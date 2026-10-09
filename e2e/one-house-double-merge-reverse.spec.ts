@@ -10,6 +10,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
 
+const REVERSE_ID = "155-4-5-double-merge-reverse-unverified";
+
 const house = (id: string, acquisitionDate: string, mergeOrigin: string) => ({
   id,
   region: "capital" as const,
@@ -53,10 +55,13 @@ test("[DMR-1] 역순 이중 합가 — 비과세", async ({ page }) => {
   await expect(page.getByText("혼인한 배우자 쪽").first()).toBeVisible();
   await judge(page);
   await expect(page.getByTestId("one-house-verdict")).toHaveText("비과세");
+  // 역순은 해석 미확보 — 적용하되 「판정하지 않은 부분」에 확인 필요를 싣는다
+  await expect(page.getByTestId(`one-house-undetermined-${REVERSE_ID}`)).toContainText("확인이 필요합니다");
 });
 
 test("[DMR-2] 짝 — 배우자 주택도 먼저 합친 쪽(합친 가족 쪽)으로 두면 구성 불일치로 과세", async ({ page }) => {
   await seed(page, "counterpart_side");
   await judge(page);
   await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+  await expect(page.getByTestId(`one-house-undetermined-${REVERSE_ID}`)).toHaveCount(0);
 });

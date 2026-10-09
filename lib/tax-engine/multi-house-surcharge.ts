@@ -23,6 +23,7 @@ import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
+import { REVERSE_DOUBLE_MERGE_NOTICE } from "./one-house/merge-deeming";
 
 // ============================================================
 // 타입 정의 — 공개 타입은 ./types/multi-house-surcharge.types 로 분리
@@ -423,6 +424,10 @@ export function determineMultiHouseSurcharge(
       )
     ) {
       warnings.push(DUTY_PERIOD_PENDING_WARNING);
+    }
+    // D4 역순(동거봉양 합가 → 혼인) 의제로 배제했으면 해석 미확보를 알린다 — 역순 D4만 `parental_care_merge`로 분류된다.
+    if (input.deemedOneHouseBy155 === "double_merge" && exclusionReasons.some((r) => r.type === "parental_care_merge")) {
+      warnings.push(REVERSE_DOUBLE_MERGE_NOTICE);
     }
     return {
       effectiveHouseCount,

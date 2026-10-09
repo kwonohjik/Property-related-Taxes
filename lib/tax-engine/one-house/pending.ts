@@ -28,6 +28,7 @@ import {
   inheritedPresaleRightSeparateHouseholdUnverified,
 } from "../presale-right-definition-date";
 import { addDays, addYears } from "date-fns";
+import { doubleMergeOrderOf, REVERSE_DOUBLE_MERGE_NOTICE } from "./merge-deeming";
 import { resolveOneHouseMinHoldingYears } from "../data/one-house-holding-residence-era";
 import { deadlineEndFrom, deadlineFields, isWithinDeadline } from "../civil-period";
 import { TRANSFER } from "../legal-codes";
@@ -57,6 +58,7 @@ import {
 } from "./threshold";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
 import type {
+  OneHouseAppliedException,
   OneHouseJudgeInput,
   OneHousePendingCondition,
   OneHouseUndetermined,
@@ -406,6 +408,24 @@ export function inheritedPresaleRightSeparateHouseholdUndetermined(
   const start = presaleRightStartDate;
   if (!(input.presaleRights ?? []).some((r) => inheritedPresaleRightSeparateHouseholdUnverified(r, start))) return [];
   return [{ id: INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, reason: INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE }];
+}
+
+/** D4 역순 이중 합가 확인 필요 — 계산기 경고와 같은 id(`transfer-tax.ts`). */
+export const REVERSE_DOUBLE_MERGE_UNVERIFIED_ID = "155-4-5-double-merge-reverse-unverified";
+
+/**
+ * D4 역순(동거봉양 합가 → 혼인)으로 비과세·부분과세가 섰을 때 확인 필요를 낸다(`REVERSE_DOUBLE_MERGE_NOTICE`).
+ * 혼인·동거봉양 두 행이 함께 적용 특례에 있는 것은 D4뿐이다(`checkExemptionCore` E-3.5).
+ */
+export function reverseDoubleMergeUndetermined(
+  input: OneHouseJudgeInput,
+  appliedExceptions: readonly OneHouseAppliedException[],
+  settled: boolean,
+): OneHouseUndetermined[] {
+  if (!settled || doubleMergeOrderOf(input)?.first !== "parental_care") return [];
+  const ids = new Set(appliedExceptions.map((e) => e.id));
+  if (!ids.has("155-4-parental-care-merge") || !ids.has("155-5-marriage-merge")) return [];
+  return [{ id: REVERSE_DOUBLE_MERGE_UNVERIFIED_ID, reason: REVERSE_DOUBLE_MERGE_NOTICE }];
 }
 
 /**

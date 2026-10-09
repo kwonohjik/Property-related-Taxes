@@ -29,6 +29,7 @@ import {
   collectPendingConditions,
   collectUndetermined,
   inheritedPresaleRightSeparateHouseholdUndetermined,
+  reverseDoubleMergeUndetermined,
   collectUnmetExceptions,
   meetsTemporaryTwoHousePrevHolding,
   undeclaredThreeYearExceptionUndetermined,
@@ -149,6 +150,7 @@ export function checkExemption(
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
       ...inheritedPresaleRightSeparateHouseholdUndetermined(input, article89Clause2, coreWouldPass, presaleRightStartDate),
+      ...reverseDoubleMergeUndetermined(input, appliedExceptions, settled),
     ],
     unmetExceptions,
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
