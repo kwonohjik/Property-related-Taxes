@@ -45,7 +45,7 @@ import {
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
-import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID } from "./one-house/pending";
+import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./one-house/pending";
 import { DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX } from "./one-house/designated-district-undeclared";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
@@ -268,7 +268,9 @@ export function calculateTransferTax(
       ERA_UNDETERMINED_IDS.has(u.id) ||
       u.id.startsWith(DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX) ||
       // 별도세대 상속 분양권(피상속인 취득일 2021.1.1. 전) — 판정 메뉴와 같은 확인 필요
-      u.id === INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID
+      u.id === INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID ||
+      // D4 역순 이중 합가(동거봉양 합가 → 혼인) — 해석 미확보 확인 필요
+      u.id === REVERSE_DOUBLE_MERGE_UNVERIFIED_ID
     ) {
       warnings.push(u.reason);
     }

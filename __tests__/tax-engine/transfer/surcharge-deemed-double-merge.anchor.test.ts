@@ -9,7 +9,8 @@
  * | # | 사례 | 기대 |
  * |---|---|---|
  * | S-1 | 혼인 2019 → 동거봉양 2020 · 강남 고가주택 양도(2026-06-15) | 부분 과세 · 중과 배제(13호) · 의제 근거 `double_merge` |
- * | S-2 | 역순(동거봉양 2018 → 혼인 2019 — 2026-10-09 인정) | 부분 과세 · 중과 배제 · 동거봉양 합가로 분류 |
+ * | S-2 | 역순(동거봉양 2018 → 혼인 2019 — 2026-10-09 인정) | 부분 과세 · 중과 배제 · 동거봉양 합가로 분류 · 확인 필요(해석 미확보) |
+ * | S-2 짝 | 역순 합가일 + 1주택(본칙 비과세) | 확인 필요 없음 |
  * | S-4 | 짝 — 배우자 쪽 2채(구성 불일치) | 의제 없음 · 중과 · 「중첩이 성립하지 않았다」 경고 |
  * | S-3 | 부모 쪽 주택이 지방 3억 이하(중과 주택 수 불산입 — §167의3①1호)라 중과 주택 수 2 | 15호(§167의10①15호)로 배제 |
  */
@@ -18,6 +19,7 @@ import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/tr
 import { resolveSurchargeDeemedOneHouse } from "@/lib/tax-engine/transfer-tax-judgment-steps";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
+import { REVERSE_DOUBLE_MERGE_NOTICE } from "@/lib/tax-engine/one-house/merge-deeming";
 import { makeMockRatesWithHouseEngine, baseTransferInput } from "../_helpers/mock-rates";
 
 const D = (s: string) => new Date(s);
@@ -84,6 +86,9 @@ describe("D4 이중 합가 — §167의3①13호 중과 배제", () => {
     // 기본세율(누진) — 짝(S-4)의 중과세율보다 낮다
     expect(r.appliedRate).toBeLessThan(calculateTransferTax(mismatch(), rates).appliedRate);
     expect(r.multiHouseSurchargeDetail?.warnings?.join(" ") ?? "").not.toContain(MERGE_WARNING);
+    // 정순은 해석(598)이 있다 — 역순 확인 필요를 내지 않는다(S-2의 짝)
+    expect(r.warnings ?? []).not.toContain(REVERSE_DOUBLE_MERGE_NOTICE);
+    expect(r.multiHouseSurchargeDetail?.warnings ?? []).not.toContain(REVERSE_DOUBLE_MERGE_NOTICE);
   });
 
   it("S-2 역순(동거봉양 합가 2018 → 혼인 2019)도 1세대1주택으로 보아 12억 초과분만 과세 → 중과 배제", () => {
@@ -97,6 +102,22 @@ describe("D4 이중 합가 — §167의3①13호 중과 배제", () => {
     expect(reasons[0]?.type).toBe("parental_care_merge");
     expect(reasons.map((e) => e.detail).join(" ")).toContain("동거봉양 합가일(2018-06-01)");
     expect(r.appliedRate).toBeLessThan(0.75);
+    // 역순은 해석 미확보 — 적용하되 비과세(판정 보류 → 계산기 경고)·중과 배제 양쪽에 확인 필요를 싣는다
+    expect(r.warnings).toContain(REVERSE_DOUBLE_MERGE_NOTICE);
+    expect(r.multiHouseSurchargeDetail?.warnings ?? []).toContain(REVERSE_DOUBLE_MERGE_NOTICE);
+  });
+
+  it("S-2 짝 — 역순 합가일이 있어도 다른 근거(1주택 본칙)로 비과세면 확인 필요를 내지 않는다", () => {
+    const single = {
+      ...input("2018-06-01"),
+      householdHousingCount: 1,
+      transferPrice: 1_000_000_000,
+      houses: [h("selling", "2015-04-01")],
+    };
+    const r = calculateTransferTax(single, rates);
+    expect(r.isExempt).toBe(true);
+    expect(r.exemptReason).not.toContain("합가");
+    expect(r.warnings ?? []).not.toContain(REVERSE_DOUBLE_MERGE_NOTICE);
   });
 
   it("S-4 짝 — 배우자 쪽 2채(구성 불일치)면 의제 없음 · 중과 · 경고", () => {
