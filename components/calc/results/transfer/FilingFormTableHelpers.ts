@@ -411,10 +411,10 @@ export function buildRows(
     setNum("acquisitionPrice", "total", ss.acquisitionDeducted);
     setNum("expenses", "total", ss.necessaryExpense);
     for (const part of ss.parts) {
-      // D1-4 — 취득가액 칸 값은 이미 채택값이다. 비교한 두 값을 각주로 밝힌다(영 §163⑨ 단서 1호).
+      // D1-4·D2-4 — 취득가액 칸 값은 이미 채택값이다. 비교한 두 값을 각주로 밝힌다(영 §163⑨ 단서 1호·2호 — echo `rule`).
       const basis = splitAcqBasisView(part);
       if (basis && !part.swapApplied) {
-        setRoseNote("acquisitionPrice", part.key, `${splitAcqBasisFormula(basis)} (소득세법 시행령 §163조 제9항 단서 1호)`);
+        setRoseNote("acquisitionPrice", part.key, `${splitAcqBasisFormula(basis)} (${basis.legalBasis})`);
       }
       if (part.swapApplied) {
         setRoseNote(

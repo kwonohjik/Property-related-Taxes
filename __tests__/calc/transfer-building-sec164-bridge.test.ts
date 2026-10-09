@@ -1,8 +1,9 @@
 /**
- * D2-4a 클라이언트 브리지 · ④ 전송 · ⑧ 임시 차단 · ⑧≡⑫ 격자 (2026-10-09)
+ * D2-4 클라이언트 브리지 · ④ 전송 · ⑧ · ⑧≡⑫ 격자 (2026-10-09 D2-4a · 2026-10-10 D2-4b)
  *
  * 계획서 §13 · 엔진 설계 `transfer-acq-cause-mixed-d2-4.engine.design.md` §3.1·§3.5.
- * 화면 변화 0: ⑧은 이 범위(2005.4.30. 전 상속·증여 건물)를 계속 막는다(② 입력 칸이 없다). D2-4b가 ⑧ 사실만 교체한다.
+ * D2-4a는 ⑧이 이 범위(2005.4.30. 전 상속·증여 건물)를 전부 막았다(② 입력 칸이 없었다). D2-4b는 카드(`BuildingSec164Card`)와 함께
+ * ⑧의 ② 사실을 브리지 파생값으로 바꿨다 — 구간 안 ⑧ 통과 ⇔ ⑫ 200(주택 ∧ 단독·다가구 명시 ∧ 5입력 ∧ ① ∧ 일부 양도 아님).
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -32,7 +33,8 @@ import {
 } from "@/lib/calc/transfer-building-sec164-bridge";
 import { validateAssetAcquisition } from "@/lib/calc/transfer-tax-validate-acquisition";
 import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
-import { BUILDING_SEC164_SCREEN_MESSAGE } from "@/lib/calc/transfer-land-part-cause";
+import { BUILDING_HOUSE_KIND_REQUIRED_MESSAGE } from "@/lib/calc/transfer-tax-validate-split";
+import { BUILDING_CAUSE_APARTMENT_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { calculateInheritanceHouseValuation } from "@/lib/tax-engine/inheritance-house-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -207,28 +209,50 @@ describe("④ buildLandPartCausePayload — 단건·다건·컴패니언 3경로
   });
 });
 
-describe("⑧ — D2-4a 임시 차단 (② 입력 칸이 화면에 없다) · 같은 leaf 사용", () => {
+describe("⑧ — D2-4b ② 입력 완결 요구 · 같은 leaf 사용", () => {
   const v8 = (a: AssetForm) => {
     const r = collectWithFields(() => validateAssetAcquisition(a, "자산1", TRANSFER_DATE));
     return { result: r.result, field: r.result ? r.fieldOf(r.result) : undefined };
   };
 
-  it("단독·다가구 + 구간: 5입력이 다 차 있어도(스토어 잔재) 화면 사실 문구로 막는다 · 이동 칸은 건물 취득일(acquisitionDate)", () => {
-    const r = v8(asset());
-    expect(r.result).toContain(BUILDING_SEC164_SCREEN_MESSAGE);
-    expect(r.result).toContain("이 계산기 화면은 영 §164⑦ 가액 입력을 받지 않아");
-    expect(r.field).toBe("acquisitionDate");
+  it("단독·다가구 + 구간 + 5입력 → 통과 (D2-4a의 화면 사실 차단은 사라졌다)", () => {
+    expect(v8(asset()).result).toBeNull();
+    expect(v8(giftAsset()).result).toBeNull();
   });
-  it("공동주택 → leaf 문구(Y4d, 화면 사실이 아니라 범위 사실) · 일부 양도 → areaScenario 이동", () => {
+  it("칸 이동 순서 = 카드 위→아래: 면적 → 최초공시 개별주택가격 → 최초공시 개별공시지가 → 최초공시 건물 기준시가 → 취득 당시 건물 기준시가", () => {
+    const all = { acquisitionArea: "", inhHouseValHousePriceAtFirst: "", inhHouseValLandPricePerSqmAtFirst: "", inhHouseValBuildingStdPriceAtFirst: "", inhHouseValBuildingStdPriceAtInheritance: "" };
+    const order = ["acquisitionArea", "inhHouseValHousePriceAtFirst", "inhHouseValLandPricePerSqmAtFirst", "inhHouseValBuildingStdPriceAtFirst", "inhHouseValBuildingStdPriceAtInheritance"] as const;
+    const filled = asset();
+    for (let k = 0; k < order.length; k++) {
+      // 앞 k칸은 채우고 나머지는 비운다 → 첫 빈 칸(order[k])으로 이동
+      const over: Partial<AssetForm> = { ...all };
+      for (const f of order.slice(0, k)) (over as Record<string, string>)[f] = filled[f] as string;
+      const r = v8(asset(over));
+      expect(r.field, `k=${k}`).toBe(order[k]);
+      expect(r.result).toContain("칸을 입력하세요");
+      expect(r.result).toContain("단서 2호");
+    }
+  });
+  it("5칸 모두 찼는데 건물 몫이 0원(분자 < 분모) → 취득 당시 건물 기준시가 칸 · ⑫도 ② 미전송으로 400", () => {
+    const tiny = asset({ inhHouseValHousePriceAtFirst: "1", inhHouseValBuildingStdPriceAtInheritance: "1" });
+    expect(deriveBuildingSec164Total(tiny)).toBe(0);
+    const r = v8(tiny);
+    expect(r.field).toBe("inhHouseValBuildingStdPriceAtInheritance");
+    expect(r.result).toContain("0원으로 계산됩니다");
+  });
+  it("주택 구분 미선택(기본값 land) → 주택 구분 칸 + 선택 요구 · 공동주택 → 같은 칸 + leaf 문구(지원하지 않는 이유)", () => {
+    const none = v8(asset({ inheritanceAssetKind: "land" }));
+    expect(none.field).toBe("inheritanceAssetKind");
+    expect(none.result).toContain(BUILDING_HOUSE_KIND_REQUIRED_MESSAGE);
     const apart = v8(asset({ inheritanceAssetKind: "house_apart" }));
-    expect(apart.field).toBe("acquisitionDate");
-    expect(apart.result).toContain("단독·다가구주택으로 확인된 주택만 지원합니다");
-    expect(apart.result).not.toContain("이 계산기 화면은 영 §164⑦ 가액 입력을 받지 않아");
+    expect(apart.field).toBe("inheritanceAssetKind");
+    expect(apart.result).toContain(BUILDING_CAUSE_APARTMENT_MESSAGE);
+    expect(apart.result).not.toContain(BUILDING_HOUSE_KIND_REQUIRED_MESSAGE);
+  });
+  it("일부 양도 → areaScenario · 비주택 building → 종전 Y4 문구(건물 취득일 칸) · 구간 밖(2005-04-30)은 통과", () => {
     const partial = v8(asset({ areaScenario: "partial", transferArea: "100" }));
     expect(partial.field).toBe("areaScenario");
     expect(partial.result).toContain("일부 양도");
-  });
-  it("비주택 building → 종전 Y4 문구 · 구간 밖(2005-04-30)은 통과", () => {
     const b = v8(asset({ assetKind: "building" }));
     expect(b.field).toBe("acquisitionDate");
     expect(b.result).toContain("기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
@@ -259,7 +283,7 @@ describe("⑧≡⑫ 격자 — 호스트 × 주택 구분 × 자산 종류 × �
   }
   const v8 = (a: AssetForm) => collectWithFields(() => validateAssetAcquisition(a, "자산1", TRANSFER_DATE));
 
-  it("격자 전수: 막다른 길 0 · 구간 안 모든 셀은 ⑧ 차단 · 구간 안 ⑫는 ②·구분·일부양도·종류에 따라 갈린다", async () => {
+  it("격자 전수: 막다른 길 0 · 구간 안 ⑧ = ⑫(②·구분·일부양도·종류에 따라 같이 갈린다)", async () => {
     const dates = ["1984-06-01", "2003-05-01", "2005-04-29", "2005-04-30", "2020-01-10"];
     const inputs: [string, Partial<AssetForm>, "ok" | "blocked"][] = [
       ["5입력 전부", {}, "ok"],
@@ -273,7 +297,7 @@ describe("⑧≡⑫ 격자 — 호스트 × 주택 구분 × 자산 종류 × �
     ];
     let cells = 0;
     for (const host of ["inheritance", "gift"] as const) {
-      for (const kind of ["house_individual", "house_apart"] as const) {
+      for (const kind of ["house_individual", "house_apart", "land"] as const) {
         for (const assetKind of ["housing", "building"] as const) {
           for (const date of dates) {
             for (const [name, over, ok] of inputs) {
@@ -286,10 +310,10 @@ describe("⑧≡⑫ 격자 — 호스트 × 주택 구분 × 자산 종류 × �
               cells++;
               // 막다른 길 0: ⑧ 통과 ⇒ ⑫ 통과
               if (eight === "pass") expect(tw, `막다른 길 ${id}`).toBe("pass");
-              // D2-4a: 구간 안은 ⑧이 계속 막는다(② 입력 칸이 없다)
-              if (inRange) expect(eight, `⑧ 구간 안 ${id}`).toBe("block");
-              // ⑫: 구간 안에서 열리는 건 주택 ∧ 단독·다가구 ∧ 5입력 ∧ ① ∧ 일부 양도 아님 뿐이다
-              if (inRange) expect(tw, `⑫ ${id}`).toBe(assetKind === "housing" && kind === "house_individual" && ok === "ok" ? "pass" : "block");
+              // 구간 안에서 열리는 건 주택 ∧ 단독·다가구(명시 선택) ∧ 5입력 ∧ ① ∧ 일부 양도 아님 뿐이다 — ⑧·⑫가 같이 갈린다(D2-4b)
+              const open = assetKind === "housing" && kind === "house_individual" && ok === "ok" ? "pass" : "block";
+              if (inRange) expect(tw, `⑫ ${id}`).toBe(open);
+              if (inRange) expect(eight, `⑧ 구간 안 ${id}`).toBe(open);
               // 구간 밖은 입력과 무관하게 종전 그대로(통과) — ② 입력 유무가 영향을 주지 않는다
               if (!inRange && ok === "ok") expect(tw, `구간 밖 ${id}`).toBe("pass");
             }
@@ -297,6 +321,6 @@ describe("⑧≡⑫ 격자 — 호스트 × 주택 구분 × 자산 종류 × �
         }
       }
     }
-    expect(cells).toBe(2 * 2 * 2 * 5 * 8);
-  }, 60_000);
+    expect(cells).toBe(2 * 3 * 2 * 5 * 8);
+  }, 90_000);
 });

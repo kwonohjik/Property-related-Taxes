@@ -5,7 +5,7 @@
  *
  * - 건물 상속 + 토지 매매(실가) / 건물 증여 + 토지 매매(환산): 토글 → 날짜 2열·고정 칩·평가액 → 계산 → 요청 body
  *   (`landAcquisitionCause: "purchase"` · 자산 단위 평가 payload 없음) → 결과 카드 원인 행.
- * - 토글 OFF → 분리 입력 stale 무시 · 소유자 분리 상호 잠금 · 2005.4.30. 전·같은 날 안내 · ⑧ 이동 칸 앵커 · 호스트 전환.
+ * - 토글 OFF → 분리 입력 stale 무시 · 소유자 분리 상호 잠금 · 2005.4.30. 전(주택 = ② 카드, D2-4b)·같은 날 안내 · ⑧ 이동 칸 앵커 · 호스트 전환.
  *
  * ⚠️ 수치·문구의 정본은 vitest anchor다. 워크트리 실행은 E2E_PORT 필수. 시드는 `landCauseHost`를 함께 넣는다(normalize가 지운다).
  */
@@ -236,17 +236,18 @@ test.describe("D2-2 — 건물 상속 + 토지 매매 화면", () => {
     await expect(toggleBlock(page)).toHaveCount(0);
   });
 
-  test("건물 상속개시일 2005.4.30. 전 → 안내(차단은 ⑧) · 계산 시도가 건물 상속개시일 칸으로 이동", async ({ page }) => {
+  test("건물 상속개시일 2005.4.30. 전(주택) → 날짜 안내 대신 ② 입력 카드(D2-4b) · 계산 시도가 카드의 주택 구분 칸으로 이동", async ({ page }) => {
     test.setTimeout(120_000);
     await open(page, d2("inheritance", { acquisitionDate: "2003-05-01", inheritanceStartDate: "2003-05-01", inheritanceDate: "2003-05-01", landAcquisitionDate: "2002-01-10", decedentAcquisitionDate: "1990-01-01" }));
-    await expect(page.getByTestId("building-cause-date-notice")).toContainText("2005.4.30.");
+    await expect(page.getByTestId("building-cause-date-notice")).toHaveCount(0);
+    await expect(page.getByTestId("building-sec164-card")).toBeVisible();
     await expect(page.getByTestId("acq-date-building").getByLabel("연도").first()).toHaveValue("2003"); // 클램프 없음
     await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByTestId("validation-issues").getByRole("button", { name: /건물 기준시가/ })).toBeVisible();
+    await expect(page.getByTestId("validation-issues").getByRole("button", { name: /주택 구분/ })).toBeVisible();
 
-    // 긍정 짝: 2025로 고치면 안내가 사라진다
+    // 긍정 짝: 2025로 고치면 카드가 사라진다
     await fillDateAndVerify(page, { year: "2025", month: "05", day: "01" }, { scope: page.getByTestId("acq-date-building") });
-    await expect(page.getByTestId("building-cause-date-notice")).toHaveCount(0);
+    await expect(page.getByTestId("building-sec164-card")).toHaveCount(0);
   });
 
   test("같은 날이면 안내가 뜬다 (⑧만 차단)", async ({ page }) => {

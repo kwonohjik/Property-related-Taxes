@@ -404,7 +404,9 @@ describe("C. D2-1 활성", () => {
     expect(v8(d2({ acquisitionCause: "gift", landCauseHost: "gift" as never, decedentAcquisitionDate: "" })).result).toBeNull();
     expect(f({ decedentSameHouseholdBeforeInheritance: true })).toMatchObject({ field: "decedentCohabitationHoldingStartDate" });
     expect(f({ decedentSameHouseholdBeforeInheritance: true, decedentCohabitationHoldingStartDate: "1995-01-01" }).msg).toBeNull();
-    expect(f({ acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "acquisitionDate" });
+    // 경계일 전(2003) — D2-4b: 주택은 입력 카드의 주택 구분 칸으로(미선택 = 단독으로 보지 않음), 비주택 건물은 종전 건물 취득일 칸.
+    expect(f({ acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "inheritanceAssetKind" });
+    expect(f({ assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "acquisitionDate" });
     expect(f({ acquisitionDate: "2005-04-30", landAcquisitionDate: "2005-01-10", decedentAcquisitionDate: "1990-01-01" }).msg).toBeNull();
     expect(f({ landAcquisitionDate: "2025-05-01" })).toMatchObject({ field: "landAcquisitionDate" }); // Q-4 같은 날 — ⑧ 전용
     expect(landPartCauseSameDay(d2({ landAcquisitionDate: "2025-05-01" }))).toBe(true);

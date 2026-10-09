@@ -17,6 +17,24 @@ const HOUSE_KIND_OPTIONS = [
   { value: "house_apart", label: "공동주택 (공동주택가격)" },
 ] as const;
 
+/**
+ * 개별↔공동 전환 patch — 조회값 정리 포함(아래 픽커 주석). D2-4 건물 파트 카드(`BuildingSec164Card`)의 주택 구분 칸도 같은 patch를 쓴다
+ * (같은 물리 사실 `inheritanceAssetKind`를 두 곳에서 다르게 바꾸지 않게).
+ */
+export function houseKindChangePatch(asset: AssetForm, v: string): Partial<AssetForm> {
+  const helperFeeds =
+    asset.useSupplementaryHelper === true &&
+    asset.inheritanceValuationMethod === "supplementary";
+  return {
+    inheritanceAssetKind: v as AssetForm["inheritanceAssetKind"],
+    // 개별↔공동 전환 시 조회값 초기화 (stale 방지) — 토글은 끄지 않는다(픽커 주석).
+    supplementaryLandUnitPrice: "",
+    supplementaryLandArea: "",
+    supplementaryBuildingValue: "",
+    ...(helperFeeds ? { publishedValueAtInheritance: "" } : {}),
+  };
+}
+
 export function InheritanceHouseKindPicker({
   asset,
   onChange,
@@ -40,10 +58,8 @@ export function InheritanceHouseKindPicker({
    *   `publishedValueAtInheritance`(그 3필드에서 계산돼 들어간 값)가 옛 구분의 값으로
    *   남는다 — 화면에는 빈 칸, 엔진에는 stale 금액이 가는 조합이다.
    *   비우는 조건은 `reportedPatch`(PostDeemedInputs)와 **같다**: 보조계산 ON + 보충적평가.
+   *   patch는 `houseKindChangePatch`(위)가 만든다.
    */
-  const helperFeeds =
-    asset.useSupplementaryHelper === true &&
-    asset.inheritanceValuationMethod === "supplementary";
   return (
     <div className="space-y-1.5">
       <label className="block text-caption text-muted-foreground font-medium">
@@ -55,16 +71,7 @@ export function InheritanceHouseKindPicker({
         layout="stack"
         options={HOUSE_KIND_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
         value={value}
-        onChange={(v) =>
-          onChange({
-            inheritanceAssetKind: v as AssetForm["inheritanceAssetKind"],
-            // 개별↔공동 전환 시 조회값 초기화 (stale 방지) — 토글은 끄지 않는다(위 주석).
-            supplementaryLandUnitPrice: "",
-            supplementaryLandArea: "",
-            supplementaryBuildingValue: "",
-            ...(helperFeeds ? { publishedValueAtInheritance: "" } : {}),
-          })
-        }
+        onChange={(v) => onChange(houseKindChangePatch(asset, v))}
       />
     </div>
   );

@@ -20,6 +20,7 @@ import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
+import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
 
 export type PartAcqMode = "actual" | "estimated" | "appraisal" | "salesCase";
 
@@ -212,6 +213,8 @@ interface SeparatePartAmounts extends LegacyAcqFlags {
   hasSeperateLandAcquisitionDate?: boolean;
   /** 토지 취득일 — 영 §163⑨ 단서 1호 구간(1990.8.30. 전 상속·증여 토지) 판정(D1-4). 없으면 단서 구간이 아니다 */
   landAcquisitionDate?: string;
+  /** 건물 취득일(D2 상속개시일·증여일) — 영 §163⑨ 단서 2호 구간(2005.4.30. 전 상속·증여 건물) 판정(D2-4). 없으면 단서 구간이 아니다 */
+  acquisitionDate?: string;
   fixedAcquisitionPrice?: string;
   landAcqMode?: PartAcqMode | "";
   buildingAcqMode?: PartAcqMode | "";
@@ -261,6 +264,9 @@ export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: numbe
   // D1-4 — 영 §163⑨ 단서 1호 구간이면 토지 취득가액은 max(평가액, 영 §164④ 가액)이고 그 비교는 엔진이 한다.
   // 평가액(①)만 합산하면 ②가 더 클 때 작은 값이 총액으로 오독되므로 환산 파트처럼 결과 도착 전까지 미확정으로 둔다.
   if (parts[0].owned && isSec163_9LandProviso(effectiveLandAcquisitionCause(asset), asset.landAcquisitionDate)) pending = true;
+  // D2-4 — 영 §163⑨ 단서 2호 구간(2005.4.30. 전 상속·증여 주택 건물 + 토지 매매)도 같다: 건물 취득가액 = max(평가액, 영 §164⑦ 가액의 건물 몫).
+  // 결과가 오면 D2-2 분기(`transfer-per-asset-summary.ts` — `acqPending ∧ splitDetail ∧ effectiveBuildingCauseMix`)가 엔진 합으로 푼다.
+  if (parts[1].owned && buildingSec164Applies(asset)) pending = true;
   for (const p of parts) {
     if (!p.owned) continue;
     if (p.mode === "estimated") {

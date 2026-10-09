@@ -105,7 +105,20 @@ export const SPLIT_CAUSE_VALUE_LABEL = { inheritance: "상속개시일 평가액
 /** ② 가액의 이름 — 1990.8.30. 전 토지는 개별공시지가가 없어 토지등급으로 환산한다(영 §164④). */
 export const SPLIT_SEC164_VALUE_LABEL = "영 §164④ 가액";
 
+/** 건물 파트 ② 가액의 이름 — 2005.4.30. 전 상속·증여 건물은 영 §164⑦로 환산한 주택가격을 건물 몫으로 안분한다(D2-4). */
+export const SPLIT_SEC164_BUILDING_VALUE_LABEL = "영 §164⑦ 가액의 건물 몫";
+
+/** 비교 규칙별 파트·② 이름·근거 — 엔진 echo `rule`이 단일 키다(호출부가 파트·조문을 하드코딩하지 않는다). */
+const SPLIT_ACQ_BASIS_RULE = {
+  sec163_9_1: { partLabel: "토지", sec164Label: SPLIT_SEC164_VALUE_LABEL, legalBasis: "소득세법 시행령 §163조 제9항 단서 1호" },
+  sec163_9_2: { partLabel: "건물", sec164Label: SPLIT_SEC164_BUILDING_VALUE_LABEL, legalBasis: "소득세법 시행령 §163조 제9항 단서 2호" },
+} as const satisfies Record<NonNullable<SplitPartResult["acquisitionBasis"]>["rule"], { partLabel: string; sec164Label: string; legalBasis: string }>;
+
 export interface SplitAcqBasisView {
+  /** 「토지」·「건물」 — 비교가 적용된 파트 */
+  partLabel: string;
+  /** 「소득세법 시행령 §163조 제9항 단서 1호」·「…단서 2호」 */
+  legalBasis: string;
   /** 「상속개시일 평가액」·「증여 신고가액」 */
   reportedLabel: string;
   sec164Label: string;
@@ -119,7 +132,8 @@ export interface SplitAcqBasisView {
 }
 
 /**
- * 영 §163⑨ 단서 1호 「평가액 vs 영 §164④ 가액 → 많은 금액」 표시 정본(D1-4) — 카드·상세명세서·신고서·PDF가 같은 문장을 쓴다.
+ * 영 §163⑨ 단서 1호·2호 「평가액 vs 영 §164④ 가액(토지)·영 §164⑦ 가액의 건물 몫(건물) → 많은 금액」 표시 정본(D1-4·D2-4)
+ * — 카드·상세명세서·신고서·PDF가 같은 문장을 쓴다. 파트·② 이름·근거는 echo `rule`에서 파생한다.
  * 엔진 echo(`acquisitionBasis`)를 그대로 읽고 값을 새로 계산하지 않는다. echo가 없으면(구 이력·단서 밖) `undefined`.
  * 채택 금액은 echo의 `adopted`가 가리키는 쪽이다 — `max`를 다시 쓰지 않는다(동점 = 평가액은 엔진 규약).
  */
@@ -130,21 +144,24 @@ export function splitAcqBasisView(
   if (!b) return undefined;
   const reportedLabel = p.acquisitionCause === "gift" ? SPLIT_CAUSE_VALUE_LABEL.gift : SPLIT_CAUSE_VALUE_LABEL.inheritance;
   const adoptedReported = b.adopted === "reported";
+  const { partLabel, sec164Label, legalBasis } = SPLIT_ACQ_BASIS_RULE[b.rule];
   return {
+    partLabel,
+    legalBasis,
     reportedLabel,
-    sec164Label: SPLIT_SEC164_VALUE_LABEL,
+    sec164Label,
     reported: b.reported,
     sec164: b.sec164,
     adopted: b.adopted,
-    adoptedLabel: adoptedReported ? reportedLabel : SPLIT_SEC164_VALUE_LABEL,
+    adoptedLabel: adoptedReported ? reportedLabel : sec164Label,
     adoptedValue: adoptedReported ? b.reported : b.sec164,
   };
 }
 
-/** `토지 취득가액 = 많은 금액(상속개시일 평가액 A, 영 §164④ 가액 B) = C` — 숫자 `/`·`÷` 없음(분수 치환 방지). */
+/** `토지 취득가액 = 많은 금액(상속개시일 평가액 A, 영 §164④ 가액 B) = C` — 숫자 `/`·`÷` 없음(분수 치환 방지). 건물(단서 2호)도 같은 모양. */
 export function splitAcqBasisFormula(v: SplitAcqBasisView): string {
   const f = (n: number) => n.toLocaleString();
-  return `토지 취득가액 = 많은 금액(${v.reportedLabel} ${f(v.reported)}, ${v.sec164Label} ${f(v.sec164)}) = ${f(v.adoptedValue)}`;
+  return `${v.partLabel} 취득가액 = 많은 금액(${v.reportedLabel} ${f(v.reported)}, ${v.sec164Label} ${f(v.sec164)}) = ${f(v.adoptedValue)}`;
 }
 
 export interface SplitGainPartSummary {
@@ -168,7 +185,7 @@ export interface SplitGainPartSummary {
   rateBasisAcquisitionDate: string | undefined;
   rateBasisRule: SplitPartResult["rateBasisRule"];
   appliedRateBasisDate: string | undefined;
-  /** 영 §163⑨ 단서 1호 비교 echo 그대로(D1-4) — 비교가 적용된 토지 파트만, 구 결과·단서 밖은 `undefined` */
+  /** 영 §163⑨ 단서 1호·2호 비교 echo 그대로(D1-4·D2-4) — 비교가 적용된 파트만, 구 결과·단서 밖은 `undefined` */
   acquisitionBasis: SplitPartResult["acquisitionBasis"];
 }
 

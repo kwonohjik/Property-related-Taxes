@@ -36,6 +36,7 @@ import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
 import { ACQ_MODE_OPTIONS, PartAcqInputs } from "./PartAcqInputs";
 import { LandSec164Card } from "./LandSec164Card";
+import { BuildingSec164Card } from "./BuildingSec164Card";
 import { BUILDING_CAUSE_META, LAND_CAUSE_META } from "./land-cause-meta";
 
 export type { PartAcqMode };
@@ -477,6 +478,10 @@ export function LandBuildingSplitSection(props: Props) {
             actualLabel={props.buildingCause ? BUILDING_CAUSE_META[props.buildingCause].priceLabel : undefined}
             actualHint={props.buildingCause ? BUILDING_CAUSE_META[props.buildingCause].hint : undefined}
           />
+          {/* D2-4b — 2005.4.30. 전 상속·증여 주택 건물: 평가액(①) 바로 아래에서 영 §164⑦ 가액의 건물 몫(②)을 구한다(단서 구간일 때만 렌더). */}
+          {props.buildingCause && props.asset && props.onAssetChange && (
+            <BuildingSec164Card asset={props.asset} onChange={props.onAssetChange} />
+          )}
         </div>
       )}
 

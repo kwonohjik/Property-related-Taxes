@@ -41,7 +41,7 @@ export function formatLumpRate(rate: number | undefined): string {
  * 건물이 상속·증여면 「건물(상속개시일 평가액)」(D2 — 같은 파트 중립 상수).
  */
 function partTag(p: SplitGainPartSummary, mixedCause: boolean): string {
-  // D1-4 — 영 §163⑨ 단서 1호 비교가 적용된 파트는 **채택된 쪽** 이름을 쓴다(② 채택인데 「평가액」이라 적으면 거짓 라벨).
+  // D1-4·D2-4 — 영 §163⑨ 단서 1호·2호 비교가 적용된 파트는 **채택된 쪽** 이름을 쓴다(② 채택인데 「평가액」이라 적으면 거짓 라벨).
   const basis = splitAcqBasisView(p);
   if (basis) return `${p.label}(${basis.adoptedLabel})`;
   const cause = p.acquisitionCause;
@@ -84,9 +84,10 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
     swapped.length > 0
       ? ` ※ ${swapped.map((p) => `${p.label} 취득가액 ${fmt(p.acquisitionPrice)}`).join(" · ")}은(는) 「소득세법」 §97②2호 단서에 따라 차감하지 않고 자본적지출·양도비를 필요경비로 적용합니다`
       : "";
-  // D1-4 — 평가액 vs 영 §164④ 가액 비교가 적용된 토지 파트는 두 값과 채택을 한 줄로 밝힌다(카드·신고서·PDF와 같은 문장).
-  const basisPart = s.parts.find((p) => splitAcqBasisView(p));
-  const basisNote = basisPart ? ` ※ ${splitAcqBasisFormula(splitAcqBasisView(basisPart)!)} (소득세법 시행령 §163조 제9항 단서 1호)` : "";
+  // D1-4·D2-4 — 평가액 vs ② 비교가 적용된 파트는 두 값과 채택을 한 줄로 밝힌다(카드·신고서·PDF와 같은 문장).
+  // `find` 1개로 충분하다 — 단서 1호(토지)는 건물 매매, 2호(건물)는 토지 매매일 때만 서므로 두 파트에 동시에 서지 않는다.
+  const basis = s.parts.map((p) => splitAcqBasisView(p)).find((v) => v !== undefined);
+  const basisNote = basis ? ` ※ ${splitAcqBasisFormula(basis)} (${basis.legalBasis})` : "";
   return `${body} — 토지·건물 파트별 산정 (소득세법 §97①1호 가목·나목)${swapNote}${basisNote}`;
 }
 
