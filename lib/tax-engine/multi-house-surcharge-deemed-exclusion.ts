@@ -152,6 +152,9 @@ function typeOf(deemed: DeemedOneHouseBasis): ExclusionReason["type"] {
     case "parental_care_merge":
     case "parental_care_merge_overlap":
       return "parental_care_merge";
+    // D4 — 기한 기준이 혼인일이라 혼인 합가로 분류한다(라벨은 `mergeAwareLabel`이 두 합가를 함께 적는다).
+    case "marriage_then_parental_care":
+      return "marriage_merge";
     case "house_with_redevelopment_right":
     case "house_with_presale_right":
       return "right_holding_one_house";
@@ -224,6 +227,9 @@ function twoHouseReason(input: MultiHouseSurchargeInput, mergeUnderOldRule: bool
         detail: `동거봉양 합가일(${d}) ${resolveMergeExemptionYears("parental_care", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제 중과 배제 (${basis})`,
       };
     }
+    // D4 — 중과 주택 수만 2(산입 제외 주택이 있는 경우)여도 같은 15호 꼬리다.
+    case "marriage_then_parental_care":
+      return { type: "marriage_merge", detail: `${mergeAwareLabel(input)} — 중과 배제 (${MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS})` };
     default:
       return {
         type: "temporary_two_house",
@@ -285,6 +291,14 @@ function mergeAwareLabel(input: MultiHouseSurchargeInput): string {
   if (d === "parental_care_merge" || d === "parental_care_merge_overlap") {
     const at = input.parentalCareMerge!.mergeDate.toISOString().slice(0, 10);
     return `동거봉양 합가일(${at}) ${resolveMergeExemptionYears("parental_care", input.transferDate)}년 내 먼저 양도 — 1세대1주택 의제(§155④)`;
+  }
+  if (d === "marriage_then_parental_care") {
+    const at = input.marriageMerge!.marriageDate.toISOString().slice(0, 10);
+    const care = input.parentalCareMerge!.mergeDate.toISOString().slice(0, 10);
+    return (
+      `혼인일(${at}) ${resolveMergeExemptionYears("marriage", input.transferDate)}년 내 먼저 양도 · 동거봉양 합가(${care}) — ` +
+      "1세대1주택 의제(§155⑤·④ — 서면인터넷방문상담4팀-598)"
+    );
   }
   return deemedSourceLabel(input);
 }
