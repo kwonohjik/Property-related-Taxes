@@ -17,6 +17,7 @@ import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from ".
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 import { housesOwnedAtTransfer } from "./household-house-count";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -115,6 +116,9 @@ export function buildHousesPayload(
   if (!isHousingLike(primary.assetKind) || !hasMultiHouseEntries) return undefined;
 
   const se = sellingExclusion;
+  // D2(건물 상속·증여 + 토지 매매, 계획서 §12 D2-Q3) — 영 §155②(상속주택 특례)·§167의3①7호(5년 내 상속주택 중과 배제)는
+  // 건물만 상속에 적용하지 않는다(정면 해석례 없음 → 「모름 = 혜택 불성립」). 영 §154⑧3호 보유·거주 통산은 다른 경로(④ 본체·거주요건)가 보낸다.
+  const d2 = !!effectiveBuildingCauseMix(primary);
   const sellingHouse = {
     id: "selling",
     // 양도 물건 regionCode에서 자동 파생 (수동 선택 폐지) — regionCode 우선·미입력 시 REGION 기본
@@ -139,7 +143,7 @@ export function buildHousesPayload(
      *    둘 다 `h.id !== sellingHouseId`로 양도 행을 **명시 제외**한다. 주택 수도 그대로다
      *    (7호는 §167의3① 본문 괄호의 불산입 대상이 아니다 — D16).
      */
-    isInherited: primary.acquisitionCause === "inheritance",
+    isInherited: primary.acquisitionCause === "inheritance" && !d2,
     /**
      * 기산일 fallback — **상속 자산의 취득시기가 곧 상속개시일**이다.
      *
@@ -151,21 +155,21 @@ export function buildHousesPayload(
      * 판정한다 — `multi-house-surcharge-count.ts:442`).
      */
     inheritedDate:
-      primary.acquisitionCause === "inheritance"
+      primary.acquisitionCause === "inheritance" && !d2
         ? primary.inheritanceDate || primary.acquisitionDate || undefined
         : undefined,
     // §155② 단서·순위 게이트 — 명부 행과 **같은 술어**(`passesHouseholdGate`·`passesRankingGate`).
     // 동일세대 사실은 §154⑧3호 칸을 그대로 쓴다(두 조문이 같은 질문 — 필드 주석의 실독 근거).
     decedentSameHouseholdAtInheritance:
-      primary.acquisitionCause === "inheritance"
+      primary.acquisitionCause === "inheritance" && !d2
         ? primary.decedentSameHouseholdBeforeInheritance
         : undefined,
     parentalCareMergeInheritedHouse:
-      primary.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
+      primary.acquisitionCause === "inheritance" && !d2 && primary.decedentSameHouseholdBeforeInheritance
         ? primary.parentalCareMergeInheritedHouse
         : undefined,
     isRankingDisqualifiedInheritedHouse:
-      primary.acquisitionCause === "inheritance"
+      primary.acquisitionCause === "inheritance" && !d2
         ? primary.isRankingDisqualifiedInheritedHouse
         : undefined,
     /**

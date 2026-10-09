@@ -16,6 +16,7 @@ import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 
@@ -168,6 +169,12 @@ export function partNeedsOwnAcqStd(mode: PartAcqMode): boolean {
 }
 
 interface SeparateAcquisitionFlags {
+  /** D2 stale 분리 입력 판정용(`hasStaleSplitInput`) — 호출부가 자산 전체를 넘기면 채워진다. 일부만 넘기면 stale 판정이 꺼진다(종전 동작) */
+  acquisitionCause?: string;
+  landAcquisitionCause?: AssetForm["landAcquisitionCause"];
+  landCauseHost?: string;
+  transferType?: string;
+  selfOwns?: "both" | "building_only" | "land_only";
   hasSeperateLandAcquisitionDate?: boolean;
   landAcquisitionDate?: string;
   acquisitionDate?: string;
@@ -196,9 +203,11 @@ interface SeparatePartAmounts extends LegacyAcqFlags {
   acquisitionCause?: string;
   assetKind?: string;
   isMixedUseHouse?: boolean;
-  landAcquisitionCause?: "" | "inheritance" | "gift";
+  landAcquisitionCause?: "" | "inheritance" | "gift" | "purchase";
   /** 토글을 켠 호스트(D1-2) — 없으면 유효 원인이 성립하지 않아 신축 후퇴도 없다. 호출부는 자산 전체를 넘긴다 */
   landCauseHost?: string;
+  /** D2 유효 판정(부담부증여 제외)에 쓴다 */
+  transferType?: string;
   hasSeperateLandAcquisitionDate?: boolean;
   /** 토지 취득일 — 영 §163⑨ 단서 1호 구간(1990.8.30. 전 상속·증여 토지) 판정(D1-4). 없으면 단서 구간이 아니다 */
   landAcquisitionDate?: string;
@@ -227,7 +236,8 @@ function raw(v: string | undefined): number {
  * 합계로 표시하지 않는다**(미확정 파트를 뺀 값을 총액으로 오독 — `feedback_engine_result_display_drift`).
  * 비소유 파트(`selfOwns≠both`)는 애초에 합계 대상이 아니다.
  */
-export function separateAcqPartsSum(asset: SeparatePartAmounts): { sum: number; pending: boolean } {
+export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: number; pending: boolean } {
+  const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④·⑧과 같은 사본
   const selfOwns = asset.selfOwns ?? "both";
   const parts = [
     {
@@ -313,7 +323,9 @@ export function partAcquisitionDates(a: {
   return { land: a.landAcquisitionDate || building, building };
 }
 
-export function isSeparateAcquisition(asset: SeparateAcquisitionFlags): boolean {
+export function isSeparateAcquisition(rawAsset: SeparateAcquisitionFlags): boolean {
+  // 상속·증여 호스트의 화면에 없는 분리 입력(stale)은 「분리 없음」으로 읽는다 — `hasStaleSplitInput`.
+  const asset = normalizeBuildingCauseInputs(rawAsset);
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;
   if (asset.landAcquisitionDate === asset.acquisitionDate) return false;

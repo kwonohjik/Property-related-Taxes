@@ -27,11 +27,15 @@
  *    엔진에 걸면 FB 엔진 테스트가 전부 skip된다. 게이트는 calc 계층(④⑤⑧)이 담당한다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 
 export function allowsFamilyBusinessInheritance(
-  asset: Pick<AssetForm, "assetKind" | "acquisitionCause">,
+  asset: Pick<AssetForm, "assetKind" | "acquisitionCause"> &
+    Partial<Pick<AssetForm, "landAcquisitionCause" | "landCauseHost" | "hasSeperateLandAcquisitionDate" | "isMixedUseHouse" | "transferType">>,
 ): boolean {
   // GB는 토지/건물 2카드로 분리 표시되며 FB 섹션을 렌더하지 않는다(⑤ 조기반환).
   if (asset.assetKind === "general_building") return false;
+  // D2 — 건물 상속·증여 + 토지 매매는 가업상속 의제 취득가액과 함께 쓸 수 없다(엔진 Y1). 입력 칸도 이 술어로 닫는다.
+  if (effectiveBuildingCauseMix(asset)) return false;
   return asset.acquisitionCause === "inheritance";
 }

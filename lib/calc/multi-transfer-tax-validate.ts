@@ -7,6 +7,8 @@ import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-tra
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -144,6 +146,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   }
   if (
     a.acquisitionCause === "inheritance" &&
+    !effectiveBuildingCauseMix(a) && // D2 — 건물 평가액은 건물 파트 취득가액 칸(`buildingAcquisitionPrice`)이 정본이라 신고가액을 요구하지 않는다
     parseAmount(a.publishedValueAtInheritance ?? "0") <= 0
   ) {
     // (b) 다건은 상속세 신고가액(publishedValueAtInheritance)을 취득가액으로 직접 사용.
@@ -164,7 +167,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (isUsageConversionActive(a)) {
     return "비주택→주택 용도변경(소득세법 §95⑤·⑥·영 §154⑤ 단서)은 단건 계산기에서만 지원됩니다.";
   }
-  if (a.usePreHousingDisclosure) {
+  if (phdFlagEffective(a)) { // D2 유효면 PHD 플래그는 무시된다(④·⑧과 같은 술어)
     return MULTI_PHD_UNSUPPORTED_MESSAGE;
   }
   if (a.parcelMode && a.assetKind === "land") {

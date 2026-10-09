@@ -3,6 +3,7 @@
  * MultiTransferFormData → POST /api/calc/transfer/multi → AggregateTransferResult
  */
 
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
@@ -121,9 +122,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
 
   // 취득가 산정방식은 자산-수준 플래그에서 도출 (단건 callTransferTaxAPI와 동일 규칙).
   // 폼-전역 form.acquisitionMethod / form.appraisalValue 는 deprecated — 더 이상 사용하지 않음.
-  const isSalesCase = primary?.isSalesCaseAcquisition === true;
-  const isAppraisal = !isSalesCase && primary?.isAppraisalAcquisition === true;
-  const isEstimated = !isSalesCase && !isAppraisal && (primary?.useEstimatedAcquisition ?? false);
+  // D2(건물 상속·증여 + 토지 매매) — 자산 단위 추계 플래그는 무시한다: 건물은 평가액(실가), 토지 방식은 파트 모드가 정한다(단건 ④·⑧과 같은 술어).
+  const d2Mix = !!primary && !!effectiveBuildingCauseMix(primary);
+  const isSalesCase = !d2Mix && primary?.isSalesCaseAcquisition === true;
+  const isAppraisal = !d2Mix && !isSalesCase && primary?.isAppraisalAcquisition === true;
+  const isEstimated = !d2Mix && !isSalesCase && !isAppraisal && (primary?.useEstimatedAcquisition ?? false);
   const acquisitionCause = primary?.acquisitionCause ?? "purchase";
 
   // ④⑬ 공유 지분율 — 폼 입력은 100% 기준이고 API 변환이 × ratio를 적용한다

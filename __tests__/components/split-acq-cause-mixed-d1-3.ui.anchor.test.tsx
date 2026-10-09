@@ -142,9 +142,11 @@ describe("② 상세명세서 — 산출세액 ※ 한 줄 · 취득가액 파�
     expect(f).toContain("건물(실거래가) 400,000,000");
   });
   it("자산 전체 상속(토지·건물 같은 원인) → 파트 태그 종전 「토지(실거래가)」 — 원인 혼합일 때만 어휘를 바꾼다", () => {
+    // 토지 취득일 = 건물 취득일(같은 상속개시일). 날짜가 다르면 D2 Y8(overlay 부재 + 건물 상속 + 분리 입력)이 던진다 — 계획서 §12 D2-Q5.
     const r = run({
       acquisitionCause: "inheritance",
       decedentAcquisitionDate: D("2000-01-01"),
+      landAcquisitionDate: D("2018-03-02"),
       landAcquisitionCause: undefined,
       landDecedentAcquisitionDate: undefined,
     });

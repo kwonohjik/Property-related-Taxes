@@ -15,6 +15,8 @@ import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mo
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { engineLandOverlay } from "./transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import {
   deriveHousingLandSec164Total,
@@ -42,7 +44,9 @@ export function makeRatioed(ratio: number, fractional: boolean) {
 }
 
 /** 분리 축이 활성인가 — `calcSplitGain` 진입 게이트(transfer-tax-split-gain.ts)와 동일 조건. */
-export function isSplitPayloadActive(primary: AssetForm, isBurdenedGift: boolean): boolean {
+export function isSplitPayloadActive(rawPrimary: AssetForm, isBurdenedGift: boolean): boolean {
+  // 상속·증여 호스트의 화면에 없는 분리 입력(stale)은 보내지 않는다 — `hasStaleSplitInput`(D2 Check 후속).
+  const primary = normalizeBuildingCauseInputs(rawPrimary);
   // ⚠️ 부담부증여 제외 — 엔진이 transferPrice·acquisitionPrice를 §159 안분액으로 override하므로
   //    (transfer-tax-burdened-gift-step.ts) 사용자가 화면에서 보는 계약 총액과 **다른 총액**이 기준이 된다.
   //    그 상태로 토지 양도가액을 직접 입력하면 잔액이 계약총액 기준으로 계산돼 음수가 된다
@@ -57,7 +61,7 @@ export function isSplitPayloadActive(primary: AssetForm, isBurdenedGift: boolean
 
 /** 분리 축 전송 페이로드 — 본체 body에 그대로 spread한다. */
 export function buildSplitPayload(
-  primary: AssetForm,
+  rawPrimary: AssetForm,
   opts: {
     isBurdenedGift: boolean;
     /** §164⑤ PHD 모드 — 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate fallback */
@@ -66,6 +70,8 @@ export function buildSplitPayload(
   },
 ): Record<string, unknown> {
   const { isBurdenedGift, usesPhd, ratioed } = opts;
+  // D2 — 건물 상속·증여 + 토지 매매면 건물 방식은 실가(평가액) 고정. ⑧·⑥과 같은 사본(`withBuildingActualWhenMix`).
+  const primary = normalizeBuildingCauseInputs(rawPrimary);
   const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
   // **별개 취득** — 분리 활성의 부분집합. 취득시점이 실제로 달라 취득가액이 파트별로 실재하는
   // 경우만 true(겸용·selfOwns 강제 분리에서 날짜가 같으면 false).
@@ -264,13 +270,14 @@ export function buildLandStdAtAcquisitionPayload(primary: AssetForm) {
  * ⚠️ 단순 증여의 증여자 취득일은 보내지 않는다(D0 G-8) — §104②2호 통산은 §97의2① 이월과세 자산만이다.
  */
 export function buildLandPartCausePayload(primary: AssetForm): {
-  landAcquisitionCause?: "inheritance" | "gift";
+  landAcquisitionCause?: "inheritance" | "gift" | "purchase";
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
   isPartialAreaTransfer?: true;
 } {
   const cause = effectiveLandAcquisitionCause(primary);
-  if (!cause) return {};
+  // D2 — 건물 상속·증여 + 토지 매매: 엔진에는 overlay `purchase`만 보낸다(토지는 자기 취득일 — 피상속인·§164④ 키는 해당 없음).
+  if (!cause) return engineLandOverlay(primary) === "purchase" ? { landAcquisitionCause: "purchase" } : {};
   return {
     landAcquisitionCause: cause,
     ...(cause === "inheritance" && primary.landDecedentAcquisitionDate

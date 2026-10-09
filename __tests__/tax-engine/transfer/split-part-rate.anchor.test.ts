@@ -450,15 +450,17 @@ describe("G-4 토지 파트 §104② 상속·증여 보유기간 통산", () => 
     ).toThrow("상속·증여로 취득한 토지는 취득가액을 환산취득가");
   });
 
-  it("A-14b(회귀): 토지 취득원인 미제공이면 자산 단위 원인을 그대로 쓴다", () => {
-    const r = run({
-      acquisitionDate: D("2020-01-01"),
-      acquisitionCause: "inheritance",
-      decedentAcquisitionDate: D("2005-01-01"),
-      landAcquisitionDate: D("2025-06-01"),
-    });
-    // 자산 단위 상속 통산이 토지 파트에도 그대로 적용된다(종전 `calcTax` 동작과 동일)
-    expect(r.calculatedTax).toBe(191_490_000);
+  it("A-14b [전환 D2 · Y8]: 토지 취득원인 미제공 + 건물 상속 + 분리 입력(토지 취득일 ≠ 건물 취득일) → 던진다", () => {
+    // 종전: 자산 단위 상속 통산이 토지 파트에도 그대로 적용되어 191,490,000(매매 토지를 상속 토지로 읽은 침묵 과소 —
+    //   같은 시드의 route anchor D2-B3: 238,500,000 → 133,060,000). 계획서 §12 D2-Q5로 ⑫·엔진이 막는다.
+    expect(() =>
+      run({
+        acquisitionDate: D("2020-01-01"),
+        acquisitionCause: "inheritance",
+        decedentAcquisitionDate: D("2005-01-01"),
+        landAcquisitionDate: D("2025-06-01"),
+      }),
+    ).toThrow("토지 취득원인이 없습니다");
   });
 });
 
