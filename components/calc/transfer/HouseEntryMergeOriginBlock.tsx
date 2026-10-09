@@ -31,8 +31,9 @@ export function HouseEntryMergeOriginBlock({
   context,
 }: Props) {
   const side = mergeHouseSideOf(house, context);
-  // D4 — 혼인 후 동거봉양 합가(이중 합가)면 「합가 후 취득」 기준일은 동거봉양 합가일이다.
+  // D4 — 혼인·동거봉양 이중 합가면 「합가 후 취득」 기준일은 나중에 합친 날이다(혼인이 먼저면 동거봉양 합가일).
   const isDouble = context.secondMergeDate !== undefined;
+  const secondEvent = context.kind === "marriage" ? "동거봉양 합가" : "혼인";
   const event = isDouble ? "혼인·동거봉양 합가" : context.kind === "marriage" ? "혼인" : "합가";
   // 받침 유무로 조사가 갈린다 — 「혼인으로」 · 「합가로」.
   const byEvent = context.kind === "marriage" && !isDouble ? "혼인으로" : "합가로";
@@ -49,7 +50,7 @@ export function HouseEntryMergeOriginBlock({
       >
         {side === "after_merge" ? (
           <p className="text-sm" data-testid="house-merge-origin-after">
-            {isDouble ? "동거봉양 합가" : event}일({afterDate}) 이후에 취득한 주택입니다 — {byEvent}{" "}
+            {isDouble ? secondEvent : event}일({afterDate}) 이후에 취득한 주택입니다 — {byEvent}{" "}
             들어온 주택이 아니라 {event} 후 새로 취득한 주택으로 봅니다.
           </p>
         ) : (
@@ -57,7 +58,7 @@ export function HouseEntryMergeOriginBlock({
             <p className="text-caption text-muted-foreground">
               {isDouble ? (
                 <>
-                  혼인 후 동거봉양 합가 특례는 양도자·배우자·동거봉양으로 합친 가족이 <b>각각 1주택</b>을 갖고
+                  혼인·동거봉양 이중 합가 특례는 양도자·배우자·동거봉양으로 합친 가족이 <b>각각 1주택</b>을 갖고
                   있다가 합가로 3주택이 된 경우에 적용됩니다. 이 주택을 합가 전에 누가 보유했는지 고르세요.
                 </>
               ) : (
@@ -96,7 +97,10 @@ export function HouseEntryMergeOriginBlock({
                       {
                         value: "second_merge_side" as const,
                         label: mergeSideLabel("second_merge_side", context.kind),
-                        description: "동거봉양으로 합친 직계존속이 합가 전부터 보유하던 주택",
+                        description:
+                          context.kind === "marriage"
+                            ? "동거봉양으로 합친 직계존속이 합가 전부터 보유하던 주택"
+                            : "배우자가 혼인 전부터 보유하던 주택",
                         testId: "merge-origin-second",
                       },
                     ]

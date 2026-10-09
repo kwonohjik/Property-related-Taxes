@@ -179,11 +179,8 @@ export function resolveDeemedOneHouseBy155(
     return "temporary_two_house";
   }
   // §155④⑤ 합가 — 비과세 E-3.5와 **같은 술어**다(중과가 따로 판정하면 두 경로가 갈린다).
-  //   D4 혼인 후 동거봉양 3주택도 비과세 E-3.5와 같은 순서로 본다(`checkExemption` — merge → 중첩 → D4).
-  return (
-    resolveMergeDeeming(input) ??
-    (resolveMarriageThenParentalCareDeeming(input) ? "marriage_then_parental_care" : undefined)
-  );
+  //   D4 이중 합가 3주택도 비과세 E-3.5와 같은 순서로 본다(`checkExemption` — merge → 중첩 → D4).
+  return resolveMergeDeeming(input) ?? (resolveDoubleMergeDeeming(input) ? "double_merge" : undefined);
 }
 
 /**
@@ -308,34 +305,50 @@ function mergeOverlapTwoHouseHolds(
   return evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall;
 }
 
+/** 이중 합가의 순서 — 먼저 합친 쪽(2주택이 된 합가)과 나중에 합친 쪽(3주택이 된 합가). 같은 날이면 혼인을 먼저 본다. */
+export type DoubleMergeOrder = {
+  first: "marriage" | "parental_care";
+  firstDate: Date;
+  secondDate: Date;
+};
+
+export function doubleMergeOrderOf(input: Pick<MergeDeemingReqInput, "marriageMerge" | "parentalCareMerge">): DoubleMergeOrder | undefined {
+  const marriageDate = input.marriageMerge?.marriageDate;
+  const parentalCareMergeDate = input.parentalCareMerge?.mergeDate;
+  if (!marriageDate || !parentalCareMergeDate) return undefined;
+  return marriageDate.getTime() <= parentalCareMergeDate.getTime()
+    ? { first: "marriage", firstDate: marriageDate, secondDate: parentalCareMergeDate }
+    : { first: "parental_care", firstDate: parentalCareMergeDate, secondDate: marriageDate };
+}
+
 /**
- * D4 — **혼인 후 동거봉양 합가**로 3주택이 된 경우의 1세대1주택 의제 (서면인터넷방문상담4팀-598, 2008.3.10.).
+ * D4 — **혼인·동거봉양 이중 합가**로 3주택이 된 경우의 1세대1주택 의제 (서면인터넷방문상담4팀-598, 2008.3.10.).
  *
  * > 1주택(A)을 보유한 자가 1주택을 보유한 자와 혼인함으로써 1세대가 2주택을 보유한 상태에서 1주택을 보유하고 있는
  * > 60세 이상의 직계존속을 동거봉양하기 위하여 세대를 합침으로써 1세대가 3주택을 보유하게 되는 경우 혼인한 날부터
  * > 2년 이내에 양도하는 A주택은 「소득세법 시행령」 제154조 제1항 규정을 적용받을 수 있습니다.
  *
- * 🔑 **혼인 → 동거봉양 순서만** 인정한다(2026-10-06 사용자 결정 — 반대 순서를 인정한 해석은 확인되지 않았다).
- *    기한은 **혼인일** 기준(현행 혼인 기한 — `resolveMergeExemptionYears`; 회신 당시 2년은 연혁에 없다).
+ * 🔑 **두 순서 모두** 인정한다(2026-10-09 사용자 결정 — 종전 2026-10-06 「혼인 → 동거봉양만」을 바꿨다). 반대 순서
+ *    (동거봉양 합가 → 혼인)를 다룬 해석은 확인되지 않았고 598을 대칭으로 옮긴 것이다.
+ * 🔑 기한은 **먼저 합친 날**부터 그 합가의 기한(598이 혼인일 · 혼인 기한을 쓴 것과 대칭 — `resolveMergeExemptionYears`;
+ *    회신 당시 2년은 연혁에 없다). 양도 주택은 먼저 합친 날 이전 취득, 양도는 나중에 합친 날 이후.
  * 🔑 3주택까지만이고, §155②③ 상속주택 제외가 겹치면 세 특례라 성립하지 않는다(`inheritedHouseExclusionCount`).
  * 🔑 구성은 `resolveDoubleMergeComposition`이 본다 — 「모름」은 불성립(holds만 인정 — 종전 동작이 없는 새 갈래다).
  */
-export function resolveMarriageThenParentalCareDeeming(input: MergeDeemingReqInput): boolean {
-  const marriageDate = input.marriageMerge?.marriageDate;
-  const parentalCareMergeDate = input.parentalCareMerge?.mergeDate;
-  if (!marriageDate || !parentalCareMergeDate) return false;
-  if (marriageDate.getTime() > parentalCareMergeDate.getTime()) return false;
+export function resolveDoubleMergeDeeming(input: MergeDeemingReqInput): boolean {
+  const order = doubleMergeOrderOf(input);
+  if (!order) return false;
   if (input.householdHousingCount !== 3 || (input.inheritedHouseExclusionCount ?? 0) > 0) return false;
   if (input.isFirstTransferredInMerge !== true) return false;
-  if (input.transferDate < parentalCareMergeDate || input.acquisitionDate > marriageDate) return false;
-  const years = resolveMergeExemptionYears("marriage", input.transferDate);
-  if (!isWithinDeadline(marriageDate, years, input.transferDate)) return false;
+  if (input.transferDate < order.secondDate || input.acquisitionDate > order.firstDate) return false;
+  const years = resolveMergeExemptionYears(order.first, input.transferDate);
+  if (!isWithinDeadline(order.firstDate, years, input.transferDate)) return false;
   const composition = resolveDoubleMergeComposition({
     householdHousingCount: input.householdHousingCount,
     houses: input.houses,
     sellingHouseId: input.sellingHouseId,
-    marriageDate,
-    parentalCareMergeDate,
+    firstMergeDate: order.firstDate,
+    secondMergeDate: order.secondDate,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
     knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noRosterInputPath: input.noMergeRosterInputPath,

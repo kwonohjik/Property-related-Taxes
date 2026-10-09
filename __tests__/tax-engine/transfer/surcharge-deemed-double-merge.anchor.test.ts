@@ -1,5 +1,5 @@
 /**
- * D4 이중 합가(혼인 후 동거봉양 합가 3주택 — 서면인터넷방문상담4팀-598)의 다주택 중과 배제 — 영 §167의3①13호.
+ * D4 이중 합가(혼인·동거봉양 합가 3주택 — 서면인터넷방문상담4팀-598 · 역순은 대칭)의 다주택 중과 배제 — 영 §167의3①13호.
  *
  * 13호: 「제155조 또는 「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로 보거나 1세대 1주택으로
  * 보아 제154조제1항이 적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택」. 비과세(E-3.5)가 D4로 1세대1주택으로 보아
@@ -8,8 +8,9 @@
  *
  * | # | 사례 | 기대 |
  * |---|---|---|
- * | S-1 | 혼인 2019 → 동거봉양 2020 · 강남 고가주택 양도(2026-06-15) | 부분 과세 · 중과 배제(13호) · 의제 근거 `marriage_then_parental_care` |
- * | S-2 | 역순(동거봉양 먼저) — 짝 | 의제 없음 · 중과 · 「중첩이 성립하지 않았다」 경고 |
+ * | S-1 | 혼인 2019 → 동거봉양 2020 · 강남 고가주택 양도(2026-06-15) | 부분 과세 · 중과 배제(13호) · 의제 근거 `double_merge` |
+ * | S-2 | 역순(동거봉양 2018 → 혼인 2019 — 2026-10-09 인정) | 부분 과세 · 중과 배제 · 동거봉양 합가로 분류 |
+ * | S-4 | 짝 — 배우자 쪽 2채(구성 불일치) | 의제 없음 · 중과 · 「중첩이 성립하지 않았다」 경고 |
  * | S-3 | 부모 쪽 주택이 지방 3억 이하(중과 주택 수 불산입 — §167의3①1호)라 중과 주택 수 2 | 15호(§167의10①15호)로 배제 |
  */
 import { describe, it, expect } from "vitest";
@@ -38,8 +39,14 @@ const h = (id: string, acq: string, extra: Partial<HouseInfo> = {}): HouseInfo =
 const rates = makeMockRatesWithHouseEngine();
 
 const MERGE_WARNING = "3주택 이상 세대의 혼인·동거봉양 합가 특례";
+/** 부모 주택도 배우자 쪽으로 — 배우자 혼인 전 2채(E128-era-spouse2와 같은 최소쌍) */
+const mismatch = () => input(undefined, { mergeOrigin: "counterpart_side" });
 
-const input = (parentalCareMergeDate = "2020-01-15", parents: Partial<HouseInfo> = {}): TransferTaxInput =>
+const input = (
+  parentalCareMergeDate = "2020-01-15",
+  parents: Partial<HouseInfo> = {},
+  spouse: Partial<HouseInfo> = {},
+): TransferTaxInput =>
   baseTransferInput({
     propertyType: "housing",
     isOneHousehold: true,
@@ -53,7 +60,7 @@ const input = (parentalCareMergeDate = "2020-01-15", parents: Partial<HouseInfo>
     residencePeriodMonths: 60,
     houses: [
       h("selling", "2015-04-01"),
-      h("spouse", "2014-02-01", { mergeOrigin: "counterpart_side" }),
+      h("spouse", "2014-02-01", { mergeOrigin: "counterpart_side", ...spouse }),
       h("parents", "2005-01-01", { mergeOrigin: "second_merge_side", ...parents }),
     ],
     sellingHouseId: "selling",
@@ -64,7 +71,7 @@ const input = (parentalCareMergeDate = "2020-01-15", parents: Partial<HouseInfo>
 
 describe("D4 이중 합가 — §167의3①13호 중과 배제", () => {
   it("S-1 1세대1주택으로 보아 12억 초과분만 과세 → 중과 배제", () => {
-    expect(resolveSurchargeDeemedOneHouse(input(), parseRatesFromMap(rates))).toBe("marriage_then_parental_care");
+    expect(resolveSurchargeDeemedOneHouse(input(), parseRatesFromMap(rates))).toBe("double_merge");
     const r = calculateTransferTax(input(), rates);
     // 12억 이하분 비과세 · 초과분 과세(고가주택)
     expect(r.isExempt).toBe(false);
@@ -74,14 +81,27 @@ describe("D4 이중 합가 — §167의3①13호 중과 배제", () => {
     expect(reasons.map((e) => e.detail).join(" ")).toContain("서면인터넷방문상담4팀-598");
     expect(reasons.map((e) => e.detail).join(" ")).toContain("§167의3①13호");
     expect(reasons[0]?.type).toBe("marriage_merge");
-    // 기본세율(누진) — 짝(S-2)의 중과세율보다 낮다
-    expect(r.appliedRate).toBeLessThan(calculateTransferTax(input("2018-06-01"), rates).appliedRate);
+    // 기본세율(누진) — 짝(S-4)의 중과세율보다 낮다
+    expect(r.appliedRate).toBeLessThan(calculateTransferTax(mismatch(), rates).appliedRate);
     expect(r.multiHouseSurchargeDetail?.warnings?.join(" ") ?? "").not.toContain(MERGE_WARNING);
   });
 
-  it("S-2 짝 — 역순(동거봉양이 먼저)이면 의제 없음 · 중과", () => {
-    expect(resolveSurchargeDeemedOneHouse(input("2018-06-01"), parseRatesFromMap(rates))).toBeUndefined();
-    const r = calculateTransferTax(input("2018-06-01"), rates);
+  it("S-2 역순(동거봉양 합가 2018 → 혼인 2019)도 1세대1주택으로 보아 12억 초과분만 과세 → 중과 배제", () => {
+    // 역순 구성 — 합친 가족(부모)이 먼저 합친 쪽, 배우자가 나중에 합친 쪽
+    const rev = input("2018-06-01", { mergeOrigin: "counterpart_side" }, { mergeOrigin: "second_merge_side" });
+    expect(resolveSurchargeDeemedOneHouse(rev, parseRatesFromMap(rates))).toBe("double_merge");
+    const r = calculateTransferTax(rev, rates);
+    expect(r.exemptReason).toContain("동거봉양 합가 후 혼인 합가");
+    expect(r.exemptReason).toContain("고가주택");
+    const reasons = r.multiHouseSurchargeDetail?.exclusionReasons ?? [];
+    expect(reasons[0]?.type).toBe("parental_care_merge");
+    expect(reasons.map((e) => e.detail).join(" ")).toContain("동거봉양 합가일(2018-06-01)");
+    expect(r.appliedRate).toBeLessThan(0.75);
+  });
+
+  it("S-4 짝 — 배우자 쪽 2채(구성 불일치)면 의제 없음 · 중과 · 경고", () => {
+    expect(resolveSurchargeDeemedOneHouse(mismatch(), parseRatesFromMap(rates))).toBeUndefined();
+    const r = calculateTransferTax(mismatch(), rates);
     expect(r.multiHouseSurchargeDetail?.exclusionReasons ?? []).toHaveLength(0);
     expect(r.appliedRate).toBe(0.75); // 기본 최고 45% + 3주택 중과 30%p
     expect(r.multiHouseSurchargeDetail?.warnings?.join(" ") ?? "").toContain(MERGE_WARNING);

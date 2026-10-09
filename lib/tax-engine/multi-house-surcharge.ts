@@ -266,7 +266,7 @@ export function determineMultiHouseSurcharge(
     input.deemedOneHouseBy155 === "parental_care_merge_overlap" ||
     input.deemedOneHouseBy155 === "marriage_merge" ||
     input.deemedOneHouseBy155 === "parental_care_merge" ||
-    input.deemedOneHouseBy155 === "marriage_then_parental_care";
+    input.deemedOneHouseBy155 === "double_merge";
   if (effectiveHouseCount >= 3 && !mergeDeemed && (input.marriageMerge || input.parentalCareMerge)) {
     warnings.push(
       `3주택 이상 세대의 혼인·동거봉양 합가 특례 — 일시적 2주택(§155①)과 겹쳐 1세대1주택 의제가 성립하는 경우에만 중과가 배제됩니다(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS}). 이 계산에는 그 중첩이 성립하지 않았습니다`,

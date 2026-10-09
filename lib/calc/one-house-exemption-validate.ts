@@ -135,18 +135,18 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   const errors: Errors = [];
 
   // 합가 칸은 ③ 이 화면에 있다 — 노출 게이트(`judgmentMergeInputVisible`)와 같은 조건에서만 경고한다.
-  // D4 — 혼인 → 동거봉양 순서는 이중 합가(3주택) 특례 입력이라 경고하지 않는다(서면인터넷방문상담4팀-598).
-  //   역순만 경고한다 — 그 순서의 3주택을 인정한 해석이 확인되지 않았다(엔진도 불성립 + 확인 필요).
+  // D4 — 혼인·동거봉양 이중 합가(3주택)는 두 순서 모두 특례 입력이라 경고하지 않는다(2026-10-09 — 역순 인정).
+  //   3주택이 아니면 두 합가는 각각 별개 특례다 — 순서와 무관하게 해당하는 쪽만 남기도록 경고한다.
   if (
     judgmentMergeInputVisible(form) &&
     form.marriageDate &&
     form.parentalCareMergeDate &&
-    form.parentalCareMergeDate < form.marriageDate
+    deriveJudgmentHouseCount(form) !== 3
   ) {
     errors.push(
       warn(
         "marriageDate",
-        "동거봉양 합가 후 혼인한 순서입니다 — 3주택이면 이 순서를 인정한 해석이 확인되지 않아 합가 특례를 불성립으로 판정합니다(확인 필요). 2주택이면 §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요.",
+        "혼인일과 동거봉양 합가일을 모두 입력했습니다 — 두 합가가 겹친 특례는 3주택일 때만 적용됩니다. 3주택이 아니면 §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요.",
       ),
     );
   }
