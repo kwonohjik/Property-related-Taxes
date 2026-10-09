@@ -14,6 +14,14 @@
  * 별도세대 상속은 상속개시일 그대로다. 그 경우를 정면으로 다룬 해석을 확보하지 못했다 — 서면-2026-법규재산-0795
  * (2026.6.15.)는 같은 사실관계지만 분양권이 주택으로 완공된 뒤의 §155② 질의다. 피상속인 취득일이 2021.1.1. 전이면
  * 확인 필요로 밝힌다(`inheritedPresaleRightSeparateHouseholdUnverified` — 사용자 결정 2026-10-09).
+ *
+ * ## §156의3②·③ 기한도 같은 날부터
+ *
+ * 동일세대 상속 분양권은 「종전주택 취득 후 1년」·「분양권 취득일부터 3년」도 피상속인 취득일부터 센다
+ * (`resolveAcquiredRightTiming` · 3년 경과 예외 칸 노출 `rightThreeYearExceptionVisible`). 동일세대 안의 상속은 새로운
+ * 취득이 아니라 상속개시일을 신규주택 취득일로 볼 수 없다고 한 사전-2023-법규재산-0464(2023.8.23. — 입주권 · §155①)와
+ * 1033의 논리를 분양권에 옮긴 것이다(사용자 결정 2026-10-09). 분양권을 직접 다룬 해석은 미확보라, 상속개시일로 세면
+ * 예외가 성립하는 경우에만 확인 필요를 얹는다(`INHERITED_PRESALE_RIGHT_TIMING_START_NOTE`).
  */
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 

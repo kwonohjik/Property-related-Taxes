@@ -474,8 +474,8 @@ export interface PresaleRight {
   parentalCareMergeInheritedRight?: boolean;
   /**
    * 상속받은 **분양권** — 피상속인이 그 분양권을 취득한 날(`acquisitionDate`는 상속개시일).
-   * 동일세대 상속이면 §89②·§104⑦의 2021.1.1. 적용례를 이 날로 본다(재산세제과-1033 —
-   * `presale-right-definition-date.ts`). 별도세대면 판정은 상속개시일 그대로 + 확인 필요.
+   * 동일세대 상속이면 §89②·§104⑦의 2021.1.1. 적용례와 §156의3②·③ 기한(1년·3년)을 이 날로 본다
+   * (재산세제과-1033 · 사전-2023-법규재산-0464 — `presale-right-definition-date.ts`). 별도세대면 상속개시일 그대로 + 확인 필요.
    */
   decedentAcquisitionDate?: Date;
 }
