@@ -90,6 +90,7 @@ import {
 } from "./transfer-tax-exemption-requirements";
 import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
 import { resolve1562Clause3Years } from "./data/article-156-2-completion-era";
+import { presaleRightDefinitionAcquisitionDate } from "./presale-right-definition-date";
 import {
   INHERITANCE_GENERAL_HOUSE_HELD_START,
   isDecedentGiftExclusionApplicable,
@@ -209,7 +210,8 @@ export type Article89Clause2Input = Pick<
 function isClause2Right(right: PresaleRight, presaleRightStartDate: Date | undefined): boolean {
   if (right.type === "redevelopment_right") return isClause2RedevelopmentRight(right);
   if (presaleRightStartDate === undefined) return false;
-  return right.acquisitionDate >= presaleRightStartDate;
+  // 상속 분양권은 동일세대면 피상속인 취득일 — §104⑦과 같은 leaf(부칙 제4조가 두 축을 한 문장으로 정한다).
+  return presaleRightDefinitionAcquisitionDate(right) >= presaleRightStartDate;
 }
 
 /**

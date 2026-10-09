@@ -30,6 +30,7 @@ import { validateUsageConversion } from "./transfer-tax-validate-usage-conversio
 import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
 import { memberOriginErrors } from "./right-member-origin-scope";
 import { originalMemberFactErrors } from "./right-member-origin-scope";
+import { inheritedPresaleRightFactErrors } from "./inherited-presale-right-facts";
 import {
   judgmentHouseCountExclusionReductions,
   judgmentLegacyCountExclusionCount,
@@ -251,6 +252,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     for (const e of memberOriginErrors(form.presaleRights ?? [])) errors.push(err(e.field, e.message));
     for (const e of originalMemberFactErrors(form.presaleRights ?? [], form.transferDate)) errors.push(err(e.field, e.message));
   }
+  // 상속 분양권 피상속인 취득일 — ④가 싣는 행이면 늘(§89②·§104⑦ 공용 날짜라 양도 자산 게이트가 없다).
+  for (const e of inheritedPresaleRightFactErrors(form.presaleRights ?? [])) errors.push(err(e.field, e.message));
 
   /**
    * §89② 3년 초과 예외 — 필수 입력 (P6-a에서 계산기 ⑧에서 **이관**).

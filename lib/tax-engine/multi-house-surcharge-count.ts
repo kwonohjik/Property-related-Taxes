@@ -23,6 +23,7 @@ import {
 } from "./rental-article/rules";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { passesRankingGate } from "./transfer-inheritance-exclusion";
+import { presaleRightDefinitionAcquisitionDate } from "./presale-right-definition-date";
 import type { SharedRentalArticle } from "./rental-article/types";
 import type {
   RentalHousingType,
@@ -517,7 +518,8 @@ export function taxIncentiveRentalAptDeadlineConfirmReasons(
  */
 export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Date): boolean {
   // 분양권 전용 — §88 10호 정의 신설 적용례. 조합원입주권은 그 이전부터 산입 요소였다(위 주석).
-  if (right.type === "presale_right" && right.acquisitionDate < presaleStartDate) return false;
+  // 상속 분양권은 동일세대면 피상속인 취득일 — §89②와 같은 leaf(`presale-right-definition-date.ts`).
+  if (right.type === "presale_right" && presaleRightDefinitionAcquisitionDate(right) < presaleStartDate) return false;
   const rc = right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE");
   if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) return false;
   return true;

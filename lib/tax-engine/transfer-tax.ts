@@ -45,6 +45,7 @@ import {
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
+import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID } from "./one-house/pending";
 import { DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX } from "./one-house/designated-district-undeclared";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
@@ -262,7 +263,12 @@ export function calculateTransferTax(
   // 입력 경로가 없는 연혁 분기(OH-22·OH-38·OH-01)의 판정 보류 — 판정 메뉴와 같은 문장을 낸다.
   for (const u of exemptionResult.undetermined) {
     // 지정 지구 미선언(확인 필요)도 판정 메뉴와 같은 문장으로 알린다.
-    if (ERA_UNDETERMINED_IDS.has(u.id) || u.id.startsWith(DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX)) {
+    if (
+      ERA_UNDETERMINED_IDS.has(u.id) ||
+      u.id.startsWith(DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX) ||
+      // 별도세대 상속 분양권(피상속인 취득일 2021.1.1. 전) — 판정 메뉴와 같은 확인 필요
+      u.id === INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID
+    ) {
       warnings.push(u.reason);
     }
   }

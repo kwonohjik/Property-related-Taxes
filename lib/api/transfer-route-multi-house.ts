@@ -174,6 +174,7 @@ export function mapPresaleRightsToEngine(
     decedentOwnedOtherRightTypeAtDeath: r.decedentOwnedOtherRightTypeAtDeath,
     decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
     parentalCareMergeInheritedRight: r.parentalCareMergeInheritedRight,
+    decedentAcquisitionDate: toOptionalDate(r.decedentAcquisitionDate),
   }));
 }
 

@@ -177,7 +177,9 @@ export function PresaleRightsSection({
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">
                   {r.type !== "redevelopment_right"
-                    ? "취득일"
+                    ? r.isInherited
+                      ? "취득일(상속개시일)"
+                      : "취득일"
                     : r.memberOrigin === "original_house"
                       ? "기존주택 취득일"
                       : r.memberOrigin === "original_non_house"
@@ -389,6 +391,28 @@ export function PresaleRightsSection({
                       }
                       title="동거봉양 합가 전부터 보유하던 주택이 전환된 것"
                     />
+                  )}
+                  {/*
+                    상속 분양권 — §89②·§104⑦의 2021.1.1. 적용례(법률 제17477호 부칙 제4조). 동일세대 상속이면 이 날로
+                    본다(재산세제과-1033). 별도세대는 상속개시일로 판정하고 확인 필요(엔진 `presale-right-definition-date.ts`).
+                  */}
+                  {r.type === "presale_right" && (
+                    <div className="space-y-1">
+                      <span className="block text-caption text-muted-foreground font-medium">
+                        피상속인이 분양권을 취득한 날
+                      </span>
+                      <DateInput
+                        data-testid={`presale-decedent-acquisition-date-${idx}`}
+                        data-field={`presaleRights.${idx}.decedentAcquisitionDate`}
+                        value={r.decedentAcquisitionDate ?? ""}
+                        onChange={(v) => update(r.id, { decedentAcquisitionDate: v })}
+                      />
+                      <span className="block text-caption text-muted-foreground">
+                        2020.12.31. 이전에 취득한 분양권을 상속개시 당시 동일세대원이 상속받았다면 주택 수에 넣지
+                        않습니다(기획재정부 재산세제과-1033). 별도세대에서 상속받았다면 상속개시일로 판정하고 확인이
+                        필요하다고 표시합니다.
+                      </span>
+                    </div>
                   )}
                 </div>
               )}

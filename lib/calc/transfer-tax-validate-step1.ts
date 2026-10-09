@@ -11,6 +11,7 @@ import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { memberOriginErrors } from "./right-member-origin-scope";
 import { originalMemberFactErrors } from "./right-member-origin-scope";
+import { inheritedPresaleRightFactErrors } from "./inherited-presale-right-facts";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
@@ -270,6 +271,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     // 기존주택 원조합원 §155①2호 단서(기존 임차인) 모순 — ⑤와 같은 게이트(`originalMemberMoveInRelevant`)
     for (const e of originalMemberFactErrors(presaleRights, form.transferDate)) issues.push({ step, ...e });
   }
+  // 상속 분양권 피상속인 취득일 — ④가 싣는 행이면 늘(§89②·§104⑦ 공용 날짜 — 위 `isHousingLike` 목록과 같은 범위).
+  for (const e of inheritedPresaleRightFactErrors(presaleRights)) issues.push({ step, ...e });
 
   /**
    * ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 입력(ON) 시 목별 필수 입력.
