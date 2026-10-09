@@ -12,6 +12,8 @@ import {
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import {
+  splitAcqBasisFormula,
+  splitAcqBasisView,
   splitAcqModeLabel,
   splitCauseLabel,
   splitRateBasisNote,
@@ -175,6 +177,15 @@ export function TransferSplitSection({ r }: { r: R }) {
               <Text style={{ ...s.val, flex: 1 }}>{cell("land", (p) => fmt(p.acquisitionDeducted))}</Text>
               <Text style={{ ...s.val, flex: 1 }}>{cell("building", (p) => fmt(p.acquisitionDeducted))}</Text>
             </View>
+            {/* D1-4 — 영 §163⑨ 단서 1호 비교(평가액 vs 영 §164④ 가액)가 적용된 토지 파트: 화면 카드와 같은 문장. */}
+            {summary.parts.map((p) => {
+              const basis = splitAcqBasisView(p);
+              return basis ? (
+                <View key={`basis-${p.key}`} style={s.row}>
+                  <Text style={{ ...s.lblSub, flex: 1 }}>{`${splitAcqBasisFormula(basis)} — 소득세법 시행령 §163조 제9항 단서 1호`}</Text>
+                </View>
+              ) : null;
+            })}
             {summary.parts.some((p) => p.directExpenses > 0) && (
               <View style={s.row}>
                 <Text style={{ ...s.lbl, flex: 2 }}>자본적지출·양도비 (필요경비)</Text>

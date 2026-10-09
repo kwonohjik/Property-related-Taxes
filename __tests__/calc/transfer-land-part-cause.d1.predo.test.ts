@@ -310,8 +310,9 @@ describe("B. D1-1 전환 — 신축 분기 ⑧이 분리 검증·원인 규칙�
   });
 
   it("B6 Q-7 1984 토지 상속 → ⑧·⑫ 차단 / Q-4 같은 날 → ⑧만 차단(⑫는 계산 — 엔진 값이 원인 없음과 같다, 계획서 §10.2 T-4)", async () => {
+    // D1-4b — 1990 전은 「무조건 차단」이 아니라 ② 입력 완결 요구다: 5칸·면적이 비면 첫 미완 칸(면적)으로 이동, ⑫는 ② 없음 400.
     const pre1990 = base({ landAcquisitionDate: "1984-05-01" });
-    expect(blockedAt(pre1990)).toBe("landAcquisitionDate");
+    expect(blockedAt(pre1990)).toBe("acquisitionArea");
     expect((await run(pre1990)).status).toBe(400);
     const sameDay = base({ landAcquisitionDate: "2020-06-01" });
     expect(blockedAt(sameDay)).toBe("landAcquisitionDate");
@@ -465,11 +466,11 @@ describe("C. D1-2 매매 호스트 개방 (설계 §2·§3·§4·§6.3 · 계획
     expect(r.fieldOf(r.result!)).toBe("landAcquisitionCause");
   });
 
-  it("C7 Q-7 ⑧(매매): 1984 상속 토지 → 토지 취득일 칸 · ⑫ 400", async () => {
+  it("C7 Q-7 ⑧(매매): 1984 상속 토지 + ② 미입력 → 첫 미완 칸(면적) · ⑫ 400", async () => {
     const a = purchase({ landAcquisitionDate: "1984-05-01", landDecedentAcquisitionDate: "1960-01-01" });
     const r = v8(a);
     expect(r.result).toContain("1990.8.30.");
-    expect(r.fieldOf(r.result!)).toBe("landAcquisitionDate");
+    expect(r.fieldOf(r.result!)).toBe("acquisitionArea"); // D1-4b — ② 입력 칸 중 첫 미완 칸
     expect((await run(a)).status).toBe(400);
   });
 

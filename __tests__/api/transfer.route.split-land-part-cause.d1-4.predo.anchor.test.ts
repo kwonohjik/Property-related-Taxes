@@ -130,7 +130,7 @@ describe("A. 현행 차단 기준 (D1-4 구현이 ② 입력 유무로 바꾼다
     expect(propertySchema.safeParse({ ...BASE, ...INH("1988-05-01", 300_000_000), landSec164Value: 350_000_000 }).success).toBe(true);
   });
 
-  it("A-4 ⑧ 직접(D1-4a: 화면에 ② 입력 칸이 없어 5칸이 차 있어도 계속 막는다 — 메시지는 화면 사실)", () => {
+  it("A-4 ⑧ 직접(D1-4b: ② 입력 칸이 생겨 5칸이 비면 첫 미완 칸, 차면 통과)", () => {
     for (const host of ["newConstruction", "purchase"] as const) {
       const asset = {
         ...makeDefaultAsset(1),
@@ -146,10 +146,10 @@ describe("A. 현행 차단 기준 (D1-4 구현이 ② 입력 유무로 바꾼다
       } as AssetForm;
       const msg = validateLandPartCause(asset, "x");
       expect(msg).toContain("1990.8.30.");
-      expect(msg).toContain("이 계산기 화면은");
-      // 5칸을 채워도(②가 파생 가능해도) D1-4a ⑧은 풀지 않는다 — 입력 칸이 D1-4b에 생긴다
+      expect(msg).toContain("토지 면적 칸을 입력하세요");
+      // 5칸을 채우면(② 파생 가능) D1-4b ⑧은 푼다 — ⑫ 짝은 아래 D 절
       const filled = { ...asset, acquisitionArea: "100", pre1990GradeMode: "value", pre1990Grade_current: "50000", pre1990Grade_prev: "40000", pre1990Grade_atAcq: "22500", pre1990PricePerSqm_1990: "7000000" } as AssetForm;
-      expect(validateLandPartCause(filled, "x")).toContain("이 계산기 화면은");
+      expect(validateLandPartCause(filled, "x")).toBeNull();
     }
   });
 
@@ -352,6 +352,6 @@ describe("D. D1-4a 구현 기대값 (Pre-Do todo → 활성)", () => {
     expect(cells).toBe(32);
   });
 
-  it.todo("D1-4b: summarizeSplitGain 통과 + 4뷰(결과 카드·명세서·신고서·PDF) 「취득가액 산정」 행");
-  it.todo("D1-4b: ⑧ 완화 — ②가 파생되면 통과, 5칸 부분입력은 첫 미완 칸으로 이동(⑧ ≡ ⑫ 정확 일치 격자)");
+  // D1-4b: 4뷰 표시는 __tests__/components/split-acq-basis-d1-4b.ui.anchor.test.tsx(실제 엔진 결과)에서 활성.
+  // D1-4b: ⑧ 완화·⑧≡⑫ 128셀 격자는 __tests__/calc/transfer-land-part-cause.d1-4.predo.test.ts A 절에서 활성(2026-10-09).
 });

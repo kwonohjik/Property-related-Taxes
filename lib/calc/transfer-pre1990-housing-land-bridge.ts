@@ -19,6 +19,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
+import { getGradeValue } from "@/lib/tax-engine/data/land-grade-values";
 import { multiplyByArea, multiplyByAreaShare } from "@/lib/tax-engine/area-utils";
 import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
@@ -30,6 +31,18 @@ export function landSec164Applies(asset: AssetForm): boolean {
   return isSec163_9LandProviso(effectiveLandAcquisitionCause(asset), asset.landAcquisitionDate);
 }
 
+/**
+ * ② 면적 — 콤마는 지운다(stale 저장값 방어). ⑤ 카드·⑧ 상태(`sec164LandPartStatus`)와 같은 파싱이어야 카드에 보이는 ②와
+ * ④가 보내는 ②가 갈리지 않는다. 단건 §164④ 경로(`transfer-tax-api-helpers.ts` pre1990Land)와 같은 규약.
+ */
+function sec164AreaSqm(asset: AssetForm): number | undefined {
+  return resolveAcqAreaForStdPrice({
+    areaScenario: asset.areaScenario,
+    acquisitionArea: (asset.acquisitionArea ?? "").replace(/,/g, ""),
+    transferArea: (asset.transferArea ?? "").replace(/,/g, ""),
+  });
+}
+
 /** 면적 입력 방식 「일부 양도」 — 단서 구간에서 차단되는 사실(엔진·⑫·⑧ 공통 leaf 사실). */
 export function isPartialAreaScenario(asset: { areaScenario?: string }): boolean {
   return asset.areaScenario === "partial";
@@ -38,7 +51,7 @@ export function isPartialAreaScenario(asset: { areaScenario?: string }): boolean
 /** 영 §164④ 환산 — 취득시 토지 ㎡당 가액(원, 정수). 단서 구간이 아니거나 5필드·면적이 덜 차면 null. */
 export function deriveHousingLandSec164PerSqm(asset: AssetForm): number | null {
   if (!landSec164Applies(asset)) return null;
-  const area = resolveAcqAreaForStdPrice(asset);
+  const area = sec164AreaSqm(asset);
   if (!area || area <= 0) return null;
 
   const buildGrade = (raw: string | undefined): LandGradeInput | undefined => {
@@ -77,8 +90,29 @@ export function deriveHousingLandSec164PerSqm(asset: AssetForm): number | null {
  */
 export function deriveHousingLandSec164Total(asset: AssetForm): number {
   const perSqm = deriveHousingLandSec164PerSqm(asset);
-  const area = resolveAcqAreaForStdPrice(asset);
+  const area = sec164AreaSqm(asset);
   if (!perSqm || !area) return 0;
   const ratio = getOwnershipRatio(asset);
   return ratio < 1 ? multiplyByAreaShare(perSqm, area, ratio) : multiplyByArea(perSqm, area);
+}
+
+/**
+ * 5칸이 모두 찼는데 ②가 안 나올 때(`deriveHousingLandSec164PerSqm` null) 고칠 **첫 등급 칸**.
+ * 등급번호 모드에서 1 미만(예: 0.5 → 정수부 0)은 등급가액을 구할 수 없다(`Pre1990LandValuationInput`의 「등급 범위 밖」과 같은 판정).
+ * 등급가액 모드는 양수면 항상 계산된다. 해당 칸이 없으면 null.
+ */
+export function invalidSec164GradeField(
+  asset: Pick<AssetForm, "pre1990GradeMode" | "pre1990Grade_current" | "pre1990Grade_prev" | "pre1990Grade_atAcq">,
+): "pre1990Grade_current" | "pre1990Grade_prev" | "pre1990Grade_atAcq" | null {
+  if (asset.pre1990GradeMode !== "number") return null;
+  for (const k of ["pre1990Grade_current", "pre1990Grade_prev", "pre1990Grade_atAcq"] as const) {
+    const n = parseFloat((asset[k] ?? "").replace(/,/g, ""));
+    if (!Number.isFinite(n) || n <= 0) continue; // 미입력은 완결 검사가 먼저 잡는다
+    try {
+      getGradeValue(Math.trunc(n));
+    } catch {
+      return k;
+    }
+  }
+  return null;
 }

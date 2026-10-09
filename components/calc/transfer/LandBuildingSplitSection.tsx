@@ -35,6 +35,7 @@ import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-ad
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
 import { ACQ_MODE_OPTIONS, PartAcqInputs } from "./PartAcqInputs";
+import { LandSec164Card } from "./LandSec164Card";
 import { LAND_CAUSE_META } from "./land-cause-meta";
 
 export type { PartAcqMode };
@@ -386,6 +387,10 @@ export function LandBuildingSplitSection(props: Props) {
             actualLabel={props.landCause ? LAND_CAUSE_META[props.landCause].priceLabel : undefined}
             actualHint={props.landCause ? LAND_CAUSE_META[props.landCause].hint : undefined}
           />
+          {/* D1-4b — 1990.8.30. 전 상속·증여 토지: 평가액(①) 바로 아래에서 영 §164④ 가액(②)을 구한다(단서 구간일 때만 렌더). */}
+          {props.landCause && props.asset && props.onAssetChange && (
+            <LandSec164Card asset={props.asset} onChange={props.onAssetChange} transferDate={props.transferDate} />
+          )}
         </div>
       )}
 

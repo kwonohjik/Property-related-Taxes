@@ -39,6 +39,7 @@ import { calcStdPriceMonths, classifySameAdjustmentPeriod, calcSameAdjustmentPer
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { depreciationSupport } from "@/lib/calc/depreciation-scope";
+import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 
 export interface TransferAssetSummaryRow {
   assetId: string;
@@ -429,6 +430,12 @@ export function computeTransferPerAssetSummary(
       acqPrice = dedicatedPreview.acqPrice;
       acqPending = false;
       // 일반건물·상가 프리뷰는 §97③ 감가상각비를 이미 공제한 값이다 — 아래에서 또 빼지 않는다.
+      depAlreadyDeducted = true;
+    } else if (isSingle && singleResult?.splitDetail?.land?.acquisitionBasis) {
+      // D1-4 영 §163⑨ 단서 1호(1990.8.30. 전 상속·증여 토지) — 입력 단계는 max(평가액, 영 §164④ 가액)를 엔진만 알아
+      // pending으로 두고(`separateAcqPartsSum`), 결과가 오면 엔진이 실제로 차감한 파트 합을 쓴다(bundled split 분기와 같은 정본).
+      acqPrice = summarizeSplitGain(singleResult.splitDetail).acquisitionDeducted;
+      acqPending = false;
       depAlreadyDeducted = true;
     } else if (acqPrice === 0 && isSingle) {
       // 단건 fallback 체인 (상속의제 → 계산 결과 환산 → 환산 프리뷰)

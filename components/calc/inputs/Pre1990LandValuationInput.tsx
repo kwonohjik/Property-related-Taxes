@@ -199,8 +199,8 @@ export function Pre1990LandValuationInput({
             <label className="block text-sm font-medium">
               1990.8.30. 개별공시지가 (원/㎡) <span className="text-destructive">*</span>
             </label>
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-40 flex-1">
                 <CurrencyInput
                   label=""
                   data-field="pre1990PricePerSqm_1990"
@@ -332,13 +332,13 @@ function GradeField({
   return (
     <div className="space-y-1" data-field={field}>
       <label className="block text-xs font-medium leading-snug">{label} <span className="text-destructive">*</span></label>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <input
           type="text"
           inputMode="numeric"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-24 rounded-md border border-border bg-background px-3 py-2 text-sm"
+          className="w-full min-w-0 max-w-24 rounded-md border border-border bg-background px-3 py-2 text-sm"
           placeholder={mode === "number" ? "등급 번호" : "등급가액"}
         />
         {/* 등급번호 모드에서만 환산된 등급가액을 옆에 표시 (직접입력 모드는 입력값이 곧 등급가액) */}
