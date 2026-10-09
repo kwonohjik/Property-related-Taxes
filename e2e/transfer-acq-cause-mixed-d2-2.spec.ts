@@ -255,7 +255,7 @@ test.describe("D2-2 — 건물 상속 + 토지 매매 화면", () => {
     await expect(page.getByTestId("building-cause-date-notice")).toContainText("취득일이 같으면");
   });
 
-  test("결과 화면(표시는 D2-3): 건물 이익 + 토지가 개시 전 취득이면 카드 원인·세율 기산일 행과 D2-Q1 고지가 보인다", async ({ page }) => {
+  test("결과 화면(D2-3 표시): 건물 이익 + 토지가 개시 전 취득이면 카드 원인·세율 기산일 행과 D2-Q1 고지가 보인다", async ({ page }) => {
     test.setTimeout(180_000);
     // 건물 취득가 100,000,000(양도 450,000,000 → 이익) — 건물분 차손이면 자산 단위 세율이라 파트 기산일 행·고지가 없다(D1-3 F1)
     await seedWizard(
@@ -267,12 +267,15 @@ test.describe("D2-2 — 건물 상속 + 토지 매매 화면", () => {
     await expect(card(page, "split-card-cause-land")).toHaveText("매매");
     await expect(card(page, "split-card-cause-building")).toHaveText("상속");
     await expect(page.getByText(/건물을 상속받기 전\(2022-01-10\)에 취득한 토지는 상속개시일\(2025-05-01\)부터/).first()).toBeVisible();
-    // 건물 파트 세율 기산일 = 피상속인 취득일(통산) — 토지 파트는 「주택 취득일」 문구(D2-3에서 건물 방향으로 다듬는다)
+    // 건물 파트 세율 기산일 = 피상속인 취득일(통산) — 토지 파트는 건물 상속개시일부터(D2-Q1)
     const b = (await card(page, "split-card-rate-basis-building").textContent()) ?? "";
     expect(b).toContain("2000-01-01");
     expect(b).toContain("피상속인 취득일");
-    // [D2-3에서 뒤집힘] 토지 파트 보조 문구는 아직 「주택 취득일」(= 건물 상속개시일)이라 건물 행의 「피상속인 취득일」과 모순으로 읽힌다.
-    expect(((await card(page, "split-card-rate-basis-land").textContent()) ?? "")).toContain("주택 취득일이 늦어 주택 취득일부터");
+    // D2-3 — 종전 「주택 취득일이 늦어 주택 취득일부터」는 건물 행의 「피상속인 취득일」과 모순으로 읽혔다. 상대편 날짜를 건물 상속개시일로 부른다.
+    const land = (await card(page, "split-card-rate-basis-land").textContent()) ?? "";
+    expect(land).toContain("2025-05-01");
+    expect(land).toContain("취득일 2022-01-10(소득세법 §104② 본문)보다 건물 상속개시일이 늦어 상속개시일부터");
+    expect(land).not.toContain("주택 취득일");
   });
 
   test("Check #1 PHD 자동 ON 잔재: 건물 2003년 상속 → D2 ON → OFF 뒤 계산이 막다른 길 없이 자산 단위 상속으로 통과한다", async ({ page }) => {

@@ -9,13 +9,13 @@
  * 설계: docs/02-design/features/transfer-split-acq-result-display.ui.design.md §3
  */
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
-import { LAND_CAUSE_META } from "@/components/calc/transfer/land-cause-meta";
 import {
   splitAcqModeLabel,
   splitAcqBasisFormula,
   splitAcqBasisView,
   splitCauseLabel,
   splitRateBasisNote,
+  SPLIT_CAUSE_VALUE_LABEL,
   summarizeSplitGain,
   type SplitAcqMode,
   type SplitGainPartSummary,
@@ -37,14 +37,15 @@ export function formatLumpRate(rate: number | undefined): string {
 
 /**
  * 「토지(실거래가)」 — 모드 echo가 없는 구 이력은 라벨 없이 「토지」.
- * 원인이 다르고(`mixedCause`) 그 파트가 상속·증여면 입력 화면 라벨과 같은 어휘로 「토지(상속개시일 평가액)」(D1-3).
+ * 원인이 다르고(`mixedCause`) 그 파트가 상속·증여면 입력 화면 라벨과 같은 어휘로 「토지(상속개시일 평가액)」(D1-3) ·
+ * 건물이 상속·증여면 「건물(상속개시일 평가액)」(D2 — 같은 파트 중립 상수).
  */
 function partTag(p: SplitGainPartSummary, mixedCause: boolean): string {
   // D1-4 — 영 §163⑨ 단서 1호 비교가 적용된 파트는 **채택된 쪽** 이름을 쓴다(② 채택인데 「평가액」이라 적으면 거짓 라벨).
   const basis = splitAcqBasisView(p);
   if (basis) return `${p.label}(${basis.adoptedLabel})`;
   const cause = p.acquisitionCause;
-  if (mixedCause && (cause === "inheritance" || cause === "gift")) return `${p.label}(${LAND_CAUSE_META[cause].valueLabel})`;
+  if (mixedCause && (cause === "inheritance" || cause === "gift")) return `${p.label}(${SPLIT_CAUSE_VALUE_LABEL[cause]})`;
   return p.mode ? `${p.label}(${splitAcqModeLabel(p.mode)})` : p.label;
 }
 
@@ -61,7 +62,7 @@ export function splitCauseDateText(sd: SplitGainResult | undefined): string | un
       const head = `${p.label} ${splitCauseLabel(p.acquisitionCause!)} ${p.acquisitionDate ?? "-"}`;
       // 세율 기산일은 엔진이 파트별로 판정했을 때만(`rateBasisShown`) — 자산 단위 세율이면 계산과 어긋난다.
       if (!s.rateBasisShown) return head;
-      const note = splitRateBasisNote(p);
+      const note = splitRateBasisNote(p, sd.building.acquisitionCause);
       return `${head} · 세율 기산일 ${p.appliedRateBasisDate ?? "-"}${note ? ` (${note})` : ""}`;
     })
     .join(" / ");

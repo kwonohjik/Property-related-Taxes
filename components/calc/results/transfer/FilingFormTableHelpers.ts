@@ -372,7 +372,7 @@ export function buildRows(
           setRoseNote("acquisitionDate", k, cause);
           continue;
         }
-        const note = splitRateBasisNote(sp[k]);
+        const note = splitRateBasisNote(sp[k], sp.building.acquisitionCause);
         setRoseNote("acquisitionDate", k, `${cause} · 세율 판정 기산일 ${sp[k].appliedRateBasisDate}${note ? ` (${note})` : ""}`);
       }
     }

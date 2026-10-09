@@ -466,9 +466,4 @@ describe("C. D2-1 활성", () => {
   });
 });
 
-// ⑦ 표시(C17~C19 종전 todo)는 D2-3 범위 — 세액 불변·표시 전용.
-describe("D2-3 이후 — todo (표시)", () => {
-  it.todo("⑦ summarizeSplitGain: mixedCause(건물 inheritance ≠ 토지 purchase) · 파트 태그 `건물(상속개시일 평가액)` · 토지 `토지(실거래가)` — 4뷰 공통");
-  it.todo("⑦ 세율 기산일 보조 문구: 토지 주택 max 문구의 「주택 취득일」이 건물 상속개시일임을 오독 없이 말한다");
-  it.todo("⑦ 신고서 split-2col: 건물 취득일 = 상속개시일(폼) · 토지 취득일 = echo (원인이 다를 때) · 취득일 칸 각주");
-});
+// ⑦ 표시(C17~C19 종전 todo)는 D2-3에서 `__tests__/components/split-acq-cause-mixed-d2-3.ui.anchor.test.tsx`(4뷰)로 활성화했다.

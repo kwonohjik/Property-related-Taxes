@@ -68,23 +68,39 @@ const RATE_BASIS_RULE: Record<NonNullable<SplitPartResult["rateBasisRule"]>, { l
 };
 
 /**
+ * 주택 `max`의 상대편 날짜 이름 — 건물 파트 원인으로 정한다(D2-3).
+ * 건물이 상속·증여면 그 날짜는 상속개시일·증여일이다(계획서 §12 D2-Q1 — 토지 앵커는 건물의 **취득일**이지
+ * 건물 세율 기산일(피상속인 취득일 통산)이 아니다). 「주택 취득일」이라 쓰면 건물 행의 「피상속인 취득일」과 모순으로 읽힌다.
+ */
+function houseDateName(houseCause: SplitPartCause | undefined): { subject: string; from: string } {
+  if (houseCause === "inheritance") return { subject: "건물 상속개시일", from: "상속개시일" };
+  if (houseCause === "gift") return { subject: "건물 증여일", from: "증여일" };
+  return { subject: "주택 취득일", from: "주택 취득일" };
+}
+
+/**
  * 「세율 기산일」 보조 문구 — 엔진 echo(`rateBasisRule`·두 기산일)를 그대로 읽는다(규칙을 날짜 비교로 재추론하지 않는다).
  * 법정 기산일과 적용 기산일이 다르면 주택 `max`(주택부수토지로서의 보유기간)가 적용된 것이다 — 그 사실을 밝힌다.
- * echo가 없는 구 결과는 `undefined`.
+ * `houseCause`는 건물 파트 echo 원인이다(상대편 날짜의 이름). echo가 없는 구 결과는 `undefined`.
  */
 export function splitRateBasisNote(
   p: Pick<SplitPartResult, "rateBasisRule" | "rateBasisAcquisitionDate" | "appliedRateBasisDate">,
+  houseCause: SplitPartCause | undefined,
 ): string | undefined {
   if (!p.rateBasisRule || !p.appliedRateBasisDate) return undefined;
   const { label, law } = RATE_BASIS_RULE[p.rateBasisRule];
   if (p.rateBasisAcquisitionDate && p.rateBasisAcquisitionDate !== p.appliedRateBasisDate) {
-    return `${label} ${p.rateBasisAcquisitionDate}(${law})보다 주택 취득일이 늦어 주택 취득일부터 — 주택부수토지로서의 보유기간`;
+    const { subject, from } = houseDateName(houseCause);
+    return `${label} ${p.rateBasisAcquisitionDate}(${law})보다 ${subject}이 늦어 ${from}부터 — 주택부수토지로서의 보유기간`;
   }
   return `${label} — ${law}`;
 }
 
-/** ① 가액의 이름 — 입력 화면(`LAND_CAUSE_META.valueLabel`)과 같은 어휘다(사용자가 입력한 단어가 결과에 그대로 나와야 검증이 된다). */
-export const SPLIT_LAND_VALUE_LABEL = { inheritance: "상속개시일 평가액", gift: "증여 신고가액" } as const;
+/**
+ * 상속·증여 파트 가액의 이름 — 토지·건물 공용(파트 방향 중립, D2-3 개명 — 종전 이름은 토지 전용처럼 읽혔다).
+ * 입력 화면(`LAND_CAUSE_META.valueLabel` · `BUILDING_CAUSE_META.priceLabel`)과 같은 어휘다(사용자가 입력한 단어가 결과에 그대로 나와야 검증이 된다).
+ */
+export const SPLIT_CAUSE_VALUE_LABEL = { inheritance: "상속개시일 평가액", gift: "증여 신고가액" } as const;
 
 /** ② 가액의 이름 — 1990.8.30. 전 토지는 개별공시지가가 없어 토지등급으로 환산한다(영 §164④). */
 export const SPLIT_SEC164_VALUE_LABEL = "영 §164④ 가액";
@@ -112,7 +128,7 @@ export function splitAcqBasisView(
 ): SplitAcqBasisView | undefined {
   const b = p.acquisitionBasis;
   if (!b) return undefined;
-  const reportedLabel = p.acquisitionCause === "gift" ? SPLIT_LAND_VALUE_LABEL.gift : SPLIT_LAND_VALUE_LABEL.inheritance;
+  const reportedLabel = p.acquisitionCause === "gift" ? SPLIT_CAUSE_VALUE_LABEL.gift : SPLIT_CAUSE_VALUE_LABEL.inheritance;
   const adoptedReported = b.adopted === "reported";
   return {
     reportedLabel,
