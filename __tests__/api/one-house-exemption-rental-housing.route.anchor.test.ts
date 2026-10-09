@@ -22,6 +22,7 @@ import {
 } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 /** Zod 필수 필드 기본값 — 1주택·5년 보유·5년 거주로 그 자체로는 비과세가 나오는 세팅. */
 const BASE = {
@@ -47,7 +48,7 @@ async function post(over: Record<string, unknown> = {}) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify({ ...BASE, ...over }),
     }),
   );

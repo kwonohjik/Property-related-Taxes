@@ -25,6 +25,7 @@ vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
 import { POST as multiPOST } from "@/app/api/calc/transfer/multi/route";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 /** 명부 행 — UI가 실제로 만드는 모양(필수 boolean 포함 — 빠지면 ⑫가 400). */
 const house = (acquisitionDate: string, over: Partial<HouseEntry> = {}): HouseEntry => ({
@@ -59,7 +60,7 @@ async function judge(h: HouseEntry) {
   const res = await judgmentPOST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(buildOneHouseExemptionApiBody(judgmentForm(h))),
     }),
   );
@@ -132,7 +133,7 @@ describe("RC-2 계산기(다건 route) — 날짜 검증은 계산기에도 적�
     const res = await multiPOST(
       new NextRequest("http://localhost/api/calc/transfer/multi", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+        headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
         body: JSON.stringify({
           taxYear: 2026,
           properties: [

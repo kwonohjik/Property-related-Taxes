@@ -39,6 +39,7 @@ import {
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 import { validateStep2 } from "@/lib/calc/one-house-exemption-validate";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -97,7 +98,7 @@ async function postForm(f: OneHouseJudgmentFormData) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(buildOneHouseExemptionApiBody(f)),
     }),
   );

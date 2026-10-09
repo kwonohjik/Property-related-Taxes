@@ -47,6 +47,7 @@ import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-f
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 const row = (id: string, acquisitionDate: string, over: Partial<HouseEntry> = {}): HouseEntry =>
   ({
@@ -136,7 +137,7 @@ async function runCalc(form: TransferFormData) {
   const res = await CALC_POST(
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(body),
     }),
   );

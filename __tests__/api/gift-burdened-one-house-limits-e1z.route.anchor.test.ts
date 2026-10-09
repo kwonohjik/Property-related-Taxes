@@ -122,7 +122,7 @@ const post = (body: unknown) =>
   SINGLE(
     new NextRequest("http://l/api/calc/transfer", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
   );

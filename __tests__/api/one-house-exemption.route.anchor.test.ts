@@ -22,6 +22,7 @@ import {
 } from "@/lib/tax-engine/one-house/house-count";
 import { resolveInheritedHouseExclusion } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 /**
  * 판정 기준일(오늘)을 고정한다 — route가 이미 지난 「이 날까지 양도」 기한을 빼므로(2026-09-29),
@@ -63,7 +64,7 @@ async function post(over: Record<string, unknown> = {}) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify({ ...BASE, ...over }),
     }),
   );

@@ -59,7 +59,7 @@ async function judge(body: Record<string, unknown>) {
   const res = await POST_JUDGE(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ ...BASE, ...body }),
     }),
   );
