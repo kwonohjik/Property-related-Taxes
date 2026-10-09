@@ -33,7 +33,9 @@ import { sec164AreaSqm } from "./transfer-pre1990-housing-land-bridge";
  * 영 §163⑨ 단서 2호 구간의 **주택**인가 — 유효 D2(건물 상속·증여 + 토지 매매) ∧ 주택 ∧ 건물 취득일 < 2005-04-30.
  * 엔진·⑫와 같은 술어(`isSec163_9BuildingProviso`). 단독·다가구 여부는 보지 않는다(`buildingSec164Open`).
  */
-export function buildingSec164Applies(asset: AssetForm): boolean {
+export function buildingSec164Applies(
+  asset: Parameters<typeof effectiveBuildingCauseMix>[0] & { acquisitionDate?: string },
+): boolean {
   return asset.assetKind === "housing" && isSec163_9BuildingProviso(effectiveBuildingCauseMix(asset), asset.acquisitionDate);
 }
 

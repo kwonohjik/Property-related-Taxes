@@ -166,29 +166,24 @@ export function buildingDatePatch(
   return cause === "inheritance" ? { acquisitionDate: v, inheritanceStartDate: v, inheritanceDate: v } : { acquisitionDate: v };
 }
 
-/** D2 ⑤ 날짜 안내 문구 — 건물 상속개시일·증여일이 영 §163⑨ 단서 2호 구간(< 2005-04-30)일 때(차단은 ⑧·⑫·엔진 Y4 — 같은 술어). */
+/**
+ * D2 ⑤ 날짜 안내 문구 — 주택이 **아닌** 건물의 상속개시일·증여일이 영 §163⑨ 단서 2호 구간(< 2005-04-30)일 때(차단은 ⑧·⑫·엔진 Y4a — 같은 술어).
+ * 주택은 이 안내 대신 건물 평가액 아래 입력 카드(`BuildingSec164Card`)가 비교를 연다(D2-4b).
+ */
 export const BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE =
-  "건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전에 상속·증여받은 건물은 평가액과 영 §164⑤~⑦ 가액 중 많은 금액이 취득가액인데, "
-  + "토지를 따로 매수한 계산에서는 이 비교를 지원하지 않습니다(소득세법 시행령 §163조 제9항 단서 2호) — 개별주택가격 최초공시일(2005.4.30.) 이전 취득은 "
+  "건물 기준시가가 고시되기 전에 상속·증여받은 건물은 평가액과 영 §164⑤~⑦ 가액 중 많은 금액이 취득가액인데, 토지를 따로 매수한 계산에서 "
+  + "이 비교는 단독·다가구주택만 지원합니다(소득세법 시행령 §163조 제9항 단서 2호) — 주택이 아닌 건물은 개별주택가격 최초공시일(2005.4.30.) 이전 취득을 "
   + "보수적으로 모두 계산하지 않습니다. 건물 상속개시일(증여일)을 확인하세요";
 
-/**
- * D2-4a 임시 — ⑧이 단서 2호 구간(2005.4.30. 전 상속·증여 건물, 단독·다가구주택)에서 ② 필수 위반을 말하는 문구. 엔진·⑫는 ②(영 §164⑦ 가액)를
- * 받아 계산하지만 이 화면에는 ② 입력 칸이 없다 — 「입력하세요」가 아니라 **화면 사실**로 말한다(D1-4a 규약). D2-4b가 칸과 함께 삭제한다.
- */
-export const BUILDING_SEC164_SCREEN_MESSAGE =
-  "건물 기준시가(개별주택가격)가 고시되기 전에 상속·증여받은 단독·다가구주택의 건물 취득가액은 상속개시일(증여일) 평가액과 영 §164⑦ 가액의 건물 몫 중 많은 금액인데, "
-  + "이 계산기 화면은 영 §164⑦ 가액 입력을 받지 않아 계산하지 못합니다 (소득세법 시행령 §163조 제9항 단서 2호) — "
-  + "건물 상속개시일(증여일)을 확인하거나 「토지는 다른 원인으로 취득」을 끄세요";
-
-/** D2 유효일 때 입력 중 안내 목록(경계일 전 · 같은 날) — D2가 아니면 빈 배열. ⑧과 같은 술어. */
+/** D2 유효일 때 입력 중 안내 목록(비주택 경계일 전 · 같은 날) — D2가 아니면 빈 배열. ⑧과 같은 술어. */
 export function buildingCauseDateNotices(
   asset: Parameters<typeof landPartCauseSameDay>[0],
 ): string[] {
   const mix = effectiveBuildingCauseMix(asset);
   if (!mix) return [];
   const out: string[] = [];
-  if (isSec163_9BuildingProviso(mix, asset.acquisitionDate)) out.push(BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE);
+  // 주택은 입력 카드가 안내한다(카드 게이트 `buildingSec164Applies`와 짝 — 주택 ∧ 같은 술어).
+  if (asset.assetKind !== "housing" && isSec163_9BuildingProviso(mix, asset.acquisitionDate)) out.push(BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE);
   if (landPartCauseSameDay(asset)) out.push(LAND_CAUSE_SAME_DAY_MESSAGE);
   return out;
 }

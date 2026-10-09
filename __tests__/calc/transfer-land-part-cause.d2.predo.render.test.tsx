@@ -219,8 +219,15 @@ describe("C. D2-2 — 토글 ON 화면 (상속 블록 대체 · 건물 원인 �
   });
 
   it("C6 경계일 전(2003)·같은 날 안내가 날짜 아래에 뜬다 — 긍정 짝: 정상 날짜는 안내 없음", () => {
+    // D2-4b — 주택은 날짜 안내 대신 건물 평가액 아래 입력 카드가 뜬다. 비주택 건물만 종전 안내(범위 밖).
     mount(d2("inheritance", { acquisitionDate: "2003-05-01", landAcquisitionDate: "2002-01-10" }));
+    expect(screen.queryByTestId("building-cause-date-notice")).toBeNull();
+    expect(screen.getByTestId("building-sec164-card")).toBeTruthy();
+    cleanup();
+    mount(d2("inheritance", { assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2002-01-10" }));
     expect(screen.getByTestId("building-cause-date-notice").textContent).toContain("2005.4.30.");
+    expect(screen.getByTestId("building-cause-date-notice").textContent).toContain("단독·다가구주택만");
+    expect(screen.queryByTestId("building-sec164-card")).toBeNull();
     cleanup();
     mount(d2("inheritance", { landAcquisitionDate: "2025-05-01" }));
     expect(screen.getByTestId("building-cause-date-notice").textContent).toContain("취득일이 같으면");

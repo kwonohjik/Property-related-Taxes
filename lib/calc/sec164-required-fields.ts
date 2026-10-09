@@ -54,7 +54,7 @@ interface FieldSpec {
    * 판별 기준은 **입력 위젯이 §164 섹션 밖에도 있는가**다:
    *   · `acquisitionArea` → `CompanionAcquisitionCauseSection`·`CompanionAcqPurchaseBlock` 등 다수
    *   · `cbExclusiveArea`·`cbSharedArea`·`cbLandArea` → `AssetAreaCommercial`(일반 면적 섹션)
-   *   · `inhHouseVal*` → `HouseValuationSection`(§164⑤~⑦ 전용) **뿐** ⇒ 공유 아님
+   *   · `inhHouseVal*` → `HouseValuationSection`(§164⑤~⑦ 전용)·`BuildingSec164Card`(D2-4 §164⑦ 건물 몫 전용) **뿐** ⇒ 공유 아님
    */
   shared?: boolean;
 }
@@ -210,6 +210,28 @@ export function sec164LandPartStatus(asset: AssetForm): Sec164FieldStatus {
       { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
       { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
       amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
+    ]),
+  );
+}
+
+/**
+ * 주택 분리 계산의 **혼합 원인 건물 파트** §164⑦ 건물 몫 (§163⑨ 단서 2호, D2-4) — `deriveBuildingSec164Total`(브리지)과 같은 5필드.
+ *
+ * `sec164LandPartStatus`와 같이 **필수**다(비교를 건너뛴 ① 단독 계산은 하지 않는다). 자산 단위 `sec164HouseStatus`와 달리
+ * 건물 기준시가 2칸도 필수다 — 둘 다 ②의 분자·분모라 비면 ②가 생기지 않는다. 순서가 ⑧ 칸 이동 순서(= 카드 위→아래)다:
+ * 면적 → 최초공시 개별주택가격 → 최초공시 개별공시지가 → 최초공시 건물 기준시가 → 취득 당시 건물 기준시가.
+ * `inhHouseVal*`는 자산 단위 §164⑤~⑦ 위젯과 같은 키다(같은 물리량 — D2 모드에서는 그 위젯이 마운트되지 않는다).
+ * 게이트(단서 구간·단독·다가구 여부)는 호출부 몫이다.
+ */
+export function sec164BuildingPartStatus(asset: AssetForm): Sec164FieldStatus {
+  return merge(
+    "§164⑦",
+    tally(asset, [
+      decimalField("acquisitionArea", "토지 면적", true),
+      amountField("inhHouseValHousePriceAtFirst", "최초 공시된 개별주택가격"),
+      amountField("inhHouseValLandPricePerSqmAtFirst", "최초공시 개별공시지가"),
+      amountField("inhHouseValBuildingStdPriceAtFirst", "최초공시 시점 건물 기준시가"),
+      amountField("inhHouseValBuildingStdPriceAtInheritance", "취득 당시 건물 기준시가"),
     ]),
   );
 }

@@ -37,8 +37,9 @@ import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
-import { BUILDING_SEC164_SCREEN_MESSAGE } from "./transfer-land-part-cause";
 import { buildingHouseKindSent } from "./transfer-building-sec164-bridge";
+import { deriveBuildingSec164Total } from "./transfer-building-sec164-bridge";
+import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
@@ -46,6 +47,7 @@ import { isPartialAreaScenario } from "./transfer-pre1990-housing-land-bridge";
 import { deriveHousingLandSec164Total } from "./transfer-pre1990-housing-land-bridge";
 import { invalidSec164GradeField } from "./transfer-pre1990-housing-land-bridge";
 import { sec164LandPartStatus } from "./sec164-required-fields";
+import { sec164BuildingPartStatus } from "./sec164-required-fields";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -135,6 +137,32 @@ function validateLandSec164Inputs(asset: AssetForm, label: string): string {
   );
 }
 
+const BUILDING_SEC164_TAIL =
+  " — 2005.4.30. 개별주택가격 공시 전에 상속·증여받은 단독·다가구주택 건물은 평가액과 영 §164⑦ 가액의 건물 몫 중 많은 금액이 취득가액입니다 "
+  + "(소득세법 시행령 §163조 제9항 단서 2호)";
+
+/** 단서 2호 구간에서 주택 구분을 고르지 않았을 때(모름 = 불성립 — 단독으로 보지 않는다). 공동주택을 고른 경우는 leaf 문구 그대로. */
+export const BUILDING_HOUSE_KIND_REQUIRED_MESSAGE =
+  "주택 구분(단독·다가구주택 / 공동주택)을 선택하세요 — 단독·다가구주택이면 평가액과 영 §164⑦ 가액의 건물 몫을 비교하고, "
+  + "공동주택은 이 비교를 지원하지 않습니다. 고르지 않으면 단독·다가구주택으로 보지 않습니다 (소득세법 시행령 §163조 제9항 단서 2호)";
+
+/**
+ * D2-4b — 단서 2호 구간에서 ②(영 §164⑦ 가액의 건물 몫) 입력 완결 요구(필수 — D1-4b 토지 `validateLandSec164Inputs`와 같은 모양).
+ * 칸 순서 = 카드 위→아래: 면적 → 최초공시 개별주택가격 → 최초공시 개별공시지가 → 최초공시 건물 기준시가 → 취득 당시 건물 기준시가
+ * → (모두 찼는데 건물 몫이 0원 — 분자가 분모보다 작다) 취득 당시 건물 기준시가 칸.
+ * ④ 브리지(`deriveBuildingSec164Total`)가 ②를 못 만드는 경우를 빠짐없이 덮는다 — ⑧ 통과 ⇒ ④가 ②를 보냄 ⇒ ⑫ 통과.
+ */
+function validateBuildingSec164Inputs(asset: AssetForm, label: string): string {
+  const status = sec164BuildingPartStatus(asset);
+  if (status.missing.length > 0) {
+    return fieldError(status.missingFields[0], `${label}: ${status.missing[0]} 칸을 입력하세요${BUILDING_SEC164_TAIL}`);
+  }
+  return fieldError(
+    "inhHouseValBuildingStdPriceAtInheritance",
+    `${label}: 영 §164⑦ 가액의 건물 몫이 0원으로 계산됩니다 — 최초공시 개별주택가격·기준시가 입력값(원 단위)을 확인하세요${BUILDING_SEC164_TAIL}`,
+  );
+}
+
 /**
  * 토지 파트 취득원인 규칙(D0 — G-1·G-2·G-3). 엔진·⑫와 **같은 leaf**(`collectSplitPartCauseIssues`)에
  * ④가 실제로 보내는 값(유효 원인 — `effectiveLandAcquisitionCause`)을 넣는다.
@@ -177,12 +205,11 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
     //   일부 양도는 ④가 `isPartialAreaTransfer`로 실제로 보낸다(`buildLandPartCausePayload`).
     landSec164Value: deriveHousingLandSec164Total({ ...asset, landAcquisitionDate: landDateSent ?? "" }) || undefined,
     isPartialAreaTransfer: isPartialAreaScenario(asset),
-    // D2-4a — 영 §163⑨ 단서 2호(2005.4.30. 전 상속·증여 건물). 주택 구분은 ④가 실제로 보내는 값(`buildingHouseKindSent`) 그대로.
-    //   ② 사실은 「없음」이다: 이 화면에는 ② 입력 칸이 없다(D2-4b가 브리지 파생값 `deriveBuildingSec164Total`로 교체).
-    //   그래서 이 구간의 ⑧ 통과 셀은 없고 「⑧ 통과 ⇒ ⑫ 200」이 성립한다. 일부 양도·공동주택·비주택은 leaf가 판정한다.
+    // D2-4 — 영 §163⑨ 단서 2호(2005.4.30. 전 상속·증여 건물). 주택 구분·②는 ④가 실제로 보내는 값(`buildingHouseKindSent`·
+    //   `deriveBuildingSec164Total` — 카드 `BuildingSec164Card`가 받는 5칸의 파생) 그대로. 일부 양도·공동주택·비주택은 leaf가 판정한다.
     isHousing: asset.assetKind === "housing",
     buildingHouseKind: buildingHouseKindSent(asset),
-    buildingSec164Value: undefined,
+    buildingSec164Value: deriveBuildingSec164Total(asset) || undefined,
     // D2 — ④가 실제로 보내는 값. 건물 방식은 D2 유효 시 실가 고정, 자산 단위 평가 payload는 D2 유효 시 미전송(= false).
     buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
     buildingAcquisitionDate: asset.acquisitionDate || undefined,
@@ -194,8 +221,13 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
   if (!issue) return null;
   // ② 필수 위반 = 화면 입력 칸(`LandSec164Card` 5칸 + 기본 정보의 토지 면적) 중 첫 미완 칸으로 이동시킨다(엔진 문구는 API 소비자용).
   if (issue.field === "landSec164Value") return validateLandSec164Inputs(asset, label);
-  // D2-4a — ② 필수 위반 = 화면에 ② 입력 칸이 없다는 사실로 말한다(엔진 문구는 API 소비자용). 이동 칸은 건물 취득일(종전 Y4와 같은 칸).
-  if (issue.field === "buildingSec164Value") return fieldError("acquisitionDate", `${label}: ${BUILDING_SEC164_SCREEN_MESSAGE}`);
+  // D2-4b — 단서 2호 ② 필수 위반 = 카드(`BuildingSec164Card`) 5칸 + 기본 정보의 토지 면적 중 첫 미완 칸으로.
+  if (issue.field === "buildingSec164Value") return validateBuildingSec164Inputs(asset, label);
+  // 단서 2호 구간의 주택인데 단독·다가구로 확인되지 않음(leaf Y4d — API 칸은 건물 취득일) → 카드의 주택 구분 칸으로.
+  // 고르지 않았으면 선택을 요구하고, 공동주택을 골랐으면 leaf 문구(지원하지 않는 이유)를 그대로 낸다.
+  if (issue.field === "acquisitionDate" && buildingSec164Applies(asset)) {
+    return fieldError("inheritanceAssetKind", `${label}: ${buildingHouseKindSent(asset) ? issue.message : BUILDING_HOUSE_KIND_REQUIRED_MESSAGE}`);
+  }
   const msg = `${label}: ${issue.message}`;
   // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
   // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.
