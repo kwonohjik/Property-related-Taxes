@@ -173,6 +173,10 @@ describe("W-1 ⑤", () => {
     const onChange = vi.fn();
     render(<PresaleRightsSection rights={[row()]} onChange={onChange} primaryKind="housing" transferDate="2021-02-01" />);
     expect(screen.getByTestId(MOVE_IN)).toBeTruthy();
+    // 멸실로 전입하지 못해도 기한은 그대로다(기준-2025-법규재산-0005) — 엔진은 M-1과 같이 법문대로 본다.
+    expect(screen.getByTestId("original-member-temp-two-house-0").textContent).toContain(
+      "관리처분·멸실로 1년 안에 전입할 수 없게 된 경우에도 이 기한은 늘어나지 않습니다",
+    );
     fireEvent.click(screen.getByTestId("original-member-existing-tenant-0").querySelector("[role=switch]")!);
     expect(onChange).toHaveBeenLastCalledWith([expect.objectContaining({ originalMemberExistingTenant: true })]);
   });
