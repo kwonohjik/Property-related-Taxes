@@ -53,7 +53,8 @@ export function OriginalMemberTempTwoHouseInputs({ row, idx, transferDate, onCha
             />
             <span className="block text-caption text-muted-foreground">
               기존주택 취득일부터 1년 이내에 세대전원이 이사하고 전입신고를 마쳐야 합니다(§155①2호 가목). 취학·근무상
-              형편·질병 요양 등 부득이한 사유로 일부 세대원이 이사하지 못한 경우도 포함됩니다.
+              형편·질병 요양 등 부득이한 사유로 일부 세대원이 이사하지 못한 경우도 포함됩니다. 기존주택이 관리처분·멸실로
+              1년 안에 전입할 수 없게 된 경우에도 이 기한은 늘어나지 않습니다.
             </span>
           </div>
           <ToggleCard
