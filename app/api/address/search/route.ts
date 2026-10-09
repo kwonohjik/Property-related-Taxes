@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { rankAddressResults } from "@/lib/address/rank-address-results";
+import { classifyVworldStatus, vworldErrorMessage } from "@/lib/address/vworld-status";
 
 const VWORLD_URL = "https://api.vworld.kr/req/search";
 
@@ -83,26 +84,44 @@ export async function GET(request: NextRequest) {
 
   // Vworld는 category별 인덱스가 분리돼 있어 도로명·지번을 각각 호출해 병합한다.
   // (도로명만 검색하면 "제주특별자치도 서귀포시 호근동 628-2" 같은 순수 지번주소가 누락됨)
-  const fetchCategory = async (category: "road" | "parcel"): Promise<VworldItem[]> => {
+  //
+  // 실패는 빈 배열로 흡수하지 않고 `failure` 로 돌려준다 — 종전에는 인증키 만료(EXPIRE_KEY)까지
+  // 「검색 결과가 없습니다」로 위장됐다(lib/address/vworld-status.ts).
+  type CategoryFetch = {
+    items: VworldItem[];
+    failure?: { code: "VWORLD_API_ERROR" | "VWORLD_FETCH_FAILED"; message: string };
+  };
+  const fetchCategory = async (category: "road" | "parcel"): Promise<CategoryFetch> => {
     try {
       const r = await fetch(`${VWORLD_URL}?${buildParams(category).toString()}`, {
         headers: { Accept: "application/json", Referer: domain },
         cache: "no-store",
       });
-      if (!r.ok) return [];
+      if (!r.ok) {
+        return { items: [], failure: { code: "VWORLD_FETCH_FAILED", message: `주소 검색 서비스 HTTP ${r.status}` } };
+      }
       const d: VworldResponse = await r.json();
-      if (d.response?.status !== "OK") return [];
-      return d.response?.result?.items ?? [];
-    } catch {
-      return [];
+      const st = classifyVworldStatus(d);
+      if (st.kind === "not_found") return { items: [] };
+      if (st.kind === "error") {
+        return { items: [], failure: { code: "VWORLD_API_ERROR", message: vworldErrorMessage("주소 검색 서비스", st) } };
+      }
+      return { items: d.response?.result?.items ?? [] };
+    } catch (err) {
+      console.error(`[vworld] search ${category} fetch failed:`, err);
+      return { items: [], failure: { code: "VWORLD_FETCH_FAILED", message: "주소 검색 서비스에 연결하지 못했습니다." } };
     }
   };
 
   try {
-    const [roadItems, parcelItems] = await Promise.all([
+    const [road, parcel] = await Promise.all([
       fetchCategory("road"),
       fetchCategory("parcel"),
     ]);
+    const roadItems = road.items;
+    const parcelItems = parcel.items;
+    const failure = road.failure ?? parcel.failure;
+    if (failure) console.error(`[vworld] search failed: ${failure.code} ${failure.message}`);
 
     // PNU(item.id) 기준 dedup — 도로명 결과를 우선 노출.
     const seen = new Set<string>();
@@ -124,6 +143,12 @@ export async function GET(request: NextRequest) {
       lng: item.point?.x ?? "",
       lat: item.point?.y ?? "",
     }));
+
+    // 결과가 하나도 없는데 실패가 있었다면 「없음」이 아니라 「조회 실패」다 — 502 로 원인을 올린다.
+    // (한쪽 category 만 실패하고 다른 쪽에 결과가 있으면 결과를 살리고 로그만 남긴다.)
+    if (merged.length === 0 && failure) {
+      return NextResponse.json({ error: failure }, { status: 502 });
+    }
 
     // 검색어 관련도 순으로 안정 정렬 — 지번 검색 시 정확 지번이 최상단에 오도록.
     return NextResponse.json({ results: rankAddressResults(query, results) });

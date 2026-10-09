@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { classifyVworldStatus, vworldErrorMessage } from "@/lib/address/vworld-status";
 
 const VWORLD_ADDR_URL = "https://api.vworld.kr/req/address";
 const VWORLD_NED_URL  = "https://api.vworld.kr/ned/data";
@@ -35,6 +36,7 @@ interface AddrStructure {
 interface AddrResponse {
   response?: {
     status?: string;
+    error?: { level?: string; code?: string; text?: string };
     refined?: { structure?: AddrStructure };
   };
 }
@@ -71,7 +73,14 @@ interface NedRawResponse {
 // 법정동코드 조회 → PNU 구성 (jibun 기반 fallback)
 // ──────────────────────────────────────────────────
 
-async function getLegalDongCode(jibun: string, apiKey: string): Promise<string | null> {
+/**
+ * 지번 → 법정동코드. `error` 는 Vworld 가 요청을 거부했음(인증키 만료 등)을 뜻한다 —
+ * `null`(주소를 못 찾음)과 섞으면 키 만료가 「지번 주소를 확인해 주세요」로 위장된다.
+ */
+async function getLegalDongCode(
+  jibun: string,
+  apiKey: string,
+): Promise<{ code: string | null; error?: string }> {
   const params = new URLSearchParams({
     service: "address", request: "getcoord", version: "2.0",
     crs: "epsg:4326", address: jibun, refine: "true",
@@ -82,12 +91,17 @@ async function getLegalDongCode(jibun: string, apiKey: string): Promise<string |
       cache: "no-store",
       headers: { Accept: "application/json", Referer: VWORLD_DOMAIN },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { code: null, error: `주소 좌표 서비스 HTTP ${res.status}` };
     const data: AddrResponse = await res.json();
-    if (data.response?.status !== "OK") return null;
+    const st = classifyVworldStatus(data);
+    if (st.kind === "error") return { code: null, error: vworldErrorMessage("주소 좌표 서비스", st) };
+    if (st.kind === "not_found") return { code: null };
     const code = data.response?.refined?.structure?.level4LC;
-    return code && code.length >= 10 ? code.slice(0, 10) : null;
-  } catch { return null; }
+    return { code: code && code.length >= 10 ? code.slice(0, 10) : null };
+  } catch (err) {
+    console.warn("[standard-price] getcoord fetch failed", err);
+    return { code: null, error: "주소 좌표 서비스에 연결하지 못했습니다." };
+  }
 }
 
 function buildPnu(legalDongCode: string, jibun: string): string | null {
@@ -273,7 +287,14 @@ export async function GET(request: NextRequest) {
         { status: 400 },
       );
     }
-    const dongCode = await getLegalDongCode(jibun, apiKey);
+    const { code: dongCode, error: dongCodeError } = await getLegalDongCode(jibun, apiKey);
+    if (dongCodeError) {
+      console.error(`[standard-price] ${dongCodeError}`);
+      return NextResponse.json(
+        { error: { code: "VWORLD_API_ERROR", message: dongCodeError } },
+        { status: 502 },
+      );
+    }
     if (!dongCode) {
       return NextResponse.json(
         { error: { code: "DONG_CODE_NOT_FOUND", message: "법정동코드를 조회할 수 없습니다. 지번 주소를 확인해 주세요." } },
