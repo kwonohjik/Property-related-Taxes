@@ -208,6 +208,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   useEffect(() => {
     if (
       acqDatePrePHD &&
+      // D2 건물 원인 모드는 PHD 토글을 렌더하지 않는다 — 켜 놓으면 끌 칸이 없는 잔재가 남아(OFF 후에도) ④가 분리 계산을 켰다(D2-2 Check).
+      !props.buildingCause &&
       props.asset &&
       props.onAssetChange &&
       !props.asset.usePreHousingDisclosure &&
@@ -247,7 +249,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const gbEffModes =
     props.assetKind === "general_building" && props.asset ? gbPartModes(props.asset) : null;
   const effLandAcqMode = gbEffModes?.land ?? effectivePartAcqMode(props.asset?.landAcqMode, props);
-  const effBuildingAcqMode = gbEffModes?.building ?? effectivePartAcqMode(props.asset?.buildingAcqMode, props);
+  // D2 건물 원인 모드는 건물 방식이 실가 고정이다 — ④·⑧·⑥이 `withBuildingActualWhenMix`로 같은 값을 읽는다(3중 패턴).
+  const buildingCause = props.buildingCause || undefined;
+  const effBuildingAcqMode = buildingCause ? "actual" : (gbEffModes?.building ?? effectivePartAcqMode(props.asset?.buildingAcqMode, props));
 
   /**
    * 취득시 기준시가가 **실제로 필요한가** — 엔진·validate와 **같은 술어**를 쓴다.
@@ -301,7 +305,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const saleStdPlace = saleStdPlacement();
 
   // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
-  const acqDateLabel = isSplit ? "건물 취득일" : "취득일";
+  const acqDateLabel = buildingCause
+    ? (buildingCause === "inheritance" ? "건물 상속개시일" : "건물 증여일")
+    : isSplit ? "건물 취득일" : "취득일";
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로
   // 일반 자산용 환산 입력(취득시/양도시 기준시가, PHD 토글)을 숨긴다.
@@ -326,6 +332,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         acqDateLabel={acqDateLabel}
         saleStdInSaleAxis={saleStdPlace.saleAxis}
         landCause={landCause}
+        buildingCause={buildingCause}
       />
 
       {/* 매매계약일 입력은 Step4 감면·공제(UnifiedReductionPanel)의 펼침 영역 상단으로 이동 (Round 9 정정 2026-05-06)
@@ -360,7 +367,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           ⚠️ 종전의 안내 카드(`split-acq-total-note` — "총 취득가액이 존재하지 않습니다")는
              **삭제**했다(2026-07-30 사용자 확정 — 화면 밀도 우선). 바로 아래 「취득가액 산정 방식
              — 토지·건물 독립 선택」 헤더가 맥락을 대신한다. */}
-      {!isSeparateAcq && !props.hideAssetAcqAxis && !isMixedPerPart && (
+      {!isSeparateAcq && !props.hideAssetAcqAxis && !buildingCause && !isMixedPerPart && (
       <div className="space-y-2">
         {/* 증축이 있으면 이 라디오가 고르는 것은 **원취득분(토지·원건물)**의 방식뿐이다 —
             증축분은 증축 카드의 「증축분 취득 방식」이 따로 정한다(별개 축).
@@ -402,7 +409,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           **파트 모드**로 판정한다 — 어느 한 파트든 환산이면 §164⑤ 대상이다. */}
       {/* 🔴 첫 자산이 아니면 PHD는 **엔진에 도달하지 않는다** — 토글 대신 안내만 띄운다.
           근거·실측은 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석. */}
-      {!isMixedUse && (props.assetKind === "housing" || isSplit)
+      {!isMixedUse && !buildingCause && (props.assetKind === "housing" || isSplit)
         && (props.useEstimatedAcquisition
             || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
         && props.isNonPrimaryAsset && (
@@ -419,6 +426,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         // D1 T-3 — 토지를 상속·증여로 취득하면 토지는 실거래가 고정이라 PHD(양쪽 환산)는 성립하지 않는다.
         //    ④ `phdPayloadActive`·⑧ `usesPhdGate`도 같은 조건으로 무시한다(자동 ON 잔재는 끌 칸이 없어도 무해).
         && !landCause
+        && !buildingCause
         && props.asset && props.onAssetChange && (
         <ToggleCard
           tone="amber"
@@ -443,7 +451,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
           파생값은 여기서 **1회 계산해 주입**하고 저쪽에서 재파생하지 않는다. */}
       <CompanionAcqAmountSection
         block={props}
-        isSeparateAcq={isSeparateAcq || isMixedPerPart}
+        isSeparateAcq={isSeparateAcq || isMixedPerPart || !!buildingCause}
         isBundledExtension={isBundledExtension}
         isMixedUse={isMixedUse}
         isGeneralBuilding={isGeneralBuilding}
@@ -492,6 +500,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
               {props.asset && props.onAssetChange && (
                 <LandBuildingSplitSection
                   landCause={landCause}
+                  buildingCause={buildingCause}
                   selfOwns={props.selfOwns ?? "both"}
                   isBurdenedGift={props.asset.transferType === "burdened_gift"}
                   landAcqMode={effLandAcqMode}
@@ -538,6 +547,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
       {/* 신축·증축 특례 (자산 카드 마지막 부분, 매매 + housing/building 자산만) */}
       {(props.assetKind === "housing" || props.assetKind === "building") &&
+        !buildingCause &&
         props.onIsSelfBuiltChange &&
         props.onBuildingTypeChange &&
         props.onConstructionDateChange &&

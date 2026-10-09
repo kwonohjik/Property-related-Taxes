@@ -160,6 +160,13 @@ export interface BlockProps {
    * 이 칸이 **토지** 취득일이라 `landAcquisitionDate`를 넘긴다 — 건물 취득일 오류가 이 칸으로 오지 않게.
    */
   fieldAcquisitionDate?: string;
+  /**
+   * 건물을 상속·증여로 취득하고 토지는 매수한 자산(D2) — 호출부(`CompanionAcquisitionCauseSection`)가 `effectiveBuildingCauseMix`로
+   * **1회 계산해 주입**한다(재파생 금지). 있으면 이 블록은 **건물 원인 모드**다: 「취득일 다름」 강제 ON·잠금, 건물 칸 라벨은
+   * 상속개시일·증여일(의제취득 클램프·배지 없음 — 사실값), 건물 파트는 평가액 고정 칩, 상단 자산 단위 취득가액 축·PHD 토글·
+   * 신축/증축 특례는 숨긴다. 토지 매매 4방식·기준시가·자본적지출·축 A는 매매 split 그대로다.
+   */
+  buildingCause?: "" | "inheritance" | "gift";
 }
 
 /** assetKind → StandardPriceInput propertyKind 변환 */

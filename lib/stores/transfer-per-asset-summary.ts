@@ -433,6 +433,14 @@ export function computeTransferPerAssetSummary(
       acqPending = false;
       // 일반건물·상가 프리뷰는 §97③ 감가상각비를 이미 공제한 값이다 — 아래에서 또 빼지 않는다.
       depAlreadyDeducted = true;
+    } else if (isSingle && acqPending && singleResult?.splitDetail && effectiveBuildingCauseMix(a)) {
+      // D2-2 건물 상속·증여 + 토지 매매 — 토지 환산·감정 파트는 입력 단계에서 엔진만 알아 pending(`separateAcqPartsSum`)이다. 결과가 오면
+      // 엔진이 실제로 차감한 파트 합으로 푼다(D1-4b와 같은 정본 `summarizeSplitGain().acquisitionDeducted`). 이 분기가 없으면 계산 후에도
+      // 「취득가액 -」에 갇힌다(실측). **입력 프리뷰가 pending일 때만** — 실가·평가액처럼 프리뷰로 확정되는 경우에 이 분기를 타면 결과 도착 후
+      // 입력을 고쳐도 옛 엔진 값에 머문다(D2-2 Check). 일반 매매 split의 환산 파트도 같은 고착이 있다 — D2 밖이라 건드리지 않는다.
+      acqPrice = summarizeSplitGain(singleResult.splitDetail).acquisitionDeducted;
+      acqPending = false;
+      depAlreadyDeducted = true;
     } else if (isSingle && singleResult?.splitDetail?.land?.acquisitionBasis) {
       // D1-4 영 §163⑨ 단서 1호(1990.8.30. 전 상속·증여 토지) — 입력 단계는 max(평가액, 영 §164④ 가액)를 엔진만 알아
       // pending으로 두고(`separateAcqPartsSum`), 결과가 오면 엔진이 실제로 차감한 파트 합을 쓴다(bundled split 분기와 같은 정본).

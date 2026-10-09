@@ -37,3 +37,24 @@ export const LAND_CAUSE_META: Record<
     fixedMode: "실거래가 · 증여 신고가액",
   },
 };
+
+/**
+ * 「건물을 상속·증여로 취득」 건물 파트 표시 문구 — D2 매매 블록 건물 원인 모드(`LandBuildingSplitSection`)용.
+ * ⚠️ 결과 상세명세서 파트 태그는 건물 파트에도 `LAND_CAUSE_META[cause].valueLabel`(「상속개시일 평가액」)을 쓴다(`partTag` — 파트 방향 중립).
+ *    입력 라벨 「건물 상속개시일 평가액」과 같은 어휘다. 상수 이름 정리는 D2-3.
+ */
+export const BUILDING_CAUSE_META: Record<
+  LandCause,
+  { priceLabel: string; hint: string; fixedMode: string }
+> = {
+  inheritance: {
+    priceLabel: "건물 상속개시일 평가액",
+    hint: "상속세 신고서상 건물 평가액 (소득세법 시행령 §163⑨ — 상속개시일 현재 상증법 §60~§66 평가액, 건물분만)",
+    fixedMode: "실거래가 · 상속개시일 평가액",
+  },
+  gift: {
+    priceLabel: "건물 증여 신고가액",
+    hint: "증여세 신고서상 건물 평가액 (증여일 현재 시가 또는 보충적 평가액, 건물분만)",
+    fixedMode: "실거래가 · 증여 신고가액",
+  },
+};

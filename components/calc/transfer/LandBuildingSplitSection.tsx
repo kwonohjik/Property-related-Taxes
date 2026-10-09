@@ -36,7 +36,7 @@ import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
 import { ACQ_MODE_OPTIONS, PartAcqInputs } from "./PartAcqInputs";
 import { LandSec164Card } from "./LandSec164Card";
-import { LAND_CAUSE_META } from "./land-cause-meta";
+import { BUILDING_CAUSE_META, LAND_CAUSE_META } from "./land-cause-meta";
 
 export type { PartAcqMode };
 
@@ -46,6 +46,12 @@ interface Props {
    * 있으면 토지 방식은 실거래가(평가액) 고정 안내, 토지 가액 칸 라벨은 평가액 문구가 된다(추계 불가 — 영 §163⑨).
    */
   landCause?: "" | "inheritance" | "gift";
+  /**
+   * 건물을 상속·증여로 취득하고 토지는 매수한 자산(D2-2) — 호출부가 `effectiveBuildingCauseMix`로 1회 계산해 주입. 있으면 건물 방식은
+   * 실거래가(평가액) **고정 칩**이고 건물 가액 칸 라벨은 「건물 상속개시일 평가액」·「건물 증여 신고가액」이다(영 §163⑨ — 추계 불가).
+   * 토지는 매매라 4방식 그대로다. `landCause`(토지가 상속·증여인 D1)와 동시에 서지 않는다.
+   */
+  buildingCause?: "" | "inheritance" | "gift";
   /** 토지·건물 소유자 분리 — 본인 소유하지 않는 파트는 모드 선택 비노출 */
   selfOwns: "both" | "building_only" | "land_only";
   /** 부담부증여(§159 자동 산정) — 파트별 모드·양도 분리 선택 자체를 숨긴다(안내만 표시) */
@@ -422,16 +428,25 @@ export function LandBuildingSplitSection(props: Props) {
             </span>
             <p className="text-xs font-semibold text-amber-800">건물 취득가액 방식</p>
           </div>
-          <div data-testid="part-acq-mode-building">
-            <RadioCardGroup
-              name={`buildingAcqMode-${props.asset?.assetId ?? "primary"}`}
-              tone="amber"
-              layout="inline"
-              options={ACQ_MODE_OPTIONS}
-              value={props.buildingAcqMode}
-              onChange={props.onBuildingAcqModeChange}
-            />
-          </div>
+          {props.buildingCause ? (
+            <ToneCard tone="amber" noDark>
+              <p className="text-xs text-amber-900" data-testid="part-acq-mode-building-fixed">
+                <strong>{BUILDING_CAUSE_META[props.buildingCause].fixedMode}</strong> — 상속·증여로 취득한 건물은 평가액이 취득당시
+                실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
+              </p>
+            </ToneCard>
+          ) : (
+            <div data-testid="part-acq-mode-building">
+              <RadioCardGroup
+                name={`buildingAcqMode-${props.asset?.assetId ?? "primary"}`}
+                tone="amber"
+                layout="inline"
+                options={ACQ_MODE_OPTIONS}
+                value={props.buildingAcqMode}
+                onChange={props.onBuildingAcqModeChange}
+              />
+            </div>
+          )}
           {showBuildingStdPrice && (
             <PartAcqStdPrice
               part="building"
@@ -459,6 +474,8 @@ export function LandBuildingSplitSection(props: Props) {
             salesCaseValue={props.buildingSalesCaseValue}
             onSalesCaseValueChange={props.onBuildingSalesCaseValueChange}
             saleStdInPart={props.saleStdInBuildingPart}
+            actualLabel={props.buildingCause ? BUILDING_CAUSE_META[props.buildingCause].priceLabel : undefined}
+            actualHint={props.buildingCause ? BUILDING_CAUSE_META[props.buildingCause].hint : undefined}
           />
         </div>
       )}

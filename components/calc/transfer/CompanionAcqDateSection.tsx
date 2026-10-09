@@ -23,7 +23,7 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { LAND_CAUSE_META } from "./land-cause-meta";
-import { landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
+import { buildingCauseDateNotices, landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -54,13 +54,20 @@ export function CompanionAcqDateSection(props: {
    * 단서 1호 — 후속 D1-4), 그 max 비교에서는 원 날짜가 의제취득일(영 §176의2④) 전인지가 산식을 가른다.
    */
   landCause?: "" | "inheritance" | "gift";
+  /**
+   * 건물을 상속·증여로 취득하고 토지는 매수한 자산(D2-2) — 호출부가 `effectiveBuildingCauseMix`로 1회 계산해 주입. 있으면 「취득일 다름」은
+   * 강제 ON·잠금이고, **건물 칸**의 의제취득(§98) 클램프·배지는 끈다 — 건물 상속개시일·증여일은 사실값이다(D1 T-6의 건물판).
+   * 토지 칸은 그대로다(매매 토지는 의제취득 대상). 건물 칸 라벨은 `acqDateLabel`이 이미 상속개시일·증여일로 파생한다.
+   */
+  buildingCause?: "" | "inheritance" | "gift";
 }) {
   const { block: p, isSplitable, isSplit, isMixedUse, acqDateLabel } = props;
   const landCause = props.landCause || undefined;
+  const buildingCause = props.buildingCause || undefined;
   const [dateClampMsg, setDateClampMsg] = useState(false);
   const [landDateClampMsg, setLandDateClampMsg] = useState(false);
 
-  const isDeemedAcquisitionDate = !!(p.acquisitionDate && p.acquisitionDate <= MIN_ACQ_DATE);
+  const isDeemedAcquisitionDate = !buildingCause && !!(p.acquisitionDate && p.acquisitionDate <= MIN_ACQ_DATE);
   const isLandDeemedAcquisitionDate = !landCause && !!(p.landAcquisitionDate && p.landAcquisitionDate <= MIN_ACQ_DATE);
 
   function handleAcquisitionDateChange(v: string) {
@@ -68,6 +75,7 @@ export function CompanionAcqDateSection(props: {
     setDateClampMsg(false);
   }
   function handleAcquisitionDateBlur() {
+    if (buildingCause) return;
     if (p.acquisitionDate && p.acquisitionDate < MIN_ACQ_DATE) {
       p.onAcquisitionDateChange(MIN_ACQ_DATE);
       setDateClampMsg(true);
@@ -118,9 +126,9 @@ export function CompanionAcqDateSection(props: {
               // 끌 수 있게 두면 "위는 소유자 다름 ON, 아래는 취득일 다름 OFF"라는 모순 상태가
               // 되는데, `isSplitPayloadActive`는 `selfOwns !== "both"`로 여전히 참이라
               // 분리 계산은 계속 돈다 — 화면과 계산이 어긋난다(2026-07-30 두 토글 인접 배치).
-              disabled={(p.selfOwns ?? "both") !== "both" || !!landCause}
+              disabled={(p.selfOwns ?? "both") !== "both" || !!landCause || !!buildingCause}
               disabledReason={
-                landCause
+                landCause || buildingCause
                   ? "토지를 다른 원인으로 취득한 자산은 토지·건물 취득일을 항상 따로 둡니다"
                   : "토지·건물 소유자가 다르면 각각 산정하므로 항상 분리됩니다"
               }
@@ -178,7 +186,7 @@ export function CompanionAcqDateSection(props: {
             <FieldCard
               label={landCause ? `토지 ${LAND_CAUSE_META[landCause].dateLabel}` : "토지 취득일"}
               field="landAcquisitionDate"
-              required={!!landCause}
+              required={!!landCause || !!buildingCause}
               trailing={isLandDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
               <DateInput
@@ -196,6 +204,7 @@ export function CompanionAcqDateSection(props: {
             <FieldCard
               label={acqDateLabel}
               field="acquisitionDate"
+              required={!!buildingCause}
               trailing={isDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
               <DateInput
@@ -216,6 +225,14 @@ export function CompanionAcqDateSection(props: {
         {landCause && p.asset && landPartCauseDateNotice(p.asset) && (
           <ToneCard tone="amber" noDark>
             <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{landPartCauseDateNotice(p.asset)}</p>
+          </ToneCard>
+        )}
+        {/* D2-2 — 건물 상속·증여 + 토지 매매: 건물 경계일(< 2005.4.30.)·같은 날 안내. ⑧·⑫와 같은 술어(차단은 거기서). */}
+        {buildingCause && p.asset && buildingCauseDateNotices(p.asset).length > 0 && (
+          <ToneCard tone="amber" noDark bodyClassName="space-y-1">
+            {buildingCauseDateNotices(p.asset).map((m) => (
+              <p key={m} className="text-xs text-amber-900" data-testid="building-cause-date-notice">{m}</p>
+            ))}
           </ToneCard>
         )}
         {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}

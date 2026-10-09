@@ -12,6 +12,7 @@ import { CompanionAcqNewConstructionBlock } from "./CompanionAcqNewConstructionB
 import { AssetOwnershipSplitSection } from "./AssetOwnershipSplitSection";
 import { NonPurchaseSplitInputsBlock } from "./NonPurchaseSplitInputsBlock";
 import { LandPartCauseBlock } from "./LandPartCauseBlock";
+import { BuildingCauseMixBlock } from "./BuildingCauseMixBlock";
 import { computeEarliestDate } from "./NewConstructionDateBlock";
 import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
@@ -27,6 +28,7 @@ import { giftEstimationClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode
 import { giftEstimationGenericScope } from "@/lib/calc/transfer-tax-validate-gift-163-9";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
+import { buildingDatePatch, effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -69,6 +71,10 @@ export function CompanionAcquisitionCauseSection({
       />
     );
   }
+
+  // D2(건물 상속·증여 + 토지 매매) 유효 여부 — **1회 계산해 아래 마운트 조건·매매 블록에 주입**한다(재파생 금지, `landCause` 주입과 같은 규약).
+  const buildingCauseMix = effectiveBuildingCauseMix(asset);
+  const d2On = !!buildingCauseMix;
 
   return (
     <div className="space-y-2">
@@ -160,6 +166,9 @@ export function CompanionAcquisitionCauseSection({
           취득원인이 자산 단위 단일값이라 종전엔 토지 취득일·취득가액 칸이 아예 없었다. */}
       <LandPartCauseBlock asset={asset} onChange={onChange} transferDate={transferDate} />
 
+      {/* 건물을 상속·증여로 취득하고 토지는 매수한 경우(D2) — 토글. 켜면 아래 상속·증여 블록 대신 매매 블록이 건물 원인 모드로 마운트된다. */}
+      <BuildingCauseMixBlock asset={asset} onChange={onChange} />
+
       {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
       {isNewConstruction && (
         <CompanionAcqNewConstructionBlock
@@ -168,11 +177,13 @@ export function CompanionAcquisitionCauseSection({
         />
       )}
 
-      {asset.acquisitionCause === "purchase" && (
+      {(asset.acquisitionCause === "purchase" || d2On) && (
         <CompanionAcqPurchaseBlock
           isNonPrimaryAsset={isNonPrimaryAsset}
+          buildingCause={buildingCauseMix}
           acquisitionDate={asset.acquisitionDate}
-          onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
+          // D2 상속 호스트는 상속개시일 3키를 한 patch로 쓴다(상속 블록과 같은 leaf) — 한쪽만 쓰면 다른 키가 stale로 남는다.
+          onAcquisitionDateChange={(v) => onChange(d2On ? buildingDatePatch(asset.acquisitionCause, v) : { acquisitionDate: v })}
           isSalesCaseAcquisition={asset.isSalesCaseAcquisition}
           onIsSalesCaseAcquisitionChange={(v) => onChange({ isSalesCaseAcquisition: v })}
           similarSalesValue={asset.similarSalesValue}
@@ -276,7 +287,7 @@ export function CompanionAcquisitionCauseSection({
         />
       )}
 
-      {asset.acquisitionCause === "inheritance" && (
+      {asset.acquisitionCause === "inheritance" && !d2On && (
         <CompanionAcqInheritanceBlock
           asset={asset}
           onChange={onChange}
@@ -284,7 +295,7 @@ export function CompanionAcquisitionCauseSection({
         />
       )}
 
-      {asset.acquisitionCause === "gift" && (
+      {asset.acquisitionCause === "gift" && !d2On && (
         <CompanionAcqGiftBlock
           acquisitionDate={asset.acquisitionDate}
           onAcquisitionDateChange={(v) => onChange({ acquisitionDate: v })}
@@ -299,11 +310,11 @@ export function CompanionAcquisitionCauseSection({
       {/* 증여 주택 §164⑤~⑦ 취득당시 기준시가 — max(증여일 상증법 평가액, §164⑤~⑦). 소령 §163⑨2호.
           자체 게이트(증여 + 주택 + 최초공시 前)를 가지므로 상가 섹션과 같이 무조건 마운트한다.
           상속은 CompanionAcqInheritanceBlock 경로가 같은 위젯을 이미 렌더한다(중복 없음). */}
-      <GiftHouseStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      {!d2On && <GiftHouseStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />}
 
       {/* 증여 토지 §164④ 취득당시 기준시가 — max(증여일 상증법 평가액, §164④). 소령 §163⑨1호.
           환산(나목)과 무관한 가목 입력이라 환산 모드 토글 밖에 둔다. */}
-      <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      {!d2On && <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />}
 
       {/* 의제취득일 前 상속·증여 + ①·② 미충족 → §163⑨ 평가액 미반영 안내 + 「가목 확인 불가」 선언.
           E-1(U2-E)로 **차단이 붙었다** — 선언이 없으면 `clauseADeclarationError`가 계산을 막는다.
@@ -313,7 +324,7 @@ export function CompanionAcquisitionCauseSection({
              와야 한다. 상속은 위 `CompanionAcqInheritanceBlock`이, 증여는 바로 위 두 §164 섹션이
              그 칸을 낸다. 그래서 가업상속공제(§97의2④)는 이 아래로 미뤘다 — 종전에는 그것이 ①과
              선언 토글 사이에 끼어 "못 구하겠다"는 사용자가 무관한 카드를 지나쳐야 했다. */}
-      <PreDeemedEstimatedNotice asset={asset} onChange={onChange} />
+      {!d2On && <PreDeemedEstimatedNotice asset={asset} onChange={onChange} />}
 
       {/* 가업상속공제 §97의2④ 의제 취득가액 — 상속 취득원인 시만 표시.
           §163⑨의 ①②③ 결정이 끝난 **뒤에 얹히는 특례**라 순서상으로도 여기가 맞다. */}

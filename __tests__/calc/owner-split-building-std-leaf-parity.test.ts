@@ -21,6 +21,8 @@ import {
   buildSplitPayload,
   isSplitPayloadActive,
 } from "@/lib/calc/transfer-tax-api-split";
+// ④가 실제로 쓰는 PHD 실효 술어 — 취득원인이 상속인 격자 셀의 PHD 플래그는 토글이 없는 곳의 잔재라 무효다(D2-2 Check #1).
+import { phdFlagEffective } from "@/lib/calc/phd-toggle-scope";
 import { ownerSplitHousingNeedsBuildingStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
@@ -121,7 +123,7 @@ function validateFlagsField(asset: AssetForm, field: string): boolean {
 function bodyOf(asset: AssetForm, c: Combo): Record<string, unknown> {
   const split = buildSplitPayload(asset, {
     isBurdenedGift: c.burdened,
-    usesPhd: c.phd,
+    usesPhd: phdFlagEffective(asset),
     ratioed,
   });
   return {
@@ -131,7 +133,7 @@ function bodyOf(asset: AssetForm, c: Combo): Record<string, unknown> {
     transferDate: "2026-06-30",
     useEstimatedAcquisition: false,
     // 본체(transfer-tax-api.ts) — 분리 활성이면 결합 총액을 보낸다(PHD는 보내지 않는다)
-    standardPriceAtAcquisition: c.phd ? undefined : parseAmount(asset.standardPriceAtAcq) || undefined,
+    standardPriceAtAcquisition: phdFlagEffective(asset) ? undefined : parseAmount(asset.standardPriceAtAcq) || undefined,
     ...buildLandStdAtAcquisitionPayload(asset),
     ...split,
   };
@@ -197,7 +199,7 @@ describe("나목(취득시 건물 기준시가) — ⑤노출 ⇔ ⑧필수 ⇔ 
       }
 
       // ④ — 채워진 N은 leaf(또는 별개 취득)일 때만 나간다. 아니면 stale 값이 숨은 채 전송되지 않는다.
-      const splitFilled = buildSplitPayload(filled, { isBurdenedGift: c.burdened, usesPhd: c.phd, ratioed });
+      const splitFilled = buildSplitPayload(filled, { isBurdenedGift: c.burdened, usesPhd: phdFlagEffective(filled), ratioed });
       const sends = splitFilled.buildingStandardPriceAtAcquisition !== undefined;
       const separateActive =
         isSplitPayloadActive(filled, c.burdened) && c.separate && !c.mixed && filled.assetKind === "housing";
@@ -239,7 +241,7 @@ describe("양도시 개별주택가격(H_T) — 같은 격자, 환산 파트가 
       expect(validateFlagsField(withHT, "standardPriceAtTransfer"), `⑧ withHT ${label(c)}`).toBe(false);
 
       // ④ — H_T 전송은 leaf일 때만 (asset-level 환산 플래그는 꺼져 있다 — 본체는 보내지 않는다)
-      const sentHT = buildSplitPayload(withHT, { isBurdenedGift: c.burdened, usesPhd: c.phd, ratioed }).standardPriceAtTransfer;
+      const sentHT = buildSplitPayload(withHT, { isBurdenedGift: c.burdened, usesPhd: phdFlagEffective(withHT), ratioed }).standardPriceAtTransfer;
       expect(sentHT !== undefined, `④ ${label(c)}`).toBe(leaf);
 
       // ⑫·엔진 — H_T를 비운 body

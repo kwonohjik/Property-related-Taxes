@@ -397,4 +397,19 @@
 - **(d)** Y4 문구: 「개별주택가격이 공시되기 전」만 말하던 것을 「건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전」 + 「정확한 고시일은 자산 종류별로 달라 2005.4.30. 이전 취득을 보수적으로 모두 막는다」로 정정(비주택 `building` 포함).
 - **고지의 증여 확장**: 증여 건물도 토지 적용 기산 = 증여일이라 구간이 갈리면 같은 고지를 증여일 문구로 낸다(Q-D2-2 + 사용자 결정 「두 기산이 갈릴 때 고지」). 상속·증여 각 11시드 실측(2018-03-02·2020-01-10·2024-01-10·2024-07-01 고지 / 2024-07-02·2025-01-10·2025-04-30·같은 날·개시 후 3종 무고지) — 초일 산입으로 2024-07-01은 양도 2026-06-30까지 딱 2년(2년 이상 구간).
 - **재검사(sync, HEAD 사본 대조) 결과**: 비-stale 46시드 ④·⑧·⑫·⑥ HEAD 동일, stale 시드 전부 ⑧ 통과·⑫ 200·자산 단위 계산과 세액 일치(새로 막히는 셀 0), D2 유효 격자 「⑧ 통과 + ⑫ 400」 0.
-- **별건(기존 결함 — D2-1이 만들지 않음)**: 상속·증여 주택에 매매 시절 자동 ON된 `usePreHousingDisclosure`가 남으면 ⑧은 PHD를 보지 않는데 ④ `usesPhd`가 분리를 켜 ⑫ 400(`landStandardPriceAtTransfer` 필요) — HEAD에서도 `inh_phd` 시드가 이미 「⑧ 통과 ↔ ⑫ 400」. stale 분리 + PHD 시드는 종전 ⑧ 차단 → 이제 같은 막다른 길로 이동. 뿌리: `phdToggleReachable`이 자산 종류만 보고 토글이 실제로 렌더되는 취득원인(매매 블록)을 보지 않는다. 다음 PR 후보.
+- **별건(기존 결함 — D2-1이 만들지 않음)**: 상속·증여 주택에 매매 시절 자동 ON된 `usePreHousingDisclosure`가 남으면 ⑧은 PHD를 보지 않는데 ④ `usesPhd`가 분리를 켜 ⑫ 400(`landStandardPriceAtTransfer` 필요) — HEAD에서도 `inh_phd` 시드가 이미 「⑧ 통과 ↔ ⑫ 400」. stale 분리 + PHD 시드는 종전 ⑧ 차단 → 이제 같은 막다른 길로 이동. 뿌리: `phdToggleReachable`이 자산 종류만 보고 토글이 실제로 렌더되는 취득원인(매매 블록)을 보지 않는다. 다음 PR 후보. → **D2-2 Check에서 해소(아래)**.
+
+**D2-2 구현 (2026-10-09, ⑤ 위젯·⑥ — 세액 산식 불변, 토글 노출)**:
+- ⑤ `BuildingCauseMixBlock`(신규) — 상속·증여 호스트에 「토지는 다른 원인으로 취득」(토지 = 매매 고정, 원인 라디오 없음). 켜면 상속·증여 블록·증여 §164 섹션·의제 전 선언 대신 **`CompanionAcqPurchaseBlock`을 건물 원인 모드(`buildingCause` prop)**로 마운트: 「취득일 다름」 강제 ON·잠금, 건물 칸 라벨 상속개시일·증여일(의제취득 클램프·배지 끔), 건물 파트 실거래가 고정 칩 + 평가액 칸, 상단 자산 단위 축·PHD 토글·신축/증축 특례 숨김. 토글 패널에 건물 피상속인 취득일(상속) · 동일세대 통산 카드(`InheritedCohabitationCard` — 상속 블록에서 추출, §154⑧3호 + 「확인 필요」, §155②·7호 미적용 문구) · 증여자 취득일(선택) · 증여 이월과세 고지. 부담부증여·가업상속 입력이 있으면 토글 미노출(켜진 쪽은 끌 수 있음). 소유자 분리와 켜는 방향만 상호 잠금(`landCauseMixActive`). 호스트 전환·OFF의 stale은 D2-1 읽는 쪽 파생이 처리 — 전환 patch 추가 없음(OFF만 `hasSeperate…`를 되돌린다).
+- 3키 쓰기 leaf `buildingDatePatch`(상속 블록·D2 건물 날짜 칸 공용) · 경계일 전·같은 날 입력 중 안내 `buildingCauseDateNotices`(⑧·⑫와 같은 술어).
+- ⑥ 단건 자산 행: D2 유효 + 결과 도착이면 `summarizeSplitGain().acquisitionDeducted`(토지 환산·감정 pending이 결과 후에도 「-」에 갇히던 것 — 일반 매매 split 환산 파트도 같은 고착이 있으나 D2 밖).
+- 검증: UI Pre-Do render 23(활성) · ⑥ 사이드바 5 · 격자 1(⑧ 통과 76셀 모두 ⑫ 200 · ⑧ 차단 52셀 모두 화면 앵커) · E2E 신규 12, 기존 acq-cause·상속·증여·사이드바·분리 계열 944건 중 923 통과·21 skipped(기존)·실패 0. mutation 22/22 KILLED(최초 M10 SURVIVED → 테스트 보강). vitest 1572파일 18,141 통과. 스크린샷 데스크톱·모바일 확인.
+- D2-3로 넘김: 토지 파트 `splitRateBasisNote`(「주택 취득일」 문구 ↔ 건물 행 「피상속인 취득일」) · 건물 방향 라벨 상수 이름(`LAND_CAUSE_META.valueLabel`을 건물 파트도 사용).
+
+**D2-2 Check 후속 (2026-10-09, sync 검사 실측 4건)**
+- **[Medium] #1 PHD 자동 ON 잔재 → ⑧ 통과 ↔ ⑫ 400 (D2-1 별건 해소)**: 건물 취득일 < 2005-04-29 주택은 매매 블록의 effect가 `usePreHousingDisclosure`를 자동 ON한다. D2 건물 원인 모드에서도 effect가 돌아 켜 놓은 플래그가 토글 OFF·날짜 수정 뒤에도 남았고, ④ `usesPhd`가 분리 계산을 켜 ⑫가 화면에 없는 양도시 기준시가 칸(`landStandardPriceAtTransfer`·`buildingStandardPriceAtTransfer`)으로 400. 두 겹: (a) effect는 `buildingCause`에서 돌지 않는다 (b) 뿌리 — **PHD 토글은 `CompanionAcqPurchaseBlock` 한 곳이고 그 블록은 취득원인 매매에서만 마운트**(코드 확인: 이월과세는 `CarryoverEstimationSection`, 겸용은 `MixedUseLegacyStdPrice`가 자기 패널)이므로 `phdToggleCauseReachable`(상속·증여·신축·부담부증여는 미도달, 매매·미지정·이월과세·겸용은 종전 그대로)를 `phdToggleReachable`·`phdFlagEffective`에 걸었다. ④·⑧·⑤가 공유하는 읽는 쪽 파생이고 저장값은 지우지 않는다(매매로 돌아오면 복귀). `ownerSplitHousingNeedsBuildingStd`의 raw 플래그 읽기도 `phdFlagEffective`로 맞췄다(잔재가 PHD로 취급되지 않으면 나목 요구가 ④·⑤와 같아야 한다). 효과: 상속·증여·신축 + PHD 잔재 → ⑧ 통과 + ⑫ 200 + **자산 단위 계산**(분리 없는 같은 자산과 body 바이트 동일·세액 동일). 매매·이월과세·겸용 PHD 시드는 불변(관련 vitest·E2E 전수 통과).
+- **[Medium] #2 증여 D2 ON → 부담부증여**: 토글이 숨는데 `hasSeperate…`가 켜져 ⑧이 입력칸 없는 `landAcquisitionPrice`를 요구했다. `hasStaleSplitInput`의 부담부증여 제외를 「D2 토글 잔재(호스트 태그 상속·증여 + overlay `purchase`)가 없을 때」로 좁혔다 — 부담부증여 자체 경로의 분리 입력(태그·overlay 없음, D1 잔재 포함)은 종전처럼 보호된다.
+- **[Low] #3 ⑥ D2 결과 분기**: 「입력 프리뷰가 pending일 때만」(`acqPending`). 실가·평가액처럼 프리뷰로 확정되는 경우는 결과 도착 후 입력을 고쳐도 실시간 프리뷰를 따른다.
+- **[Low] #4 D2 ON → 매매 전환 시 「취득일 다름」이 켜진 채 남는 것은 수용**: 매매 호스트에서는 그 토글이 화면에 보이고 끌 수 있으며 건물 가액 칸도 보여 막다른 길이 아니다(D1-2 신축 → 매매 S1과 같은 기존 현상).
+- 검증: `d2-2.check.test.ts` 11 · 렌더 C15 · mutation 7/7 KILLED(N1~N7) · E2E 1건 추가.
+

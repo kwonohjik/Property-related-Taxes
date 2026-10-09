@@ -17,11 +17,12 @@
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { InheritedAcquisitionDeemedSection } from "./InheritedAcquisitionDeemedSection";
+import { InheritedCohabitationCard } from "./InheritedCohabitationCard";
+import { buildingDatePatch } from "@/lib/calc/transfer-land-part-cause";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -66,9 +67,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
             value={asset.acquisitionDate}
             onChange={(v) =>
               onChange({
-                acquisitionDate: v,
-                inheritanceStartDate: v,
-                inheritanceDate: v,
+                ...buildingDatePatch("inheritance", v),
                 // 의제취득일 前 → 後로 넘어가면 「환산」 토글이 화면에서 사라져 켜짐 래치를 끌 방법이 없다(별건 B3 잔여).
                 // 날짜를 고치는 중간 상태(빈 값)에서는 걸지 않는다 — 연도를 덮어쓰는 동안 토글이 풀리면 안 된다.
                 ...(v ? sec164LandLatchClearPatch({ ...asset, acquisitionDate: v, inheritanceStartDate: v }) : {}),
@@ -89,65 +88,23 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
 
       {/* §154⑧3호 상속주택 자체 양도 — 동일세대 보유기간 통산 (주택 전용) */}
       {asset.assetKind === "housing" && (
-        <ToggleCard
-          variant="card"
-          tone="violet"
-          checked={asset.decedentSameHouseholdBeforeInheritance}
-          onCheckedChange={(v) => {
-            onChange({
-              decedentSameHouseholdBeforeInheritance: v,
-              ...(v ? {} : { decedentCohabitationHoldingStartDate: "", decedentCohabitationResidenceMonths: "" }),
-            });
-          }}
-          title="상속개시 당시 피상속인과 동일세대"
-          description="동일세대로 함께 거주·보유하던 상속주택을 양도하는 경우, 상속개시 전 동일세대 보유·거주기간을 1세대1주택 비과세·표2 장특공제 판정에 통산합니다 (소령 §154⑧3호)"
-        >
-          <div className="space-y-2 pt-1">
-            <div className="space-y-1">
-              <label className="block text-caption text-muted-foreground font-medium">
-                동일세대 거주·보유 개시일
-              </label>
-              <DateInput
-                data-field="decedentCohabitationHoldingStartDate"
-                value={asset.decedentCohabitationHoldingStartDate}
-                onChange={(v) => onChange({ decedentCohabitationHoldingStartDate: v })}
-              />
-              <p className="text-caption text-muted-foreground/70">
-                상속개시 전 피상속인과 동일세대로서 이 주택에 거주·보유하기 시작한 날 (비과세 보유기간 기산).
-              </p>
-            </div>
-            <div className="space-y-1">
-              <label className="block text-caption text-muted-foreground font-medium">
-                동일세대 통산 거주기간 (개월)
-              </label>
-              <div className="w-32">
-                <DecimalInput
-                  value={asset.decedentCohabitationResidenceMonths}
-                  onChange={(v) => onChange({ decedentCohabitationResidenceMonths: v })}
-                />
-              </div>
-              <p className="text-caption text-muted-foreground/70">
-                상속개시 전 피상속인과 동일세대로서 이 주택에 실제 거주한 기간(개월). 비과세 거주요건·표2
-                장특공제 대상 판정에 통산됩니다. 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
-              </p>
-            </div>
-            {/* §155② 단서 예외 — 동일세대 상속은 중과 배제(7호)가 원칙적으로 서지 않는다 */}
-            <ToggleCard
-              variant="chip"
-              tone="violet"
-              checked={asset.parentalCareMergeInheritedHouse ?? false}
-              onCheckedChange={(v) =>
-                onChange({ parentalCareMergeInheritedHouse: v || undefined })
-              }
-              title="양도 주택이 동거봉양 합가 전 피상속인 보유분"
-              description="60세 이상 직계존속 동거봉양으로 세대를 합쳐 2주택이 된 경우로서 합치기 이전부터 피상속인이 보유하던 주택이면 특례가 적용됩니다 (§155② 단서 예외)."
-            />
-            <p className="text-caption text-muted-foreground/70">
-              동일세대 상속은 §155② 단서로 상속주택 특례가 원칙 배제되고, 그에 따라 이 주택을 양도할
-              때 <b>다주택 중과 배제(영 §167의3①7호)도 서지 않습니다</b>. 위 예외에 해당하면 켜세요.
-            </p>
-          </div>
-        </ToggleCard>
+        <InheritedCohabitationCard asset={asset} onChange={onChange}>
+          {/* §155② 단서 예외 — 동일세대 상속은 중과 배제(7호)가 원칙적으로 서지 않는다 */}
+          <ToggleCard
+            variant="chip"
+            tone="violet"
+            checked={asset.parentalCareMergeInheritedHouse ?? false}
+            onCheckedChange={(v) =>
+              onChange({ parentalCareMergeInheritedHouse: v || undefined })
+            }
+            title="양도 주택이 동거봉양 합가 전 피상속인 보유분"
+            description="60세 이상 직계존속 동거봉양으로 세대를 합쳐 2주택이 된 경우로서 합치기 이전부터 피상속인이 보유하던 주택이면 특례가 적용됩니다 (§155② 단서 예외)."
+          />
+          <p className="text-caption text-muted-foreground/70">
+            동일세대 상속은 §155② 단서로 상속주택 특례가 원칙 배제되고, 그에 따라 이 주택을 양도할
+            때 <b>다주택 중과 배제(영 §167의3①7호)도 서지 않습니다</b>. 위 예외에 해당하면 켜세요.
+          </p>
+        </InheritedCohabitationCard>
       )}
 
       {/* §155②1~4호 순위 — 피상속인 2주택↑ 중 선순위가 아니면 「상속받은 주택」이 아니다 */}
