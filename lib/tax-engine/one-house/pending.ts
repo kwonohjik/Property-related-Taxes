@@ -23,6 +23,10 @@
  * (`resolveExemptionHoldingStartDate` 등). 기산일 규칙을 여기서 다시 쓰지 않는다 —
  * 두 벌이 되면 §154⑤ 용도변경·§154⑧3호 상속 통산이 한쪽에만 반영된다.
  */
+import {
+  INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE,
+  inheritedPresaleRightSeparateHouseholdUnverified,
+} from "../presale-right-definition-date";
 import { addDays, addYears } from "date-fns";
 import { resolveOneHouseMinHoldingYears } from "../data/one-house-holding-residence-era";
 import { deadlineEndFrom, deadlineFields, isWithinDeadline } from "../civil-period";
@@ -383,6 +387,25 @@ export function article89ConfirmNotesUndetermined(
 ): OneHouseUndetermined[] {
   if (!coreWouldPass || article89Clause2.status !== "excluded") return [];
   return (article89Clause2.confirmNotes ?? []).map((reason, i) => ({ id: `89-2-confirm:${i}`, reason }));
+}
+
+/** 별도세대 상속 분양권(피상속인 취득일 2021.1.1. 전) 확인 필요 — 계산기 경고와 같은 id(`transfer-tax.ts`). */
+export const INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID = "89-2-inherited-presale-right-separate-household-unverified";
+
+/**
+ * 별도세대에서 상속받은 분양권을 상속개시일로 §89②에 넣어 그 배제 때문에만 과세로 갈렸을 때 확인 필요를 낸다
+ * (결론을 가를 때만 — `presale-right-definition-date.ts` · 사용자 결정 2026-10-09).
+ */
+export function inheritedPresaleRightSeparateHouseholdUndetermined(
+  input: OneHouseJudgeInput,
+  article89Clause2: Article89Clause2Result,
+  coreWouldPass: boolean,
+  presaleRightStartDate: Date | undefined,
+): OneHouseUndetermined[] {
+  if (!coreWouldPass || article89Clause2.status !== "excluded" || presaleRightStartDate === undefined) return [];
+  const start = presaleRightStartDate;
+  if (!(input.presaleRights ?? []).some((r) => inheritedPresaleRightSeparateHouseholdUnverified(r, start))) return [];
+  return [{ id: INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, reason: INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE }];
 }
 
 /**

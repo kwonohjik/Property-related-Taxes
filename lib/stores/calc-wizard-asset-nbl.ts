@@ -567,6 +567,11 @@ export interface PresaleRightEntry {
   decedentSameHouseholdAtInheritance?: boolean;
   /** ⑥ 단서의 예외 — 동거봉양 합가 전부터 보유하던 주택이 전환된 경우 */
   parentalCareMergeInheritedRight?: boolean;
+  /**
+   * 상속받은 **분양권** — 피상속인이 그 분양권을 취득한 날(YYYY-MM-DD). `acquisitionDate`는 상속개시일이다.
+   * 동일세대 상속이면 2021.1.1. 적용례(§89②·§104⑦)를 이 날로 본다(재산세제과-1033). 분양권·상속 행에서만 싣는다.
+   */
+  decedentAcquisitionDate?: string;
 }
 
 /**

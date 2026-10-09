@@ -52,6 +52,7 @@ export interface PresaleRightPayloadItem {
   decedentOwnedOtherRightTypeAtDeath?: boolean;
   decedentSameHouseholdAtInheritance?: boolean;
   parentalCareMergeInheritedRight?: boolean;
+  decedentAcquisitionDate?: string;
 }
 
 /** 기존주택 원조합원 행의 §155① 사실(전입일·기존 임차인 단서·§155⑱ 사유). 그 밖의 행이면 빈 객체. */
@@ -103,5 +104,9 @@ export function buildPresaleRightsPayload(
       decedentOwnedOtherRightTypeAtDeath: p.decedentOwnedOtherRightTypeAtDeath,
       decedentSameHouseholdAtInheritance: p.decedentSameHouseholdAtInheritance,
       parentalCareMergeInheritedRight: p.parentalCareMergeInheritedRight,
+      // 상속 분양권의 피상속인 취득일 — 분양권·상속 행에서만(입주권·상속 해제 행에 남은 값은 싣지 않는다).
+      ...(p.type === "presale_right" && p.isInherited && p.decedentAcquisitionDate
+        ? { decedentAcquisitionDate: p.decedentAcquisitionDate }
+        : {}),
     }));
 }

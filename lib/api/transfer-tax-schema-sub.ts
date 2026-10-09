@@ -338,6 +338,8 @@ export const presaleRightSchema = z.object({
   decedentOwnedOtherRightTypeAtDeath: z.boolean().optional(),
   decedentSameHouseholdAtInheritance: z.boolean().optional(),
   parentalCareMergeInheritedRight: z.boolean().optional(),
+  /** ⑫ 상속 분양권 — 피상속인 취득일(동일세대면 §89②·§104⑦ 2021.1.1. 적용례 기준일 — 재산세제과-1033) */
+  decedentAcquisitionDate: z.string().date().optional(),
   // 공급주택 소재지 코드 (시·군·구 5자리 또는 법정동 10자리) — 다·라목 2호 동일 시·군·구 비교
   regionCode: z.string().min(5).optional(),
   /** ⑫ 지정 지구 안인가(사용자 선언) — 소재 법정동이 「동 안 일부 지구만 조정대상지역」일 때만 의미 */
