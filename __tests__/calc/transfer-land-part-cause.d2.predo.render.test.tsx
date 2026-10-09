@@ -13,7 +13,7 @@
  * ⚠️ 렌더 가능성 자체가 이 테스트의 전제다 — `CompanionAcquisitionCauseSection`이 jsdom에서 mount된다(실측).
  */
 import { describe, it, expect, afterEach } from "vitest";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
 import { CompanionAcquisitionCauseSection } from "@/components/calc/transfer/CompanionAcquisitionCauseSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
@@ -348,29 +348,31 @@ describe("C. D2-2 — 토글 ON 화면 (상속 블록 대체 · 건물 원인 �
   });
 
   it("C15 PHD 자동 ON effect는 건물 원인 모드에서 돌지 않는다 — D2 ON(2003 취득) → OFF 뒤에도 usePreHousingDisclosure가 켜지지 않는다 / 긍정 짝: 매매 호스트는 자동 ON", () => {
-    let latest: AssetForm | null = null;
+    const seen: { a: AssetForm | null } = { a: null };
     function Probe({ initial }: { initial: AssetForm }) {
       const [a, setA] = useState(initial);
-      latest = a;
+      useEffect(() => {
+        seen.a = a;
+      }, [a]);
       return (
         <CompanionAcquisitionCauseSection asset={a} onChange={(p) => setA((prev) => ({ ...prev, ...p }))} transferDate="2026-06-30" isNewConstruction={false} />
       );
     }
     const pre = { acquisitionDate: "2003-05-01", landAcquisitionDate: "2002-01-10" };
     render(<Probe initial={d2("inheritance", pre)} />);
-    expect(latest!.usePreHousingDisclosure).toBe(false);
+    expect(seen.a!.usePreHousingDisclosure).toBe(false);
     fireEvent.click(d2Switch()); // OFF
-    expect(latest!.landCauseHost).toBe("");
-    expect(latest!.usePreHousingDisclosure).toBe(false);
+    expect(seen.a!.landCauseHost).toBe("");
+    expect(seen.a!.usePreHousingDisclosure).toBe(false);
     cleanup();
     // 토글 ON 직전 상태(상속 호스트, 2003)에서 켜도 마찬가지
     render(<Probe initial={asset({ acquisitionCause: "gift", acquisitionDate: "2003-05-01", inheritanceStartDate: "", inheritanceDate: "" })} />);
     fireEvent.click(d2Switch());
-    expect(latest!.landCauseHost).toBe("gift");
-    expect(latest!.usePreHousingDisclosure).toBe(false);
+    expect(seen.a!.landCauseHost).toBe("gift");
+    expect(seen.a!.usePreHousingDisclosure).toBe(false);
     cleanup();
     // 긍정 짝: 매매 호스트 + 2003 → 자동 ON(종전)
     render(<Probe initial={asset({ acquisitionCause: "purchase", acquisitionDate: "2003-05-01" })} />);
-    expect(latest!.usePreHousingDisclosure).toBe(true);
+    expect(seen.a!.usePreHousingDisclosure).toBe(true);
   });
 });
