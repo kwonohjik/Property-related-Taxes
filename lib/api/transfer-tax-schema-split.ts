@@ -34,6 +34,10 @@ export const splitAcquisitionShape = {
   landSec164Value: z.number().int().positive().optional(),
   /** 면적 입력 방식 「일부 양도」 — 단서 구간 차단 사실(D1-4). 그 밖은 무영향 */
   isPartialAreaTransfer: z.boolean().optional(),
+  /** 건물 파트 영 §164⑦ 가액(②, 건물 몫 총액·지분 스케일 후) — 2005.4.30. 전 상속·증여 건물(영 §163⑨ 단서 2호, 단독·다가구주택)에서 필수, 엔진이 평가액과 max */
+  buildingSec164Value: z.number().int().positive().optional(),
+  /** 주택 구분 — 단독·다가구(house_individual)만 단서 2호 ②가 열린다(D2-4). 생략 = 단독이 아님 */
+  buildingHouseKind: z.enum(["house_individual", "house_apart"]).optional(),
   /** 토지 파트 증여자 취득일 (§104②2호 — 이월과세 자산만. 분리 계산의 토지 이월과세는 미지원으로 차단 — D0 G-1) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /** 토지·건물 소유자 분리 (§166⑥) */

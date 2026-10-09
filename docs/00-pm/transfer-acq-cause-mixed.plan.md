@@ -420,3 +420,46 @@
 - 신고서 split-2col 건물 열 = 상속개시일(폼) · 토지 열 = echo · 각주는 D1-3 규약이 D2에서도 그대로 성립(코드 변경 없음, 테스트로 고정).
 - 검증: 신규 `__tests__/components/split-acq-cause-mixed-d2-3.ui.anchor.test.tsx` 19(4뷰 × 상속·증여 + 다건 카드 + leaf 부정형 짝 — D1 방향·구 이력 종전 문구). Pre-Do todo 4건(C17~C19·route echo) 이 파일로 대체. E2E `d2-2.spec` 결과 화면 고정을 새 문구로 뒤집음. mutation 7/7 KILLED(leaf 상속·증여 분기 · 호출 4곳 각각 · 건물 태그). vitest 전체 통과, E2E 관련 4 spec 26건 통과.
 - 설계 문서(`…-d2.engine.design.md`·`…-d2.ui.design.md`)의 `SPLIT_LAND_VALUE_LABEL` 언급은 작성 시점 기록이라 고치지 않는다(이 절이 우선).
+
+---
+
+## 13. D2-4 Design 확정 — 2005.4.30. 전 상속·증여 건물 + 토지 매매 (영 §163⑨ 단서 2호, 2026-10-09)
+
+설계: 엔진·법령 `docs/02-design/features/transfer-acq-cause-mixed-d2-4.engine.design.md` · UI `…-d2-4.ui.design.md`. **두 문서와 이 절이 어긋나면 이 절이 우선한다.**
+
+### 13.1 사용자 결정 (2026-10-09)
+
+| # | 결정 | 근거 |
+|---|---|---|
+| Q-D24-1 | **적용 + 결과 「확인 필요」 고지** — 건물 파트 취득가액 = max(① 건물 평가액, ② 영 §164⑦ 주택 환산가액의 건물 몫). ② = 최초공시 개별주택가격 × 취득당시 건물 기준시가 ÷ (최초공시 당시 토지 기준시가 + 건물 기준시가) | 단서 2호가 max를 명시. 건물 몫 안분은 재산세과-1702(2009.8.17.)·집행기준 99-164-9(본문 확인 — 엔진 설계 §1). 취득당시 토지 기준시가는 환산 분자와 안분 분모에서 약분(실측). 「상속·증여 건물 + 따로 산 토지」를 단서 2호에서 정면으로 다룬 해석례는 없다(U-10) |
+| Q-D24-2 | **단독·다가구 주택만** 연다. 공동주택·일반건물(`building`)은 종전 Y4 차단 유지 | 공동주택은 영 §164⑥(국세청 공동주택 기준시가 고시 전) 체계라 2005.4.30. 전이라도 단서 2호가 성립하지 않을 수 있다 — 근거 없는 유리 적용 위험. 일반건물은 §164⑤(기준율) 체계·최초 고시일 미확인 |
+
+### 13.2 기본값(두 설계 일치 — 별도 질문 없이 채택)
+- 일부 양도(`areaScenario` 일부) + 경계일 전 → 차단(D1-4 미러, 자동 안분 금지).
+- 의제취득일(1985.1.1.) 전 상속·증여도 연다(엔진 효과 0, 취득당시 건물 기준시가 라벨만 `sec164AcqTimePointLabel` 규약).
+- 반올림: 안분 `safeMultiplyThenDivide` 1회 floor + 지분 `applyRatio` 1회.
+- 입력 칸은 기존 `inhHouseVal*` 4필드 + `acquisitionArea` 재사용(신규 AssetForm 키 0).
+- 공동주택 구분의 단일 진실: ④가 `deriveInheritanceHouseKind`(UI·API 공용 파생)를 사실로 싣고, 엔진 leaf가 「단독이 아니거나 사실 없음 → 차단」(모르면 혜택 불성립). ⑧≡⑫ 유지.
+- PR 2분할: **D2-4a** 엔진·leaf·⑫·⑭·④ 브리지(⑧은 계속 막아 화면 변화 0) → **D2-4b** ⑤ 카드·⑧ 완화·⑥·⑦ 4뷰 일반화·테스트 뒤집기·E2E.
+
+### 13.3 D2-4a 구현 (2026-10-09, 엔진·leaf·⑫·⑭·④ 브리지 — 화면 변화 0, 세액 산식 불변)
+
+- **leaf** `transfer-split-part-cause.ts` Y4 분기(:261~):
+  Y4a 비주택(`isHousing` 생략 포함) → 종전 문구·field `acquisitionDate` · **Y4d 단독·다가구가 아니거나 구분 사실 없음** → 새 문구(영 §164⑥ 체계라 지원하지 않음, 구분 전달이 없으면 단독으로 보지 않음)·field `acquisitionDate` · **Y4b 일부 양도** → field `areaScenario`(⑫ 경로 `isPartialAreaTransfer`) · **Y4c ② 없음** → field `buildingSec164Value`. 신규 사실 `isHousing`·`buildingHouseKind`·`buildingSec164Value`, 공유 술어 `isSec163_9BuildingSec164Open`(주택 ∧ `house_individual`)을 leaf·엔진 해결자·④ 브리지가 쓴다. Y3/Y7/Y9 불변.
+- **엔진** `resolveBuildingPartAcquisition`(`transfer-tax-split-acq-price.ts:349`, 토지 `resolveLandPartAcquisition` 미러): overlay `purchase` ∧ 주택 ∧ `house_individual` ∧ 건물 원인 상속·증여 ∧ 건물 취득일 < 2005-04-30 ∧ 별개 취득 ∧ ① 있음 ∧ ② > 0 → `max(①, ②)`(동점 = 평가액), 건물 파트 echo `acquisitionBasis{rule:"sec163_9_2", reported, sec164, adopted}`. ① 없음은 비교하지 않는다(D1-4 Low 수정과 같다). `LandAcquisitionBasis.rule`을 `"sec163_9_1" | "sec163_9_2"`로 넓혔다(타입명 유지).
+- **⑫** `buildingSec164Value`(양의 정수)·`buildingHouseKind`(enum)를 **두 스키마**(주 자산 `base-shape`, 컴패니언 `split`)에 추가, `refineSplitPartCause`에 `isHousing` 인자(주 자산 `propertyType`, 컴패니언 `assetKind`). **⑭** 3곳(`engine-input.ts`·`multi/route.ts`·`bundled-split-helpers.ts`) 매핑. ⑬은 `buildLandPartCausePayload` 공용이라 추가 없음(단건·다건·컴패니언 body 동일).
+- **④ 브리지** `lib/calc/transfer-building-sec164-bridge.ts`: `buildingSec164Applies`(유효 D2 ∧ 주택 ∧ 구간)·`buildingHouseKindSent`·`buildingSec164Open`·`deriveBuildingSec164Total`(② = P_F × B_E ÷ (L_F + B_F), L_F = `multiplyByArea(㎡당, 면적)`, 안분 `safeMultiplyThenDivide` 1회 floor + 지분 `applyRatio` 1회; 면적은 D1-4 `sec164AreaSqm`(콤마 제거)를 export해 재사용). 5입력(`inhHouseValHousePriceAtFirst`·`…LandPricePerSqmAtFirst`·`…BuildingStdPriceAtFirst`·`…AtInheritance`·`acquisitionArea`)이 모두 양수일 때만 ②가 생긴다. 구간 밖·공동주택이면 kind·②를 싣지 않는다(범위 밖 잔재 차단). 신규 AssetForm 키 0. Y7(자산 단위 `inheritedHouseValuation` 미전송)은 그대로 — 주석만 정정.
+- **⑧**(임시, D2-4b가 교체): 같은 leaf를 쓰되 ② 사실은 「없음」(화면에 ② 입력 칸이 없다) — 구간 안은 모든 셀이 계속 막힌다. 단독·다가구 ② 필수 위반은 화면 사실 문구(`BUILDING_SEC164_SCREEN_MESSAGE`, 이동 칸 `acquisitionDate`)로, 공동주택·비주택은 leaf 문구, 일부 양도는 `areaScenario`. 주택 구분 사실은 ④가 보내는 값(`buildingHouseKindSent`) 그대로. 오류 라벨 맵에 두 필드 추가.
+- **고지** `buildingSec164ApportionNotice`(`transfer-tax-appurtenant-land.ts`) → `transfer-tax.ts` warnings. 어느 쪽이 채택됐는지·유불리는 말하지 않는다. 비교가 안 돈 경우(2005-04-30 당일·건물 매매)는 없다.
+- **anchor(Do 실측, 설계 손계산과 전부 일치)**: 상속 2003-05-01 ①30M·②36,000,000 → 247,266,000(과세표준 674,300,000, 건물 취득가 36M 채택) · ① 40M → 246,090,000(① 채택, 671,500,000) · ① 36M 동점 → reported · 증여 2002-09-15 ①25M·②29,473,684 → 249,184,737(과세표준 678,868,422, 지방소득세 24,918,473) · ②를 ①=25M으로 맞춘 대조 250,500,000(−1,315,263) · 1984-06-01 상속 = 2003 시드와 같은 247,266,000 · 경계 2005-04-29 ② 필수/② 있으면 200, 2005-04-30 ② 없이 200·echo 없음 · 지분 50% ② 18,000,000(= applyRatio(36M, 0.5)) · 컴패니언 일괄양도 파트 합 336,000,000(건물 36M + 토지 300M) · 다건 route = 단건 세액 · L_acq 불변성: 자산 단위 `calculateInheritanceHouseValuation`을 L_acq 600,000/300,000/1,000,000으로 돌려 건물 몫이 3회 모두 36,000,000.
+- **전환된 기존 테스트 3건(문구 한 줄씩)**: `split-part-cause.d2.test.ts` Y4 경계 · `transfer.route.split-building-cause.d2.predo.anchor` D2-C5 · `transfer-land-part-cause.d2.predo.test.ts` B6 — 주택 구분 사실이 없는 시드는 「모름」이라 새 Y4d 문구로 400(field 불변). `it.todo` D2-4 1건은 신규 anchor로 대체. ⑧·화면 쪽 기존 테스트는 D2-4a에서 불변(D2-4b에서 뒤집는다). `e2e/`는 건드리지 않았다(`d2-2.spec`은 이동 칸 `acquisitionDate`·문구 「건물 기준시가」가 유지돼 호환 예상 — 실행 안 함).
+- **검증**: tsc 0 · eslint 오류 0(기존 경고만) · 신규 테스트 3파일(route anchor 33 · 엔진/leaf/⑫ 44 · 브리지/④/⑧/격자 20) · 관련 vitest 2,592파일 30,873건 통과(법령 커버리지 게이트 포함) · mutation 48건 전부 KILLED(해결자 max·동점·6개 적용조건·leaf Y4a~d·경계·⑫ 스키마 2곳×2필드·refine 사실·⑭ 3곳×2필드·브리지 3·④ 3·⑧ 4·고지 2·엔진 echo/사실 4). ⑧≡⑫ 격자 320셀(호스트 2 × 구분 2 × 자산 종류 2 × 날짜 5 × 입력 8): 「⑧ 통과 ⇒ ⑫ 200」 위반 0, 구간 안 ⑧ 전 셀 차단, 구간 안 ⑫ 통과는 주택 ∧ 단독·다가구 ∧ 5입력 ∧ ① ∧ 일부 양도 아님뿐.
+- **D2-4b로 넘김**: ⑤ ② 입력 카드(5칸·앵커 `inhHouseVal*` 4개 + `buildingSec164Value` 래퍼) · ⑧ ② 사실을 `deriveBuildingSec164Total`로 교체(+ `BUILDING_SEC164_SCREEN_MESSAGE` 삭제, 첫 미완 칸 이동·`sec164BuildingPartStatus` 5칸 필수) · ⑥ 사이드바 pending·`building?.acquisitionBasis` 분기 · ⑦ 4뷰 `splitAcqBasisView` 건물 라벨(「영 §164⑦ 가액」)·`rule` 분기 · `buildingCauseDateNotices` 안내 문구 교체(지금은 「이 비교를 지원하지 않습니다」) · 위 격자의 「구간 안 ⑧ 전 셀 차단」 단언 뒤집기 · E2E. 공동주택 안내 문구(「단독·다가구만」)를 화면에서 어떻게 말할지.
+- **확인 필요(미해소)**: U-10 「상속·증여받은 건물 + 따로 매수한 토지」를 단서 2호에서 정면으로 다룬 해석례 · U-4 공동주택·일반 건물 기준시가 최초 고시일(경계 2005-04-30의 정확성 — 단독·다가구는 개별주택가격 최초공시일로 읽는다) · U-11 최초공시 당시 부수토지 면적과 현재 면적이 다른 경우(분할·합병) · U-13 단서 2호 「건물의 기준시가가 고시되기 전」을 개별주택가격 최초공시일로 읽는 기존 독법.
+
+**D2-4a Check 후속 (2026-10-09, sync 검사 + 취득가액 리뷰 — 둘 다 High·FAIL 없음)**
+- **[Medium → D2-4a에서 수정] F1 주택 구분 「모름」의 단독 승격**: ④ `buildingHouseKindSent`가 표시용 파생 `deriveInheritanceHouseKind`를 썼는데, 그 함수는 미선택(기본 `inheritanceAssetKind: "land"`)·동·호 공란을 `house_individual`로 읽는다 → D2-4b가 ⑧을 열면 공동주택이 동·호 없이 입력된 경우 ②가 열린다(근거 없는 유리 적용 위험). **명시 선택(`house_individual`·`house_apart`)만 싣고 그 밖은 미전송**(엔진 leaf Y4d가 차단)으로 바꿨다. 표시용 파생 함수는 그대로. 회귀 3건(기본값 land·미선택·미선택+동·호) — 되돌리면 실패(KILLED). ⇒ **D2-4b 카드에 주택 구분 선택 칸(단독·다가구 / 공동주택)이 필요하다** — D2 모드에서는 자산 단위 상속 블록의 `InheritanceHouseKindPicker`가 마운트되지 않는다.
+- **[Low → 수정] 문구 인용**: 차단 문구 3종(공동주택·② 필수·일부 양도)의 첫 언급을 「소득세법 시행령」 제○조로, 공동주택 문구는 「영 §164⑥ 체계」 단정 대신 「국세청장이 고시한 공동주택가격이 있었는지에 따라 적용 조문(같은 영 제164조 제6항·제7항)이 갈린다」로 정정(영 §164⑦도 공동주택가격을 포함한다 — 리뷰 C-2). 결과 고지는 「제164조 제7항 가액 = 건물분 안분값」으로 섞어 말하던 것을 「제164조 제7항 가액의 **건물 몫**」으로 한정.
+- **D2-4b 선행 조건(⑧을 열기 전에 반드시)**: (M1) 4뷰 `splitAcqBasisView`·`splitAcqBasisFormula`·`partTag`·PDF·신고서 각주가 `rule`을 보지 않아 건물 echo에 「영 §164④ 가액」·「토지 취득가액」·「단서 1호」를 붙인다(API 직접 호출에서 실측 — 화면은 ⑧이 막아 도달 불가) → `rule`·파트로 분기, 결과 카드에 건물 비교 행 · (M2) 사이드바 `transfer-per-asset-summary.ts`가 `land?.acquisitionBasis`만 읽어 결과 후 330,000,000(엔진 336,000,000)에 머문다 → 구간 안 pending + 결과 도착 시 정본 합.
+- **남김(Low)**: F3 별개 취득이 아닌데 ②를 보낸 API 직접 호출은 비교 없이 ① 단독(D1-4 토지와 같은 정책, 납세자 불리 방향, 화면은 같은 날 ⑧ 차단) · `buildingSec164Value` 상한 없음(`landSec164Value`와 같은 패턴) · 컴패니언 지분 50% 일괄양도의 500(D2-4a 경로 아님 — master 동일 여부 미확인) · 컴패니언 `mixed_use_house` + D2 필드는 ⑫ 400(⑭가 housing으로 접는 점은 D2-4b 전 확인).
+- 검증: ⑧≡⑫ 격자 추가 700셀(단건)·260셀(컴패니언)·260셀(다건) — 「⑧ 통과 ∧ ⑫ 비-200」 0, 비-D2 셀 25,000건 HEAD 사본과 ④·⑧ 바이트 동일. E2E acq-cause 계열 34 + 상속·분리 결과 계열 47 통과.

@@ -183,7 +183,8 @@ describe("엔진 직접 — calcSplitGain이 같은 leaf로 던진다", () => {
     expect(() => run({ buildingAcqMode: "estimated", buildingStandardPriceAtAcquisition: 300_000_000 })).toThrow("상속·증여로 취득한 건물은 취득가액을");
   });
   it("Y4 경계: 개시 2005-04-29 → throw · 2005-04-30 → 계산", () => {
-    expect(() => run({ acquisitionDate: D("2005-04-29"), landAcquisitionDate: D("2005-01-10") })).toThrow("기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
+    // [D2-4a 전환 · 문구] 주택 구분 사실(buildingHouseKind) 없음 = 「모름」 → 단독·다가구로 보지 않는 Y4d 문구(단독·다가구 + ②는 `split-part-cause.d2-4.test.ts`)
+    expect(() => run({ acquisitionDate: D("2005-04-29"), landAcquisitionDate: D("2005-01-10") })).toThrow("단독·다가구주택으로 확인된 주택만 지원합니다");
     expect(() => run({ acquisitionDate: D("2005-04-30"), landAcquisitionDate: D("2005-01-10") })).not.toThrow();
   });
   it("Y1 소유자 분리·부담부증여(transferType)·가업상속 → throw", () => {

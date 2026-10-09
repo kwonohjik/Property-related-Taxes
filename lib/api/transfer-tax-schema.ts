@@ -146,7 +146,7 @@ export const propertySchema = z
       // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
       // D0 — 토지 파트 취득원인(이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — 주 자산과 같은 leaf
-      refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", ctx, ["companionAssets", i]);
+      refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i]);
     });
     if (companions.length > 0) {
       // 총 양도가액 필수

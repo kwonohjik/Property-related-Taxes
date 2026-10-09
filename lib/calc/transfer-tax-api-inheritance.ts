@@ -183,7 +183,7 @@ export function buildInheritedHouseValuationPayload(
   // "부분 입력이 조용히 무시"도 "칸은 다 있는데 차단"도 생기지 않는다(계획서 §5.1).
   // 자산종류(주택 2종)·취득원인(§163⑨ 대상)·기간(개별주택가격 최초공시 前) 게이트가 그 안에 있다.
   if (!isFullyFilled(sec164HouseStatus(primary))) return {};
-  // D2 — 개별주택가격(결합 공시) 환산은 건물만 상속에서 의미가 깨진다(V-4). 경계일 전은 ⑫·⑧이 막으므로 도달하지 않는다.
+  // D2 — 개별주택가격(결합 공시) 환산은 건물만 상속에서 의미가 깨진다(V-4). 경계일 전(2005.4.30. 전) ②는 자산 단위 payload가 아니라 `buildingSec164Value`로 간다(D2-4 `buildLandPartCausePayload` — Y7이 이 payload 동봉을 계속 막는다).
   if (effectiveBuildingCauseMix(primary)) return {};
 
   const inheritanceDate = deriveSec163_9BaseDate(primary);
