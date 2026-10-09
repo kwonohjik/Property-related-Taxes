@@ -128,7 +128,10 @@ function ApportionedPriceBlock({
   onTransferAreaChange,
   pricePerSqm,
   onPricePerSqmChange,
+  shareNote,
 }: {
+  /** 함께양도 묶음의 지분 자산 — 물건 전체(100%) 기준시가를 받고 지분율을 곱한다는 안내(없으면 종전 hint) */
+  shareNote?: string;
   assetKind: BlockProps["assetKind"];
   standardPriceAtTransfer: string;
   onStandardPriceAtTransferChange: (v: string) => void;
@@ -168,7 +171,7 @@ function ApportionedPriceBlock({
             ? "양도시 기준시가 (공시지가 × 양도 당시 면적, 원)"
             : "양도시 기준시가 (원)"
         }
-        hint="안분 비율 분모 (§166⑥ 단서)"
+        hint={shareNote ?? "안분 비율 분모 (§166⑥ 단서)"}
       />
     </div>
   );
@@ -234,7 +237,12 @@ export function CompanionSaleModeBlock(props: BlockProps) {
 
   // 지분 분할 모드: 양도가액은 총양도가 × 지분율로 자동 결정 → actual 입력·기준시가(§166⑥) 안분 입력
   // 모두 불필요. 모드(isFractionalSplit)로 게이트해 지분율 미입력(공란) 상태에서도 안분 입력을 숨긴다.
-  const fractionalActive = props.isFractionalSplit || ratioReady;
+  // ⚠️ 함께양도(다른 물건) 묶음의 지분 자산은 여기 오지 않는다 — 총양도가가 여러 물건의 합이라 지분율을 곱할 대상이 아니다.
+  //    그 자산은 아래 일반 칸(물건 전체 100% 기준)을 받고 ④가 지분율을 곱한다(2026-10-10 — 종전엔 자동가를 보여 주고
+  //    서버는 그 값을 쓰지 않아 500·양도가액 0). 단건(`singleMode`)의 지분 자동가는 종전 그대로.
+  const fractionalActive = props.isFractionalSplit || (ratioReady && !!props.singleMode);
+  const sharePct = ownN > 0 && ownN < ownD ? Number(((ownN / ownD) * 100).toFixed(4)) : undefined;
+  const shareInCompanion = !props.singleMode && sharePct !== undefined;
   if (fractionalActive) {
     return (
       <div className="space-y-2">
@@ -262,13 +270,19 @@ export function CompanionSaleModeBlock(props: BlockProps) {
       // 동기화한다. 단건에서는 「계약서상 양도가액」 오류(자산 2개 이상 전용)가 나지 않아 키가 겹치지 않는다.
       <div data-field={props.singleMode ? "contractTotalPrice" : "actualSalePrice"}>
         <CurrencyInput
-          label={props.singleMode ? "양도가액 (원)" : "계약서상 양도가액 (원)"}
+          label={props.singleMode ? "양도가액 (원)" : shareInCompanion ? "계약서상 양도가액 — 물건 전체(100%) 기준 (원)" : "계약서상 양도가액 (원)"}
           value={props.actualSalePrice}
           onChange={props.onActualSalePriceChange}
           required
           // 단건 모드는 힌트 없음 — "양도가액" 라벨만으로 자명(2026-07-16).
           // 다건 모드는 자산별 가액이라는 구분이 필요해 §166⑥ 근거 힌트를 유지한다.
-          hint={props.singleMode ? undefined : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"}
+          hint={
+            props.singleMode
+              ? undefined
+              : shareInCompanion
+                ? `물건 전체의 매매가액을 입력하세요 — 지분율 ${sharePct}%를 곱한 금액이 이 자산의 양도가액입니다 (§166⑥ 본문)`
+                : "이 자산의 매매계약서 명시 가액 (§166⑥ 본문)"
+          }
           data-testid="companion-actual-sale-price"
         />
       </div>
@@ -288,6 +302,11 @@ export function CompanionSaleModeBlock(props: BlockProps) {
       onTransferAreaChange={props.onTransferAreaChange}
       pricePerSqm={pricePerSqm}
       onPricePerSqmChange={onPricePerSqmChange}
+      shareNote={
+        shareInCompanion
+          ? `물건 전체(100%) 기준시가를 입력하세요 — 지분율 ${sharePct}%를 곱한 값이 이 자산의 안분 비율 분모입니다 (§166⑥ 단서)`
+          : undefined
+      }
     />
   );
 }

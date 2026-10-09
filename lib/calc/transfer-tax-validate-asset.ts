@@ -255,13 +255,14 @@ export function validateAssetEntry(
     return `${label}: 지분 모드 자산(${formatOwnershipPercent(a.ownershipNumerator || "100", a.ownershipDenominator || "100")})은 단독으로 계산할 수 없습니다. 나머지 지분도 내 것이면 그 지분을 별도 자산으로 추가하고, 나머지가 타인 소유이면 「나머지 지분은 타인 소유」를 선택하세요. 단독 소유라면 지분율을 100%로 입력하세요.`;
   }
 
-  // 다자산 양도가액 — 지분 모드(ratio < 1.0) 자산은 양도가액이 총양도가 × ratio로
-  // 자동 결정되므로 actualSalePrice·standardPriceAtTransfer 모두 검증 면제.
-  // 동일 물건 지분 단계취득 케이스(사례 27)에서 안분 키 입력 강요 차단.
-  const isFractionalAsset = ownN < ownD;
+  // 다자산 양도가액 — 축 B(같은 물건 지분 분할, 전 자산 지분)는 양도가액이 총양도가 × ratio로
+  // 자동 결정되므로 actualSalePrice·standardPriceAtTransfer 모두 검증 면제(사례 27 — 안분 키 입력 강요 차단).
+  // 함께양도(다른 물건) 묶음에 지분 자산이 섞이면 그 자산도 요구한다 — 물건 전체(100%) 입력이고 ④가 지분율을 곱한다.
+  // 종전에는 그 자산 하나의 ratio만 보고 면제해 route가 500(actual)·양도가액 0(apportioned)이었다(2026-10-10 실측).
+  const axisBBundle = isFullFractionalBundle(form.assets);
   // 증환지 증가분 존재 시 양도가액 구분 기재(actual) 불가 → 양도시 기준시가 안분 강제 (Step1 토글 숨김과 일치)
   const effBundledMode = effectiveBundledSaleMode(form);
-  if (form.assets.length > 1 && !isFractionalAsset) {
+  if (form.assets.length > 1 && !axisBBundle) {
     /**
      * 🔴 부담부증여 자산은 ⑤가 **모드를 자산별로 덮어쓴다** (2026-09-07 UI 리뷰).
      *

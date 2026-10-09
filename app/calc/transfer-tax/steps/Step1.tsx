@@ -55,11 +55,16 @@ export function Step1({
      * 여기만 빠져 있었다. (`every`가 아니라 `some`인 것은 유지한다: 토글 B 진입 직후
      * 지분율이 빈칸이라 `every`는 거짓이 된다.)
      */
+    // ⚠️ 명시 100%(단독 소유) 자산이 하나라도 있으면 축 B가 아니다 — 함께양도(다른 물건) 묶음에 지분 자산이 섞인 경우다.
+    //    종전에는 `some`만 봐서 복원 시 그 묶음을 축 B로 바꿔 ① 기본정보를 숨기고 「총양도가 × 지분율」 자동가를 보였다
+    //    (2026-10-10). 빈칸은 축 B 진입 직후의 미입력이라 허용한다(위 `some` 유지 이유).
+    const ratioBlank = (a: (typeof form.assets)[number]) => !a.ownershipNumerator?.trim() || !a.ownershipDenominator?.trim();
     if (
       form.assets.length > 1 &&
       form.assets.some((a) =>
         isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
-      )
+      ) &&
+      form.assets.every((a) => ratioBlank(a) || isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator))
     )
       return "fractional";
     if (form.assets.length > 1) return "companion";

@@ -223,3 +223,22 @@ export function prepareBundledApportionment(
 
   return { apportionment, adjustedAcq };
 }
+
+/**
+ * 함께양도(다른 물건) 묶음 안 지분 자산의 **물건 전체 양도가액**(12억 안분 분모 — `totalPropertyTransferPrice`).
+ *
+ * actual은 ④가 100% 입력값을 싣는다. apportioned는 안분 전이라 ④가 모른다 — 안분된 지분 양도가액 ÷ 지분율로 채운다
+ * (안분 키가 「물건 전체 기준시가 × 지분율」이므로 같은 물건 전체로 되돌리는 항등식). 채우지 않으면 엔진이 지분 양도가액을
+ * 분모로 써 12억 고가주택 판정이 지분분으로 내려간다. 축 B(같은 물건 지분 분할)·단독 소유·이미 값이 있으면 그대로 둔다.
+ * 원 미만 절사(정수 금액 규약).
+ */
+export function shareWholePropertyPrice(
+  totalPropertyTransferPrice: number | undefined,
+  ownershipRatio: number | undefined,
+  allocatedSalePrice: number,
+  isFullFractionalBundle: boolean,
+): number | undefined {
+  if (totalPropertyTransferPrice !== undefined || isFullFractionalBundle) return totalPropertyTransferPrice;
+  if (ownershipRatio === undefined || !(ownershipRatio < 1) || !(ownershipRatio > 0)) return totalPropertyTransferPrice;
+  return Math.floor(allocatedSalePrice / ownershipRatio);
+}
