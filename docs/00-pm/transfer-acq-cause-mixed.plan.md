@@ -349,3 +349,52 @@
   - **Medium**: 단건 결과 도착 후에도 사이드바 취득가액이 「계산 후 표시」에 갇혔다(단건 fallback 체인이 `splitDetail`을 읽지 않음 — D1-4b의 입력 단계 pending이 만든 퇴행, 세액 불변). 단건 결과에 `acquisitionBasis`가 있으면 `summarizeSplitGain().acquisitionDeducted`(bundled split 분기와 같은 정본)로 해소. 회귀 `__tests__/calc/split-land-sec164-sidebar.d1-4b.test.ts`(route 경유 신축·매매) — 수정 제거 시 2건 실패.
   - **Low**: ④ 브리지 면적 파싱이 콤마를 지우지 않아 stale 「1,200」에서 카드 ②와 ④ ②가 갈렸다 → 단건 §164④ 경로와 같은 콤마 제거. 제거 변이 KILLED.
   - 남김(기존 관행 — 신규 아님): ⑧ 메시지 「1990.1.1. 개별공시지가」 ↔ 공용 위젯 라벨 「1990.8.30. 개별공시지가」 문구 차이(`sec164LandStatus`·`sec164HouseStatus` 공통), `pre1990GradeMode` 미지정 해석(factory·migration이 항상 채움). 다건 합산 신고서 비교 각주 없음(swap 각주와 같은 계열 갭).
+
+---
+
+## 12. D2 Design 확정 — 건물 상속·증여 + 토지 매매 (2026-10-09)
+
+설계: 엔진·법령 `docs/02-design/features/transfer-acq-cause-mixed-d2.engine.design.md`(V-2·V-3·V-4·V-11 법령 확인 절 포함) · UI `…-d2.ui.design.md`. Pre-Do: `__tests__/api/transfer.route.split-building-cause.d2.predo.anchor.test.ts` · `__tests__/calc/transfer-land-part-cause.d2.predo.test.ts` · `…d2.predo.render.test.tsx`. **두 문서와 이 절이 어긋나면 이 절이 우선한다.**
+
+### 12.1 사용자 결정 (2026-10-09)
+
+| # | 결정 | 근거 |
+|---|---|---|
+| D2-Q1 | 토지가 상속 **전**에 취득된 경우 토지 파트 세율 기산 = **현행 상속개시일 앵커**(주택 토지 `max(법정 기산일, 건물 취득일)`의 건물 취득일 = 상속개시일) + 두 기산이 갈릴 때 결과 고지 1줄 | 소유자 기준 해석(서면-2024-부동산-0428 등)과 일치·현행 구현. 피상속인 앵커(유리, 최대 85,000,000 차이)는 정면 근거 없음 |
+| D2-Q3 | 건물만 상속 → 영 §154⑧3호(동일세대 상속주택 통산) **적용**(엔진 현행) — 동일세대 3키 화면 유지·④ 전송, 「확인 필요」 표기. §155②(상속주택 특례)·§167의3①7호는 **미적용** + 확인 필요 | 「상속받은 주택」= 건물(문언). D1 「토지만 상속 = 미적용」과 대칭 |
+| D2-Q5 | 토지 overlay 부재 + 건물 상속·증여 + 분리 입력 → **⑫·엔진 차단(Y8)** | 현행은 매매 토지를 상속 토지로 읽어 238,500,000 → 133,060,000 침묵 과소 |
+
+### 12.2 합의(두 설계 일치 — 권장안 채택)
+- 범위: 건물 {상속, 단순 증여} × 토지 매매(4방식). 건물 평가액 직접 입력 1칸(실가 1종 — V-4: 개별주택가격 결합 공시, 서면4팀-1462 안분은 후속). 세액 산식 변경 0.
+- 건물 취득일(상속개시일·증여일) < 2005-04-30(영 §163⑨ 단서 2호 구간의 보수적 상위 집합)은 D2-1에서 엔진·⑫·⑧ 3중 차단, max 입력은 D2-4.
+- leaf D2 분기(Y1 구조 차단 · Y2 토지 취득일 · Y3 건물 실가 1종 · Y4 경계일 · Y7 자산 단위 평가 payload 동봉 차단 · Y8), R-X5 개정(건물·토지 둘 다 상속·증여는 계속 차단 — D3). 같은 날은 ⑧ 전용.
+- **술어 분리**(UI §): D1 `effectiveLandAcquisitionCause`는 상속·증여만 반환(의미 유지), D2는 `effectiveBuildingCauseMix` + 합성 술어 — `purchase`를 D1 술어에 넣으면 D1 소비처 약 9곳이 매매 토지를 상속 토지 UI로 고정한다.
+- 위젯: 토지 = 매매 고정, 매매 블록을 건물 원인 모드로 재사용(R안), 상속 블록 미마운트, 숨김 칸 약 25(결합 공시 계열), 호스트 태그 cause별.
+- V-11: 자산 단위 STEP 0.45는 파트 가격을 덮지 않음(세액 불변)이나 표시가 어긋나고, ⑧ `postDeemedClauseARequiredError`·컴패니언 CP-1이 막다른 길 → D2-1에서 Y7과 같이 해소.
+- 다건: 허용(⑧ 신고가액 요구 면제) — 구현 전 multi route 실측, 불가면 명시 차단.
+- PR 4분할: **D2-1** 엔진·⑫·CP-1·④·⑧ 술어·고지(화면 변화 0 — 토글 미노출) → **D2-2** 위젯·⑥ → **D2-3** ⑦ 표시(`splitRateBasisNote` 건물 방향 문구) → **D2-4** 2005-04-30 전 건물 max 입력.
+
+### 12.3 D2-1 구현 (2026-10-09, 엔진·⑫·CP-1·④·⑧ 술어·고지 — 화면 변화 0, 세액 산식 불변)
+
+- **leaf** `transfer-split-part-cause.ts`: 조건 = overlay `purchase` + 건물 {상속, 증여}. 순서 구조(Y1 부담부증여·PHD·가업상속·소유자 분리) → Y2 토지 취득일 → Y4 건물 경계일(`< 2005-04-30`, field `acquisitionDate`) → Y3 건물 실가 1종(field `buildingAcqMode`) → Y7 자산 단위 평가 payload 동봉(field `inheritedAcquisition`). **Y8**: overlay 부재 + 건물 상속·증여 + 분리 입력(토지일 ≠ 건물일, 소유자 분리·PHD 후퇴 송신은 같은 날이라 비해당) → 400. R-X5 개정: 건물 이월과세·부담부증여 + 토지 매매 차단 / 건물 상속·증여 + 토지 상속·증여는 계속 차단(접두 문구 유지 + 「토지 취득원인은 매매만 지정할 수 있습니다」).
+- **사실 공급**: 엔진 `calcSplitGain`(호출 시점 입력 — STEP 0.45가 필드를 지우지 않아 Y7 판정 가능) · ⑫ 주 자산/컴패니언 `refineSplitPartCause` · ⑧ `validateLandPartCause`(④가 보내는 값).
+- **V-11 막다른 길 2건 해소**: ⑧ `validateAssetAcquisition`이 D2 유효 시 `validateBuildingCauseSplit`(신규 36줄)으로 먼저 갈라 자산 단위 상속 요구(§164·E-1·PD-1·post-deemed)에 도달하지 않음 · 컴패니언 CP-1(`refineCompanionInheritedValue`)은 overlay `purchase` + 분리 입력이면 건너뜀. ④는 D2 유효 시 `inheritedAcquisition`·`inheritedHouseValuation`·컴패니언 `inheritanceValuation`·`primaryInheritanceValuation`을 싣지 않음.
+- **클라이언트 술어 분리**: `effectiveLandAcquisitionCause`는 D1 의미 불변(반환형 `"" | "inheritance" | "gift"`, `purchase`는 `""`), D2는 `effectiveBuildingCauseMix` + 합성 `landCauseMixActive`·`engineLandOverlay`·`withBuildingActualWhenMix`. 합성 술어 소비처: `phdFlagEffective` · 같은 날(`landPartCauseSameDay`) · ④ `buildLandPartCausePayload`(overlay `purchase`만 전송) · ⑧ 사실 · 가업상속 게이트 · 다건 ⑧(신고가액 요구 면제). 건물 방식은 D2 유효 시 ④·⑧·⑥ 모두 `actual` 고정, 자산 단위 추계 플래그(환산·감정·매매사례, stale 포함)는 ④(단건 `primary-context`·다건)에서 무시. ⑥ 자산 행은 숨은 `publishedValueAtInheritance`를 읽지 않음(pending 0).
+- **D2-Q3**: 동일세대 3키 ④ 전송 유지(§154⑧3호 적용 — 엔진 현행). `houses[]` 양도 주택의 `isInherited`·`inheritedDate`·`decedentSameHouseholdAtInheritance`·합가·선순위는 D2 유효 시 미전송(§155②·§167의3①7호 미적용).
+- **D2-Q1 고지**: `landBeforeBuildingAcquisitionRateNotice`(Check 후속에서 개명 — 종전 `landBeforeInheritanceRateNotice`) — 상속·증여 건물 + 토지 매매 + 파트 세율 판정(`partRateBasisApplied`) + 토지 자기 취득일 기산과 상속개시일 기산의 세율 구간(1년 미만/1~2년/2년 이상)이 다를 때만 warnings 1줄. 세액 불변.
+- **실측(구현 전 필수 3건)**: 다건 route(`/api/calc/transfer/multi`)는 D2 payload를 수용(단건과 같은 세액, 건물 증여 동일) · 컴패니언(일괄양도) 취득가액은 파트 합 7억(안분 단계 allocated 0이어도 파트 가액이 이김), 자산 단위 평가·overlay 부재는 400 · 12억 초과 고가주택(표2) 파트 보유연수 건물 8년(개시일)·토지 11년(자기 취득일), 건물 매매 대조군과 장특·세액 동일.
+- **전환된 기존 테스트(근거 한 줄씩)**: `split-part-rate.anchor` A-14b(overlay 부재 + 건물 상속 + 분리 입력 → Y8 throw, 종전 191,490,000 침묵 과소) · `split-part-cause.d1` 「회귀 0」 시드(purchase + 건물 상속은 D2 규칙 대상) · `split-acq-cause-mixed-d1-3.ui.anchor` 「자산 전체 상속」 시드(분리 입력은 같은 날로 — Y8) · UI Pre-Do B1~B6 뒤집기 + C1~C17 활성화 · 엔진 Pre-Do D2-B3·C·D 뒤집기.
+- 검증: 신규 `split-part-cause.d2.test.ts` 49 · `…d2.predo.anchor` 20 · `…d2-1.routes.anchor` 6 · UI Pre-Do 23(+3 todo = D2-3 표시). 관련 vitest 1567파일 18,086 통과, E2E 38(acq-cause 계열 23 + 상속·다건·§164 15) 통과. mutation 34건 전부 KILLED(최초 3건 SURVIVED → 테스트 보강 후 KILLED).
+- 남은 것: D2-2 위젯·⑥ 표시(`BuildingCauseMixBlock`, 토글 노출) · D2-3 ⑦ 표시(건물 방향 `splitRateBasisNote`·건물 가액 태그) · D2-4 경계일 전 max 입력. 확인 필요 레지스트리는 엔진 설계 §10.
+
+**D2-1 Check 후속 (2026-10-09, sync 검사 + 취득가액 리뷰)**
+- **[Medium] Y8이 기존 화면 경로에 닿음 → 읽는 쪽 파생**: 일반건물에서 「취득일 다름」 + 토지 상속·증여를 입력하고 자산 종류를 주택·건물로 전환(전환 patch가 `hasSeperate…`를 끄지 않음)하거나 2026-07-30 이전 저장분은 「상속·증여 호스트 + `hasSeperate=true` + 토지일 ≠ 건물일」이 된다. HEAD는 토지를 상속으로 침묵 계산(예 134,046,000), D2-1 최초 구현은 ⑧·⑫ 차단인데 고칠 칸(토지 취득원인 토글)이 화면에 없었다. 신규 술어 `hasStaleSplitInput`(상속·증여 호스트 ∧ D2 유효 아님 ∧ 소유자 분리 아님 ∧ 부담부증여 아님 ∧ `hasSeperate=true`) + `normalizeBuildingCauseInputs`(stale 무시 + D2 건물 방식 실가 고정)를 ④(`isSplitPayloadActive`·`buildSplitPayload`)·⑧(`validateLandPartCause`·`validateSplitDirectInputs`·날짜 정합)·⑥(`isSeparateAcquisition`·`separateAcqPartsSum`·자산 행 환산 미리보기)가 공유한다. 저장값은 지우지 않는다. 소유자 분리의 `landAcquisitionDate` 후퇴 송신·D1 호스트·부담부증여·일반건물·겸용은 같은 객체를 돌려준다(body 바이트 동일 — 테스트 `same()` + 소유자 분리 ④ 값 단언). Y8(API 직접 호출 방어)은 유지. 미처리(별건): `transfer-tax-validate-expropriation.ts:44`·`-usage-conversion.ts:70`도 `hasSeperate…`를 직독한다(stale 상속·증여 호스트에서 수용·용도변경 검증이 분리 입력을 본다 — 이번 범위 밖).
+- **[Medium] 컴패니언 건물 증여 D2: ⑧ 통과 ↔ ⑫ 400** → 컴패니언 증여 arm(`fixedAcquisitionPrice` 필수)에 상속 arm CP-1 면제와 같은 술어(`isBuildingCauseMixCompanion`) 적용. 번들 안분은 파트 합 7억을 취득가액으로 쓴다(route anchor, `splitDetail` 건물 gift/own). 면제는 D2 한정(overlay 없는 컴패니언 증여는 종전대로 400).
+- **[Low] 다건 ⑧ `phdFlagEffective` 교체**: D1(토지 상속·증여 유효) + PHD 플래그 다건이 이제 ⑧을 통과한다. ④(`usesPhd`)가 원래 같은 술어라 ⑧을 ④에 맞춘 **정합 방향의 의도된 변경**이다(종전: 다건 ⑧만 원시 플래그를 읽어 ④가 PHD를 무시하는데도 막힘).
+- **취득가액 리뷰 (a) 같은 날 + 파트 가액 없음**: 같은 날은 `isSeparateAcquisition`이 false라 파트 완결 규칙(V1·V2)이 꺼져 있고, 컴패니언은 CP-1까지 면제돼 **취득가액 0**이 조용히 계산됐다(실측: 주 자산 472,935,000 · 컴패니언 474,060,000, `splitDetail` 없음). **Y9**(건물 가액 필수 · 토지 실가·감정이면 토지 가액 필수)를 leaf에 추가해 엔진·⑫·⑧이 막는다.
+- **(b)** 일괄양도 주 자산 `primaryInheritanceValuation`을 Y7 사실에 추가(⑫ 주 자산 — ④는 D2 유효 시 이미 미전송).
+- **(c)** D2 토지 매매 파트 환산·개산공제 값 고정(손계산): 환산취득가 = 7억 × 1억 ÷ 7억 = 1억, 개산공제 = 1억 × 3% = 3,000,000, 토지 양도차익 597,000,000 → 376,260,000. 건물 개산공제 0.
+- **(d)** Y4 문구: 「개별주택가격이 공시되기 전」만 말하던 것을 「건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전」 + 「정확한 고시일은 자산 종류별로 달라 2005.4.30. 이전 취득을 보수적으로 모두 막는다」로 정정(비주택 `building` 포함).
+- **고지의 증여 확장**: 증여 건물도 토지 적용 기산 = 증여일이라 구간이 갈리면 같은 고지를 증여일 문구로 낸다(Q-D2-2 + 사용자 결정 「두 기산이 갈릴 때 고지」). 상속·증여 각 11시드 실측(2018-03-02·2020-01-10·2024-01-10·2024-07-01 고지 / 2024-07-02·2025-01-10·2025-04-30·같은 날·개시 후 3종 무고지) — 초일 산입으로 2024-07-01은 양도 2026-06-30까지 딱 2년(2년 이상 구간).
+- **재검사(sync, HEAD 사본 대조) 결과**: 비-stale 46시드 ④·⑧·⑫·⑥ HEAD 동일, stale 시드 전부 ⑧ 통과·⑫ 200·자산 단위 계산과 세액 일치(새로 막히는 셀 0), D2 유효 격자 「⑧ 통과 + ⑫ 400」 0.
+- **별건(기존 결함 — D2-1이 만들지 않음)**: 상속·증여 주택에 매매 시절 자동 ON된 `usePreHousingDisclosure`가 남으면 ⑧은 PHD를 보지 않는데 ④ `usesPhd`가 분리를 켜 ⑫ 400(`landStandardPriceAtTransfer` 필요) — HEAD에서도 `inh_phd` 시드가 이미 「⑧ 통과 ↔ ⑫ 400」. stale 분리 + PHD 시드는 종전 ⑧ 차단 → 이제 같은 막다른 길로 이동. 뿌리: `phdToggleReachable`이 자산 종류만 보고 토글이 실제로 렌더되는 취득원인(매매 블록)을 보지 않는다. 다음 PR 후보.

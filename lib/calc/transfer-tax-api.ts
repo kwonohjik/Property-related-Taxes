@@ -38,6 +38,7 @@ import { isReceiveOnlyFiling } from "./redev-field-scope";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
@@ -663,7 +664,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
               ? parseAmount(primary.standardPriceAtTransfer)
               : undefined,
           primaryInheritanceValuation:
-            primary.acquisitionCause === "inheritance"
+            primary.acquisitionCause === "inheritance" && !effectiveBuildingCauseMix(primary) // D2: 건물 평가액은 파트 가액
               ? {
                   inheritanceDate: primary.acquisitionDate,
                   // 보충적평가 자산 구분 — 상단 assetKind 기준 파생(land vs 非land; housing은 개별/공동).

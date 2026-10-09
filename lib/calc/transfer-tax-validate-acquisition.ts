@@ -40,6 +40,8 @@ import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateLandPartCause } from "./transfer-tax-validate-split";
+import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
@@ -122,6 +124,9 @@ export function validateAssetAcquisition(
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
   const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal);
   if (bgError) return bgError;
+
+  // ── 건물 상속·증여 + 토지 매매(D2) — 자산 단위 상속 요구(아래 §164·E-1·PD-1·post-deemed)보다 **앞**에서 갈라 분리 검증으로 ──
+  if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label);
 
   // ── §164④·⑥·⑤~⑦ 부분 입력 차단 (소령 §163⑨1호·2호) ──
   // ②는 all-or-nothing opt-in이라 일부만 입력하면 payload가 생성되지 않고 ① 단독으로 조용히

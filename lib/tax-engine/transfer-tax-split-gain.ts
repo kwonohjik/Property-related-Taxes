@@ -88,6 +88,14 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     hasFamilyBusinessInheritance: !!input.familyBusinessInheritance,
     landSec164Value: input.landSec164Value,
     isPartialAreaTransfer: input.isPartialAreaTransfer,
+    // D2 — 건물 상속·증여 + 토지 매매. 자산 단위 평가 payload는 호출 시점 입력에서 읽는다(STEP 0.45는 필드를 지우지 않는다).
+    buildingMode: earlyBuildingMode,
+    buildingAcquisitionDate: dayKey(input.acquisitionDate as Date | string | undefined),
+    hasAssetLevelAcquisitionValuation: !!(
+      input.inheritedAcquisition || input.inheritedHouseValuation || input.pre1990Land || input.commercialInheritanceValuation
+    ),
+    hasBuildingAcquisitionPrice: (input.buildingAcquisitionPrice ?? 0) > 0,
+    hasLandAcquisitionPrice: (input.landAcquisitionPrice ?? 0) > 0,
   });
   if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
   if (!input.landAcquisitionDate) return null;

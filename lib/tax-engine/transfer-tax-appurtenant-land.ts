@@ -138,6 +138,40 @@ export function laterInheritedLandExemptNotice(
 }
 
 /**
+ * 고지(D2, 세액 불변) — 건물을 상속·증여받기 **전에** 토지를 매수했고, 토지 적용 기산을 **건물 취득일(상속개시일·증여일)**로 잡은 결과
+ * 세율 보유 구간(1년 미만 / 1~2년 / 2년 이상)이 토지 자기 취득일 기산과 달라질 때.
+ *
+ * 계획서 §12 D2-Q1(A안): 토지 세율 기산 앵커 = 건물 취득일. 근거는 소유자 기준 해석(서면-2024-부동산-0428 ·
+ * 상속증여세과-271 · 재산46014-610)이나 「건물 취득 전 토지 보유분의 통산」을 정면으로 다룬 해석례는 없다 → 선택을 결과에서 숨기지 않는다.
+ * 증여 건물도 앵커가 같다(단순 증여는 §104②2호 통산이 없어 건물 기산도 증여일) — 문구만 증여일로 낸다(Q-D2-2).
+ * 파트 세율을 실제로 판정한 경우(`partRateBasisApplied`)에만 낸다 — 자산 단위 세율로 합쳐졌으면 토지 기산은 쓰이지 않았다.
+ * 구간 비교는 엔진 echo의 두 날짜만 쓴다(재계산 없음).
+ */
+export function landBeforeBuildingAcquisitionRateNotice(
+  input: Pick<TransferTaxInput, "acquisitionCause" | "landAcquisitionCause" | "transferDate">,
+  splitDetail: SplitGainResult | undefined,
+): string | null {
+  if (!splitDetail || splitDetail.partRateBasisApplied !== true) return null;
+  if (input.landAcquisitionCause !== "purchase") return null;
+  if (input.acquisitionCause !== "inheritance" && input.acquisitionCause !== "gift") return null;
+  const own = splitDetail.land.rateBasisAcquisitionDate;
+  const applied = splitDetail.land.appliedRateBasisDate;
+  if (!own || !applied || own >= applied) return null;
+  const band = (iso: string): number => {
+    const h = calculateHoldingPeriod(new Date(`${iso}T00:00:00.000Z`), input.transferDate);
+    const months = h.years * 12 + h.months;
+    return months < 12 ? 0 : months < 24 ? 1 : 2;
+  };
+  if (band(own) === band(applied)) return null;
+  const [verb, day] = input.acquisitionCause === "gift" ? ["증여받기", "증여일"] : ["상속받기", "상속개시일"];
+  return (
+    `건물을 ${verb} 전(${own})에 취득한 토지는 ${day}(${applied})부터 주택부수토지로서의 보유기간을 계산해 세율을 정했습니다 ` +
+    "(「소득세법」 §104②·§94①1호, 주택과 그 부수토지의 소유자가 다른 기간은 부수토지 보유로 보지 않는 국세청 해석). " +
+    "건물 취득 전 토지 보유기간의 통산 여부에 대한 정면 해석례가 없어 확인이 필요합니다"
+  );
+}
+
+/**
  * 부수토지로서의 보유기간 요건(영 §154① 2년) — **주택보다 나중에 취득한 토지**만 걸린다.
  *
  * 부수토지는 주택이 있어야 성립하므로 「부수토지로서의 보유기간」은 주택·토지 취득일 중 **늦은 날**부터다

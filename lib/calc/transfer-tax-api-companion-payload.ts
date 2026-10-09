@@ -20,6 +20,7 @@ import {
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
 import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
@@ -117,7 +118,7 @@ export function buildAssetPayload(
   const fractional = ratio < 1.0;
 
   const inheritanceValuation =
-    asset.acquisitionCause === "inheritance"
+    asset.acquisitionCause === "inheritance" && !effectiveBuildingCauseMix(asset) // D2: 건물 평가액은 파트 가액(CP-1 면제와 한 쌍)
       ? {
           inheritanceDate: asset.inheritanceDate || asset.acquisitionDate,
           assetKind: deriveEngineInheritanceAssetKind(asset),

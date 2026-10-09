@@ -9,6 +9,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import {
   sec164HouseStatus,
   sec164CommercialStatus,
@@ -36,6 +37,9 @@ export function buildInheritedAcquisitionPayload(
   primaryRatio: number,
   primaryFractional: boolean,
 ): { inheritedAcquisition?: unknown } {
+  // D2(건물 상속·증여 + 토지 매매) — 건물 평가액은 건물 파트 취득가액 칸(`buildingAcquisitionPrice`)이 정본이다. 자산 단위 의제는
+  // 파트 가액을 덮지 못하면서 결과에 실제와 다른 취득가액 단계를 남긴다(V-11) → 보내지 않는다(⑫ Y7이 직접 호출을 막는다).
+  if (effectiveBuildingCauseMix(primary)) return {};
   const isGift = primary.acquisitionCause === "gift";
   const triggerable =
     isSec163_9Cause(primary.acquisitionCause) &&
@@ -179,6 +183,8 @@ export function buildInheritedHouseValuationPayload(
   // "부분 입력이 조용히 무시"도 "칸은 다 있는데 차단"도 생기지 않는다(계획서 §5.1).
   // 자산종류(주택 2종)·취득원인(§163⑨ 대상)·기간(개별주택가격 최초공시 前) 게이트가 그 안에 있다.
   if (!isFullyFilled(sec164HouseStatus(primary))) return {};
+  // D2 — 개별주택가격(결합 공시) 환산은 건물만 상속에서 의미가 깨진다(V-4). 경계일 전은 ⑫·⑧이 막으므로 도달하지 않는다.
+  if (effectiveBuildingCauseMix(primary)) return {};
 
   const inheritanceDate = deriveSec163_9BaseDate(primary);
   const isBefore1990 = !!inheritanceDate && inheritanceDate < "1990-08-30";

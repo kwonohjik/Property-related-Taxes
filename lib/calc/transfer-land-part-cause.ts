@@ -10,6 +10,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isLandBuildingSplitable } from "./self-owns-scope";
+import { effectiveSelfOwns } from "./self-owns-scope";
 
 /** 구조적 입력 — 사이드바 합계처럼 자산 일부만 들고 오는 호출부도 받는다(없으면 「범위 밖」). */
 interface LandPartCauseScope {
@@ -42,12 +43,92 @@ export function effectiveLandAcquisitionCause(
     hasSeperateLandAcquisitionDate?: boolean;
     landCauseHost?: string;
   },
-): AssetForm["landAcquisitionCause"] {
+): "" | "inheritance" | "gift" {
   if (!landPartCauseApplicable(asset) || !asset.hasSeperateLandAcquisitionDate) return "";
   // D1-2 — 토글을 켠 호스트가 지금 취득원인과 같아야 한다. 신축에서 켠 뒤 매매로 바꾸면 매매에서도 「취득일 다름」이
   // 켜진 채라(`CompanionAcquisitionCauseSection`은 비-매매 전환에서만 끈다) 잔재가 되살아났다(UI 설계 §3 S1·S2').
   if (asset.landCauseHost !== asset.acquisitionCause) return "";
-  return asset.landAcquisitionCause ?? "";
+  // D2의 `"purchase"`(상속·증여 호스트 전용)가 D1 호스트에 남아도 D1 의미로 읽지 않는다 — 반환형이 곧 안전장치다.
+  // (런타임 값은 종전 그대로 — 타입에 없는 `carryover_gift`가 저장 이력·테스트 시드로 흘러와도 D1 격자(⑧≡⑫)가 같은 값을 읽는다.)
+  return asset.landAcquisitionCause === "purchase" ? "" : ((asset.landAcquisitionCause ?? "") as "" | "inheritance" | "gift");
+}
+
+// ─── D2 — 건물 상속·증여 + 토지 매매 (계획서 §12 · D2 UI 설계 §3.1) ───────────────────────────────
+// D1 술어를 `"purchase"`까지 넓히지 않는다: truthy 소비처 약 9곳이 매매 토지를 상속 토지 UI·검증으로 읽는다.
+// D2는 별도 술어 + 합성 술어(`landCauseMixActive`·`engineLandOverlay`)로 ④·⑧·PHD·소유자 분리·같은 날에 공급한다.
+
+type BuildingCauseMixScope = LandPartCauseScope & {
+  landAcquisitionCause?: AssetForm["landAcquisitionCause"];
+  hasSeperateLandAcquisitionDate?: boolean;
+  landCauseHost?: string;
+  transferType?: string;
+};
+
+/** D2 토글이 놓일 수 있는 건물 취득원인(= 상속·증여 호스트). 주택·건물(겸용 아님). */
+export function buildingCauseMixApplicable(asset: LandPartCauseScope): boolean {
+  return (asset.acquisitionCause === "inheritance" || asset.acquisitionCause === "gift")
+    && isLandBuildingSplitable(asset.assetKind) && !asset.isMixedUseHouse;
+}
+
+/**
+ * D2 유효 여부 — 반환 = **건물** 원인(`inheritance`·`gift`) 또는 `""`.
+ * 호스트 태그가 지금 취득원인과 같고 overlay가 `purchase`일 때만 성립한다(D1 잔재 `inheritance`·`gift` overlay는 무효 —
+ * 상속 → 증여 전환은 태그를 비운다). 부담부증여는 ④가 분리 입력을 보내지 않으므로(`isSplitPayloadActive`) 무효.
+ */
+export function effectiveBuildingCauseMix(asset: BuildingCauseMixScope): "" | "inheritance" | "gift" {
+  if (!buildingCauseMixApplicable(asset) || !asset.hasSeperateLandAcquisitionDate) return "";
+  if (asset.landCauseHost !== asset.acquisitionCause) return "";
+  if (asset.landAcquisitionCause !== "purchase" || asset.transferType === "burdened_gift") return "";
+  return asset.acquisitionCause === "gift" ? "gift" : "inheritance";
+}
+
+/** 합성 술어 — D1(토지 상속·증여) 또는 D2(건물 상속·증여 + 토지 매매) 중 하나라도 유효. PHD 무시·소유자 분리 상호 잠금·같은 날의 기준. */
+export function landCauseMixActive(asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & BuildingCauseMixScope): boolean {
+  return !!effectiveLandAcquisitionCause(asset) || !!effectiveBuildingCauseMix(asset);
+}
+
+/**
+ * 화면에 없는 **stale 분리 입력**인가 — 상속·증여 호스트(주택·건물, 겸용 아님)에서 D2 토글이 유효하지 않은데
+ * `hasSeperateLandAcquisitionDate`만 켜져 있는 상태.
+ *
+ * 상속·증여 호스트에는 「취득일 다름」을 따로 켤 UI가 없다(`CompanionAcquisitionCauseSection`이 비-매매 전환에서 끈다) — 일반건물에서
+ * 켠 뒤 자산 종류를 주택·건물로 바꾸거나(`hasSeperate…`를 끄지 않는 전환 patch), 2026-07-30 이전 저장분이 이 상태를 만든다.
+ * 화면은 자산 단위 상속 계산을 보여주는데 ④·⑧이 토지 취득일 분리를 읽으면 입력 칸 없는 요구(D2 Y8)나 토지를 상속으로 읽는
+ * 침묵 계산이 된다 → 읽는 쪽이 「분리 없음」으로 읽는다(D0 G-6 방식 — 저장값은 지우지 않는다).
+ * ⚠️ 소유자 분리(`selfOwns≠both`)는 건드리지 않는다(그 경로의 `landAcquisitionDate` 후퇴 송신은 종전 그대로).
+ */
+export function hasStaleSplitInput(
+  asset: BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only" },
+): boolean {
+  if (!asset.hasSeperateLandAcquisitionDate) return false;
+  if (!buildingCauseMixApplicable(asset) || effectiveBuildingCauseMix(asset)) return false;
+  if (asset.transferType === "burdened_gift") return false; // 부담부증여는 종전 경로 그대로(④가 이미 분리 입력을 보내지 않는다)
+  return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") === "both";
+}
+
+/**
+ * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) D2 유효 시 건물 방식을
+ * `actual`로. 둘 다 해당 없으면 같은 객체를 돌려준다.
+ */
+export function normalizeBuildingCauseInputs<T extends BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only"; buildingAcqMode?: string }>(asset: T): T {
+  if (hasStaleSplitInput(asset)) return { ...asset, hasSeperateLandAcquisitionDate: false };
+  return withBuildingActualWhenMix(asset);
+}
+
+/**
+ * D2 유효 시 건물 파트 방식을 `"actual"`로 고정한 사본 — 상속·증여 건물의 평가액은 실지거래가액이다(영 §163⑨). ④가 전송하는 값과
+ * ⑧·⑥이 읽는 값을 하나로 맞춘다(3중 패턴): 남은 환산·감정 플래그(stale)가 ⑧ 요구·⑥ 합계를 바꾸지 않는다.
+ * D2가 아니면 같은 객체를 돌려준다.
+ */
+export function withBuildingActualWhenMix<T extends BuildingCauseMixScope & { buildingAcqMode?: string }>(asset: T): T {
+  return effectiveBuildingCauseMix(asset) && asset.buildingAcqMode !== "actual" ? { ...asset, buildingAcqMode: "actual" } : asset;
+}
+
+/** ④·⑧이 엔진에 보낼 토지 overlay — D1 유효 원인, 없으면 D2의 `"purchase"`, 둘 다 없으면 `""`. */
+export function engineLandOverlay(
+  asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & BuildingCauseMixScope,
+): "" | "inheritance" | "gift" | "purchase" {
+  return effectiveLandAcquisitionCause(asset) || (effectiveBuildingCauseMix(asset) ? "purchase" : "");
 }
 
 /**
@@ -56,12 +137,14 @@ export function effectiveLandAcquisitionCause(
  * false가 되어 파트 완결 규칙이 꺼진다 — 엔진은 틀리지 않으므로 ⑫는 막지 않고 ⑤ 안내·⑧ 차단만 둔다.
  */
 export const LAND_CAUSE_SAME_DAY_MESSAGE =
-  "토지와 건물의 취득일이 같으면 토지 취득원인을 따로 지정할 수 없습니다 — 토지 상속개시일(증여일)을 확인하세요";
+  "토지와 건물의 취득일이 같으면 토지 취득원인을 따로 지정할 수 없습니다 — 토지 취득일(상속개시일·증여일)을 확인하세요";
 
 export function landPartCauseSameDay(
-  asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & { landAcquisitionDate?: string; acquisitionDate?: string },
+  asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & BuildingCauseMixScope & { landAcquisitionDate?: string; acquisitionDate?: string },
 ): boolean {
-  return !!effectiveLandAcquisitionCause(asset) && !!asset.landAcquisitionDate && asset.landAcquisitionDate === asset.acquisitionDate;
+  // D2 합성(Q-D2-6): 같은 날은 엔진·⑫가 통과시키지만(원인이 세율을 가르므로 값은 맞다) `isSeparateAcquisition`이 false가 되어
+  // 파트 완결 규칙(V1·V2)이 꺼진다 — UI 단순화를 위해 ⑧만 차단한다.
+  return landCauseMixActive(asset) && !!asset.landAcquisitionDate && asset.landAcquisitionDate === asset.acquisitionDate;
 }
 
 /**

@@ -18,6 +18,7 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
+import { hasStaleSplitInput } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
@@ -172,7 +173,7 @@ export function validateAssetEntry(
     return fieldError("acquisitionDate", `${label}: 양도일(${form.transferDate})이 취득일(${a.acquisitionDate})보다 빠릅니다. 취득 후에만 양도할 수 있습니다.`);
   }
   if (
-    a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate && form.transferDate &&
+    a.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(a) && a.landAcquisitionDate && form.transferDate &&
     a.landAcquisitionDate > form.transferDate
   ) {
     return fieldError("landAcquisitionDate", `${label}: 양도일(${form.transferDate})이 토지 취득일(${a.landAcquisitionDate})보다 빠릅니다.`);
@@ -181,7 +182,7 @@ export function validateAssetEntry(
   if (a.acquisitionDate && a.acquisitionDate > today) {
     return fieldError("acquisitionDate", `${label}: 취득일(${a.acquisitionDate})이 오늘 이후입니다. 미래 날짜는 입력할 수 없습니다.`);
   }
-  if (a.hasSeperateLandAcquisitionDate && a.landAcquisitionDate && a.landAcquisitionDate > today) {
+  if (a.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(a) && a.landAcquisitionDate && a.landAcquisitionDate > today) {
     return fieldError("landAcquisitionDate", `${label}: 토지 취득일(${a.landAcquisitionDate})이 오늘 이후입니다.`);
   }
 

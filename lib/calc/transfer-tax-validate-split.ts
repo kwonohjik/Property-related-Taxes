@@ -32,7 +32,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
-import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { engineLandOverlay } from "./transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
@@ -139,7 +140,8 @@ function validateLandSec164Inputs(asset: AssetForm, label: string): string {
  * ⚠️ 신축 분기(`transfer-tax-validate-acquisition.ts`)도 직접 부른다 — 그 분기는 `validateSplitDirectInputs`에
  *    닿기 전에 반환하는데, 이 규칙의 범위(건물 신축 + 토지 상속·증여)가 정확히 그 분기다.
  */
-export function validateLandPartCause(asset: AssetForm, label: string): string | null {
+export function validateLandPartCause(rawAsset: AssetForm, label: string): string | null {
+  const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";
   const selfOwnsSplit = selfOwnsEff !== "both";
   // ④ `buildSplitPayload`의 토지 취득일 식 그대로 — 토지 취득일 칸 값, 없으면 PHD·소유자 분리의 건물 취득일 후퇴.
@@ -159,7 +161,8 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
       (!!asset.landAcquisitionDate && (asset.hasSeperateLandAcquisitionDate === true || selfOwnsSplit)) ||
       phdFlagEffective(asset) ||
       selfOwnsSplit,
-    landAcquisitionCause: effectiveLandAcquisitionCause(asset),
+    // D2 합성 — D1 유효 원인, 없으면 건물 상속·증여 + 토지 매매의 `purchase`(④ `engineLandOverlay`와 같은 값).
+    landAcquisitionCause: engineLandOverlay(asset),
     hasLandDecedentAcquisitionDate: !!asset.landDecedentAcquisitionDate,
     landMode: effectivePartAcqMode(asset.landAcqMode, asset),
     landAcquisitionDate: landDateSent || undefined,
@@ -172,6 +175,11 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
     //   일부 양도는 ④가 `isPartialAreaTransfer`로 실제로 보낸다(`buildLandPartCausePayload`).
     landSec164Value: deriveHousingLandSec164Total({ ...asset, landAcquisitionDate: landDateSent ?? "" }) || undefined,
     isPartialAreaTransfer: isPartialAreaScenario(asset),
+    // D2 — ④가 실제로 보내는 값. 건물 방식은 D2 유효 시 실가 고정, 자산 단위 평가 payload는 D2 유효 시 미전송(= false).
+    buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
+    buildingAcquisitionDate: asset.acquisitionDate || undefined,
+    hasBuildingAcquisitionPrice: parseAmount(splitBuildingAcqPriceInput(asset) ?? "") > 0,
+    hasLandAcquisitionPrice: parseAmount(asset.landAcquisitionPrice ?? "") > 0,
   });
   // Q-4 — ⑫는 막지 않는 ⑤·⑧ 정책(엔진 값은 원인 없음과 같다 — 계획서 §10.2 T-4).
   if (!issue && landPartCauseSameDay(asset)) return fieldError("landAcquisitionDate", `${label}: ${LAND_CAUSE_SAME_DAY_MESSAGE}`);
@@ -182,7 +190,8 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
   // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
   // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.
   if (issue.field === "landAcqMode") return `${msg} — 「토지는 다른 원인으로 취득」을 껐다가 다시 켜면 실거래가로 고정됩니다.`;
-  return fieldError(issue.field, msg);
+  // Y7 `inheritedAcquisition`은 ④가 D2 유효 시 싣지 않는 payload라 ⑧에는 고칠 칸이 없다(발동하지 않음) — 앵커만 토글 칸으로.
+  return fieldError(issue.field === "inheritedAcquisition" ? "landAcquisitionCause" : issue.field, msg);
 }
 
 /**
@@ -191,7 +200,8 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
  * 검증 대상 게이트 — UI가 양도가액 직접입력 칸을 노출하는 조건과 동일:
  *   `hasSeperateLandAcquisitionDate && saleSplitMode === "actual"`
  */
-export function validateSplitDirectInputs(asset: AssetForm, label: string): string | null {
+export function validateSplitDirectInputs(rawAsset: AssetForm, label: string): string | null {
+  const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   // ⚠️ 게이트는 **API 전송 조건(`isSplitPayloadActive`)과 같아야** 한다(2026-07-30).
   //    종전엔 `hasSeperateLandAcquisitionDate`만 봤는데, 비-매매 취득원인의 소유자 분리는
   //    그 플래그를 켜지 않으므로(취득일 2열 UI가 없다) validate 전체가 early-return돼

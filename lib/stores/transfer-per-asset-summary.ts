@@ -14,6 +14,8 @@
  * 근거: 소득세법 시행령 §166⑥ (양도가액 기준시가 비율 안분).
  */
 
+import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { hasStaleSplitInput } from "@/lib/calc/transfer-land-part-cause";
 import type { TransferFormData } from "./calc-wizard-store";
 import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
@@ -126,7 +128,7 @@ function isPlainLumpSumAsset(a: AssetForm): boolean {
     !isRedevelopmentPath(a) &&
     !a.isMixedUseHouse &&
     !isParcelMode(a) &&
-    !a.hasSeperateLandAcquisitionDate &&
+    (!a.hasSeperateLandAcquisitionDate || hasStaleSplitInput(a)) &&
     (effectiveSelfOwns(a) ?? "both") === "both" &&
     a.transferType !== "burdened_gift" &&
     a.acquisitionCause !== "carryover_gift" &&
@@ -278,7 +280,7 @@ export function computeTransferPerAssetSummary(
     primary.useEstimatedAcquisition &&
     !primary.parcelMode &&
     !primary.isMixedUseHouse &&
-    !primary.hasSeperateLandAcquisitionDate &&
+    (!primary.hasSeperateLandAcquisitionDate || hasStaleSplitInput(primary)) &&
     primary.transferType !== "burdened_gift" &&
     primary.assetKind !== "general_building" &&
     primary.assetKind !== "commercial_building" &&
@@ -457,7 +459,8 @@ export function computeTransferPerAssetSummary(
        *
        * ⚠️ 다건 축은 이 체인 자체가 `isSingle` 게이트 안이라 도달하지 않는다(별건).
        */
-      if (a.acquisitionCause === "inheritance" && a.inheritanceStartDate) {
+      // D2(건물 상속·증여 + 토지 매매) — 건물 평가액은 파트 칸이 정본이라 숨은 `publishedValueAtInheritance`를 읽지 않는다(미입력 = pending).
+      if (a.acquisitionCause === "inheritance" && a.inheritanceStartDate && !effectiveBuildingCauseMix(a)) {
         // 계산 결과(§163⑨ max(상증법 평가액, §164④~⑦)) 우선, 미계산 시 상증법 평가액 프리뷰
         acqPrice =
           singleResult?.inheritedAcquisitionDetail?.acquisitionPrice ||

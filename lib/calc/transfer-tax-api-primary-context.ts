@@ -8,6 +8,7 @@
  * ⚠️ 여기 있는 것들의 공통점은 **`form`·`primary`만 보고 파생된다**는 것이다. 그 밖의 값에
  *    의존하는 파생은 옮기지 말 것(파라미터가 늘면 이 파일의 존재 이유가 사라진다).
  */
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
@@ -57,11 +58,14 @@ export function buildPrimaryContext(
    * (P-9 ⑦ 실측에서 `useEst=false`로 잡혔다).
    */
   const blocksAppraisalSalesCase = isRightToMoveIn && !isSuccessorRight;
-  const isSalesCase = !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
+  // D2(건물 상속·증여 + 토지 매매) — 자산 단위 추계 플래그(stale 포함)는 무시한다: 건물은 평가액(실가) 고정, 토지 방식은 파트 모드가 정한다.
+  // ⑧ D2 분기·다건 ④와 같은 술어 — 남은 환산 플래그가 ⑫에 「환산 기준시가 필수」를 일으키는 칸 없는 400을 막는다.
+  const d2Mix = !!effectiveBuildingCauseMix(primary);
+  const isSalesCase = !d2Mix && !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
   const isAppraisal =
-    !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
+    !d2Mix && !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
   // 승계 입주권 환산은 §176의2②2호(입주권 자체) · 원조합원 환산은 §166③(종전 부동산) — 둘 다 통과.
-  const isEstimated = !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
+  const isEstimated = !d2Mix && !isSalesCase && !isAppraisal && primary.useEstimatedAcquisition;
   // pre1990 토지등급 환산은 §176의2④ 의제취득(pre-1985) 영역. post-1985 증여는 §163⑨ 신고가액이
   // 취득당시 실지거래가액으로 확인 가능 → 토지등급 환산 배제. pre1990Enabled은 환산 클릭 시 set되는
   // uncleaable 래치(CompanionAcqPurchaseBlock:92)라 gift 실거래가 전환 후 stale true로 남을 수 있으므로

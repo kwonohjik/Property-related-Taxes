@@ -362,10 +362,19 @@ export function refineSplitPartCause(
     Required2aLike,
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
+    | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
   > & {
+    acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
     preHousingDisclosure?: unknown;
     familyBusinessInheritance?: unknown;
+    // D2 Y7 — 자산 단위 상속 취득가액 의제 payload(컴패니언은 `inheritanceValuation` 포함, 주 자산은 없다)
+    inheritedAcquisition?: unknown;
+    inheritedHouseValuation?: unknown;
+    pre1990Land?: unknown;
+    commercialInheritanceValuation?: unknown;
+    inheritanceValuation?: unknown;
+    primaryInheritanceValuation?: unknown; // 일괄양도 주 자산 — 컴패니언 스키마에는 없다
   },
   isSplitable: boolean,
   ctx: z.RefinementCtx,
@@ -385,6 +394,15 @@ export function refineSplitPartCause(
     hasFamilyBusinessInheritance: !!d.familyBusinessInheritance,
     landSec164Value: d.landSec164Value,
     isPartialAreaTransfer: d.isPartialAreaTransfer,
+    // D2 — 건물 상속·증여 + 토지 매매. 건물 방식은 엔진과 같은 규칙(명시값, 없으면 자산 단위 플래그에서 파생).
+    buildingMode: partMode(d.buildingAcqMode, d),
+    buildingAcquisitionDate: d.acquisitionDate,
+    hasAssetLevelAcquisitionValuation: !!(
+      d.inheritedAcquisition || d.inheritedHouseValuation || d.pre1990Land || d.commercialInheritanceValuation || d.inheritanceValuation ||
+      d.primaryInheritanceValuation
+    ),
+    hasBuildingAcquisitionPrice: (d.buildingAcquisitionPrice ?? 0) > 0,
+    hasLandAcquisitionPrice: (d.landAcquisitionPrice ?? 0) > 0,
   });
   const issue = issuer(ctx);
   // ⑫ 경로는 실제 입력 필드다 — `areaScenario`는 ⑧(폼 칸) 전용 앵커이고 API에는 사실 `isPartialAreaTransfer`로 온다.

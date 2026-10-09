@@ -579,15 +579,18 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * 신고가액은 모두 "확인된 취득가액"이다. 원인 자체도 엔진에 전달되어(`buildLandPartCausePayload`) 상속 토지의
    * 세율 보유기간 통산(「소득세법」 §104②1호)과 추계 차단(D0)에 쓰인다. 읽는 쪽은 저장값이 아니라
    * `effectiveLandAcquisitionCause`(lib/calc/transfer-land-part-cause.ts)를 쓴다 — 블록이 닫힌 자산의 잔재는 「없음」.
+   *
+   * D2(건물 상속·증여 + 토지 매매): 상속·증여 호스트에서는 `"purchase"`만 유효하다 — 읽는 쪽은 `effectiveBuildingCauseMix`
+   * (D1 술어 `effectiveLandAcquisitionCause`는 `"purchase"`를 돌려주지 않는다 — D1 소비처가 매매 토지를 상속 토지로 읽는 것을 막는다).
    */
-  landAcquisitionCause: "" | "inheritance" | "gift";
+  landAcquisitionCause: "" | "inheritance" | "gift" | "purchase";
   /**
    * 「토지는 다른 원인으로 취득」 토글을 **어느 건물 취득원인에서 켰는가**(D1-2 — 클라이언트 전용, ④가 보내지 않는다).
    * 유효 원인은 이 값이 현재 `acquisitionCause`와 같을 때만 성립한다(`effectiveLandAcquisitionCause`). 신축에서 켠 뒤
    * 매매로 바꾼 잔재가 매매 화면에서 「켜짐」으로 되살아나 토지 원인·신축비용 후퇴가 계산에 쓰이는 것을 막는다
    * (계획서 transfer-acq-cause-mixed.plan.md §10.2 T-8 · UI 설계 §3). 쓰는 곳은 토글 ON/OFF 한 곳뿐.
    */
-  landCauseHost: "" | "newConstruction" | "purchase";
+  landCauseHost: "" | "newConstruction" | "purchase" | "inheritance" | "gift";
   /**
    * 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 「소득세법」
    * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).

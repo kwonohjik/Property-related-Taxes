@@ -116,9 +116,11 @@ describe("leaf — D1 규칙별 발동·긍정 짝", () => {
       isBurdenedGift: true, hasPreHousingDisclosure: true, hasFamilyBusinessInheritance: true,
       selfOwns: "land_only", buildingAcquisitionCause: "inheritance", landAcquisitionDate: "1984-05-01",
     };
+    // D2: `purchase` + 건물 상속·증여는 D2 규칙의 대상이다(별도 테스트 split-part-cause.d2.test.ts) — 여기서는 건물 매매일 때만 회귀 0.
     for (const landAcquisitionCause of [undefined, "", "purchase"]) {
-      expect(msgs({ ...hostile, landAcquisitionCause })).toEqual([]);
-      expect(msgs({ ...hostile, landAcquisitionCause, hasLandAcquisitionDate: false })).toEqual([]);
+      const bc = landAcquisitionCause === "purchase" ? "purchase" : "inheritance";
+      expect(msgs({ ...hostile, landAcquisitionCause, buildingAcquisitionCause: bc })).toEqual([]);
+      expect(msgs({ ...hostile, landAcquisitionCause, buildingAcquisitionCause: bc, hasLandAcquisitionDate: false })).toEqual([]);
     }
   });
 

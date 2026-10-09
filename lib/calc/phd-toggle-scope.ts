@@ -22,7 +22,7 @@
  * 차단이 아니라 **조용한 오산**이므로 여기서도 같은 술어로 막는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { landCauseMixActive } from "./transfer-land-part-cause";
 
 /**
  * 이 자산에서 §164⑤ PHD 토글에 **도달할 수 있는가**.
@@ -80,9 +80,10 @@ export function phdFlagEffective(
   asset: Pick<
     AssetForm,
     "usePreHousingDisclosure" | "acquisitionCause" | "assetKind" | "isMixedUseHouse" | "landAcquisitionCause" | "hasSeperateLandAcquisitionDate"
-  > & { landCauseHost?: string },
+  > & { landCauseHost?: string; transferType?: string },
 ): boolean {
-  return asset.usePreHousingDisclosure === true && !effectiveLandAcquisitionCause(asset);
+  // D2 합성 술어 — 건물 상속·증여 + 토지 매매도 PHD를 무시한다(상속·증여 건물은 환산 불가, 엔진 R-X2 purchase판).
+  return asset.usePreHousingDisclosure === true && !landCauseMixActive(asset);
 }
 
 /**

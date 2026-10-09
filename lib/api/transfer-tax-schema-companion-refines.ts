@@ -105,7 +105,8 @@ export function addCompanionAcquisitionCauseRefines(
         });
       }
     } else if (c.acquisitionCause === "gift") {
-      if (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0) {
+      // D2 — 건물 증여 + 토지 매매(overlay `purchase`)는 증여 신고가액을 건물 파트 취득가액으로 받는다(상속 arm의 CP-1 면제와 같은 술어).
+      if (!isBuildingCauseMixCompanion(c) && (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["companionAssets", i, "fixedAcquisitionPrice"],
@@ -177,9 +178,16 @@ export function addCompanionAcquisitionCauseRefines(
  *    (`clauseADeclarationError`). 여기서 막으면 ⑧ 통과 ↔ ⑫ 400 막다른 길이 된다.
  * 겸용·일반건물·재개발은 자기 서브객체가 취득가액을 만든다 — ⑧도 이 규칙을 걸지 않는다.
  */
+/** D2 컴패니언 — overlay `purchase` + 토지 취득일 + 주택·건물. 파트 완결(토지·건물 가액)은 `refineSplitAcquisitionInputs`가 요구한다. */
+function isBuildingCauseMixCompanion(c: CompanionAsset): boolean {
+  return c.landAcquisitionCause === "purchase" && !!c.landAcquisitionDate && (c.assetKind === "housing" || c.assetKind === "building");
+}
 const CLAUSE_A_KINDS = new Set(["housing", "land", "building", "presale_right", "commercial_building"]);
 function refineCompanionInheritedValue(c: CompanionAsset, i: number, ctx: z.RefinementCtx): void {
   if (!CLAUSE_A_KINDS.has(c.assetKind)) return;
+  // D2 — 건물 상속·증여 + 토지 매매(overlay `purchase`)는 건물 평가액을 건물 파트 취득가액(`buildingAcquisitionPrice`)으로 받는다.
+  // 파트 완결(토지·건물 가액)은 `refineSplitAcquisitionInputs`가 요구하고, 자산 단위 ①②는 오히려 leaf Y7이 막는다(한 쌍).
+  if (isBuildingCauseMixCompanion(c)) return;
   const baseDate = c.inheritanceValuation?.inheritanceDate ?? c.acquisitionDate;
   if (baseDate && baseDate < DEEMED_ACQUISITION_DATE) return;
   const clauseA1 = (c.inheritanceValuation?.publishedValueAtInheritance ?? 0) > 0;
