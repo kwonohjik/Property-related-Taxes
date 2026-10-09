@@ -135,9 +135,9 @@ export function SplitGainDetailSection({
                     {(["land", "building"] as const).map((k) => (
                       <span key={k} className="font-mono tabular-nums text-right" data-testid={`split-card-rate-basis-${k}`}>
                         {splitDetail[k].appliedRateBasisDate ?? "-"}
-                        {splitRateBasisNote(splitDetail[k]) && (
+                        {splitRateBasisNote(splitDetail[k], splitDetail.building.acquisitionCause) && (
                           <span className="block text-caption font-sans font-normal text-muted-foreground/80 text-left leading-snug">
-                            {splitRateBasisNote(splitDetail[k])}
+                            {splitRateBasisNote(splitDetail[k], splitDetail.building.acquisitionCause)}
                           </span>
                         )}
                       </span>

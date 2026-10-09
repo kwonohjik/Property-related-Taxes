@@ -413,3 +413,10 @@
 - **[Low] #4 D2 ON → 매매 전환 시 「취득일 다름」이 켜진 채 남는 것은 수용**: 매매 호스트에서는 그 토글이 화면에 보이고 끌 수 있으며 건물 가액 칸도 보여 막다른 길이 아니다(D1-2 신축 → 매매 S1과 같은 기존 현상).
 - 검증: `d2-2.check.test.ts` 11 · 렌더 C15 · mutation 7/7 KILLED(N1~N7) · E2E 1건 추가.
 
+
+**D2-3 구현 (2026-10-09, ⑦ 표시 — 세액 불변)**:
+- **토지 파트 세율 기산일 문구**: `splitRateBasisNote(p, houseCause)` — 주택 `max`의 상대편 날짜를 건물 파트 echo 원인으로 부른다. 건물 상속 → 「취득일 2022-01-10(소득세법 §104② 본문)보다 **건물 상속개시일**이 늦어 상속개시일부터 — 주택부수토지로서의 보유기간」, 건물 증여 → 「**건물 증여일**이 늦어 증여일부터」. 종전 「주택 취득일이 늦어 주택 취득일부터」는 건물 행의 「피상속인 취득일 2000-01-01」과 나란히 놓여 모순으로 읽혔다(D2-Q1: 토지 앵커는 건물의 **취득일**이지 건물 세율 기산일이 아니다). 건물 매매·신축(D1 방향)·원인 echo 없는 구 이력은 종전 문구 그대로. 호출 4곳(카드 `SplitGainDetailSection` · 상세명세서 `split-acq-text` · 신고서 `FilingFormTableHelpers` 취득일 칸 각주 · PDF `TransferSplitSection`) 모두 건물 파트 원인을 넘긴다(인자 필수 — 누락은 tsc가 잡는다).
+- **가액 이름 상수 개명**: `SPLIT_LAND_VALUE_LABEL` → `SPLIT_CAUSE_VALUE_LABEL`(파트 중립). 상세명세서 태그 「건물(상속개시일 평가액)」·「건물(증여 신고가액)」은 이 상수를 직접 읽는다(결과 문구 모듈이 입력 화면 `LAND_CAUSE_META`를 import하던 것 제거). 값·문구 불변.
+- 신고서 split-2col 건물 열 = 상속개시일(폼) · 토지 열 = echo · 각주는 D1-3 규약이 D2에서도 그대로 성립(코드 변경 없음, 테스트로 고정).
+- 검증: 신규 `__tests__/components/split-acq-cause-mixed-d2-3.ui.anchor.test.tsx` 19(4뷰 × 상속·증여 + 다건 카드 + leaf 부정형 짝 — D1 방향·구 이력 종전 문구). Pre-Do todo 4건(C17~C19·route echo) 이 파일로 대체. E2E `d2-2.spec` 결과 화면 고정을 새 문구로 뒤집음. mutation 7/7 KILLED(leaf 상속·증여 분기 · 호출 4곳 각각 · 건물 태그). vitest 전체 통과, E2E 관련 4 spec 26건 통과.
+- 설계 문서(`…-d2.engine.design.md`·`…-d2.ui.design.md`)의 `SPLIT_LAND_VALUE_LABEL` 언급은 작성 시점 기록이라 고치지 않는다(이 절이 우선).

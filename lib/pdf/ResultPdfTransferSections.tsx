@@ -155,7 +155,7 @@ export function TransferSplitSection({ r }: { r: R }) {
               </View>
             )}
             {summary.rateBasisShown && summary.parts.map((p) => {
-              const note = splitRateBasisNote(p);
+              const note = splitRateBasisNote(p, partOf("building")?.acquisitionCause);
               return note ? (
                 <View key={p.key} style={s.row}>
                   <Text style={{ ...s.lbl, flex: 4 }}>{`${p.label} 세율 기산일: ${note}`}</Text>
