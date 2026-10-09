@@ -21,7 +21,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { selfOwnsSplitApplicable } from "@/lib/calc/self-owns-scope";
-import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
+import { landCauseMixActive } from "@/lib/calc/transfer-land-part-cause";
 
 // 게이트 술어는 ④·⑧·⑥과 공용 leaf다(M2 — `lib/calc/self-owns-scope.ts`). 종전 import 경로 유지용 재export.
 export { isLandBuildingSplitable } from "@/lib/calc/self-owns-scope";
@@ -38,7 +38,7 @@ export function AssetOwnershipSplitSection(props: {
   const selfOwns = asset.selfOwns ?? "both";
   // Q-5(D1 U-3) — 「토지는 다른 원인으로 취득」과 상호 잠금(엔진은 소유자 분리에서 토지 원인을 읽지 않는다).
   //    켜진 상태는 끌 수 있게 「켜는 방향」만 막는다.
-  const landCauseOn = !!effectiveLandAcquisitionCause(asset);
+  const landCauseOn = landCauseMixActive(asset); // D1(토지 상속·증여) 또는 D2(건물 상속·증여 + 토지 매매)
 
   return (
     <div className="space-y-1.5" data-testid="asset-ownership-split">

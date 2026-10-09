@@ -11,6 +11,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { effectiveSelfOwns } from "./self-owns-scope";
+import { isSec163_9BuildingProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 구조적 입력 — 사이드바 합계처럼 자산 일부만 들고 오는 호출부도 받는다(없으면 「범위 밖」). */
 interface LandPartCauseScope {
@@ -102,7 +103,13 @@ export function hasStaleSplitInput(
 ): boolean {
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!buildingCauseMixApplicable(asset) || effectiveBuildingCauseMix(asset)) return false;
-  if (asset.transferType === "burdened_gift") return false; // 부담부증여는 종전 경로 그대로(④가 이미 분리 입력을 보내지 않는다)
+  // 부담부증여는 자체 경로의 분리 입력을 보호한다(④가 이미 분리 입력을 보내지 않는다). 단 D2 토글이 만든 잔재(호스트 태그 상속·증여 +
+  // overlay `purchase`)는 stale이다 — 증여 D2 ON 뒤 양도 형태를 부담부증여로 바꾸면 토글(`BuildingCauseMixBlock`)이 숨어 끌 수 없는데
+  // `hasSeperate…`만 켜져 ⑧이 화면에 없는 칸(`landAcquisitionPrice`)을 요구했다(D2-2 Check). 부담부증여 자체 경로는 이 두 키를 쓰지 않는다.
+  if (asset.transferType === "burdened_gift") {
+    const d2Residue = asset.landAcquisitionCause === "purchase" && (asset.landCauseHost === "inheritance" || asset.landCauseHost === "gift");
+    if (!d2Residue) return false;
+  }
   return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") === "both";
 }
 
@@ -145,6 +152,36 @@ export function landPartCauseSameDay(
   // D2 합성(Q-D2-6): 같은 날은 엔진·⑫가 통과시키지만(원인이 세율을 가르므로 값은 맞다) `isSeparateAcquisition`이 false가 되어
   // 파트 완결 규칙(V1·V2)이 꺼진다 — UI 단순화를 위해 ⑧만 차단한다.
   return landCauseMixActive(asset) && !!asset.landAcquisitionDate && asset.landAcquisitionDate === asset.acquisitionDate;
+}
+
+/**
+ * D2 ⑤ — 건물 상속개시일 입력의 **3키 동시 기록**(상속개시일 = `acquisitionDate`·`inheritanceStartDate`·`inheritanceDate`).
+ * 상속 블록(`CompanionAcqInheritanceBlock`)과 D2 날짜 2열의 건물 칸이 **같은 patch**를 쓴다 — 한쪽만 3키를 쓰면 다른 쪽이 만든
+ * stale(`inheritanceStartDate`)을 ④ 폴백(`inheritanceDate || acquisitionDate`)·⑥ 자산 행이 읽는다. 증여는 `acquisitionDate` 1키.
+ */
+export function buildingDatePatch(
+  cause: string | undefined,
+  v: string,
+): Pick<AssetForm, "acquisitionDate"> & Partial<Pick<AssetForm, "inheritanceStartDate" | "inheritanceDate">> {
+  return cause === "inheritance" ? { acquisitionDate: v, inheritanceStartDate: v, inheritanceDate: v } : { acquisitionDate: v };
+}
+
+/** D2 ⑤ 날짜 안내 문구 — 건물 상속개시일·증여일이 영 §163⑨ 단서 2호 구간(< 2005-04-30)일 때(차단은 ⑧·⑫·엔진 Y4 — 같은 술어). */
+export const BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE =
+  "건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전에 상속·증여받은 건물은 평가액과 영 §164⑤~⑦ 가액 중 많은 금액이 취득가액인데, "
+  + "토지를 따로 매수한 계산에서는 이 비교를 지원하지 않습니다(소득세법 시행령 §163조 제9항 단서 2호) — 개별주택가격 최초공시일(2005.4.30.) 이전 취득은 "
+  + "보수적으로 모두 계산하지 않습니다. 건물 상속개시일(증여일)을 확인하세요";
+
+/** D2 유효일 때 입력 중 안내 목록(경계일 전 · 같은 날) — D2가 아니면 빈 배열. ⑧과 같은 술어. */
+export function buildingCauseDateNotices(
+  asset: Parameters<typeof landPartCauseSameDay>[0],
+): string[] {
+  const mix = effectiveBuildingCauseMix(asset);
+  if (!mix) return [];
+  const out: string[] = [];
+  if (isSec163_9BuildingProviso(mix, asset.acquisitionDate)) out.push(BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE);
+  if (landPartCauseSameDay(asset)) out.push(LAND_CAUSE_SAME_DAY_MESSAGE);
+  return out;
 }
 
 /**

@@ -17,6 +17,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
+import { phdFlagEffective } from "./phd-toggle-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 
@@ -513,7 +514,7 @@ export function ownerSplitHousingNeedsBuildingStd(asset: AssetForm): boolean {
   // PHD(§164⑦)가 켜진 자산은 ④가 결합 총액(`standardPriceAtAcquisition`)을 보내지 않아(`transfer-tax-api.ts` usesPhd)
   // 비례 안분의 분자가 없다 — 양쪽 환산이면 엔진이 3-시점 경로로 early-return하고, 한쪽만 환산이어도 쌍이 안 만들어진다.
   // 즉 이 입력은 엔진에 **도달하지 않는다**(노출 ⇔ 도달 — 요구하면 거짓 요구).
-  if (asset.usePreHousingDisclosure) return false;
+  if (phdFlagEffective(asset)) return false; // ④ `usesPhd`와 같은 술어 — 토글이 없는 취득원인의 잔재 플래그는 PHD가 아니다(D2-2 Check)
   return requiresHousingBuildingStdAtAcq(
     {
       isHousing: true,

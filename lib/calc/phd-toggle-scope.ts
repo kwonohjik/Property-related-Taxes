@@ -36,9 +36,27 @@ import { landCauseMixActive } from "./transfer-land-part-cause";
 export function phdToggleReachable(asset: {
   assetKind: AssetForm["assetKind"];
   hasSeperateLandAcquisitionDate?: boolean;
+  acquisitionCause?: string;
+  isMixedUseHouse?: boolean;
 }): boolean {
+  if (!phdToggleCauseReachable(asset)) return false;
   if (asset.assetKind === "housing") return true;
   return asset.assetKind === "building" && !!asset.hasSeperateLandAcquisitionDate;
+}
+
+/**
+ * PHD 토글이 **렌더되는 취득원인**인가 — 코드로 확인한 사실(2026-10-09, D2-2 Check): 토글(`PreHousingDisclosureSection`을 감싼 ToggleCard)을
+ * 렌더하는 곳은 `CompanionAcqPurchaseBlock` 하나뿐이고 그 블록은 취득원인 **매매**에서만 마운트된다(이월과세는 자기 패널 `CarryoverEstimationSection`,
+ * 겸용은 `MixedUseLegacyStdPrice`). 상속·증여·신축 호스트에는 토글이 없는데, 매매 시절 자동 ON된 플래그는 원인을 바꿔도 남는다 — ④ `usesPhd`가
+ * 그 잔재로 분리 계산을 켜 ⑧ 통과 ↔ ⑫ 400(화면에 없는 양도시 기준시가 칸)이 됐다(master 기존 결함).
+ *
+ * ⚠️ 겸용주택·이월과세·미지정(`undefined`·`""` — 「미지정 시 매매」)은 종전 그대로 true다 — 그 경로는 자기 패널·자기 게이트를 갖는다.
+ *    저장값은 지우지 않는다(읽는 쪽 파생 — 매매로 돌아오면 복귀).
+ */
+export function phdToggleCauseReachable(asset: { acquisitionCause?: string; isMixedUseHouse?: boolean }): boolean {
+  if (asset.isMixedUseHouse) return true;
+  const c = asset.acquisitionCause;
+  return !(c === "inheritance" || c === "gift" || c === "newConstruction" || c === "burdened_gift");
 }
 
 /**
@@ -83,7 +101,8 @@ export function phdFlagEffective(
   > & { landCauseHost?: string; transferType?: string },
 ): boolean {
   // D2 합성 술어 — 건물 상속·증여 + 토지 매매도 PHD를 무시한다(상속·증여 건물은 환산 불가, 엔진 R-X2 purchase판).
-  return asset.usePreHousingDisclosure === true && !landCauseMixActive(asset);
+  // 토글이 렌더되지 않는 취득원인(상속·증여·신축)에 남은 자동 ON 잔재도 무시한다(`phdToggleCauseReachable` — D2-2 Check).
+  return asset.usePreHousingDisclosure === true && !landCauseMixActive(asset) && phdToggleCauseReachable(asset);
 }
 
 /**
