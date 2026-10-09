@@ -86,6 +86,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     isBurdenedGift: input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift",
     hasPreHousingDisclosure: !!input.preHousingDisclosure,
     hasFamilyBusinessInheritance: !!input.familyBusinessInheritance,
+    landSec164Value: input.landSec164Value,
+    isPartialAreaTransfer: input.isPartialAreaTransfer,
   });
   if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
   if (!input.landAcquisitionDate) return null;
@@ -200,6 +202,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     landMode,
     buildingMode,
     splitLandExpropriationValuationDetail,
+    landAcquisitionBasis,
   } = calcSplitAcquisitionPrice(
     input,
     landTransferPrice,
@@ -353,7 +356,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 
   const echo = buildSplitPartCauseEcho(input);
   return {
-    land: { ...landPart, ...echo.land },
+    land: { ...landPart, ...echo.land, ...(landAcquisitionBasis ? { acquisitionBasis: landAcquisitionBasis } : {}) },
     building: { ...buildingPart, ...echo.building },
     // 케이스 a(양쪽 실가)는 안분 자체를 하지 않으므로 비율이 **정의되지 않는다**.
     // `{0,0}`으로 메우면 "안분비 토지 0.0% : 건물 100.0%"로 침묵 오표시된다.

@@ -197,6 +197,8 @@ export async function POST(request: NextRequest) {
       landAcquisitionDate: toOptionalDate(p.landAcquisitionDate),
       landAcquisitionCause: p.landAcquisitionCause,
       landDecedentAcquisitionDate: toOptionalDate(p.landDecedentAcquisitionDate),
+      landSec164Value: p.landSec164Value,
+      isPartialAreaTransfer: p.isPartialAreaTransfer,
       landDonorAcquisitionDate: toOptionalDate(p.landDonorAcquisitionDate),
       landAcqMode: p.landAcqMode,
       buildingAcqMode: p.buildingAcqMode,

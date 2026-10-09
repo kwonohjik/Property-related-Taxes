@@ -278,6 +278,10 @@ export const propertyBaseShape = {
   landAcquisitionCause: z.enum(["purchase", "inheritance", "gift", "carryover_gift"]).optional(),
   /** 토지 파트 피상속인 취득일 (§104②1호) */
   landDecedentAcquisitionDate: z.string().date().optional(),
+  /** 토지 파트 영 §164④ 가액(②, 총액·지분 스케일 후) — 1990.8.30. 전 상속·증여 토지(영 §163⑨ 단서 1호)에서 필수, 엔진이 평가액과 max */
+  landSec164Value: z.number().int().positive().optional(),
+  /** 면적 입력 방식 「일부 양도」 — 단서 구간 차단 사실(D1-4). 그 밖은 무영향 */
+  isPartialAreaTransfer: z.boolean().optional(),
   /** 토지 파트 증여자 취득일 (§104②2호) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /** 분리 입력 방식 (@deprecated — landAcqMode/buildingAcqMode + saleSplitMode로 대체. 하위호환용 유지, 엔진 미소비) */

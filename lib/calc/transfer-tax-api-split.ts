@@ -16,6 +16,11 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
+import {
+  deriveHousingLandSec164Total,
+  isPartialAreaScenario,
+  landSec164Applies,
+} from "./transfer-pre1990-housing-land-bridge";
 
 /**
  * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
@@ -258,7 +263,12 @@ export function buildLandStdAtAcquisitionPayload(primary: AssetForm) {
  * ⚠️ 저장값이 아니라 **유효** 원인을 읽는다(D0 G-6) — 블록이 닫힌 자산의 잔재를 보내지 않는다.
  * ⚠️ 단순 증여의 증여자 취득일은 보내지 않는다(D0 G-8) — §104②2호 통산은 §97의2① 이월과세 자산만이다.
  */
-export function buildLandPartCausePayload(primary: AssetForm) {
+export function buildLandPartCausePayload(primary: AssetForm): {
+  landAcquisitionCause?: "inheritance" | "gift";
+  landDecedentAcquisitionDate?: string;
+  landSec164Value?: number;
+  isPartialAreaTransfer?: true;
+} {
   const cause = effectiveLandAcquisitionCause(primary);
   if (!cause) return {};
   return {
@@ -266,5 +276,12 @@ export function buildLandPartCausePayload(primary: AssetForm) {
     ...(cause === "inheritance" && primary.landDecedentAcquisitionDate
       ? { landDecedentAcquisitionDate: primary.landDecedentAcquisitionDate }
       : {}),
+    // D1-4 영 §163⑨ 단서 1호(1990.8.30. 전 상속·증여 토지) — ②(영 §164④ 가액 총액, ①`ratioed`와 같은 지분 스케일)를
+    // 따로 보낸다. max·채택 echo·「② 필수」 차단은 엔진·⑫가 한다. 단서 구간 밖이거나 5필드가 덜 차면 보내지 않는다.
+    ...(landSec164Applies(primary) && deriveHousingLandSec164Total(primary) > 0
+      ? { landSec164Value: deriveHousingLandSec164Total(primary) }
+      : {}),
+    // 일부 양도는 단서 구간에서 차단(평가액의 기준 면적 미확정, 자동 안분 금지) — 그 사실을 엔진·⑫에 알린다.
+    ...(landSec164Applies(primary) && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),
   };
 }

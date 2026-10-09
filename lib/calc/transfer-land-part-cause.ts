@@ -10,8 +10,17 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isLandBuildingSplitable } from "./self-owns-scope";
-import { LAND_CAUSE_PRE_1990_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
-import { SEC_163_9_LAND_FIRST_DISCLOSURE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
+
+/**
+ * ⑤ 안내·⑧ 차단 문구(D1-4a) — 1990.8.30. 전 상속·증여 토지. 엔진·⑫는 영 §164④ 가액(②)을 함께 받으면 계산하지만
+ * (`landSec164Value`), 이 계산기 화면에는 그 입력 칸이 아직 없다 — **화면 사실**만 적는다(엔진 문구 `LAND_SEC164_REQUIRED_MESSAGE`와 다르다).
+ * D1-4b가 입력 칸을 열면서 이 문구를 칸 이동 앵커가 있는 미완 오류로 교체한다.
+ */
+export const LAND_SEC164_SCREEN_MESSAGE =
+  "1990.8.30. 개별공시지가 고시 전에 상속·증여받은 토지의 취득가액은 상속·증여 당시 평가액과 소득세법 시행령 §164④ 가액 중 "
+  + "많은 금액인데, 이 계산기 화면은 §164④ 가액(토지등급 환산) 입력을 받지 않아 토지·건물을 따로 취득한 자산에서 "
+  + "이 비교는 지원하지 않습니다 — 토지 상속개시일(증여일)을 확인하세요 (같은 법 시행령 §163⑨ 단서 1호)";
 
 /** 구조적 입력 — 사이드바 합계처럼 자산 일부만 들고 오는 호출부도 받는다(없으면 「범위 밖」). */
 interface LandPartCauseScope {
@@ -74,8 +83,7 @@ export function landPartCauseDateNotice(
   asset: Parameters<typeof landPartCauseSameDay>[0],
 ): string | null {
   if (landPartCauseSameDay(asset)) return LAND_CAUSE_SAME_DAY_MESSAGE;
-  if (effectiveLandAcquisitionCause(asset) && asset.landAcquisitionDate && asset.landAcquisitionDate < SEC_163_9_LAND_FIRST_DISCLOSURE)
-    return LAND_CAUSE_PRE_1990_MESSAGE;
+  if (isSec163_9LandProviso(effectiveLandAcquisitionCause(asset), asset.landAcquisitionDate)) return LAND_SEC164_SCREEN_MESSAGE;
   return null;
 }
 

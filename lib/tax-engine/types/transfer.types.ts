@@ -1170,6 +1170,14 @@ export interface TransferTaxInput {
   /** 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 §104②1호 통산 */
   landDecedentAcquisitionDate?: Date;
   /**
+   * 토지 파트 영 §164④ 가액(②, 총액·지분 스케일 후) — 1990.8.30. 전 상속·증여 토지(영 §163⑨ 단서 1호)에서
+   * `landAcquisitionPrice`(①상속개시일·증여일 평가액)와 **많은 금액**을 취득가액으로 한다(동점 = 평가액).
+   * 단서 구간이 아니면 무시한다. ④가 ㎡당 가액 × 면적을 한 함수로 산출해 보낸다.
+   */
+  landSec164Value?: number;
+  /** 면적 입력 방식 「일부 양도」 — 단서 구간에서는 ①의 기준 면적이 미확정이라 차단(`transfer-split-part-cause.ts`). 그 밖은 무영향 */
+  isPartialAreaTransfer?: boolean;
+  /**
    * 토지 파트 증여자 취득일 — §104②2호 통산은 `carryover_gift`(§97의2① 자산)만이다(단순 증여는 통산 없음).
    * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).
    */
