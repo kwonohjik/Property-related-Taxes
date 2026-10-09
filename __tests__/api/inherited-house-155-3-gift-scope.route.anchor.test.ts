@@ -30,7 +30,7 @@ const post = async (handler: (req: NextRequest) => Promise<Response>, url: strin
   const res = await handler(
     new NextRequest(url, {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }),
   );

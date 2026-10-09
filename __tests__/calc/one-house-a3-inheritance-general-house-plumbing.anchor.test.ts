@@ -210,7 +210,7 @@ describe("④→⑫→⑭ — 판정 메뉴 route", () => {
     const res = await POST_JUDGE(
       new NextRequest("http://localhost/api/calc/one-house-exemption", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify(buildOneHouseExemptionApiBody(f)),
       }),
     );

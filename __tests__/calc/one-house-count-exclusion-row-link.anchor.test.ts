@@ -37,6 +37,7 @@ import { validateStep2 } from "@/lib/calc/one-house-exemption-validate";
 import { toTransferFormPatch } from "@/lib/calc/one-house-judgment-handoff";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 const row = (id: string, acquisitionDate: string, over: Partial<HouseEntry> = {}): HouseEntry =>
   ({
@@ -90,7 +91,7 @@ async function judgeForm(f: OneHouseJudgmentFormData) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(buildOneHouseExemptionApiBody(f)),
     }),
   );
@@ -299,7 +300,7 @@ describe("ROW-8·9 판정 → 계산기 전달 (Q-4 · §7-2)", () => {
     const res = await CALC_POST(
       new NextRequest("http://localhost/api/calc/transfer", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+        headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
         body: JSON.stringify(cap.body),
       }),
     );
@@ -345,7 +346,7 @@ describe("ROW-12 판정 메뉴 주택 수 = 1 + 명부 행 (⑥ 행 포함)", ()
     const res = await POST(
       new NextRequest("http://localhost/api/calc/one-house-exemption", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+        headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
         body: JSON.stringify(body),
       }),
     );

@@ -9,11 +9,12 @@
 import { describe, it, expect } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/calc/cross-104-5/route";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 const req = (body: unknown) =>
   new NextRequest("http://localhost/api/calc/cross-104-5", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+    headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
     body: JSON.stringify(body),
   });
 
@@ -73,7 +74,7 @@ describe("POST /api/calc/cross-104-5", () => {
   it("R-4: 파싱 불가 본문은 400", async () => {
     const bad = new NextRequest("http://localhost/api/calc/cross-104-5", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: "{",
     });
     const res = await POST(bad);

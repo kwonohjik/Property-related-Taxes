@@ -30,6 +30,7 @@ import {
   createInitialOneHouseJudgmentForm,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 /** 서울 강남구 역삼동 — 취득 시점에 조정대상지역이었던 시료. AN-3a가 데이터로 확인한다. */
 const SEOUL_GANGNAM = "1168010100";
@@ -67,7 +68,7 @@ async function postForm(f: OneHouseJudgmentFormData) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(buildOneHouseExemptionApiBody(f)),
     }),
   );

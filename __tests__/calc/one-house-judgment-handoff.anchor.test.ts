@@ -32,6 +32,7 @@ import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fiel
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 /**
  * §155의3 상생임대 **성립** 사실. 엔진 anchor(`one-house-155-2-155-3-special.anchor.test.ts`)가
@@ -115,7 +116,7 @@ async function run(form: TransferFormData) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(cap.body),
     }),
   );

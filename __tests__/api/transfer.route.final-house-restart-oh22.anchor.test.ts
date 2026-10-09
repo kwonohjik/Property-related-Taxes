@@ -95,7 +95,7 @@ const post = (handler: (req: NextRequest) => Promise<Response>, url: string, bod
   handler(
     new NextRequest(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }),
   );

@@ -47,6 +47,7 @@ import {
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 const TAXED = 237_435_000;
 
@@ -128,7 +129,7 @@ async function runCalc(houses: HouseEntry[]): Promise<CalcResult> {
   const res = await CALC_POST(
     new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(await captureBody(f)),
     }),
   );
@@ -269,7 +270,7 @@ describe("R97-9 판정 메뉴 route", () => {
     const res = await JUDGE_POST(
       new NextRequest("http://localhost/api/calc/one-house-exemption", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+        headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
         body: JSON.stringify(buildOneHouseExemptionApiBody(judged(houses))),
       }),
     );
@@ -296,7 +297,7 @@ describe("R97-10 다건 route ⑫·⑭", () => {
     const res = await MULTI_POST(
       new NextRequest("http://localhost/api/calc/transfer/multi", {
         method: "POST",
-        headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+        headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
         body: JSON.stringify({
           taxYear: 2026,
           properties: [{ propertyId: "p1", propertyLabel: "건1", ...payload }],

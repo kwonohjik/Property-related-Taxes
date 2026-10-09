@@ -35,6 +35,7 @@ import {
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { POST } from "@/app/api/calc/one-house-exemption/route";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
@@ -71,7 +72,7 @@ async function judgeForm(f: OneHouseJudgmentFormData) {
   const res = await POST(
     new NextRequest("http://localhost/api/calc/one-house-exemption", {
       method: "POST",
-      headers: { "content-type": "application/json", "x-ratelimit-bypass": "1" },
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: JSON.stringify(buildOneHouseExemptionApiBody(f)),
     }),
   );
