@@ -271,8 +271,10 @@ describe("D2-C 침묵 통과를 막는다 [전환 D2 · Y*] (상속·증여 건�
 
   it("D2-C5 [Y4] 건물 개시 2005-04-29 이전 → 400 field acquisitionDate (종전 200·113,060,000, §163⑨ 단서 2호 비교 없음) · 당일 2005-04-30은 200 · 증여도 동일", async () => {
     const pre = { acquisitionDate: "2003-05-01", decedentAcquisitionDate: "1990-01-01", landAcquisitionDate: "2003-01-10" };
-    await blocked(pre, "기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
-    await blocked({ ...pre, acquisitionCause: "gift", decedentAcquisitionDate: "__DEL__", donorAcquisitionDate: "1990-01-01" }, "기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
+    // [D2-4a 전환 · 문구] 이 시드는 주택 구분 사실(buildingHouseKind)이 없다 = 「모름」 → 단독·다가구로 보지 않는 Y4d 문구로 400(field 불변).
+    //   단독·다가구 + ②는 열린다 — `transfer.route.split-building-sec164.d2-4a.anchor.test.ts`. 비주택 `building`은 종전 문구(같은 파일 A-10).
+    await blocked(pre, "단독·다가구주택으로 확인된 주택만 지원합니다");
+    await blocked({ ...pre, acquisitionCause: "gift", decedentAcquisitionDate: "__DEL__", donorAcquisitionDate: "1990-01-01" }, "단독·다가구주택으로 확인된 주택만 지원합니다");
     expect((await post({ ...D2_INH, acquisitionDate: "2005-04-29", decedentAcquisitionDate: "1990-01-01", landAcquisitionDate: "2005-01-10" })).status).toBe(400);
     const edge = await post({ ...D2_INH, acquisitionDate: "2005-04-30", decedentAcquisitionDate: "1990-01-01", landAcquisitionDate: "2005-01-10" });
     expect(edge.status).toBe(200);
@@ -400,5 +402,5 @@ describe("D2-F 토지 매매 파트 환산 · 개산공제 값 (취득가액 리
 // D2-3 표시(4뷰 원인 행·건물 가액 태그)는 `__tests__/components/split-acq-cause-mixed-d2-3.ui.anchor.test.tsx`로 활성화했다.
 describe("D2 후 기대 — todo (D2-4 경계일 전 max · 선택안 B)", () => {
   it.todo("Q-D2-1=B(피상속인 앵커) 채택 시에만: 2020-01-10 → 153,860,000(토지 6년 12% = 4,800만 · 5억 − 4,800만 − 250만 = 449,500,000 × 40% − 25,940,000) / 2024-01-10 → 173,060,000(497,500,000 × 40% − 25,940,000) — A안으로 확정돼 비활성");
-  it.todo("D2-4: 개시일 < 2005-04-30 건물 max(평가액, 영 §164⑤~⑦) 입력(재산세과-1702 안분) — D2-1은 3중 차단");
+  // D2-4a(엔진·⑫·⑭·④)로 활성화 → `transfer.route.split-building-sec164.d2-4a.anchor.test.ts`. 화면(⑤ 카드·⑧ 완화)은 D2-4b.
 });

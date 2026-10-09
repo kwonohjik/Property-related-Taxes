@@ -19,6 +19,11 @@ import { engineLandOverlay } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import {
+  buildingHouseKindSent,
+  buildingSec164Applies,
+  deriveBuildingSec164Total,
+} from "./transfer-building-sec164-bridge";
+import {
   deriveHousingLandSec164Total,
   isPartialAreaScenario,
   landSec164Applies,
@@ -274,10 +279,25 @@ export function buildLandPartCausePayload(primary: AssetForm): {
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
   isPartialAreaTransfer?: true;
+  buildingSec164Value?: number;
+  buildingHouseKind?: "house_individual" | "house_apart";
 } {
   const cause = effectiveLandAcquisitionCause(primary);
   // D2 — 건물 상속·증여 + 토지 매매: 엔진에는 overlay `purchase`만 보낸다(토지는 자기 취득일 — 피상속인·§164④ 키는 해당 없음).
-  if (!cause) return engineLandOverlay(primary) === "purchase" ? { landAcquisitionCause: "purchase" } : {};
+  if (!cause) {
+    if (engineLandOverlay(primary) !== "purchase") return {};
+    // D2-4 영 §163⑨ 단서 2호(2005.4.30. 전 상속·증여 건물, 주택) — 주택 구분 사실과 ②(영 §164⑦ 가액의 건물 몫 총액, ①`ratioed`와 같은
+    // 지분 스케일)를 따로 보낸다. max·채택 echo·「② 필수」 차단은 엔진·⑫가 한다. 구간 밖·공동주택·5입력 미완이면 ②는 보내지 않는다.
+    // 일부 양도는 구간에서 차단(기준 면적 미확정, 자동 안분 금지) — 그 사실을 엔진·⑫에 알린다.
+    const kind = buildingHouseKindSent(primary);
+    const sec164 = deriveBuildingSec164Total(primary);
+    return {
+      landAcquisitionCause: "purchase",
+      ...(kind ? { buildingHouseKind: kind } : {}),
+      ...(sec164 > 0 ? { buildingSec164Value: sec164 } : {}),
+      ...(buildingSec164Applies(primary) && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),
+    };
+  }
   return {
     landAcquisitionCause: cause,
     ...(cause === "inheritance" && primary.landDecedentAcquisitionDate

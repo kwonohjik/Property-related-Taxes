@@ -290,7 +290,8 @@ describe("B. D2-1 전환 [종전 pin → D2 기대]", () => {
     expect(owner.status).toBe(400);
     const pre = await post(body, { acquisitionDate: "2003-05-01", landAcquisitionDate: "2002-01-10", decedentAcquisitionDate: "1990-01-01" });
     expect(pre.status).toBe(400);
-    expect(JSON.stringify(pre.fieldErrors?.acquisitionDate)).toContain("기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
+    // [D2-4a 전환 · 문구] 이 body는 2005년 후 시드에서 만들어져 주택 구분 사실(buildingHouseKind)이 없다 = 「모름」 → Y4d 문구(field 불변)
+    expect(JSON.stringify(pre.fieldErrors?.acquisitionDate)).toContain("단독·다가구주택으로 확인된 주택만 지원합니다");
     const sameDay = await post(body, { landAcquisitionDate: "2025-05-01" });
     expect(sameDay.status).toBe(200);
     expect(sameDay.tax).toBe(283_866_000);

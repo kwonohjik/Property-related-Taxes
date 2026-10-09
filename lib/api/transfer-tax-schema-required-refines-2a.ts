@@ -72,6 +72,8 @@ export type Required2aLike = {
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
   isPartialAreaTransfer?: boolean;
+  buildingSec164Value?: number;
+  buildingHouseKind?: "house_individual" | "house_apart";
   selfOwns?: string;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
@@ -362,7 +364,7 @@ export function refineSplitPartCause(
     Required2aLike,
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
-    | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
+    | "buildingSec164Value" | "buildingHouseKind" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
@@ -377,6 +379,8 @@ export function refineSplitPartCause(
     primaryInheritanceValuation?: unknown; // 일괄양도 주 자산 — 컴패니언 스키마에는 없다
   },
   isSplitable: boolean,
+  /** 주택(`housing`) 자산인가 — D2-4 단서 2호 ②는 주택만 연다(비주택 `building`은 종전 차단) */
+  isHousing: boolean,
   ctx: z.RefinementCtx,
   prefix: (string | number)[] = [],
 ) {
@@ -394,6 +398,10 @@ export function refineSplitPartCause(
     hasFamilyBusinessInheritance: !!d.familyBusinessInheritance,
     landSec164Value: d.landSec164Value,
     isPartialAreaTransfer: d.isPartialAreaTransfer,
+    // D2-4 — 건물 상속·증여 §163⑨ 단서 2호(단독·다가구주택만)
+    isHousing,
+    buildingHouseKind: d.buildingHouseKind,
+    buildingSec164Value: d.buildingSec164Value,
     // D2 — 건물 상속·증여 + 토지 매매. 건물 방식은 엔진과 같은 규칙(명시값, 없으면 자산 단위 플래그에서 파생).
     buildingMode: partMode(d.buildingAcqMode, d),
     buildingAcquisitionDate: d.acquisitionDate,
@@ -466,7 +474,7 @@ export function refinePreDeemedAcquisitionSource(
 export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) {
   refineExpropriationInputs(d, ctx);
   refineSplitAcquisitionInputs(d, ctx);
-  refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", ctx);
+  refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx);
   refinePreDeemedAcquisitionSource(d, ctx);
 }
 

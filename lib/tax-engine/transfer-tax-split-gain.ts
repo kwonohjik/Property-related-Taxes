@@ -88,6 +88,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     hasFamilyBusinessInheritance: !!input.familyBusinessInheritance,
     landSec164Value: input.landSec164Value,
     isPartialAreaTransfer: input.isPartialAreaTransfer,
+    // D2-4 — 건물 상속·증여 §163⑨ 단서 2호(단독·다가구주택만). 주택 여부는 엔진 입력의 자산 종류에서 읽는다.
+    isHousing: input.propertyType === "housing",
+    buildingHouseKind: input.buildingHouseKind,
+    buildingSec164Value: input.buildingSec164Value,
     // D2 — 건물 상속·증여 + 토지 매매. 자산 단위 평가 payload는 호출 시점 입력에서 읽는다(STEP 0.45는 필드를 지우지 않는다).
     buildingMode: earlyBuildingMode,
     buildingAcquisitionDate: dayKey(input.acquisitionDate as Date | string | undefined),
@@ -211,6 +215,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     buildingMode,
     splitLandExpropriationValuationDetail,
     landAcquisitionBasis,
+    buildingAcquisitionBasis,
   } = calcSplitAcquisitionPrice(
     input,
     landTransferPrice,
@@ -365,7 +370,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const echo = buildSplitPartCauseEcho(input);
   return {
     land: { ...landPart, ...echo.land, ...(landAcquisitionBasis ? { acquisitionBasis: landAcquisitionBasis } : {}) },
-    building: { ...buildingPart, ...echo.building },
+    building: { ...buildingPart, ...echo.building, ...(buildingAcquisitionBasis ? { acquisitionBasis: buildingAcquisitionBasis } : {}) },
     // 케이스 a(양쪽 실가)는 안분 자체를 하지 않으므로 비율이 **정의되지 않는다**.
     // `{0,0}`으로 메우면 "안분비 토지 0.0% : 건물 100.0%"로 침묵 오표시된다.
     ...(landRatio != null && buildingRatio != null ? { apportionRatio: { land: landRatio, building: buildingRatio } } : {}),

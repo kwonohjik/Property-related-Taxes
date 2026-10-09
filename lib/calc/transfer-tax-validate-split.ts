@@ -37,6 +37,8 @@ import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
+import { BUILDING_SEC164_SCREEN_MESSAGE } from "./transfer-land-part-cause";
+import { buildingHouseKindSent } from "./transfer-building-sec164-bridge";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
@@ -175,6 +177,12 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
     //   일부 양도는 ④가 `isPartialAreaTransfer`로 실제로 보낸다(`buildLandPartCausePayload`).
     landSec164Value: deriveHousingLandSec164Total({ ...asset, landAcquisitionDate: landDateSent ?? "" }) || undefined,
     isPartialAreaTransfer: isPartialAreaScenario(asset),
+    // D2-4a — 영 §163⑨ 단서 2호(2005.4.30. 전 상속·증여 건물). 주택 구분은 ④가 실제로 보내는 값(`buildingHouseKindSent`) 그대로.
+    //   ② 사실은 「없음」이다: 이 화면에는 ② 입력 칸이 없다(D2-4b가 브리지 파생값 `deriveBuildingSec164Total`로 교체).
+    //   그래서 이 구간의 ⑧ 통과 셀은 없고 「⑧ 통과 ⇒ ⑫ 200」이 성립한다. 일부 양도·공동주택·비주택은 leaf가 판정한다.
+    isHousing: asset.assetKind === "housing",
+    buildingHouseKind: buildingHouseKindSent(asset),
+    buildingSec164Value: undefined,
     // D2 — ④가 실제로 보내는 값. 건물 방식은 D2 유효 시 실가 고정, 자산 단위 평가 payload는 D2 유효 시 미전송(= false).
     buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
     buildingAcquisitionDate: asset.acquisitionDate || undefined,
@@ -186,6 +194,8 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
   if (!issue) return null;
   // ② 필수 위반 = 화면 입력 칸(`LandSec164Card` 5칸 + 기본 정보의 토지 면적) 중 첫 미완 칸으로 이동시킨다(엔진 문구는 API 소비자용).
   if (issue.field === "landSec164Value") return validateLandSec164Inputs(asset, label);
+  // D2-4a — ② 필수 위반 = 화면에 ② 입력 칸이 없다는 사실로 말한다(엔진 문구는 API 소비자용). 이동 칸은 건물 취득일(종전 Y4와 같은 칸).
+  if (issue.field === "buildingSec164Value") return fieldError("acquisitionDate", `${label}: ${BUILDING_SEC164_SCREEN_MESSAGE}`);
   const msg = `${label}: ${issue.message}`;
   // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
   // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.

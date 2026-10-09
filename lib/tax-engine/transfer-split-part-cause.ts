@@ -54,7 +54,17 @@ export interface SplitPartCauseFacts {
   /** 파트 취득가액 입력 유무(> 0) — 생략 = 확인하지 않는다. 같은 날(별개 취득 아님)은 파트 완결 규칙(V1·V2)이 꺼져 있어 여기서 요구한다 */
   hasBuildingAcquisitionPrice?: boolean;
   hasLandAcquisitionPrice?: boolean;
+  // ── D2-4 (건물 상속·증여, 영 §163⑨ 단서 2호 max — 단독·다가구주택만) ──
+  /** 주택(`housing`) 자산인가 — 생략 = 아니다(모름 = 불성립). 비주택 `building`은 영 §164⑤ 체계라 종전 Y4 차단을 유지한다 */
+  isHousing?: boolean;
+  /** 주택 구분 — 단독·다가구(`house_individual`)만 ②를 연다. 생략·`house_apart` = 차단(공동주택은 영 §164⑥ 체계 — 모름 = 불성립) */
+  buildingHouseKind?: BuildingHouseKind;
+  /** 건물 몫 영 §164⑦ 가액(②) 총액(지분 스케일 후) — 양수면 「있음」. 생략·0 = ② 없음 */
+  buildingSec164Value?: number;
 }
+
+/** 단서 2호 ②가 열리는 주택 구분 — ④가 `deriveInheritanceHouseKind`(UI·API 공용 파생)로 보낸다. */
+export type BuildingHouseKind = "house_individual" | "house_apart";
 
 export type SplitPartCauseField =
   | "landAcquisitionCause"
@@ -62,6 +72,7 @@ export type SplitPartCauseField =
   | "landDecedentAcquisitionDate"
   | "landAcquisitionDate"
   | "landSec164Value"
+  | "buildingSec164Value"
   | "areaScenario"
   // D2 — 건물 파트 칸
   | "buildingAcqMode"
@@ -164,6 +175,26 @@ export const BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE =
   + "(같은 법 시행령 §163⑨ 단서 2호). 정확한 고시일은 자산 종류별로 달라 개별주택가격 최초공시일(2005.4.30.) 이전 취득을 "
   + "보수적으로 모두 막습니다 — 건물 상속개시일(증여일)을 확인하거나 「토지는 다른 원인으로 취득」을 끄세요";
 
+/** 단서 2호 ② 비교가 열리는 공동의 술어 — 주택 ∧ 단독·다가구. ④(브리지)·엔진 해결자·leaf가 이 한 줄을 쓴다. */
+export function isSec163_9BuildingSec164Open(isHousing: boolean | undefined, kind: string | undefined): boolean {
+  return !!isHousing && kind === "house_individual";
+}
+
+export const BUILDING_CAUSE_APARTMENT_MESSAGE =
+  "건물 기준시가가 고시되기 전에 상속·증여받은 건물의 평가액과 「소득세법 시행령」 제164조 제7항 가액의 건물 몫 비교(같은 영 제163조 제9항 단서 제2호)는 "
+  + "단독·다가구주택으로 확인된 주택만 지원합니다 — 공동주택은 국세청장이 고시한 공동주택가격이 있었는지에 따라 적용 조문(같은 영 제164조 제6항·제7항)이 "
+  + "달라 이 계산기는 다루지 않습니다. 단독·다가구주택으로 확인되지 않으면(공동주택 포함) 계산하지 않습니다";
+
+export const BUILDING_SEC164_REQUIRED_MESSAGE =
+  "건물 기준시가(개별주택가격)가 고시되기 전에 상속·증여받은 단독·다가구주택의 건물 취득가액은 상속개시일(증여일) 현재 평가액과 "
+  + "「소득세법 시행령」 제164조 제7항 가액의 건물 몫 중 많은 금액이므로 그 건물 몫(buildingSec164Value)이 필요합니다 "
+  + "(같은 영 제163조 제9항 단서 제2호)";
+
+export const BUILDING_SEC164_PARTIAL_MESSAGE =
+  "토지 일부만 양도하는 경우(면적 입력 방식 「일부 양도」)는 건물 기준시가 고시 전에 상속·증여받은 단독·다가구주택의 "
+  + "「소득세법 시행령」 제164조 제7항 가액 비교(같은 영 제163조 제9항 단서 제2호)를 지원하지 않습니다 — "
+  + "최초공시 당시 부수토지 전체 면적이 정해지지 않고 면적으로 자동 안분하지 않습니다";
+
 export const BUILDING_CAUSE_ASSET_VALUATION_MESSAGE =
   "토지·건물을 따로 취득한 계산에서 건물 평가액은 건물 취득가액 칸으로 입력합니다 — 자산 단위 상속 취득가액 의제"
   + "(inheritedAcquisition 등)는 쓰이지 않으며 결과에 실제와 다른 취득가액이 표시됩니다";
@@ -226,8 +257,17 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
       for (const [hit, message] of structural) if (hit) issues.push({ field: "landAcquisitionCause", message });
       if (!f.hasLandAcquisitionDate) issues.push({ field: "landAcquisitionDate", message: BUILDING_CAUSE_DATE_REQUIRED_MESSAGE });
       else {
-        if (isSec163_9BuildingProviso(buildingCause, f.buildingAcquisitionDate))
-          issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
+        // Y4 — 영 §163⑨ 단서 2호 구간. 단독·다가구주택만 ②(영 §164⑦ 건물 몫)와 max로 열린다(D2-4). 그 밖은 종전 차단:
+        //   비주택(일반건물 §164⑤ 체계) → Y4a · 단독·다가구가 아니거나 모름(공동주택 §164⑥ 체계) → Y4d ·
+        //   일부 양도(기준 면적 미확정, 자동 안분 금지) → Y4b · ② 없음 → Y4c.
+        if (isSec163_9BuildingProviso(buildingCause, f.buildingAcquisitionDate)) {
+          if (!f.isHousing) issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
+          else if (!isSec163_9BuildingSec164Open(f.isHousing, f.buildingHouseKind))
+            issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_APARTMENT_MESSAGE });
+          else if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: BUILDING_SEC164_PARTIAL_MESSAGE });
+          else if (!((f.buildingSec164Value ?? 0) > 0))
+            issues.push({ field: "buildingSec164Value", message: BUILDING_SEC164_REQUIRED_MESSAGE });
+        }
         if (f.buildingMode !== undefined && f.buildingMode !== "actual")
           issues.push({ field: "buildingAcqMode", message: BUILDING_CAUSE_ESTIMATION_MESSAGE });
         if (f.hasAssetLevelAcquisitionValuation)

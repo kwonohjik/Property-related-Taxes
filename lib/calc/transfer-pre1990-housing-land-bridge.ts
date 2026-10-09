@@ -35,7 +35,7 @@ export function landSec164Applies(asset: AssetForm): boolean {
  * ② 면적 — 콤마는 지운다(stale 저장값 방어). ⑤ 카드·⑧ 상태(`sec164LandPartStatus`)와 같은 파싱이어야 카드에 보이는 ②와
  * ④가 보내는 ②가 갈리지 않는다. 단건 §164④ 경로(`transfer-tax-api-helpers.ts` pre1990Land)와 같은 규약.
  */
-function sec164AreaSqm(asset: AssetForm): number | undefined {
+export function sec164AreaSqm(asset: AssetForm): number | undefined {
   return resolveAcqAreaForStdPrice({
     areaScenario: asset.areaScenario,
     acquisitionArea: (asset.acquisitionArea ?? "").replace(/,/g, ""),

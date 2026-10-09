@@ -389,6 +389,8 @@ export function buildCompanionEngineInputs(
     landDecedentAcquisitionDate: toOptionalDate(c.landDecedentAcquisitionDate),
     landSec164Value: c.landSec164Value,
     isPartialAreaTransfer: c.isPartialAreaTransfer,
+    buildingSec164Value: c.buildingSec164Value,
+    buildingHouseKind: c.buildingHouseKind,
     landDonorAcquisitionDate: toOptionalDate(c.landDonorAcquisitionDate),
     selfOwns: c.selfOwns,
     landAcqMode: c.landAcqMode,
