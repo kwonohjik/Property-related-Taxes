@@ -49,7 +49,7 @@ test.describe("D1-2 — 건물 매매 + 토지 상속·증여 화면", () => {
     await expect(page.locator('[data-field="landAcquisitionDate"]')).toContainText("토지 증여일");
   });
 
-  test("T-6 토지 상속개시일 1984는 1985.1.1.로 바뀌지 않고 1990.8.30. 전 안내가 뜬다", async ({ page }) => {
+  test("T-6 토지 상속개시일 1984는 1985.1.1.로 바뀌지 않고 ② 입력 카드가 열린다 (D1-4b)", async ({ page }) => {
     test.setTimeout(90_000);
     await setupHouse(page);
     await page.getByRole("radio", { name: "매매", exact: true }).click();
@@ -60,7 +60,8 @@ test.describe("D1-2 — 건물 매매 + 토지 상속·증여 화면", () => {
     await landDate.getByLabel("일").first().blur();
     await expect(landDate.getByLabel("연도").first()).toHaveValue("1984");
     await expect(page.getByText("1985.1.1. 의제 취득일로 취득일 변경했습니다.")).toHaveCount(0);
-    await expect(page.getByTestId("land-cause-date-notice")).toContainText("1990.8.30.");
+    await expect(page.getByTestId("land-sec164-card")).toBeVisible();
+    await expect(page.getByTestId("land-cause-date-notice")).toHaveCount(0);
   });
 
   test("호스트 태그: 신축에서 켠 뒤 매매로 바꾸면 매매 토글은 꺼져 있고 토지 방식 라디오가 그대로다", async ({ page }) => {

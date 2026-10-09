@@ -39,8 +39,10 @@ import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
-import { LAND_SEC164_SCREEN_MESSAGE } from "./transfer-land-part-cause";
 import { isPartialAreaScenario } from "./transfer-pre1990-housing-land-bridge";
+import { deriveHousingLandSec164Total } from "./transfer-pre1990-housing-land-bridge";
+import { invalidSec164GradeField } from "./transfer-pre1990-housing-land-bridge";
+import { sec164LandPartStatus } from "./sec164-required-fields";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -109,6 +111,27 @@ function validateSeparateAcqParts(asset: AssetForm, label: string): string | nul
   return null;
 }
 
+const SEC164_TAIL =
+  " — 1990.8.30. 개별공시지가 고시 전에 상속·증여받은 토지는 영 §164④ 가액(토지등급 환산)과 평가액 중 많은 금액이 취득가액입니다 "
+  + "(소득세법 시행령 §163조 제9항 단서 1호)";
+
+/**
+ * D1-4b — 단서 구간에서 ②(영 §164④ 가액) 입력 완결 요구. 필수다(opt-in 아님 — 비교를 건너뛴 ① 단독 계산은 하지 않는다).
+ * 칸 순서 = 계산 순서: 면적 → 현재등급 → 직전등급 → 취득시등급 → 1990 공시지가 → (모두 찼는데 등급이 범위 밖) 불량 등급 칸.
+ * ④ 브리지(`deriveHousingLandSec164Total`)가 ②를 못 만드는 경우를 빠짐없이 덮는다 — 그래야 ⑧ 통과 ⇒ ④가 ②를 보냄 ⇒ ⑫ 통과.
+ */
+function validateLandSec164Inputs(asset: AssetForm, label: string): string {
+  const status = sec164LandPartStatus(asset);
+  if (status.missing.length > 0) {
+    return fieldError(status.missingFields[0], `${label}: ${status.missing[0]} 칸을 입력하세요${SEC164_TAIL}`);
+  }
+  const bad = invalidSec164GradeField(asset);
+  return fieldError(
+    bad ?? "pre1990Grade_atAcq",
+    `${label}: 토지등급으로 영 §164④ 가액을 계산할 수 없습니다 — 등급번호(1~365) 또는 등급가액을 확인하세요${SEC164_TAIL}`,
+  );
+}
+
 /**
  * 토지 파트 취득원인 규칙(D0 — G-1·G-2·G-3). 엔진·⑫와 **같은 leaf**(`collectSplitPartCauseIssues`)에
  * ④가 실제로 보내는 값(유효 원인 — `effectiveLandAcquisitionCause`)을 넣는다.
@@ -144,16 +167,17 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
     selfOwns: selfOwnsSplit ? selfOwnsEff : undefined,
     isBurdenedGift: asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift",
     hasPreHousingDisclosure: phdPayloadActive(asset),
-    // D1-4a — 이 화면에는 ② 입력 칸이 없다: ④도 ②를 보내지 않으므로 사실은 「② 없음」이다(D1-4b가 브리지 파생값으로 교체).
+    // D1-4b — ② 사실은 ④가 실제로 보내는 값(브리지 파생 총액) 그대로. 토지 취득일은 위 `landDateSent` — ④ 브리지는
+    //   `asset.landAcquisitionDate`를 직독하므로 같은 값을 넣은 사본을 먹인다(유효 토지 원인이면 `hasSeperate…`가 참이라 두 식은 같다).
     //   일부 양도는 ④가 `isPartialAreaTransfer`로 실제로 보낸다(`buildLandPartCausePayload`).
-    landSec164Value: undefined,
+    landSec164Value: deriveHousingLandSec164Total({ ...asset, landAcquisitionDate: landDateSent ?? "" }) || undefined,
     isPartialAreaTransfer: isPartialAreaScenario(asset),
   });
   // Q-4 — ⑫는 막지 않는 ⑤·⑧ 정책(엔진 값은 원인 없음과 같다 — 계획서 §10.2 T-4).
   if (!issue && landPartCauseSameDay(asset)) return fieldError("landAcquisitionDate", `${label}: ${LAND_CAUSE_SAME_DAY_MESSAGE}`);
   if (!issue) return null;
-  // ② 필수 위반 = 화면에 입력 칸이 없다는 사실로 말한다(엔진 문구는 API 소비자용). 이동 칸은 토지 취득일.
-  if (issue.field === "landSec164Value") return fieldError("landAcquisitionDate", `${label}: ${LAND_SEC164_SCREEN_MESSAGE}`);
+  // ② 필수 위반 = 화면 입력 칸(`LandSec164Card` 5칸 + 기본 정보의 토지 면적) 중 첫 미완 칸으로 이동시킨다(엔진 문구는 API 소비자용).
+  if (issue.field === "landSec164Value") return validateLandSec164Inputs(asset, label);
   const msg = `${label}: ${issue.message}`;
   // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
   // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.

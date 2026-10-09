@@ -83,6 +83,54 @@ export function splitRateBasisNote(
   return `${label} — ${law}`;
 }
 
+/** ① 가액의 이름 — 입력 화면(`LAND_CAUSE_META.valueLabel`)과 같은 어휘다(사용자가 입력한 단어가 결과에 그대로 나와야 검증이 된다). */
+export const SPLIT_LAND_VALUE_LABEL = { inheritance: "상속개시일 평가액", gift: "증여 신고가액" } as const;
+
+/** ② 가액의 이름 — 1990.8.30. 전 토지는 개별공시지가가 없어 토지등급으로 환산한다(영 §164④). */
+export const SPLIT_SEC164_VALUE_LABEL = "영 §164④ 가액";
+
+export interface SplitAcqBasisView {
+  /** 「상속개시일 평가액」·「증여 신고가액」 */
+  reportedLabel: string;
+  sec164Label: string;
+  reported: number;
+  sec164: number;
+  adopted: "reported" | "sec164";
+  /** 채택된 쪽 이름 */
+  adoptedLabel: string;
+  /** 채택된 금액 */
+  adoptedValue: number;
+}
+
+/**
+ * 영 §163⑨ 단서 1호 「평가액 vs 영 §164④ 가액 → 많은 금액」 표시 정본(D1-4) — 카드·상세명세서·신고서·PDF가 같은 문장을 쓴다.
+ * 엔진 echo(`acquisitionBasis`)를 그대로 읽고 값을 새로 계산하지 않는다. echo가 없으면(구 이력·단서 밖) `undefined`.
+ * 채택 금액은 echo의 `adopted`가 가리키는 쪽이다 — `max`를 다시 쓰지 않는다(동점 = 평가액은 엔진 규약).
+ */
+export function splitAcqBasisView(
+  p: Pick<SplitPartResult, "acquisitionBasis" | "acquisitionCause">,
+): SplitAcqBasisView | undefined {
+  const b = p.acquisitionBasis;
+  if (!b) return undefined;
+  const reportedLabel = p.acquisitionCause === "gift" ? SPLIT_LAND_VALUE_LABEL.gift : SPLIT_LAND_VALUE_LABEL.inheritance;
+  const adoptedReported = b.adopted === "reported";
+  return {
+    reportedLabel,
+    sec164Label: SPLIT_SEC164_VALUE_LABEL,
+    reported: b.reported,
+    sec164: b.sec164,
+    adopted: b.adopted,
+    adoptedLabel: adoptedReported ? reportedLabel : SPLIT_SEC164_VALUE_LABEL,
+    adoptedValue: adoptedReported ? b.reported : b.sec164,
+  };
+}
+
+/** `토지 취득가액 = 많은 금액(상속개시일 평가액 A, 영 §164④ 가액 B) = C` — 숫자 `/`·`÷` 없음(분수 치환 방지). */
+export function splitAcqBasisFormula(v: SplitAcqBasisView): string {
+  const f = (n: number) => n.toLocaleString();
+  return `토지 취득가액 = 많은 금액(${v.reportedLabel} ${f(v.reported)}, ${v.sec164Label} ${f(v.sec164)}) = ${f(v.adoptedValue)}`;
+}
+
 export interface SplitGainPartSummary {
   key: SplitPartKey;
   /** 「토지」·「건물」 */
@@ -104,6 +152,8 @@ export interface SplitGainPartSummary {
   rateBasisAcquisitionDate: string | undefined;
   rateBasisRule: SplitPartResult["rateBasisRule"];
   appliedRateBasisDate: string | undefined;
+  /** 영 §163⑨ 단서 1호 비교 echo 그대로(D1-4) — 비교가 적용된 토지 파트만, 구 결과·단서 밖은 `undefined` */
+  acquisitionBasis: SplitPartResult["acquisitionBasis"];
 }
 
 export interface SplitGainSummary {
@@ -166,6 +216,7 @@ export function summarizeSplitGain(sd: SplitGainResult): SplitGainSummary {
       rateBasisAcquisitionDate: p.rateBasisAcquisitionDate,
       rateBasisRule: p.rateBasisRule,
       appliedRateBasisDate: p.appliedRateBasisDate,
+      acquisitionBasis: p.acquisitionBasis,
     };
   });
   const sum = (f: (p: SplitGainPartSummary) => number) => parts.reduce((s, p) => s + f(p), 0);

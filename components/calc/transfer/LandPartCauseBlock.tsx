@@ -37,6 +37,7 @@ import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cau
 import { landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
+import { LandSec164Card } from "./LandSec164Card";
 import { LAND_CAUSE_META, type LandCause } from "./land-cause-meta";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -243,6 +244,9 @@ export function LandPartCauseBlock(props: {
             </FieldCard>
             {cause === "inheritance" && <DecedentDateField asset={asset} onChange={onChange} />}
           </div>
+
+          {/* D1-4b — 1990.8.30. 전 상속·증여 토지: 평가액(①) 바로 아래에서 영 §164④ 가액(②)을 구한다(단서 구간일 때만 렌더). */}
+          <LandSec164Card asset={asset} onChange={onChange} transferDate={props.transferDate} />
 
           {dateNotice && (
             <ToneCard tone="amber" noDark>

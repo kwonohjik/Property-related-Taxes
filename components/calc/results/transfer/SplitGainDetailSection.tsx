@@ -47,6 +47,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import {
+  splitAcqBasisView,
   splitAcqModeLabel,
   splitCauseLabel,
   splitRateBasisNote,
@@ -94,6 +95,8 @@ export function SplitGainDetailSection({
     // 개산공제율은 엔진이 적용한 율 echo를 읽는다(미등기 0.3% · 분양권 등 1%). echo가 없는 구 이력은 종전 3%.
     const lumpRateLabel = (rate?: number) => (rate !== undefined ? formatLumpRate(rate) : "3%");
     const { mixedCause, rateBasisShown } = summarizeSplitGain(splitDetail);
+    // D1-4 — 영 §163⑨ 단서 1호 비교(평가액 vs 영 §164④ 가액)가 적용된 토지 파트만. 엔진 echo를 그대로 읽는다.
+    const landBasis = splitAcqBasisView(splitDetail.land);
   return (
         <div className="rounded-lg border border-border p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -156,6 +159,27 @@ export function SplitGainDetailSection({
             <span className="text-muted-foreground">취득가액</span>
             <AcqCell owned={landIsOwned} part={splitDetail.land} testId="split-card-acq-land" />
             <AcqCell owned={buildingIsOwned} part={splitDetail.building} testId="split-card-acq-building" />
+            {/*
+              D1-4 — 1990.8.30. 전 상속·증여 토지: 취득가액은 평가액과 영 §164④ 가액 중 **많은 금액**이다. 두 값과 채택을 보인다
+              (채택이 ②이면 위 취득가액 칸의 값은 평가액이 아니라 ② — 이 블록 없이는 입력한 평가액과 달라 보인다).
+              동점은 평가액(엔진 규약). 구 이력·비교 미적용(echo 없음)은 렌더하지 않는다.
+            */}
+            {landBasis && (
+              <div className="col-span-3 space-y-0.5 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-acq-basis">
+                <span className="block font-medium text-foreground/80">
+                  토지 취득가액 비교 (소득세법 시행령 §163조 제9항 단서 1호 — 많은 금액)
+                </span>
+                <FLine>
+                  {landBasis.reportedLabel} <span className="font-mono tabular-nums" data-testid="split-card-acq-basis-reported">{landBasis.reported.toLocaleString()}</span>
+                  {" · "}
+                  {landBasis.sec164Label} <span className="font-mono tabular-nums" data-testid="split-card-acq-basis-sec164">{landBasis.sec164.toLocaleString()}</span>
+                </FLine>
+                <FLine>
+                  채택: <span className="font-medium text-foreground/80" data-testid="split-card-acq-basis-adopted">{landBasis.adoptedLabel}</span>{" "}
+                  <span className="font-mono tabular-nums">{landBasis.adoptedValue.toLocaleString()}</span>
+                </FLine>
+              </div>
+            )}
             <span className="text-muted-foreground">필요경비 (개산공제)</span>
             <span className={colCls(landIsOwned)}>
               {splitDetail.land.appraisalDeduction.toLocaleString()}

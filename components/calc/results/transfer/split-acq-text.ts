@@ -12,6 +12,8 @@ import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share
 import { LAND_CAUSE_META } from "@/components/calc/transfer/land-cause-meta";
 import {
   splitAcqModeLabel,
+  splitAcqBasisFormula,
+  splitAcqBasisView,
   splitCauseLabel,
   splitRateBasisNote,
   summarizeSplitGain,
@@ -38,6 +40,9 @@ export function formatLumpRate(rate: number | undefined): string {
  * 원인이 다르고(`mixedCause`) 그 파트가 상속·증여면 입력 화면 라벨과 같은 어휘로 「토지(상속개시일 평가액)」(D1-3).
  */
 function partTag(p: SplitGainPartSummary, mixedCause: boolean): string {
+  // D1-4 — 영 §163⑨ 단서 1호 비교가 적용된 파트는 **채택된 쪽** 이름을 쓴다(② 채택인데 「평가액」이라 적으면 거짓 라벨).
+  const basis = splitAcqBasisView(p);
+  if (basis) return `${p.label}(${basis.adoptedLabel})`;
   const cause = p.acquisitionCause;
   if (mixedCause && (cause === "inheritance" || cause === "gift")) return `${p.label}(${LAND_CAUSE_META[cause].valueLabel})`;
   return p.mode ? `${p.label}(${splitAcqModeLabel(p.mode)})` : p.label;
@@ -78,7 +83,10 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
     swapped.length > 0
       ? ` ※ ${swapped.map((p) => `${p.label} 취득가액 ${fmt(p.acquisitionPrice)}`).join(" · ")}은(는) 「소득세법」 §97②2호 단서에 따라 차감하지 않고 자본적지출·양도비를 필요경비로 적용합니다`
       : "";
-  return `${body} — 토지·건물 파트별 산정 (소득세법 §97①1호 가목·나목)${swapNote}`;
+  // D1-4 — 평가액 vs 영 §164④ 가액 비교가 적용된 토지 파트는 두 값과 채택을 한 줄로 밝힌다(카드·신고서·PDF와 같은 문장).
+  const basisPart = s.parts.find((p) => splitAcqBasisView(p));
+  const basisNote = basisPart ? ` ※ ${splitAcqBasisFormula(splitAcqBasisView(basisPart)!)} (소득세법 시행령 §163조 제9항 단서 1호)` : "";
+  return `${body} — 토지·건물 파트별 산정 (소득세법 §97①1호 가목·나목)${swapNote}${basisNote}`;
 }
 
 /**

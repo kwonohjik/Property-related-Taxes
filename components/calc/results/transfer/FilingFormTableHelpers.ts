@@ -14,6 +14,8 @@ import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/tran
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitCauseLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitRateBasisNote } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitAcqBasisView } from "@/lib/tax-engine/transfer-tax-split-display";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -409,6 +411,11 @@ export function buildRows(
     setNum("acquisitionPrice", "total", ss.acquisitionDeducted);
     setNum("expenses", "total", ss.necessaryExpense);
     for (const part of ss.parts) {
+      // D1-4 — 취득가액 칸 값은 이미 채택값이다. 비교한 두 값을 각주로 밝힌다(영 §163⑨ 단서 1호).
+      const basis = splitAcqBasisView(part);
+      if (basis && !part.swapApplied) {
+        setRoseNote("acquisitionPrice", part.key, `${splitAcqBasisFormula(basis)} (소득세법 시행령 §163조 제9항 단서 1호)`);
+      }
       if (part.swapApplied) {
         setRoseNote(
           "acquisitionPrice",

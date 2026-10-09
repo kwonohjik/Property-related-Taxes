@@ -6,7 +6,7 @@
  * 계획서: docs/00-pm/transfer-acq-cause-mixed.plan.md §6 Q-7 · §10.1 U-1 · §10.3 D1-4
  *
  * ## 이 파일이 하는 일
- * 1. **현행 Q-7 차단을 활성 테스트로 고정**한다 — 이름에 `[D1-4에서 뒤집힘]`이 붙은 테스트는 D1-4 Do가 일부러 깨뜨린다.
+ * 1. **현행 Q-7 차단을 활성 테스트로 고정**한다 — 이름에 `[D1-4b 전환]`이 붙은 테스트는 D1-4 Do가 일부러 깨뜨린다.
  *    깨뜨릴 때 같은 자리에서 기대값을 설계 문서 §8 판정으로 바꾼다(조용히 지나가지 않게 하는 안전망).
  * 2. **공유 키 재사용의 전제**(설계 §2)를 활성 테스트로 고정한다 — `pre1990*`·`acquisitionArea`를 채워 둬도 이 상태(주택·건물
  *    + 매매·신축 호스트)에서는 다른 어떤 읽는 쪽도 그 값을 ④로 흘리지 않는다. 이게 깨지면 새 키가 필요하다.
@@ -39,6 +39,10 @@ import { separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { validateAssetAcquisition } from "@/lib/calc/transfer-tax-validate-acquisition";
 import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
 import { landPartCauseDateNotice, effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
+import { landSec164Applies } from "@/lib/calc/transfer-pre1990-housing-land-bridge";
+import { summarizeSplitGain, splitAcqBasisView, splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitAcqFormulaText } from "@/components/calc/results/transfer/split-acq-text";
+import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
 import { isGbLandPre1990Sec163_9, deriveGbPre1990LandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-gb-bridge";
 import { sec164HouseStatus, sec164LandStatus } from "@/lib/calc/sec164-required-fields";
@@ -173,66 +177,118 @@ function valuation(over: { p1990: number; cur: number; prev: number; atAcq: numb
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// A. 현행 Q-7 차단 — D1-4가 일부러 뒤집는다 (설계 §8)
+// A. D1-4b — ⑧ 완화: 「무조건 차단」(Q-7) → 「② 입력 완결 요구」 (종전 pin이 뒤집힌 자리)
 // ─────────────────────────────────────────────────────────────────────────────
-describe("A. 현행 Q-7 차단 pin — 「[D1-4에서 뒤집힘]」", () => {
+describe("A. ⑧ 완화 — 단서 구간(1990.8.30. 전 상속·증여 토지)은 ②(영 §164④ 가액) 입력 완결을 요구한다", () => {
   const hosts: [string, (o?: Partial<AssetForm>) => AssetForm][] = [
     ["신축", newConstruction],
     ["매매", purchase],
   ];
+  /** 면적 → 현재등급 → 직전등급 → 취득시등급 → 1990 공시지가 (설계 §6 이동 순서) */
+  const ORDER: [Partial<AssetForm>, string, string][] = [
+    [{ acquisitionArea: "" }, "acquisitionArea", "토지 면적 칸을 입력하세요"],
+    [{ pre1990Grade_current: "" }, "pre1990Grade_current", "1990.8.30. 현재 토지등급 칸을 입력하세요"],
+    [{ pre1990Grade_prev: "" }, "pre1990Grade_prev", "1990.8.30. 직전 토지등급 칸을 입력하세요"],
+    [{ pre1990Grade_atAcq: "" }, "pre1990Grade_atAcq", "취득시 토지등급 칸을 입력하세요"],
+    [{ pre1990PricePerSqm_1990: "" }, "pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가 칸을 입력하세요"],
+  ];
 
   for (const [name, make] of hosts) {
-    it(`A1 [D1-4에서 뒤집힘] ${name} 호스트 + 토지 상속 1984-05-01 → ⑧ 차단(토지 취득일 칸) — §164④ 5칸·면적을 모두 채워도 풀리지 않는다`, () => {
-      for (const filled of [false, true]) {
-        const a = make(filled ? SEC164_FILLED : {});
-        const r = v8(a);
-        expect(r.result, `filled=${filled}`).toContain("1990.8.30.");
-        expect(r.result).toContain("이 비교는 지원하지 않습니다");
-        expect(r.fieldOf(r.result!)).toBe("landAcquisitionDate");
+    it(`A1 ${name} 호스트 + 토지 상속 1984-05-01: ② 완결이면 ⑧ 통과 / 미완이면 첫 미완 칸으로 이동(순서 고정) / 전부 비면 면적 칸`, () => {
+      expect(v8(make(SEC164_FILLED)).result).toBeNull();
+      for (const [blank, field, msg] of ORDER) {
+        const r = v8(make({ ...SEC164_FILLED, ...blank }));
+        expect(r.result, field).toContain(msg);
+        expect(r.result).toContain("1990.8.30.");
+        expect(r.result).not.toContain("landSec164Value");
+        expect(r.fieldOf(r.result!), field).toBe(field);
       }
+      // 순서: 여러 칸이 비면 먼저 오는 칸
+      const r = v8(make({ ...SEC164_FILLED, pre1990Grade_prev: "", pre1990PricePerSqm_1990: "" }));
+      expect(r.fieldOf(r.result!)).toBe("pre1990Grade_prev");
+      expect(v8(make()).fieldOf(v8(make()).result!)).toBe("acquisitionArea");
     });
 
-    it(`A2 [D1-4에서 뒤집힘] ${name} 호스트 + 토지 증여 1988-12-31도 같은 차단 (§163⑨ 단서 1호는 증여 포함)`, () => {
-      const a = make({ ...SEC164_FILLED, landAcquisitionCause: "gift", landAcquisitionDate: "1988-12-31", landDecedentAcquisitionDate: "" });
-      const r = v8(a);
-      expect(r.result).toContain("1990.8.30.");
-      expect(r.fieldOf(r.result!)).toBe("landAcquisitionDate");
+    it(`A2 ${name} 호스트: 증여 1988-12-31도 같은 규칙 (§163⑨ 단서 1호는 증여 포함)`, () => {
+      const gift = { landAcquisitionCause: "gift" as const, landAcquisitionDate: "1988-12-31", landDecedentAcquisitionDate: "" };
+      expect(v8(make({ ...SEC164_FILLED, ...gift })).result).toBeNull();
+      const r = v8(make({ ...SEC164_FILLED, ...gift, pre1990Grade_atAcq: "" }));
+      expect(r.fieldOf(r.result!)).toBe("pre1990Grade_atAcq");
     });
 
-    it(`A3 ${name} 호스트 경계: 1990-08-29는 차단, 1990-08-30 당일은 통과 (당일은 「고시되기 전」이 아니다) — D1-4 후에도 경계는 유지`, () => {
+    it(`A3 ${name} 호스트 경계: 1990-08-29는 ② 요구, 1990-08-30 당일은 ② 없이 통과 (당일은 「고시되기 전」이 아니다)`, () => {
       const hit = v8(make({ landAcquisitionDate: "1990-08-29", landDecedentAcquisitionDate: "1960-01-01" }));
       expect(hit.result).toContain("1990.8.30.");
-      const edge = v8(make({ landAcquisitionDate: SEC_163_9_LAND_FIRST_DISCLOSURE, landDecedentAcquisitionDate: "1960-01-01" }));
-      expect(edge.result).toBeNull();
+      expect(hit.fieldOf(hit.result!)).toBe("acquisitionArea");
+      expect(v8(make({ landAcquisitionDate: SEC_163_9_LAND_FIRST_DISCLOSURE, landDecedentAcquisitionDate: "1960-01-01" })).result).toBeNull();
+    });
+
+    it(`A3′ ${name} 호스트: 면적 방식 「일부 양도」는 areaScenario 칸으로 차단 — ② 5칸이 차 있어도`, () => {
+      const r = v8(make({ ...SEC164_FILLED, areaScenario: "partial" }));
+      expect(r.result).toContain("일부만 양도");
+      expect(r.fieldOf(r.result!)).toBe("areaScenario");
+    });
+
+    it(`A3″ ${name} 호스트: 등급번호 모드에서 1 미만(0.5)은 계산 불가 — 불량 등급 칸으로 이동`, () => {
+      const r = v8(make({ ...SEC164_FILLED, pre1990GradeMode: "number", pre1990Grade_current: "0.5", pre1990Grade_prev: "10", pre1990Grade_atAcq: "10" }));
+      expect(r.result).toContain("계산할 수 없습니다");
+      expect(r.fieldOf(r.result!)).toBe("pre1990Grade_current"); // 첫 불량 칸(취득시가 아니다)
     });
   }
 
-  it("A4 [D1-4a에서 뒤집힘] ⑫: 5칸·면적이 찬 body는 ④가 ②(landSec164Value)를 실어 엔진이 max·echo로 계산(200) — 비어 있으면 400. ⑧은 D1-4a에서 계속 막는다(A1)", async () => {
-    // 법령 정합: 영 §163⑨ 단서 1호 — 평가액 3억과 §164④ 가액 16,000,000(80,000/㎡ × 200㎡) 중 많은 금액 = 3억(평가액 채택).
-    for (const make of [newConstruction, purchase]) {
-      const filled = await run(make(SEC164_FILLED));
-      expect(filled.status).toBe(200);
-      expect(filled.body.landSec164Value).toBe(16_000_000);
-      expect(filled.split).toMatchObject({
-        land: { acquisitionPrice: 300_000_000, acquisitionBasis: { rule: "sec163_9_1", reported: 300_000_000, sec164: 16_000_000, adopted: "reported" } },
-      });
-      expect((await run(make({}))).status).toBe(400);
+  it("A4 ⑧ ≡ ⑫ 정확 일치 격자: 호스트 2 × 원인 2 × 날짜 4 × 입력 상태 8 = 128셀 — ⑧ 통과 ⇔ ⑫ 200, ⑧ 차단 ⇔ ⑫ 400 (Q-4 같은 날 제외)", async () => {
+    const dates = ["1984-05-01", "1990-08-29", "1990-08-30", "1991-01-01"];
+    const states: [string, Partial<AssetForm>][] = [
+      ["완결", {}],
+      ["면적 없음", { acquisitionArea: "", transferArea: "" }],
+      ["현재등급 없음", { pre1990Grade_current: "" }],
+      ["직전등급 없음", { pre1990Grade_prev: "" }],
+      ["취득시등급 없음", { pre1990Grade_atAcq: "" }],
+      ["1990가 없음", { pre1990PricePerSqm_1990: "" }],
+      ["불량 등급", { pre1990GradeMode: "number", pre1990Grade_current: "10", pre1990Grade_prev: "10", pre1990Grade_atAcq: "0.5" }],
+      ["일부 양도", { areaScenario: "partial" }],
+    ];
+    let cells = 0;
+    let pass8 = 0;
+    for (const [, make] of [["신축", newConstruction], ["매매", purchase]] as const) {
+      for (const cause of ["inheritance", "gift"] as const) {
+        for (const d of dates) {
+          for (const [state, over] of states) {
+            const a = make({
+              ...SEC164_FILLED,
+              landAcquisitionCause: cause,
+              landAcquisitionDate: d,
+              landDecedentAcquisitionDate: cause === "inheritance" ? "1960-01-01" : "",
+              ...over,
+            });
+            const ok8 = v8(a).result === null;
+            const status = (await run(a)).status;
+            expect(ok8 ? 200 : 400, `${a.acquisitionCause}/${cause}/${d}/${state}`).toBe(status);
+            cells += 1;
+            if (ok8) pass8 += 1;
+          }
+        }
+      }
     }
+    expect(cells).toBe(128);
+    // 통과 셀이 0이면 격자가 공허하다 — 완결 셀과 1990 이후 셀이 있어야 한다
+    expect(pass8).toBeGreaterThan(20);
   });
 
-  it("A5 [D1-4에서 뒤집힘] ⑤ 날짜 안내: 1990 전이면 「이 화면에서 계산하지 않습니다」류 차단 문구를 낸다 (D1-4 후 카드로 대체)", () => {
-    const n = landPartCauseDateNotice({ ...purchase(SEC164_FILLED) });
-    expect(n).toContain("1990.8.30.");
-    expect(n).toContain("지원하지 않습니다");
-    // 긍정 짝: 1990 이후는 안내 없음
-    expect(landPartCauseDateNotice({ ...purchase({ landAcquisitionDate: "2015-03-10" }) })).toBeNull();
+  it("A5 ⑤ 날짜 안내: 1990 전이어도 차단 문구를 내지 않는다(카드가 대체) — Q-4 같은 날 안내는 그대로", () => {
+    expect(landPartCauseDateNotice({ ...purchase(SEC164_FILLED) })).toBeNull();
+    expect(landPartCauseDateNotice({ ...purchase({ landAcquisitionDate: "2018-03-02" }) })).toContain("취득일이 같으면");
   });
 
-  it("A6 [D1-4에서 뒤집힘] ⑥ 사이드바: 1990 전 토지 상속이어도 합계는 평가액 + 건물 가액으로 **확정**(pending=false) — D1-4 후엔 §164④와의 비교가 결과 도착 전엔 미확정이라 pending", () => {
-    // 매매 호스트: 토지 평가액 3억 + 건물 3.5억
-    expect(separateAcqPartsSum(purchase(SEC164_FILLED))).toEqual({ sum: 650_000_000, pending: false });
-    // 신축 호스트: 토지 평가액 3억 + 신축비용 4억(건물 후퇴)
-    expect(separateAcqPartsSum(newConstruction(SEC164_FILLED))).toEqual({ sum: 700_000_000, pending: false });
+  it("A6 ⑥ 사이드바: 단서 구간이면 pending(결과 도착 전 합계 숨김), 단서 밖(1990-08-30·1991)은 종전 확정값", () => {
+    expect(separateAcqPartsSum(purchase(SEC164_FILLED)).pending).toBe(true);
+    expect(separateAcqPartsSum(newConstruction(SEC164_FILLED)).pending).toBe(true);
+    expect(separateAcqPartsSum(purchase({ ...SEC164_FILLED, landAcquisitionDate: "1990-08-30" }))).toEqual({ sum: 650_000_000, pending: false });
+    expect(separateAcqPartsSum(newConstruction({ ...SEC164_FILLED, landAcquisitionDate: "1991-01-01" }))).toEqual({ sum: 700_000_000, pending: false });
+    // 토지를 소유하지 않는 파트 구성(건물만 소유)이면 토지 단서 비교는 합계 대상이 아니다 — 건물가만으로 확정
+    expect(separateAcqPartsSum(purchase({ ...SEC164_FILLED, selfOwns: "building_only" }))).toEqual({ sum: 350_000_000, pending: false });
+    // 호스트 이탈(유효 원인 없음)이면 단서 구간이 아니다 — 평가액 + 건물 가액 확정(긍정 짝)
+    expect(separateAcqPartsSum(purchase({ ...SEC164_FILLED, landCauseHost: "" })).pending).toBe(false);
   });
 });
 
@@ -383,27 +439,87 @@ describe("C. 앵커 수치 — 순수 함수 값 (세율 무관)", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// D. D1-4 후 기대값 (설계 §10.3과 1:1) — 구현 시 todo → 실제 테스트로 전환
+// D. 게이트·④ 3경로·래치 비의존
 // ─────────────────────────────────────────────────────────────────────────────
-describe("D. D1-4 기대 (설계 §3~§8)", () => {
-  // ⑤ 위젯·게이트
-  it.todo("D1 게이트 leaf: 유효 토지 원인 ∧ 토지 취득일 < 1990-08-30 일 때만 §164④ 카드 노출 — 신축·매매 호스트 동일, 1990-08-30 당일은 비노출");
-  it.todo("D2 게이트는 pre1990Enabled 래치를 읽지 않는다 — 래치 true/false 모두 같은 결과 (alwaysOpen, 비교는 법이 정한 계산)");
-  // ⑧
-  it.todo("D3 ⑧ 순서: 토지일 비움(G-12) → 평가액 → 면적(acquisitionArea) → 현재등급 → 직전등급 → 취득시등급 → 1990 공시지가 → 계산 불가 — 각 칸 앵커로 이동");
-  it.todo("D4 ⑧ 통과 조건 = ④가 §164④ 페이로드를 싣는 조건 (sec164 상태 isFullyFilled ∧ 계산 성공) — 격자 전수: ⑧ 차단 ⇔ ⑫ 차단");
-  it.todo("D5 ⑧ 면적: areaScenario=partial이면 차단 또는 양도분 면적 정책 — 엔진 시니어 결론 후 확정(설계 Q-D14-UI3)");
-  it.todo("D6 Q-4 같은 날 · Q-5 소유자 분리 · R-X1~X5 결합 제외는 1990 전 날짜에서도 종전 그대로 (순서: 구조 규칙 → G-12 → Q-7' 입력 완결)");
-  // ④
-  it.todo("D7 ④ 3경로 동일: 1990 전 + 완결이면 buildLandPartCausePayload가 §164④ 페이로드를 싣고, 1990 이후·토글 OFF·불완전이면 싣지 않는다 (stale 5칸 누수 0)");
-  it.todo("D8 ⑫ 직접 호출: 1990 전 + §164④ 페이로드 없음 → 400(메시지에 입력 칸 안내), 있음 → 200 (엔진 설계 B안 기준)");
-  // ⑥
-  it.todo("D9 ⑥ separateAcqPartsSum: 1990 전 토지 원인이면 pending=true (사이드바는 결과 도착 전 합계를 숨긴다) — 1990 이후는 종전 확정값");
-  // ⑦
-  it.todo("D10 summarizeSplitGain: 채택 근거(평가액/§164④)·두 값을 echo로 받아 4뷰 공통 — echo 없는 구 이력은 종전 화면(비교 행 미렌더)");
-  it.todo("D11 상세명세서 파트 태그: §164④ 채택이면 「토지(영 §164④ 가액)」, 평가액 채택이면 「토지(상속개시일 평가액)」 — 동점은 평가액");
-  it.todo("D12 신고서 취득가액 칸 = 채택값 · 각주에 비교 두 값");
-  // 회귀
-  it.todo("D13 신축 호스트 회귀 0: 토지일 ≥ 1990-08-30 상속 상태의 ④ 원인 payload · ⑥ 합계(700,000,000) · ⑧ 통과 (D1 A1과 동일)");
-  it.todo("D14 C1·C2 수치 e2e: 평가액 3억 vs §164④ 16,000,000 → 3억 채택 / 4억 → 4억 채택 (엔진 echo의 adopted 라벨 포함)");
+describe("D. 게이트 · ④ 3경로 · 래치 비의존", () => {
+  const hosts: [string, (o?: Partial<AssetForm>) => AssetForm][] = [["신축", newConstruction], ["매매", purchase]];
+
+  for (const [name, make] of hosts) {
+    it(`D1·D2 ${name}: 게이트 landSec164Applies는 유효 원인 ∧ < 1990-08-30 — 래치 pre1990Enabled와 무관`, () => {
+      for (const latch of [true, false]) {
+        expect(landSec164Applies(make({ pre1990Enabled: latch })), `latch=${latch}`).toBe(true);
+        expect(landSec164Applies(make({ pre1990Enabled: latch, landAcquisitionDate: "1990-08-30" }))).toBe(false);
+      }
+      expect(landSec164Applies(make({ landCauseHost: "" }))).toBe(false);
+      expect(landSec164Applies(make({ landAcquisitionCause: "" }))).toBe(false);
+    });
+
+    it(`D7 ${name}: ④ 3경로가 완결이면 같은 landSec164Value를, 단서 밖·미완·토글 OFF면 싣지 않는다 (stale 5칸 누수 0)`, async () => {
+      const get = async (a: AssetForm) => {
+        const single = await bodyOf(a);
+        const multi = buildPropertyPayload(form(a)) as Record<string, unknown>;
+        const comp = buildAssetPayload(a, "apportioned", TRANSFER_DATE) as Record<string, unknown>;
+        return [single.landSec164Value, multi.landSec164Value, comp.landSec164Value];
+      };
+      const full = await get(make(SEC164_FILLED));
+      expect(full[0]).toBeGreaterThan(0);
+      expect(full[1]).toBe(full[0]);
+      expect(full[2]).toBe(full[0]);
+      for (const a of [
+        make({ ...SEC164_FILLED, landAcquisitionDate: "1990-08-30" }),
+        make({ ...SEC164_FILLED, pre1990Grade_prev: "" }),
+        make({ ...SEC164_FILLED, landAcquisitionCause: "", landCauseHost: "" }),
+      ]) {
+        expect(await get(a)).toEqual([undefined, undefined, undefined]);
+      }
+    });
+  }
+
+  it("D8 ⑧ 날짜 = ④ 날짜: ⑧ 브리지 입력(landDateSent)과 ④ 직독 날짜가 유효 원인에서 같다 — 소유자 분리는 구조 규칙이 먼저 막아 어긋나지 않는다", () => {
+    const a = purchase({ ...SEC164_FILLED, selfOwns: "building_only" });
+    const r = v8(a);
+    expect(r.fieldOf(r.result!)).toBe("landAcquisitionCause"); // 구조 규칙(R-X4)이 ② 규칙보다 앞
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E. 엔진 echo → 4뷰 공통 leaf (summarizeSplitGain)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("E. 결과 echo — summarizeSplitGain · 파트 태그 · 산식 문구", () => {
+  const sd = (adopted: "reported" | "sec164", cause: "inheritance" | "gift" = "inheritance") =>
+    ({
+      selfOwns: "both",
+      land: {
+        transferPrice: 700_000_000, acquisitionPrice: adopted === "reported" ? 300_000_000 : 400_000_000, directExpenses: 0,
+        appraisalDeduction: 0, gain: 0, holdingYears: 40, longTermRate: 0.3, longTermDeduction: 0, acqMode: "actual",
+        acquisitionCause: cause,
+        acquisitionBasis: { rule: "sec163_9_1", reported: 300_000_000, sec164: 400_000_000 - (adopted === "reported" ? 200_000_000 : 0), adopted },
+      },
+      building: {
+        transferPrice: 500_000_000, acquisitionPrice: 350_000_000, directExpenses: 0, appraisalDeduction: 0, gain: 0,
+        holdingYears: 8, longTermRate: 0.16, longTermDeduction: 0, acqMode: "actual", acquisitionCause: "purchase",
+      },
+    }) as unknown as SplitGainResult;
+
+  it("E1 채택이 ②면 파트 태그 「토지(영 §164④ 가액)」, ①이면 「토지(상속개시일 평가액)」·증여는 「증여 신고가액」 — 거짓 라벨 방지", () => {
+    expect(splitAcqFormulaText(sd("sec164"))).toContain("토지(영 §164④ 가액) 400,000,000");
+    expect(splitAcqFormulaText(sd("reported"))).toContain("토지(상속개시일 평가액) 300,000,000");
+    expect(splitAcqFormulaText(sd("reported", "gift"))).toContain("토지(증여 신고가액) 300,000,000");
+  });
+
+  it("E2 summarize는 echo를 그대로 통과 — 채택 금액은 adopted가 가리키는 쪽(동점도 echo 따름), echo 없으면 undefined(구 이력 종전 화면)", () => {
+    const part = summarizeSplitGain(sd("sec164")).parts[0];
+    const v = splitAcqBasisView(part)!;
+    expect(v).toMatchObject({ reported: 300_000_000, sec164: 400_000_000, adopted: "sec164", adoptedLabel: "영 §164④ 가액", adoptedValue: 400_000_000 });
+    expect(splitAcqBasisFormula(v)).toBe("토지 취득가액 = 많은 금액(상속개시일 평가액 300,000,000, 영 §164④ 가액 400,000,000) = 400,000,000");
+    const old = sd("sec164");
+    delete (old.land as unknown as Record<string, unknown>).acquisitionBasis;
+    expect(splitAcqBasisView(summarizeSplitGain(old).parts[0])).toBeUndefined();
+    expect(splitAcqFormulaText(old)).toContain("토지(상속개시일 평가액)"); // mixedCause 구 이력은 D1-3 종전 라벨
+    expect(splitAcqFormulaText(old)).not.toContain("많은 금액");
+  });
+
+  it("E3 산식 문구는 숫자 `/`·`÷`를 쓰지 않는다(분수 치환 방지)", () => {
+    expect(splitAcqBasisFormula(splitAcqBasisView(summarizeSplitGain(sd("sec164")).parts[0])!)).not.toMatch(/[/÷]/);
+  });
 });

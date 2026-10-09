@@ -39,17 +39,19 @@ test.describe("D1-1 — 신축 + 토지 상속·증여 화면", () => {
     await expect(page.locator('[data-field="landAcquisitionCause"]')).toHaveCount(1);
   });
 
-  test("Q-7 1990.8.30. 전 상속개시일이면 안내가 뜨고, 그 뒤 날짜로 고치면 사라진다", async ({ page }) => {
+  test("Q-7→D1-4b 1990.8.30. 전 상속개시일이면 ② 입력 카드가 열리고(차단 안내 없음), 그 뒤 날짜로 고치면 카드가 사라진다", async ({ page }) => {
     test.setTimeout(90_000);
     await setupNewConstruction(page);
     await landAcqToggle(page).click();
 
-    const notice = page.getByTestId("land-cause-date-notice");
+    const card = page.getByTestId("land-sec164-card");
     const dateCard = page.getByTestId("acq-date-land");
+    await expect(card).toHaveCount(0);
     await fillDateAndVerify(page, { year: "1984", month: "05", day: "01" }, { scope: dateCard });
-    await expect(notice).toContainText("1990.8.30.");
+    await expect(card).toBeVisible();
+    await expect(page.getByTestId("land-cause-date-notice")).toHaveCount(0);
     await fillDateAndVerify(page, { year: "2015", month: "03", day: "10" }, { scope: dateCard });
-    await expect(notice).toHaveCount(0);
+    await expect(card).toHaveCount(0);
   });
 
   test("Q-5 소유자 분리 토글과 토지 원인 토글은 서로 잠긴다 — 켜진 쪽을 끄면 풀린다", async ({ page }) => {

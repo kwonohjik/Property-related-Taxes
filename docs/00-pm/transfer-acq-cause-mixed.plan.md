@@ -338,3 +338,14 @@
 - 검증: tsc 0, 관련 vitest 13,617건(에이전트) + 추가 3건, mutation 27건 중 25 KILLED(2건 동치 — ⑫가 먼저 막아 엔진 `isPartialAreaTransfer`에 닿지 않음) + Check 후속 3/3.
 - **D1-4b로 넘김**: ⑧ ② 사실을 브리지 파생값으로 교체할 때 날짜는 ⑧의 `landDateSent`와 같은 식을 쓸 것(브리지는 `asset.landAcquisitionDate` 직독 — 지금은 소유자 분리·PHD가 구조 규칙으로 막혀 어긋나지 않음). 1985.1.1. 전 취득의 ② 「취득시」 등급 시점 라벨(법률 제4803호 부칙 §8 · 조심2010서1195 — 본문 미조회, 확인 필요)은 위젯 라벨 `sec164AcqTimePointLabel` 규약 확인.
 - 별건(기존 동작, D1-4 신규 아님): `pre-1990-land-valuation.ts`의 100% 상한(CAP-2)을 「취득일 ≥ 1990-01-01」로 대리하는 판정 — 규칙 §80⑥ 조건(직전 시가표준액 동일)과의 정합 확인 필요.
+
+**D1-4b 구현 (2026-10-09, UI — ⑤⑥⑦⑧ · 세액 불변)**:
+- ⑤ `LandSec164Card`(신규) — `Pre1990LandValuationInput`을 `alwaysOpen`으로 재사용(`onCalculatedPrice` 미사용 = 미러링 0). 신축 호스트는 `LandPartCauseBlock` 그리드 아래, 매매 호스트는 `LandBuildingSplitSection` ① 토지 평가액 아래. 노출은 브리지 `landSec164Applies`일 때만. 표시 ㎡당·② 총액은 ④와 같은 브리지 함수. `Pre1990LandValuationInput`은 좁은 폭(모바일)에서 등급 3칸·공시지가 칸이 잘려 `max-w-24 min-w-0`·`flex-wrap`으로 보정(공용 컴포넌트, 스크린샷 확인).
+- ⑧ `validateLandPartCause`의 ② 사실 = `deriveHousingLandSec164Total`(날짜는 `landDateSent`를 넣은 사본). 단서 구간 필수: 면적 → 현재 → 직전 → 취득시 등급 → 1990 공시지가(`sec164LandPartStatus`) → 불량 등급(`invalidSec164GradeField`). 임시 문구 `LAND_SEC164_SCREEN_MESSAGE` 삭제, `landPartCauseDateNotice`는 Q-4만. ⑧≡⑫ 128셀 격자(호스트 2 × 원인 2 × 날짜 4 × 입력 8) 활성 — 전 셀 일치.
+- ⑥ `separateAcqPartsSum` — 토지 소유 ∧ 단서 구간이면 `pending`.
+- ⑦ `splitAcqBasisView`/`splitAcqBasisFormula`(display leaf)로 4뷰 공통: 카드 비교 블록·상세명세서 파트 태그(② 채택이면 「토지(영 §164④ 가액)」)와 한 줄 산식·신고서 취득가액 각주·PDF 행. echo 없는 구 이력은 종전.
+- 1985.1.1. 전 ② 「취득시」 등급 라벨은 기존 `sec164AcqTimePointLabel` 규약을 그대로 쓴다(`Pre1990LandValuationInput`이 `landAcquisitionDate`를 받음). 「소득세법」 부칙(법률 제4803호, 1994.12.22.) **제8조 본문 확인(2026-10-09, 법제처 DRF `target=law` 현행 MST 280405의 부칙단위 — 「[전문개정 1995.12.29]」)**: 「제94조제1호에 규정하는 자산으로서 1984년 12월 31일이전에 취득한 것은 1985년 1월 1일에 취득한 것으로 보며 …」 ⇒ 1985 전 취득 토지의 ② 「취득시」 등급 = 1985.1.1. 시점 등급이 맞고 기존 라벨 규약과 일치한다(조심2010서1195 재결 요지와도 같다). MCP 조회 실패는 MST 오진이었다(memory `feedback_addenda_query_needs_amendment_mst` — 현행 MST로 부르면 부칙 전부가 딸려 온다).
+- **D1-4b Check 후속(sync 검사)**:
+  - **Medium**: 단건 결과 도착 후에도 사이드바 취득가액이 「계산 후 표시」에 갇혔다(단건 fallback 체인이 `splitDetail`을 읽지 않음 — D1-4b의 입력 단계 pending이 만든 퇴행, 세액 불변). 단건 결과에 `acquisitionBasis`가 있으면 `summarizeSplitGain().acquisitionDeducted`(bundled split 분기와 같은 정본)로 해소. 회귀 `__tests__/calc/split-land-sec164-sidebar.d1-4b.test.ts`(route 경유 신축·매매) — 수정 제거 시 2건 실패.
+  - **Low**: ④ 브리지 면적 파싱이 콤마를 지우지 않아 stale 「1,200」에서 카드 ②와 ④ ②가 갈렸다 → 단건 §164④ 경로와 같은 콤마 제거. 제거 변이 KILLED.
+  - 남김(기존 관행 — 신규 아님): ⑧ 메시지 「1990.1.1. 개별공시지가」 ↔ 공용 위젯 라벨 「1990.8.30. 개별공시지가」 문구 차이(`sec164LandStatus`·`sec164HouseStatus` 공통), `pre1990GradeMode` 미지정 해석(factory·migration이 항상 채움). 다건 합산 신고서 비교 각주 없음(swap 각주와 같은 계열 갭).

@@ -88,6 +88,10 @@ describe("파생 — ㎡당 가액 · 총액 (anchor C-1과 같은 손계산)", 
   });
   it("일부 양도는 ② 면적을 양도면적으로(resolveAcqAreaForStdPrice) — 표시 규약 유지", () => {
     expect(isPartialAreaScenario({ areaScenario: "partial" })).toBe(true);
+    // 콤마 저장값(stale)도 ⑤ 카드·⑧ 상태와 같은 면적으로 읽는다 — 「1,200」을 1로 읽으면 카드 ②와 ④ ②가 갈린다.
+    expect(deriveHousingLandSec164Total(asset({ acquisitionArea: "1,200", transferArea: "1,200" }))).toBe(
+      deriveHousingLandSec164Total(asset({ acquisitionArea: "1200", transferArea: "1200" })),
+    );
     expect(deriveHousingLandSec164Total(asset({ areaScenario: "partial", acquisitionArea: "300", transferArea: "100" }))).toBe(350_000_000);
   });
 });
@@ -136,7 +140,7 @@ describe("④ 3경로(단건 ⑬ 공유 빌더 · 다건 · 컴패니언)가 같
   });
 });
 
-describe("⑧ validateLandPartCause (D1-4a) — 일부 양도는 첫 칸 areaScenario, ② 필수는 화면 사실 문구", () => {
+describe("⑧ validateLandPartCause (D1-4a·b) — 일부 양도는 첫 칸 areaScenario, ② 필수는 첫 미완 칸", () => {
   const v8 = (a: AssetForm) => collectWithFields(() => validateLandPartCause(a, "자산1"));
   it("일부 양도 + 단서 구간 → areaScenario 칸으로 이동 · 문구는 일부 양도 사유", () => {
     const r = v8(asset({ areaScenario: "partial" }));
@@ -146,10 +150,10 @@ describe("⑧ validateLandPartCause (D1-4a) — 일부 양도는 첫 칸 areaSce
   it("긍정 짝: 일부 양도라도 단서 밖(1991)이면 통과", () => {
     expect(v8(asset({ areaScenario: "partial", landAcquisitionDate: "1991-05-01" })).result).toBeNull();
   });
-  it("② 필수 위반은 D1-4a에선 토지 취득일 칸 + 「이 계산기 화면은 … 입력을 받지 않아」 — 엔진 문구(landSec164Value)를 화면에 내지 않는다", () => {
-    const r = v8(asset());
-    expect(r.result).toContain("이 계산기 화면은");
+  it("② 필수 위반(D1-4b): 화면 입력 칸 중 첫 미완 칸으로 이동 — 엔진 문구(landSec164Value)를 화면에 내지 않는다", () => {
+    const r = v8(asset({ pre1990Grade_current: "" }));
+    expect(r.result).toContain("1990.8.30. 현재 토지등급 칸을 입력하세요");
     expect(r.result).not.toContain("landSec164Value");
-    expect(r.fieldOf(r.result!)).toBe("landAcquisitionDate");
+    expect(r.fieldOf(r.result!)).toBe("pre1990Grade_current");
   });
 });

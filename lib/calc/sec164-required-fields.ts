@@ -193,6 +193,27 @@ export function sec164LandStatus(asset: AssetForm): Sec164FieldStatus | null {
   );
 }
 
+/**
+ * 주택·건물 분리 계산의 **혼합 원인 토지 파트** §164④ (§163⑨ 단서 1호, D1-4) — `deriveHousingLandSec164Total`(브리지)과 같은 5필드.
+ *
+ * 토지·주택 자산 단위의 `sec164LandStatus`와 달리 **opt-in이 아니라 필수**다: 단서 구간(1990.8.30. 전 상속·증여 토지)에서
+ * ②(영 §164④ 가액) 없이는 ①(평가액)만으로 계산하지 않는다(계획서 §11 D14-2). 호출부는 `isFullyFilled`로 완결을 본다.
+ * 순서가 ⑧ 칸 이동 순서다: 면적 → 현재등급 → 직전등급 → 취득시등급 → 1990 공시지가.
+ * 게이트(단서 구간 여부)는 호출부 몫이다 — 여기서는 칸의 채움 상태만 본다.
+ */
+export function sec164LandPartStatus(asset: AssetForm): Sec164FieldStatus {
+  return merge(
+    "§164④",
+    tally(asset, [
+      decimalField("acquisitionArea", "토지 면적", true),
+      { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
+      { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
+      { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
+      amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
+    ]),
+  );
+}
+
 /** 등급은 번호(정수)·등급가액 두 모드 공통으로 "양수면 채움" — `buildGrade`와 같은 판정. */
 function gradeFilled(raw: string | undefined): boolean {
   const n = Number(String(raw ?? "").replace(/,/g, ""));
