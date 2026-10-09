@@ -51,10 +51,23 @@ export interface StdSplitDetail {
   buildingBasis: number;
 }
 
+/** 영 §163⑨ 단서 1호 비교 echo — 토지 파트에서 비교가 적용된 경우만. 금액은 지분 스케일 후(①②가 같은 축). */
+export interface LandAcquisitionBasis {
+  rule: "sec163_9_1";
+  /** ① 상속개시일·증여일 평가액 */
+  reported: number;
+  /** ② 영 §164④ 가액 */
+  sec164: number;
+  /** 많은 금액 쪽 — 동점은 reported */
+  adopted: "reported" | "sec164";
+}
+
 /** 토지/건물 분리 계산 결과 */
 export interface SplitPartResult {
   transferPrice: number;
   acquisitionPrice: number;
+  /** 영 §163⑨ 단서 1호 비교 결과 — 비교가 적용된 토지 파트만(구 결과·단서 밖은 생략) */
+  acquisitionBasis?: LandAcquisitionBasis;
   directExpenses: number;
   appraisalDeduction: number;
   /** 취득시 기준시가 — 물건 전체(100%) 값 */

@@ -2,7 +2,7 @@
 
 > 작성 2026-10-08 · 브랜치 `docs/transfer-acq-cause-mixed` · 워크트리 `Property-related-Taxes-d` (base `0211f4558`)
 > 선행: `docs/00-pm/transfer-split-acq-per-part-method.plan.md` A·B·C 머지 완료(#1995·#1999·#2008·#2013·#2022·#2027·#2038·#2044). 그 계획서 H-3(:65)·Q-3(:340)이 이 문서다.
-> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 머지(#2052). **D1 Design 확정(2026-10-09 — §10)**: 설계 `docs/02-design/features/transfer-acq-cause-mixed-d1.{engine,ui}.design.md`, 두 문서와 어긋나면 §10이 우선한다. D1-1 머지(#2058) · D1-2 머지(#2060) · D1-3 구현(결과 echo·4뷰·T-7).
+> 상태: **Plan 확정(2026-10-08 사용자 「순서대로 진행」 — Q-1~Q-8 권장안).** D0 머지(#2052). **D1 Design 확정(2026-10-09 — §10)**: 설계 `docs/02-design/features/transfer-acq-cause-mixed-d1.{engine,ui}.design.md`, 두 문서와 어긋나면 §10이 우선한다. D1-1 머지(#2058) · D1-2 머지(#2060) · D1-3 머지(#2063) · **D1-4 Design 확정(2026-10-09 — §11)**.
 
 ---
 
@@ -306,3 +306,35 @@
   - **F2**: 신고서 토지 취득일 echo는 원인이 다를 때만 — 원인이 같으면 종전 폼(이월과세 증여자 취득일 override가 토지 열에 이어지던 동작 보존).
 - 검증: 엔진 anchor 29건(E-1~E-8·T-7)·UI anchor 19건·E2E 2건 신규, 관련 vitest 18,904건·E2E 46건 통과. mutation 27건 중 26 KILLED — N9(다건 `assetTaxOf` 대입 제거)는 단건 엔진이 같은 객체에 이미 같은 판정을 써 두어 구별 불가(다건 재계산 판정이 단건과 갈리는 시드 미확보).
 - 남긴 것(Low): 다건 상세명세서·건별 신고서에는 ※·각주가 없다(카드는 있음 — 건별 신고서 어댑터가 `splitDetail`을 싣지 않는다) · §155⑳ 임대 특례 경로는 G-3 제외 자체가 없어 T-7도 없다(기존 동작) · 소유자 분리 자산의 `appliedRateBasisDate`는 주택 `max` 값이라 실제 세율 입력(토지일)과 다르다(표시 안 됨 — `rateBasisShown` 거짓).
+
+---
+
+## 11. D1-4 Design 확정 — 1990.8.30. 전 상속·증여 토지 파트 max 비교 (2026-10-09)
+
+설계: 엔진 `docs/02-design/features/transfer-acq-cause-mixed-d1-4.engine.design.md` · UI `…-d1-4.ui.design.md`. Pre-Do: `__tests__/api/transfer.route.split-land-part-cause.d1-4.predo.anchor.test.ts`(활성 15 · todo 9) · `__tests__/calc/transfer-land-part-cause.d1-4.predo.test.ts`(활성 23 · todo 14). **두 문서와 이 절이 어긋나면 이 절이 우선한다.**
+
+### 11.1 결정
+
+| # | 결정 | 비고 |
+|---|---|---|
+| D14-1 | **엔진이 max** — ④는 ①평가액(`landAcquisitionPrice`)과 ②§164④ **총액**(신규 `landSec164Value`, ①과 같은 지분 스케일)을 함께 보낸다. 엔진이 split 파트 취득가액 산정 한 곳에서 `max(①, ②)`(동점 = 평가액), land 파트 echo `acquisitionBasis{reported, sec164, adopted}` | 사용자 결정(2026-10-09, 「총액 1개 전송」). UI V2(㎡당 전송) 기각. ㎡당 × 면적은 클라이언트 브리지 한 함수(`multiplyByArea`)가 정본 — ⑤ 표시와 ④가 같은 함수 |
+| D14-2 | 단서 구간(유효 토지 원인 상속·증여 ∧ 토지 취득일 < 1990-08-30)에서 ② **필수** — 미입력이면 엔진·⑫·⑧ 차단(field `landSec164Value`, ⑧은 첫 미완 칸으로 이동) | 엔진·UI 합의. 현행 Q-7이 전부 막고 있어 새로 막히는 사용자 없음 |
+| D14-3 | 증여 토지 포함(영 §163⑨ 단서 1호 「상속 또는 증여받은 토지」) | 합의 |
+| D14-4 | **1985.1.1. 전도 산식 동일**(영 §163⑨ 가목 — 의제취득일 조건 없음, 영 §176의2④는 나목 계열). 엔진 클램프 없음. **T-6 근거 문장 정정**: 원 날짜가 가르는 것은 ② 시점 라벨·보유연수 표기뿐이다 | 합의, `gb-pre1985-163-9` anchor·`calcPreDeemed`와 일치 |
+| D14-5 | **일부 양도(`areaScenario === "partial"`) + 단서 구간은 이번엔 차단**(엔진·⑫·⑧ — leaf 사실 추가). 평가액이 취득 전체분인지 양도분인지 미확정, 자동 안분 금지 | 사용자 결정(2026-10-09) |
+| D14-6 | 입력 카드는 토글 없이 상시(단서 구간이면 열림), `pre1990Enabled` 래치 불사용. 신규 `AssetForm` 키 0 — 등급 3·1990 ㎡당가·등급 모드·`acquisitionArea` 재사용(혼합 원인 상태에서 다른 소비처 전부 불활성 실측) | 합의 |
+| D14-7 | ⑥ 사이드바 취득가액은 단서 구간에서 pending(결과 도착 전 숨김) | UI 권장 |
+| D14-8 | **PR 2분할** — D1-4a 엔진·⑫·⑭·④·브리지(⑧은 계속 막음 — 화면 변화 0, 막다른 길 없음) → D1-4b ⑤ 위젯·⑧ 완화·⑥·⑦ 4뷰·E2E | 합의 |
+
+**D1-4a 구현 (2026-10-09, 엔진·⑫·⑭·④·브리지 — 화면 변화 0)**:
+- 엔진 `resolveLandPartAcquisition`(`transfer-tax-split-acq-price.ts`)이 단서 구간에서 `max(①, ②)`, land echo `acquisitionBasis{rule, reported, sec164, adopted}`. 공유 술어 `isSec163_9LandProviso`(leaf)를 엔진·⑫·④·브리지가 쓴다.
+- leaf R-Q7 교체: 단서 구간 ∧ 일부 양도 → `areaScenario`(⑫ 경로 `isPartialAreaTransfer`) · ② 없음 → `landSec164Value`. ⑧은 화면에 ② 칸이 없어 계속 막는다(문구는 「이 계산기 화면은 §164④ 가액 입력을 받지 않아」 — 화면 사실).
+- ④ 브리지 `lib/calc/transfer-pre1990-housing-land-bridge.ts`: 5필드 + `acquisitionArea`(`resolveAcqAreaForStdPrice`) → ㎡당 × 면적 × 지분(`multiplyByAreaShare`, floor 1회). `buildLandPartCausePayload` 한 곳이라 단건·다건·컴패니언 동일(실측).
+- **Check 후속**:
+  - (취득가액 리뷰 Low) ① 없음 + ② 있음이면 ②만으로 취득가액이 됐다(엔진 직접 호출 — 「미입력 → null 승격 → 차단」 우회). ① 없으면 비교하지 않는다.
+  - (sync 검사 Low-2) 별개 취득이 아니면(총액 안분) 파트 ①을 쓰지 않는데 echo가 「② 채택」이라 했다(API 직접 호출). 별개 취득일 때만 비교·echo.
+  - (sync 검사 Low-1) ⑧ 이동 칸 `areaScenario` 앵커가 화면에 없었다 → 「면적 입력 방식」 래퍼에 `data-field`.
+  - 세 수정 모두 되돌리면 실패하는 테스트로 고정(mutation 3/3 KILLED).
+- 검증: tsc 0, 관련 vitest 13,617건(에이전트) + 추가 3건, mutation 27건 중 25 KILLED(2건 동치 — ⑫가 먼저 막아 엔진 `isPartialAreaTransfer`에 닿지 않음) + Check 후속 3/3.
+- **D1-4b로 넘김**: ⑧ ② 사실을 브리지 파생값으로 교체할 때 날짜는 ⑧의 `landDateSent`와 같은 식을 쓸 것(브리지는 `asset.landAcquisitionDate` 직독 — 지금은 소유자 분리·PHD가 구조 규칙으로 막혀 어긋나지 않음). 1985.1.1. 전 취득의 ② 「취득시」 등급 시점 라벨(법률 제4803호 부칙 §8 · 조심2010서1195 — 본문 미조회, 확인 필요)은 위젯 라벨 `sec164AcqTimePointLabel` 규약 확인.
+- 별건(기존 동작, D1-4 신규 아님): `pre-1990-land-valuation.ts`의 100% 상한(CAP-2)을 「취득일 ≥ 1990-01-01」로 대리하는 판정 — 규칙 §80⑥ 조건(직전 시가표준액 동일)과의 정합 확인 필요.

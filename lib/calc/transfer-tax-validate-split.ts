@@ -39,6 +39,8 @@ import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
+import { LAND_SEC164_SCREEN_MESSAGE } from "./transfer-land-part-cause";
+import { isPartialAreaScenario } from "./transfer-pre1990-housing-land-bridge";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -142,10 +144,16 @@ export function validateLandPartCause(asset: AssetForm, label: string): string |
     selfOwns: selfOwnsSplit ? selfOwnsEff : undefined,
     isBurdenedGift: asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift",
     hasPreHousingDisclosure: phdPayloadActive(asset),
+    // D1-4a — 이 화면에는 ② 입력 칸이 없다: ④도 ②를 보내지 않으므로 사실은 「② 없음」이다(D1-4b가 브리지 파생값으로 교체).
+    //   일부 양도는 ④가 `isPartialAreaTransfer`로 실제로 보낸다(`buildLandPartCausePayload`).
+    landSec164Value: undefined,
+    isPartialAreaTransfer: isPartialAreaScenario(asset),
   });
   // Q-4 — ⑫는 막지 않는 ⑤·⑧ 정책(엔진 값은 원인 없음과 같다 — 계획서 §10.2 T-4).
   if (!issue && landPartCauseSameDay(asset)) return fieldError("landAcquisitionDate", `${label}: ${LAND_CAUSE_SAME_DAY_MESSAGE}`);
   if (!issue) return null;
+  // ② 필수 위반 = 화면에 입력 칸이 없다는 사실로 말한다(엔진 문구는 API 소비자용). 이동 칸은 토지 취득일.
+  if (issue.field === "landSec164Value") return fieldError("landAcquisitionDate", `${label}: ${LAND_SEC164_SCREEN_MESSAGE}`);
   const msg = `${label}: ${issue.message}`;
   // 「토지는 다른 원인으로 취득」 블록엔 산정방식 라디오가 없다(켜는 순간 실거래가로 고정) — 고칠 칸이 없어 field를
   // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.

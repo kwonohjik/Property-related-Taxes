@@ -327,7 +327,8 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
                 "grid grid-cols-1 sm:grid-cols-2 gap-3 items-end",
             )}
           >
-            <div className="space-y-1.5">
+            {/* data-field — ⑧ D14-5(1990.8.30. 전 상속·증여 토지 + 일부 양도 차단)의 이동 칸 */}
+            <div className="space-y-1.5" data-field="areaScenario">
               <label className="block text-sm font-medium">
                 면적 입력 방식
               </label>

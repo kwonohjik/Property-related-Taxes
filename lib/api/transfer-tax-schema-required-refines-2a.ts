@@ -70,6 +70,8 @@ export type Required2aLike = {
   landAcquisitionDate?: string;
   landAcquisitionCause?: string;
   landDecedentAcquisitionDate?: string;
+  landSec164Value?: number;
+  isPartialAreaTransfer?: boolean;
   selfOwns?: string;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
@@ -359,7 +361,7 @@ export function refineSplitPartCause(
   d: Pick<
     Required2aLike,
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
-    | "acquisitionCause" | "selfOwns" | "transferType"
+    | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
   > & {
     useEstimatedAcquisition?: boolean;
     preHousingDisclosure?: unknown;
@@ -381,9 +383,12 @@ export function refineSplitPartCause(
     isBurdenedGift: d.transferType === "burdened_gift" || d.acquisitionCause === "burdened_gift",
     hasPreHousingDisclosure: !!d.preHousingDisclosure,
     hasFamilyBusinessInheritance: !!d.familyBusinessInheritance,
+    landSec164Value: d.landSec164Value,
+    isPartialAreaTransfer: d.isPartialAreaTransfer,
   });
   const issue = issuer(ctx);
-  for (const i of issues) issue([...prefix, i.field], i.message);
+  // ⑫ 경로는 실제 입력 필드다 — `areaScenario`는 ⑧(폼 칸) 전용 앵커이고 API에는 사실 `isPartialAreaTransfer`로 온다.
+  for (const i of issues) issue([...prefix, i.field === "areaScenario" ? "isPartialAreaTransfer" : i.field], i.message);
 }
 
 // ─── PD · 의제취득일 전 상속·증여 취득가액 ─────────────────────────────

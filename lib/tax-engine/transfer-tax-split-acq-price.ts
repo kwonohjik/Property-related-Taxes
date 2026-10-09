@@ -10,7 +10,8 @@ import type {
   TransferTaxInput,
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
-import type { StdSplitDetail } from "./types/transfer-split-gain.types";
+import type { LandAcquisitionBasis, StdSplitDetail } from "./types/transfer-split-gain.types";
+import { isSec163_9LandProviso } from "./transfer-split-part-cause";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   calcLandStdPriceAtAcq,
@@ -303,6 +304,36 @@ export function deriveUseEstimatedAcquisitionFromParts(
   return landAcqMode === "estimated" || buildingAcqMode === "estimated";
 }
 
+/**
+ * 토지 파트 취득가액 입력 ① — 영 §163⑨ 단서 1호 구간(1990.8.30. 전 상속·증여 토지)이면 `max(①평가액, ②영 §164④ 가액)`.
+ *
+ * ①②는 모두 법 §97①1호 가목의 실지거래가액 의제(§163⑨ 본문·단서)라 개산공제는 없다 — 파트 모드가 `actual`로 강제된다
+ * (`transfer-split-part-cause.ts` G-2). 동점은 평가액(`calcPostDeemed`·일반건물과 같은 규약).
+ * 단서 밖이거나 ②가 없으면 ①을 그대로 쓴다(②가 없는 단서 구간은 leaf가 이미 던졌다).
+ * ①이 없으면 비교하지 않고 그대로 비워 둔다 — ②만으로 채우면 아래 「미입력 → null 승격 → 차단」을 건너뛴다.
+ * 별개 취득이 아니면(총액 안분 모델) 파트 ①을 쓰지 않으므로 비교·echo도 없다 — echo만 「② 채택」이라 말하면 거짓 표시다
+ * (같은 날 원인 혼합은 ⑧ 전용 차단 — 계획서 §10.2 T-4).
+ * ①②는 ④에서 같은 지분 스케일(`makeRatioed`)을 거쳐 온다 — 여기서 다시 스케일하지 않는다.
+ */
+export function resolveLandPartAcquisition(
+  input: Pick<
+    TransferTaxInput,
+    "landAcquisitionPrice" | "landSec164Value" | "landAcquisitionCause" | "landAcquisitionDate" | "isSeparateAcquisition"
+  >,
+): { price: number | undefined; basis?: LandAcquisitionBasis } {
+  const d = input.landAcquisitionDate as Date | string | undefined;
+  const dayKey = d instanceof Date ? d.toISOString().slice(0, 10) : d?.slice(0, 10);
+  const sec164 = input.landSec164Value ?? 0;
+  const reported = input.landAcquisitionPrice;
+  if (!isSec163_9LandProviso(input.landAcquisitionCause, dayKey) || !(sec164 > 0) || reported === undefined
+    || input.isSeparateAcquisition !== true)
+    return { price: reported };
+  return {
+    price: Math.max(reported, sec164),
+    basis: { rule: "sec163_9_1", reported, sec164, adopted: reported >= sec164 ? "reported" : "sec164" },
+  };
+}
+
 /** 취득가액 분리 — 파트별 독립 4-way(실가/환산/감정/매매사례). 모드 미제공 파트는 자산 전체 플래그 파생. */
 export function calcSplitAcquisitionPrice(
   input: TransferTaxInput,
@@ -319,6 +350,8 @@ export function calcSplitAcquisitionPrice(
   landMode: PartAcqMode;
   buildingMode: PartAcqMode;
   splitLandExpropriationValuationDetail?: SplitLandExpropriationValuationDetail;
+  /** 영 §163⑨ 단서 1호 비교가 적용된 경우만 */
+  landAcquisitionBasis?: LandAcquisitionBasis;
 } {
   const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
@@ -409,10 +442,11 @@ export function calcSplitAcquisitionPrice(
    * 미입력은 `null`로 승격해 호출부가 차단한다. `?? 0`으로 메우면 감정·매매사례 모드에서
    * "취득가액 0 + 개산공제 3%"라는 그럴듯한 소액이 남아 오답이 눈에 띄지 않는다.
    */
+  const landPartAcq = resolveLandPartAcquisition(input);
   const partCtx: PartAcqPriceContext = {
     isSeparate,
     landRatio,
-    landAcquisitionPrice: input.landAcquisitionPrice,
+    landAcquisitionPrice: landPartAcq.price,
     buildingAcquisitionPrice: input.buildingAcquisitionPrice,
     landSalesCaseValue: input.landSalesCaseValue,
     buildingSalesCaseValue: input.buildingSalesCaseValue,
@@ -445,5 +479,6 @@ export function calcSplitAcquisitionPrice(
     landMode,
     buildingMode,
     splitLandExpropriationValuationDetail,
+    ...(landPartAcq.basis ? { landAcquisitionBasis: landPartAcq.basis } : {}),
   };
 }

@@ -329,6 +329,9 @@ export function buildTransferEngineInput(
     // §104②1·2호 토지 파트 통산 (G-4) — Date 변환 필수
     landAcquisitionCause: data.landAcquisitionCause,
     landDecedentAcquisitionDate: toOptionalDate(data.landDecedentAcquisitionDate),
+    // D1-4 영 §163⑨ 단서 1호 — ②(영 §164④ 가액)와 일부 양도 사실. 엔진 split 파트가 max/차단
+    landSec164Value: data.landSec164Value,
+    isPartialAreaTransfer: data.isPartialAreaTransfer,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
     landSplitMode: data.landSplitMode,
     // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)
