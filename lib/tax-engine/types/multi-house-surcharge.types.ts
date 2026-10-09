@@ -529,6 +529,11 @@ export type DeemedOneHouseBasis =
   | "marriage_merge_overlap"
   /** F-1 — §155①+④ 중첩(3주택) — `resolveMergeOverlapDeeming` */
   | "parental_care_merge_overlap"
+  /**
+   * D4 — 혼인 합가 후 동거봉양 합가로 3주택(서면인터넷방문상담4팀-598) — `resolveMarriageThenParentalCareDeeming`.
+   * 영 §167의3①13호 「제155조 … 에 따라 … 1세대 1주택으로 보아 제154조제1항이 적용되는 주택」(사용자 결정 2026-10-09).
+   */
+  | "marriage_then_parental_care"
   /** E-14 — §155②③ 상속주택 + 일반주택 → 일반주택 1주택 의제 — `resolveSurchargeDeemedOneHouse` */
   | "inherited_general_house"
   /** E-14c — §155⑳ 장기임대주택 + 거주주택 → 거주주택 1주택 의제(시나리오 A) — `resolveSurchargeDeemedOneHouse` */

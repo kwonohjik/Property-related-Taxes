@@ -179,7 +179,11 @@ export function resolveDeemedOneHouseBy155(
     return "temporary_two_house";
   }
   // §155④⑤ 합가 — 비과세 E-3.5와 **같은 술어**다(중과가 따로 판정하면 두 경로가 갈린다).
-  return resolveMergeDeeming(input);
+  //   D4 혼인 후 동거봉양 3주택도 비과세 E-3.5와 같은 순서로 본다(`checkExemption` — merge → 중첩 → D4).
+  return (
+    resolveMergeDeeming(input) ??
+    (resolveMarriageThenParentalCareDeeming(input) ? "marriage_then_parental_care" : undefined)
+  );
 }
 
 /**
