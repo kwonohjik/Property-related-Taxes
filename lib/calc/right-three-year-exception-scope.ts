@@ -29,6 +29,7 @@
  */
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { isRightThreeYearExceeded } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
+import { presaleRightDefinitionAcquisitionDate } from "@/lib/tax-engine/presale-right-definition-date";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -46,7 +47,14 @@ export function rightThreeYearExceptionVisible(form: TransferFormData): boolean 
       // 기존주택 원조합원 입주권은 §156의2④·시행규칙 §75①의 대상이 아니다 — §155①로 판정한다.
       !(r.type === "redevelopment_right" && r.memberOrigin === "original_house") &&
       isRightThreeYearExceeded({
-        rightAcquisitionDate: new Date(r.acquisitionDate),
+        // 동일세대 상속 분양권은 피상속인 취득일부터 센다 — 엔진 기한 판정과 같은 leaf(`resolveAcquiredRightTiming`).
+        rightAcquisitionDate: presaleRightDefinitionAcquisitionDate({
+          type: r.type,
+          acquisitionDate: new Date(r.acquisitionDate),
+          isInherited: r.isInherited,
+          decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
+          decedentAcquisitionDate: r.decedentAcquisitionDate ? new Date(r.decedentAcquisitionDate) : undefined,
+        }),
         transferDate,
       }),
   );
