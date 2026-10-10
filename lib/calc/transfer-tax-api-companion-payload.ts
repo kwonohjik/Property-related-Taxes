@@ -42,6 +42,7 @@ import {
   deriveEngineInheritanceAssetKind,
   effectiveTransferExpenseFor,
   getOwnershipRatio,
+  isFullFractionalBundle,
 } from "./transfer-tax-api-asset-basics";
 
 /**
@@ -116,6 +117,15 @@ export function buildAssetPayload(
   // 공유 지분 비율 — 단독 소유는 1.0, 지분 모드는 < 1.0
   const ratio = getOwnershipRatio(asset);
   const fractional = ratio < 1.0;
+  /**
+   * 축 B(같은 물건 지분 분할 — 전 자산 지분)인가. 「총양도가 × 지분율」 자동가는 **축 B에서만** 성립한다 —
+   * 함께양도(다른 물건) 묶음에 지분 자산이 하나 섞인 경우 총양도가는 여러 물건의 합이라 지분율을 곱할 대상이 아니다
+   * (종전: 그 자산 하나의 ratio만 보고 자동가를 써 actual 500 · apportioned 양도가액 0 — 2026-10-10 실측).
+   * route `isFullFractionalBundle`(전 자산 `totalPropertyTransferPrice`)과 같은 판정이다. 폼 없이 부르는 호출(테스트)은 종전 동작.
+   */
+  const axisB = form ? isFullFractionalBundle(form.assets) : fractional;
+  /** 함께양도 묶음 안의 지분 자산 — 금액은 물건 전체(100%) 기준 입력이고 여기서 지분율을 곱한다(화면 규약). */
+  const shareInCompanion = fractional && !axisB;
 
   const inheritanceValuation =
     asset.acquisitionCause === "inheritance" && !effectiveBuildingCauseMix(asset) // D2: 건물 평가액은 파트 가액(CP-1 면제와 한 쌍)
@@ -156,15 +166,17 @@ export function buildAssetPayload(
     ? applyRatio(fixedAcqRaw, ratio)
     : fixedAcqRaw;
 
-  // 양도가액 결정: 지분 모드는 contractTotalPrice × ratio (사용자 actualSalePrice 무시).
-  // 단독은 기존 동작 — actualSalePrice 입력값 사용.
+  // 양도가액 결정: 축 B(같은 물건 지분 분할)는 contractTotalPrice × ratio (사용자 actualSalePrice 무시).
+  // 그 밖은 actualSalePrice 입력값 — 함께양도 묶음의 지분 자산은 물건 전체(100%) 입력 × 지분율.
   const fixedSalePriceRaw =
     bundledSaleMode === "actual" && asset.actualSalePrice
       ? parseAmount(asset.actualSalePrice)
       : undefined;
-  const fixedSalePrice = fractional && totalContractPrice && totalContractPrice > 0
+  const fixedSalePrice = axisB && fractional && totalContractPrice && totalContractPrice > 0
     ? applyRatio(totalContractPrice, ratio)
-    : fixedSalePriceRaw;
+    : shareInCompanion && fixedSalePriceRaw !== undefined
+      ? applyRatio(fixedSalePriceRaw, ratio)
+      : fixedSalePriceRaw;
 
   // 분리 축(소유자 분리·별개 취득) 활성 — 단건 `transfer-tax-api.ts`의 `isSplitActive`와 같은 술어.
   const splitActive = isSplitPayloadActive(asset, asset.transferType === "burdened_gift");
@@ -279,8 +291,14 @@ export function buildAssetPayload(
     // §97①1호나목 **환산 분모**. 이월과세 general 환산에서만 아래 `cp.topLevelOverrides`가
     // 증여자 양도시 기준시가로 덮어쓴다 — 그 override는 의도된 것이다.
     standardPriceAtTransfer: stdAtTransferForApportion,
-    /** §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). */
-    standardPriceAtTransferForApportion: stdAtTransferForApportion,
+    /**
+     * §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). 함께양도 묶음의 지분 자산은 양도하는 것이 지분이라
+     * 물건 전체(100%) 기준시가 × 지분율이 그 자산의 기준시가다(축 B는 자동가를 쓰므로 키를 쓰지 않는다 — 종전 그대로).
+     */
+    standardPriceAtTransferForApportion:
+      shareInCompanion && stdAtTransferForApportion !== undefined
+        ? applyRatio(stdAtTransferForApportion, ratio)
+        : stdAtTransferForApportion,
     // ④ §164⑧ 동일조정기간 환산 — 단건과 같은 빌더(단일 소스)
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(asset),
     // 🔴 **감정가액도 개산공제(§163⑥) base로 이 값을 쓴다** (2026-09-15 — 세액 변경).
@@ -427,8 +445,14 @@ export function buildAssetPayload(
      */
     isNonBusinessLand: asset.assetKind === "land" ? (asset.isNonBusinessLand ?? false) : undefined,
     fixedSalePrice,
-    /** 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정) */
-    totalPropertyTransferPrice: fractional ? totalContractPrice : undefined,
+    /**
+     * 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정). 축 B = 총양도가(같은 물건 전체).
+     * 함께양도 묶음의 지분 자산 = 그 물건 전체 양도가액: actual은 100% 입력값, apportioned는 안분 전이라 모른다(미설정 →
+     * route가 안분액 ÷ 지분율로 채운다). ⚠️ 축 B 판정(route)은 「전 자산에 이 값이 있는가」라 혼합 묶음은 축 B가 되지 않는다.
+     */
+    totalPropertyTransferPrice: axisB
+      ? (fractional ? totalContractPrice : undefined)
+      : shareInCompanion ? fixedSalePriceRaw : undefined,
     acquisitionCause: asset.acquisitionCause,
     useEstimatedAcquisition:
       asset.acquisitionCause === "purchase" ? asset.useEstimatedAcquisition : undefined,

@@ -159,26 +159,27 @@ export const propertySchema = z
       }
 
       // ── 양도가액 모드 단일 결정 검증 (계약서 단위) ──
-      // 지분 모드(totalPropertyTransferPrice 설정) 자산은 양도가액이 자동 계산되므로 검증 면제.
+      // 축 B(같은 물건 지분 분할 — 전 자산이 totalPropertyTransferPrice를 가진다)만 양도가액이 「총양도가 × 지분율」로
+      // 자동 계산되므로 검증 면제. 함께양도 묶음에 지분 자산이 섞인 경우는 면제하지 않는다 — 그 자산도 계약서 가액·안분 키를
+      // 가져야 하고(④가 100% 입력 × 지분율로 싣는다), 면제하면 route 안분이 500(actual)·양도가액 0(apportioned)이 된다
+      // (2026-10-10 실측). route `isFullFractionalBundle`과 같은 판정.
       const primaryIsFractional = data.totalPropertyTransferPrice !== undefined;
-      const anyFractional =
-        primaryIsFractional ||
-        companions.some((c) => c.totalPropertyTransferPrice !== undefined);
+      const fullFractionalBundle =
+        primaryIsFractional && companions.every((c) => c.totalPropertyTransferPrice !== undefined);
 
       if (data.bundledSaleMode === "actual") {
-        // 주 자산 actual 가액 필수 (단, 지분 모드면 자동 계산되므로 면제)
-        if (!primaryIsFractional && (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0)) {
+        // 주 자산 actual 가액 필수 (단, 축 B면 자동 계산되므로 면제)
+        if (!fullFractionalBundle && (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["primaryActualSalePrice"],
             message: "actual 모드: 주 자산의 계약서상 양도가액 필수",
           });
         }
-        // 컴패니언도 자산별 지분 모드면 면제
+        // 컴패니언도 축 B면 면제
         for (let i = 0; i < companions.length; i++) {
           const c = companions[i];
-          const isFractionalCompanion = c.totalPropertyTransferPrice !== undefined;
-          if (!isFractionalCompanion && (!c.fixedSalePrice || c.fixedSalePrice! <= 0)) {
+          if (!fullFractionalBundle && (!c.fixedSalePrice || c.fixedSalePrice! <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["companionAssets", i, "fixedSalePrice"],
@@ -186,8 +187,8 @@ export const propertySchema = z
             });
           }
         }
-        // 합계 = totalSalePrice 검증 — 지분 모드 자산이 하나라도 있으면 ratio 합산 검증으로 대체되므로 생략
-        if (!anyFractional && data.totalSalePrice && data.primaryActualSalePrice) {
+        // 합계 = totalSalePrice 검증 — 축 B는 ratio 합산 검증(⑧)으로 대체되므로 생략. 혼합 묶음의 지분 자산은 지분 반영 가액으로 더한다.
+        if (!fullFractionalBundle && data.totalSalePrice && data.primaryActualSalePrice) {
           const sumFixed =
             data.primaryActualSalePrice +
             companions.reduce((s, c) => s + (c.fixedSalePrice ?? 0), 0);
@@ -201,9 +202,9 @@ export const propertySchema = z
         }
       } else {
         // apportioned: 주 자산 양도시점 기준시가 필수 (안분 키)
-        // 단, primary가 지분 모드(totalPropertyTransferPrice 설정됨)이면 ratio×total로 자동 결정 → 면제
+        // 단, 축 B이면 ratio×total로 자동 결정 → 면제
         if (
-          !primaryIsFractional &&
+          !fullFractionalBundle &&
           (data.standardPriceAtTransferForApportion === undefined ||
             data.standardPriceAtTransferForApportion <= 0)
         ) {
@@ -213,10 +214,9 @@ export const propertySchema = z
             message: "apportioned 모드: 주 자산의 양도시점 기준시가 필수",
           });
         }
-        // 컴패니언도 지분 모드(totalPropertyTransferPrice 설정됨)면 안분 키 면제
+        // 컴패니언도 축 B면 안분 키 면제
         for (let i = 0; i < companions.length; i++) {
           const c = companions[i];
-          const isFractionalCompanion = c.totalPropertyTransferPrice !== undefined;
           /**
            * §166⑥ 안분 키 — **실제로 안분에 쓰이는 값**을 그대로 본다
            * (`bundled-split-helpers.ts` `prepareBundledApportionment`의 키 선택식과 동일).
@@ -228,7 +228,7 @@ export const propertySchema = z
            */
           const apportionKey =
             c.standardPriceAtTransferForApportion ?? c.standardPriceAtTransfer;
-          if (!isFractionalCompanion && (!apportionKey || apportionKey <= 0)) {
+          if (!fullFractionalBundle && (!apportionKey || apportionKey <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["companionAssets", i, "standardPriceAtTransferForApportion"],

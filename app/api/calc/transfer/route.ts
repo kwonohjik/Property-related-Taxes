@@ -38,6 +38,7 @@ import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
 import { prepareBundledApportionment } from "./bundled-apportionment";
+import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 
@@ -199,17 +200,18 @@ export async function POST(request: NextRequest) {
     const primaryIsFractional = data.totalPropertyTransferPrice !== undefined;
     const allCompanionsFractional =
       companions.length > 0 && companions.every((c) => c.totalPropertyTransferPrice !== undefined);
-    const isFractionalBundle = primaryIsFractional || allCompanionsFractional;
-    // 완전 지분 모드: primary·전 companion 모두 fractional (같은 물건 지분 분할).
-    // 이때만 각 자산의 확정 양도가액(총계약가×ratio)을 fixedSalePrice로 주입한다.
-    // 혼합(primary만 지분 등)은 비지분 자산의 fixedSalePrice가 미계산이므로 기존 경로 유지.
+    // 완전 지분 모드(축 B): primary·전 companion 모두 fractional (같은 물건 지분 분할).
+    // 이때만 각 자산의 확정 양도가액(총계약가×ratio)을 fixedSalePrice로 주입하고 안분 키를 면제한다.
+    // 혼합(함께양도 묶음에 지분 자산이 섞임)은 축 B가 아니다 — 지분 자산도 계약서 가액(actual) 또는 안분 키(apportioned)를
+    // 가진다(④가 100% 입력 × 지분율로 싣는다). 종전에는 한쪽만 지분이어도 키를 면제해 actual 500·apportioned 양도가액 0이었다
+    // (2026-10-10 실측). ⑫ `transfer-tax-schema.ts`의 면제도 같은 판정이다.
     const isFullFractionalBundle = primaryIsFractional && allCompanionsFractional;
     const bundledOk =
       companions.length > 0 &&
       data.totalSalePrice !== undefined &&
       (
-        // 지분 모드: ratio×total 자동 안분 → 안분 키 불필요
-        isFractionalBundle ||
+        // 축 B: ratio×total 자동 안분 → 안분 키 불필요
+        isFullFractionalBundle ||
         // actual 모드: primary 명시 가액 필요
         (isActualMode && data.primaryActualSalePrice !== undefined) ||
         // apportioned 모드: 안분 키 (양도시 기준시가) 필요
@@ -319,6 +321,10 @@ export async function POST(request: NextRequest) {
           const primaryItem = {
             ...engineInput,
             transferPrice: a.allocatedSalePrice,
+            // 함께양도 묶음의 지분 primary(apportioned) — 물건 전체 양도가액을 안분액 ÷ 지분율로 채운다(12억 분모).
+            totalPropertyTransferPrice: shareWholePropertyPrice(
+              engineInput.totalPropertyTransferPrice, data.ownershipRatio, a.allocatedSalePrice, isFullFractionalBundle,
+            ),
             acquisitionPrice: a.allocatedAcquisitionPrice,
             expenses: a.allocatedExpenses,
             propertyId: "primary",
@@ -366,7 +372,7 @@ export async function POST(request: NextRequest) {
               {
                 ownershipRatio: data.ownershipRatio,
                 isUnregistered: data.isUnregistered,
-                totalPropertyTransferPrice: data.totalPropertyTransferPrice,
+                totalPropertyTransferPrice: primaryItem.totalPropertyTransferPrice,
                 assetId: "primary",
                 assetLabel: a.assetLabel ?? "",
                 allocatedSalePrice: a.allocatedSalePrice,
@@ -376,7 +382,14 @@ export async function POST(request: NextRequest) {
           return [primaryItem];
         }
         // 컴패니언 자산 빌드 + 한도 초과 split — bundled-split-helpers.ts로 추출
-        const c = companions[idx - 1];
+        const rawC = companions[idx - 1];
+        // 함께양도 묶음의 지분 컴패니언(apportioned) — 물건 전체 양도가액을 안분액 ÷ 지분율로 채운다(12억 분모).
+        const c = {
+          ...rawC,
+          totalPropertyTransferPrice: shareWholePropertyPrice(
+            rawC.totalPropertyTransferPrice, rawC.ownershipRatio, a.allocatedSalePrice, isFullFractionalBundle,
+          ),
+        };
         return buildCompanionEngineInputs(c, a, {
           primaryCtxForSplit,
           transferDate,

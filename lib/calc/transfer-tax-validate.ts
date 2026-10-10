@@ -27,6 +27,7 @@ import { collectWithFields, type IssueField } from "./transfer-tax-validate-fiel
 import { isMultiHouseSurchargeSuppressed, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { mergeGbPropertyLevel } from "./transfer-tax-api-gb-shares";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
 
@@ -434,18 +435,16 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
       }
     }
 
-    // actual 모드 합계 검증 — 지분 모드 자산이 하나라도 있으면 ratio 자동 적용으로 합계 검증 생략.
-    // 동일 물건 지분 단계취득은 ratio 합 = 100% 가정으로 시스템이 자동 분배.
-    const anyFractional = form.assets.some((a) => {
-      const n = parseFloat(a.ownershipNumerator || "100");
-      const d = parseFloat(a.ownershipDenominator || "100");
-      return isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
-    });
-    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !anyFractional) {
-      const sumActual = form.assets.reduce(
-        (s, a) => s + parseAmount(a.actualSalePrice),
-        0,
-      );
+    // actual 모드 합계 검증 — 축 B(같은 물건 지분 분할)는 ratio 자동 적용(합 100% 검증은 위)이라 생략.
+    // 함께양도 묶음의 지분 자산은 물건 전체(100%) 입력이라 ④와 같이 지분율을 곱한 값으로 더한다
+    // (`buildAssetPayload`·`primaryActualSalePrice`와 같은 `applyRatio` — 종전엔 지분 자산이 하나라도 있으면 생략해
+    // 합이 어긋난 채 route 500, 2026-10-10 실측).
+    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !fullFractional) {
+      const sumActual = form.assets.reduce((s, a) => {
+        const v = parseAmount(a.actualSalePrice);
+        const r = getOwnershipRatio(a);
+        return s + (r < 1 ? applyRatio(v, r) : v);
+      }, 0);
       if (sumActual !== parseAmount(form.contractTotalPrice))
         issues.push({ step, field: "contractTotalPrice", message: "구분 기재된 양도가액 합이 총 양도가액과 일치하지 않습니다." });
     }

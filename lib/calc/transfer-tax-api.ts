@@ -179,6 +179,11 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
    * ⇒ 삼항 **전체를 한 번** 감싸 갈래가 늘어도 규칙이 따라오게 한다.
    */
   const shareOf = (v: number): number => (primaryFractional ? applyRatio(v, primaryRatio) : v);
+  /**
+   * 함께양도(다른 물건) 묶음 안의 지분 primary — 축 B(같은 물건 지분 분할, `fractionalBundleMerge`)가 아니다.
+   * 양도가액·안분 키는 물건 전체(100%) 입력 × 지분율이고, 「총양도가 × 지분율」 자동가는 축 B 전용이다(2026-10-10).
+   */
+  const primaryShareInCompanion = primaryFractional && form.assets.length > 1 && !fractionalBundleMerge;
   // 파트 필드 전송은 buildSplitPayload 담당 — 여기선 §166⑥ 안분 3요소 게이트로만 쓴다.
   const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
   // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고,
@@ -278,8 +283,16 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : primaryFractional
           ? applyRatio(totalContractPrice, primaryRatio)
           : totalContractPrice,
-    /** 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용 */
-    totalPropertyTransferPrice: primaryFractional ? totalContractPrice : undefined,
+    /**
+     * 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용. 단건·축 B = 계약 총액(같은 물건 전체).
+     * 함께양도 묶음(다른 물건)의 지분 primary = 그 물건 전체 양도가액: actual은 100% 입력값, apportioned는 안분 전이라
+     * 모른다(미설정 → route가 안분액 ÷ 지분율로 채운다). 총액은 여러 물건의 합이라 쓰면 안 된다(2026-10-10).
+     */
+    totalPropertyTransferPrice: !primaryFractional
+      ? undefined
+      : primaryShareInCompanion
+        ? (effBundledSaleMode === "actual" && primary.actualSalePrice ? parseAmount(primary.actualSalePrice) : undefined)
+        : totalContractPrice,
     transferDate: receiveOnlyTransferDate || form.transferDate,
     // ⚠️ 지분 안분(`shareOf`)은 **삼항 전체**에 건다 — 갈래별로 붙이면 새 갈래가 규칙을 빠뜨린다(U2-03).
     acquisitionPrice: shareOf(
@@ -659,9 +672,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...(form.assets.length > 1 && gbShares === undefined
       ? {
           totalSalePrice: parseAmount(form.contractTotalPrice),
+          // §166⑥ 안분 키 — 함께양도 묶음의 지분 primary는 물건 전체(100%) 기준시가 × 지분율(양도하는 것이 지분이다).
           standardPriceAtTransferForApportion:
             parseAmount(primary.standardPriceAtTransfer) > 0
-              ? parseAmount(primary.standardPriceAtTransfer)
+              ? primaryShareInCompanion
+                ? applyRatio(parseAmount(primary.standardPriceAtTransfer), primaryRatio)
+                : parseAmount(primary.standardPriceAtTransfer)
               : undefined,
           primaryInheritanceValuation:
             primary.acquisitionCause === "inheritance" && !effectiveBuildingCauseMix(primary) // D2: 건물 평가액은 파트 가액
@@ -697,15 +713,15 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
             ? { commonTransferExpense: formTotalTransferExpense }
             : {}),
           // primary 확정 양도가액.
-          //  - 지분 모드: 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
-          //    companion buildAssetPayload:428 정책과 일관). route가 fixedSalePrice로 주입해
+          //  - 축 B(같은 물건 지분 분할): 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
+          //    companion `buildAssetPayload` 정책과 일관). route가 fixedSalePrice로 주입해
           //    기준시가 안분 없이 지분율 안분 성립.
-          //  - actual 모드(비지분): 계약서상 양도가액.
-          //  - apportioned 비지분: undefined (양도시 기준시가 비율 안분).
-          primaryActualSalePrice: primaryFractional
+          //  - actual 모드: 계약서상 양도가액 — 함께양도 묶음의 지분 primary는 물건 전체(100%) 입력 × 지분율.
+          //  - apportioned(축 B 아님): undefined (양도시 기준시가 비율 안분).
+          primaryActualSalePrice: primaryFractional && !primaryShareInCompanion
             ? applyRatio(totalContractPrice, primaryRatio)
             : effBundledSaleMode === "actual" && primary.actualSalePrice
-              ? parseAmount(primary.actualSalePrice)
+              ? shareOf(parseAmount(primary.actualSalePrice))
               : undefined,
         }
       : {}),
