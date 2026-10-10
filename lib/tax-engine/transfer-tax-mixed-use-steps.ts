@@ -7,6 +7,7 @@
  */
 
 import { calculateHoldingPeriod } from "./tax-utils";
+import { inheritedCapexUsesReportedRatio } from "./transfer-tax-mixed-use-inheritance";
 import { MIXED_USE, TRANSFER } from "./legal-codes/transfer";
 // §159의4 표2 거주 하한 — 사유 문구가 게이트와 **같은 상수**를 본다(2를 손으로 적으면 갈린다).
 import { TABLE2_MIN_RESIDENCE_YEARS } from "./transfer-tax-exemption";
@@ -145,6 +146,13 @@ export function buildPartialUsageChangeReason(
 
 export function collectWarnings(asset: MixedUseAssetInput): string[] {
   const warnings: string[] = [];
+  if (inheritedCapexUsesReportedRatio(asset) && (asset.capitalExpenditure ?? 0) > 0) {
+    warnings.push(
+      `취득시 개별주택가격이 없어 공통 자본적지출을 주택분·상가분 ${asset.acquisitionByGift ? "증여" : "상속"} 신고가액 비율로 나누었습니다 — ` +
+        "「소득세법」 제100조 제2항 후문(「해당 자산의 가액에 비례하여」)의 가액을 신고가액으로 본 것으로, " +
+        "이를 정면으로 다룬 해석례는 확인되지 않았습니다(확인 필요). 취득시 개별주택가격을 입력하면 기준시가 비율로 나눕니다.",
+    );
+  }
   if (asset.isMetropolitanArea === undefined) {
     warnings.push(
       "수도권 여부 미입력 — 수도권(3배 배율)으로 보수 처리됩니다. 정확한 계산을 위해 수도권 여부를 입력하세요.",
