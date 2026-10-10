@@ -13,8 +13,8 @@ import { deriveInheritanceHouseKind } from "@/lib/calc/transfer-tax-api-helpers"
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const HOUSE_KIND_OPTIONS = [
-  { value: "house_individual", label: "개별·다세대주택 (개별주택가격)" },
-  { value: "house_apart", label: "공동주택 (공동주택가격)" },
+  { value: "house_individual", label: "단독·다가구주택 (개별주택가격)" },
+  { value: "house_apart", label: "공동주택 — 아파트·연립·다세대 (공동주택가격)" },
 ] as const;
 
 /**

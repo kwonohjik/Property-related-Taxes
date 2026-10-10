@@ -76,3 +76,12 @@ describe("상속 주택 구분 픽커 — 전환 패치", () => {
     expect("publishedValueAtInheritance" in patch).toBe(false);
   });
 });
+
+describe("상속 주택 구분 픽커 — 라벨", () => {
+  it("다세대는 공동주택이다(「건축법 시행령」 별표 1 제2호 다목 · 다가구는 제1호 다목 단독주택) — 개별주택가격 라벨은 단독·다가구, D2-4 건물 카드와 같은 구분", () => {
+    render(<InheritanceHouseKindPicker asset={baseAsset({ useSupplementaryHelper: true, inheritanceValuationMethod: "supplementary" })} onChange={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: /단독·다가구주택 \(개별주택가격\)/ })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /공동주택 — 아파트·연립·다세대 \(공동주택가격\)/ })).toBeTruthy();
+    expect(screen.queryByText(/개별·다세대/)).toBeNull();
+  });
+});

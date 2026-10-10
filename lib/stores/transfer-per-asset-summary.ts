@@ -402,6 +402,9 @@ export function computeTransferPerAssetSummary(
       acqPrice = mixedUseDisplayedAcqPrice(mixedResult);
     } else if (bundledMatch) {
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
+      // 엔진이 이 자산의 취득가액을 확정했다 — 입력 단계 pending(환산 파트·필지)을 내린다. 남겨 두면 엔진 값이 0일 때
+      // 계산 후에도 「계산 후 표시」에 갇힌다.
+      acqPending = false;
       // 분리(split) 자산은 안분 프리뷰가 아니라 **엔진 echo**(E-U1 — 소유 파트 차감 취득가 합)가 정본이다. 별개 취득은 자산 단위
       // 취득가액 칸이 숨어 프리뷰가 0이고, 아래 필요경비(집계 값)와 축이 갈렸다. 엔진 값은 §97③ 공제 후라 아래에서 또 빼지 않는다.
       if (bundledProperty?.splitDetail) {
@@ -433,17 +436,12 @@ export function computeTransferPerAssetSummary(
       acqPending = false;
       // 일반건물·상가 프리뷰는 §97③ 감가상각비를 이미 공제한 값이다 — 아래에서 또 빼지 않는다.
       depAlreadyDeducted = true;
-    } else if (isSingle && acqPending && singleResult?.splitDetail && effectiveBuildingCauseMix(a)) {
-      // D2-2 건물 상속·증여 + 토지 매매 — 토지 환산·감정 파트는 입력 단계에서 엔진만 알아 pending(`separateAcqPartsSum`)이다. 결과가 오면
-      // 엔진이 실제로 차감한 파트 합으로 푼다(D1-4b와 같은 정본 `summarizeSplitGain().acquisitionDeducted`). 이 분기가 없으면 계산 후에도
-      // 「취득가액 -」에 갇힌다(실측). **입력 프리뷰가 pending일 때만** — 실가·평가액처럼 프리뷰로 확정되는 경우에 이 분기를 타면 결과 도착 후
-      // 입력을 고쳐도 옛 엔진 값에 머문다(D2-2 Check). 일반 매매 split의 환산 파트도 같은 고착이 있다 — D2 밖이라 건드리지 않는다.
-      acqPrice = summarizeSplitGain(singleResult.splitDetail).acquisitionDeducted;
-      acqPending = false;
-      depAlreadyDeducted = true;
-    } else if (isSingle && singleResult?.splitDetail?.land?.acquisitionBasis) {
-      // D1-4 영 §163⑨ 단서 1호(1990.8.30. 전 상속·증여 토지) — 입력 단계는 max(평가액, 영 §164④ 가액)를 엔진만 알아
-      // pending으로 두고(`separateAcqPartsSum`), 결과가 오면 엔진이 실제로 차감한 파트 합을 쓴다(bundled split 분기와 같은 정본).
+    } else if (isSingle && acqPending && singleResult?.splitDetail) {
+      // 토지·건물 분리(split) — 환산·감정 파트, 영 §163⑨ 단서 1호(D1-4)·2호(D2-4)의 max는 입력 단계에서 엔진만 알아 pending
+      // (`separateAcqPartsSum`)이다. 결과가 오면 엔진이 실제로 차감한 파트 합으로 푼다(bundled split 분기와 같은 정본
+      // `summarizeSplitGain().acquisitionDeducted`). 종전엔 D1-4·D2-2 원인 혼합에만 열려 있어 **일반 매매 split의 환산 파트**는
+      // 계산 후에도 「계산 후 표시」에 갇혔다(실측). **입력 프리뷰가 pending일 때만** — 실가·평가액처럼 프리뷰로 확정되는 경우에
+      // 이 분기를 타면 결과 도착 후 입력을 고쳐도 옛 엔진 값에 머문다(D2-2 Check).
       acqPrice = summarizeSplitGain(singleResult.splitDetail).acquisitionDeducted;
       acqPending = false;
       depAlreadyDeducted = true;
@@ -564,7 +562,11 @@ export function computeTransferPerAssetSummary(
       // 계산 후 — 엔진이 **실제 차감한** 필요경비(`expensesApplied`). 환산 본문은 개산공제,
       // §97②2호 단서(swap)는 자본적지출·양도비다. 종전에는 폼에 자본적지출이 남아 있으면 그 합을
       // 보여 엔진과 어긋났다(F-14 실측 7,000,000 ↔ 3,000,000).
-      expense = singleResult.expenses ?? 0;
+      // split은 `expenses`가 파트 직접경비만 싣고 개산공제는 `estimatedDeduction`에 따로 둔다(`calcTransferGain` split 분기) —
+      // 파트 합(직접경비 + 개산공제, 소유 파트만)이 정본이다. 종전엔 환산 파트의 개산공제가 사이드바에서 빠졌다(실측).
+      expense = singleResult.splitDetail
+        ? summarizeSplitGain(singleResult.splitDetail).necessaryExpense
+        : (singleResult.expenses ?? 0);
     } else if (!result && isLumpSumMode(a) && isPlainLumpSumAsset(a)) {
       /**
        * 계산 전 개산공제 — 율·절사 모두 **엔진 leaf**(F-14). 종전 `applyRate(stdAcq, 0.03)`은
