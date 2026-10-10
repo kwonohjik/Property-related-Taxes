@@ -265,7 +265,7 @@ export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: numbe
   // 평가액(①)만 합산하면 ②가 더 클 때 작은 값이 총액으로 오독되므로 환산 파트처럼 결과 도착 전까지 미확정으로 둔다.
   if (parts[0].owned && isSec163_9LandProviso(effectiveLandAcquisitionCause(asset), asset.landAcquisitionDate)) pending = true;
   // D2-4 — 영 §163⑨ 단서 2호 구간(2005.4.30. 전 상속·증여 주택 건물 + 토지 매매)도 같다: 건물 취득가액 = max(평가액, 영 §164⑦ 가액의 건물 몫).
-  // 결과가 오면 D2-2 분기(`transfer-per-asset-summary.ts` — `acqPending ∧ splitDetail ∧ effectiveBuildingCauseMix`)가 엔진 합으로 푼다.
+  // 결과가 오면 split 분기(`transfer-per-asset-summary.ts` — `acqPending ∧ splitDetail`)가 엔진 합으로 푼다.
   if (parts[1].owned && buildingSec164Applies(asset)) pending = true;
   for (const p of parts) {
     if (!p.owned) continue;

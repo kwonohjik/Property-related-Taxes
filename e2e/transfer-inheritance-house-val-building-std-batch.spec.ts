@@ -64,8 +64,8 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
     test.setTimeout(120_000);
     await gotoInheritanceHouse(page);
 
-    // 자산 구분 = 개별·다세대주택(house_individual)
-    await page.getByRole("radio", { name: /개별·다세대주택/ }).click();
+    // 자산 구분 = 단독·다가구주택(house_individual)
+    await page.getByRole("radio", { name: /단독·다가구주택/ }).click();
 
     const section = page.locator("div").filter({ hasText: HOUSE_VAL }).first();
     await expect(section).toBeVisible();
@@ -87,7 +87,7 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
   test("T3: 모달 계산·적용 → 계산서 스냅샷 저장 (최초·양도 + 취득 acqBase 키 존재, §164⑤)", async ({ page }) => {
     test.setTimeout(150_000);
     await gotoInheritanceHouse(page);
-    await page.getByRole("radio", { name: /개별·다세대주택/ }).click();
+    await page.getByRole("radio", { name: /단독·다가구주택/ }).click();
 
     const section = page.locator("div").filter({ hasText: HOUSE_VAL }).first();
     await section.getByRole("button", { name: BATCH_BTN }).click();
