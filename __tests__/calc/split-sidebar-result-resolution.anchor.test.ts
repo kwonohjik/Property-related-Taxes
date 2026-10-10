@@ -160,3 +160,52 @@ describe("⑥ split 사이드바 — 계산 전 pending → 계산 후 엔진 �
     expect(post.acqPrice).toBe(650_000_000);
   }, 60_000);
 });
+
+describe("⑥ split 사이드바 — 계산 전 필요경비: 비-actual 소유 파트가 있으면 「계산 후 표시」", () => {
+  const pre = (over: Partial<AssetForm>, assets?: AssetForm[]) =>
+    computeTransferPerAssetSummary(form(assets ?? [house(over)]), null).rows[0];
+  // 자본적지출 5,000,000 입력 — 비-actual 파트가 있으면 이 부분합을 총액으로 보이지 않는다
+  const CAPEX = { capitalExpenditure: "5,000,000" };
+
+  for (const [name, over] of [
+    ["토지 환산", CASES["일반 매매 · 토지 환산"]],
+    ["건물 환산", CASES["일반 매매 · 건물 환산"]],
+    ["토지 감정가액", { landAcqMode: "appraisal" as const }],
+    ["건물 매매사례가액", { buildingAcqMode: "salesCase" as const, buildingSalesCaseValue: "350,000,000" }],
+  ] as const) {
+    it(`${name} → expense 0 · pending (단건·함께 양도 주 자산)`, () => {
+      for (const row of [pre({ ...over, ...CAPEX }), pre({}, [house({ ...over, ...CAPEX }), land2()])]) {
+        expect(row.expense).toBe(0);
+        expect(row.expensePending).toBe(true);
+      }
+    });
+  }
+
+  it("부정형 짝 — 파트 실가만이면 입력 경비 그대로(5,000,000, pending 아님) · D1-4/D2-4 단서 구간도 파트 모드는 실가", () => {
+    for (const over of [{}, CASES["D1-4 1984 토지 상속(§163⑨ 단서 1호)"], CASES["D2-4 2003 건물 상속(§163⑨ 단서 2호)"]]) {
+      const row = pre({ ...over, ...CAPEX });
+      expect(row.expense).toBe(5_000_000);
+      expect(row.expensePending).toBe(false);
+    }
+  });
+
+  it("부정형 짝 — 비소유 파트의 환산은 보지 않는다(건물만 소유 + 토지 환산)", () => {
+    const row = pre({ ...CASES["일반 매매 · 토지 환산"], ...CAPEX, selfOwns: "building_only" });
+    expect(row.expensePending).toBe(false);
+    expect(row.expense).toBe(5_000_000);
+  });
+
+  it("부정형 짝 — 같은 취득일이면(분리 아님) 이 규칙을 타지 않는다", () => {
+    const row = pre({ ...CASES["일반 매매 · 토지 환산"], ...CAPEX, landAcquisitionDate: "2018-03-02" });
+    expect(row.expensePending).toBe(false);
+  });
+
+  it("계산 후에는 pending이 풀린다(엔진 파트 합)", async () => {
+    const fs = form([house({ ...CASES["일반 매매 · 토지 환산"], ...CAPEX })]);
+    const rs = await run(fs);
+    const row = computeTransferPerAssetSummary(fs, rs).rows[0];
+    expect(row.expensePending).toBe(false);
+    if (rs.mode !== "single") throw new Error(rs.mode);
+    expect(row.expense).toBe(summarizeSplitGain(rs.result.splitDetail!).necessaryExpense);
+  }, 60_000);
+});

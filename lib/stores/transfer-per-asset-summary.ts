@@ -25,6 +25,7 @@ import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { parseRaw, isParcelMode, isRedevelopmentPath, parcelAcqSum, directAcqRaw, directExpenseRaw } from "./transfer-per-asset-direct";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { splitHasNonActualOwnedPart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
@@ -558,6 +559,10 @@ export function computeTransferPerAssetSummary(
       // 입력분(`landDirectExpenses`+`buildingDirectExpenses`)을 부분합으로 보이면 쓰이지 않는 금액을 보여 준다(A2 §8.2).
       // ⚠️ `dedicatedPreview`(환산 전용 프리뷰) **뒤**에 둔다 — 앞에 두면 환산 프리뷰를 가로채 사이드바 spec 2건이 깨진다.
       expense = 0;
+    } else if (!result && splitHasNonActualOwnedPart(a)) {
+      // 토지·건물 분리(split)에 비-actual 파트 — 그 파트의 필요경비(개산공제 §163⑥ 또는 §97②2호 단서)는 계산 후 확정이다.
+      // 일반건물 파트 모드(바로 위)와 같은 규약: 입력 경비 부분합을 보이지 않고 아래에서 「계산 후 표시」로 둔다.
+      expense = 0;
     } else if (isSingle && singleResult) {
       // 계산 후 — 엔진이 **실제 차감한** 필요경비(`expensesApplied`). 환산 본문은 개산공제,
       // §97②2호 단서(swap)는 자본적지출·양도비다. 종전에는 폼에 자본적지출이 남아 있으면 그 합을
@@ -580,7 +585,7 @@ export function computeTransferPerAssetSummary(
       const rate = estimatedDeductionRate(unregistered, a.assetKind);
       expense = computeEstimatedDeduction(parseRaw(a.standardPriceAtAcq), rate, ratio);
     }
-    if (expense === 0 && !result && (isLumpSumMode(a) || isGbNonActualPart(a))) expensePending = true;
+    if (expense === 0 && !result && (isLumpSumMode(a) || isGbNonActualPart(a) || splitHasNonActualOwnedPart(a))) expensePending = true;
 
     return {
       assetId: a.assetId,

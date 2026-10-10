@@ -21,11 +21,13 @@ async function sidebarAmount(page: Page, label: string): Promise<string> {
   return ((await row.textContent()) ?? "").replace(label, "").trim();
 }
 
-test("일반 매매 split · 토지 환산: 계산 전 「계산 후 표시」 → 계산 후 엔진 파트 합 · 개산공제", async ({ page }) => {
+test("일반 매매 split · 토지 환산: 계산 전 취득가액·필요경비 「계산 후 표시」 → 계산 후 엔진 파트 합 · 개산공제", async ({ page }) => {
   test.setTimeout(150_000);
   await seedWizard(page, singleSeed([housing({ landAcqMode: "estimated", buildingAcqMode: "actual", buildingAcquisitionPrice: "300000000" })]));
   await expect(page.locator('[data-slot="wizard-sidebar"]')).toBeVisible();
   expect(await sidebarAmount(page, "취득가액")).toBe("계산 후 표시");
+  // 토지 개산공제(§163⑥)는 계산 후 확정 — 종전엔 「-」(입력 없음처럼 보였다)
+  expect(await sidebarAmount(page, "필요경비")).toBe("계산 후 표시");
 
   await page.getByRole("button", { name: "가산세", exact: true }).first().click();
   const reqP = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
