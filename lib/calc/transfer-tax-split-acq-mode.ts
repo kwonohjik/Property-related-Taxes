@@ -281,6 +281,23 @@ export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: numbe
 }
 
 /**
+ * 별개 취득 자산의 소유 파트 중 **실가가 아닌 파트**(환산·감정·매매사례)가 있는가 — 사이드바 계산 전 필요경비 전용.
+ *
+ * 그 파트의 필요경비는 개산공제(§163⑥, 취득당시 기준시가 × 율)이거나 환산이면 §97②2호 단서 비교 결과라 엔진만 안다
+ * (`transfer-tax-split-gain.ts` `applyAssetSwap` — 비-actual 파트는 입력 자본적지출을 그대로 차감하지 않는다). 입력 경비 부분합을
+ * 총액으로 보이지 않게 「계산 후 표시」로 둔다. 파트·모드 판정은 `separateAcqPartsSum`과 같은 사본·같은 leaf다.
+ */
+export function splitHasNonActualOwnedPart(rawAsset: SeparatePartAmounts & SeparateAcquisitionFlags): boolean {
+  if (!isSeparateAcquisition(rawAsset)) return false;
+  const asset = normalizeBuildingCauseInputs(rawAsset);
+  const selfOwns = asset.selfOwns ?? "both";
+  return (
+    (selfOwns !== "building_only" && effectivePartAcqMode(asset.landAcqMode, asset) !== "actual") ||
+    (selfOwns !== "land_only" && effectivePartAcqMode(asset.buildingAcqMode, asset) !== "actual")
+  );
+}
+
+/**
  * 토지분 취득시 기준시가 = `㎡당 개별공시지가 × 면적` (소득세법 §99①1호 가목).
  *
  * **엔진(`calcAcqStdPair`)과 UI 읽기 전용 표시가 공유하는 단일 소스**다. UI가 같은 산식을
