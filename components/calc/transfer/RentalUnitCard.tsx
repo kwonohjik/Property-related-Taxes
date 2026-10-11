@@ -279,7 +279,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
               <p className="font-semibold">{ARTICLE_LABEL[article]}</p>
               <p>
                 의무임대기간 <b>{reqYears}년</b> · 기준시가 상한 <b>{capLabel}</b>
-                {isConstruction ? " · 규모 대지298㎡·연면적149㎡" : " · 규모요건 없음"}
+                {showSize ? " · 규모 대지298㎡·연면적149㎡" : " · 규모요건 없음"}
               </p>
               <p className="text-muted-foreground">
                 등록기준일 {effRegDate ? effRegDate.toISOString().slice(0, 10) : "-"}

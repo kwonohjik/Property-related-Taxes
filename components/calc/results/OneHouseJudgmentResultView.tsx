@@ -112,6 +112,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
     judgment,
     oneRight ? oneRightThreshold : transferAt ? resolveHighValueHouseThreshold(transferAt) : undefined,
     contestedIssues,
+    rental,
   );
   const pending = judgment.pending as unknown as PendingItem[];
 

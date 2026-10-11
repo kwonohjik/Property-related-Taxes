@@ -11,6 +11,7 @@ import {
 } from "@react-pdf/renderer";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import {
   splitAcqBasisFormula,
   splitAcqBasisView,
@@ -31,8 +32,12 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   // Round 11 (2026-05-07): 양도세 신고서 양식 통일 — FilingFormTable과 동일 흐름.
   const transferGain = (num(r.transferGain) ?? 0) as number;
   const ltdAmount = (num(r.longTermHoldingDeduction) ?? 0) as number;
-  const taxableGain = (num(r.taxableGain) ?? transferGain) as number;
-  const incomeAmount = Math.max(0, taxableGain - ltdAmount);
+  // 장기임대주택 거주주택 특례(§155⑳·§154⑩)는 신고서 표(`FilingFormTableHelpers`)와 같은 순서다 —
+  // 양도차익(전체) − 장특 = §95① 양도소득금액, 엔진 `taxableGain`은 이미 **과세대상 양도소득금액**이라 다시 장특을 빼면 0이 된다(S06-8).
+  const rhDetail = r.rentalHousingExceptionDetail as { applied?: boolean; scenarioId?: string } | undefined;
+  const isRH = rhDetail?.applied === true;
+  const taxableGain = (isRH ? transferGain : (num(r.taxableGain) ?? transferGain)) as number;
+  const incomeAmount = isRH ? transferGain - ltdAmount : Math.max(0, taxableGain - ltdAmount);
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
   const eligible19 = reductionEligibleIncome(
     r.reductionTypeApplied as string | undefined,
@@ -47,7 +52,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   // — 별지84호 본 서식 ⑧ 과세표준 = ④+⑤−⑥−⑦에서 차감 대상 ⑥은 「소득감면대상 소득금액」이고,
   //   작성방법 6번이 이를 §90② 적용 시로 한정한다.
   // 종전에는 세액감면분(reducibleIncome)까지 빼서 화면(DetailedStatementHelpers)과 어긋났다.
-  const incomeAmountAfter = Math.max(0, incomeAmount - new993Reducible);
+  const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, incomeAmount - new993Reducible);
   // 농특세 총액 echo가 정본 — `new993.ruralSurtax`만 보면 세액감면형(§77 계열)이 빠진다.
   const ruralSurtax = (num(r.ruralSurtax) ?? new993?.ruralSurtax ?? 0) as number;
   /**
@@ -76,7 +81,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
         {taxableGain !== transferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(taxableGain)}</Text></View>)}
         {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(r.longTermHoldingRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmount)}</Text></View>
-        {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>비과세 양도소득금액 (소령 §161①)</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
+        {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{eligible19 > 0 ? fmt(eligible19) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{new993Reducible > 0 ? fmt(new993Reducible) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(incomeAmountAfter)}</Text></View>

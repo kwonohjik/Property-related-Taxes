@@ -29,6 +29,7 @@ import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
@@ -458,22 +459,20 @@ export function RentalHousingExceptionSection({
         const liveMonths = usesPostRegField ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
         // §154⑩ 표준 경로 + 종전규정(preRegime)이면 취득 당시 조정대상지역일 때만 거주요건이 있다.
         const residenceRequired = !(isStandalone154_10Path && preRegime154_10 && !wasRegulatedAtAcquisition);
-        // 보유기간(일) 계산 — 취득일 ~ 양도일 (§154⑩ 표준 경로도 재기산 없이 실제 취득일 기준)
-        let holdDays = 0;
+        // 보유기간 — 취득일 ~ 양도일. ⑧·엔진(`judgeRentalHousingEligibility`)과 **같은 함수**다
+        // (소령 §154⑤ → 법 §95④ 초일 산입). 일수 근사(730일·365일·30일)는 응당일 전날 양도에서 하루 어긋났다.
+        let holdPass = false;
         let holdYearsLabel = "-";
         if (acquisitionDate && transferDate) {
-          const acqMs = new Date(acquisitionDate).getTime();
-          const trnMs = new Date(transferDate).getTime();
-          if (Number.isFinite(acqMs) && Number.isFinite(trnMs) && trnMs > acqMs) {
-            holdDays = Math.floor((trnMs - acqMs) / (1000 * 60 * 60 * 24));
-            const years = Math.floor(holdDays / 365);
-            const remDays = holdDays % 365;
-            const months = Math.floor(remDays / 30);
-            holdYearsLabel = `${years}년 ${months}개월`;
+          const acqDate = new Date(acquisitionDate);
+          const trnDate = new Date(transferDate);
+          if (Number.isFinite(acqDate.getTime()) && Number.isFinite(trnDate.getTime()) && trnDate.getTime() > acqDate.getTime()) {
+            const hp = calculateHoldingPeriod(acqDate, trnDate);
+            holdPass = hp.years >= 2;
+            holdYearsLabel = `${hp.years}년 ${hp.months}개월`;
           }
         }
         const livePass = !residenceRequired || liveMonths >= 24;
-        const holdPass = holdDays >= 730;
 
         return (
           <div className="space-y-2">
