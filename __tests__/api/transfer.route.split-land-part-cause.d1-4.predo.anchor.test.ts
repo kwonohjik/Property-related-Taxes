@@ -237,7 +237,8 @@ describe("C. §164④ 취득당시 기준시가 ② 손계산 (등급가액 직�
   });
 
   it("C-3 CAP-2 경계: 1990-01-01 이후 취득이면 비율 1.0 상한이 걸린다(1989-12-31은 안 걸림) — 1990.1.1~8.29 구간 ② 입력이 게이트와 같은 날짜를 받아야 하는 이유", () => {
-    const hi = { ...input, gradeAtAcquisition: { gradeValue: 90_000 } }; // 비율 2.0
+    // 취득시 = 90.8.30. 현재(9만) — 등급조정기간 동일(소칙 §80⑥)이어야 1990-01-01 이후 취득에 상한이 걸린다(#16).
+    const hi = { ...input, grade_1990_0830: { gradeValue: 90_000 }, gradeAtAcquisition: { gradeValue: 90_000 } }; // 비율 9만/6.5만
     const before = calculatePre1990LandValuation({ ...hi, acquisitionDate: new Date("1989-12-31") });
     const after = calculatePre1990LandValuation({ ...hi, acquisitionDate: new Date("1990-01-01") });
     expect(before.breakdown.ratioCap2Applied).toBe(false);

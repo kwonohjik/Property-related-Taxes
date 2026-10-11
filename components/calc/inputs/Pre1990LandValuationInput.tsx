@@ -287,6 +287,7 @@ export function Pre1990LandValuationInput({
           <p className="text-caption text-muted-foreground">
             ※ 토지대장 및 부동산공시가격 알리미(realtyprice.kr)에서 조회 가능합니다.
             1990.1.1. 등급조정이 없었다면 직전 등급은 현재 등급과 동일하게 입력하세요.
+            1990.1.1.~8.29.에 수시조정이 있었다면 직전 등급은 마지막 수시조정일 전날의 등급입니다(「소득세법 시행규칙」 §80⑦).
           </p>
       </div>
   );

@@ -75,9 +75,10 @@ describe("파생 — ㎡당 가액 · 총액 (anchor C-1과 같은 손계산)", 
   it("단서 밖이면 5필드가 차 있어도 0", () => {
     expect(deriveHousingLandSec164Total(asset({ landAcquisitionDate: "1991-05-01" }))).toBe(0);
   });
-  it("CAP-2는 토지 파트 취득일 기준: 1989-12-31(상한 없음, 비율 2.0) vs 1990-01-01(비율 1.0 상한)", () => {
-    const hi = { pre1990Grade_atAcq: "90000" } as Partial<AssetForm>;
-    expect(deriveHousingLandSec164PerSqm(asset({ ...hi, landAcquisitionDate: "1989-12-31" }))).toBe(14_000_000);
+  it("CAP-2는 토지 파트 취득일 기준: 1989-12-31(상한 없음, 비율 9만/6.5만) vs 1990-01-01(비율 1.0 상한)", () => {
+    // 취득시 = 90.8.30. 현재(9만) — 등급조정기간 동일(소칙 §80⑥)이어야 1990-01-01 이후 취득에 상한이 걸린다(#16).
+    const hi = { pre1990Grade_current: "90000", pre1990Grade_atAcq: "90000" } as Partial<AssetForm>;
+    expect(deriveHousingLandSec164PerSqm(asset({ ...hi, landAcquisitionDate: "1989-12-31" }))).toBe(9_692_307);
     expect(deriveHousingLandSec164PerSqm(asset({ ...hi, landAcquisitionDate: "1990-01-01" }))).toBe(7_000_000);
   });
   it("지분 50% → ①`ratioed`와 같은 축으로 스케일(floor 한 번)", () => {
