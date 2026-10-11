@@ -50,6 +50,13 @@ export type TransferTaxItemInput = Omit<
 > & {
   propertyId: string;
   propertyLabel: string;
+  /**
+   * [표시 전용] 이 item의 취득가액을 **서브엔진이 이미 산정한 방식** — 세액에 관여하지 않는다.
+   * 겸용 컴패니언 파트 카드는 겸용 엔진이 환산·감정 등으로 낸 값을 **환산 플래그를 끈 실가 item**으로 되먹이므로
+   * (`mixed-use-part-cards.ts`) 결과에 산정방식이 남지 않아 명세서가 「실제 거래가액」·「양도비」로 적었다(2026-10-11 #10).
+   * 결과의 같은 이름 echo(`PerPropertyBreakdown.displayAcquisitionMode`)로 넘어간다.
+   */
+  displayAcquisitionMode?: "actual" | "estimated" | "appraisal" | "salesCase";
 };
 
 /** 다건 입력 (건별 + 공통) */
@@ -276,6 +283,8 @@ export interface PerPropertyBreakdown
    *    자체 휴리스틱을 썼고, 단건이 #069(환산 자본적지출)·#1519(`isTable2Applied`)로
    *    고쳐질 때 다건은 따라가지 못했다 — 「단건과 동일」이라 적힌 주석이 사실이 아니었다.
    */
+  /** [echo] 입력 `TransferTaxItemInput.displayAcquisitionMode` 그대로(표시 전용 — 겸용 컴패니언 파트 카드). */
+  displayAcquisitionMode?: TransferTaxItemInput["displayAcquisitionMode"];
   filingDisplay?: {
     /** §97②2호 **본문** 환산취득가 base (`estimatedBase`). 단서 swap이면 미제공. */
     estimatedBase?: number;

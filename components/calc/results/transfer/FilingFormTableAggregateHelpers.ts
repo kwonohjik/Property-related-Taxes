@@ -33,6 +33,9 @@ import { reductionEligibleIncome } from "./reduction-eligible-income";
 import { selectPriorFiledIndices } from "@/lib/calc/multi-prior-filed";
 import { baseCardId, shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitAcqBasisView } from "@/lib/tax-engine/transfer-tax-split-display";
 
 /** 일반건물이 엔진 내부에서 분해하는 카드 id (지분 접미사 제거 후 기준). */
 const GB_CARD_BASE_IDS = new Set([
@@ -157,6 +160,9 @@ export function buildAggregateRows(
   let sumLtResidence = 0;
   // 산출세액 행 주석: 자산별 shortTermNote (부수토지 일체과세 등 특수 세율)
   const taxNotes: Record<string, string> = {};
+  // 취득가액 행 주석: 영 §163⑨ 단서 1호·2호 채택값(D1-4·D2-4) — 단건 신고서(`FilingFormTableHelpers` split 분기)와 같은 leaf·같은 문구.
+  //   종전엔 합산 신고서에만 없어 취득가액 칸이 평가액이 아닌 채택값인데 그 이유가 보이지 않았다(2026-10-11 #11).
+  const acqNotes: Record<string, string> = {};
   /**
    * §102② 양도차손 통산 행 — 서식(별지 제84호 부표1)에는 이 행이 없어, 종전에는 「감면후 소득금액」
    * 칸의 각주로만 있었다(결과탭 코드리뷰 #072). 각주는 소멸분을 통산으로 적고 합계 열과 가로
@@ -344,6 +350,13 @@ export function buildAggregateRows(
     if (p.shortTermNote) {
       taxNotes[col] = p.shortTermNote;
     }
+    if (p.splitDetail) {
+      const basisNotes = summarizeSplitGain(p.splitDetail).parts.flatMap((part) => {
+        const basis = splitAcqBasisView(part);
+        return basis && !part.swapApplied ? [`${splitAcqBasisFormula(basis)} (${basis.legalBasis})`] : [];
+      });
+      if (basisNotes.length > 0) acqNotes[col] = basisNotes.join(" / ");
+    }
 
     // 농어촌특별세·지방세 — 합산-only
     setNum("ruralSurtax", col, null);
@@ -504,7 +517,7 @@ export function buildAggregateRows(
     ["moveIn", "입주일"],
     ["residencePeriod", "거주기간", { separatorAfter: true }],
     ["transferPrice", "양도가액"],
-    ["acquisitionPrice", "취득가액"],
+    ["acquisitionPrice", "취득가액", Object.keys(acqNotes).length > 0 ? { notes: acqNotes } : undefined],
     ["expenses", "필요경비", { separatorAfter: true }],
     ["transferGain", "전체 양도차익"],
     ["exemptGain", "비과세 양도차익"],

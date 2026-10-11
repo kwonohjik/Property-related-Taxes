@@ -188,6 +188,26 @@ export function buildMixedUsePartCards(
     wasRegulatedAtAcquisition: false,
   } satisfies Partial<TransferTaxItemInput>;
 
+  /**
+   * [표시 전용] 파트 카드의 취득가액 산정방식 — 카드는 환산 플래그를 끈 실가 item이라 결과에 방식이 남지 않는다(#10).
+   * · 파트 모델(B1): 토지·건물 파트 모드 그대로. §97②2호 단서로 실비를 채택한 파트는 생략(취득가액 0 + 실비 — 실가 표시가 맞다)
+   * · 총액 모델: 실거래가 · 감정/매매사례(자산 단위 `acquisitionMethod`) · 그 밖 환산. 단서 실비 채택이면 생략
+   * · 상속·증여(§163⑨ 평가액 = 실지거래가액 의제)는 생략 — 종전 표시 그대로
+   */
+  const sep = r.separateAcquisition;
+  const directChosen = (part: "land" | "building") =>
+    sep ? sep.provisoGroup?.chosen === "direct" && sep.provisoGroup.parts.includes(part) : r.necessaryExpenseProviso?.chosen === "direct";
+  const totalMode: TransferTaxItemInput["displayAcquisitionMode"] =
+    mixedAsset.acquisitionByInheritance || mixedAsset.acquisitionByGift
+      ? undefined
+      : mixedAsset.useActualAcquisition
+        ? "actual"
+        : mixedAsset.useAppraisalSalesAcquisition
+          ? (companionEngine.acquisitionMethod === "salesCase" ? "salesCase" : "appraisal")
+          : "estimated";
+  const modeOf = (part: "land" | "building"): TransferTaxItemInput["displayAcquisitionMode"] =>
+    directChosen(part) ? undefined : sep ? (part === "land" ? sep.landMode : sep.buildingMode) : totalMode;
+
   const card = (
     idBase: string,
     label: string,
@@ -208,6 +228,7 @@ export function buildMixedUsePartCards(
     // 감면은 **카드마다 같은 배열**을 싣는다 — §133② 한도는 집계 단계에서 1회 적용된다
     // (GB와 같은 규칙·같은 함수). §77의3 건물 제외 축도 그대로 따라온다.
     reductions: reductionsForCard(companionEngine.reductions, isBuilding),
+    displayAcquisitionMode: modeOf(isBuilding ? "building" : "land"),
     ...extra,
   });
 
