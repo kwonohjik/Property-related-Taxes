@@ -16,11 +16,12 @@
  */
 
 import { addMonths } from "date-fns";
-import { applyRate } from "../tax-utils";
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
 import {
-  calcRentalGainRatio,
+  calcRentalGainFraction,
+  applyRentalGainShare,
+  type RentalGainFraction,
   calculateEffectiveRentalPeriod,
   RENTAL_VACANCY_GRACE_MONTHS_97_5,
   checkRental973Clause24,
@@ -145,8 +146,9 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
 
   // 5) 임대기간 분 양도소득 안분 (령 §97의5②)
   let rentalGainRatio = 1;
+  let rentalGainFraction: RentalGainFraction | undefined;
   if (input.rentalStartDate && input.acquisitionDate) {
-    const ratio = calcRentalGainRatio({
+    const fraction = calcRentalGainFraction({
       rentalStartDate: input.rentalStartDate,
       acquisitionDate: input.acquisitionDate,
       // 조특령 §97의5② — 분자의 감수는 **취득당시** 기준시가다(§97의3의 임대개시일이 아니다).
@@ -157,7 +159,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       stdPriceAtRentalStart: input.stdPriceAtRentalStart ?? input.officialPriceAtStart,
       stdPriceAtTransfer: input.stdPriceAtTransfer,
     });
-    if (ratio === null) {
+    if (fraction === null) {
       reasons.push({
         code: "MISSING_PRORATION_PRICES",
         message:
@@ -166,7 +168,8 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
         legalBasis: "조특령 §97의5②",
       });
     } else {
-      rentalGainRatio = ratio;
+      rentalGainRatio = fraction.num / fraction.den;
+      rentalGainFraction = fraction;
     }
   }
 
@@ -185,7 +188,8 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     };
   }
 
-  const reductionAmount = applyRate(applyRate(input.calculatedTax!, rentalGainRatio), 1.0);
+  // 감면율 100% — 산출세액 × 임대기간 분(정수 분수). 종전 `applyRate(applyRate(tax, 비율), 1.0)`은 비율 double 곱으로 1원 과소.
+  const reductionAmount = applyRentalGainShare(input.calculatedTax!, { rentalGainRatio, rentalGainFraction });
 
   return {
     id: "rental_97_5",
@@ -195,6 +199,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     reductionRate: 1.0,
     reductionAmount,
     rentalGainRatio,
+    rentalGainFraction,
     isFullExemption: true,
   };
 }

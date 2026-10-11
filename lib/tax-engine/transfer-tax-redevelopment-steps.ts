@@ -370,6 +370,7 @@ export function runRedevelopmentGainSteps(
     redevAfterRight = applyRental97LthdSpecial(redevAfterLthdExclusion, {
       overrideRate: rental97Special.overrideRate,
       rentalGainRatio: rental97Special.rentalGainRatio,
+      rentalGainFraction: rental97Special.rentalGainFraction,
     });
     steps.push({
       label: "장기보유특별공제 특례 — 장기일반민간임대주택 (조특법 §97의3①)",

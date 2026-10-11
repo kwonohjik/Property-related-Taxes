@@ -15,6 +15,8 @@ import type {
   RedevelopmentBranchDetail,
 } from "./types/transfer.types";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { applyFairMarketRatio } from "./tax-utils";
+import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
 import { calculateProration } from "./tax-utils";
 
 export function zeroLthdParts(b: RedevelopmentBranchDetail): Partial<RedevelopmentBranchDetail> {
@@ -93,6 +95,8 @@ export function applyRental97LthdSpecial(
     overrideRate?: number;
     /** §97의3 — 임대기간분 양도차익 비율 (조특령 §97의3⑤). §97의4는 1 */
     rentalGainRatio: number;
+    /** 같은 비율의 정수 분수 — 금액 안분은 이것으로(`applyRentalGainShare`) */
+    rentalGainFraction?: { num: number; den: number };
     /** §97의4 — 임대기간별 추가 공제율 */
     additionalRate?: number;
   },
@@ -103,10 +107,10 @@ export function applyRental97LthdSpecial(
 
     if (special.overrideRate !== undefined) {
       // §97의3 — 임대분 × 70% + 비임대분 × 그 분기의 §166⑤ 율
-      const rentalGain = Math.floor(gain * special.rentalGainRatio);
+      const rentalGain = applyRentalGainShare(gain, special);
       const nonRentalGain = gain - rentalGain;
       const lthd =
-        Math.floor(rentalGain * special.overrideRate) + Math.floor(nonRentalGain * b.lthdRate);
+        applyFairMarketRatio(rentalGain, special.overrideRate) + applyFairMarketRatio(nonRentalGain, b.lthdRate);
       const blendedRate =
         special.overrideRate * special.rentalGainRatio + b.lthdRate * (1 - special.rentalGainRatio);
       return { ...b, lthd, lthdRate: blendedRate, ...clearLthdParts(b) };
@@ -116,7 +120,7 @@ export function applyRental97LthdSpecial(
       // §97의4 — 기본 공제율이 0(보유 3년 미만)이면 가산하지 않는다. 정상 경로와 같은 규약.
       if (b.lthdRate <= 0) return b;
       const combined = b.lthdRate + special.additionalRate;
-      return { ...b, lthd: Math.floor(gain * combined), lthdRate: combined, ...clearLthdParts(b) };
+      return { ...b, lthd: applyFairMarketRatio(gain, combined), lthdRate: combined, ...clearLthdParts(b) };
     }
     return b;
   };
@@ -201,7 +205,7 @@ export function applyHighValueAllocation(
     const originalGain = branch.gain;
     const taxableGain = prorate(originalGain);
     const nontaxableGain = originalGain - taxableGain; // 정수연산 보존: 비과세 = 안분 전 - 과세대상
-    const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
+    const taxableLthd = branch.lthdRate > 0 ? applyFairMarketRatio(taxableGain, branch.lthdRate) : 0;
     return {
       ...branch,
       gain: taxableGain,

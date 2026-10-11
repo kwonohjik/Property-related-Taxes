@@ -10,6 +10,7 @@
  */
 
 import { addDays, addMonths, differenceInDays, differenceInYears } from "date-fns";
+import { applyRate, safeMultiplyThenDivide } from "../tax-utils";
 import type {
   Rental97IneligibleReason,
   Rental97RentHistoryItem,
@@ -172,7 +173,7 @@ export function validateRentIncrease(
  * - `null` — 필요한 기준시가가 없거나 분모 ≤ 0. 호출측이 불적용 사유를 붙인다(자동 안분 금지).
  * - 그 외 0~1 클램프.
  */
-export function calcRentalGainRatio(args: {
+export function calcRentalGainFraction(args: {
   rentalStartDate: Date;
   acquisitionDate: Date;
   /**
@@ -192,7 +193,7 @@ export function calcRentalGainRatio(args: {
   stdPriceAtRentalEnd?: number;
   /** 임대가 양도일까지 계속되었는가. false면 `stdPriceAtRentalEnd`가 필수다. */
   rentalContinuesToTransfer: boolean;
-}): number | null {
+}): RentalGainFraction | null {
   const {
     stdPriceAtAcquisition: acq,
     stdPriceAtRentalStart: start,
@@ -212,7 +213,7 @@ export function calcRentalGainRatio(args: {
     args.rentalContinuesToTransfer &&
     args.rentalStartDate.getTime() <= args.acquisitionDate.getTime()
   ) {
-    return 1;
+    return FULL_RENTAL_SHARE;
   }
 
   if (acq === undefined || transfer === undefined || acq <= 0 || transfer <= 0) return null;
@@ -238,8 +239,34 @@ export function calcRentalGainRatio(args: {
 
   const denominator = transfer - acq;
   if (denominator <= 0) return null;
-  const ratio = (rentalEnd - subtrahend) / denominator;
-  return Math.min(1, Math.max(0, ratio));
+  // 0~1 클램프를 분자에서 한다 — 분수 그대로 넘겨 소비처가 `floor(금액 × 분자 ÷ 분모)`로 정확히 곱하게 한다.
+  return { num: Math.min(denominator, Math.max(0, rentalEnd - subtrahend)), den: denominator };
+}
+
+/** 임대기간 분 비율 — 정수 분수(분자·분모 = 기준시가 차). 비율 double을 곱하면 1원 과소가 난다(2026-10-11 실측). */
+export interface RentalGainFraction {
+  num: number;
+  den: number;
+}
+const FULL_RENTAL_SHARE: RentalGainFraction = { num: 1, den: 1 };
+
+/** 비율(0~1) — 표시·혼합 공제율 산정용. 금액 안분에는 `applyRentalGainShare`를 쓴다. */
+export function calcRentalGainRatio(args: Parameters<typeof calcRentalGainFraction>[0]): number | null {
+  const f = calcRentalGainFraction(args);
+  return f === null ? null : f.num / f.den;
+}
+
+/**
+ * 임대기간 분 금액 = floor(금액 × 분자 ÷ 분모) — 조특령 §97의3⑤·§97의5②.
+ * 분수가 없으면(§97·§97의2·취득 즉시 계속 임대 등 비율 1인 효과) 비율로 곱한다.
+ * 종전 `applyRate(금액, 비율)`은 비율이 0.7647…처럼 무한소수면 곱이 정수인 입력에서 1원 적게 나왔다.
+ */
+export function applyRentalGainShare(
+  amount: number,
+  eff: { rentalGainRatio: number; rentalGainFraction?: RentalGainFraction },
+): number {
+  if (eff.rentalGainFraction) return safeMultiplyThenDivide(amount, eff.rentalGainFraction.num, eff.rentalGainFraction.den);
+  return applyRate(amount, eff.rentalGainRatio);
 }
 
 /** 조특령 §97의3③4호 — 임대개시일 당시 기준시가 한도 */

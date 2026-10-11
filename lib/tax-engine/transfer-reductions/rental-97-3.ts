@@ -35,7 +35,8 @@
 import { TRANSFER_REDUCTION_ARTICLE } from "../legal-codes/transfer";
 import { checkReductionPeriod } from "./period-check";
 import {
-  calcRentalGainRatio,
+  calcRentalGainFraction,
+  type RentalGainFraction,
   calculateEffectiveRentalPeriod,
   RENTAL_VACANCY_GRACE_MONTHS_97,
   checkRental973Clause24,
@@ -241,8 +242,9 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
 
   // 7) 임대기간 분 양도차익 안분 (령 §97의3⑤ — 기준시가 비례)
   let rentalGainRatio = 1;
+  let rentalGainFraction: RentalGainFraction | undefined;
   if (input.rentalStartDate && input.acquisitionDate) {
-    const ratio = calcRentalGainRatio({
+    const fraction = calcRentalGainFraction({
       rentalStartDate: input.rentalStartDate,
       acquisitionDate: input.acquisitionDate,
       // 조특령 §97의3⑤ — 분자의 감수 C = 실제 임대기간 **개시일**의 기준시가
@@ -253,7 +255,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
       stdPriceAtRentalStart: input.stdPriceAtRentalStart ?? input.officialPriceAtStart,
       stdPriceAtTransfer: input.stdPriceAtTransfer,
     });
-    if (ratio === null) {
+    if (fraction === null) {
       reasons.push({
         code: "MISSING_PRORATION_PRICES",
         message:
@@ -262,7 +264,8 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
         legalBasis: "조특령 §97의3⑤",
       });
     } else {
-      rentalGainRatio = ratio;
+      rentalGainRatio = fraction.num / fraction.den;
+      rentalGainFraction = fraction;
     }
   }
 
@@ -283,6 +286,7 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
     effectCategory: "long_term_holding_special",
     overrideRate, // 동적: 10년↑ 0.7 / (등록 ~2022.12.31) 8~10년 0.5
     rentalGainRatio,
+    rentalGainFraction,
     eligibleRentalYears,
   };
 }
