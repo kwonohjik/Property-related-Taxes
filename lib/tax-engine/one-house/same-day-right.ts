@@ -18,6 +18,8 @@
  *    반사실을 짜지 않고, 같은 날 권리를 보유 권리에 합쳐 같은 파이프라인을 한 번 더 돌려 결론만 대조한다.
  */
 import type { TransferTaxInput, TransferTaxResult } from "../types/transfer.types";
+import type { AggregateTransferResult, TransferTaxItemInput } from "../types/transfer-aggregate.types";
+import type { MixedUseGainBreakdown } from "../types/transfer-mixed-use.types";
 import type { OneHouseJudgment, OneHouseUndetermined } from "./types";
 
 export const SAME_DAY_RIGHT_UNVERIFIED_ID = "same-day-right-unverified";
@@ -28,8 +30,13 @@ export const SAME_DAY_RIGHT_NOTICE =
   "서면인터넷방문상담4팀-1697(2004.10.22.) 등)을 권리에 적용한 것이며, 권리에 직접 적용한 해석은 확인하지 못했으니 " +
   "확인이 필요합니다.";
 
+type SameDayRightFields = Pick<
+  TransferTaxInput,
+  "presaleRights" | "householdRightCount" | "sameDayAcquiredPresaleRights"
+>;
+
 /** 같은 날 취득 권리를 보유 권리에 합친 반사실 입력 — 같은 날 권리가 없으면 입력 그대로(같은 참조). */
-export function withSameDayRightsHeld(input: TransferTaxInput): TransferTaxInput {
+export function withSameDayRightsHeld<T extends SameDayRightFields>(input: T): T {
   const sameDay = input.sameDayAcquiredPresaleRights ?? [];
   if (sameDay.length === 0) return input;
   return {
@@ -98,4 +105,58 @@ export function anySameDayRightChangesConclusion(
   return properties.some(
     (p) => (p.sameDayAcquiredPresaleRights?.length ?? 0) > 0 && resultsDiffer(calc(p), calc(withSameDayRightsHeld(p))),
   );
+}
+
+/**
+ * 겸용주택 계산기 — 같은 날 권리를 보유로 세면 주택분 비과세 여부 또는 총 납부세액이 달라질 때만 경고를 싣는다.
+ * 겸용 결과는 자기 `warnings`를 갖는다. 같은 날 권리가 없으면 결과를 그대로 돌려준다.
+ * @param recalc 같은 날 권리를 보유로 합친 입력으로 겸용 엔진을 다시 돌린 결과를 돌려주는 함수
+ */
+export function mixedUseWithSameDayRightWarning(
+  input: TransferTaxInput,
+  result: MixedUseGainBreakdown,
+  recalc: (counterfactual: TransferTaxInput) => MixedUseGainBreakdown,
+): MixedUseGainBreakdown {
+  if ((input.sameDayAcquiredPresaleRights?.length ?? 0) === 0) return result;
+  const alt = recalc(withSameDayRightsHeld(input));
+  const differ =
+    result.housingPart.isExempt !== alt.housingPart.isExempt || result.total.totalPayable !== alt.total.totalPayable;
+  return differ ? { ...result, warnings: [...result.warnings, SAME_DAY_RIGHT_NOTICE] } : result;
+}
+
+/**
+ * 일괄양도(함께 양도) 자산 목록 — 같은 날 권리를 세대 보유 권리에 합친 반사실 목록.
+ * 주 자산(같은 날 권리 목록을 가진 item)은 보유 권리·입주권 수를 함께 옮기고, 세대 단위로 `presaleRights`를 상속받은
+ * 컴패니언·겸용 파트 item(주 자산 입력과 같은 참조)은 보유 권리 목록만 바꾼다. 다른 item은 그대로다.
+ */
+export function withSameDayRightsHeldOnItems(
+  input: TransferTaxInput,
+  items: readonly TransferTaxItemInput[],
+): TransferTaxItemInput[] {
+  const held = withSameDayRightsHeld(input);
+  return items.map((item) => {
+    if ((item.sameDayAcquiredPresaleRights?.length ?? 0) > 0) return withSameDayRightsHeld(item);
+    if (item.presaleRights === input.presaleRights) return { ...item, presaleRights: held.presaleRights };
+    return item;
+  });
+}
+
+/**
+ * 일괄양도 계산기 — 자산 중 하나라도 같은 날 권리를 보유로 세면 비과세 여부가 달라지거나 총세액이 달라질 때만 경고를 싣는다.
+ * 일괄양도 결과는 신고서 단위 `warnings`를 갖는다.
+ * @param items 계산에 넣은 자산 목록
+ * @param recalc 같은 날 권리를 보유로 합친 자산 목록으로 집계 엔진을 다시 돌린 결과를 돌려주는 함수
+ */
+export function aggregateWithSameDayRightWarning(
+  input: TransferTaxInput,
+  result: AggregateTransferResult,
+  items: readonly TransferTaxItemInput[],
+  recalc: (heldItems: TransferTaxItemInput[]) => AggregateTransferResult,
+): AggregateTransferResult {
+  if ((input.sameDayAcquiredPresaleRights?.length ?? 0) === 0) return result;
+  const alt = recalc(withSameDayRightsHeldOnItems(input, items));
+  const differ =
+    result.totalTax !== alt.totalTax ||
+    result.properties.some((p, i) => p.isExempt !== alt.properties[i]?.isExempt);
+  return differ ? { ...result, warnings: [...result.warnings, SAME_DAY_RIGHT_NOTICE] } : result;
 }
