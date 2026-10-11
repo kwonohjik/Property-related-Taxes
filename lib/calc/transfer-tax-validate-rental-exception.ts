@@ -64,6 +64,12 @@ export function validateRentalHousingException(
    * 침묵으로 틀려지지 않는다(막지 않을 뿐 계산은 정확하다).
    */
   wasRegulatedAtAcquisition = false,
+  /**
+   * OH-40 이력 칸(⑤ `RentalLifetimeLimitBlock`)이 **화면에 있을 때만** 필수로 막는다 — 판정 메뉴(`facts`)와 부담부증여(카드
+   * `mode="full"` — 증여세 경로 ⑧ `gift-burdened-rental-exception.ts`가 true를 넘긴다). 계산기(`calc` 카드)는 그 칸이 없어
+   * 막으면 막다른 오류라 기본값은 `mode === "facts"`다(S06-9 · 3중 패턴).
+   */
+  requirePriorHistory: boolean = mode === "facts",
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -239,7 +245,7 @@ export function validateRentalHousingException(
     return `${label}: 2019.2.12 부칙 경과조치의 사유(당시 거주 · 그 전 계약금 지급과 임대주택 등록 여부)를 선택하세요 (대통령령 제29523호 부칙 제7조②).`;
   }
   if (
-    mode === "facts" &&
+    requirePriorHistory &&
     rh.scenario === "A" &&
     !rh.priorRentalExemptionHistory &&
     inLifetimeEraBase &&

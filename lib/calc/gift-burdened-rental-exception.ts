@@ -100,5 +100,7 @@ export function giftBurdenedRentalExceptionError(
     // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건(조정대상지역 취득 시에만 필요) 판정.
     // 엔진은 주소(법정동코드)가 있으면 저장값 대신 코드로 판정한다 — ⑤ 카드와 같은 실효값(G1-13).
     giftBurdenedEffectiveWasRegulatedAtAcquisition(bgt, giftBurdenedRegionCode(item)),
+    // OH-40 이력 칸은 이 경로 카드(`mode="full"`)에 보인다(`RentalLifetimeLimitBlock` — 계산기 `calc`만 감춘다) — ⑧도 요구한다.
+    true,
   );
 }

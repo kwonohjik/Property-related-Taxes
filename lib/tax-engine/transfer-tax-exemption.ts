@@ -36,6 +36,7 @@ import {
   article89ConfirmNotesUndetermined,
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
+import { deriveLegalBasis } from "./one-house/legal-basis";
 import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -175,10 +176,7 @@ export function checkExemption(
         judgmentBaseDate,
       ),
     ),
-    legalBasis: dedupeLegalBasis([
-      ...appliedExceptions.map((e) => e.legalBasis),
-      ...pending.map((p) => p.legalBasis),
-    ]),
+    legalBasis: deriveLegalBasis(appliedExceptions, pending),
   };
 }
 
@@ -195,11 +193,6 @@ function requirementReviewEchoOf(
   review: OneHouseJudgment["requirementReview"],
 ): Pick<OneHouseJudgment, "requirementReview"> {
   return review ? { requirementReview: review } : {};
-}
-
-/** 근거 조문 목록 — 입력 순서를 유지한 채 중복만 제거한다(표시 순서가 곧 판정 순서다). */
-function dedupeLegalBasis(values: string[]): string[] {
-  return [...new Set(values)];
 }
 
 function checkExemptionCore(

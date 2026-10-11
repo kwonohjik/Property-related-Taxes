@@ -62,8 +62,8 @@ import {
   isConstructionArticle,
   isApartmentRestrictedForArticle,
   type NormalizedRentalUnit,
-  type ArticleFailCode,
 } from "../../rental-article/check";
+import { buildFailMessage, TERMINATED_DUTY_YEARS } from "./fail-messages";
 import type {
   RentalUnitInput,
   RentalCategory,
@@ -102,15 +102,6 @@ export type EligibilityContext = {
   | "priorResidenceTransferDate"
   | "wasRegisteredRentalOrChildcare"
 >;
-
-/**
- * 종전 「민간임대주택에 관한 특별법」 임대의무기간(년) — §43①이 가리키는 §2 5호(장기일반 「8년 이상」)·
- * 6호(단기 「4년 이상」) (법률 제17482호 개정 전, MST 211593). §155㉓1호 1/2 판정 전용(OH-39).
- */
-const TERMINATED_DUTY_YEARS: Record<NonNullable<RentalUnitInput["terminatedRegistrationType"]>, number> = {
-  short_term: 4,
-  long_term_general: 8,
-};
 
 /** §155㉓ 「등록이 말소된 이후 … 5년 이내에 거주주택을 양도」 — 기한 연수 (I-4) */
 export const TERMINATION_TRANSFER_YEARS = 5;
@@ -164,7 +155,8 @@ export type CategoryAvailability = { available: boolean; reason?: string };
 /**
  * 등록일 2필드로 **결정적으로 배제**되는 임대 구분 유형을 disabled 처리하기 위한 판정.
  * 배제 기준은 `rental-article/check.ts` checkArticleGates의 REG_DATE_GATE와 1:1(단일 소스, RA_CUT 재사용).
- *   - existing_business(나): 세무서 등록일 > 2003.10.29 이면 배제 (bizRegDateMax, check.ts:189)
+ *   - existing_business(나): 지자체 등록일 > 2003.10.29 또는 세무서 등록일 > 2004.6.30(의제 기한) 이면 배제
+ *     (`passesExistingBusinessRegGate` — check.ts와 같은 술어. 날짜 하나만 있어도 그 날짜만으로 확정되면 배제)
  *   - short_6y(아·자): 등록기준일 max < 2025.6.4 이면 배제 (regDateMin, check.ts:186)
  * long_general·unsold_08_09(라)·pre_2018(구법)은 등록일 단독 배제 게이트가 없어 항상 활성.
  * 판정 불가(날짜 미입력)면 available=true — 조기 차단 금지(엔진 `?? 0` fail보다 관대·불리 미적용).
@@ -183,10 +175,14 @@ export function deriveCategoryAvailability(
       : null;
   const effTs = effRegDate?.getTime() ?? null;
 
-  const existingBusiness: CategoryAvailability =
-    bizValid && bizTs > RA_CUT.Y2003_10_29
-      ? { available: false, reason: "기존사업자(나목)는 세무서 사업자등록 2003.10.29 이전 등록분만 해당합니다." }
-      : { available: true };
+  // 나목 — 판정 불가(날짜 하나 미입력)는 활성. 엔진 술어(`passesExistingBusinessRegGate`)와 같은 두 경계를 각각 본다(한 날짜만으로 확정되면 배제).
+  const rentTs = rentalRegistrationDate?.getTime();
+  const rentValid = rentTs != null && !Number.isNaN(rentTs);
+  const existingBusinessUnavailable =
+    (bizValid && bizTs > RA_CUT.Y2004_06_30) || (rentValid && rentTs > RA_CUT.Y2003_10_29);
+  const existingBusiness: CategoryAvailability = existingBusinessUnavailable
+    ? { available: false, reason: "기존사업자(나목)는 지자체 임대사업자 등록이 2003.10.29 이전이고 세무서 사업자등록이 2004.6.30까지(2003.10.29 현재 지자체 등록자는 그때까지 한 사업자등록을 지자체 등록일에 한 것으로 봄)인 경우만 해당합니다." }
+    : { available: true };
 
   const short6y: CategoryAvailability =
     effTs != null && effTs < RA_CUT.Y2025_06_04
@@ -250,75 +246,6 @@ export function deriveStdPriceCap(
  * 로직 단일 소스는 `isApartmentRestrictedForArticle`(check.ts).
  */
 export const isApartmentRestricted = isApartmentRestrictedForArticle;
-
-// ============================================================
-// 호별 미충족 메시지 빌더 (checkRentalArticle failCode → §155⑳ 한국어 메시지)
-// ============================================================
-
-function buildFailMessage(
-  code: ArticleFailCode,
-  i: number,
-  article: RentalArticle,
-  requiredYears: number,
-  stdPriceCap: number,
-  unit: RentalUnitInput,
-): string {
-  const n = i + 1;
-  switch (code) {
-    case "BOTH_REG_REQUIRED":
-      return `${n}호: 세무서 사업자등록일과 지자체 임대사업자등록신청일을 모두 입력해야 합니다(사업자등록등).`;
-    case "RENTAL_PERIOD_SHORT":
-      return `${n}호 의무임대기간 ${requiredYears}년 미충족 (현재: ${Math.floor(unit.rentalMonths / 12)}년 ${unit.rentalMonths % 12}개월)`;
-    case "STANDARD_PRICE_EXCEEDED":
-      return `${n}호 임대개시일 기준시가 ${(stdPriceCap / 100_000_000).toFixed(0)}억원 초과 (입력값: ${(unit.standardPriceAtRentalStart / 100_000_000).toFixed(2)}억원)`;
-    case "APARTMENT_RESTRICTED":
-      return `${n}호: 해당 유형(${article}목)에서 아파트는 §155⑳ 특례 대상이 아닙니다.`;
-    case "SHORT_TERM_REGULATED":
-      return `${n}호: 조정대상지역에 신규취득한 단기임대(아목)는 §155⑳ 특례 불가.`;
-    case "SIZE_REQUIRED":
-      return `${n}호: ${article === "라" ? "미분양매입임대주택은" : "건설임대는"} 대지면적·연면적을 입력해야 규모요건(대지 298㎡·연면적 149㎡ 이하)을 판정할 수 있습니다.`;
-    case "SIZE_EXCEEDED":
-      return `${n}호: ${article === "라" ? "미분양매입임대주택" : "건설임대"} 규모요건 초과 (대지 ${unit.landAreaM2}㎡·연면적 ${unit.totalFloorAreaM2}㎡ — 각 298㎡·149㎡ 이하 필요).`;
-    case "MIN_UNITS_NOT_MET":
-      // 목별 법문이 다르다(소령 §167의3①2호) — 나목 「국민주택규모 … 민간매입임대주택을 2호 이상」,
-      // 라목 5) 「미분양매입임대주택이 같은 시ㆍ군에서 5호 이상」, 다·바·자목 「건설임대주택을 2호 이상」.
-      if (article === "나") return `${n}호: 나목은 국민주택규모 민간매입임대주택을 2호 이상 임대해야 합니다.`;
-      if (article === "라") return `${n}호: 라목은 미분양매입임대주택이 같은 시·군에서 5호 이상이어야 합니다.`;
-      return `${n}호: 건설임대는 2호 이상 임대 요건을 충족해야 합니다.`;
-    case "REG_DATE_GATE":
-      return `${n}호: 해당 유형(${article}목)의 등록기준일 요건을 충족하지 않습니다(단기 6년 유형은 2025.6.4 이후 등록).`;
-    case "SHORT_TO_LONG_CHANGE":
-      return `${n}호: 단기임대에서 장기일반으로 변경신고한 주택은 §155⑳ 특례 대상이 아닙니다.`;
-    case "NATIONAL_SIZE_REQUIRED":
-      return `${n}호: 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 요건을 충족해야 합니다.`;
-    case "REGION_RESTRICTED":
-      return `${n}호: 해당 유형은 비수도권 소재 주택만 대상입니다.`;
-    case "RENTAL_TERMINATION_RESTRICTED": {
-      // ⑳ 경로에서는 ㉓(말소 후 5년 내 거주주택 양도)만 이 코드를 쓴다 — 사목은 ⑳에서 도출되지 않는다.
-      const t = unit.terminatedRegistrationType;
-      if (!t) {
-        return `${n}호: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택해야 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호(임대의무기간 1/2 이상)를 판정할 수 있습니다.`;
-      }
-      const duty = TERMINATED_DUTY_YEARS[t];
-      return `${n}호: 자진말소는 「민간임대주택에 관한 특별법」 제43조 임대의무기간(${duty}년)의 1/2(${duty * 6}개월) 이상 임대해야 합니다 (현재: ${unit.rentalMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호).`;
-    }
-    case "REQUIREMENTS_NOT_CONFIRMED":
-      return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;
-    case "REGISTERED_AFTER_TRANSFER":
-      return (
-        `${n}호: 거주주택 양도일 현재 세무서 사업자등록과 지자체 임대주택 등록을 모두 마쳐야 합니다 ` +
-        `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 2호) — 입력한 등록일 중 양도일보다 늦은 날이 있습니다.`
-      );
-    case "APT_TRANSFER_DEADLINE_EXCEEDED":
-      return (
-        `${n}호: 해당 유형(${article}목)의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
-        "(2027.12.31 — 임대의무기간 2027.1.1 이후 종료·2027.1.1 이후 조정대상지역 신규지정·정비사업 이전고시로 " +
-        "각각 1년 연장될 수 있음)이 지난 후에도 양도하지 않아 장기임대주택으로 인정되지 않습니다."
-      );
-    default:
-      return `${n}호: 임대주택 요건 미충족`;
-  }
-}
 
 // ============================================================
 // 메인 판정 함수
@@ -400,6 +327,7 @@ export function checkEligibility(
    * **후단**(PHRP 정의)만 인용한다 — 「생애 한 차례」·「1주택 외 주택을 모두 양도한 후」는 본문
    * (전단)의 문언이라 §154⑩ 표준 경로(`isStandalone154_10`)에는 적용되지 않는다.
    */
+  let priorHistoryUnknown = false;
   if (!isStandalone154_10 && ctx) {
     // D11 — 경과조치는 사유까지 있어야 괄호를 푼다(2호 계약금 경로는 2019.2.12. 전 등록 임대주택 소유 필요).
     const claimed = ctx.residenceTransitionUnderAddendum === true;
@@ -428,9 +356,16 @@ export function checkEligibility(
           "2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 장기임대주택 보유 중 생애 한 차례만 거주주택을 최초로 양도하는 경우에 한정됩니다 — 이미 거주주택을 양도해 특례를 적용받은 이력이 있어 적용되지 않습니다 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)",
         );
       } else if (ctx.priorRentalExemptionHistory == null) {
-        notices.push(
-          "생애 한 차례 제한(2019.2.12 이후 취득 거주주택 · 2025.2.27 이전 양도 — 소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)은 판정하지 않았습니다. 장기임대주택을 보유한 채 이미 거주주택을 양도해 이 특례를 적용받은 적이 있다면 적용되지 않습니다 — 판정 메뉴에서 이력을 입력하세요.",
+        /**
+         * S06-9 — 이력을 입력하지 않았다 = **모른다**. 「생애 한 차례만 … 최초로 양도하는 경우에 한정」(2024.5.17. 시행
+         * 소령 §155⑳ 괄호)은 특례의 **성립 요건 사실**이라, 모르면 혜택을 적용하지 않는다(사용자 결정 2026-10-04 — 「모름 = 혜택
+         * 불성립 + 결론을 가를 때만 확인 필요」). 종전에는 적용하고 고지만 했다 — 형제 축 D11(경과조치 사유 미입력)·§156의2·3은
+         * 이미 이 전환을 마쳤다. 「확인 필요」 고지는 아래에서 **이 사실이 결론을 가를 때만**(나머지 요건 충족) 낸다.
+         */
+        residenceFailReasons.push(
+          "2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 장기임대주택 보유 중 생애 한 차례만 거주주택을 최초로 양도하는 경우에 한정됩니다 — 이미 거주주택을 양도해 이 특례를 적용받은 이력을 입력하지 않아 적용하지 않았습니다 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)",
         );
+        priorHistoryUnknown = true;
       }
     }
   }
@@ -598,7 +533,10 @@ export function checkEligibility(
     // §155㉑ — 임대기간요건을 **충족하기 전에** 거주주택을 양도해도 장기임대주택으로 보아 ⑳을 적용한다.
     // 면제되는 것은 기간 요건뿐이다(다른 실패 코드는 그대로). 말소된 주택은 양도일 현재 임대 중이
     // 아니므로(⑳2호) ㉓으로만 풀린다. ㉑로 통과한 호는 ㉒ 사후 추징 대상이라 따로 남긴다.
-    const periodPending = !unit.rentalAutoTermination && result.failCodes.includes("RENTAL_PERIOD_SHORT");
+    // S16-3 — 「말소된 호」는 ㉓ 대상 목뿐이다(위 `terminationEligibleArticle` · `skipAptTransferDeadlineGate`와 같은 조건). 비대상 목의 말소
+    // 플래그(화면에서 사라진 stale 값 · API 직접 호출)로 ㉑ 구제를 끄지 않는다 — 말소 표시는 이 목에서 효력이 없다.
+    const periodPending =
+      !(unit.rentalAutoTermination && terminationEligibleArticle) && result.failCodes.includes("RENTAL_PERIOD_SHORT");
     if ((terminationRelief || periodPending) && result.failCodes.includes("RENTAL_PERIOD_SHORT")) {
       result.failCodes = result.failCodes.filter((c) => c !== "RENTAL_PERIOD_SHORT");
       result.passed = result.failCodes.length === 0;
@@ -646,6 +584,13 @@ export function checkEligibility(
   }
 
   const passed = residenceFailReasons.length === 0 && allUnitsPassed;
+
+  // S06-9 — 「모름」으로 불성립한 이력 사실이 **결론을 가를 때만**(다른 불충족이 없을 때만) 확인 필요를 고지한다.
+  if (priorHistoryUnknown && residenceFailReasons.length === 1 && allUnitsPassed) {
+    notices.push(
+      "생애 한 차례 제한(2019.2.12 이후 취득 거주주택 · 2025.2.27 이전 양도 — 소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)의 이력을 입력하지 않아 적용하지 않았습니다 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 적이 없다면 판정 메뉴에서 이력을 「없음」으로 입력하세요(확인 필요).",
+    );
+  }
 
   if (
     ctx &&

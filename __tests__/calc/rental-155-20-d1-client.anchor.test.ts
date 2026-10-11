@@ -198,8 +198,15 @@ describe("V-40 OH-40 — 구간 내 A 이력(판정 메뉴에서만 요구)", ()
     expect(V(inEra(""), "2025-02-28", "facts")).toBeNull();
     expect(V(inEra(""), "2025-02-27", "facts")).toContain("이력");
   });
-  it("V-40d 계산기(full)는 막지 않는다 — 판정 사실 칸이 없다(엔진이 판정 보류 고지)", () => {
+  it("V-40d 계산기(full)는 막지 않는다 — 판정 사실 칸이 없다(막으면 막다른 오류) · 엔진이 불성립 + 확인 필요(S06-9)", () => {
     expect(V(inEra(""), "2024-06-01", "full")).toBeNull();
+  });
+  it("V-40e (S06-9) 칸이 화면에 있는 `full`(부담부증여 카드)은 requirePriorHistory로 막는다 — 선택하면 통과", () => {
+    const call = (a: AssetForm) =>
+      validateRentalHousingException(a.rentalHousingException, a, 0, "자산1", "2024-06-01", "full", false, false, true);
+    expect(call(inEra(""))).toContain("이력");
+    expect(call(inEra("none"))).toBeNull();
+    expect(call(inEra("", true))).toBeNull();
   });
 });
 

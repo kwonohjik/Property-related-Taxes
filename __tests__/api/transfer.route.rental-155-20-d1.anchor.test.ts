@@ -109,13 +109,14 @@ interface Verdict {
   totalTax: number;
   warnings?: string[];
   rentalApplied?: boolean;
+  steps?: { label: string; formula: string }[];
 }
 async function single(f: TransferFormData): Promise<Verdict> {
   const res = await post(SINGLE, "http://l/api/calc/transfer", await bodyOf(() => callTransferTaxAPI(f)));
   const json = (await res.json()) as { data: { result: Obj } };
   expect(res.status, JSON.stringify(json).slice(0, 400)).toBe(200);
-  const r = json.data.result as { totalTax: number; warnings?: string[]; rentalHousingExceptionDetail?: { applied: boolean } };
-  return { totalTax: r.totalTax, warnings: r.warnings, rentalApplied: r.rentalHousingExceptionDetail?.applied };
+  const r = json.data.result as { totalTax: number; warnings?: string[]; steps?: { label: string; formula: string }[]; rentalHousingExceptionDetail?: { applied: boolean } };
+  return { totalTax: r.totalTax, warnings: r.warnings, steps: r.steps, rentalApplied: r.rentalHousingExceptionDetail?.applied };
 }
 async function multi(f: TransferFormData): Promise<number> {
   const mf = {
@@ -148,10 +149,16 @@ describe("OH-40 route — 생애 1회 이력·경과조치가 엔진에 닿는�
     expect((none.warnings ?? []).some((w) => w.includes(LIFE))).toBe(false);
   });
 
-  it("D1R-2 미선택 → 비과세 + 판정 보류 고지(침묵 적용 아님)", async () => {
-    const r = await single(form({ priorRentalExemptionHistory: "" }));
-    expect(r.totalTax).toBe(0);
-    expect((r.warnings ?? []).some((w) => w.includes(LIFE))).toBe(true);
+  // 🔴 PR6a(S06-9) 정책 반전 — 종전 「미선택 → 비과세 + 판정 보류 고지」는 2026-10-04 원칙(「모름 = 혜택 불성립 + 확인 필요」) 이전
+  //    설계였다. 미선택 = 「있음」과 같은 과세 세액이고, 그 사실이 결론을 가르므로 확인 필요 고지가 붙는다(단건·다건).
+  it("D1R-2 미선택(모름) → 「있음」과 같은 과세 + 확인 필요 고지(침묵 적용 아님)", async () => {
+    const used = await single(form({ priorRentalExemptionHistory: "used" }));
+    const blank = await single(form({ priorRentalExemptionHistory: "" }));
+    expect(blank.totalTax).toBeGreaterThan(0);
+    expect(blank.totalTax).toBe(used.totalTax);
+    expect(await multi(form({ priorRentalExemptionHistory: "" }))).toBe(used.totalTax);
+    const confirm = (blank.steps ?? []).find((s) => s.label.includes("확인 필요"));
+    expect(confirm?.formula).toContain("이력");
   });
 
   it("D1R-3 경과조치(부칙 제7조② · 사유 당시 거주) → 이력 「있음」이어도 비과세", async () => {
