@@ -273,7 +273,9 @@ describe("RS 짝 — 되돌리지 않는 경우", () => {
     expect(hasRestoreNotice(s.warnings)).toBe("");
   });
   it("RS-9 고지의 중과 문장은 양도일 조정대상지역일 때만 — 비조정이면 문장 없이 되돌림만 알린다", async () => {
+    // 양도 주택 소재지가 입력돼 있으면 조정 여부는 주소 판정이 정한다(결정 #3·#4·#5 — 토글은 숨김) — 비조정 소재지(청주)로 둔다.
     const f = failRental(withRental(form([NEW_HOUSE], { contractTotalPrice: "1,500,000,000", isRegulatedArea: false })));
+    f.assets[0].regionCode = "4311110100";
     const w = hasRestoreNotice((await single(f)).warnings);
     expect(w).toContain("(3주택)");
     expect(w).not.toContain("중과를 다시 판정하지 않았습니다");
