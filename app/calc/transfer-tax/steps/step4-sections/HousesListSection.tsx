@@ -71,13 +71,14 @@ interface HouseBadge {
   cls: string;
 }
 
-function resolveHouseBadges(h: HouseEntry): HouseBadge[] {
+function resolveHouseBadges(h: HouseEntry, judgmentMenu: boolean): HouseBadge[] {
   const badges: HouseBadge[] = [];
   if (h.isInherited) badges.push({ key: "inherited", label: "상속", cls: CHIP_AMBER });
   if (h.isLongTermRental) badges.push({ key: "rental", label: "장기임대", cls: CHIP_VIOLET });
   if (h.isApartment) badges.push({ key: "apt", label: "아파트", cls: CHIP_SKY });
   if (h.isOfficetel) badges.push({ key: "ofc", label: "오피스텔", cls: CHIP_SKY });
-  if (h.isUnsoldHousing) badges.push({ key: "unsold", label: "조특법 감면", cls: CHIP_SKY });
+  // 5호(중과 제외) 사실의 배지 — 판정 route는 읽지 않는다. 판정 메뉴에 달면 반영된 것처럼 보인다(S14a-9).
+  if (h.isUnsoldHousing && !judgmentMenu) badges.push({ key: "unsold", label: "조특법 감면", cls: CHIP_SKY });
   return badges;
 }
 
@@ -119,6 +120,8 @@ interface RowProps {
   countExclusionApplies?: (house: HouseEntry) => boolean;
   /** 양도일 — 그날 이후(같은 날 포함) 취득한 행에 「주택 수 제외」 배지를 단다(D2 · `isOwnedAtTransfer`). */
   transferDate: string | undefined;
+  /** 판정 메뉴 — 중과 전용 배지를 달지 않는다. */
+  judgmentMenu: boolean;
 }
 
 /** 조특법 주택 수 제외 사유 — 「특례」 열 배지 문구. 어느 주택이 무슨 사유로 빠지는지 표에서 보인다. */
@@ -130,8 +133,8 @@ function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
   return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate }: RowProps) {
-  const badges = resolveHouseBadges(house);
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, judgmentMenu }: RowProps) {
+  const badges = resolveHouseBadges(house, judgmentMenu);
   const exclusionLabel =
     countExclusionEnabled && (countExclusionApplies?.(house) ?? true) ? countExclusionBadgeLabel(house) : undefined;
   const mergeSide = mergeContext ? mergeHouseSideOf(house, mergeContext) : undefined;
@@ -216,6 +219,7 @@ export function HousesListSection({
   mergeContext,
   countExclusionEnabled = false,
   countExclusionApplies,
+  judgmentMenu = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -260,6 +264,16 @@ export function HousesListSection({
   countExclusionEnabled?: boolean;
   /** 행 선언을 판정에 쓰는가(배지 한정) — `HouseTableRow`로 넘긴다. */
   countExclusionApplies?: (house: HouseEntry) => boolean;
+  /**
+   * **1세대1주택 비과세 판정 메뉴**다 — 명시 prop이다. `hideSellingHouseExclusion` 등 다른 숨김 prop에서 추론하지 않는다
+   * (그 prop들은 각자 한 축만 말한다 — `feedback_ui_mode_flag_not_domain_semantics`). 켜면:
+   *  - 머리말·빈 상태·C-1 안내가 계산기 문맥(중과 판정용·선택·① 칸)을 말하지 않는다(S14a-12).
+   *  - 「분양권·조합원입주권이 없습니다」 확인 토글을 그리지 않는다(S10-9) — 판정 메뉴는 「입력 안 함」과 「없음」을
+   *    구별하는 확인을 두지 않는다(2026-10-06 사용자 결정 · route가 `householdNoPresaleRightsConfirmed: true`로 고정).
+   *  - 행 편집 창이 중과 전용 입력을 열지 않고 명부 배지에 「조특법 감면」을 달지 않는다(S14a-9).
+   * 계산기는 넘기지 않아 동작 불변이다.
+   */
+  judgmentMenu?: boolean;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -403,8 +417,14 @@ export function HousesListSection({
       {/* ── 양도 주택 소재지 ── */}
       <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4 space-y-3">
         <p className="text-sm font-medium">
-          다른 보유 주택 목록{" "}
-          <span className="text-xs text-muted-foreground font-normal">(정밀 중과세 판정용, 선택)</span>
+          다른 보유 주택 목록
+          {/* 판정 메뉴는 중과를 판정하지 않고, 이 명부가 판정 주택 수의 유일한 출처다 — 「선택」이 아니다(S14a-12) */}
+          {!judgmentMenu && (
+            <>
+              {" "}
+              <span className="text-xs text-muted-foreground font-normal">(정밀 중과세 판정용, 선택)</span>
+            </>
+          )}
         </p>
 
         {/* 양도 주택 소재지 — 양도 물건 주소에서 자동 판정 (읽기 전용) */}
@@ -450,7 +470,9 @@ export function HousesListSection({
 
         {houses.length === 0 ? (
           <p className="text-xs text-muted-foreground/70">
-            없음 — 주택 추가 시 정밀 주택 수 산정이 적용됩니다.
+            {judgmentMenu
+              ? "없음 — 세대의 다른 주택을 모두 입력하세요. 비워 두면 다른 주택이 없는 것으로 판정합니다."
+              : "없음 — 주택 추가 시 정밀 주택 수 산정이 적용됩니다."}
           </p>
         ) : (
           /* 주택 목록 테이블 */
@@ -478,6 +500,7 @@ export function HousesListSection({
                     countExclusionEnabled={countExclusionEnabled}
                     countExclusionApplies={countExclusionApplies}
                     transferDate={form.transferDate}
+                    judgmentMenu={judgmentMenu}
                   />
                 ))}
               </tbody>
@@ -514,10 +537,13 @@ export function HousesListSection({
               <b>세대 주택 수</b>는 이 <b>다른 보유 주택 목록</b> 기준으로 산정됩니다 —{" "}
               {divergence.selfOffset === 0 ? (
                 <><b>조합원입주권 비과세 판정</b>(소득세법 §89①4호)입니다.</>
+              ) : judgmentMenu ? (
+                // 판정 메뉴는 중과를 판정하지 않고 ① 세대 보유 주택 수 칸도 없다(주택 수는 명부에서만 나온다 — S14a-12)
+                <><b>1세대1주택 비과세 판정</b>입니다.</>
               ) : (
                 <>중과 2주택·3주택 판정(배제규칙 반영)과 <b>1세대1주택 비과세 판정</b> 모두입니다.</>
               )}
-              ① <b>세대 보유 주택 수</b>는 목록이 비어 있을 때만 사용됩니다.
+              {!judgmentMenu && <> ① <b>세대 보유 주택 수</b>는 목록이 비어 있을 때만 사용됩니다.</>}
             </p>
           </ToneCard>
         )}
@@ -568,7 +594,8 @@ export function HousesListSection({
         showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
         primaryKind={form.assets?.[0]?.assetKind}
         confirmed={form.householdNoPresaleRightsConfirmed}
-        onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
+        // 판정 메뉴는 확인 토글을 두지 않는다 → 평문 「없음」(S10-9). 계산기는 ⑧ 관문이라 그대로 둔다.
+        onConfirmedChange={judgmentMenu ? undefined : (v) => onChange({ householdNoPresaleRightsConfirmed: v })}
         transferDate={form.transferDate}
       />
 
@@ -651,6 +678,7 @@ export function HousesListSection({
               taxIncentiveRentalEnabled={!hideSellingHouseExclusion}
               // P4 양론 C1 「동일세대원에게 증여」는 판정 메뉴(쟁점 카드가 있는 화면)에서만 묻는다.
               householdGiftEnabled={hideSellingHouseExclusion}
+              judgmentMenu={judgmentMenu}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

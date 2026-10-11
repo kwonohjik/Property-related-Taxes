@@ -34,6 +34,7 @@ import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntr
 import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiveRentalFields";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
+import { houseEntrySpecialExclusionVisible } from "@/lib/calc/house-entry-judgment-scope";
 
 // ============================================================
 // Props
@@ -63,13 +64,20 @@ interface Props {
    * 「해석이 갈리는 쟁점」 카드를 띄운다. 계산기는 그 카드가 없어 칩이 아무 일도 하지 않으므로 넘기지 않는다.
    */
   householdGiftEnabled?: boolean;
+  /**
+   * 1세대1주택 비과세 **판정 메뉴**에서 연 편집 창이다 — 명시 prop이다(다른 숨김 prop에서 추론하지 않는다).
+   * 판정 route는 중과 엔진을 부르지 않으므로 **중과 축 전용 입력**(조특법 감면주택 5호 칩·준공후미분양 칩·준공일 칸·
+   * 신축 특례 경고·④ 특수 배제 사유)을 열지 않는다 — 입력해도 판정에 닿지 않는데 같은 조문을 나열한 ⑥ 주택 수 제외와
+   * 혼동되고(S14a-9), 「조특법 감면」 배지까지 달린다. 계산기는 넘기지 않아 동작 불변이다. 사유·근거는 `house-entry-judgment-scope.ts`.
+   */
+  judgmentMenu?: boolean;
 }
 
 // ============================================================
 // 섹션 ① 기본정보 (sky)
 // ============================================================
 
-function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxIncentiveRentalEnabled }: Props) {
+function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxIncentiveRentalEnabled, judgmentMenu }: Props) {
   return (
     <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
 
@@ -126,8 +134,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
       </div>
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-6">
-        {/* 취득일 (행1: 취득일·준공일·전용면적 3열) */}
-        <div className="space-y-1 sm:col-span-2">
+        {/* 취득일 (행1: 취득일·준공일·전용면적 3열 — 판정 메뉴는 준공일이 없어 2열) */}
+        <div className={`space-y-1 ${judgmentMenu ? "sm:col-span-3" : "sm:col-span-2"}`}>
           <label className="block text-caption text-muted-foreground font-medium">취득일</label>
           <DateInput
             value={house.acquisitionDate}
@@ -135,18 +143,20 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
           />
         </div>
 
-        {/* 준공일 (가목 소형신축 3호) */}
-        <div className="space-y-1 sm:col-span-2">
-          <label className="block text-caption text-muted-foreground font-medium">준공일</label>
-          <DateInput
-            value={house.completionDate ?? ""}
-            onChange={(v) => onUpdate({ completionDate: v })}
-          />
-          <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
-        </div>
+        {/* 준공일 (가목 소형신축 3호) — 중과 축이라 판정 메뉴에는 없다 */}
+        {!judgmentMenu && (
+          <div className="space-y-1 sm:col-span-2">
+            <label className="block text-caption text-muted-foreground font-medium">준공일</label>
+            <DateInput
+              value={house.completionDate ?? ""}
+              onChange={(v) => onUpdate({ completionDate: v })}
+            />
+            <p className="text-micro text-muted-foreground">소형신축 특례 준공일 요건 (2024.1.10~2027.12.31)</p>
+          </div>
+        )}
 
         {/* 전용면적 */}
-        <div className="space-y-1 sm:col-span-2">
+        <div className={`space-y-1 ${judgmentMenu ? "sm:col-span-3" : "sm:col-span-2"}`}>
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
             {house.addressLookupFilled && (
@@ -196,16 +206,19 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
             onCheckedChange={(v) => onUpdate({ isOfficetel: v })}
             title="오피스텔"
           />
-          <ToggleCard
-            variant="chip"
-            tone="sky"
-            checked={house.isUnsoldHousing}
-            onCheckedChange={(v) => onUpdate({ isUnsoldHousing: v })}
-            // F-11 — 소령 §167의3①5호(조특법 §77·§98의2·§98의3·§98의5~8·§99·§99의2·§99의3). 주택 수에는
-            // 산입하고 중과 대상에서만 뺀다. 종전 「(미분양·신축)」은 §77을 빠뜨렸다.
-            title="조특법 감면주택(5호)"
-            description="조특법 §77·§98의2·§98의3·§98의5~§98의8·§99·§99의2·§99의3 감면 주택 (소령 §167의3①5호)"
-          />
+          {/* 5호는 중과 대상에서만 뺀다 — 판정 메뉴는 ⑥ 주택 수 제외가 이 사실의 입력 경로다(S14a-9) */}
+          {!judgmentMenu && (
+            <ToggleCard
+              variant="chip"
+              tone="sky"
+              checked={house.isUnsoldHousing}
+              onCheckedChange={(v) => onUpdate({ isUnsoldHousing: v })}
+              // F-11 — 소령 §167의3①5호(조특법 §77·§98의2·§98의3·§98의5~8·§99·§99의2·§99의3). 주택 수에는
+              // 산입하고 중과 대상에서만 뺀다. 종전 「(미분양·신축)」은 §77을 빠뜨렸다.
+              title="조특법 감면주택(5호)"
+              description="조특법 §77·§98의2·§98의3·§98의5~§98의8·§99·§99의2·§99의3 감면 주택 (소령 §167의3①5호)"
+            />
+          )}
           {taxIncentiveRentalEnabled && (
             <ToggleCard
               variant="chip"
@@ -230,13 +243,15 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
               description="조특법 §97·§97의2·§98에 따라 양도소득세가 감면되는 임대주택으로서 5년 이상 임대한 국민주택 (소령 §167의3①3호)"
             />
           )}
-          <ToggleCard
-            variant="chip"
-            tone="sky"
-            checked={house.isUnsoldNewHouse ?? false}
-            onCheckedChange={(v) => onUpdate({ isUnsoldNewHouse: v })}
-            title="준공후미분양"
-          />
+          {!judgmentMenu && (
+            <ToggleCard
+              variant="chip"
+              tone="sky"
+              checked={house.isUnsoldNewHouse ?? false}
+              onCheckedChange={(v) => onUpdate({ isUnsoldNewHouse: v })}
+              title="준공후미분양"
+            />
+          )}
         </div>
       </div>
 
@@ -252,7 +267,8 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
 
       {/* #3-B1 신축·준공후미분양 특례 비차단 경고 — 특례 의도(준공후미분양 토글·준공일 입력)인데
           판정 필수필드(취득가액·전용면적) 미입력 시 침묵 미적용 안내 (소령 §167의3①12 가·나목) */}
-      {(house.isUnsoldNewHouse || !!house.completionDate) &&
+      {!judgmentMenu &&
+        (house.isUnsoldNewHouse || !!house.completionDate) &&
         (!house.acquisitionPrice || !house.exclusiveArea) && (
           <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-caption text-amber-700">
             신축·준공후미분양 특례 판정에는 취득가액·전용면적 입력이 필요합니다. 미입력 시 특례가 적용되지 않습니다.
@@ -589,6 +605,7 @@ export function HouseEntryEditor({
   countExclusionEnabled = false,
   taxIncentiveRentalEnabled = false,
   householdGiftEnabled = false,
+  judgmentMenu = false,
 }: Props) {
   return (
     <div className="space-y-3">
@@ -598,6 +615,7 @@ export function HouseEntryEditor({
         showSpouseOwned={showSpouseOwned}
         transferDate={transferDate}
         taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
+        judgmentMenu={judgmentMenu}
       />
       {/* 취득일(①) 바로 다음 — 합가 후 취득 여부가 그 날짜로 갈린다. */}
       {mergeContext && (
@@ -606,7 +624,10 @@ export function HouseEntryEditor({
       <InheritanceSection house={house} onUpdate={onUpdate} householdGiftEnabled={householdGiftEnabled} />
       {/* ⑪ 연장 사실은 3호 칩과 같은 축(중과) — 계산기만 연다 */}
       <LongTermRentalSection house={house} onUpdate={onUpdate} aptDeadlineExtensionEnabled={taxIncentiveRentalEnabled} />
-      <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
+      {/* ④ 중과 배제 사유 — 판정 메뉴는 담긴 값이 있는 행에서만 연다(꺼서 비울 길을 남긴다 · house-entry-judgment-scope.ts) */}
+      {houseEntrySpecialExclusionVisible(house, judgmentMenu) && (
+        <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
+      )}
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
       <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} />
       {/* ⑥ 조특법 소유주택 의제 — ⑤(소령 §155)와 근거 법률·요건이 다르다 */}

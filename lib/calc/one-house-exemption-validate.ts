@@ -64,6 +64,7 @@ import {
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
 import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
+import { deriveOneHouseFactsFromHouses } from "./one-house-row-facts";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 
@@ -723,10 +724,34 @@ export function computeOneHouseJudgmentSummary(
   // 🔴 D-2 — `temporaryTwoHouseSpecial`은 없다(§155①이 명부 도출로 바뀐 뒤 이 토글을
   //    true로 쓰는 화면이 전무하다 — `ImportedOneHouseFactsCard.tsx:131`과 같은 사실).
   //    한때 있던 「일시적 2주택」 행은 항상 죽은 조건이라 제거했다.
+  //
+  // 🔑 §155⑥1호·⑦·⑧ 세 줄은 ④(`buildHouseholdSpecialPayload`)와 **같은 leaf**(`deriveOneHouseFactsFromHouses` —
+  //    행 우선, 레거시 폴백, 양도일 현재 보유 행만)로 읽는다(S10-11). 종전에는 화면에서 켤 수 없는 레거시 스칼라만 읽어,
+  //    정본인 명부 행 선언은 빠지고(결과 화면에 들어가기 전에는 선언이 어디에도 안 보임) 레거시 선언은 남았다.
+  //    레거시 폴백을 지우지 않는다 — 행 표시가 없는 옛 record는 ④가 스칼라를 그대로 쓰므로 사이드바도 같이 말해야 한다.
+  const factsLegacy = {
+    culturalHeritageHouseSpecial: form.culturalHeritageHouseSpecial,
+    ...(form.ruralHouseSpecial && form.ruralHouseKind
+      ? {
+          ruralHouse: {
+            kind: form.ruralHouseKind as "inherited" | "farm_exit" | "return_to_farm",
+            isOutsideCapitalEupMyeon: form.ruralHouseOutsideCapitalEupMyeon,
+          },
+        }
+      : {}),
+    ...(form.unavoidableOutsideCapitalSpecial
+      ? {
+          unavoidableOutsideCapitalHouse: {
+            reason: form.unavoidableOutsideCapitalReason as "study" | "work" | "illness" | "other",
+          },
+        }
+      : {}),
+  };
+  const rowFacts = deriveOneHouseFactsFromHouses(form.houses, factsLegacy, form.transferDate);
   const declared = [
-    form.culturalHeritageHouseSpecial && "문화유산주택",
-    form.ruralHouseSpecial && "농어촌주택",
-    form.unavoidableOutsideCapitalSpecial && "수도권 밖 부득이",
+    rowFacts.culturalHeritageHouse && "문화유산주택",
+    rowFacts.ruralHouse && "농어촌주택",
+    rowFacts.unavoidableOutsideCapitalHouse && "수도권 밖 부득이",
     // ⑤(섹션)·④·⑧과 같은 게이트 — 섹션이 숨은 세대 구성의 stale 선언은 적지 않는다(OH-05 형제).
     judgmentReplacementHouseVisible(form) && form.replacementHouseSpecial && "대체주택",
     judgmentSaleIsHousing(form) && form.longTermMortgageSpecial && "장기저당담보주택",

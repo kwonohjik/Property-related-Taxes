@@ -29,10 +29,25 @@ export function Rental972InputForm({ value, onChange }: Props) {
     onChange(patch as Partial<Rental972Form>);
   };
 
+  /**
+   * 섹션 번호는 **렌더 순서대로 자동 부여**한다 — `Rental97MainInputForm`과 같은 방식(S16-10).
+   * 🔴 종전에는 「②」가 세 곳에 하드코딩되어 유형을 고르면 「① ② ② ③ ④ ⑤」로 떴다(나목/2호 요건 카드가 유형 카드와 같은 번호).
+   *    배열 순서는 아래 JSX가 그리는 순서와 같아야 한다 — 번호는 tsc가 못 잡는다.
+   */
+  const CIRCLED = ["①", "②", "③", "④", "⑤", "⑥"] as const;
+  const sectionOrder = [
+    true, // 등록·신분
+    true, // 임대 유형
+    value.rental972Type === "construction", // 1호 나목 요건
+    value.rental972Type === "purchase", // 2호 요건
+    true, // 임대 호수 요건
+  ];
+  const num = (i: number) => CIRCLED[sectionOrder.slice(0, i).filter(Boolean).length];
+
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
+      <ToneCard tone="violet" sectionNum={num(0)} title="등록·신분" noDark>
 
         <RegistrationFields
           fieldType={value.type}
@@ -46,7 +61,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
       </ToneCard>
 
       {/* ② 임대 유형 */}
-      <ToneCard tone="amber" sectionNum="②" title="임대 유형 (§97의2①)" noDark>
+      <ToneCard tone="amber" sectionNum={num(1)} title="임대 유형 (§97의2①)" noDark>
 
         <RadioCardGroup
           data-field={`reduction.${value.type}.rental972Type`}
@@ -87,7 +102,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
 
       {/* §97의2①1호 나목 — 1999.8.19 이전 신축 공동주택 (D9-01) */}
       {value.rental972Type === "construction" && (
-        <ToneCard tone="amber" sectionNum="②" title="1호 나목 요건" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="amber" sectionNum={num(2)} title="1호 나목 요건" bodyClassName="space-y-2" noDark>
           <p className="text-micro text-amber-800">
             조특법 §97의2①1호 <strong>나목</strong> — 「<strong>1999년 8월 19일 이전에 신축된
             공동주택</strong>으로서 <strong>1999년 8월 20일 현재 입주된 사실이 없는 주택</strong>」.
@@ -136,7 +151,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
 
       {/* §97의2①2호 — 취득 당시 미입주 (D1-07) */}
       {value.rental972Type === "purchase" && (
-        <ToneCard tone="rose" sectionNum="②" title="2호 요건 — 취득 당시 미입주" noDark>
+        <ToneCard tone="rose" sectionNum={num(3)} title="2호 요건 — 취득 당시 미입주" noDark>
           <p className="mb-1.5 text-micro text-rose-800">
             조특법 §97의2①2호 — 「<strong>취득 당시 입주된 사실이 없는 주택만 해당한다</strong>」.
           </p>
@@ -165,7 +180,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
       )}
 
       {/* 주체 요건 — 조특령 §97의2① (D1-02) */}
-      <ToneCard tone="sky" sectionNum="③" title="임대 호수 요건" noDark>
+      <ToneCard tone="sky" sectionNum={num(4)} title="임대 호수 요건" noDark>
         <div>
           <p className="mb-1.5 text-xs text-muted-foreground">
             신축임대주택 1호 이상을 포함한 2호 이상 임대
@@ -206,7 +221,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
         vacancyGraceMonths={3}
         value={value}
         onChange={patchCommon}
-        sectionOffset={4}
+        sectionOffset={sectionOrder.filter(Boolean).length + 1}
       />
     </div>
   );

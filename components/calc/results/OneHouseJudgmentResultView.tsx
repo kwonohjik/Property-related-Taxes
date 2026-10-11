@@ -425,11 +425,16 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         </ToneCard>
       )}
 
-      {/* ── 판정 보류 ── */}
+      {/*
+        ── 판정 보류 · 확인 필요 ──
+        🔑 이 채널에는 두 종류가 실린다 — 자료가 없어 판정하지 않은 항목과, 「모름」 원칙으로 결론을 낸 뒤 확인을 요구하는
+           항목(「…로 판정했습니다(확인 필요)」). 머리 문구가 앞 종류만 말하면 뒤 종류와 모순된다(S13-13). 제목은 e2e가 잡는
+           이름이라 그대로 두고 머리 문구만 두 종류를 포괄한다.
+      */}
       {judgment.undetermined.length > 0 && (
         <ToneCard tone="rose" sectionNum={nextNo()} title="판정하지 않은 부분">
           <p className="text-sm text-muted-foreground">
-            아래는 입력만으로 결론을 낼 수 없어 판정을 보류했습니다. 억측으로 결론을 내지 않습니다.
+            아래는 입력만으로 확정할 수 없어 확인이 필요한 부분입니다. 항목에 적은 대로 판정을 보류했거나, 적힌 기준으로 판정했습니다.
           </p>
           <ul className="ml-4 list-disc space-y-1 text-sm">
             {judgment.undetermined.map((u) => (
