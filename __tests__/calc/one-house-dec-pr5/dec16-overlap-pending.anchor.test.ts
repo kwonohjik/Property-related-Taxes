@@ -10,7 +10,8 @@ const base = { region: "non_capital" as const };
 const INH = { ...base, id: "C", acquisitionDate: "2000-01-01", isInherited: true, inheritedDate: "2021-06-01", isCoInherited: false, decedentSameHouseholdAtInheritance: false };
 const HERITAGE = { ...base, id: "H", acquisitionDate: "1998-01-01", oneHouseCulturalHeritage: true };
 const RURAL = { ...base, id: "R", acquisitionDate: "1998-01-01", oneHouseRuralHouse: true, ruralHouseKind: "farm_exit", ruralOwnerResidenceYears: 6, ruralOutsideCapitalEupMyeon: true, ruralReturnedToFarmExitHouse: false };
-const UNAVOIDABLE = { ...base, id: "U", acquisitionDate: "1998-01-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work" };
+// 해소일을 명시한다(양도 2023-02-28 기준 3년 이내) — 해소일 공란을 «유리»로 읽는 S02-8 처리에 이 시료가 기대지 않게 한다(#31이 공란을 불성립·입력 차단으로 바꾼다).
+const UNAVOIDABLE = { ...base, id: "U", acquisitionDate: "1998-01-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalResolvedDate: "2022-06-01" };
 
 const mk = (houses: Record<string, unknown>[]): RulingCase =>
   ({

@@ -36,6 +36,7 @@ import { POST as SINGLE } from "@/app/api/calc/transfer/route";
 import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
+import { qualifiesUnavoidableOutsideCapital } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
@@ -235,5 +236,26 @@ describe("#16 ⑧·⑥ + 상속 제외 — 비과세 의제를 중과 배제에�
     const r = await run(form([UNAV({ officialPrice: "100000000", regionCode: GYEONGNAM }), INH_OLD], { transferDate: "2022-09-18" }));
     expect(r.totalTax).toBe(230_082_600);
     expect(r.reasons).toBe("only_general_two_house");
+  });
+
+  /**
+   * 의존 가드(#16 조건 «S02-8을 먼저 정하거나 같은 PR에서 고친다») — ⑧ 해소일·「미해소」 모두 공란(= 모름)인 세대가 새 13·15호 경로로
+   * 3주택 중과를 면하면 안 된다. 공란 처리(S02-8)는 결정 #31(PR8)이 «불성립 + ⑧·⑫ 차단»으로 바꾼다 — 그 변경이 들어오기 전
+   * 브랜치(공란 = 유리)에서는 이 시험이 성립하지 않으므로, 술어 leaf가 공란을 불성립으로 읽을 때만 활성화된다(PR8 → PR5 머지 순서의 자기 점검).
+   */
+  const blankIsUnqualified = !qualifiesUnavoidableOutsideCapital({
+    householdHousingCount: 2,
+    transferDate: new Date(TRANSFER_DATE),
+    unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: undefined },
+  } as never);
+  it.skipIf(!blankIsUnqualified)("⑧ 해소일·미해소 공란 + 상속 3주택 → 모름은 혜택 불성립 — 차단되거나 3주택 중과로 남고, 13·15호 배제 세액으로 새지 않는다", async () => {
+    const f = form([UNAV({ unavoidableOutsideCapitalResolvedDate: undefined }), INH_OLD]);
+    const res = await post(SINGLE, "http://l/api/calc/transfer", await bodyOf(() => callTransferTaxAPI(f)));
+    if (res.status === 200) {
+      const json = (await res.json()) as { data: { result: { totalTax: number } } };
+      expect(json.data.result.totalTax).toBeGreaterThan(AFTER);
+    } else {
+      expect(res.status).toBeGreaterThanOrEqual(400);
+    }
   });
 });
