@@ -131,6 +131,7 @@ type PrimaryLike = {
     subject?: string;
     isSuccessorMember?: boolean;
     completionDate?: string;
+    rightContractDate?: string;
     newHouseResidenceMonths?: number;
     originalAssetType?: string;
     receiveOnlyMode?: boolean;
@@ -202,7 +203,7 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   ) {
     issue(
       ["redevelopment", "completionDate"],
-      "토지만 출자한 완공APT는 준공일(사용승인서 교부일)이 필요합니다 — 1세대1주택 비과세 보유기간 기산일입니다 (소득세법 시행령 §162①4호 · 서면-2022-부동산-1616)",
+      "토지만 출자한 완공APT는 준공일(사용승인서 교부일)이 필요합니다 — 1세대1주택 비과세 보유기간 기산일이자 「취득 당시」 조정대상지역 판정일입니다 (소득세법 시행령 §162①4호 · 서면-2022-부동산-1616)",
     );
   }
 
@@ -210,20 +211,27 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   //   엔진이 읽는 값(`resolveAptResidenceMonths` 승계 분기)만 본다: 신축 거주 칸이 있으면 그것, 없으면 Step4 값 —
   //   Step4 값은 ⑤가 1세대일 때만 입력받으므로 그때만 본다.
   const rd = data.redevelopment;
-  if (rd && rd.subject === "apt" && rd.isSuccessorMember === true && rd.completionDate) {
+  // #12 — 승계조합원과 같은 축: 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 준공 전 거주는 세지 않는다(⑧ 같은 leaf).
+  const landContributedApt =
+    rd?.subject === "apt" && rd.isSuccessorMember !== true && rd.originalAssetType === "land" && rd.receiveOnlyMode !== true;
+  // 조합원 분양계약일 ≤ 사용승인일 (⑧ `validateRedevelopmentAsset` 미러)
+  if (rd && landContributedApt && rd.rightContractDate && rd.completionDate && rd.rightContractDate > rd.completionDate) {
+    issue(["redevelopment", "rightContractDate"], "조합원 분양계약일은 사용승인일 이전이어야 합니다");
+  }
+  if (rd && rd.subject === "apt" && (rd.isSuccessorMember === true || landContributedApt) && rd.completionDate) {
     const max = successorAptMaxResidenceMonths(toDate(rd.completionDate, "completionDate"), toDate(data.transferDate, "transferDate"));
     if (rd.newHouseResidenceMonths !== undefined) {
       if (rd.newHouseResidenceMonths > max)
-        issue(["redevelopment", "newHouseResidenceMonths"], successorResidenceZodMessage(rd.newHouseResidenceMonths, max));
+        issue(["redevelopment", "newHouseResidenceMonths"], successorResidenceZodMessage(rd.newHouseResidenceMonths, max, landContributedApt ? "토지 출자 신축주택" : undefined));
     } else if (data.isOneHousehold === true && (data.residencePeriodMonths ?? 0) > max) {
-      issue(["residencePeriodMonths"], successorResidenceZodMessage(data.residencePeriodMonths ?? 0, max));
+      issue(["residencePeriodMonths"], successorResidenceZodMessage(data.residencePeriodMonths ?? 0, max, landContributedApt ? "토지 출자 신축주택" : undefined));
     }
   }
 }
 
-function successorResidenceZodMessage(months: number, max: number): string {
+function successorResidenceZodMessage(months: number, max: number, subjectLabel = "승계조합원 신축주택"): string {
   return (
-    `승계조합원 신축주택 거주기간 ${months}개월이 준공일부터 양도일까지의 ${max}개월을 넘습니다 — ` +
+    `${subjectLabel} 거주기간 ${months}개월이 준공일부터 양도일까지의 ${max}개월을 넘습니다 — ` +
     `준공 전 거주는 보유기간 중 거주기간이 아닙니다 (소득세법 시행령 §162①4호 · 서면-2019-부동산-4508)`
   );
 }

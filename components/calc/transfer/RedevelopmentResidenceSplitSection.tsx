@@ -19,6 +19,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
+import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 
 interface Props {
   asset: AssetForm;
@@ -31,10 +32,12 @@ interface Props {
 export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouseSingle, transferDate }: Props) {
   const { amount: highValueThreshold, label: hv } = highValueThresholdForDisplay(transferDate);
   const shouldHide = isOneHouseSingle === false;
+  /** #12 — 토지만 출자한 원조합원은 멸실된 주택이 없어 통산할 종전주택 거주가 없다(엔진·④가 신축 거주만 읽는다). */
+  const landContributed = landContributedOriginalApt(asset);
 
   const guidance = useMemo(() => {
     const tp = parseAmount(asset.actualSalePrice || "");
-    const prior = parseInt((asset.redevPriorHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
+    const prior = landContributed ? 0 : parseInt((asset.redevPriorHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
     const newM = parseInt((asset.redevNewHouseResidenceMonths || "0").replace(/,/g, ""), 10) || 0;
     const isHighValue = tp > highValueThreshold;
 
@@ -69,7 +72,9 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
       return {
         tone: "sky" as const,
         title: `C-3 — ${hv} 초과 + 분할 장기보유특별공제 모두 표2 적용`,
-        body: "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
+        body: landContributed
+          ? "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 토지만 출자한 조합원은 신축주택 거주월수만 산정됩니다."
+          : "기존건물분과 청산금분 모두 표2(보유+거주) 적용. 거주월수 귀속은 분리되어 산정됩니다 (기존: 종전+신축 통산 / 청산금분: 신축만).",
       };
     }
     if (exceedsExisting && !exceedsNew) {
@@ -82,9 +87,9 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     return {
       tone: "amber" as const,
       title: "C-5 — 거주 2년 미충족 (두 분기 모두 표1)",
-      body: "종전+신축 통산 거주월수가 24개월 미만이면 표2(80% 캡) 진입 가드 미충족. 기존건물분·청산금분 모두 §95② 본문 표1(30% 캡) 적용.",
+      body: `${landContributed ? "신축주택" : "종전+신축 통산"} 거주월수가 24개월 미만이면 표2(80% 캡) 진입 가드 미충족. 기존건물분·청산금분 모두 §95② 본문 표1(30% 캡) 적용.`,
     };
-  }, [asset.actualSalePrice, asset.redevPriorHouseResidenceMonths, asset.redevNewHouseResidenceMonths, highValueThreshold, hv]);
+  }, [asset.actualSalePrice, asset.redevPriorHouseResidenceMonths, asset.redevNewHouseResidenceMonths, landContributed, highValueThreshold, hv]);
 
   if (shouldHide) return null;
 
@@ -92,10 +97,15 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
     <ToneCard tone="emerald" sectionNum="6" title={`거주개월 분리 입력 (1세대1주택 + ${hv} 초과 시)`} noDark>
       <p className="text-caption text-emerald-800 leading-relaxed">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
-        {" "}— 재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다.
+        {" "}—{" "}
+        {landContributed
+          ? "토지만 출자한 조합원은 멸실된 주택이 없어 통산할 종전주택 거주기간이 없습니다. 사용승인일 이후 신축주택 거주기간만 입력합니다."
+          : "재개발·재건축 거주기간은 종전주택과 신축주택을 통산합니다."}
+        {" "}
         사전법령해석재산 2020-386 — 청산금납부분 장기보유특별공제 표2 진입은 신축주택 거주 2년 이상이 필요합니다.
       </p>
 
+      {!landContributed && (
       <ResidencePeriodGroup
         label="종전주택 거주기간"
         hint="종전주택 취득일~관리처분(또는 그 이후 철거) 사이의 실거주 입주일·퇴거일을 입력하면 개월수가 자동 산정됩니다 (§154⑧ 통산 산식의 종전주택 분)."
@@ -107,6 +117,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
         onChangeStart={(v) => onChange(buildResidencePatch("prior", v, asset.redevPriorResidenceEndDate))}
         onChangeEnd={(v) => onChange(buildResidencePatch("prior", asset.redevPriorResidenceStartDate, v))}
       />
+      )}
 
       <ResidencePeriodGroup
         label="신축주택 거주기간"

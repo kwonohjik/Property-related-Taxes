@@ -21,6 +21,7 @@
  * 쌓여 근거가 보인다(일반 경로와 동일한 additive 동작).
  */
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
+import { redevLandAptResidenceNotices } from "./transfer-tax-redevelopment-land-apt-notices";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { resolveRightSaleSpecialExclusion } from "./one-house/right-sale-special-act-exclusion";
 import { presaleRightStartDate, type ParsedRates } from "./transfer-tax-helpers";
@@ -40,6 +41,8 @@ export function judgeRedevAptOneHouseExemption(
   steps: CalculationStep[],
   hceGeneralHouseAcquisitionDate: Date | undefined,
   parsedRates: ParsedRates,
+  /** 결과 경고 — 토지 출자 원조합원 거주요건 고지(#12)를 싣는다. 미전달이면 고지 없음. */
+  warnings?: string[],
 ): {
   exemptionResult: ReturnType<typeof judgeOneHouseExemptionFromInput> | undefined;
   /** STEP 0.9+0.95 산출물 — `calculateRedevelopmentTax`로 넘긴다 (D4-08). */
@@ -128,8 +131,9 @@ export function judgeRedevAptOneHouseExemption(
    *    `translateRedevAptForHousingJudgment` leaf에 있다(G8-4). 중과 STEP 0.5 ①②도 같은 leaf를 쓴다 —
    *    비과세와 중과 배제가 **같은 입력**을 봐야 한다. 승계조합원의 취득시기가 준공일인 근거는 leaf 주석.
    */
+  const translatedJudgeInput = translateRedevAptForHousingJudgment(exemptionJudgeInput);
   const exemptionResult = judgeOneHouseExemptionFromInput(
-    translateRedevAptForHousingJudgment(exemptionJudgeInput),
+    translatedJudgeInput,
     parsedRates.oneHouseSpecialRules,
     presaleRightStartDate(parsedRates),
   );
@@ -138,6 +142,16 @@ export function judgeRedevAptOneHouseExemption(
     judgeHousingCount: exemptionJudgeInput.householdHousingCount,
     deemedOneHouseBy155: exemptionResult.deemedOneHouseBy155,
   });
+  // #12 — 토지 출자 원조합원 완공APT의 거주요건 판정 고지(결론을 가를 때만). 단독신고는 신축주택을 양도하지 않아 아래에서 제외한다.
+  if (warnings && !isReceiveOnly) {
+    warnings.push(
+      ...redevLandAptResidenceNotices(
+        exemptionJudgeInput,
+        translatedJudgeInput,
+        parsedRates.oneHouseSpecialRules.one_house_exemption,
+      ),
+    );
+  }
   if (isReceiveOnly) return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis };
   return { exemptionResult, houseCountExclusion, oneHouseTable2Axis };
 }

@@ -242,6 +242,8 @@ export type ResidenceReqInput = Pick<
   | "regionInDesignatedDistrict"
   | "wasRegulatedAtAcquisition"
   | "residenceTransitionAcquisitionDate"
+  // #12 — 토지 출자 원조합원 완공APT의 입주권 전환 시점 예외(재산세제과-584). 판정 입력 번역이 싣는 내부 값.
+  | "residenceRightConversionDate"
   | "acquisitionCause"
   | "decedentSameHouseholdBeforeInheritance"
   | "decedentCohabitationResidenceMonths"
@@ -481,6 +483,8 @@ export type OneHouseResidenceBasis =
   | "proviso"
   | "not_regulated"
   | "pre_policy"
+  // #12 — 입주권 전환 완료일 현재 조정대상지역이 아니었다(토지 출자 원조합원 완공APT · 재산세제과-584·서면-2021-부동산-0965)
+  | "right_conversion_not_regulated"
   | "win_win_rental"
   | "met"
   | "unmet"
@@ -529,12 +533,23 @@ export function describeOneHouseResidenceRequirement(
     return { basis: eraBasis, wasRegulated, residenceMonths, requiredYears: CAPITAL_NEWTOWN_RESIDENCE_YEARS, capitalNewTown };
   }
   const requiredYears = rule.regulatedAreaMinResidenceYears;
+  // #12 — 입주권 전환 완료일 현재 조정대상지역이 아니었는가(명부의 지정 효력일). 주소(법정동코드)가 없으면 판정할 수 없다 → 예외 불성립.
+  const notRegulatedAtRightConversion =
+    input.residenceRightConversionDate !== undefined &&
+    !!input.regionCode &&
+    !isRegulatedByBjdCode(
+      input.regionCode,
+      format(input.residenceRightConversionDate, "yyyy-MM-dd"),
+      input.regionInDesignatedDistrict,
+    ).isRegulated;
   const basis: OneHouseResidenceBasis =
     proviso === "both" || proviso === "residence_only"
       ? "proviso"
       : !wasRegulated
         ? "not_regulated"
-        : // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
+        : notRegulatedAtRightConversion
+          ? "right_conversion_not_regulated"
+          : // §154① 부칙(대통령령 제28293호) 적용례 — prePolicy 취득은 조정지역이라도 거주요건 면제
           rule.prePolicyExemptResidence && isPrePolicy
           ? "pre_policy"
           : // §155의3① 상생임대주택 — 「제154조제1항 … 을 적용할 때 거주기간의 제한을 받지 않는다」.

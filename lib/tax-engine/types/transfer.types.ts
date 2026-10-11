@@ -224,6 +224,12 @@ export interface TransferTaxInput {
   transferPrice: number;
   /** 총 물건 양도가액 (지분 모드 전용) — 12억 안분 분모. 미설정 시 transferPrice (사례 27) */
   totalPropertyTransferPrice?: number;
+  /**
+   * 같은 물건의 지분을 **한 사람이 나눠 취득해 전부 양도**하는 카드(축 B · 지분 분할 취득)인가 — route(⑭)가 싣는다.
+   * 공유(타인 소유 지분이 있음)와 구별하는 데만 쓴다 — 입주권 공유지분 양도의 「확인 필요」 고지는 공유에만 붙인다(#11).
+   * 폼·Zod 입력이 아니다(서버가 다자산 구성에서 도출).
+   */
+  soleSplitAcquisition?: boolean;
   /** 부담부증여 12억 안분 분모 (F-1 해석 B — 증여가액 C). 우선순위 1번 분모 */
   burdenedGiftDenominator?: number;
   /** 양도일 */
@@ -646,6 +652,12 @@ export interface TransferTaxInput {
   donorAcquisitionDate?: Date;
   /** §154① 거주요건 경과규정(2017.8.3) 판정용 실제 취득일 — 이월과세 시 수증자 취득일(보유기산일과 별개). 미지정 시 acquisitionDate */
   residenceTransitionAcquisitionDate?: Date;
+  /**
+   * §154① 거주요건 **입주권 전환 시점 예외** 판정일 (#12) — 토지만 출자한 원조합원 완공APT에서 입주권 전환 완료일
+   * (인가일과 분양계약일 중 늦은 날). 그 날 현재 조정대상지역이 아니었으면 사용승인일에 조정대상지역이어도 거주요건이 없다
+   * (재산세제과-584). 판정 입력 번역(`translateRedevAptForHousingJudgment`)이 싣는 **엔진 내부** 값이다 — 폼·Zod 입력이 아니다.
+   */
+  residenceRightConversionDate?: Date;
   /**
    * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).
    *

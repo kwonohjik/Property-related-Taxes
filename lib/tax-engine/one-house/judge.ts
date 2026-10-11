@@ -101,6 +101,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     finalOneHouseRestart: facts.finalOneHouseRestart,
     nonResidentHoldingPeriod: facts.nonResidentHoldingPeriod,
     exemptionHoldingStartDate: facts.exemptionHoldingStartDate,
+    residenceRightConversionDate: facts.residenceRightConversionDate,
   } satisfies OneHouseJudgeInput;
 
   /**
@@ -176,6 +177,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     finalOneHouseRestart: input.finalOneHouseRestart,
     nonResidentHoldingPeriod: input.nonResidentHoldingPeriod,
     exemptionHoldingStartDate: input.exemptionHoldingStartDate,
+    residenceRightConversionDate: input.residenceRightConversionDate,
   } satisfies OneHouseFacts;
 
   type _Facts = typeof facts;

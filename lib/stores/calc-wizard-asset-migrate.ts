@@ -488,6 +488,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevOtherHouseAcquisitionDate === undefined) a.redevOtherHouseAcquisitionDate = "";
   // §89①4호 나목 괄호 — 시행령 §155⑱ 사유 (구 sessionStorage에는 없다)
   if (a.redevOtherHouseDisposalDelayReason === undefined) a.redevOtherHouseDisposalDelayReason = "";
+  // §89①4호 본문 — 토지 출자 입주권의 세대원 건물 소유 선언(#13). 구 저장분은 미답("") — 토지 출자면 불성립 + 확인 필요.
+  if (a.redevLandHouseholdOwnedBuilding === undefined) a.redevLandHouseholdOwnedBuilding = "";
   // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
   if (a.redevLandStdPriceAtAcq === undefined) a.redevLandStdPriceAtAcq = "";         // @deprecated legacy
   if (a.redevLandStdPriceAtApproval === undefined) a.redevLandStdPriceAtApproval = ""; // @deprecated legacy
@@ -499,6 +501,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 사례 48 — 승계조합원 신축APT 양도
   if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";
+  // #12 — 조합원 분양계약일(토지 출자 원조합원 완공APT). 구 저장분은 미입력.
+  if (a.redevRightContractDate === undefined) a.redevRightContractDate = "";
   // ③ 상업용건물·오피스텔 cb* 필드 마이그레이션 (sessionStorage 호환 — 신규 필드 누락 보호)
   // 부수토지 판정 필드 — 이전 버전 이력에는 없으므로 stale 복원 시 undefined 가드 필수.
   if (a.cbTotalLandArea === undefined) a.cbTotalLandArea = "";

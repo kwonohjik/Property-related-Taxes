@@ -1,5 +1,9 @@
 /**
- * 토지 출자 조합원입주권 — 「보유 상황」의 **1세대 해당 토글 비활성화** E2E 회귀 가드.
+ * 토지 출자 조합원입주권 — 「보유 상황」의 **1세대 해당 토글** E2E 회귀 가드.
+ *
+ * ⚠️ #13(2026-10-11)로 방향이 바뀌었다 — 토글을 잠그지 않고(1세대 성립은 사용자 선언 · Q-3′) 토지 출자 입주권은
+ *    「같은 세대가 철거 대상 건물을 소유」했다는 판정 메뉴 선언이 있을 때만 §89①4호가 성립한다는 안내를 띄운다.
+ *    파일 이름의 `disabled`는 이력이다.
  *
  * 법령 근거 (소득세법 원문 확인 2026-08-13):
  *   §89①4호 본문 — 「…관리처분계획의 인가일… 현재 제3호가목에 해당하는 **기존주택을 소유하는
@@ -63,15 +67,18 @@ async function openHoldingStep(page: Page, originalAssetType: "land" | "housing"
 }
 
 test.describe("토지 출자 입주권 — 1세대 해당 토글", () => {
-  test("토지 출자: 1세대 해당 토글이 비활성화된다 (§89①4호 본문·§95② 단서)", async ({ page }) => {
+  test("토지 출자: 1세대 해당 토글은 잠기지 않고, 세대원 건물 소유 선언 안내가 보인다 (§89①4호 본문)", async ({ page }) => {
     test.setTimeout(60_000);
     await openHoldingStep(page, "land");
 
     const toggle = page.getByRole("switch", { name: "1세대 해당" });
     await expect(toggle).toBeVisible();
-    await expect(toggle).toBeDisabled();
-    // 비활성 사유가 화면에 근거와 함께 보인다.
-    await expect(page.getByText(/토지를 출자한 조합원입주권은 1세대1주택 특례/)).toBeVisible();
+    await expect(toggle).toBeEnabled();
+    // 불성립의 근거는 1세대 토글이 아니라 §89①4호 본문(기존주택 소유 세대) 안내가 말한다.
+    const notice = page.getByTestId("land-contributed-right-notice");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("같은 세대가 철거 대상 건물");
+    await expect(notice).toContainText("선언이 없어 비과세·고가 안분을 적용하지 않습니다");
   });
 
   test("주택 출자: 1세대 해당 토글은 활성 상태 (과잉 차단 방지)", async ({ page }) => {
@@ -81,5 +88,6 @@ test.describe("토지 출자 입주권 — 1세대 해당 토글", () => {
     const toggle = page.getByRole("switch", { name: "1세대 해당" });
     await expect(toggle).toBeVisible();
     await expect(toggle).toBeEnabled();
+    await expect(page.getByTestId("land-contributed-right-notice")).toHaveCount(0);
   });
 });

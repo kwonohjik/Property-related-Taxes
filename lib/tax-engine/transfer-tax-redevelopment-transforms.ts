@@ -162,6 +162,10 @@ export function oneRightPresaleGate(
  */
 export type OneRightExemptionFacts = {
   exemptionEligibleAtApproval?: boolean;
+  /** 계산기 §166 출자 자산 — 판정 메뉴에는 없다(그 상자는 이 키를 싣지 않아 아래 토지 출자 게이트가 꺼진다). */
+  originalAssetType?: "land" | "housing";
+  /** 토지 출자일 때만 읽는다 — 인가일·양도일 두 시점 모두 같은 세대가 철거 대상 건물을 소유 (#13). */
+  landHouseholdOwnedBuilding?: boolean;
   otherHouseAcquisitionDate?: Date;
   /** 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 「3년이 되는 날 현재」 해당하면 3년을 넘겨도 나목이 성립한다. */
   otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
@@ -195,14 +199,33 @@ export function pickOneRightExemptionFacts(
 /**
  * §89①4호 고가 판정·안분의 **분모** — 이전방식 무관 전체가액 (P4-3b 추출).
  *
+ * 우선순위: 부담부증여 증여가액 > **물건 전체 양도가액(지분 모드 `totalPropertyTransferPrice`)** > 양도가액.
+ *
+ * 🔴 **공유지분 입주권은 물건 전체 가액으로 잰다** (#11 · 2026-10-11 사용자 결정 A).
+ *    종전에는 지분 모드에서도 `transferPrice`(= 지분 양도가액)로 12억을 재서, 부부가 반씩 가진 20억 입주권이
+ *    10억 ≤ 12억이라 전액 비과세(세액 0)였다 — 혼자 가졌다면 과세비율 0.4다. 「소득세법 시행령」 §156①(타인 소유부분을
+ *    포함한 물건 전체 가액으로 고가주택 판정)·§160①(양도하는 부분의 비율을 곱해 안분)을 4호 단서에 **유추**한 것이고,
+ *    현행 4호 체계에서 공유 입주권을 다룬 해석례는 없어 결과에 「확인 필요」를 싣는다(`oneRightSharedOwnershipNotice`).
+ *    완공APT(§89①3호)의 `resolveHighValuePriceCheck`와 같은 순서다.
+ *
  * 🔑 비교와 안분이 **반드시 같은 값**이어야 한다(아래 `applyOneRightExemption` 주석 참조).
  *    판정 메뉴가 이 식을 베껴 쓰면 그 불변식이 두 파일에 걸쳐 깨질 수 있어 leaf로 뺐다.
  * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
  */
 export function oneRightHighValueBase(input: TransferTaxInput): number {
-  return (input.burdenedGiftDenominator ?? 0) > 0
-    ? input.burdenedGiftDenominator!
-    : input.transferPrice;
+  if ((input.burdenedGiftDenominator ?? 0) > 0) return input.burdenedGiftDenominator!;
+  if ((input.totalPropertyTransferPrice ?? 0) > 0) return input.totalPropertyTransferPrice!;
+  return input.transferPrice;
+}
+
+/**
+ * 토지만 출자한 입주권이 §89①4호 본문(기존주택 소유 세대)을 **채우지 못하는가** — 세대원 건물 소유 선언이 「예」가 아니면 참.
+ * 토지 출자가 아니면(주택 출자 · 판정 메뉴 상자 · 출자 자산 미제공) 거짓이다.
+ */
+export function landContributionBlocksOneRight(
+  facts: Pick<OneRightExemptionFacts, "originalAssetType" | "landHouseholdOwnedBuilding">,
+): boolean {
+  return facts.originalAssetType === "land" && facts.landHouseholdOwnedBuilding !== true;
 }
 
 export function resolveOneRightExemptionClause(
@@ -217,6 +240,9 @@ export function resolveOneRightExemptionClause(
   ) {
     return undefined;
   }
+  // 본문 「인가일 … 현재 제3호가목에 해당하는 기존주택을 소유하는 세대」 — **토지만 출자**했으면 같은 세대가 그 건물을 소유한 경우에만
+  // 성립한다(#13 · 재산세과-1748). 선언이 없거나 「아니오」면 불성립(모름 = 혜택 불성립).
+  if (landContributionBlocksOneRight(redevInfo)) return undefined;
 
   // 가·나목 **양쪽**이 분양권 미보유를 요구한다 — 목을 가르기 전에 한 번 본다.
   // 연혁(E-3 후속): 2022-01-01 전 취득 입주권·분양권은 대상이 아니다(법률 제18578호 부칙 제7조②·③).

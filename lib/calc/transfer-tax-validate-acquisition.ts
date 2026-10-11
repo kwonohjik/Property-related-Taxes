@@ -224,7 +224,11 @@ export function validateAssetAcquisition(
     if (newMonthsRaw) {
       const newMonths = parseInt(newMonthsRaw.replace(/,/g, ""), 10);
       const max = successorAptResidenceOverflow(asset, formTransferDate, newMonths);
-      if (max !== null) return successorAptResidenceOverflowMessage(label, newMonths, max, asset.redevCompletionDate);
+      if (max !== null)
+        return successorAptResidenceOverflowMessage(
+          label, newMonths, max, asset.redevCompletionDate,
+          asset.redevIsSuccessorMember === "yes" ? undefined : "토지 출자 신축주택",
+        );
     }
     // redevelopment 검증 통과 후 일반 취득 검증 스킵 (별도 분기 — 양도가액·취득가액은 redev 분기에서 처리)
     if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);

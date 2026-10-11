@@ -22,6 +22,8 @@ import {
   postApprovalExpensesInScope,
   settlementOneHouseAtSaleInScope,
   redevCompletionDateInScope,
+  landContributedOriginalApt,
+  landHouseholdBuildingInScope,
 } from "./redev-field-scope";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -82,6 +84,10 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
    * 게이트가 없으면 stale 저장값이 그대로 흘러 양도가액·LTHD를 조용히 바꾼다.
    */
   const isApt = subject === "apt";
+  const rightsValueRaw =
+    asset.redevIsSuccessorMember === "yes"
+      ? parseAmount(asset.fixedAcquisitionPrice)
+      : parseAmount(asset.redevRightsValue);
   return {
     subject,
     approvalLawBasis: (asset.redevApprovalLawBasis || "urban_renovation_art_74") as "urban_renovation_art_74" | "small_housing_art_29",
@@ -91,11 +97,10 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // 스케일 O — §166④1호 평가액(관리처분계획상 물건 단위 가격).
     // 승계조합원 갈래도 함께 감싼다: 엔진은 `input.actualAcquisitionPrice`(상위에서 이미 지분
     // 스케일됨)를 우선하고 이 값은 fallback이라, 스케일하지 않으면 fallback만 100%로 남는다.
-    rightsValue: share(
-      asset.redevIsSuccessorMember === "yes"
-        ? parseAmount(asset.fixedAcquisitionPrice)
-        : parseAmount(asset.redevRightsValue),
-    ),
+    rightsValue: share(rightsValueRaw),
+    // 공유지분이면 **물건 전체 권리가액**도 싣는다 — 청산금 수령분의 고가(12억) 비교·안분은 물건 전체 기준이다(#11 · 영 §156①·§160①).
+    //   단독 소유는 싣지 않는다(rightsValue가 곧 물건 전체). 엔진·⑫가 같은 의미로 읽는다.
+    ...(fractional && rightsValueRaw > 0 ? { rightsValueWhole: rightsValueRaw } : {}),
     settlementDirection: (asset.redevSettlementDirection || "pay") as "pay" | "receive",
     // 🔴 스케일 X — §166①1호 「**납부한** 청산금」은 사실이다. 사용자가 지분 납부·수령분을
     //    직접 입력한다(UI 라벨이 지분 모드에서 「(지분 납부분)」으로 바뀐다).
@@ -155,7 +160,9 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       : undefined,
     // 사례 45 — 거주월수 분리 입력 (§154⑧1호 통산 + 해석례 2020-386)
     // 빈문자열 → undefined (legacy fallback 의도 — 엔진에서 residencePeriodMonths 단일값 사용)
-    priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths
+    // #12 — 토지만 출자한 원조합원 완공APT는 멸실된 주택이 없어 종전주택 거주 칸이 화면에 없다(엔진도 신축 거주만 읽는다).
+    //   남은 값이 표2 거주(통산)에 섞이지 않도록 이 축에서는 보내지 않는다.
+    priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths && !landContributedOriginalApt(asset)
       ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
     // 신축 APT 거주월수 — 완공 APT 양도 전용(위 `isApt` 주석).
@@ -163,8 +170,8 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
     // 거주기간(입주일·퇴거일) — 결과 카드 산정 근거 표시용 pass-through
-    priorResidenceStartDate: asset.redevPriorResidenceStartDate || undefined,
-    priorResidenceEndDate: asset.redevPriorResidenceEndDate || undefined,
+    priorResidenceStartDate: landContributedOriginalApt(asset) ? undefined : asset.redevPriorResidenceStartDate || undefined,
+    priorResidenceEndDate: landContributedOriginalApt(asset) ? undefined : asset.redevPriorResidenceEndDate || undefined,
     newResidenceStartDate: asset.redevNewResidenceStartDate || undefined,
     newResidenceEndDate: asset.redevNewResidenceEndDate || undefined,
     // 사례 46 — 청산금 수령분 단독 신고 + 비과세 판정 시점 override
@@ -194,6 +201,15 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       : asset.redevOneHouseAtSettlementSale === "yes"
         ? true
         : asset.redevOneHouseAtSettlementSale === "no"
+          ? false
+          : undefined,
+    // #13 — 토지만 출자한 입주권의 세대원 건물 소유 선언(§89①4호 본문). 토지 출자 입주권 축 밖이면 보내지 않는다
+    //       (출자 자산을 주택으로 되돌린 뒤 남은 값이 엔진에 닿지 않게 — stale 가드). 엔진도 토지 출자일 때만 읽는다.
+    landHouseholdOwnedBuilding: !landHouseholdBuildingInScope(asset)
+      ? undefined
+      : asset.redevLandHouseholdOwnedBuilding === "yes"
+        ? true
+        : asset.redevLandHouseholdOwnedBuilding === "no"
           ? false
           : undefined,
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) — 인가일 기준 종전주택 보유월수
@@ -251,5 +267,7 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // 준공일 — 승계조합원(취득시기 · 영 §162①4호) 또는 토지만 출자한 원조합원(§154① 보유 기산일 — G3-4)에서만 의미가 있다.
     // 범위 밖이면 보내지 않는다(카드가 사라진 뒤 남은 값이 엔진 판정을 바꾸지 않게 — U1-01 규약).
     completionDate: redevCompletionDateInScope(asset) ? asset.redevCompletionDate || undefined : undefined,
+    // #12 — 조합원 분양계약일: 토지 출자 원조합원 완공APT에서만 보낸다(stale 가드 — 축 밖에 남은 값이 엔진에 닿지 않게).
+    rightContractDate: landContributedOriginalApt(asset) ? asset.redevRightContractDate || undefined : undefined,
   };
 }

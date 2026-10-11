@@ -184,7 +184,7 @@ export function calculateTransferTax(
       exemptionResult: redevExemption,
       houseCountExclusion: redevHouseExclusion,
       oneHouseTable2Axis: redevOneHouseTable2Axis,
-    } = judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates);
+    } = judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates, warnings);
 
     // 🔴 종전에는 `multiHouseSurchargeResult`를 **넘기지 않았다** — STEP 0.5(`:219`)에서
     //    판정해 놓고 이 분기가 버렸다. 형제 경로 둘(`buildExemptEarlyResult` ·

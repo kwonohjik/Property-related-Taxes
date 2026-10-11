@@ -51,6 +51,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -169,7 +170,7 @@ export function RedevelopmentRightExemptionSection({
             onChange({ redevExemptionEligibleAtApproval: v ? "yes" : "" })
           }
           title="인가일 현재 §89①3호 가목 요건 충족 (자기선언)"
-          description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상 — 상생임대주택(§155의3) 요건을 갖춘 종전주택은 거주기간 제한 없음)"
+          description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택(철거 대상 건물)을 본인이나 같은 세대원이 소유하고 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상 — 상생임대주택(§155의3) 요건을 갖춘 종전주택은 거주기간 제한 없음)."
         >
           <div className="space-y-3 pt-1">
             <FieldCard
@@ -204,6 +205,27 @@ export function RedevelopmentRightExemptionSection({
               <DateInput
                 value={asset.redevApprovalDate}
                 onChange={(v) => onChange({ redevApprovalDate: v })}
+              />
+            </FieldCard>
+
+            {/* §89①4호 본문 — 철거 대상 건물(기존주택)을 본인·같은 세대원이 소유해야 한다(#13). 토지만 출자한 경우에 쓰인다.
+                판정 메뉴에는 출자 자산 입력이 없어 늘 보이고, 계산기에서 출자 자산을 「토지」로 고르면 이 선언이 적용된다
+                (선언이 없으면 불성립 + 확인 필요). 인가일과 양도일 두 시점 모두로 묻는다(재산세과-1748). */}
+            <FieldCard
+              label="토지만 출자한 경우 — 철거 대상 건물(기존주택)의 세대 소유 (본문)"
+              field="redevLandHouseholdOwnedBuilding"
+              hint="철거 대상 건물(기존주택)을 인가일과 양도일 두 시점 모두 본인이나 같은 세대원이 소유해야 합니다. 건물도 함께 출자했다면 비워 두세요. 계산기에서 출자 자산을 「토지」로 고르면 적용됩니다."
+            >
+              <RadioCardGroup
+                name={`redevLandHouseholdOwnedBuilding-${asset.assetId}`}
+                value={asset.redevLandHouseholdOwnedBuilding || ""}
+                onChange={(v) => onChange({ redevLandHouseholdOwnedBuilding: v as "" | "yes" | "no" })}
+                options={[
+                  { value: "", label: "해당 없음 / 모름", description: "건물도 출자했거나 아직 모릅니다. 토지만 출자한 입주권이면 비과세를 적용하지 않습니다." },
+                  { value: "yes", label: "예 — 인가일·양도일 모두 같은 세대가 소유", description: "인가일과 양도일 두 시점 모두 같은 세대가 건물을 소유 — 위 요건 선언대로 판정합니다." },
+                  { value: "no", label: "아니오 — 다른 세대 소유", description: "건물은 다른 세대 소유이거나 양도 전에 세대가 갈라졌습니다 — 토지만 출자한 입주권이면 비과세 불성립." },
+                ]}
+                layout="inline"
               />
             </FieldCard>
 

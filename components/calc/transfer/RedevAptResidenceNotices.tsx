@@ -5,7 +5,7 @@
  */
 
 /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신할 때 Step4 거주 입력 대신 띄운다. */
-export function RedevSplitResidenceNotice({ isSuccessor }: { isSuccessor: boolean }) {
+export function RedevSplitResidenceNotice({ isSuccessor, isLandContributed = false }: { isSuccessor: boolean; isLandContributed?: boolean }) {
   return (
     <div
       data-testid="redev-split-residence-notice"
@@ -13,7 +13,9 @@ export function RedevSplitResidenceNotice({ isSuccessor }: { isSuccessor: boolea
     >
       <p className="font-medium">거주기간은 ① 재개발 카드의 거주기간 입력을 사용합니다</p>
       <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
-        {isSuccessor
+        {isLandContributed
+          ? "토지만 출자한 조합원은 멸실된 주택이 없어 사용승인일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건에 쓰입니다 (시행령 §162①4호 · §154①)."
+          : isSuccessor
           ? "승계조합원은 준공일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §162①4호 · 서면-2019-부동산-4508)."
           : "종전주택과 신축주택 거주기간을 통산한 값이 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §154⑧1호)."}
       </p>

@@ -544,6 +544,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevPriorHouseHoldingMonths: "",
     redevOtherHouseAcquisitionDate: "", // §89①4호 나목 — 그 1주택 취득일
     redevOtherHouseDisposalDelayReason: "", // §89①4호 나목 괄호 — 시행령 §155⑱ 사유
+    redevLandHouseholdOwnedBuilding: "", // §89①4호 본문 — 토지 출자 입주권의 세대원 건물 소유(#13)
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     redevLandStdPriceAtAcq: "",      // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
     redevLandStdPriceAtApproval: "", // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)
@@ -554,6 +555,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",
+    redevRightContractDate: "", // 토지 출자 원조합원 완공APT — 조합원 분양계약일(#12)
     // 가업상속공제 §97의2④ — UI 시니어 후속 위임. 미사용 시 undefined.
     familyBusinessInheritance: undefined,
     // 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서)

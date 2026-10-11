@@ -98,6 +98,8 @@ export type OneHouseJudgeInput = Pick<
   | "nonResidentHoldingPeriod"
   // ── §154① 보유 기산일 override — 토지 출자 원조합원 완공APT(사용승인일). 엔진이 채운다(G3-4) ──
   | "exemptionHoldingStartDate"
+  // ── §154① 거주요건 입주권 전환 시점 예외 — 토지 출자 원조합원 완공APT. 엔진이 채운다(#12) ──
+  | "residenceRightConversionDate"
 >;
 
 /**
@@ -213,6 +215,9 @@ export type OneHouseFacts = {
 
   /** ⚠️ 사용자 입력이 아니다 — 토지 출자 원조합원 완공APT의 §154① 보유 기산일(사용승인일). 계산기 엔진이 채운다(G3-4). */
   exemptionHoldingStartDate?: TransferTaxInput["exemptionHoldingStartDate"];
+
+  /** ⚠️ 사용자 입력이 아니다 — 토지 출자 원조합원 완공APT의 입주권 전환 완료일(인가일·분양계약일 중 늦은 날). 계산기 엔진이 채운다(#12). */
+  residenceRightConversionDate?: TransferTaxInput["residenceRightConversionDate"];
 };
 
 /** 판정 대상 양도 정보 — 판정 메뉴는 「양도 예정」, 계산기는 실제 입력값(D-3 재판정). */

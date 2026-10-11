@@ -11,6 +11,8 @@ export const redevelopmentSchema = z
     approvalLawBasis: z.enum(["urban_renovation_art_74", "small_housing_art_29"]),
     approvalDate: z.string().date(),
     rightsValue: z.number().int().nonnegative(),
+    // 공유지분 — 물건 전체 권리가액(#11). ★★★ 침묵 stripping 차단: 여기 없으면 route가 제거해 청산금분 12억 비교가 지분가로 돌아간다.
+    rightsValueWhole: z.number().int().positive().optional(),
     settlementDirection: z.enum(["pay", "receive"]),
     settlementAmount: z.number().int().nonnegative(),
     settlementSaleDate: z.string().date().optional(),
@@ -42,6 +44,9 @@ export const redevelopmentSchema = z
     // 사례 46 — 청산금 수령분 단독 신고
     receiveOnlyMode: z.boolean().optional(),
     exemptionEligibleAtApproval: z.boolean().optional(),
+    // §89①4호 본문 — 토지만 출자한 입주권의 세대원 건물 소유 선언(#13). ★★★ 침묵 stripping 차단: 여기 없으면 route가 제거해
+    // 「예」 선언도 엔진에 닿지 않고 토지 출자 입주권이 항상 불성립이 된다.
+    landHouseholdOwnedBuilding: z.boolean().optional(),
     // ⑫ L-12 — 청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대1주택 자기선언.
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거된다.
     oneHouseAtSettlementSale: z.boolean().optional(),
@@ -49,6 +54,8 @@ export const redevelopmentSchema = z
     // 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
     isSuccessorMember: z.boolean().optional(),
     completionDate: z.string().date().optional(),
+    // #12 — 조합원 분양계약일(토지 출자 원조합원 완공APT의 §154① 거주요건 면제 예외 판정). ★★★ 침묵 stripping 차단.
+    rightContractDate: z.string().date().optional(),
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) 자동 검증용.
     // 인가일 기준 종전주택 보유 월수. 24개월 미만 시 UI 경고 카드 노출 (차단 X — 자기선언 우선).
     // 엔진 계산에는 직접 미사용 (비과세 판단은 exemptionEligibleAtApproval 기준).

@@ -282,6 +282,16 @@ export function resolveInheritedHouseExclusionFromInput(
   const redev = input.redevelopment;
   const successorNewBuild =
     redev?.subject === "apt" && redev.isSuccessorMember === true && redev.completionDate !== undefined;
+  /**
+   * #12 — 토지만 출자한 원조합원 신축주택도 취득시기는 사용승인서 교부일이고(영 §162①4호), 「상속개시 당시 보유한 조합원입주권」의
+   * 입주권 취득일은 **관리처분계획 인가일**이다. 인가 전, 곧 토지만 보유한 상태에서 상속이 개시됐다면 입주권을 보유한 것이 아니다.
+   */
+  const landContributedNewBuild =
+    !successorNewBuild &&
+    redev?.subject === "apt" &&
+    redev.isSuccessorMember !== true &&
+    redev.originalAssetType === "land" &&
+    redev.completionDate !== undefined;
   return resolveInheritedHouseExclusion(
     input.houses,
     resolveInheritedSellingHouseId(input),
@@ -297,6 +307,12 @@ export function resolveInheritedHouseExclusionFromInput(
           transferDate: input.transferDate,
           successorRightAcquisitionDate: input.acquisitionDate,
         }
+      : landContributedNewBuild
+        ? {
+            acquisitionDate: redev!.completionDate!,
+            transferDate: input.transferDate,
+            successorRightAcquisitionDate: redev!.approvalDate,
+          }
       : {
           acquisitionDate: input.acquisitionDate,
           transferDate: input.transferDate,
