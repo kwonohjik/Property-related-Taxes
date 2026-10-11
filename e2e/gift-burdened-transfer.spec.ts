@@ -486,10 +486,17 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (
       await expect(actualTotalInput).toBeHidden();
       await expect(dialog.getByText(/환산취득가 =/)).toBeVisible();
 
-      // 증여재산 평가의 시가를 끄면 보충적 평가(기준시가 안분)로 파생: 산정방식 숨김 (조건부 회귀)
-      const marketToggle = dialog.getByRole("switch", { name: /^시가 \(매매/ });
-      await marketToggle.click();
+      // 증여재산 평가의 시가를 지우면 보충적 평가(기준시가 안분)로 파생: 산정방식 숨김 (조건부 회귀)
+      // ⚠️ 시가 ToggleCard를 닫기만 하면 펼침만 접히고 `item.marketValue`는 남는다(증여세 평가도 시가 그대로) — 값을 지워야 평가가 바뀐다.
+      const marketValueInput = dialog.getByRole("textbox", { name: "시가 (매매·수용·경매가액)" });
+      // 콤마 표시 상태에서 fill("")은 변경 이벤트가 나지 않는다(값 유지 실측) — 전체 선택 후 지운다.
+      await marketValueInput.click();
+      await page.keyboard.press("ControlOrMeta+a");
+      await page.keyboard.press("Backspace");
+      await page.keyboard.press("Tab");
+      await expect(marketValueInput).toHaveValue("");
       await expect(dialog.getByTestId("bg-valuation-basis-standard")).toBeVisible();
+      await expect(dialog.getByTestId("bg-valuation-basis-market")).toHaveCount(0);
       await expect(actualRadio).toBeHidden();
     },
   );
