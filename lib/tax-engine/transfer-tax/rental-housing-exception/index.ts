@@ -92,11 +92,16 @@ export function calculateRentalHousingException(
   winWinResidenceExempt = false,
   /** 거주주택·양도 시점 사실(OH-15·16·40) — `checkEligibility`에 그대로 넘긴다. */
   eligibilityContext?: EligibilityContext,
+  /**
+   * 양도일 — 표2 연혁(2009~2020 보유 연 8%)을 가른다(`calcLongTermRate`). 미제공이면 현행 식.
+   * 호출부(`runRentalHousingExceptionStep`)는 항상 넘긴다.
+   */
+  transferDate?: Date,
 ): RentalHousingExceptionResult {
   // ─── Step 0: 토글 OFF ─────────────────────────────────────
   if (!input.applyException) {
     const { gain95Table1, gain95Table2 } = calculateGain95BothTables(
-      gain, holdYears, liveYears,
+      gain, holdYears, liveYears, transferDate,
     );
     return makeIneligibleResult(
       { passed: false, failReasons: [], residenceFailReasons: ["특례 미적용 (토글 OFF)"], laws: [] },
@@ -107,7 +112,7 @@ export function calculateRentalHousingException(
 
   // ─── Step 1: 표1·표2 동시 산출 ────────────────────────────
   const { gain95Table1, gain95Table2 } =
-    calculateGain95BothTables(gain, holdYears, liveYears);
+    calculateGain95BothTables(gain, holdYears, liveYears, transferDate);
 
   // ─── Step 2: 요건 판정 ────────────────────────────────────
   const eligibility = checkEligibility(

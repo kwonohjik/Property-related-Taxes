@@ -13,9 +13,12 @@ import {
 } from "./transfer-tax/rental-housing-exception/eligibility";
 import type { EligibilityResult } from "./transfer-tax/rental-housing-exception/types";
 import {
+  meetsTable2ResidenceRequirement,
   qualifiesWinWinRental,
+  resolveExemptionResidenceMonths,
   resolveWasRegulatedAtAcquisition,
 } from "./transfer-tax-exemption-requirements";
+import { resolveLthdTable2Era } from "./data/lthd-table2-era";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { OneHouseJudgment } from "./one-house/types";
@@ -119,6 +122,35 @@ export function buildRentalPeriodPendingNotice(unitIndexes: number[] | undefined
     `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_21}). 이후 임대기간요건을 충족하지 못하게 되면(임대의무호수를 ` +
     `임대하지 않은 기간이 6개월을 지난 경우 포함) 그 사유가 발생한 날이 속하는 달의 말일부터 2개월 이내에 ` +
     `특례가 없었다면 납부했을 세액과의 차액을 신고·납부해야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_22}).`
+  );
+}
+
+/**
+ * RH-B2 2호 부분의 장기보유특별공제 표 독법 고지 (#15 — S06-5).
+ *
+ * 「소득세법 시행령」 §161④는 2호 부분에 표2를 적용한다고 정한다. 계산은 그 문언대로 거주 2년 미만이어도 표2의
+ * 보유분을 적용한다. 반면 §159의4는 표2 대상을 「보유기간 중 거주기간이 2년 이상인 것」으로 정하므로, 그 요건을
+ * 2호에도 적용하는 견해에서는 2호가 표1로 계산된다 — 정면 해석례를 확인하지 못했다.
+ *
+ * 두 독법이 **실제로 갈리는 경우에만** 단다: 2호 금액이 있고(RH-B2), 보유 3년 이상이며, 표2 거주 2년 요건
+ * (§154⑧3호 통산·상생임대 면제 반영 — 일반 경로와 같은 술어)을 못 채운 경우. 2019년 이전 양도는 표2에 거주 요건이
+ * 없고(`data/lthd-table2-era.ts`) 상생임대는 요건이 면제되므로 이 조건에서 저절로 빠진다.
+ */
+export function buildPrhpTable2ReadingNotice(
+  effectiveInput: TransferTaxInput,
+  scenarioId: string,
+  part2: number | undefined,
+  holdYears: number,
+): string | undefined {
+  if (scenarioId !== "RH-B2" || !part2 || part2 <= 0 || holdYears < 3) return undefined;
+  const era = resolveLthdTable2Era(effectiveInput.transferDate);
+  if (era !== "holding_8pct_residence_2y" && era !== "holding_residence_split") return undefined;
+  const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(effectiveInput) / 12);
+  if (meetsTable2ResidenceRequirement(effectiveInput, table2ResidenceYears)) return undefined;
+  return (
+    "직전거주주택보유주택 양도의 §161②2호 부분은 소득세법 시행령 §161④ 문언대로 장기보유특별공제 표2(보유기간분)를 " +
+    "적용해 계산했습니다. 표2 거주 2년 요건(소득세법 시행령 §159의4)을 이 부분에도 적용하는 견해에 따르면 " +
+    "2호 부분의 장기보유특별공제는 표1로 계산됩니다 — 정면 해석례가 없어 확인이 필요합니다."
   );
 }
 

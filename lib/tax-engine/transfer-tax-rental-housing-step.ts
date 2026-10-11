@@ -21,7 +21,7 @@ import {
 } from "./transfer-tax/rental-housing-exception/display-labels";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
-import { buildEligibilityContext, buildRentalPeriodPendingNotice } from "./transfer-tax-rental-housing-judge";
+import { buildEligibilityContext, buildPrhpTable2ReadingNotice, buildRentalPeriodPendingNotice } from "./transfer-tax-rental-housing-judge";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type {
   TransferTaxInput,
@@ -382,6 +382,7 @@ export function runRentalHousingExceptionStep(
     // §155의3① — 상생임대주택이면 §155⑳1호 거주요건 면제(법문이 이 호를 명시 열거한다).
     qualifiesWinWinRental(effectiveInput),
     buildEligibilityContext(effectiveInput),
+    effectiveInput.transferDate,
   );
 
   // 근거 조문은 판정이 정한 `eligibility.laws`를 따른다 — §154⑩ 표준 경로(B · 0호)는 §155⑳ 본문이 성립하지 않는다(S06-13).
@@ -435,6 +436,18 @@ export function runRentalHousingExceptionStep(
 
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
   const periodPendingNotice = buildRentalPeriodPendingNotice(rhe.eligibility.periodPendingUnitIndexes);
+  // #15(S06-5) — 2호 부분 표2 독법 고지. 결론(세액)은 바꾸지 않고 두 독법이 갈릴 때만 단다.
+  const table2ReadingNotice = buildPrhpTable2ReadingNotice(
+    effectiveInput, rhe.scenarioId, rhe.formulaTrace.part2, holdYears,
+  );
+  if (table2ReadingNotice) {
+    steps.push({
+      label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
+      formula: table2ReadingNotice,
+      amount: 0,
+      legalBasis: rheBasis,
+    });
+  }
   steps.push({
     label: "장기임대주택 보유자 거주주택 비과세 특례",
     // §161은 B(직전거주주택보유주택)만 거친다 — A(RH-A1·A2)는 §155⑳ 전단 → §154①이다(S06-8).
@@ -692,12 +705,13 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || periodPendingNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || periodPendingNotice || table2ReadingNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
             lthdNotice,
             periodPendingNotice,
+            table2ReadingNotice,
             // OH-40·§7-5 판정 보류·확인 필요 고지 — 결론은 바꾸지 않는다.
             ...(rhe.eligibility.notices ?? []),
           ].filter((x): x is string => x !== undefined),
