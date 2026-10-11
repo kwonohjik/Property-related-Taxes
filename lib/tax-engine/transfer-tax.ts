@@ -21,9 +21,8 @@ import type {
   TransferTaxResult,
 } from "./types/transfer.types";
 export type { TransferTaxInput, TransferReduction, CalculationStep, TransferTaxResult };
-import { runRentalHousingExceptionStep, isPrhpScenarioB, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
-import { restoreRentalUnitsToHouseCount } from "./transfer-tax-rental-housing-judge";
-import { revokeExemptionOnRentalCompositionExceeded } from "./transfer-tax-rental-housing-judge";
+import { runRentalHousingExceptionStep, canEarlyReturnPrhp } from "./transfer-tax-rental-housing-step";
+import { restoreRentalUnitsToHouseCount, prhpUnappliedExemptionNotice, revokeExemptionOnRentalCompositionExceeded } from "./transfer-tax-rental-housing-judge";
 import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step";
 import type { New993Result } from "./transfer-reductions/new-99-3";
 import {
@@ -224,7 +223,7 @@ export function calculateTransferTax(
     specialHouseExclusionDetail,
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
   // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
-  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput);
+  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate, multiHouseSurchargeResult?.effectiveHouseCount);
   /**
    * 부담부증여 양도분(`transferType === "burdened_gift"`)은 증여세 계산기 화면이라 세대 보유
    * 주택 명부 입력 경로가 없다 — §155④⑤ 합가 전 구성을 「모름」으로 불리하게 적용하지 않는다
@@ -527,9 +526,8 @@ export function calculateTransferTax(
     });
     if (rheResult) return rheResult;
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
-    if (isPrhpScenarioB(effectiveInput) && exemptionResult.isExempt) {
-      warnings.push("장기임대주택 거주주택 특례(§155⑳) 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요. 일반 과세 경로로 계산되었습니다.");
-    }
+    const prhpNotice = prhpUnappliedExemptionNotice(effectiveInput, exemptionResult);
+    if (prhpNotice) warnings.push(prhpNotice);
   }
 
   // STEP 3: 과세 양도차익 (12억 초과분 안분 — 부분과세인 경우)

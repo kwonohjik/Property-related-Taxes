@@ -651,4 +651,23 @@ describe("G5 ⑭ route — A 미충족이면 임대주택을 주택 수에 되�
     const none = await gift("2026-06-01", { ...RES, householdHousingCount: 1 });
     expect(none.isExempt).toBe(true);
   });
+
+  it("G5-4 ★ (결정 #19 X1-1) 시나리오 B도 불충족이면 되돌린다 — 증여 2026-06-01 · 주택 수 1 → 주택 수 2 입력과 같은 값, 비과세 사유 없음", async () => {
+    const rhe = {
+      ...(await rheOf()),
+      scenario: "B" as const,
+      priorResidenceTransferDate: "2022-01-10",
+      wasRegisteredRentalOrChildcare: true,
+      standardPriceAtAcquisitionForPhrp: "300,000,000",
+      standardPriceAtPriorTransfer: "450,000,000",
+      standardPriceAtTransferForPhrp: "500,000,000",
+      postRegistrationResidenceMonths: "60",
+    };
+    const r = await gift("2026-06-01", { ...RES, householdHousingCount: 1, rentalHousingException: rhe } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(r.isExempt).toBe(false);
+    expect(r.exemptReason).toBeUndefined();
+    expect((r.warnings ?? []).some((w) => w.includes("임대주택 1호를 세대 주택 수에 넣어(2주택)"))).toBe(true);
+    const two = await gift("2026-06-01", { ...RES, householdHousingCount: 2, rentalHousingException: rhe } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(two.determinedTax).toBe(r.determinedTax);
+  });
 });

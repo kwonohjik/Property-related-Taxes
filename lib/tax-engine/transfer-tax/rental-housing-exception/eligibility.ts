@@ -313,7 +313,7 @@ export function checkEligibility(
   // ── 1. 거주주택 요건 ──
   if (isStandalone154_10 && ctx) {
     checkPhrp154_10Eligibility(
-      ctx, residenceHoldYears, residenceLiveYears, winWinResidenceExempt, residenceFailReasons,
+      ctx, residenceHoldYears, residenceLiveYears, winWinResidenceExempt, residenceFailReasons, notices,
     );
   } else if (!isStandalone154_10 && residenceHoldYears < 2) {
     residenceFailReasons.push(
@@ -358,7 +358,7 @@ export function checkEligibility(
     const inEra = isLifetimeLimitEra155_20(ctx.residenceAcquisitionDate, ctx.transferDate, transition);
     if (inEra && claimed && !ctx.residenceTransitionBasis) {
       notices.push(
-        "2019.2.12 부칙 경과조치(대통령령 제29523호 부칙 제7조②)의 사유(당시 거주 · 그 전 계약금 지급)가 입력되지 않아 종전 규정을 적용하지 않았습니다 — 판정 메뉴에서 사유를 선택하세요(확인 필요).",
+        "2019.2.12 부칙 경과조치(대통령령 제29523호 부칙 제7조②)의 사유(당시 거주 · 그 전 계약금 지급)가 입력되지 않아 종전 규정을 적용하지 않았습니다 — 사유를 선택하세요(확인 필요).",
       );
     } else if (inEra && ctx.residenceTransitionBasis === "contract_without_prior_rental") {
       notices.push(
@@ -602,7 +602,7 @@ export function checkEligibility(
   // S06-9 — 「모름」으로 불성립한 이력 사실이 **결론을 가를 때만**(다른 불충족이 없을 때만) 확인 필요를 고지한다.
   if (priorHistoryUnknown && residenceFailReasons.length === 1 && allUnitsPassed) {
     notices.push(
-      "생애 한 차례 제한(2019.2.12 이후 취득 거주주택 · 2025.2.27 이전 양도 — 소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)의 이력을 입력하지 않아 적용하지 않았습니다 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 적이 없다면 판정 메뉴에서 이력을 「없음」으로 입력하세요(확인 필요).",
+      "생애 한 차례 제한(2019.2.12 이후 취득 거주주택 · 2025.2.27 이전 양도 — 소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)의 이력을 입력하지 않아 적용하지 않았습니다 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 적이 없다면 이력을 「없음」으로 입력하세요(확인 필요).",
     );
   }
 
@@ -611,6 +611,7 @@ export function checkEligibility(
     needsPre2019ArticleScopeNotice(
       ctx.residenceAcquisitionDate,
       ctx.residenceTransitionUnderAddendum === true,
+      ctx.residenceTransitionBasis,
       derivedArticles,
     )
   ) {
@@ -658,6 +659,7 @@ function checkPhrp154_10Eligibility(
   residenceLiveYears: number,
   winWinResidenceExempt: boolean,
   residenceFailReasons: string[],
+  notices: string[],
 ): void {
   if (ctx.wasRegisteredRentalOrChildcare !== true) {
     residenceFailReasons.push(
@@ -678,9 +680,12 @@ function checkPhrp154_10Eligibility(
   }
 
   // 거주기간 — 취득 시기별 분기
+  // 경과조치는 사유까지 받아야 종전규정이다(결정 #21 S16-5) — §155⑳ A·B와 같은 leaf `isAddendumTransitionEffective`.
+  const transitionClaimed = ctx.residenceTransitionUnderAddendum === true;
   const preRegime = isPreLifetimeLimitRegime(
     ctx.residenceAcquisitionDate,
-    ctx.residenceTransitionUnderAddendum === true,
+    transitionClaimed,
+    ctx.residenceTransitionBasis,
   );
   if (preRegime) {
     // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
@@ -699,6 +704,22 @@ function checkPhrp154_10Eligibility(
     } else if (Math.floor(m / 12) < 2) {
       residenceFailReasons.push(
         `거주주택 거주기간(등록일 이후) 2년 미충족 (현재: ${Math.floor(m / 12)}년 ${m % 12}개월, 소령 §155⑳1호 괄호 준용)`,
+      );
+    }
+    /**
+     * 경과조치를 선언했는데 사유가 종전규정을 주지 않아(계약금 지급·그 전 등록 임대주택 없음, 또는 사유 미입력) 신규정 거주요건으로
+     * 판정했고, **그것이 결론을 가를 때만**(다른 불충족 없음 · 종전규정이면 거주요건을 충족) 확인 필요를 고지한다.
+     * 문구는 화면 중립이다(판정 메뉴·부담부증여 모두 같은 사유 칸이 있다). 근거 한계를 함께 적는다 — §154⑩ 직접 해석 없음.
+     */
+    const onlyThisFailure = residenceFailReasons.length === 1;
+    const wouldPassUnderPrior = !(ctx.wasRegulatedAtAcquisition === true && residenceLiveYears < 2);
+    // (이 분기는 `!winWinResidenceExempt`일 때만 도달한다 — 상생임대 면제는 위 else-if가 이미 걸렀다.)
+    if (transitionClaimed && onlyThisFailure && wouldPassUnderPrior) {
+      notices.push(
+        "2019.2.12 부칙 경과조치(대통령령 제29523호 부칙 제7조②)가 종전 규정을 주는 사유(당시 거주 · 그 전 계약금 지급과 2019.2.12 전 등록 임대주택 소유)가 " +
+          "확인되지 않아 종전 규정을 적용하지 않았습니다 — 등록일 이후 거주기간 2년을 요건으로 판정했습니다(소령 §155⑳1호 괄호 준용). " +
+          "이 판단은 §155⑳ 거주주택 양도 사안의 해석(서면-2020-법령해석재산-1464 · 서면-2021-법규재산-4760)을 같은 부칙 문장에 적용한 것이며 " +
+          "§154⑩ 경로를 직접 다룬 해석은 확인되지 않았습니다(확인 필요).",
       );
     }
   }

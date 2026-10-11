@@ -13,6 +13,7 @@
 
 import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
+import { rentalPhrpPriceFieldErrors } from "@/lib/api/rental-phrp-price-guard";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { rateDateKey, type RatesByTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
@@ -97,6 +98,17 @@ export async function POST(request: NextRequest) {
   }
 
   const data = parsed.data;
+
+  // §155⑳ B(임대 1호 이상) §161 기준시가 3개 필수 — 단건 route·계산기 ⑧(full)과 같은 규칙(결정 #19 X1-1)
+  for (const [i, p] of data.properties.entries()) {
+    const phrpPriceErrors = rentalPhrpPriceFieldErrors(p.rentalHousingException, `properties.${i}.rentalHousingException`);
+    if (phrpPriceErrors) {
+      return NextResponse.json(
+        { error: { code: TaxErrorCode.INVALID_INPUT, message: "입력값이 올바르지 않습니다", fieldErrors: phrpPriceErrors } },
+        { status: 400 },
+      );
+    }
+  }
 
   /**
    * 세율 로드 (Supabase 미도달 시 로컬 fallback) — **두 층**이다(E-14n).

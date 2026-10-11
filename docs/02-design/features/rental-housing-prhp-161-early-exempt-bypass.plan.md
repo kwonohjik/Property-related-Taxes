@@ -40,7 +40,7 @@ if (exemptionResult.isExempt && !(effectiveInput.rentalHousingException?.applyEx
 ```
 
 - B면 일반 경로로 계속 진행 → gain 계산 → STEP 2.5가 §161 안분 결과 반환.
-- **STEP 2.5 applied=false(자격 미달) 시**: 일반 경로 계속(과세 트랙). 자격 미달이면 §155⑳ 특례 부존재 → 임대주택이 주택수에 산입되어야 하므로 사용자 입력 "1채"(특례 전제) 자체가 무효 — 엔진이 재산입을 판단할 수 없으므로 **침묵 비과세 소급 금지**, 과세 경로 + 재확인 안내가 안전측. 현행 step은 applied=false 사유를 **steps에 기록**(`transfer-tax-rental-housing-step.ts:70~78` — warnings 아님, rev.2 E1 실측). 최소 구현: 이 steps 기록 유지 + **warnings에 1건 추가(신규)**: "특례 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요."
+- **STEP 2.5 applied=false(자격 미달) 시**: 일반 경로 계속(과세 트랙). 자격 미달이면 §155⑳ 특례 부존재 → 임대주택이 주택수에 산입되어야 하므로 사용자 입력 "1채"(특례 전제) 자체가 무효 — (2026-10-11 결정 #19 X1-1로 이 근거는 없어졌다 — 엔진이 B 불충족 시 임대주택을 주택 수에 되돌린다) 엔진이 재산입을 판단할 수 없으므로 **침묵 비과세 소급 금지**, 과세 경로 + 재확인 안내가 안전측. 현행 step은 applied=false 사유를 **steps에 기록**(`transfer-tax-rental-housing-step.ts:70~78` — warnings 아님, rev.2 E1 실측). 최소 구현: 이 steps 기록 유지 + **warnings에 1건 추가(신규)**: "특례 요건 미충족 — 임대주택이 주택수에 산입될 수 있어 1세대1주택 전제(주택수 입력)를 재확인하세요."
 - 시나리오 A는 현행 유지 (STEP 1a 경유 전액 비과세).
 
 ### D2 (버그 2). `buildExemptEarlyResult`에 환산 echo 추가

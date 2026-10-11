@@ -172,6 +172,12 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             <p className="font-mono tabular-nums font-semibold text-violet-900 dark:text-violet-200">
               = {(formulaTrace.ratio161_1 * 100).toFixed(4)}%
             </p>
+            {formulaTrace.numerator1Clamped && (
+              <p className="text-caption text-amber-800 dark:text-amber-300" data-testid="rh-numerator1-clamped-note">
+                분자(직전 거주주택 양도 당시 − 취득 당시 기준시가)가 음수라 0으로 봅니다 — 과세대상 양도소득금액이 없는 것으로 계산했습니다
+                (사전-2021-법규재산-0585는 §161① 분자 음수에 대한 회신이며 §161②1호에는 유추 적용 — 확인 필요).
+              </p>
+            )}
 
             {/* 장기보유공제(일반표) 적용 후 양도소득금액 */}
             <div className="border-t border-violet-100 dark:border-violet-800/30 pt-1.5 mt-1.5">
@@ -279,14 +285,20 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               <p className="text-muted-foreground font-medium">
                 직전 거주주택 양도일 이전 보유분 (장기보유특별공제 일반표 적용)
               </p>
-              <p className="text-muted-foreground pl-2">
-                = 장기보유공제(일반표) 적용 후 양도소득금액{" "}
-                <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
-                {" "}× 안분 비율{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {((formulaTrace.ratio161_1 ?? 0) * 100).toFixed(4)}%
-                </span>
-              </p>
+              {formulaTrace.numerator1Clamped ? (
+                <p className="text-caption text-amber-800 dark:text-amber-300 pl-2">
+                  분자(직전 거주주택 양도 당시 − 취득 당시 기준시가)가 음수 → 1호 0 (사전-2021-법규재산-0585 유추)
+                </p>
+              ) : (
+                <p className="text-muted-foreground pl-2">
+                  = 장기보유공제(일반표) 적용 후 양도소득금액{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table1)}</span>
+                  {" "}× 안분 비율{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {((formulaTrace.ratio161_1 ?? 0) * 100).toFixed(4)}%
+                  </span>
+                </p>
+              )}
               <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 pl-2">
                 = {formatN(formulaTrace.part1)} (1호 과세대상)
               </p>
@@ -301,16 +313,23 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
                 장기보유공제(1세대1주택표) 적용 후 양도소득금액{" "}
                 <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.gain95Table2)}</span>
               </p>
-              <p className="text-muted-foreground pl-2">
-                × 이후 보유분 안분 비율{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {(formulaTrace.ratio161_2_2 * 100).toFixed(4)}%
-                </span>
-                {" "}× 고가주택 과세 비율{" "}
-                <span className="font-mono tabular-nums text-foreground">
-                  {((formulaTrace.ratioHighValue ?? 0) * 100).toFixed(4)}%
-                </span>
-              </p>
+              {formulaTrace.numerator2Clamped ? (
+                <p className="text-caption text-amber-800 dark:text-amber-300 pl-2" data-testid="rh-numerator2-clamped-note">
+                  분자(현 양도 당시 − 직전 거주주택 양도 당시 기준시가)가 음수 → 2호 0
+                  (사전-2021-법규재산-0585 유추 — §161②2호를 직접 다룬 해석은 확인되지 않았습니다, 확인 필요)
+                </p>
+              ) : (
+                <p className="text-muted-foreground pl-2">
+                  × 이후 보유분 안분 비율{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {(formulaTrace.ratio161_2_2 * 100).toFixed(4)}%
+                  </span>
+                  {" "}× 고가주택 과세 비율{" "}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {((formulaTrace.ratioHighValue ?? 0) * 100).toFixed(4)}%
+                  </span>
+                </p>
+              )}
               <p className="font-mono font-semibold text-violet-900 dark:text-violet-200 pl-2">
                 = {formatN(formulaTrace.part2)} (2호 과세대상)
               </p>

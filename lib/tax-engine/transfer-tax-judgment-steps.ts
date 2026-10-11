@@ -26,7 +26,7 @@ import {
 import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { clause2BlocksSurchargeDeeming, clause2SurchargeDeemed } from "./transfer-tax-89-2-consequences";
-import { judgeRentalHousingEligibility } from "./transfer-tax-rental-housing-judge";
+import { judgeRentalHousingEligibility, surchargeDeemingHouseCount } from "./transfer-tax-rental-housing-judge";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
 import {
@@ -85,11 +85,23 @@ export function resolveSurchargeDeemedOneHouseDetail(
   // 🔴 주택 수 제외는 번역 **전** 원본을 본다 — 상속주택 제외(E-8)가 입주권 취득일과 준공일을 따로 받는다.
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
   const inheritedExcluded = ex.inheritedExclusion.excludedCount;
-  const count = surcharge15HouseCount(
-    workingInput.householdHousingCount,
-    inheritedExcluded,
-    ex.specialActExcludedCount,
-    ex.specialActVerified15Count,
+  /**
+   * 🔴 §155⑳ A가 **불성립**이면 임대주택을 더한 수로 판정한다 (결정 #20 G8-1 — 비과세 STEP 0.96과 같은 규칙 `rentalUnitsToRestore`).
+   * 종전에는 임대주택을 뺀 수로 §155①②·조특법 의제를 세워 중과를 배제했다 — 요건(호별·거주)을 못 갖췄거나 3중첩이라 비과세는 거둬도
+   * 중과 배제는 남았다(STEP 0.5가 STEP 0.96·D12 회수보다 먼저 돌아 두 철회가 닿지 않았다). 영 §155⑳은 요건을 충족한 때만 「1개의 주택을
+   * 소유하고 있는 것으로 보아」이므로 불성립이면 임대주택도 주택이고 §155①·②의 「1주택」이 서지 않는다(조심 2021서1571).
+   * 중과 주택 수 자체(`effectiveHouseCount`)는 건드리지 않는다 — 엔진 반영은 후속(고지로 처방).
+   */
+  const count = surchargeDeemingHouseCount(
+    workingInput,
+    parsedRates,
+    generalHouseAcquisitionDate,
+    surcharge15HouseCount(
+      workingInput.householdHousingCount,
+      inheritedExcluded,
+      ex.specialActExcludedCount,
+      ex.specialActVerified15Count,
+    ),
   );
   /**
    * 🔴 **재개발 완공APT는 비과세 판정(`judgeRedevAptOneHouseExemption`)과 같은 번역을 거친 입력으로 판정한다**

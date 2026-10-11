@@ -391,12 +391,14 @@ const RENTAL_CASES: FieldJumpCase[] = [
     form: R({ scenario: "B", priorResidenceTransferDate: "2020-01-01", standardPriceAtAcquisitionForPhrp: "100000000", standardPriceAtPriorTransfer: "150000000", postRegistrationResidenceMonths: "30" }),
   },
   {
-    name: "leaf: rental PHRP 직전 < 취득 기준시가", field: "rentalHousingException.standardPriceAtPriorTransfer", step: 0, assetIndex: A, message: /^자산: PHRP 시나리오 — 직전 양도 당시 기준시가\(150,000,000\)가 취득 당시/,
-    form: R({ ...PHRP, standardPriceAtAcquisitionForPhrp: "200000000", postRegistrationResidenceMonths: "30" }),
+    // 결정 #22(S06-4): 취득 뒤 하락했다가 회복한 입력은 12억 이하만 연다 — 12억 초과(여기서는 20억)는 계산기 미지원.
+    name: "leaf: rental PHRP 직전 < 취득 기준시가(12억 초과)", field: "rentalHousingException.standardPriceAtPriorTransfer", step: 0, assetIndex: A, message: /^자산: PHRP 시나리오 — 직전 양도 당시 기준시가\(150,000,000\)가 취득 당시.*계산기 미지원/,
+    form: R({ ...PHRP, standardPriceAtAcquisitionForPhrp: "200000000", postRegistrationResidenceMonths: "30" }, undefined, {}, { contractTotalPrice: "2,000,000,000" }),
   },
   {
-    name: "leaf: rental PHRP 현 < 직전 기준시가", field: "rentalHousingException.standardPriceAtTransferForPhrp", step: 0, assetIndex: A, message: /^자산: PHRP 시나리오 — 현 양도 당시 기준시가\(250,000,000\)가 직전 양도 당시/,
-    form: R({ ...PHRP, standardPriceAtPriorTransfer: "300000000", standardPriceAtTransferForPhrp: "250000000", postRegistrationResidenceMonths: "30" }),
+    // 결정 #22(S06-4): 직전 양도 뒤 하락(현 < 직전)은 더 이상 막지 않는다 — 막는 것은 분모 음수(현 < 취득)뿐이다.
+    name: "leaf: rental PHRP 현 < 취득 기준시가(분모 음수)", field: "rentalHousingException.standardPriceAtTransferForPhrp", step: 0, assetIndex: A, message: /^자산: PHRP 시나리오 — 현 양도 당시 기준시가\(80,000,000\)가 취득 당시.*계산기 미지원/,
+    form: R({ ...PHRP, standardPriceAtTransferForPhrp: "80000000", postRegistrationResidenceMonths: "30" }),
   },
   {
     name: "leaf: rental PHRP 취득 = 현 기준시가", field: "rentalHousingException.standardPriceAtTransferForPhrp", step: 0, assetIndex: A, message: /^자산: PHRP 시나리오 — 취득 당시와 현 양도 당시 기준시가가 동일/,

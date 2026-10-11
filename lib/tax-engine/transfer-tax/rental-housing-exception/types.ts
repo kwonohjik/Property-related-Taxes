@@ -274,6 +274,10 @@ export type FormulaTrace = {
   ratio161_2_2?: number;
   /** r_high = (S − 12억) / S (A2·B2 — 고가주택 과세비율) */
   ratioHighValue?: number;
+  /** 분자 (P_prior − P_acq)가 음수라 0으로 본 경우 — 사전-2021-법규재산-0585(§161① 직접 · ②1호 유추). 결과 카드가 곱셈 대신 근거를 인쇄한다. */
+  numerator1Clamped?: boolean;
+  /** 분자 (P_transfer − P_prior)가 음수라 2호를 0으로 본 경우(B2) — 0585 유추, ②2호 직접 해석 없음(확인 필요) */
+  numerator2Clamped?: boolean;
   /** §161③ 캡 발동 여부 */
   capApplied: boolean;
   /**

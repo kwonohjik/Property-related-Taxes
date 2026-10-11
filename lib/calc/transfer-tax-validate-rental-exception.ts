@@ -32,6 +32,7 @@ import {
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -70,6 +71,11 @@ export function validateRentalHousingException(
    * 막으면 막다른 오류라 기본값은 `mode === "facts"`다(S06-9 · 3중 패턴).
    */
   requirePriorHistory: boolean = mode === "facts",
+  /**
+   * §161 안분 12억 판정에 쓰는 물건 양도가액 입력(엔진 `resolveHighValuePriceCheck`의 인자). 취득 뒤 하락했다가 회복한 입력
+   * (직전 양도 당시 < 취득 당시)을 12억 이하에서만 열기 위한 것이다 — 모르면(미전달) 열지 않는다(결정 #22 하위 다).
+   */
+  highValuePrice?: { burdenedGiftDenominator?: number; totalPropertyTransferPrice?: number; transferPrice: number },
 ): string | null {
   if (!rh?.applyException) return null;
   /**
@@ -241,7 +247,19 @@ export function validateRentalHousingException(
     !!asset.acquisitionDate &&
     !!formTransferDate &&
     isLifetimeLimitEra155_20(new Date(asset.acquisitionDate), new Date(formTransferDate), false);
-  if (mode === "facts" && inLifetimeEraBase && rh.residenceTransitionUnderAddendum === true && !rh.residenceTransitionBasis) {
+  /**
+   * 경과조치 사유 필수 범위 — 사유 칸(⑤ `RentalLifetimeLimitBlock`)이 화면에 있는 경로와 같다(3중 패턴).
+   *  · §155⑳(A·임대 1호 이상 B): 양도일 구간(2019.2.12. 이후 취득 · 2025.2.27. 이전 양도) 안.
+   *  · §154⑩ 표준 경로(B · 임대 0호): **양도일과 무관**하게 2019.2.12. 이후 취득이면 — 소비 술어(`isPreLifetimeLimitRegime`)가
+   *    양도일을 보지 않으므로 사유가 거주요건을 가른다(결정 #21 S16-5·S16-4).
+   * 묻는 화면: 판정 메뉴(`facts`)와 부담부증여(`full` + `requirePriorHistory`). 계산기 카드(`calc`)는 사유 칸이 없다.
+   */
+  const asksTransitionBasis = mode === "facts" || requirePriorHistory;
+  const isStandalone154_10Path = rh.scenario === "B" && rh.rentalUnits.length === 0;
+  const transitionDeclarable = isStandalone154_10Path
+    ? !!asset.acquisitionDate && !isPreLifetimeLimitRegime(new Date(asset.acquisitionDate), false, "")
+    : inLifetimeEraBase;
+  if (asksTransitionBasis && transitionDeclarable && rh.residenceTransitionUnderAddendum === true && !rh.residenceTransitionBasis) {
     return `${label}: 2019.2.12 부칙 경과조치의 사유(당시 거주 · 그 전 계약금 지급과 임대주택 등록 여부)를 선택하세요 (대통령령 제29523호 부칙 제7조②).`;
   }
   if (
@@ -291,12 +309,26 @@ export function validateRentalHousingException(
         : `${label}: 임대→거주 전환 주택 시나리오 — 현 양도 당시 기준시가를 입력하세요.`);
     }
 
-    // 시점 일관성 확인 (경고 수준 — 실무 이례 케이스 차단하지 않고 경고만)
-    if (pPrior < pAcq) {
-      return fieldError("rentalHousingException.standardPriceAtPriorTransfer", `${label}: PHRP 시나리오 — 직전 양도 당시 기준시가(${pPrior.toLocaleString()})가 취득 당시(${pAcq.toLocaleString()})보다 작습니다. 확인 후 재입력하세요.`);
+    /**
+     * 시점 일관성 — §161③이 예정한 정상 입력은 막지 않는다(결정 #22 S06-4).
+     *
+     *  · 분모 음수(현 양도 당시 < 취득 당시): 해석례 미확보 → 계산기 미지원. 분자 음수를 0으로 보는 근거(사전-2021-법규재산-0585)는
+     *    분모가 양수인 사안이다.
+     *  · 직전 양도 뒤 하락(현 양도 당시 < 직전 양도 당시, 직전 양도 당시 ≥ 취득 당시): 엔진이 §161②2호 분자 음수를 0으로 본다(0585 유추) → 통과.
+     *  · 취득 뒤 하락했다가 회복(직전 양도 당시 < 취득 당시): 12억 이하는 과세분 0(0585)이라 통과, 12억 초과는 2호 비율이 1을 넘어
+     *    계산 방식을 정할 해석례가 없어 계산기 미지원(하위 결정 다). 12억 판정가를 모르면 12억 초과로 보아 막는다.
+     */
+    if (pTransfer < pAcq) {
+      return fieldError(linked ? "standardPriceAtTransfer" : "rentalHousingException.standardPriceAtTransferForPhrp", `${label}: PHRP 시나리오 — 현 양도 당시 기준시가(${pTransfer.toLocaleString()})가 취득 당시(${pAcq.toLocaleString()})보다 작아 §161 안분 분모가 음수입니다 — 계산기 미지원(해석례 미확보)입니다.`);
     }
-    if (pTransfer < pPrior) {
-      return fieldError(linked ? "standardPriceAtTransfer" : "rentalHousingException.standardPriceAtTransferForPhrp", `${label}: PHRP 시나리오 — 현 양도 당시 기준시가(${pTransfer.toLocaleString()})가 직전 양도 당시(${pPrior.toLocaleString()})보다 작습니다. 확인 후 재입력하세요.`);
+    if (pPrior < pAcq) {
+      const withinHighValue =
+        !!highValuePrice &&
+        !!formTransferDate &&
+        resolveHighValuePriceCheck(highValuePrice) <= resolveHighValueHouseThreshold(new Date(formTransferDate));
+      if (!withinHighValue) {
+        return fieldError("rentalHousingException.standardPriceAtPriorTransfer", `${label}: PHRP 시나리오 — 직전 양도 당시 기준시가(${pPrior.toLocaleString()})가 취득 당시(${pAcq.toLocaleString()})보다 작습니다 — 양도가액이 고가주택 기준을 넘거나 알 수 없는 경우 계산기 미지원(해석례 미확보)입니다.`);
+      }
     }
 
     // 분모 0 방지
@@ -310,10 +342,14 @@ export function validateRentalHousingException(
    * `checkPhrp154_10Eligibility`와 같은 leaf). 2019.2.12 전 취득(「종전규정」)이면 §155⑳1호
    * 괄호를 쓰지 않고 §154① 원칙(조정대상지역 취득 시에만 거주 2년, 일반 거주기간)을 쓴다.
    */
-  const isStandalone154_10 = rh.scenario === "B" && rh.rentalUnits.length === 0;
+  const isStandalone154_10 = isStandalone154_10Path;
   const preRegime154_10 =
     isStandalone154_10 && asset.acquisitionDate
-      ? isPreLifetimeLimitRegime(new Date(asset.acquisitionDate), rh.residenceTransitionUnderAddendum === true)
+      ? isPreLifetimeLimitRegime(
+          new Date(asset.acquisitionDate),
+          rh.residenceTransitionUnderAddendum === true,
+          rh.residenceTransitionBasis,
+        )
       : false;
 
   /**
