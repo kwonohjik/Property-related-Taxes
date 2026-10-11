@@ -9,6 +9,7 @@
  * 인자로 받는 것 외에 바뀐 것이 없다.
  */
 import { finalizeTransferTax, buildTransferResultDetails } from "./transfer-tax-finalize";
+import { publicExpropriationPartWiseNotice } from "./public-expropriation-reduction";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
@@ -92,6 +93,9 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
   } = args;
   // STEP 7.5 ~ 11/12: 산출세액 이후 단계 통합 (transfer-tax-finalize.ts)
   const finalize = finalizeTransferTax(args);
+  // 5B — §77 「소급 2년 이전 취득」 요건을 토지·건물 파트별로 판정해 감면대상을 한 파트로 한정했으면 확인 필요 고지.
+  const partWiseNotice = publicExpropriationPartWiseNotice(finalize.publicExpropriationDetail);
+  if (partWiseNotice) warnings.push(partWiseNotice);
   const {
     new993FinalResult,
     new99FinalResult,

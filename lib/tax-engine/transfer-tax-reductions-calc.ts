@@ -53,6 +53,7 @@ import {
 } from "./new-housing-reduction";
 import {
   type PublicExpropriationReductionResult,
+  type PublicExpropriationParts,
   calculatePublicExpropriationReduction,
 } from "./public-expropriation-reduction";
 import {
@@ -158,6 +159,8 @@ export function calcReductions(
   assetContractDate?: Date,
   /** 조특법 §129② — 미등기양도자산이면 감면 전부 미적용 (D15) */
   isUnregistered?: boolean,
+  /** 5B — 토지·건물 분리 자산의 §77 파트별 판정 입력(`buildPublicExpropriationParts`) */
+  publicExpropriationParts?: PublicExpropriationParts,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
@@ -354,6 +357,7 @@ export function calcReductions(
       transferIncome,
       basicDeduction,
       taxBase,
+      parts: publicExpropriationParts,
     });
     publicExpropriationDetail = result;
     if (result.isEligible && result.reductionAmount > 0) {

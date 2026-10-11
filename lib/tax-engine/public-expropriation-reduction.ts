@@ -1,6 +1,8 @@
 import { subYears } from "date-fns";
 import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
+import type { TransferTaxInput } from "./types/transfer.types";
+import type { SplitGainResult } from "./types/transfer-split-gain.types";
 
 /**
  * 조특법 §77① 감면율 — 경계는 **2025-01-01 양도분**이다.
@@ -91,6 +93,17 @@ export interface PublicExpropriationReductionInput {
   basicDeduction: number;
   /** 과세표준 = 양도소득금액 − 기본공제 (산출세액 분모) */
   taxBase: number;
+  /**
+   * 5B — 토지·건물을 따로 취득한 자산의 파트별 취득일·양도소득금액. 주면 「소급 2년 이전 취득」 요건을 파트마다 판정한다
+   * (`acquisitionDate`보다 우선). 미제공이면 종전대로 `acquisitionDate` 하나로 자산 전체를 판정한다.
+   */
+  parts?: PublicExpropriationParts;
+}
+
+/** 5B 파트 입력 — `income`은 그 파트의 양도소득금액(과세 양도차익 − 장기보유특별공제) */
+export interface PublicExpropriationParts {
+  land: { acquisitionDate: Date; income: number };
+  building: { acquisitionDate: Date; income: number };
 }
 
 export interface PublicExpropriationReductionResult {
@@ -126,6 +139,19 @@ export interface PublicExpropriationReductionResult {
   legalBasis: string;
   warnings: string[];
   notEligibleReason?: string;
+  /**
+   * 5B — 한 파트만 「소급 2년 이전 취득」 요건을 충족해 감면대상을 그 파트로 한정했을 때만 채운다.
+   * `breakdown`의 현금·채권분 소득은 `eligibleIncome`을, 기본공제는 `basicDeductionOnExcluded`를 뺀 나머지를 기준으로 한다.
+   */
+  partWise?: {
+    eligiblePart: "land" | "building";
+    /** 감면대상 파트의 양도소득금액 */
+    eligibleIncome: number;
+    /** 감면 제외 파트의 양도소득금액(= 자산 양도소득금액 − 감면대상분) */
+    excludedIncome: number;
+    /** 감면 제외 파트에 먼저 배정한 기본공제 (「소득세법」 §103② — 감면율이 낮은 자산부터) */
+    basicDeductionOnExcluded: number;
+  };
 }
 
 function pickBondRate(
@@ -163,8 +189,28 @@ export function calculatePublicExpropriationReduction(
   // acquisitionDate 미제공 시 검증 불가로 통과(하위호환) — 메인 파이프라인은 자산 취득일을 전달한다.
   const acqBaselineDate =
     input.transferDate < input.businessApprovalDate ? input.transferDate : input.businessApprovalDate;
-  const failsAcqRequirement =
-    input.acquisitionDate !== undefined && input.acquisitionDate > subYears(acqBaselineDate, 2);
+  const acqCutoff = subYears(acqBaselineDate, 2);
+  let failsAcqRequirement = input.acquisitionDate !== undefined && input.acquisitionDate > acqCutoff;
+  // 5B — 문언 「2년 이전에 취득한 토지등을 양도함으로써 발생하는 소득」을 토지·건물 각각에 적용한다(2026-10-11 사용자 결정 —
+  //   파트별 판정을 정면으로 다룬 해석례 없음, 확인 필요 고지). 한 파트만 충족하면 그 파트의 양도소득금액만 감면대상이고,
+  //   기본공제는 감면이 없는 파트에 먼저 배정한다(「소득세법」 §103② — 감면율이 낮은 자산의 양도소득금액에서부터 공제).
+  let transferIncome = input.transferIncome;
+  let basicDeductionInput = input.basicDeduction;
+  let partWise: PublicExpropriationReductionResult["partWise"];
+  if (input.parts) {
+    const landOk = input.parts.land.acquisitionDate <= acqCutoff;
+    const buildingOk = input.parts.building.acquisitionDate <= acqCutoff;
+    failsAcqRequirement = !landOk && !buildingOk;
+    if (landOk !== buildingOk) {
+      const eligiblePart = landOk ? "land" : "building";
+      const eligibleIncome = Math.min(Math.max(0, input.parts[eligiblePart].income), input.transferIncome);
+      const excludedIncome = input.transferIncome - eligibleIncome;
+      const basicDeductionOnExcluded = Math.min(Math.max(0, input.basicDeduction), excludedIncome);
+      transferIncome = eligibleIncome;
+      basicDeductionInput = input.basicDeduction - basicDeductionOnExcluded;
+      partWise = { eligiblePart, eligibleIncome, excludedIncome, basicDeductionOnExcluded };
+    }
+  }
 
   // 조특법 §77① 일몰: 2026.12.31 이전 양도분에 한정(양도일 기준).
   const failsSunset = input.transferDate > PUBLIC_EXPROPRIATION_SUNSET;
@@ -242,15 +288,15 @@ export function calculatePublicExpropriationReduction(
   const cashIncome =
     input.cashCompensation > 0
       ? safeMultiplyThenDivide(
-          input.transferIncome,
+          transferIncome,
           input.cashCompensation,
           totalCompensation,
         )
       : 0;
-  const bondIncome = Math.max(0, input.transferIncome - cashIncome);
+  const bondIncome = Math.max(0, transferIncome - cashIncome);
 
   // ── ② 기본공제 배정 (소득세법 §103② — 감면율 낮은 자산에서 먼저 차감) ──
-  const basicDeduction = Math.max(0, input.basicDeduction);
+  const basicDeduction = Math.max(0, basicDeductionInput);
   let basicDeductionOnCash = 0;
   let basicDeductionOnBond = 0;
 
@@ -343,5 +389,41 @@ export function calculatePublicExpropriationReduction(
       ? `${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION} + ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION_TRANSITIONAL}`
       : TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION,
     warnings,
+    ...(partWise ? { partWise } : {}),
   };
+}
+
+/**
+ * 5B — 토지·건물을 따로 취득한 자산의 §77 파트 입력. 둘 다 본인 소유인 별개취득 자산만 만든다(그 밖은 종전 자산 단위 판정).
+ * 파트 양도소득금액 = 고가주택 안분 후 과세 양도차익(`taxableGainAfterProration`, 없으면 `gain`) − 그 파트의 장기보유특별공제.
+ * 취득일은 종전 자산 단위 판정과 같은 축이다(건물 = 자산 취득일, 토지 = 토지 취득일).
+ * ⚠️ §77⑨(상속 = 피상속인 취득일 · 「소득세법」 §97의2① 적용 증여 = 증여자 취득일)은 자산 단위 판정에도 아직 반영돼 있지 않다(별건) —
+ *    고칠 때 이 함수와 `calcReductions`의 `acquisitionDate`를 함께 바꾼다.
+ */
+export function buildPublicExpropriationParts(
+  input: Pick<TransferTaxInput, "isSeparateAcquisition" | "landAcquisitionDate" | "acquisitionDate" | "selfOwns">,
+  splitDetail: SplitGainResult | undefined,
+): PublicExpropriationParts | undefined {
+  if (input.isSeparateAcquisition !== true || !input.landAcquisitionDate || !splitDetail) return undefined;
+  if ((input.selfOwns ?? "both") !== "both") return undefined;
+  const income = (p: SplitGainResult["land"]) => (p.taxableGainAfterProration ?? p.gain) - p.longTermDeduction;
+  return {
+    land: { acquisitionDate: input.landAcquisitionDate, income: income(splitDetail.land) },
+    building: { acquisitionDate: input.acquisitionDate, income: income(splitDetail.building) },
+  };
+}
+
+/** 5B 고지 — 파트별 판정으로 감면대상을 한 파트로 한정했을 때. 결과 조립(`transfer-tax-normal-return.ts`)이 경고에 싣는다. */
+export function publicExpropriationPartWiseNotice(
+  detail: Pick<PublicExpropriationReductionResult, "isEligible" | "partWise"> | undefined,
+): string | null {
+  const pw = detail?.isEligible ? detail.partWise : undefined;
+  if (!pw) return null;
+  const [ok, ng] = pw.eligiblePart === "land" ? ["토지", "건물"] : ["건물", "토지"];
+  return (
+    `토지와 건물의 취득일이 달라 「조세특례제한법」 제77조 제1항의 「사업인정고시일부터 소급하여 2년 이전에 취득한 토지등」 요건을 ` +
+    `파트별로 판정했습니다 — ${ok}분만 요건을 충족해 ${ok}분 양도소득금액만 감면대상으로 하고, ${ng}분은 감면하지 않았습니다` +
+    `(기본공제는 「소득세법」 제103조 제2항에 따라 감면이 없는 ${ng}분에서 먼저 공제). ` +
+    "토지·건물을 따로 취득한 자산에 이 요건을 파트별로 적용한 정면 해석례는 확인하지 못했습니다 — 확인 필요"
+  );
 }
