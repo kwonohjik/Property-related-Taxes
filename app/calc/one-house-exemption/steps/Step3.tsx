@@ -38,6 +38,7 @@ import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRenta
 import { UsageConversionField } from "./UsageConversionField";
 import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import { effectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
@@ -163,21 +164,23 @@ export function Step3({ form, onChange }: Props) {
   );
   // §154⑤ 단서 용도변경이면 「주택 취득 당시」는 주거용 사용 개시일이 먼저다(엔진 `resolveResidenceJudgmentDate` 순서).
   const conversionStart = judgmentUsageConversionStart(form);
+  const residenceJudgmentDate =
+    conversionStart ?? (sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate);
   const regulatedVerdict = useMemo(() => {
     if (!primary.regionCode || !primary.acquisitionDate) return null;
-    return isRegulatedByBjdCode(
-      primary.regionCode,
-      conversionStart ?? (sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate),
-      primary.regionInDesignatedDistrict,
-    );
-  }, [
-    primary.regionCode,
-    primary.regionInDesignatedDistrict,
-    primary.acquisitionDate,
-    primary.decedentCohabitationHoldingStartDate,
-    sameHouseholdStart,
-    conversionStart,
-  ]);
+    return isRegulatedByBjdCode(primary.regionCode, residenceJudgmentDate, primary.regionInDesignatedDistrict);
+  }, [primary.regionCode, primary.regionInDesignatedDistrict, primary.acquisitionDate, residenceJudgmentDate]);
+  /**
+   * ⑳ 카드·입주권 카드가 읽는 「취득 당시 조정대상지역」 — 주소(법정동코드)가 있으면 위 2-C 자동 판정과 **같은 값**
+   * (엔진은 코드가 있으면 숨은 토글 `form.wasRegulatedAtAcquisition`을 읽지 않는다). 원시 토글을 넘기면 같은 화면에서
+   * 「조정대상지역 해당」과 반대로 「거주요건이 없습니다」가 뜨고 권고 경고가 사라진다(S10-6·S13-14).
+   */
+  const wasRegulatedAtAcquisition = effectiveWasRegulatedAtAcquisition({
+    regionCode: primary.regionCode,
+    regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
+    judgmentDate: primary.acquisitionDate ? residenceJudgmentDate : undefined,
+    stored: form.wasRegulatedAtAcquisition,
+  });
 
   /**
    * 「양도 **당시**」 — 취득 당시와 **같은 규약**이다(F-3, 2026-09-25).
@@ -385,7 +388,7 @@ export function Step3({ form, onChange }: Props) {
         <RedevelopmentRightExemptionSection
           asset={primary}
           onChange={patchAsset}
-          wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
+          wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
           transferDate={form.transferDate}
         />
       )}
@@ -532,7 +535,7 @@ export function Step3({ form, onChange }: Props) {
         transferDate={form.transferDate}
         onChange={(rentalHousingException) => patchAsset({ rentalHousingException })}
         // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시(③)에 쓴다.
-        wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
+        wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
       />
       )}
 

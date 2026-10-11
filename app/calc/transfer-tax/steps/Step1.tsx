@@ -297,6 +297,8 @@ export function Step1({
           totalTransferExpense={form.totalTransferExpense}
           isOneHouseSingle={form.isOneHousehold === true && form.householdHousingCount === "1"}
           judgmentLoaded={hasJudgmentProvenance(form)}
+          wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
+          formRegionCode={form.regionCode}
           /**
            * 입주권 §⑥ 카드의 거주요건 경고 게이트 (U1-03).
            *

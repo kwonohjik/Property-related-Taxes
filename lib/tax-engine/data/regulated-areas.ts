@@ -58,6 +58,18 @@ function activeSubRules<T extends { appliesFrom?: string; appliesTo?: string }>(
 }
 
 /**
+ * 하위 규칙(`codePrefix`) 접두 비교 — 시·군·구 5자리를 **별칭(구·신)으로 바꾼 코드 전부**와 비교한다.
+ *
+ * 시·군·구 엔트리는 별칭으로 찾으면서(`expandSigunguAliases`) 하위 규칙 접두는 원 입력과만 비교하면,
+ * 데이터가 구 코드(46130250 …)로 적힌 지역에 현행 통합 코드(1213025000)가 들어올 때 지역은 찾고
+ * 읍면 제외·지구 포함은 놓친다(G7-3 — 제외 읍면이 「지정」으로 판정). 포함·제외·지구 질문 세 곳이 이 한 함수를 쓴다.
+ */
+function matchesSubRulePrefix(bjdCode: string, codePrefix: string): boolean {
+  const tail = bjdCode.slice(5);
+  return expandSigunguAliases(bjdCode).some((c) => `${c}${tail}`.startsWith(codePrefix));
+}
+
+/**
  * 법정동코드 + 날짜 → 조정대상지역 판정 (순수, 데이터 주입).
  *
  * @param regions 조정대상지역 이력 데이터 (REGULATED_REGIONS 또는 테스트 fixture)
@@ -116,7 +128,7 @@ export function isRegulatedByBjdCodeIn(
     // (1) 포함 목록: 해당 날짜에 활성인 "지구만 지정" 규칙이 있으면 그 안에서만 지정
     const included = activeSubRules(region.includedSubCodes, date);
     if (included.length > 0) {
-      const hit = included.find((inc) => bjdCode.startsWith(inc.codePrefix));
+      const hit = included.find((inc) => matchesSubRulePrefix(bjdCode, inc.codePrefix));
       if (hit?.district && inDistrict !== undefined) {
         return inDistrict
           ? {
@@ -152,7 +164,7 @@ export function isRegulatedByBjdCodeIn(
     }
     // (2) 제외 목록: 읍·면 제외
     const excluded = activeSubRules(region.excludedSubCodes, date).find((ex) =>
-      bjdCode.startsWith(ex.codePrefix),
+      matchesSubRulePrefix(bjdCode, ex.codePrefix),
     );
     if (excluded) {
       return {
@@ -272,9 +284,13 @@ export function isRegulatedByAddressIn(
   const fullName = sigungu ? `${sido} ${sigungu}` : sido;
   // 1. 시군구 정확 매칭 (일반구 포함: "경기도 성남시 수정구")
   //    2. 시도 전역 폴백 (서울 전역 "11" — name이 시도명과 동일)
+  //    3. 단층 시(세종 36110 — 시·군·구 어절이 없다): 둘째 어절이 읍·면·동이라 1번이 못 맞춘다. name이 시도명과 같은
+  //       엔트리로 받는다 — 못 받으면 수록 시도라 「미지정(high)」으로 떨어져 확인 안내도 없이 비과세로 계산된다(G7-7).
+  const singleTier = regions.find((r) => r.code.length !== 2 && r.name === sido);
   const region =
     regions.find((r) => r.name === fullName) ??
-    regions.find((r) => r.code.length === 2 && r.name === sido);
+    regions.find((r) => r.code.length === 2 && r.name === sido) ??
+    singleTier;
 
   if (!region) {
     const covered = coveredSidoNamesOf(regions).has(sido);
@@ -294,6 +310,26 @@ export function isRegulatedByAddressIn(
       confidence: "high",
       basis: `${region.name} — ${date} 기준 미지정(지정 이력 없음 또는 해제됨)`,
     };
+  }
+
+  // 단층 시 폴백: 둘째 어절을 하위 규칙의 동 이름과 대조한다(지정 동이면 지정, 읍·면이면 지정 지구 외).
+  //   어느 쪽도 확정하지 못하면(도로명 등) 아래 공통 경로의 「지정 + 확인 필요(medium)」(모름=불리 + 안내)로 둔다.
+  if (region === singleTier && sigungu) {
+    const hit = activeSubRules(region.includedSubCodes, date).find((s) => s.name === sigungu);
+    if (hit) {
+      return {
+        isRegulated: true,
+        confidence: "medium",
+        basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name} 지정 (주소 문자열 매칭 — 정확한 소재지 확인 필요)`,
+      };
+    }
+    if (activeSubRules(region.includedSubCodes, date).length > 0 && /[읍면]$/.test(sigungu)) {
+      return {
+        isRegulated: false,
+        confidence: "medium",
+        basis: `${active.designatedDate} 고시 — ${region.name} ${sigungu}은(는) 지정 지구 외 지역 (주소 문자열 매칭 — 정확한 소재지 확인 필요)`,
+      };
+    }
   }
 
   // 시군구명만으로는 동·지구 단위 예외(읍면 제외/택지지구 한정)를 판정할 수 없다.
@@ -353,7 +389,7 @@ export function designatedDistrictsForCode(
   const candidates = expandSigunguAliases(bjdCode);
   const region = REGULATED_REGIONS.find((r) => candidates.includes(r.code));
   return (region?.includedSubCodes ?? [])
-    .filter((s) => s.district && bjdCode.startsWith(s.codePrefix))
+    .filter((s) => s.district && matchesSubRulePrefix(bjdCode, s.codePrefix))
     .map((s) => ({
       district: s.district!,
       area: `${region!.name} ${s.name}`,

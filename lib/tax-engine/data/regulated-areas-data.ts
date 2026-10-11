@@ -164,6 +164,10 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
     excludedSubCodes: [
       { codePrefix: "41461250", name: "포곡읍" }, { codePrefix: "41461310", name: "모현면" },
       { codePrefix: "41461350", name: "백암면" }, { codePrefix: "41461360", name: "양지면" },
+      // 읍 승격으로 법정동코드가 바뀐 짝(G7-4) — 같은 땅(하위 리 목록 동일, 행안부 법정동코드 전체자료 2026-10-11 대조).
+      //   구 코드(41461310·41461360)는 저장된 이력·수동 입력을 위해 남긴다. 국토교통부공고 제2022-1408호 현황 주6)은
+      //   「모현읍」, 양지는 「양지면」으로 적었다(현행 코드는 양지읍).
+      { codePrefix: "41461253", name: "모현읍" }, { codePrefix: "41461262", name: "양지읍(구 양지면)" },
       // 원삼면은 6개 리만 제외 (나머지 원삼면 리는 지정)
       { codePrefix: "4146134022", name: "원삼면 사암리" },
       { codePrefix: "4146134023", name: "원삼면 좌항리" },
@@ -227,10 +231,16 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   { code: "41271", name: "경기도 안산시 상록구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
   { code: "41273", name: "경기도 안산시 단원구",
     designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }],
+    // 대부도 5개 동은 안산시 전역 지정(국토교통부공고 제2020-828호, 2020.6.19.)에서 빠지지 않았다 —
+    //   2022.7.5.(국토교통부공고 제2022-883호, 공고한 날부터 효력)에야 투기과열지구·조정대상지역에서 함께 해제됐다
+    //   (국토교통부 2022.6.30. 주거정책심의위원회 보도자료 — 「관보 게재가 완료되는 다음달 5일 0시부터 효력」).
+    //   그래서 제외 시작일은 2022-07-05다(양주 appliesFrom 규약과 같다). G7-2.
     excludedSubCodes: [
-      { codePrefix: "41273110", name: "대부동동" }, { codePrefix: "41273111", name: "대부북동" },
-      { codePrefix: "41273112", name: "대부남동" }, { codePrefix: "41273113", name: "선감동" },
-      { codePrefix: "41273114", name: "풍도동" },
+      { codePrefix: "41273110", name: "대부동동", appliesFrom: "2022-07-05" },
+      { codePrefix: "41273111", name: "대부북동", appliesFrom: "2022-07-05" },
+      { codePrefix: "41273112", name: "대부남동", appliesFrom: "2022-07-05" },
+      { codePrefix: "41273113", name: "선감동", appliesFrom: "2022-07-05" },
+      { codePrefix: "41273114", name: "풍도동", appliesFrom: "2022-07-05" },
     ] },
   { code: "41150", name: "경기도 의정부시", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
 
@@ -440,7 +450,11 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   // 기장군: 2017.8.3 전역 → 2018.8.28 일광면만(주3) → 2018.12.31 전부해제(주4). 2020.12.18~ '기장군 제외'로 재지정 없음.
   { code: "26710", name: "부산광역시 기장군",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2018-12-30" }],
-    includedSubCodes: [{ codePrefix: "26710310", name: "일광면", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" }] },
+    includedSubCodes: [
+      { codePrefix: "26710310", name: "일광면", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" },
+      // 읍 승격 후 현행 코드(일광읍 26710259) — 같은 땅(하위 리 목록 동일, 행안부 법정동코드 전체자료 2026-10-11 대조). G7-4.
+      { codePrefix: "26710259", name: "일광읍", appliesFrom: "2018-08-28", appliesTo: "2018-12-30" },
+    ] },
   // 2020.12.18~2022.9.25 '기장군·중구 제외' 전역 재지정 구 (2020.11.20 5개구에는 미포함)
   { code: "26140", name: "부산광역시 서구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
   { code: "26170", name: "부산광역시 동구", designations: [{ designatedDate: "2020-12-18", releasedDate: "2022-09-25" }] },
@@ -467,8 +481,12 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
     excludedSubCodes: [
       { codePrefix: "27710310", name: "가창면" }, { codePrefix: "27710380", name: "구지면" },
       { codePrefix: "27710330", name: "하빈면" }, { codePrefix: "27710253", name: "논공읍" },
+      // 옥포·유가·현풍은 고시(제2022-883호 주12)가 「읍」으로 적었으나 아래 27710340·370·360은 **구 면 코드**다
+      //   (행안부 법정동코드 전체자료: 옥포면·유가면·현풍면 [폐지]). 현행 읍 코드를 짝으로 둔다. G7-4.
       { codePrefix: "27710340", name: "옥포읍" }, { codePrefix: "27710370", name: "유가읍" },
       { codePrefix: "27710360", name: "현풍읍" },
+      { codePrefix: "27710262", name: "옥포읍" }, { codePrefix: "27710259", name: "유가읍" },
+      { codePrefix: "27710265", name: "현풍읍" }, { codePrefix: "27710268", name: "구지읍(구 구지면)" },
     ] },
 
   // ══════ 대전광역시 (30) — 전역(표 표기대로), 2020.6.19~2022.9.25 ══════
@@ -599,6 +617,8 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
       { codePrefix: "47290310", name: "와촌면" }, { codePrefix: "47290330", name: "자인면" },
       { codePrefix: "47290340", name: "용성면" }, { codePrefix: "47290350", name: "남산면" },
       { codePrefix: "47290360", name: "압량면" }, { codePrefix: "47290370", name: "남천면" },
+      // 압량면 → 압량읍 승격 후 현행 코드(47290256). 고시(제2022-883호 주23)는 「압량읍」. G7-4.
+      { codePrefix: "47290256", name: "압량읍" },
     ] },
 
   // ══════ 전남 여수 (46130) — 동지역 + 소라면 지정, 그 외 읍면 제외. 2020.12.18~2022.7.4 ══════

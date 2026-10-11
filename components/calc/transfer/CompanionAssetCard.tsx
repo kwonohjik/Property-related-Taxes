@@ -76,6 +76,9 @@ interface Props {
    * 자산 카드 안의 두 안내 문구가 「가라」/「선언이 없다」를 가른다.
    */
   judgmentLoaded?: boolean;
+  /** §155⑳ 카드 거주요건 표시용 — 폼-전역 저장값·법정동코드 폴백(G1-13). 주소가 있으면 카드가 주소 판정을 쓴다. */
+  wasRegulatedAtAcquisition?: boolean;
+  formRegionCode?: string;
   /** 폼-전역 조정대상지역 취득 여부 — 입주권 §⑥ 거주요건 경고 게이트 (U1-03) */
   /** 검증 실패 메시지 — 이 자산 카드에 해당하는 오류. 상단 인라인 배너 + 테두리 강조 + 전체 펼침. */
   errorMessage?: string;
@@ -115,6 +118,8 @@ export function CompanionAssetCard({
   primaryAsset,
   isOneHouseSingle,
   judgmentLoaded,
+  wasRegulatedAtAcquisition,
+  formRegionCode,
   errorMessage,
   splitMode,
   onFractionalToggle,
@@ -436,7 +441,7 @@ export function CompanionAssetCard({
           onToggle={() => toggleSection(5)}
           forceOpen={forceOpenAll}
         >
-          <AssetSectionExtras asset={asset} assetIndex={index} judgmentLoaded={judgmentLoaded} onChange={onChange} transferDate={transferDate} />
+          <AssetSectionExtras asset={asset} assetIndex={index} judgmentLoaded={judgmentLoaded} onChange={onChange} transferDate={transferDate} wasRegulatedAtAcquisition={wasRegulatedAtAcquisition} formRegionCode={formRegionCode} />
         </AssetSection>
       )}
 

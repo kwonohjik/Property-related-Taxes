@@ -22,7 +22,11 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { makeDefaultAsset, RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { toRentalHousingExceptionApi } from "@/lib/calc/transfer-tax-api-rental-housing";
 import { validateRentalHousingException } from "@/lib/calc/transfer-tax-validate-rental-exception";
-import { giftBurdenedWinWinResidenceExempt } from "@/lib/calc/gift-burdened-one-house";
+import {
+  giftBurdenedEffectiveWasRegulatedAtAcquisition,
+  giftBurdenedRegionCode,
+  giftBurdenedWinWinResidenceExempt,
+} from "@/lib/calc/gift-burdened-one-house";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
 function ymd(v: Date | string | undefined): string {
@@ -78,7 +82,7 @@ export function buildGiftBurdenedRentalExceptionPayload(
  * 요구하지 않는다 — 엔진과 같은 술어(`giftBurdenedWinWinResidenceExempt` — E-1 한계 G2).
  */
 export function giftBurdenedRentalExceptionError(
-  item: Pick<EstateItem, "id">,
+  item: Pick<EstateItem, "id" | "estateAddress">,
   bgt: BurdenedGiftTransferTaxInput,
   giftDate: string | undefined,
   label: string,
@@ -94,7 +98,7 @@ export function giftBurdenedRentalExceptionError(
     "full",
     giftBurdenedWinWinResidenceExempt(bgt, giftDate),
     // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건(조정대상지역 취득 시에만 필요) 판정.
-    // API 변환(`gift-burdened-transfer-api.ts:299`)과 같은 소스(`bgt.wasRegulatedAtAcquisition`).
-    bgt.wasRegulatedAtAcquisition ?? false,
+    // 엔진은 주소(법정동코드)가 있으면 저장값 대신 코드로 판정한다 — ⑤ 카드와 같은 실효값(G1-13).
+    giftBurdenedEffectiveWasRegulatedAtAcquisition(bgt, giftBurdenedRegionCode(item)),
   );
 }
