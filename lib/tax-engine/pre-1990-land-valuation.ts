@@ -13,8 +13,15 @@
  *   분모평균  = (90.8.30. 현재 등급가액 + 90.8.30. 직전 등급가액) / 2
  *   분모      = min(분모평균, 90.8.30. 현재 등급가액)       ← [CAP-1]
  *   비율원값  = 취득시 등급가액 / 분모
- *   비율최종  = min(비율원값, 1.0)  if 취득일 ≥ 1990-01-01   ← [CAP-2]
+ *   비율최종  = min(비율원값, 1.0)  if 등급조정기간 동일      ← [CAP-2]
  *              else 비율원값          (등급조정기간 상이 시 그대로)
+ *
+ *   [CAP-2] 「1990년 8월 30일 직전에 결정된 시가표준액과 취득일 직전에 결정된 시가표준액이 동일한 경우」(소칙 §80⑥)
+ *   = 취득시 등급이 90.8.30. 현재 등급과 **같은 결정**(등급조정기간 동일)이다 — 금액만 같아서는 안 된다
+ *   (집행기준 97-176의2 참고 4: '87.8.1. 취득 100,000 = '90.1.1. 100,000이어도 「등급조정기간이 다름」 → 그대로).
+ *   관찰 조건: 취득일 ≥ 1990-01-01(그 전 취득은 '90.1.1. 정기조정이 끼어 기간이 다르다 — 참고 4 Case ①의
+ *   「정기조정일에 직전 등급이 동일하게 조정된 것으로 봄」) **그리고** 취득시 등급가액 = 90.8.30. 현재 등급가액
+ *   (1990년 취득 뒤 수시조정이 있었으면 현재 등급이 달라져 기간이 다르다).
  * ```
  *
  * ## 5가지 산정 유형 (집행기준 예시)
@@ -27,7 +34,7 @@
  * ## ⚠️ 「취득시」가 언제인지는 본 모듈이 정하지 않는다 (B-1 · 2026-08-07)
  *
  * 산식의 분자는 **호출부가 넘긴 `gradeAtAcquisition`(등급가액)** 이고, `acquisitionDate`는
- * 1990.8.30. 이후 경고와 CAP-2 트리거 판정([CAP-2] `>= 1990-01-01`)에만 쓰인다.
+ * 1990.8.30. 이후 경고와 CAP-2 트리거 판정([CAP-2] `>= 1990-01-01` 조건)에만 쓰인다.
  * ⇒ **날짜를 1974→1985로 바꿔도 산출값이 동일**하다(probe 실증). 시점은 오직 **어느 시점의 등급을
  * 입력했는가**로 정해진다.
  *
@@ -58,7 +65,7 @@ import { safeMultiply } from "./tax-utils";
 
 /** 개별공시지가 최초 고시일 — 이날부터는 본 모듈 대신 개별공시지가 직접 사용 */
 export const INDIVIDUAL_LAND_PRICE_FIRST_NOTICE_DATE = new Date("1990-08-30");
-/** 1990.1.1. 정기조정 기준일 — CAP-2 트리거 경계 */
+/** 1990.1.1. 정기조정 기준일 — 이 날 전 취득은 CAP-2 미트리거(등급조정기간이 다르다) */
 export const GRADE_CAP_TRIGGER_DATE = new Date("1990-01-01");
 
 // ============================================================
@@ -104,7 +111,7 @@ export interface Pre1990LandValuationInput {
 
   /**
    * 선택: CAP-2(비율 100% cap) override.
-   * 기본 판정 규칙: `acquisitionDate >= 1990-01-01` ⇒ CAP-2 활성.
+   * 기본 판정 규칙: `acquisitionDate >= 1990-01-01` **그리고** 취득시 등급가액 = 90.8.30. 현재 등급가액 ⇒ CAP-2 활성.
    * 수동 제어가 필요한 드문 예외 케이스에서만 사용.
    */
   forceRatioCap?: boolean;
@@ -134,7 +141,7 @@ export interface Pre1990LandValuationBreakdown {
   rawRatio: number;
   /** 실제 사용된 비율 (CAP-2 적용 시 1.0, 아니면 rawRatio) */
   appliedRatio: number;
-  /** CAP-2 트리거 (취득일 >= 1990-01-01 또는 forceRatioCap=true) */
+  /** CAP-2 트리거 (등급조정기간 동일 — 취득일 >= 1990-01-01 이고 취득시 = 90.8.30. 현재 등급가액 — 또는 forceRatioCap=true) */
   ratioCap2Triggered: boolean;
   /** CAP-2가 실제로 비율을 낮췄는지 (triggered + rawRatio>1.0) */
   ratioCap2Applied: boolean;
@@ -279,7 +286,8 @@ export function calculatePre1990LandValuation(
   const ratioCap2Triggered =
     input.forceRatioCap !== undefined
       ? input.forceRatioCap
-      : input.acquisitionDate.getTime() >= GRADE_CAP_TRIGGER_DATE.getTime();
+      : input.acquisitionDate.getTime() >= GRADE_CAP_TRIGGER_DATE.getTime() &&
+        gradeValueAtAcquisition === gradeValue_1990_0830;
   const appliedRatio = ratioCap2Triggered && rawRatio > 1.0 ? 1.0 : rawRatio;
   const ratioCap2Applied = ratioCap2Triggered && rawRatio > 1.0;
 
