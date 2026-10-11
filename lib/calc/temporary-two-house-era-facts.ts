@@ -24,6 +24,10 @@ export interface TemporaryTwoHouseEraFacts {
   newHouseInDesignatedDistrict?: boolean;
   newHouseRegulatedAtAcquisition?: boolean;
   previousHouseRegulatedAtNewAcquisition?: boolean;
+  /** 종전 주택이 양도 주택이 아니라 명부 행이다(합가 D8 상대 쪽 짝) — 아래 두 값과 함께만 싣는다 */
+  previousHouseIsRosterRow?: boolean;
+  previousHouseRegionCode?: string;
+  previousHouseInDesignatedDistrict?: boolean;
   newHouseContractDate?: string;
   wholeHouseholdMoveInDate?: string;
   existingTenantLeaseEndDate?: string;
@@ -36,6 +40,8 @@ export function toTemporaryTwoHouseEraFacts(
   form: TemporaryTwoHouseEraFormFields,
   newHouseRegionCode: string | undefined,
   newHouseInDesignatedDistrict?: boolean,
+  /** `TemporaryTwoHouseDates.previousHouse` — 종전 주택이 양도 주택이 아닐 때만 있다(S15-2) */
+  previousHouse?: { regionCode?: string; inDesignatedDistrict?: boolean },
 ): TemporaryTwoHouseEraFacts {
   const newReg = yesNo(form.newHouseRegulatedAtAcquisition);
   const prevReg = yesNo(form.prevHouseRegulatedAtNewAcquisition);
@@ -44,6 +50,15 @@ export function toTemporaryTwoHouseEraFacts(
     ...(newHouseRegionCode && newHouseInDesignatedDistrict !== undefined ? { newHouseInDesignatedDistrict } : {}),
     ...(newReg !== undefined ? { newHouseRegulatedAtAcquisition: newReg } : {}),
     ...(prevReg !== undefined ? { previousHouseRegulatedAtNewAcquisition: prevReg } : {}),
+    ...(previousHouse
+      ? {
+          previousHouseIsRosterRow: true,
+          ...(previousHouse.regionCode ? { previousHouseRegionCode: previousHouse.regionCode } : {}),
+          ...(previousHouse.regionCode && previousHouse.inDesignatedDistrict !== undefined
+            ? { previousHouseInDesignatedDistrict: previousHouse.inDesignatedDistrict }
+            : {}),
+        }
+      : {}),
     ...(form.newHouseContractDate ? { newHouseContractDate: form.newHouseContractDate } : {}),
     ...(form.newHouseMoveInDate ? { wholeHouseholdMoveInDate: form.newHouseMoveInDate } : {}),
     // 단서는 「취득일 현재 기존 임차인」이 전제다 — 토글을 끄면 남은 종료일은 싣지 않는다.

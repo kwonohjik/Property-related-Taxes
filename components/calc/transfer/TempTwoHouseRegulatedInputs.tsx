@@ -58,10 +58,12 @@ export function TempTwoHouseRegulatedInputs({
         </p>
 
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">종전 주택(양도 주택) — 신규 주택 취득일 현재</label>
+          <label className="text-sm font-medium">
+            {regulated.previousIsRosterRow ? "종전 주택(보유 주택 목록의 짝)" : "종전 주택(양도 주택)"} — 신규 주택 취득일 현재
+          </label>
           {regulated.previousAuto ? (
             <p data-testid="temp-two-house-prev-regulated-auto" className="text-xs">
-              {auto(regulated.previous)} — 양도 주택 주소로 자동 판정
+              {auto(regulated.previous)} — {regulated.previousIsRosterRow ? "보유 주택 목록의 종전 주택 주소로" : "양도 주택 주소로"} 자동 판정
             </p>
           ) : (
             <RadioCardGroup
@@ -110,7 +112,9 @@ export function TempTwoHouseRegulatedInputs({
           <p className="text-xs text-muted-foreground">
             취득일보다 먼저 계약하고 계약금을 지급했다면 입력하세요(증빙서류로 확인되는 경우). 2018년 9월
             13일, 2019년 12월 16일 또는 2026년 8월 3일 이전 계약이면 종전 규정이 적용됩니다(대통령령 제29242호
-            부칙 제2조·제30395호 부칙 제15조·제36737호 부칙 제2조).
+            부칙 제2조·제30395호 부칙 제15조·제36737호 부칙 제2조). 다만 이 부칙들은 「종전의 주택을 보유한 1세대가」 신규 주택을
+            취득(계약)한 경우만 종전 규정을 따르므로, 종전 주택을 취득하기 전에 한 계약은 기준일 판단에 쓰지 않고 종전 주택
+            취득일을 기준으로 합니다.
           </p>
         </div>
 

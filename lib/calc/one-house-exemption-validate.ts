@@ -340,8 +340,9 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     if (!form.replBusinessApprovalDate) {
       errors.push(err("replBusinessApprovalDate", "대체주택 특례: 사업시행계획인가일을 입력하세요."));
     }
-    if (!form.replCompletionDate) {
-      errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요."));
+    // 완성 전 양도 갈래는 준공일을 요구하지 않는다(S15-4 · ④와 같은 `=== true` 읽기).
+    if (form.replSoldBeforeCompletion !== true && !form.replCompletionDate) {
+      errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요(아직 완성되지 않았다면 「완성 전 양도」를 고르세요)."));
     }
     if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0) {
       errors.push(

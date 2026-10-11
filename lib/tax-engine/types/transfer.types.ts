@@ -392,6 +392,12 @@ export interface TransferTaxInput {
      * (계획서 G-2). 자기선언 입력이므로 UI가 기준시점을 명시한다.
      */
     disposalDelayReason?: TemporaryTwoHouseDelayReason;
+    /**
+     * §155⑱ 「해당 각 호의 매각 등의 방법으로 양도하는 경우」 — **2022-02-15 전 양도분의 요건**이다(대통령령 제32420호가 삭제 —
+     * `data/temporary-two-house-delay-era.ts`). 그 전 양도에서 `disposalDelayReason`을 골랐으면 이 값이 true여야 처분기한 예외가 적용된다
+     * (미입력 = 모름 = 불성립). 2022-02-15 이후 양도에서는 읽지 않는다.
+     */
+    disposalDelayDisposedByThatMethod?: boolean;
     // ── §155①2호 조정대상지역 — 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는
     //    신규 주택을 취득」 (OH-01 A2b). 판정: `resolveRegulatedAtNewAcquisition`.
     /** 신규 주택 법정동코드(10자리 — 명부 행 주소). 있으면 신규 취득일 기준 정밀 판정(선언보다 우선). */
@@ -402,6 +408,16 @@ export interface TransferTaxInput {
     newHouseRegulatedAtAcquisition?: boolean;
     /** 양도주택 `regionCode`가 없을 때 — 신규 주택 취득 당시 종전 주택이 조정대상지역이었나(사용자 선언). */
     previousHouseRegulatedAtNewAcquisition?: boolean;
+    /**
+     * 종전의 주택이 **양도 주택이 아니라 명부의 다른 행**이다 — 합가 D8 「상대 쪽 두 주택」 짝(B → C)에서 A(양도 주택)가 아니라
+     * B가 「종전의 주택」이다(§155① 본문 「그 주택(이하 이 항에서 "종전의 주택")」 · 사전-2026-법규재산-0643).
+     * true면 종전 주택의 조정 여부를 양도주택 `regionCode`가 아니라 아래 `previousHouseRegionCode`로 판정한다(없으면 선언).
+     */
+    previousHouseIsRosterRow?: boolean;
+    /** `previousHouseIsRosterRow`일 때 종전 주택(명부 행) 법정동코드 — `regionCode`와 같은 규약. */
+    previousHouseRegionCode?: string;
+    /** `previousHouseIsRosterRow`일 때 종전 주택이 지정 지구 안인가(명부 행 선언) — `regionInDesignatedDistrict`와 같은 규약. */
+    previousHouseInDesignatedDistrict?: boolean;
     /**
      * 신규 주택 매매계약 체결·계약금 지급일 — 대통령령 제29242호 부칙 제2조②2호·제30395호 부칙
      * 제15조②2호(기준일 이전 계약이면 종전 규정)와 §155①2호 괄호(조정대상지역 공고 전 계약 제외).
@@ -424,8 +440,17 @@ export interface TransferTaxInput {
   replacementHouse?: {
     /** 사업시행계획인가일 (대체주택은 이 날 이후 취득 요건) */
     businessApprovalDate: Date;
-    /** 재개발·재건축 신축주택 준공(완성)일 (완성 후 3년내 양도·이사 기산) */
-    completionDate: Date;
+    /**
+     * 재개발·재건축 신축주택 준공(완성)일 (완성 후 N년내 양도·이사 기산).
+     * `soldBeforeCompletion`이면 없다 — 「완성되기 전」 양도는 완성일과 비교할 요건이 없다(S15-4 · R-3 `before_completion`과 같은 구조).
+     * 둘 다 없으면 양도 시기 요건(3호)은 불성립이다(날짜를 지어내지 않는다).
+     */
+    completionDate?: Date;
+    /**
+     * §156의2⑤3호 전단 「관리처분계획등에 따라 취득하는 주택이 **완성되기 전** … 대체주택을 양도할 것」 — 완성 전 양도 **명시 선언**.
+     * 사업이 진행 중이면 준공일 자체가 정해지지 않는다.
+     */
+    soldBeforeCompletion?: boolean;
     /** 대체주택 거주개월수 (1년 이상 요건) */
     replacementResidenceMonths: number;
     /** 신축주택 1년 이상 거주 자기선언 (§156의2⑬ 사후관리 전제) */

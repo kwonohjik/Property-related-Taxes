@@ -551,6 +551,8 @@ export interface PresaleRightEntry {
   originalMemberTenantLeaseEndDate?: string;
   /** §155⑱ 처분기한 예외 사유("" = 해당 없음) */
   originalMemberDisposalDelayReason?: string;
+  /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
+  originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   /**
    * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.

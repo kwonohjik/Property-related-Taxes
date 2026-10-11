@@ -379,6 +379,13 @@ export interface TemporaryTwoHouseDates {
   newHouseRegionCode?: string;
   /** 신규 주택(명부 행)이 지정 지구 안인가 — 행 선언 그대로 */
   newHouseInDesignatedDistrict?: boolean;
+  /**
+   * 종전의 주택이 양도 주택이 **아니라** 명부의 다른 행이다 — 합가 D8 상대 쪽 두 주택 짝(B → C)에서만 존재한다(S15-2).
+   * §155① 본문의 「종전의 주택」은 신규 주택을 취득한 1세대가 그때 소유하던 주택이므로, 조정 여부(§155①2호·1호)는 이 행의
+   * 소재로 판정한다. 없으면(양도 주택이 종전 주택) 양도 주택의 소재로 판정한다. 행에 주소가 없으면 코드만 비어 있다 —
+   * 호출부가 양도 주택 주소로 대신 판정하지 않는다.
+   */
+  previousHouse?: { regionCode?: string; inDesignatedDistrict?: boolean };
 }
 
 export function resolveTemporaryTwoHouse(
@@ -405,7 +412,7 @@ export function resolveTemporaryTwoHouse(
   // D8 — 합가 전(당일 포함) 취득한 주택을 양도하는 합가 세대는 쪽을 보고 짝을 고른다.
   if (args.mergeContext && prev <= args.mergeContext.mergeDate) {
     const pair = mergeSidePair(prev, owned, args.mergeContext);
-    return pair ? toRosterDates(pair.previous, pair.next) : fallback();
+    return pair ? toRosterDates(pair.previous, pair.next, pair.previousRow) : fallback();
   }
   // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
   const later = owned.filter((h) => h.acquisitionDate! > prev);
@@ -413,11 +420,26 @@ export function resolveTemporaryTwoHouse(
   return toRosterDates(prev, later[0]);
 }
 
-function toRosterDates(previousAcquisitionDate: string, next: HouseRowForCount): TemporaryTwoHouseDates {
+function toRosterDates(
+  previousAcquisitionDate: string,
+  next: HouseRowForCount,
+  /** 종전 주택이 양도 주택이 아닐 때(D8 상대 쪽 짝)의 명부 행 */
+  previousRow?: HouseRowForCount,
+): TemporaryTwoHouseDates {
   return {
     previousAcquisitionDate,
     newAcquisitionDate: next.acquisitionDate!,
     source: "roster",
+    ...(previousRow
+      ? {
+          previousHouse: {
+            ...(previousRow.regionCode ? { regionCode: previousRow.regionCode } : {}),
+            ...(previousRow.regionCode && previousRow.inDesignatedDistrict !== undefined
+              ? { inDesignatedDistrict: previousRow.inDesignatedDistrict }
+              : {}),
+          },
+        }
+      : {}),
     ...(next.regionCode ? { newHouseRegionCode: next.regionCode } : {}),
     ...(next.regionCode && next.inDesignatedDistrict !== undefined
       ? { newHouseInDesignatedDistrict: next.inDesignatedDistrict }
@@ -443,7 +465,7 @@ function mergeSidePair(
   prev: string,
   owned: readonly HouseRowForCount[],
   ctx: MergeContext,
-): { previous: string; next: HouseRowForCount } | undefined {
+): { previous: string; next: HouseRowForCount; previousRow?: HouseRowForCount } | undefined {
   const sides = owned.map((h) => ({ h, side: mergeHouseSideOf({ acquisitionDate: h.acquisitionDate!, mergeOrigin: h.mergeOrigin }, ctx) }));
   if (sides.some((x) => x.side === undefined)) return undefined; // 쪽을 모르면 짝도 모른다(⑧이 고르게 한다)
   const of = (side: string) => sides.filter((x) => x.side === side).map((x) => x.h);
@@ -457,7 +479,7 @@ function mergeSidePair(
   const pairSide = otherSides.find((g) => g.length === 2);
   if (sellerOthers.length === 0 && pairSide) {
     const [a, b] = [...pairSide].sort((x, y) => (x.acquisitionDate! < y.acquisitionDate! ? -1 : 1));
-    return a.acquisitionDate! < b.acquisitionDate! ? { previous: a.acquisitionDate!, next: b } : undefined;
+    return a.acquisitionDate! < b.acquisitionDate! ? { previous: a.acquisitionDate!, next: b, previousRow: a } : undefined;
   }
   return undefined;
 }

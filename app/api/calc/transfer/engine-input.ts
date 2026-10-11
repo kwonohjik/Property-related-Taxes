@@ -152,7 +152,8 @@ export function buildTransferEngineInput(
     replacementHouse: data.replacementHouse
       ? {
           businessApprovalDate: toDate(data.replacementHouse.businessApprovalDate, "replacementHouse.businessApprovalDate"),
-          completionDate: toDate(data.replacementHouse.completionDate, "replacementHouse.completionDate"),
+          completionDate: toOptionalDate(data.replacementHouse.completionDate),
+          soldBeforeCompletion: data.replacementHouse.soldBeforeCompletion,
           replacementResidenceMonths: data.replacementHouse.replacementResidenceMonths,
           willResideNewHouse: data.replacementHouse.willResideNewHouse,
         }

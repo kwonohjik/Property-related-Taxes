@@ -143,6 +143,7 @@ export function evaluateTemporaryTwoHouseTiming(
     //   **같은 술어**로 연다(OH-35 · 원시 토글을 넘기면 비연접에도 1년 요건이 면제됐다).
     publicInstitutionRelocation: meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse!),
     disposalDelayReason: input.temporaryTwoHouse!.disposalDelayReason,
+    disposalDelayDisposedByThatMethod: input.temporaryTwoHouse!.disposalDelayDisposedByThatMethod,
   });
 
   return { provisoRelaxesHolding, timing, era };

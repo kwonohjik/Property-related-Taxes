@@ -9,6 +9,7 @@
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { completionDeadlineYearsLabel } from "@/lib/calc/one-house-era-labels";
 
 export function ReplacementHouseSpecialBlock({
@@ -20,6 +21,8 @@ export function ReplacementHouseSpecialBlock({
 }) {
   // §156의2⑤2호 「완성된 후 N년 이내」 — 양도일 연혁(2023-01-12 전 양도 2년 · 이후 3년, 엔진 leaf 단일 소스)
   const completionYears = completionDeadlineYearsLabel(form.transferDate);
+  // §156의2⑤3호 전단 「완성되기 전」 양도 — 준공일을 요구하지 않는다(S15-4). ④·⑧과 같은 `=== true` 읽기(옛 record는 완성 후 갈래).
+  const beforeCompletion = form.replSoldBeforeCompletion === true;
   return (
     <>
       <p className="text-sm font-medium mt-1">재개발·재건축 대체주택 특례</p>
@@ -30,6 +33,7 @@ export function ReplacementHouseSpecialBlock({
             replacementHouseSpecial: v,
             replBusinessApprovalDate: v ? form.replBusinessApprovalDate : "",
             replCompletionDate: v ? form.replCompletionDate : "",
+            replSoldBeforeCompletion: v ? form.replSoldBeforeCompletion === true : false,
             replResidenceMonths: v ? form.replResidenceMonths : "",
             replWillResideNewHouse: v ? form.replWillResideNewHouse : false,
           })
@@ -49,16 +53,40 @@ export function ReplacementHouseSpecialBlock({
             />
             <p className="text-xs text-muted-foreground">재개발·재건축 조합의 사업시행인가를 받은 날</p>
           </div>
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium">
-              신축주택 준공일 <span className="text-destructive">*</span>
-            </label>
-            <DateInput
-              value={form.replCompletionDate}
-              onChange={(v) => onChange({ replCompletionDate: v })}
+          <div className="space-y-1.5 sm:col-span-2">
+            <label className="text-sm font-medium">신축주택 완성 시점 (대체주택 양도 당시)</label>
+            <RadioCardGroup
+              name="repl-completion-kind"
+              tone="emerald"
+              value={beforeCompletion ? "before" : "after"}
+              onChange={(v: string) => onChange({ replSoldBeforeCompletion: v === "before" })}
+              options={[
+                {
+                  value: "after",
+                  label: "신축주택이 완성된 뒤 양도했다",
+                  description: `완성(준공)된 날부터 ${completionYears} 이내에 양도해야 합니다 (§156의2⑤3호 후단) — 준공일을 입력하세요`,
+                },
+                {
+                  value: "before",
+                  label: "신축주택이 완성되기 전에 양도했다",
+                  description: "§156의2⑤3호 전단 — 아직 준공되지 않았다면 준공일을 입력하지 않아도 됩니다",
+                },
+              ]}
             />
-            <p className="text-xs text-muted-foreground">재개발·재건축으로 완성된 신축주택의 사용승인일</p>
           </div>
+          {!beforeCompletion && (
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">
+                신축주택 준공일 <span className="text-destructive">*</span>
+              </label>
+              <DateInput
+                data-testid="repl-completion-date"
+                value={form.replCompletionDate}
+                onChange={(v) => onChange({ replCompletionDate: v })}
+              />
+              <p className="text-xs text-muted-foreground">재개발·재건축으로 완성된 신축주택의 사용승인일</p>
+            </div>
+          )}
           <div className="space-y-1.5">
             <label className="text-sm font-medium">
               대체주택 거주개월수 <span className="text-destructive">*</span>

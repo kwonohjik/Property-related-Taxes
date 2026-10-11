@@ -166,6 +166,7 @@ export function mapPresaleRightsToEngine(
     originalMemberMoveInDate: toOptionalDate(r.originalMemberMoveInDate),
     originalMemberTenantLeaseEndDate: toOptionalDate(r.originalMemberTenantLeaseEndDate),
     originalMemberDisposalDelayReason: r.originalMemberDisposalDelayReason,
+    originalMemberDisposalDelayDisposedByThatMethod: r.originalMemberDisposalDelayDisposedByThatMethod,
     isInherited: r.isInherited,
     isRankingDisqualifiedInheritedRight: r.isRankingDisqualifiedInheritedRight,
     isCoInherited: r.isCoInherited,

@@ -37,10 +37,12 @@ import {
 } from "../transfer-tax-exemption-holding";
 import { isCapitalNewTownResidenceEra } from "../data/one-house-holding-residence-era";
 import {
+  judgeTemporaryTwoHouseTiming,
   meetsPublicInstitutionRelocationRegion,
   resolveRegulatedAtNewAcquisition,
   resolveTemporaryTwoHouseDeadline,
 } from "../transfer-tax-temporary-two-house-timing";
+import { resolveDisposalDelay } from "../data/temporary-two-house-delay-era";
 import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
 import { holidayTableProvisionalBefore, holidayTableUncoveredBefore } from "../civil-period";
 import {
@@ -70,6 +72,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "155-1-2002-transition-unverified",
   "155-1-regulated-at-new-acquisition-unverified",
   "155-1-regulated-announcement-date-unverified",
+  "155-18-disposal-method-unverified",
   "155-2-reinheritance-reference-date-unverified",
   "155-2-pre2010-parental-care-exception-unverified",
   "154-1-capital-newtown-location-unverified",
@@ -207,6 +210,32 @@ export function collectEraUndetermined(
           `시행일부터 1년이 지난 뒤이면서 신규주택 취득일부터 2년 안이라 결론이 이 단서에 달려 있는데, 단서는 판정하지 ` +
           `않았고 신규주택 취득일부터 2년으로 계산했습니다 — 확인이 필요합니다.`,
       });
+    }
+    /*
+     * S15-14 — ⑱ 사유를 골랐는데 2022-02-15 전 양도분의 「그 방법으로 양도」가 확인되지 않았다(모름 = 불성립). 그 확인이 요건 B(처분기한)를
+     * 가를 때만 낸다 — 방법을 확인했다고 가정하면 기한이 충족되는 경우.
+     */
+    if (tt.disposalDelayReason) {
+      const era = resolveTemporaryTwoHouseDeadline(input, twoHouseRule);
+      const threeYearMet = (disposalDelayDisposedByThatMethod: boolean) =>
+        judgeTemporaryTwoHouseTiming({
+          previousAcquisitionDate: tt.previousAcquisitionDate,
+          newAcquisitionDate: tt.newAcquisitionDate,
+          transferDate: input.transferDate,
+          deadlineYears: era.years,
+          deadlineDate: era.deadlineDate,
+          oneYearWaived: true, // 요건 A는 이 판단과 무관하다
+          disposalDelayReason: tt.disposalDelayReason,
+          disposalDelayDisposedByThatMethod,
+        }).threeYearMet;
+      const delay = resolveDisposalDelay({
+        reason: tt.disposalDelayReason,
+        disposedByThatMethod: tt.disposalDelayDisposedByThatMethod,
+        transferDate: input.transferDate,
+      });
+      if (delay.methodPending && !threeYearMet(false) && threeYearMet(true) && delay.note) {
+        out.push({ id: "155-18-disposal-method-unverified", reason: delay.note });
+      }
     }
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).moveInRequirementPending) {
       out.push({

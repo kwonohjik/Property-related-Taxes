@@ -382,7 +382,8 @@ function checkExemptionCore(
           legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
         });
       }
-      if (input.temporaryTwoHouse.disposalDelayReason) {
+      // S15-14 — 선언만이 아니라 **실제로 적용된** ⑱만 근거로 남긴다(방법 미확인·없던 호는 적용 근거가 아니다).
+      if (input.temporaryTwoHouse.disposalDelayReason && timing.delay.applied) {
         const delayLabel = DISPOSAL_DELAY_REASON_LABEL[input.temporaryTwoHouse.disposalDelayReason];
         basisParts.push(`§155⑱ ${delayLabel}`);
         exceptions.push({
