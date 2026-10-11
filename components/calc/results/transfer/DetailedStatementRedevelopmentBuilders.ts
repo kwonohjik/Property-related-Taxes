@@ -15,6 +15,7 @@ import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redeve
 import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
+import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 
@@ -92,8 +93,8 @@ const BRANCH_LABEL_SUCCESSOR_MEMBER: Record<RedevBranch, BranchLabelDef> = {
 // 사례 47 — settlement 비과세 차감 모드 라벨 (신축APT 양도 + 청산금 수령 동시신고).
 // 인가전·인가후는 사례 44/45 동일 산식, settlement만 비과세 차감으로 0 마스킹.
 const BRANCH_LABEL_SETTLEMENT_EXEMPTED: Record<RedevBranch, BranchLabelDef> = {
-  preApproval: { prefix: "① 인가전 분", legal: "§166②2호 + §166①2호 가목 (수령 안분)" },
-  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분", legal: "§166②2호 · §166⑤2호나목" },
+  preApproval: { prefix: "① 인가전 분", legal: "§166②2호 · §166①2호 나목 (수령 안분)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분", legal: "§166②2호 · §166①2호 가목" },
   settlement: {
     prefix: "③ 청산금 수령분 (1세대1주택 비과세)",
     // L-12 — 판정 기준일은 청산금분 양도일(소유권이전 고시일 다음날)이다. 종전 인용
@@ -122,6 +123,42 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
   },
 };
 
+/**
+ * 완공APT 청산금 **수령** 동시신고(비과세 아님) 라벨 — 시행령 §166②2호(= 제1항제2호 가목·나목) (G3-10).
+ *
+ * 종전에는 수령인데 비과세가 아니면 납부 라벨(「③ 청산금 납부분 (§166②1호 · §166⑤2호가목)」)로 떨어졌다.
+ * 인가전 분 = 나목(평가액 − 취득가액 − 필요경비 × (평가액 − 청산금) ÷ 평가액), 인가후 기존건물분 = 가목
+ * (양도가액 − (평가액 − 청산금) − 필요경비), 청산금 수령분 = 종전주택 일부의 분할양도(법규재산2012-358)다.
+ */
+const BRANCH_LABEL_APT_RECEIVE: Record<RedevBranch, BranchLabelDef> = {
+  preApproval: { prefix: "① 인가전 분", legal: "§166②2호 · §166①2호 나목 (수령 안분)" },
+  postApprovalExistingHouse: { prefix: "② 인가후 기존건물분", legal: "§166②2호 · §166①2호 가목" },
+  settlement: { prefix: "③ 청산금 수령분", legal: "종전주택 일부의 분할양도 · 법규재산2012-358" },
+};
+
+/** 빌더가 받는 축 — 입주권/완공APT · 납부/수령 */
+type RedevAxis = { subject?: "apt" | "right"; settlementDirection?: "pay" | "receive" };
+
+/**
+ * 완공APT 청산금 **수령 동시신고**인가 — 산식·라벨이 납부 구조(§166②1호)가 아니라 수령 구조(§166②2호)여야 하는 축.
+ * 단독신고(사례 46)·승계조합원(사례 48)은 각자 라벨 세트가 있어 제외한다. 입주권(right)은 이 PR 범위 밖이다.
+ */
+function isAptReceiveSimultaneous(redev: RedevelopmentResult, axis?: RedevAxis): boolean {
+  return (
+    (axis?.subject ?? "apt") !== "right" &&
+    axis?.settlementDirection === "receive" &&
+    redev.receiveOnlyMode !== true &&
+    redev.successorMemberApplied !== true
+  );
+}
+
+/** 수령 구조의 평가액 · 청산금 — 엔진 echo(`salePriceTotal` = 평가액 − 청산금, `settlement.apportionedTransfer` = 청산금)에서 되돌린다. */
+function receiveRightsAndSettlement(redev: RedevelopmentResult): { rights: number; settle: number; sale: number } {
+  const settle = redev.settlement.apportionedTransfer;
+  const sale = redev.salePriceTotal ?? 0;
+  return { rights: sale + settle, settle, sale };
+}
+
 function getBranchLabels(
   redev: RedevelopmentResult,
   subject?: "apt" | "right",
@@ -149,6 +186,19 @@ function getBranchLabels(
   }
   // 우선순위 2: settlementExemptionApplied (사례 47)
   if (redev.settlementExemptionApplied === true) return BRANCH_LABEL_SETTLEMENT_EXEMPTED;
+  // 우선순위 2.5: 완공APT 청산금 수령 동시신고 — 비과세가 아니어도 수령 구조다 (G3-10)
+  if (isAptReceiveSimultaneous(redev, { subject, settlementDirection })) {
+    const sva = redev.settlementHighValueAllocation;
+    return sva
+      ? {
+          ...BRANCH_LABEL_APT_RECEIVE,
+          settlement: {
+            prefix: "③ 청산금 수령분 (권리가액 기준 고가주택 안분)",
+            legal: "소득세법 §95③ · 시행령 §160① · 서면-2016-법령해석재산-2705",
+          },
+        }
+      : BRANCH_LABEL_APT_RECEIVE;
+  }
   // 우선순위 3: subject="right" + settlementDirection="receive" — §166①2호 가목·나목 (R-5)
   if (subject === "right" && settlementDirection === "receive") return BRANCH_LABEL_RIGHT_RECEIVE_NAMOK;
   // 우선순위 4: subject="right" 입주권 납부 모드 (사례 36 — §166①1호 + §95② 본문 괄호)
@@ -168,7 +218,20 @@ export function buildRedevTransferFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
   totalTransferPrice: number,
+  axis?: RedevAxis,
 ): string {
+  // 완공APT 청산금 수령 동시신고 — §166②2호(제1항제2호 가목·나목). 납부 구조의 「분양가 안분」 산식을 쓰지 않는다 (G3-10).
+  if (isAptReceiveSimultaneous(redev, axis)) {
+    const { rights, settle, sale } = receiveRightsAndSettlement(redev);
+    if (branch === "preApproval") {
+      return `의제 양도가액 = 평가액 ${fmt(rights)} − 청산금 ${fmt(settle)} = ${fmt(sale)} (§166①2호 나목 — 안분 비율의 분자)`;
+    }
+    if (branch === "postApprovalExistingHouse") {
+      return `양도가액 = ${fmt(redev.postApprovalExistingHouse.apportionedTransfer)} (§166①2호 가목 — 신축주택 양도가액 전액, 안분 없음)`;
+    }
+    return `청산금 수령액 = ${fmt(settle)} (종전주택 일부의 분할양도 — 청산금 상당분 · 법규재산2012-358)`;
+  }
+
   // 사례 46 receiveOnly — 인가전·인가후 0 강제, settlement만 청산금 수령액 자체
   if (redev.receiveOnlyMode === true) {
     if (branch === "settlement") {
@@ -210,7 +273,20 @@ export function buildRedevTransferFormula(
 export function buildRedevAcquisitionFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
+  axis?: RedevAxis,
 ): string {
+  // 완공APT 청산금 수령 동시신고 — 취득가액도 수령 구조다 (G3-10). 종전 취득가액은 입력값이라 곱 앞의 항을 문자로 둔다.
+  if (isAptReceiveSimultaneous(redev, axis)) {
+    const { rights, settle, sale } = receiveRightsAndSettlement(redev);
+    if (branch === "preApproval") {
+      return `종전 취득가액 × (평가액 ${fmt(rights)} − 청산금 ${fmt(settle)}) ÷ (평가액 ${fmt(rights)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166①2호 나목 — 종전 취득가액(실가 또는 §166③ 환산)의 안분, 1원 미만 절사)`;
+    }
+    if (branch === "postApprovalExistingHouse") {
+      return `분양가 = 평가액 ${fmt(rights)} − 청산금 ${fmt(settle)} = ${fmt(sale)} (§166①2호 가목 — 평가액 − 지급받은 청산금)`;
+    }
+    return `종전 취득가액 × (청산금 ${fmt(settle)}) ÷ (평가액 ${fmt(rights)}) = ${fmt(redev.settlement.apportionedAcquisition)} (종전주택 일부의 분할양도 — 청산금 상당분의 취득가액, 1원 미만 절사)`;
+  }
+
   // 사례 46 receiveOnly — settlement 안분 취득가액 = 종전취득가 × (청산금/권리가액)
   if (redev.receiveOnlyMode === true) {
     if (branch === "settlement") {
@@ -370,9 +446,14 @@ export function buildRedevLthdFormula(
     const pct = (detail.lthdRate * 100).toFixed(0);
     const years = Math.floor(detail.holdingMonths / 12);
     const months = detail.holdingMonths % 12;
+    // 어느 표인지는 **실제 공제율**로 가른다 — 「표1 강등」을 하드코딩하면 표2(예 52%) 옆에도 찍힌다 (G3-10).
+    // 표2는 보유 연 4%라 같은 보유연수의 표1(연 2%)보다 언제나 크다.
+    const table1Rate = calcLongTermRate(years, 0, false);
+    const tableMemo =
+      detail.lthdRate > table1Rate ? "표2(보유+거주) — 거주월수 귀속 분리" : "표1(보유만) — 거주월수 귀속 분리";
     return (
       `${pct}% × ${fmt(detail.gainAfterAllocation ?? 0)} = ${fmt(after)} ` +
-      `(보유 ${years}년 ${months}개월, 표1 강등 — 거주월수 귀속 분리) ` +
+      `(보유 ${years}년 ${months}개월, ${tableMemo}) ` +
       `− 1세대1주택 비과세 차감 ${fmt(after)} = 0`
     );
   }
@@ -440,7 +521,7 @@ export function buildRedevPerAssetForTransfer(
   return buildPerAsset(
     redev,
     (b, r) => r[b].apportionedTransfer,
-    (b, r) => buildRedevTransferFormula(b, r, totalTransferPrice),
+    (b, r) => buildRedevTransferFormula(b, r, totalTransferPrice, { subject, settlementDirection }),
     subject,
     settlementDirection,
   );
@@ -454,7 +535,7 @@ export function buildRedevPerAssetForAcquisition(
   return buildPerAsset(
     redev,
     (b, r) => r[b].apportionedAcquisition,
-    (b, r) => buildRedevAcquisitionFormula(b, r),
+    (b, r) => buildRedevAcquisitionFormula(b, r, { subject, settlementDirection }),
     subject,
     settlementDirection,
   );

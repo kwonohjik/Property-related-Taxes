@@ -164,6 +164,8 @@ describe("E-14f 구 §167의11①1·7호 — route", () => {
       householdHousingCount: "1",
       wasRegulatedAtAcquisition: false,
       marriageDate: "2020-05-01",
+      // 「먼저 양도」 선언은 §156의2⑨ 본문 공통 요건 — 날짜·선언 게이트가 구성 판정보다 먼저다(S05-6). 구성 미선언(판정 보류) 경로를 본다.
+      isFirstTransferredInMerge: true,
       presaleRights: RIGHT("2019-01-01"),
     });
     expect(await single(f)).toMatchObject({ totalTax: 236_365_800, reasons: "marriage_merge" });

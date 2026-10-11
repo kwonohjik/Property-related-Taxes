@@ -286,8 +286,10 @@ export function buildOneHouseExemptionApiBody(
     ...buildFinalHouseRestartPayload(form, judgmentFinalHouseRestartInScope(form)),
 
     // ── 판정 메뉴 고유 (P4-2b-0이 ⑫⑭를 열어 둔 축) ──────────
-    // §155의3 상생임대 — ⑤가 입주권 양도에는 칸을 숨기므로 ④도 싣지 않는다(stale 선언 차단 · ⑧ 같은 게이트).
-    ...buildOneHouseExtraFactsPayload(judgmentSaleIsHousing(form) ? form : { ...form, winWinRentalSpecial: false }),
+    // §155의2 장기저당담보·§155의3 상생임대 — ⑤가 입주권 양도에는 두 칸을 숨기므로 ④도 싣지 않는다(stale 선언 차단 · ⑧ 같은 게이트).
+    ...buildOneHouseExtraFactsPayload(
+      judgmentSaleIsHousing(form) ? form : { ...form, winWinRentalSpecial: false, longTermMortgageSpecial: false },
+    ),
 
     /**
      * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기의 leaf를 **그대로** 쓴다.
@@ -320,6 +322,8 @@ export function buildOneHouseExemptionApiBody(
             eligibleAtApproval: primary.redevExemptionEligibleAtApproval === "yes",
             // 빈 문자열은 **미입력**이다 — 엔진이 나목을 「판정 불가」로 두게 한다.
             otherHouseAcquisitionDate: primary.redevOtherHouseAcquisitionDate || undefined,
+            // 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱) — 빈 값은 해당 없음/모름이라 보내지 않는다.
+            otherHouseDisposalDelayReason: primary.redevOtherHouseDisposalDelayReason || undefined,
             // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 계산기와 같은 필드다.
             approvalDate: primary.redevApprovalDate || undefined,
           },
@@ -353,13 +357,21 @@ export async function callOneHouseExemptionAPI(
   return (json as { data: OneHouseExemptionResponse }).data;
 }
 
-/** 합가 3필드(§155④⑤) — 게이트는 호출부(`judgmentMergeInputVisible`)가 건다. */
+/**
+ * 합가 3필드(§155④⑤) — 게이트는 호출부(`judgmentMergeInputVisible`)가 건다.
+ *
+ * 「먼저 양도」(`isFirstTransferredInMerge`)는 **그 토글이 화면에 있을 때만** 보낸다(X3-5): 합가일 칸 아래 토글(합가일이 있을 때)
+ * 또는 §155의2② 칩 아래 토글(칩이 켜져 있을 때 — `Step3`). 둘 다 숨었는데 남은 값은 사용자가 볼 수 없는 선언이다.
+ */
 function buildMergePayload(form: OneHouseJudgmentFormData) {
+  const firstTransferToggleVisible =
+    !!(form.marriageDate || form.parentalCareMergeDate) ||
+    (form.longTermMortgageSpecial && form.longTermMortgageParentalCareMerge);
   return {
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
-    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    ...(form.isFirstTransferredInMerge && firstTransferToggleVisible ? { isFirstTransferredInMerge: true } : {}),
   };
 }

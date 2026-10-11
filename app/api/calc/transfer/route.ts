@@ -511,6 +511,12 @@ export async function POST(request: NextRequest) {
           generalHouseRightAtInheritance: engineInput.generalHouseRightAtInheritance,
         },
         specialHouseExclusions: engineInput.specialHouseExclusions,
+        // ⑭ §155⑥1호·⑦·⑧ 특례 주택 선언 (S08-3) — ⚠️ `engineInput`(귀농주택 취득일·부득이 해소일 Date 변환본).
+        article155SpecialHouses: {
+          ruralHouse: engineInput.ruralHouse,
+          culturalHeritageHouse: engineInput.culturalHeritageHouse,
+          unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
+        },
         // ⑭ §89② 세대 사실 (E-7) — ⚠️ `engineInput`(권리 취득일·합가일 등 Date 변환본).
         article89Clause2Facts: pickArticle89Clause2Facts(engineInput),
         isOneHousehold: data.isOneHousehold,

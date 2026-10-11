@@ -256,6 +256,12 @@ function resolveMoveInRegime(
 export function temporaryTwoHouseEraInputRelevance(p: {
   newAcquisitionDate: Date;
   newContractDate?: Date;
+  /**
+   * 종전주택 취득일(D13) — `resolveTemporaryTwoHouseDeadlineEra`의 같은 이름 인자와 **같은 값**을 넘긴다.
+   * 빠뜨리면 노출 술어는 계약일 기준(n = min(취득, 계약))으로 체제를 가르고 엔진은 종전주택 취득일 기준으로 가르는데,
+   * 종전주택을 보유하기 전에 한 계약은 그 기준이 아니라(D13) 엔진은 1년·전입 체제를 적용하면서 전입일 칸은 닫힌다.
+   */
+  previousAcquisitionDate?: Date;
   transferDate: Date;
 }): { regulatedAxis: boolean; moveIn: boolean } {
   const t = p.transferDate.getTime();
@@ -268,6 +274,7 @@ export function temporaryTwoHouseEraInputRelevance(p: {
       baseDeadlineYears: 3,
       newAcquisitionDate: p.newAcquisitionDate,
       newContractDate: p.newContractDate,
+      previousAcquisitionDate: p.previousAcquisitionDate,
       transferDate: p.transferDate,
     }).years === 1;
   return { regulatedAxis, moveIn };

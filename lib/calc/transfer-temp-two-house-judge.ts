@@ -13,12 +13,17 @@ import {
   judgeTemporaryTwoHouseTiming,
   resolveExemptionProviso,
 } from "@/lib/tax-engine/transfer-tax-exemption";
+import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import {
   meetsPublicInstitutionRelocationRegion,
   resolveRegulatedAtNewAcquisition,
   resolveTemporaryTwoHouseDeadline,
 } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import { temporaryTwoHouseEraInputRelevance } from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
+import {
+  resolveRegulatedShortenedClauseRef,
+  type RegulatedShortenedClauseRef,
+} from "@/lib/tax-engine/data/temporary-two-house-regulated-clause";
 import {
   toTemporaryTwoHouseEraFacts,
   type TemporaryTwoHouseEraFormFields,
@@ -59,15 +64,21 @@ export type TempTwoHouseVerdict =
         previous?: boolean;
         next?: boolean;
         previousAuto: boolean;
+        /** 종전 주택이 양도 주택이 아니라 명부 행(합가 D8 상대 쪽 짝)인가 — 위젯 문구가 갈린다(S15-2) */
+        previousIsRosterRow: boolean;
         nextAuto: boolean;
         determined: boolean;
         moveInRelevant: boolean;
+        /** 단축 규정의 연혁별 위치(「§155」 뒤 표기) — 카드 제목이 이 값을 읽는다(X2-1: 2026.10.1. 이후는 ①1호, 2호는 3년 쪽이다) */
+        clauseRef: RegulatedShortenedClauseRef;
       };
       /** §155①2호 가목 — `undefined`면 해당 없음(체제 밖) 또는 전입일 미입력(`moveInPending`) */
       moveInMet?: boolean;
       moveInPending: boolean;
       /** §155⑱ 사유로 기한 요건이 치유됐는지 — 카드가 "기한 초과이나 예외 적용"을 구분해 표시 */
       delayReasonApplied: boolean;
+      /** §155⑱ 사유를 골랐는데 양도일 연혁상 적용하지 않은 이유(방법 요건 · 없던 호) — 카드가 그대로 보여 준다 */
+      delayNote?: string;
     };
 
 /**
@@ -90,6 +101,14 @@ export function judgeTempTwoHouseFromForm(p: {
   /** 1호 임차일부터 세대전원 거주 개월 — ④와 같은 파서(`parseRentalLeaseResidenceMonths`) */
   provisoRentalLeaseResidenceMonths?: string;
   residencePeriodMonths: string;
+  /**
+   * §154⑧3호 동일세대 상속 통산 — ④가 싣는 값(`buildSameHouseholdInheritancePayload`)과 같은 사실.
+   * 1년 요건 면제(§154①3호 「1년 이상 거주」)를 엔진과 같은 거주 개월로 따지게 한다(S11-6).
+   */
+  sameHouseholdInheritance?: Pick<
+    ResidenceReqInput,
+    "acquisitionCause" | "decedentSameHouseholdBeforeInheritance" | "decedentCohabitationResidenceMonths"
+  >;
   /** §155⑯ 공공기관 지방이전 — 기한 5년 + 1년 요건 면제 */
   publicInstitutionRelocation?: boolean;
   /** §155⑯ 「이전한 시·군」 코드 — 신규주택 소재 코드와 함께 연접 여부를 자동 판정한다 */
@@ -98,6 +117,8 @@ export function judgeTempTwoHouseFromForm(p: {
   newHouseSigunguCode?: string;
   /** §155⑱ 처분기한 예외 사유 ("" = 해당 없음) */
   disposalDelayReason?: string;
+  /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건(④와 같은 값) */
+  disposalDelayDisposedByThatMethod?: boolean;
   /** 양도(종전) 주택 법정동코드 — 엔진과 같이 코드가 있으면 자동 판정 */
   regionCode?: string;
   /** 양도 주택이 지정 지구 안인가(선언) — 엔진 `regionInDesignatedDistrict`와 같은 값 */
@@ -108,6 +129,8 @@ export function judgeTempTwoHouseFromForm(p: {
   newHouseRegionCode?: string;
   /** 신규 주택이 지정 지구 안인가(명부 행 선언) */
   newHouseInDesignatedDistrict?: boolean;
+  /** 종전 주택이 양도 주택이 아니라 명부 행이다(합가 D8 상대 쪽 짝) — 조정 여부를 이 행의 소재로 판정한다(S15-2) */
+  previousHouse?: { regionCode?: string; inDesignatedDistrict?: boolean };
   /** §155①2호 새 입력(OH-01 A2b) — ④와 같은 leaf(`toTemporaryTwoHouseEraFacts`)로 편다 */
   eraFields?: TemporaryTwoHouseEraFormFields;
 }): TempTwoHouseVerdict {
@@ -134,6 +157,7 @@ export function judgeTempTwoHouseFromForm(p: {
       transferDate: transfer,
       residencePeriodMonths: parseInt(p.residencePeriodMonths || "0", 10) || 0,
       wasRegulatedAtAcquisition: false, // resolveExemptionProviso 미사용 필드 — 타입 충족용
+      ...p.sameHouseholdInheritance,
       oneHouseExemptionProviso: {
         reason: p.provisoReason as "rental_5yr_residence" | "expropriation" | "unavoidable",
         departureDate: p.provisoDepartureDate ? new Date(p.provisoDepartureDate) : undefined,
@@ -156,6 +180,7 @@ export function judgeTempTwoHouseFromForm(p: {
     p.eraFields ?? {},
     p.newHouseRegionCode || undefined,
     p.newHouseInDesignatedDistrict,
+    p.previousHouse,
   );
   const optDate = (v: string | undefined) => {
     if (!v) return undefined;
@@ -177,6 +202,9 @@ export function judgeTempTwoHouseFromForm(p: {
       newHouseInDesignatedDistrict: facts.newHouseInDesignatedDistrict,
       newHouseRegulatedAtAcquisition: facts.newHouseRegulatedAtAcquisition,
       previousHouseRegulatedAtNewAcquisition: facts.previousHouseRegulatedAtNewAcquisition,
+      previousHouseIsRosterRow: facts.previousHouseIsRosterRow,
+      previousHouseRegionCode: facts.previousHouseRegionCode,
+      previousHouseInDesignatedDistrict: facts.previousHouseInDesignatedDistrict,
       newHouseContractDate: optDate(facts.newHouseContractDate),
       wholeHouseholdMoveInDate: optDate(facts.wholeHouseholdMoveInDate),
       existingTenantLeaseEndDate: optDate(facts.existingTenantLeaseEndDate),
@@ -192,6 +220,7 @@ export function judgeTempTwoHouseFromForm(p: {
   const relevance = temporaryTwoHouseEraInputRelevance({
     newAcquisitionDate: nw,
     newContractDate: engineLike.temporaryTwoHouse.newHouseContractDate,
+    previousAcquisitionDate: prev,
     transferDate: transfer,
   });
 
@@ -206,6 +235,7 @@ export function judgeTempTwoHouseFromForm(p: {
     disposalDelayReason: (p.disposalDelayReason || undefined) as
       | TemporaryTwoHouseDelayReason
       | undefined,
+    disposalDelayDisposedByThatMethod: p.disposalDelayDisposedByThatMethod,
     deadlineDate: era.deadlineDate,
     moveInMet: era.moveInMet,
   });
@@ -225,14 +255,20 @@ export function judgeTempTwoHouseFromForm(p: {
       relevant: relevance.regulatedAxis && !relocation,
       previous: reg.previous,
       next: reg.next,
-      previousAuto: !!engineLike.regionCode,
+      // D8 상대 쪽 짝이면 B의 주소가 있을 때만 자동 판정이다 — 양도 주택(A)의 주소로 대신하지 않는다(S15-2).
+      previousAuto: p.previousHouse ? !!facts.previousHouseRegionCode : !!engineLike.regionCode,
+      // 위젯 안내 문구가 「양도 주택」과 「명부 종전 주택」을 구분한다.
+      previousIsRosterRow: !!p.previousHouse,
       nextAuto: !!facts.newHouseRegionCode,
       determined: reg.determined,
       // 가목·단서 체제 — 두 주택이 모두 조정(또는 미확인)일 때만 연다.
       moveInRelevant: relevance.moveIn && reg.previous !== false && reg.next !== false && !relocation,
+      clauseRef: resolveRegulatedShortenedClauseRef(transfer),
     },
     ...(era.moveInMet !== undefined ? { moveInMet: era.moveInMet } : {}),
     moveInPending: era.moveInRequirementPending,
-    delayReasonApplied: !!p.disposalDelayReason,
+    // 선언이 아니라 연혁(방법 요건·호별 신설 시기)까지 통과해 **실제로 적용된** 경우만 — 엔진 요건 B와 같은 판정(S15-14).
+    delayReasonApplied: t.delay.applied,
+    ...(t.delay.note ? { delayNote: t.delay.note } : {}),
   };
 }

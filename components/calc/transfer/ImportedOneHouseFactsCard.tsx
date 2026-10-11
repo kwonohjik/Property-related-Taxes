@@ -22,7 +22,7 @@ import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-f
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import type { TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
-import { completionDeadlineYearsLabel } from "@/lib/calc/one-house-era-labels";
+import { completionDeadlineYearsLabel, regulatedShortenedClauseRefOf } from "@/lib/calc/one-house-era-labels";
 
 /**
  * 계산기에서 **편집 위젯이 사라진** §89② 권리 예외 13필드 (P6-a).
@@ -84,6 +84,7 @@ export type ImportedSpecialsSlice = Pick<
   | "newHouseAcquisitionDate"
   | "publicInstitutionRelocation"
   | "disposalDelayReason"
+  | "disposalDelayDisposedByThatMethod"
   | "newHouseRegulatedAtAcquisition"
   | "prevHouseRegulatedAtNewAcquisition"
   | "newHouseContractDate"
@@ -96,6 +97,7 @@ export type ImportedSpecialsSlice = Pick<
   | "replacementHouseSpecial"
   | "replBusinessApprovalDate"
   | "replCompletionDate"
+  | "replSoldBeforeCompletion"
   | "replResidenceMonths"
   | "replWillResideNewHouse"
   | "provisoReason"
@@ -139,6 +141,7 @@ function specialsRows(
   replacementHouseApplies: boolean,
   temporaryTwoHouse: TemporaryTwoHouseDates | undefined,
   provisoMode: ProvisoMode,
+  regulatedClause: string,
 ): Row[] {
   const rows: Row[] = [];
   const push = (label: string, value: string | undefined) => {
@@ -152,6 +155,8 @@ function specialsRows(
     push("신규 주택 취득일", temporaryTwoHouse.newAcquisitionDate);
     if (f.publicInstitutionRelocation) push("공공기관·법인 지방이전 (§155⑯)", "예");
     push("처분기한 예외 사유 (§155⑱)", f.disposalDelayReason ? DELAY_REASON[f.disposalDelayReason] ?? "선언함" : undefined);
+    // 2022. 2. 15. 전 양도분의 요건 — 사유를 골랐고 선언했을 때만 적는다(미선언은 엔진이 적용하지 않는다).
+    if (f.disposalDelayReason && f.disposalDelayDisposedByThatMethod) push("사유의 매각 등의 방법으로 양도 (§155⑱)", "예");
   }
   /**
    * 🔑 §154① 단서는 **`temporary_two_house` 맥락일 때만** 적는다. `one_house` 맥락의 같은
@@ -166,8 +171,8 @@ function specialsRows(
    * **입력된 것만** 적는다. 신규 필드라 옛 record에는 없다(`?? ""` 대신 falsy 스킵).
    */
   const REG: Record<string, string> = { yes: "조정대상지역", no: "조정대상지역 아님" };
-  push("신규 주택 취득 당시 종전 주택 (§155①2호)", REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
-  push("신규 주택 취득 당시 신규 주택 (§155①2호)", REG[f.newHouseRegulatedAtAcquisition ?? ""]);
+  push(`신규 주택 취득 당시 종전 주택 (§155${regulatedClause})`, REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
+  push(`신규 주택 취득 당시 신규 주택 (§155${regulatedClause})`, REG[f.newHouseRegulatedAtAcquisition ?? ""]);
   push("신규 주택 매매계약·계약금 지급일", f.newHouseContractDate || undefined);
   push("세대전원 전입일 (§155①2호 가목)", f.newHouseMoveInDate || undefined);
   if (f.newHouseExistingTenant) {
@@ -187,7 +192,9 @@ function specialsRows(
         : "선언함 — 현재 세대 구성(2주택 미만·조합원입주권 없음)에서는 성립하지 않아 계산에 쓰지 않습니다",
     );
     push("사업시행계획 인가일", f.replBusinessApprovalDate);
-    push("신축주택 준공일", f.replCompletionDate);
+    // 완성 전 양도 갈래는 준공일이 없다 — 그 사실을 적는다(S15-4). 옛 record(필드 없음)는 준공일 행 그대로.
+    if (f.replSoldBeforeCompletion === true) push("신축주택 완성 시점", "완성 전 양도");
+    else push("신축주택 준공일", f.replCompletionDate);
     push("대체주택 거주기간", f.replResidenceMonths ? `${f.replResidenceMonths}개월` : undefined);
     if (f.replWillResideNewHouse) push("신축주택 1년 이상 거주 예정", "예");
   }
@@ -289,7 +296,7 @@ export function ImportedOneHouseFactsCard({
 }) {
   const rRows = rights ? rightsRows(rights, completionDeadlineYearsLabel(transferDate)) : [];
   const sRows = specials
-    ? specialsRows(specials, replacementHouseApplies, temporaryTwoHouse, provisoMode)
+    ? specialsRows(specials, replacementHouseApplies, temporaryTwoHouse, provisoMode, regulatedShortenedClauseRefOf(transferDate))
     : [];
   /**
    * 🔑 **둘 중 하나만 있어도 렌더한다.** P6 이전에 저장한 이력은 `importedOneHouseFacts`가

@@ -162,6 +162,7 @@ import { fourPartFinancials, splitTwoColFinancials } from "./FilingFormTableFina
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
+import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import { resolveFilingRateCode } from "./filing-rate-code";
 import {
   reductionEligibleIncome,
@@ -681,5 +682,8 @@ export function buildRows(
 
   // B1 — 겸용 별개 취득 파트 모델: 취득가액 행 열별 주석(엔진 echo 소비 — 재도출 금지)
   const acqNotes = mode === "fourpart" || mode === "mixed-4col" ? separateAcqFilingNotes(mu) : undefined;
-  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes, acqNotes);
+  // 「비과세 양도소득금액」 행: 특례 적용 결과는 「(소령 §161①)」을 B에만 붙인다(S06-8). 그 외(미적용)는 종전 라벨.
+  const rhDetail = result.rentalHousingExceptionDetail;
+  const nontaxableRowLabel = rhDetail?.applied === true ? nontaxableIncomeLabel(rhDetail.scenarioId) : undefined;
+  return buildRowsFromOrder(v, roseNotesMap, acqDateRowLabel, singleTaxNotes, acqNotes, nontaxableRowLabel);
 }

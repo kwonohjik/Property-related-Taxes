@@ -90,12 +90,21 @@ export const winWinRentalHouseSchema = z.object({
 });
 
 // ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
-export const replacementHouseSchema = z.object({
-  businessApprovalDate: z.string().date(),
-  completionDate: z.string().date(),
-  replacementResidenceMonths: z.number().int().nonnegative(),
-  willResideNewHouse: z.boolean(),
-});
+export const replacementHouseSchema = z
+  .object({
+    businessApprovalDate: z.string().date(),
+    /** 신축주택 준공일 — 「완성되기 전」 양도(`soldBeforeCompletion`)면 없다(S15-4) */
+    completionDate: z.string().date().optional(),
+    /** §156의2⑤3호 전단 — 완성 전 양도 명시 선언 */
+    soldBeforeCompletion: z.boolean().optional(),
+    replacementResidenceMonths: z.number().int().nonnegative(),
+    willResideNewHouse: z.boolean(),
+  })
+  // 양도 시기 요건(3호)의 근거가 둘 중 하나는 있어야 한다 — 날짜 없이 완성 전 선언도 없으면 요건을 판정할 수 없다.
+  .refine((r) => r.soldBeforeCompletion === true || r.completionDate !== undefined, {
+    message: "대체주택 특례: 신축주택 준공일 또는 완성 전 양도 선언이 필요합니다",
+    path: ["completionDate"],
+  });
 
 /**
  * ⑫ §89② 배제의 **3년 초과 예외** 선언 — 「소득세법 시행령」 §156의2④ · §156의3③ /
@@ -223,7 +232,7 @@ export const houseSchema = z.object({
   completionDate: z.string().date().optional(),
   // #2a 배우자 단독 보유 (§167의3⑨ 혼인 5년내 차감)
   isSpouseOwned: z.boolean().optional(),
-  // §155④⑤ 합가 전 보유 쪽 — 판정 메뉴 명부 입력(merge-composition.ts)
+  // §155④⑤ 합가 전 보유 쪽 — 판정 메뉴·계산기 공통 명부 입력(merge-composition.ts)
   mergeOrigin: z.enum(["seller_side", "counterpart_side", "second_merge_side"]).optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
   inheritedDate: z.string().date().optional(),
@@ -308,7 +317,7 @@ export const houseSchema = z.object({
   saleDepositReceived: z.boolean().optional(),
 });
 
-// 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11)
+// 세대 보유 분양권·입주권 (주택 수 산입 — 분양권만 2021.1.1 이후 취득분, 법률 제17477호 부칙 제4조 · 소령 §167의11. 입주권은 취득일 무관)
 export const presaleRightSchema = z.object({
   id: z.string().min(1),
   type: z.enum(["presale_right", "redevelopment_right"]),
@@ -330,6 +339,8 @@ export const presaleRightSchema = z.object({
   originalMemberDisposalDelayReason: z
     .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
     .optional(),
+  /** ⑫ 위 사유의 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
+  originalMemberDisposalDelayDisposedByThatMethod: z.boolean().optional(),
   isInherited: z.boolean().optional(),
   isRankingDisqualifiedInheritedRight: z.boolean().optional(),
   isCoInherited: z.boolean().optional(),
@@ -503,6 +514,13 @@ export const oneRightExemptionFactsSchema = z.object({
    * 가목(다른 주택 0채)이면 비운다. 미입력이면 엔진이 나목을 **적용하지 않는다**(판정 불가).
    */
   otherHouseAcquisitionDate: z.string().date().optional(),
+  /**
+   * 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 「다른 주택 취득일부터 3년이 되는 날 현재」 해당.
+   * 해당하면 3년을 넘겨도 나목이 성립한다. 일시적 2주택 `disposalDelayReason`과 같은 값(S05-4).
+   */
+  otherHouseDisposalDelayReason: z
+    .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
+    .optional(),
   /** 양도하는 입주권의 관리처분계획인가일 — 분양권 요건 연혁(법률 제18578호 부칙 제7조②·③) 판정용(E-3 후속) */
   approvalDate: z.string().date().optional(),
 });

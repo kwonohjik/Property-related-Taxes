@@ -63,6 +63,7 @@ import {
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
   giftBurdenedRegulatedByAddress,
+  giftBurdenedEffectiveWasRegulatedAtAcquisition,
   giftBurdenedMergeInScope,
   giftBurdenedMergeSlice,
   giftBurdenedWinWinInScope,
@@ -370,6 +371,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
                 }
               />
               <TempTwoHouseDelayReasonInput
+                transferDate={transferDate}
                 form={deadlineFields}
                 onChange={(p) =>
                   set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedDeadlineExceptionPatch(p) } })
@@ -433,8 +435,8 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           transferDate={transferDate ?? ""}
           mode="full"
           onChange={(rh) => set({ rentalHousingException: rh })}
-          // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건. API 변환·⑧ 검증과 같은 소스.
-          wasRegulatedAtAcquisition={bgt.wasRegulatedAtAcquisition ?? false}
+          // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건. ⑧ 검증과 같은 실효값(주소가 있으면 엔진과 같은 주소 판정 — G1-13).
+          wasRegulatedAtAcquisition={giftBurdenedEffectiveWasRegulatedAtAcquisition(bgt, regionCode)}
         />
       )}
     </div>

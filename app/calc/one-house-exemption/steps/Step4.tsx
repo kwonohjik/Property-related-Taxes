@@ -19,9 +19,11 @@ type Props = {
   onCalculateTax: () => void;
   /** 양도(예정)일 — 배지의 고가주택 기준금액 표시용(OH-54) */
   transferDate?: string;
+  /** 폼의 「보유 주택」 명부 — 결과의 「보유 주택 N」을 화면 명부 순번으로 매긴다(S03-8). */
+  houses?: readonly { id: string; acquisitionDate?: string }[];
 };
 
-export function Step4({ result, error, isLoading, onJudge, onCalculateTax, transferDate }: Props) {
+export function Step4({ result, error, isLoading, onJudge, onCalculateTax, transferDate, houses }: Props) {
   const triggered = useRef(false);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ export function Step4({ result, error, isLoading, onJudge, onCalculateTax, trans
       result={result}
       onCalculateTax={onCalculateTax}
       transferDate={transferDate}
+      houses={houses}
     />
   );
 }

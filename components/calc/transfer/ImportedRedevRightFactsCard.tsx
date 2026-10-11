@@ -33,6 +33,7 @@ export type ImportedRedevRightSlice = Pick<
   AssetForm,
   | "redevExemptionEligibleAtApproval"
   | "redevOtherHouseAcquisitionDate"
+  | "redevOtherHouseDisposalDelayReason"
   | "redevPriorHouseHoldingMonths"
   | "redevPriorHouseResidenceMonths"
 >;
@@ -54,6 +55,7 @@ function factsRows(a: ImportedRedevRightSlice): Row[] {
     ELIGIBLE_LABEL[a.redevExemptionEligibleAtApproval ?? ""],
   );
   push("다른 주택 취득일 (나목 3년 기산)", a.redevOtherHouseAcquisitionDate);
+  push("나목 처분기한 예외 사유 (시행령 §155⑱)", a.redevOtherHouseDisposalDelayReason ? "선언함" : undefined);
   push(
     "종전주택 보유기간",
     a.redevPriorHouseHoldingMonths ? `${a.redevPriorHouseHoldingMonths}개월` : undefined,

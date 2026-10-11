@@ -25,6 +25,8 @@ import * as path from "node:path";
 import { SIGUNGU_CODES } from "@/lib/korean-law/sigungu-codes";
 import { JEONNAM_GWANGJU_ALIASES, JEONBUK_ALIASES } from "@/lib/geo/sigungu-code-alias";
 import ABOLISHED from "@/lib/geo/abolished-sigungu-codes.json";
+import { REGULATED_REGIONS, type RegulatedRegion } from "@/lib/tax-engine/data/regulated-areas";
+import SUBAREA_STATUS from "./fixtures/regulated-subarea-code-status.json";
 
 /**
  * 시·군·구 코드 리터럴을 담고 있는 파일. **새 파일이 생기면 여기에 추가**한다.
@@ -164,5 +166,67 @@ describe("시·군·구 코드 리터럴 전수 대조 (계획서 §6-G.3)", () 
     ]);
     const missing = found.filter((f) => !known.has(f));
     expect(missing, `감사 대상에 넣거나 예외로 명시할 것:\n${missing.join("\n")}`).toEqual([]);
+  });
+
+  // ── G7-4: 하위(읍·면·동·리) 접두까지 — 읍 승격으로 폐지된 면 코드가 현행 짝 없이 남는 것을 막는다 ──
+  //
+  // 5자리 시·군·구 감사만으로는 `41461310`(모현면 — 읍 승격으로 폐지)처럼 **하위 접두**가 낡는 것을 못 잡는다.
+  // 매칭은 원 코드 `startsWith(codePrefix)`라 현행 읍 코드(4146125300)가 들어오면 「해당 없음」으로 조용히 흡수돼
+  // 제외 7곳이 지정으로, 지정 1곳(일광)이 비지정으로 뒤집혔다. 그래서 데이터의 모든 하위 접두를 행안부 법정동코드
+  // 전체자료 스냅숏(`fixtures/regulated-subarea-code-status.json`)과 대조한다.
+
+  /** 폐지된 하위 접두 → 현행 짝(같은 땅 — 행안부 자료로 하위 리 목록이 같음을 확인한 것만). */
+  const SUBAREA_SUCCESSOR: Record<string, string> = {
+    "41461310": "41461253", // 처인 모현면 → 모현읍
+    "41461360": "41461262", // 처인 양지면 → 양지읍
+    "27710340": "27710262", // 달성 옥포면 → 옥포읍
+    "27710370": "27710259", // 달성 유가면 → 유가읍
+    "27710360": "27710265", // 달성 현풍면 → 현풍읍
+    "27710380": "27710268", // 달성 구지면 → 구지읍
+    "47290360": "47290256", // 경산 압량면 → 압량읍
+    "26710310": "26710259", // 기장 일광면 → 일광읍
+  };
+
+  const subRulesOf = (r: RegulatedRegion) =>
+    [...(r.excludedSubCodes ?? []), ...(r.includedSubCodes ?? [])].filter((s) => s.codePrefix.length >= 8);
+  const STATUS = (SUBAREA_STATUS as { status: Record<string, string> }).status;
+  const aliasLegacy = (c5: string) => LEGACY.has(c5) || c5 in INTENTIONAL_LEGACY;
+
+  it("AUDIT-6a: 데이터의 모든 하위 접두가 행안부 스냅숏에 대조돼 있다", () => {
+    const unknown = REGULATED_REGIONS.flatMap((r) =>
+      subRulesOf(r)
+        .filter((s) => !(s.codePrefix in STATUS))
+        .map((s) => `${r.code} ${r.name} ${s.name} "${s.codePrefix}"`),
+    );
+    expect(
+      unknown,
+      `행안부 법정동코드 전체자료로 존재·폐지를 대조해 fixtures/regulated-subarea-code-status.json에 추가할 것:\n${unknown.join("\n")}`,
+    ).toEqual([]);
+  });
+
+  it("AUDIT-6b: 폐지된 하위 접두는 현행 짝이 같은 지역·같은 기간에 함께 있거나 구 시·군·구 체계 안에 있다", () => {
+    const orphans: string[] = [];
+    for (const r of REGULATED_REGIONS) {
+      for (const s of subRulesOf(r)) {
+        if (STATUS[s.codePrefix] !== "폐지") continue;
+        if (aliasLegacy(s.codePrefix.slice(0, 5))) continue; // 별칭·의도적 구 체계 — 매처가 흡수(G7-3) / 현행 엔트리가 따로 있다
+        const succ = SUBAREA_SUCCESSOR[s.codePrefix];
+        const twin = succ ? subRulesOf(r).find((t) => t.codePrefix === succ) : undefined;
+        const ok =
+          twin !== undefined &&
+          STATUS[succ] === "존재" &&
+          twin.appliesFrom === s.appliesFrom &&
+          twin.appliesTo === s.appliesTo;
+        if (!ok) orphans.push(`${r.code} ${r.name} ${s.name} "${s.codePrefix}" — 폐지, 같은 기간의 현행 짝 없음`);
+      }
+    }
+    expect(orphans, `현행 짝을 추가하거나 SUBAREA_SUCCESSOR에 짝을 등록할 것:\n${orphans.join("\n")}`).toEqual([]);
+  });
+
+  it("AUDIT-6c: SUBAREA_SUCCESSOR의 구·신이 스냅숏에서 각각 폐지·존재다", () => {
+    for (const [old, cur] of Object.entries(SUBAREA_SUCCESSOR)) {
+      expect(STATUS[old], old).toBe("폐지");
+      expect(STATUS[cur], cur).toBe("존재");
+    }
   });
 });

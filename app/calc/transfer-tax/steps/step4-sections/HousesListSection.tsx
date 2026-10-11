@@ -251,8 +251,9 @@ export function HousesListSection({
    */
   hideSpouseOwned?: boolean;
   /**
-   * §155④⑤ 합가 — 넘기면 행 편집 창에 합가 전 보유 쪽을 묻고 표에 배지를 단다(판정 메뉴).
-   * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다. 계산기는 넘기지 않는다.
+   * §155④⑤ 합가 — 넘기면 행 편집 창에 합가 전 보유 쪽을 묻고 표에 배지를 단다(판정 메뉴·계산기 공통).
+   * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다 — 계산기도 합가일이 있으면 넘긴다
+   * (`Step4.tsx`·`SurchargeJudgmentSection.tsx`의 `mergeContextOf(form)`). 넘기지 않은 화면은 합가일이 없는 경우뿐이다.
    */
   mergeContext?: MergeContext;
   /** 조특법 주택 수 제외(행 편집 ⑥·「특례」 배지) — 게이트는 호출부(`HouseCountExemptionInputs`)가 정한다. */
@@ -358,9 +359,10 @@ export function HousesListSection({
               },
             }
           : {}),
-      }).fromLegacyOnly,
+      }, form.transferDate).fromLegacyOnly,
     [
       form.houses,
+      form.transferDate,
       form.culturalHeritageHouseSpecial,
       form.ruralHouseSpecial,
       form.ruralHouseKind,
@@ -377,8 +379,9 @@ export function HousesListSection({
         householdHousingCount: form.householdHousingCount,
         houses: form.houses,
         presaleRights: form.presaleRights,
+        transferDate: form.transferDate,
       }),
-    [form.assets, form.householdHousingCount, form.houses, form.presaleRights],
+    [form.assets, form.householdHousingCount, form.houses, form.presaleRights, form.transferDate],
   );
 
   return (
@@ -555,8 +558,8 @@ export function HousesListSection({
         transferDate={form.transferDate}
       />
 
-      {/* ── 양도 주택 3주택+ 전용 배제 특례 ──
-          🔴 「담긴 값이 있으면」도 연다 (2026-09-07 대장 재대조). 토글을 켠 뒤 주택수를 2채로
+      {/* ── 양도 주택 자체 중과배제 특례 (2주택 이상 — §167의3①·§167의10①2호) ──
+          🔴 「담긴 값이 있으면」도 연다 (2026-09-07 대장 재대조). 토글을 켠 뒤 주택수를 1채로
              낮추면 섹션이 사라지는데 ⑧(`transfer-tax-validate.ts`)은 켜진 토글의 기간(년)을
              계속 요구해, 그 토글을 끌 화면이 없는 dead-end가 됐다. 술어는 leaf 단일 소스. */}
       {!hideSellingHouseExclusion && sellingHouseExclusionVisible(form) && (
@@ -568,7 +571,7 @@ export function HousesListSection({
 
       {/* ── 양도 주택 2주택 전용 배제 특례 (§167의10①3호·7호) ──
           두 호는 **양도하는 주택 자신**에도 적용된다(F-16). 종전에는 「다른 보유 주택」 행에만
-          입력이 있어 양도 주택에는 경로가 없었다. dead-end 회피는 위 3주택+ 섹션과 같은 규칙. */}
+          입력이 있어 양도 주택에는 경로가 없었다. dead-end 회피는 위 섹션과 같은 규칙. */}
       {!hideSellingHouseExclusion && sellingHouseTwoHouseExclusionVisible(form) && (
         <SellingHouseTwoHouseExclusionSection
           value={form.sellingHouseExclusion}

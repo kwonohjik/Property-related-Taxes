@@ -39,6 +39,7 @@ export interface NormalReturnArgs extends FinalizeArgs {
   rental97LthdDetail: TransferTaxResult["rental97LthdDetail"];
   usageConversionDetail: TransferTaxResult["usageConversionDetail"];
   lthdExclusionReason: TransferTaxResult["lthdExclusionReason"];
+  lthdTable2OneHouseAxis: boolean;
   new994Detail: TransferTaxResult["new994Detail"];
   unsold989Detail: TransferTaxResult["unsold989Detail"];
   houseCountExclusionDetails: TransferTaxResult["houseCountExclusionDetails"];
@@ -82,6 +83,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
+    lthdTable2OneHouseAxis,
     new994Detail,
     unsold989Detail,
     houseCountExclusionDetails,
@@ -205,6 +207,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
+    lthdTable2OneHouseAxis,
     rental97TaxDetail,
     new994Detail,
     unsold989Detail,

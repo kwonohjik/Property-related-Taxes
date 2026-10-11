@@ -12,6 +12,10 @@
  *    전수 목록**이고, 컴파일러가 그 목록을 강제한다. 서브트리가 새 필드를 읽으면 이 Pick에
  *    없어서 `tsc`가 막고, 이 Pick에 추가하면 어댑터(`judge.ts`)의 키 커버리지 가드가 막는다.
  *    ⇒ 「판정 메뉴가 넘기는 사실만으로 계산기와 같은 판정이 나온다」가 **유지되는 불변식**이 된다.
+ *
+ * ⚠️ 이 불변식은 **직접 읽기만** 막는다. `OneHouseJudgeInput`을 **다른 필드를 읽는 함수**(예: `redevelopment`를 읽는
+ *    `resolveInheritedHouseExclusionFromInput`)에 그대로 넘기는 간접 읽기는 tsc가 못 잡는다(S07-11 실측).
+ *    그런 정본 결과는 STEP 0.95가 낸 echo(`inheritedHouseExclusionDetail`)로 받는다 — 서브트리가 다시 부르지 않는다.
  */
 import type { FinalOneHouseRestartEcho } from "./final-house-restart";
 import type { TransferTaxInput } from "../types/transfer.types";
@@ -80,6 +84,7 @@ export type OneHouseJudgeInput = Pick<
   | "sellingHouseId"
   | "knownHouseExclusionCount"
   | "inheritedHouseExclusionCount"
+  | "inheritedHouseExclusionDetail"
   | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
   // 혼인합가 1199(양쪽 2주택 이상) — 명부 밖 장기임대주택의 혼인 전 보유자(`rentalUnits[].mergeOrigin`)
@@ -92,6 +97,8 @@ export type OneHouseJudgeInput = Pick<
   | "finalOneHouseRestart"
   // ── 보유 중 비거주 기간(보유기간 통산 제외 · §154⑧2호) — 판정 메뉴 전용 ──
   | "nonResidentHoldingPeriod"
+  // ── §154① 보유 기산일 override — 토지 출자 원조합원 완공APT(사용승인일). 엔진이 채운다(G3-4) ──
+  | "exemptionHoldingStartDate"
 >;
 
 /**
@@ -184,6 +191,8 @@ export type OneHouseFacts = {
   knownHouseExclusionCount?: TransferTaxInput["knownHouseExclusionCount"];
   /** 위 제외 중 §155②③ 상속주택 몫 — §155 특례 중첩 상한(세 특례 불허) echo. */
   inheritedHouseExclusionCount?: TransferTaxInput["inheritedHouseExclusionCount"];
+  /** STEP 0.95 §155②③ 제외 정본 결과 echo — 판정 서브트리가 같은 판정을 다른 입력으로 다시 하지 않게 한다(S07-11). */
+  inheritedHouseExclusionDetail?: TransferTaxInput["inheritedHouseExclusionDetail"];
   /** 위 제외 중 명부 행으로 특정된 몫(PR-3) — §155④⑤ 합가 전 구성 판정의 echo. */
   knownHouseExclusionHouseIds?: TransferTaxInput["knownHouseExclusionHouseIds"];
   /** 명부 입력 경로가 없는 호출부(부담부증여) echo — §155④⑤ 합가 전 구성 판정(사용자 결정 2026-10-05). */
@@ -201,6 +210,9 @@ export type OneHouseFacts = {
 
   /** 보유 중 비거주 기간 — 보유기간은 거주자 기간만 통산(§154⑧2호 예외). 판정 메뉴 전용 입력. */
   nonResidentHoldingPeriod?: TransferTaxInput["nonResidentHoldingPeriod"];
+
+  /** ⚠️ 사용자 입력이 아니다 — 토지 출자 원조합원 완공APT의 §154① 보유 기산일(사용승인일). 계산기 엔진이 채운다(G3-4). */
+  exemptionHoldingStartDate?: TransferTaxInput["exemptionHoldingStartDate"];
 };
 
 /** 판정 대상 양도 정보 — 판정 메뉴는 「양도 예정」, 계산기는 실제 입력값(D-3 재판정). */
@@ -329,8 +341,10 @@ export type OneHouseUndetermined = {
  * 🔑 **선언한 특례만** 낸다. 선언하지 않은 조문을 「해당 없음」으로 나열하면 화면이 안 쓰는
  *    조문으로 길어지고, 읽는 사람은 그것이 판정에 영향을 줬다고 읽는다
  *    (`OneHouseJudgmentResultView`의 확립된 원칙 — §155⑳·§89①4호 카드가 같은 규칙을 쓴다).
- * 🔑 **기한 초과는 담지 않는다** — 그 축은 `pending`이 이미 날짜와 함께 안내한다. 두 곳에서
- *    같은 사실을 말하면 어느 쪽이 정본인지 흐려진다.
+ * 🔑 **기한 초과는 `pending`이 말한다** — 기한이 아직 이룰 수 있으면 날짜와 함께 안내한다. 두 곳에서 같은 사실을 말하면 어느
+ *    쪽이 정본인지 흐려진다. 단 **판정 기준일 전에 기한이 지나** `pending`에서 빠진 「이 날까지 양도」 조건은 사유가 사라지지
+ *    않도록 여기에 「기한 경과」로 남긴다(id `…:deadline-lapsed` — §89② 3년·§155⑧·§155⑦3호. §155① 처분기한·합가 기한은
+ *    요건 검토표가 같은 사유를 말하므로 싣지 않는다).
  * 🔑 성립 여부 판정은 **정본**(`resolveMergeDeeming` 등)이 하고, 이 타입은 **사유만** 담는다.
  *    수집기가 따로 성립을 판정하면 정본과 드리프트한다.
  */
@@ -374,8 +388,8 @@ export type OneHouseJudgment = {
    * 「따라 … 보는」이므로 사용자가 켠 플래그가 아니라 **각 항의 요건을 실제로 충족해 의제가 성립한
    * 경우**만이며, 그 판정을 내리는 곳이 여기(`checkExemption`)뿐이라 결과로 echo한다.
    *
-   * 현재 범위는 **§155①④⑤⑥⑦⑧ + §155의2②**다(§155의2②는 P3에서 추가 — E-3.9).
-   * §156의2(주택+조합원입주권)·§156의3(주택+분양권)은 괄호에 함께 열거돼 있으나 **손대지 않았다**.
+   * 현재 범위는 **§155①④⑤⑥⑦⑧ + §155의2② + §156의2⑤**다(§155의2②는 P3에서 추가 — E-3.9, §156의2⑤ 대체주택은 S08-4).
+   * §156의3(주택+분양권)과 §156의2의 다른 항은 괄호에 함께 열거돼 있으나 **손대지 않았다**.
    *
    * ⚠️ 이름이 같은 **다른 축**이 있다 — 중과 배제(영 §167의10①15호)의 `deemedOneHouseBy155`
    *    (`multi-house-surcharge.types.ts`)는 「**제155조 또는 조특법**」만 인정해 §155의2를

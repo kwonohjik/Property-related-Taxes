@@ -5,9 +5,10 @@
  *
  * ## 이 파일이 지키는 것 — **④ → 컴패니언 겸용 카드까지의 효과**
  *
- * 판정 메뉴에서 넘어온 폼-전역 사실이 함께 양도한 겸용주택의 세액까지 닿는지를 고정한다.
- * 실측 차이 **121,500,000원**(1,039,935,001 → 918,435,001). ④ 변환(`buildWinWinRentalPayload`)을
- * 지우면 KILLED된다.
+ * 판정 메뉴에서 넘어온 폼-전역 사실이 함께 양도한 겸용주택의 세액까지 닿는지를 고정하려던 파일이다.
+ * 🔁 **S08-6(2026-10) 정정**: 종전 CW-1의 「실측 차이 121,500,000원」은 컴패니언 겸용 카드가 아니라 **토지 primary**가
+ * 표2를 받던 것이었다(순수 토지는 표2 대상 자산이 아니다 — 아래 CW-1). 겸용 카드까지의 도달 효과는 현재 관측되지 않는다.
+ * ④ 전달 자체(body)는 아래 CW-2가 고정한다.
  *
  * ## ⚠️ **구별하지 못하는 것을 적어 둔다** — 뮤테이션 실측
  *
@@ -166,17 +167,27 @@ describe("컴패니언 겸용주택 × §155의3 상생임대", () => {
    * 🔴 **핵심.** 판정 메뉴에서 넘어온 폼-전역 사실이 **컴패니언 겸용 카드까지** 닿아야 한다.
    *    `globals`의 `Pick`이나 `mixed-use-part-cards`의 매핑이 빠지면 세액이 그대로다.
    */
-  it("[CW-1] 넘겨받은 상생임대 사실이 컴패니언 겸용 비과세를 살린다", async () => {
+  it("[CW-1] 🔁 상생임대 사실이 **토지 primary**의 장특 표2를 열지 않는다 — 순수 토지는 표2 대상 자산이 아니다 (S08-6)", async () => {
+    /**
+     * 🔁 S08-6(2026-10) 정정. 종전 이 테스트는 `winWin 유무로 determinedTax가 121,500,000원 줄어든다`를 단언했고 주석은 그 효과를
+     *    「컴패니언 겸용 카드까지 도달」이라 적었다. 실측으로 가르니 **줄어든 것은 토지 primary 한 장**이었다 — 세대 플래그(1세대·1주택)가
+     *    실린 순수 토지가 상생임대 거주요건 면제로 표2 40%(vs 표1 22%)를 받고 있었다(양도차익 1,500,000,000 × 18%p = 270,000,000 공제 차이 ×
+     *    45% = 121,500,000). 「소득세법」 §95② 단서는 표2를 「1세대 1주택(이에 딸린 토지를 포함)에 해당하는 **자산**」에만 주므로
+     *    순수 토지는 대상이 아니다. 겸용 카드 4장은 두 경우 모두 같은 값이라 상생임대가 거기 **도달한 효과는 관측되지 않는다**
+     *    (겸용 축은 별도 추적 — 이 테스트가 「살린다」고 주장하던 것은 근거가 없었다).
+     */
     const without = await pipeline(form());
     const withWinWin = await pipeline(form({ importedOneHouseFacts: IMPORTED_WIN_WIN }));
 
     expect(without.status, JSON.stringify(without.json).slice(0, 300)).toBe(200);
     expect(withWinWin.status, JSON.stringify(withWinWin.json).slice(0, 300)).toBe(200);
 
-    const a = without.json.data?.aggregated?.determinedTax;
-    const b = withWinWin.json.data?.aggregated?.determinedTax;
-    expect(typeof a).toBe("number");
-    expect(b!).toBeLessThan(a!);
+    type Card = { propertyId: string; longTermHoldingDeduction: number };
+    const primaryOf = (r: typeof without) =>
+      (r.json.data?.aggregated?.properties as Card[]).find((p) => p.propertyId === "primary")!;
+    // 토지 primary: 표1(보유 11년 22% × 1,500,000,000 = 330,000,000) — 상생임대 유무와 무관
+    expect(primaryOf(without).longTermHoldingDeduction).toBe(330_000_000);
+    expect(primaryOf(withWinWin).longTermHoldingDeduction).toBe(330_000_000);
   });
 
   /**

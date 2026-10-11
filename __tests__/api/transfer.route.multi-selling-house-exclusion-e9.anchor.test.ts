@@ -247,6 +247,19 @@ describe("E-9 판정 — 화면 경로(⑬→⑫→⑭)가 단건과 같다", ()
     expect(await multi(f)).toEqual(s);
   });
 
+  /**
+   * 재검증 S14b-2(PR1b) — 같은 여섯 선언이 **2주택(명부 1채)** 에서도 배제된다. 종전 E9-4는 명부 2채(=3주택)로만 시험해
+   * 「영 §167의10①2호 준용」인 2주택 안전망이 0이었다. 화면 게이트(`sellingHouseExclusionVisible`)도 같은 2채부터다.
+   */
+  it.each(THREE_PLUS)("E9-4b 2주택 %s — 단건에서 배제되고 다건도 같은 세액", async (_name, se, acq) => {
+    const base = await single(form(1, undefined, acq));
+    const f = form(1, se, acq);
+    expect(validateMultiSupportedMode(f)).toBeNull();
+    const s = await single(f);
+    expect(s.totalTax).toBeLessThan(base.totalTax);
+    expect(await multi(f)).toEqual(s);
+  });
+
   it.each(TWO)("E9-5 2주택 %s — 단건에서 배제되고 다건도 같은 세액", async (_name, se) => {
     const base = await single(form(1));
     const f = form(1, se);

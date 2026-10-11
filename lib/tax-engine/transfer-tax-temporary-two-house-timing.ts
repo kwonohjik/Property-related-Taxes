@@ -28,6 +28,7 @@ import {
   isOneYearHoldRequiredForTemporaryTwoHouse,
   type TemporaryTwoHouseDeadlineEra,
 } from "./data/temporary-two-house-deadline-era";
+import { resolveDisposalDelay, type DisposalDelayResolution } from "./data/temporary-two-house-delay-era";
 
 /** §155⑯ 전단 — 공공기관 지방이전 시 처분기한 5년 */
 const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
@@ -56,6 +57,11 @@ export function judgeTemporaryTwoHouseTiming(p: {
   /** §155⑱ — 해당 시 처분기한 초과여도 요건 B 충족 */
   disposalDelayReason?: TemporaryTwoHouseDelayReason;
   /**
+   * §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 선언 — 2022-02-15 전 양도분에만 요건이다(`resolveDisposalDelay`).
+   * 미선언은 불성립(모름 = 혜택 불성립).
+   */
+  disposalDelayDisposedByThatMethod?: boolean;
+  /**
    * §155①2호 단서(기존 임차인)로 늘어난 기한 말일 — 있으면 `deadlineYears` 대신 이 날까지다
    * (연혁 leaf `TemporaryTwoHouseDeadlineEra.deadlineDate`).
    */
@@ -74,6 +80,8 @@ export function judgeTemporaryTwoHouseTiming(p: {
   threeYearMet: boolean;
   /** §155①2호 가목 — 입력 그대로(해당 없음·미판정이면 `undefined`) */
   moveInMet?: boolean;
+  /** §155⑱ 사유 판정 — 양도일 연혁(방법 요건·호별 신설 시기)을 반영한 **실제 적용 여부**와 미적용 사유(S15-14) */
+  delay: DisposalDelayResolution;
   overall: boolean;
 } {
   const oneYearThreshold = firstDayAfterPeriod(p.previousAcquisitionDate, 1);
@@ -91,7 +99,13 @@ export function judgeTemporaryTwoHouseTiming(p: {
   // §155① 본문 괄호 "(제18항에 따른 사유에 해당하는 경우를 포함한다)" — 기한 초과를 치유한다.
   //   ⑱ 각 호는 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 해당 여부이므로 양도일과 무관하다.
   //   ⑱은 **요건 B(기한)만** 치유한다 — 요건 A(1년)는 그대로다(본문 괄호가 3년 절에만 붙어 있다).
-  const threeYearMet = p.disposalDelayReason !== undefined || isOnOrBeforeDay(p.transferDate, deadline);
+  //   2022-02-15 전 양도분은 사유 해당만으로는 부족하고 「그 방법으로 양도」도 필요하다(S15-14 — `resolveDisposalDelay`).
+  const delay = resolveDisposalDelay({
+    reason: p.disposalDelayReason,
+    disposedByThatMethod: p.disposalDelayDisposedByThatMethod,
+    transferDate: p.transferDate,
+  });
+  const threeYearMet = delay.applied || isOnOrBeforeDay(p.transferDate, deadline);
   // ⑱은 양도 기한만 치유한다 — 가목(전입)은 「각 목의 요건을 모두 충족」의 별개 요건이다.
   const moveInOk = p.moveInMet !== false;
   return {
@@ -101,6 +115,7 @@ export function judgeTemporaryTwoHouseTiming(p: {
     ...(deadlineNote ? { deadlineNote } : {}),
     threeYearMet,
     ...(p.moveInMet !== undefined ? { moveInMet: p.moveInMet } : {}),
+    delay,
     overall: oneYearMet && threeYearMet && moveInOk,
   };
 }
@@ -169,6 +184,9 @@ export function resolveTemporaryTwoHouseDeadlineYears(
  * §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 —
  * **신규 주택 취득일** 기준 두 주택의 조정 여부 (OH-01 판정 대상·시점).
  *
+ * 「종전의 주택」은 보통 양도 주택이지만 합가 D8 상대 쪽 짝(B → C)을 양도 주택(A)이 먼저 양도할 때는 명부의 B다
+ * (`temporaryTwoHouse.previousHouseIsRosterRow` — S15-2).
+ *
  * 주택마다 법정동코드가 있으면 `isRegulatedByBjdCode(취득일)`로 정밀 판정하고(형제
  * `resolveWasRegulatedAtAcquisition`과 같은 규약 — 코드가 선언을 이긴다), 없으면 사용자 선언을 쓴다.
  *
@@ -207,12 +225,11 @@ export function resolveRegulatedAtNewAcquisition(
   // `inDistrict` — 「동 안 일부 지구만 지정」된 동이면 그 주택이 지구 안인가(선언). 위치 사실이라 날짜마다 같은 값.
   const at = (code: string | undefined, inDistrict: boolean | undefined, declared: boolean | undefined, date: Date) =>
     code ? isRegulatedByBjdCode(code, format(date, "yyyy-MM-dd"), inDistrict).isRegulated : declared;
-  const previous = at(
-    p.regionCode,
-    p.regionInDesignatedDistrict,
-    tt.previousHouseRegulatedAtNewAcquisition,
-    tt.newAcquisitionDate,
-  );
+  // 종전의 주택 — 합가 D8 상대 쪽 짝(B → C)이면 양도 주택(A)이 아니라 명부의 B다(S15-2). 그때 B에 주소가 없으면 A의 주소로
+  //   대신 판정하지 않고 선언(`previousHouseRegulatedAtNewAcquisition`)을 받는다.
+  const previous = tt.previousHouseIsRosterRow
+    ? at(tt.previousHouseRegionCode, tt.previousHouseInDesignatedDistrict, tt.previousHouseRegulatedAtNewAcquisition, tt.newAcquisitionDate)
+    : at(p.regionCode, p.regionInDesignatedDistrict, tt.previousHouseRegulatedAtNewAcquisition, tt.newAcquisitionDate);
   let next = at(tt.newHouseRegionCode, tt.newHouseInDesignatedDistrict, tt.newHouseRegulatedAtAcquisition, tt.newAcquisitionDate);
   if (next === true && tt.newHouseRegionCode && tt.newHouseContractDate) {
     next = isRegulatedByBjdCode(

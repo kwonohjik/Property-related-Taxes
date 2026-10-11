@@ -22,13 +22,16 @@ type JudgmentLike = {
 };
 
 export type OneHouseVerdict = {
-  label: "비과세" | "부분 비과세" | "과세" | "해석이 갈림";
+  label: "비과세" | "기간분 비과세" | "부분 비과세" | "과세" | "해석이 갈림";
   tone: "emerald" | "amber" | "rose" | "violet";
   detail: string;
 };
 
 /** 해석이 갈리는 쟁점(P4 — `OneHouseExemptionResponse.contestedIssues`)에서 배지가 보는 것만. */
 type ContestedLike = { conclusionsDiffer?: boolean };
+
+/** 장기임대주택 특례 결론(`OneHouseExemptionResponse.rentalHousingException`)에서 배지가 보는 것만. */
+type RentalLike = { scenario?: string; passed?: boolean };
 
 /**
  * 판정 배지 — 세 갈래(전액 비과세 / 부분 비과세 / 과세).
@@ -49,6 +52,7 @@ export function oneHouseVerdictOf(
   judgment: JudgmentLike,
   highValueThreshold?: number,
   contestedIssues?: ContestedLike[],
+  rental?: RentalLike,
 ): OneHouseVerdict {
   /*
    * P4 — 두 입장의 결론이 다르면 결론을 **단언하지 않는다**(사용자 결정 2026-10-06). 결론이 같으면 그 결론 그대로다.
@@ -59,6 +63,26 @@ export function oneHouseVerdictOf(
       label: "해석이 갈림",
       tone: "violet",
       detail: "해석이 갈리는 쟁점이 있어 입장에 따라 결론이 다릅니다. 아래 「해석이 갈리는 쟁점」에서 두 입장의 결론과 근거를 확인하세요.",
+    };
+  }
+  /*
+   * S09-3 — 직전거주주택보유주택(B) 충족은 **전액 비과세가 아니다.** 소령 §154⑩·§155⑳ 후단은 「직전거주주택의 양도일
+   * 후의 기간분에 대해서만 … 제154조제1항을 적용」한다. 판정 메뉴는 §161 안분 입력을 받지 않으므로(Q-7) 과세 범위를
+   * 단정하지 않는다 — 「과세」도 「비과세」도 아닌 기간분 비과세로 적고, 과세 범위는 세액 계산이 정한다.
+   * 이 술어가 결과뷰·이력·불러오기·계산기 출처 줄의 단일 소스라 한 곳에서 바꾼다.
+   */
+  if (rental?.scenario === "B" && rental.passed === true && (judgment.isExempt || judgment.isPartialExempt)) {
+    return {
+      label: "기간분 비과세",
+      tone: "amber",
+      detail:
+        "직전거주주택 양도일 후의 기간분에 대해서만 1세대1주택 비과세를 적용합니다(소령 §154⑩·§155⑳ 후단). " +
+        "과세되는 범위는 §161 안분 입력이 있는 세액 계산에서 정해집니다." +
+        (judgment.isPartialExempt
+          ? ` 고가주택${
+              highValueThreshold !== undefined ? `(${formatHighValueThresholdLabel(highValueThreshold)} 초과)` : ""
+            }에 해당해 그 초과분 과세 계산(소령 §161②)도 함께 적용됩니다.`
+          : ""),
     };
   }
   if (judgment.isExempt) {
@@ -98,7 +122,12 @@ export function oneHouseVerdictFromResult(
   const judgment = resultData?.judgment as JudgmentLike | undefined;
   if (!judgment || typeof judgment !== "object") return null;
   const contested = resultData?.contestedIssues;
-  return oneHouseVerdictOf(judgment, undefined, Array.isArray(contested) ? (contested as ContestedLike[]) : undefined);
+  return oneHouseVerdictOf(
+    judgment,
+    undefined,
+    Array.isArray(contested) ? (contested as ContestedLike[]) : undefined,
+    resultData?.rentalHousingException as RentalLike | undefined,
+  );
 }
 
 /**

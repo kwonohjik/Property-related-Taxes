@@ -111,6 +111,7 @@ export function giftBurdenedDeadlineExceptionFields(
     newHouseJibun: tt?.newHouseJibun ?? "",
     newHouseSigunguCode: extractSigunguCodeFromPnu(tt?.newHouseRegionCode || undefined) ?? "",
     disposalDelayReason: tt?.disposalDelayReason ?? "",
+    disposalDelayDisposedByThatMethod: tt?.disposalDelayDisposedByThatMethod === true,
   };
 }
 
@@ -123,6 +124,7 @@ function giftBurdenedDeadlineJudgeArgs(bgt: BurdenedGiftTransferTaxInput) {
     relocatedSigunguCode: f.relocatedSigunguCode,
     newHouseSigunguCode: f.newHouseSigunguCode,
     disposalDelayReason: f.disposalDelayReason,
+    disposalDelayDisposedByThatMethod: f.disposalDelayDisposedByThatMethod,
   };
 }
 
@@ -138,6 +140,8 @@ export function giftBurdenedDeadlineExceptionPatch(
   if (patch.relocatedInstitutionJibun !== undefined) out.relocatedInstitutionJibun = patch.relocatedInstitutionJibun;
   if (patch.relocatedSigunguCode !== undefined) out.relocatedSigunguCode = patch.relocatedSigunguCode;
   if (patch.disposalDelayReason !== undefined) out.disposalDelayReason = patch.disposalDelayReason;
+  if (patch.disposalDelayDisposedByThatMethod !== undefined)
+    out.disposalDelayDisposedByThatMethod = patch.disposalDelayDisposedByThatMethod;
   if (patch.newHouseJibun !== undefined) out.newHouseJibun = patch.newHouseJibun;
   return out;
 }

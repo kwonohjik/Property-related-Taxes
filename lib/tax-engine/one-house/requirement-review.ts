@@ -26,6 +26,10 @@
  */
 import { deadlineEndFrom, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
+import {
+  isOneYearHoldRequiredForTemporaryTwoHouse,
+  TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START,
+} from "../data/temporary-two-house-deadline-era";
 import { TRANSFER } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
@@ -34,8 +38,14 @@ import {
   describeOneHouseResidenceRequirement,
   DISPOSAL_DELAY_REASON_LABEL,
   evaluateTemporaryTwoHouseTiming,
+  doubleMergeHouseCountHolds,
+  doubleMergeOrderOf,
+  inheritedBothPoolsExcluded,
+  mergeAxisHouses,
   mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
+  resolveTwoHouseMergeAxis,
+  ruralTemporaryTwoHouseOverlapCountHolds,
   type OneHouseResidenceBasis,
 } from "../transfer-tax-exemption-requirements";
 import {
@@ -46,6 +56,7 @@ import {
 import {
   MARRIAGE_BOTH_SIDES_MULTI_HOUSE_BASIS,
   marriageRentalSidesOf,
+  resolveDoubleMergeComposition,
   resolveMergeComposition,
 } from "./merge-composition";
 import type {
@@ -100,7 +111,12 @@ export function buildRequirementReview(
     return { scheme: "155-4-5-merge", items: mergeItems(input, rule, twoHouseRule, judgmentBaseDate) };
   }
 
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  // E-3와 같은 주택 수 게이트 — ⑦ 농어촌주택이 겹친 3주택(D3)도 §155① 행으로 검토한다(S07-5).
+  if (
+    (input.householdHousingCount === 2 || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    input.temporaryTwoHouse &&
+    twoHouseRule
+  ) {
     // 다른 §155 특례로 비과세가 됐으면 이 행들은 결론의 근거가 아니다.
     if (settled && !ids.includes("155-1-temporary-two-house")) return undefined;
     return {
@@ -139,24 +155,43 @@ function temporaryTwoHouseItems(
 
   // ① 「종전의 주택을 취득한 날부터 1년 이상이 지난 후 신규 주택을 취득」
   const oneYearNatural = isAfterPeriod(tth.previousAcquisitionDate, 1, tth.newAcquisitionDate);
-  items.push({
-    id: "one-year",
-    label: "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
-    status: oneYearNatural ? "met" : timing.oneYearMet ? "waived" : "unmet",
-    facts: [
-      { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
-      { label: "1년 경과일", value: fmt(timing.oneYearThreshold) },
-      { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
-    ],
-    ...(!oneYearNatural && timing.oneYearMet
-      ? {
-          note: provisoRelaxesHolding
-            ? "§154① 단서 사유에 해당해 1년 요건을 적용하지 않습니다."
-            : "§155⑯ 법인·공공기관 지방이전에 해당해 1년 요건을 적용하지 않습니다.",
-        }
-      : {}),
-    legalBasis: oneYearNatural || provisoRelaxesHolding || !timing.oneYearMet ? basis155 : `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
-  });
+  if (!isOneYearHoldRequiredForTemporaryTwoHouse(input.transferDate)) {
+    /**
+     * 2012.6.29. 전 양도분 §155①에는 이 요건이 없다(대통령령 제23887호가 도입 — 2012.2.2. 시행본 원문 확인).
+     * `timing.oneYearMet`가 참인 것은 그 때문이지 §155⑯ 지방이전·§154① 단서 면제가 아니다 — 사유를 가리지 않고
+     * 「요건 없음」으로 싣는다(종전에는 ⑯ 지방이전 면제로 표시했다).
+     */
+    items.push({
+      id: "one-year",
+      label: "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+      status: "not_required",
+      facts: [
+        { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
+        { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
+      ],
+      note: `${fmt(TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START)} 전 양도분에는 이 요건이 없었습니다(대통령령 제23887호로 도입).`,
+      legalBasis: basis155,
+    });
+  } else {
+    items.push({
+      id: "one-year",
+      label: "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+      status: oneYearNatural ? "met" : timing.oneYearMet ? "waived" : "unmet",
+      facts: [
+        { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
+        { label: "1년 경과일", value: fmt(timing.oneYearThreshold) },
+        { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
+      ],
+      ...(!oneYearNatural && timing.oneYearMet
+        ? {
+            note: provisoRelaxesHolding
+              ? "§154① 단서 사유에 해당해 1년 요건을 적용하지 않습니다."
+              : "§155⑯ 법인·공공기관 지방이전에 해당해 1년 요건을 적용하지 않습니다.",
+          }
+        : {}),
+      legalBasis: oneYearNatural || provisoRelaxesHolding || !timing.oneYearMet ? basis155 : `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
+    });
+  }
 
   // ② 「신규 주택을 취득한 날부터 3년 이내에 종전의 주택을 양도」(⑱ 사유 포함)
   const withinDeadline = isOnOrBeforeDay(input.transferDate, timing.deadline);
@@ -236,25 +271,45 @@ function mergeItems(
   twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"],
   judgmentBaseDate: Date | undefined,
 ): OneHouseRequirementCheck[] {
-  const isMarriage = input.marriageMerge?.marriageDate !== undefined;
-  const mergeDate = (input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate)!;
+  /**
+   * 🔑 검토표는 **정본이 고른 합가**를 그대로 읽는다(X4-3 · S04-3). 합가일이 둘 다 있으면 혼인만 보지 않는다:
+   *   - 이중 합가 3주택(D4 — §155①과 겹친 3주택이 아닐 때): 먼저 합친 날·그 합가의 연수(`doubleMergeOrderOf` ·
+   *     `resolveDoubleMergeComposition` — `resolveDoubleMergeDeeming`과 같은 조각).
+   *   - 그 밖(2주택): `resolveTwoHouseMergeAxis`가 명부 소유 쪽으로 고른 합가.
+   */
+  const count = input.householdHousingCount;
+  const countHoldsSingle = mergeDeemingHouseCountHolds(input, twoHouseRule);
+  const doubleOrder = count === 3 && !countHoldsSingle ? doubleMergeOrderOf(input) : undefined;
+  const axis = doubleOrder ? undefined : resolveTwoHouseMergeAxis(input)!;
+  const isMarriage = doubleOrder ? doubleOrder.first === "marriage" : axis!.kind === "marriage";
+  const mergeDate = doubleOrder?.firstDate ?? axis!.mergeDate;
   const event = isMarriage ? "혼인" : "합가";
   const basis = isMarriage ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT;
   const items: OneHouseRequirementCheck[] = [];
 
-  // ① 「1주택을 보유하는 자가 1주택을 보유하는 자와 … 합침으로써 1세대가 2주택」
-  const count = input.householdHousingCount;
-  const countHolds = mergeDeemingHouseCountHolds(input, twoHouseRule);
-  const composition = resolveMergeComposition({
-    householdHousingCount: count,
-    houses: input.houses,
-    sellingHouseId: input.sellingHouseId,
-    mergeDate,
-    knownHouseExclusionCount: input.knownHouseExclusionCount,
-    knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
-    noRosterInputPath: input.noMergeRosterInputPath,
-    marriageRentals: marriageRentalSidesOf(input, isMarriage),
-  });
+  // ① 「1주택을 보유하는 자가 1주택을 보유하는 자와 … 합침으로써 1세대가 2주택」(이중 합가는 3주택)
+  const countHolds = doubleOrder ? doubleMergeHouseCountHolds(input) : countHoldsSingle;
+  const composition = doubleOrder
+    ? resolveDoubleMergeComposition({
+        householdHousingCount: count,
+        houses: input.houses,
+        sellingHouseId: input.sellingHouseId,
+        firstMergeDate: doubleOrder.firstDate,
+        secondMergeDate: doubleOrder.secondDate,
+        knownHouseExclusionCount: input.knownHouseExclusionCount,
+        knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
+        noRosterInputPath: input.noMergeRosterInputPath,
+      })
+    : resolveMergeComposition({
+        householdHousingCount: count,
+        houses: mergeAxisHouses(input.houses, axis!),
+        sellingHouseId: input.sellingHouseId,
+        mergeDate,
+        knownHouseExclusionCount: input.knownHouseExclusionCount,
+        knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
+        noRosterInputPath: input.noMergeRosterInputPath,
+        marriageRentals: marriageRentalSidesOf(input, isMarriage),
+      });
   const compositionUnknownFacts = composition.status === "fails" &&
     (composition.reason === "roster_missing" ||
       composition.reason === "origin_missing" ||
@@ -269,7 +324,9 @@ function mergeItems(
       : [];
   items.push({
     id: "merge-composition",
-    label: `${event} 전 각자 1주택을 보유하다가 ${isMarriage ? "혼인으로" : "합가로"} 1세대 2주택이 됨`,
+    label: doubleOrder
+      ? "혼인·동거봉양 두 합가를 거쳐 합가 전 각자 1주택을 보유하다가 1세대 3주택이 됨(이중 합가)"
+      : `${event} 전 각자 1주택을 보유하다가 ${isMarriage ? "혼인으로" : "합가로"} 1세대 2주택이 됨`,
     status: !countHolds || composition.status === "fails" ? "unmet" : composition.status === "holds" ? "met" : "unchecked",
     facts: [{ label: "세대 주택 수", value: `${count}채` }, ...compositionFacts],
     ...(!countHolds
@@ -277,7 +334,9 @@ function mergeItems(
           note:
             count === 3
               ? "3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다."
-              : `합가 특례는 2주택(일시적 2주택과 겹친 경우 3주택)까지만 적용됩니다.`,
+              : count === 2 && inheritedBothPoolsExcluded(input)
+                ? "상속주택 2채(단독상속 §155② · 공동상속 소수지분 §155③)를 주택 수에서 뺀 뒤에도 2주택입니다 — 세 특례가 겹친 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다(확인 필요)."
+                : `합가 특례는 2주택(일시적 2주택과 겹친 경우 3주택)까지만 적용됩니다.`,
         }
       : composition.status === "fails"
         ? {
@@ -332,7 +391,9 @@ function mergeItems(
   // ④ 「합친 날(혼인한 날)부터 N년 이내」 — N은 양도일 연혁(OH-29)
   const years = resolveMergeExemptionYears(isMarriage ? "marriage" : "parental_care", input.transferDate);
   const deadline = deadlineEndFrom(mergeDate, years).end;
-  const afterMerge = input.transferDate.getTime() >= mergeDate.getTime();
+  // 이중 합가는 **나중에 합친 날** 이후의 양도여야 3주택이 된 뒤의 양도다(`matchDoubleMergeApartFromWindow`).
+  const afterMergeDate = doubleOrder?.secondDate ?? mergeDate;
+  const afterMerge = input.transferDate.getTime() >= afterMergeDate.getTime();
   const within = afterMerge && isWithinDeadline(mergeDate, years, input.transferDate);
   items.push({
     id: "merge-window",
@@ -344,7 +405,11 @@ function mergeItems(
       { label: "양도(예정)일", value: fmt(input.transferDate) },
     ],
     ...(!afterMerge
-      ? { note: `${event}일 전의 양도입니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 되기 전입니다.` }
+      ? {
+          note: doubleOrder
+            ? `나중에 합친 날(${fmt(afterMergeDate)}) 전의 양도입니다 — 두 합가로 3주택이 되기 전입니다.`
+            : `${event}일 전의 양도입니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 되기 전입니다.`,
+        }
       : !within
         ? {
             note:

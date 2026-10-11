@@ -14,10 +14,12 @@
  *
  * `judgeRentalHousingEligibility`(`transfer-tax-rental-housing-step.ts`)가 유일한 소스다.
  * 보유·거주 연수 도출과 §155의3 거주기간 면제까지 그 안에 있다 — 여기서 다시 세지 않는다.
- * §161 안분 입력(`priorResidenceTransferDate`·`standardPriceAt*`)은 **보지 않는다**(Q-7 분할선).
+ * §161 안분 입력(`standardPriceAt*`)은 **보지 않는다**(Q-7 분할선). 단 `priorResidenceTransferDate`는 §154⑩ 표준 경로
+ * (B · 임대주택 0호)에서 **본다** — 그 경로의 2호 요건(직전거주주택보유주택)을 이 날짜로 확인하고, 미입력이면
+ * 불충족으로 본다(`checkPhrp154_10Eligibility`). ⑧이 그 경로에서 이 날짜를 요구한다(S06-10).
  */
 import { judgeRentalHousingEligibility } from "../transfer-tax-rental-housing-step";
-import { TRANSFER_RENTAL_HOUSING } from "../legal-codes/transfer";
+import { rentalHousingBasisOf } from "../transfer-tax/rental-housing-exception/display-labels";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 import { revokeOneHouseExemption } from "./revoke-exemption";
@@ -77,7 +79,8 @@ export function buildRentalHousingVerdict(
     periodPendingUnitIndexes: eligibility.periodPendingUnitIndexes ?? [],
     notices: [...(eligibility.notices ?? []), ...compositionNotice],
     ...(eligibility.cancellationWindow ? { cancellationWindow: eligibility.cancellationWindow } : {}),
-    legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+    // 근거 조문은 판정이 정한 값 — §154⑩ 표준 경로(B · 0호)는 §154⑩, 그 밖에는 §155⑳ (S06-13).
+    legalBasis: rentalHousingBasisOf(eligibility.laws),
   };
 }
 

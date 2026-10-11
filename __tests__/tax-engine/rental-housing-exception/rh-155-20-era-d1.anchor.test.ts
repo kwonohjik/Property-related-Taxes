@@ -247,10 +247,29 @@ describe("OH-40 생애 한 차례 제한(A) — 거주주택 취득일·양도�
     expect(e.notices ?? []).toHaveLength(0);
   });
 
-  it("OH40-6 이력 미입력 → 결론은 유지하되 판정 보류 고지(침묵 적용 금지)", () => {
+  /**
+   * 🔴 PR6a(S06-9) 정책 반전 — 종전 「미입력 → 적용 + 판정 보류 고지」는 2026-10-04 원칙(「모름 = 혜택 불성립 +
+   *    결론을 가를 때만 확인 필요」) 이전 설계(D1, 2026-09-26)였다. 「생애 한 차례만 … 최초로 양도하는 경우에 한정」(2024.5.17.
+   *    시행 소령 §155⑳ 괄호)은 성립 요건 사실이라, 입력하지 않으면 적용하지 않고(형제 축 D11 사유 미입력과 같은 형태)
+   *    그것이 결론을 가를 때만 「확인 필요」를 고지한다. 같은 사실의 「있음」(OH40-1)과 결론이 같다.
+   */
+  it("OH40-6 이력 미입력(모름) → 불성립 + 확인 필요 고지(결론을 가르므로)", () => {
     const e = checkEligibility([unitOk], 5, 5, false, ctxA("2019-06-01", "2024-06-01"));
+    expect(e.passed).toBe(false);
+    expect(e.residenceFailReasons.join()).toContain(LIFE);
+    expect((e.notices ?? []).join()).toContain("확인 필요");
+  });
+
+  it("OH40-6b 미입력 + 다른 불충족(거주 2년 미만) → 불성립이지만 「확인 필요」는 내지 않는다(결론을 가르지 않는다)", () => {
+    const e = checkEligibility([unitOk], 5, 1, false, ctxA("2019-06-01", "2024-06-01"));
+    expect(e.passed).toBe(false);
+    expect((e.notices ?? []).join()).not.toContain("확인 필요");
+  });
+
+  it("OH40-6c 구간 밖(2025-02-28 양도)은 미입력이어도 묻지 않는다 — 경계 짝", () => {
+    const e = checkEligibility([unitOk], 5, 5, false, ctxA("2019-06-01", "2025-02-28"));
     expect(e.passed).toBe(true);
-    expect((e.notices ?? []).join()).toContain(LIFE);
+    expect(e.notices ?? []).toHaveLength(0);
   });
 
   it("OH40-7 전엔진: 이력 있음 + 주택 수 1 → 과세(STEP 1a 조기반환 억제) + 사유 step", () => {
@@ -275,7 +294,7 @@ describe("OH-40 생애 한 차례 제한(A) — 거주주택 취득일·양도�
     expect(r.steps.some((s) => s.formula.includes(LIFE))).toBe(true);
   });
 
-  it("OH40-8 전엔진: 이력 미입력 + 요건 충족 → 비과세 + warnings에 판정 보류 고지(STEP 1a 경로)", () => {
+  it("OH40-8 전엔진: 이력 미입력(모름) + 요건 충족 → 과세(「있음」과 같은 세액) + 적용 불가 사유 step · 확인 필요 step (S06-9 정책 반전)", () => {
     const r = calculateTransferTax(
       baseTransferInput({
         transferPrice: 800_000_000,
@@ -287,8 +306,22 @@ describe("OH-40 생애 한 차례 제한(A) — 거주주택 취득일·양도�
       }),
       rates,
     );
-    expect(r.isExempt).toBe(true);
-    expect((r.warnings ?? []).join()).toContain(LIFE);
+    const used = calculateTransferTax(
+      baseTransferInput({
+        transferPrice: 800_000_000,
+        acquisitionPrice: 400_000_000,
+        acquisitionDate: new Date("2019-06-01"),
+        transferDate: new Date("2024-06-01"),
+        residencePeriodMonths: 60,
+        rentalHousingException: { applyException: true, scenario: "A", rentalUnits: [unitOk], priorRentalExemptionHistory: "used" },
+      }),
+      rates,
+    );
+    expect(r.isExempt).toBe(false);
+    expect(r.determinedTax).toBeGreaterThan(0);
+    expect(r.determinedTax).toBe(used.determinedTax);
+    expect(r.steps.some((s) => s.formula.includes(LIFE))).toBe(true);
+    expect(r.steps.some((s) => s.label.includes("확인 필요") && s.formula.includes("이력"))).toBe(true);
   });
 });
 

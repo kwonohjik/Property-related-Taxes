@@ -5,6 +5,7 @@ import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
@@ -44,6 +45,7 @@ import {
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
+import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
@@ -193,14 +195,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         // OH-20 — 재개발 완공APT도 §154① 단서 대상이다(④ · ⑧과 같은 술어). 시행령 §154① 단서는
         //   자산 종류를 가리지 않고 「1세대가 양도일 현재 국내에 1주택을 보유」한 경우에 걸린다.
         isHousing: isOneHouseExemptionAsset(primaryKind),
-        // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴).
-        householdHousingCount: resolveHouseholdHousingCount({
-          primaryKind,
-          declared: parseInt(form.householdHousingCount || "1", 10) || 0,
-          houses: form.houses,
-          transferDate: form.transferDate,
-          legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-        }),
+        // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴). §155②③·조특법 제외 **후** 수다(S03-4).
+        householdHousingCount: resolveExemptionHousingCount(form),
         temporaryTwoHouseApplies: tempTwoHouseDates !== undefined,
       }),
     /**
@@ -210,16 +206,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
      *
      * `temporary_two_house` 모드는 넘겨받은 사실 카드의 §154① 단서 행이 소비한다(OH-36).
      * 판정 메뉴 `Step2.tsx` 쪽 안전망은 `__tests__/calc/proviso-gate-roster-deps.ui.test.tsx`(PGD).
+     *
+     * 제외 후 주택 수(`resolveExemptionHousingCount`)는 양도일·감면주택 선언·상속 관련 세대 사실까지 읽으므로
+     * 폼 전체를 의존으로 건다(`tempTwoHouseDates`와 같은 이유).
      */
-    [
-      form.isOneHousehold,
-      primaryKind,
-      form.householdHousingCount,
-      form.houses,
-      form.transferDate,
-      form.legacyHouseCountPrecedence,
-      tempTwoHouseDates,
-    ],
+    [form, primaryKind, tempTwoHouseDates],
   );
 
   /**
@@ -387,13 +378,33 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   (양도하는 입주권 1개 + 아래 목록의 조합원입주권 항목 수로 자동 산정됩니다)
                 </span>
               </p>
-              {/* §89①4호 가목 본문 요건 안내 */}
+              {/*
+                §89①4호 가목 본문 요건 안내 — 분양권 보유 여부는 **아래 목록이 정본**이라 「없음」 확인이 있을 때만
+                「미보유」를 적는다(S15-13 — 입주권 항목만 있는 목록은 입주권 수가 2가 되어 이 안내가 숨는다). 목록에 분양권이 있으면 가·나목 모두 분양권 요건을 받는다 — 2022.1.1. 전 취득분
+                적용 범위는 법률 제18578호 부칙 제7조 ②·③(법제처 실독)이라 여기서 충족·불성립을 가르지 않는다.
+              */}
               {isOneHouseholdEffective && derivedHouseholdRightCount === 1 && form.householdHousingCount === "0" && (
-                <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
+                <div
+                  className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900"
+                  data-testid="one-right-requirement-notice"
+                >
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
                   <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
-                    다른 주택 없음(0채) + 1입주권만(1개) + <b>분양권 미보유</b> 조건 충족.
-                    자산 카드의 §⑥ 비과세 토글 ON 및 인가일 기준 보유·거주요건도 함께 확인하세요.
+                    {form.presaleRights.some((p) => p.type === "presale_right") ? (
+                      <>
+                        다른 주택 없음(0채) + 1입주권만(1개)이 입력되어 있습니다. 가목·나목은 <b>분양권을 보유하지 않을 것</b>도
+                        요구하며, 아래 목록의 분양권이 이 요건에 걸리는지는 입주권 취득일(관리처분계획인가일)과 분양권 취득일
+                        (2022.1.1. 전·후)에 따라 갈립니다 — {REDEVELOPMENT.ONE_RIGHT_PRESALE_ADDENDUM}.
+                      </>
+                    ) : form.householdNoPresaleRightsConfirmed ? (
+                      <>다른 주택 없음(0채) + 1입주권만(1개) + <b>분양권 미보유</b>로 입력되어 있습니다.</>
+                    ) : (
+                      <>
+                        다른 주택 없음(0채) + 1입주권만(1개)이 입력되어 있습니다. 가목·나목은 <b>분양권을 보유하지 않을 것</b>도
+                        요구하므로 아래에서 분양권 보유 여부를 입력하세요.
+                      </>
+                    )}{" "}
+                    인가일 기준 보유·거주요건(§89①3호 가목 기존주택 소유)은 판정 메뉴에서 선언한 사실을 1단계 「판정 불러오기」로 가져오며, 이 화면에서는 수정할 수 없습니다.
                   </p>
                 </div>
               )}

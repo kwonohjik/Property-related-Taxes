@@ -149,6 +149,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "그 보유기간 중 거주기간이 2년 이상인 것",
       // ⑧3호 동일세대 상속 통산 — 판정 메뉴 입력 경로(OH-18)가 이 문언에 기댄다(MST 286211 실독 2026-09-26)
       "상속개시 전에 상속인과 피상속인이 동일세대로서 거주하고 보유한 기간",
+      // ⑦ 후단 — 공익사업 수용 시 부수토지 배율의 용도지역 기준일(제35878호 2025.11.28.). 결과 고지·입력 안내가 이 문언에 기댄다.
+      "사업인정 고시일 전날 현재 해당 토지의 용도지역을 적용한다",
     ],
     keywordMode: "ALL",
   },
@@ -174,6 +176,9 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "최초로 등록이 말소되는 장기임대주택의 등록 말소 이후를 말한다",
       // ㉓ 가목2)·라목8)·마목4) 비적용 — Q-1(대통령령 제36737호, 2026.9.30. 공포) 신설
       "제167조의3제1항제2호가목2)ㆍ라목8)ㆍ마목4)의 요건은 적용하지 않는다",
+      // ⑱ 「법 제89조제1항제4호나목」의 「대통령령으로 정하는 사유」 — 입주권 양도 나목 3년 기한 예외(S05-4)와 §155① 처분기한
+      //   예외(E-2)가 이 문언에 기댄다(MST 290841 실독 2026-10-11)
+      "다른 주택을 취득한 날부터 3년이 되는 날 현재 다음 각 호의 어느 하나에 해당하는 경우를 말한다",
     ],
     keywordMode: "ALL",
   },
@@ -445,7 +450,7 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.SHORT_TERM_HOUSE_LAND",
     citation: "소득세법 시행령 §167의5",
-    keywords: ["주택이 정착된 면적", "배율", "3배", "10배"],
+    keywords: ["주택이 정착된 면적", "배율", "3배", "10배", "사업인정 고시일 전날 현재 해당 토지의 용도지역을 적용한다"],
     keywordMode: "ALL",
   },
 
@@ -509,7 +514,7 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.NBL_HOUSE_APPURTENANT",
     citation: "소득세법 시행령 §168의12",
-    keywords: ["지역별로 대통령령으로 정하는 배율", "3배", "5배", "10배"],
+    keywords: ["지역별로 대통령령으로 정하는 배율", "3배", "5배", "10배", "사업인정 고시일 전날 현재 해당 토지의 용도지역을 적용한다"],
     keywordMode: "ALL",
   },
   {

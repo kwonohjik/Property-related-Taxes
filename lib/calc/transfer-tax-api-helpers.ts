@@ -366,14 +366,20 @@ export function buildExpropriationInput(primary: AssetForm) {
 }
 
 // ─── ④⑬ §156의2⑤ 대체주택 비과세 특례 FLAT → nested (TS 미감지 영역 — 누락 시 침묵 strip) ───
-/** 폼 → replacementHouse nested payload. 토글 OFF 또는 필수 날짜 미입력 시 {} */
+/**
+ * 폼 → replacementHouse nested payload. 토글 OFF 또는 필수 날짜 미입력 시 {}.
+ *
+ * §156의2⑤3호 — 완성 전 양도(`replSoldBeforeCompletion`)는 준공일 없이 성립한다(S15-4). 그 갈래에서는 남아 있는 준공일을 싣지 않는다
+ * (숨은 stale 값이 엔진으로 가지 않게 — 갈래의 정본은 선언이다).
+ */
 export function buildReplacementHousePayload(form: TransferFormData): object {
-  if (!form.replacementHouseSpecial || !form.replBusinessApprovalDate || !form.replCompletionDate)
+  const beforeCompletion = form.replSoldBeforeCompletion === true;
+  if (!form.replacementHouseSpecial || !form.replBusinessApprovalDate || (!beforeCompletion && !form.replCompletionDate))
     return {};
   return {
     replacementHouse: {
       businessApprovalDate: form.replBusinessApprovalDate,
-      completionDate: form.replCompletionDate,
+      ...(beforeCompletion ? { soldBeforeCompletion: true } : { completionDate: form.replCompletionDate }),
       replacementResidenceMonths: parseInt(form.replResidenceMonths || "0", 10),
       willResideNewHouse: form.replWillResideNewHouse,
     },

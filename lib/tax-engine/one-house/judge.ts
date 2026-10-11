@@ -87,6 +87,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     sellingHouseId: facts.sellingHouseId,
     knownHouseExclusionCount: facts.knownHouseExclusionCount,
     inheritedHouseExclusionCount: facts.inheritedHouseExclusionCount,
+    inheritedHouseExclusionDetail: facts.inheritedHouseExclusionDetail,
     knownHouseExclusionHouseIds: facts.knownHouseExclusionHouseIds,
     noMergeRosterInputPath: facts.noMergeRosterInputPath,
     rentalHousingException: facts.rentalHousingException,
@@ -97,6 +98,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     // ── §154⑤ 단서 (OH-22) ──
     finalOneHouseRestart: facts.finalOneHouseRestart,
     nonResidentHoldingPeriod: facts.nonResidentHoldingPeriod,
+    exemptionHoldingStartDate: facts.exemptionHoldingStartDate,
   } satisfies OneHouseJudgeInput;
 
   /**
@@ -161,6 +163,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     sellingHouseId: input.sellingHouseId,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
     inheritedHouseExclusionCount: input.inheritedHouseExclusionCount,
+    inheritedHouseExclusionDetail: input.inheritedHouseExclusionDetail,
     knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noMergeRosterInputPath: input.noMergeRosterInputPath,
     rentalHousingException: input.rentalHousingException,
@@ -170,6 +173,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     inheritedRightChoiceWhenBothHeld: input.inheritedRightChoiceWhenBothHeld,
     finalOneHouseRestart: input.finalOneHouseRestart,
     nonResidentHoldingPeriod: input.nonResidentHoldingPeriod,
+    exemptionHoldingStartDate: input.exemptionHoldingStartDate,
   } satisfies OneHouseFacts;
 
   type _Facts = typeof facts;

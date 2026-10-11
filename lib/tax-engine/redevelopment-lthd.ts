@@ -25,10 +25,11 @@ import { calculateHoldingPeriod } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { completedMonthsInclusive } from "./civil-period";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
+import { resolveOneHouseAtSettlementSale } from "./transfer-tax-redevelopment-settlement";
 
 
 /**
- * §95② 단서 표2 진입의 **1세대1주택 축** — 실가·환산 경로 **공용 leaf**.
+ * §95② 단서 표2 진입의 **1세대1주택 축** — **입주권(subject="right") 전용** leaf (실가·환산 경로 공용).
  *
  * `exemptionEligibleAtApproval === false`(종전주택 보유 요건 미충족 자기선언 — 조합 제공 시까지,
  * 부동산거래관리과-380 후단)는 표2를 강등한다. `undefined`는 강등하지 않는다 — 「선언하지 않음」이지
@@ -37,6 +38,10 @@ import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
  * 🔑 2026-08-25(E2-03): 환산 경로(`redevelopment-housing-contribution.ts`)가 이 값을
  *    **`false` 상수로** 넘기고 있어, 취득가액 산정 방식이 LTHD 표를 갈랐다. 두 경로가
  *    같은 함수를 보게 해 **인자 동일성**까지 맞춘다(memory `feedback_shared_predicate_argument_parity`).
+ *
+ * 🔴 **완공APT(subject="apt")는 이 leaf를 쓰지 않는다** (G3-8). 380 후단의 대상은 「그 청산금」뿐이라
+ *    미충족 선언은 **청산금 수령분 분기만** 표1로 내리고(`resolveRedevSettlementReceiveOneHouse`),
+ *    신축주택분(인가전·인가후 기존건물분)은 시행령 §159의4·§154⑧1호의 일반 판정(`isOneHouseSingle`)을 따른다.
  */
 export function resolveRedevEffectiveOneHouseSingle(input: {
   redevelopment: { exemptionEligibleAtApproval?: boolean };
@@ -45,6 +50,35 @@ export function resolveRedevEffectiveOneHouseSingle(input: {
   return input.redevelopment.exemptionEligibleAtApproval === false
     ? false
     : (input.isOneHouseSingle ?? false);
+}
+
+/**
+ * 완공APT **청산금 수령분** 분기의 표2 「1주택」 축 — G3-8 · G3-5.
+ *
+ * 청산금 수령분은 종전주택 일부의 **별도 양도**다(법규재산2012-358). 그 표2 대상 판정은
+ * 「소득세법 시행령」 §159의4 「양도일 현재 국내에 1주택」의 **양도일 = 청산금분 양도일**
+ * (소유권이전 고시일 다음날 — 사전-2022-법규재산-1282)이다. 그래서:
+ *
+ * 1. `exemptionEligibleAtApproval === false`(조합 제공 시까지 보유 요건 미충족 선언 — 부동산거래관리과-380 후단)
+ *    → 표1. 대상은 「그 청산금」이라 이 분기에만 건다.
+ * 2. 청산금분 양도일 현재 1세대1주택이 **아님**(`false`)이거나 **판정 불가**(`undefined` — 신축주택 양도일과
+ *    날이 다른데 선언이 없음)면 표1. 판정 불가는 「모름 = 혜택 불성립」이다.
+ *    술어는 비과세(Step A.6 `applySettlementExemption`)와 **같은 leaf**(`resolveOneHouseAtSettlementSale`)다.
+ *
+ * `isOneHouseSingle`은 호출부가 넘기는 **표2·§154① 축**(실제 1주택 ∨ §155 의제)이다.
+ */
+export function resolveRedevSettlementReceiveOneHouse(
+  input: {
+    transferDate: Date;
+    redevelopment: Pick<
+      RedevelopmentInfo,
+      "exemptionEligibleAtApproval" | "oneHouseAtSettlementSale" | "settlementSaleDate"
+    >;
+  },
+  isOneHouseSingle: boolean,
+): boolean {
+  if (input.redevelopment.exemptionEligibleAtApproval === false) return false;
+  return resolveOneHouseAtSettlementSale(input, isOneHouseSingle) === true;
 }
 
 /**
@@ -213,6 +247,7 @@ export function computeRedevelopmentLthd(
   // 부동산거래관리과-380 (2012.07.20) 후단 — 종전주택을 조합에 제공한 때까지 보유 요건 미충족이면
   // 청산금분 1세대1주택 비과세 미해당(판정 기준일 자체는 청산금분 양도일 — L-12) → 표2 진입 차단, 표1 강제.
   // undefined 시 legacy isOneHouseSingle fallback (사례 44·45 회귀 안전).
+  // 🔴 입주권(right)만 이 값을 쓴다. 완공APT는 강등 대상이 **청산금 수령분 분기뿐**이다(G3-8 — 아래 apt 분기).
   const effectiveOneHouseSingle = resolveRedevEffectiveOneHouseSingle(input);
 
   // ─ 거주월수 귀속 분리 (사례 45 — 시행령 §154⑧ + 사전법령해석재산 2020-386) ─
@@ -252,13 +287,21 @@ export function computeRedevelopmentLthd(
   }
 
   // ─ subject="apt" (완공 APT 양도) 분기 ─
+  // 신축주택분(인가전·인가후 기존건물분)·청산금 납부분은 일반 판정 축(`input.isOneHouseSingle`)을 그대로 쓴다 —
+  // 미충족 선언(380 후단)은 「그 청산금」만 과세로 보는 것이라 신축주택분 표2를 내리지 않는다(G3-8).
+  // 청산금 **수령**분은 청산금분 양도일 축으로 따로 판정한다(G3-5).
+  const aptOneHouseSingle = input.isOneHouseSingle ?? false;
   return computeAptLthd({
     acquisitionDate,
     approvalDate,
     transferDate,
     settlementDirection,
     settlementSaleDate,
-    isOneHouseSingle: effectiveOneHouseSingle,
+    isOneHouseSingle: aptOneHouseSingle,
+    receiveSettlementOneHouseSingle: resolveRedevSettlementReceiveOneHouse(
+      { transferDate, redevelopment },
+      aptOneHouseSingle,
+    ),
     existingResidenceMonths,
     payResidenceMonths,
   });
@@ -326,7 +369,10 @@ function computeAptLthd(args: {
   transferDate: Date;
   settlementDirection: "pay" | "receive";
   settlementSaleDate?: Date;
+  /** 신축주택분·청산금 납부분의 표2 「1주택」 축 */
   isOneHouseSingle: boolean;
+  /** 청산금 **수령**분의 표2 「1주택」 축 — 청산금분 양도일 기준 + 미충족 선언 강등 (`resolveRedevSettlementReceiveOneHouse`) */
+  receiveSettlementOneHouseSingle: boolean;
   /** 기존건물분 거주월수 (= prior + new, §154⑧ 통산) */
   existingResidenceMonths: number;
   /** 청산금분 거주월수 (= new, 해석례 2020-386) */
@@ -339,6 +385,7 @@ function computeAptLthd(args: {
     settlementDirection,
     settlementSaleDate,
     isOneHouseSingle,
+    receiveSettlementOneHouseSingle,
     existingResidenceMonths,
     payResidenceMonths,
   } = args;
@@ -386,7 +433,7 @@ function computeAptLthd(args: {
     const endDate = settlementSaleDate ?? transferDate;
     const receiveHolding = calculateHoldingPeriod(acquisitionDate, endDate);
     const receiveMonths = receiveHolding.years * 12 + receiveHolding.months;
-    const receiveSplit = computeLthdRateSplit(receiveHolding.years, isOneHouseSingle, payResidenceYears);
+    const receiveSplit = computeLthdRateSplit(receiveHolding.years, receiveSettlementOneHouseSingle, payResidenceYears);
     settlementBranch = {
       holdingMonths: receiveMonths,
       holdingDays: receiveHolding.days,
@@ -458,10 +505,13 @@ export function usesTable2(isOneHouseSingle: boolean, residenceYears: number): b
  * - 입주권 승계조합원: LTHD 부존재(§95② 본문 괄호) → 표2 아님
  * - 입주권 원조합원: `resolveRedevEffectiveOneHouseSingle` + `resolveRightResidenceMonths`
  * - 완공APT 승계조합원: `runSuccessorMember`와 같이 원시 1세대1주택 + 신축 거주(`resolveAptResidenceMonths`)
- * - 완공APT 원조합원: 기존건물분 표2와 같은 `resolveRedevEffectiveOneHouseSingle` + `resolveAptResidenceMonths`
+ * - 완공APT 원조합원: 기존건물분 표2와 같은 원시 1세대1주택 축 + `resolveAptResidenceMonths`(미충족 선언은 청산금 수령분 분기만 강등 — G3-8)
  *
  * ⚠️ 청산금 납부분은 신축 거주만으로 표를 정한다(해석례 2020-386) — 분기별 단서 판정은 하지 않고
  *   자산 단위(기존건물분 기준)로 본다(종전 구조 유지).
+ * ⚠️ **청산금 수령 단독신고**(`receiveOnlyMode`)는 청산금분만 양도 대상이라 그 분기의 표(청산금분 양도일 축 +
+ *   미충족 선언 강등 — `resolveRedevSettlementReceiveOneHouse`, 신축 거주만)를 본다. `transferDate`를 넘긴
+ *   호출부에서만 켠다(G3-8 · 완공APT 원조합원의 강등이 청산금 수령분 분기로 좁혀지면서 생긴 분기).
  */
 export function redevUsesTable2(input: {
   redevelopment: {
@@ -470,10 +520,15 @@ export function redevUsesTable2(input: {
     exemptionEligibleAtApproval?: boolean;
     priorHouseResidenceMonths?: number;
     newHouseResidenceMonths?: number;
+    settlementDirection?: RedevelopmentInfo["settlementDirection"];
+    receiveOnlyMode?: boolean;
+    oneHouseAtSettlementSale?: boolean;
+    settlementSaleDate?: Date;
   };
   isOneHouseSingle: boolean;
   residencePeriodMonths?: number;
   isSuccessorRightToMoveIn?: boolean;
+  transferDate?: Date;
 }): boolean {
   const r = input.redevelopment;
   const months = {
@@ -494,10 +549,22 @@ export function redevUsesTable2(input: {
       Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: true }) / 12),
     );
   }
-  return usesTable2(
-    resolveRedevEffectiveOneHouseSingle(input),
-    Math.floor(resolveAptResidenceMonths(months) / 12),
-  );
+  if (
+    r.settlementDirection === "receive" &&
+    r.receiveOnlyMode === true &&
+    input.transferDate !== undefined
+  ) {
+    const hasSplit =
+      r.priorHouseResidenceMonths !== undefined || r.newHouseResidenceMonths !== undefined;
+    return usesTable2(
+      resolveRedevSettlementReceiveOneHouse(
+        { transferDate: input.transferDate, redevelopment: r },
+        input.isOneHouseSingle,
+      ),
+      Math.floor((hasSplit ? (r.newHouseResidenceMonths ?? 0) : 0) / 12),
+    );
+  }
+  return usesTable2(input.isOneHouseSingle, Math.floor(resolveAptResidenceMonths(months) / 12));
 }
 
 export function computeLthdRateSplit(

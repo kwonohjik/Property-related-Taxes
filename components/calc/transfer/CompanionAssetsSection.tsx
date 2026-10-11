@@ -37,9 +37,13 @@ interface Props {
    * 자산 카드 안의 두 안내 문구가 「가라」/「선언이 없다」를 가른다.
    */
   judgmentLoaded?: boolean;
+  /** §155⑳ 카드 거주요건 표시용 — 폼-전역 「취득 당시 조정대상지역」 저장값·법정동코드 폴백(G1-13). 주소가 있으면 카드가 주소 판정을 쓴다. */
+  wasRegulatedAtAcquisition?: boolean;
+  formRegionCode?: string;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1) — 입주권 §⑥ 카드가 판정 메뉴
    *    전용이 되면서 이 체인의 소비처가 사라졌다. U1-03 감시는 판정 메뉴 경로로 옮겼다.
+   *    (위 `wasRegulatedAtAcquisition`은 그 입주권 카드가 아니라 §155⑳ 카드 표시용으로 G1-13에서 다시 둔 것이다.)
    */
   /** 자산 인덱스 → 그 카드의 첫 검증 오류 (카드 배너 + 섹션 강제 펼침) */
   assetErrors?: Record<number, string>;
@@ -49,7 +53,7 @@ interface Props {
   onFractionalToggle: (yes: boolean) => void;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, assetErrors, splitMode, onFractionalToggle }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -103,6 +107,8 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           primaryAsset={idx > 0 ? assets[0] : undefined}
           isOneHouseSingle={isOneHouseSingle}
           judgmentLoaded={judgmentLoaded}
+          wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
+          formRegionCode={formRegionCode}
           errorMessage={assetErrors?.[idx]}
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}

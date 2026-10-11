@@ -10,6 +10,7 @@
  */
 
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
+import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
 interface LthdFallbackArgs {
@@ -38,7 +39,7 @@ export function buildLthdFallbackFormulas(args: LthdFallbackArgs): LthdFallbackF
   const holdingYears = Math.floor(totalHoldingMs / 12);
   const residenceYears = Math.floor(residenceMs / 12);
   const holdingPct = Math.min(holdingYears * 4, 40);
-  const residencePct = Math.min(residenceYears * 4, 40);
+  const residencePct = table2ResidencePct(residenceYears);
 
   // 배제 케이스(§95② 본문 괄호 — 미등기·분양권·승계입주권·§104⑦ 중과): 산식 대신 사유 표시
   const exclusionLabel =

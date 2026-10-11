@@ -50,11 +50,17 @@ describe("X-1 route", () => {
   });
 });
 
-describe("X-2 route — §155② 상속주택 제외는 입주권 판정에 쓰지 않는다", () => {
-  it("E094 — 주택 수 제외에는 상속주택이 보이지만 입주권 판정은 과세", async () => {
+describe("X-2 route — §155② 상속주택 제외는 입주권 판정에 쓰지 않는다(명세도 같다 — PR1b S03-6)", () => {
+  it("E094 — 입주권 양도: 명세의 주택 수 제외에 상속주택이 없고(다른 주택으로 센다) 판정은 과세", async () => {
     const o = await observeCase(load("E094.json", "E094-dual"));
-    expect(o.excludedHouses.map((x) => x.houseId)).toContain("mother-house");
+    expect(o.excludedHouses.map((x) => x.houseId)).not.toContain("mother-house");
     expect(o.isExempt).toBe(false);
+  });
+  it("[짝] 같은 입력에서 양도 대상만 주택으로 바꾸면 상속주택은 주택 수 제외에 보인다 — 주택 양도 판정은 §155②를 쓴다", async () => {
+    const c = load("E094.json", "E094-dual");
+    const asHousing = { ...c, form: { ...c.form, asset: { ...c.form!.asset, assetKind: "housing" } } } as RulingCase;
+    const o = await observeCase(asHousing);
+    expect(o.excludedHouses.map((x) => x.houseId)).toContain("mother-house");
   });
 });
 

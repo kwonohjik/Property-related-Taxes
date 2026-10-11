@@ -25,6 +25,7 @@ import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transf
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { eligibleCountExcludedHouseIds } from "./house-count-exclusion-rows";
+import { housesOwnedAtTransfer } from "./household-house-count";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildInheritanceGeneralHousePayload } from "./inheritance-general-house-scope";
 
@@ -89,9 +90,11 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
  * 엔진에 실리는 것과 같은 행·같은 payload다(`findRuralHouseRow` · `deriveOneHouseFactsFromHouses`).
  */
 export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
-  const ruralRow = findRuralHouseRow(form.houses);
-  const row = form.houses?.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
-  const rural = deriveOneHouseFactsFromHouses(form.houses).ruralHouse;
+  // 양도일 현재 보유 행만 — ④가 싣는 행·payload와 같다(`deriveOneHouseFactsFromHouses`의 `transferDate`).
+  const owned = housesOwnedAtTransfer(form.houses, form.transferDate);
+  const ruralRow = findRuralHouseRow(owned);
+  const row = owned.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
+  const rural = deriveOneHouseFactsFromHouses(owned).ruralHouse;
   const transferDate = toOptionalDate(form.transferDate);
   if (!row?.id || !rural || !transferDate) return new Set();
   const qualifies = qualifiesRuralHouse({
@@ -102,10 +105,22 @@ export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet
   return qualifies ? new Set([row.id]) : new Set();
 }
 
-/** §155① 신규 주택 후보에서 뺄 행 — 조특법 제외 ∪ 상속주택 제외 ∪ ⑦ 농어촌주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
-export function temporaryTwoHouseCandidateExcludedIds(form: CandidateFormLike): ReadonlySet<string> {
+/**
+ * 비과세 판정의 **주택 수에서 빠지는** 명부 행 id — 조특법 소유주택 제외(§99의4·§98의9·보유 감면주택) ∪ §155②③ 상속주택.
+ *
+ * 엔진 `resolveExemptionHouseCountExclusions`가 `householdHousingCount`에서 빼는 두 갈래(`hceApplied`·
+ * `specialHouseExclusionDetail` · `inheritedExclusion`)의 행이다. §154① 단서 게이트(`provisoGate`)·일시적 2주택 후보·
+ * 「제외 후 주택 수」(`resolveExemptionHousingCount`)가 **이 한 함수**를 읽는다(재검증 S03-4).
+ */
+export function exemptionCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   const ids = new Set(eligibleCountExcludedHouseIds(form));
   for (const id of inheritedCountExcludedHouseIds(form)) ids.add(id);
+  return ids;
+}
+
+/** §155① 신규 주택 후보에서 뺄 행 — 주택 수 제외 행 ∪ ⑦ 농어촌주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
+export function temporaryTwoHouseCandidateExcludedIds(form: CandidateFormLike): ReadonlySet<string> {
+  const ids = new Set(exemptionCountExcludedHouseIds(form));
   for (const id of ruralCountExcludedHouseIds(form)) ids.add(id);
   return ids;
 }

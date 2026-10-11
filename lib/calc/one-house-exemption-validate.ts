@@ -22,6 +22,7 @@ import {
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
+import { oneRightNaFactIssues } from "./one-right-na-facts-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
@@ -339,8 +340,9 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     if (!form.replBusinessApprovalDate) {
       errors.push(err("replBusinessApprovalDate", "대체주택 특례: 사업시행계획인가일을 입력하세요."));
     }
-    if (!form.replCompletionDate) {
-      errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요."));
+    // 완성 전 양도 갈래는 준공일을 요구하지 않는다(S15-4 · ④와 같은 `=== true` 읽기).
+    if (form.replSoldBeforeCompletion !== true && !form.replCompletionDate) {
+      errors.push(err("replCompletionDate", "대체주택 특례: 신축주택 준공일을 입력하세요(아직 완성되지 않았다면 「완성 전 양도」를 고르세요)."));
     }
     if (!form.replResidenceMonths || parseInt(form.replResidenceMonths, 10) <= 0) {
       errors.push(
@@ -477,6 +479,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
   }
 
+  // §89①4호 나목 — 「그 1주택 취득일」 칸이 보유 주택 명부와 어긋나거나 양도일 이후면 막는다(S10-4).
+  for (const issue of oneRightNaFactIssues(form)) errors.push(err(issue.field, issue.message));
+
   // §154⑤ 단서 용도변경 — 계산기와 같은 leaf. 칸은 주택 양도에만 있다(⑤·④와 같은 `judgmentSaleIsHousing`).
   if (primary && judgmentSaleIsHousing(form)) {
     const conversionError = validateUsageConversion(primary, "양도 대상 주택", form.transferDate);
@@ -561,7 +566,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
    */
 
   // §155의2 — 어댑터가 전송을 포기하는 조건과 **같은 자리**에서 막는다.
-  if (form.longTermMortgageSpecial) {
+  //   입주권 양도에는 칸이 없다(⑤·④·사이드바와 같은 `judgmentSaleIsHousing` 게이트 — S10-8).
+  if (form.longTermMortgageSpecial && judgmentSaleIsHousing(form)) {
     if (!form.longTermMortgageContractDate) {
       errors.push(err("longTermMortgageContractDate", "장기저당담보주택: 계약체결일을 입력하세요."));
     }
@@ -700,7 +706,7 @@ export function computeOneHouseJudgmentSummary(
     form.unavoidableOutsideCapitalSpecial && "수도권 밖 부득이",
     // ⑤(섹션)·④·⑧과 같은 게이트 — 섹션이 숨은 세대 구성의 stale 선언은 적지 않는다(OH-05 형제).
     judgmentReplacementHouseVisible(form) && form.replacementHouseSpecial && "대체주택",
-    form.longTermMortgageSpecial && "장기저당담보주택",
+    judgmentSaleIsHousing(form) && form.longTermMortgageSpecial && "장기저당담보주택",
     judgmentSaleIsHousing(form) && form.winWinRentalSpecial && "상생임대주택",
     // OH-18·OH-28 — ④가 실제로 싣는 조건(⑤·⑧과 같은 게이트)일 때만 적는다.
     judgmentSaleIsHousing(form) &&

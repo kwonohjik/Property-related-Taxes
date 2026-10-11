@@ -25,6 +25,7 @@ type Patch = Partial<
     | "originalMemberExistingTenant"
     | "originalMemberTenantLeaseEndDate"
     | "originalMemberDisposalDelayReason"
+    | "originalMemberDisposalDelayDisposedByThatMethod"
   >
 >;
 
@@ -86,12 +87,21 @@ export function OriginalMemberTempTwoHouseInputs({ row, idx, transferDate, onCha
         <TempTwoHouseDelayReasonInput
           name={`original-member-disposal-delay-${row.id}`}
           newHouseLabel="기존주택"
+          transferDate={transferDate}
           form={{
+            disposalDelayDisposedByThatMethod: row.originalMemberDisposalDelayDisposedByThatMethod === true,
             disposalDelayReason: (row.originalMemberDisposalDelayReason ?? "") as Parameters<
               typeof TempTwoHouseDelayReasonInput
             >[0]["form"]["disposalDelayReason"],
           }}
-          onChange={(p) => onChange({ originalMemberDisposalDelayReason: p.disposalDelayReason })}
+          onChange={(p) =>
+            onChange({
+              ...(p.disposalDelayReason !== undefined ? { originalMemberDisposalDelayReason: p.disposalDelayReason } : {}),
+              ...(p.disposalDelayDisposedByThatMethod !== undefined
+                ? { originalMemberDisposalDelayDisposedByThatMethod: p.disposalDelayDisposedByThatMethod }
+                : {}),
+            })
+          }
         />
       </div>
     </div>

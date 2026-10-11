@@ -1,9 +1,9 @@
 /**
- * ④ 주택수 판정 입력(세대 보유 주택 목록·감면주택 제외·3주택+ 배제특례)의 **노출 술어**.
+ * ④ 주택수 판정 입력(세대 보유 주택 목록·감면주택 제외·양도 주택 자체 배제특례)의 **노출 술어**.
  *
  * ## 왜 leaf인가 — 「빈 행 + 주택수 축소」가 탈출 불가였다 (2026-09-07 대장 재대조)
  *
- * ⑤는 `isHousingLike && 세대주택수 ≥ 2`(3주택+ 배제특례는 `≥ 3`)에서만 이 위젯들을 렌더하는데,
+ * ⑤는 `isHousingLike && 세대주택수 ≥ 2`에서만 이 위젯들을 렌더하는데,
  * ⑧은 **배열에 행이 있으면** 무조건 검증한다. 그래서
  *
  *   1. 주택 목록에 행을 추가하고 취득일을 비운 채
@@ -89,28 +89,37 @@ export function houseRosterRendered(form: TransferFormData, primaryKind: string 
 }
 
 /**
- * 「양도 주택 3주택+ 전용 배제 특례」 섹션을 렌더하는가.
+ * 「양도 주택 자체 중과배제 특례」(§167의3①4·5·6·8·8의2호) 섹션을 렌더하는가.
+ *
+ * ⚠️ 기준은 **2채**다(재검증 S14b-2). 종전에는 3채였다 — 「양도 주택 3주택+ 전용」으로 알았기 때문이다.
+ *    그러나 2주택은 「소득세법 시행령」 §167의10①2호가 「제167조의3제1항제2호부터 제8호까지 및 제8호의2 중 어느 하나에
+ *    해당하는 주택」을 중과 대상에서 빼므로(준용), 엔진도 `effectiveHouseCount >= 2`에서 판정한다
+ *    (`multi-house-surcharge-exclusion.ts` — F-7). 3으로 두면 2주택 사용자는 **선언할 화면이 없고**(세대 주택 수는 명부 파생
+ *    읽기 전용이라 올릴 수도 없다) 중과가 그대로 붙는다. 형제 게이트(`sellingHouseLongTermRentalVisible`)와 같은 기준이다.
  *
  * ⑧(`transfer-tax-validate.ts`)은 `sellingHouseExclusion`의 토글이 켜져 있으면 기간(년)을
- * 무조건 요구한다. 주택수를 2채로 낮추면 그 토글을 끌 화면이 사라져 같은 dead-end가 된다.
+ * 무조건 요구한다. 주택수를 1채로 낮추면 그 토글을 끌 화면이 사라져 같은 dead-end가 된다.
  */
 export function sellingHouseExclusionVisible(form: TransferFormData): boolean {
   const se = form.sellingHouseExclusion;
   if (se?.isEmployeeHousing || se?.isDayCareCenter) return true;
-  return parseInt(form.householdHousingCount || "1", 10) >= 3;
+  return parseInt(form.householdHousingCount || "1", 10) >= 2;
 }
 
 /**
  * 「양도 주택 2주택 전용 배제 특례」 섹션(§167의10①3호·7호)을 렌더하는가.
  *
- * 그 두 호는 2주택에서만 성립하므로 기본 조건은 주택수 2다. 위 3주택+ 게이트와 같은 이유로
- * 토글이 켜져 있으면 주택수와 무관하게 남긴다 — 끌 화면이 사라지면 ⑧의 부속값 요구가
- * 막다른 길이 된다.
+ * 그 두 호는 **유효 주택 수가 2채**일 때만 성립한다(`effectiveHouseCount === 2`). 유효 주택 수는 §167의10① 괄호가
+ * 주택 수에서 빼는 1호·12호 주택(지방 저가주택 등 — DB 규칙이 필요해 클라이언트에서 셀 수 없다)을 뺀 값이라
+ * 세대 보유 주택 수 이하다. 그래서 기준은 「스칼라 `=== 2`」가 아니라 **「스칼라 `>= 2`」**다(재검증 S14b-2 짝 결함) —
+ * 종전에는 불산입 주택이 낀 3채 세대(유효 2채)가 이 칸을 열 수 없어 소송·부득이 취득 선언이 막혔다
+ * (실측 299,816,000 → 141,966,000). 유효 3채 이상이면 엔진이 이 칸을 읽지 않는다 — 안내문이 그 조건을 밝힌다.
+ * 토글이 켜져 있으면 주택수와 무관하게 남긴다 — 끌 화면이 사라지면 ⑧의 부속값 요구가 막다른 길이 된다.
  */
 export function sellingHouseTwoHouseExclusionVisible(form: TransferFormData): boolean {
   const se = form.sellingHouseExclusion;
   if (se?.isUnavoidableReason || se?.isLitigationHousing) return true;
-  return parseInt(form.householdHousingCount || "1", 10) === 2;
+  return parseInt(form.householdHousingCount || "1", 10) >= 2;
 }
 
 /**

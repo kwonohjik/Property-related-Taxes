@@ -20,6 +20,7 @@ import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
@@ -173,13 +174,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       isOneHousehold: form.isOneHousehold,
       // OH-20 — 재개발 완공APT도 §154① 단서 대상. 단건 ④(`transfer-tax-api.ts`)와 같은 술어.
       isHousing: isOneHouseExemptionAsset(primaryKind),
-      householdHousingCount: resolveHouseholdHousingCount({
-        primaryKind: primaryKind,
-        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-      }),
+      // §154① 단서는 제외 **후** 주택 수로 본다 — 단건 ④와 같은 leaf(S03-4).
+      householdHousingCount: resolveExemptionHousingCount(form),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,

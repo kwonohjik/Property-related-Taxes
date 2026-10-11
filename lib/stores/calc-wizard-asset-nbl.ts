@@ -105,9 +105,9 @@ export interface HouseEntry {
   /** #2a 배우자 단독 보유 주택 여부 (§167의3⑨ 3주택↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
   isSpouseOwned?: boolean;
   /**
-   * §155④⑤ 합가 전 보유 쪽 — **판정 메뉴 전용** 입력(엔진 `HouseInfo.mergeOrigin`).
+   * §155④⑤ 합가 전 보유 쪽 — 판정 메뉴·계산기 공통 입력(엔진 `HouseInfo.mergeOrigin`, 합가일이 있을 때 노출).
    * 합가일보다 나중에 취득한 행은 이 값과 무관하게 「합가 후 취득」으로 본다(날짜가 먼저).
-   * 미입력이면 구성 판정을 하지 않는다(구 저장분 호환).
+   * 미입력이면 구성 판정을 하지 못해 합가 특례는 불성립 + 확인 필요다. ⑧이 미입력을 막는다(구 저장분 호환).
    */
   mergeOrigin?: "seller_side" | "counterpart_side" | "second_merge_side";
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
@@ -496,7 +496,7 @@ export type TaxIncentiveRentalFacts = Partial<
 
 /**
  * 세대 보유 분양권·입주권 항목 (폼 문자열 버전).
- * 소령 §167의11·§167의3①: 2021.1.1 이후 취득분은 주택 수 산정에 포함.
+ * 소령 §167의11·§167의3①: 분양권은 2021.1.1 이후 취득분만(법률 제17477호 부칙 제4조), 입주권은 취득일 무관하게 주택 수 산정에 포함.
  */
 export interface PresaleRightEntry {
   id: string;
@@ -551,6 +551,8 @@ export interface PresaleRightEntry {
   originalMemberTenantLeaseEndDate?: string;
   /** §155⑱ 처분기한 예외 사유("" = 해당 없음) */
   originalMemberDisposalDelayReason?: string;
+  /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
+  originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   /**
    * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.
@@ -565,7 +567,7 @@ export interface PresaleRightEntry {
   decedentOwnedOtherRightTypeAtDeath?: boolean;
   /** ⑥ 단서 — 상속개시 당시 상속인·피상속인이 1세대였는가 */
   decedentSameHouseholdAtInheritance?: boolean;
-  /** ⑥ 단서의 예외 — 동거봉양 합가 전부터 보유하던 주택이 전환된 경우 */
+  /** 단서의 예외 — 입주권: §156의2⑥ 단서(합가 전부터 보유하던 주택이 입주권으로 전환된 경우) · 분양권: §156의3④ 단서(합치기 이전부터 보유하던 분양권, 전환 요건 없음) */
   parentalCareMergeInheritedRight?: boolean;
   /**
    * 상속받은 **분양권** — 피상속인이 그 분양권을 취득한 날(YYYY-MM-DD). `acquisitionDate`는 상속개시일이다.

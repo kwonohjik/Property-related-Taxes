@@ -465,15 +465,26 @@ describe("checkEligibility — Phase3 라목·말소 특례", () => {
     expect(r.failReasons.find((f) => f.code === "RENTAL_TERMINATION_RESTRICTED")).toBeDefined();
   });
 
-  it("㉓ 말소 특례: 바목(대상 목 아님)은 말소여도 RENTAL_PERIOD_SHORT 유지", () => {
-    const r = checkEligibility([makeUnit({
-      rentalCategory: "long_general", rentalAcquisitionType: "construction",
+  /**
+   * 🔴 PR6a(S16-3) 정책 정정 — 종전 「바목(대상 목 아님)은 말소여도 RENTAL_PERIOD_SHORT 유지」는 말소 플래그를 목과 무관하게 읽어
+   *    §155㉑ 구제를 껐다. ㉓은 「제167조의3제1항제2호가목 및 다목부터 마목까지」로 한정돼(MST 290841) 바목은 말소를 표현할 수 없으므로
+   *    그 플래그는 효력이 없다 — 말소값 없는 같은 호와 같이 ㉑(임대기간요건 충족 전 양도)로 기간 요건을 면제한다.
+   *    ㉓ 대상 목이 말소로 ㉑을 못 받는 것은 아래 가목 계열 테스트가 계속 고정한다.
+   */
+  it("㉓ 말소 특례: 바목(대상 목 아님)의 말소 플래그는 효력이 없다 — ㉑로 기간 요건 면제(말소값 없는 호와 같다)", () => {
+    const unit = {
+      rentalCategory: "long_general" as const, rentalAcquisitionType: "construction" as const,
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
-      region: "seoul-metro", standardPriceAtRentalStart: 500_000_000,
+      region: "seoul-metro" as const, standardPriceAtRentalStart: 500_000_000,
       landAreaM2: 200, totalFloorAreaM2: 140, hasMinimum2Units: true,
-      rentalMonths: 60, rentalAutoTermination: true,
-    })], 5, 5);
-    expect(r.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeDefined();
+      rentalMonths: 60,
+    };
+    const flagged = checkEligibility([makeUnit({ ...unit, rentalAutoTermination: true })], 5, 5);
+    const clean = checkEligibility([makeUnit({ ...unit, rentalAutoTermination: false })], 5, 5);
+    expect(flagged.failReasons.find((f) => f.code === "RENTAL_PERIOD_SHORT")).toBeUndefined();
+    expect(flagged.periodPendingUnitIndexes).toEqual([0]);
+    expect(flagged.periodPendingUnitIndexes).toEqual(clean.periodPendingUnitIndexes);
+    expect(flagged.passed).toBe(clean.passed);
   });
 });
 

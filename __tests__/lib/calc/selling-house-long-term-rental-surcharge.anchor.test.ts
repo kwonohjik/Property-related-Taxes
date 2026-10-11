@@ -180,11 +180,11 @@ describe("LR ④⑬ — 양도 주택의 장기임대 선언이 페이로드에 
 // ────────────────────────────── ⑤ 노출 게이트 ──────────────────────────────
 
 describe("LR ⑤ — 2호는 2주택에서도 성립하므로 게이트가 2채다", () => {
-  it("LR-10 2주택이면 뜬다 (3주택+ 섹션은 안 뜬다 — 게이트가 다르다)", () => {
+  it("LR-10 2주택이면 뜬다 (양도 주택 자체 배제 섹션도 2주택부터다 — PR1b S14b-2로 같은 기준)", () => {
     const f = form();
     f.householdHousingCount = "2";
     expect(sellingHouseLongTermRentalVisible(f)).toBe(true);
-    expect(sellingHouseExclusionVisible(f)).toBe(false);
+    expect(sellingHouseExclusionVisible(f)).toBe(true);
 
     f.householdHousingCount = "1";
     expect(sellingHouseLongTermRentalVisible(f)).toBe(false);

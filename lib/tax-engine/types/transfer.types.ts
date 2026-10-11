@@ -325,6 +325,8 @@ export interface TransferTaxInput {
   oneRightExemptionFacts?: {
     eligibleAtApproval: boolean;
     otherHouseAcquisitionDate?: Date;
+    /** 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — `redevelopment.otherHouseDisposalDelayReason`과 같은 사실. */
+    otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
     /**
      * 양도하는 입주권의 관리처분계획인가일(E-3 후속) — 분양권 요건(법률 제18578호 부칙 제7조②·③)과
      * 재건축 기준일 고지용. 계산기는 같은 값을 `redevelopment.approvalDate`(필수)로 보낸다.
@@ -390,6 +392,12 @@ export interface TransferTaxInput {
      * (계획서 G-2). 자기선언 입력이므로 UI가 기준시점을 명시한다.
      */
     disposalDelayReason?: TemporaryTwoHouseDelayReason;
+    /**
+     * §155⑱ 「해당 각 호의 매각 등의 방법으로 양도하는 경우」 — **2022-02-15 전 양도분의 요건**이다(대통령령 제32420호가 삭제 —
+     * `data/temporary-two-house-delay-era.ts`). 그 전 양도에서 `disposalDelayReason`을 골랐으면 이 값이 true여야 처분기한 예외가 적용된다
+     * (미입력 = 모름 = 불성립). 2022-02-15 이후 양도에서는 읽지 않는다.
+     */
+    disposalDelayDisposedByThatMethod?: boolean;
     // ── §155①2호 조정대상지역 — 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는
     //    신규 주택을 취득」 (OH-01 A2b). 판정: `resolveRegulatedAtNewAcquisition`.
     /** 신규 주택 법정동코드(10자리 — 명부 행 주소). 있으면 신규 취득일 기준 정밀 판정(선언보다 우선). */
@@ -400,6 +408,16 @@ export interface TransferTaxInput {
     newHouseRegulatedAtAcquisition?: boolean;
     /** 양도주택 `regionCode`가 없을 때 — 신규 주택 취득 당시 종전 주택이 조정대상지역이었나(사용자 선언). */
     previousHouseRegulatedAtNewAcquisition?: boolean;
+    /**
+     * 종전의 주택이 **양도 주택이 아니라 명부의 다른 행**이다 — 합가 D8 「상대 쪽 두 주택」 짝(B → C)에서 A(양도 주택)가 아니라
+     * B가 「종전의 주택」이다(§155① 본문 「그 주택(이하 이 항에서 "종전의 주택")」 · 사전-2026-법규재산-0643).
+     * true면 종전 주택의 조정 여부를 양도주택 `regionCode`가 아니라 아래 `previousHouseRegionCode`로 판정한다(없으면 선언).
+     */
+    previousHouseIsRosterRow?: boolean;
+    /** `previousHouseIsRosterRow`일 때 종전 주택(명부 행) 법정동코드 — `regionCode`와 같은 규약. */
+    previousHouseRegionCode?: string;
+    /** `previousHouseIsRosterRow`일 때 종전 주택이 지정 지구 안인가(명부 행 선언) — `regionInDesignatedDistrict`와 같은 규약. */
+    previousHouseInDesignatedDistrict?: boolean;
     /**
      * 신규 주택 매매계약 체결·계약금 지급일 — 대통령령 제29242호 부칙 제2조②2호·제30395호 부칙
      * 제15조②2호(기준일 이전 계약이면 종전 규정)와 §155①2호 괄호(조정대상지역 공고 전 계약 제외).
@@ -422,8 +440,17 @@ export interface TransferTaxInput {
   replacementHouse?: {
     /** 사업시행계획인가일 (대체주택은 이 날 이후 취득 요건) */
     businessApprovalDate: Date;
-    /** 재개발·재건축 신축주택 준공(완성)일 (완성 후 3년내 양도·이사 기산) */
-    completionDate: Date;
+    /**
+     * 재개발·재건축 신축주택 준공(완성)일 (완성 후 N년내 양도·이사 기산).
+     * `soldBeforeCompletion`이면 없다 — 「완성되기 전」 양도는 완성일과 비교할 요건이 없다(S15-4 · R-3 `before_completion`과 같은 구조).
+     * 둘 다 없으면 양도 시기 요건(3호)은 불성립이다(날짜를 지어내지 않는다).
+     */
+    completionDate?: Date;
+    /**
+     * §156의2⑤3호 전단 「관리처분계획등에 따라 취득하는 주택이 **완성되기 전** … 대체주택을 양도할 것」 — 완성 전 양도 **명시 선언**.
+     * 사업이 진행 중이면 준공일 자체가 정해지지 않는다.
+     */
+    soldBeforeCompletion?: boolean;
     /** 대체주택 거주개월수 (1년 이상 요건) */
     replacementResidenceMonths: number;
     /** 신축주택 1년 이상 거주 자기선언 (§156의2⑬ 사후관리 전제) */
@@ -478,6 +505,18 @@ export interface TransferTaxInput {
    * 요건 충족자 예외), §89①4호는 2020-01-01 이후 양도분부터 배제. `one-house/non-resident.ts`.
    */
   transferorNonResidentAtTransfer?: boolean;
+  /**
+   * §154① **보유기간 기산일** override — 1세대1주택 판정 서브트리 전용(양도 자산 입력이 아니라 **엔진이 채운다**).
+   *
+   * 토지만 출자한 원조합원의 완공APT는 보유기간을 **사용승인서 교부일**부터 센다 — 「소득세법 시행령」
+   * §162①4호 「자기가 건설한 건축물에 있어서는 … 사용승인서 교부일」 · 서면-2022-부동산-1616(2023.09.14.
+   * 「토지를 소유한 조합원이 재개발로 취득한 주택의 보유기간 계산은 사용검사필증교부일부터 양도일까지」).
+   * 멸실된 주택이 없어 §154⑧1호 통산도 걸리지 않는다. `redev-apt-judgment-input.ts`가 채운다.
+   *
+   * ⚠️ **보유 기산일만 옮긴다.** `acquisitionDate`(= §166 산식의 토지 취득일 · 「취득 당시」 조정대상지역·
+   * 2017.8.3. 경과규정 판정일)는 그대로다 — 거주요건 판정 기준일(사용승인일 vs 인가일)은 사용자 결정 대기다.
+   */
+  exemptionHoldingStartDate?: Date;
   /**
    * 보유 중 **비거주자였던 기간** — 1세대1주택 보유기간은 거주자로서 보유한 기간만 통산한다
    * (부동산납세과-615 · 서면인터넷방문상담4팀-1424). 예외: 비거주자가 그 주택을 3년 이상 보유하고
@@ -864,6 +903,16 @@ export interface TransferTaxInput {
    */
   inheritedHouseExclusionCount?: number;
   /**
+   * §155②③ 상속주택 제외 **정본 결과 전체** echo (S07-11) — STEP 0.95(`runHouseCountExclusionStep`)가 채운다.
+   *
+   * 판정 서브트리(`collectInheritedUnmet` · `era-undetermined`)는 `OneHouseJudgeInput`의 키만 읽으므로, 재개발 신축주택처럼
+   * 입력이 서브트리 진입 전에 바뀌는 경로(취득일 = 준공일 치환 · `redevelopment` strip)에서 정본을 다시 부르면
+   * STEP 0.95와 **다른 입력**으로 다른 답이 나온다. 그래서 정본이 낸 결과를 그대로 이어받게 한다 —
+   * 서브트리가 같은 판정을 두 번 하지 않는다. 사용자 입력이 아니라 echo다(Zod 대상 아님).
+   * 비어 있으면(엔진 직접 호출 등) 서브트리가 입력으로 정본을 부른다(종전 동작).
+   */
+  inheritedHouseExclusionDetail?: import("../transfer-inheritance-exclusion").InheritedHouseExclusionResult;
+  /**
    * `knownHouseExclusionCount` 중 **어느 명부 행인지 특정된** 몫(PR-3 — `merge-composition-
    * unknown-unfavorable.plan.md` §3-4). §155②③ 상속주택(`excludedHouses[].houseId`) ·
    * 조특법 §99의4·§98의9·보유 감면주택(행에 연결된 선언만) — `resolveMergeComposition`이
@@ -1246,6 +1295,9 @@ export interface TransferTaxInput {
    * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
    * - "non_urban": 도시지역 외 → 10배
    * buildingFootprintArea가 있을 때만 유효.
+   * ⚠️ 용도지역 기준 시점: 공익사업 수용 양도(2025-11-28 이후, 사업인정 고시일 전에 취득한 토지)는 세 조문 모두
+   *    「사업인정 고시일 전날 현재 해당 토지의 용도지역」이다(§154⑦·§167의5·§168의12 후단 — 대통령령 제35878호). 엔진은 이 구분을
+   *    입력으로 받지 않고 이 값을 그대로 쓰며, 결과 경고(`expropriationZoneBaseDateNotice`)로 기준일을 알린다.
    */
   appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
   /**
@@ -1324,6 +1376,12 @@ export interface TransferTaxInput {
     houseAcquisitionDate: Date;
     /** 짝 주택이 이월과세 §97의2②2호로 배제됐는가 — 부수토지도 따른다(F-13 Q-4) */
     carryoverOneHouseExcluded: boolean;
+    /**
+     * 짝 주택의 장특 표2 「1주택」 축(주택 수 제외 반영 후 1주택 ∨ §155 의제 — `lthdTable2OneHouseAxis`).
+     * 부수토지 카드는 자기 원시 주택 수(주 자산 주택 수 복제본)가 아니라 이 값으로 표2 대상을 본다(S08-5 —
+     * 「소득세법 시행령」 §159의4 괄호·§95② 단서 「이에 딸린 토지를 포함한다」). 미주입이면 종전(카드 자기 판정).
+     */
+    oneHouseForTable2?: boolean;
   };
 
   /**

@@ -486,6 +486,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevPriorHouseHoldingMonths === undefined) a.redevPriorHouseHoldingMonths = "";
   // §89①4호 나목 — 그 1주택 취득일 (구 sessionStorage에는 없다)
   if (a.redevOtherHouseAcquisitionDate === undefined) a.redevOtherHouseAcquisitionDate = "";
+  // §89①4호 나목 괄호 — 시행령 §155⑱ 사유 (구 sessionStorage에는 없다)
+  if (a.redevOtherHouseDisposalDelayReason === undefined) a.redevOtherHouseDisposalDelayReason = "";
   // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
   if (a.redevLandStdPriceAtAcq === undefined) a.redevLandStdPriceAtAcq = "";         // @deprecated legacy
   if (a.redevLandStdPriceAtApproval === undefined) a.redevLandStdPriceAtApproval = ""; // @deprecated legacy

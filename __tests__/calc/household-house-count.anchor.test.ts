@@ -175,27 +175,27 @@ describe("HC-6 D-6 게이트 시나리오 — 이 PR의 존재 이유", () => {
 
 describe("HC-7 명부가 정본인 상태", () => {
   it("[HC-7a] 주택 양도 + 취득일 있는 행 → true", () => {
-    expect(houseRosterIsAuthoritative("housing", [row("2020-01-01")], undefined)).toBe(true);
+    expect(houseRosterIsAuthoritative("housing", [row("2020-01-01")])).toBe(true);
   });
 
   it("[HC-7b] 행은 있으나 취득일 미입력 → false (아직 세어지지 않는다)", () => {
-    expect(houseRosterIsAuthoritative("housing", [row()], undefined)).toBe(false);
+    expect(houseRosterIsAuthoritative("housing", [row()])).toBe(false);
   });
 
   it("[HC-7c] 분양권 양도(범위 밖)면 false", () => {
-    expect(houseRosterIsAuthoritative("presale_right", [row("2020-01-01")], undefined)).toBe(false);
+    expect(houseRosterIsAuthoritative("presale_right", [row("2020-01-01")])).toBe(false);
   });
 
   it("[HC-7d] 명부 자체가 없으면 false", () => {
-    expect(houseRosterIsAuthoritative("housing", undefined, undefined)).toBe(false);
+    expect(houseRosterIsAuthoritative("housing", undefined)).toBe(false);
   });
 
   it("[HC-7e] 🔴 PR-B — redevelopment_apt도 housing과 같이 true", () => {
-    expect(houseRosterIsAuthoritative("redevelopment_apt", [row("2020-01-01")], undefined)).toBe(true);
+    expect(houseRosterIsAuthoritative("redevelopment_apt", [row("2020-01-01")])).toBe(true);
   });
 
   it("[HC-7f] 🔴 PR-C — right_to_move_in도 housing과 같이 true(오프셋만 다르다)", () => {
-    expect(houseRosterIsAuthoritative("right_to_move_in", [row("2020-01-01")], undefined)).toBe(true);
+    expect(houseRosterIsAuthoritative("right_to_move_in", [row("2020-01-01")])).toBe(true);
   });
 });
 

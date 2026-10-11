@@ -46,16 +46,20 @@ import {
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
 import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./one-house/pending";
-import { DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX } from "./one-house/designated-district-undeclared";
+import {
+  DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX,
+  surchargeSellingDistrictUndeclared,
+} from "./one-house/designated-district-undeclared";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { meetsTable2ResidenceRequirement, meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
+import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { laterInheritedLandExemptNotice } from "./transfer-tax-appurtenant-land";
+import { laterInheritedLandExemptNotice, expropriationZoneNoticeFor } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -175,8 +179,11 @@ export function calculateTransferTax(
     }
     // STEP 0.65a: 완공 신축주택(subject="apt") §89①3호가목 비과세 판정 + 주택수 제외 산출물.
     //   근거·게이트(청산금 수령 단독신고 제외 — OH-19)·거주월수 단일 소스(OH-48)는 분리 파일 주석.
-    const { exemptionResult: redevExemption, houseCountExclusion: redevHouseExclusion } =
-      judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates);
+    const {
+      exemptionResult: redevExemption,
+      houseCountExclusion: redevHouseExclusion,
+      oneHouseTable2Axis: redevOneHouseTable2Axis,
+    } = judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates);
 
     // 🔴 종전에는 `multiHouseSurchargeResult`를 **넘기지 않았다** — STEP 0.5(`:219`)에서
     //    판정해 놓고 이 분기가 버렸다. 형제 경로 둘(`buildExemptEarlyResult` ·
@@ -200,6 +207,7 @@ export function calculateTransferTax(
 
     return calculateRedevelopmentTax(redevInput, parsedRates, steps, multiHouseSurchargeResult, {
       exemptionResult: redevExemption,
+      oneHouseTable2Axis: redevOneHouseTable2Axis,
       carryoverDetail,
       warnings,
       houseCountExclusion: redevHouseExclusion,
@@ -275,6 +283,8 @@ export function calculateTransferTax(
       warnings.push(u.reason);
     }
   }
+  // 다주택 중과가 양도일 조정 여부에 달려 있으면(판정 메뉴는 중과를 계산하지 않는다) 양도 주택 지구 미선언도 알린다(S02-7).
+  warnings.push(...surchargeSellingDistrictUndeclared(input, multiHouseSurchargeResult?.surchargeApplicable, exemptionResult));
   // OH-22 — §154⑤ 단서 재기산을 적용했으면 판정 메뉴 결과 카드와 같은 문장으로 알린다(재기산 기산일·근거).
   if (exemptionResult.finalOneHouseRestart?.applied) warnings.push(exemptionResult.finalOneHouseRestart.description);
   // OH-38 — 삭제 전 §154①4호를 선택했으나 요건 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
@@ -528,6 +538,9 @@ export function calculateTransferTax(
   // T-7(D1-3) — 나중 취득 상속 토지분이 비과세에서 빠진 사실 + §154⑧3호 통산 미적용 고지(세액 불변).
   const laterInheritedNotice = laterInheritedLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
+  // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
+  const expropriationZoneNotice = expropriationZoneNoticeFor(effectiveInput);
+  if (expropriationZoneNotice) warnings.push(expropriationZoneNotice);
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
@@ -587,8 +600,8 @@ export function calculateTransferTax(
     // 표2 대상 축은 위 STEP 4와 **같은 술어**를 쓴다 — 여기만 실제 주택수를 보면 §155 의제
     // 자산에서 「STEP 4는 표2인데 §98의2 특칙은 표2가 아니라고 본다」는 세 번째 진실이 생긴다.
     const isOneHouseSpecial982 =
-      exemptionJudgeInput.isOneHousehold &&
-      (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155) &&
+      resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) &&
+      isLthdTable2SubjectAsset(exemptionJudgeInput) &&
       meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep) &&
       longTermHoldingDeduction > 0;
     if (!isOneHouseSpecial982) {
@@ -608,10 +621,10 @@ export function calculateTransferTax(
     table2ResidenceYearsForStep,
     // 표시 축도 계산 축과 **같은 술어**를 쓴다 — §155의3 면제를 계산에만 반영하고 문구가 표1이면
     // 「공제율은 표2인데 문구는 표1」 드리프트가 난다.
-    meetsTable2Residence: meetsTable2ResidenceRequirement(
-      exemptionJudgeInput,
-      table2ResidenceYearsForStep,
-    ),
+    // 자산 축(순수 토지·건물·배율 초과·판정 불가 카드는 표1 — S08-6)도 같은 술어다.
+    meetsTable2Residence:
+      isLthdTable2SubjectAsset(exemptionJudgeInput) &&
+      meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep),
     isOneHousehold: exemptionJudgeInput.isOneHousehold,
     // 표시 축도 계산 축과 맞춘다 — §159의4 의제 1세대1주택은 표2를 적용받으므로 산식 문구도
     // 표2(보유 4% + 거주 4%)여야 한다. 어긋나면 「공제율 64%인데 문구는 표1」 drift가 난다.
@@ -627,7 +640,7 @@ export function calculateTransferTax(
     splitDetail,
   });
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
-  if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && exemptionJudgeInput.isOneHousehold && (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
+  if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
   const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);
@@ -764,6 +777,8 @@ export function calculateTransferTax(
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
+    // 짝 부수토지 카드가 받는 표2 「1주택」 축 echo(S08-5 — `toHouseVerdict`) — L-3 게이트와 같은 술어.
+    lthdTable2OneHouseAxis: resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155),
     new994Detail,
     unsold989Detail,
     houseCountExclusionDetails,

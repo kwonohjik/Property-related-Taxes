@@ -93,6 +93,12 @@ export function calculateRedevelopmentTax(
      * 조합원입주권(subject="right")은 §89①4호이고 `applyOneRightExemption`이 담당하므로 undefined다.
      */
     exemptionResult?: { isExempt: boolean; isPartialExempt: boolean; exemptReason?: string };
+    /**
+     * 완공APT **표2·§154① 축** 「1주택」 = 실제 1주택 ∨ §155 의제 (G3-2) — `judgeRedevAptOneHouseExemption` 산출.
+     * 장특 표2·§97의4① 단서·청산금 수령분 비과세가 읽는다. 12억 판정은 `exemptionResult`가 이미 의제를 포함한다.
+     * undefined(입주권 등)면 실제 1주택 축만 쓴다.
+     */
+    oneHouseTable2Axis?: boolean;
     /** §97의2 배우자등 이월과세 A/B 판정 근거 (STEP 0.475 산출). */
     carryoverDetail?: CarryoverTaxationDetail;
     /**
@@ -174,13 +180,25 @@ export function calculateRedevelopmentTax(
    * > 2년 이상**인 것을 말한다.
    *
    * ⇒ 판정 기준은 **「양도일 현재 세대 주택 수 1 + 거주 2년」**이지 §89①4호 나목의 3년 요건이
-   *   아니다. 현행 `isOneHouseSingle`이 이 문언과 정확히 일치한다.
+   *   아니다.
    *
    * 실제로 나목 술어로 바꿔 보니 **기존 12건이 실패**했다(`case-redev-right-12억-1house` 9 ·
    * `case-redev-right-transfer-pay-lthd-split` 1 · `land-contributed-right-no-one-house` 1 등) —
    * 그 spec들이 §159의4를 옳게 encode하고 있었다. 「연관돼 보이는 두 판정」이 실은 다른 조문에서
    * 나온다는 사례로 남긴다.
+   *
+   * 🔴 **그러나 「`isOneHouseSingle`이 이 문언과 정확히 일치한다」는 서술은 틀렸다** (G3-2 · 2026-10-11).
+   * 괄호 「제155조·… 및 그 밖의 규정에 따라 1세대 1주택으로 보는 주택을 포함한다」는 **의제 1주택**을
+   * 포함하는데 `isOneHouseSingle`은 원시 주택 수(=1)만 본다 — §155①(일시적 2주택)·②③(상속주택)·④⑤(합가)·
+   * ⑦⑧ 의제 세대가 표2에서 표1로 떨어졌다(12억 초과 고가: 총세액 +72,932,200원). 그래서 일반 경로 F10
+   * (`transfer-tax-lthd.ts` `isOneHouseForTable2`)처럼 **두 축으로 나눈다.**
+   *
+   *   · `isOneHouseSingle`      — 실제 보유 주택 수 축(§95⑤ 진입·12억 판정). 그대로 둔다.
+   *   · `isOneHouseForTable2`   — 표2·§154① 축 = 실제 1주택 ∨ **의제**(`opts.oneHouseTable2Axis` —
+   *     `resolveRedevAptOneHouseTable2Axis`가 주택 수 제외 반영 후 주택 수와 `deemedOneHouseBy155`로 정한다).
+   *     표2(원조합원·승계조합원)·§97의4① 단서·청산금 수령분 비과세가 읽는다.
    */
+  const isOneHouseForTable2 = isOneHouseSingle || opts?.oneHouseTable2Axis === true;
   /**
    * ─ Step A~A.8 — **§166 3분할 산출 · 12억 안분 · 비과세 게이트 · §95② 배제**.
    *
@@ -188,7 +206,7 @@ export function calculateRedevelopmentTax(
    * 입력 3개·출력 5개로 이음매가 좁아 **구조분해로 받으면 하류 참조가 바뀌지 않는다**.
    */
   const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, surchargeFallbackNotice } =
-    runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult, opts?.burdenedGift);
+    runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, isOneHouseForTable2, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult, opts?.burdenedGift);
 
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
   emitRedevelopmentSteps(steps, redevAfterRight, input.redevelopment!);

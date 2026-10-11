@@ -149,9 +149,17 @@ export function resolveHouseholdHousingCount(
 ): number {
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
   if (!usesHouseCountRoster(args.primaryKind)) return args.declared; // F1
-  const rows = countedHouseRows(args.houses, args.transferDate);
-  if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
-  return houseCountSelfOffset(args.primaryKind) + rows;
+  // D-4 간이 입력 — 날짜 있는 행이 **하나도 없을 때만** 스칼라다(계산기는 ⑧이 이 분기 도달을 막는다).
+  // 🔴 날짜 있는 행이 전부 양도일 당일·이후면 세어지는 행은 0이지만 **명부가 정본이다** — 양도일 현재 보유 주택은
+  //    자기 몫(offset)뿐이다. 종전에는 `rows === 0`을 「명부 없음」과 같게 보아 잔존 스칼라(예: 일 입력 중간값
+  //    `2025-06-00`이 만든 2)가 주택 수가 되어 비과세가 과세로 뒤집혔다(재검증 S12-1).
+  if (!hasDatedHouseRow(args.houses)) return args.declared;
+  return houseCountSelfOffset(args.primaryKind) + countedHouseRows(args.houses, args.transferDate);
+}
+
+/** 취득일이 입력된 명부 행이 하나라도 있는가 — 양도일 전후와 무관하다. 명부가 정본인지 가르는 기준. */
+function hasDatedHouseRow(houses: readonly HouseRowForCount[] | undefined): boolean {
+  return (houses ?? []).some((h) => h.acquisitionDate);
 }
 
 /** 주택 수에 세어지는 명부 행 수 — 산식 단일 소스(`house-count-divergence.ts`도 이걸 쓴다). */
@@ -163,13 +171,15 @@ export function countedHouseRows(
   return housesOwnedAtTransfer(houses, transferDate).filter((h) => h.acquisitionDate).length;
 }
 
-/** 명부가 주택 수의 정본인가 — 화면이 스칼라 버튼을 비활성화할지 판단하는 데 쓴다. */
+/**
+ * 명부가 주택 수의 정본인가 — 화면이 스칼라 버튼을 비활성화할지 판단하는 데 쓴다.
+ * 날짜 있는 행이 있으면 정본이다 — 그 행이 전부 양도일 당일·이후여도(세어지는 행 0) 같다(`resolveHouseholdHousingCount`).
+ */
 export function houseRosterIsAuthoritative(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
-  transferDate: string | undefined,
 ): boolean {
-  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses, transferDate) > 0;
+  return usesHouseCountRoster(primaryKind) && hasDatedHouseRow(houses);
 }
 
 /**
@@ -198,9 +208,9 @@ export function houseRosterIsAuthoritative(
  *    「다른 보유 주택이 없습니다」 확정(아래) 없이는 ⑧이 통과시키지 않는다(명부 필수화 PR-1).
  *
  * ⚠️ 행이 **생기면**(배열 길이 > 0 — 취득일 입력 여부와 무관, `houseRosterIsAuthoritative`의
- *    `countedHouseRows > 0` 요건보다 느슨하다) 「다른 보유 주택이 없습니다」 확정
+ *    「날짜 있는 행이 있다」 요건보다 느슨하다) 「다른 보유 주택이 없습니다」 확정
  *    (`householdNoOtherHousesConfirmed`)을 함께 해제한다(Q-5, #1919 패턴) — 새로 추가한 빈 행은
- *    아직 취득일이 없어 `countedHouseRows`엔 안 잡히지만, 그 순간 「없음」은 더는 사실이 아니다.
+ *    아직 취득일이 없어 명부 정본 판정엔 안 잡히지만, 그 순간 「없음」은 더는 사실이 아니다.
  *    이 patch가 세 쓰기 지점(추가·삭제·수정)의 단일 경유점이라 여기 한 곳만 고치면 된다.
  */
 export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
@@ -214,12 +224,24 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   if (legacyPrecedence) return { houses };
   const isRosterKind = usesHouseCountRoster(primaryKind);
   const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
-  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return { houses, ...clearConfirm };
-  return {
-    houses,
-    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)),
-    ...clearConfirm,
-  };
+  return { houses, ...derivedHouseCountPatch(houses, primaryKind, legacyPrecedence, transferDate), ...clearConfirm };
+}
+
+/**
+ * 파생 주택 수 patch **하나** — 명부가 정본이면 `{ householdHousingCount: offset + 양도일 현재 보유 행 수 }`, 아니면 `{}`.
+ *
+ * 명부 편집(`housesPatchWithDerivedCount`)과 **양도일 변경**(`TransferTaxCalculator.handleFormChange`)이 같은 leaf를 부른다.
+ * 양도일을 옮기면 같은 행이 양도일 현재 보유 ↔ 미보유로 바뀌는데, 명부를 건드리지 않으니 종전에는 스칼라가 그대로 남아
+ * 원시 스칼라를 읽는 ⑤ 게이트가 옛 주택 수로 동작했다(재검증 S12-1 G). 레거시 표식이 켜져 있으면 스칼라를 건드리지 않는다.
+ */
+export function derivedHouseCountPatch(
+  houses: readonly HouseRowForCount[] | undefined,
+  primaryKind: string | undefined,
+  legacyPrecedence: boolean,
+  transferDate: string | undefined,
+): { householdHousingCount?: string } {
+  if (legacyPrecedence || !houseRosterIsAuthoritative(primaryKind, houses)) return {};
+  return { householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)) };
 }
 
 /**
@@ -238,7 +260,7 @@ export function houseCountDivergedFromRoster(
   declared: number,
   transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
   return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
@@ -260,7 +282,7 @@ export function houseCountScalarLocked(
   declared: number,
   transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
   return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
@@ -357,6 +379,13 @@ export interface TemporaryTwoHouseDates {
   newHouseRegionCode?: string;
   /** 신규 주택(명부 행)이 지정 지구 안인가 — 행 선언 그대로 */
   newHouseInDesignatedDistrict?: boolean;
+  /**
+   * 종전의 주택이 양도 주택이 **아니라** 명부의 다른 행이다 — 합가 D8 상대 쪽 두 주택 짝(B → C)에서만 존재한다(S15-2).
+   * §155① 본문의 「종전의 주택」은 신규 주택을 취득한 1세대가 그때 소유하던 주택이므로, 조정 여부(§155①2호·1호)는 이 행의
+   * 소재로 판정한다. 없으면(양도 주택이 종전 주택) 양도 주택의 소재로 판정한다. 행에 주소가 없으면 코드만 비어 있다 —
+   * 호출부가 양도 주택 주소로 대신 판정하지 않는다.
+   */
+  previousHouse?: { regionCode?: string; inDesignatedDistrict?: boolean };
 }
 
 export function resolveTemporaryTwoHouse(
@@ -383,7 +412,7 @@ export function resolveTemporaryTwoHouse(
   // D8 — 합가 전(당일 포함) 취득한 주택을 양도하는 합가 세대는 쪽을 보고 짝을 고른다.
   if (args.mergeContext && prev <= args.mergeContext.mergeDate) {
     const pair = mergeSidePair(prev, owned, args.mergeContext);
-    return pair ? toRosterDates(pair.previous, pair.next) : fallback();
+    return pair ? toRosterDates(pair.previous, pair.next, pair.previousRow) : fallback();
   }
   // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
   const later = owned.filter((h) => h.acquisitionDate! > prev);
@@ -391,11 +420,26 @@ export function resolveTemporaryTwoHouse(
   return toRosterDates(prev, later[0]);
 }
 
-function toRosterDates(previousAcquisitionDate: string, next: HouseRowForCount): TemporaryTwoHouseDates {
+function toRosterDates(
+  previousAcquisitionDate: string,
+  next: HouseRowForCount,
+  /** 종전 주택이 양도 주택이 아닐 때(D8 상대 쪽 짝)의 명부 행 */
+  previousRow?: HouseRowForCount,
+): TemporaryTwoHouseDates {
   return {
     previousAcquisitionDate,
     newAcquisitionDate: next.acquisitionDate!,
     source: "roster",
+    ...(previousRow
+      ? {
+          previousHouse: {
+            ...(previousRow.regionCode ? { regionCode: previousRow.regionCode } : {}),
+            ...(previousRow.regionCode && previousRow.inDesignatedDistrict !== undefined
+              ? { inDesignatedDistrict: previousRow.inDesignatedDistrict }
+              : {}),
+          },
+        }
+      : {}),
     ...(next.regionCode ? { newHouseRegionCode: next.regionCode } : {}),
     ...(next.regionCode && next.inDesignatedDistrict !== undefined
       ? { newHouseInDesignatedDistrict: next.inDesignatedDistrict }
@@ -421,7 +465,7 @@ function mergeSidePair(
   prev: string,
   owned: readonly HouseRowForCount[],
   ctx: MergeContext,
-): { previous: string; next: HouseRowForCount } | undefined {
+): { previous: string; next: HouseRowForCount; previousRow?: HouseRowForCount } | undefined {
   const sides = owned.map((h) => ({ h, side: mergeHouseSideOf({ acquisitionDate: h.acquisitionDate!, mergeOrigin: h.mergeOrigin }, ctx) }));
   if (sides.some((x) => x.side === undefined)) return undefined; // 쪽을 모르면 짝도 모른다(⑧이 고르게 한다)
   const of = (side: string) => sides.filter((x) => x.side === side).map((x) => x.h);
@@ -435,7 +479,7 @@ function mergeSidePair(
   const pairSide = otherSides.find((g) => g.length === 2);
   if (sellerOthers.length === 0 && pairSide) {
     const [a, b] = [...pairSide].sort((x, y) => (x.acquisitionDate! < y.acquisitionDate! ? -1 : 1));
-    return a.acquisitionDate! < b.acquisitionDate! ? { previous: a.acquisitionDate!, next: b } : undefined;
+    return a.acquisitionDate! < b.acquisitionDate! ? { previous: a.acquisitionDate!, next: b, previousRow: a } : undefined;
   }
   return undefined;
 }

@@ -35,6 +35,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
+import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -73,8 +74,10 @@ interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   /**
-   * 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역).
-   * 사례 45 §⑤ 거주월수 분리 입력 카드 가시성 가드.
+   * 표2·§154① 축 「1주택」 **후보** 여부 (form-전역) — 1세대 + 세대 주택 수 1 또는 2(§155 의제 후보).
+   * 술어는 `redevOneHouseAxisCandidate`(G3-2) — 원시 주택 수 `=== 1`이 아니다. 의제 세대가 카드를
+   * 못 보면 정답에 이를 입력 경로가 없다. 판정은 엔진이 한다.
+   * 사례 45 §⑤ 거주월수 분리 입력 카드 · ③-c 청산금분 선언 카드 가시성 가드.
    * undefined 시 fallback: true (legacy 호환 — 신규 호출 사이트는 명시 전달 권장).
    */
   isOneHouseSingle?: boolean;
@@ -183,6 +186,25 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           }))}
           layout="stack"
         />
+        {/* G3-4 — 토지만 출자한 원조합원의 완공APT: §154① 비과세 보유기간을 **사용승인서 교부일**부터 센다.
+            멸실된 주택이 없어 §154⑧1호 통산이 없고 신축주택 취득시기가 사용승인서 교부일이다(영 §162①4호 ·
+            서면-2022-부동산-1616). ⑧·⑫ 필수 — 같은 술어(`landContributedOriginalApt`). §166 산식의 취득일은
+            토지 취득일 그대로이고, 「취득 당시」 조정대상지역 판정일도 바뀌지 않는다. */}
+        {landContributedOriginalApt(asset) && (
+          <FieldCard
+            label="준공일 (사용승인서 교부일)"
+            field="redevCompletionDate"
+            hint="1세대1주택 비과세 판정에만 쓰입니다(1세대1주택 판정을 받는 경우 필수). 토지만 출자한 조합원이 받은 신축주택의 비과세 보유기간은 이 날부터 셉니다. 양도차익(§166) 계산의 취득일은 토지 취득일 그대로입니다."
+            trailing={
+              <LawArticleModal legalBasis="소득세법 시행령 §162 ① 4호" label="시행령 §162①4호" />
+            }
+          >
+            <DateInput
+              value={asset.redevCompletionDate}
+              onChange={(v) => onChange({ redevCompletionDate: v })}
+            />
+          </FieldCard>
+        )}
       </ToneCard>
 
       {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) — **완공 APT 양도 전용**.
