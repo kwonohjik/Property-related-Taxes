@@ -16,6 +16,7 @@ import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-re
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
@@ -575,13 +576,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         isOneHousehold: form.isOneHousehold,
         // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
         isHousing: isOneHouseExemptionAsset(primary.assetKind),
-        householdHousingCount: resolveHouseholdHousingCount({
-        primaryKind: primary.assetKind,
-        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-      }),
+        // §154① 단서는 §155②③·조특법 제외 **후** 주택 수로 본다 — 엔진과 같은 leaf(⑤·⑧·Step4 안내와 공용, S03-4).
+        householdHousingCount: resolveExemptionHousingCount(form),
         temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,

@@ -308,7 +308,7 @@ export const houseSchema = z.object({
   saleDepositReceived: z.boolean().optional(),
 });
 
-// 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11)
+// 세대 보유 분양권·입주권 (주택 수 산입 — 분양권만 2021.1.1 이후 취득분, 법률 제17477호 부칙 제4조 · 소령 §167의11. 입주권은 취득일 무관)
 export const presaleRightSchema = z.object({
   id: z.string().min(1),
   type: z.enum(["presale_right", "redevelopment_right"]),

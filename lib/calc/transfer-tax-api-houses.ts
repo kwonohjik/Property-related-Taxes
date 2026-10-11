@@ -98,7 +98,7 @@ export function sellingRentalAcquisitionPrice(ltr: RentalDeclaration | undefined
 /**
  * 양도주택(selling) + 보유주택 목록 → Zod houseSchema 배열 페이로드 빌드.
  * isLongTermRental=true && rentalType 설정 시에만 9유형 18필드를 게이트.
- * sellingExclusion: 양도 주택 3주택+ 전용 배제 특례(저당권·사원주택·문화재·어린이집 등) — selling 객체에 주입.
+ * sellingExclusion: 양도 주택 자체 배제 특례(2주택 이상 — 저당권·사원주택·문화재·어린이집 등) — selling 객체에 주입.
  */
 export function buildHousesPayload(
   primary: AssetForm,
@@ -188,7 +188,7 @@ export function buildHousesPayload(
     ...buildSellingTaxIncentiveRentalPayload(se),
     isOfficetel: false,
     isUnsoldHousing: false,
-    // P2 양도 주택 3주택+ 전용 배제 특례
+    // P2 양도 주택 자체 배제 특례(2주택 이상)
     isMortgageExecution: se?.isMortgageExecution,
     isEmployeeHousing: se?.isEmployeeHousing,
     freeProvisionYears:

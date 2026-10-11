@@ -327,7 +327,7 @@ export interface TransferFormData {
   /** `finalHouseRestartHistory === "yes"`일 때의 처분 목록(구 기록엔 없다 — 읽기는 `readFinalHouseDisposals`) */
   finalHouseRestartDisposals: FinalHouseDisposalRow[];
   houses: HouseEntry[];
-  /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
+  /** 세대 보유 분양권·입주권 (주택 수 산입 — 분양권만 2021.1.1 이후 취득분, 법률 제17477호 부칙 제4조 · 소령 §167의11. 입주권은 취득일 무관) */
   presaleRights: PresaleRightEntry[];
   /**
    * 다주택 중과세 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9).
@@ -352,8 +352,8 @@ export interface TransferFormData {
     areaDesignatedDate?: string;
   };
   /**
-   * 양도(selling) 주택의 3주택+ 전용 중과배제 특례 (소령 §167의10 — 양도 주택 자체가 배제 항목 해당).
-   * 양도 주택을 기술하므로 폼-전역. effectiveHouseCount≥3에서만 의미. 날짜·연수는 폼 문자열.
+   * 양도(selling) 주택 자체의 중과배제 특례 (소령 §167의3① 각 호 — 2주택은 §167의10①2호 준용, 양도 주택 자체가 배제 항목 해당).
+   * 양도 주택을 기술하므로 폼-전역. effectiveHouseCount≥2에서 의미. 날짜·연수는 폼 문자열.
    */
   sellingHouseExclusion?: {
     /** 저당권 실행·채권변제 취득 (취득 후 3년 이내) */

@@ -351,7 +351,7 @@ export interface HouseInfo {
   unavoidableReasonUnresolved?: boolean;
 }
 
-/** 분양권/입주권 정보 (2021.1.1 이후 취득분 → 주택 수 산정 포함) */
+/** 분양권/입주권 정보 (주택 수 산정 포함 — 분양권만 2021.1.1 이후 취득분, 법률 제17477호 부칙 제4조. 입주권은 취득일 무관) */
 export interface PresaleRight {
   id: string;
   type: "presale_right" | "redevelopment_right";

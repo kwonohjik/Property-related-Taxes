@@ -496,7 +496,7 @@ export type TaxIncentiveRentalFacts = Partial<
 
 /**
  * 세대 보유 분양권·입주권 항목 (폼 문자열 버전).
- * 소령 §167의11·§167의3①: 2021.1.1 이후 취득분은 주택 수 산정에 포함.
+ * 소령 §167의11·§167의3①: 분양권은 2021.1.1 이후 취득분만(법률 제17477호 부칙 제4조), 입주권은 취득일 무관하게 주택 수 산정에 포함.
  */
 export interface PresaleRightEntry {
   id: string;
