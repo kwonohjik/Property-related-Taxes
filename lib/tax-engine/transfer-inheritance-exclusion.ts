@@ -274,6 +274,21 @@ export function resolveInheritedHouseExclusionFromInput(
 }
 
 /**
+ * 판정 **서브트리**(불성립 사유 · 판정 보류)용 §155②③ 제외 결과 — STEP 0.95가 이미 낸 결과(`inheritedHouseExclusionDetail`
+ * echo)가 있으면 **그대로 이어받고**, 없을 때만 입력으로 정본을 부른다(S07-11).
+ *
+ * 🔴 서브트리 입력은 STEP 0.95 입력과 **같지 않을 수 있다** — 재개발 신축주택(`judgeRedevAptOneHouseExemption`)은 취득일을
+ *    준공일로 치환하고 `redevelopment`를 strip한 입력으로 서브트리를 부른다. 그 입력으로 정본을 다시 부르면
+ *    「승계조합원 신축주택」 분기(E-8)를 타지 못해 STEP 0.95가 뺀 상속주택을 「상속개시 후 취득이라 빼지 않는다」고 안내한다.
+ */
+export function resolveInheritedHouseExclusionForJudgment(
+  input: Parameters<typeof resolveInheritedHouseExclusionFromInput>[0] &
+    Pick<TransferTaxInput, "inheritedHouseExclusionDetail">,
+): InheritedHouseExclusionResult {
+  return input.inheritedHouseExclusionDetail ?? resolveInheritedHouseExclusionFromInput(input);
+}
+
+/**
  * 양도(일반)주택으로 볼 명부 행 id — `sellingHouseId` 미입력 시 **첫 행**으로 폴백한다.
  *
  * 제외 후보는 「상속주택이면서 **양도 대상이 아닌** 행」이므로, 불성립 사유 안내도 이 id를

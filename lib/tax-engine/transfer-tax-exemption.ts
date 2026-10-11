@@ -49,6 +49,7 @@ import {
   qualifiesRuralHouse,
   ruralTemporaryTwoHouseOverlapCountHolds,
   qualifiesUnavoidableOutsideCapital,
+  twoHouseSpecialCountHolds,
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageContract,
   qualifiesLongTermMortgageResidenceExemption,
@@ -314,7 +315,7 @@ function checkExemptionCore(
 
   // E-3: 일시적 2주택 — ⑦ 농어촌주택이 겹친 3주택도 같은 분기로 본다(D3 · `ruralTemporaryTwoHouseOverlapCountHolds`).
   const ruralOverlap = ruralTemporaryTwoHouseOverlapCountHolds(input);
-  if ((input.householdHousingCount === 2 || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
+  if ((twoHouseSpecialCountHolds(input) || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
     const provisoReason = input.oneHouseExemptionProviso?.reason;
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
@@ -446,7 +447,7 @@ function checkExemptionCore(
    * ⇒ ① 2주택일 것 ② 문화유산 주택 선언 ③ §154① 요건 충족(「§154①을 적용」이므로).
    */
   if (
-    input.householdHousingCount === 2 &&
+    twoHouseSpecialCountHolds(input) &&
     input.culturalHeritageHouse === true &&
     meetsOneHouseHoldingResidence(input, rule)
   ) {

@@ -126,12 +126,15 @@ describe("⑤ §155⑥1호 문화유산 주택 — **명부 행**에 선언 칸�
   /**
    * 🔑 **「각각 1개씩」은 이제 화면이 아니라 엔진이 본다**(사실/규칙 분리 — 계획서 §5.10).
    *    행은 「이 주택이 문화유산인가」라는 **사실**만 받고, 2주택 요건은
-   *    `transfer-tax-exemption.ts:374`의 `householdHousingCount === 2`가 지킨다.
+   *    `transfer-tax-exemption.ts`의 `twoHouseSpecialCountHolds`(= `householdHousingCount === 2` + 세 특례 상한)가 지킨다.
    *    그 게이트가 살아 있음을 여기서 고정한다 — 없어지면 1주택에도 특례가 붙는다.
    */
   it("★ 2주택 요건은 엔진 게이트가 지킨다 — 화면 게이트로 옮기지 않았다", () => {
     const src = readFileSync("lib/tax-engine/transfer-tax-exemption.ts", "utf8");
-    expect(src).toMatch(/input\.householdHousingCount === 2\s*&&\s*\n?\s*input\.culturalHeritageHouse === true/);
+    // 2주택 게이트는 공용 술어 `twoHouseSpecialCountHolds`(2주택 + ②③ 동시 제외 상한 — S01-2)다. 그 술어가 2주택을 요구하는지도 고정한다.
+    expect(src).toMatch(/twoHouseSpecialCountHolds\(input\)\s*&&\s*\n?\s*input\.culturalHeritageHouse === true/);
+    const holding = readFileSync("lib/tax-engine/transfer-tax-exemption-holding.ts", "utf8");
+    expect(holding).toMatch(/return input\.householdHousingCount === 2 && !inheritedBothPoolsExcluded\(input\);/);
   });
 
   /** 판정 메뉴 ③에는 **더 이상 없다** — 이중 입력 금지(같은 PR에서 뺐다). */

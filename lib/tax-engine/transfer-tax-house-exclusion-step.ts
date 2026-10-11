@@ -39,8 +39,10 @@ export function collectKnownHouseExclusionIds(sources: {
 }
 
 /**
- * D5 — §99의4 순서를 합가 상대방 세대 기준으로 볼 맥락(`new994GeneralHouseAcquisitionDate`). 합가일은 혼인을 먼저 본다
- * (판정 메뉴 `mergeContextOf`와 같은 순서). 합가가 없거나 명부가 없으면 `undefined` — 종전 그대로.
+ * D5 — §99의4 순서를 합가 상대방 세대 기준으로 볼 맥락(`new994GeneralHouseAcquisitionDate`). 합가일이 둘 다 있으면 혼인을 먼저 본다.
+ * ⚠️ 판정 메뉴 `mergeContextOf`는 이제 **먼저 합친 쪽**을 `kind`로 두므로(D4 이중 합가) 두 날짜가 있을 때 이 함수와 같은 순서가
+ * 아니다 — §155④⑤ 비과세의 합가 축은 `resolveTwoHouseMergeAxis`(명부 소유 쪽)다. 이 §99의4 맥락이 두 날짜에서 어느 합가를
+ * 따라야 하는지는 확인하지 못했다(확인 필요 — 종전 동작 유지). 합가가 없거나 명부가 없으면 `undefined`.
  */
 function new994MergeOrderOf(input: TransferTaxInput): New994MergeOrderContext {
   const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
@@ -289,6 +291,7 @@ export function runHouseCountExclusionStep(
       : {}),
     knownHouseExclusionCount: totalExcluded,
     inheritedHouseExclusionCount: inheritedExclusion.excludedCount,
+    inheritedHouseExclusionDetail: inheritedExclusion,
     knownHouseExclusionHouseIds,
   };
   // 둘 다 적격이면 §99의4 → §98의9 순으로 각각 1채씩 (D4-01) — 주택 수는 순차 체이닝

@@ -280,6 +280,8 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
           right({ id: "o2", acquisitionDate: new Date("2022-02-01") }),
         ],
         parentalCareMerge: { mergeDate: new Date("2020-03-01") },
+        // 날짜 게이트(먼저 양도 → 합가 이후 → N년)가 구성 판정보다 먼저다(S05-6) — 통과해야 ⑧이 판정 불가로 열려 있다.
+        isFirstTransferredInMerge: true,
       }),
     );
     expect(r.isExempt).toBe(true);

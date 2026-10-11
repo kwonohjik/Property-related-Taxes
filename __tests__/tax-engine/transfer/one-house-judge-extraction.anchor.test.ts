@@ -86,6 +86,8 @@ const JUDGE_INPUT_KEYS = [
   "sellingHouseId",
   "knownHouseExclusionCount",
   "inheritedHouseExclusionCount",
+  // S07-11 — STEP 0.95 §155②③ 제외 정본 결과 echo(서브트리가 같은 판정을 다른 입력으로 다시 하지 않는다)
+  "inheritedHouseExclusionDetail",
   "knownHouseExclusionHouseIds",
   "noMergeRosterInputPath",
   // 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자
@@ -175,6 +177,19 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   sellingHouseId: "sell",
   knownHouseExclusionCount: 1,
   inheritedHouseExclusionCount: 1,
+  inheritedHouseExclusionDetail: {
+    soleExcludedCount: 1,
+    coExcludedCount: 0,
+    excludedCount: 1,
+    sameHouseholdDisqualifiedCount: 0,
+    rankingDisqualifiedCount: 0,
+    excludedHouses: [{ houseId: "inherited-house", basis: "sole" }],
+    eligibleSoleCount: 1,
+    eligibleCoMinorityCount: 0,
+    generalHouseNotHeldCount: 0,
+    inheritedDateUnknownCount: 0,
+    sameInheritanceAsSoldCount: 0,
+  },
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,
   rentalHousingException: {

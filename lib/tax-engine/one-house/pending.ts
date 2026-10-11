@@ -42,12 +42,14 @@ import {
   meetsOneHouseHoldingResidence,
   meetsOneHouseResidenceRequirement,
   matchMergeApartFromWindow,
+  matchDoubleMergeApartFromWindow,
   mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
   qualifiesRuralHouseApartFromDeadline,
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
+  twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined } from "./era-undetermined";
@@ -186,7 +188,7 @@ export function collectPendingConditions(
    * 요건 A(1년)는 이미 지난 사실(신규주택을 언제 샀는가)이라 **치유할 수 없다** ⇒ pending 대상 아님.
    * 요건 B(처분기한)만 미충족이고 §154① 보유·거주가 충족일 때 기한을 낸다.
    */
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  if (twoHouseSpecialCountHolds(input) && input.temporaryTwoHouse && twoHouseRule) {
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
     /**
      * 📌 `!timing.threeYearMet`는 **현재 도달 불가능한 방어 조건**이다(뮤테이션 M13 SURVIVED).
@@ -257,9 +259,11 @@ export function collectPendingConditions(
    *    `matchMergeApartFromWindow`(먼저 양도·합가 전 취득·축 선택) + `mergeDeemingHouseCountHolds`
    *    (2주택 · §155① 중첩 3주택)는 `resolveMergeDeeming`·`resolveMergeOverlapDeeming`과 같은 조건이다.
    */
-  const mergeApart = mergeDeemingHouseCountHolds(input, twoHouseRule)
-    ? matchMergeApartFromWindow(input)
-    : undefined;
+  // 이중 합가(D4) 3주택은 `resolveDoubleMergeDeeming`과 같은 술어(`matchDoubleMergeApartFromWindow`) — 기한은 **먼저 합친 날**
+  // 기준이다(X4-3 — 종전에는 이 게이트에서 D4가 빠져 합가 축 기한이 안내되지 않았다).
+  const mergeApart =
+    (mergeDeemingHouseCountHolds(input, twoHouseRule) ? matchMergeApartFromWindow(input) : undefined) ??
+    matchDoubleMergeApartFromWindow(input);
   for (const axis of mergeAxes) {
     if (!axis.mergeDate) continue;
     // 엔진이 실제로 판정하는 축만 — 혼인·동거봉양이 둘 다 있으면 혼인만 본다.
@@ -285,7 +289,7 @@ export function collectPendingConditions(
    * 그 사실은 `collectUndetermined`가 판정 보류로 남긴다.
    */
   const unavoidable = input.unavoidableOutsideCapitalHouse;
-  if (unavoidable?.resolvedDate && input.householdHousingCount === 2) {
+  if (unavoidable?.resolvedDate && twoHouseSpecialCountHolds(input)) {
     const dl = deadlineEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (
       !isWithinDeadline(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&

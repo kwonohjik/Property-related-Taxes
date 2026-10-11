@@ -260,7 +260,13 @@ describe("E-14f 구 §167의11①1호 — 「제156조의2제3항부터 제5항�
 });
 
 describe("E-14f 구 §167의11①6호(동거봉양 10년)·7호(혼인 5년) — 합침으로써 주택 1 + 권리 1", () => {
-  const marriage = (d: string) => ({ wasRegulatedAtAcquisition: false, marriageMerge: { marriageDate: D(d) } });
+  // 「먼저 양도하는 주택」 선언은 §156의2⑨ 본문 공통 요건이다 — 날짜 게이트(먼저 양도 → 합가 이후 → N년)가 합가 전 구성 판정보다 먼저라
+  // (S05-6), 선언이 없으면 구성을 묻기 전에 §89② 배제가 확정된다. 이 anchor는 구성 미선언(판정 보류) 경로를 본다.
+  const marriage = (d: string) => ({
+    wasRegulatedAtAcquisition: false,
+    isFirstTransferredInMerge: true,
+    marriageMerge: { marriageDate: D(d) },
+  });
 
   it("F2-1 7호 — 혼인 전 각자 주택·입주권 · 혼인 후 1년 10개월 양도 → 배제 236,365,800 (종전 423,115,000)", () => {
     const r = calc(oneRight("2016-01-01", "2019-01-01", "2022-03-02", marriage("2020-05-01")));
@@ -272,6 +278,7 @@ describe("E-14f 구 §167의11①6호(동거봉양 10년)·7호(혼인 5년) —
     const r = calc(
       oneRight("2012-01-01", "2013-06-01", "2022-03-02", {
         wasRegulatedAtAcquisition: false,
+        isFirstTransferredInMerge: true,
         parentalCareMerge: { mergeDate: D("2014-01-01") },
       }),
     );

@@ -27,7 +27,7 @@ import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import { marriageRentalSidesOf, resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "../types/transfer.types";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
-import type { DeemedOneHouseBasis } from "../types/multi-house-surcharge.types";
+import type { DeemedOneHouseBasis, HouseInfo } from "../types/multi-house-surcharge.types";
 import {
   judgeTemporaryTwoHouseTiming,
   meetsPublicInstitutionRelocationRegion,
@@ -39,6 +39,7 @@ import {
   resolveExemptionProviso,
   qualifiesRuralHouse,
   ruralTemporaryTwoHouseOverlapCountHolds,
+  twoHouseSpecialCountHolds,
 } from "../transfer-tax-exemption-holding";
 
 /**
@@ -171,7 +172,7 @@ export function resolveDeemedOneHouseBy155(
   //   (3주택 세대의 명부가 중과 불산입 주택을 「신규 주택」으로 도출해 15호가 새던 결함 · 부동산납세과-1179).
   //   D3 — ⑦ 농어촌주택이 겹친 3주택도 비과세 E-3과 같은 게이트로 본다.
   if (
-    (input.householdHousingCount === 2 || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
     input.temporaryTwoHouse &&
     twoHouseRule &&
     evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
@@ -202,7 +203,8 @@ export function resolveDeemedOneHouseBy155(
 export function resolveMergeDeeming(
   input: MergeDeemingReqInput,
 ): "marriage_merge" | "parental_care_merge" | undefined {
-  if (input.householdHousingCount !== 2) return undefined;
+  // 2주택 + ②③ 동시 제외로 세 특례가 되지 않을 것(`inheritedBothPoolsExcluded`) — S01-2.
+  if (!twoHouseSpecialCountHolds(input)) return undefined;
   return matchMergeWindow(input);
 }
 
@@ -234,22 +236,80 @@ function matchMergeGateAndComposition(
   input: MergeDeemingReqInput,
 ): { kind: "marriage" | "parental_care"; mergeDate: Date; composition: ReturnType<typeof resolveMergeComposition> } | undefined {
   if (input.isFirstTransferredInMerge !== true) return undefined;
-  const mergeDate = input.marriageMerge?.marriageDate ?? input.parentalCareMerge?.mergeDate;
-  if (!mergeDate) return undefined;
+  const axis = resolveTwoHouseMergeAxis(input);
+  if (!axis) return undefined;
+  const { kind, mergeDate } = axis;
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
   const composition = resolveMergeComposition({
     householdHousingCount: input.householdHousingCount,
-    houses: input.houses,
+    houses: mergeAxisHouses(input.houses, axis),
     sellingHouseId: input.sellingHouseId,
     mergeDate,
     knownHouseExclusionCount: input.knownHouseExclusionCount,
     knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noRosterInputPath: input.noMergeRosterInputPath,
-    marriageRentals: marriageRentalSidesOf(input, input.marriageMerge !== undefined),
+    marriageRentals: marriageRentalSidesOf(input, kind === "marriage"),
   });
-  return { kind: input.marriageMerge ? "marriage" : "parental_care", mergeDate, composition };
+  return { kind, mergeDate, composition };
+}
+
+/** 합가 축 — 어느 합가가 「1세대가 2주택」을 만들었는가. `secondMergeSide`: 나중에 합친 쪽 행이 상대 쪽(`counterpart_side`)인 축. */
+export type TwoHouseMergeAxis = {
+  kind: "marriage" | "parental_care";
+  mergeDate: Date;
+  secondMergeSide: boolean;
+};
+
+/**
+ * 합가일이 **둘 다** 있는 2주택의 합가 축 — 명부 행의 합가 전 보유 쪽(`mergeOrigin`)이 가리키는 합가다 (S04-3).
+ *
+ * 두 합가 중 2주택을 만든 것은 **한쪽뿐**이다 — 다른 주택의 보유자가 합친 쪽. 판정 메뉴·계산기 명부의 소유 쪽 정의
+ * (`lib/calc/merge-house-origin.ts` `mergeContextOf` · `mergeSideLabel`)는 **먼저 합친 쪽 = `counterpart_side`,
+ * 나중에 합친 쪽 = `second_merge_side`**다(혼인이 먼저면 배우자 · 동거봉양 가족, 동거봉양이 먼저면 합친 가족 · 혼인한 배우자).
+ * 그래서 양도 주택 외 행이:
+ *   - `second_merge_side`면 나중에 합친 합가가 축이다(앞선 합가는 주택 없는 사람과의 합가였다) —
+ *     구성 판정은 그 합가를 단일 합가로 보아 그 행을 상대 쪽(`counterpart_side`)으로 읽는다(`mergeAxisHouses`).
+ *   - `counterpart_side`면 먼저 합친 합가가 축이다.
+ *   - 둘 다 아니면(미입력·양도자 쪽만) 어느 쪽인지 가를 근거가 없다 — 종전대로 혼인을 먼저 본다(구성 판정이 어차피
+ *     `origin_missing`·`seller_side_only`로 불성립이다).
+ *
+ * 종전에는 두 날짜가 있어도 늘 혼인 축만 봤다 — 「무주택 배우자와 혼인한 뒤 1주택 부모와 동거봉양 합가」(④ 성립)는 과세되고,
+ * 「동거봉양 합가 10년 경과 뒤 무주택 배우자와 혼인」(⑤ 불성립)은 비과세됐다. 3주택 이중 합가는 이 축이 아니다
+ * (`resolveDoubleMergeDeeming` — 먼저 합친 날 기준).
+ */
+export function resolveTwoHouseMergeAxis(
+  input: Pick<
+    MergeDeemingReqInput,
+    "marriageMerge" | "parentalCareMerge" | "householdHousingCount" | "houses" | "sellingHouseId" | "knownHouseExclusionHouseIds"
+  >,
+): TwoHouseMergeAxis | undefined {
+  const marriageDate = input.marriageMerge?.marriageDate;
+  const parentalDate = input.parentalCareMerge?.mergeDate;
+  if (!marriageDate && !parentalDate) return undefined;
+  const legacy: TwoHouseMergeAxis = marriageDate
+    ? { kind: "marriage", mergeDate: marriageDate, secondMergeSide: false }
+    : { kind: "parental_care", mergeDate: parentalDate!, secondMergeSide: false };
+  const order = doubleMergeOrderOf(input);
+  if (!order || input.householdHousingCount !== 2) return legacy;
+
+  const excluded = new Set(input.knownHouseExclusionHouseIds ?? []);
+  const others = (input.houses ?? []).filter((h) => h.id !== input.sellingHouseId && !excluded.has(h.id));
+  const secondKind = order.first === "marriage" ? "parental_care" : "marriage";
+  if (others.some((h) => h.mergeOrigin === "second_merge_side")) {
+    return { kind: secondKind, mergeDate: order.secondDate, secondMergeSide: true };
+  }
+  if (others.some((h) => h.mergeOrigin === "counterpart_side")) {
+    return { kind: order.first, mergeDate: order.firstDate, secondMergeSide: false };
+  }
+  return legacy;
+}
+
+/** 나중에 합친 합가가 축이면 `second_merge_side` 행을 단일 합가의 상대 쪽(`counterpart_side`)으로 읽는다 — 구성 판정의 입력. */
+export function mergeAxisHouses(houses: HouseInfo[] | undefined, axis: TwoHouseMergeAxis): HouseInfo[] | undefined {
+  if (!axis.secondMergeSide || !houses) return houses;
+  return houses.map((h) => (h.mergeOrigin === "second_merge_side" ? { ...h, mergeOrigin: "counterpart_side" as const } : h));
 }
 
 export function matchMergeApartFromWindow(
@@ -290,7 +350,7 @@ export function mergeDeemingHouseCountHolds(
   input: DeemedOneHouseReqInput,
   twoHouseRule: OneHouseSpecialRulesData["temporary_two_house"] | undefined,
 ): boolean {
-  return input.householdHousingCount === 2 || mergeOverlapTwoHouseHolds(input, twoHouseRule);
+  return twoHouseSpecialCountHolds(input) || mergeOverlapTwoHouseHolds(input, twoHouseRule);
 }
 
 /** F-1 중첩의 주택 수·§155① 조건 — `resolveMergeOverlapDeeming`과 `mergeDeemingHouseCountHolds` 공용. */
@@ -346,13 +406,32 @@ export const REVERSE_DOUBLE_MERGE_NOTICE =
  * 🔑 구성은 `resolveDoubleMergeComposition`이 본다 — 「모름」은 불성립(holds만 인정 — 종전 동작이 없는 새 갈래다).
  */
 export function resolveDoubleMergeDeeming(input: MergeDeemingReqInput): boolean {
+  const m = matchDoubleMergeApartFromWindow(input);
+  if (!m) return false;
+  const years = resolveMergeExemptionYears(m.kind, input.transferDate);
+  return isWithinDeadline(m.mergeDate, years, input.transferDate);
+}
+
+/** D4 이중 합가의 주택 수 요건 — 3주택까지만, §155②③ 상속주택 제외가 겹치면 세 특례라 불성립. */
+export function doubleMergeHouseCountHolds(
+  input: Pick<MergeDeemingReqInput, "householdHousingCount" | "inheritedHouseExclusionCount">,
+): boolean {
+  return input.householdHousingCount === 3 && (input.inheritedHouseExclusionCount ?? 0) === 0;
+}
+
+/**
+ * D4 이중 합가 요건 중 **N년 기한만 뺀** 나머지 — `resolveDoubleMergeDeeming`과 pending 합가 축·요건 검토표가 같은 술어를
+ * 쓴다(X4-3 — 종전에는 pending·검토표가 단일 합가 술어(`matchMergeApartFromWindow`)만 읽어, 이중 합가면 합가 축 기한을 내지 않거나
+ * 혼인일 기준의 틀린 기한을 보였다). `kind`·`mergeDate`는 **먼저 합친** 합가다(기한의 기산점).
+ */
+export function matchDoubleMergeApartFromWindow(
+  input: MergeDeemingReqInput,
+): { kind: "marriage" | "parental_care"; mergeDate: Date } | undefined {
   const order = doubleMergeOrderOf(input);
-  if (!order) return false;
-  if (input.householdHousingCount !== 3 || (input.inheritedHouseExclusionCount ?? 0) > 0) return false;
-  if (input.isFirstTransferredInMerge !== true) return false;
-  if (input.transferDate < order.secondDate || input.acquisitionDate > order.firstDate) return false;
-  const years = resolveMergeExemptionYears(order.first, input.transferDate);
-  if (!isWithinDeadline(order.firstDate, years, input.transferDate)) return false;
+  if (!order) return undefined;
+  if (!doubleMergeHouseCountHolds(input)) return undefined;
+  if (input.isFirstTransferredInMerge !== true) return undefined;
+  if (input.transferDate < order.secondDate || input.acquisitionDate > order.firstDate) return undefined;
   const composition = resolveDoubleMergeComposition({
     householdHousingCount: input.householdHousingCount,
     houses: input.houses,
@@ -363,7 +442,7 @@ export function resolveDoubleMergeDeeming(input: MergeDeemingReqInput): boolean 
     knownHouseExclusionHouseIds: input.knownHouseExclusionHouseIds,
     noRosterInputPath: input.noMergeRosterInputPath,
   });
-  return composition.status === "holds";
+  return composition.status === "holds" ? { kind: order.first, mergeDate: order.firstDate } : undefined;
 }
 
 /**
