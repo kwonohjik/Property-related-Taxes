@@ -31,6 +31,7 @@ import {
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { effectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { threeHouseMergeRequirementsHold } from "@/lib/tax-engine/one-house/merge-confirm-warnings";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { sameHouseholdInheritanceOrderError } from "@/lib/calc/same-household-inheritance-order";
@@ -367,6 +368,33 @@ export function giftBurdenedMergeSlice(bgt: BurdenedGiftTransferTaxInput): Merge
 export function giftBurdenedMergeAgeError(bgt: BurdenedGiftTransferTaxInput): string | null {
   if (!giftBurdenedMergeInScope(bgt)) return null;
   return parentalCareParentAgeMissing(giftBurdenedMergeSlice(bgt)) ? PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE : null;
+}
+
+/**
+ * 입력 화면의 「세대 3주택 합가 특례는 판정하지 않습니다」 카드를 띄울지 — 결과 화면의 엔진 고지
+ * (`mergeConfirmWarnings`)와 **같은 술어**다: 증여자 세대가 1세대(ON)이고 주택 수 3이며 합가 특례 요건
+ * (먼저 양도 · 합가일 이전 취득 · 기한 내 · 합가 후 양도)이 모두 설 때만. 1세대 OFF면 구성과 무관하게 과세라
+ * 계산기로 안내하지 않는다(토글 아래 1세대 안내가 먼저 보인다 — 결정 #24 조건 5 · #25 조건 1).
+ * 증여 화면 양도일은 증여일(`transferDate`) — 모르면 요건을 알 수 없어 띄우지 않는다(결과 고지가 이어받는다).
+ */
+export function giftBurdenedThreeHouseMergeNoticeNeeded(
+  bgt: BurdenedGiftTransferTaxInput,
+  transferDate: string | undefined,
+): boolean {
+  if (bgt.isOneHousehold !== true || (bgt.householdHousingCount ?? 1) !== 3) return false;
+  const transfer = toOptionalDate(transferDate);
+  const acquisition = toOptionalDate(ymd(bgt.acquisitionDate));
+  if (!transfer || !acquisition) return false;
+  const marriageDate = toOptionalDate(bgt.marriageDate);
+  const mergeDate = toOptionalDate(bgt.parentalCareMergeDate);
+  return threeHouseMergeRequirementsHold({
+    householdHousingCount: 3,
+    marriageMerge: marriageDate ? { marriageDate } : undefined,
+    parentalCareMerge: mergeDate ? { mergeDate } : undefined,
+    isFirstTransferredInMerge: bgt.isFirstTransferredInMerge === true,
+    acquisitionDate: acquisition,
+    transferDate: transfer,
+  });
 }
 
 /** ④ — 계산기와 같은 leaf. 게이트 밖이면 키 없음. */

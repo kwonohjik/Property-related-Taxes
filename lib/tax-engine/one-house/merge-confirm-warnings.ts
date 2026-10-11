@@ -31,7 +31,7 @@ export const NO_ROSTER_THREE_HOUSE_MERGE_NOTICE =
  * 합가 전 보유 구성·§155① 처분기한은 이 화면에서 알 수 없어 보지 않는다 — 알 수 있는 요건이 다 서야 「구성만 알면
  * 결론이 달라진다」가 성립한다(결론을 가를 때만 고지).
  */
-function threeHouseMergeRequirementsHold(input: MergeDeemingReqInput): boolean {
+export function threeHouseMergeRequirementsHold(input: MergeDeemingReqInput): boolean {
   if (input.householdHousingCount !== 3 || (input.inheritedHouseExclusionCount ?? 0) > 0) return false;
   if (input.isFirstTransferredInMerge !== true) return false;
   const marriageDate = input.marriageMerge?.marriageDate;

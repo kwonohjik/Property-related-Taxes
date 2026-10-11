@@ -71,6 +71,7 @@ import {
   giftBurdenedEffectiveWasRegulatedAtAcquisition,
   giftBurdenedMergeInScope,
   giftBurdenedMergeSlice,
+  giftBurdenedThreeHouseMergeNoticeNeeded,
   giftBurdenedWinWinInScope,
   giftBurdenedWinWinSlice,
 } from "@/lib/calc/gift-burdened-one-house";
@@ -436,8 +437,8 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
         <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} variant="gift" />
       )}
       {/* 세대 3주택 + 합가일 — 이 화면에는 세대 보유 주택 목록이 없어 3주택 합가 특례(일시적 2주택 중첩·이중 합가)를 판정하지 않는다
-          (결정 #25 C · #26 B). 결론을 가르는지(합가 요건)는 엔진이 판정해 결과 고지로 낸다 — 입력 화면은 판정하지 않음만 알린다. */}
-      {householdCount === 3 && (bgt.marriageDate || bgt.parentalCareMergeDate) && (
+          (결정 #25 C · #26 B). 게이트는 결과 화면 엔진 고지와 같은 술어다 — 1세대 ON · 주택 수 3 · 합가 요건 성립(결정 #24 조건 5 · #25 조건 1). */}
+      {giftBurdenedThreeHouseMergeNoticeNeeded(bgt, transferDate) && (
         <ToneCard tone="amber" title="세대 3주택 합가 특례는 이 화면에서 판정하지 않습니다 (확인 필요)" className="py-2">
           <p data-testid="bg-three-house-merge-notice" className="text-xs">
             일시적 2주택(§155①)과 합가가 겹친 경우, 혼인·동거봉양 이중 합가는 보유 주택 목록이 있어야 판정할 수 있습니다. 이 화면에는 목록 입력 칸이

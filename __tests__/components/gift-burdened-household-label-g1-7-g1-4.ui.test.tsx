@@ -9,7 +9,7 @@
  * | UI-H2 | 결과 고지(1세대 OFF)는 결론을 가를 때만 — 주택 수 1 · §155① 두 날짜 · 합가일. 1세대 ON·비주택·입력 없는 2주택은 없다 |
  * | UI-H3 | 결과 카드가 증여 화면 전용 고지를 같은 공용 카드(접힘 밖)로 보인다 |
  * | UI-M1 | 합가 입력란: 증여 화면은 지키지 않는 3주택 중첩·중과 경감 안내를 숨긴다 · 계산기는 그대로 |
- * | UI-M2 | 세대 3주택 + 합가일 → 판정하지 않는다는 안내 · 주택 수 2는 없다 |
+ * | UI-M2 | 1세대 ON · 세대 3주택 · 합가 요건 성립 → 판정하지 않는다는 안내 · 1세대 OFF·요건 불성립·주택 수 2는 없다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -150,18 +150,39 @@ describe("UI-M1 합가 입력란 안내 (#25 하위 1)", () => {
   });
 });
 
-describe("UI-M2 세대 3주택 + 합가일 안내 (#25·#26)", () => {
-  it("★ 주택 수 3 + 합가일 → 이 화면에서 판정하지 않는다는 안내(확인 필요)", () => {
-    renderGift(item({ isOneHousehold: true, householdHousingCount: 3, marriageDate: "2020-01-01" }));
+describe("UI-M2 세대 3주택 + 합가 요건 성립 안내 (#24 조건 5 · #25 조건 1 · #26)", () => {
+  // 증여일 2025-06-01 · 취득 2015-01-01 · 혼인 합가 2020-01-01(10년 이내) · 먼저 양도 — 요건이 모두 선다.
+  const HOLDS = { isOneHousehold: true, householdHousingCount: 3, marriageDate: "2020-01-01", isFirstTransferredInMerge: true };
+  const NOTICE = () => screen.queryByTestId("bg-three-house-merge-notice");
+  it("★ 1세대 ON · 주택 수 3 · 합가 요건 성립 → 이 화면에서 판정하지 않는다는 안내(확인 필요)", () => {
+    renderGift(item(HOLDS));
     const n = screen.getByTestId("bg-three-house-merge-notice");
     expect(n.textContent).toContain("판정하지 않고 계산");
     expect(n.textContent).toContain("양도소득세 계산기(부담부증여)");
   });
-  it("부정 짝 — 주택 수 2 · 합가일 없는 3주택은 안내 없음", () => {
-    renderGift(item({ isOneHousehold: true, householdHousingCount: 2, marriageDate: "2020-01-01" }));
-    expect(screen.queryByTestId("bg-three-house-merge-notice")).toBeNull();
+  it("★ 부정 짝 — 1세대 OFF(기본값)이면 계산기 안내 없이 1세대 안내가 먼저 보인다", () => {
+    renderGift(item({ ...HOLDS, isOneHousehold: undefined }));
+    expect(NOTICE()).toBeNull();
+    expect(document.body.textContent).toContain(GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT);
     cleanup();
-    renderGift(item({ isOneHousehold: true, householdHousingCount: 3 }));
-    expect(screen.queryByTestId("bg-three-house-merge-notice")).toBeNull();
+    renderGift(item({ ...HOLDS, isOneHousehold: false }));
+    expect(NOTICE()).toBeNull();
+  });
+  it("부정 짝 — 합가 요건이 하나라도 안 서면 안내 없음(먼저 양도 아님 · 합가 후 취득 · 기한 초과)", () => {
+    renderGift(item({ ...HOLDS, isFirstTransferredInMerge: false }));
+    expect(NOTICE()).toBeNull();
+    cleanup();
+    renderGift(item({ ...HOLDS, marriageDate: "2014-01-01" })); // 양도 주택(2015 취득)이 합가일 이후 취득
+    expect(NOTICE()).toBeNull();
+    cleanup();
+    renderGift(item({ ...HOLDS, marriageDate: "2010-01-01", acquisitionDate: new Date("2009-01-01") })); // 증여일 2025-06 — 10년 초과
+    expect(NOTICE()).toBeNull();
+  });
+  it("부정 짝 — 주택 수 2 · 합가일 없는 3주택은 안내 없음", () => {
+    renderGift(item({ ...HOLDS, householdHousingCount: 2 }));
+    expect(NOTICE()).toBeNull();
+    cleanup();
+    renderGift(item({ isOneHousehold: true, householdHousingCount: 3, isFirstTransferredInMerge: true }));
+    expect(NOTICE()).toBeNull();
   });
 });
