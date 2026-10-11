@@ -53,19 +53,14 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
 }
 
 function engineInput(body: Record<string, unknown>): TransferTaxInput {
-  const merged: Record<string, unknown> = {
+  return {
     propertyType: "housing",
     transferPrice: 1_000_000_000,
     acquisitionDate: "2018-06-01",
     transferDate: "2026-03-06",
     acquisitionPrice: 550_000_000,
     ...body,
-  };
-  // 엔진 계약은 Date다(route ⑭가 `toDate`로 변환) — 문자열 그대로 넘기면 UTC 달력일 비교(`civil-period`)가 깨진다.
-  for (const k of ["acquisitionDate", "transferDate", "landAcquisitionDate"]) {
-    if (typeof merged[k] === "string") merged[k] = new Date(merged[k] as string);
-  }
-  return merged as unknown as TransferTaxInput;
+  } as unknown as TransferTaxInput;
 }
 
 describe("S1 — 구분양도 + 양도가액 미입력 + 양도시 기준시가 有", () => {

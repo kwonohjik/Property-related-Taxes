@@ -43,22 +43,9 @@ export function isCapitalNewTownResidenceEra(transferDate: Date): boolean {
 const WHOLE_AREA_PREFIXES = ["11", "41290"];
 /**
  * 신도시가 있는 시·구 — 성남 분당구(41135) · 고양 일산동구(41285)·일산서구(41287) ·
- * 안양 동안구(41173) · 군포시(41410) · 부천시(4119 — 구 폐지·부활 코드 포함, 오정구는 아래 제외)
+ * 안양 동안구(41173) · 군포시(41410) · 부천시(4119 — 구 폐지·부활 코드 포함)
  */
 const NEW_TOWN_PREFIXES = ["41135", "41285", "41287", "41173", "41410", "4119"];
-
-/**
- * 부천시 안에서 **중동 택지개발예정지구 밖**인 구 — 오정구(현행 41196 · 폐지 전 코드 41199).
- *
- * 규정의 대상은 「택지개발촉진법 제3조에 따라 택지개발예정지구로 지정·고시된 … 중동 신도시지역」이지
- * 부천시 전역이 아니다(「소득세법 시행령」 제154조제1항 괄호 — 2009.6.9. 시행본 MST 94701 · 2006.1.1.·2006.2.9. 시행본 MST 72432·72871 같은 문언).
- * 오정구 전역이 그 지구 밖이라는 것은 법령 밖의 **지리 사실**이다 — 사용자 지시(2026-10-11, PR9a)로 반영했고
- * 지구 지정·고시 원문(도면)은 이 저장소에서 확인하지 못했다. 소사구(41194·41197)는 송내동 일부가 지구에 걸리는지
- * 확인 전이라 「안일 수 있음」으로 둔다(확인 필요). 원미구(41192·41195)는 중동 지구가 있는 구다.
- * 같은 원미구 안의 상동택지개발지구는 중동신도시가 아니지만(재산46014-394, 2003.11.21.) 법정동코드가
- * 시·구 단위라 가르지 못한다 — 판정 보류 고지가 안내한다.
- */
-const NOT_IN_NEW_TOWN_PREFIXES = ["41196", "41199"];
 
 export type CapitalNewTownLocation = "in" | "maybe" | "out" | "unknown";
 
@@ -66,7 +53,6 @@ export type CapitalNewTownLocation = "in" | "maybe" | "out" | "unknown";
 export function capitalNewTownLocation(regionCode: string | undefined): CapitalNewTownLocation {
   if (!regionCode) return "unknown";
   if (WHOLE_AREA_PREFIXES.some((p) => regionCode.startsWith(p))) return "in";
-  if (NOT_IN_NEW_TOWN_PREFIXES.some((p) => regionCode.startsWith(p))) return "out";
   if (NEW_TOWN_PREFIXES.some((p) => regionCode.startsWith(p))) return "maybe";
   return "out";
 }

@@ -94,3 +94,15 @@ describe("X4-2 — 2/29 취득 보유 개월 (§160③)", () => {
     expect(holdingMonthsFromDates("2020-02-29", "2021-02-28")).toBe(12);
   });
 });
+
+describe("X4-2 파급 — 종전 date-fns 허용 범위(문자열·undefined)를 그대로 받는다", () => {
+  it("ISO 문자열 입력은 Date 입력과 같은 값", () => {
+    const viaDate = calculateHoldingPeriod(d("2020-02-29"), d("2021-02-27"));
+    expect(calculateHoldingPeriod("2020-02-29" as unknown as Date, "2021-02-27" as unknown as Date)).toEqual(viaDate);
+  });
+  it("undefined·Invalid Date는 throw하지 않고 NaN (종전 동작 — 호출부 가드가 있는 표시 경로가 깨지지 않는다)", () => {
+    expect(() => calculateHoldingPeriod(undefined as unknown as Date, d("2021-02-27"))).not.toThrow();
+    expect(calculateHoldingPeriod(undefined as unknown as Date, d("2021-02-27")).years).toBeNaN();
+    expect(calculateHoldingPeriod(new Date("invalid"), d("2021-02-27")).months).toBeNaN();
+  });
+});
