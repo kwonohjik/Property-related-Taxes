@@ -53,7 +53,7 @@ import {
   twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
-import { collectEraUndetermined } from "./era-undetermined";
+import { collectEraUndetermined, type ResidenceRelevance } from "./era-undetermined";
 import {
   formatHighValueThresholdLabel,
   resolveHighValueHouseThreshold,
@@ -456,6 +456,7 @@ export function collectUndetermined(
   settled: boolean,
   /** 양도 주택 지구 선언이 비과세 결론을 가르는가 — `checkExemption`이 선언 true/false로 두 번 판정해 채운다. */
   districtRelevance?: DistrictDeclarationRelevance,
+  residenceRelevance?: ResidenceRelevance,
 ): OneHouseUndetermined[] {
   const undetermined: OneHouseUndetermined[] = [];
 
@@ -501,7 +502,9 @@ export function collectUndetermined(
     input.isOneHousehold === true &&
     !input.isUnregistered &&
     !residenceExempt &&
-    !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption)
+    !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption) &&
+    // S07-10 — 거주요건이 결론을 가를 때만. 3주택·처분기한 경과처럼 거주와 무관하게 과세가 정해졌으면 내지 않는다.
+    (residenceRelevance?.residenceDecides() ?? true)
   ) {
     undetermined.push({
       id: "154-1-residence-deadline-unavailable",
@@ -511,7 +514,7 @@ export function collectUndetermined(
   }
 
   // 입력 경로가 없는 연혁 분기(OH-22 · OH-38 · OH-01 2019-12-17 체제) — `era-undetermined.ts`.
-  undetermined.push(...collectEraUndetermined(input, oneHouseRules, settled));
+  undetermined.push(...collectEraUndetermined(input, oneHouseRules, settled, residenceRelevance));
 
   return undetermined;
 }

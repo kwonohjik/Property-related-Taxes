@@ -138,3 +138,18 @@ export function buildCarryoverPayload(
 export function carryoverAcquisitionDateFallback(asset: AssetForm): string {
   return asset.acquisitionDate || asset.carryover?.giftRegistryDate || "";
 }
+
+/**
+ * 양도 대표 자산의 **④ 취득일** — 본문 `acquisitionDate`·명부 양도 행·§155① 종전주택 취득일이 모두 이 한 값을 읽는다 (G4-3).
+ *
+ * 이월과세(`carryover_gift`)는 자산 카드에 취득일 칸이 없어 `acquisitionDate`가 비어 있을 수 있다. 본문만 위 fallback을 쓰고 명부 양도
+ * 행·§155① 인자가 원시값을 쓰면 ⑧을 통과한 입력을 ⑫가 400(`houses.0.acquisitionDate` Invalid ISO date)으로 막고, 양도 행만 고치면
+ * §155① 도출(`!prev`)이 조용히 빠진다.
+ *
+ * 🔑 **우선순위는 본문과 같다**(`acquisitionDate` → 증여 등기접수일). 이월과세 주택이 §155①의 「종전의 주택을 취득한 날」을 증여일로 볼지
+ *    증여자 취득일로 볼지는 결정 대기 축이라 여기서 정하지 않는다 — 빈 값만 본문과 같은 값으로 채운다.
+ */
+export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string | undefined {
+  if (!asset) return undefined;
+  return asset.acquisitionCause === "carryover_gift" ? carryoverAcquisitionDateFallback(asset) : asset.acquisitionDate;
+}

@@ -210,12 +210,27 @@ describe("E-14g 다건 route — §155⑳ 자산의 소득금액·중과 판정�
     expect(await multi(f)).toBe(RH_EXCLUDED);
   });
 
+  // S06-1 — 레거시 선언 필드(`temporaryTwoHouseSpecial`·`newHouseAcquisitionDate`) 없이 명부만으로 단언한다. 임대(2016)가 거주주택(2015)
+  // 뒤라 「나중 취득 행」이 임대 + 신규 2채로 보이던 때는 신규 주택이 도출되지 않아 선언 필드가 있어야만 통과했다.
   it("G-2 거주 + 임대 + 신규(§155① 중첩) → 단건 = 다건 = 102,086,600 (수정 전 다건 0)", async () => {
-    const f = withRental(
-      form([RENTAL_ROW, NEW_HOUSE], { temporaryTwoHouseSpecial: true, newHouseAcquisitionDate: "2025-01-01" }),
-    );
+    const f = withRental(form([RENTAL_ROW, NEW_HOUSE]));
     expect(await single(f)).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
     expect(await multi(f)).toBe(RH_EXCLUDED);
+  });
+
+  it("G-2b 10억 · 같은 명부(임대가 거주주택 뒤) → 0원 (수정 전 512,886,000 · 적용 불가 문구) — 취득 순서와 무관", async () => {
+    const f = withRental(form([RENTAL_ROW, NEW_HOUSE], { contractTotalPrice: "1,000,000,000" }));
+    const s = await single(f);
+    expect(s).toMatchObject({ totalTax: 0, rentalApplied: true });
+    expect(s.notApplicable).toBeUndefined();
+    expect(await multi(f)).toBe(0);
+  });
+
+  it("G-2c 긍정 짝 — 임대(2014)가 거주주택 앞인 같은 10억은 종전에도 0원", async () => {
+    const f = withRental(
+      form([{ ...RENTAL_ROW, acquisitionDate: "2014-01-01" }, NEW_HOUSE], { contractTotalPrice: "1,000,000,000" }),
+    );
+    expect(await single(f)).toMatchObject({ totalTax: 0, rentalApplied: true });
   });
 
   it("G-3 시나리오 B(RH-B1 · mock 세율) → 단건 = 다건 = 67,309,000 (수정 전 다건 22,093,500)", async () => {

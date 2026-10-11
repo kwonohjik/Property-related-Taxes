@@ -27,6 +27,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { eligibleCountExcludedHouseIds } from "./house-count-exclusion-rows";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildInheritanceGeneralHousePayload } from "./inheritance-general-house-scope";
 
 type CandidateFormLike = Partial<
@@ -47,7 +48,7 @@ type CandidateFormLike = Partial<
 /** §155②③으로 주택 수에서 빠지는 상속주택 명부 행 id(엔진 판정). 양도일·양도 주택 취득일이 없으면 빈 집합. */
 export function inheritedCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   const primary = form.assets?.[0];
-  const acquisitionDate = toOptionalDate(primary?.acquisitionDate);
+  const acquisitionDate = toOptionalDate(primaryAcquisitionDateOf(primary));
   const transferDate = toOptionalDate(form.transferDate);
   if (!primary || !acquisitionDate || !transferDate || !(form.houses ?? []).some((h) => h.isInherited)) {
     return new Set();
@@ -115,6 +116,31 @@ export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet
 export function exemptionCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   const ids = new Set(eligibleCountExcludedHouseIds(form));
   for (const id of inheritedCountExcludedHouseIds(form)) ids.add(id);
+  return ids;
+}
+
+/**
+ * 「소득세법 시행령」 제155조제20항(장기임대주택 보유자의 거주주택 특례) **시나리오 A를 선언했을 때** 명부의
+ * 「장기임대」 행 id — 「나중 취득 행」이 2채 이상이라 모호할 때 §155① 신규 주택 후보에서 뺀다 (S06-1).
+ *
+ * 영 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대가 거주주택을 양도하는 경우를 규율하며 **임대주택을
+ * 거주주택보다 먼저 취득해야 한다는 요건이 없다**(MST 286211 본문). 그런데 임대주택이 거주주택보다 **나중에** 취득이면
+ * 「나중 취득 행이 정확히 1채」가 임대주택 + 신규 주택 2채로 깨져 §155①이 도출되지 않았다 — 임대주택 취득일 하나가
+ * ⑳+① 중첩 성립 여부를 갈랐다(거주주택 앞이면 성립). 서면-2019-부동산-1303 · 사전-2025-법규재산-0993은 ⑳+① 중첩을 인정했다.
+ *
+ * 🔑 ⑳ 시나리오 A를 **선언한 경우에만** 뺀다(D1 상속·D3 농어촌과 같은 형제 패턴) — 선언하지 않은 세대의 「장기임대」 표식 행은
+ *    다른 판정(중과 주택 수)이 쓰는 값일 뿐 §155① 후보 판단을 바꾸지 않는다.
+ * 🔑 `temporaryTwoHouseCandidateExcludedIds`에 **섞지 않는다** — 임대주택이 유일한 나중 취득 행이면 그 행이 신규 주택으로 도출되는
+ *    종전 동작을 지킨다(구 §167의10①8호 「3년 안에 임대주택을 취득한 세대」가 그 도출을 쓴다 — `rental-residence-155-20-e14gh` OE-2).
+ *    그래서 `resolveTemporaryTwoHouse`가 별도 인자(`rentalResidenceHouseIds`)로 받아 후보가 모호할 때만 다시 센다.
+ */
+export function rentalResidenceCandidateHouseIds(form: CandidateFormLike): ReadonlySet<string> {
+  const rhe = form.assets?.[0]?.rentalHousingException;
+  if (rhe?.applyException !== true || rhe.scenario !== "A") return new Set();
+  const ids = new Set<string>();
+  for (const h of housesOwnedAtTransfer(form.houses, form.transferDate)) {
+    if (h.isLongTermRental && h.id) ids.add(h.id);
+  }
   return ids;
 }
 
