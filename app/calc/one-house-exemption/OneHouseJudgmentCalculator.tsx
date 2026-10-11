@@ -281,6 +281,7 @@ export default function OneHouseJudgmentCalculator() {
                 onJudge={handleJudge}
                 onCalculateTax={handleCalculateTax}
                 transferDate={formData.transferDate || undefined}
+                houses={formData.houses}
               />
             )}
 

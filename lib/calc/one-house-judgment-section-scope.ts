@@ -169,7 +169,7 @@ export function judgmentHouseCountExclusionReductions(
   form: OneHouseJudgmentFormData,
 ): RowCountExclusionReduction[] {
   if (!judgmentSaleIsHousing(form)) return [];
-  return rowCountExclusionReductions(form.houses);
+  return rowCountExclusionReductions(form.houses, form.transferDate);
 }
 
 /**
@@ -186,7 +186,10 @@ export function judgmentCountExclusionRowApplies(form: OneHouseJudgmentFormData,
 export function judgmentSpecialHouseExclusions(
   form: OneHouseJudgmentFormData,
 ): SpecialHouseExclusionFormItem[] {
-  return rowSpecialHouseExclusions((form.houses ?? []).filter((h) => judgmentCountExclusionRowApplies(form, h)));
+  return rowSpecialHouseExclusions(
+    (form.houses ?? []).filter((h) => judgmentCountExclusionRowApplies(form, h)),
+    form.transferDate,
+  );
 }
 
 /**

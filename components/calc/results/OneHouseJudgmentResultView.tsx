@@ -27,6 +27,7 @@ import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/thresh
 import { resolveOneRightHighValueThreshold } from "@/lib/tax-engine/data/one-right-high-value-era";
 import { oneRightClauseNaYears } from "@/lib/tax-engine/data/one-right-requirement-era";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { countExclusionHouseRef, type HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
 
 /** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
 type Serialized<T> = T extends Date ? string : T;
@@ -44,10 +45,19 @@ function formatDate(v: string): string {
 }
 
 /**
- * 「보유 주택 N (취득일) — 」 — 명세 항목이 **어느 주택**인지(판정 메뉴 명부 행). 엔진이 결과에 싣는다
- * (`buildOneHouseCountBreakdown`) — 폼 없이 이력 상세에서도 같은 문구가 나온다. 행을 모르면 비운다.
+ * 「보유 주택 N (취득일) — 」 — 명세 항목이 **어느 주택**인지(판정 메뉴 명부 행).
+ *
+ * 🔑 번호는 **화면 명부 순번**(`form.houses` idx+1)이다 — 폼 명부를 받으면 계산기 형제와 같은 leaf
+ *    (`countExclusionHouseRef`)로 매긴다. 엔진의 `houseNo`는 양도일 당일·이후 행을 거른 **엔진 명부** 순번이라
+ *    걸러진 행이 앞에 있으면 화면 No.와 어긋난다(D2 — 재검증 S03-8).
+ * 폼이 없는 화면(이력 상세)은 엔진이 결과에 실은 값으로 후퇴한다(`buildOneHouseCountBreakdown`). 행을 모르면 비운다.
  */
-function houseRef(x: { houseNo?: number; houseAcquisitionDate?: string }): string {
+function houseRef(
+  x: { houseId?: string; houseNo?: number; houseAcquisitionDate?: string },
+  houses: readonly HouseRefRow[] | undefined,
+): string {
+  const fromForm = countExclusionHouseRef(houses, x.houseId);
+  if (fromForm) return `${fromForm} — `;
   if (!x.houseNo) return "";
   return `보유 주택 ${x.houseNo}${x.houseAcquisitionDate ? ` (${x.houseAcquisitionDate} 취득)` : ""} — `;
 }
@@ -67,9 +77,14 @@ type Props = {
    * 기준금액은 엔진과 같은 단일 소스 `resolveHighValueHouseThreshold`로 구한다.
    */
   transferDate?: string;
+  /**
+   * 폼의 「보유 주택」 명부(판정 메뉴 ③) — 「보유 주택 N」을 **화면 명부 순번**으로 매기는 데만 쓴다.
+   * 없으면(이력 상세) 엔진이 결과에 실은 순번으로 후퇴한다.
+   */
+  houses?: readonly HouseRefRow[];
 };
 
-export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDate }: Props) {
+export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDate, houses }: Props) {
   const {
     judgment,
     houseCount,
@@ -142,7 +157,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           <ul className="ml-4 list-disc space-y-1 text-sm">
             {houseCount.excluded.map((e, i) => (
               <li key={i} data-testid="one-house-count-excluded">
-                {houseRef(e)}
+                {houseRef(e, houses)}
                 {e.label}
                 <span className="ml-2">
                   <LawArticleModal legalBasis={e.legalBasis} />
@@ -158,7 +173,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         {houseCount.notApplied?.map((n, i) => (
           <div key={`na-${i}`} className="space-y-1" data-testid="one-house-count-not-applied">
             <p className="text-sm font-semibold text-rose-700">
-              {houseRef(n)}
+              {houseRef(n, houses)}
               {n.label}
               <span className="ml-2">
                 <LawArticleModal legalBasis={n.legalBasis} />

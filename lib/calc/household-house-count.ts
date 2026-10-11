@@ -149,9 +149,17 @@ export function resolveHouseholdHousingCount(
 ): number {
   if (args.legacyPrecedence) return args.declared; // OH-34 세액 보존
   if (!usesHouseCountRoster(args.primaryKind)) return args.declared; // F1
-  const rows = countedHouseRows(args.houses, args.transferDate);
-  if (rows === 0) return args.declared; // D-4 간이 입력(계산기는 ⑧이 이 분기 도달을 막는다)
-  return houseCountSelfOffset(args.primaryKind) + rows;
+  // D-4 간이 입력 — 날짜 있는 행이 **하나도 없을 때만** 스칼라다(계산기는 ⑧이 이 분기 도달을 막는다).
+  // 🔴 날짜 있는 행이 전부 양도일 당일·이후면 세어지는 행은 0이지만 **명부가 정본이다** — 양도일 현재 보유 주택은
+  //    자기 몫(offset)뿐이다. 종전에는 `rows === 0`을 「명부 없음」과 같게 보아 잔존 스칼라(예: 일 입력 중간값
+  //    `2025-06-00`이 만든 2)가 주택 수가 되어 비과세가 과세로 뒤집혔다(재검증 S12-1).
+  if (!hasDatedHouseRow(args.houses)) return args.declared;
+  return houseCountSelfOffset(args.primaryKind) + countedHouseRows(args.houses, args.transferDate);
+}
+
+/** 취득일이 입력된 명부 행이 하나라도 있는가 — 양도일 전후와 무관하다. 명부가 정본인지 가르는 기준. */
+function hasDatedHouseRow(houses: readonly HouseRowForCount[] | undefined): boolean {
+  return (houses ?? []).some((h) => h.acquisitionDate);
 }
 
 /** 주택 수에 세어지는 명부 행 수 — 산식 단일 소스(`house-count-divergence.ts`도 이걸 쓴다). */
@@ -163,13 +171,15 @@ export function countedHouseRows(
   return housesOwnedAtTransfer(houses, transferDate).filter((h) => h.acquisitionDate).length;
 }
 
-/** 명부가 주택 수의 정본인가 — 화면이 스칼라 버튼을 비활성화할지 판단하는 데 쓴다. */
+/**
+ * 명부가 주택 수의 정본인가 — 화면이 스칼라 버튼을 비활성화할지 판단하는 데 쓴다.
+ * 날짜 있는 행이 있으면 정본이다 — 그 행이 전부 양도일 당일·이후여도(세어지는 행 0) 같다(`resolveHouseholdHousingCount`).
+ */
 export function houseRosterIsAuthoritative(
   primaryKind: string | undefined,
   houses: readonly HouseRowForCount[] | undefined,
-  transferDate: string | undefined,
 ): boolean {
-  return usesHouseCountRoster(primaryKind) && countedHouseRows(houses, transferDate) > 0;
+  return usesHouseCountRoster(primaryKind) && hasDatedHouseRow(houses);
 }
 
 /**
@@ -198,9 +208,9 @@ export function houseRosterIsAuthoritative(
  *    「다른 보유 주택이 없습니다」 확정(아래) 없이는 ⑧이 통과시키지 않는다(명부 필수화 PR-1).
  *
  * ⚠️ 행이 **생기면**(배열 길이 > 0 — 취득일 입력 여부와 무관, `houseRosterIsAuthoritative`의
- *    `countedHouseRows > 0` 요건보다 느슨하다) 「다른 보유 주택이 없습니다」 확정
+ *    「날짜 있는 행이 있다」 요건보다 느슨하다) 「다른 보유 주택이 없습니다」 확정
  *    (`householdNoOtherHousesConfirmed`)을 함께 해제한다(Q-5, #1919 패턴) — 새로 추가한 빈 행은
- *    아직 취득일이 없어 `countedHouseRows`엔 안 잡히지만, 그 순간 「없음」은 더는 사실이 아니다.
+ *    아직 취득일이 없어 명부 정본 판정엔 안 잡히지만, 그 순간 「없음」은 더는 사실이 아니다.
  *    이 patch가 세 쓰기 지점(추가·삭제·수정)의 단일 경유점이라 여기 한 곳만 고치면 된다.
  */
 export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
@@ -214,12 +224,24 @@ export function housesPatchWithDerivedCount<T extends HouseRowForCount>(
   if (legacyPrecedence) return { houses };
   const isRosterKind = usesHouseCountRoster(primaryKind);
   const clearConfirm = isRosterKind && houses.length > 0 ? { householdNoOtherHousesConfirmed: false as const } : {};
-  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return { houses, ...clearConfirm };
-  return {
-    houses,
-    householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)),
-    ...clearConfirm,
-  };
+  return { houses, ...derivedHouseCountPatch(houses, primaryKind, legacyPrecedence, transferDate), ...clearConfirm };
+}
+
+/**
+ * 파생 주택 수 patch **하나** — 명부가 정본이면 `{ householdHousingCount: offset + 양도일 현재 보유 행 수 }`, 아니면 `{}`.
+ *
+ * 명부 편집(`housesPatchWithDerivedCount`)과 **양도일 변경**(`TransferTaxCalculator.handleFormChange`)이 같은 leaf를 부른다.
+ * 양도일을 옮기면 같은 행이 양도일 현재 보유 ↔ 미보유로 바뀌는데, 명부를 건드리지 않으니 종전에는 스칼라가 그대로 남아
+ * 원시 스칼라를 읽는 ⑤ 게이트가 옛 주택 수로 동작했다(재검증 S12-1 G). 레거시 표식이 켜져 있으면 스칼라를 건드리지 않는다.
+ */
+export function derivedHouseCountPatch(
+  houses: readonly HouseRowForCount[] | undefined,
+  primaryKind: string | undefined,
+  legacyPrecedence: boolean,
+  transferDate: string | undefined,
+): { householdHousingCount?: string } {
+  if (legacyPrecedence || !houseRosterIsAuthoritative(primaryKind, houses)) return {};
+  return { householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)) };
 }
 
 /**
@@ -238,7 +260,7 @@ export function houseCountDivergedFromRoster(
   declared: number,
   transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
   return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 
@@ -260,7 +282,7 @@ export function houseCountScalarLocked(
   declared: number,
   transferDate: string | undefined,
 ): boolean {
-  if (!houseRosterIsAuthoritative(primaryKind, houses, transferDate)) return false;
+  if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
   return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
 }
 

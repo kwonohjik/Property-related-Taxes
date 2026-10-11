@@ -75,7 +75,8 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
    * 빠지지만 아래 행 필수값 검증(취득일)이 따로 막는다.
    */
   const rowDeclarations =
-    rowCountExclusionReductions(form.houses).length + rowSpecialHouseExclusions(form.houses).length;
+    rowCountExclusionReductions(form.houses, form.transferDate).length +
+    rowSpecialHouseExclusions(form.houses, form.transferDate).length;
   const effectiveCount = resolveHouseholdHousingCount({
     primaryKind: form.assets?.[0]?.assetKind,
     declared: parseInt(form.householdHousingCount) || 0,
@@ -89,10 +90,10 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
 
   // 선언은 행 값(취득일·가액·면적)으로 채워져 온다 — 그 칸이 비면 행 기본 정보가 빈 것이다.
   const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
-  for (const r of rowCountExclusionReductions(form.houses)) {
+  for (const r of rowCountExclusionReductions(form.houses, form.transferDate)) {
     for (const m of collectHouseCountExclusionReductionErrors(r)) messages.push(`보유 주택 ${rowNo(r.houseId)}: ${m}`);
   }
-  for (const e of rowSpecialHouseExclusions(form.houses)) {
+  for (const e of rowSpecialHouseExclusions(form.houses, form.transferDate)) {
     for (const m of collectSpecialHouseExclusionRowErrors(e)) messages.push(`보유 주택 ${rowNo(e.houseId)}: ${m}`);
   }
 

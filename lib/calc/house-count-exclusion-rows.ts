@@ -29,6 +29,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 import { toEngineReductions } from "./transfer-tax-api-reductions";
+import { housesOwnedAtTransfer } from "./household-house-count";
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
 
 /** 명부 행 ⑥이 받는 §99의4·§98의9 유형 — 계산기 ③ 감면 패널에서는 뺀다(Q-3). */
@@ -55,9 +56,18 @@ export function countExclusionRowsInScope(primaryKind: string | undefined): bool
   return primaryKind === "housing" || primaryKind === "redevelopment_apt";
 }
 
-/** 행 → §99의4·§98의9 선언(폼 모양). 행 값으로 사실을 덮고 `houseId`를 싣는다. */
-export function rowCountExclusionReductions(houses: HouseEntry[] | undefined): RowCountExclusionReduction[] {
-  return (houses ?? []).flatMap((h): RowCountExclusionReduction[] => {
+/**
+ * 행 → §99의4·§98의9 선언(폼 모양). 행 값으로 사실을 덮고 `houseId`를 싣는다.
+ *
+ * 🔑 **양도일 현재 보유 행만**(`housesOwnedAtTransfer` — 명부·주택 수와 같은 leaf). 양도일 당일·이후 취득 행은 세지 않은
+ *    주택이라 「소유주택으로 보지 아니한다」(조특법 §98의6②·§99의4①)로 한 번 더 뺄 근거가 없다(재검증 S10-1).
+ *    `transferDate`를 **필수**로 둔다 — 빠뜨린 호출부를 컴파일러가 찾는다.
+ */
+export function rowCountExclusionReductions(
+  houses: HouseEntry[] | undefined,
+  transferDate: string | undefined,
+): RowCountExclusionReduction[] {
+  return housesOwnedAtTransfer(houses, transferDate).flatMap((h): RowCountExclusionReduction[] => {
     if (h.countExclusion?.kind !== "reduction") return [];
     const r = h.countExclusion.reduction;
     if (r.type === "unsold_98_9") {
@@ -85,9 +95,15 @@ export function rowCountExclusionReductions(houses: HouseEntry[] | undefined): R
   });
 }
 
-/** 행 → 보유 감면주택 선언. 취득일은 행 값. */
-export function rowSpecialHouseExclusions(houses: HouseEntry[] | undefined): SpecialHouseExclusionFormItem[] {
-  return (houses ?? []).flatMap((h) =>
+/**
+ * 행 → 보유 감면주택 선언. 취득일은 행 값. **양도일 현재 보유 행만**(`rowCountExclusionReductions`와 같은 근거 —
+ * 엔진 §98의6은 basis가 none이라 날짜 판정을 하지 않으므로 여기서 거르지 않으면 닿는다).
+ */
+export function rowSpecialHouseExclusions(
+  houses: HouseEntry[] | undefined,
+  transferDate: string | undefined,
+): SpecialHouseExclusionFormItem[] {
+  return housesOwnedAtTransfer(houses, transferDate).flatMap((h) =>
     h.countExclusion?.kind === "special"
       ? [{ ...h.countExclusion.special, houseId: h.id, houseAcquisitionDate: h.acquisitionDate }]
       : [],
@@ -112,10 +128,10 @@ function linkedDeclarations(form: FormLike) {
   const stored = (form.assets?.[0]?.reductions ?? []).filter(isRowReduction).filter((r) => r.houseId);
   const storedSpecial = (form.specialHouseExclusions ?? []).filter((e) => e.houseId);
   return {
-    reductions: [...rowCountExclusionReductions(form.houses), ...stored],
+    reductions: [...rowCountExclusionReductions(form.houses, form.transferDate), ...stored],
     // 🔴 조문을 아직 고르지 않은 행(「감면주택」만 선택)은 뺀다 — 평가기가 조문 표를 읽다 TypeError가 난다
     //    (판정 메뉴 ③ 헤더 `useMemo`가 매 렌더 부른다).
-    specials: [...rowSpecialHouseExclusions(form.houses), ...storedSpecial].filter((e) => e.article),
+    specials: [...rowSpecialHouseExclusions(form.houses, form.transferDate), ...storedSpecial].filter((e) => e.article),
   };
 }
 
@@ -186,6 +202,8 @@ export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<strin
 
 type CalcFormLike = {
   houses?: HouseEntry[];
+  /** 양도일 — 명부 행 선언을 양도일 현재 보유 행으로 거른다(`rowCountExclusionReductions`). 필수: 빠뜨린 호출부를 컴파일러가 찾는다. */
+  transferDate: string | undefined;
   assets?: Pick<AssetForm, "assetKind" | "reductions">[];
   specialHouseExclusions?: SpecialHouseExclusionFormItem[];
 };
@@ -195,7 +213,7 @@ export function primaryReductionsWithRows(form: CalcFormLike): AssetReductionFor
   const primary = form.assets?.[0];
   const stored = primary?.reductions ?? [];
   return countExclusionRowsInScope(primary?.assetKind)
-    ? [...stored, ...rowCountExclusionReductions(form.houses)]
+    ? [...stored, ...rowCountExclusionReductions(form.houses, form.transferDate)]
     : stored;
 }
 
@@ -203,7 +221,7 @@ export function primaryReductionsWithRows(form: CalcFormLike): AssetReductionFor
 export function specialHouseExclusionsWithRows(form: CalcFormLike): SpecialHouseExclusionFormItem[] {
   const global = form.specialHouseExclusions ?? [];
   return countExclusionRowsInScope(form.assets?.[0]?.assetKind)
-    ? [...global, ...rowSpecialHouseExclusions(form.houses)]
+    ? [...global, ...rowSpecialHouseExclusions(form.houses, form.transferDate)]
     : global;
 }
 
