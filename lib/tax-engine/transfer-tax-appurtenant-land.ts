@@ -14,10 +14,13 @@ import { calculateHoldingPeriod } from "./tax-utils";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
+import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-1-proviso-era";
+import { resolveExemptionProviso } from "./transfer-tax-exemption-holding";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
+import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 
 /**
  * 「소득세법」 시행령 제154조 제1항 1세대1주택 보유요건의 **현행 연수**(2년) — 양도일 연혁은 `resolveOneHouseMinHoldingYears`가 정한다
@@ -103,6 +106,11 @@ export function buildLandRateInput(input: TransferTaxInput, basisDate: Date): Tr
  * 결정하는 시점에는 아직 양도차익이 계산되지 않았기 때문이다.
  */
 export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): boolean {
+  return laterLandFailsHoldingRequirement(input) && !laterLandCoveredByExpropriationProviso(input);
+}
+
+/** G-3 입력 게이트 + 보유요건 미달 — 단서(5A) 반영 전. 비과세 제외와 5A 고지가 같은 게이트를 쓴다. */
+function laterLandFailsHoldingRequirement(input: TransferTaxInput): boolean {
   if (input.propertyType !== "housing") return false;
   if ((input.selfOwns ?? "both") !== "both") return false;
   // 별개취득 입력이어야 `calcSplitGain`이 반드시 파트를 낸다(총액 경로로 흘러 null이 되지 않음).
@@ -119,6 +127,77 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   if (input.burdenedGiftDenominator !== undefined) return false;
   if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return false;
   return true;
+}
+
+/**
+ * 5A — 나중에 취득한 부수토지도 「소득세법 시행령」 제154조 제1항 단서 제2호 가목(수용)이 덮는가.
+ *
+ * 단서는 1~3호에 해당하면 「그 보유기간 및 거주기간의 제한을 받지 않」는다고 하고, 가목의 대상은
+ * 「주택 및 그 부수토지(사업인정 고시일 전에 취득한 주택 및 그 부수토지에 한한다)」다. G-3의 근거가 같은 항의
+ * 보유요건이므로, 가목이 성립하고 토지도 고시일 **전**(당일은 「전」이 아니다)에 취득했으면 토지분에 보유요건을 걸지 않는다.
+ * 고시일 이후 취득한 토지는 괄호 밖이라 G-3 그대로다. 괄호가 없는 연혁 구간(2006.2.9. 전 양도·부칙 제30조① 경과)은
+ * 주택 쪽 판정과 같은 leaf(`expropriationNoticeDateRequirementApplies`)가 정한다.
+ * 나중에 취득한 부수토지에 이 단서를 적용한 정면 해석례는 확인하지 못했다(2026-10-11 사용자 결정 — 문언대로 + 확인 필요 고지).
+ *
+ * 반환: `undefined` 단서 불성립 · `null` 괄호 없는 연혁(취득일 무관) · `Date` 이 날(사업인정 고시일) 전에 취득한 토지만.
+ * F-13 부수토지 카드는 짝 주택의 이 값을 `appurtenantHouseVerdict.expropriationLandCutoff`로 받는다.
+ */
+export function expropriationProvisoLandCutoff(input: TransferTaxInput | TransferTaxItemInput): Date | null | undefined {
+  const p = input.oneHouseExemptionProviso;
+  if (p?.reason !== "expropriation" || resolveExemptionProviso(input) !== "both") return undefined;
+  if (!expropriationNoticeDateRequirementApplies(input)) return null;
+  return p.businessApprovalDate;
+}
+
+/** `expropriationProvisoLandCutoff`의 값으로 그 토지가 단서 안에 드는가 — 고시일 **전**(당일 제외) 취득분만. */
+export function landCoveredByExpropriationProviso(landAcquisitionDate: Date, cutoff: Date | null | undefined): boolean {
+  return cutoff === null || (cutoff !== undefined && landAcquisitionDate < cutoff);
+}
+
+function laterLandCoveredByExpropriationProviso(input: TransferTaxInput): boolean {
+  return !!input.landAcquisitionDate && landCoveredByExpropriationProviso(input.landAcquisitionDate, expropriationProvisoLandCutoff(input));
+}
+
+/**
+ * F-13 부수토지 카드 — 짝 주택보다 나중에 취득해 보유요건에 못 미치지만 짝 주택의 수용 단서가 덮는가.
+ * `checkExemption` F-13 분기와 5A 고지가 같은 술어를 쓴다.
+ */
+export function appurtenantCardCoveredByExpropriationProviso(
+  input: Pick<TransferTaxInput, "oneHouseUnitRole" | "appurtenantHouseVerdict" | "acquisitionDate" | "transferDate">,
+): boolean {
+  const v = input.appurtenantHouseVerdict;
+  if (input.oneHouseUnitRole !== "appurtenant_land" || !v) return false;
+  if (!isLaterAcquiredLandHeldTooShort(input.acquisitionDate, v.houseAcquisitionDate, input.transferDate)) return false;
+  return landCoveredByExpropriationProviso(input.acquisitionDate, v.expropriationLandCutoff);
+}
+
+/** 5A 고지(세액은 `isLaterAcquiredLandExemptExcluded`가 정한다) — 보유요건에 못 미친 나중 취득 부수토지를 수용 단서로 비과세했을 때. */
+function expropriationLaterLandNotice(input: TransferTaxInput, exemptApplies: boolean): string | null {
+  if (!exemptApplies) return null;
+  const covered =
+    appurtenantCardCoveredByExpropriationProviso(input) ||
+    (laterLandFailsHoldingRequirement(input) && laterLandCoveredByExpropriationProviso(input));
+  if (!covered) return null;
+  return (
+    "주택보다 나중에 취득한 부수토지는 보유기간이 「소득세법 시행령」 제154조 제1항의 보유요건에 못 미치지만, 사업인정 고시일 전에 취득한 부수토지로서 " +
+    "같은 항 단서 제2호 가목(수용 — 보유기간 및 거주기간의 제한을 받지 않음)에 해당한다고 보아 1세대1주택 비과세를 적용했습니다. " +
+    "나중에 취득한 부수토지에 이 단서를 적용한 정면 해석례는 확인하지 못했습니다 — 확인 필요"
+  );
+}
+
+/** 5A 고지 — 전액 비과세 조기 반환(STEP 1a) 경로용. 조기 반환은 비과세 확정 뒤라 `exemptApplies`가 참이다. */
+export function expropriationLaterLandNotices(input: TransferTaxInput): string[] {
+  const n = expropriationLaterLandNotice(input, true);
+  return n ? [n] : [];
+}
+
+/** 나중 취득 부수토지 고지 — T-7(상속 토지 제외) 또는 5A(수용 단서로 비과세). 둘은 G-3 성립·불성립으로 갈려 동시에 나지 않는다. */
+export function laterLandExemptNotice(
+  input: TransferTaxInput,
+  splitDetail: SplitGainResult | undefined,
+  exemptApplies: boolean,
+): string | null {
+  return laterInheritedLandExemptNotice(input, splitDetail, exemptApplies) ?? expropriationLaterLandNotice(input, exemptApplies);
 }
 
 /**

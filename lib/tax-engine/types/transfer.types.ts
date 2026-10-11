@@ -1382,6 +1382,11 @@ export interface TransferTaxInput {
      * 「소득세법 시행령」 §159의4 괄호·§95② 단서 「이에 딸린 토지를 포함한다」). 미주입이면 종전(카드 자기 판정).
      */
     oneHouseForTable2?: boolean;
+    /**
+     * 5A — 짝 주택에 수용 단서(「소득세법 시행령」 제154조 제1항 단서 제2호 가목)가 성립할 때 그 단서가 덮는 토지 취득 기한
+     * (`expropriationProvisoLandCutoff`). `undefined` 단서 불성립 · `null` 괄호 없는 연혁 · `Date` 사업인정 고시일 전 취득분만.
+     */
+    expropriationLandCutoff?: Date | null;
   };
 
   /**

@@ -10,6 +10,7 @@
  * - 단위 카드 전부의 12억 판정·안분 분모(`totalPropertyTransferPrice`)를 합계액으로 두고,
  * - 주택 카드를 **먼저** 계산해 그 판정을 부수토지 카드에 넘긴다(`appurtenantHouseVerdict`).
  */
+import { expropriationProvisoLandCutoff } from "./transfer-tax-appurtenant-land";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 
@@ -96,5 +97,6 @@ export function toHouseVerdict(
     houseAcquisitionDate: house.acquisitionDate,
     carryoverOneHouseExcluded: result.carryoverTaxationDetail?.exclusionReason === "one_house_exemption",
     oneHouseForTable2: result.lthdTable2OneHouseAxis === true,
+    expropriationLandCutoff: expropriationProvisoLandCutoff(house),
   };
 }
