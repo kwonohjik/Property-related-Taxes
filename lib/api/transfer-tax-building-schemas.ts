@@ -45,6 +45,9 @@ export const carryoverTaxationEngineShape = z.object({
   donorDeceased: z.boolean().optional(),
   /** D45 배우자 예외 사실 — 단건 인라인 shape과 parity(컴패니언이 이 shape을 쓴다) */
   spouseGiftOneHouseAtGiftDate: z.boolean().optional(),
+  /** 결정 #33·#34 — 증여일부터 양도일까지 증여자와 계속 같은 세대 (단건 인라인 shape과 parity) */
+  donorSameHouseholdContinuous: z.boolean().optional(),
+  donorHouseholdHoldingStartDate: z.string().date().optional(),
   /**
    * 환산 모드 분자 — **증여자 취득 당시** 그 파트의 기준시가 (설계 D9-8).
    *

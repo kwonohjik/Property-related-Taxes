@@ -34,6 +34,9 @@ import { RentalHousingExceptionSection } from "@/components/calc/transfer/Rental
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
+import { GiftedSameHouseholdField } from "@/components/calc/transfer/GiftedSameHouseholdField";
+import { giftHouseholdFactVisible } from "@/lib/calc/gift-household-payload";
+import { giftHouseholdConsolidationStart } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { UsageConversionField } from "./UsageConversionField";
 import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
@@ -89,14 +92,41 @@ export function Step3({ form, onChange }: Props) {
       primary.acquisitionDate,
     ],
   );
+  // 결정 #38 — 증여받은 주택의 세대 사실. 계속 같은 세대로 확인되면 「취득 당시」는 세대 보유 시작일(엔진 leaf)이고, 조정대상지역은 세대
+  // 보유 시작일과 증여일 둘 다 지정 중일 때만 거주요건이다 — 엔진 `resolveWasRegulatedAtAcquisition`이 같은 basis로 정한다.
+  const giftBasis =
+    giftHouseholdFactVisible(primary) &&
+    primary.acquisitionDate &&
+    primary.donorAcquisitionDate &&
+    primary.giftSameHousehold
+      ? {
+          giftDate: new Date(primary.acquisitionDate),
+          donorAcquisitionDate: new Date(primary.donorAcquisitionDate),
+          continuousSameHousehold: primary.giftSameHousehold === "yes",
+          householdHoldingStartDate: primary.giftHouseholdHoldingStartDate
+            ? new Date(primary.giftHouseholdHoldingStartDate)
+            : undefined,
+        }
+      : undefined;
+  const giftConsolidated = giftHouseholdConsolidationStart(giftBasis) !== undefined;
   // §154⑤ 단서 용도변경이면 「주택 취득 당시」는 주거용 사용 개시일이 먼저다(엔진 `resolveResidenceJudgmentDate` 순서).
   const conversionStart = judgmentUsageConversionStart(form);
   const residenceJudgmentDate =
-    conversionStart ?? (sameHouseholdStart ? primary.decedentCohabitationHoldingStartDate : primary.acquisitionDate);
+    conversionStart ??
+    (sameHouseholdStart
+      ? primary.decedentCohabitationHoldingStartDate
+      : giftConsolidated
+        ? primary.giftHouseholdHoldingStartDate
+        : primary.acquisitionDate);
   const regulatedVerdict = useMemo(() => {
     if (!primary.regionCode || !primary.acquisitionDate) return null;
-    return isRegulatedByBjdCode(primary.regionCode, residenceJudgmentDate, primary.regionInDesignatedDistrict);
-  }, [primary.regionCode, primary.regionInDesignatedDistrict, primary.acquisitionDate, residenceJudgmentDate]);
+    const atJudgment = isRegulatedByBjdCode(primary.regionCode, residenceJudgmentDate, primary.regionInDesignatedDistrict);
+    // 같은 세대 확인 — 세대 보유 시작일에 지정 중이어도 증여일에 비지정이면 증여일 기준(거울상, 엔진 all 규칙)이라 증여일 판정을 보여 준다.
+    if (giftConsolidated && !conversionStart && atJudgment.isRegulated) {
+      return isRegulatedByBjdCode(primary.regionCode, primary.acquisitionDate, primary.regionInDesignatedDistrict);
+    }
+    return atJudgment;
+  }, [primary.regionCode, primary.regionInDesignatedDistrict, primary.acquisitionDate, residenceJudgmentDate, giftConsolidated, conversionStart]);
   /**
    * ⑳ 카드·입주권 카드가 읽는 「취득 당시 조정대상지역」 — 주소(법정동코드)가 있으면 위 2-C 자동 판정과 **같은 값**
    * (엔진은 코드가 있으면 숨은 토글 `form.wasRegulatedAtAcquisition`을 읽지 않는다). 원시 토글을 넘기면 같은 화면에서
@@ -107,6 +137,10 @@ export function Step3({ form, onChange }: Props) {
     regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
     judgmentDate: primary.acquisitionDate ? residenceJudgmentDate : undefined,
     stored: form.wasRegulatedAtAcquisition,
+    // 같은 세대 증여는 증여일을 기준일(acquisitionDate)로 두고 basis가 세대 보유 시작일과의 결합을 정한다.
+    ...(giftConsolidated && !conversionStart && !sameHouseholdStart
+      ? { judgmentDate: primary.acquisitionDate, giftHouseholdBasis: giftBasis }
+      : {}),
   });
 
   /**
@@ -251,6 +285,7 @@ export function Step3({ form, onChange }: Props) {
           (UI 순서 = 로직 순서). 입주권 양도에는 이 축이 없다 — ④·⑧과 같은 게이트.
         */}
         {!isRightSale && <InheritedSameHouseholdField asset={primary} onChange={patchAsset} />}
+        {!isRightSale && <GiftedSameHouseholdField asset={primary} onChange={patchAsset} />}
         {/*
           §154⑤ 단서 — 비주택 → 주택 용도변경. 보유 기산·거주요건 기준일을 옮기므로 취득일 축 바로 뒤.
           입주권 양도에는 이 축이 없다 — ④·⑧과 같은 `judgmentUsageConversionStart` 게이트.

@@ -38,6 +38,7 @@ import {
 import { oneHouseJudgmentExtraDefaults } from "@/lib/stores/one-house-extra-fields.types";
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
 import { readJudgmentInputHash } from "./one-house-judgment-provenance";
+import { giftHandoffAsset } from "./gift-household-handoff";
 
 const TRANSFER_ROUTE = "/calc/transfer-tax";
 
@@ -127,7 +128,7 @@ export function toTransferFormPatch(
      * 받는다(`transfer-calc-count-exclusion-row-link.plan.md` §4-3). 종전(PR #1881)처럼 감면 저장소로
      * 옮기면 행과 저장소에 같은 선언이 두 벌 실린다.
      */
-    assets: withMirroredSalePrice(form),
+    assets: withMirroredSalePrice(form).map((a, i) => (i === 0 ? giftHandoffAsset(a, form.transferDate) : a)),
     importedOneHouseFacts: pickOneHouseExtraFacts(form),
     /**
      * 🔴 **출처 두 키는 값이 없어도 키를 싣는다**(S11-7) — store가 얕은 병합이라 키가 아예 없으면 **직전 전달의 id·해시가

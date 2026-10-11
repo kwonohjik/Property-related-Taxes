@@ -138,6 +138,13 @@ dateToStr(bgt.acquisitionDate)
       {/* 상속받은 주택(E-1 잔여 D) — 판정 메뉴와 같은 위젯. 「위 취득일에는 상속개시일」 안내가 붙으므로
           취득일 바로 뒤에 둔다. ④·⑧은 같은 slice(`giftBurdenedInheritanceSlice`)를 본다. */}
       <InheritedSameHouseholdField asset={giftBurdenedInheritanceSlice(bgt)} onChange={(patch) => set(patch)} />
+      {/* 결정 #38 범위 밖 고지 — 증여자가 이 주택을 증여받아 취득했다면 같은 세대 증여의 보유기간 통산은 이 화면에서 입력받지 않는다.
+          판정 메뉴·양도세 계산기(이월과세)는 같은 사실을 받아 통산한다. 모르는 사실을 유리하게 읽지 않는다 — 증여일 기준으로 계산한다. */}
+      <p className="text-caption text-muted-foreground" data-testid="bg-transfer-gift-household-out-of-scope">
+        이 주택을 증여받아 취득했다면 취득일에는 증여받은 날을 입력하세요. 증여자와 계속 같은 세대였다면 증여자 세대의 보유기간을 1세대1주택
+        비과세 판정에 통산하지만, 이 화면은 그 사실을 입력받지 않아 증여일부터 보유기간을 세어 판정합니다 — 같은 세대였다면 결과가 달라질 수
+        있으니 확인이 필요합니다. 1세대1주택 판정 메뉴에서 같은 사실을 입력해 판정할 수 있습니다.
+      </p>
 
       {/* 취득시 기준시가 */}
       <FieldCard

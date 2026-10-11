@@ -10,6 +10,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Button } from "@/components/ui/button";
+import { FieldCard } from "@/components/calc/inputs/FieldCard";
+import { DateInput } from "@/components/ui/date-input";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
 /** 직계존비속 「양도 당시 사망」 제외 신설 — 2025.1.1. 이후 증여받는 자산부터. */
@@ -23,6 +25,16 @@ interface Props {
   donorDeceased: boolean;
   /** D45 배우자 예외 사실 — 증여일 현재 1세대1주택을 배우자로부터 증여받음 */
   spouseGiftOneHouseAtGiftDate: boolean;
+  /**
+   * 증여자와 증여일부터 양도일까지 계속 같은 세대였는가 (결정 #33·#34) — 필수 질문. `""`=미답.
+   * 노출 술어는 ④·⑧과 같은 `carryoverHouseholdFactVisible`이 정한다(`showHouseholdFact`).
+   */
+  donorSameHousehold: CarryoverTaxationForm["donorSameHousehold"];
+  donorHouseholdHoldingStartDate: string;
+  /** 증여자 취득일 — 세대 보유 시작일 안내용 (YYYY-MM-DD) */
+  donorAcquisitionDate: string;
+  /** 위 질문을 보일지 — 주택이고 증여자가 사망하지 않았고 관계가 「그 외」가 아닐 때(`carryoverHouseholdFactVisible`) */
+  showHouseholdFact: boolean;
   /**
    * 배우자 예외 문항을 보일지 — §97조의2②2호는 **주택** 조항이다. 일반건물은 ④가 이 사실을
    * 전송하지 않으므로(엔진 카드도 1세대1주택이 성립하지 않는다) 문항을 숨긴다.
@@ -41,6 +53,10 @@ export function CarryoverGiftExclusionSection({
   donorRelation,
   donorDeceased,
   spouseGiftOneHouseAtGiftDate,
+  donorSameHousehold,
+  donorHouseholdHoldingStartDate,
+  donorAcquisitionDate,
+  showHouseholdFact,
   showSpouseOneHouseFact,
   giftRegistryDate,
   assetId,
@@ -130,6 +146,56 @@ export function CarryoverGiftExclusionSection({
           />
         )}
       </ToneCard>
+
+      {/*
+        결정 #33·#34 — 증여자와 증여일부터 양도일까지 **계속 같은 세대**인가. 결론이 아니라 **사실**을 묻는다(필수).
+        같은 세대면 증여자 세대의 보유기간을 1세대1주택 비과세 판정(보유 2년·거주요건 「취득 당시」)에 통산한다. 이혼 후 재결합은
+        「아니오」로 계산하고, 장기보유특별공제·세율 보유기간은 어느 쪽이든 증여일 기준이다.
+      */}
+      {showHouseholdFact && (
+        <ToneCard tone="violet" title="증여자와 같은 세대 여부 (§154① 보유기간·취득 당시)">
+          <p className="text-caption text-muted-foreground">
+            증여일부터 양도일까지 증여자와 <strong>계속 같은 세대</strong>였습니까? 배우자는 「소득세법」 §88 6호 기준으로 혼인이
+            유지된 경우(법률상 이혼했어도 생계를 같이 하는 등 사실상 이혼으로 보기 어려우면 같은 세대), 그 밖에는 같은 주소·생계를
+            계속한 경우입니다. 이혼 후 같은 사람과 재결합한 경우나 증여자가 양도 전에 사망한 경우는 「아니오」로 계산하며 확인이
+            필요합니다. 같은 세대라면 비과세 판정의 보유기간(과 거주요건 「취득 당시」)을 증여자 세대가 보유를 시작한 날부터 셉니다
+            (조심 2022서7583).
+          </p>
+          <RadioCardGroup
+            name={`carryover-donor-same-household-${assetId}`}
+            data-field="carryover.donorSameHousehold"
+            layout="inline"
+            options={[
+              { value: "yes", label: "예 — 계속 같은 세대" },
+              { value: "no", label: "아니오 — 세대가 달랐거나 중간에 분리" },
+            ]}
+            value={donorSameHousehold}
+            onChange={(v) =>
+              onRelationChange(
+                v === "yes"
+                  ? { donorSameHousehold: "yes" }
+                  : { donorSameHousehold: "no", donorHouseholdHoldingStartDate: "" },
+              )
+            }
+          />
+          {donorSameHousehold === "yes" && (
+            <FieldCard
+              label="세대가 이 주택 보유를 시작한 날"
+              field="carryover.donorHouseholdHoldingStartDate"
+              hint={
+                donorAcquisitionDate
+                  ? `증여자 취득일(${donorAcquisitionDate}) 이후 혼인·합가했다면 그 날 — 증여자 취득일 이후 증여 등기접수일 전의 날짜`
+                  : "증여자 취득일 이후 혼인·합가했다면 그 날 — 증여자 취득일 이후 증여 등기접수일 전의 날짜"
+              }
+            >
+              <DateInput
+                value={donorHouseholdHoldingStartDate}
+                onChange={(v) => onRelationChange({ donorHouseholdHoldingStartDate: v })}
+              />
+            </FieldCard>
+          )}
+        </ToneCard>
+      )}
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-1.5">

@@ -9,6 +9,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 //    helpers가 이 파일을 import한다(`transfer-tax-api-helpers.ts:12`). 그래서 ratio는 **인자**로 받고
 //    스케일 함수만 엔진 유틸에서 직접 가져온다.
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -116,6 +117,9 @@ export function buildCarryoverPayload(
     // D45 배우자 예외 사실 — ⑤가 배우자일 때만 묻는다. 관계가 바뀐 stale 값은 싣지 않는다(엔진도 관계를 본다).
     spouseGiftOneHouseAtGiftDate:
       c.donorRelation === "spouse" && c.spouseGiftOneHouseAtGiftDate ? true : undefined,
+    // 결정 #33·#34 — 증여자와 계속 같은 세대 사실. 묻는 조건은 ⑤·⑧과 같은 술어(`carryoverHouseholdQuestionApplies`)다:
+    //   증여자가 사망하지 않았고 관계가 「그 외」가 아닐 때만. 아니면 stale 값을 싣지 않는다(미답 "" = 미전송 = 미확인).
+    ...carryoverHouseholdPayload(asset),
     exclusionDeclared: {
       expropriationWithin2Years: c.exclusionDeclared.expropriationWithin2Years || undefined,
       // D45 · Q-3 — 옛 이력의 선언만(③이 옮긴 값). 새 폼에는 세우는 UI가 없다.
@@ -152,4 +156,51 @@ export function carryoverAcquisitionDateFallback(asset: AssetForm): string {
 export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string | undefined {
   if (!asset) return undefined;
   return asset.acquisitionCause === "carryover_gift" ? carryoverAcquisitionDateFallback(asset) : asset.acquisitionDate;
+}
+
+/**
+ * 「증여자와 증여일부터 양도일까지 계속 같은 세대」 질문을 **묻는가** — ⑤(위젯 노출)·⑧(필수)·④(전송)가 같은 술어를 쓴다.
+ *
+ * §154① 비과세 판정을 받는 주택(`isOneHouseExemptionAsset`)이고, 증여자가 사망하지 않았고, 관계가 「그 외」가 아닐 때.
+ * **관계를 고르지 않았어도 묻는다**(결정 #34 조건: 관계 미선택이 질문을 건너뛰는 구멍이 되지 않게). 사망은 질문 없이 통산 없이
+ * 계산하고 엔진이 확인 필요를 고지한다. 비주택은 이 사실이 결론을 가르지 않아 묻지 않는다.
+ */
+export function carryoverHouseholdFactVisible(asset: Pick<AssetForm, "assetKind" | "carryover">): boolean {
+  const c = asset.carryover;
+  return !!c && isOneHouseExemptionAsset(asset.assetKind) && c.donorRelation !== "other" && !c.donorDeceased;
+}
+
+/**
+ * 이월과세 주택의 「주택 취득 당시」 기준일(YYYY-MM-DD) — Step4 조정대상지역 자동 판별의 기준일 (결정 #33 G4-1).
+ *
+ * 자산 카드에는 취득일 칸이 없어(`acquisitionDate`가 비어 있다) 종전에는 기준일이 비었다. 엔진은 증여자와 계속 같은 세대로 확인되면
+ * 세대 보유 시작일, 아니면 증여일(`one-house/gift-household-basis.ts`)로 판정하므로 화면 자동 판별도 같은 날을 쓴다.
+ * 세대 관계가 미확인(옛 이력)일 때 엔진은 증여자 취득일도 함께 보지만(주소가 있으면 코드 판정), 이 단일 기준일은 증여일이다.
+ */
+export function carryoverResidenceJudgmentDate(asset: Pick<AssetForm, "assetKind" | "carryover" | "acquisitionCause">): string | undefined {
+  if (asset.acquisitionCause !== "carryover_gift" || !asset.carryover) return undefined;
+  const c = asset.carryover;
+  if (
+    carryoverHouseholdFactVisible(asset) &&
+    c.donorSameHousehold === "yes" &&
+    c.donorHouseholdHoldingStartDate &&
+    c.donorHouseholdHoldingStartDate >= c.donorAcquisitionDate &&
+    c.donorHouseholdHoldingStartDate < c.giftRegistryDate
+  )
+    return c.donorHouseholdHoldingStartDate;
+  return c.giftRegistryDate || undefined;
+}
+
+/** ④ 전송 조각 — 질문을 묻는 경우에만, 답한 값만. */
+function carryoverHouseholdPayload(asset: AssetForm): {
+  donorSameHouseholdContinuous?: boolean;
+  donorHouseholdHoldingStartDate?: string;
+} {
+  const c = asset.carryover;
+  if (!c || !carryoverHouseholdFactVisible(asset) || c.donorSameHousehold === "") return {};
+  if (c.donorSameHousehold === "no") return { donorSameHouseholdContinuous: false };
+  return {
+    donorSameHouseholdContinuous: true,
+    ...(c.donorHouseholdHoldingStartDate ? { donorHouseholdHoldingStartDate: c.donorHouseholdHoldingStartDate } : {}),
+  };
 }

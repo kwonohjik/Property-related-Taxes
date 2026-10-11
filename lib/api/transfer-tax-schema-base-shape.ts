@@ -82,6 +82,12 @@ export const propertyBaseShape = {
   decedentCohabitationHoldingStartDate: z.string().date().optional(),
   decedentCohabitationResidenceMonths: z.number().int().nonnegative().optional(),
   donorAcquisitionDate: z.string().date().optional(),
+  /**
+   * 증여받은 주택(`acquisitionCause === "gift"`)의 증여자와 증여일부터 양도일까지 계속 같은 세대 — 판정 메뉴가 보낸다 (결정 #38).
+   * 미전송 = 미확인(계산기 일반 증여 화면은 이 칸이 없다). `true`면 세대 보유 시작일이 필수(refine).
+   */
+  giftSameHouseholdContinuous: z.boolean().optional(),
+  giftHouseholdHoldingStartDate: z.string().date().optional(),
   expenses: z.number().int().nonnegative(),
   /** §97① 가목 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */
   capitalExpenditure: z.number().int().nonnegative().optional(),
@@ -473,9 +479,12 @@ export const propertyBaseShape = {
     donorDeceased: z.boolean().optional(),
     /** D45 배우자 예외 사실 — 증여일 현재 1세대1주택을 배우자로부터 증여받음 */
     spouseGiftOneHouseAtGiftDate: z.boolean().optional(),
+    /** 결정 #33·#34 — 증여일부터 양도일까지 증여자와 계속 같은 세대(미전송 = 미확인) */
+    donorSameHouseholdContinuous: z.boolean().optional(),
+    donorHouseholdHoldingStartDate: z.string().date().optional(),
     /**
      * 환산 모드 분자 — 증여자 취득 당시 기준시가 (설계 D9-8).
-     * `carryoverTaxationEngineShape`와 **필드·타입 11개 전부 일치**를 유지해야 한다(V-5).
+     * `carryoverTaxationEngineShape`와 **필드·타입 13개 전부 일치**를 유지해야 한다(V-5).
      *
      * ⚠️ 단건(비-GB) 경로에서는 **현재 아무도 읽지 않는다** — 유일한 소비자가
      *    `general-building-valuation.ts`의 `applyCarryoverEstimationBasis`이고,

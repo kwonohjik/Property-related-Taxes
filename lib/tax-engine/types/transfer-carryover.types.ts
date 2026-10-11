@@ -75,6 +75,17 @@ export interface CarryoverTaxationInput {
    */
   spouseGiftOneHouseAtGiftDate?: boolean;
   /**
+   * **증여일부터 양도일까지 증여자와 계속 같은 세대였는가** (결정 #33 G4-1 · #34 G4-2).
+   * 배우자는 「소득세법」 §88 6호 기준 혼인 유지(법률상 이혼했어도 사실상 이혼이 아니면 같은 세대),
+   * 직계존비속은 같은 주소·생계 계속. 관계가 배우자·직계존비속이고 증여자가 사망하지 않았으면 화면이 필수로 묻는다.
+   * **undefined = 미확인**(API 직접 호출·옛 이력) — 어느 방향으로도 유리하게 읽지 않는다.
+   * 쓰임: B 시나리오의 §154① 보유 통산, 「취득 당시」 기준일(조정대상지역·2017.8.3. 경과규정), D4-05 취득일.
+   * 장기보유특별공제·§104② 세율 보유기간에는 쓰지 않는다.
+   */
+  donorSameHouseholdContinuous?: boolean;
+  /** 세대가 이 주택 보유를 시작한 날 — `donorSameHouseholdContinuous === true`일 때 필수(증여자 취득일 ≤ 이 날 < 증여일). */
+  donorHouseholdHoldingStartDate?: Date;
+  /**
    * 환산 모드 분자 — **증여자 취득 당시** 그 자산(파트)의 기준시가.
    * `useEstimatedAcquisition === true`일 때만 의미가 있다.
    * 분모(양도 당시 기준시가)는 받지 않는다 — 엔진이 아는 값을 쓴다(설계 D9-8).

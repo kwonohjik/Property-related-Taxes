@@ -6,20 +6,24 @@
     "basis": "era",
     "today": "2005-01-15",
     "summary": "배우자에게서 증여받은(2004.4.13.) 1주택을 협의이혼 후 재결합한 뒤 2005.1.21. 양도 — 증여자 보유기간 통산 안 함",
-    "referenceForm": {
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "원문 일자 그대로(배우자 명의 1993.3.~ 보유 → 2004-04-13 증여 → 2004-04-15 협의이혼 → 2004-09-20 재결합 → 2005-01-21 양도 예정), 양도가 3억 가정. 회신 규칙: 동일세대원 간 증여는 증여자 보유·거주기간을 통산하지만 이혼 전 증여 후 이혼·재결합한 경우는 통산하지 않는다 → 증여일부터 9개월로 과세. match(결정 #38 — 판정 메뉴 「증여받은 주택」 칸): 증여 이틀 뒤 이혼·재결합은 증여자와 증여일부터 양도일까지 계속 같은 세대가 아니므로(아니오) 증여일부터 센다. 재결합 사안은 정면 해석이 엇갈려 「아니오」로 계산한다. 회신의 해외이주 부분은 짝 P-F217-after-departure·N-F217-before-departure.",
+    "form": {
       "isOneHousehold": true,
       "transferDate": "2005-01-21",
       "contractTotalPrice": "300000000",
       "asset": {
         "assetKind": "housing",
-        "acquisitionDate": "2004-04-13"
+        "acquisitionDate": "2004-04-13",
+        "acquisitionCause": "gift",
+        "donorAcquisitionDate": "1993-03-15",
+        "giftDonorRelation": "spouse",
+        "giftSameHousehold": "no"
       }
-    },
-    "expected": {
-      "isExempt": false
-    },
-    "bucket": "inexpressible",
-    "note": "원문 일자 그대로(배우자 명의 1993.3.~ 보유 → 2004-04-13 증여 → 2004-04-15 협의이혼 → 2004-09-20 재결합 → 2005-01-21 양도 예정), 양도가 3억 가정. 회신 규칙: 동일세대원 간 증여는 증여자 보유·거주기간을 통산하지만 이혼 전 증여 후 이혼·재결합한 경우는 통산하지 않는다 → 증여일부터 9개월로 과세. 없는 입력: 취득 원인(증여)·증여자의 세대·이혼·재결합 이력 — 취득일 한 칸뿐이다. 참고 관측: referenceForm(증여일 2004-04-13) = 과세 / 증여자 취득일 1993-03-15로 입력하면 비과세. 회신의 해외이주 부분은 짝 P-F217-after-departure·N-F217-before-departure."
+    }
   },
   {
     "id": "P-F217-after-departure",

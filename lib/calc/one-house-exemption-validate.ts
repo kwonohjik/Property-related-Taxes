@@ -18,6 +18,7 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { parentalCareAgeIssues } from "./parental-care-age-issue";
+import { giftHouseholdFactErrors } from "@/lib/calc/gift-household-payload";
 import {
   isTransferDateBeforeSupported,
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
@@ -556,6 +557,10 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       if (order) errors.push(err("decedentCohabitationHoldingStartDate", order));
     }
   }
+
+  // 증여받은 주택의 증여자와 계속 같은 세대 (결정 #38) — ⑤·④와 같은 게이트. 규칙은 `gift-household-payload.ts`가 정본이다.
+  if (primary && judgmentSaleIsHousing(form))
+    for (const e of giftHouseholdFactErrors(primary)) errors.push(err(e.field, e.message));
 
   /**
    * 거주 구간 — 계산기와 **같은 leaf**(`residence-interval-validate.ts`, OH-07).

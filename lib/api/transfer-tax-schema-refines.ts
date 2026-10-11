@@ -65,6 +65,8 @@ export function addPropertyRefines(
     acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
+    giftSameHouseholdContinuous?: boolean;
+    giftHouseholdHoldingStartDate?: string;
     annualBasicDeductionUsed?: number;
     acquisitionMethod?: "actual" | "estimated" | "appraisal" | "salesCase";
     appraisalValue?: number;
@@ -247,6 +249,31 @@ export function addPropertyRefines(
         path: ["donorAcquisitionDate"],
         message: "증여자 취득일은 증여일보다 이전이어야 합니다",
       });
+    }
+    // 결정 #38 — 증여자와 계속 같은 세대면 세대 보유 시작일(증여자 취득일 ≤ 시작일 < 증여일)이 필수다.
+    //   비우면 엔진이 통산하지 못해 「같다고 답했는데 효과가 없는」 상태가 된다. ⑧(판정 메뉴 검증)과 같은 조건.
+    if (data.giftSameHouseholdContinuous === true) {
+      const start = data.giftHouseholdHoldingStartDate;
+      if (!data.donorAcquisitionDate) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["donorAcquisitionDate"],
+          message: "증여자와 계속 같은 세대이면 증여자 취득일이 필요합니다",
+        });
+      }
+      if (!start) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["giftHouseholdHoldingStartDate"],
+          message: "증여자와 계속 같은 세대이면 세대 보유 시작일이 필요합니다 (소득세법 시행령 §154①)",
+        });
+      } else if (start >= data.acquisitionDate || (data.donorAcquisitionDate && start < data.donorAcquisitionDate)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["giftHouseholdHoldingStartDate"],
+          message: "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다",
+        });
+      }
     }
   }
   if (data.annualBasicDeductionUsed !== undefined && data.annualBasicDeductionUsed > 2_500_000) {

@@ -96,6 +96,8 @@ describe("validateAssetAcquisition ⑧ 게이트 (앵커)", () => {
         estimationMode: "phd",
         giftDateValuation: "500,000,000",
         giftTaxAmount: "0",
+        // 결정 #33·#34 필수 사실 질문 — 이 파일의 관심사는 §164⑦ 게이트라 중립값 「아니오」.
+        donorSameHousehold: "no",
       },
     };
   }

@@ -52,6 +52,9 @@ const CARRYOVER_FULL: CarryoverTaxationForm = {
   donorRelation: "spouse" as const,
   donorDeceased: false,
   spouseGiftOneHouseAtGiftDate: false,
+  // 결정 #33·#34 — 필수 사실 질문 (이 파일의 관심사는 안분 키라 중립값 「아니오」)
+  donorSameHousehold: "no" as const,
+  donorHouseholdHoldingStartDate: "",
   exclusionDeclared: {
     expropriationWithin2Years: false,
     legacyOneHouseExemptionDeclared: false,

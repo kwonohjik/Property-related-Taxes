@@ -17,6 +17,11 @@ import { appurtenantCardCoveredByExpropriationProviso } from "./transfer-tax-app
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { article89Clause2PostManagementNotice } from "./transfer-tax-89-2-consequences";
 import { meetsReplacementHouse } from "./one-house/replacement-house";
+import {
+  giftHouseholdConsolidationStart,
+  giftHouseholdUnconfirmed,
+  type GiftHouseholdBasis,
+} from "./one-house/gift-household-basis";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { RENTAL_4HO_REASON, rental4hoLegalBasis } from "./one-house/rental-registration-4ho";
@@ -203,6 +208,48 @@ export function checkExemption(
           if (article89Clause2.status === "excluded") return false;
           const r = checkExemptionCore({ ...input, finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] } }, oneHouseRules);
           return r.isExempt || r.isPartialExempt;
+        },
+        // 결정 #33·#34·#38 — 증여받은 주택의 세대 사실을 바꾼 반사실 판정이 현재 판정과 다를 때만 확인 필요를 낸다.
+        //   반사실 입력은 세대 관계가 확정(통산 성립·별도세대)이라 이 고지를 다시 만들지 않는다 — 통산 성립 가정은 한 번 더 별도세대
+        //   가정과 비교할 수 있으나 그 호출은 확정이므로 재귀 깊이가 2를 넘지 않는다.
+        giftHouseholdDecides: () => {
+          const g = input.giftHouseholdBasis;
+          const verdictOf = (basis: GiftHouseholdBasis) => {
+            const r = checkExemption({ ...input, giftHouseholdBasis: basis }, oneHouseRules, presaleRightStartDate, options);
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          if (!g) {
+            // 일반 증여 화면(세대 사실·증여자 취득일 미입력) — 통산 성립 가정으로 다시 판정할 사실이 없다. 증여로 취득한 주택이
+            // 비과세가 아닐 때만 알린다(비과세면 통산이 결론을 바꾸지 못한다 — 통산은 혜택을 늘리는 방향으로만 작용한다).
+            if (input.acquisitionCause !== "gift") return false;
+            return !settled;
+          }
+          if (g.householdDateStrict) return false; // 반사실 입력은 고지를 만들지 않는다 — 재귀 차단
+          const base = `${verdict.isExempt}|${verdict.isPartialExempt}`;
+          const separate = (): string => verdictOf({ ...g, donorDeceased: undefined, continuousSameHousehold: false });
+          // 통산 성립 가정 — 시작일을 모르면 증여자 취득일을 시작일로 둔다(세대 보유 시작일의 가장 이른 값).
+          const consolidated = (): string | undefined =>
+            g.donorAcquisitionDate.getTime() < g.giftDate.getTime()
+              ? verdictOf({
+                  ...g,
+                  donorDeceased: undefined,
+                  continuousSameHousehold: true,
+                  householdHoldingStartDate: giftHouseholdConsolidationStart(g) ?? g.donorAcquisitionDate,
+                })
+              : undefined;
+          if (g.donorDeceased === true) {
+            const c = consolidated();
+            return c !== undefined && c !== base;
+          }
+          // 통산 성립 — 별도세대 가정과 비교하고, 거울상(세대 보유 시작일에 지정 중 · 증여일에 비지정)을 세대 취득일로 읽는 가정(strict)과도 비교한다.
+          if (giftHouseholdConsolidationStart(g)) {
+            return separate() !== base || verdictOf({ ...g, householdDateStrict: true }) !== base;
+          }
+          if (giftHouseholdUnconfirmed(g)) {
+            const c = consolidated();
+            return separate() !== base || (c !== undefined && c !== base);
+          }
+          return false;
         },
         // §154①2호 가목 괄호 「사업인정 고시일 전 취득」 — 고시일이 비어 있어 단서를 적용하지 않았다. 고시일을 취득 뒤/앞으로 가정한
         // 두 판정이 다를 때만 확인 필요를 낸다(S02-2). 고시일을 채운 두 판정은 이 함수 자신이고, 채우면 그 고지가 생기지 않아 재귀하지 않는다.

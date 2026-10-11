@@ -13,9 +13,11 @@
 // 농어촌주택 취득 뒤에 일반주택을 보유하게 된 경우에도 취득순서 요건이 통과했다.
 // STEP 0.45(중과 배제 선판정)는 이미 같은 이유로 원본 `input`을 쓴다.
 //
-// 배우자 증여는 예외다 — 소득세법 §88 6호가 1세대를 「거주자 및 **그 배우자**가 그들과 같은
-// 주소 또는 거소에서 생계를 같이 하는 자와 함께 구성하는 가족단위」로 정의하므로 배우자로부터의
-// 증여는 세대가 바뀌지 않는다.
+// 증여자와 증여일부터 양도일까지 **계속 같은 세대**로 확인되면 예외다 — 소득세법 §88 6호가 1세대를
+// 「거주자 및 **그 배우자**가 그들과 같은 주소 또는 거소에서 생계를 같이 하는 자와 함께 구성하는 가족단위」로
+// 정의하므로 혼인이 유지된 배우자로부터의 증여는 세대가 바뀌지 않는다.
+// 결정 #33(2026-10-11): 종전에는 배우자 증여면 사실 확인 없이 증여자 취득일을 썼으나, 양도 전에 이혼한 배우자까지
+// 세대로 보게 되므로 「계속 같은 세대」가 입력으로 확인될 때만 쓴다(미확인·별도세대는 양도자 본인의 취득일).
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
@@ -33,7 +35,11 @@ const RURAL = {
   meetsLocationRequirement: true,
 };
 
-function run(over: Partial<TransferTaxInput> = {}, relation?: "spouse" | "lineal") {
+function run(
+  over: Partial<TransferTaxInput> = {},
+  relation?: "spouse" | "lineal",
+  household?: { continuous: boolean; start?: Date },
+) {
   return calculateTransferTax(
     baseTransferInput({
       propertyType: "housing",
@@ -54,6 +60,9 @@ function run(over: Partial<TransferTaxInput> = {}, relation?: "spouse" | "lineal
         giftTaxAmount: 0,
         giftDateValuation: 700_000_000,
         ...(relation ? { donorRelation: relation } : {}),
+        ...(household
+          ? { donorSameHouseholdContinuous: household.continuous, donorHouseholdHoldingStartDate: household.start }
+          : {}),
       },
       reductions: [RURAL],
       ...over,
@@ -89,8 +98,8 @@ describe("D4-05 이월과세 × §99의4 취득순서 — 판정 기준일", () 
     expect(r.carryoverTaxationDetail?.exclusionReason).not.toBe("one_house_exemption");
   });
 
-  it("D4-05-4: 배우자 증여는 세대가 바뀌지 않는다 (소법 §88 6호) → 증여자 취득일(2005-01) 기준 적격", () => {
-    const r = run({}, "spouse");
+  it("D4-05-4: 혼인 유지가 확인된 배우자 증여는 세대가 바뀌지 않는다 (소법 §88 6호) → 세대 보유 시작일(증여자 취득일 2005-01) 기준 적격", () => {
+    const r = run({}, "spouse", { continuous: true, start: new Date("2005-01-01") });
     expect(r.new994Detail?.isEligible).toBe(true);
     // 세대 주택수 2 − 1 = 1 → 1세대1주택 · 양도가 10억 ≤ 12억 → 전액 비과세
     expect(r.isExempt).toBe(true);
@@ -99,6 +108,19 @@ describe("D4-05 이월과세 × §99의4 취득순서 — 판정 기준일", () 
     // 카드의 비교표와 최종 세액이 어긋난다 (이중 진실)
     expect(r.carryoverTaxationDetail?.scenarioA.determinedTax).toBe(0);
     expect(r.carryoverTaxationDetail?.scenarioB.determinedTax).toBe(0);
+  });
+
+  it("D4-05-4b [기대값 변경 · 결정 #33] 배우자라도 혼인 유지를 확인하지 않았으면(미확인) 양도자 본인의 취득일 — 취득순서 불충족", () => {
+    // 전: 배우자면 증여자 취득일 기준 적격(비과세 0). 후: 사실 미확인은 유리하게 읽지 않는다.
+    const r = run({}, "spouse");
+    expect(r.new994Detail?.isEligible).not.toBe(true);
+    expect(r.carryoverTaxationDetail?.scenarioA.determinedTax).toBeGreaterThan(0);
+  });
+
+  it("D4-05-4c 부정 짝: 양도 전 이혼 등으로 계속 같은 세대가 아니면(아니오) 배우자도 양도자 본인의 취득일", () => {
+    const r = run({}, "spouse", { continuous: false });
+    expect(r.new994Detail?.isEligible).not.toBe(true);
+    expect(r.carryoverTaxationDetail?.scenarioA.determinedTax).toBeGreaterThan(0);
   });
 
   it("D4-05-5: 취득순서가 실제로 맞으면 직계존비속 증여도 적격 (과잉차단 방지)", () => {

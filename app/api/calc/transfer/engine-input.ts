@@ -103,6 +103,19 @@ export function buildTransferEngineInput(
         }
       : undefined,
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
+    // ⑭ 결정 #38 — 증여받은 주택의 증여자와 같은 세대 사실. **답한 경우에만** 엔진 입력을 만든다: 일반 증여 계산기 화면은 이 칸이 없어
+    //    미전송이고, 그때는 종전 판정(증여일 기준)에 엔진이 확인 필요를 고지한다. 증여자 취득일 없이는 만들 수 없다.
+    giftHouseholdBasis:
+      data.acquisitionCause === "gift" &&
+      data.donorAcquisitionDate &&
+      data.giftSameHouseholdContinuous !== undefined
+        ? {
+            giftDate: toDate(data.acquisitionDate, "acquisitionDate"),
+            donorAcquisitionDate: toDate(data.donorAcquisitionDate, "donorAcquisitionDate"),
+            continuousSameHousehold: data.giftSameHouseholdContinuous,
+            householdHoldingStartDate: toOptionalDate(data.giftHouseholdHoldingStartDate),
+          }
+        : undefined,
     // ⑭ 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
     //    종전 열거형은 ⑫·④가 실제로 보내던 `donorRelation`·`donorDeceased`(① 관계요건
     //    배제 판정축)를 빠뜨려 침묵 strip했다 — 단건 경로에서만 배제가 죽었다
@@ -123,6 +136,8 @@ export function buildTransferEngineInput(
             data.carryoverTaxation.donorAcquisitionDate,
             "carryoverTaxation.donorAcquisitionDate",
           ),
+          // 결정 #33·#34 — 세대 보유 시작일도 일자라 spread의 string을 덮어쓴다(전송하지 않았으면 undefined).
+          donorHouseholdHoldingStartDate: toOptionalDate(data.carryoverTaxation.donorHouseholdHoldingStartDate),
         }
       : undefined,
     isOneHousehold: data.isOneHousehold,

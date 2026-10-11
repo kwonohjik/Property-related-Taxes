@@ -29,6 +29,7 @@ import {
   overseasTwoYearDeadlineApplies,
 } from "./data/one-house-154-1-proviso-era";
 import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
+import { giftHouseholdHoldingStart, resolveGiftResidenceDates } from "./one-house/gift-household-basis";
 import { excludeNonResidentHoldingPeriod } from "./one-house/non-resident-holding";
 import {
   CAPITAL_NEWTOWN_RESIDENCE_YEARS,
@@ -263,6 +264,8 @@ export type ResidenceReqInput = Pick<
   | "rentalHousingException"
   // 비거주 기간은 보유기간에서 뺀다(§154⑧2호 예외) — `one-house/non-resident.ts`.
   | "nonResidentHoldingPeriod"
+  // 증여받은 주택 — 증여자와 계속 같은 세대면 보유 통산·「취득 당시」 기준일을 세대 보유 시작일로 옮긴다(결정 #33·#34·#38).
+  | "giftHouseholdBasis"
 > &
   Partial<Pick<TransferTaxInput, "householdHousingCount">>;
 
@@ -378,11 +381,29 @@ export function resolveExemptionProviso(
  *    엔진·Step4 안내·수동 토글이 서로 다른 날짜를 보면 "화면은 통과인데 엔진은 차단"이 된다.
  */
 export function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
-  return (
-    input.nonHousingToHousingConversion?.residentialUseStartDate ??
-    sameHouseholdInheritanceHoldingStart(input) ??
-    input.acquisitionDate
-  );
+  return resolveResidenceJudgmentDates(input)[0];
+}
+
+/**
+ * 「주택 취득 당시」 조정대상지역 판정 기준일 **후보들**. 보통 하나이고, 증여받은 주택의 세대 관계가 미확인이면
+ * 증여일·증여자 취득일 둘이다(어느 하나라도 지정 중이면 요건을 적용 — 모름 = 혜택 불성립, 결정 #33).
+ * 증여 기준일은 `one-house/gift-household-basis.ts`가 정한다 — 여기서 따로 고르지 않는다.
+ */
+export function resolveResidenceJudgmentDates(input: ResidenceReqInput): Date[] {
+  return resolveResidenceJudgmentPlan(input).dates;
+}
+
+/** 후보일과 결합 방식 — `any`는 하나라도 지정 중이면 거주요건, `all`은 모두 지정 중일 때만(`gift-household-basis.ts` 표 참고). */
+export function resolveResidenceJudgmentPlan(input: ResidenceReqInput): { dates: Date[]; mode: "any" | "all" } {
+  const converted = input.nonHousingToHousingConversion?.residentialUseStartDate;
+  if (converted) return { dates: [converted], mode: "any" };
+  const inherited = sameHouseholdInheritanceHoldingStart(input);
+  if (inherited) return { dates: [inherited], mode: "any" };
+  if (input.giftHouseholdBasis) {
+    const g = resolveGiftResidenceDates(input.giftHouseholdBasis);
+    return { dates: g.judgmentDates, mode: g.mode };
+  }
+  return { dates: [input.acquisitionDate], mode: "any" };
 }
 
 
@@ -421,8 +442,12 @@ export function usageConversionTransitionApplies(input: ResidenceReqInput): bool
  */
 export function resolveResidenceTransitionDate(input: ResidenceReqInput): Date {
   if (usageConversionTransitionApplies(input)) return input.nonHousingToHousingConversion!.residentialUseStartDate;
+  // 증여받은 주택은 세대 관계에 따라 증여일/세대 보유 시작일(`gift-household-basis.ts`) — 조정 판정과 같은 기준이다(결정 #33).
   return (
-    input.residenceTransitionAcquisitionDate ?? sameHouseholdInheritanceHoldingStart(input) ?? input.acquisitionDate
+    input.residenceTransitionAcquisitionDate ??
+    sameHouseholdInheritanceHoldingStart(input) ??
+    (input.giftHouseholdBasis ? resolveGiftResidenceDates(input.giftHouseholdBasis).transitionDate : undefined) ??
+    input.acquisitionDate
   );
 }
 
@@ -438,11 +463,11 @@ export function resolveResidenceTransitionDate(input: ResidenceReqInput): Date {
  */
 export function resolveWasRegulatedAtAcquisition(input: ResidenceReqInput): boolean {
   if (input.regionCode) {
-    return isRegulatedByBjdCode(
-      input.regionCode,
-      format(resolveResidenceJudgmentDate(input), "yyyy-MM-dd"),
-      input.regionInDesignatedDistrict,
-    ).isRegulated;
+    const code = input.regionCode;
+    const plan = resolveResidenceJudgmentPlan(input);
+    const regulatedAt = (d: Date) =>
+      isRegulatedByBjdCode(code, format(d, "yyyy-MM-dd"), input.regionInDesignatedDistrict).isRegulated;
+    return plan.mode === "all" ? plan.dates.every(regulatedAt) : plan.dates.some(regulatedAt);
   }
   return input.wasRegulatedAtAcquisition === true;
 }
@@ -663,7 +688,12 @@ function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
   ) {
     return input.nonHousingToHousingConversion.residentialUseStartDate;
   }
-  return sameHouseholdInheritanceHoldingStart(input) ?? input.acquisitionDate;
+  // 증여받은 주택: 증여자와 계속 같은 세대면 세대 보유 시작일부터 통산(조심 2022서7583). 이월과세 A는 이미 증여자 취득일이라 제외.
+  return (
+    sameHouseholdInheritanceHoldingStart(input) ??
+    giftHouseholdHoldingStart(input.giftHouseholdBasis) ??
+    input.acquisitionDate
+  );
 }
 
 /**

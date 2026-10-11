@@ -23,6 +23,7 @@
  * 다만 `transferPrice`는 **양수 필수**이고 고가주택(12억 초과) 판정에 **실제로 쓰이므로**
  * 사용자에게 받는다(③ 예상 양도가액).
  */
+import { buildGiftHouseholdPayload } from "@/lib/calc/gift-household-payload";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { calcEffectiveWasRegulatedAtAcquisition, effectiveIsRegulatedAtTransfer } from "@/lib/calc/effective-regulated-at-acquisition";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -212,6 +213,12 @@ export function buildOneHouseExemptionApiBody(
           ...buildSameHouseholdInheritancePayload(primary),
         }
       : {}),
+
+    /**
+     * 증여받은 주택의 증여자와 계속 같은 세대 (결정 #38) — 상속과 같은 게이트·같은 방식이다. 보유 통산·「취득 당시」 기준일은
+     * 엔진 한 leaf(`one-house/gift-household-basis.ts`)가 정한다. 계산기 이월과세 폼의 같은 사실과 같은 엔진 입력이 된다.
+     */
+    ...(judgmentSaleIsHousing(form) ? buildGiftHouseholdPayload(primary) : {}),
 
     /**
      * ── 계산기와 **같은 leaf** ──────────────────────────────

@@ -23,6 +23,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CarryoverGiftExclusionSection } from "./CarryoverGiftExclusionSection";
 import { CarryoverEstimationSection } from "./CarryoverEstimationSection";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
+import { carryoverHouseholdFactVisible } from "@/lib/calc/transfer-tax-api-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -352,6 +353,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           donorRelation={c.donorRelation}
           donorDeceased={c.donorDeceased}
           spouseGiftOneHouseAtGiftDate={c.spouseGiftOneHouseAtGiftDate}
+          donorSameHousehold={c.donorSameHousehold}
+          donorHouseholdHoldingStartDate={c.donorHouseholdHoldingStartDate}
+          donorAcquisitionDate={c.donorAcquisitionDate}
+          showHouseholdFact={carryoverHouseholdFactVisible(asset)}
           showSpouseOneHouseFact={asset.assetKind !== "general_building"}
           giftRegistryDate={c.giftRegistryDate}
           assetId={asset.assetId}

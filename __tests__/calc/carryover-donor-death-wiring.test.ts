@@ -27,6 +27,8 @@ function makeCarryoverForm(over: Partial<CarryoverTaxationForm> = {}): Carryover
     donorAcquisitionDate: "2010-01-01",
     donorAcquisitionPrice: "300000000",
     giftDateValuation: "700000000",
+    // 결정 #33·#34 — 증여자와 계속 같은 세대 질문은 필수다(관계 미선택이어도 묻는다). 이 파일의 관심사는 사망 배제라 중립값 「아니오」.
+    donorSameHousehold: "no",
     ...over,
   };
 }
@@ -181,10 +183,20 @@ describe("DD-W ⑧: validation", () => {
     expect(err).toContain("증여자와의 관계");
   });
 
-  it("DD-W-09: 🔑 관계 미선택이어도 사망 미선언이면 통과 [회귀 방어]", () => {
-    // 구형 sessionStorage에는 이 필드가 없다 — 필수화하면 기존 이월과세가 전부 막힌다.
+  it("DD-W-09: 🔑 관계 미선택이어도 사망 미선언이면 통과 [회귀 방어] — 관계를 단독으로 필수화하지 않는다", () => {
+    // 구형 sessionStorage에는 이 필드가 없다 — 관계를 필수화하면 기존 이월과세가 전부 막힌다.
     const err = validateAssetAcquisition(makeCarryoverAsset(), "자산 1", "2030-05-31");
     expect(err).toBeNull();
+  });
+
+  it("DD-W-09b [기대값 변경 · 결정 #34] 관계 미선택이어도 「계속 같은 세대」 답이 없으면 막는다(질문은 관계와 무관) · 답하면 통과", () => {
+    // 전: 관계·세대 질문이 모두 없어 통과. 후: 세대 질문은 관계 「그 외」·증여자 사망만 건너뛴다.
+    const err = validateAssetAcquisition(makeCarryoverAsset({ donorSameHousehold: "" }), "자산 1", "2030-05-31");
+    expect(err).toContain("계속 같은 세대");
+    expect(err).not.toContain("증여자와의 관계");
+    expect(
+      validateAssetAcquisition(makeCarryoverAsset({ donorSameHousehold: "" , donorDeceased: true, donorRelation: "spouse" }), "자산 1", "2030-05-31"),
+    ).toBeNull();
   });
 
   it("DD-W-10: 관계까지 고르면 통과", () => {

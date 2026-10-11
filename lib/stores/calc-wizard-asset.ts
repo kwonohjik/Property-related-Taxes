@@ -501,6 +501,19 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** §154⑧3호 — 상속개시 전 동일세대 통산 거주 개월 (비과세 거주요건·표2 대상 판정용, 공제율은 실거주 별도) */
   decedentCohabitationResidenceMonths: string;
   /**
+   * 증여받은 주택(`acquisitionCause === "gift"`)의 증여자와의 관계 — **판정 메뉴 전용 입력** (결정 #38).
+   * 배우자는 혼인 유지, 그 밖의 친족은 같은 주소·생계 계속 여부를 묻는 문구와, 계산기로 넘길 때 이월과세(배우자·직계존비속)
+   * 여부를 정하는 데 쓴다. 증여자 취득일은 기존 `donorAcquisitionDate`를 그대로 쓴다.
+   */
+  giftDonorRelation: "" | "spouse" | "lineal" | "other";
+  /**
+   * 증여일부터 양도일까지 증여자와 **계속 같은 세대**였는가 (결정 #38 — 이월과세 폼의 `donorSameHousehold`와 같은 사실).
+   * `""` = 미답(⑧이 막는다). 판정 메뉴 전용 — 계산기 일반 증여 화면은 이 칸이 없다(확인 필요 고지).
+   */
+  giftSameHousehold: "" | "yes" | "no";
+  /** 세대가 이 주택 보유를 시작한 날 — `giftSameHousehold === "yes"`일 때 필수(증여자 취득일 ≤ 이 날 < 증여일). */
+  giftHouseholdHoldingStartDate: string;
+  /**
    * §155② 단서 **예외** — 동거봉양 합가 + 합가 이전부터 피상속인이 보유하던 주택인가.
    * `decedentSameHouseholdBeforeInheritance === true`일 때만 의미가 있다.
    *

@@ -141,6 +141,12 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { field: "acquisitionCause", step: 0, assetIndex: A, message: /^자산: 이월과세는 배우자 또는 직계존비속/, form: carry({ donorRelation: "other" }) },
   { field: "carryover.donorRelation", step: 0, assetIndex: A, message: /^자산: 증여자와의 관계를 선택하세요/, form: carry({ donorRelation: "", donorDeceased: true }) },
   { field: "carryover.giftDateValuation", step: 0, assetIndex: A, message: /^자산: 증여 당시 평가액을 입력하세요/, form: carry({ giftDateValuation: "" }) },
+  // 결정 #33·#34 — 증여자와 계속 같은 세대(필수 사실 질문). 오류 순서는 맨 뒤라 앞선 입력 오류를 가리지 않는다.
+  { field: "carryover.donorSameHousehold", step: 0, assetIndex: A, message: /^자산: 증여일부터 양도일까지 증여자와 계속 같은 세대였는지/, form: carry({}) },
+  {
+    field: "carryover.donorHouseholdHoldingStartDate", step: 0, assetIndex: A, message: /^자산: 세대가 이 주택 보유를 시작한 날을 입력하세요/,
+    form: carry({ donorSameHousehold: "yes" }),
+  },
   { field: "carryover.donorAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 증여자 취득가액을 입력하세요/, form: carry({ donorAcquisitionPrice: "" }) },
   { field: "carryover.estimationMode", step: 0, assetIndex: A, message: /^자산: 환산 방식\(/, form: carry({ useEstimatedAcquisition: true }) },
   {

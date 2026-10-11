@@ -96,6 +96,10 @@ export function migrateAsset(raw: unknown): AssetForm {
     a.decedentCohabitationHoldingStartDate = "";
   if (a.decedentCohabitationResidenceMonths === undefined)
     a.decedentCohabitationResidenceMonths = "";
+  // 증여받은 주택의 증여자와 같은 세대 사실(결정 #38) — 구 세션 복원 방어. 미답("")이라 ⑧이 판정 메뉴에서 답을 요구한다.
+  if (a.giftDonorRelation === undefined) a.giftDonorRelation = "";
+  if (a.giftSameHousehold === undefined) a.giftSameHousehold = "";
+  if (a.giftHouseholdHoldingStartDate === undefined) a.giftHouseholdHoldingStartDate = "";
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
   // ③ §164⑧ 환산 — 구 sessionStorage에는 이 키들이 없다. 미보정 시 `sapFormula`가 undefined인
