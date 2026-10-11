@@ -128,27 +128,24 @@ export function assertBurdenedGiftEligible(args: {
 }
 
 /**
- * F-2 (2026-05-12): 케이스 12 다주택 중과 비스코프 감지.
+ * 부담부증여 × 다주택 중과 **한시 배제 적용** 고지 (1h-G1-11).
  *
- * 부담부증여 + 주택 + 조정대상지역 + 자산 수 ≥ 2 시 정보성 경고 메시지 반환.
- * 정식 지원은 §167의3 한시 유예 종료 시점 확정 후 별도 PR.
+ * 종전(F-2)에는 「Phase 2 비스코프 — 결과는 한시 유예 기준으로 산정」이라 고지했으나 날짜 게이트가 없어, 유예 밖 양도일
+ * (2022.5.9. 이전 · 2026.5.10. 이후)에 엔진이 실제로 중과를 적용한 결과에도 같은 문구가 붙어 사실과 달랐다
+ * (이후 E-1 잔여 A가 부담부증여 중과를 정답으로 고정했다). 이제는 **유예가 실제로 적용된 결과**에서만 정확한 조문으로 고지한다.
  *
- * @returns 경고 메시지 (감지 시) | null (해당 없음)
+ * 「소득세법 시행령」 §167의10①12의2 가목(1세대 2주택) · §167의3①12의2 가목(1세대 3주택 이상) — 보유기간 2년 이상인
+ * 주택으로서 「2026년 5월 9일까지 양도하는 주택」(MST 290841 원문 확인). 나·다목은 매매계약·토지거래허가 요건이라 증여와 무관하다.
+ *
+ * 호출부가 「주택이고, 중과 대상이며, 유예가 적용된 결과」인지 판정해 부른다(`transfer-tax.ts`).
  */
-export function detectBurdenedGiftMultiHouseWarning(args: {
-  propertyType: string;
-  isRegulatedArea?: boolean;
-  householdHousingCount?: number;
-}): string | null {
-  if (
-    args.propertyType === "housing" &&
-    args.isRegulatedArea === true &&
-    (args.householdHousingCount ?? 1) >= 2
-  ) {
-    return (
-      "다주택 중과(소득세법 시행령 §167의3) 분기는 Phase 2 비스코프입니다. " +
-      "결과는 한시 유예 기준으로 산정되었습니다 — 중과 유예 해제 시점 확정 후 별도 PR로 정식 지원 예정."
-    );
-  }
-  return null;
+export function burdenedGiftSurchargeSuspendedNotice(effectiveHouseCount: number): string {
+  const clause =
+    effectiveHouseCount >= 3
+      ? "「소득세법 시행령」 제167조의3 제1항 제12호의2 가목(1세대 3주택 이상)"
+      : "「소득세법 시행령」 제167조의10 제1항 제12호의2 가목(1세대 2주택)";
+  return (
+    `다주택 중과 한시 배제를 적용했습니다 — ${clause}에 따라 보유기간 2년 이상인 주택을 2026년 5월 9일까지 양도하는 경우 ` +
+    "「소득세법」 제104조 제7항의 중과세율을 적용하지 않고 기본 세율로 산정했습니다."
+  );
 }

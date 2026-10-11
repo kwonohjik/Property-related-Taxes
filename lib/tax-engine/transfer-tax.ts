@@ -65,6 +65,7 @@ import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { judgeRedevAptOneHouseExemption } from "./transfer-tax-redevelopment-apt-exemption";
 import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-gift";
+import { burdenedGiftSurchargeSuspendedNotice } from "./burdened-gift-eligibility";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
@@ -569,6 +570,10 @@ export function calculateTransferTax(
     isSurchargeApplied: isSurchargeCase && !suspendedResult,
   });
   if (surchargeFallbackNotice) warnings.push(surchargeFallbackNotice);
+  // 부담부증여 × 다주택 중과 — 한시 배제가 실제로 적용된 결과에서만 고지한다(1h-G1-11)
+  if (transferBurdenedGiftBreakdown && effectiveInput.propertyType === "housing" && isSurchargeCase && suspendedResult) {
+    warnings.push(burdenedGiftSurchargeSuspendedNotice(multiHouseSurchargeResult?.effectiveHouseCount ?? effectiveInput.householdHousingCount));
+  }
 
   // STEP 4: 장기보유특별공제 (장기임대 특례율 포함 — §97의3·§97의4는 L-2' 블록)
   // §99의4 eligible 시 exemptionJudgeInput(유효 주택수) 전달 — 표2 판정도 §89①3호 의제 체인

@@ -703,7 +703,8 @@ test("[BT-E2E-7] 일시적 2주택 §155①2호 새 입력 → 요청 본문 tem
     await f.getByRole("textbox", { name: "월" }).fill(m);
     await f.getByRole("textbox", { name: "일" }).fill(d);
   };
-  await fillDate("종전 주택 취득일", "2010", "3", "15");
+  // 종전 주택 = 증여 주택 — 입력 칸이 아니라 위 「취득일」(2010-03-15)이 그대로 표시된다(1h-G1-3)
+  await expect(dialog.getByTestId("bg-transfer-prev-acq-date")).toHaveText("2010-03-15");
   await fillDate("신규 주택 취득일", "2020", "6", "1");
 
   const block = dialog.getByTestId("temp-two-house-regulated-block");

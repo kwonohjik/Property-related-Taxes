@@ -17,6 +17,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { BURDENED_GIFT_TRANSFER } from "@/lib/tax-engine/legal-codes/burdened-gift";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -93,13 +94,13 @@ export function ValuationModeSection({
             {
               value: "sangjeungbeop_standard",
               label: "기준시가 안분 (K-1~K-3)",
-              description: "상증법 기준시가로 취득가액 산정 (소령 §159①1호 원칙)",
+              description: `양도가액을 기준시가로 산정하므로 취득가액도 상증법 기준시가로 산정 (${BURDENED_GIFT_TRANSFER.LABEL_159_1_PAREN})`,
               testId: "bg-valuation-mode-standard",
             },
             {
               value: "sangjeungbeop_market",
               label: "시가 평가 (K-4/K-5)",
-              description: "실지취득가액 또는 환산취득가액으로 산정 (§159①1호 A괄호 요건 시)",
+              description: `실지취득가액 또는 환산취득가액으로 산정 (${BURDENED_GIFT_TRANSFER.LABEL_159_1_BODY})`,
               testId: "bg-valuation-mode-market",
             },
           ]}
@@ -110,7 +111,7 @@ export function ValuationModeSection({
       {isMarketMode && (
         <FieldCard
           label="양도시 시가 (원) — 분모 C"
-          hint="증여일 기준 감정평가액·매매사례가액 등 시가. §159①1호 A괄호 분모로 사용됩니다."
+          hint="증여일 기준 감정평가액·매매사례가액 등 시가. 증여가액 C로서 채무 안분의 분모로 사용됩니다 (소령 §159①1호)."
           required
         >
           <CurrencyInput
@@ -194,8 +195,8 @@ export function ValuationModeSection({
             label="실지취득가액 합계 (원)"
             hint={
               bgt.acquisitionCause === "inheritance"
-                ? "상속받은 자산은 상속개시일 현재 상증법 평가액(상속세 신고·결정가액)이 취득가액입니다 (소령 §163⑨). §159①1호 A괄호 안분 분자."
-                : "건물·토지 합산 실제 취득대금. §159①1호 A괄호 안분 분자."
+                ? "상속받은 자산은 상속개시일 현재 상증법 평가액(상속세 신고·결정가액)이 취득가액입니다 (소령 §163⑨). 소령 §159①1호 본문의 안분 분자."
+                : "건물·토지 합산 실제 취득대금. 소령 §159①1호 본문의 안분 분자."
             }
             required
           >

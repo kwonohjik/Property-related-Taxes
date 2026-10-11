@@ -36,6 +36,7 @@ import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-
 import { buildTempTwoHouseDeadlineExceptionFacts } from "@/lib/calc/transfer-tax-api-body-blocks";
 import {
   giftBurdenedDeadlineExceptionFields,
+  giftBurdenedPreviousAcquisitionDate,
   giftBurdenedTempTwoHouseDeadlineInScope,
 } from "@/lib/calc/gift-burdened-temp-two-house";
 import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
@@ -301,12 +302,10 @@ export function buildGiftBurdenedTransferBody(
 
   // 일시적 2주택 (H4) — 주택 전용. householdHousingCount === 2일 때만 의미 있음
   if (isHousingType && bgt.temporaryTwoHouse) {
-    const prev = bgt.temporaryTwoHouse.previousAcquisitionDate;
     const next = bgt.temporaryTwoHouse.newAcquisitionDate;
     body.temporaryTwoHouse = {
-      previousAcquisitionDate: prev instanceof Date
-        ? prev.toISOString().slice(0, 10)
-        : (prev as unknown as string),
+      // 종전 주택 = 이번 증여(양도) 주택 — ⑤·⑧과 같은 leaf (1h-G1-3). 저장된 옛 자유 입력값은 쓰지 않는다.
+      previousAcquisitionDate: giftBurdenedPreviousAcquisitionDate(bgt),
       newAcquisitionDate: next instanceof Date
         ? next.toISOString().slice(0, 10)
         : (next as unknown as string),

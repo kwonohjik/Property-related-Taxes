@@ -210,7 +210,7 @@ export function runPreCalculationSteps(
         transferExpense: workingInput.transferExpense,
       }
     : rawInput;
-  const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps, warnings);
+  const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps);
   const transferBurdenedGiftBreakdown = bgStep.breakdown;
   workingInput = bgStep.workingInput;
 

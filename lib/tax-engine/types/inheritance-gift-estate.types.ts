@@ -1144,6 +1144,12 @@ export interface BurdenedGiftTransferTaxInput {
   isHousing?: boolean;
 
   // ===== housing(isHousing=true or apartment) 전용 =====
+  /**
+   * 물건의 **일부 지분만** 증여(나머지 지분은 타인 소유) — 1h-G1-6.
+   * 이 경로는 지분율·물건 전체 가액 입력이 없어 12억 고가주택 판정이 지분 가액으로 이뤄진다(「소득세법 시행령」 §156①·§160①은
+   * 물건 전체 가액 기준). 그래서 ON이면 ⑧이 막고 양도소득세 계산기로 안내한다 — 엔진·API에는 싣지 않는다(④ 비전송).
+   */
+  isPartialOwnershipGift?: boolean;
   /** 세대 보유 주택 수 (비과세·중과 판정용, 기본 1). 증여자 기준. */
   householdHousingCount?: number;
   /** 1세대1주택 여부 (기본 false — 안전 방향, 미입력 시 비과세 미적용). 증여자 기준. */

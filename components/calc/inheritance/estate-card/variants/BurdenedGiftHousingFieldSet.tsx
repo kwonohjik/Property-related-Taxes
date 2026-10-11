@@ -45,6 +45,7 @@ import {
   giftBurdenedDeadlineExceptionFields,
   giftBurdenedDeadlineExceptionPatch,
   giftBurdenedNewHouseAddressPatch,
+  giftBurdenedPreviousAcquisitionDate,
   giftBurdenedTempTwoHouseDeadlineInScope,
   giftBurdenedTempTwoHouseRegulatedGate,
 } from "@/lib/calc/gift-burdened-temp-two-house";
@@ -170,6 +171,18 @@ dateToStr(bgt.acquisitionDate)
         </FieldCard>
       )}
 
+      {/* 일부 지분만 증여(1h-G1-6) — 12억 고가주택 판정은 물건 전체 가액 기준(소령 §156①·§160①)인데 이 화면에는 지분율·
+          물건 전체 가액 칸이 없다. 켜면 ⑧이 막고 양도소득세 계산기로 안내한다(`giftBurdenedPartialOwnershipError`). */}
+      <ToggleCard
+        tone="amber"
+        size="sm"
+        title="물건의 일부 지분만 증여 (나머지 지분은 타인 소유)"
+        description="ON이면 이 화면에서는 양도소득세를 함께 계산할 수 없습니다 — 12억 고가주택 판정이 물건 전체 가액 기준이라 양도소득세 계산기(공유 지분 + 부담부증여)에서 계산하세요."
+        checked={bgt.isPartialOwnershipGift === true}
+        onCheckedChange={(v) => set({ isPartialOwnershipGift: v || undefined })}
+        data-testid="bg-transfer-partial-ownership"
+      />
+
       {/* 1세대1주택 여부 */}
       <ToggleCard
         tone="emerald"
@@ -278,25 +291,20 @@ dateToStr(bgt.acquisitionDate)
           <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
             일시적 2주택 비과세 특례 (§155①)
           </p>
-          <FieldCard label="종전 주택 취득일">
-            <DateInput
-              value={
-dateToStr(bgt.temporaryTwoHouse?.previousAcquisitionDate)
-              }
-              onChange={(v) => {
-                const d = strToDate(v);
-                set({
-                  temporaryTwoHouse: {
-                    ...bgt.temporaryTwoHouse,
-                    previousAcquisitionDate: d as unknown as Date,
-                    newAcquisitionDate:
-                      bgt.temporaryTwoHouse?.newAcquisitionDate as Date,
-                  },
-                });
-              }}
-            />
+          {/* 종전 주택 = 이번에 증여(양도)하는 주택 — 취득일은 위 「취득일」 한 칸이 정본이다(1h-G1-3). 자유 입력으로 두면
+              나중에 취득한 주택을 증여하면서 먼저 산 주택의 날짜를 넣어 비과세가 성립했다. ④·⑧·노출 게이트도 같은 leaf를 쓴다. */}
+          <FieldCard
+            label="종전 주택 취득일"
+            hint="§155①의 종전 주택은 양도(증여)하는 주택입니다 — 위 「취득일 (증여자 당초 취득일)」과 같은 날로 판정합니다."
+          >
+            <p className="text-sm tabular-nums" data-testid="bg-transfer-prev-acq-date">
+              {giftBurdenedPreviousAcquisitionDate(bgt) || "위 취득일을 입력하세요"}
+            </p>
           </FieldCard>
-          <FieldCard label="신규 주택 취득일">
+          <FieldCard
+            label="신규 주택 취득일"
+            hint="증여하는 주택을 취득한 뒤 새로 취득한 다른 주택의 취득일입니다."
+          >
             <DateInput
               value={
 dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
@@ -306,8 +314,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
                 set({
                   temporaryTwoHouse: {
                     ...bgt.temporaryTwoHouse,
-                    previousAcquisitionDate:
-                      bgt.temporaryTwoHouse?.previousAcquisitionDate as Date,
+                    previousAcquisitionDate: bgt.acquisitionDate,
                     newAcquisitionDate: d as unknown as Date,
                   },
                 });

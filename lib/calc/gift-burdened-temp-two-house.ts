@@ -25,6 +25,20 @@ function ymd(v: Date | string | undefined): string {
 }
 
 /**
+ * §155① 「종전의 주택」 취득일 — **이번 증여(양도) 주택의 취득일**로 고정한다(1h-G1-3).
+ *
+ * 「소득세법 시행령」 §155①은 「그 주택(이하 이 항에서 "종전의 주택"이라 한다)을 양도하기 전에 다른 주택 … 을
+ * 취득 … 신규 주택을 취득한 날부터 … 기간 이내에 종전의 주택을 양도하는 경우」에만 1세대1주택으로 본다 —
+ * 양도하는 주택이 종전의 주택이다. 종전 취득일을 자유 입력으로 받으면 나중에 취득한 주택을 증여하면서 다른
+ * (먼저 산) 주택 날짜를 넣어 일시적 2주택 비과세가 성립해 버린다. 양도세 계산기(`household-house-count.ts`)·판정 메뉴
+ * (`one-house-judgment-temp-two-house.ts`)도 양도 주택 취득일로 고정한다. ⑤ 표시 · ④ 전송 · ⑧ 게이트가 모두 이 값을 쓴다
+ * (3중 패턴). 저장된 `temporaryTwoHouse.previousAcquisitionDate`(옛 자유 입력)는 읽지 않는다.
+ */
+export function giftBurdenedPreviousAcquisitionDate(bgt: BurdenedGiftTransferTaxInput): string {
+  return ymd(bgt.acquisitionDate);
+}
+
+/**
  * 일시적 2주택 블록(세대 주택 수 2)이 열려 있고, 그 양도(증여) 시기에 두 주택의 조정 여부가 기한을
  * 바꾸면 판정 결과(`regulated`)를 돌려준다. 아니면 `null` — 새 입력 칸을 그리지 않고 검증하지 않는다.
  * 주택 여부(`propertyType === "housing"`)는 호출부가 확인한다(⑤는 주택 필드 세트 안에만 있다).
@@ -39,7 +53,7 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
   if ((bgt.householdHousingCount ?? 1) !== 2 || !tt) return null;
   const newAcquisitionDate = ymd(tt.newAcquisitionDate);
   const v = judgeTempTwoHouseFromForm({
-    previousAcquisitionDate: ymd(tt.previousAcquisitionDate),
+    previousAcquisitionDate: giftBurdenedPreviousAcquisitionDate(bgt),
     newHouseAcquisitionDate: newAcquisitionDate,
     transferDate: giftDate ?? "",
     provisoReason: "",
@@ -92,7 +106,7 @@ export function giftBurdenedNewHouseAddressPatch(
  */
 export function giftBurdenedTempTwoHouseDeadlineInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
   const tt = bgt.temporaryTwoHouse;
-  return (bgt.householdHousingCount ?? 1) === 2 && !!tt && !!ymd(tt.previousAcquisitionDate) && !!ymd(tt.newAcquisitionDate);
+  return (bgt.householdHousingCount ?? 1) === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate);
 }
 
 /**

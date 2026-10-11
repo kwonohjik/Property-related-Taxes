@@ -238,18 +238,19 @@ describe("F07 · §155⑳ B 시나리오(§161 안분) — 12억 판정 분모 =
   });
 });
 
-describe("F07 · 부담부증여 분모는 이 정정 범위 밖 — 현행 유지 가드", () => {
+describe("F07 · 부담부증여 분모 = 증여가액 C (1h-G1-1 — 종전 현행 유지 가드 반전)", () => {
   /**
-   * `burdenedGiftDenominator`(소령 §159 · 12억 안분 해석 B — 분모 = 증여가액 C)는 정본 체인의
-   * 최우선 항이지만, 「부담부증여 × §155⑳」 조합의 **도달성이 확인되지 않았다**. 검증되지 않은
-   * 축을 함께 움직이지 않기 위해 이 경로는 부담부증여 입력에서 종전(`transferPrice`)을 그대로
-   * 유지한다.
+   * `burdenedGiftDenominator`(소령 §159 · 12억 안분 해석 B — 분모 = 증여가액 C)는 정본 체인
+   * (`resolveHighValuePriceCheck`)의 최우선 항이다. 종전 가드(F07-BG1)는 「부담부증여 × §155⑳」의 도달성이
+   * 확인되지 않았다는 이유로 이 경로만 `transferPrice`(= 채무 안분 양도가액 B)를 분모로 동결했으나, 해제 조건은
+   * E-1 잔여 C(증여 화면 §155⑳ 카드 개통)로 충족됐다. 「소득세법 시행령」 §155⑳은 거주주택에 §154①을 적용하므로
+   * 일반 1세대1주택 경로(`calcOneHouseProration` — C 분모)와 같은 축이다.
    *
-   * ⇒ 이 anchor는 "정본 체인을 그대로 복사(burdenedGiftDenominator 우선)"하는 확장을 **차단**한다.
-   *   그렇게 바꾸면 분모 30억 → S > 12억 → RH-A2가 되어 아래 단언이 깨진다.
-   *   (부담부증여 축을 실제로 열려면 그 조합의 도달성·해석 B 적용 여부를 먼저 확정할 것.)
+   * 기대값 독립 도출: 취득 4억 · 양도(채무분) 10억 → gain 6억 → 표2 44% 공제 후 336,000,000.
+   *   분모 C = 30억 → (30억−12억)/30억 = 0.6 → 336,000,000 × 18/30 = 201,600,000.
+   *   (종전 분모 B = 10억 ≤ 12억 → RH-A1 · 과세분 0)
    */
-  it("F07-BG1: burdenedGiftDenominator가 있으면 분모를 바꾸지 않는다", () => {
+  it("F07-BG1: burdenedGiftDenominator가 있으면 분모는 C — 고가주택 안분(RH-A2)", () => {
     const g = calculateTransferTax(
       fixture({
         transferPrice: 1_000_000_000,
@@ -260,9 +261,25 @@ describe("F07 · 부담부증여 분모는 이 정정 범위 밖 — 현행 유�
       }),
       rates,
     );
+    expect(g.rentalHousingExceptionDetail!.scenarioId).toBe("RH-A2");
+    expect(g.rentalHousingExceptionDetail!.formulaTrace.ratioHighValue).toBeCloseTo(0.6, 12);
+    expect(g.rentalHousingExceptionDetail!.taxableGain).toBe(201_600_000);
+    expect(g.isExempt).toBe(false);
+  });
+
+  it("F07-BG2(긍정 짝): burdenedGiftDenominator가 12억 이하면 RH-A1 전액 비과세 — 총 물건가가 커도 C가 우선", () => {
+    const g = calculateTransferTax(
+      fixture({
+        transferPrice: 1_000_000_000,
+        acquisitionPrice: 400_000_000,
+        totalPropertyTransferPrice: 2_000_000_000,
+        burdenedGiftDenominator: 1_100_000_000,
+        householdHousingCount: 2,
+        rentalHousingException: rheA,
+      }),
+      rates,
+    );
     expect(g.rentalHousingExceptionDetail!.scenarioId).toBe("RH-A1");
-    expect(g.rentalHousingExceptionDetail!.taxableGain).toBe(0);
-    expect(g.taxableGain).toBe(0);
     expect(g.totalTax).toBe(0);
   });
 });

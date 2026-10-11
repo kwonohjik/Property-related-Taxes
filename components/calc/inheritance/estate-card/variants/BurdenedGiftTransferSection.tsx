@@ -108,6 +108,7 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     bgt.standardPriceAtAcquisition > 0 ||
     bgt.isHousing !== undefined ||
     bgt.isOneHousehold !== undefined ||
+    bgt.isPartialOwnershipGift === true ||
     bgt.acquisitionCause === "inheritance" ||
     bgt.rentalHousingException?.applyException === true ||
     bgt.winWinRentalSpecial === true ||

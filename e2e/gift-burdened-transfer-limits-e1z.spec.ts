@@ -154,7 +154,8 @@ test("[BT-E2E-15] §155⑯·⑱ → 요청 본문 temporaryTwoHouse.publicInstit
     await f.getByRole("textbox", { name: "월" }).fill(m);
     await f.getByRole("textbox", { name: "일" }).fill(d);
   };
-  await fillDate("종전 주택 취득일", "2010", "3", "15");
+  // 종전 주택 = 증여 주택 — 입력 칸이 아니라 위 「취득일」(2010-03-15)이 그대로 표시된다(1h-G1-3)
+  await expect(dialog.getByTestId("bg-transfer-prev-acq-date")).toHaveText("2010-03-15");
   await fillDate("신규 주택 취득일", "2020", "1", "1");
 
   await dialog.getByRole("switch", { name: /공공기관·법인 지방이전 특례/ }).click();

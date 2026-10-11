@@ -259,14 +259,14 @@ describe("케이스 5-a — 1세대1주택 + 12억 초과 부담부증여 (D-0-2
 // 거주요건 → 표1 전환의 완전한 cross-cutting 통합은 후속 PR (별도 PR 신호).
 
 // ============================================================
-// 케이스 12 — 다주택 중과 비스코프 안내 (F-2, 2026-05-12)
+// 케이스 12 — 다주택 중과 한시 배제 적용 고지 (F-2 → 1h-G1-11 정정)
 // ============================================================
 //
 // 부담부증여 + 주택 + 조정대상지역 + 자산 수 ≥ 2 시 result.warnings에 정보성 메시지 첨부.
 // 차단(throw) 아님 — 산출세액은 일반 기준으로 산정되되 결과 카드·사이드바 amber 배지 노출.
 // 정식 §167의3 적용은 한시 유예 종료 시점 확정 후 별도 PR.
 
-describe("케이스 12 — 다주택 중과 비스코프 warnings 첨부", () => {
+describe("케이스 12 — 다주택 중과 한시 배제 적용 고지", () => {
   const case12Input = (overrides: Partial<TransferTaxInput> = {}) =>
     baseTransferInput({
       propertyType: "housing",
@@ -293,12 +293,30 @@ describe("케이스 12 — 다주택 중과 비스코프 warnings 첨부", () =>
       ...overrides,
     });
 
-  it("housing + 조정대상지역 + 자산 수 ≥ 2 → warnings에 §167의3 안내 첨부", () => {
+  // 1h-G1-11 — 종전 F-2 경고(「Phase 2 비스코프 · 한시 유예 기준으로 산정」)는 날짜 게이트가 없어 유예 밖 양도일에도 붙었다.
+  //   이제는 한시 배제가 **실제로 적용된** 결과(2024-03-01 증여 = 유예 창 안)에서만, 정확한 조문으로 고지한다.
+  it("유예 창 안(2024-03-01) 2주택 → 한시 배제 적용 고지 · 소령 §167의10①12의2 가목 · 「Phase 2」 개발 용어 없음", () => {
     const result = calculateTransferTax(case12Input(), rates);
-    expect(result.warnings).toBeDefined();
+    expect(result.isSurchargeSuspended).toBe(true);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings![0]).toMatch(/167의3|다주택 중과/);
-    expect(result.warnings![0]).toMatch(/Phase 2 비스코프|한시 유예/);
+    expect(result.warnings![0]).toContain("제167조의10 제1항 제12호의2 가목");
+    expect(result.warnings![0]).toContain("2026년 5월 9일까지");
+    expect(result.warnings![0]).not.toMatch(/Phase 2|비스코프|별도 PR/);
+  });
+
+  it("유예 밖(2022-05-09 이전 · 2026-05-10 이후)은 중과가 적용되고 한시 유예 고지가 붙지 않는다", () => {
+    for (const d of ["2022-05-09", "2026-05-10"]) {
+      const result = calculateTransferTax(case12Input({ transferDate: new Date(d) }), rates);
+      expect(result.isSurchargeSuspended).toBe(false);
+      expect(result.surchargeType).toBe("multi_house_2");
+      expect((result.warnings ?? []).some((w) => /한시|유예/.test(w))).toBe(false);
+    }
+  });
+
+  it("3주택 이상이면 소령 §167의3①12의2 가목으로 고지한다", () => {
+    const result = calculateTransferTax(case12Input({ householdHousingCount: 3 }), rates);
+    expect(result.isSurchargeSuspended).toBe(true);
+    expect(result.warnings![0]).toContain("제167조의3 제1항 제12호의2 가목");
   });
 
   it("isRegulatedArea=false 시 warnings 미첨부 (회귀)", () => {
