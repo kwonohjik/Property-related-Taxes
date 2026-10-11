@@ -18,6 +18,7 @@ import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/type
 import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
 import { TAX_LABEL } from "@/lib/storage/title-generator";
 import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
+import { inheritedRightHistoryNotice } from "@/lib/calc/history-inherited-right-notice";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 import { HistoryBackupActions } from "@/components/history/HistoryBackupActions";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -512,6 +513,14 @@ export function HistoryClient() {
                     className="mt-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
                   >
                     합산 결과가 저장되지 않은 이력입니다 — 다시 계산하세요.
+                  </p>
+                )}
+                {inheritedRightHistoryNotice(record) && (
+                  <p
+                    data-testid={`inherited-right-notice-${record.id}`}
+                    className="mt-1 rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+                  >
+                    상속 권리 판정 방식이 바뀌기 전에 저장한 이력입니다 — 다시 계산하면 결과가 바뀔 수 있습니다.
                   </p>
                 )}
                 {(() => {
