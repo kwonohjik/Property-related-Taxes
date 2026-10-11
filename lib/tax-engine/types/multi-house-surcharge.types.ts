@@ -554,6 +554,16 @@ export type DeemedOneHouseBasis =
   | "long_term_rental_residence"
   /** E-14a — 조특법 감면주택을 「소유주택으로 보지 아니」해 양도 주택만 남는 경우 — `resolveSurchargeDeemedOneHouse` */
   | "special_act_house_exclusion"
+  /**
+   * #16(G8-3) — §155⑥ 문화유산 주택 + 일반주택 1주택 의제. §155②③ 상속주택·조특법 제외로 2주택이 된 세대에만 선다
+   * (단독 2주택은 종전대로 §167의3①6호·§167의10①10호) — `resolveSurchargeDeemedOneHouse`.
+   */
+  | "cultural_heritage_house"
+  /**
+   * #16(G8-3) — §155⑧ 수도권 밖 부득이 주택 + 일반주택 1주택 의제. 위와 같은 조건(제외로 2주택이 된 세대에만) —
+   * 단독 2주택은 종전대로 §167의10①4호 슬롯(`unavoidableOutsideCapitalHouse`)이 받는다.
+   */
+  | "unavoidable_outside_capital_house"
   /** E-14c — §156의2(주택 + 조합원입주권) 예외 충족 → 1세대1주택 의제 — `resolveSurchargeDeemedOneHouse` */
   | "house_with_redevelopment_right"
   /** E-14c — §156의3(주택 + 분양권) 예외 충족 → 1세대1주택 의제 — `resolveSurchargeDeemedOneHouse` */
@@ -590,6 +600,11 @@ export interface MultiHouseSurchargeInput {
    * §156의2·§156의3(충족한 예외 항 — 예: 「소득세법 시행령 §156의2 ③」)만 채운다. 판정에는 쓰지 않는다.
    */
   deemedOneHouseSource?: string;
+  /**
+   * 의제가 §155②③ 상속주택 제외에 기대어 섰는가 — ⑦·⑥·⑧ 2중첩(#16). 판정에는 쓰지 않고 `true`일 때 중과 상세에
+   * 「2중첩 해석 미확보 — 확인 필요」(`one-house/overlap-notice.ts`)를 싣는다.
+   */
+  deemedRestsOnInheritedExclusion?: boolean;
   /**
    * 영 §167의10①**4호**「제155조제8항에 따른 수도권 밖에 소재하는 주택」.
    *
@@ -678,6 +693,8 @@ export interface ExclusionReason {
     | "inherited_general_house"     // §155②③ 상속주택 보유 일반주택 1주택 의제 (§167의10①15호 · 구 13호) — E-14
     | "long_term_rental_residence"  // §155⑳ 장기임대주택 보유 거주주택 1주택 의제 (§167의10①15호 · 구 14호 · 3주택+ §167의3①13호) — E-14c
     | "special_act_house_exclusion" // 조특법 감면주택 소유주택 제외 → 1주택 의제 (§167의10①15호) — E-14a
+    | "cultural_heritage_house"     // §155⑥ 문화유산 주택 + 일반주택 1주택 의제 — 상속·조특법 제외로 2주택이 된 세대 (§167의10①15호 · 3주택+ §167의3①13호) — #16
+    | "unavoidable_outside_capital_house" // §155⑧ 수도권 밖 부득이 주택 + 일반주택 1주택 의제 — 위와 같음 (§167의10①15호 · 3주택+ §167의3①13호) — #16
     | "right_holding_one_house"     // §156의2·§156의3 1세대1주택 의제 (§167의11①13호 · 합 3 이상 §167의4③7호) — E-14c
     | "long_holding_10y_until_2020_06_30"; // 보유 10년 이상 · 2019.12.17.~2020.6.30. 양도 (§167의3①12호 등 · 2020.2.11. 신설) — E-14j
   detail: string;

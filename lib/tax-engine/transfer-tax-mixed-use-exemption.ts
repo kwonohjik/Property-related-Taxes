@@ -27,6 +27,7 @@ import {
   surcharge15HouseCount,
   inheritedGeneralHouseSurchargeBasis,
   specialActHouseExclusionBasis,
+  culturalOrUnavoidableDeemingBasis,
   verifiedSpecialAct15Exclusions,
   collectKnownHouseExclusionIds,
 } from "./transfer-tax-house-exclusion-step";
@@ -65,6 +66,10 @@ export function judgeMixedUseOneHouseExemption(
   surchargeDeemedOneHouseBy155: DeemedOneHouseBasis | undefined;
   /** `surchargeDeemedOneHouseBy155`의 표시용 근거 조문 — 조특법 감면주택 · §156의2·§156의3 경로(E-14a · E-7) */
   surchargeDeemedOneHouseSource: string | undefined;
+  /** `surchargeDeemedOneHouseBy155`가 상속 제외에 기댄 ⑥·⑧ 2중첩인가 — 중과 상세 고지(#16) */
+  surchargeDeemedRestsOnInheritedExclusion: boolean;
+  /** 4호 슬롯 재판정 값 — `article155SpecialHouses` 미전달이면 undefined(route 값 유지) */
+  surchargeUnavoidableOutsideCapitalSlot: boolean | undefined;
   /** 구 영 §167의11①1호 인용 범위 — §156의2③④·§156의3②③ 직접 경로(E-14f · 단건 `resolveSurchargeDeemedOneHouseDetail`과 같은 값) */
   rightDeemingCitedByOldClause1: boolean | undefined;
   /** §89② 판정(E-7) — `article89Clause2Facts` 미전달이면 undefined(판정하지 않음). */
@@ -225,7 +230,7 @@ export function judgeMixedUseOneHouseExemption(
       temporaryTwoHouse: asset.temporaryTwoHouse,
       // 이 호출은 중과 15호 ① 요소와 §155①④⑤ 비과세 축을 겸한다 — §155⑦ 농어촌주택은 여기 넘기지 않는다
       //   (`ruralHouse` 미전달 → §155⑦ 불성립). ⑥·⑦·⑧의 **비과세** 판정은 아래 `special155Basis`(`article155SpecialHouses`)가 맡는다(S08-3).
-      //   중과 쪽으로의 전달(②+⑥·②+⑦·②+⑧)은 별건 결정 대기라 넘기지 않는다.
+      //   중과 쪽으로의 전달은 아래 `culturalOrUnavoidableDeemingBasis`(#16 — 상속·조특법 제외로 2주택이 된 세대의 ⑥·⑧)가 맡는다.
       // `householdHousingCount`는 §155①(일시적 2주택)·④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
       //   단건 E-3·E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함 · 조특법 제외 후)이다.
       //   E-14 — 단건 15호 ① 요소와 같은 규칙(`surcharge15HouseCount`) · E-14d §155②③ 제외 포함.
@@ -258,8 +263,8 @@ export function judgeMixedUseOneHouseExemption(
    * §155⑥1호·⑦·⑧ — 특례 주택과 일반주택을 「각각 1개씩 소유」한 1세대가 일반주택을 양도하면 「1개의 주택을 소유하고 있는 것으로
    * 보아 제154조제1항을 적용」한다(S08-3). 겸용주택의 주택 부분은 §154③상 §89①3호의 「주택」이라 일반주택이다 — 단건
    * `checkExemptionCore`(E-3.7 ⑧ → E-3.6 ⑥ → E-3.8 ⑦)와 **같은 술어·같은 순서**, 주택 수는 제외 후 값(`effectiveHouseCount`)이다.
-   * §154①(보유·거주)은 아래 `meetsOneHouseRequirements`가 따로 AND한다. 비과세 축 전용 — 중과 15호 ① 요소(`deemedOneHouseBy155`)에는
-   * 넘기지 않는다(②+⑥·②+⑧ 방향은 결정 대기). 선언은 `asset.article155SpecialHouses`뿐이라 미전달이면 판정하지 않는다.
+   * §154①(보유·거주)은 아래 `meetsOneHouseRequirements`가 따로 AND한다. 이 `special155Basis`는 비과세 축 전용이다 — 중과 15호 ① 요소는
+   * 제외 후 2주택이 된 세대의 ⑥·⑧만 `culturalOrUnavoidableDeemingBasis`로 따로 판정한다(#16). 선언은 `asset.article155SpecialHouses`뿐이라 미전달이면 판정하지 않는다.
    */
   const special155Facts = asset.article155SpecialHouses;
   const special155Input =
@@ -379,10 +384,25 @@ export function judgeMixedUseOneHouseExemption(
     houseCount: surcharge15Count,
     inheritedExcludedCount,
     specialActExcludedCount: houseCountExclusionApplied,
+    specialActVerified15Count: verifiedSpecial.specialActVerified15Count,
     transferDate,
   });
+  // #16(G8-3) — 상속·조특법 제외로 2주택이 된 세대의 §155⑥·⑧ 의제. 단건과 같은 술어 · 비과세 축(`special155Basis`)과 같은 선언이다.
+  const cultural155Deemed =
+    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined
+      ? culturalOrUnavoidableDeemingBasis({
+          isOneHousehold: isOneHouseholdForHouseCount,
+          houseCount: surcharge15Count,
+          rawHouseCount: asset.householdHousingCountForExclusion ?? 0,
+          inheritedExcludedCount,
+          specialActExcludedCount: houseCountExclusionApplied,
+          transferDate,
+          culturalHeritageHouse: special155Facts?.culturalHeritageHouse,
+          unavoidableOutsideCapitalHouse: special155Facts?.unavoidableOutsideCapitalHouse,
+        })
+      : undefined;
   const rightDeemed =
-    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined && clause2ForSurcharge
+    deemedOneHouseBy155 === undefined && inheritedDeemed === undefined && specialDeemed === undefined && cultural155Deemed === undefined && clause2ForSurcharge
       ? clause2SurchargeDeemed(clause2ForSurcharge)
       : undefined;
 
@@ -394,7 +414,18 @@ export function judgeMixedUseOneHouseExemption(
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.
     surchargeDeemedOneHouseBy155: surchargeBlocked
       ? undefined
-      : (deemedOneHouseBy155 ?? inheritedDeemed ?? specialDeemed?.basis ?? rightDeemed?.basis),
+      : (deemedOneHouseBy155 ?? inheritedDeemed ?? specialDeemed?.basis ?? cultural155Deemed ?? rightDeemed?.basis),
+    surchargeDeemedRestsOnInheritedExclusion: !surchargeBlocked && cultural155Deemed !== undefined && inheritedExcludedCount > 0,
+    // #16 — 영 §167의10①4호 슬롯의 주택 수는 ① 요소와 같은 제외 후 값이다(route가 원시 수로 만든 boolean을 대체한다).
+    surchargeUnavoidableOutsideCapitalSlot:
+      special155Facts?.unavoidableOutsideCapitalHouse && isOneHouseholdForHouseCount
+        ? qualifiesUnavoidableOutsideCapital({
+            householdHousingCount: surcharge15Count,
+            inheritedHouseExclusionCount: inheritedExcludedCount,
+            transferDate,
+            unavoidableOutsideCapitalHouse: special155Facts.unavoidableOutsideCapitalHouse,
+          })
+        : undefined,
     // E-14a · E-7 — 조특법 · §156의2·§156의3 경로의 근거 조문(표시용). 다른 경로는 없다.
     surchargeDeemedOneHouseSource:
       surchargeBlocked || deemedOneHouseBy155 !== undefined || inheritedDeemed !== undefined

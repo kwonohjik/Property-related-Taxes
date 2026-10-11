@@ -29,6 +29,9 @@ import {
 } from "../presale-right-definition-date";
 import { addDays, addYears } from "date-fns";
 import { doubleMergeOrderOf, REVERSE_DOUBLE_MERGE_NOTICE } from "./merge-deeming";
+import { INHERITED_SPECIAL_OVERLAP_NOTICE, INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID } from "./overlap-notice";
+
+export { INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID };
 import { resolveOneHouseMinHoldingYears } from "../data/one-house-holding-residence-era";
 import { deadlineEndFrom, deadlineFields, isWithinDeadline } from "../civil-period";
 import { TRANSFER } from "../legal-codes";
@@ -486,6 +489,23 @@ export function reverseDoubleMergeUndetermined(
   const ids = new Set(appliedExceptions.map((e) => e.id));
   if (!ids.has("155-4-parental-care-merge") || !ids.has("155-5-marriage-merge")) return [];
   return [{ id: REVERSE_DOUBLE_MERGE_UNVERIFIED_ID, reason: REVERSE_DOUBLE_MERGE_NOTICE }];
+}
+
+/**
+ * §155②③ 상속주택 제외 뒤 §155⑥·⑦·⑧ 특례로 비과세·부분과세가 섰을 때 2중첩 확인 필요를 낸다(#16).
+ * 적용 특례 근거(`appliedExceptions`) 중 ⑥(`155-6-`)·⑦(`155-7-rural:`)·⑧(`155-8-`)이 있고 상속 제외가 걸렸을 때만이다.
+ * ⑦은 일시적 2주택과의 3주택 중첩(D3)도 같은 id를 쓰지만 그 갈래는 상속 제외가 겹치면 성립하지 않는다.
+ */
+export function inheritedSpecialOverlapUndetermined(
+  input: Pick<OneHouseJudgeInput, "inheritedHouseExclusionCount">,
+  appliedExceptions: readonly OneHouseAppliedException[],
+  settled: boolean,
+): OneHouseUndetermined[] {
+  if (!settled || (input.inheritedHouseExclusionCount ?? 0) <= 0) return [];
+  const rests = appliedExceptions.some(
+    (e) => e.id.startsWith("155-6-") || e.id.startsWith("155-7-rural:") || e.id.startsWith("155-8-"),
+  );
+  return rests ? [{ id: INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID, reason: INHERITED_SPECIAL_OVERLAP_NOTICE }] : [];
 }
 
 /**
