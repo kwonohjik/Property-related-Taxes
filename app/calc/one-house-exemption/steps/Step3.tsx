@@ -483,6 +483,21 @@ export function Step3({ form, onChange }: Props) {
             title="담보주택을 보유한 직계존속과 동거봉양 합가로 2주택이 되었다"
             tone="violet"
           />
+          {/*
+            §155의2② 「먼저 양도하는 주택」 — 법정 요건이다. 합가일 칸(`MergeDateSection`)은 합가일을 입력해야만 열려서, 기한이 없는
+            이 특례에서는 합가일을 비운 세대가 이 선언을 할 길이 없었다(X3-5). 값은 그 칸과 **같은 필드**(`isFirstTransferredInMerge`)다 —
+            두 토글이 서로를 복사하지 않는다. ④는 합가일이나 이 칩이 있을 때만 이 값을 보낸다(`buildMergePayload`).
+          */}
+          {form.longTermMortgageParentalCareMerge && (
+            <ToggleCard
+              data-testid="ltm-first-transferred-in-merge"
+              variant="chip"
+              checked={form.isFirstTransferredInMerge}
+              onCheckedChange={(isFirstTransferredInMerge) => onChange({ isFirstTransferredInMerge })}
+              title="합가 후 세대에서 먼저 양도하는 주택이다"
+              tone="violet"
+            />
+          )}
           <ToggleCard
             variant="chip"
             checked={form.longTermMortgageTransferredBeforeMaturity}

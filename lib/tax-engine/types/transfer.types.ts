@@ -864,6 +864,16 @@ export interface TransferTaxInput {
    */
   inheritedHouseExclusionCount?: number;
   /**
+   * §155②③ 상속주택 제외 **정본 결과 전체** echo (S07-11) — STEP 0.95(`runHouseCountExclusionStep`)가 채운다.
+   *
+   * 판정 서브트리(`collectInheritedUnmet` · `era-undetermined`)는 `OneHouseJudgeInput`의 키만 읽으므로, 재개발 신축주택처럼
+   * 입력이 서브트리 진입 전에 바뀌는 경로(취득일 = 준공일 치환 · `redevelopment` strip)에서 정본을 다시 부르면
+   * STEP 0.95와 **다른 입력**으로 다른 답이 나온다. 그래서 정본이 낸 결과를 그대로 이어받게 한다 —
+   * 서브트리가 같은 판정을 두 번 하지 않는다. 사용자 입력이 아니라 echo다(Zod 대상 아님).
+   * 비어 있으면(엔진 직접 호출 등) 서브트리가 입력으로 정본을 부른다(종전 동작).
+   */
+  inheritedHouseExclusionDetail?: import("../transfer-inheritance-exclusion").InheritedHouseExclusionResult;
+  /**
    * `knownHouseExclusionCount` 중 **어느 명부 행인지 특정된** 몫(PR-3 — `merge-composition-
    * unknown-unfavorable.plan.md` §3-4). §155②③ 상속주택(`excludedHouses[].houseId`) ·
    * 조특법 §99의4·§98의9·보유 감면주택(행에 연결된 선언만) — `resolveMergeComposition`이

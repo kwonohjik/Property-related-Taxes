@@ -51,7 +51,7 @@ import {
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 import { resolveRental4hoRegistration } from "./rental-registration-4ho";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
-import { resolveInheritedHouseExclusionFromInput } from "../transfer-inheritance-exclusion";
+import { resolveInheritedHouseExclusionForJudgment } from "../transfer-inheritance-exclusion";
 import { INHERITANCE_GENERAL_HOUSE_HELD_START } from "../data/inheritance-general-house-era";
 
 // §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
@@ -251,7 +251,7 @@ export function collectEraUndetermined(
   const reInheritedMatters =
     reInheritedIds.length > 0 &&
     input.acquisitionDate >= INHERITANCE_GENERAL_HOUSE_HELD_START &&
-    resolveInheritedHouseExclusionFromInput(input).excludedHouses.some((e) => reInheritedIds.includes(e.houseId));
+    resolveInheritedHouseExclusionForJudgment(input).excludedHouses.some((e) => reInheritedIds.includes(e.houseId));
   if (reInheritedMatters) {
     out.push({
       id: "155-2-reinheritance-reference-date-unverified",

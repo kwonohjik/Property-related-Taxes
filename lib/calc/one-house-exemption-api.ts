@@ -353,13 +353,21 @@ export async function callOneHouseExemptionAPI(
   return (json as { data: OneHouseExemptionResponse }).data;
 }
 
-/** 합가 3필드(§155④⑤) — 게이트는 호출부(`judgmentMergeInputVisible`)가 건다. */
+/**
+ * 합가 3필드(§155④⑤) — 게이트는 호출부(`judgmentMergeInputVisible`)가 건다.
+ *
+ * 「먼저 양도」(`isFirstTransferredInMerge`)는 **그 토글이 화면에 있을 때만** 보낸다(X3-5): 합가일 칸 아래 토글(합가일이 있을 때)
+ * 또는 §155의2② 칩 아래 토글(칩이 켜져 있을 때 — `Step3`). 둘 다 숨었는데 남은 값은 사용자가 볼 수 없는 선언이다.
+ */
 function buildMergePayload(form: OneHouseJudgmentFormData) {
+  const firstTransferToggleVisible =
+    !!(form.marriageDate || form.parentalCareMergeDate) ||
+    (form.longTermMortgageSpecial && form.longTermMortgageParentalCareMerge);
   return {
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
     ...(form.parentalCareMergeDate
       ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
       : {}),
-    ...(form.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
+    ...(form.isFirstTransferredInMerge && firstTransferToggleVisible ? { isFirstTransferredInMerge: true } : {}),
   };
 }

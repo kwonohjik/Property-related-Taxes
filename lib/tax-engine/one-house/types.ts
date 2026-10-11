@@ -12,6 +12,10 @@
  *    전수 목록**이고, 컴파일러가 그 목록을 강제한다. 서브트리가 새 필드를 읽으면 이 Pick에
  *    없어서 `tsc`가 막고, 이 Pick에 추가하면 어댑터(`judge.ts`)의 키 커버리지 가드가 막는다.
  *    ⇒ 「판정 메뉴가 넘기는 사실만으로 계산기와 같은 판정이 나온다」가 **유지되는 불변식**이 된다.
+ *
+ * ⚠️ 이 불변식은 **직접 읽기만** 막는다. `OneHouseJudgeInput`을 **다른 필드를 읽는 함수**(예: `redevelopment`를 읽는
+ *    `resolveInheritedHouseExclusionFromInput`)에 그대로 넘기는 간접 읽기는 tsc가 못 잡는다(S07-11 실측).
+ *    그런 정본 결과는 STEP 0.95가 낸 echo(`inheritedHouseExclusionDetail`)로 받는다 — 서브트리가 다시 부르지 않는다.
  */
 import type { FinalOneHouseRestartEcho } from "./final-house-restart";
 import type { TransferTaxInput } from "../types/transfer.types";
@@ -80,6 +84,7 @@ export type OneHouseJudgeInput = Pick<
   | "sellingHouseId"
   | "knownHouseExclusionCount"
   | "inheritedHouseExclusionCount"
+  | "inheritedHouseExclusionDetail"
   | "knownHouseExclusionHouseIds"
   | "noMergeRosterInputPath"
   // 혼인합가 1199(양쪽 2주택 이상) — 명부 밖 장기임대주택의 혼인 전 보유자(`rentalUnits[].mergeOrigin`)
@@ -184,6 +189,8 @@ export type OneHouseFacts = {
   knownHouseExclusionCount?: TransferTaxInput["knownHouseExclusionCount"];
   /** 위 제외 중 §155②③ 상속주택 몫 — §155 특례 중첩 상한(세 특례 불허) echo. */
   inheritedHouseExclusionCount?: TransferTaxInput["inheritedHouseExclusionCount"];
+  /** STEP 0.95 §155②③ 제외 정본 결과 echo — 판정 서브트리가 같은 판정을 다른 입력으로 다시 하지 않게 한다(S07-11). */
+  inheritedHouseExclusionDetail?: TransferTaxInput["inheritedHouseExclusionDetail"];
   /** 위 제외 중 명부 행으로 특정된 몫(PR-3) — §155④⑤ 합가 전 구성 판정의 echo. */
   knownHouseExclusionHouseIds?: TransferTaxInput["knownHouseExclusionHouseIds"];
   /** 명부 입력 경로가 없는 호출부(부담부증여) echo — §155④⑤ 합가 전 구성 판정(사용자 결정 2026-10-05). */

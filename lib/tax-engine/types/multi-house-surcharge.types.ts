@@ -33,7 +33,9 @@ export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | 
 /** 합가 전 보유 쪽 — 양도자(본인) 쪽 · 합친 상대(배우자 또는 동거봉양 가족) 쪽. */
 /**
  * 합가 전 보유 쪽. `second_merge_side` — **혼인·동거봉양 이중 합가**(D4)에서 나중에 합친 쪽(혼인이 먼저면 동거봉양으로 합친 가족, 동거봉양이 먼저면 혼인한 배우자).
- * 그때 `counterpart_side`는 배우자 쪽이다. 단일 합가에서는 쓰지 않는다(구성 판정이 불성립으로 센다).
+ * 그때 `counterpart_side`는 **먼저 합친 쪽**이다(혼인이 먼저면 배우자, 동거봉양이 먼저면 합친 가족 — `lib/calc/merge-house-origin.ts`).
+ * 단일 합가(합가일이 하나)에서는 쓰지 않는다(구성 판정이 불성립으로 센다). 합가일이 둘 다 있는 **2주택**에서는 이 값이
+ * 어느 합가가 2주택을 만들었는지 가리킨다(`resolveTwoHouseMergeAxis` — `counterpart_side` = 먼저 합친 합가, `second_merge_side` = 나중에 합친 합가).
  */
 export type MergeOrigin = "seller_side" | "counterpart_side" | "second_merge_side";
 
