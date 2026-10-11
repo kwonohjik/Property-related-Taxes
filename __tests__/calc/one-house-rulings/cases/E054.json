@@ -19,7 +19,8 @@
         {
           "id": "seoul",
           "region": "capital",
-          "acquisitionDate": "2004-09-15"
+          "acquisitionDate": "2004-09-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

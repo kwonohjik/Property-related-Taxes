@@ -10,6 +10,7 @@ import { describe, it, expect } from "vitest";
 import { buildHouseholdSpecialPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import { RETURN_TO_FARM_ROW_OK } from "../_helpers/rural-return-to-farm-facts";
 
 const row = (over: Partial<HouseEntry>): HouseEntry =>
   ({
@@ -68,6 +69,7 @@ function ruralForm(wholeHouseholdMoved: boolean) {
       acquisitionDate: "2022-01-10",
       oneHouseRuralHouse: true,
       ruralHouseKind: "return_to_farm",
+      ...RETURN_TO_FARM_ROW_OK,
       ruralOutsideCapitalEupMyeon: true,
       ruralLandAreaSqm: "300",
       ruralWholeHouseholdMoved: wholeHouseholdMoved,

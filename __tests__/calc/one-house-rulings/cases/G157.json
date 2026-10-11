@@ -22,7 +22,8 @@
         {
           "id": "C",
           "acquisitionDate": "2016-12-16",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         }
       ],
       "presaleRights": [
@@ -64,7 +65,8 @@
         {
           "id": "C",
           "acquisitionDate": "2016-12-16",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         }
       ]
     },

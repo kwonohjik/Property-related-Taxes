@@ -38,6 +38,7 @@ import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/tr
 import { resolveArticle89Clause2 } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { PresaleRight, HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const mockRates = makeMockRates();
 const run = (input: TransferTaxInput) => calculateTransferTax(input, mockRates);
@@ -216,6 +217,7 @@ describe("§156의2⑪ · §156의3⑧ — 이농주택**만**", () => {
       twoHouse({
         ruralHouse: {
           kind: "return_to_farm",
+          ...RETURN_TO_FARM_OK,
           isOutsideCapitalEupMyeon: true,
           acquisitionDate: new Date("2016-01-01"),
           landAreaSqm: 500,

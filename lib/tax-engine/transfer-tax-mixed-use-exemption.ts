@@ -35,6 +35,7 @@ import {
   resolveInheritedHouseExclusionFromInput,
   buildInheritedExclusionSteps,
 } from "./transfer-inheritance-exclusion";
+import { resolvePopulationDecline71_2 } from "./transfer-reductions/population-decline-71-2";
 import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./transfer-reductions";
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
@@ -196,6 +197,43 @@ export function judgeMixedUseOneHouseExemption(
         })
       : undefined;
   const inheritedExcludedCount = inheritedExclusion?.excludedCount ?? 0;
+  /**
+   * 조특법 §71의2① 인구감소지역주택(결정 #42) — 겸용 경로는 `runHouseCountExclusionStep`을 타지 않고 위 두 resolver를 직접 부르므로 여기서도 같은 평가기를
+   * 부른다(안 부르면 겸용 양도에서만 조용히 빠진다). 선언이 아니라 명부에서 도출 — 같은 행을 다른 제외가 이미 뺐으면 한 번만 뺀다.
+   */
+  if (
+    asset.householdHousingCountForExclusion !== undefined &&
+    isOneHouseholdForHouseCount &&
+    asset.multiHouse?.houses &&
+    asset.multiHouse.sellingHouseId
+  ) {
+    const pop = resolvePopulationDecline71_2({
+      houses: asset.multiHouse.houses,
+      sellingHouseId: asset.multiHouse.sellingHouseId,
+      transferDate,
+      presaleRights: asset.multiHouse.presaleRights ?? [],
+      alreadyExcludedIds: new Set(
+        collectKnownHouseExclusionIds({
+          hceApplied: hceAppliedForMerge,
+          specialEntries: specialEntriesForMerge,
+          inheritedExcludedHouses: inheritedExclusion?.excludedHouses,
+        }),
+      ),
+      otherExcludedCount: houseCountExclusionApplied + inheritedExcludedCount,
+      householdHousingCount: asset.householdHousingCountForExclusion,
+      sellingIsHousing: true,
+    });
+    if (pop.entries.length > 0) {
+      const merged = {
+        entries: [...specialEntriesForMerge, ...pop.entries],
+        excludedCount: (mixedSpecialHouseExclusionDetail?.excludedCount ?? 0) + pop.excludedCount,
+      };
+      mixedSpecialHouseExclusionDetail = merged;
+      specialEntriesForMerge = merged.entries;
+      houseCountExclusionApplied += pop.excludedCount;
+      verifiedSpecial = verifiedSpecialAct15Exclusions(merged, hceAppliedForMerge);
+    }
+  }
   // PR-3 — §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)이 명부에서 뺄 행 id(사용자 결정 Q-4).
   const knownHouseExclusionHouseIds = collectKnownHouseExclusionIds({
     hceApplied: hceAppliedForMerge,

@@ -1,86 +1,87 @@
 [
- {
-  "id": "G049-era",
-  "docNo": "서일46014-11681",
-  "docDate": "2003.11.24.",
-  "basis": "era",
-  "today": "2004-06-16",
-  "summary": "재건축 연립주택(약 15년 보유·8년 거주)의 입주권 양도 — 세대가 조특법 §98 미분양주택(1997 취득)을 함께 보유",
-  "form": {
-   "isOneHousehold": true,
-   "transferDate": "2004-06-15",
-   "contractTotalPrice": "400000000",
-   "asset": {
-    "assetKind": "right_to_move_in",
-    "redevSubject": "right",
-    "redevExemptionEligibleAtApproval": "yes",
-    "acquisitionDate": "1988-11-15",
-    "redevApprovalDate": "2003-12-08"
-   },
-   "houses": [
-    {
-     "id": "unsold98",
-     "region": "capital",
-     "acquisitionDate": "1997-06-15",
-     "countExclusion": {
-      "kind": "special",
-      "special": {
-       "article": "unsold_98",
-       "houseAcquisitionDate": "",
-       "houseContractDate": "",
-       "isNationalHousing": false,
-       "requirementsConfirmed": true
-      }
-     }
-    }
-   ]
+  {
+    "id": "G049-era",
+    "docNo": "서일46014-11681",
+    "docDate": "2003.11.24.",
+    "basis": "era",
+    "today": "2004-06-16",
+    "summary": "재건축 연립주택(약 15년 보유·8년 거주)의 입주권 양도 — 세대가 조특법 §98 미분양주택(1997 취득)을 함께 보유",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2004-06-15",
+      "contractTotalPrice": "400000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "acquisitionDate": "1988-11-15",
+        "redevApprovalDate": "2003-12-08"
+      },
+      "houses": [
+        {
+          "id": "unsold98",
+          "region": "capital",
+          "acquisitionDate": "1997-06-15",
+          "countExclusion": {
+            "kind": "special",
+            "special": {
+              "article": "unsold_98",
+              "houseAcquisitionDate": "",
+              "houseContractDate": "",
+              "isNationalHousing": false,
+              "requirementsConfirmed": true
+            }
+          },
+          "acquisitionOrigin": "general"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(입주권 양도의 조특법 소유주택 제외 — 사용자 결정 2026-10-08 「해석례대로 전 기간」). 회신: 입주권(입주자로 선정된 지위) 비과세 판정에서 조특법 §98① 미분양주택은 소유주택에서 제외 → 다른 주택이 없으므로 비과세. 표현: 연립 취득 1988-11-15 가정(약 15년 보유)·사업계획승인 2003-12-08(당시 재건축 기준일)·인가일 현재 요건 선언 yes, 명부 §98 행(1997-06-15 취득·제외 선언), 양도 2004-06-15 가정·4억. 관측: 가목 비과세 — 명부 §98 행을 다른 주택에서 뺐다(houseCount.excluded unsold98)."
   },
-  "expected": {
-   "isExempt": true
-  },
-  "bucket": "match",
-  "note": "match(입주권 양도의 조특법 소유주택 제외 — 사용자 결정 2026-10-08 「해석례대로 전 기간」). 회신: 입주권(입주자로 선정된 지위) 비과세 판정에서 조특법 §98① 미분양주택은 소유주택에서 제외 → 다른 주택이 없으므로 비과세. 표현: 연립 취득 1988-11-15 가정(약 15년 보유)·사업계획승인 2003-12-08(당시 재건축 기준일)·인가일 현재 요건 선언 yes, 명부 §98 행(1997-06-15 취득·제외 선언), 양도 2004-06-15 가정·4억. 관측: 가목 비과세 — 명부 §98 행을 다른 주택에서 뺐다(houseCount.excluded unsold98)."
- },
- {
-  "id": "G049-current",
-  "docNo": "서일46014-11681",
-  "docDate": "2003.11.24.",
-  "basis": "current",
-  "today": "2026-10-07",
-  "summary": "1주택이 관리처분인가로 입주권이 된 세대가 조특법 §98 미분양주택(1997 취득)을 함께 보유한 상태에서 입주권 양도 (2026)",
-  "form": {
-   "isOneHousehold": true,
-   "transferDate": "2026-06-15",
-   "contractTotalPrice": "800000000",
-   "asset": {
-    "assetKind": "right_to_move_in",
-    "redevSubject": "right",
-    "redevExemptionEligibleAtApproval": "yes",
-    "acquisitionDate": "2010-03-15",
-    "redevApprovalDate": "2023-05-15"
-   },
-   "houses": [
-    {
-     "id": "unsold98",
-     "region": "capital",
-     "acquisitionDate": "1997-06-15",
-     "countExclusion": {
-      "kind": "special",
-      "special": {
-       "article": "unsold_98",
-       "houseAcquisitionDate": "",
-       "houseContractDate": "",
-       "isNationalHousing": false,
-       "requirementsConfirmed": true
-      }
-     }
-    }
-   ]
-  },
-  "expected": {
-   "isExempt": true
-  },
-  "bucket": "match",
-  "note": "match(G049-era와 같은 축 — 현행). 현행 규칙: 조특법이 소유주택으로 보지 않는 주택(§98 미분양주택 등)은 §89①4호 입주권 비과세의 다른 주택 수에서도 뺀다. 구성: 기존주택 2010-03-15·관리처분인가 2023-05-15·양도 2026-06-15·8억·비조정, 명부 §98 행 1997-06-15(제외 선언). 관측: 가목 비과세."
- }
+  {
+    "id": "G049-current",
+    "docNo": "서일46014-11681",
+    "docDate": "2003.11.24.",
+    "basis": "current",
+    "today": "2026-10-07",
+    "summary": "1주택이 관리처분인가로 입주권이 된 세대가 조특법 §98 미분양주택(1997 취득)을 함께 보유한 상태에서 입주권 양도 (2026)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2026-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "acquisitionDate": "2010-03-15",
+        "redevApprovalDate": "2023-05-15"
+      },
+      "houses": [
+        {
+          "id": "unsold98",
+          "region": "capital",
+          "acquisitionDate": "1997-06-15",
+          "countExclusion": {
+            "kind": "special",
+            "special": {
+              "article": "unsold_98",
+              "houseAcquisitionDate": "",
+              "houseContractDate": "",
+              "isNationalHousing": false,
+              "requirementsConfirmed": true
+            }
+          }
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(G049-era와 같은 축 — 현행). 현행 규칙: 조특법이 소유주택으로 보지 않는 주택(§98 미분양주택 등)은 §89①4호 입주권 비과세의 다른 주택 수에서도 뺀다. 구성: 기존주택 2010-03-15·관리처분인가 2023-05-15·양도 2026-06-15·8억·비조정, 명부 §98 행 1997-06-15(제외 선언). 관측: 가목 비과세."
+  }
 ]

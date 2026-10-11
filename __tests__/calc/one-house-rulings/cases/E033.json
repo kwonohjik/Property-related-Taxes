@@ -19,7 +19,8 @@
         {
           "id": "c",
           "region": "non_capital",
-          "acquisitionDate": "2009-06-30"
+          "acquisitionDate": "2009-06-30",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -51,7 +52,8 @@
         {
           "id": "c",
           "region": "non_capital",
-          "acquisitionDate": "2010-03-15"
+          "acquisitionDate": "2010-03-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

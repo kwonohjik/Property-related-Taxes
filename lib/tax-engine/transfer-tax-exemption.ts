@@ -18,6 +18,7 @@ import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { article89Clause2PostManagementNotice } from "./transfer-tax-89-2-consequences";
 import { meetsReplacementHouse } from "./one-house/replacement-house";
 import { buildEraNoticeRelevance } from "./one-house/era-notice-relevance";
+import { returnToFarmPostManagementNotice } from "./one-house/rural-return-to-farm-facts";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { RENTAL_4HO_REASON, rental4hoLegalBasis } from "./one-house/rental-registration-4ho";
@@ -173,13 +174,19 @@ export function checkExemption(
   // §156의2⑬·§156의3⑩ 사후관리(추징) — 계산기 경고와 같은 leaf·같은 문장(G5-7). 자기선언으로 비과세를 받았을 때만 있다.
   const postManagementNotice = article89Clause2PostManagementNotice(article89Clause2, settled, input.transferDate);
   const clause2Exception = article89Clause2.exception;
+  // §155⑫ 귀농주택 사후관리(추징) — 계산기 경고와 같은 문장(`returnToFarmPostManagementNotice`). 귀농 특례로 비과세를 받았을 때만 있다.
+  const ruralNotice =
+    settled && appliedExceptions.some((e) => e.id === "155-7-rural:return_to_farm")
+      ? returnToFarmPostManagementNotice(input.ruralHouse)
+      : undefined;
+  const postNotices = [postManagementNotice, ruralNotice].filter((n): n is string => !!n);
 
   return {
     ...verdict,
     article89Clause2,
     // §89② 배제일 때만 — 계산기 미선언·확인 필요 고지가 「결론을 가를 때만」 나가도록 본체 판정 결과를 올린다(G5-8).
     ...(excluded ? { coreWouldPass } : {}),
-    ...(postManagementNotice ? { postManagementNotices: [postManagementNotice] } : {}),
+    ...(postNotices.length > 0 ? { postManagementNotices: postNotices } : {}),
     appliedExceptions,
     pending,
     undetermined: [

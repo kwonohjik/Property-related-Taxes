@@ -67,6 +67,7 @@ const B: HouseEntry = {
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 };
 /** 영 §167의3①1호 — 지방(VALUE) 기준시가 2억, 양도 주택보다 **나중** 취득 → 도출이 「신규 주택」으로 고른다. */
 const LOCAL_CHEAP: HouseEntry = {

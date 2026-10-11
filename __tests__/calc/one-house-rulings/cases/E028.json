@@ -29,12 +29,14 @@
               "isAdjacentArea": false,
               "meetsLocationRequirement": true
             }
-          }
+          },
+          "acquisitionOrigin": "general"
         },
         {
           "id": "new",
           "region": "non_capital",
-          "acquisitionDate": "2014-10-15"
+          "acquisitionDate": "2014-10-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

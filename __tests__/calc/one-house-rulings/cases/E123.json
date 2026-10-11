@@ -28,7 +28,8 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2006-08-15"
+          "acquisitionDate": "2006-08-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "parentalCareParentAge": "over_60"
@@ -70,7 +71,8 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2024-08-15"
+          "acquisitionDate": "2024-08-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "parentalCareParentAge": "over_60"

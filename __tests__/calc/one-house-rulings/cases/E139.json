@@ -27,7 +27,8 @@
           "id": "c",
           "region": "non_capital",
           "acquisitionDate": "2014-01-03",
-          "mergeOrigin": "seller_side"
+          "mergeOrigin": "seller_side",
+          "acquisitionOrigin": "general"
         }
       ],
       "parentalCareParentAge": "over_60"

@@ -105,6 +105,8 @@ const JUDGE_INPUT_KEYS = [
   "residenceRightConversionDate",
   // 결정 #33·#34·#38 — 증여받은 주택의 증여자와 같은 세대 사실
   "giftHouseholdBasis",
+  // 결정 #42 — 조특법 §71의2 후보 중 사실을 확정하지 못한 건(엔진이 채운다 · 주택 수 제외 스텝의 echo)
+  "popDecline71_2Unconfirmed",
 ] as const;
 
 const _frozenKeyGuards: [

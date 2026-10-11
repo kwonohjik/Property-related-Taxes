@@ -26,7 +26,8 @@
         {
           "id": "B",
           "region": "capital",
-          "acquisitionDate": "2018-12-15"
+          "acquisitionDate": "2018-12-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

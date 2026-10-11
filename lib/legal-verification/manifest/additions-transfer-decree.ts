@@ -720,4 +720,15 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // 결정 #42 — 인구감소지역주택의 범위·과세특례신고서(양도세 ①). 원문 MST 288915 실독 2026-10-11.
+    id: "TRANSFER_DECREE.POP_DECLINE_HOUSE_68_2",
+    citation: "조특령 §68의2",
+    keywords: [
+      "인구감소지역주택",
+      "취득 당시 인구감소지역에 소재할 것",
+      "과세특례신고서를 제출해야 한다",
+    ],
+    keywordMode: "ALL",
+  },
 ];

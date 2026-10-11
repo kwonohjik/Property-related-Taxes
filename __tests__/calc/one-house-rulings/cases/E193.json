@@ -46,12 +46,14 @@
           "inheritedDate": "2012-12-11",
           "isCoInherited": true,
           "isLargestCoInheritedShareholder": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "gen",
           "acquisitionDate": "2016-06-30",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         }
       ],
       "temporaryTwoHouseSpecial": true,
@@ -111,12 +113,14 @@
           "inheritedDate": "2012-12-11",
           "isCoInherited": true,
           "isLargestCoInheritedShareholder": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "gen",
           "acquisitionDate": "2024-06-30",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         }
       ],
       "temporaryTwoHouseSpecial": true,

@@ -18,7 +18,8 @@
         {
           "id": "b",
           "region": "non_capital",
-          "acquisitionDate": "2021-07-20"
+          "acquisitionDate": "2021-07-20",
+          "acquisitionOrigin": "general"
         }
       ],
       "presaleRights": [
@@ -59,7 +60,8 @@
         {
           "id": "c",
           "region": "non_capital",
-          "acquisitionDate": "2023-06-15"
+          "acquisitionDate": "2023-06-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "presaleRights": [

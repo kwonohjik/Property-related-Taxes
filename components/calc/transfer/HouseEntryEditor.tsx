@@ -32,6 +32,9 @@ import { HouseEntryCountExclusionSection } from "@/components/calc/transfer/Hous
 import { HouseEntrySameDaySection } from "@/components/calc/transfer/HouseEntrySameDaySection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntryMergeOriginBlock";
+import { HouseEntryNewHouseOriginBlock } from "@/components/calc/transfer/HouseEntryNewHouseOriginBlock";
+import { HouseEntryPopDeclineBlock } from "@/components/calc/transfer/HouseEntryPopDeclineBlock";
+import { popDeclineRowCandidate } from "@/lib/calc/pop-decline-71-2-scope";
 import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiveRentalFields";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
@@ -77,6 +80,18 @@ interface Props {
    * 입주권 양도(§89①4호)에는 이 순서 규정이 닿지 않아 열지 않는다.
    */
   sameDayEnabled?: boolean;
+  /**
+   * 이 행에 신규 주택 **취득 경위** 질문을 연다(§155① — 양도 주택보다 나중에 취득한 행 · 결정 #43). 호출부가
+   * `newHouseOriginQuestionVisible`로 정한다 — 두 화면 모두 같은 술어다.
+   */
+  newHouseOriginEnabled?: boolean;
+  /**
+   * 조특법 §71의2① 인구감소지역주택 질문을 연다(결정 #42) — 판정 메뉴는 주택·입주권 양도 모두, 계산기는 주택·재개발 완공 아파트 양도만
+   * (입주권 양도의 계산기 적용은 S11-1 결정을 따른다). 후보 행(취득일 창 + 인구감소지역)에만 그린다.
+   */
+  popDeclineEnabled?: boolean;
+  /** 양도(종전) 주택 취득일 — §71의2 「양도 주택을 권리로 받았는가」 질문의 노출 게이트 */
+  sellingAcquisitionDate?: string;
 }
 
 // ============================================================
@@ -615,6 +630,9 @@ export function HouseEntryEditor({
   householdGiftEnabled = false,
   judgmentMenu = false,
   sameDayEnabled = false,
+  newHouseOriginEnabled = false,
+  popDeclineEnabled = false,
+  sellingAcquisitionDate,
 }: Props) {
   return (
     <div className="space-y-3">
@@ -628,6 +646,8 @@ export function HouseEntryEditor({
       />
       {/* ①과 같은 양도 시점 축 — 이 주택이 현재 양도 주택과 같은 날 양도되는가(§154⑨). 켜지 않으면 일반 보유 주택이다. */}
       {sameDayEnabled && <HouseEntrySameDaySection house={house} onUpdate={onUpdate} />}
+      {/* 취득일(①) 바로 다음 — 신규 주택 취득 경위(분양권·입주권 유래)가 §155① 선후를 가른다(결정 #43). */}
+      {newHouseOriginEnabled && <HouseEntryNewHouseOriginBlock house={house} onUpdate={onUpdate} />}
       {/* 취득일(①) 바로 다음 — 합가 후 취득 여부가 그 날짜로 갈린다. */}
       {mergeContext && (
         <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />
@@ -644,6 +664,10 @@ export function HouseEntryEditor({
       {/* ⑥ 조특법 소유주택 의제 — ⑤(소령 §155)와 근거 법률·요건이 다르다 */}
       {countExclusionEnabled && (
         <HouseEntryCountExclusionSection house={house} onUpdate={onUpdate} transferDate={transferDate} />
+      )}
+      {/* ⑥′ 조특법 §71의2① 인구감소지역주택 — 선언이 아니라 명부에서 도출하는 의제라 토글 없이 과거 사실만 받는다(결정 #42) */}
+      {popDeclineEnabled && popDeclineRowCandidate(house) && (
+        <HouseEntryPopDeclineBlock house={house} onUpdate={onUpdate} sellingAcquisitionDate={sellingAcquisitionDate} />
       )}
     </div>
   );

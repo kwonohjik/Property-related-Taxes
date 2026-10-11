@@ -26,7 +26,8 @@
         {
           "id": "new",
           "region": "non_capital",
-          "acquisitionDate": "2003-02-26"
+          "acquisitionDate": "2003-02-26",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -66,7 +67,8 @@
         {
           "id": "new",
           "region": "non_capital",
-          "acquisitionDate": "2025-04-21"
+          "acquisitionDate": "2025-04-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -106,7 +108,8 @@
         {
           "id": "new",
           "region": "non_capital",
-          "acquisitionDate": "2025-04-21"
+          "acquisitionDate": "2025-04-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -146,7 +149,8 @@
         {
           "id": "new",
           "region": "non_capital",
-          "acquisitionDate": "2025-04-21"
+          "acquisitionDate": "2025-04-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },

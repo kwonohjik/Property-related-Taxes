@@ -24,7 +24,8 @@
           "id": "spouse",
           "region": "capital",
           "acquisitionDate": "2004-05-01",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "counterpart_side",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "parents",
@@ -112,7 +113,8 @@
           "id": "spouse",
           "region": "capital",
           "acquisitionDate": "2004-05-01",
-          "mergeOrigin": "second_merge_side"
+          "mergeOrigin": "second_merge_side",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "parents",
@@ -155,7 +157,8 @@
           "id": "spouse",
           "region": "capital",
           "acquisitionDate": "2004-05-01",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "counterpart_side",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "parents",

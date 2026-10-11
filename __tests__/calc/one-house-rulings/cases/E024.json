@@ -18,7 +18,8 @@
         {
           "id": "b",
           "region": "non_capital",
-          "acquisitionDate": "1999-06-15"
+          "acquisitionDate": "1999-06-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

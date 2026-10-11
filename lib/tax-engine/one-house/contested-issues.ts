@@ -11,6 +11,7 @@
  * | `155-3-same-household-co-inherited-minority` (C2) | 동일세대원에게서 상속받은 공동상속주택 소수지분 | A — §155② 단서 적용 | 그 행에 §155② 단서(동일세대 게이트)를 적용하지 않음 |
  * | `155-4-parental-care-merge-right-sale` (C6) | 동거봉양 합가 후 조합원입주권 양도 | B — 입주권에 §155④ 부적용 | 혼인합가와 같은 「합가 상대 쪽 1채 제외」 적용 |
  * | `155-3-co-inherited-minority-before-ranking-clause` (C7) | 2017.2.3. 전 양도 + 소수지분 공동상속주택을 제외하지 못한 행(적격 2채 이상 · 순위 부적격 선언) | A — 과세관청 해석 | 그 행들을 주택에서 빼고(소수지분 전부 제외) 판정 |
+ * | `155-1-presale-holding-completion` (C8) | 종전주택 보유 중 취득한 분양권(2021.1.1. 이후)이 완공된 뒤 종전주택 양도 | A — §155① 완공일 기산 | §156의3②·③으로 판정 |
  *
  * ⚠️ C1 반대 입장은 **§155② 축만** 뒤집는다 — 명부 행의 상속 사실만 지운다. 그 주택이 §155⑦1호 상속 농어촌주택이기도 하면
  *    농어촌주택 특례(`ruralHouse`)는 그대로 둔다: 서면-2015-부동산-1363이 다룬 것은 §155②뿐이다(평가셋 E109 — 결론 같음).
@@ -25,13 +26,15 @@ import { passesHouseholdGate, resolveInheritedHouseExclusionFromInput } from "..
 import { deriveHouseholdHousingCount } from "./house-count";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
+import { isHoldingPresaleOrigin } from "./new-house-origin";
 import type { OneHouseJudgment } from "./types";
 
 export type OneHouseContestedIssueId =
   | "155-2-inherited-house-gifted-within-household"
   | "155-3-same-household-co-inherited-minority"
   | "155-3-co-inherited-minority-before-ranking-clause"
-  | "155-4-parental-care-merge-right-sale";
+  | "155-4-parental-care-merge-right-sale"
+  | "155-1-presale-holding-completion";
 
 export type ContestedPositionKey = "A" | "B";
 export type ContestedVerdict = "exempt" | "partial" | "taxable";
@@ -141,6 +144,23 @@ const SPECS: Record<OneHouseContestedIssueId, IssueSpec> = {
       authorities: ["조심-2021-서-1117 (2022.08.10.)"],
     },
   },
+  "155-1-presale-holding-completion": {
+    title: "종전주택 보유 중 취득한 분양권이 완공된 뒤 종전주택 양도",
+    legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
+    enginePosition: "A",
+    A: {
+      summary:
+        "완공된 신규 주택을 일시적 2주택(§155①)의 신규 주택으로 보고 완공일부터 처분기한을 셉니다 — 분양권 상태가 아니라 주택을 취득한 것으로 판정했습니다.",
+      authorities: [
+        "서면-2021-법규재산-0407 · 사전-2024-법규재산-0670 · 사전-2025-법규재산-0584 (2021.1.1. 전 취득 분양권의 완공일 기산 — 이 갈래에 §155①을 병용할 수 있다고 직접 밝힌 해석은 확인하지 못함)",
+      ],
+    },
+    B: {
+      summary:
+        "완공 뒤 양도도 분양권 규정(§156의3②·③)으로 판정합니다 — 종전주택 취득 후 1년이 지난 뒤 분양권을 취득하고 그 취득일부터 3년 이내에 양도하거나, 3년이 지나면 완성 후 세대전원 이사·1년 거주 등 §156의3③ 요건을 갖춰야 합니다.",
+      authorities: ["사전-2024-법규재산-0833 (2024.11.27.)", "사전-2025-법규재산-1241", "서면-2024-법규재산-3770"],
+    },
+  },
 };
 
 /** 감지된 쟁점 — 반대 입장으로 재판정할 입력을 함께 싣는다. */
@@ -216,6 +236,19 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
         });
       }
     }
+  }
+
+  // C8 — 엔진(A)은 종전주택 보유 중 취득한 분양권이 완공된 갈래에 §155①(완공일 기산)을 적용. 반대(B)는 §156의3②·③으로 판정(결정 #43).
+  const tth = input.temporaryTwoHouse;
+  if (input.propertyType === "housing" && tth?.newHouseOrigin && isHoldingPresaleOrigin(tth)) {
+    out.push({
+      id: "155-1-presale-holding-completion",
+      houseIds: [],
+      otherPositionInput: {
+        ...input,
+        temporaryTwoHouse: { ...tth, newHouseOrigin: { ...tth.newHouseOrigin, holdingPresalePosition: "156_3" } },
+      },
+    });
   }
 
   // C6 — 엔진(B)은 입주권에 §155④ 부적용. 반대(A)는 동거봉양 합가에도 합가 상대 쪽 1채 제외.

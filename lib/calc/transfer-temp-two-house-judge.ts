@@ -30,8 +30,10 @@ import {
   type TemporaryTwoHouseEraFormFields,
 } from "@/lib/calc/temporary-two-house-era-facts";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "@/lib/tax-engine/legal-codes/transfer";
-import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
+import type { TemporaryTwoHouseDelayReason, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
+import { judgeNewHouseOrigin } from "@/lib/tax-engine/one-house/new-house-origin";
+import type { RightThreeYearException } from "@/lib/tax-engine/types/transfer.types";
 
 /**
  * §155① **본문** 처분기한 3년 — 엔진 규칙 행 `temporary_two_house.disposalDeadlineYears`와 같은 값
@@ -80,6 +82,11 @@ export type TempTwoHouseVerdict =
       delayReasonApplied: boolean;
       /** §155⑱ 사유를 골랐는데 양도일 연혁상 적용하지 않은 이유(방법 요건 · 없던 호) — 카드가 그대로 보여 준다 */
       delayNote?: string;
+      /**
+       * 신규 주택의 취득 경위(분양권·조합원입주권 유래) 판정 — 엔진 `judgeNewHouseOrigin`과 같은 함수다(결정 #43).
+       * 불성립(`blocked`)이면 `status`가 `ineligible`이다. `notes`는 사유·확인 필요를 그대로 싣는다(재계산 금지).
+       */
+      origin?: { blocked: boolean; notes: string[] };
     };
 
 /**
@@ -134,6 +141,12 @@ export function judgeTempTwoHouseFromForm(p: {
   previousHouse?: { regionCode?: string; inDesignatedDistrict?: boolean };
   /** §155①2호 새 입력(OH-01 A2b) — ④와 같은 leaf(`toTemporaryTwoHouseEraFacts`)로 편다 */
   eraFields?: TemporaryTwoHouseEraFormFields;
+  /** 신규 주택 취득 경위(명부 행의 답 · 날짜는 문자열) — ④가 싣는 `temporaryTwoHouse.newHouseOrigin`과 같은 값(결정 #43) */
+  newHouseOrigin?: { kind: string; rightAcquisitionDate?: string; rightApprovalDate?: string };
+  /** §156의2④ 3년 경과 예외 선언 — 권리 유래 신규 주택의 타이밍 판정이 읽는다(④와 같은 payload를 Date로 바꾼 것) */
+  rightThreeYearException?: RightThreeYearException;
+  /** 혼인·동거봉양 합가 선언(합가 + 권리 유래 신규 주택 가드) — ④가 싣는 합가일과 같은 사실 */
+  hasMerge?: boolean;
 }): TempTwoHouseVerdict {
   if (!p.previousAcquisitionDate || !p.newHouseAcquisitionDate || !p.transferDate) {
     return { status: "pending" };
@@ -242,8 +255,33 @@ export function judgeTempTwoHouseFromForm(p: {
     moveInMet: era.moveInMet,
   });
 
+  // 신규 주택이 권리(분양권·조합원입주권)로 취득한 주택이면 갈래를 가른다 — 엔진 `evaluateTemporaryTwoHouseTiming`과 같은 함수(결정 #43).
+  const o = p.newHouseOrigin;
+  const originVerdict = o
+    ? judgeNewHouseOrigin(
+        {
+          acquisitionDate: prev,
+          transferDate: transfer,
+          rightThreeYearException: p.rightThreeYearException,
+          ...(p.hasMerge ? { marriageMerge: { marriageDate: prev } } : {}),
+          temporaryTwoHouse: {
+            previousAcquisitionDate: prev,
+            newAcquisitionDate: nw,
+            newHouseOrigin: {
+              kind: o.kind as NonNullable<NonNullable<TransferTaxInput["temporaryTwoHouse"]>["newHouseOrigin"]>["kind"],
+              rightAcquisitionDate: optDate(o.rightAcquisitionDate),
+              rightApprovalDate: optDate(o.rightApprovalDate),
+            },
+          },
+        },
+        oneYearWaived,
+      )
+    : undefined;
+  const originNotes = originVerdict ? [...originVerdict.reasons, ...originVerdict.unconfirmed, ...originVerdict.confirmNotes] : [];
+
   return {
-    status: t.overall ? "eligible" : "ineligible",
+    status: t.overall && !originVerdict?.blocked ? "eligible" : "ineligible",
+    ...(originVerdict && originNotes.length > 0 ? { origin: { blocked: originVerdict.blocked, notes: originNotes } } : {}),
     oneYearThreshold: t.oneYearThreshold,
     oneYearMet: t.oneYearMet,
     // ⑯ 후단도 1년 면제 사유다 — 카드 문구가 "면제"를 표시해야 판정과 설명이 어긋나지 않는다.

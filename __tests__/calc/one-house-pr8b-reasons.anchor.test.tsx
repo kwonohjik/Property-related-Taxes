@@ -31,6 +31,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "@/lib/calc/one-house-judgment-temp-two-house";
 import { regulatedShortenedClauseRefOf } from "@/lib/calc/one-house-era-labels";
 import { buildCaseForm, type RulingCase } from "./one-house-rulings/harness";
+import { RETURN_TO_FARM_ROW_OK } from "../_helpers/rural-return-to-farm-facts";
 
 vi.mock("@/components/ui/address-search", () => ({ AddressSearch: () => null }));
 afterEach(cleanup);
@@ -100,9 +101,9 @@ const U1 = (today: string) =>
   mkCase(today, {
     isOneHousehold: true, transferDate: "2025-06-02", contractTotalPrice: "800000000",
     asset: { assetKind: "housing", acquisitionDate: "2015-01-10" },
-    houses: [{ id: "u", region: "non_capital", acquisitionDate: "2018-03-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalResolvedDate: "2020-01-15" }],
+    houses: [{ id: "u", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: "2018-03-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalResolvedDate: "2020-01-15" }],
   });
-const RURAL_3HO = { id: "rural", region: "non_capital", acquisitionDate: "2020-01-10", oneHouseRuralHouse: true, ruralHouseKind: "return_to_farm", ruralOutsideCapitalEupMyeon: true, ruralLandAreaSqm: "300", ruralWholeHouseholdMoved: true, ruralHighPriceAtAcquisition: false, ruralReturnedToFarmExitHouse: false };
+const RURAL_3HO = { id: "rural", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: "2020-01-10", oneHouseRuralHouse: true, ruralHouseKind: "return_to_farm", ...RETURN_TO_FARM_ROW_OK, ruralOutsideCapitalEupMyeon: true, ruralLandAreaSqm: "300", ruralWholeHouseholdMoved: true, ruralHighPriceAtAcquisition: false, ruralReturnedToFarmExitHouse: false };
 const R2 = (today: string) =>
   mkCase(today, {
     isOneHousehold: true, transferDate: "2025-07-01", contractTotalPrice: "900000000",
@@ -159,7 +160,7 @@ describe("S07-3 기준일 전에 기한이 지난 「이 날까지 양도」 —
       mkCase("2026-10-10", {
         isOneHousehold: true, transferDate: "2025-06-02", contractTotalPrice: "800000000",
         asset: { assetKind: "housing", acquisitionDate: "2018-01-10", residenceInputMode: "direct", residencePeriodMonthsAsset: "30" },
-        houses: [{ id: "b", region: "non_capital", acquisitionDate: "2021-03-02" }],
+        houses: [{ id: "b", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: "2021-03-02" }],
       }),
     );
     expect(r.errors).toEqual([]);
@@ -176,7 +177,7 @@ const U = (transfer: string, gen: string) =>
   mkCase("2024-01-02", {
     isOneHousehold: true, transferDate: transfer, contractTotalPrice: "800000000",
     asset: { assetKind: "housing", acquisitionDate: gen },
-    houses: [{ id: "u", region: "non_capital", acquisitionDate: "2018-03-02", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalResolvedDate: "2022-01-03" }],
+    houses: [{ id: "u", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: "2018-03-02", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalResolvedDate: "2022-01-03" }],
   });
 const R = (transfer: string, gen: string) =>
   mkCase("2024-01-02", {
@@ -237,7 +238,7 @@ describe("X2-1 조정대상지역 단축 규정 인용 — 양도일 연혁", ()
     mkCase(today, {
       isOneHousehold: true, transferDate: transfer, contractTotalPrice: "800000000",
       asset: { assetKind: "housing", acquisitionDate: prev, residenceInputMode: "direct", residencePeriodMonthsAsset: "30" },
-      houses: [{ id: "b", region: "capital", acquisitionDate: nw }],
+      houses: [{ id: "b", region: "capital", acquisitionOrigin: "general", acquisitionDate: nw }],
     });
   async function cite(c: RulingCase) {
     const r = await judge(c, false);
@@ -300,7 +301,7 @@ describe("S07-6 2012.6.29. 전 양도 — 검토표 1년 행은 「요건 없음
     mkCase(today, {
       isOneHousehold: true, transferDate: transfer, contractTotalPrice: "500000000",
       asset: { assetKind: "housing", acquisitionDate: prev },
-      houses: [{ id: "n", region: "non_capital", acquisitionDate: nw }],
+      houses: [{ id: "n", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: nw }],
     });
   const oneYear = async (c: RulingCase) => {
     const r = await judge(c, true);
@@ -333,7 +334,7 @@ describe("S07-6 2012.6.29. 전 양도 — 검토표 1년 행은 「요건 없음
 // 서면인터넷방문상담4팀-977 · 엔진 E-3 `ruralTemporaryTwoHouseOverlapCountHolds` — 농어촌주택이 겹친 3주택은 §155① 분기다.
 describe("S07-5 D3(⑦ 농어촌 + 일시적 2주택 3주택) — 엔진 규칙과 표시층이 같은 말을 한다", () => {
   const RURAL = { ...RURAL_3HO, acquisitionDate: "2022-01-10" };
-  const NEW = { id: "new", region: "non_capital", acquisitionDate: "2023-09-01" };
+  const NEW = { id: "new", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: "2023-09-01" };
   const f = (transferDate: string, houses: unknown[]) => ({
     isOneHousehold: true, transferDate, contractTotalPrice: "900000000",
     asset: { assetKind: "housing", acquisitionDate: "2019-06-01" }, houses,
@@ -383,8 +384,8 @@ describe("S15-9 3주택 세대 §155① 판정 카드 — 「요건 충족」을
     isOneHousehold: true, transferDate: "2026-06-01", contractTotalPrice: "800000000",
     asset: { assetKind: "housing", acquisitionDate: "2015-03-01" }, houses,
   });
-  const B = { id: "b", region: "capital", acquisitionDate: "2010-03-01" };
-  const C = { id: "c", region: "capital", acquisitionDate: "2024-03-01" };
+  const B = { id: "b", region: "capital", acquisitionOrigin: "general", acquisitionDate: "2010-03-01" };
+  const C = { id: "c", region: "capital", acquisitionOrigin: "general", acquisitionDate: "2024-03-01" };
   const card = (houses: unknown[]) => {
     const { container } = render(<Step2 form={buildCaseForm(mkCase("2026-06-02", f(houses)))} onChange={() => {}} />);
     return container.textContent ?? "";
@@ -415,7 +416,7 @@ describe("S11-6 판정 카드의 1년 요건 면제 — 엔진과 같은 거주 
       decedentCohabitationHoldingStartDate: "2019-01-01", decedentCohabitationResidenceMonths: "60",
       residencePeriodMonthsAsset: residence,
     },
-    houses: [{ id: "new", region: "non_capital", acquisitionDate: "2024-06-01" }],
+    houses: [{ id: "new", region: "non_capital", acquisitionOrigin: "general", acquisitionDate: "2024-06-01" }],
   });
   async function both(sameHousehold: boolean, residence: string) {
     const c = mkCase("2025-03-01", form(sameHousehold, residence));

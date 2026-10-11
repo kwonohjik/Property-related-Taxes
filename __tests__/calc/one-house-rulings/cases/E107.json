@@ -23,7 +23,8 @@
           "inheritedDate": "2008-01-09",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
-          "inheritedGiftedToHouseholdMember": true
+          "inheritedGiftedToHouseholdMember": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -63,7 +64,8 @@
           "isInherited": true,
           "inheritedDate": "2008-01-09",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         }
       ]
     },

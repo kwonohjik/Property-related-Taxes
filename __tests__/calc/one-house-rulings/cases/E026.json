@@ -18,7 +18,8 @@
         {
           "id": "gift",
           "region": "non_capital",
-          "acquisitionDate": "2005-07-08"
+          "acquisitionDate": "2005-07-08",
+          "acquisitionOrigin": "general"
         }
       ]
     },

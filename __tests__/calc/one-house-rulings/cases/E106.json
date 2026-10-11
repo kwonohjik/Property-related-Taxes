@@ -19,7 +19,8 @@
           "id": "B",
           "region": "capital",
           "acquisitionDate": "2005-06-15",
-          "isInherited": false
+          "isInherited": false,
+          "acquisitionOrigin": "general"
         }
       ]
     },

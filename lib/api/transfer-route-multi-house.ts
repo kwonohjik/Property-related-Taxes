@@ -130,6 +130,11 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isPopulationDeclineArea: h.isPopulationDeclineArea,
     isSecondHomeRegistered: h.isSecondHomeRegistered,
     populationAreaType: h.populationAreaType,
+    // 조특법 §71의2① 인구감소지역주택(결정 #42) — 날짜는 Date 변환. 단건·다건·겸용이 이 매퍼를 공유한다.
+    popDeclSoleAtAcquisition: h.popDeclSoleAtAcquisition,
+    popDeclAcquiredByGift: h.popDeclAcquiredByGift,
+    popDeclPriorRight: h.popDeclPriorRight,
+    popDeclPriorRightDate: toOptionalDate(h.popDeclPriorRightDate),
     // P2 특수 배제 (selling-house 3주택+)
     isMortgageExecution: h.isMortgageExecution,
     isEmployeeHousing: h.isEmployeeHousing,

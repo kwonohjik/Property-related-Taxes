@@ -21,7 +21,8 @@
           "acquisitionDate": "2017-02-03",
           "oneHouseUnavoidableOutsideCapital": true,
           "unavoidableOutsideCapitalReason": "work",
-          "unavoidableOutsideCapitalUnresolved": true
+          "unavoidableOutsideCapitalUnresolved": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

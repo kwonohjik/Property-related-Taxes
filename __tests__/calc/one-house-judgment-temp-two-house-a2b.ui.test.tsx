@@ -47,6 +47,7 @@ function form(over: Record<string, unknown> = {}, rowOver: Record<string, unknow
         acquisitionDate: "2020-06-01",
         officialPrice: "300000000",
         isInherited: false,
+        acquisitionOrigin: "general",
         ...rowOver,
       },
     ],

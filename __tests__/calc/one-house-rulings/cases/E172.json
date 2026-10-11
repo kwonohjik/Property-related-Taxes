@@ -20,7 +20,8 @@
         {
           "id": "daycare",
           "acquisitionDate": "2014-06-15",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "rural",
@@ -36,7 +37,8 @@
               "isAdjacentArea": false,
               "meetsLocationRequirement": true
             }
-          }
+          },
+          "acquisitionOrigin": "general"
         }
       ]
     },

@@ -39,7 +39,7 @@ const mk = (today: string, form: RulingCase["form"]): RulingCase => ({
 const P1 = (extra: Partial<RulingCase["form"]> = {}): RulingCase["form"] => ({
   isOneHousehold: true, transferDate: "2024-07-19", contractTotalPrice: "800000000",
   asset: { assetKind: "housing", acquisitionDate: "2018-01-22" },
-  houses: [{ id: "A", acquisitionDate: "1988-05-17", region: "capital" }],
+  houses: [{ id: "A", acquisitionOrigin: "general" as const, acquisitionDate: "1988-05-17", region: "capital" }],
   ...repl, replBusinessApprovalDate: "2016-08-08", replCompletionDate: "2023-10-23",
   ...extra,
 } as RulingCase["form"]);
@@ -53,7 +53,7 @@ const P2 = (rows: FormHouses): RulingCase["form"] => ({
   houses: rows,
   ...repl, replBusinessApprovalDate: "2019-06-15", replCompletionDate: "2024-03-15",
 } as RulingCase["form"]);
-const A_ROW = { id: "A", acquisitionDate: "2012-03-15", region: "capital" as const };
+const A_ROW = { id: "A", acquisitionOrigin: "general" as const, acquisitionDate: "2012-03-15", region: "capital" as const };
 
 describe("S01-1 판정 메뉴 — 대체주택 취득 뒤 취득해 양도일까지 보유한 구성은 불성립", () => {
   it("0614 사실관계(대체주택 뒤 분양권 C 보유) → 과세 · 156-2-5 미적용", async () => {
@@ -68,7 +68,7 @@ describe("S01-1 판정 메뉴 — 대체주택 취득 뒤 취득해 양도일까
     expect(o.appliedExceptions).toContain(ID);
   });
   it("조심2011중2759 — 대체주택 뒤 취득한 일반주택 C를 양도일까지 보유 → 과세", async () => {
-    const o = await observeCase(mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionDate: "2021-05-15", region: "capital" as const }])));
+    const o = await observeCase(mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2021-05-15", region: "capital" as const }])));
     expect(o.validationErrors).toEqual([]);
     expect(o.isExempt).toBe(false);
     expect(o.appliedExceptions).not.toContain(ID);
@@ -79,13 +79,13 @@ describe("S01-1 판정 메뉴 — 대체주택 취득 뒤 취득해 양도일까
     expect(o.appliedExceptions).toContain(ID);
   });
   it("경계 — C를 양도일 당일 취득(양도 후 취득으로 본다)하면 양도일 현재 보유가 아니다 → 비과세", async () => {
-    const o = await observeCase(mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionDate: "2026-06-15", region: "capital" as const }])));
+    const o = await observeCase(mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2026-06-15", region: "capital" as const }])));
     expect(o.isExempt).toBe(true);
     expect(o.appliedExceptions).toContain(ID);
   });
   it("경계 — 대체주택 뒤 취득한 주택이 §155② 상속주택(별도세대 상속)이면 주택 수에서 빠진다 → 비과세 유지", async () => {
     const o = await observeCase(
-      mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionDate: "2021-05-15", region: "capital" as const, isInherited: true, inheritedDate: "2021-05-15" }])),
+      mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2021-05-15", region: "capital" as const, isInherited: true, inheritedDate: "2021-05-15" }])),
     );
     expect(o.excludedHouses.map((x) => x.houseId)).toContain("C");
     expect(o.isExempt).toBe(true);
@@ -105,7 +105,7 @@ describe("S01-1 판정 메뉴 — 사업 대상이 조합원입주권일 때(주
     ...repl, replBusinessApprovalDate: "2011-09-07", replCompletionDate: "2021-03-31", replResidenceMonths: "97",
   } as unknown as RulingCase["form"]);
   it("대체주택 뒤(2015) 취득해 보유한 일반주택 C → 주택 수가 2뿐이어도 과세", async () => {
-    const o = await observeCase(mk("2019-12-24", G([{ id: "C", acquisitionDate: "2015-05-15", region: "capital" as const }])));
+    const o = await observeCase(mk("2019-12-24", G([{ id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2015-05-15", region: "capital" as const }])));
     expect(o.validationErrors).toEqual([]);
     expect(o.isExempt).toBe(false);
     expect(o.appliedExceptions).not.toContain(ID);
@@ -135,8 +135,8 @@ describe("S01-1 계산기 — ④→⑫→⑭ route", () => {
       replResidenceMonths: "60", replWillResideNewHouse: true,
     });
   }
-  const A = () => hrow({ id: "A", acquisitionDate: "2012-03-15", region: "capital" });
-  const C = () => hrow({ id: "C", acquisitionDate: "2021-05-15", region: "capital" });
+  const A = () => hrow({ id: "A", acquisitionOrigin: "general" as const, acquisitionDate: "2012-03-15", region: "capital" });
+  const C = () => hrow({ id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2021-05-15", region: "capital" });
 
   it("명부 A + C(대체주택 뒤) + 선언 → 과세(세액 > 0)", async () => {
     const r = await runCalc(calcForm([A(), C()], "3"));

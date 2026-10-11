@@ -22,13 +22,15 @@
           "id": "rental1",
           "region": "capital",
           "acquisitionDate": "2012-04-01",
-          "isLongTermRental": true
+          "isLongTermRental": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "rental2",
           "region": "capital",
           "acquisitionDate": "2012-04-01",
-          "isLongTermRental": true
+          "isLongTermRental": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

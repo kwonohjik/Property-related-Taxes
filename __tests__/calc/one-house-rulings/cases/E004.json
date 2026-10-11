@@ -23,12 +23,14 @@
           "inheritedDate": "2009-02-02",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": true,
-          "parentalCareMergeInheritedHouse": true
+          "parentalCareMergeInheritedHouse": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "c",
           "region": "capital",
-          "acquisitionDate": "2015-12-21"
+          "acquisitionDate": "2015-12-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -68,12 +70,14 @@
           "inheritedDate": "2009-02-02",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": true,
-          "parentalCareMergeInheritedHouse": true
+          "parentalCareMergeInheritedHouse": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "c",
           "region": "capital",
-          "acquisitionDate": "2015-12-21"
+          "acquisitionDate": "2015-12-21",
+          "acquisitionOrigin": "general"
         }
       ],
       "temporaryTwoHouseSpecial": true,
@@ -115,12 +119,14 @@
           "inheritedDate": "2009-02-02",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": true,
-          "parentalCareMergeInheritedHouse": true
+          "parentalCareMergeInheritedHouse": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "c",
           "region": "capital",
-          "acquisitionDate": "2015-12-21"
+          "acquisitionDate": "2015-12-21",
+          "acquisitionOrigin": "general"
         }
       ],
       "temporaryTwoHouseSpecial": true,
@@ -159,7 +165,8 @@
         {
           "id": "c",
           "region": "capital",
-          "acquisitionDate": "2015-12-21"
+          "acquisitionDate": "2015-12-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -196,12 +203,14 @@
           "inheritedDate": "2009-02-02",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": true,
-          "parentalCareMergeInheritedHouse": false
+          "parentalCareMergeInheritedHouse": false,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "c",
           "region": "capital",
-          "acquisitionDate": "2015-12-21"
+          "acquisitionDate": "2015-12-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },

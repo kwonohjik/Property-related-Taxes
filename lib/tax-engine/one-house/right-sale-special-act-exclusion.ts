@@ -45,8 +45,18 @@ export const RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES = [
   "new_99",
 ] as const satisfies readonly SpecialHouseExclusionArticle[];
 
+/**
+ * 조특법 §71의2① 인구감소지역주택(결정 #42) — **법률이 4호를 직접 적는다**(「…「소득세법」 제89조제1항제3호 또는 제4호를 적용한다」)라
+ * 해석례 없이도 입주권 양도의 「다른 주택」에서 뺀다. 위 해석례 확인 조문 목록(2026-10-08 결정)과 취지가 다르지 않다 — 명문이 있다.
+ * 선언이 아니라 명부에서 도출하는 의제라 `SpecialHouseExclusionArticle`이 아닌 별도 상수다.
+ */
+const RIGHT_SALE_DERIVED_ARTICLES: readonly string[] = ["pop_decline_71_2"];
+
 export function rightSaleSpecialExclusionApplies(article: string | undefined): boolean {
-  return (RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES as readonly string[]).includes(article ?? "");
+  return (
+    (RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES as readonly string[]).includes(article ?? "") ||
+    RIGHT_SALE_DERIVED_ARTICLES.includes(article ?? "")
+  );
 }
 
 type Exclusion = {

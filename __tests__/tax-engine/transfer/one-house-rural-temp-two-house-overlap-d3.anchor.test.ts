@@ -20,6 +20,7 @@ import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/tr
 import { resolveDeemedOneHouseBy155 } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rates = makeMockRates();
 const D = (s: string) => new Date(s);
@@ -39,6 +40,7 @@ function overlap(over: Partial<TransferTaxInput> = {}, rural: Record<string, unk
     temporaryTwoHouse: { previousAcquisitionDate: D("2019-06-01"), newAcquisitionDate: D("2023-09-01") },
     ruralHouse: {
       kind: "return_to_farm",
+      ...RETURN_TO_FARM_OK,
       isOutsideCapitalEupMyeon: true,
       acquisitionDate: D("2022-01-10"),
       isHighPriceAtAcquisition: false,

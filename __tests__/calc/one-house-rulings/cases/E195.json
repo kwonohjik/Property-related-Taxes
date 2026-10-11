@@ -52,12 +52,14 @@
               "isAdjacentArea": false,
               "meetsLocationRequirement": true
             }
-          }
+          },
+          "acquisitionOrigin": "general"
         },
         {
           "id": "gen",
           "acquisitionDate": "2015-12-11",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -127,12 +129,14 @@
               "isAdjacentArea": false,
               "meetsLocationRequirement": true
             }
-          }
+          },
+          "acquisitionOrigin": "general"
         },
         {
           "id": "gen",
           "acquisitionDate": "2024-12-11",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         }
       ]
     },

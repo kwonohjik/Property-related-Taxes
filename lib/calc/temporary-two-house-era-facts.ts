@@ -121,3 +121,21 @@ export function temporaryTwoHouseEraIssues(
   }
   return out;
 }
+
+/**
+ * 권리(분양권·조합원입주권)로 취득한 신규 주택 행이 있으면 **§155①1호 괄호의 「권리 취득」 시점은 그 행의 권리 취득일**이다
+ * (결정 #43 · G6-4, 원칙 4 — 같은 사실을 두 칸에서 받지 않는다). 폼 전역 「매매계약 체결·계약금 지급일」 칸은 그 행에 쓰지 않고 이 값으로 덮는다.
+ *
+ * - 권리 경위: 승계 입주권·분양권·상가토지 원조합원 → 행의 권리 취득일
+ * - 기존주택의 연장(원조합원 기존주택·자가 재건축)은 취득일 자체가 기존주택 취득일이라 같은 값으로 덮는다
+ * - 일반·모름·경위 미수집(직접 선언)은 종전 그대로(폼의 계약일 칸)
+ * ④ 변환과 ⑤ 판정 카드·⑧ 검증이 **같은 함수**로 편다.
+ */
+export function eraFormWithOriginDates<F extends TemporaryTwoHouseEraFormFields>(
+  form: F,
+  origin: { kind: string; rightAcquisitionDate?: string } | undefined,
+): F {
+  if (!origin?.rightAcquisitionDate) return form;
+  if (origin.kind === "general" || origin.kind === "unknown" || origin.kind === "not_collected") return form;
+  return { ...form, newHouseContractDate: origin.rightAcquisitionDate };
+}

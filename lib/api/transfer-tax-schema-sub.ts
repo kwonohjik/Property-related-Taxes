@@ -62,6 +62,13 @@ export const ruralHouseSchema = z.object({
   wholeHouseholdMoved: z.boolean().optional(),
   /** 2호·3호 — 5년 이상 거주하다 이농한 뒤 다시 그 주택으로 귀농 */
   returnedToFarmExitHouse: z.boolean().optional(),
+  /** 3호 ⑩4호 영농·영어 목적(가·나·다목) — 키가 없으면 엔진이 「모름」과 같이 불성립으로 본다(결정 #44) */
+  farmlandBasis: z.enum(["ga", "na", "da", "none", "unknown"]).optional(),
+  farmlandHolder: z.enum(["self", "spouse"]).optional(),
+  /** 3호 ⑪ 이미 이 특례로 일반주택을 비과세 양도했는가 */
+  priorReturnFarmExemption: z.enum(["none", "has", "unknown"]).optional(),
+  /** 3호 양도 일반주택을 귀농 전에 취득했는가 */
+  generalHouseAcquiredBeforeReturn: z.enum(["yes", "no", "unknown"]).optional(),
 });
 
 /**
@@ -310,6 +317,11 @@ export const houseSchema = z.object({
   isPopulationDeclineArea: z.boolean().optional(),
   isSecondHomeRegistered: z.boolean().optional(),
   populationAreaType: z.enum(["decline", "interest"]).optional(),
+  // ── 조특법 §71의2① 인구감소지역주택 의제(결정 #42) — 명부에 없는 과거 사실 3종. 키가 없으면 「모름」(불성립 + 확인 필요) ──
+  popDeclSoleAtAcquisition: z.enum(["yes", "no", "unknown"]).optional(),
+  popDeclAcquiredByGift: z.enum(["no", "yes", "unknown"]).optional(),
+  popDeclPriorRight: z.enum(["no", "yes", "unknown"]).optional(),
+  popDeclPriorRightDate: z.string().date().optional(),
   // ── P2 특수 배제 (selling-house 3주택+) ──
   isMortgageExecution: z.boolean().optional(),
   isEmployeeHousing: z.boolean().optional(),

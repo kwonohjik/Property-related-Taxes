@@ -18,6 +18,7 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TaxRateKey } from "@/lib/tax-engine/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRatesWithHouseEngine, makeHouseInfo, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const seedRules = transferTaxSeeds.find(
   (s) => s.category === "special" && s.sub_category === "one_house_exemption",
@@ -206,6 +207,7 @@ describe("E-4 — §155⑦ 농어촌주택 보유 + 일반주택 양도", () => 
     const r = calc({
       ruralHouse: {
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         isOutsideCapitalEupMyeon: true,
         acquisitionDate: D("2023-01-01"), // 양도 2026-06-01 → 5년 이내
         isHighPriceAtAcquisition: false,
@@ -222,6 +224,7 @@ describe("E-4 — §155⑦ 농어촌주택 보유 + 일반주택 양도", () => 
     const r = calc({
       ruralHouse: {
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         isOutsideCapitalEupMyeon: true,
         acquisitionDate: D("2020-01-01"), // 양도까지 6년 5개월
         isHighPriceAtAcquisition: false,
@@ -240,6 +243,7 @@ describe("E-4 — §155⑦ 농어촌주택 보유 + 일반주택 양도", () => 
     const r = calc({
       ruralHouse: {
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         isOutsideCapitalEupMyeon: true,
         acquisitionDate: D("2023-01-01"),
         isHighPriceAtAcquisition: false,
@@ -255,6 +259,7 @@ describe("E-4 — §155⑦ 농어촌주택 보유 + 일반주택 양도", () => 
     const r = calc({
       ruralHouse: {
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         isOutsideCapitalEupMyeon: true,
         acquisitionDate: D("2023-01-01"),
         isHighPriceAtAcquisition: false,

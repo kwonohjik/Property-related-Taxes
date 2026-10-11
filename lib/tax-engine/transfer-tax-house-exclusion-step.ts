@@ -12,6 +12,8 @@ import { resolveInheritedHouseExclusionFromInput, buildInheritedExclusionSteps }
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 import type { New994MergeOrderContext } from "./transfer-reductions/new-99-4";
 import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
+import { resolvePopulationDecline71_2, POP_DECLINE_71_2_ARTICLE } from "./transfer-reductions/population-decline-71-2";
+import { resolveInheritedSellingHouseId } from "./transfer-inheritance-exclusion";
 import type { SpecialHouseExclusionResolution } from "./transfer-reductions/unsold-hybrid-p5";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
@@ -73,12 +75,43 @@ export function resolveExemptionHouseCountExclusions(
       mergeOrder: new994MergeOrderOf(effectiveInput),
     },
   );
-  const specialHouseExclusionDetail = resolveSpecialHouseExclusions(
+  const specialDeclared = resolveSpecialHouseExclusions(
     effectiveInput.specialHouseExclusions,
     effectiveInput.transferDate,
   );
   const inheritedExclusion = resolveInheritedHouseExclusionFromInput(effectiveInput);
+  /**
+   * 조특법 §71의2① 인구감소지역주택 — 선언이 아니라 **명부에서 도출**한다(결정 #42). 같은 행을 다른 제외가 이미 뺐으면 한 번만 뺀다.
+   * 결과 항목은 보유 감면주택 항목 뒤에 이어 붙여(`entries`) 주택 수 제외 개수·행 id·중과 15호 확인 조문·명세 표시가 한 갈래로 읽게 한다.
+   */
+  const sellingHouseId = resolveInheritedSellingHouseId(effectiveInput);
+  const popDecline =
+    effectiveInput.isOneHousehold && sellingHouseId && (effectiveInput.houses?.length ?? 0) > 0
+      ? resolvePopulationDecline71_2({
+          houses: effectiveInput.houses!,
+          sellingHouseId,
+          transferDate: effectiveInput.transferDate,
+          presaleRights: effectiveInput.presaleRights ?? [],
+          alreadyExcludedIds: new Set(
+            collectKnownHouseExclusionIds({
+              hceApplied,
+              specialEntries: specialDeclared.entries,
+              inheritedExcludedHouses: inheritedExclusion.excludedHouses,
+            }),
+          ),
+          otherExcludedCount: hceApplied.length + specialDeclared.excludedCount + inheritedExclusion.excludedCount,
+          householdHousingCount: effectiveInput.householdHousingCount,
+          sellingIsHousing: effectiveInput.propertyType !== "right_to_move_in",
+        })
+      : { entries: [], excludedCount: 0 };
+  const specialHouseExclusionDetail = {
+    entries: [...specialDeclared.entries, ...popDecline.entries],
+    excludedCount: specialDeclared.excludedCount + popDecline.excludedCount,
+  };
+  const popUnconfirmed = popDecline.entries.filter((e) => e.article === POP_DECLINE_71_2_ARTICLE && !e.eligible && e.unconfirmed);
   return {
+    /** 조특법 §71의2① 후보 중 모름·미답·해석 미확보로 불성립한 것 — 결론을 가를 때만 확인 필요를 알리는 재료 */
+    popDecline71_2Unconfirmed: popUnconfirmed.length > 0 ? { reasons: popUnconfirmed.map((e) => e.reason ?? "") } : undefined,
     hceApplied,
     new994Detail,
     unsold989Detail,
@@ -188,6 +221,9 @@ export const SPECIAL_ACT_15HO_VERIFIED_ARTICLES: ReadonlySet<string> = new Set([
   "unsold_98_9",
   "new_99_4_rural",
   "new_99_4_hometown",
+  // 조특법 §71의2① 인구감소지역주택 — 「…소유주택이 아닌 것으로 보아 …적용한다」로 §98의9와 같은 문형이다(결정 #42 하위 가 — §98의9 2026-10-04 결정 준용).
+  //   이 조문에 13호·15호를 적용한 직접 해석은 찾지 못했다. 비과세는 1주택, 중과는 2주택으로 세는 고지 없는 과다과세를 피하려는 선택이다.
+  "pop_decline_71_2",
 ]);
 
 /**
@@ -329,6 +365,7 @@ export function runHouseCountExclusionStep(
     specialHouseExclusionDetail,
     inheritedExclusion,
     knownHouseExclusionHouseIds,
+    popDecline71_2Unconfirmed,
   } = resolveExemptionHouseCountExclusions(effectiveInput, generalHouseAcquisitionDate);
   const totalExcluded =
     hceApplied.length + specialHouseExclusionDetail.excludedCount + inheritedExclusion.excludedCount;
@@ -344,6 +381,7 @@ export function runHouseCountExclusionStep(
     inheritedHouseExclusionCount: inheritedExclusion.excludedCount,
     inheritedHouseExclusionDetail: inheritedExclusion,
     knownHouseExclusionHouseIds,
+    popDecline71_2Unconfirmed,
   };
   // 둘 다 적격이면 §99의4 → §98의9 순으로 각각 1채씩 (D4-01) — 주택 수는 순차 체이닝
   let hceCursor = effectiveInput.householdHousingCount;

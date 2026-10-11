@@ -34,12 +34,14 @@ import {
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
   twoHouseSpecialCountHolds,
+  evaluateTemporaryTwoHouseTiming,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
   unavoidableResolvedDeadlineApplies,
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
 import { PARENTAL_CARE_AGE_CONFIRM_NOTICE, PARENTAL_CARE_AGE_UNMET_REASON, parentalCareAgeVerdict } from "./parental-care-age";
+import { checkReturnToFarmFacts } from "./rural-return-to-farm-facts";
 import { deadlineHoldingUnmetReason } from "./deadline-holding";
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
@@ -344,6 +346,11 @@ function collectTemporaryTwoHouseUnmet(
    * 그 날짜를 밝힌다 — 종전에는 ⑦ 카드가 「주택 수가 3채라 2주택에만 적용」이라고만 말해 실제 탈락 원인이 가려졌다(S07-5).
    */
   const twoHouseRule = oneHouseRules.temporary_two_house;
+  // 신규 주택의 취득 경위(분양권·조합원입주권 등 권리 유래) 때문에 불성립이면 그 사유를 밝힌다(결정 #43).
+  if (twoHouseRule && (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input))) {
+    const { origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+    if (origin.blocked) reasons.push(...origin.reasons, ...origin.unconfirmed);
+  }
   if (twoHouseRule && ruralTemporaryTwoHouseOverlapCountHolds(input)) {
     reasons.push(
       ...overlappedTemporaryTwoHouseTimingReasons(
@@ -587,6 +594,11 @@ function collectRuralUnmet(
       }
       if (r.wholeHouseholdMoved !== true) {
         reasons.push("3호 귀농주택으로 세대전원이 이사해 거주한다고 선언하지 않았습니다(§155⑩5호).");
+      }
+      {
+        // ⑩4호(영농·영어 목적) · ⑪(귀농 후 최초 1개) · 귀농 전 취득 일반주택 — 확정 불충족과 「모름」·미응답을 함께 밝힌다(결정 #44).
+        const farm = checkReturnToFarmFacts(r, input.transferDate);
+        reasons.push(...farm.failed, ...farm.unconfirmed);
       }
       if (!r.acquisitionDate) {
         reasons.push(

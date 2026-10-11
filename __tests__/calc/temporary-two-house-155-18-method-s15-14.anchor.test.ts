@@ -29,7 +29,7 @@ const judgeForm = (transferDate: string, prev: string, nw: string, extra: Record
   transferDate,
   contractTotalPrice: "500000000",
   asset: { assetKind: "housing", acquisitionDate: prev },
-  houses: [{ id: "new", region: "non_capital", acquisitionDate: nw }],
+  houses: [{ id: "new", acquisitionOrigin: "general", region: "non_capital", acquisitionDate: nw }],
   ...extra,
 });
 const ids = (r: Awaited<ReturnType<typeof observeRaw>>) => (r.j?.appliedExceptions ?? []).map((e: { id: string }) => e.id);
@@ -118,7 +118,7 @@ describe("S15-14 계산기 — 판정 메뉴에서 넘겨받은 사실(④⑫⑭
       transferDate: "2021-06-01", contractTotalPrice: "500,000,000", residencePeriodMonths: "0",
       householdNoPresaleRightsConfirmed: true, householdNoOtherHousesConfirmed: false,
       householdHousingCount: "2", isRegulatedArea: false,
-      houses: [hrow({ id: "new", acquisitionDate: "2018-03-01", region: "non_capital" })],
+      houses: [hrow({ id: "new", acquisitionOrigin: "general", acquisitionDate: "2018-03-01", region: "non_capital" })],
       ...extra,
     });
   }

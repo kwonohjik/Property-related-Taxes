@@ -42,6 +42,7 @@ import {
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
+import { returnToFarmPostManagementNotice } from "./one-house/rural-return-to-farm-facts";
 import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./one-house/pending";
 import {
   DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX,
@@ -306,16 +307,8 @@ export function calculateTransferTax(
     );
   }
 
-  // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
-  //   과거·미래 양도 이력이 있어야 판정할 수 있어 엔진이 결론 낼 수 없다. 자동 판정 대신 경고로 노출한다
-  //   (자동 안분 fallback 금지 원칙과 다른 층위 — 임의 배분이 아니라 **판정 불가 고지**다).
-  if (exemptionResult.exemptReason?.includes("§155⑦3호") ) {
-    warnings.push(
-      "귀농주택 특례(§155⑦3호) — ⑪ 귀농 후 **최초로 양도하는 1개** 일반주택에만 적용됩니다. " +
-        "또한 §155⑫에 따라 귀농일부터 3년 이상 영농·영어에 종사하지 않거나 그 기간 거주하지 않으면 " +
-        "사유 발생일이 속하는 달의 말일부터 2개월 이내에 감면세액을 신고·납부해야 합니다(추징).",
-    );
-  }
+  // §155⑦3호 귀농주택 — ⑩4호·⑪은 입력으로 받아 판정한다(결정 #44). 장래 사실인 ⑫ 사후관리(추징)만 고지한다 — 판정 메뉴 결과와 같은 문장.
+  if (exemptionResult.exemptReason?.includes("§155⑦3호")) warnings.push(returnToFarmPostManagementNotice(input.ruralHouse));
 
   // F-1 — ①+④⑤ 중첩 의제는 국세청 해석에 기댄다. 무엇에 기댔고 어디까지 확인됐는지 남긴다.
   if (exemptionResult.exemptReason?.includes("중첩")) {

@@ -13,6 +13,7 @@ import {
   giftHouseholdUnconfirmed,
   type GiftHouseholdBasis,
 } from "./gift-household-basis";
+import { withUnconfirmedFactsFavorable } from "./rural-return-to-farm-facts";
 import { counterfactualVerdictDiffers, withMoveInWithinYear, withNotBothRegulated } from "./temp-two-house-counterfactual";
 import type { OneHouseCoreVerdict, OneHouseJudgeInput, OneHouseJudgment } from "./types";
 
@@ -117,6 +118,25 @@ export function buildEraNoticeRelevance(ctx: {
         return `${r.isExempt}|${r.isPartialExempt}`;
       };
       return verdictIf(new Date(input.acquisitionDate.getTime() + 86_400_000)) !== verdictIf(input.acquisitionDate);
+    },
+    // 귀농주택 ⑩4호·⑪·귀농 전 취득 「모름」·미응답(결정 #44) — 그 사실만 유리하게 채운 본체 판정이 비과세일 때만 확인 필요를 낸다.
+    ruralFarmFactsDecide: () => {
+      if (!input.ruralHouse || article89Excluded) return false;
+      const v = core({ ...input, ruralHouse: withUnconfirmedFactsFavorable(input.ruralHouse) });
+      return v.isExempt || v.isPartialExempt;
+    },
+    // 조특법 §71의2① 인구감소지역주택 후보(모름·해석 미확보로 불성립) — 그 후보를 소유주택에서 뺀 본체 판정이 비과세일 때만 확인 필요를 낸다(결정 #42).
+    popDeclineDecides: () => {
+      if (!input.popDecline71_2Unconfirmed || article89Excluded) return false;
+      const v = core({ ...input, householdHousingCount: Math.max(input.householdHousingCount - 1, 0) });
+      return v.isExempt || v.isPartialExempt;
+    },
+    // 신규 주택 취득 경위 「모름」·미입력·3년 경과 예외 미선언(결정 #43) — 경위를 일반 취득으로 채운 본체 판정이 비과세일 때만 확인 필요를 낸다.
+    newHouseOriginDecides: () => {
+      const tth = input.temporaryTwoHouse;
+      if (!tth?.newHouseOrigin || article89Excluded) return false;
+      const v = core({ ...input, temporaryTwoHouse: { ...tth, newHouseOrigin: { kind: "general" } } });
+      return v.isExempt || v.isPartialExempt;
     },
     // §155①2호 조정 여부·가목 전입일 고지(#30·#32) — 모르는 사실을 유리하게 읽은 반사실 판정이 비과세·부분과세 결론을 바꿀 때만.
     regulatedReadingDecides: () =>

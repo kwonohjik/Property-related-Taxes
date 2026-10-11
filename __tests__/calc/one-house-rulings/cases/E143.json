@@ -26,7 +26,8 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2016-05-25"
+          "acquisitionDate": "2016-05-25",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -67,7 +68,8 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2024-03-01"
+          "acquisitionDate": "2024-03-01",
+          "acquisitionOrigin": "general"
         }
       ]
     },

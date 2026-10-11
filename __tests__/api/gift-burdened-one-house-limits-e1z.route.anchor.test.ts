@@ -478,6 +478,7 @@ describe("G3 ⑭ route — 처분기한이 바뀐다 (계산기와 같은 결론
           isApartment: false,
           isOfficetel: false,
           isUnsoldHousing: false,
+          acquisitionOrigin: "general",
           acquisitionPrice: "",
           exclusiveArea: "",
           isUnsoldNewHouse: false,
@@ -553,6 +554,7 @@ describe("G4 ⑭ route — §155⑤ 혼인합가 10년 이내 먼저 양도 → 
         isApartment: false,
         isOfficetel: false,
         isUnsoldHousing: false,
+        acquisitionOrigin: "general" as const,
         mergeOrigin: "counterpart_side" as const,
       },
     ];

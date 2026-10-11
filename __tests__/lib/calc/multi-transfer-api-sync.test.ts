@@ -178,6 +178,8 @@ describe("[§155①] 다건 일시적 2주택 종전취득일 단일소스", () 
     expect(payload.temporaryTwoHouse).toEqual({
       previousAcquisitionDate: "2020-01-01",
       newAcquisitionDate: "2021-06-01",
+      // 결정 #43 — 명부 행 없이 신규 주택 취득일만 받는 흐름은 취득 경위를 묻지 못했다고 싣는다.
+      newHouseOrigin: { kind: "not_collected" },
     });
   });
 
@@ -422,6 +424,7 @@ describe("F1 — 다건 gracePeriod per-property 전송", () => {
         isApartment: true,
         isOfficetel: false,
         isUnsoldHousing: false,
+        acquisitionOrigin: "general",
         acquisitionPrice: "700000000",
         exclusiveArea: "84",
         isUnsoldNewHouse: false,

@@ -18,7 +18,8 @@
         {
           "id": "goyang",
           "region": "capital",
-          "acquisitionDate": "1996-02-21"
+          "acquisitionDate": "1996-02-21",
+          "acquisitionOrigin": "general"
         }
       ],
       "transferorNonResident": true

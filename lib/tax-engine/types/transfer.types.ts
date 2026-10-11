@@ -57,6 +57,29 @@ export type { CarryoverTaxationInput, CarryoverTaxationDetail } from "./transfer
 export type RuralHouseKind = "inherited" | "farm_exit" | "return_to_farm";
 
 /**
+ * §155① 신규 주택의 **취득 경위** (결정 #43 · G6-4) — 명부 행에는 「취득일」 하나뿐이라 권리(분양권·조합원입주권)로 취득해 완공된 주택에
+ * 완공일을 넣으면 해석이 부적용으로 본 순차 사례까지 §155①이 고지 없이 성립했다. 경위와 권리 취득일을 받아 갈래를 나눈다.
+ *
+ * - `general` 일반 취득(매매·상속·증여 등) — 취득일 그대로
+ * - `successor_right` 조합원입주권을 승계취득해 완공 — `rightAcquisitionDate` = 승계취득일
+ * - `original_member_house` 원조합원이 기존주택을 헐어 재개발·재건축으로 완공 — 기존주택의 연장이라 취득일 = 기존주택 취득일
+ * - `original_member_non_house` 원조합원(상가·토지 등 주택 아님)으로 완공 — `rightAcquisitionDate` = 관리처분계획 인가일
+ * - `presale` 분양권으로 취득해 완공 — `rightAcquisitionDate` = 분양권 취득일
+ * - `self_rebuild` 보유 주택을 헐고 다시 지은 주택(자가 재건축·신축) — 기존주택의 연장이라 취득일 = 헐기 전 주택 취득일
+ * - `unknown` 모름(또는 미입력) — §155①만이 근거이면 불성립 + 확인 필요
+ * - `not_collected` 명부 행이 없는 경로(계산기 직접 선언·증여 부담부)라 경위를 묻지 못했다 — 현행대로 판정하고 확인 필요를 알린다
+ */
+export type NewHouseOriginKind =
+  | "general"
+  | "successor_right"
+  | "original_member_house"
+  | "original_member_non_house"
+  | "presale"
+  | "self_rebuild"
+  | "unknown"
+  | "not_collected";
+
+/**
  * 「소득세법 시행규칙」 §75① — §156의2③ 전단·§156의3② 전단의 「3년 이내에 양도하지 못하는
  * 경우로서 재정경제부령으로 정하는 사유」.
  *
@@ -446,6 +469,23 @@ export interface TransferTaxInput {
      * 종료일(취득일 이후 갱신한 계약은 인정하지 않는다). 가·나목 기한이 이 날까지(최대 2년) 늘어난다.
      */
     existingTenantLeaseEndDate?: Date;
+    /**
+     * 신규 주택의 취득 경위 — 권리로 취득한 주택이면 갈래를 가른다(`one-house/new-house-origin.ts`).
+     * 🔑 **키 자체가 없으면 판정하지 않는다(종전 동작)** — 직접 호출·옛 기록. 화면 경로는 항상 싣는다
+     * (경위를 묻지 못하는 경로는 `kind: "not_collected"`).
+     */
+    newHouseOrigin?: {
+      kind: NewHouseOriginKind;
+      /** 권리 취득일 — 의미는 `kind`마다 다르다(위 설명). 비어 있으면 모름과 같이 불성립이다. */
+      rightAcquisitionDate?: Date;
+      /** 조합원입주권(승계) 관리처분계획 인가일 — 2006.1.1. 전 인가·승계분은 §89② 대상이 아니라 갈래를 가르지 않는다. */
+      rightApprovalDate?: Date;
+      /**
+       * 종전주택 보유 중 취득한 분양권이 완공된 갈래(직접 해석 없음)의 **반대 입장 재판정 플래그** — 판정 메뉴 양론(`contested-issues.ts`) 전용.
+       * `"156_3"`이면 §156의3②③으로 판정한다. 비우면 엔진 입장(§155① 완공일 기산).
+       */
+      holdingPresalePosition?: "155_1" | "156_3";
+    };
   };
   /**
    * §156의2⑤ 대체주택 비과세 특례 — 재개발·재건축 시행기간 중 거주목적 대체주택 취득 후 양도.
@@ -790,6 +830,28 @@ export interface TransferTaxInput {
      * 미전송(레거시 기록)은 해당 없음으로 본다 — 화면 경로는 ⑧이 답을 받아 항상 싣는다.
      */
     returnedToFarmExitHouse?: boolean;
+    /**
+     * 3호·⑩4호 — 「영농 또는 영어의 목적으로 취득」 요건의 목(가·나·다). 귀농주택 정의에 명문으로 들어 있는 요건이다.
+     * - `ga` 1,000㎡ 이상 농지를 소유하는 자(또는 배우자)가 농지소재지 주택을 취득
+     * - `na` 그 농지를 소유하기 전 1년 이내에 농지소재지 주택을 취득(대통령령 제27074호 — 귀농주택 2016.3.31. 이후 취득분만)
+     * - `da` 어업인(또는 배우자)이 취득
+     * - `none` 어느 목에도 해당하지 않음(확정) · `unknown` 모름
+     * 🔑 **키가 없으면 「모름」과 같이 불성립**이다(원칙 1) — 판정 메뉴·계산기 화면 경로는 ⑧이 답을 받아 항상 싣는다.
+     */
+    farmlandBasis?: "ga" | "na" | "da" | "none" | "unknown";
+    /** ⑩4호 — 농지 소유자·어업인이 본인인가 배우자인가(배우자 인정은 목마다 시행 시기가 다르다). 가·나·다목일 때만 의미가 있다. */
+    farmlandHolder?: "self" | "spouse";
+    /**
+     * ⑪ — 이 귀농주택 특례(§155⑦)로 **이미 일반주택을 비과세 양도한 적**이 있는가(`has`면 「귀농 후 최초로 양도하는 1개」가 아니다).
+     * 다주택 상태의 과세 양도는 세지 않는다(대법원 2005.12.23. 선고 2004두10869). 키가 없거나 `unknown`이면 불성립이다.
+     */
+    priorReturnFarmExemption?: "none" | "has" | "unknown";
+    /**
+     * 3호 — 양도하는 일반주택을 **귀농 전에 취득**했는가. 「귀농주택으로 귀농이후에 일반주택을 취득하여 양도하는 경우」를 다룬 국세청
+     * 해석(1998.07.27.·2010.03.15. — 목록의 제목만 확인했고 본문은 확인 필요)에 기댄 요건이다(1세대1주택 리뷰 결정 #44 하위 3).
+     * 상속 등으로 이어진 보유를 날짜 비교로 오판하지 않도록 직접 묻는다. `no`·`unknown`·키 없음은 불성립이다.
+     */
+    generalHouseAcquiredBeforeReturn?: "yes" | "no" | "unknown";
   };
   /**
    * §155⑥1호 — 「문화유산의 보존 및 활용에 관한 법률」에 따른 **지정문화유산**,
@@ -959,6 +1021,12 @@ export interface TransferTaxInput {
    * STEP 0.9/0.95 등이 채우는 echo다.
    */
   knownHouseExclusionHouseIds?: ReadonlyArray<string>;
+  /**
+   * 조특법 §71의2① 인구감소지역주택 후보 중 **모름·미답·해석 미확보 때문에 불성립으로 본** 것의 사유(결정 #42) — STEP 0.9가 채우는 echo다.
+   * 판정(`checkExemption`)이 「그 후보를 소유주택에서 뺐다면 결론이 달라지는가」를 가려 **결론을 가를 때만** 확인 필요를 알린다.
+   * 사용자 입력이 아니다(Zod 대상 아님).
+   */
+  popDecline71_2Unconfirmed?: { reasons: string[] };
   /**
    * §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)에 **명부 입력 경로가 없는 호출부**임을
    * 알린다(2026-10-05 Q-10). **공개 입력이 아니라 echo다** — 엔진이 `burdenedGiftInfo.houseRosterInputUnavailable`

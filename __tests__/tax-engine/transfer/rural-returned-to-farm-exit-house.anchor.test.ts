@@ -21,11 +21,13 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 type Rural = NonNullable<TransferTaxInput["ruralHouse"]>;
 const FARM_EXIT: Rural = { kind: "farm_exit", isOutsideCapitalEupMyeon: true, ownerResidenceYears: 20 };
 const RETURN_TO_FARM: Rural = {
   kind: "return_to_farm",
+  ...RETURN_TO_FARM_OK,
   isOutsideCapitalEupMyeon: true,
   acquisitionDate: new Date("2023-01-01"),
   isHighPriceAtAcquisition: false,

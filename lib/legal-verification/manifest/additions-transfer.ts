@@ -377,6 +377,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 결정 #42 — 인구감소지역주택을 소유주택이 아닌 것으로 보는 양도세 특례(①). 원문 MST 284389 실독 2026-10-11.
+    id: "SPECIAL.POP_DECLINE_HOUSE_71_2",
+    citation: "조특법 §71의2",
+    keywords: ["인구감소지역주택", "소유주택이 아닌 것으로 보아", "제89조제1항제3호 또는 제4호를 적용한다"],
+    keywordMode: "ALL",
+  },
+  {
     id: "SPECIAL.NEW_HOUSE_1998_BUYER",
     citation: "조특법 §99",
     keywords: ["신축주택", "1998년 5월 22일부터 1999년 6월 30일", "양도소득금액을 양도소득세 과세대상소득금액에서 빼"],

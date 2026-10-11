@@ -40,8 +40,8 @@ const form = (a: string, b: string | undefined, c: string, extra: Record<string,
   isFirstTransferredInMerge: true,
   asset: { assetKind: "housing", acquisitionDate: "2015-02-22", regionCode: a },
   houses: [
-    { id: "b", region: "capital", acquisitionDate: "2016-11-23", mergeOrigin: "counterpart_side", ...(b ? { regionCode: b } : {}) },
-    { id: "c", region: "capital", acquisitionDate: "2020-03-01", mergeOrigin: "counterpart_side", regionCode: c },
+    { id: "b", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2016-11-23", mergeOrigin: "counterpart_side", ...(b ? { regionCode: b } : {}) },
+    { id: "c", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2020-03-01", mergeOrigin: "counterpart_side", regionCode: c },
   ],
   ...extra,
 });
@@ -105,7 +105,7 @@ describe("S15-2 D8 짝(B→C) — 종전주택은 B다", () => {
   });
   it("양성 짝 — 양도 주택 A와 짝(A→C, 합가 후 취득 1채)이면 종전주택은 여전히 A의 주소로 판정한다", async () => {
     const f = form(GN, undefined, GN);
-    f.houses = [{ id: "c", region: "capital", acquisitionDate: "2020-08-01", regionCode: GN }] as never;
+    f.houses = [{ id: "c", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2020-08-01", regionCode: GN }] as never;
     const { card } = await run(f);
     expect(card.regulated.previousAuto).toBe(true);
     expect(card.regulated.previous).toBe(true);
@@ -126,8 +126,8 @@ describe("S15-2 계산기 — 같은 짝·같은 판정(④⑫⑭)", () => {
       householdNoPresaleRightsConfirmed: true, householdNoOtherHousesConfirmed: false,
       householdHousingCount: "3", marriageDate: "2020-06-01", isFirstTransferredInMerge: true,
       houses: [
-        hrow({ id: "b", region: "capital", acquisitionDate: "2016-11-23", mergeOrigin: "counterpart_side", regionCode: b }),
-        hrow({ id: "c", region: "capital", acquisitionDate: "2020-03-01", mergeOrigin: "counterpart_side", regionCode: c }),
+        hrow({ id: "b", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2016-11-23", mergeOrigin: "counterpart_side", regionCode: b }),
+        hrow({ id: "c", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2020-03-01", mergeOrigin: "counterpart_side", regionCode: c }),
       ],
     });
   }

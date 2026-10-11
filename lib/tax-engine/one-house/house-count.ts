@@ -184,7 +184,7 @@ export function buildOneHouseCountBreakdown(p: {
     if (!entry.eligible) continue;
     excluded.push({
       ...(entry.houseId ? { houseId: entry.houseId } : {}),
-      label: `${entry.articleLabel} — 주택 수 제외`,
+      label: `${entry.articleLabel} — 주택 수 제외${entry.notice ? ` · ${entry.notice}` : ""}`,
       legalBasis: entry.legalBasis,
     });
   }
@@ -228,7 +228,7 @@ export function buildOneHouseCountBreakdown(p: {
     if (entry.eligible) continue;
     notApplied.push({
       ...(entry.houseId ? { houseId: entry.houseId } : {}),
-      label: `${entry.articleLabel} — 요건 미충족으로 주택 수에서 빼지 않음`,
+      label: `${entry.articleLabel} — ${entry.unconfirmed ? "확인되지 않아" : "요건 미충족으로"} 주택 수에서 빼지 않음`,
       legalBasis: entry.legalBasis,
       reasons: entry.reason ? [entry.reason] : [],
     });

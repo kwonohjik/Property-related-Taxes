@@ -104,6 +104,7 @@ describe("[F04] §155④⑤ 합가 후 첫 양도 게이트", () => {
         isApartment: false,
         isOfficetel: false,
         isUnsoldHousing: false,
+        acquisitionOrigin: "general",
         mergeOrigin: "counterpart_side",
       },
     ];
@@ -192,6 +193,8 @@ describe("[F04] §155⑯⑱ 일시적 2주택 4필드", () => {
       relocatedSigunguCode: "11110",
       newHouseSigunguCode: "11140",
       disposalDelayReason: "auction",
+      // 결정 #43 — 명부 행 없이 신규 주택 취득일만 받는 흐름은 취득 경위를 묻지 못했다고 싣는다.
+      newHouseOrigin: { kind: "not_collected" },
     });
   });
 

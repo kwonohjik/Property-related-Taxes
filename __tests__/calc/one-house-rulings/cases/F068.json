@@ -19,25 +19,29 @@
           "id": "702",
           "acquisitionDate": "2001-02-26",
           "isApartment": true,
-          "isSpouseOwned": true
+          "isSpouseOwned": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "902",
           "acquisitionDate": "2001-02-26",
           "isApartment": true,
-          "isSpouseOwned": true
+          "isSpouseOwned": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "1103",
           "acquisitionDate": "2000-12-06",
           "isApartment": true,
-          "isSpouseOwned": true
+          "isSpouseOwned": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "1203",
           "acquisitionDate": "2000-12-06",
           "isApartment": true,
-          "isSpouseOwned": true
+          "isSpouseOwned": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

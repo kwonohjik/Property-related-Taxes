@@ -75,6 +75,7 @@ const ROW: HouseEntry = {
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 };
 /** 장기임대주택 행 — 등록 정보 없이 표시만(영 §167의3①2호 판정 불가 → 중과 주택 수에 들어간다) */
 const RENTAL_ROW: HouseEntry = { ...ROW, id: "h4", acquisitionDate: "2016-01-01", isLongTermRental: true, isApartment: false };

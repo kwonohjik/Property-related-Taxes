@@ -18,7 +18,8 @@
         {
           "id": "h1",
           "region": "capital",
-          "acquisitionDate": "2002-09-30"
+          "acquisitionDate": "2002-09-30",
+          "acquisitionOrigin": "general"
         }
       ]
     },

@@ -49,6 +49,8 @@ describe("TTR — §155① 신규주택 명부 도출", () => {
     expect(r).toEqual({
       previousAcquisitionDate: "2017-08-31",
       newAcquisitionDate: "2024-05-30",
+      // 결정 #43 — 경위를 답하지 않은 명부 행은 「모름」(일시적 2주택을 적용하지 않고 확인 필요)
+      newHouseOrigin: { kind: "unknown" },
       source: "roster",
     });
   });
@@ -96,6 +98,7 @@ describe("TTR — §155① 신규주택 명부 도출", () => {
     expect(r).toEqual({
       previousAcquisitionDate: "2017-08-31",
       newAcquisitionDate: "2024-05-30",
+      newHouseOrigin: { kind: "not_collected" },
       source: "declared",
     });
   });
@@ -135,6 +138,8 @@ describe("TTR — §155① 신규주택 명부 도출", () => {
     expect(r).toEqual({
       previousAcquisitionDate: "2017-08-31",
       newAcquisitionDate: "2024-05-30",
+      // 결정 #43 — 경위를 답하지 않은 명부 행은 「모름」(일시적 2주택을 적용하지 않고 확인 필요)
+      newHouseOrigin: { kind: "unknown" },
       source: "roster",
     });
   });

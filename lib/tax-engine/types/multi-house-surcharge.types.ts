@@ -300,6 +300,15 @@ export interface HouseInfo {
    * 미제공 시 4억 한도(보수적).
    */
   populationAreaType?: "decline" | "interest";
+  // ── 조특법 §71의2① 인구감소지역주택 의제 (결정 #42) — 명부에 없는 **과거 사실** 3종. 비교·모름 처리는 `transfer-reductions/population-decline-71-2.ts` ──
+  /** 이 주택 취득 당시 세대가 주택·조합원입주권·분양권 중 1채(1개)만 보유했는가 — 명부에 이미 둘 이상이면 묻지 않고 불성립이다. 미답·모름은 불성립 + 확인 필요. */
+  popDeclSoleAtAcquisition?: "yes" | "no" | "unknown";
+  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 해석 본문 확인 전이라 증여·모름은 미적용 + 확인 필요. */
+  popDeclAcquiredByGift?: "no" | "yes" | "unknown";
+  /** 종전(양도) 주택이 이 주택보다 늦게 기록된 경우에만 — 종전 주택을 분양권·조합원입주권으로 받았는가. 그렇다면 선후는 권리를 가진 날로 본다. */
+  popDeclPriorRight?: "no" | "yes" | "unknown";
+  /** `popDeclPriorRight`가 「그렇다」일 때 그 권리를 가진 날 */
+  popDeclPriorRightDate?: Date;
   // ── 2주택 배제 관련 ──
   /**
    * 취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 여부.

@@ -398,8 +398,15 @@ export function usesContractDateOnly(article: string): boolean {
 }
 
 
+/** 선언이 아니라 **명부에서 도출**하는 조특법 의제 조문 — 조특법 §71의2① 인구감소지역주택(`population-decline-71-2.ts`). */
+export type DerivedSpecialHouseExclusionArticle = "pop_decline_71_2";
+
 export interface SpecialHouseExclusionEntryResult {
-  article: SpecialHouseExclusionArticle;
+  article: SpecialHouseExclusionArticle | DerivedSpecialHouseExclusionArticle;
+  /** 「모름」·미답·해석 미확보 때문에 불성립으로 본 도출 항목(§71의2) — 결론을 가를 때 확인 필요를 알린다. 선언 항목에는 없다. */
+  unconfirmed?: boolean;
+  /** 적용됐을 때 함께 알릴 안내(§71의2 과세특례신고서 제출) — 명세 라벨에 붙는다. */
+  notice?: string;
   /** 선언의 명부 행 id (있을 때만) */
   houseId?: string;
   articleLabel: string;

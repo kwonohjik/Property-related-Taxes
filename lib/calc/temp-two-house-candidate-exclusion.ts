@@ -22,6 +22,7 @@ import { qualifiesRuralHouse } from "@/lib/tax-engine/transfer-tax-exemption-hol
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { deriveOneHouseFactsFromHouses, findRuralHouseRow } from "./one-house-row-facts";
 import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transfer-inheritance-exclusion";
+import { resolvePopulationDecline71_2 } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { eligibleCountExcludedHouseIds } from "./house-count-exclusion-rows";
@@ -116,7 +117,53 @@ export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet
 export function exemptionCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   const ids = new Set(eligibleCountExcludedHouseIds(form));
   for (const id of inheritedCountExcludedHouseIds(form)) ids.add(id);
+  for (const id of popDeclineCountExcludedHouseIds(form, ids)) ids.add(id);
   return ids;
+}
+
+/**
+ * 조특법 §71의2① 인구감소지역주택으로 주택 수에서 빠지는 명부 행 id(엔진 판정 · 결정 #42) — 엔진 `resolveExemptionHouseCountExclusions`가 보는 것과
+ * 같은 평가기(`resolvePopulationDecline71_2`)에 같은 명부 payload를 넘긴다. 이 행이 §155① 신규 주택 후보에 남으면 일시적 2주택 도출·⑧ 취득 경위 요구가
+ * 엉뚱한 행으로 간다. 양도일·양도 주택 취득일이 없으면 빈 집합.
+ *
+ * @param alreadyExcluded 다른 제외(조특법 선언·§99의4·§98의9·§155②③)로 이미 빠진 행 — 같은 행을 두 번 빼지 않고 겹침 판정에 쓴다.
+ */
+export function popDeclineCountExcludedHouseIds(
+  form: CandidateFormLike,
+  alreadyExcluded: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const primary = form.assets?.[0];
+  const transferDate = toOptionalDate(form.transferDate);
+  if (!primary || !transferDate || !(form.houses ?? []).length) return new Set();
+  const payload = buildHousesPayload(
+    primary,
+    form.houses ?? [],
+    form.presaleRights?.length ?? 0,
+    form.sellingHouseExclusion,
+    form.transferDate,
+  ) as Array<Record<string, unknown>> | undefined;
+  if (!payload) return new Set();
+  const houses = payload.map((h) => ({
+    ...h,
+    acquisitionDate: toOptionalDate(h.acquisitionDate as string | undefined),
+    popDeclPriorRightDate: toOptionalDate(h.popDeclPriorRightDate as string | undefined),
+  })) as unknown as HouseInfo[];
+  if (houses.some((h) => !h.acquisitionDate)) return new Set();
+  const sellingIsHousing = primary.assetKind !== "right_to_move_in";
+  const r = resolvePopulationDecline71_2({
+    houses,
+    sellingHouseId: "selling", // route와 같은 양도 행 id
+    transferDate,
+    presaleRights: (form.presaleRights ?? []).flatMap((p) => {
+      const d = toOptionalDate(p.acquisitionDate);
+      return d ? [{ acquisitionDate: d, regionCode: p.regionCode }] : [];
+    }),
+    alreadyExcludedIds: alreadyExcluded,
+    otherExcludedCount: alreadyExcluded.size,
+    householdHousingCount: sellingIsHousing ? houses.length : houses.length - 1,
+    sellingIsHousing,
+  });
+  return new Set(r.entries.filter((e) => e.eligible && e.houseId).map((e) => e.houseId as string));
 }
 
 /**

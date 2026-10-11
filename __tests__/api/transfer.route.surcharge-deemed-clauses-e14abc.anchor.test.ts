@@ -56,6 +56,7 @@ const ROW: HouseEntry = {
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 };
 /** 일시적 2주택의 신규 주택 — 양도 주택(2015)보다 나중 취득 → 명부 도출이 「신규 주택」으로 고른다 */
 const NEW_GANGNAM: HouseEntry = { ...ROW };

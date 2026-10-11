@@ -18,7 +18,8 @@
         {
           "id": "apt",
           "region": "capital",
-          "acquisitionDate": "2000-09-08"
+          "acquisitionDate": "2000-09-08",
+          "acquisitionOrigin": "general"
         }
       ]
     },

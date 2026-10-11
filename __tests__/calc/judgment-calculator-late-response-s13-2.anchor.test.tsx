@@ -64,7 +64,7 @@ afterEach(() => {
 
 const HOUSE = {
   id: "h1", region: "capital", acquisitionDate: "2020-01-01", officialPrice: "300000000",
-  isInherited: false, isLongTermRental: false, isApartment: true, isOfficetel: false, isUnsoldHousing: false,
+  isInherited: false, isLongTermRental: false, isApartment: true, isOfficetel: false, isUnsoldHousing: false, acquisitionOrigin: "general",
 };
 function form0(): OneHouseJudgmentFormData {
   const f = createInitialOneHouseJudgmentForm();

@@ -38,6 +38,8 @@ import {
 } from "./transfer-tax-house-exclusion-step";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
+import { judgeNewHouseOrigin, OLD_CLAUSE_8_ORIGIN_DIVERGENCE_NOTE } from "./one-house/new-house-origin";
+import { waivesPriorHouseOneYearGap } from "./transfer-tax-exemption-requirements";
 import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
 import { translateRedevAptForHousingJudgment } from "./one-house/redev-apt-judgment-input";
@@ -443,6 +445,16 @@ export function runMultiHouseSurchargeStep(
         workingInput.isRegulatedArea,
       );
     multiHouseSurchargeResult = judge(housesForSurcharge);
+    // 구 8호(2023.2.28. 전 양도분)는 신규 주택의 취득 경위 갈래 분리를 적용하지 않는다 — 비과세는 그 갈래로 불성립인데 8호가 성립한 경우만 알린다(결정 #43 하위 1 나).
+    if (mhInput.oldClause8TemporaryTwoHouse === true && workingInput.temporaryTwoHouse?.newHouseOrigin) {
+      const originVerdict = judgeNewHouseOrigin(workingInput, waivesPriorHouseOneYearGap(workingInput));
+      if (originVerdict.blocked) {
+        multiHouseSurchargeResult = {
+          ...multiHouseSurchargeResult,
+          warnings: [...(multiHouseSurchargeResult.warnings ?? []), OLD_CLAUSE_8_ORIGIN_DIVERGENCE_NOTE],
+        };
+      }
+    }
     // §155①⑦·조특법 제외 구성 행은 중과가 배제될 때만 쓴다 — 중과가 남으면 그 결론을 다른 주택의 모르는 사실(1호·10호 등)이
     //   가를 수 있으므로 종전대로 원시 플래그 + 「확인 필요」 고지로 돌린다(`noRosterTwoHouseDeemingHouses`).
     //   구성 행(양도 주택 뒤)의 1호 불산입 여부도 모른다 — 산입 수가 줄어든 모든 경우(앞에서부터 자른 구성)에도

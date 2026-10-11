@@ -30,6 +30,7 @@ import {
 } from "./data/one-house-154-1-proviso-era";
 import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
 import { giftHouseholdHoldingStart, resolveGiftResidenceDates } from "./one-house/gift-household-basis";
+import { checkReturnToFarmFacts } from "./one-house/rural-return-to-farm-facts";
 import { excludeNonResidentHoldingPeriod } from "./one-house/non-resident-holding";
 import {
   CAPITAL_NEWTOWN_RESIDENCE_YEARS,
@@ -172,7 +173,7 @@ export function qualifiesCulturalHeritageHouse(
  * 베껴 쓰면 한쪽만 개정 반영되므로, 기한 판정만 떼어 낸 이 함수를 둘이 함께 쓴다.
  */
 export function qualifiesRuralHouseApartFromDeadline(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "ruralHouse" | "inheritedHouseExclusionCount">,
+  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
 ): boolean {
   const r = input.ruralHouse;
   if (!twoHouseSpecialCountHolds(input) || !r) return false;
@@ -193,6 +194,8 @@ export function qualifiesRuralHouseApartFromDeadline(
       if (r.isHighPriceAtAcquisition === true) return false; // ⑩2호
       if ((r.landAreaSqm ?? Infinity) > RURAL_RETURN_TO_FARM_MAX_LAND_SQM) return false; // ⑩3호
       if (r.wholeHouseholdMoved !== true) return false; // ⑩5호
+      // ⑩4호(영농·영어 목적) · ⑪(귀농 후 최초 1개) · 귀농 전 취득 일반주택 — 키가 없거나 「모름」이면 불성립(결정 #44)
+      if (!checkReturnToFarmFacts(r, input.transferDate).qualified) return false;
       return !!r.acquisitionDate; // ⑦ 단서 판정 불가 → 적용하지 않는다
   }
 }

@@ -49,6 +49,10 @@ export type OneHouseFactRow = Partial<
     | "ruralWholeHouseholdMoved"
     | "ruralHighPriceAtAcquisition"
     | "ruralReturnedToFarmExitHouse"
+    | "ruralFarmlandBasis"
+    | "ruralFarmlandHolder"
+    | "ruralPriorReturnFarmExemption"
+    | "ruralGeneralHouseBeforeReturn"
     | "oneHouseUnavoidableOutsideCapital"
     | "unavoidableOutsideCapitalReason"
     | "unavoidableOutsideCapitalResolvedDate"
@@ -72,6 +76,10 @@ export interface RuralHousePayload {
   landAreaSqm?: number;
   wholeHouseholdMoved?: boolean;
   returnedToFarmExitHouse?: boolean;
+  farmlandBasis?: "ga" | "na" | "da" | "none" | "unknown";
+  farmlandHolder?: "self" | "spouse";
+  priorReturnFarmExemption?: "none" | "has" | "unknown";
+  generalHouseAcquiredBeforeReturn?: "yes" | "no" | "unknown";
 }
 
 /** ④가 만드는 §155⑧ nested payload — 엔진 `TransferTaxInput["unavoidableOutsideCapitalHouse"]`. */
@@ -161,6 +169,48 @@ export function findUnavoidableOutsideCapitalRow(
 
 const num = (s: string | undefined) => parseFloat(s ?? "") || 0;
 
+/** ⑩3호 대지면적 — 빈 칸·숫자 아님이면 `undefined`(0㎡로 읽지 않는다). */
+function landAreaSqmOf(row: Pick<HouseEntry, "ruralLandAreaSqm">): number | undefined {
+  const v = parseFloat(row.ruralLandAreaSqm ?? "");
+  return Number.isFinite(v) ? v : undefined;
+}
+
+/**
+ * ⑧ §155⑦3호 귀농주택 — ⑩3호 대지면적 · ⑩4호 영농·영어 목적 · ⑪ 귀농 후 최초 1개 · 귀농 전 취득 일반주택에 **답이 없다**.
+ * 「모름」은 유효한 답이다(불성립으로 판정하고 확인 필요를 알린다) — 막는 것은 답을 아예 안 한 경우다.
+ * 판정 메뉴·계산기 ⑧이 같은 leaf를 쓴다(⑤ `HouseEntryRuralHouseBlock` 라디오·입력이 유일한 입력 경로 — 3중 패턴).
+ */
+export function ruralReturnToFarmFactsIssue(
+  row: Pick<
+    HouseEntry,
+    | "oneHouseRuralHouse"
+    | "ruralHouseKind"
+    | "ruralLandAreaSqm"
+    | "ruralFarmlandBasis"
+    | "ruralFarmlandHolder"
+    | "ruralPriorReturnFarmExemption"
+    | "ruralGeneralHouseBeforeReturn"
+  >,
+): { field: string; message: string } | null {
+  if (row.oneHouseRuralHouse !== true || row.ruralHouseKind !== "return_to_farm") return null;
+  if (landAreaSqmOf(row) === undefined) {
+    return { field: "ruralLandAreaSqm", message: "귀농주택 대지면적(㎡)을 입력하세요 — 비우면 660㎡ 이내 요건(§155⑩3호)을 확인할 수 없습니다." };
+  }
+  if (!row.ruralFarmlandBasis) {
+    return { field: "ruralFarmlandBasis", message: "귀농주택이 영농·영어의 목적으로 취득한 것인지(§155⑩4호 가·나·다목) 선택하세요 — 모르면 「모름」을 고르세요." };
+  }
+  if (["ga", "na", "da"].includes(row.ruralFarmlandBasis) && !row.ruralFarmlandHolder) {
+    return { field: "ruralFarmlandHolder", message: "농지를 소유한 사람(또는 어업인)이 본인인지 배우자인지 선택하세요(§155⑩4호)." };
+  }
+  if (!row.ruralPriorReturnFarmExemption) {
+    return { field: "ruralPriorReturnFarmExemption", message: "이 귀농주택 특례로 이미 일반주택을 비과세 양도한 적이 있는지 선택하세요(§155⑪ 귀농 후 최초로 양도하는 1개)." };
+  }
+  if (!row.ruralGeneralHouseBeforeReturn) {
+    return { field: "ruralGeneralHouseBeforeReturn", message: "양도하는 일반주택을 귀농 전에 취득했는지 선택하세요." };
+  }
+  return null;
+}
+
 /**
  * ⑧ D7 — §155⑦1호 상속 농어촌주택으로 표시한 행인데 상속개시 당시 동일세대 여부를 답하지 않았다.
  * 판정 메뉴·계산기 ⑧이 같은 leaf를 쓴다(⑤ `HouseEntryRuralHouseBlock` 라디오가 유일한 입력 경로 — 3중 패턴).
@@ -217,9 +267,15 @@ function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
           // §155⑦ 단서의 「**그 주택**을 취득한 날」 = 이 행의 취득일. 별도 칸이 없는 이유다.
           ...(row.acquisitionDate ? { acquisitionDate: row.acquisitionDate } : {}),
           isHighPriceAtAcquisition: row.ruralHighPriceAtAcquisition === true,
-          landAreaSqm: num(row.ruralLandAreaSqm),
+          // 🔴 빈 칸은 키를 싣지 않는다 — `num("")`=0이 ⑩3호(660㎡ 이내)를 조용히 통과시켰다(결정 #44). ⑧이 빈 칸을 막는다.
+          ...(landAreaSqmOf(row) !== undefined ? { landAreaSqm: landAreaSqmOf(row) } : {}),
           wholeHouseholdMoved: row.ruralWholeHouseholdMoved === true,
           returnedToFarmExitHouse: row.ruralReturnedToFarmExitHouse === true,
+          // ⑩4호·⑪·귀농 전 취득 — 답이 없으면 키를 싣지 않는다(엔진이 「모름」과 같이 불성립으로 본다).
+          ...(row.ruralFarmlandBasis ? { farmlandBasis: row.ruralFarmlandBasis } : {}),
+          ...(row.ruralFarmlandHolder ? { farmlandHolder: row.ruralFarmlandHolder } : {}),
+          ...(row.ruralPriorReturnFarmExemption ? { priorReturnFarmExemption: row.ruralPriorReturnFarmExemption } : {}),
+          ...(row.ruralGeneralHouseBeforeReturn ? { generalHouseAcquiredBeforeReturn: row.ruralGeneralHouseBeforeReturn } : {}),
         }
       : {}),
   };

@@ -38,8 +38,11 @@ import { INHERITED_HOUSE } from "../legal-codes";
 const SAME_HOUSEHOLD_PROVISO_TRANSFER_START = new Date("2010-02-18");
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import {
+  evaluateTemporaryTwoHouseTiming,
   meetsOneHouseResidenceRequirement,
   qualifiesLongTermMortgageResidenceExemption,
+  ruralTemporaryTwoHouseOverlapCountHolds,
+  twoHouseSpecialCountHolds,
 } from "../transfer-tax-exemption-requirements";
 import {
   describeOneHouseHoldingRequirement,
@@ -74,6 +77,15 @@ import {
   hwaseongTemporaryTwoHouseWindowNotice,
 } from "./hwaseong-announcement-window";
 import { giftHouseholdConfirmedSeparate, giftHouseholdUnconfirmed } from "./gift-household-basis";
+import {
+  checkReturnToFarmFacts,
+  farmland990EraNotice,
+  RURAL_FARMLAND_990_ERA_ID,
+  RURAL_FARM_FACTS_UNCONFIRMED_ID,
+} from "./rural-return-to-farm-facts";
+import { qualifiesRuralHouseApartFromDeadline } from "../transfer-tax-exemption-holding";
+import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "../transfer-reductions/population-decline-71-2";
+import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_ORIGIN_UNCONFIRMED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from "./new-house-origin";
 
 // §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
 export {
@@ -122,6 +134,12 @@ export const ERA_UNDETERMINED_IDS = new Set([
   USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID,
   "civil-161-holiday-table-uncovered",
   HWASEONG_WINDOW_NOTICE_ID,
+  RURAL_FARM_FACTS_UNCONFIRMED_ID,
+  RURAL_FARMLAND_990_ERA_ID,
+  NEW_HOUSE_ORIGIN_UNCONFIRMED_ID,
+  NEW_HOUSE_ORIGIN_UNCOLLECTED_ID,
+  NEW_HOUSE_PRESALE_HOLDING_ID,
+  POP_DECLINE_71_2_UNCONFIRMED_ID,
 ]);
 
 const law = (s: string) => `${TRANSFER.ONE_HOUSE_REQUIREMENT}${s}`;
@@ -149,6 +167,12 @@ export interface EraNoticeRelevance {
    * 미확인이면 「통산 성립」·「별도세대」 두 가정, 통산이 적용됐으면 「별도세대」, 증여자 사망이면 「통산 성립」 가정과 비교한다.
    */
   giftHouseholdDecides: () => boolean;
+  /** 귀농주택 ⑩4호·⑪·귀농 전 취득 일반주택 「모름」·미응답 고지(결정 #44) — 그 사실을 유리하게 채운 반사실 판정이 비과세인가 */
+  ruralFarmFactsDecide?: () => boolean;
+  /** 신규 주택 취득 경위 「모름」·미입력·3년 경과 예외 미선언 고지(결정 #43) — 경위를 일반 취득으로 채운 반사실 판정이 비과세인가 */
+  newHouseOriginDecides?: () => boolean;
+  /** 조특법 §71의2① 인구감소지역주택 「모름」·해석 미확보 고지(결정 #42) — 그 후보를 소유주택에서 뺀 반사실 판정이 비과세인가 */
+  popDeclineDecides?: () => boolean;
 }
 
 export function collectEraUndetermined(
@@ -547,6 +571,62 @@ export function collectEraUndetermined(
         "2010년 2월 18일 이후 양도분부터 적용되는 규정입니다(대통령령 제22034호 부칙 제3조). 그 전 양도분도 동일세대원으로부터 상속받은 주택은 " +
         "상속주택 특례 대상이 아니라고 보지만(조세심판관합동회의 조심2009서2497), 동거봉양 예외를 그 전 양도분에 인정했는지는 확인되지 않았습니다 — " +
         "예외를 인정해 판정했으니 확인이 필요합니다.",
+    });
+  }
+
+  /*
+   * §155⑦3호 귀농주택 — ⑩4호(영농·영어 목적)·⑪(귀농 후 최초 1개)·귀농 전 취득 일반주택에 「모름」이거나 답이 없으면 불성립으로 판정한다
+   * (원칙 1). 그 사실이 **결론을 가를 때만** 확인 필요를 낸다 — 유리하게 채운 반사실 판정이 비과세일 때다.
+   */
+  const farm = input.ruralHouse;
+  if (farm?.kind === "return_to_farm") {
+    const facts = checkReturnToFarmFacts(farm, input.transferDate);
+    if (!settled && facts.unconfirmed.length > 0 && (relevance?.ruralFarmFactsDecide?.() ?? true)) {
+      out.push({
+        id: RURAL_FARM_FACTS_UNCONFIRMED_ID,
+        reason: `${facts.unconfirmed.join(" ")} 확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다.`,
+      });
+    }
+    const n990 = farmland990EraNotice(farm);
+    if (settled && n990 && qualifiesRuralHouseApartFromDeadline(input)) {
+      out.push({ id: RURAL_FARMLAND_990_ERA_ID, reason: n990 });
+    }
+  }
+
+  /*
+   * §155① 신규 주택의 취득 경위(결정 #43 · G6-4) — 권리(분양권·조합원입주권) 유래 주택은 갈래를 가른다(`new-house-origin.ts`).
+   *   · 모름·미입력·3년 경과 예외 미선언으로 불성립한 것은 **결론을 가를 때만** 확인 필요를 낸다(경위를 일반 취득으로 채운 반사실 판정이 비과세일 때).
+   *   · 종전주택 보유 중 분양권이 완공된 갈래(직접 해석 없음)와 경위를 묻지 못한 경로는 §155①로 비과세가 선 경우에만 확인 필요를 낸다.
+   */
+  const originRule = oneHouseRules.temporary_two_house;
+  if (
+    originRule &&
+    input.temporaryTwoHouse?.newHouseOrigin &&
+    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input))
+  ) {
+    const { origin, timing } = evaluateTemporaryTwoHouseTiming(input, originRule);
+    if (!settled && origin.blocked && origin.unconfirmed.length > 0 && (relevance?.newHouseOriginDecides?.() ?? true)) {
+      out.push({ id: NEW_HOUSE_ORIGIN_UNCONFIRMED_ID, reason: `${origin.unconfirmed.join(" ")} 확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다.` });
+    }
+    if (settled && timing.overall && origin.confirmNotes.length > 0) {
+      out.push({
+        id: origin.holdingPresale ? NEW_HOUSE_PRESALE_HOLDING_ID : NEW_HOUSE_ORIGIN_UNCOLLECTED_ID,
+        reason: origin.confirmNotes.join(" "),
+      });
+    }
+  }
+
+  /*
+   * 조특법 §71의2① 인구감소지역주택 — 후보인데 모름·미답·해석 미확보라 소유주택에서 빼지 않았다(결정 #42). **결론을 가를 때만** 알린다 —
+   * 그 후보를 뺀 반사실 판정이 비과세일 때다. 양도 주택·입주권 모두 같은 echo를 읽지만 이 수집기는 주택 양도만 본다.
+   */
+  const popUnconfirmed = input.popDecline71_2Unconfirmed;
+  if (popUnconfirmed && !settled && (relevance?.popDeclineDecides?.() ?? true)) {
+    out.push({
+      id: POP_DECLINE_71_2_UNCONFIRMED_ID,
+      reason:
+        `${TRANSFER.POP_DECLINE_HOUSE_71_2}(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다 — ${popUnconfirmed.reasons.join(" ")} ` +
+        "확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다.",
     });
   }
 

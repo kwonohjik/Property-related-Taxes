@@ -21,7 +21,8 @@
       "houses": [
         {
           "id": "new",
-          "acquisitionDate": "2002-12-12"
+          "acquisitionDate": "2002-12-12",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -53,7 +54,8 @@
       "houses": [
         {
           "id": "new",
-          "acquisitionDate": "2023-12-15"
+          "acquisitionDate": "2023-12-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -88,7 +90,8 @@
       "houses": [
         {
           "id": "new",
-          "acquisitionDate": "2023-03-10"
+          "acquisitionDate": "2023-03-10",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -123,7 +126,8 @@
       "houses": [
         {
           "id": "new",
-          "acquisitionDate": "2023-03-10"
+          "acquisitionDate": "2023-03-10",
+          "acquisitionOrigin": "general"
         }
       ]
     },

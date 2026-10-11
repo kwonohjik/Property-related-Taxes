@@ -62,6 +62,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
+import { RETURN_TO_FARM_ROW_OK } from "../_helpers/rural-return-to-farm-facts";
 
 type Form = ReturnType<typeof createDefaultTransferFormData>;
 type Obj = Record<string, unknown>;
@@ -228,6 +229,7 @@ const RURAL = (ruralHouseKind: "inherited" | "return_to_farm"): HouseEntry => ({
   acquisitionDate: "2024-01-01",
   oneHouseRuralHouse: true,
   ruralHouseKind,
+  ...RETURN_TO_FARM_ROW_OK,
   ruralOutsideCapitalEupMyeon: true,
   ruralDecedentResidenceYears: "6",
   ruralLandAreaSqm: "300",

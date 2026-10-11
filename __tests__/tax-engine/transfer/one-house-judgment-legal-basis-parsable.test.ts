@@ -29,6 +29,7 @@ import { parseLawRef } from "@/lib/utils/law-url";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules;
 const PRESALE_START = new Date("2021-01-01");
@@ -63,6 +64,7 @@ const CASES: Array<{ name: string; input: Partial<TransferTaxInput> }> = [
       householdHousingCount: 2,
       ruralHouse: {
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         isOutsideCapitalEupMyeon: true,
         acquisitionDate: D("2018-01-01"),
         isHighPriceAtAcquisition: false,

@@ -202,6 +202,7 @@ describe("OH-34(병합) 레거시 표식 — 판정 폼 값으로 확정한다",
           isApartment: true,
           isOfficetel: false,
           isUnsoldHousing: false,
+          acquisitionOrigin: "general",
         } as HouseEntry,
       ],
     };
@@ -218,6 +219,8 @@ describe("OH-34(병합) 레거시 표식 — 판정 폼 값으로 확정한다",
     expect(p.temporaryTwoHouse).toEqual({
       previousAcquisitionDate: "2018-06-01",
       newAcquisitionDate: "2024-05-30",
+      // 결정 #43 — 명부 행(경위 「일반 취득」)에서 도출한 신규 주택은 그 경위를 싣는다.
+      newHouseOrigin: { kind: "general" },
     });
   });
 

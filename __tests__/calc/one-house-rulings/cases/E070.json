@@ -22,7 +22,8 @@
           "isInherited": true,
           "inheritedDate": "2020-03-10",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         }
       ]
     },

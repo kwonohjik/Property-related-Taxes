@@ -101,6 +101,28 @@ export interface HouseEntry {
   soldSameDay?: boolean;
   /** `soldSameDay`일 때 — `first` 이 주택을 현재 양도하는 주택보다 **먼저** 양도한 것으로 선택(주택 수에서 뺀다) / `later` 나중에(산입). 미선택=산입+고지. */
   sameDayTransferOrder?: "first" | "later";
+  /**
+   * §155① 신규 주택 **취득 경위** (결정 #43 · G6-4) — 이 행이 양도 주택보다 나중에 취득한 행(신규 주택 후보)일 때 묻는다.
+   * 분양권·조합원입주권으로 취득해 완공된 주택에 완공일을 「취득일」로 넣으면 해석이 부적용으로 본 순차 사례까지 비과세가 나왔다.
+   * `undefined`는 「아직 답하지 않음」 — ⑧이 막고, 엔진은 「모름」과 같이 불성립으로 본다(결론을 가를 때 확인 필요).
+   * `NewHouseOriginKind`에서 `not_collected`만 뺀 값이다(그 값은 명부 행이 없는 경로가 엔진에 싣는 표지).
+   */
+  acquisitionOrigin?:
+    | "general"
+    | "successor_right"
+    | "original_member_house"
+    | "original_member_non_house"
+    | "presale"
+    | "self_rebuild"
+    | "unknown";
+  /**
+   * 권리 취득일(`YYYY-MM-DD`) — 의미는 `acquisitionOrigin`마다 다르다: 승계 입주권 = 승계취득일 · 분양권 = 취득일(청약은 당첨일,
+   * 선착순은 동·호 지정 후 계약일) · 상가·토지 원조합원 = 관리처분계획 인가일 · 원조합원(기존주택)·자가 재건축 = 기존(헐기 전) 주택 취득일.
+   * 이 칸은 `completionDate`(§167의3①12가목 소형신축 준공일)와 다른 사실이다 — 섞지 않는다.
+   */
+  rightAcquisitionDate?: string;
+  /** 승계취득한 조합원입주권의 관리처분계획 인가일 — 2006.1.1. 전 인가·승계분은 §89② 대상이 아니다(법률 제7837호 부칙 §12). 선택 입력. */
+  rightApprovalDate?: string;
   /** 취득가액(원, 문자열) — 소형신축·준공후미분양 특례 가액 기준 (§167의3①12가·나목) */
   acquisitionPrice?: string;
   /** 전용면적(㎡, 문자열) — 소형신축 60㎡·미분양 85㎡ 판정 */
@@ -211,6 +233,17 @@ export interface HouseEntry {
    * 않는다(부동산납세과-67). `undefined`는 「아직 답하지 않음」 — ⑧이 막는다(모름은 불리).
    */
   ruralReturnedToFarmExitHouse?: boolean;
+  /**
+   * 3호 §155⑩4호 — 「영농 또는 영어의 목적으로 취득」 요건의 목(가·나·다). `undefined`는 「아직 답하지 않음」 — ⑧이 막는다(모름은 불리).
+   * `unknown`은 「모름」이라는 **답**이다 — 불성립으로 판정하고 결론을 가를 때 확인 필요를 알린다(결정 #44).
+   */
+  ruralFarmlandBasis?: "ga" | "na" | "da" | "none" | "unknown";
+  /** 3호 §155⑩4호 — 농지 소유자·어업인이 본인인가 배우자인가(가·나·다목을 골랐을 때만). 배우자 인정은 목마다 시행 시기가 다르다. */
+  ruralFarmlandHolder?: "self" | "spouse";
+  /** 3호 §155⑪ — 이 귀농주택 특례로 이미 일반주택을 비과세 양도한 적이 있는가(없음·있음·모름). */
+  ruralPriorReturnFarmExemption?: "none" | "has" | "unknown";
+  /** 3호 — 양도하는 일반주택을 귀농 전에 취득했는가(예·아니오·모름). */
+  ruralGeneralHouseBeforeReturn?: "yes" | "no" | "unknown";
   // ⚠️ 귀농주택 **취득일**은 별도 칸이 없다 — §155⑦ 단서의 「그 주택을 취득한 날」이
   //    곧 이 행의 `acquisitionDate`다. 소재지도 행의 `addressJibun`·`regionCode`를 쓴다.
 
@@ -371,6 +404,16 @@ export interface HouseEntry {
   /** 인구감소지역 유형 (다목 decline 9억 / 라목 interest 4억) — 가액한도 구분 */
   populationAreaType?: "decline" | "interest";
 
+  // ── 조특법 §71의2① 인구감소지역주택(결정 #42) — 명부에 없는 **과거 사실** 3종. 적용 여부를 고르는 토글은 없다(강행 의제 — 명부에서 도출).
+  //    모름·미답은 불성립 + 확인 필요(`transfer-reductions/population-decline-71-2.ts`). 소재지·가액은 이 행의 주소(`regionCode`)·`acquisitionOfficialPrice`를 쓴다. ──
+  /** 이 주택을 취득할 당시 세대가 주택·조합원입주권·분양권 중 1채(1개)만 보유했는가 */
+  popDeclSoleAtAcquisition?: "yes" | "no" | "unknown";
+  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 해석 본문 확인 전이라 증여·모름은 미적용 + 확인 필요 */
+  popDeclAcquiredByGift?: "no" | "yes" | "unknown";
+  /** 양도 주택이 이 행보다 늦게 취득된 것으로 기록된 경우에만 — 양도(종전) 주택을 분양권·조합원입주권으로 받았는가 */
+  popDeclPriorRight?: "no" | "yes" | "unknown";
+  /** `popDeclPriorRight`가 「그렇다」일 때 그 권리를 가진 날(`YYYY-MM-DD`) — 선후는 이 날로 본다 */
+  popDeclPriorRightDate?: string;
   // ── 소재지 주소검색 (AddressSearch 재표시 + regionCode 파생 · 공시가격/전유면적 자동조회) ──
   addressRoad?: string;
   addressJibun?: string;

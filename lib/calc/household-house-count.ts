@@ -78,6 +78,25 @@ export interface HouseRowForCount extends SameDayOrderFacts {
   inDesignatedDistrict?: boolean;
   /** 합가 전 보유 쪽 — 합가 맥락에서 §155① 짝을 같은 쪽 안에서 고를 때만 쓴다(`resolveTemporaryTwoHouse` D8). */
   mergeOrigin?: MergeOrigin;
+  /** §155① 신규 주택 취득 경위(결정 #43) — 미답은 `undefined`. */
+  acquisitionOrigin?: NewHouseRowOrigin;
+  /** 권리 취득일(경위마다 의미가 다르다 — `HouseEntry.rightAcquisitionDate`). */
+  rightAcquisitionDate?: string;
+  /** 승계 입주권 관리처분계획 인가일 */
+  rightApprovalDate?: string;
+}
+
+/** 명부 행의 취득 경위 — `HouseEntry.acquisitionOrigin`과 같은 집합. */
+export type NewHouseRowOrigin = NonNullable<import("@/lib/stores/calc-wizard-asset-nbl").HouseEntry["acquisitionOrigin"]>;
+
+/**
+ * §155① 「나중 취득」 선후를 가르는 **유효 취득일** — 기존주택의 연장인 경위(원조합원 기존주택·자가 재건축)는 완공일이 아니라
+ * 기존(헐기 전) 주택 취득일이다(조심 2016서2731). 그 날짜를 모르면 완공일 그대로 두고(경위 미입력과 같이) 엔진이 불성립 + 확인 필요로 본다.
+ */
+export function effectiveNewHouseAcquisitionDate(h: HouseRowForCount): string | undefined {
+  return (h.acquisitionOrigin === "original_member_house" || h.acquisitionOrigin === "self_rebuild") && h.rightAcquisitionDate
+    ? h.rightAcquisitionDate
+    : h.acquisitionDate;
 }
 
 /**
@@ -431,6 +450,20 @@ export interface TemporaryTwoHouseDates {
    * 호출부가 양도 주택 주소로 대신 판정하지 않는다.
    */
   previousHouse?: { regionCode?: string; inDesignatedDistrict?: boolean };
+  /**
+   * 신규 주택으로 도출된 명부 행 id — ⑧이 「이 행의 취득 경위를 답하세요」를 그 행에만 요구한다(⑤ 노출과 같은 도출).
+   * 직접 선언 경로(`source: "declared"`)에는 행이 없다.
+   */
+  newHouseRowId?: string;
+  /**
+   * 신규 주택 취득 경위 — 엔진 `temporaryTwoHouse.newHouseOrigin`(문자열 날짜). 명부 행이면 행의 답(미답 = `unknown`),
+   * 직접 선언 경로는 경위를 묻지 못했으므로 `not_collected`다.
+   */
+  newHouseOrigin?: {
+    kind: NewHouseRowOrigin | "not_collected";
+    rightAcquisitionDate?: string;
+    rightApprovalDate?: string;
+  };
 }
 
 export function resolveTemporaryTwoHouse(
@@ -444,6 +477,7 @@ export function resolveTemporaryTwoHouse(
           previousAcquisitionDate: prev,
           newAcquisitionDate: args.declaredNewHouseDate,
           source: "declared",
+          newHouseOrigin: { kind: "not_collected" },
         }
       : undefined;
 
@@ -451,9 +485,10 @@ export function resolveTemporaryTwoHouse(
   if (!isOneHouseExemptionAsset(args.primaryKind)) return fallback(); // F1 — 권리 양도는 축이 다르다
   if (!prev) return fallback(); // 비교 기준이 없으면 「나중 취득」을 가릴 수 없다
 
-  const owned = housesOwnedAtTransfer(args.houses, args.transferDate, args.primaryKind).filter(
-    (h) => h.acquisitionDate !== undefined && !(h.id !== undefined && args.excludedHouseIds.has(h.id)),
-  );
+  const owned = housesOwnedAtTransfer(args.houses, args.transferDate, args.primaryKind)
+    .filter((h) => h.acquisitionDate !== undefined && !(h.id !== undefined && args.excludedHouseIds.has(h.id)))
+    // 기존주택의 연장인 경위(원조합원 기존주택·자가 재건축)는 선후를 기존주택 취득일로 본다 — 원 행은 `rosterRow`로 되돌려 준다.
+    .map((h) => ({ ...h, acquisitionDate: effectiveNewHouseAcquisitionDate(h), rosterRow: h }));
   // D8 — 합가 전(당일 포함) 취득한 주택을 양도하는 합가 세대는 쪽을 보고 짝을 고른다.
   if (args.mergeContext && prev <= args.mergeContext.mergeDate) {
     const pair = mergeSidePair(prev, owned, args.mergeContext);
@@ -472,7 +507,7 @@ export function resolveTemporaryTwoHouse(
 
 function toRosterDates(
   previousAcquisitionDate: string,
-  next: HouseRowForCount,
+  next: HouseRowForCount & { rosterRow?: HouseRowForCount },
   /** 종전 주택이 양도 주택이 아닐 때(D8 상대 쪽 짝)의 명부 행 */
   previousRow?: HouseRowForCount,
 ): TemporaryTwoHouseDates {
@@ -480,6 +515,8 @@ function toRosterDates(
     previousAcquisitionDate,
     newAcquisitionDate: next.acquisitionDate!,
     source: "roster",
+    ...(next.id !== undefined ? { newHouseRowId: next.id } : {}),
+    newHouseOrigin: rowOriginOf(next.rosterRow ?? next),
     ...(previousRow
       ? {
           previousHouse: {
@@ -494,6 +531,15 @@ function toRosterDates(
     ...(next.regionCode && next.inDesignatedDistrict !== undefined
       ? { newHouseInDesignatedDistrict: next.inDesignatedDistrict }
       : {}),
+  };
+}
+
+/** 명부 행 → 엔진 `newHouseOrigin` — 미답은 「모름」으로 싣는다(원칙 1 · 엔진이 불성립 + 확인 필요로 본다). */
+function rowOriginOf(row: HouseRowForCount): NonNullable<TemporaryTwoHouseDates["newHouseOrigin"]> {
+  return {
+    kind: row.acquisitionOrigin ?? "unknown",
+    ...(row.rightAcquisitionDate ? { rightAcquisitionDate: row.rightAcquisitionDate } : {}),
+    ...(row.rightApprovalDate ? { rightApprovalDate: row.rightApprovalDate } : {}),
   };
 }
 

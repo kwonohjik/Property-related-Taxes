@@ -80,6 +80,7 @@ const house = (id: string, over: Partial<HouseEntry> = {}): HouseEntry =>
     isApartment: false,
     isOfficetel: false,
     isUnsoldHousing: false,
+    acquisitionOrigin: "general",
     acquisitionPrice: "",
     exclusiveArea: "",
     isUnsoldNewHouse: false,
@@ -198,6 +199,8 @@ describe("P4-2b-1 — 계산기 leaf 재사용", () => {
     expect(body.temporaryTwoHouse).toEqual({
       previousAcquisitionDate: "2019-06-01",
       newAcquisitionDate: "2020-07-01",
+      // 결정 #43 — 명부 행 없이 신규 주택 취득일만 받는 흐름은 취득 경위를 묻지 못했다고 싣는다.
+      newHouseOrigin: { kind: "not_collected" },
     });
     // 기한 도과 → 조건부·기한이 판정에 실린다(P4-1 축이 배관을 탄다).
     //   기한 2023-07-03이 아직 오지 않은 「오늘」에서 판정한다 — 지났으면 이룰 수 없어 빠진다.

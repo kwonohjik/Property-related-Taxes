@@ -30,12 +30,14 @@
               "isAdjacentArea": false,
               "meetsLocationRequirement": true
             }
-          }
+          },
+          "acquisitionOrigin": "general"
         },
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2008-06-15"
+          "acquisitionDate": "2008-06-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

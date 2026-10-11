@@ -1,45 +1,46 @@
 [
- {
-  "id": "G065-era",
-  "docNo": "사전-2018-법령해석재산-0143 [법령해석과-1122]",
-  "docDate": "2018.04.26.",
-  "basis": "era",
-  "today": "2018-04-26",
-  "summary": "부부 공동 A단층주택(2010.7.)이 관리처분인가(2017.8.)로 입주권 — 부부 공동 B아파트(2010.12., 조특법 §98의2 미분양) 보유 중 입주권 양도(2018.)",
-  "form": {
-   "isOneHousehold": true,
-   "transferDate": "2018-04-15",
-   "contractTotalPrice": "500000000",
-   "asset": {
-    "assetKind": "right_to_move_in",
-    "redevSubject": "right",
-    "redevExemptionEligibleAtApproval": "yes",
-    "acquisitionDate": "2010-07-15",
-    "redevApprovalDate": "2017-08-15",
-    "redevOtherHouseAcquisitionDate": "2010-12-15"
-   },
-   "houses": [
-    {
-     "id": "B",
-     "region": "non_capital",
-     "acquisitionDate": "2010-12-15",
-     "countExclusion": {
-      "kind": "special",
-      "special": {
-       "article": "unsold_98_2",
-       "houseAcquisitionDate": "",
-       "houseContractDate": "",
-       "isNationalHousing": false,
-       "requirementsConfirmed": true
-      }
-     }
-    }
-   ]
-  },
-  "expected": {
-   "isExempt": true
-  },
-  "bucket": "match",
-  "note": "match(입주권 양도의 조특법 소유주택 제외 — 사용자 결정 2026-10-08). 회신: 1조합원입주권 보유 세대가 양도일 현재 다른 주택이 없으면 §89①4호 가목으로 비과세(9억 초과분 과세)하며 §98의2①·§98의5① 미분양주택은 소유주택에서 제외. 표현: A 2010-07-15·인가 2017-08-15·선언 yes, 명부 B 2010-12-15 수도권 밖 §98의2 행(제외 선언)·나목 취득일 칸 B 일자, 양도 2018-04-15 가정(2018.2. 계약)·5억. 관측: 가목 비과세 — B를 다른 주택에서 뺐다."
- }
+  {
+    "id": "G065-era",
+    "docNo": "사전-2018-법령해석재산-0143 [법령해석과-1122]",
+    "docDate": "2018.04.26.",
+    "basis": "era",
+    "today": "2018-04-26",
+    "summary": "부부 공동 A단층주택(2010.7.)이 관리처분인가(2017.8.)로 입주권 — 부부 공동 B아파트(2010.12., 조특법 §98의2 미분양) 보유 중 입주권 양도(2018.)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2018-04-15",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "right_to_move_in",
+        "redevSubject": "right",
+        "redevExemptionEligibleAtApproval": "yes",
+        "acquisitionDate": "2010-07-15",
+        "redevApprovalDate": "2017-08-15",
+        "redevOtherHouseAcquisitionDate": "2010-12-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "region": "non_capital",
+          "acquisitionDate": "2010-12-15",
+          "countExclusion": {
+            "kind": "special",
+            "special": {
+              "article": "unsold_98_2",
+              "houseAcquisitionDate": "",
+              "houseContractDate": "",
+              "isNationalHousing": false,
+              "requirementsConfirmed": true
+            }
+          },
+          "acquisitionOrigin": "general"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true
+    },
+    "bucket": "match",
+    "note": "match(입주권 양도의 조특법 소유주택 제외 — 사용자 결정 2026-10-08). 회신: 1조합원입주권 보유 세대가 양도일 현재 다른 주택이 없으면 §89①4호 가목으로 비과세(9억 초과분 과세)하며 §98의2①·§98의5① 미분양주택은 소유주택에서 제외. 표현: A 2010-07-15·인가 2017-08-15·선언 yes, 명부 B 2010-12-15 수도권 밖 §98의2 행(제외 선언)·나목 취득일 칸 B 일자, 양도 2018-04-15 가정(2018.2. 계약)·5억. 관측: 가목 비과세 — B를 다른 주택에서 뺐다."
+  }
 ]

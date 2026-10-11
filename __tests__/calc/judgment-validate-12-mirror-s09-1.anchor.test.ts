@@ -16,7 +16,7 @@ const TODAY = "2026-06-01";
 const mk = (form: RulingCase["form"]): RulingCase =>
   ({ id: "p", docNo: "", docDate: "", basis: "current", today: TODAY, summary: "", bucket: "match", form }) as RulingCase;
 const BASE = { isOneHousehold: true, transferDate: "2026-05-01", contractTotalPrice: "900000000", asset: { assetKind: "housing", acquisitionDate: "2016-01-01" } };
-const H = { id: "h1", acquisitionDate: "2018-01-01", officialPrice: "300000000" };
+const H = { id: "h1", acquisitionDate: "2018-01-01", officialPrice: "300000000", acquisitionOrigin: "general" };
 const RENTAL = { ...H, isLongTermRental: true, rentalRegistrationDate: "2018-02-01", rentalStartDate: "2018-02-01" };
 const CASES: [string, RulingCase["form"], boolean][] = [
   ["rental-typeA-no-startprice", { ...BASE, houses: [{ ...RENTAL, rentalType: "A" } as never] }, false],

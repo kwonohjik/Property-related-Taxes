@@ -53,6 +53,7 @@ const row = (over: Partial<HouseEntry>): HouseEntry =>
     isApartment: false,
     isOfficetel: false,
     isUnsoldHousing: false,
+    acquisitionOrigin: "general",
     ...over,
   }) as HouseEntry;
 

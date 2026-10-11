@@ -23,7 +23,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2020-02-15"
+          "acquisitionDate": "2020-02-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "newHouseMoveInDate": "2021-09-20"
@@ -61,7 +62,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2020-02-15"
+          "acquisitionDate": "2020-02-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "newHouseMoveInDate": "2021-09-28"
@@ -94,7 +96,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2024-02-15"
+          "acquisitionDate": "2024-02-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },
