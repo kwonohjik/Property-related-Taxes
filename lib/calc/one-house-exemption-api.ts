@@ -59,6 +59,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { formatFieldErrors } from "./transfer-tax-error-format";
 
 
 /**
@@ -350,8 +351,13 @@ export async function callOneHouseExemptionAPI(
   });
   const json = await res.json().catch(() => null);
   if (!res.ok) {
-    const message =
-      (json as { error?: { message?: string } } | null)?.error?.message ?? `HTTP ${res.status}`;
+    const error = (json as { error?: { message?: string; fieldErrors?: Record<string, string[]> } } | null)?.error;
+    const message = error?.message ?? `HTTP ${res.status}`;
+    // ⑫가 어느 칸 때문에 400을 냈는지 사용자 문구로 낸다(S09-1) — 계산기 ⑬(`transfer-tax-api.ts`)과 같다.
+    //   message만 던지면 「입력값이 올바르지 않습니다」만 남아 고칠 칸을 알 수 없다.
+    if (error?.fieldErrors && Object.keys(error.fieldErrors).length > 0) {
+      throw new Error(formatFieldErrors(error.fieldErrors, message));
+    }
     throw new Error(message);
   }
   return (json as { data: OneHouseExemptionResponse }).data;

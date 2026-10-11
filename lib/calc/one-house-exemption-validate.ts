@@ -64,6 +64,8 @@ import {
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
 import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
+import { houseRentalTypeIssue } from "./house-row-required-issues";
+import { houseUnavoidableIssue } from "./house-row-required-issues";
 
 export interface OneHouseJudgmentValidationError {
   field: string;
@@ -215,6 +217,16 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     const statusIssue = twoHouseExclusionStatusIssue(h);
     if (statusIssue) {
       errors.push(err(`houses.${i}.${statusIssue.field}`, `보유 주택 ${i + 1}: ${statusIssue.message}`));
+    }
+    // S09-1 — 장기임대 9유형 유형별 칸·부득이 사유 칸. 명부 편집기가 조건 없이 렌더하는데(`HouseEntryEditor`) ⑫ refine이 비면 400을
+    //   낸다(`refineRentalRows`·`refineHouseExclusionInputs`). 계산기 ⑧과 **같은 leaf**로 ⑧이 먼저 잡는다(VD-1 규약).
+    const rentalTypeIssue = houseRentalTypeIssue(h);
+    if (rentalTypeIssue) {
+      errors.push(err(`houses.${i}.${rentalTypeIssue.field}`, `보유 주택 ${i + 1}: ${rentalTypeIssue.message}`));
+    }
+    const unavoidableIssue = houseUnavoidableIssue(h);
+    if (unavoidableIssue) {
+      errors.push(err(`houses.${i}.${unavoidableIssue.field}`, `보유 주택 ${i + 1}: ${unavoidableIssue.message}`));
     }
   });
 
@@ -477,6 +489,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
 
   if (form.transferDate && primary?.acquisitionDate && form.transferDate < primary.acquisitionDate) {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
+  } else if (form.transferDate && primary?.acquisitionDate && form.transferDate === primary.acquisitionDate) {
+    // ⑫ refine(`acquisitionDate >= transferDate`)의 거울 — 같은 날이면 route가 400을 낸다(S09-1).
+    errors.push(err("transferDate", "양도 예정일은 취득일보다 이후여야 합니다."));
   }
 
   // §89①4호 나목 — 「그 1주택 취득일」 칸이 보유 주택 명부와 어긋나거나 양도일 이후면 막는다(S10-4).
@@ -500,6 +515,14 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   // ⑫ refine과 같은 필수값 — 비우면 route가 400으로 돌려보낸다(계산기 ⑧과 같은 문구 축).
   if (inheritedSale && !primary.decedentAcquisitionDate) {
     errors.push(err("decedentAcquisitionDate", "상속받은 주택이면 피상속인 취득일을 입력하세요."));
+  } else if (
+    inheritedSale &&
+    primary.acquisitionDate &&
+    primary.decedentAcquisitionDate &&
+    primary.decedentAcquisitionDate >= primary.acquisitionDate
+  ) {
+    // ⑫ refine(`decedentAcquisitionDate >= acquisitionDate`)의 거울 — 순서가 어긋나면 route가 400을 낸다(S09-1).
+    errors.push(err("decedentAcquisitionDate", "피상속인 취득일은 상속개시일보다 이전이어야 합니다."));
   }
   if (inheritedSale && primary.decedentSameHouseholdBeforeInheritance) {
     if (!primary.decedentCohabitationHoldingStartDate) {

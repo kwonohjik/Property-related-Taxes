@@ -37,11 +37,30 @@ export function deriveRentalRegionFromCode(regionCode?: string): RegionType {
 }
 
 /**
+ * 주소가 **새로 고르거나 지운** 것인가 — 직전 주소에서 파생한 값을 지워야 하는 시점이다(S14a-3).
+ *
+ * `AddressSearch`는 「지우기」(`handleClear`)·「입력한 주소 그대로 사용」(`handleUseTypedAddress`)에 `pnu: ""`를,
+ * 검색 결과 선택에 `pnu: <PNU>`를 보낸다. 반면 동·호·상세주소 재발화는 `{ ...value, … }`라 호출부 `value`에
+ * `pnu`가 없으면 **`pnu`가 아예 없다(undefined)** — 같은 물건이므로 코드를 지키는 쪽이다. 주소 자체가 빈 경우만 지움으로 본다.
+ *
+ * 형제 입력 경로와 **같은 술어**다 — 양도 주택 카드(`AssetSectionBasic` D-7)·판정 ②(`Step3` OH-32). 행(명부 주택·
+ * 분양권·입주권)마다 인라인으로 적으면 한 곳이 빠진다(S14a-3·S14b-3이 그렇게 빠졌다).
+ */
+export function isAddressReplaced(v: Pick<AddressValue, "pnu" | "road" | "jibun">): boolean {
+  return v.pnu !== undefined || (!v.road && !v.jibun);
+}
+
+/**
  * AddressSearch 선택 결과(AddressValue) → HouseEntry patch.
  *
  * onChange가 3회(주소·동·호) 발화하며 공시가격·전유면적은 **호(ho) 선택 시에만** 반환 →
  * partial-guard로 가격/면적 없는 발화가 기존값(수동입력·직전 조회분)을 덮지 않도록 한다.
  * regionCode(10자리)·지역 구분(region)은 매 발화 동시 갱신(useEffect 미러링 금지 — 콜백 내 set).
+ *
+ * 🔴 **주소를 바꾸거나 지우면 직전 주소에서 파생한 값을 함께 비운다**(S14a-2·S14a-3). 코드는 그 소재지의 사실이다 —
+ *    `regionCode`·`addressPnu`·`inDesignatedDistrict`(조정·투기지역 판정)와 §155⑦ 소재 판정 상태
+ *    (`ruralUrbanZone` 조회값·`ruralOutsideCapitalEupMyeon` 직접 지정값)가 남으면 사라진 주소로 판정한다.
+ *    동·호 재발화(`pnu` 없음)는 같은 물건이라 지키고, PNU가 있는 선택은 새 코드로 덮는다.
  */
 export function buildHouseAddressPatch(v: AddressValue, currentRegionCode?: string): Partial<HouseEntry> {
   const patch: Partial<HouseEntry> = {
@@ -54,14 +73,27 @@ export function buildHouseAddressPatch(v: AddressValue, currentRegionCode?: stri
     longitude: v.lng,
     latitude: v.lat,
   };
+  const replaced = isAddressReplaced(v);
   if (v.pnu && v.pnu.length >= 10) {
     const code = v.pnu.slice(0, 10);
     patch.regionCode = code;
     patch.region = deriveHouseRegionFromCode(code);
     // 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다(동·호 재발화는 같은 코드라 유지).
     if (code !== currentRegionCode) patch.inDesignatedDistrict = undefined;
+  } else if (replaced) {
+    // PNU 없이 주소만 바뀐 경우(지우기·입력한 주소 그대로 사용) — 직전 주소의 코드는 더 이상 이 물건의 것이 아니다.
+    patch.regionCode = "";
+    patch.inDesignatedDistrict = undefined;
+    // 지역 구분(`region`)은 직전 코드에서 자동 파생된 값이었다 — 코드가 없으면 수동 선택 칸이 열리므로 기본값으로 되돌린다.
+    // (코드 없이 사용자가 직접 고른 값은 건드리지 않는다.)
+    if (currentRegionCode) patch.region = deriveHouseRegionFromCode(undefined);
   }
   if (v.pnu && v.pnu.length === 19) patch.addressPnu = v.pnu;
+  else if (replaced) patch.addressPnu = undefined;
+  if (replaced) {
+    patch.ruralUrbanZone = undefined;
+    patch.ruralOutsideCapitalEupMyeon = undefined;
+  }
   if (v.standardPrice != null) {
     patch.officialPrice = String(v.standardPrice);
     patch.addressLookupFilled = true;
