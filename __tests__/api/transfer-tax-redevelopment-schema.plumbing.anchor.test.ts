@@ -72,6 +72,8 @@ const FULL_PAYLOAD = {
   newResidenceEndDate: "2022-06-01",
   priorHouseHoldingMonths: 60,
   otherHouseAcquisitionDate: "2021-01-01",
+  // S05-4 — §89①4호 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱)
+  otherHouseDisposalDelayReason: "auction",
 } as const;
 
 describe("T1-02 · ⑫ redevelopmentSchema 필드 집합 보존", () => {

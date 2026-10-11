@@ -152,7 +152,8 @@ export function buildTransferEngineInput(
     replacementHouse: data.replacementHouse
       ? {
           businessApprovalDate: toDate(data.replacementHouse.businessApprovalDate, "replacementHouse.businessApprovalDate"),
-          completionDate: toDate(data.replacementHouse.completionDate, "replacementHouse.completionDate"),
+          completionDate: toOptionalDate(data.replacementHouse.completionDate),
+          soldBeforeCompletion: data.replacementHouse.soldBeforeCompletion,
           replacementResidenceMonths: data.replacementHouse.replacementResidenceMonths,
           willResideNewHouse: data.replacementHouse.willResideNewHouse,
         }
@@ -217,6 +218,8 @@ export function buildTransferEngineInput(
           otherHouseAcquisitionDate: toOptionalDate(
             data.oneRightExemptionFacts.otherHouseAcquisitionDate,
           ),
+          // 문자열 enum이라 변환 없이 그대로 — 빠지면 사유가 있어도 나목이 조용히 불성립한다(S05-4).
+          otherHouseDisposalDelayReason: data.oneRightExemptionFacts.otherHouseDisposalDelayReason,
           // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 같은 이유로 Date 변환 필수.
           approvalDate: toOptionalDate(data.oneRightExemptionFacts.approvalDate),
         }

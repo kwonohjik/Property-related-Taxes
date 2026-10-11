@@ -98,7 +98,7 @@ export function sellingRentalAcquisitionPrice(ltr: RentalDeclaration | undefined
 /**
  * 양도주택(selling) + 보유주택 목록 → Zod houseSchema 배열 페이로드 빌드.
  * isLongTermRental=true && rentalType 설정 시에만 9유형 18필드를 게이트.
- * sellingExclusion: 양도 주택 3주택+ 전용 배제 특례(저당권·사원주택·문화재·어린이집 등) — selling 객체에 주입.
+ * sellingExclusion: 양도 주택 자체 배제 특례(2주택 이상 — 저당권·사원주택·문화재·어린이집 등) — selling 객체에 주입.
  */
 export function buildHousesPayload(
   primary: AssetForm,
@@ -188,7 +188,7 @@ export function buildHousesPayload(
     ...buildSellingTaxIncentiveRentalPayload(se),
     isOfficetel: false,
     isUnsoldHousing: false,
-    // P2 양도 주택 3주택+ 전용 배제 특례
+    // P2 양도 주택 자체 배제 특례(2주택 이상)
     isMortgageExecution: se?.isMortgageExecution,
     isEmployeeHousing: se?.isEmployeeHousing,
     freeProvisionYears:
@@ -292,9 +292,10 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // #2a 배우자 단독 보유 (§167의3⑨ 혼인 차감) — 양도주택(selling)은 본인 소유라 미설정
       isSpouseOwned: h.isSpouseOwned,
       /**
-       * §155④⑤ 합가 전 보유 쪽 — 판정 메뉴 명부 입력. 계산기는 이 칸이 없어 늘 미전송이다.
+       * §155④⑤ 합가 전 보유 쪽 — 판정 메뉴와 계산기가 같은 명부 입력(`mergeContextOf` — 합가일이 있을 때 노출)이다.
+       * 계산기는 ⑧(`transfer-tax-validate-step1.ts`)이 미입력을 막고 ④가 이 값을 싣는다.
        * enum 밖 값(저장소 손상)은 싣지 않는다 — ⑫가 400을 내 판정 전체가 막히는 것보다
-       * 「미입력 = 구성 판정 안 함」이 안전측이다.
+       * 「미입력 = 구성 판정 못 함(합가 특례 불성립 + 확인 필요)」이 안전측이다.
        */
       mergeOrigin:
         h.mergeOrigin === "seller_side" || h.mergeOrigin === "counterpart_side" || h.mergeOrigin === "second_merge_side"

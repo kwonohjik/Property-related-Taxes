@@ -36,18 +36,21 @@ import { calculateHoldingPeriod } from "../tax-utils";
 import { resolveMergeExemptionYears, type MergeExemptionKind } from "../data/merge-exemption-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
-import { designatedDistrictUndeclared } from "./designated-district-undeclared";
+import { designatedDistrictUndeclared, type DistrictDeclarationRelevance } from "./designated-district-undeclared";
 import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
   meetsOneHouseResidenceRequirement,
   matchMergeApartFromWindow,
+  matchDoubleMergeApartFromWindow,
   mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
   qualifiesRuralHouseApartFromDeadline,
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
+  ruralTemporaryTwoHouseOverlapCountHolds,
+  twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined } from "./era-undetermined";
@@ -57,6 +60,7 @@ import {
   resolveHighValuePriceCheck,
 } from "./threshold";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
+import { meetsHoldingResidenceOnDeadline } from "./deadline-holding";
 import type {
   OneHouseAppliedException,
   OneHouseJudgeInput,
@@ -186,7 +190,12 @@ export function collectPendingConditions(
    * 요건 A(1년)는 이미 지난 사실(신규주택을 언제 샀는가)이라 **치유할 수 없다** ⇒ pending 대상 아님.
    * 요건 B(처분기한)만 미충족이고 §154① 보유·거주가 충족일 때 기한을 낸다.
    */
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  // E-3(`checkExemptionCore`)와 같은 주택 수 게이트 — ⑦ 농어촌주택이 겹친 3주택(D3)도 같은 분기다(S07-5).
+  if (
+    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    input.temporaryTwoHouse &&
+    twoHouseRule
+  ) {
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
     /**
      * 📌 `!timing.threeYearMet`는 **현재 도달 불가능한 방어 조건**이다(뮤테이션 M13 SURVIVED).
@@ -257,9 +266,11 @@ export function collectPendingConditions(
    *    `matchMergeApartFromWindow`(먼저 양도·합가 전 취득·축 선택) + `mergeDeemingHouseCountHolds`
    *    (2주택 · §155① 중첩 3주택)는 `resolveMergeDeeming`·`resolveMergeOverlapDeeming`과 같은 조건이다.
    */
-  const mergeApart = mergeDeemingHouseCountHolds(input, twoHouseRule)
-    ? matchMergeApartFromWindow(input)
-    : undefined;
+  // 이중 합가(D4) 3주택은 `resolveDoubleMergeDeeming`과 같은 술어(`matchDoubleMergeApartFromWindow`) — 기한은 **먼저 합친 날**
+  // 기준이다(X4-3 — 종전에는 이 게이트에서 D4가 빠져 합가 축 기한이 안내되지 않았다).
+  const mergeApart =
+    (mergeDeemingHouseCountHolds(input, twoHouseRule) ? matchMergeApartFromWindow(input) : undefined) ??
+    matchDoubleMergeApartFromWindow(input);
   for (const axis of mergeAxes) {
     if (!axis.mergeDate) continue;
     // 엔진이 실제로 판정하는 축만 — 혼인·동거봉양이 둘 다 있으면 혼인만 본다.
@@ -285,11 +296,13 @@ export function collectPendingConditions(
    * 그 사실은 `collectUndetermined`가 판정 보류로 남긴다.
    */
   const unavoidable = input.unavoidableOutsideCapitalHouse;
-  if (unavoidable?.resolvedDate && input.householdHousingCount === 2) {
+  if (unavoidable?.resolvedDate && twoHouseSpecialCountHolds(input)) {
     const dl = deadlineEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (
       !isWithinDeadline(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
-      meetsOneHouseHoldingResidence(input, rule)
+      meetsOneHouseHoldingResidence(input, rule) &&
+      // 기한일에 양도해도 §154① 보유 2년이 모자라면 이룰 수 없는 약속이다(S07-4) — 사유는 `collectUnavoidableUnmet`이 말한다.
+      meetsHoldingResidenceOnDeadline(input, rule, dl.end)
     ) {
       pending.push({
         id: "155-8-unavoidable-resolved",
@@ -317,7 +330,9 @@ export function collectPendingConditions(
     const dl = deadlineEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
     if (
       !isWithinDeadline(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&
-      meetsOneHouseHoldingResidence(input, rule)
+      meetsOneHouseHoldingResidence(input, rule) &&
+      // 위 ⑧과 같다(S07-4) — 사유는 `collectRuralUnmet`이 말한다.
+      meetsHoldingResidenceOnDeadline(input, rule, dl.end)
     ) {
       pending.push({
         id: "155-7-3ho-return-to-farm",
@@ -439,6 +454,8 @@ export function collectUndetermined(
   oneHouseRules: OneHouseSpecialRulesData,
   article89Clause2: Article89Clause2Result,
   settled: boolean,
+  /** 양도 주택 지구 선언이 비과세 결론을 가르는가 — `checkExemption`이 선언 true/false로 두 번 판정해 채운다. */
+  districtRelevance?: DistrictDeclarationRelevance,
 ): OneHouseUndetermined[] {
   const undetermined: OneHouseUndetermined[] = [];
 
@@ -455,7 +472,7 @@ export function collectUndetermined(
    * (`qualifiesUnavoidableOutsideCapital` 안전측 설계). 그 사실을 숨기지 않는다.
    */
   // 「동 안 일부 지구만 조정대상지역」 동인데 지구 안·밖을 고르지 않음 — 지구 안으로 판정(모름=불리) + 확인 필요.
-  undetermined.push(...designatedDistrictUndeclared(input));
+  undetermined.push(...designatedDistrictUndeclared(input, districtRelevance));
 
   if (input.unavoidableOutsideCapitalHouse && !input.unavoidableOutsideCapitalHouse.resolvedDate) {
     undetermined.push({

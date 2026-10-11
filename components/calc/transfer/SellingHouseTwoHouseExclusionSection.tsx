@@ -8,8 +8,8 @@
  * 종전에는 두 호가 「다른 보유 주택」 행에만 있어 양도 주택에는 입력 경로가 없었다(F-16).
  * 엔진은 effectiveHouseCount===2 에서 sellingHouse.* 플래그로 평가.
  *
- * 3주택+ 전용 특례는 `SellingHouseExclusionSection`(amber)이 담당한다 — 같은
- * `form.sellingHouseExclusion` 객체를 나눠 쓴다.
+ * 그 밖의 양도 주택 자체 특례(저당권·사원용·조특·문화재·어린이집)는 2주택 이상 공용인
+ * `SellingHouseExclusionSection`(amber)이 담당한다 — 같은 `form.sellingHouseExclusion` 객체를 나눠 쓴다.
  *
  * 정책: ToggleCard/DateInput/DecimalInput/CurrencyInput 전용 · OFF 시 onChange 직접 patch
  *      (useEffect 미러링 금지).
@@ -39,6 +39,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
     <ToneCard tone="rose" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 시)" noDark>
       <p className="text-caption text-muted-foreground/80">
         양도하는 주택 자체가 아래 사유에 해당하면 2주택이어도 중과 배제됩니다 (소령 §167의10①3호·7호).
+        유효 주택 수(§167의10① 괄호의 불산입 주택 제외)가 2채일 때만 적용됩니다.
       </p>
 
       {/* 3호 — 부득이한 사유 취득 */}

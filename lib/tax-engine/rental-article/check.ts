@@ -27,6 +27,7 @@ import {
   rentalStdPriceCap,
   rentalRequiredYears,
   RA_CUT,
+  passesExistingBusinessRegGate,
   judgeAptTransferDeadline,
   type AptDeadlinePendingReason,
   type AptTransferDeadlineExtension,
@@ -152,7 +153,7 @@ type ArticleGate = {
   national?: boolean;
   apartmentBlanket?: boolean; // 아·자
   regDateMin?: number; // 아·자
-  bizRegDateMax?: number; // 나 (biz기준)
+  existingBusinessGate?: boolean; // 나 — 지자체 ≤ 기존사업자기준일 · 세무서 ≤ 2004.6.30.(의제 포함) — `passesExistingBusinessRegGate`
   saleWindow?: readonly [number, number]; // 라
   nonCapitalOnly?: boolean; // 라
   hard918?: boolean; // 마
@@ -167,7 +168,7 @@ const GATES: Record<SharedRentalArticle, ArticleGate> = {
   나: {
     priceAt: "acquisition",
     fivePct: false,
-    bizRegDateMax: RA_CUT.Y2003_10_29,
+    existingBusinessGate: true,
     national: true,
     min2: true,
     aptDeadlineGate: true,
@@ -277,9 +278,9 @@ function checkArticleGates(
 
   // (b) 등록기준일 경계 게이트
   if (gate.regDateMin != null && effTs < gate.regDateMin) fails.push("REG_DATE_GATE"); // 아·자
-  if (gate.bizRegDateMax != null) {
-    const bizTs = u.businessRegistrationDate?.getTime();
-    if (bizTs == null || bizTs > gate.bizRegDateMax) fails.push("REG_DATE_GATE"); // 나(biz기준)
+  if (gate.existingBusinessGate) {
+    // 나 — 세무서·지자체 두 등록일을 함께 본다(S06-12: 세무서 단독 비교는 의제 방향 불통과·역방향 통과 오류)
+    if (!passesExistingBusinessRegGate(u.businessRegistrationDate?.getTime(), u.rentalRegistrationDate?.getTime())) fails.push("REG_DATE_GATE");
   }
   if (gate.saleWindow) {
     const scTs = u.firstSaleContractDate?.getTime();

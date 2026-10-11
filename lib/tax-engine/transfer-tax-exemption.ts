@@ -24,6 +24,7 @@ import type {
   OneHouseCoreVerdict,
   OneHouseJudgeInput,
   OneHouseJudgment,
+  OneHousePendingCondition,
 } from "./one-house/types";
 import {
   collectPendingConditions,
@@ -36,6 +37,8 @@ import {
   article89ConfirmNotesUndetermined,
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
+import { deriveLegalBasis } from "./one-house/legal-basis";
+import { collectLapsedDeadlineUnmet } from "./one-house/unmet-deadline-reasons";
 import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -47,8 +50,10 @@ import {
   PROVISO_LABEL,
   resolveExemptionProviso,
   qualifiesRuralHouse,
+  qualifiesCulturalHeritageHouse,
   ruralTemporaryTwoHouseOverlapCountHolds,
   qualifiesUnavoidableOutsideCapital,
+  twoHouseSpecialCountHolds,
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageContract,
   qualifiesLongTermMortgageResidenceExemption,
@@ -122,12 +127,20 @@ export function checkExemption(
   const settled = verdict.isExempt || verdict.isPartialExempt;
   const appliedExceptions = verdict.appliedExceptions ?? [];
   // 이미 비과세·부분과세면 「무엇을 더 하면」이 없다 — pending은 과세를 뒤집는 조건만 담는다.
-  const pending = (
-    settled ? [] : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass)
-  ).filter(
-    // 「이 날까지 양도」인데 그 날이 판정 기준일 전에 지났으면 이룰 수 없다 — 안내하지 않는다.
-    //   「이 날 이후 양도」(보유 2년 충족일)는 기준일이 지나면 오히려 충족되므로 남긴다.
-    (p) => !judgmentBaseDate || p.kind !== "transfer_by" || isDeadlineStillReachable(p.deadline, judgmentBaseDate),
+  const allPending = settled ? [] : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass);
+  // 「이 날까지 양도」인데 그 날이 판정 기준일 전에 지났으면 이룰 수 없다 — 안내하지 않는다.
+  //   「이 날 이후 양도」(보유 2년 충족일)는 기준일이 지나면 오히려 충족되므로 남긴다.
+  const isLapsed = (p: OneHousePendingCondition) =>
+    !!judgmentBaseDate && p.kind === "transfer_by" && !isDeadlineStillReachable(p.deadline, judgmentBaseDate);
+  const pending = allPending.filter((p) => !isLapsed(p));
+
+  // 요건 검토표 — 아래 「기한 경과 사유」가 검토표와 같은 말을 되풀이하지 않도록 먼저 만든다.
+  const requirementReview = buildRequirementReview(
+    input,
+    oneHouseRules,
+    { isExempt: verdict.isExempt, isPartialExempt: verdict.isPartialExempt, appliedExceptions },
+    article89Clause2,
+    judgmentBaseDate,
   );
 
   /**
@@ -136,9 +149,16 @@ export function checkExemption(
    * §89② 배제면 `settled === false`지만 본체 판정은 통과했다. 그 경우 합가 특례는 실제로
    * **성립했고** 다른 조문이 결론을 뒤집은 것이므로, 「합가가 적용되지 않았다」는 안내는
    * 거짓이 된다. 본체가 통과한 경우는 사유를 내지 않는다.
+   *
+   * 기준일 필터가 뺀 「기한 경과」는 **별개**다 — 과세가 맞고 사유는 남겨야 한다(S07-3). §89② 배제처럼
+   * 본체가 통과해도(기한이 그 배제의 유일한 장애물) 사유를 낸다.
    */
-  const unmetExceptions =
-    settled || coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules);
+  const unmetExceptions = settled
+    ? []
+    : [
+        ...(coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules)),
+        ...collectLapsedDeadlineUnmet(allPending.filter(isLapsed), judgmentBaseDate, requirementReview?.scheme),
+      ];
 
   return {
     ...verdict,
@@ -146,7 +166,17 @@ export function checkExemption(
     appliedExceptions,
     pending,
     undetermined: [
-      ...collectUndetermined(input, oneHouseRules, article89Clause2, settled),
+      ...collectUndetermined(input, oneHouseRules, article89Clause2, settled, {
+        // 양도 주택 「지정 지구 안인가」 미선언 고지는 그 선언이 비과세 결론을 가를 때만 낸다(S02-7). 선언을 채운 두 판정은
+        // 이 함수 자신이다 — 선언이 있으면 그 고지가 생기지 않아 재귀하지 않는다.
+        selling: () => {
+          const verdictIf = (regionInDesignatedDistrict: boolean) => {
+            const r = checkExemption({ ...input, regionInDesignatedDistrict }, oneHouseRules, presaleRightStartDate, options);
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          return verdictIf(true) !== verdictIf(false);
+        },
+      }),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
       ...inheritedPresaleRightSeparateHouseholdUndetermined(input, article89Clause2, coreWouldPass, presaleRightStartDate),
@@ -155,19 +185,8 @@ export function checkExemption(
     unmetExceptions,
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
     ...finalOneHouseRestartEchoOf(input),
-    ...requirementReviewEchoOf(
-      buildRequirementReview(
-        input,
-        oneHouseRules,
-        { isExempt: verdict.isExempt, isPartialExempt: verdict.isPartialExempt, appliedExceptions },
-        article89Clause2,
-        judgmentBaseDate,
-      ),
-    ),
-    legalBasis: dedupeLegalBasis([
-      ...appliedExceptions.map((e) => e.legalBasis),
-      ...pending.map((p) => p.legalBasis),
-    ]),
+    ...requirementReviewEchoOf(requirementReview),
+    legalBasis: deriveLegalBasis(appliedExceptions, pending),
   };
 }
 
@@ -184,11 +203,6 @@ function requirementReviewEchoOf(
   review: OneHouseJudgment["requirementReview"],
 ): Pick<OneHouseJudgment, "requirementReview"> {
   return review ? { requirementReview: review } : {};
-}
-
-/** 근거 조문 목록 — 입력 순서를 유지한 채 중복만 제거한다(표시 순서가 곧 판정 순서다). */
-function dedupeLegalBasis(values: string[]): string[] {
-  return [...new Set(values)];
 }
 
 function checkExemptionCore(
@@ -252,6 +266,10 @@ function checkExemptionCore(
       exemptReason: v.isExempt ? "주택부수토지 — 1세대1주택 비과세" : "주택부수토지 — 1세대1주택 고가주택",
       // 짝 주택이 **어떤 특례로** 비과세가 됐는지는 `appurtenantHouseVerdict`에 담겨 오지 않는다
       // (isExempt·isPartialExempt·houseAcquisitionDate뿐). 여기서는 부수토지 근거만 낸다.
+      // 다만 **표2 「1주택」 축**은 담겨 온다(`oneHouseForTable2` — 실제 1주택 ∨ §155·조특법·§155②③ 제외 반영 후 1주택):
+      // 「소득세법 시행령」 §159의4 괄호·§95② 단서(「이에 딸린 토지를 포함한다」)에 따라 부수토지도 짝 주택과 같은 축이다.
+      // 이 카드의 원시 주택 수는 주 자산 주택 수 복제본이라 의제·제외를 반영하지 못한다(S08-5).
+      ...(v.oneHouseForTable2 === true ? { deemedOneHouseBy155: true } : {}),
       appliedExceptions: [
         {
           id: "89-1-3-appurtenant-land",
@@ -285,11 +303,16 @@ function checkExemptionCore(
           legalBasis: TRANSFER.REPLACEMENT_HOUSE_156_2_5,
         },
       ];
+      // 「소득세법 시행령」 §159의4 괄호 「제156조의2 … 에 따라 1세대 1주택으로 보는 주택을 포함」 — §156의2⑤ 대체주택은
+      // 「1세대1주택으로 보아 제154조제1항을 적용」하는 주택이라 표2 대상 「1주택」에 든다. 신축주택 완성 후(⑤3호 3년 이내)
+      // 세대 2주택으로 양도해도 이 echo로 장특 표2 게이트(`isOneHouseForTable2`)가 열린다(S08-4). 거주 2년 요건은 별개로 남는다.
+      // ⚠️ 중과 배제 축(영 §167의10① — `MultiHouseSurchargeInput.deemedOneHouseBy155`)과는 다른 축이다 — 거기로 넘기지 않는다.
       if (priceCheck <= highValueThreshold) {
         return {
           isExempt: true,
           isPartialExempt: false,
           exemptReason: `대체주택 특례 비과세 (${REPLACEMENT_HOUSE_SHORT})`,
+          deemedOneHouseBy155: true,
           appliedExceptions: exceptions,
         };
       }
@@ -297,6 +320,7 @@ function checkExemptionCore(
         isExempt: false,
         isPartialExempt: true,
         exemptReason: `대체주택 특례 고가주택 (${REPLACEMENT_HOUSE_SHORT})`,
+        deemedOneHouseBy155: true,
         appliedExceptions: exceptions,
       };
     }
@@ -304,7 +328,7 @@ function checkExemptionCore(
 
   // E-3: 일시적 2주택 — ⑦ 농어촌주택이 겹친 3주택도 같은 분기로 본다(D3 · `ruralTemporaryTwoHouseOverlapCountHolds`).
   const ruralOverlap = ruralTemporaryTwoHouseOverlapCountHolds(input);
-  if ((input.householdHousingCount === 2 || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
+  if ((twoHouseSpecialCountHolds(input) || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
     const provisoReason = input.oneHouseExemptionProviso?.reason;
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
@@ -377,7 +401,8 @@ function checkExemptionCore(
           legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
         });
       }
-      if (input.temporaryTwoHouse.disposalDelayReason) {
+      // S15-14 — 선언만이 아니라 **실제로 적용된** ⑱만 근거로 남긴다(방법 미확인·없던 호는 적용 근거가 아니다).
+      if (input.temporaryTwoHouse.disposalDelayReason && timing.delay.applied) {
         const delayLabel = DISPOSAL_DELAY_REASON_LABEL[input.temporaryTwoHouse.disposalDelayReason];
         basisParts.push(`§155⑱ ${delayLabel}`);
         exceptions.push({
@@ -435,11 +460,7 @@ function checkExemptionCore(
    *    선행 과제」라 적었으나 **과대평가였다**(계획서 §4.2).
    * ⇒ ① 2주택일 것 ② 문화유산 주택 선언 ③ §154① 요건 충족(「§154①을 적용」이므로).
    */
-  if (
-    input.householdHousingCount === 2 &&
-    input.culturalHeritageHouse === true &&
-    meetsOneHouseHoldingResidence(input, rule)
-  ) {
+  if (qualifiesCulturalHeritageHouse(input) && meetsOneHouseHoldingResidence(input, rule)) {
     const basis = ` (${shortArticle(TRANSFER.CULTURAL_HERITAGE_HOUSE)})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;

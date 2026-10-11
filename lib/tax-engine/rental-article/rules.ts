@@ -11,7 +11,8 @@ import { TRANSFER_RENTAL_HOUSING } from "../legal-codes";
 
 /** 목별 판정 경계일 (getTime() 캐시) */
 export const RA_CUT = {
-  Y2003_10_29: new Date("2003-10-29").getTime(), // 나목 기존사업자 등록 상한(사업자등록일 기준)
+  Y2003_10_29: new Date("2003-10-29").getTime(), // 나목 기존사업자기준일 — 지자체 임대사업자 등록 상한(세무서는 의제 포함 Y2004_06_30)
+  Y2004_06_30: new Date("2004-06-30").getTime(), // 나목 사업자등록 의제 기한(영 §167조의3①2호 각 목 외의 부분 괄호)
   Y2008_06_11: new Date("2008-06-11").getTime(), // 라목 미분양 최초 분양계약일 하한
   Y2009_06_30: new Date("2009-06-30").getTime(), // 라목 미분양 최초 분양계약일 상한
   Y2018_04_02: new Date("2018-04-02").getTime(), // 가·다목 등록 상한(다주택 checkRentalType_A/C — §155⑳ derive는 2020.7.11 경계라 공용 predicate 미적용)
@@ -280,4 +281,24 @@ export function hasAnyAptDeadlineExtensionFact(ext?: AptTransferDeadlineExtensio
     validTs(ext.newRegulatedAreaAnnouncementDate) != null ||
     hasRelocationFact(ext)
   );
+}
+
+/**
+ * 나목(기존사업자 매입임대) 등록일 게이트 — **단일 술어**(⑳·다주택 `checkRentalArticle` · ⑤ 임대 구분 활성 `deriveCategoryAvailability`).
+ *
+ * 「소득세법 시행령」 §167조의3①2호 각 목 외의 부분 괄호(MST 290841): 「2003년 10월 29일(기존사업자기준일) 현재 「민간임대주택에
+ * 관한 특별법」 제5조에 따른 임대사업자등록을 했으나 법 제168조에 따른 사업자등록을 하지 않은 거주자가 2004년 6월 30일까지 같은
+ * 조에 따른 사업자등록을 한 때에는 … 임대사업자등록일에 … 사업자등록을 한 것으로 본다」 + 나목 「기존사업자기준일 이전에
+ * 사업자등록등을 하고 … (기존사업자기준일 이전에 임대주택으로 등록하여 임대하는 것에 한한다)」.
+ * ⇒ **지자체 임대사업자 등록 ≤ 2003.10.29.** 그리고 **세무서 사업자등록 ≤ 2004.6.30.**(2003.10.29. 이전이거나, 의제).
+ * 종전에는 세무서 등록일 ≤ 2003.10.29.만 봐 의제(세무서 2003.10.29.~2004.6.30.)는 불통과, 지자체 등록이 그 뒤인 호는 통과했다(S06-12).
+ * 날짜가 없으면(모름) 통과시키지 않는다.
+ */
+export function passesExistingBusinessRegGate(
+  businessRegistrationTs: number | null | undefined,
+  rentalRegistrationTs: number | null | undefined,
+): boolean {
+  if (businessRegistrationTs == null || rentalRegistrationTs == null) return false;
+  if (Number.isNaN(businessRegistrationTs) || Number.isNaN(rentalRegistrationTs)) return false;
+  return rentalRegistrationTs <= RA_CUT.Y2003_10_29 && businessRegistrationTs <= RA_CUT.Y2004_06_30;
 }

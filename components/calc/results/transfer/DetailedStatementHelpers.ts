@@ -88,6 +88,7 @@ export function residenceMonthsOfAsset(
 
 // 800줄 분리 — 양쪽이 함께 쓰는 두 헬퍼는 `DetailedStatementLeaf.ts`(순환 차단 leaf)로 이동.
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
+import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 export { findStepByLabel, buildPerAssetWithFormula };
 
 
@@ -433,6 +434,8 @@ export function buildStatementItems(
    * ⚠️ 이 플래그는 4단계 「양도소득금액」에서도 쓴다 — 두 자리가 같은 사실을 봐야 한다.
    */
   const isRentalHousingException = result.rentalHousingExceptionDetail?.applied === true;
+  // 「(소령 §161①)」은 B(직전거주주택보유주택)에만 붙는다 — A는 §155⑳ 전단 → §154①이다(S06-8).
+  const rhScenarioId = result.rentalHousingExceptionDetail?.scenarioId;
 
   // 비과세 자산은 `transferGain`이 0이라 「비과세 양도차익」까지 0이 됐다 — gross 축으로 맞춘다
   // (신고서 정본: `FilingFormTableHelpers.ts:644`).
@@ -488,7 +491,7 @@ export function buildStatementItems(
   const taxableFormula: ReactNode = isAggregate
     ? "각 자산 과세대상 양도차익 합계"
     : isRentalHousingException
-      ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (§161①은 양도소득금액 단계에서 비과세분을 가른다)`
+      ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (비과세분은 양도소득금액 단계에서 가른다)`
       : proratedStep
       ? prorationFormulaAsFrac(proratedStep.formula)
       : exemptVal <= 0
@@ -497,7 +500,7 @@ export function buildStatementItems(
   const exemptFormula = isAggregate
     ? "각 자산 비과세 양도차익 합계 (§89 비과세 또는 §95 고가주택 기준금액 초과 안분)"
     : isRentalHousingException
-    ? "§161①은 양도차익이 아니라 양도소득금액 단계에서 비과세분을 가른다 — 아래 「비과세 양도소득금액 (소령 §161①)」 행 참조"
+    ? `비과세분은 양도차익이 아니라 양도소득금액 단계에서 가른다 — 아래 「${nontaxableIncomeLabel(rhScenarioId)}」 행 참조`
     : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 과세대상 양도차익 ${taxableGainVal.toLocaleString()} (§89 비과세 또는 ${prorationCitation})`;
   items.set("exemptGain", {
     label: "비과세 양도차익",
@@ -612,7 +615,8 @@ export function buildStatementItems(
   // 비과세 양도소득금액 — 엔진이 emit한 §161① step의 산식·법령 우선 사용 (정확한 변수값).
   const nontaxStep = findStepByLabel(result.steps, "비과세 양도소득금액");
   items.set("nontaxableIncome", {
-    label: "비과세 양도소득금액 (소령 §161①)",
+    // 특례 적용 결과만 시나리오별 라벨 — 미적용은 종전 라벨(행은 특례 때만 값이 있다).
+    label: isRentalHousingException ? nontaxableIncomeLabel(rhScenarioId) : "비과세 양도소득금액 (소령 §161①)",
     value: result.nontaxableGainAmount ?? 0,
     formula:
       nontaxStep?.formula ??

@@ -215,6 +215,7 @@ describe("G3 ③ 복원 · 게이트 leaf", () => {
       newHouseJibun: "",
       newHouseSigunguCode: "",
       disposalDelayReason: "",
+      disposalDelayDisposedByThatMethod: false,
     });
   });
 });

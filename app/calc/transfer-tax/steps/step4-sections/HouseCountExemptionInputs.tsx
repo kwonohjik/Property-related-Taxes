@@ -59,7 +59,7 @@ export function HouseCountExemptionInputs({
   hideSellingHouseExclusion?: boolean;
   /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다. */
   hideSpouseOwned?: boolean;
-  /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다. */
+  /** `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다 — 판정 메뉴·계산기 공통(합가일이 있을 때). */
   mergeContext?: MergeContext;
   /**
    * 조특법 주택 수 제외를 **명부 행**(행 편집 ⑥)에서 받는다. 켜면 아래의 세대 단위

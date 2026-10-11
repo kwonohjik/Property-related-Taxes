@@ -386,7 +386,7 @@ export function ExemptionAtApprovalCard({
           {
             value: "no",
             label: "미충족으로 선언",
-            description: "조합 제공 시까지 보유(거주) 요건 미충족 — 청산금 과세 · 장기보유특별공제 표1 강제",
+            description: "조합 제공 시까지 보유(거주) 요건 미충족 — 청산금 과세 · 청산금분 장기보유특별공제 표1 강제(신축주택분은 일반 판정 그대로)",
           },
         ]}
         layout="inline"
@@ -415,11 +415,11 @@ export function ExemptionAtApprovalCard({
         >
           {effective === "yes" ? (
             <p>
-              <span className="font-semibold">충족으로 선언됨</span> — 장기보유특별공제 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
+              <span className="font-semibold">충족으로 선언됨</span> — 청산금분 비과세·표2 판정 대상 (청산금분 양도일 현재 1세대1주택일 때 · 12억 초과 시 안분 적용)
             </p>
           ) : (
             <p>
-              <span className="font-semibold">미충족으로 선언됨</span> — 장기보유특별공제 표1 강제 (12억 안분 비활성)
+              <span className="font-semibold">미충족으로 선언됨</span> — 청산금분만 과세 · 장기보유특별공제 표1 강제 (신축주택분의 비과세·12억 안분·표2는 일반 판정을 따릅니다)
             </p>
           )}
         </div>
@@ -434,8 +434,8 @@ export function ExemptionAtApprovalCard({
           <p className="text-caption text-violet-700 leading-relaxed">
             청산금 수령분의 1세대1주택 여부는 신축주택 양도일이 아니라 청산금분 양도일 현재로
             판정합니다(사전-2022-법규재산-1282 — 그 날 입주권으로 받은 다른 신축주택을 함께 소유하면
-            비과세 불가). 선택하지 않으면 두 날이 같을 때만 위 세대 주택 수 입력으로 판정하고, 다르면
-            청산금분 비과세를 적용하지 않습니다.
+            비과세 불가). 선택하지 않으면 두 날이 같을 때만 위 세대 주택 수 입력(§155 등으로 1주택으로 보는
+            경우 포함)으로 판정하고, 다르면 청산금분 비과세를 적용하지 않습니다.
           </p>
           <RadioCardGroup
             name={`redevOneHouseAtSettlementSale-${asset.assetId}`}
@@ -445,7 +445,7 @@ export function ExemptionAtApprovalCard({
             }
             options={[
               { value: "", label: "선택 안 함", description: "양도일과 같으면 세대 입력으로 판정 · 다르면 판정 불가" },
-              { value: "yes", label: "1세대 1주택", description: "그 날 세대가 국내에 이 주택 1채만 보유" },
+              { value: "yes", label: "1세대 1주택", description: "그 날 세대가 국내에 이 주택 1채만 보유 (§155 등으로 1주택으로 보는 경우 포함)" },
               { value: "no", label: "아님", description: "그 날 다른 주택을 함께 보유 — 청산금분 과세" },
             ]}
             layout="inline"
@@ -641,9 +641,7 @@ export function SuccessorMemberSection({
             <div className="font-semibold">현재 지원하지 않는 분기 (자동 차단)</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
               <li>승계조합원 + 청산금 분기 (납부·수령)</li>
-              <li>승계조합원 + 12억 초과 안분</li>
               <li>승계조합원 + 환산취득가 모드 (상속·증여 평가액을 직접 입력하세요)</li>
-              <li>승계조합원 + 동일세대 상속 §154⑧ 통산</li>
             </ul>
           </div>
         </div>

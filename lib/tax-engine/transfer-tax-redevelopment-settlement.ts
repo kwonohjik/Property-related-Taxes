@@ -26,9 +26,13 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { scaleLthdParts, zeroLthdParts } from "./transfer-tax-redevelopment-lthd";
 import type { TransferTaxInput, RedevelopmentResult } from "./types/transfer.types";
+import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 
 /** 청산금분 양도일 — 엔진 입력이 없으면 양도일(조문상 같은 신고 단위)로 본다. */
-function settlementSaleDateOf(input: Pick<TransferTaxInput, "transferDate" | "redevelopment">): Date {
+function settlementSaleDateOf(input: {
+  transferDate: Date;
+  redevelopment?: Pick<RedevelopmentInfo, "settlementSaleDate">;
+}): Date {
   return input.redevelopment?.settlementSaleDate ?? input.transferDate;
 }
 
@@ -49,13 +53,18 @@ function sameDay(a: Date, b: Date): boolean {
  *
  * 1. 자기선언 `oneHouseAtSettlementSale`이 있으면 그것.
  * 2. 없고 청산금분 양도일 = 이 신고의 양도일이면(단독신고는 ④가 양도일을 고시일 다음날로 맞춘다)
- *    세대 입력(`isOneHouseSingle` — 세대 주택 수 1)을 그 날의 사실로 쓴다(종전 동작).
+ *    세대 입력을 그 날의 사실로 쓴다. 호출부가 넘기는 `isOneHouseSingle`은 **표2·§154① 축**
+ *    (실제 1주택 ∨ §155 의제 — `resolveRedevAptOneHouseTable2Axis`)이다: 「소득세법 시행령」 제154조제1항을
+ *    적용받는 청산금분 비과세는 제155조제1항 의제의 적용을 받는다(부동산거래관리과-631, 2012.11.20.).
  * 3. 없고 두 날이 다르면 **판정 불가** — 세대 입력은 신축주택 양도일의 사실이라 청산금분
  *    양도일의 주택 수를 말해 주지 않는다. 비과세를 주지 않고 경고한다(「모르니까 준다」 금지 ·
  *    §89①4호 나목 미입력과 같은 처리).
  */
 export function resolveOneHouseAtSettlementSale(
-  input: Pick<TransferTaxInput, "transferDate" | "redevelopment">,
+  input: {
+    transferDate: Date;
+    redevelopment?: Pick<RedevelopmentInfo, "oneHouseAtSettlementSale" | "settlementSaleDate">;
+  },
   isOneHouseSingle: boolean,
 ): boolean | undefined {
   const declared = input.redevelopment?.oneHouseAtSettlementSale;

@@ -24,6 +24,12 @@ import { AddressSearch, type AddressValue } from "@/components/ui/address-search
 import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 import type { RelocationRegionVerdict } from "@/lib/calc/relocation-region-verdict";
 import type { TempTwoHouseDeadlineExceptionFields } from "@/lib/calc/transfer-tax-api-body-blocks";
+import {
+  isDisposalDelayMethodRequired,
+  resolveDisposalDelay,
+  TT_DELAY_METHOD_DROPPED_TRANSFER_START,
+} from "@/lib/tax-engine/data/temporary-two-house-delay-era";
+import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 
 
 type RelocationProps = {
@@ -33,16 +39,30 @@ type RelocationProps = {
   onNewHouseAddress?: (v: AddressValue) => void;
 };
 
+type DelayReasonFields = Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason" | "disposalDelayDisposedByThatMethod">;
+
 type DelayReasonProps = {
-  form: Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason">;
-  onChange: (patch: Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason">) => void;
+  form: DelayReasonFields;
+  onChange: (patch: Partial<DelayReasonFields>) => void;
+  /**
+   * 종전 주택 양도일(YYYY-MM-DD) — §155⑱의 「그 방법으로 양도」 요건과 호별 신설 시기가 양도일 연혁이라(`resolveDisposalDelay`)
+   * 입력 칸·안내가 이 날짜를 따른다. 비어 있거나 잘못된 날짜면 연혁 칸을 열지 않는다.
+   */
+  transferDate?: string;
   /** radio name — 같은 화면에 여러 개가 뜰 때(원조합원 입주권 행) 가른다. 기본 `disposalDelayReason` */
   name?: string;
   /** 「신규 주택」을 화면에서 부르는 이름 — 원조합원 입주권 행은 「기존주택」. 기본 「신규 주택」 */
   newHouseLabel?: string;
+  /** 사유에 해당할 때의 효과 문장 — 기본은 §155① 요건 B. 입주권 양도 나목(§89①4호)은 다른 효과라 호출부가 준다. */
+  effectNote?: string;
+  /** radio 그룹 제목 — 기본 「처분기한 예외 사유 (§155⑱)」 */
+  label?: string;
 };
 
 /** §155⑯ 공공기관·법인 지방이전 특례 — 토글 + 이전지·신규 주택 소재지 + 연접 판정 안내 */
+
+/** 기본 효과 문구 — §155① 요건 B(처분기한 예외) 경로. */
+const DEFAULT_EFFECT_NOTE = "해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.";
 export function TempTwoHouseRelocationInputs({
   form,
   onChange,
@@ -124,12 +144,23 @@ export function TempTwoHouseRelocationInputs({
 export function TempTwoHouseDelayReasonInput({
   form,
   onChange,
+  transferDate,
   name = "disposalDelayReason",
   newHouseLabel = "신규 주택",
+  effectNote = DEFAULT_EFFECT_NOTE,
+  label = "처분기한 예외 사유 (§155⑱)",
 }: DelayReasonProps) {
+  // 양도일 연혁 — 엔진(요건 B)·판정 카드와 같은 leaf. 사유를 고르지 않았거나 양도일을 모르면 연혁 안내를 내지 않는다.
+  const transfer = transferDate ? new Date(transferDate) : undefined;
+  const dated = transfer !== undefined && !Number.isNaN(transfer.getTime());
+  const reason = (form.disposalDelayReason || undefined) as TemporaryTwoHouseDelayReason | undefined;
+  const methodRequired = dated && reason !== undefined && isDisposalDelayMethodRequired(transfer);
+  const delay = dated
+    ? resolveDisposalDelay({ reason, disposedByThatMethod: form.disposalDelayDisposedByThatMethod === true, transferDate: transfer })
+    : undefined;
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium">처분기한 예외 사유 (§155⑱)</label>
+      <label className="text-sm font-medium">{label}</label>
       <RadioCardGroup
         name={name}
         value={form.disposalDelayReason}
@@ -153,8 +184,27 @@ export function TempTwoHouseDelayReasonInput({
       />
       <p className="text-xs text-muted-foreground">
         <strong>{newHouseLabel}을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
-        해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
+        {effectNote}
+        {/* 2022.2.15. 전 양도분의 「매각 등의 방법」 요건(PR8a S15-14)은 §155① 요건 B 경로(기본 문구)에만 엔진이 적용한다 — 나목 등 다른 호출부는 effectNote를 따로 준다. */}
+        {effectNote === DEFAULT_EFFECT_NOTE && dated && transfer.getTime() < TT_DELAY_METHOD_DROPPED_TRANSFER_START.getTime()
+          ? " 다만 2022. 2. 15. 전 양도분은 사유에 해당하는 것만으로는 부족하고, 그 사유의 매각 등의 방법으로 양도해야 합니다."
+          : ""}
       </p>
+      {methodRequired && (
+        <ToggleCard
+          data-testid={`${name}-by-that-method`}
+          checked={form.disposalDelayDisposedByThatMethod === true}
+          onCheckedChange={(v) => onChange({ disposalDelayDisposedByThatMethod: v })}
+          title="선택한 사유의 매각 등의 방법으로 양도 (2022. 2. 15. 전 양도분)"
+          description="「다른 주택을 취득한 날부터 3년이 되는 날 현재」 사유에 해당하는 경우로서 「해당 각 호의 매각 등의 방법으로 양도하는 경우」에만 적용됩니다(대통령령 제32420호 개정 전 문언) — 사유에 해당하더라도 다른 방법으로 양도했다면 켜지 마세요"
+          tone="sky"
+        />
+      )}
+      {delay?.note && (
+        <p data-testid={`${name}-note`} className="text-xs text-muted-foreground">
+          {delay.note}
+        </p>
+      )}
     </div>
   );
 }

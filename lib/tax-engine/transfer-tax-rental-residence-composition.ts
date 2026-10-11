@@ -122,14 +122,22 @@ const sameDay = (a: Date, b: Date) =>
 
 type Exclusions = ReturnType<typeof resolveExemptionHouseCountExclusions>;
 
-/** 조특법 소유주택 제외(적격분) — 조문 키·명부 행 id·인용 */
-function specialActExclusions(ex: Exclusions) {
+/**
+ * 조특법 소유주택 제외(적격분) — 조문 키·명부 행 id·인용.
+ *
+ * 🔴 S06-3 — **「그 밖의 주택」에 대한 제외만** 모은다. 장기임대주택 행(또는 양도 주택 행) **자신**에 걸린 제외는 이 판정의
+ * 대상이 아니다: 그 행은 이미 `others`에서 빠져 있어, 같은 제외를 한 번 더 세면 일반주택이 남는데도 `remaining`이
+ * 줄어 ⑳ 세대 구성이 성립한다(장기임대 행에 §99의2를 겹쳐 선언 + 일반주택 1채 → 비과세·13호 중과 배제).
+ * 행에 연결되지 않은 선언(`houseId` 없음)은 어느 행인지 모르므로 종전대로 「그 밖의 주택」에서 뺀다(L-5). 명부 없음은 행이 없어
+ * `ownRowIds`가 비어 있다.
+ */
+function specialActExclusions(ex: Exclusions, ownRowIds: ReadonlySet<string> = new Set()) {
   const all = [
     ...ex.hceApplied.map((d) => ({ key: d.id as string, houseId: d.houseId, legalBasis: d.legalBasis })),
     ...ex.specialHouseExclusionDetail.entries
       .filter((e) => e.eligible)
       .map((e) => ({ key: e.article as string, houseId: e.houseId, legalBasis: e.legalBasis })),
-  ];
+  ].filter((x) => !x.houseId || !ownRowIds.has(x.houseId));
   return { all, unverified: all.filter((x) => !RENTAL_RESIDENCE_VERIFIED_SPECIAL_ACT.has(x.key)) };
 }
 
@@ -159,7 +167,8 @@ export function resolveRentalResidenceComposition(
   if (others.length === 0) return { status: "met", via: "sole" };
 
   const ex = resolveExemptionHouseCountExclusions(input, generalHouseAcquisitionDate);
-  const sa = specialActExclusions(ex);
+  const ownRowIds = new Set(houses.filter((h) => h.isLongTermRental || h.id === sellingId).map((h) => h.id));
+  const sa = specialActExclusions(ex, ownRowIds);
   // 조특법 「소유주택으로 보지 아니한다」 제외는 §155 특례가 아니라 중첩 수에 들지 않는다(3686·0198).
   const remaining = others.length - sa.all.length;
   if (remaining >= 2) {

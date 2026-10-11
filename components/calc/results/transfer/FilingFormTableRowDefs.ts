@@ -46,6 +46,8 @@ export function buildRowsFromOrder(
   singleTaxNotes: Record<ColumnKey, string> | undefined,
   /** B1 — 겸용 별개 취득 파트 모델의 취득가액 행 열별 주석(열마다 산정방식). 행을 추가하지 않는다(별지 서식 행 구성 보존). */
   acqNotes?: Record<ColumnKey, string>,
+  /** 「비과세 양도소득금액」 행 라벨 — 「(소령 §161①)」은 B(직전거주주택보유주택)에만 붙는다(S06-8). */
+  nontaxableIncomeRowLabel = "비과세 양도소득금액 (소령 §161①)",
 ): RowDef[] {
   const rowOrder: Array<[string, string, Partial<RowDef>?]> = [
     ["transferDate", "양도일자"],
@@ -64,7 +66,7 @@ export function buildRowsFromOrder(
     ["ltHoldingPart", " 보유 기간분 장특", { indent: true }],
     ["ltResidencePart", " 거주 기간분 장특", { indent: true, separatorAfter: true }],
     ["incomeAmount", "양도소득금액"],
-    ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
+    ["nontaxableIncome", nontaxableIncomeRowLabel, { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
     ["incomeAmountAfter", "감면후 소득금액"],

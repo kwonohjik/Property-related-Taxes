@@ -18,6 +18,7 @@ import { ValidationIssuePanel } from "@/components/calc/transfer/ValidationIssue
 import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
 import type { StepStatus } from "@/components/calc/StepIndicator";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
+import { derivedHouseCountPatch } from "@/lib/calc/household-house-count";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
@@ -184,7 +185,18 @@ export default function TransferTaxCalculator({
           formData,
           isAllBurdenedGift(nextAssets),
         );
-        updateFormAndInvalidate({ ...patch, ...penaltyPatch });
+        // 양도일을 옮기면 같은 명부 행이 양도일 현재 보유 ↔ 미보유로 바뀐다 — 파생 주택 수 스칼라를 같은 patch에 싣는다.
+        // 명부 편집(`HousesListSection.patchHouses`)과 같은 leaf다. onChange 동시 갱신이지 useEffect 미러링이 아니다.
+        const rosterPatch =
+          "transferDate" in patch
+            ? derivedHouseCountPatch(
+                patch.houses ?? formData.houses,
+                nextAssets?.[0]?.assetKind,
+                patch.legacyHouseCountPrecedence ?? formData.legacyHouseCountPrecedence ?? false,
+                nextTransferDate,
+              )
+            : {};
+        updateFormAndInvalidate({ ...rosterPatch, ...patch, ...penaltyPatch });
       } else {
         updateFormAndInvalidate(patch);
       }

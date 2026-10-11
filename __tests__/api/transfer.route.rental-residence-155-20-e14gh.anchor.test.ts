@@ -155,6 +155,7 @@ const post = (handler: (req: NextRequest) => Promise<Response>, url: string, bod
 
 interface Single {
   totalTax: number;
+  longTermHoldingRate: number | undefined;
   rentalApplied: boolean;
   notApplicable: string | undefined;
   warnings: string[];
@@ -167,6 +168,7 @@ async function single(f: Form): Promise<Single> {
   const steps = (r.steps ?? []) as { label: string; formula: string }[];
   return {
     totalTax: r.totalTax as number,
+    longTermHoldingRate: r.longTermHoldingRate as number | undefined,
     rentalApplied: (r.rentalHousingExceptionDetail as { applied?: boolean } | undefined)?.applied === true,
     notApplicable: steps.find((s) => s.label === "장기임대주택 거주주택 비과세 특례 — 적용 불가")?.formula,
     warnings: (r.warnings ?? []) as string[],
@@ -313,8 +315,11 @@ describe("E-14h 비과세 — 「장기임대주택 … 과 그 밖의 1주택�
     );
     const s = await single(f);
     // 수정 전 102,086,600은 §155②·① 고가주택 비과세(12억 초과분만 과세) — 「> 0」으로는 구별되지 않는다.
-    // 304,887,000은 임대주택이 명부에 없어 중과 주택 수에서도 빠진 값(기본세율) — 그 사실을 고지한다.
-    expect(s).toMatchObject({ totalTax: 304_887_000, rentalApplied: false });
+    // 임대주택이 명부에 없어 중과 주택 수에서도 빠진 값(기본세율) — 그 사실을 고지한다.
+    // 🔴 PR6a(S07-7): 종전 304,887,000은 비과세를 거둔 뒤에도 `deemedOneHouseBy155`가 남아 장특을 표2(보유 11년×4% +
+    //    거주 4년×4% = 56%)로 냈다. 의제가 불성립이면 영 §159의4 표2 대상이 아니다 → 표1 보유 11년×2% = 22%,
+    //    582,598,500(차이 277,711,500 — 정책이 아니라 불변식 정정이다. 중과 판정·회수 여부는 불변).
+    expect(s).toMatchObject({ totalTax: 582_598_500, rentalApplied: false, longTermHoldingRate: 0.22 });
     expect(s.notApplicable).toMatch(/2채/);
     expect(s.warnings.some((w) => w.includes("목록에 「장기임대」로 넣어"))).toBe(true);
     expect(await multi(f)).toBe(s.totalTax);

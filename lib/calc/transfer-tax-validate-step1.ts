@@ -13,7 +13,8 @@ import { memberOriginErrors } from "./right-member-origin-scope";
 import { originalMemberFactErrors } from "./right-member-origin-scope";
 import { inheritedPresaleRightFactErrors } from "./inherited-presale-right-facts";
 import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
-import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
@@ -192,7 +193,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     if (firstError) issues.push({ step, message: firstError });
   }
 
-  // ⑧ 양도 주택 3주택+ 전용 배제 특례 — 사원주택/어린이집 선택 시 기간(년) 필수
+  // ⑧ 양도 주택 자체 배제 특례(2주택 이상) — 사원주택/어린이집 선택 시 기간(년) 필수
   const se = form.sellingHouseExclusion;
   if (se?.isEmployeeHousing && (!se.freeProvisionYears || parseFloat(se.freeProvisionYears) <= 0))
     issues.push({ step, field: "sellingHouseExclusion.freeProvisionYears", message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
@@ -334,13 +335,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     isOneHousehold: form.isOneHousehold,
     // OH-20 — 재개발 완공APT도 §89①3호가목 「주택」이다(⑤ Step4 · ④와 같은 술어).
     isHousing: isOneHouseExemptionAsset(form.assets?.[0]?.assetKind),
-    householdHousingCount: resolveHouseholdHousingCount({
-      primaryKind: form.assets?.[0]?.assetKind,
-      declared: parseInt(form.householdHousingCount || "1", 10) || 0,
-      houses: form.houses,
-      transferDate: form.transferDate,
-      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-    }),
+    // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·Step4 안내와 같은 leaf(S03-4).
+    householdHousingCount: resolveExemptionHousingCount(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
       primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,

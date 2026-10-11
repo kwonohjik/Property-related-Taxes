@@ -74,6 +74,7 @@ type FullOnlyProps = {
   tempTwoHouseVerdict: ReturnType<typeof judgeTempTwoHouseFromForm>;
   relocationRegionVerdict: RelocationRegionVerdict | null;
   proviso: ReturnType<typeof provisoGate>;
+  /** §155① **종전 주택** 취득일 — 양도 주택이 종전 주택이면 그 취득일, 합가 상대 쪽 짝이면 그중 먼저 취득한 주택(S15-2) */
   primaryAcquisitionDate: string;
   /**
    * §155① 신규 주택 취득일 — **명부에서 파생된 값**(`resolveTemporaryTwoHouse`).
@@ -87,6 +88,17 @@ type FullOnlyProps = {
    * 없다」고 말하는 것이 아니라, 판정할 사실이 명부에 없다는 뜻이다.
    */
   derivedNewHouseAcquisitionDate: string | undefined;
+  /**
+   * 비과세 판정이 보는 **제외 후 세대 주택 수**(`judgmentExemptionHouseCount` — 명부 파생값 − 주택 수 제외 행).
+   * 3채 이상이면 판정 카드가 「요건 충족」을 말하지 않는다 — §155①은 「1주택을 소유한 1세대가 … 일시적으로 2주택이 된 경우」라
+   * 농어촌주택(§155⑦)·합가(§155④⑤)와 겹친 경우가 아니면 대상이 아니다(S15-9).
+   */
+  householdHousingCount: number;
+  /**
+   * §156의2⑤ 대체주택 블록을 그리는가 — 판정 메뉴 `judgmentReplacementHouseVisible`(⑤·④·⑧ 공용 게이트)의 값.
+   * 대체주택은 양도하는 **주택**의 특례라 입주권 양도에서는 false다(S10-8).
+   */
+  replacementHouseVisible: boolean;
 };
 
 type BaseProps = {
@@ -145,7 +157,8 @@ function TempTwoHouseCoreBlocks({
                    「입력해야 하는 칸」으로 읽혔다(사용자 제보 2026-09-23).
               */}
               <p className="text-xs text-muted-foreground">
-                지금 양도하는 주택의 취득일에서 자동 반영 (② 양도 대상 주택 단계에서 입력)
+                지금 양도하는 주택의 취득일에서 자동 반영 (② 양도 대상 주택 단계에서 입력). 합가 세대에서 상대 쪽 두
+                주택이 짝이면 그중 먼저 취득한 주택의 취득일입니다.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -200,24 +213,31 @@ function TempTwoHouseVerdictCard({
   form,
   tempTwoHouseVerdict,
   derivedNewHouseAcquisitionDate,
+  householdHousingCount,
 }: Pick<BaseProps, "form"> &
-  Pick<FullOnlyProps, "tempTwoHouseVerdict" | "derivedNewHouseAcquisitionDate">) {
+  Pick<FullOnlyProps, "tempTwoHouseVerdict" | "derivedNewHouseAcquisitionDate" | "householdHousingCount">) {
   // 핵심 블록과 같은 게이트 — 명부에서 신규 주택을 도출하지 못하면 판정할 사실이 없다.
   if (!derivedNewHouseAcquisitionDate) return null;
+  // 3채 이상 — 기간 요건(A·B)은 보여 주되 특례가 적용된다고 말하지 않는다(S15-9). 겹침 여부는 엔진이 판정 결과에서 확정한다.
+  const overThree = householdHousingCount >= 3;
   return (
     <>
         {/* §155① 요건 자동판정 카드 — 엔진 헬퍼 단일소스(judgeTempTwoHouseFromForm) */}
         {(
           <ToneCard
             tone={
-              tempTwoHouseVerdict.status === "eligible"
-                ? "emerald"
-                : tempTwoHouseVerdict.status === "ineligible"
-                  ? "amber"
-                  : "rose"
+              overThree
+                ? "amber"
+                : tempTwoHouseVerdict.status === "eligible"
+                  ? "emerald"
+                  : tempTwoHouseVerdict.status === "ineligible"
+                    ? "amber"
+                    : "rose"
             }
             title={
-              tempTwoHouseVerdict.status === "eligible"
+              overThree
+                ? `일시적 2주택 특례 — 세대 주택 ${householdHousingCount}채`
+                : tempTwoHouseVerdict.status === "eligible"
                 ? "일시적 2주택 특례 요건 충족"
                 : tempTwoHouseVerdict.status === "ineligible"
                   ? "일시적 2주택 특례 요건 미충족"
@@ -225,6 +245,13 @@ function TempTwoHouseVerdictCard({
             }
           >
             <div data-testid="temp-two-house-verdict" className="space-y-1 text-xs">
+              {overThree && (
+                <p data-testid="temp-two-house-over-three-notice">
+                  세대 보유 주택이 {householdHousingCount}채입니다 — 이 특례는 국내에 1주택을 소유한 1세대가 신규 주택을 취득해 일시적으로
+                  2주택이 된 경우에 적용하므로, 농어촌주택(§155⑦)·합가(§155④⑤)와 겹친 경우가 아니면 대상이 아닙니다. 아래는 겹친
+                  경우를 가정한 기간 요건입니다.
+                </p>
+              )}
               {tempTwoHouseVerdict.status === "pending" ? (
                 <p>양도 자산 취득일·신규 주택 취득일·양도일을 입력하면 요건을 자동 판정합니다.</p>
               ) : (
@@ -246,6 +273,11 @@ function TempTwoHouseVerdictCard({
                     {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
                     {tempTwoHouseVerdict.delayReasonApplied && " — §155⑱ 사유로 기한 요건 충족 간주"}
                   </p>
+                  {tempTwoHouseVerdict.delayNote && (
+                    <p data-testid="temp-two-house-delay-note" className="text-caption">
+                      {tempTwoHouseVerdict.delayNote}
+                    </p>
+                  )}
                   {tempTwoHouseVerdict.deadlineNote && (
                     <p data-testid="temp-two-house-deadline-note" className="text-caption">
                       {tempTwoHouseVerdict.deadlineNote}
@@ -283,7 +315,8 @@ function TempTwoHouseOtherSpecials({
   onChange,
   proviso,
   derivedNewHouseAcquisitionDate,
-}: BaseProps & Pick<FullOnlyProps, "proviso" | "derivedNewHouseAcquisitionDate">) {
+  replacementHouseVisible,
+}: BaseProps & Pick<FullOnlyProps, "proviso" | "derivedNewHouseAcquisitionDate" | "replacementHouseVisible">) {
   return (
     <SaleHouseSpecialsGroup>
         {/*
@@ -334,11 +367,11 @@ function TempTwoHouseOtherSpecials({
           판정 기준시점이 양도일이 아님을 문구로 명시(G-2).
         */}
         {derivedNewHouseAcquisitionDate && (
-          <TempTwoHouseDelayReasonInput form={form} onChange={onChange} />
+          <TempTwoHouseDelayReasonInput form={form} onChange={onChange} transferDate={form.transferDate} />
         )}
 
         {/* §156의2⑤ 대체주택 비과세 특례 — 판정 메뉴가 이 섹션 밖에서도 그린다(OH-05) */}
-        <ReplacementHouseSpecialBlock form={form} onChange={onChange} />
+        {replacementHouseVisible && <ReplacementHouseSpecialBlock form={form} onChange={onChange} />}
     </SaleHouseSpecialsGroup>
   );
 }

@@ -57,6 +57,11 @@ export const redevelopmentSchema = z
     // §89①4호 나목 — 「해당 1주택을 취득한 날부터 3년 이내에 해당 조합원입주권을 양도할 것」
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거된다.
     otherHouseAcquisitionDate: z.string().date().optional(),
+    // §89①4호 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 「다른 주택 취득일부터 3년이 되는 날 현재」.
+    // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거된다 — 사유가 있어도 나목이 불성립했다(S05-4).
+    otherHouseDisposalDelayReason: z
+      .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
+      .optional(),
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
     landStdPriceAtAcq: z.number().int().nonnegative().optional(),

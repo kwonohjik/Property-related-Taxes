@@ -234,6 +234,8 @@ export async function POST(request: NextRequest) {
       houseCountExclusion: exclusion.houseCountExclusion,
       specialHouseExclusion: exclusion.specialHouseExclusionDetail,
       inheritedExclusion: exclusion.inheritedExclusion,
+      // 입주권 양도 판정은 §155②③ 상속주택을 「다른 주택」에서 빼지 않는다 — 명세도 같은 입장이어야 한다(S03-6).
+      inheritedExclusionApplies: !isRightSale,
       houses: engineInput.houses,
     });
 

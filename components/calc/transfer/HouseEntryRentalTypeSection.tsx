@@ -118,7 +118,7 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDead
       {fields.length > 0 && (
         <div className="space-y-2.5 rounded-md border border-violet-200/70 bg-violet-50/30 p-2.5">
           <p className="text-caption text-violet-700/80">
-            선택한 유형의 중과배제 요건 입력 — 미입력·미충족 시 주택 수에 산입됩니다.
+            선택한 유형의 중과배제 요건 입력 — 요건 충족 여부와 무관하게 주택 수에는 산입되며, 요건을 충족하면 중과 대상에서만 제외됩니다(소득세법 시행령 §167의3①·§167의10①).
           </p>
           {fields.map((key) => {
             const meta = FIELD_META[key as string];

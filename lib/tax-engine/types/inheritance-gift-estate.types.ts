@@ -1219,6 +1219,8 @@ export interface BurdenedGiftTransferTaxInput {
     relocatedSigunguCode?: string;
     /** §155⑱ 처분기한 예외 사유("" = 해당 없음) — 양도세 폼 `disposalDelayReason`과 같은 값 */
     disposalDelayReason?: string;
+    /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건. 양도세 폼 `disposalDelayDisposedByThatMethod`와 같은 값 */
+    disposalDelayDisposedByThatMethod?: boolean;
   };
   /*
    * ── housing 전용 — 1세대1주택 후속 입력 (E-1 후속) ──

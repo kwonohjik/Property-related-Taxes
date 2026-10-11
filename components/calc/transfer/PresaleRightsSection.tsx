@@ -3,7 +3,8 @@
 /**
  * PresaleRightsSection — 세대 보유 분양권·입주권 입력 (다주택 중과 주택 수 산입)
  *
- * 소령 §167의11·§167의3①: 2021.1.1 이후 취득한 분양권·조합원입주권은 주택 수에 포함.
+ * 소령 §167의11·§167의3①: 분양권은 2021.1.1 이후 취득분만 주택 수에 포함한다(법률 제17477호 부칙 제4조 ·
+ * 대통령령 제31442호 부칙 제10조① — 분양권 전용 적용례). 조합원입주권은 취득일과 무관하게 포함한다.
  * 항목별 3필드(종류·취득일·지역)뿐이므로 모달 없이 인라인 편집.
  *
  * 정책: RadioCardGroup/DateInput 전용 · useEffect→store 미러링 금지(onChange 직접 set).
@@ -17,6 +18,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AddressSearch } from "@/components/ui/address-search";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
+import { rightRowDistrictAnswerUsed } from "@/lib/tax-engine/one-house/designated-district-undeclared";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
@@ -84,7 +86,9 @@ export function PresaleRightsSection({
     >
       <p className="text-caption text-muted-foreground/80">
         세대가 보유한 분양권·조합원입주권을 취득일과 무관하게 모두 입력하세요. 주택 수 산정
-        포함 여부(2021.1.1 이후 취득분, 소령 §167의11)는 입력한 취득일로 자동 판단됩니다.
+        포함 여부는 입력한 취득일로 자동 판단됩니다. 분양권은 2021.1.1 이후 취득분만 산입하고
+        (「소득세법」 법률 제17477호 부칙 제4조, 「소득세법 시행령」 대통령령 제31442호 부칙
+        제10조①), 조합원입주권은 취득일과 무관하게 산입합니다.
       </p>
 
       {rights.length === 0 ? (
@@ -281,12 +285,16 @@ export function PresaleRightsSection({
                     });
                   }}
                 />
-                <DesignatedDistrictQuestion
-                  regionCode={r.regionCode}
-                  value={r.inDesignatedDistrict}
-                  onChange={(inDesignatedDistrict) => update(r.id, { inDesignatedDistrict })}
-                  idSuffix={`right-${idx}`}
-                />
+                {/* 이 답을 엔진이 쓰는 행에만 묻는다 — 고지(`designatedDistrictUndeclared`)와 같은 술어(S14b-7). 분양권·승계취득·
+                    상가·토지 원조합원 행과 입주권 양도에서는 답이 결론에 안 쓰이므로 묻지 않는다. */}
+                {rightRowDistrictAnswerUsed(r, isOneHouseExemptionAsset(primaryKind)) && (
+                  <DesignatedDistrictQuestion
+                    regionCode={r.regionCode}
+                    value={r.inDesignatedDistrict}
+                    onChange={(inDesignatedDistrict) => update(r.id, { inDesignatedDistrict })}
+                    idSuffix={`right-${idx}`}
+                  />
+                )}
                 <p className="text-caption text-muted-foreground/70">
                   인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지의 주소를 검색하세요.
                 </p>
@@ -389,7 +397,11 @@ export function PresaleRightsSection({
                       onCheckedChange={(v) =>
                         update(r.id, { parentalCareMergeInheritedRight: v })
                       }
-                      title="동거봉양 합가 전부터 보유하던 주택이 전환된 것"
+                      title={
+                        r.type === "redevelopment_right"
+                          ? "동거봉양 합가 전부터 보유하던 주택이 전환된 것"
+                          : "동거봉양 합가 전부터 보유하던 분양권"
+                      }
                     />
                   )}
                   {/*

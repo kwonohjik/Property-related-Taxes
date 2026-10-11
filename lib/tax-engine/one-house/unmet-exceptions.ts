@@ -10,24 +10,35 @@ import {
   resolveDoubleMergeComposition,
   resolveMergeComposition,
 } from "./merge-composition";
-import { doubleMergeOrderOf } from "./merge-deeming";
+import { doubleMergeOrderOf, mergeAxisHouses, resolveTwoHouseMergeAxis } from "./merge-deeming";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
   passesHouseholdGate,
-  resolveInheritedHouseExclusionFromInput,
+  resolveInheritedHouseExclusionForJudgment,
   resolveInheritedSellingHouseId,
 } from "../transfer-inheritance-exclusion";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import {
-  evaluateTemporaryTwoHouseTiming,
+  inheritedBothPoolsExcluded,
   meetsOneHouseHoldingResidence,
+  qualifiesLongTermMortgageContract,
+  qualifiesLongTermMortgageResidenceExemption,
   RURAL_HOUSE_LABEL,
+  ruralTemporaryTwoHouseOverlapCountHolds,
   RURAL_HOUSE_RESIDENCE_YEARS,
+  qualifiesRuralHouseApartFromDeadline,
   RURAL_RETURN_TO_FARM_MAX_LAND_SQM,
+  RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
+  ruralReturnToFarmDeadlineApplies,
+  twoHouseSpecialCountHolds,
+  UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
+import { deadlineHoldingUnmetReason } from "./deadline-holding";
+import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
+import { deadlineEndFrom, isWithinDeadline } from "../civil-period";
 import type { OneHouseJudgeInput, OneHouseUnmetException } from "./types";
 
 type OneHouseRule = OneHouseSpecialRulesData["one_house_exemption"];
@@ -52,7 +63,8 @@ type OneHouseRule = OneHouseSpecialRulesData["one_house_exemption"];
  * ## 🔑 기한 초과는 여기서 말하지 않는다
  *
  * `collectPendingConditions`의 합가 축이 **날짜와 함께** 안내한다(`155-5-marriage-merge`).
- * 두 곳에서 같은 사실을 말하면 어느 쪽이 정본인지 흐려진다.
+ * 두 곳에서 같은 사실을 말하면 어느 쪽이 정본인지 흐려진다. (판정 기준일 전에 기한이 지나 `pending`에서 빠진 조건의 사유만
+ * `collectLapsedDeadlineUnmet`이 따로 남긴다 — S07-3.)
  */
 export function collectUnmetExceptions(
   input: OneHouseJudgeInput,
@@ -76,6 +88,8 @@ export function collectUnmetExceptions(
   return [
     ...collectMergeUnmet(input, oneHouseRules),
     ...collectInheritedUnmet(input),
+    ...collectTemporaryTwoHouseUnmet(input, oneHouseRules),
+    ...collectLongTermMortgageMergeUnmet(input, oneHouseRules),
     ...collectUnavoidableUnmet(input, oneHouseRules),
     ...collectCulturalHeritageUnmet(input, oneHouseRules),
     ...collectRuralUnmet(input, oneHouseRules),
@@ -95,14 +109,22 @@ function collectMergeUnmet(
    * §155④⑤ — 혼인이 먼저다(E-3.5와 같은 순서). 둘 다 입력돼 있으면 혼인 축으로 안내한다.
    * 입력이 아예 없으면 **선언하지 않은 특례**이므로 아무것도 내지 않는다.
    */
-  const marriageDate = input.marriageMerge?.marriageDate;
-  const parentalCareDate = input.parentalCareMerge?.mergeDate;
   // D4 이중 합가 3주택은 먼저 합친 날·그 합가가 기준이다(`resolveDoubleMergeDeeming` — 순서 무관).
   const doubleOrder = input.householdHousingCount === 3 ? doubleMergeOrderOf(input) : undefined;
-  const mergeDate = doubleOrder?.firstDate ?? marriageDate ?? parentalCareDate;
+  // 그 밖에는 정본의 합가 축(`resolveTwoHouseMergeAxis` — 두 날짜가 있는 2주택은 명부 소유 쪽이 가리키는 합가, S04-3).
+  const axis = doubleOrder ? undefined : resolveTwoHouseMergeAxis(input);
+  const mergeDate = doubleOrder?.firstDate ?? axis?.mergeDate;
   if (!mergeDate) return unmet;
 
-  const isMarriage = doubleOrder ? doubleOrder.first === "marriage" : marriageDate !== undefined;
+  /**
+   * 1채(또는 0채)면 합가 항목을 **만들지 않는다**(S07-8). §155②③·조특법 제외로 판정 주택 수가 1채가 된 세대는 「합침으로써
+   * 2주택」 의제가 필요 없고 §154①이 바로 적용된다 — 「합가 특례는 2주택까지만」이라는 사유는 틀린 안내이고, 뒤에 오는
+   * §154① 사유(`pushBaseRequirementReason`)까지 `reasons.length > 0`으로 가린다. 요건 검토표(`requirement-review.ts`)가 1채를
+   * `154-1-one-house`로 보내는 것과 같은 규칙이다. 4채 이상만 상한 사유를 낸다.
+   */
+  if (input.householdHousingCount <= 1) return unmet;
+
+  const isMarriage = doubleOrder ? doubleOrder.first === "marriage" : axis!.kind === "marriage";
   const mergeLabel = isMarriage ? "혼인한 날" : "합친 날";
   const reasons: string[] = [];
 
@@ -151,6 +173,8 @@ function collectMergeUnmet(
     reasons.push(
       "상속주택(§155②③)을 주택 수에서 뺀 뒤에도 3주택입니다 — 상속주택 특례·일시적 2주택·합가 특례 세 가지가 겹친 경우를 인정한 해석이 확인되지 않아 적용하지 않습니다(확인 필요).",
     );
+  } else if (count === 2 && inheritedBothPoolsExcluded(input)) {
+    reasons.push(inheritedBothPoolsCapReason("합가 특례"));
   } else if (count === 3) {
     /**
      * 3주택은 §155①과 **겹친 경우만** 인정된다(F-1 — 사전-2025-법규재산-1240 ·
@@ -176,22 +200,13 @@ function collectMergeUnmet(
       // 어느 요건이 어느 날짜로 깨졌는지 밝힌다 — 종전 문구는 두 요건을 양도 연도와 무관하게 함께 나열해
       // 2012-06-29 전 양도분(1년 요건 없음)에도 1년 요건을 말했다. 합가로 3주택이 된 경우에도 신규주택
       // 취득일부터 처분기한 안에 양도해야 한다(사전-2026-법규재산-0643).
-      const { timing, era } = evaluateTemporaryTwoHouseTiming(input, oneHouseRules.temporary_two_house);
-      const tt = input.temporaryTwoHouse;
-      const lead = "겹쳐 있는 일시적 2주택 특례의 기간 요건을 충족하지 않습니다";
-      if (!timing.oneYearMet) {
-        reasons.push(
-          `${lead} — 종전주택 취득일(${fmtDate(tt.previousAcquisitionDate)})부터 1년이 지난 뒤(${fmtDate(timing.oneYearThreshold)}부터) 신규주택을 취득해야 하는데 ${fmtDate(tt.newAcquisitionDate)}에 취득했습니다.`,
-        );
-      }
-      if (!timing.threeYearMet) {
-        reasons.push(
-          `${lead} — 신규주택 취득일(${fmtDate(tt.newAcquisitionDate)})부터 처분기한 ${era.years}년의 말일(${fmtDate(timing.deadline)})이 지난 ${fmtDate(input.transferDate)}에 양도했습니다. 합가로 3주택이 된 경우에도 이 기한 안에 양도해야 합니다.`,
-        );
-      }
-      if (timing.moveInMet === false) {
-        reasons.push(`${lead} — 세대전원 이사·전입신고 기한 요건(§155①2호 가목)을 충족하지 않습니다.`);
-      }
+      reasons.push(
+        ...overlappedTemporaryTwoHouseTimingReasons(
+          { ...input, temporaryTwoHouse: input.temporaryTwoHouse },
+          oneHouseRules.temporary_two_house,
+          "합가로 3주택이 된 경우에도 이 기한 안에 양도해야 합니다.",
+        ),
+      );
     }
   } else if (count !== undefined && count !== 2) {
     reasons.push(
@@ -211,7 +226,7 @@ function collectMergeUnmet(
   if ((count === 2 || (count === 3 && !doubleOrder)) && reasons.length === 0) {
     const composition = resolveMergeComposition({
       householdHousingCount: count,
-      houses: input.houses,
+      houses: axis ? mergeAxisHouses(input.houses, axis) : input.houses,
       sellingHouseId: input.sellingHouseId,
       mergeDate,
       knownHouseExclusionCount: input.knownHouseExclusionCount,
@@ -279,6 +294,124 @@ function pushBaseRequirementReason(
   );
 }
 
+/**
+ * 상속주택 두 채(②·③)를 뺀 뒤 2주택이 남아 **세 특례**가 겹치는 경우의 사유 — 정본 술어는 `inheritedBothPoolsExcluded`
+ * (`transfer-tax-exemption-holding.ts`)이고, 여기서는 사실을 문장으로 옮길 뿐 성립을 다시 판정하지 않는다(S01-2).
+ * 3주택 중첩(`count === 3 && inheritedHouseExclusionCount > 0`)의 문구와 같은 형식이다.
+ */
+function inheritedBothPoolsCapReason(what: string): string {
+  return (
+    `상속주택 2채(단독상속 §155② · 공동상속 소수지분 §155③)를 주택 수에서 뺀 뒤에도 2주택이 남았습니다 — 상속주택 특례 두 가지와 ${what}이(가) ` +
+    "겹친 세 특례를 인정한 해석이 확인되지 않고 불허 회신(사전-2023-법규재산-0209)이 있어 적용하지 않습니다(확인 필요)."
+  );
+}
+
+/** 상속주택 2채 제외 + 2주택 전제 특례 → 세 특례 상한 사유(`inheritedBothPoolsCapReason`) — 각 특례 수집기가 부른다. */
+function pushInheritedBothPoolsCapReason(reasons: string[], input: OneHouseJudgeInput, what: string): void {
+  if (input.householdHousingCount === 2 && inheritedBothPoolsExcluded(input)) {
+    reasons.push(inheritedBothPoolsCapReason(what));
+  }
+}
+
+/**
+ * §155① 일시적 2주택 — 상속주택 2채 제외로 세 특례가 겹쳐 적용되지 않은 사유.
+ *
+ * 🔑 §155① 기간 요건 사유는 `pending`(처분기한)·`collectEraUndetermined`가 말한다 — 여기는 **세 특례 상한**과
+ *    ⑦ 농어촌 중첩 3주택(D3)의 기간 탈락만 낸다(2주택은 검토표가 같은 사유를 낸다).
+ *    선언하지 않은 특례(`temporaryTwoHouse` 없음)는 말하지 않는다.
+ */
+function collectTemporaryTwoHouseUnmet(
+  input: OneHouseJudgeInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+): OneHouseUnmetException[] {
+  if (!input.temporaryTwoHouse) return [];
+  const reasons: string[] = [];
+  pushInheritedBothPoolsCapReason(reasons, input, "일시적 2주택 특례(§155①)");
+  /**
+   * D3 — ⑦ 농어촌주택이 겹친 3주택은 엔진이 §155① 분기로 본다(E-3 `ruralTemporaryTwoHouseOverlapCountHolds`). 기간 요건에서 탈락했으면
+   * 그 날짜를 밝힌다 — 종전에는 ⑦ 카드가 「주택 수가 3채라 2주택에만 적용」이라고만 말해 실제 탈락 원인이 가려졌다(S07-5).
+   */
+  const twoHouseRule = oneHouseRules.temporary_two_house;
+  if (twoHouseRule && ruralTemporaryTwoHouseOverlapCountHolds(input)) {
+    reasons.push(
+      ...overlappedTemporaryTwoHouseTimingReasons(
+        { ...input, temporaryTwoHouse: input.temporaryTwoHouse },
+        twoHouseRule,
+        "농어촌주택(§155⑦)과 겹쳐 3주택이 된 경우에도 이 기한 안에 양도해야 합니다.",
+      ),
+    );
+  }
+  if (reasons.length === 0) return [];
+  return [
+    {
+      id: "155-1-temporary-two-house",
+      label: "일시적 2주택",
+      // 구조화 인용이라 법령명을 남긴다(`pending`의 `155-1-disposal-deadline`과 같은 이유 — 항(①)이 있어야 본문 하이라이트가 걸린다).
+      legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
+      reasons,
+    },
+  ];
+}
+
+/**
+ * §155의2② 장기저당담보주택 동거봉양 합가 — 불성립 사유 (X3-5).
+ *
+ * 엔진 분기(E-3.9 `checkExemptionCore`)의 조건과 **1:1**이다: 담보주택 동거봉양 합가 선언 · 2주택 · 「먼저 양도」 ·
+ * 계약 요건(`qualifiesLongTermMortgageContract`) · §154①(양도 주택이 담보주택이면 거주기간 면제를 주입).
+ * 종전에는 이 축의 사유가 하나도 없어 칩을 선언하고도 「먼저 양도」를 입력하지 않은 세대가 아무 안내 없이 과세됐다 —
+ * 선언한 사실이 출력에서 사라졌다. 성립 판정은 정본이 하고 여기서는 **사유만** 옮긴다(선언하지 않았으면 말하지 않는다).
+ *
+ * 🔑 「먼저 양도」는 법정 요건이다(「…합침으로써 1세대가 2주택을 소유하게 되는 경우 **먼저 양도하는 주택**에 대하여는」) — 선언하지
+ *    않았으면 사실을 몰라 불성립으로 판정한 것이므로 「확인 필요」를 붙인다(모름 = 혜택 불성립 + 결론을 가를 때만 고지).
+ * 🔑 기한은 없다(§155④의 10년과 다르다) — 기한 사유를 만들지 않는다.
+ */
+function collectLongTermMortgageMergeUnmet(
+  input: OneHouseJudgeInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+): OneHouseUnmetException[] {
+  const m = input.longTermMortgageHouse;
+  if (m?.parentalCareMerge !== true) return []; // 선언하지 않은 특례는 말하지 않는다
+
+  const reasons: string[] = [];
+  const count = input.householdHousingCount;
+  if (count !== undefined && count !== 2) {
+    reasons.push(
+      `세대 주택 수가 ${count}채입니다 — 이 특례는 담보주택을 보유한 직계존속과 동거봉양 합가로 1세대가 2주택이 된 경우에만 적용됩니다.`,
+    );
+  }
+  if (input.isFirstTransferredInMerge !== true) {
+    reasons.push(
+      "합가 후 세대에서 먼저 양도하는 주택으로 선언하지 않았습니다 — 이 특례는 「먼저 양도하는 주택」에만 적용됩니다(§155의2②). 확인 필요: 먼저 양도하는 주택이면 선언하세요.",
+    );
+  }
+  if (m.transferredBeforeMaturity) {
+    reasons.push("장기저당담보주택을 계약기간 만료 이전에 양도합니다 — §155의2③에 따라 ①·②를 적용하지 않습니다.");
+  } else if (!qualifiesLongTermMortgageContract(input)) {
+    reasons.push(
+      "장기저당담보대출계약 요건(계약체결일 현재 가입자 60세 이상 · 계약기간 10년 이상 · 만기에 해당 주택을 처분해 일시 상환하는 조건 — §155의2①1~3호)을 충족하지 않습니다.",
+    );
+  }
+  // §154① — 앞 사유가 없을 때만(의제부터 불성립이면 §154①을 덧붙이면 원인이 흐려진다). 양도 주택이 담보주택이면 거주기간 면제를 준다.
+  if (
+    reasons.length === 0 &&
+    !meetsOneHouseHoldingResidence(input, oneHouseRules.one_house_exemption, qualifiesLongTermMortgageResidenceExemption(input))
+  ) {
+    reasons.push(
+      `${shortArticle(TRANSFER.ONE_HOUSE_REQUIREMENT)}① 보유 2년(취득 당시 조정대상지역이면 거주 2년 — 양도 주택이 담보주택이면 거주기간은 면제) 요건을 충족하지 않습니다.`,
+    );
+  }
+  if (reasons.length === 0) return [];
+
+  return [
+    {
+      id: "155-2-2-long-term-mortgage-merge",
+      label: "장기저당담보주택 동거봉양 합가",
+      legalBasis: TRANSFER.LONG_TERM_MORTGAGE_MERGE,
+      reasons,
+    },
+  ];
+}
+
 /** 주택 수 요건(「각각 1개씩」 = 2주택) 사유 — §155⑦·⑧이 같은 문장을 쓴다. */
 function pushTwoHouseCountReason(
   reasons: string[],
@@ -299,7 +432,8 @@ function pushTwoHouseCountReason(
  *    미충족으로 읽으면 법 근거 없이 납세자에게 불리해진다. 그 사실은 `collectUndetermined`가
  *    판정 보류(`155-8-resolved-date-missing`)로 따로 밝힌다.
  * 🔑 **3년 기한 초과도 여기서 말하지 않는다** — `collectPendingConditions`가 **날짜와 함께**
- *    안내한다(`155-8-unavoidable-resolved`). 두 카드가 같은 사실을 말하지 않는다.
+ *    안내한다(`155-8-unavoidable-resolved`). 두 카드가 같은 사실을 말하지 않는다. 단 기한일 기준 §154① 보유 2년이 모자라
+ *    안내를 못 낸 경우는 그 이유를 여기서 말한다(S07-4).
  */
 function collectUnavoidableUnmet(
   input: OneHouseJudgeInput,
@@ -310,7 +444,16 @@ function collectUnavoidableUnmet(
 
   const reasons: string[] = [];
   pushTwoHouseCountReason(reasons, input.householdHousingCount, "부득이한 사유로 취득한 수도권 밖 주택");
+  pushInheritedBothPoolsCapReason(reasons, input, "수도권 밖 부득이한 사유 주택 특례(§155⑧)");
   pushBaseRequirementReason(reasons, input, oneHouseRules.one_house_exemption);
+  // 다른 사유가 없는데 3년 기한이 지났다면 `pending`이 기한을 안내한다 — 단 기한일 기준 보유 2년이 모자라 안내를 못 냈으면 그 이유를 말한다(S07-4).
+  if (reasons.length === 0 && u.resolvedDate && twoHouseSpecialCountHolds(input)) {
+    const dl = deadlineEndFrom(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
+    if (!isWithinDeadline(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate)) {
+      const why = deadlineHoldingUnmetReason(input, oneHouseRules.one_house_exemption, dl.end, "부득이한 사유가 해소된 날부터 3년");
+      if (why) reasons.push(why);
+    }
+  }
   if (reasons.length === 0) return [];
 
   return [
@@ -339,6 +482,7 @@ function collectCulturalHeritageUnmet(
 
   const reasons: string[] = [];
   pushTwoHouseCountReason(reasons, input.householdHousingCount, "문화유산 주택");
+  pushInheritedBothPoolsCapReason(reasons, input, "문화유산 주택 특례(§155⑥)");
   pushBaseRequirementReason(reasons, input, oneHouseRules.one_house_exemption);
   if (reasons.length === 0) return [];
 
@@ -356,7 +500,8 @@ function collectCulturalHeritageUnmet(
  * §155⑦ 농어촌주택 — 불성립 사유. 각 항은 `qualifiesRuralHouse`의 탈락 지점과 **1:1**이다.
  *
  * 🔑 3호(귀농)의 「취득일부터 5년 이내 양도」 초과는 `collectPendingConditions`가 날짜와 함께
- *    안내한다(`155-7-3ho-return-to-farm`) — 여기서 중복해 말하지 않는다.
+ *    안내한다(`155-7-3ho-return-to-farm`) — 여기서 중복해 말하지 않는다. 단 기한일 기준 §154① 보유 2년이 모자라
+ *    안내를 못 낸 경우는 그 이유를 말한다(S07-4).
  */
 function collectRuralUnmet(
   input: OneHouseJudgeInput,
@@ -366,7 +511,11 @@ function collectRuralUnmet(
   if (!r) return []; // 선언하지 않은 특례는 말하지 않는다
 
   const reasons: string[] = [];
-  pushTwoHouseCountReason(reasons, input.householdHousingCount, "농어촌주택");
+  // D3 — ⑦이 §155①과 겹친 3주택은 엔진이 성립시키는 주택 수다(`ruralTemporaryTwoHouseOverlapCountHolds`). 「2주택에만 적용」은 틀린 사유다.
+  if (!ruralTemporaryTwoHouseOverlapCountHolds(input)) {
+    pushTwoHouseCountReason(reasons, input.householdHousingCount, "농어촌주택");
+  }
+  pushInheritedBothPoolsCapReason(reasons, input, "농어촌주택 특례(§155⑦)");
 
   if (!r.isOutsideCapitalEupMyeon) {
     reasons.push(
@@ -430,6 +579,19 @@ function collectRuralUnmet(
   }
 
   pushBaseRequirementReason(reasons, input, oneHouseRules.one_house_exemption);
+  // 3호 5년 기한 — 위 ⑧과 같다(S07-4). 다른 사유가 없을 때만, 기한 안내(`pending`)가 못 나간 이유를 말한다.
+  if (
+    reasons.length === 0 &&
+    r.kind === "return_to_farm" &&
+    r.acquisitionDate &&
+    ruralReturnToFarmDeadlineApplies(r.acquisitionDate) &&
+    qualifiesRuralHouseApartFromDeadline(input) &&
+    !isWithinDeadline(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate)
+  ) {
+    const dl = deadlineEndFrom(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
+    const why = deadlineHoldingUnmetReason(input, oneHouseRules.one_house_exemption, dl.end, "귀농주택 취득일부터 5년");
+    if (why) reasons.push(why);
+  }
   if (reasons.length === 0) return [];
 
   return [
@@ -460,15 +622,16 @@ function collectRuralUnmet(
  *
  * ## 🔑 성립 판정은 정본이 한다
  *
- * `resolveInheritedHouseExclusionFromInput`(정본)을 **그대로 호출**해 그 결과만 문장으로 옮긴다.
- * 순수 함수이고 인자가 같으므로 `runHouseCountExclusionStep`이 얻은 값과 항상 일치한다.
+ * STEP 0.95가 낸 정본 결과(`inheritedHouseExclusionDetail` echo)를 **그대로 이어받아** 문장으로 옮긴다
+ * (`resolveInheritedHouseExclusionForJudgment`). echo가 없는 직접 호출만 정본을 입력으로 부른다 —
+ * 재개발 신축주택은 서브트리 입력(취득일 = 준공일 · `redevelopment` strip)이 STEP 0.95 입력과 달라 다시 부르면 답이 갈린다(S07-11).
  */
 function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetException[] {
   const sellingId = resolveInheritedSellingHouseId(input);
   const candidates = (input.houses ?? []).filter((h) => h.isInherited && h.id !== sellingId);
   if (candidates.length === 0) return []; // 선언하지 않은 특례는 말하지 않는다
 
-  const x = resolveInheritedHouseExclusionFromInput(input);
+  const x = resolveInheritedHouseExclusionForJudgment(input);
   const reasons: string[] = [];
 
   // OH-12c — 증여 제외 괄호는 2018-02-13 이후 증여분부터(제28637호 부칙 제16조). 정본 leaf로 같은 판정을 한다.

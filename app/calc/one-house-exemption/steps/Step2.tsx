@@ -35,12 +35,13 @@ import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionPro
 import { SaleHouseSpecialsGroup } from "@/components/calc/transfer/SaleHouseSpecialsGroup";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart";
-import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import {
   judgmentCountExclusionRowApplies,
   judgmentMarriageRentalOriginVisible,
   judgmentMergeInputVisible,
+  judgmentExemptionHouseCount,
+  judgmentProvisoMode,
   judgmentReplacementHouseVisible,
   judgmentRightSaleMergeOwnsInput,
   judgmentTemporaryTwoHouseVisible,
@@ -121,19 +122,16 @@ export function Step2({ form, onChange }: Props) {
    */
 
   /**
-   * §154① 단서 게이트 — **파생 주택 수**를 넘긴다.
-   * 빈 문자열이면 `parseInt("") = NaN`으로 카드가 닫혀 면제 사유를 적을 곳이 사라진다.
+   * §154① 단서 게이트 — ④·⑧과 **같은 함수**(`judgmentProvisoMode`)의 맥락이다.
+   *
+   * 🔴 종전에는 `isHousing: true`를 하드코딩하고 제외 **전** 주택 수를 넘겼다 — 입주권 양도에도 ④·⑧이 버리는 카드가
+   *    뜨고(S10-5), 제외 후 1주택인 세대는 카드가 없어 단서를 입력할 곳이 없었다(S03-4).
+   *    파생 주택 수(명부)·§155① 신규 주택·제외 행 모두 그 함수 안에서 같은 leaf로 구한다.
    */
-  const proviso = useMemo(
-    () =>
-      provisoGate({
-        isOneHousehold: form.isOneHousehold,
-        isHousing: true,
-        householdHousingCount: houseCount, // 판정 메뉴는 이미 명부 파생값이다(D-3)
-        temporaryTwoHouseApplies: derivedNewHouse !== undefined,
-      }),
-    [form.isOneHousehold, houseCount, derivedNewHouse],
-  );
+  const proviso = useMemo(() => {
+    const mode = judgmentProvisoMode(form);
+    return { visible: mode !== null, mode };
+  }, [form]);
 
   // 조특법 주택 수 제외 — 요건을 갖춘 행만(엔진 평가기 그대로 · Q-3(b)). 머리말의 주택 수 안내용.
   const countExcludedIds = useMemo(
@@ -211,8 +209,11 @@ export function Step2({ form, onChange }: Props) {
           tempTwoHouseVerdict={tempTwoHouseVerdict}
           relocationRegionVerdict={relocationRegionVerdict}
           proviso={proviso}
-          primaryAcquisitionDate={primaryAcquisitionDate}
+          // D8 상대 쪽 짝(B → C)이면 종전 주택은 양도 주택이 아니라 B다 — 카드·④와 같은 짝(`derivedNewHouse`)에서 읽는다.
+          primaryAcquisitionDate={derivedNewHouse?.previousAcquisitionDate ?? primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
+          householdHousingCount={judgmentExemptionHouseCount(form)}
+          replacementHouseVisible={judgmentReplacementHouseVisible(form)}
           /*
             합가일은 이 섹션의 `<MergeDateSection>`이 받는다(주택 수 ≥ 2 — 계산기와 같은 자리).
             1주택 + 권리 세대는 아래 `MergedHouseholdRightSection`이 소유한다 —

@@ -21,7 +21,10 @@ import {
   rowCountExclusionReductions,
   rowSpecialHouseExclusions,
 } from "@/lib/calc/house-count-exclusion-rows";
-import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import {
+  exemptionCountExcludedHouseIds,
+  temporaryTwoHouseCandidateExcludedIds,
+} from "./temp-two-house-candidate-exclusion";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
 import { rightSaleSpecialExclusionApplies } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
@@ -95,6 +98,9 @@ export function judgmentMarriageRentalOriginVisible(form: OneHouseJudgmentFormDa
  *    **조합원입주권을 1개 이상 보유**. 분양권은 §156의3 축이라 세지 않는다.
  */
 export function judgmentReplacementHouseVisible(form: OneHouseJudgmentFormData): boolean {
+  // 대체주택은 **양도하는 주택**의 특례다 — 입주권 양도(§89①4호)에는 적용 여지가 없고 엔진도 무시한다. 공용 술어는
+  // 「2주택 이상이면 양도 대상 무관 true」라 입주권 양도 + 명부 2채에서도 열렸으므로 여기서 먼저 막는다(S10-8).
+  if (!judgmentSaleIsHousing(form)) return false;
   // 조건 본문은 계산기 ④와 공용이다(`replacement-house-scope.ts`) — 인자만 명부 파생값으로 채운다.
   return replacementHouseApplies({
     houseCount: deriveJudgmentHouseCount(form),
@@ -104,17 +110,26 @@ export function judgmentReplacementHouseVisible(form: OneHouseJudgmentFormData):
 }
 
 /**
- * §154① 단서 카드의 맥락 — ④(전송)와 ⑧(필수값)이 **같은 값**을 쓴다(OH-06).
+ * §154① 단서 게이트가 읽는 **제외 후 주택 수** — 명부 파생값에서 §155②③ 상속주택·조특법 소유주택 제외 행을 뺀다(S03-4).
+ * 계산기의 `resolveExemptionHousingCount`와 같은 빼는 leaf(`exemptionCountExcludedHouseIds`)를 쓴다.
+ */
+export function judgmentExemptionHouseCount(form: OneHouseJudgmentFormData): number {
+  return Math.max(deriveJudgmentHouseCount(form) - exemptionCountExcludedHouseIds(form).size, 0);
+}
+
+/**
+ * §154① 단서 카드의 맥락 — ⑤(Step2 렌더)·④(전송)·⑧(필수값)이 **같은 값**을 쓴다(OH-06 · S10-5).
  *
  * 🔑 ④가 사유를 보내지 않는 맥락(`null`)에서 ⑧이 막으면 채울 칸 없는 영구 차단이 되고,
  *    ④가 보내는 맥락에서 ⑧이 빠지면 필수값 없는 사유가 엔진에 닿는다. 그래서 한 함수다.
+ *    ⑤(`Step2.tsx`)가 `isHousing`을 따로 쓰면 입주권 양도에도 ④·⑧이 버리는 카드가 뜬다.
  */
 export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode {
   const primary = form.assets?.[0];
   return provisoGate({
     isOneHousehold: form.isOneHousehold,
     isHousing: primary?.assetKind === "housing",
-    householdHousingCount: deriveJudgmentHouseCount(form), // 판정 메뉴는 명부 파생값(D-3)
+    householdHousingCount: judgmentExemptionHouseCount(form), // 명부 파생값(D-3) − 주택 수 제외 행(S03-4)
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: primary?.assetKind,
       primaryAcquisitionDate: primary?.acquisitionDate,
@@ -169,7 +184,7 @@ export function judgmentHouseCountExclusionReductions(
   form: OneHouseJudgmentFormData,
 ): RowCountExclusionReduction[] {
   if (!judgmentSaleIsHousing(form)) return [];
-  return rowCountExclusionReductions(form.houses);
+  return rowCountExclusionReductions(form.houses, form.transferDate);
 }
 
 /**
@@ -186,7 +201,10 @@ export function judgmentCountExclusionRowApplies(form: OneHouseJudgmentFormData,
 export function judgmentSpecialHouseExclusions(
   form: OneHouseJudgmentFormData,
 ): SpecialHouseExclusionFormItem[] {
-  return rowSpecialHouseExclusions((form.houses ?? []).filter((h) => judgmentCountExclusionRowApplies(form, h)));
+  return rowSpecialHouseExclusions(
+    (form.houses ?? []).filter((h) => judgmentCountExclusionRowApplies(form, h)),
+    form.transferDate,
+  );
 }
 
 /**

@@ -203,7 +203,7 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
     expect(aggregateOf(stripped).taxBase).not.toBe(aggregateOf(cards).taxBase);
   });
 
-  it("MUT-2 🔴 상가 카드에 세대 축을 실으면 상가가 1세대1주택 표2 장특을 받는다", () => {
+  it("MUT-2 🔁 상가 카드에 세대 축을 실어도 상가는 표2를 받지 않는다 — 엔진이 자산 축으로 막는다 (S08-6)", () => {
     const asset: MixedUseAssetInput = { ...mixedUseCase14(), isOneHouseExempt: true };
     const companion = companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 });
     const cards = buildMixedUsePartCards(companion, withIdentityHousingBuildingStd(asset), PRICE, TD, rates, "c1", "자산 2");
@@ -227,6 +227,10 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
           } as TransferTaxItemInput)
         : c,
     );
-    expect(aggregateOf(leaked).taxBase).not.toBe(aggregateOf(cards).taxBase);
+    // 🔁 S08-6 이전에는 이 실수가 세액을 바꿨다(`not.toBe` — 상가가 표2 80%를 받았다). 이제 엔진의 표2 대상 자산 축
+    //    (`lthd-table2-subject.ts` — 「1세대 1주택(이에 딸린 토지 포함)에 해당하는 자산」)이 상가·건물·순수 토지를 표1로 두므로
+    //    카드 조립의 중화(`nonHousing`)를 빼먹어도 값이 같다. 방어가 두 겹이 됐다 — 카드 쪽 중화는 그대로 두고, 이 단언은
+    //    「표2만큼은 새지 않는다」를 고정한다(MUT 실측: 이 입력에서 leak 여부와 과세표준이 같다).
+    expect(aggregateOf(leaked).taxBase).toBe(aggregateOf(cards).taxBase);
   });
 });

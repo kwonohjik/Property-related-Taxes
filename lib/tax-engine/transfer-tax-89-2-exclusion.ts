@@ -179,6 +179,7 @@ export type Article89Clause2Input = Pick<
   | "acquisitionDate"
   | "transferDate"
   | "householdHousingCount"
+  | "knownHouseExclusionHouseIds"
   | "presaleRights"
   | "marriageMerge"
   | "parentalCareMerge"
@@ -497,8 +498,9 @@ function generalHouseHeldAtInheritanceEstablished(input: Article89Clause2Input):
  * ## 네 갈래
  *
  * · `no_merge`     — 합가 사실 자체가 없다. 화면에 합가일 칸이 있으므로 **미입력은 미해당**이다.
- * · `not_declared` — 합가는 있는데 **합가 전 보유 구성**을 선언하지 않았다 ⇒ 판정 불가(경고).
- * · `unmet`        — 선언했는데 어느 호에도 해당하지 않는다 ⇒ 이 축은 결론이 났다.
+ * · `not_declared` — 합가는 있고 **날짜·선언 게이트를 통과**했는데 **합가 전 보유 구성**을 선언하지 않았다 ⇒ 판정 불가(경고).
+ * · `unmet`        — 게이트(먼저 양도 · 합가 이후 양도 · N년 기한)에서 떨어졌거나, 선언했는데 어느 호에도 해당하지 않는다
+ *                    ⇒ 이 축은 결론이 났다. 게이트는 구성 판정보다 **먼저**다(S05-6 · S05-1).
  * · `met`          — 어느 호에 해당한다 ⇒ **직접 1세대1주택 의제**(타이밍 요건 없음).
  *
  * ## ⚠️ §155④⑤와 술어를 공유하지 않는다
@@ -517,31 +519,40 @@ function resolveMergedHouseholdVerdict(input: Article89Clause2Input): MergedHous
   const marriageDate = input.marriageMerge?.marriageDate;
   if (!parentalCareDate && !marriageDate) return { status: "no_merge" };
 
-  const declared = input.mergedHouseholdFirstHouse;
-  if (declared === undefined) {
-    return {
-      status: "not_declared",
-      openArticles: [
-        ...(parentalCareDate ? ["소득세법 시행령 §156의2 ⑧"] : []),
-        ...(marriageDate ? ["소득세법 시행령 §156의2 ⑨"] : []),
-      ],
-    };
-  }
-
-  // ⑧·⑨ 본문 공통 — 「합친 날부터 N년 이내에 **먼저 양도하는 주택**」(N = 양도일 연혁).
+  /**
+   * 🔑 **게이트 순서** — 날짜·선언 게이트(먼저 양도 → 합가 이후 양도 → N년 기한)를 **합가 전 구성 판정보다 먼저** 본다
+   * (S05-6 순서 정정 · S05-1). 날짜가 안 맞으면 「모름」을 말할 자리가 없다 — 구성을 몰라서가 아니라 그 합가 축 자체가
+   * 불성립이다(형제 §155④⑤ `matchMergeGateAndComposition`이 같은 순서다). 종전에는 구성 미선언이면 기한이 지났거나
+   * 「먼저 양도」가 아니어도 판정 보류(비과세 종전 동작)로 새서, 불성립이 확정된 세대까지 비과세로 나왔다.
+   * 미선언을 어떻게 처리할지(보류 vs 불성립)는 이 순서와 **별개 결정**이다 — 게이트를 통과한 뒤의 미선언은 종전대로 판정 보류다.
+   */
+  // ⑧·⑨ 본문 공통 — 「합친 날부터 N년 이내에 **먼저 양도하는 주택**」.
   if (input.isFirstTransferredInMerge !== true) return { status: "unmet" };
 
   const axes: { date: Date | undefined; clause: "⑧" | "⑨" }[] = [
     { date: parentalCareDate, clause: "⑧" },
     { date: marriageDate, clause: "⑨" },
   ];
-  for (const { date, clause } of axes) {
-    if (!date) continue;
-    const years = resolveMergeExemptionYears(
-      clause === "⑧" ? "parental_care" : "marriage",
-      input.transferDate,
-    );
-    if (!isWithinDeadline(date, years, input.transferDate)) continue;
+  const alive = axes.filter((axis): axis is { date: Date; clause: "⑧" | "⑨" } => {
+    if (!axis.date) return false;
+    // 「합친 날(혼인한 날)부터」 — 합가(혼인) **전** 양도는 「합침으로써 … 소유하게 되는 경우」가 아직 성립하지 않았다(S05-1).
+    // 같은 날 양도는 포함한다(`merge-deeming.ts` `matchMergeGateAndComposition`과 같은 경계).
+    if (input.transferDate < axis.date) return false;
+    // N = 양도일 연혁.
+    const years = resolveMergeExemptionYears(axis.clause === "⑧" ? "parental_care" : "marriage", input.transferDate);
+    return isWithinDeadline(axis.date, years, input.transferDate);
+  });
+  if (alive.length === 0) return { status: "unmet" };
+
+  const declared = input.mergedHouseholdFirstHouse;
+  if (declared === undefined) {
+    return {
+      status: "not_declared",
+      openArticles: alive.map(({ clause }) => `소득세법 시행령 §156의2 ${clause}`),
+    };
+  }
+
+  for (const { date, clause } of alive) {
     const item = matchMergedHouseholdClause(declared, {
       mergeDate: date,
       houseAcquisitionDate: input.acquisitionDate,

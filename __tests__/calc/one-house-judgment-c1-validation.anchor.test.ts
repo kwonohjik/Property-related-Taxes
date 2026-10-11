@@ -285,7 +285,8 @@ describe("OH-53 §155⑳ 미충족 — 과세로 뒤집으면 비과세 사유�
         body: JSON.stringify({
           ...BASE,
           residencePeriodMonths,
-          rentalHousingException: { applyException: true, scenario: "A", rentalUnits: [unit] },
+          // PR6a(S06-9) — 구간 안(2019.2.12. 이후 취득 · 2025.2.27. 이전 양도) 이력 미입력은 「모름 = 불성립」 — 긍정 짝은 「없음」을 입력한다.
+          rentalHousingException: { applyException: true, scenario: "A", rentalUnits: [unit], priorRentalExemptionHistory: "none" },
         }),
       }),
     );

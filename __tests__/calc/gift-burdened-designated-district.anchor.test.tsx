@@ -185,12 +185,15 @@ describe("W-1 ⑤ 화면", () => {
 
 describe("E-1 route — 확인 필요 경고", () => {
   const warnings = async (bgt: Partial<BurdenedGiftTransferTaxInput>) => {
-    const it = item({ residencePeriodMonths: 30, ...bgt });
+    // 증여(양도) 2023-03-02 · 거주 0개월 — 취득(2020-01-10)이 지구 한정 지정 구간이라 선언이 거주요건(§154① 괄호)을 가른다
+    // (지구 안=거주 2년 필요 → 과세 · 지구 밖=비조정 → 비과세). 선언이 결론을 안 가르면 고지하지 않는다(S02-7) — 거주 30개월 짝은 아래.
+    //   양도일(2020-03-02 — 보유 2년 미달)로는 비과세가 어느 쪽이든 성립하지 않아 선언이 결론을 못 가른다.
+    const it = item({ residencePeriodMonths: 0, ...bgt });
     const res = await POST(
       new NextRequest("http://localhost/api/calc/transfer", {
         method: "POST",
         headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
-        body: JSON.stringify(buildGiftBurdenedTransferBody(it, form(it))),
+        body: JSON.stringify(buildGiftBurdenedTransferBody(it, { ...form(it), giftDate: "2023-03-02" })),
       }),
     );
     const json = await res.json();
@@ -202,5 +205,8 @@ describe("E-1 route — 확인 필요 경고", () => {
     expect((await warnings({})).some((w) => NOTICE.test(w))).toBe(true);
     expect((await warnings({ regionInDesignatedDistrict: false })).some((w) => NOTICE.test(w))).toBe(false);
     expect((await warnings({ regionInDesignatedDistrict: true })).some((w) => NOTICE.test(w))).toBe(false);
+  });
+  it("긍정 짝 — 거주 30개월이면 선언이 결론을 가르지 않으므로 미선언이어도 경고가 없다(S02-7)", async () => {
+    expect((await warnings({ residencePeriodMonths: 30 })).some((w) => NOTICE.test(w))).toBe(false);
   });
 });

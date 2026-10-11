@@ -509,6 +509,24 @@ export function buildAssetPayload(
               : ("non_appurtenant" as const),
         }
       : {}),
+    /**
+     * ⑬ 부수토지 한도 판정 면적(`areaM2` — 영 §154⑦·§167의5 배율) — **화면의 토지 면적 칸 그대로**.
+     *
+     * 🔴 종전에는 싣지 않았다. ⑫ Zod(`areaM2`)와 ⑭(`bundled-split-helpers` `areaM2: c.areaM2`)에는 칸이 있는데 ④만 비어
+     *    화면 경로의 부수토지 컴패니언은 늘 「배율 이내인지 판정 불가」였다. 그러면 F-13 「1세대1주택 단위」에 들지 못해
+     *    비과세가 거부되고, S08-6 이후에는 장특도 표1이 된다 — 바로잡을 입력 경로가 없는 막다른 길이다(PR5a 보고 7-2).
+     *
+     * 면적은 **양도하는 토지 면적**(`transferArea`)을 우선한다 — 일부양도(`partial`)에서는 양도한 부분, 같은 면적(`same`)이면
+     * `transferArea`와 `acquisitionArea`가 같은 값이다(`AssetAreaSection`이 함께 쓴다). 양도면적이 비면 취득면적으로 대신한다.
+     * 부수토지(`landNature === "appurtenant"`)만 싣는다 — 독립 나대지는 한도 판정 대상이 아니다.
+     * 금액이 아니라 물건 면적 사실이라 지분 스케일을 하지 않는다.
+     */
+    ...(asset.assetKind === "land" && asset.landNature === "appurtenant"
+      ? (() => {
+          const area = parseFloat(asset.transferArea) || parseFloat(asset.acquisitionArea) || 0;
+          return area > 0 ? { areaM2: area } : {};
+        })()
+      : {}),
     // ⑬ 사례 28 — companion 신축주택 정착면적·도시지역·4시점 (자동 분기용)
     // primary가 land이고 companion이 housing인 케이스에서 부수토지 한도 산정.
     ...(asset.acquisitionCause === "newConstruction"

@@ -13,6 +13,7 @@ import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
 import { aptDeadlineExtensionPayload, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
+import { rentalUnitTerminationInScope } from "./rental-unit-termination-scope";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
 
@@ -71,11 +72,12 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
         : undefined,
       rentalMonths: deriveRentalMonths(u),
-      rentalAutoTermination: u.rentalAutoTermination ?? false,
+      // S16-3 — 말소 표시는 ㉓ 대상 목(가·다·라·마)일 때만 효력이 있다. 목이 바뀌어 토글이 화면에서 사라진 stale 값은 보내지 않는다.
+      rentalAutoTermination: rentalUnitTerminationInScope(u),
       // I-4 — ㉓ 말소일. 말소 토글 ON일 때만 보낸다(⑤가 그때만 노출 — 3중 패턴). 미입력("")·stale(undefined)은
       // 보내지 않는다(Zod optional) — 엔진은 말소일이 없으면 ㉓을 판정하지 않는다.
       registrationCancellationDate:
-        u.rentalAutoTermination && u.registrationCancellationDate
+        rentalUnitTerminationInScope(u) && u.registrationCancellationDate
           ? (u.registrationCancellationDate.includes('T')
             ? u.registrationCancellationDate
             : `${u.registrationCancellationDate}T00:00:00.000Z`)
@@ -83,7 +85,7 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       // OH-39 — 미선택("")·stale(undefined)이면 보내지 않는다(Zod optional). 엔진은 미입력이면 ㉓을 판정하지 않는다.
       // 말소 토글 OFF면 의미가 없으므로 보내지 않는다(⑤가 토글 ON일 때만 노출 — 3중 패턴).
       terminatedRegistrationType:
-        u.rentalAutoTermination && u.terminatedRegistrationType ? u.terminatedRegistrationType : undefined,
+        rentalUnitTerminationInScope(u) && u.terminatedRegistrationType ? u.terminatedRegistrationType : undefined,
       requirementsConfirmed: u.requirementsConfirmed ?? false,
       // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외). 「모름」은 미전송.
       aptDeadlineExtension: rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionPayload(u.aptDeadlineExtension) : undefined,

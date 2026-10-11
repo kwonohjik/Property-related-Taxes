@@ -10,6 +10,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
+  type MergeExemptionKind,
   MARRIAGE_MERGE_10Y_TRANSFER_START,
   PARENTAL_CARE_MERGE_10Y_TRANSFER_START,
   resolveMergeExemptionYears,
@@ -18,19 +19,22 @@ import {
   COMPLETION_DEADLINE_3Y_TRANSFER_START,
   resolve1562DeadlineYears,
 } from "@/lib/tax-engine/data/article-156-2-completion-era";
+import { resolveRegulatedShortenedClauseRef } from "@/lib/tax-engine/data/temporary-two-house-regulated-clause";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
 /**
  * 「합친 날(혼인한 날)부터 N년 이내」의 N 문구.
  * 혼인·동거봉양 합가일이 둘 다 있으면 혼인을 본다 — 엔진 `matchMergeApartFromWindow`와 같은 순서.
+ * `kind`를 주면 합가일 입력과 무관하게 그 종류의 문구를 쓴다 — 종류별 안내 칸(`MergeDateSection`)이 쓴다.
  */
 export function mergeExemptionYearsLabel(args: {
   marriageDate?: string;
   parentalCareMergeDate?: string;
   transferDate?: string;
+  kind?: MergeExemptionKind;
 }): string {
-  const kind = args.marriageDate ? "marriage" : args.parentalCareMergeDate ? "parental_care" : undefined;
+  const kind = args.kind ?? (args.marriageDate ? "marriage" : args.parentalCareMergeDate ? "parental_care" : undefined);
   const transferAt = toOptionalDate(args.transferDate);
   if (kind && transferAt) return `${resolveMergeExemptionYears(kind, transferAt)}년`;
   if (kind === "marriage") return `10년(${ymd(MARRIAGE_MERGE_10Y_TRANSFER_START)} 전 양도는 5년)`;
@@ -46,4 +50,13 @@ export function completionDeadlineYearsLabel(transferDate: string | undefined): 
   const transferAt = toOptionalDate(transferDate);
   if (transferAt) return `${resolve1562DeadlineYears(transferAt)}년`;
   return `3년(${ymd(COMPLETION_DEADLINE_3Y_TRANSFER_START)} 전 양도는 2년)`;
+}
+
+/**
+ * 「§155」 뒤에 붙는 조정대상지역 처분기한 단축 규정의 위치(`①1호` · `①2호` · `①`) — 양도일 연혁(X2-1).
+ * 양도일을 모르면 호를 단정하지 않고 `①`만 적는다.
+ */
+export function regulatedShortenedClauseRefOf(transferDate: string | undefined): string {
+  const transferAt = toOptionalDate(transferDate);
+  return transferAt ? resolveRegulatedShortenedClauseRef(transferAt) : "①";
 }

@@ -86,6 +86,8 @@ const JUDGE_INPUT_KEYS = [
   "sellingHouseId",
   "knownHouseExclusionCount",
   "inheritedHouseExclusionCount",
+  // S07-11 — STEP 0.95 §155②③ 제외 정본 결과 echo(서브트리가 같은 판정을 다른 입력으로 다시 하지 않는다)
+  "inheritedHouseExclusionDetail",
   "knownHouseExclusionHouseIds",
   "noMergeRosterInputPath",
   // 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자
@@ -98,6 +100,8 @@ const JUDGE_INPUT_KEYS = [
   "finalOneHouseRestart",
   // 보유 중 비거주 기간(§154⑧2호) — 판정 메뉴 전용
   "nonResidentHoldingPeriod",
+  // G3-4 — 토지 출자 원조합원 완공APT의 §154① 보유 기산일(사용승인일). 엔진이 채운다
+  "exemptionHoldingStartDate",
 ] as const;
 
 const _frozenKeyGuards: [
@@ -175,6 +179,19 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   sellingHouseId: "sell",
   knownHouseExclusionCount: 1,
   inheritedHouseExclusionCount: 1,
+  inheritedHouseExclusionDetail: {
+    soleExcludedCount: 1,
+    coExcludedCount: 0,
+    excludedCount: 1,
+    sameHouseholdDisqualifiedCount: 0,
+    rankingDisqualifiedCount: 0,
+    excludedHouses: [{ houseId: "inherited-house", basis: "sole" }],
+    eligibleSoleCount: 1,
+    eligibleCoMinorityCount: 0,
+    generalHouseNotHeldCount: 0,
+    inheritedDateUnknownCount: 0,
+    sameInheritanceAsSoldCount: 0,
+  },
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,
   rentalHousingException: {
@@ -201,6 +218,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     disposals: [{ kind: "gift", date: D("2021-05-05"), temporaryTwoHouseSpecial: false }],
   },
   nonResidentHoldingPeriod: { startDate: D("2019-01-01"), endDate: D("2020-06-01"), residedAtConversion: true },
+  exemptionHoldingStartDate: D("2021-02-03"),
 };
 
 describe("P2 — 판정 입력 왕복 (세액 불변의 근거)", () => {

@@ -211,10 +211,20 @@ export interface TransferFormData {
   ruralHouseWholeHouseholdMoved: boolean;
   /** §155⑱ 처분기한 예외 사유 — "" = 해당 없음. 「3년이 되는 날 현재」 기준 */
   disposalDelayReason: string;
+  /**
+   * §155⑱ 「해당 각 호의 매각 등의 방법으로 양도하는 경우」 — **2022-02-15 전 양도분의 요건**이다(그 날 이후 양도에는 없다 —
+   * `lib/tax-engine/data/temporary-two-house-delay-era.ts`). 사유(`disposalDelayReason`)를 골랐을 때만 의미가 있다.
+   */
+  disposalDelayDisposedByThatMethod: boolean;
   // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
   replacementHouseSpecial: boolean;
   replBusinessApprovalDate: string;   // 사업시행계획인가일
-  replCompletionDate: string;         // 신축주택 준공일
+  replCompletionDate: string;         // 신축주택 준공일 (완성 전 양도면 불필요 — 아래)
+  /**
+   * §156의2⑤3호 전단 「완성되기 전」 양도 — true면 신축주택 준공일을 요구하지 않는다(S15-4 · R-3 `before_completion` 갈래와 같은 구조).
+   * 옛 record에는 없다 → `=== true`로 읽어 완성 후 양도(종전 동작)로 본다.
+   */
+  replSoldBeforeCompletion: boolean;
   replResidenceMonths: string;        // 대체주택 거주개월수 (숫자 문자열)
   replWillResideNewHouse: boolean;    // 신축주택 1년 이상 거주 자기선언
 
@@ -327,7 +337,7 @@ export interface TransferFormData {
   /** `finalHouseRestartHistory === "yes"`일 때의 처분 목록(구 기록엔 없다 — 읽기는 `readFinalHouseDisposals`) */
   finalHouseRestartDisposals: FinalHouseDisposalRow[];
   houses: HouseEntry[];
-  /** 세대 보유 분양권·입주권 (2021.1.1 이후 취득분 주택 수 산입 — 소령 §167의11) */
+  /** 세대 보유 분양권·입주권 (주택 수 산입 — 분양권만 2021.1.1 이후 취득분, 법률 제17477호 부칙 제4조 · 소령 §167의11. 입주권은 취득일 무관) */
   presaleRights: PresaleRightEntry[];
   /**
    * 다주택 중과세 한시 유예 조건부 판정 (소령 §167의3 중과 한시 배제 2022.5.10~2026.5.9).
@@ -352,8 +362,8 @@ export interface TransferFormData {
     areaDesignatedDate?: string;
   };
   /**
-   * 양도(selling) 주택의 3주택+ 전용 중과배제 특례 (소령 §167의10 — 양도 주택 자체가 배제 항목 해당).
-   * 양도 주택을 기술하므로 폼-전역. effectiveHouseCount≥3에서만 의미. 날짜·연수는 폼 문자열.
+   * 양도(selling) 주택 자체의 중과배제 특례 (소령 §167의3① 각 호 — 2주택은 §167의10①2호 준용, 양도 주택 자체가 배제 항목 해당).
+   * 양도 주택을 기술하므로 폼-전역. effectiveHouseCount≥2에서 의미. 날짜·연수는 폼 문자열.
    */
   sellingHouseExclusion?: {
     /** 저당권 실행·채권변제 취득 (취득 후 3년 이내) */

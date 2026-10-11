@@ -13,6 +13,12 @@ import { applyRate, calculateHoldingPeriod, truncateToWon, calculateProgressiveT
 import { TRANSFER_RENTAL_HOUSING, NBL } from "./legal-codes/transfer";
 import { TRANSFER } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
+import {
+  isPhrpScenarioId,
+  nontaxableIncomeLabel,
+  rentalHousingBasisOf,
+  rentalHousingBasisShort,
+} from "./transfer-tax/rental-housing-exception/display-labels";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import { buildEligibilityContext, buildRentalPeriodPendingNotice } from "./transfer-tax-rental-housing-judge";
@@ -329,6 +335,23 @@ export function runRentalHousingExceptionStep(
   }
 
   /**
+   * S06-2 — **1세대 게이트**. 「소득세법 시행령」 §155⑳ 본문의 주체는 「…그 밖의 1주택을 국내에 소유하고 있는 **1세대가**」이고
+   * 효과는 「제154조제1항을 적용한다」다 — §154①도 「1세대가 양도일 현재 국내에 1주택을 보유」를 요건으로 한다(MST 290841).
+   * 1세대가 아니면 ⑳도 §154①도 적용할 수 없어 일반 경로로 돌린다(`checkExemption`의 `!isOneHousehold` 즉시 과세와 같은 결론 —
+   * 설계서 OH-16b). 종전에는 이 게이트가 없어 같은 입력을 판정 메뉴는 과세, 계산기는 전액 비과세(표2까지)로 답했다.
+   * ⑤ 거주기간 카드(③)는 게이트하지 않는다 — 1세대 OFF에서 그 카드가 거주기간의 유일한 입력 경로다.
+   */
+  if (!effectiveInput.isOneHousehold) {
+    steps.push({
+      label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
+      formula: "1세대 요건을 충족하지 않아 적용하지 않습니다 — 장기임대주택 거주주택 특례는 1세대가 거주주택을 양도하는 경우에 적용합니다",
+      amount: 0,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+    });
+    return null;
+  }
+
+  /**
    * E-14h — 「장기임대주택 … 과 **그 밖의 1주택**」. 종전에는 세대 구성을 보지 않아 거주 + 임대 + 다른 일반주택
    * (특례 불성립)에도 특례를 적용했다. 중과 배제 ① 요소와 **같은 판정**이다(`resolveRentalResidenceComposition`).
    * 판정 보류(`undetermined` — 명부 없음 · 그 밖의 주택 0채)는 종전 동작(적용)을 유지한다. 명부 없이 「그 밖의 주택」
@@ -361,19 +384,23 @@ export function runRentalHousingExceptionStep(
     buildEligibilityContext(effectiveInput),
   );
 
+  // 근거 조문은 판정이 정한 `eligibility.laws`를 따른다 — §154⑩ 표준 경로(B · 0호)는 §155⑳ 본문이 성립하지 않는다(S06-13).
+  const rheBasis = rentalHousingBasisOf(rhe.eligibility.laws);
+  const rheBasisShort = rentalHousingBasisShort(rheBasis);
+
   if (composition.status === "exceeded") {
     steps.push({
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: composition.reason,
       amount: 0,
-      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+      legalBasis: rheBasis,
     });
     if (composition.confirmNotice && rhe.applied) {
       steps.push({
         label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
         formula: composition.confirmNotice,
         amount: 0,
-        legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+        legalBasis: rheBasis,
       });
     }
     return null;
@@ -391,7 +418,7 @@ export function runRentalHousingExceptionStep(
       label: "장기임대주택 거주주택 비과세 특례 — 적용 불가",
       formula: reasonText,
       amount: 0,
-      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+      legalBasis: rheBasis,
     });
     // 판정 보류·확인 필요 고지(예: ⑪3호 인가·지정일 모름으로 양도기한 경과)는 미적용 경로에서도 보여야 한다 —
     // 적용 경로에서만 `warnings`에 실리면 「모름」 때문에 불리하게 계산된 사실이 가려진다.
@@ -400,7 +427,7 @@ export function runRentalHousingExceptionStep(
         label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
         formula: rhe.eligibility.notices.join(" · "),
         amount: 0,
-        legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+        legalBasis: rheBasis,
       });
     }
     return null;
@@ -410,9 +437,10 @@ export function runRentalHousingExceptionStep(
   const periodPendingNotice = buildRentalPeriodPendingNotice(rhe.eligibility.periodPendingUnitIndexes);
   steps.push({
     label: "장기임대주택 보유자 거주주택 비과세 특례",
-    formula: `§155⑳ + §161 — ${rhe.scenarioId} 시나리오 적용`,
+    // §161은 B(직전거주주택보유주택)만 거친다 — A(RH-A1·A2)는 §155⑳ 전단 → §154①이다(S06-8).
+    formula: `${rheBasisShort}${isPhrpScenarioId(rhe.scenarioId) ? " + §161" : ""} — ${rhe.scenarioId} 시나리오 적용`,
     amount: rhe.taxableGain,
-    legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+    legalBasis: rheBasis,
   });
   // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 이 조기반환 경로가 기본공제를
   //   연 한도(250만) **전액**으로 고정해 `annualBasicDeductionUsed`(같은 해 기사용분)를
@@ -472,15 +500,17 @@ export function runRentalHousingExceptionStep(
     }
   }
 
-  // §161 비과세 양도소득금액 = §95① 양도소득금액 − 과세대상 양도소득금액.
-  // 명세서 카드 "비과세 양도소득금액 (소령 §161①)" 행에서 step.formula 자동 매핑.
-  const nontaxableGainAmount = Math.max(0, rhe.formulaTrace.gain95Table1 - rhe.taxableGain);
+  // 비과세 양도소득금액 = §95① 양도소득금액 − 과세대상 양도소득금액. §95① 양도소득금액은 **실제 적용한 장특표** 기준이다 —
+  // A(RH-A1·A2)는 표2(1세대 1주택), B는 표1(`rhe.appliedTable`). 종전에는 표1로 고정해 A2가 표1 장특·「소령 §161①」을 표시했다(S06-8).
+  // 명세서 카드 "비과세 양도소득금액" 행에서 step.formula 자동 매핑.
+  const gain95Applied = rhe.appliedTable === "table-2" ? rhe.formulaTrace.gain95Table2 : rhe.formulaTrace.gain95Table1;
+  const nontaxableGainAmount = Math.max(0, gain95Applied - rhe.taxableGain);
   if (nontaxableGainAmount > 0) {
     steps.push({
-      label: "비과세 양도소득금액 (소령 §161①)",
-      formula: `§95① 양도소득금액 ${rhe.formulaTrace.gain95Table1.toLocaleString()} − 과세대상 양도소득금액 ${rhe.taxableGain.toLocaleString()} = ${nontaxableGainAmount.toLocaleString()}`,
+      label: nontaxableIncomeLabel(rhe.scenarioId),
+      formula: `§95① 양도소득금액 ${gain95Applied.toLocaleString()} − 과세대상 양도소득금액 ${rhe.taxableGain.toLocaleString()} = ${nontaxableGainAmount.toLocaleString()}`,
       amount: nontaxableGainAmount,
-      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+      legalBasis: rheBasis,
     });
   }
 
@@ -685,12 +715,13 @@ export function runRentalHousingExceptionStep(
     estimatedDeduction: usedEstimated ? estimatedDeduction : undefined,
     ...(depreciationAmount ? { depreciationAmount } : {}),
     // 주택분 장특(종전 산식 — 표1 기준 · 분모만 배율 초과분 제외분으로 바뀐다) + 비사토분 표1 장특.
-    longTermHoldingDeduction: (rhe.formulaTrace.gain95Table1 > 0
-      ? housingGain - rhe.formulaTrace.gain95Table1
+    // 실제 적용한 장특표 기준(A=표2 · B=표1 — `gain95Applied`). 표1 고정이면 A2의 신고서·명세서가 52%가 아닌 20%를 찍는다(S06-8).
+    longTermHoldingDeduction: (gain95Applied > 0
+      ? housingGain - gain95Applied
       : 0) + (nbl?.longTermDeduction ?? 0),
     // 장기보유공제율 — 0 강제 시 결과 카드에 "0%"로 잘못 표시되므로 실제 공제율 산출
-    longTermHoldingRate: transferGain > 0 && rhe.formulaTrace.gain95Table1 > 0
-      ? ((housingGain - rhe.formulaTrace.gain95Table1) + (nbl?.longTermDeduction ?? 0)) / transferGain
+    longTermHoldingRate: transferGain > 0 && gain95Applied > 0
+      ? ((housingGain - gain95Applied) + (nbl?.longTermDeduction ?? 0)) / transferGain
       : 0,
     lthdStartDate: resolveLTHDStartDate(effectiveInput),
     nontaxableGainAmount,

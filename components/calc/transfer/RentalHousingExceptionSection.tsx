@@ -29,14 +29,15 @@ import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
 import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { isLifetimeLimitEra155_20, isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 // ── 메인 섹션 ─────────────────────────────────────────────────────
 
 /**
  * 표시 모드 (P4-3a 계획서 Q-7 · P6-c-2에서 `"calc"` 추가).
  *
- * - `"full"` — 판정 사실 + §161 안분 산식 입력을 **모두**. 이제 **아무도 쓰지 않는다**(기본값
- *   으로만 남는다 — 기존 테스트 다수가 인자 없이 마운트한다).
+ * - `"full"` — 판정 사실 + §161 안분 산식 입력을 **모두**. 부담부증여 카드가 쓴다
+ *   (`BurdenedGiftHousingFieldSet` — 기본값이기도 하다).
  * - `"facts"` — 판정 메뉴. 판정 사실만.
  * - `"calc"` — 계산기. **세액 축만**. 아래 분할선 표를 보라.
  *
@@ -129,6 +130,16 @@ export function RentalHousingExceptionSection({
     !Number.isNaN(new Date(acquisitionDate).getTime()) &&
     !Number.isNaN(new Date(transferDate).getTime()) &&
     isLifetimeLimitEra155_20(new Date(acquisitionDate), new Date(transferDate), false);
+  /**
+   * S16-4 — §154⑩ 표준 경로(B · 임대 0호)에서 부칙 제7조② 경과조치 선언 칸이 필요한가. 소비 술어(`isPreLifetimeLimitRegime`)와 같은
+   * 축이다: 2019.2.12. 이후 취득이어야 경과조치가 거주요건 분기를 가른다(그 전 취득은 이미 종전규정). 표시 전용 파생.
+   */
+  const transitionDeclarationFor154_10 =
+    rh.scenario === "B" &&
+    rh.rentalUnits.length === 0 &&
+    !!acquisitionDate &&
+    !Number.isNaN(new Date(acquisitionDate).getTime()) &&
+    !isPreLifetimeLimitRegime(new Date(acquisitionDate), false);
   function set<K extends keyof AssetForm["rentalHousingException"]>(
     key: K,
     val: AssetForm["rentalHousingException"][K],
@@ -251,6 +262,20 @@ export function RentalHousingExceptionSection({
             <RentalLifetimeLimitBlock
               rh={rh}
               assetId={asset.assetId}
+              onChange={(patch) => onChange({ ...rh, ...patch })}
+            />
+          )}
+          {/*
+            S16-4 — §154⑩ 표준 경로의 부칙 제7조② 경과조치 선언은 **양도일과 무관하게** 거주요건 축을 가른다(엔진·⑧·④·③이 모두
+            양도일 무관 `isPreLifetimeLimitRegime`). 위 블록은 양도일 구간(2025.2.28. 전)에서만 열려 그 뒤 양도에는 입력 경로가 없었다
+            (그 사실이 결론을 가르는데 칸도 고지도 없다 · 구간 안에서 켠 값은 양도일을 옮기면 끌 수 없다). 구간 밖에는 선언 칸만 연다 —
+            생애 1회 이력·사유는 구간 안 ⑳ 후단 괄호의 축이다(사유 처리 규칙은 별건 S16-5).
+          */}
+          {!lifetimeEraBase && transitionDeclarationFor154_10 && (
+            <RentalLifetimeLimitBlock
+              rh={rh}
+              assetId={asset.assetId}
+              transitionOnly
               onChange={(patch) => onChange({ ...rh, ...patch })}
             />
           )}
@@ -458,22 +483,20 @@ export function RentalHousingExceptionSection({
         const liveMonths = usesPostRegField ? parseInt(postRegRaw, 10) || 0 : totalLiveMonths;
         // §154⑩ 표준 경로 + 종전규정(preRegime)이면 취득 당시 조정대상지역일 때만 거주요건이 있다.
         const residenceRequired = !(isStandalone154_10Path && preRegime154_10 && !wasRegulatedAtAcquisition);
-        // 보유기간(일) 계산 — 취득일 ~ 양도일 (§154⑩ 표준 경로도 재기산 없이 실제 취득일 기준)
-        let holdDays = 0;
+        // 보유기간 — 취득일 ~ 양도일. ⑧·엔진(`judgeRentalHousingEligibility`)과 **같은 함수**다
+        // (소령 §154⑤ → 법 §95④ 초일 산입). 일수 근사(730일·365일·30일)는 응당일 전날 양도에서 하루 어긋났다.
+        let holdPass = false;
         let holdYearsLabel = "-";
         if (acquisitionDate && transferDate) {
-          const acqMs = new Date(acquisitionDate).getTime();
-          const trnMs = new Date(transferDate).getTime();
-          if (Number.isFinite(acqMs) && Number.isFinite(trnMs) && trnMs > acqMs) {
-            holdDays = Math.floor((trnMs - acqMs) / (1000 * 60 * 60 * 24));
-            const years = Math.floor(holdDays / 365);
-            const remDays = holdDays % 365;
-            const months = Math.floor(remDays / 30);
-            holdYearsLabel = `${years}년 ${months}개월`;
+          const acqDate = new Date(acquisitionDate);
+          const trnDate = new Date(transferDate);
+          if (Number.isFinite(acqDate.getTime()) && Number.isFinite(trnDate.getTime()) && trnDate.getTime() > acqDate.getTime()) {
+            const hp = calculateHoldingPeriod(acqDate, trnDate);
+            holdPass = hp.years >= 2;
+            holdYearsLabel = `${hp.years}년 ${hp.months}개월`;
           }
         }
         const livePass = !residenceRequired || liveMonths >= 24;
-        const holdPass = holdDays >= 730;
 
         return (
           <div className="space-y-2">

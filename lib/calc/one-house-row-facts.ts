@@ -23,6 +23,7 @@
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
+import { housesOwnedAtTransfer } from "./household-house-count";
 
 /**
  * 도출에 필요한 행 속성만 — 테스트가 전체 `HouseEntry`를 만들지 않아도 되게 좁힌다.
@@ -223,13 +224,18 @@ function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
 /**
  * 명부 행에서 세대 단위 §155 사실을 도출한다 — **행 우선, 레거시 폴백**.
  *
- * @param houses  ④ 다른 보유 주택 목록
+ * @param allHouses  ④ 다른 보유 주택 목록
  * @param legacy  세대 단위 레거시 값(폼 스칼라). 행 표시가 없을 때만 쓰인다.
+ * @param transferDate  양도일 — **양도일 현재 보유 행의 사실만** 쓴다(`housesOwnedAtTransfer` — 명부·주택 수와 같은 leaf).
+ *   §155⑥⑦⑧은 「…각각 1개씩 소유하고 있는 1세대」라, 양도일 당일·이후 취득 행의 사실은 판정에 실리지 않는다(재검증 S10-1).
+ *   비우면 거르지 않는다(종전 그대로 — 호출부는 폼의 양도일을 넘긴다).
  */
 export function deriveOneHouseFactsFromHouses(
-  houses: readonly OneHouseFactRow[] | undefined,
+  allHouses: readonly OneHouseFactRow[] | undefined,
   legacy: OneHouseLegacyFacts = {},
+  transferDate?: string,
 ): DerivedOneHouseRowFacts {
+  const houses = housesOwnedAtTransfer(allHouses, transferDate);
   const rowHeritage = hasCulturalHeritageRow(houses);
   const legacyHeritage = legacy.culturalHeritageHouseSpecial === true;
 

@@ -172,6 +172,12 @@ export interface TransferTaxResult {
    */
   lthdExclusionReason?: import("../legal-codes/transfer").LthdExclusionReason;
   /**
+   * 장특 표2 「1주택」 축 echo — 주택 수 제외 반영 후 1주택 ∨ §155 등 의제(「소득세법 시행령」 §159의4 괄호).
+   * 이 카드의 L-3 게이트가 본 값과 같다. 일괄양도의 부수토지 카드는 짝 주택의 이 값을 받아
+   * (`appurtenantHouseVerdict.oneHouseForTable2`) 자기 원시 주택 수 대신 쓴다(S08-5). 세액 무영향 — 합산 엔진 전달용.
+   */
+  lthdTable2OneHouseAxis?: boolean;
+  /**
    * 장기보유특별공제 보유기간 실제 기산일 (사례 35).
    * - 기본값: acquisitionDate (용도변경 미적용 시)
    * - 다주택 용도변경 적용 시: conversionDate (사전법규재산 2022-684·881)

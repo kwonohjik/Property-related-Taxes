@@ -33,7 +33,9 @@ export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | 
 /** 합가 전 보유 쪽 — 양도자(본인) 쪽 · 합친 상대(배우자 또는 동거봉양 가족) 쪽. */
 /**
  * 합가 전 보유 쪽. `second_merge_side` — **혼인·동거봉양 이중 합가**(D4)에서 나중에 합친 쪽(혼인이 먼저면 동거봉양으로 합친 가족, 동거봉양이 먼저면 혼인한 배우자).
- * 그때 `counterpart_side`는 배우자 쪽이다. 단일 합가에서는 쓰지 않는다(구성 판정이 불성립으로 센다).
+ * 그때 `counterpart_side`는 **먼저 합친 쪽**이다(혼인이 먼저면 배우자, 동거봉양이 먼저면 합친 가족 — `lib/calc/merge-house-origin.ts`).
+ * 단일 합가(합가일이 하나)에서는 쓰지 않는다(구성 판정이 불성립으로 센다). 합가일이 둘 다 있는 **2주택**에서는 이 값이
+ * 어느 합가가 2주택을 만들었는지 가리킨다(`resolveTwoHouseMergeAxis` — `counterpart_side` = 먼저 합친 합가, `second_merge_side` = 나중에 합친 합가).
  */
 export type MergeOrigin = "seller_side" | "counterpart_side" | "second_merge_side";
 
@@ -351,7 +353,7 @@ export interface HouseInfo {
   unavoidableReasonUnresolved?: boolean;
 }
 
-/** 분양권/입주권 정보 (2021.1.1 이후 취득분 → 주택 수 산정 포함) */
+/** 분양권/입주권 정보 (주택 수 산정 포함 — 분양권만 2021.1.1 이후 취득분, 법률 제17477호 부칙 제4조. 입주권은 취득일 무관) */
 export interface PresaleRight {
   id: string;
   type: "presale_right" | "redevelopment_right";
@@ -424,6 +426,8 @@ export interface PresaleRight {
   originalMemberTenantLeaseEndDate?: Date;
   /** §155⑱ 처분기한 예외 사유 — 「신규 주택(기존주택)을 취득한 날부터 3년이 되는 날 현재」 해당 */
   originalMemberDisposalDelayReason?: TemporaryTwoHouseDelayReason;
+  /** 위 §155⑱ 사유의 「해당 각 호의 매각 등의 방법으로 양도」 선언 — 2022-02-15 전 양도분의 요건(`temporaryTwoHouse.disposalDelayDisposedByThatMethod`와 같은 값) */
+  originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   /**
    * §156의2⑥1~3호 · §156의3④1~2호 **순위 부적격** 자기선언 — 피상속인이 2 이상의 권리를
@@ -468,8 +472,9 @@ export interface PresaleRight {
    */
   decedentSameHouseholdAtInheritance?: boolean;
   /**
-   * 같은 단서의 예외 — 동거봉양 합가로 2주택이 된 경우로서 **합치기 이전부터 보유하던 주택이
-   * 조합원입주권으로 전환**된 경우. `decedentSameHouseholdAtInheritance === true`일 때만 의미.
+   * 같은 단서의 예외 — 동거봉양 합가로 2주택이 된 경우로서, 입주권은 **합치기 이전부터 보유하던 주택이
+   * 조합원입주권으로 전환**된 경우(§156의2⑥ 단서), 분양권은 **합치기 이전부터 보유하던 분양권**(§156의3④ 단서 — 전환 요건 없음).
+   * `decedentSameHouseholdAtInheritance === true`일 때만 의미.
    */
   parentalCareMergeInheritedRight?: boolean;
   /**

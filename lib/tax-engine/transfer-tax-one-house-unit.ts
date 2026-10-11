@@ -95,5 +95,6 @@ export function toHouseVerdict(
     isPartialExempt: result.isPartialExempt === true,
     houseAcquisitionDate: house.acquisitionDate,
     carryoverOneHouseExcluded: result.carryoverTaxationDetail?.exclusionReason === "one_house_exemption",
+    oneHouseForTable2: result.lthdTable2OneHouseAxis === true,
   };
 }

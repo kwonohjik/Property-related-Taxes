@@ -23,6 +23,7 @@ import type {
   TransferTaxInput,
   RedevelopmentResult,
   CalculationStep,
+  TemporaryTwoHouseDelayReason,
 } from "./types/transfer.types";
 
 
@@ -161,6 +162,8 @@ export function oneRightPresaleGate(
 export type OneRightExemptionFacts = {
   exemptionEligibleAtApproval?: boolean;
   otherHouseAcquisitionDate?: Date;
+  /** 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 「3년이 되는 날 현재」 해당하면 3년을 넘겨도 나목이 성립한다. */
+  otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
   /**
    * 양도하는 입주권의 관리처분계획인가일(= 원조합원의 입주권 취득일) — 분양권 요건 부칙 제7조②·③과
    * 재건축 기준일 고지에 쓴다(E-3 후속). 계산기는 `redevelopment.approvalDate`(필수), 판정 메뉴는 선택 입력.
@@ -183,6 +186,7 @@ export function pickOneRightExemptionFacts(
   return {
     exemptionEligibleAtApproval: facts.eligibleAtApproval,
     otherHouseAcquisitionDate: facts.otherHouseAcquisitionDate,
+    otherHouseDisposalDelayReason: facts.otherHouseDisposalDelayReason,
     approvalDate: facts.approvalDate,
   };
 }
@@ -239,7 +243,16 @@ export function resolveOneRightExemptionClause(
     // 「취득한 날부터 N년 이내」 — 초일불산입(민법 §157·§160). `setFullYear`는 2/29 취득을 3/1로 넘겨
     //   하루 길었고, 평년 2/28 취득은 윤년 2/29 만료를 하루 짧게 봤다.
     //   말일이 토요일·공휴일이면 익일(국세기본법 §4 → 민법 §161 — L-1).
-    return isWithinDeadline(acquired, naYears, input.transferDate) ? "na" : undefined;
+    //   🔴 법 §89①4호나목 괄호 「3년 이내에 양도하지 못하는 경우로서 대통령령으로 정하는 사유에 해당하는 경우를
+    //   포함한다」 = 시행령 §155⑱ — 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 1~5호(자산관리공사 매각 의뢰 ·
+    //   경매 신청 · 공매 진행 · 현금청산금 소송 · 수용재결·매도청구소송)에 해당하면 기한을 넘겨도 나목이 성립한다.
+    //   일시적 2주택(§155①)의 `judgeTemporaryTwoHouseTiming`(`threeYearMet = 사유 ∨ 기한 내`)과 같은 규칙이다.
+    //   종전에는 이 입력 칸이 어느 층에도 없어(⑤·④·⑫·타입) 사유가 있어도 조용히 불성립했다(S05-4).
+    //   사유는 「3년이 되는 날」을 기준으로 하므로 기산일(취득일)이 있어야 의미가 있다 — 위 `!acquired` 가드 뒤다.
+    return redevInfo.otherHouseDisposalDelayReason !== undefined ||
+      isWithinDeadline(acquired, naYears, input.transferDate)
+      ? "na"
+      : undefined;
   }
 
   return undefined;

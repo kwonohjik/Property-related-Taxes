@@ -75,7 +75,7 @@ export const RURAL_HOUSE_LABEL: Record<RuralHouseKind, string> = {
  * §154① 충족은 여기서 보지 않는다(15호 ② 요소는 별도 게이트).
  */
 export function qualifiesRuralHouse(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse">,
+  input: Pick<TransferTaxInput, "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount">,
 ): boolean {
   if (!qualifiesRuralHouseApartFromDeadline(input)) return false;
   const r = input.ruralHouse!;
@@ -83,6 +83,30 @@ export function qualifiesRuralHouse(
   // ⑦ 단서 — 귀농주택(3호)은 그 취득일부터 5년 이내 일반주택 양도에 한정(2016-02-17 이후 취득분만 — D15).
   if (!ruralReturnToFarmDeadlineApplies(r.acquisitionDate!)) return true;
   return isWithinDeadline(r.acquisitionDate!, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate);
+}
+
+/**
+ * §155②(단독상속) · ③(공동상속 소수지분) 상속주택 제외가 **둘 다** 걸린 세대인가 — 「세 특례」 상한의 한 축.
+ *
+ * 제외 풀은 풀마다 최대 1채라 `inheritedHouseExclusionCount ≥ 2`는 ②와 ③을 **동시에** 적용했다는 뜻이다. 그 위에
+ * 2주택 전제 §155 특례(①·④⑤·⑥·⑦·⑧)를 하나 더 얹으면 세 특례가 겹친다. 국세청은 ①②③ 중첩 적용을 불허했고
+ * (사전-2023-법규재산-0209: 「…제155조제1항, 제2항, 및 제3항을 중첩 적용하여 같은 법 시행령 제154조제1항을 적용할 수 없는 것」),
+ * 세 특례를 인정한 해석은 확인되지 않았다 — 사용자 결정 2026-10-06 「세 특례 불허 + 확인 필요」(`inheritedHouseExclusionCount` 주석).
+ * 3주택 술어(`mergeOverlapTwoHouseHolds` · `ruralTemporaryTwoHouseOverlapCountHolds` · 이중 합가)는 이미 `> 0`으로 막고 있다 —
+ * 상속주택을 둘 빼서 **2주택이 남는** 경로가 이 상한을 지나쳤다(S01-2).
+ */
+export function inheritedBothPoolsExcluded(input: Pick<TransferTaxInput, "inheritedHouseExclusionCount">): boolean {
+  return (input.inheritedHouseExclusionCount ?? 0) >= 2;
+}
+
+/**
+ * 2주택 전제 §155 특례(①·④⑤·⑥·⑦·⑧)의 **공용 주택 수 게이트** — 「각각 1개씩 소유(2주택)」이고 ②③ 동시 제외로 세 특례가
+ * 되지 않을 것. 비과세 · 중과 15호 의제 · 판정 보류(pending)가 같은 술어를 쓴다.
+ */
+export function twoHouseSpecialCountHolds(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "inheritedHouseExclusionCount">,
+): boolean {
+  return input.householdHousingCount === 2 && !inheritedBothPoolsExcluded(input);
 }
 
 /**
@@ -106,6 +130,18 @@ export function ruralTemporaryTwoHouseOverlapCountHolds(
 }
 
 /**
+ * §155⑥1호 문화유산 주택 + 일반주택 — 「각각 1개씩 소유(2주택)」 + 문화유산 주택 선언.
+ *
+ * 2·3호가 삭제돼 요건은 선언 boolean 하나다. 비과세(E-3.6)와 겸용주택 판정(S08-3)이 같은 술어를 쓴다.
+ * §154① 충족은 여기서 보지 않는다 — 호출부(`meetsOneHouseHoldingResidence`)가 따로 AND한다.
+ */
+export function qualifiesCulturalHeritageHouse(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "inheritedHouseExclusionCount" | "culturalHeritageHouse">,
+): boolean {
+  return twoHouseSpecialCountHolds(input) && input.culturalHeritageHouse === true;
+}
+
+/**
  * §155⑦ 농어촌주택 요건 중 **⑦ 단서의 5년 기한만 뺀** 나머지 — `qualifiesRuralHouse`와
  * pending 귀농 축(`one-house/pending.ts`)의 **같은 술어**(OH-23).
  *
@@ -113,10 +149,10 @@ export function ruralTemporaryTwoHouseOverlapCountHolds(
  * 베껴 쓰면 한쪽만 개정 반영되므로, 기한 판정만 떼어 낸 이 함수를 둘이 함께 쓴다.
  */
 export function qualifiesRuralHouseApartFromDeadline(
-  input: Pick<TransferTaxInput, "householdHousingCount" | "ruralHouse">,
+  input: Pick<TransferTaxInput, "householdHousingCount" | "ruralHouse" | "inheritedHouseExclusionCount">,
 ): boolean {
   const r = input.ruralHouse;
-  if (input.householdHousingCount !== 2 || !r) return false;
+  if (!twoHouseSpecialCountHolds(input) || !r) return false;
   // 소재: 수도권 밖의 읍(도시지역 제외)·면 — 유형 불문 공통 요건.
   if (!r.isOutsideCapitalEupMyeon) return false;
 
@@ -150,11 +186,11 @@ export function qualifiesRuralHouseApartFromDeadline(
 export function qualifiesUnavoidableOutsideCapital(
   input: Pick<
     TransferTaxInput,
-    "householdHousingCount" | "transferDate" | "unavoidableOutsideCapitalHouse"
+    "householdHousingCount" | "transferDate" | "unavoidableOutsideCapitalHouse" | "inheritedHouseExclusionCount"
   >,
 ): boolean {
   const u = input.unavoidableOutsideCapitalHouse;
-  if (input.householdHousingCount !== 2 || !u) return false;
+  if (!twoHouseSpecialCountHolds(input) || !u) return false;
   // 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 본다(계획서 W-1).
   if (u.resolvedDate === undefined) return true;
   return isWithinDeadline(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate);
@@ -209,7 +245,7 @@ export type ResidenceReqInput = Pick<
  * 구조적으로 이 타입을 만족한다.
  */
 export type ExemptionReqInput = ResidenceReqInput &
-  Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate">;
+  Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate" | "exemptionHoldingStartDate">;
 
 /** §154① 단서 각호 면제 범위 라벨 (exemptReason 표시용) — 모듈 스코프 (per-call 재생성 금지) */
 export const PROVISO_LABEL: Record<
@@ -514,6 +550,9 @@ export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date
 }
 
 function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
+  // 토지만 출자한 원조합원 완공APT — 사용승인서 교부일(시행령 §162①4호 · 서면-2022-부동산-1616). 엔진이 채운 값이라
+  // 용도변경·상속 통산과 겹치는 조합이 없다(`redev-apt-judgment-input.ts` — 완공APT 번역에서만 채운다). G3-4.
+  if (input.exemptionHoldingStartDate) return input.exemptionHoldingStartDate;
   // §154⑤ 단서 — 주택이 아닌 건물을 주택으로 용도변경한 경우 보유기간은 **주택으로 사용한 날**부터
   // 기산한다. 2024-02-29 이후 양도분부터 적용(대통령령 제34265호 — 공포일 시행).
   //

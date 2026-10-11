@@ -15,6 +15,7 @@ import type {
   RedevelopmentBranchDetail,
 } from "./types/transfer.types";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { calculateProration } from "./tax-utils";
 
 export function zeroLthdParts(b: RedevelopmentBranchDetail): Partial<RedevelopmentBranchDetail> {
   return {
@@ -153,14 +154,15 @@ function clearLthdParts(
  * 1세대1주택 + 양도가액 > 12억 시 분기별 양도차익·LTHD 를 과세대상으로 축소.
  *
  * 산식 (시행령 §160):
- *   taxableRatio  = (transferPrice − 12억) / transferPrice
- *   branchTaxableGain = floor(branchGain × taxableRatio)
+ *   taxableRatio  = (transferPrice − 12억) / transferPrice            (표시용 비율)
+ *   branchTaxableGain = floor(branchGain × (transferPrice − 12억) / transferPrice)   (곱셈 먼저 — 정수 비례)
  *   branchTaxableLthd = floor(branchTaxableGain × branchRate)
  *
  * 분기별로 floor 적용 — 예제 xlsx 결과 일치 (xlsx D17·E17·F17 각각 분기별 산정 후 합산).
  *
  * @param redevRaw runRedevelopment 결과 (분기별 gain·lthd 가 전체 양도차익 기준)
- * @param transferPrice 양도가액 (양도가액 - 12억 비율 산정용)
+ * @param transferPrice 12억 비교·안분 분모 — 호출부가 판정과 **같은 값**을 넘긴다(지분 모드면 물건 전체 가액,
+ *   부담부증여면 증여가액 C — `resolveHighValuePriceCheck`)
  * @param redevInfo 입력 redevelopment (lthdResidenceAttribution 부착용)
  */
 export function applyHighValueAllocation(
@@ -188,6 +190,8 @@ export function applyHighValueAllocation(
   const threshold = resolveHighValueHouseThreshold(transferDate);
   const taxableRatio = (transferPrice - threshold) / transferPrice;
   const nontaxableThreshold = threshold;
+  // 일반 경로 `calcOneHouseProration`과 같은 정수 비례 leaf — 곱셈 먼저 · 나눗셈 나중(부동소수점 비율 금지).
+  const prorate = (gain: number) => calculateProration(gain, transferPrice - threshold, transferPrice);
 
   // 분기별 과세대상 양도차익·LTHD 산정 (정수연산 — 분기별 floor)
   const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
@@ -195,7 +199,7 @@ export function applyHighValueAllocation(
       return { ...branch, gainBeforeAllocation: branch.gain, nontaxableGain: 0 };
     }
     const originalGain = branch.gain;
-    const taxableGain = Math.floor(originalGain * taxableRatio);
+    const taxableGain = prorate(originalGain);
     const nontaxableGain = originalGain - taxableGain; // 정수연산 보존: 비과세 = 안분 전 - 과세대상
     const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
     return {
@@ -221,8 +225,8 @@ export function applyHighValueAllocation(
   const allocationBase = keepSettlement
     ? redevRaw.preApproval.gain + redevRaw.postApprovalExistingHouse.gain
     : redevRaw.total.gain;
-  const nontaxableGain = allocationBase - Math.floor(allocationBase * taxableRatio);
-  const taxableGainTotal = Math.floor(allocationBase * taxableRatio);
+  const taxableGainTotal = prorate(allocationBase);
+  const nontaxableGain = allocationBase - taxableGainTotal;
 
   // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §154⑧ 노출)
   const prior = redevInfo.priorHouseResidenceMonths ?? 0;

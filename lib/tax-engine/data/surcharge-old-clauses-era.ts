@@ -69,6 +69,7 @@
 
 import { MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE } from "../legal-codes";
 import { isWithinDeadline } from "../civil-period";
+import { resolveDisposalDelay } from "./temporary-two-house-delay-era";
 import type { TemporaryTwoHouseDelayReason } from "../types/transfer.types";
 
 /** 구 호(8호 · §167의11①1·6·7호)를 쓰는 양도분인가 — 대통령령 제33267호 시행일(2023.2.28.) **전**. */
@@ -99,6 +100,7 @@ export function qualifiesOldClause8TemporaryTwoHouse(p: {
     previousAcquisitionDate: Date;
     newAcquisitionDate: Date;
     disposalDelayReason?: TemporaryTwoHouseDelayReason;
+    disposalDelayDisposedByThatMethod?: boolean;
   };
 }): boolean {
   const tt = p.temporaryTwoHouse;
@@ -108,7 +110,15 @@ export function qualifiesOldClause8TemporaryTwoHouse(p: {
   // 「그 주택을 양도하기 전에 다른 주택을 취득」 — 종전 주택이 먼저다(같은 날 취득은 확인 필요 · 불성립으로 둔다).
   if (!(tt.previousAcquisitionDate < tt.newAcquisitionDate)) return false;
   // 「3년이 지난 경우로서 제155조제18항 각 호의 어느 하나에 해당하는 경우를 포함」 — ⑱ 사유 선언(§155①과 같은 입력).
-  if (tt.disposalDelayReason !== undefined) return true;
+  //   「…해당하는 경우」는 §155⑱ 자체의 요건(양도일 연혁의 「그 방법으로 양도」 · 호별 신설 시기)을 포함한다 — 비과세와 같은 술어.
+  if (
+    resolveDisposalDelay({
+      reason: tt.disposalDelayReason,
+      disposedByThatMethod: tt.disposalDelayDisposedByThatMethod,
+      transferDate: p.transferDate,
+    }).applied
+  )
+    return true;
   const years = p.publicInstitutionRelocationMet === true ? OLD_CLAUSE_8_RELOCATION_YEARS : OLD_CLAUSE_8_YEARS;
   return isWithinDeadline(tt.newAcquisitionDate, years, p.transferDate);
 }

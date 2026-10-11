@@ -246,6 +246,8 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
         transferDate: new Date("2019-06-01"),
         presaleRights: [right()],
         marriageMerge: { marriageDate: new Date("2018-01-01") },
+        // 날짜 게이트(먼저 양도 → 합가 이후 → N년)가 구성 판정보다 먼저다(S05-6) — 게이트를 통과해야 구성 미선언이 판정 불가로 남는다.
+        isFirstTransferredInMerge: true,
       }),
       "§156의2 ⑨",
     );
