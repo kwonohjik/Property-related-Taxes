@@ -16,6 +16,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { EstateBodyRealEstate } from "@/components/calc/inheritance/estate-card/variants/EstateBodyRealEstate";
 import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
 import { BurdenedTransferTaxResultCard } from "@/components/calc/results/BurdenedTransferTaxResultCard";
+import { NO_ROSTER_THREE_HOUSE_MERGE_NOTICE } from "@/lib/tax-engine/one-house/merge-confirm-warnings";
 import {
   GIFT_BURDENED_NOT_ONE_HOUSEHOLD_NOTICE,
   GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT,
@@ -114,6 +115,15 @@ describe("UI-H3 결과 카드", () => {
     render(<BurdenedTransferTaxResultCard transferTaxResults={[result]} notices={[GIFT_BURDENED_NOT_ONE_HOUSEHOLD_NOTICE]} />);
     expect(screen.getByText(GIFT_BURDENED_NOT_ONE_HOUSEHOLD_NOTICE)).toBeTruthy();
     expect(screen.getByText("엔진 경고 예시")).toBeTruthy();
+  });
+  it("★ 엔진의 3주택 합가 고지(#26 하위 1)는 접힌 산식 상세 «밖»에 보인다 — 펼치거나 인쇄하지 않아도 닿는다", () => {
+    render(<BurdenedTransferTaxResultCard transferTaxResults={[{ ...result, warnings: [NO_ROSTER_THREE_HOUSE_MERGE_NOTICE] }]} />);
+    const el = screen.getByText(NO_ROSTER_THREE_HOUSE_MERGE_NOTICE);
+    expect(el.closest(".hidden")).toBeNull();
+  });
+  it("비과세 결과에서도 같은 고지가 보인다(비과세 분기가 경고를 버리던 갭 — G1-8)", () => {
+    render(<BurdenedTransferTaxResultCard transferTaxResults={[{ ...result, isExempt: true, warnings: [NO_ROSTER_THREE_HOUSE_MERGE_NOTICE] } as TransferTaxResult]} />);
+    expect(screen.getByText(NO_ROSTER_THREE_HOUSE_MERGE_NOTICE)).toBeTruthy();
   });
   it("부정 짝 — notices 없으면 엔진 경고만", () => {
     render(<BurdenedTransferTaxResultCard transferTaxResults={[result]} />);

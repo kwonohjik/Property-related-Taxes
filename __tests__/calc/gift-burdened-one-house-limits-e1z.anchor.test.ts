@@ -245,15 +245,16 @@ describe("G4 ③ 복원", () => {
 // ═══ G6 — 상속받은 자산의 환산취득가액(K-5) (소득세법 시행령 §163⑨) ═══════════════════════════
 
 describe("G6 ⑧ — 상속개시일 평가액이 가목이라 환산(K-5)은 막는다 (계산기 postDeemedClauseARequiredError와 같은 결론)", () => {
+  // 시가 평가는 증여세 평가에서 파생한다(1h-G1-2) — 증여재산 평가의 시가 4억을 둔 토지(양도시 개별공시지가 총액 3억 = item.standardPrice)
   const market = (over: Partial<BurdenedGiftTransferTaxInput>) =>
-    landItem({
-      valuationMode: "sangjeungbeop_market",
-      marketValueAtTransfer: 400_000_000,
-      landStdPriceAtTransfer: 300_000_000,
-      acquisitionCause: "inheritance",
-      decedentAcquisitionDate: "2010-01-01",
-      ...over,
-    });
+    landItem(
+      {
+        acquisitionCause: "inheritance",
+        decedentAcquisitionDate: "2010-01-01",
+        ...over,
+      },
+      { marketValue: 400_000_000 },
+    );
   it("V-G6-1 ★ 상속(개시 2020-06-01) + K-5 → 차단(§163⑨ · §97①1호 단서 안내)", () => {
     expect(v("2021-06-01", market({ acquisitionMethod: "converted" }))).toContain("환산취득가액(K-5)을 쓸 수 없습니다");
   });

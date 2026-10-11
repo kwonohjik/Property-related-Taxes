@@ -32,6 +32,7 @@ import { buildBurdenedUnlistedValuationFields } from "@/lib/calc/gift-burdened-s
 import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { buildTempTwoHouseDeadlineExceptionFacts } from "@/lib/calc/transfer-tax-api-body-blocks";
 import {
@@ -119,10 +120,14 @@ export function buildGiftBurdenedTransferBody(
   const mortgageAmount = item.mortgageAmount ?? 0;
 
   // ─── K-4/K-5 평가방식 게이트 (§159①1호) ───
-  // valuationMode === "sangjeungbeop_market": 시가 평가 → K-4(실지) 또는 K-5(환산)
-  // 미입력(undefined) 또는 "sangjeungbeop_standard": 기준시가 안분 모드(K-1~K-3)
-  const valuationMode = bgt.valuationMode ?? "sangjeungbeop_standard";
+  // 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — 저장된 bgt.valuationMode·marketValueAtTransfer(옛 독립 입력)는 읽지 않는다.
+  //   시가·감정가·매매사례가로 평가 → "sangjeungbeop_market"(시가 평가 → K-4 실지 또는 K-5 환산), 보충적 평가 → 기준시가 안분(K-1~K-3).
+  const valuation = giftBurdenedValuationBasis(item);
+  const valuationMode = valuation.mode;
   const isMarketMode = valuationMode === "sangjeungbeop_market";
+  // 시가 평가인데 담보평가(§66)가 이겨 취득가액도 기준시가로 산정(엔진이 강제) — 산정방식 선택은 의미가 없다(확인 필요 고지는 엔진).
+  const acquisitionForcedToStandard = isMarketMode && valuation.collateralForcesStandardAcquisition;
+  const acquisitionMethod = acquisitionForcedToStandard ? ("converted" as const) : bgt.acquisitionMethod;
 
   // 기준시가 배정: land → landStd, building/housing → buildingStd (§3)
   // 상업용 건물 경로 B(§61①2호+1호): standardPrice(건물분)에 부수토지 개별공시지가를 합산한
@@ -140,8 +145,8 @@ export function buildGiftBurdenedTransferBody(
   const landStdAtAcquisition = isLandType ? stdAtAcquisition : 0;
   const buildingStdAtAcquisition = isLandType ? 0 : stdAtAcquisition;
 
-  // 시가 모드(K-4/K-5): 분모 C = marketValueAtTransfer
-  const marketValueAtTransfer = isMarketMode ? (bgt.marketValueAtTransfer ?? 0) : undefined;
+  // 시가 모드(K-4/K-5): 분모 C의 시가항 = 증여세 평가의 시가(감정가·매매사례가) — 사용자가 따로 입력하지 않는다
+  const marketValueAtTransfer = isMarketMode ? (valuation.marketValue ?? 0) : undefined;
 
   // 월세 → 연간 임대료 환산 (C1 핵심: 누락 시 임대평가 1/12 오류)
   const annualRentTotal = (item.monthlyRent ?? 0) * 12;
@@ -207,15 +212,17 @@ export function buildGiftBurdenedTransferBody(
   const burdenedGiftInfoMarket = isMarketMode
     ? {
         marketValueAtTransfer,
-        acquisitionMethod: bgt.acquisitionMethod,
+        acquisitionMethod,
         // K-4: 실지취득가액 (건물+토지 통합, 증여 category에 general_building 없음)
-        actualAcquisitionTotal: bgt.acquisitionMethod === "actual"
+        actualAcquisitionTotal: acquisitionMethod === "actual" && !acquisitionForcedToStandard
           ? (bgt.actualAcquisitionTotal ?? 0)
           : undefined,
-        // K-5: 환산 분자/분모용 기준시가 (시장모드 + 토지: 별도 입력값, 주택·건물: standardPrice)
+        // K-5: 환산 분자/분모용 기준시가 — 양도시 기준시가는 토지·건물 모두 «총액»(item.standardPrice)이다.
+        //   종전 토지는 별도 칸의 ㎡당 공시지가(bgt.landStdPriceAtTransfer)를 총액처럼 실어 취득가액이 단가×수만큼 부풀고(실측: 정답
+        //   66,666,666이 200억 → 세액 0) 막히지 않았다(1h-G1-2). 이제 증여재산 평가의 «보충적 평가(개별공시지가 총액)»와 같은 한 칸이다.
         //   비적용 측은 0으로 전달(undefined 금지) — Zod number 필수 + 엔진 totalStd 안분 분모 안전.
         //   비-토지 K-4 실지: 취득시 기준시가 미입력이어도 landStd=0/buildingStd=0이 전액 건물분으로 귀속(inert).
-        landStdPriceAtTransfer: isLandType ? (bgt.landStdPriceAtTransfer ?? 0) : 0,
+        landStdPriceAtTransfer: isLandType ? stdAtTransfer : 0,
         buildingStdPriceAtTransfer: isLandType ? 0 : buildingStdAtTransfer,
         landStdPriceAtAcquisition: isLandType ? stdAtAcquisition : 0,
         buildingStdPriceAtAcquisition: isLandType ? 0 : buildingStdAtAcquisition,
@@ -274,7 +281,8 @@ export function buildGiftBurdenedTransferBody(
     // §114조의2 신축·증축 가산세 (K-5 환산 + 건물 전용) — body 최상위 (Zod propertyBaseShape 수용)
     // land 제외(건물 행위). 엔진 step override가 converted+isSelfBuilt에서 penalty base 결선.
     ...(isMarketMode &&
-    bgt.acquisitionMethod === "converted" &&
+    acquisitionMethod === "converted" &&
+    !acquisitionForcedToStandard &&
     bgt.isSelfBuilt === true &&
     !isLandType
       ? {

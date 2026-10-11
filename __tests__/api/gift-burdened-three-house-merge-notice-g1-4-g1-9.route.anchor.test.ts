@@ -97,3 +97,26 @@ describe("G1-4·G1-9 — 결론을 가르지 않으면 고지하지 않는다(�
     expect(has(await run({ ...body, burdenedGiftInfo: info }))).toBe(false);
   });
 });
+
+describe("다주택 중과 확인 고지 — 목록 입력 칸이 없는 화면은 계산기로 안내한다 (#25 조건)", () => {
+  /** 조정대상지역 · 세대 2주택 · 증여 2021-06-01(한시 배제 전) → 명부 없이 원시 플래그로 중과 적용 */
+  const SUR = { acquisitionDate: new Date("2015-03-01"), householdHousingCount: 2, isRegulatedArea: true, isOneHousehold: true } as const;
+  const OLD_TAIL = "세대 보유 주택 목록에 주택을 입력하면 판정합니다";
+  const find = (r: Obj) => warnings(r).find((w) => w.startsWith("세대 보유 주택 목록이 입력되지 않아"));
+
+  it("S-1 ★ 증여 화면(표식): 이 화면에는 입력 칸이 없다는 문구 + 양도소득세 계산기(부담부증여) 안내 — «목록에 입력하면 판정» 막다른 안내가 아니다", async () => {
+    const w = find(await gift("2021-06-01", SUR, { standardPrice: 800_000_000, debt: 300_000_000 }));
+    expect(w).toBeDefined();
+    expect(w).toContain("증여세 계산 화면에는 세대 보유 주택 목록 입력 칸이 없어");
+    expect(w).toContain("양도소득세 계산기(부담부증여)");
+    expect(w).not.toContain(OLD_TAIL);
+  });
+  it("S-2 부정 짝 — 표식이 없는 호출(목록 입력 칸이 있는 계산기)은 종전 안내 그대로", async () => {
+    const body = giftBody("2021-06-01", SUR, { standardPrice: 800_000_000, debt: 300_000_000 });
+    const { houseRosterInputUnavailable: _d, ...info } = body.burdenedGiftInfo as Obj;
+    void _d;
+    const w = find(await run({ ...body, burdenedGiftInfo: info }));
+    expect(w).toBeDefined();
+    expect(w).toContain(OLD_TAIL);
+  });
+});

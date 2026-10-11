@@ -243,8 +243,25 @@ export function buildBurdenedGiftBreakdown(params: {
     );
   }
 
+  /**
+   * 시가 평가인데 담보평가(§66)가 시가보다 커서 C가 담보평가가 된 경우 — 괄호가 문언대로 발동한다(「제66조에 따라 기준시가로 산정한
+   * 경우」). 해석례가 없어 괄호대로 계산하고 확인 필요로 알린다(1h-G1-2 · 결정 #23 하위 2 다). 입주권은 기존 동작 유지(위 fail-fast 주석).
+   */
+  const collateralForcedStdInMarketMode =
+    info.valuationMode === "sangjeungbeop_market" &&
+    sangjeungbeopValuation.selectedMode === "mortgage" &&
+    !isRightToMoveInValuation;
+  if (collateralForcedStdInMarketMode && landStdPriceAtAcquisition + buildingStdPriceAtAcquisition <= 0) {
+    // 취득시 기준시가가 없으면 취득가액이 0이 되어 양도차익이 통째로 부풀지만 막히지 않는 오답이다 — 입력을 요구한다(자동 fallback 금지).
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 시가로 평가했지만 담보채권액 평가(상증법 §66)가 시가보다 커서 「소득세법 시행령」 제159조 제1항 제1호 괄호에 따라 " +
+        "취득가액을 취득시 기준시가로 산정해야 합니다. 취득시 기준시가를 입력하세요.",
+    );
+  }
+
   /** 괄호가 발동하는가 = 취득가액을 취득시 기준시가로 강제하는가. */
-  const acqStdPriceForced = isStandardMode && !isRightToMoveInValuation;
+  const acqStdPriceForced = (isStandardMode && !isRightToMoveInValuation) || collateralForcedStdInMarketMode;
 
   // STEP 4: 자산별 취득가액 산정 (소령 §159 ① 1호) — 4-way 분기 (§100① 일치 게이트 내재화)
   //   K-1~K-3 (괄호 발동):        취득시 기준시가 × 채무비율 (§159①1호 A괄호 강제). 분모 giftValuation.max.
@@ -595,6 +612,8 @@ export function buildBurdenedGiftBreakdown(params: {
     sangjeungbeopValuation,
     giftValuation,
     wholePropertySupplementary,
+    // 시가 평가인데 담보평가가 이겨 취득가액도 기준시가로 산정했는가 — 확인 필요 고지의 근거(1h-G1-2)
+    ...(collateralForcedStdInMarketMode ? { acquisitionStdForcedByCollateral: true } : {}),
     // 지분 모드의 12억 판정 가액(소령 §156① — 지분 증여가액 ÷ 지분율). 단독 소유는 없음.
     ...(ownershipRatio !== undefined && ownershipRatio > 0 && ownershipRatio < 1
       ? {

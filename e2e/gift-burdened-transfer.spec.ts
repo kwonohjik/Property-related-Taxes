@@ -25,6 +25,7 @@ import { test, expect } from "@playwright/test";
 import { fillAndVerify, fillDateAndVerify } from "./_helpers/tax-flow";
 import {
   addApartmentWithDebt,
+  chooseActualAcquisition,
   enableBurdenedTransferToggle,
   fillApartmentTransferInfo,
   giftStep0,
@@ -254,6 +255,9 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       const nonBizChecked = await nonBizToggle.getAttribute("aria-checked");
       if (nonBizChecked !== "true") await nonBizToggle.click();
 
+      // 증여재산을 시가로 평가했으므로 양도소득세도 시가 평가 — 취득가액 산정방식(실지) 선택이 필수다(1h-G1-2)
+      await chooseActualAcquisition(dialog);
+
       // 모달 닫기
       await dialog.getByRole("button", { name: "닫기" }).click();
       await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
@@ -366,6 +370,9 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
       await expect(transferStdPriceInput).toBeVisible();
       await fillAndVerify(transferStdPriceInput, "500000000");
 
+      // 증여재산을 시가로 평가했으므로 양도소득세도 시가 평가 — 취득가액 산정방식(실지) 선택이 필수다(1h-G1-2)
+      await chooseActualAcquisition(dialog);
+
       // 모달 닫기
       await dialog.getByRole("button", { name: "닫기" }).click();
       await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
@@ -446,26 +453,24 @@ test.describe("부담부증여 양도소득세 통합 표시", () => {
 // ─── 취득가액 산정방식 K-4/K-5 (실지·환산 모드) ──────────────────────────────────
 test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (증여세 마법사)", () => {
   test(
-    "[AM-E2E-1] 시가 평가 선택 → 산정방식(K-4/K-5) 노출·전환 + 조건부 필드 표시/숨김",
+    "[AM-E2E-1] 증여재산을 시가로 평가 → 시가 평가(K-4/K-5) 자동 · 산정방식 노출·전환 + 조건부 필드 표시/숨김",
     async ({ page }) => {
       test.setTimeout(120_000);
       await setupTransferApiMock(page);
       await giftStep0(page);
-      const dialog = await addApartmentWithDebt(page);
+      const dialog = await addApartmentWithDebt(page); // 증여재산 평가: 시가 8억
       await enableBurdenedTransferToggle(dialog);
-      await fillApartmentTransferInfo(dialog);
+      await fillApartmentTransferInfo(dialog, { acquisitionMethod: "none" });
 
-      // 기본 = 기준시가 모드(K-1~K-3): 시가(분모 C) 입력·산정방식 라디오 숨김
+      // 평가방식·양도 시 시가는 증여세 평가에서 파생(1h-G1-2) — 라디오·«양도시 시가» 입력 칸이 없다
       // ★ RadioCardGroup radio의 accessible name = label+description → testId로 셀렉트
-      const marketValueInput = dialog.getByRole("textbox", { name: "양도시 시가" });
-      const actualRadio = dialog.getByTestId("bg-acq-method-actual");
-      await expect(marketValueInput).toBeHidden();
-      await expect(actualRadio).toBeHidden();
+      await expect(dialog.getByTestId("bg-valuation-basis-market")).toContainText("시가 평가 (K-4/K-5)");
+      await expect(dialog.getByTestId("bg-valuation-mode-market")).toHaveCount(0);
+      await expect(dialog.getByTestId("bg-valuation-mode-standard")).toHaveCount(0);
+      await expect(dialog.getByRole("textbox", { name: "양도시 시가" })).toHaveCount(0);
 
-      // 평가방식 = 시가 평가(K-4/K-5) 선택 → 시가·산정방식 노출
-      await dialog.getByTestId("bg-valuation-mode-market").check();
-      await expect(marketValueInput).toBeVisible();
-      await fillAndVerify(marketValueInput, "500000000");
+      // 산정방식 라디오 노출
+      const actualRadio = dialog.getByTestId("bg-acq-method-actual");
       const convertedRadio = dialog.getByTestId("bg-acq-method-converted");
       await expect(actualRadio).toBeVisible();
       await expect(convertedRadio).toBeVisible();
@@ -481,9 +486,10 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (
       await expect(actualTotalInput).toBeHidden();
       await expect(dialog.getByText(/환산취득가 =/)).toBeVisible();
 
-      // 평가방식 = 기준시가로 복귀: 시가·산정방식 숨김 (조건부 회귀)
-      await dialog.getByTestId("bg-valuation-mode-standard").check();
-      await expect(marketValueInput).toBeHidden();
+      // 증여재산 평가의 시가를 끄면 보충적 평가(기준시가 안분)로 파생: 산정방식 숨김 (조건부 회귀)
+      const marketToggle = dialog.getByRole("switch", { name: /^시가 \(매매/ });
+      await marketToggle.click();
+      await expect(dialog.getByTestId("bg-valuation-basis-standard")).toBeVisible();
       await expect(actualRadio).toBeHidden();
     },
   );
@@ -498,9 +504,7 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (
       await enableBurdenedTransferToggle(dialog);
       await fillApartmentTransferInfo(dialog);
 
-      // 시가 평가 + 실지(K-4) + 자본적지출 (라디오는 testId 셀렉트)
-      await dialog.getByTestId("bg-valuation-mode-market").check();
-      await fillAndVerify(dialog.getByRole("textbox", { name: "양도시 시가" }), "500000000");
+      // 시가 평가(증여재산 평가의 시가 8억에서 파생) + 실지(K-4) + 자본적지출 (라디오는 testId 셀렉트)
       await dialog.getByTestId("bg-acq-method-actual").check();
       await fillAndVerify(
         dialog.getByRole("textbox", { name: "실지취득가액 합계" }),
@@ -535,7 +539,7 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 K-4/K-5 (
       expect(bgInfo.valuationMode).toBe("sangjeungbeop_market");
       expect(bgInfo.acquisitionMethod).toBe("actual");
       expect(bgInfo.actualAcquisitionTotal).toBe(200_000_000);
-      expect(bgInfo.marketValueAtTransfer).toBe(500_000_000);
+      expect(bgInfo.marketValueAtTransfer).toBe(800_000_000); // 증여재산 평가의 시가(파생 — 별도 입력 칸 없음)
       // ★ 실비는 burdenedGiftInfo 밖 body 최상위 (엔진 top-level 소비)
       expect(body.capitalExpenditure).toBe(5_000_000);
     },
@@ -554,9 +558,7 @@ test.describe("부담부증여 양도세 — §114조의2 신축 가산세 (증�
       await enableBurdenedTransferToggle(dialog);
       await fillApartmentTransferInfo(dialog);
 
-      // 시가 평가 + 환산(K-5)
-      await dialog.getByTestId("bg-valuation-mode-market").check();
-      await fillAndVerify(dialog.getByRole("textbox", { name: "양도시 시가" }), "500000000");
+      // 시가 평가(증여재산 평가의 시가에서 파생) + 환산(K-5)
       await dialog.getByTestId("bg-acq-method-converted").check();
 
       // 신축·증축 토글 ON → 신축 위젯 노출
@@ -611,9 +613,7 @@ test.describe("부담부증여 양도세 — §114조의2 신축 가산세 (증�
       await enableBurdenedTransferToggle(dialog);
       await fillApartmentTransferInfo(dialog);
 
-      // 시가 평가 + 환산(K-5)
-      await dialog.getByTestId("bg-valuation-mode-market").check();
-      await fillAndVerify(dialog.getByRole("textbox", { name: "양도시 시가" }), "500000000");
+      // 시가 평가(증여재산 평가의 시가에서 파생) + 환산(K-5)
       await dialog.getByTestId("bg-acq-method-converted").check();
 
       // 신축·증축 토글 ON

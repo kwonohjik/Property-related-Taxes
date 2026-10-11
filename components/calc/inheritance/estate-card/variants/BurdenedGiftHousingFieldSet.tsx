@@ -40,6 +40,7 @@ import {
 } from "@/lib/calc/gift-burdened-rental-exception";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
 import { GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT } from "@/lib/calc/gift-burdened-household-notice";
+import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
@@ -85,12 +86,11 @@ export interface HousingFieldSetProps {
   onTransferStdPriceChange: (v: number | undefined) => void;
   transferStdPriceLabel: string;
   isLand: boolean;
-  jibun?: string;
   item: EstateItem;
   transferDate?: string;
 }
 
-export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item, transferDate }: HousingFieldSetProps) {
+export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate }: HousingFieldSetProps) {
   const householdCount = bgt.householdHousingCount ?? 1;
   // §155①2호 새 입력(A2b · E-1) — ⑧과 같은 게이트. 두 주택 조정 여부가 기한을 바꾸는 시기에만 연다.
   //   증여 주택 주소가 있으면 종전 주택 조정 여부는 주소로 자동 판정된다(④가 싣는 `regionCode`와 같은 값).
@@ -108,9 +108,14 @@ export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPri
   const provisoMode = giftBurdenedProvisoMode(bgt);
   const oneHouse = giftBurdenedOneHouseSlice(bgt, transferDate);
   const restartInScope = giftBurdenedFinalHouseRestartInScope(bgt, transferDate);
-  const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
-  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
-  const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
+  // 평가방식은 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — ④·⑧과 같은 leaf.
+  const valuation = giftBurdenedValuationBasis(item);
+  const isMarketMode = valuation.mode === "sangjeungbeop_market";
+  const collateralForced = isMarketMode && valuation.collateralForcesStandardAcquisition;
+  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요. 담보평가 승은 기준시가를 쓰므로 필수.
+  const acqStdInert = isMarketMode && !collateralForced && bgt.acquisitionMethod === "actual";
+  // 양도시 기준시가(공시가격)는 기준시가 안분·담보평가 승·환산(K-5)의 분모에 쓰인다 — 실지(K-4)에서는 쓰이지 않는다.
+  const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted";
   // §155⑯·⑱(E-1 한계 G3) — ④와 같은 필드 파생(신규 주택 시·군 코드는 소재지 법정동코드에서)
   const deadlineFields = giftBurdenedDeadlineExceptionFields(bgt);
   return (
@@ -153,26 +158,28 @@ dateToStr(bgt.acquisitionDate)
         />
       </FieldCard>
 
-      {/* 평가방식·취득가액 산정 (K-4/K-5) */}
-      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} jibun={jibun} />
+      {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
+      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} />
 
-      {/* 기준시가 모드: 양도시 기준시가 (시가 모드에서는 ValuationModeSection 내 시가 입력으로 대체) */}
-      {!isMarketMode && (
-        <FieldCard
+      {/* 양도시 기준시가 — 평가 입력의 '보충적 평가(기준시가)'와 같은 한 칸. 기준시가 안분·담보평가 승·환산(K-5)에서 필수 */}
+      <FieldCard
+        label={transferStdPriceLabel}
+        hint={
+          transferStdRequired
+            ? "증여일(양도일) 현재 기준시가. §159 안분·환산에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+            : "실지취득가액(K-4)에서는 입력하지 않아도 됩니다 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+        }
+        required={transferStdRequired}
+      >
+        <CurrencyInput
           label={transferStdPriceLabel}
-          hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
-          required
-        >
-          <CurrencyInput
-            label={transferStdPriceLabel}
-            value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
-            onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
-            hideLabel
-            hideUnit
-            data-testid="bg-transfer-transfer-stdprice"
-          />
-        </FieldCard>
-      )}
+          value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
+          onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
+          hideLabel
+          hideUnit
+          data-testid="bg-transfer-transfer-stdprice"
+        />
+      </FieldCard>
 
       {/* 일부 지분만 증여(1h-G1-6) — 12억 고가주택 판정은 물건 전체 가액 기준(소령 §156①·§160①)인데 이 화면에는 지분율·
           물건 전체 가액 칸이 없다. 켜면 ⑧이 막고 양도소득세 계산기로 안내한다(`giftBurdenedPartialOwnershipError`). */}

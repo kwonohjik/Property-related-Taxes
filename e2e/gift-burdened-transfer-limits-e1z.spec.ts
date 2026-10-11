@@ -9,6 +9,7 @@ import { test, expect } from "@playwright/test";
 import { fillAndVerify, fillDateAndVerify } from "./_helpers/tax-flow";
 import {
   addApartmentWithDebt,
+  chooseActualAcquisition,
   enableBurdenedTransferToggle,
   fillApartmentTransferInfo,
   setupTransferApiMock,
@@ -76,6 +77,8 @@ async function addLandWithTransfer(page: Page) {
   await trUnit.fill("250000");
   await trUnit.press("Tab");
   await expect(tr.getByRole("textbox").last()).toHaveValue(/25,000,000|25000000/);
+  // 증여재산을 시가로 평가했으므로 양도소득세도 시가 평가 — 취득가액 산정방식(실지) 선택이 필수다(1h-G1-2)
+  await chooseActualAcquisition(dialog);
   return dialog;
 }
 

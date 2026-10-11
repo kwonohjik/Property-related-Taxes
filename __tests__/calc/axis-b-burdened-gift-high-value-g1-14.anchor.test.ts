@@ -51,14 +51,14 @@ const asset = (id: number, numerator: string, bg: Record<string, string>): Asset
     ...bg,
   }) as AssetForm;
 
-const form = (assets: AssetForm[]): TransferFormData =>
+const form = (assets: AssetForm[], contractTotalPrice = "1300000000"): TransferFormData =>
   ({
     transferDate: "2024-03-01",
     filingDate: "2024-05-31",
     assets,
     houses: [],
     presaleRights: [],
-    contractTotalPrice: "1300000000",
+    contractTotalPrice,
     totalTransferExpense: "0",
     householdHousingCount: "1",
     isOneHousehold: true,
@@ -127,5 +127,30 @@ describe("축 B 정정 — 담보가 이기는 1세대1주택: 60% + 40% = 단�
     const axisB = await run(form([asset(1, "60", small), asset(2, "40", small)]));
     expect(single.data?.result?.totalTax).toBe(0);
     expect(axisB.data?.aggregated?.totalTax).toBe(0);
+  });
+});
+
+describe("별건 400 — 새 폼(양도가액 contractTotalPrice 빈 칸)에서도 지분 부담부증여 계산이 막히지 않는다 (결정 #28 조건)", () => {
+  /**
+   * 부담부증여의 양도가액은 §159가 채무 안분으로 정하므로 폼의 «양도가액» 칸은 비어 있다. ④가 그 빈 칸을
+   * totalPropertyTransferPrice = 0 으로 실으면 ⑫ `positive()`가 거절해 400이었다. #2098(PR7)이 부담부증여 주 자산에서
+   * 그 값을 싣지 않게 해소했다 — 이 anchor가 «양도가액이 빈 새 폼»으로 고정한다(기존 R4 D3·축 B 배관 anchor는 10억 픽스처라 400을 가렸다).
+   */
+  it("NF-1 ★ 축 B 60/40 · 양도가액 빈 새 폼 → 200 (합계 > 0)", async () => {
+    const blank = await run(form([asset(1, "60", DEBT), asset(2, "40", DEBT)], ""));
+    expect(blank.status).toBe(200);
+    expect(blank.data?.aggregated?.totalTax).toBeGreaterThan(0);
+    // 양도가액은 §159가 채무 안분으로 정하므로 칸을 채워도 세액이 같다 — placeholder가 계산에 새지 않는다
+    const filled = await run(form([asset(1, "60", DEBT), asset(2, "40", DEBT)]));
+    expect(blank.data?.aggregated?.totalTax).toBe(filled.data?.aggregated?.totalTax);
+  });
+  it("NF-3 함께 부담부증여(다른 물건 2건 100%) · 양도가액 빈 새 폼 → 200", async () => {
+    const r = await run(form([asset(1, "100", DEBT), asset(2, "100", { ...DEBT, assetId: "2" })], ""));
+    expect(r.status).toBe(200);
+  });
+  it("NF-2 ★ 단건 지분 1/2(나머지 타인 소유) · 양도가액 빈 새 폼 → 200", async () => {
+    const half = asset(1, "50", { bgLendingDepositTotal: "325000000", bgMortgageDebtAmount: "325000000", ownershipRemainderThirdParty: "yes" });
+    const r = await run(form([half], ""));
+    expect(r.status).toBe(200);
   });
 });

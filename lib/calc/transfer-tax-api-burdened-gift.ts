@@ -463,3 +463,25 @@ export function buildCompanionBurdenedGiftWholeInfo(
     assumedDebtOverride: undefined,
   };
 }
+
+/**
+ * 전 자산이 부담부증여인 **묶음**(축 B 지분 분할 취득 · 함께 부담부증여)의 총 양도가액 placeholder.
+ *
+ * 부담부증여의 양도가액은 §159가 채무 안분으로 정하므로 폼의 「총 양도가액」(`contractTotalPrice`) 칸은 비어 있는 것이 정상이다
+ * (⑧이 검증을 면제한다 — `transfer-tax-validate.ts` `allBurdenedGift`). 그런데 ⑫ Zod는 `totalSalePrice`·`primaryActualSalePrice`·
+ * 컴패니언 `totalPropertyTransferPrice`를 양수로만 받아, 빈 칸을 0으로 실으면 새 폼이 전부 400이었다(1h-G1-14 별건 · 결정 #28).
+ * 단건이 채무 합계를 `transferPrice` placeholder로 싣는 것과 같은 규약이다 — 값은 엔진 STEP 0.48이 §159로 다시 계산하므로
+ * 양수이기만 하면 된다. 입력한 총 양도가액이 있으면 그 값을 그대로 쓴다.
+ *
+ * 축 B는 각 카드가 같은 물건의 채무 전체(100%)를 입력하므로 주 자산 채무 하나를, 함께양도(다른 물건)는 자산별 채무의 합을 쓴다.
+ */
+export function burdenedGiftBundleTotalSalePrice(
+  assets: ReadonlyArray<Pick<AssetForm, "transferType" | "bgLendingDepositTotal" | "bgMortgageDebtAmount">>,
+  formContractTotalPrice: number,
+  isAxisB: boolean,
+): number {
+  if (formContractTotalPrice > 0) return formContractTotalPrice;
+  if (assets.length < 2 || !assets.every((a) => a.transferType === "burdened_gift")) return formContractTotalPrice;
+  const debt = (a: (typeof assets)[number]) => (parseAmount(a.bgLendingDepositTotal) || 0) + (parseAmount(a.bgMortgageDebtAmount) || 0);
+  return isAxisB ? debt(assets[0]) : assets.reduce((sum, a) => sum + debt(a), 0);
+}

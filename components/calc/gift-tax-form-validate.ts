@@ -31,6 +31,7 @@ import {
   missingBurdenedUnlistedValuationInputs,
 } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
+import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import {
   giftBurdenedTempTwoHouseIncompleteError,
   giftBurdenedTempTwoHouseRegulatedGate,
@@ -122,17 +123,20 @@ export function validateStep(step: number, form: FormState): string | null {
       }
       // housing 전용 — 거주기간 (resolvePropertyType 단일 진실로 dual-truth 방지)
       const propertyType = resolvePropertyType(bgItem.category, bgt.isHousing);
-      // ─── 평가방식(valuationMode) 분기 검증 ───
-      const valuationMode = bgt.valuationMode ?? "sangjeungbeop_standard";
-      const isMarketMode = valuationMode === "sangjeungbeop_market";
+      // ─── 평가방식 분기 검증 ───
+      // 평가방식·양도 시 시가는 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — ⑤·④와 같은 leaf. 별도 입력이 없으니 그 값을 요구하지 않는다.
+      const valuation = giftBurdenedValuationBasis(bgItem);
+      const isMarketMode = valuation.mode === "sangjeungbeop_market";
+      // 시가 평가인데 담보평가(§66)가 시가보다 커서 취득가액도 기준시가로 산정 — ⑤가 산정방식 라디오를 숨기고 ④가 환산을 싣는다(확인 필요 고지는 엔진).
+      const acqForcedToStandard = isMarketMode && valuation.collateralForcesStandardAcquisition;
       // 필수: 취득시 기준시가 — 단, 시가 모드 + 실지취득가액(K-4) + 비-토지 자산은 제외.
-      //   K-1~3(기준시가 안분): 취득가액 = 취득시 기준시가 × 채무비율 → 산식 직접 인자(필수).
+      //   K-1~3(기준시가 안분): 취득가액 = 취득시 기준시가 × 채무비율 → 산식 직접 인자(필수). 담보평가 승(위)도 같다.
       //   K-5(환산): 환산취득가 분자 → 필수.
       //   K-4(실지): 비-토지 자산은 실지취득가액이 전액 건물분으로 귀속(landStd=0)되어
       //     취득시 기준시가가 양도차익 계산에 영향이 없음(inert) → 입력 불필요.
       //     토지는 공시지가 비율로 토지/건물 분배 라우팅에 필요 → 필수 유지.
       const acqStdPriceInert =
-        isMarketMode && bgt.acquisitionMethod === "actual" && propertyType !== "land";
+        isMarketMode && !acqForcedToStandard && bgt.acquisitionMethod === "actual" && propertyType !== "land";
       if (
         !acqStdPriceInert &&
         (!bgt.standardPriceAtAcquisition || bgt.standardPriceAtAcquisition <= 0)
@@ -140,14 +144,11 @@ export function validateStep(step: number, form: FormState): string | null {
         return `${itemLabel}: 취득시 기준시가를 입력하세요. (양도소득세 계산 필수)`;
       }
 
-      if (isMarketMode) {
-        // K-4/K-5 시가 모드: 분모 C (양도시 시가) 필수
-        if (!bgt.marketValueAtTransfer || bgt.marketValueAtTransfer <= 0) {
-          return `${itemLabel}: 시가 평가 시 양도시 시가(분모 C)를 입력하세요. (§159①1호 K-4/K-5 필수)`;
-        }
+      if (isMarketMode && !acqForcedToStandard) {
+        // K-4/K-5 시가 모드: 분모 C의 시가항은 증여재산 평가의 시가·감정가·매매사례가에서 온다(파생) — 별도 입력 없음.
         // 취득가액 산정방식 필수
         if (!bgt.acquisitionMethod) {
-          return `${itemLabel}: 취득가액 산정방식(실지 또는 환산)을 선택하세요.`;
+          return `${itemLabel}: 증여재산을 시가로 평가했으므로 양도소득세 취득가액 산정방식(실지 또는 환산)을 선택하세요.`;
         }
         // 상속받은 자산(상속개시일 1985.1.1. 이후) — §163⑨ 평가액이 가목이라 환산(K-5) 불가(E-1 한계 G6 · ⑤ 라디오와 같은 술어)
         if (bgt.acquisitionMethod === "converted" && giftBurdenedInheritedConversionBlocked(bgt)) {
@@ -159,33 +160,31 @@ export function validateStep(step: number, form: FormState): string | null {
             return `${itemLabel}: 실지취득가액 합계를 입력하세요. (K-4 실지 모드 필수)`;
           }
         }
-        // K-5 환산 + 토지: 양도시 기준시가 별도 필수
-        if (bgt.acquisitionMethod === "converted" && propertyType === "land") {
-          if (!bgt.landStdPriceAtTransfer || bgt.landStdPriceAtTransfer <= 0) {
-            return `${itemLabel}: 토지 양도시(증여시) 기준시가(원/㎡)를 입력하세요. (K-5 환산 분모 필수)`;
-          }
-        }
-        // K-5 환산 + 건물/주택: 양도시 기준시가(standardPrice = 분모) 침묵 0-base 차단 (소령 §176의2②2호)
-        if (bgt.acquisitionMethod === "converted" && propertyType !== "land") {
+        // K-5 환산: 양도시 기준시가(standardPrice = 분모)는 토지·건물 모두 «총액» 한 칸이다 — 침묵 0-base 차단 (소령 §176의2②2호).
+        //   토지는 종전에 ㎡당 공시지가를 별도 칸에 받아 총액처럼 썼다(단위 결함 — 취득가액이 200억으로 부풀어 세액 0). 이제 증여재산 평가의
+        //   보충적 평가(개별공시지가 총액)와 같은 한 칸이다.
+        if (bgt.acquisitionMethod === "converted") {
           if (!bgItem.standardPrice || bgItem.standardPrice <= 0) {
-            return `${itemLabel}: 양도시(증여시) 기준시가를 입력하세요. (K-5 환산 분모 필수)`;
+            return `${itemLabel}: ${propertyType === "land" ? "토지 양도시(증여시) 개별공시지가 총액" : "양도시(증여시) 기준시가"}를 입력하세요. (K-5 환산 분모 필수)`;
           }
-          // §114조의2 신축·증축: 신축일(취득일) 필수 (5년 기산 — 자동 fallback 금지)
-          if (bgt.isSelfBuilt === true && !bgt.constructionDate) {
-            return `${itemLabel}: 신축·증축 건물의 신축일(취득일)을 입력하세요. (§114조의2 5년 기산 필수)`;
-          }
-          // Phase 2 증축 필수 차단 — 자동 안분 fallback 금지
-          if (bgt.isSelfBuilt === true && bgt.buildingType === "extension") {
-            if (!bgt.extensionFloorArea || bgt.extensionFloorArea <= 0) {
-              return `${itemLabel}: 증축부분 바닥면적 합계를 입력해 주세요. §114조의2① 85㎡ 초과 판정에 필요합니다.`;
+          // §114조의2 신축·증축: 신축일(취득일) 필수 (5년 기산 — 자동 fallback 금지) — 건물만(토지 제외)
+          if (propertyType !== "land") {
+            if (bgt.isSelfBuilt === true && !bgt.constructionDate) {
+              return `${itemLabel}: 신축·증축 건물의 신축일(취득일)을 입력하세요. (§114조의2 5년 기산 필수)`;
             }
-            if (!bgt.extensionStdPriceAtAcquisition || bgt.extensionStdPriceAtAcquisition <= 0) {
-              return `${itemLabel}: 증축부분 취득시 기준시가를 입력해 주세요. §114조의2① 증축부분 한정 환산취득가 산출에 필요합니다.`;
+            // Phase 2 증축 필수 차단 — 자동 안분 fallback 금지
+            if (bgt.isSelfBuilt === true && bgt.buildingType === "extension") {
+              if (!bgt.extensionFloorArea || bgt.extensionFloorArea <= 0) {
+                return `${itemLabel}: 증축부분 바닥면적 합계를 입력해 주세요. §114조의2① 85㎡ 초과 판정에 필요합니다.`;
+              }
+              if (!bgt.extensionStdPriceAtAcquisition || bgt.extensionStdPriceAtAcquisition <= 0) {
+                return `${itemLabel}: 증축부분 취득시 기준시가를 입력해 주세요. §114조의2① 증축부분 한정 환산취득가 산출에 필요합니다.`;
+              }
             }
           }
         }
       } else {
-        // 기준시가 모드(K-1~K-3): 양도시 기준시가 필수 — 건물·아파트 및 토지 모두
+        // 기준시가 모드(K-1~K-3) 및 담보평가 승(위): 양도시 기준시가 필수 — 건물·아파트 및 토지 모두
         // 토지: standardPrice = 개별공시지가 총액 (LandPriceLookupField with area prop → 총액 저장)
         // 주택·건물: standardPrice = 공동주택가격·건물기준시가
         if (!bgItem.standardPrice || bgItem.standardPrice <= 0) {

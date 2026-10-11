@@ -1337,15 +1337,17 @@ export interface BurdenedGiftTransferTaxInput {
 
   // ===== K-4/K-5 취득가액 실지·환산 모드 (§159①1호 게이트) =====
   /**
-   * 평가 방식. 미입력 = 기준시가 모드(K-1~K-3) 유지.
+   * @deprecated 평가 방식은 **증여세 평가에서 파생**한다(1h-G1-2 · 결정 #23) — `lib/calc/gift-burdened-valuation-basis.ts`
+   * `giftBurdenedValuationBasis`가 ⑤·④·⑧ 단일 소스다. 시가·감정가·매매사례가로 평가 → 시가 평가(K-4/K-5), 보충적 평가 → 기준시가 안분
+   * (K-1~K-3). **새 기록에는 쓰지 않으며, 옛 기록의 값은 읽지 않는다**(⑤가 옛 값과 지금 파생 방식이 다르면 고지만 한다).
    * - "sangjeungbeop_standard": 상증법 기준시가 안분 (K-1~K-3)
    * - "sangjeungbeop_market":   시가 평가 → 실지 또는 환산 (K-4/K-5)
    */
   valuationMode?: "sangjeungbeop_standard" | "sangjeungbeop_market";
 
   /**
-   * 시가 평가 시 분모 C: 양도시 시가 (원).
-   * sangjeungbeop_market 선택 시 필수. K-5 환산취득가 = 취득기준시가 × (채무 / C).
+   * @deprecated 시가 평가 시 분모 C의 시가항은 증여재산 평가의 시가·감정가·매매사례가에서 파생한다(1h-G1-2 · 결정 #23). 옛 독립 입력 —
+   * 읽지 않는다(⑤가 보충적 평가로 파생되는 옛 기록에서 «쓰지 않는다» 고지만 한다).
    */
   marketValueAtTransfer?: number;
 
@@ -1388,9 +1390,8 @@ export interface BurdenedGiftTransferTaxInput {
   transferExpense?: number;
 
   /**
-   * 토지 양도시 기준시가 (원) — 토지 자산의 K-5 환산 분자.
-   * real_estate_land + sangjeungbeop_market + converted 조합 시 필수.
-   * 주택·건물 자산에서는 standardPrice(양도시 기준시가)가 이미 있으므로 불필요.
+   * @deprecated 토지 양도시 기준시가는 증여재산 평가의 «보충적 평가(개별공시지가 총액)» `item.standardPrice` 한 칸이다(1h-G1-2).
+   * 옛 칸은 ㎡당 공시지가를 받아 ④가 총액처럼 엔진에 실었다(취득가액이 단가×수만큼 부풀어 세액 0 — 단위 결함). 읽지 않는다.
    */
   landStdPriceAtTransfer?: number;
 

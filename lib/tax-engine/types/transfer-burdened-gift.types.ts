@@ -379,6 +379,12 @@ export interface TransferBurdenedGiftBreakdown {
    * 엔진이 12억 판정·안분 분모(`burdenedGiftDenominator`)로 쓰는 값의 echo다.
    */
   fractionalHighValueDenominator?: number;
+
+  /**
+   * 시가 평가(상증법 §60②)인데 담보채권액 평가(§66)가 시가보다 커서 증여가액 C가 담보평가가 되었고, 그래서 취득가액을
+   * 「소득세법 시행령」 §159①1호 괄호대로 취득시 기준시가로 산정했다(1h-G1-2 · 결정 #23 하위 2). 해석례가 없어 확인 필요 고지가 붙는다.
+   */
+  acquisitionStdForcedByCollateral?: true;
   /**
    * 자산 종류 — 결과 표시가 행 라벨을 고르는 근거.
    * ❌ 모드 플래그(`valuationMode` 등)로 자산을 추론하지 않는다

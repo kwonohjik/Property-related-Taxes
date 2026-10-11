@@ -568,7 +568,7 @@ export function calculateTransferTax(
   );
   // 명부 없이 원시 플래그로 중과를 건 경우 — 다른 주택이 각 호에 해당하면 결론이 바뀔 수 있다(확인 필요).
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
-    houses: effectiveInput.houses,
+    houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),
     householdHousingCount: effectiveInput.householdHousingCount,
     multiHouseSurchargeResult,
     isSurchargeApplied: isSurchargeCase && !suspendedResult,

@@ -166,8 +166,10 @@ afterEach(() => vi.unstubAllGlobals());
 function nonHousingItem(
   category: "real_estate_land" | "real_estate_building",
   bgt: Partial<BurdenedGiftTransferTaxInput>,
+  itemExtra: Partial<EstateItem> = {},
 ): EstateItem {
   return {
+    ...itemExtra,
     id: "nh-1",
     category,
     name: category === "real_estate_land" ? "테스트 토지" : "테스트 상가",
@@ -179,8 +181,12 @@ function nonHousingItem(
     burdenedGiftTransferTax: { standardPriceAtAcquisition: 150_000_000, isUnregistered: false, ...bgt },
   } as EstateItem;
 }
-const nh = (category: "real_estate_land" | "real_estate_building", giftDate: string, bgt: Partial<BurdenedGiftTransferTaxInput>) =>
-  run(buildGiftBurdenedTransferBody(nonHousingItem(category, bgt), giftForm(giftDate)));
+const nh = (
+  category: "real_estate_land" | "real_estate_building",
+  giftDate: string,
+  bgt: Partial<BurdenedGiftTransferTaxInput>,
+  itemExtra: Partial<EstateItem> = {},
+) => run(buildGiftBurdenedTransferBody(nonHousingItem(category, bgt, itemExtra), giftForm(giftDate)));
 
 /** 상속개시 2020-06-01(= 취득일) · 피상속인 취득 2010-01-01 */
 const NH_ACQ = { acquisitionDate: new Date("2020-06-01") };
@@ -272,16 +278,15 @@ describe("G1 ⑭ route — 세율 보유기간만 바뀐다 (양도차익·장�
   });
 
   it("G1-5 시가 모드(K-4 실지)에서도 바뀌는 축은 세율뿐 — 양도차익 그대로", async () => {
+    // 시가 평가(K-4/K-5)는 증여세 평가에서 파생한다(1h-G1-2) — 증여재산 평가의 시가 4억 + 양도시 기준시가 3억(item.standardPrice)
     const market = {
       ...NH_ACQ,
-      valuationMode: "sangjeungbeop_market" as const,
-      marketValueAtTransfer: 400_000_000,
-      landStdPriceAtTransfer: 300_000_000,
       acquisitionMethod: "actual" as const,
       actualAcquisitionTotal: 250_000_000,
     };
-    const base = await nh("real_estate_land", "2021-06-01", market);
-    const r = await nh("real_estate_land", "2021-06-01", { ...market, ...NH_INHERITED });
+    const priced = { marketValue: 400_000_000 };
+    const base = await nh("real_estate_land", "2021-06-01", market, priced);
+    const r = await nh("real_estate_land", "2021-06-01", { ...market, ...NH_INHERITED }, priced);
     expect(base.appliedRate).toBe(0.4);
     expect(base.determinedTax).toBe(21_500_000);
     expect(r.appliedRate).toBe(0.24);
