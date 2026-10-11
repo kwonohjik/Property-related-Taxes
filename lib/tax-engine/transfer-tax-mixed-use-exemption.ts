@@ -5,6 +5,7 @@
  *   · 영 §154① 보유·거주(단서 면제 포함) — 정본 `meetsOneHouseHoldingResidence`
  *   · §89①3호 주택 수 제외 — 조특법(§99의4·§98의9·보유 감면주택) + §155②③ 상속주택(E-14d)
  *   · §155①④⑤ 1세대1주택 의제 — 정본 `resolveDeemedOneHouseBy155` (OH-09)
+ *   · §155⑥1호·⑦·⑧ 특례 주택 + 일반주택 의제 — 단건 E-3.6~E-3.8과 같은 술어(S08-3). 비과세 축 전용
  * 그리고 같은 주택 수로 영 §167의10①15호 ① 요소(중과 배제)를 선판정한다(E-14 · E-14d).
  *
  * `warnings`에 in-place push한다(호출부 배열 순서 유지).
@@ -12,10 +13,17 @@
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
+import { TRANSFER } from "./legal-codes";
 import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption";
 import {
+  qualifiesCulturalHeritageHouse,
+  qualifiesRuralHouse,
+  qualifiesUnavoidableOutsideCapital,
+} from "./transfer-tax-exemption";
+import {
+  new994MergeOrderOf,
   surcharge15HouseCount,
   inheritedGeneralHouseSurchargeBasis,
   specialActHouseExclusionBasis,
@@ -149,7 +157,12 @@ export function judgeMixedUseOneHouseExemption(
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
       generalHouseAcquisitionDate: asset.buildingAcquisitionDate,
       transferDate,
-      mergeOrder: undefined, // 겸용 경로는 §99의4 D5 합가 맥락을 넘기지 않는다 — 명부 `mergeOrigin` 입력은 있으나 일반 경로(`new994MergeOrderOf`)와 달리 쓰지 않는다
+      // §99의4 D5 합가 맥락 — 일반 경로와 **같은 함수**(`new994MergeOrderOf`). 겸용 명부(`multiHouse.houses`)에도 `mergeOrigin`이 실린다.
+      mergeOrder: new994MergeOrderOf({
+        marriageMerge: asset.multiHouse?.marriageMerge,
+        parentalCareMerge: asset.multiHouse?.parentalCareMerge,
+        houses: asset.multiHouse?.houses,
+      }),
     });
     const special = resolveSpecialHouseExclusions(asset.specialHouseExclusions, transferDate);
     mixedNew994Detail = hce.new994Detail;
@@ -209,8 +222,9 @@ export function judgeMixedUseOneHouseExemption(
         asset.multiHouse?.isRegulatedArea ?? asset.surchargeFallback?.isRegulatedArea ?? false,
       isOneHousehold: asset.multiHouse?.isOneHousehold ?? asset.isOneHousehold ?? false,
       temporaryTwoHouse: asset.temporaryTwoHouse,
-      // 겸용은 §155⑦ 농어촌주택 입력을 받지 않는다(농어촌주택은 겸용주택이 아니다) —
-      //   `ruralHouse`가 없으면 §155⑦ 판정은 주택 수와 무관하게 불성립이다.
+      // 이 호출은 중과 15호 ① 요소와 §155①④⑤ 비과세 축을 겸한다 — §155⑦ 농어촌주택은 여기 넘기지 않는다
+      //   (`ruralHouse` 미전달 → §155⑦ 불성립). ⑥·⑦·⑧의 **비과세** 판정은 아래 `special155Basis`(`article155SpecialHouses`)가 맡는다(S08-3).
+      //   중과 쪽으로의 전달(②+⑥·②+⑦·②+⑧)은 별건 결정 대기라 넘기지 않는다.
       // `householdHousingCount`는 §155①(일시적 2주택)·④⑤ 합가 의제의 「2주택」 판정에 쓴다 —
       //   단건 E-3·E-3.5와 같은 비과세 축(폼 세대 주택 수, 겸용주택 자신 포함 · 조특법 제외 후)이다.
       //   E-14 — 단건 15호 ① 요소와 같은 규칙(`surcharge15HouseCount`) · E-14d §155②③ 제외 포함.
@@ -239,10 +253,39 @@ export function judgeMixedUseOneHouseExemption(
   // §155 의제가 성립하면 「1세대1주택으로 보아」 주택 수 축이 충족된다(OH-09).
   // E-14i — 제외 분기도 「1세대가」(§89①3호가목·영 §154①)를 본다. 조특법 §99의4①·§98의9①·§98의7② 등은 주택 수에서
   //   뺄 뿐 1세대 요건을 대신하지 않는다. 단건 `checkExemptionCore`의 `!input.isOneHousehold` · 위 상속 제외(E-14d)와 같은 값.
-  const houseCountOk =
+  /**
+   * §155⑥1호·⑦·⑧ — 특례 주택과 일반주택을 「각각 1개씩 소유」한 1세대가 일반주택을 양도하면 「1개의 주택을 소유하고 있는 것으로
+   * 보아 제154조제1항을 적용」한다(S08-3). 겸용주택의 주택 부분은 §154③상 §89①3호의 「주택」이라 일반주택이다 — 단건
+   * `checkExemptionCore`(E-3.7 ⑧ → E-3.6 ⑥ → E-3.8 ⑦)와 **같은 술어·같은 순서**, 주택 수는 제외 후 값(`effectiveHouseCount`)이다.
+   * §154①(보유·거주)은 아래 `meetsOneHouseRequirements`가 따로 AND한다. 비과세 축 전용 — 중과 15호 ① 요소(`deemedOneHouseBy155`)에는
+   * 넘기지 않는다(②+⑥·②+⑧ 방향은 결정 대기). 선언은 `asset.article155SpecialHouses`뿐이라 미전달이면 판정하지 않는다.
+   */
+  const special155Facts = asset.article155SpecialHouses;
+  const special155Input =
+    special155Facts && effectiveHouseCount !== undefined && isOneHouseholdForHouseCount
+      ? {
+          householdHousingCount: effectiveHouseCount,
+          inheritedHouseExclusionCount: inheritedExcludedCount,
+          transferDate,
+          ruralHouse: special155Facts.ruralHouse,
+          culturalHeritageHouse: special155Facts.culturalHeritageHouse,
+          unavoidableOutsideCapitalHouse: special155Facts.unavoidableOutsideCapitalHouse,
+        }
+      : undefined;
+  const special155Basis = special155Input
+    ? qualifiesUnavoidableOutsideCapital(special155Input)
+      ? TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL
+      : qualifiesCulturalHeritageHouse(special155Input)
+        ? TRANSFER.CULTURAL_HERITAGE_HOUSE
+        : qualifiesRuralHouse(special155Input)
+          ? `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`
+          : undefined
+    : undefined;
+  const houseCountOkWithoutSpecial155 =
     (effectiveHouseCount !== undefined && houseCountExclusionApplied + inheritedExcludedCount > 0
       ? isOneHouseholdForHouseCount && effectiveHouseCount <= 1
       : (asset.isOneHouseExempt ?? true)) || deemedOneHouseBy155 !== undefined;
+  const houseCountOk = houseCountOkWithoutSpecial155 || special155Basis !== undefined;
   // ⑦ E-14d — 단건 산식 step과 **같은 문구**(`buildInheritedExclusionSteps`)를 경고로 싣는다(제외·불성립 사유).
   if (inheritedExclusion) {
     for (const st of buildInheritedExclusionSteps(
@@ -281,6 +324,14 @@ export function judgeMixedUseOneHouseExemption(
     clause2Facts && effectiveHouseCount !== undefined ? clause2Judge(effectiveHouseCount) : undefined;
   const clause2Excluded = article89Clause2?.status === "excluded";
   const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered && !clause2Excluded;
+  // §155⑥⑦⑧ 의제가 비과세를 연 경우 — 겸용주택에 이 특례를 적용한 정면 해석례가 없어 사실대로 알린다(S08-3).
+  if (!houseCountOkWithoutSpecial155 && special155Basis !== undefined && isOneHouseExempt) {
+    warnings.push(
+      `겸용주택의 주택 부분을 「${special155Basis}」에 따라 1세대1주택으로 보아 영 §154①을 적용했습니다 — ` +
+        "같은 영 §154③이 겸용주택을 주택으로 보고 §155⑥·⑦·⑧의 「일반주택」에서 겸용주택을 빼는 문언은 없으나, " +
+        "겸용주택 양도에 이 특례를 정면으로 적용한 해석례는 확인하지 못했습니다 — 확인 필요",
+    );
+  }
   warnings.push(...article89Clause2Notices(article89Clause2, isOneHouseExempt, transferDate));
   // 배제 확정 — 단건은 판정 결과(`article89Clause2`)를 결과 카드가 보여 주지만 겸용 결과뷰에는 그 칸이 없다 ⇒ 경고로 사유를 싣는다.
   if (clause2Excluded && houseCountOk && meetsOneHouseRequirements && !isUnregistered) {

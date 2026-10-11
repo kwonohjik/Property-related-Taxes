@@ -1270,6 +1270,9 @@ export interface TransferTaxInput {
    * - "non_metropolitan_or_green": 수도권 녹지 또는 수도권 외 도시지역 → 5배
    * - "non_urban": 도시지역 외 → 10배
    * buildingFootprintArea가 있을 때만 유효.
+   * ⚠️ 용도지역 기준 시점: 공익사업 수용 양도(2025-11-28 이후, 사업인정 고시일 전에 취득한 토지)는 세 조문 모두
+   *    「사업인정 고시일 전날 현재 해당 토지의 용도지역」이다(§154⑦·§167의5·§168의12 후단 — 대통령령 제35878호). 엔진은 이 구분을
+   *    입력으로 받지 않고 이 값을 그대로 쓰며, 결과 경고(`expropriationZoneBaseDateNotice`)로 기준일을 알린다.
    */
   appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
   /**

@@ -130,6 +130,18 @@ export function ruralTemporaryTwoHouseOverlapCountHolds(
 }
 
 /**
+ * §155⑥1호 문화유산 주택 + 일반주택 — 「각각 1개씩 소유(2주택)」 + 문화유산 주택 선언.
+ *
+ * 2·3호가 삭제돼 요건은 선언 boolean 하나다. 비과세(E-3.6)와 겸용주택 판정(S08-3)이 같은 술어를 쓴다.
+ * §154① 충족은 여기서 보지 않는다 — 호출부(`meetsOneHouseHoldingResidence`)가 따로 AND한다.
+ */
+export function qualifiesCulturalHeritageHouse(
+  input: Pick<TransferTaxInput, "householdHousingCount" | "inheritedHouseExclusionCount" | "culturalHeritageHouse">,
+): boolean {
+  return twoHouseSpecialCountHolds(input) && input.culturalHeritageHouse === true;
+}
+
+/**
  * §155⑦ 농어촌주택 요건 중 **⑦ 단서의 5년 기한만 뺀** 나머지 — `qualifiesRuralHouse`와
  * pending 귀농 축(`one-house/pending.ts`)의 **같은 술어**(OH-23).
  *

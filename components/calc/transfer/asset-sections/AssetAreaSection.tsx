@@ -522,6 +522,10 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
               <p className="text-caption text-muted-foreground">
                 미선택 시 배율 한도 검증을 하지 않습니다 — 토지 면적이 정착면적의 3배를 넘으면 필수입니다.
               </p>
+              <p className="text-caption text-muted-foreground">
+                공익사업 수용 양도(양도일 2025-11-28 이후)는 사업인정 고시일 전에 취득한 토지에 한해 사업인정 고시일 전날 현재의 용도지역으로
+                구분합니다(「소득세법 시행령」 §154⑦ 후단).
+              </p>
             </div>
           )}
         </div>
