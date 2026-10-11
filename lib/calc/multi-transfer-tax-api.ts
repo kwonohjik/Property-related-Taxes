@@ -150,7 +150,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
   const isBurdenedGift =
     primary?.transferType === "burdened_gift" || primary?.acquisitionCause === "burdened_gift";
   const usesPhd = primary ? phdFlagEffective(primary) : false; // 단건 ④와 같은 술어(D1-2)
-  const isSplitActive = primary ? isSplitPayloadActive(primary, isBurdenedGift) : false;
+  const isSplitActive = primary ? isSplitPayloadActive(primary, isBurdenedGift, { transferDate: form.transferDate }) : false;
 
   // §97② 단서 swap 분리 입력 — 단건과 동일: 두 필드 중 하나라도 입력되면 분리 전송.
   const capEx = primaryFractional
@@ -293,7 +293,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     // ⑬ 토지·건물 분리 축 — 반드시 `standardPriceAtAcquisition` **뒤**에 둔다(별개 취득이면 빌더가
     //    그 값을 undefined로 덮는다 — 단건 ④와 같은 순서). 종전에는 소유자 분리(`selfOwns`)가 화면에
     //    뜨는데 전송되지 않아 비소유 파트까지 과세됐다(29,216,000 → 35,953,500).
-    ...(primary ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed }) : {}),
+    ...(primary ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate } }) : {}),
     ...(primary ? buildLandStdAtAcquisitionPayload(primary) : {}),
     ...(primary ? buildLandPartCausePayload(primary) : {}),
     // 부수토지 배율 한도(영 §168의12) 입력 — 분리 축(별개 취득)에서 엔진이 소비한다.

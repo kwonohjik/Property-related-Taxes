@@ -17,6 +17,7 @@ import type {
 } from "./types/transfer.types";
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
 import { buildSplitPartCauseEcho } from "./transfer-split-part-echo";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -135,7 +136,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const stdNeedGate = {
     isHousing: input.propertyType === "housing" && input.transferType !== "burdened_gift",
     isSeparate: input.isSeparateAcquisition === true,
-    isOwnerSplit: (input.selfOwns ?? "both") !== "both",
+    // #17 — 같은 날 취득 주택의 배율 초과분 분리도 같은 비례 안분(개별주택가격 ÷ 가목:나목)을 쓴다 → 나목이 필수다.
+    isOwnerSplit: (input.selfOwns ?? "both") !== "both" || housingExcessSplitAppliesToInput(input),
   };
   if (
     requiresHousingBuildingStdAtAcq(stdNeedGate, input, { landMode: earlyLandMode, buildingMode: earlyBuildingMode }) &&

@@ -435,6 +435,7 @@ export function AssetSectionBasic({
         onAddAsset={onAddAsset}
         hasIncrementAsset={hasIncrementAsset}
         transferDate={transferDate}
+        isFirst={isFirst}
       />
 
       {/* 토지 성격 — 부수토지 vs 독립 나대지 (사례 28 landNature 명시 입력 정책) */}

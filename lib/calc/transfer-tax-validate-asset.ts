@@ -32,6 +32,7 @@ import { validateHousingExprAsset } from "./transfer-tax-validate-expropriation"
 import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { validateDepreciation } from "./transfer-tax-validate-depreciation";
+import { validateHousingExcessSplitInputs } from "./transfer-tax-validate-housing-excess";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -229,6 +230,10 @@ export function validateAssetEntry(
       }
     }
   }
+
+  // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
+  const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index === 0);
+  if (housingExcessError) return housingExcessError;
 
   // 공유 지분율 범위 — ⑤ 인라인 경고(`OwnershipRatioInput`)와 **같은 술어**를 쓴다.
   // 술어가 갈리면 「칸에는 경고가 없는데 다음을 누르면 막히는」 모순이 생긴다.

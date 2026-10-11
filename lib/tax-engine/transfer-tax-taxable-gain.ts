@@ -19,6 +19,8 @@ import {
   hasHousingLandExemptExclusion,
 } from "./transfer-tax-split-rate";
 import { TRANSFER } from "./legal-codes";
+import { housingExcessSplitAppliesToInput } from "./housing-excess-split";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { buildSplitGainFormula } from "./transfer-tax-split-display";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -45,6 +47,16 @@ export function resolveTaxableGain(args: {
 
   // G-2·G-3: 비과세 대상이 아닌 부수토지분(배율 초과분 · 보유 2년 미만분)을 12억 안분 대상에서
   // 빼고 전액 과세한다 (겸용주택 ①→② 패턴)
+  // #17 — 같은 날 취득 주택의 배율 초과: 토지·건물 가액 구분 입력 경로가 있는 조합인데 구분 근거(기준시가)가 없어 분리하지 못했다.
+  //   비과세로 끝내지도(초과분이 조용히 비과세) 한 덩어리로 과세하지도 않고 막는다 — ⑧이 같은 술어로 먼저 막으므로 API 직접 호출만 여기 온다.
+  if (!splitDetail && housingExcessSplitAppliesToInput(effectiveInput)) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "토지 면적이 건물 정착면적의 지역별 배율 한도를 넘는데 토지·건물 가액을 구분할 기준시가가 없습니다 — 초과분은 비사업용 토지로 분리해 과세해야 합니다. " +
+        "취득 당시 개별주택가격·㎡당 개별공시지가·건물 기준시가와 양도 당시 ㎡당 개별공시지가·건물 기준시가를 입력하세요 (소득세법 §89①3호·§99①1호·시행령 §166⑥).",
+      { housingExcessSplitInputsMissing: true },
+    );
+  }
   const exclusion = applyHousingLandExclusions({
     input: effectiveInput,
     splitDetail,

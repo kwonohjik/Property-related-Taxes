@@ -188,7 +188,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
    */
   const primaryShareInCompanion = primaryFractional && form.assets.length > 1 && !fractionalBundleMerge;
   // 파트 필드 전송은 buildSplitPayload 담당 — 여기선 §166⑥ 안분 3요소 게이트로만 쓴다.
-  const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
+  const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift, { transferDate: form.transferDate });
   // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고,
   // 엔진이 개산공제 계산 지점에서만 적용한다(설계 transfer-fractional-lump-sum-deduction).
   const ownershipRatioForDeduction = primaryFractional ? primaryRatio : undefined;
@@ -437,7 +437,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
         : undefined,
     // ④⑬ 토지·건물 분리 축 (소령 §166⑥·§168②) — 게이트·파트 필드 전체를 sibling 빌더에 위임.
-    ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed }),
+    ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate } }),
     /**
      * 엔진 `acquisitionArea` — **취득 당시 단가에 곱할 면적**이며, 일부양도(`partial`)에서는
      * 취득 전체 면적이 아니라 **양도한 부분의 면적**이다.

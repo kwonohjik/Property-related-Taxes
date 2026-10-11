@@ -59,7 +59,7 @@ import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-r
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor } from "./transfer-tax-appurtenant-land";
+import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -343,7 +343,11 @@ export function calculateTransferTax(
       amount: 0,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
-    warnings.push(...rentalNoticesForEarlyReturn(effectiveInput), ...expropriationLaterLandNotices(effectiveInput)); // §155㉑·㉒ + OH-40 판정 보류 · 5A 고지
+    warnings.push(
+      ...rentalNoticesForEarlyReturn(effectiveInput),
+      ...expropriationLaterLandNotices(effectiveInput),
+      ...[housingExcessUnseparatedNotice(effectiveInput, undefined, true)].filter((n): n is string => !!n),
+    ); // §155㉑·㉒ + OH-40 판정 보류 · 5A 고지 · #17 초과분 미분리 고지
     return buildExemptEarlyResult({
       input,
       effectiveInput,
@@ -546,8 +550,8 @@ export function calculateTransferTax(
   const laterInheritedNotice = laterLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
-  const expropriationZoneNotice = expropriationZoneNoticeFor(effectiveInput);
-  if (expropriationZoneNotice) warnings.push(expropriationZoneNotice);
+  // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지(세액 불변).
+  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt)].filter((n): n is string => !!n));
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
