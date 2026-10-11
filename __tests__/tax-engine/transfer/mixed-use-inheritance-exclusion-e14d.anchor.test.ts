@@ -180,8 +180,16 @@ describe("E-14d §155③ 공동상속주택 소수지분", () => {
   it("E14D-7 소수지분 → 주택으로 보지 않는다 → 비과세", () => {
     expect(run(co(false)).calculationRoute.highValueRule).toBe("below_threshold_exempt");
   });
-  it("E14D-7b 부정 짝 — 최대지분자(③ 단서) → 산입 → 과세", () => {
-    expect(run(co(true)).calculationRoute.highValueRule).toBe("non_one_house_full_taxation");
+  it("E14D-7b 결정 #6 — 최대지분자(③ 단서로 본인 소유)도 ② 요건으로 판정 → 비과세", () => {
+    expect(run(co(true)).calculationRoute.highValueRule).toBe("below_threshold_exempt");
+  });
+  it("E14D-7b' 부정 짝 — 최대지분자 + 동일세대 단서 → 과세 유지", () => {
+    const h = inheritedSole({
+      isCoInherited: true,
+      isLargestCoInheritedShareholder: true,
+      decedentSameHouseholdAtInheritance: true,
+    });
+    expect(run(h).calculationRoute.highValueRule).toBe("non_one_house_full_taxation");
   });
   it("E14D-7c L-11 — 증여 게이트는 ② 풀만 비운다 → ③ 소수지분은 여전히 제외", () => {
     const r = run(co(false), {

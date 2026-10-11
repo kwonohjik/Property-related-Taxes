@@ -185,12 +185,12 @@ describe("합가 기한 연혁 — 동거봉양·혼인 합가 세대 카드", (
     render(<MergedHouseholdRightSection form={f(over)} onChange={() => {}} />).container.textContent ?? "";
 
   it("[G1F-11] 동거봉양 · 2018-02-12 양도 → 5년", () => {
-    const t = text({ parentalCareMergeDate: "2014-01-01", transferDate: "2018-02-12" });
+    const t = text({ parentalCareMergeDate: "2014-01-01", parentalCareParentAge: "over_60", transferDate: "2018-02-12" });
     expect(t).toContain("5년 이내에 먼저 양도하는 주택");
     expect(t).not.toContain("10년");
   });
   it("[G1F-12] 동거봉양 · 2018-02-13 양도 → 10년", () => {
-    const t = text({ parentalCareMergeDate: "2014-01-01", transferDate: "2018-02-13" });
+    const t = text({ parentalCareMergeDate: "2014-01-01", parentalCareParentAge: "over_60", transferDate: "2018-02-13" });
     expect(t).toContain("10년 이내에 먼저 양도하는 주택");
     expect(t).not.toContain("5년");
   });

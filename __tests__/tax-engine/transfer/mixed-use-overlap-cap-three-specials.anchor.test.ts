@@ -55,7 +55,7 @@ function run(extra: HouseInfo[]) {
         presaleRights: [],
         isOneHousehold: true,
         isRegulatedArea: false,
-        parentalCareMerge: { mergeDate: D("2022-01-01") },
+        parentalCareMerge: { mergeDate: D("2022-01-01"), parentAge: "over_60" as const },
       },
       inheritedHouseExclusion: {
         generalHouseGiftedFromDecedentWithin2yr: undefined,

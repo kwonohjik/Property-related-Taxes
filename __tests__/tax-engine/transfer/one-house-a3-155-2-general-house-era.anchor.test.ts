@@ -177,10 +177,10 @@ describe("OH-12b — §156의2⑦ 후단·⑥ 일반주택 요건도 같은 부�
     expect(v.openArticles ?? []).not.toContain("소득세법 시행령 §156의2 ⑦");
   });
 
-  it("대조군 — 2013-02-15 이후 · 상속 후 취득 · 선언 없음 → 여전히 판정 불가", () => {
+  it("대조군 — 2013-02-15 이후 · 상속 후 취득 → 결정 #8: 판정 불가가 아니라 불성립(배제 확정) + 사유 한 줄", () => {
     const v = seventh("2013-06-01", "2013-05-01");
-    expect(v.status).toBe("undetermined");
-    expect(v.openArticles ?? []).toContain("소득세법 시행령 §156의2 ⑦");
+    expect(v.status).toBe("excluded");
+    expect((v.exclusionReasons ?? []).join(" ")).toContain("상속개시 뒤에 취득했습니다");
   });
 
   const sixth = (acq: string, over: Partial<TransferTaxInput> = {}) =>
@@ -191,7 +191,7 @@ describe("OH-12b — §156의2⑦ 후단·⑥ 일반주택 요건도 같은 부�
         householdHousingCount: 1,
         acquisitionDate: D(acq),
         transferDate: D("2023-06-01"),
-        presaleRights: [{ ...right, acquisitionDate: D("2020-01-01"), isInherited: true }],
+        presaleRights: [{ ...right, acquisitionDate: D("2020-01-01"), isInherited: true, inheritedDate: D("2020-01-01") }],
         ...over,
       }),
       undefined,
@@ -201,14 +201,18 @@ describe("OH-12b — §156의2⑦ 후단·⑥ 일반주택 요건도 같은 부�
     expect(sixth("2012-06-01").status).toBe("exception_met");
   });
 
-  it("대조군 — ⑥ 일반주택 2016 취득 · 선언 없음 → 판정 불가(종전)", () => {
-    expect(sixth("2016-06-01").status).toBe("undetermined");
+  it("대조군 — ⑥ 일반주택 2016 취득(상속개시 2020-01-01 전 보유) → 날짜로 성립(결정 #8: 선언 토글 폐지)", () => {
+    expect(sixth("2016-06-01").status).toBe("exception_met");
+  });
+  it("대조군 — ⑥ 일반주택 2021 취득(상속개시 뒤) → 불성립 ⇒ 일반 권리 판정(3년 초과) ⇒ 배제 확정 + 사유", () => {
+    const v = sixth("2021-06-01", { rightThreeYearException: { kind: "none" } } as Partial<TransferTaxInput>);
+    expect(v.status).toBe("excluded");
+    expect((v.exclusionReasons ?? []).join(" ")).toContain("상속개시일(2020-01-01)보다 뒤에 취득했습니다");
   });
 
   it("🔴 OH-12c ⑥ — 증여일 2018-02-12이면 증여 제외 괄호 미적용 / 2018-02-13이면 부적격", () => {
     const g = (d: string) =>
       sixth("2016-06-01", {
-        generalHouseHeldAtInheritance: true,
         generalHouseGiftedFromDecedentWithin2yr: true,
         generalHouseGiftDate: D(d),
       } as Partial<TransferTaxInput>);

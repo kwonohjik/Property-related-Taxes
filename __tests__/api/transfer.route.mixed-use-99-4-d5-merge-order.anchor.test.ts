@@ -131,7 +131,7 @@ describe("S14a-13 / X1-5 — 겸용 경로의 §99의4 D5 합가 맥락", () => 
   });
 
   it("대조 — 동거봉양 합가일도 같은 함수(`new994MergeOrderOf`)를 탄다", async () => {
-    const over = { marriageMerge: undefined, parentalCareMerge: { mergeDate: "2020-06-15" } };
+    const over = { marriageMerge: undefined, parentalCareMerge: { mergeDate: "2020-06-15", parentAge: "over_60" as const } };
     const g = await general(over);
     const m = await mixed(over);
     expect(m.new994Detail.isEligible).toBe(g.new994Detail.isEligible);

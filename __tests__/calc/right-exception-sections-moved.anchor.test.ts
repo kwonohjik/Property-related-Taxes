@@ -116,13 +116,12 @@ describe("P6-a ② 값 불변 — ④가 계속 읽는다 (OH-21)", () => {
         rightNewHouseCompletionDate: "2020-05-01",
         rightMovedInWithin3Years: true,
         rightResidedOneYearOrMore: true,
-        generalHouseHeldAtInheritance: true,
         mergedHouseholdFirstHouseKind: "house_only",
       }),
     );
 
     expect(body.rightThreeYearException).toBeDefined();
-    expect(body.generalHouseHeldAtInheritance).toBe(true);
+    expect(body.generalHouseHeldAtInheritance).toBeUndefined(); // 결정 #8 — 선언 토글 폐지(날짜 판정)
     expect(body.mergedHouseholdFirstHouse).toMatchObject({ kind: "house_only" });
   });
 

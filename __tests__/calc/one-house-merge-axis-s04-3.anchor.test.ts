@@ -51,6 +51,7 @@ function calcForm(s: Sc): Form {
     householdNoPresaleRightsConfirmed: true,
     marriageDate: s.marriage ?? "",
     parentalCareMergeDate: s.parental ?? "",
+    parentalCareParentAge: s.parental ? "over_60" : "", // 결정 #9 — 동거봉양 합가일이 있으면 연령 요건 선언(60세 이상)
     isFirstTransferredInMerge: true,
     houses: [hrow({ id: "parent", acquisitionDate: "2000-01-01", mergeOrigin: s.origin })],
   });
@@ -70,7 +71,7 @@ function judgeCase(s: Sc, label: string): RulingCase {
       transferDate: T,
       contractTotalPrice: "800000000",
       ...(s.marriage ? { marriageDate: s.marriage } : {}),
-      ...(s.parental ? { parentalCareMergeDate: s.parental } : {}),
+      ...(s.parental ? { parentalCareMergeDate: s.parental, parentalCareParentAge: "over_60" } : {}),
       isFirstTransferredInMerge: true,
       asset: { assetKind: "housing", acquisitionDate: s.sellAcq },
       houses: [{ id: "parent", region: "non_capital", acquisitionDate: "2000-01-01", mergeOrigin: s.origin }],

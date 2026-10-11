@@ -130,7 +130,7 @@ describe("OH-23 합가 축 — 합가(혼인) 전 취득 요건", () => {
     const r = judge({
       ...MARRIAGE,
       householdHousingCount: 2,
-      parentalCareMerge: { mergeDate: D("2012-03-15") },
+      parentalCareMerge: { mergeDate: D("2012-03-15"), parentAge: "over_60" as const },
     });
     expect(r.pending.map((p) => p.id)).toEqual(["155-5-marriage-merge"]);
   });

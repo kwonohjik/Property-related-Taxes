@@ -9,7 +9,7 @@
  */
 
 import type { AptTransferDeadlineExtension } from "../rental-article/rules";
-import type { TemporaryTwoHouseDelayReason } from "./transfer.types";
+import type { ParentalCareParentAge, TemporaryTwoHouseDelayReason } from "./transfer.types";
 
 // ============================================================
 // 타입 정의
@@ -85,7 +85,8 @@ export interface HouseInfo {
   isCoInherited?: boolean;
   /**
    * 공동상속주택 중 상속지분이 최대인 상속인인지 — §155③ 단서.
-   * true = 산입(주택수 포함, 제외 대상 아님) / false·미제공 = 소수지분(제외 후보).
+   * true = 그 주택을 소유한 것으로 봄(주택수 산입 유지) — 일반주택 양도 시 §155② 풀에서 요건(동일세대 단서·상속개시 당시 보유·
+   * 2년 내 증여·순위)으로 제외 판정(결정 #6) / false·미제공 = 소수지분(§155③ 제외 후보).
    * ⚠️ 자기선언 boolean — 엔진은 다른 공동상속인의 지분을 알 수 없음.
    */
   isLargestCoInheritedShareholder?: boolean;
@@ -483,6 +484,14 @@ export interface PresaleRight {
    * (재산세제과-1033 · 사전-2023-법규재산-0464 — `presale-right-definition-date.ts`). 별도세대면 상속개시일 그대로 + 확인 필요.
    */
   decedentAcquisitionDate?: Date;
+  /**
+   * 상속받은 **조합원입주권**의 상속개시일 — `type === "redevelopment_right"` && `isInherited` 행 전용(결정 #8).
+   * §156의2⑥·⑦ 후단의 일반주택 요건 「상속개시 당시 보유한 주택」을 **날짜로 판정**하는 데만 쓴다(§162①5호 — 상속 자산의
+   * 취득시기는 상속이 개시된 날). 입주권 행의 `acquisitionDate`는 취득 경위에 따라 기존주택 취득일·인가일·승계일이라
+   * 상속개시일이 보장되지 않아 칸을 따로 둔다. 분양권 행은 `acquisitionDate`가 상속개시일이라 이 필드를 쓰지 않는다.
+   * ⚠️ 보유 판정 전용이다 — 이 날로 §156의2③ 타이밍의 기산일을 바꾸지 않는다(별건).
+   */
+  inheritedDate?: Date;
 }
 
 /** 다주택 중과세 판정 입력 */
@@ -613,6 +622,8 @@ export interface MultiHouseSurchargeInput {
   /** 동거봉양 합가 정보 */
   parentalCareMerge?: {
     mergeDate: Date;
+    /** 직계존속 연령 요건 선언(결정 #9) — `TransferTaxInput.parentalCareMerge.parentAge`와 같은 값 */
+    parentAge?: ParentalCareParentAge;
   };
   /** 세대 보유 분양권/입주권 목록 */
   presaleRights: PresaleRight[];

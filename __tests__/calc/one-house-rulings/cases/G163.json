@@ -42,7 +42,220 @@
       "undetermined": false
     },
     "bucket": "match",
-    "note": "match(경로 다름). 일자 월 단위 → 15일, 분양권 '22.00. → 2022-03-15, 양도 '22.00. → 2022-09-15 가정(혼인 후 5년·분양권 취득 후 3년 이내; 2021.1.1.~2022.5.9. 구간 회피), today 2022-09-16, 양도가 7억·비조정(경남 양산). 표현: B(배우자 혼인 전 주택) mergeOrigin = counterpart_side(배우자), 혼인일 2021-05-15, 먼저 양도, 분양권 행, 합가 전 보유 구성 '주택 1채만 갖고 있었다'. 관측: 비과세 — appliedExceptions 155-5-marriage-merge, article89Clause2 = §156의2⑨2호(§156의3⑥ 준용). 원문 경로는 §155⑤ + §156의3② 중첩. 함정(프로브): 합가 전 보유 구성을 '어느 것에도 해당하지 않는다'로 고르면(분양권이 혼인 후 취득이라 혼인으로 생긴 구성이 아니라고 보는 경우) §89② 배제 확정 → 과세 — §155⑤로 1주택 의제한 뒤 §156의3②를 태우는 경로가 엔진에 없다. 비워 두면 비과세 + 판정 보류(89-2-open §156의2⑨)."
+    "note": "match(결정 #7 이후 원문 경로 §155⑤ + §156의3②를 명부 날짜로 판정). 일자 월 단위 → 15일, 분양권 '22.00. → 2022-03-15, 양도 '22.00. → 2022-09-15 가정(혼인 후 5년·분양권 취득 후 3년 이내; 2021.1.1.~2022.5.9. 구간 회피), today 2022-09-16, 양도가 7억·비조정(경남 양산). 표현: B(배우자 혼인 전 주택) mergeOrigin = counterpart_side(배우자), 혼인일 2021-05-15, 먼저 양도, 분양권 행, 합가 전 보유 구성 '주택 1채만 갖고 있었다'. 관측: 비과세 — appliedExceptions 155-5-marriage-merge, article89Clause2 = §156의2⑨2호(§156의3⑥ 준용). 구성 선언과 무관하게: 혼인 후 분양권 취득 + 나중 취득 주택(B 2020-09-15) 취득 후 1년 경과 + 분양권 취득 후 3년 이내 + 혼인 후 N년 이내 양도 + 명부(양도 주택 외 배우자 쪽 1채) 날짜가 맞으면 구성을 비우거나 「어느 것에도 해당하지 않는다」를 골라도 §156의3②(§155⑤ 경유)로 비과세(G163-era-blank · G163-era-none). 음성 짝: 분양권이 나중 주택 취득 1년 안이거나 혼인 전 취득이면 이 경로가 서지 않아 구성 미선택은 불성립 + 확인 필요(N-G163-blank-*)."
+  },
+  {
+    "id": "G163-era-blank",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "era",
+    "today": "2022-09-16",
+    "summary": "7572 사실에서 합가 전 보유 구성을 비워 둔 경우 — 명부 날짜로 §155⑤ + §156의3② 경로 성립",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2020-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2021-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2022-03-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": ""
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(결정 #7 하위 1 나). 구성 공란이어도 7572 경로(혼인 후 분양권 취득 · 나중 취득 주택 취득 후 1년 경과 · 분양권 취득 후 3년 이내 · 혼인 후 N년 이내 · 명부 날짜)가 성립해 비과세 — 종전: 비과세 + 판정 보류(89-2-open ⑨)."
+  },
+  {
+    "id": "G163-era-none",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "era",
+    "today": "2022-09-16",
+    "summary": "7572 사실에서 합가 전 보유 구성을 「어느 것에도 해당하지 않는다」로 고른 경우 — 같은 경로로 비과세",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2020-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2021-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2022-03-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": "none"
+    },
+    "expected": {
+      "isExempt": true,
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(결정 #7 하위 1 나). 종전 함정: 「해당 없음」을 고르면 §89② 배제 확정으로 과세(150,766,000류) — 이제 7572 경로가 명부 날짜로 비과세한다."
+  },
+  {
+    "id": "N-G163-blank-within1y",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "era",
+    "today": "2022-09-16",
+    "summary": "음성 짝 — 분양권을 나중 주택 취득(2020-09-15) 후 1년 안에 취득하고 구성은 비움",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2020-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2021-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2021-06-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": ""
+    },
+    "expected": {
+      "isExempt": false,
+      "undetermined": [
+        "89-2-merged-household-composition-undeclared"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 분양권 취득이 나중 취득 주택 취득 후 1년 미만이라 7572 경로가 서지 않는다 — 구성 미선택은 불성립 + 확인 필요(중립 고지), 과세."
+  },
+  {
+    "id": "N-G163-blank-right-before-marriage",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "era",
+    "today": "2022-09-16",
+    "summary": "음성 짝 — 분양권을 혼인 전에 취득하고 구성은 비움",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2022-09-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2020-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2021-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2021-02-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": ""
+    },
+    "expected": {
+      "isExempt": false,
+      "undetermined": [
+        "89-2-merged-household-composition-undeclared"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 분양권이 혼인 전 취득이면 혼인 후 취득을 전제로 한 7572 경로가 아니라 ⑨ 구성 선언 축이 판정한다 — 미선택은 불성립 + 확인 필요."
+  },
+  {
+    "id": "N-G163-none-over3y",
+    "docNo": "서면-2021-부동산-7572 [부동산납세과-1014]",
+    "docDate": "2022.04.21.",
+    "basis": "era",
+    "today": "2022-09-16",
+    "summary": "음성 짝 — 구성 「해당 없음」 + 분양권 취득 후 3년 초과 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2025-09-15",
+      "contractTotalPrice": "700000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2019-03-15"
+      },
+      "houses": [
+        {
+          "id": "B",
+          "acquisitionDate": "2020-09-15",
+          "region": "non_capital",
+          "mergeOrigin": "counterpart_side"
+        }
+      ],
+      "marriageDate": "2021-05-15",
+      "isFirstTransferredInMerge": true,
+      "presaleRights": [
+        {
+          "id": "C",
+          "type": "presale_right",
+          "acquisitionDate": "2022-03-15",
+          "region": "non_capital"
+        }
+      ],
+      "mergedHouseholdFirstHouseKind": "none"
+    },
+    "expected": {
+      "isExempt": false
+    },
+    "bucket": "match",
+    "note": "match(음성 짝). 분양권 취득일(2022-03-15) + 3년을 넘겨 양도하면 7572 경로가 서지 않고, 선언한 「해당 없음」은 사실의 선언이라 확인 필요 고지 없이 과세."
   },
   {
     "id": "G163-current",

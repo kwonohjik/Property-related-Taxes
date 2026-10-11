@@ -37,6 +37,8 @@ import {
   meetsTemporaryTwoHousePrevHolding,
   undeclaredThreeYearExceptionUndetermined,
   article89ConfirmNotesUndetermined,
+  article89ExclusionUnmet,
+  undeclaredMergeCompositionUndetermined,
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
 import { deriveLegalBasis } from "./one-house/legal-basis";
@@ -160,6 +162,7 @@ export function checkExemption(
     ? []
     : [
         ...(coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules)),
+        ...article89ExclusionUnmet(article89Clause2, coreWouldPass),
         ...collectLapsedDeadlineUnmet(allPending.filter(isLapsed), judgmentBaseDate, requirementReview?.scheme),
       ];
 
@@ -208,6 +211,7 @@ export function checkExemption(
         },
       }),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass, input.transferDate),
+      ...undeclaredMergeCompositionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
       ...inheritedPresaleRightSeparateHouseholdUndetermined(input, article89Clause2, coreWouldPass, presaleRightStartDate),
       ...reverseDoubleMergeUndetermined(input, appliedExceptions, settled),

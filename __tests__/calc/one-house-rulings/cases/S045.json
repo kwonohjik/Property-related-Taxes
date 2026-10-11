@@ -1,0 +1,109 @@
+[
+  {
+    "id": "S045-2019seo2002-era",
+    "docNo": "조심-2019-서-2002",
+    "docDate": "2019.08.22.",
+    "basis": "era",
+    "today": "2016-06-10",
+    "summary": "일반주택 1채와 소수지분(112분의 14 동일) 공동상속주택 2채를 보유한 세대가 2016.5.28. 일반주택을 양도 — 2017.2.3. 전 양도(「선순위 1주택」 한정 신설 전) (양도가 5억은 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2016-05-28",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2004-11-22"
+      },
+      "houses": [
+        {
+          "id": "co1",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21",
+          "isInherited": true,
+          "inheritedDate": "2015-12-21",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "co2",
+          "region": "capital",
+          "acquisitionDate": "2015-12-21",
+          "isInherited": true,
+          "inheritedDate": "2015-12-21",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "A": "taxable",
+          "B": "exempt"
+        }
+      ]
+    },
+    "bucket": "match",
+    "note": "match(결정 #10 양론). 과세관청(처분청 근거 서면4팀-813 · 재산세과-2922)은 일반주택 1채 + 소수지분 2채에 비과세 불가, 조세심판원(조심-2010-서-0825 · 2016-서-2720 · 2017-서-3603 · 2019-서-2002)은 소수지분을 모두 주택 수에서 빼 비과세. 엔진은 과세관청 입장(본 판정 과세)이고 판정 메뉴는 두 결론을 병기한다 — 결론이 갈려 배지가 「해석이 갈립니다」. 가정: 양도가 5억·중립 지역. 최소쌍: 양도일 2017-02-03이면 「선순위 1주택」 한정이 적용되어 쟁점이 없다(엔진 단일 결론)."
+  },
+  {
+    "id": "S045-2017seo3603-era",
+    "docNo": "조심-2017-서-3603",
+    "docDate": "2017.10.30.",
+    "basis": "era",
+    "today": "2015-12-30",
+    "summary": "일반주택 1채와 소수지분 공동상속주택 3채(상속 2003.10.26.)를 보유한 세대가 2015.12.28. 일반주택을 양도 — 2017.2.3. 전 양도 (양도가 5억 가정)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-12-28",
+      "contractTotalPrice": "500000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2000-10-26"
+      },
+      "houses": [
+        {
+          "id": "co1",
+          "region": "capital",
+          "acquisitionDate": "2003-10-26",
+          "isInherited": true,
+          "inheritedDate": "2003-10-26",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "co2",
+          "region": "capital",
+          "acquisitionDate": "2003-10-26",
+          "isInherited": true,
+          "inheritedDate": "2003-10-26",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        },
+        {
+          "id": "co3",
+          "region": "capital",
+          "acquisitionDate": "2003-10-26",
+          "isInherited": true,
+          "inheritedDate": "2003-10-26",
+          "isCoInherited": true,
+          "decedentSameHouseholdAtInheritance": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "A": "taxable",
+          "B": "exempt"
+        }
+      ]
+    },
+    "bucket": "match",
+    "note": "match(결정 #10 양론). 소수지분 3채 — 과세관청 입장은 과세, 심판원 입장은 전부 제외로 비과세. 3채 모두 같은 상속개시일(가정)."
+  }
+]

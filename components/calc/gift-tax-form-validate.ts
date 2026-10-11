@@ -43,6 +43,7 @@ import {
   GIFT_BURDENED_INHERITED_CONVERSION_ERROR,
   giftBurdenedPartialOwnershipError,
   giftBurdenedWinWinError,
+  giftBurdenedMergeAgeError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -213,6 +214,9 @@ export function validateStep(step: number, form: FormState): string | null {
         //   ⑤ 배치(거주기간 바로 뒤)와 같은 순서로 먼저 본다.
         const winWinError = giftBurdenedWinWinError(bgt, form.giftDate);
         if (winWinError) return `${itemLabel}: ${winWinError}`;
+        // §155④ 동거봉양 합가 직계존속 연령(결정 #9) — 칸(`MergeDateSection`)과 같은 게이트.
+        const mergeAgeError = giftBurdenedMergeAgeError(bgt);
+        if (mergeAgeError) return `${itemLabel}: ${mergeAgeError}`;
         const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate
           ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {

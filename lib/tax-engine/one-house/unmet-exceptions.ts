@@ -11,9 +11,11 @@ import {
   resolveMergeComposition,
 } from "./merge-composition";
 import { doubleMergeOrderOf, mergeAxisHouses, resolveTwoHouseMergeAxis } from "./merge-deeming";
+import { isBeforeCoInheritedRankingClause } from "../data/co-inherited-ranking-clause-era";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
+  isSecondClausePoolHouse,
   passesHouseholdGate,
   resolveInheritedHouseExclusionForJudgment,
   resolveInheritedSellingHouseId,
@@ -36,6 +38,7 @@ import {
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
+import { PARENTAL_CARE_AGE_CONFIRM_NOTICE, PARENTAL_CARE_AGE_UNMET_REASON, parentalCareAgeVerdict } from "./parental-care-age";
 import { deadlineHoldingUnmetReason } from "./deadline-holding";
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
@@ -144,6 +147,14 @@ function collectMergeUnmet(
     reasons.push(
       `양도 주택을 ${mergeLabel}(${fmtDate(mergeDate)}) 이후인 ${fmtDate(input.acquisitionDate)}에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.`,
     );
+  }
+
+  // ── 동거봉양 직계존속 연령 요건 — `matchMergeGateAndComposition`·`matchDoubleMergeApartFromWindow`의 같은 leaf(결정 #9) ──
+  //    미선택(모름)은 불성립 + 확인 필요, 「해당 없음」은 사실의 선언이라 확인 필요 없이 불성립 사유만 말한다.
+  if (doubleOrder || axis!.kind === "parental_care") {
+    const ageVerdict = parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4");
+    if (ageVerdict === "unmet") reasons.push(PARENTAL_CARE_AGE_UNMET_REASON);
+    else if (ageVerdict === "unknown") reasons.push(`합가의 직계존속 연령 요건을 선택하지 않아 합가 특례를 적용하지 않았습니다 — 확인 필요: ${PARENTAL_CARE_AGE_CONFIRM_NOTICE}`);
   }
 
   // ── 주택 수 조건 — `resolveMergeDeeming`(2주택) · `resolveMergeOverlapDeeming`(3주택) ──
@@ -635,16 +646,16 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   const reasons: string[] = [];
 
   // OH-12c — 증여 제외 괄호는 2018-02-13 이후 증여분부터(제28637호 부칙 제16조). 정본 leaf로 같은 판정을 한다.
-  // L-11 — 괄호는 §155② 단독상속 풀에만 걸린다(「이하 이 항에서」). 단독상속 후보가 있을 때만 말한다.
+  // L-11 — 괄호는 §155② 풀(단독상속·최대지분 공동상속)에만 걸린다(「이하 이 항에서」). ② 풀 후보가 있을 때만 말한다.
   if (
-    candidates.some((h) => !h.isCoInherited) &&
+    candidates.some(isSecondClausePoolHouse) &&
     isDecedentGiftExclusionApplicable({
       gifted: input.generalHouseGiftedFromDecedentWithin2yr,
       giftDate: input.generalHouseGiftDate,
     })
   ) {
     reasons.push(
-      "양도하는 일반주택을 상속개시일부터 2년 이내에 피상속인으로부터 증여받았습니다 — 단독상속주택은 주택 수에서 빼지 않습니다(§155② 괄호). §155③ 공동상속주택(소수지분)에는 이 괄호가 없어 제외에 영향이 없습니다.",
+      "양도하는 일반주택을 상속개시일부터 2년 이내에 피상속인으로부터 증여받았습니다 — 단독상속주택·최대지분 공동상속주택은 주택 수에서 빼지 않습니다(§155② 괄호). §155③ 공동상속주택(소수지분)에는 이 괄호가 없어 제외에 영향이 없습니다.",
     );
   }
   if (x.generalHouseNotHeldCount > 0) {
@@ -669,9 +680,17 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
       `상속주택 ${x.sameHouseholdDisqualifiedCount}채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다.`,
     );
   }
-  if (x.rankingDisqualifiedCount > 0) {
+  // 결정 #10 — §155③ 「선순위 1주택」 한정은 2017.2.3. 신설이다. 그 전 양도의 소수지분 행에는 당시 문언에 없는 요건을 말하지 않는다.
+  const beforeRankingClause = isBeforeCoInheritedRankingClause(input.transferDate);
+  const rankingCoMinority = beforeRankingClause ? x.rankingDisqualifiedCoMinorityCount : 0;
+  if (x.rankingDisqualifiedCount - rankingCoMinority > 0) {
     reasons.push(
-      `상속주택 ${x.rankingDisqualifiedCount}채를 「순위상 상속주택이 아님」으로 선언했습니다 — 주택 수 제외 대상이 아닙니다(§155②1~4호).`,
+      `상속주택 ${x.rankingDisqualifiedCount - rankingCoMinority}채를 「순위상 상속주택이 아님」으로 선언했습니다 — 주택 수 제외 대상이 아닙니다(§155②1~4호).`,
+    );
+  }
+  if (rankingCoMinority > 0) {
+    reasons.push(
+      `공동상속주택(소수지분) ${rankingCoMinority}채를 「순위상 상속주택이 아님」으로 선언했습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없지만, 과세관청 해석에 따라 주택 수에서 빼지 않았습니다. 조세심판원은 소수지분을 모두 뺍니다 — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요.`,
     );
   }
   /**
@@ -685,7 +704,9 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   }
   if (x.eligibleCoMinorityCount >= 2) {
     reasons.push(
-      `제외 요건을 갖춘 공동상속주택(소수지분)이 ${x.eligibleCoMinorityCount}채여서 선순위 1채를 특정할 수 없습니다 — 어느 것도 주택 수에서 빼지 않았습니다.`,
+      beforeRankingClause
+        ? `제외 요건을 갖춘 공동상속주택(소수지분)이 ${x.eligibleCoMinorityCount}채여서 어느 것도 주택 수에서 빼지 않았습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없습니다. 과세관청 해석(재산세과-2922)은 비과세를 인정하지 않았고 조세심판원은 소수지분을 모두 뺐습니다(조심-2019-서-2002 등) — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요.`
+        : `제외 요건을 갖춘 공동상속주택(소수지분)이 ${x.eligibleCoMinorityCount}채여서 선순위 1채를 특정할 수 없습니다 — 어느 것도 주택 수에서 빼지 않았습니다.`,
     );
   }
   if (reasons.length === 0) return [];

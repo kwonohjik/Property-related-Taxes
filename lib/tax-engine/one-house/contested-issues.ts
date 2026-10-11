@@ -10,6 +10,7 @@
  * | `155-2-inherited-house-gifted-within-household` (C1) | 상속주택(지분)을 동일세대원에게 증여 | B — 상속주택 유지 | 그 행을 상속주택이 아닌 주택으로 |
  * | `155-3-same-household-co-inherited-minority` (C2) | 동일세대원에게서 상속받은 공동상속주택 소수지분 | A — §155② 단서 적용 | 그 행에 §155② 단서(동일세대 게이트)를 적용하지 않음 |
  * | `155-4-parental-care-merge-right-sale` (C6) | 동거봉양 합가 후 조합원입주권 양도 | B — 입주권에 §155④ 부적용 | 혼인합가와 같은 「합가 상대 쪽 1채 제외」 적용 |
+ * | `155-3-co-inherited-minority-before-ranking-clause` (C7) | 2017.2.3. 전 양도 + 소수지분 공동상속주택을 제외하지 못한 행(적격 2채 이상 · 순위 부적격 선언) | A — 과세관청 해석 | 그 행들을 주택에서 빼고(소수지분 전부 제외) 판정 |
  *
  * ⚠️ C1 반대 입장은 **§155② 축만** 뒤집는다 — 명부 행의 상속 사실만 지운다. 그 주택이 §155⑦1호 상속 농어촌주택이기도 하면
  *    농어촌주택 특례(`ruralHouse`)는 그대로 둔다: 서면-2015-부동산-1363이 다룬 것은 §155②뿐이다(평가셋 E109 — 결론 같음).
@@ -19,7 +20,9 @@
  *    이농주택으로 다시 귀농(§155⑦3호)도 뒤의 해석이 일관돼 양론으로 보지 않는다(사용자 결정 2026-10-09).
  */
 import { INHERITED_HOUSE, TRANSFER } from "../legal-codes";
-import { passesHouseholdGate } from "../transfer-inheritance-exclusion";
+import { isBeforeCoInheritedRankingClause } from "../data/co-inherited-ranking-clause-era";
+import { passesHouseholdGate, resolveInheritedHouseExclusionFromInput } from "../transfer-inheritance-exclusion";
+import { deriveHouseholdHousingCount } from "./house-count";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
@@ -27,6 +30,7 @@ import type { OneHouseJudgment } from "./types";
 export type OneHouseContestedIssueId =
   | "155-2-inherited-house-gifted-within-household"
   | "155-3-same-household-co-inherited-minority"
+  | "155-3-co-inherited-minority-before-ranking-clause"
   | "155-4-parental-care-merge-right-sale";
 
 export type ContestedPositionKey = "A" | "B";
@@ -98,6 +102,29 @@ const SPECS: Record<OneHouseContestedIssueId, IssueSpec> = {
       summary:
         "소수지분권자에게는 §155② 단서를 적용하지 않습니다 — §155③에 따라 공동상속주택 소수지분을 주택 수에서 빼고 판정했습니다.",
       authorities: ["조심-2018-중-0424 (2018.04.19.)", "조심-2023-중-7006 (2024.04.22.)"],
+    },
+  },
+  "155-3-co-inherited-minority-before-ranking-clause": {
+    title: "2017.2.3. 전 양도 — 소수지분 공동상속주택이 2채 이상이거나 순위 부적격으로 선언한 경우",
+    legalBasis: INHERITED_HOUSE.EXEMPTION_CO_INHERITED_BASIS,
+    enginePosition: "A",
+    A: {
+      summary:
+        "소수지분 공동상속주택 중 1채를 특정할 수 없으면(적격 2채 이상) 어느 것도 주택 수에서 빼지 않고, 순위 부적격으로 선언한 행도 빼지 않고 판정했습니다 — 일반주택 1채와 소수지분 2채를 보유한 세대의 일반주택 양도에 1세대1주택 비과세를 적용하지 않은 과세관청 해석입니다.",
+      authorities: [
+        "재산세과-2922 (2008.09.24.)",
+        "서면인터넷방문상담4팀-813 (2008.03.27.) — 조심-2019-서-2002에 인용된 처분청 근거",
+      ],
+    },
+    B: {
+      summary:
+        "공동상속주택이 모두 소수지분이면 일반주택 양도 시 그 소수지분은 보유주택 수에 포함되지 않습니다 — 이 양도 당시 §155③에는 「선순위 1주택」 한정이 없었으므로(2017.2.3. 신설) 해당 행을 모두 주택 수에서 빼고 판정했습니다. 2017.2.3. 이후 양도분은 조세심판원도 선순위 1주택만 뺍니다(조심-2018-중-0793).",
+      authorities: [
+        "조심-2010-서-0825 (2011.02.11.)",
+        "조심-2016-서-2720 (2017.03.03.)",
+        "조심-2017-서-3603 (2017.10.30.)",
+        "조심-2019-서-2002 (2019.08.22.)",
+      ],
     },
   },
   "155-4-parental-care-merge-right-sale": {
@@ -173,6 +200,21 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
         houseIds: minority,
         otherPositionInput: withRows(input, minority, (h) => ({ ...h, decedentSameHouseholdAtInheritance: false })),
       });
+    }
+
+    // C7 — 2017.2.3. 전 양도(「선순위 1주택」 한정 신설 전). 엔진(A)은 소수지분을 제외하지 못한 행을 주택 수에 남긴다.
+    //   반대(B)는 그 행들을 명부에서 빼고 주택 수를 다시 구해 판정. 감지 집합은 엔진 정본(`unexcludedCoMinorityHouseIds`)이 낸다.
+    //   같은 피상속인으로 한정하지 않는다(부부가 각자 받은 소수지분도 개정 전 양도분이면 대상). C2(동일세대)는 게이트 통과 행만 센다.
+    if (isBeforeCoInheritedRankingClause(input.transferDate)) {
+      const ids = resolveInheritedHouseExclusionFromInput(input).unexcludedCoMinorityHouseIds;
+      if (ids.length > 0) {
+        const houses = (input.houses ?? []).filter((h) => !ids.includes(h.id));
+        out.push({
+          id: "155-3-co-inherited-minority-before-ranking-clause",
+          houseIds: ids,
+          otherPositionInput: { ...input, houses, householdHousingCount: deriveHouseholdHousingCount(houses) },
+        });
+      }
     }
   }
 

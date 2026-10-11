@@ -54,7 +54,7 @@ describe("합가 §155④⑤ 비과세 (앵커)", () => {
 
   it("★ 동거봉양 합가 동일 → 비과세 (RED→GREEN)", () => {
     const r = calculateTransferTax(
-      mergeInput({ parentalCareMerge: { mergeDate: new Date("2020-01-01") } }),
+      mergeInput({ parentalCareMerge: { mergeDate: new Date("2020-01-01"), parentAge: "over_60" as const } }),
       mockRates,
     );
     expect(r.isExempt).toBe(true);

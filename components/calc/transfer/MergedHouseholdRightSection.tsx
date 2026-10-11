@@ -15,10 +15,11 @@
  *   ③ 섹션이 소유한 값을 읽기만 한다. `PresaleRightsSection`이 ②·④ 사이에서 쓰는 것과 같은
  *   **상호 배타 렌더** 규약이라 값의 진실은 여전히 하나다.
  *
- * ## ⚠️ 「선택 안 함」과 「해당 없음」은 다르다
+ * ## ⚠️ 「선택 안 함」은 「모름」이다 (결정 #7)
  *
- * 미선택은 판정 불가로 남아 종전 동작 + 경고가 된다. 신규 필드라 기존 저장분에 값이 없고,
- * 미입력을 미해당으로 읽으면 합가 세대 전체가 갑자기 과세로 뒤집힌다.
+ * 합가일·「먼저 양도」·기한 요건을 갖춘 세대가 구성을 선택하지 않으면 모름 = 혜택 불성립으로 읽어 합가 예외를 적용하지 않고
+ * 「소득세법」 §89② 배제를 적용한다(비과세 판정이 이 배제 때문에만 과세로 갈릴 때 확인 필요 고지). 「어느 것에도 해당하지 않는다」는
+ * 사실의 선언이고, 미선택은 사실을 모르는 상태다. 입력을 막지는 않는다.
  */
 
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -29,6 +30,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { mergeExemptionYearsLabel } from "@/lib/calc/one-house-era-labels";
+import { ParentalCareParentAgeField } from "./ParentalCareParentAgeField";
 
 type Props = {
   form: TransferFormData;
@@ -126,6 +128,13 @@ export function MergedHouseholdRightSection({ form, onChange }: Props) {
           </FieldCard>
         </div>
       )}
+      {/* 동거봉양 직계존속 연령 요건(결정 #9) — 합가일 칸을 이 카드가 소유하는 구간에서만(그 밖에는 ③ 섹션의 `MergeDateSection`이 받는다). §156의2⑧2호는 요양급여 갈래가 없다. */}
+      {ownsMergeDateInputs && form.parentalCareMergeDate && (
+        <ParentalCareParentAgeField
+          value={form.parentalCareParentAge}
+          onChange={(v) => onChange({ parentalCareParentAge: v })}
+        />
+      )}
 
       {hasMerge && (
         <>
@@ -194,8 +203,8 @@ export function MergedHouseholdRightSection({ form, onChange }: Props) {
 
           {kind === "" && (
             <p className="text-caption leading-relaxed text-violet-800 dark:text-violet-300">
-              선택하지 않으면 이 요건을 판정할 수 없어 <b>종전대로 계산</b>하고 결과에 확인 안내를
-              남깁니다.
+              선택하지 않으면 이 요건을 모르는 것으로 보아 <b>합가 예외를 적용하지 않고</b>(§89② 배제 적용) 결과에
+              확인 필요를 남깁니다.
             </p>
           )}
         </>

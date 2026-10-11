@@ -344,7 +344,7 @@ export function judgeMixedUseOneHouseExemption(
   if (clause2Excluded && houseCountOk && meetsOneHouseRequirements && !isUnregistered) {
     warnings.push(
       "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 겸용주택을 양도해 「소득세법」 §89②에 따라 " +
-        "1세대1주택 비과세(§89①3호)를 적용하지 않았습니다 — 시행령 §156의2·§156의3의 예외에 해당하지 않습니다. 주택분도 과세됩니다.",
+        "1세대1주택 비과세(§89①3호)를 적용하지 않았습니다 — 시행령 §156의2·§156의3의 예외를 적용하지 않았습니다(해당 여부는 판정 메뉴에서 확인 필요). 주택분도 과세됩니다.",
     );
   }
   if (houseCountOk && !meetsOneHouseRequirements) {

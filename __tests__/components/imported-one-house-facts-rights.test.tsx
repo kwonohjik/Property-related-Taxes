@@ -56,11 +56,11 @@ describe("P6-a 읽기 전용 요약 — 권리 사실", () => {
     render(
       <ImportedOneHouseFactsCard
         facts={undefined}
-        rights={rights({ generalHouseHeldAtInheritance: true })}
+        rights={rights({ generalHouseGiftedFromDecedentWithin2yr: true, generalHouseGiftDate: "2019-03-04" })}
       />,
     );
     expect(screen.getByTestId("imported-one-house-facts")).toBeTruthy();
-    expect(screen.getByText(/상속개시 당시 보유한 주택/)).toBeTruthy();
+    expect(screen.getByText(/상속개시 2년 내 피상속인 증여분/)).toBeTruthy();
   });
 
   /**

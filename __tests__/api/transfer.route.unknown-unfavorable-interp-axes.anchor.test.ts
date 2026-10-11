@@ -329,7 +329,7 @@ describe("§155④⑤⑦ 겹침 — ④⑤·⑦3호는 해석 확보(met), ⑦1�
   });
 
   it("UX-C2 §155④ 동거봉양 합가 → 적용 + 13호 중과 배제 (수정 전 199,997,600)", async () => {
-    const s = await single(merged({ parentalCareMergeDate: "2020-01-01", isFirstTransferredInMerge: true }));
+    const s = await single(merged({ parentalCareMergeDate: "2020-01-01", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true }));
     expect(s).toMatchObject({ totalTax: RH_EXCLUDED, rentalApplied: true });
     expect(s.exclusions).toContain("long_term_rental_residence");
     expect(s.confirm).toBeUndefined();

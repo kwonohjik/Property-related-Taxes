@@ -114,7 +114,7 @@ export interface HouseEntry {
   inheritedDate?: string;
   /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
   isCoInherited?: boolean;
-  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=산입, false·미제공=소수지분 제외후보) */
+  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=소유로 봄, 일반주택 양도 시 §155② 요건으로 제외 판정 · false·미제공=소수지분 §155③ 제외후보) */
   isLargestCoInheritedShareholder?: boolean;
   /** 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미 */
   decedentSameHouseholdAtInheritance?: boolean;
@@ -569,6 +569,12 @@ export interface PresaleRightEntry {
   decedentSameHouseholdAtInheritance?: boolean;
   /** 단서의 예외 — 입주권: §156의2⑥ 단서(합가 전부터 보유하던 주택이 입주권으로 전환된 경우) · 분양권: §156의3④ 단서(합치기 이전부터 보유하던 분양권, 전환 요건 없음) */
   parentalCareMergeInheritedRight?: boolean;
+  /**
+   * 상속받은 **조합원입주권**의 상속개시일(YYYY-MM-DD) — 입주권·상속 행 전용(결정 #8). §156의2⑥·⑦ 후단 「상속개시 당시 보유한
+   * 주택」을 날짜로 판정하는 데만 쓴다(기산일은 바꾸지 않는다). 분양권 행은 `acquisitionDate`가 상속개시일이라 쓰지 않는다.
+   * 비우면 모름 — 상속 입주권 특례를 적용하지 않고 확인 필요로 알린다.
+   */
+  inheritedDate?: string;
   /**
    * 상속받은 **분양권** — 피상속인이 그 분양권을 취득한 날(YYYY-MM-DD). `acquisitionDate`는 상속개시일이다.
    * 동일세대 상속이면 2021.1.1. 적용례(§89②·§104⑦)를 이 날로 본다(재산세제과-1033). 분양권·상속 행에서만 싣는다.

@@ -110,6 +110,22 @@ export function article89Clause2Notices(
     );
   }
 
+  // 합가(혼인) 전 보유 구성 미선택 → 불성립(모름=불리, 결정 #7). 결론을 가를 때만 낸다(위와 같은 게이트). 문구는 중립.
+  if (declarationDecides && clause2?.status === "excluded" && clause2.undeclaredMergeArticles?.length) {
+    notices.push(
+      `합가(혼인) 전 보유 구성을 선택하지 않아 그 예외(${clause2.undeclaredMergeArticles.join(" · ")})를 적용하지 않고 「소득세법」 §89② 배제를 ` +
+        "적용했습니다(확인 필요). 합가 전 최초양도주택을 소유하던 사람이 실제로 무엇을 갖고 있었는지 1세대1주택 판정 메뉴의 " +
+        "「합가 전 보유 구성」에서 사실대로 선택하면 판정합니다.",
+    );
+  }
+
+  // 날짜로 확정된 사실(상속개시 뒤 취득 등) 때문에 상속 예외를 적용하지 않았다 — 종전 조문 지목 카드가 사라지므로 이유를 남긴다(결정 #8).
+  if (declarationDecides && clause2?.status === "excluded") {
+    for (const reason of clause2.exclusionReasons ?? []) {
+      notices.push(`「소득세법」 §89② 배제를 적용했습니다 — ${reason}`);
+    }
+  }
+
   // 모르는 사실 때문에 특례를 적용하지 않았다(원조합원·승계취득 미입력 등) — 확인 필요.
   if (declarationDecides && clause2?.status === "excluded") {
     for (const note of clause2.confirmNotes ?? []) {
@@ -177,7 +193,6 @@ export const ARTICLE_89_2_FACT_KEYS = [
   "ruralHouse",
   "replacementHouse",
   "rightThreeYearException",
-  "generalHouseHeldAtInheritance",
   "inheritedRightChoiceWhenBothHeld",
   "generalHouseGiftedFromDecedentWithin2yr",
   "generalHouseGiftDate",

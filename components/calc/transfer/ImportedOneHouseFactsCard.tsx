@@ -38,7 +38,6 @@ export type ImportedRightsSlice = Pick<
   | "rightResidedOneYearOrMore"
   | "rightDisposalDelayReason"
   | "rightDisposedByThatMethod"
-  | "generalHouseHeldAtInheritance"
   | "generalHouseGiftedFromDecedentWithin2yr"
   | "generalHouseGiftDate"
   | "inheritedRightChoiceWhenBothHeld"
@@ -216,7 +215,6 @@ function rightsRows(r: ImportedRightsSlice, completionYears: string): Row[] {
   if (r.rightResidedOneYearOrMore) push("1년 이상 거주", "예");
   push("처분 지연 사유", r.rightDisposalDelayReason ? "선언함" : undefined);
   if (r.rightDisposedByThatMethod) push("그 방법으로 양도됨", "예");
-  if (r.generalHouseHeldAtInheritance) push("상속개시 당시 보유한 주택", "예");
   if (r.generalHouseGiftedFromDecedentWithin2yr) {
     push("상속개시 2년 내 피상속인 증여분", "예");
     // OH-12c — 2018.2.13. 이후 증여분만 특례 배제(부칙 제28637호 제16조) — 날짜가 결론을 가른다.

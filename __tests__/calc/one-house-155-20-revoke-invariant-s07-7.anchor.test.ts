@@ -27,7 +27,7 @@ const TMP = {
 };
 const D4 = {
   isOneHousehold: true, transferDate: "2026-04-10", contractTotalPrice: "800000000",
-  marriageDate: "2019-03-01", parentalCareMergeDate: "2018-06-01", isFirstTransferredInMerge: true,
+  marriageDate: "2019-03-01", parentalCareMergeDate: "2018-06-01", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true,
   asset: { assetKind: "housing", acquisitionDate: "2015-04-01" },
   houses: [
     { id: "spouse", region: "capital", acquisitionDate: "2014-02-01", mergeOrigin: "second_merge_side" },

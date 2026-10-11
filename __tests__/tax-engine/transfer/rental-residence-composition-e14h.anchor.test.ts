@@ -215,7 +215,7 @@ describe("E-14h resolveRentalResidenceComposition", () => {
     // 각자 1주택 합가(합친 가족 쪽) — L-4와 같은 이유로 `mergeOrigin` 명시.
     const r = resolveRentalResidenceComposition(
       input([SELLING, RENTAL, { ...OTHER, mergeOrigin: "counterpart_side" }], {
-        parentalCareMerge: { mergeDate: D("2020-01-01") },
+        parentalCareMerge: { mergeDate: D("2020-01-01"), parentAge: "over_60" as const },
         isFirstTransferredInMerge: true,
       } as Partial<TransferTaxInput>),
       parsed,

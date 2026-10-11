@@ -12,6 +12,7 @@ import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
 import { canStockAggregateFromHistory } from "@/lib/calc/stock-aggregate-entry";
 import { resumeCalculationRecord } from "@/lib/calc/history-resume-entry";
 import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
+import { inheritedRightHistoryNotice } from "@/lib/calc/history-inherited-right-notice";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/StockHistoryAggregateModal";
 
@@ -190,6 +191,7 @@ export function HistoryDetailDrawer({
   }
 
   const summaryItems = extractResultSummaryItems(record.resultData, record.taxType);
+  const inheritedRightNotice = inheritedRightHistoryNotice(record);
 
   async function doDelete() {
     setIsDeleting(true);
@@ -316,6 +318,14 @@ export function HistoryDetailDrawer({
             >
               이 조건으로 재계산
             </button>
+          )}
+          {inheritedRightNotice && (
+            <p
+              data-testid="drawer-inherited-right-notice"
+              className="rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
+            >
+              {inheritedRightNotice}
+            </p>
           )}
           {resumeBlocked && (
             <p

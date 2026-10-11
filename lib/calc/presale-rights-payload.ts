@@ -54,6 +54,8 @@ export interface PresaleRightPayloadItem {
   decedentSameHouseholdAtInheritance?: boolean;
   parentalCareMergeInheritedRight?: boolean;
   decedentAcquisitionDate?: string;
+  /** 상속받은 조합원입주권의 상속개시일 — 입주권·상속 행 전용(보유 판정 전용 · 결정 #8). */
+  inheritedDate?: string;
 }
 
 /** 기존주택 원조합원 행의 §155① 사실(전입일·기존 임차인 단서·§155⑱ 사유). 그 밖의 행이면 빈 객체. */
@@ -116,5 +118,7 @@ export function buildPresaleRightsPayload(
       ...(p.type === "presale_right" && p.isInherited && p.decedentAcquisitionDate
         ? { decedentAcquisitionDate: p.decedentAcquisitionDate }
         : {}),
+      // 상속 입주권의 상속개시일 — 입주권·상속 행에서만(분양권은 취득일이 상속개시일이라 싣지 않는다 · 상속 해제 행의 stale 값 차단).
+      ...(p.type === "redevelopment_right" && p.isInherited && p.inheritedDate ? { inheritedDate: p.inheritedDate } : {}),
     }));
 }

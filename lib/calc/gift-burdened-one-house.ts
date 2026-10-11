@@ -42,6 +42,7 @@ import {
 } from "@/lib/calc/one-house-extra-facts-payload";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { buildMergeFacts, type MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
+import { PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE, parentalCareParentAgeMissing } from "@/lib/calc/parental-care-age-issue";
 import { isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
@@ -357,8 +358,15 @@ export function giftBurdenedMergeSlice(bgt: BurdenedGiftTransferTaxInput): Merge
   return {
     marriageDate: bgt.marriageDate ?? "",
     parentalCareMergeDate: bgt.parentalCareMergeDate ?? "",
+    parentalCareParentAge: bgt.parentalCareParentAge ?? "",
     isFirstTransferredInMerge: bgt.isFirstTransferredInMerge === true,
   };
+}
+
+/** ⑧ — 동거봉양 합가일을 넣고 직계존속 연령을 고르지 않음(결정 #9 하위 1 가). ⑤·④와 같은 게이트. 오류 문구 또는 null. */
+export function giftBurdenedMergeAgeError(bgt: BurdenedGiftTransferTaxInput): string | null {
+  if (!giftBurdenedMergeInScope(bgt)) return null;
+  return parentalCareParentAgeMissing(giftBurdenedMergeSlice(bgt)) ? PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE : null;
 }
 
 /** ④ — 계산기와 같은 leaf. 게이트 밖이면 키 없음. */

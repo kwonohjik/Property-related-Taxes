@@ -6,9 +6,15 @@
  * **뒤에** 취득된 경우다. 판정은 엔진 leaf(`qualifiesAsInheritanceGeneralHouse`)를 그대로 부른다(선언 없이
  * `no`가 나오는 경우 = 선언이 결론을 바꿀 수 있는 경우). ⑤·④·⑧이 이 술어 하나를 쓴다
  * (`feedback_shared_predicate_argument_parity`).
+ *
+ * 두 갈래에서 열린다(같은 질문 — 「양도 주택이 상속개시 당시 보유한 권리로 완공된 신축주택인가」):
+ *   · 주택 축 — 명부 ② 풀 상속주택(§155②, 결정 #6으로 최대지분 공동상속 포함)의 상속개시일 뒤에 취득한 경우
+ *   · 권리 축(결정 #8) — **⑥·④ 모양**(상속받은 권리 1개 + 상속 외 권리 없음)에서 권리의 상속개시일 뒤에 취득한 경우.
+ *     ⑦·⑤ 후단(상속 외 권리 동반)에는 신축주택을 포함하는 문구가 없어 엔진이 그 값을 보지 않으므로 열지 않는다.
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { qualifiesAsInheritanceGeneralHouse } from "@/lib/tax-engine/data/inheritance-general-house-era";
+import { isSecondClausePoolHouse } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 
 const toDate = (v: string | undefined): Date | undefined => {
@@ -18,7 +24,7 @@ const toDate = (v: string | undefined): Date | undefined => {
 };
 
 export function generalHouseRightAtInheritanceVisible(
-  form: Pick<TransferFormData, "houses" | "assets" | "transferDate">,
+  form: Pick<TransferFormData, "houses" | "assets" | "transferDate" | "presaleRights">,
 ): boolean {
   // 양도 대상이 §154① 비과세 판정 자산일 때만 — ⑤ 명부 섹션이 열리는 범위와 같다(막다른 길 방지).
   if (!isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) return false;
@@ -35,16 +41,28 @@ export function generalHouseRightAtInheritanceVisible(
   const acquisition = toDate(form.assets?.[0]?.acquisitionDate);
   const transfer = toDate(form.transferDate);
   if (!acquisition || !transfer) return false;
-  return (form.houses ?? []).some(
+  const houseAxis = (form.houses ?? []).some(
     (h) =>
       h.isInherited &&
-      // §155③ 공동상속주택에는 이 괄호가 없다 — 단독상속 행만 본다(엔진과 같은 범위).
-      !h.isCoInherited &&
+      // §155③ 소수지분에는 이 괄호가 없다 — ② 풀(단독상속·최대지분 공동상속) 행만 본다(엔진과 같은 술어).
+      isSecondClausePoolHouse(h) &&
       qualifiesAsInheritanceGeneralHouse({
         generalHouseAcquisitionDate: acquisition,
         inheritedDate: toDate(h.inheritedDate),
         transferDate: transfer,
       }) === "no",
+  );
+  if (houseAxis) return true;
+  // 권리 축(⑥·④ 모양) — 상속개시일은 분양권 행의 취득일 / 입주권 행의 상속개시일 칸(엔진 `qualifyInheritedRight`와 같은 원값).
+  const rights = form.presaleRights ?? [];
+  if (rights.length !== 1 || !rights[0].isInherited) return false;
+  const r = rights[0];
+  return (
+    qualifiesAsInheritanceGeneralHouse({
+      generalHouseAcquisitionDate: acquisition,
+      inheritedDate: toDate(r.type === "presale_right" ? r.acquisitionDate : r.inheritedDate),
+      transferDate: transfer,
+    }) === "no"
   );
 }
 
@@ -60,6 +78,7 @@ export function buildInheritanceGeneralHousePayload(
     | "houses"
     | "assets"
     | "transferDate"
+    | "presaleRights"
     | "generalHouseGiftedFromDecedentWithin2yr"
     | "generalHouseGiftDate"
     | "generalHouseRightAtInheritance"

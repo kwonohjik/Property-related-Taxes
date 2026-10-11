@@ -62,6 +62,9 @@ test.describe("검증 경고 표시", () => {
     await expect(card).toBeVisible();
     await expect(card).toContainText("각각 별개 특례이므로 해당하는 쪽만 남기세요");
 
+    // 동거봉양 합가일을 넣으면 직계존속 연령 칸이 열린다(결정 #9) — 고르지 않으면 ⑧이 판정 진행을 막는다(경고와 별개의 차단).
+    await page.getByTestId("parental-care-age-over-60").click();
+
     // 🔑 경고는 **막지 않는다** — 판정이 그대로 나온다.
     await page.getByTestId("one-house-judge-cta").click();
     await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();

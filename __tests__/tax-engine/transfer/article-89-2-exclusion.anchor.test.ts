@@ -200,14 +200,6 @@ describe("§89② 예외 — 시행령 §156의2③ · §156의3② (일시적 1
 });
 
 describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 불리 적용 금지)", () => {
-  function warnedButExempt(input: TransferTaxInput, ...needles: string[]) {
-    const r = run(input);
-    expect(r.isExempt).toBe(true); // 종전 동작 유지
-    const joined = (r.warnings ?? []).join("\n");
-    expect(joined).toContain("§89②");
-    for (const n of needles) expect(joined).toContain(n);
-  }
-
   it("3년 초과 + §156의2④·시행규칙 §75① 미선언 → 배제(2026-10-08 미선언=불리 — 판정 메뉴에 선언 칸이 있다) + 확인 필요", () => {
     // 입주권 2016-10-01 + 3년 = 2019-10-01 < 양도 2024-06-01
     const r = run(houseInput({ presaleRights: [right()] }));
@@ -219,19 +211,23 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
   });
 
   /**
-   * 🔴 2026-08-26 갱신(Phase 3): 종전 사유는 「순위 규칙 미구현」이었다. 이제 순위·공동상속·
-   *    동일세대는 자기선언으로 판정한다. 남은 판정 불가 사유는 **일반주택 긍정 선언**
-   *    (`generalHouseHeldAtInheritance`)이 없는 것이다 — 미선언을 「미해당」으로 읽으면
-   *    상속 권리 보유 세대가 갑자기 과세로 뒤집히므로 여전히 종전 동작을 유지한다.
+   * 🔴 2026-10-11 갱신(결정 #8): 종전에는 일반주택 긍정 선언 토글(`generalHouseHeldAtInheritance`)이 없으면 판정 불가·비과세 유지였다.
+   *    이제 「상속개시 당시 보유」는 날짜로 판정한다. 상속 입주권의 상속개시일을 모르면(`inheritedDate` 없음) 불성립 + 확인 필요다 —
+   *    그 결과 일반 권리 ③ 타이밍을 탄다(③이 서면 상속과 무관하게 비과세, 서지 않으면 배제 + 확인 필요).
    */
-  it("상속받은 권리 + 일반주택 긍정 선언 없음 → §156의2⑥·⑦ 판정 불가", () => {
-    warnedButExempt(
-      houseInput({
-        transferDate: new Date("2019-06-01"),
-        presaleRights: [right({ isInherited: true })],
-      }),
-      "§156의2 ⑥·⑦",
+  it("상속받은 입주권 + 상속개시일 없음 → 불성립(일반 권리 ③으로 판정) — ③ 성립이면 비과세 · 경고 없음", () => {
+    const r = run(
+      houseInput({ transferDate: new Date("2019-06-01"), presaleRights: [right({ isInherited: true })] }),
     );
+    expect(r.isExempt).toBe(true);
+    expect(r.warnings ?? []).toEqual([]);
+  });
+  it("상속받은 입주권 + 상속개시일 없음 + ③ 불성립(3년 초과) → 배제 + 확인 필요(모름 = 혜택 불성립)", () => {
+    const r = run(houseInput({ presaleRights: [right({ isInherited: true })] }));
+    expect(r.isExempt).toBe(false);
+    const joined = (r.warnings ?? []).join("\n");
+    expect(joined).toContain("상속받은 조합원입주권의 상속개시일이 없어");
+    expect(joined).toContain("확인 필요");
   });
 
   /**
@@ -240,17 +236,34 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
    *    다르므로(⑨엔 60세 요건이 없고 호 번호가 하나씩 당겨진다) 둘을 함께 안내하면
    *    확인 대상이 절반은 무관한 조문이 된다.
    */
-  it("혼인 합가 선언 + 합가 전 보유 구성 미선언 → §156의2⑨ 판정 불가", () => {
-    warnedButExempt(
+  it("혼인 합가 선언 + 합가 전 보유 구성 미선언 → §156의2⑨ 불성립 + 확인 필요 (결정 #7 — 종전: 판정 불가·비과세 유지)", () => {
+    // 양도 2024 — 권리 취득(2016-10-01) + 3년 초과라 ③ 타이밍으로 구제되지 않는다(3년 예외 축은 명시적으로 닫는다).
+    const r = run(
+      houseInput({
+        transferDate: new Date("2024-06-01"),
+        presaleRights: [right()],
+        marriageMerge: { marriageDate: new Date("2021-01-01") },
+        // 날짜 게이트(먼저 양도 → 합가 이후 → N년)가 구성 판정보다 먼저다(S05-6) — 게이트를 통과해야 구성 미선언이 확인 필요로 남는다.
+        isFirstTransferredInMerge: true,
+        rightThreeYearException: { kind: "none" },
+      }),
+    );
+    expect(r.isExempt).toBe(false);
+    const joined = (r.warnings ?? []).join("\n");
+    expect(joined).toContain("§156의2 ⑨");
+    expect(joined).toContain("확인 필요");
+  });
+  it("긍정 짝 — 같은 사실이 ③ 타이밍(권리 취득 3년 이내 양도)을 채우면 합가 구성을 몰라도 비과세 · 경고 없음", () => {
+    const r = run(
       houseInput({
         transferDate: new Date("2019-06-01"),
         presaleRights: [right()],
         marriageMerge: { marriageDate: new Date("2018-01-01") },
-        // 날짜 게이트(먼저 양도 → 합가 이후 → N년)가 구성 판정보다 먼저다(S05-6) — 게이트를 통과해야 구성 미선언이 판정 불가로 남는다.
         isFirstTransferredInMerge: true,
       }),
-      "§156의2 ⑨",
     );
+    expect(r.isExempt).toBe(true);
+    expect(r.warnings ?? []).toEqual([]);
   });
 
   // E011 — 2주택(특수주택 선언 없음)은 배제 확정이라 이 갈래를 3주택으로 옮겼다(`article-89-2-two-house-axis` U-1).

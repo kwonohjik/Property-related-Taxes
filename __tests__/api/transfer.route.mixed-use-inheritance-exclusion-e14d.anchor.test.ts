@@ -164,10 +164,16 @@ describe("E-14d route — 겸용주택 §155②③", () => {
     expect(right.result.calculationRoute.highValueRule).toBe("below_threshold_exempt");
   });
 
-  it("E14D-R5 §155③ 공동상속 소수지분 → 비과세 / 최대지분자 → 과세", async () => {
+  it("E14D-R5 공동상속 — 소수지분(§155③)과 최대지분자(§155②, 결정 #6) 모두 비과세 / 최대지분 + 동일세대는 과세", async () => {
     const minority = await run(form({ ...INH, isCoInherited: true, isLargestCoInheritedShareholder: false }));
     expect(minority.result.calculationRoute.highValueRule).toBe("below_threshold_exempt");
+    // 결정 #6: 최대지분 상속인도 ②로 판정한다(변경 전에는 산입 → 과세였다)
     const largest = await run(form({ ...INH, isCoInherited: true, isLargestCoInheritedShareholder: true }));
-    expect(largest.result.calculationRoute.highValueRule).toBe("non_one_house_full_taxation");
+    expect(largest.result.calculationRoute.highValueRule).toBe("below_threshold_exempt");
+    // 부정 짝 — ② 단서(동일세대)가 최대지분 행에도 걸려 과세가 유지된다
+    const sameHousehold = await run(
+      form({ ...INH, isCoInherited: true, isLargestCoInheritedShareholder: true, decedentSameHouseholdAtInheritance: true }),
+    );
+    expect(sameHousehold.result.calculationRoute.highValueRule).toBe("non_one_house_full_taxation");
   });
 });

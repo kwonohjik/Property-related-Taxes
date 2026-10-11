@@ -191,9 +191,16 @@ export function buildOneHouseCountBreakdown(p: {
 
   // §155②③ 상속 — **행을 특정할 수 있는 유일한 축**이다. 입주권 양도 판정에는 적용하지 않는다(위 `inheritedExclusionApplies`).
   for (const h of p.inheritedExclusionApplies === false ? [] : p.inheritedExclusion.excludedHouses) {
+    // ② 풀(`basis` "sole")에는 최대지분 공동상속주택도 든다 — 라벨만 행에서 도출한다(결정 #6, 기초 판정 근거는 같은 §155②).
+    const largestCo = p.houses?.some((x) => x.id === h.houseId && x.isCoInherited === true) === true;
     excluded.push({
       houseId: h.houseId,
-      label: h.basis === "sole" ? "상속주택 — 주택 수 제외" : "공동상속주택(소수지분) — 주택 수 제외",
+      label:
+        h.basis === "sole"
+          ? largestCo
+            ? "공동상속주택(최대지분) — 주택 수 제외"
+            : "상속주택 — 주택 수 제외"
+          : "공동상속주택(소수지분) — 주택 수 제외",
       legalBasis:
         h.basis === "sole"
           ? INHERITED_HOUSE.EXEMPTION_SOLE_BASIS

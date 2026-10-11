@@ -62,7 +62,7 @@ function formWithStep1Warnings(): OneHouseJudgmentFormData {
     ...createInitialOneHouseJudgmentForm(),
     isOneHousehold: false,
     marriageDate: "2024-03-01",
-    parentalCareMergeDate: "2023-05-01",
+    parentalCareMergeDate: "2023-05-01", parentalCareParentAge: "over_60",
   } as unknown as OneHouseJudgmentFormData;
 }
 
@@ -106,7 +106,7 @@ function formWithMergeWarning(): OneHouseJudgmentFormData {
     ...f,
     assets: [{ ...f.assets[0], rentalHousingException: undefined }],
     marriageDate: "2024-03-01",
-    parentalCareMergeDate: "2023-05-01",
+    parentalCareMergeDate: "2023-05-01", parentalCareParentAge: "over_60",
   } as unknown as OneHouseJudgmentFormData;
 }
 

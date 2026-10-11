@@ -174,9 +174,14 @@ export const propertyBaseShape = {
   generalHouseGiftDate: z.string().date().optional(),
   generalHouseRightAtInheritance: z.enum(["redevelopment_right", "presale_right", "none"]).optional(),
   // ⑫ §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 예외 축 — 엔진이 게이트, strip 방지
-  generalHouseHeldAtInheritance: z.boolean().optional(),
   inheritedRightChoiceWhenBothHeld: z.enum(["redevelopment_right", "presale_right"]).optional(),
-  parentalCareMerge: z.object({ mergeDate: z.string().date() }).optional(),
+  parentalCareMerge: z
+    .object({
+      mergeDate: z.string().date(),
+      // ⑫ 동거봉양 직계존속 연령 요건 선언(결정 #9) — 비어 있으면 모름(엔진이 불성립 + 확인 필요)
+      parentAge: z.enum(["over_60", "care_benefit", "none"]).optional(),
+    })
+    .optional(),
   // ⑫ 비거주자(§121② 단서 · 시행령 §154⑧2호) — 판정 메뉴 전용 입력. 계산기는 보내지 않는다.
   transferorNonResidentAtTransfer: z.boolean().optional(),
   nonResidentHoldingPeriod: z

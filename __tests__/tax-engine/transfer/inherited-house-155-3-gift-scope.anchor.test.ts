@@ -91,8 +91,9 @@ describe("L-11 — §155③ 공동상속(소수지분) 풀에는 증여 제외 �
     expect(ex(input("co_minority", undefined)).coExcludedCount).toBe(1);
   });
 
-  it("③ 단서 — 최대지분 상속인은 증여와 무관하게 산입(제외 0)", () => {
+  it("결정 #6 — 최대지분 상속인은 ② 풀이라 증여 괄호가 걸린다(제외 0) · 증여 아님이면 제외 1", () => {
     expect(ex(input("co_largest", "2018-03-01")).excludedCount).toBe(0);
+    expect(ex(input("co_largest", undefined, { generalHouseGiftedFromDecedentWithin2yr: false })).excludedCount).toBe(1);
   });
 
   it("②·③ 함께 보유(3주택) + 증여 — ② 제외 0 · ③ 제외 1", () => {

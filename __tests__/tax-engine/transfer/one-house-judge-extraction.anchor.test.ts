@@ -69,7 +69,6 @@ const JUDGE_INPUT_KEYS = [
   "decedentSameHouseholdBeforeInheritance",
   "decedentCohabitationResidenceMonths",
   "decedentCohabitationHoldingStartDate",
-  "generalHouseHeldAtInheritance",
   "generalHouseGiftedFromDecedentWithin2yr",
   // A3 OH-12c·OH-12 — 증여일(2018-02-13 부칙 게이트) · 상속개시 당시 보유 권리의 신축주택
   "generalHouseGiftDate",
@@ -136,7 +135,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   isOneHousehold: true,
   householdHousingCount: 2,
   marriageMerge: { marriageDate: D("2020-05-06") },
-  parentalCareMerge: { mergeDate: D("2019-09-10") },
+  parentalCareMerge: { mergeDate: D("2019-09-10"), parentAge: "over_60" as const },
   isFirstTransferredInMerge: true,
   residencePeriodMonths: 37,
   residenceTransitionAcquisitionDate: D("2017-01-03"),
@@ -147,7 +146,6 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   decedentSameHouseholdBeforeInheritance: true,
   decedentCohabitationResidenceMonths: 19,
   decedentCohabitationHoldingStartDate: D("2011-08-08"),
-  generalHouseHeldAtInheritance: true,
   generalHouseGiftedFromDecedentWithin2yr: true,
   generalHouseGiftDate: D("2019-03-04"),
   generalHouseRightAtInheritance: "redevelopment_right",
@@ -191,6 +189,8 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     generalHouseNotHeldCount: 0,
     inheritedDateUnknownCount: 0,
     sameInheritanceAsSoldCount: 0,
+    rankingDisqualifiedCoMinorityCount: 0,
+    unexcludedCoMinorityHouseIds: [],
   },
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,
@@ -248,7 +248,7 @@ describe("P2 — 판정 입력 왕복 (세액 불변의 근거)", () => {
       marriageDate: D("2020-01-01"),
       parentalCareMergeDate: undefined,
     });
-    expect(only({ parentalCareMerge: { mergeDate: D("2021-02-02") } })).toMatchObject({
+    expect(only({ parentalCareMerge: { mergeDate: D("2021-02-02"), parentAge: "over_60" as const } })).toMatchObject({
       marriageDate: undefined,
       parentalCareMergeDate: D("2021-02-02"),
     });
@@ -374,7 +374,7 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
       sellingHouseId: "sell",
     };
     expect(exempt({ ...merge, marriageMerge: { marriageDate: D("2020-01-01") } })).toBe(true);
-    expect(exempt({ ...merge, parentalCareMerge: { mergeDate: D("2020-01-01") } })).toBe(true);
+    expect(exempt({ ...merge, parentalCareMerge: { mergeDate: D("2020-01-01"), parentAge: "over_60" as const } })).toBe(true);
     expect(exempt(merge)).toBe(false); // 합가 사실 없음
     expect(
       exempt({
@@ -533,12 +533,17 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
     expect(openArticles(merged)).toContain("§156의2 ⑨");
   });
 
-  it("J-23 §156의2⑥⑦ 상속 권리 — 일반주택 증여 단서가 갈래를 바꾼다", () => {
+  it("J-23 §156의2⑥⑦ 상속 권리 — 상속개시일(날짜)·일반주택 증여 단서가 갈래를 바꾼다", () => {
+    // 결정 #8 — 「상속개시 당시 보유」는 선언 토글이 아니라 입주권 `inheritedDate`로 판정한다(일반주택 2016-01-01 ≤ 상속개시 2017-01-01).
     const inherited = {
       ...S892,
-      presaleRights: [{ ...S892.presaleRights[0], isInherited: true }],
+      presaleRights: [{ ...S892.presaleRights[0], isInherited: true, inheritedDate: D("2017-01-01") }],
     };
-    expect(openArticles(inherited)).toContain("§156의2 ⑥·⑦");
+    expect(openArticles(inherited)).toBe(""); // ⑥ 성립 — 고지 없음
+    // 상속개시일을 모르면(칸 비움) 불성립 + 확인 필요 — 종전의 「판정 불가·비과세 유지」가 아니다.
+    const undated = { ...S892, presaleRights: [{ ...S892.presaleRights[0], isInherited: true }] };
+    expect(openArticles(undated)).toContain("상속개시일이 없어");
+    expect(exempt(undated)).toBe(false);
     // 상속개시일 소급 2년 내 피상속인 증여분이면 그 갈래에서 탈락해 ④ 축으로 넘어간다.
     expect(openArticles({ ...inherited, generalHouseGiftedFromDecedentWithin2yr: true })).toContain(
       "§156의2 ④",
@@ -552,10 +557,13 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
         { ...S892.presaleRights[0], isInherited: true, decedentOwnedOtherRightTypeAtDeath: true },
       ],
     };
-    expect(openArticles({ ...both, inheritedRightChoiceWhenBothHeld: "redevelopment_right" })).toContain(
-      "§156의2 ⑥·⑦",
-    );
-    expect(openArticles(both)).toContain("§156의2 ④");
+    const dated = {
+      ...both,
+      presaleRights: [{ ...both.presaleRights[0], inheritedDate: D("2017-01-01") }],
+    };
+    // ⑮ 선택이 「다른 종류의 권리 미소유」만 면제해 ⑥이 성립한다(고지 없음) / 선택이 없으면 일반 권리로 ④ 축.
+    expect(openArticles({ ...dated, inheritedRightChoiceWhenBothHeld: "redevelopment_right" })).toBe("");
+    expect(openArticles(dated)).toContain("§156의2 ④");
   });
 
   it("J-25 §156의2⑦ 후단 — 상속주택 보유 세대의 일반주택 한정", () => {
@@ -569,13 +577,12 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
       sellingHouseId: "sell",
     };
     // 🔴 ⑦ 후단이 날짜로 닫히면 남는 것은 3년 경과 예외(④·§75①) **미선언**뿐이다 — 2026-10-08부터 미선언은
-    //    배제(모름=불리)라 과세다. ⑦이 열린 아래 `undated`는 판정 보류(비과세 유지)라 두 갈래가 결론으로도 갈린다.
+    //    배제(모름=불리)라 과세다.
     expect(exempt(withInheritedHouse)).toBe(false);
     // A3 OH-12b(2026-09-26) — 일반주택 2016 취득 · 상속 2021이면 「상속개시 당시 보유」가 **날짜로 확인**된다
     //   (§155② 경로와 같은 leaf `qualifiesAsInheritanceGeneralHouse`) ⇒ 선언 없이도 ⑦ 후단이 닫힌다.
     expect(openArticles(withInheritedHouse)).not.toContain("§156의2 ⑦");
-    // 선언이 여전히 의미를 갖는 갈래 — 상속개시일을 모르면(API 직접) 날짜로 확인할 수 없어 판정 불가로 남고,
-    //   선언하면 닫힌다(종전 J-25의 구별력을 이 갈래로 옮긴다).
+    // 상속개시일을 모르면(API 직접) 날짜로 확인할 수 없어 불성립 + 확인 필요다(종전 J-25의 구별력을 이 갈래로 옮겼다).
     //   🔑 공동상속(소수지분)으로 둔다 — §155③에는 「상속개시 당시 보유」 괄호가 없어 날짜 없이도 주택수가 준다.
     //   단독상속이면 2026-10-04 「모름은 불리하게」로 §155② 제외가 먼저 배제돼 이 갈래에 오지 않는다.
     const undated = {
@@ -585,9 +592,10 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
         { ...withInheritedHouse.houses[1], inheritedDate: undefined, isCoInherited: true, isLargestCoInheritedShareholder: false },
       ],
     };
-    expect(exempt(undated)).toBe(true);
-    expect(openArticles(undated)).toContain("§156의2 ⑦");
-    expect(openArticles({ ...undated, generalHouseHeldAtInheritance: true })).not.toContain("§156의2 ⑦");
+    // 결정 #8 — 선언 토글을 폐지했다: 상속개시일을 모르면 불성립 + 확인 필요(종전: 판정 불가·비과세 유지).
+    expect(exempt(undated)).toBe(false);
+    expect(openArticles(undated)).toContain("§156의2 ⑦1호");
+    expect(openArticles(undated)).toContain("확인 필요");
   });
 
   it("J-26 권리 자체가 없으면 이 축은 발동하지 않는다 (긍정 짝)", () => {

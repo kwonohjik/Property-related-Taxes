@@ -33,6 +33,7 @@ import {
 import { TRANSFER } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
+import { PARENTAL_CARE_AGE_CONFIRM_NOTICE, PARENTAL_CARE_AGE_UNMET_REASON, parentalCareAgeVerdict } from "./parental-care-age";
 import {
   describeOneHouseHoldingRequirement,
   describeOneHouseResidenceRequirement,
@@ -387,6 +388,35 @@ function mergeItems(
     facts: [],
     legalBasis: basis,
   });
+
+  // ③′ 동거봉양 — 「60세 이상의 직계존속을 동거봉양하기 위하여」(합가일 현재 만 나이 · 결정 #9). 혼인 합가에는 이 요건이 없다.
+  if (doubleOrder || !isMarriage) {
+    const ageVerdict = parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4");
+    items.push({
+      id: "merge-parent-age",
+      label: "합가일 현재 직계존속(배우자의 직계존속 포함) 중 만 60세 이상 또는 요양급여 받는 60세 미만",
+      status: ageVerdict === "met" ? "met" : "unmet", // 모름도 불성립으로 판정했다(note가 확인 필요를 말한다)
+      facts: [
+        {
+          label: "직계존속 연령",
+          value:
+            input.parentalCareMerge?.parentAge === "over_60"
+              ? "합가일 현재 만 60세 이상"
+              : input.parentalCareMerge?.parentAge === "care_benefit"
+                ? "요양급여 받는 60세 미만"
+                : input.parentalCareMerge?.parentAge === "none"
+                  ? "해당 없음"
+                  : "선택하지 않음",
+        },
+      ],
+      ...(ageVerdict === "unknown"
+        ? { note: `불성립으로 판정했습니다 — 확인 필요: ${PARENTAL_CARE_AGE_CONFIRM_NOTICE}` }
+        : ageVerdict === "unmet"
+          ? { note: PARENTAL_CARE_AGE_UNMET_REASON }
+          : {}),
+      legalBasis: TRANSFER.PARENTAL_CARE_MERGE_EXEMPT,
+    });
+  }
 
   // ④ 「합친 날(혼인한 날)부터 N년 이내」 — N은 양도일 연혁(OH-29)
   const years = resolveMergeExemptionYears(isMarriage ? "marriage" : "parental_care", input.transferDate);

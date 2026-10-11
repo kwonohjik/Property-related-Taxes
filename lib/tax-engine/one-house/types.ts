@@ -18,7 +18,7 @@
  *    그런 정본 결과는 STEP 0.95가 낸 echo(`inheritedHouseExclusionDetail`)로 받는다 — 서브트리가 다시 부르지 않는다.
  */
 import type { FinalOneHouseRestartEcho } from "./final-house-restart";
-import type { TransferTaxInput } from "../types/transfer.types";
+import type { ParentalCareParentAge, TransferTaxInput } from "../types/transfer.types";
 import type { HouseInfo, PresaleRight } from "../types/multi-house-surcharge.types";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 
@@ -65,7 +65,6 @@ export type OneHouseJudgeInput = Pick<
   | "decedentSameHouseholdBeforeInheritance"
   | "decedentCohabitationResidenceMonths"
   | "decedentCohabitationHoldingStartDate"
-  | "generalHouseHeldAtInheritance"
   | "generalHouseGiftedFromDecedentWithin2yr"
   | "generalHouseGiftDate"
   | "generalHouseRightAtInheritance"
@@ -121,6 +120,8 @@ export type OneHouseholdInput = {
   marriageDate?: Date;
   /** §155④ 동거봉양 합가일 */
   parentalCareMergeDate?: Date;
+  /** 동거봉양 합가일 현재 직계존속 연령 요건 선언(결정 #9) — 미선택 = 모름 */
+  parentalCareParentAge?: ParentalCareParentAge;
   /** §155④⑤ 「먼저 양도하는 주택」 여부 */
   isFirstTransferredInMerge?: boolean;
 };
@@ -163,7 +164,6 @@ export type OneHouseFacts = {
   decedentSameHouseholdBeforeInheritance?: boolean;
   decedentCohabitationResidenceMonths?: number;
   decedentCohabitationHoldingStartDate?: Date;
-  generalHouseHeldAtInheritance?: boolean;
   generalHouseGiftedFromDecedentWithin2yr?: boolean;
   /** OH-12c — 소급 2년 내 증여의 증여일(2018-02-13 부칙 게이트) */
   generalHouseGiftDate?: Date;

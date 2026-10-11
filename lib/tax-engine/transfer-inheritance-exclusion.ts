@@ -2,11 +2,13 @@
  * §155②③ 상속주택·공동상속주택 비과세 주택수 제외 산정 (Tier 2-A2 + 단서·순위 게이트 완성)
  *
  * 일반주택 양도 시, 세대가 보유한 상속주택을 비과세 판정 주택수에서 제외한다.
- * - 단독상속 풀(§155②): isInherited && !isCoInherited → 적격 1채이면 제외 1채.
- * - 공동상속 풀(§155③): isInherited && isCoInherited && 최대지분자 아님 → 적격 1채이면 제외 1채.
- *   최대지분자(isLargestCoInheritedShareholder === true)는 산입(제외 안 함, §155③ 단서).
- * - 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② **단독상속 풀만** 게이트-오프(L-11 —
- *   괄호가 「이하 이 항에서 "일반주택"」으로 ②에 한정되고 §155③에는 없다 · 법규과-1841 2022.6.21.).
+ * - ② 풀(§155②): isInherited && (!isCoInherited || 최대지분자) → 적격 1채이면 제외 1채.
+ *   최대지분자(isLargestCoInheritedShareholder === true)는 §155③ 단서로 공동상속주택을 **소유한 것으로 보는**
+ *   사람이고, 그 주택에도 ②를 적용한다(결정 #6 · 서면-2016-부동산-4022 · 서면-2022-부동산-1083). **주택 수 산입은 유지**하되
+ *   ② 요건(동일세대 단서·상속개시 당시 보유·2년 내 증여·순위)으로 판정한다.
+ * - ③ 풀(§155③): isInherited && isCoInherited && 최대지분자 아님(소수지분) → 적격 1채이면 제외 1채.
+ * - 양도(일반)주택이 상속개시 2년내 피상속인 증여분이면 §155② 풀(단독·최대지분)만 게이트-오프(L-11 —
+ *   괄호가 「이하 이 항에서 "일반주택"」으로 ②에 한정되고 §155③ 소수지분에는 없다 · 법규과-1841 2022.6.21.).
  *
  * 적격(제외 후보) 게이트 2종 — 둘 다 통과해야 상속주택으로 인정(§155③도 단서 준용):
  * - 동거봉양 단서(§155② 단서): 상속개시 당시 피상속인과 동일세대(decedentSameHouseholdAtInheritance)
@@ -26,11 +28,21 @@ import {
   type GeneralHouseRightAtInheritance,
 } from "./data/inheritance-general-house-era";
 
+/**
+ * ② 풀 소속 — 단독상속 + 최대지분 공동상속(③ 단서로 본인 소유로 보는 주택). 소수지분은 ③ 풀이다.
+ * 엔진·불성립 사유·폼 게이트(`generalHouseRightAtInheritanceVisible`)가 이 술어 하나를 쓴다(손술어 사본 금지).
+ */
+export function isSecondClausePoolHouse(
+  h: Pick<HouseInfo, "isCoInherited" | "isLargestCoInheritedShareholder">,
+): boolean {
+  return !h.isCoInherited || h.isLargestCoInheritedShareholder === true;
+}
+
 /** UTC 달력일 키 — date-coerce 운영 경로(UTC 자정)와 같은 규약. */
 const dayKey = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
 export interface InheritedHouseExclusionResult {
-  /** §155② 단독상속 상속주택 제외 수 (0 또는 1) */
+  /** §155② 풀(단독상속 + 최대지분 공동상속) 상속주택 제외 수 (0 또는 1) */
   soleExcludedCount: number;
   /** §155③ 공동상속(소수지분) 주택 제외 수 (0 또는 1) */
   coExcludedCount: number;
@@ -47,6 +59,7 @@ export interface InheritedHouseExclusionResult {
    * 「어느 행이 왜 빠졌는지」를 못 보여준다. **세액과 무관한 표시 축**이며,
    * `excludedCount`는 여기 길이와 항상 같다(아래에서 함께 만든다).
    */
+  /** `basis` "sole" = ② 풀(단독상속·최대지분 공동상속), "co_inherited" = ③ 풀(소수지분). 최대지분 여부는 행에서 도출한다. */
   excludedHouses: Array<{ houseId: string; basis: "sole" | "co_inherited" }>;
   /**
    * 게이트 2종을 통과한 **적격** 상속주택 수 — 풀별. **표시용**이며 계산에는 쓰이지 않는다.
@@ -77,6 +90,16 @@ export interface InheritedHouseExclusionResult {
    * (집행기준 89-155-9). **표시용** — 계산은 위 필드가 이미 반영했다.
    */
   sameInheritanceAsSoldCount: number;
+  /**
+   * 순위 부적격 선언(`rankingDisqualifiedCount`) 중 §155③ 소수지분 행 수 — **표시용**. 개정 전(2017.2.3. 전) §155③에는 순위
+   * 요건이 없어서(`data/co-inherited-ranking-clause-era.ts`) 불성립 사유 문구가 조문을 가르는 데 쓴다.
+   */
+  rankingDisqualifiedCoMinorityCount: number;
+  /**
+   * 동일세대 게이트를 통과했지만 엔진이 **제외하지 않은** §155③ 소수지분 행 id — 적격이 2채 이상이라 선순위를 특정하지 못했거나
+   * 순위 부적격 선언으로 빠진 행이다. **표시용**(결정 #10 양론 카드 감지의 단일 소스) — 계산은 위 필드가 이미 반영했다.
+   */
+  unexcludedCoMinorityHouseIds: string[];
 }
 
 /** OH-12 — §155② 괄호 「일반주택」 한정 판정에 쓰는 양도 주택 사실. 미전달이면 이 게이트를 보지 않는다. */
@@ -133,12 +156,14 @@ export function resolveInheritedHouseExclusion(
     generalHouseNotHeldCount: 0,
     inheritedDateUnknownCount: 0,
     sameInheritanceAsSoldCount: 0,
+    rankingDisqualifiedCoMinorityCount: 0,
+    unexcludedCoMinorityHouseIds: [],
   };
   if (!houses) return empty;
 
   /**
-   * OH-12 — §155② 괄호 「그 밖의 주택(상속개시 당시 보유한 주택 … 만 해당)」은 **단독상속 풀**의 요건이다
-   * (§155③ 공동상속주택 조문에는 이 괄호가 없다). 상속주택마다 상속개시일이 다르므로 행별로 본다.
+   * OH-12 — §155② 괄호 「그 밖의 주택(상속개시 당시 보유한 주택 … 만 해당)」은 **② 풀(단독상속·최대지분 공동상속)** 의 요건이다
+   * (§155③ 소수지분 조문에는 이 괄호가 없다). 상속주택마다 상속개시일이 다르므로 행별로 본다.
    * 상속개시일을 모르면(`unknown`) 「상속개시 당시 보유」가 확인되지 않은 것이다 — 그 사실이 있어야 성립하는
    * 특례이므로 **불성립**으로 본다(사용자 결정 2026-10-04 「모름은 납세자에게 불리하게」 · §156의2⑦ 후단
    * `generalHouseHeldAtInheritanceEstablished`도 같은 leaf에서 `yes`만 성립으로 본다).
@@ -158,8 +183,9 @@ export function resolveInheritedHouseExclusion(
   /**
    * L-11 — 「상속개시일부터 소급하여 2년 이내에 피상속인으로부터 증여받은 주택 … 은 제외한다. **이하 이 항에서**
    * "일반주택"이라 한다」는 §155②의 괄호다. §155③(공동상속주택)에는 이 괄호가 없고, 같은 항 단서처럼
-   * 「이하 제3항 … 에서 같다」는 연결도 없다 ⇒ 증여 게이트는 **단독상속 풀**만 비운다. ③ 풀은 그대로 판정한다
+   * 「이하 제3항 … 에서 같다」는 연결도 없다 ⇒ 증여 게이트는 **② 풀**(단독상속·최대지분)만 비운다. ③ 풀은 그대로 판정한다
    * (종전에는 두 풀을 모두 비워 ③ 특례를 근거 없이 껐다). 형제 선례: 위 `heldForSole`(보유 괄호)도 ② 풀에만.
+   * 최대지분 공동상속주택은 ③ 단서로 본인 소유로 보는 주택이라 ② 풀이다(결정 #6) — 두 괄호 모두 받는다.
    */
   const sold = houses.find((h) => h.id === sellingHouseId);
   const soldInheritedKey = sold?.isInherited && sold.inheritedDate ? dayKey(sold.inheritedDate) : undefined;
@@ -169,42 +195,46 @@ export function resolveInheritedHouseExclusion(
   const otherInherited = houses.filter((h) => h.isInherited && h.id !== sellingHouseId);
   const sameInheritanceAsSoldCount = otherInherited.filter(fromSameInheritance).length;
   const inheritedOthers = otherInherited.filter(
-    (h) => !fromSameInheritance(h) && !(generalHouseGiftedFromDecedentWithin2yr && !h.isCoInherited),
+    (h) => !fromSameInheritance(h) && !(generalHouseGiftedFromDecedentWithin2yr && isSecondClausePoolHouse(h)),
   );
 
-  // 표시용 부적격 카운트 — 제외 후보(단독 or 공동 소수지분)만 대상. household 사유 우선.
+  // 표시용 부적격 카운트 — 제외 후보(② 풀 or ③ 소수지분) 전부 대상. household 사유 우선.
   let sameHouseholdDisqualifiedCount = 0;
   let rankingDisqualifiedCount = 0;
+  let rankingDisqualifiedCoMinorityCount = 0;
   for (const h of inheritedOthers) {
-    const isExclusionCandidate = !h.isCoInherited || h.isLargestCoInheritedShareholder !== true;
-    if (!isExclusionCandidate) continue; // 최대지분 공동상속 = 산입(별도 처리), 부적격 표시 대상 아님
     if (!passesHouseholdGate(h)) sameHouseholdDisqualifiedCount++;
-    else if (!passesRankingGate(h)) rankingDisqualifiedCount++;
+    else if (!passesRankingGate(h)) {
+      rankingDisqualifiedCount++;
+      if (!isSecondClausePoolHouse(h)) rankingDisqualifiedCoMinorityCount++;
+    }
   }
 
   const gatesPassed = inheritedOthers.filter((h) => passesHouseholdGate(h) && passesRankingGate(h));
-  const generalHouseNotHeldCount = gatesPassed.filter((h) => !h.isCoInherited && heldVerdict(h) === "no").length;
+  const generalHouseNotHeldCount = gatesPassed.filter((h) => isSecondClausePoolHouse(h) && heldVerdict(h) === "no").length;
   const inheritedDateUnknownCount = gatesPassed.filter(
-    (h) => !h.isCoInherited && heldVerdict(h) === "unknown",
+    (h) => isSecondClausePoolHouse(h) && heldVerdict(h) === "unknown",
   ).length;
-  const eligible = gatesPassed.filter((h) => h.isCoInherited || heldForSole(h));
-  const soleCount = eligible.filter((h) => !h.isCoInherited).length;
-  const coMinorityCount = eligible.filter(
-    (h) => h.isCoInherited && h.isLargestCoInheritedShareholder !== true,
-  ).length;
+  const eligible = gatesPassed.filter((h) => !isSecondClausePoolHouse(h) || heldForSole(h));
+  const soleCount = eligible.filter(isSecondClausePoolHouse).length;
+  const coMinorityCount = eligible.filter((h) => !isSecondClausePoolHouse(h)).length;
   const soleExcludedCount = soleCount === 1 ? 1 : 0;
   const coExcludedCount = coMinorityCount === 1 ? 1 : 0;
   // 🔑 제외 판정은 「적격이 **정확히 1채**일 때만」이므로, 그 1채가 곧 제외 대상이다
   //    (2채 이상이면 선순위를 특정할 수 없어 제외 0 — 위 주석). 같은 필터를 다시 쓴다.
   const excludedHouses: InheritedHouseExclusionResult["excludedHouses"] = [];
   if (soleExcludedCount === 1) {
-    const h = eligible.find((x) => !x.isCoInherited);
+    const h = eligible.find(isSecondClausePoolHouse);
     if (h) excludedHouses.push({ houseId: h.id, basis: "sole" });
   }
   if (coExcludedCount === 1) {
-    const h = eligible.find((x) => x.isCoInherited && x.isLargestCoInheritedShareholder !== true);
+    const h = eligible.find((x) => !isSecondClausePoolHouse(x));
     if (h) excludedHouses.push({ houseId: h.id, basis: "co_inherited" });
   }
+  const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
+  const unexcludedCoMinorityHouseIds = inheritedOthers
+    .filter((h) => !isSecondClausePoolHouse(h) && passesHouseholdGate(h) && !excludedIds.has(h.id))
+    .map((h) => h.id);
   return {
     soleExcludedCount,
     coExcludedCount,
@@ -217,6 +247,8 @@ export function resolveInheritedHouseExclusion(
     generalHouseNotHeldCount,
     inheritedDateUnknownCount,
     sameInheritanceAsSoldCount,
+    rankingDisqualifiedCoMinorityCount,
+    unexcludedCoMinorityHouseIds,
   };
 }
 

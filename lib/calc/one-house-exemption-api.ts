@@ -29,7 +29,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
-import { buildHouseholdSpecialPayload } from "./transfer-tax-api-body-blocks";
+import { buildHouseholdSpecialPayload, buildParentalCareMergeFact } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
@@ -242,7 +242,6 @@ export function buildOneHouseExemptionApiBody(
       : {}),
     // OH-12c 증여일 · OH-12 신축주택 선언 — 계산기 ④와 같은 빌더
     ...buildInheritanceGeneralHousePayload(form),
-    ...(form.generalHouseHeldAtInheritance ? { generalHouseHeldAtInheritance: true } : {}),
     ...(form.inheritedRightChoiceWhenBothHeld
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }
       : {}),
@@ -382,9 +381,7 @@ function buildMergePayload(form: OneHouseJudgmentFormData) {
     (form.longTermMortgageSpecial && form.longTermMortgageParentalCareMerge);
   return {
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
-    ...(form.parentalCareMergeDate
-      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
-      : {}),
+    ...buildParentalCareMergeFact(form.parentalCareMergeDate, form.parentalCareParentAge),
     ...(form.isFirstTransferredInMerge && firstTransferToggleVisible ? { isFirstTransferredInMerge: true } : {}),
   };
 }

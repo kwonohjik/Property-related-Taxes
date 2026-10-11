@@ -376,7 +376,6 @@ export async function POST(request: NextRequest) {
             winWinLeaseEndDate: toOptionalDate(p.winWinRentalHouse.winWinLeaseEndDate),
           }
         : undefined,
-      generalHouseHeldAtInheritance: p.generalHouseHeldAtInheritance,
       inheritedRightChoiceWhenBothHeld: p.inheritedRightChoiceWhenBothHeld,
       generalHouseGiftedFromDecedentWithin2yr: p.generalHouseGiftedFromDecedentWithin2yr,
       // ⑭ OH-12c·OH-12 — string 일자 → Date (date-coerce)
@@ -416,7 +415,12 @@ export async function POST(request: NextRequest) {
       oneHouseExemptionProviso: toEngineOneHouseExemptionProviso(p.oneHouseExemptionProviso),
       // ⑭ OH-22 §154⑤ 단서 처분 이력 — 단건과 같은 변환
       finalOneHouseRestart: toEngineFinalHouseRestart(p.finalOneHouseRestart),
-      parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,
+      parentalCareMerge: p.parentalCareMerge
+        ? {
+            mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate"),
+            ...(p.parentalCareMerge.parentAge ? { parentAge: p.parentalCareMerge.parentAge } : {}),
+          }
+        : undefined,
       rentalReductionDetails: p.rentalReductionDetails
         ? {
             ...p.rentalReductionDetails,

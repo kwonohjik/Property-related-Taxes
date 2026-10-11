@@ -29,7 +29,11 @@ import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-sp
 import { buildLandPartCausePayload } from "@/lib/calc/transfer-tax-api-split";
 import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
-import { buildHouseholdSpecialPayload, buildLateFilingPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
+import {
+  buildHouseholdSpecialPayload,
+  buildLateFilingPayload,
+  buildParentalCareMergeFact,
+} from "@/lib/calc/transfer-tax-api-body-blocks";
 import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
 import { buildHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
@@ -372,7 +376,6 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       : {}),
     // ⑬ OH-12c 증여일 · OH-12 신축주택 선언 — 단건과 같은 빌더
     ...buildInheritanceGeneralHousePayload(form),
-    ...(form.generalHouseHeldAtInheritance ? { generalHouseHeldAtInheritance: true } : {}),
     ...(form.inheritedRightChoiceWhenBothHeld
       ? { inheritedRightChoiceWhenBothHeld: form.inheritedRightChoiceWhenBothHeld }
       : {}),
@@ -404,9 +407,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     // 다건은 자산별 form이라 gracePeriod도 native per-property.
     ...(gracePeriodInScope(form) && form.gracePeriod ? { gracePeriod: form.gracePeriod } : {}),
     ...(form.marriageDate ? { marriageMerge: { marriageDate: form.marriageDate } } : {}),
-    ...(form.parentalCareMergeDate
-      ? { parentalCareMerge: { mergeDate: form.parentalCareMergeDate } }
-      : {}),
+    ...buildParentalCareMergeFact(form.parentalCareMergeDate, form.parentalCareParentAge),
     // 🔴 §154① 단서 reason 정규화 — 단건 ④(`transfer-tax-api.ts:521`)와 **같은 두 leaf**를 쓴다.
     //    종전 다건은 `form.provisoReason`을 게이트 없이 그대로 실어, 카드가 숨겨진 상태(mode=null)나
     //    일시적 2주택에서 무효인 사유(나·다목·5호)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.

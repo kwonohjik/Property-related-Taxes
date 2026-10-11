@@ -26,6 +26,7 @@
 import { isWithinDeadline } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import { classifyMergeHouse } from "./merge-composition";
+import { parentalCareAgeVerdict } from "./parental-care-age";
 import type { TransferTaxInput } from "../types/transfer.types";
 
 export type RightSaleMarriageMerge =
@@ -50,6 +51,8 @@ function mergeToJudge(input: Input): { kind: "marriage" | "parental_care"; date:
   const parentalCareDate = input.parentalCareMerge?.mergeDate;
   if (marriageDate && !parentalCareDate) return { kind: "marriage", date: marriageDate };
   if (parentalCareDate && !marriageDate && input.contestedRightSaleParentalCareMergeApply === true) {
+    // C6 반대 입장도 §155④를 적용하는 것이므로 직계존속 연령 요건(요양급여 갈래 포함)을 같은 leaf로 본다(결정 #9).
+    if (parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4") !== "met") return null;
     return { kind: "parental_care", date: parentalCareDate };
   }
   return null;
