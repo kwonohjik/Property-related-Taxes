@@ -9,7 +9,8 @@
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { resolveTemporaryTwoHouse, type TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
-import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
@@ -47,6 +48,12 @@ export function judgmentTempTwoHouseVerdict(
     provisoRentalLeaseResidenceMonths: form.provisoRentalLeaseResidenceMonths,
     // 거주 개월 — ④와 같은 정본(OH-56). 폼-전역 `residencePeriodMonths`는 이 메뉴가 쓰지 않는다.
     residencePeriodMonths: String(deriveJudgmentResidenceMonths(form)),
+    // S11-6 — §154⑧3호 동일세대 상속 통산: 엔진이 ④의 같은 leaf로 받는 값을 카드도 같은 leaf로 편다.
+    //   게이트도 ④와 같다 — 주택 양도 + 취득 원인이 상속일 때만 싣는다(`one-house-exemption-api.ts`).
+    sameHouseholdInheritance:
+      primary && judgmentSaleIsHousing(form) && primary.acquisitionCause === "inheritance"
+        ? { acquisitionCause: "inheritance", ...buildSameHouseholdInheritancePayload(primary) }
+        : undefined,
     publicInstitutionRelocation: form.publicInstitutionRelocation,
     // §155⑯ 지역 요건 — 엔진과 같이 처분기한 5년 적용 여부를 가른다(OH-57).
     relocatedSigunguCode: form.relocatedSigunguCode,

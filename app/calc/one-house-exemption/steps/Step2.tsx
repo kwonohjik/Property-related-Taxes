@@ -40,6 +40,7 @@ import {
   judgmentCountExclusionRowApplies,
   judgmentMarriageRentalOriginVisible,
   judgmentMergeInputVisible,
+  judgmentExemptionHouseCount,
   judgmentProvisoMode,
   judgmentReplacementHouseVisible,
   judgmentRightSaleMergeOwnsInput,
@@ -211,6 +212,7 @@ export function Step2({ form, onChange }: Props) {
           // D8 상대 쪽 짝(B → C)이면 종전 주택은 양도 주택이 아니라 B다 — 카드·④와 같은 짝(`derivedNewHouse`)에서 읽는다.
           primaryAcquisitionDate={derivedNewHouse?.previousAcquisitionDate ?? primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
+          householdHousingCount={judgmentExemptionHouseCount(form)}
           replacementHouseVisible={judgmentReplacementHouseVisible(form)}
           /*
             합가일은 이 섹션의 `<MergeDateSection>`이 받는다(주택 수 ≥ 2 — 계산기와 같은 자리).

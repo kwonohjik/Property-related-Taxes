@@ -26,6 +26,10 @@
  */
 import { deadlineEndFrom, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
+import {
+  isOneYearHoldRequiredForTemporaryTwoHouse,
+  TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START,
+} from "../data/temporary-two-house-deadline-era";
 import { TRANSFER } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
@@ -41,6 +45,7 @@ import {
   mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
   resolveTwoHouseMergeAxis,
+  ruralTemporaryTwoHouseOverlapCountHolds,
   type OneHouseResidenceBasis,
 } from "../transfer-tax-exemption-requirements";
 import {
@@ -106,7 +111,12 @@ export function buildRequirementReview(
     return { scheme: "155-4-5-merge", items: mergeItems(input, rule, twoHouseRule, judgmentBaseDate) };
   }
 
-  if (input.householdHousingCount === 2 && input.temporaryTwoHouse && twoHouseRule) {
+  // E-3와 같은 주택 수 게이트 — ⑦ 농어촌주택이 겹친 3주택(D3)도 §155① 행으로 검토한다(S07-5).
+  if (
+    (input.householdHousingCount === 2 || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    input.temporaryTwoHouse &&
+    twoHouseRule
+  ) {
     // 다른 §155 특례로 비과세가 됐으면 이 행들은 결론의 근거가 아니다.
     if (settled && !ids.includes("155-1-temporary-two-house")) return undefined;
     return {
@@ -145,24 +155,43 @@ function temporaryTwoHouseItems(
 
   // ① 「종전의 주택을 취득한 날부터 1년 이상이 지난 후 신규 주택을 취득」
   const oneYearNatural = isAfterPeriod(tth.previousAcquisitionDate, 1, tth.newAcquisitionDate);
-  items.push({
-    id: "one-year",
-    label: "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
-    status: oneYearNatural ? "met" : timing.oneYearMet ? "waived" : "unmet",
-    facts: [
-      { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
-      { label: "1년 경과일", value: fmt(timing.oneYearThreshold) },
-      { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
-    ],
-    ...(!oneYearNatural && timing.oneYearMet
-      ? {
-          note: provisoRelaxesHolding
-            ? "§154① 단서 사유에 해당해 1년 요건을 적용하지 않습니다."
-            : "§155⑯ 법인·공공기관 지방이전에 해당해 1년 요건을 적용하지 않습니다.",
-        }
-      : {}),
-    legalBasis: oneYearNatural || provisoRelaxesHolding || !timing.oneYearMet ? basis155 : `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
-  });
+  if (!isOneYearHoldRequiredForTemporaryTwoHouse(input.transferDate)) {
+    /**
+     * 2012.6.29. 전 양도분 §155①에는 이 요건이 없다(대통령령 제23887호가 도입 — 2012.2.2. 시행본 원문 확인).
+     * `timing.oneYearMet`가 참인 것은 그 때문이지 §155⑯ 지방이전·§154① 단서 면제가 아니다 — 사유를 가리지 않고
+     * 「요건 없음」으로 싣는다(종전에는 ⑯ 지방이전 면제로 표시했다).
+     */
+    items.push({
+      id: "one-year",
+      label: "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+      status: "not_required",
+      facts: [
+        { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
+        { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
+      ],
+      note: `${fmt(TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START)} 전 양도분에는 이 요건이 없었습니다(대통령령 제23887호로 도입).`,
+      legalBasis: basis155,
+    });
+  } else {
+    items.push({
+      id: "one-year",
+      label: "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+      status: oneYearNatural ? "met" : timing.oneYearMet ? "waived" : "unmet",
+      facts: [
+        { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
+        { label: "1년 경과일", value: fmt(timing.oneYearThreshold) },
+        { label: "신규주택 취득일", value: fmt(tth.newAcquisitionDate) },
+      ],
+      ...(!oneYearNatural && timing.oneYearMet
+        ? {
+            note: provisoRelaxesHolding
+              ? "§154① 단서 사유에 해당해 1년 요건을 적용하지 않습니다."
+              : "§155⑯ 법인·공공기관 지방이전에 해당해 1년 요건을 적용하지 않습니다.",
+          }
+        : {}),
+      legalBasis: oneYearNatural || provisoRelaxesHolding || !timing.oneYearMet ? basis155 : `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
+    });
+  }
 
   // ② 「신규 주택을 취득한 날부터 3년 이내에 종전의 주택을 양도」(⑱ 사유 포함)
   const withinDeadline = isOnOrBeforeDay(input.transferDate, timing.deadline);

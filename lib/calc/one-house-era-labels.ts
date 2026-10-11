@@ -19,6 +19,7 @@ import {
   COMPLETION_DEADLINE_3Y_TRANSFER_START,
   resolve1562DeadlineYears,
 } from "@/lib/tax-engine/data/article-156-2-completion-era";
+import { resolveRegulatedShortenedClauseRef } from "@/lib/tax-engine/data/temporary-two-house-regulated-clause";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -49,4 +50,13 @@ export function completionDeadlineYearsLabel(transferDate: string | undefined): 
   const transferAt = toOptionalDate(transferDate);
   if (transferAt) return `${resolve1562DeadlineYears(transferAt)}년`;
   return `3년(${ymd(COMPLETION_DEADLINE_3Y_TRANSFER_START)} 전 양도는 2년)`;
+}
+
+/**
+ * 「§155」 뒤에 붙는 조정대상지역 처분기한 단축 규정의 위치(`①1호` · `①2호` · `①`) — 양도일 연혁(X2-1).
+ * 양도일을 모르면 호를 단정하지 않고 `①`만 적는다.
+ */
+export function regulatedShortenedClauseRefOf(transferDate: string | undefined): string {
+  const transferAt = toOptionalDate(transferDate);
+  return transferAt ? resolveRegulatedShortenedClauseRef(transferAt) : "①";
 }

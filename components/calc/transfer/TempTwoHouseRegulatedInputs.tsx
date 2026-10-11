@@ -49,7 +49,7 @@ export function TempTwoHouseRegulatedInputs({
   const auto = (v: boolean | undefined) =>
     v === undefined ? "판정 불가" : v ? "조정대상지역" : "조정대상지역 아님";
   return (
-    <ToneCard tone="sky" title="조정대상지역 처분기한 (§155①2호)" className="p-3">
+    <ToneCard tone="sky" title={`조정대상지역 처분기한 (§155${regulated.clauseRef})`} className="p-3">
       <div data-testid="temp-two-house-regulated-block" className="space-y-3">
         <p className="text-xs text-muted-foreground">
           이 양도 시기에는 종전 주택이 조정대상지역에 있는 상태에서 조정대상지역의 신규 주택을 취득하면
