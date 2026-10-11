@@ -194,7 +194,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           <FieldCard
             label="준공일 (사용승인서 교부일)"
             field="redevCompletionDate"
-            hint="토지만 출자한 조합원이 받은 신축주택의 비과세 보유기간은 이 날부터 셉니다. 양도차익(§166) 계산의 취득일은 토지 취득일 그대로입니다."
+            hint="1세대1주택 비과세 판정에만 쓰입니다(1세대1주택 판정을 받는 경우 필수). 토지만 출자한 조합원이 받은 신축주택의 비과세 보유기간은 이 날부터 셉니다. 양도차익(§166) 계산의 취득일은 토지 취득일 그대로입니다."
             trailing={
               <LawArticleModal legalBasis="소득세법 시행령 §162 ① 4호" label="시행령 §162①4호" />
             }

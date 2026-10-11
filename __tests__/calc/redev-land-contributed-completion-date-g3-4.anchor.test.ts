@@ -79,16 +79,23 @@ describe("G3-4 ④ — payload", () => {
 
 describe("G3-4 ⑧ — 필수 입력", () => {
   it("토지 출자 + 준공일 미입력 → 차단(입력칸 redevCompletionDate로 이동)", () => {
-    const { result: err, fieldOf } = collectWithFields(() => validateRedevelopmentAsset(asset(LAND("")), "자산1"));
+    const { result: err, fieldOf } = collectWithFields(() => validateRedevelopmentAsset(asset(LAND("")), "자산1", true));
     expect(err).toContain("준공일");
     expect(fieldOf(err!)).toBe("redevCompletionDate");
   });
   it("준공일 < 인가일 → 차단", () => {
-    const err = validateRedevelopmentAsset(asset(LAND("2015-01-01")), "자산1"); // 인가 2016-06-01
+    const err = validateRedevelopmentAsset(asset(LAND("2015-01-01")), "자산1", true); // 인가 2016-06-01
     expect(err).toContain("인가일 이후");
   });
   it("준공일 입력 → 통과", () => {
-    expect(validateRedevelopmentAsset(asset(LAND("2023-01-15")), "자산1")).toBeNull();
+    expect(validateRedevelopmentAsset(asset(LAND("2023-01-15")), "자산1", true)).toBeNull();
+  });
+  it("🔑 1세대가 아니면 준공일 없이 통과 — 그 값은 1세대1주택 판정에만 쓰인다(미전달=직접 호출도 요구하지 않는다)", () => {
+    expect(validateRedevelopmentAsset(asset(LAND("")), "자산1", false)).toBeNull();
+    expect(validateRedevelopmentAsset(asset(LAND("")), "자산1")).toBeNull();
+  });
+  it("입력돼 있으면 1세대 여부와 무관하게 인가일 이후여야 한다", () => {
+    expect(validateRedevelopmentAsset(asset(LAND("2015-01-01")), "자산1", false)).toContain("인가일 이후");
   });
   it("대조 — 주택 출자 원조합원은 준공일 없이 통과(필수 아님)", () => {
     expect(validateRedevelopmentAsset(asset({ redevOriginalAssetType: "housing", redevCompletionDate: "" }), "자산1")).toBeNull();
@@ -124,6 +131,21 @@ describe("G3-4 ⑫·⑭ — route", () => {
       redevAptForm({ count: "1", assetOver: LAND("", { redevActualAcquisitionPrice: "100000000", fixedAcquisitionPrice: "100000000" }) }),
     );
     expect(r.issues.some((i) => i.field === "redevCompletionDate")).toBe(true);
+  });
+
+  it("🔑 1세대가 아닌 토지 출자 완공APT — 준공일 없이도 ⑧·⑫ 통과 · 세액은 준공일 유무와 무관(결론에 쓰이지 않는 입력)", async () => {
+    const mk = (completion: string) =>
+      redevAptForm({
+        count: "2",
+        formOver: { isOneHousehold: false },
+        assetOver: LAND(completion, { redevActualAcquisitionPrice: "100000000", fixedAcquisitionPrice: "100000000" }),
+      });
+    const without = await runCalc(mk(""));
+    expect(without.issues.some((i) => i.field === "redevCompletionDate")).toBe(false);
+    expect(without.status).toBe(200);
+    const withDate = await runCalc(mk("2023-01-15"));
+    expect(withDate.status).toBe(200);
+    expect(without.result.totalTax).toBe(withDate.result.totalTax);
   });
 
   it("⑫ — 준공일 없이 직접 호출하면 400(필수)", async () => {

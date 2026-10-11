@@ -114,6 +114,8 @@ export function validateAssetAcquisition(
   isNonPrimaryAsset = false,
   /** 컴패니언 함께 부담부증여 — 증여계약 전체 인수 채무 합계. 근거는 `validateBurdenedGiftAsset`. */
   contractAssumedDebtTotal?: number,
+  /** 폼-전역 1세대 여부 — 재개발 토지 출자 완공APT 준공일 필수 조건(G3-4). */
+  isOneHousehold?: boolean,
 ): string | null {
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
   // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
@@ -215,7 +217,7 @@ export function validateAssetAcquisition(
   // redevSubject="" 미입력 시에도 redev 검증 진입 (3중 패턴 — API/validate 동기화):
   // buildRedevelopmentPayload와 동일 fallback (right_to_move_in → "right", 그 외 → "apt")
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
-    const redevError = validateRedevelopmentAsset(asset, label);
+    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold);
     if (redevError) return redevError;
     // I-8 — 승계조합원 신축주택 거주 개월 수는 준공일~양도일 개월 수를 넘을 수 없다(⑫ 같은 leaf).
     const newMonthsRaw = (asset.redevNewHouseResidenceMonths || "").trim();

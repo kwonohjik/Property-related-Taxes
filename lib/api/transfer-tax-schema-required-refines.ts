@@ -6,6 +6,7 @@
  * 다른 분기로 조용히 채운다). 조건은 각 항목에 적은 ⑧ 위치의 거울이다 — 어긋나면 「⑧ 통과 ↔ ⑫ 400」
  * 모순이 된다(14지점 ⑧·⑩).
  */
+import { redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { z } from "zod";
 import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { toDate } from "./date-coerce";
@@ -188,12 +189,16 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   // G3-4 — 토지만 출자한 원조합원의 완공APT: §154① 비과세 보유기간은 사용승인서 교부일부터 센다(영 §162①4호 ·
   //   서면-2022-부동산-1616). 비우면 엔진이 토지 취득일 기산으로 판정해 준공 후 2년 안 양도도 전액 비과세가 났다.
   //   ⑧ `validateRedevelopmentAsset`의 `landContributedOriginalApt`와 같은 조건(승계 아님 · 토지 출자 · 단독신고 아님).
+  //   그 값은 1세대1주택 판정에만 쓰이므로 1세대일 때만 필수다 — ⑧·엔진과 같은 술어(`redevCompletionDateRequiredForHolding`).
   if (
-    data.redevelopment?.subject === "apt" &&
-    data.redevelopment.isSuccessorMember !== true &&
-    data.redevelopment.originalAssetType === "land" &&
-    data.redevelopment.receiveOnlyMode !== true &&
-    !data.redevelopment.completionDate
+    redevCompletionDateRequiredForHolding({
+      isOneHousehold: data.isOneHousehold,
+      subject: data.redevelopment?.subject,
+      isSuccessorMember: data.redevelopment?.isSuccessorMember,
+      originalAssetType: data.redevelopment?.originalAssetType,
+      receiveOnlyMode: data.redevelopment?.receiveOnlyMode,
+    }) &&
+    !data.redevelopment?.completionDate
   ) {
     issue(
       ["redevelopment", "completionDate"],

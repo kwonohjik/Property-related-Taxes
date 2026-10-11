@@ -65,6 +65,30 @@ export function isLandContributedOriginalApt(
 }
 
 /**
+ * **준공일 입력이 판정에 쓰이는 조건** — 토지 출자 원조합원 완공APT ∧ 1세대 (G3-4 보정).
+ *
+ * `exemptionHoldingStartDate`는 §154① 비과세 보유 기산일에만 쓰인다. 1세대가 아니면 1세대1주택 판정 자체가 없어
+ * 결론에 쓰이지 않는 입력이므로 ⑧·⑫가 그것을 필수로 요구하면 저장 이력 재계산만 막는다. ⑧(`validateRedevelopmentAsset`)·
+ * ⑫(`refinePrimaryAcquisitionInputs`)·엔진의 소비 조건이 어긋나지 않게 이 술어 하나를 쓴다(3중 패턴).
+ * 청산금 수령 단독신고는 신축주택을 양도하지 않아 제외한다(엔진도 그 판정을 겹치지 않는다).
+ */
+export function redevCompletionDateRequiredForHolding(f: {
+  isOneHousehold?: boolean;
+  subject?: string;
+  isSuccessorMember?: boolean;
+  originalAssetType?: string;
+  receiveOnlyMode?: boolean;
+}): boolean {
+  return (
+    f.isOneHousehold === true &&
+    f.subject === "apt" &&
+    f.isSuccessorMember !== true &&
+    f.originalAssetType === "land" &&
+    f.receiveOnlyMode !== true
+  );
+}
+
+/**
  * 완공APT면 1세대1주택 판정 입력으로 번역한 사본, 아니면 입력 그대로(동일 참조).
  *
  * `residencePeriodMonths`는 `resolveAptResidenceMonths`가 정한다 — 재개발 카드의 분리 입력(§154⑧1호 통산)과

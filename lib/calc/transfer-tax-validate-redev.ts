@@ -16,13 +16,19 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { landContributedOriginalApt, postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
+import { redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { IssueField } from "./transfer-tax-validate-field";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
-export function validateRedevelopmentAsset(asset: AssetForm, label: string): string | null {
+export function validateRedevelopmentAsset(
+  asset: AssetForm,
+  label: string,
+  /** 폼-전역 1세대 여부 — 토지 출자 완공APT 준공일 필수 조건(G3-4). 미전달(직접 호출)이면 요구하지 않는다. */
+  isOneHousehold?: boolean,
+): string | null {
   // ── 분기 결정 필드 ──
   // UI display fallback과 동일(RedevelopmentBlock.tsx) + API 변환(buildRedevelopmentPayload).
   // 3중 패턴 강제 (memory `mirror-pattern`, 8지점 ⑧):
@@ -107,20 +113,30 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
   }
 
   /**
-   * 토지만 출자한 원조합원의 완공APT — **준공일(사용승인서 교부일)이 필수**다 (G3-4).
+   * 토지만 출자한 원조합원의 완공APT — **1세대이면 준공일(사용승인서 교부일)이 필수**다 (G3-4).
    *
    * §154① 비과세 보유기간을 그 날부터 센다(「소득세법 시행령」 §162①4호 · 서면-2022-부동산-1616). 비우면 엔진이
    * 토지 취득일부터 센 보유기간으로 비과세를 판정해 준공 후 2년 안에 양도해도 전액 비과세가 난다 — 자동 안분
-   * fallback 금지(미입력은 검증 오류로 차단). ④ `buildRedevelopmentPayload`·⑫ `refinePrimaryAcquisitionInputs`와
-   * **같은 술어**(`landContributedOriginalApt`)다. 입력칸은 ② 「출자 자산」 카드 안에 있다.
+   * fallback 금지(미입력은 검증 오류로 차단). 그 값은 1세대1주택 판정에만 쓰이므로 1세대가 아니면 요구하지 않는다
+   * (결론에 쓰이지 않는 입력이 저장 이력 재계산을 막지 않게). ⑫·엔진과 **같은 술어**
+   * (`redevCompletionDateRequiredForHolding`)다. 입력칸은 ② 「출자 자산」 카드 안에 있다.
    */
-  if (landContributedOriginalApt(asset)) {
+  if (
+    redevCompletionDateRequiredForHolding({
+      isOneHousehold,
+      subject,
+      isSuccessorMember: asset.redevIsSuccessorMember === "yes",
+      originalAssetType,
+      receiveOnlyMode: asset.redevReceiveOnlyMode === "yes",
+    })
+  ) {
     if (!asset.redevCompletionDate) {
       return fieldError("redevCompletionDate", `${label}: 토지만 출자한 완공APT — 준공일(사용승인서 교부일)을 입력하세요. 1세대1주택 비과세 보유기간은 그 날부터 셉니다. (시행령 §162①4호 · 서면-2022-부동산-1616)`);
     }
-    if (asset.redevApprovalDate && asset.redevCompletionDate < asset.redevApprovalDate) {
-      return fieldError("redevCompletionDate", `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`);
-    }
+  }
+  // 입력돼 있으면(1세대 여부와 무관하게) 인가일 이후여야 한다.
+  if (landContributedOriginalApt(asset) && asset.redevCompletionDate && asset.redevApprovalDate && asset.redevCompletionDate < asset.redevApprovalDate) {
+    return fieldError("redevCompletionDate", `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`);
   }
 
   if (approvalLawBasis !== "urban_renovation_art_74") {
