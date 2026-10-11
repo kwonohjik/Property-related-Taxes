@@ -544,7 +544,7 @@ export const TRANSFER = {
 /**
  * §154① 단서 각호 면제 시한 상수 (개정 없는 안정 역사값 — feedback_historical_tax_tables).
  *   2호 가목: 양도일·수용일부터 N년 — 연혁(2년→5년)이라 상수가 아니다(`data/expropriation-remnant-era.ts`) /
- *   2호 나·다목: 출국일부터 2년
+ *   2호 나·다목: 출국일부터 2년 — 2006.2.9. 신설, 그 전 양도분·경과조치 구간은 기한 없음(`data/one-house-154-1-proviso-era.ts`)
  *   1호: 세대전원 거주 5년 / 3호: 1년 이상 거주
  */
 export const EXEMPTION_PROVISO_CONST = {
@@ -554,6 +554,20 @@ export const EXEMPTION_PROVISO_CONST = {
   RENTAL_RESIDENCE_YEARS: 5,
   /** 3호 — 거주 (년) */
   UNAVOIDABLE_RESIDENCE_YEARS: 1,
+} as const;
+
+/**
+ * 대통령령 제19327호(2006.2.9.) 부칙 — §154①2호 가목 괄호(「사업인정 고시일 전에 취득한 주택 … 에 한한다」)·나·다목(「출국일부터
+ * 2년 이내에 양도」)을 신설한 개정의 적용 범위 (DRF 부칙 원문 2026-10-11 실독 — MST 72871).
+ * `data/one-house-154-1-proviso-era.ts`가 이 상수로 연혁을 인용한다.
+ */
+export const ONE_HOUSE_PROVISO_2006_ADDENDA = {
+  /** 「양도소득세에 관한 개정규정은 이 영 시행 후 최초로 양도하는 분부터 적용한다」 */
+  GENERAL_APPLICATION: "대통령령 제19327호 부칙 제3조",
+  /** 「시행당시 사업인정 고시일 이후에 취득한 … 주택 및 그 부수토지를 2007년 12월 31일까지 양도하는 경우에는 … 종전의 규정」 */
+  EXPROPRIATION_TRANSITION: "대통령령 제19327호 부칙 제30조 ①",
+  /** 「시행당시 … 세대전원이 출국한 경우로서 2007년 12월 31일까지 주택을 양도하는 경우에는 … 종전의 규정」 */
+  OVERSEAS_TRANSITION: "대통령령 제19327호 부칙 제30조 ②",
 } as const;
 
 /** 일시적 2주택 종전주택 §154① 단서 보유면제 사유 — §155① 2문 §154①1호(rental)·2호가(expropriation)·3호(unavoidable) 명시 인용(나·다목=출국일 1주택·5호=무주택 양립불가 제외). 엔진·api-helpers 공유 단일소스. */

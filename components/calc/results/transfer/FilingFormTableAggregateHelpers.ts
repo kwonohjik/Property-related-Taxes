@@ -202,7 +202,8 @@ export function buildAggregateRows(
       ? (periods[periods.length - 1].moveOutDate || colTransferDate)
       : "";
     const residenceMs = (() => {
-      if (a?.residenceInputMode === "interval" && periods.length > 0) {
+      // interval 모드는 구간이 0개여도 0개월이다 — 숨은 개월 칸은 읽지 않는다(`deriveResidencePeriodMonths`와 같은 규칙, S12-2).
+      if (a?.residenceInputMode === "interval") {
         return periods.reduce((sum, pp) => {
           const end = pp.moveOutDate || colTransferDate;
           return sum + residenceIntervalMonths(pp.moveInDate, end); // §154⑥ 초일 산입(입력 경로와 같은 leaf)

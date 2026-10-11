@@ -24,6 +24,10 @@ import { qualifiesWinWinRental } from "./transfer-tax-exemption-residence-waiver
 import { resolveRental4hoRegistration } from "./one-house/rental-registration-4ho";
 import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart } from "./one-house/final-house-restart";
 import { resolveExpropriationRemnantYears } from "./data/expropriation-remnant-era";
+import {
+  expropriationNoticeDateRequirementApplies,
+  overseasTwoYearDeadlineApplies,
+} from "./data/one-house-154-1-proviso-era";
 import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
 import { excludeNonResidentHoldingPeriod } from "./one-house/non-resident-holding";
 import {
@@ -281,7 +285,13 @@ export function resolveExemptionProviso(
   switch (p.reason) {
     case "expropriation":
       // 2호 가목: 사업인정 고시일 전 취득 + 양도일·수용일부터 N년 이내(2013-02-15 전 양도 2년 · 이후 5년)
-      if (p.businessApprovalDate && input.acquisitionDate >= p.businessApprovalDate) return null;
+      // 괄호 「사업인정 고시일 전에 취득한 주택 … 에 한한다」는 혜택을 받기 위한 **요건 사실**이다 — 고시일을 모르면(공란)
+      //   불성립이다(모름 = 불성립, 결론을 가를 때만 확인 필요 고지: `one-house/era-undetermined.ts`). 수용일(아래)과 같은 fail-closed.
+      //   2006.2.9. 전 양도·경과조치 구간은 이 괄호가 없다(대통령령 제19327호 부칙 제3조·제30조① — `data/one-house-154-1-proviso-era.ts`).
+      if (expropriationNoticeDateRequirementApplies(input)) {
+        if (!p.businessApprovalDate) return null;
+        if (input.acquisitionDate >= p.businessApprovalDate) return null;
+      }
       // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `?? input.transferDate` fallback은
       //   fail-open이었다. 수용일 미입력 시 `transferDate <= transferDate + 5년`이 **항상 참**이라
       //   5년 요건을 검증하지 않고 무조건 "both"(보유·거주 면제)를 줬다 → 비과세 과다.
@@ -305,6 +315,8 @@ export function resolveExemptionProviso(
         // 「출국일 현재 1주택」 — 장기임대주택 등 특례 주택도 센다(사전-2019-법령해석재산-0188). 아니오·미입력은 불성립.
         if (p.departureOnlyHouse !== true) return null;
       }
+      // 「출국일부터 2년 이내에 양도」는 대통령령 제19327호(2006.2.9.)가 신설했다 — 그 전 양도분·부칙 제30조② 경과조치 구간은 기한이 없다.
+      if (!overseasTwoYearDeadlineApplies({ departureDate: d, transferDate: input.transferDate })) return "both";
       return isWithinDeadline(d, C.OVERSEAS_TRANSFER_YEARS, input.transferDate) ? "both" : null;
     }
     case "unavoidable":

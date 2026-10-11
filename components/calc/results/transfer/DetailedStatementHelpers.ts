@@ -76,7 +76,8 @@ export function residenceMonthsOfAsset(
   transferDate: string,
 ): number {
   const ps = asset?.residenceInputMode === "interval" ? (asset.residencePeriods ?? []) : [];
-  if (ps.length > 0) {
+  // interval 모드는 구간이 0개여도 0개월이다 — 숨은 개월 칸은 읽지 않는다(`deriveResidencePeriodMonths`와 같은 규칙, S12-2).
+  if (asset?.residenceInputMode === "interval") {
     // 입력 경로(`sumResidenceMonths`)와 같은 §154⑥ 초일 산입 leaf — 결과 표시가 엔진 입력과 갈리지 않게.
     return ps.reduce(
       (sum, pp) => sum + residenceIntervalMonths(pp.moveInDate, pp.moveOutDate || transferDate),

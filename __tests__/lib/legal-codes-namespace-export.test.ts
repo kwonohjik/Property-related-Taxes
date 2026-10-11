@@ -65,7 +65,7 @@ const MODULES: ReadonlyArray<{
     symbols: [
       // transfer.ts 본체
       "TRANSFER", "EXEMPTION_PROVISO_CONST", "TEMP_TWO_HOUSE_PROVISO_REASONS",
-      "ONE_HOUSE_RESIDENCE", "SURCHARGE_EXCLUSION_WINDOW",
+      "ONE_HOUSE_RESIDENCE", "ONE_HOUSE_PROVISO_2006_ADDENDA", "SURCHARGE_EXCLUSION_WINDOW",
       "SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW", "isWithinSurchargeSuspensionWindow",
       // P0(2026-09-20) — 라벨이 조문 번호를 리터럴로 다시 적지 않게 상수에서 파생시킨다.
       "shortArticle",

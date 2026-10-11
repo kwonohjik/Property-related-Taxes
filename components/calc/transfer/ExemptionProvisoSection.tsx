@@ -167,7 +167,7 @@ export function ExemptionProvisoSection({
 
       {effReason === "expropriation" && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <FieldCard label="사업인정 고시일" hint="고시일 전 취득한 주택만 해당 (미입력 시 검증 생략)">
+          <FieldCard label="사업인정 고시일" hint="고시일 전 취득한 주택만 해당 — 비우면 이 단서를 적용하지 않고 확인 필요로 안내합니다 (2006.2.9. 전 양도분 등은 고시일 요건 없음)">
             <DateInput
               value={provisoBusinessApprovalDate}
               onChange={(v) => onChange({ provisoBusinessApprovalDate: v })}
@@ -194,7 +194,7 @@ export function ExemptionProvisoSection({
       )}
 
       {isOverseas && (
-        <FieldCard field="provisoDepartureDate" label="출국일" required hint="출국일부터 2년 내 양도 시 적용 (필수)">
+        <FieldCard field="provisoDepartureDate" label="출국일" required hint="출국일부터 2년 내 양도 시 적용 (필수) — 2006.2.9. 전 양도분과 2006.2.9. 전 출국·2007.12.31.까지 양도분은 기한이 없습니다">
           <DateInput
             value={provisoDepartureDate}
             onChange={(v) => onChange({ provisoDepartureDate: v })}
