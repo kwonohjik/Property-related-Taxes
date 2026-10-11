@@ -141,12 +141,20 @@ export default function OneHouseJudgmentCalculator() {
          F-2가 지목한 「`validateAllSteps`에 차단 소비처가 없다」가 바로 이 자리다.
     */
     if (blockOnFirstInvalidStep(RESULT_STEP)) return;
+    /**
+     * 🔴 **응답은 그 응답을 만든 폼에만 귀속된다**(S13-2) — 응답을 기다리는 동안 입력을 바꾸면(결과 단계 이탈 후 명부 수정)
+     *    `updateFormData`가 결과를 무효화(`null`)하는데, 늦게 도착한 옛 판정이 `setResult`로 그것을 **덮어** 새 입력의 결과로
+     *    표시·자동저장됐다(재진입해도 재판정이 없었다). 요청 시점의 폼 참조(`formData`)와 지금 store의 폼이 다르면 버린다 —
+     *    `updateFormData`·`reset`은 항상 새 폼 객체를 만들므로 참조 비교로 충분하다. 로딩은 버려도 푼다(`Step4`가 새 폼으로 재판정).
+     */
+    const isCurrent = () => useOneHouseJudgmentStore.getState().formData === formData;
     setLoading(true);
     setError(null);
     try {
-      setResult(await callOneHouseExemptionAPI(formData));
+      const res = await callOneHouseExemptionAPI(formData);
+      if (isCurrent()) setResult(res);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "판정에 실패했습니다.");
+      if (isCurrent()) setError(e instanceof Error ? e.message : "판정에 실패했습니다.");
     } finally {
       setLoading(false);
     }
@@ -175,6 +183,12 @@ export default function OneHouseJudgmentCalculator() {
    */
   const onStepClick = useCallback(
     (target: number) => {
+      /**
+       * 🔴 결과 단계의 **제자리 클릭은 아무것도 하지 않는다**(S13-12) — 종전에는 `setError(null)`이 판정 API 오류와 「다시 판정하기」를
+       *    지웠는데, `Step4`의 1회 가드(`triggered`)는 그대로라 재판정도 시작되지 않아 「판정을 준비하고 있습니다…」에 고정됐다.
+       *    오류는 재시도 버튼과 함께 남아야 한다(`Step4` 오류 분기). 다른 단계를 거쳐 돌아오면 새로 마운트돼 재판정한다.
+       */
+      if (target === currentStep && currentStep === RESULT_STEP) return;
       if (target > currentStep && blockOnFirstInvalidStep(target)) return;
       setError(null);
       setStep(target);
@@ -195,13 +209,20 @@ export default function OneHouseJudgmentCalculator() {
    *    「이 세액은 어느 판정에서 왔는가」를 되짚을 수 있다. 저장 전(입력 중)에는 `null`이고,
    *    그때는 출처 없이 사실만 넘어간다 — 사실이 넘어가는 것 자체는 막지 않는다.
    */
-  const { savedId } = useAutoSaveCalculation({
+  const resultData = isResult ? (result as unknown as Record<string, unknown>) : null;
+  const { savedId: lastSavedId, savedFor } = useAutoSaveCalculation({
     taxType: "one_house_exemption",
     inputData: formData as unknown as Record<string, unknown>,
-    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
+    resultData,
     taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
+  /**
+   * 🔴 **지금 결과의 저장 id만 출처로 쓴다**(S11-7) — 새 결과가 저장 중이거나 저장이 실패하면 훅의 `savedId`는 직전 판정의
+   *    id로 남는다. 그것을 그대로 넘기면 「이 결과로 세액 계산」의 출처가 이전 판정으로 표시된다. 저장 전과 같이 출처 없이
+   *    사실만 넘어간다(계산기는 `unknown`으로 읽는다).
+   */
+  const savedId = resultData !== null && savedFor === resultData ? lastSavedId : null;
 
   /**
    * 「이 결과로 세액 계산」 (P5-a).

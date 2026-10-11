@@ -52,6 +52,17 @@ describe("HP-FD — §95④ 보유기간 초일 산입", () => {
     expect(years("2020-02-29", "2021-02-27")).toBe(0);
   });
 
+  it("HP-FD-5 months 성분(X4-2): 2020-02-29 → 2021-02-27 = 0년 11월, 2021-02-28 = 1년 0월", () => {
+    expect(calculateHoldingPeriod(new Date("2020-02-29"), new Date("2021-02-27"))).toMatchObject({
+      years: 0,
+      months: 11,
+    });
+    expect(calculateHoldingPeriod(new Date("2020-02-29"), new Date("2021-02-28"))).toMatchObject({
+      years: 1,
+      months: 0,
+    });
+  });
+
   it("HP-FD-6 개월·일 분해: 2022-04-01 → 2024-03-31 = 2년 0월 0일", () => {
     expect(calculateHoldingPeriod(new Date("2022-04-01"), new Date("2024-03-31"))).toEqual({
       years: 2,

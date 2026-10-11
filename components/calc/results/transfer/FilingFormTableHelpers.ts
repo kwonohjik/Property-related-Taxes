@@ -255,7 +255,8 @@ export function buildRows(
   setStr("holdingPeriod", "total", holdingPeriodFromDates(acquisitionDate, transferDate));
 
   const residenceMonthsTotal = (() => {
-    if (primary?.residenceInputMode === "interval" && periods.length > 0) {
+    // interval 모드는 구간이 0개여도 0개월이다 — 숨은 개월 칸은 읽지 않는다(`deriveResidencePeriodMonths`와 같은 규칙, S12-2).
+    if (primary?.residenceInputMode === "interval") {
       return periods.reduce((sum, p) => {
         const end = p.moveOutDate || transferDate;
         return sum + residenceIntervalMonths(p.moveInDate, end); // §154⑥ 초일 산입(입력 경로와 같은 leaf)

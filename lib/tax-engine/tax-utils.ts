@@ -1,7 +1,8 @@
-import { addDays, addMonths, addYears, differenceInDays, differenceInMonths, differenceInYears, subMonths } from "date-fns";
+import { addDays, addMonths, addYears, differenceInDays, differenceInYears, subMonths, toDate } from "date-fns";
 import type { Heir } from "./types/inheritance-gift.types";
 import { SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW } from "./legal-codes/transfer";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
+import { completedMonthsInclusive } from "./civil-period";
 
 // ============================================================
 // P0-2 원칙: 세율(rate) × 금액(amount) 곱셈은 반드시 applyRate()를 사용.
@@ -284,7 +285,14 @@ export function calculateHoldingPeriod(
   const years = differenceInYears(end, acquisitionDate);
   const afterYears = addYears(acquisitionDate, years);
 
-  const months = differenceInMonths(end, afterYears);
+  // 개월 성분은 「민법」 §160③(해당일 없는 월은 말일 만료)의 정본 `completedMonthsInclusive`로 구한다 —
+  // date-fns `differenceInMonths`는 2/29 기산에서 말일 보정으로 만료 전날(평년 2/27 양도)을 12개월로 센다(X4-2).
+  // `toDate`(date-fns)로 정규화한다 — 종전 date-fns 계산이 허용하던 문자열·undefined(→ Invalid Date → NaN)를 이 호출도 같게 받아,
+  //   UTC 달력일 함수(`civil-period`)가 Date가 아닌 값에서 TypeError로 화면·route를 깨뜨리지 않게 한다.
+  const months = Math.min(
+    11,
+    Math.max(0, completedMonthsInclusive(toDate(acquisitionDate), toDate(disposalDate)) - years * 12),
+  );
   const afterMonths = addMonths(afterYears, months);
 
   const days = differenceInDays(end, afterMonths);
