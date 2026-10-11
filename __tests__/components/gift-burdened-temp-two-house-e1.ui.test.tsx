@@ -97,14 +97,20 @@ describe("UI-3 날짜 수정이 새 입력을 지우지 않는다", () => {
     expect(tt.newHouseMoveInDate).toBe("2021-01-01");
     expect(tt.prevHouseRegulatedAtNewAcquisition).toBe("yes");
   });
-  it("종전 주택 취득일을 고쳐도 보존", () => {
-    const onUpdate = vi.fn();
-    renderGift(item({ newHouseMoveInDate: "2021-01-01" }), "2021-03-01", onUpdate);
+  it("종전 주택 취득일은 입력 칸이 아니라 증여 주택 취득일 표시다(1h-G1-3) — 저장된 옛 값과 무관", () => {
+    renderGift(item({ previousAcquisitionDate: new Date("2010-05-05") }), "2021-03-01");
+    const shown = screen.getByTestId("bg-transfer-prev-acq-date");
+    expect(shown.textContent).toBe("2015-01-01");
+    // 편집 칸이 없다 — 「종전 주택 취득일」 FieldCard 안에 날짜 입력이 없다
     const card = screen.getByText("종전 주택 취득일").closest("div")!;
-    fireEvent.change(card.querySelector('input[aria-label="월"]')!, { target: { value: "02" } });
-    const tt = ttOf(onUpdate);
-    expect((tt.previousAcquisitionDate as Date).toISOString().slice(0, 10)).toBe("2015-02-01");
-    expect(tt.newHouseMoveInDate).toBe("2021-01-01");
+    expect(card.querySelector('input[aria-label="월"]')).toBeNull();
+  });
+  it("신규 주택 취득일을 고치면 종전 취득일 필드는 증여 주택 취득일로 맞춰 저장된다", () => {
+    const onUpdate = vi.fn();
+    renderGift(item({ previousAcquisitionDate: new Date("2010-05-05") }), "2021-03-01", onUpdate);
+    const card = screen.getByText("신규 주택 취득일").closest("div")!;
+    fireEvent.change(card.querySelector('input[aria-label="월"]')!, { target: { value: "07" } });
+    expect((ttOf(onUpdate).previousAcquisitionDate as Date).toISOString().slice(0, 10)).toBe("2015-01-01");
   });
 });
 

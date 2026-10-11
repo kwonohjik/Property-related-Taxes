@@ -19,7 +19,7 @@ import {
   rentalHousingBasisOf,
   rentalHousingBasisShort,
 } from "./transfer-tax/rental-housing-exception/display-labels";
-import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import { buildEligibilityContext, buildRentalPeriodPendingNotice } from "./transfer-tax-rental-housing-judge";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
@@ -292,14 +292,14 @@ function resolveClause5Tax(args: {
  * 종전에는 이 경로만 `transferPrice`를 그대로 봐서, 총 20억 물건의 1/2 지분(본인 10억)이
  * 12억 이하로 판정돼 RH-A1(전액 비과세)로 빠졌다 — 일반 경로는 같은 입력에서 부분과세였다.
  *
- * ⚠️ `burdenedGiftDenominator`(부담부증여 — 소령 §159 해석 B: 분모 = 증여가액 C)는 이 체인에
- *   **넣지 않는다**. 「부담부증여 × §155⑳」 조합의 도달성이 확인되지 않았고, 그 조합에서 분모를
- *   바꾸면 검증되지 않은 축이 함께 움직인다. 부담부증여 입력에서는 현행(`transferPrice`)을 그대로
- *   유지해 **동작 변화 0**을 보장한다(별도 검토 대상).
+ * 부담부증여(`burdenedGiftDenominator` — 소령 §159 해석 B: 분모 = 증여가액 C)도 정본 체인
+ * `resolveHighValuePriceCheck`(`one-house/threshold.ts`)의 1순위로 위임한다. 「소득세법 시행령」 §155⑳은
+ * 거주주택을 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」하므로 12억 판정·안분 분모는
+ * 일반 1세대1주택 경로(`calcOneHouseProration`)와 같은 C여야 한다. 종전에는 이 경로만 `transferPrice`(= §159
+ * 채무 안분 양도가액 B)를 봐서, 증여 15억·채무 3억 거주주택이 RH-A1 전액 비과세로 빠졌다(1h-G1-1).
  */
 function resolveHighValueDenominator(effectiveInput: TransferTaxInput): number {
-  if (effectiveInput.burdenedGiftDenominator !== undefined) return effectiveInput.transferPrice;
-  return effectiveInput.totalPropertyTransferPrice ?? effectiveInput.transferPrice;
+  return resolveHighValuePriceCheck(effectiveInput);
 }
 
 /**

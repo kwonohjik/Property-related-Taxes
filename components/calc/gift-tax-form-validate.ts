@@ -41,6 +41,7 @@ import {
   giftBurdenedInheritanceError,
   giftBurdenedInheritedConversionBlocked,
   GIFT_BURDENED_INHERITED_CONVERSION_ERROR,
+  giftBurdenedPartialOwnershipError,
   giftBurdenedWinWinError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
@@ -198,6 +199,9 @@ export function validateStep(step: number, form: FormState): string | null {
           return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
         }
       }
+      // 일부 지분만 증여(1h-G1-6) — ⑤ 토글과 같은 주택 게이트. 지분율·물건 전체 가액 입력이 없어 12억 판정이 틀리므로 막는다.
+      const partialOwnershipError = giftBurdenedPartialOwnershipError(bgt, propertyType === "housing");
+      if (partialOwnershipError) return `${itemLabel}: ${partialOwnershipError}`;
       // 상속받은 자산(E-1 잔여 D · E-1 한계 G1) — ⑤·④와 같은 slice·같은 주택 게이트, 판정 메뉴·계산기와 같은 규칙·문구.
       //   피상속인 취득일은 ⑫ refine의 필수값이다(비우면 route 400). 토지·비주택 건물도 §104②1호 대상이라 같이 본다.
       const inheritanceError = giftBurdenedInheritanceError(bgt, propertyType === "housing");

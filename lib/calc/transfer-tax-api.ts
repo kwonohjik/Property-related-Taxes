@@ -288,8 +288,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
      * 12억 안분 분모용 총 물건 양도가액 — primary 지분 모드 전용. 단건·축 B = 계약 총액(같은 물건 전체).
      * 함께양도 묶음(다른 물건)의 지분 primary = 그 물건 전체 양도가액: actual은 100% 입력값, apportioned는 안분 전이라
      * 모른다(미설정 → route가 안분액 ÷ 지분율로 채운다). 총액은 여러 물건의 합이라 쓰면 안 된다(2026-10-10).
+     *
+     * 부담부증여 primary는 보내지 않는다(1h-G1-6) — 양도가액이 채무 안분으로 정해져 화면에 「총 양도가액」 칸이 없고
+     * (`contractTotalPrice` 검증 면제 — `transfer-tax-validate.ts:84`) ④가 0을 실었다. Zod는 양수만 받아(`transfer-tax-schema-base-shape.ts:62`)
+     * 지분 부담부증여가 전부 400이었다. 12억 분모는 엔진이 물건 전체 보충적평가액(`wholePropertySupplementary`)을 `burdenedGiftDenominator`로 싣는다.
      */
-    totalPropertyTransferPrice: !primaryFractional
+    totalPropertyTransferPrice: !primaryFractional || isBurdenedGiftPrimary
       ? undefined
       : primaryShareInCompanion
         ? (effBundledSaleMode === "actual" && primary.actualSalePrice ? parseAmount(primary.actualSalePrice) : undefined)

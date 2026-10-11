@@ -14,6 +14,7 @@ import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
+import { PartialExemptBasisCard } from "@/components/calc/results/shared/PartialExemptBasisCard";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
@@ -452,20 +453,10 @@ export function TransferTaxResultView({
                `exemptReason`을 그대로 싣는다. §155⑳ 요건 미충족·부수토지 비과세 제외(G-2·G-3)처럼
                안분 없이 과세된 결과에서 「초과분에 대해서만 과세」라고 적으면 결과와 모순된다.
             기준금액은 엔진 STEP 라벨(`과세 양도차익 (9억 초과분)` 등)에서 읽고, 없으면 양도일로 고른다. */}
-        {!result.isExempt && result.isPartialExempt && result.exemptReason && (
-          <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 p-3 text-sm dark:border-emerald-900/60 dark:bg-emerald-950/20">
-            <p className="font-semibold text-emerald-900 dark:text-emerald-300">
-              1세대1주택 특례 적용 — {result.exemptReason}
-            </p>
-            <p className="text-xs text-emerald-800 dark:text-emerald-400 mt-0.5">
-              양도가액{" "}
-              {result.steps
-                ?.map((st) => st.label?.match(/과세 양도차익 \((\d+억) 초과분\)/)?.[1])
-                .find(Boolean) ?? highValueThresholdForDisplay(formData?.transferDate).label}
-              원 초과분에 대해서만 과세됩니다 (소득세법 §89①3호·시행령 §160).
-            </p>
-          </div>
-        )}
+        <PartialExemptBasisCard
+          result={result}
+          fallbackThresholdLabel={highValueThresholdForDisplay(formData?.transferDate).label}
+        />
 
         {/* 필지별 계산 내역 */}
         {result.parcelDetails && result.parcelDetails.length > 0 && (

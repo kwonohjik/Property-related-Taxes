@@ -85,6 +85,8 @@ describe("G-1 §155①2호 게이트(⑤ 판정 카드 · ⑧ 공용)", () => {
     giftBurdenedTempTwoHouseRegulatedGate(
       {
         householdHousingCount: 2,
+        // 종전 주택 = 증여 주택(1h-G1-3) — 종전 취득일은 자산 취득일에서 온다
+        acquisitionDate: new Date("2018-01-10"),
         regionInDesignatedDistrict: prev,
         temporaryTwoHouse: {
           previousAcquisitionDate: new Date("2018-01-10"),

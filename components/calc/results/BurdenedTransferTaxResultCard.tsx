@@ -19,6 +19,9 @@ import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggleButton";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
+import { PartialExemptBasisCard } from "@/components/calc/results/shared/PartialExemptBasisCard";
+import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
 
@@ -85,6 +88,9 @@ function SingleTransferResultCard({
         <div className="px-4 py-3 text-sm text-muted-foreground">
           {result.exemptReason ?? "1세대 1주택 비과세 요건을 충족합니다."}
         </div>
+        {/* 비과세 결론과 함께 엔진 경고(§155㉓ 기한 · §154⑤ 판정 보류 · 확인 필요)를 보여 준다(1h-G1-8) — 종전에는 이
+            조기 return이 경고를 버려 「비과세의 전제」가 사라지고 무조건 비과세로 읽혔다. */}
+        <CalculationWarningsCard warnings={result.warnings} className="m-4 mt-0" />
       </div>
     );
   }
@@ -105,6 +111,16 @@ function SingleTransferResultCard({
           tone="sky"
         />
       </div>
+
+      {/* 엔진 경고 · 부분 비과세(고가주택) 근거 — 접힌 상세 안이 아니라 결론과 함께 보인다(1h-G1-8).
+          경고는 비과세 분기(위)와 같은 공용 카드이고, 부분 비과세 사유는 양도세 결과뷰와 같은 카드다. */}
+      <CalculationWarningsCard warnings={result.warnings} className="m-4 mb-0" />
+      <PartialExemptBasisCard
+        result={result}
+        priceLabel="증여가액"
+        fallbackThresholdLabel={highValueThresholdForDisplay(undefined).label}
+        className="m-4 mb-0"
+      />
 
       {/* 최종 납부세액 요약 */}
       <div className="divide-y divide-border">
@@ -261,7 +277,8 @@ function SingleTransferResultCard({
            (`shared/ExpandToggleButton.tsx:8`). 종전에는 접힘 상태(기본값)에서 DOM이 아예 없어,
            **손으로 펼치지 않고 인쇄하면** §159①1호 안분비율·취득가액 산정 경로(K-1~K-5)·
            장특공제·산출세액 산식이 출력물에서 통째로 빠졌다. 특히 `result.warnings`가
-           이 블록 안에만 있어 다주택 중과 안내 등 **엔진 경고까지 사라졌다**.
+           이 블록 안에만 있어 다주택 중과 안내 등 **엔진 경고까지 사라졌다**
+           (1h-G1-8 — 지금은 경고를 결론 쪽 공용 카드로 올려 접힌 상세에는 두지 않는다).
       */}
       <div
         className={
@@ -292,7 +309,7 @@ function SingleTransferResultCard({
             if (method === "actual") {
               return (
                 <p className="mt-1 text-amber-700 dark:text-amber-300">
-                  ※ 취득가액 산정: 실지취득가액 × <Frac top="채무" bottom="시가" /> (소령 §159①1호 A괄호 — K-4)
+                  ※ 취득가액 산정: 실지취득가액 × <Frac top="채무" bottom="시가" /> (소령 §159①1호 본문 — K-4)
                   {deductionTotal > 0
                     ? ` / 자본적 지출·양도비 ${formatKRW(deductionTotal)}`
                     : ""}
@@ -317,7 +334,7 @@ function SingleTransferResultCard({
             // standard_price 또는 미확인(구버전 결과)
             return (
               <p className="mt-1">
-                취득가액 산정: 취득시 기준시가 × <Frac top="채무" bottom="증여재산 기준시가" /> (소령 §159①1호 —
+                취득가액 산정: 취득시 기준시가 × <Frac top="채무" bottom="증여재산 기준시가" /> (소령 §159①1호 괄호 —
                 K-1~K-3)
               </p>
             );
@@ -325,7 +342,7 @@ function SingleTransferResultCard({
           <p className="mt-1">
             장기보유특별공제:{" "}
             {result.longTermHoldingDeduction > 0
-              ? `양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}%`
+              ? `과세 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}%`
               : "해당 없음"}
           </p>
           <p>
@@ -334,15 +351,6 @@ function SingleTransferResultCard({
               ? ` − 누진공제 ${formatKRW(result.progressiveDeduction)}`
               : ""}
           </p>
-          {result.warnings && result.warnings.length > 0 && (
-            <div className="mt-1 space-y-0.5">
-              {result.warnings.map((w, i) => (
-                <p key={i} className="text-amber-600 dark:text-amber-400">
-                  ⚠ {w}
-                </p>
-              ))}
-            </div>
-          )}
       </div>
     </div>
   );

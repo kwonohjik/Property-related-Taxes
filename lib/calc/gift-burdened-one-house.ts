@@ -21,6 +21,7 @@
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import { provisoGate, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
+import { giftBurdenedPreviousAcquisitionDate } from "@/lib/calc/gift-burdened-temp-two-house";
 import type { ExemptionProvisoFormSlice } from "@/lib/calc/exemption-proviso-payload";
 import { finalHouseRestartInScope, type FinalHouseRestartFormSlice } from "@/lib/calc/final-house-restart";
 import {
@@ -159,7 +160,7 @@ export function giftBurdenedProvisoMode(bgt: BurdenedGiftTransferTaxInput): Prov
     isHousing: true,
     householdHousingCount: count,
     temporaryTwoHouseApplies:
-      count === 2 && !!tt && !!ymd(tt.previousAcquisitionDate) && !!ymd(tt.newAcquisitionDate),
+      count === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate),
   }).mode;
 }
 
@@ -382,3 +383,22 @@ export function giftBurdenedInheritedConversionBlocked(bgt: BurdenedGiftTransfer
 export const GIFT_BURDENED_INHERITED_CONVERSION_ERROR =
   "상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — " +
   "환산취득가액(K-5)을 쓸 수 없습니다(소득세법 §97①1호 단서). 실지취득가액(K-4)에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.";
+
+/**
+ * 지분 증여(1h-G1-6) 차단 문구 — 증여 화면의 부담부증여 양도세 경로는 지분율·물건 전체 가액 칸이 없어 12억 고가주택
+ * 판정이 지분 가액으로 이뤄진다. 「소득세법 시행령」 §156①(일부가 타인 소유인 경우 타인 소유부분을 포함한 면적 비율로
+ * 환산한 금액)·§160①은 물건 전체 가액을 기준으로 한다. 지분 가액이 12억 이하면 전액 비과세로 빠지고(물건 전체 20억의 1/2 지분),
+ * 그 위 구간은 고가 안분이 과소했다. 양도세 계산기는 같은 사실(공유 지분 + 부담부증여)을 물건 전체 100% 입력 × 지분율로 받는다.
+ */
+export const GIFT_BURDENED_PARTIAL_OWNERSHIP_ERROR =
+  "물건의 일부 지분만 증여하는 경우에는 이 화면에서 양도소득세를 함께 계산할 수 없습니다 — 12억 고가주택 판정이 물건 전체 가액 기준" +
+  "(소득세법 시행령 §156①·§160①)인데 이 화면에는 지분율·물건 전체 가액 칸이 없습니다. 「양도소득세 함께 계산」을 끄고, " +
+  "양도소득세 계산기에서 자산의 공유 지분을 입력하고 양도 유형을 「부담부증여」로 계산하세요.";
+
+/** ⑧ — 주택이고 「일부 지분만 증여」가 켜져 있으면 차단 문구. ⑤ 토글(`HousingFieldSet`)과 같은 주택 게이트다. */
+export function giftBurdenedPartialOwnershipError(
+  bgt: BurdenedGiftTransferTaxInput,
+  isHousing: boolean,
+): string | null {
+  return isHousing && bgt.isPartialOwnershipGift === true ? GIFT_BURDENED_PARTIAL_OWNERSHIP_ERROR : null;
+}

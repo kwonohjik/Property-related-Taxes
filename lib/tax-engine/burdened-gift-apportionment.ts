@@ -60,7 +60,7 @@ export {
 } from "./burdened-gift-valuation";
 export {
   assertBurdenedGiftEligible,
-  detectBurdenedGiftMultiHouseWarning,
+  burdenedGiftSurchargeSuspendedNotice,
 } from "./burdened-gift-eligibility";
 
 

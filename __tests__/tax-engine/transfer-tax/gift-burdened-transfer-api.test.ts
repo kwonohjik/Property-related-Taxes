@@ -354,9 +354,10 @@ describe("B-api-6: temporaryTwoHouse Date → ISO string 변환", () => {
     expect(body.temporaryTwoHouse).toBeDefined();
   });
 
-  it("previousAcquisitionDate = '2018-06-01' (ISO date string)", () => {
+  // 1h-G1-3 — 종전 주택은 증여(양도) 주택이다: 저장된 옛 자유 입력(2018-06-01)이 아니라 자산 취득일(2020-01-01)을 싣는다.
+  it("previousAcquisitionDate = 증여 주택 취득일 '2020-01-01' (ISO date string) — 저장된 옛 값(2018-06-01)은 읽지 않는다", () => {
     const tth = body.temporaryTwoHouse as Record<string, unknown>;
-    expect(tth.previousAcquisitionDate).toBe("2018-06-01");
+    expect(tth.previousAcquisitionDate).toBe("2020-01-01");
   });
 
   it("newAcquisitionDate = '2020-01-01' (ISO date string)", () => {

@@ -5,7 +5,7 @@
  * transferType OR legacy + propertyType 4종 + overshoot fail-fast + 5-a 해석 B + 케이스 12 안내.
  */
 
-import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible, detectBurdenedGiftMultiHouseWarning } from "./burdened-gift-apportionment";
+import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible } from "./burdened-gift-apportionment";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
@@ -15,7 +15,6 @@ export function runBurdenedGiftStep(
   rawInput: TransferTaxInput,
   workingInputIn: TransferTaxInput,
   steps: CalculationStep[],
-  warnings: string[],
 ): { breakdown?: TransferBurdenedGiftBreakdown; workingInput: TransferTaxInput } {
   let workingInput = workingInputIn;
   let transferBurdenedGiftBreakdown: TransferBurdenedGiftBreakdown | undefined;
@@ -131,13 +130,7 @@ export function runBurdenedGiftStep(
       amount: totalTransferPrice,
       legalBasis: BURDENED_GIFT_TRANSFER.VALUATION_159,
     });
-    // F-2: 케이스 12 다주택 중과 비스코프 안내 (양도자 = 증여자 → §97의2 미적용).
-    const multiHouseWarning = detectBurdenedGiftMultiHouseWarning({
-      propertyType: workingInput.propertyType,
-      isRegulatedArea: workingInput.isRegulatedArea,
-      householdHousingCount: workingInput.householdHousingCount,
-    });
-    if (multiHouseWarning) warnings.push(multiHouseWarning);
+    // 다주택 중과 한시 배제 적용 고지는 중과 판정이 끝난 뒤 `transfer-tax.ts`가 붙인다(1h-G1-11 — 유예가 실제 적용된 결과에서만).
   }
   return { breakdown: transferBurdenedGiftBreakdown, workingInput };
 }
