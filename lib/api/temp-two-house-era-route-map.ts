@@ -25,5 +25,13 @@ export function mapTemporaryTwoHouseEraFacts(tt: Parsed) {
     newHouseContractDate: toOptionalDate(tt.newHouseContractDate),
     wholeHouseholdMoveInDate: toOptionalDate(tt.wholeHouseholdMoveInDate),
     existingTenantLeaseEndDate: toOptionalDate(tt.existingTenantLeaseEndDate),
+    // 신규 주택 취득 경위 — 날짜는 JSON 경유로 string이라 Date로 바꾼다. 단건·다건이 같은 함수를 쓴다(F04 전례).
+    newHouseOrigin: tt.newHouseOrigin
+      ? {
+          kind: tt.newHouseOrigin.kind,
+          rightAcquisitionDate: toOptionalDate(tt.newHouseOrigin.rightAcquisitionDate),
+          rightApprovalDate: toOptionalDate(tt.newHouseOrigin.rightApprovalDate),
+        }
+      : undefined,
   };
 }

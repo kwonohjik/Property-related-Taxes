@@ -27,6 +27,7 @@ import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import { marriageRentalSidesOf, resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
 import { parentalCareAgeVerdict, PARENTAL_CARE_AGE_CONFIRM_NOTICE } from "./parental-care-age";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "../types/transfer.types";
+import { judgeNewHouseOrigin, type NewHouseOriginVerdict } from "./new-house-origin";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { DeemedOneHouseBasis, HouseInfo } from "../types/multi-house-surcharge.types";
 import {
@@ -55,7 +56,7 @@ export type DeemedOneHouseReqInput = ExemptionReqInput &
   MergeDeemingReqInput &
   Pick<
     TransferTaxInput,
-    "isRegulatedArea" | "isOneHousehold" | "temporaryTwoHouse" | "householdHousingCount" | "ruralHouse"
+    "isRegulatedArea" | "isOneHousehold" | "temporaryTwoHouse" | "householdHousingCount" | "ruralHouse" | "rightThreeYearException"
   >;
 
 /** §155④⑤ 합가 의제 성립 판정 입력 — `resolveMergeDeeming` 전용 narrowing. */
@@ -120,6 +121,8 @@ export function evaluateTemporaryTwoHouseTiming(
   timing: ReturnType<typeof judgeTemporaryTwoHouseTiming>;
   /** 처분기한 연혁(연수·임차인 단서 말일) — 요건 검토 카드가 「N년」 문구에 쓴다 */
   era: ReturnType<typeof resolveTemporaryTwoHouseDeadline>;
+  /** 신규 주택의 취득 경위(분양권·입주권 등 권리 유래) 판정 — 불성립이면 `timing.overall`이 거짓이 된다(결정 #43) */
+  origin: NewHouseOriginVerdict;
 } {
   const { previousAcquisitionDate, newAcquisitionDate } = input.temporaryTwoHouse!;
 
@@ -147,7 +150,9 @@ export function evaluateTemporaryTwoHouseTiming(
     disposalDelayDisposedByThatMethod: input.temporaryTwoHouse!.disposalDelayDisposedByThatMethod,
   });
 
-  return { provisoRelaxesHolding, timing, era };
+  // 신규 주택이 권리(분양권·조합원입주권)로 취득해 완공된 주택이면 갈래를 가른다 — 순차 사례는 §155① 부적용(결정 #43 · G6-4).
+  const origin = judgeNewHouseOrigin(input, provisoRelaxesHolding);
+  return { provisoRelaxesHolding, timing: origin.blocked ? { ...timing, overall: false } : timing, era, origin };
 }
 
 /**

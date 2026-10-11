@@ -24,7 +24,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2020-06-25"
+          "acquisitionDate": "2020-06-25",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -59,7 +60,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2024-06-15"
+          "acquisitionDate": "2024-06-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

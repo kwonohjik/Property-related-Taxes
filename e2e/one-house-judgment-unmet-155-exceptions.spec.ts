@@ -29,6 +29,7 @@ const house = (
 ) => ({
   id,
   region: "capital" as const,
+  acquisitionOrigin: "general" as const,
   acquisitionDate,
   officialPrice: "300000000",
   isInherited: false,

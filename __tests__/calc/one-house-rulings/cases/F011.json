@@ -23,7 +23,8 @@
         },
         {
           "id": "house3",
-          "acquisitionDate": "2003-04-24"
+          "acquisitionDate": "2003-04-24",
+          "acquisitionOrigin": "general"
         }
       ]
     },

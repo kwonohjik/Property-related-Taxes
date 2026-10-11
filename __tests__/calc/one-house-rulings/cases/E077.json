@@ -23,7 +23,8 @@
           "inheritedDate": "2000-06-30",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": true,
-          "isLargestCoInheritedShareholder": true
+          "isLargestCoInheritedShareholder": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

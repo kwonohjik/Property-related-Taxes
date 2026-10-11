@@ -27,7 +27,8 @@
    "houses": [
     {
      "id": "mapo",
-     "acquisitionDate": "2008-03-20"
+     "acquisitionDate": "2008-03-20",
+     "acquisitionOrigin": "general"
     }
    ],
    "provisoReason": "overseas_migration",

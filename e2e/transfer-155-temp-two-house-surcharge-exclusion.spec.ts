@@ -56,6 +56,7 @@ function seedForm(over: Record<string, unknown>) {
           {
             id: "h2",
             region: "capital",
+            acquisitionOrigin: "general",
             acquisitionDate: "2025-01-01",
             officialPrice: "800000000",
             isInherited: false,
@@ -118,6 +119,7 @@ test.describe("일시적 2주택 §155① 의제 → 중과 배제 (§167의10�
         {
           id: "h2",
           region: "capital",
+          acquisitionOrigin: "general",
           acquisitionDate: "2017-01-01", // 양도주택보다 **먼저** 취득 ⇒ 신규주택이 아니다
           officialPrice: "800000000",
           isInherited: false,

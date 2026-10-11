@@ -18,122 +18,146 @@
     {
      "id": "ofc01",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc02",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc03",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc04",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc05",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc06",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc07",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc08",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc09",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc10",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc11",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc12",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc13",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc14",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc15",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc16",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc17",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc18",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc19",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc20",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc21",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc22",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc23",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "ofc24",
      "acquisitionDate": "2015-11-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     }
    ]
   },

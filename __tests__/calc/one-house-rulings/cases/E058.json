@@ -21,7 +21,8 @@
           "id": "b",
           "region": "non_capital",
           "acquisitionDate": "2020-06-26",
-          "regionCode": "3017010100"
+          "regionCode": "3017010100",
+          "acquisitionOrigin": "general"
         }
       ]
     },

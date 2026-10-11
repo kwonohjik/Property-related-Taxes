@@ -337,6 +337,9 @@ export function buildGiftBurdenedTransferBody(
       ...(giftBurdenedTempTwoHouseDeadlineInScope(bgt)
         ? buildTempTwoHouseDeadlineExceptionFacts(giftBurdenedDeadlineExceptionFields(bgt))
         : {}),
+      // 신규 주택의 취득 경위(분양권·조합원입주권 유래)는 이 경로에 보유 주택 목록이 없어 묻지 못한다 — 현행대로 판정하고
+      // 엔진이 §155①만이 비과세 근거일 때 확인 필요를 알린다(결정 #43 · 코드 가드: `not_collected`).
+      newHouseOrigin: { kind: "not_collected" },
     };
   }
 

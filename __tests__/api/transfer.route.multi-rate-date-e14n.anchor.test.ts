@@ -67,6 +67,7 @@ const row = (id: string, acq: string): HouseEntry => ({
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 });
 
 function form(acq: string, transfer: string, houses: HouseEntry[], over: Partial<Form> = {}): Form {

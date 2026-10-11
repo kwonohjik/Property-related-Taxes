@@ -20,7 +20,8 @@
    "houses": [
     {
      "id": "new",
-     "acquisitionDate": "2008-01-15"
+     "acquisitionDate": "2008-01-15",
+     "acquisitionOrigin": "general"
     }
    ],
    "provisoReason": "overseas_residence",

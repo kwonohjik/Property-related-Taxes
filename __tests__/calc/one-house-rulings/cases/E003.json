@@ -18,7 +18,8 @@
         {
           "id": "sejong",
           "region": "non_capital",
-          "acquisitionDate": "2014-07-21"
+          "acquisitionDate": "2014-07-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },

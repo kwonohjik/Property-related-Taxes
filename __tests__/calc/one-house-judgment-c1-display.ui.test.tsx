@@ -35,6 +35,7 @@ const houseRow = (id: string, acquisitionDate: string) => ({
   acquisitionDate,
   officialPrice: "300000000",
   isInherited: false,
+  acquisitionOrigin: "general",
 });
 
 function form(over: Record<string, unknown> = {}, assetOver: Partial<AssetForm> = {}): OneHouseJudgmentFormData {

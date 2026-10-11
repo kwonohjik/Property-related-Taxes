@@ -22,6 +22,7 @@ import { selectDirectResidenceInput } from "./_helpers/residence-direct";
 const HOUSE = {
   id: "h1",
   region: "capital",
+  acquisitionOrigin: "general",
   officialPrice: "300000000",
   isInherited: false,
   isLongTermRental: false,

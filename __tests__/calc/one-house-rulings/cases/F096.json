@@ -18,7 +18,8 @@
     {
      "id": "ofc",
      "acquisitionDate": "2012-09-28",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     }
    ]
   },

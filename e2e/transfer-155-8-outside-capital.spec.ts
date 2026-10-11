@@ -37,6 +37,7 @@ function seedForm(over: Record<string, unknown>) {
           {
             id: "h2",
             region: "non_capital",
+            acquisitionOrigin: "general",
             acquisitionDate: "2019-01-01",
             officialPrice: "800000000",
             isInherited: false,
@@ -70,7 +71,7 @@ async function seedAndCalc(page: Page, over: Record<string, unknown> = {}) {
 }
 
 test.describe("§155⑦ 농어촌주택", () => {
-  test("3호 귀농 — ⑬⑭ 배관 + 결과 근거 + ⑪⑫ 사후관리 경고", async ({ page }) => {
+  test("3호 귀농(레거시 스칼라) — ⑬⑭ 배관 + ⑩4호·⑪ 답이 없으면 비과세 근거를 싣지 않는다", async ({ page }) => {
     test.setTimeout(60_000);
     let sent: Record<string, unknown> | undefined;
     page.on("request", (req) => {
@@ -102,8 +103,9 @@ test.describe("§155⑦ 농어촌주택", () => {
     // 유형별 무의미 필드는 실리지 않는다(침묵 오판정 방지)
     expect(sent?.decedentResidenceYears).toBeUndefined();
 
-    await expect(page.getByText(/§155⑦3호 귀농/).first()).toBeVisible();
-    await expect(page.getByText(/최초로 양도하는 1개/).first()).toBeVisible();
+    // 결정 #44 — 세대 단위 레거시 스칼라는 ⑩4호·⑪·귀농 전 취득 답을 싣지 못한다 → 엔진이 불성립으로 판정한다(옛 「§155⑦3호 귀농」 비과세 문구는 더 이상 나오지 않는다).
+    expect(sent?.farmlandBasis).toBeUndefined();
+    expect(sent?.priorReturnFarmExemption).toBeUndefined();
   });
 
   test("1호 상속 — 피상속인 거주 5년 미만이면 미적용", async ({ page }) => {

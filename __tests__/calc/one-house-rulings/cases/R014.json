@@ -18,11 +18,13 @@
         {
           "id": "officetel",
           "acquisitionDate": "2007-01-03",
-          "isOfficetel": true
+          "isOfficetel": true,
+          "acquisitionOrigin": "general"
         },
         {
           "id": "new",
-          "acquisitionDate": "2009-05-12"
+          "acquisitionDate": "2009-05-12",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -55,7 +57,8 @@
       "houses": [
         {
           "id": "new",
-          "acquisitionDate": "2009-05-12"
+          "acquisitionDate": "2009-05-12",
+          "acquisitionOrigin": "general"
         }
       ]
     },

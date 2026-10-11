@@ -18,12 +18,14 @@
     {
      "id": "issue",
      "acquisitionDate": "2002-11-13",
-     "isApartment": true
+     "isApartment": true,
+     "acquisitionOrigin": "general"
     },
     {
      "id": "new",
      "acquisitionDate": "2003-01-10",
-     "isApartment": true
+     "isApartment": true,
+     "acquisitionOrigin": "general"
     }
    ]
   },

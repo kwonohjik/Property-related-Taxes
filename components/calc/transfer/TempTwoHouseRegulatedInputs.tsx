@@ -35,6 +35,7 @@ export function TempTwoHouseRegulatedInputs({
   regulated,
   newHouseAcquisitionDate,
   hasHouseRoster = true,
+  contractDateFromRow,
 }: {
   form: TemporaryTwoHouseEraFormFields;
   onChange: (d: Partial<TemporaryTwoHouseEraFormFields>) => void;
@@ -45,6 +46,11 @@ export function TempTwoHouseRegulatedInputs({
    * 「신규 주택 소재지」 칸(E-1 잔여 B)을 가리킨다 — 그 화면에는 목록이 없다.
    */
   hasHouseRoster?: boolean;
+  /**
+   * 신규 주택이 권리(분양권·조합원입주권)로 취득한 행이면 그 행의 권리 취득일(`YYYY-MM-DD`) — §155①1호 괄호의 「권리 취득」 시점은 이 날로
+   * 판정하므로 폼 전역 「매매계약 체결·계약금 지급일」 칸을 받지 않는다(원칙 4 — 같은 사실을 두 칸에서 받지 않는다 · 결정 #43).
+   */
+  contractDateFromRow?: string;
 }) {
   const auto = (v: boolean | undefined) =>
     v === undefined ? "판정 불가" : v ? "조정대상지역" : "조정대상지역 아님";
@@ -102,6 +108,16 @@ export function TempTwoHouseRegulatedInputs({
           )}
         </div>
 
+        {contractDateFromRow ? (
+          <div className="space-y-1.5" data-testid="temp-two-house-contract-date-from-row">
+            <label className="text-sm font-medium">신규 주택을 취득할 수 있는 권리의 취득일</label>
+            <p className="text-xs">{contractDateFromRow}</p>
+            <p className="text-xs text-muted-foreground">
+              신규 주택을 권리(분양권·조합원입주권)로 취득한 행이라, 조정대상지역 공고 전에 권리를 취득했는지는 보유 주택 목록에 입력한 이 날로
+              판정합니다. 별도의 매매계약일 칸은 받지 않습니다.
+            </p>
+          </div>
+        ) : (
         <div className="space-y-1.5">
           <label className="text-sm font-medium">신규 주택 매매계약 체결·계약금 지급일 (해당 시)</label>
           <DateInput
@@ -117,6 +133,7 @@ export function TempTwoHouseRegulatedInputs({
             취득일을 기준으로 합니다.
           </p>
         </div>
+        )}
 
         {regulated.moveInRelevant && (
           <>

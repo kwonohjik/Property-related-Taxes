@@ -49,6 +49,7 @@ import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-ju
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules;
 const D = (s: string) => new Date(s);
@@ -358,6 +359,7 @@ describe("§155④⑤·⑦3호·⑧ · §154① 단서 · §156의2⑤ · §89�
   it("🔴 §155⑦3호 귀농 5년 — 월 ✓ · 화 ✗", () => {
     const RURAL = {
       kind: "return_to_farm",
+      ...RETURN_TO_FARM_OK,
       isOutsideCapitalEupMyeon: true,
       acquisitionDate: D("2019-06-01"),
       isHighPriceAtAcquisition: false,

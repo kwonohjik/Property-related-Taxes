@@ -22,6 +22,7 @@ import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.typ
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rates = makeMockRates();
 const D = (s: string) => new Date(s);
@@ -76,6 +77,7 @@ const merge = (extraHouses: HouseInfo[]) =>
 
 const RURAL = {
   kind: "return_to_farm" as const,
+  ...RETURN_TO_FARM_OK,
   isOutsideCapitalEupMyeon: true,
   acquisitionDate: D("2022-01-10"),
   isHighPriceAtAcquisition: false,

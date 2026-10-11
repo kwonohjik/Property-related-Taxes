@@ -171,7 +171,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           })
         }
         title="인구감소지역 소재 주택"
-        description="소령 §167의3①12 다·라목 — 세컨드홈 특례 시 주택 수 제외 (2026.1.1~)"
+        description="소령 §167의3①12 다·라목 — 세컨드홈 특례 시 중과 주택 수에서 제외 (2026.1.1~). 중과 주택 수 전용입니다 — 1세대1주택 비과세 판정의 조특법 §71의2 인구감소지역주택은 이 칸과 무관하게 명부에서 자동 판정합니다."
       >
         <div className="space-y-2 pt-1">
           <ToggleCard

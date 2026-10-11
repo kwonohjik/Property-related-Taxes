@@ -89,6 +89,11 @@ type FullOnlyProps = {
    */
   derivedNewHouseAcquisitionDate: string | undefined;
   /**
+   * 신규 주택으로 도출된 행의 취득 경위(`TemporaryTwoHouseDates.newHouseOrigin`) — 권리 유래 행이면 폼 전역 「매매계약 체결·계약금 지급일」 칸 대신
+   * 그 행의 권리 취득일로 §155①1호 괄호를 판정한다(원칙 4 · 결정 #43).
+   */
+  derivedNewHouseOrigin?: { kind: string; rightAcquisitionDate?: string };
+  /**
    * 비과세 판정이 보는 **제외 후 세대 주택 수**(`judgmentExemptionHouseCount` — 명부 파생값 − 주택 수 제외 행).
    * 3채 이상이면 판정 카드가 「요건 충족」을 말하지 않는다 — §155①은 「1주택을 소유한 1세대가 … 일시적으로 2주택이 된 경우」라
    * 농어촌주택(§155⑦)·합가(§155④⑤)와 겹친 경우가 아니면 대상이 아니다(S15-9).
@@ -121,6 +126,7 @@ function TempTwoHouseCoreBlocks({
   relocationRegionVerdict,
   primaryAcquisitionDate,
   derivedNewHouseAcquisitionDate,
+  derivedNewHouseOrigin,
 }: BaseProps &
   Pick<
     FullOnlyProps,
@@ -128,6 +134,7 @@ function TempTwoHouseCoreBlocks({
     | "relocationRegionVerdict"
     | "primaryAcquisitionDate"
     | "derivedNewHouseAcquisitionDate"
+    | "derivedNewHouseOrigin"
   >) {
   /**
    * 명부에서 신규 주택을 도출하지 못하면 이 특례 축 자체를 그리지 않는다.
@@ -194,6 +201,14 @@ function TempTwoHouseCoreBlocks({
                 onChange={onChange}
                 regulated={tempTwoHouseVerdict.regulated}
                 newHouseAcquisitionDate={derivedNewHouseAcquisitionDate}
+                contractDateFromRow={
+                  derivedNewHouseOrigin &&
+                  derivedNewHouseOrigin.kind !== "general" &&
+                  derivedNewHouseOrigin.kind !== "unknown" &&
+                  derivedNewHouseOrigin.kind !== "not_collected"
+                    ? derivedNewHouseOrigin.rightAcquisitionDate
+                    : undefined
+                }
               />
             )}
           </div>
@@ -294,6 +309,19 @@ function TempTwoHouseVerdictCard({
                       · 요건 C — 같은 기한 내 신규주택으로 세대전원 이사·전입신고 (§155①2호 가목)
                       {tempTwoHouseVerdict.moveInPending && " — 전입일을 입력하지 않아 충족하지 않은 것으로 판정합니다(확인 필요)"}
                     </p>
+                  )}
+                  {/* 신규 주택의 취득 경위(분양권·조합원입주권 유래) — 엔진 `judgeNewHouseOrigin`이 정한 사유·확인 필요를 그대로 싣는다(결정 #43) */}
+                  {tempTwoHouseVerdict.origin && (
+                    <div data-testid="temp-two-house-origin-note" className="space-y-1">
+                      <p className="font-medium">
+                        {tempTwoHouseVerdict.origin.blocked ? "미충족" : "확인 필요"} · 요건 D — 신규주택의 취득 경위
+                      </p>
+                      {tempTwoHouseVerdict.origin.notes.map((n, i) => (
+                        <p key={`origin-note-${i}`} className="text-caption">
+                          {n}
+                        </p>
+                      ))}
+                    </div>
                   )}
                   <p className="text-caption">최종 비과세 여부는 판정 결과에서 확정됩니다.</p>
                 </>

@@ -62,8 +62,10 @@ export type { CommercialBuildingFormSlice } from "./calc-wizard-asset-cb";
 // 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서)
 import type { UsageConversionFormSlice } from "./calc-wizard-asset-usage-conversion";
 export type { UsageConversionFormSlice } from "./calc-wizard-asset-usage-conversion";
+import type { SellingHouseOriginFormSlice } from "./calc-wizard-asset-selling-origin";
+export type { SellingHouseOriginFormSlice } from "./calc-wizard-asset-selling-origin";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice {
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice {
   assetId: string;
   assetLabel: string;
   /**

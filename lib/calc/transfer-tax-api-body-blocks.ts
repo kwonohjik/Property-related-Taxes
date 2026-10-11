@@ -15,12 +15,14 @@ import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/trans
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { housesOwnedAtTransfer, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
+import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -134,14 +136,16 @@ export function buildMergeFacts(f: {
   };
 }
 
-export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
-  /**
-   * §155① 두 날짜의 **단일 생산 지점**. 명부에서 신규주택을 도출하고, 도출이 성립하지 않을
-   * 때만 종전 flat 필드로 폴백한다 — 규칙과 근거는 `resolveTemporaryTwoHouse` 주석 참조.
-   */
-  const tempTwoHouse = resolveTemporaryTwoHouse({
+/**
+ * §155① 두 날짜의 **단일 생산 지점**(계산기). 명부에서 신규주택을 도출하고, 도출이 성립하지 않을
+ * 때만 종전 flat 필드로 폴백한다 — 규칙과 근거는 `resolveTemporaryTwoHouse` 주석 참조.
+ * ④ 변환과 ⑧ 검증(신규 주택 행의 취득 경위 필수)이 **같은 도출**을 읽는다.
+ */
+export function deriveCalcTemporaryTwoHouse(form: TransferFormData, primary: AssetForm | undefined) {
+  return resolveTemporaryTwoHouse({
     primaryKind: primary?.assetKind,
-    primaryAcquisitionDate: primaryAcquisitionDateOf(primary),
+    // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일이 종전주택 취득일이다(결정 #43 하위 2 · ⑤⑧과 같은 leaf).
+    primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primaryAcquisitionDateOf(primary),
     houses: form.houses,
     transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
@@ -151,6 +155,10 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
     excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
   });
+}
+
+export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
+  const tempTwoHouse = deriveCalcTemporaryTwoHouse(form, primary);
 
   return {
   ...(tempTwoHouse
@@ -163,11 +171,14 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
           // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b).
           //   ⑤ 판정 카드와 같은 leaf로 편다. 신규 주택 코드는 명부 행에서만 온다.
           ...toTemporaryTwoHouseEraFacts(
-            form,
+            // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 행의 권리 취득일로 본다 — 폼 전역 계약일 칸은 그 행에 쓰지 않는다(결정 #43).
+            eraFormWithOriginDates(form, tempTwoHouse.newHouseOrigin),
             tempTwoHouse.newHouseRegionCode,
             tempTwoHouse.newHouseInDesignatedDistrict,
             tempTwoHouse.previousHouse,
           ),
+          // 신규 주택 취득 경위(분양권·조합원입주권 유래 갈래) — 명부 행의 답, 직접 선언 경로는 `not_collected`(결정 #43 · G6-4).
+          ...(tempTwoHouse.newHouseOrigin ? { newHouseOrigin: tempTwoHouse.newHouseOrigin } : {}),
         },
       }
     : {}),
@@ -221,7 +232,10 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
                       ? { acquisitionDate: form.ruralHouseAcquisitionDate }
                       : {}),
                     isHighPriceAtAcquisition: form.ruralHouseHighPriceAtAcquisition,
-                    landAreaSqm: parseFloat(form.ruralHouseLandAreaSqm) || 0,
+                    // 빈 칸은 키를 싣지 않는다 — 0㎡로 읽으면 ⑩3호(660㎡ 이내)를 조용히 통과한다(결정 #44). 새 ⑩4호·⑪ 키도 없다 → 엔진이 불성립.
+                    ...(Number.isFinite(parseFloat(form.ruralHouseLandAreaSqm))
+                      ? { landAreaSqm: parseFloat(form.ruralHouseLandAreaSqm) }
+                      : {}),
                     wholeHouseholdMoved: form.ruralHouseWholeHouseholdMoved,
                   }
                 : {}),

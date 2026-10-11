@@ -80,6 +80,7 @@ const RENTAL_ROW: HouseEntry = {
   isApartment: false,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 };
 
 const unit = (unitId: string) => ({

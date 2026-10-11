@@ -386,6 +386,7 @@ describe("B ⑭ route — 신규 주택 주소가 선언 없이 신규 주택 �
           isApartment: false,
           isOfficetel: false,
           isUnsoldHousing: false,
+          acquisitionOrigin: "general",
           acquisitionPrice: "",
           exclusiveArea: "",
           isUnsoldNewHouse: false,

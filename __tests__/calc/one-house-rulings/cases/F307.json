@@ -26,7 +26,8 @@
     {
      "id": "officetel",
      "acquisitionDate": "2016-09-05",
-     "isOfficetel": true
+     "isOfficetel": true,
+     "acquisitionOrigin": "general"
     }
    ],
    "provisoReason": "overseas_residence",

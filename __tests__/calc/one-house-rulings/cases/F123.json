@@ -17,7 +17,8 @@
    "houses": [
     {
      "id": "B",
-     "acquisitionDate": "2026-03-15"
+     "acquisitionDate": "2026-03-15",
+     "acquisitionOrigin": "general"
     }
    ]
   },
@@ -48,7 +49,8 @@
    "houses": [
     {
      "id": "B",
-     "acquisitionDate": "2026-03-15"
+     "acquisitionDate": "2026-03-15",
+     "acquisitionOrigin": "general"
     }
    ]
   },

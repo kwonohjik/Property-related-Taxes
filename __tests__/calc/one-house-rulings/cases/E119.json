@@ -25,7 +25,8 @@
           "inheritedDate": "2022-10-15",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": true,
-          "parentalCareMergeInheritedHouse": true
+          "parentalCareMergeInheritedHouse": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

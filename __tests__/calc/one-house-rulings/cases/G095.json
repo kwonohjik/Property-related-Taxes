@@ -18,7 +18,8 @@
     {
      "id": "B",
      "region": "non_capital",
-     "acquisitionDate": "2014-12-15"
+     "acquisitionDate": "2014-12-15",
+     "acquisitionOrigin": "general"
     }
    ]
   },

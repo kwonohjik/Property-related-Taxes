@@ -24,7 +24,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2020-02-15"
+          "acquisitionDate": "2020-02-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "transferDate": "2022-04-15"
@@ -60,7 +61,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2020-02-15"
+          "acquisitionDate": "2020-02-15",
+          "acquisitionOrigin": "general"
         }
       ],
       "transferDate": "2021-06-15"
@@ -100,7 +102,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2024-02-15"
+          "acquisitionDate": "2024-02-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

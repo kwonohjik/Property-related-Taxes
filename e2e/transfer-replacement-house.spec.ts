@@ -57,7 +57,8 @@ async function gotoStep4Household2(page: Page) {
   await page.getByRole("button", { name: "보유 상황" }).first().click();
   await expect(page.getByText("세대 보유 주택 수")).toBeVisible();
   await page.getByRole("switch", { name: "1세대 해당" }).setChecked(true);
-  await addHouseRow(page);
+  // 행 취득일(2018-01-01)이 양도 주택(2017-04-13)보다 늦어 신규 주택 후보다 — 취득 경위를 답해야 ⑧을 통과한다(결정 #43).
+  await addHouseRow(page, { acquisitionDate: "2018-01-01", officialPrice: "300000000", acquisitionOrigin: "general" });
   await confirmNoPresaleRights(page);
   await selectDirectResidenceInput(page); // 거주 무관 흐름 — 구 기본값(개월 수 직접 입력) 축
 }

@@ -76,6 +76,8 @@ function uocRow(over: Partial<HouseEntry> = {}): HouseEntry {
     isUnsoldHousing: false,
     oneHouseUnavoidableOutsideCapital: true,
     unavoidableOutsideCapitalReason: "work",
+    // 양도 주택보다 나중에 취득한 행은 신규 주택 취득 경위를 답해야 한다(결정 #43) — 이 시험의 관심사가 아니라 일반 취득으로 둔다.
+    acquisitionOrigin: "general",
     ...over,
   };
 }

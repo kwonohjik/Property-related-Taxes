@@ -28,7 +28,8 @@
     {
      "id": "C",
      "region": "capital",
-     "acquisitionDate": "2014-12-22"
+     "acquisitionDate": "2014-12-22",
+     "acquisitionOrigin": "general"
     }
    ],
    "marriageDate": "2011-09-25",
@@ -69,7 +70,8 @@
     {
      "id": "C",
      "region": "capital",
-     "acquisitionDate": "2024-09-15"
+     "acquisitionDate": "2024-09-15",
+     "acquisitionOrigin": "general"
     }
    ],
    "marriageDate": "2018-05-15",

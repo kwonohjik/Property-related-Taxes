@@ -124,6 +124,7 @@ const house = (over: Partial<HouseEntry>): HouseEntry =>
     isApartment: false,
     isOfficetel: false,
     isUnsoldHousing: false,
+    acquisitionOrigin: "general",
     acquisitionPrice: "",
     exclusiveArea: "",
     isUnsoldNewHouse: false,
@@ -225,6 +226,8 @@ describe("E-1 ④⑬ 본문 — 새 필드가 `temporaryTwoHouse`에 실린다 (
       newHouseContractDate: "2020-05-01",
       wholeHouseholdMoveInDate: "2021-01-01",
       existingTenantLeaseEndDate: "2021-12-31",
+      // 결정 #43 — 명부 행 없이 신규 주택 취득일만 받는 흐름은 취득 경위를 묻지 못했다고 싣는다.
+      newHouseOrigin: { kind: "not_collected" },
     });
   });
   it("B-1 부정 짝 — 임차인 토글 OFF면 남은 종료일 미전송 · 미선택 선언 미전송 · 신규 주택 코드 없음", () => {
@@ -232,7 +235,12 @@ describe("E-1 ④⑬ 본문 — 새 필드가 `temporaryTwoHouse`에 실린다 (
       giftItem("2020-06-01", { newHouseRegulatedAtAcquisition: "", newHouseTenantLeaseEndDate: "2021-12-31" }),
       giftForm("2021-03-01"),
     ).temporaryTwoHouse as Obj;
-    expect(tt).toEqual({ previousAcquisitionDate: PREV_ACQ, newAcquisitionDate: "2020-06-01" });
+    expect(tt).toEqual({
+      previousAcquisitionDate: PREV_ACQ,
+      newAcquisitionDate: "2020-06-01",
+      // 결정 #43 — 명부 행 없이 신규 주택 취득일만 받는 흐름은 취득 경위를 묻지 못했다고 싣는다.
+      newHouseOrigin: { kind: "not_collected" },
+    });
   });
 });
 

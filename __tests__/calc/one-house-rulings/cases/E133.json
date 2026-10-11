@@ -21,19 +21,22 @@
           "id": "p-new",
           "region": "capital",
           "acquisitionDate": "2002-08-22",
-          "mergeOrigin": "seller_side"
+          "mergeOrigin": "seller_side",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "s1",
           "region": "capital",
           "acquisitionDate": "1999-05-15",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "counterpart_side",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "s2",
           "region": "capital",
           "acquisitionDate": "2001-05-15",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "counterpart_side",
+          "acquisitionOrigin": "general"
         }
       ]
     },

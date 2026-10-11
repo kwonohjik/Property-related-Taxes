@@ -29,7 +29,8 @@
           "inheritedDate": "2016-12-20",
           "decedentSameHouseholdAtInheritance": true,
           "parentalCareMergeInheritedHouse": true,
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "counterpart_side",
+          "acquisitionOrigin": "general"
         }
       ],
       "parentalCareParentAge": "over_60"

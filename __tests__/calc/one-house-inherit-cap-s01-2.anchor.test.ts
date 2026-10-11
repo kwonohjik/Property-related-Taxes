@@ -13,7 +13,7 @@
 import { describe, it, expect } from "vitest";
 import { observeCase, type RulingCase } from "./one-house-rulings/harness";
 
-const base = { region: "non_capital" as const };
+const base = { region: "non_capital" as const, acquisitionOrigin: "general" as const };
 const C = { ...base, id: "C", acquisitionDate: "2000-01-01", isInherited: true, inheritedDate: "2021-06-01", isCoInherited: false, decedentSameHouseholdAtInheritance: false };
 const D = { ...base, id: "D", acquisitionDate: "2000-01-01", isInherited: true, inheritedDate: "2022-04-18", isCoInherited: true, isLargestCoInheritedShareholder: false, decedentSameHouseholdAtInheritance: false };
 /** ① 신규 주택(양도 주택보다 나중 취득 — 명부에서 일시적 2주택으로 도출된다) */

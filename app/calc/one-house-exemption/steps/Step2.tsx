@@ -35,6 +35,7 @@ import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionPro
 import { SaleHouseSpecialsGroup } from "@/components/calc/transfer/SaleHouseSpecialsGroup";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
 import { judgmentFinalHouseRestartInScope } from "@/lib/calc/final-house-restart";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { judgeRelocationRegion } from "@/lib/calc/relocation-region-verdict";
 import {
   judgmentCountExclusionRowApplies,
@@ -76,7 +77,7 @@ export function Step2({ form, onChange }: Props) {
    */
   const viewForm = useMemo(() => withDerivedHouseCount(form), [form]);
   const houseCount = deriveJudgmentHouseCount(form);
-  const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
+  const primaryAcquisitionDate = sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? form.assets?.[0]?.acquisitionDate ?? "";
 
   /**
    * §155① 신규 주택 — **명부에서 도출**한다(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`).
@@ -203,6 +204,7 @@ export function Step2({ form, onChange }: Props) {
           // D8 상대 쪽 짝(B → C)이면 종전 주택은 양도 주택이 아니라 B다 — 카드·④와 같은 짝(`derivedNewHouse`)에서 읽는다.
           primaryAcquisitionDate={derivedNewHouse?.previousAcquisitionDate ?? primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
+          derivedNewHouseOrigin={derivedNewHouse?.newHouseOrigin}
           householdHousingCount={judgmentExemptionHouseCount(form)}
           replacementHouseVisible={judgmentReplacementHouseVisible(form)}
           /*

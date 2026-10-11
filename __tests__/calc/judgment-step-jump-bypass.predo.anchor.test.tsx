@@ -79,6 +79,7 @@ const house = (acquisitionDate: string) => ({
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 });
 
 /** ①②는 온전하고 ③(명부)만 불완전한 폼 — 점프해야만 도달하는 상태다. */

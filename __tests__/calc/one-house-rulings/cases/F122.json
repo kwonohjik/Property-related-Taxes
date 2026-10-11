@@ -18,7 +18,8 @@
     {
      "id": "B",
      "region": "non_capital",
-     "acquisitionDate": "2020-11-15"
+     "acquisitionDate": "2020-11-15",
+     "acquisitionOrigin": "general"
     }
    ],
    "prevHouseRegulatedAtNewAcquisition": "no",

@@ -22,7 +22,8 @@
         {
           "id": "rural-b",
           "region": "non_capital",
-          "acquisitionDate": "2011-05-15"
+          "acquisitionDate": "2011-05-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

@@ -41,4 +41,24 @@ export const temporaryTwoHouseSchema = z.object({
   wholeHouseholdMoveInDate: z.string().date().optional(),
   /** 2호 단서 — 전 소유자와 기존 임차인의 임대차계약 종료일 */
   existingTenantLeaseEndDate: z.string().date().optional(),
+  /**
+   * 신규 주택의 취득 경위(분양권·조합원입주권 유래 갈래) — 결정 #43 · G6-4. 키가 없으면 판정하지 않는다(직접 호출·옛 기록).
+   * 화면 경로는 항상 싣는다(미답 = `unknown`, 명부 행이 없는 경로 = `not_collected`).
+   */
+  newHouseOrigin: z
+    .object({
+      kind: z.enum([
+        "general",
+        "successor_right",
+        "original_member_house",
+        "original_member_non_house",
+        "presale",
+        "self_rebuild",
+        "unknown",
+        "not_collected",
+      ]),
+      rightAcquisitionDate: z.string().date().optional(),
+      rightApprovalDate: z.string().date().optional(),
+    })
+    .optional(),
 });

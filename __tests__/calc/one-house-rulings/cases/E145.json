@@ -26,7 +26,8 @@
           "ruralHouseKind": "inherited",
           "ruralDecedentResidenceYears": "10",
           "oneHouseRuralHouse": true,
-          "ruralOutsideCapitalEupMyeon": true
+          "ruralOutsideCapitalEupMyeon": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

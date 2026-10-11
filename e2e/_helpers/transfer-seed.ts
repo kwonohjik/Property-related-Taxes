@@ -11,6 +11,8 @@ import { DIRECT_RESIDENCE } from "./residence-direct";
 export const otherHouse = (id: string, acquisitionDate: string, over: Record<string, unknown> = {}) => ({
   id,
   region: "non_capital",
+  // 결정 #43 — 신규 주택으로 도출될 수 있는 행은 취득 경위를 답해야 계산이 진행된다(⑧). 시드는 일반 취득으로 둔다.
+  acquisitionOrigin: "general",
   acquisitionDate,
   officialPrice: "150000000",
   isInherited: false,

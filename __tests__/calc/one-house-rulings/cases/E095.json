@@ -18,7 +18,8 @@
         {
           "id": "b",
           "region": "capital",
-          "acquisitionDate": "2011-01-15"
+          "acquisitionDate": "2011-01-15",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "c-inherited",
@@ -27,7 +28,8 @@
           "isInherited": true,
           "inheritedDate": "2012-03-07",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         }
       ]
     },

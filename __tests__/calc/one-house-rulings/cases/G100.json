@@ -50,7 +50,8 @@
     {
      "id": "B",
      "region": "capital",
-     "acquisitionDate": "1995-06-15"
+     "acquisitionDate": "1995-06-15",
+     "acquisitionOrigin": "general"
     }
    ]
   },

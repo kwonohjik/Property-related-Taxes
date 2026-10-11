@@ -18,7 +18,8 @@
     {
      "id": "mgr",
      "region": "non_capital",
-     "acquisitionDate": "2000-12-11"
+     "acquisitionDate": "2000-12-11",
+     "acquisitionOrigin": "general"
     }
    ]
   },

@@ -18,7 +18,8 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2023-05-15"
+          "acquisitionDate": "2023-05-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

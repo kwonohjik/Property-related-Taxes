@@ -17,7 +17,8 @@
    "houses": [
     {
      "id": "B",
-     "acquisitionDate": "2020-06-15"
+     "acquisitionDate": "2020-06-15",
+     "acquisitionOrigin": "general"
     }
    ]
   },

@@ -21,7 +21,8 @@
           "id": "b",
           "region": "capital",
           "acquisitionDate": "2021-01-15",
-          "regionCode": "4148010100"
+          "regionCode": "4148010100",
+          "acquisitionOrigin": "general"
         }
       ]
     },

@@ -26,6 +26,7 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules;
 const D = (s: string) => new Date(s);
@@ -140,6 +141,7 @@ describe("OH-23 귀농 3호 축 — ⑦ 소재 · ⑩2·3·5호", () => {
   const RURAL = (over: Record<string, unknown> = {}) =>
     ({
       kind: "return_to_farm",
+      ...RETURN_TO_FARM_OK,
       isOutsideCapitalEupMyeon: true,
       // D15 — ⑦ 단서(5년)는 2016-02-17 이후 귀농주택 취득분에만 붙는다(대통령령 제26982호 부칙 제10조).
       acquisitionDate: D("2017-01-01"),

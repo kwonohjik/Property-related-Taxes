@@ -25,7 +25,8 @@
           "id": "spouse",
           "region": "capital",
           "acquisitionDate": "2000-05-15",
-          "mergeOrigin": "counterpart_side"
+          "mergeOrigin": "counterpart_side",
+          "acquisitionOrigin": "general"
         }
       ]
     },

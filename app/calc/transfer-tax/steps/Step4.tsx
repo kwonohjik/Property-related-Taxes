@@ -44,6 +44,7 @@ import {
   houseCountScalarLocked,
   resolveTemporaryTwoHouse,
 } from "@/lib/calc/household-house-count";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
@@ -193,7 +194,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     () =>
       resolveTemporaryTwoHouse({
         primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
+        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence === true,

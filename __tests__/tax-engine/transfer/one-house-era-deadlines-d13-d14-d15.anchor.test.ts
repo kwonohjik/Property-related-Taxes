@@ -19,6 +19,7 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import { makeMockRates } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 const era = (transfer: string, extra: Partial<Parameters<typeof resolveTemporaryTwoHouseDeadlineEra>[0]> = {}) =>
@@ -111,6 +112,7 @@ describe("D15 귀농주택 5년 단서 — 귀농주택 취득일 2016-02-17 이
       transferDate: d("2024-04-15"),
       ruralHouse: {
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         isOutsideCapitalEupMyeon: true,
         acquisitionDate: d(acq),
         isHighPriceAtAcquisition: false,

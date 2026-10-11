@@ -18,7 +18,8 @@
     {
      "id": "daycare",
      "acquisitionDate": "2002-09-18",
-     "isApartment": true
+     "isApartment": true,
+     "acquisitionOrigin": "general"
     }
    ]
   },

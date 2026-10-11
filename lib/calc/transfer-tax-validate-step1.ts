@@ -42,11 +42,12 @@ import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
-import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
+import { houseRowFactIssues } from "./house-row-fact-issues";
+import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
+import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./selling-house-origin-scope";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
-import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -128,6 +129,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   //   합가일이 없으면 undefined(묻지 않는다). 「모름」은 엔진에서 불성립이 되므로 차단한다
   //   (merge-composition-unknown-unfavorable.plan.md §3-3 · memory `feedback_unknown_fact_applies_unfavorably`).
   const mergeCtx = mergeContextOf(form);
+  // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(④ 전송·⑤ 노출과 같은 도출 `deriveCalcTemporaryTwoHouse`).
+  const newHouseRowId = deriveCalcTemporaryTwoHouse(form, form.assets?.[0])?.newHouseRowId;
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
     const label = `보유 주택 ${i + 1}`;
@@ -169,12 +172,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 판정 메뉴 ⑧과 같은 leaf.
       const uocIssue = houseUnavoidableOutsideCapitalIssue(h);
       if (uocIssue) return fieldError(rowKey, `${label}: ${uocIssue.message}`);
-      // D7 — §155⑦1호 상속 농어촌주택 동일세대 여부(판정 메뉴 ⑧과 같은 leaf).
-      const ruralSameHouseholdIssue = ruralInheritedSameHouseholdIssue(h);
-      if (ruralSameHouseholdIssue) return fieldError(rowKey, `${label}: ${ruralSameHouseholdIssue}`);
-      // §155⑦2호·3호 — 이농 후 그 주택으로 재귀농 여부(판정 메뉴 ⑧과 같은 leaf).
-      const ruralReturnedIssue = ruralReturnedToFarmExitIssue(h);
-      if (ruralReturnedIssue) return fieldError(rowKey, `${label}: ${ruralReturnedIssue}`);
+      // 명부 행 사실 답 누락 — D7 §155⑦1호 동일세대 · §155⑦2·3호 재귀농 · §155⑦3호 귀농 ⑩3·4호·⑪ · §155① 신규 주택 취득 경위(판정 메뉴 ⑧과 같은 leaf).
+      const factIssue = houseRowFactIssues(h, newHouseRowId)[0];
+      if (factIssue) return fieldError(rowKey, `${label}: ${factIssue.message}`);
       // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴 ⑧과 같은 판정(`mergeHouseSideOf`).
       if (mergeCtx && mergeHouseSideOf(h, mergeCtx) === undefined) {
         return fieldError(
@@ -186,6 +186,10 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     })();
     if (firstError) issues.push({ step, message: firstError });
   }
+
+  // ⑧ 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일 필수 — ⑤ `HousesListSection`·④ `deriveCalcTemporaryTwoHouse`와 같은 leaf(결정 #43 하위 2).
+  const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], houses.length);
+  if (sellingOrigin) issues.push({ step, field: sellingOrigin.field as "sellingHouseExistingAcquisitionDate", message: sellingOrigin.message });
 
   // ⑧ 양도 주택 자체 배제 특례(2주택 이상) — 사원주택/어린이집 선택 시 기간(년) 필수
   const se = form.sellingHouseExclusion;
@@ -333,7 +337,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     householdHousingCount: resolveExemptionHousingCount(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
-      primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
+      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
       houses: form.houses,
       transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,

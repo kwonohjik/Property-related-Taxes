@@ -17,7 +17,8 @@
       "houses": [
         {
           "id": "b",
-          "acquisitionDate": "2010-11-23"
+          "acquisitionDate": "2010-11-23",
+          "acquisitionOrigin": "general"
         }
       ],
       "presaleRights": [
@@ -55,7 +56,8 @@
       "houses": [
         {
           "id": "b",
-          "acquisitionDate": "2010-11-23"
+          "acquisitionDate": "2010-11-23",
+          "acquisitionOrigin": "general"
         }
       ]
     },

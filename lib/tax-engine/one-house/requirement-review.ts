@@ -24,6 +24,7 @@
  * 다른 특례(상속·농어촌·대체주택 등)로 결론이 났거나 §89② 배제면 싣지 않는다. 그 요건은
  * 이 행들과 다르고, 「적용된 특례」·「선언했으나 적용되지 않은 특례」 카드가 따로 말한다.
  */
+import { NEW_HOUSE_ORIGIN_LABEL } from "./new-house-origin";
 import { deadlineEndFrom, deadlineEndNote, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import {
@@ -150,9 +151,30 @@ function temporaryTwoHouseItems(
   judgmentBaseDate: Date | undefined,
 ): OneHouseRequirementCheck[] {
   const tth = input.temporaryTwoHouse!;
-  const { provisoRelaxesHolding, timing, era } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+  const { provisoRelaxesHolding, timing, era, origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
   const basis155 = `${TRANSFER.TEMPORARY_TWO_HOUSE}①`;
   const items: OneHouseRequirementCheck[] = [];
+
+  // 신규 주택이 권리(분양권·조합원입주권)로 취득한 주택이면 취득 경위가 첫 관문이다(결정 #43). 일반 취득·경위 미수집은 행을 싣지 않는다.
+  const originKind = tth.newHouseOrigin?.kind;
+  if (originKind && originKind !== "general" && originKind !== "not_collected") {
+    items.push({
+      id: "new-house-origin",
+      label: "신규주택의 취득 경위가 일시적 2주택 요건에 맞음",
+      status: origin.blocked ? "unmet" : "met",
+      facts: [
+        { label: "경위", value: originKind === "unknown" ? "모름·미입력" : NEW_HOUSE_ORIGIN_LABEL[originKind] },
+        ...(tth.newHouseOrigin?.rightAcquisitionDate
+          ? [{ label: "권리 취득일(기존주택 연장은 기존주택 취득일)", value: fmt(tth.newHouseOrigin.rightAcquisitionDate) }]
+          : []),
+        { label: "종전주택 취득일", value: fmt(tth.previousAcquisitionDate) },
+      ],
+      ...(origin.blocked || origin.confirmNotes.length > 0
+        ? { note: [...origin.reasons, ...origin.unconfirmed, ...origin.confirmNotes].join(" ") }
+        : {}),
+      legalBasis: basis155,
+    });
+  }
 
   // ① 「종전의 주택을 취득한 날부터 1년 이상이 지난 후 신규 주택을 취득」
   const oneYearNatural = isAfterPeriod(tth.previousAcquisitionDate, 1, tth.newAcquisitionDate);

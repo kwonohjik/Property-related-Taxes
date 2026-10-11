@@ -62,6 +62,7 @@ const graceBase = (gracePeriod: Record<string, unknown>) =>
         {
           id: "house_e2e_1",
           region: "capital",
+          acquisitionOrigin: "general",
           acquisitionDate: "2020-01-01",
           officialPrice: "300000000",
           isInherited: false,

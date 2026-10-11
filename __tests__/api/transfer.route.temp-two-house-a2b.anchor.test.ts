@@ -64,6 +64,7 @@ const house = (over: Partial<HouseEntry>): HouseEntry =>
     isCoInherited: false,
     decedentSameHouseholdAtInheritance: false,
     isRankingDisqualifiedInheritedHouse: false,
+    acquisitionOrigin: "general",
     ...over,
   }) as HouseEntry;
 

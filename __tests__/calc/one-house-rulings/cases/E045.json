@@ -23,7 +23,8 @@
           "id": "officetel",
           "region": "capital",
           "acquisitionDate": "2019-05-14",
-          "isOfficetel": true
+          "isOfficetel": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -60,7 +61,8 @@
           "id": "officetel",
           "region": "capital",
           "acquisitionDate": "2023-08-15",
-          "isOfficetel": true
+          "isOfficetel": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

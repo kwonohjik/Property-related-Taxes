@@ -6,6 +6,7 @@
  * assets.length === 1 → single 엔드포인트, >= 2 → bundled 엔드포인트.
  */
 
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
@@ -589,7 +590,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         householdHousingCount: resolveExemptionHousingCount(form),
         temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
+        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,

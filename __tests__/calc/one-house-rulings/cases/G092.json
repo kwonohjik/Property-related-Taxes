@@ -18,7 +18,8 @@
     {
      "id": "B",
      "region": "capital",
-     "acquisitionDate": "2015-08-12"
+     "acquisitionDate": "2015-08-12",
+     "acquisitionOrigin": "general"
     }
    ]
   },

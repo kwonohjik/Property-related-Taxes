@@ -123,23 +123,28 @@
    "houses": [
     {
      "id": "r1",
-     "acquisitionDate": "2006-09-13"
+     "acquisitionDate": "2006-09-13",
+     "acquisitionOrigin": "general"
     },
     {
      "id": "r2",
-     "acquisitionDate": "2006-09-13"
+     "acquisitionDate": "2006-09-13",
+     "acquisitionOrigin": "general"
     },
     {
      "id": "r3",
-     "acquisitionDate": "2006-09-13"
+     "acquisitionDate": "2006-09-13",
+     "acquisitionOrigin": "general"
     },
     {
      "id": "r4",
-     "acquisitionDate": "2006-09-13"
+     "acquisitionDate": "2006-09-13",
+     "acquisitionOrigin": "general"
     },
     {
      "id": "r5",
-     "acquisitionDate": "2006-09-13"
+     "acquisitionDate": "2006-09-13",
+     "acquisitionOrigin": "general"
     }
    ]
   },

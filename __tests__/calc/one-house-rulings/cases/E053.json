@@ -20,12 +20,14 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2007-10-15"
+          "acquisitionDate": "2007-10-15",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "swap",
           "region": "capital",
-          "acquisitionDate": "2008-04-15"
+          "acquisitionDate": "2008-04-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -58,12 +60,14 @@
         {
           "id": "new",
           "region": "capital",
-          "acquisitionDate": "2007-10-15"
+          "acquisitionDate": "2007-10-15",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "swap",
           "region": "capital",
-          "acquisitionDate": "2008-04-14"
+          "acquisitionDate": "2008-04-14",
+          "acquisitionOrigin": "general"
         }
       ]
     },

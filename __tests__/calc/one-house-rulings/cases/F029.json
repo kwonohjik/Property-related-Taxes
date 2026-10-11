@@ -17,7 +17,8 @@
       "houses": [
         {
           "id": "spouse",
-          "acquisitionDate": "1994-05-21"
+          "acquisitionDate": "1994-05-21",
+          "acquisitionOrigin": "general"
         }
       ]
     },

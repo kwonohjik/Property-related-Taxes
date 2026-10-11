@@ -29,7 +29,8 @@
         {
           "id": "eul",
           "region": "non_capital",
-          "acquisitionDate": "2005-02-15"
+          "acquisitionDate": "2005-02-15",
+          "acquisitionOrigin": "general"
         }
       ]
     },

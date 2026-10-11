@@ -85,6 +85,7 @@ export type OneHouseJudgeInput = Pick<
   | "inheritedHouseExclusionCount"
   | "inheritedHouseExclusionDetail"
   | "knownHouseExclusionHouseIds"
+  | "popDecline71_2Unconfirmed"
   | "noMergeRosterInputPath"
   // 혼인합가 1199(양쪽 2주택 이상) — 명부 밖 장기임대주택의 혼인 전 보유자(`rentalUnits[].mergeOrigin`)
   | "rentalHousingException"
@@ -199,6 +200,7 @@ export type OneHouseFacts = {
   inheritedHouseExclusionDetail?: TransferTaxInput["inheritedHouseExclusionDetail"];
   /** 위 제외 중 명부 행으로 특정된 몫(PR-3) — §155④⑤ 합가 전 구성 판정의 echo. */
   knownHouseExclusionHouseIds?: TransferTaxInput["knownHouseExclusionHouseIds"];
+  popDecline71_2Unconfirmed?: TransferTaxInput["popDecline71_2Unconfirmed"];
   /** 명부 입력 경로가 없는 호출부(부담부증여) echo — §155④⑤ 합가 전 구성 판정(사용자 결정 2026-10-05). */
   noMergeRosterInputPath?: TransferTaxInput["noMergeRosterInputPath"];
   /** 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자(`merge-composition.ts` `marriageRentalSidesOf`). */

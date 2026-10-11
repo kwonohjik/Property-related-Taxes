@@ -743,6 +743,8 @@ test("[BT-E2E-7] 일시적 2주택 §155①2호 새 입력 → 요청 본문 tem
     previousHouseRegulatedAtNewAcquisition: true,
     newHouseRegulatedAtAcquisition: true,
     wholeHouseholdMoveInDate: "2021-06-02",
+    // 이 화면은 보유 주택 목록이 없어 신규 주택 취득 경위를 묻지 못한다 — 엔진은 현행대로 판정하고 확인 필요를 알린다(결정 #43)
+    newHouseOrigin: { kind: "not_collected" },
   });
 });
 

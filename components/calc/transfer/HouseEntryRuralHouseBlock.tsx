@@ -40,8 +40,15 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { classifyEupMyeon } from "@/lib/geo/rural-house-location";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { resolveRuralLocationQualified } from "@/lib/calc/one-house-row-facts";
+import {
+  RURAL_FARMLAND_NA_ACQ_START,
+  RURAL_FARMLAND_SPOUSE_DA_TRANSFER_START,
+  RURAL_FARMLAND_SPOUSE_GA_NA_TRANSFER_START,
+} from "@/lib/tax-engine/one-house/rural-return-to-farm-facts";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+
+const dotDate = (d: Date) => `${d.getUTCFullYear()}.${d.getUTCMonth() + 1}.${d.getUTCDate()}.`;
 
 interface Props {
   house: HouseEntry;
@@ -113,6 +120,10 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
                 ruralWholeHouseholdMoved: undefined,
                 ruralHighPriceAtAcquisition: undefined,
                 ruralReturnedToFarmExitHouse: undefined,
+                ruralFarmlandBasis: undefined,
+                ruralFarmlandHolder: undefined,
+                ruralPriorReturnFarmExemption: undefined,
+                ruralGeneralHouseBeforeReturn: undefined,
               },
         )
       }
@@ -130,7 +141,18 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
             name={`ruralHouseKind-${house.id}`}
             value={house.ruralHouseKind ?? "inherited"}
             onChange={(v) =>
-              onUpdate({ ruralHouseKind: v as HouseEntry["ruralHouseKind"] })
+              onUpdate({
+                ruralHouseKind: v as HouseEntry["ruralHouseKind"],
+                // 귀농(3호) 전용 답은 유형을 바꾸면 비운다 — 다시 3호로 돌아오면 새로 답하게 한다(stale 답이 판정에 실리지 않게).
+                ...(v !== "return_to_farm"
+                  ? {
+                      ruralFarmlandBasis: undefined,
+                      ruralFarmlandHolder: undefined,
+                      ruralPriorReturnFarmExemption: undefined,
+                      ruralGeneralHouseBeforeReturn: undefined,
+                    }
+                  : {}),
+              })
             }
             options={[
               { value: "inherited", label: "1호 상속", description: "피상속인이 취득 후 5년 이상 거주" },
@@ -295,6 +317,85 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
               />
               <p className="text-xs text-muted-foreground">660㎡ 이내여야 합니다 (§155⑩3호).</p>
             </div>
+            {/* ⑩4호 — 영농 또는 영어의 목적으로 취득(가·나·다목). 모르면 「모름」 — 불성립으로 판정하고 결론을 가를 때 확인 필요를 알린다. */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">영농·영어 목적 취득 요건 (§155⑩4호)</label>
+              <RadioCardGroup
+                name={`ruralFarmlandBasis-${house.id}`}
+                data-testid="house-row-rural-farmland-basis"
+                tone="emerald"
+                layout="stack"
+                options={[
+                  {
+                    value: "ga",
+                    label: "가목 — 1,000㎡ 이상 농지를 소유한 사람(또는 배우자)이 농지소재지의 이 주택을 취득",
+                    testId: "house-row-rural-farmland-basis-ga",
+                  },
+                  {
+                    value: "na",
+                    label: "나목 — 그 농지를 소유하기 전 1년 이내에 농지소재지의 이 주택을 취득",
+                    description:
+                      house.acquisitionDate && house.acquisitionDate < RURAL_FARMLAND_NA_ACQ_START.toISOString().slice(0, 10)
+                        ? "2016.3.31. 전에 취득한 귀농주택은 나목이 없던 때라 종전 가목(귀농일 현재 농지 소유)으로 판정합니다."
+                        : "귀농주택을 2016.3.31. 이후 취득한 경우에만 인정합니다.",
+                    testId: "house-row-rural-farmland-basis-na",
+                  },
+                  {
+                    value: "da",
+                    label: "다목 — 어업인(또는 배우자)이 이 주택을 취득",
+                    testId: "house-row-rural-farmland-basis-da",
+                  },
+                  {
+                    value: "none",
+                    label: "해당 없음 — 어느 목에도 해당하지 않습니다",
+                    description: "귀농주택으로 인정되지 않아 이 특례를 적용하지 않습니다.",
+                    testId: "house-row-rural-farmland-basis-none",
+                  },
+                  {
+                    value: "unknown",
+                    label: "모름",
+                    description: "귀농주택으로 인정하지 않고 판정하며, 결론을 가를 때 확인 필요를 알립니다.",
+                    testId: "house-row-rural-farmland-basis-unknown",
+                  },
+                ]}
+                value={house.ruralFarmlandBasis ?? ""}
+                onChange={(v) =>
+                  onUpdate({
+                    ruralFarmlandBasis: v as HouseEntry["ruralFarmlandBasis"],
+                    ...(v === "none" || v === "unknown" ? { ruralFarmlandHolder: undefined } : {}),
+                  })
+                }
+              />
+              {(house.ruralFarmlandBasis === "ga" ||
+                house.ruralFarmlandBasis === "na" ||
+                house.ruralFarmlandBasis === "da") && (
+                <>
+                  <label className="text-sm font-medium">
+                    {house.ruralFarmlandBasis === "da" ? "어업인" : "농지 소유자"}는 누구입니까
+                  </label>
+                  <RadioCardGroup
+                    name={`ruralFarmlandHolder-${house.id}`}
+                    data-testid="house-row-rural-farmland-holder"
+                    tone="emerald"
+                    layout="stack"
+                    options={[
+                      { value: "self", label: "본인", testId: "house-row-rural-farmland-holder-self" },
+                      {
+                        value: "spouse",
+                        label: "배우자",
+                        description:
+                          house.ruralFarmlandBasis === "da"
+                            ? `${dotDate(RURAL_FARMLAND_SPOUSE_DA_TRANSFER_START)} 이후 양도하는 분부터 인정합니다.`
+                            : `${dotDate(RURAL_FARMLAND_SPOUSE_GA_NA_TRANSFER_START)} 이후 양도하는 분부터 인정합니다.`,
+                        testId: "house-row-rural-farmland-holder-spouse",
+                      },
+                    ]}
+                    value={house.ruralFarmlandHolder ?? ""}
+                    onChange={(v) => onUpdate({ ruralFarmlandHolder: v as HouseEntry["ruralFarmlandHolder"] })}
+                  />
+                </>
+              )}
+            </div>
             <ToggleCard
               variant="card"
               size="sm"
@@ -313,6 +414,66 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
               title="취득 당시 고가주택에 해당 (§155⑩2호)"
               description="해당하면 귀농주택 요건을 충족하지 못합니다"
             />
+            {/* ⑪ — 귀농 후 최초로 양도하는 1개의 일반주택. 다주택 상태의 과세 양도는 세지 않는다(대법원 2005.12.23. 선고 2004두10869). */}
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">이 특례로 이미 일반주택을 비과세 양도한 적 (§155⑪)</label>
+              <RadioCardGroup
+                name={`ruralPriorExemption-${house.id}`}
+                data-testid="house-row-rural-prior-exemption"
+                tone="emerald"
+                layout="stack"
+                options={[
+                  {
+                    value: "none",
+                    label: "없습니다 — 귀농 후 이번이 처음입니다",
+                    testId: "house-row-rural-prior-exemption-none",
+                  },
+                  {
+                    value: "has",
+                    label: "있습니다 — 귀농주택 특례(§155⑦)로 일반주택을 비과세 양도했습니다",
+                    description: "귀농 후 최초로 양도하는 1개의 일반주택에 한해 적용하므로 이번에는 적용하지 않습니다.",
+                    testId: "house-row-rural-prior-exemption-has",
+                  },
+                  {
+                    value: "unknown",
+                    label: "모름",
+                    description: "특례를 적용하지 않고 판정하며, 결론을 가를 때 확인 필요를 알립니다.",
+                    testId: "house-row-rural-prior-exemption-unknown",
+                  },
+                ]}
+                value={house.ruralPriorReturnFarmExemption ?? ""}
+                onChange={(v) => onUpdate({ ruralPriorReturnFarmExemption: v as HouseEntry["ruralPriorReturnFarmExemption"] })}
+              />
+              <p className="text-xs text-muted-foreground">
+                다주택 상태에서 비과세 요건을 갖추지 못한 채 과세로 양도한 일은 세지 않습니다.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">양도하는 일반주택을 귀농 전에 취득했습니까</label>
+              <RadioCardGroup
+                name={`ruralGeneralBeforeReturn-${house.id}`}
+                data-testid="house-row-rural-general-before-return"
+                tone="emerald"
+                layout="stack"
+                options={[
+                  { value: "yes", label: "예 — 귀농 전에 취득했습니다(상속 등으로 이어진 보유 포함)", testId: "house-row-rural-general-before-return-yes" },
+                  {
+                    value: "no",
+                    label: "아니오 — 귀농 후에 취득했습니다",
+                    description: "귀농 이후에 취득한 일반주택에는 이 특례를 적용하지 않습니다.",
+                    testId: "house-row-rural-general-before-return-no",
+                  },
+                  {
+                    value: "unknown",
+                    label: "모름",
+                    description: "특례를 적용하지 않고 판정하며, 결론을 가를 때 확인 필요를 알립니다.",
+                    testId: "house-row-rural-general-before-return-unknown",
+                  },
+                ]}
+                value={house.ruralGeneralHouseBeforeReturn ?? ""}
+                onChange={(v) => onUpdate({ ruralGeneralHouseBeforeReturn: v as HouseEntry["ruralGeneralHouseBeforeReturn"] })}
+              />
+            </div>
           </div>
         )}
       </div>

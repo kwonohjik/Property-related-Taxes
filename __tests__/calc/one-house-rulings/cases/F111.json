@@ -18,7 +18,8 @@
     {
      "id": "issue",
      "region": "non_capital",
-     "acquisitionDate": "1997-08-11"
+     "acquisitionDate": "1997-08-11",
+     "acquisitionOrigin": "general"
     }
    ]
   },

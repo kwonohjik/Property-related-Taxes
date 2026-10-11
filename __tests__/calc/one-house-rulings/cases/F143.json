@@ -17,11 +17,13 @@
    "houses": [
     {
      "id": "B",
-     "acquisitionDate": "2001-12-15"
+     "acquisitionDate": "2001-12-15",
+     "acquisitionOrigin": "general"
     },
     {
      "id": "C",
-     "acquisitionDate": "2002-01-15"
+     "acquisitionDate": "2002-01-15",
+     "acquisitionOrigin": "general"
     }
    ]
   },

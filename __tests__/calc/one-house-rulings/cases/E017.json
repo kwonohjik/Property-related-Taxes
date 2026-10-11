@@ -18,7 +18,8 @@
         {
           "id": "farm",
           "region": "non_capital",
-          "acquisitionDate": "1998-09-05"
+          "acquisitionDate": "1998-09-05",
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -50,12 +51,14 @@
         {
           "id": "farm",
           "region": "non_capital",
-          "acquisitionDate": "1998-09-05"
+          "acquisitionDate": "1998-09-05",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "rowhouse",
           "region": "capital",
-          "acquisitionDate": "1999-12-20"
+          "acquisitionDate": "1999-12-20",
+          "acquisitionOrigin": "general"
         }
       ]
     },

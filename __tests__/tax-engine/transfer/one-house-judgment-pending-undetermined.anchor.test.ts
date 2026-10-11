@@ -22,6 +22,7 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules;
 const D = (s: string) => new Date(s);
@@ -184,6 +185,7 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
   const RURAL = (acq: string) =>
     ({
       kind: "return_to_farm",
+      ...RETURN_TO_FARM_OK,
       isOutsideCapitalEupMyeon: true,
       acquisitionDate: D(acq),
       isHighPriceAtAcquisition: false,

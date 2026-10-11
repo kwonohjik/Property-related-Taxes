@@ -9,18 +9,22 @@
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
 import { resolveTemporaryTwoHouse, type TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
-import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { buildRightThreeYearExceptionPayload, buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
+import type { RightThreeYearException } from "@/lib/tax-engine/types/transfer.types";
 import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
 export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
   const primary = form.assets?.[0];
   return resolveTemporaryTwoHouse({
     primaryKind: primary?.assetKind,
-    primaryAcquisitionDate: primary?.acquisitionDate ?? "",
+    // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일이 종전주택 취득일이다(결정 #43 하위 2 · ⑤⑧과 같은 leaf).
+    primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate ?? "",
     houses: form.houses,
     transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
@@ -39,7 +43,8 @@ export function judgmentTempTwoHouseVerdict(
   const primary = form.assets?.[0];
   return judgeTempTwoHouseFromForm({
     // D8 — 합가 세대에서 상대 쪽 두 주택이 짝이면 종전주택은 양도 주택이 아니다(사전-2026-법규재산-0643). ④와 같은 짝을 쓴다.
-    previousAcquisitionDate: derivedNewHouse?.previousAcquisitionDate ?? primary?.acquisitionDate ?? "",
+    previousAcquisitionDate:
+      derivedNewHouse?.previousAcquisitionDate ?? sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate ?? "",
     sellingAcquisitionDate: primary?.acquisitionDate,
     newHouseAcquisitionDate: derivedNewHouse?.newAcquisitionDate ?? "",
     transferDate: form.transferDate,
@@ -70,6 +75,21 @@ export function judgmentTempTwoHouseVerdict(
     newHouseInDesignatedDistrict: derivedNewHouse?.newHouseInDesignatedDistrict,
     // D8 상대 쪽 짝(B → C)이면 종전의 주택은 B다 — 조정 여부를 B의 소재로 판정한다(S15-2). ④와 같은 값.
     previousHouse: derivedNewHouse?.previousHouse,
-    eraFields: form,
+    // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 행의 권리 취득일로 본다 — ④와 같은 leaf(결정 #43).
+    eraFields: eraFormWithOriginDates(form, derivedNewHouse?.newHouseOrigin),
+    newHouseOrigin: derivedNewHouse?.newHouseOrigin,
+    rightThreeYearException: engineRightThreeYearException(form),
+    hasMerge: !!(form.marriageDate || form.parentalCareMergeDate),
   });
+}
+
+/** ④ `buildRightThreeYearExceptionPayload`가 싣는 3년 경과 예외 선언을 카드용 Date 모양으로 — 엔진 route(⑭)와 같은 변환. */
+function engineRightThreeYearException(form: OneHouseJudgmentFormData): RightThreeYearException | undefined {
+  const raw = (buildRightThreeYearExceptionPayload(form as never) as { rightThreeYearException?: Record<string, unknown> })
+    .rightThreeYearException;
+  if (!raw) return undefined;
+  return {
+    ...raw,
+    ...(typeof raw.completionDate === "string" ? { completionDate: new Date(raw.completionDate) } : {}),
+  } as unknown as RightThreeYearException;
 }

@@ -31,7 +31,8 @@
        "isNationalHousing": false,
        "requirementsConfirmed": true
       }
-     }
+     },
+     "acquisitionOrigin": "general"
     }
    ]
   },

@@ -79,6 +79,7 @@ const BASE_ROW: HouseEntry = {
   isApartment: false,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 };
 
 function form(opts: {

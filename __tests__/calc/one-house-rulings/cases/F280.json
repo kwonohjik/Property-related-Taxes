@@ -20,7 +20,8 @@
    "houses": [
     {
      "id": "jamwon",
-     "acquisitionDate": "2005-04-08"
+     "acquisitionDate": "2005-04-08",
+     "acquisitionOrigin": "general"
     }
    ],
    "provisoReason": "overseas_residence",

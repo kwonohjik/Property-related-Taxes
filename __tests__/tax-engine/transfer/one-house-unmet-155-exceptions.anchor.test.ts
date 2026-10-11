@@ -25,6 +25,7 @@ import { describe, it, expect } from "vitest";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 /** mock-rates의 `transfer:special:one_house_exemption`과 같은 값. */
 const RULES = {
@@ -276,6 +277,7 @@ describe("UMX §155⑦ — 농어촌주택", () => {
       base(
         rural({
           kind: "return_to_farm",
+          ...RETURN_TO_FARM_OK,
           acquisitionDate: new Date("2024-01-01"),
           isHighPriceAtAcquisition: true,
           landAreaSqm: 700,
@@ -294,6 +296,7 @@ describe("UMX §155⑦ — 농어촌주택", () => {
       base(
         rural({
           kind: "return_to_farm",
+          ...RETURN_TO_FARM_OK,
           acquisitionDate: new Date("2024-01-01"),
           landAreaSqm: 660,
           wholeHouseholdMoved: false,
@@ -306,7 +309,7 @@ describe("UMX §155⑦ — 농어촌주택", () => {
 
   it("UMX-13 3호 귀농 — 대지면적 미입력은 「확인할 수 없다」로 구분한다", () => {
     const rs = reasonsOf(
-      base(rural({ kind: "return_to_farm", acquisitionDate: new Date("2024-01-01"), wholeHouseholdMoved: true })),
+      base(rural({ kind: "return_to_farm", ...RETURN_TO_FARM_OK, acquisitionDate: new Date("2024-01-01"), wholeHouseholdMoved: true })),
     );
     expect(rs).toHaveLength(1);
     expect(rs[0]).toContain("확인할 수 없습니다");
@@ -315,7 +318,7 @@ describe("UMX §155⑦ — 농어촌주택", () => {
 
   it("UMX-14 3호 귀농 — 취득일 미입력은 ⑦ 단서를 확인할 수 없다고 밝힌다", () => {
     const rs = reasonsOf(
-      base(rural({ kind: "return_to_farm", landAreaSqm: 300, wholeHouseholdMoved: true })),
+      base(rural({ kind: "return_to_farm", ...RETURN_TO_FARM_OK, landAreaSqm: 300, wholeHouseholdMoved: true })),
     );
     expect(rs).toHaveLength(1);
     expect(rs[0]).toContain("취득일");
@@ -327,6 +330,7 @@ describe("UMX §155⑦ — 농어촌주택", () => {
     const input = base(
       rural({
         kind: "return_to_farm",
+        ...RETURN_TO_FARM_OK,
         acquisitionDate: new Date("2019-01-01"),
         landAreaSqm: 300,
         wholeHouseholdMoved: true,

@@ -23,15 +23,15 @@ const TMP = {
   isOneHousehold: true, transferDate: "2026-06-15", contractTotalPrice: "800000000",
   temporaryTwoHouseSpecial: true, newHouseAcquisitionDate: "2024-03-01",
   asset: { assetKind: "housing", acquisitionDate: "2018-01-10", residenceInputMode: "direct", residencePeriodMonthsAsset: "24" },
-  houses: [{ id: "new", region: "capital", acquisitionDate: "2024-03-01" }],
+  houses: [{ id: "new", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2024-03-01" }],
 };
 const D4 = {
   isOneHousehold: true, transferDate: "2026-04-10", contractTotalPrice: "800000000",
   marriageDate: "2019-03-01", parentalCareMergeDate: "2018-06-01", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true,
   asset: { assetKind: "housing", acquisitionDate: "2015-04-01" },
   houses: [
-    { id: "spouse", region: "capital", acquisitionDate: "2014-02-01", mergeOrigin: "second_merge_side" },
-    { id: "parents", region: "capital", acquisitionDate: "2005-01-01", mergeOrigin: "counterpart_side" },
+    { id: "spouse", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2014-02-01", mergeOrigin: "second_merge_side" },
+    { id: "parents", acquisitionOrigin: "general", region: "capital", acquisitionDate: "2005-01-01", mergeOrigin: "counterpart_side" },
   ],
 };
 const NR = { transferorNonResident: true };

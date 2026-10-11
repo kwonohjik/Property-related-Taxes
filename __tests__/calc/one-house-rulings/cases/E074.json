@@ -23,7 +23,8 @@
           "inheritedDate": "1999-06-15",
           "isCoInherited": true,
           "isLargestCoInheritedShareholder": true,
-          "decedentSameHouseholdAtInheritance": true
+          "decedentSameHouseholdAtInheritance": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },
@@ -57,7 +58,8 @@
           "inheritedDate": "2022-03-10",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": true,
-          "parentalCareMergeInheritedHouse": true
+          "parentalCareMergeInheritedHouse": true,
+          "acquisitionOrigin": "general"
         }
       ]
     },

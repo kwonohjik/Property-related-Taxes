@@ -31,6 +31,7 @@ import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { isRightThreeYearExceeded } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { presaleRightDefinitionAcquisitionDate } from "@/lib/tax-engine/presale-right-definition-date";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { NEW_HOUSE_ORIGIN_REDEV_RIGHT_START } from "@/lib/tax-engine/one-house/new-house-origin";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -62,8 +63,21 @@ export function rightThreeYearExceptionRightKinds(form: TransferFormData): ("red
         transferDate,
       }),
   );
+  // 결정 #43 — 승계 입주권·상가토지 원조합원으로 취득해 완공된 **신규 주택 행**도 권리 취득일부터 3년을 넘기면 §156의2④ 선언 대상이다
+  // (엔진 `judgeNewHouseOrigin`이 같은 선언을 읽는다). 2006.1.1. 전 인가·승계분은 §89② 대상이 아니라 제외한다.
+  const originRowExceeded = (form.houses ?? []).some((h) => {
+    if (h.acquisitionOrigin !== "successor_right" && h.acquisitionOrigin !== "original_member_non_house") return false;
+    if (!h.rightAcquisitionDate) return false;
+    const acquired = new Date(h.rightAcquisitionDate);
+    const approval = h.acquisitionOrigin === "original_member_non_house" ? acquired : h.rightApprovalDate ? new Date(h.rightApprovalDate) : undefined;
+    const counts =
+      approval === undefined ||
+      approval.getTime() >= NEW_HOUSE_ORIGIN_REDEV_RIGHT_START.getTime() ||
+      acquired.getTime() >= NEW_HOUSE_ORIGIN_REDEV_RIGHT_START.getTime();
+    return counts && isRightThreeYearExceeded({ rightAcquisitionDate: acquired, transferDate });
+  });
   const kinds: ("redevelopment_right" | "presale_right")[] = [];
-  if (exceeded.some((r) => r.type === "redevelopment_right")) kinds.push("redevelopment_right");
+  if (originRowExceeded || exceeded.some((r) => r.type === "redevelopment_right")) kinds.push("redevelopment_right");
   if (exceeded.some((r) => r.type === "presale_right")) kinds.push("presale_right");
   return kinds;
 }

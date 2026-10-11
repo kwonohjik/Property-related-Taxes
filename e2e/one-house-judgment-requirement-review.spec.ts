@@ -39,6 +39,7 @@ const REPORTED = {
     {
       id: "h1",
       region: "capital",
+      acquisitionOrigin: "general",
       acquisitionDate: "2023-07-01",
       officialPrice: "460000000",
       // 명부 행의 필수 boolean — 화면 입력은 항상 채운다. 시드도 같은 형태여야 route Zod를 통과한다.

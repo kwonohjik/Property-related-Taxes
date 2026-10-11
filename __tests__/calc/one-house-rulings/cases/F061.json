@@ -17,7 +17,8 @@
       "houses": [
         {
           "id": "new",
-          "acquisitionDate": "2001-09-17"
+          "acquisitionDate": "2001-09-17",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "inh",
@@ -25,7 +26,8 @@
           "isInherited": true,
           "inheritedDate": "2000-05-15",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         }
       ]
     },

@@ -17,7 +17,8 @@
       "houses": [
         {
           "id": "spouse-apt",
-          "acquisitionDate": "2009-02-16"
+          "acquisitionDate": "2009-02-16",
+          "acquisitionOrigin": "general"
         }
       ]
     },

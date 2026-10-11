@@ -28,6 +28,7 @@ import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-ju
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { RETURN_TO_FARM_OK } from "../../_helpers/rural-return-to-farm-facts";
 
 const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules;
 const D = (s: string) => new Date(s);
@@ -198,6 +199,7 @@ describe("§155④⑤ 합가 — 혼인한 날(2019-02-28)부터 5년 이내(202
 describe("§155⑦3호 — 귀농주택 취득일(2019-02-28)부터 5년 이내", () => {
   const RURAL = {
     kind: "return_to_farm",
+    ...RETURN_TO_FARM_OK,
     isOutsideCapitalEupMyeon: true,
     acquisitionDate: D("2019-02-28"),
     isHighPriceAtAcquisition: false,

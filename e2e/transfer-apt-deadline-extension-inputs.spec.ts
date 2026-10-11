@@ -51,6 +51,7 @@ function seedForm(transferDate = "2028-03-01") {
           {
             id: "house_rental_1",
             region: "capital",
+            acquisitionOrigin: "general",
             regionCode: GANGNAM,
             acquisitionDate: "2017-06-01",
             officialPrice: "300000000",

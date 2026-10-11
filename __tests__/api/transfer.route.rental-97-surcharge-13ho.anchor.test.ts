@@ -79,6 +79,7 @@ const ROW: HouseEntry = {
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  acquisitionOrigin: "general",
 };
 
 const special = (over: Partial<SpecialHouseExclusionFormItem> = {}): SpecialHouseExclusionFormItem => ({

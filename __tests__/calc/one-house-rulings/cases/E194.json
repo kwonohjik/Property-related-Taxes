@@ -41,7 +41,8 @@
         {
           "id": "repl",
           "acquisitionDate": "2019-06-15",
-          "region": "capital"
+          "region": "capital",
+          "acquisitionOrigin": "general"
         },
         {
           "id": "co",
@@ -51,7 +52,8 @@
           "inheritedDate": "2015-03-15",
           "isCoInherited": true,
           "isLargestCoInheritedShareholder": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "acquisitionOrigin": "general"
         }
       ],
       "temporaryTwoHouseSpecial": true,

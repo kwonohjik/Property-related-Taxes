@@ -130,6 +130,11 @@ describe("#30 형제 경로 — 3주택 겹침(⑦ 농어촌)에도 같은 규�
     isHighPriceAtAcquisition: false,
     landAreaSqm: 300,
     wholeHouseholdMoved: true,
+    // ⑩4호·⑪·귀농 전 취득 일반주택 사실(결정 #44) — 답이 없으면 귀농주택이 불성립해 이 시험이 보려는 #30 축에 닿지 못한다.
+    farmlandBasis: "ga" as const,
+    farmlandHolder: "self" as const,
+    priorReturnFarmExemption: "none" as const,
+    generalHouseAcquiredBeforeReturn: "yes" as const,
   };
   const withRural = (extra: Partial<TT>, transfer = "2021-03-01") =>
     tt("2020-06-01", transfer, extra, { householdHousingCount: 3, ruralHouse: rural });
