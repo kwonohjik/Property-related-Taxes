@@ -18,6 +18,7 @@
  * | `155-2-pre2010-parental-care-exception-unverified` | §155② 단서 동거봉양 예외(2010.2.18. 대통령령 제22034호 신설) — 그 전 양도분 | 동일세대 상속 배제는 그 전에도 적용(조세심판관합동회의 조심2009서2497)되나 동거봉양 예외를 그 전 양도분에 인정한 해석은 미확보 — 예외를 인정해 판정 |
  * | `154-1-capital-newtown-location-unverified` | §154① 본문(2003-11-20 ~ 2011-06-02 양도 — 서울·과천·5개 신도시 거주 2년) | 양도 주택이 신도시 지구 안인지(법정동코드는 시·구까지) 또는 주소 — 요건을 적용해 판정, 거주요건 때문에 과세될 때만 |
  * | `154-1-expropriation-notice-date-unverified` | §154①2호 가목 괄호 「사업인정 고시일 전에 취득한 주택에 한한다」(대통령령 제19327호 2006.2.9. 신설 — 부칙 제3조·제30조①) | 사업인정 고시일 — 공란이면 단서를 적용하지 않았다(모름 = 불성립). 고시일 전 취득이면 결론이 비과세로 바뀔 때만 |
+ * | `154-12-co-inherited-residence-unverified` | §154⑫(2021.2.17. 신설 · 2024.2.29. 개정) — 취득 당시 조정대상지역 공동상속주택의 거주기간 | 공동상속주택인지와 다른 공동상속인의 거주기간 — 입력 경로가 없다. 상속 취득 · 본인 거주 미달로 과세될 때만 확인 필요로 밝힌다(판정은 바꾸지 않는다) |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
@@ -73,6 +74,13 @@ export {
 /** §154⑤ 단서 재기산 이력 미답 — 비과세로 판정된 1주택 양도에만 내는 보류다(아래 `settled`). */
 export const FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID = "154-5-final-one-house-restart-unverified";
 
+/** §154⑫ 신설(대통령령 제31442호, 2021.2.17.) — 시행 이후 양도분부터 적용(검토 문서 인용, 부칙 원문 재확인 필요). */
+const CO_INHERITED_RESIDENCE_TRANSFER_START = new Date("2021-02-17");
+/** §154⑫ 개정(대통령령 제34265호, 2024.2.29.) — 「거주한 공동상속인 중 거주기간이 가장 긴 사람」. 그 전 양도분은 종전 문언. */
+const CO_INHERITED_RESIDENCE_LONGEST_TRANSFER_START = new Date("2024-02-29");
+
+export const CO_INHERITED_RESIDENCE_UNVERIFIED_ID = "154-12-co-inherited-residence-unverified";
+
 export const ERA_UNDETERMINED_IDS = new Set([
   FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
   "154-1-4ho-rental-registration-unverified",
@@ -85,6 +93,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "155-2-pre2010-parental-care-exception-unverified",
   "154-1-capital-newtown-location-unverified",
   "154-1-expropriation-notice-date-unverified",
+  CO_INHERITED_RESIDENCE_UNVERIFIED_ID,
   "civil-161-holiday-table-uncovered",
 ]);
 
@@ -208,6 +217,39 @@ export function collectEraUndetermined(
         "사업인정 고시일이 입력되지 않아 이 단서를 적용하지 않았습니다 — 고시일 전에 취득한 주택이면 보유·거주 요건 없이 비과세될 수 있으니 " +
         "고시일을 입력하세요(확인 필요). 도시계획시설 부지 매수청구로 양도한 경우 사업인정 고시일은 보상계획을 통지한 날로 본 재결례가 있습니다(조심2008중2343).",
     });
+  }
+
+  /*
+   * G5-4 — §154⑫ 공동상속주택 거주기간. 취득 당시 조정대상지역의 **상속 취득** 주택이 본인 거주 미달로 과세될 때,
+   * 공동상속주택이면 다른 공동상속인의 거주기간으로 판단될 수 있다. 공동상속 여부·다른 공동상속인의 거주기간은
+   * 입력 경로가 없어(새 칸은 사용자 결정 대기) 판정을 바꾸지 않고 확인 필요로만 밝힌다(모름 = 혜택 불성립 + 결론을 가를 때만 고지).
+   * 비조정·경과규정(거주요건 없음)·거주 충족이면 `basis`가 `unmet`이 아니라 내지 않는다.
+   */
+  if (
+    !settled &&
+    input.acquisitionCause === "inheritance" &&
+    input.transferDate.getTime() >= CO_INHERITED_RESIDENCE_TRANSFER_START.getTime() &&
+    !qualifiesLongTermMortgageResidenceExemption(input)
+  ) {
+    const residence = describeOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption);
+    const holding = describeOneHouseHoldingRequirement(input, oneHouseRules.one_house_exemption);
+    if (
+      residence.basis === "unmet" &&
+      (holding.met || holding.provisoWaives) &&
+      (relevance?.residenceDecides() ?? true)
+    ) {
+      const longest = input.transferDate.getTime() >= CO_INHERITED_RESIDENCE_LONGEST_TRANSFER_START.getTime();
+      out.push({
+        id: CO_INHERITED_RESIDENCE_UNVERIFIED_ID,
+        reason:
+          `취득 당시 조정대상지역에 있는 공동상속주택이면 거주기간은 ` +
+          (longest
+            ? "그 주택에 거주한 공동상속인 중 거주기간이 가장 긴 사람이 거주한 기간으로 판단합니다"
+            : "소득세법 시행령 §155③ 단서에 따라 공동상속주택을 소유한 것으로 보는 사람이 거주한 기간으로 판단합니다") +
+          `(${law("⑫")}). 공동상속주택인지와 다른 공동상속인의 거주기간은 입력받지 않아 입력한 거주기간 ` +
+          `${residence.residenceMonths}개월만으로 판정했습니다 — 공동상속주택이면 확인이 필요합니다.`,
+      });
+    }
   }
 
   /*

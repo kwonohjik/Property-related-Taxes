@@ -34,6 +34,7 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 import { validateDepreciation } from "./transfer-tax-validate-depreciation";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import {
@@ -338,7 +339,13 @@ export function validateAssetEntry(
   // OH-42 — 상생임대주택(§155의3①)이면 §155⑳1호 거주요건 면제. 엔진과 같은 술어·같은 사실(④가 보내는 운반 상자).
   const rhError = validateRentalHousingException(
     a.rentalHousingException, a, index, label, form.transferDate, "full",
-    qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts) }),
+    qualifiesWinWinRental({
+      winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts),
+      // ①1호 「취득한 후 체결」 날짜 하한 — 엔진과 같은 취득일·동일세대 상속 사실(④가 primary에서 싣는 값).
+      acquisitionDate: toOptionalDate(a.acquisitionDate),
+      decedentSameHouseholdBeforeInheritance:
+        a.acquisitionCause === "inheritance" ? a.decedentSameHouseholdBeforeInheritance : undefined,
+    }),
     // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부. 주소(법정동코드)가 있으면 엔진과 같은 주소 판정,
     // 없으면 폼-전역 토글(일반 §154① 흐름과 동일 소스) — ⑤ 카드와 같은 실효값(G1-13).
     calcEffectiveWasRegulatedAtAcquisition(a, form.wasRegulatedAtAcquisition, form.regionCode),

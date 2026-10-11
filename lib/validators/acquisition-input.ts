@@ -268,6 +268,26 @@ const officeAssetSchema = z.object({
   // §28의4⑤1호 — 오피스텔은 「그 주택 또는 오피스텔에 거주하는 사람」 단계가 있다
   isResidentInInheritedHouse: z.boolean().optional(),
   isOtherTiedHeirResident: z.boolean().optional(),
+  // §28의4⑥8·9호 오피스텔 한시 특례 — 선언한 호의 사실이 비면 엔진이 조용히 제외하지 않는다(아래 refine이 막는다)
+  hansiOfficeKind: z.enum(["new_build", "lease_registered"]).optional(),
+  buildingApprovalDate: dateStr.optional(),
+  exclusiveAreaSqm: z.number().positive().optional(),
+  acquisitionValue: z.number().nonnegative().optional(),
+  isMetropolitan: z.boolean().optional(),
+  leaseRegistrationDate: dateStr.optional(),
+  leaseObligationViolated: z.boolean().optional(),
+}).superRefine((v, ctx) => {
+  if (!v.hansiOfficeKind) return;
+  const need = (ok: boolean, path: string, message: string) => {
+    if (!ok) ctx.addIssue({ code: "custom", path: [path], message });
+  };
+  need(v.exclusiveAreaSqm !== undefined, "exclusiveAreaSqm", "오피스텔 한시 특례(§28의4⑥8·9호)는 전용면적이 필요합니다");
+  need(v.acquisitionValue !== undefined, "acquisitionValue", "오피스텔 한시 특례(§28의4⑥8·9호)는 취득당시가액이 필요합니다");
+  if (v.hansiOfficeKind === "new_build") {
+    need(!!v.buildingApprovalDate, "buildingApprovalDate", "신축 오피스텔 한시 특례(§28의4⑥8호)는 사용승인일이 필요합니다");
+  } else {
+    need(!!v.leaseRegistrationDate, "leaseRegistrationDate", "임대등록 오피스텔 한시 특례(§28의4⑥9호)는 임대주택 등록일이 필요합니다");
+  }
 });
 
 const pendingAcquisitionSchema = z.object({

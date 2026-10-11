@@ -117,6 +117,30 @@ export function qualifiesLongTermMortgageResidenceExemption(
 }
 
 /**
+ * §155의3①1호 「1세대가 주택을 **취득한 후** 해당 주택에 대하여 임차인과 체결한 직전 임대차계약」(승계 계약 제외)의
+ * 날짜 하한 — **새 입력 없이 결정되는 부분**만 다룬다.
+ *
+ * 상생임대차계약은 직전임대차계약 **뒤**에 체결되므로, 상생 체결일이 취득일 이전이거나 같은 날이면
+ * 직전임대차는 취득 전에 체결된 계약이라 1호가 성립할 수 없다. 반대로 「취득 후 N개월 안에 체결」 같은 하한은
+ * 만료 전 재계약(갱신) 때문에 날짜만으로 정할 수 없어 여기서 단정하지 않는다. 직전 계약이 승계 계약인지는
+ * 입력이 있어야 하는 별도 사실이다(확인 필요).
+ *
+ * 🔑 동일세대 상속(`sameHouseholdInheritance`)은 판정하지 않는다 — 1세대가 피상속인 취득 때부터 소유해 온 주택이라
+ *    「취득」 기준일이 상속개시일이 아닐 수 있고, 이를 정한 해석례를 확인하지 못했다. 법 근거 없이 불리하게
+ *    적용하지 않는다(종전 동작 유지).
+ *
+ * ⑧(판정 메뉴·부담부증여)과 엔진 `qualifiesWinWinRental`이 **이 한 함수**를 쓴다.
+ */
+export function winWinContractNotAfterAcquisition(
+  winWinContractDate: Date,
+  acquisitionDate: Date | undefined,
+  opts: { sameHouseholdInheritance?: boolean } = {},
+): boolean {
+  if (opts.sameHouseholdInheritance || !acquisitionDate) return false;
+  return winWinContractDate.getTime() <= acquisitionDate.getTime();
+}
+
+/**
  * §155의3① 상생임대주택 요건(1~3호) 충족 여부.
  *
  * 🔑 이것은 **의제가 아니라 거주기간 제한 면제**다. 성립해도 주택 수는 그대로이고
@@ -125,10 +149,21 @@ export function qualifiesLongTermMortgageResidenceExemption(
  *    **보는 경우를 포함**」이므로 **의제 1주택 세대에도 적용**된다 ⇒ 공통 술어에 둔다.
  */
 export function qualifiesWinWinRental(
-  input: Pick<TransferTaxInput, "winWinRentalHouse"> & Partial<Pick<TransferTaxInput, "transferDate">>,
+  input: Pick<TransferTaxInput, "winWinRentalHouse"> &
+    // 키는 **필수**다(값만 `undefined` 허용) — 호출부가 취득일을 빠뜨리면 컴파일이 막는다. 조용히 날짜 하한을 건너뛰지 않게.
+    { acquisitionDate: Date | undefined } &
+    Partial<Pick<TransferTaxInput, "transferDate" | "decedentSameHouseholdBeforeInheritance">>,
 ): boolean {
   const w = input.winWinRentalHouse;
   if (!w) return false;
+  // ①1호 「취득한 후 … 체결한 직전 임대차」 — 상생 체결일이 취득일 이전·당일이면 성립할 수 없다.
+  if (
+    winWinContractNotAfterAcquisition(w.winWinContractDate, input.acquisitionDate, {
+      sameHouseholdInheritance: input.decedentSameHouseholdBeforeInheritance === true,
+    })
+  ) {
+    return false;
+  }
   const requirements1to3 =
     w.winWinContractDate >= WIN_WIN_CONTRACT_START &&
     w.winWinContractDate <= WIN_WIN_CONTRACT_END &&
@@ -169,7 +204,7 @@ export const TABLE2_MIN_RESIDENCE_YEARS = 2;
  * (`data/lthd-table2-era.ts`). `transferDate`가 없는 호출(겸용주택 — 2022년 이후 양도만)은 현행대로 본다.
  */
 export function meetsTable2ResidenceRequirement(
-  input: Pick<TransferTaxInput, "winWinRentalHouse"> & Partial<Pick<TransferTaxInput, "transferDate">>,
+  input: Parameters<typeof qualifiesWinWinRental>[0],
   table2ResidenceYears: number,
 ): boolean {
   if (input.transferDate && resolveLthdTable2Era(input.transferDate) === "holding_8pct") return true;

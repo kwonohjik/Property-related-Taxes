@@ -36,7 +36,10 @@ export function WinWinRentalSpecialField({ value, onChange }: Props) {
       lawRefs={[{ legalBasis: "소득세법 시행령 §155의3", label: "영 §155의3" }]}
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <FieldCard label="상생임대차계약 체결일">
+        <FieldCard
+          label="상생임대차계약 체결일"
+          hint="직전 임대차는 주택을 취득한 후 체결한 계약이어야 합니다(취득으로 임대인 지위를 이어받은 계약은 제외). 체결일이 취득일과 같거나 이전이면 적용되지 않습니다"
+        >
           <DateInput
             data-testid="ww-contract-date"
             value={value.winWinRentalContractDate}

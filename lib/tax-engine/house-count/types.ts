@@ -220,6 +220,23 @@ export interface OfficeAsset extends JointInheritanceShareFields, SameDayOrderFi
    * §28의4⑥3호 준용
    */
   inheritanceDate?: string;
+  /**
+   * §28의4⑥8·9호 오피스텔 한시 특례 선언 — `new_build`(8호: 신축 최초 유상승계) / `lease_registered`(9호: 유상승계 + 60일 내 임대등록).
+   * 아래 사실 칸이 모두 있어야 제외를 판정한다(미선언 = 제외 없음 · 사실 누락 = 제외 불성립, 입력 경로는 ⑧·⑫가 막는다).
+   */
+  hansiOfficeKind?: "new_build" | "lease_registered";
+  /** 8호 — 「건축법」 제22조 사용승인일(임시사용승인 포함) (YYYY-MM-DD) */
+  buildingApprovalDate?: string;
+  /** 8·9호 — 전용면적 (㎡) */
+  exclusiveAreaSqm?: number;
+  /** 8·9호 — 취득당시가액 (원) */
+  acquisitionValue?: number;
+  /** 8·9호 — 수도권 소재 여부(취득당시가액 한도 3억 / 6억) */
+  isMetropolitan?: boolean;
+  /** 9호 — 임대주택 등록일 (YYYY-MM-DD) — 취득일부터 60일 이내 */
+  leaseRegistrationDate?: string;
+  /** 9호 단서 — 임대의무기간 중 임대 외 용도 사용·매각·증여 또는 사유 없는 등록 말소 */
+  leaseObligationViolated?: boolean;
   /** §28의4⑤1호 — 본인이 그 오피스텔에 거주 (동순위 시) */
   isResidentInInheritedHouse?: boolean;
   /** §28의4⑤1호 — 다른 동순위 상속인이 그 오피스텔에 거주 */
@@ -389,6 +406,8 @@ export type ExclusionReason =
   | "hansi_lease_registered"   // 한시 특례 임대등록
   | "hansi_unsold_apt"         // 한시 특례 미분양 아파트
   | "low_value_office"         // 시가표준액 1억 이하 오피스텔
+  | "hansi_new_build_office"   // 한시 특례 신축 오피스텔 최초 유상승계 (§28의4⑥8호)
+  | "hansi_lease_office"       // 한시 특례 유상승계 + 임대등록 오피스텔 (§28의4⑥9호)
   | "pre_2020_08_12_right_office" // 2020.8.12. 전 취득·계약 입주권·분양권·오피스텔 (법률 제17473호 부칙 제3조·제7조)
   | "acquired_after_reference_date" // 권리취득일 소급 기준일 뒤 취득 (§28의4① 후단)
   | "joint_inheritance_not_owner" // 공동상속 주택의 소유자로 보지 않는 상속인 (§28의4⑤)

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
+import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
@@ -151,7 +152,11 @@ function OwnedHouseCard({
         tone="sky"
         size="sm"
         title="수도권 소재"
-        description="수도권 1억 / 수도권 외 2억 이하면 주택 수 제외 (취득하는 주택이 2025.1.2. 전 취득이면 전국 1억)"
+        description={
+          house.propertyType === "officetel"
+            ? "오피스텔 한시 특례(시행령 §28의4⑥8·9호)의 취득당시가액 한도를 가릅니다 — 수도권 6억 / 수도권 외 3억"
+            : "수도권 1억 / 수도권 외 2억 이하면 주택 수 제외 (취득하는 주택이 2025.1.2. 전 취득이면 전국 1억)"
+        }
         checked={house.isMetropolitanRegion}
         onCheckedChange={(v) => set("isMetropolitanRegion", v)}
       />
@@ -284,7 +289,73 @@ function OwnedHouseCard({
         />
       </ToggleCard>
 
-      {/* 한시 특례 */}
+      {/* 한시 특례 — 오피스텔은 §28의4⑥8·9호(주택용 ②1~3호와 다른 조문·요건), 주택은 ②1~3호 */}
+      {house.propertyType === "officetel" ? (
+        <ToggleCard
+          tone="violet"
+          size="sm"
+          title="오피스텔 한시 특례 해당 (주택 수 제외)"
+          description="2024.1.10~2027.12.31 유상승계취득한 60㎡·3억(수도권 6억) 이하 오피스텔 — 신축 최초 유상승계(⑥8호) 또는 취득일부터 60일 이내 임대등록(⑥9호)"
+          checked={house.isHansiBenefit}
+          onCheckedChange={(v) => set("isHansiBenefit", v)}
+        >
+          <RadioCardGroup
+            tone="violet"
+            layout="stack"
+            name={`officeHansiBenefitType-${house.id}`}
+            value={house.hansiBenefitType}
+            onChange={(v) => set("hansiBenefitType", v)}
+            options={[
+              { value: "new_build", label: "사용승인을 받은 신축 오피스텔을 최초로 유상승계취득 (시행령 §28의4⑥8호)" },
+              { value: "lease_registered", label: "신축 최초 유상승계가 아닌 유상승계취득 + 취득일부터 60일 이내 임대주택 등록 (시행령 §28의4⑥9호)" },
+            ]}
+          />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 mt-2">
+            <div>
+              <p className="text-xs font-medium mb-1">전용면적 (㎡)</p>
+              <DecimalInput
+                value={house.officeExclusiveAreaSqm}
+                onChange={(v) => set("officeExclusiveAreaSqm", v)}
+                unit="㎡"
+                data-testid={`office-hansi-area-${house.id}`}
+              />
+            </div>
+            <CurrencyInput
+              label="취득당시가액 (원)"
+              value={house.officeAcquisitionValue}
+              onChange={(v) => set("officeAcquisitionValue", v)}
+            />
+            {house.hansiBenefitType === "new_build" && (
+              <div>
+                <p className="text-xs font-medium mb-1">사용승인일 (임시사용승인 포함)</p>
+                <DateInput value={house.officeApprovalDate} onChange={(v) => set("officeApprovalDate", v)} />
+              </div>
+            )}
+            {house.hansiBenefitType === "lease_registered" && (
+              <div>
+                <p className="text-xs font-medium mb-1">임대주택 등록일</p>
+                <DateInput
+                  value={house.officeLeaseRegisteredDate}
+                  onChange={(v) => set("officeLeaseRegisteredDate", v)}
+                />
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            한도는 위 「수도권 소재」 토글로 가릅니다(3억 / 수도권 6억).
+          </p>
+          {house.hansiBenefitType === "lease_registered" && (
+            <ToggleCard
+              tone="rose"
+              size="sm"
+              title="임대의무기간 중 임대 외 용도 사용·매각·증여 또는 등록 말소"
+              description="임대사업자가 의무기간 안에 임대 외 용도로 쓰거나 매각·증여했거나, 부득이한 사유 없이 등록이 말소되면 이 오피스텔은 주택 수에서 제외되지 않습니다 (⑥9호 단서)"
+              checked={house.officeLeaseObligationViolated}
+              onCheckedChange={(v) => set("officeLeaseObligationViolated", v)}
+            />
+          )}
+        </ToggleCard>
+      ) : (
       <ToggleCard
         tone="violet"
         size="sm"
@@ -306,6 +377,7 @@ function OwnedHouseCard({
           ]}
         />
       </ToggleCard>
+      )}
     </ToneCard>
   );
 }

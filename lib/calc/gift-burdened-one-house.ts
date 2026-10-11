@@ -317,7 +317,12 @@ export function giftBurdenedWinWinError(
   giftDate?: string,
 ): string | null {
   if (!giftBurdenedWinWinInScope(bgt)) return null;
-  return winWinRentalFieldErrors(giftBurdenedWinWinSlice(bgt), giftDate)[0]?.message ?? null;
+  return (
+    winWinRentalFieldErrors(giftBurdenedWinWinSlice(bgt), giftDate, {
+      acquisitionDate: ymd(bgt.acquisitionDate),
+      sameHouseholdInheritance: bgt.decedentSameHouseholdBeforeInheritance === true,
+    })[0]?.message ?? null
+  );
 }
 
 /**
@@ -333,6 +338,8 @@ export function giftBurdenedWinWinResidenceExempt(
   return qualifiesWinWinRental({
     winWinRentalHouse: toWinWinRentalHouseFact(giftBurdenedWinWinSlice(bgt)),
     transferDate: toOptionalDate(giftDate),
+    acquisitionDate: toOptionalDate(ymd(bgt.acquisitionDate)),
+    decedentSameHouseholdBeforeInheritance: bgt.decedentSameHouseholdBeforeInheritance === true,
   });
 }
 

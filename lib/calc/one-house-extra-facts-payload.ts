@@ -18,7 +18,10 @@
 import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-fields.types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
-import { isWinWinDeadlineEraApplicable } from "@/lib/tax-engine/transfer-tax-exemption-residence-waivers";
+import {
+  isWinWinDeadlineEraApplicable,
+  winWinContractNotAfterAcquisition,
+} from "@/lib/tax-engine/transfer-tax-exemption-residence-waivers";
 
 /**
  * §155의2 FLAT → nested. 토글 OFF이거나 계약체결일 미입력이면 **아예 보내지 않는다**
@@ -124,15 +127,31 @@ export function toWinWinRentalHouseFact(
  * @param transferDate 양도(예정)일 — 2026-10-01 이후 양도분부터만 ①3호 임대기간 종료일을 필수로
  *   요구한다(2026 개정 양도기한, `isWinWinDeadlineEraApplicable`과 같은 게이트). 미입력(호출부가
  *   아직 넘기지 않음)이면 요구하지 않는다 — 영구 차단 방지(기존 동작 유지).
+ * @param acquisition 취득일(문자열)·동일세대 상속 여부 — ①1호 「취득한 후 체결」 날짜 하한(엔진과 같은
+ *   `winWinContractNotAfterAcquisition`). 취득일 미입력이면 막지 않는다(다른 필수 검증이 먼저 잡는다).
  */
 export function winWinRentalFieldErrors(
   f: WinWinRentalFields,
   transferDate?: string,
+  acquisition?: { acquisitionDate?: string; sameHouseholdInheritance?: boolean },
 ): { field: keyof WinWinRentalFields; message: string }[] {
   if (!f.winWinRentalSpecial) return [];
   const errors: { field: keyof WinWinRentalFields; message: string }[] = [];
   if (!f.winWinRentalContractDate) {
     errors.push({ field: "winWinRentalContractDate", message: "상생임대주택: 상생임대차계약 체결일을 입력하세요." });
+  } else if (
+    winWinContractNotAfterAcquisition(
+      toDate(f.winWinRentalContractDate, "winWinRentalContractDate"),
+      toOptionalDate(acquisition?.acquisitionDate),
+      { sameHouseholdInheritance: acquisition?.sameHouseholdInheritance },
+    )
+  ) {
+    // 엔진 `qualifiesWinWinRental`이 같은 leaf로 불성립 처리한다 — 막지 않으면 판정만 「특례 불성립」으로 조용히 바뀐다.
+    errors.push({
+      field: "winWinRentalContractDate",
+      message:
+        "상생임대주택: 상생임대차계약 체결일이 취득일과 같거나 그 이전입니다. 「소득세법 시행령」 제155조의3제1항제1호는 1세대가 주택을 취득한 후 체결한 직전 임대차계약을 요건으로 하므로 이 특례는 적용되지 않습니다. 체결일을 확인하거나 상생임대주택 선언을 해제하세요.",
+    });
   }
   if (!f.winWinRentalIncreaseRatePct) {
     errors.push({ field: "winWinRentalIncreaseRatePct", message: "상생임대주택: 임대료 증가율(%)을 입력하세요." });

@@ -442,6 +442,8 @@ export function calcMixedUseTransferTax(
     mainTextWholeHouse ? wholeBuildingPrice : undefined,
     // §155의3① 2026 개정(제36737호) 양도기한 판정용 — 단건과 같은 필드.
     transferDate,
+    // §155의3①1호 「취득한 후 체결」 — 위 `exemptionReqInput`과 같은 취득일(건물 취득일 = 주택 부분 취득일).
+    asset.buildingAcquisitionDate,
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.

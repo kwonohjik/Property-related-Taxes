@@ -610,7 +610,13 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   //   2026 개정 양도기한(종료일 필수)은 양도일로 게이트한다 — ⑤와 같은 경계.
   //   입주권 양도에는 칸이 없다(⑤·④와 같은 `judgmentSaleIsHousing` 게이트).
   if (judgmentSaleIsHousing(form))
-    for (const e of winWinRentalFieldErrors(form, form.transferDate)) errors.push(err(e.field, e.message));
+    for (const e of winWinRentalFieldErrors(form, form.transferDate, {
+      // ①1호 「취득한 후 체결」 날짜 하한 — 엔진 `qualifiesWinWinRental`과 같은 취득일·동일세대 상속 사실.
+      acquisitionDate: primary?.acquisitionDate,
+      sameHouseholdInheritance:
+        primary?.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance === true,
+    }))
+      errors.push(err(e.field, e.message));
 
   /**
    * §155⑳ 장기임대주택 특례 (P4-3a) — 계산기와 **같은 leaf**를 `facts` 모드로 부른다.
