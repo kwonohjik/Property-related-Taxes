@@ -7,7 +7,7 @@
  * 결론이 이미 정해진 판정에도 「판정 보류」 카드를 띄웠다.
  *
  * 대상 기한은 엔진이 양도일과 견주는 선언된 기한 축 전부다: §155①(두 독법 포함) · ④⑤ 합가 · ⑧ 해소 후 3년 · ⑦3호 귀농 5년 ·
- * §154① 단서(수용·출국) · §89② 권리 3년 · §156의2⑤ 대체주택 · §155㉓ 임대주택 말소 후 5년. 기한은 각 정본 술어와 **같은 연수 함수**로 센다.
+ * §154① 단서(수용·출국) · §89② 권리 3년(충족·배제 갈래 모두) · §156의2④·§156의3③ 완성 후 N년 · §156의2⑤ 대체주택 · §155㉓ 임대주택 말소 후 5년. 기한은 각 정본 술어와 **같은 연수 함수**로 센다.
  * 정본이 모르는 사실(날짜 미입력 등)은 기한이 없다 — 그 축은 말일이 없으므로 고지 대상이 아니다.
  */
 import { deadlineEnd, deadlineEndFrom, deadlineEndHolidayUncertaintyNear, type DeadlineEnd } from "../civil-period";
@@ -36,7 +36,7 @@ import type { OneHouseJudgeInput } from "./types";
 export function declaredDeadlineEnds(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
-  article89Clause2: Pick<Article89Clause2Result, "deadline">,
+  article89Clause2: Pick<Article89Clause2Result, "deadline" | "noticeDeadlines">,
 ): DeadlineEnd[] {
   const out: DeadlineEnd[] = [];
   const t = input.transferDate;
@@ -87,7 +87,9 @@ export function declaredDeadlineEnds(
   }
 
   // §89② 주택 + 권리 세대 — 권리 취득일부터 3년(정본이 계산한 말일).
+  //   충족 갈래(3년 안 양도 · ④ 완성 후 N년)의 말일은 `noticeDeadlines`가 싣는다.
   if (article89Clause2.deadline) out.push(deadlineEnd(article89Clause2.deadline));
+  for (const d of article89Clause2.noticeDeadlines ?? []) out.push(deadlineEnd(d));
 
   // §156의2⑤ 대체주택 — 신축주택 완성 후 N년.
   const rh = input.replacementHouse;
@@ -105,7 +107,7 @@ export function declaredDeadlineEnds(
 export function holidayTableNoticeKind(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
-  article89Clause2: Pick<Article89Clause2Result, "deadline">,
+  article89Clause2: Pick<Article89Clause2Result, "deadline" | "noticeDeadlines">,
 ): "uncovered" | "provisional" | undefined {
   const kinds = declaredDeadlineEnds(input, oneHouseRules, article89Clause2).map((d) =>
     deadlineEndHolidayUncertaintyNear(d.end, input.transferDate),

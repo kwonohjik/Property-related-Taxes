@@ -70,7 +70,14 @@ function timingFrom(
 
 
   if (oneYearMet && withinDeadline) {
-    return { status: "exception_met", exception: `소득세법 시행령 ${clause}`, viaArticle, byTimingClause: true };
+    // 3년 말일이 양도일 곁이면 공휴일 한 날이 결론을 가른다 — 충족 갈래도 그 말일을 고지 후보로 싣는다(#32).
+    return {
+      status: "exception_met",
+      exception: `소득세법 시행령 ${clause}`,
+      viaArticle,
+      byTimingClause: true,
+      noticeDeadlines: [deadline],
+    };
   }
   /**
    * OH-30b — ④(§156의3③)의 「종전주택 취득 후 1년이 지난 후 권리 취득」 요건은 대통령령 제32420호
@@ -107,6 +114,9 @@ function timingFrom(
         ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}),
       };
     }
+    // ④ 완성 후 N년 말일 — 이 말일이 양도일 곁이면 충족·불충족 어느 쪽이든 공휴일 한 날이 결론을 가른다(#32).
+    const completionEnd = newHouseCompletionDeadlineEnd(declared, input.transferDate);
+    const completionNotice = completionEnd ? { noticeDeadlines: [completionEnd] } : {};
     if (
       meetsThreeYearException(declared, input.transferDate) &&
       (thirdClauseOpen || declared.kind !== "delay")
@@ -115,6 +125,7 @@ function timingFrom(
         status: "exception_met",
         viaArticle,
         byTimingClause: true,
+        ...completionNotice,
         exception:
           // ④2호는 전단·후단이 **같은 항**이다 — 인용을 갈래로 나누면 ⑬ 사후관리 경고가 끊긴다.
           declared.kind === "new_house" || declared.kind === "before_completion"
@@ -122,7 +133,11 @@ function timingFrom(
             : `${right.type === "redevelopment_right" ? "소득세법 시행령 §156의2 ③" : "소득세법 시행령 §156의3 ②"} 후단(소득세법 시행규칙 §75 ①)`,
       };
     }
-    return { status: "excluded", ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}) };
+    return {
+      status: "excluded",
+      ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}),
+      ...completionNotice,
+    };
   }
 
   /**
@@ -131,6 +146,16 @@ function timingFrom(
    * 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
    */
   return { status: "excluded" };
+}
+
+/**
+ * ④1호·2호 후단의 「완성 후 N년」 기한 말일(민법 §161 반영 후) — 이사·거주 자기선언을 갖춘 `new_house` 선언만 가진다.
+ * 이사·거주를 못 채웠으면 말일이 결론을 바꾸지 못하므로 말일도 없다. `meetsThreeYearException` 후단과 같은 연수 함수다.
+ */
+function newHouseCompletionDeadlineEnd(declared: RightThreeYearException, transferDate: Date): Date | undefined {
+  if (declared.kind !== "new_house") return undefined;
+  if (declared.movedInWithin3Years !== true || declared.residedOneYearOrMore !== true) return undefined;
+  return deadlineEndFrom(declared.completionDate, resolve1562DeadlineYears(transferDate)).end;
 }
 
 /**

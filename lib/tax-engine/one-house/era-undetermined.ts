@@ -130,7 +130,7 @@ export function collectEraUndetermined(
   settled: boolean,
   relevance?: EraNoticeRelevance,
   /** §89② 판정 — 권리 3년 기한 말일이 공휴일 표 고지의 후보다(없으면 그 축은 보지 않는다) */
-  article89Clause2?: Pick<Article89Clause2Result, "deadline">,
+  article89Clause2?: Pick<Article89Clause2Result, "deadline" | "noticeDeadlines">,
 ): OneHouseUndetermined[] {
   if (input.propertyType !== "housing" || !input.isOneHousehold || input.isUnregistered) return [];
   if (input.oneHouseUnitRole === "appurtenant_land") return [];
