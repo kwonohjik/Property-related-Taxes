@@ -18,6 +18,7 @@ import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import { summarizeSplitGain } from "./transfer-tax-split-display";
+import { buildPublicExpropriationParts } from "./public-expropriation-reduction";
 import {
   emitPenaltySteps,
   getReductionLegalBasis,
@@ -327,6 +328,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     // Phase 2 (2026-06-11): §97의2·§97의5 시한 — 매매계약일 우선
     input.assetContractDate,
     input.isUnregistered,
+    buildPublicExpropriationParts(input, splitDetailForRate), // 5B — §77 「소급 2년 이전 취득」 파트별 판정
   );
   steps.push({
     label: "감면세액",

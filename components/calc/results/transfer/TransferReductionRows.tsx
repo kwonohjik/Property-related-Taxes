@@ -135,8 +135,20 @@ export function PublicExpropriationDetailCard({
         <p className="text-muted-foreground">① 보상 구성</p>
         <p>현금보상 {formatKRW(bd.cashAmount)} · 채권보상 {formatKRW(bd.bondAmount)}</p>
       </div>
+      {d.partWise && (
+        <div className="space-y-0.5" data-testid="expropriation-part-wise">
+          <p className="text-muted-foreground">토지·건물 파트별 판정 (사업인정고시일부터 소급 2년 이전 취득 — 확인 필요)</p>
+          <p>
+            감면대상 {d.partWise.eligiblePart === "land" ? "토지" : "건물"}분 양도소득금액 {formatKRW(d.partWise.eligibleIncome)} · 감면 제외{" "}
+            {d.partWise.eligiblePart === "land" ? "건물" : "토지"}분 {formatKRW(d.partWise.excludedIncome)}
+            {d.partWise.basicDeductionOnExcluded > 0 && (
+              <> (기본공제 −{formatKRW(d.partWise.basicDeductionOnExcluded)}는 감면 제외분에서 먼저 공제 — 「소득세법」 §103②)</>
+            )}
+          </p>
+        </div>
+      )}
       <div className="space-y-0.5">
-        <p className="text-muted-foreground">② 양도소득금액 안분 (보상액 비율)</p>
+        <p className="text-muted-foreground">② {d.partWise ? "감면대상 " : ""}양도소득금액 안분 (보상액 비율)</p>
         <p>현금분 소득 {formatKRW(bd.cashIncome)} · 채권분 소득 {formatKRW(bd.bondIncome)}</p>
       </div>
       {(bd.basicDeductionOnCash > 0 || bd.basicDeductionOnBond > 0) && (
