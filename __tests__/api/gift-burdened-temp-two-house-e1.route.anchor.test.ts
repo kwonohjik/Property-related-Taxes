@@ -253,7 +253,7 @@ describe("E-1 ⑭ route — 새 입력이 결론을 바꾸고, 양도세 계산�
     expect(withFacts.isExempt).toBe(true);
     expect(hasNotice(withFacts)).toBe(false);
     expect((await transfer("2021-08-01", "2020-06-01", era, true)).isExempt).toBe(true);
-    // 미입력 — 종전 대리 지표(양도일 조정 ⇒ 1년 도과) 그대로 + 고지 유지
+    // 미입력 — 불성립 독법(두 주택 모두 조정 ⇒ 1년 도과) + 고지 유지(#30)
     const legacy = await gift("2021-08-01", "2020-06-01", {}, true);
     expect(legacy.isExempt).toBe(false);
     expect(hasNotice(legacy)).toBe(true);
@@ -264,7 +264,8 @@ describe("E-1 ⑭ route — 새 입력이 결론을 바꾸고, 양도세 계산�
     expect(withFacts.isExempt).toBe(false);
     expect((await transfer("2022-12-10", "2020-12-01", BOTH, false)).isExempt).toBe(false);
     const legacy = await gift("2022-12-10", "2020-12-01", {}, false);
-    expect(legacy.isExempt).toBe(true); // 대리 지표(증여일 비조정 ⇒ 3년)
+    // #30 — 미입력은 증여일 기준 대리 지표(비조정 ⇒ 3년)가 아니라 불성립 독법(두 주택 모두 조정 ⇒ 2년)이다. 결론이 갈리므로 고지가 붙는다.
+    expect(legacy.isExempt).toBe(false);
     expect(hasNotice(legacy)).toBe(true);
   });
 

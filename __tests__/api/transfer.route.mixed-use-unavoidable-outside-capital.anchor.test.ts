@@ -133,7 +133,7 @@ beforeEach(() => {
 
 describe("겸용주택 × §167의10①4호 부득이 수도권 밖 주택", () => {
   it("UOC-1 부득이 사유(해소 전) → 중과 배제가 발동한다", async () => {
-    const r = await call({ unavoidableOutsideCapitalHouse: { reason: "work" } });
+    const r = await call({ unavoidableOutsideCapitalHouse: { reason: "work", unresolvedAtTransfer: true } });
     const reasons = r.multiHouseSurcharge?.exclusionReasons ?? [];
     expect(
       reasons.some((x) => x.type === "unavoidable_outside_capital"),
@@ -151,7 +151,7 @@ describe("겸용주택 × §167의10①4호 부득이 수도권 밖 주택", () 
   });
 
   it("UOC-3 배제가 세액을 실제로 바꾼다 (구별력 0 방지)", async () => {
-    const withReason = await call({ unavoidableOutsideCapitalHouse: { reason: "work" } });
+    const withReason = await call({ unavoidableOutsideCapitalHouse: { reason: "work", unresolvedAtTransfer: true } });
     const without = await call();
     expect(
       withReason.total.determinedTax,

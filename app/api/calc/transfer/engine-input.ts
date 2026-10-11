@@ -140,11 +140,12 @@ export function buildTransferEngineInput(
           ...mapTemporaryTwoHouseEraFacts(data.temporaryTwoHouse),
         }
       : undefined,
-    // ⑭ §155⑧ — resolvedDate는 string이라 Date 변환 필수(미제공 = 미해소).
+    // ⑭ §155⑧ — resolvedDate는 string이라 Date 변환 필수. 해소일 ↔ 「양도일 현재 미해소」 택일(⑫ 검증, #31) — 미해소 선택도 전달한다.
     unavoidableOutsideCapitalHouse: data.unavoidableOutsideCapitalHouse
       ? {
           reason: data.unavoidableOutsideCapitalHouse.reason,
           resolvedDate: toOptionalDate(data.unavoidableOutsideCapitalHouse.resolvedDate),
+          unresolvedAtTransfer: data.unavoidableOutsideCapitalHouse.unresolvedAtTransfer,
         }
       : undefined,
     // ⑭ §155⑦ — acquisitionDate만 Date 변환 대상. 나머지는 boolean·number라 그대로 통과.

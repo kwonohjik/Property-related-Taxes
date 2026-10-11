@@ -68,23 +68,25 @@ describe("E-1 — §155⑯ 공공기관 지방이전", () => {
     ).toBe(5);
   });
 
-  it("G-1b W-4: 조정대상지역이어도 ⑯이 5년으로 덮는다", () => {
-    // 「제1항 중 "3년"을 "5년"으로 본다」 — 조정지역 단축(DB 2년)보다 ⑯이 우선한다는 해석.
-    // 🔶 조문 해석 미확정(계획서 W-4). 현행 구현을 명시적으로 고정해 둔다.
-    expect(
+  it("G-1b W-4 → #29(S04-6): 조정→조정 단축 기한(2년)은 「3년」이 아니라 ⑯ 5년이 덮지 않는다 (종전: 5년)", () => {
+    // 「제1항 중 "3년"을 "5년"으로 본다」 — 치환 대상은 §155① 본문의 "3년"이다. 기획재정부 재산세제과-884(2021.10.12.) 쟁점2(2018.9.14.~
+    // 2019.12.16. 계약·조정→조정)는 2년, 부동산납세과-707(2023.3.15.)도 「허용기간이 3년인 경우에는 5년」. 종전 기대값 5년(W-4 「현행 구현 고정」)은
+    // 해석례로 해소됐다 — 결정 문서 #29 A. 세부 anchor는 `temporary-two-house-155-16-regulated-shortened-s04-6.anchor.test.ts`.
+    const tth = {
+      previousAcquisitionDate: D("2018-01-01"),
+      newAcquisitionDate: D("2019-06-01"),
+      publicInstitutionRelocation: true,
+      previousHouseRegulatedAtNewAcquisition: true,
+      newHouseRegulatedAtAcquisition: true,
+    };
+    const years = (tt: typeof tth) =>
       resolveTemporaryTwoHouseDeadlineYears(
-        {
-          isRegulatedArea: true,
-          transferDate: D("2022-01-01"), // 완화 전 → 본래 2년
-          temporaryTwoHouse: {
-            previousAcquisitionDate: D("2018-01-01"),
-            newAcquisitionDate: D("2019-06-01"),
-            publicInstitutionRelocation: true,
-          },
-        },
+        { isRegulatedArea: true, transferDate: D("2022-01-01"), temporaryTwoHouse: tt },
         twoHouseRule,
-      ),
-    ).toBe(5);
+      );
+    expect(years(tth)).toBe(2);
+    // 긍정 짝 — 신규 주택이 비조정(한쪽만 조정)이면 본문 3년이라 ⑯ 5년이 그대로 적용된다.
+    expect(years({ ...tth, newHouseRegulatedAtAcquisition: false })).toBe(5);
   });
 
   it("🔴 G-1 후단: 1년 요건이 면제된다 (빠뜨리기 쉬운 효과)", () => {
@@ -222,15 +224,14 @@ describe("E-1·E-2 엔진 통합 — 단일 소스라 비과세에 그대로 반
       }),
       seedRates(),
     );
-    expect(r.exemptReason).toBe(
-      "일시적 2주택 고가주택 (§155⑯ 지방이전 처분기한 5년·1년요건 면제)",
-    );
+    // #29 — ⑯ 표시는 실제로 바꾼 것만: 종전주택 취득(2018-01-01) 뒤 4년 5개월에 신규 취득이라 1년 요건은 자연 충족 → 5년만.
+    expect(r.exemptReason).toBe("일시적 2주택 고가주택 (§155⑯ 지방이전 처분기한 5년)");
   });
 
   it("근거 둘이 동시에 적용되면 함께 표시된다", () => {
     const r = calc({ publicInstitutionRelocation: true, disposalDelayReason: "kamco" });
     expect(r.exemptReason).toBe(
-      "일시적 2주택 고가주택 (§155⑯ 지방이전 처분기한 5년·1년요건 면제 · §155⑱ 1호 한국자산관리공사 매각 의뢰)",
+      "일시적 2주택 고가주택 (§155⑯ 지방이전 처분기한 5년 · §155⑱ 1호 한국자산관리공사 매각 의뢰)",
     );
   });
 });

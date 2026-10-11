@@ -101,9 +101,9 @@ describe("OH-01 §155①2호 2019-12-17 체제 — 전입요건·임차인 단�
     });
   const ID = "155-1-move-in-requirement-unverified";
 
-  it("신규 2020-06-01 · 양도 2021-03-01(1년 이내) → 비과세 + 전입요건 미판정 고지", () => {
+  it("신규 2020-06-01 · 양도 2021-03-01(1년 이내) → 가목 불성립(과세) + 확인 필요 고지 (#30 — 종전: 비과세 + 전입요건 미판정 고지)", () => {
     const i = tt("2020-06-01", "2021-03-01");
-    expect(calculateTransferTax(i, mockRates).isExempt).toBe(true);
+    expect(calculateTransferTax(i, mockRates).isExempt).toBe(false);
     expect(ids(i)).toContain(ID);
     expect(warn(i)).toContain("세대전원");
   });

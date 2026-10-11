@@ -45,6 +45,7 @@ import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
+import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
 import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
@@ -165,6 +166,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
       const statusIssue = twoHouseExclusionStatusIssue(h);
       if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
+      // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 판정 메뉴 ⑧과 같은 leaf.
+      const uocIssue = houseUnavoidableOutsideCapitalIssue(h);
+      if (uocIssue) return fieldError(rowKey, `${label}: ${uocIssue.message}`);
       // D7 — §155⑦1호 상속 농어촌주택 동일세대 여부(판정 메뉴 ⑧과 같은 leaf).
       const ruralSameHouseholdIssue = ruralInheritedSameHouseholdIssue(h);
       if (ruralSameHouseholdIssue) return fieldError(rowKey, `${label}: ${ruralSameHouseholdIssue}`);

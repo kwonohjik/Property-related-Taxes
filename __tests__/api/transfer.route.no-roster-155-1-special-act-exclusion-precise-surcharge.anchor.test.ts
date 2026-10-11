@@ -394,6 +394,8 @@ describe("음성 짝 — 열지 않는다(원시 플래그 + #1955 고지 · 세
         transferDate: DATE,
         temporaryTwoHouseSpecial: true,
         newHouseAcquisitionDate: "2021-03-01",
+        // 신규 2021-03-01은 2019-12-17 체제(조정→조정)라 가목(1년 내 세대전원 전입)이 요건이다 — #30: 전입일 미입력은 불성립이므로 입력한다.
+        newHouseMoveInDate: "2021-04-01",
       });
     const s = await single(withReductions(pre(), [RURAL_994_DECL]));
     expect(s).toMatchObject({ totalTax: 699_600_000, evaluated: false });

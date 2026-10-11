@@ -171,10 +171,24 @@ describe("OH-01 통합 — 비과세 판정이 연혁 기한을 따른다", () =
     expect(exempt(tt("2018-09-14", "2021-06-01"))).toBe(false);
   });
 
-  it("비조정이면 같은 날짜도 3년 — 양도 2022-09-01 비과세", () => {
+  it("비조정이면 같은 날짜도 3년 — 양도 2022-09-01 비과세 (#30: 「비조정」은 신규 취득 당시 조정 여부 선언이다 — 양도일 기준 isRegulatedArea 토글이 아니다)", () => {
     expect(
-      exempt(tt("2020-06-01", "2022-09-01", { isRegulatedArea: false, wasRegulatedAtAcquisition: false })),
+      exempt(
+        tt("2020-06-01", "2022-09-01", {
+          isRegulatedArea: false,
+          wasRegulatedAtAcquisition: false,
+          temporaryTwoHouse: {
+            previousAcquisitionDate: d("2015-01-01"),
+            newAcquisitionDate: d("2020-06-01"),
+            newHouseRegulatedAtAcquisition: false,
+          },
+        }),
+      ),
     ).toBe(true);
+  });
+
+  it("★ #30 신규 취득 당시 조정 여부 미입력이면 isRegulatedArea=false여도 3년이 아니다 — 불성립 독법(2년)으로 과세", () => {
+    expect(exempt(tt("2020-06-01", "2022-09-01", { isRegulatedArea: false, wasRegulatedAtAcquisition: false }))).toBe(false);
   });
 });
 
@@ -199,7 +213,17 @@ describe("2026 개정(제36737호) 통합 — 비과세 판정이 2년 기한을
 
   it("긍정 짝 — 조정→비조정이면 신규 2026-08-10·양도 2029-07-10도 비과세(본문 3년)", () => {
     expect(
-      exempt(tt("2026-08-10", "2029-07-10", { isRegulatedArea: false, wasRegulatedAtAcquisition: false })),
+      exempt(
+        tt("2026-08-10", "2029-07-10", {
+          isRegulatedArea: false,
+          wasRegulatedAtAcquisition: false,
+          temporaryTwoHouse: {
+            previousAcquisitionDate: d("2015-01-01"),
+            newAcquisitionDate: d("2026-08-10"),
+            newHouseRegulatedAtAcquisition: false,
+          },
+        }),
+      ),
     ).toBe(true);
   });
 

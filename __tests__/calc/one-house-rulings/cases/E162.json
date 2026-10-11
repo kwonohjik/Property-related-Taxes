@@ -20,7 +20,8 @@
           "region": "non_capital",
           "acquisitionDate": "2017-02-03",
           "oneHouseUnavoidableOutsideCapital": true,
-          "unavoidableOutsideCapitalReason": "work"
+          "unavoidableOutsideCapitalReason": "work",
+          "unavoidableOutsideCapitalUnresolved": true
         }
       ]
     },
@@ -28,6 +29,6 @@
       "isExempt": true
     },
     "bucket": "match",
-    "note": "match. 일자: 원문 그대로(A 상속 취득 2010-08, 양도 2024-04-11, B 2017-02-03), 양도가 8억 가정, A 상속 취득이나 피상속인 취득일이 원문에 없어 취득원인을 매매로 표현. B 행에 ⑧ 선언(사유 근무상 형편, 해소일 미입력 = 해소 전 양도 전제). 관측: 비과세(applied 155-8-unavoidable:work) + undetermined 155-8-resolved-date-missing(해소일 미입력 안내 — 결론 영향 없음). 쟁점 「수도권 밖→밖 수회 이전 후 재취업지 주택」은 수도권 밖 소재(행 지역)와 사유 선택만으로 표현 — 이전 이력 입력 칸은 없고 엔진도 묻지 않는다. 최소쌍: ⑧ 선언을 빼면 과세."
+    "note": "match. 일자: 원문 그대로(A 상속 취득 2010-08, 양도 2024-04-11, B 2017-02-03), 양도가 8억 가정, A 상속 취득이나 피상속인 취득일이 원문에 없어 취득원인을 매매로 표현. B 행에 ⑧ 선언(사유 근무상 형편, 「사유가 양도일 현재 해소되지 않음」 선택 = 해소 전 양도 전제 — 해소일 빈 칸은 모름이라 #31부터 입력 단계에서 막힌다). 관측: 비과세(applied 155-8-unavoidable:work) · 판정 보류 없음(종전 155-8-resolved-date-missing은 해소일 ↔ 「미해소」 택일 입력으로 사라졌다). 쟁점 「수도권 밖→밖 수회 이전 후 재취업지 주택」은 수도권 밖 소재(행 지역)와 사유 선택만으로 표현 — 이전 이력 입력 칸은 없고 엔진도 묻지 않는다. 최소쌍: ⑧ 선언을 빼면 과세."
   }
 ]

@@ -32,7 +32,7 @@ const FACTS: Record<string, Partial<HouseEntry>> = {
     ruralDecedentResidenceYears: "10",
     ruralOutsideCapitalEupMyeon: true,
   } as Partial<HouseEntry>,
-  "§155⑧": { oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", region: "non_capital" } as Partial<HouseEntry>,
+  "§155⑧": { oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalUnresolved: true, region: "non_capital" } as Partial<HouseEntry>,
   "§98의6": {
     countExclusion: {
       kind: "special",

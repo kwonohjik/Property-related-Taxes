@@ -321,7 +321,8 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
     expect(exempt({ householdHousingCount: 2 })).toBe(false);
   });
 
-  it("J-10 §155① 처분기한은 **조정지역 + 양도일**로 갈린다 (완화 2022-05-10 이전)", () => {
+  it("J-10 §155① 처분기한은 **신규 취득 당시 두 주택의 조정 여부 + 양도일**로 갈린다 (완화 2022-05-10 이전)", () => {
+    // #30 — 조정 여부는 신규 취득일 기준 두 주택의 선언·소재지다. 양도일 기준 `isRegulatedArea` 토글이 아니다.
     const pre = {
       householdHousingCount: 2,
       acquisitionDate: D("2016-01-01"),
@@ -331,8 +332,13 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
         newAcquisitionDate: D("2019-01-01"), // 양도까지 2.4년
       },
     } as const;
-    expect(exempt({ ...pre, isRegulatedArea: false })).toBe(true); // 3년 이내
-    expect(exempt({ ...pre, isRegulatedArea: true })).toBe(false); // 2년 초과
+    const withFacts = (previous: boolean, next: boolean) => ({
+      ...pre,
+      temporaryTwoHouse: { ...pre.temporaryTwoHouse, previousHouseRegulatedAtNewAcquisition: previous, newHouseRegulatedAtAcquisition: next },
+    });
+    expect(exempt(withFacts(true, false))).toBe(true); // 한쪽만 조정 — 3년 이내
+    expect(exempt(withFacts(true, true))).toBe(false); // 조정→조정 — 2년 초과
+    expect(exempt({ ...pre, isRegulatedArea: false })).toBe(false); // 미입력은 불성립 독법(조정→조정) — 대리 지표(isRegulatedArea)가 아니다
   });
 
   it("J-11 §155④⑤ 합가 — 합가일·선양도가 모두 있어야 의제", () => {
@@ -394,7 +400,7 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
         ruralHouse: { kind: "inherited", isOutsideCapitalEupMyeon: true, decedentResidenceYears: 6 },
       }),
     ).toBe(true);
-    expect(exempt({ ...two, unavoidableOutsideCapitalHouse: { reason: "work" } })).toBe(true);
+    expect(exempt({ ...two, unavoidableOutsideCapitalHouse: { reason: "work", unresolvedAtTransfer: true } })).toBe(true);
     expect(exempt(two)).toBe(false);
   });
 

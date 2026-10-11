@@ -123,6 +123,29 @@ export function isTerminationEligibleArticle(article: RentalArticle): boolean {
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 const validDate = (d: Date | undefined): d is Date => d instanceof Date && !Number.isNaN(d.getTime());
+
+/**
+ * §155㉓ 5년 창의 기산점 — 입력한 말소 호 중 가장 이른 말소일(기획재정부 재산세제과-1308, 2022.10.18. · 법규과-864, 2025.4.24.).
+ * ㉓ 말소는 법률 제17482호(2020.8.18. 시행)가 만든 자진·자동 말소라 그 전 날짜와 양도일 뒤 말소는 창에 넣지 않는다.
+ * 호별 판정(`evaluateRentalUnits`)과 판정 보류 고지(`one-house/holiday-notice-deadlines.ts`)가 같은 기산점을 쓴다.
+ */
+export function firstTerminationCancellation(
+  rentalUnits: readonly RentalUnitInput[],
+  transferDate: Date,
+): { date: Date; unitIndex: number } | null {
+  let first: { date: Date; unitIndex: number } | null = null;
+  for (let i = 0; i < rentalUnits.length; i++) {
+    const u = rentalUnits[i];
+    const cd = u.registrationCancellationDate;
+    if (!u.rentalAutoTermination || !validDate(cd)) continue;
+    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveEffectiveRegDate(u));
+    if (!isTerminationEligibleArticle(art)) continue;
+    if (dayOf(cd) < RA_CUT.Y2020_08_18 || dayOf(cd) > dayOf(transferDate)) continue;
+    if (!first || dayOf(cd) < dayOf(first.date)) first = { date: cd, unitIndex: i };
+  }
+  return first;
+}
+
 const dayOf = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
 // ============================================================
@@ -378,16 +401,7 @@ export function checkEligibility(
    * ㉓ 말소는 법률 제17482호(2020.8.18. 시행)가 만든 자진·자동 말소라 그 전 날짜는 창에 넣지 않는다.
    * 판정 맥락(양도일)이 없는 직접 호출은 판정하지 않는다 — 종전 동작.
    */
-  let first: { date: Date; unitIndex: number } | null = null;
-  for (let i = 0; ctx && i < rentalUnits.length; i++) {
-    const u = rentalUnits[i];
-    const cd = u.registrationCancellationDate;
-    if (!u.rentalAutoTermination || !validDate(cd)) continue;
-    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveEffectiveRegDate(u));
-    if (!isTerminationEligibleArticle(art)) continue;
-    if (dayOf(cd) < RA_CUT.Y2020_08_18 || dayOf(cd) > dayOf(ctx.transferDate)) continue;
-    if (!first || dayOf(cd) < dayOf(first.date)) first = { date: cd, unitIndex: i };
-  }
+  const first = ctx ? firstTerminationCancellation(rentalUnits, ctx.transferDate) : null;
   const firstDeadline = first ? terminationDeadline(first.date) : null;
   const cancellationWindow: CancellationWindow | undefined =
     ctx && first && firstDeadline

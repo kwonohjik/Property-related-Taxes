@@ -92,11 +92,12 @@ const reasonsOf = (input: OneHouseJudgeInput) => unmetOf(input).flatMap((u) => u
 // §155⑧ 수도권 밖 부득이한 사유 주택
 // ──────────────────────────────────────────────────────────────────────────
 describe("UMX §155⑧ — 수도권 밖 부득이한 사유 주택", () => {
-  const declared = { unavoidableOutsideCapitalHouse: { reason: "work" as const } };
+  // #31 — 「양도일 현재 미해소」를 명시한다(빈 값은 「모름」이라 불성립: UMX-5).
+  const declared = { unavoidableOutsideCapitalHouse: { reason: "work" as const, unresolvedAtTransfer: true } };
 
   it("UMX-1 🔴 드리프트 가드 — 정본이 성립시키면 사유 0건", () => {
     const r = judge(base(declared as Partial<OneHouseJudgeInput>));
-    expect(r.isExempt).toBe(true); // 해소일 미입력 = 기한 미기산 → 정본 통과
+    expect(r.isExempt).toBe(true); // 「양도일 현재 미해소」 선택 = 기한 미기산 → 정본 통과
     expect(r.unmetExceptions).toEqual([]);
   });
 
@@ -145,8 +146,8 @@ describe("UMX §155⑧ — 수도권 밖 부득이한 사유 주택", () => {
     expect(r.unmetExceptions).toEqual([]); // 같은 사실을 두 카드가 말하지 않는다
   });
 
-  it("UMX-5 해소일 미입력은 사유가 아니다 — 판정 보류로만 밝힌다", () => {
-    // 3주택으로 만들어 카드는 뜨게 하되, 「해소일」을 사유로 들먹이지 않는지 본다.
+  it("UMX-5 「양도일 현재 미해소」 선택은 사유가 아니다 — 판정 보류도 더는 없다 (#31)", () => {
+    // 3주택으로 만들어 카드는 뜨게 하되, 「해소」를 사유로 들먹이지 않는지 본다.
     const r = judge(
       base({
         ...declared,
@@ -155,7 +156,15 @@ describe("UMX §155⑧ — 수도권 밖 부득이한 사유 주택", () => {
       } as Partial<OneHouseJudgeInput>),
     );
     expect(r.unmetExceptions.flatMap((u) => u.reasons).some((x) => x.includes("해소"))).toBe(false);
-    expect(r.undetermined.map((u) => u.id)).toContain("155-8-resolved-date-missing");
+    // 종전 판정 보류 `155-8-resolved-date-missing`은 해소일 ↔ 「미해소」 택일 입력으로 사라졌다.
+    expect(r.undetermined.map((u) => u.id)).not.toContain("155-8-resolved-date-missing");
+  });
+
+  it("UMX-5b ★ 해소일도 「미해소」 선택도 없는 빈 값은 「모름」 — 혜택 불성립 + 확인 필요 사유 (엔진 직접 호출 방어)", () => {
+    const r = judge(base({ unavoidableOutsideCapitalHouse: { reason: "work" as const } } as Partial<OneHouseJudgeInput>));
+    expect(r.isExempt).toBe(false);
+    const reasons = r.unmetExceptions.flatMap((u) => u.reasons);
+    expect(reasons.some((x) => x.includes("확인 필요") && x.includes("해소"))).toBe(true);
   });
 
   it("UMX-6 선언하지 않으면 말하지 않는다", () => {
@@ -493,7 +502,7 @@ describe("UMX §155②③ — 상속주택 주택 수 제외", () => {
 // ──────────────────────────────────────────────────────────────────────────
 describe("UMX 공통 — 자산·세대 게이트는 신규 축에도 걸린다", () => {
   const declaredAll = {
-    unavoidableOutsideCapitalHouse: { reason: "work" as const },
+    unavoidableOutsideCapitalHouse: { reason: "work" as const, unresolvedAtTransfer: true },
     ruralHouse: { kind: "inherited" as const, isOutsideCapitalEupMyeon: false },
     culturalHeritageHouse: true,
     householdHousingCount: 3,

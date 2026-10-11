@@ -18,6 +18,7 @@ import {
   meetsPublicInstitutionRelocationRegion,
   resolveRegulatedAtNewAcquisition,
   resolveTemporaryTwoHouseDeadline,
+  resolveTemporaryTwoHouseDeadlineFor,
 } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import { temporaryTwoHouseEraInputRelevance } from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
 import {
@@ -210,12 +211,13 @@ export function judgeTempTwoHouseFromForm(p: {
       existingTenantLeaseEndDate: optDate(facts.existingTenantLeaseEndDate),
     },
   };
-  const era = resolveTemporaryTwoHouseDeadline(engineLike, {
-    disposalDeadlineYears: TEMP_TWO_HOUSE_UI_DEADLINE_YEARS,
-  });
+  const deadlineRule = { disposalDeadlineYears: TEMP_TWO_HOUSE_UI_DEADLINE_YEARS };
+  const era = resolveTemporaryTwoHouseDeadline(engineLike, deadlineRule);
   const deadlineYears = era.years;
-  // §155⑯(5년)은 조정 기한 연혁을 덮는다 — 그때 두 주택 조정 여부·전입은 결론을 바꾸지 않는다.
   const relocation = meetsPublicInstitutionRelocationRegion(engineLike.temporaryTwoHouse);
+  // §155⑯(5년)이 연혁상 조정 기한을 **덮는 경우에만** 두 주택 조정 여부·전입이 결론을 바꾸지 않는다. 조정→조정 단축 기한(2년·1년)은
+  //   「3년」이 아니라 5년으로 덮이지 않으므로 그 독법에서는 입력 칸이 열려야 한다(#29). 5년이 덮는 독법은 조정 여부와 무관하다.
+  const relocationOverridesRegulated = resolveTemporaryTwoHouseDeadlineFor(engineLike, deadlineRule, true).relocationFiveYearApplied;
   const reg = resolveRegulatedAtNewAcquisition(engineLike);
   const relevance = temporaryTwoHouseEraInputRelevance({
     newAcquisitionDate: nw,
@@ -252,7 +254,7 @@ export function judgeTempTwoHouseFromForm(p: {
     deadlineExtendedByTenant: era.deadlineDate !== undefined,
     threeYearMet: t.threeYearMet,
     regulated: {
-      relevant: relevance.regulatedAxis && !relocation,
+      relevant: relevance.regulatedAxis && !relocationOverridesRegulated,
       previous: reg.previous,
       next: reg.next,
       // D8 상대 쪽 짝이면 B의 주소가 있을 때만 자동 판정이다 — 양도 주택(A)의 주소로 대신하지 않는다(S15-2).
@@ -262,7 +264,7 @@ export function judgeTempTwoHouseFromForm(p: {
       nextAuto: !!facts.newHouseRegionCode,
       determined: reg.determined,
       // 가목·단서 체제 — 두 주택이 모두 조정(또는 미확인)일 때만 연다.
-      moveInRelevant: relevance.moveIn && reg.previous !== false && reg.next !== false && !relocation,
+      moveInRelevant: relevance.moveIn && reg.previous !== false && reg.next !== false && !relocationOverridesRegulated,
       clauseRef: resolveRegulatedShortenedClauseRef(transfer),
     },
     ...(era.moveInMet !== undefined ? { moveInMet: era.moveInMet } : {}),

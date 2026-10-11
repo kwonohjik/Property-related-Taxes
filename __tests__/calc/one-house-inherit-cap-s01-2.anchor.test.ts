@@ -21,7 +21,7 @@ const B = { ...base, id: "B", acquisitionDate: "2020-12-01" };
 /** ⑥ 국가유산주택 · ⑦ 이농주택 · ⑧ 부득이한 사유 주택 — 양도 주택(2001-09-01)보다 먼저 취득 */
 const HERITAGE = { ...base, id: "H", acquisitionDate: "1998-01-01", oneHouseCulturalHeritage: true };
 const RURAL = { ...base, id: "R", acquisitionDate: "1998-01-01", oneHouseRuralHouse: true, ruralHouseKind: "farm_exit", ruralOwnerResidenceYears: 6, ruralOutsideCapitalEupMyeon: true, ruralReturnedToFarmExitHouse: false };
-const UNAVOIDABLE = { ...base, id: "U", acquisitionDate: "1998-01-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work" };
+const UNAVOIDABLE = { ...base, id: "U", acquisitionDate: "1998-01-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalUnresolved: true };
 /** ⑤ 혼인 합가 — 배우자 쪽 주택(양도 주택은 혼인 전 취득) */
 const SPOUSE = { ...base, id: "S", acquisitionDate: "1999-01-01", mergeOrigin: "counterpart_side" };
 const Cm = { ...C, mergeOrigin: "seller_side" };

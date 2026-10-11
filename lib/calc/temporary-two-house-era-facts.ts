@@ -75,7 +75,7 @@ export function toTemporaryTwoHouseEraFacts(
  * 🔑 게이트(`regulated.relevant`)는 호출부가 ⑤와 **같은 판정 결과**로 건다 — 칸이 없는 화면에서 막지 않는다.
  * 🔑 차단(`error`)은 모순뿐이다(계약일 > 취득일 · 임차인 토글 ON인데 종료일 없음 · 종료일 ≤ 취득일).
  *    ④는 임차인 토글이 켜졌을 때만 종료일을 싣는다(`toTemporaryTwoHouseEraFacts`) — 같은 조건이다.
- * 🔑 미입력은 `warning`이다 — 엔진이 판정 보류로 고지하고(종전 대리 지표로 계산) 결론을 지어내지 않는다.
+ * 🔑 미입력은 `warning`이다 — 엔진이 불성립 독법으로 계산하고 결론을 가를 때 확인 필요로 고지한다(모름 = 혜택 불성립 · #30).
  */
 export interface TemporaryTwoHouseEraIssue {
   field: keyof TemporaryTwoHouseEraFormFields;
@@ -99,7 +99,7 @@ export function temporaryTwoHouseEraIssues(
   if (!p.determined) {
     warn(
       "newHouseRegulatedAtAcquisition",
-      "신규 주택 취득일 현재 두 주택이 조정대상지역이었는지 선택하세요 — 선택하지 않으면 양도일 기준 양도 주택의 조정대상지역 여부로 대신 판정합니다.",
+      "신규 주택 취득일 현재 두 주택이 조정대상지역이었는지 선택하세요 — 선택하지 않으면 두 주택 모두 조정대상지역인 것으로 보고 불성립으로 계산합니다(결론이 갈리면 확인 필요).",
     );
   }
   if (!p.moveInRelevant) return out;
@@ -116,7 +116,7 @@ export function temporaryTwoHouseEraIssues(
   if (!form.newHouseMoveInDate) {
     warn(
       "newHouseMoveInDate",
-      "신규 주택으로 세대전원이 이사·전입신고한 날을 입력하세요 — 입력하지 않으면 1년 내 전입 요건(§155①2호 가목)은 판정하지 않습니다.",
+      "신규 주택으로 세대전원이 이사·전입신고한 날을 입력하세요 — 입력하지 않으면 1년 내 전입 요건(§155①2호 가목)을 충족하지 않은 것으로 보고 불성립으로 계산합니다(결론이 갈리면 확인 필요).",
     );
   }
   return out;

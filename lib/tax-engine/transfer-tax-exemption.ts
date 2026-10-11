@@ -42,16 +42,20 @@ import {
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
 import { deriveLegalBasis } from "./one-house/legal-basis";
+import { counterfactualVerdictDiffers, withMoveInWithinYear, withNotBothRegulated } from "./one-house/temp-two-house-counterfactual";
 import { collectLapsedDeadlineUnmet } from "./one-house/unmet-deadline-reasons";
 import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
+import {
+  describePublicInstitutionRelocationEffects,
+  relocationEffectsLabel,
+} from "./transfer-tax-temporary-two-house-timing";
 
 import {
   DISPOSAL_DELAY_REASON_LABEL,
   describeOneHouseHoldingRequirement,
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
-  meetsPublicInstitutionRelocationRegion,
   PROVISO_LABEL,
   resolveExemptionProviso,
   qualifiesRuralHouse,
@@ -209,6 +213,11 @@ export function checkExemption(
           };
           return verdictIf(new Date(input.acquisitionDate.getTime() + 86_400_000)) !== verdictIf(input.acquisitionDate);
         },
+        // §155①2호 조정 여부·가목 전입일 고지(#30·#32) — 모르는 사실을 유리하게 읽은 반사실 판정이 비과세·부분과세 결론을 바꿀 때만.
+        regulatedReadingDecides: () =>
+          counterfactualVerdictDiffers(input, (i) => checkExemptionCore(i, oneHouseRules), article89Clause2.status === "excluded", withNotBothRegulated),
+        moveInDecides: () =>
+          counterfactualVerdictDiffers(input, (i) => checkExemptionCore(i, oneHouseRules), article89Clause2.status === "excluded", withMoveInWithinYear),
       }),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass, input.transferDate),
       ...undeclaredMergeCompositionUndetermined(article89Clause2, coreWouldPass),
@@ -401,7 +410,7 @@ function checkExemptionCore(
   const ruralOverlap = ruralTemporaryTwoHouseOverlapCountHolds(input);
   if ((twoHouseSpecialCountHolds(input) || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
     const provisoReason = input.oneHouseExemptionProviso?.reason;
-    const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+    const { provisoRelaxesHolding, timing, era } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
     /**
      * §154① 보유 2년 사전게이트 — 2026-08-13 F09로 **두 가지**를 고쳤다.
@@ -463,12 +472,15 @@ function checkExemptionCore(
           legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
         });
       }
-      // ⑯ 근거 표시는 **실제로 적용된 경우**(지역 요건 충족)에만 — 판정과 같은 술어(OH-35).
-      if (meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse)) {
-        basisParts.push("§155⑯ 지방이전 처분기한 5년·1년요건 면제");
+      // ⑯ 근거 표시는 **실제로 바꾼 것**만 — 5년이 기한을 바꿨는지·1년 요건 면제가 걸렸는지를 나누고, 둘 다 아니면 표시하지 않는다(#29).
+      const relocationLabel = relocationEffectsLabel(
+        describePublicInstitutionRelocationEffects(input.temporaryTwoHouse, input.transferDate, era, provisoRelaxesHolding),
+      );
+      if (relocationLabel) {
+        basisParts.push(`§155⑯ ${relocationLabel}`);
         exceptions.push({
           id: "155-16-public-institution-relocation",
-          label: "§155⑯ 지방이전 처분기한 5년·1년요건 면제",
+          label: `§155⑯ ${relocationLabel}`,
           legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑯`,
         });
       }

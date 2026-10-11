@@ -71,7 +71,7 @@ const GENERAL = { ...COMMON, propertyType: "housing" as const };
 
 const FACTS: Record<string, Record<string, unknown>> = {
   none: {},
-  uoc: { unavoidableOutsideCapitalHouse: { reason: "work" } },
+  uoc: { unavoidableOutsideCapitalHouse: { reason: "work", unresolvedAtTransfer: true } }, // #31 — 「양도일 현재 미해소」 명시(빈 값은 모름)
   rural: { ruralHouse: { kind: "inherited", isOutsideCapitalEupMyeon: true, decedentResidenceYears: 5 } },
   cult: { culturalHeritageHouse: true },
   tth: { temporaryTwoHouse: { previousAcquisitionDate: "2016-06-01", newAcquisitionDate: "2025-12-01" } },

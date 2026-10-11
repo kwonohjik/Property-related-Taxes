@@ -83,6 +83,7 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
                 oneHouseUnavoidableOutsideCapital: undefined,
                 unavoidableOutsideCapitalReason: undefined,
                 unavoidableOutsideCapitalResolvedDate: undefined,
+                unavoidableOutsideCapitalUnresolved: undefined,
               },
         )
       }
@@ -144,14 +145,33 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium">§155⑧ 사유 해소일</label>
-            <DateInput
-              value={house.unavoidableOutsideCapitalResolvedDate ?? ""}
-              onChange={(v) => onUpdate({ unavoidableOutsideCapitalResolvedDate: v })}
+            {/* §155⑧ 「해소된 날부터 3년」 — 해소일 또는 「사유가 양도일 현재 해소되지 않음」 택일(빈 값 = 모름은 ⑧이 막는다 · #31) */}
+            <ToggleCard
+              variant="chip"
+              tone="rose"
+              data-testid={`house-uoc-unresolved-${house.id}`}
+              checked={house.unavoidableOutsideCapitalUnresolved === true}
+              onCheckedChange={(v) =>
+                onUpdate(
+                  v
+                    ? { unavoidableOutsideCapitalUnresolved: true, unavoidableOutsideCapitalResolvedDate: undefined }
+                    : { unavoidableOutsideCapitalUnresolved: undefined },
+                )
+              }
+              title="사유가 양도일 현재 해소되지 않음"
             />
+            {house.unavoidableOutsideCapitalUnresolved !== true && (
+              <>
+                <label className="text-sm font-medium">§155⑧ 사유 해소일</label>
+                <DateInput
+                  value={house.unavoidableOutsideCapitalResolvedDate ?? ""}
+                  onChange={(v) => onUpdate({ unavoidableOutsideCapitalResolvedDate: v || undefined })}
+                />
+              </>
+            )}
             <p className="text-xs text-muted-foreground">
               해소일부터 <strong>3년 이내</strong>에 일반주택을 양도해야 합니다.
-              아직 해소되지 않았다면 비워 두세요 — 기한이 기산되지 않습니다.
+              해소일 또는 「사유가 양도일 현재 해소되지 않음」 중 하나가 필요합니다 — 비워 두면 판정하지 않습니다.
             </p>
           </div>
         </div>

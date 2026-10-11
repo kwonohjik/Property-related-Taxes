@@ -191,7 +191,13 @@ describe("G3-2 — 청산금 수령분 비과세는 §155① 의제 세대를 �
   }
   const temp47 = {
     householdHousingCount: 2,
-    temporaryTwoHouse: { previousAcquisitionDate: D("2001-01-01"), newAcquisitionDate: D("2021-03-01") },
+    // 이 anchor의 주제는 청산금분 비과세와 §155① 의제의 공존이다 — 신규 주택 취득 당시 비조정(선언)으로 본문 3년 독법을 고정한다
+    //   (#30: 조정 여부 미입력은 두 주택 모두 조정으로 읽은 불성립 독법이라 이 양도 시기에는 1년 + 전입 요건이 붙는다).
+    temporaryTwoHouse: {
+      previousAcquisitionDate: D("2001-01-01"),
+      newAcquisitionDate: D("2021-03-01"),
+      newHouseRegulatedAtAcquisition: false,
+    },
   } as Partial<TransferTaxInput>;
 
   it("같은 날 동시신고(사례 47) 1주택 — 청산금분 비과세(기준)", () => {

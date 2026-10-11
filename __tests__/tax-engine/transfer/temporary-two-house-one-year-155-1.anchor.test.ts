@@ -18,7 +18,7 @@ import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 const mockRates = makeMockRates();
 
 function tt(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
-  return baseTransferInput({
+  const input = baseTransferInput({
     propertyType: "housing",
     isOneHousehold: true,
     householdHousingCount: 2,
@@ -28,6 +28,11 @@ function tt(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     residencePeriodMonths: 0,
     ...over,
   });
+  // 이 anchor의 주제는 1년 경과 요건(요건 A)이다 — 신규 주택은 취득 당시 비조정(선언)으로 고정해 본문 3년 독법을 본다.
+  //   (#30: 신규 취득 당시 조정 여부 미입력은 두 주택 모두 조정으로 읽는 불성립 독법이라 2018-10-23~2023-01-11 양도에서 기한이 짧아진다.)
+  return input.temporaryTwoHouse
+    ? { ...input, temporaryTwoHouse: { newHouseRegulatedAtAcquisition: false, ...input.temporaryTwoHouse } }
+    : input;
 }
 
 describe("일시적 2주택 §155① 1년 경과 요건 (D1 앵커)", () => {

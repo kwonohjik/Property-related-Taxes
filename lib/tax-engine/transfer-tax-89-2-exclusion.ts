@@ -188,6 +188,13 @@ export interface Article89Clause2Result {
    */
   deadline?: Date;
   deadlineNote?: string;
+  /**
+   * 공휴일 표 한계 고지(`civil-161-holiday-table-uncovered` — #32)의 **추가 후보 말일**(민법 §161 반영 후).
+   * `deadline`은 배제 갈래에서만 채워져 **충족 갈래**(3년 안 양도 · 완성 후 N년 내 양도)의 기한 말일을 담지 못한다 —
+   * 그 갈래에서도 말일이 양도일 곁에 있으면 공휴일 한 날이 결론을 가르므로 판정 경로가 실제로 비교한 말일을 따로 싣는다.
+   * 세액·판정에는 쓰지 않는다.
+   */
+  noticeDeadlines?: Date[];
 }
 
 /** 이 술어가 읽는 입력만 — 겸용주택 등 부분 입력 경로도 그대로 재사용할 수 있게 좁힌다. */

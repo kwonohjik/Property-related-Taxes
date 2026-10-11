@@ -47,9 +47,11 @@ test.describe("일시적 2주택 §155① 종전취득일 자동반영 + 요건 
   });
 
   test("요건 충족: 1년 경과 + 3년내 → 충족 카드", async ({ page }) => {
+    // 조정대상지역 처분기한 단축(2018-10-23~2023-01-11 · 2026-10-01~) 밖의 양도 시기로 잡는다 — 그 시기에는 신규 주택 취득 당시 조정 여부를
+    // 입력하지 않으면 두 주택 모두 조정으로 읽은 불성립 독법(#30)이라 카드가 미충족으로 뜬다. 여기서는 조정 여부와 무관한 본문 3년을 본다.
     await gotoHolding(page, "2018-01-01", {
-      transferDate: "2021-06-01",
-      newHouseAcquisitionDate: "2020-01-01", // 종전+24개월, 3년내
+      transferDate: "2024-06-01",
+      newHouseAcquisitionDate: "2022-01-01", // 종전+4년, 신규 취득 후 2.4년 — 3년 내
     });
     const verdict = page.getByTestId("temp-two-house-verdict");
     await expect(verdict).toBeVisible();

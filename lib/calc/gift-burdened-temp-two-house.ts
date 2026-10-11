@@ -68,8 +68,8 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
     // 신규 주택 소재지 코드(E-1 잔여 B) — ④ `toTemporaryTwoHouseEraFacts`와 같은 값
     newHouseRegionCode: tt.newHouseRegionCode || undefined,
     newHouseInDesignatedDistrict: tt.newHouseInDesignatedDistrict,
-    // §155⑯·⑱(E-1 한계 G3) — ④가 싣는 값과 같다. ⑯이 성립하면 조정 기한 연혁을 덮어 ①2호 칸이 닫힌다
-    //   (판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자).
+    // §155⑯·⑱(E-1 한계 G3) — ④가 싣는 값과 같다. ⑯이 「3년」을 5년으로 덮는 독법이면 조정 여부가 기한을 바꾸지 않아 ①2호 칸이 닫히고,
+    //   조정→조정 단축 기한(2년·1년)이 나오는 독법이면 ⑯이어도 열린다(#29 — 판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자).
     ...giftBurdenedDeadlineJudgeArgs(bgt),
     eraFields: tt,
   });

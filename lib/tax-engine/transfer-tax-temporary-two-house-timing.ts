@@ -11,6 +11,7 @@
  */
 import { format } from "date-fns";
 import {
+  type DeadlineEnd,
   deadlineEnd,
   deadlineEndFrom,
   deadlineEndNote,
@@ -26,6 +27,7 @@ import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjac
 import {
   resolveTemporaryTwoHouseDeadlineEra,
   isOneYearHoldRequiredForTemporaryTwoHouse,
+  TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START,
   type TemporaryTwoHouseDeadlineEra,
 } from "./data/temporary-two-house-deadline-era";
 import { resolveDisposalDelay, type DisposalDelayResolution } from "./data/temporary-two-house-delay-era";
@@ -33,6 +35,14 @@ import { resolveDisposalDelay, type DisposalDelayResolution } from "./data/tempo
 /** §155⑯ 전단 — 공공기관 지방이전 시 처분기한 5년 */
 const PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS = 5;
 
+
+/** §155① 처분기한 말일(민법 §161 반영) — 연수 기한은 신규 주택 취득일부터 N년, 기존 임차인 단서는 그 날짜(`deadlineDate`)까지. */
+export function temporaryTwoHouseDeadlineEnd(
+  newAcquisitionDate: Date,
+  era: { years: number; deadlineDate?: Date },
+): DeadlineEnd {
+  return era.deadlineDate ? deadlineEnd(era.deadlineDate) : deadlineEndFrom(newAcquisitionDate, era.years);
+}
 
 /**
  * §155① 일시적 2주택 타이밍 요건 판정 (순수 — rule·waiver는 caller 주입).
@@ -93,7 +103,7 @@ export function judgeTemporaryTwoHouseTiming(p: {
     // D14 — 2012-06-29 전 양도분 §155①에는 이 요건이 없다(제23887호가 도입).
     !isOneYearHoldRequiredForTemporaryTwoHouse(p.transferDate) ||
     isAfterPeriod(p.previousAcquisitionDate, 1, p.newAcquisitionDate);
-  const dl = p.deadlineDate ? deadlineEnd(p.deadlineDate) : deadlineEndFrom(p.newAcquisitionDate, p.deadlineYears);
+  const dl = temporaryTwoHouseDeadlineEnd(p.newAcquisitionDate, { years: p.deadlineYears, deadlineDate: p.deadlineDate });
   const deadline = dl.end;
   const deadlineNote = deadlineEndNote(dl);
   // §155① 본문 괄호 "(제18항에 따른 사유에 해당하는 경우를 포함한다)" — 기한 초과를 치유한다.
@@ -252,8 +262,11 @@ export function resolveRegulatedAtNewAcquisition(
   const warn = announcementWarning ? { announcementWarning } : {};
   if (previous === false || next === false) return { previous, next, bothRegulated: false, determined: true, ...warn };
   if (previous === true && next === true) return { previous, next, bothRegulated: true, determined: true, ...warn };
-  // 미입력 — 저장 당시 결론을 보존하려고 종전 대리 지표(양도일 기준 양도주택)로 계산한다(고지 동반).
-  return { previous, next, bothRegulated: resolveIsRegulatedAtTransfer(p), determined: false, ...warn };
+  // 미입력(모름) — 혜택 불성립(#30 · 2026-10-04 원칙): 「두 주택 모두 조정대상지역」인 쪽으로 읽는다. 그 쪽이 기한이 짧거나 같고
+  //   (2년·1년 · ⑯ 5년 불적용) 가목 전입 요건이 붙으므로, 모든 독법에서 성립하는 경우에만 비과세가 선다 — 두 독법을 따로
+  //   계산해 같을 때만 확정하는 것과 같은 결론이다. 결론을 가를 때만 확인 필요를 고지한다(`one-house/era-undetermined.ts`).
+  //   종전에는 법문에 없는 양도일 기준 양도주택의 조정 여부(`resolveIsRegulatedAtTransfer`)로 대신 판정했다.
+  return { previous, next, bothRegulated: true, determined: false, ...warn };
 }
 
 /**
@@ -288,28 +301,69 @@ function resolveNewHousePreAnnouncement(
 }
 
 /**
- * §155① 처분기한 — 연혁 leaf(`data/temporary-two-house-deadline-era.ts`)의 결과를 그대로 돌려준다.
- * `moveInRequirementPending`은 2019-12-17 체제의 전입요건을 **판정하지 않았다**는 신호다
- * (판정 보류 고지 — `one-house/era-undetermined.ts`).
+ * §155⑯ 지방이전이 이 세대에 **실제로 바꾼 것** — 결과의 ⑯ 표시가 쓴다(#29: 「5년 적용」과 「1년 요건 면제만 적용」을 나누고,
+ * 둘 다 바꾸지 않았으면 표시하지 않는다).
+ *
+ * - `fiveYear`: 지역 요건을 충족하고 기한이 실제로 5년이 됐다(연혁상 조정→조정 단축 기한이면 5년이 덮지 않는다).
+ * - `oneYear`: 지역 요건을 충족하고, 1년 요건이 있는 양도 시기(2012-06-29 이후)에, §154① 단서로 이미 면제되지 않았고,
+ *   1년이 자연히 지나지 않았을 때(= ⑯ 후단이 없었다면 1년 요건이 걸렸을 때).
  */
-export function resolveTemporaryTwoHouseDeadline(
+export function describePublicInstitutionRelocationEffects(
+  tt: NonNullable<TransferTaxInput["temporaryTwoHouse"]>,
+  transferDate: Date,
+  era: Pick<TemporaryTwoHouseDeadlineResolution, "relocationFiveYearApplied">,
+  oneYearWaivedByProviso: boolean,
+): { fiveYear: boolean; oneYear: boolean } {
+  if (!meetsPublicInstitutionRelocationRegion(tt)) return { fiveYear: false, oneYear: false };
+  return {
+    fiveYear: era.relocationFiveYearApplied,
+    oneYear:
+      isOneYearHoldRequiredForTemporaryTwoHouse(transferDate) &&
+      !oneYearWaivedByProviso &&
+      !isAfterPeriod(tt.previousAcquisitionDate, 1, tt.newAcquisitionDate),
+  };
+}
+
+/** `describePublicInstitutionRelocationEffects`의 표시 문구 — 바꾼 것이 없으면 `undefined`(표시하지 않는다). */
+export function relocationEffectsLabel(e: { fiveYear: boolean; oneYear: boolean }): string | undefined {
+  if (e.fiveYear && e.oneYear) return "지방이전 처분기한 5년·1년요건 면제";
+  if (e.fiveYear) return "지방이전 처분기한 5년";
+  if (e.oneYear) return "지방이전 1년요건 면제";
+  return undefined;
+}
+
+/**
+ * §155① 처분기한 해석 결과 — 연혁 leaf 결과 + §155⑯ 5년이 **실제로 기한을 5년으로 바꿨는가**.
+ */
+export type TemporaryTwoHouseDeadlineResolution = TemporaryTwoHouseDeadlineEra & {
+  /**
+   * §155⑯ 전단 「"3년"을 "5년"으로 본다」가 기한을 바꿨다. ⑯ 지역 요건을 충족해도 연혁상 조정→조정 단축 기한(1년·2년)이
+   * 나오면 그 기한은 「3년」이 아니라 치환 대상이 아니므로 `false`다(#29 — 재산세제과-884 · 부동산납세과-707).
+   */
+  relocationFiveYearApplied: boolean;
+};
+
+/**
+ * §155① 처분기한 — 연혁 leaf(`data/temporary-two-house-deadline-era.ts`)의 결과에 §155⑯을 얹는다.
+ * `moveInRequirementPending`은 2019-12-17 체제의 전입요건을 **판정하지 않았다**는 신호다 — 그때 가목은 불성립으로 읽고
+ * (`moveInMet: false` — 모름 = 혜택 불성립), 결론을 가를 때만 확인 필요를 고지한다(`one-house/era-undetermined.ts`).
+ *
+ * @param bothRegulated 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」했는가 —
+ *   조정 여부를 두 독법으로 가를 때(결론이 갈리는지 보는 반사실 판정) 독법마다 넘긴다.
+ */
+export function resolveTemporaryTwoHouseDeadlineFor(
   p: Pick<
     TransferTaxInput,
     "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode" | "regionInDesignatedDistrict"
   >,
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
-): TemporaryTwoHouseDeadlineEra {
-  // §155⑯ 전단: "제1항 중 '3년'을 '5년'으로 본다."
-  //   🔶 조정대상지역 단축 기한과의 우선순위는 명문이 없다(계획서 W-4).
-  //   법문이 §155① 본문의 "3년"을 직접 치환하므로 5년이 덮는 것으로 구현한다.
-  if (p.temporaryTwoHouse && meetsPublicInstitutionRelocationRegion(p.temporaryTwoHouse)) {
-    return { years: PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS, moveInRequirementPending: false };
-  }
+  bothRegulated: boolean,
+): TemporaryTwoHouseDeadlineResolution {
   // OH-01 — 조정대상지역 처분기한 연혁은 코드 leaf가, 조정 판정 대상·시점(신규 취득 당시 두 주택)은
-  //   `resolveRegulatedAtNewAcquisition`이 정한다(A2b — 종전 대리 지표는 미입력 폴백으로만 남았다).
+  //   `resolveRegulatedAtNewAcquisition`이 정한다.
   const tt = p.temporaryTwoHouse;
-  return resolveTemporaryTwoHouseDeadlineEra({
-    bothRegulated: resolveRegulatedAtNewAcquisition(p).bothRegulated,
+  const era = resolveTemporaryTwoHouseDeadlineEra({
+    bothRegulated,
     baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
     newAcquisitionDate: tt?.newAcquisitionDate,
     newContractDate: tt?.newHouseContractDate,
@@ -318,4 +372,29 @@ export function resolveTemporaryTwoHouseDeadline(
     existingTenantLeaseEndDate: tt?.existingTenantLeaseEndDate,
     transferDate: p.transferDate,
   });
+  // §155⑯ 전단: "제1항 중 '3년'을 '5년'으로 본다." — 치환 대상은 §155① **본문의 "3년"**이다. 조정→조정 단축 기한(2호 2년·
+  //   가·나목 1년·2026 개정 1호 2년)은 "3년"이 아니라 5년으로 덮이지 않는다. 기획재정부 재산세제과-884(2021.10.12.)는 ⑯ 종사자 ×
+  //   계약일·취득일 모두 조정에 2018.9.13. 이전 계약은 5년, 2018.9.14.~2019.12.16.은 2년, 2019.12.17. 이후는 1년으로 회신했고,
+  //   부동산납세과-707(2023.3.15.)도 「허용기간이 3년인 경우에는 5년」으로 범위를 그었다. 2026 개정 1호(2년)에는 해석례가 없으나
+  //   ⑯ 문언이 바뀌지 않아 같은 논리다.
+  //   2012-06-29 전 양도분은 그대로 5년이다 — 2008.2.22.~2012.6.28.에는 ⑯이 당시 1년·2년 기한도 5년으로 바꿨다(결정 #29 조건).
+  if (tt && meetsPublicInstitutionRelocationRegion(tt)) {
+    const regulatedShortened =
+      p.transferDate.getTime() >= TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START.getTime() && era.years < twoHouseRule.disposalDeadlineYears;
+    if (!regulatedShortened) {
+      return { years: PUBLIC_INSTITUTION_RELOCATION_DEADLINE_YEARS, moveInRequirementPending: false, relocationFiveYearApplied: true };
+    }
+  }
+  return { ...era, ...(era.moveInRequirementPending ? { moveInMet: false } : {}), relocationFiveYearApplied: false };
+}
+
+/** §155① 처분기한 — 신규 취득 당시 두 주택의 조정 여부는 `resolveRegulatedAtNewAcquisition`이 정한다(미입력이면 보수 독법). */
+export function resolveTemporaryTwoHouseDeadline(
+  p: Pick<
+    TransferTaxInput,
+    "isRegulatedArea" | "transferDate" | "temporaryTwoHouse" | "regionCode" | "regionInDesignatedDistrict"
+  >,
+  twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
+): TemporaryTwoHouseDeadlineResolution {
+  return resolveTemporaryTwoHouseDeadlineFor(p, twoHouseRule, resolveRegulatedAtNewAcquisition(p).bothRegulated);
 }
