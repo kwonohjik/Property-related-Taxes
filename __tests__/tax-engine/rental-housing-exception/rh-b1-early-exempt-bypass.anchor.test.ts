@@ -111,7 +111,8 @@ describe("P1~P3: 시나리오 B — STEP 1a 조기 반환 억제 (§161① 안�
     expect(r.rentalHousingExceptionDetail).toBeUndefined();
     expect(r.determinedTax).toBeGreaterThan(0);
     expect(r.steps.some((s) => s.label.includes("장기임대주택 거주주택 비과세 특례"))).toBe(true);
-    expect(r.warnings?.some((w) => w.includes("주택수"))).toBe(true);
+    // X1-1: 불충족 B는 임대주택을 주택 수에 되돌린다 — 고지는 되돌림 문장(전에는 「주택수 재확인」 경고)
+    expect(r.warnings?.some((w) => w.includes("임대주택 1호를 세대 주택 수에 넣어(2주택)"))).toBe(true);
   });
 
   it("P7(F3): 시나리오 A + 임대 요건 미충족 + count=1 → 과세 (STEP 1a 조기반환 억제, over-exemption 차단)", () => {

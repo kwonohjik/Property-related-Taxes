@@ -95,7 +95,7 @@ export function RentalHousingCalcSummary({
           <strong>
             {rh.scenario === "B"
               ? "임대주택을 거주주택으로 전환 후 양도 (§161① 안분)"
-              : "거주주택 양도 (임대주택 주택수 제외)"}
+              : "거주주택 양도 (장기임대주택 보유 중)"}
           </strong>{" "}
           · 임대주택 {rh.rentalUnits.length}호
         </p>

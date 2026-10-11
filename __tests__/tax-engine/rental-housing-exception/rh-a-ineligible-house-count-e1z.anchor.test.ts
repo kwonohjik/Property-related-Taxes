@@ -66,9 +66,12 @@ describe("G5 — A 미충족이면 임대주택을 주택 수에 되돌린다", 
     expect(ok.taxableGain).toBeLessThan(800_000_000);
   });
 
-  it("RA-3 부정 짝 — 주택 수 2 이상은 건드리지 않는다(임대주택을 이미 센 입력 — 이중 계상 방지) · B 시나리오는 종전 고지", () => {
+  it("RA-3 부정 짝 — 명부 없이 주택 수 2 이상은 건드리지 않는다(임대주택을 이미 센 입력 — 이중 계상 방지)", () => {
     const two = calculateTransferTax(input(2), rates);
     expect(two.warnings?.some((w) => w.includes("세대 주택 수에 넣어")) ?? false).toBe(false);
+  });
+
+  it("RA-3b (X1-1 반전) B 시나리오도 불충족이면 임대주택을 되돌린다 — 종전에는 B만 건드리지 않고 부분 비과세·표2를 냈다", () => {
     const b = calculateTransferTax(
       input(1, {
         rentalHousingException: {
@@ -84,6 +87,10 @@ describe("G5 — A 미충족이면 임대주택을 주택 수에 되돌린다", 
       }),
       rates,
     );
-    expect(b.warnings?.some((w) => w.includes("세대 주택 수에 넣어")) ?? false).toBe(false);
+    expect(b.warnings?.some((w) => w.includes("임대주택 1호를 세대 주택 수에 넣어(2주택)"))).toBe(true);
+    // 주택 수 2 입력과 같은 세액 — 비과세·12억 안분·표2 없음
+    expect(b.isExempt).toBe(false);
+    expect(b.isPartialExempt).toBe(false);
+    expect(b.totalTax).toBe(calculateTransferTax(input(2), rates).totalTax);
   });
 });
