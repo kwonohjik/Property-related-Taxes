@@ -4,6 +4,7 @@
  */
 
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils";
 import { calcReductions } from "./transfer-tax-reductions-calc";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
@@ -44,7 +45,7 @@ export function buildNonBusinessPart(
 
   const transferredGain = housingPart.nonBusinessTransferredGain + additionalTransferredGain;
   const deductionRate = calcLongTermRate(landHoldingYears, 0, false, isUnregistered);
-  const longTermDeductionAmount = applyRate(Math.max(transferredGain, 0), deductionRate);
+  const longTermDeductionAmount = applyFairMarketRatio(Math.max(transferredGain, 0), deductionRate);
 
   return {
     excessArea: excessResult.excessArea,

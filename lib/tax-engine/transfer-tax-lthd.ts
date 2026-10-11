@@ -42,6 +42,7 @@ import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
+import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
 
 interface LongTermHoldingResult {
   deduction: number;
@@ -519,11 +520,11 @@ export function calcLongTermHoldingDeduction(
   ) {
     // §97의3: 임대기간 분 양도차익 × 70% + 비임대분 × 일반율 (ratio=1이면 전액 70%)
     const positiveGain = Math.max(taxableGain, 0);
-    const rentalGain = applyRate(positiveGain, rental97Eval.rentalGainRatio);
+    const rentalGain = applyRentalGainShare(positiveGain, rental97Eval);
     const nonRentalGain = positiveGain - rentalGain;
     // F-1: 공제율(임대분 0.7·0.5, 비임대분 `rate`)은 정수 % 상수라 정수 분수연산을 쓴다 — `applyRate(g, 0.7)`은
-    //   g=700에서 489(정확 490)다. `rentalGainRatio`는 기준시가 비율(임의 소수)이라 위 `applyRate`를 유지한다
-    //   (`applyLthdRate`는 소수 4자리로 반올림하므로 비율 안분에 쓰면 세액이 바뀐다).
+    //   g=700에서 489(정확 490)다. 임대기간 분 비율은 기준시가 비율(임의 소수)이라 `applyLthdRate`(소수 4자리 반올림)가 아니라
+    //   **기준시가 정수 분수**(`applyRentalGainShare`)로 곱한다 — 종전 `applyRate(g, 비율)`의 1원 과소 해소(2026-10-11).
     const deduction =
       applyLthdRate(rentalGain, rental97Eval.overrideRate) + applyLthdRate(nonRentalGain, rate);
     const blendedRate =

@@ -5,7 +5,8 @@
  * 소득세법 시행령 §160 ① 단서 / §164 / §168의12 / §95 ②
  */
 
-import { calculateEstimatedAcquisitionPrice, applyRate } from "./tax-utils";
+import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils"; // 장특 공제율 × 차익 — double 공제율(0.68 등)의 1원 과소 방지(일반 경로 `applyLthdRate`와 같은 leaf)
 import { getHousingMultiplier } from "./non-business-land/urban-area";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
@@ -622,8 +623,8 @@ export function buildHousingPart(
   );
 
   const longTermDeductionAmount =
-    applyRate(Math.max(proratedLandGain, 0), landDedRate) +
-    applyRate(Math.max(proratedBuildingGain, 0), buildingDedRate);
+    applyFairMarketRatio(Math.max(proratedLandGain, 0), landDedRate) +
+    applyFairMarketRatio(Math.max(proratedBuildingGain, 0), buildingDedRate);
 
   // 단일 공제율은 "혼합" — 대표값을 건물 기준으로 표시 (UI용)
   const longTermDeductionRate = buildingDedRate;
@@ -687,8 +688,8 @@ export function buildCommercialPart(
   const buildingDedRate = calcLongTermRate(gainSplit.buildingHoldingYears, 0, false, isUnregistered);
 
   const longTermDeductionAmount =
-    applyRate(Math.max(gainSplit.landGain, 0), landDedRate) +
-    applyRate(Math.max(gainSplit.buildingGain, 0), buildingDedRate);
+    applyFairMarketRatio(Math.max(gainSplit.landGain, 0), landDedRate) +
+    applyFairMarketRatio(Math.max(gainSplit.buildingGain, 0), buildingDedRate);
 
   const longTermDeductionRate = calcLongTermRate(holdingYears, 0, false, isUnregistered);
 
@@ -698,10 +699,10 @@ export function buildCommercialPart(
     transferGain: gainSplit.totalGain,
     // 파트별 양도소득금액 — §104①2·3호 단기세율은 토지·건물 각각의 보유기간으로 갈린다.
     // 장특이 이미 파트별(landDedRate·buildingDedRate)이므로 같은 축으로 노출한다(재도출 금지).
-    landIncomeAmount: Math.max(0, gainSplit.landGain - applyRate(Math.max(gainSplit.landGain, 0), landDedRate)),
+    landIncomeAmount: Math.max(0, gainSplit.landGain - applyFairMarketRatio(Math.max(gainSplit.landGain, 0), landDedRate)),
     buildingIncomeAmount: Math.max(
       0,
-      gainSplit.buildingGain - applyRate(Math.max(gainSplit.buildingGain, 0), buildingDedRate),
+      gainSplit.buildingGain - applyFairMarketRatio(Math.max(gainSplit.buildingGain, 0), buildingDedRate),
     ),
     landTransferGain: gainSplit.landGain,
     buildingTransferGain: gainSplit.buildingGain,

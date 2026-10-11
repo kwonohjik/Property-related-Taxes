@@ -252,6 +252,8 @@ export interface RentalLthdEffect {
    * 취득 즉시 임대(rentalStartDate ≤ acquisitionDate)면 1.
    */
   rentalGainRatio: number;
+  /** 같은 비율의 정수 분수 — 금액 안분은 이것으로(`applyRentalGainShare`). 비율 1이면 없을 수 있다. */
+  rentalGainFraction?: { num: number; den: number };
   eligibleRentalYears: number;
   /**
    * [echo] 결과 카드 산식 표시용 — `transfer-tax-lthd.ts`가 공제액 산출 직후 채운다.
@@ -278,6 +280,8 @@ export interface RentalTaxAmountEffect {
   reductionAmount: number;
   /** 임대기간 분 비율 (§97의5만 안분 — §97·§97의2는 1) */
   rentalGainRatio: number;
+  /** 같은 비율의 정수 분수(§97의5 안분 시) — 금액 안분은 이것으로(`applyRentalGainShare`). */
+  rentalGainFraction?: { num: number; den: number };
   isFullExemption: boolean;
 }
 

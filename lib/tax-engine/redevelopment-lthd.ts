@@ -21,8 +21,8 @@
  * - settlement (apt + pay): 2009-10-23 ~ 2023-02-16 ≈ 13년 3월 → 표1 26%
  */
 
-import { applyRate } from "./tax-utils";
 import { calculateHoldingPeriod } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils";
 import { completedMonthsInclusive } from "./civil-period";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 
@@ -538,5 +538,6 @@ function zeroBranch(reason: string): RedevelopmentLthdBranch {
  */
 export function applyLthdToGain(gain: number, rate: number): number {
   if (gain <= 0 || rate <= 0) return 0;
-  return applyRate(gain, rate);
+  // 공제율이 double 합(보유분 + 거주분 · 표1 + §97의4 가산)이라 0.6799…처럼 내려가면 1원 과소 — 정수 분수로(일반 경로 `applyLthdRate`와 같은 leaf)
+  return applyFairMarketRatio(gain, rate);
 }

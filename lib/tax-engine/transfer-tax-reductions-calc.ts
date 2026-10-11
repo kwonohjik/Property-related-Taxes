@@ -68,6 +68,7 @@ import type { Rental97Result } from "./transfer-reductions/types";
 import type { LongTermRentalRuleSet, NewHousingMatrixData } from "./schemas/rate-table.schema";
 import type { TransferReduction } from "./types/transfer.types";
 import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
+import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
 import {
   calculateGbDesignatedLandReduction,
   type GbDesignatedLandResult,
@@ -267,7 +268,7 @@ export function calcReductions(
           reducibleIncome:
             transferIncome === undefined
               ? undefined
-              : applyRate(transferIncome, rental97Result.rentalGainRatio),
+              : applyRentalGainShare(transferIncome, rental97Result),
           aggregateReductionRate: rental97Result.reductionRate,
         });
       }
