@@ -140,7 +140,8 @@ describe("#17 보정 2 — 함께 양도 주택 카드(컴패니언)의 초과�
 
   it("🔑 컴패니언 주택 500㎡ · 정착면적 100㎡ → ④가 면적 사실을 싣고 고지가 난다 · 총세액 0 불변 (수정 전: 경고 0건)", async () => {
     const r = await runCalc(bundle());
-    expect(r.issues).toEqual([]);
+    // 같은 날 함께양도에 주택 2채가 묶이면 ⑧이 §154⑨ 순서 입력 불가로 따로 막는다(결정 #40 하위 1 가) — 그 차단 외의 오류는 없어야 한다.
+    expect(r.issues.filter((i) => !i.message.includes("함께양도로 묶여 있습니다"))).toEqual([]);
     expect(r.status).toBe(200);
     expect(companionBody(r).companionHousingLand).toEqual({ landAreaM2: 500, footprintM2: 100, zone: "metropolitan_residential" });
     expect(r.json.data.aggregated.totalTax).toBe(0);
