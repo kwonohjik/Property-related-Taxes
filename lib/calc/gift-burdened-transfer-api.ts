@@ -38,6 +38,7 @@ import {
   giftBurdenedDeadlineExceptionFields,
   giftBurdenedPreviousAcquisitionDate,
   giftBurdenedTempTwoHouseDeadlineInScope,
+  giftBurdenedTempTwoHouseInScope,
 } from "@/lib/calc/gift-burdened-temp-two-house";
 import { buildExemptionProvisoPayload } from "@/lib/calc/exemption-proviso-payload";
 import { buildFinalHouseRestartPayload } from "@/lib/calc/final-house-restart";
@@ -197,6 +198,9 @@ export function buildGiftBurdenedTransferBody(
     isMinorDonee: isMinorDonee || undefined,
     isGenerationSkip: isGenerationSkip || undefined,
     priorGiftsWithin10Years,
+    // 이 화면에는 세대 보유 주택 목록 입력 칸이 없다 — 엔진이 §155④⑤ 합가 전 구성 「모름」을 불성립으로 보지 않는 예외(Q-10)의
+    // 유일한 근거 표식이다(1h-G1-12 · 결정 #27). 양도 형태(transferType)로 화면을 짐작하지 않는다. 계산기 ④는 싣지 않는다.
+    houseRosterInputUnavailable: true,
   };
 
   // 시가 모드(K-4/K-5) 추가 필드
@@ -300,8 +304,10 @@ export function buildGiftBurdenedTransferBody(
   body.wasRegulatedAtAcquisition = bgt.wasRegulatedAtAcquisition ?? false;
   body.residencePeriodMonths = bgt.residencePeriodMonths ?? 0;
 
-  // 일시적 2주택 (H4) — 주택 전용. householdHousingCount === 2일 때만 의미 있음
-  if (isHousingType && bgt.temporaryTwoHouse) {
+  // 일시적 2주택 (H4) — 주택 전용. ⑤ 블록이 보이고(세대 주택 수 2) 두 취득일이 모두 있을 때만 싣는다(1h-G1-4·G1-5 ·
+  // ⑤·⑧과 같은 leaf). 주택 수를 바꿔 칸이 사라졌거나 신규 취득일이 빈 채 객체만 남은 값은 싣지 않는다 — 숨은 값으로 중첩 비과세가
+  // 서거나 ⑫ 400이 나던 갭.
+  if (isHousingType && bgt.temporaryTwoHouse && giftBurdenedTempTwoHouseInScope(bgt)) {
     const next = bgt.temporaryTwoHouse.newAcquisitionDate;
     body.temporaryTwoHouse = {
       // 종전 주택 = 이번 증여(양도) 주택 — ⑤·⑧과 같은 leaf (1h-G1-3). 저장된 옛 자유 입력값은 쓰지 않는다.

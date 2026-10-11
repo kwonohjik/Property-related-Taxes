@@ -954,10 +954,11 @@ export interface TransferTaxInput {
   knownHouseExclusionHouseIds?: ReadonlyArray<string>;
   /**
    * §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`)에 **명부 입력 경로가 없는 호출부**임을
-   * 알린다(사용자 결정 2026-10-05 — 부담부증여 양도분, `transferType === "burdened_gift"`만
-   * 세운다). true면 명부가 없어도 불성립(`roster_missing`) 대신 판정 보류(`unknown`)로 두어
-   * 종전 동작(합가 허용)을 유지한다 — 입력 경로가 없는 화면에서 「모름」을 불리하게 적용하지
-   * 않는다. 계산기·판정 메뉴·API 직접 호출·겸용주택은 세우지 않는다.
+   * 알린다(2026-10-05 Q-10). **공개 입력이 아니라 echo다** — 엔진이 `burdenedGiftInfo.houseRosterInputUnavailable`
+   * (증여세 마법사만 싣는 표식)과 `transferType === "burdened_gift"`가 함께 있을 때 파생해 세운다
+   * (`one-house/roster-input-path.ts` · 1h-G1-12). Zod(⑫)에 열지 않는다 — 열면 재개발 아파트 비과세·§155⑳ 세대 구성에 번진다.
+   * true면 명부가 없어도 불성립(`roster_missing`) 대신 판정 보류(`unknown`)로 두어 합가를 허용한다.
+   * 계산기(부담부증여 모드 포함)·판정 메뉴·표식 없는 API 직접 호출·겸용주택은 세우지 않는다.
    */
   noMergeRosterInputPath?: boolean;
   /** 다주택 중과 한시 유예 조건부 판정 (소령 §167의3 한시 배제 2022.5.10~2026.5.9). houses + 유예 윈도우 활성 시 mhInput.gracePeriod로 전달(STEP 0.5). */

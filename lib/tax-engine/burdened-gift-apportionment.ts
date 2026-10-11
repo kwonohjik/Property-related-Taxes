@@ -47,6 +47,7 @@ import {
   apportionTransferPrice,
   apportionAcquisitionPrice,
   estimatedDeductionForBurdenedGift,
+  fractionalHighValueDenominator,
 } from "./burdened-gift-valuation";
 
 export {
@@ -594,6 +595,17 @@ export function buildBurdenedGiftBreakdown(params: {
     sangjeungbeopValuation,
     giftValuation,
     wholePropertySupplementary,
+    // 지분 모드의 12억 판정 가액(소령 §156① — 지분 증여가액 ÷ 지분율). 단독 소유는 없음.
+    ...(ownershipRatio !== undefined && ownershipRatio > 0 && ownershipRatio < 1
+      ? {
+          fractionalHighValueDenominator: fractionalHighValueDenominator({
+            selectedMode: sangjeungbeopValuation.selectedMode,
+            max: sangjeungbeopValuation.max,
+            wholePropertySupplementary,
+            ownershipRatio,
+          }),
+        }
+      : {}),
     /**
      * 입주권 평가 구성 내역 — 표시·검증 전용. 평가액 **자체**는
      * `buildingStdPriceAtTransfer`(→ `perAsset.building.sangjeungbeopValue`)가 담는다.

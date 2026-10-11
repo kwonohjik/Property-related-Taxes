@@ -267,6 +267,19 @@ export interface BurdenedGiftInfo {
    *    도달하지 않고(계획서 §5.7.4), ②§97②2호 단서(swap)의 나목에 섞여 판정을 오염시킨다.
    */
   carryoverGiftTaxAmount?: number;
+
+  /**
+   * 이 입력을 보내는 화면에 **세대 보유 주택 목록 입력 칸이 없다**는 표식 (1h-G1-12 · 결정 #27).
+   *
+   * 증여세 마법사의 부담부증여 양도세 섹션만 `true`를 싣는다. 목록 입력 칸이 있는 양도세 계산기(부담부증여 모드 포함)·
+   * 판정 메뉴·API 직접 호출은 싣지 않는다 — 표식이 없으면 §155④⑤ 합가 전 구성 「모름」은 불성립 + 확인 필요다(원칙 1).
+   * 엔진은 `transferType === "burdened_gift"` 자체가 아니라 **이 표식**을 보고 `noMergeRosterInputPath`를 세운다
+   * (`one-house/roster-input-path.ts`) — 양도 형태로 화면을 짐작하지 않는다.
+   *
+   * ⚠️ 합가 비과세·중과 배제 두 판정에만 쓴다. 재개발 아파트 비과세·§155⑳ 세대 구성에는 번지지 않게
+   *    `TransferTaxInput.noMergeRosterInputPath`(echo)를 공개 입력으로 열지 않고 이 표식에서 파생한다.
+   */
+  houseRosterInputUnavailable?: boolean;
 }
 
 /**
@@ -358,6 +371,14 @@ export interface TransferBurdenedGiftBreakdown {
    * 단독 소유에서는 `sangjeungbeopValuation.supplementary`와 항상 같다.
    */
   wholePropertySupplementary: number;
+
+  /**
+   * **지분 모드 전용** — 12억 고가주택 판정 가액 = 지분 증여가액 ÷ 지분율 (소령 §156①, 1h-G1-14 · 결정 #28 A).
+   * 보충적평가가 이기면 `wholePropertySupplementary`와 같고, 담보(§66)·임대(§61⑤)가 이기면 그 C ÷ 지분율이다.
+   * 단독 소유(지분 100%)에서는 없다 — 판정 가액은 `sangjeungbeopValuation.max` 그대로다.
+   * 엔진이 12억 판정·안분 분모(`burdenedGiftDenominator`)로 쓰는 값의 echo다.
+   */
+  fractionalHighValueDenominator?: number;
   /**
    * 자산 종류 — 결과 표시가 행 라벨을 고르는 근거.
    * ❌ 모드 플래그(`valuationMode` 등)로 자산을 추론하지 않는다

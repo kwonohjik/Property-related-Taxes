@@ -121,6 +121,11 @@ export const burdenedGiftInfoSchema = z.object({
       }),
     )
     .optional(),
+  /**
+   * 이 입력을 보내는 화면에 세대 보유 주택 목록 입력 칸이 없다는 표식 (1h-G1-12 · 결정 #27) — 증여세 마법사만 `true`.
+   * 🔴 여기 등록하지 않으면 `z.object`가 침묵 strip해 증여 화면 합가 비과세가 조용히 불성립으로 바뀐다(⑫).
+   */
+  houseRosterInputUnavailable: z.boolean().optional(),
 });
 
 export type BurdenedGiftInfoSchema = z.infer<typeof burdenedGiftInfoSchema>;

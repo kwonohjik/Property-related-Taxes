@@ -39,12 +39,14 @@ import {
   giftBurdenedRentalHousingException,
 } from "@/lib/calc/gift-burdened-rental-exception";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
+import { GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT } from "@/lib/calc/gift-burdened-household-notice";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import {
   giftBurdenedDeadlineExceptionFields,
   giftBurdenedDeadlineExceptionPatch,
+  giftBurdenedNewAcquisitionDatePatch,
   giftBurdenedNewHouseAddressPatch,
   giftBurdenedPreviousAcquisitionDate,
   giftBurdenedTempTwoHouseDeadlineInScope,
@@ -185,11 +187,13 @@ dateToStr(bgt.acquisitionDate)
       />
 
       {/* 1세대1주택 여부 */}
+      {/* 엔진 필드 `isOneHousehold`는 «1세대에 해당하는가»(소득세법 §88 6호)다 — 1세대1주택 요건 충족 여부가 아니다(1h-G1-7 · 결정 #24).
+          기본값 OFF는 그대로 두고, 끄면 무엇이 판정되지 않는지 늘 보인다. 결론을 가를 때의 결과 고지는 결과 카드가 낸다. */}
       <ToggleCard
         tone="emerald"
         size="sm"
-        title="1세대 1주택 (§89)"
-        description="증여자가 1세대 1주택 요건을 충족하면 ON — 비과세 판정 및 장특공제 표2 적용."
+        title="증여자 세대가 1세대에 해당 (소득세법 §88 6호)"
+        description={`독립적인 생계를 유지하는 세대에 해당하면 ON — 1세대1주택 비과세 판정 및 장기보유특별공제 표2 적용. ${GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT}`}
         checked={bgt.isOneHousehold ?? false}
         onCheckedChange={(v) =>
           set({
@@ -311,16 +315,16 @@ dateToStr(bgt.acquisitionDate)
               value={
 dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }
-              onChange={(v) => {
-                const d = strToDate(v);
+              onChange={(v) =>
+                // 취득일을 비우고 쓴 항목이 없으면 객체를 되돌린다 — 한 글자만 쳐도 빈 객체가 남아 ⑧이 막던 갭(1h-G1-5)
                 set({
-                  temporaryTwoHouse: {
-                    ...bgt.temporaryTwoHouse,
-                    previousAcquisitionDate: bgt.acquisitionDate,
-                    newAcquisitionDate: d as unknown as Date,
-                  },
-                });
-              }}
+                  temporaryTwoHouse: giftBurdenedNewAcquisitionDatePatch(
+                    bgt.temporaryTwoHouse,
+                    strToDate(v) as Date | undefined,
+                    bgt.acquisitionDate,
+                  ),
+                })
+              }
             />
           </FieldCard>
           {/* 신규 주택 소재지(E-1 잔여 B) — 계산기는 보유 주택 명부 행 주소에서 코드를 얻는다. 이 화면엔 명부가 없어
@@ -422,7 +426,17 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
       {/* §155④⑤ 합가(E-1 한계 G4) — 양도세 계산기와 같은 위젯. 계산기와 같이 세대 주택 수 2 이상에서 §155① 블록·
           단서 뒤에 둔다. 게이트는 ④와 같다(`giftBurdenedMergeInScope`). */}
       {giftBurdenedMergeInScope(bgt) && (
-        <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} />
+        <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} variant="gift" />
+      )}
+      {/* 세대 3주택 + 합가일 — 이 화면에는 세대 보유 주택 목록이 없어 3주택 합가 특례(일시적 2주택 중첩·이중 합가)를 판정하지 않는다
+          (결정 #25 C · #26 B). 결론을 가르는지(합가 요건)는 엔진이 판정해 결과 고지로 낸다 — 입력 화면은 판정하지 않음만 알린다. */}
+      {householdCount === 3 && (bgt.marriageDate || bgt.parentalCareMergeDate) && (
+        <ToneCard tone="amber" title="세대 3주택 합가 특례는 이 화면에서 판정하지 않습니다 (확인 필요)" className="py-2">
+          <p data-testid="bg-three-house-merge-notice" className="text-xs">
+            일시적 2주택(§155①)과 합가가 겹친 경우, 혼인·동거봉양 이중 합가는 보유 주택 목록이 있어야 판정할 수 있습니다. 이 화면에는 목록 입력 칸이
+            없어 비과세와 다주택 중과 배제를 모두 판정하지 않고 계산합니다 — 양도소득세 계산기(부담부증여)에서 세대 보유 주택 목록을 입력해 확인하세요.
+          </p>
+        </ToneCard>
       )}
 
       {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 2021.1.1.~2022.5.9. 증여(양도) 1주택만 */}

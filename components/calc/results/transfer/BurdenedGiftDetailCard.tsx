@@ -92,9 +92,21 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800">
                 공유지분 {(bg.ownershipRatio * 100).toFixed(4).replace(/\.?0+$/, "")}% 적용 —
                 아래 평가액은 <b>지분 해당분</b>입니다(소령 §159의 A·C). 인수 채무는 입력한
-                실제 인수액 그대로입니다. 고가주택 판정 분모로는 물건 전체
-                보충적평가액 <span className="font-mono tabular-nums">{fmt(bg.wholePropertySupplementary)}</span>
-                을 별도 사용합니다.
+                실제 인수액 그대로입니다.{" "}
+                {bg.fractionalHighValueDenominator !== undefined &&
+                bg.fractionalHighValueDenominator !== bg.wholePropertySupplementary ? (
+                  <>
+                    고가주택 판정 가액으로는 {bg.sangjeungbeopValuation.selectedMode === "rental" ? "임대평가" : "담보평가"}가 이긴 지분 증여가액을
+                    지분율로 나눈 <span className="font-mono tabular-nums">{fmt(bg.fractionalHighValueDenominator)}</span>
+                    을 사용합니다(소령 §156①).
+                  </>
+                ) : (
+                  <>
+                    고가주택 판정 분모로는 물건 전체
+                    보충적평가액 <span className="font-mono tabular-nums">{fmt(bg.wholePropertySupplementary)}</span>
+                    을 별도 사용합니다.
+                  </>
+                )}
               </td>
             </tr>
           )}

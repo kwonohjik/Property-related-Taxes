@@ -57,14 +57,15 @@
  * 합가로 2주택이 된 것이 아니다. 3주택에서 합가 후 취득이 2채 이상이어도 같다. 계산기도 명부를
  * 보내므로 이 층은 두 메뉴 모두에 적용된다(계획서 Q-5).
  *
- * ## 🔑 예외 — 명부 입력 경로가 없는 화면 (사용자 결정 2026-10-05)
+ * ## 🔑 예외 — 명부 입력 경로가 없는 화면 (Q-10, 2026-10-05)
  *
- * 부담부증여 양도분(`transferType === "burdened_gift"`)은 증여세 계산기 화면이라 세대 보유
- * 주택 명부 입력 자체가 없다(`buildGiftBurdenedTransferBody`는 `houses`/`sellingHouseId`를
- * 싣지 않는다). 입력 경로가 없는 화면에서 「모름」을 불리하게 적용하면 사용자가 고칠 수 없는
- * 항목으로 불이익을 주게 된다(memory `feedback_required_field_needs_an_input_path`와 같은
- * 층위) ⇒ **이 호출부만** `noRosterInputPath: true`로 알려 종전 동작(판정 보류 → 합가 허용)을
- * 유지한다. 증여세 화면에 명부 입력을 추가하는 것은 별건이다. 계산기·판정 메뉴·API 직접
+ * 증여세 마법사의 부담부증여 양도세 섹션에는 세대 보유 주택 명부 입력 자체가 없다
+ * (`buildGiftBurdenedTransferBody`는 `houses`/`sellingHouseId`를 싣지 않는다). 입력 경로가 없는 화면에서
+ * 「모름」을 불리하게 적용하면 사용자가 고칠 수 없는 항목으로 불이익을 주게 된다
+ * (memory `feedback_required_field_needs_an_input_path`와 같은 층위) ⇒ **그 화면이 표식을 싣는 호출부만**
+ * `noRosterInputPath: true`로 알려 판정 보류 → 합가 허용을 유지한다. 표식은 화면이 직접 싣고
+ * (`burdenedGiftInfo.houseRosterInputUnavailable`), 엔진은 양도 형태가 아니라 그 표식을 본다
+ * (`one-house/roster-input-path.ts` · 1h-G1-12). 계산기(부담부증여 모드 포함)·판정 메뉴·표식 없는 API 직접
  * 호출·겸용주택은 이 플래그를 세우지 않으므로 PR-2의 「모름 → 불리」 동작 그대로다.
  */
 import type { HouseInfo, MergeOrigin } from "../types/multi-house-surcharge.types";
@@ -163,7 +164,7 @@ export interface MergeCompositionInput {
    */
   knownHouseExclusionHouseIds?: ReadonlyArray<string>;
   /**
-   * 이 호출부에 명부 입력 경로가 **없다**(사용자 결정 2026-10-05 — 부담부증여 양도분 전용).
+   * 이 호출부에 명부 입력 경로가 **없다**(Q-10 — 증여세 마법사의 부담부증여 양도분 전용, 표식 기준 — 1h-G1-12).
    * true면 명부·양도 주택 행이 없을 때 `roster_missing`(불성립) 대신 `unknown`(판정 보류 →
    * 종전 동작)으로 둔다. 입력 경로가 있는 화면(계산기·판정 메뉴·겸용)은 세우지 않는다.
    */

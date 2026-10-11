@@ -188,8 +188,8 @@ export async function fillApartmentTransferInfo(
   await expect(transferStdPriceInput).toBeVisible();
   await fillAndVerify(transferStdPriceInput, "350000000");
 
-  // 1세대1주택 ON — ToggleCard switch
-  const oneHouseToggle = dialog.getByRole("switch", { name: /1세대 1주택/ });
+  // 증여자 세대가 1세대에 해당 ON — ToggleCard switch (1h-G1-7: 라벨이 「1세대 1주택 (§89)」에서 엔진 뜻대로 바뀜)
+  const oneHouseToggle = dialog.getByRole("switch", { name: /증여자 세대가 1세대에 해당/ });
   await expect(oneHouseToggle).toBeVisible();
   const oneHouseChecked = await oneHouseToggle.getAttribute("aria-checked");
   if (oneHouseChecked !== "true") await oneHouseToggle.click();

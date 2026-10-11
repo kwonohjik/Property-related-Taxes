@@ -191,4 +191,7 @@ test("[BT-E2E-16] 혼인합가일 · 먼저 양도 → 요청 본문 marriageMer
   const body = await calculateAndCapture(page, mock);
   expect(body.marriageMerge).toEqual({ marriageDate: "2020-01-01" });
   expect(body.isFirstTransferredInMerge).toBe(true);
+  // 이 화면에는 세대 보유 주택 목록 입력 칸이 없다 — 표식이 빠지면 엔진이 합가 전 구성 「모름」을 불성립으로 읽어
+  // 비과세가 조용히 과세로 바뀐다(1h-G1-12). 화면 쪽 ⑬ 누락은 route anchor로 못 잡으므로 요청 본문에서 고정한다.
+  expect((body.burdenedGiftInfo as Record<string, unknown>).houseRosterInputUnavailable).toBe(true);
 });

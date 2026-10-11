@@ -526,20 +526,16 @@ describe("G4 ④ — 계산기와 같은 leaf(`buildMergeFacts`)로 싣는다", 
 });
 
 describe("G4 ⑭ route — §155⑤ 혼인합가 10년 이내 먼저 양도 → 비과세 (계산기와 같은 결론)", () => {
-  it("G4-1 ★ 혼인 2020-01-01 · 증여 2023-06-01 · 세대 2주택: 과세 8,306,400 → 비과세 (부담부증여는 명부 입력 경로가 없어 종전 동작 유지)", async () => {
+  it("G4-1 ★ 혼인 2020-01-01 · 증여 2023-06-01 · 세대 2주택: 과세 8,306,400 → 비과세 (증여세 화면은 명부 입력 칸이 없어 표식으로 종전 동작 유지)", async () => {
     /**
-     * 🔁 2026-10-05(리드 전달 — 사용자 결정) — 부담부증여 양도분(`BurdenedGiftTransferTaxInput`)은
-     * 증여세 계산기 화면이라 세대 보유 주택 명부(`houses`) 입력 경로가 없다(Q-10). 입력 경로가
-     * 없는 화면에서 「모름」을 불리하게 적용하면 사용자가 고칠 수 없는 항목으로 불이익을 주게
-     * 되므로(memory `feedback_required_field_needs_an_input_path`), **이 경로만** 종전 동작
-     * (합가 구성 판정을 하지 않고 성립)을 유지한다 — `transferType === "burdened_gift"`일 때만
-     * `noMergeRosterInputPath: true`를 세우는 `transfer-tax.ts` STEP 1 배선
-     * (`merge-composition.ts`의 `noRosterInputPath` → `unknown`/`no_roster_input_path`).
+     * 🔁 Q-10(2026-10-05) — 증여세 마법사의 부담부증여 양도분(`BurdenedGiftTransferTaxInput`)에는 세대 보유 주택
+     * 명부(`houses`) 입력 칸이 없다. 입력 칸이 없는 화면에서 「모름」을 불리하게 적용하면 사용자가 고칠 수 없는 항목으로
+     * 불이익을 주게 되므로(memory `feedback_required_field_needs_an_input_path`), **그 화면만** 합가 구성 판정을 하지 않고
+     * 성립으로 둔다. 1h-G1-12(결정 #27)부터 그 근거는 양도 형태(`transferType`)가 아니라 ④가 싣는 표식
+     * (`burdenedGiftInfo.houseRosterInputUnavailable`)이다 — `gift-burdened-no-roster-marker-g1-12`가 표식 유무를 고정한다.
      *
-     * 음성 짝은 **같은 사실을 일반 양도세 route(API 직접, 명부 없음)로** 보낸다 — 이 경로는
-     * `noMergeRosterInputPath`를 세우지 않으므로 PR-2의 「모름 → 불리」 그대로 불성립이다.
-     * 계산기도 음성 짝과 같은 엔진(`calculateTransferTax`)을 타므로 명부 없이는 불성립,
-     * 명부(`MERGE_HOUSES`)를 채우면 성립한다(계산기는 Q-10과 무관 — 입력 경로가 있다).
+     * 음성 짝은 **같은 사실을 표식 없이(일반 양도세 route, 명부 없음)** 보낸다 — 불성립 그대로다. 계산기도 같은 엔진이라
+     * 명부 없이는 불성립, 명부(`MERGE_HOUSES`)를 채우면 성립한다(계산기에는 입력 칸이 있다).
      */
     const MERGE_HOUSES = [
       {
@@ -563,8 +559,8 @@ describe("G4 ⑭ route — §155⑤ 혼인합가 10년 이내 먼저 양도 → 
     const calc = (over: Partial<TransferFormData>) =>
       transfer(transferForm("2023-06-01", "2015-01-01", { householdHousingCount: "2", ...over }));
     expect((await calc({})).isExempt).toBe(false);
-    // 음성 짝 — 같은 사실(명부 없음)을 일반 양도세 route로 보내면 noMergeRosterInputPath가 서지
-    // 않아 불성립 그대로다(부담부증여만의 예외임을 증명).
+    // 음성 짝 — 같은 사실(명부 없음)을 표식 없이 일반 양도세 route로 보내면 noMergeRosterInputPath가 서지
+    // 않아 불성립 그대로다(증여세 화면 표식만의 예외임을 증명).
     expect(
       (await calc({ marriageDate: "2020-01-01", isFirstTransferredInMerge: true })).isExempt,
     ).toBe(false);

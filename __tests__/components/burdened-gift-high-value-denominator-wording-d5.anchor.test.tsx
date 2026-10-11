@@ -60,3 +60,23 @@ describe("D-5: BurdenedGiftDetailCard 지분 모드 — 고가주택 판정 분�
     expect(screen.getByText("800,000,000")).toBeInTheDocument();
   });
 });
+
+describe("1h-G1-14(결정 #28 A): 담보·임대가 이긴 지분은 «지분 증여가액 ÷ 지분율» 판정 가액을 보인다", () => {
+  it("fractionalHighValueDenominator가 물건 전체 보충적평가액과 다르면 그 값을 소령 §156①로 안내한다", () => {
+    render(
+      <BurdenedGiftDetailCard
+        breakdown={makeBreakdown({
+          sangjeungbeopValuation: { supplementary: 400_000_000, mortgage: 650_000_000, rental: 0, selectedMode: "mortgage", max: 650_000_000 },
+          fractionalHighValueDenominator: 1_300_000_000,
+        })}
+      />,
+    );
+    expect(screen.getByText(/담보평가가 이긴 지분 증여가액을 지분율로 나눈/)).toBeInTheDocument();
+    expect(screen.getByText("1,300,000,000")).toBeInTheDocument();
+    expect(screen.queryByText(/고가주택 판정 분모로는 물건 전체/)).not.toBeInTheDocument();
+  });
+  it("부정 짝 — 보충적평가가 이겨 같은 값이면 종전 문구", () => {
+    render(<BurdenedGiftDetailCard breakdown={makeBreakdown({ fractionalHighValueDenominator: 800_000_000 })} />);
+    expect(screen.getByText(/고가주택 판정 분모로는 물건 전체/)).toBeInTheDocument();
+  });
+});

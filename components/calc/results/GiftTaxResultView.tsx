@@ -13,6 +13,7 @@ import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { BurdenedTransferTaxResultCard } from "@/components/calc/results/BurdenedTransferTaxResultCard";
+import { giftBurdenedNotOneHouseholdNotice } from "@/lib/calc/gift-burdened-household-notice";
 import { BurdenedStockTransferTaxResultCard } from "@/components/calc/results/BurdenedStockTransferTaxResultCard";
 import { BurdenedGiftComparisonCard } from "@/components/calc/results/BurdenedGiftComparisonCard";
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
@@ -193,6 +194,11 @@ export function GiftTaxResultView({
       );
     }
   };
+
+  // 증여 화면 전용 고지(1h-G1-7) — 1세대 토글 OFF가 부담부증여 양도세 결론을 가를 때만. 엔진 경고가 아니다.
+  const burdenedItem = estateItems.find((it) => it.burdenedGiftTransferTax);
+  const burdenedTransferNotice = burdenedItem ? giftBurdenedNotOneHouseholdNotice(burdenedItem) : null;
+  const burdenedTransferNotices = burdenedTransferNotice ? [burdenedTransferNotice] : undefined;
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
   const hasFilingFormTable =
@@ -517,7 +523,11 @@ export function GiftTaxResultView({
       )}
       {transferTaxResults.length > 0 && (
         <PrintSection id="burdened-transfer-tax" selectedIds={selectedPrintIds}>
-          <BurdenedTransferTaxResultCard transferTaxResults={transferTaxResults} transferDate={giftDate} />
+          <BurdenedTransferTaxResultCard
+            transferTaxResults={transferTaxResults}
+            transferDate={giftDate}
+            notices={burdenedTransferNotices}
+          />
         </PrintSection>
       )}
 

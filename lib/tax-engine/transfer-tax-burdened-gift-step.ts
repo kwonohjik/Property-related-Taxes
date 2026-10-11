@@ -95,12 +95,12 @@ export function runBurdenedGiftStep(
       acquisitionMethod: "actual" as const,
       // 12억 고가주택 판정·안분 분모.
       //   단독: 현행 그대로 C(= max) — 국세청 해석례 5건 기반 해석 B 유지.
-      //   지분: **물건 전체** 보충적평가액. 지분분 C를 쓰면 문턱이 1/지분율만큼 올라
-      //         24억 물건의 1/2 지분이 비과세로 빠진다(A4/#849와 동형 결함).
+      //   지분: 소령 §156① 문언대로 «지분 증여가액 ÷ 지분율» (1h-G1-14 · 결정 #28 A). 지분분 C를 그대로 쓰면 문턱이
+      //         1/지분율만큼 올라 24억 물건의 1/2 지분이 비과세로 빠지고(A4/#849), 물건 전체 보충적평가액만 쓰면 담보·임대가
+      //         이기는 지분이 더 낮게 판정된다. 보충적평가가 이기면 물건 전체 보충적평가액과 같다.
       burdenedGiftDenominator:
-        ownershipRatio !== undefined && ownershipRatio < 1
-          ? transferBurdenedGiftBreakdown.wholePropertySupplementary
-          : transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
+        transferBurdenedGiftBreakdown.fractionalHighValueDenominator ??
+        transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
       ...(isK5SelfBuilt
         ? {
             acquisitionMethod: "estimated" as const,

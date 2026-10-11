@@ -16,6 +16,7 @@ import { judgeTempTwoHouseFromForm, type TempTwoHouseVerdict } from "@/lib/calc/
 import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 import type { TempTwoHouseDeadlineExceptionFields } from "@/lib/calc/transfer-tax-api-body-blocks";
 
+type TempTwoHouseFacts = NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>;
 type RegulatedVerdict = Extract<TempTwoHouseVerdict, { status: "eligible" | "ineligible" }>["regulated"];
 
 /** Date(메모리) 또는 YYYY-MM-DD(복원 직후) → YYYY-MM-DD. 무효면 "". */
@@ -100,13 +101,54 @@ export function giftBurdenedNewHouseAddressPatch(
 }
 
 /**
- * §155① 처분기한 예외 입력(§155⑯·⑱ — E-1 한계 G3)의 ⑤④ 공용 게이트 — 세대 주택 수 2 · 두 취득일 입력.
- * 판정 메뉴는 명부에서 신규 주택이 도출될 때(`derivedNewHouseAcquisitionDate`) 같은 칸을 연다 — 이 경로의 같은
- * 사실은 두 날짜 칸이다. 주택 여부는 호출부가 확인한다. ⑧ 규칙은 없다(판정 메뉴에도 없다).
+ * §155① 일시적 2주택 사실을 **④가 싣고 ⑤가 확정 표시하는** 게이트 — 세대 주택 수 2 · 종전(= 증여 주택) 취득일 · 신규 취득일 입력.
+ *
+ * ④ 전송(`buildGiftBurdenedTransferBody`)·⑧ 검증(`giftBurdenedTempTwoHouseIncompleteError`)·⑤ 처분기한 예외 칸이 **같은 술어**를 쓴다
+ * (1h-G1-4·G1-5 · 결정 #25). 종전에는 ④가 `temporaryTwoHouse` 객체 존재만 보내 (a) 주택 수를 2에서 3으로 바꿔 칸이 사라져도
+ * 숨은 날짜가 실려 중첩 비과세가 서고 (b) 신규 취득일이 빈 채 객체만 있으면 ⑫ Zod 400이 났다.
+ * 증여 화면에는 보유 주택 목록이 없어 3주택 중 어느 두 채가 일시적 2주택 짝인지 가릴 수 없으므로 주택 수 2에서만 연다.
  */
-export function giftBurdenedTempTwoHouseDeadlineInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+export function giftBurdenedTempTwoHouseInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
   const tt = bgt.temporaryTwoHouse;
   return (bgt.householdHousingCount ?? 1) === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate);
+}
+
+/** §155①2호 처분기한 예외 입력(§155⑯·⑱ — E-1 한계 G3)의 ⑤④ 공용 게이트 — 위 {@link giftBurdenedTempTwoHouseInScope}와 같다. ⑧ 규칙은 없다. */
+export function giftBurdenedTempTwoHouseDeadlineInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
+  return giftBurdenedTempTwoHouseInScope(bgt);
+}
+
+/**
+ * ⑧ — 주택 수 2에서 §155① 입력 칸을 건드렸는데(객체가 있다) 신규 주택 취득일이 비었으면 막는다. ④는 이 상태를 싣지 않아
+ * (미완성 사실은 불성립) 사용자가 쓴 값이 결과에 안 닿는다 — 침묵하지 않고 입력을 마치거나 비우도록 안내한다.
+ * 주택 수가 2가 아니면 칸 자체가 없으므로 막지 않는다(영구 차단 방지 — 숨은 값은 ④가 싣지 않는다).
+ */
+export function giftBurdenedTempTwoHouseIncompleteError(bgt: BurdenedGiftTransferTaxInput): string | null {
+  if ((bgt.householdHousingCount ?? 1) !== 2 || !bgt.temporaryTwoHouse) return null;
+  if (ymd(bgt.temporaryTwoHouse.newAcquisitionDate)) return null;
+  return "일시적 2주택(§155①) 신규 주택 취득일을 입력하세요. 이 특례를 적용하지 않으려면 입력한 §155① 항목을 비우세요.";
+}
+
+/**
+ * 신규 주택 취득일 칸 저장 patch — 취득일을 비웠고 그 칸 밖에 쓴 §155① 항목이 없으면 객체를 통째로 `undefined`로 되돌린다.
+ * DateInput은 날짜가 완성되기 전 매 키 입력마다 빈 값을 내므로, 되돌리지 않으면 한 글자만 쳐도 빈 객체가 생겨 ⑧이 막는다
+ * (1h-G1-5). 다른 항목(소재지·처분기한 예외 등)이 있으면 지우지 않는다 — 사용자가 쓴 사실을 날려 보내지 않는다.
+ */
+export function giftBurdenedNewAcquisitionDatePatch(
+  tt: TempTwoHouseFacts | undefined,
+  newAcquisitionDate: Date | undefined,
+  previousAcquisitionDate: Date | undefined,
+): TempTwoHouseFacts | undefined {
+  const next = {
+    ...tt,
+    previousAcquisitionDate: previousAcquisitionDate as unknown as Date,
+    newAcquisitionDate: newAcquisitionDate as unknown as Date,
+  } satisfies TempTwoHouseFacts;
+  if (newAcquisitionDate) return next;
+  const hasOtherFacts = Object.entries(next).some(
+    ([k, v]) => k !== "previousAcquisitionDate" && k !== "newAcquisitionDate" && v !== undefined && v !== "" && v !== false,
+  );
+  return hasOtherFacts ? next : undefined;
 }
 
 /**

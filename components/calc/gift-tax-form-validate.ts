@@ -31,7 +31,10 @@ import {
   missingBurdenedUnlistedValuationInputs,
 } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
-import { giftBurdenedTempTwoHouseRegulatedGate } from "@/lib/calc/gift-burdened-temp-two-house";
+import {
+  giftBurdenedTempTwoHouseIncompleteError,
+  giftBurdenedTempTwoHouseRegulatedGate,
+} from "@/lib/calc/gift-burdened-temp-two-house";
 import { temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
 import { collectExemptionProvisoErrors } from "@/lib/calc/exemption-proviso-validate";
 import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
@@ -217,6 +220,9 @@ export function validateStep(step: number, form: FormState): string | null {
         // §155④ 동거봉양 합가 직계존속 연령(결정 #9) — 칸(`MergeDateSection`)과 같은 게이트.
         const mergeAgeError = giftBurdenedMergeAgeError(bgt);
         if (mergeAgeError) return `${itemLabel}: ${mergeAgeError}`;
+        // §155① 입력을 건드렸는데 신규 주택 취득일이 비었다 — ④가 싣지 않으니(미완성 사실은 불성립) 침묵하지 않고 막는다(1h-G1-5).
+        const tempTwoIncomplete = giftBurdenedTempTwoHouseIncompleteError(bgt);
+        if (tempTwoIncomplete) return `${itemLabel}: ${tempTwoIncomplete}`;
         const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate
           ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {

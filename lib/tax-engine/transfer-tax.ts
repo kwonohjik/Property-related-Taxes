@@ -51,7 +51,7 @@ import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
-import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
+import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
@@ -62,6 +62,7 @@ import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax
 import { judgeRedevAptOneHouseExemption } from "./transfer-tax-redevelopment-apt-exemption";
 import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-gift";
 import { burdenedGiftSurchargeSuspendedNotice } from "./burdened-gift-eligibility";
+import { hasNoMergeRosterInputPath } from "./one-house/roster-input-path";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
@@ -224,15 +225,11 @@ export function calculateTransferTax(
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
   // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
   const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate, multiHouseSurchargeResult?.effectiveHouseCount);
-  /**
-   * 부담부증여 양도분(`transferType === "burdened_gift"`)은 증여세 계산기 화면이라 세대 보유
-   * 주택 명부 입력 경로가 없다 — §155④⑤ 합가 전 구성을 「모름」으로 불리하게 적용하지 않는다
-   * (사용자 결정 2026-10-05, `merge-composition-unknown-unfavorable.plan.md` Q-10).
-   * 계산기·판정 메뉴·API 직접 호출·겸용주택은 이 플래그를 세우지 않는다.
-   */
+  // 증여세 마법사는 세대 보유 주택 명부 입력 칸이 없어 합가 전 구성 「모름」을 불리하게 쓰지 않는다(Q-10) — 그 화면이 싣는
+  // 표식(`burdenedGiftInfo.houseRosterInputUnavailable`)이 있을 때만 세운다(1h-G1-12). 계산기·판정 메뉴·표식 없는 호출은 세우지 않는다.
   const exemptionJudgeInput = {
     ...rentalPremise.input,
-    noMergeRosterInputPath: effectiveInput.transferType === "burdened_gift",
+    noMergeRosterInputPath: hasNoMergeRosterInputPath(effectiveInput),
   };
   if (rentalPremise.notice) warnings.push(rentalPremise.notice);
 
@@ -301,10 +298,12 @@ export function calculateTransferTax(
    * 다른 의제(§155① 등)로 비과세가 선 경우를 가리지 않기 위해서다(계획서 §3-1).
    */
   if (!exemptionResult.isExempt && !exemptionResult.isPartialExempt) {
-    const mergeNotice = resolveMergeCompositionConfirmNotice(exemptionJudgeInput);
-    if (mergeNotice && meetsOneHouseHoldingResidence(exemptionJudgeInput, parsedRates.oneHouseSpecialRules.one_house_exemption)) {
-      warnings.push(`§155④⑤ 합가 특례 — 확인 필요: ${mergeNotice}`);
-    }
+    warnings.push(
+      ...mergeConfirmWarnings(
+        exemptionJudgeInput,
+        meetsOneHouseHoldingResidence(exemptionJudgeInput, parsedRates.oneHouseSpecialRules.one_house_exemption),
+      ),
+    );
   }
 
   // §155⑦3호 귀농주택 — ⑪(귀농 후 최초 1개 일반주택 한정)·⑫(귀농일부터 3년 영농·거주 사후관리)는
