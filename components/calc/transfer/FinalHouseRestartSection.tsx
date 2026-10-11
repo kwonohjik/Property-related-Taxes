@@ -7,7 +7,7 @@
  * — ④ 본문·⑧ 검증과 같은 술어). 판정은 엔진 leaf 하나다 — 아래 미리보기도 그 leaf의 문장을 그대로 보여 준다.
  *
  * 🔑 「처분한 적이 있나요」와 행별 「일시적 2주택 관계」는 3-state 라디오다(미선택 = 미입력).
- *    이력 미답은 판정 보류(재기산 없음으로 추정하지 않는다), 행별 미답은 ⑧이 막는다.
+ *    이력 미답은 순수 1주택이면 재기산 가정(불성립)·그 밖의 세대 유형은 판정 보류(재기산 없음으로 추정하지 않는다), 행별 미답은 ⑧이 막는다.
  */
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
@@ -98,7 +98,8 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
           />
           {history === "" && (
             <p className="text-caption text-muted-foreground">
-              답하지 않으면 이 요건은 판정하지 않고 결과에 판정 보류로 안내합니다.
+              답하지 않으면 다른 주택·입주권·분양권이 없는 1주택 세대는 재기산된 것으로 보아 비과세 요건을 충족하지 않는 것으로
+              판정하고 확인 필요로 안내합니다. 그 밖의 세대 유형은 판정하지 않고 판정 보류로 안내합니다.
             </p>
           )}
         </div>

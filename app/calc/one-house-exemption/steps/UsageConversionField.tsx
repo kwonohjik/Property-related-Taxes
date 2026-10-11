@@ -11,6 +11,7 @@
  * 이 날짜가 판정에 쓰이는 곳(엔진 `transfer-tax-exemption-holding.ts`):
  *   - 보유기간 기산 — 2024.2.29. 이후 양도분(대통령령 제34265호 · `CONVERSION_EXEMPTION_CUTOFF`)
  *   - 거주요건의 조정대상지역 판정 시점 — 주택으로 사용한 날(서면-2020-부동산-5098)
+ *   - 거주요건 경과규정(2017.8.2. 이전 취득)의 「취득한 날」 — 같은 날(결정 #35 · `resolveResidenceTransitionDate`)
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -30,7 +31,7 @@ export function UsageConversionField({
       checked={asset.hasNonHousingConversion === true}
       onCheckedChange={(on) => onChange({ hasNonHousingConversion: on })}
       title="건물 전체를 주택으로 용도변경"
-      description="오피스텔·근린생활시설 등 주택이 아닌 건물을 취득해 건물 전부를 주거용으로 사용하거나 주택으로 용도변경한 경우 — 2024.2.29. 이후 양도분은 보유기간을 주거용 사용일부터 세고, 거주요건의 조정대상지역 여부도 그 날 기준으로 봅니다"
+      description="오피스텔·근린생활시설 등 건물 전부를 주거용으로 바꾼 경우 — 2024.2.29. 이후 양도분은 보유기간을 주거용 사용일부터 세고, 거주요건의 조정대상지역 여부와 2017.8.2. 이전 취득 경과규정도 그 날 기준으로 봅니다"
       tone="violet"
       lawRefs={[{ legalBasis: "소득세법 시행령 §154⑤", label: "영 §154⑤" }]}
     >

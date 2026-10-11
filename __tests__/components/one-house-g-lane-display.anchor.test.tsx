@@ -35,6 +35,8 @@ function nineEokPartial() {
       isRegulatedArea: false,
       isOneHousehold: true,
       householdHousingCount: 1,
+      // 2021-11-30은 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 재기산으로 보아 과세)
+      finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
     }),
     rates,
   );

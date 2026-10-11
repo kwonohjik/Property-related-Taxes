@@ -36,7 +36,9 @@ describe("G5-4 판정 메뉴 — 상속·취득 당시 조정·본인 거주 미
 
   it("[CI-3] 신설 전 양도분(2021-02-16)은 규정이 없어 내지 않고, 2021-02-17부터 낸다", async () => {
     expect((await inherited({ transfer: "2021-02-16", asset: { acquisitionDate: "2018-03-01" } })).undetermined).not.toContain(ID);
-    expect((await inherited({ transfer: "2021-02-17", asset: { acquisitionDate: "2018-03-01" } })).undetermined).toContain(ID);
+    // 2021-02-17은 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 보유도 불성립이라 이 고지 전에 과세가 정해진다)
+    const answered = await judge({ acq: "2018-03-01", transfer: "2021-02-17", residence: "0", asset: { ...INH, acquisitionDate: "2018-03-01" }, top: { finalHouseRestartHistory: "no" } });
+    expect(answered.undetermined).toContain(ID);
   });
 });
 

@@ -437,8 +437,10 @@ describe("P2 — 판정 사실이 계산기까지 도달한다 (긍정·음성 �
 
   it("J-16 고가주택 판정은 **양도일 기준 금액**을 쓴다 (G-5)", () => {
     // 10억 양도: 2021-12-08 이후는 12억 이하라 전액 비과세, 그 전날은 9억 초과라 일부 과세.
-    expect(run({ transferPrice: 1_000_000_000, transferDate: D("2021-12-08") }).isExempt).toBe(true);
-    expect(run({ transferPrice: 1_000_000_000, transferDate: D("2021-12-07") }).isExempt).toBe(false);
+    // 두 날짜 모두 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대로 둔다(미답이면 결정 #36에 따라 재기산으로 보아 과세).
+    const none = { finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] } };
+    expect(run({ transferPrice: 1_000_000_000, transferDate: D("2021-12-08"), ...none }).isExempt).toBe(true);
+    expect(run({ transferPrice: 1_000_000_000, transferDate: D("2021-12-07"), ...none }).isExempt).toBe(false);
   });
 
   it("J-17 12억 안분 분모는 **합계액**이다 (지분·일괄양도)", () => {

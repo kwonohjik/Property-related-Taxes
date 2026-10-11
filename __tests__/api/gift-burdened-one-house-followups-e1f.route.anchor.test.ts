@@ -69,6 +69,9 @@ function giftItem(bgt: Partial<BurdenedGiftTransferTaxInput>, pnu?: string): Est
       wasRegulatedAtAcquisition: false,
       residencePeriodMonths: 0,
       isUnregistered: false,
+      // 2021-01-01~2022-05-09 증여·양도 시료는 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대가 기본이다
+      // (미답이면 결정 #36에 따라 재기산으로 보아 과세 — 미답 시료는 F 축이 `finalHouseRestartHistory: ""`로 따로 둔다).
+      finalHouseRestartHistory: "no",
       ...bgt,
     },
   } as EstateItem;
@@ -84,6 +87,7 @@ function transferForm(transferDate: string, acquisitionDate: string, over: Parti
   f.isRegulatedArea = false;
   f.wasRegulatedAtAcquisition = false;
   f.residencePeriodMonths = "0";
+  f.finalHouseRestartHistory = "no"; // 구간 안 양도는 처분 이력 「없음」을 답한 세대(미답은 결정 #36에 따라 과세)
   f.contractTotalPrice = "300,000,000";
   Object.assign(f.assets[0], {
     assetKind: "housing",
@@ -280,8 +284,8 @@ const SOLD = {
 describe("F ⑭ route — 처분 이력이 엔진에 닿는다", () => {
   it("F-1 ★ 2021-06-01 다른 주택 양도 → 재기산 과세, 계산기와 같은 결론 (취득 2015-03-01 · 증여 2022-03-01)", async () => {
     const bgt = { acquisitionDate: new Date("2015-03-01") };
-    const base = await gift("2022-03-01", bgt);
-    expect(base.isExempt).toBe(true); // 판정 보류 고지와 함께 비과세(종전 동작)
+    const base = await gift("2022-03-01", { ...bgt, finalHouseRestartHistory: "" } as Partial<BurdenedGiftTransferTaxInput>);
+    expect(base.isExempt).toBe(false); // 이력 미답 — 재기산으로 보아 과세 + 확인 필요 고지(결정 #36, 종전 비과세 + 판정 보류)
     const r = await gift("2022-03-01", { ...bgt, ...SOLD } as unknown as Partial<BurdenedGiftTransferTaxInput>);
     expect(r.isExempt).toBe(false);
     expect(r.determinedTax).toBe(9_195_600);
@@ -290,9 +294,9 @@ describe("F ⑭ route — 처분 이력이 엔진에 닿는다", () => {
     expect(calc.isExempt).toBe(false);
   });
 
-  it("F-2 부정 짝 — 「처분 없음」이면 비과세이고 판정 보류 고지도 사라진다", async () => {
+  it("F-2 부정 짝 — 「처분 없음」이면 비과세이고 확인 필요 고지도 사라진다", async () => {
     const bgt = { acquisitionDate: new Date("2015-03-01") };
-    const base = await gift("2022-03-01", bgt);
+    const base = await gift("2022-03-01", { ...bgt, finalHouseRestartHistory: "" } as Partial<BurdenedGiftTransferTaxInput>);
     const r = await gift("2022-03-01", { ...bgt, finalHouseRestartHistory: "no" } as Partial<BurdenedGiftTransferTaxInput>);
     expect(r.isExempt).toBe(true);
     expect((r.warnings ?? []).length).toBeLessThan((base.warnings ?? []).length);

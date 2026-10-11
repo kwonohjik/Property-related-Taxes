@@ -35,6 +35,8 @@ function run(td: string) {
     isOneHousehold: true,
     householdHousingCount: 1,
     residencePeriodMonths: 60,
+    // 구간(2021-01-01~2022-05-09) 양도 시료 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 재기산으로 보아 과세)
+    finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
     burdenedGiftInfo: info,
   } as never);
   return calculateTransferTax(i, loadFallbackTransferRates(i.transferDate));

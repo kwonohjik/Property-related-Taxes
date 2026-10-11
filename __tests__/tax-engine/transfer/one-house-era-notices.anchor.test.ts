@@ -34,11 +34,17 @@ describe("OH-22 §154⑤ 단서 — 최종 1주택 보유기간 재기산 (2021-
     baseTransferInput({ acquisitionDate: d("2017-08-28"), transferDate: d(t), residencePeriodMonths: 30 });
   const ID = "154-5-final-one-house-restart-unverified";
 
-  it("★ 조심 2025전0555형 — 비과세로 판정하되 재기산 미판정을 고지한다", () => {
+  it("★ 조심 2025전0555형 — 이력 미답이면 재기산으로 보아 과세하고 확인 필요를 고지한다 (결정 #36: 비과세 → 과세)", () => {
     const i = one("2021-11-10");
-    expect(calculateTransferTax(i, mockRates).isExempt).toBe(true);
+    expect(calculateTransferTax(i, mockRates).isExempt).toBe(false);
     expect(ids(i)).toContain(ID);
     expect(warn(i)).toContain("1주택 외의 주택을 모두 처분");
+    expect(warn(i)).toContain("「없음」을 선택하세요");
+  });
+  it("긍정 짝 — 같은 사실에 「처분 없음」을 답하면 비과세 · 고지 없음", () => {
+    const i = { ...one("2021-11-10"), finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] } };
+    expect(calculateTransferTax(i, mockRates).isExempt).toBe(true);
+    expect(ids(i)).not.toContain(ID);
   });
   it("경계: 2020-12-31 고지 없음 / 2021-01-01 고지", () => {
     expect(ids(one("2020-12-31"))).not.toContain(ID);

@@ -22,7 +22,7 @@ import { EXEMPTION_PROVISO_CONST } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-residence-waivers";
 import { resolveRental4hoRegistration } from "./one-house/rental-registration-4ho";
-import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart } from "./one-house/final-house-restart";
+import { applyFinalOneHouseRestart, capResidenceMonthsAtRestart, resolveFinalOneHouseRestart } from "./one-house/final-house-restart";
 import { resolveExpropriationRemnantYears } from "./data/expropriation-remnant-era";
 import {
   expropriationNoticeDateRequirementApplies,
@@ -256,6 +256,11 @@ export type ResidenceReqInput = Pick<
   | "winWinRentalHouse"
   // §154⑤ 단서(2021-01-01~2022-05-09 양도) 최종 1주택 재기산 — 보유 기산일·거주요건이 함께 읽는다(OH-22).
   | "finalOneHouseRestart"
+  // 결정 #36 — 처분 이력 미답을 「순수 1주택 세대」(`isPlainSingleHouseHousehold`)에만 불성립으로 읽는다.
+  | "houses"
+  | "presaleRights"
+  | "knownHouseExclusionCount"
+  | "rentalHousingException"
   // 비거주 기간은 보유기간에서 뺀다(§154⑧2호 예외) — `one-house/non-resident.ts`.
   | "nonResidentHoldingPeriod"
 > &
@@ -380,6 +385,46 @@ export function resolveResidenceJudgmentDate(input: ResidenceReqInput): Date {
   );
 }
 
+
+/**
+ * 거주요건 경과규정(대통령령 제28293호 부칙 제2조②1호 「2017년 8월 2일 이전에 취득한 주택」) 적용 시행일 —
+ * 「이 영 시행 후 최초로 양도하는 분부터」(2017.9.19.). 그 전 양도분은 부칙상 종전 규정이라 아래 용도변경 독법을 걸지 않는다
+ * (해당 건은 사실상 없다 — 범위 밖).
+ */
+const RESIDENCE_TRANSITION_RULE_TRANSFER_START = new Date("2017-09-19");
+
+/**
+ * 용도변경 주택의 거주요건 경과규정 기준일 독법이 **이 입력에 실제로 걸리는가** (결정 #35).
+ * 이월과세 경로(`residenceTransitionAcquisitionDate` — 증여 등기일)는 건드리지 않는다: 그 축의 「취득 당시」는
+ * 별건(#33)에서 정하므로 이월과세가 우선하는 종전 동작을 그대로 둔다.
+ */
+export function usageConversionTransitionApplies(input: ResidenceReqInput): boolean {
+  return (
+    input.nonHousingToHousingConversion !== undefined &&
+    input.residenceTransitionAcquisitionDate === undefined &&
+    input.transferDate >= RESIDENCE_TRANSITION_RULE_TRANSFER_START
+  );
+}
+
+/**
+ * 거주요건 **경과규정 기준일** — 부칙 「2017년 8월 2일 이전에 취득한 주택」의 「취득한 날」 (결정 #35).
+ *
+ * 용도변경 주택(비주택 → 주택)은 **주거용 사용 개시일**이다. 소득세법 §88 7호가 「주택」을 사실상 주거용 건물로 정의하고
+ * 부칙이 보호하는 대상도 「주택」이므로, 「주택으로 취득한 날」을 주거용 사용일로 읽는다. 조정대상지역 판정
+ * (`resolveResidenceJudgmentDate`, 서면-2020-부동산-5098)과 **같은 날**을 본다 — 한 판정 안에서 두 날짜를 쓰던
+ * 자기모순을 없앤다.
+ *
+ * 범위: 용도변경 주택의 경과규정 기준일만. **보유기간 기산일은 바꾸지 않는다**(2024.2.29. 전 양도분은 원취득일 —
+ * `resolveBaseHoldingStartDate`). 이월과세·입주권 주택처럼 판단 축별 날짜가 다른 경로는 건드리지 않는다.
+ * 의제 비과세(§155)·중과 배제(§167의10①15호)도 이 판정을 공유하므로 함께 따라온다.
+ * 2017.9.19. 전 양도분(부칙상 종전 규정)에는 걸지 않는다 — 해당 건은 사실상 없다.
+ */
+export function resolveResidenceTransitionDate(input: ResidenceReqInput): Date {
+  if (usageConversionTransitionApplies(input)) return input.nonHousingToHousingConversion!.residentialUseStartDate;
+  return (
+    input.residenceTransitionAcquisitionDate ?? sameHouseholdInheritanceHoldingStart(input) ?? input.acquisitionDate
+  );
+}
 
 /**
  * 취득 당시 조정대상지역 여부 — 거주요건(§154① 본문) 판정 입력.
@@ -510,8 +555,8 @@ export function describeOneHouseResidenceRequirement(
   // 이월과세 시 acquisitionDate는 증여자(보유 기산)로 교체되므로(§95④), 경과규정 판정은
   // 수증자 실제 취득일(residenceTransitionAcquisitionDate) 사용 — §97의2는 필요경비 계산 특례에 한정.
   // M4 — 동일세대 상속은 동일세대 보유 개시일(`sameHouseholdInheritanceHoldingStart`).
-  const residenceTransitionDate =
-    input.residenceTransitionAcquisitionDate ?? sameHouseholdInheritanceHoldingStart(input) ?? input.acquisitionDate;
+  // 용도변경 주택은 주거용 사용 개시일(결정 #35 — `resolveResidenceTransitionDate`).
+  const residenceTransitionDate = resolveResidenceTransitionDate(input);
   const isPrePolicy = residenceTransitionDate < new Date(rule.prePolicyDate);
   // §154⑧3호: 동일세대 상속이면 상속개시 전 동일세대 통산 거주분을 거주요건 판정에 합산.
   // §154⑤ 단서 재기산이면 재기산일 이후 거주만(재산세제과-1058 — `one-house/final-house-restart.ts`).
@@ -635,18 +680,31 @@ function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
 export function describeOneHouseHoldingRequirement(
   input: ExemptionReqInput,
   rule: Pick<OneHouseSpecialRulesData["one_house_exemption"], "minHoldingYears">,
-): { startDate: Date; years: number; months: number; requiredYears: number; met: boolean; provisoWaives: boolean } {
+): {
+  startDate: Date;
+  years: number;
+  months: number;
+  requiredYears: number;
+  met: boolean;
+  provisoWaives: boolean;
+  /** §154⑤ 단서 처분 이력 미답 + 순수 1주택 — 재기산된 것으로 보아 `met`이 거짓이다(결정 #36). 기산일·연수는 그대로. */
+  restartUnanswered: boolean;
+} {
   const startDate = resolveExemptionHoldingStartDate(input);
   const holding = calculateHoldingPeriod(startDate, input.transferDate);
   // M2 — 2012-06-29 전 양도분은 보유 3년(`data/one-house-holding-residence-era.ts`)
   const requiredYears = resolveOneHouseMinHoldingYears(input.transferDate, rule.minHoldingYears);
+  // 결정 #36 — 이 구간 재기산은 언제나 보유 2년 미달로 이어진다(재기산일 ≥ 2021-01-01 · 양도일 ≤ 2022-05-09). 이력을 답하지
+  //   않은 순수 1주택 세대는 모르는 사실이라 재기산된 것으로 본다 — 단서 1~3호 면제(`provisoWaives`)는 호출부가 따로 본다.
+  const restartUnanswered = resolveFinalOneHouseRestart(input).status === "unanswered_plain";
   return {
     startDate,
     years: holding.years,
     months: holding.months,
     requiredYears,
-    met: holding.years >= requiredYears,
+    met: holding.years >= requiredYears && !restartUnanswered,
     provisoWaives: resolveExemptionProviso(input) === "both",
+    restartUnanswered,
   };
 }
 

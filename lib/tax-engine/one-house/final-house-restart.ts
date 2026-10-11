@@ -53,18 +53,29 @@ export type FinalOneHouseRestartInput = Pick<
   TransferTaxInput,
   "transferDate" | "acquisitionDate" | "finalOneHouseRestart"
 > &
-  Partial<Pick<TransferTaxInput, "householdHousingCount">>;
+  // 아래 5필드는 「순수 1주택 세대」 구분(`isPlainSingleHouseHousehold`)만 읽는다 — 생략하면 순수 1주택이 아니다.
+  Partial<
+    Pick<
+      TransferTaxInput,
+      "householdHousingCount" | "houses" | "presaleRights" | "knownHouseExclusionCount" | "rentalHousingException"
+    >
+  >;
 
 /**
  * 판정 결과.
  * - `out_of_scope`: 양도일이 구간 밖이거나 양도일 현재 1주택 세대가 아니다(단서가 걸리지 않는다).
- * - `undetermined`: 처분 이력을 입력받지 못했다 — 재기산 없음으로 추정하지 않는다(판정 보류 고지).
+ * - `undetermined`: 처분 이력을 입력받지 못했고 이 세대 유형에 단서가 걸리는지 해석이 확인되지 않았다 — 판정 보류 고지
+ *   (주택 수 제외·§155⑳ 임대주택·1주택+입주권·분양권 세대. 결론은 종전 그대로다).
+ * - `unanswered_plain`: 처분 이력 미답 + **순수 1주택 세대**(결정 #36) — 모르는 사실이라 재기산된 것으로 보아
+ *   보유 2년 불성립(모름 = 혜택 불성립). 이 구간 재기산은 언제나 보유 2년 미달로 이어진다. 확인 필요 고지는 「없음」이면
+ *   결론이 달라질 때만 낸다(`era-undetermined.ts`).
  * - `no_restart`: 이력은 있으나 재기산일이 되는 처분이 없다(사유 포함).
  * - `restart`: 재기산일(`restartDate`)부터 보유·거주기간을 센다.
  */
 export type FinalOneHouseRestartVerdict =
   | { status: "out_of_scope" }
   | { status: "undetermined" }
+  | { status: "unanswered_plain" }
   | {
       status: "no_restart";
       reason: "no_disposal" | "completed_before_2021" | "not_a_disposal" | "on_or_before_acquisition";
@@ -93,20 +104,41 @@ function isQualifyingDisposal(p: FinalHouseDisposalFact): boolean {
   return false; // 그 밖(멸실 등) — 양도·증여·용도변경이 아니다(법규과-1604)
 }
 
+/**
+ * 처분 이력 질문을 **화면에서 받는 순수 1주택 세대**인가 (결정 #36) — 양도일 현재 주택·입주권·분양권을 통틀어 이 주택
+ * 1채뿐이고, 주택 수에서 빠지는 주택이 없으며, §155⑳ 특례 선언이 없다. 판정 메뉴·계산기(단건·다건)·부담부증여가
+ * 이 한 술어로 세대 구분을 따른다. 입력에 주택 수가 없으면(겸용 등 질문 경로가 없는 호출부) 순수 1주택이 아니다 —
+ * 입력 경로 없이 불리하게 판정하지 않는다.
+ */
+export function isPlainSingleHouseHousehold(input: FinalOneHouseRestartInput): boolean {
+  return (
+    input.householdHousingCount === 1 &&
+    (input.houses?.length ?? 0) <= 1 &&
+    (input.presaleRights?.length ?? 0) === 0 &&
+    (input.knownHouseExclusionCount ?? 0) === 0 &&
+    input.rentalHousingException?.applyException !== true
+  );
+}
+
+/** 이력 미답 — 순수 1주택은 재기산 가정(불성립), 그 밖의 세대 유형은 종전 결론 유지(판정 보류). */
+function unanswered(input: FinalOneHouseRestartInput): FinalOneHouseRestartVerdict {
+  return isPlainSingleHouseHousehold(input) ? { status: "unanswered_plain" } : { status: "undetermined" };
+}
+
 export function resolveFinalOneHouseRestart(input: FinalOneHouseRestartInput): FinalOneHouseRestartVerdict {
   if (!isFinalOneHouseRestartEra(input.transferDate)) return { status: "out_of_scope" };
   if (input.householdHousingCount !== undefined && input.householdHousingCount !== 1) {
     return { status: "out_of_scope" };
   }
   const facts = input.finalOneHouseRestart;
-  if (!facts) return { status: "undetermined" };
+  if (!facts) return unanswered(input);
   if (!facts.hadOtherHouseDisposal) return { status: "no_restart", reason: "no_disposal" };
   // 양도일 뒤의 처분은 이 양도의 「처분 후 1주택」이 아니다(⑧이 입력을 막는다).
   const counted = facts.disposals.filter(
     (p) => p.date.getTime() <= input.transferDate.getTime() && isQualifyingDisposal(p),
   );
   if (counted.length === 0) {
-    return facts.disposals.length === 0 ? { status: "undetermined" } : { status: "no_restart", reason: "not_a_disposal" };
+    return facts.disposals.length === 0 ? unanswered(input) : { status: "no_restart", reason: "not_a_disposal" };
   }
   const last = Math.max(...counted.map((p) => p.date.getTime()));
   // 재산세제과-1132 — 2021-01-01 현재 이미 1주택이었다(마지막 처분이 그 전) → 취득일 기산.
@@ -169,7 +201,7 @@ const NO_RESTART_TEXT: Record<Extract<FinalOneHouseRestartVerdict, { status: "no
 
 export function describeFinalOneHouseRestart(input: FinalOneHouseRestartInput): FinalOneHouseRestartEcho | undefined {
   const v = resolveFinalOneHouseRestart(input);
-  if (v.status === "out_of_scope" || v.status === "undetermined") return undefined;
+  if (v.status === "out_of_scope" || v.status === "undetermined" || v.status === "unanswered_plain") return undefined;
   if (v.status === "no_restart") {
     return { applied: false, description: NO_RESTART_TEXT[v.reason], legalBasis: law };
   }

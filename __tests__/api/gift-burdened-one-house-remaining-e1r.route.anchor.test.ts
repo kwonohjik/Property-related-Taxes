@@ -78,6 +78,9 @@ function giftItem(bgt: Partial<BurdenedGiftTransferTaxInput>, pnu?: string): Est
       wasRegulatedAtAcquisition: false,
       residencePeriodMonths: 0,
       isUnregistered: false,
+      // 2021-01-01~2022-05-09 증여·양도 시료는 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대가 기본이다
+      // (미답이면 결정 #36에 따라 재기산으로 보아 과세 — 미답 시료는 F 축이 `finalHouseRestartHistory: ""`로 따로 둔다).
+      finalHouseRestartHistory: "no",
       ...bgt,
     },
   } as EstateItem;
@@ -99,6 +102,7 @@ function transferForm(
   f.isRegulatedArea = false;
   f.wasRegulatedAtAcquisition = false;
   f.residencePeriodMonths = "0";
+  f.finalHouseRestartHistory = "no"; // 구간 안 양도는 처분 이력 「없음」을 답한 세대(미답은 결정 #36에 따라 과세)
   f.contractTotalPrice = "300,000,000";
   Object.assign(f.assets[0], {
     assetKind: "housing",

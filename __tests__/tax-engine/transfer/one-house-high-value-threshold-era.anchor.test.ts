@@ -42,6 +42,8 @@ function oneHouse(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     propertyType: "housing",
     isOneHousehold: true,
     householdHousingCount: 1,
+    // 구간(2021-01-01~2022-05-09) 양도 시료 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 재기산으로 보아 과세)
+    finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
     residencePeriodMonths: 60,
     isRegulatedArea: false,
     expenses: 0,
@@ -221,6 +223,8 @@ describe("G-5 재개발 APT — 판정과 안분이 같은 기준금액을 본�
       useEstimatedAcquisition: false,
       isOneHousehold: true,
       householdHousingCount: 1,
+      // 구간(2021-01-01~2022-05-09) 양도 시료 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 재기산으로 보아 과세)
+      finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
       residencePeriodMonths: 66,
       redevelopment: {
         subject: "apt",
@@ -278,6 +282,8 @@ describe("G-5 토지·건물 분리 소유 — LTHD 안분도 같은 기준금�
       acquisitionPrice: 450_000_000,
       isOneHousehold: true,
       householdHousingCount: 1,
+      // 구간(2021-01-01~2022-05-09) 양도 시료 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 재기산으로 보아 과세)
+      finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
       residencePeriodMonths: 60,
       isSeparateAcquisition: true,
       selfOwns: "land_only",

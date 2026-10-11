@@ -164,11 +164,15 @@ describe("OH-22 ⑫⑬⑭ — 세 route 도달", () => {
     expect(j.isExempt).toBe(true);
     expect(j.undetermined.map((u) => u.id)).not.toContain("154-5-final-one-house-restart-unverified");
   });
-  it("미답 — 비과세 + 판정 보류(종전 동작 유지)", async () => {
+  it("미답 — 순수 1주택은 재기산 가정으로 과세 + 확인 필요 고지 (결정 #36: 비과세 + 판정 보류 → 과세 + 확인 필요)", async () => {
     const j = await judge(form());
-    expect(j.isExempt).toBe(true);
+    expect(j.isExempt).toBe(false);
     expect(j.undetermined.map((u) => u.id)).toContain("154-5-final-one-house-restart-unverified");
     expect(j.finalOneHouseRestart).toBeUndefined();
+  });
+  it("미답 — 단건 계산기·다건 합산도 같은 세대 구분으로 과세 (세 route 일치)", async () => {
+    expect((await single(form())).isExempt).toBe(false);
+    expect((await multi(form())).isExempt).toBe(false);
   });
   it("⑭ 날짜 변환 — 증여 2021-02-16은 처분 아님(비과세), 2021-02-17은 재기산(과세) — 세 route 모두", async () => {
     const before = form({ finalHouseRestartHistory: "yes", finalHouseRestartDisposals: [row("gift", "2021-02-16")] });

@@ -367,6 +367,8 @@ export function collectPendingConditions(
   if (
     input.householdHousingCount === 1 &&
     resolveFinalOneHouseRestart(input).status !== "restart" &&
+    // 결정 #36 — 이력 미답으로 보유가 불성립한 순수 1주택은 「이 날까지 보유」가 틀린 날짜다(재기산 가정). 「없음」을 고르면 된다.
+    resolveFinalOneHouseRestart(input).status !== "unanswered_plain" &&
     holdingIsTheOnlyUnmetRequirement(input, rule)
   ) {
     pending.push({

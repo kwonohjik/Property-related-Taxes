@@ -133,9 +133,9 @@ describe("OH-22 ④ 처분이 아니거나 괄호로 제외되는 경우", () =>
     expect(exempt(i)).toBe(true);
     expect(ids(i)).not.toContain(UNVERIFIED);
   });
-  it("미답(사실 없음) → 종전과 같이 비과세 + 판정 보류 고지", () => {
+  it("미답(사실 없음) → 순수 1주택은 재기산 가정으로 과세 + 확인 필요 고지 (결정 #36: 비과세 → 과세)", () => {
     const i = house("2022-03-01");
-    expect(exempt(i)).toBe(true);
+    expect(exempt(i)).toBe(false);
     expect(ids(i)).toContain(UNVERIFIED);
   });
   it("처분일이 이 주택 취득일 이전이면 재기산일이 되지 않는다(1주택이 된 뒤에 취득)", () => {
