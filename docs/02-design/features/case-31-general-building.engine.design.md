@@ -30,7 +30,7 @@ Plan §3의 17행을 그대로 이전. 통산 순서 검증용 4개 anchor(★)�
 | 31-D | 개산공제 (건물) | 시행령 §163⑥ | `case31_estimated_deduction_building` | **844,341** | ☐ TODO |
 | 31-E1 | 양도차익 (토지) | 소득세법 §94① | `case31_gain_land` | **663,676,556** | ☐ TODO |
 | 31-E2 | 양도차익 (건물) — 차손 발생 | 소득세법 §94① | `case31_gain_building` | **−8,230,409** | ☐ TODO |
-| 31-F1 | 보유기간 (만 23년) | 시행령 §159 | `case31_holding_years_floor` | **23** | ☐ TODO |
+| 31-F1 | 보유기간 (만 23년) | 소득세법 §95④ | `case31_holding_years_floor` | **23** | ☐ TODO |
 | 31-F2 | 장특율 (토지 일반 표1, 15년+ 상한 30%) | 소득세법 §95② | `case31_ltsd_rate_land` | **0.30** | ☐ TODO |
 | 31-F3 | 장특공제 (토지) | 소득세법 §95② | `case31_ltsd_land` | **199,102,966** | ☐ TODO |
 | 31-F4 ★ | 장특공제 (건물) — 차손이므로 0 | 소득세법 §95② | `case31_ltsd_building` | **0** | ☐ TODO |

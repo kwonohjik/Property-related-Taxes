@@ -157,14 +157,18 @@ describe("§156의2⑩ · §156의3⑦ — 문화유산 주택 + 일반주택 + 
   });
 
   it("분양권도 같다 — §156의3⑦로 인용한다", () => {
-    const v = verdict(
+    // S05-8 — 종전에는 시행일을 안 넘겨 not_applicable만 단언했다(이름과 다른 단언). 분양권 축은 취득일 게이트를 탄다.
+    const v = resolveArticle89Clause2(
       twoHouse({
         culturalHeritageHouse: true,
-        presaleRights: [right({ type: "presale_right" })],
+        transferDate: new Date("2024-06-01"),
+        presaleRights: [right({ type: "presale_right", acquisitionDate: new Date("2021-06-01") })],
       }),
+      new Date("2021-01-01"),
     );
-    // presaleRightStartDate 미제공이라 분양권은 §89②의 대상 자체가 아니다.
-    expect(v.status).toBe("not_applicable");
+    expect(v.status).toBe("exception_met");
+    expect(v.exception).toBe("소득세법 시행령 §156의3 ②");
+    expect(v.viaArticle).toBe("소득세법 시행령 §156의3 ⑦");
   });
 });
 

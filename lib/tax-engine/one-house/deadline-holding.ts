@@ -8,7 +8,7 @@
  * 🔑 판정을 다시 쓰지 않는다 — 양도일만 기한일로 바꿔 정본 술어(`meetsOneHouseHoldingResidence`)를 그대로 부른다.
  *    `pending.ts`(안내를 낼지)와 `unmet-exceptions.ts`(안내를 내지 않는 사유)가 같은 함수를 쓴다.
  */
-import { shortArticle, TRANSFER } from "../legal-codes";
+import { baseRequirementPhrase } from "./base-requirement-phrase";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { meetsOneHouseHoldingResidence, type ExemptionReqInput } from "../transfer-tax-exemption-requirements";
 
@@ -38,7 +38,8 @@ export function deadlineHoldingUnmetReason(
   if (meetsHoldingResidenceOnDeadline(input, rule, deadlineEnd)) return undefined;
   return (
     `${deadlineLabel}의 말일(${deadlineEnd.toISOString().slice(0, 10)})이 지난 뒤 양도했습니다. 그 말일에 양도했더라도 ` +
-    `${shortArticle(TRANSFER.ONE_HOUSE_REQUIREMENT)}① 보유 2년(취득 당시 조정대상지역이면 거주 2년) 요건을 충족하지 못해, ` +
+    // 그 말일에 양도한 것으로 판정했으므로 연혁도 말일 기준이다(X2-3).
+    `${baseRequirementPhrase(deadlineEnd, rule)} 요건을 충족하지 못해, ` +
     "기한 안에 양도하는 것으로는 이 특례가 성립하지 않습니다."
   );
 }

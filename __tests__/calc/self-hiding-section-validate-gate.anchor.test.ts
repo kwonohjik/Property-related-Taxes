@@ -93,12 +93,13 @@ describe("§89② 3년 초과 예외 — 카드가 사라지면 ⑧도 멈춘다
       rightThreeYearExceptionKind: "new_house",
       rightNewHouseCompletionDate: "",
     });
+    // X2-2 — 이 fixture는 분양권이라 인용은 §156의3③이다(조합원입주권은 §156의2④).
     expect(judgeMsgs(visible)).toContain(
-      "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
+      "3년 초과 예외(시행령 §156의3③): 신축주택 완성일을 입력하세요.",
     );
     // 🔑 계산기는 더 이상 막지 않는다 — 그 화면에는 채울 칸이 없다.
     expect(msgs(visible)).not.toContain(
-      "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
+      "3년 초과 예외(시행령 §156의3③): 신축주택 완성일을 입력하세요.",
     );
   });
 

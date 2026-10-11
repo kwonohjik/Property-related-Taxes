@@ -16,7 +16,9 @@ import {
   resolveMergeExemptionYears,
 } from "@/lib/tax-engine/data/merge-exemption-era";
 import {
+  CLAUSE3_3Y_TRANSFER_START,
   COMPLETION_DEADLINE_3Y_TRANSFER_START,
+  resolve1562Clause3Years,
   resolve1562DeadlineYears,
 } from "@/lib/tax-engine/data/article-156-2-completion-era";
 import { resolveRegulatedShortenedClauseRef } from "@/lib/tax-engine/data/temporary-two-house-regulated-clause";
@@ -50,6 +52,17 @@ export function completionDeadlineYearsLabel(transferDate: string | undefined): 
   const transferAt = toOptionalDate(transferDate);
   if (transferAt) return `${resolve1562DeadlineYears(transferAt)}년`;
   return `3년(${ymd(COMPLETION_DEADLINE_3Y_TRANSFER_START)} 전 양도는 2년)`;
+}
+
+/**
+ * 「권리 취득일부터 **N년**이 지나/이내」(§156의2③④ · §156의3②③ · 시행규칙 §75①)의 N 문구 — 양도일 연혁(2006~2008.11.27. 1년 ·
+ * ~2012.6.28. 2년 · 이후 3년, `resolve1562Clause3Years`). 판정이 쓰는 leaf와 같은 값이라 카드·검증 문구가 엔진과 어긋나지 않는다(X2-4).
+ * 양도일을 모르면 현행 연수와 경과 규정을 함께 적는다.
+ */
+export function rightDisposalYearsLabel(transferDate: string | undefined): string {
+  const transferAt = toOptionalDate(transferDate);
+  if (transferAt) return `${resolve1562Clause3Years(transferAt)}년`;
+  return `3년(${ymd(CLAUSE3_3Y_TRANSFER_START)} 전 양도는 2년 이하)`;
 }
 
 /**

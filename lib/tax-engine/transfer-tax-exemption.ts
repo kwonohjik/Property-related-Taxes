@@ -14,6 +14,7 @@
 
 import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
+import { article89Clause2PostManagementNotice } from "./transfer-tax-89-2-consequences";
 import { meetsReplacementHouse } from "./one-house/replacement-house";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
@@ -161,9 +162,16 @@ export function checkExemption(
         ...collectLapsedDeadlineUnmet(allPending.filter(isLapsed), judgmentBaseDate, requirementReview?.scheme),
       ];
 
+  // §156의2⑬·§156의3⑩ 사후관리(추징) — 계산기 경고와 같은 leaf·같은 문장(G5-7). 자기선언으로 비과세를 받았을 때만 있다.
+  const postManagementNotice = article89Clause2PostManagementNotice(article89Clause2, settled, input.transferDate);
+  const clause2Exception = article89Clause2.exception;
+
   return {
     ...verdict,
     article89Clause2,
+    // §89② 배제일 때만 — 계산기 미선언·확인 필요 고지가 「결론을 가를 때만」 나가도록 본체 판정 결과를 올린다(G5-8).
+    ...(excluded ? { coreWouldPass } : {}),
+    ...(postManagementNotice ? { postManagementNotices: [postManagementNotice] } : {}),
     appliedExceptions,
     pending,
     undetermined: [
@@ -198,7 +206,7 @@ export function checkExemption(
           return verdictIf(new Date(input.acquisitionDate.getTime() + 86_400_000)) !== verdictIf(input.acquisitionDate);
         },
       }),
-      ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
+      ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass, input.transferDate),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
       ...inheritedPresaleRightSeparateHouseholdUndetermined(input, article89Clause2, coreWouldPass, presaleRightStartDate),
       ...reverseDoubleMergeUndetermined(input, appliedExceptions, settled),
@@ -207,7 +215,13 @@ export function checkExemption(
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
     ...finalOneHouseRestartEchoOf(input),
     ...requirementReviewEchoOf(requirementReview),
-    legalBasis: deriveLegalBasis(appliedExceptions, pending),
+    // ④·§156의3③ 자기선언으로 받은 비과세는 적용 특례 카드(`appliedExceptions`)가 없어 근거 조문이 비었다 — 그 조문을 싣는다(G5-7).
+    legalBasis: [
+      ...new Set([
+        ...deriveLegalBasis(appliedExceptions, pending),
+        ...(postManagementNotice && clause2Exception !== undefined ? [clause2Exception] : []),
+      ]),
+    ],
   };
 }
 

@@ -38,6 +38,7 @@ import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRenta
 import { UsageConversionField } from "./UsageConversionField";
 import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import { highValueThresholdForDisplay, oneRightHighValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { effectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
@@ -325,7 +326,8 @@ export function Step3({ form, onChange }: Props) {
 
         <FieldCard
           label="예상 양도가액"
-          hint="12억 초과 여부(고가주택)를 판정하는 데 쓰입니다"
+          // 기준금액은 양도일 연혁(9억·6억·12억) — 엔진과 같은 leaf를 읽는다. 입주권 양도는 §89①4호의 연혁이 따로다(S01-9).
+          hint={`${(isRightSale ? oneRightHighValueThresholdForDisplay : highValueThresholdForDisplay)(form.transferDate).label} 초과 여부(고가주택)를 판정하는 데 쓰입니다`}
         >
           <CurrencyInput
             data-testid="one-house-sale-price"

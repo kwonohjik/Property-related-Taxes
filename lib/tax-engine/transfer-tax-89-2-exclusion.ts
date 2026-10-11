@@ -143,6 +143,12 @@ export interface Article89Clause2Result {
    * 인용 범위를 문자열 비교 없이 가르려고 둔다. 비과세 판정에는 쓰지 않는다.
    */
   byTimingClause?: boolean;
+  /**
+   * 예외를 받은 세대의 **권리 종류** — 합가(⑧⑨·§156의3⑥) 의제에서만 채운다. `exception`이 항상 §156의2⑧·⑨로 적혀
+   * (분양권은 §156의3⑥이 그 항에 위임한다) 문자열로는 어느 권리 세대인지 가릴 수 없어서 둔다(S05-8).
+   * 입주권과 분양권이 섞인 세대는 `redevelopment_right`다 — 어느 라벨이 맞는지는 법문만으로 정해지지 않아 종전 표기를 유지한다.
+   */
+  rightKind?: PresaleRight["type"];
   /** 판정 불가 사유 — 사용자에게 「이 항을 직접 확인하라」고 알릴 조문 표기 */
   openArticles?: string[];
   /**
@@ -269,7 +275,14 @@ export function resolveArticle89Clause2(
    */
   const mergeVerdict = resolveMergedHouseholdVerdict(input);
   if (mergeVerdict.status === "met") {
-    return { status: "exception_met", exception: mergeVerdict.exception };
+    // 분양권만 있는 세대는 §156의3⑥이 ⑧·⑨에 위임한다 — 그 경유를 `viaArticle`로 밝힌다(준용 표기 규약).
+    const presaleOnly = rights.every((r) => r.type === "presale_right");
+    return {
+      status: "exception_met",
+      exception: mergeVerdict.exception,
+      rightKind: presaleOnly ? "presale_right" : "redevelopment_right",
+      ...(presaleOnly ? { viaArticle: TRANSFER.PRESALE_MERGE_156_3_6 } : {}),
+    };
   }
 
   /**
@@ -278,7 +291,7 @@ export function resolveArticle89Clause2(
    * 셋 다 「(특수)주택 + 일반주택 + 권리를 **각각 1개씩**」이고 ③~⑤(②·③)를 **준용**한다.
    * ⇒ 특수주택이 무엇인지 판정되면 타이밍 판정을 그대로 태우고, 아니면 판정 불가로 남긴다.
    */
-  const twoHouseVia = resolveTwoHouseSpecialArticle(input, rights.length);
+  const twoHouseVia = resolveTwoHouseSpecialArticle(input, rights);
   /**
    * E011 — **2주택 + 1권리**에서 특수주택(문화유산·이농주택)을 선언하지 않았으면 2주택 축은 **결론이 난 것**이다.
    * 두 사실 모두 명부 행에 선언 칸이 있으므로 미선언은 사실의 표시이고(위 「있는데 선언하지 않았다 ⇒ 미해당
@@ -317,7 +330,8 @@ export function resolveArticle89Clause2(
     inheritedVerdict === "qualified" && inheritedRights.length === 1 && otherRights.length === 1;
 
   if (inheritedVerdict === "undetermined") {
-    open.push("소득세법 시행령 §156의2 ⑥·⑦", "소득세법 시행령 §156의3 ④·⑤");
+    // 세대가 가진 권리 종류의 조문만 안내한다 — 분양권만 있는 세대에 §156의2를 가리키면 확인해도 소용없다(S05-8).
+    open.push(...openArticlesByRightKind(rights, "⑥·⑦", "④·⑤"));
   }
 
   /**
@@ -350,7 +364,7 @@ export function resolveArticle89Clause2(
    *    **상속개시 당시 보유한 주택**으로 한정한다」가 한 번도 검증되지 않고 있었다(실측).
    */
   if (hasInheritedHouseOtherThanSelling(input) && !generalHouseHeldAtInheritanceEstablished(input)) {
-    open.push("소득세법 시행령 §156의2 ⑦", "소득세법 시행령 §156의3 ⑤");
+    open.push(...openArticlesByRightKind(rights, "⑦", "⑤"));
   }
 
   if (open.length > 0) return { status: "undetermined", openArticles: dedupe(open) };
@@ -402,11 +416,13 @@ export function resolveArticle89Clause2(
    */
   const right = isArticle7Shape ? otherRights[0] : rights[0];
   /** 준용 근거 — ⑦(상속 축) 또는 ⑩·⑪(2주택 축). 둘 다 아니면 ③이 직접 적용된 것이다. */
-  const viaArticle = isArticle7Shape
-    ? "소득세법 시행령 §156의2 ⑦"
-    : hasInheritedHouseOtherThanSelling(input)
-      ? "소득세법 시행령 §156의2 ⑦"
-      : resolveTwoHouseSpecialArticle(input, rights.length);
+  const viaArticle =
+    isArticle7Shape || hasInheritedHouseOtherThanSelling(input)
+      ? // ⑦(입주권판)·§156의3⑤(분양권판)는 **상속 외의 원인으로 취득한 권리**의 종류가 가른다 — `right`가 바로 그 권리다.
+        right.type === "presale_right"
+        ? TRANSFER.INHERITED_OTHER_PRESALE_156_3_5
+        : TRANSFER.INHERITED_OTHER_RIGHT_156_2_7
+      : resolveTwoHouseSpecialArticle(input, rights);
   const successorReading = () => resolveAcquiredRightTiming(input, right, viaArticle);
   if (right.type !== "redevelopment_right") return successorReading();
   // 조합원입주권 — ③·④는 승계취득 전용, 원조합원은 §155①(`one-house/original-member-right.ts`).
@@ -434,13 +450,30 @@ export function resolveArticle89Clause2(
  */
 function resolveTwoHouseSpecialArticle(
   input: Article89Clause2Input,
-  rightCount: number,
+  rights: readonly PresaleRight[],
 ): string | undefined {
   // 「각각 1개씩」 — 특수주택 1 + 일반주택 1 = 2주택, 권리 1개.
-  if (input.householdHousingCount !== 2 || rightCount !== 1) return undefined;
-  if (input.culturalHeritageHouse === true) return "소득세법 시행령 §156의2 ⑩";
-  if (input.ruralHouse?.kind === "farm_exit") return "소득세법 시행령 §156의2 ⑪";
+  if (input.householdHousingCount !== 2 || rights.length !== 1) return undefined;
+  // ⑩·⑪은 조합원입주권, §156의3⑦·⑧은 분양권을 요건으로 한다(S05-8).
+  const presale = rights[0].type === "presale_right";
+  if (input.culturalHeritageHouse === true) {
+    return presale ? TRANSFER.CULTURAL_HERITAGE_PRESALE_156_3_7 : TRANSFER.CULTURAL_HERITAGE_RIGHT_156_2_10;
+  }
+  if (input.ruralHouse?.kind === "farm_exit") {
+    return presale ? TRANSFER.FARM_EXIT_PRESALE_156_3_8 : TRANSFER.FARM_EXIT_RIGHT_156_2_11;
+  }
   return undefined;
+}
+
+/**
+ * 판정 불가 안내용 — 세대가 가진 **권리 종류의 조문만** 싣는다(입주권 → §156의2, 분양권 → §156의3).
+ * 둘 다 가진 세대는 둘 다 싣는다.
+ */
+function openArticlesByRightKind(rights: readonly PresaleRight[], redevClauses: string, presaleClauses: string): string[] {
+  const out: string[] = [];
+  if (rights.some((r) => r.type === "redevelopment_right")) out.push(`${TRANSFER.RIGHT_ONE_HOUSE_SPECIAL} ${redevClauses}`);
+  if (rights.some((r) => r.type === "presale_right")) out.push(`${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL} ${presaleClauses}`);
+  return out;
 }
 
 /**

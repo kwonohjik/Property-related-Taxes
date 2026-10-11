@@ -141,6 +141,13 @@ const BASE_MANIFEST: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // X2-8 — 보유기간 기산의 법 근거(초일 산입). 종전 상수는 영 §159(부담부증여)를 가리켰다.
+    id: "TRANSFER.HOLDING_PERIOD_CALC",
+    citation: "소득세법 §95 ④",
+    keywords: ["보유기간은 그 자산의 취득일부터 양도일까지로 한다"],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER.CARRYOVER_GIFT_TAX_FORMULA",
     citation: "소득세법 시행령 §163의2",
     keywords: ["증여세", "자산가액"],

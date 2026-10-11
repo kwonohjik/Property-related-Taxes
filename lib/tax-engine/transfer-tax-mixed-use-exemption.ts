@@ -37,6 +37,7 @@ import {
 import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./transfer-reductions";
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
+import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import {
   article89Clause2Notices,
   clause2BlocksSurchargeDeeming,
@@ -332,7 +333,13 @@ export function judgeMixedUseOneHouseExemption(
         "겸용주택 양도에 이 특례를 정면으로 적용한 해석례는 확인하지 못했습니다 — 확인 필요",
     );
   }
-  warnings.push(...article89Clause2Notices(article89Clause2, isOneHouseExempt, transferDate));
+  warnings.push(
+    ...article89Clause2Notices(article89Clause2, isOneHouseExempt, transferDate, {
+      // 미선언·확인 필요 고지는 선언이 비과세를 바꿀 때만(G5-8). 겸용 경로는 중과 적용 여부가 이 시점에 없어 구 §167의11①1호 시대 양도는 그대로 둔다.
+      coreWouldPass: houseCountOk && meetsOneHouseRequirements && !isUnregistered,
+      surchargeDeclarationMatters: isOldSurchargeClauseEra(transferDate),
+    }),
+  );
   // 배제 확정 — 단건은 판정 결과(`article89Clause2`)를 결과 카드가 보여 주지만 겸용 결과뷰에는 그 칸이 없다 ⇒ 경고로 사유를 싣는다.
   if (clause2Excluded && houseCountOk && meetsOneHouseRequirements && !isUnregistered) {
     warnings.push(

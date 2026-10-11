@@ -140,7 +140,8 @@ export function capResidenceMonthsAtRestart(input: FinalOneHouseRestartInput, mo
   return Math.min(months, completedMonthsInclusive(v.restartDate, input.transferDate));
 }
 
-const law = `${TRANSFER.ONE_HOUSE_REQUIREMENT}⑤`;
+/** 재기산 단서는 2022.5.31.에 삭제됐다 — 현행 §154⑤ 단서(용도변경)와 구별되게 「삭제 전」을 밝힌다(X2-7). */
+const law = TRANSFER.FINAL_HOUSE_RESTART_PRE_DELETION;
 const fmt = (x: Date) => x.toISOString().slice(0, 10);
 
 /** 판정 메뉴 결과 카드·계산기 안내가 함께 쓰는 echo. 구간 밖·미입력이면 싣지 않는다. */
@@ -178,7 +179,7 @@ export function describeFinalOneHouseRestart(input: FinalOneHouseRestartInput): 
     restartDate: v.restartDate,
     description:
       `2021년 1월 1일~2022년 5월 9일 양도분으로, 2주택 이상을 보유한 세대가 다른 주택을 모두 처분해 ` +
-      `${day}에 1주택이 되었으므로 1세대1주택 비과세 보유기간을 ${day}부터 다시 셉니다(${law} 단서). ` +
+      `${day}에 1주택이 되었으므로 1세대1주택 비과세 보유기간을 ${day}부터 다시 셉니다. 근거는 ${law}입니다. ` +
       `거주기간도 그날부터 다시 셉니다 — 기획재정부 재산세제과-1058(2020.12.4.) 해석이며 판례로 확인된 것은 아닙니다. ` +
       "장기보유특별공제의 보유기간은 이 재기산과 관계없이 취득일부터 셉니다.",
     legalBasis: law,
