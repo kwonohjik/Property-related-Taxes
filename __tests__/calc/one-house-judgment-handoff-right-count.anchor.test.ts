@@ -72,20 +72,20 @@ describe("PR-D 분양권·입주권 목록 — 판정 메뉴에서 넘겨받으�
   it("R-1 입주권 양도 · 명부 입주권 없음 → 목록 확정 true + 도출값 1 (양도 대상 포함)", () => {
     const patch = toTransferFormPatch(rightJudgmentForm());
     expect(patch.householdNoPresaleRightsConfirmed).toBe(true);
-    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights)).toBe(1);
+    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights, "2024-06-01")).toBe(1);
   });
 
   it("R-2 명부에 다른 입주권 1개 → 확정 false + 도출값 2 (가목 불성립 쪽도 전달된다)", () => {
     const patch = toTransferFormPatch(rightJudgmentForm({ presaleRights: [otherRight("r1")] }));
     expect(patch.householdNoPresaleRightsConfirmed).toBe(false);
-    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights)).toBe(2);
+    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights, "2024-06-01")).toBe(2);
   });
 
   it("R-3 입주권 2개 보유(자신 포함 3) → 캡 없이 그대로 3을 전달한다(숫자 칸 폐지, PR-D)", () => {
     const patch = toTransferFormPatch(
       rightJudgmentForm({ presaleRights: [otherRight("r1"), otherRight("r2")] }),
     );
-    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights)).toBe(3);
+    expect(resolveHouseholdRightCount("right_to_move_in", patch.presaleRights, "2024-06-01")).toBe(3);
   });
 
   it("R-4 주택 양도 · 입주권 없음 → 도출값 0 (양도 대상이 주택이면 입주권으로 세지 않는다)", () => {
@@ -94,7 +94,7 @@ describe("PR-D 분양권·입주권 목록 — 판정 메뉴에서 넘겨받으�
       ...f,
       assets: [{ ...f.assets[0], assetKind: "housing" }],
     });
-    expect(resolveHouseholdRightCount("housing", patch.presaleRights)).toBe(0);
+    expect(resolveHouseholdRightCount("housing", patch.presaleRights, "2024-06-01")).toBe(0);
   });
 
   it("R-5 계산기에 남아 있던 목록 미확정(false)을 판정 값(true)으로 덮는다 — 「판정 불러오기」 경로", () => {

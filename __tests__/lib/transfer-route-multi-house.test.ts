@@ -183,13 +183,13 @@ describe("mapGracePeriodToEngine", () => {
 
 describe("mapPresaleRightsToEngine", () => {
   it("undefined → undefined", () => {
-    expect(mapPresaleRightsToEngine(undefined)).toBeUndefined();
+    expect(mapPresaleRightsToEngine(undefined, undefined)).toBeUndefined();
   });
 
   it("string 취득일 → Date 변환 + 종류·지역 매핑", () => {
     const result = mapPresaleRightsToEngine([
       { id: "p1", type: "redevelopment_right", acquisitionDate: "2022-03-01", region: "capital" },
-    ]);
+    ], undefined);
     expect(result).toHaveLength(1);
     expect(result![0].id).toBe("p1");
     expect(result![0].type).toBe("redevelopment_right");

@@ -44,7 +44,7 @@ describe("isInherited — ④ → ⑫ → ⑭ 4계층 배관", () => {
   it("⑭ route 매핑이 엔진 입력까지 옮긴다", () => {
     const payload = buildPresaleRightsPayload("housing", [entry({ isInherited: true })])!;
     const parsed = payload.map((p) => presaleRightSchema.parse(p));
-    const engineInput = mapPresaleRightsToEngine(parsed);
+    const engineInput = mapPresaleRightsToEngine(parsed, undefined);
     expect(engineInput?.[0].isInherited).toBe(true);
   });
 
@@ -53,12 +53,12 @@ describe("isInherited — ④ → ⑫ → ⑭ 4계층 배관", () => {
     expect(payload[0].isInherited).toBeUndefined();
     const parsed = presaleRightSchema.parse(payload[0]);
     expect(parsed.isInherited).toBeUndefined();
-    expect(mapPresaleRightsToEngine([parsed])?.[0].isInherited).toBeUndefined();
+    expect(mapPresaleRightsToEngine([parsed], undefined)?.[0].isInherited).toBeUndefined();
   });
 
   it("false도 그대로 보존된다 (명시적 「상속 아님」)", () => {
     const payload = buildPresaleRightsPayload("housing", [entry({ isInherited: false })])!;
     const parsed = presaleRightSchema.parse(payload[0]);
-    expect(mapPresaleRightsToEngine([parsed])?.[0].isInherited).toBe(false);
+    expect(mapPresaleRightsToEngine([parsed], undefined)?.[0].isInherited).toBe(false);
   });
 });

@@ -22,6 +22,7 @@
  */
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
+import { resolveRightSaleSpecialExclusion } from "./one-house/right-sale-special-act-exclusion";
 import { presaleRightStartDate, type ParsedRates } from "./transfer-tax-helpers";
 import {
   resolveRedevAptOneHouseTable2Axis,
@@ -51,7 +52,16 @@ export function judgeRedevAptOneHouseExemption(
 } {
   const redev = redevInput.redevelopment;
   if (redev?.subject !== "apt") {
-    return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis: undefined };
+    // 입주권 양도(subject="right")는 §89①4호 판정을 Step A.7이 한다 — 여기서는 그 판정이 「다른 주택」에서 뺀 보유 감면주택
+    // (§98·§98의2·§98의5·§99)의 명세만 결과 카드에 싣는다(결정 #2). §99의4·§98의9는 입주권 양도에서 효과가 없어 싣지 않는다.
+    const rightSaleExclusion = redev?.subject === "right" ? resolveRightSaleSpecialExclusion(redevInput) : undefined;
+    return {
+      exemptionResult: undefined,
+      houseCountExclusion: rightSaleExclusion && rightSaleExclusion.entries.length > 0
+        ? { specialHouseExclusionDetail: rightSaleExclusion }
+        : undefined,
+      oneHouseTable2Axis: undefined,
+    };
   }
   /**
    * ⚠️ **청산금 「수령」 단독신고(사례 46 · `receiveOnlyMode`)만 제외한다.**

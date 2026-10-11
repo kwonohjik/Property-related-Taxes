@@ -227,10 +227,10 @@ describe("CR-2l 대표 자산이 게이트 밖이어도 — 함께 양도하는 
 });
 
 describe("CR-3 게이트 술어 (Q-2′)", () => {
-  it("[CR-3] 주택·재개발 아파트 양도만 연다 — 권리 양도에는 효과가 없다(V-1)", () => {
+  it("[CR-3] 주택·재개발 아파트·입주권 양도를 연다 — 입주권은 4개 조문 보유 감면주택 행만(결정 #2), 분양권은 효과가 없다(V-1)", () => {
     expect(countExclusionRowsInScope("housing")).toBe(true);
     expect(countExclusionRowsInScope("redevelopment_apt")).toBe(true);
-    expect(countExclusionRowsInScope("right_to_move_in")).toBe(false);
+    expect(countExclusionRowsInScope("right_to_move_in")).toBe(true);
     expect(countExclusionRowsInScope("presale_right")).toBe(false);
     expect(countExclusionRowsInScope("land")).toBe(false);
     expect(countExclusionRowsInScope(undefined)).toBe(false);

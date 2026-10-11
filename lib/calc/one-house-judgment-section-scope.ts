@@ -18,6 +18,7 @@ import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "@/lib/st
 import { temporaryTwoHouseApplies } from "./household-house-count";
 import { replacementHouseApplies } from "./replacement-house-scope";
 import {
+  countExclusionRowApplies,
   rowCountExclusionReductions,
   rowSpecialHouseExclusions,
 } from "@/lib/calc/house-count-exclusion-rows";
@@ -27,7 +28,6 @@ import {
   temporaryTwoHouseCandidateExcludedIds,
 } from "./temp-two-house-candidate-exclusion";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
-import { rightSaleSpecialExclusionApplies } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /**
@@ -195,8 +195,8 @@ export function judgmentHouseCountExclusionReductions(
  * G065 §98의2·§98의5 — 엔진 `RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES`, route와 같은 목록) 쓴다(2026-10-08 사용자 결정).
  */
 export function judgmentCountExclusionRowApplies(form: OneHouseJudgmentFormData, house: HouseEntry): boolean {
-  if (judgmentSaleIsHousing(form)) return house.countExclusion !== undefined;
-  return house.countExclusion?.kind === "special" && rightSaleSpecialExclusionApplies(house.countExclusion.special.article);
+  // 계산기 ④·⑤·⑧과 같은 술어(`countExclusionRowApplies`) — 두 메뉴가 같은 행을 같게 읽는다(결정 #2).
+  return countExclusionRowApplies(judgmentSaleIsHousing(form) ? "housing" : "right_to_move_in", house);
 }
 
 /** 보유 감면주택(§98 등) 선언 — 명부 행에서. 입주권 양도면 해석례 확인 조문만(`judgmentCountExclusionRowApplies`). */

@@ -104,6 +104,18 @@ export function housesOwnedAtTransfer<T extends HouseRowForCount>(
   return (houses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
 }
 
+/**
+ * 양도일 현재 보유한 분양권·조합원입주권 행만 — 주택 명부(`housesOwnedAtTransfer`)와 **같은 단일 술어**(`isOwnedAtTransfer`).
+ * 양도일 당일·이후 취득 권리는 「양도일 현재 … 보유」(소득세법 §89①4호 가목 · §89②)가 아니다(코드 리뷰 결정 #1). ④·⑤·판정 메뉴
+ * 요약이 함께 쓴다(3중 패턴) — ⑭ 매퍼 `splitPresaleRightsAtTransfer`도 같은 술어다.
+ */
+export function rightsOwnedAtTransfer<T extends { acquisitionDate?: string }>(
+  rights: readonly T[] | undefined,
+  transferDate: string | undefined,
+): T[] {
+  return (rights ?? []).filter((r) => isOwnedAtTransfer(r.acquisitionDate, transferDate));
+}
+
 export interface ResolveHouseholdHousingCountArgs {
   /**
    * 양도 대표 자산 종류(`form.assets[0].assetKind`). `usesHouseCountRoster`(housing·
@@ -537,9 +549,11 @@ export function temporaryTwoHouseApplies(args: ResolveTemporaryTwoHouseArgs): bo
  */
 export function resolveHouseholdRightCount(
   primaryKind: string | undefined,
-  presaleRights: readonly Pick<PresaleRightEntry, "type">[] | undefined,
+  presaleRights: readonly Pick<PresaleRightEntry, "type" | "acquisitionDate">[] | undefined,
+  /** 양도일 — 그날 이후(같은 날 포함) 취득한 권리는 세지 않는다(`rightsOwnedAtTransfer`). 필수: 빠뜨린 호출부를 컴파일러가 찾는다. */
+  transferDate: string | undefined,
 ): number {
-  return deriveHouseholdRightCount(presaleRights, primaryKind === "right_to_move_in");
+  return deriveHouseholdRightCount(rightsOwnedAtTransfer(presaleRights, transferDate), primaryKind === "right_to_move_in");
 }
 
 /**

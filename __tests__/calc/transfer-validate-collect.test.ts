@@ -112,10 +112,10 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     expect(collectStepIssues(0, form)).toEqual([]);
   });
 
-  it("T-08: step 1 — 보유 감면주택 행별 오류 일괄 수집 (폼 전역 섹션 = 주택·재개발 아파트 외 양도)", () => {
+  it("T-08: step 1 — 보유 감면주택 행별 오류 일괄 수집 (폼 전역 섹션 = 주택·재개발 아파트·입주권 외 양도)", () => {
     const form = baseForm();
     // 주택 양도는 명부 행 ⑥에서 받는다(`transfer-calc-count-exclusion-row-link.plan.md`) — 폼 전역 섹션은 그 밖
-    form.assets[0].assetKind = "right_to_move_in";
+    form.assets[0].assetKind = "presale_right"; // 입주권 양도도 명부 행으로 받는다(코드 리뷰 결정 #2)
     form.householdHousingCount = ""; // 주택 수 미선택
     form.householdNoPresaleRightsConfirmed = true; // 명부 필수화(PR-D) — 이 테스트의 관심사 밖
     form.householdNoOtherHousesConfirmed = true; // 명부 필수화(PR-C) — 이 테스트의 관심사 밖

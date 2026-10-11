@@ -4,10 +4,12 @@
  * 계획서 `docs/00-pm/transfer-calc-count-exclusion-row-link.plan.md`. 판정 메뉴 짝:
  * `one-house-exemption-validate.ts`(같은 필수값 leaf `collectHouseCountExclusionReductionErrors`).
  *
- * - **게이트 안**(주택·재개발 아파트 양도 — `countExclusionRowsInScope`, Q-2′): 입력은 명부 행 ⑥이다.
- *   행 필수값을 행 번호로 막고, **어느 주택인지 모르는** 옛 선언을 막는다(Q-1). 옛 선언은 1채를
+ * - **게이트 안**(주택·재개발 아파트·조합원입주권 양도 — `countExclusionRowsInScope`, Q-2′ · 코드 리뷰 결정 #2): 입력은
+ *   명부 행 ⑥이다. 행 필수값을 행 번호로 막고, **어느 주택인지 모르는** 옛 선언을 막는다(Q-1). 옛 선언은 1채를
  *   명부와 무관하게 빼 준다 — 명부에 없는 주택을 빼는 과소과세(C6)가 그대로 남는다.
  *   해소 경로는 ② 화면의 안내 카드(「기존 선언 삭제」)다 — 입력 칸 없는 영구 차단이 아니다.
+ *   입주권 양도는 해석례로 확인된 4개 조문의 보유 감면주택 행만 본다(`countExclusionRowApplies`) — 그 밖의 행 선언은
+ *   판정에 쓰이지 않으므로 필수값도 요구하지 않는다.
  * - **게이트 밖**: 종전 폼 전역 감면주택 섹션이 그대로 보이므로 종전 검증을 그대로 한다(D4-03).
  *   §99의4·§98의9 옛 선언은 **그 선언이 붙은 자산**이 게이트 안(함께 양도하는 주택 등)일 때만 막는다 —
  *   권리 양도 자산의 선언은 효과가 없다(V-1).
@@ -20,6 +22,7 @@ import {
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { countedHouseRows, resolveHouseholdHousingCount } from "./household-house-count";
 import {
+  countExclusionRowApplies,
   countExclusionRowsInScope,
   rowCountExclusionReductions,
   rowSpecialHouseExclusions,
@@ -74,9 +77,12 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
    * 주택 수는 ④(`transfer-tax-api.ts`)와 **같은 leaf·같은 인자**로 센다. 취득일 없는 ⑥ 행은 명부 계수에
    * 빠지지만 아래 행 필수값 검증(취득일)이 따로 막는다.
    */
+  const kind = form.assets?.[0]?.assetKind;
+  // 판정에 쓰는 선언의 행만 — 입주권 양도에서는 4개 조문의 보유 감면주택 행이다(그 밖의 행은 ④가 보내지 않는다).
+  const usedRows = (form.houses ?? []).filter((h) => countExclusionRowApplies(kind, h));
   const rowDeclarations =
-    rowCountExclusionReductions(form.houses, form.transferDate).length +
-    rowSpecialHouseExclusions(form.houses, form.transferDate).length;
+    rowCountExclusionReductions(usedRows, form.transferDate).length +
+    rowSpecialHouseExclusions(usedRows, form.transferDate).length;
   const effectiveCount = resolveHouseholdHousingCount({
     primaryKind: form.assets?.[0]?.assetKind,
     declared: parseInt(form.householdHousingCount) || 0,
@@ -85,15 +91,16 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
     legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
   });
   const requiredCount = 1 + countedHouseRows(form.houses, form.transferDate);
-  if (rowDeclarations > 0 && effectiveCount < requiredCount)
+  // 입주권 양도의 양도 대상은 주택이 아니다 — 「양도 주택 포함 1채」 전제가 없다(스칼라도 명부에서 도출된다).
+  if (kind !== "right_to_move_in" && rowDeclarations > 0 && effectiveCount < requiredCount)
     messages.push(COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE(effectiveCount, requiredCount));
 
   // 선언은 행 값(취득일·가액·면적)으로 채워져 온다 — 그 칸이 비면 행 기본 정보가 빈 것이다.
   const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
-  for (const r of rowCountExclusionReductions(form.houses, form.transferDate)) {
+  for (const r of rowCountExclusionReductions(usedRows, form.transferDate)) {
     for (const m of collectHouseCountExclusionReductionErrors(r)) messages.push(`보유 주택 ${rowNo(r.houseId)}: ${m}`);
   }
-  for (const e of rowSpecialHouseExclusions(form.houses, form.transferDate)) {
+  for (const e of rowSpecialHouseExclusions(usedRows, form.transferDate)) {
     for (const m of collectSpecialHouseExclusionRowErrors(e)) messages.push(`보유 주택 ${rowNo(e.houseId)}: ${m}`);
   }
 

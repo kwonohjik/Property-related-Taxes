@@ -23,6 +23,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import { resolveHouseCountExclusion } from "@/lib/tax-engine/transfer-reductions/unsold-98-9";
 import { resolveSpecialHouseExclusions } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
+import { rightSaleSpecialExclusionApplies } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import { SPECIAL_HOUSE_EXCLUSION_WINDOWS } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -45,15 +46,37 @@ export const isRowReduction = (r: AssetReductionForm): r is RowCountExclusionRed
 /**
  * 계산기 — 명부 행 ⑥을 **입력(⑤)·전송(④)·검증(⑧)** 하는 양도 자산. 세 층이 이 술어 하나를 부른다.
  *
- * 계획서 `transfer-calc-count-exclusion-row-link.plan.md` Q-2′ · §7-1 V-1: 두 조문의 효과는
- * 「일반**주택**을 양도하는 경우 … 「소득세법」 제89조제1항**제3호**를 적용」이다. 실측으로도
- * 입주권·분양권 양도에서는 선언이 세액을 바꾸지 않고, 주택·재개발 완공 아파트에서만 바꾼다.
+ * 계획서 `transfer-calc-count-exclusion-row-link.plan.md` Q-2′ · §7-1 V-1 · 결정 #2(2026-10-11):
  *
- * ⚠️ 명부로 주택 수를 세는 F1(`household-house-count.ts`)은 `housing`만이다 — 축이 다르다.
+ * - **주택·재개발 완공 아파트 양도**: 행 ⑥의 모든 선언(§99의4·§98의9·보유 감면주택)을 쓴다. 두 조문의 효과는
+ *   「일반**주택**을 양도하는 경우 … 「소득세법」 제89조제1항**제3호**를 적용」이다.
+ * - **조합원입주권 양도(`right_to_move_in`)**: 입주권 가·나목(§89①4호)의 「다른 주택」에서 빼는 **보유 감면주택 4개 조문**
+ *   (§98·§98의2·§98의5·§99 — 해석례로 입주권 적용이 확인된 것, `RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES`)만 쓴다.
+ *   행 단위 술어는 `countExclusionRowApplies`다. §99의4·§98의9는 입주권 양도에서 효과가 없다(V-1 실측) — 선언은 보내지 않는다.
+ *
+ * ⚠️ 명부로 주택 수를 세는 F1(`household-house-count.ts`)은 `housing`·입주권이다 — 축이 다르다.
  *    재개발 아파트도 선언이 엔진 스칼라 차감에 쓰이므로(C6 실재) 여기서는 연다.
  */
 export function countExclusionRowsInScope(primaryKind: string | undefined): boolean {
+  return countExclusionReductionRowsInScope(primaryKind) || primaryKind === "right_to_move_in";
+}
+
+/** 행 ⑥의 §99의4·§98의9 선언을 쓰는 양도 자산 — 주택·재개발 완공 아파트. 입주권 양도에서는 효과가 없다(V-1). */
+export function countExclusionReductionRowsInScope(primaryKind: string | undefined): boolean {
   return primaryKind === "housing" || primaryKind === "redevelopment_apt";
+}
+
+/**
+ * 이 명부 행의 선언을 **판정에 쓰는가** — ④(전송)·⑤(배지)·⑧(필수값)과 판정 메뉴(`judgmentCountExclusionRowApplies`)의 공용 술어.
+ * 주택·재개발 완공 아파트 양도면 모든 행 선언을, 입주권 양도면 해석례로 확인된 4개 조문의 보유 감면주택 행만 쓴다.
+ */
+export function countExclusionRowApplies(
+  primaryKind: string | undefined,
+  house: Pick<HouseEntry, "countExclusion">,
+): boolean {
+  if (house.countExclusion === undefined) return false;
+  if (primaryKind !== "right_to_move_in") return true;
+  return house.countExclusion.kind === "special" && rightSaleSpecialExclusionApplies(house.countExclusion.special.article);
 }
 
 /**
@@ -212,7 +235,7 @@ type CalcFormLike = {
 export function primaryReductionsWithRows(form: CalcFormLike): AssetReductionForm[] {
   const primary = form.assets?.[0];
   const stored = primary?.reductions ?? [];
-  return countExclusionRowsInScope(primary?.assetKind)
+  return countExclusionReductionRowsInScope(primary?.assetKind)
     ? [...stored, ...rowCountExclusionReductions(form.houses, form.transferDate)]
     : stored;
 }
@@ -220,9 +243,12 @@ export function primaryReductionsWithRows(form: CalcFormLike): AssetReductionFor
 /** ④ 보유 감면주택 — 폼 전역 + (게이트 안이면) 명부 행 ⑥. */
 export function specialHouseExclusionsWithRows(form: CalcFormLike): SpecialHouseExclusionFormItem[] {
   const global = form.specialHouseExclusions ?? [];
-  return countExclusionRowsInScope(form.assets?.[0]?.assetKind)
-    ? [...global, ...rowSpecialHouseExclusions(form.houses, form.transferDate)]
-    : global;
+  const kind = form.assets?.[0]?.assetKind;
+  // 입주권 양도 — 명부 행에 연결된 4개 조문 선언만. 어느 주택인지 모르는 폼 전역 선언은 보내지 않는다(⑧이 막고 삭제를 안내한다).
+  if (kind === "right_to_move_in") {
+    return rowSpecialHouseExclusions((form.houses ?? []).filter((h) => countExclusionRowApplies(kind, h)), form.transferDate);
+  }
+  return countExclusionRowsInScope(kind) ? [...global, ...rowSpecialHouseExclusions(form.houses, form.transferDate)] : global;
 }
 
 /**
@@ -266,7 +292,7 @@ export function unlinkedCountExclusionDeclarations(form: CalcFormLike): {
   const unlinked = (houseId: string | undefined) => !houseId || !rowIds.has(houseId);
   return {
     reductions: (form.assets ?? [])
-      .filter((a) => countExclusionRowsInScope(a.assetKind))
+      .filter((a) => countExclusionReductionRowsInScope(a.assetKind))
       .flatMap((a) => (a.reductions ?? []).filter(isRowReduction))
       .filter((r) => unlinked(r.houseId)),
     specials: countExclusionRowsInScope(form.assets?.[0]?.assetKind)
@@ -283,7 +309,7 @@ export function clearUnlinkedCountExclusions<F extends CalcFormLike & { assets: 
   const linked = (houseId: string | undefined) => !!houseId && rowIds.has(houseId);
   return {
     assets: form.assets.map((a) =>
-      countExclusionRowsInScope(a.assetKind)
+      countExclusionReductionRowsInScope(a.assetKind)
         ? { ...a, reductions: (a.reductions ?? []).filter((r) => !isRowReduction(r) || linked(r.houseId)) }
         : a,
     ),

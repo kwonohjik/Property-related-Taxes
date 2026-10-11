@@ -30,6 +30,7 @@ import {
   SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING,
 } from "./transfer-tax-redevelopment-settlement";
 import { redevUsesTable2 } from "./redevelopment-lthd";
+import { oneRightInputAfterSpecialActExclusionOf } from "./one-house/right-sale-special-act-exclusion";
 import {
   resolveOneRightHighValueThreshold,
   oneRightHighValueEraNotice,
@@ -277,10 +278,13 @@ export function runRedevelopmentGainSteps(
   // - 12억 이하: 전액 비과세 (3분기 gain/lthd 모두 0 → 산출세액 0)
   // - 12억 초과: §89①4호 각 목 외의 부분 단서 안분 (taxableRatio 적용 후 비과세분 마스킹)
   // subject="right" 가드 — 사례 44~48 (apt) 경로 영향 0 (회귀 안전)
+  //
+  // 🔑 조특법상 소유주택으로 보지 않는 보유 감면주택(§98·§98의2·§98의5·§99)은 가·나목의 「다른 주택」에서 뺀다 — 판정 메뉴 route와
+  //    같은 함수다(결정 #2). 빼는 것은 **이 판정에 넘기는 복사본**뿐이라 `isOneHouseSingle`(표2·12억 축)은 원본 주택 수를 그대로 본다.
   const redevAfterRightRaw: RedevelopmentResult = applyOneRightExemption(
     redev,
     input.redevelopment!,
-    input,
+    input.redevelopment!.subject === "right" ? oneRightInputAfterSpecialActExclusionOf(input) : input,
   );
 
   // ─ Step A.8: §95② 장기보유특별공제 배제 ─

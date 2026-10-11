@@ -31,6 +31,7 @@
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { SpecialHouseExclusionSection } from "@/components/calc/transfer/SpecialHouseExclusionSection";
 import { HousesListSection } from "./HousesListSection";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
@@ -88,6 +89,22 @@ export function HouseCountExemptionInputs({
         countExclusionApplies={countExclusionApplies}
         judgmentMenu={judgmentMenu}
       />
+
+      {/*
+        조합원입주권 양도(§89①4호) — 행에 선언해도 판정에 쓰지 않는 조특 제외가 있다는 안내. 두 메뉴가 같은 문구·같은 술어
+        (`countExclusionApplies`)를 쓴다(코드 리뷰 결정 #2). 주택 양도에서는 모든 행 선언을 쓰므로 뜨지 않는다.
+      */}
+      {countExclusionEnabled &&
+        countExclusionApplies &&
+        (form.houses ?? []).some((h) => h.countExclusion && !countExclusionApplies(h)) && (
+          <ToneCard tone="amber">
+            <p className="text-xs leading-relaxed" data-testid="right-sale-count-exclusion-unused-notice">
+              조합원입주권 양도(§89①4호)에서 다른 주택 수에서 빼는 조특법 주택은 해석례로 확인된 §98·§98의2·§98의5·§99
+              감면주택뿐입니다. 농어촌·고향주택(§99의4)·준공후미분양주택(§98의9) 등 그 밖의 선언은 이 판정에 쓰지 않고 다른
+              주택으로 셉니다.
+            </p>
+          </ToneCard>
+        )}
 
       {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) — 판정 메뉴는 명부 행에서 받는다 */}
       {!countExclusionEnabled && (

@@ -48,7 +48,7 @@ import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house
 import { rentalResidenceCandidateHouseIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
-import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
+import { countExclusionRowApplies, countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /**
@@ -253,8 +253,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    * leaf(`resolveHouseholdRightCount`)를 쓴다(3중 패턴) — right_to_move_in 전용.
    */
   const derivedHouseholdRightCount = useMemo(
-    () => resolveHouseholdRightCount(primaryKind, form.presaleRights),
-    [primaryKind, form.presaleRights],
+    () => resolveHouseholdRightCount(primaryKind, form.presaleRights, form.transferDate),
+    [primaryKind, form.presaleRights, form.transferDate],
   );
 
   // 조정대상지역 자동 판별(주소·날짜 → API) + 안내 — 800줄 정책 분리(OH-22). 주택은 섹션② 취득일 조정
@@ -427,6 +427,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   primaryKind={primaryKind}
                   confirmed={form.householdNoPresaleRightsConfirmed}
                   onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
+                  transferDate={form.transferDate}
                 />
               )}
             </div>
@@ -476,6 +477,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 primaryKind={primaryKind}
                 confirmed={form.householdNoPresaleRightsConfirmed}
                 onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
+                transferDate={form.transferDate}
               />
             )}
 
@@ -694,6 +696,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               onChange={onChange}
               hideGracePeriod
               countExclusionEnabled={countExclusionRowsInScope(primaryKind)}
+              countExclusionApplies={(h) => countExclusionRowApplies(primaryKind, h)}
               // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 파생(합가일 없으면 undefined, PR-2).
               mergeContext={mergeContextOf(form)}
             />

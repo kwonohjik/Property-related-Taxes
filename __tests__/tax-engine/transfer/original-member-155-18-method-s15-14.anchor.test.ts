@@ -57,7 +57,7 @@ describe("S15-14 원조합원 행 ④⑫⑭", () => {
       row({ originalMemberDisposalDelayReason: "auction", originalMemberDisposalDelayDisposedByThatMethod: true }),
     ])!;
     expect(p).toMatchObject({ originalMemberDisposalDelayReason: "auction", originalMemberDisposalDelayDisposedByThatMethod: true });
-    const [e] = mapPresaleRightsToEngine([presaleRightSchema.parse(p)])!;
+    const [e] = mapPresaleRightsToEngine([presaleRightSchema.parse(p)], undefined)!;
     expect(e.originalMemberDisposalDelayDisposedByThatMethod).toBe(true);
     const [noReason] = buildPresaleRightsPayload("housing", [row({ originalMemberDisposalDelayDisposedByThatMethod: true })])!;
     expect(noReason).not.toHaveProperty("originalMemberDisposalDelayDisposedByThatMethod");

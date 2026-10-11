@@ -190,17 +190,6 @@ export function Step2({ form, onChange }: Props) {
         judgmentMenu
       />
 
-      {!judgmentSaleIsHousing(form) &&
-        (form.houses ?? []).some((h) => h.countExclusion && !judgmentCountExclusionRowApplies(form, h)) && (
-          <ToneCard tone="amber">
-            <p className="text-xs leading-relaxed" data-testid="right-sale-count-exclusion-unused-notice">
-              조합원입주권 양도(§89①4호)에서 다른 주택 수에서 빼는 조특법 주택은 해석례로 확인된 §98·§98의2·§98의5·§99
-              감면주택뿐입니다. 농어촌·고향주택(§99의4)·준공후미분양주택(§98의9) 등 그 밖의 선언은 이 판정에 쓰지 않고 다른
-              주택으로 셉니다.
-            </p>
-          </ToneCard>
-        )}
-
       {/* 행을 지정하지 않은 옛 세대 단위 선언 — ⑧이 막으므로 해소 경로를 함께 둔다(Q-2). */}
       {judgmentSaleIsHousing(form) && <LegacyCountExclusionNotice form={form} onChange={onChange} />}
 

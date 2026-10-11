@@ -7,7 +7,7 @@
  */
 import { presaleRightStartDate, type ParsedRates } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
-import { oneRightInputAfterSpecialActExclusion } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
+import { oneRightInputAfterSpecialActExclusionOf } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
@@ -60,8 +60,9 @@ export function runOneHouseJudgmentPipeline(
    *    판정 메뉴가 §89①4호 비과세를 영원히 말하지 못한다.
    */
   // 조특법상 소유주택으로 보지 않는 주택은 가·나목 「다른 주택」에서 뺀다(G065 — §155②③ 상속주택 제외는 빼지 않는다).
+  //   계산기 §166 분기(`transfer-tax-redevelopment-steps.ts`)가 같은 함수를 부른다(결정 #2).
   const oneRightVerdict = buildOneRightVerdict(
-    isRightSale ? oneRightInputAfterSpecialActExclusion(engineInput, exclusion) : engineInput,
+    isRightSale ? oneRightInputAfterSpecialActExclusionOf(engineInput) : engineInput,
     isRightSale,
   );
   const afterOneRight = applyOneRightVerdict(afterRental, oneRightVerdict);

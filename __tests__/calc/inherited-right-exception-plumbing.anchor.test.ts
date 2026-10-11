@@ -43,7 +43,7 @@ function throughAllLayers(e: PresaleRightEntry) {
   const payload = buildPresaleRightsPayload("housing", [e]);
   if (!payload) throw new Error("④ payload 없음");
   const parsed = payload.map((p) => presaleRightSchema.parse(p));
-  const engine = mapPresaleRightsToEngine(parsed);
+  const engine = mapPresaleRightsToEngine(parsed, undefined);
   if (!engine) throw new Error("⑭ 매핑 없음");
   return engine[0];
 }

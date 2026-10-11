@@ -49,6 +49,8 @@ import {
   type OneHouseContestedIssue,
 } from "@/lib/tax-engine/one-house/contested-issues";
 import { runOneHouseJudgmentPipeline } from "./judgment-pipeline";
+import { withSameDayRightNotice } from "@/lib/tax-engine/one-house/same-day-right";
+import { resolveRightSaleSpecialExclusion } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
 import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
 import {
   resolveExemptionHoldingStartDate,
@@ -229,10 +231,12 @@ export async function POST(request: NextRequest) {
       ),
     );
 
+    // 입주권 양도 판정이 「다른 주택」에서 빼는 것은 해석례로 확인된 보유 감면주택 4개 조문뿐이다(§99의4·§98의9·그 밖의 조문은
+    // 효과가 없다) — 명세도 판정과 같은 목록으로 만든다(`oneRightInputAfterSpecialActExclusionOf`와 같은 leaf · S03-6).
     const houseCount = buildOneHouseCountBreakdown({
       total: engineInput.householdHousingCount,
-      houseCountExclusion: exclusion.houseCountExclusion,
-      specialHouseExclusion: exclusion.specialHouseExclusionDetail,
+      houseCountExclusion: isRightSale ? { appliedList: [], details: [] } : exclusion.houseCountExclusion,
+      specialHouseExclusion: isRightSale ? resolveRightSaleSpecialExclusion(engineInput) : exclusion.specialHouseExclusionDetail,
       inheritedExclusion: exclusion.inheritedExclusion,
       // 입주권 양도 판정은 §155②③ 상속주택을 「다른 주택」에서 빼지 않는다 — 명세도 같은 입장이어야 한다(S03-6).
       inheritedExclusionApplies: !isRightSale,
@@ -249,8 +253,16 @@ export async function POST(request: NextRequest) {
           }
         : undefined;
 
-    const payload: OneHouseExemptionResponse = {
+    // 양도일과 같은 날 취득한 권리를 보유로 세면 결론이 달라질 때만 확인 필요를 덧붙인다(코드 리뷰 결정 #1) — 같은 파이프라인 재실행.
+    const judgmentWithSameDayNotice = withSameDayRightNotice(
+      engineInput,
       judgment,
+      (counterfactual) =>
+        runOneHouseJudgmentPipeline(counterfactual, parsedRates, judgmentBaseDate, isRightSale).judgment,
+    );
+
+    const payload: OneHouseExemptionResponse = {
+      judgment: judgmentWithSameDayNotice,
       judgmentBaseDate: judgmentBaseDate.toISOString().slice(0, 10),
       houseCount,
       ...(rentalVerdict ? { rentalHousingException: rentalVerdict } : {}),

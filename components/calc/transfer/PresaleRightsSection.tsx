@@ -22,6 +22,7 @@ import { rightRowDistrictAnswerUsed } from "@/lib/tax-engine/one-house/designate
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { isAddressReplaced } from "@/lib/calc/house-region";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
+import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { OriginalMemberTempTwoHouseInputs } from "@/components/calc/transfer/OriginalMemberTempTwoHouseInputs";
 
@@ -89,7 +90,8 @@ export function PresaleRightsSection({
         세대가 보유한 분양권·조합원입주권을 취득일과 무관하게 모두 입력하세요. 주택 수 산정
         포함 여부는 입력한 취득일로 자동 판단됩니다. 분양권은 2021.1.1 이후 취득분만 산입하고
         (「소득세법」 법률 제17477호 부칙 제4조, 「소득세법 시행령」 대통령령 제31442호 부칙
-        제10조①), 조합원입주권은 취득일과 무관하게 산입합니다.
+        제10조①), 조합원입주권은 취득일과 무관하게 산입합니다. 다만 양도일 당일·이후에 취득한
+        권리는 「양도일 현재 보유」가 아니므로 입력해도 판정에서 빠집니다.
       </p>
 
       {rights.length === 0 ? (
@@ -123,6 +125,13 @@ export function PresaleRightsSection({
                   삭제
                 </button>
               </div>
+              {!isOwnedAtTransfer(r.acquisitionDate, transferDate) && (
+                <ToneCard tone="amber">
+                  <p className="text-micro" data-testid={`presale-right-after-transfer-badge-${r.id}`}>
+                    양도일(같은 날 포함) 이후 취득 — 보유 분양권·입주권에서 제외
+                  </p>
+                </ToneCard>
+              )}
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">종류</span>
                 <RadioCardGroup

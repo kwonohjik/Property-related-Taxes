@@ -19,7 +19,13 @@ import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
-import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } from "@/lib/api/transfer-route-multi-house";
+import {
+  mapHousesToEngine,
+  mapGracePeriodToEngine,
+  mapPresaleRightsToEngine,
+  mapSameDayPresaleRightsToEngine,
+  householdNoPresaleRightsConfirmedAtTransfer,
+} from "@/lib/api/transfer-route-multi-house";
 import { mapSpecialHouseExclusionsToEngine } from "@/lib/api/transfer-route-multi-house";
 import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { toRentalHousingExceptionEngineInput } from "./_rental-engine-input";
@@ -248,9 +254,16 @@ export function buildTransferEngineInput(
     nonBusinessLandDetails: buildNblEngineInput(data.nonBusinessLandRaw),
     // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)
     houses: mapHousesToEngine(data.houses),
-    presaleRights: mapPresaleRightsToEngine(data.presaleRights),
-    // ⑭ §89①4호 가·나목 분양권 게이트 — PR-D ⑧ 확인 echo (roster-required-other-assets §4-6)
-    householdNoPresaleRightsConfirmed: data.householdNoPresaleRightsConfirmed,
+    // 양도일 현재 보유분만(양도일 당일·이후 취득 권리는 제외 — 코드 리뷰 결정 #1). 같은 날 취득분은 확인 필요 고지용으로 따로 싣는다.
+    presaleRights: mapPresaleRightsToEngine(data.presaleRights, data.transferDate),
+    sameDayAcquiredPresaleRights: mapSameDayPresaleRightsToEngine(data.presaleRights, data.transferDate),
+    // ⑭ §89①4호 가·나목 분양권 게이트 — PR-D ⑧ 확인 echo (roster-required-other-assets §4-6).
+    //   입력한 권리가 모두 양도일 이후 취득분이면 「없음」 확인을 다시 요구하지 않는다.
+    householdNoPresaleRightsConfirmed: householdNoPresaleRightsConfirmedAtTransfer(
+      data.presaleRights,
+      data.transferDate,
+      data.householdNoPresaleRightsConfirmed,
+    ),
     sellingHouseId: data.sellingHouseId,
     gracePeriod: mapGracePeriodToEngine(data.gracePeriod),
     marriageMerge: data.marriageMerge

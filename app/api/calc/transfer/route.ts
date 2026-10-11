@@ -14,6 +14,7 @@ import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import {
   calculateTransferTaxAggregate,
+  type AggregateTransferInput,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
@@ -41,6 +42,11 @@ import { prepareBundledApportionment } from "./bundled-apportionment";
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
+import {
+  aggregateWithSameDayRightWarning,
+  mixedUseWithSameDayRightWarning,
+  withSameDayRightWarning,
+} from "@/lib/tax-engine/one-house/same-day-right";
 
 /**
  * 성공 응답 — NaN·Infinity가 있으면 던져 아래 `catch`가 500으로 응답한다(E-14l).
@@ -425,8 +431,7 @@ export async function POST(request: NextRequest) {
       });
 
       // (6) 다건 엔진 호출
-      const aggregated = calculateTransferTaxAggregate(
-        {
+      const aggregateInput: AggregateTransferInput = {
           taxYear: transferDate.getFullYear(),
           properties: items,
           annualBasicDeductionUsed: data.annualBasicDeductionUsed,
@@ -449,8 +454,13 @@ export async function POST(request: NextRequest) {
            */
           burdenedGiftWholeInfo: data.burdenedGiftWholeInfo,
           burdenedGiftDate: data.burdenedGiftWholeInfo ? transferDate : undefined,
-        },
-        rates,
+      };
+      // 양도일과 같은 날 취득한 권리를 보유로 세면 어느 자산의 결론이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
+      const aggregated = aggregateWithSameDayRightWarning(
+        engineInput,
+        calculateTransferTaxAggregate(aggregateInput, rates),
+        items,
+        (heldItems) => calculateTransferTaxAggregate({ ...aggregateInput, properties: heldItems }, rates),
       );
 
       return okJson(
@@ -486,8 +496,10 @@ export async function POST(request: NextRequest) {
        *
        * ⚠️ 날짜를 갖는 값은 전부 `engineInput` 변환본이다(Zod 출력은 string).
        */
-      const mixedAsset = buildMixedUseAssetInput({
-        mixedUse: data.mixedUse,
+      // 세대 보유 권리(`presaleRights`)와 §89② 세대 사실이 `ei`에서 갈라진다 — 같은 날 권리 반사실(결정 #1)이 같은 조립을 다시 탄다.
+      const mixedUseInput = data.mixedUse; // 클로저 안에서 좁힘이 풀리지 않게 고정
+      const buildMixedAsset = (ei: TransferTaxInput) => buildMixedUseAssetInput({
+        mixedUse: mixedUseInput,
         transferDate,
         ownershipRatio: data.ownershipRatio,
         isUnregistered: data.isUnregistered,
@@ -518,7 +530,7 @@ export async function POST(request: NextRequest) {
           unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
         },
         // ⑭ §89② 세대 사실 (E-7) — ⚠️ `engineInput`(권리 취득일·합가일 등 Date 변환본).
-        article89Clause2Facts: pickArticle89Clause2Facts(engineInput),
+        article89Clause2Facts: pickArticle89Clause2Facts(ei),
         isOneHousehold: data.isOneHousehold,
         isRegulatedArea: data.isRegulatedArea,
         isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
@@ -526,7 +538,7 @@ export async function POST(request: NextRequest) {
         rawHouses: data.houses,
         houses: engineInput.houses,
         sellingHouseId: data.sellingHouseId,
-        presaleRights: engineInput.presaleRights,
+        presaleRights: ei.presaleRights,
         marriageMerge: engineInput.marriageMerge,
         parentalCareMerge: engineInput.parentalCareMerge,
         isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
@@ -534,15 +546,18 @@ export async function POST(request: NextRequest) {
         unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
       });
 
-      const mixedResult = calcMixedUseTransferTax(
-        data.transferPrice,
-        new Date(data.transferDate),
-        mixedAsset,
-        rates,
-        // 신고서 단위 수정신고·경정청구 — engineInput.amendment는 상단(:308~)에서 Date 변환 완료.
-        // ⚠️ raw data.amendment 전달 금지: Zod 출력은 string이라 §48② 감면율 판정(isAfter)이 침묵 오작동.
-        engineInput.amendment,
-      );
+      const calcMixed = (ei: TransferTaxInput) =>
+        calcMixedUseTransferTax(
+          data.transferPrice,
+          new Date(data.transferDate),
+          buildMixedAsset(ei),
+          rates,
+          // 신고서 단위 수정신고·경정청구 — engineInput.amendment는 상단(:308~)에서 Date 변환 완료.
+          // ⚠️ raw data.amendment 전달 금지: Zod 출력은 string이라 §48② 감면율 판정(isAfter)이 침묵 오작동.
+          engineInput.amendment,
+        );
+      // 양도일과 같은 날 취득한 권리를 보유로 세면 주택분 비과세·총세액이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
+      const mixedResult = mixedUseWithSameDayRightWarning(engineInput, calcMixed(engineInput), calcMixed);
       return okJson(
         { data: { mode: "mixed-use" as const, result: mixedResult } },
       );
@@ -673,7 +688,10 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    const result = calculateTransferTax(engineInput, rates);
+    // 양도일과 같은 날 취득한 권리를 보유로 세면 비과세·세액이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1).
+    const result = withSameDayRightWarning(engineInput, calculateTransferTax(engineInput, rates), (counterfactual) =>
+      calculateTransferTax(counterfactual, rates),
+    );
     return okJson({ data: { mode: "single" as const, result } });
   } catch (err) {
     // 서버 콘솔에 풀 스택 출력 — dev 터미널에서 즉시 원인 식별

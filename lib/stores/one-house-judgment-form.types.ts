@@ -38,7 +38,7 @@ import { migrateAsset } from "./calc-wizard-asset-migrate";
  */
 import type { OneHouseJudgmentExtraFields } from "./one-house-extra-fields.types";
 import { oneHouseJudgmentExtraDefaults } from "./one-house-extra-fields.types";
-import { housesOwnedAtTransfer } from "@/lib/calc/household-house-count";
+import { housesOwnedAtTransfer, rightsOwnedAtTransfer } from "@/lib/calc/household-house-count";
 export type { OneHouseJudgmentExtraFields };
 export { oneHouseJudgmentExtraDefaults };
 
@@ -159,12 +159,15 @@ export function judgmentSaleIsHousing(
 
 /**
  * 명부 → 세대 보유 **조합원입주권 수** (§89①4호 본문). 양도 대상 입주권을 **포함**한다.
- * 분양권은 세지 않는다 — 그 보유 여부는 가·나목이 따로 묻는 축이다.
+ * 분양권은 세지 않는다 — 그 보유 여부는 가·나목이 따로 묻는 축이다. 양도일 당일·이후 취득 권리는 세지 않는다.
  */
 export function deriveJudgmentRightCount(
-  form: Pick<OneHouseJudgmentFormData, "presaleRights" | "assets">,
+  form: Pick<OneHouseJudgmentFormData, "presaleRights" | "assets" | "transferDate">,
 ): number {
-  const listed = (form.presaleRights ?? []).filter((r) => r.type === "redevelopment_right").length;
+  // 양도일 당일·이후 취득 권리는 세지 않는다 — 계산기 ④·⑤와 같은 술어(`rightsOwnedAtTransfer`, 코드 리뷰 결정 #1).
+  const listed = rightsOwnedAtTransfer(form.presaleRights, form.transferDate).filter(
+    (r) => r.type === "redevelopment_right",
+  ).length;
   return listed + (judgmentSaleIsHousing(form) ? 0 : 1);
 }
 
