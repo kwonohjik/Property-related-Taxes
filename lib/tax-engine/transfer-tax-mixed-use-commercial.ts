@@ -23,6 +23,7 @@ import { mixedPartAcqNeedsOf } from "./mixed-use-part-acq";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
 import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
+import { inheritedCapexStdOverride } from "./transfer-tax-mixed-use-inheritance";
 
 // ──────────────────────────────────────────────────────────────
 // 상가부분 환산취득가액 + 양도차익 분리 (STEP 7)
@@ -251,8 +252,10 @@ export function calcCommercialGainSplit(
     swapToDirect && housingAcqResult?.phdResult
       ? { housingStd: housingAcqResult.phdResult.estimatedHousingPriceAtAcquisition }
       : undefined;
+  // C8 — 상속·증여 + 취득시 개별주택가격 없음이면 신고가액 비율(주택분과 같은 축 — `inheritedCapexStdOverride`).
   const commonCapexCommercial = apportionAcquisitionPrice(
-    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived, phdAcqStdOverride,
+    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
+    phdAcqStdOverride ?? inheritedCapexStdOverride(asset, effectiveAcqDerived),
   ).commercialAcqPrice;
   const commonTransferExpCommercial = apportionTransferPrice(
     asset.transferExpense ?? 0, asset, derived,
