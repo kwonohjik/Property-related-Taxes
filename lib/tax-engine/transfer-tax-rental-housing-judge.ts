@@ -284,7 +284,7 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
     (surcharge
       ? ` 다주택 중과 판정의 주택 수에는 임대주택이 들어가지 않았습니다(중과를 다시 판정하지 않았습니다) — ` +
         (restore.hasRoster
-          ? "임대주택을 세대 보유 주택 목록에 「장기임대」로 넣어 다시 계산하세요."
+          ? "임대주택을 다른 보유 주택 목록에 「장기임대」로 넣어 다시 계산하세요."
           : "세대 보유 주택 수에 임대주택을 포함해 다시 입력하세요.")
       : "");
   return { input: { ...judgeInput, householdHousingCount: restored }, notice };

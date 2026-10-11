@@ -460,7 +460,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
         <ToneCard tone="amber" title="세대 3주택 합가 특례는 이 화면에서 판정하지 않습니다 (확인 필요)" className="py-2">
           <p data-testid="bg-three-house-merge-notice" className="text-xs">
             일시적 2주택(§155①)과 합가가 겹친 경우, 혼인·동거봉양 이중 합가는 보유 주택 목록이 있어야 판정할 수 있습니다. 이 화면에는 목록 입력 칸이
-            없어 비과세와 다주택 중과 배제를 모두 판정하지 않고 계산합니다 — 양도소득세 계산기(부담부증여)에서 세대 보유 주택 목록을 입력해 확인하세요.
+            없어 비과세와 다주택 중과 배제를 모두 판정하지 않고 계산합니다 — 양도소득세 계산기(부담부증여)에서 다른 보유 주택 목록을 입력해 확인하세요.
           </p>
         </ToneCard>
       )}
