@@ -61,7 +61,7 @@ export function InheritedRightExceptionSection({ form, onChange }: Props) {
         checked={form.generalHouseHeldAtInheritance}
         onCheckedChange={(v: boolean) => onChange({ generalHouseHeldAtInheritance: v })}
         title="양도하는 주택을 상속개시 당시 이미 보유하고 있었다"
-        description="시행령 §156의2⑥·⑦은 일반주택을 「상속개시 당시 보유한 주택」으로 한정합니다. 선택하지 않으면 이 특례를 판정할 수 없어 종전대로 계산하고 결과에 안내를 남깁니다."
+        description="시행령 §156의2⑥·⑦(분양권은 §156의3④·⑤)은 일반주택을 「상속개시 당시 보유한 주택」으로 한정합니다. 선택하지 않으면 이 특례를 판정할 수 없어 종전대로 계산하고 결과에 안내를 남깁니다."
         tone="violet"
       />
 

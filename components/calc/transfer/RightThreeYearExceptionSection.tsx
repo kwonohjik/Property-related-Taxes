@@ -21,9 +21,14 @@
  *
  * ## ⚠️ 「선택 안 함」과 「해당 없음」은 다르다
  *
- * 미선택은 **판정 불가**로 남아 종전 동작(비과세 유지) + 경고가 된다. 배제가 확정되려면
- * 사용자가 「해당 없음」을 **명시 선택**해야 한다 — 신규 필드라 기존 저장분에 값이 없고,
- * 미입력을 미해당으로 읽으면 3년 초과 세대 전체가 갑자기 과세로 뒤집히기 때문이다.
+ * 미선택(미선언)은 「모름 → 혜택 불성립 + 확인 필요」다(2026-10-08) — 엔진은 예외 없이 **과세로 계산**하고 결과의
+ * 「판정하지 않은 부분」에 확인 안내를 남긴다. 「해당 없음」은 **명시 선언**이라 안내 없이 같은 과세다.
+ * (종전에는 미선택을 판정 불가로 두어 비과세를 유지했다 — 이 문구와 카드 안내가 그때의 설명이었다.)
+ *
+ * ## 인용·연수는 엔진 leaf를 읽는다
+ *
+ * 조문은 카드를 연 **권리의 종류**(입주권 §156의2④ · 분양권 §156의3③)로, 「권리 취득일부터 N년」의 N은 **양도일 연혁**
+ * (`rightDisposalYearsLabel`)으로 정한다. 리터럴로 적으면 분양권 세대에 입주권 조문이, 2012.6.28. 이전 양도분에 3년이 나온다.
  */
 
 import { useMemo } from "react";
@@ -33,7 +38,12 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { rightThreeYearExceptionVisible } from "@/lib/calc/right-three-year-exception-scope";
+import {
+  rightThreeYearExceptionCitations,
+  rightThreeYearExceptionCiteText,
+  rightThreeYearExceptionRightKinds,
+} from "@/lib/calc/right-three-year-exception-scope";
+import { rightDisposalYearsLabel } from "@/lib/calc/one-house-era-labels";
 import { resolve1562DeadlineYears } from "@/lib/tax-engine/data/article-156-2-completion-era";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -57,9 +67,9 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
    *    세대 보유 권리 중 **가장 먼저 취득한** 것이 기준이고(엔진도 `rights[0]`을 본다),
    *    취득일이 비어 있는 행은 「입력 중」이라 판정 대상이 아니다 — 술어가 그대로 옮겨졌다.
    */
-  const exceeded = useMemo(() => rightThreeYearExceptionVisible(form), [form]);
+  const kinds = useMemo(() => rightThreeYearExceptionRightKinds(form), [form]);
 
-  if (!exceeded) return null;
+  if (kinds.length === 0) return null;
 
   const kind = form.rightThreeYearExceptionKind;
   /**
@@ -69,14 +79,18 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
    * 카드가 떠 있다는 것은 `rightThreeYearExceptionVisible`이 양도일을 이미 읽었다는 뜻이다.
    */
   const completionYears = resolve1562DeadlineYears(new Date(form.transferDate));
+  /** 「권리 취득일부터 N년」 — 양도일 연혁(1·2·3년). 위 완성 후 기한(N=completionYears)과 다른 축이다(X2-4). */
+  const rightYears = rightDisposalYearsLabel(form.transferDate);
 
   return (
     <ToneCard
       tone="amber"
-      title="권리 취득 후 3년이 지나 양도 — 비과세 예외 선언"
+      title={`권리 취득 후 ${rightYears}이 지나 양도 — 비과세 예외 선언`}
       titleExtra={
         <>
-          <LawArticleModal legalBasis="소득세법 시행령 §156의2 ④" label="시행령 §156의2④" />
+          {rightThreeYearExceptionCitations(kinds).map((c) => (
+            <LawArticleModal key={c.legalBasis} legalBasis={c.legalBasis} label={`시행령 ${c.short}`} />
+          ))}
           <LawArticleModal legalBasis="소득세법 시행규칙 §75 ①" label="시행규칙 §75①" />
         </>
       }
@@ -84,8 +98,8 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
     >
       <p className="text-xs leading-relaxed text-amber-900 dark:text-amber-200">
         세대가 조합원입주권·분양권을 보유한 상태로 주택을 양도하면 1세대1주택 비과세가 적용되지
-        않습니다(「소득세법」 §89②). 권리를 취득한 날부터 <b>3년 이내</b>에 양도하면 예외이지만,
-        3년을 넘긴 경우에는 아래 어느 하나에 해당해야 비과세가 유지됩니다.
+        않습니다(「소득세법」 §89②). 권리를 취득한 날부터 <b>{rightYears} 이내</b>에 양도하면 예외이지만,
+        {rightYears}을 넘긴 경우에는 아래 어느 하나에 해당해야 비과세가 유지됩니다.
       </p>
 
       <RadioCardGroup
@@ -100,18 +114,18 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
             value: "new_house",
             label: "신축주택이 완성된 뒤 양도했다",
             description:
-              `완성 후 ${completionYears}년 이내 세대전원 이사 + 1년 이상 계속 거주 (시행령 §156의2④1호·2호 후단)`,
+              `완성 후 ${completionYears}년 이내 세대전원 이사 + 1년 이상 계속 거주 (시행령 ${rightThreeYearExceptionCiteText(kinds, "1호·2호 후단")})`,
           },
           {
             value: "before_completion",
             label: "신축주택이 완성되기 전에 양도했다",
             description:
-              "시행령 §156의2④2호 전단. 아직 준공되지 않았다면 완성일을 입력하지 않아도 됩니다.",
+              `시행령 ${rightThreeYearExceptionCiteText(kinds, "2호 전단")}. 아직 준공되지 않았다면 완성일을 입력하지 않아도 됩니다.`,
           },
           {
             value: "delay",
-            label: "경매·공매 등으로 3년 내 양도하지 못했다",
-            description: "3년이 되는 날 현재 매각의뢰·경매·공매 (시행규칙 §75①)",
+            label: `경매·공매 등으로 ${rightYears} 내 양도하지 못했다`,
+            description: `${rightYears}이 되는 날 현재 매각의뢰·경매·공매 (시행규칙 §75①)`,
           },
           {
             value: "none",
@@ -163,8 +177,8 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
       {kind === "delay" && (
         <div className="space-y-2">
           <FieldCard
-            label="3년이 되는 날 현재의 사유"
-            hint="권리를 취득한 날부터 3년이 되는 날을 기준으로 판단합니다(양도일 기준이 아닙니다)."
+            label={`${rightYears}이 되는 날 현재의 사유`}
+            hint={`권리를 취득한 날부터 ${rightYears}이 되는 날을 기준으로 판단합니다(양도일 기준이 아닙니다).`}
           >
             <RadioCardGroup
               name="right-disposal-delay-reason"
@@ -194,8 +208,8 @@ export function RightThreeYearExceptionSection({ form, onChange }: Props) {
 
       {kind === "" && (
         <p className="text-caption leading-relaxed text-amber-800 dark:text-amber-300">
-          선택하지 않으면 이 요건을 판정할 수 없어 <b>종전대로 계산</b>하고 결과에 확인 안내를
-          남깁니다. 해당 사항이 없다면 「어느 것에도 해당하지 않는다」를 선택하세요.
+          선택하지 않으면 예외 없이 <b>과세로 계산</b>하고 결과에 확인 안내를 남깁니다. 위에 해당하면
+          선택하고, 해당 사항이 없다면 「어느 것에도 해당하지 않는다」를 선택하세요.
         </p>
       )}
     </ToneCard>

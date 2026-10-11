@@ -30,18 +30,22 @@
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { isRightThreeYearExceeded } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { presaleRightDefinitionAcquisitionDate } from "@/lib/tax-engine/presale-right-definition-date";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
- * ⑤ §89② 3년 초과 예외 카드의 노출 조건.
+ * 3년을 넘겨 카드를 연 권리의 **종류**(조합원입주권 → §156의2④ · 분양권 → §156의3③) — 노출 술어와 같은 모집단이다.
+ *
+ * 인용은 이 종류로 고른다(엔진 `timingFrom`이 권리 종류로 `RIGHT_3YR_EXCEPTION_156_2_4`/`PRESALE_3YR_EXCEPTION_156_3_3`을 가르는 것과 같은 규칙, X2-2).
+ * 입주권과 분양권이 함께 있으면 둘 다 담는다(입주권 → 분양권 순).
  *
  * ⚠️ 취득일이 빈 권리 행은 「입력 중」이라 판정 대상이 아니다(종전 ⑤ 동작 그대로).
  */
-export function rightThreeYearExceptionVisible(form: TransferFormData): boolean {
-  if (!isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) return false;
-  if (!form.transferDate) return false;
+export function rightThreeYearExceptionRightKinds(form: TransferFormData): ("redevelopment_right" | "presale_right")[] {
+  if (!isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) return [];
+  if (!form.transferDate) return [];
   const transferDate = new Date(form.transferDate);
-  return (form.presaleRights ?? []).some(
+  const exceeded = (form.presaleRights ?? []).filter(
     (r) =>
       r.acquisitionDate &&
       // 기존주택 원조합원 입주권은 §156의2④·시행규칙 §75①의 대상이 아니다 — §155①로 판정한다.
@@ -58,4 +62,41 @@ export function rightThreeYearExceptionVisible(form: TransferFormData): boolean 
         transferDate,
       }),
   );
+  const kinds: ("redevelopment_right" | "presale_right")[] = [];
+  if (exceeded.some((r) => r.type === "redevelopment_right")) kinds.push("redevelopment_right");
+  if (exceeded.some((r) => r.type === "presale_right")) kinds.push("presale_right");
+  return kinds;
+}
+
+/**
+ * ⑤ §89② 3년 초과 예외 카드의 노출 조건.
+ *
+ * ⚠️ 취득일이 빈 권리 행은 「입력 중」이라 판정 대상이 아니다(종전 ⑤ 동작 그대로).
+ */
+export function rightThreeYearExceptionVisible(form: TransferFormData): boolean {
+  return rightThreeYearExceptionRightKinds(form).length > 0;
+}
+
+/** 카드 법령 모달용 — 권리 종류별 3년 초과 예외 조문(엔진 상수 그대로)과 그 약식 표기(`§156의2④`). */
+export function rightThreeYearExceptionCitations(
+  kinds: readonly ("redevelopment_right" | "presale_right")[],
+): { legalBasis: string; short: string }[] {
+  return kinds.map((k) => {
+    const legalBasis = k === "presale_right" ? TRANSFER.PRESALE_3YR_EXCEPTION_156_3_3 : TRANSFER.RIGHT_3YR_EXCEPTION_156_2_4;
+    // 「소득세법 시행령 §156의2 ④」 → 「§156의2④」 — 표기를 따로 적지 않고 상수에서 뽑는다.
+    return { legalBasis, short: legalBasis.replace("소득세법 시행령 ", "").replace(/\s/g, "") };
+  });
+}
+
+/**
+ * 인용 문구 — 호·후단 접미사(`1호·2호 후단`)가 있으면 항마다 붙인다. 단일 종류면 종전 문구(`§156의2④1호·2호 후단`)와 같고,
+ * 둘이 섞이면 `§156의2④·§156의3③의 1호·2호 후단`으로 적는다.
+ */
+export function rightThreeYearExceptionCiteText(
+  kinds: readonly ("redevelopment_right" | "presale_right")[],
+  suffix = "",
+): string {
+  const shorts = rightThreeYearExceptionCitations(kinds).map((c) => c.short);
+  if (shorts.length <= 1 || !suffix) return `${shorts.join("·")}${suffix}`;
+  return `${shorts.join("·")}의 ${suffix}`;
 }

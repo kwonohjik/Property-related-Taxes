@@ -37,6 +37,7 @@ import {
 } from "../transfer-tax-exemption-requirements";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
 import { deadlineHoldingUnmetReason } from "./deadline-holding";
+import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
 import { deadlineEndFrom, isWithinDeadline } from "../civil-period";
 import type { OneHouseJudgeInput, OneHouseUnmetException } from "./types";
@@ -289,9 +290,8 @@ function pushBaseRequirementReason(
 ): void {
   if (reasons.length > 0) return;
   if (meetsOneHouseHoldingResidence(input, rule)) return;
-  reasons.push(
-    `${shortArticle(TRANSFER.ONE_HOUSE_REQUIREMENT)}① 보유 2년(취득 당시 조정대상지역이면 거주 2년) 요건을 충족하지 않습니다.`,
-  );
+  // 연수·거주 기준은 양도일 연혁이다(X2-3) — 같은 화면의 요건 검토표와 같은 leaf를 읽는다.
+  reasons.push(`${baseRequirementPhrase(input.transferDate, rule)} 요건을 충족하지 않습니다.`);
 }
 
 /**

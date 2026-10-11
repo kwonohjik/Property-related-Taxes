@@ -411,6 +411,17 @@ export type OneHouseJudgment = {
    */
   article89Clause2?: Article89Clause2Result;
   /**
+   * §89② 배제(`article89Clause2.status === "excluded"`)일 때만 싣는다 — §89②를 **무시했다면** 본체 판정이 비과세·부분과세였는가.
+   * 3년 경과 예외 미선언·확인 필요 고지를 「그 사실이 결론을 가를 때만」 내려는 계산기 경고(`article89Clause2Notices`)가 읽는다(G5-8).
+   * 판정 메뉴의 `pending`·`undetermined` 게이트가 쓰는 `coreWouldPass`와 같은 값이다.
+   */
+  coreWouldPass?: boolean;
+  /**
+   * §156의2⑬ · §156의3⑩ 사후관리(추징) 고지 — 자기선언(③④·⑤)으로 비과세를 받았을 때만 싣는다(G5-7).
+   * 계산기 경고와 같은 leaf(`article89Clause2PostManagementNotice`)가 만든 같은 문장이고, 비과세를 거두면(`revokeOneHouseExemption`) 함께 지운다.
+   */
+  postManagementNotices?: string[];
+  /**
    * 적용된 특례 — **빈 배열은 「없음」을 뜻한다**(「아직 안 만듦」이 아니다).
    *
    * `checkExemptionCore`의 비과세·부분과세 반환 지점이 채우고, `checkExemption`이

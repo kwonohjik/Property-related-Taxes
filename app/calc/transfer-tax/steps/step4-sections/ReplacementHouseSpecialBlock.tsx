@@ -11,6 +11,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { completionDeadlineYearsLabel } from "@/lib/calc/one-house-era-labels";
+import { POST_MANAGEMENT_FILING } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 
 export function ReplacementHouseSpecialBlock({
   form,
@@ -113,10 +114,10 @@ export function ReplacementHouseSpecialBlock({
         {/* 사후관리 경고 카드 (§156의2⑬) */}
         <div className="rounded-lg border border-rose-300 bg-rose-50/60 px-4 py-3 text-xs leading-relaxed text-rose-900 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-200">
           <p className="font-semibold text-rose-800 dark:text-rose-300">사후관리 주의 (소득세법 시행령 §156의2⑬)</p>
+          {/* 추징 사유는 「신축주택 양도」가 아니라 ⑤2호 요건(이사·1년 계속 거주)을 갖추지 못하게 된 것이고, 기한은 사유 발생 달 말일부터 2개월이다(§156의2⑬ <개정 2013.2.15>). 문구는 계산기·판정 메뉴 고지와 같은 leaf다(S15-8). */}
           <p className="mt-1">
-            신축주택 완성 후 {completionYears} 내 세대전원 이사·1년 이상 거주하지 못하고
-            신축주택을 양도하면 비과세받은 세액이 추징됩니다.
-            추징세액은 해당 사유가 발생한 과세연도에 신고·납부해야 합니다.
+            신축주택 완성 후 {completionYears} 내 세대전원 이사·1년 이상 계속 거주 요건(⑤2호)을 갖추지 못하게
+            되면 {POST_MANAGEMENT_FILING}.
           </p>
         </div>
       </ToggleCard>

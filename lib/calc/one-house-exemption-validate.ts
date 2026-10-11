@@ -28,7 +28,8 @@ import { validateRentalHousingException } from "./transfer-tax-validate-rental-e
 import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
-import { rightThreeYearExceptionVisible } from "./right-three-year-exception-scope";
+import { rightThreeYearExceptionCiteText, rightThreeYearExceptionRightKinds } from "./right-three-year-exception-scope";
+import { rightDisposalYearsLabel } from "./one-house-era-labels";
 import { memberOriginErrors } from "./right-member-origin-scope";
 import { originalMemberFactErrors } from "./right-member-origin-scope";
 import { inheritedPresaleRightFactErrors } from "./inherited-presale-right-facts";
@@ -280,12 +281,15 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
    *    상태에서 **채울 칸도 해제할 컨트롤도 없는 영구 차단**이 났다
    *    (`transfer-tax-validate.ts`의 같은 블록 주석에 그 전례가 기록돼 있다).
    */
-  if (rightThreeYearExceptionVisible(form)) {
+  const exceptionRightKinds = rightThreeYearExceptionRightKinds(form);
+  if (exceptionRightKinds.length > 0) {
+    // 조문은 카드를 연 권리의 종류(입주권 §156의2④ · 분양권 §156의3③), 연수는 양도일 연혁 — 카드와 같은 leaf를 읽는다(X2-2 · X2-4).
+    const rightYears = rightDisposalYearsLabel(form.transferDate);
     if (form.rightThreeYearExceptionKind === "new_house" && !form.rightNewHouseCompletionDate) {
       errors.push(
         err(
           "rightNewHouseCompletionDate",
-          "3년 초과 예외(시행령 §156의2④): 신축주택 완성일을 입력하세요.",
+          `${rightYears} 초과 예외(시행령 ${rightThreeYearExceptionCiteText(exceptionRightKinds)}): 신축주택 완성일을 입력하세요.`,
         ),
       );
     }
@@ -293,7 +297,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(
         err(
           "rightDisposalDelayReason",
-          "3년 초과 예외(시행규칙 §75①): 3년이 되는 날 현재의 사유를 선택하세요.",
+          `${rightYears} 초과 예외(시행규칙 §75①): ${rightYears}이 되는 날 현재의 사유를 선택하세요.`,
         ),
       );
     }

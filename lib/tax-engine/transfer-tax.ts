@@ -51,7 +51,7 @@ import {
   surchargeSellingDistrictUndeclared,
 } from "./one-house/designated-district-undeclared";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
-import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
+import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { meetsTable2ResidenceRequirement, meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
@@ -267,6 +267,11 @@ export function calculateTransferTax(
       exemptionResult.article89Clause2,
       exemptionResult.isExempt || exemptionResult.isPartialExempt,
       input.transferDate,
+      {
+        // 미선언·확인 필요 고지는 선언이 비과세 또는 중과 배제를 바꿀 때만(G5-8) — 판정 메뉴의 `coreWouldPass` 게이트와 같은 값.
+        coreWouldPass: exemptionResult.coreWouldPass === true,
+        surchargeDeclarationMatters: surchargeDeclarationMatters(input.transferDate, multiHouseSurchargeResult?.surchargeApplicable),
+      },
     ),
   );
 

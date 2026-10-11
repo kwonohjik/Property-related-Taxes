@@ -45,5 +45,7 @@ export function revokeOneHouseExemption(judgment: OneHouseJudgment): OneHouseJud
     undetermined: judgment.undetermined.filter((u) => !SETTLED_PREMISE_UNDETERMINED_IDS.has(u.id)),
     legalBasis: deriveLegalBasis(appliedExceptions, judgment.pending),
     requirementReview: undefined,
+    // 사후관리(추징)는 받은 비과세가 전제다 — 거두면 고지도 없다(G5-7).
+    postManagementNotices: undefined,
   };
 }

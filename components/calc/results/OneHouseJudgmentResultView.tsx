@@ -226,10 +226,29 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         >
           <p className="text-sm" data-testid="one-house-final-house-restart">
             {judgment.finalOneHouseRestart.description}
-            <span className="ml-2">
-              <LawArticleModal legalBasis={judgment.finalOneHouseRestart.legalBasis} label="영 §154⑤ 단서" />
+            {/*
+              근거 조문은 링크 없이 적는다(X2-7) — 재기산 단서는 2022.5.31.에 삭제돼 현행 §154⑤를 열면 무관한 용도변경 단서
+              (2024.2.29. 개정)가 강조된다. 삭제 사실은 엔진 leaf(`legalBasis`)가 이미 말하므로 그대로 읽는다.
+            */}
+            <span className="ml-2 text-micro text-muted-foreground" data-testid="one-house-final-house-restart-basis">
+              {judgment.finalOneHouseRestart.legalBasis}
             </span>
           </p>
+        </ToneCard>
+      )}
+
+      {/*
+        ── §156의2⑬ · §156의3⑩ 사후관리(추징) (G5-7) ──
+        🔑 ④·§156의3③ 자기선언(특히 완성 전 양도)과 ⑤ 대체주택으로 받은 비과세는 장래 요건이 걸린 조건부다. 문장은 계산기 경고와
+           같은 엔진 leaf(`article89Clause2PostManagementNotice`)가 만든 것을 그대로 읽는다(역산·복제 금지). 구 응답엔 필드가 없다.
+      */}
+      {(judgment.postManagementNotices ?? []).length > 0 && (
+        <ToneCard tone="rose" sectionNum={nextNo()} title="사후관리(추징) 안내">
+          {(judgment.postManagementNotices ?? []).map((n, i) => (
+            <p key={`post-management-${i}`} className="text-sm" data-testid="one-house-post-management-notice">
+              {n}
+            </p>
+          ))}
         </ToneCard>
       )}
 

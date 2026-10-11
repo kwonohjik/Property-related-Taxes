@@ -34,6 +34,7 @@ import { deadlineEndFrom, deadlineFields, isWithinDeadline } from "../civil-peri
 import { TRANSFER } from "../legal-codes";
 import { calculateHoldingPeriod } from "../tax-utils";
 import { resolveMergeExemptionYears, type MergeExemptionKind } from "../data/merge-exemption-era";
+import { resolve1562Clause3Years } from "../data/article-156-2-completion-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import { designatedDistrictUndeclared, type DistrictDeclarationRelevance } from "./designated-district-undeclared";
@@ -173,7 +174,8 @@ export function collectPendingConditions(
     pending.push({
       id: "156-2-3-right-three-year",
       kind: "transfer_by",
-      description: `주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 ${exempt}`,
+      // N은 양도일 연혁(1·2·3년) — 판정(`timingFrom`)이 쓰는 leaf와 같은 값이다(X2-4).
+      description: `주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 ${resolve1562Clause3Years(input.transferDate)}년 이내에 종전주택을 양도해야 ${exempt}`,
       deadline: article89Clause2.deadline,
       ...(article89Clause2.deadlineNote ? { deadlineNote: article89Clause2.deadlineNote } : {}),
       legalBasis: TRANSFER.RIGHT_HOLDING_EXCLUSION,
@@ -381,6 +383,7 @@ export function collectPendingConditions(
 export function undeclaredThreeYearExceptionUndetermined(
   article89Clause2: Article89Clause2Result,
   coreWouldPass: boolean,
+  transferDate: Date,
 ): OneHouseUndetermined[] {
   const articles = article89Clause2.status === "excluded" ? article89Clause2.undeclaredArticles : undefined;
   if (!coreWouldPass || !articles?.length) return [];
@@ -388,7 +391,7 @@ export function undeclaredThreeYearExceptionUndetermined(
     {
       id: "89-2-three-year-exception-undeclared",
       reason:
-        `권리 취득일부터 3년이 지나 양도했고 그 예외(${articles.join(" · ")}) 해당 여부를 선언하지 않아 예외 없이 과세로 ` +
+        `권리 취득일부터 ${resolve1562Clause3Years(transferDate)}년이 지나 양도했고 그 예외(${articles.join(" · ")}) 해당 여부를 선언하지 않아 예외 없이 과세로 ` +
         "판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요.",
     },
   ];

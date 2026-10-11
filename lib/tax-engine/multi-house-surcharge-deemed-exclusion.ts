@@ -164,8 +164,23 @@ function typeOf(deemed: DeemedOneHouseBasis, input: MultiHouseSurchargeInput): E
   }
 }
 
+/**
+ * 합가 중첩 의제의 배제 근거 — 중과 주택 수 3 이상이면 §167의3①13호, 2이면 형제 합가 분기와 같은 §167의10①15호
+ * (2023.2.28. 전은 구 5호·6호). §167의3①은 「주택을 3개 이상」 세대 조항이고 §167의3①13호는 2021.2.17.에 신설됐다(G8-5).
+ */
+function overlapBasis(marriage: boolean, oldRule: boolean, threePlus: boolean): string {
+  if (threePlus) return MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS;
+  if (marriage) return oldRule ? MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS_OLD : MULTI_HOUSE.MARRIAGE_MERGE_2HOUSE_BASIS;
+  return oldRule ? MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS_OLD : MULTI_HOUSE.PARENTAL_CARE_MERGE_2HOUSE_BASIS;
+}
+
 /** 2주택(15호·개정 전 호) 배제 사유 — 의제 근거 항마다 라벨과 근거 조문이 다르다. */
-function twoHouseReason(input: MultiHouseSurchargeInput, mergeUnderOldRule: boolean): ExclusionReason {
+function twoHouseReason(
+  input: MultiHouseSurchargeInput,
+  mergeUnderOldRule: boolean,
+  /** 중과 주택 수 3 이상의 합가 중첩(F-1) — §167의3①13호. 2주택이면 형제 합가 분기와 같은 15호(구 5·6호)다(G8-5). */
+  overlapThreePlus = false,
+): ExclusionReason {
   const before15 = input.transferDate < MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE;
   switch (input.deemedOneHouseBy155) {
     case "rural_house":
@@ -205,7 +220,7 @@ function twoHouseReason(input: MultiHouseSurchargeInput, mergeUnderOldRule: bool
         type: marriage ? "marriage_merge" : "parental_care_merge",
         detail:
           `${marriage ? "혼인일" : "동거봉양 합가일"}(${d}) ${years}년 내 먼저 양도 + 일시적 2주택(§155①) 중첩 — ` +
-          `1세대1주택 의제 중과 배제 (${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS})`,
+          `1세대1주택 의제 중과 배제 (${overlapBasis(marriage, mergeUnderOldRule, overlapThreePlus)})`,
       };
     }
     case "marriage_merge": {
@@ -285,7 +300,7 @@ export function resolveDeemedSurchargeExclusion(
         ? MULTI_HOUSE.HOUSE_RIGHT_ONE_EACH_DEEMED_BASIS
         : MULTI_HOUSE.HOUSE_RIGHT_3PLUS_DEEMED_BASIS;
   // 합가 중첩(F-1)은 종전 문구를 그대로 둔다(3주택 13호 — 종전 anchor가 이 문장을 본다).
-  if (clause.kind === "three_plus" && isOverlap(deemed)) return twoHouseReason(input, false);
+  if (clause.kind === "three_plus" && isOverlap(deemed)) return twoHouseReason(input, false, true);
   return { type: typeOf(deemed, input), detail: `${mergeAwareLabel(input)} — 중과 배제 (${basis})` };
 }
 
