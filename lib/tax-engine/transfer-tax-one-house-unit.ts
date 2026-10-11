@@ -16,8 +16,14 @@ import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 
 export interface OneHouseUnit {
   houseIdx: number;
+  /** 배율 이내로 확인된 부수토지 카드 — 비과세·표2 대상 */
   landIdxs: number[];
-  /** §89①3호 괄호 — 주택 + 배율 이내 부수토지 양도가액 합계 */
+  /**
+   * 12억 판정·안분 분모의 합계액에만 드는 카드 — 배율 **초과**분(`appurtenant_excess`)과 면적이 없어 배율 이내인지 판정하지 못한
+   * 부수토지 선언 카드(#18). 비과세·표2 대상은 아니다(초과분은 비사업용 토지, 판정 불가는 «모름 = 혜택 불성립»).
+   */
+  valuationOnlyIdxs: number[];
+  /** §89①3호 괄호 — 주택 + 부수토지(배율 초과분·판정 불가 카드 포함) 양도가액 합계 */
   combinedTransferPrice: number;
 }
 
@@ -28,24 +34,29 @@ export function resolveOneHouseUnit(
 ): OneHouseUnit | undefined {
   const houseIdxs = items.flatMap((it, i) => (it.oneHouseUnitRole === "house" ? [i] : []));
   const landIdxs = items.flatMap((it, i) => (it.oneHouseUnitRole === "appurtenant_land" ? [i] : []));
+  const excessIdxs = items.flatMap((it, i) => (it.oneHouseUnitRole === "appurtenant_excess" ? [i] : []));
   /**
-   * 부수토지로 선언됐으나 배율 이내인지 **판정하지 못한** 카드(토지 면적·정착면적 미입력) — 단위에 넣지 않는다
-   * (초과분이 비과세로 새지 않게). 조용히 일반 토지로 계산하지 않고 알린다.
-   * 배율 초과 카드는 route가 일체과세 컨텍스트를 떼어 내므로(`primaryContextForCompanionRate: undefined`) 여기 걸리지 않는다.
+   * 부수토지로 선언됐으나 배율 이내인지 **판정하지 못한** 카드(토지 면적·정착면적 미입력) — 비과세·표2 단위에는 넣지 않는다
+   * (초과분이 비과세로 새지 않게). 조용히 일반 토지로 계산하지 않고 알린다. 다만 12억 판정·안분 분모의 합계액에는 넣는다(#18 —
+   * 가액을 모르는 것이 아니라 면적을 몰라 비과세 대상인지만 모른다. 빼면 주택이 토지 없이 홀로 판정돼 고가주택이 비과세로 샌다).
+   * 배율 초과 카드는 route가 일체과세 컨텍스트를 떼어 내므로(`primaryContextForCompanionRate: undefined`) 여기 걸리지 않고
+   * `appurtenant_excess`로 따로 들어온다.
    */
-  const unverified = items.filter(
-    (it) =>
-      it.oneHouseUnitRole === undefined &&
-      it.propertyType === "land" &&
-      it.landNature === "appurtenant_to_housing" &&
-      it.primaryContextForCompanionRate !== undefined,
+  const unverifiedIdxs = items.flatMap((it, i) =>
+    it.oneHouseUnitRole === undefined &&
+    it.propertyType === "land" &&
+    it.landNature === "appurtenant_to_housing" &&
+    it.primaryContextForCompanionRate !== undefined
+      ? [i]
+      : [],
   );
-  if (houseIdxs.length === 1 && items[houseIdxs[0]].isOneHousehold && unverified.length > 0) {
+  if (houseIdxs.length === 1 && items[houseIdxs[0]].isOneHousehold && unverifiedIdxs.length > 0) {
     warnings.push(
-      "주택부수토지로 선언한 토지의 면적(토지 면적·건물 정착면적)이 없어 배율 이내인지 판정하지 못했습니다 — 1세대1주택 비과세(소득세법 §89①3호)를 적용하지 않고 일반 토지로 계산했습니다.",
+      "주택부수토지로 선언한 토지의 면적(토지 면적·건물 정착면적)이 없어 배율 이내인지 판정하지 못했습니다 — 1세대1주택 비과세(소득세법 §89①3호)를 적용하지 않고 일반 토지로 계산했습니다. 고가주택(12억 초과) 판정에는 그 토지 가액을 합산했습니다.",
     );
   }
-  if (houseIdxs.length !== 1 || landIdxs.length === 0) return undefined;
+  const valuationOnlyIdxs = [...excessIdxs, ...unverifiedIdxs];
+  if (houseIdxs.length !== 1 || (landIdxs.length === 0 && valuationOnlyIdxs.length === 0)) return undefined;
   const members = [houseIdxs[0], ...landIdxs];
   /**
    * 지분(`totalPropertyTransferPrice`)·부담부증여(§159 분모)는 12억 분모가 이미 다른 의미로 쓰인다 —
@@ -64,8 +75,8 @@ export function resolveOneHouseUnit(
     );
     return undefined;
   }
-  const combinedTransferPrice = members.reduce((s, i) => s + items[i].transferPrice, 0);
-  return { houseIdx: houseIdxs[0], landIdxs, combinedTransferPrice };
+  const combinedTransferPrice = [...members, ...valuationOnlyIdxs].reduce((sum, i) => sum + items[i].transferPrice, 0);
+  return { houseIdx: houseIdxs[0], landIdxs, valuationOnlyIdxs, combinedTransferPrice };
 }
 
 /** 단위 카드의 12억 판정·안분 분모를 합계액으로 둔다. */

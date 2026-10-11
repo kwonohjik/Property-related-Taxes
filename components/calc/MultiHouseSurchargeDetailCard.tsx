@@ -67,6 +67,8 @@ const EXCLUSION_REASON_LABEL: Record<string, string> = {
   inherited_general_house: "상속주택 보유 일반주택 1세대1주택 의제 (§155②)",
   long_term_rental_residence: "장기임대주택 보유 거주주택 1세대1주택 의제 (§155⑳)",
   special_act_house_exclusion: "조특법 감면주택 소유주택 제외 — 1세대1주택 의제",
+  cultural_heritage_house: "문화유산 주택 보유 일반주택 1세대1주택 의제 (§155⑥)",
+  unavoidable_outside_capital_house: "수도권 밖 부득이한 사유 주택 보유 일반주택 1세대1주택 의제 (§155⑧)",
   right_holding_one_house: "주택과 조합원입주권·분양권 보유 1세대1주택 의제 (§156의2·§156의3)",
   long_holding_10y_until_2020_06_30: "보유 10년 이상 주택 2020.6.30.까지 양도",
 };

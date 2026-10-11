@@ -112,6 +112,8 @@ export function calcMixedUseTransferTax(
     isOneHouseExempt,
     surchargeDeemedOneHouseBy155,
     surchargeDeemedOneHouseSource,
+    surchargeDeemedRestsOnInheritedExclusion,
+    surchargeUnavoidableOutsideCapitalSlot,
     rightDeemingCitedByOldClause1,
     new994Detail: mixedNew994Detail,
     unsold989Detail: mixedUnsold989Detail,
@@ -146,6 +148,9 @@ export function calcMixedUseTransferTax(
             // E-14d — §155②③(상속주택 + 일반주택) 경로(`inherited_general_house`)도 담는다.
             deemedOneHouseBy155: surchargeDeemedOneHouseBy155,
             deemedOneHouseSource: surchargeDeemedOneHouseSource,
+            deemedRestsOnInheritedExclusion: surchargeDeemedRestsOnInheritedExclusion,
+            unavoidableOutsideCapitalHouse:
+              surchargeUnavoidableOutsideCapitalSlot ?? asset.multiHouse.unavoidableOutsideCapitalHouse,
             // E-7 — §156의2·§156의3 의제의 구 §167의11①1호 인용 범위(단건 `runMultiHouseSurchargeStep`과 같은 값).
             rightDeemingCitedByOldClause1,
             // E-14e — 구 §167의10①8호(2023.2.28. 전 양도분). 단건과 같은 leaf · 실제 소유 주택 수(조심2021중1803).

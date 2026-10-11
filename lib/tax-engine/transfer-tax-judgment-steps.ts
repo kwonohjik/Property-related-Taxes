@@ -34,6 +34,7 @@ import {
   surcharge15HouseCount,
   inheritedGeneralHouseSurchargeBasis,
   specialActHouseExclusionBasis,
+  culturalOrUnavoidableDeemingBasis,
 } from "./transfer-tax-house-exclusion-step";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
@@ -80,7 +81,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
   workingInput: TransferTaxInput,
   parsedRates: ParsedRates,
   generalHouseAcquisitionDate?: Date,
-): { basis: DeemedOneHouseBasis; source?: string; citedByOldClause1?: boolean } | undefined {
+): { basis: DeemedOneHouseBasis; source?: string; citedByOldClause1?: boolean; restsOnInheritedExclusion?: boolean } | undefined {
   // 🔴 주택 수 제외는 번역 **전** 원본을 본다 — 상속주택 제외(E-8)가 입주권 취득일과 준공일을 따로 받는다.
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
   const inheritedExcluded = ex.inheritedExclusion.excludedCount;
@@ -124,15 +125,32 @@ export function resolveSurchargeDeemedOneHouseDetail(
     },
     parsedRates.oneHouseSpecialRules,
   );
-  if (deemed) return { basis: deemed };
+  // ②③ 상속 제외 뒤 ⑦(농어촌)·⑥·⑧이 겹친 2중첩은 해석 미확보 확인 필요를 단다(#16 — `overlap-notice.ts`).
+  const restsOnInherited = inheritedExcluded > 0;
+  if (deemed) return { basis: deemed, ...(restsOnInherited && deemed === "rural_house" ? { restsOnInheritedExclusion: true } : {}) };
   const inherited = inheritedGeneralHouseSurchargeBasis({
     isOneHousehold: workingInput.isOneHousehold,
     houseCount: count,
     inheritedExcludedCount: inheritedExcluded,
     specialActExcludedCount: ex.specialActExcludedCount,
+    specialActVerified15Count: ex.specialActVerified15Count,
     transferDate: workingInput.transferDate,
   });
   if (inherited) return { basis: inherited };
+  // #16(G8-3) — 상속·조특법 제외로 2주택이 된 세대의 §155⑥·⑧ 의제. 비과세 E-3.6·E-3.7과 같은 술어다.
+  const culturalOrUnavoidable = culturalOrUnavoidableDeemingBasis({
+    isOneHousehold: workingInput.isOneHousehold,
+    houseCount: count,
+    rawHouseCount: workingInput.householdHousingCount,
+    inheritedExcludedCount: inheritedExcluded,
+    specialActExcludedCount: ex.specialActExcludedCount,
+    transferDate: workingInput.transferDate,
+    culturalHeritageHouse: workingInput.culturalHeritageHouse,
+    unavoidableOutsideCapitalHouse: workingInput.unavoidableOutsideCapitalHouse,
+  });
+  if (culturalOrUnavoidable) {
+    return { basis: culturalOrUnavoidable, ...(restsOnInherited ? { restsOnInheritedExclusion: true } : {}) };
+  }
   // E-14a — 확인된 조특법 제외만으로 양도 주택 하나가 남았다(상속 제외와 섞이면 열지 않는다 — 확인 필요).
   const special = specialActHouseExclusionBasis({
     isOneHousehold: workingInput.isOneHousehold,
@@ -313,6 +331,24 @@ function noRosterTwoHouseDeemingHouses(
 }
 
 /**
+ * 영 §167의10①4호 슬롯(`qualifiesUnavoidableOutsideCapital`)에 넘길 입력 — 주택 수를 §155②③·조특법 제외 **후** 값으로 바꾼다
+ * (#16 · `surcharge15HouseCount` — ① 요소와 같은 수). 제외가 없으면 입력 그대로다(종전 동작·참조 동일).
+ * 중과 엔진 4호 분기가 「다른 효과 주택이 상속주택이면」 건너뛰는 가드를 따로 건다(`multi-house-surcharge-exclusion.ts`).
+ */
+export function surchargeSlotInput(workingInput: TransferTaxInput, generalHouseAcquisitionDate?: Date): TransferTaxInput {
+  const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
+  const inheritedExcluded = ex.inheritedExclusion.excludedCount;
+  const count = surcharge15HouseCount(
+    workingInput.householdHousingCount,
+    inheritedExcluded,
+    ex.specialActExcludedCount,
+    ex.specialActVerified15Count,
+  );
+  if (count === workingInput.householdHousingCount) return workingInput;
+  return { ...workingInput, householdHousingCount: count, inheritedHouseExclusionCount: inheritedExcluded };
+}
+
+/**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
  * 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
  * (확인된 조특법 제외 주택 포함 — `noRosterTwoHouseDeemingHouses`)가 서면 입력된 사실로 행을 구성해 판정한다.
@@ -355,9 +391,13 @@ export function runMultiHouseSurchargeStep(
       //   E-14 — 주택 수는 원시값이 아니라 비과세 정본의 값이다(`resolveSurchargeDeemedOneHouse`).
       deemedOneHouseBy155: deemed?.basis,
       deemedOneHouseSource: deemed?.source,
+      deemedRestsOnInheritedExclusion: deemed?.restsOnInheritedExclusion,
       // 영 §167의10①4호 — §155⑧ 수도권 밖 부득이 주택. 15호와 **별개 호**라 슬롯이 다르다.
       //   요건(2주택·해소일부터 3년) 판정은 비과세와 같은 정본을 쓴다.
-      unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital(workingInput),
+      //   #16 — 주택 수는 비과세 E-3.7과 **같은 제외 후 값**이다(종전에는 원시 수라 ③+⑧ 공동상속 소수지분 세대에서 늘 false).
+      unavoidableOutsideCapitalHouse: qualifiesUnavoidableOutsideCapital(
+        surchargeSlotInput(workingInput, generalHouseAcquisitionDate),
+      ),
       // E-14e·f — 2023.2.28. 전 양도분의 구 호(8호 · §167의11①1호). 판정은 `data/surcharge-old-clauses-era.ts`.
       //   8호의 「1주택을 소유한 1세대」는 실제 소유 주택 수다(조심2021중1803) — §155②③·조특법 제외 전 값.
       oldClause8TemporaryTwoHouse: qualifiesOldClause8TemporaryTwoHouse({

@@ -132,7 +132,7 @@ describe("F-13 주택 + 배율 이내 부수토지 = 1세대1주택 단위", () 
     expect(a.totalTax).toBe(single(1_400_000_000));
   });
 
-  it("F13-3 Q-2 배율 초과 분리 — 한도 내 카드만 단위(합 12.4억) · 초과 카드는 비사업용 토지", async () => {
+  it("F13-3 Q-2 배율 초과 분리 — 한도 내 카드는 비과세·표2 단위, 초과 카드는 비사업용 토지 · 12억 판정 합계는 초과분 포함 14억(#18)", async () => {
     const a = await post({ ...primary(1_000_000_000, 400_000_000), companionAssets: [land(400_000_000, { areaM2: 500 })] });
     expect(byId(a, "c1__excess").rateGroup).toBe("non_business_land");
     expect(byId(a, "c1__appurtenant").rateGroup).not.toBe("non_business_land");
@@ -140,7 +140,9 @@ describe("F-13 주택 + 배율 이내 부수토지 = 1세대1주택 단위", () 
     // 물려받아 표2 60%(공제 48,000,000)를 받은 값이었다. 표2는 「1세대 1주택(이에 딸린 토지 포함)에 해당하는 자산」 전용이고 배율 초과분은
     // 주택부수토지가 아니므로(재산세과-791) 표1 24%(공제 19,200,000)다 — 같은 사실의 단건 G-2 초과분과 같은 값이다.
     expect(byId(a, "c1__excess").longTermHoldingDeduction).toBe(19_200_000);
-    expect(a.totalTax).toBe(15_996_200);
+    // #18(G… S08-7) — 12억 판정·안분 분모의 합계액에 배율 초과분 가액을 넣는다(법문 괄호 «주택 및 이에 딸린 토지의 … 합계액»에 배율 한정이 없다).
+    // 합계 12.4억 → 14억: 안분 비율 (12.4−12)/12.4 → (14−12)/14라 주택분 과세가 늘어 15,996,200 → 19,927,913.
+    expect(a.totalTax).toBe(19_927_913);
   });
 
   it("F13-4 Q-3 부수토지를 주택보다 늦게 취득해 부수토지로서 2년 미만 → 그 토지는 비과세 아님", async () => {
@@ -202,5 +204,30 @@ describe("F-13 주택 + 배율 이내 부수토지 = 1세대1주택 단위", () 
     const l = byId(a, "c1").carryoverTaxationDetail!;
     expect(l.exclusionReason).toBe("one_house_exemption");
     expect(l.adoptedScenario).toBe("B");
+  });
+});
+
+describe("#18 12억 판정·안분 분모 — 배율 초과 부수토지 가액도 합계에 넣는다 (초과 토지는 계속 비과세 제외)", () => {
+  it("F13-8 주택 8억 + 토지 6억(500㎡ — 한도 300㎡ 초과 200㎡) → 합계 14억이라 주택·한도 내 토지분이 부분과세 (수정 전 합 11.6억 → 비과세)", async () => {
+    const a = await post({ ...primary(800_000_000, 600_000_000), companionAssets: [land(600_000_000, { areaM2: 500 })] });
+    expect(byId(a, "primary").isExempt).toBe(false);
+    expect(byId(a, "c1__appurtenant").isExempt).toBe(false);
+    expect(byId(a, "c1__excess").rateGroup).toBe("non_business_land");
+    expect(a.totalTax).toBe(31_005_069);
+  });
+
+  it("F13-9 긍정 짝 — 초과분을 넣어도 합계가 12억 이하면(주택 6억 + 토지 4억 500㎡) 주택·한도 내 토지는 비과세 그대로", async () => {
+    const a = await post({ ...primary(600_000_000, 400_000_000), companionAssets: [land(400_000_000, { areaM2: 500 })] });
+    expect(byId(a, "primary").isExempt).toBe(true);
+    expect(byId(a, "c1__appurtenant").isExempt).toBe(true);
+    expect(byId(a, "c1__excess").rateGroup).toBe("non_business_land");
+  });
+
+  it("F13-10 면적 없는 부수토지 선언 카드도 12억 합계에 든다(비과세는 계속 제외) — 주택 8억 + 토지 6억(면적 없음) → 주택 부분과세", async () => {
+    const a = await post({ ...primary(800_000_000, 600_000_000), companionAssets: [land(600_000_000, { areaM2: undefined })] });
+    expect(byId(a, "primary").isExempt).toBe(false);
+    expect(byId(a, "c1").isExempt).toBe(false);
+    expect((a.warnings ?? []).some((w) => w.includes("고가주택(12억 초과) 판정에는 그 토지 가액을 합산"))).toBe(true);
+    expect(a.totalTax).toBe(81_879_285);
   });
 });

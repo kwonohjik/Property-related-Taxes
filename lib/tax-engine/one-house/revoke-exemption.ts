@@ -1,6 +1,7 @@
 import { FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID } from "./era-undetermined";
 import { deriveLegalBasis } from "./legal-basis";
 import { REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./pending";
+import { INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID } from "./overlap-notice";
 import type { OneHouseJudgment } from "./types";
 
 /**
@@ -10,6 +11,7 @@ import type { OneHouseJudgment } from "./types";
 const SETTLED_PREMISE_UNDETERMINED_IDS: ReadonlySet<string> = new Set([
   FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
   REVERSE_DOUBLE_MERGE_UNVERIFIED_ID,
+  INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID,
 ]);
 
 /**

@@ -16,6 +16,7 @@ import type { SpecialHouseExclusionResolution } from "./transfer-reductions/unso
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE } from "./legal-codes";
+import { qualifiesCulturalHeritageHouse, qualifiesUnavoidableOutsideCapital } from "./transfer-tax-exemption-holding";
 
 /**
  * §155④⑤ 합가 전 구성 판정(`resolveMergeComposition`, PR-3)이 명부에서 **빼고** 셀 행 id를
@@ -234,15 +235,62 @@ export function inheritedGeneralHouseSurchargeBasis(p: {
   houseCount: number;
   inheritedExcludedCount: number;
   specialActExcludedCount: number;
+  /**
+   * 그중 **해석으로 확인된** 조특법 제외 수(`SPECIAL_ACT_15HO_VERIFIED_ARTICLES`). 조특법 제외가 전부 확인된 것이면 상속 제외와
+   * 섞여도 연다(#16 하위 2 · E-14a 잔여 — 상속주택 + 조특법 감면주택 보유 상태의 일반주택 양도를 비과세로 본 회신:
+   * 서면-2022-부동산-1896·서면-2017-부동산-1480). 생략하면 0 — 종전 동작(섞이면 열지 않는다)과 같다.
+   */
+  specialActVerified15Count?: number;
   transferDate: Date;
 }): DeemedOneHouseBasis | undefined {
   return p.isOneHousehold &&
     p.houseCount === 1 &&
     p.inheritedExcludedCount > 0 &&
-    p.specialActExcludedCount === 0 &&
+    p.specialActExcludedCount === (p.specialActVerified15Count ?? 0) &&
     p.transferDate >= INHERITED_GENERAL_HOUSE_SURCHARGE_EXCLUSION_EFFECTIVE_DATE
     ? "inherited_general_house"
     : undefined;
+}
+
+/**
+ * 영 §167의10①15호·§167의3①13호 ① 요소 — §155②③ 상속주택 제외 또는 조특법 제외로 **2주택이 된** 세대의
+ * §155⑥(문화유산 주택)·⑧(수도권 밖 부득이 주택) 1주택 의제 (#16 · G8-3).
+ *
+ * 비과세 E-3.6·E-3.7이 쓰는 술어(`qualifiesCulturalHeritageHouse`·`qualifiesUnavoidableOutsideCapital`)를 **그대로** 부른다 —
+ * 같은 사실에서 비과세는 1주택 의제, 중과는 3주택 중과로 갈리던 불일치를 없앤다. 제외가 없는 단독 2주택은 열지 않는다:
+ * 종전대로 §167의3①6호·§167의10①10호(⑥)와 §167의10①4호 슬롯(⑧)이 받는다(배제 사유 라벨 불변).
+ * ②③을 동시에 제외해 세 특례가 되는 세대는 술어가 막는다(`inheritedBothPoolsExcluded`). 중과 엔진이 ② 요소
+ * (§154① 충족)와 양도일 연혁(2주택 2023.2.28.~ · 3주택+ 2021.2.17.~)을 따로 건다.
+ * 단건(`resolveSurchargeDeemedOneHouseDetail`)과 겸용이 같은 술어를 쓴다.
+ */
+export function culturalOrUnavoidableDeemingBasis(p: {
+  isOneHousehold: boolean;
+  /** `surcharge15HouseCount`의 값 */
+  houseCount: number;
+  /** 제외 전 원시 세대 주택 수 */
+  rawHouseCount: number;
+  inheritedExcludedCount: number;
+  specialActExcludedCount: number;
+  transferDate: Date;
+  culturalHeritageHouse: TransferTaxInput["culturalHeritageHouse"];
+  unavoidableOutsideCapitalHouse: TransferTaxInput["unavoidableOutsideCapitalHouse"];
+}): DeemedOneHouseBasis | undefined {
+  if (!p.isOneHousehold || p.rawHouseCount <= p.houseCount) return undefined;
+  if (p.inheritedExcludedCount + p.specialActExcludedCount <= 0) return undefined;
+  const count = { householdHousingCount: p.houseCount, inheritedHouseExclusionCount: p.inheritedExcludedCount };
+  if (qualifiesCulturalHeritageHouse({ ...count, culturalHeritageHouse: p.culturalHeritageHouse })) {
+    return "cultural_heritage_house";
+  }
+  if (
+    qualifiesUnavoidableOutsideCapital({
+      ...count,
+      transferDate: p.transferDate,
+      unavoidableOutsideCapitalHouse: p.unavoidableOutsideCapitalHouse,
+    })
+  ) {
+    return "unavoidable_outside_capital_house";
+  }
+  return undefined;
 }
 
 /**

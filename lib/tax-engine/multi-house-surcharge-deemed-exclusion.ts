@@ -134,6 +134,10 @@ function deemedSourceLabel(input: MultiHouseSurchargeInput): string {
       return "농어촌주택 보유 1세대1주택 의제(§155⑦)";
     case "inherited_general_house":
       return "상속주택 보유 일반주택 1세대1주택 의제(§155②)";
+    case "cultural_heritage_house":
+      return "문화유산 주택 보유 일반주택 1세대1주택 의제(§155⑥)";
+    case "unavoidable_outside_capital_house":
+      return "수도권 밖 부득이한 사유 주택 보유 일반주택 1세대1주택 의제(§155⑧)";
     case "long_term_rental_residence":
       return "장기임대주택 보유 거주주택 1세대1주택 의제(§155⑳)";
     case "special_act_house_exclusion":
@@ -197,6 +201,16 @@ function twoHouseReason(
             ? MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS_OLD
             : MULTI_HOUSE.INHERITED_GENERAL_HOUSE_2HOUSE_BASIS
         })`,
+      };
+    case "cultural_heritage_house":
+      return {
+        type: "cultural_heritage_house",
+        detail: `${deemedSourceLabel(input)} — 상속주택 등 제외로 1주택 (${MULTI_HOUSE.CULTURAL_HERITAGE_2HOUSE_BASIS})`,
+      };
+    case "unavoidable_outside_capital_house":
+      return {
+        type: "unavoidable_outside_capital_house",
+        detail: `${deemedSourceLabel(input)} — 상속주택 등 제외로 1주택 (${MULTI_HOUSE.UNAVOIDABLE_OUTSIDE_CAPITAL_2HOUSE_BASIS})`,
       };
     case "long_term_rental_residence":
       return {

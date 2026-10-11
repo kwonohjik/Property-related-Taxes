@@ -32,6 +32,7 @@ import { validateHousingExprAsset } from "./transfer-tax-validate-expropriation"
 import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriation";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { validateDepreciation } from "./transfer-tax-validate-depreciation";
+import { validateHousingExcessSplitInputs } from "./transfer-tax-validate-housing-excess";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -217,7 +218,22 @@ export function validateAssetEntry(
     if (hasHousingInBundle && !a.landNature) {
       return fieldError("landNature", `${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`);
     }
+    // #18 하위 1 — 부수토지로 선언한 토지는 면적이 있어야 배율 이내인지(비과세·표2 대상)와 12억 고가주택 판정 합계를 가를 수 있다.
+    //   ④(`transfer-tax-api-companion-payload.ts`)가 `areaM2`로 싣는 식과 **같은 식**(양도면적 우선, 없으면 취득면적)이다 — 3중 패턴.
+    if (hasHousingInBundle && a.landNature === "appurtenant") {
+      const area = parseFloat(a.transferArea) || parseFloat(a.acquisitionArea) || 0;
+      if (!(area > 0)) {
+        return fieldError(
+          "acquisitionArea",
+          `${label}: 주택부수토지로 선언한 토지의 면적(㎡)을 입력하세요. 면적과 주택 정착면적으로 배율 이내인지(비과세·장기보유특별공제 표2 대상) 판정하고, 12억 고가주택 판정에도 이 토지 가액이 합산됩니다.`,
+        );
+      }
+    }
   }
+
+  // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
+  const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index === 0);
+  if (housingExcessError) return housingExcessError;
 
   // 공유 지분율 범위 — ⑤ 인라인 경고(`OwnershipRatioInput`)와 **같은 술어**를 쓴다.
   // 술어가 갈리면 「칸에는 경고가 없는데 다음을 누르면 막히는」 모순이 생긴다.

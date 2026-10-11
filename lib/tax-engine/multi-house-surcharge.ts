@@ -24,6 +24,7 @@ import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { REVERSE_DOUBLE_MERGE_NOTICE } from "./one-house/merge-deeming";
+import { INHERITED_SPECIAL_OVERLAP_NOTICE } from "./one-house/overlap-notice";
 
 // ============================================================
 // 타입 정의 — 공개 타입은 ./types/multi-house-surcharge.types 로 분리
@@ -428,6 +429,13 @@ export function determineMultiHouseSurcharge(
     // D4 역순(동거봉양 합가 → 혼인) 의제로 배제했으면 해석 미확보를 알린다 — 역순 D4만 `parental_care_merge`로 분류된다.
     if (input.deemedOneHouseBy155 === "double_merge" && exclusionReasons.some((r) => r.type === "parental_care_merge")) {
       warnings.push(REVERSE_DOUBLE_MERGE_NOTICE);
+    }
+    // 상속 제외 뒤 ⑥·⑦·⑧ 2중첩 의제로 배제했으면 해석 미확보를 알린다(#16). 의제를 근거로 한 배제 사유가 있을 때만이다.
+    if (
+      input.deemedRestsOnInheritedExclusion === true &&
+      exclusionReasons.some((r) => r.type === input.deemedOneHouseBy155)
+    ) {
+      warnings.push(INHERITED_SPECIAL_OVERLAP_NOTICE);
     }
     return {
       effectiveHouseCount,

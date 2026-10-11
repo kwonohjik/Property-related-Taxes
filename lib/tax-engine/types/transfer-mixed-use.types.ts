@@ -249,7 +249,8 @@ export interface MixedUseAssetInput {
    * (`qualifiesCulturalHeritageHouse`·`qualifiesRuralHouse`·`qualifiesUnavoidableOutsideCapital`)로 판정해
    * **비과세 주택 수 축**에만 반영한다.
    *
-   * ⚠️ 중과 15호 ① 요소(`resolveDeemedOneHouseBy155`)에는 넘기지 않는다 — 비과세 축 전용이다(②+⑥·②+⑧ 방향은 별건 결정 대기).
+   * 중과 15호 ① 요소는 `culturalOrUnavoidableDeemingBasis`(#16)가 같은 선언으로 판정한다 — 상속·조특법 제외로 2주택이 된
+   * 세대의 ⑥·⑧만이고, 제외 없는 단독 2주택은 종전대로 4호·10호 몫이다(⑦ 농어촌의 중과 전달은 별건).
    * ⚠️ `multiHouse.unavoidableOutsideCapitalHouse`(**boolean** — 중과 4호 슬롯)와 같은 사실의 다른 층위다. 이 값은 **원값**이다.
    * 🔑 미전달(undefined)이면 판정하지 않는다(종전 동작). 컴패니언 겸용은 카드 item이 이 선언을 싣지 않아 서브엔진만
    *    의제하면 카드 판정과 갈리므로 미전달이다(`inheritedHouseExclusion` 전례).
@@ -350,6 +351,8 @@ export interface MixedUseAssetInput {
     | "sellingHouseMeetsOneHouseRequirements"
     | "deemedOneHouseBy155"
     | "deemedOneHouseSource"
+    // #16 — ⑥·⑦·⑧ 2중첩 고지 플래그도 서브엔진이 의제와 함께 판정한다.
+    | "deemedRestsOnInheritedExclusion"
     // E-14e·f — 구 8호·구 §167의11①1호 판정도 엔진이 한다(겸용 서브엔진이 `asset.temporaryTwoHouse`로 판정).
     | "oldClause8TemporaryTwoHouse"
     | "rightDeemingCitedByOldClause1"

@@ -25,6 +25,7 @@ import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance
 import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
+import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
@@ -527,6 +528,19 @@ export function buildAssetPayload(
           return area > 0 ? { areaM2: area } : {};
         })()
       : {}),
+    /**
+     * ⑬ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 «미분리» 고지 전용(세액 불변, #17).
+     * 컴패니언 주택은 `buildingFootprintArea`·`appurtenantLandZone`을 싣지 않는다(형제 토지 카드의 주택 컨텍스트 키 — 싣는 순간 세율 자동 분기가 움직인다).
+     * 그래서 초과분을 분리하지 않는데, 사실이 엔진에 닿지 않으면 고지도 못 내 초과분이 조용히 비과세됐다. 면적은 물건 사실이라 지분 스케일을 하지 않는다.
+     */
+    ...(() => {
+      if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return {};
+      const footprintM2 = parseFloat(asset.buildingFootprintArea) || 0;
+      const landAreaM2 = resolveAcqAreaForStdPrice(asset) ?? 0;
+      return footprintM2 > 0 && landAreaM2 > 0
+        ? { companionHousingLand: { landAreaM2, footprintM2, zone: asset.appurtenantLandZone } }
+        : {};
+    })(),
     // ⑬ 사례 28 — companion 신축주택 정착면적·도시지역·4시점 (자동 분기용)
     // primary가 land이고 companion이 housing인 케이스에서 부수토지 한도 산정.
     ...(asset.acquisitionCause === "newConstruction"

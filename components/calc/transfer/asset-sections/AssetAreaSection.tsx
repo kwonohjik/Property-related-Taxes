@@ -25,6 +25,7 @@
  * 계획: `docs/00-pm/transfer-area-unification-all-asset-kinds.plan.md`
  */
 
+import { HousingExcessSplitCard } from "../HousingExcessSplitCard";
 import { cn } from "@/lib/utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
@@ -227,9 +228,11 @@ interface Props {
   hasIncrementAsset?: boolean;
   /** 양도일 — 일반건물 「주택→상가 용도변경」 보유기간 미리보기가 소비 */
   transferDate?: string;
+  /** 첫 자산(주 자산) 여부 — «같은 날 취득 주택의 배율 초과분 분리»(#17) 입력 카드는 주 자산에만 있다 */
+  isFirst?: boolean;
 }
 
-export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsset, transferDate }: Props) {
+export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsset, transferDate, isFirst }: Props) {
   return (
     <>
       {/* 면적 정보 — AREA_SCENARIOS_BY_ASSET_KIND 등재 자산유형 + 전용 위젯 보유 자산유형.
@@ -530,6 +533,8 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
           )}
         </div>
       )}
+      {/* #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸). 소재지 구분·정착면적·토지 면적이 정해진 뒤에만 열린다(③ 노출 ⇔ ⑧ 필수 ⇔ ④ 전송 ⇔ 엔진). */}
+      <HousingExcessSplitCard asset={asset} onChange={onChange} transferDate={transferDate} isFirst={isFirst} />
     </>
   );
 }

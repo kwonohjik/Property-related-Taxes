@@ -29,6 +29,8 @@ const mockRates = makeMockRates();
 function buildInput(opts: {
   originalAssetType: "land" | "housing";
   isOneHousehold: boolean;
+  /** #14 — 입주권 표2·비과세는 §89①4호 가·나목 성립(인가일 요건 선언 + 다른 주택·분양권 없음)일 때만 열린다 */
+  declaredOneRight?: boolean;
 }): TransferTaxInput {
   const redev: RedevelopmentInfo = {
     subject: "right",
@@ -41,6 +43,7 @@ function buildInput(opts: {
     preApprovalExpenses: 0,
     postApprovalExpenses: 0,
     originalAssetType: opts.originalAssetType,
+    ...(opts.declaredOneRight ? { exemptionEligibleAtApproval: true } : {}),
   };
   return baseTransferInput({
     propertyType: "right_to_move_in",
@@ -52,7 +55,8 @@ function buildInput(opts: {
     useEstimatedAcquisition: false,
     redevelopment: redev,
     isOneHousehold: opts.isOneHousehold,
-    householdHousingCount: opts.isOneHousehold ? 1 : 2,
+    householdHousingCount: opts.declaredOneRight ? 0 : opts.isOneHousehold ? 1 : 2,
+    ...(opts.declaredOneRight ? { householdRightCount: 1, householdNoPresaleRightsConfirmed: true } : {}),
     residencePeriodMonths: 60,
   });
 }
@@ -80,9 +84,9 @@ describe("토지 출자 입주권 — 1세대1주택 특례 미적용", () => {
     expect(landOn.isExempt).toBe(false);
   });
 
-  it("E-4: 주택 출자는 종전대로 1세대1주택이 반영된다 (과잉 차단 방지 회귀 가드)", () => {
+  it("E-4: 주택 출자는 1세대1입주권(가목 성립)이 반영된다 (과잉 차단 방지 회귀 가드)", () => {
     const housingOn = calculateTransferTax(
-      buildInput({ originalAssetType: "housing", isOneHousehold: true }),
+      buildInput({ originalAssetType: "housing", isOneHousehold: true, declaredOneRight: true }),
       mockRates,
     );
     const housingOff = calculateTransferTax(

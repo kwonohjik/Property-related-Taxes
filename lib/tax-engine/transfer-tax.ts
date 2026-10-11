@@ -9,7 +9,6 @@
 import { TRANSFER } from "./legal-codes";
 import { buildLossTransferTaxResult } from "./transfer-tax-loss-return";
 import { buildNormalTransferTaxResult } from "./transfer-tax-normal-return";
-import { applyRate } from "./tax-utils";
 import { resolveSurchargeApplication, noRosterSurchargeFallbackNotice } from "./transfer-tax-surcharge-predicate";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { runPreCalculationSteps, runSurchargeAndLandSteps } from "./transfer-tax-precalc";
@@ -33,10 +32,9 @@ import {
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
-import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
+import { applyLthd982AndPushSteps } from "./transfer-tax-lthd-982-step";
 
 import {
-  resolveExemptionResidenceMonths,
   calcTransferGain,
   calcLongTermHoldingDeduction,
   calcBasicDeduction,
@@ -45,21 +43,20 @@ import {
 } from "./transfer-tax-helpers";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { ERA_UNDETERMINED_IDS } from "./one-house/era-undetermined";
-import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./one-house/pending";
+import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./one-house/pending";
 import {
   DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX,
   surchargeRegulatedAreaNotices,
 } from "./one-house/designated-district-undeclared";
 import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
-import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
-import { meetsTable2ResidenceRequirement, meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
-import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
+import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
+import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor } from "./transfer-tax-appurtenant-land";
+import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -284,7 +281,8 @@ export function calculateTransferTax(
       // 별도세대 상속 분양권(피상속인 취득일 2021.1.1. 전) — 판정 메뉴와 같은 확인 필요
       u.id === INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID ||
       // D4 역순 이중 합가(동거봉양 합가 → 혼인) — 해석 미확보 확인 필요
-      u.id === REVERSE_DOUBLE_MERGE_UNVERIFIED_ID
+      u.id === REVERSE_DOUBLE_MERGE_UNVERIFIED_ID ||
+      u.id === INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID // §155②③ 상속 제외 뒤 ⑥·⑦·⑧ 2중첩(#16)
     ) {
       warnings.push(u.reason);
     }
@@ -342,7 +340,11 @@ export function calculateTransferTax(
       amount: 0,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
-    warnings.push(...rentalNoticesForEarlyReturn(effectiveInput), ...expropriationLaterLandNotices(effectiveInput)); // §155㉑·㉒ + OH-40 판정 보류 · 5A 고지
+    warnings.push(
+      ...rentalNoticesForEarlyReturn(effectiveInput),
+      ...expropriationLaterLandNotices(effectiveInput),
+      ...[housingExcessUnseparatedNotice(effectiveInput, undefined, true)].filter((n): n is string => !!n),
+    ); // §155㉑·㉒ + OH-40 판정 보류 · 5A 고지 · #17 초과분 미분리 고지
     return buildExemptEarlyResult({
       input,
       effectiveInput,
@@ -545,8 +547,8 @@ export function calculateTransferTax(
   const laterInheritedNotice = laterLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
-  const expropriationZoneNotice = expropriationZoneNoticeFor(effectiveInput);
-  if (expropriationZoneNotice) warnings.push(expropriationZoneNotice);
+  // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지(세액 불변).
+  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt)].filter((n): n is string => !!n));
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
@@ -601,56 +603,26 @@ export function calculateTransferTax(
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail, deemedOneHouseBy155);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
-  const table2ResidenceYearsForStep = Math.floor(resolveExemptionResidenceMonths(exemptionJudgeInput) / 12);
-  // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
-  // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
-  // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
-  let lthd982Applied = false;
-  if (surchargeExclusionByReduction.appliedId === "unsold_98_2") {
-    // 표2 대상 축은 위 STEP 4와 **같은 술어**를 쓴다 — 여기만 실제 주택수를 보면 §155 의제
-    // 자산에서 「STEP 4는 표2인데 §98의2 특칙은 표2가 아니라고 본다」는 세 번째 진실이 생긴다.
-    const isOneHouseSpecial982 =
-      resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) &&
-      isLthdTable2SubjectAsset(exemptionJudgeInput) &&
-      meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep) &&
-      longTermHoldingDeduction > 0;
-    if (!isOneHouseSpecial982) {
-      const rate982 = holdingPeriod.years >= 3 ? Math.min(holdingPeriod.years * 0.04, 0.4) : 0;
-      longTermHoldingDeduction = applyRate(taxableGain, rate982);
-      longTermHoldingRate = rate982;
-      lthd982Applied = true;
-    }
-  }
-  pushLongTermHoldingSteps({
+  // STEP 4.05(§98의2 특칙 재할당) · 장특 step 생성 · OH-31 표2 연혁 미지원 고지 — transfer-tax-lthd-982-step.ts (800줄 정책 분리).
+  const lthd982 = applyLthd982AndPushSteps({
     steps,
+    warnings,
     taxableGain,
+    exemptionJudgeInput,
+    effectiveInput,
+    surchargeExclusionAppliedId: surchargeExclusionByReduction.appliedId,
+    deemedOneHouseBy155,
     holdingPeriod,
-    longTermHoldingRate,
     longTermHoldingDeduction,
-    residenceYearsForStep: Math.floor(effectiveInput.residencePeriodMonths / 12),
-    table2ResidenceYearsForStep,
-    // 표시 축도 계산 축과 **같은 술어**를 쓴다 — §155의3 면제를 계산에만 반영하고 문구가 표1이면
-    // 「공제율은 표2인데 문구는 표1」 드리프트가 난다.
-    // 자산 축(순수 토지·건물·배율 초과·판정 불가 카드는 표1 — S08-6)도 같은 술어다.
-    meetsTable2Residence:
-      isLthdTable2SubjectAsset(exemptionJudgeInput) &&
-      meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep),
-    isOneHousehold: exemptionJudgeInput.isOneHousehold,
-    // 표시 축도 계산 축과 맞춘다 — §159의4 의제 1세대1주택은 표2를 적용받으므로 산식 문구도
-    // 표2(보유 4% + 거주 4%)여야 한다. 어긋나면 「공제율 64%인데 문구는 표1」 drift가 난다.
-    householdHousingCount: deemedOneHouseBy155 ? 1 : exemptionJudgeInput.householdHousingCount,
-    lthd982Applied,
+    longTermHoldingRate,
     lthdExclusionReason,
-    // §95⑤ 적용 시 보유분을 표1+표2로 나눠 표시한다 — 없으면 종전 표2 문구 그대로.
     usageConversionDetail,
-    // §95④ 후단(가업상속) 적용 시 공제율 분해 문구로 대체한다.
     fbLthdFormula,
     appurtenantTable1Applied,
-    transferDate: exemptionJudgeInput.transferDate,
     splitDetail,
   });
-  // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
-  if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
+  longTermHoldingDeduction = lthd982.longTermHoldingDeduction;
+  longTermHoldingRate = lthd982.longTermHoldingRate;
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
   const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);

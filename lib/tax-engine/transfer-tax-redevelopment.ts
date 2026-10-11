@@ -27,6 +27,7 @@
 import { isRedevelopmentActive } from "./redevelopment";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
+import { resolveRightTable2Clause, rightTable2Notices } from "./redevelopment-right-table2";
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
@@ -200,7 +201,14 @@ export function calculateRedevelopmentTax(
    *     `resolveRedevAptOneHouseTable2Axis`가 주택 수 제외 반영 후 주택 수와 `deemedOneHouseBy155`로 정한다).
    *     표2(원조합원·승계조합원)·§97의4① 단서·청산금 수령분 비과세가 읽는다.
    */
-  const isOneHouseForTable2 = isOneHouseSingle || opts?.oneHouseTable2Axis === true;
+  // 입주권(subject="right")의 표2 「1주택」 축은 §89①4호 가·나목 판정 하나다(#14 · 비과세와 같은 술어 — `redevelopment-right-table2.ts`).
+  //   다른 주택이 없는 가목 고가 입주권도 표2를 받고, 요건을 못 갖췄거나 선언하지 않은 입주권은 다른 주택 1채여도 표1이다.
+  //   완공APT(subject="apt")는 종전대로 실제 1주택 ∨ 의제 축이다.
+  const rightTable2Clause = resolveRightTable2Clause(input, isLandContributedRight);
+  const isOneHouseForTable2 =
+    input.redevelopment!.subject === "right"
+      ? rightTable2Clause !== undefined
+      : isOneHouseSingle || opts?.oneHouseTable2Axis === true;
   /**
    * ─ Step A~A.8 — **§166 3분할 산출 · 12억 안분 · 비과세 게이트 · §95② 배제**.
    *
@@ -614,6 +622,7 @@ export function calculateRedevelopmentTax(
       ...(oneRightThresholdNotice ? [oneRightThresholdNotice] : []),
       ...oneRightRequirementNotices,
       ...(oneRightSharedNotice ? [oneRightSharedNotice] : []),
+      ...rightTable2Notices(input, rightTable2Clause),
       ...(surchargeFallbackNotice ? [surchargeFallbackNotice] : []),
     ],
     transferGain: redevAfterRight.total.gain,

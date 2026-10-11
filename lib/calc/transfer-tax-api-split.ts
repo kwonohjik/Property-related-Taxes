@@ -12,6 +12,7 @@ import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-spli
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
+import { housingExcessNeedsLandSplit } from "./housing-excess-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
@@ -48,8 +49,18 @@ export function makeRatioed(ratio: number, fractional: boolean) {
   };
 }
 
+/**
+ * 주 자산 컨텍스트 — «같은 날 취득 주택의 배율 초과분 분리»(#17)는 양도일이 있어야 배율을 정하고 주 자산에만 입력 경로가 있다.
+ * 생략하면(컴패니언·감가상각 범위 판정) 그 경로를 보지 않는다.
+ */
+export type PrimaryExcessCtx = { transferDate: string | undefined };
+
 /** 분리 축이 활성인가 — `calcSplitGain` 진입 게이트(transfer-tax-split-gain.ts)와 동일 조건. */
-export function isSplitPayloadActive(rawPrimary: AssetForm, isBurdenedGift: boolean): boolean {
+export function isSplitPayloadActive(
+  rawPrimary: AssetForm,
+  isBurdenedGift: boolean,
+  primaryCtx?: PrimaryExcessCtx,
+): boolean {
   // 상속·증여 호스트의 화면에 없는 분리 입력(stale)은 보내지 않는다 — `hasStaleSplitInput`(D2 Check 후속).
   const primary = normalizeBuildingCauseInputs(rawPrimary);
   // ⚠️ 부담부증여 제외 — 엔진이 transferPrice·acquisitionPrice를 §159 안분액으로 override하므로
@@ -59,8 +70,10 @@ export function isSplitPayloadActive(rawPrimary: AssetForm, isBurdenedGift: bool
   //    부담부증여는 기준시가 비율 안분만 사용한다.
   return (
     // M2 — 소유 축은 ⑤가 여는 범위에서만 읽는다(`self-owns-scope.ts`). 토지 등에 남은 잔재는 `both`.
-    (primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both") &&
-    !isBurdenedGift
+    ((primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both") &&
+      !isBurdenedGift) ||
+    // #17 — 같은 날 취득 주택의 배율 초과분 분리(기준시가 5칸). ⑤ 카드 노출·⑧ 필수와 같은 술어.
+    (primaryCtx !== undefined && housingExcessNeedsLandSplit(primary, primaryCtx.transferDate, true))
   );
 }
 
@@ -72,12 +85,16 @@ export function buildSplitPayload(
     /** §164⑦ PHD 모드 — 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate fallback */
     usesPhd: boolean;
     ratioed: (v: string | undefined) => number | undefined;
+    /** 주 자산이면 양도일 — «같은 날 취득 주택의 배율 초과분 분리»(#17) 게이트 */
+    primaryCtx?: PrimaryExcessCtx;
   },
 ): Record<string, unknown> {
-  const { isBurdenedGift, usesPhd, ratioed } = opts;
+  const { isBurdenedGift, usesPhd, ratioed, primaryCtx } = opts;
   // D2 — 건물 상속·증여 + 토지 매매면 건물 방식은 실가(평가액) 고정. ⑧·⑥과 같은 사본(`withBuildingActualWhenMix`).
   const primary = normalizeBuildingCauseInputs(rawPrimary);
-  const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift);
+  const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift, primaryCtx);
+  // #17 — 같은 날 취득 주택의 배율 초과분 분리 경로(소유자 분리·별개취득이 아니다). 엔진 `housingExcessSplitAppliesToInput`과 같은 술어.
+  const excessSplit = primaryCtx !== undefined && housingExcessNeedsLandSplit(primary, primaryCtx.transferDate, true);
   // **별개 취득** — 분리 활성의 부분집합. 취득시점이 실제로 달라 취득가액이 파트별로 실재하는
   // 경우만 true(겸용·selfOwns 강제 분리에서 날짜가 같으면 false).
   // 엔진 취득가액 축의 파트별 완결 게이트(§97①1호·§114⑦) — 판정 단일 소스는 그 헬퍼 1곳.
@@ -151,7 +168,7 @@ export function buildSplitPayload(
     landAcquisitionDate:
       (primary.hasSeperateLandAcquisitionDate || selfOwnsEff !== "both") && primary.landAcquisitionDate
         ? primary.landAcquisitionDate
-        : usesPhd || selfOwnsEff !== "both"
+        : usesPhd || selfOwnsEff !== "both" || excessSplit
           ? primary.acquisitionDate
           : undefined,
     // 파트별 취득 모드 + 양도 분리 모드 — 엔진 명시 입력(§9 M2, "죽은 모드" 재발 방지).
@@ -166,7 +183,7 @@ export function buildSplitPayload(
     //   (집행기준 99-164-9). 나목이 비례의 분모라 결합 총액과 함께 보낸다 — **총액은 덮어쓰지 않는다**.
     // 전송 조건 = ⑤ 노출·⑧ 필수와 **같은 술어**(`ownerSplitHousingNeedsBuildingStd`) — 숨은 stale 나목이
     // 비례에 쓰이는 것을 막는다(3중 패턴).
-    ...(separateAcquisition || ownerSplitHousingNeedsBuildingStd(primary)
+    ...(separateAcquisition || ownerSplitHousingNeedsBuildingStd(primary) || excessSplit
       ? { buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined }
       : {}),
     ...(separateAcquisition

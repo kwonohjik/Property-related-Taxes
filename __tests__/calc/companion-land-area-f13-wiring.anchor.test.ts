@@ -123,10 +123,18 @@ describe("토지 컴패니언 면적 배선 (④→⑧→⑫→⑭)", () => {
     expect((r.body.companionAssets as { areaM2?: number }[])[0].areaM2).toBeUndefined();
   });
 
-  it("면적 미입력 — 판정 불가 안내(종전 그대로) · 면적을 채우면 위 첫 케이스로 바로잡힌다", async () => {
+  it("면적 미입력 — ⑧이 막는다(#18 하위 1: 면적 필수) · API 직접 호출은 판정 불가 안내 + 12억 합계에는 토지 가액 포함 · 면적을 채우면 위 첫 케이스로 바로잡힌다", async () => {
     const r = await runCalc(form({ acquisitionArea: "", transferArea: "" }));
+    // ⑧ — 부수토지로 선언한 토지는 면적 필수 (같은 식을 ④가 areaM2로 싣는다 — 3중 패턴). 면적을 채우면 첫 케이스처럼 issues가 비는 것이 긍정 짝.
+    expect(JSON.stringify(r.issues).includes("주택부수토지로 선언한 토지의 면적(㎡)을 입력하세요")).toBe(true);
     expect((r.body.companionAssets as { areaM2?: number }[])[0].areaM2).toBeUndefined();
     expect((r.json.data.aggregated.warnings ?? []).join("\n")).toContain("배율 이내인지 판정하지 못했습니다");
+    expect((r.json.data.aggregated.warnings ?? []).join("\n")).toContain("고가주택(12억 초과) 판정에는 그 토지 가액을 합산했습니다");
     expect(landCard(r).isExempt).not.toBe(true);
+  });
+
+  it("독립 나대지는 면적이 비어도 ⑧이 막지 않는다 (부수토지 선언만 면적 필수)", async () => {
+    const r = await runCalc(form({ landNature: "standalone", acquisitionArea: "", transferArea: "" }));
+    expect(JSON.stringify(r.issues).includes("주택부수토지로 선언한 토지의 면적")).toBe(false);
   });
 });

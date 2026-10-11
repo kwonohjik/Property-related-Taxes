@@ -8,9 +8,11 @@
  * 표2 (1세대1주택 특례):   보유연수 × 4% + 거주연수 × 4%, 최대 80%
  *
  * 법령 근거: 소득세법 §95② 별표, 소득세법 시행령 §161④
+ * 표2 공제율은 `calcLongTermRate`(정본)가 계산한다 — 이 파일은 표1·표2를 한 양도차익에 동시에 적용하는 분기만 맡는다.
  */
 
-import { applyRate } from "../../tax-utils";
+import { applyFairMarketRatio, applyRate } from "../../tax-utils";
+import { calcLongTermRate } from "../../transfer-tax-mixed-use-inheritance";
 
 // ============================================================
 // 공제율 계산 함수
@@ -23,20 +25,6 @@ import { applyRate } from "../../tax-utils";
 export function calcTable1Rate(holdYears: number): number {
   if (holdYears < 3) return 0;
   return Math.min(holdYears * 0.02, 0.30);
-}
-
-/**
- * 표2 — 1세대1주택 특례 장기보유공제율
- * 보유연수 × 4% + 거주연수 × 4%, 최대 80%
- * 각 파트는 40% 캡 적용 후 합산
- * 최소 보유기간 3년, 거주기간 2년
- */
-export function calcTable2Rate(holdYears: number, liveYears: number): number {
-  if (holdYears < 3) return 0;
-  if (liveYears < 2) return 0;
-  const holdPart = Math.min(holdYears * 0.04, 0.40);
-  const livePart = Math.min(liveYears * 0.04, 0.40);
-  return Math.min(holdPart + livePart, 0.80);
 }
 
 // ============================================================
@@ -72,18 +60,26 @@ export type Gain95BothTables = {
  * @param gain 양도차익 (원)
  * @param holdYears 보유연수 (정수)
  * @param liveYears 거주연수 (정수)
+ * @param transferDate 양도일 — 표2 연혁(2009~2020 보유 연 8%, `data/lthd-table2-era.ts`). 미제공이면 현행 식.
+ *
+ * 표2 공제율은 일반 경로와 같은 정본 `calcLongTermRate`(표2)에 위임한다(S06-5·S06-6 — 자체 사본 금지).
+ * 거주분은 거주 2년 미만이면 0이고 보유분은 남는다: 소득세법 시행령 §161④가 RH-B2 2호에 「표2를 적용한다」고
+ * 정해, 2호 부분은 거주 2년 미만이어도 표2 보유분을 적용한다(#15 A). 표1 독법(§159의4)과 갈리는 경우는
+ * 호출부가 「확인 필요」로 고지한다.
  */
 export function calculateGain95BothTables(
   gain: number,
   holdYears: number,
   liveYears: number,
+  transferDate?: Date,
 ): Gain95BothTables {
   const rateTable1 = calcTable1Rate(holdYears);
-  const rateTable2 = calcTable2Rate(holdYears, liveYears);
+  const rateTable2 = calcLongTermRate(holdYears, liveYears, true, false, transferDate);
 
   // applyRate = Math.floor(gain * rate) — 세율×금액은 반드시 이 함수 사용
   const ltcTable1 = applyRate(gain, rateTable1);
-  const ltcTable2 = applyRate(gain, rateTable2);
+  // 표2 비율은 보유분+거주분 double 합이라 applyRate(floor)면 1원 과소가 난다(일반 경로 `applyLthdRate`와 같은 사유).
+  const ltcTable2 = applyFairMarketRatio(gain, rateTable2);
 
   const gain95Table1 = gain - ltcTable1;
   const gain95Table2 = gain - ltcTable2;

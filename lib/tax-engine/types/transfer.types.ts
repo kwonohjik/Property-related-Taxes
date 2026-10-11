@@ -1333,6 +1333,20 @@ export interface TransferTaxInput {
    */
   appurtenantLandZone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
   /**
+   * 함께 양도 **주택 카드**(컴패니언)의 부수토지 면적 사실 — **고지 전용**(세액 불변, #17).
+   * 컴패니언 주택은 `buildingFootprintArea`·`appurtenantLandZone`을 자기 item에 싣지 않는다(형제 토지 카드의 주택 컨텍스트 전용 키라
+   * 싣는 순간 세율 자동 분기가 움직인다). 그래서 배율 초과분 판정·분리를 하지 않는데, 사실이 엔진에 없으면 «초과분 미분리» 고지도
+   * 나올 수 없어 초과분이 조용히 비과세됐다. 이 값은 그 고지를 낼 사실만 운반한다 — 분리 경로(`housingExcessSplitApplies`)는 읽지 않는다.
+   */
+  companionHousingLand?: {
+    /** 토지 면적(㎡) — 주 자산이 `acquisitionArea`로 싣는 값과 같은 식 */
+    landAreaM2: number;
+    /** 건물 정착면적(㎡) */
+    footprintM2: number;
+    /** 소재지 구분 — 비면 배율을 정하지 못한다(미입력 fallback 금지) */
+    zone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
+  };
+  /**
    * 장기임대주택 보유자 거주주택 비과세 특례 입력 (소령 §155⑳).
    * applyException=true 시 임대주택을 주택수에서 제외하여 1세대1주택 비과세 적용.
    * 시나리오 B(PHRP)는 §161① 기준시가 안분으로 직전거주주택 양도일 이후분만 비과세.
@@ -1393,9 +1407,11 @@ export interface TransferTaxInput {
    * 짝 주택의 판정을 따르게 한다(`appurtenantHouseVerdict`).
    * - "house": 일괄양도의 주 자산 주택(`propertyType === "housing"`)
    * - "appurtenant_land": 배율 **이내**로 확인된 주택부수토지 카드(분리 후 한도 내 카드 또는 초과 없음 확인)
-   * 배율 초과 카드는 단위 밖이다(비사업용 토지 — §104의3①5호).
+   * - "appurtenant_excess": 배율 **초과**분 카드(비사업용 토지 — §104의3①5호). 비과세·표2 대상은 아니지만 **12억 판정·안분 분모**의
+   *   합계액에는 든다(#18 — 법문 괄호 「주택 및 이에 딸린 토지의 … 합계액」에 배율 한정이 없고 서면4팀-2677·재산세제과-915·
+   *   서울행법 2018구단74696·조심2018서2003도 초과분까지 넣은 전체 가액으로 판정했다).
    */
-  oneHouseUnitRole?: "house" | "appurtenant_land";
+  oneHouseUnitRole?: "house" | "appurtenant_land" | "appurtenant_excess";
 
   /**
    * **F-13 — 짝 주택의 1세대1주택 판정** (`oneHouseUnitRole === "appurtenant_land"` 카드에 합산 엔진이 주입).
