@@ -88,7 +88,7 @@ export function collectMultiRosterIssues(properties: readonly PropertyItem[]): M
   for (const p of houses) {
     const f = p.item.form;
     const rows = f.houses ?? [];
-    const counted = housesOwnedAtTransfer(rows, p.transferDate);
+    const counted = housesOwnedAtTransfer(rows, p.transferDate, p.kind);
     for (const q of views) {
       if (q === p) continue;
       const status = sameHouseStatus(p, q);

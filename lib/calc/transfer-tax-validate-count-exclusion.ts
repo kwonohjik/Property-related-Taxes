@@ -81,8 +81,8 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
   // 판정에 쓰는 선언의 행만 — 입주권 양도에서는 4개 조문의 보유 감면주택 행이다(그 밖의 행은 ④가 보내지 않는다).
   const usedRows = (form.houses ?? []).filter((h) => countExclusionRowApplies(kind, h));
   const rowDeclarations =
-    rowCountExclusionReductions(usedRows, form.transferDate).length +
-    rowSpecialHouseExclusions(usedRows, form.transferDate).length;
+    rowCountExclusionReductions(usedRows, form.transferDate, kind).length +
+    rowSpecialHouseExclusions(usedRows, form.transferDate, kind).length;
   const effectiveCount = resolveHouseholdHousingCount({
     primaryKind: form.assets?.[0]?.assetKind,
     declared: parseInt(form.householdHousingCount) || 0,
@@ -90,17 +90,17 @@ export function collectCountExclusionIssues(form: TransferFormData): string[] {
     transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
   });
-  const requiredCount = 1 + countedHouseRows(form.houses, form.transferDate);
+  const requiredCount = 1 + countedHouseRows(form.houses, form.transferDate, kind);
   // 입주권 양도의 양도 대상은 주택이 아니다 — 「양도 주택 포함 1채」 전제가 없다(스칼라도 명부에서 도출된다).
   if (kind !== "right_to_move_in" && rowDeclarations > 0 && effectiveCount < requiredCount)
     messages.push(COUNT_EXCLUSION_EXCEEDS_HOUSE_COUNT_MESSAGE(effectiveCount, requiredCount));
 
   // 선언은 행 값(취득일·가액·면적)으로 채워져 온다 — 그 칸이 비면 행 기본 정보가 빈 것이다.
   const rowNo = (id: string | undefined) => (form.houses ?? []).findIndex((h) => h.id === id) + 1;
-  for (const r of rowCountExclusionReductions(usedRows, form.transferDate)) {
+  for (const r of rowCountExclusionReductions(usedRows, form.transferDate, kind)) {
     for (const m of collectHouseCountExclusionReductionErrors(r)) messages.push(`보유 주택 ${rowNo(r.houseId)}: ${m}`);
   }
-  for (const e of rowSpecialHouseExclusions(usedRows, form.transferDate)) {
+  for (const e of rowSpecialHouseExclusions(usedRows, form.transferDate, kind)) {
     for (const m of collectSpecialHouseExclusionRowErrors(e)) messages.push(`보유 주택 ${rowNo(e.houseId)}: ${m}`);
   }
 

@@ -81,10 +81,10 @@ describe("L 명부 술어 — 먼저 양도한 것으로 선택한 행만 주택
     row("F", "2020-01-01"),
   ];
   it("first만 제외, later·미선택·표시 없는 순서·일반 행은 남는다", () => {
-    expect(housesOwnedAtTransfer(rows, TD).map((h) => h.id)).toEqual(["C", "D", "E", "F"]);
+    expect(housesOwnedAtTransfer(rows, TD, "housing").map((h) => h.id)).toEqual(["C", "D", "E", "F"]);
   });
   it("제외 행 목록(결과 표시용)은 제외된 행과 화면 순번을 낸다", () => {
-    expect(sameDayExcludedRows(rows, TD).map((r) => [r.no, r.row.id])).toEqual([[1, "B"]]);
+    expect(sameDayExcludedRows(rows, TD, "housing").map((r) => [r.no, r.row.id])).toEqual([[1, "B"]]);
   });
   it("§155⑥·⑦·⑧ 행 사실과 조특법 선언도 같은 술어로 함께 빠진다(주택 수 이중 차감 없음)", () => {
     const rural = rowB({
@@ -93,14 +93,14 @@ describe("L 명부 술어 — 먼저 양도한 것으로 선택한 행만 주택
       countExclusion: { kind: "special", special: { article: "", houseAcquisitionDate: "", houseContractDate: "", isNationalHousing: false, requirementsConfirmed: false } },
     });
     const same = { ...rural, sameDayTransferOrder: "later" as const };
-    const first = deriveOneHouseFactsFromHouses([rural], {}, TD);
+    const first = deriveOneHouseFactsFromHouses(housesOwnedAtTransfer([rural], TD, "housing"), {}, TD);
     expect(first.culturalHeritageHouse).toBeFalsy();
     expect(first.ruralHouse).toBeUndefined();
-    expect(rowSpecialHouseExclusions([rural], TD)).toEqual([]);
-    expect(rowCountExclusionReductions([rural], TD)).toEqual([]);
+    expect(rowSpecialHouseExclusions([rural], TD, "housing")).toEqual([]);
+    expect(rowCountExclusionReductions([rural], TD, "housing")).toEqual([]);
     // 긍정 짝 — later면 같은 행의 사실이 그대로 닿는다
-    expect(deriveOneHouseFactsFromHouses([same], {}, TD).culturalHeritageHouse).toBe(true);
-    expect(rowSpecialHouseExclusions([same], TD)).toHaveLength(1);
+    expect(deriveOneHouseFactsFromHouses(housesOwnedAtTransfer([same], TD, "housing"), {}, TD).culturalHeritageHouse).toBe(true);
+    expect(rowSpecialHouseExclusions([same], TD, "housing")).toHaveLength(1);
   });
 });
 

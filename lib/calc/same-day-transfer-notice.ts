@@ -8,6 +8,7 @@ import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import {
   countedHouseRows,
   isOwnedAtTransfer,
+  sameDayOrderApplies,
   type HouseRowForCount,
 } from "@/lib/calc/household-house-count";
 import { houseCountSelfOffset } from "@/lib/calc/housing-like-asset";
@@ -22,9 +23,12 @@ export interface SameDayRowRef<T extends HouseRowForCount> {
 function rowsWhere<T extends HouseRowForCount>(
   houses: readonly T[] | undefined,
   transferDate: string | undefined,
+  primaryKind: string | undefined,
   pred: (h: T) => boolean,
 ): SameDayRowRef<T>[] {
   const out: SameDayRowRef<T>[] = [];
+  // §154⑨는 주택 양도(법 §89①3호)에만 닿는다 — 입주권 등으로 바꿔 남은 선택값은 주택 수에서 빼지 않으므로 표시도 하지 않는다.
+  if (!sameDayOrderApplies(primaryKind)) return out;
   (houses ?? []).forEach((row, i) => {
     // 취득일이 있고 양도일 현재 이미 취득한 행만 — 같은 날·이후 취득 행은 다른 사유(양도 후 취득)로 이미 빠진다.
     if (row.acquisitionDate && isOwnedAtTransfer(row.acquisitionDate, transferDate) && pred(row)) out.push({ no: i + 1, row });
@@ -36,16 +40,18 @@ function rowsWhere<T extends HouseRowForCount>(
 export function sameDayExcludedRows<T extends HouseRowForCount>(
   houses: readonly T[] | undefined,
   transferDate: string | undefined,
+  primaryKind: string | undefined,
 ): SameDayRowRef<T>[] {
-  return rowsWhere(houses, transferDate, isSameDayFirstTransferred);
+  return rowsWhere(houses, transferDate, primaryKind, isSameDayFirstTransferred);
 }
 
 /** 같은 날 양도라고 표시했지만 순서를 고르지 않아 주택 수에 넣은 행. */
 export function sameDayUndecidedRows<T extends HouseRowForCount>(
   houses: readonly T[] | undefined,
   transferDate: string | undefined,
+  primaryKind: string | undefined,
 ): SameDayRowRef<T>[] {
-  return rowsWhere(houses, transferDate, isSameDayOrderUndecided);
+  return rowsWhere(houses, transferDate, primaryKind, isSameDayOrderUndecided);
 }
 
 /** 결과 화면 한 줄 — 「보유 주택 2(취득일 2018-01-01)」. */
@@ -67,9 +73,9 @@ export function sameDayOrderNotice(args: {
   houses: readonly HouseRowForCount[] | undefined;
   transferDate: string | undefined;
 }): string | null {
-  const undecided = sameDayUndecidedRows(args.houses, args.transferDate);
+  const undecided = sameDayUndecidedRows(args.houses, args.transferDate, args.primaryKind);
   if (undecided.length === 0) return null;
-  const total = houseCountSelfOffset(args.primaryKind) + countedHouseRows(args.houses, args.transferDate);
+  const total = houseCountSelfOffset(args.primaryKind) + countedHouseRows(args.houses, args.transferDate, args.primaryKind);
   if (total < 2) return null;
   const labels = undecided.map((r) => `보유 주택 ${r.no}`).join("·");
   return (

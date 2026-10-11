@@ -79,7 +79,7 @@ describe("HC-1·2 명부 우선", () => {
       args({ declared: 1, houses: [row("2020-01-01"), row(), row(undefined)] }),
     );
     expect(n).toBe(2); // 1 + 1
-    expect(countedHouseRows([row("2020-01-01"), row()], undefined)).toBe(1);
+    expect(countedHouseRows([row("2020-01-01"), row()], undefined, "housing")).toBe(1);
   });
 });
 

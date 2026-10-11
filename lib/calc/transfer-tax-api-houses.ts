@@ -244,7 +244,7 @@ export function buildHousesPayload(
       : {}),
   };
 
-  return [sellingHouse, ...buildOtherHousesPayload(housesOwnedAtTransfer(houses, transferDate))];
+  return [sellingHouse, ...buildOtherHousesPayload(housesOwnedAtTransfer(houses, transferDate, primary.assetKind))];
 }
 
 /**

@@ -23,7 +23,7 @@
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
-import { housesOwnedAtTransfer } from "./household-house-count";
+import { isOwnedAtTransfer } from "./household-house-count";
 import { unavoidableOutsideCapitalStatusPayload } from "./two-house-exclusion-status";
 
 /**
@@ -228,7 +228,8 @@ function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
 /**
  * 명부 행에서 세대 단위 §155 사실을 도출한다 — **행 우선, 레거시 폴백**.
  *
- * @param allHouses  ④ 다른 보유 주택 목록
+ * @param allHouses  ④ 다른 보유 주택 목록 — 🔑 호출부는 **`housesOwnedAtTransfer(houses, 양도일, 양도 자산 종류)`로 거른 행**을 넘긴다(같은 날 먼저 양도한 행 제외는
+ *   양도 자산 종류에 달려 있어 이 함수가 알 수 없다 — §154⑨ 게이트, 결정 #40). 여기서는 양도일 현재 보유 여부만 한 번 더 본다(멱등).
  * @param legacy  세대 단위 레거시 값(폼 스칼라). 행 표시가 없을 때만 쓰인다.
  * @param transferDate  양도일 — **양도일 현재 보유 행의 사실만** 쓴다(`housesOwnedAtTransfer` — 명부·주택 수와 같은 leaf).
  *   §155⑥⑦⑧은 「…각각 1개씩 소유하고 있는 1세대」라, 양도일 당일·이후 취득 행의 사실은 판정에 실리지 않는다(재검증 S10-1).
@@ -239,7 +240,7 @@ export function deriveOneHouseFactsFromHouses(
   legacy: OneHouseLegacyFacts = {},
   transferDate?: string,
 ): DerivedOneHouseRowFacts {
-  const houses = housesOwnedAtTransfer(allHouses, transferDate);
+  const houses = (allHouses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
   const rowHeritage = hasCulturalHeritageRow(houses);
   const legacyHeritage = legacy.culturalHeritageHouseSpecial === true;
 

@@ -92,7 +92,7 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
  */
 export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   // 양도일 현재 보유 행만 — ④가 싣는 행·payload와 같다(`deriveOneHouseFactsFromHouses`의 `transferDate`).
-  const owned = housesOwnedAtTransfer(form.houses, form.transferDate);
+  const owned = housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind);
   const ruralRow = findRuralHouseRow(owned);
   const row = owned.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
   const rural = deriveOneHouseFactsFromHouses(owned).ruralHouse;
@@ -138,7 +138,7 @@ export function rentalResidenceCandidateHouseIds(form: CandidateFormLike): Reado
   const rhe = form.assets?.[0]?.rentalHousingException;
   if (rhe?.applyException !== true || rhe.scenario !== "A") return new Set();
   const ids = new Set<string>();
-  for (const h of housesOwnedAtTransfer(form.houses, form.transferDate)) {
+  for (const h of housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind)) {
     if (h.isLongTermRental && h.id) ids.add(h.id);
   }
   return ids;

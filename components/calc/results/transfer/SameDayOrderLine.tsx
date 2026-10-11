@@ -32,7 +32,7 @@ export function SameDayOrderLine({
   label?: string;
 }) {
   if (!form) return null;
-  const excluded = sameDayExcludedRows(form.houses, form.transferDate);
+  const excluded = sameDayExcludedRows(form.houses, form.transferDate, form.assets?.[0]?.assetKind);
   const notice = sameDayOrderNotice({
     primaryKind: form.assets?.[0]?.assetKind,
     houses: form.houses,

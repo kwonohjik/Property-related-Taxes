@@ -41,7 +41,7 @@ export function oneRightNaFactIssues(form: OneHouseJudgmentFormData): OneRightNa
     });
   }
 
-  const rows = housesOwnedAtTransfer(form.houses, form.transferDate);
+  const rows = housesOwnedAtTransfer(form.houses, form.transferDate, primary.assetKind);
   if (rows.length === 1) {
     const row = rows[0];
     if (!row.isInherited && row.acquisitionDate && row.acquisitionDate !== na) {

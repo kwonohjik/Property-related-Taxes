@@ -25,6 +25,7 @@ import {
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { oneRightNaFactIssues } from "./one-right-na-facts-validate";
+import { housesOwnedAtTransfer } from "./household-house-count";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { calcEffectiveWasRegulatedAtAcquisition } from "./effective-regulated-at-acquisition";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";

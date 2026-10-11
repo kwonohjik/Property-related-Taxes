@@ -46,10 +46,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
 import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
-import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
+import { isOwnedAtTransfer, sameDayOrderApplies } from "@/lib/calc/household-house-count";
 import { isSameDayFirstTransferred, isSameDayOrderUndecided } from "@/lib/calc/same-day-transfer-order";
 import { sameDayOrderNotice } from "@/lib/calc/same-day-transfer-notice";
-import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { GracePeriodSection } from "./GracePeriodSection";
 
@@ -123,6 +122,8 @@ interface RowProps {
   countExclusionApplies?: (house: HouseEntry) => boolean;
   /** 양도일 — 그날 이후(같은 날 포함) 취득한 행에 「주택 수 제외」 배지를 단다(D2 · `isOwnedAtTransfer`). */
   transferDate: string | undefined;
+  /** §154⑨ 같은 날 양도 순서가 닿는 양도 대상인가(`sameDayOrderApplies`) — 아니면 남은 선택값의 배지를 달지 않는다(주택 수에서도 빼지 않는다). */
+  sameDayApplies: boolean;
   /** 판정 메뉴 — 중과 전용 배지를 달지 않는다. */
   judgmentMenu: boolean;
 }
@@ -136,7 +137,7 @@ function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
   return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, judgmentMenu }: RowProps) {
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, sameDayApplies, judgmentMenu }: RowProps) {
   const badges = resolveHouseBadges(house, judgmentMenu);
   const exclusionLabel =
     countExclusionEnabled && (countExclusionApplies?.(house) ?? true) ? countExclusionBadgeLabel(house) : undefined;
@@ -165,12 +166,12 @@ function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclus
               양도일(같은 날 포함) 이후 취득 — 주택 수 제외
             </span>
           )}
-          {isSameDayFirstTransferred(house) && (
+          {sameDayApplies && isSameDayFirstTransferred(house) && (
             <span className={`${CHIP_BASE} ${CHIP_EMERALD}`} data-testid={`house-same-day-badge-${house.id}`}>
               같은 날 먼저 양도 선택(§154⑨) — 주택 수 제외
             </span>
           )}
-          {house.soldSameDay === true && !isSameDayFirstTransferred(house) && (
+          {sameDayApplies && house.soldSameDay === true && !isSameDayFirstTransferred(house) && (
             <span className={`${CHIP_BASE} ${CHIP_AMBER}`} data-testid={`house-same-day-badge-${house.id}`}>
               {isSameDayOrderUndecided(house)
                 ? "같은 날 양도 — 순서 미선택(주택 수 산입)"
@@ -528,6 +529,7 @@ export function HousesListSection({
                     countExclusionEnabled={countExclusionEnabled}
                     countExclusionApplies={countExclusionApplies}
                     transferDate={form.transferDate}
+                    sameDayApplies={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
                     judgmentMenu={judgmentMenu}
                   />
                 ))}
@@ -716,7 +718,7 @@ export function HousesListSection({
               householdGiftEnabled={hideSellingHouseExclusion}
               judgmentMenu={judgmentMenu}
               // §154⑨ 같은 날 양도 순서는 §89①3호 주택 양도의 규정이다 — 입주권(§89①4호) 양도에는 열지 않는다.
-              sameDayEnabled={isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)}
+              sameDayEnabled={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

@@ -13,7 +13,7 @@ import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline
 import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
-import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
+import { housesOwnedAtTransfer, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
@@ -187,7 +187,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
      * ⚠️ 유형별로 무의미한 필드를 싣지 않는 규약은 `toRuralPayload`가 이어받았다
      *    (상속 유형에 귀농 대지면적을 실어 보내면 조용한 오판정이 된다).
      */
-    const derived = deriveOneHouseFactsFromHouses(form.houses, {
+    const derived = deriveOneHouseFactsFromHouses(housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind), {
       culturalHeritageHouseSpecial: form.culturalHeritageHouseSpecial,
       ...(form.unavoidableOutsideCapitalSpecial
         ? {
