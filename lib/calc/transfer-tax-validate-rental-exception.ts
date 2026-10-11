@@ -31,6 +31,7 @@ import {
 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { fieldError } from "./transfer-tax-validate-field";
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -94,6 +95,19 @@ export function validateRentalHousingException(
     }
   }
 
+  /**
+   * 🔴 호별 「요건 충족」 토글(나목 국민주택·2호 · 라목 5호 · §155⑳2호 자기확인)은 **계산기(`full`)에서만 막는다** (S16-6).
+   *
+   * 이 토글들은 「입력 누락」이 아니라 **요건 사실 그 자체**다. OFF는 엔진(`checkEligibility`)이 호별 불충족 사유
+   * (`unitFailReasons`)와 함께 불성립으로 답한다 — 판정 메뉴는 그 답을 보여주는 화면이다
+   * (`one-house-exemption-validate.ts` 헤더 「막는 것은 판정이 **불가능한** 입력뿐」). 여기서 막으면 사실대로 끄거나
+   * 모르는 사용자가 「충족」을 켜야만 진행되어(모름 = 혜택 불성립 + 확인 필요와 반대 방향) 불성립 결론에 도달할 수 없다.
+   * 같은 「2호 이상」 토글이 다·바·자목에서는 이미 막지 않는다. 자기확인 OFF도 엔진이 「확인 필요」 사유로 불성립 처리한다.
+   * 계산기는 세액을 내려면 확정이 필요하므로 종전대로 막는다(거주 미달과 같은 구조).
+   * ④는 OFF를 `false`로 보내므로(`?? false`) ⑧을 풀어도 엔진 입력이 달라지지 않는다 — 3중 패턴.
+   */
+  const blocksUnitFactToggles = mode === "full";
+
   // 호별 검증 (임대주택이 있을 때만 — §154⑩ 표준 경로는 0호라 이 루프를 건너뛴다)
   for (let i = 0; i < rh.rentalUnits.length; i++) {
     const u = rh.rentalUnits[i];
@@ -134,10 +148,10 @@ export function validateRentalHousingException(
       if (!u.acquisitionOfficialPrice || parseAmount(u.acquisitionOfficialPrice) <= 0) {
         return `${unitLabel}: 취득 당시 기준시가를 입력하세요 (나목 3억 이하 요건).`;
       }
-      if (!u.isNationalSizeHousing) {
+      if (blocksUnitFactToggles && !u.isNationalSizeHousing) {
         return `${unitLabel}: 나목은 국민주택규모(전용 85㎡·수도권 도시지역 60㎡ 이하) 요건 충족 확인이 필요합니다.`;
       }
-      if (!u.hasMinimum2Units) {
+      if (blocksUnitFactToggles && !u.hasMinimum2Units) {
         return `${unitLabel}: 나목은 2호 이상 임대 요건 충족 확인이 필요합니다.`;
       }
     } else if (article === "라") {
@@ -148,7 +162,7 @@ export function validateRentalHousingException(
       if (!u.firstSaleContractDate) {
         return `${unitLabel}: 라목은 최초 분양계약일(2008.6.11~2009.6.30)을 입력하세요.`;
       }
-      if (!u.hasMinimum5UnitsInCity) {
+      if (blocksUnitFactToggles && !u.hasMinimum5UnitsInCity) {
         return `${unitLabel}: 라목은 같은 시·군 5호 이상 임대 요건 충족 확인이 필요합니다.`;
       }
       if (!u.rentalLandArea || parseDecimal(u.rentalLandArea) <= 0
@@ -170,7 +184,7 @@ export function validateRentalHousingException(
     }
     // §155⑳2호(양도일 현재 등록·임대 중·임대료 5% 이내)는 목을 가리지 않는다 — 나·라목 포함(OH-41).
     // 엔진 `checkEligibility`가 전 목에 요구하므로 ⑤도 전 목에 토글을 띄운다(3중 패턴).
-    if (!u.requirementsConfirmed) {
+    if (blocksUnitFactToggles && !u.requirementsConfirmed) {
       // U2 — 말소 호는 「말소 전까지」 충족을 묻는다(⑤ 문구와 같은 조건 · 기획재정부 재산세제과-151).
       const terminated =
         u.rentalAutoTermination && (article === "가" || article === "다" || article === "라" || article === "마");
@@ -234,11 +248,21 @@ export function validateRentalHousingException(
     return `${label}: 2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 이력이 있는지 선택하세요 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①).`;
   }
 
-  // B 시나리오 추가 검증 — §161① 안분 입력. 판정에는 쓰이지 않으므로 facts 모드에서는 묻지 않는다.
-  if (rh.scenario === 'B' && mode === "full") {
+  /**
+   * B 시나리오 추가 검증 — §161① 안분 입력은 판정에 쓰이지 않으므로 facts 모드에서는 묻지 않는다.
+   *
+   * 🔴 **단 하나의 예외 — 직전거주주택 양도일은 §154⑩ 표준 경로(0호)에서 facts도 요구한다.**
+   *    그 경로의 2호(「직전거주주택보유주택일 것」)는 이 날짜로 확인하며, 엔진이 미입력을 불충족으로 보아
+   *    비과세를 회수한다(`checkPhrp154_10Eligibility`). ⑤가 그 칸을 「필수」로 띄우는데(`RentalHousing154_10Block`)
+   *    ⑧이 비워 두면 「화면은 필수 · 검증은 통과 · 결론은 비과세 회수」가 된다(S06-10).
+   *    임대주택이 1호 이상인 B는 판정에 이 날짜를 쓰지 않으므로 facts에서 묻지 않는다.
+   */
+  if (rh.scenario === 'B' && (mode === "full" || rh.rentalUnits.length === 0)) {
     if (!rh.priorResidenceTransferDate) {
       return fieldError("rentalHousingException.priorResidenceTransferDate", `${label}: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요.`);
     }
+  }
+  if (rh.scenario === 'B' && mode === "full") {
     // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 — API 변환(④)·UI(⑤)와 동일 ternary (3중 패턴)
     const linked = isPhrpStdPriceLinked(asset);
     const pAcq = linked
@@ -340,15 +364,17 @@ export function validateRentalHousingException(
     return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`);
   }
 
-  // 보유기간 24개월 검증 (취득일 ~ 양도일) — §154⑩ 표준 경로도 포함(재기산하지 않는다,
-  // `eligibility.ts` 상단 주석 · 서면법규재산-2020-1309 질의5 · 기준-2020-법령해석재산-0143)
+  // 보유기간 2년 검증 (취득일 ~ 양도일) — §154⑩ 표준 경로도 포함(재기산하지 않는다,
+  // `eligibility.ts` 상단 주석 · 서면법규재산-2020-1309 질의5 · 기준-2020-법령해석재산-0143).
+  // 엔진(`judgeRentalHousingEligibility`)과 **같은 함수**(`calculateHoldingPeriod` — 소령 §154⑤ → 법 §95④
+  // 초일 산입)다. 일수(730일)로 세면 응당일 전날 양도에서 엔진은 충족인데 여기서만 차단됐다.
   if (formTransferDate && asset.acquisitionDate) {
-    const acqMs = new Date(asset.acquisitionDate).getTime();
-    const trnMs = new Date(formTransferDate).getTime();
-    if (Number.isFinite(acqMs) && Number.isFinite(trnMs)) {
-      const days = Math.floor((trnMs - acqMs) / (1000 * 60 * 60 * 24));
-      if (days < 730) {
-        return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년(730일) 이상이 필요합니다. (취득일~양도일: ${days}일)`);
+    const acq = new Date(asset.acquisitionDate);
+    const trn = new Date(formTransferDate);
+    if (Number.isFinite(acq.getTime()) && Number.isFinite(trn.getTime())) {
+      const hp = calculateHoldingPeriod(acq, trn);
+      if (hp.years < 2) {
+        return fieldError("acquisitionDate", `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (취득일~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
       }
     }
   }

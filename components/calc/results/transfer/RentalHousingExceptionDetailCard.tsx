@@ -18,6 +18,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 import { RentalCancellationWindowNote } from "./RentalCancellationWindowNote";
+import { rentalHousingBasisOf } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -64,7 +65,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             장기임대주택 거주주택 비과세 특례 — 적용 불가
           </p>
           <span className="text-micro text-amber-800 dark:text-amber-400">
-            소득세법 시행령 제155조 제20항
+            {rentalHousingBasisOf(detail.eligibility.laws)}
           </span>
         </div>
 
@@ -110,7 +111,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           장기임대주택 보유자 거주주택 비과세 특례
         </p>
         <ScenarioBadge id={scenarioId} threshold={thresholdLabel(detail)} />
-        <span className="text-micro text-muted-foreground">소득세법 시행령 §155⑳</span>
+        <span className="text-micro text-muted-foreground">{rentalHousingBasisOf(detail.eligibility.laws)}</span>
       </div>
 
       {/* 요건 판정 */}
@@ -357,7 +358,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           </p>
         </div>
         <div className="rounded border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/30 dark:bg-emerald-950/20 p-2.5 text-center">
-          <p className="text-micro text-emerald-700 dark:text-emerald-400 font-medium">비과세 양도소득금액 (시행령 §161①)</p>
+          <p className="text-micro text-emerald-700 dark:text-emerald-400 font-medium">{isScenarioB ? "비과세 양도소득금액 (시행령 §161①)" : "비과세 양도소득금액"}</p>
           <p className="text-sm font-mono font-semibold text-emerald-900 dark:text-emerald-200 mt-0.5">
             {formatN(exemptGain)}
           </p>
