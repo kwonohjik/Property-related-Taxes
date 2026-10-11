@@ -38,10 +38,14 @@ const dot = (s: string) => `${s.replace(/-/g, ".")}.`;
 
 const isHwaseong = (code: string | undefined): code is string => !!code && code.startsWith(HWASEONG_CODE_PREFIX);
 
-/** 그 날이 화성시 전역 지정(2020-06-19 구간)이라 판정되는데 정정공고일 전인가 — 정정공고일로 읽으면 미지정이 되는 날 */
-function inStatusWindow(code: string | undefined, date: string): boolean {
+/**
+ * 그 날이 화성시 전역 지정(2020-06-19 구간)이라 판정되는데 정정공고일 전인가 — 정정공고일로 읽으면 미지정이 되는 날.
+ * `inDistrict`는 엔진 판정(`isRegulatedByBjdCode`)에 넘기는 「지정 지구 안인가」 선언과 같은 값이다 — 반송동·석우동처럼
+ * 동탄2 지구 안이면 6.19. 전부터 지정(시작 2017-08-03)이고 지구 밖(동탄1)이라 선언하면 6.19.부터 지정이라, 선언이 열흘 해당 여부를 가른다.
+ */
+function inStatusWindow(code: string | undefined, date: string, inDistrict?: boolean): boolean {
   if (!isHwaseong(code) || date < WINDOW_START || date >= CORRECTION_DATE) return false;
-  return governingDesignationStart(code, date) === WINDOW_START;
+  return governingDesignationStart(code, date, inDistrict) === WINDOW_START;
 }
 
 /**
@@ -65,7 +69,7 @@ export function hwaseongAcquisitionWindowNotice(
 ): OneHouseUndetermined[] {
   if (settled || !input.regionCode) return [];
   const date = ymd(resolveResidenceJudgmentDate(input));
-  if (!inStatusWindow(input.regionCode, date)) return [];
+  if (!inStatusWindow(input.regionCode, date, input.regionInDesignatedDistrict)) return [];
   if (!(residenceDecides?.() ?? true)) return [];
   return [
     {
@@ -82,7 +86,7 @@ export function hwaseongAcquisitionWindowNotice(
  * 두 독법의 처분기한 판정이 갈릴 때만. `bothRegulated`는 6.19. 독법의 판정이고, 6.29. 독법은 그보다 지정이 적어 `false`가 될 수 있다.
  */
 export function hwaseongTemporaryTwoHouseWindowNotice(
-  input: Pick<TransferTaxInput, "regionCode" | "transferDate">,
+  input: Pick<TransferTaxInput, "regionCode" | "regionInDesignatedDistrict" | "transferDate">,
   tt: NonNullable<TransferTaxInput["temporaryTwoHouse"]>,
   bothRegulatedByTenth: boolean,
   deadlineYearsFor: (bothRegulated: boolean) => number,
@@ -91,11 +95,14 @@ export function hwaseongTemporaryTwoHouseWindowNotice(
   const acq = ymd(tt.newAcquisitionDate);
   const contract = tt.newHouseContractDate ? ymd(tt.newHouseContractDate) : undefined;
   const previousCode = tt.previousHouseIsRosterRow ? tt.previousHouseRegionCode : input.regionCode;
+  // 종전 주택의 지구 선언 — 판정 정본(`resolveRegulatedAtNewAcquisition`)과 같은 짝(명부 행이면 명부 선언, 아니면 양도 주택 선언)
+  const previousInDistrict = tt.previousHouseIsRosterRow ? tt.previousHouseInDesignatedDistrict : input.regionInDesignatedDistrict;
   const newCode = tt.newHouseRegionCode;
+  const newInDistrict = tt.newHouseInDesignatedDistrict;
   const status =
-    inStatusWindow(previousCode, acq) ||
-    inStatusWindow(newCode, acq) ||
-    (contract !== undefined && inStatusWindow(newCode, contract));
+    inStatusWindow(previousCode, acq, previousInDistrict) ||
+    inStatusWindow(newCode, acq, newInDistrict) ||
+    (contract !== undefined && inStatusWindow(newCode, contract, newInDistrict));
   const gap =
     inAnnouncementGap(newCode, newCode ? governingDesignationStart(newCode, acq, tt.newHouseInDesignatedDistrict) : null, acq) ||
     (contract !== undefined &&
@@ -133,7 +140,7 @@ export function hwaseongSurchargeWindowNotice(
   const transfer = ymd(input.transferDate);
   const start = governingDesignationStart(code, transfer, house.inDesignatedDistrict);
   const contract = house.contractDate && house.saleDepositReceived ? ymd(house.contractDate) : undefined;
-  if (inStatusWindow(code, transfer)) {
+  if (inStatusWindow(code, transfer, house.inDesignatedDistrict)) {
     return [
       `이 주택의 양도일(${dot(transfer)})은 화성시 지정 시작 열흘(${dot(WINDOW_START)}~6.28.)에 걸려 있어 다주택 중과를 적용했습니다. ${BASIS}. 조정대상지역이 아니면 중과가 없습니다.`,
     ];

@@ -39,6 +39,7 @@ beforeEach(() => {
 const HYOHAENG = "4159325021"; // 화성시 효행구 — 2020.6.19.~2022.11.13. 시 전역 지정
 const NEUNGDONG = "4159710100"; // 화성시 동탄구 능동 — 동탄2 밖
 const SANCHEOK = "4159711000"; // 화성시 동탄구 산척동 — 동탄2(2017.8.3.부터 지정)
+const BANSONG = "4159710200"; // 화성시 동탄구 반송동 — 동탄1 지구 99.8%(동탄2 지구 한정 지정 때는 동탄2 안·밖을 선언받는다)
 const NAMYANG = "4159125600"; // 화성시 만세구 남양읍
 const SEOSIN = "4159133000"; // 화성시 만세구 서신면 — 2022.7.5. 해제
 const DASAN = "4136011200"; // 남양주시 다산동 — 2019.11.8.~2020.6.18. 지정
@@ -277,6 +278,83 @@ describe("#3 하위 2 — 화성 지정 시작 열흘(2020.6.19.~6.28.) 확인 �
     expect(
       hwaseongTemporaryTwoHouseWindowNotice({ ...common, transferDate: new Date("2023-03-01") }, tt("2020-07-10"), true, years),
     ).toEqual([]);
+  });
+});
+
+describe("#3 하위 2 — 지구 안·밖 선언이 열흘 해당 여부를 가른다 (반송동·석우동: 동탄2 지구 밖이면 6.19.부터 지정)", () => {
+  const rowHouse = (id: string, over = {}) => ({ ...makeHouse(id), ...over });
+
+  it("① 취득: 지구 밖(동탄1) 선언 + 취득 2020.6.22. → 6.19.부터 지정이라 고지 · 지구 안 선언(2017.8.3.부터 지정)·미선언·열흘 밖은 고지 없음", async () => {
+    const outside = await judge({ regionCode: BANSONG, acq: "2020-06-22", transfer: "2024-06-22", asset: { regionInDesignatedDistrict: false } });
+    expect(outside.isExempt).toBe(false); // 지구 밖 선언도 6.19.부터 지정이라 취득 당시 조정 — 거주 0 → 과세
+    expect(outside.undetermined).toContain(HWASEONG_WINDOW_NOTICE_ID);
+    for (const o of [
+      { asset: { regionInDesignatedDistrict: true }, acq: "2020-06-22" }, // 지구 안 — 6.19. 전부터 지정(구간 시작 2017-08-03)
+      { asset: {}, acq: "2020-06-22" }, // 미선언 — 지정(모름=불리), 열흘에 의존하지 않는다
+      { asset: { regionInDesignatedDistrict: false }, acq: "2020-06-29" }, // 열흘 밖
+      { asset: { regionInDesignatedDistrict: false }, acq: "2020-06-18" }, // 지구 밖 선언 + 6.18. 취득 — 미지정
+    ]) {
+      const j = await judge({ regionCode: BANSONG, acq: o.acq, transfer: "2024-06-29", asset: o.asset });
+      expect(j.undetermined, JSON.stringify(o)).not.toContain(HWASEONG_WINDOW_NOTICE_ID);
+    }
+  });
+
+  it("② §155①2호: 신규 주택이 지구 밖 선언 반송동이고 취득이 열흘 안이면 고지 · 지구 안·미선언이면 없음", () => {
+    const years = (both: boolean) => (both ? 2 : 3);
+    const common = { regionCode: GANGNAM, transferDate: new Date("2023-03-01") };
+    const tt = (inDistrict: boolean | undefined) => ({
+      previousAcquisitionDate: new Date("2015-01-01"),
+      newAcquisitionDate: new Date("2020-06-25"),
+      newHouseRegionCode: BANSONG,
+      newHouseInDesignatedDistrict: inDistrict,
+      previousHouseIsRosterRow: false,
+    });
+    expect(hwaseongTemporaryTwoHouseWindowNotice(common, tt(false), true, years)).toHaveLength(1);
+    expect(hwaseongTemporaryTwoHouseWindowNotice(common, tt(true), true, years)).toEqual([]);
+    expect(hwaseongTemporaryTwoHouseWindowNotice(common, tt(undefined), true, years)).toEqual([]);
+  });
+
+  it("② 종전 주택 쪽: 양도 주택(비명부)의 선언은 input, 명부 행의 선언은 tt.previousHouseInDesignatedDistrict를 쓴다", () => {
+    const years = (both: boolean) => (both ? 2 : 3);
+    const base = {
+      previousAcquisitionDate: new Date("2015-01-01"),
+      newAcquisitionDate: new Date("2020-06-25"),
+      newHouseRegionCode: GANGNAM, // 신규 주택은 열흘과 무관 — 종전 주택 쪽만 본다
+    };
+    const transferDate = new Date("2023-03-01");
+    // 비명부 — 종전 주택 = 양도 주택(input.regionCode · input.regionInDesignatedDistrict)
+    const nonRoster = { ...base, previousHouseIsRosterRow: false };
+    expect(
+      hwaseongTemporaryTwoHouseWindowNotice({ regionCode: BANSONG, regionInDesignatedDistrict: false, transferDate }, nonRoster, true, years),
+    ).toHaveLength(1);
+    expect(hwaseongTemporaryTwoHouseWindowNotice({ regionCode: BANSONG, transferDate }, nonRoster, true, years)).toEqual([]);
+    // 명부 행 — 선언은 tt.previousHouseInDesignatedDistrict(양도 주택 선언은 무관)
+    const roster = (inDistrict: boolean | undefined) => ({
+      ...base,
+      previousHouseIsRosterRow: true,
+      previousHouseRegionCode: BANSONG,
+      previousHouseInDesignatedDistrict: inDistrict,
+    });
+    const input = { regionCode: GANGNAM, regionInDesignatedDistrict: false, transferDate };
+    expect(hwaseongTemporaryTwoHouseWindowNotice(input, roster(false), true, years)).toHaveLength(1);
+    expect(hwaseongTemporaryTwoHouseWindowNotice(input, roster(true), true, years)).toEqual([]);
+    expect(hwaseongTemporaryTwoHouseWindowNotice(input, roster(undefined), true, years)).toEqual([]);
+  });
+
+  it("③ 다주택 중과: 양도 주택이 지구 밖 선언 반송동 + 양도일 열흘 안이면 중과 적용 + 고지 · 지구 안·미선언이면 고지 없음", () => {
+    const run = (i: MultiHouseSurchargeInput) =>
+      determineMultiHouseSurcharge(i, defaultRules, toRegulatedAreaHistory(), suspensionNone, true);
+    const mk = (inDesignatedDistrict: boolean | undefined) =>
+      makeInput([rowHouse("h1", { regionCode: BANSONG, inDesignatedDistrict }), rowHouse("h2")], {
+        sellingHouseId: "h1",
+        transferDate: new Date("2020-06-25"),
+      });
+    const outside = mk(false);
+    expect(run(outside).isRegulatedAtTransfer).toBe(true);
+    expect(run(outside).surchargeApplicable).toBe(true);
+    expect(hwaseongSurchargeWindowNotice(outside, true, false)).toHaveLength(1);
+    expect(hwaseongSurchargeWindowNotice(mk(true), true, false)).toEqual([]);
+    expect(hwaseongSurchargeWindowNotice(mk(undefined), true, false)).toEqual([]);
   });
 });
 
