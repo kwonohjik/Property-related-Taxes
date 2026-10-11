@@ -241,6 +241,24 @@ export interface MixedUseAssetInput {
       | "generalHouseRightAtInheritance"]: TransferTaxInput[K];
   };
   /**
+   * 「소득세법 시행령」 §155⑥1호·⑦·⑧ 특례 주택(문화유산 · 농어촌 · 수도권 밖 부득이한 사유) **세대 선언** — 폼-전역(route 주입, S08-3).
+   *
+   * 특례 주택과 일반주택을 각각 1개씩 소유한 1세대가 일반주택을 양도하면 「1개의 주택을 소유하고 있는 것으로 보아
+   * 제154조제1항을 적용」한다. 겸용주택의 주택 부분은 §154③상 §89①3호의 「주택」이라 일반주택이다(일반주택에서 겸용을
+   * 빼는 문언 없음 — 정면 해석례는 미확보, 확인 필요). 엔진이 단건 `checkExemption`(E-3.6~E-3.8)과 **같은 술어**
+   * (`qualifiesCulturalHeritageHouse`·`qualifiesRuralHouse`·`qualifiesUnavoidableOutsideCapital`)로 판정해
+   * **비과세 주택 수 축**에만 반영한다.
+   *
+   * ⚠️ 중과 15호 ① 요소(`resolveDeemedOneHouseBy155`)에는 넘기지 않는다 — 비과세 축 전용이다(②+⑥·②+⑧ 방향은 별건 결정 대기).
+   * ⚠️ `multiHouse.unavoidableOutsideCapitalHouse`(**boolean** — 중과 4호 슬롯)와 같은 사실의 다른 층위다. 이 값은 **원값**이다.
+   * 🔑 미전달(undefined)이면 판정하지 않는다(종전 동작). 컴패니언 겸용은 카드 item이 이 선언을 싣지 않아 서브엔진만
+   *    의제하면 카드 판정과 갈리므로 미전달이다(`inheritedHouseExclusion` 전례).
+   * 🔑 키를 **필수**로 둔 매핑 타입이다 — route가 셋 중 하나를 빠뜨리면 컴파일이 실패한다(값은 undefined 가능).
+   */
+  article155SpecialHouses?: {
+    [K in "ruralHouse" | "culturalHeritageHouse" | "unavoidableOutsideCapitalHouse"]: TransferTaxInput[K];
+  };
+  /**
    * 「소득세법」 §89② 판정용 **세대 사실**(보유 조합원입주권·분양권 · 예외 선언 · 합가 · 명부 등) — route 주입(E-7).
    *
    * 겸용주택의 주택 부분은 「소득세법 시행령」 §154③상 §89①3호를 적용할 때의 「주택」이므로, 주택과 권리를 함께

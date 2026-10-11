@@ -103,6 +103,32 @@ export function appurtenantLandMultiplier(
   }
 }
 
+/**
+ * 영 §154⑦ 후단 · §167의5 · §168의12 후단 — **공익사업 수용** 양도의 용도지역 기준일 개정 시행일.
+ *
+ * 「…수용되는 경우(사업인정 고시일 전에 해당 토지를 취득한 경우로 한정한다)에는 사업인정 고시일 전날 현재 해당 토지의 용도지역을
+ * 적용한다」 — 대통령령 제35878호(공포·시행 2025-11-28, 법제처 행위시법 2025-12-15 기준 시행본 실독) 부칙 제2조:
+ * 「제154조제7항, 제167조의5 및 제168조의12의 개정규정은 이 영 시행 이후 양도하는 경우부터 적용한다.」
+ */
+export const EXPROPRIATION_ZONE_BASE_DATE_EFFECTIVE_DATE = new Date("2025-11-28");
+
+/**
+ * 수용 양도의 부수토지 배율 용도지역 **기준일 고지**(세액 불변) — 엔진은 사용자가 고른 `appurtenantLandZone`으로 배율을 정하므로,
+ * 수용이면 그 구분이 사업인정 고시일 전날 현재 용도지역이어야 한다는 사실을 알린다(입력 칸·계산은 바꾸지 않는다).
+ * 양도일이 시행일 전이거나 수용이 아니면 `null`.
+ */
+export function expropriationZoneBaseDateNotice(
+  input: Pick<TransferTaxInput, "transferCause" | "transferDate">,
+): string | null {
+  if (input.transferCause !== "public_expropriation") return null;
+  if (input.transferDate < EXPROPRIATION_ZONE_BASE_DATE_EFFECTIVE_DATE) return null;
+  return (
+    "공익사업 수용 양도 — 양도일이 2025-11-28 이후이면 주택 부수토지 배율(「소득세법 시행령」 §154⑦·§167의5·§168의12)의 용도지역은, " +
+    "사업인정 고시일 전에 해당 토지를 취득한 경우에 한해 「사업인정 고시일 전날 현재 해당 토지의 용도지역」을 적용합니다. " +
+    "입력한 부수토지 소재지 구분이 그 기준일 현재 용도지역인지 확인하세요 — 양도 당시 용도지역과 다르면 배율이 달라질 수 있습니다 — 확인 필요"
+  );
+}
+
 /** primary 자산에서 부수토지 분기에 필요한 최소 컨텍스트 */
 export interface PrimaryContextForCompanionRate {
   /** primary 자산 종류 ("housing" 계열이어야 부수토지 분기 대상) */

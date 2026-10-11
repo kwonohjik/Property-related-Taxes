@@ -48,6 +48,7 @@ import {
   PROVISO_LABEL,
   resolveExemptionProviso,
   qualifiesRuralHouse,
+  qualifiesCulturalHeritageHouse,
   ruralTemporaryTwoHouseOverlapCountHolds,
   qualifiesUnavoidableOutsideCapital,
   twoHouseSpecialCountHolds,
@@ -439,11 +440,7 @@ function checkExemptionCore(
    *    선행 과제」라 적었으나 **과대평가였다**(계획서 §4.2).
    * ⇒ ① 2주택일 것 ② 문화유산 주택 선언 ③ §154① 요건 충족(「§154①을 적용」이므로).
    */
-  if (
-    twoHouseSpecialCountHolds(input) &&
-    input.culturalHeritageHouse === true &&
-    meetsOneHouseHoldingResidence(input, rule)
-  ) {
+  if (qualifiesCulturalHeritageHouse(input) && meetsOneHouseHoldingResidence(input, rule)) {
     const basis = ` (${shortArticle(TRANSFER.CULTURAL_HERITAGE_HOUSE)})`;
     const priceCheck =
       input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;

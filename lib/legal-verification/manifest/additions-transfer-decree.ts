@@ -149,6 +149,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "그 보유기간 중 거주기간이 2년 이상인 것",
       // ⑧3호 동일세대 상속 통산 — 판정 메뉴 입력 경로(OH-18)가 이 문언에 기댄다(MST 286211 실독 2026-09-26)
       "상속개시 전에 상속인과 피상속인이 동일세대로서 거주하고 보유한 기간",
+      // ⑦ 후단 — 공익사업 수용 시 부수토지 배율의 용도지역 기준일(제35878호 2025.11.28.). 결과 고지·입력 안내가 이 문언에 기댄다.
+      "사업인정 고시일 전날 현재 해당 토지의 용도지역을 적용한다",
     ],
     keywordMode: "ALL",
   },
@@ -448,7 +450,7 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.SHORT_TERM_HOUSE_LAND",
     citation: "소득세법 시행령 §167의5",
-    keywords: ["주택이 정착된 면적", "배율", "3배", "10배"],
+    keywords: ["주택이 정착된 면적", "배율", "3배", "10배", "사업인정 고시일 전날 현재 해당 토지의 용도지역을 적용한다"],
     keywordMode: "ALL",
   },
 
@@ -512,7 +514,7 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.NBL_HOUSE_APPURTENANT",
     citation: "소득세법 시행령 §168의12",
-    keywords: ["지역별로 대통령령으로 정하는 배율", "3배", "5배", "10배"],
+    keywords: ["지역별로 대통령령으로 정하는 배율", "3배", "5배", "10배", "사업인정 고시일 전날 현재 해당 토지의 용도지역을 적용한다"],
     keywordMode: "ALL",
   },
   {

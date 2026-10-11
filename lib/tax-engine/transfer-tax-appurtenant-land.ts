@@ -12,14 +12,18 @@
  */
 import { calculateHoldingPeriod } from "./tax-utils";
 import { round2 } from "./area-utils";
-import { appurtenantLandMultiplier } from "./appurtenant-land-rate";
+import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
+import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 
-/** 「소득세법」 시행령 제154조 제1항 1세대1주택 보유요건 (2년) */
-const ONE_HOUSE_HOLDING_MONTHS = 24;
+/**
+ * 「소득세법」 시행령 제154조 제1항 1세대1주택 보유요건의 **현행 연수**(2년) — 양도일 연혁은 `resolveOneHouseMinHoldingYears`가 정한다
+ * (2012-06-29 전 양도분은 3년 — 대통령령 제23887호 부칙 제2조). 이 값은 그 함수의 `ruleYears` 인자다.
+ */
+const ONE_HOUSE_HOLDING_YEARS = 2;
 
 /**
  * 토지 파트의 §104② 세율 보유기간 기산일.
@@ -91,9 +95,9 @@ export function buildLandRateInput(input: TransferTaxInput, basisDate: Date): Tr
 }
 
 /**
- * G-3 비과세 축 — 주택 부수토지를 **나중에** 취득해 보유 2년 미만이면 그 토지분은
+ * G-3 비과세 축 — 주택 부수토지를 **나중에** 취득해 보유 2년(2012-06-29 전 양도분은 3년) 미만이면 그 토지분은
  * 1세대1주택 비과세를 적용하지 않는다(「소득세법」 시행령 제154조 제1항 보유요건 미충족).
- * 건물분과 2년 이상 보유한 토지분만 비과세 대상이다(계획서 §5.4).
+ * 건물분과 요건 연수 이상 보유한 토지분만 비과세 대상이다(계획서 §5.4).
  *
  * `splitDetail` 없이 **입력만으로** 판정한다 — 전액 비과세 조기 반환(STEP 1a)을 막을지
  * 결정하는 시점에는 아직 양도차익이 계산되지 않았기 때문이다.
@@ -106,9 +110,12 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   const land = input.landAcquisitionDate;
   if (!land) return false;
   if (!isLaterAcquiredLandHeldTooShort(land, input.acquisitionDate, input.transferDate)) return false;
-  // 지분(총양도가) · 부담부증여(§159)는 12억 안분 분모가 자산 단위와 달라 파트별 안분 기준이
-  // 확정돼 있지 않다 — 대상에서 제외한다(계획서 §5.4 선결 과제).
-  if (input.totalPropertyTransferPrice !== undefined) return false;
+  // 부담부증여(§159)는 12억 안분 분모가 자산 단위와 달라 파트별 안분 기준이 확정돼 있지 않다 — 대상에서 제외한다(계획서 §5.4 선결 과제).
+  //
+  // 지분 양도는 **제외하지 않는다**(S08-8). 종전에는 `totalPropertyTransferPrice !== undefined`(= 물건 전체 양도가액을 12억 분모로 싣는
+  // 값 — 지분 단건·함께양도 묶음의 지분 자산·F-13 단위 카드 합계 주입이 모두 채운다)를 「지분 양도」의 대리 지표로 읽어 G-3을 통째로
+  // 껐다. 그러나 영 §154①의 보유요건은 공유 여부와 무관하고, 12억 초과 지분은 같은 영 §156①(물건 전체로 고가 판정)·§160①(보유기간이
+  // 다른 부분은 합계액 대비 비율 안분)이 이미 정한 물건 전체 분모로 파트별 안분한다(`calcOneHouseProration`).
   if (input.burdenedGiftDenominator !== undefined) return false;
   if (input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift") return false;
   return true;
@@ -131,7 +138,7 @@ export function laterInheritedLandExemptNotice(
   if (input.landAcquisitionCause !== "inheritance") return null;
   if (!isLaterAcquiredLandExemptExcluded(input)) return null;
   return (
-    "주택보다 나중에 상속받은 부수토지는 상속개시일부터 보유기간을 계산해 2년 미만이므로 1세대1주택 비과세에서 제외했습니다. " +
+    "주택보다 나중에 상속받은 부수토지는 상속개시일부터 보유기간을 계산해 보유요건(「소득세법 시행령」 제154조 제1항 — 양도일 연혁 2년·3년) 미만이므로 1세대1주택 비과세에서 제외했습니다. " +
     "피상속인의 보유기간 통산(「소득세법 시행령」 제154조 제8항 제3호)은 문언이 「상속받은 주택으로서 상속개시 당시 동일세대인 경우」라 " +
     "토지만 상속받은 경우에는 적용하지 않았습니다 — 확인 필요"
   );
@@ -190,11 +197,14 @@ export function buildingSec164ApportionNotice(splitDetail: SplitGainResult | und
 }
 
 /**
- * 부수토지로서의 보유기간 요건(영 §154① 2년) — **주택보다 나중에 취득한 토지**만 걸린다.
+ * 부수토지로서의 보유기간 요건(영 §154① — 현행 2년, **양도일 2012-06-29 전은 3년**) — **주택보다 나중에 취득한 토지**만 걸린다.
  *
  * 부수토지는 주택이 있어야 성립하므로 「부수토지로서의 보유기간」은 주택·토지 취득일 중 **늦은 날**부터다
  * (토지를 먼저 취득했으면 주택 취득일 — 주택의 보유요건이 곧 이 요건이다). 단일 주택 입력(G-3)과
  * 컴패니언 부수토지 카드(F-13 — `checkExemption`)가 **이 한 함수**를 쓴다.
+ *
+ * 연수는 주택 본체의 §154① 보유요건과 **같은 연혁 leaf**(`resolveOneHouseMinHoldingYears`)가 정한다 — 종전에는 24개월 상수라
+ * 주택 자체는 3년(2010-06-15 양도에 주택 2년 5개월 → 과세)인데 부수토지는 2년으로 비과세됐다(S02-5).
  */
 export function isLaterAcquiredLandHeldTooShort(
   landAcquisitionDate: Date,
@@ -203,7 +213,33 @@ export function isLaterAcquiredLandHeldTooShort(
 ): boolean {
   if (landAcquisitionDate.getTime() <= houseAcquisitionDate.getTime()) return false;
   const held = calculateHoldingPeriod(landAcquisitionDate, transferDate);
-  return held.years * 12 + held.months < ONE_HOUSE_HOLDING_MONTHS;
+  return held.years * 12 + held.months < resolveOneHouseMinHoldingYears(transferDate, ONE_HOUSE_HOLDING_YEARS) * 12;
+}
+
+/**
+ * 배율 한도 판정(G-2)이 도는 입력 게이트 — 주택 · 토지·건물 모두 본인 소유 · 별개취득 · 용도지역 선택 · 정착면적·토지면적 양수.
+ * `resolveAppurtenantLandExcess`와 수용 기준일 고지(`expropriationZoneNoticeFor`)가 **같은 게이트**를 쓴다.
+ */
+function resolveAppurtenantZoneInputs(
+  input: TransferTaxInput,
+): { zone: NonNullable<TransferTaxInput["appurtenantLandZone"]>; footprint: number; landArea: number } | null {
+  if (input.propertyType !== "housing") return null;
+  if ((input.selfOwns ?? "both") !== "both") return null;
+  if (input.isSeparateAcquisition !== true) return null;
+  if (input.appurtenantLandZone === undefined) return null;
+  const footprint = input.buildingFootprintArea ?? 0;
+  const landArea = input.acquisitionArea ?? 0;
+  if (footprint <= 0 || landArea <= 0) return null;
+  return { zone: input.appurtenantLandZone, footprint, landArea };
+}
+
+/**
+ * G5-6 — 배율 한도 판정이 실제로 도는 수용 양도(2025-11-28 이후)에 용도지역 기준일(사업인정 고시일 전날)을 알린다. 세액 불변.
+ * 판정 게이트는 `resolveAppurtenantLandExcess`와 같다 — 배율이 쓰이지 않는 입력에는 말할 거리가 없다.
+ */
+export function expropriationZoneNoticeFor(input: TransferTaxInput): string | null {
+  if (!resolveAppurtenantZoneInputs(input)) return null;
+  return expropriationZoneBaseDateNotice(input);
 }
 
 /** 주택 부수토지 배율 한도 판정 결과 (G-2) */
@@ -233,15 +269,11 @@ export interface AppurtenantLandExcess {
 export function resolveAppurtenantLandExcess(
   input: TransferTaxInput,
 ): AppurtenantLandExcess | null {
-  if (input.propertyType !== "housing") return null;
-  if ((input.selfOwns ?? "both") !== "both") return null;
-  if (input.isSeparateAcquisition !== true) return null;
-  if (input.appurtenantLandZone === undefined) return null;
-  const footprint = input.buildingFootprintArea ?? 0;
-  const landArea = input.acquisitionArea ?? 0;
-  if (footprint <= 0 || landArea <= 0) return null;
+  const zoneInputs = resolveAppurtenantZoneInputs(input);
+  if (!zoneInputs) return null;
+  const { zone, footprint, landArea } = zoneInputs;
 
-  const multiplier = appurtenantLandMultiplier(input.appurtenantLandZone, input.transferDate);
+  const multiplier = appurtenantLandMultiplier(zone, input.transferDate);
   const limitArea = round2(footprint * multiplier);
   const excessArea = round2(Math.max(0, landArea - limitArea));
   if (excessArea <= 0) return null;
@@ -267,8 +299,8 @@ export interface HousingLandExclusionResult {
  * 겸용주택 정본(`buildHousingPart`)의 ①→② 순서를 그대로 따른다:
  *   ① 비과세 비대상분을 **안분 전** 양도차익에서 분리 — 전액 과세
  *      · G-2: 배율 초과분 → 비사업용 토지(§104의3①5호). 별도 파트로 조립한다.
- *      · G-3: 배율 내이지만 나중 취득으로 보유 2년 미만인 토지분(영 §154① 보유요건 미충족).
- *   ② 12억 안분(영 §160①)은 **잔여 주택분**(배율 내 + 2년 이상 토지 + 건물)에만 적용.
+ *      · G-3: 배율 내이지만 나중 취득으로 보유 요건 연수(2년, 2012-06-29 전 양도분은 3년) 미만인 토지분(영 §154① 보유요건 미충족).
+ *   ② 12억 안분(영 §160①)은 **잔여 주택분**(배율 내 + 요건 연수 이상 토지 + 건물)에만 적용.
  *      분모는 자산 양도가액 그대로다 — 고가주택 판정(§89①3호)은 주택과 그 부수토지 전체의
  *      실지거래가액 기준이기 때문이다.
  *
@@ -301,7 +333,7 @@ export function applyHousingLandExclusions(args: {
   // ② 잔여 주택분 — 비과세 대상이면 안분(전액 비과세면 0), 아니면 전액 과세
   const exemptApplies = isExempt || isPartialExempt;
   const applyExempt = (gain: number) => (isExempt ? 0 : prorate(gain));
-  //   배율 내 토지분: G-3(보유 2년 미만)이면 비과세 대상이 아니라 전액 과세
+  //   배율 내 토지분: G-3(보유 요건 연수 미만)이면 비과세 대상이 아니라 전액 과세
   const landTaxableGain =
     !exemptApplies || laterLand ? housingLandGain : applyExempt(housingLandGain);
   const buildingTaxableGain = !exemptApplies ? buildingGain : applyExempt(buildingGain);

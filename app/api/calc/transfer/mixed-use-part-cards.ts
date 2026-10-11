@@ -358,6 +358,12 @@ export function buildMixedUseCompanionItems(
      */
     article89Clause2Facts: pickArticle89Clause2Facts(companionEngine),
     specialHouseExclusions: g.specialHouseExclusions,
+    /**
+     * §155⑥1호·⑦·⑧ 특례 주택 선언(S08-3)은 **싣지 않는다** — 파트 카드의 비과세는 카드마다 도는 단건 엔진이 재판정하는데
+     * 컴패니언 item은 이 선언을 싣지 않으므로, 서브엔진만 의제하면 §154③ 본문(상가 카드의 주택 취급)이 카드 판정과 갈린다
+     * ⇒ 종전 동작 유지(`inheritedHouseExclusion`과 같은 이유 · 확인 필요 — 컴패니언 겸용 × §155⑥⑦⑧ 별건).
+     */
+    article155SpecialHouses: undefined,
     isOneHousehold: companionEngine.isOneHousehold ?? false,
     isRegulatedArea: ctx.primaryEngineInput.isRegulatedArea,
     isSelfCultivatedExpropriatedLand: g.isSelfCultivatedExpropriatedLand,
