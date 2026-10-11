@@ -251,8 +251,9 @@ export function HousesListSection({
    */
   hideSpouseOwned?: boolean;
   /**
-   * §155④⑤ 합가 — 넘기면 행 편집 창에 합가 전 보유 쪽을 묻고 표에 배지를 단다(판정 메뉴).
-   * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다. 계산기는 넘기지 않는다.
+   * §155④⑤ 합가 — 넘기면 행 편집 창에 합가 전 보유 쪽을 묻고 표에 배지를 단다(판정 메뉴·계산기 공통).
+   * 게이트(합가 칸이 보이고 합가일이 있을 때)는 호출부가 건다 — 계산기도 합가일이 있으면 넘긴다
+   * (`Step4.tsx`·`SurchargeJudgmentSection.tsx`의 `mergeContextOf(form)`). 넘기지 않은 화면은 합가일이 없는 경우뿐이다.
    */
   mergeContext?: MergeContext;
   /** 조특법 주택 수 제외(행 편집 ⑥·「특례」 배지) — 게이트는 호출부(`HouseCountExemptionInputs`)가 정한다. */

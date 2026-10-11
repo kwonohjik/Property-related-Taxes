@@ -149,7 +149,7 @@ export function judgeMixedUseOneHouseExemption(
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
       generalHouseAcquisitionDate: asset.buildingAcquisitionDate,
       transferDate,
-      mergeOrder: undefined, // 겸용 경로에는 합가 전 보유 쪽(`mergeOrigin`) 입력이 없다 — 판정 메뉴 전용
+      mergeOrder: undefined, // 겸용 경로는 §99의4 D5 합가 맥락을 넘기지 않는다 — 명부 `mergeOrigin` 입력은 있으나 일반 경로(`new994MergeOrderOf`)와 달리 쓰지 않는다
     });
     const special = resolveSpecialHouseExclusions(asset.specialHouseExclusions, transferDate);
     mixedNew994Detail = hce.new994Detail;

@@ -10,6 +10,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
+  type MergeExemptionKind,
   MARRIAGE_MERGE_10Y_TRANSFER_START,
   PARENTAL_CARE_MERGE_10Y_TRANSFER_START,
   resolveMergeExemptionYears,
@@ -24,13 +25,15 @@ const ymd = (d: Date) => d.toISOString().slice(0, 10);
 /**
  * 「합친 날(혼인한 날)부터 N년 이내」의 N 문구.
  * 혼인·동거봉양 합가일이 둘 다 있으면 혼인을 본다 — 엔진 `matchMergeApartFromWindow`와 같은 순서.
+ * `kind`를 주면 합가일 입력과 무관하게 그 종류의 문구를 쓴다 — 종류별 안내 칸(`MergeDateSection`)이 쓴다.
  */
 export function mergeExemptionYearsLabel(args: {
   marriageDate?: string;
   parentalCareMergeDate?: string;
   transferDate?: string;
+  kind?: MergeExemptionKind;
 }): string {
-  const kind = args.marriageDate ? "marriage" : args.parentalCareMergeDate ? "parental_care" : undefined;
+  const kind = args.kind ?? (args.marriageDate ? "marriage" : args.parentalCareMergeDate ? "parental_care" : undefined);
   const transferAt = toOptionalDate(args.transferDate);
   if (kind && transferAt) return `${resolveMergeExemptionYears(kind, transferAt)}년`;
   if (kind === "marriage") return `10년(${ymd(MARRIAGE_MERGE_10Y_TRANSFER_START)} 전 양도는 5년)`;

@@ -46,7 +46,7 @@ interface Props {
   showSpouseOwned?: boolean;
   /** 양도일 — 공시가격 조회 기준연도 기본값(§167의3①1호 기준시가는 **양도 당시**) */
   transferDate?: string;
-  /** §155④⑤ 합가 — 있으면 합가 전 보유 쪽을 묻는다(판정 메뉴 전용). */
+  /** §155④⑤ 합가 — 있으면 합가 전 보유 쪽을 묻는다(판정 메뉴·계산기 공통, 합가일이 있을 때 호출부가 넘긴다). */
   mergeContext?: MergeContext;
   /**
    * 조특법 주택 수 제외(⑥) 칸을 연다 — 판정 메뉴(`judgmentSaleIsHousing`)와 계산기
@@ -321,9 +321,19 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             onChange={(v) => onUpdate({ inheritedDate: v || undefined })}
           />
           <p className="text-caption text-muted-foreground/70">
-            상속 후 5년 이내이면 주택 수 산정에서 자동 배제됩니다.
+            상속 후 5년 이내이면 중과 대상에서만 제외되고 주택 수에는 산입됩니다. 비과세 판정의 상속주택 특례(소득세법
+            시행령 §155②)에는 이 5년 기간 제한이 없습니다.
           </p>
         </div>
+
+        {/* §155⑲ — 협의분할 등기 전 법정상속분 의제 + 등기 후 추가 신고·납부(G5-9). 선언 칸(③) 앞에서 보이도록 카드 밖에 둔다 */}
+        <p className="pt-2 text-caption text-muted-foreground/70" data-testid="house-entry-155-19-notice">
+          공동상속 여부와 최대지분 판정은, 양도일까지 협의분할(「민법」 제1013조)하여 등기하지 않았으면 법정상속분(「민법」
+          제1009조·제1010조)에 따라 상속주택을 소유하는 것으로 봅니다(소득세법 시행령 §155⑲). 미등기 상속주택은
+          법정상속분 기준으로 입력하세요. 양도 후 국세 부과 제척기간 내에 협의분할 등기를 하여 소득세법 시행령
+          §155②·③을 적용받지 못하게 되면, 등기일이 속하는 달의 말일부터 2개월 이내에 추가 납부세액을 신고·납부해야
+          합니다(같은 항 단서).
+        </p>
 
         {/* §155③ 공동상속주택 (2-A2) — 일반주택 양도 시 소수지분은 주택 수 제외 */}
         <div className="pt-2">

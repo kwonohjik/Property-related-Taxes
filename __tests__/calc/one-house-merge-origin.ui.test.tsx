@@ -89,7 +89,7 @@ describe("MO-1 편집 창(⑤)", () => {
     expect(screen.getByTestId("house-merge-origin-after").textContent).toContain("합가로 들어온 주택이 아니라");
   });
 
-  it("mergeContext가 없으면(계산기) 블록 자체가 없다", () => {
+  it("mergeContext가 없으면(합가일 없음) 블록 자체가 없다", () => {
     render(<HouseEntryEditor house={house("2018-01-01")} onUpdate={() => {}} showSpouseOwned />);
     expect(screen.queryByTestId("house-merge-origin")).toBeNull();
     // 계산기의 중과 축 칩은 그대로다
@@ -129,7 +129,7 @@ describe("MO-2 명부 표(⑦) · 배우자 칩 숨김", () => {
     expect(screen.getByTestId("house-merge-badge-h1").getAttribute("data-side")).toBe("unset");
   });
 
-  it("계산기 모드(두 prop 없음) — 배지 없음 · 편집 창에 배우자 칩 그대로", () => {
+  it("합가 맥락 없음(두 prop 없음 — 합가일 없는 계산기 등) — 배지 없음 · 편집 창에 배우자 칩 그대로", () => {
     render(<HousesListSection form={calcForm(house("2018-01-01"))} onChange={() => {}} />);
     expect(screen.queryByTestId("house-merge-badge-h1")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
