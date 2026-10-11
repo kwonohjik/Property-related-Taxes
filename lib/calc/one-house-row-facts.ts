@@ -24,6 +24,7 @@
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { housesOwnedAtTransfer } from "./household-house-count";
+import { unavoidableOutsideCapitalStatusPayload } from "./two-house-exclusion-status";
 
 /**
  * 도출에 필요한 행 속성만 — 테스트가 전체 `HouseEntry`를 만들지 않아도 되게 좁힌다.
@@ -51,6 +52,7 @@ export type OneHouseFactRow = Partial<
     | "oneHouseUnavoidableOutsideCapital"
     | "unavoidableOutsideCapitalReason"
     | "unavoidableOutsideCapitalResolvedDate"
+    | "unavoidableOutsideCapitalUnresolved"
     | "acquisitionDate"
     | "addressJibun"
     | "regionCode"
@@ -75,7 +77,9 @@ export interface RuralHousePayload {
 /** ④가 만드는 §155⑧ nested payload — 엔진 `TransferTaxInput["unavoidableOutsideCapitalHouse"]`. */
 export interface UnavoidableOutsideCapitalPayload {
   reason: "study" | "work" | "illness" | "other";
+  /** 해소일 — `unresolvedAtTransfer`와 택일(둘 다 없으면 ⑧·⑫ 차단, 엔진은 불성립) */
   resolvedDate?: string;
+  unresolvedAtTransfer?: true;
 }
 
 /** 세대 단위 레거시 값(폼 스칼라) — 행에 표시가 없을 때만 쓴다. */
@@ -246,10 +250,11 @@ export function deriveOneHouseFactsFromHouses(
   const rowUoc: UnavoidableOutsideCapitalPayload | undefined = uocRow
     ? {
         reason: uocRow.unavoidableOutsideCapitalReason ?? "work",
-        // 미입력 = **미해소**다. 빈 문자열을 그대로 보내면 엔진이 기한을 기산해 버린다(W-1).
-        ...(uocRow.unavoidableOutsideCapitalResolvedDate
-          ? { resolvedDate: uocRow.unavoidableOutsideCapitalResolvedDate }
-          : {}),
+        // 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 빈 값은 「모름」이라 어느 쪽도 싣지 않고 ⑧·⑫가 막는다.
+        ...unavoidableOutsideCapitalStatusPayload({
+          resolvedDate: uocRow.unavoidableOutsideCapitalResolvedDate,
+          unresolved: uocRow.unavoidableOutsideCapitalUnresolved,
+        }),
       }
     : undefined;
 

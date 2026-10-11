@@ -91,6 +91,8 @@ const HOUSE_ROW_CASES: FieldJumpCase[] = [
   // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(2026-10-04 · 빈 값 = 「모름」 차단)
   { name: "step1: 보유 주택 부득이 사유 해소 상태", field: R, step: 1, message: /^보유 주택 1: 부득이한 사유 주택: 사유 해소일을 입력하거나/, form: holding([row({ isUnavoidableReason: true, unavoidableResidenceYears: "2", acquisitionOfficialPrice: "250000000" })]) },
   { name: "step1: 보유 주택 소송 상태", field: R, step: 1, message: /^보유 주택 1: 소송 주택: 소송 확정판결일을 입력하거나/, form: holding([row({ isLitigationHousing: true })]) },
+  // §155⑧ 수도권 밖 부득이 주택 — 해소일 또는 「사유가 양도일 현재 해소되지 않음」 택일(#31 · 빈 값 = 「모름」 차단)
+  { name: "step1: 보유 주택 §155⑧ 해소 상태", field: R, step: 1, message: /^보유 주택 1: 수도권 밖 부득이한 사유 주택: 사유 해소일을 입력하거나/, form: holding([row({ oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work" })]) },
 ];
 
 const SE = "sellingHouseExclusion";

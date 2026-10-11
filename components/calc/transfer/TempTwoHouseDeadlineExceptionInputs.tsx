@@ -74,7 +74,7 @@ export function TempTwoHouseRelocationInputs({
       checked={form.publicInstitutionRelocation}
       onCheckedChange={(v) => onChange({ publicInstitutionRelocation: v })}
       title="공공기관·법인 지방이전 특례 (§155⑯)"
-      description="수도권 1주택 보유 중 소속 법인·공공기관이 수도권 밖으로 이전하여, 이전한 시·군 또는 연접 시·군의 주택을 취득한 경우 — 처분기한이 5년으로 늘고 1년 경과 요건도 면제됩니다"
+      description="수도권 1주택 보유 중 소속 법인·공공기관이 수도권 밖으로 이전하여, 이전한 시·군 또는 연접 시·군의 주택을 취득한 경우 — 처분기한 「3년」이 5년으로 늘고(조정대상지역 단축 기한 2년·1년은 늘지 않습니다) 1년 경과 요건도 면제됩니다"
       tone="sky"
     >
       {/* 두 소재지를 넣으면 「이전한 시·군 또는 연접한 시·군」을 자동 판정한다.

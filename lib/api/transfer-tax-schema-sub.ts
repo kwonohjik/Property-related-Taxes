@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { aptDeadlineExtensionSchema } from "./transfer-tax-schema-apt-deadline";
+import {
+  unavoidableOutsideCapitalStatusConflict,
+  unavoidableOutsideCapitalStatusIssue,
+} from "@/lib/calc/two-house-exclusion-status";
 
 // ─── ⑩ 장기임대주택 거주주택 비과세 특례 enum 재export (컴패니언) ─
 
@@ -32,8 +36,15 @@ export { temporaryTwoHouseSchema } from "./transfer-tax-schema-temp-two-house";
 /** ⑫ §155⑧ 수도권 밖 부득이 주택 — 양도 대상은 일반주택이고 이 주택은 보유만 한다 */
 export const unavoidableOutsideCapitalHouseSchema = z.object({
   reason: z.enum(["study", "work", "illness", "other"]),
-  /** 미제공 = 사유 미해소 → 3년 기한 미기산 (계획서 W-1) */
+  /** 사유 해소일 — `unresolvedAtTransfer`와 택일. 해소일이 있으면 3년 기한(2012.2.2. 전 해소분은 기한 없음) */
   resolvedDate: z.string().date().optional(),
+  /** 「사유가 양도일 현재 해소되지 않음」 — 해소일과 택일(⑫ superRefine). 둘 다 없으면 「모름」이라 400 */
+  unresolvedAtTransfer: z.literal(true).optional(),
+}).superRefine((u, ctx) => {
+  // 해소일 ↔ 「양도일 현재 미해소」 택일 — 둘 다 없으면 「모름」이 엔진에서 불성립으로 조용히 바뀐다. ⑧ `unavoidableOutsideCapitalStatusIssue`의 거울.
+  const issue = unavoidableOutsideCapitalStatusIssue({ resolvedDate: u.resolvedDate, unresolved: u.unresolvedAtTransfer === true })
+    ?? unavoidableOutsideCapitalStatusConflict({ resolvedDate: u.resolvedDate, unresolved: u.unresolvedAtTransfer === true });
+  if (issue) ctx.addIssue({ code: "custom", path: ["resolvedDate"], message: issue.message });
 });
 
 /** ⑫ §155⑦ 농어촌주택 — 유형별 요건은 엔진이 판정한다(Zod는 형상만 검증) */

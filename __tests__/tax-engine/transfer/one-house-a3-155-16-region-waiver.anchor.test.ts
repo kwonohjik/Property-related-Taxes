@@ -64,6 +64,10 @@ function calc(newHouseSigunguCode: string | undefined, relocation = true) {
         publicInstitutionRelocation: relocation,
         relocatedSigunguCode: RELOCATED,
         ...(newHouseSigunguCode ? { newHouseSigunguCode } : {}),
+        // 이 anchor의 주제는 ⑯ 지역 요건이다 — 신규 주택은 취득 당시 비조정으로 고정한다(#30: 조정 여부 미입력은 불성립 독법이 되어
+        // 양도 시기(2022-06-01)에 따라 2년 기한이 걸리므로 주제와 섞이지 않게 선언한다).
+        previousHouseRegulatedAtNewAcquisition: true,
+        newHouseRegulatedAtAcquisition: false,
       },
     }),
     seedRates(),
@@ -102,6 +106,8 @@ describe("OH-35 엔진 — ⑯ 1년 면제는 지역 요건에 묶인다", () =>
           publicInstitutionRelocation: true,
           relocatedSigunguCode: RELOCATED,
           newHouseSigunguCode: NON_ADJACENT,
+          previousHouseRegulatedAtNewAcquisition: true,
+          newHouseRegulatedAtAcquisition: false,
         },
       }),
       seedRates(),
@@ -129,6 +135,8 @@ describe("OH-35 판정 카드 — 엔진과 같은 술어", () => {
       publicInstitutionRelocation: true,
       relocatedSigunguCode: RELOCATED,
       newHouseSigunguCode,
+      // 신규 주택 취득 당시 비조정(선언) — 조정 여부 미입력은 #30의 불성립 독법이라 주제(⑯ 지역 요건)와 섞이지 않게 고정한다.
+      eraFields: { newHouseRegulatedAtAcquisition: "no", prevHouseRegulatedAtNewAcquisition: "yes" },
     });
 
   it("🔴 비연접 → 1년 요건 미충족·면제 표시 없음·불성립", () => {

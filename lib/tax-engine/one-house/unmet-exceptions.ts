@@ -35,6 +35,7 @@ import {
   ruralReturnToFarmDeadlineApplies,
   twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
+  unavoidableResolvedDeadlineApplies,
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
@@ -438,10 +439,10 @@ function pushTwoHouseCountReason(
 /**
  * §155⑧ 수도권 밖 부득이한 사유 주택 — 불성립 사유.
  *
- * 🔑 **해소일 미입력은 사유가 아니다.** 정본(`qualifiesUnavoidableOutsideCapital`)이 기한을
- *    기산하지 않고 **통과**시키는 자리라(해소 전 양도는 명문 없음 — 계획서 W-1), 미입력을
- *    미충족으로 읽으면 법 근거 없이 납세자에게 불리해진다. 그 사실은 `collectUndetermined`가
- *    판정 보류(`155-8-resolved-date-missing`)로 따로 밝힌다.
+ * 🔑 **「양도일 현재 미해소」 선택은 사유가 아니다.** 정본(`qualifiesUnavoidableOutsideCapital`)이 기한을 기산하지 않고
+ *    **통과**시키는 자리라(해소 전 양도는 명문 없음 — 계획서 W-1), 미충족으로 읽으면 법 근거 없이 납세자에게 불리해진다.
+ *    해소일도 「미해소」 선택도 없는 빈 값(모름)은 ⑧·⑫가 막으므로 여기서 말할 사유가 없다(#31 — 종전의 판정 보류
+ *    `155-8-resolved-date-missing`은 이 택일 입력으로 사라졌다).
  * 🔑 **3년 기한 초과도 여기서 말하지 않는다** — `collectPendingConditions`가 **날짜와 함께**
  *    안내한다(`155-8-unavoidable-resolved`). 두 카드가 같은 사실을 말하지 않는다. 단 기한일 기준 §154① 보유 2년이 모자라
  *    안내를 못 낸 경우는 그 이유를 여기서 말한다(S07-4).
@@ -457,8 +458,14 @@ function collectUnavoidableUnmet(
   pushTwoHouseCountReason(reasons, input.householdHousingCount, "부득이한 사유로 취득한 수도권 밖 주택");
   pushInheritedBothPoolsCapReason(reasons, input, "수도권 밖 부득이한 사유 주택 특례(§155⑧)");
   pushBaseRequirementReason(reasons, input, oneHouseRules.one_house_exemption);
+  // 해소일도 「양도일 현재 미해소」도 고르지 않은 빈 값은 「모름」이다 — 혜택 불성립 + 확인 필요(#31 · 직접 호출 방어, ⑧·⑫가 먼저 막는다).
+  if (!u.resolvedDate && u.unresolvedAtTransfer !== true) {
+    reasons.push(
+      "부득이한 사유가 해소된 날을 입력하거나 「사유가 양도일 현재 해소되지 않음」을 선택하지 않아 적용하지 않았습니다(확인 필요).",
+    );
+  }
   // 다른 사유가 없는데 3년 기한이 지났다면 `pending`이 기한을 안내한다 — 단 기한일 기준 보유 2년이 모자라 안내를 못 냈으면 그 이유를 말한다(S07-4).
-  if (reasons.length === 0 && u.resolvedDate && twoHouseSpecialCountHolds(input)) {
+  if (reasons.length === 0 && u.resolvedDate && unavoidableResolvedDeadlineApplies(u.resolvedDate) && twoHouseSpecialCountHolds(input)) {
     const dl = deadlineEndFrom(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (!isWithinDeadline(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate)) {
       const why = deadlineHoldingUnmetReason(input, oneHouseRules.one_house_exemption, dl.end, "부득이한 사유가 해소된 날부터 3년");

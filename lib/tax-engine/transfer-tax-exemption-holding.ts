@@ -46,6 +46,24 @@ import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
 
+/**
+ * §155⑧ 「해소된 날부터 3년」 개정규정의 적용 시작일 — 대통령령 제23588호(2012.2.2. 공포·시행).
+ * 부칙 제10조 「제155조제8항의 개정규정은 이 영 시행 후 부득이한 사유가 해소된 분부터 적용한다」(DRF eflaw 실독 2026-10-11).
+ * 종전 ⑧(2008.11.28. 신설)에는 해소 개념도 3년 기한도 없었으므로, 이 날 **전**에 해소된 분에는 기한을 걸지 않는다.
+ * 시행일 당일 해소분은 「시행 후」로 보아 3년을 적용한다(`resolveUnavoidableResolvedDeadline`의 선례 규약).
+ */
+export const UNAVOIDABLE_OUTSIDE_CAPITAL_DEADLINE_RESOLVED_START = new Date("2012-02-02");
+
+/** 해소일이 3년 기한의 적용 대상인가 — 2012.2.2. 전 해소분은 종전 규정(기한 없음)이다. */
+export function unavoidableResolvedDeadlineApplies(resolvedDate: Date): boolean {
+  return resolvedDate.getTime() >= UNAVOIDABLE_OUTSIDE_CAPITAL_DEADLINE_RESOLVED_START.getTime();
+}
+
+/** 해소일이 있을 때의 기한 충족 — 2012.2.2. 전 해소분은 기한이 없어 항상 충족이다. */
+export function unavoidableResolvedWithinDeadline(resolvedDate: Date, transferDate: Date): boolean {
+  return !unavoidableResolvedDeadlineApplies(resolvedDate) || isWithinDeadline(resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, transferDate);
+}
+
 // §155⑦1호·2호 — 거주 요건 연수.
 export const RURAL_HOUSE_RESIDENCE_YEARS = 5;
 // §155⑦ 단서 — 귀농주택(3호)은 취득일부터 5년 이내 일반주택 양도에 한정.
@@ -195,9 +213,11 @@ export function qualifiesUnavoidableOutsideCapital(
 ): boolean {
   const u = input.unavoidableOutsideCapitalHouse;
   if (!twoHouseSpecialCountHolds(input) || !u) return false;
-  // 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 본다(계획서 W-1).
-  if (u.resolvedDate === undefined) return true;
-  return isWithinDeadline(u.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate);
+  // 해소일 또는 「양도일 현재 미해소」 택일(#31 · 2026-10-04 원칙) — 둘 다 없으면 「모름」이라 혜택 불성립이다(⑧·⑫가 차단하고
+  //   엔진은 직접 호출 방어로 불성립). 종전에는 빈 값을 「미해소」로 읽어 3년 기한 없이 특례를 줬다(계획서 W-1).
+  //   🔶 해소 전 양도에 특례를 적용하는 독법(「미해소」 선택)은 사전-2024-법규재산-0319가 질의 전제로 받친다.
+  if (u.resolvedDate === undefined) return u.unresolvedAtTransfer === true;
+  return unavoidableResolvedWithinDeadline(u.resolvedDate, input.transferDate);
 }
 
 /** §155⑧ 부득이한 사유 라벨 (exemptReason 표시용 — 내부 id 노출 금지) */

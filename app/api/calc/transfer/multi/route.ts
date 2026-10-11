@@ -284,11 +284,12 @@ export async function POST(request: NextRequest) {
             ...mapTemporaryTwoHouseEraFacts(p.temporaryTwoHouse),
           }
         : undefined,
-      // ⑭ §155⑧ 수도권 밖 부득이 — resolvedDate는 string이라 Date 변환 필수(미제공 = 미해소).
+      // ⑭ §155⑧ 수도권 밖 부득이 — resolvedDate는 string이라 Date 변환 필수. 해소일 ↔ 「양도일 현재 미해소」 택일(⑫ 검증, #31).
       unavoidableOutsideCapitalHouse: p.unavoidableOutsideCapitalHouse
         ? {
             reason: p.unavoidableOutsideCapitalHouse.reason,
             resolvedDate: toOptionalDate(p.unavoidableOutsideCapitalHouse.resolvedDate),
+            unresolvedAtTransfer: p.unavoidableOutsideCapitalHouse.unresolvedAtTransfer,
           }
         : undefined,
       // ⑭ §155⑦ 농어촌주택 — acquisitionDate만 Date 변환 대상. 나머지는 boolean·number라 그대로 통과.

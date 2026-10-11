@@ -188,8 +188,9 @@ describe("G3 ③ 복원 · 게이트 leaf", () => {
       giftBurdenedTempTwoHouseDeadlineInScope(aptItem(TT3({ newAcquisitionDate: undefined })).burdenedGiftTransferTax!),
     ).toBe(false);
   });
-  it("G3-G2 ★ ⑤⑧ §155①2호 게이트 — ⑯이 성립하면 조정 기한 연혁 칸이 닫힌다(판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자)", () => {
+  it("G3-G2 ★ ⑤⑧ §155①2호 게이트 — ⑯이 「3년」을 5년으로 덮는 독법에서만 조정 기한 연혁 칸이 닫힌다(판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자)", () => {
     // 신규 2020-06-01 · 증여 2021-03-01 — 두 주택 조정 여부가 기한을 바꾸는 시기(E-1 anchor와 같은 시료)
+    // #29 — 이 시기에 조정→조정이면 2019-12-17 체제의 1년 기한이라 ⑯ 5년이 덮지 않는다 → ⑯이어도 칸이 열린다(종전: 닫힘).
     const tt = (extra: Record<string, unknown>) => ({
       ...TT3(extra),
       acquisitionDate: new Date("2015-01-01"),
@@ -202,7 +203,18 @@ describe("G3 ③ 복원 · 게이트 leaf", () => {
     expect(giftBurdenedTempTwoHouseRegulatedGate(aptItem(tt({})).burdenedGiftTransferTax!, "2021-03-01", undefined)).not.toBeNull();
     expect(
       giftBurdenedTempTwoHouseRegulatedGate(aptItem(tt({ publicInstitutionRelocation: true })).burdenedGiftTransferTax!, "2021-03-01", undefined),
-    ).toBeNull();
+    ).not.toBeNull();
+    // 긍정 짝 — ⑯이 5년으로 덮는 시기(2023-01-12 이후 본문 3년 구간: 조정 여부가 기한을 바꾸지 않는다)에는 칸이 닫힌 채다.
+    const late = (extra: Record<string, unknown>) => ({
+      ...TT3(extra),
+      acquisitionDate: new Date("2015-01-01"),
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2015-01-01"),
+        newAcquisitionDate: new Date("2024-06-01"),
+        ...extra,
+      } as NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>,
+    });
+    expect(giftBurdenedTempTwoHouseRegulatedGate(aptItem(late({})).burdenedGiftTransferTax!, "2025-03-01", undefined)).toBeNull();
   });
   it("G3-F1 필드 파생 — 신규 주택 시·군 코드 = 소재지 법정동코드 앞 5자리 + 0 · 옛 record는 빈 값", () => {
     expect(giftBurdenedDeadlineExceptionFields(aptItem(TT3({ newHouseRegionCode: "4415010100" })).burdenedGiftTransferTax!).newHouseSigunguCode).toBe(

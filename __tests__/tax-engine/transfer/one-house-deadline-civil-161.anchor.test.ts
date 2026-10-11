@@ -448,17 +448,25 @@ describe("표 밖 양도 — 판정 보류 고지(토·일만 반영)", () => {
     expect([judge(seol("2028-01-27")).isExempt, judge(seol("2028-01-31")).isExempt]).toEqual([true, true]);
     expect(judge(seol("2028-02-01")).isExempt).toBe(false);
   });
-  it("말일 2036-06-07(토) → 06-09(월)까지 비과세 + 표 미포함 고지(토·일만)", () => {
-    const r = judge({
-      ...tt("2036-06-09"),
-      acquisitionDate: D("2030-01-01"),
-      temporaryTwoHouse: {
-        previousAcquisitionDate: D("2030-01-01"),
-        newAcquisitionDate: D("2033-06-07"),
-      } as TransferTaxInput["temporaryTwoHouse"],
-    });
-    expect(r.isExempt).toBe(true);
-    const u = r.undetermined.find((x) => x.id === "civil-161-holiday-table-uncovered");
+  it("말일 2036-06-07(토) → 06-09(월)까지 비과세(고지 없음 — 말일 안이라 표 한계가 결론을 못 바꾼다) · 06-11 과세 + 표 미포함 고지(토·일만) (#32 하위 1 가)", () => {
+    const at = (t: string) =>
+      judge({
+        ...tt(t),
+        acquisitionDate: D("2030-01-01"),
+        temporaryTwoHouse: {
+          previousAcquisitionDate: D("2030-01-01"),
+          newAcquisitionDate: D("2033-06-07"),
+          // 신규 주택 취득 당시 비조정(선언) — 본문 3년(말일 2036-06-07)을 본다. 미입력이면 2026 개정 1호의 불성립 독법(2년)이다(#30).
+          newHouseRegulatedAtAcquisition: false,
+        } as TransferTaxInput["temporaryTwoHouse"],
+      });
+    const within = at("2036-06-09");
+    expect(within.isExempt).toBe(true);
+    expect(within.undetermined.map((x) => x.id)).not.toContain("civil-161-holiday-table-uncovered");
+    // 말일(06-09) 이틀 뒤 — 표 밖의 해라 06-10 이후 공휴일이 더 있었다면 기한이 늘었을 수 있다 → 결론이 갈린다.
+    const after = at("2036-06-11");
+    expect(after.isExempt).toBe(false);
+    const u = after.undetermined.find((x) => x.id === "civil-161-holiday-table-uncovered");
     expect(u?.reason).toContain("토·일요일만");
   });
   it("표 안 양도(2024)에는 고지하지 않는다", () => {

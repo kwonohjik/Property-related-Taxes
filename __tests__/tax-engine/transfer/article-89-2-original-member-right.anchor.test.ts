@@ -100,10 +100,23 @@ describe("기존주택 원조합원 — §155① 일시적 2주택(0620)", () =>
       expect(iso(v.deadline)).toBe("2023-03-02");
     });
 
-    it("둘 다 조정(강남) → 1년 체제의 전입 요건을 입력받지 않아 특례 불성립 + 확인 필요", () => {
-      const v = verdict(input({ ...rightAt, regionCode: "11680" }, { ...era, regionCode: "11680" }));
+    it("둘 다 조정(강남) → 1년 체제의 전입 요건을 입력받지 않아 특례 불성립 + 확인 필요 (결론이 갈리는 양도 2020-12-01 — 1년 안)", () => {
+      const v = verdict(input({ ...rightAt, regionCode: "11680" }, { ...era, transferDate: D("2020-12-01"), regionCode: "11680" }));
       expect(v.status).toBe("excluded");
       expect(v.confirmNotes?.join(" ")).toContain("§155①2호 가목");
+    });
+
+    it("#30 전입일 미입력이어도 결론이 같으면 확인 필요를 붙이지 않는다 — 1년 기한(2021-03-01)을 넘긴 양도 2021-06-01은 전입과 무관하게 불성립", () => {
+      const v = verdict(input({ ...rightAt, regionCode: "11680" }, { ...era, regionCode: "11680" }));
+      expect(v.status).toBe("excluded");
+      expect(v.confirmNotes).toBeUndefined();
+    });
+
+    it("#30 긍정 짝 — 전입일(1년 안)을 입력하면 같은 양도(2020-12-01)가 성립한다", () => {
+      const v = verdict(
+        input({ ...rightAt, regionCode: "11680", originalMemberMoveInDate: D("2020-04-01") }, { ...era, transferDate: D("2020-12-01"), regionCode: "11680" }),
+      );
+      expect(v.status).toBe("exception_met");
     });
 
     it("소재지를 모르면 두 경우를 모두 계산해 결론이 갈리면 특례 불성립 + 확인 필요", () => {

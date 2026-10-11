@@ -182,10 +182,10 @@ describe("A2b-R 조정 판정 대상·시점 — 신규 취득일 기준 두 주
     expect(exempt(i)).toBe(false);
   });
 
-  it("R7 미입력 → 종전 대리 지표(양도일 기준 양도주택)로 계산 + 판정 보류 고지 / 입력하면 고지 없음", () => {
+  it("R7 미입력 → 두 주택 모두 조정으로 읽은 불성립 독법(#30 — 종전: 양도일 기준 양도주택 대리 지표) + 결론이 갈리면 확인 필요 / 입력하면 고지 없음", () => {
     const ID = "155-1-regulated-at-new-acquisition-unverified";
     const legacy = tt("2020-06-01", "2021-08-01", {}, { isRegulatedArea: true });
-    expect(exempt(legacy)).toBe(false); // 저장 당시와 같은 결론(1년 도과)
+    expect(exempt(legacy)).toBe(false); // 조정→조정 1년 독법 — 처분기한 도과
     expect(undeterminedIds(legacy)).toContain(ID);
     expect(calculateTransferTax(legacy, mockRates).warnings?.some((w) => w.includes("신규주택 취득일 기준"))).toBe(true);
     expect(undeterminedIds(tt("2020-06-01", "2021-08-01", bothDeclared, { isRegulatedArea: true }))).not.toContain(ID);
@@ -203,10 +203,10 @@ describe("A2b-M 2019-12-17 체제 통합 — 가목 전입 · 단서 임차인 �
     expect(exempt(tt("2020-06-01", "2021-03-01", { ...bothDeclared, wholeHouseholdMoveInDate: d("2021-06-02") }))).toBe(false);
   });
 
-  it("M2 전입일 미입력 → 비과세 유지 + 미판정 고지 / 입력하면 고지 없음", () => {
+  it("M2 → #30: 전입일 미입력 → 가목 불성립(과세) + 확인 필요 고지 (종전: 비과세 유지 + 미판정 고지) / 입력하면 비과세 · 고지 없음", () => {
     const ID = "155-1-move-in-requirement-unverified";
     const none = tt("2020-06-01", "2021-03-01", bothDeclared);
-    expect(exempt(none)).toBe(true);
+    expect(exempt(none)).toBe(false); // 가목(1년 내 세대전원 전입)은 적극 요건 — 모르면 혜택 불성립(2026-10-04 원칙)
     expect(undeterminedIds(none)).toContain(ID);
     expect(
       undeterminedIds(tt("2020-06-01", "2021-03-01", { ...bothDeclared, wholeHouseholdMoveInDate: d("2020-07-01") })),

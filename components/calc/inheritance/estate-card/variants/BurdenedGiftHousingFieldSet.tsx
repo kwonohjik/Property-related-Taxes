@@ -325,7 +325,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
           </FieldCard>
           {/* 신규 주택 소재지(E-1 잔여 B) — 계산기는 보유 주택 명부 행 주소에서 코드를 얻는다. 이 화면엔 명부가 없어
               같은 주소 위젯으로 한 칸만 받는다. 코드가 있으면 아래 위젯이 신규 주택도 자동 판정한다(④⑧ 같은 값). */}
-          {eraGate && bgt.temporaryTwoHouse && (
+          {eraGate && bgt.temporaryTwoHouse && !(giftBurdenedTempTwoHouseDeadlineInScope(bgt) && bgt.temporaryTwoHouse.publicInstitutionRelocation) && (
             <FieldCard label="신규 주택 소재지" hint="신규 주택 취득일 현재 조정대상지역 여부를 주소로 판정합니다.">
               <div data-testid="bg-transfer-new-house-address">
                 <AddressSearch
@@ -361,7 +361,8 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
             </FieldCard>
           )}
           {/* §155⑯·⑱ 처분기한 예외(E-1 한계 G3) — 판정 메뉴와 같은 위젯. ⑯의 신규 주택 소재지는 위 칸과 같은 필드에
-              저장하고(⑯이 켜지면 조정 기한 연혁이 닫혀 위 칸은 숨는다) 시·군 코드는 거기서 파생한다. 게이트는 ④와 같다. */}
+              저장하고(⑯이 켜지면 같은 주소를 두 번 받지 않도록 위 칸은 숨는다 — #29 이후 ⑯이어도 조정→조정 단축 기한에서는 조정 여부 칸이 열려 있다)
+              시·군 코드는 거기서 파생한다. 게이트는 ④와 같다. */}
           {giftBurdenedTempTwoHouseDeadlineInScope(bgt) && (
             <>
               <TempTwoHouseRelocationInputs

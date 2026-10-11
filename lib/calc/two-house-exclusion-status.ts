@@ -90,3 +90,47 @@ export function twoHouseExclusionStatusPayload(h: TwoHouseExclusionStatusSource)
     ...(pending ? { litigationPending: true as const } : {}),
   };
 }
+
+// ── §155⑧ 수도권 밖 부득이 주택 (소득세법 시행령 §167의10①4호 겸용) — 같은 택일 규약 (#31) ─────────────────────────────
+//
+// 법문(MST 242735 §155⑧ 실독) 「…부득이한 사유가 **해소된 날부터 3년 이내**에 일반주택을 양도하는 경우」.
+// 종전 화면은 해소일 칸 하나였고 안내문이 「아직 해소되지 않았다면 비워 두세요」였다 — 같은 빈 값에 「해소일을 모른다」가 겹쳐,
+// 모르는 세대가 3년 기한 없이 비과세·중과 배제를 받았다. 3호·7호와 같은 이유로 「양도일 현재 미해소」를 명시 선택으로 받고, 날짜도
+// 선택도 없으면 계산하지 않는다(⑧·⑫). 엔진은 둘 다 없으면 불성립으로 본다(`qualifiesUnavoidableOutsideCapital`).
+
+export interface UnavoidableOutsideCapitalStatusInput {
+  /** 사유 해소일(YYYY-MM-DD) */
+  resolvedDate?: string;
+  /** 「사유가 양도일 현재 해소되지 않음」 선택 */
+  unresolved?: boolean;
+}
+
+const UOC_STATUS_MISSING =
+  "수도권 밖 부득이한 사유 주택: 사유 해소일을 입력하거나 「사유가 양도일 현재 해소되지 않음」을 고르세요 (소득세법 시행령 §155⑧)";
+
+/** ⑧·⑫ — 해소일도 「미해소」 선택도 없으면 「모름」이라 막는다. */
+export function unavoidableOutsideCapitalStatusIssue(
+  h: UnavoidableOutsideCapitalStatusInput,
+): { message: string } | null {
+  return h.unresolved !== true && !h.resolvedDate ? { message: UOC_STATUS_MISSING } : null;
+}
+
+/** ⑫ 전용 — 해소일과 「미해소」가 함께 오면 모순(⑤가 선택 시 날짜를 지우고 ④가 남은 날짜를 싣지 않으므로 화면에서는 생기지 않는다). */
+export function unavoidableOutsideCapitalStatusConflict(
+  h: UnavoidableOutsideCapitalStatusInput,
+): { message: string } | null {
+  return h.unresolved === true && h.resolvedDate
+    ? { message: "수도권 밖 부득이한 사유 해소일과 「사유가 양도일 현재 해소되지 않음」은 함께 보낼 수 없습니다 (소득세법 시행령 §155⑧)" }
+    : null;
+}
+
+/** ④ — 「미해소」를 골랐으면 남은 날짜는 싣지 않는다. */
+export function unavoidableOutsideCapitalStatusPayload(
+  h: UnavoidableOutsideCapitalStatusInput,
+): { resolvedDate?: string; unresolvedAtTransfer?: true } {
+  return h.unresolved === true
+    ? { unresolvedAtTransfer: true }
+    : h.resolvedDate
+      ? { resolvedDate: h.resolvedDate }
+      : {};
+}

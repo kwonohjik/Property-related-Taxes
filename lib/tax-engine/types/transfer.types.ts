@@ -718,15 +718,21 @@ export interface TransferTaxInput {
    * **일반주택(= 양도 대상)** 을 양도하는 경우 1세대1주택으로 본다.
    *
    * 「부득이한 사유가 **해소된 날부터 3년 이내**」 양도 요건이 붙는다.
-   * 🔶 해소 전 양도는 명문이 없다 — 기한이 기산되지 않은 것으로 보아 적용한다
-   * (계획서 W-1 · memory `feedback_no_unfavorable_application_without_legal_basis`).
+   * 🔶 해소 전 양도(「양도일 현재 미해소」 선택)는 명문이 없다 — 기한이 기산되지 않은 것으로 보아 적용한다
+   * (계획서 W-1 · memory `feedback_no_unfavorable_application_without_legal_basis`). 해소일도 「미해소」도 없는 빈 값은
+   * 「모름」이라 적용하지 않는다(#31).
    *
    * 중과 배제는 15호가 아니라 영 §167의10①**4호**가 직접 규정한다.
    */
   unavoidableOutsideCapitalHouse?: {
     reason: UnavoidableReasonKind;
-    /** 부득이한 사유가 해소된 날. 미입력 = 미해소 → 3년 기한 미기산 */
+    /** 부득이한 사유가 해소된 날 — `unresolvedAtTransfer`와 택일. 해소일이 있으면 3년 기한(2012.2.2. 전 해소분은 기한 없음) */
     resolvedDate?: Date;
+    /**
+     * 「양도일 현재 부득이한 사유가 해소되지 않음」 명시 선택 — 해소일과 택일(#31). 둘 다 없으면 「모름」이라 특례 불성립
+     * (직접 호출 방어 · ⑧·⑫가 먼저 막는다). 종전에는 해소일 빈 값을 「미해소」로 읽었다.
+     */
+    unresolvedAtTransfer?: boolean;
   };
   /**
    * §155⑦ — 농어촌주택(수도권 밖 읍·면 소재)과 일반주택을 각각 1개씩 보유한 1세대가

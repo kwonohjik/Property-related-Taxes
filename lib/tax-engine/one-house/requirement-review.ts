@@ -24,7 +24,7 @@
  * 다른 특례(상속·농어촌·대체주택 등)로 결론이 났거나 §89② 배제면 싣지 않는다. 그 요건은
  * 이 행들과 다르고, 「적용된 특례」·「선언했으나 적용되지 않은 특례」 카드가 따로 말한다.
  */
-import { deadlineEndFrom, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
+import { deadlineEndFrom, deadlineEndNote, isAfterPeriod, isOnOrBeforeDay, isWithinDeadline } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import {
   isOneYearHoldRequiredForTemporaryTwoHouse,
@@ -237,6 +237,14 @@ function temporaryTwoHouseItems(
       label: "신규주택 취득일부터 1년 이내 세대 전원 이사·전입신고(조정대상지역 신규주택 취득분)",
       status: timing.moveInMet ? "met" : "unmet",
       facts: [],
+      // 전입일 미입력 — 「모름」 불성립 + 확인 필요(#30). 합가 전 구성 「모름」 행과 같은 방식이다.
+      ...(era.moveInRequirementPending
+        ? {
+            note:
+              "세대 전원 전입일이 입력되지 않아 충족하지 않은 것으로 판정했습니다 — 확인 필요: 신규주택 취득일부터 1년 이내에 " +
+              "세대 전원이 이사·전입신고를 마쳤다면 전입일을 입력하세요.",
+          }
+        : {}),
       legalBasis: basis155,
     });
   }
@@ -420,11 +428,28 @@ function mergeItems(
 
   // ④ 「합친 날(혼인한 날)부터 N년 이내」 — N은 양도일 연혁(OH-29)
   const years = resolveMergeExemptionYears(isMarriage ? "marriage" : "parental_care", input.transferDate);
-  const deadline = deadlineEndFrom(mergeDate, years).end;
+  const deadlineInfo = deadlineEndFrom(mergeDate, years);
+  const deadline = deadlineInfo.end;
+  // 기한 말일이 토요일·공휴일이라 늘었거나 공휴일 표가 덮지 못하는 해면 §155① 기한 줄과 같은 한 줄 단서를 단다(#32 — 이 줄만 없었다).
+  const deadlineNote = deadlineEndNote(deadlineInfo);
   // 이중 합가는 **나중에 합친 날** 이후의 양도여야 3주택이 된 뒤의 양도다(`matchDoubleMergeApartFromWindow`).
   const afterMergeDate = doubleOrder?.secondDate ?? mergeDate;
   const afterMerge = input.transferDate.getTime() >= afterMergeDate.getTime();
   const within = afterMerge && isWithinDeadline(mergeDate, years, input.transferDate);
+  const windowNote = [
+    !afterMerge
+      ? doubleOrder
+        ? `나중에 합친 날(${fmt(afterMergeDate)}) 전의 양도입니다 — 두 합가로 3주택이 되기 전입니다.`
+        : `${event}일 전의 양도입니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 되기 전입니다.`
+      : !within
+        ? judgmentBaseDate && !isDeadlineStillReachable(deadline, judgmentBaseDate)
+          ? `기한이 판정 기준일(${fmt(judgmentBaseDate)}) 전에 지나 양도일을 조정해도 충족할 수 없습니다.`
+          : `${fmt(deadline)}까지 양도하면 이 요건을 충족합니다.`
+        : undefined,
+    deadlineNote,
+  ]
+    .filter(Boolean)
+    .join(" ");
   items.push({
     id: "merge-window",
     label: `${event}일부터 ${years}년 이내 양도`,
@@ -434,20 +459,7 @@ function mergeItems(
       { label: "기한", value: fmt(deadline) },
       { label: "양도(예정)일", value: fmt(input.transferDate) },
     ],
-    ...(!afterMerge
-      ? {
-          note: doubleOrder
-            ? `나중에 합친 날(${fmt(afterMergeDate)}) 전의 양도입니다 — 두 합가로 3주택이 되기 전입니다.`
-            : `${event}일 전의 양도입니다 — ${isMarriage ? "혼인으로" : "합가로"} 2주택이 되기 전입니다.`,
-        }
-      : !within
-        ? {
-            note:
-              judgmentBaseDate && !isDeadlineStillReachable(deadline, judgmentBaseDate)
-                ? `기한이 판정 기준일(${fmt(judgmentBaseDate)}) 전에 지나 양도일을 조정해도 충족할 수 없습니다.`
-                : `${fmt(deadline)}까지 양도하면 이 요건을 충족합니다.`,
-          }
-        : {}),
+    ...(windowNote ? { note: windowNote } : {}),
     legalBasis: basis,
   });
 

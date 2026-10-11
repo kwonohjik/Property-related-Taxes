@@ -85,7 +85,11 @@ export function overlappedTemporaryTwoHouseTimingReasons(
     );
   }
   if (timing.moveInMet === false) {
-    reasons.push(`${lead} — 세대전원 이사·전입신고 기한 요건(§155①2호 가목)을 충족하지 않습니다.`);
+    reasons.push(
+      era.moveInRequirementPending
+        ? `${lead} — 세대전원 이사·전입신고일이 입력되지 않아 기한 요건(§155①2호 가목)을 충족하지 않은 것으로 판정했습니다(확인 필요).`
+        : `${lead} — 세대전원 이사·전입신고 기한 요건(§155①2호 가목)을 충족하지 않습니다.`,
+    );
   }
   return reasons;
 }

@@ -47,20 +47,20 @@ import { isCapitalNewTownResidenceEra } from "../data/one-house-holding-residenc
 import { expropriationNoticeDateRequirementApplies } from "../data/one-house-154-1-proviso-era";
 import {
   judgeTemporaryTwoHouseTiming,
-  meetsPublicInstitutionRelocationRegion,
   resolveRegulatedAtNewAcquisition,
   resolveTemporaryTwoHouseDeadline,
+  resolveTemporaryTwoHouseDeadlineFor,
 } from "../transfer-tax-temporary-two-house-timing";
 import { resolveDisposalDelay } from "../data/temporary-two-house-delay-era";
-import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
 import { resolveRegulatedShortenedClauseRef } from "../data/temporary-two-house-regulated-clause";
-import { holidayTableProvisionalBefore, holidayTableUncoveredBefore } from "../civil-period";
+import { holidayTableNoticeKind } from "./holiday-notice-deadlines";
 import {
   PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
   PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
   PUBLIC_HOLIDAY_TABLE_OFFICIAL_LAST_YEAR,
 } from "../data/public-holidays-kr";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
+import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import { resolveRental4hoRegistration } from "./rental-registration-4ho";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
 import { resolveInheritedHouseExclusionForJudgment } from "../transfer-inheritance-exclusion";
@@ -115,6 +115,13 @@ export interface EraNoticeRelevance {
   residenceDecides: () => boolean;
   /** 사업인정 고시일 고지(S02-2) — 고시일이 「취득 전」이냐 「취득 후」냐에 따라 비과세 결론이 달라지는가 */
   expropriationNoticeDate: () => boolean;
+  /**
+   * §155①2호 조정대상지역 고지(#30·#32) — 신규 취득 당시 두 주택 중 하나가 조정대상지역이 **아니었다**고 읽은 반사실 판정이
+   * 실제 판정(모름 = 두 주택 모두 조정대상지역으로 읽는 불성립 독법)과 비과세·부분과세 결론이 다른가.
+   */
+  regulatedReadingDecides: () => boolean;
+  /** §155①2호 가목 전입일 고지(#30) — 세대전원이 1년 안에 전입했다고 읽은 반사실 판정이 실제 판정과 결론이 다른가. */
+  moveInDecides: () => boolean;
 }
 
 export function collectEraUndetermined(
@@ -122,6 +129,8 @@ export function collectEraUndetermined(
   oneHouseRules: OneHouseSpecialRulesData,
   settled: boolean,
   relevance?: EraNoticeRelevance,
+  /** §89② 판정 — 권리 3년 기한 말일이 공휴일 표 고지의 후보다(없으면 그 축은 보지 않는다) */
+  article89Clause2?: Pick<Article89Clause2Result, "deadline">,
 ): OneHouseUndetermined[] {
   if (input.propertyType !== "housing" || !input.isOneHousehold || input.isUnregistered) return [];
   if (input.oneHouseUnitRole === "appurtenant_land") return [];
@@ -270,34 +279,52 @@ export function collectEraUndetermined(
    */
   const twoHouseRule = oneHouseRules.temporary_two_house;
   const tt = input.temporaryTwoHouse;
-  if (input.householdHousingCount === 2 && tt && twoHouseRule) {
+  /*
+   * 신규 취득 당시 조정 여부·전입일 미입력(#30) — 3주택 겹침(농어촌 §155⑦ · 합가 §155④⑤)도 같은 규칙이다. 주택 수 게이트는 넓게 잡고
+   * 결론을 가를 때만 낸다(`relevance` 반사실 판정이 3주택·특례 없는 세대를 걸러 낸다).
+   */
+  const overlapCount = (input.householdHousingCount === 2 || input.householdHousingCount === 3) && tt && twoHouseRule;
+  if (overlapCount) {
     const reg = resolveRegulatedAtNewAcquisition(input);
-    const eraFor = (bothRegulated: boolean) =>
-      resolveTemporaryTwoHouseDeadlineEra({
-        bothRegulated,
-        baseDeadlineYears: twoHouseRule.disposalDeadlineYears,
-        newAcquisitionDate: tt.newAcquisitionDate,
-        newContractDate: tt.newHouseContractDate,
-        previousAcquisitionDate: tt.previousAcquisitionDate,
-        transferDate: input.transferDate,
-      }).years;
-    const regulatedAxisMatters = !meetsPublicInstitutionRelocationRegion(tt) && eraFor(true) !== eraFor(false);
-    // L-7 — 신규 주택 지정 구간의 공고일이 표에 없으면 「공고가 있은 날 이전」 제외를 판정하지 않았다.
-    if (reg.announcementWarning && regulatedAxisMatters) {
+    // ⑯ 5년이 연혁상 단축 기한을 덮는지까지 포함해 두 독법의 기한이 다를 때만 조정 여부가 기한에 쓰인다(#29).
+    const yrs = (b: boolean) => resolveTemporaryTwoHouseDeadlineFor(input, twoHouseRule, b).years;
+    const regulatedAxisMatters = yrs(true) !== yrs(false);
+    const regulatedDecides = regulatedAxisMatters && (relevance?.regulatedReadingDecides() ?? true);
+    // L-7 — 신규 주택 지정 구간의 공고일이 표에 없으면 「공고가 있은 날 이전」 제외를 판정하지 않았다(제외하지 않는 불성립 독법).
+    //   결론을 가를 때만 낸다(#32).
+    if (reg.announcementWarning && regulatedDecides) {
       out.push({ id: "155-1-regulated-announcement-date-unverified", reason: reg.announcementWarning });
     }
     // 결정 #3 하위 2 — 신규 주택 취득·계약이 화성시 지정 시작 열흘에 걸리고 처분기한 판정이 갈릴 때.
-    if (reg.determined) out.push(...hwaseongTemporaryTwoHouseWindowNotice(input, tt, reg.bothRegulated, eraFor));
-    if (!reg.determined && regulatedAxisMatters) {
+    if (reg.determined) out.push(...hwaseongTemporaryTwoHouseWindowNotice(input, tt, reg.bothRegulated, yrs));
+    if (!reg.determined && regulatedDecides) {
       out.push({
         id: "155-1-regulated-at-new-acquisition-unverified",
         reason:
           `이 양도 시기에는 종전주택이 조정대상지역에 있는 상태에서 조정대상지역의 신규주택을 취득하면 처분기한이 ` +
           `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}${resolveRegulatedShortenedClauseRef(input.transferDate)}). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
-          "주소나 조정대상지역 여부가 입력되지 않아 양도일 기준 양도주택의 조정대상지역 여부로 대신 계산했습니다 — " +
-          "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요.",
+          "주소나 조정대상지역 여부가 입력되지 않아 두 주택 모두 조정대상지역인 것으로 보고 불성립으로 계산했습니다" +
+          `(모두 조정대상지역이면 ${yrs(true)}년, 아니면 ${yrs(false)}년 — 이 양도일은 결론이 갈립니다) — ` +
+          "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요(확인 필요).",
       });
     }
+    /*
+     * 2019-12-17 체제인데 세대전원 전입일이 없다 — 가목(1년 내 전입)은 적극 요건이라 불성립으로 읽었다(모름 = 혜택 불성립 · #30).
+     * 전입을 충족한 독법이 결론을 바꿀 때만 낸다(전입하지 않아 비운 세대도 같은 빈칸이다).
+     */
+    if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).moveInRequirementPending && (relevance?.moveInDecides() ?? true)) {
+      out.push({
+        id: "155-1-move-in-requirement-unverified",
+        reason:
+          `조정대상지역 종전주택 보유 중 2019년 12월 17일 이후 조정대상지역 신규주택을 취득해 2022년 5월 9일 이전에 ` +
+          `양도하면 신규주택 취득일부터 1년 이내 양도 외에 1년 이내 세대전원 전입 요건이 있습니다` +
+          `(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호 가목 — 대통령령 제30395호 부칙 제15조). ` +
+          "세대전원 전입일이 입력되지 않아 이 요건을 충족하지 않은 것으로 보고 불성립으로 계산했습니다 — " +
+          "신규주택 취득일부터 1년 이내에 세대전원이 전입했다면 비과세로 바뀌므로 전입일을 입력하세요(확인 필요).",
+      });
+    }
+  }
+  if (input.householdHousingCount === 2 && tt && twoHouseRule) {
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified) {
       out.push({
         id: "155-1-2002-transition-unverified",
@@ -336,33 +363,13 @@ export function collectEraUndetermined(
         out.push({ id: "155-18-disposal-method-unverified", reason: delay.note });
       }
     }
-    if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).moveInRequirementPending) {
-      out.push({
-        id: "155-1-move-in-requirement-unverified",
-        reason:
-          `조정대상지역 종전주택 보유 중 2019년 12월 17일 이후 조정대상지역 신규주택을 취득해 2022년 5월 9일 이전에 ` +
-          `양도하면 신규주택 취득일부터 1년 이내 양도 외에 1년 이내 세대전원 전입 요건이 있습니다` +
-          `(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호 가목 — 대통령령 제30395호 부칙 제15조). ` +
-          "세대전원 전입일이 입력되지 않아 전입 요건은 판정하지 않았습니다(처분기한만 적용).",
-      });
-    }
   }
 
   /*
-   * L-1 — 「~이내」 기한(§155①④⑤⑦⑧·§154① 단서·§156의2·§156의3)은 말일이 토요일·공휴일이면 익일로 만료한다
-   * (민법 §161). 양도일 직전이 공휴일 표 밖의 해면 토·일요일만 반영했으므로 결론과 무관하게 밝힌다.
-   * 표 안이라도 월력요항 미발표 해(예정 공휴일)면 임시공휴일이 빠져 있어 같은 id로 문구만 달리해 밝힌다.
-   * 기한 축을 선언하지 않은 세대에게는 말하지 않는다.
+   * L-1 — 「~이내」 기한(§155①④⑤⑦⑧·§154① 단서·§156의2·§156의3·§155㉓)은 말일이 토요일·공휴일이면 익일로 만료한다(민법 §161).
+   * 양도일 직전이 공휴일 표 밖의 해(또는 예정 공휴일 해)면 토·일요일만 반영했거나 임시공휴일을 빼고 계산했다. 그 한계가 판정을 바꾸는 것은
+   * 선언한 기한 중 하나의 말일이 양도일 직전 최장 연휴 일수 안에 있을 때뿐이다 — 아래 고지가 그때만 낸다(#32).
    */
-  const hasWithinDeadlineAxis =
-    !!input.temporaryTwoHouse ||
-    !!input.marriageMerge ||
-    !!input.parentalCareMerge ||
-    !!input.unavoidableOutsideCapitalHouse?.resolvedDate ||
-    input.ruralHouse?.kind === "return_to_farm" ||
-    !!input.oneHouseExemptionProviso ||
-    (input.presaleRights?.length ?? 0) > 0 ||
-    !!input.replacementHouse;
   /*
    * D17 — 재상속(별도세대에서 받은 상속주택을 동일세대원이 다시 상속)으로 §155② 단서를 통과한 행이 있으면, 일반주택
    * 「상속개시 당시 보유」 괄호를 재상속일로 판정했다는 것을 밝힌다(최초 상속일 기준인지 정면 해석은 확보되지 않았다 —
@@ -418,7 +425,9 @@ export function collectEraUndetermined(
     });
   }
 
-  if (hasWithinDeadlineAxis && holidayTableUncoveredBefore(input.transferDate)) {
+  // 어느 선언된 기한의 말일이 양도일 곁에 있어 공휴일 표 한계가 판정을 바꿀 수 있을 때만(#32 하위 1 가 — `holiday-notice-deadlines.ts`).
+  const holidayKind = holidayTableNoticeKind(input, oneHouseRules, article89Clause2 ?? {});
+  if (holidayKind === "uncovered") {
     out.push({
       id: "civil-161-holiday-table-uncovered",
       reason:
@@ -427,7 +436,7 @@ export function collectEraUndetermined(
         "양도일 직전 기간의 공휴일(설·추석·대체공휴일·임시공휴일 등)은 반영하지 못하고 토·일요일만 반영했습니다 — " +
         "기한 말일이 공휴일이었다면 직접 확인하세요.",
     });
-  } else if (hasWithinDeadlineAxis && holidayTableProvisionalBefore(input.transferDate)) {
+  } else if (holidayKind === "provisional") {
     // 같은 고지 채널(id) — 2028~는 표가 덮지만 월력요항 전 예정값이라 임시공휴일·규정 개정이 빠져 있다.
     out.push({
       id: "civil-161-holiday-table-uncovered",

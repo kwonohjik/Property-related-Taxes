@@ -89,7 +89,7 @@ const DEEMED_CASES: Array<[string, Partial<TransferTaxInput>, string]> = [
   ],
   [
     "§155⑧ 수도권 밖 부득이",
-    { unavoidableOutsideCapitalHouse: { reason: "work" } },
+    { unavoidableOutsideCapitalHouse: { reason: "work", unresolvedAtTransfer: true } },
     "수도권 밖 부득이한 사유 주택 고가주택 (§155⑧ 근무상 형편)",
   ],
 ];

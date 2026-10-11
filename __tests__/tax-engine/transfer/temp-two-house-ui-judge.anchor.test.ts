@@ -12,6 +12,12 @@ const EMPTY = {
   provisoBusinessApprovalDate: "",
   residencePeriodMonths: "0",
 };
+/**
+ * 신규 주택 취득 당시 비조정(선언) — 이 파일의 기간 요건(1년·3년) anchor는 조정 여부와 무관한 본문 3년 독법을 본다.
+ * 조정 여부 미입력은 #30의 불성립 독법(두 주택 모두 조정)이라 2019-12-17 이후 취득·2018-10-23~2023-01-11 양도에서 기한이 짧아지므로,
+ * 그 독법은 아래 TT-미입력 anchor가 따로 지킨다.
+ */
+const NOT_REGULATED = { eraFields: { newHouseRegulatedAtAcquisition: "no" as const } };
 
 describe("judgeTempTwoHouseFromForm (UI 판정 앵커)", () => {
   it("입력 부족 → pending", () => {
@@ -40,8 +46,22 @@ describe("judgeTempTwoHouseFromForm (UI 판정 앵커)", () => {
       newHouseAcquisitionDate: "2020-01-01",
       transferDate: "2021-06-01",
       ...EMPTY,
+      ...NOT_REGULATED,
     });
     expect(v.status).toBe("eligible");
+  });
+
+  it("TT-미입력 ★ 신규 주택 취득 당시 조정 여부 미입력(#30) → 두 주택 모두 조정으로 읽은 불성립 독법(1년 + 전입 요건) — 선언하면 3년 독법", () => {
+    const base = { previousAcquisitionDate: "2018-01-01", newHouseAcquisitionDate: "2020-01-01", transferDate: "2021-06-01", ...EMPTY };
+    const unknown = judgeTempTwoHouseFromForm(base);
+    expect(unknown.status).toBe("ineligible");
+    if (unknown.status === "pending") return;
+    expect(unknown.deadlineYears).toBe(1);
+    expect(unknown.regulated.determined).toBe(false);
+    expect(unknown.regulated.relevant).toBe(true); // 입력 칸이 열려 있다
+    expect(unknown.moveInPending).toBe(true);
+    const declared = judgeTempTwoHouseFromForm({ ...base, ...NOT_REGULATED });
+    expect(declared.status).toBe("eligible");
   });
 
   it("TT-2 1년 미경과 → ineligible (oneYearMet false)", () => {
@@ -82,6 +102,7 @@ describe("judgeTempTwoHouseFromForm (UI 판정 앵커)", () => {
       provisoExpropriationDate: "2020-12-01",
       provisoDepartureDate: "",
       residencePeriodMonths: "0",
+      ...NOT_REGULATED,
     });
     expect(v.status).toBe("eligible");
     if (v.status !== "pending") expect(v.oneYearWaived).toBe(true);

@@ -85,27 +85,36 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
       existingTenantLeaseEndDate: right.originalMemberTenantLeaseEndDate,
       transferDate: input.transferDate,
     });
+    const timingOf = (moveInMet: boolean | undefined) =>
+      judgeTemporaryTwoHouseTiming({
+        previousAcquisitionDate: input.acquisitionDate,
+        newAcquisitionDate: newAcq,
+        transferDate: input.transferDate,
+        deadlineYears: era.years,
+        oneYearWaived,
+        ...(era.deadlineDate ? { deadlineDate: era.deadlineDate } : {}),
+        ...(moveInMet !== undefined ? { moveInMet } : {}),
+        // §155⑱ — 기존주택 취득일부터 3년이 되는 날 현재 각 호 사유면 처분기한을 넘겨도 충족으로 본다.
+        ...(right.originalMemberDisposalDelayReason ? { disposalDelayReason: right.originalMemberDisposalDelayReason } : {}),
+        // 2022-02-15 전 양도분은 「그 방법으로 양도」도 필요하다 — 일시적 2주택 경로와 같은 술어(`resolveDisposalDelay`).
+        disposalDelayDisposedByThatMethod: right.originalMemberDisposalDelayDisposedByThatMethod,
+      });
+    // 전입일 미입력(#30) — 가목은 적극 요건이라 충족하지 않은 것으로 읽는다. 전입을 충족한 독법과 결론이 같으면 그대로 확정하고,
+    //   갈릴 때만 특례 불성립 + 확인 필요다(일시적 2주택 경로 `era-undetermined.ts`와 같은 규칙).
     if (era.moveInRequirementPending) {
-      return {
-        kind: "unknown",
-        reason:
-          "기존주택 취득일부터 1년 안에 세대전원이 이사·전입했는지(§155①2호 가목)가 입력되지 않았습니다 — " +
-          "분양권·입주권 목록의 그 입주권 행에 기존주택 전입일을 입력하세요",
-      };
+      const unmet = timingOf(false);
+      const ifMoveIn = timingOf(true);
+      if (unmet.overall !== ifMoveIn.overall) {
+        return {
+          kind: "unknown",
+          reason:
+            "기존주택 취득일부터 1년 안에 세대전원이 이사·전입했는지(§155①2호 가목)가 입력되지 않았습니다 — " +
+            "분양권·입주권 목록의 그 입주권 행에 기존주택 전입일을 입력하세요",
+        };
+      }
+      return unmet.overall ? { kind: "met", deadline: unmet.deadline } : { kind: "unmet" };
     }
-    const timing = judgeTemporaryTwoHouseTiming({
-      previousAcquisitionDate: input.acquisitionDate,
-      newAcquisitionDate: newAcq,
-      transferDate: input.transferDate,
-      deadlineYears: era.years,
-      oneYearWaived,
-      ...(era.deadlineDate ? { deadlineDate: era.deadlineDate } : {}),
-      ...(era.moveInMet !== undefined ? { moveInMet: era.moveInMet } : {}),
-      // §155⑱ — 기존주택 취득일부터 3년이 되는 날 현재 각 호 사유면 처분기한을 넘겨도 충족으로 본다.
-      ...(right.originalMemberDisposalDelayReason ? { disposalDelayReason: right.originalMemberDisposalDelayReason } : {}),
-      // 2022-02-15 전 양도분은 「그 방법으로 양도」도 필요하다 — 일시적 2주택 경로와 같은 술어(`resolveDisposalDelay`).
-      disposalDelayDisposedByThatMethod: right.originalMemberDisposalDelayDisposedByThatMethod,
-    });
+    const timing = timingOf(era.moveInMet);
     return timing.overall ? { kind: "met", deadline: timing.deadline } : { kind: "unmet" };
   });
 

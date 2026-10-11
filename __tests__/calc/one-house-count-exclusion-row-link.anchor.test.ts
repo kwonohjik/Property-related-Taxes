@@ -82,6 +82,10 @@ const jForm = (houses: HouseEntry[], over: Record<string, unknown> = {}, assetOv
     isOneHousehold: true,
     isRegulatedArea: false,
     wasRegulatedAtAcquisition: false,
+    // 서면-2021-부동산-6220 사실관계: 대구 B(2019.3.17. 취득) — 신규 주택 취득 당시 비조정이다. #30: 조정 여부 미입력은 두 주택 모두 조정으로 읽은
+    //   불성립 독법(2년)이라 양도 2021-12-12(신규 취득 후 2년 8개월)가 과세가 되므로 사실대로 선언한다.
+    newHouseRegulatedAtAcquisition: "no",
+    prevHouseRegulatedAtNewAcquisition: "no",
     houses,
     presaleRights: [],
     ...over,

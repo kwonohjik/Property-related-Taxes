@@ -18,7 +18,7 @@
  * | 조정→조정, 신규 취득 ≤ 2018-09-13 | 신규취득일 | 3년(본문) | 제29242호 부칙 제2조②1호 |
  * | 조정→조정, 신규 취득 ≥ 2018-09-14 | 신규취득일 | **2년** | §155① 괄호(MST 204914, 2018-10-23 시행) |
  * | 조정→조정, 신규 취득 ≥ 2019-12-17 · 양도 2020-02-11 ~ 2022-05-09 | 둘 다 | **1년** + 1년 내 세대전원 전입 | §155①2호 가·나목(MST 218373), 제30395호 부칙 제15조 |
- * | 조정→조정, 양도 2022-05-10 ~ 2023-01-11 | 양도일 | **2년** | §155①2호(MST 242735), 제32654호 부칙 제3조 |
+ * | 조정→조정, 양도 2022-05-10 ~ 2023-01-11 | 양도일 | **2년**. 단 신규 취득(계약) ≤ 2018-09-13은 종전 **3년** | §155①2호(MST 242735), 제32654호 부칙 제3조 · 제29242호 부칙 제2조②(끊는 규정 없음 — 정면 해석례 없음, 확인 필요) |
  * | 양도 2023-01-12 ~ 2026-09-30 | 양도일 | 3년(본문) | 2호 삭제(MST 248191), 제33267호 부칙 제8조 |
  * | 조정→조정, 양도 ≥ 2026-10-01 · 신규 취득(또는 계약) ≥ 2026-08-04 | 둘 다 | **2년** | §155①1호(MST 290841), 제36737호 부칙 제2조① |
  * | 양도 ≥ 2026-10-01 · 1호 외(신규 취득·계약이 2026-08-03 이전 등) | — | 3년(2호) | §155①2호(MST 290841), 제36737호 부칙 제2조②1·2호 |
@@ -206,7 +206,13 @@ export function resolveTemporaryTwoHouseDeadlineEra(p: {
     return base;
   }
   if (t >= TT_REGULATED_ABOLISHED_TRANSFER_START.getTime()) return base;
-  if (t >= TT_REGULATED_2022_TRANSFER_START.getTime()) return { years: 2, moveInRequirementPending: false };
+  if (t >= TT_REGULATED_2022_TRANSFER_START.getTime()) {
+    // #29 하위 1(가) — 제32654호 부칙 제3조는 2호 개정규정의 적용 시기(2022-05-10 이후 양도)만 정하고 제29242호 부칙
+    //   제2조②의 경과조치(2018-09-13 이전 취득·계약은 종전 3년)를 끊는 규정이 없다 — 이 구간에서도 종전 3년이다.
+    //   정면 해석례는 없다(서면-2022-부동산-1656[부동산납세과-3753]의 반대해석 — 확인 필요).
+    if (n !== undefined && n < TT_REGULATED_2Y_NEW_ACQ_START.getTime()) return base;
+    return { years: 2, moveInRequirementPending: false };
+  }
   if (t < TT_REGULATED_2Y_TRANSFER_START.getTime()) return base;
   if (n === undefined) return { years: 2, moveInRequirementPending: false };
   if (n < TT_REGULATED_2Y_NEW_ACQ_START.getTime()) return base;

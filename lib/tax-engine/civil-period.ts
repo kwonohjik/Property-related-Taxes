@@ -155,21 +155,22 @@ export function deadlineFields(d: DeadlineEnd, basisLaw?: string): { deadline: D
 }
 
 /**
- * `target` 직전 며칠(표 안 최장 연속 휴무 `PUBLIC_HOLIDAY_LONGEST_RUN_DAYS`) 중 공휴일 표 밖의 해가 있는가.
- * 「~이내」 기한은 역상 말일이 그 안에 있을 때만 §161 연장이 `target`의 판정을 바꾼다 — 판정 보류 고지용.
+ * 「~이내」 기한 말일 `end`(민법 §161 반영 후)가 `target`(양도일) 곁에 있어 **공휴일 표의 한계가 판정을 바꿀 수 있는가** (#32 하위 1 가).
+ *
+ * 말일이 표 밖의 해(`uncovered` — 토·일요일만 반영)면 실제 말일이 더 늦을 수 있어 `end` 직후 최장 연휴 일수 안의 양도(`end < target ≤ end + N`)만
+ * 판정이 갈린다. 예정 공휴일 해(`provisional` — 임시공휴일·규정 개정 미반영)는 연장이 잘못 얹혔을 수도 있어 `end` 앞뒤 `N`일을 본다.
+ * 말일이 양도일보다 한참 앞이거나 뒤면 표를 알든 모르든 결론이 같으므로 고지하지 않는다.
+ *
+ * @returns 곁에 있고 표 한계가 걸리면 그 종류, 아니면 `undefined`
  */
-export function holidayTableUncoveredBefore(target: Date): boolean {
-  const from = new Date(dayKey(target) - PUBLIC_HOLIDAY_LONGEST_RUN_DAYS * DAY_MS);
-  return !inHolidayTable(from) || !inHolidayTable(target);
-}
-
-/**
- * `holidayTableUncoveredBefore`와 같은 구간이 표 안이지만 예정 공휴일 해(월력요항 미발표)에 걸리는가 —
- * 임시공휴일·규정 개정이 반영되지 않았다는 고지용. 표 밖이 걸리면 그쪽(`holidayTableUncoveredBefore`)이 우선한다.
- */
-export function holidayTableProvisionalBefore(target: Date): boolean {
-  const from = new Date(dayKey(target) - PUBLIC_HOLIDAY_LONGEST_RUN_DAYS * DAY_MS);
-  return inProvisionalHolidayYears(from) || inProvisionalHolidayYears(target);
+export function deadlineEndHolidayUncertaintyNear(end: Date, target: Date): "uncovered" | "provisional" | undefined {
+  const e = dayKey(end);
+  const t = dayKey(target);
+  const run = PUBLIC_HOLIDAY_LONGEST_RUN_DAYS * DAY_MS;
+  const touches = (pred: (d: Date) => boolean) => pred(end) || pred(target);
+  if (e < t && t - e <= run && touches((d) => !inHolidayTable(d))) return "uncovered";
+  if (Math.abs(t - e) <= run && !touches((d) => !inHolidayTable(d)) && touches(inProvisionalHolidayYears)) return "provisional";
+  return undefined;
 }
 
 /**

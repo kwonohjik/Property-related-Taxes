@@ -99,6 +99,9 @@ describe("OH-35 — §155⑯ 1년 면제는 연접 지역 요건에 묶인다 (r
       publicInstitutionRelocation: true,
       relocatedSigunguCode: "4111700000",
       newHouseSigunguCode,
+      // 주제는 ⑯ 지역 요건이다 — 신규 주택 취득 당시 비조정(선언)으로 고정한다(#30: 조정 여부 미입력은 불성립 독법).
+      previousHouseRegulatedAtNewAcquisition: true,
+      newHouseRegulatedAtAcquisition: false,
     },
   });
 

@@ -292,6 +292,7 @@ function TempTwoHouseVerdictCard({
                           ? "충족"
                           : "미충족"}{" "}
                       · 요건 C — 같은 기한 내 신규주택으로 세대전원 이사·전입신고 (§155①2호 가목)
+                      {tempTwoHouseVerdict.moveInPending && " — 전입일을 입력하지 않아 충족하지 않은 것으로 판정합니다(확인 필요)"}
                     </p>
                   )}
                   <p className="text-caption">최종 비과세 여부는 판정 결과에서 확정됩니다.</p>

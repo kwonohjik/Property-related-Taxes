@@ -175,7 +175,7 @@ describe("R ⑭ route — 주소가 선언을 이긴다(양도세 계산기와 �
     expect(calc.isExempt).toBe(true);
   });
 
-  it("R-3 ★ §155①2호 — 종전(증여) 주택 조정 여부 선언 없음: 종전 판정 보류(대리 지표 비과세) → 주소로 판정해 과세 (신규 2020-06-01 조정 선언 · 증여 2021-08-01)", async () => {
+  it("R-3 ★ §155①2호 — 종전(증여) 주택 조정 여부 선언 없음: 불성립 독법 과세 + 확인 필요(#30 — 종전: 대리 지표 비과세 + 판정 보류) → 주소로 판정하면 고지 없이 같은 과세 (신규 2020-06-01 조정 선언 · 증여 2021-08-01)", async () => {
     const tt = {
       previousAcquisitionDate: new Date("2015-01-01"),
       newAcquisitionDate: new Date("2020-06-01"),
@@ -183,7 +183,7 @@ describe("R ⑭ route — 주소가 선언을 이긴다(양도세 계산기와 �
     };
     const bgt = { acquisitionDate: new Date("2015-01-01"), householdHousingCount: 2, temporaryTwoHouse: tt };
     const base = await gift("2021-08-01", bgt);
-    expect(base.isExempt).toBe(true);
+    expect(base.isExempt).toBe(false); // 모름 = 두 주택 모두 조정(1년 + 전입) 독법 — 3년 독법이면 비과세라 결론이 갈린다
     expect(warned(base, "신규주택 취득일 기준")).toBe(true);
     const withAddress = await gift("2021-08-01", bgt, GANGNAM_PNU);
     expect(withAddress.isExempt).toBe(false);

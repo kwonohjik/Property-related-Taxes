@@ -94,7 +94,7 @@ describe("F09 — E-3 사전게이트의 기산일·삼킴", () => {
   });
 
   it("(b) §155⑧ 부득이 — 일시적 2주택 토글을 함께 켜도 삼켜지지 않는다", () => {
-    const unavoidable = { unavoidableOutsideCapitalHouse: { reason: "work" as const } };
+    const unavoidable = { unavoidableOutsideCapitalHouse: { reason: "work" as const, unresolvedAtTransfer: true } };
     const solo = calculateTransferTax(inheritedHouse(unavoidable), rates);
     const both = calculateTransferTax(inheritedHouse({ ...unavoidable, ...TEMP_TWO_HOUSE }), rates);
 
@@ -124,7 +124,7 @@ describe("F09 — E-3 사전게이트의 기산일·삼킴", () => {
         reason: "overseas_migration",
         departureDate: new Date("2026-01-01"), departureOnlyHouse: true,
       },
-      unavoidableOutsideCapitalHouse: { reason: "work" as const },
+      unavoidableOutsideCapitalHouse: { reason: "work" as const, unresolvedAtTransfer: true },
       ...TEMP_TWO_HOUSE,
     });
     const r = calculateTransferTax(input, rates);

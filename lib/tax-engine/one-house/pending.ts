@@ -53,6 +53,7 @@ import {
   ruralTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
+  unavoidableResolvedDeadlineApplies,
 } from "../transfer-tax-exemption-requirements";
 import { collectEraUndetermined, type EraNoticeRelevance } from "./era-undetermined";
 import {
@@ -295,11 +296,11 @@ export function collectPendingConditions(
   /**
    * §155⑧ 수도권 밖 부득이한 사유 주택 — **해소일부터 3년** 이내 일반주택 양도.
    *
-   * 해소일이 없으면 현행 술어가 기한을 **보지 않고 통과**시키므로(안전측) 여기도 기한을 내지 않는다.
-   * 그 사실은 `collectUndetermined`가 판정 보류로 남긴다.
+   * 해소일이 없으면(「양도일 현재 미해소」 선택) 기한이 기산되지 않아 기한을 내지 않는다. 해소일도 선택도 없는 「모름」은 ⑧·⑫가
+   * 막고, 엔진은 직접 호출 방어로 불성립이다(#31). 2012.2.2. 전 해소분은 기한이 없어 기한 안내도 없다.
    */
   const unavoidable = input.unavoidableOutsideCapitalHouse;
-  if (unavoidable?.resolvedDate && twoHouseSpecialCountHolds(input)) {
+  if (unavoidable?.resolvedDate && unavoidableResolvedDeadlineApplies(unavoidable.resolvedDate) && twoHouseSpecialCountHolds(input)) {
     const dl = deadlineEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (
       !isWithinDeadline(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
@@ -513,20 +514,8 @@ export function collectUndetermined(
     });
   }
 
-  /**
-   * §155⑧ — 부득이한 사유 **해소일**이 없으면 3년 기한을 확인하지 않고 통과시킨다
-   * (`qualifiesUnavoidableOutsideCapital` 안전측 설계). 그 사실을 숨기지 않는다.
-   */
   // 「동 안 일부 지구만 조정대상지역」 동인데 지구 안·밖을 고르지 않음 — 지구 안으로 판정(모름=불리) + 확인 필요.
   undetermined.push(...designatedDistrictUndeclared(input, districtRelevance));
-
-  if (input.unavoidableOutsideCapitalHouse && !input.unavoidableOutsideCapitalHouse.resolvedDate) {
-    undetermined.push({
-      id: "155-8-resolved-date-missing",
-      reason:
-        "부득이한 사유가 해소된 날을 입력하지 않아 3년 이내 양도 요건을 확인하지 않았습니다.",
-    });
-  }
 
   /**
    * §154① 거주요건 — 「언제까지 거주하면 충족」을 **구조적으로 낼 수 없다**.
@@ -559,7 +548,7 @@ export function collectUndetermined(
   }
 
   // 입력 경로가 없는 연혁 분기(OH-22 · OH-38 · OH-01 2019-12-17 체제) — `era-undetermined.ts`.
-  undetermined.push(...collectEraUndetermined(input, oneHouseRules, settled, eraNoticeRelevance));
+  undetermined.push(...collectEraUndetermined(input, oneHouseRules, settled, eraNoticeRelevance, article89Clause2));
 
   return undetermined;
 }

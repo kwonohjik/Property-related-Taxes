@@ -111,9 +111,21 @@ describe("E-3 — §155⑧ 수도권 밖 부득이 주택 보유 + 일반주택 
     expect(r.exemptReason).toBe("수도권 밖 부득이한 사유 주택 고가주택 (§155⑧ 취학)");
   });
 
-  it("W-1: 해소일 미입력(사유 미해소) → 기한이 기산되지 않아 적용 — 명문 부재를 불리하게 보지 않는다", () => {
-    const r = calc({ unavoidableOutsideCapitalHouse: { reason: "illness" } });
+  it("W-1: 「양도일 현재 미해소」 명시 선택 → 기한이 기산되지 않아 적용 — 명문 부재를 불리하게 보지 않는다", () => {
+    const r = calc({ unavoidableOutsideCapitalHouse: { reason: "illness", unresolvedAtTransfer: true } });
     expect(r.exemptReason).toBe("수도권 밖 부득이한 사유 주택 고가주택 (§155⑧ 질병 요양)");
+  });
+
+  it("W-1b ★ 해소일도 「미해소」 선택도 없는 빈 값은 「모름」 — 적용하지 않는다 (#31 · 종전: 빈 값을 미해소로 읽어 적용)", () => {
+    const r = calc({ unavoidableOutsideCapitalHouse: { reason: "illness" } });
+    expect(r.exemptReason).toBeUndefined();
+  });
+
+  it("W-3 ★ 부칙 제23588호 제10조 — 2012.2.2. 전 해소분은 3년 기한 없이 적용 / 당일(2012-02-02) 해소분은 3년 적용", () => {
+    const early = calc({ unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: D("2012-01-31") } });
+    expect(early.exemptReason).toBe("수도권 밖 부득이한 사유 주택 고가주택 (§155⑧ 근무상 형편)");
+    const onDay = calc({ unavoidableOutsideCapitalHouse: { reason: "work", resolvedDate: D("2012-02-02") } });
+    expect(onDay.exemptReason).toBeUndefined(); // 양도 2026-06-01 — 3년(2015-02-02) 경과
   });
 
   it("3주택이면 §155⑧ 의제가 성립하지 않는다 (「각각 1개씩」)", () => {

@@ -266,16 +266,41 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
     expect(judge({ ...base, acquisitionDate: D("2019-01-06") }).pending).toEqual([]);
   });
 
-  it("[PD-12] 🔴 §155⑧ 해소일 미입력 — 기한을 지어내지 않고 **판정 보류**로 남긴다", () => {
+  it("[PD-12] 🔴 §155⑧ 「양도일 현재 미해소」 선택 — 기한을 지어내지 않는다 · 판정 보류도 없다 (#31 — 택일 입력으로 대체)", () => {
     const over: Partial<TransferTaxInput> = {
       householdHousingCount: 2,
       unavoidableOutsideCapitalHouse: {
         reason: "work",
+        unresolvedAtTransfer: true,
       } as TransferTaxInput["unavoidableOutsideCapitalHouse"],
       ...RESIDENCE_FREE,
     };
     expect(pendingIds(over)).toEqual([]);
-    expect(undeterminedIds(over)).toContain("155-8-resolved-date-missing");
+    expect(undeterminedIds(over)).not.toContain("155-8-resolved-date-missing");
+  });
+
+  it("[PD-12b] 해소일도 「미해소」 선택도 없는 빈 값(모름) — 불성립이라 기한을 약속하지 않는다", () => {
+    const over: Partial<TransferTaxInput> = {
+      householdHousingCount: 2,
+      unavoidableOutsideCapitalHouse: { reason: "work" } as TransferTaxInput["unavoidableOutsideCapitalHouse"],
+      ...RESIDENCE_FREE,
+    };
+    expect(pendingIds(over)).toEqual([]);
+    expect(judge(over).isExempt).toBe(false);
+  });
+
+  it("[PD-12c] 부칙 제23588호 제10조 — 2012.2.2. 전에 해소된 사유는 3년 기한 자체가 없어 기한 안내도 없다", () => {
+    const over: Partial<TransferTaxInput> = {
+      householdHousingCount: 2,
+      acquisitionDate: D("2008-01-01"),
+      unavoidableOutsideCapitalHouse: {
+        reason: "work",
+        resolvedDate: D("2011-06-01"),
+      } as TransferTaxInput["unavoidableOutsideCapitalHouse"],
+      ...RESIDENCE_FREE,
+    };
+    expect(pendingIds(over)).toEqual([]);
+    expect(judge(over).isExempt).toBe(true);
   });
 });
 

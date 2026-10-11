@@ -10,6 +10,7 @@
  * `field`는 비어 있는 칸의 이름이다(판정 ⑧의 오류 `field`로 쓴다).
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+import { unavoidableOutsideCapitalStatusIssue } from "./two-house-exclusion-status";
 
 export interface HouseRowIssue {
   field: string;
@@ -77,4 +78,22 @@ export function houseUnavoidableIssue(
   if (!h.acquisitionOfficialPrice)
     return { field: "acquisitionOfficialPrice", message: "부득이한 사유 주택의 취득 당시 기준시가를 입력하세요." };
   return null;
+}
+
+/**
+ * §155⑧ 수도권 밖 부득이 주택(영 §167의10①4호 겸용) — 사유 해소일 또는 「사유가 양도일 현재 해소되지 않음」 택일(#31).
+ * ⑫ `unavoidableOutsideCapitalHouseSchema`의 거울이다 — 빈 값은 「모름」이라 엔진이 특례를 적용하지 않는다.
+ */
+export function houseUnavoidableOutsideCapitalIssue(
+  h: Pick<
+    HouseEntry,
+    "oneHouseUnavoidableOutsideCapital" | "unavoidableOutsideCapitalResolvedDate" | "unavoidableOutsideCapitalUnresolved"
+  >,
+): HouseRowIssue | null {
+  if (!h.oneHouseUnavoidableOutsideCapital) return null;
+  const issue = unavoidableOutsideCapitalStatusIssue({
+    resolvedDate: h.unavoidableOutsideCapitalResolvedDate,
+    unresolved: h.unavoidableOutsideCapitalUnresolved,
+  });
+  return issue ? { field: "unavoidableOutsideCapitalResolvedDate", message: issue.message } : null;
 }

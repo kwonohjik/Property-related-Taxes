@@ -233,10 +233,15 @@ export interface HouseEntry {
   /** §155⑧ 부득이한 사유 종류 — 소칙이 정하는 4종. */
   unavoidableOutsideCapitalReason?: "study" | "work" | "illness" | "other";
   /**
-   * §155⑧ 사유 **해소일**. 미입력 = 미해소 ⇒ 기한이 기산되지 않는다(계획서 W-1).
+   * §155⑧ 사유 **해소일** — `unavoidableOutsideCapitalUnresolved`와 택일. 해소일이 있으면 3년 기한(2012.2.2. 전 해소분은 없음).
    * ⚠️ 3호의 `unavoidableReasonResolvedDate`와 **다른 칸**이다 — 요건이 다르므로 공유하지 않는다.
    */
   unavoidableOutsideCapitalResolvedDate?: string;
+  /**
+   * 「사유가 양도일 현재 해소되지 않음」 — 해소일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단(#31 —
+   * 종전에는 해소일 빈 값이 「미해소」였고 같은 빈 값에 「모름」이 겹쳤다). 구 저장분은 이관하지 않는다 — ⑧이 선택을 요구한다.
+   */
+  unavoidableOutsideCapitalUnresolved?: boolean;
   // ⚠️ 「수도권 밖」 요건에 별도 칸을 두지 않는다 — 행의 `regionCode`로 판정한다.
   //    다만 이 PR은 **순수 이관**이라 엔진 게이트를 새로 넣지 않고 화면 경고로만 알린다.
   /**

@@ -109,7 +109,13 @@ describe("E-14e 구 §167의10①8호 — §154① · §155① 1년 · 조정대
   });
 
   it("E8-1p [짝] §154① 충족 → 종전에도 배제였다 274,065,000 (결론 불변 · 근거 호만 8호)", () => {
-    const r = calc(two("2019-06-01", "2021-07-01", "2022-03-02", { residencePeriodMonths: 24 }));
+    // 신규 2021-07-01은 2019-12-17 체제(조정→조정)라 가목(1년 내 세대전원 전입)이 요건이다 — #30: 전입일 미입력은 불성립이므로 전입일을 입력한다.
+    const r = calc(
+      two("2019-06-01", "2021-07-01", "2022-03-02", {
+        residencePeriodMonths: 24,
+        temporaryTwoHouse: tt("2019-06-01", "2021-07-01", { wholeHouseholdMoveInDate: D("2021-08-01") }),
+      }),
+    );
     expect(r).toMatchObject({ totalTax: 274_065_000, reasons: "temporary_two_house" });
     expect(r.detail).toContain(MULTI_HOUSE.TEMP_TWO_HOUSE_2HOUSE_BASIS_OLD);
   });
