@@ -103,6 +103,8 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
       ...(era.moveInMet !== undefined ? { moveInMet: era.moveInMet } : {}),
       // §155⑱ — 기존주택 취득일부터 3년이 되는 날 현재 각 호 사유면 처분기한을 넘겨도 충족으로 본다.
       ...(right.originalMemberDisposalDelayReason ? { disposalDelayReason: right.originalMemberDisposalDelayReason } : {}),
+      // 2022-02-15 전 양도분은 「그 방법으로 양도」도 필요하다 — 일시적 2주택 경로와 같은 술어(`resolveDisposalDelay`).
+      disposalDelayDisposedByThatMethod: right.originalMemberDisposalDelayDisposedByThatMethod,
     });
     return timing.overall ? { kind: "met", deadline: timing.deadline } : { kind: "unmet" };
   });

@@ -59,6 +59,8 @@ export type TempTwoHouseDeadlineExceptionFields = {
   newHouseJibun: string;
   newHouseSigunguCode: string;
   disposalDelayReason: string;
+  /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건. 옛 record에는 없다(미확인 = 불성립) */
+  disposalDelayDisposedByThatMethod?: boolean;
 };
 
 /**
@@ -70,6 +72,7 @@ export function buildTempTwoHouseDeadlineExceptionFacts(f: {
   relocatedSigunguCode?: string;
   newHouseSigunguCode?: string;
   disposalDelayReason?: string;
+  disposalDelayDisposedByThatMethod?: boolean;
 }): object {
   return {
     // §155⑯ — 처분기한 5년 + 1년 요건 면제. false는 보내지 않는다(Zod optional).
@@ -83,7 +86,11 @@ export function buildTempTwoHouseDeadlineExceptionFacts(f: {
       : {}),
     // §155⑱ — 빈 문자열은 "해당 없음"이므로 미전송.
     ...(f.disposalDelayReason
-      ? { disposalDelayReason: f.disposalDelayReason as TemporaryTwoHouseDelayReason }
+      ? {
+          disposalDelayReason: f.disposalDelayReason as TemporaryTwoHouseDelayReason,
+          // 사유가 있을 때만(방법 선언은 사유에 딸린 사실) — false·미선언은 보내지 않는다(= 미확인).
+          ...(f.disposalDelayDisposedByThatMethod ? { disposalDelayDisposedByThatMethod: true } : {}),
+        }
       : {}),
   };
 }
@@ -138,6 +145,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
             form,
             tempTwoHouse.newHouseRegionCode,
             tempTwoHouse.newHouseInDesignatedDistrict,
+            tempTwoHouse.previousHouse,
           ),
         },
       }

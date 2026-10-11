@@ -5,7 +5,7 @@
  * 고르지 않았으면 엔진은 지구 안(조정대상지역)으로 판정한다(모름=불리 — 사용자 결정 2026-10-08). 그 사실을 알린다.
  *
  * 대상은 코드가 조정대상지역 판정에 쓰이는 셋이다: 양도 주택(취득 당시 · 양도 당시 · 신규 주택 취득 당시),
- * 일시적 2주택의 신규 주택(명부 행), 기존주택 원조합원 입주권 행(§155① 처분기한 — `original-member-right.ts`).
+ * 일시적 2주택의 신규 주택(명부 행)과 합가 D8 짝의 종전 주택(명부 행), 기존주택 원조합원 입주권 행(§155① 처분기한 — `original-member-right.ts`).
  *
  * 🔑 **그 선언이 결론을 가를 때만** 낸다(`feedback_unknown_fact_applies_unfavorably` — 형제 고지 `era-undetermined`의
  * `regulatedAxisMatters` · `pending`의 `coreWouldPass`와 같은 규약). 양도 주택은 「지구 안·밖 어느 쪽이든 비과세 결론이 같으면」
@@ -89,6 +89,12 @@ export function designatedDistrictUndeclared(
     [resolveResidenceJudgmentDate(input), input.transferDate, tt?.newAcquisitionDate],
     relevance?.selling,
   );
+  // 합가 D8 상대 쪽 짝(B → C)의 종전 주택(명부 행) — 양도 주택이 아니라 이 행의 소재로 조정 여부를 판정한다(S15-2).
+  if (tt?.previousHouseIsRosterRow) {
+    check("previous-house", "종전 주택(보유 주택 목록)", tt.previousHouseRegionCode, tt.previousHouseInDesignatedDistrict, [
+      tt.newAcquisitionDate,
+    ]);
+  }
   check("new-house", "신규 주택(보유 주택 목록)", tt?.newHouseRegionCode, tt?.newHouseInDesignatedDistrict, [
     tt?.newAcquisitionDate,
     tt?.newHouseContractDate,

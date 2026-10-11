@@ -382,7 +382,8 @@ export async function POST(request: NextRequest) {
       replacementHouse: p.replacementHouse
         ? {
             businessApprovalDate: toDate(p.replacementHouse.businessApprovalDate, "replacementHouse.businessApprovalDate"),
-            completionDate: toDate(p.replacementHouse.completionDate, "replacementHouse.completionDate"),
+            completionDate: toOptionalDate(p.replacementHouse.completionDate),
+            soldBeforeCompletion: p.replacementHouse.soldBeforeCompletion,
             replacementResidenceMonths: p.replacementHouse.replacementResidenceMonths,
             willResideNewHouse: p.replacementHouse.willResideNewHouse,
           }

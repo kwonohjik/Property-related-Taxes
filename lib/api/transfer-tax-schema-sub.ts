@@ -90,12 +90,21 @@ export const winWinRentalHouseSchema = z.object({
 });
 
 // ⑫ §156의2⑤ 대체주택 비과세 특례 Zod 스키마
-export const replacementHouseSchema = z.object({
-  businessApprovalDate: z.string().date(),
-  completionDate: z.string().date(),
-  replacementResidenceMonths: z.number().int().nonnegative(),
-  willResideNewHouse: z.boolean(),
-});
+export const replacementHouseSchema = z
+  .object({
+    businessApprovalDate: z.string().date(),
+    /** 신축주택 준공일 — 「완성되기 전」 양도(`soldBeforeCompletion`)면 없다(S15-4) */
+    completionDate: z.string().date().optional(),
+    /** §156의2⑤3호 전단 — 완성 전 양도 명시 선언 */
+    soldBeforeCompletion: z.boolean().optional(),
+    replacementResidenceMonths: z.number().int().nonnegative(),
+    willResideNewHouse: z.boolean(),
+  })
+  // 양도 시기 요건(3호)의 근거가 둘 중 하나는 있어야 한다 — 날짜 없이 완성 전 선언도 없으면 요건을 판정할 수 없다.
+  .refine((r) => r.soldBeforeCompletion === true || r.completionDate !== undefined, {
+    message: "대체주택 특례: 신축주택 준공일 또는 완성 전 양도 선언이 필요합니다",
+    path: ["completionDate"],
+  });
 
 /**
  * ⑫ §89② 배제의 **3년 초과 예외** 선언 — 「소득세법 시행령」 §156의2④ · §156의3③ /
@@ -330,6 +339,8 @@ export const presaleRightSchema = z.object({
   originalMemberDisposalDelayReason: z
     .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
     .optional(),
+  /** ⑫ 위 사유의 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
+  originalMemberDisposalDelayDisposedByThatMethod: z.boolean().optional(),
   isInherited: z.boolean().optional(),
   isRankingDisqualifiedInheritedRight: z.boolean().optional(),
   isCoInherited: z.boolean().optional(),

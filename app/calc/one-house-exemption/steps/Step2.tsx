@@ -208,7 +208,8 @@ export function Step2({ form, onChange }: Props) {
           tempTwoHouseVerdict={tempTwoHouseVerdict}
           relocationRegionVerdict={relocationRegionVerdict}
           proviso={proviso}
-          primaryAcquisitionDate={primaryAcquisitionDate}
+          // D8 상대 쪽 짝(B → C)이면 종전 주택은 양도 주택이 아니라 B다 — 카드·④와 같은 짝(`derivedNewHouse`)에서 읽는다.
+          primaryAcquisitionDate={derivedNewHouse?.previousAcquisitionDate ?? primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
           replacementHouseVisible={judgmentReplacementHouseVisible(form)}
           /*

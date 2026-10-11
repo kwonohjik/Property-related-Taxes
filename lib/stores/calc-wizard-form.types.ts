@@ -211,10 +211,20 @@ export interface TransferFormData {
   ruralHouseWholeHouseholdMoved: boolean;
   /** §155⑱ 처분기한 예외 사유 — "" = 해당 없음. 「3년이 되는 날 현재」 기준 */
   disposalDelayReason: string;
+  /**
+   * §155⑱ 「해당 각 호의 매각 등의 방법으로 양도하는 경우」 — **2022-02-15 전 양도분의 요건**이다(그 날 이후 양도에는 없다 —
+   * `lib/tax-engine/data/temporary-two-house-delay-era.ts`). 사유(`disposalDelayReason`)를 골랐을 때만 의미가 있다.
+   */
+  disposalDelayDisposedByThatMethod: boolean;
   // §156의2⑤ 대체주택 비과세 특례 FLAT 필드 (API에서 replacementHouse nested로 조립)
   replacementHouseSpecial: boolean;
   replBusinessApprovalDate: string;   // 사업시행계획인가일
-  replCompletionDate: string;         // 신축주택 준공일
+  replCompletionDate: string;         // 신축주택 준공일 (완성 전 양도면 불필요 — 아래)
+  /**
+   * §156의2⑤3호 전단 「완성되기 전」 양도 — true면 신축주택 준공일을 요구하지 않는다(S15-4 · R-3 `before_completion` 갈래와 같은 구조).
+   * 옛 record에는 없다 → `=== true`로 읽어 완성 후 양도(종전 동작)로 본다.
+   */
+  replSoldBeforeCompletion: boolean;
   replResidenceMonths: string;        // 대체주택 거주개월수 (숫자 문자열)
   replWillResideNewHouse: boolean;    // 신축주택 1년 이상 거주 자기선언
 

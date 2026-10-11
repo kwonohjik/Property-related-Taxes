@@ -84,6 +84,7 @@ export type ImportedSpecialsSlice = Pick<
   | "newHouseAcquisitionDate"
   | "publicInstitutionRelocation"
   | "disposalDelayReason"
+  | "disposalDelayDisposedByThatMethod"
   | "newHouseRegulatedAtAcquisition"
   | "prevHouseRegulatedAtNewAcquisition"
   | "newHouseContractDate"
@@ -96,6 +97,7 @@ export type ImportedSpecialsSlice = Pick<
   | "replacementHouseSpecial"
   | "replBusinessApprovalDate"
   | "replCompletionDate"
+  | "replSoldBeforeCompletion"
   | "replResidenceMonths"
   | "replWillResideNewHouse"
   | "provisoReason"
@@ -152,6 +154,8 @@ function specialsRows(
     push("신규 주택 취득일", temporaryTwoHouse.newAcquisitionDate);
     if (f.publicInstitutionRelocation) push("공공기관·법인 지방이전 (§155⑯)", "예");
     push("처분기한 예외 사유 (§155⑱)", f.disposalDelayReason ? DELAY_REASON[f.disposalDelayReason] ?? "선언함" : undefined);
+    // 2022. 2. 15. 전 양도분의 요건 — 사유를 골랐고 선언했을 때만 적는다(미선언은 엔진이 적용하지 않는다).
+    if (f.disposalDelayReason && f.disposalDelayDisposedByThatMethod) push("사유의 매각 등의 방법으로 양도 (§155⑱)", "예");
   }
   /**
    * 🔑 §154① 단서는 **`temporary_two_house` 맥락일 때만** 적는다. `one_house` 맥락의 같은
@@ -187,7 +191,9 @@ function specialsRows(
         : "선언함 — 현재 세대 구성(2주택 미만·조합원입주권 없음)에서는 성립하지 않아 계산에 쓰지 않습니다",
     );
     push("사업시행계획 인가일", f.replBusinessApprovalDate);
-    push("신축주택 준공일", f.replCompletionDate);
+    // 완성 전 양도 갈래는 준공일이 없다 — 그 사실을 적는다(S15-4). 옛 record(필드 없음)는 준공일 행 그대로.
+    if (f.replSoldBeforeCompletion === true) push("신축주택 완성 시점", "완성 전 양도");
+    else push("신축주택 준공일", f.replCompletionDate);
     push("대체주택 거주기간", f.replResidenceMonths ? `${f.replResidenceMonths}개월` : undefined);
     if (f.replWillResideNewHouse) push("신축주택 1년 이상 거주 예정", "예");
   }

@@ -371,6 +371,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
                 }
               />
               <TempTwoHouseDelayReasonInput
+                transferDate={transferDate}
                 form={deadlineFields}
                 onChange={(p) =>
                   set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...giftBurdenedDeadlineExceptionPatch(p) } })

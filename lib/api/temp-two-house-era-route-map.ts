@@ -17,6 +17,11 @@ export function mapTemporaryTwoHouseEraFacts(tt: Parsed) {
     newHouseInDesignatedDistrict: tt.newHouseInDesignatedDistrict,
     newHouseRegulatedAtAcquisition: tt.newHouseRegulatedAtAcquisition,
     previousHouseRegulatedAtNewAcquisition: tt.previousHouseRegulatedAtNewAcquisition,
+    // §155⑱ 「그 방법으로 양도」 — 사유(`disposalDelayReason`)와 같은 경로. 단건·다건이 이 함수를 같이 쓴다.
+    disposalDelayDisposedByThatMethod: tt.disposalDelayDisposedByThatMethod,
+    previousHouseIsRosterRow: tt.previousHouseIsRosterRow,
+    previousHouseRegionCode: tt.previousHouseRegionCode,
+    previousHouseInDesignatedDistrict: tt.previousHouseInDesignatedDistrict,
     newHouseContractDate: toOptionalDate(tt.newHouseContractDate),
     wholeHouseholdMoveInDate: toOptionalDate(tt.wholeHouseholdMoveInDate),
     existingTenantLeaseEndDate: toOptionalDate(tt.existingTenantLeaseEndDate),

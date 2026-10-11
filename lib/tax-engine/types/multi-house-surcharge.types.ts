@@ -426,6 +426,8 @@ export interface PresaleRight {
   originalMemberTenantLeaseEndDate?: Date;
   /** §155⑱ 처분기한 예외 사유 — 「신규 주택(기존주택)을 취득한 날부터 3년이 되는 날 현재」 해당 */
   originalMemberDisposalDelayReason?: TemporaryTwoHouseDelayReason;
+  /** 위 §155⑱ 사유의 「해당 각 호의 매각 등의 방법으로 양도」 선언 — 2022-02-15 전 양도분의 요건(`temporaryTwoHouse.disposalDelayDisposedByThatMethod`와 같은 값) */
+  originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   /**
    * §156의2⑥1~3호 · §156의3④1~2호 **순위 부적격** 자기선언 — 피상속인이 2 이상의 권리를

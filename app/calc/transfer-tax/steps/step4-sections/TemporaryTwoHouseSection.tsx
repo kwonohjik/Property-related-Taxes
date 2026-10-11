@@ -74,6 +74,7 @@ type FullOnlyProps = {
   tempTwoHouseVerdict: ReturnType<typeof judgeTempTwoHouseFromForm>;
   relocationRegionVerdict: RelocationRegionVerdict | null;
   proviso: ReturnType<typeof provisoGate>;
+  /** §155① **종전 주택** 취득일 — 양도 주택이 종전 주택이면 그 취득일, 합가 상대 쪽 짝이면 그중 먼저 취득한 주택(S15-2) */
   primaryAcquisitionDate: string;
   /**
    * §155① 신규 주택 취득일 — **명부에서 파생된 값**(`resolveTemporaryTwoHouse`).
@@ -150,7 +151,8 @@ function TempTwoHouseCoreBlocks({
                    「입력해야 하는 칸」으로 읽혔다(사용자 제보 2026-09-23).
               */}
               <p className="text-xs text-muted-foreground">
-                지금 양도하는 주택의 취득일에서 자동 반영 (② 양도 대상 주택 단계에서 입력)
+                지금 양도하는 주택의 취득일에서 자동 반영 (② 양도 대상 주택 단계에서 입력). 합가 세대에서 상대 쪽 두
+                주택이 짝이면 그중 먼저 취득한 주택의 취득일입니다.
               </p>
             </div>
             <div className="space-y-1.5">
@@ -251,6 +253,11 @@ function TempTwoHouseVerdictCard({
                     {` (처분기한 ${tempTwoHouseVerdict.deadline.toISOString().slice(0, 10)})`}
                     {tempTwoHouseVerdict.delayReasonApplied && " — §155⑱ 사유로 기한 요건 충족 간주"}
                   </p>
+                  {tempTwoHouseVerdict.delayNote && (
+                    <p data-testid="temp-two-house-delay-note" className="text-caption">
+                      {tempTwoHouseVerdict.delayNote}
+                    </p>
+                  )}
                   {tempTwoHouseVerdict.deadlineNote && (
                     <p data-testid="temp-two-house-deadline-note" className="text-caption">
                       {tempTwoHouseVerdict.deadlineNote}
@@ -340,7 +347,7 @@ function TempTwoHouseOtherSpecials({
           판정 기준시점이 양도일이 아님을 문구로 명시(G-2).
         */}
         {derivedNewHouseAcquisitionDate && (
-          <TempTwoHouseDelayReasonInput form={form} onChange={onChange} />
+          <TempTwoHouseDelayReasonInput form={form} onChange={onChange} transferDate={form.transferDate} />
         )}
 
         {/* §156의2⑤ 대체주택 비과세 특례 — 판정 메뉴가 이 섹션 밖에서도 그린다(OH-05) */}

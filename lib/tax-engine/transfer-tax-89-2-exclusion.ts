@@ -179,6 +179,7 @@ export type Article89Clause2Input = Pick<
   | "acquisitionDate"
   | "transferDate"
   | "householdHousingCount"
+  | "knownHouseExclusionHouseIds"
   | "presaleRights"
   | "marriageMerge"
   | "parentalCareMerge"

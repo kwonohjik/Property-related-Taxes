@@ -52,12 +52,15 @@ export function judgmentTempTwoHouseVerdict(
     relocatedSigunguCode: form.relocatedSigunguCode,
     newHouseSigunguCode: form.newHouseSigunguCode,
     disposalDelayReason: form.disposalDelayReason,
+    disposalDelayDisposedByThatMethod: form.disposalDelayDisposedByThatMethod,
     // §155①2호 (OH-01 A2b) — ④(`one-house-exemption-api.ts`)가 싣는 값과 같은 소스.
     regionCode: primary?.regionCode,
     regionInDesignatedDistrict: primary?.regionInDesignatedDistrict,
     isRegulatedArea: form.isRegulatedArea,
     newHouseRegionCode: derivedNewHouse?.newHouseRegionCode,
     newHouseInDesignatedDistrict: derivedNewHouse?.newHouseInDesignatedDistrict,
+    // D8 상대 쪽 짝(B → C)이면 종전의 주택은 B다 — 조정 여부를 B의 소재로 판정한다(S15-2). ④와 같은 값.
+    previousHouse: derivedNewHouse?.previousHouse,
     eraFields: form,
   });
 }

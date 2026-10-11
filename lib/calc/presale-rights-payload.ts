@@ -44,6 +44,7 @@ export interface PresaleRightPayloadItem {
   originalMemberMoveInDate?: string;
   originalMemberTenantLeaseEndDate?: string;
   originalMemberDisposalDelayReason?: string;
+  originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   isRankingDisqualifiedInheritedRight?: boolean;
   isCoInherited?: boolean;
@@ -63,7 +64,14 @@ function originalMemberFacts(p: PresaleRightEntry): Partial<PresaleRightPayloadI
     ...(p.originalMemberExistingTenant && p.originalMemberTenantLeaseEndDate
       ? { originalMemberTenantLeaseEndDate: p.originalMemberTenantLeaseEndDate }
       : {}),
-    ...(p.originalMemberDisposalDelayReason ? { originalMemberDisposalDelayReason: p.originalMemberDisposalDelayReason } : {}),
+    ...(p.originalMemberDisposalDelayReason
+      ? {
+          originalMemberDisposalDelayReason: p.originalMemberDisposalDelayReason,
+          ...(p.originalMemberDisposalDelayDisposedByThatMethod
+            ? { originalMemberDisposalDelayDisposedByThatMethod: true }
+            : {}),
+        }
+      : {}),
   };
 }
 
