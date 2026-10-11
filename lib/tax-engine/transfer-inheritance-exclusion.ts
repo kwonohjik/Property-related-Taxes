@@ -90,6 +90,16 @@ export interface InheritedHouseExclusionResult {
    * (집행기준 89-155-9). **표시용** — 계산은 위 필드가 이미 반영했다.
    */
   sameInheritanceAsSoldCount: number;
+  /**
+   * 순위 부적격 선언(`rankingDisqualifiedCount`) 중 §155③ 소수지분 행 수 — **표시용**. 개정 전(2017.2.3. 전) §155③에는 순위
+   * 요건이 없어서(`data/co-inherited-ranking-clause-era.ts`) 불성립 사유 문구가 조문을 가르는 데 쓴다.
+   */
+  rankingDisqualifiedCoMinorityCount: number;
+  /**
+   * 동일세대 게이트를 통과했지만 엔진이 **제외하지 않은** §155③ 소수지분 행 id — 적격이 2채 이상이라 선순위를 특정하지 못했거나
+   * 순위 부적격 선언으로 빠진 행이다. **표시용**(결정 #10 양론 카드 감지의 단일 소스) — 계산은 위 필드가 이미 반영했다.
+   */
+  unexcludedCoMinorityHouseIds: string[];
 }
 
 /** OH-12 — §155② 괄호 「일반주택」 한정 판정에 쓰는 양도 주택 사실. 미전달이면 이 게이트를 보지 않는다. */
@@ -146,6 +156,8 @@ export function resolveInheritedHouseExclusion(
     generalHouseNotHeldCount: 0,
     inheritedDateUnknownCount: 0,
     sameInheritanceAsSoldCount: 0,
+    rankingDisqualifiedCoMinorityCount: 0,
+    unexcludedCoMinorityHouseIds: [],
   };
   if (!houses) return empty;
 
@@ -189,9 +201,13 @@ export function resolveInheritedHouseExclusion(
   // 표시용 부적격 카운트 — 제외 후보(② 풀 or ③ 소수지분) 전부 대상. household 사유 우선.
   let sameHouseholdDisqualifiedCount = 0;
   let rankingDisqualifiedCount = 0;
+  let rankingDisqualifiedCoMinorityCount = 0;
   for (const h of inheritedOthers) {
     if (!passesHouseholdGate(h)) sameHouseholdDisqualifiedCount++;
-    else if (!passesRankingGate(h)) rankingDisqualifiedCount++;
+    else if (!passesRankingGate(h)) {
+      rankingDisqualifiedCount++;
+      if (!isSecondClausePoolHouse(h)) rankingDisqualifiedCoMinorityCount++;
+    }
   }
 
   const gatesPassed = inheritedOthers.filter((h) => passesHouseholdGate(h) && passesRankingGate(h));
@@ -215,6 +231,10 @@ export function resolveInheritedHouseExclusion(
     const h = eligible.find((x) => !isSecondClausePoolHouse(x));
     if (h) excludedHouses.push({ houseId: h.id, basis: "co_inherited" });
   }
+  const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
+  const unexcludedCoMinorityHouseIds = inheritedOthers
+    .filter((h) => !isSecondClausePoolHouse(h) && passesHouseholdGate(h) && !excludedIds.has(h.id))
+    .map((h) => h.id);
   return {
     soleExcludedCount,
     coExcludedCount,
@@ -227,6 +247,8 @@ export function resolveInheritedHouseExclusion(
     generalHouseNotHeldCount,
     inheritedDateUnknownCount,
     sameInheritanceAsSoldCount,
+    rankingDisqualifiedCoMinorityCount,
+    unexcludedCoMinorityHouseIds,
   };
 }
 

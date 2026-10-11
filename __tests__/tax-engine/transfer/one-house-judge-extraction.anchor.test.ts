@@ -191,6 +191,8 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     generalHouseNotHeldCount: 0,
     inheritedDateUnknownCount: 0,
     sameInheritanceAsSoldCount: 0,
+    rankingDisqualifiedCoMinorityCount: 0,
+    unexcludedCoMinorityHouseIds: [],
   },
   knownHouseExclusionHouseIds: ["inherited-house"],
   noMergeRosterInputPath: true,

@@ -11,6 +11,7 @@ import {
   resolveMergeComposition,
 } from "./merge-composition";
 import { doubleMergeOrderOf, mergeAxisHouses, resolveTwoHouseMergeAxis } from "./merge-deeming";
+import { isBeforeCoInheritedRankingClause } from "../data/co-inherited-ranking-clause-era";
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE, TRANSFER, shortArticle } from "../legal-codes";
 import {
@@ -670,9 +671,17 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
       `상속주택 ${x.sameHouseholdDisqualifiedCount}채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다.`,
     );
   }
-  if (x.rankingDisqualifiedCount > 0) {
+  // 결정 #10 — §155③ 「선순위 1주택」 한정은 2017.2.3. 신설이다. 그 전 양도의 소수지분 행에는 당시 문언에 없는 요건을 말하지 않는다.
+  const beforeRankingClause = isBeforeCoInheritedRankingClause(input.transferDate);
+  const rankingCoMinority = beforeRankingClause ? x.rankingDisqualifiedCoMinorityCount : 0;
+  if (x.rankingDisqualifiedCount - rankingCoMinority > 0) {
     reasons.push(
-      `상속주택 ${x.rankingDisqualifiedCount}채를 「순위상 상속주택이 아님」으로 선언했습니다 — 주택 수 제외 대상이 아닙니다(§155②1~4호).`,
+      `상속주택 ${x.rankingDisqualifiedCount - rankingCoMinority}채를 「순위상 상속주택이 아님」으로 선언했습니다 — 주택 수 제외 대상이 아닙니다(§155②1~4호).`,
+    );
+  }
+  if (rankingCoMinority > 0) {
+    reasons.push(
+      `공동상속주택(소수지분) ${rankingCoMinority}채를 「순위상 상속주택이 아님」으로 선언했습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없지만, 과세관청 해석에 따라 주택 수에서 빼지 않았습니다. 조세심판원은 소수지분을 모두 뺍니다 — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요.`,
     );
   }
   /**
@@ -686,7 +695,9 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
   }
   if (x.eligibleCoMinorityCount >= 2) {
     reasons.push(
-      `제외 요건을 갖춘 공동상속주택(소수지분)이 ${x.eligibleCoMinorityCount}채여서 선순위 1채를 특정할 수 없습니다 — 어느 것도 주택 수에서 빼지 않았습니다.`,
+      beforeRankingClause
+        ? `제외 요건을 갖춘 공동상속주택(소수지분)이 ${x.eligibleCoMinorityCount}채여서 어느 것도 주택 수에서 빼지 않았습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없습니다. 과세관청 해석(재산세과-2922)은 비과세를 인정하지 않았고 조세심판원은 소수지분을 모두 뺐습니다(조심-2019-서-2002 등) — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요.`
+        : `제외 요건을 갖춘 공동상속주택(소수지분)이 ${x.eligibleCoMinorityCount}채여서 선순위 1채를 특정할 수 없습니다 — 어느 것도 주택 수에서 빼지 않았습니다.`,
     );
   }
   if (reasons.length === 0) return [];
