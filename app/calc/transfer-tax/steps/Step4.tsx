@@ -16,6 +16,8 @@ import { SurchargeJudgmentSection } from "./step4-sections/SurchargeJudgmentSect
 import { TemporaryTwoHouseSection } from "./step4-sections/TemporaryTwoHouseSection";
 import { SpecialSituationSection } from "./step4-sections/SpecialSituationSection";
 import { useRegulatedAreaAutoTip } from "./step4-sections/useRegulatedAreaAutoTip";
+import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
+import { calcResidenceJudgmentDate, regulatedVerdictForDisplay } from "@/lib/calc/effective-regulated-at-acquisition";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
@@ -103,17 +105,18 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    */
   const successorCompletionActive =
     !conversionActive && !!primary && redevAptHoldingStartDate(primary) !== primary.acquisitionDate;
-  const residenceJudgmentDate = conversionActive
-    ? primary!.residentialUseStartDate
-    : primary
-      ? redevAptHoldingStartDate(primary)
-      : primaryAcquisitionDate;
+  // 엔진 `resolveResidenceJudgmentDate`와 같은 순서(용도변경 → 동일세대 상속 보유 개시 → 승계 준공일 → 취득일) — ⑧·⑤ 카드와 같은 leaf.
+  const residenceJudgmentDate = primary ? calcResidenceJudgmentDate(primary) : primaryAcquisitionDate;
+  const sameHouseholdStartActive =
+    !conversionActive && !successorCompletionActive && !!primary && residenceJudgmentDate !== primary.acquisitionDate;
   /** 거주요건 맥락에서 기준일을 부르는 이름 — 라벨·안내 문구가 공유한다. */
   const judgmentDateLabel = conversionActive
     ? "용도변경일"
     : successorCompletionActive
       ? "준공일"
-      : "취득일";
+      : sameHouseholdStartActive
+        ? "동일세대 보유 개시일"
+        : "취득일";
   /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신하는가(엔진 `resolveAptResidenceMonths`와 같은 조건). */
   const redevSplitResidence = !!primary && redevSplitResidenceSupersedesStep4(primary);
 
@@ -140,6 +143,17 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
   // 법정동코드(주소검색 PNU 앞 10자리) — 있으면 동 단위 정밀 판정 경로
   const primaryRegionCode = form.assets?.[0]?.regionCode ?? "";
+  // 결정 #5(G7-6) — ④가 싣는 코드(`primary.regionCode || form.regionCode`)와 같은 코드·지구 선언·기준일로 낸 자동 판정.
+  //   코드가 없으면 null이라 토글을 그대로 보인다. 엔진 leaf를 그대로 부른다(별도 판정식 금지).
+  const acquisitionVerdict = useMemo(
+    () =>
+      regulatedVerdictForDisplay({
+        regionCode: primary?.regionCode || form.regionCode || undefined,
+        regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
+        date: residenceJudgmentDate,
+      }),
+    [primary?.regionCode, primary?.regionInDesignatedDistrict, form.regionCode, residenceJudgmentDate],
+  );
 
   // 메시지 ②: 조정대상지역 거주요건(2년) 미충족 — 엔진 §154① 판정과 단일 진실(useMemo 파생, store 미러링 금지).
   const residenceShortfall = useMemo(() => {
@@ -444,18 +458,23 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           <SectionHeader title="② 1세대1주택 비과세 판정" description="취득일 조정대상지역·거주기간·보유거주 요건 면제 사유를 입력하세요" />
           <div className="space-y-3">
             {/* 취득일 기준 조정대상지역 — 비과세 거주요건 판단(거주기간 입력의 전제, 원인→결과 순서) */}
-            <ToggleCard
-              checked={form.wasRegulatedAtAcquisition}
-              onCheckedChange={(v) =>
-                onChange({ wasRegulatedAtAcquisition: v, wasRegulatedAtAcquisitionTouched: true })
-              }
-              title={`${judgmentDateLabel} 기준 조정대상지역`}
-              description={
+            {/* 결정 #5(G7-6) — 주소(법정동코드)가 있으면 토글을 숨기고 엔진과 같은 자동 판정을 읽기 전용으로 보인다(없으면 토글). */}
+            <RegulatedAreaField
+              verdict={acquisitionVerdict}
+              autoLabel={`${judgmentDateLabel} 기준 조정대상지역`}
+              autoTestId="transfer-regulated-acquisition-auto"
+              toggleTestId="transfer-was-regulated"
+              toggleTitle={`${judgmentDateLabel} 기준 조정대상지역`}
+              toggleDescription={
                 conversionActive
                   ? "비과세 거주요건 판단 — 주택이 된 날(주거용 사용 개시일)이 기준입니다. 해당 시 거주 2년 이상 필요"
                   : "비과세 거주요건 판단 — 해당 시 거주 2년 이상 필요"
               }
-              tone="rose"
+              toggleSize="default"
+              checked={form.wasRegulatedAtAcquisition}
+              onCheckedChange={(v) =>
+                onChange({ wasRegulatedAtAcquisition: v, wasRegulatedAtAcquisitionTouched: true })
+              }
             />
 
             {/* 조정대상지역 자동 판별 안내 — 취득일 조정 토글의 판정 근거 (토글 직하 배치) */}

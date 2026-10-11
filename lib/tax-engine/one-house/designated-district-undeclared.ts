@@ -14,6 +14,7 @@
  */
 import { format } from "date-fns";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
+import { hwaseongSurchargeWindowNotice } from "./hwaseong-announcement-window";
 import { resolveResidenceJudgmentDate, type ResidenceReqInput } from "../transfer-tax-exemption-holding";
 import type { TransferTaxInput } from "../types/transfer.types";
 
@@ -47,6 +48,24 @@ const ymd = (d: Date) => format(d, "yyyy-MM-dd");
 const dot = (s: string) => `${s.replace(/-/g, ".")}.`;
 
 /**
+ * 「지구 안인가」 미선언 고지 문장 — `scopeUnverified`(고시의 지정 범위가 법정동인지 행정동인지 미확인)면 「동 전체가 아니라 …만」이라고
+ * 단정하지 않는다. 그 문구는 두 독법 어느 쪽에서도 사실과 다르다(결정 #4).
+ */
+function districtNoticeReason(
+  where: string,
+  only: { district: string; area: string; scopeUnverified?: boolean },
+  d: Date,
+  /** 미선언 처리 결과 — 예: 「조정대상지역으로 판정했습니다」 */
+  outcome = "조정대상지역으로 판정했습니다",
+): string {
+  return only.scopeUnverified
+    ? `${where} 소재지(${only.area})는 ${dot(ymd(d))} 당시 고시에 「${only.district}」만 조정대상지역으로 적혀 있는데, 그 범위(법정동인지 ` +
+        `행정동인지)를 확인하지 못했고 지구 안인지 고르지 않아 ${outcome}(확인 필요) — 소재지 아래에서 「지구 안·밖」을 고르세요.`
+    : `${where} 소재지(${only.area})는 ${dot(ymd(d))} 당시 동 전체가 아니라 「${only.district}」만 ` +
+        `조정대상지역이었는데, 지구 안인지 고르지 않아 ${outcome}(확인 필요) — 소재지 아래에서 「지구 안·밖」을 고르세요.`;
+}
+
+/**
  * @param relevance 양도 주택 고지의 관련성 게이트. **생략하면 게이트 없음**(후보가 있으면 낸다) — 운영 경로
  *   (`checkExemption` → `collectUndetermined`)는 항상 넘긴다.
  */
@@ -71,10 +90,7 @@ export function designatedDistrictUndeclared(
       if (!matters()) return;
       out.push({
         id: `${DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX}${id}`,
-        reason:
-          `${where} 소재지(${j.districtOnly.area})는 ${dot(ymd(d))} 당시 동 전체가 아니라 「${j.districtOnly.district}」만 ` +
-          "조정대상지역이었는데, 지구 안인지 고르지 않아 조정대상지역으로 판정했습니다(확인 필요) — 소재지 아래에서 " +
-          "「지구 안·밖」을 고르세요.",
+        reason: districtNoticeReason(where, j.districtOnly, d),
       });
       return;
     }
@@ -128,9 +144,20 @@ export function surchargeSellingDistrictUndeclared(
   if (!house?.regionCode || house.inDesignatedDistrict !== undefined) return [];
   const j = isRegulatedByBjdCode(house.regionCode, ymd(input.transferDate));
   if (!j.districtOnly) return [];
+  return [districtNoticeReason("양도 주택", j.districtOnly, input.transferDate, "조정대상지역으로 보고 다주택 중과를 적용했습니다")];
+}
+
+/**
+ * 계산기 다주택 중과가 **양도일 조정대상지역 판정**에 달려 있을 때의 확인 필요 고지 묶음 — 양도 주택 지구 미선언(위)과
+ * 화성시 지정 시작 열흘(`hwaseong-announcement-window.ts`, 결정 #3)이다. `transfer-tax.ts`가 이 함수 하나만 부른다.
+ */
+export function surchargeRegulatedAreaNotices(
+  input: Pick<TransferTaxInput, "houses" | "sellingHouseId" | "transferDate">,
+  surchargeApplicable: boolean | undefined,
+  exemption: { isExempt: boolean; undetermined: { id: string }[] },
+): string[] {
   return [
-    `양도 주택 소재지(${j.districtOnly.area})는 ${dot(ymd(input.transferDate))} 당시 동 전체가 아니라 「${j.districtOnly.district}」만 ` +
-      "조정대상지역이었는데, 지구 안인지 고르지 않아 조정대상지역으로 보고 다주택 중과를 적용했습니다(확인 필요) — 소재지 아래에서 " +
-      "「지구 안·밖」을 고르세요.",
+    ...surchargeSellingDistrictUndeclared(input, surchargeApplicable, exemption),
+    ...hwaseongSurchargeWindowNotice(input, surchargeApplicable, exemption.isExempt),
   ];
 }

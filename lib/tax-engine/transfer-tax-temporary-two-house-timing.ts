@@ -154,7 +154,7 @@ export function meetsPublicInstitutionRelocationRegion(
  *    같은 폼의 세 판정이 서로 다른 근거를 쓰던 것을 여기서 맞춘다(F-3).
  *    anchor: `judgment-transfer-regulated-region-code.predo.anchor.test.ts`.
  */
-function resolveIsRegulatedAtTransfer(
+export function resolveIsRegulatedAtTransfer(
   p: Pick<TransferTaxInput, "isRegulatedArea" | "transferDate" | "regionCode" | "regionInDesignatedDistrict">,
 ): boolean {
   if (p.regionCode) {

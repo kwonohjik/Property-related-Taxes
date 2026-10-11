@@ -3,7 +3,8 @@
  *
  * 검증: assets[0].regionCode(법정동코드) + 양도일이 있으면 Step4 진입 시
  *   useEffect가 /api/address/regulated-area를 호출(regionCode 우선·Vworld 무관)하여
- *   ① 자동판정 안내 박스 표시 ② 조정대상지역 토글(isRegulatedArea) 자동 체크.
+ *   ① 자동판정 안내 박스 표시 ② 조정대상지역 **자동 판정 카드**(토글은 숨는다 — 결정 #5, G7-6).
+ *   주소(법정동코드)가 없을 때만 토글이 남는다.
  *
  * regionCode 직접 주입으로 Vworld 주소검색 의존 없이 실측 (자동판정 로직은 vitest로도 커버).
  * worktree 실행: E2E_PORT=3101 npx playwright test e2e/transfer-regulated-auto.spec.ts
@@ -50,7 +51,7 @@ async function seedStep4(
 }
 
 test.describe("P2 조정대상지역 자동판정 토글", () => {
-  test("강남 regionCode → 조정대상지역 ✓ 자동판정 + 토글 자동 체크", async ({ page }) => {
+  test("강남 regionCode → 조정대상지역 ✓ 자동판정 + 읽기 전용 자동 판정 카드(토글 없음)", async ({ page }) => {
     const ok = await seedStep4(
       page,
       {
@@ -67,16 +68,17 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("조정대상지역 ✓").first()).toBeVisible({ timeout: 15000 });
 
-    // isRegulatedArea 토글 자동 체크 (양도일 기준 조정대상지역)
-    await expect(
-      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
-    ).toBeChecked({ timeout: 15000 });
+    // 주소(법정동코드)가 있으면 양도일 기준 조정대상지역은 토글이 아니라 읽기 전용 자동 판정 카드다
+    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toHaveCount(0);
+    await expect(page.getByTestId("transfer-regulated-transfer-auto")).toContainText("양도일 기준 조정대상지역 해당", {
+      timeout: 15000,
+    });
 
     // 메시지① 중과 검토 안내 노출 (주택 + 양도시 조정)
     await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
   });
 
-  test("미수록 시도(제주) regionCode → 미지정 + 신뢰도 경고", async ({ page }) => {
+  test("미수록 시도(제주) regionCode → 미지정 + 신뢰도 낮음 안내(소재지를 지우면 직접 선택)", async ({ page }) => {
     const ok = await seedStep4(
       page,
       {
@@ -91,12 +93,16 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
 
     await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("미지정").first()).toBeVisible({ timeout: 15000 });
-    // 미수록 → low 신뢰도 경고 노출
-    await expect(page.getByText(/신뢰도: low/)).toBeVisible({ timeout: 15000 });
+    // 미수록 → 신뢰도 낮음: 자동 판정 카드에 「소재지를 지우면 직접 선택」 안내(결정 #5 하위 2 — 낮음에서만)
+    await expect(page.getByTestId("transfer-regulated-acquisition-auto")).toContainText("자동 판정이 불확실합니다", {
+      timeout: 15000,
+    });
   });
 
-  test("수동 조작한 토글은 스텝 재진입(재조회) 시 자동판별이 덮어쓰지 않음", async ({ page }) => {
-    // 강남 2017-05-02 취득(지정 고시 2017-08-03 이전 → 취득일 기준 미지정) + 2021-06-01 양도(지정)
+  test("강남 2017-05-02 취득(지정 고시 이전) + 2021-06-01 양도 → 취득일 미해당 · 양도일 해당 자동 판정 카드, 토글 없음", async ({ page }) => {
+    // 강남 2017-05-02 취득(지정 고시 2017-08-03 이전 → 취득일 기준 미지정) + 2021-06-01 양도(지정).
+    // 주소(법정동코드)가 있으면 사용자가 바꿀 토글이 없다 — 종전 「수동 조작한 토글을 자동판별이 덮어쓰지 않음」 시나리오는
+    // 주소 없이 소재지 문자열만 있는 경로로 한정된다(결정 #5, G7-6).
     const ok = await seedStep4(
       page,
       {
@@ -109,28 +115,12 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     );
     expect(ok).toBe(true);
 
-    // 자동판별: 양도일 ON · 취득일 OFF
-    const acqSwitch = page.getByRole("switch", { name: /취득일 기준 조정대상지역/ });
-    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toBeChecked({
+    await expect(page.getByTestId("transfer-regulated-transfer-auto")).toContainText("양도일 기준 조정대상지역 해당", {
       timeout: 15000,
     });
-    await expect(acqSwitch).not.toBeChecked();
-
-    // 사용자가 취득일 토글을 수동 ON
-    await acqSwitch.click();
-    await expect(acqSwitch).toBeChecked();
-
-    // 다른 스텝으로 이탈 → 재진입(재마운트·재조회 발생)
-    // 완료 스텝은 "✓ 자산 목록"으로 name 합쳐짐 → 부분 매칭 (e2e/CLAUDE.md §2)
-    await page.getByRole("button", { name: "자산 목록" }).click();
-    await page.getByRole("button", { name: "보유 상황", exact: true }).click();
-    await page.getByText("보유 상황 입력").waitFor({ timeout: 15000 });
-    await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
-
-    // 수동 ON이 자동판별(미지정=OFF)에 덮여쓰이지 않고 유지
-    await expect(page.getByRole("switch", { name: /취득일 기준 조정대상지역/ })).toBeChecked({
-      timeout: 15000,
-    });
+    await expect(page.getByTestId("transfer-regulated-acquisition-auto")).toContainText("취득일 기준 조정대상지역 미해당");
+    await expect(page.getByRole("switch", { name: /취득일 기준 조정대상지역/ })).toHaveCount(0);
+    await expect(page.getByRole("switch", { name: /양도일 기준 조정대상지역/ })).toHaveCount(0);
   });
 
   // ── 중과 한시배제 팁 3분기 (plan: step4-regulated-tip-surcharge-suspension) ──
@@ -167,9 +157,9 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     );
     expect(ok).toBe(true);
 
-    await expect(
-      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
-    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByTestId("transfer-regulated-transfer-auto")).toContainText("양도일 기준 조정대상지역 해당", {
+      timeout: 15000,
+    });
     await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/보유 2년 미만은 다주택 중과 한시배제/)).toBeVisible();
     await expect(page.getByText("다주택 중과 한시배제 기간")).toHaveCount(0);
@@ -188,9 +178,9 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
     );
     expect(ok).toBe(true);
 
-    await expect(
-      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
-    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByTestId("transfer-regulated-transfer-auto")).toContainText("양도일 기준 조정대상지역 해당", {
+      timeout: 15000,
+    });
     await expect(page.getByText("중과세 적용 여부를 검토하세요")).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/경과조치로 중과가 배제될 수 있습니다/)).toBeVisible();
     await expect(page.getByText("다주택 중과 한시배제 기간")).toHaveCount(0);
@@ -208,7 +198,7 @@ test.describe("P2 조정대상지역 자동판정 토글", () => {
 const ADDR_PLACEHOLDER = "도로명 또는 지번 주소 입력";
 
 test.describe("P2-b 소재지 검색 → regionCode 자동추출 → 자동판정", () => {
-  test("강남 주소 선택만으로 regionCode 추출 + 조정대상지역 자동 판정 + 토글 체크", async ({
+  test("강남 주소 선택만으로 regionCode 추출 + 조정대상지역 자동 판정 + 자동 판정 카드", async ({
     page,
   }) => {
     // 강남구 PNU(앞5 = 11680 = 강남구, 줄곧 지정). 좌표는 비워 reverse-geocode 부수호출 회피.
@@ -280,9 +270,9 @@ test.describe("P2-b 소재지 검색 → regionCode 자동추출 → 자동판�
     // regionCode 직접 주입 없이도 자동 판정되어야 한다
     await expect(page.getByText("조정대상지역 자동 판별")).toBeVisible({ timeout: 15000 });
     await expect(page.getByText("조정대상지역 ✓").first()).toBeVisible({ timeout: 15000 });
-    await expect(
-      page.getByRole("switch", { name: /양도일 기준 조정대상지역/ }),
-    ).toBeChecked({ timeout: 15000 });
+    await expect(page.getByTestId("transfer-regulated-transfer-auto")).toContainText("양도일 기준 조정대상지역 해당", {
+      timeout: 15000,
+    });
   });
 });
 

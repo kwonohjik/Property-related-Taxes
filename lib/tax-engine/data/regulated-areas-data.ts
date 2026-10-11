@@ -61,6 +61,12 @@ export interface IncludedSubArea {
    * 따른다. 선언이 없으면 지정으로 보고 확인 필요(모름=불리 — 사용자 결정 2026-10-08).
    */
   district?: string;
+  /**
+   * 고시가 적은 지정 범위(예: 「다산동」)가 법정동인지 행정동인지 **확인하지 못해** 임시로 지정 + 질문으로 둔 항목이다
+   * (남양주 지금동·도농동 — 결정 #4). 질문·고지 문구가 「동 전체가 아니라 …만」이라 단정하지 않고 범위 미확인을 밝힌다.
+   * `district`가 있을 때만 의미가 있다.
+   */
+  scopeUnverified?: boolean;
   /** 포함 적용 시작일 (시점별로 포함 지구가 달랐던 경우). 생략 시 전 기간 */
   appliesFrom?: string;
   /** 포함 적용 종료일. 생략 시 현재까지 */
@@ -93,7 +99,7 @@ export interface RegulatedAreaJudgment {
    * 코드가 「동 안 일부 지구만 지정」된 동에 걸렸다 — 지구 안·밖을 코드로 정할 수 없다(`IncludedSubArea.district`).
    * `isRegulated`는 모름=불리 기본값(true)이다. 호출부는 `resolveRegulatedWithDistrict`로 사용자 선언을 반영한다.
    */
-  districtOnly?: { district: string; area: string };
+  districtOnly?: { district: string; area: string; scopeUnverified?: boolean };
 }
 
 // ============================================================
@@ -200,12 +206,20 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
     includedSubCodes: [{ codePrefix: "41287104", name: "대화동(킨텍스1단계)", district: "킨텍스1단계 도시개발지구", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" }] },
 
   // ── 남양주 (2017.8.3 전역 → 2019.11.8~2020.6.18 다산·별내만 → 2020.6.19 전역[화도·수동·조안 제외] → 2022.11.14 해제) ──
+  //   2019.11.8.~2020.6.18. 지정 범위는 고시(국토교통부공고 제2019-1540호)의 「다산동·별내동」이다.
+  //   · 다산동(법정동 41360112) — 「남양주시 읍·면·동 및 리의 명칭과 관할구역에 관한 조례」 별표 2상 법정동 다산동 전체가
+  //     행정동 다산1·2동에 속하므로 「다산동」을 법정동으로 읽든 행정동으로 읽든 동 전체가 지정이다 — 질문 없이 지정(G7-5, 결정 #4).
+  //   · 별내동(41360111) — 조례상 행정동 별내동은 「별내동 일원」이라 어느 독법으로도 동 전체가 지정이다 —
+  //     2026-10-08 「지구 안인가」 질문을 없애고 동 전체를 지정으로 처리한다(결정 #4 하위 1).
+  //   · 지금동(41360109)·도농동(41360110) — 고시의 「다산동」 범위(법정동/행정동)를 확인하지 못해 임시로 지정 + 질문을 유지한다
+  //     (`scopeUnverified`). 수석동(41360108)은 고시에 이름이 없어 미지정 그대로다(원칙 3 — 근거 없이 넓히지 않는다).
   { code: "41360", name: "경기도 남양주시",
     designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
     includedSubCodes: [
-      { codePrefix: "41360109", name: "지금동(다산)", district: "다산동(행정동)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41360110", name: "도농동(다산)", district: "다산동(행정동)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
-      { codePrefix: "41360111", name: "별내동", district: "별내동(행정동)", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360109", name: "지금동(다산)", district: "다산동", scopeUnverified: true, appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360110", name: "도농동(다산)", district: "다산동", scopeUnverified: true, appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360111", name: "별내동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
+      { codePrefix: "41360112", name: "다산동", appliesFrom: "2019-11-08", appliesTo: "2020-06-18" },
     ],
     excludedSubCodes: [
       { codePrefix: "41360256", name: "화도읍", appliesFrom: "2020-06-19" },
@@ -244,24 +258,37 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
     ] },
   { code: "41150", name: "경기도 의정부시", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
 
-  // ── 화성 (동탄2택지만 줄곧 — 2017.8.3~2022.11.14) ──
+  // ── 화성 (2017.8.3~2020.6.18 동탄2택지만 → 2020.6.19~2022.11.13 시 전역[서신면 2022.7.5. 제외]) ──
+  //   2020.6.19. 국토교통부공고 제2020-828호의 현황표 <신규 지정>에 「화성시」가 있다(「현행」 칸은 동탄2택지개발지구를 따로
+  //   적는다). 정정공고 제2020-877호(2020.6.29.)는 대상지역 행에 「화성시」를 넣었을 뿐 「지정기간 2020. 6. 19. ~」과
+  //   「공고한 날부터 효력」은 고치지 않았다 → 시 전역 지정의 시작일은 원 공고일 2020-06-19다(결정 #3 A · G7-1).
+  //   서신면은 제2022-883호(공고한 날부터 효력)로 2022.7.5. 해제 — 종료일 2022-11-13의 전환점이 아니라 제외 시작일이다.
+  //   ⚠️ 6.19.~6.28. 열흘은 해석례·심판례가 없다(정정공고일 6.29.로 읽으면 이 열흘은 미지정) — 이 구간에 걸린 사안은
+  //   `one-house/hwaseong-announcement-window.ts`가 확인 필요로 알린다.
+  //   동탄2 `includedSubCodes`의 `appliesTo 2020-06-18`은 필수다 — 매처는 그 날짜에 포함 규칙이 하나라도 활성이면 비매칭을
+  //   「지정 지구 외」로 끝낸다. 지정 구간을 둘로 나눠 `basis`가 「2020-06-19 고시」로 나오게 한다(동탄2 밖이 「2017-08-03
+  //   고시」로 지정된 것처럼 보이지 않게).
   { code: "41590", name: "경기도 화성시",
-    designations: [{ designatedDate: "2017-08-03", releasedDate: "2022-11-13" }],
+    designations: [
+      { designatedDate: "2017-08-03", releasedDate: "2020-06-18" },
+      { designatedDate: "2020-06-19", releasedDate: "2022-11-13" },
+    ],
     includedSubCodes: [
-      { codePrefix: "41590127", name: "동탄2 반송동", district: "동탄2택지개발지구" },
-      { codePrefix: "41590128", name: "동탄2 석우동", district: "동탄2택지개발지구" },
-      { codePrefix: "41590420", name: "동탄2 동탄면", district: "동탄2택지개발지구" },
-    ] },
+      { codePrefix: "41590127", name: "동탄2 반송동", district: "동탄2택지개발지구", appliesTo: "2020-06-18" },
+      { codePrefix: "41590128", name: "동탄2 석우동", district: "동탄2택지개발지구", appliesTo: "2020-06-18" },
+      { codePrefix: "41590420", name: "동탄2 동탄면", district: "동탄2택지개발지구", appliesTo: "2020-06-18" },
+    ],
+    excludedSubCodes: [{ codePrefix: "41590350", name: "서신면", appliesFrom: "2022-07-05" }] },
 
   // 화성 일반구 신설(만세·효행·병점·동탄) — 부천과 같은 구조다(계획서 D-9).
   //   시 코드 `41590`은 살아 있으나 하위 법정동이 전부 일반구로 재배치됐다.
   //
-  //   부천(D-8)과 결정적으로 다른 점: 화성은 **시 전역이 아니라 동탄2 지구 한정** 지정이었다.
-  //   신설 구 전역으로 넓히면 지정된 적 없는 지역까지 조정대상지역이 되어 **근거 없이
-  //   납세자에게 불리**해진다. 따라서 구 `includedSubCodes`가 가리키던 **같은 지리적 범위**만
-  //   현행 코드로 옮긴다.
+  //   부천(D-8)과 다른 점: 화성은 2020.6.18.까지 **시 전역이 아니라 동탄2 지구 한정** 지정이었다
+  //   (2020.6.19.부터 시 전역 — 위 41590 엔트리 주석, 결정 #3). 그 전 기간은 신설 구 전역으로 넓히면
+  //   지정된 적 없는 지역까지 조정대상지역이 되어 **근거 없이 납세자에게 불리**해진다. 따라서 구
+  //   `includedSubCodes`가 가리키던 **같은 지리적 범위**만 현행 코드로 옮기되 기간은 2020-06-18까지로 끊는다.
   //
-  //   지정 범위가 시기마다 다르다(2017 지구 한정 → 2026 전역). 엔트리를 둘로 나눌 수는 없다 —
+  //   지정 범위가 시기마다 다르다(2017 지구 한정 → 2020.6.19. 시 전역 → 2026 동탄구 전역). 엔트리를 둘로 나눌 수는 없다 —
   //   `isRegulatedByBjdCodeIn`은 시·군·구가 일치하는 **첫 엔트리만** 집으므로 뒤 엔트리가
   //   조용히 죽는다. 대신 `includedSubCodes`의 `appliesFrom`/`appliesTo`로 과거 이력에만
   //   지구 한정을 걸어 둔다(`activeSubRules`가 날짜로 거른다).
@@ -288,35 +315,46 @@ export const REGULATED_REGIONS: RegulatedRegion[] = [
   //   후 그 땅에 동탄1신도시가 들어섰다). 2017-08-03 고시 문구는 「동탄2택지개발지구에
   //   한함」이었으므로 종전 데이터가 이미 고시보다 넓었다.
   //
-  //   2026-08-01 세무 판단 — **종전 범위를 그대로 이전**한다(반송·석우 + 동탄면 12개
-  //   + 여울동 = 13개). 축소하면 저장된 이력과 어긋나고, 능동은 어느 근거로도 들어오지
-  //   않으므로 제외한다 — 근거 없이 넓히면 납세자에게 불리해진다.
+  //   2026-08-01 세무 판단 — **2020.6.18.까지의 동탄2 한정 범위**를 그대로 이전한다(반송·석우 + 동탄면 12개
+  //   + 여울동 = 13개). 능동은 그 기간 어느 근거로도 들어오지 않으므로 제외한다 — 근거 없이 넓히면 납세자에게
+  //   불리해진다. 다만 그 판단은 2017년 동탄2 범위만 옮긴 것이라 **2020.6.19.~ 시 전역 지정은 검토한 적이 없었다** —
+  //   2026-10-11 결정 #3(G7-1)이 그 구간을 공고 원문대로 바로잡았다(능동 등 동탄2 밖은 2020-06-19부터 지정).
   { code: "41597", name: "경기도 화성시 동탄구",
     designations: [
-      // 과거 이력 — 동탄2 지구 한정(아래 includedSubCodes가 기간과 함께 좁힌다)
-      { designatedDate: "2017-08-03", releasedDate: "2022-11-13" },
+      // 2017.8.3.~2020.6.18. — 동탄2 지구 한정(아래 includedSubCodes가 기간과 함께 좁힌다)
+      { designatedDate: "2017-08-03", releasedDate: "2020-06-18" },
+      // 2020.6.19.~2022.11.13. — 화성시 전역 지정(제2020-828호) → 능동 등 동탄2 밖도 지정
+      { designatedDate: "2020-06-19", releasedDate: "2022-11-13" },
       // 신규 지정 — 동탄구 **전역**. 국토교통부공고 제2026-882호(2026-07-01),
       //   「주택법」 §63의2④. 대상: 화성시 동탄구·용인시 기흥구·구리시.
       { designatedDate: "2026-07-01", releasedDate: null },
     ],
     includedSubCodes: [
       // 구 41590127·41590128 (동탄면 반송리·석우리 → 동)
-      { codePrefix: "41597102", name: "반송동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597103", name: "석우동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597102", name: "반송동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597103", name: "석우동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
       // 구 41590420 동탄면 나머지 리 → 동 (오산동 41597104는 폐지되어 제외)
-      { codePrefix: "41597105", name: "청계동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597106", name: "영천동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597107", name: "중동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597108", name: "신동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597109", name: "목동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597110", name: "산척동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597111", name: "장지동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597112", name: "송동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597113", name: "방교동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
-      { codePrefix: "41597114", name: "금곡동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597105", name: "청계동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597106", name: "영천동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597107", name: "중동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597108", name: "신동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597109", name: "목동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597110", name: "산척동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597111", name: "장지동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597112", name: "송동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597113", name: "방교동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
+      { codePrefix: "41597114", name: "금곡동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
       // 신설 동 — 리 목록엔 없으나 동탄2 지구 99.2%라 동탄면 리에서 분할된 것으로 본다
-      { codePrefix: "41597115", name: "여울동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2022-11-13" },
+      { codePrefix: "41597115", name: "여울동", district: "동탄2택지개발지구", appliesFrom: "2017-08-03", appliesTo: "2020-06-18" },
     ] },
+
+  // 화성 일반구 신설 3구(만세·효행·병점) — 2020.6.19.~2022.11.13. 화성시 전역 지정을 물려받는다(동탄2 지구 한정이던 기간에는
+  //   이 코드가 없어 미지정이다). 서신면은 만세구 `41591330`(구 `41590350`)이고 2022.7.5.부터 제외된다. 결정 #3(G7-1).
+  { code: "41591", name: "경기도 화성시 만세구",
+    designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }],
+    excludedSubCodes: [{ codePrefix: "41591330", name: "서신면", appliesFrom: "2022-07-05" }] },
+  { code: "41593", name: "경기도 화성시 효행구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
+  { code: "41595", name: "경기도 화성시 병점구", designations: [{ designatedDate: "2020-06-19", releasedDate: "2022-11-13" }] },
 
   // ── 김포 (2020.11.20~2022.11.14, 통진·대곶·월곶·하성면 제외) ──
   { code: "41570", name: "경기도 김포시",

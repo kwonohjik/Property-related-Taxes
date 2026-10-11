@@ -36,7 +36,16 @@ export function DesignatedDistrictQuestion({ regionCode, value, onChange, idSuff
             {d.appliesFrom || d.appliesTo
               ? `${d.appliesFrom ? dot(d.appliesFrom) : ""}~${d.appliesTo ? dot(d.appliesTo) : ""} 동안 `
               : "지정 기간 동안 "}
-            동 전체가 아니라 <b>{d.district}</b>만 조정대상지역이었습니다.
+            {d.scopeUnverified ? (
+              <>
+                고시에는 <b>{d.district}</b>만 조정대상지역으로 적혀 있는데, 그 범위(법정동인지 행정동인지)를 확인하지 못해 이 동을
+                조정대상지역으로 둡니다(확인 필요).
+              </>
+            ) : (
+              <>
+                동 전체가 아니라 <b>{d.district}</b>만 조정대상지역이었습니다.
+              </>
+            )}
           </p>
         ))}
         <RadioCardGroup

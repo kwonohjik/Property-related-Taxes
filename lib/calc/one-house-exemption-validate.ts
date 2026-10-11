@@ -24,6 +24,7 @@ import {
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { oneRightNaFactIssues } from "./one-right-na-facts-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { calcEffectiveWasRegulatedAtAcquisition } from "./effective-regulated-at-acquisition";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
@@ -643,7 +644,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 판정에 쓰인다(facts 모드는
       // 이 값을 쓰는 검증 이전에 반환하므로 지금은 no-op이지만, 계산기(`full`)와 같은 소스를
       // 유지해 향후 facts 모드가 이 축을 쓰게 되어도 3중 패턴이 깨지지 않게 한다).
-      form.wasRegulatedAtAcquisition,
+      // 결정 #5(G7-6) — 주소가 있으면 ④·⑤와 같은 주소 판정값(저장된 토글이 아니다).
+      calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition),
     );
     if (rentalError) errors.push(err("rentalHousingException", rentalError));
   }
