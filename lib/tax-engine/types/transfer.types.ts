@@ -682,6 +682,14 @@ export interface TransferTaxInput {
    */
   presaleRights?: PresaleRight[];
   /**
+   * 양도일과 **같은 날** 취득한 분양권·입주권 — 「양도일 현재 보유」에서 뺀 것(코드 리뷰 결정 #1). `presaleRights`에는 없다.
+   *
+   * ⑭ 매퍼(`splitPresaleRightsAtTransfer`)가 양도일 당일 취득분만 여기로 나눈다(양도일 다음 날 이후 취득분은 어디에도 싣지 않는다).
+   * 판정에는 쓰지 않고, 「같은 날 권리를 보유로 세면 결론이 달라지는가」를 다시 판정해 달라질 때만 확인 필요를 고지하는 데만 쓴다
+   * (`one-house/same-day-right.ts`). 계산기 단건 route·판정 메뉴 route가 읽는다.
+   */
+  sameDayAcquiredPresaleRights?: PresaleRight[];
+  /**
    * 세대가 보유한 분양권·입주권이 **없다고 명시적으로 확인**했는가 — §89①4호 가·나목 분양권
    * 게이트(`oneRightPresaleGate`) 전용(2026-10-06, 계획서 `roster-required-other-assets.plan.md`
    * §4-6 남은 별건 3).

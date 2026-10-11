@@ -98,11 +98,56 @@ describe("⑤ ② 명부 행 편집 ⑥ — 게이트 (Q-2′)", () => {
     expect(screen.getByTestId("house-row-count-exclusion")).toBeTruthy();
   });
 
-  it("[UI-2+] 짝 — 입주권 양도는 ⑥을 띄우지 않고 종전 폼 전역 섹션이 남는다", () => {
+  it("[UI-2+] 입주권 양도 — 행 편집에 ⑥이 뜨고, 폼 전역 감면주택 섹션은 없다(코드 리뷰 결정 #2 · 입력 두 벌 방지)", () => {
     render(<Step4 form={form({ houses: [ROW] }, "right_to_move_in")} onChange={() => {}} />);
+    expect(screen.queryAllByText(/조특법 감면주택 보유 — 주택 수 제외/)).toHaveLength(0);
+    openRow();
+    expect(screen.getByTestId("house-row-count-exclusion")).toBeTruthy();
+  });
+
+  it("[UI-2p] 짝 — 분양권 양도는 ⑥을 띄우지 않고 종전 폼 전역 섹션이 남는다(효과 0)", () => {
+    render(<Step4 form={form({ houses: [ROW] }, "presale_right")} onChange={() => {}} />);
     expect(screen.getAllByText(/조특법 감면주택 보유 — 주택 수 제외/)).toHaveLength(1);
     openRow();
     expect(screen.queryByTestId("house-row-count-exclusion")).toBeNull();
+  });
+
+  const SPECIAL_98 = {
+    kind: "special",
+    special: {
+      article: "unsold_98",
+      houseAcquisitionDate: "",
+      houseContractDate: "",
+      isNationalHousing: false,
+      requirementsConfirmed: true,
+    },
+  } as HouseEntry["countExclusion"];
+
+  it("[UI-2x] 입주권 양도 — 4개 조문 보유 감면주택 행은 배지를 달고 안내가 없다 · §99의4 행은 배지 없이 「쓰지 않는다」 안내", () => {
+    const { rerender } = render(
+      <Step4 form={form({ houses: [{ ...ROW, countExclusion: SPECIAL_98 } as HouseEntry] }, "right_to_move_in")} onChange={() => {}} />,
+    );
+    expect(screen.getByTestId("house-count-exclusion-badge-r")).toBeTruthy();
+    expect(screen.queryByTestId("right-sale-count-exclusion-unused-notice")).toBeNull();
+    rerender(
+      <Step4
+        form={form({ houses: [{ ...ROW, countExclusion: { kind: "reduction", reduction: RURAL } } as HouseEntry] }, "right_to_move_in")}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId("house-count-exclusion-badge-r")).toBeNull();
+    expect(screen.getByTestId("right-sale-count-exclusion-unused-notice")).toBeTruthy();
+  });
+
+  it("[UI-2h] 짝 — 주택 양도는 §99의4 행에도 배지가 있고 「쓰지 않는다」 안내가 없다", () => {
+    render(
+      <Step4
+        form={form({ houses: [{ ...ROW, countExclusion: { kind: "reduction", reduction: RURAL } } as HouseEntry] })}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("house-count-exclusion-badge-r")).toBeTruthy();
+    expect(screen.queryByTestId("right-sale-count-exclusion-unused-notice")).toBeNull();
   });
 });
 
@@ -120,9 +165,31 @@ describe("⑤ ② 옛 선언 안내 카드 (Q-1)", () => {
     expect(patch?.assets?.[0].reductions.map((r) => r.type)).toEqual(["self_farming"]);
   });
 
-  it("[UI-3+] 짝 — 입주권 양도에서는 카드를 띄우지 않는다(효과 0 · ⑧도 막지 않는다)", () => {
+  it("[UI-3+] 짝 — 입주권 양도의 §99의4·§98의9 옛 선언은 카드를 띄우지 않는다(효과 0 · ⑧도 막지 않는다)", () => {
     render(<Step4 form={form({ houses: [ROW] }, "right_to_move_in", [RURAL])} onChange={() => {}} />);
     expect(screen.queryByTestId("one-house-legacy-count-exclusion")).toBeNull();
+  });
+
+  it("[UI-3++] 입주권 양도 — 행 id 없는 옛 보유 감면주택 선언은 카드로 나열되고 삭제하면 지운다(결정 #2 · 명부 밖 주택을 빼지 않는다)", () => {
+    let patch: Partial<TransferFormData> | undefined;
+    const legacy = {
+      article: "unsold_98",
+      houseAcquisitionDate: "1997-06-15",
+      houseContractDate: "",
+      isNationalHousing: false,
+      requirementsConfirmed: true,
+    } as never;
+    render(
+      <Step4
+        form={form({ houses: [ROW], specialHouseExclusions: [legacy] }, "right_to_move_in")}
+        onChange={(p) => (patch = p)}
+      />,
+    );
+    const card = screen.getByTestId("one-house-legacy-count-exclusion");
+    expect(card.textContent).toContain("1997-06-15");
+    fireEvent.click(within(card).getByTestId("one-house-legacy-count-exclusion-clear"));
+    fireEvent.click(screen.getByRole("button", { name: "삭제" }));
+    expect(patch?.specialHouseExclusions).toEqual([]);
   });
 });
 

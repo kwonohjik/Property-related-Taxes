@@ -41,6 +41,7 @@ import { prepareBundledApportionment } from "./bundled-apportionment";
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { buildTransferEngineInput } from "./engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
+import { withSameDayRightWarning } from "@/lib/tax-engine/one-house/same-day-right";
 
 /**
  * 성공 응답 — NaN·Infinity가 있으면 던져 아래 `catch`가 500으로 응답한다(E-14l).
@@ -673,7 +674,10 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-    const result = calculateTransferTax(engineInput, rates);
+    // 양도일과 같은 날 취득한 권리를 보유로 세면 비과세·세액이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1).
+    const result = withSameDayRightWarning(engineInput, calculateTransferTax(engineInput, rates), (counterfactual) =>
+      calculateTransferTax(counterfactual, rates),
+    );
     return okJson({ data: { mode: "single" as const, result } });
   } catch (err) {
     // 서버 콘솔에 풀 스택 출력 — dev 터미널에서 즉시 원인 식별

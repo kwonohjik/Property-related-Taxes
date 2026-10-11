@@ -203,7 +203,7 @@ describe("P-1 ④⑫⑭", () => {
   it("⑫ Zod가 통과시키고 ⑭ route가 Date로 넘긴다", () => {
     const parsed = presaleRightSchema.parse(buildPresaleRightsPayload("housing", [entry()])![0]);
     expect(parsed.decedentAcquisitionDate).toBe("2019-06-15");
-    const engine = mapPresaleRightsToEngine([parsed])![0];
+    const engine = mapPresaleRightsToEngine([parsed], undefined)![0];
     expect(engine.decedentAcquisitionDate).toEqual(D("2019-06-15"));
     expect(presaleRightSchema.safeParse({ ...parsed, decedentAcquisitionDate: "2019-13-01" }).success).toBe(false);
   });

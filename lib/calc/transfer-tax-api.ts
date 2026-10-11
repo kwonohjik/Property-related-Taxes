@@ -473,7 +473,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     }),
     // 사례 36 §89①4호 가목·나목 — 조합원입주권 수 (양도일 현재). PR-D(2026-10-05) — 스칼라
     // 숫자 칸을 없애고 명부(`presaleRights`)에서 도출한다(판정 메뉴와 같은 leaf, 3중 패턴).
-    householdRightCount: resolveHouseholdRightCount(primary.assetKind, form.presaleRights),
+    householdRightCount: resolveHouseholdRightCount(primary.assetKind, form.presaleRights, form.transferDate),
     // 거주기간 — 공용 헬퍼 도출(interval 합산 / direct·form-global fallback). UI 메시지②와 단일 진실.
     // 용도변경 시에는 §95⑤2호 클램프가 적용된 값이다(위 `residence` 참조).
     residencePeriodMonths: residence.months,

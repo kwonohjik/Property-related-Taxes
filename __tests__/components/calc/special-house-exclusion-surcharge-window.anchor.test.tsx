@@ -23,8 +23,8 @@
  * 옮기면 **무검증 통과**가 됐다.
  *
  * 🔄 2026-09-30 — 주택·재개발 아파트 양도에서는 입력 경로가 **명부 행 ⑥**으로 옮겨졌다
- * (`transfer-calc-count-exclusion-row-link.plan.md`). 폼 전역 섹션은 그 게이트 밖(권리 양도)에만
- * 남는다. 이 파일이 지키는 사실 — 「창 안에서도 입력 경로가 **정확히 1벌** 있고 ⑧이 막는다」 — 은
+ * (`transfer-calc-count-exclusion-row-link.plan.md`). 폼 전역 섹션은 그 게이트 밖(분양권 양도)에만
+ * 남는다. 조합원입주권 양도도 2026-10-11(코드 리뷰 결정 #2)부터 명부 행 ⑥으로 옮겨졌다. 이 파일이 지키는 사실 — 「창 안에서도 입력 경로가 **정확히 1벌** 있고 ⑧이 막는다」 — 은
  * 두 경로 각각에 대해 그대로 단언한다.
  */
 import { render, screen, cleanup } from "@testing-library/react";
@@ -54,7 +54,7 @@ const OUT_WINDOW = { transferDate: "2026-08-01", acquisitionDate: "2014-01-01" }
 
 function makeForm(
   w: { transferDate: string; acquisitionDate: string },
-  assetKind: "housing" | "right_to_move_in" = "housing",
+  assetKind: "housing" | "right_to_move_in" | "presale_right" = "housing",
 ): TransferFormData {
   const base = createDefaultTransferFormData();
   return {
@@ -71,12 +71,12 @@ function makeForm(
 
 function renderStep4(
   w: { transferDate: string; acquisitionDate: string },
-  assetKind: "housing" | "right_to_move_in" = "housing",
+  assetKind: "housing" | "right_to_move_in" | "presale_right" = "housing",
 ) {
   render(<Step4 form={makeForm(w, assetKind)} onChange={() => {}} />);
 }
 
-/** 폼 전역 섹션 — 게이트 밖(권리 양도)의 입력 경로 */
+/** 폼 전역 섹션 — 게이트 밖(분양권 양도)의 입력 경로 */
 const EXCLUSION_TITLE = /조특법 감면주택 보유 — 주택 수 제외/;
 /** 명부 — 게이트 안(주택 양도)의 입력 경로. 행 편집 ⑥이 감면주택을 받는다. */
 const ROSTER_ADD = { name: "+ 주택 추가" } as const;
@@ -87,11 +87,14 @@ describe("D4-03 한시배제 창 × 감면주택 주택수 제외", () => {
     expect(isMultiHouseSurchargeSuppressed(OUT_WINDOW.transferDate, OUT_WINDOW.acquisitionDate)).toBe(false);
   });
 
-  it("D4-03-2: 🔴 창 **안**에서도 입력 경로가 있다 — 주택 양도는 명부(행 ⑥), 권리 양도는 폼 전역 섹션", () => {
+  it("D4-03-2: 🔴 창 **안**에서도 입력 경로가 있다 — 주택·입주권 양도는 명부(행 ⑥), 분양권 양도는 폼 전역 섹션", () => {
     renderStep4(IN_WINDOW);
     expect(screen.getAllByRole("button", ROSTER_ADD).length).toBeGreaterThan(0);
     cleanup();
     renderStep4(IN_WINDOW, "right_to_move_in");
+    expect(screen.getAllByRole("button", ROSTER_ADD).length).toBeGreaterThan(0);
+    cleanup();
+    renderStep4(IN_WINDOW, "presale_right");
     expect(screen.getAllByText(EXCLUSION_TITLE).length).toBeGreaterThan(0);
   });
 
@@ -100,16 +103,21 @@ describe("D4-03 한시배제 창 × 감면주택 주택수 제외", () => {
     expect(screen.getAllByRole("button", ROSTER_ADD).length).toBeGreaterThan(0);
     cleanup();
     renderStep4(OUT_WINDOW, "right_to_move_in");
+    expect(screen.getAllByRole("button", ROSTER_ADD).length).toBeGreaterThan(0);
+    cleanup();
+    renderStep4(OUT_WINDOW, "presale_right");
     expect(screen.getAllByText(EXCLUSION_TITLE).length).toBeGreaterThan(0);
   });
 
-  it("D4-03-4: 🔑 어느 쪽이든 **정확히 1벌만** 뜬다 — 주택 양도에서는 폼 전역 섹션이 사라지고 명부만 남는다", () => {
+  it("D4-03-4: 🔑 어느 쪽이든 **정확히 1벌만** 뜬다 — 주택·입주권 양도에서는 폼 전역 섹션이 사라지고 명부만 남는다", () => {
     for (const w of [IN_WINDOW, OUT_WINDOW]) {
-      renderStep4(w);
-      expect(screen.getAllByRole("button", ROSTER_ADD)).toHaveLength(1);
-      expect(screen.queryAllByText(EXCLUSION_TITLE)).toHaveLength(0);
-      cleanup();
-      renderStep4(w, "right_to_move_in");
+      for (const kind of ["housing", "right_to_move_in"] as const) {
+        renderStep4(w, kind);
+        expect(screen.getAllByRole("button", ROSTER_ADD)).toHaveLength(1);
+        expect(screen.queryAllByText(EXCLUSION_TITLE)).toHaveLength(0);
+        cleanup();
+      }
+      renderStep4(w, "presale_right");
       expect(screen.getAllByText(EXCLUSION_TITLE)).toHaveLength(1);
       cleanup();
     }
@@ -143,8 +151,8 @@ describe("D4-03 한시배제 창 × 감면주택 주택수 제외", () => {
     expect(issues.some((i) => i.message.includes("감면주택의 적용 조문을 선택하세요"))).toBe(true);
   });
 
-  it("D4-03-6r: ⑧ — 권리 양도(폼 전역 섹션)도 창 안에서 미완성 행을 막는다", () => {
-    const form = makeForm(IN_WINDOW, "right_to_move_in");
+  it("D4-03-6r: ⑧ — 분양권 양도(폼 전역 섹션)도 창 안에서 미완성 행을 막는다", () => {
+    const form = makeForm(IN_WINDOW, "presale_right");
     form.specialHouseExclusions = [
       { article: "", houseAcquisitionDate: "", houseContractDate: "", isNationalHousing: false, requirementsConfirmed: false },
     ] as never;
@@ -153,7 +161,7 @@ describe("D4-03 한시배제 창 × 감면주택 주택수 제외", () => {
   });
 
   it("D4-03-7: ⑧ — 조문만 있고 날짜가 없으면 취득일·매매계약일을 요구한다 (창 안 · 폼 전역 섹션)", () => {
-    const form = makeForm(IN_WINDOW, "right_to_move_in");
+    const form = makeForm(IN_WINDOW, "presale_right");
     form.specialHouseExclusions = [
       { article: "unsold_98_3", houseAcquisitionDate: "", houseContractDate: "", isNationalHousing: false, requirementsConfirmed: false },
     ] as never;

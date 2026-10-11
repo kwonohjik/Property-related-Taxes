@@ -13,6 +13,7 @@ import type { AptTransferDeadlineExtension } from "@/lib/tax-engine/rental-artic
 import type { HouseInfo, MultiHouseGracePeriodInput, PresaleRight } from "@/lib/tax-engine/multi-house-surcharge";
 import type { SpecialHouseExclusionInput } from "@/lib/api/transfer-tax-schema";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
 
 type HouseInput = z.infer<typeof houseSchema>;
 type PresaleRightInput = z.infer<typeof presaleRightSchema>;
@@ -143,12 +144,43 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
   }));
 }
 
-/** Zod presaleRights → 엔진 PresaleRight[] (취득일 string→Date) */
-export function mapPresaleRightsToEngine(
-  rights: PresaleRightInput[] | undefined,
-): PresaleRight[] | undefined {
-  if (!rights) return undefined;
-  return rights.map((r) => ({
+/**
+ * 세대 보유 분양권·입주권을 **양도일 현재 보유분**과 **같은 날 취득분**으로 나눈다 (코드 리뷰 결정 #1).
+ *
+ * 양도일 당일·이후에 취득한 권리는 「양도일 현재 보유」가 아니다 — 주택 명부의 D2(`isOwnedAtTransfer`)와 **같은 단일 술어**를
+ * 쓴다(§89①4호 가목은 「다른 주택 또는 분양권」을 한 문장으로 묻는다). 양도일 다음 날 이후 취득분은 어디에도 싣지 않고,
+ * 같은 날 취득분만 따로 돌려준다 — 판정에는 쓰지 않고 「같은 날 권리를 보유로 세면 결론이 달라지는가」를 다시 판정해
+ * 확인 필요를 고지하는 데만 쓴다(`one-house/same-day-right.ts`). 양도일이 없거나 형식이 아니면 모두 보유분이다(`isOwnedAtTransfer`).
+ */
+export function splitPresaleRightsAtTransfer<T extends { acquisitionDate: string }>(
+  rights: readonly T[] | undefined,
+  transferDate: string | undefined,
+): { held: T[]; sameDay: T[] } {
+  const held: T[] = [];
+  const sameDay: T[] = [];
+  for (const r of rights ?? []) {
+    if (isOwnedAtTransfer(r.acquisitionDate, transferDate)) held.push(r);
+    else if (r.acquisitionDate === transferDate) sameDay.push(r);
+  }
+  return { held, sameDay };
+}
+
+/**
+ * 입력한 권리가 **모두** 양도일(같은 날 포함) 이후 취득분이면 「없음」 확인을 다시 요구하지 않는다 — 사용자가 사실(목록)을 이미
+ * 제공했다(`oneRightPresaleGate`가 목록이 빌 때만 확인 플래그를 본다 · `project_89_2_104_7_empty_rights_is_none`의 #1992는 그대로).
+ * 목록이 아예 비어 있으면 원래 확인값을 그대로 돌려준다.
+ */
+export function householdNoPresaleRightsConfirmedAtTransfer(
+  rights: readonly { acquisitionDate: string }[] | undefined,
+  transferDate: string | undefined,
+  confirmed: boolean | undefined,
+): boolean | undefined {
+  if ((rights?.length ?? 0) > 0 && splitPresaleRightsAtTransfer(rights, transferDate).held.length === 0) return true;
+  return confirmed;
+}
+
+function toEnginePresaleRight(r: PresaleRightInput): PresaleRight {
+  return {
     id: r.id,
     type: r.type,
     acquisitionDate: new Date(r.acquisitionDate),
@@ -176,7 +208,28 @@ export function mapPresaleRightsToEngine(
     decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
     parentalCareMergeInheritedRight: r.parentalCareMergeInheritedRight,
     decedentAcquisitionDate: toOptionalDate(r.decedentAcquisitionDate),
-  }));
+  };
+}
+
+/**
+ * Zod presaleRights → 엔진 PresaleRight[] (취득일 string→Date) — **양도일 현재 보유분만** (`splitPresaleRightsAtTransfer`).
+ * 양도일은 필수 인자다 — 빠뜨린 호출부를 컴파일러가 찾는다.
+ */
+export function mapPresaleRightsToEngine(
+  rights: PresaleRightInput[] | undefined,
+  transferDate: string | undefined,
+): PresaleRight[] | undefined {
+  if (!rights) return undefined;
+  return splitPresaleRightsAtTransfer(rights, transferDate).held.map(toEnginePresaleRight);
+}
+
+/** 양도일과 같은 날 취득한 권리 → 엔진 (`TransferTaxInput.sameDayAcquiredPresaleRights`). 없으면 `undefined`. */
+export function mapSameDayPresaleRightsToEngine(
+  rights: PresaleRightInput[] | undefined,
+  transferDate: string | undefined,
+): PresaleRight[] | undefined {
+  const { sameDay } = splitPresaleRightsAtTransfer(rights, transferDate);
+  return sameDay.length > 0 ? sameDay.map(toEnginePresaleRight) : undefined;
 }
 
 /** Zod gracePeriod → 엔진 MultiHouseGracePeriodInput (string→Date) */

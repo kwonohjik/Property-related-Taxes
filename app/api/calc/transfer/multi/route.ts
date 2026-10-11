@@ -32,6 +32,8 @@ import {
   mapHousesToEngine,
   mapGracePeriodToEngine,
   mapPresaleRightsToEngine,
+  mapSameDayPresaleRightsToEngine,
+  householdNoPresaleRightsConfirmedAtTransfer,
   toEngineAptDeadlineExtension,
   mapSpecialHouseExclusionsToEngine,
 } from "@/lib/api/transfer-route-multi-house";
@@ -41,6 +43,8 @@ import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { computePreliminaryFilingTaxes } from "@/lib/tax-engine/transfer-tax-preliminary-filing";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
+import { ratesForTransferDate } from "@/lib/tax-engine/transfer-tax-item-rates";
+import { anySameDayRightChangesConclusion, SAME_DAY_RIGHT_NOTICE } from "@/lib/tax-engine/one-house/same-day-right";
 
 export async function POST(request: NextRequest) {
   // Rate Limiting — 분당 15회 (단건 30회의 절반)
@@ -396,9 +400,14 @@ export async function POST(request: NextRequest) {
       houses: mapHousesToEngine(p.houses),
       // ⑭ 세대 보유 분양권·입주권 — 단건 route와 동일 공용 헬퍼(취득일 string→Date).
       //    ⑬과 함께 배선해야 도달한다(P1-02 — 종전에는 두 층 모두 비어 있었다).
-      presaleRights: mapPresaleRightsToEngine(p.presaleRights),
+      presaleRights: mapPresaleRightsToEngine(p.presaleRights, p.transferDate),
+      sameDayAcquiredPresaleRights: mapSameDayPresaleRightsToEngine(p.presaleRights, p.transferDate),
       // ⑭ §89①4호 가·나목 분양권 게이트 — PR-D ⑧ 확인 echo, 단건 정본과 같은 leaf(engine-input.ts).
-      householdNoPresaleRightsConfirmed: p.householdNoPresaleRightsConfirmed,
+      householdNoPresaleRightsConfirmed: householdNoPresaleRightsConfirmedAtTransfer(
+        p.presaleRights,
+        p.transferDate,
+        p.householdNoPresaleRightsConfirmed,
+      ),
       sellingHouseId: p.sellingHouseId,
       // ⑭ 다주택 중과 한시 유예/경과조치 — 단건 route와 동일 공용 헬퍼(Date 변환). 자산별 gracePeriod.
       gracePeriod: mapGracePeriodToEngine(p.gracePeriod),
@@ -610,6 +619,25 @@ export async function POST(request: NextRequest) {
 
     const finalInput: AggregateTransferInput = { ...engineInput, properties: enrichedProperties };
     const result = calculateTransferTaxAggregate(finalInput, rates, ratesByTransferDate);
+    // 양도일과 같은 날 취득한 권리를 보유로 세면 어느 자산의 결론이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
+    if (
+      anySameDayRightChangesConclusion(finalInput.properties as unknown as TransferTaxInput[], (i) =>
+        // 자산 하나만의 단독 계산 — 예정신고 세액 계산(`computePreliminaryFilingTaxes`)과 같은 모양으로 집계 컨텍스트를 뺀다.
+        calculateTransferTax(
+          {
+            ...i,
+            annualBasicDeductionUsed: finalInput.annualBasicDeductionUsed,
+            skipBasicDeduction: false,
+            amendment: undefined,
+            filingPenaltyDetails: undefined,
+            delayedPaymentDetails: undefined,
+          },
+          ratesForTransferDate(i.transferDate, rates, ratesByTransferDate),
+        ),
+      )
+    ) {
+      result.warnings = [...result.warnings, SAME_DAY_RIGHT_NOTICE];
+    }
     // NaN·Infinity는 JSON에서 null이 되어 200으로 나간다 — 반환 전에 끊는다(E-14l).
     assertFiniteResponse(result);
     return NextResponse.json({ data: result }, { status: 200 });

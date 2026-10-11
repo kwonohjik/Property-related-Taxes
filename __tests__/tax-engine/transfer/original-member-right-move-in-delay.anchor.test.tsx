@@ -123,7 +123,7 @@ describe("P-1 ④ · ⑫ · ⑭", () => {
       originalMemberTenantLeaseEndDate: "2021-09-30",
       originalMemberDisposalDelayReason: "auction",
     });
-    const [e] = mapPresaleRightsToEngine([presaleRightSchema.parse(p)])!;
+    const [e] = mapPresaleRightsToEngine([presaleRightSchema.parse(p)], undefined)!;
     expect(e.originalMemberMoveInDate?.toISOString().slice(0, 10)).toBe("2020-09-01");
     expect(e.originalMemberTenantLeaseEndDate?.toISOString().slice(0, 10)).toBe("2021-09-30");
     expect(e.originalMemberDisposalDelayReason).toBe("auction");

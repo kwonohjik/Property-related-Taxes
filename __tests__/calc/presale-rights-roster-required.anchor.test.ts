@@ -53,26 +53,26 @@ describe("PD-A ④ 입주권 수는 목록에서 도출한다 (이중 입력 해
     const presaleRights = [
       { id: "r1", type: "redevelopment_right" as const, acquisitionDate: "2015-01-01", region: "capital" as const },
     ];
-    expect(resolveHouseholdRightCount("right_to_move_in", presaleRights)).toBe(2);
+    expect(resolveHouseholdRightCount("right_to_move_in", presaleRights, "2026-06-01")).toBe(2);
   });
 
   it("[PD-A2] 목록 0건 → 도출 1(양도 대상 입주권 자신)", () => {
-    expect(resolveHouseholdRightCount("right_to_move_in", [])).toBe(1);
-    expect(resolveHouseholdRightCount("right_to_move_in", undefined)).toBe(1);
+    expect(resolveHouseholdRightCount("right_to_move_in", [], "2026-06-01")).toBe(1);
+    expect(resolveHouseholdRightCount("right_to_move_in", undefined, "2026-06-01")).toBe(1);
   });
 
   it("[PD-A3] 분양권(presale_right)은 세지 않는다 — 조합원입주권만 센다", () => {
     const presaleRights = [
       { id: "p1", type: "presale_right" as const, acquisitionDate: "2015-01-01", region: "capital" as const },
     ];
-    expect(resolveHouseholdRightCount("right_to_move_in", presaleRights)).toBe(1);
+    expect(resolveHouseholdRightCount("right_to_move_in", presaleRights, "2026-06-01")).toBe(1);
   });
 
   it("[PD-A4] 양도 대상이 주택이면(right_to_move_in이 아니면) 자신을 더하지 않는다", () => {
     const presaleRights = [
       { id: "r1", type: "redevelopment_right" as const, acquisitionDate: "2015-01-01", region: "capital" as const },
     ];
-    expect(resolveHouseholdRightCount("housing", presaleRights)).toBe(1);
+    expect(resolveHouseholdRightCount("housing", presaleRights, "2026-06-01")).toBe(1);
   });
 });
 
