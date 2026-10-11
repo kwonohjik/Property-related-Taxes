@@ -134,6 +134,66 @@ describe("S16-5 §154⑩ 경로 — 경과조치 사유 없이는 종전규정�
   });
 });
 
+describe("S16-5 12억 초과 — 사유 불성립이 사유 충족보다 세액이 적은 역전이 없다 (검증자 지적)", () => {
+  /** [양도가액, 사유 충족(residing) 세액, 사유 불성립 세액] — mock 세율, 8억 시료에서 양도가액만 변경 */
+  const CASES: ReadonlyArray<readonly [number, number, number]> = [
+    [1_300_000_000, 162_273_691, 225_423_000],
+    [1_500_000_000, 225_607_800, 284_559_000],
+    [2_000_000_000, 393_960_600, 433_108_500],
+  ];
+
+  it("T-8 ★ 12억 초과도 「체크만」·「계약금 + 그 전 등록 임대주택 없음」은 전액 과세 — 부분 비과세·표2 안분 없음 (13억 전 5,512,268 → 후 225,423,000)", () => {
+    for (const [price, metTax, unmetTax] of CASES) {
+      const met = calculateTransferTax(
+        input({ residenceTransitionUnderAddendum: true, residenceTransitionBasis: "residing" }, { transferPrice: price }),
+        rates,
+      );
+      expect(met.totalTax).toBe(metTax);
+      for (const rh of [
+        { residenceTransitionUnderAddendum: true },
+        { residenceTransitionUnderAddendum: true, residenceTransitionBasis: "contract_without_prior_rental" },
+      ]) {
+        const r = calculateTransferTax(input(rh, { transferPrice: price }), rates);
+        expect(r.totalTax).toBe(unmetTax);
+        expect(r.isPartialExempt).toBe(false);
+        expect(r.exemptReason).toBeUndefined();
+        expect(r.steps.some((s) => s.label.includes("12억 초과분"))).toBe(false);
+        // 불충족 ≥ 충족 — 요건을 못 채운 쪽이 세액이 적은 역전 금지
+        expect(r.totalTax).toBeGreaterThanOrEqual(met.totalTax);
+        expect((r.warnings ?? []).some((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해") && w.includes("확인 필요"))).toBe(true);
+      }
+    }
+  });
+
+  it("T-9 부정 짝 — 사유 충족(residing·with_prior)은 12억 초과에서도 종전규정 §161 안분 그대로 (고지 없음)", () => {
+    for (const basis of ["residing", "contract_with_prior_rental"] as const) {
+      const r = calculateTransferTax(
+        input({ residenceTransitionUnderAddendum: true, residenceTransitionBasis: basis }, { transferPrice: 1_500_000_000 }),
+        rates,
+      );
+      expect(r.rentalHousingExceptionDetail?.applied).toBe(true);
+      expect(r.totalTax).toBe(225_607_800);
+      expect((r.warnings ?? []).some((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해"))).toBe(false);
+    }
+  });
+
+  it("T-10 범위 경계 — 경과조치를 선언하지 않은 0호 입력은 결정 #19가 범위 밖으로 둔 경로라 현행 유지(12억 초과 부분 비과세 + 기존 고지)", () => {
+    const r = calculateTransferTax(input({}, { transferPrice: 1_300_000_000 }), rates);
+    expect(r.isPartialExempt).toBe(true);
+    expect(r.totalTax).toBe(5_512_268);
+    expect((r.warnings ?? []).some((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해"))).toBe(false);
+  });
+
+  it("T-11 2019.2.12. 전 취득은 사유와 무관하게 종전규정 — 12억 초과도 거두지 않는다", () => {
+    const r = calculateTransferTax(
+      input({ residenceTransitionUnderAddendum: true }, { acquisitionDate: new Date("2018-06-01"), transferPrice: 1_500_000_000 }),
+      rates,
+    );
+    expect(r.rentalHousingExceptionDetail?.applied).toBe(true);
+    expect((r.warnings ?? []).some((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해"))).toBe(false);
+  });
+});
+
 describe("S16-5 판정 메뉴 결론(buildRentalHousingVerdict) — 계산기와 같은 leaf", () => {
   const verdictOf = (rh: Record<string, unknown>) => buildRentalHousingVerdict(input(rh));
   it("V-1 ★ 체크만 · 「계약금 + 그 전 등록 임대주택 없음」 → 불충족 (종전: 충족 · 비과세)", () => {

@@ -25,6 +25,7 @@ import { isSurchargeSuspended } from "./tax-utils";
 import type { OneHouseJudgment } from "./one-house/types";
 import { revokeOneHouseExemption } from "./one-house/revoke-exemption";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
+import { isAddendumTransitionEffective } from "./data/rental-155-20-era";
 
 /**
  * §155⑳ 시나리오 B(임대→거주 전환 PHRP) 여부 — STEP 1a 전액 비과세 조기 반환 억제 게이트.
@@ -311,6 +312,38 @@ export function surchargeDeemingHouseCount(
 }
 
 /**
+ * §154⑩ 표준 경로(B · 임대 0호) + 부칙 제29523호 제7조② 경과조치를 선언했으나 **사유가 종전규정을 주지 않아**(#21 S16-5)
+ * 특례 요건이 불성립하면 고지 문장을 돌려준다(아니면 `undefined`). 호출부가 비과세를 거둔다 — 판정 메뉴(`applyRentalHousingVerdict`)와 같은 불변식.
+ *
+ * 🔴 종전: #21이 사유를 보게 되자 이 입력이 STEP 2.5에서 「미적용」으로 일반 경로에 흘렀다. 전액 비과세(`isExempt`)는 STEP 3가 전액 과세하지만
+ *    12억 초과 부분 비과세(`isPartialExempt`)는 안분·표2가 그대로 남아 세액이 8억 사례와 반대로 **줄었다**(13억 162,273,691→5,512,268 ·
+ *    사유 충족이 불충족보다 많음). #21의 판정 방향(부분 비과세→전액 과세)대로 12억 초과도 전액 과세한다.
+ * 🔑 범위는 「경과조치 선언 + 사유 불성립」뿐이다. 경과조치를 선언하지 않은 0호 입력은 결정 #19가 범위 밖으로 둔 경로라 바꾸지 않는다
+ *    (`prhpUnappliedExemptionNotice` 고지 유지).
+ */
+function prhpStandardPathTransitionUnmetNotice(effectiveInput: TransferTaxInput): string | undefined {
+  const rhe = effectiveInput.rentalHousingException;
+  if (
+    rhe?.applyException !== true ||
+    rhe.scenario !== "B" ||
+    (rhe.rentalUnits?.length ?? 0) !== 0 ||
+    !effectiveInput.isOneHousehold ||
+    effectiveInput.isUnregistered ||
+    rhe.residenceTransitionUnderAddendum !== true ||
+    isAddendumTransitionEffective(true, rhe.residenceTransitionBasis)
+  ) {
+    return undefined;
+  }
+  const eligibility = judgeRentalHousingEligibility(effectiveInput);
+  if (!eligibility || eligibility.passed) return undefined;
+  return (
+    `영 §154⑩ 거주요건 특례가 요건을 충족하지 못해(부칙 제7조② 경과조치 사유가 종전 규정을 주지 않음 — 확인 필요) ` +
+    `1세대1주택 비과세·12억 초과분 안분·장기보유특별공제 표2를 적용하지 않고 전액 과세로 계산했습니다 — ` +
+    `${TRANSFER_RENTAL_HOUSING.PIT_RD_161_1} 안분도 적용하지 않았습니다.`
+  );
+}
+
+/**
  * D12 — STEP 1 직후: §155⑳ A의 세대 구성이 불성립(`exceeded` — 다른 특례 둘을 겹쳐야 하는 3중첩 등)이면
  * 「임대주택 제외」 전제로 낸 비과세를 거둔다(사전-2016-법령해석재산-0584 · 조심-2021-중-5977).
  *
@@ -328,8 +361,10 @@ export function revokeExemptionOnRentalCompositionExceeded(
   generalHouseAcquisitionDate?: Date,
 ): { judgment: OneHouseJudgment; notice?: string } {
   const rhe = effectiveInput.rentalHousingException;
-  if (rhe?.applyException !== true || rhe.scenario !== "A") return { judgment: exemption };
   if (!exemption.isExempt && !exemption.isPartialExempt) return { judgment: exemption };
+  const standardPathNotice = prhpStandardPathTransitionUnmetNotice(effectiveInput);
+  if (standardPathNotice) return { judgment: revokeOneHouseExemption(exemption), notice: standardPathNotice };
+  if (rhe?.applyException !== true || rhe.scenario !== "A") return { judgment: exemption };
   const composition = resolveRentalResidenceComposition(effectiveInput, parsedRates, generalHouseAcquisitionDate);
   if (composition.status !== "exceeded") return { judgment: exemption };
   return {
