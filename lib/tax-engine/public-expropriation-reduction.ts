@@ -83,7 +83,7 @@ export interface PublicExpropriationReductionInput {
   bondCompensation: number;
   bondHoldingYears?: 3 | 5 | null;
   businessApprovalDate: Date;
-  /** 취득일(상속 시 피상속인 취득일) — §77① '고시일 소급 2년 이전 취득' 요건 검증용. 미제공 시 요건 미검증(하위호환). */
+  /** 취득일(상속 시 피상속인 취득일 — §77⑨, `expropriationAcquisitionDate`) — §77① '고시일 소급 2년 이전 취득' 요건 검증용. 미제공 시 요건 미검증(하위호환). */
   acquisitionDate?: Date;
   transferDate: Date;
   calculatedTax: number;
@@ -396,21 +396,53 @@ export function calculatePublicExpropriationReduction(
 /**
  * 5B — 토지·건물을 따로 취득한 자산의 §77 파트 입력. 둘 다 본인 소유인 별개취득 자산만 만든다(그 밖은 종전 자산 단위 판정).
  * 파트 양도소득금액 = 고가주택 안분 후 과세 양도차익(`taxableGainAfterProration`, 없으면 `gain`) − 그 파트의 장기보유특별공제.
- * 취득일은 종전 자산 단위 판정과 같은 축이다(건물 = 자산 취득일, 토지 = 토지 취득일).
- * ⚠️ §77⑨(상속 = 피상속인 취득일 · 「소득세법」 §97의2① 적용 증여 = 증여자 취득일)은 자산 단위 판정에도 아직 반영돼 있지 않다(별건) —
- *    고칠 때 이 함수와 `calcReductions`의 `acquisitionDate`를 함께 바꾼다.
+ * 취득일은 자산 단위 판정과 같은 축이다(건물 = 자산 취득일, 토지 = 토지 취득일) — 상속받은 파트는 §77⑨로 피상속인 취득일.
+ * 토지 파트의 원인은 `landAcquisitionCause`가 있으면 그것, 없으면 자산 원인이다(`resolveLandRateBasis`와 같은 선택).
  */
 export function buildPublicExpropriationParts(
-  input: Pick<TransferTaxInput, "isSeparateAcquisition" | "landAcquisitionDate" | "acquisitionDate" | "selfOwns">,
+  input: Pick<
+    TransferTaxInput,
+    | "isSeparateAcquisition" | "landAcquisitionDate" | "acquisitionDate" | "selfOwns"
+    | "acquisitionCause" | "decedentAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate"
+  >,
   splitDetail: SplitGainResult | undefined,
 ): PublicExpropriationParts | undefined {
   if (input.isSeparateAcquisition !== true || !input.landAcquisitionDate || !splitDetail) return undefined;
   if ((input.selfOwns ?? "both") !== "both") return undefined;
   const income = (p: SplitGainResult["land"]) => (p.taxableGainAfterProration ?? p.gain) - p.longTermDeduction;
+  const useLandCause = input.landAcquisitionCause !== undefined;
+  const landDate = inheritedAcquisitionDate(
+    useLandCause ? input.landAcquisitionCause : input.acquisitionCause,
+    input.landAcquisitionDate,
+    useLandCause ? input.landDecedentAcquisitionDate : input.decedentAcquisitionDate,
+  )!;
   return {
-    land: { acquisitionDate: input.landAcquisitionDate, income: income(splitDetail.land) },
-    building: { acquisitionDate: input.acquisitionDate, income: income(splitDetail.building) },
+    land: { acquisitionDate: landDate, income: income(splitDetail.land) },
+    building: { acquisitionDate: expropriationAcquisitionDate(input)!, income: income(splitDetail.building) },
   };
+}
+
+/**
+ * 「조세특례제한법」 제77조 제9항·제77조의3 제3항 — 상속받은 토지등은 피상속인이 그 토지등을 취득한 날을 취득일로 본다.
+ * 상속이 아니거나 피상속인 취득일이 없으면 `own` 그대로다(상속이면 피상속인 취득일은 입력 필수 — 화면 검증이 막는다).
+ * §77⑨의 다른 한 축(「소득세법」 제97조의2 제1항이 적용되는 증여 = 증여자 취득일)은 여기서 다루지 않는다 —
+ * 이월과세 시나리오 A가 취득일 자체를 증여자 취득일로 바꿔 다시 계산하고(`transfer-tax-carryover.ts`),
+ * 같은 조 제2항으로 배제되면 제1항이 적용되지 않으므로 의제도 없다.
+ * §77의2(대토보상)에는 같은 의제 규정이 없어 쓰지 않는다(조특령 §73에도 없음).
+ */
+function inheritedAcquisitionDate(
+  cause: TransferTaxInput["acquisitionCause"],
+  own: Date | undefined,
+  decedent: Date | undefined,
+): Date | undefined {
+  return cause === "inheritance" && decedent ? decedent : own;
+}
+
+/** 자산 단위 §77①·§77의3 취득일 — `calcReductions`의 `expropriationAcquisitionDate` 인자. */
+export function expropriationAcquisitionDate(
+  input: Pick<TransferTaxInput, "acquisitionCause" | "acquisitionDate" | "decedentAcquisitionDate">,
+): Date | undefined {
+  return inheritedAcquisitionDate(input.acquisitionCause, input.acquisitionDate, input.decedentAcquisitionDate);
 }
 
 /** 5B 고지 — 파트별 판정으로 감면대상을 한 파트로 한정했을 때. 결과 조립(`transfer-tax-normal-return.ts`)이 경고에 싣는다. */

@@ -21,6 +21,7 @@ import type { CarryoverTaxationDetail } from "./types/transfer-carryover.types";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { calcTax } from "./transfer-tax-rate-calc";
 import { calcReductions } from "./transfer-tax-reductions-calc";
+import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
@@ -164,6 +165,8 @@ export function handleMultiParcelBranch(
     // (마지막 positional 인자 — 순서 어긋남 없음. 다필지=토지라 numeric 영향은 사실상 없으나 일관성 확보)
     input.assetContractDate,
     input.isUnregistered,
+    undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
+    expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
   );
   /**
    * §133 5년 누적 한도 — 형제 4경로(finalize·redevelopment·rental-housing-step·mixed-use)와

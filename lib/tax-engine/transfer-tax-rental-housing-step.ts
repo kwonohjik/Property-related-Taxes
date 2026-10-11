@@ -30,6 +30,7 @@ import type {
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
+import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
@@ -436,6 +437,8 @@ export function runRentalHousingExceptionStep(
     effectiveInput.standardPriceAtTransfer,
     effectiveInput.assetContractDate,
     effectiveInput.isUnregistered,
+    undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
+    expropriationAcquisitionDate(effectiveInput), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
   );
 
   const cap = applyReductionStatutoryCap({

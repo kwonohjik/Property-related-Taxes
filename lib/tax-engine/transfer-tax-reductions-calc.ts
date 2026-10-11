@@ -161,6 +161,11 @@ export function calcReductions(
   isUnregistered?: boolean,
   /** 5B — 토지·건물 분리 자산의 §77 파트별 판정 입력(`buildPublicExpropriationParts`) */
   publicExpropriationParts?: PublicExpropriationParts,
+  /**
+   * §77①·§77의3 취득일 — 상속이면 피상속인 취득일(조특법 §77⑨·§77의3③, `expropriationAcquisitionDate`).
+   * 미제공이면 `acquisitionDate`. §77의2(대토보상)·자경농지 등 다른 감면은 계속 `acquisitionDate`를 쓴다.
+   */
+  expropriationAcquisitionDate?: Date,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
@@ -351,7 +356,7 @@ export function calcReductions(
       bondCompensation: reduction.bondCompensation,
       bondHoldingYears: reduction.bondHoldingYears ?? null,
       businessApprovalDate: reduction.businessApprovalDate,
-      acquisitionDate, // §77① '고시일 소급 2년 이전 취득' 요건 검증 (상속 시 피상속인 취득일)
+      acquisitionDate: expropriationAcquisitionDate ?? acquisitionDate, // §77① '고시일 소급 2년 이전 취득' 요건 (상속 = 피상속인 취득일, §77⑨)
       transferDate,
       calculatedTax,
       transferIncome,
@@ -378,10 +383,11 @@ export function calcReductions(
   for (const reduction of reductions) {
     if (reduction.type !== "gb_designated_land") continue;
     if (!transferDate || transferIncome === undefined || basicDeduction === undefined || taxBase === undefined) continue;
-    if (!acquisitionDate) continue; // 취득일(상속 시 피상속인 취득일) 필수
+    const gbAcquisitionDate = expropriationAcquisitionDate ?? acquisitionDate; // 상속 = 피상속인 취득일(§77의3③)
+    if (!gbAcquisitionDate) continue;
     const result = calculateGbDesignatedLandReduction({
       branch: reduction.branch,
-      acquisitionDate,
+      acquisitionDate: gbAcquisitionDate,
       designationDate: reduction.designationDate,
       triggerDate: reduction.triggerDate,
       releasedDate: reduction.releasedDate,
@@ -415,7 +421,7 @@ export function calcReductions(
       cashCompensation: reduction.cashCompensation,
       replacementLandComp: reduction.replacementLandComp,
       businessApprovalDate: reduction.businessApprovalDate,
-      acquisitionDate, // §77의2① '고시일 소급 2년 이전 취득' 요건 검증 (상속 시 피상속인 취득일)
+      acquisitionDate, // §77의2① '고시일 소급 2년 이전 취득' 요건 — §77의2에는 §77⑨ 같은 상속 의제 규정이 없다
       transferDate,
       calculatedTax,
       transferIncome,
