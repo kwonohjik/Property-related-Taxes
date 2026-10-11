@@ -102,7 +102,7 @@ export async function resumeTransferRecord(
   }
 
   if (isMulti) {
-    const { useMultiTransferStore } = await import("@/lib/stores/multi-transfer-tax-store");
+    const { useMultiTransferStore, migrateMultiForm } = await import("@/lib/stores/multi-transfer-tax-store");
     /**
      * 🔑 **정정 플래그는 저장된 그대로 복원한다.** 「편집」은 *그 신고서를 다시 여는 것*이라
      *    수정신고였으면 수정신고인 채로 열려야 한다.
@@ -110,8 +110,9 @@ export async function resumeTransferRecord(
      *       시작한다. 두 진입의 의미가 다르므로 규칙도 달라야 한다.
      * 단계만 자산 목록으로 돌려 편입 결과를 먼저 확인시킨다.
      */
+    // 자산 폼은 단건 「편집」(아래 `migrateAsset` 경로)과 같은 마이그레이션을 거친다 — 종전엔 이 분기만 우회했다.
     useMultiTransferStore.getState().setForm({
-      ...(input as unknown as MultiTransferFormData),
+      ...migrateMultiForm(input as unknown as MultiTransferFormData),
       activeStep: "list",
       activePropertyIndex: 0,
     });
