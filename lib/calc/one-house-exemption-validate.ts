@@ -68,7 +68,6 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { houseRowFactIssues } from "./house-row-fact-issues";
-import { deriveOneHouseFactsFromHouses } from "./one-house-row-facts";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
