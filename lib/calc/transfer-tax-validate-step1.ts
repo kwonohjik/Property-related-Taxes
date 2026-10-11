@@ -26,6 +26,8 @@ import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
 import {
   effectiveSellingTaxIncentiveRental,
@@ -339,7 +341,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     householdHousingCount: resolveExemptionHousingCount(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
-      primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+      primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
       houses: form.houses,
       transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
@@ -347,6 +349,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       declaredNewHouseDate: form.newHouseAcquisitionDate,
       mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
       excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+      rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
     }),
   }).mode;
   /**

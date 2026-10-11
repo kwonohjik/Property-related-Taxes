@@ -23,6 +23,7 @@ import {
 } from "@/lib/calc/house-count-exclusion-rows";
 import {
   exemptionCountExcludedHouseIds,
+  rentalResidenceCandidateHouseIds,
   temporaryTwoHouseCandidateExcludedIds,
 } from "./temp-two-house-candidate-exclusion";
 import type { HouseEntry, RowCountExclusionReduction } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -140,6 +141,7 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
       declaredNewHouseDate: form.newHouseAcquisitionDate,
       mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
       excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+      rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
     }),
   }).mode;
 }

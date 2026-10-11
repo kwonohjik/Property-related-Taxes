@@ -45,7 +45,7 @@ import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
-import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
+import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
@@ -64,6 +64,7 @@ import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload"
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
@@ -584,7 +585,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         householdHousingCount: resolveExemptionHousingCount(form),
         temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
@@ -592,6 +593,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         declaredNewHouseDate: form.newHouseAcquisitionDate,
         mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
       }),
       }).mode;
       // 본문 조립은 증여세 부담부증여 경로와 공용 leaf(E-1 후속)

@@ -82,10 +82,20 @@ export const ERA_UNDETERMINED_IDS = new Set([
 
 const law = (s: string) => `${TRANSFER.ONE_HOUSE_REQUIREMENT}${s}`;
 
+/**
+ * 거주요건이 비과세 **결론을 가르는가**를 엔진 판정으로 알려 주는 게이트 (S07-10).
+ * `checkExemption`이 채운다 — 거주 개월을 채운 반사실 판정(`checkExemptionCore`)과 보유 미달 1주택(PD-15)이다.
+ * **생략하면 게이트 없음**(종전 동작) — 운영 경로는 항상 넘긴다.
+ */
+export interface ResidenceRelevance {
+  residenceDecides: () => boolean;
+}
+
 export function collectEraUndetermined(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
   settled: boolean,
+  relevance?: ResidenceRelevance,
 ): OneHouseUndetermined[] {
   if (input.propertyType !== "housing" || !input.isOneHousehold || input.isUnregistered) return [];
   if (input.oneHouseUnitRole === "appurtenant_land") return [];
@@ -152,7 +162,9 @@ export function collectEraUndetermined(
     if (
       residence.basis === "unmet" &&
       (residence.capitalNewTown === "maybe" || residence.capitalNewTown === "unknown") &&
-      (holding.met || holding.provisoWaives)
+      (holding.met || holding.provisoWaives) &&
+      // S07-10 — 거주요건이 결론을 가를 때만. 주택 수·처분기한 같은 다른 사유로 과세가 이미 정해졌으면 소재지를 되물어도 결론이 같다.
+      (relevance?.residenceDecides() ?? true)
     ) {
       out.push({
         id: "154-1-capital-newtown-location-unverified",

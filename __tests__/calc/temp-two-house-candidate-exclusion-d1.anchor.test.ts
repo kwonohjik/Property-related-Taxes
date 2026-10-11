@@ -90,3 +90,51 @@ describe("D3 계산기 ④ — ⑦ 농어촌주택 행은 신규 주택 후보�
     expect(buildHouseholdSpecialPayload(f, f.assets[0])).not.toHaveProperty("temporaryTwoHouse");
   });
 });
+
+// S06-1 — §155⑳ 시나리오 A를 선언했으면 「장기임대」 행은 후보가 아니다. 임대주택이 거주주택(2015)보다 나중(2016) 취득이어도
+// §155⑳에는 취득 순서 요건이 없다(MST 286211 · 서면-2019-부동산-1303 · 사전-2025-법규재산-0993).
+function rentalForm(over: { applyException: boolean; scenario: "A" | "B"; rentalAcquisitionDate?: string }) {
+  const f = createDefaultTransferFormData();
+  f.transferDate = "2026-09-18";
+  Object.assign(f.assets[0], { assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01" });
+  f.assets[0].rentalHousingException = {
+    ...f.assets[0].rentalHousingException,
+    applyException: over.applyException,
+    scenario: over.scenario,
+  };
+  f.houses = [
+    row({ id: "rental", acquisitionDate: over.rentalAcquisitionDate ?? "2016-01-01", isLongTermRental: true }),
+    row({ id: "new", acquisitionDate: "2025-01-01" }),
+  ];
+  return f;
+}
+
+describe("S06-1 계산기 ④ — ⑳ 시나리오 A의 「장기임대」 행은 신규 주택 후보가 아니다", () => {
+  it("시나리오 A 선언 + 임대(2016)가 거주주택(2015) 뒤 → 신규 주택 2025가 명부에서 도출된다", () => {
+    const f = rentalForm({ applyException: true, scenario: "A" });
+    expect(buildHouseholdSpecialPayload(f, f.assets[0])).toMatchObject({
+      temporaryTwoHouse: { previousAcquisitionDate: "2015-01-01", newAcquisitionDate: "2025-01-01" },
+    });
+  });
+  it("긍정 짝 — 임대(2014)가 거주주택 앞이면 종전에도 같은 짝이 도출된다", () => {
+    const f = rentalForm({ applyException: true, scenario: "A", rentalAcquisitionDate: "2014-01-01" });
+    expect(buildHouseholdSpecialPayload(f, f.assets[0])).toMatchObject({
+      temporaryTwoHouse: { previousAcquisitionDate: "2015-01-01", newAcquisitionDate: "2025-01-01" },
+    });
+  });
+  it("긍정 짝 — 임대가 유일한 나중 취득 행이면 종전대로 그 행이 도출된다(구 §167의10①8호 OE-2가 쓴다)", () => {
+    const f = rentalForm({ applyException: true, scenario: "A" });
+    f.houses = [f.houses[0]];
+    expect(buildHouseholdSpecialPayload(f, f.assets[0])).toMatchObject({
+      temporaryTwoHouse: { previousAcquisitionDate: "2015-01-01", newAcquisitionDate: "2016-01-01" },
+    });
+  });
+  it("음성 짝 — ⑳ 미선언이면 「장기임대」 행도 후보라 2채 → 도출하지 않는다", () => {
+    const f = rentalForm({ applyException: false, scenario: "A" });
+    expect(buildHouseholdSpecialPayload(f, f.assets[0])).not.toHaveProperty("temporaryTwoHouse");
+  });
+  it("음성 짝 — 시나리오 B(PHRP 양도)는 거주주택 양도가 아니라 후보를 바꾸지 않는다", () => {
+    const f = rentalForm({ applyException: true, scenario: "B" });
+    expect(buildHouseholdSpecialPayload(f, f.assets[0])).not.toHaveProperty("temporaryTwoHouse");
+  });
+});

@@ -18,6 +18,8 @@ import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /**
@@ -121,7 +123,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
    */
   const tempTwoHouse = resolveTemporaryTwoHouse({
     primaryKind: primary?.assetKind,
-    primaryAcquisitionDate: primary?.acquisitionDate,
+    primaryAcquisitionDate: primaryAcquisitionDateOf(primary),
     houses: form.houses,
     transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
@@ -129,6 +131,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
     declaredNewHouseDate: form.newHouseAcquisitionDate,
     mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
     excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+    rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
   });
 
   return {

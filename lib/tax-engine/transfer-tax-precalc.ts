@@ -45,6 +45,7 @@ import {
 } from "./transfer-tax-judgment-steps";
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { TRANSFER } from "./legal-codes";
+import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   TransferTaxInput,
@@ -179,7 +180,7 @@ export function runPreCalculationSteps(
               // 그 사실을 적지 않으면 위 두 금액만 보고 「작은 쪽이 채택됐다」는 오독이 생긴다.
               options?.carryoverScenarioOverride ? " (신고 전체 결정세액 비교 · §92③2호)" : ""
             }`
-          : `이월과세 적용배제 (사유: ${carryoverResult.detail.exclusionReason ?? "없음"})`,
+          : `이월과세 적용배제 (사유: ${carryoverExclusionReasonLabel(carryoverResult.detail.exclusionReason)})`,
         amount: 0,
         legalBasis: TRANSFER.CARRYOVER_TAXATION,
       });

@@ -44,6 +44,7 @@ import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
 import {
   DISPOSAL_DELAY_REASON_LABEL,
+  describeOneHouseHoldingRequirement,
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
   meetsPublicInstitutionRelocationRegion,
@@ -176,6 +177,10 @@ export function checkExemption(
           };
           return verdictIf(true) !== verdictIf(false);
         },
+      }, {
+        // 거주기간 요건 고지(`154-1-residence-deadline-unavailable` · `154-1-capital-newtown-location-unverified`)는 그 요건이
+        // 결론을 가를 때만 낸다(S07-10). 판정은 엔진 본체(`checkExemptionCore`) 그대로다 — 거주 개월만 채워 다시 돌린다.
+        residenceDecides: () => residenceDecidesConclusion(input, oneHouseRules, article89Clause2.status === "excluded"),
       }),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
@@ -188,6 +193,30 @@ export function checkExemption(
     ...requirementReviewEchoOf(requirementReview),
     legalBasis: deriveLegalBasis(appliedExceptions, pending),
   };
+}
+
+/** 거주 요건을 채운 반사실 판정에 넣는 거주 개월 — 어떤 거주요건(2년·신도시 2년)도 넘는 값이다. */
+const RESIDENCE_COUNTERFACTUAL_MONTHS = 1200;
+
+/**
+ * 거주기간 요건이 비과세 **결론을 가르는가** (S07-10) — 판정 보류 고지 게이트.
+ *
+ * 거주 개월만 채워 `checkExemptionCore`(본체 판정)를 다시 돌려 비과세·부분과세가 되면 거주가 결론을 가른다. 3주택·특례 없는
+ * 2주택·§155① 처분기한 경과처럼 거주와 무관한 사유로 과세가 정해졌으면 채워도 과세라 가르지 않는다. 결론을 따로 쓰지 않는다.
+ *
+ * - §89② 배제가 확정이면 본체 판정과 무관하게 과세라 가르지 않는다.
+ * - 보유도 모자란 1주택(PD-15)은 거주를 채워도 아직 과세지만 둘 다 시간이 해소하므로 고지를 유지한다.
+ */
+function residenceDecidesConclusion(
+  input: OneHouseJudgeInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+  article89Excluded: boolean,
+): boolean {
+  if (article89Excluded) return false;
+  const withResidence = checkExemptionCore({ ...input, residencePeriodMonths: RESIDENCE_COUNTERFACTUAL_MONTHS }, oneHouseRules);
+  if (withResidence.isExempt || withResidence.isPartialExempt) return true;
+  const holding = describeOneHouseHoldingRequirement(input, oneHouseRules.one_house_exemption);
+  return input.householdHousingCount === 1 && !holding.met && !holding.provisoWaives;
 }
 
 /** 판정 서브트리의 선행 게이트(1세대 주택 · 등기 · 부수토지 카드 아님)를 지난 경우에만 echo를 싣는다. */
