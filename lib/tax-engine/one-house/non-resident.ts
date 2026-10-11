@@ -11,12 +11,16 @@
  * | 2010-01-01~2019-12-31 | 배제(나·다목 예외) | 판정 보류(확인 필요) — 단서에 4호 없음 | 2010-01-01 시행본(MST 98343) 단서 · 시행령 §180의2(2010-02-18본 같은 문언) |
  * | 2020-01-01~ | 배제(나·다목 예외) | 배제 | 법률 제16834호 부칙 제2조② 「시행 이후 양도하는 분부터」 |
  *
+ * 본체 판정이 **과세**여도 2010.1.1. 이후 주택 양도(나·다목 예외 불성립)면 기한형 `pending`을 비우고 `non-resident-121-2` 사유를 싣는다
+ * (S02-6 — 「보유 2년 뒤 양도하면 비과세」는 비거주자에게 성립하지 않는다). 그 전 양도분·입주권은 비과세일 때만 판정 보류를 붙인다.
+ *
  * 범위: 판정 메뉴만(사용자 결정 2026-10-08). 계산기는 이 입력을 보내지 않는다 — §95② 단서(장기보유특별공제 표2)도
  * 계산기 몫이라 다루지 않는다.
  */
 import { TRANSFER } from "../legal-codes/transfer";
 import { NON_RESIDENT_HOUSE_EXCLUSION_TRANSFER_START } from "../data/non-resident-exclusion-era";
 import { resolveExemptionProviso } from "../transfer-tax-exemption-holding";
+import { deriveLegalBasis } from "./legal-basis";
 import { revokeOneHouseExemption } from "./revoke-exemption";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
@@ -34,10 +38,10 @@ export function applyNonResidentVerdict(
 ): OneHouseJudgment {
   if (input.transferorNonResidentAtTransfer !== true) return judgment;
   const exempt = judgment.isExempt || judgment.isPartialExempt;
-  if (!exempt) return judgment;
   // 입주권 — 2020.1.1. 이후는 `resolveOneRightExemptionClause`가 이미 걸렀다. 그 전 양도분은 §121② 단서에 4호가
   // 없어 결론을 바꾸지 않고 판정 보류로 알린다(조심-2019-전-2185는 2018 양도분을 해외이주 단서 부적용으로 과세).
   if (isRightSale) {
+    if (!exempt) return judgment;
     return withUndetermined(
       judgment,
       "121-2-pre2020-non-resident-right-unverified",
@@ -45,16 +49,27 @@ export function applyNonResidentVerdict(
     );
   }
   if (input.transferDate < NON_RESIDENT_HOUSE_EXCLUSION_TRANSFER_START) {
+    if (!exempt) return judgment;
     return withUndetermined(
       judgment,
       "121-2-pre2010-non-resident-unverified",
       `양도일 현재 비거주자입니다. 비거주자에게 1세대1주택 비과세를 적용하지 않는 규정(${TRANSFER.NON_RESIDENT_EXEMPTION_EXCLUSION} 단서)은 2010.1.1. 이후 양도분부터라 그 전 양도분은 적용 여부를 확인해야 합니다 — 거주자 기준으로 판정했습니다.`,
     );
   }
+  // §154①2호 나·다목 요건을 충족한 비거주자는 §121② 단서의 제외 대상이다 — 본체 판정을 그대로 둔다.
   const reason = input.oneHouseExemptionProviso?.reason;
   if (reason && OVERSEAS_REASONS.has(reason) && resolveExemptionProviso(input) === "both") return judgment;
+  /*
+   * 2010.1.1. 이후 주택 양도 + 나·다목 예외 불성립 — §89①3호(와 §155 특례)가 **적용되지 않는다**(S02-6).
+   * 본체가 과세여도 같다: 본체의 `pending`(「보유 2년 후 양도하면 비과세」 등 기한형 안내)은 거주자 기준 약속이라
+   * 비거주자에게는 성립하지 않으므로 비우고, 과세 사유를 §121②로 밝힌다(입주권 형제 경로 `one-right-verdict.ts`와 같은 규칙).
+   * 본체가 비과세였다면 비과세를 거둔다.
+   */
+  const base = exempt
+    ? revokeOneHouseExemption(judgment)
+    : { ...judgment, pending: [], legalBasis: deriveLegalBasis(judgment.appliedExceptions, []) };
   return {
-    ...revokeOneHouseExemption(judgment),
+    ...base,
     unmetExceptions: [
       ...judgment.unmetExceptions,
       {

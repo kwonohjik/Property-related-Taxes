@@ -181,6 +181,22 @@ export function checkExemption(
         // 거주기간 요건 고지(`154-1-residence-deadline-unavailable` · `154-1-capital-newtown-location-unverified`)는 그 요건이
         // 결론을 가를 때만 낸다(S07-10). 판정은 엔진 본체(`checkExemptionCore`) 그대로다 — 거주 개월만 채워 다시 돌린다.
         residenceDecides: () => residenceDecidesConclusion(input, oneHouseRules, article89Clause2.status === "excluded"),
+        // §154①2호 가목 괄호 「사업인정 고시일 전 취득」 — 고시일이 비어 있어 단서를 적용하지 않았다. 고시일을 취득 뒤/앞으로 가정한
+        // 두 판정이 다를 때만 확인 필요를 낸다(S02-2). 고시일을 채운 두 판정은 이 함수 자신이고, 채우면 그 고지가 생기지 않아 재귀하지 않는다.
+        expropriationNoticeDate: () => {
+          const p = input.oneHouseExemptionProviso;
+          if (!p) return false;
+          const verdictIf = (businessApprovalDate: Date) => {
+            const r = checkExemption(
+              { ...input, oneHouseExemptionProviso: { ...p, businessApprovalDate } },
+              oneHouseRules,
+              presaleRightStartDate,
+              options,
+            );
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          return verdictIf(new Date(input.acquisitionDate.getTime() + 86_400_000)) !== verdictIf(input.acquisitionDate);
+        },
       }),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),

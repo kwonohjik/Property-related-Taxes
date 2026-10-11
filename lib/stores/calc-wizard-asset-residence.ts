@@ -109,7 +109,12 @@ export function sumResidenceMonths(
 
 /**
  * 거주기간 개월수 도출 — API 변환(transfer-tax-api)·UI 거주요건 안내 메시지(Step4) 공용(단일 진실).
- * interval 모드 + 구간 입력 있으면 합산, 아니면 자산 직접입력 또는 form-global fallback.
+ * interval 모드면 구간 합산(구간이 0개면 0개월), direct 모드면 자산 직접입력 또는 form-global fallback.
+ *
+ * 🔑 interval 모드에서는 **구간이 0개여도 숨은 개월 칸(`residencePeriodMonthsAsset`)을 읽지 않는다** —
+ *    interval 모드는 그 칸을 화면에서 숨기므로(`ResidencePeriodSection`) 사용자가 볼 수 없는 옛 값(direct에서 입력 후
+ *    토글 ON → 구간 전부 삭제)이 엔진·⑧ 상한 검사로 새면 화면 합계(0개월)와 엔진 거주기간이 갈린다(S12-2).
+ *    숨은 값을 지우는 effect 미러링은 쓰지 않는다 — 읽는 쪽 leaf 하나로 막는다(3중 패턴).
  */
 export function deriveResidencePeriodMonths(
   primary: {
@@ -120,7 +125,7 @@ export function deriveResidencePeriodMonths(
   transferDate: string,
   formFallbackMonths: string,
 ): number {
-  return primary.residenceInputMode === "interval" && primary.residencePeriods.length > 0
+  return primary.residenceInputMode === "interval"
     ? sumResidenceMonths(primary.residencePeriods, transferDate)
     : parseInt(primary.residencePeriodMonthsAsset || formFallbackMonths) || 0;
 }

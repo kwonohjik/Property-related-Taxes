@@ -34,6 +34,11 @@ describe("holdingMonthsFromDates — §95④ 초일 산입", () => {
       expect(holdingMonthsFromDates(a, t)).toBe(months(a, t));
     }
   });
+  it("★ 2/29 취득은 「민법」 §160③ — 평년 2/27 양도는 11개월, 2/28 양도는 12개월 (X4-2: 엔진 parity만으론 결함값 12가 고정됐다)", () => {
+    expect(holdingMonthsFromDates("2020-02-29", "2021-02-27")).toBe(11);
+    expect(holdingMonthsFromDates("2020-02-29", "2021-02-28")).toBe(12);
+    expect(holdingMonthsFromDates("2020-02-29", "2023-02-27")).toBe(35);
+  });
   it("입력이 없거나 역전되면 0", () => {
     expect(holdingMonthsFromDates(undefined, "2020-01-01")).toBe(0);
     expect(holdingMonthsFromDates("2021-01-01", "2020-01-01")).toBe(0);

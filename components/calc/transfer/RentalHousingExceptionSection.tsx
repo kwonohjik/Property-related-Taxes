@@ -520,8 +520,8 @@ export function RentalHousingExceptionSection({
                      입력한 사용자가 이 카드를 열면 구간이 비어 **「합계 거주기간 0개월」**이
                      보이는데 바로 아래 실시간 판정은 direct 개월을 읽어 **「✓ 충족」**을 찍었다
                      — 한 카드가 자기 자신과 모순됐다.
-                     게다가 구간을 입력하면 `deriveResidencePeriodMonths`가 `interval &&
-                     periods.length > 0`에서 구간 합산으로 갈아타므로 **그 개월 수는 버려진다**.
+                     게다가 구간을 입력하면 `deriveResidencePeriodMonths`가 `interval`
+                     모드의 구간 합산으로 갈아타므로 **그 개월 수는 버려진다**.
                      둘 다 말로 밝힌다 — 값을 몰래 옮기지 않는다(개월→날짜 역산 불가).
                 */}
                 {asset.residenceInputMode !== "interval" &&

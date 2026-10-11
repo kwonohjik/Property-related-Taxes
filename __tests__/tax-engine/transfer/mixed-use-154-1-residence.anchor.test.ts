@@ -127,9 +127,16 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
 });
 
 describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
-  /** 2호 가목 수용 — 수용일부터 5년 이내 양도 */
+  /**
+   * 2호 가목 수용 — 수용일부터 5년 이내 양도. 사업인정 고시일은 **취득 뒤**(= 고시일 전 취득)로 둔다 —
+   * 괄호 「사업인정 고시일 전에 취득한 주택에 한한다」는 요건 사실이라 고시일 공란이면 단서를 적용하지 않는다(S02-2, B-A4d).
+   */
   const EXPROPRIATION: Partial<MixedUseAssetInput> = {
-    oneHouseExemptionProviso: { reason: "expropriation", expropriationDate: D("2024-01-01") },
+    oneHouseExemptionProviso: {
+      reason: "expropriation",
+      expropriationDate: D("2024-01-01"),
+      businessApprovalDate: D("2026-01-01"),
+    },
   };
   /**
    * 보유 1년(= §154① 보유요건 미충족) — 토지·건물 동시 취득.
@@ -157,10 +164,18 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
     expect(r.total.transferTax).toBe(TAXED_TAX);
   });
 
+  it("B-A4d: 사업인정 고시일 **공란**이면 단서 미적용 (모름 = 불성립, S02-2) — 고시일을 입력한 B-A4와 짝", () => {
+    const r = run({
+      wasRegulatedAtAcquisition: true,
+      oneHouseExemptionProviso: { reason: "expropriation", expropriationDate: D("2024-01-01") },
+    });
+    expect(r.total.transferTax).toBe(TAXED_TAX);
+  });
+
   it("B-A4c: 수용일부터 5년 **초과** 양도면 단서 미적용", () => {
     const r = run({
       wasRegulatedAtAcquisition: true,
-      oneHouseExemptionProviso: { reason: "expropriation", expropriationDate: D("2020-01-01") },
+      oneHouseExemptionProviso: { reason: "expropriation", expropriationDate: D("2020-01-01"), businessApprovalDate: D("2026-01-01") },
     });
     expect(r.total.transferTax).toBe(TAXED_TAX);
   });
