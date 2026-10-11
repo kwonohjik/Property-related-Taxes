@@ -19,6 +19,7 @@ import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPena
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import { summarizeSplitGain } from "./transfer-tax-split-display";
 import { buildPublicExpropriationParts } from "./public-expropriation-reduction";
+import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import {
   emitPenaltySteps,
   getReductionLegalBasis,
@@ -329,6 +330,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     input.assetContractDate,
     input.isUnregistered,
     buildPublicExpropriationParts(input, splitDetailForRate), // 5B — §77 「소급 2년 이전 취득」 파트별 판정
+    expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
   );
   steps.push({
     label: "감면세액",

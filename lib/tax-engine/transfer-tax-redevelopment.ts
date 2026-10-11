@@ -29,6 +29,7 @@ import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gi
 import { runRedevelopmentGainSteps } from "./transfer-tax-redevelopment-steps";
 import { resolveRightTable2Clause, rightTable2Notices } from "./redevelopment-right-table2";
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
+import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 import {
@@ -430,6 +431,8 @@ export function calculateRedevelopmentTax(
     input.standardPriceAtTransfer,
     input.assetContractDate,
     input.isUnregistered,
+    undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
+    expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
   );
   steps.push({
     label: "감면세액",
