@@ -94,6 +94,7 @@ const fullProps = (f: TransferFormData) => ({
     disposalDelayReason: f.disposalDelayReason,
   }),
   relocationRegionVerdict: null,
+  replacementHouseVisible: true,
   proviso: provisoGate({
     isOneHousehold: true,
     isHousing: true,

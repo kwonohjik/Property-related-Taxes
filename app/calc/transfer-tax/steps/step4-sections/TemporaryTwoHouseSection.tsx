@@ -87,6 +87,11 @@ type FullOnlyProps = {
    * 없다」고 말하는 것이 아니라, 판정할 사실이 명부에 없다는 뜻이다.
    */
   derivedNewHouseAcquisitionDate: string | undefined;
+  /**
+   * §156의2⑤ 대체주택 블록을 그리는가 — 판정 메뉴 `judgmentReplacementHouseVisible`(⑤·④·⑧ 공용 게이트)의 값.
+   * 대체주택은 양도하는 **주택**의 특례라 입주권 양도에서는 false다(S10-8).
+   */
+  replacementHouseVisible: boolean;
 };
 
 type BaseProps = {
@@ -283,7 +288,8 @@ function TempTwoHouseOtherSpecials({
   onChange,
   proviso,
   derivedNewHouseAcquisitionDate,
-}: BaseProps & Pick<FullOnlyProps, "proviso" | "derivedNewHouseAcquisitionDate">) {
+  replacementHouseVisible,
+}: BaseProps & Pick<FullOnlyProps, "proviso" | "derivedNewHouseAcquisitionDate" | "replacementHouseVisible">) {
   return (
     <SaleHouseSpecialsGroup>
         {/*
@@ -338,7 +344,7 @@ function TempTwoHouseOtherSpecials({
         )}
 
         {/* §156의2⑤ 대체주택 비과세 특례 — 판정 메뉴가 이 섹션 밖에서도 그린다(OH-05) */}
-        <ReplacementHouseSpecialBlock form={form} onChange={onChange} />
+        {replacementHouseVisible && <ReplacementHouseSpecialBlock form={form} onChange={onChange} />}
     </SaleHouseSpecialsGroup>
   );
 }

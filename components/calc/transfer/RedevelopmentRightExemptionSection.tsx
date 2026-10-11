@@ -34,7 +34,7 @@
  *    ├── 보유·거주 월수 입력 (DecimalInput — 월수, 정수)
  *    ├── 입주권 관리처분계획인가일 (DateInput — 분양권 요건 연혁 · E-3 후속)
  *    ├── 나목 — 세대 보유 1주택 취득일 (DateInput)
- *    ├── 고가 기준금액 초과 자동 안내 (transferPrice > 양도일 기준금액 + 토글 ON 시 — E-3)
+ *    ├── 고가 기준금액 초과 자동 안내 (contractTotalPrice > 양도일 기준금액 — E-3 · S13-9)
  *    ├── (a) useMemo 자동 검증 → (b) rose 경고 카드 조건부 노출
  *    └── (c) 면책 문구 (토글 ON 시만)
  *
@@ -74,6 +74,11 @@ interface Props {
    * 엔진 `applyOneRightExemption`과 같은 leaf를 부른다. 미전달·빈값이면 현행 12억.
    */
   transferDate?: string;
+  /**
+   * 판정 메뉴의 「예상 양도가액」(`form.contractTotalPrice`) — 12억(연혁상 6억·9억) 초과 안내를 켜는 값.
+   * 판정 메뉴에는 자산-수준 양도가액 입력 칸이 없다(`Step3`의 가격 칸이 유일). 미전달·빈값이면 안내를 띄우지 않는다.
+   */
+  contractTotalPrice?: string;
 }
 
 export function RedevelopmentRightExemptionSection({
@@ -81,6 +86,7 @@ export function RedevelopmentRightExemptionSection({
   onChange,
   wasRegulatedAtAcquisition = false,
   transferDate,
+  contractTotalPrice,
 }: Props) {
   const isRightSubject =
     asset.assetKind === "right_to_move_in" && (asset.redevSubject === "right" || !asset.redevSubject);
@@ -116,22 +122,17 @@ export function RedevelopmentRightExemptionSection({
   /**
    * ── 12억 초과 안내 ──
    *
-   * 🔴 2026-08-26 정정(U1-03): 종전에는 `transferPrice` **prop**을 읽었는데
-   *    프로덕션 경로(Step1 → … → `AssetSectionAcquisition:328`)가 그 prop을 넘기지 않아
-   *    `parseAmount(undefined ?? "") = 0`으로 **항상 false**였다. 4계층을 지나는 prop은
-   *    한 곳만 빠뜨려도 조용히 사라진다(memory `feedback_explicit_prop_mapping_strip`).
+   * 🔴 이 화면(판정 메뉴 ③ 양도 예정)이 사용자에게서 받는 양도가액은 `form.contractTotalPrice` **하나**다.
+   *    종전에는 `asset.actualSalePrice`를 읽었는데(U1-03 → P6-c-1 이관 뒤) 판정 메뉴에는 그 칸이 없어
+   *    **어떤 가격에서도 안내가 뜨지 않았다**(S13-9). 호출부(`Step3`)가 폼-전역 값을 prop으로 넘긴다 —
+   *    prop이 빠지면 안내가 조용히 사라지므로 `redev-right-exemption-prop-wiring` anchor가 프로덕션 경로에서 지킨다.
    *
-   * ⇒ **자산이 이미 들고 있는 값을 직접 읽어 prop 축을 하나 줄인다.**
-   *   같은 파일군의 `RedevelopmentResidenceSplitSection`·`RedevelopmentValuationSection`도
-   *   `asset.actualSalePrice`를 그렇게 읽는다.
-   *
-   * ⚠️ 안분(bundled) 모드에서는 자산-수준 양도가액이 비어 안내가 뜨지 않는다 —
-   *    안내·경고 전용이라 계산에는 영향이 없다(§89①4호 단서 판정은 엔진이 한다).
+   * ⚠️ 안내·경고 전용이라 계산에는 영향이 없다(§89①4호 단서 판정은 엔진이 한다).
    */
   const highValue = oneRightHighValueThresholdForDisplay(transferDate);
   const isHighValue = useMemo(
-    () => parseAmount(asset.actualSalePrice) > highValue.amount,
-    [asset.actualSalePrice, highValue.amount],
+    () => parseAmount(contractTotalPrice ?? "") > highValue.amount,
+    [contractTotalPrice, highValue.amount],
   );
 
   const isToggleOn = asset.redevExemptionEligibleAtApproval === "yes";
@@ -142,9 +143,9 @@ export function RedevelopmentRightExemptionSection({
   return (
     <div className="space-y-3">
       {/* §⑥ violet: 1세대1입주권 비과세 카드 */}
-      <ToneCard tone="violet" sectionNum="⑥" bodyClassName="space-y-3" title="1세대1입주권 비과세 요건 (§89①4호 가목)" noDark>
+      <ToneCard tone="violet" sectionNum="⑥" bodyClassName="space-y-3" title="1세대1입주권 비과세 요건 (§89①4호)" noDark>
         <div className="flex flex-wrap items-center gap-1.5">
-          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호 가목" />
+          <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호" />
           <LawArticleModal legalBasis="소득세법 §89 ① 3호" label="§89①3호 가목" />
           <LawArticleModal legalBasis="소득세법 시행령 §154" label="시행령 §154" />
         </div>
@@ -216,10 +217,10 @@ export function RedevelopmentRightExemptionSection({
               />
             </FieldCard>
 
-            {/* Step3 보유 상황 안내 링크 */}
+            {/* 보유 상황 안내 — 단계 번호를 쓰지 않는다(재배치 때 ②→③으로 어긋났다, S13-9). */}
             <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed">
               <p className="font-semibold">
-                ② 보유 주택·권리 입력 필요
+                「보유 주택·권리」 단계 입력 필요
               </p>
               <p className="mt-0.5">
                 §89①4호는 <span className="font-semibold">가목·나목 중 하나</span>를 충족하면 비과세됩니다.
@@ -227,12 +228,12 @@ export function RedevelopmentRightExemptionSection({
                 (2022.1.1. 이후 인가된 입주권에 한해 2022.1.1. 이후 취득한 분양권).
                 <br />
                 <span className="font-semibold">가목</span> — 양도일 현재 다른 주택 또는 분양권을 보유하지 아니할 것
-                → ② 「보유 주택」 명부를{" "}
+                → 「보유 주택」 명부를{" "}
                 <span className="font-semibold">비워 둘 것(0채)</span>.
                 <br />
                 <span className="font-semibold">나목</span> — 1입주권 외에 1주택을 보유(분양권 미보유)하고, 그 1주택
                 취득일부터 <span className="font-semibold">3년 이내</span>에 입주권을 양도할 것
-                → <span className="font-semibold">② 명부에 주택 1채</span> + 위 취득일 입력
+                → <span className="font-semibold">명부에 주택 1채</span> + 위 취득일 입력
                 (기한은 양도일에 따라 1·2·3년 — 2005.12.31. 이전 양도분은 가목만).
                 <br />
                 어느 목이든 <span className="font-semibold">세대 보유 입주권 수 = 1개(양도 대상 포함)</span>여야

@@ -75,7 +75,6 @@ function rightAsset(over: Partial<AssetForm> = {}): AssetForm {
   a.assetKind = "right_to_move_in";
   a.redevSubject = "right";
   a.acquisitionDate = "2010-01-01";
-  a.actualSalePrice = HIGH_VALUE;
   a.redevApprovalDate = "2020-10-23";
   a.redevRightsValue = "800000000";
   a.redevSettlementDirection = "pay";
@@ -93,11 +92,13 @@ function rightAsset(over: Partial<AssetForm> = {}): AssetForm {
  * 🔑 판정 메뉴 폼은 `TransferFormData`의 슈퍼셋이라(Q-8) 계산기 시료를 그대로 얹는다.
  */
 function renderStep1(asset: AssetForm, form: Partial<TransferFormData> = {}): string {
+  // 🔴 양도가액은 **판정 메뉴가 실제로 받는 칸**(`form.contractTotalPrice`)으로만 채운다 — 자산-수준
+  //    `actualSalePrice`를 심으면 판정 메뉴에 없는 입력 경로로 통과해 S13-9 결함이 가려진다.
   const formData = {
     ...createDefaultTransferFormData(),
     ...createInitialOneHouseJudgmentForm(),
     transferDate: "2024-06-01",
-    contractTotalPrice: asset.actualSalePrice,
+    contractTotalPrice: HIGH_VALUE,
     assets: [asset],
     ...form,
   };
@@ -127,17 +128,17 @@ describe("U1-03 · 12억 초과 안분 안내 — 프로덕션 경로 도달", (
   });
 
   it("U1-03-02: 대조군 — 양도가액 9억이면 뜨지 않는다 (12억이 실제 경계다)", () => {
-    expect(shows(renderStep1(rightAsset({ actualSalePrice: LOW_VALUE })), HIGH_VALUE_NOTICE)).toBe(false);
+    expect(shows(renderStep1(rightAsset(), { contractTotalPrice: LOW_VALUE }), HIGH_VALUE_NOTICE)).toBe(false);
   });
 
   it("U1-03-03: 경계 — 12억 정확히는 「초과」가 아니다", () => {
     expect(
-      shows(renderStep1(rightAsset({ actualSalePrice: "1200000000" })), HIGH_VALUE_NOTICE),
+      shows(renderStep1(rightAsset(), { contractTotalPrice: "1200000000" }), HIGH_VALUE_NOTICE),
       "12억 정확히에서 안내가 떴다",
     ).toBe(false);
     cleanup();
     expect(
-      shows(renderStep1(rightAsset({ actualSalePrice: "1200000001" })), HIGH_VALUE_NOTICE),
+      shows(renderStep1(rightAsset(), { contractTotalPrice: "1200000001" }), HIGH_VALUE_NOTICE),
       "12억+1원에서 안내가 없다",
     ).toBe(true);
   });
@@ -149,13 +150,13 @@ describe("U1-03 · 12억 초과 안분 안내 — 프로덕션 경로 도달", (
  */
 describe("E-3 · 고가 안내 기준금액 — 양도일 배선(프로덕션 경로)", () => {
   it("E3-UI-01: 🔑 2021-06-01 양도 10억 → 「9억 초과」 안내 (12억이 아니다)", () => {
-    const body = renderStep1(rightAsset({ actualSalePrice: "1000000000" }), { transferDate: "2021-06-01" });
+    const body = renderStep1(rightAsset(), { contractTotalPrice: "1000000000", transferDate: "2021-06-01" });
     expect(shows(body, "양도가액 9억 초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용"), "9억 안내 미노출").toBe(true);
     expect(shows(body, HIGH_VALUE_NOTICE), "9억 시기에 12억 안내").toBe(false);
   });
 
   it("E3-UI-02: 대조군 — 같은 10억이 2021-12-08 양도면 안내가 없다 (12억 이하)", () => {
-    const body = renderStep1(rightAsset({ actualSalePrice: "1000000000" }), { transferDate: "2021-12-08" });
+    const body = renderStep1(rightAsset(), { contractTotalPrice: "1000000000", transferDate: "2021-12-08" });
     expect(shows(body, "초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용")).toBe(false);
   });
 });

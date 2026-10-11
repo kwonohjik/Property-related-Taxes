@@ -390,6 +390,7 @@ export function Step3({ form, onChange }: Props) {
           onChange={patchAsset}
           wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}
           transferDate={form.transferDate}
+          contractTotalPrice={form.contractTotalPrice}
         />
       )}
 
@@ -421,94 +422,102 @@ export function Step3({ form, onChange }: Props) {
            `validateStep2`에 남겼다 — 조건이 `form.houses.length > 0`인데 명부는 ③에서
            입력되므로, 여기로 옮기면 명부 입력 시점에 평가되지 않아 경고가 죽는다.
       */}
-      <ToggleCard
-        data-testid="one-house-long-term-mortgage"
-        checked={form.longTermMortgageSpecial}
-        onCheckedChange={(longTermMortgageSpecial) => onChange({ longTermMortgageSpecial })}
-        title="장기저당담보주택 특례"
-        description="주택을 담보로 연금을 받는 계약(역모기지) — 거주기간 요건이 면제됩니다"
-        tone="violet"
-        lawRefs={[{ legalBasis: "소득세법 시행령 §155의2", label: "영 §155의2" }]}
-      >
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FieldCard label="계약체결일">
-            <DateInput
-              data-testid="ltm-contract-date"
-              value={form.longTermMortgageContractDate}
-              onChange={(longTermMortgageContractDate) =>
-                onChange({ longTermMortgageContractDate })
-              }
-            />
-          </FieldCard>
-          <FieldCard label="계약체결일 현재 가입자 나이" hint="만 나이(세)">
-            <IntegerInput
-              allowEmpty
-              value={form.longTermMortgageBorrowerAge === "" ? undefined : Number(form.longTermMortgageBorrowerAge)}
-              onChange={(v) => onChange({ longTermMortgageBorrowerAge: v === undefined ? "" : String(v) })}
-            />
-          </FieldCard>
-          <FieldCard label="계약기간" hint="연 단위">
-            <IntegerInput
-              allowEmpty
-              value={form.longTermMortgageContractYears === "" ? undefined : Number(form.longTermMortgageContractYears)}
-              onChange={(v) => onChange({ longTermMortgageContractYears: v === undefined ? "" : String(v) })}
-            />
-          </FieldCard>
-        </div>
-        <div className="space-y-2 pt-1">
-          <ToggleCard
-            variant="chip"
-            checked={form.longTermMortgageMaturityLumpSum}
-            onCheckedChange={(longTermMortgageMaturityLumpSum) =>
-              onChange({ longTermMortgageMaturityLumpSum })
-            }
-            title="만기에 이 주택을 처분해 일시 상환하는 계약조건"
-            tone="violet"
-          />
-          <ToggleCard
-            variant="chip"
-            checked={form.longTermMortgageIsTransferredHouseMortgaged}
-            onCheckedChange={(longTermMortgageIsTransferredHouseMortgaged) =>
-              onChange({ longTermMortgageIsTransferredHouseMortgaged })
-            }
-            title="양도할 주택이 담보로 제공된 그 주택이다"
-            tone="violet"
-          />
-          <ToggleCard
-            variant="chip"
-            checked={form.longTermMortgageParentalCareMerge}
-            onCheckedChange={(longTermMortgageParentalCareMerge) =>
-              onChange({ longTermMortgageParentalCareMerge })
-            }
-            title="담보주택을 보유한 직계존속과 동거봉양 합가로 2주택이 되었다"
-            tone="violet"
-          />
-          {/*
-            §155의2② 「먼저 양도하는 주택」 — 법정 요건이다. 합가일 칸(`MergeDateSection`)은 합가일을 입력해야만 열려서, 기한이 없는
-            이 특례에서는 합가일을 비운 세대가 이 선언을 할 길이 없었다(X3-5). 값은 그 칸과 **같은 필드**(`isFirstTransferredInMerge`)다 —
-            두 토글이 서로를 복사하지 않는다. ④는 합가일이나 이 칩이 있을 때만 이 값을 보낸다(`buildMergePayload`).
-          */}
-          {form.longTermMortgageParentalCareMerge && (
+      {/*
+        §155의2 장기저당담보주택 — **양도 대상 주택**의 특례다(「…주택을 양도하는 경우 … 거주기간의 제한을 받지 아니한다」).
+        입주권 양도(§89①4호)에는 적용 여지가 없어 엔진이 무시하므로(`transfer-tax-exemption.ts`의 `propertyType !== "housing"`)
+        칸을 띄우지 않는다 — 켜 봐야 ⑧이 쓰이지 않는 필수값만 요구한다(S10-8). 상생임대와 같은 `judgmentSaleIsHousing` 게이트
+        (⑤·④·⑧·사이드바).
+      */}
+      {!isRightSale && (
+        <ToggleCard
+          data-testid="one-house-long-term-mortgage"
+          checked={form.longTermMortgageSpecial}
+          onCheckedChange={(longTermMortgageSpecial) => onChange({ longTermMortgageSpecial })}
+          title="장기저당담보주택 특례"
+          description="주택을 담보로 연금을 받는 계약(역모기지) — 거주기간 요건이 면제됩니다"
+          tone="violet"
+          lawRefs={[{ legalBasis: "소득세법 시행령 §155의2", label: "영 §155의2" }]}
+        >
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FieldCard label="계약체결일">
+              <DateInput
+                data-testid="ltm-contract-date"
+                value={form.longTermMortgageContractDate}
+                onChange={(longTermMortgageContractDate) =>
+                  onChange({ longTermMortgageContractDate })
+                }
+              />
+            </FieldCard>
+            <FieldCard label="계약체결일 현재 가입자 나이" hint="만 나이(세)">
+              <IntegerInput
+                allowEmpty
+                value={form.longTermMortgageBorrowerAge === "" ? undefined : Number(form.longTermMortgageBorrowerAge)}
+                onChange={(v) => onChange({ longTermMortgageBorrowerAge: v === undefined ? "" : String(v) })}
+              />
+            </FieldCard>
+            <FieldCard label="계약기간" hint="연 단위">
+              <IntegerInput
+                allowEmpty
+                value={form.longTermMortgageContractYears === "" ? undefined : Number(form.longTermMortgageContractYears)}
+                onChange={(v) => onChange({ longTermMortgageContractYears: v === undefined ? "" : String(v) })}
+              />
+            </FieldCard>
+          </div>
+          <div className="space-y-2 pt-1">
             <ToggleCard
-              data-testid="ltm-first-transferred-in-merge"
               variant="chip"
-              checked={form.isFirstTransferredInMerge}
-              onCheckedChange={(isFirstTransferredInMerge) => onChange({ isFirstTransferredInMerge })}
-              title="합가 후 세대에서 먼저 양도하는 주택이다"
+              checked={form.longTermMortgageMaturityLumpSum}
+              onCheckedChange={(longTermMortgageMaturityLumpSum) =>
+                onChange({ longTermMortgageMaturityLumpSum })
+              }
+              title="만기에 이 주택을 처분해 일시 상환하는 계약조건"
               tone="violet"
             />
-          )}
-          <ToggleCard
-            variant="chip"
-            checked={form.longTermMortgageTransferredBeforeMaturity}
-            onCheckedChange={(longTermMortgageTransferredBeforeMaturity) =>
-              onChange({ longTermMortgageTransferredBeforeMaturity })
-            }
-            title="계약기간이 끝나기 전에 양도한다"
-            tone="rose"
-          />
-        </div>
-      </ToggleCard>
+            <ToggleCard
+              variant="chip"
+              checked={form.longTermMortgageIsTransferredHouseMortgaged}
+              onCheckedChange={(longTermMortgageIsTransferredHouseMortgaged) =>
+                onChange({ longTermMortgageIsTransferredHouseMortgaged })
+              }
+              title="양도할 주택이 담보로 제공된 그 주택이다"
+              tone="violet"
+            />
+            <ToggleCard
+              variant="chip"
+              checked={form.longTermMortgageParentalCareMerge}
+              onCheckedChange={(longTermMortgageParentalCareMerge) =>
+                onChange({ longTermMortgageParentalCareMerge })
+              }
+              title="담보주택을 보유한 직계존속과 동거봉양 합가로 2주택이 되었다"
+              tone="violet"
+            />
+            {/*
+              §155의2② 「먼저 양도하는 주택」 — 법정 요건이다. 합가일 칸(`MergeDateSection`)은 합가일을 입력해야만 열려서, 기한이 없는
+              이 특례에서는 합가일을 비운 세대가 이 선언을 할 길이 없었다(X3-5). 값은 그 칸과 **같은 필드**(`isFirstTransferredInMerge`)다 —
+              두 토글이 서로를 복사하지 않는다. ④는 합가일이나 이 칩이 있을 때만 이 값을 보낸다(`buildMergePayload`).
+            */}
+            {form.longTermMortgageParentalCareMerge && (
+              <ToggleCard
+                data-testid="ltm-first-transferred-in-merge"
+                variant="chip"
+                checked={form.isFirstTransferredInMerge}
+                onCheckedChange={(isFirstTransferredInMerge) => onChange({ isFirstTransferredInMerge })}
+                title="합가 후 세대에서 먼저 양도하는 주택이다"
+                tone="violet"
+              />
+            )}
+            <ToggleCard
+              variant="chip"
+              checked={form.longTermMortgageTransferredBeforeMaturity}
+              onCheckedChange={(longTermMortgageTransferredBeforeMaturity) =>
+                onChange({ longTermMortgageTransferredBeforeMaturity })
+              }
+              title="계약기간이 끝나기 전에 양도한다"
+              tone="rose"
+            />
+          </div>
+        </ToggleCard>
+      )}
 
       {/* §155의3 상생임대주택 — 증여세 부담부증여 경로와 같은 위젯(E-1 한계 G2에서 옮겼다 · JSX 그대로).
           🔑 입주권 양도에는 띄우지 않는다 — §89①4호 판정은 인가일 현재 기존주택 요건을 위 자기선언으로 받는다
