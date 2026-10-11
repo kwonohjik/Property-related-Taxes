@@ -55,6 +55,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { oneRightHighValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
+import { TempTwoHouseDelayReasonInput } from "@/components/calc/transfer/TempTwoHouseDeadlineExceptionInputs";
 
 interface Props {
   asset: AssetForm;
@@ -216,6 +217,18 @@ export function RedevelopmentRightExemptionSection({
                 onChange={(v) => onChange({ redevOtherHouseAcquisitionDate: v })}
               />
             </FieldCard>
+
+            {/* §89①4호 나목 괄호 「3년 이내에 양도하지 못하는 경우로서 대통령령으로 정하는 사유」 = 시행령 §155⑱ 1~5호.
+                이 칸이 없으면 사유가 있어도 3년을 넘긴 나목이 조용히 불성립한다(S05-4). 취득일을 넣은 뒤 3년이 지난
+                경우에 의미가 있고, 사유는 「그 1주택을 취득한 날부터 3년이 되는 날 현재」 기준이다. */}
+            <TempTwoHouseDelayReasonInput
+              form={{ disposalDelayReason: asset.redevOtherHouseDisposalDelayReason ?? "" }}
+              onChange={(p) => onChange({ redevOtherHouseDisposalDelayReason: p.disposalDelayReason as AssetForm["redevOtherHouseDisposalDelayReason"] })}
+              name={`redevOtherHouseDisposalDelayReason-${asset.assetId}`}
+              newHouseLabel="그 1주택"
+              label="3년 이내 양도하지 못한 사유 (나목 괄호 · 시행령 §155⑱)"
+              effectNote="해당 시 3년을 넘겨 양도해도 나목 요건을 충족한 것으로 봅니다(취득일 입력 필요). 선택하지 않으면 사유가 없는 것으로 봅니다."
+            />
 
             {/* 보유 상황 안내 — 단계 번호를 쓰지 않는다(재배치 때 ②→③으로 어긋났다, S13-9). */}
             <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed">

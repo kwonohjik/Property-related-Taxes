@@ -15,7 +15,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
-import { postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
+import { landContributedOriginalApt, postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -104,6 +104,23 @@ export function validateRedevelopmentAsset(asset: AssetForm, label: string): str
       return fieldError("redevPostApprovalHousingUseEndDate", `${label}: 사실상 주거용 사용 종료일은 관리처분계획인가일 이후여야 합니다. 인가일까지의 기간은 이미 보유기간에 포함됩니다.`);
     }
     // 양도일은 폼-전역이라 이 자산-수준 validate에는 없다 — 상한은 인가일 조건으로만 건다.
+  }
+
+  /**
+   * 토지만 출자한 원조합원의 완공APT — **준공일(사용승인서 교부일)이 필수**다 (G3-4).
+   *
+   * §154① 비과세 보유기간을 그 날부터 센다(「소득세법 시행령」 §162①4호 · 서면-2022-부동산-1616). 비우면 엔진이
+   * 토지 취득일부터 센 보유기간으로 비과세를 판정해 준공 후 2년 안에 양도해도 전액 비과세가 난다 — 자동 안분
+   * fallback 금지(미입력은 검증 오류로 차단). ④ `buildRedevelopmentPayload`·⑫ `refinePrimaryAcquisitionInputs`와
+   * **같은 술어**(`landContributedOriginalApt`)다. 입력칸은 ② 「출자 자산」 카드 안에 있다.
+   */
+  if (landContributedOriginalApt(asset)) {
+    if (!asset.redevCompletionDate) {
+      return fieldError("redevCompletionDate", `${label}: 토지만 출자한 완공APT — 준공일(사용승인서 교부일)을 입력하세요. 1세대1주택 비과세 보유기간은 그 날부터 셉니다. (시행령 §162①4호 · 서면-2022-부동산-1616)`);
+    }
+    if (asset.redevApprovalDate && asset.redevCompletionDate < asset.redevApprovalDate) {
+      return fieldError("redevCompletionDate", `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`);
+    }
   }
 
   if (approvalLawBasis !== "urban_renovation_art_74") {

@@ -233,7 +233,7 @@ export type ResidenceReqInput = Pick<
  * 구조적으로 이 타입을 만족한다.
  */
 export type ExemptionReqInput = ResidenceReqInput &
-  Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate">;
+  Pick<TransferTaxInput, "decedentCohabitationHoldingStartDate" | "exemptionHoldingStartDate">;
 
 /** §154① 단서 각호 면제 범위 라벨 (exemptReason 표시용) — 모듈 스코프 (per-call 재생성 금지) */
 export const PROVISO_LABEL: Record<
@@ -538,6 +538,9 @@ export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date
 }
 
 function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
+  // 토지만 출자한 원조합원 완공APT — 사용승인서 교부일(시행령 §162①4호 · 서면-2022-부동산-1616). 엔진이 채운 값이라
+  // 용도변경·상속 통산과 겹치는 조합이 없다(`redev-apt-judgment-input.ts` — 완공APT 번역에서만 채운다). G3-4.
+  if (input.exemptionHoldingStartDate) return input.exemptionHoldingStartDate;
   // §154⑤ 단서 — 주택이 아닌 건물을 주택으로 용도변경한 경우 보유기간은 **주택으로 사용한 날**부터
   // 기산한다. 2024-02-29 이후 양도분부터 적용(대통령령 제34265호 — 공포일 시행).
   //

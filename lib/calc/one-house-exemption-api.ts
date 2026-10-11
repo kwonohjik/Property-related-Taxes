@@ -322,6 +322,8 @@ export function buildOneHouseExemptionApiBody(
             eligibleAtApproval: primary.redevExemptionEligibleAtApproval === "yes",
             // 빈 문자열은 **미입력**이다 — 엔진이 나목을 「판정 불가」로 두게 한다.
             otherHouseAcquisitionDate: primary.redevOtherHouseAcquisitionDate || undefined,
+            // 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱) — 빈 값은 해당 없음/모름이라 보내지 않는다.
+            otherHouseDisposalDelayReason: primary.redevOtherHouseDisposalDelayReason || undefined,
             // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 계산기와 같은 필드다.
             approvalDate: primary.redevApprovalDate || undefined,
           },

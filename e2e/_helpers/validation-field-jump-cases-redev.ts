@@ -34,8 +34,9 @@ const apt = (patch: Record<string, unknown> = {}, formPatch: Record<string, unkn
 const right = (patch: Record<string, unknown> = {}) =>
   apt({ assetKind: "right_to_move_in", redevSubject: "right", ...patch });
 
-/** 토지 출자 */
-const land = (patch: Record<string, unknown> = {}) => apt({ redevOriginalAssetType: "land", ...patch });
+/** 토지 출자 — 토지만 출자한 완공 APT는 준공일(§154① 보유 기산일 · 시행령 §162①4호)이 필수라 기본으로 채운다(G3-4) */
+const land = (patch: Record<string, unknown> = {}) =>
+  apt({ redevOriginalAssetType: "land", redevCompletionDate: "2020-03-01", ...patch });
 
 /** 완공 APT + 환산 — 최초공시일 이후 취득(§164⑦ 미발동) */
 const est = (patch: Record<string, unknown> = {}) =>

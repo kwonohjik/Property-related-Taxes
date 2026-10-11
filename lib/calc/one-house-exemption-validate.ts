@@ -22,6 +22,7 @@ import {
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
+import { oneRightNaFactIssues } from "./one-right-na-facts-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
@@ -476,6 +477,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   if (form.transferDate && primary?.acquisitionDate && form.transferDate < primary.acquisitionDate) {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
   }
+
+  // §89①4호 나목 — 「그 1주택 취득일」 칸이 보유 주택 명부와 어긋나거나 양도일 이후면 막는다(S10-4).
+  for (const issue of oneRightNaFactIssues(form)) errors.push(err(issue.field, issue.message));
 
   // §154⑤ 단서 용도변경 — 계산기와 같은 leaf. 칸은 주택 양도에만 있다(⑤·④와 같은 `judgmentSaleIsHousing`).
   if (primary && judgmentSaleIsHousing(form)) {

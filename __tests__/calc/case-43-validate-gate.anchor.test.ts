@@ -32,6 +32,8 @@ function landEstimatedReceive(over: Partial<AssetForm> = {}): AssetForm {
     redevRightsValue: "500,000,000",
     redevSettlementAmount: "114,000,000",
     redevSettlementSaleDate: "2023-03-02",
+    // G3-4 — 토지만 출자한 완공APT는 준공일(§154① 보유 기산일)이 필수다. 이 파일이 시험하는 §166③ 게이트와는 별개 축이라 채워 둔다.
+    redevCompletionDate: "2020-01-01",
     // §166③ 분자·분모 — 3중 패턴(단가×면적 우선)
     redevLandArea: "100",
     redevLandPricePerSqmAtAcq: "600,000",

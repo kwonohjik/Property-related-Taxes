@@ -131,6 +131,8 @@ type PrimaryLike = {
     isSuccessorMember?: boolean;
     completionDate?: string;
     newHouseResidenceMonths?: number;
+    originalAssetType?: string;
+    receiveOnlyMode?: boolean;
   } | null;
   isOneHousehold?: boolean;
   residencePeriodMonths?: number;
@@ -181,6 +183,22 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   // 승계조합원 — 준공일(사용검사필증 교부일)이 취득시기다(소령 §162①4호). 비우면 취득일로 읽었다.
   if (data.redevelopment?.isSuccessorMember === true && !data.redevelopment.completionDate) {
     issue(["redevelopment", "completionDate"], "승계조합원은 준공일(사용검사필증 교부일)이 필요합니다 (소득세법 시행령 §162①4호)");
+  }
+
+  // G3-4 — 토지만 출자한 원조합원의 완공APT: §154① 비과세 보유기간은 사용승인서 교부일부터 센다(영 §162①4호 ·
+  //   서면-2022-부동산-1616). 비우면 엔진이 토지 취득일 기산으로 판정해 준공 후 2년 안 양도도 전액 비과세가 났다.
+  //   ⑧ `validateRedevelopmentAsset`의 `landContributedOriginalApt`와 같은 조건(승계 아님 · 토지 출자 · 단독신고 아님).
+  if (
+    data.redevelopment?.subject === "apt" &&
+    data.redevelopment.isSuccessorMember !== true &&
+    data.redevelopment.originalAssetType === "land" &&
+    data.redevelopment.receiveOnlyMode !== true &&
+    !data.redevelopment.completionDate
+  ) {
+    issue(
+      ["redevelopment", "completionDate"],
+      "토지만 출자한 완공APT는 준공일(사용승인서 교부일)이 필요합니다 — 1세대1주택 비과세 보유기간 기산일입니다 (소득세법 시행령 §162①4호 · 서면-2022-부동산-1616)",
+    );
   }
 
   // I-8 — 승계조합원 완공APT 거주 개월 수 ≤ 준공일~양도일 개월 수(⑧ `successorAptResidenceOverflow` 같은 leaf).

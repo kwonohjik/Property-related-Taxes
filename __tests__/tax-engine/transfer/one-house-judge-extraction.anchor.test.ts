@@ -100,6 +100,8 @@ const JUDGE_INPUT_KEYS = [
   "finalOneHouseRestart",
   // 보유 중 비거주 기간(§154⑧2호) — 판정 메뉴 전용
   "nonResidentHoldingPeriod",
+  // G3-4 — 토지 출자 원조합원 완공APT의 §154① 보유 기산일(사용승인일). 엔진이 채운다
+  "exemptionHoldingStartDate",
 ] as const;
 
 const _frozenKeyGuards: [
@@ -216,6 +218,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     disposals: [{ kind: "gift", date: D("2021-05-05"), temporaryTwoHouseSpecial: false }],
   },
   nonResidentHoldingPeriod: { startDate: D("2019-01-01"), endDate: D("2020-06-01"), residedAtConversion: true },
+  exemptionHoldingStartDate: D("2021-02-03"),
 };
 
 describe("P2 — 판정 입력 왕복 (세액 불변의 근거)", () => {

@@ -40,6 +40,10 @@ type DelayReasonProps = {
   name?: string;
   /** 「신규 주택」을 화면에서 부르는 이름 — 원조합원 입주권 행은 「기존주택」. 기본 「신규 주택」 */
   newHouseLabel?: string;
+  /** 사유에 해당할 때의 효과 문장 — 기본은 §155① 요건 B. 입주권 양도 나목(§89①4호)은 다른 효과라 호출부가 준다. */
+  effectNote?: string;
+  /** radio 그룹 제목 — 기본 「처분기한 예외 사유 (§155⑱)」 */
+  label?: string;
 };
 
 /** §155⑯ 공공기관·법인 지방이전 특례 — 토글 + 이전지·신규 주택 소재지 + 연접 판정 안내 */
@@ -126,10 +130,12 @@ export function TempTwoHouseDelayReasonInput({
   onChange,
   name = "disposalDelayReason",
   newHouseLabel = "신규 주택",
+  effectNote = "해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.",
+  label = "처분기한 예외 사유 (§155⑱)",
 }: DelayReasonProps) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium">처분기한 예외 사유 (§155⑱)</label>
+      <label className="text-sm font-medium">{label}</label>
       <RadioCardGroup
         name={name}
         value={form.disposalDelayReason}
@@ -153,7 +159,7 @@ export function TempTwoHouseDelayReasonInput({
       />
       <p className="text-xs text-muted-foreground">
         <strong>{newHouseLabel}을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
-        해당 시 처분기한을 넘겨도 §155① 요건 B를 충족한 것으로 봅니다.
+        {effectNote}
       </p>
     </div>
   );

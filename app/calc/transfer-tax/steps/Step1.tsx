@@ -24,6 +24,7 @@ import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import { Button } from "@/components/ui/button";
 import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
+import { redevOneHouseAxisCandidate } from "@/lib/calc/redev-one-house-axis";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -295,7 +296,7 @@ export function Step1({
           onFormChange={onChange}
           contractTotalPrice={form.contractTotalPrice}
           totalTransferExpense={form.totalTransferExpense}
-          isOneHouseSingle={form.isOneHousehold === true && form.householdHousingCount === "1"}
+          isOneHouseSingle={redevOneHouseAxisCandidate(form)}
           judgmentLoaded={hasJudgmentProvenance(form)}
           wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
           formRegionCode={form.regionCode}

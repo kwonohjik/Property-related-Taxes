@@ -39,6 +39,7 @@ import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
+import { translateRedevAptForHousingJudgment } from "./one-house/redev-apt-judgment-input";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
 type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
@@ -80,6 +81,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
   parsedRates: ParsedRates,
   generalHouseAcquisitionDate?: Date,
 ): { basis: DeemedOneHouseBasis; source?: string; citedByOldClause1?: boolean } | undefined {
+  // 🔴 주택 수 제외는 번역 **전** 원본을 본다 — 상속주택 제외(E-8)가 입주권 취득일과 준공일을 따로 받는다.
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
   const inheritedExcluded = ex.inheritedExclusion.excludedCount;
   const count = surcharge15HouseCount(
@@ -89,13 +91,21 @@ export function resolveSurchargeDeemedOneHouseDetail(
     ex.specialActVerified15Count,
   );
   /**
+   * 🔴 **재개발 완공APT는 비과세 판정(`judgeRedevAptOneHouseExemption`)과 같은 번역을 거친 입력으로 판정한다**
+   * (G8-4). 번역하지 않으면 §89② 게이트(`resolveArticle89Clause2`)가 `propertyType !== "housing"`이라 늘
+   * `not_applicable`이고(→ §89②로 비과세가 꺼진 세대에 중과 배제가 서고, §156의2·§156의3 예외 의제는 열리지
+   * 않는다), §155① 종전주택 요건(`meetsOneHouseHoldingResidence`)이 승계조합원의 입주권 취득일·Step4 거주값을
+   * 읽는다(비과세는 준공일 기준 보유 미달인데 ① 요소는 충족). 완공APT가 아니면 입력 그대로(동일 참조)다.
+   */
+  const judgedInput = translateRedevAptForHousingJudgment(workingInput);
+  /**
    * 「소득세법」 §89② — 주택과 조합원입주권·분양권을 함께 보유하면 §89①3호(§154①)를 적용하지 않는다(단서 예외는
    * 영 §156의2·§156의3). 그러면 §155 의제가 서도 「제154조제1항이 적용되는 주택」이 아니다 ⇒ 비과세 정본
    * (`checkExemption`)과 같은 술어로 먼저 거른다. 판정 보류(`undetermined` — 예외 사실을 입력받을 경로가 없는 조합)는
    * 비과세가 종전 동작(적용)을 유지하고 경고하지만, 중과 배제까지 그 가정에 기대지 않는다(확인 필요 — 종전 동작).
    */
   const clause2 = resolveArticle89Clause2(
-    { ...workingInput, householdHousingCount: count },
+    { ...judgedInput, householdHousingCount: count },
     presaleRightStartDate(parsedRates),
   );
   if (clause2BlocksSurchargeDeeming(clause2)) return undefined;
@@ -105,7 +115,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
   // 비과세·중과 배제가 같은 결론을 내야 한다.
   const deemed = resolveDeemedOneHouseBy155(
     {
-      ...workingInput,
+      ...judgedInput,
       householdHousingCount: count,
       knownHouseExclusionCount: inheritedExcluded + ex.specialActExcludedCount,
       inheritedHouseExclusionCount: inheritedExcluded,
@@ -363,9 +373,10 @@ export function runMultiHouseSurchargeStep(
       presaleRights: workingInput.presaleRights ?? [],
       gracePeriod: workingInput.gracePeriod,
       // §154① 보유·거주 요건 precompute (배제2 §155⑤ 의제 게이트). 미산정 시 undefined → 엔진 충족 간주
+      //   재개발 완공APT는 비과세 판정과 같은 번역(승계조합원 준공일 기산 · 거주월수)을 거친다 — G8-4.
       sellingHouseMeetsOneHouseRequirements: parsedRates.oneHouseSpecialRules
         ? meetsOneHouseHoldingResidence(
-            workingInput,
+            translateRedevAptForHousingJudgment(workingInput),
             parsedRates.oneHouseSpecialRules.one_house_exemption,
           )
         : undefined,

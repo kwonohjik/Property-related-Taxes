@@ -23,7 +23,10 @@
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { presaleRightStartDate, type ParsedRates } from "./transfer-tax-helpers";
-import { resolveAptResidenceMonths } from "./redevelopment-lthd";
+import {
+  resolveRedevAptOneHouseTable2Axis,
+  translateRedevAptForHousingJudgment,
+} from "./one-house/redev-apt-judgment-input";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
 export type RedevHouseCountExclusion = Pick<
@@ -40,9 +43,16 @@ export function judgeRedevAptOneHouseExemption(
   exemptionResult: ReturnType<typeof judgeOneHouseExemptionFromInput> | undefined;
   /** STEP 0.9+0.95 산출물 — `calculateRedevelopmentTax`로 넘긴다 (D4-08). */
   houseCountExclusion: RedevHouseCountExclusion | undefined;
+  /**
+   * 완공APT **표2·§154① 축** 「1주택」(실제 1주택 ∨ §155 의제 — `resolveRedevAptOneHouseTable2Axis`) — G3-2.
+   * 단독신고(`receiveOnlyMode`)에서도 채운다(청산금분 양도일 기준 판정). subject≠"apt"면 undefined.
+   */
+  oneHouseTable2Axis: boolean | undefined;
 } {
   const redev = redevInput.redevelopment;
-  if (redev?.subject !== "apt") return { exemptionResult: undefined, houseCountExclusion: undefined };
+  if (redev?.subject !== "apt") {
+    return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis: undefined };
+  }
   /**
    * ⚠️ **청산금 「수령」 단독신고(사례 46 · `receiveOnlyMode`)만 제외한다.**
    *
@@ -64,16 +74,26 @@ export function judgeRedevAptOneHouseExemption(
    *    축으로 판정한다(L-12) — `applyAptOneHouseExemption`·신축주택 12억 안분이 수령 방향에서는
    *    청산금 분기를 건드리지 않는다.
    */
-  if (redev.settlementDirection === "receive" && redev.receiveOnlyMode === true) {
-    return { exemptionResult: undefined, houseCountExclusion: undefined };
-  }
+  const isReceiveOnly = redev.settlementDirection === "receive" && redev.receiveOnlyMode === true;
+  /**
+   * 🔴 **단독신고도 「표2·§154① 축」은 판정한다** (G3-2 · 2026-10-11).
+   *
+   * 위 이유로 신축주택 비과세 판정 **결과**는 단독신고에서 쓰지 않는다(`exemptionResult: undefined`).
+   * 그러나 청산금분 비과세(Step A.6)가 보는 「청산금분 양도일 현재 1세대1주택」은 §155 의제를 포함한다 —
+   * 부동산거래관리과-631(2012.11.20): 청산금을 교부받기 전에 다른 주택을 취득해 「소득세법 시행령」 제155조제1항
+   * 일시적 2주택이 된 경우 교부받은 청산금은 같은 영 제154조제1항을 적용받을 수 있다. 단독신고는 ④가 양도일을
+   * 청산금분 양도일로 맞추므로 이 입력(`transferDate`·`temporaryTwoHouse`)이 곧 그 날의 사실이다.
+   * 그래서 판정 **부산물**(의제 여부 · 주택 수 제외 후 주택 수)만 꺼내고, 단독신고의 steps·주택수 제외 상세는
+   * 종전대로 남기지 않는다(양도 대상이 신축주택이 아니라 그 산출물이 근거가 되지 않는다).
+   */
+  const scratchSteps: CalculationStep[] = [];
   const {
     exemptionJudgeInput,
     new994Detail,
     unsold989Detail,
     houseCountExclusionDetails,
     specialHouseExclusionDetail,
-  } = runHouseCountExclusionStep(redevInput, steps, hceGeneralHouseAcquisitionDate);
+  } = runHouseCountExclusionStep(redevInput, isReceiveOnly ? scratchSteps : steps, hceGeneralHouseAcquisitionDate);
   // 🔴 종전에는 `exemptionJudgeInput`만 꺼내고 나머지 셋을 버렸다 — 결과에 실리지 않아
   //   §99의4⑥ 3년 미보유 **추징 경고**(`clawbackWarning`)·농어촌주택 보유기간·
   //   §98의9 `dualExclusionWarning`이 통째로 사라졌다(코드리뷰 D4-08).
@@ -93,42 +113,21 @@ export function judgeRedevAptOneHouseExemption(
    * 쓰는 **내부 자산종류 태그**이지 법령상 자산 구분이 아니다.
    * ⇒ 판정 경계에서만 `housing`으로 번역한다(게이트 자체를 넓히면 §166 데이터가 없는
    *   다른 경로까지 함께 바뀌므로 이 배치의 범위를 넘는다).
-   */
-  /**
-   * 🔑 **승계조합원 신축주택의 취득시기는 준공일이다** — 「소득세법 시행령」 §162①4호
-   * 「자기가 건설한 건축물에 있어서는 **사용승인서 교부일**」(+ 사전-2019-법령해석재산-0649).
-   * 원조합원(종전주택 제공)은 소유권의 연장이라 종전주택 취득일이 그대로 취득시기지만,
-   * 승계조합원은 입주권을 취득한 것이라 신축주택 취득시기가 따로 정해진다.
    *
-   * 엔진은 이미 이 규칙을 쓰고 있다 — `runSuccessorMember`의 보유기간·`§104②` 세율 기산
-   * 모두 `completionDate`다. 비과세(§154① 보유 2년) 판정만 원래 취득일을 쓰면 **한 계산
-   * 안에서 취득시기가 두 개**가 된다(실측: 사례 48 — 준공 2.5개월인데 비과세로 판정됐다).
+   * 🔑 번역(`propertyType`·승계조합원 준공일 기산·거주월수 단일 소스 — OH-48·OH-50)은
+   *    `translateRedevAptForHousingJudgment` leaf에 있다(G8-4). 중과 STEP 0.5 ①②도 같은 leaf를 쓴다 —
+   *    비과세와 중과 배제가 **같은 입력**을 봐야 한다. 승계조합원의 취득시기가 준공일인 근거는 leaf 주석.
    */
-  const isSuccessor = redev.isSuccessorMember === true;
-  const exemptionAcquisitionDate =
-    isSuccessor && redev.completionDate ? redev.completionDate : exemptionJudgeInput.acquisitionDate;
-  /**
-   * 🔴 **거주월수도 표2와 같은 값이어야 한다** (2026-09-26 · OH-48 · OH-50).
-   *
-   * 종전에는 Step4 거주값(`residencePeriodMonths`)을 그대로 넘겨, 재개발 카드의 분리 입력
-   * (§154⑧1호 통산)을 쓰는 표2와 한 계산 안에서 답이 갈렸다. 규칙과 근거는
-   * `resolveAptResidenceMonths` 주석에 모았다(승계조합원은 준공 후 신축주택 거주만).
-   */
-  const exemptionResidenceMonths = resolveAptResidenceMonths({
-    isSuccessorMember: isSuccessor,
-    priorHouseResidenceMonths: redev.priorHouseResidenceMonths,
-    newHouseResidenceMonths: redev.newHouseResidenceMonths,
-    residencePeriodMonths: exemptionJudgeInput.residencePeriodMonths,
-  });
   const exemptionResult = judgeOneHouseExemptionFromInput(
-    {
-      ...exemptionJudgeInput,
-      propertyType: "housing",
-      acquisitionDate: exemptionAcquisitionDate,
-      residencePeriodMonths: exemptionResidenceMonths,
-    },
+    translateRedevAptForHousingJudgment(exemptionJudgeInput),
     parsedRates.oneHouseSpecialRules,
     presaleRightStartDate(parsedRates),
   );
-  return { exemptionResult, houseCountExclusion };
+  const oneHouseTable2Axis = resolveRedevAptOneHouseTable2Axis({
+    isOneHousehold: exemptionJudgeInput.isOneHousehold,
+    judgeHousingCount: exemptionJudgeInput.householdHousingCount,
+    deemedOneHouseBy155: exemptionResult.deemedOneHouseBy155,
+  });
+  if (isReceiveOnly) return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis };
+  return { exemptionResult, houseCountExclusion, oneHouseTable2Axis };
 }
