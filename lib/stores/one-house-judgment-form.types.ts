@@ -139,7 +139,7 @@ export function deriveJudgmentHouseCount(
   form: Pick<OneHouseJudgmentFormData, "houses" | "assets" | "transferDate">,
 ): number {
   // 양도일 이후(같은 날 포함) 취득 행은 세지 않는다 — ④ `buildHousesPayload`·route와 같은 술어(D2).
-  return (judgmentSaleIsHousing(form) ? 1 : 0) + housesOwnedAtTransfer(form.houses, form.transferDate).length;
+  return (judgmentSaleIsHousing(form) ? 1 : 0) + housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind).length;
 }
 
 /**

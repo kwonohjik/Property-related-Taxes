@@ -129,6 +129,7 @@ export async function resumeCalculationRecord(
       currentStep: 0,
       formData: normalizeOneHouseJudgmentForm(record.inputData),
       result: null,
+      resultClientId: null,
       error: null,
       isLoading: false,
     });

@@ -64,7 +64,7 @@ export function computeHouseCountDivergence(
   const declared = parseInt(input.householdHousingCount || "1", 10); // store default "1"과 일치
   const selfOffset = houseCountSelfOffset(input.primaryKind);
   // 실제 계산이 쓰는 수와 같은 leaf — 양도일 당일·이후 취득 행은 양도일 현재 보유 주택이 아니다(D2).
-  const structuralCount = selfOffset + countedHouseRows(input.houses, input.transferDate); // F7: 주택만. 분양권 제외
+  const structuralCount = selfOffset + countedHouseRows(input.houses, input.transferDate, input.primaryKind); // F7: 주택만. 분양권 제외
   return {
     showPrecedence: isHouseSale && populated,
     showMismatch: isHouseSale && populated && structuralCount !== declared,

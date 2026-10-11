@@ -65,9 +65,10 @@ import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { mergeHouseSideOf } from "@/lib/calc/merge-house-origin";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import type { MergeOrigin } from "@/lib/tax-engine/types/multi-house-surcharge.types";
+import { isSameDayFirstTransferred, type SameDayOrderFacts } from "@/lib/calc/same-day-transfer-order";
 
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
-export interface HouseRowForCount {
+export interface HouseRowForCount extends SameDayOrderFacts {
   /** 명부 행 id — 조특법 주택 수 제외 행을 신규 주택 후보에서 뺄 때 쓴다(`excludedHouseIds`). */
   id?: string;
   acquisitionDate?: string;
@@ -96,12 +97,29 @@ export function isOwnedAtTransfer(acquisitionDate: string | undefined, transferD
   return acquisitionDate < transferDate;
 }
 
-/** 명부에서 양도일 현재 보유 주택 행만 — `isOwnedAtTransfer`. */
+/**
+ * 명부에서 양도일 현재 보유 주택 행만 — `isOwnedAtTransfer` + **같은 날 먼저 양도한 것으로 선택한 행 제외**.
+ *
+ * 🔑 소득세법 시행령 §154⑨ — 2개 이상의 주택을 같은 날 양도하면 거주자가 선택하는 순서대로 양도한 것으로 본다(중과는 §167의3⑥ 준용).
+ *    「이 주택을 먼저 양도한 것으로 선택」한 행은 현재 양도일에 이미 양도한 뒤라 양도일 현재 보유 주택이 아니다(`same-day-transfer-order.ts`).
+ *    주택 수·신규 주택 후보·엔진 명부(④ 페이로드)·조특법 제외 선언·§155⑥1호·⑦·⑧ 행 사실이 모두 이 한 술어를 거치므로
+ *    같은 날 취득 행과 **같은 경로로** 빠진다(주택 수 이중 차감 없음).
+ */
 export function housesOwnedAtTransfer<T extends HouseRowForCount>(
   houses: readonly T[] | undefined,
   transferDate: string | undefined,
+  /**
+   * 양도 대표 자산 종류(`assets[0].assetKind`) — **필수**(빠뜨린 호출부를 컴파일러가 찾는다).
+   * §154⑨는 「법 제89조제1항제3호」(주택 비과세)의 규정이므로 양도 대상이 `isOneHouseExemptionAsset`(주택·재개발APT)일 때만
+   * 「먼저 양도」 선택을 뺀다. 화면 게이트(⑤ `sameDayEnabled`)와 같은 술어다 — 주택 양도에서 켠 뒤 입주권으로 바꿔 남은 선택값을
+   * ④·⑧이 그대로 적용하면 칸이 숨어 끌 수 없는 채로 §89①4호 가목 판정이 바뀐다.
+   */
+  primaryKind: string | undefined,
 ): T[] {
-  return (houses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
+  const sameDayApplies = sameDayOrderApplies(primaryKind);
+  return (houses ?? []).filter(
+    (h) => isOwnedAtTransfer(h.acquisitionDate, transferDate) && !(sameDayApplies && isSameDayFirstTransferred(h)),
+  );
 }
 
 /**
@@ -114,6 +132,11 @@ export function rightsOwnedAtTransfer<T extends { acquisitionDate?: string }>(
   transferDate: string | undefined,
 ): T[] {
   return (rights ?? []).filter((r) => isOwnedAtTransfer(r.acquisitionDate, transferDate));
+}
+
+/** §154⑨ 「같은 날 양도 순서」가 닿는 양도 대상인가 — ⑤ 입력 게이트·④ 주택 수·⑧ 검증·표시가 모두 이 한 술어다. */
+export function sameDayOrderApplies(primaryKind: string | undefined): boolean {
+  return isOneHouseExemptionAsset(primaryKind);
 }
 
 export interface ResolveHouseholdHousingCountArgs {
@@ -166,7 +189,7 @@ export function resolveHouseholdHousingCount(
   //    자기 몫(offset)뿐이다. 종전에는 `rows === 0`을 「명부 없음」과 같게 보아 잔존 스칼라(예: 일 입력 중간값
   //    `2025-06-00`이 만든 2)가 주택 수가 되어 비과세가 과세로 뒤집혔다(재검증 S12-1).
   if (!hasDatedHouseRow(args.houses)) return args.declared;
-  return houseCountSelfOffset(args.primaryKind) + countedHouseRows(args.houses, args.transferDate);
+  return houseCountSelfOffset(args.primaryKind) + countedHouseRows(args.houses, args.transferDate, args.primaryKind);
 }
 
 /** 취득일이 입력된 명부 행이 하나라도 있는가 — 양도일 전후와 무관하다. 명부가 정본인지 가르는 기준. */
@@ -179,8 +202,10 @@ export function countedHouseRows(
   houses: readonly HouseRowForCount[] | undefined,
   /** 양도일 — 그날 이후(같은 날 포함) 취득한 행은 세지 않는다(`isOwnedAtTransfer`). */
   transferDate: string | undefined,
+  /** 양도 대표 자산 종류 — `housesOwnedAtTransfer`의 같은 날 양도 순서 게이트. 필수. */
+  primaryKind: string | undefined,
 ): number {
-  return housesOwnedAtTransfer(houses, transferDate).filter((h) => h.acquisitionDate).length;
+  return housesOwnedAtTransfer(houses, transferDate, primaryKind).filter((h) => h.acquisitionDate).length;
 }
 
 /**
@@ -253,7 +278,7 @@ export function derivedHouseCountPatch(
   transferDate: string | undefined,
 ): { householdHousingCount?: string } {
   if (legacyPrecedence || !houseRosterIsAuthoritative(primaryKind, houses)) return {};
-  return { householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate)) };
+  return { householdHousingCount: String(houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate, primaryKind)) };
 }
 
 /**
@@ -273,7 +298,7 @@ export function houseCountDivergedFromRoster(
   transferDate: string | undefined,
 ): boolean {
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
+  return declared !== houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate, primaryKind);
 }
 
 /**
@@ -295,7 +320,7 @@ export function houseCountScalarLocked(
   transferDate: string | undefined,
 ): boolean {
   if (!houseRosterIsAuthoritative(primaryKind, houses)) return false;
-  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate);
+  return declared === houseCountSelfOffset(primaryKind) + countedHouseRows(houses, transferDate, primaryKind);
 }
 
 /**
@@ -426,7 +451,7 @@ export function resolveTemporaryTwoHouse(
   if (!isOneHouseExemptionAsset(args.primaryKind)) return fallback(); // F1 — 권리 양도는 축이 다르다
   if (!prev) return fallback(); // 비교 기준이 없으면 「나중 취득」을 가릴 수 없다
 
-  const owned = housesOwnedAtTransfer(args.houses, args.transferDate).filter(
+  const owned = housesOwnedAtTransfer(args.houses, args.transferDate, args.primaryKind).filter(
     (h) => h.acquisitionDate !== undefined && !(h.id !== undefined && args.excludedHouseIds.has(h.id)),
   );
   // D8 — 합가 전(당일 포함) 취득한 주택을 양도하는 합가 세대는 쪽을 보고 짝을 고른다.

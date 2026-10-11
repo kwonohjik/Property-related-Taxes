@@ -102,7 +102,7 @@ function run(
   );
 }
 
-const FALLBACK_WARNING = /세대 보유 주택 목록이 입력되지 않아/;
+const FALLBACK_WARNING = /다른 보유 주택 목록이 입력되지 않아/;
 
 describe("겸용주택 §104⑦ — 원시 플래그 fallback", () => {
   it("MF-01: 🔴 목록 없이 조정·2주택 → 중과가 걸린다 (종전 미적용)", () => {

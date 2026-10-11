@@ -89,8 +89,9 @@ export function countExclusionRowApplies(
 export function rowCountExclusionReductions(
   houses: HouseEntry[] | undefined,
   transferDate: string | undefined,
+  primaryKind: string | undefined,
 ): RowCountExclusionReduction[] {
-  return housesOwnedAtTransfer(houses, transferDate).flatMap((h): RowCountExclusionReduction[] => {
+  return housesOwnedAtTransfer(houses, transferDate, primaryKind).flatMap((h): RowCountExclusionReduction[] => {
     if (h.countExclusion?.kind !== "reduction") return [];
     const r = h.countExclusion.reduction;
     if (r.type === "unsold_98_9") {
@@ -125,8 +126,9 @@ export function rowCountExclusionReductions(
 export function rowSpecialHouseExclusions(
   houses: HouseEntry[] | undefined,
   transferDate: string | undefined,
+  primaryKind: string | undefined,
 ): SpecialHouseExclusionFormItem[] {
-  return housesOwnedAtTransfer(houses, transferDate).flatMap((h) =>
+  return housesOwnedAtTransfer(houses, transferDate, primaryKind).flatMap((h) =>
     h.countExclusion?.kind === "special"
       ? [{ ...h.countExclusion.special, houseId: h.id, houseAcquisitionDate: h.acquisitionDate }]
       : [],
@@ -135,7 +137,7 @@ export function rowSpecialHouseExclusions(
 
 type FormLike = {
   houses?: HouseEntry[];
-  assets?: Pick<AssetForm, "acquisitionDate" | "acquisitionCause" | "reductions">[];
+  assets?: Pick<AssetForm, "assetKind" | "acquisitionDate" | "acquisitionCause" | "reductions">[];
   specialHouseExclusions?: SpecialHouseExclusionFormItem[];
   transferDate?: string;
   /** D5 — §99의4 순서의 합가 맥락(엔진 `new994MergeOrderOf`와 같은 순서: 혼인 먼저). */
@@ -151,10 +153,10 @@ function linkedDeclarations(form: FormLike) {
   const stored = (form.assets?.[0]?.reductions ?? []).filter(isRowReduction).filter((r) => r.houseId);
   const storedSpecial = (form.specialHouseExclusions ?? []).filter((e) => e.houseId);
   return {
-    reductions: [...rowCountExclusionReductions(form.houses, form.transferDate), ...stored],
+    reductions: [...rowCountExclusionReductions(form.houses, form.transferDate, form.assets?.[0]?.assetKind), ...stored],
     // 🔴 조문을 아직 고르지 않은 행(「감면주택」만 선택)은 뺀다 — 평가기가 조문 표를 읽다 TypeError가 난다
     //    (판정 메뉴 ③ 헤더 `useMemo`가 매 렌더 부른다).
-    specials: [...rowSpecialHouseExclusions(form.houses, form.transferDate), ...storedSpecial].filter((e) => e.article),
+    specials: [...rowSpecialHouseExclusions(form.houses, form.transferDate, form.assets?.[0]?.assetKind), ...storedSpecial].filter((e) => e.article),
   };
 }
 
@@ -236,7 +238,7 @@ export function primaryReductionsWithRows(form: CalcFormLike): AssetReductionFor
   const primary = form.assets?.[0];
   const stored = primary?.reductions ?? [];
   return countExclusionReductionRowsInScope(primary?.assetKind)
-    ? [...stored, ...rowCountExclusionReductions(form.houses, form.transferDate)]
+    ? [...stored, ...rowCountExclusionReductions(form.houses, form.transferDate, primary?.assetKind)]
     : stored;
 }
 
@@ -246,9 +248,9 @@ export function specialHouseExclusionsWithRows(form: CalcFormLike): SpecialHouse
   const kind = form.assets?.[0]?.assetKind;
   // 입주권 양도 — 명부 행에 연결된 4개 조문 선언만. 어느 주택인지 모르는 폼 전역 선언은 보내지 않는다(⑧이 막고 삭제를 안내한다).
   if (kind === "right_to_move_in") {
-    return rowSpecialHouseExclusions((form.houses ?? []).filter((h) => countExclusionRowApplies(kind, h)), form.transferDate);
+    return rowSpecialHouseExclusions((form.houses ?? []).filter((h) => countExclusionRowApplies(kind, h)), form.transferDate, kind);
   }
-  return countExclusionRowsInScope(kind) ? [...global, ...rowSpecialHouseExclusions(form.houses, form.transferDate)] : global;
+  return countExclusionRowsInScope(kind) ? [...global, ...rowSpecialHouseExclusions(form.houses, form.transferDate, kind)] : global;
 }
 
 /**

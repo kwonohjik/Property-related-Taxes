@@ -50,7 +50,7 @@ export function HouseholdHousingCountSection({
           <p className="text-sm" data-testid="household-house-count-derived">
             {derivedHouseholdHousingCount}채
             <span className="ml-1.5 text-xs text-muted-foreground">
-              (아래 「세대 보유 주택 목록」에서 자동 산정됩니다)
+              (아래 「다른 보유 주택 목록」에서 양도일 현재 기준으로 자동 산정됩니다)
             </span>
           </p>
           {/*
@@ -72,8 +72,8 @@ export function HouseholdHousingCountSection({
               title="다른 보유 주택이 없습니다"
               description={
                 primaryKind === "right_to_move_in"
-                  ? "양도하는 이 입주권 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
-                  : "양도하는 이 주택 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「세대 보유 주택 목록」에 추가하세요."
+                  ? "양도일 현재 양도하는 이 입주권 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「다른 보유 주택 목록」에 추가하세요."
+                  : "양도일 현재 양도하는 이 주택 외에 세대가 보유한 주택이 없으면 켜세요. 다른 주택이 있으면 아래 「다른 보유 주택 목록」에 추가하세요."
               }
               tone="sky"
             />
@@ -113,7 +113,7 @@ export function HouseholdHousingCountSection({
           </div>
           {houseCountLocked && (
             <p className="pt-0.5 text-xs text-muted-foreground">
-              아래 「세대 보유 주택 목록」에 입력한 주택으로 자동 산정됩니다. 바꾸려면 목록을 수정하세요.
+              아래 「다른 보유 주택 목록」에 입력한 주택으로 자동 산정됩니다. 바꾸려면 목록을 수정하세요.
             </p>
           )}
           {/* 3채 이상: 정확한 세대 보유 주택 수 — 비과세·장특(§89①3호가목 1주택 요건) 판정에 실제 주택 수 사용.

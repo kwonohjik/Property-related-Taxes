@@ -18,6 +18,7 @@ import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages
 import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { multiRosterBlockMessage } from "./multi-roster-parity";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -222,6 +223,11 @@ export function validateMultiSettings(form: MultiTransferFormData): string | nul
       return `"${p.propertyLabel}": ${unsupported}`;
     }
   }
+
+  // 같은 신고의 다른 건과 명부가 명백히 모순되면 막는다 — 같은 날 양도하는 주택이 모두 1채로 계산되는 경우(§154⑨),
+  // 명부가 비고 「없음」까지 확인했는데 그날 보유 중인 다른 주택 건이 있는 경우(§154①). 나머지 어긋남은 비차단 고지다(`multi-roster-parity.ts`).
+  const rosterBlock = multiRosterBlockMessage(form.properties);
+  if (rosterBlock) return rosterBlock;
 
   const used = parseAmount(form.annualBasicDeductionUsed);
   if (used > 2_500_000) return "연간 기사용 기본공제는 250만원을 초과할 수 없습니다.";

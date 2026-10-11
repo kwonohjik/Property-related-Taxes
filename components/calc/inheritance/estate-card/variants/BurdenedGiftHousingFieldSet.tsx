@@ -26,6 +26,7 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
@@ -220,7 +221,10 @@ dateToStr(bgt.acquisitionDate)
       />
 
       {/* 세대 보유 주택 수 */}
-      <FieldCard label="세대 보유 주택 수 (증여자 기준)" hint="증여자 세대가 보유한 주택 수. 비과세·중과 판정용.">
+      <FieldCard
+        label="세대 보유 주택 수 (증여자 기준)"
+        hint="증여자 세대가 보유한 주택 수. 비과세·중과 판정용."
+      >
         <DecimalInput
           value={householdCount > 0 ? String(householdCount) : "1"}
           onChange={(v) =>
@@ -229,6 +233,13 @@ dateToStr(bgt.acquisitionDate)
           data-testid="bg-transfer-house-count"
         />
       </FieldCard>
+      {/* §154⑨ 같은 날 양도 순서(결정 #40) — 이 화면은 보유 주택 목록이 없어 순서를 따로 받지 않는다. 길어서 접힘 카드로 둔다(안내문 길이 가드). */}
+      <CollapsibleHintCard tone="slate" summary="같은 날 다른 주택도 양도한다면">
+        <p data-testid="bg-transfer-same-day-hint" className="leading-relaxed">
+          증여(양도)하는 주택과 같은 날 다른 주택도 양도한다면 거주자가 선택한 순서대로 양도한 것으로 보므로(소득세법 시행령 §154⑨, 중과는 §167의3⑥ 준용)
+          먼저 양도하는 주택은 뺀 수를 입력하세요 — 이 화면에는 보유 주택 목록이 없어 순서를 따로 받지 않습니다. 같은 날 증여한 주택에는 쓰지 않습니다(확인 필요).
+        </p>
+      </CollapsibleHintCard>
 
       {/* 지정 지구 안인가(#2055 후속) — 증여 주택 법정동이 「동 안 일부 지구만 조정대상지역」일 때만 뜬다. 아래 두 조정
           판정(양도시·취득시)과 ④·⑧이 같은 답을 쓴다. 소재지가 바뀌면 답을 지운다(`giftBurdenedDistrictResetPatch`). */}
@@ -449,7 +460,7 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
         <ToneCard tone="amber" title="세대 3주택 합가 특례는 이 화면에서 판정하지 않습니다 (확인 필요)" className="py-2">
           <p data-testid="bg-three-house-merge-notice" className="text-xs">
             일시적 2주택(§155①)과 합가가 겹친 경우, 혼인·동거봉양 이중 합가는 보유 주택 목록이 있어야 판정할 수 있습니다. 이 화면에는 목록 입력 칸이
-            없어 비과세와 다주택 중과 배제를 모두 판정하지 않고 계산합니다 — 양도소득세 계산기(부담부증여)에서 세대 보유 주택 목록을 입력해 확인하세요.
+            없어 비과세와 다주택 중과 배제를 모두 판정하지 않고 계산합니다 — 양도소득세 계산기(부담부증여)에서 다른 보유 주택 목록을 입력해 확인하세요.
           </p>
         </ToneCard>
       )}

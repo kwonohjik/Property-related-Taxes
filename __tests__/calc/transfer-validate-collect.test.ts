@@ -48,6 +48,7 @@ describe("collectStepIssues — step 0 일괄 수집", () => {
     form.assets.push(second);
     form.bundledSaleMode = "actual";
     form.assets[0].actualSalePrice = "50000000";
+    form.isOneHousehold = false; // 결정 #40 — 같은 날 주택 2채 함께양도 차단(§154⑨)이 세 번째 자산 오류로 끼지 않게 한다(이 테스트는 자산별 필드 오류 수집을 본다)
 
     const issues = collectStepIssues(0, form);
     const assetIssues = issues.filter((it) => it.assetIndex != null);

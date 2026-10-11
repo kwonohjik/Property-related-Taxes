@@ -106,8 +106,10 @@ test.describe("검증 오류 → 입력칸 이동", () => {
   });
 
   test("D-5 자산 2의 오류 클릭 → 접혀 있던 자산 2 카드를 펼치고 그 입력칸", async ({ page }) => {
+    // 자산 2는 토지다 — 둘 다 주택이면 같은 날 함께양도 차단(결정 #40 · 소득세법 시행령 §154⑨)이 카드 2의 오류 배너를 차지해
+    //   이 테스트가 보는 「소재지」 오류가 배너에 오르지 않는다.
     await seedAndOpen(page, {
-      assets: [makeDefaultAsset(1), makeDefaultAsset(2)],
+      assets: [makeDefaultAsset(1), { ...makeDefaultAsset(2), assetKind: "land" }],
       transferDate: "2024-03-01",
       contractTotalPrice: "1000000000",
     });

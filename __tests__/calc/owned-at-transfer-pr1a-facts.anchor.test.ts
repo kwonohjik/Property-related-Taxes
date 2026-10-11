@@ -136,12 +136,12 @@ describe("L leaf — 양도일 현재 보유 행만 도출·변환한다(경계:
       hrow({ id: "r", acquisitionDate: acq, countExclusion: { kind: "reduction", ...rural } } as Partial<HouseEntry>),
       hrow({ id: "s", acquisitionDate: acq, countExclusion: { kind: "special", ...special } } as Partial<HouseEntry>),
     ];
-    expect(rowCountExclusionReductions(rows("2025-06-01"), T)).toHaveLength(1);
-    expect(rowSpecialHouseExclusions(rows("2025-06-01"), T)).toHaveLength(1);
-    expect(rowCountExclusionReductions(rows(T), T)).toHaveLength(0);
-    expect(rowSpecialHouseExclusions(rows(T), T)).toHaveLength(0);
-    expect(rowCountExclusionReductions(rows("2025-06-03"), T)).toHaveLength(0);
-    expect(rowSpecialHouseExclusions(rows(T), undefined)).toHaveLength(1);
+    expect(rowCountExclusionReductions(rows("2025-06-01"), T, "housing")).toHaveLength(1);
+    expect(rowSpecialHouseExclusions(rows("2025-06-01"), T, "housing")).toHaveLength(1);
+    expect(rowCountExclusionReductions(rows(T), T, "housing")).toHaveLength(0);
+    expect(rowSpecialHouseExclusions(rows(T), T, "housing")).toHaveLength(0);
+    expect(rowCountExclusionReductions(rows("2025-06-03"), T, "housing")).toHaveLength(0);
+    expect(rowSpecialHouseExclusions(rows(T), undefined, "housing")).toHaveLength(1);
   });
   it("ruralCountExcludedHouseIds — §155① 신규 주택 후보에서 빼는 ⑦ 행도 양도일 현재 보유 행만", () => {
     const form = (acq: string) => ({

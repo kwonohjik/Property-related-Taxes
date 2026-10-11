@@ -46,7 +46,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
 import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
-import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
+import { isOwnedAtTransfer, sameDayOrderApplies } from "@/lib/calc/household-house-count";
+import { isSameDayFirstTransferred, isSameDayOrderUndecided } from "@/lib/calc/same-day-transfer-order";
+import { sameDayOrderNotice } from "@/lib/calc/same-day-transfer-notice";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { GracePeriodSection } from "./GracePeriodSection";
 
@@ -120,6 +122,8 @@ interface RowProps {
   countExclusionApplies?: (house: HouseEntry) => boolean;
   /** 양도일 — 그날 이후(같은 날 포함) 취득한 행에 「주택 수 제외」 배지를 단다(D2 · `isOwnedAtTransfer`). */
   transferDate: string | undefined;
+  /** §154⑨ 같은 날 양도 순서가 닿는 양도 대상인가(`sameDayOrderApplies`) — 아니면 남은 선택값의 배지를 달지 않는다(주택 수에서도 빼지 않는다). */
+  sameDayApplies: boolean;
   /** 판정 메뉴 — 중과 전용 배지를 달지 않는다. */
   judgmentMenu: boolean;
 }
@@ -133,7 +137,7 @@ function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
   return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, judgmentMenu }: RowProps) {
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, sameDayApplies, judgmentMenu }: RowProps) {
   const badges = resolveHouseBadges(house, judgmentMenu);
   const exclusionLabel =
     countExclusionEnabled && (countExclusionApplies?.(house) ?? true) ? countExclusionBadgeLabel(house) : undefined;
@@ -160,6 +164,18 @@ function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclus
           {!isOwnedAtTransfer(house.acquisitionDate, transferDate) && (
             <span className={`${CHIP_BASE} ${CHIP_AMBER}`} data-testid={`house-after-transfer-badge-${house.id}`}>
               양도일(같은 날 포함) 이후 취득 — 주택 수 제외
+            </span>
+          )}
+          {sameDayApplies && isSameDayFirstTransferred(house) && (
+            <span className={`${CHIP_BASE} ${CHIP_EMERALD}`} data-testid={`house-same-day-badge-${house.id}`}>
+              같은 날 먼저 양도 선택(§154⑨) — 주택 수 제외
+            </span>
+          )}
+          {sameDayApplies && house.soldSameDay === true && !isSameDayFirstTransferred(house) && (
+            <span className={`${CHIP_BASE} ${CHIP_AMBER}`} data-testid={`house-same-day-badge-${house.id}`}>
+              {isSameDayOrderUndecided(house)
+                ? "같은 날 양도 — 순서 미선택(주택 수 산입)"
+                : "같은 날 양도 — 나중에 양도 선택(주택 수 산입)"}
             </span>
           )}
           {exclusionLabel && (
@@ -412,19 +428,31 @@ export function HousesListSection({
     [form.assets, form.householdHousingCount, form.houses, form.presaleRights, form.transferDate],
   );
 
+  /**
+   * §154⑨ 같은 날 양도 — 순서를 고르지 않았을 때의 고지(파생·표시 전용). 결론을 가를 수 있을 때(세대 주택 수 2채 이상)만 낸다.
+   * 술어·문구는 `same-day-transfer-notice.ts` 한 곳이다 — 결과 화면도 같은 함수를 읽는다.
+   */
+  const sameDayNotice = useMemo(
+    () =>
+      sameDayOrderNotice({
+        primaryKind: form.assets?.[0]?.assetKind,
+        houses: form.houses,
+        transferDate: form.transferDate,
+      }),
+    [form.assets, form.houses, form.transferDate],
+  );
+
   return (
     <div className="space-y-3">
       {/* ── 양도 주택 소재지 ── */}
       <div className="rounded-lg border border-border/80 bg-muted/20 px-4 py-4 space-y-3">
         <p className="text-sm font-medium">
-          다른 보유 주택 목록
-          {/* 판정 메뉴는 중과를 판정하지 않고, 이 명부가 판정 주택 수의 유일한 출처다 — 「선택」이 아니다(S14a-12) */}
-          {!judgmentMenu && (
-            <>
-              {" "}
-              <span className="text-xs text-muted-foreground font-normal">(정밀 중과세 판정용, 선택)</span>
-            </>
-          )}
+          다른 보유 주택 목록{" "}
+          {/*
+            「선택」이 아니다 — 이 명부가 세대 주택 수의 정본이고 ⑧이 행을 넣거나 「없음」을 확인하라고 요구한다(결정 #41).
+            주택 수는 건마다 **양도일 현재**로 센다(소득세법 시행령 §154①). 계산기·판정 메뉴 2단계가 같은 머리글을 쓴다.
+          */}
+          <span className="text-xs text-muted-foreground font-normal">(양도일 현재 보유 기준)</span>
         </p>
 
         {/* 양도 주택 소재지 — 양도 물건 주소에서 자동 판정 (읽기 전용) */}
@@ -457,7 +485,8 @@ export function HousesListSection({
 
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">
-            현재 양도하는 주택 외 세대 구성원이 보유한 주택을 입력하세요.
+            양도일 현재 양도하는 주택 외에 세대 구성원이 보유한 주택을 입력하세요. 이미 양도한 주택은 넣지 않고,
+            같은 날 양도하는 다른 주택은 넣은 뒤 편집에서 양도 순서를 고릅니다.
           </p>
           <button
             type="button"
@@ -500,11 +529,20 @@ export function HousesListSection({
                     countExclusionEnabled={countExclusionEnabled}
                     countExclusionApplies={countExclusionApplies}
                     transferDate={form.transferDate}
+                    sameDayApplies={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
                     judgmentMenu={judgmentMenu}
                   />
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {sameDayNotice && (
+          <div data-testid="same-day-order-notice">
+            <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
+              <p className="text-xs leading-relaxed">{sameDayNotice}</p>
+            </ToneCard>
           </div>
         )}
 
@@ -679,6 +717,8 @@ export function HousesListSection({
               // P4 양론 C1 「동일세대원에게 증여」는 판정 메뉴(쟁점 카드가 있는 화면)에서만 묻는다.
               householdGiftEnabled={hideSellingHouseExclusion}
               judgmentMenu={judgmentMenu}
+              // §154⑨ 같은 날 양도 순서는 §89①3호 주택 양도의 규정이다 — 입주권(§89①4호) 양도에는 열지 않는다.
+              sameDayEnabled={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
             />
           )}
           <div className="flex justify-end pt-2 border-t border-border">

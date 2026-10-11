@@ -10,7 +10,7 @@
  *   2. 주택 수 위젯이 없다 — 명부에서 파생한다(G-1).
  *   3. 이력에 남는 것은 **세액이 아니라 판정**이다(P4-2b-3).
  */
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
@@ -32,6 +32,7 @@ import {
   validateStepByIndex,
 } from "@/lib/calc/one-house-exemption-validate";
 import { ValidationWarnings } from "@/components/calc/shared/ValidationWarnings";
+import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 
 /**
  * 🔑 **파일명 ≠ 화면 순서다** — `Step3`(양도 대상)이 2번째, `Step2`(보유 주택)가 3번째 화면이다.
@@ -53,15 +54,31 @@ export default function OneHouseJudgmentCalculator() {
   // atomic selector (무한 루프 방지 — 계산기 store와 같은 규약)
   const currentStep = useOneHouseJudgmentStore((s) => s.currentStep);
   const formData = useOneHouseJudgmentStore((s) => s.formData);
-  const result = useOneHouseJudgmentStore((s) => s.result);
+  const storeResult = useOneHouseJudgmentStore((s) => s.result);
+  const resultClientId = useOneHouseJudgmentStore((s) => s.resultClientId);
   const error = useOneHouseJudgmentStore((s) => s.error);
   const isLoading = useOneHouseJudgmentStore((s) => s.isLoading);
 
-  const { setStep, updateFormData, setResult, setError, setLoading, reset } =
-    useOneHouseJudgmentStore();
+  const { setStep, updateFormData, setResult, setError, setLoading, reset } = useOneHouseJudgmentStore();
 
   const activeClientId = useProfessionalStore((s) => s.activeClientId);
   const router = useRouter();
+
+  /**
+   * 🔴 **다른 의뢰인이 만든 판정 결과는 쓰지 않는다**(S13-3 · 결정 #39 B) — 결과는 판정을 요청한 시점의 의뢰인(`resultClientId`)과 묶여 있고,
+   *    지금 의뢰인과 다르면 표시·자동저장·세액 계산 전달에 쓰지 않는다. 의뢰인을 바꾸는 순간 store가 결과를 비우고 1단계로 보내는 것이
+   *    정본 경로다(`one-house-judgment-store.ts`의 구독). 여기는 그 구독이 놓친 경로(다른 의뢰인 몫의 결과가 그대로 남은 경우)를 막는
+   *    **표시 단계 방어**다 — `useEffect`로 store에 쓰지 않고 렌더에서 파생한다.
+   */
+  const result = storeResult !== null && resultClientId !== activeClientId ? null : storeResult;
+
+  /**
+   * 🔴 **이 화면을 열기 전부터 있던 결과는 자동저장하지 않는다**(결정 #39 하위 2 가) — 홈 카드(`?new=1`) 재진입은 같은 커밋에서
+   *    reset과 저장 효과가 함께 돌아 **옛 결과로 저장**했고(이력에서 지운 판정이 되살아남), 다른 메뉴의 링크로 돌아오는 경로도
+   *    같다. 원인이 같은 「화면을 열 때의 저장」이라 한 장치로 막는다: 마운트 시점의 결과 참조를 기억해 두고, 그것과 다른
+   *    (= 이 화면에서 새로 판정한) 결과만 저장한다.
+   */
+  const [resultAtMount] = useState(() => useOneHouseJudgmentStore.getState().result);
 
   useResetOnNewParam(reset);
 
@@ -147,18 +164,25 @@ export default function OneHouseJudgmentCalculator() {
      *    표시·자동저장됐다(재진입해도 재판정이 없었다). 요청 시점의 폼 참조(`formData`)와 지금 store의 폼이 다르면 버린다 —
      *    `updateFormData`·`reset`은 항상 새 폼 객체를 만들므로 참조 비교로 충분하다. 로딩은 버려도 푼다(`Step4`가 새 폼으로 재판정).
      */
-    const isCurrent = () => useOneHouseJudgmentStore.getState().formData === formData;
+    /*
+      🔴 응답은 그 요청을 **낸 의뢰인**에게만 귀속된다(S13-3) — 판정 중에 의뢰인을 바꾸면 늦게 도착한 응답이 새 의뢰인의 화면·이력에
+         들어가면 안 된다. 요청 시점의 의뢰인을 잡아 두고, 응답 시점에 지금 의뢰인과 같을 때만 쓴다. 결과에도 이 값을 묶어 둔다.
+    */
+    const requestClientId = activeClientId;
+    const isCurrent = () =>
+      useOneHouseJudgmentStore.getState().formData === formData &&
+      useProfessionalStore.getState().activeClientId === requestClientId;
     setLoading(true);
     setError(null);
     try {
       const res = await callOneHouseExemptionAPI(formData);
-      if (isCurrent()) setResult(res);
+      if (isCurrent()) setResult(res, requestClientId);
     } catch (e) {
       if (isCurrent()) setError(e instanceof Error ? e.message : "판정에 실패했습니다.");
     } finally {
       setLoading(false);
     }
-  }, [formData, setLoading, setError, setResult, blockOnFirstInvalidStep]);
+  }, [formData, activeClientId, setLoading, setError, setResult, blockOnFirstInvalidStep]);
 
   /**
    * 🔑 확인 다이얼로그를 여기서 만들지 않는다 — `ResetButton`이 `ConfirmDialog`를 **내장**한다.
@@ -209,7 +233,9 @@ export default function OneHouseJudgmentCalculator() {
    *    「이 세액은 어느 판정에서 왔는가」를 되짚을 수 있다. 저장 전(입력 중)에는 `null`이고,
    *    그때는 출처 없이 사실만 넘어간다 — 사실이 넘어가는 것 자체는 막지 않는다.
    */
-  const resultData = isResult ? (result as unknown as Record<string, unknown>) : null;
+  // 이 화면에서 새로 만든 결과만 저장 대상이다(`resultAtMount` 주석) — 열기 전부터 있던 결과는 null로 건너뛴다.
+  const resultData =
+    isResult && result !== resultAtMount ? (result as unknown as Record<string, unknown>) : null;
   const { savedId: lastSavedId, savedFor } = useAutoSaveCalculation({
     taxType: "one_house_exemption",
     inputData: formData as unknown as Record<string, unknown>,
@@ -294,6 +320,8 @@ export default function OneHouseJudgmentCalculator() {
             {currentStep === 0 && <Step1 form={formData} onChange={updateFormData} />}
             {currentStep === 1 && <Step3 form={formData} onChange={updateFormData} />}
             {currentStep === 2 && <Step2 form={formData} onChange={updateFormData} />}
+            {/* §154⑨ 같은 날 양도 순서 선택으로 주택 수에서 뺀 주택 — 판정의 근거 사실이다(결정 #40). */}
+            {currentStep === RESULT_STEP && result && <SameDayOrderLine form={formData} />}
             {currentStep === RESULT_STEP && (
               <Step4
                 result={result}

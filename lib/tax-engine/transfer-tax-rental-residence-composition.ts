@@ -194,9 +194,9 @@ export function resolveRentalResidenceComposition(
         status: "exceeded",
         otherHouseCount: 1,
         reason:
-          `조특법 소유주택 제외 선언이 세대 보유 주택 목록의 어느 행인지 연결되지 않아 남는 주택을 특정할 수 없습니다 — ` +
+          `조특법 소유주택 제외 선언이 다른 보유 주택 목록의 어느 행인지 연결되지 않아 남는 주택을 특정할 수 없습니다 — ` +
           `${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}을 적용하지 않았습니다`,
-        confirmNotice: `조특법 소유주택 제외 선언을 세대 보유 주택 목록의 행에 연결하면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 적용 여부를 판정합니다(확인 필요)`,
+        confirmNotice: `조특법 소유주택 제외 선언을 다른 보유 주택 목록의 행에 연결하면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 적용 여부를 판정합니다(확인 필요)`,
       };
     }
     favorable = judgeOtherHouse(input, parsedRates, ex, candidates[0]);
@@ -342,7 +342,7 @@ function resolveWithoutRoster(
 /** 명부 없음 + 그 밖의 주택 1채 — 「확인 필요」 고지 (결론을 가를 때만 싣는다). */
 export const RENTAL_RESIDENCE_NO_ROSTER_CONFIRM_NOTICE =
   `거주주택·장기임대주택 외 주택 1채가 일시적 2주택(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_1})·상속주택` +
-  `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_2})으로 주택 수에서 빠지면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}이 적용될 수 있습니다 — 세대 보유 주택 목록에 그 주택을 입력하면 ` +
+  `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_2})으로 주택 수에서 빠지면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}이 적용될 수 있습니다 — 다른 보유 주택 목록에 그 주택을 입력하면 ` +
   `판정합니다(확인 필요)`;
 
 /** §155⑦1호·2호 농어촌주택과의 겹침 — 「확인 필요」 고지 (결론을 가를 때만 싣는다). */
