@@ -293,6 +293,8 @@ test.describe("§95⑤ × 이월과세 취득 — C-21 폐지", () => {
       giftDateValuation: "700000000",
       giftTaxAmount: "0",
       donorRelation: "spouse",
+      // 결정 #33·#34 필수 사실 — 증여자와 계속 같은 세대인가. 「아니오」는 종전 계산(세대 보유기간 통산 없음)과 같아 이 테스트의 축(C-21)을 바꾸지 않는다.
+      donorSameHousehold: "no",
     },
   };
 

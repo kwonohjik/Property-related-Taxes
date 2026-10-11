@@ -48,7 +48,7 @@ import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
-import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
+import { primaryAcquisitionDateOf, carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowApplies, countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
@@ -105,10 +105,16 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
    */
   const successorCompletionActive =
     !conversionActive && !!primary && redevAptHoldingStartDate(primary) !== primary.acquisitionDate;
-  // 엔진 `resolveResidenceJudgmentDate`와 같은 순서(용도변경 → 동일세대 상속 보유 개시 → 승계 준공일 → 취득일) — ⑧·⑤ 카드와 같은 leaf.
+  // 엔진 `resolveResidenceJudgmentDate`와 같은 순서(용도변경 → 동일세대 상속 보유 개시 → 이월과세 증여일/세대 보유 시작일 → 승계 준공일 → 취득일) — ⑧·⑤ 카드와 같은 leaf.
   const residenceJudgmentDate = primary ? calcResidenceJudgmentDate(primary) : primaryAcquisitionDate;
+  // 이월과세 자산 카드에는 취득일 칸이 없어(결정 #33) 기준일이 취득일과 달라 보이지만 동일세대 상속 보유 개시일이 아니다.
+  const carryoverDateActive = !!primary && carryoverResidenceJudgmentDate(primary) !== undefined;
   const sameHouseholdStartActive =
-    !conversionActive && !successorCompletionActive && !!primary && residenceJudgmentDate !== primary.acquisitionDate;
+    !conversionActive &&
+    !successorCompletionActive &&
+    !carryoverDateActive &&
+    !!primary &&
+    residenceJudgmentDate !== primary.acquisitionDate;
   /** 거주요건 맥락에서 기준일을 부르는 이름 — 라벨·안내 문구가 공유한다. */
   const judgmentDateLabel = conversionActive
     ? "용도변경일"

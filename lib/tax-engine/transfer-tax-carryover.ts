@@ -18,6 +18,7 @@ import {
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
 import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
+import { carryoverGiftHouseholdBasis, resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -224,8 +225,10 @@ export function calcCarryoverScenarios(
           ),
         }
       : {}),
-    // §154① 거주요건 경과규정 판정은 수증자 실제 취득일 기준 (이월과세 의제는 필요경비 한정 §97의2①)
-    residenceTransitionAcquisitionDate: ct.giftRegistryDate,
+    // §154① 「취득 당시」(조정대상지역 판정 · 2017.8.3. 경과규정)는 수증자 취득일(증여일) 또는, 증여자와 계속 같은 세대로 확인되면
+    // 세대 보유 시작일이다 — 한 판정 안에 날짜가 둘이 되지 않도록 한 leaf가 둘을 함께 정한다(결정 #33 G4-1).
+    // 보유 기산은 §95④ 단서로 이미 증여자 취득일이라 건드리지 않는다.
+    giftHouseholdBasis: carryoverGiftHouseholdBasis(ct, true),
     // §99의4·§98의9 취득순서 판정도 같은 이유로 세대 기준 보유 개시일을 따로 싣는다 (D4-05)
     houseCountExclusionAcquisitionDate: resolveHouseCountExclusionAcqDate(rawInput, ct),
     capitalExpenditure: effectiveCapex,           // 합산된 capex (directSide swap용)
@@ -619,6 +622,8 @@ function buildInputB(
     acquisitionCause: "purchase",
     // §99의4·§98의9 취득순서 판정 축 — A/B 어느 쪽이 채택되든 세대 기준은 같다 (D4-05)
     houseCountExclusionAcquisitionDate: resolveHouseCountExclusionAcqDate(rawInput, ct),
+    // §154① 보유 통산·「취득 당시」 — 증여자와 계속 같은 세대로 확인되면 세대 보유 시작일부터(결정 #34 G4-2). 장특·세율 보유기간은 증여일 그대로.
+    giftHouseholdBasis: carryoverGiftHouseholdBasis(ct, false),
     // preHousingDisclosure: B에서는 환산 사용 안 함 — 명시적으로 제거
     preHousingDisclosure: undefined,
   };
@@ -631,17 +636,15 @@ function buildInputB(
  * 않는다(§97의2①; 보유기간 승계는 §95④·§104②의 별도 명문). 시나리오 A는 `acquisitionDate`를
  * 증여자 취득일로 교체하므로 그대로 두면 취득순서 요건이 부당하게 통과한다.
  *
- * **배우자 증여는 예외**다. 소득세법 §88 6호가 1세대를 「거주자 및 **그 배우자**가 그들과
- * 같은 주소 또는 거소에서 생계를 같이 하는 자와 함께 구성하는 가족단위」로 정의해 배우자를
- * 세대 구성의 축으로 두므로, 배우자로부터의 증여는 세대가 바뀌지 않아 세대의 보유 개시일이
- * 증여자 취득일이다. 직계존비속은 동일세대일 수도 별도세대일 수도 있고 그 사실이 엔진에
- * 들어오지 않으므로 원칙(양도자 취득일)을 따른다.
+ * 증여자와 증여일부터 양도일까지 **계속 같은 세대**로 확인되면(배우자는 소득세법 §88 6호 기준 혼인 유지) 세대 보유 시작일이다.
+ * 종전에는 배우자 증여면 사실 확인 없이 증여자 취득일을 썼으나 양도 전에 이혼한 배우자까지 세대로 보게 되어, 입력으로 확인될 때만
+ * 쓰도록 바꿨다(결정 #33). 미확인은 양도자 본인의 취득일이다.
  */
-function resolveHouseCountExclusionAcqDate(
-  rawInput: TransferTaxInput,
+export function resolveHouseCountExclusionAcqDate(
+  rawInput: Pick<TransferTaxInput, "acquisitionDate">,
   ct: NonNullable<TransferTaxInput["carryoverTaxation"]>,
 ): Date {
-  return ct.donorRelation === "spouse" ? ct.donorAcquisitionDate : rawInput.acquisitionDate;
+  return resolveHouseCountExclusionDate(rawInput.acquisitionDate, carryoverGiftHouseholdBasis(ct, false));
 }
 
 /** 적용배제 시 Scenario A 빈 객체 (결과 카드 표시 불필요) */

@@ -34,7 +34,8 @@ import { applyFamilyBusinessCgtStep } from "./transfer-tax-family-business";
 import { resolveAcquisitionOverride } from "./transfer-tax-acquisition-override";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
-import { calcCarryoverScenarios } from "./transfer-tax-carryover";
+import { calcCarryoverScenarios, resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover";
+import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/income-deduction-router";
@@ -224,21 +225,17 @@ export function runPreCalculationSteps(
    * 취득시기를 의제하지 않으므로, 시나리오 A의 `workingInput.acquisitionDate`(증여자 취득일)로
    * 판정하면 안 된다 — STEP 0.45가 같은 이유로 이미 원본 `input`을 쓴다.
    *
-   * 다만 **배우자 증여는 예외**다. 소득세법 §88 6호는 1세대를 「거주자 및 그 배우자가 그들과
-   * 같은 주소 또는 거소에서 생계를 같이 하는 자와 함께 구성하는 가족단위」로 정의해 배우자를
-   * 세대 구성의 축으로 둔다 ⇒ 배우자로부터의 증여는 세대가 바뀌지 않아 세대의 보유 개시일이
-   * 증여자 취득일이다. 직계존비속은 동일세대일 수도 별도세대일 수도 있고 엔진에 그 사실이
-   * 들어오지 않으므로, 양도자 본인의 취득일을 기준으로 둔다(동일세대였다는 예외 사실은
-   * 납세자가 입증할 영역).
+   * 다만 증여자와 증여일부터 양도일까지 **계속 같은 세대**로 확인되면(배우자는 소득세법 §88 6호 기준 혼인 유지) 세대 보유 시작일이다 —
+   * `one-house/gift-household-basis.ts`의 한 leaf가 정한다(결정 #33). 미확인은 양도자 본인의 취득일이다.
    */
   const hceGeneralHouseAcquisitionDate =
     input.houseCountExclusionAcquisitionDate ??
     // #12 — 토지만 출자한 원조합원 신축주택의 취득시기는 사용승인서 교부일이다(영 §162①4호). 비과세 판정 번역과 같은 날짜로 맞춘다.
     (isLandContributedOriginalApt(input)
       ? input.redevelopment!.completionDate!
-      : input.carryoverTaxation && input.carryoverTaxation.donorRelation === "spouse"
-        ? input.carryoverTaxation.donorAcquisitionDate
-        : input.acquisitionDate);
+      : input.carryoverTaxation
+        ? resolveHouseCountExclusionAcqDate(input, input.carryoverTaxation)
+        : resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis));
   return {
     parsedRates,
     input,

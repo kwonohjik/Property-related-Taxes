@@ -15,7 +15,7 @@
 import { format } from "date-fns";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
 import { hwaseongSurchargeWindowNotice } from "./hwaseong-announcement-window";
-import { resolveResidenceJudgmentDate, type ResidenceReqInput } from "../transfer-tax-exemption-holding";
+import { resolveResidenceJudgmentDates, type ResidenceReqInput } from "../transfer-tax-exemption-holding";
 import type { TransferTaxInput } from "../types/transfer.types";
 
 export const DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX = "regulated-district-undeclared:";
@@ -102,7 +102,7 @@ export function designatedDistrictUndeclared(
     "양도 주택",
     input.regionCode,
     input.regionInDesignatedDistrict,
-    [resolveResidenceJudgmentDate(input), input.transferDate, tt?.newAcquisitionDate],
+    [...resolveResidenceJudgmentDates(input), input.transferDate, tt?.newAcquisitionDate],
     relevance?.selling,
   );
   // 합가 D8 상대 쪽 짝(B → C)의 종전 주택(명부 행) — 양도 주택이 아니라 이 행의 소재로 조정 여부를 판정한다(S15-2).

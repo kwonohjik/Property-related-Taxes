@@ -88,6 +88,8 @@ function form(o: { cause: "carryover_gift" | "gift"; acq: string; roster: boolea
             giftDateValuation: "700000000",
             giftTaxAmount: "0",
             donorRelation: "lineal",
+            // 결정 #33·#34 필수 사실 질문 — 이 파일의 관심사는 취득일 fallback이라 중립값 「아니오」(별도세대).
+            donorSameHousehold: "no" as const,
           },
         }
       : {}),

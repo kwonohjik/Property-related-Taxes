@@ -14,6 +14,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
+import { carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import {
@@ -37,6 +38,11 @@ export function effectiveWasRegulatedAtAcquisition(o: {
   judgmentDate?: string;
   /** 숨은 토글 저장값 — 주소 판정이 없을 때만 쓴다 */
   stored?: boolean;
+  /**
+   * 증여받은 주택의 세대 사실(결정 #38) — 있으면 엔진이 `gift-household-basis.ts`로 후보일·결합 방식을 정한다(같은 세대 확인 시
+   * 세대 보유 시작일과 증여일 둘 다 지정 중일 때만). 이때 `judgmentDate`는 증여일(취득일)이다.
+   */
+  giftHouseholdBasis?: ResidenceReqInput["giftHouseholdBasis"];
 }): boolean {
   const date = toOptionalDate(o.judgmentDate);
   if (!o.regionCode || !date) return o.stored === true;
@@ -44,6 +50,7 @@ export function effectiveWasRegulatedAtAcquisition(o: {
     regionCode: o.regionCode,
     regionInDesignatedDistrict: o.regionInDesignatedDistrict,
     acquisitionDate: date,
+    giftHouseholdBasis: o.giftHouseholdBasis,
   } as ResidenceReqInput);
 }
 
@@ -67,7 +74,7 @@ export function calcEffectiveWasRegulatedAtAcquisition(
 
 /**
  * 「주택 취득 당시」 기준일 — 엔진 `resolveResidenceJudgmentDate`와 같은 순서다: 용도변경 주거용 사용 개시일 → §154⑧3호 동일세대 상속의
- * 동일세대 보유 개시일 → 승계조합원 완공APT 준공일 → 취득일. ⑤ 자동 판정 카드·⑧·⑤ §155⑳ 카드가 같은 날짜를 본다
+ * 동일세대 보유 개시일 → 이월과세 증여일/세대 보유 시작일 → 승계조합원 완공APT 준공일 → 취득일. ⑤ 자동 판정 카드·⑧·⑤ §155⑳ 카드가 같은 날짜를 본다
  * (동일세대 상속을 빠뜨리면 카드가 엔진과 다른 값을 「자동」이라며 보였다).
  */
 export function calcResidenceJudgmentDate(asset: AssetForm): string {
@@ -83,7 +90,9 @@ export function calcResidenceJudgmentDate(asset: AssetForm): string {
           acquisitionDate: acquisition,
         })
       : undefined;
-  return sameHouseholdStart ? asset.decedentCohabitationHoldingStartDate : redevAptHoldingStartDate(asset);
+  if (sameHouseholdStart) return asset.decedentCohabitationHoldingStartDate;
+  // 이월과세 주택은 자산 카드에 취득일 칸이 없다 — 증여일/세대 보유 시작일(결정 #33)이 기준일이다.
+  return carryoverResidenceJudgmentDate(asset) ?? redevAptHoldingStartDate(asset);
 }
 
 /**

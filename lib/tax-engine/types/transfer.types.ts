@@ -8,6 +8,7 @@
  * 소득세법 §92~§118 기반.
  */
 
+import type { GiftHouseholdBasis } from "../one-house/gift-household-basis";
 import type {
   HouseInfo,
   PresaleRight,
@@ -668,6 +669,12 @@ export interface TransferTaxInput {
    * 미지정 시 `acquisitionDate`로 폴백한다(비-이월과세 경로는 동일값).
    */
   houseCountExclusionAcquisitionDate?: Date;
+  /**
+   * 증여받은 주택의 「증여자와 계속 같은 세대」 사실 — §154① 보유기간 통산·「취득 당시」 기준일 (리뷰 결정 #33·#34·#38).
+   * 증여받은 주택이 아니면 undefined. 날짜 선택은 `one-house/gift-household-basis.ts` 한 곳이 한다.
+   * 장기보유특별공제·§104② 세율 보유기간에는 쓰지 않는다.
+   */
+  giftHouseholdBasis?: GiftHouseholdBasis;
   /** 조세특례 감면 목록 */
   reductions: TransferReduction[];
   /**

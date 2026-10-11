@@ -152,6 +152,9 @@ test.describe("부담부증여 × 이월과세(증여) — 지원 개시", () =>
         donorCapitalExpenditure: "0",
         giftDateValuation: "600000000",
         exclusionDeclared: {},
+        // 결정 #33·#34 필수 사실 — 주택이면 증여자와 계속 같은 세대인지 묻는다. 「아니오」는 종전 계산(세대 보유기간 통산 없음)과 같아
+        //   이월과세 비교 카드(이 테스트의 관측 대상)가 그대로 뜬다.
+        donorSameHousehold: "no",
       },
     });
 

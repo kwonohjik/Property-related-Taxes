@@ -586,6 +586,7 @@ export function buildCompanionEngineInputs(
             c.carryoverTaxation.donorAcquisitionDate,
             "companionAssets[].carryoverTaxation.donorAcquisitionDate",
           ),
+          donorHouseholdHoldingStartDate: toOptionalDate(c.carryoverTaxation.donorHouseholdHoldingStartDate),
         }
       : undefined,
     // ⑭ 감면 일자 변환은 **단건과 같은 정본 매퍼**를 쓴다(`route-reductions-mapper.ts`).
