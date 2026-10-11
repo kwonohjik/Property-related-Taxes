@@ -133,6 +133,7 @@ const MODE_ORDER: SplitAcqMode[] = ["actual", "estimated", "appraisal", "salesCa
 /**
  * 집계 자산들의 취득가액 산정방식 집합 — **응답에 실재하는 echo 세 종**에서 파생한다(우선순위):
  *  1. `p.splitDetail` — 분리 자산의 소유 파트 `acqMode`
+ *  1-1. 겸용 컴패니언 파트 카드의 `displayAcquisitionMode`(겸용 엔진이 정한 산정방식 — 카드는 실가 item이라 다른 echo가 없다)
  *  2. 일반건물 `assetCards[]` 중 이 자산의 카드 `acquisitionMode`(구 이력은 `usedEstimatedAcquisition`)
  *  3. `p.filingDisplay.estimatedBase` 실재 + swap 아님 — 평범한 환산 자산(`FilingFormTableAggregateHelpers`의 규칙과 같다)
  *  4. 그 밖 → 실거래가
@@ -146,6 +147,11 @@ export function aggregateAcqModes(
   for (const p of properties) {
     if (p.splitDetail) {
       for (const part of summarizeSplitGain(p.splitDetail).parts) modes.add(part.mode ?? "actual");
+      continue;
+    }
+    // 겸용 컴패니언 파트 카드 — 겸용 엔진이 정한 산정방식 echo(카드 자체는 환산 플래그를 끈 실가 item이다, #10).
+    if (p.displayAcquisitionMode) {
+      modes.add(p.displayAcquisitionMode);
       continue;
     }
     const card = gb?.assetCards.find(

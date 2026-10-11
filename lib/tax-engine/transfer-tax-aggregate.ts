@@ -515,6 +515,7 @@ function computeAggregateOnce(
       surchargeRate: r.result.surchargeRate,
       refCalculatedTax,
       refCalculatedTaxNote: partAssetTax?.note,
+      displayAcquisitionMode: r.item.displayAcquisitionMode,
       // [echo] 신고서 표가 단건과 같은 분기를 하도록 파생 입력을 그대로 실어 보낸다(세액 불변).
       filingDisplay: {
         estimatedBase: r.result.estimatedBase,

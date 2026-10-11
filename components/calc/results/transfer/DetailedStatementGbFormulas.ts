@@ -19,6 +19,7 @@ import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
+import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 
 /**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
@@ -271,9 +272,11 @@ function buildGbAcquisitionFormulaCore(
     if (capExShift > 0) {
       return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(capExShift)} = ${fmt(p.acquisitionPrice + capExShift)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
     }
+    // 겸용 컴패니언 파트 카드 — 겸용 엔진이 정한 산정방식을 밝힌다(카드 자체는 실가 item이라 다른 echo가 없다, #10).
+    const modeTag = p.displayAcquisitionMode ? `(${splitAcqModeLabel(p.displayAcquisitionMode)})` : "";
     return p.depreciationAmount
-      ? `자산별 취득가액 = ${fmt(p.acquisitionPrice)} (감가상각비 ${fmt(p.depreciationAmount)} 공제 후 — 소득세법 §97③)`
-      : `자산별 취득가액 = ${fmt(p.acquisitionPrice)}`;
+      ? `자산별 취득가액${modeTag} = ${fmt(p.acquisitionPrice)} (감가상각비 ${fmt(p.depreciationAmount)} 공제 후 — 소득세법 §97③)`
+      : `자산별 취득가액${modeTag} = ${fmt(p.acquisitionPrice)}`;
   }
 
   // 자본적지출은 실가 모드에서 필요경비 칸에 머문다. 예외 축(swap·이월과세 A)만 취득가액에 합산 표시.
@@ -455,6 +458,10 @@ export function buildGbExpenseFormula(
       return transferExp > 0
         ? `자본적지출 ${fmt(capEx)} + 양도비 ${fmt(transferExp)} = ${fmt(p.necessaryExpense)} (§97① 2호·3호)`
         : `자본적지출 ${fmt(capEx)} = ${fmt(p.necessaryExpense)} (§97① 2호)`;
+    }
+    // 겸용 컴패니언 파트 카드의 비-실가 파트 — 필요경비는 개산공제(§163⑥, 공통 실비 안분분 포함)다. 종전엔 「양도비」로 적었다(#10).
+    if (p.displayAcquisitionMode && p.displayAcquisitionMode !== "actual") {
+      return `개산공제 등 필요경비 = ${fmt(displayExp)} (${splitAcqModeLabel(p.displayAcquisitionMode)} 파트 — 시행령 §163⑥)`;
     }
     return `자산별 양도비 합계 = ${fmt(displayExp)} (§97① 나목)`;
   }

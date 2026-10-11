@@ -370,6 +370,14 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
               (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
             );
             const propNew993Reducible = (np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0;
+            // 영 §163⑨ 단서 1호·2호 채택값 각주 — 화면 합산 신고서(`FilingFormTableAggregateHelpers` acqNotes)와 같은 leaf·문구(#11).
+            const propSplit = p.splitDetail as SplitGainResult | undefined;
+            const propAcqBasisNotes = propSplit
+              ? summarizeSplitGain(propSplit).parts.flatMap((part) => {
+                  const basis = splitAcqBasisView(part);
+                  return basis && !part.swapApplied ? [`${splitAcqBasisFormula(basis)} (${basis.legalBasis})`] : [];
+                })
+              : [];
             // D-14 — 세액감면분은 소득금액에서 빼지 않는다(§90①은 세액만 감면)
             const propIncomeAfter = Math.max(0, propIncome - propNew993Reducible);
             return (
@@ -381,6 +389,10 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
                   <View style={s.table}>
                     {num(p.transferPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>양도가액</Text><Text style={s.val}>{fmt(p.transferPrice)}</Text></View>)}
                     {num(p.acquisitionPrice) !== undefined && (<View style={s.row}><Text style={s.lbl}>취득가액</Text><Text style={s.val}>{fmt(p.acquisitionPrice)}</Text></View>)}
+                    {propAcqBasisNotes.map((note, ni) => (<Text key={ni} style={{ fontSize: 7, color: C.muted, paddingLeft: 8, marginBottom: 2 }}>※ {note}</Text>))}
+                    {/* 필요경비 — 엔진 자산별 표시 echo(`PerPropertyBreakdown.necessaryExpense`, 양도가액 − 취득가액 − 양도차익과 같은 축).
+                        종전엔 빠져 이 표가 「양도가액 − 취득가액 ≠ 양도차익」이었다(2026-10-11 #9). */}
+                    {num(p.necessaryExpense) !== undefined && (<View style={s.row}><Text style={s.lbl}>필요경비</Text><Text style={s.val}>{fmt(p.necessaryExpense)}</Text></View>)}
                     <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(p.transferGain)}</Text></View>
                     {propTaxableGain !== propTransferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(propTaxableGain)}</Text></View>)}
                     {(num(p.longTermHoldingDeduction) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(p.longTermHoldingDeduction)}</Text></View>)}
