@@ -57,7 +57,10 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ companionAssets: [{}] })).toEqual(["companionAssets"]);
     expect(issues({ reductions: [{ type: "self_farming" }] })).toEqual([]);
     expect(issues({ reductions: [{ type: "unsold_98" }] })).toEqual(["reductions"]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions"]);
+    expect(issues({ propertyType: "housing" })).toEqual([]);
+    expect(issues({ propertyType: "redevelopment_apt" })).toEqual(["propertyType"]);
+    expect(issues({ propertyType: "right_to_move_in" })).toEqual(["propertyType"]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);

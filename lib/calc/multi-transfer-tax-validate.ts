@@ -6,12 +6,12 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
-import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -133,7 +133,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
    * 상단 축 A를 제거하면서 그 칸마저 사라지므로(취득가액 0 + 입력칸 없음) 명시 차단으로 바꾼다.
    */
   if (a.assetKind === "right_to_move_in") {
-    return "조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.";
+    return MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE;
   }
   if (a.assetKind === "housing" && a.isMixedUseHouse) {
     return MULTI_MIXED_USE_UNSUPPORTED_MESSAGE;
@@ -154,19 +154,13 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     // 필요한데 다건 route 미지원 → 취득가액 0 과대과세되므로 신고가액 확정 전까지만 차단.
     return "상속 취득가액(신고가액)을 입력하거나 단건 계산기를 사용하세요. 보충적평가 자동조회·환산취득가는 단건 계산기에서만 지원됩니다.";
   }
-  /**
-   * 비주택 → 주택 용도변경 (소득세법 §95⑤·⑥ · 시행령 §154⑤ 단서) — 다건 미지원 (Q26).
-   *
-   * 🔴 종전에는 이 가드가 없어 **조용히 무시**됐다. 다건 화면은 단건 마법사를 그대로
-   *   임베드하므로 토글을 켜고 주거용 사용 개시일까지 입력할 수 있고 ⑧도 통과시키는데,
-   *   다건 변환(`multi-transfer-tax-api.ts`)은 `nonHousingToHousingConversion`을 만들지 않고
-   *   거주월수 §95⑤2호 클램프(`clampResidenceToHousingPeriod`)도 태우지 않는다
-   *   ⇒ §95⑤ 기간 분해와 §154⑤ 단서 보유기간 기산이 통째로 빠져 **세액이 조용히 달라졌고**,
-   *   사용자는 입력이 반영된 것으로 오인했다. 침묵 오산보다 명시 차단이 안전하다.
-   */
-  if (isUsageConversionActive(a)) {
-    return "비주택→주택 용도변경(소득세법 §95⑤·⑥·영 §154⑤ 단서)은 단건 계산기에서만 지원됩니다.";
-  }
+  // 비주택 → 주택 용도변경(§95⑤·⑥ · 영 §154⑤ 단서)은 **차단하지 않는다** (G2-4, 2026-10-11).
+  //    종전 차단(Q26)의 사유는 다건 ④⑬이 `nonHousingToHousingConversion` 키와 §95⑤2호 거주월수 클램프를
+  //    만들지 않는다는 배관 미비뿐이었다. 지금은 ④⑬(`multi-transfer-tax-api.ts`)이 단건과 같은 두 leaf
+  //    (`isUsageConversionActive`·`clampResidenceToHousingPeriod`)로 싣고, ⑭(`multi/route.ts`)가 Date로 옮기며,
+  //    ⑫ `MULTI_REJECT_RULES`도 이 키를 거부하지 않는다. 합산 엔진은 자산마다 단건 엔진을 그대로 부르고
+  //    두 규칙 모두 자산 1건 단위(장특공제 기간 분할·보유기간 기산)라 단건 = 다건이다.
+  //    고정: `__tests__/calc/multi-usage-conversion-block.anchor.test.ts`(차단하지 않음 + 단건 parity).
   if (phdFlagEffective(a)) { // D2 유효면 PHD 플래그는 무시된다(④·⑧과 같은 술어)
     return MULTI_PHD_UNSUPPORTED_MESSAGE;
   }

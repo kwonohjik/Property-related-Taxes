@@ -138,3 +138,24 @@ export function assetTaxableGain(p: {
 export function assetExemptGain(p: Parameters<typeof assetTaxableGain>[0]): number {
   return Math.max(0, effectiveGrossGain(p) - assetTaxableGain(p));
 }
+
+/**
+ * 다건 합산 표시용 — 자산별 gross / 비과세 / 과세대상 양도차익의 합 (요약 카드·PDF 합산 표 공용).
+ *
+ * `result.totalTransferGain`(= 자산별 `transferGain` 합)은 12억 초과 고가주택·§155⑳에서 **안분 전** 값이라
+ * 「양도차익 − 비과세 = 과세대상」「과세대상 − 장특 = 양도소득금액」 행 검산이 깨진다(G2-6).
+ * 합산 신고서·자산별 아코디언·자산별 PDF 표가 쓰는 정본 leaf(`assetTaxableGain`·`assetExemptGain`)의 합을 쓴다.
+ */
+export function sumAssetGains(
+  properties: ReadonlyArray<Parameters<typeof assetTaxableGain>[0]>,
+): { gross: number; exempt: number; taxable: number } {
+  let gross = 0;
+  let exempt = 0;
+  let taxable = 0;
+  for (const p of properties) {
+    gross += effectiveGrossGain(p);
+    exempt += assetExemptGain(p);
+    taxable += assetTaxableGain(p);
+  }
+  return { gross, exempt, taxable };
+}

@@ -13,6 +13,10 @@
  *   재계산은 「다른 값을 만드는 것」이 아니라 **호별 echo를 얻는 것**이다.
  *   ⚠️ 다만 5케이스는 감면·가산세를 포함하지 않았다 ⇒ 호출자는 재계산 전후를 **비교**해
  *     달라지면 알린다(계획서 X-2·X-5). 「불변이라 가정」하지 않는다.
+ *   🔴 **다건 계산기가 지원하지 않는 모드는 값이 바뀐다** — 재개발 완공APT·조합원입주권(§166)은 단건이 §166 산식 +
+ *     §89①3·4호로 비과세 0원인데, 다건 ④는 서브객체 없이 propertyType만 보내 일반 양도로 다시 계산한다
+ *     (G2-2: 0 → 107,646,000 / 186,846,000). 그래서 아래 W-1처럼 **다건 ⑧ 게이트와 같은 술어**
+ *     (`validateMultiSupportedMode`)로 막는다 — 화면이 막는 자산을 이 경로가 우회하지 못한다.
  *
  * 🔒 **`mode:"mixed-use"`(겸용주택)는 지원하지 않는다**(W-1) — 단건 전용 경로
  *   (`transfer-tax-mixed-use.ts`)라 다자산으로 옮기면 4부분 안분이 달라질 수 있는데
@@ -22,6 +26,7 @@ import {
   callMultiTransferTaxAPI,
 } from "./multi-transfer-tax-api";
 import { callStockTransferTaxAPI } from "./stock-transfer-tax-api";
+import { validateMultiSupportedMode } from "./multi-transfer-tax-validate";
 import {
   defaultMultiTransferFormData,
   type MultiTransferFormData,
@@ -48,6 +53,8 @@ export type RecalcEligibility =
  *   (`mode:"single"`은 **assets 1건**이다 — 2건 이상이면 `bundled`이고 그쪽은 이미
  *    `aggregated`를 품고 있어 재계산이 불필요하다. `transfer-tax-api.ts:726`)
  * - `mode:"mixed-use"` → ❌ 미지원(W-1)
+ * - 다건 ⑧이 막는 모드(재개발·입주권·부담부증여·이월과세·일반/상업용건물·PHD·가업상속·다필지·컴패니언 등)가
+ *   하나라도 있으면 ❌ — 다건 계산기에서 막히는 자산을 크로스 「다시 계산」이 우회하면 안 된다(G2-2)
  */
 export function checkRealEstateRecalc(record: CalculationRecord): RecalcEligibility {
   const input = (record.inputData ?? {}) as Record<string, unknown>;
@@ -65,12 +72,27 @@ export function checkRealEstateRecalc(record: CalculationRecord): RecalcEligibil
     if (!Array.isArray(input.properties) || input.properties.length === 0) {
       return { ok: false, reason: "저장된 자산 목록이 비어 있어 다시 계산할 수 없습니다." };
     }
+    const items = input.properties as PropertyItem[];
+    for (const p of items) {
+      const unsupported = p?.form ? validateMultiSupportedMode(p.form) : null;
+      if (unsupported) return { ok: false, reason: unsupportedRecalcReason(unsupported, p.propertyLabel) };
+    }
     return { ok: true, kind: "multi" };
   }
   if (!Array.isArray(input.assets) || input.assets.length === 0) {
     return { ok: false, reason: "저장된 입력이 비어 있어 다시 계산할 수 없습니다." };
   }
+  const unsupported = validateMultiSupportedMode(input as unknown as TransferFormData);
+  if (unsupported) return { ok: false, reason: unsupportedRecalcReason(unsupported) };
   return { ok: true, kind: "single" };
+}
+
+/** 다건 ⑧이 막는 모드 — 같은 사유 문구에 「왜 합산 화면에서 못 쓰는지」를 앞세운다. */
+function unsupportedRecalcReason(unsupported: string, label?: string): string {
+  return (
+    "이 계산은 합산 화면에서 다시 계산할 수 없습니다 — 다건 계산 경로가 지원하지 않는 항목이 있습니다. " +
+    (label ? `"${label}": ${unsupported}` : unsupported)
+  );
 }
 
 /**

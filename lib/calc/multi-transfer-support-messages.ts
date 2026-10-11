@@ -13,6 +13,8 @@ export const MULTI_CARRYOVER_UNSUPPORTED_MESSAGE = "배우자등 이월과세(§
  */
 export const MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE = "부담부증여(소령 §159)는 단건 계산기에서만 지원됩니다.";
 export const MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE = "재개발·재건축(시행령 §166)은 단건 계산기에서만 지원됩니다.";
+export const MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE =
+  "조합원입주권(시행령 §166① / 승계취득분 §97①1호)은 단건 계산기에서만 지원됩니다.";
 export const MULTI_MIXED_USE_UNSUPPORTED_MESSAGE = "겸용주택 분리계산은 단건 계산기에서만 지원됩니다.";
 export const MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE =
   "일반건물·상업용건물(토지·건물 일괄/환산취득가)은 단건 계산기에서만 지원됩니다.";
