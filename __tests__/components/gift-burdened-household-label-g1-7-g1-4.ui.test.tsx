@@ -133,7 +133,7 @@ describe("UI-H3 결과 카드", () => {
 });
 
 describe("UI-M1 합가 입력란 안내 (#25 하위 1)", () => {
-  const form = { marriageDate: "2020-01-01", parentalCareMergeDate: "", isFirstTransferredInMerge: true };
+  const form = { marriageDate: "2020-01-01", parentalCareMergeDate: "", parentalCareParentAge: "" as const, isFirstTransferredInMerge: true };
   it("★ 증여 화면(variant=gift): 3주택 중첩·중과 경감/배제 안내가 없다", () => {
     render(<MergeDateSection form={form} onChange={() => {}} variant="gift" />);
     const t = document.body.textContent ?? "";
