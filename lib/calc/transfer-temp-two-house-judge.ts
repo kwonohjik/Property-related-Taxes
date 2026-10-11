@@ -13,12 +13,17 @@ import {
   judgeTemporaryTwoHouseTiming,
   resolveExemptionProviso,
 } from "@/lib/tax-engine/transfer-tax-exemption";
+import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import {
   meetsPublicInstitutionRelocationRegion,
   resolveRegulatedAtNewAcquisition,
   resolveTemporaryTwoHouseDeadline,
 } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import { temporaryTwoHouseEraInputRelevance } from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
+import {
+  resolveRegulatedShortenedClauseRef,
+  type RegulatedShortenedClauseRef,
+} from "@/lib/tax-engine/data/temporary-two-house-regulated-clause";
 import {
   toTemporaryTwoHouseEraFacts,
   type TemporaryTwoHouseEraFormFields,
@@ -64,6 +69,8 @@ export type TempTwoHouseVerdict =
         nextAuto: boolean;
         determined: boolean;
         moveInRelevant: boolean;
+        /** 단축 규정의 연혁별 위치(「§155」 뒤 표기) — 카드 제목이 이 값을 읽는다(X2-1: 2026.10.1. 이후는 ①1호, 2호는 3년 쪽이다) */
+        clauseRef: RegulatedShortenedClauseRef;
       };
       /** §155①2호 가목 — `undefined`면 해당 없음(체제 밖) 또는 전입일 미입력(`moveInPending`) */
       moveInMet?: boolean;
@@ -94,6 +101,14 @@ export function judgeTempTwoHouseFromForm(p: {
   /** 1호 임차일부터 세대전원 거주 개월 — ④와 같은 파서(`parseRentalLeaseResidenceMonths`) */
   provisoRentalLeaseResidenceMonths?: string;
   residencePeriodMonths: string;
+  /**
+   * §154⑧3호 동일세대 상속 통산 — ④가 싣는 값(`buildSameHouseholdInheritancePayload`)과 같은 사실.
+   * 1년 요건 면제(§154①3호 「1년 이상 거주」)를 엔진과 같은 거주 개월로 따지게 한다(S11-6).
+   */
+  sameHouseholdInheritance?: Pick<
+    ResidenceReqInput,
+    "acquisitionCause" | "decedentSameHouseholdBeforeInheritance" | "decedentCohabitationResidenceMonths"
+  >;
   /** §155⑯ 공공기관 지방이전 — 기한 5년 + 1년 요건 면제 */
   publicInstitutionRelocation?: boolean;
   /** §155⑯ 「이전한 시·군」 코드 — 신규주택 소재 코드와 함께 연접 여부를 자동 판정한다 */
@@ -142,6 +157,7 @@ export function judgeTempTwoHouseFromForm(p: {
       transferDate: transfer,
       residencePeriodMonths: parseInt(p.residencePeriodMonths || "0", 10) || 0,
       wasRegulatedAtAcquisition: false, // resolveExemptionProviso 미사용 필드 — 타입 충족용
+      ...p.sameHouseholdInheritance,
       oneHouseExemptionProviso: {
         reason: p.provisoReason as "rental_5yr_residence" | "expropriation" | "unavoidable",
         departureDate: p.provisoDepartureDate ? new Date(p.provisoDepartureDate) : undefined,
@@ -247,6 +263,7 @@ export function judgeTempTwoHouseFromForm(p: {
       determined: reg.determined,
       // 가목·단서 체제 — 두 주택이 모두 조정(또는 미확인)일 때만 연다.
       moveInRelevant: relevance.moveIn && reg.previous !== false && reg.next !== false && !relocation,
+      clauseRef: resolveRegulatedShortenedClauseRef(transfer),
     },
     ...(era.moveInMet !== undefined ? { moveInMet: era.moveInMet } : {}),
     moveInPending: era.moveInRequirementPending,

@@ -198,6 +198,15 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
     expect(iso(r.pending[0].deadline)).toBe("2022-01-03");
   });
 
+  it("[PD-9c] 🔴 부정 짝(S07-4) — 기한일(2022-01-03)에 일반주택 보유 2년 미달이면 기한을 약속하지 않고 사유를 낸다", () => {
+    const r = judge({ householdHousingCount: 2, acquisitionDate: D("2020-06-01"), ruralHouse: RURAL("2017-01-01"), ...RESIDENCE_FREE });
+    expect(r.isExempt).toBe(false);
+    expect(r.pending).toEqual([]);
+    const reasons = r.unmetExceptions.find((u) => u.id === "155-7-rural:return_to_farm")?.reasons.join("\n") ?? "";
+    expect(reasons).toContain("2022-01-03");
+    expect(reasons).toContain("보유 2년");
+  });
+
   it("[PD-9b] D15 — 2016-02-17 전 취득 귀농주택은 5년 단서가 없다 → 비과세 · pending 없음", () => {
     const r = judge({ householdHousingCount: 2, ruralHouse: RURAL("2015-01-01"), ...RESIDENCE_FREE });
     expect(r.isExempt).toBe(true);
@@ -211,8 +220,10 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
   });
 
   it("[PD-11] §155⑧ 해소일 3년 초과 — 기한은 해소일 + 3년", () => {
+    // 🔑 일반주택이 기한일(2021-01-04)에 보유 2년을 채운 시료여야 한다(S07-4) — 기본 시료(2019-06-01 취득)는 기한일에 1.6년이다.
     const r = judge({
       householdHousingCount: 2,
+      acquisitionDate: D("2017-01-01"),
       unavoidableOutsideCapitalHouse: {
         reason: "work",
         resolvedDate: D("2018-01-01"),
@@ -222,6 +233,37 @@ describe("P4-1 pending — §155⑦3호 귀농 · §155⑧ 부득이", () => {
     expect(r.pending.map((p) => p.id)).toEqual(["155-8-unavoidable-resolved"]);
     // L-1 — 역상 말일 2021-01-01(금 1월 1일)·02(토)·03(일) → 기한 01-04(월)(민법 §161).
     expect(iso(r.pending[0].deadline)).toBe("2021-01-04");
+  });
+
+  it("[PD-11b] 🔴 부정 짝(S07-4) — 기한일(2021-01-04)에 일반주택 보유 2년 미달이면 기한을 약속하지 않고 사유를 낸다", () => {
+    const r = judge({
+      householdHousingCount: 2,
+      acquisitionDate: D("2019-06-01"),
+      unavoidableOutsideCapitalHouse: {
+        reason: "work",
+        resolvedDate: D("2018-01-01"),
+      } as TransferTaxInput["unavoidableOutsideCapitalHouse"],
+      ...RESIDENCE_FREE,
+    });
+    expect(r.isExempt).toBe(false);
+    expect(r.pending).toEqual([]);
+    const reasons = r.unmetExceptions.find((u) => u.id === "155-8-unavoidable:work")?.reasons.join("\n") ?? "";
+    expect(reasons).toContain("2021-01-04");
+    expect(reasons).toContain("보유 2년");
+  });
+
+  it("[PD-11c] 경계 ±1일 — 기한일(2021-01-04)에 보유 2년을 정확히 채우는 일반주택(2019-01-05 취득)은 pending, 하루 모자란 2019-01-06 취득은 pending 없음", () => {
+    const base = {
+      householdHousingCount: 2,
+      unavoidableOutsideCapitalHouse: {
+        reason: "work",
+        resolvedDate: D("2018-01-01"),
+      } as TransferTaxInput["unavoidableOutsideCapitalHouse"],
+      ...RESIDENCE_FREE,
+    } as const;
+    // 보유기간은 §95④ 초일 산입 — 2019-01-05 취득은 2021-01-04에 만 2년이고, 2019-01-06 취득은 그날 2년에서 하루 모자란다.
+    expect(judge({ ...base, acquisitionDate: D("2019-01-05") }).pending.map((p) => p.id)).toEqual(["155-8-unavoidable-resolved"]);
+    expect(judge({ ...base, acquisitionDate: D("2019-01-06") }).pending).toEqual([]);
   });
 
   it("[PD-12] 🔴 §155⑧ 해소일 미입력 — 기한을 지어내지 않고 **판정 보류**로 남긴다", () => {

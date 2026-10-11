@@ -49,6 +49,7 @@ import {
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
+  ruralTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
 } from "../transfer-tax-exemption-requirements";
@@ -59,6 +60,7 @@ import {
   resolveHighValuePriceCheck,
 } from "./threshold";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
+import { meetsHoldingResidenceOnDeadline } from "./deadline-holding";
 import type {
   OneHouseAppliedException,
   OneHouseJudgeInput,
@@ -188,7 +190,12 @@ export function collectPendingConditions(
    * 요건 A(1년)는 이미 지난 사실(신규주택을 언제 샀는가)이라 **치유할 수 없다** ⇒ pending 대상 아님.
    * 요건 B(처분기한)만 미충족이고 §154① 보유·거주가 충족일 때 기한을 낸다.
    */
-  if (twoHouseSpecialCountHolds(input) && input.temporaryTwoHouse && twoHouseRule) {
+  // E-3(`checkExemptionCore`)와 같은 주택 수 게이트 — ⑦ 농어촌주택이 겹친 3주택(D3)도 같은 분기다(S07-5).
+  if (
+    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    input.temporaryTwoHouse &&
+    twoHouseRule
+  ) {
     const { provisoRelaxesHolding, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
     /**
      * 📌 `!timing.threeYearMet`는 **현재 도달 불가능한 방어 조건**이다(뮤테이션 M13 SURVIVED).
@@ -293,7 +300,9 @@ export function collectPendingConditions(
     const dl = deadlineEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (
       !isWithinDeadline(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
-      meetsOneHouseHoldingResidence(input, rule)
+      meetsOneHouseHoldingResidence(input, rule) &&
+      // 기한일에 양도해도 §154① 보유 2년이 모자라면 이룰 수 없는 약속이다(S07-4) — 사유는 `collectUnavoidableUnmet`이 말한다.
+      meetsHoldingResidenceOnDeadline(input, rule, dl.end)
     ) {
       pending.push({
         id: "155-8-unavoidable-resolved",
@@ -321,7 +330,9 @@ export function collectPendingConditions(
     const dl = deadlineEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
     if (
       !isWithinDeadline(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&
-      meetsOneHouseHoldingResidence(input, rule)
+      meetsOneHouseHoldingResidence(input, rule) &&
+      // 위 ⑧과 같다(S07-4) — 사유는 `collectRuralUnmet`이 말한다.
+      meetsHoldingResidenceOnDeadline(input, rule, dl.end)
     ) {
       pending.push({
         id: "155-7-3ho-return-to-farm",

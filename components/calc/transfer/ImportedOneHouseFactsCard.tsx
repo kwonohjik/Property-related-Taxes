@@ -22,7 +22,7 @@ import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-f
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import type { TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { effectiveProvisoReason, type ProvisoMode } from "@/lib/calc/transfer-tax-api-helpers";
-import { completionDeadlineYearsLabel } from "@/lib/calc/one-house-era-labels";
+import { completionDeadlineYearsLabel, regulatedShortenedClauseRefOf } from "@/lib/calc/one-house-era-labels";
 
 /**
  * 계산기에서 **편집 위젯이 사라진** §89② 권리 예외 13필드 (P6-a).
@@ -141,6 +141,7 @@ function specialsRows(
   replacementHouseApplies: boolean,
   temporaryTwoHouse: TemporaryTwoHouseDates | undefined,
   provisoMode: ProvisoMode,
+  regulatedClause: string,
 ): Row[] {
   const rows: Row[] = [];
   const push = (label: string, value: string | undefined) => {
@@ -170,8 +171,8 @@ function specialsRows(
    * **입력된 것만** 적는다. 신규 필드라 옛 record에는 없다(`?? ""` 대신 falsy 스킵).
    */
   const REG: Record<string, string> = { yes: "조정대상지역", no: "조정대상지역 아님" };
-  push("신규 주택 취득 당시 종전 주택 (§155①2호)", REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
-  push("신규 주택 취득 당시 신규 주택 (§155①2호)", REG[f.newHouseRegulatedAtAcquisition ?? ""]);
+  push(`신규 주택 취득 당시 종전 주택 (§155${regulatedClause})`, REG[f.prevHouseRegulatedAtNewAcquisition ?? ""]);
+  push(`신규 주택 취득 당시 신규 주택 (§155${regulatedClause})`, REG[f.newHouseRegulatedAtAcquisition ?? ""]);
   push("신규 주택 매매계약·계약금 지급일", f.newHouseContractDate || undefined);
   push("세대전원 전입일 (§155①2호 가목)", f.newHouseMoveInDate || undefined);
   if (f.newHouseExistingTenant) {
@@ -295,7 +296,7 @@ export function ImportedOneHouseFactsCard({
 }) {
   const rRows = rights ? rightsRows(rights, completionDeadlineYearsLabel(transferDate)) : [];
   const sRows = specials
-    ? specialsRows(specials, replacementHouseApplies, temporaryTwoHouse, provisoMode)
+    ? specialsRows(specials, replacementHouseApplies, temporaryTwoHouse, provisoMode, regulatedShortenedClauseRefOf(transferDate))
     : [];
   /**
    * 🔑 **둘 중 하나만 있어도 렌더한다.** P6 이전에 저장한 이력은 `importedOneHouseFacts`가

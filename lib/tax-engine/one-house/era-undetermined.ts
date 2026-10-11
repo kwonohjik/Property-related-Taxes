@@ -13,7 +13,7 @@
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-2002-transition-unverified` | 대통령령 제17555호 부칙 ③ 1호(2001-03-30 ~ 2002-03-29 신규 취득 · 양도가 2003-03-29 뒤 ~ 취득일부터 2년 안) | 1호 단서(보유기간등 충족일 + 6월) — 미구현, 취득일부터 2년으로 계산. 그 밖의 부칙 ③ 구간은 어느 독법이든 결론이 같아 고지하지 않는다 |
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
- * | `155-1-regulated-at-new-acquisition-unverified` | §155①2호 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
+ * | `155-1-regulated-at-new-acquisition-unverified` | §155① 조정대상지역 단축 규정(양도일 연혁별 호 — `temporary-two-house-regulated-clause.ts`) 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
  * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 정면 해석 미확보, 입력된 재상속일로 판정(서면-2019-법령해석재산-3032와 같은 기준). 괄호가 걸리고(일반주택 2013-02-15 이후 취득) 그 행이 실제로 제외될 때만 |
  * | `155-2-pre2010-parental-care-exception-unverified` | §155② 단서 동거봉양 예외(2010.2.18. 대통령령 제22034호 신설) — 그 전 양도분 | 동일세대 상속 배제는 그 전에도 적용(조세심판관합동회의 조심2009서2497)되나 동거봉양 예외를 그 전 양도분에 인정한 해석은 미확보 — 예외를 인정해 판정 |
  * | `154-1-capital-newtown-location-unverified` | §154① 본문(2003-11-20 ~ 2011-06-02 양도 — 서울·과천·5개 신도시 거주 2년) | 양도 주택이 신도시 지구 안인지(법정동코드는 시·구까지) 또는 주소 — 요건을 적용해 판정, 거주요건 때문에 과세될 때만 |
@@ -44,6 +44,7 @@ import {
 } from "../transfer-tax-temporary-two-house-timing";
 import { resolveDisposalDelay } from "../data/temporary-two-house-delay-era";
 import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
+import { resolveRegulatedShortenedClauseRef } from "../data/temporary-two-house-regulated-clause";
 import { holidayTableProvisionalBefore, holidayTableUncoveredBefore } from "../civil-period";
 import {
   PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
@@ -194,7 +195,7 @@ export function collectEraUndetermined(
         id: "155-1-regulated-at-new-acquisition-unverified",
         reason:
           `이 양도 시기에는 종전주택이 조정대상지역에 있는 상태에서 조정대상지역의 신규주택을 취득하면 처분기한이 ` +
-          `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}①2호). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
+          `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}${resolveRegulatedShortenedClauseRef(input.transferDate)}). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
           "주소나 조정대상지역 여부가 입력되지 않아 양도일 기준 양도주택의 조정대상지역 여부로 대신 계산했습니다 — " +
           "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요.",
       });

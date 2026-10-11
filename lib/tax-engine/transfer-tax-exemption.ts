@@ -24,6 +24,7 @@ import type {
   OneHouseCoreVerdict,
   OneHouseJudgeInput,
   OneHouseJudgment,
+  OneHousePendingCondition,
 } from "./one-house/types";
 import {
   collectPendingConditions,
@@ -37,6 +38,7 @@ import {
 } from "./one-house/pending";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
 import { deriveLegalBasis } from "./one-house/legal-basis";
+import { collectLapsedDeadlineUnmet } from "./one-house/unmet-deadline-reasons";
 import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/requirement-review";
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 
@@ -125,12 +127,20 @@ export function checkExemption(
   const settled = verdict.isExempt || verdict.isPartialExempt;
   const appliedExceptions = verdict.appliedExceptions ?? [];
   // 이미 비과세·부분과세면 「무엇을 더 하면」이 없다 — pending은 과세를 뒤집는 조건만 담는다.
-  const pending = (
-    settled ? [] : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass)
-  ).filter(
-    // 「이 날까지 양도」인데 그 날이 판정 기준일 전에 지났으면 이룰 수 없다 — 안내하지 않는다.
-    //   「이 날 이후 양도」(보유 2년 충족일)는 기준일이 지나면 오히려 충족되므로 남긴다.
-    (p) => !judgmentBaseDate || p.kind !== "transfer_by" || isDeadlineStillReachable(p.deadline, judgmentBaseDate),
+  const allPending = settled ? [] : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass);
+  // 「이 날까지 양도」인데 그 날이 판정 기준일 전에 지났으면 이룰 수 없다 — 안내하지 않는다.
+  //   「이 날 이후 양도」(보유 2년 충족일)는 기준일이 지나면 오히려 충족되므로 남긴다.
+  const isLapsed = (p: OneHousePendingCondition) =>
+    !!judgmentBaseDate && p.kind === "transfer_by" && !isDeadlineStillReachable(p.deadline, judgmentBaseDate);
+  const pending = allPending.filter((p) => !isLapsed(p));
+
+  // 요건 검토표 — 아래 「기한 경과 사유」가 검토표와 같은 말을 되풀이하지 않도록 먼저 만든다.
+  const requirementReview = buildRequirementReview(
+    input,
+    oneHouseRules,
+    { isExempt: verdict.isExempt, isPartialExempt: verdict.isPartialExempt, appliedExceptions },
+    article89Clause2,
+    judgmentBaseDate,
   );
 
   /**
@@ -139,9 +149,16 @@ export function checkExemption(
    * §89② 배제면 `settled === false`지만 본체 판정은 통과했다. 그 경우 합가 특례는 실제로
    * **성립했고** 다른 조문이 결론을 뒤집은 것이므로, 「합가가 적용되지 않았다」는 안내는
    * 거짓이 된다. 본체가 통과한 경우는 사유를 내지 않는다.
+   *
+   * 기준일 필터가 뺀 「기한 경과」는 **별개**다 — 과세가 맞고 사유는 남겨야 한다(S07-3). §89② 배제처럼
+   * 본체가 통과해도(기한이 그 배제의 유일한 장애물) 사유를 낸다.
    */
-  const unmetExceptions =
-    settled || coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules);
+  const unmetExceptions = settled
+    ? []
+    : [
+        ...(coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules)),
+        ...collectLapsedDeadlineUnmet(allPending.filter(isLapsed), judgmentBaseDate, requirementReview?.scheme),
+      ];
 
   return {
     ...verdict,
@@ -168,15 +185,7 @@ export function checkExemption(
     unmetExceptions,
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
     ...finalOneHouseRestartEchoOf(input),
-    ...requirementReviewEchoOf(
-      buildRequirementReview(
-        input,
-        oneHouseRules,
-        { isExempt: verdict.isExempt, isPartialExempt: verdict.isPartialExempt, appliedExceptions },
-        article89Clause2,
-        judgmentBaseDate,
-      ),
-    ),
+    ...requirementReviewEchoOf(requirementReview),
     legalBasis: deriveLegalBasis(appliedExceptions, pending),
   };
 }
