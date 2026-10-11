@@ -13,6 +13,7 @@
  */
 
 import { isLaterAcquiredLandHeldTooShort } from "./transfer-tax-appurtenant-land";
+import { appurtenantCardCoveredByExpropriationProviso } from "./transfer-tax-appurtenant-land";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { article89Clause2PostManagementNotice } from "./transfer-tax-89-2-consequences";
 import { meetsReplacementHouse } from "./one-house/replacement-house";
@@ -316,7 +317,11 @@ function checkExemptionCore(
   if (input.oneHouseUnitRole === "appurtenant_land") {
     const v = input.appurtenantHouseVerdict;
     if (!v || !(v.isExempt || v.isPartialExempt)) return { isExempt: false, isPartialExempt: false };
-    if (isLaterAcquiredLandHeldTooShort(input.acquisitionDate, v.houseAcquisitionDate, input.transferDate)) {
+    // 5A — 짝 주택이 수용 단서(영 §154① 단서 2호 가목)로 비과세됐고 이 토지도 사업인정 고시일 전 취득이면 보유요건을 걸지 않는다.
+    if (
+      isLaterAcquiredLandHeldTooShort(input.acquisitionDate, v.houseAcquisitionDate, input.transferDate) &&
+      !appurtenantCardCoveredByExpropriationProviso(input)
+    ) {
       return { isExempt: false, isPartialExempt: false };
     }
     return {

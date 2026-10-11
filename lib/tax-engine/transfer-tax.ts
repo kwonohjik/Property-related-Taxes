@@ -59,7 +59,7 @@ import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-r
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { laterInheritedLandExemptNotice, expropriationZoneNoticeFor } from "./transfer-tax-appurtenant-land";
+import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -342,7 +342,7 @@ export function calculateTransferTax(
       amount: 0,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
-    warnings.push(...rentalNoticesForEarlyReturn(effectiveInput)); // §155㉑·㉒ + OH-40 판정 보류 고지
+    warnings.push(...rentalNoticesForEarlyReturn(effectiveInput), ...expropriationLaterLandNotices(effectiveInput)); // §155㉑·㉒ + OH-40 판정 보류 · 5A 고지
     return buildExemptEarlyResult({
       input,
       effectiveInput,
@@ -541,8 +541,8 @@ export function calculateTransferTax(
     isPartialExempt: exemptionResult.isPartialExempt,
     steps,
   });
-  // T-7(D1-3) — 나중 취득 상속 토지분이 비과세에서 빠진 사실 + §154⑧3호 통산 미적용 고지(세액 불변).
-  const laterInheritedNotice = laterInheritedLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
+  // T-7(D1-3) 나중 취득 상속 토지분 비과세 제외 · 5A 나중 취득 토지에 수용 단서 적용 — 고지(세액 불변).
+  const laterInheritedNotice = laterLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
   const expropriationZoneNotice = expropriationZoneNoticeFor(effectiveInput);
