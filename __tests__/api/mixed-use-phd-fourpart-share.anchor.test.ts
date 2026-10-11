@@ -214,6 +214,8 @@ describe("겸용 PHD 4부분 안분 × 공유지분", () => {
       A(2, { actualSalePrice: "800000000", standardPriceAtTransfer: "500000000" }),
     ]);
     // ⑧이 통과시킨다 — 그러면 ⑩도 통과해야 한다(모순 금지).
+    // 결정 #40 — 같은 날 주택 2채 함께양도는 1세대·조정지역일 때 ⑧이 막는다(§154⑨). 이 테스트는 ⑩ 400 해소를 보므로 1세대가 아닌 세대로 둔다.
+    bundled.isOneHousehold = false;
     expect(collectStepIssues(0, bundled).map((i) => i.message)).toEqual([]);
     const r = await run(bundled);
     expect(r.status).toBe(200);

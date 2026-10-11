@@ -173,7 +173,8 @@ function primaryMixedForm(): TransferFormData {
 describe("컴패니언 × 겸용주택 (시행령 §160① 단서)", () => {
 
   it("PM-1 primary 겸용도 ⑧을 통과한다 (2026-09-04 개방)", () => {
-    expect(collectStepIssues(0, primaryMixedForm()).map((i) => i.message)).toEqual([]);
+    // 결정 #40 — 같은 날 주택 2채 함께양도는 1세대·조정지역일 때 ⑧이 막는다(§154⑨). 이 테스트는 겸용 개방을 보므로 1세대가 아닌 세대로 둔다.
+    expect(collectStepIssues(0, { ...primaryMixedForm(), isOneHousehold: false }).map((i) => i.message)).toEqual([]);
   });
 
   it("PM-2 primary 겸용이 파트 5장으로 펼쳐진다", async () => {

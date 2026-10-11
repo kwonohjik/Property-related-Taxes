@@ -9,6 +9,7 @@ import {
   judgmentSpecialHouseExclusions,
 } from "./one-house-judgment-section-scope";
 import { deriveOneHouseFactsFromHouses } from "./one-house-row-facts";
+import { sameDayExcludedRows } from "./same-day-transfer-notice";
 import {
   deriveJudgmentHouseCount,
   deriveJudgmentRightCount,
@@ -37,6 +38,8 @@ export function computeOneHouseJudgmentSummary(
     items.push({ label: "양도 대상", value: "조합원입주권" });
   }
   items.push({ label: "세대 보유 주택 수", value: `${deriveJudgmentHouseCount(form)}채` });
+  const sameDayOut = sameDayExcludedRows(form.houses, form.transferDate).length; // 위 주택 수가 명부보다 적은 이유(#40)
+  if (sameDayOut > 0) items.push({ label: "같은 날 먼저 양도(§154⑨)로 제외", value: `${sameDayOut}채` });
   if (!judgmentSaleIsHousing(form)) {
     // §89①4호 본문이 「1개」를 요구하는 축 — 양도 대상 포함 수를 그대로 보여준다.
     items.push({ label: "세대 보유 입주권 수", value: `${deriveJudgmentRightCount(form)}개` });

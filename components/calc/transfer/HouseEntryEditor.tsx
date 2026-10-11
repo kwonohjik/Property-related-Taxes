@@ -29,6 +29,7 @@ import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEnt
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
 import { HouseEntryCountExclusionSection } from "@/components/calc/transfer/HouseEntryCountExclusionSection";
+import { HouseEntrySameDaySection } from "@/components/calc/transfer/HouseEntrySameDaySection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntryMergeOriginBlock";
 import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiveRentalFields";
@@ -71,6 +72,11 @@ interface Props {
    * 혼동되고(S14a-9), 「조특법 감면」 배지까지 달린다. 계산기는 넘기지 않아 동작 불변이다. 사유·근거는 `house-entry-judgment-scope.ts`.
    */
   judgmentMenu?: boolean;
+  /**
+   * 「같은 날 양도 · 양도 순서」(소득세법 시행령 §154⑨) 칸을 연다 — 양도 대상이 §89①3호 주택(`isOneHouseExemptionAsset`)일 때 호출부가 넘긴다.
+   * 입주권 양도(§89①4호)에는 이 순서 규정이 닿지 않아 열지 않는다.
+   */
+  sameDayEnabled?: boolean;
 }
 
 // ============================================================
@@ -608,6 +614,7 @@ export function HouseEntryEditor({
   taxIncentiveRentalEnabled = false,
   householdGiftEnabled = false,
   judgmentMenu = false,
+  sameDayEnabled = false,
 }: Props) {
   return (
     <div className="space-y-3">
@@ -619,6 +626,8 @@ export function HouseEntryEditor({
         taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
         judgmentMenu={judgmentMenu}
       />
+      {/* ①과 같은 양도 시점 축 — 이 주택이 현재 양도 주택과 같은 날 양도되는가(§154⑨). 켜지 않으면 일반 보유 주택이다. */}
+      {sameDayEnabled && <HouseEntrySameDaySection house={house} onUpdate={onUpdate} />}
       {/* 취득일(①) 바로 다음 — 합가 후 취득 여부가 그 날짜로 갈린다. */}
       {mergeContext && (
         <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />

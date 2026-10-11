@@ -9,6 +9,7 @@ import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 import { AssetTabBar } from "@/components/calc/transfer/AssetTabBar";
 import { StaleSourceBanner } from "@/components/calc/transfer/StaleSourceBanner";
 import { AggregateSettingsPanel } from "@/components/calc/transfer/AggregateSettingsPanel";
+import { MultiRosterNotices } from "@/components/calc/transfer/MultiRosterNotices";
 import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
 import { MultiTransferTaxResultView } from "@/components/calc/results/MultiTransferTaxResultView";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -483,6 +484,8 @@ export default function MultiTransferTaxCalculator() {
               onReload={handleReloadSource}
               onAdopt={handleAdoptSource}
             />
+            {/* 건별 명부 어긋남 고지(#41) — 「세액 계산」 직전 화면에서 본다. 계산을 막는 모순은 아래 오류로 나간다. */}
+            <MultiRosterNotices properties={form.properties} />
             <AggregateSettingsPanel form={form} onChange={setForm} />
 
             {/* [B2] 신고서 단위 수정신고·경정청구 — 이력에서 진입 시(amendmentMode) 노출.
@@ -534,6 +537,9 @@ export default function MultiTransferTaxCalculator() {
           <div className="flex items-center justify-between">
             <NavButton direction="prev" label="설정으로 돌아가기" onClick={() => setStep("settings")} />
           </div>
+
+          {/* 결과는 자동 저장돼 신고 자료로 쓰인다 — 설정 단계에서 지나친 명부 어긋남을 다시 보여 준다(입력에서 재계산, 저장 없음). */}
+          <MultiRosterNotices properties={form.properties} />
 
           <MultiTransferTaxResultView
             result={result}

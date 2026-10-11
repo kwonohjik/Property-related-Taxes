@@ -65,9 +65,10 @@ import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { mergeHouseSideOf } from "@/lib/calc/merge-house-origin";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import type { MergeOrigin } from "@/lib/tax-engine/types/multi-house-surcharge.types";
+import { isSameDayFirstTransferred, type SameDayOrderFacts } from "@/lib/calc/same-day-transfer-order";
 
 /** 명부 행 중 **주택 수에 세는** 것 — 취득일이 있어야 한다(⑧이 조건 없이 요구한다). */
-export interface HouseRowForCount {
+export interface HouseRowForCount extends SameDayOrderFacts {
   /** 명부 행 id — 조특법 주택 수 제외 행을 신규 주택 후보에서 뺄 때 쓴다(`excludedHouseIds`). */
   id?: string;
   acquisitionDate?: string;
@@ -96,12 +97,21 @@ export function isOwnedAtTransfer(acquisitionDate: string | undefined, transferD
   return acquisitionDate < transferDate;
 }
 
-/** 명부에서 양도일 현재 보유 주택 행만 — `isOwnedAtTransfer`. */
+/**
+ * 명부에서 양도일 현재 보유 주택 행만 — `isOwnedAtTransfer` + **같은 날 먼저 양도한 것으로 선택한 행 제외**.
+ *
+ * 🔑 소득세법 시행령 §154⑨ — 2개 이상의 주택을 같은 날 양도하면 거주자가 선택하는 순서대로 양도한 것으로 본다(중과는 §167의3⑥ 준용).
+ *    「이 주택을 먼저 양도한 것으로 선택」한 행은 현재 양도일에 이미 양도한 뒤라 양도일 현재 보유 주택이 아니다(`same-day-transfer-order.ts`).
+ *    주택 수·신규 주택 후보·엔진 명부(④ 페이로드)·조특법 제외 선언·§155⑥1호·⑦·⑧ 행 사실이 모두 이 한 술어를 거치므로
+ *    같은 날 취득 행과 **같은 경로로** 빠진다(주택 수 이중 차감 없음).
+ */
 export function housesOwnedAtTransfer<T extends HouseRowForCount>(
   houses: readonly T[] | undefined,
   transferDate: string | undefined,
 ): T[] {
-  return (houses ?? []).filter((h) => isOwnedAtTransfer(h.acquisitionDate, transferDate));
+  return (houses ?? []).filter(
+    (h) => isOwnedAtTransfer(h.acquisitionDate, transferDate) && !isSameDayFirstTransferred(h),
+  );
 }
 
 /**

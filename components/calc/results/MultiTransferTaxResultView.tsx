@@ -25,6 +25,7 @@ import { DetailedCalculationStatementCard } from "@/components/calc/results/tran
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
+import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
 import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
@@ -515,6 +516,11 @@ export function MultiTransferTaxResultView({
             label={p.propertyLabel}
           />
         ))}
+
+      {/* §154⑨ 같은 날 양도 순서 선택으로 주택 수에서 뺀 주택 — 건마다(#40). 선택 출력과 무관하게 항상 인쇄되는 근거 고지다. */}
+      {properties.map((p) => (
+        <SameDayOrderLine key={`sameday-${p.propertyId}`} form={p.form} label={p.propertyLabel} />
+      ))}
 
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       <PrintSelectionPanel

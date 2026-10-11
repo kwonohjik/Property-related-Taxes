@@ -43,6 +43,7 @@ import { resolveRuralSurtax } from "@/components/calc/results/transfer/reduction
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
+import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
@@ -243,6 +244,7 @@ export function TransferTaxResultView({
         🔑 `formData`에서 읽는다 — 엔진 result에 실으면 어댑터 화이트리스트가 침묵 strip한다.
       */}
       <OneHouseJudgmentProvenanceLine form={formData} />
+      <SameDayOrderLine form={formData} />
 
       <PrintSelectionPanel
         allGroups={TRANSFER_PRINT_SECTIONS}

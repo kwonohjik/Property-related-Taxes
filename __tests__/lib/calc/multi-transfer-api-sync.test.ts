@@ -259,9 +259,12 @@ describe("[H-2] 미지원 고급 모드 명시 차단", () => {
   });
 
   it("validateMultiSettings 정상 단일주택 2건은 통과(null)", () => {
+    // 결정 #40 — 양도일이 같은 주택 두 건이 모두 세대 주택 1채로 계산되면 ⑧이 막는다(§154⑨). 정상 2건은 양도일이 다르다.
+    const second = baseForm();
+    second.transferDate = "2026-09-01";
     const multi = makeMultiForm([
       makeProperty(baseForm(), "건1"),
-      makeProperty(baseForm(), "건2"),
+      makeProperty(second, "건2"),
     ]);
     expect(validateMultiSettings(multi)).toBeNull();
   });

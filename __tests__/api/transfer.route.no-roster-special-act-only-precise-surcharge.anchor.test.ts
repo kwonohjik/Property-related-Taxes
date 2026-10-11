@@ -54,7 +54,7 @@ type Obj = Record<string, unknown>;
 
 const TRANSFER_DATE = "2026-09-18";
 const GANGNAM = "1168010100";
-const MARKER = "세대 보유 주택 목록이 입력되지 않아";
+const MARKER = "다른 보유 주택 목록이 입력되지 않아";
 
 /** 고지 기대값 — 엔진과 같은 leaf를 「명부 없음 · 중과 적용」 인자로 부른다(leaf가 꺼지면 undefined라 단언이 실패한다). */
 const notice = (householdHousingCount: number) =>

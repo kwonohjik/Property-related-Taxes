@@ -28,6 +28,7 @@ import {
 } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
+import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -171,6 +172,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
         🔑 `formData`에서 읽는다 — 엔진 result에 실으면 어댑터 화이트리스트가 침묵 strip한다.
       */}
       <OneHouseJudgmentProvenanceLine form={formData} />
+      <SameDayOrderLine form={formData} />
 
       <PrintSelectionPanel
         allGroups={TRANSFER_PRINT_SECTIONS}

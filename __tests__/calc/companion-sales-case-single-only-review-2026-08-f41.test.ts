@@ -126,7 +126,8 @@ describe("[F41] 컴패니언 매매사례가액 — ⑧ 명시 차단", () => {
         standardPriceAtAcq: "300,000,000",
       },
     });
-    expect(collectStepIssues(0, form)).toEqual([]);
+    // 결정 #40 — 같은 날 주택 2채 함께양도는 1세대·조정지역일 때 ⑧이 막는다(§154⑨). 이 테스트는 매매사례가액 가드의 over-block을 보므로 1세대가 아닌 세대로 둔다.
+    expect(collectStepIssues(0, { ...form, isOneHousehold: false })).toEqual([]);
 
     // ④⑬ + ⑩ — 이 조합은 실제로 Zod를 통과한다(차단 대상이 아님을 payload로 고정)
     const { run, get } = captureBody(form);

@@ -456,7 +456,7 @@ export function MixedUseCalculationSections({
                 excl
                   ? `조정대상지역 ${excl.houseCount}주택 중과 대상 주택 — 장기보유특별공제 배제 (소득세법 §95② 본문 괄호·§104⑦)` +
                     (excl.fromFallback
-                      ? " ※ 세대 보유 주택 목록 미입력 — 「세대 보유 주택 수」로 판정한 근사입니다."
+                      ? " ※ 다른 보유 주택 목록 미입력 — 「세대 보유 주택 수」로 판정한 근사입니다."
                       : "")
                   : h.longTermDeductionTable === 2
                     ? "보유연수×4% + 거주연수×4% (최대 80%)"

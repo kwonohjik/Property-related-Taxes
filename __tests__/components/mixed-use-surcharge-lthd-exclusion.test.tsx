@@ -68,7 +68,7 @@ describe("겸용 결과 카드 — §95② 배제 표시", () => {
   it("MC-02: 🔑 근사임을 **함께 말한다** — 목록 미입력 안내", () => {
     const b = run({ surchargeFallback: { isRegulatedArea: true, householdHousingCount: 2 } });
     render(<MixedUseResultCard breakdown={b} />);
-    expect(screen.getByText(/세대 보유 주택 목록 미입력/)).toBeInTheDocument();
+    expect(screen.getByText(/다른 보유 주택 목록 미입력/)).toBeInTheDocument();
   });
 
   it("MC-03: 정밀 경로는 배제 표시는 같고 **근사 안내는 없다**", () => {
@@ -77,7 +77,7 @@ describe("겸용 결과 카드 — §95② 배제 표시", () => {
 
     render(<MixedUseResultCard breakdown={b} />);
     expect(screen.getByText("장기보유공제 (배제)")).toBeInTheDocument();
-    expect(screen.queryByText(/세대 보유 주택 목록 미입력/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/다른 보유 주택 목록 미입력/)).not.toBeInTheDocument();
   });
 
   it("MC-04: 대조 — 배제가 없으면 종전 라벨(표1/표2 + 공제율)이 그대로다", () => {

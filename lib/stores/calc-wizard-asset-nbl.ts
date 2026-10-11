@@ -94,6 +94,13 @@ export interface HouseEntry {
   isApartment: boolean;
   isOfficetel: boolean;
   isUnsoldHousing: boolean;
+  /**
+   * 소득세법 시행령 §154⑨ — 이 주택도 **현재 양도하는 주택과 같은 날 양도**한다(표시). 같은 날 판 주택을 서로의 명부에 넣을 때 쓴다.
+   * 의미·두 단계는 `lib/calc/same-day-transfer-order.ts`. 같은 날 **증여**한 주택은 대상이 아니다. 엔진은 모른다(④가 행을 빼서 보낸다).
+   */
+  soldSameDay?: boolean;
+  /** `soldSameDay`일 때 — `first` 이 주택을 현재 양도하는 주택보다 **먼저** 양도한 것으로 선택(주택 수에서 뺀다) / `later` 나중에(산입). 미선택=산입+고지. */
+  sameDayTransferOrder?: "first" | "later";
   /** 취득가액(원, 문자열) — 소형신축·준공후미분양 특례 가액 기준 (§167의3①12가·나목) */
   acquisitionPrice?: string;
   /** 전용면적(㎡, 문자열) — 소형신축 60㎡·미분양 85㎡ 판정 */

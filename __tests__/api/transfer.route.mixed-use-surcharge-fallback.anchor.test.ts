@@ -106,14 +106,14 @@ describe("⑭ 겸용주택 중과 fallback — route 배관", () => {
     expect(r.multiHouseSurcharge).toBeUndefined();
     expect(r.total.surchargeAddon).toBe(0.2); // §104⑦1호 +20%p
     expect(r.housingPart.longTermDeductionAmount).toBe(0); // §95② 배제
-    expect(r.warnings.some((w) => /세대 보유 주택 목록이 입력되지 않아/.test(w))).toBe(true);
+    expect(r.warnings.some((w) => /다른 보유 주택 목록이 입력되지 않아/.test(w))).toBe(true);
   });
 
   it("MP-R2: 🔑 대조 — 비조정지역이면 그대로다 (게이트를 통째로 연 것이 아니다)", async () => {
     const r = await call({ isRegulatedArea: false });
     expect(r.total.surchargeAddon).toBeUndefined();
     expect(r.housingPart.longTermDeductionAmount).toBeGreaterThan(0);
-    expect(r.warnings.some((w) => /세대 보유 주택 목록이 입력되지 않아/.test(w))).toBe(false);
+    expect(r.warnings.some((w) => /다른 보유 주택 목록이 입력되지 않아/.test(w))).toBe(false);
   });
 
   it("MP-R3: 🔑 대조 — 1주택이면 그대로다 (주택 수에 겸용주택 자신이 포함된다)", async () => {

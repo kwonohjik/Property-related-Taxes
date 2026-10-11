@@ -30,6 +30,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
+import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -201,6 +202,9 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     //    보고 걸려서 지분 분할 일반건물이 **계산 자체를 못 하는** 상태였다
     //    (vitest anchor는 payload를 손으로 만들어 route만 봤기 때문에 못 잡았다).
     if (form.assets.length > 1) {
+      // 같은 날 주택 2채 이상 — §154⑨ 양도 순서를 넣을 길이 없다(결정 #40). 술어·안내는 한 leaf.
+      const sameDayBundle = sameDayHousingBundleIssue(form);
+      if (sameDayBundle) issues.push({ step, assetIndex: sameDayBundle.assetIndex, message: sameDayBundle.message });
       /**
        * 🔑 **목록이 비었다 (2026-09-04).** 자산종류별 「함께양도 불가」 축은 **전건 개방**됐다 —
        *    분양권·입주권·재개발APT·일반건물·부담부증여(2026-09-03) · 겸용주택(2026-09-04).

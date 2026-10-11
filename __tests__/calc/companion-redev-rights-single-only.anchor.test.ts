@@ -250,7 +250,8 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
    * 판별력은 아래 AC-3b(over-block 금지)와 AC-5(세율 차)가 계속 맡는다.
    */
   it("✅ AC-3 (반전): 형제 `redevelopment_apt`도 더는 차단되지 않는다", () => {
-    const form = bundledForm({ assetKind: "redevelopment_apt", ...REDEV_166_REQUIRED });
+    // 결정 #40 — 같은 날 주택 2채(재개발 신축주택 포함) 함께양도는 1세대·조정지역일 때 ⑧이 막는다(§154⑨). 이 테스트는 입주권·분양권 차단 해제를 보므로 1세대가 아닌 세대로 둔다.
+    const form = { ...bundledForm({ assetKind: "redevelopment_apt", ...REDEV_166_REQUIRED }), isOneHousehold: false };
     const issues = collectStepIssues(0, form);
     expect(issues.filter((i) => i.message.includes(BLOCK_TEMPLATE))).toHaveLength(0);
     expect(issues).toHaveLength(0);
@@ -259,7 +260,8 @@ describe("[A5] 함께양도 × 조합원입주권·분양권 — ⑧ 명시 차�
   it("✅ AC-3b (over-block 금지): 순수 주택 컴패니언은 계속 통과한다", () => {
     // 픽스처가 다른 사유로 막히고 있지 않다는 증거이기도 하다 — 이것이 `[]`이므로
     // AC-1·AC-2의 현행 `[]`는 「가드 부재」 외의 원인이 없다.
-    const form = bundledForm({ assetKind: "housing" });
+    // 결정 #40 — 같은 날 주택 2채 함께양도는 1세대·조정지역일 때 ⑧이 막는다(§154⑨). 이 테스트는 입주권·분양권 가드의 over-block을 보므로 1세대가 아닌 세대로 둔다.
+    const form = { ...bundledForm({ assetKind: "housing" }), isOneHousehold: false };
     expect(collectStepIssues(0, form)).toEqual([]);
   });
 

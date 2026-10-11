@@ -101,6 +101,7 @@ describe("S14a-12 판정 메뉴 명부 머리말·안내 — 계산기 문맥을
     const { container } = render(<Step2 form={judgmentForm()} onChange={() => {}} />);
     const t = text(container);
     expect(t).toContain("다른 보유 주택 목록");
+    expect(t).toContain("(양도일 현재 보유 기준)"); // 결정 #41 — 두 메뉴가 같은 머리글이다
     expect(t).not.toContain("정밀 중과세 판정용");
     expect(t).not.toContain("정밀 주택 수 산정이 적용됩니다");
     expect(t).toContain("비워 두면 다른 주택이 없는 것으로 판정합니다");
@@ -120,7 +121,9 @@ describe("S14a-12 판정 메뉴 명부 머리말·안내 — 계산기 문맥을
   it("대조(계산기): 0행 머리말·빈 상태, 1행 C-1 안내가 그대로 있다", () => {
     const zero = render(<HousesListSection form={calcForm()} onChange={() => {}} />);
     const t0 = text(zero.container);
-    expect(t0).toContain("(정밀 중과세 판정용, 선택)");
+    // 결정 #41 — 「선택」이 아니다(⑧이 행을 넣거나 「없음」을 확인하라고 요구한다). 머리글에 「양도일 현재」를 밝힌다. 판정 메뉴와 같은 머리글.
+    expect(t0).toContain("(양도일 현재 보유 기준)");
+    expect(t0).not.toContain("정밀 중과세 판정용, 선택");
     expect(t0).toContain("주택 추가 시 정밀 주택 수 산정이 적용됩니다");
     zero.unmount();
     const one = render(

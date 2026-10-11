@@ -12,6 +12,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
+import { useProfessionalStore } from "./professional-store";
 import {
   createInitialOneHouseJudgmentForm,
   normalizeOneHouseJudgmentForm,
@@ -23,6 +24,12 @@ export interface OneHouseJudgmentState {
   formData: OneHouseJudgmentFormData;
   /** 판정 결과 — persist 대상이 **아니다**(아래 partialize) */
   result: OneHouseExemptionResponse | null;
+  /**
+   * 그 결과를 **판정 요청한 시점의 의뢰인**(세무사 모드 `activeClientId`) — persist 대상이 아니다.
+   * 결과는 이 의뢰인에게만 쓴다: 의뢰인이 바뀐 뒤에는 화면 표시·자동저장·「이 결과로 세액 계산」 어디에도 쓰지 않는다
+   * (의뢰인 격리 — `resultBelongsToClient`). `null`은 의뢰인 없음(일반 모드) 또는 결과 없음이다.
+   */
+  resultClientId: string | null;
   error: string | null;
   isLoading: boolean;
 }
@@ -30,7 +37,10 @@ export interface OneHouseJudgmentState {
 export interface OneHouseJudgmentActions {
   setStep: (step: number) => void;
   updateFormData: (patch: Partial<OneHouseJudgmentFormData>) => void;
-  setResult: (result: OneHouseExemptionResponse | null) => void;
+  /** @param clientId 판정을 **요청한 시점**의 의뢰인. 응답 도착 시점의 값이 아니다. */
+  setResult: (result: OneHouseExemptionResponse | null, clientId?: string | null) => void;
+  /** 다른 의뢰인의 결과를 비우고 1단계로 — 입력(formData)은 유지한다. */
+  discardResultForClientChange: () => void;
   setError: (error: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   reset: () => void;
@@ -44,6 +54,7 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
       currentStep: 0,
       formData: createInitialOneHouseJudgmentForm(),
       result: null,
+      resultClientId: null,
       error: null,
       isLoading: false,
 
@@ -54,8 +65,11 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
        * (`feedback_store_update_must_invalidate_result`).
        */
       updateFormData: (patch) =>
-        set((state) => ({ formData: { ...state.formData, ...patch }, result: null })),
-      setResult: (result) => set({ result }),
+        set((state) => ({ formData: { ...state.formData, ...patch }, result: null, resultClientId: null })),
+      setResult: (result, clientId = null) =>
+        set({ result, resultClientId: result ? clientId : null }),
+      discardResultForClientChange: () =>
+        set({ result: null, resultClientId: null, currentStep: 0, error: null, isLoading: false }),
       setError: (error) => set({ error }),
       setLoading: (isLoading) => set({ isLoading }),
       reset: () =>
@@ -63,6 +77,7 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
           currentStep: 0,
           formData: createInitialOneHouseJudgmentForm(),
           result: null,
+          resultClientId: null,
           error: null,
           isLoading: false,
         }),
@@ -88,6 +103,7 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
         if (!state) return;
         state.currentStep = 0;
         state.result = null;
+        state.resultClientId = null;
         // 이력 재개(`HistoryClient`·`HistoryDetailDrawer`)와 **같은 leaf**를 쓴다.
         state.formData = normalizeOneHouseJudgmentForm(
           state.formData as unknown as Record<string, unknown>,
@@ -96,3 +112,18 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
     },
   ),
 );
+
+/**
+ * 🔴 **의뢰인이 바뀌면 남은 판정 결과를 비우고 1단계로 보낸다**(S13-3 · 결정 #39 B) — 입력은 유지한다.
+ *
+ * 세무사 모드에서 결과 화면에 머문 채 헤더 「변경」으로 의뢰인을 바꾸면 계산기가 내렸다 올라오는데, 메모리 store의 직전 의뢰인 판정은 그대로
+ * 남아 있어 종전에는 새 의뢰인 이력에 저장됐다. 의뢰인을 바꾸는 **사용자 동작(store 이벤트)** 에서 한 번 비운다 — `useEffect`로
+ * store에 쓰는 미러링이 아니다(렌더 루프 없음). 결과가 있을 때만 비운다: 입력 도중 의뢰인을 바꿔도 사용자가 있던 단계는 유지한다.
+ * 이 구독이 놓친 경로(결과를 다른 의뢰인 몫으로 직접 심은 경우)는 화면의 `resultClientId` 대조가 따로 막는다.
+ */
+useProfessionalStore.subscribe((state, prev) => {
+  if (state.activeClientId === prev.activeClientId) return;
+  if (useOneHouseJudgmentStore.getState().result !== null) {
+    useOneHouseJudgmentStore.getState().discardResultForClientChange();
+  }
+});
