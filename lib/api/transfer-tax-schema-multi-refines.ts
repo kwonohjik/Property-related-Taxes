@@ -17,6 +17,7 @@ import { z } from "zod";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -48,6 +49,14 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
   burdenedGiftInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
   burdenedGiftWholeInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
   redevelopment: whenPresent(MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE),
+  // 다건 ④는 §166 서브객체(`redevelopment`)를 만들지 않고 propertyType만 싣는다 — 서브객체 거부만으로는
+  // 완공APT·입주권이 일반 양도로 계산돼 새어 나온다(G2-2). ⑧(`validateMultiSupportedMode`)의 assetKind 차단과 같은 모드·같은 문구.
+  propertyType: (v) =>
+    v === "redevelopment_apt"
+      ? MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE
+      : v === "right_to_move_in"
+        ? MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE
+        : null,
   mixedUse: whenPresent(MULTI_MIXED_USE_UNSUPPORTED_MESSAGE),
   generalBuildingValuation: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
   generalBuildingShares: whenPresent(MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE),
