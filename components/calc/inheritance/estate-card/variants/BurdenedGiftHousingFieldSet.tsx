@@ -39,12 +39,15 @@ import {
   giftBurdenedRentalHousingException,
 } from "@/lib/calc/gift-burdened-rental-exception";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
+import { GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT } from "@/lib/calc/gift-burdened-household-notice";
+import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import { dateToStr, strToDate } from "./burdened-gift-dates";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import {
   giftBurdenedDeadlineExceptionFields,
   giftBurdenedDeadlineExceptionPatch,
+  giftBurdenedNewAcquisitionDatePatch,
   giftBurdenedNewHouseAddressPatch,
   giftBurdenedPreviousAcquisitionDate,
   giftBurdenedTempTwoHouseDeadlineInScope,
@@ -68,6 +71,7 @@ import {
   giftBurdenedEffectiveWasRegulatedAtAcquisition,
   giftBurdenedMergeInScope,
   giftBurdenedMergeSlice,
+  giftBurdenedThreeHouseMergeNoticeNeeded,
   giftBurdenedWinWinInScope,
   giftBurdenedWinWinSlice,
 } from "@/lib/calc/gift-burdened-one-house";
@@ -83,12 +87,11 @@ export interface HousingFieldSetProps {
   onTransferStdPriceChange: (v: number | undefined) => void;
   transferStdPriceLabel: string;
   isLand: boolean;
-  jibun?: string;
   item: EstateItem;
   transferDate?: string;
 }
 
-export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, jibun, item, transferDate }: HousingFieldSetProps) {
+export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate }: HousingFieldSetProps) {
   const householdCount = bgt.householdHousingCount ?? 1;
   // §155①2호 새 입력(A2b · E-1) — ⑧과 같은 게이트. 두 주택 조정 여부가 기한을 바꾸는 시기에만 연다.
   //   증여 주택 주소가 있으면 종전 주택 조정 여부는 주소로 자동 판정된다(④가 싣는 `regionCode`와 같은 값).
@@ -106,9 +109,14 @@ export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPri
   const provisoMode = giftBurdenedProvisoMode(bgt);
   const oneHouse = giftBurdenedOneHouseSlice(bgt, transferDate);
   const restartInScope = giftBurdenedFinalHouseRestartInScope(bgt, transferDate);
-  const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
-  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
-  const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
+  // 평가방식은 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — ④·⑧과 같은 leaf.
+  const valuation = giftBurdenedValuationBasis(item);
+  const isMarketMode = valuation.mode === "sangjeungbeop_market";
+  const collateralForced = isMarketMode && valuation.collateralForcesStandardAcquisition;
+  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요. 담보평가 승은 기준시가를 쓰므로 필수.
+  const acqStdInert = isMarketMode && !collateralForced && bgt.acquisitionMethod === "actual";
+  // 양도시 기준시가(공시가격)는 기준시가 안분·담보평가 승·환산(K-5)의 분모에 쓰인다 — 실지(K-4)에서는 쓰이지 않는다.
+  const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted";
   // §155⑯·⑱(E-1 한계 G3) — ④와 같은 필드 파생(신규 주택 시·군 코드는 소재지 법정동코드에서)
   const deadlineFields = giftBurdenedDeadlineExceptionFields(bgt);
   return (
@@ -151,26 +159,28 @@ dateToStr(bgt.acquisitionDate)
         />
       </FieldCard>
 
-      {/* 평가방식·취득가액 산정 (K-4/K-5) */}
-      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} jibun={jibun} />
+      {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
+      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} />
 
-      {/* 기준시가 모드: 양도시 기준시가 (시가 모드에서는 ValuationModeSection 내 시가 입력으로 대체) */}
-      {!isMarketMode && (
-        <FieldCard
+      {/* 양도시 기준시가 — 평가 입력의 '보충적 평가(기준시가)'와 같은 한 칸. 기준시가 안분·담보평가 승·환산(K-5)에서 필수 */}
+      <FieldCard
+        label={transferStdPriceLabel}
+        hint={
+          transferStdRequired
+            ? "증여일(양도일) 현재 기준시가. §159 안분·환산에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+            : "실지취득가액(K-4)에서는 입력하지 않아도 됩니다 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+        }
+        required={transferStdRequired}
+      >
+        <CurrencyInput
           label={transferStdPriceLabel}
-          hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
-          required
-        >
-          <CurrencyInput
-            label={transferStdPriceLabel}
-            value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
-            onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
-            hideLabel
-            hideUnit
-            data-testid="bg-transfer-transfer-stdprice"
-          />
-        </FieldCard>
-      )}
+          value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
+          onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
+          hideLabel
+          hideUnit
+          data-testid="bg-transfer-transfer-stdprice"
+        />
+      </FieldCard>
 
       {/* 일부 지분만 증여(1h-G1-6) — 12억 고가주택 판정은 물건 전체 가액 기준(소령 §156①·§160①)인데 이 화면에는 지분율·
           물건 전체 가액 칸이 없다. 켜면 ⑧이 막고 양도소득세 계산기로 안내한다(`giftBurdenedPartialOwnershipError`). */}
@@ -185,11 +195,13 @@ dateToStr(bgt.acquisitionDate)
       />
 
       {/* 1세대1주택 여부 */}
+      {/* 엔진 필드 `isOneHousehold`는 «1세대에 해당하는가»(소득세법 §88 6호)다 — 1세대1주택 요건 충족 여부가 아니다(1h-G1-7 · 결정 #24).
+          기본값 OFF는 그대로 두고, 끄면 무엇이 판정되지 않는지 늘 보인다. 결론을 가를 때의 결과 고지는 결과 카드가 낸다. */}
       <ToggleCard
         tone="emerald"
         size="sm"
-        title="1세대 1주택 (§89)"
-        description="증여자가 1세대 1주택 요건을 충족하면 ON — 비과세 판정 및 장특공제 표2 적용."
+        title="증여자 세대가 1세대에 해당 (소득세법 §88 6호)"
+        description={`독립적인 생계를 유지하는 세대에 해당하면 ON — 1세대1주택 비과세 판정 및 장기보유특별공제 표2 적용. ${GIFT_BURDENED_ONE_HOUSEHOLD_OFF_HINT}`}
         checked={bgt.isOneHousehold ?? false}
         onCheckedChange={(v) =>
           set({
@@ -311,16 +323,16 @@ dateToStr(bgt.acquisitionDate)
               value={
 dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }
-              onChange={(v) => {
-                const d = strToDate(v);
+              onChange={(v) =>
+                // 취득일을 비우고 쓴 항목이 없으면 객체를 되돌린다 — 한 글자만 쳐도 빈 객체가 남아 ⑧이 막던 갭(1h-G1-5)
                 set({
-                  temporaryTwoHouse: {
-                    ...bgt.temporaryTwoHouse,
-                    previousAcquisitionDate: bgt.acquisitionDate,
-                    newAcquisitionDate: d as unknown as Date,
-                  },
-                });
-              }}
+                  temporaryTwoHouse: giftBurdenedNewAcquisitionDatePatch(
+                    bgt.temporaryTwoHouse,
+                    strToDate(v) as Date | undefined,
+                    bgt.acquisitionDate,
+                  ),
+                })
+              }
             />
           </FieldCard>
           {/* 신규 주택 소재지(E-1 잔여 B) — 계산기는 보유 주택 명부 행 주소에서 코드를 얻는다. 이 화면엔 명부가 없어
@@ -422,7 +434,17 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
       {/* §155④⑤ 합가(E-1 한계 G4) — 양도세 계산기와 같은 위젯. 계산기와 같이 세대 주택 수 2 이상에서 §155① 블록·
           단서 뒤에 둔다. 게이트는 ④와 같다(`giftBurdenedMergeInScope`). */}
       {giftBurdenedMergeInScope(bgt) && (
-        <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} />
+        <MergeDateSection form={giftBurdenedMergeSlice(bgt)} onChange={(patch) => set(patch)} variant="gift" />
+      )}
+      {/* 세대 3주택 + 합가일 — 이 화면에는 세대 보유 주택 목록이 없어 3주택 합가 특례(일시적 2주택 중첩·이중 합가)를 판정하지 않는다
+          (결정 #25 C · #26 B). 게이트는 결과 화면 엔진 고지와 같은 술어다 — 1세대 ON · 주택 수 3 · 합가 요건 성립(결정 #24 조건 5 · #25 조건 1). */}
+      {giftBurdenedThreeHouseMergeNoticeNeeded(bgt, transferDate) && (
+        <ToneCard tone="amber" title="세대 3주택 합가 특례는 이 화면에서 판정하지 않습니다 (확인 필요)" className="py-2">
+          <p data-testid="bg-three-house-merge-notice" className="text-xs">
+            일시적 2주택(§155①)과 합가가 겹친 경우, 혼인·동거봉양 이중 합가는 보유 주택 목록이 있어야 판정할 수 있습니다. 이 화면에는 목록 입력 칸이
+            없어 비과세와 다주택 중과 배제를 모두 판정하지 않고 계산합니다 — 양도소득세 계산기(부담부증여)에서 세대 보유 주택 목록을 입력해 확인하세요.
+          </p>
+        </ToneCard>
       )}
 
       {/* OH-22 §154⑤ 단서 최종 1주택 재기산 — 2021.1.1.~2022.5.9. 증여(양도) 1주택만 */}

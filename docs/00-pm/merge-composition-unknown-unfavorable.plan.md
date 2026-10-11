@@ -186,7 +186,7 @@ MergeComposition
 - **결과 세액**: PR-1은 입력 경로만 바꾼다(세액 불변). PR-2부터 합가 구성을 모르는 경우가 「비과세 → 불성립(확인 필요)」로 바뀐다. 다만 PR-1·PR-2의 ⑧ 차단으로 계산기 화면에서는 명부·소유가 늘 채워지므로, 엔진의 1·2번 분기는 **API 직접 호출**과 판정 메뉴 경계 사례에서만 실제로 탄다.
 - **옛 저장분**: 사용자가 기존 저장 데이터를 모두 삭제했다(2026-10-05). 이후 새로 생긴 저장분은 ⑧을 통과한 것이다.
 - **명부 없음 엔진 경로(#1947·#1955·#1958·#1965·#1968)**: 주택 양도 계산기 화면에서는 더 이상 도달하지 않는다. 엔진·API에는 남긴다(Q-8).
-- **부담부증여 양도분 예외(Q-10, 2026-10-05 리드 전달)**: 「모름 → 불리」 정책에서 **유일하게 제외**된다. `transferType === "burdened_gift"`일 때만 `noMergeRosterInputPath: true`가 서서 §155④⑤ 합가 전 구성이 종전 동작(명부 없이도 성립)을 유지한다 — 증여세 계산기 화면에 명부 입력이 없어 사용자가 사실을 제공할 방법이 없기 때문이다. 계산기·판정 메뉴·API 직접 호출(`transferType` 미지정 또는 `"regular"`)·겸용주택은 이 예외와 무관하게 PR-2 그대로다.
+- **부담부증여 양도분 예외(Q-10, 2026-10-05 리드 전달)**: 「모름 → 불리」 정책에서 **유일하게 제외**된다. **증여세 마법사가 싣는 표식(`burdenedGiftInfo.houseRosterInputUnavailable`, 1h-G1-12 · 결정 #27)이 있을 때만** `noMergeRosterInputPath: true`가 서서 §155④⑤ 합가 전 구성이 종전 동작(명부 없이도 성립)을 유지한다(종전에는 양도 형태 `transferType === "burdened_gift"`로 짐작해 명부 입력 칸이 있는 계산기 부담부증여 모드까지 번졌다) — 증여세 계산기 화면에 명부 입력이 없어 사용자가 사실을 제공할 방법이 없기 때문이다. 계산기(부담부증여 모드 포함)·판정 메뉴·표식 없는 API 직접 호출·겸용주택은 이 예외와 무관하게 PR-2 그대로다.
 
 ## 7. 레지스터
 
@@ -201,7 +201,7 @@ Q-1~Q-4는 §1-1에서 결정됐다.
 | Q-7 | 필수화 대상 자산 | **주택 양도만 1차** — 입주권·분양권·재개발 아파트·겸용주택은 ① 의미가 달라 별건 설계 | **권장안 채택**(2026-10-05) |
 | Q-8 | API Zod `houses` required 전환 | **하지 않는다** — API 호출자는 명부 없이 보낼 수 있고, 엔진의 명부 없음 경로(모름 → 불리)가 그 경우를 처리한다 | **권장안 채택**(2026-10-05) |
 | Q-9 | 다건에서 건마다 같은 세대 명부를 다시 입력하는 구조 | **현행 유지**(이번 범위 밖) — 세대 단위 공유는 별건 | **권장안 채택**(2026-10-05) |
-| Q-10 | 증여세 계산기 부담부증여 양도분의 세대 주택 수(별도 화면·명부 없음, `gift-burdened-one-house.ts`) | **범위 밖**(화면에 명부 입력 추가는 별건) | **범위 밖 확정 + PR-2 적용 예외 추가 결정**(2026-10-05, 리드 전달): §155④⑤ 합가 전 구성 판정에서 **이 경로만** 「모름」을 불리하게 적용하지 않는다(나) 종전 동작(합가 구성 판정을 하지 않고 성립) 유지. 근거: 입력 경로가 없는 화면에서 불리하게 적용하면 사용자가 고칠 수 없는 항목으로 불이익을 주게 된다(memory `feedback_required_field_needs_an_input_path`). 구현: `TransferTaxInput.noMergeRosterInputPath`(echo, `transferType === "burdened_gift"`에서만 `transfer-tax.ts`가 세운다) → `resolveMergeComposition`의 `noRosterInputPath` → 명부 없음이면 `roster_missing`(불성립) 대신 `unknown`/`no_roster_input_path`(판정 보류, 종전 동작). 계산기·판정 메뉴·API 직접 호출·겸용주택은 이 플래그를 세우지 않으므로 PR-2의 「모름 → 불리」 그대로다. `__tests__/api/gift-burdened-one-house-limits-e1z.route.anchor.test.ts` G4-1이 고정. |
+| Q-10 | 증여세 계산기 부담부증여 양도분의 세대 주택 수(별도 화면·명부 없음, `gift-burdened-one-house.ts`) | **범위 밖**(화면에 명부 입력 추가는 별건) | **범위 밖 확정 + PR-2 적용 예외 추가 결정**(2026-10-05, 리드 전달): §155④⑤ 합가 전 구성 판정에서 **이 경로만** 「모름」을 불리하게 적용하지 않는다(나) 종전 동작(합가 구성 판정을 하지 않고 성립) 유지. 근거: 입력 경로가 없는 화면에서 불리하게 적용하면 사용자가 고칠 수 없는 항목으로 불이익을 주게 된다(memory `feedback_required_field_needs_an_input_path`). 구현: `TransferTaxInput.noMergeRosterInputPath`(echo, 표식 + `transferType === "burdened_gift"`일 때만 `hasNoMergeRosterInputPath`가 세운다 — 공개 입력 아님) → `resolveMergeComposition`의 `noRosterInputPath` → 명부 없음이면 `roster_missing`(불성립) 대신 `unknown`/`no_roster_input_path`(판정 보류, 종전 동작). 계산기·판정 메뉴·표식 없는 API 직접 호출·겸용주택은 이 플래그를 세우지 않으므로 PR-2의 「모름 → 불리」 그대로다. `__tests__/api/gift-burdened-one-house-limits-e1z.route.anchor.test.ts` G4-1과 `gift-burdened-no-roster-marker-g1-12.route.anchor.test.ts`가 고정. |
 
 ### 확인 필요 (V)
 

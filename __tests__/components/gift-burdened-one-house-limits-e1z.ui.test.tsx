@@ -183,10 +183,11 @@ describe("UI-G4 §155④⑤ 합가", () => {
 });
 
 describe("UI-G6 상속받은 자산 — 환산취득가액(K-5) 라디오 비활성 (⑧과 같은 술어)", () => {
+  // 시가 평가(K-4/K-5)는 증여세 평가에서 파생한다(1h-G1-2) — 매매사례가액을 둔 토지
   const land = (bgt: Partial<BurdenedGiftTransferTaxInput>) =>
     item(
-      { isOneHousehold: undefined, householdHousingCount: undefined, residencePeriodMonths: undefined, valuationMode: "sangjeungbeop_market", ...bgt },
-      { category: "real_estate_land" } as Partial<EstateItem>,
+      { isOneHousehold: undefined, householdHousingCount: undefined, residencePeriodMonths: undefined, ...bgt },
+      { category: "real_estate_land", similarSalesValue: 400_000_000 } as Partial<EstateItem>,
     );
   const k5 = () => screen.getByTestId("bg-acq-method-converted") as HTMLInputElement;
   it("★ 상속(개시 2018-03-01) → K-5 비활성 · 안내 문구", () => {

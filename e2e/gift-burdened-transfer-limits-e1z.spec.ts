@@ -9,6 +9,7 @@ import { test, expect } from "@playwright/test";
 import { fillAndVerify, fillDateAndVerify } from "./_helpers/tax-flow";
 import {
   addApartmentWithDebt,
+  chooseActualAcquisition,
   enableBurdenedTransferToggle,
   fillApartmentTransferInfo,
   setupTransferApiMock,
@@ -76,6 +77,8 @@ async function addLandWithTransfer(page: Page) {
   await trUnit.fill("250000");
   await trUnit.press("Tab");
   await expect(tr.getByRole("textbox").last()).toHaveValue(/25,000,000|25000000/);
+  // 증여재산을 시가로 평가했으므로 양도소득세도 시가 평가 — 취득가액 산정방식(실지) 선택이 필수다(1h-G1-2)
+  await chooseActualAcquisition(dialog);
   return dialog;
 }
 
@@ -191,4 +194,7 @@ test("[BT-E2E-16] 혼인합가일 · 먼저 양도 → 요청 본문 marriageMer
   const body = await calculateAndCapture(page, mock);
   expect(body.marriageMerge).toEqual({ marriageDate: "2020-01-01" });
   expect(body.isFirstTransferredInMerge).toBe(true);
+  // 이 화면에는 세대 보유 주택 목록 입력 칸이 없다 — 표식이 빠지면 엔진이 합가 전 구성 「모름」을 불성립으로 읽어
+  // 비과세가 조용히 과세로 바뀐다(1h-G1-12). 화면 쪽 ⑬ 누락은 route anchor로 못 잡으므로 요청 본문에서 고정한다.
+  expect((body.burdenedGiftInfo as Record<string, unknown>).houseRosterInputUnavailable).toBe(true);
 });

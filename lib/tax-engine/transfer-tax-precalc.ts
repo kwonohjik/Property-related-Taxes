@@ -215,6 +215,7 @@ export function runPreCalculationSteps(
   const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps);
   const transferBurdenedGiftBreakdown = bgStep.breakdown;
   workingInput = bgStep.workingInput;
+  warnings.push(...bgStep.notices);
 
   /**
    * §99의4①·§98의9①의 「그 주택 취득 **전에 보유하던** 다른 주택」 판정용 일반주택 취득일 (D4-05).

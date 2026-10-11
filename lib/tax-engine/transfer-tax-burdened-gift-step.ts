@@ -6,6 +6,7 @@
  */
 
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible } from "./burdened-gift-apportionment";
+import { MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE } from "./burdened-gift-valuation";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
@@ -15,9 +16,10 @@ export function runBurdenedGiftStep(
   rawInput: TransferTaxInput,
   workingInputIn: TransferTaxInput,
   steps: CalculationStep[],
-): { breakdown?: TransferBurdenedGiftBreakdown; workingInput: TransferTaxInput } {
+): { breakdown?: TransferBurdenedGiftBreakdown; workingInput: TransferTaxInput; notices: string[] } {
   let workingInput = workingInputIn;
   let transferBurdenedGiftBreakdown: TransferBurdenedGiftBreakdown | undefined;
+  const notices: string[] = [];
   const isBurdenedGiftEngine =
     rawInput.transferType === "burdened_gift" ||
     rawInput.acquisitionCause === "burdened_gift";
@@ -57,8 +59,10 @@ export function runBurdenedGiftStep(
     // penalty base로 신호. estimatedBase·usedEstimatedAcquisition은 finalize STEP 10.5가
     // 읽는 penalty 전용 신호이며, 본 양도차익은 위 §159 안분값(useEstimatedAcquisition:false)으로 계산.
     // 발동 게이트(5년·85㎡·acquisitionMethod=estimated)는 calculateBuildingPenalty가 최종 판정.
+    // 환산취득가액을 실제로 쓴 경우만 — 시가 평가인데 담보평가가 이겨 취득가액이 기준시가로 강제되면(1h-G1-2) 환산 가산세 신호를 세우지 않는다.
     const isK5SelfBuilt =
       rawInput.burdenedGiftInfo.acquisitionMethod === "converted" &&
+      transferBurdenedGiftBreakdown.acquisitionMethodUsed === "converted" &&
       rawInput.isSelfBuilt === true;
     // §114조의2① 증축: penalty base를 증축부분 한정 환산취득가로 교체 (건물 전체 base 과대부과 방지).
     // 증축부분 환산취득가 = 채무안분 건물양도가 × (증축부분 취득기준시가 ÷ 양도시 건물 기준시가).
@@ -95,12 +99,12 @@ export function runBurdenedGiftStep(
       acquisitionMethod: "actual" as const,
       // 12억 고가주택 판정·안분 분모.
       //   단독: 현행 그대로 C(= max) — 국세청 해석례 5건 기반 해석 B 유지.
-      //   지분: **물건 전체** 보충적평가액. 지분분 C를 쓰면 문턱이 1/지분율만큼 올라
-      //         24억 물건의 1/2 지분이 비과세로 빠진다(A4/#849와 동형 결함).
+      //   지분: 소령 §156① 문언대로 «지분 증여가액 ÷ 지분율» (1h-G1-14 · 결정 #28 A). 지분분 C를 그대로 쓰면 문턱이
+      //         1/지분율만큼 올라 24억 물건의 1/2 지분이 비과세로 빠지고(A4/#849), 물건 전체 보충적평가액만 쓰면 담보·임대가
+      //         이기는 지분이 더 낮게 판정된다. 보충적평가가 이기면 물건 전체 보충적평가액과 같다.
       burdenedGiftDenominator:
-        ownershipRatio !== undefined && ownershipRatio < 1
-          ? transferBurdenedGiftBreakdown.wholePropertySupplementary
-          : transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
+        transferBurdenedGiftBreakdown.fractionalHighValueDenominator ??
+        transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
       ...(isK5SelfBuilt
         ? {
             acquisitionMethod: "estimated" as const,
@@ -131,6 +135,7 @@ export function runBurdenedGiftStep(
       legalBasis: BURDENED_GIFT_TRANSFER.VALUATION_159,
     });
     // 다주택 중과 한시 배제 적용 고지는 중과 판정이 끝난 뒤 `transfer-tax.ts`가 붙인다(1h-G1-11 — 유예가 실제 적용된 결과에서만).
+    if (transferBurdenedGiftBreakdown.acquisitionStdForcedByCollateral) notices.push(MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE);
   }
-  return { breakdown: transferBurdenedGiftBreakdown, workingInput };
+  return { breakdown: transferBurdenedGiftBreakdown, workingInput, notices };
 }

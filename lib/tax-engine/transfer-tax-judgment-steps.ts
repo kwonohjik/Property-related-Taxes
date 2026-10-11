@@ -41,6 +41,7 @@ import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-claus
 import { classifyRegionCriteriaByCode } from "./multi-house-surcharge-count";
 import type { IncomeDeductionId } from "./transfer-reductions";
 import { translateRedevAptForHousingJudgment } from "./one-house/redev-apt-judgment-input";
+import { hasNoMergeRosterInputPath } from "./one-house/roster-input-path";
 
 /** `resolveSurchargeExclusionByReduction` 반환형 (조특법 감면주택 중과 배제 선판정) */
 type SurchargeExclusionByReduction = { excluded: boolean; appliedId?: IncomeDeductionId; legalBasis?: string };
@@ -133,7 +134,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
       knownHouseExclusionCount: inheritedExcluded + ex.specialActExcludedCount,
       inheritedHouseExclusionCount: inheritedExcluded,
       knownHouseExclusionHouseIds: ex.knownHouseExclusionHouseIds,
-      noMergeRosterInputPath: workingInput.transferType === "burdened_gift",
+      noMergeRosterInputPath: hasNoMergeRosterInputPath(workingInput),
     },
     parsedRates.oneHouseSpecialRules,
   );

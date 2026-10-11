@@ -17,17 +17,26 @@ import { ParentalCareParentAgeField } from "./ParentalCareParentAgeField";
 export function MergeDateSection({
   form,
   onChange,
+  variant = "calculator",
 }: {
   form: MergeDateFields;
   onChange: (d: Partial<MergeDateFields>) => void;
+  /**
+   * `gift` — 증여세 마법사의 부담부증여 양도세 섹션(1h-G1-4 · 결정 #25). 이 화면에는 세대 보유 주택 목록이 없어
+   * 일시적 2주택 중첩(3주택)·합가에 따른 중과 경감/배제를 판정하지 않는다 — 판정하지 않는 혜택은 안내하지 않는다.
+   */
+  variant?: "calculator" | "gift";
 }) {
   const hasAnyMerge = form.marriageDate || form.parentalCareMergeDate;
+  const isGift = variant === "gift";
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">
         합가 특례{" "}
-        <span className="text-xs text-muted-foreground font-normal">(선택 — 혼인·동거봉양 합가 시 1세대1주택 비과세·중과 배제)</span>
+        <span className="text-xs text-muted-foreground font-normal">
+          {isGift ? "(선택 — 혼인·동거봉양 합가 시 1세대1주택 비과세)" : "(선택 — 혼인·동거봉양 합가 시 1세대1주택 비과세·중과 배제)"}
+        </span>
       </p>
       <div
         className={cn(
@@ -43,7 +52,11 @@ export function MergeDateSection({
               value={form.marriageDate}
               onChange={(v) => onChange({ marriageDate: v })}
             />
-            <p className="text-xs text-muted-foreground">혼인합가 후 {mergeExemptionYearsLabel({ kind: "marriage" })} 내 먼저 양도 시 1세대1주택 비과세(§155⑤). 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분). 중과는 그 밖에 2주택 10년·3주택↑ 5년(배우자 주택수 차감) 내 경감</p>
+            <p className="text-xs text-muted-foreground">
+              {isGift
+                ? `혼인합가 후 ${mergeExemptionYearsLabel({ kind: "marriage" })} 내 먼저 양도 시 1세대1주택 비과세(§155⑤)`
+                : `혼인합가 후 ${mergeExemptionYearsLabel({ kind: "marriage" })} 내 먼저 양도 시 1세대1주택 비과세(§155⑤). 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분). 중과는 그 밖에 2주택 10년·3주택↑ 5년(배우자 주택수 차감) 내 경감`}
+            </p>
           </div>
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">동거봉양 합가일</label>
@@ -52,7 +65,11 @@ export function MergeDateSection({
               value={form.parentalCareMergeDate}
               onChange={(v) => onChange({ parentalCareMergeDate: v })}
             />
-            <p className="text-xs text-muted-foreground">동거봉양 합가 후 {mergeExemptionYearsLabel({ kind: "parental_care" })} 내 먼저 양도 시 1세대1주택 비과세(§155④)·중과 배제. 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분)</p>
+            <p className="text-xs text-muted-foreground">
+              {isGift
+                ? `동거봉양 합가 후 ${mergeExemptionYearsLabel({ kind: "parental_care" })} 내 먼저 양도 시 1세대1주택 비과세(§155④)`
+                : `동거봉양 합가 후 ${mergeExemptionYearsLabel({ kind: "parental_care" })} 내 먼저 양도 시 1세대1주택 비과세(§155④)·중과 배제. 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분)`}
+            </p>
           </div>
         </div>
         {/* 동거봉양 합가일이 있으면 직계존속 연령 요건을 받는다(결정 #9) — 혼인합가에는 이 요건이 없다. */}
@@ -67,7 +84,11 @@ export function MergeDateSection({
             variant="card"
             tone="violet"
             title="세대 내 먼저 양도하는 주택"
-            description="§155④⑤ 비과세와 2주택 중과배제(소득세법 시행령 §167의10①15호)는 합가·혼인 후 세대 내 먼저 양도하는 주택에만 적용됩니다. 이 양도가 합가 후 첫 양도이면 체크하세요. (양도 주택은 합가일 이전 또는 당일 취득분)"
+            description={
+              isGift
+                ? "§155④⑤ 비과세는 합가·혼인 후 세대 내 먼저 양도하는 주택에만 적용됩니다. 이 양도가 합가 후 첫 양도이면 체크하세요. (양도 주택은 합가일 이전 또는 당일 취득분)"
+                : "§155④⑤ 비과세와 2주택 중과배제(소득세법 시행령 §167의10①15호)는 합가·혼인 후 세대 내 먼저 양도하는 주택에만 적용됩니다. 이 양도가 합가 후 첫 양도이면 체크하세요. (양도 주택은 합가일 이전 또는 당일 취득분)"
+            }
             checked={form.isFirstTransferredInMerge}
             onCheckedChange={(v) => onChange({ isFirstTransferredInMerge: v })}
           />

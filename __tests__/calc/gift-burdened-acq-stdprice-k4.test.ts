@@ -31,6 +31,8 @@ function buildingItem(
     category,
     name: "정안빌딩",
     standardPrice: 1_000_000_000, // 양도시 기준시가(평가액 — 채무 초과 경고 회피용)
+    // 평가방식은 증여세 평가에서 파생한다(1h-G1-2) — 시가 모드는 증여재산 평가의 시가를 둔 자산, 기준시가 안분은 시가 없는 자산이다
+    ...(bgt.valuationMode === "sangjeungbeop_standard" ? {} : { marketValue: 1_000_000_000 }),
     assumedDebtForGift: 400_000_000,
     // §47① 인수채무액의 **내역**. ⑧ C-4b(2026-08 F26)가 「§47① = 임대보증금 + 저당권 채무액」
     // 일치를 요구하므로 픽스처에도 채운다 — 종전에는 두 칸이 비어 있어(합계 0) 엔진 §159의
@@ -40,8 +42,6 @@ function buildingItem(
     burdenedGiftTransferTax: {
       acquisitionDate: new Date("2012-01-01"),
       standardPriceAtAcquisition: bgt.standardPriceAtAcquisition ?? 0,
-      valuationMode: bgt.valuationMode ?? "sangjeungbeop_market",
-      marketValueAtTransfer: 1_000_000_000,
       acquisitionMethod: bgt.acquisitionMethod,
       actualAcquisitionTotal: 160_000_000,
     },

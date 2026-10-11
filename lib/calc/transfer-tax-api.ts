@@ -49,7 +49,7 @@ import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
-import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { buildBurdenedGiftInfo, burdenedGiftBundleTotalSalePrice } from "./transfer-tax-api-burdened-gift";
 import { buildCompanionBurdenedGiftWholeInfo } from "./transfer-tax-api-burdened-gift";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import {
@@ -192,7 +192,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고,
   // 엔진이 개산공제 계산 지점에서만 적용한다(설계 transfer-fractional-lump-sum-deduction).
   const ownershipRatioForDeduction = primaryFractional ? primaryRatio : undefined;
-  const totalContractPrice = parseAmount(form.contractTotalPrice);
+  const totalContractPrice = burdenedGiftBundleTotalSalePrice(form.assets, parseAmount(form.contractTotalPrice), fractionalBundleMerge);
   // 증환지 증가분이 있으면 결정방식은 `apportioned` 강제 — ⑤·⑧과 **같은 leaf**를 쓴다(H8).
   const effBundledSaleMode = effectiveBundledSaleMode(form);
   // 폼-수준 총 양도비 (B3) — 지분 모드 자동 안분의 분자 sourcing.
@@ -674,7 +674,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     //    companion 경로를 아예 쓰지 않는 것이 이 설계의 회귀 0 근거다(설계 D1-1).
     ...(form.assets.length > 1 && gbShares === undefined
       ? {
-          totalSalePrice: parseAmount(form.contractTotalPrice),
+          totalSalePrice: totalContractPrice,
           // §166⑥ 안분 키 — 함께양도 묶음의 지분 primary는 물건 전체(100%) 기준시가 × 지분율(양도하는 것이 지분이다).
           standardPriceAtTransferForApportion:
             parseAmount(primary.standardPriceAtTransfer) > 0

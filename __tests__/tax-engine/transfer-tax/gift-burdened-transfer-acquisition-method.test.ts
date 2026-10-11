@@ -55,8 +55,9 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
  * 주택(housing) 자산 — burdenedGiftTransferTax에 미래 필드(bgtExtra)를 주입.
  * bgtExtra는 BurdenedGiftTransferTaxInput에 아직 없는 필드 → 전체 `as EstateItem` 캐스팅.
  */
-function makeHousingItem(bgtExtra: Record<string, unknown> = {}): EstateItem {
+function makeHousingItem(bgtExtra: Record<string, unknown> = {}, itemExtra: Record<string, unknown> = {}): EstateItem {
   return {
+    ...itemExtra,
     id: "apt-1",
     category: "real_estate_apartment",
     name: "테스트 아파트",
@@ -108,13 +109,11 @@ describe("A-회귀: 기준시가 모드 현행 동작 (K-1~K-3 회귀 가드 —
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("A-K4: 시가 평가 + 실지취득가액 안분 (Pre-Do 실패 기대)", () => {
-  const item = makeHousingItem({
-    valuationMode: "sangjeungbeop_market",
-    acquisitionMethod: "actual",
-    actualAcquisitionTotal: 200_000_000,
-    marketValueAtTransfer: 500_000_000, // 분모 C
-    capitalExpenditure: 5_000_000,
-  });
+  // 평가방식·양도 시 시가는 증여세 평가에서 파생한다(1h-G1-2) — 증여재산 평가의 시가 5억이 분모 C의 시가항이다
+  const item = makeHousingItem(
+    { acquisitionMethod: "actual", actualAcquisitionTotal: 200_000_000, capitalExpenditure: 5_000_000 },
+    { marketValue: 500_000_000 },
+  );
   const body = buildGiftBurdenedTransferBody(item, makeForm());
 
   it("burdenedGiftInfo.valuationMode === 'sangjeungbeop_market'", () => {
@@ -143,11 +142,7 @@ describe("A-K4: 시가 평가 + 실지취득가액 안분 (Pre-Do 실패 기대)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("A-K5: 시가 평가 + 환산취득가액 (Pre-Do 실패 기대)", () => {
-  const item = makeHousingItem({
-    valuationMode: "sangjeungbeop_market",
-    acquisitionMethod: "converted",
-    marketValueAtTransfer: 500_000_000, // 분모 C
-  });
+  const item = makeHousingItem({ acquisitionMethod: "converted" }, { marketValue: 500_000_000 }); // 시가 5억 = 분모 C의 시가항(증여세 평가에서 파생)
   const body = buildGiftBurdenedTransferBody(item, makeForm());
 
   it("burdenedGiftInfo.valuationMode === 'sangjeungbeop_market'", () => {

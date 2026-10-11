@@ -203,6 +203,11 @@ const LOW_VALUE_REGIONAL_HOUSE =
  * 문언: 소득세법 시행령 §167의10①·§167의3① 각 호(MST 290841 실독).
  */
 export function noRosterSurchargeFallbackNotice(args: {
+  /**
+   * 이 입력을 보내는 화면에 세대 보유 주택 목록 입력 칸이 **없다**(증여세 마법사 — `burdenedGiftInfo.houseRosterInputUnavailable`).
+   * 「목록에 입력하면 판정합니다」는 막다른 안내라, 입력 칸이 있는 양도소득세 계산기(부담부증여)로 안내한다(1h-G1-11 · 결정 #25).
+   */
+  rosterInputUnavailable?: boolean;
   houses?: readonly unknown[];
   householdHousingCount: number;
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
@@ -225,6 +230,9 @@ export function noRosterSurchargeFallbackNotice(args: {
   return (
     `세대 보유 주택 목록이 입력되지 않아 「세대 보유 주택 수」(${n}채)와 조정대상지역 여부만으로 ` +
     `${n >= 3 ? "1세대 3주택 이상" : "1세대 2주택"} 중과를 적용했습니다. ${clauses} — ` +
-    `보유 주택이 이에 해당하면 중과가 배제될 수 있으니, 세대 보유 주택 목록에 주택을 입력하면 판정합니다(확인 필요)`
+    (args.rosterInputUnavailable
+      ? `보유 주택이 이에 해당하면 중과가 배제될 수 있으나, 증여세 계산 화면에는 세대 보유 주택 목록 입력 칸이 없어 판정하지 않았습니다. ` +
+        `양도소득세 계산기(부담부증여)에서 세대 보유 주택 목록을 입력해 확인하세요(확인 필요)`
+      : `보유 주택이 이에 해당하면 중과가 배제될 수 있으니, 세대 보유 주택 목록에 주택을 입력하면 판정합니다(확인 필요)`)
   );
 }

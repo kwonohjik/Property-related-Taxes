@@ -170,12 +170,20 @@ describe("B4: 시가 모드 K-4 — 실지취득가액도 지분분", () => {
     expect(build(mkt).sangjeungbeopValuation.supplementary).toBe(1_200_000_003);
   });
 
-  it("🔴 실지취득가액이 지분분 기준으로 안분된다", () => {
-    const before = totalAcq(build(mkt));
-    const after = totalAcq(build(mkt, 0.5));
-    expect(after).toBeLessThan(before);
-    // 지분분: C = max(600,000,001, 700,000,000) = 7억 → B/C = 1.0 → A 그대로
-    expect(after).toBe(200_000_001); // floor(400,000,003 × 0.5)
+  it("🔴 담보평가가 시가를 이기는 구간: §159①1호 괄호가 발동해 취득가액은 지분분 취득시 기준시가 × B/C (1h-G1-2 · 결정 #23 하위 2)", () => {
+    // 종전에는 이 구간에서 사용자가 입력한 실지취득가액을 지분분으로 줄여 썼다(floor(400,000,003 × 0.5) = 200,000,001).
+    // 시가 평가인데 C가 §66 담보평가가 되면 «제66조에 따라 기준시가로 산정한 경우 취득가액도 기준시가»라 실지 입력은 쓰이지 않는다.
+    const r = build(mkt, 0.5);
+    expect(r.acquisitionStdForcedByCollateral).toBe(true);
+    expect(r.acquisitionMethodUsed).toBe("standard_price");
+    // C = max(600,000,001, 700,000,000) = 7억 → B/C = 1.0 → 지분분 취득시 기준시가 floor(500,000,001 × 0.5) 그대로
+    expect(totalAcq(r)).toBe(250_000_000);
+  });
+
+  it("부정 짝 — 담보평가가 시가를 이기지 못하면(채무 5억 < 지분분 시가 6억) 실지취득가액 경로 그대로", () => {
+    const r = build({ ...mkt, mortgageDebtAmount: 500_000_000 }, 0.5);
+    expect(r.acquisitionStdForcedByCollateral).toBeUndefined();
+    expect(r.acquisitionMethodUsed).toBe("actual");
   });
 });
 
@@ -183,13 +191,14 @@ describe("B4: 시가 모드 K-4 — 실지취득가액도 지분분", () => {
 // B5 — 시가 모드 K-5(환산): **의도적으로 스케일 불변**
 // ════════════════════════════════════════════════════════════
 describe("B5: K-5 환산취득가액은 지분과 무관하다 (비율 상쇄 — 설계 확인)", () => {
+  // 채무 5억 < 지분분 시가 6억 — 담보평가가 시가를 이기지 못하는 구간(이기면 취득가액이 기준시가로 강제된다 — B4)
   const mkt = info({
     valuationMode: "sangjeungbeop_market",
     marketValueAtTransfer: 1_200_000_003,
     marketValueAtAcquisition: 600_000_003,
     acquisitionMethod: "converted",
     lendingDepositTotal: 0,
-    mortgageDebtAmount: 700_000_000,
+    mortgageDebtAmount: 500_000_000,
   });
 
   it("환산취득가액 = 양도가액 × (취득기준시가 ÷ 양도기준시가) — 기준시가 비율이 상쇄된다", () => {
@@ -198,10 +207,17 @@ describe("B5: K-5 환산취득가액은 지분과 무관하다 (비율 상쇄 �
     expect(totalAcq(build(mkt, 0.5))).toBe(totalAcq(build(mkt)));
   });
 
-  it("반면 개산공제 base는 C가 clamp되므로 지분 영향을 받는다", () => {
+  it("개산공제도 비율이 상쇄돼 지분과 무관하다(담보평가가 시가를 이기지 못하는 구간)", () => {
     const d = (r: ReturnType<typeof build>) =>
       r.perAsset.land.estimatedDeduction + r.perAsset.building.estimatedDeduction;
-    expect(d(build(mkt, 0.5))).toBeLessThan(d(build(mkt)));
+    expect(d(build(mkt, 0.5))).toBe(d(build(mkt)));
+  });
+
+  it("담보평가가 시가를 이기면(채무 7억 > 지분분 시가 6억) 취득가액이 기준시가로 강제돼 지분 영향을 받는다 — 확인 필요 고지 대상", () => {
+    const clamped = { ...mkt, mortgageDebtAmount: 700_000_000 };
+    const r = build(clamped, 0.5);
+    expect(r.acquisitionStdForcedByCollateral).toBe(true);
+    expect(totalAcq(r)).not.toBe(totalAcq(build(clamped)));
   });
 });
 

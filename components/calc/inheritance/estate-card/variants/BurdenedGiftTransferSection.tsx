@@ -39,6 +39,7 @@ import { dateToStr, strToDate } from "./burdened-gift-dates";
 import { HousingFieldSet } from "./BurdenedGiftHousingFieldSet";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { giftBurdenedInheritanceSlice } from "@/lib/calc/gift-burdened-one-house";
+import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 
 
 /** housing 전용 1세대1주택 후속 입력(E-1 후속)을 비운 patch — 주택 여부를 끌 때 함께 비운다 */
@@ -85,14 +86,12 @@ function createEmptyBgt(): BurdenedGiftTransferTaxInput {
   return {
     acquisitionDate: undefined as unknown as Date,
     standardPriceAtAcquisition: 0,
-    // K-4/K-5 신규 필드 — 기본 기준시가 모드(K-1~K-3). store default = UI fallback = API/validate 3중 일치.
-    valuationMode: "sangjeungbeop_standard",
-    marketValueAtTransfer: undefined,
+    // K-4/K-5 — 평가방식·양도 시 시가는 증여세 평가에서 파생한다(1h-G1-2): `valuationMode`·`marketValueAtTransfer`·
+    // `landStdPriceAtTransfer`(옛 독립 입력)는 새 기록에 쓰지 않는다. 시가 평가일 때의 산정방식·실지취득가액·실비만 입력받는다.
     acquisitionMethod: undefined,
     actualAcquisitionTotal: undefined,
     capitalExpenditure: undefined,
     transferExpense: undefined,
-    landStdPriceAtTransfer: undefined,
     // §114조의2 신축·증축 가산세 (K-5 + 건물 전용)
     isSelfBuilt: undefined,
     buildingType: undefined,
@@ -117,13 +116,10 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     !!bgt.parentalCareMergeDate ||
     !!bgt.residencePeriodMonths ||
     !!bgt.householdHousingCount ||
-    bgt.valuationMode === "sangjeungbeop_market" ||
-    !!bgt.marketValueAtTransfer ||
     bgt.acquisitionMethod !== undefined ||
     !!bgt.actualAcquisitionTotal ||
     !!bgt.capitalExpenditure ||
     !!bgt.transferExpense ||
-    !!bgt.landStdPriceAtTransfer ||
     bgt.isSelfBuilt === true ||
     !!bgt.constructionDate ||
     (bgt.extensionFloorArea ?? 0) > 0 ||
@@ -310,38 +306,36 @@ export function BurdenedGiftTransferSection({
               />
             </div>
 
-            {/* 평가방식·취득가액 산정 (K-4/K-5) */}
+            {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
             <ValuationModeSection
               bgt={bgt}
               set={set}
               item={item}
               isLandType={true}
-              jibun={jibun}
             />
 
-            {/* 기준시가 모드: 양도시 개별공시지가 — 단가는 local, store(item.standardPrice)에는 «총액» */}
-            {(bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_standard" && (
-              <div data-testid="bg-transfer-transfer-stdprice-land">
-                <StandardPriceInput
-                  propertyKind="land"
-                  totalPrice={
-                    item.standardPrice && item.standardPrice > 0
-                      ? String(item.standardPrice)
-                      : ""
-                  }
-                  onTotalPriceChange={(v) =>
-                    onTransferStdPriceChange(parseAmount(v) || undefined)
-                  }
-                  pricePerSqm={transferPricePerSqm}
-                  onPricePerSqmChange={setTransferPricePerSqm}
-                  area={item.areaSqm != null ? String(item.areaSqm) : ""}
-                  onAreaChange={(v) => onChange({ areaSqm: parseDecimal(v) || undefined })}
-                  jibun={jibun}
-                  label="양도시(증여시) 개별공시지가"
-                  hint="증여일(양도일) 기준 공시지가 총액. §159 안분 분모로 사용됩니다."
-                />
-              </div>
-            )}
+            {/* 양도시 개별공시지가 — 단가는 local, store(item.standardPrice)에는 «총액». 증여재산 평가의 «보충적 평가» 한 칸이며
+                기준시가 안분·담보평가 승·환산(K-5) 분모에 쓰인다(시가 평가여도 총액 한 칸 — 1h-G1-2 토지 단위 결함 정정) */}
+            <div data-testid="bg-transfer-transfer-stdprice-land">
+              <StandardPriceInput
+                propertyKind="land"
+                totalPrice={
+                  item.standardPrice && item.standardPrice > 0
+                    ? String(item.standardPrice)
+                    : ""
+                }
+                onTotalPriceChange={(v) =>
+                  onTransferStdPriceChange(parseAmount(v) || undefined)
+                }
+                pricePerSqm={transferPricePerSqm}
+                onPricePerSqmChange={setTransferPricePerSqm}
+                area={item.areaSqm != null ? String(item.areaSqm) : ""}
+                onAreaChange={(v) => onChange({ areaSqm: parseDecimal(v) || undefined })}
+                jibun={jibun}
+                label="양도시(증여시) 개별공시지가"
+                hint="증여일(양도일) 기준 공시지가 총액. §159 안분·환산(K-5) 분모로 사용됩니다."
+              />
+            </div>
 
             {/* 비사업용 토지 여부 */}
             <ToggleCard
@@ -402,7 +396,6 @@ export function BurdenedGiftTransferSection({
                 onTransferStdPriceChange={onTransferStdPriceChange}
                 transferStdPriceLabel={transferStdPriceLabel}
                 isLand={false}
-                jibun={jibun}
                 item={item}
                 transferDate={transferDate}
               />
@@ -436,7 +429,6 @@ export function BurdenedGiftTransferSection({
             onTransferStdPriceChange={onTransferStdPriceChange}
             transferStdPriceLabel={transferStdPriceLabel}
             isLand={false}
-            jibun={jibun}
             item={item}
             transferDate={transferDate}
           />
@@ -490,9 +482,13 @@ interface NonHousingFieldSetProps {
 }
 
 function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item }: NonHousingFieldSetProps) {
-  const isMarketMode = (bgt.valuationMode ?? "sangjeungbeop_standard") === "sangjeungbeop_market";
-  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요.
-  const acqStdInert = isMarketMode && bgt.acquisitionMethod === "actual";
+  // 평가방식은 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — ④·⑧과 같은 leaf.
+  const valuation = giftBurdenedValuationBasis(item);
+  const isMarketMode = valuation.mode === "sangjeungbeop_market";
+  const collateralForced = isMarketMode && valuation.collateralForcesStandardAcquisition;
+  // 시가 모드 + 실지취득가액(K-4): 비-토지 자산은 취득시 기준시가가 결과에 무영향 → 입력 불필요. 담보평가 승은 기준시가를 쓰므로 필수.
+  const acqStdInert = isMarketMode && !collateralForced && bgt.acquisitionMethod === "actual";
+  const transferStdRequired = !isMarketMode || collateralForced || bgt.acquisitionMethod === "converted";
   return (
     <div className="space-y-2">
       <FieldCard label="취득일 (증여자 당초 취득일)" required>
@@ -532,26 +528,28 @@ dateToStr(bgt.acquisitionDate)
         />
       </FieldCard>
 
-      {/* 평가방식·취득가액 산정 (K-4/K-5) */}
+      {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
       <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} />
 
-      {/* 기준시가 모드: 양도시 기준시가 */}
-      {!isMarketMode && (
-        <FieldCard
+      {/* 양도시 기준시가 — 평가 입력의 '보충적 평가(기준시가)'와 같은 한 칸. 기준시가 안분·담보평가 승·환산(K-5)에서 필수 */}
+      <FieldCard
+        label={transferStdPriceLabel}
+        hint={
+          transferStdRequired
+            ? "증여일(양도일) 현재 기준시가. §159 안분·환산에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+            : "실지취득가액(K-4)에서는 입력하지 않아도 됩니다 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
+        }
+        required={transferStdRequired}
+      >
+        <CurrencyInput
           label={transferStdPriceLabel}
-          hint="증여일(양도일) 현재 기준시가. §159 안분에 사용 — 평가 입력의 '보충적 평가(기준시가)'와 동일 값입니다."
-          required
-        >
-          <CurrencyInput
-            label={transferStdPriceLabel}
-            value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
-            onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
-            hideLabel
-            hideUnit
-            data-testid="bg-transfer-transfer-stdprice"
-          />
-        </FieldCard>
-      )}
+          value={transferStdPrice && transferStdPrice > 0 ? String(transferStdPrice) : ""}
+          onChange={(v) => onTransferStdPriceChange(parseAmount(v) || undefined)}
+          hideLabel
+          hideUnit
+          data-testid="bg-transfer-transfer-stdprice"
+        />
+      </FieldCard>
     </div>
   );
 }

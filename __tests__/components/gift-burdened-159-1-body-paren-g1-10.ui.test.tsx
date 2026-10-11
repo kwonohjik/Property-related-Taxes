@@ -19,10 +19,11 @@ import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 vi.mock("@/components/ui/address-search", () => ({ AddressSearch: () => null }));
 afterEach(cleanup);
 
-const section = (bgt: object): string => {
+/** 평가방식은 증여세 평가에서 파생한다(1h-G1-2) — 시가 평가는 증여재산 평가 칸에 시가·감정가·매매사례가를 둔 item으로 만든다. */
+const section = (bgt: object, over: object = {}): string => {
   const item = {
     id: "apt-1", category: "real_estate_apartment", name: "아파트", standardPrice: 300_000_000, leaseDeposit: 100_000_000,
-    mortgageAmount: 0, assumedDebtForGift: 100_000_000,
+    mortgageAmount: 0, assumedDebtForGift: 100_000_000, ...over,
     burdenedGiftTransferTax: { acquisitionDate: new Date("2015-01-01"), standardPriceAtAcquisition: 150_000_000, ...bgt },
   } as unknown as EstateItem;
   return render(
@@ -30,16 +31,22 @@ const section = (bgt: object): string => {
   ).container.textContent ?? "";
 };
 
-describe("G1-10 라디오 — 본문 = 시가(실지·환산), 괄호 = 기준시가 안분", () => {
+describe("G1-10 평가방식 표시 — 본문 = 시가(실지·환산), 괄호 = 기준시가 안분", () => {
   it("G1-10-A: 기준시가 안분은 「괄호」, 시가 평가는 「본문」이다 — 「원칙」·「A괄호 요건 시」가 아니다", () => {
-    const t = section({});
-    expect(t).toContain(`기준시가로 산정하므로 취득가액도 상증법 기준시가로 산정 (${BURDENED_GIFT_TRANSFER.LABEL_159_1_PAREN})`);
-    expect(t).toContain(`실지취득가액 또는 환산취득가액으로 산정 (${BURDENED_GIFT_TRANSFER.LABEL_159_1_BODY})`);
-    expect(t).not.toContain("§159①1호 원칙");
-    expect(t).not.toContain("A괄호");
+    const std = section({});
+    expect(std).toContain(`기준시가로 산정하므로 취득가액도 상증법 기준시가로 산정 (${BURDENED_GIFT_TRANSFER.LABEL_159_1_PAREN})`);
+    expect(std).not.toContain(BURDENED_GIFT_TRANSFER.LABEL_159_1_BODY);
+    cleanup();
+    const market = section({}, { similarSalesValue: 400_000_000 });
+    expect(market).toContain(`실지취득가액 또는 환산취득가액으로 산정 (${BURDENED_GIFT_TRANSFER.LABEL_159_1_BODY})`);
+    expect(market).not.toContain(BURDENED_GIFT_TRANSFER.LABEL_159_1_PAREN);
+    for (const t of [std, market]) {
+      expect(t).not.toContain("§159①1호 원칙");
+      expect(t).not.toContain("A괄호");
+    }
   });
   it("G1-10-B: 시가 + 실지 모드의 분모·분자 힌트도 거꾸로 적지 않는다(분모는 증여가액 C)", () => {
-    const t = section({ valuationMode: "sangjeungbeop_market", acquisitionMethod: "actual", marketValueAtTransfer: 400_000_000 });
+    const t = section({ acquisitionMethod: "actual" }, { similarSalesValue: 400_000_000 });
     expect(t).not.toContain("A괄호");
     expect(t).toContain("증여가액 C");
     expect(t).toContain("소령 §159①1호 본문의 안분 분자");

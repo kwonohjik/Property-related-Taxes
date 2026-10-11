@@ -65,12 +65,16 @@ function SingleTransferResultCard({
   result,
   index,
   transferDate,
+  notices,
 }: {
   result: TransferTaxResult;
   index: number;
   /** 부담부증여 양도일(= 증여일) — 소득세법 §91② 고지의 시행일 게이트. 없으면 고지를 거두지 않는다. */
   transferDate?: string | undefined;
+  /** 증여 화면 전용 고지(1세대 토글 OFF 등 — 엔진 경고가 아니다). 엔진 경고 앞에 같은 공용 카드로 보인다. */
+  notices?: string[];
 }) {
+  const shownWarnings = [...(notices ?? []), ...(result.warnings ?? [])];
   const [detailOpen, setDetailOpen] = useState(false);
 
   const title =
@@ -94,7 +98,7 @@ function SingleTransferResultCard({
         </div>
         {/* 비과세 결론과 함께 엔진 경고(§155㉓ 기한 · §154⑤ 판정 보류 · 확인 필요)를 보여 준다(1h-G1-8) — 종전에는 이
             조기 return이 경고를 버려 「비과세의 전제」가 사라지고 무조건 비과세로 읽혔다. */}
-        <CalculationWarningsCard warnings={result.warnings} className="m-4 mt-0" />
+        <CalculationWarningsCard warnings={shownWarnings} className="m-4 mt-0" />
         {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 부담부증여도 빼지 않는다(매수인 쪽 적용 여부 미확인). */}
         <FalseContractPriceNotice
           transferDate={transferDate}
@@ -124,7 +128,7 @@ function SingleTransferResultCard({
 
       {/* 엔진 경고 · 부분 비과세(고가주택) 근거 — 접힌 상세 안이 아니라 결론과 함께 보인다(1h-G1-8).
           경고는 비과세 분기(위)와 같은 공용 카드이고, 부분 비과세 사유는 양도세 결과뷰와 같은 카드다. */}
-      <CalculationWarningsCard warnings={result.warnings} className="m-4 mb-0" />
+      <CalculationWarningsCard warnings={shownWarnings} className="m-4 mb-0" />
       <PartialExemptBasisCard
         result={result}
         priceLabel="증여가액"
@@ -379,9 +383,14 @@ interface Props {
   transferTaxResults: TransferTaxResult[];
   /** 부담부증여 양도일(= 증여일, YYYY-MM-DD) — 소득세법 §91② 고지의 시행일 게이트 */
   transferDate?: string | undefined;
+  /**
+   * 첫 번째 자산(증여세 마법사는 부담부증여 양도세를 자산 1건에만 켠다)에 붙이는 증여 화면 전용 고지 —
+   * 1세대 토글 OFF가 결론을 가를 때(`giftBurdenedNotOneHouseholdNotice`). 엔진 경고로 넣지 않는다.
+   */
+  notices?: string[];
 }
 
-export function BurdenedTransferTaxResultCard({ transferTaxResults, transferDate }: Props) {
+export function BurdenedTransferTaxResultCard({ transferTaxResults, transferDate, notices }: Props) {
   if (transferTaxResults.length === 0) return null;
 
   return (
@@ -390,7 +399,13 @@ export function BurdenedTransferTaxResultCard({ transferTaxResults, transferDate
         부담부증여 양도소득세 (소득세법 §88 · 소령 §159)
       </h3>
       {transferTaxResults.map((r, i) => (
-        <SingleTransferResultCard key={i} result={r} index={i} transferDate={transferDate} />
+        <SingleTransferResultCard
+          key={i}
+          result={r}
+          index={i}
+          transferDate={transferDate}
+          notices={i === 0 ? notices : undefined}
+        />
       ))}
     </div>
   );

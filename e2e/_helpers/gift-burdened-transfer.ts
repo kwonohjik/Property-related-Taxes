@@ -158,6 +158,21 @@ export async function enableBurdenedTransferToggle(
 }
 
 /**
+ * 증여재산을 시가로 평가한 자산(시가·감정가·매매사례가 입력) — 양도소득세도 시가 평가(K-4/K-5)로 파생되므로(1h-G1-2)
+ * 취득가액 산정방식 선택이 필수다. 실지(K-4) + 실지취득가액 합계를 입력한다(상속받은 자산은 환산(K-5)이 막혀 실지뿐).
+ * 라디오가 없으면(기준시가 평가·담보평가 승) 아무것도 하지 않는다.
+ */
+export async function chooseActualAcquisition(
+  dialog: Awaited<ReturnType<typeof addApartmentWithDebt>>,
+  total = "300000000",
+) {
+  const actualRadio = dialog.getByTestId("bg-acq-method-actual");
+  if ((await actualRadio.count()) === 0) return;
+  await actualRadio.check();
+  await fillAndVerify(dialog.getByRole("textbox", { name: "실지취득가액 합계" }), total);
+}
+
+/**
  * 아파트 주택 기준시가 취득 정보 입력.
  * 1세대1주택 ON + 거주기간 입력 포함.
  *
@@ -168,6 +183,7 @@ export async function enableBurdenedTransferToggle(
  */
 export async function fillApartmentTransferInfo(
   dialog: Awaited<ReturnType<typeof addApartmentWithDebt>>,
+  opts: { acquisitionMethod?: "actual" | "none" } = {},
 ) {
   // 취득일 입력 — DateInput은 연/월/일 3개 textbox. last()로 가장 마지막(취득일) 세트 사용.
   const yearInput = dialog.getByRole("textbox", { name: "연도" }).last();
@@ -188,8 +204,8 @@ export async function fillApartmentTransferInfo(
   await expect(transferStdPriceInput).toBeVisible();
   await fillAndVerify(transferStdPriceInput, "350000000");
 
-  // 1세대1주택 ON — ToggleCard switch
-  const oneHouseToggle = dialog.getByRole("switch", { name: /1세대 1주택/ });
+  // 증여자 세대가 1세대에 해당 ON — ToggleCard switch (1h-G1-7: 라벨이 「1세대 1주택 (§89)」에서 엔진 뜻대로 바뀜)
+  const oneHouseToggle = dialog.getByRole("switch", { name: /증여자 세대가 1세대에 해당/ });
   await expect(oneHouseToggle).toBeVisible();
   const oneHouseChecked = await oneHouseToggle.getAttribute("aria-checked");
   if (oneHouseChecked !== "true") await oneHouseToggle.click();
@@ -200,4 +216,9 @@ export async function fillApartmentTransferInfo(
   const residenceInput = residenceWrapper.locator("input");
   await residenceInput.fill("120");
   await expect(residenceInput).toHaveValue("120");
+
+  // 증여재산을 시가로 평가했으므로(`addApartmentWithDebt` — 시가 8억) 양도소득세도 시가 평가(K-4/K-5)다. 평가방식·양도 시 시가는
+  // 증여세 평가에서 파생하고(1h-G1-2) 산정방식(실지·환산)은 선택이 필수다 — 기본은 실지(K-4) + 실지취득가액 합계. 산정방식 UI 자체를
+  // 보려는 spec은 `{ acquisitionMethod: "none" }`로 선택 전 상태를 둔다. 기준시가 평가(시가 미입력) 흐름에는 산정방식 라디오가 없다.
+  if (opts.acquisitionMethod !== "none") await chooseActualAcquisition(dialog);
 }

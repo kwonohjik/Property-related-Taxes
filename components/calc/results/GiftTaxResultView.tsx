@@ -13,8 +13,10 @@ import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import { BurdenedTransferTaxResultCard } from "@/components/calc/results/BurdenedTransferTaxResultCard";
+import { giftBurdenedNotOneHouseholdNotice } from "@/lib/calc/gift-burdened-household-notice";
 import { BurdenedStockTransferTaxResultCard } from "@/components/calc/results/BurdenedStockTransferTaxResultCard";
 import { BurdenedGiftComparisonCard } from "@/components/calc/results/BurdenedGiftComparisonCard";
+import { GiftSimultaneousResultSections } from "@/components/calc/results/GiftSimultaneousResultSections";
 import { GIFT_DONOR_LABELS } from "@/components/calc/prior-gift/meta";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
@@ -193,6 +195,11 @@ export function GiftTaxResultView({
       );
     }
   };
+
+  // 증여 화면 전용 고지(1h-G1-7) — 1세대 토글 OFF가 부담부증여 양도세 결론을 가를 때만. 엔진 경고가 아니다.
+  const burdenedItem = estateItems.find((it) => it.burdenedGiftTransferTax);
+  const burdenedTransferNotice = burdenedItem ? giftBurdenedNotOneHouseholdNotice(burdenedItem) : null;
+  const burdenedTransferNotices = burdenedTransferNotice ? [burdenedTransferNotice] : undefined;
 
   const taxBeforeCredit = result.computedTax + result.generationSkipSurcharge;
   const hasFilingFormTable =
@@ -390,79 +397,13 @@ export function GiftTaxResultView({
         </PrintSection>
       )}
 
-      {/* 동시증여 추가 건 별지 제10호서식 (⑦-b 지점) */}
-      {simultaneousResults && simultaneousResults.length > 0 && (
-        <PrintSection id="simultaneous-filing-10" selectedIds={selectedPrintIds}>
-          <div className="space-y-4">
-            {simultaneousResults.map((sr, i) => (
-              <div key={i} className="space-y-2">
-                {/* 건 헤더 */}
-                <div className="flex items-center gap-2 px-1" data-testid={`sim-result-header-${i}`}>
-                  <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
-                    건 {i + 1}
-                  </span>
-                  {simultaneousResultLabels?.[i] && (
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {simultaneousResultLabels[i]}
-                    </span>
-                  )}
-                </div>
-                <GiftTaxFilingFormTable
-                  rows={sr.besshi10Rows}
-                  warnings={sr.warnings}
-                  testIdPrefix={`besshi10-${i + 1}-`}
-                />
-              </div>
-            ))}
-          </div>
-        </PrintSection>
-      )}
-
-      {/* 동시증여 수증자 총 납부세액 합계 카드 (⑦-b 지점) */}
-      {simultaneousResults && simultaneousResults.length > 0 && (
-        <div className="rounded-xl border-2 border-sky-300 bg-sky-50/60 p-4 space-y-2 dark:border-sky-700 dark:bg-sky-900/20">
-          <h3 className="text-sm font-bold text-sky-900 dark:text-sky-100">
-            수증자 총 납부세액 합계 (상증법 §4의2①)
-          </h3>
-          <table className="w-full text-xs">
-            <tbody>
-              <tr>
-                <td className="py-0.5 text-sky-700 dark:text-sky-300">
-                  건 0 결정세액 {mainDonor ? `(${GIFT_DONOR_LABELS[mainDonor] ?? mainDonor})` : ""}
-                </td>
-                <td className="py-0.5 text-right font-mono tabular-nums">
-                  {formatKRW(result.finalTax)}
-                </td>
-              </tr>
-              {simultaneousResults.map((sr, i) => (
-                <tr key={i}>
-                  <td className="py-0.5 text-sky-700 dark:text-sky-300">
-                    건 {i + 1} 결정세액{" "}
-                    {simultaneousResultLabels?.[i]
-                      ? `(${simultaneousResultLabels[i]})`
-                      : ""}
-                  </td>
-                  <td className="py-0.5 text-right font-mono tabular-nums">
-                    {formatKRW(sr.finalTax)}
-                  </td>
-                </tr>
-              ))}
-              <tr className="border-t border-sky-300 dark:border-sky-700 font-bold">
-                <td className="pt-2 text-sky-900 dark:text-sky-100">합계</td>
-                <td className="pt-2 text-right font-mono tabular-nums text-sky-900 dark:text-sky-100">
-                  {formatKRW(
-                    result.finalTax +
-                      simultaneousResults.reduce((s, r) => s + r.finalTax, 0),
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="text-micro text-sky-600 dark:text-sky-400">
-            수증자 총 납부세액 합계 = 건 0 결정세액 + 건 1 결정세액 + … + 건 N 결정세액
-          </p>
-        </div>
-      )}
+      <GiftSimultaneousResultSections
+        result={result}
+        simultaneousResults={simultaneousResults}
+        simultaneousResultLabels={simultaneousResultLabels}
+        mainDonor={mainDonor}
+        selectedPrintIds={selectedPrintIds}
+      />
 
       {/* 사전증여 합산 — 이력 출처 배지 (Phase 2) */}
       {priorGifts.length > 0 && (
@@ -517,7 +458,11 @@ export function GiftTaxResultView({
       )}
       {transferTaxResults.length > 0 && (
         <PrintSection id="burdened-transfer-tax" selectedIds={selectedPrintIds}>
-          <BurdenedTransferTaxResultCard transferTaxResults={transferTaxResults} transferDate={giftDate} />
+          <BurdenedTransferTaxResultCard
+            transferTaxResults={transferTaxResults}
+            transferDate={giftDate}
+            notices={burdenedTransferNotices}
+          />
         </PrintSection>
       )}
 
