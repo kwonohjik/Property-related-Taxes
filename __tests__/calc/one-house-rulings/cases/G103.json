@@ -1,36 +1,36 @@
 [
-  {
-    "id": "G103-era",
-    "docNo": "조심-2016-서-2731",
-    "docDate": "2017.07.21.",
-    "basis": "era",
-    "today": "2017-07-21",
-    "summary": "쟁점주택(1988 증여) 보유 중 멸실 예정 주택을 증여받아(2010.8.27.) 멸실·신축(사용승인 2011.9.15.) — 쟁점주택 양도(2014.5.20.) 시 신축주택 취득일은 수증일",
-    "expected": {
-      "isExempt": false,
-      "notAppliedExceptions": [
-        "155-1-temporary-two-house"
-      ]
-    },
-    "bucket": "match",
-    "note": "match(결정 #43 · G6-4 하위 2 가 — inexpressible에서 승격). 재건축·신축 주택은 기존(헐기 전) 주택의 연장이라 취득일 = 기존주택 취득일이다 — 이제 완공(사용승인)일을 「취득일」에 자연스럽게 넣고 경위(원조합원 기존주택·자가 재건축)와 기존주택 취득일을 따로 입력한다. 기대 결론은 종전 note의 「참고 관측」(기존주택 취득일을 취득일로 입력)과 같고, 완공일을 취득일로 넣었을 때 나던 반대 결론은 더 이상 나오지 않는다. 종전 note: inexpressible — 없는 입력: 멸실 후 신축한 주택을 기존주택의 연장으로 볼지(취득일 = 멸실주택 취득일·수증일) — 명부 행은 취득일 하나뿐(P1 E019·E032와 같은 축). 결정: §155①의 다른 주택 취득일은 사용승인일이 아니라 멸실주택 수증일(2010-08-27) → 3년 경과 후 양도라 비과세 배제(기각). 참고 관측(referenceForm: 쟁점주택 1988-05-30, 신축주택 = 수증일 2010-08-27, 양도 2014-05-20·5억 가정): 과세 = 원문. 사용승인일 2011-09-15를 넣으면 비과세(155-1, V-G103-completion) — 청구 주장 쪽.",
-    "form": {
-      "isOneHousehold": true,
-      "transferDate": "2014-05-20",
-      "contractTotalPrice": "500000000",
-      "asset": {
-        "assetKind": "housing",
-        "acquisitionDate": "1988-05-30"
-      },
-      "houses": [
-        {
-          "id": "rebuilt",
-          "region": "capital",
-          "acquisitionDate": "2011-09-15",
-          "acquisitionOrigin": "self_rebuild",
-          "rightAcquisitionDate": "2010-08-27"
-        }
-      ]
+ {
+  "id": "G103-era",
+  "docNo": "조심-2016-서-2731",
+  "docDate": "2017.07.21.",
+  "basis": "era",
+  "today": "2017-07-21",
+  "summary": "쟁점주택(1988 증여) 보유 중 멸실 예정 주택을 증여받아(2010.8.27.) 멸실·신축(사용승인 2011.9.15.) — 쟁점주택 양도(2014.5.20.) 시 신축주택 취득일은 수증일",
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "bucket": "match",
+  "note": "match(결정 #43 · G6-4 하위 2 가 — inexpressible에서 승격). 재건축·신축 주택은 기존(헐기 전) 주택의 연장이라 취득일 = 기존주택 취득일이다 — 이제 완공(사용승인)일을 「취득일」에 자연스럽게 넣고 경위(원조합원 기존주택·자가 재건축)와 기존주택 취득일을 따로 입력한다. 기대 결론은 종전 note의 「참고 관측」(기존주택 취득일을 취득일로 입력)과 같고, 완공일을 취득일로 넣었을 때 나던 반대 결론은 더 이상 나오지 않는다. 종전 note: inexpressible — 없는 입력: 멸실 후 신축한 주택을 기존주택의 연장으로 볼지(취득일 = 멸실주택 취득일·수증일) — 명부 행은 취득일 하나뿐(P1 E019·E032와 같은 축). 결정: §155①의 다른 주택 취득일은 사용승인일이 아니라 멸실주택 수증일(2010-08-27) → 3년 경과 후 양도라 비과세 배제(기각). 참고 관측(referenceForm: 쟁점주택 1988-05-30, 신축주택 = 수증일 2010-08-27, 양도 2014-05-20·5억 가정): 과세 = 원문. 사용승인일 2011-09-15를 넣으면 비과세(155-1, V-G103-completion) — 청구 주장 쪽.",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2014-05-20",
+   "contractTotalPrice": "500000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "1988-05-30"
+   },
+   "houses": [
+    {
+     "id": "rebuilt",
+     "region": "capital",
+     "acquisitionDate": "2011-09-15",
+     "acquisitionOrigin": "self_rebuild",
+     "rightAcquisitionDate": "2010-08-27"
     }
+   ]
   }
+ }
 ]
