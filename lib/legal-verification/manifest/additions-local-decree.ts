@@ -112,6 +112,24 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     keywords: ["7. 제2항제1호부터 제3호까지의 규정에 해당하는 주택"],
     keywordMode: "ALL",
   },
+  // ── §28의4⑥8·9호 오피스텔 한시 특례 (S03-7 — 2026-10-11 KoreanLaw 현행 MST 290815 본문 verbatim) ──
+  {
+    id: "ACQUISITION.HOUSE_COUNT_OFFICE_HANSI_NEW_BUILD",
+    citation: "지방세법 시행령 §28의4⑥8호",
+    keywords: [
+      "신축 오피스텔을 같은 기간 내에 최초로 유상승계취득하는 오피스텔로서 전용면적이 60제곱미터 이하이고 취득당시가액이 3억원",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "ACQUISITION.HOUSE_COUNT_OFFICE_HANSI_LEASE",
+    citation: "지방세법 시행령 §28의4⑥9호",
+    keywords: [
+      "유상승계취득하는 오피스텔(신축 후 최초로 유상승계취득한 오피스텔은 제외한다)로서 다음 각 목의 요건을 모두 갖춘 오피스텔",
+      "그 오피스텔을 임대주택으로 등록할 것",
+    ],
+    keywordMode: "ALL",
+  },
   // ── §28의4③·⑤ (계획서 I-7·I-6 — 2026-09-30 KoreanLaw 현행 MST 288831 본문 verbatim) ──
   {
     id: "ACQUISITION.HOUSE_COUNT_SIMULTANEOUS_ACQUISITION",

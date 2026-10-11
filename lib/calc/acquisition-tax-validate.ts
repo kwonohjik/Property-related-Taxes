@@ -81,6 +81,29 @@ function validateOwnedHouses(form: FormState): string | null {
     if (h.isInherited && !h.inheritanceDate) {
       return `보유 주택 #${i + 1} — 상속개시일을 입력하세요.`;
     }
+    const officeHansi = validateOfficeHansi(h, i);
+    if (officeHansi) return officeHansi;
+  }
+  return null;
+}
+
+/**
+ * 오피스텔 행의 한시 특례(§28의4⑥8·9호) — 선언을 켰으면 ④가 읽는 사실을 모두 받는다.
+ * ④(`officeHansiFields`)·⑫(`officeAssetSchema` refine)와 같은 조건이다: 유형이 8호·9호가 아니면(오피스텔 행에 남은 주택용
+ * `unsold_apt`·빈 값) ④가 선언을 보내지 않아 조용히 버려지므로 선택을 요구하고, 사실이 비면 엔진이 제외를 판정할 수 없다.
+ */
+function validateOfficeHansi(h: FormState["ownedHouses"][number], index: number): string | null {
+  if (h.propertyType !== "officetel" || !h.isHansiBenefit) return null;
+  const label = `보유 주택 #${index + 1}(오피스텔) 한시 특례`;
+  if (h.hansiBenefitType !== "new_build" && h.hansiBenefitType !== "lease_registered") {
+    return `${label} — 신축 최초 유상승계(시행령 §28의4⑥8호)와 유상승계 + 임대등록(⑥9호) 중에서 고르세요.`;
+  }
+  if (!(parseFloat(h.officeExclusiveAreaSqm) > 0)) return `${label} — 전용면적(㎡)을 입력하세요.`;
+  if (!h.officeAcquisitionValue.trim()) return `${label} — 취득당시가액을 입력하세요.`;
+  if (h.hansiBenefitType === "new_build") {
+    if (!h.officeApprovalDate) return `${label} — 사용승인일을 입력하세요 (시행령 §28의4⑥8호).`;
+  } else if (!h.officeLeaseRegisteredDate) {
+    return `${label} — 임대주택 등록일을 입력하세요 (시행령 §28의4⑥9호).`;
   }
   return null;
 }

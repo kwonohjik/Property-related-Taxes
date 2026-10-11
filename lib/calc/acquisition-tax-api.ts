@@ -125,8 +125,34 @@ function mapToEngineOfficeAsset(h: FormOwnedHouseInfo, form: FormState): OfficeA
     // 법률 제17473호 부칙 제3조·제7조 · 소급 기준일 뒤 취득 판정 (OH-03·OH-26)
     acquisitionDate: h.acquisitionDate,
     contractDate: strOrUndef(h.contractDate ?? ""),
+    ...officeHansiFields(h),
     ...sameDayOrderField(form, h),
     ...jointInheritanceFields(h, true),
+  };
+}
+
+/**
+ * §28의4⑥8·9호 오피스텔 한시 특례 — 선언(`isHansiBenefit`)이 켜지고 유형이 8호(`new_build`)·9호(`lease_registered`)일 때만 싣는다.
+ * 오피스텔 행에 남은 주택용 유형(`unsold_apt`)·빈 유형은 보내지 않는다(⑧이 같은 조건에서 막는다). 호별로 읽는 사실만 싣는다.
+ */
+function officeHansiFields(h: FormOwnedHouseInfo): Partial<OfficeAsset> {
+  if (!h.isHansiBenefit) return {};
+  const kind = h.hansiBenefitType;
+  if (kind !== "new_build" && kind !== "lease_registered") return {};
+  const area = parseFloat(h.officeExclusiveAreaSqm);
+  // 🔴 `parseAmount("")`는 0이다 — 빈 칸이 「0원」으로 실려 가격 한도를 통과하지 않게 값이 있을 때만 싣는다.
+  const hasValue = strOrUndef(h.officeAcquisitionValue) !== undefined;
+  return {
+    hansiOfficeKind: kind,
+    ...(isNaN(area) ? {} : { exclusiveAreaSqm: area }),
+    ...(hasValue ? { acquisitionValue: parseAmount(h.officeAcquisitionValue) } : {}),
+    isMetropolitan: h.isMetropolitanRegion,
+    ...(kind === "new_build"
+      ? strOrUndef(h.officeApprovalDate) ? { buildingApprovalDate: h.officeApprovalDate } : {}
+      : {
+          ...(strOrUndef(h.officeLeaseRegisteredDate) ? { leaseRegistrationDate: h.officeLeaseRegisteredDate } : {}),
+          ...(h.officeLeaseObligationViolated ? { leaseObligationViolated: true } : {}),
+        }),
   };
 }
 

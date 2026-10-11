@@ -141,6 +141,15 @@ export interface OwnedHouseInfo {
   /** 한시 특례 해당 여부 (2024.1.10~2027.12.31) */
   isHansiBenefit: boolean;
   hansiBenefitType: string;   // "new_build" | "lease_registered" | "unsold_apt" | ""
+  /**
+   * 오피스텔 행 한시 특례 사실 (§28의4⑥8·9호) — 주택 행에는 쓰지 않는다. 선언 토글·유형은 위 `isHansiBenefit`·
+   * `hansiBenefitType`(오피스텔은 new_build=8호 / lease_registered=9호)를 그대로 쓰고, 수도권 여부는 `isMetropolitanRegion`을 쓴다.
+   */
+  officeApprovalDate: string;       // 8호 사용승인일 (YYYY-MM-DD)
+  officeExclusiveAreaSqm: string;   // 전용면적 (㎡)
+  officeAcquisitionValue: string;   // 취득당시가액 (원)
+  officeLeaseRegisteredDate: string; // 9호 임대주택 등록일 (YYYY-MM-DD)
+  officeLeaseObligationViolated: boolean; // 9호 단서 — 임대의무기간 중 임대 외 용도·매각·증여·말소
   /** 주된 상속자 판정 관련 */
   shareInInheritance: string; // 본인 지분
   maxShareInInheritors: string; // 최대 지분
@@ -177,6 +186,11 @@ export function createOwnedHouseInfo(id: string): OwnedHouseInfo {
     coOwnersAllInHousehold: true,
     isHansiBenefit: false,
     hansiBenefitType: "",
+    officeApprovalDate: "",
+    officeExclusiveAreaSqm: "",
+    officeAcquisitionValue: "",
+    officeLeaseRegisteredDate: "",
+    officeLeaseObligationViolated: false,
     shareInInheritance: "1",
     maxShareInInheritors: "1",
     tieInMaxShare: false,

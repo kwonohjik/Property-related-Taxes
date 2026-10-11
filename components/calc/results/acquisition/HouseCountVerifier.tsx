@@ -46,6 +46,8 @@ const EXCLUSION_TYPE_LABELS = {
   hansi_lease_registered: "한시특례 임대등록",
   hansi_unsold_apt: "한시특례 미분양",
   low_value_office: "시가표준액 1억 이하 오피스텔",
+  hansi_new_build_office: "한시특례 신축 오피스텔 최초 유상승계",
+  hansi_lease_office: "한시특례 오피스텔 임대등록",
   pre_2020_08_12_right_office: "2020.8.12. 전 취득·계약 입주권·분양권·오피스텔",
   acquired_after_reference_date: "권리취득일 뒤 취득",
   joint_inheritance_not_owner: "공동상속 — 소유자로 보지 않는 상속인",

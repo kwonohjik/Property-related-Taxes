@@ -517,6 +517,11 @@ export function buildHousingPart(
    * (기한 미판정 — 2026-10-01 전 양도로 본다)과 같다.
    */
   transferDate?: Date,
+  /**
+   * §155의3①1호 「취득한 후 체결」 날짜 하한용 취득일 — 단건과 같은 술어(`qualifiesWinWinRental`)가 읽는다.
+   * 겸용주택은 건물 취득일이 주택 부분 취득일이다(`transfer-tax-mixed-use-exemption.ts`와 같은 값).
+   */
+  acquisitionDate?: Date,
 ): MixedUseHousingPart {
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
@@ -606,7 +611,7 @@ export function buildHousingPart(
    */
   const useTable2 =
     isOneHouseExempt &&
-    meetsTable2ResidenceRequirement({ winWinRentalHouse, transferDate }, table2ResidenceYears);
+    meetsTable2ResidenceRequirement({ winWinRentalHouse, transferDate, acquisitionDate }, table2ResidenceYears);
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
   const landDedRate = calcLongTermRate(

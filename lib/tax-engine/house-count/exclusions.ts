@@ -460,6 +460,56 @@ export function getSpousePreMarriageHouseExclusion(
 // 오피스텔 제외 판정
 // ============================================================
 
+const HANSI_OFFICE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 오피스텔 한시 특례 (§28의4⑥8·9호) 제외 판정 — 선언한 호의 사실이 모두 갖춰질 때만 제외한다.
+ *
+ * - 공통: 취득일이 2024.1.10.~2027.12.31., 전용면적 60㎡ 이하, 취득당시가액 3억원(수도권 6억원) 이하.
+ * - 8호: 사용승인일(임시사용승인 포함)도 같은 기간 안 — 「같은 기간 내에 최초로 유상승계취득」.
+ * - 9호: 취득일부터 60일 이내 임대주택 등록 + 임대의무기간 중 임대 외 용도·매각·증여·말소가 없을 것(단서).
+ * 사실이 비었거나 어긋나면 제외하지 않는다(모름 = 혜택 불성립) — 입력 누락은 ⑧·⑫가 막는다.
+ */
+function getHansiOfficeExclusion(office: OfficeAsset): ExcludedItem | null {
+  const kind = office.hansiOfficeKind;
+  if (!kind) return null;
+  const { acquisitionDate, exclusiveAreaSqm, acquisitionValue } = office;
+  if (!acquisitionDate || exclusiveAreaSqm === undefined || acquisitionValue === undefined) return null;
+  const start = ACQUISITION_CONST.HANSI_START_DATE;
+  const end = kind === "new_build" ? ACQUISITION_CONST.HANSI_NEW_BUILD_END : ACQUISITION_CONST.HANSI_LEASE_END;
+  if (acquisitionDate < start || acquisitionDate > end) return null;
+  if (exclusiveAreaSqm > ACQUISITION_CONST.HANSI_NEW_BUILD_MAX_AREA) return null;
+  const limit = office.isMetropolitan
+    ? ACQUISITION_CONST.HANSI_PRICE_LIMIT_METRO
+    : ACQUISITION_CONST.HANSI_PRICE_LIMIT_NON_METRO;
+  if (acquisitionValue > limit) return null;
+  const facts = `취득일 ${acquisitionDate} · 전용 ${exclusiveAreaSqm}㎡ ≤ 60㎡ · 취득당시가액 ${acquisitionValue.toLocaleString()} ≤ ${limit.toLocaleString()}원(${office.isMetropolitan ? "수도권" : "수도권 외"})`;
+
+  if (kind === "new_build") {
+    const approval = office.buildingApprovalDate;
+    if (!approval || approval < start || approval > end) return null;
+    return {
+      assetId: office.id,
+      assetType: "office",
+      reason: "hansi_new_build_office",
+      legalBasis: ACQUISITION.HOUSE_COUNT_OFFICE_HANSI_NEW_BUILD,
+      description: `한시 특례 신축 오피스텔 최초 유상승계 — 사용승인일 ${approval}, ${facts} → 주택 수 제외`,
+    };
+  }
+
+  const registered = office.leaseRegistrationDate;
+  if (!registered || office.leaseObligationViolated) return null;
+  const days = (new Date(registered).getTime() - new Date(acquisitionDate).getTime()) / HANSI_OFFICE_DAY_MS;
+  if (!(days >= 0 && days <= 60)) return null;
+  return {
+    assetId: office.id,
+    assetType: "office",
+    reason: "hansi_lease_office",
+    legalBasis: ACQUISITION.HOUSE_COUNT_OFFICE_HANSI_LEASE,
+    description: `한시 특례 유상승계 + 임대등록 오피스텔 — 임대등록일 ${registered}(취득일부터 ${days}일), ${facts} → 주택 수 제외`,
+  };
+}
+
 /**
  * [P3-1] 주거형 오피스텔 — 시가표준액 1억 이하 제외
  *
@@ -496,6 +546,13 @@ export function getExclusionReasonsForOffice(
       });
       return excluded;
     }
+  }
+
+  // 한시 특례 오피스텔 (§28의4⑥8·9호) — 시가표준액 1억 초과도 요건을 갖추면 제외
+  const hansiOffice = getHansiOfficeExclusion(office);
+  if (hansiOffice) {
+    excluded.push(hansiOffice);
+    return excluded;
   }
 
   // 시가표준액 1억 이하 오피스텔 → 카운트 제외
