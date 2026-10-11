@@ -12,6 +12,7 @@ import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-ap
 import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
@@ -27,6 +28,7 @@ export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): Tempora
     declaredNewHouseDate: form.newHouseAcquisitionDate,
     mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
     excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+    rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
   });
 }
 

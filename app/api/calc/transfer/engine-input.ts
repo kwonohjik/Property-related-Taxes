@@ -11,7 +11,7 @@
  * Date 변환은 호출부(route.ts)가 `toDate`로 끝낸 값을 인자로 받는다 —
  * 이 모듈은 `toOptionalDate`만 자체 호출한다(`lib/api/date-coerce.ts` 필수 경로).
  */
-import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
+import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import type { z } from "zod";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -276,17 +276,7 @@ export function buildTransferEngineInput(
         }
       : undefined,
     // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
-    oneHouseExemptionProviso: data.oneHouseExemptionProviso
-      ? {
-          reason: data.oneHouseExemptionProviso.reason,
-          departureDate: toOptionalDate(data.oneHouseExemptionProviso.departureDate),
-          departureOnlyHouse: data.oneHouseExemptionProviso.departureOnlyHouse,
-          expropriationDate: toOptionalDate(data.oneHouseExemptionProviso.expropriationDate),
-          businessApprovalDate: toOptionalDate(data.oneHouseExemptionProviso.businessApprovalDate),
-          rentalLeaseResidenceMonths: data.oneHouseExemptionProviso.rentalLeaseResidenceMonths,
-          rentalRegistration4ho: toEngineRental4ho(data.oneHouseExemptionProviso.rentalRegistration4ho),
-        }
-      : undefined,
+    oneHouseExemptionProviso: toEngineOneHouseExemptionProviso(data.oneHouseExemptionProviso),
     // ⑭ OH-22 §154⑤ 단서 처분 이력 — 날짜는 date-coerce(`toEngineFinalHouseRestart`)
     finalOneHouseRestart: toEngineFinalHouseRestart(data.finalOneHouseRestart),
     // [C7 수정] 장기임대 감면 정밀 입력

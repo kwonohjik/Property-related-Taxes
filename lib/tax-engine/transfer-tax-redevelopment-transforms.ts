@@ -58,6 +58,7 @@ export {
   applyHighValueAllocation,
 } from "./transfer-tax-redevelopment-lthd";
 import { resolveOneRightHighValueThreshold } from "./data/one-right-high-value-era";
+import { applyFairMarketRatio } from "./tax-utils";
 import {
   oneRightClauseNaYears,
   oneRightPresaleRightBlocks,
@@ -396,7 +397,7 @@ export function applyOneRightExemption(
       const taxableGain = Math.floor(originalGain * taxableRatio);
       const nontaxableGain = originalGain - taxableGain;
       // subject="right": postApprovalExistingHouse.gain=0, settlement LTHD=0 (§94①2호)
-      const taxableLthd = branch.lthdRate > 0 ? Math.floor(taxableGain * branch.lthdRate) : 0;
+      const taxableLthd = branch.lthdRate > 0 ? applyFairMarketRatio(taxableGain, branch.lthdRate) : 0;
       return {
         ...branch,
         gain: taxableGain,

@@ -42,6 +42,7 @@ const pair = (sellingAcq: string, houses: Row[], mergeContext: MergeContext | un
     declaredSpecial: false,
     declaredNewHouseDate: "",
     excludedHouseIds: new Set<string>(),
+    rentalResidenceHouseIds: new Set<string>(),
     ...over,
   });
   return r ? `${r.previousAcquisitionDate}→${r.newAcquisitionDate}` : undefined;

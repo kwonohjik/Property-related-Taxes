@@ -11,6 +11,11 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { cn } from "@/lib/utils";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import {
+  CARRYOVER_EXCLUSION_REASON_LABELS,
+  carryoverComparisonPerformed,
+  carryoverScenariosComputed,
+} from "@/lib/tax-engine/transfer-carryover-exclusion-labels";
 import type {
   CarryoverTaxationDetail,
   CarryoverScenarioADetail,
@@ -36,9 +41,14 @@ interface ScenarioColProps {
    * 그것이 오류가 아니기 때문이다(§92③2호 결정세액은 신고 전체 기준).
    */
   filingUnit: boolean;
+  /**
+   * §97조의2 ② 3호 세액 비교가 수행됐는가 — 아닐 때(②2호 등 배제로 비교 없이 B 채택) 「더 큰 세액」은 거짓이다.
+   * 비교 없이 채택했으므로 채택 배지는 「✓ 채택」뿐이다.
+   */
+  compared: boolean;
 }
 
-function ScenarioCol({ label, adopted, children, determinedTax, filingUnit }: ScenarioColProps) {
+function ScenarioCol({ label, adopted, children, determinedTax, filingUnit, compared }: ScenarioColProps) {
   return (
     <div
       className={cn(
@@ -52,7 +62,7 @@ function ScenarioCol({ label, adopted, children, determinedTax, filingUnit }: Sc
         <p className="text-xs font-semibold text-muted-foreground">{label}</p>
         {adopted && (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-caption font-bold text-emerald-700">
-            {filingUnit ? "✓ 채택" : "✓ 채택 (더 큰 세액)"}
+            {filingUnit || !compared ? "✓ 채택" : "✓ 채택 (더 큰 세액)"}
           </span>
         )}
       </div>
@@ -85,10 +95,11 @@ function InfoRow({ label, value, sub = false }: { label: string; value: string; 
 
 // ── Scenario A 상세 ──────────────────────────────────────────────
 
-function ScenarioAContent({ a, adopted, filingUnit }: {
+function ScenarioAContent({ a, adopted, filingUnit, compared }: {
   a: CarryoverScenarioADetail;
   adopted: boolean;
   filingUnit: boolean;
+  compared: boolean;
 }) {
   /**
    * ⚠️ 안분 내역은 **시나리오 A 자신**이 들고 있다(`giftTaxApportionment`).
@@ -102,6 +113,7 @@ function ScenarioAContent({ a, adopted, filingUnit }: {
       adopted={adopted}
       determinedTax={a.determinedTax}
       filingUnit={filingUnit}
+      compared={compared}
     >
       <div className="space-y-1">
         <InfoRow label="취득가액 [당초 증여자 취득가]" value={fmt(a.acquisitionPrice)} />
@@ -155,11 +167,12 @@ function ScenarioAContent({ a, adopted, filingUnit }: {
 
 // ── Scenario B 상세 ──────────────────────────────────────────────
 
-function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit }: {
+function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit, compared }: {
   b: CarryoverScenarioBDetail;
   adopted: boolean;
   isComparisonExclusion: boolean;
   filingUnit: boolean;
+  compared: boolean;
 }) {
   return (
     <ScenarioCol
@@ -167,6 +180,7 @@ function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit }: {
       adopted={adopted}
       determinedTax={b.determinedTax}
       filingUnit={filingUnit}
+      compared={compared}
     >
       <div className="space-y-1">
         <InfoRow label="취득가액 [증여 당시 평가액]" value={fmt(b.acquisitionPrice)} />
@@ -178,19 +192,6 @@ function ScenarioBContent({ b, adopted, isComparisonExclusion, filingUnit }: {
 }
 
 // ── 적용배제 배너 ────────────────────────────────────────────────
-
-const EXCLUSION_REASON_LABELS: Record<string, string> = {
-  expropriation: "§97조의2 ② 1호 — 사업인정고시일 2년 이전 증여받은 토지·건물의 협의매수·수용",
-  one_house_exemption: "§97조의2 ② 2호 — 이월과세 적용 시 1세대1주택 비과세 해당 (고가주택 포함)",
-  tax_comparison: "§97조의2 ② 3호 — 비교과세 (시나리오 B 세액이 더 큼)",
-  period_exceeded: "§97조의2 ③ — 적용기간 초과",
-  // 🔴 **두 사유를 한 값이 나눠 쓴다** — 「사망」만 적으면 O-2로 들어온 「그 외 관계」가 거짓 사유를 본다.
-  //    ⓐ 대상 관계가 아님(배우자·직계존비속 외) — ① 본문 요건. 증여자 생존과 무관하다.
-  //    ⓑ 증여자 사망 — 본문 **괄호**(「단서」가 아니다). 배우자=사망으로 혼인관계 소멸 / 직계존비속=양도 당시 사망.
-  relation_invalid:
-    "§97조의2 ① — 대상 요건 미충족 (배우자·직계존비속이 아니거나, 증여자가 사망)",
-  family_business: "§97조의2 ④ — 가업상속공제 적용 자산",
-};
 
 /**
  * 배제 사유별 **출처** — 사용자가 선언한 것인가, 엔진이 판정한 것인가 (2026-09-05 · 코드리뷰 Q19).
@@ -249,6 +250,11 @@ export function CarryoverComparisonCard({ detail }: Props) {
    */
   const filing = detail.filingUnitComparison;
 
+  /** 채택 시나리오의 결정세액 — A·B를 카드에서 다시 비교하지 않고 엔진이 채택한 쪽을 그대로 읽는다. */
+  const adoptedTax = adoptedA ? detail.scenarioA.determinedTax : detail.scenarioB.determinedTax;
+  const scenariosComputed = carryoverScenariosComputed(detail);
+  const compared = carryoverComparisonPerformed(detail);
+
   const periodLabel =
     detail.applicablePeriodYears === 10
       ? "10년 이내 (2022.12.31. 개정 — 증여일 ≥ 2023.1.1.)"
@@ -278,7 +284,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
           <p className="font-semibold text-amber-800 mb-0.5">
             이월과세 적용배제 — {exclusionSourceLabel(detail)}
           </p>
-          <p className="text-amber-700">{EXCLUSION_REASON_LABELS[detail.exclusionReason] ?? detail.exclusionReason}</p>
+          <p className="text-amber-700">{CARRYOVER_EXCLUSION_REASON_LABELS[detail.exclusionReason] ?? detail.exclusionReason}</p>
           {detail.oneHouseExclusionSource === "legacy_declaration" && (
             <p className="text-amber-700 mt-0.5">
               저장 당시 선언 기준으로 계산했습니다 — 입력 화면에서 「자동 판정으로 전환」하면 입력한 사실로 다시 판정합니다.
@@ -298,23 +304,30 @@ export function CarryoverComparisonCard({ detail }: Props) {
         </ToneCard>
       )}
 
-      {/* A·B 두 시나리오 나란히 */}
-      <div className="flex gap-3">
-        <ScenarioAContent a={detail.scenarioA} adopted={adoptedA} filingUnit={filing !== undefined} />
-        <ScenarioBContent
-          b={detail.scenarioB}
-          adopted={!adoptedA}
-          isComparisonExclusion={detail.comparisonExclusion}
-          filingUnit={filing !== undefined}
-        />
-      </div>
+      {/* A·B 두 시나리오 나란히 — 빈 시나리오로 끝난 배제(기간 초과·관계·수용·가업·레거시 ②2호)는 숨긴다(원 설계: 비교과세 미표시) */}
+      {scenariosComputed && (
+        <div className="flex gap-3">
+          <ScenarioAContent a={detail.scenarioA} adopted={adoptedA} filingUnit={filing !== undefined} compared={compared} />
+          <ScenarioBContent
+            b={detail.scenarioB}
+            adopted={!adoptedA}
+            isComparisonExclusion={detail.comparisonExclusion}
+            filingUnit={filing !== undefined}
+            compared={compared}
+          />
+        </div>
+      )}
 
       {/* 하단 요약 */}
       <div className="rounded-md border-t pt-3 space-y-1 text-xs text-muted-foreground">
         <div className="flex justify-between font-semibold text-foreground text-sm">
           <span>채택 시나리오: {detail.adoptedScenario} ({detail.adoptedScenario === "A" ? "이월과세 적용" : "비교과세 미적용"})</span>
-          {filing === undefined && (
-            <span>신고세액 = 시나리오 A·B 중 큰 금액 = {fmt(Math.max(detail.scenarioA.determinedTax, detail.scenarioB.determinedTax))}</span>
+          {filing === undefined && scenariosComputed && (
+            <span data-testid="carryover-filing-tax">
+              {compared
+                ? `신고세액 = 시나리오 A·B 중 큰 금액 = ${fmt(adoptedTax)}`
+                : `신고세액 = 시나리오 B(이월과세 미적용) 결정세액 = ${fmt(adoptedTax)}`}
+            </span>
           )}
         </div>
         {filing !== undefined && (

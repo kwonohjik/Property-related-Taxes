@@ -24,6 +24,7 @@
  */
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { applyFairMarketRatio } from "./tax-utils";
 import { scaleLthdParts, zeroLthdParts } from "./transfer-tax-redevelopment-lthd";
 import type { TransferTaxInput, RedevelopmentResult } from "./types/transfer.types";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
@@ -122,7 +123,7 @@ export function applySettlementExemption(
       redevInfo.rightsValue,
     );
     // §160①2호 — 형제 경로(`applyHighValueAllocation`)와 같이 안분 후 양도차익 × 그 분기 공제율.
-    const taxableLthd = s.lthdRate > 0 ? Math.floor(taxableGain * s.lthdRate) : 0;
+    const taxableLthd = s.lthdRate > 0 ? applyFairMarketRatio(taxableGain, s.lthdRate) : 0;
     const settlement = {
       ...s,
       gain: taxableGain,

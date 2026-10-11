@@ -10,7 +10,7 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
-import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { assetTaxableGain, sumAssetGains } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import {
   splitAcqBasisFormula,
@@ -279,6 +279,16 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
       aggRuralSurtax += np.ruralSurtax ?? 0;
     }
   }
+  // G2-6 — 부분 비과세(고가주택·§155⑳)가 있으면 `totalTransferGain`은 안분 전 값이라 정본 leaf 합으로 3행을 낸다(요약 카드와 같은 규칙).
+  const aggGains = sumAssetGains(
+    props.map((p) => ({
+      isExempt: bool(p.isExempt),
+      exemptGrossGain: num(p.exemptGrossGain) as number | undefined,
+      transferGain: (num(p.transferGain) ?? 0) as number,
+      income: (num(p.income) ?? 0) as number,
+      longTermHoldingDeduction: (num(p.longTermHoldingDeduction) ?? 0) as number,
+    })),
+  );
   const totalIncomeAfterOffset = (num(r.totalIncomeAfterOffset) ?? 0) as number;
   // D-14 — 세액감면분(aggReducibleIncome)은 소득금액에서 빼지 않는다(위 단건과 같은 근거)
   const incomeAmountAfter = Math.max(0, totalIncomeAfterOffset - aggNew993Reducible);
@@ -290,7 +300,15 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
     <>
       <Text style={s.sectionTitle}>합산 신고서 양식</Text>
       <View style={s.table}>
-        <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(r.totalTransferGain)}</Text></View>
+        {aggGains.exempt > 0 ? (
+          <>
+            <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(aggGains.gross)}</Text></View>
+            <View style={s.row}><Text style={s.lblSub}>비과세 양도차익</Text><Text style={s.val}>- {fmt(aggGains.exempt)}</Text></View>
+            <View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(aggGains.taxable)}</Text></View>
+          </>
+        ) : (
+          <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(r.totalTransferGain)}</Text></View>
+        )}
         {num(r.totalLongTermHoldingDeduction) !== undefined && (r.totalLongTermHoldingDeduction as number) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(r.totalLongTermHoldingDeduction)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(totalIncomeAfterOffset)}</Text></View>
         {(num(r.unusedLoss) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(r.unusedLoss)}</Text></View>)}

@@ -43,7 +43,8 @@ function seedForm() {
             ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1",
             assetKind: "housing",
             acquisitionCause: "carryover_gift",
-            acquisitionDate: "2023-06-01",
+            // 실제 폼과 같게 비운다 — 이월과세 입력 UI는 `carryover` 서브객체만 받고 자산-수준 취득일 칸이 없다(④가 증여 등기접수일로 채운다).
+            acquisitionDate: "",
             carryover: {
               giftRegistryDate: "2023-06-01",
               donorAcquisitionDate: "2012-01-01",

@@ -45,6 +45,8 @@ import {
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
+import { rentalResidenceCandidateHouseIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
@@ -173,7 +175,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     () =>
       resolveTemporaryTwoHouse({
         primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence === true,
@@ -182,6 +184,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         // D1 — 조특법 제외 행 + §155②③ 상속주택 제외 행(엔진 정본 판정) — ④와 같은 leaf.
         mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
       }),
     // 후보 제외가 양도일·감면주택 선언·상속 관련 세대 사실(증여·권리)까지 읽는다.
     [form],

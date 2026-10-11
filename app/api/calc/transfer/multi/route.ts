@@ -11,7 +11,7 @@
  *   2차: determinedTax 주입 후 가산세 포함 재계산
  */
 
-import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
+import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import { NextRequest, NextResponse } from "next/server";
 import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
@@ -404,16 +404,7 @@ export async function POST(request: NextRequest) {
       gracePeriod: mapGracePeriodToEngine(p.gracePeriod),
       marriageMerge: p.marriageMerge ? { marriageDate: toDate(p.marriageMerge.marriageDate, "marriageMerge.marriageDate") } : undefined,
       // ⑭ §154① 단서 — string 일자 → Date 변환 (date-coerce)
-      oneHouseExemptionProviso: p.oneHouseExemptionProviso
-        ? {
-            reason: p.oneHouseExemptionProviso.reason,
-            departureDate: toOptionalDate(p.oneHouseExemptionProviso.departureDate),
-            departureOnlyHouse: p.oneHouseExemptionProviso.departureOnlyHouse,
-            expropriationDate: toOptionalDate(p.oneHouseExemptionProviso.expropriationDate),
-            businessApprovalDate: toOptionalDate(p.oneHouseExemptionProviso.businessApprovalDate),
-            rentalRegistration4ho: toEngineRental4ho(p.oneHouseExemptionProviso.rentalRegistration4ho),
-          }
-        : undefined,
+      oneHouseExemptionProviso: toEngineOneHouseExemptionProviso(p.oneHouseExemptionProviso),
       // ⑭ OH-22 §154⑤ 단서 처분 이력 — 단건과 같은 변환
       finalOneHouseRestart: toEngineFinalHouseRestart(p.finalOneHouseRestart),
       parentalCareMerge: p.parentalCareMerge ? { mergeDate: toDate(p.parentalCareMerge.mergeDate, "parentalCareMerge.mergeDate") } : undefined,

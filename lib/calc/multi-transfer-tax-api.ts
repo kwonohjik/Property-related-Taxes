@@ -43,6 +43,7 @@ import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
+import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
@@ -186,6 +187,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
         declaredNewHouseDate: form.newHouseAcquisitionDate,
         mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
+        rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
       }),
     }).mode,
     form.provisoReason,

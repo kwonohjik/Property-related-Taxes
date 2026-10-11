@@ -18,6 +18,7 @@ import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 
 /**
  * ④⑬ 양도 주택의 §167의3①2호 장기임대 선언 → `houseSchema` 필드.
@@ -127,7 +128,7 @@ export function buildHousesPayload(
     regionCode: primary.regionCode || undefined,
     // ④ 지정 지구 안인가 — 코드와 함께만 의미가 있다(소재 동이 지구 한정일 때)
     inDesignatedDistrict: primary.regionCode ? primary.regionInDesignatedDistrict : undefined,
-    acquisitionDate: primary.acquisitionDate,
+    acquisitionDate: primaryAcquisitionDateOf(primary),
     officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
     /**
      * ④⑬ §167의3①**7호** — 양도 주택 **자신**이 5년 내 상속주택이면 중과 대상에서 빠진다.

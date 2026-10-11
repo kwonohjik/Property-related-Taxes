@@ -365,6 +365,14 @@ export interface ResolveTemporaryTwoHouseArgs {
    * 🔑 **필수 인자다** — 호출부가 새로 생겨도 넘기지 않으면 컴파일이 막힌다.
    */
   excludedHouseIds: ReadonlySet<string>;
+  /**
+   * §155⑳ 시나리오 A를 선언한 세대의 「장기임대」 명부 행 id(`rentalResidenceCandidateHouseIds`) — **후보가 모호할 때만** 뺀다 (S06-1).
+   *
+   * `excludedHouseIds`와 달리 처음부터 빼지 않는다: 임대주택이 유일한 나중 취득 행이면 종전대로 그 행을 신규 주택으로 도출한다
+   * (구 §167의10①8호가 쓴다). 나중 취득 행이 2채 이상이라 도출을 포기하던 때에만, 임대 행을 뺀 나머지가 정확히 1채인지 다시 본다.
+   * 🔑 **필수 인자다** — 호출부가 새로 생겨도 넘기지 않으면 컴파일이 막힌다.
+   */
+  rentalResidenceHouseIds: ReadonlySet<string>;
 }
 
 export interface TemporaryTwoHouseDates {
@@ -416,8 +424,13 @@ export function resolveTemporaryTwoHouse(
   }
   // 문자열 `YYYY-MM-DD`는 사전식 비교가 곧 시간순이다(폼 전역 규약).
   const later = owned.filter((h) => h.acquisitionDate! > prev);
-  if (later.length !== 1) return fallback(); // 0채·2채 이상 — 억측으로 고르지 않는다
-  return toRosterDates(prev, later[0]);
+  if (later.length === 1) return toRosterDates(prev, later[0]);
+  // S06-1 — ⑳A 선언 세대: 2채 이상 중 「장기임대」 행을 빼면 정확히 1채인가. 합가 짝(위 D8)에는 적용하지 않는다.
+  if (later.length >= 2) {
+    const nonRental = later.filter((h) => !(h.id !== undefined && args.rentalResidenceHouseIds.has(h.id)));
+    if (nonRental.length === 1) return toRosterDates(prev, nonRental[0]);
+  }
+  return fallback(); // 0채·여전히 2채 이상 — 억측으로 고르지 않는다
 }
 
 function toRosterDates(

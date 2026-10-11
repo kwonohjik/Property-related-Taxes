@@ -12,7 +12,7 @@
 
 import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
 import { Badge } from "@/components/ui/badge";
-import { effectiveGrossGain } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { effectiveGrossGain, sumAssetGains } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -106,8 +106,10 @@ export function MultiTransferTaxSummaryCard({
 }) {
   // 단순 합산 — 엔진이 이미 단건별 결정세액 등을 포함
   const sums = sumFromBreakdown(result.properties);
-  // 비과세분 = gross 합 − 과세 차익 합. 0이면 행을 숨긴다(전 자산 과세).
-  const exemptGain = Math.max(0, sums.grossGain - result.totalTransferGain);
+  // 비과세분·과세대상 = 자산별 정본 leaf 합(G2-6). `result.totalTransferGain`은 고가주택에서 안분 전 값이다.
+  //  비과세분이 0이면 행을 숨긴다(전 자산 과세).
+  const gains = sumAssetGains(result.properties);
+  const exemptGain = gains.exempt;
 
   // 확정신고 기납부세액 정산 (§111③) — 엔진 단일진실(approach A). UI 재계산 금지.
   // 기존 autoPriorPaid(앞 자산 결정세액 단순합)는 §107② 위반이라 제거, 엔진 settlement 필드 read.
@@ -145,7 +147,7 @@ export function MultiTransferTaxSummaryCard({
         {exemptGain > 0 && (
           <>
             <ResultRow label="비과세 양도차익" value={-exemptGain} />
-            <ResultRow label="과세대상 양도차익" value={result.totalTransferGain} />
+            <ResultRow label="과세대상 양도차익" value={gains.taxable} />
           </>
         )}
         <ResultRow label="장기보유특별공제" value={-result.totalLongTermHoldingDeduction} />
