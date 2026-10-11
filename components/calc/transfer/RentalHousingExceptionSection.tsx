@@ -8,7 +8,6 @@
  * 시나리오 B: 임대주택→거주주택 전환 후 양도 (PHRP, §161① 안분)
  */
 
-import Link from "next/link";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -24,6 +23,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RentalUnitCard } from "./RentalUnitCard";
 import { RentalHousing154_10Block } from "./RentalHousing154_10Block";
 import { RentalLifetimeLimitBlock } from "./RentalLifetimeLimitBlock";
+import { RentalHousingCalcSummary } from "./RentalHousingCalcSummary";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
@@ -139,7 +139,7 @@ export function RentalHousingExceptionSection({
     rh.rentalUnits.length === 0 &&
     !!acquisitionDate &&
     !Number.isNaN(new Date(acquisitionDate).getTime()) &&
-    !isPreLifetimeLimitRegime(new Date(acquisitionDate), false);
+    !isPreLifetimeLimitRegime(new Date(acquisitionDate), false, "");
   function set<K extends keyof AssetForm["rentalHousingException"]>(
     key: K,
     val: AssetForm["rentalHousingException"][K],
@@ -258,7 +258,7 @@ export function RentalHousingExceptionSection({
             직전거주주택보유주택 1주택 한정)가 적용되고, 제35349호 부칙 제14조로 2025.2.28 이후 양도분부터 삭제됐다.
             게이트는 엔진과 같은 leaf(`isLifetimeLimitEra155_20`) — 경과조치를 켜기 전 기준으로 연다.
           */}
-          {lifetimeEraBase && (
+          {lifetimeEraBase && !isStandalone154_10Path && (
             <RentalLifetimeLimitBlock
               rh={rh}
               assetId={asset.assetId}
@@ -266,16 +266,16 @@ export function RentalHousingExceptionSection({
             />
           )}
           {/*
-            S16-4 — §154⑩ 표준 경로의 부칙 제7조② 경과조치 선언은 **양도일과 무관하게** 거주요건 축을 가른다(엔진·⑧·④·③이 모두
+            S16-4·S16-5 — §154⑩ 표준 경로의 부칙 제7조② 경과조치 선언 + 사유는 **양도일과 무관하게** 거주요건 축을 가른다(엔진·⑧·④·③이 모두
             양도일 무관 `isPreLifetimeLimitRegime`). 위 블록은 양도일 구간(2025.2.28. 전)에서만 열려 그 뒤 양도에는 입력 경로가 없었다
-            (그 사실이 결론을 가르는데 칸도 고지도 없다 · 구간 안에서 켠 값은 양도일을 옮기면 끌 수 없다). 구간 밖에는 선언 칸만 연다 —
-            생애 1회 이력·사유는 구간 안 ⑳ 후단 괄호의 축이다(사유 처리 규칙은 별건 S16-5).
+            (S16-4). 사유는 종전규정을 주는지를 가르므로(S16-5) 구간 안팎 모두 선언 + 사유를 연다 — 생애 1회 안내·이력은 ⑳ 본문 괄호의 축이라
+            이 경로에는 싣지 않는다. 구간 안 §154⑩도 이 블록으로 대체한다(종전에는 ⑳ 괄호 안내 카드가 그대로 떴다).
           */}
-          {!lifetimeEraBase && transitionDeclarationFor154_10 && (
+          {transitionDeclarationFor154_10 && (
             <RentalLifetimeLimitBlock
               rh={rh}
               assetId={asset.assetId}
-              transitionOnly
+              path154_10
               onChange={(patch) => onChange({ ...rh, ...patch })}
             />
           )}
@@ -474,7 +474,11 @@ export function RentalHousingExceptionSection({
          */
         const preRegime154_10 =
           isStandalone154_10Path && acquisitionDate && !Number.isNaN(new Date(acquisitionDate).getTime())
-            ? isPreLifetimeLimitRegime(new Date(acquisitionDate), rh.residenceTransitionUnderAddendum === true)
+            ? isPreLifetimeLimitRegime(
+                new Date(acquisitionDate),
+                rh.residenceTransitionUnderAddendum === true,
+                rh.residenceTransitionBasis,
+              )
             : false;
         // 등록일 이후 거주기간(postRegistrationResidenceMonths) 칸을 쓰는 경우 — 일반 B(임대주택
         // 있음) 또는 §154⑩ 표준 경로인데 2019.2.12 이후 취득(「종전규정」 아님).
@@ -589,9 +593,14 @@ export function RentalHousingExceptionSection({
 
             {isStandalone154_10Path && preRegime154_10 && (
               <p className="text-caption text-violet-700 px-1">
-                2019.2.12 전 취득(또는 부칙 경과조치 해당)으로 종전규정이 적용됩니다 — 소령 §154① 원칙에
+                2019.2.12 전 취득(또는 사유를 확인한 부칙 경과조치)으로 종전규정이 적용됩니다 — 소령 §154① 원칙에
                 따라 <strong>취득 당시 조정대상지역인 경우에만</strong> 거주기간 2년이 필요합니다(등록일로
                 자르지 않는 일반 거주기간). {wasRegulatedAtAcquisition ? "이 주택은 조정대상지역 취득입니다." : "이 주택은 조정대상지역 취득이 아니므로 거주요건이 없습니다."}
+              </p>
+            )}
+            {isStandalone154_10Path && !preRegime154_10 && rh.residenceTransitionUnderAddendum === true && (
+              <p className="text-caption text-violet-700 px-1" data-testid="rental-transition-not-effective-note">
+                경과조치 사유가 종전 규정을 주지 않거나 선택되지 않아 종전규정을 적용하지 않았습니다 — 등록일 이후 거주기간 2년으로 판정합니다.
               </p>
             )}
 
@@ -655,112 +664,11 @@ export function RentalHousingExceptionSection({
   );
 
   /**
-   * 계산기 — 토글이 없다. 특례 선언은 판정 메뉴 몫이라 여기서 켤 수 없다(P6-c-2).
-   *
-   * 🔴 **선언이 없으면 안내를, 있으면 요약을 반드시 낸다.** 위젯만 없앴고 값은 살아서
-   *    세액을 바꾸기 때문이다 — P6-c-2 **이전**에 저장한 이력을 다시 열었을 때가 정확히
-   *    그 경우다. 화면이 말하지 않으면 그 상태를 알 수 없다(OH-20·OH-21과 같은 층위).
+   * 계산기 — 토글이 없다. 특례 선언은 판정 메뉴 몫이라 여기서 켤 수 없다(P6-c-2). 선언이 없으면 안내를, 있으면 요약을 반드시 낸다 —
+   * 위젯만 없앴고 값은 살아서 세액을 바꾸기 때문이다(`RentalHousingCalcSummary`).
    */
   if (mode === "calc") {
-    if (!rh.applyException) {
-      return (
-        <div
-          className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 text-sm text-violet-900"
-          data-testid="rental-housing-handoff-notice"
-        >
-          {/*
-            🔴 **이미 판정을 다녀온 사용자에게 「가라」고 하지 않는다** (P6-c-5).
-
-            종전에는 이 카드가 `asset`만 받아 폼-전역 provenance를 볼 수단이 없었다. 판정을
-            불러왔는데 이 특례가 **해당 없어** 선언하지 않은 사용자(대부분)에게도 「판정한 뒤
-            불러오세요」라고 말했다 — 다시 가도 할 것이 없다. `JudgmentHandoffNoticeCard`
-            (Step4)는 같은 축에서 provenance를 보는데 이 카드와 §89①4호만 못 봤다.
-          */}
-          {judgmentLoaded ? (
-            <>
-              <p>
-                넘겨받은 판정에 장기임대주택 거주주택 특례(
-                <LawArticleModal legalBasis="소득세법 시행령 §155" label="소령 §155⑳" />
-                ) 선언이 <strong>없습니다</strong> — 해당하지 않으면 그대로 두세요.
-              </p>
-              <p className="mt-1 text-caption text-muted-foreground">
-                선언하려면{" "}
-                <Link
-                  href="/calc/one-house-exemption"
-                  className="font-medium underline underline-offset-2"
-                  data-testid="rental-housing-handoff-link"
-                >
-                  판정 메뉴
-                </Link>
-                로 돌아가 다시 판정하세요. 이 계산은 <strong>특례 없음</strong>으로 산출됩니다.
-              </p>
-            </>
-          ) : (
-            <>
-              <p>
-                장기임대주택 보유자 거주주택 비과세 특례(
-                <LawArticleModal legalBasis="소득세법 시행령 §155" label="소령 §155⑳" />
-                )는{" "}
-                <Link
-                  href="/calc/one-house-exemption"
-                  className="font-medium underline underline-offset-2"
-                  data-testid="rental-housing-handoff-link"
-                >
-                  1세대1주택 비과세 판정
-                </Link>
-                에서 판정한 뒤, 1단계의 「📋 판정 불러오기」로 가져오세요.
-              </p>
-              <p className="mt-1 text-caption text-muted-foreground">
-                판정을 거치지 않으면 이 계산은 <strong>특례 없음</strong>으로 산출됩니다.
-              </p>
-            </>
-          )}
-        </div>
-      );
-    }
-    return (
-      <div className="rounded-lg border border-violet-300 bg-violet-50/70 p-3 space-y-3">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <p className="text-sm font-semibold text-violet-900">
-            장기임대주택 보유자 거주주택 비과세 특례 — 적용
-          </p>
-          <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
-        </div>
-        {/* 판정 메뉴에서 넘겨받은 사실 — 여기서는 고칠 수 없다. */}
-        <div
-          className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1 text-xs text-violet-900"
-          data-testid="imported-rental-housing-facts"
-        >
-          <p>
-            <strong>
-              {rh.scenario === "B"
-                ? "임대주택을 거주주택으로 전환 후 양도 (§161① 안분)"
-                : "거주주택 양도 (임대주택 주택수 제외)"}
-            </strong>{" "}
-            · 임대주택 {rh.rentalUnits.length}호
-          </p>
-          {/* OH-40 — 넘겨받은 생애 1회 판정 사실(세액을 바꾼다). 값이 있을 때만 말한다. */}
-          {(rh.priorRentalExemptionHistory || rh.residenceTransitionUnderAddendum) && (
-            <p data-testid="imported-rental-lifetime-facts">
-              {rh.residenceTransitionUnderAddendum && rh.residenceTransitionBasis !== "contract_without_prior_rental"
-                ? rh.residenceTransitionBasis === "residing"
-                  ? "2019.2.12 부칙 경과조치 해당(당시 거주)"
-                  : rh.residenceTransitionBasis === "contract_with_prior_rental"
-                    ? "2019.2.12 부칙 경과조치 해당(그 전 계약금 지급 · 등록 임대주택 소유)"
-                    : "2019.2.12 부칙 경과조치 — 사유 미입력(종전 규정 미적용, 판정 메뉴에서 사유를 선택하세요)"
-                : rh.priorRentalExemptionHistory === "used"
-                  ? "장기임대주택 보유 중 거주주택 양도 이력: 있음 (생애 1회 제한)"
-                  : "장기임대주택 보유 중 거주주택 양도 이력: 없음"}
-            </p>
-          )}
-          <p className="text-caption text-muted-foreground">
-            시나리오와 임대주택 정보는 이 화면에서 수정할 수 없습니다 — 고치려면 판정 메뉴로
-            돌아가 다시 판정하세요.
-          </p>
-        </div>
-        {body}
-      </div>
-    );
+    return <RentalHousingCalcSummary rh={rh} judgmentLoaded={judgmentLoaded} body={body} />;
   }
 
   return (

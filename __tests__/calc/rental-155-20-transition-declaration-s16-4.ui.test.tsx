@@ -4,7 +4,7 @@
  * 2025.2.28. 이후 양도에도 있어야 한다. 종전에는 입력 칸이 양도일 구간(2025.2.28. 전)에서만 열려, 이후 양도는 칸도 고지도 없었고
  * 구간 안에서 켠 값은 양도일을 옮기면 끌 수 없었다.
  *
- * 입력 경로만 다룬다 — 이 선언의 사유 요건 적용 범위는 별건(S16-5, 사용자 결정 대기).
+ * 입력 경로만 다룬다 — 사유 요건은 `rental-155-20-transition-basis-s16-5.ui.test.tsx`(결정 #21).
  * 법령: 「소득세법 시행령」 §154⑩2호는 2019.2.12. 이후 개정이 없고(MST 290841 연혁), 제29523호 부칙 제7조②는 「제154조제10항제2호,
  * 제155조제20항(제2호는 제외한다)의 개정규정 … 에도 불구하고 종전의 규정에 따른다」다(리뷰의 법제처 DRF 부칙 원문 확인 — 이 PR에서
  * 본문을 직접 재확인한 것은 아래 「확인」 절).
@@ -54,11 +54,12 @@ describe("S16-4 §154⑩ 경로 — 경과조치 선언 칸은 양도일과 무�
     fireEvent.click(within(screen.getByTestId(TOGGLE)).getByRole("switch"));
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ residenceTransitionUnderAddendum: false, residenceTransitionBasis: "" }));
   });
-  it("구간 밖에서는 선언 칸만 — 적용 범위 제한 안내·사유·생애 1회 이력은 싣지 않는다(구간 안 ⑳ 괄호의 축)", () => {
+  it("구간 밖에서는 적용 범위 제한 안내·생애 1회 이력을 싣지 않는다(구간 안 ⑳ 괄호의 축) — 사유 칸은 S16-5로 연다", () => {
     renderAt("facts", "2020-05-01", "2026-03-01", { residenceTransitionUnderAddendum: true });
     expect(screen.queryByText(/적용 범위 제한/)).toBeNull();
-    expect(screen.queryByTestId("rental-transition-basis")).toBeNull();
     expect(screen.queryByTestId("rental-prior-history")).toBeNull();
+    // S16-5 — 사유가 종전규정을 주는지를 가르므로 §154⑩ 경로는 양도일과 무관하게 사유를 받는다.
+    expect(screen.getByTestId("rental-transition-basis")).toBeTruthy();
   });
   it("경계 짝 — 2019.2.12. 전 취득은 이미 종전규정이라 선언 칸이 없다", () => {
     renderAt("facts", "2018-05-01", "2026-03-01");

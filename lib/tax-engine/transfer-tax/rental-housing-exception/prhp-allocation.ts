@@ -33,6 +33,7 @@ export type PriceValidationError =
   | "P_PRIOR_MISSING"      // P_prior 미입력
   | "P_TRANSFER_MISSING"   // P_transfer 미입력
   | "DENOMINATOR_ZERO"     // P_transfer === P_acq (분모 0)
+  | "DENOMINATOR_NEGATIVE" // P_transfer < P_acq (분모 음수 — 해석례 미확보, 계산기 미지원)
   | "P_PRIOR_OUT_OF_RANGE"; // P_prior < P_acq 또는 P_prior > P_transfer
 
 export type PriceValidationResult =
@@ -77,6 +78,15 @@ export function validatePrices(
       message: `기준시가 분모(P_transfer − P_acq)가 0입니다. P_transfer(${P_transfer})와 P_acq(${P_acq})가 동일합니다.`,
     };
   }
+  // 분모 음수(현 양도 당시 < 취득 당시 기준시가) — §161③이 예정한 입력이 아니고 해석례도 확보하지 못했다(결정 #22 S06-4).
+  // 분자 음수를 0으로 보는 근거(사전-2021-법규재산-0585)는 분모가 양수인 사안이다 — 이 입력은 특례 없이 전액 과세한다.
+  if (P_transfer < P_acq) {
+    return {
+      valid: false,
+      error: "DENOMINATOR_NEGATIVE",
+      message: `PHRP 양도 당시 기준시가(${P_transfer})가 취득 당시(${P_acq})보다 작아 §161 안분 분모(P_transfer − P_acq)가 음수입니다 — 계산기 미지원(해석례 미확보).`,
+    };
+  }
   // P_prior는 P_acq ~ P_transfer 범위 내여야 논리적 (상승장 가정)
   // 단, 하락장에서 P_prior > P_transfer 가능하므로 경고 수준으로만 처리
   // 여기서는 P_prior < 0 만 차단
@@ -103,8 +113,12 @@ export type AllocationResult = {
   part1?: number;
   /** B2 2호 과세 양도소득금액 (B1은 undefined) */
   part2?: number;
-  /** r161_1 = (P_prior − P_acq) / (P_transfer − P_acq) */
+  /** r161_1 = (P_prior − P_acq) / (P_transfer − P_acq) — 분자가 음수이면 0(`numerator1Clamped`) */
   ratio161_1: number;
+  /** 분자 (P_prior − P_acq)가 음수라 0으로 본 경우 — 사전-2021-법규재산-0585(§161① 직접 · ②1호 유추) */
+  numerator1Clamped?: boolean;
+  /** 분자 (P_transfer − P_prior)가 음수라 2호를 0으로 본 경우(B2) — 0585 유추(②2호 직접 해석 없음, 확인 필요) */
+  numerator2Clamped?: boolean;
   /** r161_2_2 = (P_transfer − P_prior) / (P_transfer − P_acq) (B2 전용) */
   ratio161_2_2?: number;
   /** r_high = (S − 12억) / S (B2 전용) */
@@ -136,10 +150,13 @@ export function calculatePrhpAllocation(
   const HIGH_VALUE_THRESHOLD = highValueThreshold;
 
   // 공통 분자·분모
-  const numerator1 = P_prior - P_acq;          // (P_prior − P_acq)
-  const denominator = P_transfer - P_acq;      // (P_transfer − P_acq)
+  const rawNumerator1 = P_prior - P_acq;       // (P_prior − P_acq)
+  const denominator = P_transfer - P_acq;      // (P_transfer − P_acq) — 호출부(validatePrices)가 양수를 보장한다
+  // 분자가 음수(취득 뒤 하락)이면 과세대상 양도소득금액이 없다 — 사전-2021-법규재산-0585(§161① 직접, ②1호 유추).
+  const numerator1Clamped = rawNumerator1 < 0;
+  const numerator1 = Math.max(0, rawNumerator1);
 
-  // r161_1 = numerator1 / denominator (비율, 0~1 범위)
+  // r161_1 = numerator1 / denominator (분자 음수는 0으로 접은 값)
   // 소수 표현은 추적용으로만, 실제 계산은 safeMultiplyThenDivide 사용
   const ratio161_1 = denominator > 0 ? numerator1 / denominator : 0;
 
@@ -161,12 +178,17 @@ export function calculatePrhpAllocation(
       taxableGain,
       capApplied,
       ratio161_1,
+      ...(numerator1Clamped ? { numerator1Clamped } : {}),
       appliedLaw: TRANSFER_RENTAL_HOUSING.PIT_RD_161_1,
     };
   }
 
   // ─── B2: 12억 초과 ─────────────────────────────────────────
-  const numerator2 = P_transfer - P_prior;     // (P_transfer − P_prior)
+  // 2호 분자 (P_transfer − P_prior) — 직전거주주택 양도 뒤 기준시가가 하락하면 음수다. 그 기간에 차익이 없으므로 2호도 없다고 본다
+  // (§155⑳ 후단 「직전거주주택의 양도일 후의 기간분에 대해서만」 · 0585 유추 — ②2호를 직접 다룬 해석은 확인되지 않았다).
+  const rawNumerator2 = P_transfer - P_prior;
+  const numerator2Clamped = rawNumerator2 < 0;
+  const numerator2 = Math.max(0, rawNumerator2);
 
   const ratio161_2_2 = denominator > 0 ? numerator2 / denominator : 0;
   const ratioHighValue = S > 0 ? (S - HIGH_VALUE_THRESHOLD) / S : 0;
@@ -203,6 +225,8 @@ export function calculatePrhpAllocation(
     ratio161_1,
     ratio161_2_2,
     ratioHighValue,
+    ...(numerator1Clamped ? { numerator1Clamped } : {}),
+    ...(numerator2Clamped ? { numerator2Clamped } : {}),
     appliedLaw: TRANSFER_RENTAL_HOUSING.PIT_RD_161_2_1,
   };
 }

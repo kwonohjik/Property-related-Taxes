@@ -183,17 +183,37 @@ describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", (
     expect(result.residenceFailReasons.some((r) => r.includes("등록일 이후) 2년 미충족"))).toBe(true);
   });
 
-  it("anchor: 부칙 제7조② 경과조치(residenceTransitionUnderAddendum) → 2019.2.12 이후 취득이어도 preRegime(§154①) 취급", () => {
-    const result = checkEligibility(
-      [], HOLD_YEARS, LIVE_YEARS, false,
-      makeCtx({
-        residenceAcquisitionDate: new Date("2020-01-01"),
-        residenceTransitionUnderAddendum: true,
-        wasRegulatedAtAcquisition: false,
-        // postRegistrationResidenceMonths 미입력이어도 preRegime 취급이라 요구되지 않는다.
-      }),
-    );
-    expect(result.passed).toBe(true);
+  it("anchor: 부칙 제7조② 경과조치(residenceTransitionUnderAddendum) + 사유(당시 거주 · 계약금 + 그 전 등록 임대주택 소유) → 2019.2.12 이후 취득이어도 preRegime(§154①) 취급", () => {
+    // 결정 #21(S16-5): 체크만으로는 종전규정을 주지 않는다 — 사유까지 받는다(`isAddendumTransitionEffective`).
+    for (const residenceTransitionBasis of ["residing", "contract_with_prior_rental"] as const) {
+      const result = checkEligibility(
+        [], HOLD_YEARS, LIVE_YEARS, false,
+        makeCtx({
+          residenceAcquisitionDate: new Date("2020-01-01"),
+          residenceTransitionUnderAddendum: true,
+          residenceTransitionBasis,
+          wasRegulatedAtAcquisition: false,
+          // postRegistrationResidenceMonths 미입력이어도 preRegime 취급이라 요구되지 않는다.
+        }),
+      );
+      expect(result.passed).toBe(true);
+    }
+  });
+
+  it("anchor(S16-5 반전): 경과조치 체크만(사유 없음) · 「계약금 + 그 전 등록 임대주택 없음」 → preRegime 아님 — 등록일 이후 거주기간을 요구한다", () => {
+    for (const residenceTransitionBasis of [undefined, "contract_without_prior_rental" as const]) {
+      const result = checkEligibility(
+        [], HOLD_YEARS, LIVE_YEARS, false,
+        makeCtx({
+          residenceAcquisitionDate: new Date("2020-01-01"),
+          residenceTransitionUnderAddendum: true,
+          residenceTransitionBasis,
+          wasRegulatedAtAcquisition: false,
+        }),
+      );
+      expect(result.passed).toBe(false);
+      expect(result.residenceFailReasons.some((r) => r.includes("괄호 준용"))).toBe(true);
+    }
   });
 
   it("positive twin: §155⑳ 경로(rentalUnits 1호 이상)는 §154⑩ 게이트·취득 시기 분기를 타지 않는다(회귀 0)", () => {

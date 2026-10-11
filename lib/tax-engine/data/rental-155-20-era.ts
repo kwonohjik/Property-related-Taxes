@@ -84,8 +84,15 @@ export type AddendumTransitionBasis =
   | "contract_without_prior_rental";
 
 /**
- * 경과조치가 **생애 1회·1주택 한정 괄호를 푸는가**. 사유를 모르면(구 기록·미선택) 풀지 않는다 —
- * 「모름」은 혜택 불성립(사용자 결정 2026-10-04). §154⑩ 거주기간 분기(`isPreLifetimeLimitRegime`)는 이 함수를 쓰지 않는다.
+ * 경과조치가 **종전 규정을 주는가**. 사유를 모르면(구 기록·미선택) 주지 않는다 — 「모름」은 혜택 불성립
+ * (사용자 결정 2026-10-04).
+ *
+ * 쓰는 곳 둘 — ① §155⑳ A·B의 생애 1회·1주택 한정 괄호를 푸는가(`isLifetimeLimitEra155_20` 인자),
+ * ② §154⑩ 표준 경로의 거주요건이 「종전규정」(§154① 원칙)인가(`isPreLifetimeLimitRegime`). ②는 판정 메뉴 결정
+ * #21(S16-5)로 이 함수를 쓰게 됐다 — 부칙 제29523호 제7조②가 제154조제10항제2호와 제155조제20항 개정규정을
+ * 한 문장에서 같은 「주택」 요건으로 묶기 때문이다(법제처 원문). 사유 요건(2호 계약금 경로는 2019.2.12. 전 등록 임대주택
+ * 소유)은 시나리오 A 사안의 회신(서면-2020-법령해석재산-1464 · 서면-2021-법규재산-4760)을 같은 부칙 문장에 적용한
+ * 것이며, **§154⑩ 경로를 직접 다룬 해석은 확보하지 못했다**(확인 필요 — 엔진이 고지한다).
  */
 export function isAddendumTransitionEffective(
   transitionUnderAddendum: boolean,
@@ -128,13 +135,18 @@ export function isLifetimeLimitEra155_20(
  * 계약금 지급 증빙이 있으면 종전 규정」과 같은 축이다 — 양도일 상한(2025-02-27,
  * `RENTAL_155_20_LIFETIME_LIMIT_REPEAL_TRANSFER_START`)은 이 분기와 무관하다(그 상한은
  * 「생애 한 차례」·「1주택 외 주택을 모두 양도한 후」 제한에만 걸린다, `isLifetimeLimitEra155_20` 참조).
+ *
+ * 경과조치는 **사유까지** 받아야 종전규정이다(`isAddendumTransitionEffective` — 판정 메뉴 결정 #21/S16-5).
+ * 체크만으로 주던 종전 동작은 「계약금 지급 · 그 전 등록 임대주택 없음」과 사유 미입력에도 종전규정을 줬다 — 같은 화면의
+ * 라디오가 그 사유에 「종전 규정을 적용받지 못합니다」라고 적는 것과 모순이었고, §155⑳ A 경로와 판정이 갈렸다.
  */
 export function isPreLifetimeLimitRegime(
   residenceAcquisitionDate: Date,
   transitionUnderAddendum7_2: boolean,
+  transitionBasis: AddendumTransitionBasis | "" | undefined,
 ): boolean {
   return (
-    transitionUnderAddendum7_2 ||
+    isAddendumTransitionEffective(transitionUnderAddendum7_2, transitionBasis) ||
     residenceAcquisitionDate.getTime() < RENTAL_155_20_LIFETIME_LIMIT_ACQ_START.getTime()
   );
 }
@@ -146,8 +158,9 @@ export function isPreLifetimeLimitRegime(
 export function needsPre2019ArticleScopeNotice(
   residenceAcquisitionDate: Date,
   transitionUnderAddendum7_2: boolean,
+  transitionBasis: AddendumTransitionBasis | "" | undefined,
   derivedArticles: readonly string[],
 ): boolean {
-  const preRegime = isPreLifetimeLimitRegime(residenceAcquisitionDate, transitionUnderAddendum7_2);
+  const preRegime = isPreLifetimeLimitRegime(residenceAcquisitionDate, transitionUnderAddendum7_2, transitionBasis);
   return preRegime && derivedArticles.some((a) => a === "마" || a === "바");
 }

@@ -455,6 +455,27 @@ export function runRentalHousingExceptionStep(
     amount: rhe.taxableGain,
     legalBasis: rheBasis,
   });
+  // §161 안분 분자가 음수(기준시가 하락)라 0으로 계산했으면 그 사실과 근거를 남긴다(결정 #22 S06-4) — 곱셈 식으로는 보이지 않는다.
+  if (rhe.formulaTrace.numerator1Clamped) {
+    steps.push({
+      label: "§161 안분 분자 음수 — 1호 0으로 계산",
+      formula:
+        "직전거주주택 양도 당시 기준시가가 취득 당시 기준시가보다 작아 분자(직전 양도 당시 − 취득 당시)가 음수입니다 — 과세대상 양도소득금액이 없는 것으로 계산했습니다" +
+        "(사전-2021-법규재산-0585는 §161①의 분자 음수에 대한 회신이며, 이 계산의 §161②1호에는 유추 적용했습니다 — 확인 필요).",
+      amount: 0,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_161_1,
+    });
+  }
+  if (rhe.formulaTrace.numerator2Clamped) {
+    steps.push({
+      label: "§161 안분 분자 음수 — 2호 0으로 계산",
+      formula:
+        "현 양도 당시 기준시가가 직전거주주택 양도 당시 기준시가보다 작아 분자(현 양도 당시 − 직전 양도 당시)가 음수입니다 — §161②2호를 0으로 계산했습니다" +
+        "(사전-2021-법규재산-0585를 유추 적용했으며 §161②2호를 직접 다룬 해석은 확인되지 않았습니다 — 확인 필요).",
+      amount: 0,
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_161_2_2,
+    });
+  }
   // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): 이 조기반환 경로가 기본공제를
   //   연 한도(250만) **전액**으로 고정해 `annualBasicDeductionUsed`(같은 해 기사용분)를
   //   무시했다. 같은 해 다른 양도에서 이미 공제받았어도 250만원을 다시 전액 공제해

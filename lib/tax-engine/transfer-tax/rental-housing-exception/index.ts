@@ -238,6 +238,28 @@ function calculateScenarioB(
     };
   }
 
+  // 취득 뒤 하락했다가 직전 양도 뒤 회복한 입력(직전 양도 당시 < 취득 당시)의 12억 초과 양도 — §161②2호 비율이 1을 넘는다.
+  // 일반 1주택보다 많이 과세하는 값(원안)과 1로 자르는 값 사이에서 정할 해석례가 없어 ⑧과 같이 계산기 미지원이다(결정 #22 하위 다).
+  // ⑧(계산기·부담부증여)이 막지만 API 직접 호출은 거치지 않으므로 엔진도 특례 없이 일반 과세한다(「모름」은 혜택 불성립).
+  if (S > highValueThreshold && input.standardPriceAtPriorTransfer! < input.standardPriceAtAcquisition!) {
+    return {
+      applied: false,
+      scenarioId: "RH-B2",
+      eligibility: {
+        ...eligibility,
+        passed: false,
+        residenceFailReasons: [
+          ...eligibility.residenceFailReasons,
+          "직전거주주택 양도 당시 기준시가가 취득 당시보다 작고 양도가액이 고가주택 기준을 넘어 §161②2호 비율이 1을 넘습니다 — 계산기 미지원(해석례 미확보)이라 특례를 적용하지 않았습니다.",
+        ],
+      },
+      taxableGain: 0,
+      exemptGain: 0,
+      appliedTable: "table-1",
+      formulaTrace: { gain95Table1, gain95Table2, capApplied: false },
+    };
+  }
+
   // priorResidenceTransferDate 필수 검증
   if (!input.priorResidenceTransferDate) {
     return {
@@ -291,6 +313,8 @@ function calculateScenarioB(
     ratio161_2_2: allocation.ratio161_2_2,
     ratioHighValue: allocation.ratioHighValue,
     capApplied: allocation.capApplied,
+    ...(allocation.numerator1Clamped ? { numerator1Clamped: true } : {}),
+    ...(allocation.numerator2Clamped ? { numerator2Clamped: true } : {}),
     part1: allocation.part1,
     part2: allocation.part2,
     highValueThreshold,
