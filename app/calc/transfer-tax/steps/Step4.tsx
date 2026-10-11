@@ -5,6 +5,7 @@ import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
@@ -377,13 +378,33 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   (양도하는 입주권 1개 + 아래 목록의 조합원입주권 항목 수로 자동 산정됩니다)
                 </span>
               </p>
-              {/* §89①4호 가목 본문 요건 안내 */}
+              {/*
+                §89①4호 가목 본문 요건 안내 — 분양권 보유 여부는 **아래 목록이 정본**이라 「없음」 확인이 있을 때만
+                「미보유」를 적는다(S15-13 — 입주권 항목만 있는 목록은 입주권 수가 2가 되어 이 안내가 숨는다). 목록에 분양권이 있으면 가·나목 모두 분양권 요건을 받는다 — 2022.1.1. 전 취득분
+                적용 범위는 법률 제18578호 부칙 제7조 ②·③(법제처 실독)이라 여기서 충족·불성립을 가르지 않는다.
+              */}
               {isOneHouseholdEffective && derivedHouseholdRightCount === 1 && form.householdHousingCount === "0" && (
-                <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900">
+                <div
+                  className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900"
+                  data-testid="one-right-requirement-notice"
+                >
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
                   <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
-                    다른 주택 없음(0채) + 1입주권만(1개) + <b>분양권 미보유</b> 조건 충족.
-                    자산 카드의 §⑥ 비과세 토글 ON 및 인가일 기준 보유·거주요건도 함께 확인하세요.
+                    {form.presaleRights.some((p) => p.type === "presale_right") ? (
+                      <>
+                        다른 주택 없음(0채) + 1입주권만(1개)이 입력되어 있습니다. 가목·나목은 <b>분양권을 보유하지 않을 것</b>도
+                        요구하며, 아래 목록의 분양권이 이 요건에 걸리는지는 입주권 취득일(관리처분계획인가일)과 분양권 취득일
+                        (2022.1.1. 전·후)에 따라 갈립니다 — {REDEVELOPMENT.ONE_RIGHT_PRESALE_ADDENDUM}.
+                      </>
+                    ) : form.householdNoPresaleRightsConfirmed ? (
+                      <>다른 주택 없음(0채) + 1입주권만(1개) + <b>분양권 미보유</b>로 입력되어 있습니다.</>
+                    ) : (
+                      <>
+                        다른 주택 없음(0채) + 1입주권만(1개)이 입력되어 있습니다. 가목·나목은 <b>분양권을 보유하지 않을 것</b>도
+                        요구하므로 아래에서 분양권 보유 여부를 입력하세요.
+                      </>
+                    )}{" "}
+                    인가일 기준 보유·거주요건(§89①3호 가목 기존주택 소유)은 판정 메뉴에서 선언한 사실을 1단계 「판정 불러오기」로 가져오며, 이 화면에서는 수정할 수 없습니다.
                   </p>
                 </div>
               )}

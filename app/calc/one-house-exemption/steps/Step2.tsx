@@ -210,6 +210,7 @@ export function Step2({ form, onChange }: Props) {
           proviso={proviso}
           primaryAcquisitionDate={primaryAcquisitionDate}
           derivedNewHouseAcquisitionDate={derivedNewHouse?.newAcquisitionDate}
+          replacementHouseVisible={judgmentReplacementHouseVisible(form)}
           /*
             합가일은 이 섹션의 `<MergeDateSection>`이 받는다(주택 수 ≥ 2 — 계산기와 같은 자리).
             1주택 + 권리 세대는 아래 `MergedHouseholdRightSection`이 소유한다 —

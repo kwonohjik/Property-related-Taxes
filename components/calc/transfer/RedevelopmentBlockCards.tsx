@@ -641,9 +641,7 @@ export function SuccessorMemberSection({
             <div className="font-semibold">현재 지원하지 않는 분기 (자동 차단)</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
               <li>승계조합원 + 청산금 분기 (납부·수령)</li>
-              <li>승계조합원 + 12억 초과 안분</li>
               <li>승계조합원 + 환산취득가 모드 (상속·증여 평가액을 직접 입력하세요)</li>
-              <li>승계조합원 + 동일세대 상속 §154⑧ 통산</li>
             </ul>
           </div>
         </div>

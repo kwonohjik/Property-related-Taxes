@@ -561,7 +561,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
    */
 
   // §155의2 — 어댑터가 전송을 포기하는 조건과 **같은 자리**에서 막는다.
-  if (form.longTermMortgageSpecial) {
+  //   입주권 양도에는 칸이 없다(⑤·④·사이드바와 같은 `judgmentSaleIsHousing` 게이트 — S10-8).
+  if (form.longTermMortgageSpecial && judgmentSaleIsHousing(form)) {
     if (!form.longTermMortgageContractDate) {
       errors.push(err("longTermMortgageContractDate", "장기저당담보주택: 계약체결일을 입력하세요."));
     }
@@ -700,7 +701,7 @@ export function computeOneHouseJudgmentSummary(
     form.unavoidableOutsideCapitalSpecial && "수도권 밖 부득이",
     // ⑤(섹션)·④·⑧과 같은 게이트 — 섹션이 숨은 세대 구성의 stale 선언은 적지 않는다(OH-05 형제).
     judgmentReplacementHouseVisible(form) && form.replacementHouseSpecial && "대체주택",
-    form.longTermMortgageSpecial && "장기저당담보주택",
+    judgmentSaleIsHousing(form) && form.longTermMortgageSpecial && "장기저당담보주택",
     judgmentSaleIsHousing(form) && form.winWinRentalSpecial && "상생임대주택",
     // OH-18·OH-28 — ④가 실제로 싣는 조건(⑤·⑧과 같은 게이트)일 때만 적는다.
     judgmentSaleIsHousing(form) &&

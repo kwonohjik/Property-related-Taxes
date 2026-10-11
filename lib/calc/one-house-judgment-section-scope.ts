@@ -98,6 +98,9 @@ export function judgmentMarriageRentalOriginVisible(form: OneHouseJudgmentFormDa
  *    **조합원입주권을 1개 이상 보유**. 분양권은 §156의3 축이라 세지 않는다.
  */
 export function judgmentReplacementHouseVisible(form: OneHouseJudgmentFormData): boolean {
+  // 대체주택은 **양도하는 주택**의 특례다 — 입주권 양도(§89①4호)에는 적용 여지가 없고 엔진도 무시한다. 공용 술어는
+  // 「2주택 이상이면 양도 대상 무관 true」라 입주권 양도 + 명부 2채에서도 열렸으므로 여기서 먼저 막는다(S10-8).
+  if (!judgmentSaleIsHousing(form)) return false;
   // 조건 본문은 계산기 ④와 공용이다(`replacement-house-scope.ts`) — 인자만 명부 파생값으로 채운다.
   return replacementHouseApplies({
     houseCount: deriveJudgmentHouseCount(form),

@@ -39,6 +39,7 @@ import {
   oneRightClauseNaYears,
   oneRightRequirementEraNotices,
 } from "../data/one-right-requirement-era";
+import { isWithinDeadline } from "../civil-period";
 import { oneRightOtherHouseCount, resolveRightSaleMarriageMerge } from "./right-sale-marriage-merge";
 import { NON_RESIDENT_ONE_RIGHT_REASON, nonResidentExcludesOneRight } from "../data/non-resident-exclusion-era";
 import type { TransferTaxInput } from "../types/transfer.types";
@@ -170,7 +171,13 @@ export function buildOneRightVerdict(
     reasons.push(
       `나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 ${naYears}년 요건을 판정할 수 없어 나목을 적용하지 않습니다.`,
     );
-  } else if (houseCount === 1) {
+  } else if (
+    houseCount === 1 &&
+    naYears !== null && // 앞 분기들이 연혁 없음·취득일 미입력을 이미 처리했다 — 타입 좁히기용
+    facts.otherHouseAcquisitionDate &&
+    // 판정(`resolveOneRightExemptionClause`)과 같은 leaf — 기한 안인데 다른 사유로 미성립이면 「넘겼습니다」를 적지 않는다(S05-7).
+    !isWithinDeadline(facts.otherHouseAcquisitionDate, naYears, input.transferDate)
+  ) {
     reasons.push(
       `나목 — 그 1주택을 취득한 날부터 ${naYears}년 이내에 입주권을 양도해야 합니다. ${naYears}년을 넘겼습니다.`,
     );
