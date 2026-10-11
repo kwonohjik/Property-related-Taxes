@@ -358,9 +358,10 @@ export function HousesListSection({
               },
             }
           : {}),
-      }).fromLegacyOnly,
+      }, form.transferDate).fromLegacyOnly,
     [
       form.houses,
+      form.transferDate,
       form.culturalHeritageHouseSpecial,
       form.ruralHouseSpecial,
       form.ruralHouseKind,
@@ -377,8 +378,9 @@ export function HousesListSection({
         householdHousingCount: form.householdHousingCount,
         houses: form.houses,
         presaleRights: form.presaleRights,
+        transferDate: form.transferDate,
       }),
-    [form.assets, form.householdHousingCount, form.houses, form.presaleRights],
+    [form.assets, form.householdHousingCount, form.houses, form.presaleRights, form.transferDate],
   );
 
   return (

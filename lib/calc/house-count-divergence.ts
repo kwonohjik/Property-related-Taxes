@@ -12,6 +12,7 @@
  * · docs/00-pm/roster-required-other-assets.plan.md(PR-B — redevelopment_apt F1 확장)
  */
 import { houseCountSelfOffset, usesHouseCountRoster } from "@/lib/calc/housing-like-asset";
+import { countedHouseRows } from "@/lib/calc/household-house-count";
 
 /** computeHouseCountDivergence 입력 — TransferFormData가 구조적으로 satisfy (F4: 테스트 경량화). */
 export interface HouseCountDivergenceInput {
@@ -23,6 +24,11 @@ export interface HouseCountDivergenceInput {
   houses: { acquisitionDate?: string }[];
   /** ④ 분양권·입주권 목록 (구조 카운트 미포함 — populated 게이트에만 사용) */
   presaleRights: unknown[];
+  /**
+   * 양도일 — 그날 이후(같은 날 포함) 취득한 행은 세지 않는다(`countedHouseRows`). **필수**: 빠뜨린 호출부를 컴파일러가 찾는다.
+   * 종전에는 이 값 없이 센 수가 실제 계산(`resolveHouseholdHousingCount`)과 어긋나 거짓 안내를 띄웠다(재검증 S14b-4).
+   */
+  transferDate: string | undefined;
 }
 
 export interface HouseCountDivergenceResult {
@@ -57,8 +63,8 @@ export function computeHouseCountDivergence(
   const populated = input.houses.length > 0 || input.presaleRights.length > 0; // C-1: 분양권만 입력해도 노출
   const declared = parseInt(input.householdHousingCount || "1", 10); // store default "1"과 일치
   const selfOffset = houseCountSelfOffset(input.primaryKind);
-  const structuralCount =
-    selfOffset + input.houses.filter((h) => h.acquisitionDate).length; // F7: 주택만. 분양권 제외
+  // 실제 계산이 쓰는 수와 같은 leaf — 양도일 당일·이후 취득 행은 양도일 현재 보유 주택이 아니다(D2).
+  const structuralCount = selfOffset + countedHouseRows(input.houses, input.transferDate); // F7: 주택만. 분양권 제외
   return {
     showPrecedence: isHouseSale && populated,
     showMismatch: isHouseSale && populated && structuralCount !== declared,

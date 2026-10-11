@@ -227,14 +227,18 @@ describe("ROW-6 ④ 본문 — 행 값으로 채우고 행 id를 싣는다", () 
       wasOneHouseholdAtAcquisition: true,
       meetsSellerAndContractRequirement: true,
     };
-    const f = jForm([
-      row("u", "2024-03-01", {
-        acquisitionPrice: "500000000",
-        exclusiveArea: "84",
-        regionCode: "4719025000", // 경북 — 수도권 밖
-        countExclusion: { kind: "reduction", reduction: unsold },
-      }),
-    ]);
+    const f = jForm(
+      [
+        row("u", "2024-03-01", {
+          acquisitionPrice: "500000000",
+          exclusiveArea: "84",
+          regionCode: "4719025000", // 경북 — 수도권 밖
+          countExclusion: { kind: "reduction", reduction: unsold },
+        }),
+      ],
+      // 양도일 현재 보유 행만 선언이 실린다(PR1a) — 행 취득일(2024-03-01)보다 뒤로 양도일을 둔다.
+      { transferDate: "2025-06-02" },
+    );
     expect(buildOneHouseExemptionApiBody(f).reductions).toEqual([
       expect.objectContaining({
         type: "unsold_98_9",

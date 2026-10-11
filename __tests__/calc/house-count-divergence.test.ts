@@ -20,6 +20,7 @@ function input(over: Partial<HouseCountDivergenceInput>): HouseCountDivergenceIn
     householdHousingCount: "1",
     houses: [],
     presaleRights: [],
+    transferDate: undefined,
     ...over,
   };
 }

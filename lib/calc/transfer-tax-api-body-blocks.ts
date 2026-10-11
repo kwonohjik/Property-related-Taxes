@@ -199,7 +199,7 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
             },
           }
         : {}),
-    });
+    }, form.transferDate);
     return {
       ...(derived.culturalHeritageHouse ? { culturalHeritageHouse: true } : {}),
       ...(derived.ruralHouse ? { ruralHouse: derived.ruralHouse } : {}),

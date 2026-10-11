@@ -25,6 +25,7 @@ import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transf
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { eligibleCountExcludedHouseIds } from "./house-count-exclusion-rows";
+import { housesOwnedAtTransfer } from "./household-house-count";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildInheritanceGeneralHousePayload } from "./inheritance-general-house-scope";
 
@@ -89,9 +90,11 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
  * 엔진에 실리는 것과 같은 행·같은 payload다(`findRuralHouseRow` · `deriveOneHouseFactsFromHouses`).
  */
 export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
-  const ruralRow = findRuralHouseRow(form.houses);
-  const row = form.houses?.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
-  const rural = deriveOneHouseFactsFromHouses(form.houses).ruralHouse;
+  // 양도일 현재 보유 행만 — ④가 싣는 행·payload와 같다(`deriveOneHouseFactsFromHouses`의 `transferDate`).
+  const owned = housesOwnedAtTransfer(form.houses, form.transferDate);
+  const ruralRow = findRuralHouseRow(owned);
+  const row = owned.find((h) => h === ruralRow); // 같은 객체 — id가 있는 명부 행 타입으로 되찾는다
+  const rural = deriveOneHouseFactsFromHouses(owned).ruralHouse;
   const transferDate = toOptionalDate(form.transferDate);
   if (!row?.id || !rural || !transferDate) return new Set();
   const qualifies = qualifiesRuralHouse({
