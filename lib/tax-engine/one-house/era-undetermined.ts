@@ -19,6 +19,7 @@
  * | `154-1-capital-newtown-location-unverified` | §154① 본문(2003-11-20 ~ 2011-06-02 양도 — 서울·과천·5개 신도시 거주 2년) | 양도 주택이 신도시 지구 안인지(법정동코드는 시·구까지) 또는 주소 — 요건을 적용해 판정, 거주요건 때문에 과세될 때만 |
  * | `154-1-expropriation-notice-date-unverified` | §154①2호 가목 괄호 「사업인정 고시일 전에 취득한 주택에 한한다」(대통령령 제19327호 2006.2.9. 신설 — 부칙 제3조·제30조①) | 사업인정 고시일 — 공란이면 단서를 적용하지 않았다(모름 = 불성립). 고시일 전 취득이면 결론이 비과세로 바뀔 때만 |
  * | `154-12-co-inherited-residence-unverified` | §154⑫(2021.2.17. 신설 · 2024.2.29. 개정) — 취득 당시 조정대상지역 공동상속주택의 거주기간 | 공동상속주택인지와 다른 공동상속인의 거주기간 — 입력 경로가 없다. 상속 취득 · 본인 거주 미달로 과세될 때만 확인 필요로 밝힌다(판정은 바꾸지 않는다) |
+ * | `regulated-hwaseong-announcement-window-unverified` | 화성시 조정대상지역 지정 시작 열흘(2020.6.19.~6.28.) — 원 공고(제2020-828호)일부터로 판정, 정정공고(제2020-877호)일 6.29.로 읽으면 결과가 달라짐 (결정 #3, `hwaseong-announcement-window.ts`) | 해석례·심판례 — 확보하지 못함. 취득 당시 거주요건·§155①2호 신규 주택이 결론을 가를 때만 낸다(다주택 중과는 계산기 경고) |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
@@ -64,6 +65,11 @@ import { resolveRental4hoRegistration } from "./rental-registration-4ho";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
 import { resolveInheritedHouseExclusionForJudgment } from "../transfer-inheritance-exclusion";
 import { INHERITANCE_GENERAL_HOUSE_HELD_START } from "../data/inheritance-general-house-era";
+import {
+  HWASEONG_WINDOW_NOTICE_ID,
+  hwaseongAcquisitionWindowNotice,
+  hwaseongTemporaryTwoHouseWindowNotice,
+} from "./hwaseong-announcement-window";
 
 // §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
 export {
@@ -95,6 +101,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-1-expropriation-notice-date-unverified",
   CO_INHERITED_RESIDENCE_UNVERIFIED_ID,
   "civil-161-holiday-table-uncovered",
+  HWASEONG_WINDOW_NOTICE_ID,
 ]);
 
 const law = (s: string) => `${TRANSFER.ONE_HOUSE_REQUIREMENT}${s}`;
@@ -252,6 +259,9 @@ export function collectEraUndetermined(
     }
   }
 
+  // 결정 #3 하위 2 — 화성시 지정 시작 열흘(2020.6.19.~6.28.)의 취득 당시 조정대상지역 판정(거주요건이 결론을 가를 때만).
+  out.push(...hwaseongAcquisitionWindowNotice(input, settled, relevance?.residenceDecides));
+
   /*
    * OH-01 — §155①2호. 결론과 무관하게 낸다(입력이 없어 판정하지 않은 사실을 밝힌다).
    *   ① 신규 취득일 기준 두 주택의 조정 여부가 미입력이고 그 값이 기한을 바꾸는 구간이면 —
@@ -276,6 +286,8 @@ export function collectEraUndetermined(
     if (reg.announcementWarning && regulatedAxisMatters) {
       out.push({ id: "155-1-regulated-announcement-date-unverified", reason: reg.announcementWarning });
     }
+    // 결정 #3 하위 2 — 신규 주택 취득·계약이 화성시 지정 시작 열흘에 걸리고 처분기한 판정이 갈릴 때.
+    if (reg.determined) out.push(...hwaseongTemporaryTwoHouseWindowNotice(input, tt, reg.bothRegulated, eraFor));
     if (!reg.determined && regulatedAxisMatters) {
       out.push({
         id: "155-1-regulated-at-new-acquisition-unverified",

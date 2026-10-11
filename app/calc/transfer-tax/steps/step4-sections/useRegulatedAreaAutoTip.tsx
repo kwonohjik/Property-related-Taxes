@@ -43,6 +43,8 @@ export function useRegulatedAreaAutoTip({
     acquisition: form.wasRegulatedAtAcquisitionTouched,
   };
   const primaryInDistrict = form.assets?.[0]?.regionInDesignatedDistrict;
+  // ④가 싣는 코드와 같은 폴백(`primary.regionCode || form.regionCode`) — ②·④ 카드가 토글을 숨기는 조건과 같다.
+  const hasRegionCode = !!(primaryRegionCode || form.regionCode);
   // 주소(또는 법정동코드)·날짜가 준비되면 조정대상지역 자동 판별
   useEffect(() => {
     if ((!primaryAddress && !primaryRegionCode) || !form.transferDate || !isHousingLike(primaryKind)) {
@@ -131,7 +133,11 @@ export function useRegulatedAreaAutoTip({
                종전에는 두 자산에도 「아래 체크박스를 수동 확인하세요」가 떠서 존재하지 않는
                컨트롤을 가리켰다.
           */}
-          {regulatedAuto.confidence !== "high" && (
+          {/*
+            결정 #5(G7-6) 하위 2 — 주소(법정동코드)가 있으면 ② 토글이 없고 자동 판정 카드가 뜬다. 「소재지를 지우면 직접 선택」 안내는
+            그 카드가 신뢰도 낮음에서만 낸다(판정 메뉴와 같은 규약) — 여기서는 화면에 없는 「아래 체크박스」를 가리키지 않는다.
+          */}
+          {regulatedAuto.confidence !== "high" && !(isOneHouseExemptionAsset(primaryKind) && hasRegionCode) && (
             <p className="text-caption text-amber-700 dark:text-amber-400">
               ⚠️ 신뢰도: {regulatedAuto.confidence} — 시군구 일부만 지정된 경우{" "}
               {isOneHouseExemptionAsset(primaryKind)

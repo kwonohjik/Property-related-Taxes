@@ -74,9 +74,9 @@ describe("판정 — 지구 한정 동", () => {
     expect(governingDesignationStart(DAEHWA, "2020-01-15", true)).not.toBeNull();
   });
 
-  it("지구 이름은 광교·고양·남양주(다산·별내)·동탄2 묶음 35개 항목에 모두 있다", () => {
+  it("지구 이름은 광교·고양·남양주(지금·도농 — 다산동)·동탄2 묶음 34개 항목에 모두 있다 (별내동은 결정 #4로 제외)", () => {
     const tagged = REGULATED_REGIONS.flatMap((r) => r.includedSubCodes ?? []).filter((s) => s.district);
-    expect(tagged).toHaveLength(35);
+    expect(tagged).toHaveLength(34);
     expect(new Set(tagged.map((s) => s.district))).toEqual(
       new Set([
         "광교택지개발지구",
@@ -87,8 +87,7 @@ describe("판정 — 지구 한정 동", () => {
         "덕은 도시개발지구",
         "고양관광문화단지(한류월드)",
         "킨텍스1단계 도시개발지구",
-        "다산동(행정동)",
-        "별내동(행정동)",
+        "다산동",
         "동탄2택지개발지구",
       ]),
     );

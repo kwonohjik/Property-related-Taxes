@@ -17,6 +17,7 @@ import { provisoGate, effectiveProvisoReason, buildSameHouseholdInheritancePaylo
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
+import { calcEffectiveWasRegulatedAtAcquisition } from "./effective-regulated-at-acquisition";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -85,7 +86,10 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
     // ④와 같은 식 — 자산 코드에 붙은 「지정 지구 안인가」 선언(폼-전역 코드 폴백에는 선언이 없다). 빠지면 지구 밖 선언이
     // 무시되어 엔진은 비조정인데 Step4만 「거주요건 불충족」을 띄운다(재검증 S12-5 [A]).
     regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
-    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // 결정 #5(G7-6) — 주소가 있으면 주소 판정값(④와 같은 leaf). 이 빌더는 Step4 안내가 엔진과 같은 값을 보게 한다.
+    wasRegulatedAtAcquisition: primary
+      ? calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode)
+      : form.wasRegulatedAtAcquisition,
     // §154⑧3호 동일세대 상속 거주 통산 — meetsOneHouseResidenceRequirement가 소비하므로
     // Step4 거주요건 안내(이 빌더 소비)도 엔진과 동일 필드 전달 필수 (UI↔엔진 dual-truth 방지).
     acquisitionCause: primary?.acquisitionCause,

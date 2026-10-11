@@ -95,8 +95,13 @@ const twoHouse = (td: string) => form("2010-01-01", td, [row("n", "2017-06-01")]
 /** 3주택 — 양도 주택 2015 취득(보유 3년) */
 const threeHouse = (td: string) => form("2015-01-01", td, [row("a", "2012-01-01"), row("b", "2016-06-01")]);
 /** 비조정 · 주택 수 3(legacy 감면 경로 관측용 — 중과 없음) */
-const plain = (acq: string, td: string, count = "3") =>
-  form(acq, td, [], { isRegulatedArea: false, householdHousingCount: count });
+//   소재지는 비조정 지역(경기 양평군)이다 — 종전에는 강남 코드에 토글만 false로 두어 「비조정」을 흉내 냈는데, 결정 #5(G7-6) 하위 1 이후
+//   ④는 주소가 있으면 저장된 토글이 아니라 주소 판정값(강남=조정)을 싣는다. 시료가 결함(토글이 주소를 이김)을 수단으로 쓰고 있었다.
+const plain = (acq: string, td: string, count = "3") => {
+  const f = form(acq, td, [], { isRegulatedArea: false, householdHousingCount: count });
+  f.assets[0] = { ...f.assets[0], regionCode: "4183010100" };
+  return f;
+};
 
 /** legacy 장기임대 감면(`rentalReductionDetails`) — ④가 만들지 않는 API 직접 입력 전용 경로 */
 const rental =

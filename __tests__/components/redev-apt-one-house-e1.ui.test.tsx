@@ -130,7 +130,8 @@ describe("OH-51 ⑤ — 승계조합원 「취득 당시」 조정대상지역�
     render(<Step4 form={form({ ...SUCCESSOR, regionCode: "4113310100" })} onChange={() => {}} />);
     await waitFor(() => expect(bodies.length).toBeGreaterThan(0));
     expect(bodies[0].acquisitionDate).toBe("2020-06-30");
-    expect(screen.queryAllByText("준공일 기준 조정대상지역").length).toBe(1);
+    // 결정 #5(G7-6) — 주소(법정동코드)가 있으면 토글 대신 자동 판정 카드가 같은 이름(라벨 + 해당/미해당)으로 뜬다.
+    expect(screen.queryAllByText(/^준공일 기준 조정대상지역 (해당|미해당)$/).length).toBe(1);
   });
 
   it("짝 — 원조합원은 종전주택 취득일 그대로", async () => {
@@ -138,7 +139,7 @@ describe("OH-51 ⑤ — 승계조합원 「취득 당시」 조정대상지역�
     render(<Step4 form={form({ ...ORIGINAL, regionCode: "4113310100" })} onChange={() => {}} />);
     await waitFor(() => expect(bodies.length).toBeGreaterThan(0));
     expect(bodies[0].acquisitionDate).toBe("2018-01-10");
-    expect(screen.queryAllByText("취득일 기준 조정대상지역").length).toBe(1);
+    expect(screen.queryAllByText(/^취득일 기준 조정대상지역 (해당|미해당)$/).length).toBe(1);
   });
 });
 

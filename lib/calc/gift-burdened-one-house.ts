@@ -131,9 +131,9 @@ export function giftBurdenedDistrictResetPatch(
  * (`giftBurdenedTempTwoHouseRegulatedGate`)는 저장값을 넘기지만, 주소 코드가 있으면 판정이 코드를 먼저 보고
  * (`resolveIsRegulatedAtTransfer`) 없으면 실효값 = 저장값이라 결과가 같다.
  *
- * 규칙은 양도세 계산기(`useRegulatedAreaAutoTip`)와 같다: 주소가 있으면 증여일(= 양도일) 판정
- * (`/api/address/regulated-area`와 같은 `isRegulatedByBjdCode`)으로 토글을 채우되, **사용자가 직접 만진
- * 토글은 덮어쓰지 않는다**. 계산기의 「만짐」 표지(`isRegulatedAreaTouched`)는 여기서는 저장값의 유무다 —
+ * 규칙: 주소가 있으면 증여일(= 양도일) 판정(`/api/address/regulated-area`와 같은 `isRegulatedByBjdCode`)으로 토글을 채우되,
+ * **사용자가 직접 만진 토글은 덮어쓰지 않는다**. (양도세 계산기는 2026-10-11 결정 #5(G7-6)로 주소가 있으면 토글을 숨기고 주소
+ * 판정만 쓴다 — 이 화면은 그 정렬(옵션 C)을 별도 결정으로 미뤘다.) 계산기의 「만짐」 표지(`isRegulatedAreaTouched`)는 여기서는 저장값의 유무다 —
  * ⑤는 토글을 만지면 `true`/`false`를 그대로 저장하고, 안 만졌으면 저장값이 없다(`undefined`).
  * 주소가 없으면 저장값(없으면 아님)이다 — 종전 동작 그대로.
  *

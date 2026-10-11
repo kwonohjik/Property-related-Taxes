@@ -149,7 +149,11 @@ export function isRegulatedByBjdCodeIn(
               isRegulated: true,
               confidence: "medium",
               basis: `${active.designatedDate} 고시 — ${region.name} ${hit.name}: ${hit.district}만 지정(지구 안인지 확인 필요)`,
-              districtOnly: { district: hit.district, area: `${region.name} ${hit.name}` },
+              districtOnly: {
+                district: hit.district,
+                area: `${region.name} ${hit.name}`,
+                ...(hit.scopeUnverified ? { scopeUnverified: true } : {}),
+              },
             }
           : {
               isRegulated: true,
@@ -384,7 +388,7 @@ export function toRegulatedAreaHistory(): RegulatedAreaHistory {
  */
 export function designatedDistrictsForCode(
   bjdCode: string | undefined,
-): { district: string; area: string; appliesFrom?: string; appliesTo?: string }[] {
+): { district: string; area: string; scopeUnverified?: boolean; appliesFrom?: string; appliesTo?: string }[] {
   if (!bjdCode || bjdCode.length < 10) return [];
   const candidates = expandSigunguAliases(bjdCode);
   const region = REGULATED_REGIONS.find((r) => candidates.includes(r.code));
@@ -393,6 +397,7 @@ export function designatedDistrictsForCode(
     .map((s) => ({
       district: s.district!,
       area: `${region!.name} ${s.name}`,
+      ...(s.scopeUnverified ? { scopeUnverified: true } : {}),
       ...(s.appliesFrom ? { appliesFrom: s.appliesFrom } : {}),
       ...(s.appliesTo ? { appliesTo: s.appliesTo } : {}),
     }));

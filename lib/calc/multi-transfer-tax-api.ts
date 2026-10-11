@@ -3,6 +3,7 @@
  * MultiTransferFormData → POST /api/calc/transfer/multi → AggregateTransferResult
  */
 
+import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { depreciationSupport } from "./depreciation-scope";
@@ -305,8 +306,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     householdRightCount: resolveHouseholdRightCount(primaryKind, form.presaleRights, form.transferDate),
     // 거주기간 — 단건과 **같은 leaf**(§95⑤2호 주택 보유기간 클램프 포함, 위 주석 참조)
     residencePeriodMonths: residence.months,
-    isRegulatedArea: form.isRegulatedArea,
-    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // 결정 #5(G7-6) 하위 1 — 단건(`transfer-tax-api.ts`)과 같은 leaf: 주소가 있으면 저장된 토글 대신 주소 판정값.
+    isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form),
+    wasRegulatedAtAcquisition: primary
+      ? calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode)
+      : form.wasRegulatedAtAcquisition,
     // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 단건(`transfer-tax-api.ts`)과 같은 게이트.
     presaleRightNoOtherRight:
       primaryKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,

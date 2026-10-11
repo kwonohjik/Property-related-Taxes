@@ -24,6 +24,7 @@
  * 사용자에게 받는다(③ 예상 양도가액).
  */
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
+import { calcEffectiveWasRegulatedAtAcquisition, effectiveIsRegulatedAtTransfer } from "@/lib/calc/effective-regulated-at-acquisition";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
@@ -143,8 +144,14 @@ export function buildOneHouseExemptionApiBody(
 
     isOneHousehold: form.isOneHousehold,
     isUnregistered: form.isUnregistered,
-    isRegulatedArea: form.isRegulatedArea,
-    wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
+    // 결정 #5(G7-6) 하위 1 — 주소(법정동코드)가 있으면 저장된 토글이 아니라 주소 판정값을 싣는다(⑤가 토글을 숨기고 보이는 값과 같다).
+    isRegulatedArea: effectiveIsRegulatedAtTransfer({
+      regionCode: primary.regionCode,
+      regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
+      transferDate: form.transferDate,
+      stored: form.isRegulatedArea,
+    }),
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition),
     /**
      * ④ 양도 물건 법정동코드 — ② 화면의 소재지 검색(PNU 앞 10자리)이 세운다.
      *

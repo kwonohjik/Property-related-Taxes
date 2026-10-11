@@ -103,25 +103,58 @@ describe("D-9 화성시 동탄 — 일반구 신설 (41590 → 41597 등)", () =
     }
   });
 
-  it("D9-2c: 능동은 **미적용** — 동탄면이 아니라 구 화성시 본토 동이다", () => {
-    // 능동(41597101)은 구 `41590118`로 진안·병점·기산동과 같은 묶음이었다.
-    // 동탄면 13개 리 목록에 없고 종전 데이터에도 없었다 — 근거 없는 확대를 막는 대조군.
-    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(false);
+  it("D9-2c: 능동은 2020-06-18까지 **미적용**(동탄면이 아니라 구 화성시 본토 동) · 2020-06-19부터 시 전역 지정으로 적용", () => {
+    // 능동(41597101)은 구 `41590118`로 진안·병점·기산동과 같은 묶음이었다. 동탄면 13개 리 목록에 없어
+    // 2017.8.3.~2020.6.18. 동탄2 한정 지정에는 들어오지 않는다(근거 없는 확대를 막는 대조군).
+    // 그러나 2020.6.19.(국토교통부공고 제2020-828호)부터 화성시 전역이 지정되어 동탄2 밖도 지정이다(결정 #3, G7-1).
+    expect(isRegulatedByBjdCode("4159710100", "2020-06-18").isRegulated).toBe(false);
+    expect(isRegulatedByBjdCode("4159710100", "2020-06-19").isRegulated).toBe(true);
+    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(true);
+    expect(isRegulatedByBjdCode("4159710100", "2022-11-13").isRegulated).toBe(true);
+    expect(isRegulatedByBjdCode("4159710100", "2022-11-14").isRegulated).toBe(false);
   });
 
-  it("D9-3: 화성은 **시 전역이 아니라 지구 한정** 지정이었다 — 부분 지정이 유지된다", () => {
-    // 부천(전역)과 달리 화성은 동탄2 지구만 지정이었다. 신설 구 전역으로 넓히면
-    // 근거 없이 납세자에게 불리해진다 — 지정 밖 지역은 그대로 미지정이어야 한다.
-    expect(isRegulatedByBjdCode("4159310100", DURING).isRegulated).toBe(false); // 효행구 배양동
-    expect(isRegulatedByBjdCode("4159510200", DURING).isRegulated).toBe(false); // 병점구 병점동
-    expect(isRegulatedByBjdCode("4159110100", DURING).isRegulated).toBe(false); // 만세구 새솔동
+  it("D9-3: 2020-06-18까지 신설 3구(동탄2 밖)는 미지정 · 2020-06-19~2022-11-13은 시 전역 지정", () => {
+    // 부천(전역)과 달리 화성은 2020.6.18.까지 동탄2 지구만 지정이었다 → 그 전 기간 신설 3구는 미지정(대조군 유지).
+    for (const code of ["4159310100", "4159510200", "4159110100"]) {
+      // 효행구 배양동 · 병점구 병점동 · 만세구 새솔동
+      expect(isRegulatedByBjdCode(code, "2020-06-18").isRegulated, `${code} 2020-06-18`).toBe(false);
+      expect(isRegulatedByBjdCode(code, "2020-06-19").isRegulated, `${code} 2020-06-19`).toBe(true);
+      expect(isRegulatedByBjdCode(code, DURING).isRegulated, `${code} ${DURING}`).toBe(true);
+      expect(isRegulatedByBjdCode(code, "2022-11-13").isRegulated, `${code} 2022-11-13`).toBe(true);
+      expect(isRegulatedByBjdCode(code, "2022-11-14").isRegulated, `${code} 2022-11-14`).toBe(false);
+    }
+  });
+
+  it("D9-3b: 판정 근거 문구 — 동탄2 밖은 「2020-06-19 고시」(2017 고시로 지정된 것처럼 보이지 않는다) · 동탄2는 2020-06-18까지 「2017-08-03 고시」", () => {
+    expect(isRegulatedByBjdCode("4159710100", DURING).basis).toContain("2020-06-19 고시");
+    expect(isRegulatedByBjdCode("4159710100", DURING).basis).not.toContain("2017-08-03");
+    expect(isRegulatedByBjdCode("4159711000", "2019-06-01").basis).toContain("2017-08-03 고시"); // 산척동(동탄2) 2020-06-18까지는 종전 고시 그대로
+    expect(isRegulatedByBjdCode("4159711000", DURING).basis).toContain("2020-06-19 고시"); // 2020-06-19부터는 시 전역 지정
+    expect(isRegulatedByBjdCode("4159325021", DURING).basis).toContain("2020-06-19 고시"); // 효행구
+  });
+
+  it("D9-3c: 서신면(2022-07-05 해제 — 제2022-883호) — 현행 만세구 41591330 · 구 41590350 모두 2022-07-04까지 지정", () => {
+    for (const code of ["4159133000", "4159035000"]) {
+      expect(isRegulatedByBjdCode(code, "2020-06-19").isRegulated, `${code} 2020-06-19`).toBe(true);
+      expect(isRegulatedByBjdCode(code, "2022-07-04").isRegulated, `${code} 2022-07-04`).toBe(true);
+      expect(isRegulatedByBjdCode(code, "2022-07-05").isRegulated, `${code} 2022-07-05`).toBe(false);
+    }
+    // 대조군 — 같은 구의 서신면 밖(남양읍)은 2022-07-05 이후에도 2022-11-13까지 지정
+    expect(isRegulatedByBjdCode("4159125600", "2022-07-05").isRegulated).toBe(true);
+  });
+
+  it("D9-3d: 동탄2 지구 한정 기간(~2020-06-18)의 포함 규칙은 그대로 — 동탄1(반송·석우)·동탄2 동 판정 불변", () => {
+    expect(isRegulatedByBjdCode("4159711000", "2020-06-18").isRegulated).toBe(true); // 산척동
+    expect(isRegulatedByBjdCode("4159711000", "2017-08-02").isRegulated).toBe(false); // 지정 전날
+    expect(isRegulatedByBjdCode("4159711000", "2017-08-03").isRegulated).toBe(true);
   });
 
   it("D9-4: 2026-07-01 동탄구 전역 지정(국토부공고 제2026-882호)은 별건으로 살아 있다", () => {
-    // 과거 이력(2017~2022 동탄2 한정)과 신규 지정(2026 동탄구 전역)은 서로 다른 건이다.
-    // 능동은 동탄면이 아니라 과거엔 미지정이지만, 2026 지정은 **전역**이라 걸린다.
+    // 2017~2020.6.18. 동탄2 한정 · 2020.6.19.~2022.11.13. 화성시 전역과 신규 지정(2026 동탄구 전역)은 서로 다른 건이다.
+    // 2022.11.14.~2026.6.30.은 미지정이고, 2026 지정은 **전역**이라 능동도 걸린다.
     expect(isRegulatedByBjdCode("4159710100", "2026-07-01").isRegulated).toBe(true); // 능동
-    expect(isRegulatedByBjdCode("4159710100", DURING).isRegulated).toBe(false); // 당시엔 미지정
+    expect(isRegulatedByBjdCode("4159710100", "2025-01-01").isRegulated).toBe(false); // 해제 후 ~ 재지정 전
     // 동탄2 지구인 산척동은 양쪽 모두 지정
     expect(isRegulatedByBjdCode("4159711000", "2026-07-01").isRegulated).toBe(true);
     expect(isRegulatedByBjdCode("4159711000", DURING).isRegulated).toBe(true);
