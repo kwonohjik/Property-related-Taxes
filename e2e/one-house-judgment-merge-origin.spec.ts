@@ -66,6 +66,8 @@ test.describe("판정 메뉴 — 합가 전 보유자", () => {
     await expect(page.getByTestId("house-merge-origin")).toBeVisible();
     // 판정 메뉴에서는 중과 축의 「배우자 단독 보유」 칩을 묻지 않는다
     await expect(page.getByText("배우자 단독 보유 주택")).toHaveCount(0);
+    // 결정 #47 — 「양도일 현재도 배우자 쪽이 보유하나요」 질문도 판정 메뉴에는 없다(`hideSpouseOwned`)
+    await expect(page.locator('[data-testid^="spouse-holding-"]')).toHaveCount(0);
     await page.getByTestId("merge-origin-counterpart").check();
     await page.getByRole("button", { name: "완료" }).click();
     await expect(badge).toHaveAttribute("data-side", "counterpart_side");

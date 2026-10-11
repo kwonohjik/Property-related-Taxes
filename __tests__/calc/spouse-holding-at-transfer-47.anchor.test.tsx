@@ -138,3 +138,24 @@ describe("#47 ⑤ 편집 창", () => {
     expect(screen.queryByTestId("spouse-holding-spouse_side")).toBeNull();
   });
 });
+
+describe("#47 ⑤ 분양권·입주권 행 — 칩이 아니라 조건부 질문 (E2E 대체 근거)", () => {
+  const right = { id: "r1", type: "presale_right" as const, acquisitionDate: "2022-01-01", region: "capital" as const };
+  const withRight = (over: Record<string, unknown> = {}) => form([ROW("b")], { presaleRights: [right], ...over });
+  const renderRights = (f: TransferFormData) =>
+    render(<HousesListSection form={f} onChange={() => {}} mergeContext={{ kind: "marriage", mergeDate: "2024-03-01" }} />);
+
+  it("[SQ-9] 혼인일만 입력된 폼(조건 미충족)에서는 질문도 옛 칩도 없다", () => {
+    renderRights(withRight({ isRegulatedArea: false }));
+    expect(screen.queryByTestId("spouse-holding-right")).toBeNull();
+    expect(screen.queryByRole("switch", { name: /배우자 단독 보유/ })).toBeNull();
+  });
+
+  it("[SQ-10] 조건 충족(조정 · 혼인 5년 안 · 주택+권리 3↑)이면 예/아니오/모름 질문이 열린다 — 옛 칩은 없다", () => {
+    renderRights(withRight());
+    expect(screen.getByTestId("spouse-holding-right")).toBeTruthy();
+    expect(screen.getByTestId("spouse-holding-yes-r1")).toBeTruthy();
+    expect(screen.getByTestId("spouse-holding-unknown-r1")).toBeTruthy();
+    expect(screen.queryByRole("switch", { name: /배우자 단독 보유/ })).toBeNull();
+  });
+});
