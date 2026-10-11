@@ -60,6 +60,7 @@ import {
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
+import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 
 // ── 중과 유예 근거(basis) 표시용 기한 포맷 — API JSON 왕복 후 string 도달 가능(Date 직렬화) ──
 function fmtDeadline(d: Date | string | undefined): string {
@@ -392,6 +393,12 @@ export function TransferTaxResultView({
               {result.exemptReason ?? "비과세"}
             </p>
             <p className="text-2xl font-bold mt-1">납부세액 0</p>
+            {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 비과세 결과 안의 짧은 안내 줄. 공용 술어·문구. */}
+            <FalseContractPriceNotice
+              transferDate={formData?.transferDate}
+              isExempt={result.isExempt}
+              className="mt-3"
+            />
           </div>
         ) : result.amendmentDetail ? (
           <AmendmentResultCard
@@ -457,6 +464,16 @@ export function TransferTaxResultView({
           result={result}
           fallbackThresholdLabel={highValueThresholdForDisplay(formData?.transferDate).label}
         />
+
+        {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 부분 비과세·감면 결과. 전액 비과세는 위 카드 안에 이미 있다(경정 환급 카드는 예외). */}
+        {(!result.isExempt || result.amendmentDetail?.correctionKind === "refund_claim") && (
+          <FalseContractPriceNotice
+            transferDate={formData?.transferDate}
+            isExempt={result.isExempt}
+            isPartialExempt={result.isPartialExempt}
+            reductionAmount={result.reductionAmount}
+          />
+        )}
 
         {/* 필지별 계산 내역 */}
         {result.parcelDetails && result.parcelDetails.length > 0 && (

@@ -486,6 +486,7 @@ function computeAggregateOnce(
       propertyId: r.item.propertyId,
       propertyLabel: r.item.propertyLabel,
       isExempt: r.result.isExempt,
+      isPartialExempt: r.result.isPartialExempt, // [echo] §91② 범위 밖 고지 술어용 (표시 전용)
       exemptReason: r.result.exemptReason,
       transferPrice: effectiveTransferPrice,
       acquisitionPrice: effectiveAcquisitionPrice,

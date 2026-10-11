@@ -517,7 +517,7 @@ export function GiftTaxResultView({
       )}
       {transferTaxResults.length > 0 && (
         <PrintSection id="burdened-transfer-tax" selectedIds={selectedPrintIds}>
-          <BurdenedTransferTaxResultCard transferTaxResults={transferTaxResults} />
+          <BurdenedTransferTaxResultCard transferTaxResults={transferTaxResults} transferDate={giftDate} />
         </PrintSection>
       )}
 

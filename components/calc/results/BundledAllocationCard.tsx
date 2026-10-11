@@ -27,6 +27,7 @@ import {
   hasBuildingStdReport,
 } from "@/components/calc/results/BuildingStdPriceReportSection";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
+import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -507,6 +508,17 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           />
         ))}
       </div>
+
+      {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 일괄양도의 주택 단위 결과도 「비과세」를 표시하므로 같은 술어·문구로 붙인다. */}
+      <FalseContractPriceNoticeForItems
+        items={aggregated.properties.map((p) => ({
+          label: p.propertyLabel,
+          transferDate: formData.transferDate,
+          isExempt: p.isExempt,
+          isPartialExempt: p.isPartialExempt,
+          reductionAmount: p.reductionAmount,
+        }))}
+      />
 
       {/* 합산 과세 내역 (납부세액 요약 대체) */}
       <AggregatedTaxSummary aggregated={aggregated} />
