@@ -30,6 +30,10 @@ async function seed(page: Page) {
     contractTotalPrice: "800000000",
     wasRegulatedAtAcquisition: false,
     isRegulatedArea: false,
+    // 해석례 사실관계: 대구 B(2019.3.17. 취득) — 신규 주택 취득 당시 비조정이다. 미입력은 두 주택 모두 조정으로 읽는
+    //   불성립 독법(2년 — 결정 #30)이라 신규 취득 후 2년 8개월 양도가 과세가 되므로 사실대로 선언한다(vitest anchor와 같은 값).
+    newHouseRegulatedAtAcquisition: "no",
+    prevHouseRegulatedAtNewAcquisition: "no",
     assets: [{ assetKind: "housing", acquisitionDate: "2012-11-21" }],
     houses: [house("b", "2019-03-17"), house("c", "2019-10-21")],
   });
