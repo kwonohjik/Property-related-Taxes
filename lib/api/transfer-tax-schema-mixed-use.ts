@@ -207,6 +207,10 @@ export const mixedUseAssetSchema = z.object({
   // 취득시 H는 위 환산·실가·감정·상속증여 규칙이 이미 같은 조건(`isHousingPriceAtAcqRequired` ⊆ 이 규칙들)으로 요구한다.
   if (isHousingPriceAtTransferRequired({ usePhd: v.usePreHousingDisclosure }) && !(v.transferStandardPrice.housingPrice > 0)) {
     ctx.addIssue({ code: "custom", message: "겸용주택 양도시 개별주택가격이 필요합니다 — 양도시 주택의 토지분·건물분은 이 가격을 가목:나목 비율로 나눕니다", path: ["transferStandardPrice", "housingPrice"] });
+  } else if (v.usePreHousingDisclosure === true && !(v.transferStandardPrice.housingPrice > 0)) {
+    // PHD여도 양도가액의 주택분:상가분 안분(`apportionTransferPrice`)은 이 값을 분자로 쓴다 — PHD 자체 양도시 가격은 주택 내부 분할에만 쓰인다.
+    // 0이면 주택 양도가액이 0이 되는 침묵 오답이었다(⑧ `transfer-tax-validate-mixed-use-asset.ts`는 PHD와 무관하게 요구 — ⑧≡⑫).
+    ctx.addIssue({ code: "custom", message: "겸용주택 양도시 개별주택가격이 필요합니다 — 양도가액을 주택분·상가분으로 나누는 기준입니다(사용승인 전 주택 환산을 켜도 필요합니다)", path: ["transferStandardPrice", "housingPrice"] });
   }
   if (isHousingBuildingStdAtTransferRequired({ usePhd: v.usePreHousingDisclosure })) {
     if (!((v.transferStandardPrice.housingBuildingPrice ?? 0) > 0)) {

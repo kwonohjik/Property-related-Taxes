@@ -571,7 +571,7 @@ describe("(R) 컴패니언 겸용 — 같은 ⑫ 스키마 · ⑭ spread", () =>
 });
 
 describe("(R) PHD 켬 — 양도시 housingPrice 0은 S3-2가 막지 않는다(기존 동작 유지)", () => {
-  it("R-9 PHD + transferStandardPrice.housingPrice 0 → 200 그대로 (⑫ H_T 필수는 비-PHD 한정). ⚠️ 기존 별건: 이 값이 주택:상가 안분 분자라 0이면 주택 양도가액 0으로 흘러간다 — 설계서 확인 필요", async () => {
+  it("R-9 PHD + transferStandardPrice.housingPrice 0 → 400 (2026-10-11 전환: 주택:상가 양도가액 안분 분자라 0이면 주택 양도가액 0 — 종전 200은 침묵 오답, ⑧과 일치)", async () => {
     const mk = (hp: number) => body({
       usePreHousingDisclosure: true, landAcquisitionDate: "2000-01-01", buildingAcquisitionDate: "2000-01-01",
       transferStandardPrice: { housingPrice: hp, commercialBuildingPrice: 100_000_000, landPricePerSqm: 12_000_000 },
@@ -580,7 +580,8 @@ describe("(R) PHD 켬 — 양도시 housingPrice 0은 S3-2가 막지 않는다(�
     });
     const a = await post({ ...mk(0), acquisitionDate: "2000-01-01" });
     const b = await post({ ...mk(1_600_000_000), acquisitionDate: "2000-01-01" });
-    expect(a.status).toBe(200);
+    expect(a.status).toBe(400);
+    expect(JSON.stringify(a)).toContain("양도가액을 주택분·상가분으로 나누는 기준입니다");
     expect(b.status).toBe(200);
   });
 });

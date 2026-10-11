@@ -27,6 +27,7 @@ import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-r
 import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
 import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
 import { refineSplitPartCause } from "./transfer-tax-schema-required-refines-2a";
+import { refineSplitAcquisitionInputs } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
@@ -147,6 +148,14 @@ export const propertySchema = z
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
       // D0 — 토지 파트 취득원인(이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — 주 자산과 같은 leaf
       refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i]);
+      // 소유자 분리·별개 취득 입력 완결(V1~V8) — 종전엔 주 자산에만 걸려 컴패니언은 3종이 비면 엔진이 분리를 조용히 포기하고
+      // **비소유 파트까지 과세**했다(⑧ `validateSplitDirectInputs`는 컴패니언도 차단 — ⑧≡⑫). 양도시 파트 기준시가(V7)도 ⑧이 요구하고,
+      // 빠지면 엔진이 칸 없는 400을 내던 것을 정확한 칸으로 짚는다.
+      refineSplitAcquisitionInputs(
+        { ...c, propertyType: c.assetKind, acquisitionDate: c.acquisitionDate ?? "", transferDate: data.transferDate, useEstimatedAcquisition: c.useEstimatedAcquisition ?? false },
+        ctx,
+        ["companionAssets", i],
+      );
     });
     if (companions.length > 0) {
       // 총 양도가액 필수

@@ -10,6 +10,7 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
+import { hasStaleSplitInput } from "./transfer-land-part-cause";
 
 /**
  * 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서) 전용 검증.
@@ -67,7 +68,8 @@ export function validateUsageConversion(
   }
 
   // C-19 — 토지·건물 분리취득은 파트별 공제율을 따로 내므로 §95⑤ 혼합과 병용할 수 없다.
-  if (asset.hasSeperateLandAcquisitionDate === true) {
+  // stale 분리 입력(화면에 끌 토글이 없는 상속·증여 호스트 잔재)은 ④가 분리 없이 보내므로 막지 않는다.
+  if (asset.hasSeperateLandAcquisitionDate === true && !hasStaleSplitInput(asset)) {
     return unsupported("토지·건물을 서로 다른 시점에 취득한 자산입니다.");
   }
 

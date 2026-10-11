@@ -28,6 +28,7 @@ import {
 } from "./expropriation-required-gate";
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
+import { hasStaleSplitInput } from "./transfer-land-part-cause";
 
 /**
  * ⑧ 어댑터 — `AssetForm` → 게이트 사실. 판정은 `expropriation-required-gate.ts`가 한다
@@ -41,7 +42,8 @@ function exprFactsFromAsset(asset: AssetForm, formTransferDate: string | undefin
     transferDate: formTransferDate,
     useEstimatedAcquisition: !!asset.useEstimatedAcquisition,
     parcelMode: !!asset.parcelMode,
-    separateLandAcquisition: !!asset.hasSeperateLandAcquisitionDate,
+    // 화면에 없는 stale 분리 입력(상속·증여 호스트)은 「분리 없음」 — ④가 보내지 않는 축을 ⑧이 읽으면 막다른 오류가 된다.
+    separateLandAcquisition: !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset),
     usePreHousingDisclosure: !!asset.usePreHousingDisclosure,
     isAuctionTransfer: !!asset.isAuctionTransfer,
   };

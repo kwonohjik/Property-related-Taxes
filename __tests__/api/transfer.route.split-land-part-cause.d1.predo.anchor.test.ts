@@ -329,7 +329,7 @@ describe("D1-6 결합 제외 — 현행 실측 (설계 §3 표)", () => {
     expect((await post({ acquisitionCause: "newConstruction", landAcquisitionDate: "2022-01-10", landAcquisitionCause: "inheritance", landDecedentAcquisitionDate: "2005-01-01" })).status).toBe(200);
   });
 
-  it("D1-6g [기존 결함 — 원인 무관] 부담부증여에 분리 입력(landAcquisitionDate)이 닿으면 §159 총액과 어긋나 양도차손이 난다 — 원인 유무와 같은 값 → ⑫ 차단 대상(전환)", async () => {
+  it("D1-6g 부담부증여에 분리 입력이 닿으면 원인 유무와 무관하게 400 (2026-10-11 R-6 전환 — 종전 양도차손 토지 −125,000,000·건물 −275,000,000)", async () => {
     const bg = {
       transferType: "burdened_gift",
       burdenedGiftInfo: {
@@ -344,12 +344,11 @@ describe("D1-6 결합 제외 — 현행 실측 (설계 §3 표)", () => {
     };
     const a = await post({ ...bg, ...CAUSE });
     const b = await post(bg);
-    // 전환 D1-1 · R-X1: 원인이 있으면 400. 원인 없는 분리 입력의 양도차손은 원인 무관 기존 결함 — 별건(설계 §12 R-6)이라 현행 고정.
+    // D1-1 · R-X1: 원인이 있으면 400. R-6(2026-10-11): 원인이 없어도 분리 전용 필드가 닿으면 400 — 종전엔 §159 총액과 어긋나 양도차손.
     expect(a.status).toBe(400);
     expect(messages(a.body)).toContain("부담부증여로 양도하는 자산에는 토지 취득원인을 따로 지정할 수 없습니다");
-    expect(b.status).toBe(200);
-    expect(b.r.splitDetail.land.gain).toBe(-125_000_000);
-    expect(b.r.splitDetail.building.gain).toBe(-275_000_000);
+    expect(b.status).toBe(400);
+    expect(messages(b.body)).toContain("부담부증여는 토지·건물을 나눈 취득가액·양도가액을 받지 않습니다");
   });
 
   it("D1-6i [신규 D1-1 · R-X2] PHD(preHousingDisclosure) + 토지 상속 → 400 · 추계 불가 메시지가 아니라 PHD 전용 메시지", async () => {
