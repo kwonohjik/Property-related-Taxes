@@ -26,6 +26,7 @@ import { AmendmentResultCard } from "@/components/calc/results/transfer/Amendmen
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import { OneHouseJudgmentProvenanceLine } from "@/components/calc/results/transfer/OneHouseJudgmentProvenanceLine";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
+import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import {
   PropertyBreakdownAccordion,
@@ -551,6 +552,17 @@ export function MultiTransferTaxResultView({
         result={result}
         properties={properties}
         taxYear={taxYear}
+      />
+      {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 건별 양도일·비과세/감면 여부를 공용 술어로 가려 한 줄로 묶는다. */}
+      <FalseContractPriceNoticeForItems
+        className="mt-3"
+        items={result.properties.map((p) => ({
+          label: p.propertyLabel,
+          transferDate: properties.find((x) => x.propertyId === p.propertyId)?.form?.transferDate,
+          isExempt: p.isExempt,
+          isPartialExempt: p.isPartialExempt,
+          reductionAmount: p.reductionAmount,
+        }))}
       />
       </PrintSection>
 

@@ -204,7 +204,7 @@ E-2(40%·6억·3억)도 같은 혼입의 산물이다.
 | §154① 단서 면제 **6종** | ✅ | `transfer-tax-exemption-requirements.ts:219-256 resolveExemptionProviso` — `expropriation`·`overseas_migration`·`overseas_residence`·`unavoidable`·`rental_5yr_residence`·`pre_designation_contract`(거주만 면제). UI는 `ExemptionProvisoSection.tsx`에 「해당 없음」 포함 7선택지 |
 | §154⑦ 부수토지 배율 | ✅ **3·5·10 + 2022.1.1 시점 분기** | **정본** `non-business-land/urban-area.ts:106-132 getHousingMultiplier()` · 상수 `:90 HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE` · 법령상수 `legal-codes/transfer.ts:337`. ⚠️ `appurtenant-land-*.ts`는 **지방세법 §101② 비주택 부속토지** 축이라 별개다 |
 | §154③④ 겸용주택 안분 | ✅ | `transfer-tax-mixed-use.ts` · `lib/print/mixed-use-print-sections.ts` |
-| §91 미등기 비과세배제 · 70% | ✅ | `transfer-tax-exemption.ts:71-91`(§91① 비과세만 배제, §91② 감면은 미적용 — 법 근거 없는 불리적용 회피) · `transfer-tax-rate-calc.ts:166` |
+| §91 미등기 비과세배제 · 70% | ✅ | `transfer-tax-exemption.ts:214-234`(§91① 비과세만 배제. §91②(매매계약서 거래가액 허위기재)는 감면 배제가 아니라 비과세(1호)·감면(2호) 세액 차감 조항 — **미구현·범위 밖 고지**로 둔다: 2011.7.1. 시행·그 뒤 최초 매매계약분부터, 계약서 거래가액 입력 칸과 1호 산식 해석례가 없어 결과뷰 고지만 띄움 — 결정 #48 A, `lib/calc/false-contract-price-notice.ts`) · `transfer-tax-rate-calc.ts:166` |
 
 ### 3.2 특례 — 원안 11종 + 3B 대조
 

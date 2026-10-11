@@ -21,6 +21,7 @@ import { ExpandToggleButton } from "@/components/calc/results/shared/ExpandToggl
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import { PartialExemptBasisCard } from "@/components/calc/results/shared/PartialExemptBasisCard";
+import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
@@ -63,9 +64,12 @@ function Row({
 function SingleTransferResultCard({
   result,
   index,
+  transferDate,
 }: {
   result: TransferTaxResult;
   index: number;
+  /** 부담부증여 양도일(= 증여일) — 소득세법 §91② 고지의 시행일 게이트. 없으면 고지를 거두지 않는다. */
+  transferDate?: string | undefined;
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -91,6 +95,12 @@ function SingleTransferResultCard({
         {/* 비과세 결론과 함께 엔진 경고(§155㉓ 기한 · §154⑤ 판정 보류 · 확인 필요)를 보여 준다(1h-G1-8) — 종전에는 이
             조기 return이 경고를 버려 「비과세의 전제」가 사라지고 무조건 비과세로 읽혔다. */}
         <CalculationWarningsCard warnings={result.warnings} className="m-4 mt-0" />
+        {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 부담부증여도 빼지 않는다(매수인 쪽 적용 여부 미확인). */}
+        <FalseContractPriceNotice
+          transferDate={transferDate}
+          isExempt={result.isExempt}
+          className="mx-4 mb-4"
+        />
       </div>
     );
   }
@@ -119,6 +129,13 @@ function SingleTransferResultCard({
         result={result}
         priceLabel="증여가액"
         fallbackThresholdLabel={highValueThresholdForDisplay(undefined).label}
+        className="m-4 mb-0"
+      />
+      {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 부분 비과세·감면 결과. */}
+      <FalseContractPriceNotice
+        transferDate={transferDate}
+        isPartialExempt={result.isPartialExempt}
+        reductionAmount={result.reductionAmount}
         className="m-4 mb-0"
       />
 
@@ -360,9 +377,11 @@ function SingleTransferResultCard({
 
 interface Props {
   transferTaxResults: TransferTaxResult[];
+  /** 부담부증여 양도일(= 증여일, YYYY-MM-DD) — 소득세법 §91② 고지의 시행일 게이트 */
+  transferDate?: string | undefined;
 }
 
-export function BurdenedTransferTaxResultCard({ transferTaxResults }: Props) {
+export function BurdenedTransferTaxResultCard({ transferTaxResults, transferDate }: Props) {
   if (transferTaxResults.length === 0) return null;
 
   return (
@@ -371,7 +390,7 @@ export function BurdenedTransferTaxResultCard({ transferTaxResults }: Props) {
         부담부증여 양도소득세 (소득세법 §88 · 소령 §159)
       </h3>
       {transferTaxResults.map((r, i) => (
-        <SingleTransferResultCard key={i} result={r} index={i} />
+        <SingleTransferResultCard key={i} result={r} index={i} transferDate={transferDate} />
       ))}
     </div>
   );

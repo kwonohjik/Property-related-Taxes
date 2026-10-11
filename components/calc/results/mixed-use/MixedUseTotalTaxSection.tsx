@@ -13,6 +13,7 @@
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
+import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import {
   fmt,
   fmtPlain,
@@ -210,6 +211,17 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         }
         appliedReductionType={t.reductionTypeApplied}
         appliedReductionAmount={t.reductionAmount}
+      />
+      {/*
+        소득세법 §91② 범위 밖 고지 (결정 #48) — 주택부분이 비과세(12억 이하)·부분 비과세(12억 초과 안분)이거나 감면을 받은 결과.
+        비과세 미적용(`non_one_house_full_taxation`)은 차감할 세액이 없으므로 뜨지 않는다. 공용 술어·문구.
+        `PrintSection`(계산 내역) 안이다 — 선택 출력 밖 직계 자식을 늘리지 않는다(`result-view-print-coverage.anchor`).
+      */}
+      <FalseContractPriceNotice
+        transferDate={formData?.transferDate}
+        isExempt={h.isExempt}
+        isPartialExempt={breakdown.calculationRoute?.highValueRule === "above_threshold_prorated"}
+        reductionAmount={t.reductionAmount}
       />
     </>
   );

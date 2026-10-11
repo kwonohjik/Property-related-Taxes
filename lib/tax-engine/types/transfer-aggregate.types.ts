@@ -187,6 +187,11 @@ export interface PerPropertyBreakdown
   propertyId: string;
   propertyLabel: string;
   isExempt: boolean;
+  /**
+   * [echo] 고가주택 부분 비과세(12억 초과분만 과세) 여부 — 표시 전용(세액 불변). `isExempt:false`라도 비과세 규정을 받은 건이다.
+   * 소득세법 §91② 범위 밖 고지(`shouldShowFalseContractPriceNotice`)가 「비과세 또는 감면받았거나 받을 세액」 보유 여부를 읽는다.
+   */
+  isPartialExempt?: boolean;
   exemptReason?: string;
   /**
    * 양도가액 — **표시 전용**. 일반 자산은 입력값(`singleInput.transferPrice`), 토지·건물 분리 자산은 **소유 파트의 양도가 합**이다

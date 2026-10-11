@@ -426,6 +426,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywords: ["양도소득세 비과세 또는 감면의 배제 등", "미등기양도자산에 대하여는 이 법 또는 이 법 외의 법률 중 양도소득에 대한 소득세의 비과세에 관한 규정을 적용하지 아니한다"],
     keywordMode: "ALL",
   },
+  // KoreanLaw 실측 본문(MST 280405, 시행 2026-01-01) — 매매계약서 거래가액 허위기재 시 비과세·감면 세액 차감(결정 #48 · 범위 밖 고지).
+  {
+    id: "TRANSFER.EXEMPTION_FALSE_CONTRACT_PRICE",
+    citation: "소득세법 §91",
+    keywords: ["양도소득세 비과세 또는 감면의 배제 등", "매매계약서의 거래가액을 실지거래가액과 다르게 적은 경우", "비과세 또는 감면받았거나 받을 세액에서 다음 각 호의 구분에 따른 금액을 뺀다"],
+    keywordMode: "ALL",
+  },
   // KoreanLaw 실측 본문(MST 284389, 시행 2026-09-18) — 미등기양도자산 감면 배제(D15).
   {
     id: "TRANSFER.REDUCTION_UNREGISTERED_EXCLUSION",
