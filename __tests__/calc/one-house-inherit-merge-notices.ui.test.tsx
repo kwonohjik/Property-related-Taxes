@@ -63,11 +63,17 @@ describe("G5-9 — §155⑲ 협의분할 미등기 안내", () => {
     render(<HouseEntryEditor house={entry()} onUpdate={() => {}} />);
     expect(screen.queryByTestId("house-entry-155-19-notice")).toBeNull();
   });
-  it("사용자 결정 대기(S04-1) 문구는 그대로다 — 최대지분 안내", () => {
-    render(<HouseEntryEditor house={entry({ isInherited: true, isCoInherited: true })} onUpdate={() => {}} />);
-    expect(
-      screen.queryAllByText(/최대지분 상속인이면 주택 수에 산입되고, 소수지분이면 일반주택 양도 시 주택 수에서/).length,
-    ).toBeGreaterThan(0);
+  it("결정 #6 — 최대지분 안내는 「산입하되 §155② 요건으로 제외」이고 판정 기준일(상속개시일)을 알린다", () => {
+    const { container } = render(
+      <HouseEntryEditor house={entry({ isInherited: true, isCoInherited: true })} onUpdate={() => {}} />,
+    );
+    const t = (container.textContent ?? "").replace(/\s+/g, " ");
+    expect(t).toContain("최대지분 상속인은 그 주택을 소유한 것으로 보아 주택 수에 산입하되");
+    expect(t).toContain("상속주택 특례 요건(소령 §155② — 동일세대 단서·상속개시 당시 보유·2년 내 증여·순위)");
+    expect(t).toContain("소수지분이면 §155③으로 주택 수에서 제외됩니다");
+    expect(t).toContain("최대지분 판정 기준일은 상속개시일입니다");
+    // 부정 짝 — 변경 전 단정 문구(최대지분이면 제외하지 않는다는 뜻)는 없다
+    expect(t).not.toMatch(/최대지분 상속인이면 주택 수에 산입되고, 소수지분이면/);
   });
 });
 

@@ -85,7 +85,8 @@ export interface HouseInfo {
   isCoInherited?: boolean;
   /**
    * 공동상속주택 중 상속지분이 최대인 상속인인지 — §155③ 단서.
-   * true = 산입(주택수 포함, 제외 대상 아님) / false·미제공 = 소수지분(제외 후보).
+   * true = 그 주택을 소유한 것으로 봄(주택수 산입 유지) — 일반주택 양도 시 §155② 풀에서 요건(동일세대 단서·상속개시 당시 보유·
+   * 2년 내 증여·순위)으로 제외 판정(결정 #6) / false·미제공 = 소수지분(§155③ 제외 후보).
    * ⚠️ 자기선언 boolean — 엔진은 다른 공동상속인의 지분을 알 수 없음.
    */
   isLargestCoInheritedShareholder?: boolean;

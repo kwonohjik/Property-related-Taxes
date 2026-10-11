@@ -114,7 +114,7 @@ export interface HouseEntry {
   inheritedDate?: string;
   /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
   isCoInherited?: boolean;
-  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=산입, false·미제공=소수지분 제외후보) */
+  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=소유로 봄, 일반주택 양도 시 §155② 요건으로 제외 판정 · false·미제공=소수지분 §155③ 제외후보) */
   isLargestCoInheritedShareholder?: boolean;
   /** 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미 */
   decedentSameHouseholdAtInheritance?: boolean;

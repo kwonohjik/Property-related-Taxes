@@ -54,7 +54,7 @@ describe("§155③ 공동상속주택 비과세 (2-A2 LEAN 앵커)", () => {
     expect(r.isExempt).toBe(true);
   });
 
-  it("★ C11 공동상속 최대지분자 → 산입(과세) (§155③ 단서, RED→GREEN)", () => {
+  it("★ C11 공동상속 최대지분자 → 주택 수 산입 후 §155② 요건으로 판정 → 비과세 (결정 #6 — 변경 전: 과세 48,917,000)", () => {
     const r = calculateTransferTax(
       coInheritedInput({
         householdHousingCount: 2,
@@ -70,7 +70,7 @@ describe("§155③ 공동상속주택 비과세 (2-A2 LEAN 앵커)", () => {
       }),
       mockRates,
     );
-    expect(r.isExempt).toBe(false);
+    expect(r.isExempt).toBe(true);
   });
 
   it("★ C12 단독상속 1채 + 공동상속 소수지분 1채 → 2채 제외 비과세 (RED→GREEN)", () => {

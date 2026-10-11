@@ -9,6 +9,7 @@
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { qualifiesAsInheritanceGeneralHouse } from "@/lib/tax-engine/data/inheritance-general-house-era";
+import { isSecondClausePoolHouse } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 
 const toDate = (v: string | undefined): Date | undefined => {
@@ -38,8 +39,8 @@ export function generalHouseRightAtInheritanceVisible(
   return (form.houses ?? []).some(
     (h) =>
       h.isInherited &&
-      // §155③ 공동상속주택에는 이 괄호가 없다 — 단독상속 행만 본다(엔진과 같은 범위).
-      !h.isCoInherited &&
+      // §155③ 소수지분에는 이 괄호가 없다 — ② 풀(단독상속·최대지분 공동상속) 행만 본다(엔진과 같은 술어).
+      isSecondClausePoolHouse(h) &&
       qualifiesAsInheritanceGeneralHouse({
         generalHouseAcquisitionDate: acquisition,
         inheritedDate: toDate(h.inheritedDate),

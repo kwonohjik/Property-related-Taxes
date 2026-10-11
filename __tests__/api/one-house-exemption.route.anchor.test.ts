@@ -142,7 +142,7 @@ describe("P4-2a — 주택 수 산정 명세", () => {
     ]);
   });
 
-  it("[HC-5] §155③ 공동상속 소수지분도 행을 특정한다 — 최대지분자는 산입", () => {
+  it("[HC-5] §155③ 공동상속 소수지분도 행을 특정한다 — 최대지분자는 ② 풀(결정 #6)", () => {
     const minority = resolveInheritedHouseExclusion(
       [house("selling"), house("h1", { isInherited: true, isCoInherited: true })],
       "selling",
@@ -150,7 +150,7 @@ describe("P4-2a — 주택 수 산정 명세", () => {
     );
     expect(minority.excludedHouses).toEqual([{ houseId: "h1", basis: "co_inherited" }]);
 
-    // 🔑 긍정 짝 — 최대지분자로 선언하면 제외되지 않는다(§155③ 단서).
+    // 🔑 결정 #6 — 최대지분자는 ③ 단서로 본인 소유로 보는 주택이라 ②로 제외한다(basis "sole" = ② 풀). 변경 전에는 제외 0이었다.
     const largest = resolveInheritedHouseExclusion(
       [
         house("selling"),
@@ -163,11 +163,11 @@ describe("P4-2a — 주택 수 산정 명세", () => {
       "selling",
       undefined,
     );
-    expect(largest.excludedHouses).toEqual([]);
-    expect(largest.excludedCount).toBe(0);
+    expect(largest.excludedHouses).toEqual([{ houseId: "h1", basis: "sole" }]);
+    expect(largest.excludedCount).toBe(1);
   });
 
-  it("[HC-5b] 🔴 최대지분자와 소수지분자가 **함께** 있으면 소수지분 쪽을 특정해야 한다", () => {
+  it("[HC-5b] 🔴 최대지분자와 소수지분자가 **함께** 있으면 두 풀(② 최대지분 · ③ 소수지분)이 각각 1채씩 특정된다", () => {
     /**
      * HC-5의 두 시료로는 `coExcludedCount === 1` 가드가 먼저 걸러 행 특정 로직에 도달하지
      * 못한다(뮤테이션 N6이 그래서 살아남았다). 최대지분 1채 + 소수지분 1채가 함께 있어야
@@ -187,7 +187,27 @@ describe("P4-2a — 주택 수 산정 명세", () => {
       undefined,
     );
     expect(r.coExcludedCount).toBe(1);
-    expect(r.excludedHouses).toEqual([{ houseId: "minority", basis: "co_inherited" }]);
+    expect(r.soleExcludedCount).toBe(1);
+    expect(r.excludedHouses).toEqual([
+      { houseId: "largest", basis: "sole" },
+      { houseId: "minority", basis: "co_inherited" },
+    ]);
+    // 짝 — 최대지분을 순위 부적격으로 선언하면 소수지분 쪽만 특정된다(행 특정 로직이 풀별로 갈린다)
+    const ranked = resolveInheritedHouseExclusion(
+      [
+        house("selling"),
+        house("largest", {
+          isInherited: true,
+          isCoInherited: true,
+          isLargestCoInheritedShareholder: true,
+          isRankingDisqualifiedInheritedHouse: true,
+        }),
+        house("minority", { isInherited: true, isCoInherited: true }),
+      ],
+      "selling",
+      undefined,
+    );
+    expect(ranked.excludedHouses).toEqual([{ houseId: "minority", basis: "co_inherited" }]);
   });
 
   it("[HC-6] 적격 상속주택이 2채면 선순위를 특정할 수 없어 제외 0 — 명세도 비어 있다", () => {

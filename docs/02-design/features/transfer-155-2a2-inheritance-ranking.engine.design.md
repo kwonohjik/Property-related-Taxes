@@ -384,7 +384,7 @@ inheritedHouseRankingDetail?: import("../transfer-inheritance-ranking").Inherite
 | C8 | 단독상속 2채, 1~3호 전부 동률, 기준시가도 동일 (4호 동률 — 상속인 선택) | 전부 동일값 | sole → 4호 배열 순서 결정적 선택 | 1 | 비과세(요건 충족 시, "상속인 선택" 허용 문언과 부합) |
 | C9 | 단독상속 2채, decedentAcquisitionDate 둘 다 미입력 (2-A1 회귀 anchor와 동일) | 기존 anchor 케이스(§7) | sole → unresolvedReason | 0 | 과세 (2-A1 동일 결과 유지 — 순위 불가 보수적 거부) |
 | C10 | 공동상속 1채, 소수지분(`isLargestCoInheritedShareholder=false`) | houses=[selling, coHouse(isCoInherited=true)] | co 1채(순위 불요) | 1 | 비과세(요건 충족 시) |
-| C11 | 공동상속 1채, 최대지분(`isLargestCoInheritedShareholder=true`) | 상동, 최대지분 | co 0채(산입) | 0 | 과세(2주택 상태 유지) |
+| C11 | 공동상속 1채, 최대지분(`isLargestCoInheritedShareholder=true`) | 상동, 최대지분 | **(결정 #6, 2026-10-11 변경)** ② 풀에서 판정 — 별도세대·상속 전 보유면 co 1채 제외(주택 수 산입은 유지) / 종전: co 0채(산입) | 1 / 종전 0 | **비과세** / 종전: 과세(2주택 상태 유지) |
 | C12 | 단독상속 1채 + 공동상속(소수지분) 1채 동시 보유 | 2채 각 풀 1개씩 | sole 1 + co 1 | 2 | 비과세(household count가 이를 충분히 상쇄하는 경우) |
 | C13 | 공동상속 2채(동일 피상속인 가정), 피상속인 취득일 상이 | co 풀 내 1호 해소 | co → 1채 승 | 1 | 비과세(요건 충족 시), 후순위 공동상속주택은 산입 |
 | C14 | 동거봉양 상속 예외 해당 정황(상속인·피상속인 상속개시 당시 1세대) | §1.4 단서 | **미구현** — 표준 순위 그대로 적용 | 표준 로직값(0 or 1) 불변 | 식별 부정확 가능하나 세액 결과는 §1.4 논증대로 불변 — "확인 필요"로 별도 표시 |

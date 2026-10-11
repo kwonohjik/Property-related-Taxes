@@ -1,0 +1,39 @@
+[
+  {
+    "id": "S041-4022-era",
+    "docNo": "서면-2016-부동산-4022",
+    "docDate": "2016.09.01.",
+    "basis": "era",
+    "today": "2019-06-10",
+    "summary": "별도세대 부친 소유 주택을 공동상속한 상속인 甲(지분 34% 최대)이 상속개시 전 취득한 자기 주택을 양도 — 최대지분 상속인에게도 §155② 적용 (일자는 가정: 일반주택 1996-04-30 취득 · 상속개시 2015-10-18 · 양도 2019-06-15 · 8억)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2019-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "1996-04-30"
+      },
+      "houses": [
+        {
+          "id": "co",
+          "region": "capital",
+          "acquisitionDate": "2015-10-18",
+          "isInherited": true,
+          "inheritedDate": "2015-10-18",
+          "isCoInherited": true,
+          "isLargestCoInheritedShareholder": true
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "excludedHouses": [
+        "co"
+      ],
+      "undetermined": false
+    },
+    "bucket": "match",
+    "note": "match(결정 #6). 회신: 해당 상속인이 공동상속주택 외 다른 주택을 양도할 때에는 영 §155②에 따라 1세대1주택 비과세 여부를 판정(서면-2022-부동산-1083도 같은 취지). 엔진: 최대지분 공동상속주택은 주택 수에 산입하되 ② 요건(동일세대 단서·상속개시 당시 보유·2년 내 증여·순위)으로 판정 — 제외 행 §155②, 사유·보류 없음. 종전에는 최대지분자를 어느 풀에도 넣지 않아 사유 없이 과세(185,966,000원 @취득가 1억·목업 세율). 최소쌍: 최대지분을 false로 바꾸면 ③ 소수지분 제외(비과세), 동일세대로 바꾸면 ② 단서로 과세. 일자는 원문 미기재 가정."
+  }
+]

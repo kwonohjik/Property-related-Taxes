@@ -378,8 +378,10 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
                 description="지분이 가장 큰 상속인만 해당 주택 소유로 봅니다. 지분이 같으면 그 주택 거주자, 그다음 최연장자. (§155③ 단서)"
               />
               <p className="text-caption text-muted-foreground/70">
-                최대지분 상속인이면 주택 수에 산입되고, 소수지분이면 일반주택 양도 시 주택 수에서
-                제외됩니다.
+                일반주택을 양도할 때 최대지분 상속인은 그 주택을 소유한 것으로 보아 주택 수에 산입하되, 상속주택 특례
+                요건(소령 §155② — 동일세대 단서·상속개시 당시 보유·2년 내 증여·순위)을 갖추면 단독상속주택과 같이 주택
+                수에서 제외됩니다. 소수지분이면 §155③으로 주택 수에서 제외됩니다. 최대지분 판정 기준일은
+                상속개시일입니다.
               </p>
             </div>
           </ToggleCard>
