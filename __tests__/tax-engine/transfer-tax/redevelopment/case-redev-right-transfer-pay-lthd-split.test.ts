@@ -191,32 +191,40 @@ describe("R-PAY-9 — 승계조합원 (isSuccessorRightToMoveIn=true) — §166 
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
-// R-PAY-10 — 1세대1주택 + 거주 2년 충족 → 표2 적용
+// R-PAY-10 — §89①4호 가·나목 성립(1세대1입주권) + 거주 2년 충족 → 표2 적용 (#14)
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe("R-PAY-10 — 1세대1주택 + 거주 2년+ → preApproval LTHD 표2율 적용", () => {
-  const oneHouseInput = baseInput({
+describe("R-PAY-10 — 가목 성립 + 거주 2년+ → preApproval LTHD 표2율 적용 (#14)", () => {
+  // 종전 fixture는 「입주권 외 다른 주택 1채」라는 주택 수만으로 표2를 줬다 — 가·나목을 선언하지 않았다.
+  // #14 이후 표2는 §89①4호 가·나목 성립(인가일 요건 선언 + 다른 주택·분양권 없음) + 거주 2년이다.
+  // 12억 이하면 전액 비과세라 표를 볼 수 없어 양도가액을 12억 초과로 둔다(안분으로 산출세액 > 0).
+  const gaInput = baseInput({
     isOneHousehold: true,
-    householdHousingCount: 1,
+    householdHousingCount: 0,
     householdRightCount: 1,
+    householdNoPresaleRightsConfirmed: true,
+    transferPrice: 1_500_000_000,
     residencePeriodMonths: 36, // 3년 거주
+    redevelopment: { ...baseRedevInfo(), exemptionEligibleAtApproval: true },
   });
-  const result = calculateTransferTax(oneHouseInput, mockRates);
+  const result = calculateTransferTax(gaInput, mockRates);
 
-  it("[R-PAY-10] 1세대1주택 + 거주 3년 → preApproval LTHD > 60,000,000 (표2율 보유+거주 합산)", () => {
-    // 표2: 보유 16년×4%=64%→40% 캡 + 거주 3년×4%=12% → 합계 52% (단 80% 캡)
-    // preApproval LTHD = 200M × 52% = 104,000,000 (표1 60M 초과)
-    // ※ 1세대1주택 입주권 양도 시 12억 이하 전액 비과세 가능성 있으나
-    //   본 케이스는 양도가 520M < 12억 → 전액 비과세 → LTHD=0 or 비과세
-    //   전액 비과세 시 result.isExempt=true, calculatedTax=0
-    //   결과 확인: 비과세가 아니면 표2 LTHD가 표1보다 큼을 확인
-    if (result.isExempt) {
-      // 전액 비과세 — §89①4호 가목 (1세대1주택 입주권 12억 이하)
-      expect(result.calculatedTax).toBe(0);
-    } else {
-      // 표2 적용 — LTHD가 표1(60M)보다 큼
-      expect(result.longTermHoldingDeduction).toBeGreaterThan(60_000_000);
-    }
+  it("[R-PAY-10] 가목 + 거주 3년 → preApproval 공제율 0.52 (표2: 보유 16년 40% 캡 + 거주 3년 12%)", () => {
+    expect(result.redevelopmentDetail?.oneRightExemptionClause).toBe("ga");
+    expect(result.redevelopmentDetail?.preApproval.lthdRate).toBe(0.52);
+  });
+
+  it("[R-PAY-10b] 대조 — 같은 사실에서 거주 0개월이면 표1 (0.30 캡)", () => {
+    const r = calculateTransferTax({ ...gaInput, residencePeriodMonths: 0 }, mockRates);
+    expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.3);
+  });
+
+  it("[R-PAY-10c] 대조 — 인가일 요건을 선언하지 않으면 거주 3년이어도 표1 (0.30) — 「모름 = 혜택 불성립」", () => {
+    const r = calculateTransferTax(
+      { ...gaInput, redevelopment: { ...baseRedevInfo(), exemptionEligibleAtApproval: undefined } },
+      mockRates,
+    );
+    expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.3);
   });
 });
 

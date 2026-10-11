@@ -34,9 +34,11 @@
  *
  * ⇒ 실가에서는 1세대1주택이 세액을 **11,797,500원** 움직이는데 환산에서는 **0원**이었다.
  *
- * ⚠️ 이 fixture는 `exemptionEligibleAtApproval`을 **넣지 않는다**. 그 값을 `true`로 두면
- *    §166④1호 청산금 수령 비과세(`applySettlementExemption`)가 함께 발화해 축이 섞인다
- *    (실측: 양도차익 167,000,000 → 97,000,000). 여기서 보려는 것은 **LTHD 표 축 하나**다.
+ * ⚠️ #14(2026-10-11) 이후 이 fixture의 «1세대1주택 ON»은 §89①4호 가목 성립(인가일 요건 선언 + 다른 주택·분양권 없음)이다 —
+ *    입주권의 표2 대상은 더는 «다른 주택 정확히 1채»가 아니다. 그 값을 `true`로 두면 청산금 수령일 때
+ *    §166④1호 청산금 수령 비과세(`applySettlementExemption`)가 함께 발화해 축이 섞이므로(실측: 양도차익 167,000,000 → 97,000,000)
+ *    청산금분 양도일을 양도일과 다르게(2023-03-01) 두고 그날 1주택이 아니라고 선언해 청산금분 비과세를 끈다 —
+ *    «LTHD 표 축 하나»만 본다(환산 경로는 수령 방향 전용이라 청산금 납부로 바꿀 수 없다).
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -78,15 +80,22 @@ function input(o: Partial<TransferTaxInput>, redev: Partial<RedevelopmentInfo> =
 }
 
 const ESTIMATED_OFF = { useEstimatedAcquisition: true, isOneHousehold: false, householdHousingCount: 2 };
-const ESTIMATED_ON = { useEstimatedAcquisition: true, isOneHousehold: true, householdHousingCount: 1 };
+const ONE_HOUSE_ON = { isOneHousehold: true, householdHousingCount: 0, householdRightCount: 1, householdNoPresaleRightsConfirmed: true };
+const ESTIMATED_ON = { useEstimatedAcquisition: true, ...ONE_HOUSE_ON };
 const ACTUAL_OFF = { useEstimatedAcquisition: false, acquisitionPrice: 180_000_000, isOneHousehold: false, householdHousingCount: 2 };
-const ACTUAL_ON = { useEstimatedAcquisition: false, acquisitionPrice: 180_000_000, isOneHousehold: true, householdHousingCount: 1 };
+const ACTUAL_ON = { useEstimatedAcquisition: false, acquisitionPrice: 180_000_000, ...ONE_HOUSE_ON };
+/** §89①4호 가목 본문 — 인가일 현재 기존주택 비과세 요건 충족 선언 */
+const DECLARED = {
+  exemptionEligibleAtApproval: true,
+  settlementSaleDate: new Date("2023-03-01"),
+  oneHouseAtSettlementSale: false,
+};
 
 describe("E2-03 anchor — 환산 경로도 1세대1주택·거주기간을 소비한다", () => {
   const estOff = calculateTransferTax(input(ESTIMATED_OFF, PHD), rates);
-  const estOn = calculateTransferTax(input(ESTIMATED_ON, PHD), rates);
+  const estOn = calculateTransferTax(input(ESTIMATED_ON, { ...PHD, ...DECLARED }), rates);
   const actOff = calculateTransferTax(input(ACTUAL_OFF), rates);
-  const actOn = calculateTransferTax(input(ACTUAL_ON), rates);
+  const actOn = calculateTransferTax(input(ACTUAL_ON, DECLARED), rates);
 
   it("기준선 — 실가 경로는 1세대1주택이 표1(0.10) → 표2(0.40)를 가른다", () => {
     expect(actOff.redevelopmentDetail?.preApproval.lthdRate).toBe(0.1);
@@ -116,7 +125,7 @@ describe("E2-03 anchor — 환산 경로도 1세대1주택·거주기간을 소�
 
   it("거주 2년 미만이면 환산 경로도 표1 — §159의4 「거주기간 2년 이상」", () => {
     const shortStay = calculateTransferTax(
-      input({ ...ESTIMATED_ON, residencePeriodMonths: 12 }, PHD),
+      input({ ...ESTIMATED_ON, residencePeriodMonths: 12 }, { ...PHD, ...DECLARED }),
       rates,
     );
     expect(shortStay.redevelopmentDetail?.preApproval.lthdRate).toBe(0.1);

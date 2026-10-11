@@ -146,8 +146,9 @@ describe("U-8 · 12억 판정 분모 = 증여가액 C (채무액 아님)", () =>
   it("세액 실측값 (mock 세율)", () => {
     const r = run();
     expect(r.transferGain).toBe(235_625_000);
-    expect(r.calculatedTax).toBe(67_023_000);
-    expect(r.totalTax).toBe(73_725_300);
+    // #14 — 가목 고가 입주권도 장기보유특별공제 표2(보유 + 거주)를 받는다: 산출세액 67,023,000 → 63,593,500 (표1 → 표2).
+    expect(r.calculatedTax).toBe(63_593_500);
+    expect(r.totalTax).toBe(69_952_850);
   });
 
   it("🔑 비교와 안분이 같은 분모 — 안분 비율 = (24억 − 12억) / 24억 = 0.5", () => {

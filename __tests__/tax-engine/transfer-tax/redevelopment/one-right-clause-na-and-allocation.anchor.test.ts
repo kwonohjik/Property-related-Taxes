@@ -16,9 +16,9 @@
  * |---|---|---|
  * | 전액 비과세 | 가목 4조건 | **나목 경로 전무** → 요건 충족자 전액 과세 (C1-03) |
  * | 12억 안분 | `isOneHouseSingle`(= 세대 주택수 1) | **요건 무검증** → 미충족자도 안분 (E3-03) |
- * | LTHD 표2 | `isOneHouseSingle` | **정상** — 근거가 §159의4라 이 축이 맞다(리뷰 제안 기각) |
+ * | LTHD 표2 | `isOneHouseSingle` | (당시 기각) → **#14(2026-10-11)에서 같은 가·나목 술어로 모았다** — 아래 마지막 describe |
  *
- * ⇒ `resolveOneRightExemptionClause` 하나가 **비과세와 안분 두 곳**을 함께 가른다(표2는 별개 축).
+ * ⇒ `resolveOneRightExemptionClause` 하나가 **비과세·안분·장특 표2 대상** 세 곳을 함께 가른다(표2의 거주 2년 요건만 별개).
  *
  * ## 실측 (mock 세율 · 입주권 권리가액 5억 · 인가 2018-10-23 · 청산금 납부 5천만 · 취득 2010-04-09)
  *
@@ -26,7 +26,7 @@
  * |---|---|---|---|
  * | 나목 충족 · 9억 | 198,627,000 | **0** | 198,627,000 과대 해소 |
  * | 주택1채 요건 미검증 · 15억 | 70,485,800 | **479,638,500** | 409,152,700 과소 해소 |
- * | (표2 축은 §159의4라 변경 없음 — 아래 세 번째 describe 참조) | | | |
+ * | (표2 축은 #14에서 가·나목 술어로 바뀌었다 — 아래 마지막 describe) | | | |
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -156,29 +156,39 @@ describe("E3-03 — 12억 안분은 §89①4호 요건을 충족할 때만", () 
 });
 
 /**
- * ⛔ **리뷰 제안 기각 — LTHD 표2는 §89①4호와 술어를 공유하지 않는다.**
+ * #14(G3-7) — **LTHD 표2는 §89①4호 가·나목 성립 + 거주 2년이다** (종전 E3-03 기각 해석을 뒤집었다).
  *
- * E3-03의 수정 방향은 「LTHD 표2 진입도 같은 술어를 공유해야 한다」였다. **법령 실독으로
- * 기각한다.** 표2의 근거는 §95② 단서 → **시행령 §159의4**이고 그 문언은:
+ * 종전 이 자리는 「표2는 §89①4호와 술어를 공유하지 않는다 — 표2는 양도일 현재 세대 주택 수 1 + 거주 2년」이라고 적었다.
+ * 그 독법은 입주권 외 다른 주택이 **정확히 1채**일 때만 표2를 줬다:
+ *   · 다른 주택이 없는 가목 고가 입주권 → 표1 (과대과세)
+ *   · 나목 기한이 지났거나 요건을 선언하지 않은 입주권 + 다른 주택 1채 → 표2 (「모르는데 혜택」)
+ * 국세청 회신(재산세과-1078 · 부동산거래관리과-1046 · 서면법규과-501 · 사전-2018-법령해석재산-0017 · 사전-2023-법규재산-0141)과
+ * 심판례(조심2011서1530 · 조심2022중7305)는 모두 「입주권이 1세대1주택으로 보는 요건(가·나목)을 갖추면 표2, 못 갖추면 표1」이다
+ * (§95② 단서는 양도하는 그 자산이 1세대1주택일 때 표2를 준다). 사용자 결정 #14(2026-10-11) A로 비과세와 표2를 같은 판정 하나로 모았다.
  *
- * > "대통령령으로 정하는 1세대 1주택"이란 각각 **1세대가 양도일 현재 국내에 1주택**(제155조·
- * > 제155조의2·제156조의2·제156조의3 및 그 밖의 규정에 따라 1세대 1주택으로 보는 주택을
- * > 포함한다)**을 보유**하고 **보유기간 중 거주기간이 2년 이상**인 것을 말한다.
- *
- * ⇒ 기준은 「양도일 현재 세대 주택 수 1 + 거주 2년」이지 나목의 **3년 요건이 아니다**.
- *   실제로 나목 술어로 바꿔 전건을 돌리니 §159의4를 옳게 encode한 **기존 spec 12건이 실패**했다.
- *
- * 이 describe는 그 경계를 **고정**한다 — 「안분(§89①4호)과 표2(§159의4)는 서로 다른 축」.
+ * 표2의 거주 2년 요건(영 §159의4)은 별개 축으로 그대로다.
  */
-describe("E3-03 정정 — LTHD 표2는 §159의4(양도일 현재 1주택 + 거주 2년) 축", () => {
-  it("🔑 주택 1채 + 거주 60개월 → §89①4호 요건과 무관하게 표2 (0.52)", () => {
+describe("#14 — LTHD 표2는 §89①4호 가·나목 성립 + 거주 2년", () => {
+  it("🔑 주택 1채 + 거주 60개월이지만 나목 불성립(취득일 미입력) → 표1 (0.16) — 종전 표2(0.52)", () => {
     const r = calculateTransferTax(input({ householdHousingCount: 1, residencePeriodMonths: 60 }), rates);
     expect(r.redevelopmentDetail?.oneRightExemptionClause).toBeUndefined(); // 나목 미충족
-    expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.52); // 그래도 표2
+    expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.16);
   });
 
-  it("주택 0채(가목 충족·비과세) + 거주 60개월 → 표1 — 「양도일 현재 1주택 보유」가 아니다", () => {
+  it("🔑 주택 1채 + 나목 기한 경과(4년 5개월) + 거주 60개월 → 표1 (0.16) — 요건 불성립은 다른 주택 1채여도 표1", () => {
+    const r = calculateTransferTax(input({ ...NA_LATE, residencePeriodMonths: 60 }), rates);
+    expect(r.redevelopmentDetail?.oneRightExemptionClause).toBeUndefined();
+    expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.16);
+  });
+
+  it("🔑 주택 0채(가목 충족) + 거주 60개월 · 15억 → 표2 (0.52) — 종전 표1(0.16)", () => {
     const r = calculateTransferTax(input({ transferPrice: 1_500_000_000, residencePeriodMonths: 60 }), rates);
+    expect(r.redevelopmentDetail?.oneRightExemptionClause).toBe("ga");
+    expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.52);
+  });
+
+  it("긍정 짝 — 가목 + 거주 12개월(2년 미만)이면 표1 (거주 2년 요건은 그대로)", () => {
+    const r = calculateTransferTax(input({ transferPrice: 1_500_000_000, residencePeriodMonths: 12 }), rates);
     expect(r.redevelopmentDetail?.oneRightExemptionClause).toBe("ga");
     expect(r.redevelopmentDetail?.preApproval.lthdRate).toBe(0.16);
   });

@@ -338,10 +338,13 @@ export function computeRightLthd(args: {
   // 원조합원: 인가전 분만 LTHD (§166⑤1호 — 취득일 ~ 관리처분 인가일)
   const preApprovalHolding = calculateHoldingPeriod(acquisitionDate, approvalDate);
   const preApprovalMonths = preApprovalHolding.years * 12 + preApprovalHolding.months;
+  // 표2 **대상 판정**은 입력한 거주 전체(관리처분계획인가일 이후 철거 전 거주 포함)로, 거주기간별 **공제율**은 취득일~인가일 안의 거주만
+  // 센다(사전-2023-법규재산-0141 — 입력 칸을 새로 만들지 않고, 그 기간을 넘는 부분은 확실히 인가 후 거주라 «모름»이 아니다 · #14 하위 나).
   const preApprovalSplit = computeLthdRateSplit(
     preApprovalHolding.years,
     isOneHouseSingle,
     Math.floor(residencePeriodMonths / 12),
+    Math.floor(Math.min(residencePeriodMonths, preApprovalMonths) / 12),
   );
 
   return {
@@ -571,12 +574,17 @@ export function computeLthdRateSplit(
   years: number,
   isOneHouseSingle: boolean,
   residenceYears: number,
+  /**
+   * 거주분 공제율에 쓰는 거주 연수 — 표2 **대상 판정**(`residenceYears`)과 갈릴 때만 준다(입주권: 인가 후 거주 제외). 생략하면 같은 값.
+   * 표2 거주기간 열은 「2년 이상」부터라(§95② 표2) 공제율용 거주가 2년 미만이면 거주분은 0이다.
+   */
+  rateResidenceYears: number = residenceYears,
 ): { holding: number; residence: number; total: number } {
   if (years < 3) return { holding: 0, residence: 0, total: 0 };
 
   if (usesTable2(isOneHouseSingle, residenceYears)) {
     const holding = Math.min(years * 0.04, 0.40);
-    const residence = Math.min(residenceYears * 0.04, 0.40);
+    const residence = rateResidenceYears >= 2 ? Math.min(rateResidenceYears * 0.04, 0.40) : 0;
     return { holding, residence, total: holding + residence };
   }
 
