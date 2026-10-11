@@ -1029,7 +1029,7 @@ export interface TransferTaxInput {
   parcels?: ParcelInput[];
   /**
    * 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (선택).
-   * 제공 시 calcSplitGain이 §164⑤ 2-단계 추정 알고리즘으로 취득시 기준시가를 산출.
+   * 제공 시 calcSplitGain이 §164⑦ 2-단계 추정 알고리즘으로 취득시 기준시가를 산출.
    * useEstimatedAcquisition===true + landAcquisitionDate 제공 시에만 의미 있음.
    */
   preHousingDisclosure?: PreHousingDisclosureInput;

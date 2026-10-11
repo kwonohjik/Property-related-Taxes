@@ -69,7 +69,7 @@ export function buildSplitPayload(
   rawPrimary: AssetForm,
   opts: {
     isBurdenedGift: boolean;
-    /** §164⑤ PHD 모드 — 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate fallback */
+    /** §164⑦ PHD 모드 — 취득일 동일이어도 calcSplitGain 진입을 위해 landAcquisitionDate fallback */
     usesPhd: boolean;
     ratioed: (v: string | undefined) => number | undefined;
   },

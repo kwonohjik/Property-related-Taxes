@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 개별주택가격 미공시 취득 환산 상세 섹션 — 소득세법 시행령 §164⑤
+ * 개별주택가격 미공시 취득 환산 상세 섹션 — 소득세법 시행령 §164⑦
  *
  * TransferTaxResultView에서 분리 (800줄 정책).
  */
@@ -65,7 +65,7 @@ export function PreHousingDisclosureDetailSection({ result, onPrint }: Props) {
     <div data-print-section="phd" className="rounded-lg border border-blue-500/50 bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-1">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
-          개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑤)
+          개별주택가격 미공시 취득 환산 (소득세법 시행령 §164 ⑦)
         </p>
         {onPrint && (
         <button

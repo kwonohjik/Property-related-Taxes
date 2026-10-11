@@ -73,7 +73,7 @@ export function addPropertyRefines(
     buildingType?: "new" | "extension";
     extensionFloorArea?: number;
     constructionDate?: string;
-    /** §164⑤ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 + §164⑦ 취득일 게이트 */
+    /** §164⑦ PHD 입력 — 제공 시 standardPriceAt* 필수 검증 우회 + §164⑦ 취득일 게이트 */
     preHousingDisclosure?: { firstDisclosureDate?: string } | null;
     /** ⑩ 비주택 → 주택 용도변경(§95⑥) — 주거용 사용 개시일의 취득일·양도일 사이 검증 */
     nonHousingToHousingConversion?: { residentialUseStartDate: string } | null;
@@ -142,7 +142,7 @@ export function addPropertyRefines(
   }
   refineUnregisteredSelfFarming(data.isUnregistered, data.reductions, ctx, ["reductions"]);
   refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"]);
-  // §164⑤ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
+  // §164⑦ PHD 경로: 3-시점 입력으로 기준시가 자동 도출되므로 standardPriceAt* 불요
   // 겸용주택 모드는 calcMixedUseTransferTax 별도 엔진에서 처리 → 일반 환산 검증 우회
   const hasPhd =
     (data.preHousingDisclosure !== undefined && data.preHousingDisclosure !== null) ||

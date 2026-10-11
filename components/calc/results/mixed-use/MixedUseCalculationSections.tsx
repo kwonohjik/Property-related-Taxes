@@ -151,7 +151,7 @@ export function MixedUseCalculationSections({
                 ph.landAreaAtFirstDisclosure !== ph.landAreaAtTransfer);
             const base = (
               <FLine>
-                시행령 §164⑤ 역산 환산: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
+                시행령 §164⑦ 역산 환산: 주택 양도가액 {fmtPlain(a.housingTransferPrice)} ×{" "}
                 <Frac
                   top={`역산한 취득시 개별주택가격 ${fmtPlain(h.phdEstimatedAcqHousingPrice)}`}
                   bottom={`양도시 개별주택공시가격 ${fmtPlain(a.housingStandardPrice)}`}

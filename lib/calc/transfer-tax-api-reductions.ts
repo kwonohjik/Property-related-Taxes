@@ -142,7 +142,7 @@ export function toEngineReductions(
     }
     // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 변환 ──
     if (r.type === "new_99_3") {
-      // 취득시 기준시가 — PHD 환산 ON이고 환산 입력 충분하면 §164⑤ 자동 산출(source ternary,
+      // 취득시 기준시가 — PHD 환산 ON이고 환산 입력 충분하면 §164⑦ 자동 산출(source ternary,
       // UI 숨김/echo·validate와 동일 소스). 아니면 수동값. useEffect store 미러 없이 단일 소스.
       const phdInput993 = {
         firstDisclosurePrice: r.phdFirstDisclosurePrice993 ? parseAmount(r.phdFirstDisclosurePrice993) : 0,
@@ -346,7 +346,7 @@ export function toEngineReductions(
     // ── P1 §99 신축주택 IMF 1차 (2026-06-11): 차감형 본 변환 (④) ──
     // 날짜는 string 그대로 — Route handler(⑭ route-reductions-mapper)에서 Date 변환.
     if (r.type === "new_99") {
-      // 취득시 기준시가 — PHD 환산 ON이고 입력 충분하면 §164⑤ 자동 산출(source ternary,
+      // 취득시 기준시가 — PHD 환산 ON이고 입력 충분하면 §164⑦ 자동 산출(source ternary,
       // UI echo·validate와 동일 소스). 아니면 수동값. 엔진은 환산값(취득기준시가)만 수용(phd echo 필드 없음).
       const phdInput99 = {
         firstDisclosurePrice: r.phdFirstDisclosurePrice99 ? parseAmount(r.phdFirstDisclosurePrice99) : 0,
@@ -382,7 +382,7 @@ export function toEngineReductions(
     }
     // ── P1 §98의8 준공후미분양 50% (2026-06-11): 차감형 본 변환 (④) ──
     if (r.type === "unsold_98_8") {
-      // 취득시 기준시가 — PHD 환산 ON이고 충분하면 §164⑤ 자동 산출(A설계, 환산값만 엔진 전달).
+      // 취득시 기준시가 — PHD 환산 ON이고 충분하면 §164⑦ 자동 산출(A설계, 환산값만 엔진 전달).
       const phdInput988 = {
         firstDisclosurePrice: r.phdFirstDisclosurePrice988 ? parseAmount(r.phdFirstDisclosurePrice988) : 0,
         landAreaSqm: r.phdLandAreaSqm988 ? parseFloat(r.phdLandAreaSqm988) : 0,
@@ -587,7 +587,7 @@ export function toEngineReductions(
     // ── P2 §99의2 신축·미분양·1세대1주택 (2026-06-11): 하이브리드 본 변환 (④) ──
     // houseType별 비활성 분기 일자만 strip (UI 검토 #4 — 라디오 전환 잔존값 미전달)
     if (r.type === "unsold_99_2") {
-      // 취득시 기준시가 — PHD 환산 ON이고 입력 충분하면 §164⑤ 자동 산출(source ternary, UI echo·validate 동일 소스).
+      // 취득시 기준시가 — PHD 환산 ON이고 입력 충분하면 §164⑦ 자동 산출(source ternary, UI echo·validate 동일 소스).
       // 아니면 수동값. 엔진(hybrid)은 환산값(취득기준시가)만 수용(phd echo 필드 없음, A설계).
       const phdInput992 = {
         firstDisclosurePrice: r.phdFirstDisclosurePrice992 ? parseAmount(r.phdFirstDisclosurePrice992) : 0,

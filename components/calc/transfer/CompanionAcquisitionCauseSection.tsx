@@ -46,7 +46,7 @@ interface Props {
   /** 지분 카드(fractional split 2번째 이후) — 일반건물 증축 유무 토글을 숨긴다(물건 사건). */
   shareAcquisitionOnly?: boolean;
   /**
-   * 첫 자산이 아닌 자산 여부 — §164⑤ 3-시점 환산(PHD) 토글 노출 게이트.
+   * 첫 자산이 아닌 자산 여부 — §164⑦ 3-시점 환산(PHD) 토글 노출 게이트.
    * 근거는 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석.
    */
   isNonPrimaryAsset?: boolean;

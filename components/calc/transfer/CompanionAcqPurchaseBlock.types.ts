@@ -123,7 +123,7 @@ export interface BlockProps {
   buildingStandardPriceAtTransfer?: string;
   onBuildingStandardPriceAtTransferChange?: (v: string) => void;
   /**
-   * 개별주택가격 미공시 취득 §164⑤ 3-시점 모드.
+   * 개별주택가격 미공시 취득 §164⑦ 3-시점 모드.
    * 환산취득가 + hasSeperateLandAcquisitionDate === true 일 때만 표시.
    * asset·onAssetChange와 함께 제공해야 한다.
    */
@@ -146,7 +146,7 @@ export interface BlockProps {
   /**
    * 첫 자산이 아닌 자산(함께양도 컴패니언·지분 2번째 이후) 여부.
    *
-   * 🔴 **§164⑤ 3-시점 환산(PHD) 토글을 숨기는 데 쓴다.** ④가 PHD를 싣는 지점은
+   * 🔴 **§164⑦ 3-시점 환산(PHD) 토글을 숨기는 데 쓴다.** ④가 PHD를 싣는 지점은
    *    `buildPreHousingDisclosurePayload(primary, …)` **한 곳뿐**이고 primary 전용이라,
    *    첫 자산이 아닌 자산에서는 사용자가 11칸을 채워도 **엔진에 도달하지 않는다**
    *    (⑫·⑭를 배관해도 `calcSplitGain`이 `landAcquisitionDate` 부재로 `null`을 반환해

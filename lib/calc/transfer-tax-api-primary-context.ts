@@ -96,7 +96,7 @@ export function buildPrimaryContext(
    */
   const hasPre1990ForSec164 =
     primary.assetKind === "land" && isSec163_9Cause(primary.acquisitionCause);
-  // §164⑤ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
+  // §164⑦ PHD 모드: standardPriceAt* 는 3-시점 입력으로 자동 도출 → API body에서 제외
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)해도 PHD 경로는 표준시가 직접 입력 불요.
   // D1-2 — 토지 원인 혼합이 유효하면 PHD 무시(⑧ 토지 취득일 후퇴·⑤ 안내와 같은 술어).
   const usesPhd = phdFlagEffective(primary);

@@ -82,7 +82,7 @@ export function toEngineSec163_9Inputs(
     inheritedAcquisition: src.inheritedAcquisition
       ? buildInheritedAcquisition(src.inheritedAcquisition, transferDate, transferPrice)
       : undefined,
-    // 상속 주택 환산취득가 보조 입력 (§164⑤·§176조의2④)
+    // 상속 주택 환산취득가 보조 입력 (§164⑦·§176조의2④)
     inheritedHouseValuation: h
       ? {
           ...h,

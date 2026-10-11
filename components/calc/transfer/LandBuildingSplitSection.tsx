@@ -90,7 +90,7 @@ interface Props {
    */
   acqStdRequiredLand: boolean;
   acqStdRequiredBuilding: boolean;
-  /** §164⑤ PHD + 양쪽 환산 — 엔진이 3-시점 경로로 early-return해 이 입력을 쓰지 않는다 */
+  /** §164⑦ PHD + 양쪽 환산 — 엔진이 3-시점 경로로 early-return해 이 입력을 쓰지 않는다 */
   isPhdBothEstimated: boolean;
   /**
    * 양도시 기준시가를 파트 섹션에 두는가 — `saleStdPlacement(...)`의 파트 2값.
@@ -287,7 +287,7 @@ export function LandBuildingSplitSection(props: Props) {
   // 술어는 호출부가 계산해 내려준다 — 여기서 재파생하면 dual-truth가 된다.
   const isHousingAsset = props.asset?.assetKind === "housing";
   // 두 파트 카드의 공통 전제 — 별개취득 · PHD 양쪽환산 제외 · 자산 종류 · 콜백 존재.
-  // §164⑤ PHD + **양쪽** 환산은 `calcSplitGainPreDisclosure`로 early-return되어
+  // §164⑦ PHD + **양쪽** 환산은 `calcSplitGainPreDisclosure`로 early-return되어
   // (transfer-tax-split-gain.ts) 이 입력이 엔진에 도달하지 않는다. 한쪽만 환산이면
   // early-return이 걸리지 않아 카드가 실제로 필요하므로 `양쪽 estimated`로 한정한다.
   const stdCardBase =
@@ -458,7 +458,7 @@ export function LandBuildingSplitSection(props: Props) {
               showTransfer={props.saleStdInBuildingPart}
             />
           )}
-          {/* 취득시 카드가 없는 조합(§164⑤ PHD 양쪽 환산)에서만 양도시 단독 카드 */}
+          {/* 취득시 카드가 없는 조합(§164⑦ PHD 양쪽 환산)에서만 양도시 단독 카드 */}
           {!showBuildingStdPrice && props.saleStdInBuildingPart && props.asset && props.onAssetChange && (
             <TransferBuildingStdPartCard
               asset={props.asset}

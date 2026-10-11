@@ -8,7 +8,7 @@
  * 전부 호출부가 주입한다.
  *
  * ## 맥락별 시점 구성 (호출부가 `points`로 결정)
- *  - PHD §164⑤ · 겸용 · 상속 주택평가: 취득 · 최초공시 · 양도 3시점
+ *  - PHD §164⑦ · 겸용 · 상속 주택평가: 취득 · 최초공시 · 양도 3시점
  *  - 상가 §164⑥(호별 고시 전 취득): 취득 · **최초고시(2005)** · 양도 3시점
  *  - 일반건물 환산: 취득 · 양도 2시점
  *
@@ -68,7 +68,7 @@ export interface StdPricePointSpec {
   key: "acquisition" | "firstDisclosure" | "transfer";
   /**
    * 화면 라벨 — 맥락에 따라 같은 `key`도 다르게 부른다.
-   * 예) `firstDisclosure`: PHD §164⑤ "최초공시일" / 상가 §164⑥ "최초고시(2005)".
+   * 예) `firstDisclosure`: PHD §164⑦ "최초공시일" / 상가 §164⑥ "최초고시(2005)".
    * 미지정 시 `POINT_LABEL` 기본값으로 대체한다.
    */
   label: string;

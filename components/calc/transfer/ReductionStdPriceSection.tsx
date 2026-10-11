@@ -130,7 +130,7 @@ export function ReductionStdPriceSection({
     }
   }
 
-  // PHD 환산 ON — 취득시 기준시가는 §164⑤ 환산으로 자동 산출(수동 조회 숨김 + echo).
+  // PHD 환산 ON — 취득시 기준시가는 §164⑦ 환산으로 자동 산출(수동 조회 숨김 + echo).
   const phdActive = phd.phdMode === true;
   const phdEchoAcqStdPrice = useMemo(() => {
     if (!phdActive) return null;
@@ -192,7 +192,7 @@ export function ReductionStdPriceSection({
             <label className="mb-1 block text-xs font-medium">취득시 기준시가</label>
             <div className="rounded-md border border-amber-300 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2">
               <p className="text-xs text-amber-900 dark:text-amber-200">
-                최초공시 전 환산 자동 계산(§164⑤):{" "}
+                최초공시 전 환산 자동 계산(§164⑦):{" "}
                 <span className="font-semibold font-mono">
                   {phdEchoAcqStdPrice != null
                     ? `${phdEchoAcqStdPrice.toLocaleString()} 원`

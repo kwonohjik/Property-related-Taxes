@@ -57,7 +57,7 @@ const FIELD_LABEL: Record<string, string> = {
   landSalesCaseValue: "토지 매매사례가액",
   buildingSalesCaseValue: "건물 매매사례가액",
 
-  // PHD §164⑤
+  // PHD §164⑦
   "preHousingDisclosure.firstDisclosureDate": "최초 고시일",
   "preHousingDisclosure.firstDisclosureHousingPrice": "최초 고시 주택공시가격",
   "preHousingDisclosure.transferHousingPrice": "양도시 주택공시가격",

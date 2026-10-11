@@ -40,7 +40,7 @@ export interface ExprGateFacts {
   parcelMode: boolean;
   /** 토지·건물 취득일 분리 */
   separateLandAcquisition: boolean;
-  /** §164⑤ 개별주택가격 미공시 3시점 환산 */
+  /** §164⑦ 개별주택가격 미공시 3시점 환산 */
   usePreHousingDisclosure: boolean;
   /** §164⑨2호 공매·경락 */
   isAuctionTransfer: boolean;

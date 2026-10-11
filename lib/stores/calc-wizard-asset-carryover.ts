@@ -21,7 +21,7 @@ export interface CarryoverExclusionDeclared {
 /**
  * 환산 방식 선택 — useEstimatedAcquisition === true 시 활성.
  * - "general": 일반 기준시가 환산 (취득시·양도시 기준시가 직접 입력)
- * - "phd": 개별주택가격 미공시 §164⑤ 3-시점 환산
+ * - "phd": 개별주택가격 미공시 §164⑦ 3-시점 환산
  * - "apd": 공동주택 최초고시 전 환산
  */
 export type CarryoverEstimationMode = "general" | "phd" | "apd";

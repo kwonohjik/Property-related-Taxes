@@ -1,5 +1,5 @@
 /**
- * 겸용주택 PHD §164⑤ + 1990.8.30. 이전 취득 토지 환산 브리지 (단일 진실 헬퍼)
+ * 겸용주택 PHD §164⑦ + 1990.8.30. 이전 취득 토지 환산 브리지 (단일 진실 헬퍼)
  *
  * 겸용주택은 assetKind="housing"이라 API의 hasPre1990(assetKind="land" 게이트) 경로를
  * 타지 않는다. 따라서 pre1990 환산 "취득시 토지 ㎡당 가액"을 PHD 입력(phdLandPricePerSqmAtAcq)

@@ -124,7 +124,7 @@ const AREA_SCENARIOS_BY_ASSET_KIND: Partial<
  * `same` 시나리오 단일 입력의 라벨 — taxonomy 원칙 C `[세법 역할]+[기준 시점]+"면적 (㎡)"`.
  * 대상어는 그 면적이 실제로 곱해지는 대상에서 온다:
  *   land    → 토지 기준시가 = ㎡당 개별공시지가 × 면적
- *   housing → 부수토지 면적(PHD §164⑤·환산의 곱셈 인자)
+ *   housing → 부수토지 면적(PHD §164⑦·환산의 곱셈 인자)
  *   building→ 부수토지 면적 — 「소득세법」 제99조 제1항 제1호 **가목**(개별공시지가 × 면적).
  *             나목 건물분은 축 B(`buildingFloorArea`)가 담당한다.
  */
@@ -139,7 +139,7 @@ const AREA_LABEL_BY_ASSET_KIND: Partial<Record<AssetForm["assetKind"], string>> 
  *
  * - `housing`: 「건물 기준시가 계산서」의 곱셈 인자. 종전에는 폼 필드가 없어 시점별 모달에서
  *   각각 수동 입력했고 스냅샷 키가 시점별로 갈려 **3시점 불일치**가 무검증 통과했다
- *   (anchor A-3). 단독주택 건물분 기준시가·PHD §164⑤ 환산이 이 값에 의존한다.
+ *   (anchor A-3). 단독주택 건물분 기준시가·PHD §164⑦ 환산이 이 값에 의존한다.
  * - `building`: 자산 자체가 건물이므로 축 B가 유일한 면적이다.
  *
  * GB·상가·겸용은 전용 필드(`gbBuildingArea`·`cbExclusiveArea`+`cbSharedArea`·

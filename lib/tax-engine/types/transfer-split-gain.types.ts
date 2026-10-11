@@ -253,7 +253,7 @@ export interface SplitGainResult {
    * `undefined` = 세율 단계에 닿지 않음(비과세 조기반환·차손·임대 특례 경로) 또는 구 결과 — 역시 내지 않는다.
    */
   partRateBasisApplied?: boolean;
-  /** §164⑤ 경로 시만 포함 — calculateTransferTax가 result.preHousingDisclosureDetail로 승격 */
+  /** §164⑦ 경로 시만 포함 — calculateTransferTax가 result.preHousingDisclosureDetail로 승격 */
   preHousingDisclosureDetail?: PreHousingDisclosureResult;
   /** §164⑨1호 건물 split 토지분 특례 산출근거 (계획 P6/D6) — 적용 시만 포함 */
   splitLandExpropriationValuationDetail?: SplitLandExpropriationValuationDetail;

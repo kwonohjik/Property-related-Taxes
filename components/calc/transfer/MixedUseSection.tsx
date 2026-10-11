@@ -108,10 +108,10 @@ export function MixedUseExpandedPanel({
         ? mixedUsePhdEffective(asset)
         : useEstimatedAcquisition && asset.usePreHousingDisclosure) && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-900 space-y-1">
-          <p className="font-semibold">겸용주택 + 환산취득가 + 토지/건물 분리 + §164⑤ 미공시 4-way 적용</p>
+          <p className="font-semibold">겸용주택 + 환산취득가 + 토지/건물 분리 + §164⑦ 미공시 4-way 적용</p>
           <ol className="ml-4 list-decimal space-y-0.5 leading-relaxed">
             <li>양도가액을 면적·기준시가 비율로 주택/상가 안분</li>
-            <li>주택부분: §164⑤ 3-시점 환산으로 취득시 주택가격 역산 → 토지/건물 보유연수 분리·표2 장특공제</li>
+            <li>주택부분: §164⑦ 3-시점 환산으로 취득시 주택가격 역산 → 토지/건물 보유연수 분리·표2 장특공제</li>
             <li>상가부분: §97 직접 환산 + 토지/건물 보유연수 분리·표1 장특공제</li>
             <li>주택부수토지 배율초과 면적은 비사업용토지로 이전(+10%p 가산)</li>
           </ol>

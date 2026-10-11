@@ -49,7 +49,7 @@ export function housingFlagResetPatchForAssetKind(
     : { rentalHousingException: { ...RENTAL_HOUSING_EXCEPTION_DEFAULTS } };
 
   /**
-   * §164⑤ PHD — 종류를 바꾸면 토글이 사라지는데 플래그는 남는다. 취득일 < 2005-04-29 주택에서
+   * §164⑦ PHD — 종류를 바꾸면 토글이 사라지는데 플래그는 남는다. 취득일 < 2005-04-29 주택에서
    * ⑤가 **자동으로 켜 주는** 값이라 사용자는 켠 적조차 없다.
    *
    * ⚠️ `building`은 **분리취득이면 토글이 남는다** — 여기서는 종류만 알므로 `building`으로

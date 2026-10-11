@@ -139,7 +139,7 @@ export type AssetReductionForm =
       /** 본인이 주택건설사업자 — 적용 배제 */
       isHousingConstructionBusiness993: boolean;
       // ── Round 10 (2026-05-06): PHD 환산 입력 (취득시 추정 공동주택가격 자동 산출) ──
-      // 신축주택은 준공 후 1~2년 후 공시되므로 취득시 공시가격이 대부분 없음 → §164⑤ 환산 필수.
+      // 신축주택은 준공 후 1~2년 후 공시되므로 취득시 공시가격이 대부분 없음 → §164⑦ 환산 필수.
       // PHD 모드 ON 시 standardPriceAtAcquisition993를 자동 산출.
       /** PHD 환산 모드 ON/OFF (기본: 자동 — acquisitionDate < firstDisclosureDate 시 ON) */
       phdMode993?: boolean;
@@ -361,7 +361,7 @@ export type RentalReductionFormVariant =
       isRedevelopedNewHouse99: boolean;
       /** 종전주택 취득 당시 기준시가 (원) — 변형 ON 시 필수. 별개 물건 → 조회형/PHD 대상 아님 */
       previousHouseStdPrice99: string;
-      // ── PHD 환산 (Phase 2, 2026-07-27): 최초공시 전 취득 시 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 2, 2026-07-27): 최초공시 전 취득 시 취득시 기준시가 §164⑦ 자동 산출 ──
       /** PHD 모드 ON 시 standardPriceAtAcquisition99를 자동 산출 */
       phdMode99?: boolean;
       phdFirstDisclosureDate99?: string;
@@ -403,7 +403,7 @@ export type RentalReductionFormVariant =
       standardPriceAt5Years988: string;
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer988: string;
-      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑦ 자동 산출 ──
       phdMode988?: boolean;
       phdFirstDisclosureDate988?: string;
       phdFirstDisclosurePrice988?: string;
@@ -479,7 +479,7 @@ export type RentalReductionFormVariant =
       standardPriceAtAcquisition983: string;
       standardPriceAt5Years983: string;
       standardPriceAtTransfer983: string;
-      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑦ 자동 산출 ──
       phdMode983?: boolean;
       phdFirstDisclosureDate983?: string;
       phdFirstDisclosurePrice983?: string;
@@ -504,7 +504,7 @@ export type RentalReductionFormVariant =
       standardPriceAtAcquisition985: string;
       standardPriceAt5Years985: string;
       standardPriceAtTransfer985: string;
-      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑦ 자동 산출 ──
       phdMode985?: boolean;
       phdFirstDisclosureDate985?: string;
       phdFirstDisclosurePrice985?: string;
@@ -541,7 +541,7 @@ export type RentalReductionFormVariant =
       standardPriceAtAcquisition986: string;
       standardPriceAt5Years986: string;
       standardPriceAtTransfer986: string;
-      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑦ 자동 산출 ──
       phdMode986?: boolean;
       phdFirstDisclosureDate986?: string;
       phdFirstDisclosurePrice986?: string;
@@ -578,7 +578,7 @@ export type RentalReductionFormVariant =
       standardPriceAt5Years987: string;
       /** 양도시 기준시가 (원) — 미입력 시 자산 standardPriceAtTransfer fallback */
       standardPriceAtTransfer987: string;
-      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 4, 2026-07-27): 최초공시 전 취득 취득시 기준시가 §164⑦ 자동 산출 ──
       phdMode987?: boolean;
       phdFirstDisclosureDate987?: string;
       phdFirstDisclosurePrice987?: string;
@@ -621,7 +621,7 @@ export type RentalReductionFormVariant =
       standardPriceAt5Years992: string;
       /** 양도시 기준시가 (원) — 미입력 시 자산 fallback */
       standardPriceAtTransfer992: string;
-      // ── PHD 환산 (Phase 3, 2026-07-27): 최초공시 전 취득 시 취득시 기준시가 §164⑤ 자동 산출 ──
+      // ── PHD 환산 (Phase 3, 2026-07-27): 최초공시 전 취득 시 취득시 기준시가 §164⑦ 자동 산출 ──
       phdMode992?: boolean;
       phdFirstDisclosureDate992?: string;
       phdFirstDisclosurePrice992?: string;
