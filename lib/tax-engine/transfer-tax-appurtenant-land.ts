@@ -18,7 +18,7 @@ import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-
 import { resolveExemptionProviso } from "./transfer-tax-exemption-holding";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
-import { housingExcessAreaOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
+import { housingExcessAreaM2, housingExcessAreaOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
@@ -228,7 +228,8 @@ export function laterInheritedLandExemptNotice(
  * 고지(#17, 세액 불변) — 토지 면적이 정착면적 × 배율 한도를 넘는데 초과분(비사업용 토지 — 소득세법 §104의3①5호)을 **분리하지 못한**
  * 주택 양도에 «초과분 미분리 — 과소 가능, 확인 필요»를 알린다. 분리 경로(별개취득 · 같은 날 취득 + 기준시가 안분 입력)에 든 입력은
  * `splitDetail.nonBusinessLandPart`가 있으므로 말하지 않는다. 입력 경로가 없는 조합(부담부증여 · 지분 · 상속·증여 평가 · PHD ·
- * 재개발 · 함께 양도 주택 카드 · 소유자 분리)은 막지 않고 비과세·종전 계산을 유지하며 이 고지로 남긴다.
+ * 재개발 · 소유자 분리 · 2005-04-30 전 취득[취득 당시 개별주택가격 부존재])은 막지 않고 비과세·종전 계산을 유지하며 이 고지로 남긴다.
+ * 함께 양도 주택 카드(컴패니언)는 ④가 `companionHousingLand`로 면적 사실만 실어 보내 이 고지가 발화한다(분리·세액은 불변).
  * 비과세·부분비과세로 계산됐을 때만이다(과세 계산에서 말할 «놓친 비과세»가 없다).
  */
 export function housingExcessUnseparatedNotice(
@@ -237,6 +238,27 @@ export function housingExcessUnseparatedNotice(
   exemptApplies: boolean,
 ): string | null {
   if (!exemptApplies || splitDetail?.nonBusinessLandPart) return null;
+  // 함께 양도 주택 카드(컴패니언) — 분리 입력 경로가 없어 초과분을 판정·분리하지 않는다. 사실(면적·정착면적·소재지 구분)이 있으면 그것을 알린다.
+  const companion = input.companionHousingLand;
+  if (companion && input.propertyType === "housing") {
+    if (companion.zone === undefined && companion.landAreaM2 > companion.footprintM2 * 3) {
+      return (
+        "함께 양도 주택 카드는 부수토지 배율 초과분을 판정·분리하지 않습니다. 이 카드는 토지 면적이 건물 정착면적의 3배를 넘지만 소재지 구분이 없어 배율 한도(초과 여부)도 판정하지 않았습니다 — " +
+        "초과분이 있으면 비과세에서 제외되는 비사업용 토지입니다(소득세법 §89①3호·§104의3①5호, 시행령 §154⑦) — 초과분 미분리(과소 가능), 확인이 필요합니다."
+      );
+    }
+    const companionExcess = housingExcessAreaM2({
+      zone: companion.zone,
+      footprintM2: companion.footprintM2,
+      landAreaM2: companion.landAreaM2,
+      transferDate: input.transferDate,
+    });
+    if (companionExcess <= 0) return null;
+    return (
+      `함께 양도 주택 카드는 부수토지 배율 초과분을 판정·분리하지 않습니다. 이 카드는 토지 면적이 건물 정착면적의 지역별 배율 한도를 ${companionExcess.toFixed(2)}㎡ 넘습니다 — ` +
+      "초과분 미분리(과소 가능). 초과분은 1세대1주택 비과세 대상이 아닌 비사업용 토지입니다(소득세법 §89①3호·§104의3①5호) — 확인이 필요합니다."
+    );
+  }
   // 소재지 구분이 비어 배율을 정하지 못했지만 가장 작은 배율(3배)로도 한도를 넘을 수 있다 — 초과 여부를 판정하지 않았다는 사실을 알린다(모름 = 확인 필요).
   if (
     input.propertyType === "housing" &&
@@ -252,7 +274,7 @@ export function housingExcessUnseparatedNotice(
   const excess = housingExcessAreaOfInput(input);
   if (excess <= 0) return null;
   return (
-    `토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘지만, 이 입력 조합(부담부증여·지분·상속·증여 평가·소유자 분리·재개발·함께 양도 주택 카드 등)은 ` +
+    `토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘지만, 이 입력 조합(부담부증여·지분·상속·증여 평가·소유자 분리·재개발·2005년 전 취득 등)은 ` +
     "토지·건물 가액 구분 입력 경로가 없어 초과분을 분리하지 못했습니다 — 초과분 미분리(과소 가능). " +
     "초과분은 1세대1주택 비과세 대상이 아닌 비사업용 토지입니다(소득세법 §89①3호·§104의3①5호) — 확인이 필요합니다."
   );

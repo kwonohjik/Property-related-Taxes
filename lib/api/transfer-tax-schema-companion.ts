@@ -324,6 +324,18 @@ export const companionAssetSchema = z.object({
   appurtenantLandZone: z
     .enum(["metropolitan_residential", "non_metropolitan_or_green", "non_urban"])
     .optional(),
+  /**
+   * ⑫ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 «미분리» 고지 전용(세액 불변, #17).
+   * `buildingFootprintArea`·`appurtenantLandZone`은 형제 토지 카드의 주택 컨텍스트 전용이라 컴패니언 주택 자기 item에 싣지 않는다 —
+   * 그래서 같은 사실을 별도 키로 운반한다.
+   */
+  companionHousingLand: z
+    .object({
+      landAreaM2: z.number().positive(),
+      footprintM2: z.number().positive(),
+      zone: z.enum(["metropolitan_residential", "non_metropolitan_or_green", "non_urban"]).optional(),
+    })
+    .optional(),
   /** 사례 28 — companion 신축주택 4시점 (가장 빠른 날 → acquisitionDate 자동 도출) */
   occupancyApprovalDate: z.string().date().optional(),
   approvalCertificateDate: z.string().date().optional(),

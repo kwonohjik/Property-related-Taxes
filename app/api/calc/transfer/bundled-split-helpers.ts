@@ -602,6 +602,8 @@ export function buildCompanionEngineInputs(
     primaryContextForCompanionRate: ctx.primaryCtxForSplit,
     // 분리 축(주택·건물)의 토지 면적이 우선, 없으면 G-2 토지 컴패니언 면적. 두 칸은 같은 자산에서 겹치지 않는다(⑫ 주석).
     acquisitionArea: c.acquisitionArea ?? c.areaM2,
+    // ⑭ 컴패니언 주택의 부수토지 면적 사실 — 배율 초과분 «미분리» 고지 전용(세액 불변, #17). 빠지면 ⑫를 통과해도 고지가 침묵한다.
+    companionHousingLand: c.companionHousingLand,
   } satisfies TransferTaxItemInput;
 
   /**

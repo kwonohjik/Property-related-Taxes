@@ -19,11 +19,13 @@
  *
  * ## 적용 범위(검증하지 못한 조합은 막지 않고 «초과분 미분리» 고지로 남긴다)
  *
- * 매매 취득(실지거래가액) · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·PHD·재개발 아님. 환산·감정·매매사례 취득, 상속·증여 평가,
- * 2005년 전 취득, 함께 양도 주택 카드는 이 범위 밖이다(`housingExcessUnseparatedNotice`).
+ * 매매 취득(실지거래가액) · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·PHD·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
+ * 존재). 환산·감정·매매사례 취득, 상속·증여 평가, 2005-04-30 전 취득, 함께 양도 주택 카드는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
+ * «초과분 미분리 — 확인 필요»로 고지한다(`housingExcessUnseparatedNotice`; 함께 양도 주택 카드는 ④가 `companionHousingLand`로 면적 사실을 싣는다).
  */
 import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtenant-land-rate";
 import { round2 } from "./area-utils";
+import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 배율 초과 면적(㎡) — 한도 = 정착면적 × 법정 배율(양도일·지역 연혁). 초과가 없거나 입력이 모자라면 0. */
@@ -53,7 +55,21 @@ export interface HousingExcessSplitFacts {
   isBurdenedGift: boolean;
   /** 공유지분 양도 */
   isFractional: boolean;
+  /**
+   * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전 — «취득 당시 개별주택가격»이 존재하지 않아 기준시가 안분 입력(취득시 3칸)을 줄 수 없다.
+   * 이 경우는 막지 않고 비과세를 유지하며 «초과분 미분리 — 확인 필요» 고지로 남긴다(#17 조건). 취득일 미입력은 false(취득일 필수는 다른 ⑧이 막는다).
+   */
+  acquiredBeforeFirstDisclosure: boolean;
   excessAreaM2: number;
+}
+
+/** 취득일(ISO `YYYY-MM-DD…`)이 개별주택가격 최초 공시일(2005-04-30) 전인가 — ⑧·④·엔진이 같은 상수·같은 비교를 쓴다. */
+export function isBeforeHousePriceFirstDisclosure(acquisitionDate: string | Date | undefined): boolean {
+  if (!acquisitionDate) return false;
+  if (acquisitionDate instanceof Date) {
+    return acquisitionDate.getTime() < new Date(`${SEC_163_9_BUILDING_FIRST_DISCLOSURE}T00:00:00.000Z`).getTime();
+  }
+  return acquisitionDate.slice(0, 10) < SEC_163_9_BUILDING_FIRST_DISCLOSURE;
 }
 
 /** 같은 날 취득 주택의 초과분 분리 경로(5칸 입력 + 기준시가 안분)를 타는가. */
@@ -66,6 +82,7 @@ export function housingExcessSplitApplies(f: HousingExcessSplitFacts): boolean {
     !f.isSeparateAcquisition &&
     !f.isBurdenedGift &&
     !f.isFractional &&
+    !f.acquiredBeforeFirstDisclosure &&
     f.excessAreaM2 > 0
   );
 }
@@ -92,6 +109,7 @@ type EngineFacts = Pick<
   | "buildingFootprintArea"
   | "acquisitionArea"
   | "transferDate"
+  | "acquisitionDate"
 >;
 
 /** 배율 초과 면적(㎡) — 별개취득 여부·취득원인과 무관한 순수 면적 판정(고지의 모집단). */
@@ -116,6 +134,7 @@ export function housingExcessSplitAppliesToInput(input: EngineFacts): boolean {
     isBurdenedGift: input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift",
     isFractional:
       (input.ownershipRatio !== undefined && input.ownershipRatio < 1) || input.totalPropertyTransferPrice !== undefined,
+    acquiredBeforeFirstDisclosure: isBeforeHousePriceFirstDisclosure(input.acquisitionDate),
     excessAreaM2: housingExcessAreaOfInput(input),
   });
 }
