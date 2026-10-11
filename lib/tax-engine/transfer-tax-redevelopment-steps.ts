@@ -11,6 +11,7 @@ import { runRedevelopment } from "./redevelopment";
 import {
   resolveHighValueHouseThreshold,
   formatHighValueThresholdLabel,
+  resolveHighValuePriceCheck,
 } from "./one-house/threshold";
 import { resolveSurchargeApplication, noRosterSurchargeFallbackNotice } from "./transfer-tax-surcharge-predicate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
@@ -48,7 +49,13 @@ export function runRedevelopmentGainSteps(
   input: TransferTaxInput,
   parsedRates: ParsedRates,
   steps: CalculationStep[],
+  /** 실제 보유 주택 수 1 — §95⑤·12억 판정 축. */
   isOneHouseSingle: boolean,
+  /**
+   * 표2·§154① 축 「1주택」 = 실제 1주택 ∨ §155 의제 (G3-2) — LTHD 표2 · §97의4① 단서 · 청산금 수령분 비과세.
+   * 「소득세법 시행령」 §159의4 괄호가 의제 1주택을 포함한다. 일반 경로 F10과 같은 분리.
+   */
+  isOneHouseForTable2: boolean,
   lthdSpecialNotice: string | undefined,
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined,
   /** §89①3호가목 비과세 판정 결과 — `opts.exemptionResult`(subject="apt" 전용). 마스킹에만 쓴다. */
@@ -71,7 +78,7 @@ export function runRedevelopmentGainSteps(
     transferPrice: input.transferPrice,
     actualAcquisitionPrice: input.useEstimatedAcquisition ? undefined : input.acquisitionPrice,
     useEstimatedAcquisition: input.useEstimatedAcquisition ?? false,
-    isOneHouseSingle,
+    isOneHouseSingle: isOneHouseForTable2,
     residencePeriodMonths: input.residencePeriodMonths,
     priorHouseResidenceMonths: input.redevelopment!.priorHouseResidenceMonths,
     newHouseResidenceMonths: input.redevelopment!.newHouseResidenceMonths,
@@ -143,12 +150,24 @@ export function runRedevelopmentGainSteps(
    *
    * ⚠️ **비교와 안분이 반드시 같은 값이어야 한다** — 다르면 「12억을 넘는다」고 판정해 놓고
    *    다른 분모로 나누는 모순이 된다. 그래서 한 상수로 뽑아 두 곳에 함께 쓴다.
-   * ⚠️ `??`가 아니라 `> 0` 판정이다 — `??`는 0을 걸러내지 못한다.
+   *
+   * 🔴 **지분 모드의 분모는 물건 전체 가액이다** (G3-1 · 「소득세법 시행령」 제156조제1항·제160조제1항).
+   *
+   * 종전에는 부담부증여가 아니면 `input.transferPrice`(= 지분 양도가액)를 썼다. 그런데 고가 **판정**
+   * (`aptExemption.isPartialExempt` ← `checkExemption`)은 `burdenedGiftDenominator ??
+   * totalPropertyTransferPrice ?? transferPrice`로 물건 전체를 본다 — 한 계산 안에서 판정 분모와
+   * 안분 분모가 달라, 20억 물건의 50% 지분이면 (10억 − 12억) / 10억 = **−0.2**로 안분되어 세액이
+   * 0이 됐다(30억이면 (15억 − 12억) / 15억 = 0.2로 과소).
+   *
+   * 같은 영 제156조제1항은 일부가 타인 소유인 경우 고가주택 판정을 타인 소유부분을 포함한 물건 전체
+   * 가액으로 하고, 제160조제1항 후단은 12억에 양도 부분의 비율을 곱해 안분하게 한다 — 50% 지분이면
+   * (10억 − 6억) ÷ 10억 = (20억 − 12억) ÷ 20억 = 0.4다.
+   *
+   * 판정과 **같은 leaf**(`resolveHighValuePriceCheck`)를 쓴다 — 인라인으로 다시 쓰면 분모가 또 갈린다.
+   * ⚠️ 청산금 수령분(`settlement.ts`)·입주권(`transforms.ts` `oneRightHighValueBase`)의 지분 모드 12억
+   *    기준은 정면 해석례가 없어 **사용자 결정 대기**라 이 값을 쓰지 않는다.
    */
-  const highValueBase =
-    (input.burdenedGiftDenominator ?? 0) > 0
-      ? input.burdenedGiftDenominator!
-      : input.transferPrice;
+  const highValueBase = resolveHighValuePriceCheck(input);
   // G-5: 기준금액은 **양도일** 시점 값이다(6억/9억/12억). 판정과 안분이 같은 값을 봐야 한다 —
   //      `aptExemption` 경로는 메인 판정(`checkExemptionCore`)이 이미 시점 함수를 쓰므로,
   //      안분(`applyHighValueAllocation`)도 같은 양도일로 풀지 않으면 과거 양도분에서
@@ -183,8 +202,13 @@ export function runRedevelopmentGainSteps(
     steps.push({
       label: `1세대1주택 ${formatHighValueThresholdLabel(highValueThreshold)} 초과 과세대상 양도차익 안분`,
       formula: (() => {
+        // 분모가 둘 이상이면 어느 값인지 적는다 — 산식이 자기 값을 만들어야 한다(부담부증여 > 지분 > 단독).
         const baseLabel =
-          highValueBase === input.transferPrice ? "양도가액" : "증여가액";
+          input.burdenedGiftDenominator !== undefined
+            ? "증여가액"
+            : highValueBase === input.transferPrice
+              ? "양도가액"
+              : "물건 전체 양도가액";
         // 수령 방향은 신축주택분만 안분한다(청산금분은 Step A.6) — 산식이 자기 값을 만들도록 같은 합을 적는다.
         const gainLabel = settlementJudgedSeparately
           ? `신축주택분 양도차익 ${(redevRaw.preApproval.gain + redevRaw.postApprovalExistingHouse.gain).toLocaleString()}`
@@ -204,7 +228,7 @@ export function runRedevelopmentGainSteps(
     allocated,
     input.redevelopment!,
     input,
-    isOneHouseSingle,
+    isOneHouseForTable2,
   );
   const settlementThresholdLabel = formatHighValueThresholdLabel(settlementHighValueThreshold(input));
   const settlementSaleDateLabel = (input.redevelopment!.settlementSaleDate ?? input.transferDate)
@@ -243,7 +267,7 @@ export function runRedevelopmentGainSteps(
   const settlementWarning =
     settlementJudgedSeparately &&
     input.redevelopment!.exemptionEligibleAtApproval === true &&
-    resolveOneHouseAtSettlementSale(input, isOneHouseSingle) === undefined
+    resolveOneHouseAtSettlementSale(input, isOneHouseForTable2) === undefined
       ? SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING
       : undefined;
 
@@ -331,7 +355,7 @@ export function runRedevelopmentGainSteps(
   // §97의4① 단서 — LTHD 표2와 같은 leaf(분리 거주 입력·인가일 요건 강등·승계 분기) (E-4).
   const table2ActiveForRedev = redevUsesTable2({
     redevelopment: input.redevelopment!,
-    isOneHouseSingle,
+    isOneHouseSingle: isOneHouseForTable2,
     residencePeriodMonths: input.residencePeriodMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
   });

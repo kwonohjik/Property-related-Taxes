@@ -178,8 +178,11 @@ export function calculateTransferTax(
     }
     // STEP 0.65a: 완공 신축주택(subject="apt") §89①3호가목 비과세 판정 + 주택수 제외 산출물.
     //   근거·게이트(청산금 수령 단독신고 제외 — OH-19)·거주월수 단일 소스(OH-48)는 분리 파일 주석.
-    const { exemptionResult: redevExemption, houseCountExclusion: redevHouseExclusion } =
-      judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates);
+    const {
+      exemptionResult: redevExemption,
+      houseCountExclusion: redevHouseExclusion,
+      oneHouseTable2Axis: redevOneHouseTable2Axis,
+    } = judgeRedevAptOneHouseExemption(redevInput, steps, hceGeneralHouseAcquisitionDate, parsedRates);
 
     // 🔴 종전에는 `multiHouseSurchargeResult`를 **넘기지 않았다** — STEP 0.5(`:219`)에서
     //    판정해 놓고 이 분기가 버렸다. 형제 경로 둘(`buildExemptEarlyResult` ·
@@ -203,6 +206,7 @@ export function calculateTransferTax(
 
     return calculateRedevelopmentTax(redevInput, parsedRates, steps, multiHouseSurchargeResult, {
       exemptionResult: redevExemption,
+      oneHouseTable2Axis: redevOneHouseTable2Axis,
       carryoverDetail,
       warnings,
       houseCountExclusion: redevHouseExclusion,

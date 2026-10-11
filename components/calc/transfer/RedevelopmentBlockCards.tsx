@@ -434,8 +434,8 @@ export function ExemptionAtApprovalCard({
           <p className="text-caption text-violet-700 leading-relaxed">
             청산금 수령분의 1세대1주택 여부는 신축주택 양도일이 아니라 청산금분 양도일 현재로
             판정합니다(사전-2022-법규재산-1282 — 그 날 입주권으로 받은 다른 신축주택을 함께 소유하면
-            비과세 불가). 선택하지 않으면 두 날이 같을 때만 위 세대 주택 수 입력으로 판정하고, 다르면
-            청산금분 비과세를 적용하지 않습니다.
+            비과세 불가). 선택하지 않으면 두 날이 같을 때만 위 세대 주택 수 입력(§155 등으로 1주택으로 보는
+            경우 포함)으로 판정하고, 다르면 청산금분 비과세를 적용하지 않습니다.
           </p>
           <RadioCardGroup
             name={`redevOneHouseAtSettlementSale-${asset.assetId}`}
@@ -445,7 +445,7 @@ export function ExemptionAtApprovalCard({
             }
             options={[
               { value: "", label: "선택 안 함", description: "양도일과 같으면 세대 입력으로 판정 · 다르면 판정 불가" },
-              { value: "yes", label: "1세대 1주택", description: "그 날 세대가 국내에 이 주택 1채만 보유" },
+              { value: "yes", label: "1세대 1주택", description: "그 날 세대가 국내에 이 주택 1채만 보유 (§155 등으로 1주택으로 보는 경우 포함)" },
               { value: "no", label: "아님", description: "그 날 다른 주택을 함께 보유 — 청산금분 과세" },
             ]}
             layout="inline"

@@ -262,6 +262,60 @@ export function redevAptHoldingStartDate(
 }
 
 /**
+ * **토지만 출자한 원조합원**의 완공APT인가 — 「소득세법 시행령」 §154① 보유기간을 **사용승인서 교부일**부터 세는 축
+ * (G3-4 · ⑤ UI · ④ payload · ⑧ validate 공용).
+ *
+ * 주택을 출자한 원조합원은 §154⑧1호 「멸실되어 재건축한 주택」 통산이라 종전주택 취득일이 기산일이지만, 토지만
+ * 출자했으면 멸실된 주택이 없어 통산 대상이 없고 신축주택 취득시기는 사용승인서 교부일이다(영 §162①4호 ·
+ * 서면-2022-부동산-1616). 엔진 술어는 `isLandContributedOriginalApt`(`one-house/redev-apt-judgment-input.ts`)다 —
+ * 이 함수는 그 입력(준공일)을 **받을 수 있는 폼 상태**를 같은 모양으로 가른다.
+ *
+ * 청산금 수령 단독신고(`receiveOnlyMode`)는 신축주택을 양도하지 않아 제외한다(엔진도 그 판정을 겹치지 않는다).
+ */
+export function landContributedOriginalApt(
+  asset: Pick<
+    AssetForm,
+    | "assetKind"
+    | "redevSubject"
+    | "redevIsSuccessorMember"
+    | "redevOriginalAssetType"
+    | "redevReceiveOnlyMode"
+  >,
+): boolean {
+  return (
+    asset.assetKind === "redevelopment_apt" &&
+    resolveRedevSubject(asset) === "apt" &&
+    asset.redevIsSuccessorMember !== "yes" &&
+    asset.redevOriginalAssetType === "land" &&
+    asset.redevReceiveOnlyMode !== "yes"
+  );
+}
+
+/**
+ * 완공APT **준공일(사용승인서 교부일)** 입력(`redevCompletionDate`)이 의미를 갖는 축인가 — ⑤ · ④ · ⑧ 공용 (G3-4).
+ *
+ *  · 승계조합원 — 취득시기·보유기간·세율 기산일(영 §162①4호 · 사전-2019-법령해석재산-0649)
+ *  · 토지만 출자한 원조합원 — §154① 비과세 보유기간 기산일(`landContributedOriginalApt`)
+ *
+ * 범위 밖이면 ④가 보내지 않는다 — 입력칸이 화면에서 사라진 뒤 남은 값이 엔진 판정을 바꾸지 않게 한다.
+ */
+export function redevCompletionDateInScope(
+  asset: Pick<
+    AssetForm,
+    | "assetKind"
+    | "redevSubject"
+    | "redevIsSuccessorMember"
+    | "redevOriginalAssetType"
+    | "redevReceiveOnlyMode"
+  >,
+): boolean {
+  // 승계조합원은 종전 동작을 그대로 둔다 — ⑫가 자산 종류·축과 무관하게 `isSuccessorMember === true`면 준공일을 필수로
+  // 요구하므로(`refinePrimaryAcquisitionInputs`) ④가 종류로 걸러 보내지 않으면 400이 난다.
+  if (asset.redevIsSuccessorMember === "yes") return true;
+  return landContributedOriginalApt(asset);
+}
+
+/**
  * I-8 ⑧ — 승계조합원 완공APT의 거주 **개월 수**가 준공일~양도일 개월 수를 넘는가(⑫ 미러:
  * `refinePrimaryAcquisitionInputs`). 넘으면 그 상한, 아니면 null.
  *

@@ -256,6 +256,14 @@ export interface RedevelopmentFormSlice {
    * 빈문자열 = 미입력 → 3년 요건을 판정할 수 없으므로 나목 미적용(비과세·12억 안분 모두 없음).
    */
   redevOtherHouseAcquisitionDate: string;
+  /**
+   * **§89①4호 「나」목 괄호** — 「3년 이내에 양도하지 못하는 경우로서 대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호).
+   *
+   * 「다른 주택을 취득한 날부터 **3년이 되는 날 현재**」 한국자산관리공사 매각 의뢰·법원 경매 신청·공매 진행·
+   * 정비사업 현금청산금 소송·수용재결·매도청구소송에 해당하면 3년을 넘겨도 나목이 성립한다(S05-4).
+   * 빈문자열 = 해당 없음/모름 → 사유가 없는 것으로 보아 3년 기한만 본다(모름 = 혜택 불성립).
+   */
+  redevOtherHouseDisposalDelayReason: "" | "kamco" | "auction" | "public_sale" | "cash_settlement_suit" | "expropriation_suit";
 
   // ── 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land") ──
 

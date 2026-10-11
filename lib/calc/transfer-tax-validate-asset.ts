@@ -308,7 +308,7 @@ export function validateAssetEntry(
           0,
         )
       : undefined;
-  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal);
+  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true);
   if (acqError) return acqError;
 
   // ⑧ §97③ 감가상각비 — 입력 가능 구조인지 · 취득가액 한도 (⑤ 게이트와 같은 술어 `depreciation-scope.ts`)

@@ -21,6 +21,7 @@ import {
   exemptionAtApprovalInScope,
   postApprovalExpensesInScope,
   settlementOneHouseAtSaleInScope,
+  redevCompletionDateInScope,
 } from "./redev-field-scope";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -205,6 +206,8 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // (엔진이 판정 불가 → 비과세·12억 안분 모두 미적용). ⑫ Zod는 date string을 받고
     // ⑭ route가 Date로 바꾼다 — 그 변환이 빠지면 `Date < string` 비교가 조용히 false가 된다.
     otherHouseAcquisitionDate: asset.redevOtherHouseAcquisitionDate || undefined,
+    // 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 판정 메뉴 값을 그대로 싣는다(S05-4).
+    otherHouseDisposalDelayReason: asset.redevOtherHouseDisposalDelayReason || undefined,
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     // 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 직접 입력 fallback.
     // UI·validate와 동일 우선순위 — API layer 단독 변환 금지(silent stripping 차단).
@@ -245,6 +248,8 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
         : asset.redevIsSuccessorMember === "no"
           ? false
           : undefined,
-    completionDate: asset.redevCompletionDate || undefined,
+    // 준공일 — 승계조합원(취득시기 · 영 §162①4호) 또는 토지만 출자한 원조합원(§154① 보유 기산일 — G3-4)에서만 의미가 있다.
+    // 범위 밖이면 보내지 않는다(카드가 사라진 뒤 남은 값이 엔진 판정을 바꾸지 않게 — U1-01 규약).
+    completionDate: redevCompletionDateInScope(asset) ? asset.redevCompletionDate || undefined : undefined,
   };
 }

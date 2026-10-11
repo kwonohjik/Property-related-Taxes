@@ -325,6 +325,8 @@ export interface TransferTaxInput {
   oneRightExemptionFacts?: {
     eligibleAtApproval: boolean;
     otherHouseAcquisitionDate?: Date;
+    /** 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — `redevelopment.otherHouseDisposalDelayReason`과 같은 사실. */
+    otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
     /**
      * 양도하는 입주권의 관리처분계획인가일(E-3 후속) — 분양권 요건(법률 제18578호 부칙 제7조②·③)과
      * 재건축 기준일 고지용. 계산기는 같은 값을 `redevelopment.approvalDate`(필수)로 보낸다.
@@ -478,6 +480,18 @@ export interface TransferTaxInput {
    * 요건 충족자 예외), §89①4호는 2020-01-01 이후 양도분부터 배제. `one-house/non-resident.ts`.
    */
   transferorNonResidentAtTransfer?: boolean;
+  /**
+   * §154① **보유기간 기산일** override — 1세대1주택 판정 서브트리 전용(양도 자산 입력이 아니라 **엔진이 채운다**).
+   *
+   * 토지만 출자한 원조합원의 완공APT는 보유기간을 **사용승인서 교부일**부터 센다 — 「소득세법 시행령」
+   * §162①4호 「자기가 건설한 건축물에 있어서는 … 사용승인서 교부일」 · 서면-2022-부동산-1616(2023.09.14.
+   * 「토지를 소유한 조합원이 재개발로 취득한 주택의 보유기간 계산은 사용검사필증교부일부터 양도일까지」).
+   * 멸실된 주택이 없어 §154⑧1호 통산도 걸리지 않는다. `redev-apt-judgment-input.ts`가 채운다.
+   *
+   * ⚠️ **보유 기산일만 옮긴다.** `acquisitionDate`(= §166 산식의 토지 취득일 · 「취득 당시」 조정대상지역·
+   * 2017.8.3. 경과규정 판정일)는 그대로다 — 거주요건 판정 기준일(사용승인일 vs 인가일)은 사용자 결정 대기다.
+   */
+  exemptionHoldingStartDate?: Date;
   /**
    * 보유 중 **비거주자였던 기간** — 1세대1주택 보유기간은 거주자로서 보유한 기간만 통산한다
    * (부동산납세과-615 · 서면인터넷방문상담4팀-1424). 예외: 비거주자가 그 주택을 3년 이상 보유하고

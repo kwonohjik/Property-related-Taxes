@@ -503,6 +503,13 @@ export const oneRightExemptionFactsSchema = z.object({
    * 가목(다른 주택 0채)이면 비운다. 미입력이면 엔진이 나목을 **적용하지 않는다**(판정 불가).
    */
   otherHouseAcquisitionDate: z.string().date().optional(),
+  /**
+   * 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 「다른 주택 취득일부터 3년이 되는 날 현재」 해당.
+   * 해당하면 3년을 넘겨도 나목이 성립한다. 일시적 2주택 `disposalDelayReason`과 같은 값(S05-4).
+   */
+  otherHouseDisposalDelayReason: z
+    .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
+    .optional(),
   /** 양도하는 입주권의 관리처분계획인가일 — 분양권 요건 연혁(법률 제18578호 부칙 제7조②·③) 판정용(E-3 후속) */
   approvalDate: z.string().date().optional(),
 });
