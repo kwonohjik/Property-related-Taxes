@@ -179,7 +179,7 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
           : undefined,
     // U1-01 — ③-c 카드는 「완공APT + 청산금 수령 + 원조합원」에서만 열린다. 방향을 되돌리면
     //         카드가 사라지는데 완공APT에는 이 값을 지울 다른 위젯이 없다(§⑥ 토글은 입주권 전용)
-    //         ⇒ **범위 밖이면 보내지 않는다**. 남으면 엔진이 LTHD를 표1로 강등한다(§95② 표1·표2).
+    //         ⇒ **범위 밖이면 보내지 않는다**. 남으면 엔진이 입주권 인가전 분 LTHD를 표1로 강등한다(§95② 표1·표2).
     exemptionEligibleAtApproval: !exemptionAtApprovalInScope(asset)
       ? undefined
       : asset.redevExemptionEligibleAtApproval === "yes"

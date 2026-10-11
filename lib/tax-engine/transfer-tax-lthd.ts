@@ -31,6 +31,8 @@ import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 import { TRANSFER } from "./legal-codes";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
+import { table2ResidencePct } from "./data/lthd-table2-era";
+import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
@@ -214,13 +216,17 @@ export function calcLongTermHoldingDeduction(
      */
     const landHolding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
     // 부수토지는 1세대1주택 여부·거주기간을 주택과 공유. 표2 대상 판정은 본 게이트(:아래 L-3)와
-    // **같은 술어**여야 한다 — 한쪽만 §159의4 의제를 반영하면 부수토지 경로가 어긋난다.
-    const isOneHouseSingleForCompanion =
-      input.isOneHousehold && (input.householdHousingCount === 1 || deemedOneHouseBy155 === true);
+    // **같은 술어**(`lthd-table2-subject.ts`)여야 한다 — 한쪽만 §159의4 의제를 반영하면 부수토지 경로가 어긋난다.
+    // 짝 주택의 의제·주택 수 제외는 합산 엔진이 `appurtenantHouseVerdict`로 넘겨 `checkExemption`(F-13)이
+    // `deemedOneHouseBy155`로 싣는다(S08-5).
+    const isOneHouseSingleForCompanion = resolveLthdTable2OneHouseAxis(input, deemedOneHouseBy155);
     const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
     const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
+    // 자산 축 — 배율 이내로 확인된 부수토지 카드만 표2 대상이다(판정 불가 카드는 표1 — S08-6).
     const useTable2ForCompanion =
-      isOneHouseSingleForCompanion && meetsTable2ResidenceRequirement(input, table2ResidenceYears);
+      isOneHouseSingleForCompanion &&
+      isLthdTable2SubjectAsset(input) &&
+      meetsTable2ResidenceRequirement(input, table2ResidenceYears);
     // 표1(일반 보유 × 2%, 30% 캡)은 **토지 자신의** 보유연수 — 통칙의 「그 토지의 전체보유기간」.
     // 3년 진입요건도 같은 축이다 — `calcLongTermRate` 정본에 3년 가드가 내장돼 있어
     // 외곽 게이트를 따로 두지 않는다(종전 `ctx.holdingMonths < 36` 외곽 return은 축이 어긋나 있었다).
@@ -277,8 +283,7 @@ export function calcLongTermHoldingDeduction(
    */
   const isOneHouseSingle =
     input.isOneHousehold && input.householdHousingCount === 1;
-  const isOneHouseForTable2 =
-    isOneHouseSingle || (input.isOneHousehold && deemedOneHouseBy155 === true);
+  const isOneHouseForTable2 = resolveLthdTable2OneHouseAxis(input, deemedOneHouseBy155);
   const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
   // §154⑧3호: 표2 "대상 판정"은 동일세대 상속 통산 거주 (공제율은 실거주 residenceYears 유지).
   const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
@@ -333,7 +338,7 @@ export function calcLongTermHoldingDeduction(
     // 반대해석(주택 보유기간 기준)은 ⑤1호가 표2 보유기간 열에 주택 기간을 대입하는 점을 근거로 하나,
     // 명문 없이 공제를 8%p 줄이는 방향이라 채택하지 않는다. 예규·심판례는 2026-08-05 현재 0건.
     const totalHolding = calculateHoldingPeriod(input.acquisitionDate, input.transferDate);
-    const residencePct = totalHolding.years < 3 ? 0 : Math.min(residenceYears * 4, 40);
+    const residencePct = totalHolding.years < 3 ? 0 : table2ResidencePct(residenceYears);
 
     const totalPct = holdingPct + residencePct;
     return {
@@ -363,7 +368,11 @@ export function calcLongTermHoldingDeduction(
   // §159의4는 「1주택(의제 포함)을 보유하**고** 거주 2년 이상」이라는 **연언(AND)**이다 —
   // 의제만으로 표2가 열리지 않으며 거주 2년 요건은 그대로 유지된다.
   // §155의3 상생임대주택은 §159의4의 거주기간 제한을 받지 않는다(같은 조가 명시 열거).
-  const useTable2 = isOneHouseForTable2 && meetsTable2ResidenceRequirement(input, table2ResidenceYears);
+  // 자산 축: 순수 토지·건물·상가·배율 초과 카드는 1세대1주택 세대여도 표1이다(S08-6 — §95② 단서 「1세대 1주택(이에 딸린 토지 포함)에 해당하는 자산」).
+  const useTable2 =
+    isOneHouseForTable2 &&
+    isLthdTable2SubjectAsset(input) &&
+    meetsTable2ResidenceRequirement(input, table2ResidenceYears);
   // 양도일을 넘겨 표2 연혁(OH-31 — 2009~2020 연 8% 단일축)을 가른다.
   const rateForYears = (years: number): number =>
     calcLongTermRate(years, residenceYears, useTable2, false, input.transferDate);

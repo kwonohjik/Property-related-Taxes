@@ -54,6 +54,7 @@ import { RENTAL_4HO_UNMET_ID } from "./one-house/rental-registration-4ho";
 import { article89Clause2Notices } from "./transfer-tax-89-2-consequences";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { meetsTable2ResidenceRequirement, meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
+import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
@@ -599,8 +600,8 @@ export function calculateTransferTax(
     // 표2 대상 축은 위 STEP 4와 **같은 술어**를 쓴다 — 여기만 실제 주택수를 보면 §155 의제
     // 자산에서 「STEP 4는 표2인데 §98의2 특칙은 표2가 아니라고 본다」는 세 번째 진실이 생긴다.
     const isOneHouseSpecial982 =
-      exemptionJudgeInput.isOneHousehold &&
-      (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155) &&
+      resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) &&
+      isLthdTable2SubjectAsset(exemptionJudgeInput) &&
       meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep) &&
       longTermHoldingDeduction > 0;
     if (!isOneHouseSpecial982) {
@@ -620,10 +621,10 @@ export function calculateTransferTax(
     table2ResidenceYearsForStep,
     // 표시 축도 계산 축과 **같은 술어**를 쓴다 — §155의3 면제를 계산에만 반영하고 문구가 표1이면
     // 「공제율은 표2인데 문구는 표1」 드리프트가 난다.
-    meetsTable2Residence: meetsTable2ResidenceRequirement(
-      exemptionJudgeInput,
-      table2ResidenceYearsForStep,
-    ),
+    // 자산 축(순수 토지·건물·배율 초과·판정 불가 카드는 표1 — S08-6)도 같은 술어다.
+    meetsTable2Residence:
+      isLthdTable2SubjectAsset(exemptionJudgeInput) &&
+      meetsTable2ResidenceRequirement(exemptionJudgeInput, table2ResidenceYearsForStep),
     isOneHousehold: exemptionJudgeInput.isOneHousehold,
     // 표시 축도 계산 축과 맞춘다 — §159의4 의제 1세대1주택은 표2를 적용받으므로 산식 문구도
     // 표2(보유 4% + 거주 4%)여야 한다. 어긋나면 「공제율 64%인데 문구는 표1」 drift가 난다.
@@ -639,7 +640,7 @@ export function calculateTransferTax(
     splitDetail,
   });
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
-  if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && exemptionJudgeInput.isOneHousehold && (exemptionJudgeInput.householdHousingCount === 1 || deemedOneHouseBy155)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
+  if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 
   // STEP 4.5: 양도소득금액 = 양도차익 − 장기보유특별공제 (소득세법 §95 ①)
   const transferIncomeBefore993 = Math.max(0, taxableGain - longTermHoldingDeduction);
@@ -776,6 +777,8 @@ export function calculateTransferTax(
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
+    // 짝 부수토지 카드가 받는 표2 「1주택」 축 echo(S08-5 — `toHouseVerdict`) — L-3 게이트와 같은 술어.
+    lthdTable2OneHouseAxis: resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155),
     new994Detail,
     unsold989Detail,
     houseCountExclusionDetails,

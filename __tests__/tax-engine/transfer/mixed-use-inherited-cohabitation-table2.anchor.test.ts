@@ -62,11 +62,12 @@ describe("겸용주택 동일세대 상속 §154⑧3호 거주 통산 표2", () 
     expect(r.housingPart.longTermDeductionRate).toBeLessThanOrEqual(0.30);
   });
 
-  it("앵커5: 실거주1년 + 통산 2년 → 표2(대상 통산), 거주분=실거주1년×4%=4% → 44%", () => {
+  it("앵커5: 실거주1년 + 통산 2년 → 표2(대상 통산), 거주분=실거주 1년은 표2 거주기간 열 해당 없음 0 → 40%", () => {
     const r = run(base40({ residencePeriodYears: 1, table2ResidencePeriodYears: 2 }));
     expect(r.housingPart.longTermDeductionTable).toBe(2);
-    // 보유40% + 거주(실거주1년)4% = 44% (통산분이 거주분 공제율에 침범하지 않음)
-    expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.44, 5);
+    // 보유40% + 거주(실거주1년) 0 = 40% (통산분이 거주분 공제율에 침범하지 않고, 표2 거주기간 열은 2년 이상부터 —
+    // 「소득세법」 §95② 표2, 2021.1.1. 시행본 MST 224837·현행 MST 280405 원문. 종전 0.44는 S08-2 과다공제)
+    expect(r.housingPart.longTermDeductionRate).toBeCloseTo(0.40, 5);
   });
 
   it("앵커6: 용도변경 겸용 + 실거주0 통산2년 → 표2 개방 (period-split 폐지 후에도 불변)", () => {

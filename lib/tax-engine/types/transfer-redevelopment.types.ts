@@ -300,9 +300,10 @@ export interface RedevelopmentInfo {
    * ⚠️ 종전 주석은 이 축의 근거를 서면2016-법령해석재산-2705로 적었으나 그 회신은 380을 인용할
    *    뿐이고 원문은 「양도일 현재」다(2026-09-28 정정 · L-12).
    *
-   * false 시:
-   *   - LTHD 표1 강제 (표2 진입 차단)
-   *   - 12억 안분 비활성화 (전부 과세)
+   * false 시 (G3-8 — 대상은 「그 청산금」뿐이다):
+   *   - **청산금 수령분 분기만** LTHD 표1 강제 (표2 진입 차단) · 청산금분 비과세 미적용(전부 과세)
+   *   - 신축주택분(인가전·인가후 기존건물분)의 표2·비과세·12억 안분은 이 선언을 읽지 않는다 —
+   *     시행령 §159의4·§154①·§154⑧1호로 판정한다 (단독신고는 신축주택분이 없어 청산금분이 신고 전부다)
    *
    * UI 자동 산정: monthsBetween(acquisitionDate, approvalDate) ≥ 24 → true
    * 사용자 override 허용. 미입력(undefined) 시 legacy `isOneHouseSingle` fallback.

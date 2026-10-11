@@ -386,7 +386,7 @@ export function ExemptionAtApprovalCard({
           {
             value: "no",
             label: "미충족으로 선언",
-            description: "조합 제공 시까지 보유(거주) 요건 미충족 — 청산금 과세 · 장기보유특별공제 표1 강제",
+            description: "조합 제공 시까지 보유(거주) 요건 미충족 — 청산금 과세 · 청산금분 장기보유특별공제 표1 강제(신축주택분은 일반 판정 그대로)",
           },
         ]}
         layout="inline"
@@ -415,11 +415,11 @@ export function ExemptionAtApprovalCard({
         >
           {effective === "yes" ? (
             <p>
-              <span className="font-semibold">충족으로 선언됨</span> — 장기보유특별공제 표2 적용 가능 (1세대1주택 + 12억 초과 시 안분 적용)
+              <span className="font-semibold">충족으로 선언됨</span> — 청산금분 비과세·표2 판정 대상 (청산금분 양도일 현재 1세대1주택일 때 · 12억 초과 시 안분 적용)
             </p>
           ) : (
             <p>
-              <span className="font-semibold">미충족으로 선언됨</span> — 장기보유특별공제 표1 강제 (12억 안분 비활성)
+              <span className="font-semibold">미충족으로 선언됨</span> — 청산금분만 과세 · 장기보유특별공제 표1 강제 (신축주택분의 비과세·12억 안분·표2는 일반 판정을 따릅니다)
             </p>
           )}
         </div>

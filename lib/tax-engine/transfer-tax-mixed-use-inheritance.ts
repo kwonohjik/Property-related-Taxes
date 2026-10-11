@@ -14,7 +14,11 @@
  */
 
 import { applyRate } from "./tax-utils";
-import { resolveLthdTable2Era, table2HoldingOnlyRate } from "./data/lthd-table2-era";
+import {
+  LTHD_TABLE2_RESIDENCE_MIN_YEARS,
+  resolveLthdTable2Era,
+  table2HoldingOnlyRate,
+} from "./data/lthd-table2-era";
 import { multiplyByArea } from "./area-utils";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
@@ -56,7 +60,9 @@ export function calcLongTermRate(
   }
   if (useTable2) {
     const holdingPart = Math.min(holdingYears * 0.04, 0.40);
-    const residencePart = Math.min(residenceYears * 0.04, 0.40);
+    // 거주기간 열은 2년 이상부터다(§95② 표2 — 2년 미만 칸 없음). 정수 % → 소수 변환 없이 기존 식 유지.
+    const residencePart =
+      residenceYears >= LTHD_TABLE2_RESIDENCE_MIN_YEARS ? Math.min(residenceYears * 0.04, 0.40) : 0;
     return holdingPart + residencePart;
   }
   return Math.min(holdingYears * 0.02, 0.30);

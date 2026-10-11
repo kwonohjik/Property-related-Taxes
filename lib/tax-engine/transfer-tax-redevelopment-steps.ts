@@ -358,6 +358,7 @@ export function runRedevelopmentGainSteps(
     isOneHouseSingle: isOneHouseForTable2,
     residencePeriodMonths: input.residencePeriodMonths,
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
+    transferDate: input.transferDate,
   });
   let redevAfterRight: RedevelopmentResult = redevAfterLthdExclusion;
   if (

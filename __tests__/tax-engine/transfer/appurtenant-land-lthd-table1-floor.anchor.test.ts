@@ -52,6 +52,8 @@ function companionLand(acq: string, houseMonths: number, residMonths: number): T
   return baseTransferInput({
     propertyType: "land",
     landNature: "appurtenant_to_housing",
+    // 배율 이내로 확인된 부수토지 카드 — 합산 엔진·route가 붙이는 역할. 표2 대상 자산 축(S08-6)이 요구한다.
+    oneHouseUnitRole: "appurtenant_land",
     transferPrice: 900_000_000,
     acquisitionPrice: 100_000_000,
     acquisitionDate: D(acq),

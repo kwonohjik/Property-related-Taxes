@@ -14,6 +14,7 @@
  * 설계: docs/02-design/features/transfer-split-acq-result-display.engine.design.md §4
  */
 import { applyRateFraction } from "./tax-utils";
+import { LTHD_TABLE2_RESIDENCE_MIN_YEARS } from "./data/lthd-table2-era";
 import type { SplitGainResult, SplitPartResult } from "./types/transfer-split-gain.types";
 
 export type SplitPartKey = "land" | "building";
@@ -347,13 +348,20 @@ export interface SplitLthdDisplayArgs {
 
 const pct = (rate: number) => Math.round(rate * 100);
 
+/** 표2 거주분 문구 — 거주기간 열은 2년 이상부터라(§95② 표2) 2년 미만은 「N년×4%」로 쓰지 않는다. */
+function residenceTerm(residenceYears: number, residencePct: number, eq = "="): string {
+  return residenceYears >= LTHD_TABLE2_RESIDENCE_MIN_YEARS
+    ? `거주 ${residenceYears}년×4%${eq}${residencePct}%`
+    : `거주 ${residenceYears}년(2년 미만 — 거주기간 공제 없음)${eq}${residencePct}%`;
+}
+
 function partReason(p: SplitPartResult, a: SplitLthdDisplayArgs): string {
   const years = p.holdingYears;
   if (years < 3) return `보유 ${years}년 — 3년 미만은 공제 없음`;
   const total = pct(p.longTermRate);
   if (a.singleAxis) return `표2 보유 ${years}년×8% = ${total}%, 80% 한도 — 2020.12.31. 이전 양도분`;
   if (a.isTable2) {
-    return `보유 ${years}년×4%=${pct(p.holdingDeductionRate!)}% + 거주 ${a.residenceYears}년×4%=${pct(p.residenceDeductionRate!)}%`;
+    return `보유 ${years}년×4%=${pct(p.holdingDeductionRate!)}% + ${residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!))}`;
   }
   return `보유 ${years}년×2% = ${total}%, 30% 한도`;
 }
@@ -460,7 +468,7 @@ export function buildSplitLthdSubFormulas(
       resItems.push(`${label} ${won(res)} (${why})`);
     } else {
       holdItems.push(`${label} ${won(hold)} (보유 ${p.holdingYears}년×4% = ${pct(p.holdingDeductionRate!)}%)`);
-      resItems.push(`${label} ${won(res)} (거주 ${a.residenceYears}년×4% = ${pct(p.residenceDeductionRate!)}%)`);
+      resItems.push(`${label} ${won(res)} (${residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`);
     }
   }
   const nb = a.sd.nonBusinessLandPart;
