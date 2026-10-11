@@ -243,7 +243,7 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
 
   // ── 1990.8.30. 이전 토지 ──
   { name: "acquisitionArea (1990 이전 토지)", field: "acquisitionArea", step: 0, assetIndex: A, message: /^자산: 취득 당시 면적\(㎡\)을 입력하세요/, form: pre1990({ acquisitionArea: "", transferArea: "" }) },
-  { field: "pre1990PricePerSqm_1990", step: 0, assetIndex: A, message: /^자산: 1990\.1\.1\. 개별공시지가/, form: pre1990({ pre1990PricePerSqm_1990: "" }) },
+  { field: "pre1990PricePerSqm_1990", step: 0, assetIndex: A, message: /^자산: 1990\.1\.1\. 기준 개별공시지가\(1990\.8\.30\. 고시\)를 입력하세요/, form: pre1990({ pre1990PricePerSqm_1990: "" }) },
   { name: "standardPriceAtTransfer (1990 이전 토지)", field: "standardPriceAtTransfer", step: 0, assetIndex: A, message: /^자산: 양도 당시 기준시가를 입력하세요/, form: pre1990({ standardPriceAtTransfer: "" }) },
   { field: "pre1990Grade_current", step: 0, assetIndex: A, message: /^자산: 1990\.8\.30\. 현재 토지등급/, form: pre1990({ pre1990Grade_current: "" }) },
   { field: "pre1990Grade_prev", step: 0, assetIndex: A, message: /^자산: 1990\.8\.30\. 직전 토지등급/, form: pre1990({ pre1990Grade_prev: "" }) },

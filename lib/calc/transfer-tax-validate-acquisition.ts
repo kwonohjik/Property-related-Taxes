@@ -504,7 +504,7 @@ export function validateAssetAcquisition(
     const areaSqm = parseFloat((asset.acquisitionArea || "").replace(/,/g, ""));
     if (!areaSqm || areaSqm <= 0) return fieldError("acquisitionArea", `${label}: 취득 당시 면적(㎡)을 입력하세요.`);
     if (!asset.pre1990PricePerSqm_1990 || parseAmount(asset.pre1990PricePerSqm_1990) <= 0)
-      return fieldError("pre1990PricePerSqm_1990", `${label}: 1990.1.1. 개별공시지가(원/㎡)를 입력하세요.`);
+      return fieldError("pre1990PricePerSqm_1990", `${label}: 1990.1.1. 기준 개별공시지가(1990.8.30. 고시)를 입력하세요.`);
     // 양도시 기준시가는 상위 standardPriceAtTransfer 필드로 입력 (㎡당 단가 × 면적 총액).
     // pre1990PricePerSqm_atTransfer(입력 UI 없는 필드)는 더 이상 검사하지 않음.
     if (!asset.standardPriceAtTransfer || parseAmount(asset.standardPriceAtTransfer) <= 0)

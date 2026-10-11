@@ -8,7 +8,7 @@
  *
  * 동작:
  *   - 면적은 상위 자산 면적과 자동 연동 (CompanionAcqPurchaseBlock에서 useEffect로 동기화)
- *   - 1990.8.30. 개별공시지가는 vworld API(year=1990)로 자동 조회 가능
+ *   - 1990.1.1. 기준 개별공시지가(1990.8.30. 고시)는 vworld API(year=1990)로 자동 조회 가능
  *   - 모든 입력값 충족 시 클라이언트에서 환산 계산 → onCalculatedPrice 콜백으로 취득시 기준시가 자동 입력
  *   - 양도당시 개별공시지가는 별도 입력하지 않음 (양도시 기준시가는 상위에서 별도 관리)
  */
@@ -38,7 +38,7 @@ interface Props {
   onChange: (patch: Partial<Pre1990FormSlice>) => void;
   /** 취득 당시 면적 (㎡) — 환산 계산의 areaSqm. 상위 자산 aquisitionArea 주입. */
   acquisitionArea?: string;
-  /** vworld 조회용 지번 주소 (1990.8.30. 개별공시지가 자동 조회) */
+  /** vworld 조회용 지번 주소 (1990.1.1. 기준 개별공시지가 자동 조회) */
   jibun?: string;
   /** 취득일 — 환산 계산 + CAP-2 트리거 판정용 */
   acquisitionDate?: string;
@@ -165,7 +165,7 @@ export function Pre1990LandValuationInput({
         setLookupMsg({
           text:
             `⚠ 1990년 개별공시지가는 자동조회가 제공되지 않아 1991년 최초 공시분(${price1991.toLocaleString()}/㎡)으로 대체했습니다. ` +
-            "정확한 1990.8.30. 개별공시지가는 부동산공시가격 알리미(realtyprice.kr)에서 확인해 직접 수정하세요.",
+            "정확한 1990.1.1. 기준 개별공시지가(1990.8.30. 고시)는 부동산공시가격 알리미(realtyprice.kr)에서 확인해 직접 수정하세요.",
           kind: "warn",
         });
         return;
@@ -194,10 +194,10 @@ export function Pre1990LandValuationInput({
             </p>
           )}
 
-          {/* 1990.8.30. 개별공시지가 + 조회 버튼 */}
+          {/* 1990.1.1. 기준 개별공시지가 + 조회 버튼 */}
           <div className="space-y-1.5">
             <label className="block text-sm font-medium">
-              1990.8.30. 개별공시지가 (원/㎡) <span className="text-destructive">*</span>
+              1990.1.1. 기준 개별공시지가(1990.8.30. 고시) (원/㎡) <span className="text-destructive">*</span>
             </label>
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-40 flex-1">
