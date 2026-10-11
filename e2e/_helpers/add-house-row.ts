@@ -27,7 +27,12 @@ export async function fillAcquisitionDateInDialog(dialog: Locator, ymd: string):
 
 export async function addHouseRow(
   page: Page,
-  opts: { acquisitionDate: string; officialPrice?: string } = { acquisitionDate: "2018-01-01", officialPrice: "300000000" },
+  opts: {
+    acquisitionDate: string;
+    officialPrice?: string;
+    /** 결정 #43 — 양도 주택보다 나중에 취득한 행(신규 주택 후보)은 취득 경위를 답해야 ⑧을 통과한다. 그 칸이 뜨는 시료에서만 넘긴다. */
+    acquisitionOrigin?: "general";
+  } = { acquisitionDate: "2018-01-01", officialPrice: "300000000" },
 ): Promise<void> {
   await page.getByRole("button", { name: /주택 추가/ }).click();
   const dialog = page.getByRole("dialog");
@@ -38,6 +43,10 @@ export async function addHouseRow(
   if (opts.officialPrice) {
     // CurrencyInput hideLabel — 시각 라벨이 숨어 있어도 aria-label="공시가격"은 항상 붙는다.
     await dialog.getByLabel("공시가격", { exact: true }).fill(opts.officialPrice);
+  }
+
+  if (opts.acquisitionOrigin) {
+    await dialog.getByTestId(`house-row-origin-${opts.acquisitionOrigin}`).click();
   }
 
   await dialog.getByRole("button", { name: "완료" }).click();

@@ -192,6 +192,8 @@ test("[BT-E2E-11] 신규 주택 소재지 → 자동 판정 · 요청 본문 tem
     newAcquisitionDate: "2020-06-18",
     newHouseRegionCode: "2826010100",
     previousHouseRegulatedAtNewAcquisition: true,
+    // 이 화면은 보유 주택 목록이 없어 신규 주택 취득 경위를 묻지 못한다 — 엔진은 현행대로 판정하고 확인 필요를 알린다(결정 #43)
+    newHouseOrigin: { kind: "not_collected" },
   });
 });
 
