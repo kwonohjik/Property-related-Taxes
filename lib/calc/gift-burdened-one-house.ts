@@ -373,7 +373,7 @@ export function giftBurdenedMergeAgeError(bgt: BurdenedGiftTransferTaxInput): st
 /**
  * 입력 화면의 「세대 3주택 합가 특례는 판정하지 않습니다」 카드를 띄울지 — 결과 화면의 엔진 고지
  * (`mergeConfirmWarnings`)와 **같은 술어**다: 증여자 세대가 1세대(ON)이고 주택 수 3이며 합가 특례 요건
- * (먼저 양도 · 합가일 이전 취득 · 기한 내 · 합가 후 양도)이 모두 설 때만. 1세대 OFF면 구성과 무관하게 과세라
+ * (먼저 양도 · 합가일 이전 취득 · 기한 내 · 합가 후 양도 · 동거봉양이면 직계존속 연령)이 모두 설 때만. 1세대 OFF면 구성과 무관하게 과세라
  * 계산기로 안내하지 않는다(토글 아래 1세대 안내가 먼저 보인다 — 결정 #24 조건 5 · #25 조건 1).
  * 증여 화면 양도일은 증여일(`transferDate`) — 모르면 요건을 알 수 없어 띄우지 않는다(결과 고지가 이어받는다).
  */
@@ -390,7 +390,7 @@ export function giftBurdenedThreeHouseMergeNoticeNeeded(
   return threeHouseMergeRequirementsHold({
     householdHousingCount: 3,
     marriageMerge: marriageDate ? { marriageDate } : undefined,
-    parentalCareMerge: mergeDate ? { mergeDate } : undefined,
+    parentalCareMerge: mergeDate ? { mergeDate, parentAge: bgt.parentalCareParentAge || undefined } : undefined,
     isFirstTransferredInMerge: bgt.isFirstTransferredInMerge === true,
     acquisitionDate: acquisition,
     transferDate: transfer,

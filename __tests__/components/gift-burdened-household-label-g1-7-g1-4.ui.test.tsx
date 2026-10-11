@@ -178,6 +178,14 @@ describe("UI-M2 세대 3주택 + 합가 요건 성립 안내 (#24 조건 5 · #2
     renderGift(item({ ...HOLDS, marriageDate: "2010-01-01", acquisitionDate: new Date("2009-01-01") })); // 증여일 2025-06 — 10년 초과
     expect(NOTICE()).toBeNull();
   });
+  it("동거봉양 합가는 직계존속 연령으로 가른다 — 60세 이상이면 안내 · 「해당 없음」이면 없음(결정 #9)", () => {
+    const PC = { isOneHousehold: true, householdHousingCount: 3, parentalCareMergeDate: "2020-01-01", isFirstTransferredInMerge: true };
+    renderGift(item({ ...PC, parentalCareParentAge: "over_60" }));
+    expect(NOTICE()).not.toBeNull();
+    cleanup();
+    renderGift(item({ ...PC, parentalCareParentAge: "none" }));
+    expect(NOTICE()).toBeNull();
+  });
   it("부정 짝 — 주택 수 2 · 합가일 없는 3주택은 안내 없음", () => {
     renderGift(item({ ...HOLDS, householdHousingCount: 2 }));
     expect(NOTICE()).toBeNull();

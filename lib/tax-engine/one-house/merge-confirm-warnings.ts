@@ -15,6 +15,7 @@ import {
   resolveMergeCompositionConfirmNotice,
   type MergeDeemingReqInput,
 } from "./merge-deeming";
+import { parentalCareAgeVerdict } from "./parental-care-age";
 
 /**
  * 증여세 마법사 3주택 합가 고지 문구 — 비과세뿐 아니라 다주택 중과 배제도 판정하지 않았음을 함께 적는다.
@@ -27,7 +28,8 @@ export const NO_ROSTER_THREE_HOUSE_MERGE_NOTICE =
   "양도소득세 계산기(부담부증여)에서 세대 보유 주택 목록을 입력하면 판정합니다.";
 
 /**
- * 3주택 합가 특례의 **합가 요건**(먼저 양도 · 합가 후 양도 · 양도 주택을 합가일 이전에 취득 · 기한 내)이 모두 서는가.
+ * 3주택 합가 특례의 **합가 요건**(먼저 양도 · 합가 후 양도 · 양도 주택을 합가일 이전에 취득 · 기한 내 ·
+ * 동거봉양이면 직계존속 연령)이 모두 서는가.
  * 합가 전 보유 구성·§155① 처분기한은 이 화면에서 알 수 없어 보지 않는다 — 알 수 있는 요건이 다 서야 「구성만 알면
  * 결론이 달라진다」가 성립한다(결론을 가를 때만 고지).
  */
@@ -40,6 +42,9 @@ export function threeHouseMergeRequirementsHold(input: MergeDeemingReqInput): bo
   const order = doubleMergeOrderOf(input);
   // 이중 합가는 먼저 합친 날이 기한의 기산점·양도 주택 취득 상한이고 양도는 나중에 합친 날 이후다(`matchDoubleMergeApartFromWindow`).
   const kind = order ? order.first : marriageDate ? "marriage" : "parental_care";
+  // 동거봉양 합가가 들어 있으면(단일 동거봉양 · 이중 합가) 직계존속 연령 요건도 서야 한다(결정 #9 — 합가 의제의 모든 소비처와 같은 판정).
+  const involvesParentalCare = order !== undefined || kind === "parental_care";
+  if (involvesParentalCare && parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4") !== "met") return false;
   const firstDate = order ? order.firstDate : (marriageDate ?? parentalDate)!;
   const lastDate = order ? order.secondDate : firstDate;
   if (input.transferDate < lastDate || input.acquisitionDate > firstDate) return false;

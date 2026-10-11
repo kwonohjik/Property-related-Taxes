@@ -30,7 +30,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const BASE = { acquisitionDate: new Date("2015-01-01"), householdHousingCount: 3 } satisfies Partial<BurdenedGiftTransferTaxInput>;
 const SINGLE = { ...BASE, marriageDate: "2020-01-01", isFirstTransferredInMerge: true };
-const DOUBLE = { ...BASE, marriageDate: "2019-01-01", parentalCareMergeDate: "2020-01-01", isFirstTransferredInMerge: true };
+const DOUBLE = { ...BASE, marriageDate: "2019-01-01", parentalCareMergeDate: "2020-01-01", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true } satisfies Partial<BurdenedGiftTransferTaxInput>;
 const warnings = (r: Obj) => (r.warnings as string[] | undefined) ?? [];
 const has = (r: Obj) => warnings(r).includes(NO_ROSTER_THREE_HOUSE_MERGE_NOTICE);
 
@@ -60,7 +60,7 @@ describe("G1-4·G1-9 — 합가 요건이 서면 3주택 합가 고지 1건 + �
   });
 
   it("N-3 역순 이중 합가(동거봉양 → 혼인)도 같은 고지", async () => {
-    const r = await gift("2022-06-01", { ...BASE, marriageDate: "2020-01-01", parentalCareMergeDate: "2019-01-01", isFirstTransferredInMerge: true });
+    const r = await gift("2022-06-01", { ...DOUBLE, marriageDate: "2020-01-01", parentalCareMergeDate: "2019-01-01" });
     expect(r.isExempt).toBe(false);
     expect(has(r)).toBe(true);
   });
@@ -89,6 +89,15 @@ describe("G1-4·G1-9 — 결론을 가르지 않으면 고지하지 않는다(�
   });
   it("N-10 이중 합가인데 증여가 나중에 합친 날 이전(증여 2019-06-01 < 동거봉양 2020-01-01): 요건 불성립 — 고지 없음", async () => {
     expect(has(await gift("2019-06-01", DOUBLE))).toBe(false);
+  });
+  it("N-12 ★ 동거봉양 직계존속 연령 「해당 없음」·미선택: 합가 특례가 어차피 서지 않는다 — 고지 없음(결정 #9)", async () => {
+    expect(has(await gift("2022-06-01", { ...DOUBLE, parentalCareParentAge: "none" }))).toBe(false);
+    expect(has(await gift("2022-06-01", { ...DOUBLE, parentalCareParentAge: "" }))).toBe(false);
+  });
+  it("N-13 단일 동거봉양 합가도 연령으로 가른다 — 요양급여(§155④ 경로 인정)는 고지 · 해당 없음은 없음", async () => {
+    const SINGLE_PC = { ...BASE, parentalCareMergeDate: "2020-01-01", isFirstTransferredInMerge: true };
+    expect(has(await gift("2025-06-01", { ...SINGLE_PC, parentalCareParentAge: "care_benefit" }))).toBe(true);
+    expect(has(await gift("2025-06-01", { ...SINGLE_PC, parentalCareParentAge: "none" }))).toBe(false);
   });
   it("N-11 목록 입력 칸이 있는 호출(표식 없음)은 이 고지가 아니다(그 화면은 목록 입력으로 판정한다)", async () => {
     const body = giftBody("2022-06-01", DOUBLE);
