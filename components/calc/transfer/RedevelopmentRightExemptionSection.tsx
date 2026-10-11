@@ -170,7 +170,7 @@ export function RedevelopmentRightExemptionSection({
             onChange({ redevExemptionEligibleAtApproval: v ? "yes" : "" })
           }
           title="인가일 현재 §89①3호 가목 요건 충족 (자기선언)"
-          description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택(철거 대상 건물)을 본인이나 같은 세대원이 소유하고 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상 — 상생임대주택(§155의3) 요건을 갖춘 종전주택은 거주기간 제한 없음). 토지만 가졌고 건물은 다른 세대 소유면 해당 없습니다."
+          description="양도일 현재 1세대1입주권 + 인가일 기준 종전주택(철거 대상 건물)을 본인이나 같은 세대원이 소유하고 보유 2년 이상 (조정대상지역 취득 시 거주 2년 이상 — 상생임대주택(§155의3) 요건을 갖춘 종전주택은 거주기간 제한 없음)."
         >
           <div className="space-y-3 pt-1">
             <FieldCard
@@ -214,7 +214,7 @@ export function RedevelopmentRightExemptionSection({
             <FieldCard
               label="토지만 출자한 경우 — 철거 대상 건물(기존주택)의 세대 소유 (본문)"
               field="redevLandHouseholdOwnedBuilding"
-              hint="철거 대상 건물(기존주택)을 인가일과 양도일 두 시점 모두 본인이나 같은 세대원이 소유해야 합니다. 토지만 가졌고 건물은 다른 세대 소유면 해당 없습니다. 건물(주택)도 함께 출자했다면 이 칸은 비워 두세요. 양도세 계산기에서 출자 자산을 「토지」로 고르면 이 선언이 적용됩니다."
+              hint="철거 대상 건물(기존주택)을 인가일과 양도일 두 시점 모두 본인이나 같은 세대원이 소유해야 합니다. 건물도 함께 출자했다면 비워 두세요. 계산기에서 출자 자산을 「토지」로 고르면 적용됩니다."
             >
               <RadioCardGroup
                 name={`redevLandHouseholdOwnedBuilding-${asset.assetId}`}

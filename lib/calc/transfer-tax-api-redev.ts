@@ -160,7 +160,9 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       : undefined,
     // 사례 45 — 거주월수 분리 입력 (§154⑧1호 통산 + 해석례 2020-386)
     // 빈문자열 → undefined (legacy fallback 의도 — 엔진에서 residencePeriodMonths 단일값 사용)
-    priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths
+    // #12 — 토지만 출자한 원조합원 완공APT는 멸실된 주택이 없어 종전주택 거주 칸이 화면에 없다(엔진도 신축 거주만 읽는다).
+    //   남은 값이 표2 거주(통산)에 섞이지 않도록 이 축에서는 보내지 않는다.
+    priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths && !landContributedOriginalApt(asset)
       ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
     // 신축 APT 거주월수 — 완공 APT 양도 전용(위 `isApt` 주석).
@@ -168,8 +170,8 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
       : undefined,
     // 거주기간(입주일·퇴거일) — 결과 카드 산정 근거 표시용 pass-through
-    priorResidenceStartDate: asset.redevPriorResidenceStartDate || undefined,
-    priorResidenceEndDate: asset.redevPriorResidenceEndDate || undefined,
+    priorResidenceStartDate: landContributedOriginalApt(asset) ? undefined : asset.redevPriorResidenceStartDate || undefined,
+    priorResidenceEndDate: landContributedOriginalApt(asset) ? undefined : asset.redevPriorResidenceEndDate || undefined,
     newResidenceStartDate: asset.redevNewResidenceStartDate || undefined,
     newResidenceEndDate: asset.redevNewResidenceEndDate || undefined,
     // 사례 46 — 청산금 수령분 단독 신고 + 비과세 판정 시점 override

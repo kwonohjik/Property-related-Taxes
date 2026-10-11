@@ -446,7 +446,9 @@ export function validateRedevelopmentAsset(
   // 3중 패턴: UI hide ↔ API undefined ↔ validate undefined-허용 (모순 차단).
   const priorRaw = (asset.redevPriorHouseResidenceMonths || "").trim();
   const newRaw = (asset.redevNewHouseResidenceMonths || "").trim();
-  if (priorRaw) {
+  // #12 — 토지만 출자한 원조합원 완공APT는 종전주택 거주 칸이 없다(④도 보내지 않는다) → 남은 값으로 막지 않는다.
+  const priorInScope = !landContributedOriginalApt(asset);
+  if (priorRaw && priorInScope) {
     const v = parseInt(priorRaw.replace(/,/g, ""), 10);
     if (!isFinite(v) || v < 0) {
       return fieldError("redevPriorHouseResidenceMonths", `${label}: 종전주택 거주개월수는 0 이상의 정수여야 합니다.`);
@@ -463,8 +465,8 @@ export function validateRedevelopmentAsset(
   // 한쪽만 입력 시 차단. start > end 차단. 양쪽 모두 비어있으면 위 *ResidenceMonths 직접 입력 경로 허용.
   const periodChecks: Array<{ start: string; end: string; name: string; startField: IssueField; endField: IssueField }> = [
     {
-      start: asset.redevPriorResidenceStartDate || "",
-      end: asset.redevPriorResidenceEndDate || "",
+      start: priorInScope ? asset.redevPriorResidenceStartDate || "" : "",
+      end: priorInScope ? asset.redevPriorResidenceEndDate || "" : "",
       name: "종전주택",
       startField: "redevPriorResidenceStartDate",
       endField: "redevPriorResidenceEndDate",

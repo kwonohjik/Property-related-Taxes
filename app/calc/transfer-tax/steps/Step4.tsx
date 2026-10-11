@@ -33,7 +33,7 @@ import { HouseholdHousingCountSection } from "./step4-sections/HouseholdHousingC
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
-import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
+import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate, landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
 import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
@@ -553,7 +553,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 한쪽만 열면 「거주 2년 필요」라 안내하고 채울 칸이 없는 dead-end가 된다. */}
             {/* OH-48 — 분리 입력이 있으면 엔진은 그것만 읽는다. 같은 질문을 두 번 받지 않도록 안내로 대체. */}
             {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && redevSplitResidence && (
-              <RedevSplitResidenceNotice isSuccessor={primary.redevIsSuccessorMember === "yes"} />
+              <RedevSplitResidenceNotice isSuccessor={primary.redevIsSuccessorMember === "yes"} isLandContributed={landContributedOriginalApt(primary)} />
             )}
             {form.isOneHousehold && isOneHouseExemptionAsset(primaryKind) && primary && !redevSplitResidence && (
               <ResidencePeriodSection

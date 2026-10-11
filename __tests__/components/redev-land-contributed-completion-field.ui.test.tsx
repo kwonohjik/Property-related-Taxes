@@ -102,3 +102,18 @@ describe("#12 ⑤ — 조합원 분양계약일 칸의 노출 게이트 (사용�
     }
   });
 });
+
+describe("#12 ⑤ — 거주 분리 입력: 토지 출자는 종전주택 거주 칸이 없다 (엔진이 신축 거주만 읽는다)", () => {
+  it("🔑 토지 출자 + 원조합원 완공APT — 신축주택 거주만, 종전주택 거주 칸 없음", () => {
+    const { container } = render(<RedevelopmentBlock asset={apt()} onChange={() => {}} isOneHouseSingle={true} />);
+    // 거주 그룹마다 「입주일」 칸이 하나씩 — 종전 그룹이 빠지면 1개(신축)만 남는다.
+    expect(screen.getAllByText("입주일").length).toBe(1);
+    expect(has(container, "신축주택 거주기간")).toBe(true);
+  });
+  it("긍정 짝 — 주택 출자 원조합원은 종전주택 거주 칸이 그대로 있다(§154⑧1호 통산)", () => {
+    const { container } = render(
+      <RedevelopmentBlock asset={apt({ redevOriginalAssetType: "housing" })} onChange={() => {}} isOneHouseSingle={true} />,
+    );
+    expect(screen.getAllByText("입주일").length).toBe(2);
+  });
+});

@@ -231,7 +231,9 @@ export function isReceiveOnlyFiling(
  *
  * 조건은 ④(`buildRedevelopmentPayload`)가 값을 **보내는 조건**과 엔진이 **읽는 조건**의 교집합이다:
  * - 승계조합원 — 신축주택 거주(`redevNewHouseResidenceMonths`)만 읽는다(종전주택 거주는 승계 전 거주).
- * - 원조합원 — 종전주택 또는 신축주택 거주 중 하나라도 있으면 분리 입력이다.
+ * - 토지만 출자한 원조합원(#12) — 승계조합원과 같다. 멸실된 주택이 없어 통산할 종전주택 거주가 없고, 엔진 번역 leaf가
+ *   신축주택 거주만 읽는다(`translateRedevAptForHousingJudgment`). 종전주택 거주 칸은 화면에도 없다.
+ * - 그 밖의 원조합원 — 종전주택 또는 신축주택 거주 중 하나라도 있으면 분리 입력이다.
  */
 export function redevSplitResidenceSupersedesStep4(
   asset: Pick<
@@ -239,12 +241,14 @@ export function redevSplitResidenceSupersedesStep4(
     | "assetKind"
     | "redevSubject"
     | "redevIsSuccessorMember"
+    | "redevOriginalAssetType"
+    | "redevReceiveOnlyMode"
     | "redevPriorHouseResidenceMonths"
     | "redevNewHouseResidenceMonths"
   >,
 ): boolean {
   if (asset.assetKind !== "redevelopment_apt" || resolveRedevSubject(asset) !== "apt") return false;
-  if (asset.redevIsSuccessorMember === "yes") return !!asset.redevNewHouseResidenceMonths;
+  if (asset.redevIsSuccessorMember === "yes" || landContributedOriginalApt(asset)) return !!asset.redevNewHouseResidenceMonths;
   return !!asset.redevPriorHouseResidenceMonths || !!asset.redevNewHouseResidenceMonths;
 }
 

@@ -91,6 +91,22 @@ describe("OH-48 ⑤ — 분리 입력이 있으면 Step4 거주 입력 대신 �
   });
 });
 
+describe("#12 ⑤ — 토지 출자 원조합원: 종전주택 거주만으로는 Step4 거주 입력을 가리지 않는다", () => {
+  const LAND: Partial<Asset> = { ...ORIGINAL, redevOriginalAssetType: "land", redevCompletionDate: "2021-02-15" };
+  it("🔑 종전주택 거주 분리 입력만 있어도 Step4 거주 입력이 그대로 (엔진은 신축 거주만 읽는다)", () => {
+    render(<Step4 form={form({ ...LAND, redevPriorHouseResidenceMonths: "30" })} onChange={() => {}} />);
+    expect(screen.queryByTestId("redev-split-residence-notice")).toBeNull();
+    expect(screen.queryAllByText(RESIDENCE_INPUT).length).toBe(1);
+  });
+  it("신축주택 거주 분리 입력이 있으면 안내로 대체 — 토지 출자 문구(종전 통산 문구 아님)", () => {
+    render(<Step4 form={form({ ...LAND, redevNewHouseResidenceMonths: "30" })} onChange={() => {}} />);
+    const notice = screen.getByTestId("redev-split-residence-notice");
+    expect(notice.textContent).toContain("토지만 출자한 조합원");
+    expect(notice.textContent).not.toContain("통산");
+    expect(screen.queryAllByText(RESIDENCE_INPUT).length).toBe(0);
+  });
+});
+
 describe("OH-50 ⑤ — 승계조합원 개월 수 직접 입력 안내", () => {
   it("🔑 승계조합원 + direct 모드 → 「준공일 이후 거주만」 안내", () => {
     render(<Step4 form={form({ ...SUCCESSOR, residenceInputMode: "direct" })} onChange={() => {}} />);
