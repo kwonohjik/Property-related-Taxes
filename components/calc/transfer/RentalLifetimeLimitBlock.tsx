@@ -22,14 +22,37 @@ type Rh = AssetForm["rentalHousingException"];
 interface RentalLifetimeLimitBlockProps {
   rh: Rh;
   assetId?: string;
+  /**
+   * 구간(2025.2.28. 전 양도) 밖 §154⑩ 표준 경로 — **경과조치 선언 칸만** 연다(S16-4). 적용 범위 제한 안내·사유·생애 1회 이력은
+   * 구간 안 ⑳ 괄호의 축이라 싣지 않는다.
+   */
+  transitionOnly?: boolean;
   onChange: (patch: Partial<Rh>) => void;
 }
 
-export function RentalLifetimeLimitBlock({ rh, assetId, onChange }: RentalLifetimeLimitBlockProps) {
+export function RentalLifetimeLimitBlock({ rh, assetId, transitionOnly = false, onChange }: RentalLifetimeLimitBlockProps) {
   const transitionEffective = isAddendumTransitionEffective(
     rh.residenceTransitionUnderAddendum === true,
     rh.residenceTransitionBasis,
   );
+  if (transitionOnly) {
+    return (
+      <div className="space-y-2" data-testid="rental-lifetime-limit-block">
+        <ToggleCard
+          variant="card"
+          size="sm"
+          tone="emerald"
+          data-testid="rental-residence-transition"
+          title="2019.2.12 당시 이 주택에 거주하고 있었거나, 그 전에 매매계약을 체결하고 계약금을 지급했습니다."
+          description="증빙서류로 확인되면 종전 규정을 따라 2019.2.12 전 취득 주택과 같이 소령 §154① 원칙의 거주요건을 적용합니다(대통령령 제29523호 부칙 제7조②)."
+          checked={rh.residenceTransitionUnderAddendum === true}
+          onCheckedChange={(v) =>
+            onChange({ residenceTransitionUnderAddendum: v, ...(v ? {} : { residenceTransitionBasis: "" }) })
+          }
+        />
+      </div>
+    );
+  }
   return (
     <div className="space-y-2" data-testid="rental-lifetime-limit-block">
       <ToneCard tone="amber" title="2019.2.12 이후 취득 · 2025.2.27 이전 양도 — 적용 범위 제한">

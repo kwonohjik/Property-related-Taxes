@@ -84,6 +84,9 @@ const rentalBody = (over: Record<string, unknown> = {}, unitOver: Record<string,
   applyException: true,
   scenario: "A",
   rentalUnits: [passingUnit(unitOver)],
+  // 🔴 PR6a(S06-9) — BASE(취득 2019-06-01 · 양도 2024-06-01)는 「생애 한 차례」 구간이다. 이력 미입력은 「모름 = 혜택 불성립」이라
+  //    기본값은 「없음」(이력 없는 최초 양도)으로 둔다 — 종전 기본값(미입력)은 적용 + 고지로 통과해 이 파일의 「충족」 시료를 가렸다.
+  priorRentalExemptionHistory: "none",
   ...over,
 });
 

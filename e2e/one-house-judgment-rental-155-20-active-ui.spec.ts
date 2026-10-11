@@ -139,9 +139,13 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
   test("나목(기존사업자) 선택 → 취득당시 기준시가 스왑 + 국민주택 토글 + 소재지역 숨김", async ({ page }) => {
     await gotoRentalSection(page);
 
-    // 나목(기존사업자)은 세무서 등록 ≤2003.10.29만 활성 → biz 등록일을 2003-01-01로 변경
+    // 나목(기존사업자)은 지자체 임대사업자 등록 ≤2003.10.29 + 세무서 사업자등록 ≤2004.6.30(의제 포함)일 때만 활성
+    // (PR6a S06-12 — 종전에는 세무서 등록일만 봤다) → 두 등록일을 모두 2003-01-01로 변경
     await fillDateAndVerify(page, { year: "2003", month: "01", day: "01" }, {
       scope: page.getByTestId("rental-biz-reg-date-0"),
+    });
+    await fillDateAndVerify(page, { year: "2003", month: "01", day: "01" }, {
+      scope: page.getByTestId("rental-reg-date-0"),
     });
     // 임대구분 → 기존사업자(나목)
     await page.locator('input[name="rental-category-0"][value="existing_business"]').check();
@@ -211,7 +215,7 @@ test.describe("§155⑳ 임대주택 능동형 UI", () => {
     await expect(page.getByTestId("rental-category-pre_2018-0")).toBeEnabled();
     // 사유 캡션 2줄
     await expect(page.getByText("단기 6년(아·자목)은 2025.6.4 이후", { exact: false })).toBeVisible();
-    await expect(page.getByText("기존사업자(나목)는 세무서 사업자등록 2003.10.29 이전", { exact: false })).toBeVisible();
+    await expect(page.getByText("기존사업자(나목)는 지자체 임대사업자 등록이 2003.10.29 이전", { exact: false })).toBeVisible();
   });
 
   test("mount-limbo 가드 — 이력 로드로 무효 선택(short_6y+2020) mount 시 회색 아님·checked 유지", async ({ page }) => {

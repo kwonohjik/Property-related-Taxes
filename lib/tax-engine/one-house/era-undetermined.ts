@@ -60,8 +60,11 @@ export {
   FINAL_ONE_HOUSE_RESTART_TRANSFER_END_EXCLUSIVE,
 } from "./final-house-restart";
 
+/** §154⑤ 단서 재기산 이력 미답 — 비과세로 판정된 1주택 양도에만 내는 보류다(아래 `settled`). */
+export const FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID = "154-5-final-one-house-restart-unverified";
+
 export const ERA_UNDETERMINED_IDS = new Set([
-  "154-5-final-one-house-restart-unverified",
+  FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
   "154-1-4ho-rental-registration-unverified",
   "155-1-move-in-requirement-unverified",
   "155-1-2002-transition-unverified",
@@ -91,7 +94,7 @@ export function collectEraUndetermined(
    */
   if (settled && resolveFinalOneHouseRestart(input).status === "undetermined") {
     out.push({
-      id: "154-5-final-one-house-restart-unverified",
+      id: FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
       reason:
         `2021년 1월 1일~2022년 5월 9일 양도분은 2주택 이상을 보유한 세대가 1주택 외의 주택을 모두 처분한 경우 ` +
         `처분 후 1주택이 된 날부터 보유기간을 다시 셉니다(${law("⑤")} 단서 — 대통령령 제29523호·제32654호 부칙). ` +

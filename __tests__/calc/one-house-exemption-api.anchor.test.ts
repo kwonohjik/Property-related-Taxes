@@ -488,7 +488,9 @@ describe("P4-3a — §155⑳ 판정 배선", () => {
           ...f.assets[0],
           residenceInputMode: "direct" as const,
           residencePeriodMonthsAsset: "60",
-          rentalHousingException: { applyException: true, scenario: "A", rentalUnits: [unit] },
+          // 🔴 PR6a(S06-9) — 양도 2024-06-01 · 취득 2019-06-01은 「생애 한 차례」 구간이다. 이력 미입력은 「모름 = 혜택 불성립」이라
+          //    통과 시료에는 「없음」을 입력한다(⑧ facts도 이 구간에서는 이력을 필수로 막는다 — 화면에서 통과하는 시료여야 한다).
+          rentalHousingException: { applyException: true, scenario: "A", rentalUnits: [unit], priorRentalExemptionHistory: "none" },
         },
       ],
     };
