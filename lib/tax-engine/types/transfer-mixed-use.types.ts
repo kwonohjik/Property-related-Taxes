@@ -626,7 +626,7 @@ export interface MixedUseApportionment {
 
 /** 주택부분 계산 결과 */
 export interface MixedUseHousingPart {
-  /** 주택부분 환산취득가액 (§97 또는 §164⑤ PHD) */
+  /** 주택부분 환산취득가액 (§97 또는 §164⑦ PHD) */
   estimatedAcquisitionPrice: number;
   /**
    * §97 직접 환산에서 **분자로 쓴 취득시 개별주택공시가격** — 산식 표시 전용 echo.
@@ -910,7 +910,7 @@ export interface MixedUseCalculationRoute {
   /** 환산취득가액 산정 경로 — 상속 2개 값 추가(소령 §163⑨) */
   acquisitionConversionRoute:
     | "section97_direct"        // 비상속 §97 직접환산
-    | "phd_corrected"           // 비상속 PHD §164⑤
+    | "phd_corrected"           // 비상속 PHD §164⑦
     | "inheritance_direct"      // 상속·공시(§163⑨ 본문)
     | "inheritance_phd_max"     // 상속·미공시(§163⑨2호 max)
     | "gift_direct"             // 증여·공시(§163⑨ 본문, 상속과 동일)
@@ -1025,7 +1025,7 @@ export interface MixedUseGainBreakdown {
     /** 사용자가 면적을 수정했는지 여부 */
     isAreaCustomized: boolean;
     /**
-     * PHD §164⑤ 환산 분기 (PHD ON + partialUsageChange ON 조합에서만 산출).
+     * PHD §164⑦ 환산 분기 (PHD ON + partialUsageChange ON 조합에서만 산출).
      *
      * - "case_a_whole_building": firstDisclosureDate < usageChangeDate.
      *   최초공시 시점에 건물 전체가 주택이었으므로 P_F 가 "전체 건물(미래 상가 부분 포함)"의

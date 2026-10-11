@@ -698,7 +698,7 @@ export function validateGeneralBuildingAsset(
    * 되돌리지 않고, 토글은 환산 모드에서만 렌더된다 ⇒ 실거래가로 바꾼 순간 **끄는 UI가
    * 없는 채로 계산이 막혔다**(복구하려면 다시 환산을 골라야 함을 사용자가 알 수 없다).
    *
-   * 형제 기능 §164⑤ PHD가 같은 상황을 이미 「잔존해도 무시」로 처리한다
+   * 형제 기능 §164⑦ PHD가 같은 상황을 이미 「잔존해도 무시」로 처리한다
    * (`transfer-tax-validate-asset.ts` — `if (usesPhd && isEstimated)`). 같은 계약으로 맞춘다.
    *
    * ⚠️ **PHD의 술어를 그대로 복제하지 않는다.** PHD는 플래그 축(`useEstimatedAcquisition`)인데

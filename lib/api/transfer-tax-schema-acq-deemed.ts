@@ -2,7 +2,7 @@
  * ⑫ 취득가액 의제·환산 Zod 스키마 — 상속 부동산 의제취득가액·개별주택가격 미공시 환산·
  * 1990.8.30. 이전 취득 토지 등급가액
  *
- * 근거: 소득세법 시행령 §176조의2④·§163⑨(상속 의제) · §164⑤(개별주택 미공시 환산) ·
+ * 근거: 소득세법 시행령 §176조의2④·§163⑨(상속 의제) · §164⑦(개별주택 미공시 환산) ·
  *       §164⑦(공동주택 미공시) · 소칙 §80(등급가액)
  *
  * `transfer-tax-schema-sub.ts`가 810줄로 파일 크기 정책(트리거 800·착지 ≤700)을 넘겨
@@ -94,7 +94,7 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
   }),
 ]);
 
-// ─── 개별주택가격 미공시 취득 환산 스키마 (§164⑤) ──────────────
+// ─── 개별주택가격 미공시 취득 환산 스키마 (§164⑦) ──────────────
 
 export const preHousingDisclosureSchema = z.object({
   /** 최초 고시일 (사용자 직접 입력) */
@@ -164,9 +164,9 @@ export const inheritanceHouseValuationSchema = z
     landPricePerSqmAtInheritance: z.number().int().positive().optional(),
     /** 상속개시일 시점 주택가격 직접 입력 override (원) */
     housePriceAtInheritanceOverride: z.number().int().nonnegative().optional(),
-    /** 최초고시 시점 건물기준시가 (원) — §164⑤ Sum_F 분모: 토지기준시가 + 이 값 */
+    /** 최초고시 시점 건물기준시가 (원) — §164⑦ Sum_F 분모: 토지기준시가 + 이 값 */
     buildingStdPriceAtFirstDisclosure: z.number().int().nonnegative().optional(),
-    /** 상속개시일 시점 건물기준시가 (원) — §164⑤ Sum_A 분자: 토지기준시가 + 이 값 */
+    /** 상속개시일 시점 건물기준시가 (원) — §164⑦ Sum_A 분자: 토지기준시가 + 이 값 */
     buildingStdPriceAtInheritance: z.number().int().nonnegative().optional(),
     /** 최초 고시일 (기본 "2005-04-30") */
     firstDisclosureDate: z.string().date().default("2005-04-30"),

@@ -165,7 +165,7 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
     expect(screen.getAllByText(/취득시 \(감면 최초공시 전 환산/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/최초공시일 \(감면 최초공시 전 환산/).length).toBeGreaterThan(0);
-    // §164⑤ 환산은 두 시점 모두 "취득 시점 측" — 취득당시(acq2001) 칸 마킹, 양도당시(transfer) 아님
+    // §164⑦ 환산은 두 시점 모두 "취득 시점 측" — 취득당시(acq2001) 칸 마킹, 양도당시(transfer) 아님
     expect(
       screen.getAllByTestId("nts-bsp-1-acq2001").filter((el) => (el.textContent ?? "").includes("○")).length,
     ).toBe(2);
@@ -204,7 +204,7 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
     expect(screen.getAllByText(/취득시 \(재개발 환산 §164⑦/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/최초공시일 \(재개발 환산 §164⑦/).length).toBeGreaterThan(0);
-    // 🔑 감면(§164⑤) 라벨이 섞이지 않는다 — 조문 분기 구별력
+    // 🔑 감면(§164⑦) 라벨이 섞이지 않는다 — 조문 분기 구별력
     expect(screen.queryByText(/감면 최초공시 전 환산/)).toBeNull();
     // 두 시점 모두 "취득 시점 측" — 취득당시(acq2001) 칸 마킹, 양도당시 아님
     expect(
@@ -314,7 +314,7 @@ describe("BuildingStdPriceReportSection — PHD 일괄 스냅샷", () => {
     render(<BuildingStdPriceReportSection inputData={{ assets: [{ assetId: "asset-k" }] }} />);
     expect(screen.getAllByTestId("nts-bsp-report").length).toBe(2);
     // 조문 표기가 붙지 않은 종전 제목 그대로
-    expect(screen.getAllByText(/취득시 \(감면 최초공시 전 환산 §164⑤\)/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/취득시 \(감면 최초공시 전 환산 §164⑦\)/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/§99의3 감면 최초공시 전 환산/)).toBeNull();
   });
 

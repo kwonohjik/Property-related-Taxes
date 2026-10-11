@@ -198,7 +198,7 @@ export function buildAssetPayload(
      */
     ...buildSplitPayload(asset, {
       isBurdenedGift: asset.transferType === "burdened_gift",
-      // PHD(§164⑤)는 컴패니언 미지원 — N-6 (B)에서 ⑤·⑧을 함께 닫았다.
+      // PHD(§164⑦)는 컴패니언 미지원 — N-6 (B)에서 ⑤·⑧을 함께 닫았다.
       usesPhd: false,
       ratioed: makeRatioed(ratio, fractional),
     }),

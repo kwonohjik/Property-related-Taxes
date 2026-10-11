@@ -12,7 +12,7 @@
  * → ④ 최초고시(토지+주택) → ⑤ 상속개시일 토지단가(등급가액 환산 or 직접입력)
  * → ⑥ 주택가격 override 토글 → ⑦ 결과 미리보기
  *
- * 근거: 소령 §164⑤ · §176조의2④ · §163⑥ · 시행규칙 §80⑥
+ * 근거: 소령 §164⑦ · §176조의2④ · §163⑥ · 시행규칙 §80⑥
  */
 
 import { useMemo, useState } from "react";
@@ -331,7 +331,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
         <div className="flex items-center gap-1.5">
           <LawArticleModal
             legalBasis="소득세법시행령 §164"
-            label="소령 §164⑤"
+            label="소령 §164⑦"
             className={LAW_BADGE_CLASS}
           />
           <LawArticleModal
@@ -450,7 +450,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           jibun={asset.addressJibun || undefined}
           referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
           label="최초 공시된 개별주택가격"
-          hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑤ 추정 공식의 분자 승수."
+          hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑦ 추정 공식의 분자 승수."
         />
         <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — 취득시 개별주택가격 역산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. 개별주택가격과 별개입니다." className="sm:grid-cols-[200px_1fr]">
           <div className="w-1/2">
@@ -471,7 +471,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           if (sumF <= 0) return null;
           return (
             <div className="flex items-center justify-between rounded bg-muted/40 px-3 py-2">
-              <span className="text-caption text-muted-foreground">최초고시 합산기준시가 (§164⑤ 분모)</span>
+              <span className="text-caption text-muted-foreground">최초고시 합산기준시가 (§164⑦ 분모)</span>
               <span className="text-sm font-semibold tabular-nums">{sumF.toLocaleString()}</span>
             </div>
           );
@@ -528,11 +528,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           />
         )}
 
-        {/* 취득시점 건물기준시가 — §164⑤ Sum_A 분자의 건물 성분 */}
+        {/* 취득시점 건물기준시가 — §164⑦ Sum_A 분자의 건물 성분 */}
         <FieldCard
           label={`${acqTimeLabel} 건물기준시가`}
           unit="원"
-          hint={`국세청 건물기준시가 (${acqTimeLabel} 당시). §164⑤ 환산 가격 공식에 사용.`}
+          hint={`국세청 건물기준시가 (${acqTimeLabel} 당시). §164⑦ 환산 가격 공식에 사용.`}
         >
           <CurrencyInput
             label=""
@@ -571,7 +571,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
           return (
             <div className="space-y-1">
-              <p className="text-caption text-muted-foreground font-medium">환산 가격 (§164⑤)</p>
+              <p className="text-caption text-muted-foreground font-medium">환산 가격 (§164⑦)</p>
               <div className="flex items-start justify-between rounded bg-muted/40 px-3 py-2 gap-3">
                 <div className="space-y-0.5">
                   <span className="text-caption text-muted-foreground leading-relaxed block">

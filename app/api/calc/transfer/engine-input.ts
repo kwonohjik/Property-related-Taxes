@@ -370,7 +370,7 @@ export function buildTransferEngineInput(
     // 1990.8.30. 이전 취득 토지 기준시가 환산 · 상속 취득가액 의제 · 상속 주택 환산 보조 · 상속 상가 §164⑥ —
     // §163⑨ 4키는 컴패니언과 **같은 leaf**로 변환한다(CP-3 · `route-inherited-acquisition.ts`).
     ...toEngineSec163_9Inputs(data, transferDate, data.transferPrice),
-    // 개별주택가격 미공시 취득 환산 (§164⑤) — 문자열 날짜 → Date 변환
+    // 개별주택가격 미공시 취득 환산 (§164⑦) — 문자열 날짜 → Date 변환
     preHousingDisclosure: data.preHousingDisclosure
       ? {
           ...data.preHousingDisclosure,

@@ -1,5 +1,5 @@
 /**
- * 「§164⑤ 3-시점 환산(PHD) 토글이 **화면에 있는가**」 — ⑤ 리셋 · ⑧ 검증 · ④ 전송 공용 술어.
+ * 「§164⑦ 3-시점 환산(PHD) 토글이 **화면에 있는가**」 — ⑤ 리셋 · ⑧ 검증 · ④ 전송 공용 술어.
  *
  * ## 왜 필요한가 — 사용자가 켠 적도 없는 모드가 계산을 영구 차단했다 (2026-09-07 UI 리뷰)
  *
@@ -18,14 +18,14 @@
  *
  * `buildPreHousingDisclosurePayload`는 `usePreHousingDisclosure`만 보고 보낸다. 11칸을
  * **다 채운 뒤** 종류를 바꾸면 ⑧이 통과하고 ④가 그대로 실어, 토지·상가 양도에
- * **주택 3-시점 환산 산식**이 적용된다(§164⑤·⑦은 「개별주택가격」이 축인 주택 전용 규정이다).
+ * **주택 3-시점 환산 산식**이 적용된다(§164⑦은 「개별주택가격」이 축인 주택 전용 규정이다 — ⑤는 건물 규정).
  * 차단이 아니라 **조용한 오산**이므로 여기서도 같은 술어로 막는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { landCauseMixActive } from "./transfer-land-part-cause";
 
 /**
- * 이 자산에서 §164⑤ PHD 토글에 **도달할 수 있는가**.
+ * 이 자산에서 §164⑦ PHD 토글에 **도달할 수 있는가**.
  *
  * ⑤ `CompanionAcqPurchaseBlock`의 렌더 조건 중 **자산 종류 축**만 뽑았다 —
  * 환산 모드·첫 자산 여부는 호출부가 각자 이미 판정한다(⑧의 `isEstimated`·`isNonPrimaryAsset`).
@@ -60,7 +60,7 @@ export function phdToggleCauseReachable(asset: { acquisitionCause?: string; isMi
 }
 
 /**
- * 이월과세(증여) 축에서 §164⑤ PHD·APD 환산을 **쓰고 있는가**.
+ * 이월과세(증여) 축에서 §164⑦ PHD·APD 환산을 **쓰고 있는가**.
  *
  * ## 왜 별도 술어인가 — ⑤·⑧은 요구하는데 ④만 안 보냈다 (2026-09-07 재검증 H3)
  *

@@ -49,7 +49,7 @@ export {
  * 토지/건물 분리 양도차익 계산.
  * landAcquisitionDate 미제공 또는 지원 대상 아닌 propertyType 시 null 반환.
  *
- * preHousingDisclosure 제공 시: §164⑤ 3-시점 알고리즘으로 취득시 기준시가 추정 후 안분.
+ * preHousingDisclosure 제공 시: §164⑦ 3-시점 알고리즘으로 취득시 기준시가 추정 후 안분.
  * 미제공 시: 기존 standardPricePerSqmAtAcquisition × acquisitionArea 기반 안분.
  *
  * 단기세율 혼합 케이스(토지 장기 + 건물 2년 미만 등): 구현됨 — 파트별 세율은
@@ -104,7 +104,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
   if (!input.landAcquisitionDate) return null;
 
-  // ── 개별주택가격 미공시 취득 경로 (§164⑤) ──
+  // ── 개별주택가격 미공시 취득 경로 (§164⑦) ──
   // 토지·건물 **모두** 환산(estimated)일 때만 진입 — 혼합 모드(예: 토지 실가+건물 환산)는
   // PHD 3-시점 알고리즘이 아니라 아래 파트별 경로로 처리한다(2026-07-28 게이트 강화).
   if (input.preHousingDisclosure && earlyLandMode === "estimated" && earlyBuildingMode === "estimated") {
@@ -395,7 +395,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
 }
 
 /**
- * §164⑤ 경로: 개별주택가격 미공시 취득 + 3-시점 환산취득가 분리 계산.
+ * §164⑦ 경로: 개별주택가격 미공시 취득 + 3-시점 환산취득가 분리 계산.
  * calcPreHousingDisclosureGain() 결과로 SplitGainResult 구성.
  */
 // ⑤ §97② 단서 swap (환산/감정가액 모드 + 자산별 직접경비 명시 입력 시)
@@ -481,7 +481,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const buildingDirectExp = buildingCapex + buildingTransferExpense;
 
   // §97②2호 택일(MAX) 적용 — 2026-07-29 정정(#591 감사 R7 — **세액 변경**).
-  //   PHD(§164⑤) 경로는 항상 환산취득가 모드인데, 종전에는
+  //   PHD(§164⑦) 경로는 항상 환산취득가 모드인데, 종전에는
   //   `환산취득가 + 개산공제 + 자본적지출`을 **전부 합산 차감**해 필요경비를 이중계상했다
   //   (양도차익 과소 → 세액 과소). 비-PHD 경로(`calcSplitGain`)는 이미 `applyAssetSwap`으로
   //   가목(환산+개산공제) ↔ 나목(자본적지출) **택일**을 구현하고 있어 두 경로가 어긋나 있었다.
@@ -558,7 +558,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     land: { ...landPart, ...echo.land },
     building: { ...buildingPart, ...echo.building },
     apportionRatio: phd.transferApportionRatio,
-    note: `개별주택가격 미공시(§164⑤) — 토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리`,
+    note: `개별주택가격 미공시(§164⑦) — 토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리`,
     selfOwns: input.selfOwns ?? "both",
     preHousingDisclosureDetail: phd,
     housingExpropriationValuationDetail: housingExprVal?.detail,

@@ -251,7 +251,7 @@ export function calcMixedUseTransferTax(
       ? apportionAcquisitionPrice(asset.acquisitionActualTotalPrice ?? 0, asset, acqDerived)
       : undefined;
 
-  // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑤ PHD, 또는 실가 안분분)
+  // STEP 3: 주택부분 환산취득가액 (§97 또는 §164⑦ PHD, 또는 실가 안분분)
   // PHD + 보유 중 용도변경 케이스에서 시점별 면적 분리를 위해 acqDerived도 전달
   let housingAcqResult = calcHousingEstimatedAcq(
     apportionment.housingTransferPrice,
@@ -597,7 +597,7 @@ export function calcMixedUseTransferTax(
         isAreaCustomized:
           asset.partialUsageChange.acqResidentialArea !== undefined
           || asset.partialUsageChange.acqCommercialArea !== undefined,
-        // PHD §164⑤ 환산 분기 — calcHousingEstimatedAcq 가 산출
+        // PHD §164⑦ 환산 분기 — calcHousingEstimatedAcq 가 산출
         phdScopeBranch: housingAcqResult.phdScopeBranch,
       }
     : undefined;

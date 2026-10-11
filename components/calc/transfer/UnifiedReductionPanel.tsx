@@ -139,7 +139,7 @@ export function buildPeriodContext(asset: AssetForm, transferDate: string): Peri
 // ============================================================================
 
 /**
- * §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD(§164⑤) dual-truth 완화 스냅샷.
+ * §99의3 감면 PHD 위젯 ↔ 자산-수준 PHD(§164⑦) dual-truth 완화 스냅샷.
  * 자산 PHD 활성(usePreHousingDisclosure) 시 동일 자산의 같은 최초공시·토지단가·건물기준시가를
  * New993InputForm "자산 카드 PHD 가져오기" 버튼 소스로 노출 → §99의3 감면 PHD 7필드 재입력 footgun 제거.
  * OFF이거나 값이 하나도 없으면 undefined(버튼 비활성).

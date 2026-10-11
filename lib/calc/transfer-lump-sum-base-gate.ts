@@ -13,7 +13,7 @@ import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 
 /**
- * PHD(§164⑤ 개별주택가격 미공시 환산) 게이트 — ⑤ 토글 렌더 조건과 **같은 술어**.
+ * PHD(§164⑦ 개별주택가격 미공시 환산) 게이트 — ⑤ 토글 렌더 조건과 **같은 술어**.
  *
  * 자산 종류를 바꾸면 토글이 사라진 채 플래그만 남아 「화면에 없는 11칸」을 요구하던 문제를
  * `phdToggleReachable`이 막는다. 두 호출부(PHD 11필드 · 추계 개산공제 base)가 같은 값을 보도록

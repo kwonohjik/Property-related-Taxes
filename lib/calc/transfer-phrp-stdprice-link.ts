@@ -27,6 +27,6 @@ export function isPhrpStdPriceLinked(asset: AssetForm): boolean {
     // 부담부증여: 산정방식·기준시가 영역 전체 숨김(§159 자동 산정) — 연동 시 입력 불가능한 빈 값이 소스가 됨
     asset.transferType !== "burdened_gift" &&
     !asset.isMixedUseHouse && // 겸용주택: 기준시가는 분리계산 영역에서 부분별 입력
-    !asset.usePreHousingDisclosure // PHD §164⑤/⑦: 취득기준시가는 엔진이 3-시점에서 도출
+    !asset.usePreHousingDisclosure // PHD §164⑦: 취득기준시가는 엔진이 3-시점에서 도출
   );
 }

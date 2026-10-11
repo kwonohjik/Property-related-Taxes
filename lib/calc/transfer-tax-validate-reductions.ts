@@ -61,7 +61,7 @@ function failIfStdPriceMissingOver5Y(
   stdAcq: string | undefined,
   std5Y: string | undefined,
   articleLabel: string,
-  /** PHD 환산 ON — 취득시 기준시가는 §164⑤ 환산으로 충족되므로 취득시 검증 skip(5년 시점만 검증) */
+  /** PHD 환산 ON — 취득시 기준시가는 §164⑦ 환산으로 충족되므로 취득시 검증 skip(5년 시점만 검증) */
   phdSatisfiesAcq: boolean | undefined,
   /** 입력칸 이동 앵커의 조문 타입 — `ReductionStdPriceSection`이 `reduction.${fieldType}.standardPriceAt…`로 단다 */
   fieldType: string,

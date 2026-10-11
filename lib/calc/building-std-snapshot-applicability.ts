@@ -24,7 +24,7 @@
  * ## 판정 대상 키 (하나씩 늘린다)
  *
  *  · `-redev-phd` — 재개발 §164⑦ 환산 섹션의 가시성 5중 게이트
- *  · `-red{조문}-phd` — 감면 조문 PHD 환산(§164⑤). 그 조문이 후보에 있고 PHD 모드가 켜졌는가
+ *  · `-red{조문}-phd` — 감면 조문 PHD 환산(§164⑦). 그 조문이 후보에 있고 PHD 모드가 켜졌는가
  *  · `-mx-housing-{acq|transfer}` — 겸용 주택분 나목(S3-2). 그 시점의 나목이 아직 **쓰이는가**
  *    (PHD ON·용도변경 상가→주택으로 술어가 거짓이 되면 계산서는 어디에도 쓰이지 않는다)
  *
@@ -190,7 +190,7 @@ export function isBuildingStdSnapshotApplicable(
       : needsMixedHousingBuildingStdAtTransfer(form);
   }
 
-  // 감면 조문 PHD 환산(§164⑤) — 그 조문이 아직 후보에 있고 PHD 모드가 켜져 있는가.
+  // 감면 조문 PHD 환산(§164⑦) — 그 조문이 아직 후보에 있고 PHD 모드가 켜져 있는가.
   const article = redPhdArticle(key);
   if (article) {
     const asset = findAsset(inputData, idOfSnapshotKey(key));

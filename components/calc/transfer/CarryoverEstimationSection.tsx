@@ -41,7 +41,7 @@ const ESTIMATION_MODE_OPTIONS: {
   },
   {
     value: "phd",
-    label: "개별주택가격 미공시 §164⑤",
+    label: "개별주택가격 미공시 §164⑦",
     description: "증여자 취득 당시 개별주택가격이 공시되지 않은 경우 — 3-시점 환산 방식 적용",
   },
   {
@@ -161,7 +161,7 @@ export function CarryoverEstimationSection({
         </div>
       )}
 
-      {/* PHD §164⑤ 입력 — PreHousingDisclosureSection 재사용 */}
+      {/* PHD §164⑦ 입력 — PreHousingDisclosureSection 재사용 */}
       {c.estimationMode === "phd" && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground text-amber-700">

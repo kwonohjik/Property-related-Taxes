@@ -103,7 +103,7 @@ export function validateAssetAcquisition(
   /**
    * 첫 자산이 아닌 자산(함께양도 컴패니언·지분 2번째 이후) 여부.
    *
-   * 🔴 **§164⑤ 3-시점 환산(PHD) 11필드 요구를 끄는 데만 쓴다.** ④가 PHD를 싣는 지점은
+   * 🔴 **§164⑦ 3-시점 환산(PHD) 11필드 요구를 끄는 데만 쓴다.** ④가 PHD를 싣는 지점은
    *    `buildPreHousingDisclosurePayload(primary, …)` **한 곳뿐**이라 첫 자산이 아니면
    *    그 값이 엔진에 도달하지 않는다(⑫·⑭를 배관해도 `calcSplitGain`이
    *    `landAcquisitionDate` 부재로 `null` — 실측 응답 바이트 동일).
@@ -304,7 +304,7 @@ export function validateAssetAcquisition(
         if (parseAmount(c.donorStandardPriceAtTransfer) <= 0)
           return fieldError("carryover.donorStandardPriceAtTransfer", `${label}: 양도시 기준시가를 입력하세요.`);
       } else if (c.estimationMode === "phd") {
-        // PHD §164⑤ — asset 수준 phdFirstDisclosureDate 등 필수
+        // PHD §164⑦ — asset 수준 phdFirstDisclosureDate 등 필수
         if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
         // §164⑦ 게이트 — 이월과세는 증여자 취득가액 기준: 비교일 = 증여자 취득일
         if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
@@ -519,7 +519,7 @@ export function validateAssetAcquisition(
   }
 
   // 4) 환산취득가 — 기준시가
-  // 주의: usePreHousingDisclosure === true 경로에서는 §164⑤ 3-시점 입력으로 자동 도출되므로
+  // 주의: usePreHousingDisclosure === true 경로에서는 §164⑦ 3-시점 입력으로 자동 도출되므로
   //   standardPriceAtAcq / standardPriceAtTransfer 직접 입력 불요.
   // 겸용주택 PHD는 위 isMixedUseHouse 분기에서 이미 return되어 이 줄에 도달하지 않음.
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(사례 23 공동주택 등)해도 PHD 경로는 표준시가 직접 입력 불요.
@@ -537,8 +537,8 @@ export function validateAssetAcquisition(
       return fieldError("standardPriceAtTransfer", `${label}: 양도 당시 기준시가를 입력하세요.`);
   }
 
-  // 4-2) 개별주택가격 미공시 취득 환산 (§164⑤) — 일반 자산: 11개 필수 필드
-  // PHD §164⑤ 는 환산취득가 산식의 일부이므로 환산 모드(isEstimated)에서만 검증.
+  // 4-2) 개별주택가격 미공시 취득 환산 (§164⑦) — 일반 자산: 11개 필수 필드
+  // PHD §164⑦ 는 환산취득가 산식의 일부이므로 환산 모드(isEstimated)에서만 검증.
   // 실거래가/감정가액 모드에서 usePreHousingDisclosure 플래그가 잔존해도 무시.
   if (usesPhd && isEstimated) {
     if (!asset.phdFirstDisclosureDate)

@@ -12,7 +12,7 @@
  * jibun + year 제공 시 Vworld 개별공시지가 자동 조회 버튼 활성화.
  * 공시지가(원/㎡)와 면적(㎡)이 모두 있으면 토지기준시가를 표시한다.
  *
- * 법령 근거: 소득세법 시행령 §164 ⑤
+ * 법령 근거: 소득세법 시행령 §164 ⑦
  */
 
 import { PointBlock } from "./ThreePointPointBlock";

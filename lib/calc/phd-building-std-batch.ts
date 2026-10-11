@@ -1,5 +1,5 @@
 /**
- * PHD 3시점 건물기준시가 일괄 산출 오케스트레이션 (양도 §164⑤) — Phase 2(겸용, Option B)
+ * PHD 3시점 건물기준시가 일괄 산출 오케스트레이션 (양도 §164⑦) — Phase 2(겸용, Option B)
  *
  * 계획서: docs/02-design/features/phd-building-stdprice-3point-batch-mixed-use.plan.md
  * anchor: __tests__/tax-engine/building-standard-price/phd-3point-batch.anchor.test.ts

@@ -446,7 +446,7 @@ export const propertyBaseShape = {
    *    엔진 계약이 `allocatedExpenses = direct + commonShare`다. 둘 다 실으면 이중 계상이다.
    */
   commonTransferExpense: z.number().int().nonnegative().optional(),
-  /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑤) */
+  /** 개별주택가격 미공시 취득 시 3-시점 환산취득가 계산 입력 (§164⑦) */
   preHousingDisclosure: preHousingDisclosureSchema.optional(),
   /**
    * ⑫ 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) — 미정의 시 침묵 stripping 방지.

@@ -9,7 +9,7 @@
  *     ⚠️ 종전 배치 삭제가 **접두 매칭**이라 phd prefix를 쓰면 `bsp-{id}-phd` 배치에 삭제됐다
  *        → `mx`로 분리했다. 삭제 규칙은 2026-08-24(B-7)에 **키 집합**(`batchSnapshotKeys`)으로
  *        바뀌어 접두 겹침이 사라졌지만, 이 분리는 그대로 둔다(키 의미가 다르다).
- *   · PHD 환산 통합 모달(취득시+최초공시시 2시점 단일 스냅샷) — 감면 §164⑤ `bsp-${assetId}-red{조문}-phd`,
+ *   · PHD 환산 통합 모달(취득시+최초공시시 2시점 단일 스냅샷) — 감면 §164⑦ `bsp-${assetId}-red{조문}-phd`,
  *     재개발 §164⑦ `bsp-${assetId}-redev-phd`. 시점 세그먼트 없음(`snapshotKeyTimepoint` null 유지).
  *
  * `idOfSnapshotKey`는 use-auto-save-calculation(이력 동봉 필터)·BuildingStdPriceReportSection

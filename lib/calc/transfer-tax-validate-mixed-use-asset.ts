@@ -258,7 +258,7 @@ export function validateMixedUseAsset(
     // (Case A/B 분기 식별을 위해 firstDisclosureDate 와 비교 필요)
     if (asset.usePreHousingDisclosure) {
       if (!asset.partialChangeDate) {
-        return fieldError("partialChangeDate", `${label}: 보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다. 시행령 §164⑤ 환산 산식이 최초공시일과 용도변경일의 선후 관계에 따라 달라집니다.`);
+        return fieldError("partialChangeDate", `${label}: 보유 중 일부 용도변경 + 개별주택가격 미공시 환산 동시 사용 시 용도변경일이 필수입니다. 시행령 §164⑦ 환산 산식이 최초공시일과 용도변경일의 선후 관계에 따라 달라집니다.`);
       }
       const ucDate = new Date(asset.partialChangeDate);
       if (Number.isNaN(ucDate.getTime())) {

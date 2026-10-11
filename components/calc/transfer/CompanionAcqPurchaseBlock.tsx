@@ -203,7 +203,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   }, [props.useEstimatedAcquisition, isLand, acqDatePre1990]);
 
   // 건물 취득일 < 2005.4.29. (개별주택공시가격 최초 고시 이전) → usePreHousingDisclosure 자동 체크
-  // §164⑤ 3-시점 환산이 필요한 시점이므로 디폴트 ON.
+  // §164⑦ 3-시점 환산이 필요한 시점이므로 디폴트 ON.
   const acqDatePrePHD = !!(props.acquisitionDate && props.acquisitionDate < "2005-04-29");
   useEffect(() => {
     if (
@@ -406,7 +406,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
          자동 트리거 조건(housing || isMixedUse)과 일치시켜 모순 방지.
          겸용주택 모드에서는 MixedUseStandardPriceInputs 내부의 PHD 토글을 사용하므로 여기서는 숨긴다. */}
       {/* 별개 취득에서는 상단 환산 라디오가 숨겨지므로 `useEstimatedAcquisition`이 아니라
-          **파트 모드**로 판정한다 — 어느 한 파트든 환산이면 §164⑤ 대상이다. */}
+          **파트 모드**로 판정한다 — 어느 한 파트든 환산이면 §164⑦ 대상이다. */}
       {/* 🔴 첫 자산이 아니면 PHD는 **엔진에 도달하지 않는다** — 토글 대신 안내만 띄운다.
           근거·실측은 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석. */}
       {!isMixedUse && !buildingCause && (props.assetKind === "housing" || isSplit)
@@ -415,7 +415,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         && props.isNonPrimaryAsset && (
         <p className="rounded-md border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
           이 자산은 <strong>취득 당시 기준시가를 직접 입력</strong>합니다. 개별주택가격 미공시 취득
-          3-시점 환산(「소득세법 시행령」 §164⑤)은 <strong>첫 자산에서만</strong> 적용됩니다.
+          3-시점 환산(「소득세법 시행령」 §164⑦)은 <strong>첫 자산에서만</strong> 적용됩니다.
         </p>
       )}
 
@@ -431,7 +431,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         <ToggleCard
           tone="amber"
           size="sm"
-          title="취득 당시 개별주택가격 미공시 (§164⑤ 3-시점 계산)"
+          title="취득 당시 개별주택가격 미공시 (§164⑦ 3-시점 계산)"
           checked={!!props.asset.usePreHousingDisclosure}
           onCheckedChange={(v) =>
             props.onAssetChange!({ usePreHousingDisclosure: v })

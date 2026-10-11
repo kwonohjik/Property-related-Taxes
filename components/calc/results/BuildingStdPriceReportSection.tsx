@@ -97,7 +97,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         // 취득당시 칸에 마킹(취득시=연도별 acq2000/acq2001, 최초공시일=acq2001).
         //
         // 두 호출부가 같은 구조다 — 조문만 다르다:
-        //   `-red-phd`   감면 조문 PHD 환산 (§164⑤) — ReductionPhdInput
+        //   `-red-phd`   감면 조문 PHD 환산 (§164⑦) — ReductionPhdInput
         //   `-redev-phd` 재개발 §166③ 환산의 §164⑦ 본문 — RedevelopmentValuationSection
         // ⚠️ `-red-phd$`는 `-redev-phd`에 매칭되지 않는다(접미가 다르다) — 그래도 아래처럼
         //    긴 쪽(`redev`)을 먼저 시험해 `building-std-snapshot-keys.ts`의 열거 규율과 맞춘다.
@@ -106,7 +106,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
         const phdConversionKind = /-redev-phd$/.test(key)
           ? { suffix: "재개발 환산 §164⑦" }
           : /-red\d*-phd$/.test(key)
-            ? { suffix: redArticle ? `${redArticle} 감면 최초공시 전 환산 §164⑤` : "감면 최초공시 전 환산 §164⑤" }
+            ? { suffix: redArticle ? `${redArticle} 감면 최초공시 전 환산 §164⑦` : "감면 최초공시 전 환산 §164⑦" }
             : null;
         if (phdConversionKind) {
           const acqInst = model.instances.find((i) => i.markCell !== "transfer");
@@ -185,7 +185,7 @@ export function BuildingStdPriceReportSection({ inputData }: Props) {
                 : "acq2001"
             : undefined;
         // 배치 스냅샷은 취득→최초→양도, 주택→상가 순으로 정렬. 비-배치는 삽입 순서 유지.
-        // ⚠️ 정렬은 `tp.order`를 쓴다 — 라벨 문자열 매칭은 접두마다 달라(§164⑤ "최초공시일" ↔
+        // ⚠️ 정렬은 `tp.order`를 쓴다 — 라벨 문자열 매칭은 접두마다 달라(§164⑦ "최초공시일" ↔
         //    §164⑥ "최초고시(2005)") 새 접두가 붙을 때마다 조용히 0으로 떨어진다.
         const rank = tp ? tp.order * 2 + (tp.category === "commercial" ? 1 : 0) : 100 + seq;
         seq++;

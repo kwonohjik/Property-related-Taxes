@@ -6,7 +6,7 @@
  * 주택 취득 당시 개별주택가격이 공시되지 않은 경우, 최초 공시 시점을 기준으로
  * 취득·최초공시·양도 3시점의 기준시가를 입력해 취득시 기준시가를 역산한다.
  *
- * 법령 근거: 소득세법 시행령 §164 ⑤
+ * 법령 근거: 소득세법 시행령 §164 ⑦
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -33,7 +33,7 @@ interface Props {
 function LegalBadge() {
   return (
     <span className="inline-flex items-center rounded border border-border bg-background px-1.5 py-0.5 text-micro font-medium text-muted-foreground">
-      소득세법 시행령 §164 ⑤
+      소득세법 시행령 §164 ⑦
     </span>
   );
 }

@@ -298,7 +298,7 @@ export function buildPenaltyAmendmentPayload(form: TransferFormData): object {
   };
 }
 
-/** ④⑬ 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용 — 겸용주택은 mixedUse 경로) */
+/** ④⑬ 개별주택가격 미공시 취득 환산 §164⑦ (일반 자산 전용 — 겸용주택은 mixedUse 경로) */
 export function buildPreHousingDisclosurePayload(
   primary: AssetForm,
   isMixed: boolean,
@@ -306,7 +306,7 @@ export function buildPreHousingDisclosurePayload(
   transferDate: string,
 ): object {
   return {
-  // ── 개별주택가격 미공시 취득 환산 §164⑤ (일반 자산 전용) ──
+  // ── 개별주택가격 미공시 취득 환산 §164⑦ (일반 자산 전용) ──
   // 겸용주택은 mixedUse.preHousingDisclosure에서 별도 전송하므로 여기 송신 금지.
   // hasSeperateLandAcquisitionDate 무관 — 취득일 동일(공동주택 사례 23 등)도 PHD 전송.
   // 🔴 자산 종류 축 — ⑤ 토글이 닿지 않는 종류에서는 보내지 않는다(2026-09-07). 11칸을 다 채운

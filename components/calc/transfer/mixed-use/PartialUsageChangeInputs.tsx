@@ -147,7 +147,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
 
         🔴 **PHD가 켜져 있으면 「(선택)」이 아니다** (2026-09-07 UI 리뷰 보통).
            ⑧(`transfer-tax-validate-mixed-use-asset.ts:165~168`)은 `usePreHousingDisclosure`
-           일 때 이 값을 **필수로 차단**한다 — §164⑤ 환산 산식이 최초고시일과 용도변경일의
+           일 때 이 값을 **필수로 차단**한다 — §164⑦ 환산 산식이 최초고시일과 용도변경일의
            선후(Case A/B)로 갈리기 때문이다. 라벨만 「(선택)」이라 사용자는 비워 두었다가
            원인 모를 차단을 만났다. 라벨을 ⑧과 같은 조건으로 파생시킨다.
       */}

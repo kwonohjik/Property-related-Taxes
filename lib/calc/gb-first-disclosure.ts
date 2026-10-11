@@ -41,7 +41,7 @@ type GateAsset = Pick<
  * `effectivePartAcqMode`는 파트 미선택 시 자산 전체 레거시 플래그로 폴백하므로
  * **분리 OFF + 환산도 그대로 포함**한다 — 플래그 축의 상위 개념이다(종전 노출은 전부 유지).
  *
- * ⚠️ 주택 자산의 형제 기능 §164⑤ PHD는 플래그 축을 쓴다
+ * ⚠️ 주택 자산의 형제 기능 §164⑦ PHD는 플래그 축을 쓴다
  * (`transfer-tax-validate-asset.ts` `isEstimated`). 그 술어를 여기로 복제하지 말 것 —
  * PHD는 토지·건물 파트 분리 축이 없는 자산용이라 전제가 다르다.
  */

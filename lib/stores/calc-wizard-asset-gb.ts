@@ -242,7 +242,7 @@ export interface GeneralBuildingFormSlice {
    *
    * ⚠️ 상가(§164⑥)의 「최초고시 2005」처럼 상수로 고정할 수 **없다** — 그쪽은 국세청장의
    *    전국 단일 고시 사건이지만 개별주택가격은 시장·군수·구청장이 물건별로 공시하고,
-   *    집행기준 99-164-10도 연도를 못박지 않는다. §164⑤ PHD(`phdFirstDisclosureDate`)와
+   *    집행기준 99-164-10도 연도를 못박지 않는다. §164⑦ PHD(`phdFirstDisclosureDate`)와
    *    같은 성격이라 같은 방식(날짜 입력)을 쓴다.
    */
   gbFirstDisclosureDate: string;
