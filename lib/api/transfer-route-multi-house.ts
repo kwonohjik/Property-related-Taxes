@@ -71,6 +71,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isUnsoldNewHouse: h.isUnsoldNewHouse,
     completionDate: toOptionalDate(h.completionDate),
     isSpouseOwned: h.isSpouseOwned,
+    spouseHeldAtTransfer: h.spouseHeldAtTransfer,
     // §155④⑤ 합가 전 보유 쪽 — enum pass-through(분류는 엔진 `classifyMergeHouse`가 날짜 우선으로)
     mergeOrigin: h.mergeOrigin,
     inheritedDate: toOptionalDate(h.inheritedDate),
@@ -193,6 +194,7 @@ function toEnginePresaleRight(r: PresaleRightInput): PresaleRight {
     regionCriteria: r.regionCriteria,
     rightValue: r.rightValue,
     isSpouseOwned: r.isSpouseOwned,
+    spouseHeldAtTransfer: r.spouseHeldAtTransfer,
     regionCode: r.regionCode,
     inDesignatedDistrict: r.inDesignatedDistrict,
     // ⑭ 인가일 — `Date < string` 침묵 false 방지(date-coerce 규약). 미입력은 undefined 유지.

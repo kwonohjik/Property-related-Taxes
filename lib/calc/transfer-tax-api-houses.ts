@@ -292,6 +292,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       completionDate: h.completionDate || undefined,
       // #2a 배우자 단독 보유 (§167의3⑨ 혼인 차감) — 양도주택(selling)은 본인 소유라 미설정
       isSpouseOwned: h.isSpouseOwned,
+      // 결정 #47 — 「양도일 현재 배우자 보유」 3-state 응답. 레거시 isSpouseOwned보다 우선(엔진 `readSpouseHolding`)
+      spouseHeldAtTransfer: h.spouseHeldAtTransfer,
       /**
        * §155④⑤ 합가 전 보유 쪽 — 판정 메뉴와 계산기가 같은 명부 입력(`mergeContextOf` — 합가일이 있을 때 노출)이다.
        * 계산기는 ⑧(`transfer-tax-validate-step1.ts`)이 미입력을 막고 ④가 이 값을 싣는다.

@@ -25,11 +25,13 @@ import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset
 import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { OriginalMemberTempTwoHouseInputs } from "@/components/calc/transfer/OriginalMemberTempTwoHouseInputs";
+import { SpouseHoldingQuestion } from "@/components/calc/transfer/SpouseHoldingQuestion";
+import { readSpouseHolding } from "@/lib/tax-engine/spouse-holding-at-transfer";
 
 interface Props {
   rights: PresaleRightEntry[];
   onChange: (rights: PresaleRightEntry[]) => void;
-  /** #2b 혼인합가일 입력 시 "배우자 단독 보유" chip 노출 (§167의4⑤) */
+  /** 결정 #47 — 「양도일 현재도 배우자 쪽이 보유하나요」 질문 노출(§167의4⑤). 호출부가 `spouseHoldingQuestionApplies`로 정한다. */
   showSpouseOwned?: boolean;
   /**
    * 「세대가 보유한 분양권·입주권이 없습니다」 확인 토글 — PR-D(2026-10-05,
@@ -316,14 +318,13 @@ export function PresaleRightsSection({
                   인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지의 주소를 검색하세요.
                 </p>
               </div>
-              {/* #2b 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시) */}
+              {/* 결정 #47 — §167의4⑤ 「양도일 현재 배우자 보유」(혼인 5년 안 양도·3주택↑·중과 양도에서만). 미응답 = 모름(차감 없음) */}
               {showSpouseOwned && (
-                <ToggleCard
-                  variant="chip"
-                  tone="violet"
-                  checked={r.isSpouseOwned ?? false}
-                  onCheckedChange={(v) => update(r.id, { isSpouseOwned: v })}
-                  title="배우자 단독 보유"
+                <SpouseHoldingQuestion
+                  idPrefix={r.id}
+                  role="right"
+                  value={readSpouseHolding(r)}
+                  onChange={(spouseHeldAtTransfer) => update(r.id, { spouseHeldAtTransfer })}
                 />
               )}
               {/*

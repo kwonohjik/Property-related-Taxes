@@ -29,6 +29,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { calcEffectiveWasRegulatedAtAcquisition } from "./effective-regulated-at-acquisition";
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
+import { demolishedFieldIssues } from "./one-house-demolished";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 // ⑤·⑧ 공용 노출 술어 — 계산기와 **같은 것**을 쓴다(두 벌이 되면 한쪽만 개정 반영된다).
 import { rightThreeYearExceptionCiteText, rightThreeYearExceptionRightKinds } from "./right-three-year-exception-scope";
@@ -498,6 +499,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   if (!primary?.acquisitionDate) {
     errors.push(err("acquisitionDate", "양도 대상 주택의 취득일을 입력하세요."));
   }
+
+  // 잔금 전 멸실 특약(결정 #46) — 칸과 같은 게이트. 규칙·문구는 `one-house-demolished.ts` leaf.
+  errors.push(...demolishedFieldIssues(form));
 
   /**
    * 🔴 예상 양도가액은 **양수여야 한다** — `propertySchema`가 `positive()`를 요구하고,

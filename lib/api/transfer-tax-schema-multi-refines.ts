@@ -25,6 +25,7 @@ import { MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-tran
 import { MULTI_COMPANION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
+import { MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
@@ -71,6 +72,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
   // 증여받은 주택의 세대 사실(결정 #38) — 판정 메뉴 전용 입력. 다건 ④는 만들지 않는다.
   giftSameHouseholdContinuous: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
   giftHouseholdHoldingStartDate: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
+  // 잔금 전 멸실 특약(판정 메뉴 전용, 결정 #46) — 다건 ⑭는 옮기지 않는다.
+  demolishedBeforeBalance: whenPresent(MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE),
   familyBusinessInheritance: whenPresent(MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE),
   inheritedAcquisition: whenPresent(MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE),
   inheritedHouseValuation: whenPresent(MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE),

@@ -54,6 +54,22 @@ export function isWinWinDeadlineEraApplicable(transferDate: Date | undefined): b
 }
 
 /**
+ * ⑤·⑧ 게이트 — 임대기간 종료일을 **입력해야 결론이 정해지는** 양도인가 (결정 #45).
+ *
+ * §155의3①의 양도기한은 종료일이 언제든 2027-12-31 이후다(종료일이 2026-12-31 이전이면 고정 2027-12-31,
+ * 그 뒤면 「종료일부터 1년」이라 2027-12-31보다 늦다 — `resolveWinWinTransferDeadline`). 그래서 시행일(2026-10-01)
+ * 이후 2027-12-31까지의 양도는 종료일이 없어도 기한을 충족한다 — 종료일이 결론을 바꾸지 못한다.
+ * 그 뒤 양도부터만 종료일이 결론을 가른다. 엔진(`qualifiesWinWinRental`)·⑧·고지가 이 한 술어를 쓴다.
+ */
+export function isWinWinLeaseEndDateRequired(transferDate: Date | undefined): boolean {
+  return (
+    !!transferDate &&
+    isWinWinDeadlineEraApplicable(transferDate) &&
+    !isOnOrBeforeDeadline(transferDate, WIN_WIN_TRANSFER_DEADLINE_EARLY_FIXED)
+  );
+}
+
+/**
  * §155의3① 본문(2026 개정) — 상생임대주택 **양도기한** 말일.
  *
  * 「제3호에 따른 임대기간이 종료된 날부터 1년이 되는 날과 2029년 12월 31일 중 빠른 날까지(2026년
@@ -177,9 +193,10 @@ export function qualifiesWinWinRental(
   if (!input.transferDate || input.transferDate.getTime() < WIN_WIN_TRANSFER_DEADLINE_EFFECTIVE_DATE.getTime()) {
     return true;
   }
-  // 시행일 이후 양도 — ①3호 임대기간 종료일이 있어야 기한을 정할 수 있다. 미입력이면 법 근거 없이
-  // 유리하게(기한 없음으로) 보지 않는다 — 불성립.
-  if (!w.winWinLeaseEndDate) return false;
+  // 시행일 이후 양도 — 종료일이 없어도 양도기한은 2027-12-31 이전이 될 수 없다(`isWinWinLeaseEndDateRequired`).
+  // 그 날까지의 양도는 종료일 없이 성립하고(결정 #45), 그 뒤 양도는 종료일이 있어야 기한을 정할 수 있다 —
+  // 미입력이면 법 근거 없이 유리하게(기한 없음으로) 보지 않는다 — 불성립.
+  if (!w.winWinLeaseEndDate) return !isWinWinLeaseEndDateRequired(input.transferDate);
   return isOnOrBeforeDeadline(input.transferDate, resolveWinWinTransferDeadline(w.winWinLeaseEndDate));
 }
 

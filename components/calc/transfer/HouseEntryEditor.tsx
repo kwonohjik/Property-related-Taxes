@@ -35,6 +35,8 @@ import { HouseEntryMergeOriginBlock } from "@/components/calc/transfer/HouseEntr
 import { HouseEntryNewHouseOriginBlock } from "@/components/calc/transfer/HouseEntryNewHouseOriginBlock";
 import { HouseEntryPopDeclineBlock } from "@/components/calc/transfer/HouseEntryPopDeclineBlock";
 import { popDeclineRowCandidate } from "@/lib/calc/pop-decline-71-2-scope";
+import { SpouseHoldingQuestion } from "@/components/calc/transfer/SpouseHoldingQuestion";
+import { spouseHoldingDisplayValue, type SpouseHoldingRole } from "@/lib/calc/spouse-holding-scope";
 import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiveRentalFields";
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
@@ -47,8 +49,12 @@ import { houseEntrySpecialExclusionVisible } from "@/lib/calc/house-entry-judgme
 interface Props {
   house: HouseEntry;
   onUpdate: (patch: Partial<HouseEntry>) => void;
-  /** #2a 혼인합가일 입력 시 "배우자 단독 보유" chip 노출 (§167의3⑨) */
-  showSpouseOwned?: boolean;
+  /**
+   * 「양도일 현재도 배우자 쪽이 보유하나요」 질문의 행 역할(§167의3⑨, 결정 #47) — 없으면 질문을 열지 않는다. 호출부가
+   * `spouseHoldingQuestionApplies`(혼인 5년 안 양도·3주택↑·중과가 걸리는 양도)와 `spouseHoldingRowRole`로 정한다.
+   * 종전 「배우자 단독 보유 주택」 칩을 대체한다. 판정 메뉴는 열지 않는다.
+   */
+  spouseHoldingRole?: SpouseHoldingRole;
   /** 양도일 — 공시가격 조회 기준연도 기본값(§167의3①1호 기준시가는 **양도 당시**) */
   transferDate?: string;
   /** §155④⑤ 합가 — 있으면 합가 전 보유 쪽을 묻는다(판정 메뉴·계산기 공통, 합가일이 있을 때 호출부가 넘긴다). */
@@ -98,7 +104,7 @@ interface Props {
 // 섹션 ① 기본정보 (sky)
 // ============================================================
 
-function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxIncentiveRentalEnabled, judgmentMenu }: Props) {
+function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEnabled, judgmentMenu }: Props) {
   return (
     <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
 
@@ -296,22 +302,6 @@ function BasicInfoSection({ house, onUpdate, showSpouseOwned, transferDate, taxI
           </p>
         )}
 
-      {/* #2a 혼인합가 — 배우자 단독 보유 (혼인합가일 입력 시에만 노출) */}
-      {showSpouseOwned && (
-        <div className="space-y-1">
-          <label className="block text-caption text-muted-foreground font-medium">혼인 합가</label>
-          <ToggleCard
-            variant="chip"
-            tone="violet"
-            checked={house.isSpouseOwned ?? false}
-            onCheckedChange={(v) => onUpdate({ isSpouseOwned: v })}
-            title="배우자 단독 보유 주택"
-          />
-          <p className="text-micro text-muted-foreground">
-            혼인 전부터 배우자가 보유 — 3주택↑ 혼인 5년내 양도 시 주택 수 차감 (§167의3⑨)
-          </p>
-        </div>
-      )}
     </ToneCard>
   );
 }
@@ -622,7 +612,7 @@ function LongTermRentalSection({
 export function HouseEntryEditor({
   house,
   onUpdate,
-  showSpouseOwned,
+  spouseHoldingRole,
   transferDate,
   mergeContext,
   countExclusionEnabled = false,
@@ -639,7 +629,6 @@ export function HouseEntryEditor({
       <BasicInfoSection
         house={house}
         onUpdate={onUpdate}
-        showSpouseOwned={showSpouseOwned}
         transferDate={transferDate}
         taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
         judgmentMenu={judgmentMenu}
@@ -651,6 +640,15 @@ export function HouseEntryEditor({
       {/* 취득일(①) 바로 다음 — 합가 후 취득 여부가 그 날짜로 갈린다. */}
       {mergeContext && (
         <HouseEntryMergeOriginBlock house={house} onUpdate={onUpdate} context={mergeContext} />
+      )}
+      {/* 합가 전 보유자(§155⑤)와 **다른 사실**이라 바로 뒤에 따로 묻는다 — §167의3⑨ 「양도일 현재 배우자 보유」(결정 #47) */}
+      {spouseHoldingRole && (
+        <SpouseHoldingQuestion
+          idPrefix={house.id}
+          role={spouseHoldingRole}
+          value={spouseHoldingDisplayValue(house, spouseHoldingRole)}
+          onChange={(spouseHeldAtTransfer) => onUpdate({ spouseHeldAtTransfer })}
+        />
       )}
       <InheritanceSection house={house} onUpdate={onUpdate} householdGiftEnabled={householdGiftEnabled} />
       {/* ⑪ 연장 사실은 3호 칩과 같은 축(중과) — 계산기만 연다 */}

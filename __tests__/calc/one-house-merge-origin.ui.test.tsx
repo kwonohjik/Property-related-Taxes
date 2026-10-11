@@ -7,7 +7,7 @@
  *
  * - ⑤ 편집 창: 합가 전 취득이면 2지선다, 합가 후 취득이면 선택지 없이 「합가 후 취득」
  * - ⑦ 명부 표: 행마다 배지(판정 메뉴만)
- * - 판정 메뉴에서 「배우자 단독 보유」 칩(중과 축)을 숨긴다 — 계산기는 그대로
+ * - 판정 메뉴에서 「양도일 현재도 배우자 쪽이 보유하나요」 질문(중과 축, 결정 #47)을 숨긴다 — 계산기는 질문 노출 게이트(spouse-holding-scope)를 따른다
  * - ⑧ 보유자 미입력 경고(차단 아님)
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -89,11 +89,11 @@ describe("MO-1 편집 창(⑤)", () => {
     expect(screen.getByTestId("house-merge-origin-after").textContent).toContain("합가로 들어온 주택이 아니라");
   });
 
-  it("mergeContext가 없으면(합가일 없음) 블록 자체가 없다", () => {
-    render(<HouseEntryEditor house={house("2018-01-01")} onUpdate={() => {}} showSpouseOwned />);
+  it("mergeContext가 없으면(합가일 없음) 블록 자체가 없다 — 질문 역할을 넘기면 질문은 뜬다(결정 #47, 종전 칩 대체)", () => {
+    render(<HouseEntryEditor house={house("2018-01-01")} onUpdate={() => {}} spouseHoldingRole="other" />);
     expect(screen.queryByTestId("house-merge-origin")).toBeNull();
-    // 계산기의 중과 축 칩은 그대로다
-    expect(screen.getByText("배우자 단독 보유 주택")).toBeTruthy();
+    expect(screen.queryByText("배우자 단독 보유 주택")).toBeNull();
+    expect(screen.getByTestId("spouse-holding-other")).toBeTruthy();
   });
 });
 
@@ -116,7 +116,8 @@ describe("MO-2 명부 표(⑦) · 배우자 칩 숨김", () => {
     expect(badge.textContent).toBe("배우자 쪽");
 
     fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
-    expect(screen.queryByText("배우자 단독 보유 주택")).toBeNull();
+    expect(screen.queryByTestId("spouse-holding-spouse_side")).toBeNull();
+    expect(screen.queryByTestId("spouse-holding-other")).toBeNull();
     expect(screen.getByTestId("house-merge-origin")).toBeTruthy();
   });
 
@@ -129,11 +130,12 @@ describe("MO-2 명부 표(⑦) · 배우자 칩 숨김", () => {
     expect(screen.getByTestId("house-merge-badge-h1").getAttribute("data-side")).toBe("unset");
   });
 
-  it("합가 맥락 없음(두 prop 없음 — 합가일 없는 계산기 등) — 배지 없음 · 편집 창에 배우자 칩 그대로", () => {
+  it("합가 맥락 없음(두 prop 없음 — 합가일 없는 계산기 등) — 배지 없음 · 질문 게이트(3주택↑·중과 양도)가 닫혀 있으면 질문도 없다", () => {
     render(<HousesListSection form={calcForm(house("2018-01-01"))} onChange={() => {}} />);
     expect(screen.queryByTestId("house-merge-badge-h1")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
-    expect(screen.getByText("배우자 단독 보유 주택")).toBeTruthy();
+    expect(screen.queryByText("배우자 단독 보유 주택")).toBeNull();
+    expect(screen.queryByTestId("spouse-holding-other")).toBeNull();
     expect(screen.queryByTestId("house-merge-origin")).toBeNull();
   });
 });

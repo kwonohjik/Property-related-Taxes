@@ -19,7 +19,7 @@ import type { OneHouseJudgmentExtraFields } from "@/lib/stores/one-house-extra-f
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import {
-  isWinWinDeadlineEraApplicable,
+  isWinWinLeaseEndDateRequired,
   winWinContractNotAfterAcquisition,
 } from "@/lib/tax-engine/transfer-tax-exemption-residence-waivers";
 
@@ -62,8 +62,8 @@ export type WinWinRentalFields = Pick<
  * ⚠️ `increaseRatePct`는 **인하(음수)도 유효**하다 — 「5% 이하」 요건이라 인하는 당연히 충족이다.
  *    `parseAmount`류로 음수를 잘라내면 정당한 상생임대인이 탈락한다.
  * 🔑 `winWinLeaseEndDate`(2026 개정 양도기한용) — 미입력이면 키를 **싣지 않는다**(Zod optional 규약).
- *    2026-10-01 전 양도는 애초에 쓰이지 않고(엔진 게이트), 그 후 양도인데 미입력이면 엔진이
- *    불성립으로 판정한다(자동 안분 fallback 금지 — `qualifiesWinWinRental`).
+ *    2026-10-01 전 양도는 애초에 쓰이지 않고(엔진 게이트), 2027-12-31까지의 양도는 종료일 없이 성립하며,
+ *    2028-01-01 이후 양도인데 미입력이면 엔진이 불성립으로 판정한다(자동 안분 fallback 금지 — `qualifiesWinWinRental`).
  */
 export function buildWinWinRentalPayload(f: WinWinRentalFields): object {
   if (!f.winWinRentalSpecial || !f.winWinRentalContractDate) return {};
@@ -124,8 +124,9 @@ export function toWinWinRentalHouseFact(
  * §155의3 ⑧ 필수값 — 판정 메뉴(`one-house-exemption-validate.ts`)와 증여세 부담부증여 경로(E-1 한계 G2)가
  * **같은 규칙·문구**를 쓴다. 임대기간 0개월은 「미입력」과 구별되지 않으므로 빈 값만 막는다.
  *
- * @param transferDate 양도(예정)일 — 2026-10-01 이후 양도분부터만 ①3호 임대기간 종료일을 필수로
- *   요구한다(2026 개정 양도기한, `isWinWinDeadlineEraApplicable`과 같은 게이트). 미입력(호출부가
+ * @param transferDate 양도(예정)일 — 2028-01-01 이후 양도분부터만 ①3호 임대기간 종료일을 필수로
+ *   요구한다(2026 개정 양도기한 — 종료일이 언제든 기한이 2027-12-31 이후라 그 날까지는 종료일이 결론을 바꾸지
+ *   못한다. `isWinWinLeaseEndDateRequired`와 같은 게이트, 결정 #45). 미입력(호출부가
  *   아직 넘기지 않음)이면 요구하지 않는다 — 영구 차단 방지(기존 동작 유지).
  * @param acquisition 취득일(문자열)·동일세대 상속 여부 — ①1호 「취득한 후 체결」 날짜 하한(엔진과 같은
  *   `winWinContractNotAfterAcquisition`). 취득일 미입력이면 막지 않는다(다른 필수 검증이 먼저 잡는다).
@@ -165,12 +166,12 @@ export function winWinRentalFieldErrors(
   if (
     !f.winWinRentalLeaseEndDate &&
     transferDate &&
-    isWinWinDeadlineEraApplicable(toOptionalDate(transferDate))
+    isWinWinLeaseEndDateRequired(toOptionalDate(transferDate))
   ) {
     errors.push({
       field: "winWinRentalLeaseEndDate",
       message:
-        "상생임대주택: 상생임대차계약 임대기간이 종료된 날을 입력하세요(2026.10.1. 이후 양도분은 양도기한 판정에 필요합니다).",
+        "상생임대주택: 상생임대차계약 임대기간이 종료된 날을 입력하세요(2028.1.1. 이후 양도분은 양도기한 판정에 필요합니다 — 2027.12.31.까지의 양도는 입력하지 않아도 됩니다).",
     });
   }
   return errors;

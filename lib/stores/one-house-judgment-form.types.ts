@@ -70,10 +70,29 @@ export const oneHouseJudgmentNonResidentDefaults: OneHouseJudgmentNonResidentFie
   nonResidentResidedAtConversion: false,
 };
 
+/**
+ * 매매특약에 따른 잔금청산 전 주택 멸실 — **판정 메뉴 전용**(결정 #46).
+ *
+ * 🔑 비거주자 사실과 같은 이유로 계산기로 넘기지 않는다 — 계산기 엔진은 양도물건을 「주택」으로 다시 판정하므로, 넘기면
+ *    판정 메뉴와 다른 답을 낸다. `toTransferFormPatch`가 이 키들을 뺀다. 넘길 때는 ⑧ 경고가 「단순토지로 입력」을 안내한다.
+ */
+export interface OneHouseJudgmentDemolishedFields {
+  /** 매매특약에 따라 잔금청산 전에 주택을 멸실(철거)했다 */
+  demolishedBeforeBalance: boolean;
+  /** 매매계약일 — 토글이 켜지면 필수(2022-12-20 이후 체결이면 양도일 현황으로 판정) */
+  demolishedBeforeBalanceContractDate: string;
+}
+
+export const oneHouseJudgmentDemolishedDefaults: OneHouseJudgmentDemolishedFields = {
+  demolishedBeforeBalance: false,
+  demolishedBeforeBalanceContractDate: "",
+};
+
 /** 판정 메뉴 폼 — `TransferFormData` 슈퍼셋(Q-8). */
 export type OneHouseJudgmentFormData = TransferFormData &
   OneHouseJudgmentExtraFields &
-  OneHouseJudgmentNonResidentFields;
+  OneHouseJudgmentNonResidentFields &
+  OneHouseJudgmentDemolishedFields;
 
 
 /**
@@ -90,6 +109,7 @@ export function createInitialOneHouseJudgmentForm(): OneHouseJudgmentFormData {
     ...createDefaultTransferFormData(),
     ...oneHouseJudgmentExtraDefaults,
     ...oneHouseJudgmentNonResidentDefaults,
+    ...oneHouseJudgmentDemolishedDefaults,
   };
 }
 

@@ -40,6 +40,7 @@ import { giftHouseholdConsolidationStart } from "@/lib/tax-engine/one-house/gift
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { UsageConversionField } from "./UsageConversionField";
 import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
+import { judgmentDemolishedDeclared, judgmentDemolishedVisible } from "@/lib/calc/one-house-demolished";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { highValueThresholdForDisplay, oneRightHighValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { effectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
@@ -197,6 +198,37 @@ export function Step3({ form, onChange }: Props) {
             )
           }
         />
+        {/*
+          잔금 전 멸실 특약(결정 #46) — 판정 메뉴 전용. ⑤·④·⑧ 게이트: `judgmentDemolishedVisible`·`judgmentDemolishedDeclared`
+          (lib/calc/one-house-demolished.ts). 양도물건은 양도일(잔금청산일) 현황으로 판정한다(재산세제과-1543).
+        */}
+        {judgmentDemolishedVisible(form) && (
+          <ToggleCard
+            data-testid="one-house-demolished"
+            checked={form.demolishedBeforeBalance}
+            onCheckedChange={(demolishedBeforeBalance) => onChange({ demolishedBeforeBalance })}
+            title="매매특약에 따라 잔금청산 전에 주택을 멸실(철거)합니다"
+            description="양도물건은 양도일(잔금청산일) 현황으로 판정합니다. 2022.12.20. 이후 체결한 계약에서 잔금청산 전에 주택을 멸실하면 원칙적으로 주택이 아닌 토지의 양도로 봅니다(기획재정부 재산세제과-1543)."
+            tone="violet"
+          >
+            {judgmentDemolishedDeclared(form) && (
+              <div className="pt-1">
+                <FieldCard
+                  field="demolishedBeforeBalanceContractDate"
+                  label="매매계약일"
+                  required
+                  hint="재작성한 계약이 있으면 그 계약의 체결일과 최초 계약의 체결일 중 어느 쪽인지 확인이 필요합니다"
+                >
+                  <DateInput
+                    data-testid="one-house-demolished-contract-date"
+                    value={form.demolishedBeforeBalanceContractDate}
+                    onChange={(demolishedBeforeBalanceContractDate) => onChange({ demolishedBeforeBalanceContractDate })}
+                  />
+                </FieldCard>
+              </div>
+            )}
+          </ToggleCard>
+        )}
       </ToneCard>
 
       <ToneCard tone="amber" sectionNum="2-B" title={isRightSale ? "양도 대상 입주권" : "양도 대상 주택"}>

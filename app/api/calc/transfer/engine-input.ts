@@ -299,6 +299,10 @@ export function buildTransferEngineInput(
     inheritedRightChoiceWhenBothHeld: data.inheritedRightChoiceWhenBothHeld,
     // ⑭ 비거주자 — 판정 메뉴 전용 입력(date-coerce)
     transferorNonResidentAtTransfer: data.transferorNonResidentAtTransfer,
+    // ⑭ 잔금 전 멸실 특약 — 판정 메뉴 전용 입력(date-coerce)
+    demolishedBeforeBalance: data.demolishedBeforeBalance
+      ? { contractDate: toDate(data.demolishedBeforeBalance.contractDate, "demolishedBeforeBalance.contractDate") }
+      : undefined,
     nonResidentHoldingPeriod: data.nonResidentHoldingPeriod
       ? {
           startDate: toOptionalDate(data.nonResidentHoldingPeriod.startDate),
