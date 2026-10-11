@@ -48,6 +48,23 @@ export function buildGiftHouseholdPayload(primary: GiftFactFields | undefined): 
   };
 }
 
+/**
+ * 단건 계산기 ④ 전송 조각 — 판정 메뉴에서 **넘어온** 증여 사실을 일반 증여(`gift`) 계산에도 싣는다(결정 #38 조건: 판정 메뉴와 계산기
+ * 단건이 같은 사실로 같은 판정을 한다).
+ *
+ * 계산기 일반 증여 화면에는 이 칸의 입력 위젯이 없다 — 값은 판정 메뉴가 넘긴 것(`toTransferFormPatch`)이다. 이월과세로 바뀌지 않는
+ * 증여(그 밖의 친족 · 10년(5년) 밖 · 세대 사실이 이월과세 배제를 가르지 않는 경우)도 이 사실이 §154① 보유·「취득 당시」를 가르므로
+ * 버리지 않는다. 다만 **불완전·불일치 사실은 보내지 않는다** — ⑫가 400으로 막는 모양(시작일 누락·순서 위반)을 보내면 고칠 칸이 이 화면에
+ * 없는 막다른 오류가 된다. 그때는 미전송(엔진이 확인 필요를 고지)이다.
+ */
+export function buildCalcGiftHouseholdPayload(
+  primary: (GiftFactFields & Pick<AssetForm, "acquisitionDate">) | undefined,
+): ReturnType<typeof buildGiftHouseholdPayload> {
+  if (!primary || !primary.giftSameHousehold) return {};
+  if (giftHouseholdFactErrors(primary).length > 0) return {};
+  return buildGiftHouseholdPayload(primary);
+}
+
 /** 배우자는 혼인 유지, 그 밖의 친족은 같은 주소·생계 계속 — 질문 문구가 관계별로 다르다(결정 #38 조건). */
 export function giftHouseholdQuestionText(relation: AssetForm["giftDonorRelation"]): string {
   return relation === "spouse"

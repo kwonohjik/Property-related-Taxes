@@ -133,6 +133,32 @@ describe("G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계
     expect(r.warnings.some((w) => w.includes("계속 같은 세대였는지"))).toBe(true);
   });
 
+  it("G4-1-8 [막다른 고지 수정] 관계 「그 외」는 질문을 묻지 않는다 → 별도 세대(증여일 기준) → 증여자 취득 때만 지정이어도 0 · 고지 없음 (종전 113,060,000)", () => {
+    const r = run(FREV.over, { ...FREV.ct, donorRelation: "other" });
+    expect(r.excl).toBe("relation_invalid");
+    expect(r.tax).toBe(0);
+    expect(r.exempt).toBe(true);
+    expect(r.warnings.some((w) => w.includes("계속 같은 세대였는지"))).toBe(false);
+  });
+
+  it("G4-1-8b 긍정 짝: 관계 「직계」는 같은 입력에서 미확인 → 보수 판정 157,060,000 + 확인 필요 고지 그대로", () => {
+    const r = run(FREV.over, { ...FREV.ct, donorRelation: "lineal" });
+    expect(r.tax).toBe(157_060_000);
+    expect(r.warnings.some((w) => w.includes("계속 같은 세대였는지"))).toBe(true);
+  });
+
+  it("G4-1-8c 「그 외」라도 호출자가 명시로 답한 사실(API 직접 호출)은 존중한다 — 계속 같은 세대 · 시작일 2021-01-15(지정 중)이면 통산", () => {
+    const r = run(FREV.over, {
+      ...FREV.ct,
+      donorRelation: "other",
+      donorSameHouseholdContinuous: true,
+      donorHouseholdHoldingStartDate: D("2021-01-15"),
+    });
+    // 증여일엔 해제 → 거울상(결정 #38 하위 2 가) 증여일 기준 유지 → 0, 통산 적용 세부는 확인 필요 고지
+    expect(r.tax).toBe(0);
+    expect(r.warnings.some((w) => w.includes("계속 같은 세대였다는 입력"))).toBe(true);
+  });
+
   it("G4-1-7 결론을 가르지 않으면 고지하지 않는다 — 두 날짜 모두 비지정인 지역은 미확인이어도 결론이 같다", () => {
     const r = run(
       { transferPrice: 500_000_000, transferDate: D("2025-06-15"), acquisitionDate: D("2023-03-15"), regionCode: "4713010100" },

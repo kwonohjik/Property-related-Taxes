@@ -9,6 +9,7 @@
  * | GJ-2 | route | 계속 같은 세대 → 통산해 비과세 / 아니오 → 증여일 기준 과세 + 보유 기한 |
  * | GJ-3 | ⑧ | 관계·증여자 취득일·세대 답·시작일을 필수로 묻는다(결론이 아니라 사실) |
  * | GJ-4 | 핸드오프 | 배우자·직계존비속 10년(5년) 안 증여는 같은 사실로 「이월과세(증여)」로 넘긴다 |
+ * | GJ-5 | 계산기 단건 | 이월과세로 바뀌지 않은 증여(그 밖의 친족·기간 밖)도 넘어온 사실로 판정 메뉴와 같은 결론을 낸다 |
  *
  * 부정형 단언에는 긍정 짝을 둔다.
  */
@@ -19,7 +20,9 @@ import { toTransferFormPatch } from "@/lib/calc/one-house-judgment-handoff";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createInitialOneHouseJudgmentForm, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { runJudgment } from "./_one-house-pr6a-routes";
+import { runJudgment, handoff } from "./_one-house-pr6a-routes";
+import { runCalc } from "./_one-house-pr3a-calc-route";
+import { buildCalcGiftHouseholdPayload } from "@/lib/calc/gift-household-payload";
 
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
@@ -157,5 +160,43 @@ describe("GJ-4 핸드오프 — 같은 사실로 이월과세 원인을 정해 �
     expect(at("2022-12-31", "2027-12-31")).toBe("carryover_gift"); // 정확히 5년째
     expect(at("2022-12-31", "2028-01-02")).toBe("gift"); // 5년 초과
     expect(at("2023-01-01", "2028-01-02")).toBe("carryover_gift"); // 10년
+  });
+});
+
+describe("GJ-5 판정 메뉴 → 계산기 단건 — 이월과세로 바뀌지 않은 증여도 같은 사실로 같은 판정", () => {
+  /** 그 밖의 친족(형제) · 계속 같은 세대 · 증여 8개월 뒤 양도 — 이월과세 대상이 아니라 계산기에서도 `gift`다. */
+  const sibling = (over: Partial<AssetForm> = {}) => jForm({ giftDonorRelation: "other", ...over });
+
+  it("[GJ-5a] 계속 같은 세대(예) → 판정 메뉴 비과세 · 계산기 단건도 비과세 (종전: 사실이 버려져 계산기만 과세)", async () => {
+    const form = sibling();
+    const j = await runJudgment(form);
+    expect(j.data.judgment.isExempt).toBe(true);
+    const h = handoff(form);
+    expect(h.assets[0].acquisitionCause).toBe("gift");
+    const c = await runCalc(h);
+    expect(c.status, c.err).toBe(200);
+    expect(c.body.giftSameHouseholdContinuous).toBe(true);
+    expect(c.body.giftHouseholdHoldingStartDate).toBe("2010-03-01");
+    expect(c.isExempt).toBe(true);
+    // 사실이 반영됐으므로 「입력받지 않아」 고지가 없다
+    expect((c.warnings ?? []).some((w: string) => w.includes("이 화면은 증여자와의 세대 관계를 입력받지 않아"))).toBe(false);
+  });
+
+  it("[GJ-5b] 부정 짝: 아니오 → 판정 메뉴·계산기 모두 증여일 기준 과세, false를 싣는다", async () => {
+    const form = sibling({ giftSameHousehold: "no" });
+    const j = await runJudgment(form);
+    expect(j.data.judgment.isExempt).toBe(false);
+    const c = await runCalc(handoff(form));
+    expect(c.status, c.err).toBe(200);
+    expect(c.body.giftSameHouseholdContinuous).toBe(false);
+    expect(c.isExempt).toBe(false);
+  });
+
+  it("[GJ-5c] 불완전한 사실(예인데 시작일 없음)은 싣지 않는다 — ⑫ 400 막다른 오류 방지, 증여가 아니면 싣지 않는다", () => {
+    const base = asset({ giftDonorRelation: "other" });
+    expect(buildCalcGiftHouseholdPayload(base).giftSameHouseholdContinuous).toBe(true);
+    expect(buildCalcGiftHouseholdPayload({ ...base, giftHouseholdHoldingStartDate: "" })).toEqual({});
+    expect(buildCalcGiftHouseholdPayload({ ...base, giftHouseholdHoldingStartDate: base.acquisitionDate })).toEqual({});
+    expect(buildCalcGiftHouseholdPayload({ ...base, acquisitionCause: "purchase" })).toEqual({});
   });
 });

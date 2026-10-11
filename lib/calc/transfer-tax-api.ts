@@ -63,6 +63,7 @@ import { selfBuiltActive } from "./self-built-scope";
 // 하위 호환 재수출 — 기존 import 경로 유지
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { calcReplacementHouseApplies } from "./replacement-house-scope";
+import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -533,6 +534,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.acquisitionCause === "gift" && primary.donorAcquisitionDate
         ? primary.donorAcquisitionDate
         : undefined,
+    // ④⑬ 결정 #38 — 판정 메뉴에서 넘어온 「증여자와 계속 같은 세대」 사실(이월과세로 바뀌지 않은 증여). 위 `donorAcquisitionDate`와 같은 값.
+    ...buildCalcGiftHouseholdPayload(primary),
     isOneHousehold: form.isOneHousehold,
     reductions,
     annualBasicDeductionUsed: parseAmount(form.annualBasicDeductionUsed),

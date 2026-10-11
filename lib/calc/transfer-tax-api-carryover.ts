@@ -163,7 +163,9 @@ export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string |
  *
  * §154① 비과세 판정을 받는 주택(`isOneHouseExemptionAsset`)이고, 증여자가 사망하지 않았고, 관계가 「그 외」가 아닐 때.
  * **관계를 고르지 않았어도 묻는다**(결정 #34 조건: 관계 미선택이 질문을 건너뛰는 구멍이 되지 않게). 사망은 질문 없이 통산 없이
- * 계산하고 엔진이 확인 필요를 고지한다. 비주택은 이 사실이 결론을 가르지 않아 묻지 않는다.
+ * 계산하고 엔진이 확인 필요를 고지한다. 관계 「그 외」는 묻지 않고, 엔진이 별도 세대(증여일 기준)로 읽는다 — 묻지 않는 질문을
+ * 미확인으로 읽어 「입력되지 않아」 고지와 보수 판정을 내면 사용자가 풀 길이 없다(`carryoverGiftHouseholdBasis`). 비주택은 이 사실이
+ * 결론을 가르지 않아 묻지 않는다(§154① 판정을 받지 않는 입주권·분양권·토지는 미전송이어도 세액이 같다 — 실측).
  */
 export function carryoverHouseholdFactVisible(asset: Pick<AssetForm, "assetKind" | "carryover">): boolean {
   const c = asset.carryover;
