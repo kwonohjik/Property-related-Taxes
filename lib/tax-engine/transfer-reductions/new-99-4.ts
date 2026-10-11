@@ -45,7 +45,7 @@ export const NEW_99_4_MANDATORY_YEARS = 3;
  * D5 — §99의4① 「그 농어촌주택등 취득 전에 보유하던 다른 주택(일반주택)」 순서를 볼 **합가 맥락**.
  *
  * 합가가 없으면 `undefined`(종전 그대로 — 양도 주택 취득일과 비교). `houses`는 엔진 명부 형태
- * (`mergeOrigin` — 합가 전 보유 쪽)이고, 판정 메뉴만 그 칸을 채운다.
+ * (`mergeOrigin` — 합가 전 보유 쪽)이다. 판정 메뉴와 계산기 일반 경로가 그 칸을 채운다(겸용 경로는 이 맥락을 넘기지 않는다).
  */
 export type New994MergeOrderContext =
   | {

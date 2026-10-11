@@ -468,8 +468,9 @@ export interface PresaleRight {
    */
   decedentSameHouseholdAtInheritance?: boolean;
   /**
-   * 같은 단서의 예외 — 동거봉양 합가로 2주택이 된 경우로서 **합치기 이전부터 보유하던 주택이
-   * 조합원입주권으로 전환**된 경우. `decedentSameHouseholdAtInheritance === true`일 때만 의미.
+   * 같은 단서의 예외 — 동거봉양 합가로 2주택이 된 경우로서, 입주권은 **합치기 이전부터 보유하던 주택이
+   * 조합원입주권으로 전환**된 경우(§156의2⑥ 단서), 분양권은 **합치기 이전부터 보유하던 분양권**(§156의3④ 단서 — 전환 요건 없음).
+   * `decedentSameHouseholdAtInheritance === true`일 때만 의미.
    */
   parentalCareMergeInheritedRight?: boolean;
   /**

@@ -392,7 +392,11 @@ export function PresaleRightsSection({
                       onCheckedChange={(v) =>
                         update(r.id, { parentalCareMergeInheritedRight: v })
                       }
-                      title="동거봉양 합가 전부터 보유하던 주택이 전환된 것"
+                      title={
+                        r.type === "redevelopment_right"
+                          ? "동거봉양 합가 전부터 보유하던 주택이 전환된 것"
+                          : "동거봉양 합가 전부터 보유하던 분양권"
+                      }
                     />
                   )}
                   {/*
