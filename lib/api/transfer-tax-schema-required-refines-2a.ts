@@ -254,13 +254,35 @@ function refineEstimatedTransferStd(
  *   V8 소유자 분리(동시 취득) 취득시 기준시가 3종 → 엔진이 분리 계산을 조용히 포기하고 **비소유 파트까지 과세**
  *   V1·V2 별개 취득 파트 취득가액 · V4·V7 양도가액 구분 근거 · V5·V6 취득시 기준시가 → 엔진이 던져 **경로 없는 400**
  */
-export function refineSplitAcquisitionInputs(d: Required2aLike, ctx: z.RefinementCtx) {
+export function refineSplitAcquisitionInputs(
+  d: Required2aLike,
+  ctx: z.RefinementCtx,
+  /** 오류 경로 접두 — 컴패니언은 `["companionAssets", i]`. */
+  prefix: (string | number)[] = [],
+) {
   if (d.propertyType !== "housing" && d.propertyType !== "building") return;
   if (d.mixedUse || d.preHousingDisclosure || (d.parcels?.length ?? 0) > 0) return;
-  if (d.transferType === "burdened_gift") return;
+  const base = issuer(ctx);
+  const issue: Issue = (path, message) => base([...prefix, ...path], message);
+  if (d.transferType === "burdened_gift") {
+    // R-6 — 부담부증여는 §159 채무 비율로 안분한 총액만 쓴다. 분리 전용 필드(별개 취득·파트 가액)가 닿으면 양도가액은 채무분인데
+    // 파트 취득가액은 전액이라 **양도차손**이 났다(실측 결정세액 20,435,000 → 0). 화면은 `isSplitPayloadActive`가 이 필드를 보내지 않는다.
+    // 토지 취득일만 오는 경우(PHD·소유자 분리 후퇴 송신)는 무해해 막지 않는다.
+    const splitFields =
+      d.isSeparateAcquisition === true ||
+      positive(d.landAcquisitionPrice) ||
+      positive(d.buildingAcquisitionPrice) ||
+      positive(d.landTransferPrice) ||
+      positive(d.buildingTransferPrice);
+    if (d.landAcquisitionDate && splitFields)
+      issue(
+        ["isSeparateAcquisition"],
+        "부담부증여는 토지·건물을 나눈 취득가액·양도가액을 받지 않습니다 — 채무 비율로 안분한 총액만 씁니다 (소득세법 시행령 §159)",
+      );
+    return;
+  }
   const selfOwnsSplit = d.selfOwns !== undefined && d.selfOwns !== "both";
   if (!d.landAcquisitionDate && !selfOwnsSplit) return;
-  const issue = issuer(ctx);
   const separate = d.isSeparateAcquisition === true;
 
   const landMode = partMode(d.landAcqMode, d);

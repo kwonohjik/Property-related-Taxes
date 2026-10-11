@@ -3,6 +3,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { hasStaleSplitInput } from "@/lib/calc/transfer-land-part-cause";
 import {
   isExprValuationEligibleAssetKind,
   isHousingExprEligibleAssetKind,
@@ -64,13 +65,15 @@ export function ExpropriationBlock({
     transferDate >= EXPR_VALUATION_MIN_DATE;
   // 건물 split(토지·건물 취득일 분리) — `calcSplitGain` 경로라 단건 per-sqm 특례가 우회된다.
   // 이 경우 per-sqm 칸을 노출하면 입력해도 엔진이 안 읽는 **침묵 무시** → 토지분 총액 블록으로 전환(P6/D6).
+  // stale 분리 입력은 「분리 없음」(④·⑧과 같은 술어 `hasStaleSplitInput`) — 아니면 칸이 숨어 ⑫가 요구하는 원/㎡를 못 넣는다.
+  const splitActive = !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset);
   const isSplitBuilding =
-    isSplitLandExprEligibleAssetKind(asset.assetKind) && asset.hasSeperateLandAcquisitionDate;
+    isSplitLandExprEligibleAssetKind(asset.assetKind) && splitActive;
   // 주택 **regular** split(비-PHD)만 총액 트랙에서 제외 — Q6 미지원(validate 차단). 노출 시 침묵 무시.
   // 주택 **PHD** split(§164⑦ 3시점 환산)은 총액 트랙을 정상 소비하므로(P6b/D15) 노출·요구한다.
   const isHousingRegularSplit =
     isHousingExprEligibleAssetKind(asset.assetKind) &&
-    asset.hasSeperateLandAcquisitionDate &&
+    splitActive &&
     !asset.usePreHousingDisclosure;
   // §164⑨ 1호 환산 min[] 게이트: 적격 자산(가~다목) + 환산모드 + 양도 ≥ 2009.02.04.
   // ⚠️ 적격 판정은 `expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면
