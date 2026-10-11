@@ -323,7 +323,8 @@ describe("P4-1 pending — §154① 보유 2년", () => {
   });
 
   it("[PD-14b] 윤일 취득 — 2년 만료는 §160③ 월말(2022-02-28): 기한 안내와 비과세 판정이 같은 날에 맞물린다", () => {
-    const acq = { acquisitionDate: D("2020-02-29"), ...RESIDENCE_FREE };
+    // 2022-01-15·2022-02-28 양도는 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대(미답이면 결정 #36에 따라 재기산으로 보아 과세)
+    const acq = { acquisitionDate: D("2020-02-29"), ...RESIDENCE_FREE, finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] } };
     const before = judge({ ...acq, transferDate: D("2022-01-15") });
     expect(before.pending.map((p) => p.id)).toEqual(["154-1-holding-years"]);
     expect(iso(before.pending[0].deadline)).toBe("2022-02-28");

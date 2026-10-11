@@ -50,14 +50,28 @@ describe("거주 구간 겹침·취득일 경계 (step 1)", () => {
     expect(issues.some((it) => it.message.includes("겹칩니다"))).toBe(true);
   });
 
-  it("T-03: 퇴거일 = 다음 입주일 (이사 당일) → 겹침 아님, 통과", () => {
+  it("T-03: 퇴거일 = 다음 입주일 (같은 날) → 이중 계산이라 차단 · 「한 구간으로 합쳐 입력」 안내 (결정 #37)", () => {
     const form = residenceForm();
     form.assets[0].residencePeriods = [
       { moveInDate: "2020-02-01", moveOutDate: "2021-02-01" },
       { moveInDate: "2021-02-01", moveOutDate: "2022-02-01" },
     ];
     const issues = collectStepIssues(1, form);
-    expect(issues.some((it) => it.message.includes("겹칩니다"))).toBe(false);
+    const hit = issues.find((it) => it.message.includes("같은 날(2021-02-01)"));
+    expect(hit).toBeTruthy();
+    expect(hit!.message).toContain("한 구간으로 합쳐서 입력");
+    // 「다음 날로 옮겨 나누라」는 안내는 넣지 않는다 — 나누면 같은 거주가 1개월 적게 나올 수 있다
+    expect(hit!.message).not.toContain("다음 날");
+  });
+
+  it("T-03b: 긍정 짝 — 퇴거일 다음 날 입주(하루 간격)는 차단하지 않는다", () => {
+    const form = residenceForm();
+    form.assets[0].residencePeriods = [
+      { moveInDate: "2020-02-01", moveOutDate: "2021-02-01" },
+      { moveInDate: "2021-02-02", moveOutDate: "2022-02-01" },
+    ];
+    const issues = collectStepIssues(1, form);
+    expect(issues.some((it) => it.message.includes("겹칩니다") || it.message.includes("같은 날("))).toBe(false);
   });
 
   it("T-04: 입력 순서가 뒤섞여도 (정렬 후 비교) 겹침 탐지", () => {

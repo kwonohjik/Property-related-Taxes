@@ -61,6 +61,8 @@ function sim(
     householdHousingCount: 1,
     residencePeriodMonths: 254,
     redevelopment: { ...case47RedevelopmentInfo(), ...redev },
+    // 2022-03-01 양도는 §154⑤ 단서 구간 — 사례 47의 전제(다른 주택 처분 없음)를 답한 세대로 둔다(미답이면 결정 #36에 따라 재기산으로 보아 과세).
+    finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
     ...o,
   });
 }

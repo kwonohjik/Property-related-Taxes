@@ -40,13 +40,13 @@ async function judge(page: Page) {
 }
 
 test.describe("판정 메뉴 — §154⑤ 단서 최종 1주택 재기산", () => {
-  test("[FR-1] 이력 미답 → 비과세 + 판정 보류 고지(본문에 키 없음)", async ({ page }) => {
+  test("[FR-1] 이력 미답 → 순수 1주택은 재기산 가정으로 과세 + 확인 필요 고지(본문에 키 없음) — 결정 #36", async ({ page }) => {
     await seedOneHouse(page);
     await expect(page.getByTestId("final-house-restart-section")).toBeVisible();
     const body = await judge(page);
     expect(body).not.toHaveProperty("finalOneHouseRestart");
-    await expect(page.getByTestId("one-house-verdict")).toHaveText("비과세");
-    await expect(page.getByText(/처분한 이력이 입력되지 않아/).first()).toBeVisible();
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+    await expect(page.getByText(/처분한 이력이 입력되지 않아 재기산된 것으로 보고/).first()).toBeVisible();
   });
 
   test("[FR-2] ★ 있음 · 양도 2021-06-01 · 일시적 2주택 아님 → 재기산 과세", async ({ page }) => {

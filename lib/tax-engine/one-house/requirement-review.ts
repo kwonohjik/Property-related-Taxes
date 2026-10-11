@@ -507,6 +507,13 @@ function holdingItem(
       { label: "보유기간", value: `${holding.years}년 ${holding.months}개월` },
     ],
     ...(status === "waived" ? { note: "§154① 단서 사유에 해당해 보유기간 요건을 적용하지 않습니다." } : {}),
+    ...(holding.restartUnanswered && status === "unmet"
+      ? {
+          note:
+            "§154⑤ 단서(2021.1.1.~2022.5.9. 양도) 처분 이력이 입력되지 않아 재기산된 것으로 보고 충족하지 않은 것으로 판정했습니다 — " +
+            "다른 주택을 처분한 적이 없다면 「없음」을 선택하세요(확인 필요).",
+        }
+      : {}),
     legalBasis: TRANSFER.ONE_HOUSE_REQUIREMENT,
   };
 }

@@ -71,9 +71,9 @@ describe("G1-8 부담부증여 결과 카드 — 비과세 결론과 함께 경�
     expect(t).toContain("입력한 임대주택만");
   });
 
-  it("G1-8-B: 비과세 + §154⑤ 재기산 판정 보류 고지(2021-06-01 증여) → 카드에 고지가 보인다", async () => {
+  it("G1-8-B: 과세 + §154⑤ 재기산 확인 필요 고지(2021-06-01 증여 · 이력 미답, 결정 #36: 비과세 + 판정 보류 → 과세) → 카드에 고지가 보인다", async () => {
     const e = await gift("2021-06-01", { acquisitionDate: new Date("2015-01-01"), householdHousingCount: 1 });
-    expect(e.isExempt).toBe(true);
+    expect(e.isExempt).toBe(false);
     expect(dom(e)).toContain("최종 1주택 보유기간 재기산");
   });
 

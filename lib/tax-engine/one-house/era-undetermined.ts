@@ -8,7 +8,7 @@
  *
  * | id | 조문 | 판정에 필요한 사실(미입력) |
  * |---|---|---|
- * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | OH-22(I-1)에서 입력 경로가 생겼다(보유 중 다른 주택 처분 이력). 이력 미답만 고지 — 판정은 `final-house-restart.ts` |
+ * | `154-5-final-one-house-restart-unverified` | 시행령 §154⑤ 단서(2021-01-01~2022-05-09 양도) | OH-22(I-1)에서 입력 경로가 생겼다(보유 중 다른 주택 처분 이력). 이력 미답만 고지 — 판정은 `final-house-restart.ts`. 결정 #36: 순수 1주택은 미답 = 재기산으로 보아 과세(「없음」이면 결론이 달라질 때만 고지), 그 밖의 세대 유형은 종전 결론 + 「해석 미확인」 고지 |
  * | `154-1-4ho-rental-registration-unverified` | 삭제된 §154①4호 · 대통령령 제30395호 부칙 제38조 | OH-38 입력 레인에서 입력 경로가 생겼다(§154① 단서 「4호 임대사업자 등록」). 사유 미선택 또는 선택했으나 사실 미입력만 고지 |
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-2002-transition-unverified` | 대통령령 제17555호 부칙 ③ 1호(2001-03-30 ~ 2002-03-29 신규 취득 · 양도가 2003-03-29 뒤 ~ 취득일부터 2년 안) | 1호 단서(보유기간등 충족일 + 6월) — 미구현, 취득일부터 2년으로 계산. 그 밖의 부칙 ③ 구간은 어느 독법이든 결론이 같아 고지하지 않는다 |
@@ -20,6 +20,7 @@
  * | `154-1-expropriation-notice-date-unverified` | §154①2호 가목 괄호 「사업인정 고시일 전에 취득한 주택에 한한다」(대통령령 제19327호 2006.2.9. 신설 — 부칙 제3조·제30조①) | 사업인정 고시일 — 공란이면 단서를 적용하지 않았다(모름 = 불성립). 고시일 전 취득이면 결론이 비과세로 바뀔 때만 |
  * | `154-12-co-inherited-residence-unverified` | §154⑫(2021.2.17. 신설 · 2024.2.29. 개정) — 취득 당시 조정대상지역 공동상속주택의 거주기간 | 공동상속주택인지와 다른 공동상속인의 거주기간 — 입력 경로가 없다. 상속 취득 · 본인 거주 미달로 과세될 때만 확인 필요로 밝힌다(판정은 바꾸지 않는다) |
  * | `regulated-hwaseong-announcement-window-unverified` | 화성시 조정대상지역 지정 시작 열흘(2020.6.19.~6.28.) — 원 공고(제2020-828호)일부터로 판정, 정정공고(제2020-877호)일 6.29.로 읽으면 결과가 달라짐 (결정 #3, `hwaseong-announcement-window.ts`) | 해석례·심판례 — 확보하지 못함. 취득 당시 거주요건·§155①2호 신규 주택이 결론을 가를 때만 낸다(다주택 중과는 계산기 경고) |
+ * | `154-1-usage-conversion-transition-unverified` | 대통령령 제28293호 부칙 제2조 ②1호(거주요건 경과규정) × 비주택→주택 용도변경(결정 #35) | 「2017년 8월 2일 이전에 취득한 주택」의 취득한 날을 주거용 사용 개시일로 읽었다 — 이 조합의 정면 해석 미확보. 원취득일 2017.8.3. 전·주거용 사용일 이후·그날 조정대상지역이라 거주요건 때문에 비과세(단건·의제)나 중과 배제가 막힐 때만. 부칙 ②2호(계약금 지급일 무주택)는 판정하지 않음 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
@@ -27,6 +28,7 @@
 import {
   DEADLINE_HOLIDAY_EXTENSION_161,
   ONE_HOUSE_PROVISO_2006_ADDENDA as TRANSFER_PROVISO_2006,
+  ONE_HOUSE_RESIDENCE_2017_ADDENDA,
   PERIOD_CALCULATION_4,
   TRANSFER,
 } from "../legal-codes";
@@ -42,6 +44,7 @@ import {
 import {
   describeOneHouseHoldingRequirement,
   describeOneHouseResidenceRequirement,
+  usageConversionTransitionApplies,
 } from "../transfer-tax-exemption-holding";
 import { isCapitalNewTownResidenceEra } from "../data/one-house-holding-residence-era";
 import { expropriationNoticeDateRequirementApplies } from "../data/one-house-154-1-proviso-era";
@@ -87,6 +90,9 @@ const CO_INHERITED_RESIDENCE_LONGEST_TRANSFER_START = new Date("2024-02-29");
 
 export const CO_INHERITED_RESIDENCE_UNVERIFIED_ID = "154-12-co-inherited-residence-unverified";
 
+/** 용도변경 주택 거주요건 경과규정 기준일(주거용 사용일) 독법 — 정면 해석 미확보 확인 필요 (결정 #35). */
+export const USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID = "154-1-usage-conversion-transition-unverified";
+
 export const ERA_UNDETERMINED_IDS = new Set([
   FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
   "154-1-4ho-rental-registration-unverified",
@@ -100,6 +106,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-1-capital-newtown-location-unverified",
   "154-1-expropriation-notice-date-unverified",
   CO_INHERITED_RESIDENCE_UNVERIFIED_ID,
+  USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID,
   "civil-161-holiday-table-uncovered",
   HWASEONG_WINDOW_NOTICE_ID,
 ]);
@@ -122,6 +129,8 @@ export interface EraNoticeRelevance {
   regulatedReadingDecides: () => boolean;
   /** §155①2호 가목 전입일 고지(#30) — 세대전원이 1년 안에 전입했다고 읽은 반사실 판정이 실제 판정과 결론이 다른가. */
   moveInDecides: () => boolean;
+  /** 처분 이력 미답 고지(결정 #36) — 이력을 「없음」으로 답하면 비과세·부분 비과세로 바뀌는가 */
+  finalHouseRestartNone: () => boolean;
 }
 
 export function collectEraUndetermined(
@@ -137,19 +146,40 @@ export function collectEraUndetermined(
   const out: OneHouseUndetermined[] = [];
 
   /*
-   * OH-22 — 비과세로 판정된 1주택 양도에만 낸다. 과세면 재기산은 결론을 바꾸지 못한다
-   * (기산일이 늦어질 뿐이다). I-1에서 처분 이력 입력이 생겼다 — **이력 질문에 답하지 않았을 때만**
-   * 판정 보류로 남긴다(`undetermined`). 답했으면 leaf가 재기산 여부를 판정한다.
+   * OH-22 · 결정 #36 — §154⑤ 단서 처분 이력 미답. 세대 유형으로 갈린다.
+   *
+   * · 순수 1주택(`unanswered_plain`): 재기산되면 보유 2년 미달이 확정되므로 모르는 사실은 재기산으로 본다(모름 = 혜택 불성립).
+   *   `describeOneHouseHoldingRequirement`가 이미 보유 불성립으로 판정했다. 「없음」이라고 답하면 결론(비과세·부분 비과세)이
+   *   달라지는 경우에만 확인 필요를 낸다(`relevance.finalHouseRestartNone`). §154① 단서 1~3호로 보유요건이 면제되면
+   *   재기산은 결론을 가르지 못하므로 고지하지 않는다.
+   * · 그 밖의 세대 유형(`undetermined` — 주택 수 제외·§155⑳ 임대주택·1주택+입주권·분양권): 이 세대에 단서가 걸리는지
+   *   해석이 확인되지 않아 종전 결론을 두고 판정하지 않았음을 밝힌다. 비과세로 판정된 경우에만(과세면 재기산은 결론을
+   *   바꾸지 못한다), 단서 1~3호 면제 세대는 제외. 이 유형은 질문 칸이 숨겨질 수 있어 「칸에 입력하세요」를 쓰지 않는다.
    */
-  if (settled && resolveFinalOneHouseRestart(input).status === "undetermined") {
-    out.push({
-      id: FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
-      reason:
-        `2021년 1월 1일~2022년 5월 9일 양도분은 2주택 이상을 보유한 세대가 1주택 외의 주택을 모두 처분한 경우 ` +
-        `처분 후 1주택이 된 날부터 보유기간을 다시 셉니다(${law("⑤")} 단서 — 대통령령 제29523호·제32654호 부칙). ` +
-        "이 주택을 보유하는 동안 다른 주택을 처분한 이력이 입력되지 않아 이 요건은 판정하지 않았습니다 — " +
-        "「최종 1주택 보유기간 재기산」 칸에 처분 이력을 입력하세요.",
-    });
+  const restart = resolveFinalOneHouseRestart(input);
+  if (restart.status === "unanswered_plain" && !settled) {
+    const holding = describeOneHouseHoldingRequirement(input, oneHouseRules.one_house_exemption);
+    if (!holding.provisoWaives && (relevance?.finalHouseRestartNone() ?? true)) {
+      out.push({
+        id: FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
+        reason:
+          `2021년 1월 1일~2022년 5월 9일 양도분은 2주택 이상을 보유한 세대가 1주택 외의 주택을 모두 처분한 경우 ` +
+          `처분 후 1주택이 된 날부터 보유기간을 다시 셉니다(${law("⑤")} 단서 — 대통령령 제29523호·제32654호 부칙). ` +
+          "이 주택을 보유하는 동안 다른 주택을 처분한 이력이 입력되지 않아 재기산된 것으로 보고 보유기간 2년 요건을 충족하지 않는 " +
+          "것으로 판정했습니다 — 처분한 적이 없다면 「최종 1주택 보유기간 재기산」 칸에서 「없음」을 선택하세요(확인 필요).",
+      });
+    }
+  } else if (restart.status === "undetermined" && settled) {
+    if (!describeOneHouseHoldingRequirement(input, oneHouseRules.one_house_exemption).provisoWaives) {
+      out.push({
+        id: FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
+        reason:
+          `2021년 1월 1일~2022년 5월 9일 양도분은 2주택 이상을 보유한 세대가 1주택 외의 주택을 모두 처분한 경우 ` +
+          `처분 후 1주택이 된 날부터 보유기간을 다시 셉니다(${law("⑤")} 단서 — 대통령령 제29523호·제32654호 부칙). ` +
+          "이 주택은 주택 수에서 제외되는 주택·장기임대주택·조합원입주권·분양권을 함께 보유한 세대에 해당하는데, 이 세대 유형에 " +
+          "단서가 걸리는지 해석이 확인되지 않아 이 요건은 판정하지 않았습니다 — 확인 필요.",
+      });
+    }
   }
 
   /*
@@ -210,6 +240,40 @@ export function collectEraUndetermined(
             ? "양도 주택 주소가 입력되지 않아 이 요건을 적용했습니다 — 주소를 입력하면 판정합니다."
             : "양도 주택이 신도시가 있는 시·구에 있어 이 요건을 적용했습니다 — 신도시 지구 밖이면 거주요건이 없습니다(확인 필요)."),
       });
+    }
+  }
+
+  /*
+   * 결정 #35 — 2017.8.2. 이전에 취득한 비주택을 2017.8.3. 이후 조정대상지역 지정 중 주거용으로 바꾼 주택. 거주요건 경과규정
+   * (대통령령 제28293호 부칙 제2조 ②1호 「2017년 8월 2일 이전에 취득한 주택」)의 「취득한 날」을 주거용 사용 개시일로 읽어
+   * 거주요건을 적용했다(조정대상지역 판정과 같은 날 — `resolveResidenceTransitionDate`). 이 조합을 직접 다룬 해석은 확인되지 않아,
+   * 그 독법 때문에 비과세(단건·의제)나 중과 배제가 거주요건에서 막힌 경우에만 확인 필요를 밝힌다(결론을 가를 때만).
+   * 의제 비과세·중과 배제는 같은 거주요건 술어를 공유하므로 이 판정(`residenceDecides` 반사실)에 함께 걸린다.
+   */
+  if (!settled && usageConversionTransitionApplies(input)) {
+    const rule = oneHouseRules.one_house_exemption;
+    const useStart = input.nonHousingToHousingConversion!.residentialUseStartDate;
+    const prePolicy = new Date(rule.prePolicyDate);
+    if (input.acquisitionDate < prePolicy && useStart >= prePolicy) {
+      const residence = describeOneHouseResidenceRequirement(input, rule);
+      const holding = describeOneHouseHoldingRequirement(input, rule);
+      if (
+        residence.basis === "unmet" &&
+        residence.wasRegulated &&
+        (holding.met || holding.provisoWaives) &&
+        (relevance?.residenceDecides() ?? true)
+      ) {
+        out.push({
+          id: USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID,
+          reason:
+            `2017년 8월 2일 이전에 취득한 비주택을 주거용으로 바꾼 주택이라, 거주요건 경과규정(${ONE_HOUSE_RESIDENCE_2017_ADDENDA.ACQUIRED_BEFORE} ` +
+            `「2017년 8월 2일 이전에 취득한 주택」)의 취득한 날을 주거용 사용 개시일(${useStart.toISOString().slice(0, 10)})로 보아 ` +
+            `거주요건을 적용했습니다 — 조정대상지역 판정과 같은 날입니다(서면-2020-부동산-5098). 이 조합을 직접 다룬 해석은 확인되지 않았습니다(확인 필요). ` +
+            `또 2017년 8월 2일 이전에 매매계약을 체결하고 계약금을 지급했으며 계약금 지급일 현재 세대가 무주택이었다면 ` +
+            `${ONE_HOUSE_RESIDENCE_2017_ADDENDA.CONTRACTED_BEFORE}(종전 규정)을 주장할 여지가 있으나 판정하지 않았습니다 ` +
+            "(서면-2020-부동산-0221은 오피스텔 분양계약 후 잔금 때부터 거주한 사례여서 사실관계가 다릅니다).",
+        });
+      }
     }
   }
 

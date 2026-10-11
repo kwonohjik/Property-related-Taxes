@@ -189,6 +189,8 @@ function redevResult(price: number, transferDate: string, over: Partial<Transfer
       householdHousingCount: 1,
       residencePeriodMonths: 66,
       redevelopment,
+      // 2021-12 양도는 §154⑤ 단서 구간 — 처분 이력 「없음」을 답한 세대로 둔다(미답이면 결정 #36에 따라 재기산으로 보아 과세).
+      finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
       ...over,
     }),
     rates,

@@ -49,7 +49,10 @@ export function collectResidenceIntervalErrors(args: {
     if (firstError) errors.push(firstError);
   });
 
-  // 겹침 — 입주일 정렬 후 인접 비교. 퇴거일 = 다음 입주일(이사 당일)은 겹침이 아니다(초과만 차단).
+  // 겹침 — 입주일 정렬 후 인접 비교. 앞 구간 퇴거일 ≥ 다음 입주일이면 차단한다.
+  // 거주기간은 「전입일부터 전출일까지」 **초일 산입**이라(`residenceIntervalMonths`) 퇴거일 = 다음 입주일인
+  // 같은 날은 두 구간에 한 번씩 들어가 이중 계산된다(소령 §154⑥ — 같은 하루를 두 번 셀 근거는 문언에 없다).
+  // 옛 「이사 당일은 겹침 아님」 예외는 반개구간 셈 때 맞던 것이다(결정 문서 #37).
   const complete = periods
     .map((p, idx) => ({ ...p, idx }))
     .filter((p) => p.moveInDate && p.moveOutDate)
@@ -62,7 +65,16 @@ export function collectResidenceIntervalErrors(args: {
       errors.push(
         fieldError(
           `residencePeriods.${cur.idx}.moveInDate`,
-          `거주 구간 #${prev.idx + 1}(퇴거 ${prev.moveOutDate})과 #${cur.idx + 1}(입주 ${cur.moveInDate})이 겹칩니다. 구간이 겹치면 거주기간이 이중 계산되므로 구간을 분리하거나 합쳐서 입력하세요.`,
+          `거주 구간 #${prev.idx + 1}(퇴거 ${prev.moveOutDate})과 #${cur.idx + 1}(입주 ${cur.moveInDate})이 겹칩니다. 구간이 겹치면 거주기간이 이중 계산되므로 날짜를 바로잡거나 한 구간으로 합쳐서 입력하세요.`,
+        ),
+      );
+    } else if (prev.moveOutDate === cur.moveInDate) {
+      // 같은 날 — 계속 거주였다면 한 구간으로, 실제 재입주일이 다르면 그 날짜로. 「다음 날로 옮겨 나누라」는
+      // 안내는 하지 않는다(나누면 같은 거주가 1개월 적게 나올 수 있다).
+      errors.push(
+        fieldError(
+          `residencePeriods.${cur.idx}.moveInDate`,
+          `거주 구간 #${prev.idx + 1}의 퇴거일과 #${cur.idx + 1}의 입주일이 같은 날(${cur.moveInDate})입니다. 그날이 두 구간에 모두 산입되어 이중 계산됩니다. 계속 거주했다면 한 구간으로 합쳐서 입력하고, 실제 재입주일이 다르면 그 날짜로 수정하세요.`,
         ),
       );
     }

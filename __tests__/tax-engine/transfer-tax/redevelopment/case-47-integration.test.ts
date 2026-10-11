@@ -38,6 +38,8 @@ describe("사례 47 통합 anchor — 신축APT 양도 + 청산금 수령 동시
     isOneHousehold: true,
     householdHousingCount: 1,
     residencePeriodMonths: 254, // 21년 2개월 (보유 = 거주)
+    // 2022-03-01 양도는 §154⑤ 단서 구간 — 사례 47의 전제(다른 주택 처분 없음)를 답한 세대로 둔다(미답이면 결정 #36에 따라 재기산으로 보아 과세).
+    finalOneHouseRestart: { hadOtherHouseDisposal: false, disposals: [] },
     redevelopment: case47RedevelopmentInfo(),
   });
 

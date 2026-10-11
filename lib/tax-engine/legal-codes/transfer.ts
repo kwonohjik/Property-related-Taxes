@@ -615,6 +615,17 @@ export const ONE_HOUSE_PROVISO_2006_ADDENDA = {
 export const TEMP_TWO_HOUSE_PROVISO_REASONS: ReadonlySet<string> = new Set(["rental_5yr_residence", "expropriation", "unavoidable"]);
 
 /**
+ * 대통령령 제28293호(2017.9.19.) 부칙 제2조 — §154①·② 거주요건 도입의 적용례·경과조치 (DRF 부칙 원문 2026-10-11 실독 — MST 197529).
+ * ①은 「이 영 시행 이후 양도하는 분부터」, ②는 아래 주택에 「종전의 규정」을 적용한다.
+ */
+export const ONE_HOUSE_RESIDENCE_2017_ADDENDA = {
+  /** 「2017년 8월 2일 이전에 취득한 주택」 — 거주요건 경과규정(`ONE_HOUSE_RESIDENCE.prePolicyDate`) */
+  ACQUIRED_BEFORE: "대통령령 제28293호 부칙 제2조 ②1호",
+  /** 「2017년 8월 2일 이전에 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류에 의하여 확인되는 주택(… 계약금 지급일 현재 주택을 보유하지 아니하는 경우로 한정한다)」 */
+  CONTRACTED_BEFORE: "대통령령 제28293호 부칙 제2조 ②2호",
+} as const;
+
+/**
  * §154① 본문 — 취득 당시 조정대상지역 1세대1주택 비과세 거주요건 (단일 소스).
  * 2017.8.3(8·2 대책, 대통령령 제28293호) 이후 취득 + 취득 당시 조정대상지역이면 거주 2년.
  * transfer-rate-seed(엔진 rule)·Step4 거주요건 안내 메시지(UI)가 모두 이 상수를 참조 — dual-truth 방지.
