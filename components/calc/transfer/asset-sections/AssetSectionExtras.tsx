@@ -10,6 +10,7 @@ import { NblSectionContainer } from "../nbl/NblSectionContainer";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
+import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 
 interface Props {
   asset: AssetForm;
@@ -22,9 +23,13 @@ interface Props {
   judgmentLoaded?: boolean;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  /** 폼-전역 「취득 당시 조정대상지역」 저장값 — 주소(법정동코드)가 없을 때만 쓴다(G1-13). */
+  wasRegulatedAtAcquisition?: boolean;
+  /** ④의 법정동코드 폴백(`form.regionCode`) */
+  formRegionCode?: string;
 }
 
-export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange, transferDate }: Props) {
+export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange, transferDate, wasRegulatedAtAcquisition, formRegionCode }: Props) {
   /**
    * 🔴 **컴패니언에는 §155⑳ 카드를 띄우지 않는다** (P6-c-4). ④는 단건·다건 모두 primary만
    *    보낸다 — 엔진 입력의 `rentalHousingException`이 top-level **단일 객체**이기 때문이다.
@@ -82,6 +87,8 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
           judgmentLoaded={judgmentLoaded}
           onChangeResidence={(patch) => onChange(patch)}
           onChange={(rh) => onChange({ rentalHousingException: rh })}
+          // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시. ⑧과 같은 실효값(G1-13).
+          wasRegulatedAtAcquisition={calcEffectiveWasRegulatedAtAcquisition(asset, wasRegulatedAtAcquisition, formRegionCode)}
         />
       )}
     </>

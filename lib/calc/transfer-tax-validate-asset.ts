@@ -60,6 +60,7 @@ export { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { validateAssetAcquisition } from "./transfer-tax-validate-acquisition";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
+import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 
 /**
  * 날짜 순서 교차 검증 — 자산 카드 실시간 인라인 경고(UI)와
@@ -338,8 +339,9 @@ export function validateAssetEntry(
   const rhError = validateRentalHousingException(
     a.rentalHousingException, a, index, label, form.transferDate, "full",
     qualifiesWinWinRental({ winWinRentalHouse: toWinWinRentalHouseFact(form.importedOneHouseFacts) }),
-    // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부(폼-전역, 일반 §154① 흐름과 동일 소스).
-    form.wasRegulatedAtAcquisition,
+    // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부. 주소(법정동코드)가 있으면 엔진과 같은 주소 판정,
+    // 없으면 폼-전역 토글(일반 §154① 흐름과 동일 소스) — ⑤ 카드와 같은 실효값(G1-13).
+    calcEffectiveWasRegulatedAtAcquisition(a, form.wasRegulatedAtAcquisition, form.regionCode),
   );
   if (rhError) return rhError;
 

@@ -146,7 +146,17 @@ export function checkExemption(
     appliedExceptions,
     pending,
     undetermined: [
-      ...collectUndetermined(input, oneHouseRules, article89Clause2, settled),
+      ...collectUndetermined(input, oneHouseRules, article89Clause2, settled, {
+        // 양도 주택 「지정 지구 안인가」 미선언 고지는 그 선언이 비과세 결론을 가를 때만 낸다(S02-7). 선언을 채운 두 판정은
+        // 이 함수 자신이다 — 선언이 있으면 그 고지가 생기지 않아 재귀하지 않는다.
+        selling: () => {
+          const verdictIf = (regionInDesignatedDistrict: boolean) => {
+            const r = checkExemption({ ...input, regionInDesignatedDistrict }, oneHouseRules, presaleRightStartDate, options);
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          return verdictIf(true) !== verdictIf(false);
+        },
+      }),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
       ...inheritedPresaleRightSeparateHouseholdUndetermined(input, article89Clause2, coreWouldPass, presaleRightStartDate),

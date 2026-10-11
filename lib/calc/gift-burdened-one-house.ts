@@ -28,6 +28,7 @@ import {
   type ResidenceReqInput,
 } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import { effectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
@@ -90,6 +91,22 @@ export function giftBurdenedRegulatedByAddress(
       ? { atGift: isRegulatedByBjdCode(regionCode, ymd(gift), inDistrict).isRegulated }
       : {}),
   };
+}
+
+/**
+ * 「취득시 조정대상지역」 실효값 — ⑤ §155⑳ 카드와 ⑧이 읽는 값(G1-13). 주소(법정동코드)가 있으면 엔진과 같은 주소 판정,
+ * 없으면 선언 토글 저장값이다. 숨은 저장값을 그대로 읽으면 엔진(코드 우선)과 반대로 안내·검증한다.
+ */
+export function giftBurdenedEffectiveWasRegulatedAtAcquisition(
+  bgt: Pick<BurdenedGiftTransferTaxInput, "acquisitionDate" | "regionInDesignatedDistrict" | "wasRegulatedAtAcquisition">,
+  regionCode: string | undefined,
+): boolean {
+  return effectiveWasRegulatedAtAcquisition({
+    regionCode,
+    regionInDesignatedDistrict: bgt.regionInDesignatedDistrict,
+    judgmentDate: ymd(bgt.acquisitionDate),
+    stored: bgt.wasRegulatedAtAcquisition,
+  });
 }
 
 /**

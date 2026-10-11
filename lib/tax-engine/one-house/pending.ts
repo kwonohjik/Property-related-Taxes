@@ -36,7 +36,7 @@ import { calculateHoldingPeriod } from "../tax-utils";
 import { resolveMergeExemptionYears, type MergeExemptionKind } from "../data/merge-exemption-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
-import { designatedDistrictUndeclared } from "./designated-district-undeclared";
+import { designatedDistrictUndeclared, type DistrictDeclarationRelevance } from "./designated-district-undeclared";
 import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
@@ -439,6 +439,8 @@ export function collectUndetermined(
   oneHouseRules: OneHouseSpecialRulesData,
   article89Clause2: Article89Clause2Result,
   settled: boolean,
+  /** 양도 주택 지구 선언이 비과세 결론을 가르는가 — `checkExemption`이 선언 true/false로 두 번 판정해 채운다. */
+  districtRelevance?: DistrictDeclarationRelevance,
 ): OneHouseUndetermined[] {
   const undetermined: OneHouseUndetermined[] = [];
 
@@ -455,7 +457,7 @@ export function collectUndetermined(
    * (`qualifiesUnavoidableOutsideCapital` 안전측 설계). 그 사실을 숨기지 않는다.
    */
   // 「동 안 일부 지구만 조정대상지역」 동인데 지구 안·밖을 고르지 않음 — 지구 안으로 판정(모름=불리) + 확인 필요.
-  undetermined.push(...designatedDistrictUndeclared(input));
+  undetermined.push(...designatedDistrictUndeclared(input, districtRelevance));
 
   if (input.unavoidableOutsideCapitalHouse && !input.unavoidableOutsideCapitalHouse.resolvedDate) {
     undetermined.push({

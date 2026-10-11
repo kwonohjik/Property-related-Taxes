@@ -18,6 +18,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { AddressSearch } from "@/components/ui/address-search";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
+import { rightRowDistrictAnswerUsed } from "@/lib/tax-engine/one-house/designated-district-undeclared";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
@@ -284,12 +285,16 @@ export function PresaleRightsSection({
                     });
                   }}
                 />
-                <DesignatedDistrictQuestion
-                  regionCode={r.regionCode}
-                  value={r.inDesignatedDistrict}
-                  onChange={(inDesignatedDistrict) => update(r.id, { inDesignatedDistrict })}
-                  idSuffix={`right-${idx}`}
-                />
+                {/* 이 답을 엔진이 쓰는 행에만 묻는다 — 고지(`designatedDistrictUndeclared`)와 같은 술어(S14b-7). 분양권·승계취득·
+                    상가·토지 원조합원 행과 입주권 양도에서는 답이 결론에 안 쓰이므로 묻지 않는다. */}
+                {rightRowDistrictAnswerUsed(r, isOneHouseExemptionAsset(primaryKind)) && (
+                  <DesignatedDistrictQuestion
+                    regionCode={r.regionCode}
+                    value={r.inDesignatedDistrict}
+                    onChange={(inDesignatedDistrict) => update(r.id, { inDesignatedDistrict })}
+                    idSuffix={`right-${idx}`}
+                  />
+                )}
                 <p className="text-caption text-muted-foreground/70">
                   인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지의 주소를 검색하세요.
                 </p>
