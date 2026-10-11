@@ -14,6 +14,7 @@ import { estimatedDeductionRate } from "./legal-codes";
 import { calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
 import { splitDeemedExpense, resolvePartNecessaryExpense } from "./transfer-tax-mixed-use-inheritance";
+import { inheritedCapexStdOverride } from "./transfer-tax-mixed-use-inheritance";
 import { apportionAcquisitionPrice, apportionTransferPrice } from "./transfer-tax-mixed-use-helpers";
 import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { HousingEstimatedAcqResult } from "./transfer-tax-mixed-use-helpers";
@@ -422,8 +423,9 @@ export function calcHousingGainSplit(
    *   · 양도비     → `apportionTransferPrice`(**양도시** 기준시가)
    * 두 헬퍼는 이미 취득가액·양도가액 안분에 쓰는 **같은 함수**다 — 축을 새로 만들지 않는다.
    */
+  // C8 — 상속·증여 + 취득시 개별주택가격 없음이면 신고가액 비율(`inheritedCapexStdOverride`, 상가분과 같은 축).
   const commonCapexHousing = apportionAcquisitionPrice(
-    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
+    asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived, inheritedCapexStdOverride(asset, effectiveAcqDerived),
   ).housingAcqPrice;
   const commonTransferExpHousing = apportionTransferPrice(
     asset.transferExpense ?? 0, asset, derived,

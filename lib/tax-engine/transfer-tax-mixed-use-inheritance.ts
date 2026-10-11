@@ -15,7 +15,8 @@
 
 import { applyRate } from "./tax-utils";
 import { resolveLthdTable2Era, table2HoldingOnlyRate } from "./data/lthd-table2-era";
-import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
+import { multiplyByArea } from "./area-utils";
+import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
 
 /**
@@ -258,4 +259,41 @@ export function resolveCommercialInheritedAcq(
       selected: reported !== null ? "reported" : "standard_price",
     },
   };
+}
+
+/**
+ * C8 — 상속·증여 겸용(공시, 비-PHD)에서 **취득시 개별주택가격이 없을 때** 공통 자본적지출을 주택분·상가분
+ * **신고가액 비율**로 나누는가(2026-10-11 사용자 결정 「개별주택가격이 없을 때만」).
+ *
+ * 공통 자본적지출은 「소득세법」 제100조 제2항 후문(「해당 자산의 가액에 비례하여」)에 따라 `apportionAcquisitionPrice`가
+ * 취득시 기준시가 비율로 나누는데, 상속·증여는 취득시 개별주택가격이 필수가 아니다(S3-2 Q-B — 신고가액이 이미 주택·상가로 나뉜다).
+ * 그 칸이 비면 주택 분자가 0이 되어 **자본적지출 전액이 상가분으로 쏠렸다**(1세대1주택 고가주택 축 18,620,000원 과소 과세 실측).
+ * 상속 자산의 취득시 = 상속개시일이라 보충적 평가 신고면 주택 신고가액이 곧 그날의 개별주택가격이다 — 같은 시점의 가액으로 빈칸을 채운다.
+ * 이 독법을 정면으로 다룬 해석례는 확인되지 않아 결과에 고지한다(`collectWarnings`).
+ * 개별주택가격을 입력했으면 종전 기준시가 비율 그대로(기존 결과 불변). PHD는 자기 축(F18 `acqStdOverride`)이 따로 있어 제외.
+ */
+export function inheritedCapexUsesReportedRatio(asset: MixedUseAssetInput): boolean {
+  return (
+    (asset.acquisitionByInheritance === true || asset.acquisitionByGift === true) &&
+    asset.usePreHousingDisclosure !== true &&
+    !((asset.acquisitionStandardPrice.housingPrice ?? 0) > 0) &&
+    (asset.housingInheritedValue ?? 0) > 0
+  );
+}
+
+/**
+ * `apportionAcquisitionPrice`에 주입할 축 — 주택분 신고가액 : 상가분 취득가액(신고가액, 없으면 보충적 평가 합계 =
+ * `resolveCommercialInheritedAcq`가 채택하는 값). 적용 대상이 아니면 undefined(종전 축).
+ * 주택분·상가분 두 지점이 **같은 축**을 받아야 두 몫의 합이 자본적지출과 같다(잔액 흡수).
+ */
+export function inheritedCapexStdOverride(
+  asset: MixedUseAssetInput,
+  acqDerived: MixedUseDerivedAreas,
+): { housingStd: number; commercialStd: number } | undefined {
+  if (!inheritedCapexUsesReportedRatio(asset)) return undefined;
+  const commercialStd =
+    asset.commercialInheritedValue ??
+    multiplyByArea(asset.acquisitionStandardPrice.landPricePerSqm, acqDerived.commercialLandArea) +
+      asset.acquisitionStandardPrice.commercialBuildingPrice;
+  return { housingStd: asset.housingInheritedValue ?? 0, commercialStd };
 }
