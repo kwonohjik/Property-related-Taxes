@@ -33,7 +33,7 @@ export function isLthdTable2SubjectAsset(
     case "general_building":
     case "general_building_unit":
       return false;
-    // housing 외(조합원입주권·겸용 등)는 종전 판정을 그대로 둔다 — 입주권 표2 조건은 사용자 결정 대기(G3-7).
+    // housing 외(조합원입주권·겸용 등)는 종전 판정을 그대로 둔다 — 입주권의 표2 «1주택 축»은 §89①4호 가·나목이다(#14 · `redevelopment-right-table2.ts`).
     default:
       return true;
   }

@@ -245,7 +245,8 @@ export function splitCompanionIntoTwo(
   //   초과분은 「소득세법」 §104의3①5호(위임 영 §168의12 — 「주택부속토지 중 … 배율을 곱하여 산정한
   //   면적을 초과하는 토지」)로 **비사업용 토지**다. 초과 상태는 보유기간 내내 같으므로 기간요건(영 §168의6)도
   //   충족된다고 본다(F-13 Q-2, 2026-09-19 사용자 결정 — 종전에는 사용자 입력값을 그대로 상속했다).
-  //   1세대1주택 단위(`oneHouseUnitRole`)에도 넣지 않는다 — 비과세 대상 밖이다(§89①3호).
+  //   비과세 대상 밖이다(§89①3호) — `appurtenant_excess`로 표시해 1세대1주택 단위의 **비과세·표2에서는 빼되 12억 판정·안분
+  //   분모의 합계액에는 넣는다**(#18 — 법문 괄호 「주택 및 이에 딸린 토지의 양도 당시 실지거래가액의 합계액」).
   const excess: TransferTaxItemInput = {
     ...base,
     propertyId: `${base.propertyId}__excess`,
@@ -263,7 +264,7 @@ export function splitCompanionIntoTwo(
     // 한도 초과분은 주택 일체과세 배제 → primaryContext 없음
     primaryContextForCompanionRate: undefined,
     isNonBusinessLand: true,
-    oneHouseUnitRole: undefined,
+    oneHouseUnitRole: "appurtenant_excess",
     // 수동 오버라이드도 없음 (본래 보유기간 기준 세율 자동 적용)
     manualHoldingPeriodOverride: undefined,
   };

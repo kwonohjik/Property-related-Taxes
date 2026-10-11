@@ -1393,9 +1393,11 @@ export interface TransferTaxInput {
    * 짝 주택의 판정을 따르게 한다(`appurtenantHouseVerdict`).
    * - "house": 일괄양도의 주 자산 주택(`propertyType === "housing"`)
    * - "appurtenant_land": 배율 **이내**로 확인된 주택부수토지 카드(분리 후 한도 내 카드 또는 초과 없음 확인)
-   * 배율 초과 카드는 단위 밖이다(비사업용 토지 — §104의3①5호).
+   * - "appurtenant_excess": 배율 **초과**분 카드(비사업용 토지 — §104의3①5호). 비과세·표2 대상은 아니지만 **12억 판정·안분 분모**의
+   *   합계액에는 든다(#18 — 법문 괄호 「주택 및 이에 딸린 토지의 … 합계액」에 배율 한정이 없고 서면4팀-2677·재산세제과-915·
+   *   서울행법 2018구단74696·조심2018서2003도 초과분까지 넣은 전체 가액으로 판정했다).
    */
-  oneHouseUnitRole?: "house" | "appurtenant_land";
+  oneHouseUnitRole?: "house" | "appurtenant_land" | "appurtenant_excess";
 
   /**
    * **F-13 — 짝 주택의 1세대1주택 판정** (`oneHouseUnitRole === "appurtenant_land"` 카드에 합산 엔진이 주입).
