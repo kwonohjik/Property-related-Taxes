@@ -495,6 +495,7 @@ export function toEngineRedevelopment(
     settlementSaleDate: toOptionalDate(redev.settlementSaleDate),
     firstDisclosureDate: toOptionalDate(redev.firstDisclosureDate),
     completionDate: toOptionalDate(redev.completionDate),
+    rightContractDate: toOptionalDate(redev.rightContractDate),
     otherHouseAcquisitionDate: toOptionalDate(redev.otherHouseAcquisitionDate),
   };
 }

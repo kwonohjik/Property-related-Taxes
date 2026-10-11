@@ -34,14 +34,21 @@ function isRedevApt(input: Pick<TransferTaxInput, "propertyType" | "redevelopmen
 }
 
 /**
- * 1세대1주택 판정용 보유 기산일 — 승계조합원 신축주택이면 준공일, 그 밖에는 `acquisitionDate`.
- * (원조합원은 종전주택 취득일 — 시행령 §154⑧1호 통산.)
+ * 1세대1주택 판정용 「주택 취득일」 — 신축주택 취득시기가 **사용승인서 교부일**인 두 축은 준공일, 그 밖에는 `acquisitionDate`.
+ *
+ *  · 승계조합원 신축주택 — 준공일 (영 §162①4호 · 사전-2019-법령해석재산-0649)
+ *  · 토지만 출자한 원조합원 신축주택 — 준공일 (#12 · 영 §162①4호 — 멸실된 주택이 없어 §154⑧1호 통산 대상이 없다)
+ *
+ * 이 날짜가 §154① 「취득 당시」 조정대상지역 판정일이고, 주택 취득일을 쓰는 형제 판정(상속주택 특례 §155② 일반주택 취득일 ·
+ * 일시적 2주택 · 중과 배제 §167의10①15호)도 같은 번역 입력을 읽는다. 주택을 출자한 원조합원은 종전주택 취득일이 그대로다(§154⑧1호 통산).
  */
 export function redevAptJudgmentAcquisitionDate(
-  input: Pick<TransferTaxInput, "acquisitionDate" | "redevelopment">,
+  input: Pick<TransferTaxInput, "acquisitionDate" | "redevelopment" | "propertyType">,
 ): Date {
   const redev = input.redevelopment;
-  return redev?.isSuccessorMember === true && redev.completionDate ? redev.completionDate : input.acquisitionDate;
+  if (redev?.isSuccessorMember === true && redev.completionDate) return redev.completionDate;
+  if (isLandContributedOriginalApt(input) && redev?.completionDate) return redev.completionDate;
+  return input.acquisitionDate;
 }
 
 /**
@@ -97,19 +104,43 @@ export function redevCompletionDateRequiredForHolding(f: {
 export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(input: T): T {
   if (!isRedevApt(input)) return input;
   const redev = input.redevelopment!;
+  const landContributed = isLandContributedOriginalApt(input);
+  const conversion = landContributed ? redevRightConversion(redev) : undefined;
   return {
     ...input,
     propertyType: "housing",
     acquisitionDate: redevAptJudgmentAcquisitionDate(input),
-    // 보유 기산일만 옮긴다 — 취득일(조정지역·경과규정 판정일)은 그대로(거주요건 기준일은 사용자 결정 대기).
-    ...(isLandContributedOriginalApt(input) ? { exemptionHoldingStartDate: redev.completionDate } : {}),
+    ...(landContributed
+      ? {
+          // 보유 기산일 = 사용승인일(G3-4).
+          exemptionHoldingStartDate: redev.completionDate,
+          // #12 — 2017.8.3. 경과규정은 **입주권 전환 완료일**(인가일·분양계약일 중 늦은 날)이 2017.8.2. 이전일 때만 면제된다
+          //   (서면-2018-법령해석재산-1711 · 서면-2022-법규재산-4321). 분양계약일을 모르면 전환 완료일을 알 수 없어 면제하지 않는다 —
+          //   사용승인일을 경과규정 기준일로 둔다(사용승인일이 2017.8.2. 이전이면 그 자체로 면제).
+          residenceTransitionAcquisitionDate: conversion ?? redev.completionDate,
+          // 전환 완료일 현재 조정대상지역이 아니면 거주요건 면제 — `describeOneHouseResidenceRequirement`가 읽는다.
+          residenceRightConversionDate: conversion,
+        }
+      : {}),
     residencePeriodMonths: resolveAptResidenceMonths({
-      isSuccessorMember: redev.isSuccessorMember === true,
+      // 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 신축주택 거주만 센다 — 승계조합원과 같다(준공 전 거주는 보유기간 중 거주가 아니다).
+      isSuccessorMember: redev.isSuccessorMember === true || landContributed,
       priorHouseResidenceMonths: redev.priorHouseResidenceMonths,
       newHouseResidenceMonths: redev.newHouseResidenceMonths,
       residencePeriodMonths: input.residencePeriodMonths,
     }),
   };
+}
+
+/**
+ * 토지 출자 원조합원 완공APT의 **입주권 전환 완료일** — 관리처분계획 인가일과 분양계약일 중 늦은 날 (#12).
+ * 분양계약일을 입력하지 않았으면 `undefined`(전환 완료일을 알 수 없다 — 면제 예외 불성립).
+ */
+export function redevRightConversion(
+  redev: Pick<NonNullable<TransferTaxInput["redevelopment"]>, "approvalDate" | "rightContractDate">,
+): Date | undefined {
+  if (!redev.rightContractDate) return undefined;
+  return redev.rightContractDate > redev.approvalDate ? redev.rightContractDate : redev.approvalDate;
 }
 
 /**

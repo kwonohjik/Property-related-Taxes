@@ -259,6 +259,26 @@ interface CompanionBuildContext {
      */
     rightThreeYearException?: TransferTaxItemInput["rightThreeYearException"];
     /**
+     * §89①4호 가·나목 판정 사실(세대 단위) — **축 B(같은 물건 지분 분할 취득)에서만** 실린다(#11 별건).
+     *
+     * 🔴 컴패니언 엔진 input에는 이 사실이 없어 입주권 둘째 카드는 `resolveOneRightExemptionClause`가 항상 불성립이었다 —
+     *    50%+50% 20억 입주권에서 앞 카드는 전액 비과세, 뒤 카드는 전액 과세(단건 224,831,640 vs 291,211,800).
+     *    같은 물건의 지분 카드는 같은 세대·같은 입주권이라 주 카드와 같은 사실을 본다. 함께 양도(다른 물건)는 싣지 않는다 —
+     *    그쪽 입주권 카드의 4호 판정은 별개 축이다.
+     */
+    oneRightHouseholdFacts?: Pick<
+      TransferTaxItemInput,
+      | "householdRightCount"
+      | "householdNoPresaleRightsConfirmed"
+      | "transferorNonResidentAtTransfer"
+      | "houses"
+      | "sellingHouseId"
+      | "marriageMerge"
+      | "parentalCareMerge"
+      | "isFirstTransferredInMerge"
+      | "contestedRightSaleParentalCareMergeApply"
+    >;
+    /**
      * §104①4호 단서(영 §167의6 1·2호) — 세대 단위 사실. 컴패니언이 분양권(`presale_right`)이면
      * 이 값으로 단서를 판정한다. 미제공 시 단서 불성립(모름 = 혜택 불성립).
      */
@@ -499,6 +519,10 @@ export function buildCompanionEngineInputs(
     // ⑭ 세대 단위 — 위 타입 주석 참조(R-5). 이 줄이 없으면 컴패니언 주택이 §89②·§104⑦을 면한다.
     presaleRights: ctx.primaryEngineInput.presaleRights,
     rightThreeYearException: ctx.primaryEngineInput.rightThreeYearException,
+    // ⑭ 축 B 입주권 카드 — §89①4호 판정 사실(위 타입 주석). 입주권이 아니면 싣지 않는다.
+    ...(c.redevelopment?.subject === "right" && ctx.primaryEngineInput.oneRightHouseholdFacts
+      ? ctx.primaryEngineInput.oneRightHouseholdFacts
+      : {}),
     // ⑭ §104①4호 단서(영 §167의6) — 컴패니언 분양권 전용(세대 단위 사실, 위 타입 주석 참조).
     presaleRightNoOtherRight: ctx.primaryEngineInput.presaleRightNoOtherRight,
     presaleRightAgeOrSpouseMet: ctx.primaryEngineInput.presaleRightAgeOrSpouseMet,

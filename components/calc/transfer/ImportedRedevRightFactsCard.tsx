@@ -34,9 +34,16 @@ export type ImportedRedevRightSlice = Pick<
   | "redevExemptionEligibleAtApproval"
   | "redevOtherHouseAcquisitionDate"
   | "redevOtherHouseDisposalDelayReason"
+  | "redevLandHouseholdOwnedBuilding"
+  | "redevOriginalAssetType"
   | "redevPriorHouseHoldingMonths"
   | "redevPriorHouseResidenceMonths"
 >;
+
+const HOUSEHOLD_BUILDING_LABEL: Record<string, string> = {
+  yes: "인가일·양도일 모두 같은 세대가 소유",
+  no: "다른 세대 소유",
+};
 
 const ELIGIBLE_LABEL: Record<string, string> = {
   yes: "충족 선언",
@@ -54,6 +61,14 @@ function factsRows(a: ImportedRedevRightSlice): Row[] {
     "인가일 현재 기존주택 소유 (§89①4호 가목)",
     ELIGIBLE_LABEL[a.redevExemptionEligibleAtApproval ?? ""],
   );
+  // 토지 출자일 때만 의미가 있다 — 출자 자산이 토지가 아니면 보여 주지 않는다(주택 출자의 stale 선언이 비과세 근거처럼 보이지 않게).
+  if (a.redevOriginalAssetType === "land") {
+    push(
+      "철거 대상 건물의 세대 소유 (본문 · 토지 출자)",
+      HOUSEHOLD_BUILDING_LABEL[a.redevLandHouseholdOwnedBuilding ?? ""] ??
+        "선언 없음 — 토지만 출자한 입주권은 비과세 불성립 (판정 메뉴에서 선언)",
+    );
+  }
   push("다른 주택 취득일 (나목 3년 기산)", a.redevOtherHouseAcquisitionDate);
   push("나목 처분기한 예외 사유 (시행령 §155⑱)", a.redevOtherHouseDisposalDelayReason ? "선언함" : undefined);
   push(

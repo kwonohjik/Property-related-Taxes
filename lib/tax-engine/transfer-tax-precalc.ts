@@ -46,6 +46,7 @@ import {
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { TRANSFER } from "./legal-codes";
 import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
+import { isLandContributedOriginalApt } from "./one-house/redev-apt-judgment-input";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   TransferTaxInput,
@@ -231,9 +232,12 @@ export function runPreCalculationSteps(
    */
   const hceGeneralHouseAcquisitionDate =
     input.houseCountExclusionAcquisitionDate ??
-    (input.carryoverTaxation && input.carryoverTaxation.donorRelation === "spouse"
-      ? input.carryoverTaxation.donorAcquisitionDate
-      : input.acquisitionDate);
+    // #12 — 토지만 출자한 원조합원 신축주택의 취득시기는 사용승인서 교부일이다(영 §162①4호). 비과세 판정 번역과 같은 날짜로 맞춘다.
+    (isLandContributedOriginalApt(input)
+      ? input.redevelopment!.completionDate!
+      : input.carryoverTaxation && input.carryoverTaxation.donorRelation === "spouse"
+        ? input.carryoverTaxation.donorAcquisitionDate
+        : input.acquisitionDate);
   return {
     parsedRates,
     input,

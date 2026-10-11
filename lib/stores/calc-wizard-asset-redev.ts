@@ -264,6 +264,15 @@ export interface RedevelopmentFormSlice {
    * 빈문자열 = 해당 없음/모름 → 사유가 없는 것으로 보아 3년 기한만 본다(모름 = 혜택 불성립).
    */
   redevOtherHouseDisposalDelayReason: "" | "kamco" | "auction" | "public_sale" | "cash_settlement_suit" | "expropriation_suit";
+  /**
+   * **§89①4호 본문 — 토지만 출자한 입주권의 「기존주택 소유 세대」** (#13 · 2026-10-11 결정 B).
+   *
+   * 관리처분계획 인가일과 양도일 **두 시점 모두**, 철거되는 기존주택(건물)을 본인 또는 같은 세대원이 소유하는가.
+   * 계산기에서 출자 자산을 「토지」로 고른 입주권에만 읽힌다(`landHouseholdBuildingInScope`) —
+   * 판정 메뉴 §89①4호 카드에서 선언하고 계산기로 넘어온다.
+   * `""` = 미답(토지 출자면 불성립 + 확인 필요) · `"yes"` = 기존 인가일 요건 선언대로 판정 · `"no"` = 불성립.
+   */
+  redevLandHouseholdOwnedBuilding: "" | "yes" | "no";
 
   // ── 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land") ──
 
@@ -340,4 +349,10 @@ export interface RedevelopmentFormSlice {
    * 시행령 §162①4호 "건축법 §22②에 따른 사용승인서 교부일".
    */
   redevCompletionDate: string;
+  /**
+   * **조합원 분양계약일** — 토지만 출자한 원조합원 완공APT의 §154① 거주요건 면제 예외 판정 (#12).
+   * 입주권 전환 완료일 = 인가일과 분양계약일 중 늦은 날. 선택 입력(비우면 예외 불성립 + 확인 필요).
+   * 토지 출자 원조합원 완공APT(`landContributedOriginalApt`)에서만 읽힌다 — ④가 그 밖에는 보내지 않는다.
+   */
+  redevRightContractDate: string;
 }

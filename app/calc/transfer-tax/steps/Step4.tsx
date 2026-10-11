@@ -121,23 +121,21 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const redevSplitResidence = !!primary && redevSplitResidenceSupersedesStep4(primary);
 
   /**
-   * 토지만 출자한 조합원입주권 — 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
+   * 토지만 출자한 조합원입주권 — §89①4호 비과세는 **같은 세대가 철거 대상 건물을 소유**한 경우에만 성립한다(#13).
    *
    *   §89①4호 본문: 「…관리처분계획의 인가일… 현재 제3호가목에 해당하는 **기존주택을 소유하는
-   *     세대**」가 요건 ⇒ 토지 출자는 인가일 현재 기존주택이 없어 불성립.
-   *   §95② 단서: 「1세대 1주택…에 해당하는 **자산**」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가.
+   *     세대**」 ⇒ 토지만 출자했고 세대도 그 건물을 소유하지 않았다면 불성립. 세대원이 건물을 가졌다면 성립할 여지가 있다
+   *     (재산세과-1748).
+   *   §95② 단서: 「1세대 1주택…에 해당하는 **자산**」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가(엔진이 계속 막는다).
    *
-   * 엔진도 같은 술어로 차단한다(`transfer-tax-redevelopment.ts` `isLandContributedRight`).
-   * subject fallback은 API 변환·validate와 동일(미입력 시 입주권 자산 → "right").
+   * 🔴 「1세대 해당」 토글은 **잠그지 않는다** — 1세대 성립은 프로그램이 판정하지 않고 사용자 선언으로 받는다(Q-3′).
+   *    토지 출자의 불성립은 1세대 문제가 아니라 §89①4호 본문(기존주택 소유) 문제이고, 판정 메뉴의 「세대원 건물 소유」 선언과
+   *    결과 고지가 말한다. subject fallback은 API 변환·validate와 동일(미입력 시 입주권 자산 → "right").
    */
   const isLandContributedRight =
     primary?.redevOriginalAssetType === "land" &&
     (primary?.redevSubject || (primaryKind === "right_to_move_in" ? "right" : "apt")) === "right";
-  /**
-   * 표시용 1세대 여부 — 토지 출자 입주권이면 저장값과 무관하게 false로 보인다.
-   * store에 쓰지 않는다(useEffect 미러링 금지). 엔진이 같은 술어로 무시하므로 결과와 어긋나지 않는다.
-   */
-  const isOneHouseholdEffective = form.isOneHousehold && !isLandContributedRight;
+  const isOneHouseholdEffective = form.isOneHousehold;
 
   const primaryAddress =
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
@@ -367,9 +365,25 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
             title="1세대 해당"
             description="독립적인 생계를 유지하는 세대"
             tone="violet"
-            disabled={isLandContributedRight}
-            disabledReason="토지를 출자한 조합원입주권은 1세대1주택 특례(비과세·장기보유특별공제 표2) 대상이 아닙니다. 관리처분계획 인가일 현재 기존주택을 소유한 세대만 해당합니다 (소득세법 §89①4호 본문·§95② 단서)."
           />
+          {isLandContributedRight && (
+            <div
+              className="rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 text-caption leading-relaxed text-amber-900"
+              data-testid="land-contributed-right-notice"
+            >
+              <p className="font-medium">토지만 출자한 조합원입주권</p>
+              <p className="mt-0.5">
+                §89①4호 비과세는 관리처분계획 인가일과 양도일 현재 <b>같은 세대가 철거 대상 건물(기존주택)을 소유</b>한 경우에만 성립합니다
+                (소득세법 §89①4호 본문 · 재산세과-1748). 그 선언은 판정 메뉴 §89①4호 카드에서 받습니다
+                {primary?.redevLandHouseholdOwnedBuilding === "yes"
+                  ? " — 「예」로 선언되어 있습니다."
+                  : primary?.redevLandHouseholdOwnedBuilding === "no"
+                    ? " — 「아니오」로 선언되어 비과세·고가 안분을 적용하지 않습니다."
+                    : " — 선언이 없어 비과세·고가 안분을 적용하지 않습니다(확인 필요)."}
+                {" "}장기보유특별공제 표2(1세대1주택 우대)는 토지 출자 입주권에 적용하지 않습니다(§95② 단서).
+              </p>
+            </div>
+          )}
 
           <HouseholdHousingCountSection
             form={form}

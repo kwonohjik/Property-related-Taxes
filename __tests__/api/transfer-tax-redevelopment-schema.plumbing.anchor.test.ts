@@ -74,6 +74,12 @@ const FULL_PAYLOAD = {
   otherHouseAcquisitionDate: "2021-01-01",
   // S05-4 — §89①4호 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱)
   otherHouseDisposalDelayReason: "auction",
+  // #11 — 공유지분 물건 전체 권리가액
+  rightsValueWhole: 600_000_000,
+  // #12 — 조합원 분양계약일 (토지 출자 원조합원 완공APT 거주요건 예외)
+  rightContractDate: "2017-02-10",
+  // #13 — 토지 출자 입주권의 세대원 건물 소유 선언
+  landHouseholdOwnedBuilding: true,
 } as const;
 
 describe("T1-02 · ⑫ redevelopmentSchema 필드 집합 보존", () => {

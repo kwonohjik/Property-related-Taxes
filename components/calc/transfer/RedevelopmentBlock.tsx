@@ -189,12 +189,12 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
         {/* G3-4 — 토지만 출자한 원조합원의 완공APT: §154① 비과세 보유기간을 **사용승인서 교부일**부터 센다.
             멸실된 주택이 없어 §154⑧1호 통산이 없고 신축주택 취득시기가 사용승인서 교부일이다(영 §162①4호 ·
             서면-2022-부동산-1616). ⑧·⑫ 필수 — 같은 술어(`landContributedOriginalApt`). §166 산식의 취득일은
-            토지 취득일 그대로이고, 「취득 당시」 조정대상지역 판정일도 바뀌지 않는다. */}
+            토지 취득일 그대로이고, 비과세 판정의 「취득 당시」(보유 기산 · 조정대상지역 판정)는 이 날이다(#12). */}
         {landContributedOriginalApt(asset) && (
           <FieldCard
-            label="준공일 (사용승인서 교부일)"
+            label="사용승인일 (사용승인서 교부일 · 임시사용승인·사실상 사용이 먼저면 그날)"
             field="redevCompletionDate"
-            hint="1세대1주택 비과세 판정에만 쓰입니다(1세대1주택 판정을 받는 경우 필수). 토지만 출자한 조합원이 받은 신축주택의 비과세 보유기간은 이 날부터 셉니다. 양도차익(§166) 계산의 취득일은 토지 취득일 그대로입니다."
+            hint="1세대1주택 비과세 판정에만 쓰입니다(1세대1주택 판정을 받는 경우 필수). 토지만 출자한 조합원이 받은 신축주택의 취득시기는 사용승인서 교부일이고(임시사용승인을 받았거나 사실상 사용했으면 그중 빠른 날), 보유 2년 기산과 「취득 당시」 조정대상지역 판정에 함께 쓰입니다. 양도차익(§166) 계산의 취득일은 토지 취득일 그대로입니다."
             trailing={
               <LawArticleModal legalBasis="소득세법 시행령 §162 ① 4호" label="시행령 §162①4호" />
             }
@@ -202,6 +202,21 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             <DateInput
               value={asset.redevCompletionDate}
               onChange={(v) => onChange({ redevCompletionDate: v })}
+            />
+          </FieldCard>
+        )}
+        {/* #12 — 토지 출자 신축주택의 거주요건 예외: 입주권 전환 완료일(인가일과 분양계약일 중 늦은 날)이 2017.8.2. 이전이거나
+            그 날 조정대상지역이 아니었으면 사용승인일이 조정대상지역이어도 거주요건이 없다(서면-2022-법규재산-4321 ·
+            서면-2018-법령해석재산-1711 · 서면-2021-부동산-0965). 선택 입력 — 비우면 예외를 적용하지 않는다. */}
+        {landContributedOriginalApt(asset) && (
+          <FieldCard
+            label="조합원 분양계약일 (선택)"
+            field="redevRightContractDate"
+            hint="사용승인일에 조정대상지역이어서 거주 2년이 필요한 경우에만 결론을 바꿉니다. 입주권 전환 완료일(관리처분계획 인가일과 분양계약일 중 늦은 날)이 2017.8.2. 이전이거나 그 날 조정대상지역이 아니었으면 거주요건이 없습니다(주소 입력 필요). 비워 두면 그 예외를 적용하지 않습니다."
+          >
+            <DateInput
+              value={asset.redevRightContractDate}
+              onChange={(v) => onChange({ redevRightContractDate: v })}
             />
           </FieldCard>
         )}

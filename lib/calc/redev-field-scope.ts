@@ -62,6 +62,19 @@ export function exemptionAtApprovalInScope(
 }
 
 /**
+ * 「세대원 건물 소유」 선언(`redevLandHouseholdOwnedBuilding`)이 의미를 갖는 축인가 — ④ payload · 엔진 공용 (#13).
+ *
+ * 입주권 양도 + 출자 자산 **토지**일 때만이다. 엔진(`landContributionBlocksOneRight`)이 읽는 조건과 같다.
+ * 판정 메뉴에는 출자 자산 입력이 없어 선언 위젯은 항상 보이고(계산기에서 토지를 고르면 적용된다), 값은 지우지 않는다 —
+ * `clearOutOfScopeRedevPatch`가 비우면 「판정 불러오기」로 가져온 선언이 사라진다.
+ */
+export function landHouseholdBuildingInScope(
+  asset: Pick<AssetForm, "assetKind" | "redevSubject" | "redevOriginalAssetType">,
+): boolean {
+  return resolveRedevSubject(asset) === "right" && asset.redevOriginalAssetType === "land";
+}
+
+/**
  * ③-c 카드의 **부속 입력**(`redevPostApprovalHousingUse`·`…EndDate`)이 의미를 갖는 축인가
  * (P6-c-3 신설).
  *
@@ -251,14 +264,22 @@ export function redevSplitResidenceSupersedesStep4(
 export function redevAptHoldingStartDate(
   asset: Pick<
     AssetForm,
-    "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevCompletionDate" | "acquisitionDate"
+    | "assetKind"
+    | "redevSubject"
+    | "redevIsSuccessorMember"
+    | "redevCompletionDate"
+    | "acquisitionDate"
+    | "redevOriginalAssetType"
+    | "redevReceiveOnlyMode"
   >,
 ): string {
   const isSuccessorApt =
     asset.assetKind === "redevelopment_apt" &&
     resolveRedevSubject(asset) === "apt" &&
     asset.redevIsSuccessorMember === "yes";
-  return isSuccessorApt && asset.redevCompletionDate ? asset.redevCompletionDate : asset.acquisitionDate;
+  // #12 — 토지만 출자한 원조합원 신축주택의 「취득 당시」도 사용승인서 교부일이다(엔진 `redevAptJudgmentAcquisitionDate`와 같은 축).
+  const isLandApt = landContributedOriginalApt(asset);
+  return (isSuccessorApt || isLandApt) && asset.redevCompletionDate ? asset.redevCompletionDate : asset.acquisitionDate;
 }
 
 /**
@@ -325,13 +346,19 @@ export function redevCompletionDateInScope(
 export function successorAptResidenceOverflow(
   asset: Pick<
     AssetForm,
-    "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevCompletionDate"
+    | "assetKind"
+    | "redevSubject"
+    | "redevIsSuccessorMember"
+    | "redevCompletionDate"
+    | "redevOriginalAssetType"
+    | "redevReceiveOnlyMode"
   >,
   transferDate: string | undefined,
   months: number,
 ): number | null {
   if (asset.assetKind !== "redevelopment_apt" || resolveRedevSubject(asset) !== "apt") return null;
-  if (asset.redevIsSuccessorMember !== "yes") return null;
+  // 승계조합원 + (#12) 토지만 출자한 원조합원 — 둘 다 보유기간이 사용승인일부터라 준공 전 거주는 보유기간 중 거주가 아니다.
+  if (asset.redevIsSuccessorMember !== "yes" && !landContributedOriginalApt(asset)) return null;
   const completion = toOptionalDate(asset.redevCompletionDate);
   const transfer = toOptionalDate(transferDate);
   if (!completion || !transfer) return null;
@@ -345,9 +372,11 @@ export function successorAptResidenceOverflowMessage(
   months: number,
   max: number,
   completionDate: string,
+  /** 어느 축인가 — 승계조합원(종전) · 토지만 출자한 원조합원(#12). 종전 호출부는 생략한다. */
+  subjectLabel: string = "승계조합원 신축주택",
 ): string {
   return (
-    `${label}: 승계조합원 신축주택 거주기간 ${months}개월이 준공일(${completionDate})부터 양도일까지의 ` +
+    `${label}: ${subjectLabel} 거주기간 ${months}개월이 준공일(${completionDate})부터 양도일까지의 ` +
     `${max}개월을 넘습니다. 준공 전 거주는 보유기간 중 거주기간이 아닙니다 (소득세법 시행령 §162①4호 · ` +
     `서면-2019-부동산-4508). 사용승인 전에 사실상 사용하거나 임시사용승인을 받았다면 그 날을 준공일에 입력하세요 ` +
     `(같은 호 단서).`

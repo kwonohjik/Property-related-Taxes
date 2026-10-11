@@ -224,7 +224,14 @@ export function Step3({ form, onChange }: Props) {
         />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <FieldCard label="취득일">
+          <FieldCard
+            label="취득일"
+            hint={
+              isRightSale
+                ? undefined
+                : "재개발로 받은 신축주택이면 사용승인일(임시사용승인·사실상 사용이 먼저면 그날)을 입력하세요 — 신축주택 취득시기입니다(시행령 §162①4호). 토지만 출자한 경우 입주권 전환이 조정대상지역 지정 전이면 거주요건이 없을 수 있으니 양도세 계산기의 재개발 입력으로 확인하세요."
+            }
+          >
             <DateInput
               data-testid="one-house-acq-date"
               value={primary?.acquisitionDate ?? ""}

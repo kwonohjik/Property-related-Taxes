@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
         },
       } satisfies MixedUseCompanionContext;
 
-      const items: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
+      const itemsRaw: TransferTaxItemInput[] = apportionment.apportioned.flatMap((a, idx) => {
         if (a.assetId === "primary") {
           // 주 자산: engineInput을 복제 + 안분 결과로 양도·취득·필요경비 덮어쓰기
           // 지분 모드: data.totalPropertyTransferPrice는 engineInput에서 이미 상속됨 (...engineInput).
@@ -405,6 +405,22 @@ export async function POST(request: NextRequest) {
             // 세대 단위 — 컴패니언 주택도 §89②·§104⑦ 판정을 받아야 한다(R-5).
             presaleRights: engineInput.presaleRights,
             rightThreeYearException: engineInput.rightThreeYearException,
+            // 축 B 입주권 카드의 §89①4호 판정 사실(세대 단위) — 같은 물건이라 주 카드와 같은 사실이다(#11 별건).
+            ...(isFullFractionalBundle
+              ? {
+                  oneRightHouseholdFacts: {
+                    householdRightCount: engineInput.householdRightCount,
+                    householdNoPresaleRightsConfirmed: engineInput.householdNoPresaleRightsConfirmed,
+                    transferorNonResidentAtTransfer: engineInput.transferorNonResidentAtTransfer,
+                    houses: engineInput.houses,
+                    sellingHouseId: engineInput.sellingHouseId,
+                    marriageMerge: engineInput.marriageMerge,
+                    parentalCareMerge: engineInput.parentalCareMerge,
+                    isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
+                    contestedRightSaleParentalCareMergeApply: engineInput.contestedRightSaleParentalCareMergeApply,
+                  },
+                }
+              : {}),
             isRegulatedArea: engineInput.isRegulatedArea,
             wasRegulatedAtAcquisition: engineInput.wasRegulatedAtAcquisition,
             // §104①4호 단서(영 §167의6) — 세대 단위, 컴패니언 분양권도 같은 사실을 본다.
@@ -429,6 +445,11 @@ export async function POST(request: NextRequest) {
           mixedUseCtx,
         });
       });
+
+      // 축 B(같은 물건 지분 분할 — 한 사람이 나눠 취득해 전부 양도)는 서버가 다자산 구성에서 도출해 표시한다(#11 — 공유와 구별).
+      const items: TransferTaxItemInput[] = isFullFractionalBundle
+        ? itemsRaw.map((it) => ({ ...it, soleSplitAcquisition: true }))
+        : itemsRaw;
 
       // (6) 다건 엔진 호출
       const aggregateInput: AggregateTransferInput = {

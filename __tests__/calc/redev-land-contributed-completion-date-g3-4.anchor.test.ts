@@ -38,6 +38,9 @@ const LAND = (completion: string, over: Record<string, unknown> = {}) => ({
   acquisitionDate: "2007-02-01",
   redevOriginalAssetType: "land",
   redevCompletionDate: completion,
+  // #12 — 준공 전 거주는 보유기간 중 거주가 아니다: ⑧이 입주일 < 사용승인일을 막으므로 거주 구간은 사용승인일 이후로 둔다.
+  //       (종전 픽스처는 helper 기본값 2019-06-01 입주 — 사용승인 2020/2023보다 앞서 있었다)
+  residencePeriods: [{ moveInDate: completion || "2019-06-01", moveOutDate: "2024-06-01" }],
   ...over,
 });
 const asset = (o: Record<string, unknown> = {}) => redevAptForm({ assetOver: o }).assets[0] as AssetForm;

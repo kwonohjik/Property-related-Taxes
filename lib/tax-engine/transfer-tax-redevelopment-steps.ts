@@ -22,6 +22,7 @@ import {
   applyOneRightExemption,
   applyAptOneHouseExemption,
   applyRental97LthdSpecial,
+  oneRightHighValueBase,
 } from "./transfer-tax-redevelopment-transforms";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import {
@@ -31,6 +32,8 @@ import {
 } from "./transfer-tax-redevelopment-settlement";
 import { redevUsesTable2 } from "./redevelopment-lthd";
 import { oneRightInputAfterSpecialActExclusionOf } from "./one-house/right-sale-special-act-exclusion";
+import { settlementRightsValueBase, oneRightSharedOwnershipNotice } from "./transfer-tax-redevelopment-shared-ownership";
+import { oneRightLandContributionNotices } from "./transfer-tax-redevelopment-land-right";
 import {
   resolveOneRightHighValueThreshold,
   oneRightHighValueEraNotice,
@@ -165,8 +168,8 @@ export function runRedevelopmentGainSteps(
    * (10억 − 6억) ÷ 10억 = (20억 − 12억) ÷ 20억 = 0.4다.
    *
    * 판정과 **같은 leaf**(`resolveHighValuePriceCheck`)를 쓴다 — 인라인으로 다시 쓰면 분모가 또 갈린다.
-   * ⚠️ 청산금 수령분(`settlement.ts`)·입주권(`transforms.ts` `oneRightHighValueBase`)의 지분 모드 12억
-   *    기준은 정면 해석례가 없어 **사용자 결정 대기**라 이 값을 쓰지 않는다.
+   * 청산금 수령분(`settlement.ts` `settlementRightsValueBase`)·입주권(`transforms.ts` `oneRightHighValueBase`)의 지분 모드
+   * 12억 기준도 같은 물건 전체 기준이다(#11 · 2026-10-11 사용자 결정 A) — 각자의 leaf가 정한다.
    */
   const highValueBase = resolveHighValuePriceCheck(input);
   // G-5: 기준금액은 **양도일** 시점 값이다(6억/9억/12억). 판정과 안분이 같은 값을 봐야 한다 —
@@ -232,6 +235,11 @@ export function runRedevelopmentGainSteps(
     isOneHouseForTable2,
   );
   const settlementThresholdLabel = formatHighValueThresholdLabel(settlementHighValueThreshold(input));
+  // 공유지분이면 비교·안분 권리가격은 물건 전체다(#11) — 산식이 자기 값을 만들도록 어느 값인지 적는다.
+  const settlementRightsLabel =
+    input.redevelopment!.rightsValueWhole !== undefined && input.redevelopment!.rightsValueWhole > 0
+      ? "물건 전체 권리가액"
+      : "권리가액";
   const settlementSaleDateLabel = (input.redevelopment!.settlementSaleDate ?? input.transferDate)
     .toISOString()
     .slice(0, 10);
@@ -244,7 +252,7 @@ export function runRedevelopmentGainSteps(
       formula:
         `양도차익 ${exemptedGain.toLocaleString()} + 장기보유특별공제 ${exemptedLthd.toLocaleString()} 합산 제외 ` +
         `(청산금분 양도일 ${settlementSaleDateLabel} 현재 1세대1주택 + 종전주택 보유 요건 충족 · ` +
-        `권리가액 ${input.redevelopment!.rightsValue.toLocaleString()} ≤ ${settlementThresholdLabel} — ` +
+        `${settlementRightsLabel} ${settlementRightsValueBase(input.redevelopment!).toLocaleString()} ≤ ${settlementThresholdLabel} — ` +
         `${REDEVELOPMENT.REDEV_SETTLEMENT_ONE_HOUSE_RULING} · ${REDEVELOPMENT.REDEV_SETTLEMENT_SALE_DATE_RULING})`,
       amount: -(exemptedGain - exemptedLthd),
       legalBasis: REDEVELOPMENT.ONE_HOUSE_REQUIREMENT,
@@ -256,7 +264,7 @@ export function runRedevelopmentGainSteps(
       label: `청산금 수령분 ${settlementThresholdLabel} 초과 과세대상 양도차익 안분`,
       formula:
         `청산금분 양도차익 ${sh.gainBeforeAllocation.toLocaleString()} ` +
-        `× (권리가액 ${sh.rightsValue.toLocaleString()} - ${settlementThresholdLabel}) / (권리가액 ${sh.rightsValue.toLocaleString()}) ` +
+        `× (${settlementRightsLabel} ${sh.rightsValue.toLocaleString()} - ${settlementThresholdLabel}) / (${settlementRightsLabel} ${sh.rightsValue.toLocaleString()}) ` +
         `= ${sh.taxableGain.toLocaleString()} ` +
         `(비과세분 ${sh.nontaxableGain.toLocaleString()}) — 청산금분 양도일 ${settlementSaleDateLabel} 현재 1세대1주택 · ` +
         `${REDEVELOPMENT.REDEV_SETTLEMENT_HIGH_VALUE_RULING}`,
@@ -447,10 +455,18 @@ export function runRedevelopmentGainSteps(
   const oneRightThresholdLabel = formatHighValueThresholdLabel(
     resolveOneRightHighValueThreshold(input.transferDate),
   );
+  // 비교·안분 분모 — 공유지분이면 물건 전체 양도가액이다(#11). 산식이 자기 값을 만들도록 어느 값인지 적는다.
+  const oneRightBase = oneRightHighValueBase(input);
+  const oneRightBaseLabel =
+    input.burdenedGiftDenominator !== undefined && input.burdenedGiftDenominator > 0
+      ? "증여가액"
+      : oneRightBase === input.transferPrice
+        ? "양도가액"
+        : "물건 전체 양도가액";
   if (redevAfterRight.oneRightExemptionApplied) {
     steps.push({
       label: "1세대1입주권 비과세",
-      formula: `§89①4호 가목 — 양도일 현재 입주권 1개 + 다른 주택 없음 + 인가일 기준 종전주택 비과세 요건 충족 + 양도가액 ${input.transferPrice.toLocaleString()} ≤ ${oneRightThresholdLabel} → 전액 비과세`,
+      formula: `§89①4호 가목 — 양도일 현재 입주권 1개 + 다른 주택 없음 + 인가일 기준 종전주택 비과세 요건 충족 + ${oneRightBaseLabel} ${oneRightBase.toLocaleString()} ≤ ${oneRightThresholdLabel} → 전액 비과세`,
       amount: 0,
       legalBasis: REDEVELOPMENT.GAIN_BASE,
     });
@@ -460,7 +476,7 @@ export function runRedevelopmentGainSteps(
     const ha = redevAfterRight.highValueAllocation;
     steps.push({
       label: `1세대1입주권 ${oneRightThresholdLabel} 초과 과세대상 양도차익 안분`,
-      formula: `§89①4호 각 목 외의 부분 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (양도가액 ${input.transferPrice.toLocaleString()} - ${oneRightThresholdLabel}) / 양도가액 = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
+      formula: `§89①4호 각 목 외의 부분 단서 + §95③ — 전체 양도차익 ${redev.total.gain.toLocaleString()} × (${oneRightBaseLabel} ${oneRightBase.toLocaleString()} - ${oneRightThresholdLabel}) / ${oneRightBaseLabel} ${oneRightBase.toLocaleString()} = ${ha.taxableGain.toLocaleString()} (비과세분 ${ha.nontaxableGain.toLocaleString()})`,
       amount: ha.taxableGain,
       legalBasis: REDEVELOPMENT.REDEV_HIGH_VALUE_ALLOCATION,
     });
@@ -470,16 +486,22 @@ export function runRedevelopmentGainSteps(
     redevAfterRight.oneRightExemptionApplied || redevAfterRight.oneRightHighValueApplied
       ? oneRightHighValueEraNotice(input.transferDate)
       : undefined;
+  // #11 — 공유지분 입주권(공유에만): 물건 전체 기준은 영 §156①·§160① 유추라 확인 필요 고지를 결과 경고로 싣는다.
+  const oneRightSharedNotice = oneRightSharedOwnershipNotice(input, redevAfterRight.oneRightHighValueApplied);
   // E-3 후속 — 요건 연혁 고지(판정 메뉴 `buildOneRightVerdict`와 같은 함수). 입주권 양도에만.
   const redevInfo = input.redevelopment;
   const oneRightRequirementNotices =
     redevInfo?.subject === "right"
-      ? oneRightRequirementEraNotices({
-          transferDate: input.transferDate,
-          rightApprovalDate: redevInfo.approvalDate,
-          householdRightCount: input.householdRightCount,
-          eligibleAtApprovalDeclared: redevInfo.exemptionEligibleAtApproval === true,
-        })
+      ? [
+          ...oneRightRequirementEraNotices({
+            transferDate: input.transferDate,
+            rightApprovalDate: redevInfo.approvalDate,
+            householdRightCount: input.householdRightCount,
+            eligibleAtApprovalDeclared: redevInfo.exemptionEligibleAtApproval === true,
+          }),
+          // #13 — 토지만 출자한 입주권: 세대원 건물 소유 선언이 결론을 가르는 경우의 고지.
+          ...oneRightLandContributionNotices(input, redevAfterRight),
+        ]
       : [];
-  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, surchargeFallbackNotice };
+  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, oneRightSharedNotice, surchargeFallbackNotice };
 }

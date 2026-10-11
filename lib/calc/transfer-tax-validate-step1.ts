@@ -409,7 +409,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     if (max !== null)
       issues.push({
         step,
-        message: fieldError("residencePeriodMonthsAsset", successorAptResidenceOverflowMessage("거주기간", months, max, primary.redevCompletionDate)),
+        message: fieldError("residencePeriodMonthsAsset", successorAptResidenceOverflowMessage("거주기간", months, max, primary.redevCompletionDate, primary.redevIsSuccessorMember === "yes" ? undefined : "토지 출자 신축주택")),
       });
     // 일반 상한 — 보유 기산일~양도일(구간 모드와 같은 기준일 · 승계조합원은 위가 더 구체적인 문구로 먼저 잡는다)
     else {

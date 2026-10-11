@@ -26,6 +26,7 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { scaleLthdParts, zeroLthdParts } from "./transfer-tax-redevelopment-lthd";
+import { settlementRightsValueBase } from "./transfer-tax-redevelopment-shared-ownership";
 import type { TransferTaxInput, RedevelopmentResult } from "./types/transfer.types";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 
@@ -112,15 +113,19 @@ export function applySettlementExemption(
 
   const threshold = settlementHighValueThreshold(input);
   const s = redev.settlement;
+  // 🔴 공유지분이면 비교·안분 모두 **물건 전체 권리가격**이다(#11) — 청산금분은 종전주택의 분할양도라 영 §156①(타인 소유부분 포함)·
+  //    §160①이 바로 적용되고, 권리가격은 관리처분계획에 공유 물건 단위로 정해진다. 지분가로 재면 물건 전체가 12억을 넘어도
+  //    지분가가 12억 이하로 읽혀 청산금분이 전액 비과세가 된다. 이 분기의 양도차익은 이미 지분분이라 비율만 곱한다.
+  const rightsBase = settlementRightsValueBase(redevInfo);
 
-  if (redevInfo.rightsValue > threshold) {
+  if (rightsBase > threshold) {
     // §160①1호 — 양도차익 × (양도가액 − 기준금액) ÷ 양도가액. 「양도가액」 자리에 권리가격(2705 질의2).
     // 손실 분기는 안분하지 않는다(`applyHighValueAllocation`의 같은 규약).
     if (s.gain <= 0) return redev;
     const taxableGain = safeMultiplyThenDivide(
       s.gain,
-      redevInfo.rightsValue - threshold,
-      redevInfo.rightsValue,
+      rightsBase - threshold,
+      rightsBase,
     );
     // §160①2호 — 형제 경로(`applyHighValueAllocation`)와 같이 안분 후 양도차익 × 그 분기 공제율.
     const taxableLthd = s.lthdRate > 0 ? applyFairMarketRatio(taxableGain, s.lthdRate) : 0;
@@ -139,9 +144,9 @@ export function applySettlementExemption(
       settlement,
       total: { gain: totalGain, lthd: totalLthd, taxableIncome: totalGain - totalLthd },
       settlementHighValueAllocation: {
-        rightsValue: redevInfo.rightsValue,
+        rightsValue: rightsBase,
         threshold,
-        taxableRatio: (redevInfo.rightsValue - threshold) / redevInfo.rightsValue,
+        taxableRatio: (rightsBase - threshold) / rightsBase,
         gainBeforeAllocation: s.gain,
         taxableGain,
         nontaxableGain: s.gain - taxableGain,

@@ -131,12 +131,22 @@ export function validateRedevelopmentAsset(
     })
   ) {
     if (!asset.redevCompletionDate) {
-      return fieldError("redevCompletionDate", `${label}: 토지만 출자한 완공APT — 준공일(사용승인서 교부일)을 입력하세요. 1세대1주택 비과세 보유기간은 그 날부터 셉니다. (시행령 §162①4호 · 서면-2022-부동산-1616)`);
+      return fieldError("redevCompletionDate", `${label}: 토지만 출자한 완공APT — 준공일(사용승인서 교부일)을 입력하세요. 1세대1주택 비과세 보유기간과 「취득 당시」 조정대상지역 판정은 그 날을 기준으로 합니다. (시행령 §162①4호 · 서면-2022-부동산-1616)`);
     }
   }
   // 입력돼 있으면(1세대 여부와 무관하게) 인가일 이후여야 한다.
   if (landContributedOriginalApt(asset) && asset.redevCompletionDate && asset.redevApprovalDate && asset.redevCompletionDate < asset.redevApprovalDate) {
     return fieldError("redevCompletionDate", `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`);
+  }
+
+  // #12 — 조합원 분양계약일은 사용승인일 이전이어야 한다(입주권 전환 완료일은 신축주택 완공 전이다).
+  if (
+    landContributedOriginalApt(asset) &&
+    asset.redevRightContractDate &&
+    asset.redevCompletionDate &&
+    asset.redevRightContractDate > asset.redevCompletionDate
+  ) {
+    return fieldError("redevRightContractDate", `${label}: 조합원 분양계약일은 사용승인일 이전이어야 합니다.`);
   }
 
   if (approvalLawBasis !== "urban_renovation_art_74") {
