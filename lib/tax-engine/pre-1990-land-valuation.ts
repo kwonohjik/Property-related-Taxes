@@ -197,7 +197,7 @@ function validateInput(input: Pre1990LandValuationInput): void {
     throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `면적(areaSqm)은 양수여야 합니다 (입력: ${input.areaSqm})`);
   }
   if (!Number.isFinite(input.pricePerSqm_1990) || input.pricePerSqm_1990 <= 0) {
-    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `1990.1.1. 개별공시지가는 양수여야 합니다 (입력: ${input.pricePerSqm_1990})`);
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `1990.1.1. 기준 개별공시지가는 양수여야 합니다 (입력: ${input.pricePerSqm_1990})`);
   }
   // pricePerSqm_atTransfer는 optional — 검증 불필요.
   // 양도시 기준시가는 상위 standardPriceAtTransfer 필드로 공급된다.

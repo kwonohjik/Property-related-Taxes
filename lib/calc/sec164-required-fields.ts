@@ -126,7 +126,7 @@ export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
     { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
     { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
     { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
-    amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
+    amountField("pre1990PricePerSqm_1990", "1990.1.1. 기준 개별공시지가(1990.8.30. 고시)"),
   ];
 
   /**
@@ -188,7 +188,7 @@ export function sec164LandStatus(asset: AssetForm): Sec164FieldStatus | null {
       { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
       { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
       { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
-      amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
+      amountField("pre1990PricePerSqm_1990", "1990.1.1. 기준 개별공시지가(1990.8.30. 고시)"),
     ]),
   );
 }
@@ -209,7 +209,7 @@ export function sec164LandPartStatus(asset: AssetForm): Sec164FieldStatus {
       { has: (a) => gradeFilled(a.pre1990Grade_current), label: "1990.8.30. 현재 토지등급", field: "pre1990Grade_current" },
       { has: (a) => gradeFilled(a.pre1990Grade_prev), label: "1990.8.30. 직전 토지등급", field: "pre1990Grade_prev" },
       { has: (a) => gradeFilled(a.pre1990Grade_atAcq), label: "취득시 토지등급", field: "pre1990Grade_atAcq" },
-      amountField("pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가"),
+      amountField("pre1990PricePerSqm_1990", "1990.1.1. 기준 개별공시지가(1990.8.30. 고시)"),
     ]),
   );
 }

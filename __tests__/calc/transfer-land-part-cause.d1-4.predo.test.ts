@@ -190,7 +190,7 @@ describe("A. ⑧ 완화 — 단서 구간(1990.8.30. 전 상속·증여 토지)�
     [{ pre1990Grade_current: "" }, "pre1990Grade_current", "1990.8.30. 현재 토지등급 칸을 입력하세요"],
     [{ pre1990Grade_prev: "" }, "pre1990Grade_prev", "1990.8.30. 직전 토지등급 칸을 입력하세요"],
     [{ pre1990Grade_atAcq: "" }, "pre1990Grade_atAcq", "취득시 토지등급 칸을 입력하세요"],
-    [{ pre1990PricePerSqm_1990: "" }, "pre1990PricePerSqm_1990", "1990.1.1. 개별공시지가 칸을 입력하세요"],
+    [{ pre1990PricePerSqm_1990: "" }, "pre1990PricePerSqm_1990", "1990.1.1. 기준 개별공시지가(1990.8.30. 고시) 칸을 입력하세요"],
   ];
 
   for (const [name, make] of hosts) {
