@@ -7,19 +7,20 @@
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
-import { toDate } from "@/lib/api/date-coerce";
+import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { toEngineRental4ho } from "@/lib/api/rental-4ho-coerce";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption";
-import { provisoGate, effectiveProvisoReason } from "./transfer-tax-api-helpers";
+import { provisoGate, effectiveProvisoReason, buildSameHouseholdInheritancePayload } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
+import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
-import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
+import { departureOnlyHousePayload, rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 
 export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
   const primary = form.assets?.[0];
@@ -53,13 +54,8 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
       isOneHousehold: form.isOneHousehold,
       // OH-20 — 재개발 완공APT도 §154① 단서 대상(⑤ Step4 · ⑧과 같은 술어).
         isHousing: isOneHouseExemptionAsset(primary?.assetKind),
-      householdHousingCount: resolveHouseholdHousingCount({
-        primaryKind: primary?.assetKind,
-        declared: parseInt(form.householdHousingCount || "1", 10) || 0,
-        houses: form.houses,
-        transferDate: form.transferDate,
-        legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-      }),
+      // §154① 단서는 제외 **후** 주택 수로 본다 — ④·⑤·⑧과 같은 leaf(S03-4).
+      householdHousingCount: resolveExemptionHousingCount(form),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
         primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
@@ -74,23 +70,25 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
     }).mode,
     form.provisoReason,
   ) as NonNullable<ResidenceReqInput["oneHouseExemptionProviso"]>["reason"] | "";
+  // §154⑧3호 동일세대 상속 사실 — ④(`transfer-tax-api.ts`)·판정 메뉴 ④와 **같은 leaf**다(OH-18).
+  // 보유 개시일(`decedentCohabitationHoldingStartDate`)까지 같이 싣는다 — 빠지면 거주요건의 「취득 당시」·보유 기산일이
+  // 취득일로 남아 엔진 결론과 갈린다(재검증 S12-5 [B]·F252).
+  const sameHouseholdInheritance = primary ? buildSameHouseholdInheritancePayload(primary) : undefined;
   return {
     acquisitionDate: toDate(primary?.acquisitionDate, "acquisitionDate"),
     transferDate: toDate(form.transferDate, "transferDate"),
     residencePeriodMonths: residence.months,
     regionCode: primary?.regionCode || form.regionCode || undefined,
+    // ④와 같은 식 — 자산 코드에 붙은 「지정 지구 안인가」 선언(폼-전역 코드 폴백에는 선언이 없다). 빠지면 지구 밖 선언이
+    // 무시되어 엔진은 비조정인데 Step4만 「거주요건 불충족」을 띄운다(재검증 S12-5 [A]).
+    regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
     wasRegulatedAtAcquisition: form.wasRegulatedAtAcquisition,
     // §154⑧3호 동일세대 상속 거주 통산 — meetsOneHouseResidenceRequirement가 소비하므로
     // Step4 거주요건 안내(이 빌더 소비)도 엔진과 동일 필드 전달 필수 (UI↔엔진 dual-truth 방지).
     acquisitionCause: primary?.acquisitionCause,
-    decedentSameHouseholdBeforeInheritance:
-      primary?.acquisitionCause === "inheritance"
-        ? primary.decedentSameHouseholdBeforeInheritance
-        : undefined,
-    decedentCohabitationResidenceMonths:
-      primary?.acquisitionCause === "inheritance" && primary.decedentSameHouseholdBeforeInheritance
-        ? parseInt(primary.decedentCohabitationResidenceMonths) || 0
-        : undefined,
+    decedentSameHouseholdBeforeInheritance: sameHouseholdInheritance?.decedentSameHouseholdBeforeInheritance,
+    decedentCohabitationHoldingStartDate: toOptionalDate(sameHouseholdInheritance?.decedentCohabitationHoldingStartDate),
+    decedentCohabitationResidenceMonths: sameHouseholdInheritance?.decedentCohabitationResidenceMonths,
     // §154⑤ 단서·§154① 거주요건 판정 기준일 — 용도변경 시 주거용 사용일이 「주택 취득일」이다.
     // Step4 안내가 엔진과 같은 기준일을 보게 하려면 이 빌더도 같은 술어로 조립해야 한다.
     nonHousingToHousingConversion: conversionOn
@@ -130,6 +128,8 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
           ...(form.provisoBusinessApprovalDate
             ? { businessApprovalDate: toDate(form.provisoBusinessApprovalDate, "provisoBusinessApprovalDate") }
             : {}),
+          // 2호 나·다목 「출국일 현재 1주택」 — ④와 같은 조각(빠지면 「예」라고 답해도 단서가 불성립으로 읽힌다 · S12-5 [C])
+          ...departureOnlyHousePayload(effectiveReason, form.provisoDepartureOnlyHouse),
           ...rentalLeaseResidencePayload(effectiveReason, form.provisoRentalLeaseResidenceMonths),
           // OH-38 — Step4 거주요건 안내도 ④·⑭와 같은 조립·같은 변환(단일 진실)
           ...(effectiveReason === "rental_registration_4ho"

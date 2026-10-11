@@ -201,12 +201,21 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     await expect(dialog.getByText("사유 해소일", { exact: false })).toBeVisible();
   });
 
-  test("양도 주택 3주택+ 전용 배제 특례 — 주택수 3채 시 섹션 노출", async ({ page }) => {
+  test("양도 주택 자체 배제 특례 — 주택수 3채 시 섹션 노출", async ({ page }) => {
     // 명부 필수화(PR-1) — "3채 이상" 버튼이 사라졌다. 명부 행 2개(취득일 채움)로 도출 3채(1+2).
     await addHouseRows(page, 2);
 
-    await expect(page.getByText("양도 주택 중과배제 특례", { exact: false })).toBeVisible();
+    // 3채에서는 2주택 전용 섹션(「… (2주택 시)」)도 함께 뜬다 — 제목 전체로 구분한다.
+    await expect(page.getByText("양도 주택 중과배제 특례 (2주택 이상 시)", { exact: true })).toBeVisible();
     // 사원용 주택 토글 ON → 무상 제공 기간 노출
+    await page.getByRole("switch", { name: /사원용 주택/ }).click();
+    await expect(page.getByText("무상 제공 기간 (년)", { exact: false })).toBeVisible();
+  });
+
+  test("양도 주택 자체 배제 특례 — 주택수 2채(명부 1행)에서도 섹션 노출 (소령 §167의10①2호 준용, 재검증 S14b-2)", async ({ page }) => {
+    await addHouseRows(page, 1);
+
+    await expect(page.getByText("양도 주택 중과배제 특례 (2주택 이상 시)", { exact: true })).toBeVisible();
     await page.getByRole("switch", { name: /사원용 주택/ }).click();
     await expect(page.getByText("무상 제공 기간 (년)", { exact: false })).toBeVisible();
   });

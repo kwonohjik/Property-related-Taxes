@@ -145,6 +145,15 @@ export function buildOneHouseCountBreakdown(p: {
   /** §155②③ 상속·공동상속 */
   inheritedExclusion: InheritedHouseExclusionResult;
   /**
+   * §155②③ 상속주택 제외를 **이 판정의 주택 수에 반영하는가**. 기본 true.
+   *
+   * 🔴 조합원입주권 양도(§89①4호) 판정은 상속주택을 「다른 주택」에서 **빼지 않는다** — 시행령 §155②③은 「일반주택을
+   *    양도하는 경우」 §154①을 적용하는 규정이라 입주권에 유추할 수 없다는 입장이다(E094 · 조심-2021-서-1117,
+   *    `judgment-pipeline.ts`의 `oneRightInputAfterSpecialActExclusion`). 명세가 그 주택을 「주택 수 제외」로 보이면
+   *    판정(가목 불성립 — 다른 주택 보유)과 명세(0채)가 갈린다(재검증 S03-6). false면 상속주택은 차감하지 않는다.
+   */
+  inheritedExclusionApplies?: boolean;
+  /**
    * 엔진 형태 명부(`selling` 행 포함) — `houseId`를 「보유 주택 N · 취득일」로 바꿔 싣는 데만 쓴다.
    * 🔑 결과에 실어 두면 화면이 폼을 몰라도(이력 상세) 어느 주택인지 보인다.
    */
@@ -180,8 +189,8 @@ export function buildOneHouseCountBreakdown(p: {
     });
   }
 
-  // §155②③ 상속 — **행을 특정할 수 있는 유일한 축**이다.
-  for (const h of p.inheritedExclusion.excludedHouses) {
+  // §155②③ 상속 — **행을 특정할 수 있는 유일한 축**이다. 입주권 양도 판정에는 적용하지 않는다(위 `inheritedExclusionApplies`).
+  for (const h of p.inheritedExclusionApplies === false ? [] : p.inheritedExclusion.excludedHouses) {
     excluded.push({
       houseId: h.houseId,
       label: h.basis === "sole" ? "상속주택 — 주택 수 제외" : "공동상속주택(소수지분) — 주택 수 제외",

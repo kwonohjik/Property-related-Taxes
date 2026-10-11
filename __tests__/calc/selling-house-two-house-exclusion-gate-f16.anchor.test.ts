@@ -27,9 +27,10 @@ describe("F-16 ⑤ 양도 주택 2주택 배제 섹션 가시성", () => {
     expect(sellingHouseTwoHouseExclusionVisible(form({ householdHousingCount: "2" }))).toBe(true);
   });
 
-  it("F16-G2 주택수 1·3에서는 보이지 않는다 — 두 호는 2주택 전용이다", () => {
+  it("F16-G2 주택수 1에서는 보이지 않고 3에서는 보인다 — 두 호는 유효 주택 수 2채에서 성립하고, 유효 수는 세대 주택 수 이하다", () => {
     expect(sellingHouseTwoHouseExclusionVisible(form({ householdHousingCount: "1" }))).toBe(false);
-    expect(sellingHouseTwoHouseExclusionVisible(form({ householdHousingCount: "3" }))).toBe(false);
+    // PR1b(S14b-2 짝) — 종전 `=== 2`는 불산입 주택(§167의10① 괄호)이 낀 3채 세대(유효 2채)의 선언 경로를 막았다.
+    expect(sellingHouseTwoHouseExclusionVisible(form({ householdHousingCount: "3" }))).toBe(true);
   });
 
   it("F16-G3 토글이 켜져 있으면 주택수와 무관하게 남는다 — 끌 화면이 사라지면 dead-end", () => {
@@ -45,10 +46,13 @@ describe("F-16 ⑤ 양도 주택 2주택 배제 섹션 가시성", () => {
     ).toBe(true);
   });
 
-  it("F16-G4 3주택+ 섹션과는 다른 게이트다 — 주택수 2에서 그 섹션은 열리지 않는다", () => {
-    const f = form({ householdHousingCount: "2" });
-    expect(sellingHouseExclusionVisible(f)).toBe(false);
-    expect(sellingHouseTwoHouseExclusionVisible(f)).toBe(true);
+  it("F16-G4 양도 주택 자체 배제 섹션은 2주택부터 열린다(PR1b S14b-2) — 1주택에서는 둘 다 닫힌다", () => {
+    const two = form({ householdHousingCount: "2" });
+    expect(sellingHouseExclusionVisible(two)).toBe(true);
+    expect(sellingHouseTwoHouseExclusionVisible(two)).toBe(true);
+    const one = form({ householdHousingCount: "1" });
+    expect(sellingHouseExclusionVisible(one)).toBe(false);
+    expect(sellingHouseTwoHouseExclusionVisible(one)).toBe(false);
   });
 });
 

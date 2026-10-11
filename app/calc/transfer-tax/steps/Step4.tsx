@@ -44,6 +44,7 @@ import {
 import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-section-scope";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
+import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 
@@ -193,14 +194,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         // OH-20 — 재개발 완공APT도 §154① 단서 대상이다(④ · ⑧과 같은 술어). 시행령 §154① 단서는
         //   자산 종류를 가리지 않고 「1세대가 양도일 현재 국내에 1주택을 보유」한 경우에 걸린다.
         isHousing: isOneHouseExemptionAsset(primaryKind),
-        // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴).
-        householdHousingCount: resolveHouseholdHousingCount({
-          primaryKind,
-          declared: parseInt(form.householdHousingCount || "1", 10) || 0,
-          houses: form.houses,
-          transferDate: form.transferDate,
-          legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
-        }),
+        // Q-8 — ④·⑧과 **같은 leaf**로 주택 수를 얻는다(3중 패턴). §155②③·조특법 제외 **후** 수다(S03-4).
+        householdHousingCount: resolveExemptionHousingCount(form),
         temporaryTwoHouseApplies: tempTwoHouseDates !== undefined,
       }),
     /**
@@ -210,16 +205,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
      *
      * `temporary_two_house` 모드는 넘겨받은 사실 카드의 §154① 단서 행이 소비한다(OH-36).
      * 판정 메뉴 `Step2.tsx` 쪽 안전망은 `__tests__/calc/proviso-gate-roster-deps.ui.test.tsx`(PGD).
+     *
+     * 제외 후 주택 수(`resolveExemptionHousingCount`)는 양도일·감면주택 선언·상속 관련 세대 사실까지 읽으므로
+     * 폼 전체를 의존으로 건다(`tempTwoHouseDates`와 같은 이유).
      */
-    [
-      form.isOneHousehold,
-      primaryKind,
-      form.householdHousingCount,
-      form.houses,
-      form.transferDate,
-      form.legacyHouseCountPrecedence,
-      tempTwoHouseDates,
-    ],
+    [form, primaryKind, tempTwoHouseDates],
   );
 
   /**

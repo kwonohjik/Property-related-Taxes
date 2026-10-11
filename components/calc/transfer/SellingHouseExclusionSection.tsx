@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * SellingHouseExclusionSection — 양도(selling) 주택 3주택+ 전용 중과배제 특례
+ * SellingHouseExclusionSection — 양도(selling) 주택 자체 중과배제 특례 (2주택 이상)
  *
- * 소령 §167의10 — 양도 주택 자체가 배제 항목(저당권 실행·사원주택·조특 특례·문화재·어린이집)에 해당.
- * 엔진은 effectiveHouseCount>=3 에서 sellingHouse.* 플래그로 평가(helpers:672-725).
+ * 양도 주택 자체가 배제 항목(저당권 실행·사원주택·조특 특례·문화재·어린이집)에 해당하면 중과 대상이 아니다.
+ * 근거: 3주택 이상은 「소득세법 시행령」 §167의3①4·5·6·8·8의2호 직접, 2주택은 같은 영 §167의10①2호(준용).
+ * 엔진은 effectiveHouseCount>=2 에서 sellingHouse.* 플래그로 평가한다(`multi-house-surcharge-exclusion.ts` — F-7).
  * 양도 주택을 기술하므로 폼-전역(form.sellingHouseExclusion).
  *
  * 정책: ToggleCard/DecimalInput 전용 · OFF 시 onChange 직접 patch(useEffect 미러링 금지).
@@ -29,9 +30,10 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
   }
 
   return (
-    <ToneCard tone="amber" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (3주택 이상 시)" noDark>
+    <ToneCard tone="amber" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 이상 시)" noDark>
       <p className="text-caption text-muted-foreground/80">
-        양도하는 주택 자체가 아래 사유에 해당하면 3주택 이상이어도 중과 배제됩니다 (소령 §167의10).
+        양도하는 주택 자체가 아래 사유에 해당하면 2주택 이상이어도 중과 배제됩니다
+        (3주택 이상은 소령 §167의3①, 2주택은 소령 §167의10①2호 준용).
       </p>
 
       {/* 저당권 실행 취득 (취득 후 3년 이내) */}

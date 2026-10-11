@@ -105,10 +105,22 @@ export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet
   return qualifies ? new Set([row.id]) : new Set();
 }
 
-/** §155① 신규 주택 후보에서 뺄 행 — 조특법 제외 ∪ 상속주택 제외 ∪ ⑦ 농어촌주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
-export function temporaryTwoHouseCandidateExcludedIds(form: CandidateFormLike): ReadonlySet<string> {
+/**
+ * 비과세 판정의 **주택 수에서 빠지는** 명부 행 id — 조특법 소유주택 제외(§99의4·§98의9·보유 감면주택) ∪ §155②③ 상속주택.
+ *
+ * 엔진 `resolveExemptionHouseCountExclusions`가 `householdHousingCount`에서 빼는 두 갈래(`hceApplied`·
+ * `specialHouseExclusionDetail` · `inheritedExclusion`)의 행이다. §154① 단서 게이트(`provisoGate`)·일시적 2주택 후보·
+ * 「제외 후 주택 수」(`resolveExemptionHousingCount`)가 **이 한 함수**를 읽는다(재검증 S03-4).
+ */
+export function exemptionCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   const ids = new Set(eligibleCountExcludedHouseIds(form));
   for (const id of inheritedCountExcludedHouseIds(form)) ids.add(id);
+  return ids;
+}
+
+/** §155① 신규 주택 후보에서 뺄 행 — 주택 수 제외 행 ∪ ⑦ 농어촌주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
+export function temporaryTwoHouseCandidateExcludedIds(form: CandidateFormLike): ReadonlySet<string> {
+  const ids = new Set(exemptionCountExcludedHouseIds(form));
   for (const id of ruralCountExcludedHouseIds(form)) ids.add(id);
   return ids;
 }
