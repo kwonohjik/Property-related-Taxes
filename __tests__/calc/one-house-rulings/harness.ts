@@ -99,7 +99,7 @@ export function makeHouse(id: string, over: Partial<HouseEntry> = {}): HouseEntr
     completionDate: "",
     isSpouseOwned: false,
     isCoInherited: false,
-    decedentSameHouseholdAtInheritance: false,
+    // 동일세대 여부는 미리 답하지 않는다 — UI 팩토리(`HousesListSection` addHouse)와 같다(S14a-1).
     isRankingDisqualifiedInheritedHouse: false,
     ...over,
   } as HouseEntry;

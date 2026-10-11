@@ -17,7 +17,7 @@
  *  - Tailwind 정적 색조 매핑 (동적 bg-${tone} 금지)
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import {
   sellingHouseExclusionVisible,
@@ -269,15 +269,26 @@ export function HousesListSection({
    * 세 쓰기 지점(추가·삭제·수정)이 전부 이걸 거친다. 한 곳이라도 빠지면 그 경로로만
    * 스칼라가 어긋나므로 `onChange({ houses })` 를 직접 부르지 말 것.
    */
-  function patchHouses(next: HouseEntry[]) {
+  function patchHouses(next: HouseEntry[], base: TransferFormData = form) {
     return housesPatchWithDerivedCount(
       next,
-      form.assets?.[0]?.assetKind,
+      base.assets?.[0]?.assetKind,
       // OH-34: 레거시 표식이 켜져 있으면 스칼라를 덮지 않는다(전환 버튼만이 끈다).
-      form.legacyHouseCountPrecedence ?? false,
-      form.transferDate,
+      base.legacyHouseCountPrecedence ?? false,
+      base.transferDate,
     );
   }
+
+  /**
+   * 🔴 **가장 최근에 그려진 폼**(S14a-6) — 비동기 응답(공시가격 「조회」·용도지역 조회)이 `updateHouse`를 **응답 시점에**
+   *    부르는데, 그 함수가 닫아 둔 `houses`는 **요청 시점 렌더**의 것이다. 응답을 기다리는 동안 같은 행을 고치면(아파트 토글·
+   *    농어촌 유형) 응답이 그 편집을 옛 `houses`로 덮었다. 응답은 「최신 행에 patch만 더해야」 한다.
+   *    ref는 effect에서 갱신한다(렌더 중 쓰기 금지) — store로 값을 미러링하는 것이 아니라 호출 시점의 최신 prop을 읽을 뿐이다.
+   */
+  const latestFormRef = useRef(form);
+  useEffect(() => {
+    latestFormRef.current = form;
+  });
 
   // 양도 주택 소재지 — 양도 물건(assets[0]) 주소에서 자동 판정 (사용자 수동 선택 폐지)
   const sellingRegionCode = form.assets?.[0]?.regionCode;
@@ -304,7 +315,9 @@ export function HousesListSection({
       completionDate: "",
       isSpouseOwned: false,
       isCoInherited: false,
-      decedentSameHouseholdAtInheritance: false,
+      // `decedentSameHouseholdAtInheritance`는 **미리 답하지 않는다**(S14a-1) — §155⑦1호 상속 농어촌주택은 동일세대 여부가
+      // 요건 사실이라(§155② 단서 괄호) 「모름」은 ⑧이 막아야 한다(D7). 팩토리가 `false`를 넣으면 「+ 주택 추가」로 만든 행만 그 질문을
+      // 건너뛴다. 비농어촌 상속주택(§155②)은 `undefined`를 `false`와 같이 다룬다(엔진 `=== true` 판정 · 토글은 `?? false` 표시).
       isRankingDisqualifiedInheritedHouse: false,
     };
     onChange(patchHouses([...houses, newHouse]));
@@ -318,7 +331,8 @@ export function HousesListSection({
   }
 
   function updateHouse(id: string, patch: Partial<HouseEntry>) {
-    onChange(patchHouses(houses.map((h) => (h.id === id ? { ...h, ...patch } : h))));
+    const latest = latestFormRef.current;
+    onChange(patchHouses(latest.houses.map((h) => (h.id === id ? { ...h, ...patch } : h)), latest));
   }
 
   // gracePeriod 노출 조건: 1세대 + 주택수 2채 이상 + (보유 주택 OR 분양권·입주권) 1건 이상.

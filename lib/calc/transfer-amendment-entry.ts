@@ -105,8 +105,10 @@ export function enterAmendment(record: CalculationRecord, router: AppRouter): vo
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/calc/transfer-amendment-helpers"),
   ]).then(([{ useCalcWizardStore }, { deriveStatutoryDeadline }]) => {
-    const { updateFormData, setStep } = useCalcWizardStore.getState();
+    const { updateFormData, setStep, reset } = useCalcWizardStore.getState();
     const transferDate = (record.inputData as { transferDate?: string }).transferDate;
+    // 🔴 reset 후 병합(S11-2) — 직전 세션의 판정 전달 키·계산기 전용 선택 키가 이 이력에 남지 않게 한다.
+    reset();
     updateFormData({
       ...(record.inputData as Parameters<typeof updateFormData>[0]),
       amendmentMode: true,
@@ -135,8 +137,10 @@ export function enterRefundClaim(record: CalculationRecord, router: AppRouter): 
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/calc/transfer-amendment-helpers"),
   ]).then(([{ useCalcWizardStore }, { deriveStatutoryDeadline }]) => {
-    const { updateFormData, setStep } = useCalcWizardStore.getState();
+    const { updateFormData, setStep, reset } = useCalcWizardStore.getState();
     const transferDate = (record.inputData as { transferDate?: string }).transferDate;
+    // 🔴 reset 후 병합(S11-2) — 수정신고 진입과 같다.
+    reset();
     updateFormData({
       ...(record.inputData as Parameters<typeof updateFormData>[0]),
       amendmentMode: true,

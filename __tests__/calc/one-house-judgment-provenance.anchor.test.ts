@@ -175,10 +175,16 @@ describe("P5-b-1 기준선 생산 — 전달이 그것을 심는다", () => {
     expect(patch.sourceJudgmentInputHash).toBe("abc123");
   });
 
-  /** 기준선을 못 읽었으면 **비워 둔다** — 빈 문자열로 채우면 「있는데 다르다」로 오판한다. */
-  it("[P-12] 기준선을 못 읽었으면 키를 만들지 않는다", () => {
+  /**
+   * 기준선을 못 읽었으면 **비워 둔다** — 빈 문자열로 채우면 「있는데 다르다」로 오판한다.
+   *
+   * ⚠️ 키는 **`undefined`로 존재**한다(S11-7). 종전 단언은 「키 자체가 없다」였는데, store가 얕은 병합이라 키가 없으면 **직전 전달의
+   *    해시가 새 id에 붙어** 거짓 `source_changed` 경고가 났다. 비움의 의미(빈 문자열이 아님)는 그대로다.
+   */
+  it("[P-12] 기준선을 못 읽었으면 빈 값(undefined)으로 둔다 — 빈 문자열이 아니고, 직전 해시를 잇지 않는다", () => {
     const patch = toTransferFormPatch(createInitialOneHouseJudgmentForm(), "rec-1");
     expect(patch.sourceJudgmentId).toBe("rec-1");
-    expect(patch).not.toHaveProperty("sourceJudgmentInputHash");
+    expect(patch.sourceJudgmentInputHash).toBeUndefined();
+    expect(patch).toHaveProperty("sourceJudgmentInputHash"); // 키가 있어야 얕은 병합이 직전 값을 덮는다
   });
 });

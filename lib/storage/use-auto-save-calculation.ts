@@ -49,6 +49,12 @@ interface Return {
   savedId: string | null;
   /** 이번 저장이 신규 record(true)였는지 갱신(false)이었는지 */
   created: boolean | null;
+  /**
+   * `savedId`가 **어느 resultData의 저장 결과인가**(참조). 새 결과가 저장 중이거나 저장이 실패하면 `savedId`는
+   * **직전 결과의 id로 남는다** — 그 id를 새 결과의 출처로 쓰면 안 되는 호출부(판정 → 계산기 전달)가
+   * `savedFor === 지금 resultData`로 대조한다(S11-7). 값이 없으면(`null`) 아직 저장된 결과가 없다.
+   */
+  savedFor: Record<string, unknown> | null;
   status: AutoSaveStatus;
   error: string | null;
   /** v4 draft 자동 승격 — final 저장 직전 삭제한 draft 수 (별도 작업자 구현 대기) */
@@ -76,6 +82,7 @@ export function useAutoSaveCalculation({
 }: Params): Return {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [created, setCreated] = useState<boolean | null>(null);
+  const [savedFor, setSavedFor] = useState<Record<string, unknown> | null>(null);
   const [status, setStatus] = useState<AutoSaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -113,6 +120,7 @@ export function useAutoSaveCalculation({
       })
       .then(({ id, created: c }) => {
         setSavedId(id);
+        setSavedFor(target);
         setCreated(c);
         setStatus("saved");
         if (clientId) clientRepository.touch(clientId);
@@ -124,5 +132,5 @@ export function useAutoSaveCalculation({
       });
   }, [taxType, inputData, resultData, taxLawVersion, clientId]);
 
-  return { savedId, created, status, error };
+  return { savedId, created, savedFor, status, error };
 }

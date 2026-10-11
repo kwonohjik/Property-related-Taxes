@@ -129,8 +129,24 @@ export function toTransferFormPatch(
      */
     assets: withMirroredSalePrice(form),
     importedOneHouseFacts: pickOneHouseExtraFacts(form),
-    ...(judgmentId ? { sourceJudgmentId: judgmentId } : {}),
-    ...(judgmentInputHash ? { sourceJudgmentInputHash: judgmentInputHash } : {}),
+    /**
+     * 🔴 **출처 두 키는 값이 없어도 키를 싣는다**(S11-7) — store가 얕은 병합이라 키가 아예 없으면 **직전 전달의 id·해시가
+     *    그대로 남아**, id 없는 전달(저장 전·저장 실패) 뒤에도 출처가 이전 판정으로 `fresh` 표시된다. 해시도 따로다 —
+     *    새 record의 해시를 못 읽었을 때 이전 해시가 새 id에 붙으면 거짓 `source_changed` 경고가 난다.
+     *    `undefined`는 「출처 없음」(`detectJudgmentProvenance` → `unknown`)이다.
+     */
+    sourceJudgmentId: judgmentId || undefined,
+    sourceJudgmentInputHash: judgmentInputHash || undefined,
+    /**
+     * 🔴 **양도 자산에 붙는 계산기 전용 선택을 비운다**(S11-7) — 판정 메뉴는 이 셋을 모른다(`createInitialOneHouseJudgmentForm`
+     *    에 없음). 이 patch가 `assets`를 통째로 바꾸므로 이 셋도 **이전 물건의 것**이다. 비우지 않으면 이전 물건의 저당권 실행
+     *    선언(`sellingHouseExclusion`)이 새 물건 본문에 실려 2주택 중과가 일반세율로 과소 산출됐고, 폼-전역 `regionCode`는
+     *    새 자산의 `regionCode` 폴백(`primary.regionCode || form.regionCode`)으로 새어 들었다.
+     *    미납세액 방식(`unpaidTaxMode`)은 가산세 축이라 물건과 무관하므로 건드리지 않는다.
+     */
+    regionCode: undefined,
+    sellingHouseExclusion: undefined,
+    gracePeriod: undefined,
   };
 }
 

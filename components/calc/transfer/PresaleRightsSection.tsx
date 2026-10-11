@@ -20,6 +20,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import { rightRowDistrictAnswerUsed } from "@/lib/tax-engine/one-house/designated-district-undeclared";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
+import { isAddressReplaced } from "@/lib/calc/house-region";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { OriginalMemberTempTwoHouseInputs } from "@/components/calc/transfer/OriginalMemberTempTwoHouseInputs";
@@ -276,10 +277,17 @@ export function PresaleRightsSection({
                 <AddressSearch
                   value={{ road: "", jibun: r.regionName ?? "", building: "", detail: "", lng: "", lat: "" }}
                   onChange={(v) => {
-                    const regionCode = v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : r.regionCode;
+                    /**
+                     * 🔴 「지우기」·「입력한 주소 그대로 사용」(`pnu: ""`)은 직전 주소의 코드·이름을 비운다(S14b-3) — 종전에는
+                     *    PNU가 없으면 `r.regionCode`·`r.regionName`을 그대로 두어, 화면 주소(춘천)와 다른 법정동(강남)으로
+                     *    원조합원 처분기한(§155① 괄호)을 판정했다. 동·호 재발화(`pnu` 없음)는 같은 물건이라 유지한다.
+                     */
+                    const replaced = isAddressReplaced(v);
+                    const regionCode =
+                      v.pnu && v.pnu.length >= 10 ? v.pnu.slice(0, 10) : replaced ? undefined : r.regionCode;
                     update(r.id, {
                       regionCode,
-                      regionName: v.jibun || v.road || r.regionName,
+                      regionName: replaced ? v.jibun || v.road || undefined : v.jibun || v.road || r.regionName,
                       // 「지정 지구 안인가」 답은 그 소재지에 붙는다 — 법정동이 바뀌면 지운다.
                       ...(regionCode !== r.regionCode ? { inDesignatedDistrict: undefined } : {}),
                     });

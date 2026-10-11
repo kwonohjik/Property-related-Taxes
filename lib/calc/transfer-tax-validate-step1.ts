@@ -41,6 +41,8 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { ruralInheritedSameHouseholdIssue } from "./one-house-row-facts";
+import { houseRentalTypeIssue } from "./house-row-required-issues";
+import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { ruralReturnedToFarmExitIssue } from "./one-house-row-facts";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
@@ -132,33 +134,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
           return fieldError(rowKey, `${label}: 임대기간(년)을 입력하세요.`);
       }
       // 장기임대 9유형: 유형별 필수 입력값(가액·면적·날짜) — 미입력 시 엔진 오판정
-      // (특히 면적 미입력 → 엔진 0 간주 → 298㎡ 이하 통과 → 과대 적용). exact 비교(.includes(t)=정확매칭).
-      if (h.isLongTermRental && h.rentalType) {
-        const t = h.rentalType;
-        if (["A", "C", "E", "F", "H", "I"].includes(t) && !h.rentalStartOfficialPrice)
-          return fieldError(rowKey, `${label}: 임대개시 당시 공시가격을 입력하세요.`);
-        if (["B", "D"].includes(t) && !h.acquisitionOfficialPrice)
-          return fieldError(rowKey, `${label}: 취득 당시 공시가격을 입력하세요.`);
-        if (["C", "D", "F", "I"].includes(t) && (!h.rentalLandArea || !h.rentalTotalFloorArea))
-          return fieldError(rowKey, `${label}: 대지면적·연면적(㎡)을 입력하세요.`);
-        if (t === "D" && !h.firstSaleContractDate)
-          return fieldError(rowKey, `${label}: 최초 분양계약일을 입력하세요.`);
-        if (t === "G") {
-          if (!h.rentalCancellationDate)
-            return fieldError(rowKey, `${label}: 자진·자동 말소일을 입력하세요.`);
-          // 사목 base 목(가·다·라·마) + 그 목의 "해당 목의 다른 요건"(임대기간요건 외) — 엔진 SAMOK_BASE_REQUIRED·base 게이트와 동기화
-          const base = h.saMokBaseArticle;
-          if (!base) return fieldError(rowKey, `${label}: 사목 — 말소 전 base 목(가·다·라·마)을 선택하세요.`);
-          if ((base === "가" || base === "다" || base === "마") && !h.rentalStartOfficialPrice)
-            return fieldError(rowKey, `${label}: 사목 base 목의 임대개시 당시 공시가격을 입력하세요.`);
-          if (base === "라" && !h.acquisitionOfficialPrice)
-            return fieldError(rowKey, `${label}: 사목 base 라목의 취득 당시 공시가격을 입력하세요.`);
-          if ((base === "다" || base === "라") && (!h.rentalLandArea || !h.rentalTotalFloorArea))
-            return fieldError(rowKey, `${label}: 사목 base 목의 대지면적·연면적(㎡)을 입력하세요.`);
-          if (base === "라" && !h.firstSaleContractDate)
-            return fieldError(rowKey, `${label}: 사목 base 라목의 최초 분양계약일을 입력하세요.`);
-        }
-      }
+      // (특히 면적 미입력 → 엔진 0 간주 → 298㎡ 이하 통과 → 과대 적용). 판정 메뉴 ⑧과 **같은 leaf**(S09-1).
+      const rentalTypeIssue = houseRentalTypeIssue(h);
+      if (rentalTypeIssue) return fieldError(rowKey, `${label}: ${rentalTypeIssue.message}`);
       // §167의3①3호 감면대상장기임대주택 — 「5년 이상 임대」 판정 칸. 미입력이면 엔진이 0년으로 읽어 조용히 불적용.
       if (taxIncentiveRentalPeriodMissing(h))
         return fieldError(rowKey, `${label}: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.`);
@@ -168,12 +146,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       if (ext2Issue) return fieldError(rowKey, `${label}: 장기임대 아파트 양도기한 연장 사유(소령 §167의3⑪) — ${ext2Issue}`);
       const ext3Issue = taxIncentiveAptDeadlineIncomplete(h);
       if (ext3Issue) return fieldError(rowKey, `${label}: 조특법 감면 임대주택 양도기한 연장 사유(소령 §167의3⑪) — ${ext3Issue}`);
-      // P2 부득이한 사유: 거주기간(년) 필수 (엔진 ≥1년 판정 — 미입력 시 0 간주로 배제 미발동)
-      if (h.isUnavoidableReason && (!h.unavoidableResidenceYears || parseFloat(h.unavoidableResidenceYears) <= 0))
-        return fieldError(rowKey, `${label}: 부득이한 사유 주택의 거주기간(년)을 입력하세요.`);
-      // 3호의 기준시가는 「취득 당시」다 — 미입력이면 엔진이 판정 불가로 두고 배제하지 않는다(F-16).
-      if (h.isUnavoidableReason && !h.acquisitionOfficialPrice)
-        return fieldError(rowKey, `${label}: 부득이한 사유 주택의 취득 당시 기준시가를 입력하세요.`);
+      // P2 부득이한 사유: 거주기간(년)·취득 당시 기준시가 필수 — 판정 메뉴 ⑧과 **같은 leaf**(S09-1).
+      const unavoidableIssue = houseUnavoidableIssue(h);
+      if (unavoidableIssue) return fieldError(rowKey, `${label}: ${unavoidableIssue.message}`);
       // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
       const statusIssue = twoHouseExclusionStatusIssue(h);
       if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);

@@ -124,7 +124,7 @@ export async function resumeTransferRecord(
     import("@/lib/stores/calc-wizard-store"),
     import("@/lib/stores/calc-wizard-asset"),
   ]);
-  const { updateFormData, setStep } = useCalcWizardStore.getState();
+  const { updateFormData, setStep, reset } = useCalcWizardStore.getState();
   /**
    * ⚠️ 이력 assets는 **migrate를 통과시켜야 한다** — `updateFormData`는 단순 merge라 assets
    *    배열이 통째로 교체된다. 이 경로만 우회하면 옛 이력의 신규 필드 디폴트 누락과 파생 면적의
@@ -154,6 +154,14 @@ export async function resumeTransferRecord(
     parseInt(migrated?.householdHousingCount || "1", 10) || 0,
     migrated?.transferDate,
   );
+  /**
+   * 🔴 **reset 후 병합한다**(S11-2) — `updateFormData`는 단순 merge라 이력 record에 없는 키는 **직전 세션 값이 그대로**
+   *    남는다. 판정 전달이 남긴 `importedOneHouseFacts`·`sourceJudgmentId`·`sourceJudgmentInputHash`와 계산기 전용 선택 키
+   *    (`sellingHouseExclusion` 등)가 무관한 이력에 붙은 채 열려, 상생임대 사실이 거주요건을 면제해 과세가 비과세로 뒤집혔다.
+   *    다건 형제(`MultiTransferTaxCalculator`의 `syncToWizardStore`)와 같은 규칙이다. 「키 삭제」가 아닌 이유 — record 자체가
+   *    전달 키를 담고 있으면 그 키는 **저장 당시 그대로** 복원돼야 한다.
+   */
+  reset();
   updateFormData({ ...migrated, legacyHouseCountPrecedence });
   setStep(0);
   router.push(TRANSFER_ROUTE);
