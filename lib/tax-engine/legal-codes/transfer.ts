@@ -67,6 +67,8 @@ export const TRANSFER = {
    * 4호는 법률 제16834호(2020-01-01 시행, 부칙 제2조② 양도분)부터.
    */
   NON_RESIDENT_EXEMPTION_EXCLUSION: "소득세법 §121 ②",
+  /** 소득세법 §98 — 양도시기는 대금을 청산한 날(잔금청산일). 양도물건의 현황도 그 날을 기준으로 본다(결정 #46). */
+  ACQUISITION_TRANSFER_TIMING: "소득세법 §98",
   /** 소득세법 시행령 §180의2 — 위 단서의 비거주자 범위. §89①3호에는 §154①2호 나·다목 요건 충족자를 제외한다. */
   NON_RESIDENT_EXEMPTION_EXCLUSION_DECREE: "소득세법 시행령 §180의2",
   /**

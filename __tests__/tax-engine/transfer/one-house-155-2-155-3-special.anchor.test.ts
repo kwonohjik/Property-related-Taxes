@@ -345,11 +345,23 @@ describe("§155의3 상생임대주택 — 거주요건 면제 (의제 아님)",
       ).toBe(true);
     });
 
-    it("시행일 이후 양도인데 ①3호 임대기간 종료일이 없으면 불성립(법 근거 없이 유리 적용 금지)", () => {
+    it("시행일 이후 2027-12-31까지 양도는 ①3호 임대기간 종료일이 없어도 성립 — 양도기한이 종료일과 무관하게 그 날 이후(결정 #45)", () => {
+      for (const transfer of ["2026-10-01", "2026-11-02", "2027-12-31"]) {
+        expect(
+          exempt({
+            ...RESIDENCE_BINDS,
+            transferDate: D(transfer),
+            winWinRentalHouse: WIN_WIN_OK, // winWinLeaseEndDate 미입력
+          }),
+        ).toBe(true);
+      }
+    });
+
+    it("2028-01-01 이후 양도인데 ①3호 임대기간 종료일이 없으면 불성립(법 근거 없이 유리 적용 금지)", () => {
       expect(
         exempt({
           ...RESIDENCE_BINDS,
-          transferDate: D("2026-10-01"),
+          transferDate: D("2028-01-01"),
           winWinRentalHouse: WIN_WIN_OK, // winWinLeaseEndDate 미입력
         }),
       ).toBe(false);

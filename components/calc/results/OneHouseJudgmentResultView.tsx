@@ -27,6 +27,7 @@ import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/thresh
 import { resolveOneRightHighValueThreshold } from "@/lib/tax-engine/data/one-right-high-value-era";
 import { oneRightClauseNaYears } from "@/lib/tax-engine/data/one-right-requirement-era";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { DEMOLISHED_BEFORE_BALANCE_UNMET_ID } from "@/lib/tax-engine/data/demolished-before-balance-era";
 import { countExclusionHouseRef, type HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
 
 /** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
@@ -488,6 +489,12 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
             세액을 내려면 계산기에서 <b>취득가액·필요경비</b>를 추가로 입력해야 합니다 — 이 화면은
             그 값을 묻지 않습니다.
           </p>
+          {judgment.unmetExceptions.some((u) => u.id === DEMOLISHED_BEFORE_BALANCE_UNMET_ID) && (
+            <p className="text-sm text-muted-foreground" data-testid="one-house-to-calculator-demolished-note">
+              잔금청산 전 멸실 특약은 이 판정에만 반영됩니다. 계산기에서는 양도 대상이 <b>주택으로 다시 판정</b>되니,
+              잔금청산일 현재 나대지로 양도하는 것으로 계산하려면 계산기에서 양도 대상을 <b>단순토지</b>로 입력하세요.
+            </p>
+          )}
           <CtaButton data-testid="one-house-to-calculator" onClick={onCalculateTax}>
             이 결과로 세액 계산
           </CtaButton>

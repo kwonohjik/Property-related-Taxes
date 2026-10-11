@@ -38,6 +38,7 @@ import { aptDeadlineExtensionIncomplete, rentalDeclarationAptDeadlineInScope } f
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import { PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE, parentalCareParentAgeMissing } from "./parental-care-age-issue";
 import { temporaryTwoHouseSectionVisible } from "./temporary-two-house-section-scope";
+import { spouseHoldingUnansweredIndexes } from "./spouse-holding-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
@@ -131,6 +132,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const mergeCtx = mergeContextOf(form);
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(④ 전송·⑤ 노출과 같은 도출 `deriveCalcTemporaryTwoHouse`).
   const newHouseRowId = deriveCalcTemporaryTwoHouse(form, form.assets?.[0])?.newHouseRowId;
+  // 결정 #47 — 응답이 필요한 배우자 쪽 행(⑤ 질문과 같은 술어). 「모름」은 응답이라 막지 않는다.
+  const spouseHoldingUnanswered = new Set(spouseHoldingUnansweredIndexes(form));
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
     const label = `보유 주택 ${i + 1}`;
@@ -180,6 +183,13 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
         return fieldError(
           rowKey,
           `${label}: ${mergeCtx.kind === "marriage" ? "혼인" : "합가"} 전 보유자를 고르세요 — 고르지 않으면 합가 특례를 불성립으로 판정합니다.`,
+        );
+      }
+      // 결정 #47 §167의3⑨ — 양도일 현재도 배우자 쪽이 보유하는지(예/아니오/모름). 미응답으로 두면 차감 여부를 정할 수 없다.
+      if (spouseHoldingUnanswered.has(i)) {
+        return fieldError(
+          rowKey,
+          `${label}: 양도일 현재도 배우자 쪽이 이 주택을 보유하는지 고르세요 — 혼인 5년 안 양도라 「소득세법 시행령」 §167의3⑨에 따라 양도일 현재 배우자가 보유한 주택은 주택 수에서 뺍니다(모르면 「모름」을 고르세요).`,
         );
       }
       return null;

@@ -84,7 +84,7 @@ export function WinWinRentalSpecialField({ value, onChange }: Props) {
         </FieldCard>
         <FieldCard
           label="상생임대차 임대기간이 종료된 날"
-          hint="2026년 10월 1일 이후 양도분부터 양도기한 판정에 필요합니다(2026.9.30. 개정)"
+          hint="2028년 1월 1일 이후 양도분부터 양도기한 판정에 필요합니다(2026.9.30. 개정) — 2027년 12월 31일까지의 양도는 비워 두어도 됩니다"
         >
           <DateInput
             data-testid="ww-lease-end-date"

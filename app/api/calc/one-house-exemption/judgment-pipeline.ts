@@ -1,5 +1,5 @@
 /**
- * 판정 메뉴 route 단계 6~6.7 — 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자.
+ * 판정 메뉴 route 단계 6~6.8 — 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자 → 잔금 전 멸실 특약.
  *
  * route에서 그대로 옮겼다. 양론 표시(P4)가 **같은 파이프라인을 반대 입장 입력으로 한 번 더** 돌려야 해서
  * 함수로 뺐다 — 재판정을 손으로 줄여 쓰면(예: `judgeOneHouseExemptionFromInput`만 부르기) §155⑳·§89①4호·
@@ -13,6 +13,7 @@ import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judg
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
+import { applyDemolishedBeforeBalanceVerdict } from "@/lib/tax-engine/one-house/demolished-before-balance";
 import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 export function runOneHouseJudgmentPipeline(
@@ -72,7 +73,13 @@ export function runOneHouseJudgmentPipeline(
    * 주택 양도면 §154①2호 나·다목 예외가 아니면 비과세를 끈다(2010.1.1. 전 양도분은 판정 보류).
    * 입주권 양도는 위 §89①4호 판정이 이미 걸렀다(2020.1.1. 이후).
    */
-  const judgment = applyNonResidentVerdict(afterOneRight, engineInput, isRightSale);
+  const afterNonResident = applyNonResidentVerdict(afterOneRight, engineInput, isRightSale);
+
+  /**
+   * 단계 6.8: 매매특약에 따른 잔금 전 주택 멸실(결정 #46) — 판정 메뉴 전용.
+   * 2022-12-20 이후 계약이면 양도물건을 잔금청산일 현황(나대지)으로 판정해 주택 비과세를 거둔다.
+   */
+  const judgment = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
 
   return { exclusion, rentalVerdict, oneRightVerdict, judgment };
 }

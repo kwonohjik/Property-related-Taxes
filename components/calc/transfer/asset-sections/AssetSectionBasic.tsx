@@ -177,6 +177,13 @@ export function AssetSectionBasic({
             </Fragment>
           ))}
         </div>
+        {asset.assetKind === "housing" && (
+          <p className="text-xs text-muted-foreground mt-1" data-testid="housing-balance-date-status-note">
+            ※ 주택인지는 양도일(잔금청산일) 현재의 현황으로 판정합니다. 2022.12.20. 이후 체결한 계약에서 매매특약에 따라
+            잔금청산 전에 주택을 멸실해 나대지 상태로 양도하면 「단순토지」로 입력하세요(비과세·장기보유특별공제·중과는
+            기획재정부 재산세제과-1543, 「조세특례제한법」 주택 감면은 서면-2022-법규재산-5613).
+          </p>
+        )}
         {asset.assetKind === "commercial_building" && (
           <p className="text-xs text-muted-foreground mt-1">
             ※ 기준시가 공시된 것 — 국세청이 호별 ㎡당 기준시가를 고시한

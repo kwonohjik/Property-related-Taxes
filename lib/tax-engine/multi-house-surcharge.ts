@@ -18,7 +18,8 @@ import {
   inheritedPresaleRightSeparateHouseholdUnverified,
 } from "./presale-right-definition-date";
 import { format } from "date-fns";
-import { isWithinDeadline } from "./civil-period";
+import { readSpouseHolding, marriageSubtractionWindowOpen } from "./spouse-holding-at-transfer";
+import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
@@ -176,6 +177,23 @@ export function determineMultiHouseSurcharge(
   suspensionRules: SurchargeSpecialRulesData | null,
   isRegulatedFallback: boolean,
 ): MultiHouseSurchargeResult {
+  const result = computeMultiHouseSurcharge(
+    input, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback,
+  );
+  // §167의3⑨·§167의4⑤ 「양도일 현재 배우자 보유」 응답이 결론을 가를 때만 알린다(결정 #47) — 반사실 재계산은 위 함수를 그대로 다시 부른다.
+  const notices = spouseHoldingNotices(input, result, (alt) =>
+    computeMultiHouseSurcharge(alt, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback),
+  );
+  return notices.length > 0 ? { ...result, warnings: [...result.warnings, ...notices] } : result;
+}
+
+function computeMultiHouseSurcharge(
+  input: MultiHouseSurchargeInput,
+  houseCountRules: HouseCountExclusionRules,
+  regulatedAreaHistory: RegulatedAreaHistory | null,
+  suspensionRules: SurchargeSpecialRulesData | null,
+  isRegulatedFallback: boolean,
+): MultiHouseSurchargeResult {
   const warnings: string[] = [];
 
   // ⑪ 확인 필요 — 결과 분기 전에 먼저 싣는다(모든 반환 경로가 같은 warnings를 공유). 모름은 불리 적용(기한 경과)했고
@@ -222,21 +240,19 @@ export function determineMultiHouseSurcharge(
   const excludedPresaleRights: Array<{ id: string; reason: "spouse_marriage_subtraction" }> = [];
   if (input.marriageMerge && effectiveHouseCount >= 3) {
     const m = input.marriageMerge.marriageDate;
-    // §167의3⑨ 「혼인한 날부터 5년 이내에 해당 주택을 양도하는 경우」 — B 유형(초일불산입 · 민법 §160③·§161, E-11).
-    const within5y =
-      input.transferDate >= m &&
-      isWithinDeadline(m, MULTI_HOUSE.MARRIAGE_SUBTRACT_YEARS_3HOUSE, input.transferDate);
-    // 단서: 혼인 5년내 신규 주택·분양권·입주권 취득 시 그 취득일 이후 양도분에는 미적용
-    const acquiredAfterMarriage =
-      input.houses.some((h) => h.acquisitionDate > m && h.acquisitionDate <= input.transferDate) ||
-      input.presaleRights.some(
-        (r) => r.acquisitionDate > m && r.acquisitionDate <= input.transferDate,
-      );
-    if (within5y && !acquiredAfterMarriage) {
-      // (a) §167의3⑨ 배우자 보유 주택 차감
+    // §167의3⑨ 「혼인한 날부터 5년 이내에 해당 주택을 양도하는 경우」(B 유형 — 초일불산입, 민법 §160③·§161, E-11) +
+    // 단서: 혼인 5년내 신규 주택·분양권·입주권 취득 시 그 취득일 이후 양도분에는 미적용 — 계산기 ⑤·⑧과 같은 술어(결정 #47).
+    if (
+      marriageSubtractionWindowOpen({
+        marriageDate: m,
+        transferDate: input.transferDate,
+        acquisitionDates: [...input.houses.map((h) => h.acquisitionDate), ...input.presaleRights.map((r) => r.acquisitionDate)],
+      })
+    ) {
+      // (a) §167의3⑨ 배우자 보유 주택 차감 — 「양도일 현재」 보유 응답이 「예」인 행만(미응답·모름·아니오는 차감 안 함)
       const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
       const spouseCounted = input.houses.filter(
-        (h) => h.isSpouseOwned && h.id !== input.sellingHouseId && !excludedIds.has(h.id),
+        (h) => readSpouseHolding(h) === "yes" && h.id !== input.sellingHouseId && !excludedIds.has(h.id),
       );
       for (const sh of spouseCounted) {
         effectiveHouseCount -= 1;
@@ -250,7 +266,7 @@ export function determineMultiHouseSurcharge(
       // (b) §167의4⑤ 배우자 보유 분양권/입주권 차감 (산입분만 — isPresaleRightCounted)
       const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
       const spouseRights = input.presaleRights.filter(
-        (r) => r.isSpouseOwned && isPresaleRightCounted(r, presaleStartDate),
+        (r) => readSpouseHolding(r) === "yes" && isPresaleRightCounted(r, presaleStartDate),
       );
       for (const sr of spouseRights) {
         effectiveHouseCount -= 1;
@@ -271,7 +287,7 @@ export function determineMultiHouseSurcharge(
     input.deemedOneHouseBy155 === "double_merge";
   if (effectiveHouseCount >= 3 && !mergeDeemed && (input.marriageMerge || input.parentalCareMerge)) {
     warnings.push(
-      `3주택 이상 세대의 혼인·동거봉양 합가 특례 — 일시적 2주택(§155①)과 겹쳐 1세대1주택 의제가 성립하는 경우에만 중과가 배제됩니다(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS}). 이 계산에는 그 중첩이 성립하지 않았습니다`,
+      `3주택 이상 세대의 혼인·동거봉양 합가 특례 — 일시적 2주택(§155①)과 겹쳐 1세대1주택 의제가 성립하는 경우에만 이 특례로 중과가 배제됩니다(${MULTI_HOUSE.MERGE_3HOUSE_OVERLAP_BASIS}). 이 계산에는 그 중첩이 성립하지 않았습니다. 혼인 5년 안 양도의 배우자 보유 주택 수 차감(${MULTI_HOUSE.MARRIAGE_SUBTRACT_3HOUSE_BASIS})은 이 특례와 별개이며 「양도일 현재 배우자 쪽 보유」 응답을 따릅니다`,
     );
   }
 

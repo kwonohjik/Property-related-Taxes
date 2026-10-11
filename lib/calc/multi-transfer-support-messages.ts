@@ -29,6 +29,7 @@ export const MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE = "비거주자 입력은 1�
  */
 export const MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE =
   "증여받은 주택의 증여자와 같은 세대 통산은 1세대1주택 판정 메뉴와 단건 계산기(이월과세)에서만 지원됩니다.";
+export const MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE = "잔금 전 멸실 특약 입력은 1세대1주택 비과세 판정 메뉴에서만 지원됩니다.";
 /** API 전용 — 화면(⑧)은 신고가액 공란을 막고, 다건은 신고가액을 `acquisitionPrice`로 직접 쓴다. */
 export const MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE =
   "상속 취득가액 평가(보충적평가·환산)는 단건 계산기에서만 지원됩니다. 다건은 상속세 신고가액을 취득가액으로 입력하세요.";

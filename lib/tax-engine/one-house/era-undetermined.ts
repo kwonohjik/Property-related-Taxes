@@ -21,6 +21,7 @@
  * | `154-12-co-inherited-residence-unverified` | §154⑫(2021.2.17. 신설 · 2024.2.29. 개정) — 취득 당시 조정대상지역 공동상속주택의 거주기간 | 공동상속주택인지와 다른 공동상속인의 거주기간 — 입력 경로가 없다. 상속 취득 · 본인 거주 미달로 과세될 때만 확인 필요로 밝힌다(판정은 바꾸지 않는다) |
  * | `regulated-hwaseong-announcement-window-unverified` | 화성시 조정대상지역 지정 시작 열흘(2020.6.19.~6.28.) — 원 공고(제2020-828호)일부터로 판정, 정정공고(제2020-877호)일 6.29.로 읽으면 결과가 달라짐 (결정 #3, `hwaseong-announcement-window.ts`) | 해석례·심판례 — 확보하지 못함. 취득 당시 거주요건·§155①2호 신규 주택이 결론을 가를 때만 낸다(다주택 중과는 계산기 경고) |
  * | `154-1-usage-conversion-transition-unverified` | 대통령령 제28293호 부칙 제2조 ②1호(거주요건 경과규정) × 비주택→주택 용도변경(결정 #35) | 「2017년 8월 2일 이전에 취득한 주택」의 취득한 날을 주거용 사용 개시일로 읽었다 — 이 조합의 정면 해석 미확보. 원취득일 2017.8.3. 전·주거용 사용일 이후·그날 조정대상지역이라 거주요건 때문에 비과세(단건·의제)나 중과 배제가 막힐 때만. 부칙 ②2호(계약금 지급일 무주택)는 판정하지 않음 |
+ * | `155-3-win-win-lease-end-unverified` | §155의3①(2026.9.30. 개정, 대통령령 제36737호) 양도기한 — 「임대기간이 종료된 날부터 1년이 되는 날과 2029년 12월 31일 중 빠른 날까지(2026년 12월 31일 이전 종료는 2027년 12월 31일까지)」 | 상생임대차 임대기간 종료일 — 2028.1.1. 이후 양도인데 미입력이면 거주기간 제한 면제를 적용하지 않았다(모름 = 불성립). 종료일을 넣었다면 성립했을 때(거주요건이 결론을 가를 때)만 확인 필요로 밝힌다. 2027.12.31.까지의 양도는 종료일이 결론을 바꾸지 못해 고지하지 않는다 |
  * | `civil-161-holiday-table-uncovered` | 국세기본법 §4 → 민법 §161(「~이내」 기한 말일 토요일·공휴일 → 익일) | 양도일 직전 해의 관공서 공휴일 — 공휴일 표(`data/public-holidays-kr.ts`) 밖이라 토·일요일만 반영, 또는 예정 공휴일 해(월력요항 미발표)라 임시공휴일 미반영 |
  *
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
@@ -44,6 +45,7 @@ import {
   ruralTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
 } from "../transfer-tax-exemption-requirements";
+import { isWinWinLeaseEndDateRequired, qualifiesWinWinRental } from "../transfer-tax-exemption-residence-waivers";
 import {
   describeOneHouseHoldingRequirement,
   describeOneHouseResidenceRequirement,
@@ -102,6 +104,8 @@ const CO_INHERITED_RESIDENCE_TRANSFER_START = new Date("2021-02-17");
 const CO_INHERITED_RESIDENCE_LONGEST_TRANSFER_START = new Date("2024-02-29");
 
 export const CO_INHERITED_RESIDENCE_UNVERIFIED_ID = "154-12-co-inherited-residence-unverified";
+/** §155의3① 양도기한 — 임대기간 종료일 미입력(2028.1.1. 이후 양도) 확인 필요(결정 #45). */
+export const WIN_WIN_LEASE_END_UNVERIFIED_ID = "155-3-win-win-lease-end-unverified";
 
 /** 용도변경 주택 거주요건 경과규정 기준일(주거용 사용일) 독법 — 정면 해석 미확보 확인 필요 (결정 #35). */
 export const USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID = "154-1-usage-conversion-transition-unverified";
@@ -132,6 +136,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   "154-1-expropriation-notice-date-unverified",
   CO_INHERITED_RESIDENCE_UNVERIFIED_ID,
   USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID,
+  WIN_WIN_LEASE_END_UNVERIFIED_ID,
   "civil-161-holiday-table-uncovered",
   HWASEONG_WINDOW_NOTICE_ID,
   RURAL_FARM_FACTS_UNCONFIRMED_ID,
@@ -419,6 +424,38 @@ export function collectEraUndetermined(
 
   // 결정 #3 하위 2 — 화성시 지정 시작 열흘(2020.6.19.~6.28.)의 취득 당시 조정대상지역 판정(거주요건이 결론을 가를 때만).
   out.push(...hwaseongAcquisitionWindowNotice(input, settled, relevance?.residenceDecides));
+
+  /*
+   * #45 — §155의3① 양도기한. 상생임대 사실이 있는데 임대기간 종료일이 없고 2028.1.1. 이후 양도이면 기한을 정할 수 없어
+   * 거주기간 제한 면제를 적용하지 않았다(모름 = 불성립 — `qualifiesWinWinRental`). 종료일을 넣었다면 성립해 결론이 달라질 때만
+   * 밝힌다: ① 종료일을 (양도일로) 채운 반사실에서 술어가 성립하고 ② 거주요건이 비과세 결론을 가를 때. 2027.12.31.까지의
+   * 양도는 종료일이 결론을 바꾸지 못해(양도기한이 종료일과 무관하게 그 날 이후) 술어가 이미 성립이라 여기 오지 않는다.
+   */
+  const winWin = input.winWinRentalHouse;
+  if (
+    !settled &&
+    winWin &&
+    !winWin.winWinLeaseEndDate &&
+    isWinWinLeaseEndDateRequired(input.transferDate) &&
+    qualifiesWinWinRental({ ...input, winWinRentalHouse: { ...winWin, winWinLeaseEndDate: input.transferDate } })
+  ) {
+    const residence = describeOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption);
+    const holding = describeOneHouseHoldingRequirement(input, oneHouseRules.one_house_exemption);
+    if (
+      residence.basis === "unmet" &&
+      (holding.met || holding.provisoWaives) &&
+      (relevance?.residenceDecides() ?? true)
+    ) {
+      out.push({
+        id: WIN_WIN_LEASE_END_UNVERIFIED_ID,
+        reason:
+          `상생임대주택 특례(${TRANSFER.WIN_WIN_RENTAL_EXEMPT})는 임대기간이 종료된 날부터 1년이 되는 날과 2029년 12월 31일 중 빠른 날까지 ` +
+          `양도해야 거주기간 제한이 면제됩니다(2026년 12월 31일 이전에 종료되면 2027년 12월 31일까지). ` +
+          `임대기간이 종료된 날이 입력되지 않고 양도일이 2028년 1월 1일 이후라 양도기한을 정할 수 없어 이 면제를 적용하지 않았습니다 — ` +
+          `종료일을 입력하면(계산기에서는 판정 메뉴에서 입력해 다시 넘기면) 결론이 달라질 수 있습니다(확인 필요).`,
+      });
+    }
+  }
 
   /*
    * OH-01 — §155①2호. 결론과 무관하게 낸다(입력이 없어 판정하지 않은 사실을 밝힌다).

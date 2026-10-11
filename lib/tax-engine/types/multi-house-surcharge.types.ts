@@ -39,6 +39,13 @@ export type RentalHousingType = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | 
  */
 export type MergeOrigin = "seller_side" | "counterpart_side" | "second_merge_side";
 
+/**
+ * §167의3⑨·§167의4⑤ 「양도일 현재 양도자의 배우자가 보유한」 — 주택·분양권·입주권 행의 응답(결정 #47).
+ * `yes` 차감 / `no` 차감 안 함 / `unknown` 모름 = 차감 안 함 + 결론을 가를 때만 확인 필요. 미응답(키 없음)은 `unknown`과 같이
+ * 차감하지 않되, 계산기 ⑧이 배우자 쪽 주택 행에서는 응답을 요구한다. 읽는 법은 `spouse-holding-at-transfer.ts` 한 곳이다.
+ */
+export type SpouseHoldingAnswer = "yes" | "no" | "unknown";
+
 export interface HouseInfo {
   /** 내부 식별자 */
   id: string;
@@ -161,6 +168,12 @@ export interface HouseInfo {
    * 양도일 현재 배우자 보유 주택 수를 차감(§167의3⑨). 미제공(기본 false)=본인 소유로 간주(차감 대상 아님).
    */
   isSpouseOwned?: boolean;
+  /**
+   * §167의3⑨ 「양도일 현재 양도자의 배우자가 보유한」 주택인가 — 3-state 응답(결정 #47). 있으면 `isSpouseOwned`보다 우선한다.
+   * 없으면 레거시 `isSpouseOwned === true`만 「예」로 읽고, `false`·미제공은 「아니오」가 아니라 **미응답**이다
+   * (`readSpouseHolding`). 혼인 전 보유자(`mergeOrigin`)와 **다른 사실**이다.
+   */
+  spouseHeldAtTransfer?: SpouseHoldingAnswer;
   /**
    * §155④⑤ 합가 의제 — 이 주택을 **합가(혼인) 전에** 누가 보유했나(판정 메뉴 명부 입력).
    *
@@ -390,6 +403,8 @@ export interface PresaleRight {
    * 주택+권 합 3↑ + marriageMerge 발동 시 양도일 현재 배우자 보유 권리수를 차감. 미제공=본인 보유.
    */
   isSpouseOwned?: boolean;
+  /** §167의4⑤ 「양도일 현재 양도자의 배우자가 보유한」 권리인가 — 3-state 응답(결정 #47). 읽는 법은 주택 행(`HouseInfo`)과 같다. */
+  spouseHeldAtTransfer?: SpouseHoldingAnswer;
   /**
    * 상속받은 권리인가 — 「소득세법 시행령」 §156의2⑥·⑦ · §156의3④·⑤ (§89② 배제의 예외).
    *

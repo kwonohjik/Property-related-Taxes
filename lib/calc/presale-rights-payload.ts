@@ -37,6 +37,7 @@ export interface PresaleRightPayloadItem {
   regionCriteria?: PresaleRightEntry["regionCriteria"];
   rightValue?: number;
   isSpouseOwned?: boolean;
+  spouseHeldAtTransfer?: PresaleRightEntry["spouseHeldAtTransfer"];
   regionCode?: string;
   inDesignatedDistrict?: boolean;
   managementDisposalApprovalDate?: string;
@@ -98,6 +99,7 @@ export function buildPresaleRightsPayload(
       regionCriteria: p.regionCriteria,
       rightValue: p.rightValue ? parseAmount(p.rightValue) || undefined : undefined,
       isSpouseOwned: p.isSpouseOwned,
+      spouseHeldAtTransfer: p.spouseHeldAtTransfer,
       regionCode: p.regionCode || undefined,
       inDesignatedDistrict: p.regionCode ? p.inDesignatedDistrict : undefined,
       // §89② 조합원입주권 축 시행일 게이트(법률 제7837호 부칙 §12①) — 빈 문자열은 미입력이다.

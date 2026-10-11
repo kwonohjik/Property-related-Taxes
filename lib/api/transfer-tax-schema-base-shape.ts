@@ -190,6 +190,8 @@ export const propertyBaseShape = {
     .optional(),
   // ⑫ 비거주자(§121② 단서 · 시행령 §154⑧2호) — 판정 메뉴 전용 입력. 계산기는 보내지 않는다.
   transferorNonResidentAtTransfer: z.boolean().optional(),
+  // ⑫ 잔금 전 멸실 특약(결정 #46) — 판정 메뉴 전용 입력. 계산기는 보내지 않는다.
+  demolishedBeforeBalance: z.object({ contractDate: z.string().date() }).optional(),
   nonResidentHoldingPeriod: z
     .object({
       startDate: z.string().date().optional(),

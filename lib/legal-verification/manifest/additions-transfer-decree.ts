@@ -459,6 +459,25 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // 결정 #47 — 혼인 5년 내 「양도일 현재」 배우자 보유 차감. 응답 질문·엔진 차감·확인 필요 고지가 이 문언에 기댄다(MST 290841 실독 2026-10-11).
+    id: "TRANSFER_DECREE.MARRIAGE_SUBTRACT_THREE_HOUSE",
+    citation: "소득세법 시행령 §167의3",
+    keywords: [
+      "혼인한 날 현재 제1항에 따른 1세대3주택 이상에 해당하는 주택을 보유하게 된 경우로서 그 혼인한 날부터 5년 이내에 해당 주택을 양도하는 경우에는 양도일 현재 양도자의 배우자가 보유한 주택 수",
+      "혼인한 날부터 5년 이내에 새로운 주택을 취득한 경우 해당 주택의 취득일 이후 양도하는 주택에 대해서는 이를 적용하지 아니한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_DECREE.MARRIAGE_SUBTRACT_HOUSE_RIGHT_3PLUS",
+    citation: "소득세법 시행령 §167의4",
+    keywords: [
+      "양도일 현재 배우자가 보유한 제2항에 따른 주택, 조합원입주권 또는 분양권의 수를 차감하여 해당 1세대가 보유한 주택, 조합원입주권 또는 분양권의 수를 계산한다",
+      "혼인한 날부터 5년 이내에 새로운 주택, 조합원입주권 또는 분양권을 취득한 경우",
+    ],
+    keywordMode: "ALL",
+  },
   // 공고 전 매매계약 중과 배제(legal-codes `PRE_DESIGNATION_CONTRACT_EXCLUSION` — 계획서 regulated-area-region-code-match).
   // 네 호 문언이 같다(MST 286211 실독 2026-09-29). 호가 옮겨지거나 문언이 바뀌면 여기서 잡힌다.
   {

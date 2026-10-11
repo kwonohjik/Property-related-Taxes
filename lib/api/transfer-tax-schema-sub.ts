@@ -248,8 +248,10 @@ export const houseSchema = z.object({
   exclusiveArea: z.number().nonnegative().optional(),
   isUnsoldNewHouse: z.boolean().optional(),
   completionDate: z.string().date().optional(),
-  // #2a 배우자 단독 보유 (§167의3⑨ 혼인 5년내 차감)
+  // #2a 배우자 단독 보유 (§167의3⑨ 혼인 5년내 차감) — 레거시. 있으면 아래 3-state 응답이 우선한다
   isSpouseOwned: z.boolean().optional(),
+  // ⑫ 결정 #47 — 「양도일 현재 배우자 보유」 3-state 응답(예/아니오/모름). 미응답(키 없음)과 모름은 차감하지 않는다
+  spouseHeldAtTransfer: z.enum(["yes", "no", "unknown"]).optional(),
   // §155④⑤ 합가 전 보유 쪽 — 판정 메뉴·계산기 공통 명부 입력(merge-composition.ts)
   mergeOrigin: z.enum(["seller_side", "counterpart_side", "second_merge_side"]).optional(),
   // 상속 5년 배제 기산 (소령 §167의3①7호)
@@ -349,6 +351,8 @@ export const presaleRightSchema = z.object({
   regionCriteria: z.enum(["REGION", "VALUE"]).optional(),
   rightValue: z.number().int().nonnegative().optional(),
   isSpouseOwned: z.boolean().optional(),
+  // ⑫ 결정 #47 — 권리 행도 같은 3-state 응답(§167의4⑤)
+  spouseHeldAtTransfer: z.enum(["yes", "no", "unknown"]).optional(),
   // §156의2⑥·⑦ · §156의3④·⑤ — §89② 배제의 상속 예외 축
   /** ⑫ §89② 조합원입주권 축 시행일 게이트 — 법률 제7837호 부칙 §12①(인가일 기준). */
   managementDisposalApprovalDate: z.string().date().optional(),

@@ -53,6 +53,7 @@ import { primaryAcquisitionDateOf, carryoverResidenceJudgmentDate } from "@/lib/
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowApplies, countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { spouseHoldingQuestionApplies } from "@/lib/calc/spouse-holding-scope";
 
 /**
  * 미등기 양도(「소득세법」 제104조 제3항) 토글을 **띄우지 않는** 자산 종류.
@@ -458,7 +459,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 <PresaleRightsSection
                   rights={form.presaleRights}
                   onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
-                  showSpouseOwned={!!form.marriageDate}
+                  showSpouseOwned={spouseHoldingQuestionApplies(form)}
                   primaryKind={primaryKind}
                   confirmed={form.householdNoPresaleRightsConfirmed}
                   onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}
@@ -513,7 +514,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               <PresaleRightsSection
                 rights={form.presaleRights}
                 onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
-                showSpouseOwned={!!form.marriageDate}
+                showSpouseOwned={spouseHoldingQuestionApplies(form)}
                 primaryKind={primaryKind}
                 confirmed={form.householdNoPresaleRightsConfirmed}
                 onConfirmedChange={(v) => onChange({ householdNoPresaleRightsConfirmed: v })}

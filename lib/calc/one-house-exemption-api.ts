@@ -33,6 +33,7 @@ import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload, buildParentalCareMergeFact } from "./transfer-tax-api-body-blocks";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildNonResidentPayload } from "./one-house-non-resident";
+import { buildDemolishedPayload } from "./one-house-demolished";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { rentalLeaseResidencePayload } from "./exemption-proviso-payload";
@@ -244,6 +245,8 @@ export function buildOneHouseExemptionApiBody(
     ...(judgmentMergeInputVisible(form) ? buildMergePayload(form) : {}),
     // 비거주자(판정 메뉴 전용) — ⑤·⑧과 같은 게이트(`judgmentNonResidentPeriodVisible`)
     ...buildNonResidentPayload(form),
+    // 잔금 전 멸실 특약(판정 메뉴 전용, 결정 #46) — ⑤·⑧과 같은 게이트(`judgmentDemolishedDeclared`)
+    ...buildDemolishedPayload(form),
     ...(form.generalHouseGiftedFromDecedentWithin2yr
       ? { generalHouseGiftedFromDecedentWithin2yr: true }
       : {}),

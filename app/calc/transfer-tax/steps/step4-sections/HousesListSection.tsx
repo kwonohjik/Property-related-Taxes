@@ -35,6 +35,7 @@ import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { SellingHouseOriginBlock } from "@/components/calc/transfer/SellingHouseOriginBlock";
 import { sellingHouseOriginQuestionVisible, sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { mergeHouseSideOf, mergeSideLabel, type MergeContext } from "@/lib/calc/merge-house-origin";
+import { spouseHoldingQuestionApplies, spouseHoldingRowRole } from "@/lib/calc/spouse-holding-scope";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
 import { SellingHouseExclusionSection } from "@/components/calc/transfer/SellingHouseExclusionSection";
@@ -273,9 +274,10 @@ export function HousesListSection({
    */
   hideSellingHouseExclusion?: boolean;
   /**
-   * 「배우자 단독 보유」 칩(§167의3⑨·§167의4⑤ **중과 축**)을 숨긴다 — **판정 메뉴 전용**.
+   * 「양도일 현재도 배우자 쪽이 보유하나요」 질문(§167의3⑨·§167의4⑤ **중과 축**, 결정 #47)을 숨긴다 — **판정 메뉴 전용**.
    * 판정 route는 중과 엔진을 부르지 않아 이 값이 결과를 바꾸지 않는다(2026-09-29 route probe —
-   * 켜고 끈 응답이 동일). 같은 사실을 합가 전 보유 쪽(`mergeContext`)이 묻는다.
+   * 켜고 끈 응답이 동일). 판정 메뉴에서 넘어온 「배우자 쪽」 행은 응답 없이 도착하고 계산기 ⑧이 응답을 요구한다.
+   * 질문의 노출 게이트는 `spouseHoldingQuestionApplies`(혼인 5년 안 양도·3주택↑·중과가 걸리는 양도)다.
    */
   hideSpouseOwned?: boolean;
   /**
@@ -301,6 +303,8 @@ export function HousesListSection({
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
+  // 결정 #47 — 「양도일 현재도 배우자 쪽이 보유하나요」 질문 노출(⑧과 같은 술어). 판정 메뉴는 묻지 않는다.
+  const spouseHoldingOpen = !hideSpouseOwned && spouseHoldingQuestionApplies(form);
 
   /**
    * 명부 patch — **파생 주택 수를 같은 patch 에 싣는다**(Q-8 후속).
@@ -645,7 +649,7 @@ export function HousesListSection({
       <PresaleRightsSection
         rights={form.presaleRights}
         onChange={(presaleRights) => onChange(presaleRightsPatchWithConfirmClear(presaleRights))}
-        showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
+        showSpouseOwned={spouseHoldingOpen}
         primaryKind={form.assets?.[0]?.assetKind}
         confirmed={form.householdNoPresaleRightsConfirmed}
         // 판정 메뉴는 확인 토글을 두지 않는다 → 평문 「없음」(S10-9). 계산기는 ⑧ 관문이라 그대로 둔다.
@@ -724,7 +728,7 @@ export function HousesListSection({
             <HouseEntryEditor
               house={editingHouse}
               onUpdate={(patch) => updateHouse(editingHouse.id, patch)}
-              showSpouseOwned={!hideSpouseOwned && !!form.marriageDate}
+              spouseHoldingRole={spouseHoldingOpen && editingHouse ? spouseHoldingRowRole(editingHouse, form) : undefined}
               transferDate={form.transferDate}
               mergeContext={mergeContext}
               countExclusionEnabled={countExclusionEnabled}
