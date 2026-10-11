@@ -98,7 +98,24 @@ export function buildTempTwoHouseDeadlineExceptionFacts(f: {
 }
 
 /** §155④⑤ 합가 위젯(`MergeDateSection`)이 읽고 쓰는 필드 — 양도세 폼과 증여세 부담부증여 폼이 같은 이름으로 갖는다 */
-export type MergeDateFields = Pick<TransferFormData, "marriageDate" | "parentalCareMergeDate" | "isFirstTransferredInMerge">;
+export type MergeDateFields = Pick<
+  TransferFormData,
+  "marriageDate" | "parentalCareMergeDate" | "parentalCareParentAge" | "isFirstTransferredInMerge"
+>;
+
+/**
+ * 동거봉양 합가 ④ 조각 — 합가일 + 직계존속 연령 선언(결정 #9). **세 생산 지점(계산기 단건 · 다건 · 판정 메뉴 · 증여 부담부)이 이 leaf
+ * 하나를 쓴다** — 한쪽만 연령 키를 빠뜨리면 그 경로는 늘 「모름 → 불성립」이 된다(`feedback_leaf_unification_leaves_one_handwritten_predicate`).
+ * 빈 문자열(미선택)은 키를 만들지 않는다 — 엔진이 `undefined`를 모름으로 읽는다.
+ */
+export function buildParentalCareMergeFact(
+  mergeDate: string | undefined,
+  parentAge: string | undefined,
+): { parentalCareMerge?: { mergeDate: string; parentAge?: "over_60" | "care_benefit" | "none" } } {
+  if (!mergeDate) return {};
+  const age = parentAge === "over_60" || parentAge === "care_benefit" || parentAge === "none" ? parentAge : undefined;
+  return { parentalCareMerge: { mergeDate, ...(age ? { parentAge: age } : {}) } };
+}
 
 /**
  * 「소득세법 시행령」 §155④(동거봉양)·⑤(혼인) 합가 — 본문 조각. 양도세 계산기 ④와 증여세 부담부증여 경로 ④가
@@ -107,11 +124,12 @@ export type MergeDateFields = Pick<TransferFormData, "marriageDate" | "parentalC
 export function buildMergeFacts(f: {
   marriageDate?: string;
   parentalCareMergeDate?: string;
+  parentalCareParentAge?: string;
   isFirstTransferredInMerge?: boolean;
 }): object {
   return {
     ...(f.marriageDate ? { marriageMerge: { marriageDate: f.marriageDate } } : {}),
-    ...(f.parentalCareMergeDate ? { parentalCareMerge: { mergeDate: f.parentalCareMergeDate } } : {}),
+    ...buildParentalCareMergeFact(f.parentalCareMergeDate, f.parentalCareParentAge),
     ...(f.isFirstTransferredInMerge ? { isFirstTransferredInMerge: true } : {}),
   };
 }

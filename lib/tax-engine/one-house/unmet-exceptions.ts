@@ -38,6 +38,7 @@ import {
   UNAVOIDABLE_REASON_LABEL,
 } from "../transfer-tax-exemption-requirements";
 import { collectRental4hoUnmet } from "./rental-registration-4ho";
+import { PARENTAL_CARE_AGE_CONFIRM_NOTICE, PARENTAL_CARE_AGE_UNMET_REASON, parentalCareAgeVerdict } from "./parental-care-age";
 import { deadlineHoldingUnmetReason } from "./deadline-holding";
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
@@ -146,6 +147,14 @@ function collectMergeUnmet(
     reasons.push(
       `양도 주택을 ${mergeLabel}(${fmtDate(mergeDate)}) 이후인 ${fmtDate(input.acquisitionDate)}에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.`,
     );
+  }
+
+  // ── 동거봉양 직계존속 연령 요건 — `matchMergeGateAndComposition`·`matchDoubleMergeApartFromWindow`의 같은 leaf(결정 #9) ──
+  //    미선택(모름)은 불성립 + 확인 필요, 「해당 없음」은 사실의 선언이라 확인 필요 없이 불성립 사유만 말한다.
+  if (doubleOrder || axis!.kind === "parental_care") {
+    const ageVerdict = parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4");
+    if (ageVerdict === "unmet") reasons.push(PARENTAL_CARE_AGE_UNMET_REASON);
+    else if (ageVerdict === "unknown") reasons.push(`합가의 직계존속 연령 요건을 선택하지 않아 합가 특례를 적용하지 않았습니다 — 확인 필요: ${PARENTAL_CARE_AGE_CONFIRM_NOTICE}`);
   }
 
   // ── 주택 수 조건 — `resolveMergeDeeming`(2주택) · `resolveMergeOverlapDeeming`(3주택) ──

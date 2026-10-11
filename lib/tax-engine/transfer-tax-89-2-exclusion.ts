@@ -30,11 +30,11 @@
  * | §156의2③ · §156의3② | 종전주택 취득 **1년 후** 권리 취득 + 권리 취득일부터 **3년 이내** 양도 | `acquisitionDate` · 권리 `acquisitionDate` · `transferDate` |
  * | §156의2④ · §156의3③ · 규칙 §75① | 3년 초과 — 신축주택 완성 후 이주·거주 / 경매·공매 | `rightThreeYearException` (Phase 2) |
  * | §156의2⑤ | 대체주택 | `replacementHouse` (E-5가 이미 판정 — 여기 오기 전에 비과세로 빠진다) |
- * | §156의2⑥·⑦ · §156의3④·⑤ | 상속받은 **권리** 귀속 | 권리의 상속 7필드 + `generalHouseHeldAtInheritance` (Phase 3) |
- * | §156의2⑧·⑨ (§156의3⑥ 준용) | 동거봉양·혼인 합가 — 합가 전 보유 구성 | `mergedHouseholdFirstHouse` (Phase 4) |
+ * | §156의2⑥·⑦ · §156의3④·⑤ | 상속받은 **권리** 귀속 | 권리의 상속 7필드 + 「상속개시 당시 보유」 **날짜 판정**(분양권 = 행 `acquisitionDate`, 입주권 = `inheritedDate` — 결정 #8, 선언 토글 폐지) |
+ * | §156의2⑧·⑨ (§156의3⑥ 준용) | 동거봉양·혼인 합가 — 합가 전 보유 구성 | `mergedHouseholdFirstHouse` (Phase 4) — 미선택 = 불성립 + 확인 필요(결정 #7) · ⑧2호 `parentalCareMerge.parentAge`(결정 #9) · 혼인 후 분양권 취득은 명부 날짜(7572) |
  * | §156의2⑩ · §156의3⑦ | §155⑥1호 문화유산 주택 + 일반주택 + 권리 각 1개 | `culturalHeritageHouse` (Phase 5) |
  * | §156의2⑪ · §156의3⑧ | §155⑦**2호 이농주택** + 일반주택 + 권리 각 1개 | `ruralHouse.kind === "farm_exit"` (Phase 5) |
- * | §156의2⑦1호 · §156의3⑤1호 | 상속받은 **주택** — 후단 「상속개시 당시 보유한 주택」 | `houses[].isInherited` + `generalHouseHeldAtInheritance` (Phase 5) |
+ * | §156의2⑦1호 · §156의3⑤1호 | 상속받은 **주택** — 후단 「상속개시 당시 보유한 주택」 | `houses[].isInherited` + 상속개시일 날짜 판정(신축주택 갈래 없음 — 결정 #8 하위 1) |
  *
  * 나머지는 「그 사실을 선언할 입력이 있는가」로 갈린다:
  *   · 있는데 선언하지 않았다 ⇒ **미해당 확정**(`marriageMerge`·`parentalCareMerge`·`ruralHouse`·
@@ -74,10 +74,7 @@
  *    주석에 부칙 원문을 옮겨 두었다.
  */
 
-import type {
-  TransferTaxInput,
-  MergedHouseholdFirstHouse,
-} from "./types/transfer.types";
+import type { TransferTaxInput } from "./types/transfer.types";
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { isWithinDeadline } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
@@ -88,14 +85,16 @@ import {
   waivesPriorHouseOneYearGap,
   type ResidenceReqInput,
 } from "./transfer-tax-exemption-requirements";
-import { resolveMergeExemptionYears } from "./data/merge-exemption-era";
+import { resolveMarriageThenPresaleRight, resolveMergedHouseholdVerdict } from "./transfer-tax-89-2-merged-household";
+import {
+  hasInheritedHouseOtherThanSelling,
+  inheritedHousesHeldVerdict,
+  qualifyInheritedRight,
+  withClause2TraceNotes,
+  type Article89Clause2Trace,
+} from "./transfer-tax-89-2-inherited-right";
 import { resolve1562Clause3Years } from "./data/article-156-2-completion-era";
 import { presaleRightDefinitionAcquisitionDate } from "./presale-right-definition-date";
-import {
-  INHERITANCE_GENERAL_HOUSE_HELD_START,
-  isDecedentGiftExclusionApplicable,
-  qualifiesAsInheritanceGeneralHouse,
-} from "./data/inheritance-general-house-era";
 
 /* §156의2③·§156의3②의 처분기한(현행 3년)은 양도일 연혁 — `resolve1562Clause3Years`(M7). */
 
@@ -163,6 +162,20 @@ export interface Article89Clause2Result {
    */
   confirmNotes?: string[];
   /**
+   * 배제(`excluded`)가 **확정된 사실** 때문에 특정 예외를 적용하지 않은 사유 — 모름이 아니라 날짜로 확정된 불성립이다(결정 #8).
+   * 상속 권리·상속주택 축에서 「상속개시 당시 보유한 주택」 요건이 날짜로 깨졌을 때, 종전에 뜨던 조문 지목 카드가 사라지므로
+   * 이유를 한 줄 남긴다(`feedback_success_only_breakdown_hides_failures`). 판정 메뉴는 불성립 사유 카드로, 계산기는 경고로 낸다.
+   */
+  exclusionReasons?: string[];
+  /**
+   * 합가(혼인) 전 보유 구성(§156의2⑧⑨ · 분양권은 §156의3⑥)을 **선택하지 않아** 합가 예외를 적용하지 않고 배제한(`excluded`) 조문 표기
+   * (결정 #7 — 모름 = 혜택 불성립 + 확인 필요). 확인 필요 고지는 비과세 판정이 이 배제 때문에만 과세로 갈릴 때 판정 메뉴가
+   * (`undeclaredMergeCompositionUndetermined`), 계산기는 경고로 낸다. 문구는 중립이다 — 특정 선택지를 유도하지 않는다.
+   */
+  undeclaredMergeArticles?: string[];
+  /** `exclusionReasons`가 가리키는 조문(불성립 사유 카드의 근거 표기) */
+  exclusionBasis?: string;
+  /**
    * §156의2③·§156의3② — **권리 취득일부터 3년** 처분기한 (P4-1).
    *
    * 종전에는 `:337` 지역변수로 만들어 비교에만 쓰고 버렸다. 판정 메뉴(P4)의 「조건부·기한」이
@@ -192,7 +205,6 @@ export type Article89Clause2Input = Pick<
   | "ruralHouse"
   | "replacementHouse"
   | "rightThreeYearException"
-  | "generalHouseHeldAtInheritance"
   | "inheritedRightChoiceWhenBothHeld"
   | "generalHouseGiftedFromDecedentWithin2yr"
   | "generalHouseGiftDate"
@@ -248,6 +260,15 @@ export function resolveArticle89Clause2(
   input: Article89Clause2Input,
   presaleRightStartDate: Date | undefined,
 ): Article89Clause2Result {
+  const trace: Article89Clause2Trace = {};
+  return withClause2TraceNotes(resolveArticle89Clause2Core(input, presaleRightStartDate, trace), trace);
+}
+
+function resolveArticle89Clause2Core(
+  input: Article89Clause2Input,
+  presaleRightStartDate: Date | undefined,
+  trace: Article89Clause2Trace,
+): Article89Clause2Result {
   // §89②은 「**그 주택**을 양도하는 경우」다 — 주택 양도가 아니면 이 조항의 대상이 아니다.
   if (input.propertyType !== "housing" || !input.isOneHousehold) {
     return { status: "not_applicable" };
@@ -285,6 +306,18 @@ export function resolveArticle89Clause2(
     };
   }
 
+  // ⑧ 직계존속 연령 요건 — 모름은 확인 필요, 요양급여 갈래는 이 경로에 없다는 사유(결정 #9). 최종 결과가 배제일 때만 래퍼가 싣는다.
+  if (mergeVerdict.status === "unmet") {
+    if (mergeVerdict.confirmNotes) trace.mergeConfirmNotes = mergeVerdict.confirmNotes;
+    if (mergeVerdict.exclusionReasons) trace.mergeExclusionReasons = mergeVerdict.exclusionReasons;
+  }
+  // 구성 미선언 — 불성립 + 확인 필요(결정 #7). 최종 결과가 배제일 때만 래퍼가 `undeclaredMergeArticles`로 옮긴다.
+  if (mergeVerdict.status === "undeclared") trace.mergeUndeclared = mergeVerdict.articles;
+
+  // 혼인 후 분양권 취득(서면-2021-부동산-7572) — 합가 전 보유 구성 선언과 무관하게 명부 날짜로 판정한다(결정 #7 하위 1).
+  const marriageThenPresale = resolveMarriageThenPresaleRight(input, rights);
+  if (marriageThenPresale) return marriageThenPresale;
+
   /**
    * 2주택 축 — §156의2⑦·⑩·⑪ · §156의3⑤·⑦·⑧ (Phase 5).
    *
@@ -319,9 +352,12 @@ export function resolveArticle89Clause2(
    */
   const inheritedRights = rights.filter((r) => r.isInherited === true);
   const otherRights = rights.filter((r) => r.isInherited !== true);
+  // 신축주택 갈래(상속개시 당시 보유한 권리로 완공된 신축주택)는 ⑥·④ 모양(상속 권리 + 일반주택)에서만 인정한다 —
+  // ⑦·⑤ 후단(상속 외 권리 동반)에는 그 문구가 없다(결정 #8 조건).
+  const newBuildAllowed = otherRights.length === 0;
   const inheritedVerdict =
     inheritedRights.length === 1
-      ? qualifyInheritedRight(inheritedRights[0], input)
+      ? qualifyInheritedRight(inheritedRights[0], input, newBuildAllowed, trace)
       : inheritedRights.length === 0
         ? "not_inherited"
         : "undetermined"; // 상속 권리 2개 이상 — 조문이 「1개」를 전제한다
@@ -350,12 +386,6 @@ export function resolveArticle89Clause2(
   const isTwoRightShape = rights.length >= 2 && !isArticle7Shape;
 
   /**
-   * 합가 축이 **미선언**이면 그 축만 판정 불가로 남긴다(Phase 4).
-   * 선언했는데 요건을 못 갖췄으면(`unmet`) 그 축은 **결론이 난 것**이므로 열지 않는다.
-   */
-  if (mergeVerdict.status === "not_declared") open.push(...mergeVerdict.openArticles);
-
-  /**
    * §156의2⑦1호 · §156의3⑤1호 — 상속받은 **주택** 갈래의 후단 요건.
    *
    * 🔴 이 세대는 §155②③ 주택수 제외가 `checkExemption` 진입 전에 count를 1로 줄여
@@ -363,11 +393,21 @@ export function resolveArticle89Clause2(
    *    까지 그대로 도달하는데, ⑦ 후단의 「제3항 및 제4항의 규정을 적용받는 일반주택은
    *    **상속개시 당시 보유한 주택**으로 한정한다」가 한 번도 검증되지 않고 있었다(실측).
    */
-  if (hasInheritedHouseOtherThanSelling(input) && !generalHouseHeldAtInheritanceEstablished(input)) {
-    open.push(...openArticlesByRightKind(rights, "⑦", "⑤"));
-  }
+  const houseHeldVerdict = hasInheritedHouseOtherThanSelling(input) ? inheritedHousesHeldVerdict(input) : "yes";
 
   if (open.length > 0) return { status: "undetermined", openArticles: dedupe(open) };
+
+  /**
+   * ⑦1호·⑤1호 후단의 일반주택 요건이 날짜로 깨졌거나(`no`) 날짜를 몰라(`unknown` — 모름 = 혜택 불성립 + 확인 필요) 상속주택 갈래가
+   * 서지 않는다 ⇒ 남은 예외가 없어 배제 확정이다(종전: 판정 불가·비과세 유지). 사유·확인 필요는 래퍼가 싣는다.
+   */
+  if (houseHeldVerdict !== "yes") {
+    trace.houses = {
+      kind: houseHeldVerdict === "no" ? "after" : "unknown",
+      rightTypes: [...new Set(rights.map((r) => r.type))],
+    };
+    return { status: "excluded" };
+  }
 
   /**
    * 권리 2개 이상 — 남는 예외가 없으면 **배제 확정**이다.
@@ -487,226 +527,6 @@ function openArticlesForTwoHouseAxis(input: Article89Clause2Input): string[] {
   return isRuralOutOfScope
     ? ["소득세법 시행령 §156의2 ⑦·⑩", "소득세법 시행령 §156의3 ⑤·⑦"]
     : ["소득세법 시행령 §156의2 ⑦·⑩·⑪", "소득세법 시행령 §156의3 ⑤·⑦·⑧"];
-}
-
-/**
- * 세대가 **양도 대상이 아닌 상속받은 주택**을 보유하는가 — §156의2⑦1호·§156의3⑤1호의 전제.
- * 양도 주택 식별은 `transfer-tax-house-exclusion-step.ts`의 §155②③ 제외와 **같은 규약**이다
- * (`sellingHouseId` 미지정 시 첫 항목).
- */
-function hasInheritedHouseOtherThanSelling(input: Article89Clause2Input): boolean {
-  const houses = input.houses ?? [];
-  const sellingId = input.sellingHouseId ?? houses[0]?.id;
-  return houses.some((h) => h.isInherited === true && h.id !== sellingId);
-}
-
-/**
- * §156의2⑦ 후단 · §156의3⑤ — 「제3항 및 제4항의 규정을 적용받는 일반주택은 상속개시 당시 보유한 주택으로
- * 한정한다」가 **성립하는가** (OH-12b).
- *
- * 긍정 선언(`generalHouseHeldAtInheritance`)이 있거나, §155② 경로와 **같은 leaf**
- * (`qualifiesAsInheritanceGeneralHouse`)가 모든 상속주택에 대해 `yes`를 내면 성립한다 —
- * 2013-02-15 전 취득 일반주택(제24356호 부칙 제20조 — 한정 없음)이거나 상속개시 전 취득이 날짜로 확인되는 경우.
- * 상속개시일을 모르거나 상속 후 취득이면 종전대로 선언을 요구한다(판정 불가).
- */
-function generalHouseHeldAtInheritanceEstablished(input: Article89Clause2Input): boolean {
-  if (input.generalHouseHeldAtInheritance === true) return true;
-  const houses = input.houses ?? [];
-  const sellingId = input.sellingHouseId ?? houses[0]?.id;
-  const inherited = houses.filter((h) => h.isInherited === true && h.id !== sellingId);
-  return inherited.every(
-    (h) =>
-      qualifiesAsInheritanceGeneralHouse({
-        generalHouseAcquisitionDate: input.acquisitionDate,
-        inheritedDate: h.inheritedDate,
-        transferDate: input.transferDate,
-        rightAtInheritance: input.generalHouseRightAtInheritance,
-      }) === "yes",
-  );
-}
-
-/**
- * 합가(동거봉양·혼인) 축의 판정 — 「소득세법 시행령」 §156의2⑧·⑨.
- *
- * ## 네 갈래
- *
- * · `no_merge`     — 합가 사실 자체가 없다. 화면에 합가일 칸이 있으므로 **미입력은 미해당**이다.
- * · `not_declared` — 합가는 있고 **날짜·선언 게이트를 통과**했는데 **합가 전 보유 구성**을 선언하지 않았다 ⇒ 판정 불가(경고).
- * · `unmet`        — 게이트(먼저 양도 · 합가 이후 양도 · N년 기한)에서 떨어졌거나, 선언했는데 어느 호에도 해당하지 않는다
- *                    ⇒ 이 축은 결론이 났다. 게이트는 구성 판정보다 **먼저**다(S05-6 · S05-1).
- * · `met`          — 어느 호에 해당한다 ⇒ **직접 1세대1주택 의제**(타이밍 요건 없음).
- *
- * ## ⚠️ §155④⑤와 술어를 공유하지 않는다
- *
- * 재사용하는 것은 **합가일과 선양도 두 사실**까지다. §155④⑤는 주택 + 주택 조합이라 아래
- * 3·4·5호의 「합가 전 보유 구성」 요건이 아예 없다.
- */
-type MergedHouseholdVerdict =
-  | { status: "no_merge" }
-  | { status: "not_declared"; openArticles: string[] }
-  | { status: "unmet" }
-  | { status: "met"; exception: string };
-
-function resolveMergedHouseholdVerdict(input: Article89Clause2Input): MergedHouseholdVerdict {
-  const parentalCareDate = input.parentalCareMerge?.mergeDate;
-  const marriageDate = input.marriageMerge?.marriageDate;
-  if (!parentalCareDate && !marriageDate) return { status: "no_merge" };
-
-  /**
-   * 🔑 **게이트 순서** — 날짜·선언 게이트(먼저 양도 → 합가 이후 양도 → N년 기한)를 **합가 전 구성 판정보다 먼저** 본다
-   * (S05-6 순서 정정 · S05-1). 날짜가 안 맞으면 「모름」을 말할 자리가 없다 — 구성을 몰라서가 아니라 그 합가 축 자체가
-   * 불성립이다(형제 §155④⑤ `matchMergeGateAndComposition`이 같은 순서다). 종전에는 구성 미선언이면 기한이 지났거나
-   * 「먼저 양도」가 아니어도 판정 보류(비과세 종전 동작)로 새서, 불성립이 확정된 세대까지 비과세로 나왔다.
-   * 미선언을 어떻게 처리할지(보류 vs 불성립)는 이 순서와 **별개 결정**이다 — 게이트를 통과한 뒤의 미선언은 종전대로 판정 보류다.
-   */
-  // ⑧·⑨ 본문 공통 — 「합친 날부터 N년 이내에 **먼저 양도하는 주택**」.
-  if (input.isFirstTransferredInMerge !== true) return { status: "unmet" };
-
-  const axes: { date: Date | undefined; clause: "⑧" | "⑨" }[] = [
-    { date: parentalCareDate, clause: "⑧" },
-    { date: marriageDate, clause: "⑨" },
-  ];
-  const alive = axes.filter((axis): axis is { date: Date; clause: "⑧" | "⑨" } => {
-    if (!axis.date) return false;
-    // 「합친 날(혼인한 날)부터」 — 합가(혼인) **전** 양도는 「합침으로써 … 소유하게 되는 경우」가 아직 성립하지 않았다(S05-1).
-    // 같은 날 양도는 포함한다(`merge-deeming.ts` `matchMergeGateAndComposition`과 같은 경계).
-    if (input.transferDate < axis.date) return false;
-    // N = 양도일 연혁.
-    const years = resolveMergeExemptionYears(axis.clause === "⑧" ? "parental_care" : "marriage", input.transferDate);
-    return isWithinDeadline(axis.date, years, input.transferDate);
-  });
-  if (alive.length === 0) return { status: "unmet" };
-
-  const declared = input.mergedHouseholdFirstHouse;
-  if (declared === undefined) {
-    return {
-      status: "not_declared",
-      openArticles: alive.map(({ clause }) => `소득세법 시행령 §156의2 ${clause}`),
-    };
-  }
-
-  for (const { date, clause } of alive) {
-    const item = matchMergedHouseholdClause(declared, {
-      mergeDate: date,
-      houseAcquisitionDate: input.acquisitionDate,
-      isParentalCare: clause === "⑧",
-    });
-    if (item) return { status: "met", exception: `소득세법 시행령 §156의2 ${clause}${item}` };
-  }
-  return { status: "unmet" };
-}
-
-/**
- * 최초양도주택이 ⑧3·4·5호(⑨2·3·4호) 중 어디에 해당하는가 — 해당 호·목 표기를 돌려준다.
- *
- * ## 🔑 ⑨는 **호 번호가 하나씩 당겨진다**
- *
- * ⑨에는 「60세 이상 직계존속」인 제2호가 없어 제1호 하나뿐이다 ⇒ **2호 = ⑧3호 · 3호 = ⑧4호 ·
- * 4호 = ⑧5호**. 인용 문자열을 상수로 묶으면 조용히 틀린다.
- *
- * ## 🔑 3·4호와 5호는 취득 시점의 방향이 **반대**다
- *
- * 3·4호는 「합친 날 이전에 … **소유하던** 주택」이고, 5호는 합가 전 권리에 의하여 「합친 날
- * **이후에 취득하는** 주택」이다. 한 조건으로 묶을 수 없다.
- */
-function matchMergedHouseholdClause(
-  declared: MergedHouseholdFirstHouse,
-  p: { mergeDate: Date; houseAcquisitionDate: Date; isParentalCare: boolean },
-): string | undefined {
-  /** ⑧ 기준 호 번호 → ⑨는 하나 당겨진다. */
-  const no = (parentalCareNo: number) => (p.isParentalCare ? parentalCareNo : parentalCareNo - 1);
-  const ownedBeforeMerge = p.houseAcquisitionDate <= p.mergeDate;
-  const acquiredAfterMerge = p.houseAcquisitionDate > p.mergeDate;
-
-  switch (declared.kind) {
-    case "house_only":
-      return ownedBeforeMerge ? `${no(3)}호` : undefined;
-    case "initial_right":
-      // 가목은 요건이 **둘**이다 — 「인가일 이후 취득」 그리고 「취득 후 1년 이상 거주」.
-      return ownedBeforeMerge && declared.acquiredAfterApproval && declared.residedOneYear
-        ? `${no(4)}호가목`
-        : undefined;
-    case "succeeded_right":
-      return ownedBeforeMerge && declared.ownedBeforeRight ? `${no(4)}호나목` : undefined;
-    case "presale_right":
-      return ownedBeforeMerge && declared.ownedBeforeRight ? `${no(4)}호다목` : undefined;
-    case "right_only":
-      return acquiredAfterMerge ? `${no(5)}호` : undefined;
-    case "none":
-      return undefined;
-  }
-}
-
-/**
- * 상속받은 권리가 §156의2⑥(입주권)·§156의3④(분양권)의 「상속받은 권리」로 **인정되는가**.
- *
- * ## 세 갈래로 답한다
- *
- * · `qualified`    — 요건을 모두 충족. ⑥(단독) 또는 ⑦(상속 외 권리 1개 동반)로 간다.
- * · `disqualified` — 요건 중 하나가 **명시적으로** 깨졌다. 그 권리는 「상속받은 것」이 아니라
- *                    **일반 권리**로 취급되어 ③④ 타이밍 판정을 탄다.
- * · `undetermined` — 긍정 선언(`generalHouseHeldAtInheritance`)이 없어 판정할 수 없다.
- *                    ⇒ 종전 동작 유지 + 경고. **`disqualified`로 떨어뜨리면 안 된다** —
- *                    미선언을 미해당으로 읽으면 상속 권리 보유 세대가 갑자기 과세로 뒤집힌다.
- *
- * ## 부정 선언은 `!== true` 규약을 따른다
- *
- * 순위 부적격·공동상속 소수지분·동일세대 등은 **체크박스가 화면에 있으므로** 미체크를 「아님」으로
- * 읽는다 — 주택 축(`transfer-inheritance-exclusion.ts`)이 §155②③에서 쓰는 것과 같은 규약이다.
- */
-function qualifyInheritedRight(
-  right: PresaleRight,
-  input: Article89Clause2Input,
-): "qualified" | "disqualified" | "undetermined" {
-  // ── ⑥ 본문 괄호 ①: 피상속인이 상속개시 당시 **주택**을 소유하지 않았을 것 ──
-  //    ⚠️ ⑮·⑫ 선택으로도 **면제되지 않는다**(⑮ 본문이 「주택은 소유하지 않고」를 전제로 건다).
-  if (right.decedentOwnedHouseAtDeath === true) return "disqualified";
-
-  // ── ⑥ 본문 괄호 ②: 피상속인이 **다른 종류의 권리**를 소유하지 않았을 것 ──
-  //    §156의2⑮ · §156의3⑫ 선택이 이 요건**만** 면제한다.
-  const article15Applied = input.inheritedRightChoiceWhenBothHeld === right.type;
-  if (right.decedentOwnedOtherRightTypeAtDeath === true && !article15Applied) {
-    return "disqualified";
-  }
-
-  // ── ⑥1~3호 / §156의3④1~2호 순위 ──
-  if (right.isRankingDisqualifiedInheritedRight === true) return "disqualified";
-
-  // ── 공동상속: ⑦3호가목 / ⑤5호가목 — 최대지분 상속인이 소유한 것으로 본다 ──
-  if (right.isCoInherited === true && right.isLargestCoInheritedShareholder !== true) {
-    return "disqualified";
-  }
-
-  // ── ⑥ 단서: 상속개시 당시 상속인·피상속인이 1세대였으면 원칙 배제 ──
-  if (
-    right.decedentSameHouseholdAtInheritance === true &&
-    right.parentalCareMergeInheritedRight !== true
-  ) {
-    return "disqualified";
-  }
-
-  // ── 일반주택 요건: 상속개시일 소급 2년 내 피상속인 증여분이면 배제 ──
-  //    OH-12c — 2018-02-13 이후 증여분부터(대통령령 제28637호 부칙 제16조 — ⑥·⑦ 함께 적용).
-  if (
-    isDecedentGiftExclusionApplicable({
-      gifted: input.generalHouseGiftedFromDecedentWithin2yr,
-      giftDate: input.generalHouseGiftDate,
-    })
-  ) {
-    return "disqualified";
-  }
-
-  // ── 일반주택 요건: 「상속개시 당시 보유한 주택」 — **긍정 선언 필수** ──
-  //    OH-12b — 2013-02-15 전 취득 일반주택에는 이 한정이 없다(제24356호 부칙 제20조 — ⑥·⑦ 함께 적용).
-  //    권리에는 상속개시일 입력이 없어 날짜로 보유를 확인할 수 없으므로 그 밖에는 선언을 요구한다.
-  if (
-    input.generalHouseHeldAtInheritance !== true &&
-    input.acquisitionDate >= INHERITANCE_GENERAL_HOUSE_HELD_START
-  ) {
-    return "undetermined";
-  }
-
-  return "qualified";
 }
 
 /**

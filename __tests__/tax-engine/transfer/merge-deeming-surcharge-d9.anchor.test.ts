@@ -56,7 +56,7 @@ function households(
 }
 
 const PC = (d: string, first = true): Partial<TransferTaxInput> => ({
-  parentalCareMerge: { mergeDate: new Date(d) },
+  parentalCareMerge: { mergeDate: new Date(d), parentAge: "over_60" as const },
   isFirstTransferredInMerge: first,
 });
 const MM = (d: string, first = true): Partial<TransferTaxInput> => ({
@@ -157,7 +157,7 @@ describe("D9 합가 중과배제 — §167의10①15호·§167의3①13호", () 
 describe("resolveMergeDeeming — §155④⑤ 합가 의제 정본(비과세 E-3.5 · 중과 15호 공용)", () => {
   const base = {
     householdHousingCount: 2,
-    parentalCareMerge: { mergeDate: new Date("2016-08-01") },
+    parentalCareMerge: { mergeDate: new Date("2016-08-01"), parentAge: "over_60" as const },
     isFirstTransferredInMerge: true,
     acquisitionDate: new Date("2010-01-01"),
     transferDate: new Date("2020-01-01"),

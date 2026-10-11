@@ -22,7 +22,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 afterEach(cleanup);
 
-const DOUBLE = { marriageDate: "2019-03-01", parentalCareMergeDate: "2020-01-15" };
+const DOUBLE = { marriageDate: "2019-03-01", parentalCareMergeDate: "2020-01-15", parentalCareParentAge: "over_60" };
 const row = (over: Partial<HouseEntry> = {}): HouseEntry =>
   ({
     id: "parents",

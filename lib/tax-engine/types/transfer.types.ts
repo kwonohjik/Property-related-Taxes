@@ -180,6 +180,15 @@ export type UnavoidableReasonKind = "study" | "work" | "illness" | "other";
  * §155⑱ 각 호 — §155① 처분기한(3년/⑯ 5년)의 예외 사유.
  * 「다른 주택을 취득한 날부터 **3년이 되는 날 현재**」 해당해야 한다(기준시점 주의).
  */
+/**
+ * 동거봉양 합가의 직계존속 연령 요건(결정 #9) — 「합가일 현재 만 나이」 기준(재산세과-291 · 서면법규과-820 · 사전-2015-법령해석재산-0424).
+ *   · `over_60`       — 직계존속(배우자의 직계존속 포함) 중 1명 이상이 만 60세 이상 (§155④ 본문·1호·2호 · §156의2⑧2호 · §155② 단서)
+ *   · `care_benefit`  — 요양급여를 받는 60세 미만 직계존속(§155④3호) — **§155④ 경로에서만** 인정, §156의2⑧2호·§155② 단서에는 없다
+ *   · `none`          — 위에 해당하지 않는다(사실의 선언 → 불성립, 고지 없음)
+ * 미선택(`undefined`)은 모름이다.
+ */
+export type ParentalCareParentAge = "over_60" | "care_benefit" | "none";
+
 export type TemporaryTwoHouseDelayReason =
   /** 1호 한국자산관리공사에 매각을 의뢰한 경우 */
   | "kamco"
@@ -479,18 +488,10 @@ export interface TransferTaxInput {
    *    값이 없고, 미입력을 미해당으로 읽으면 합가 세대 전체가 갑자기 과세로 뒤집힌다.
    */
   mergedHouseholdFirstHouse?: MergedHouseholdFirstHouse;
-  /**
-   * §156의2⑥·⑦ · §156의3④·⑤ — 「일반주택」이 **상속개시 당시 보유한 주택**인가.
-   *
-   * 두 항 모두 일반주택을 「상속개시 당시 보유한 주택(또는 상속개시 당시 보유한 권리에 의하여
-   * 사업시행 완료 후 취득한 신축주택)만 해당」으로 한정한다. 상속 후에 산 주택을 양도하면서
-   * 상속받은 권리로 특례를 받을 수는 없다.
-   *
-   * ⚠️ **긍정 선언이 있을 때만** 상속 권리 예외를 인정한다. 미선언은 「미해당」이 아니라
-   *    **판정 불가**로 남긴다 — 미선언을 미해당으로 읽으면 상속 권리 보유 세대가 갑자기
-   *    과세로 뒤집힌다(Phase 2와 같은 규약).
+  /*
+   * (폐지) `generalHouseHeldAtInheritance` — §156의2⑥·⑦ · §156의3④·⑤ 「상속개시 당시 보유한 주택」 선언 토글. 결정 #8로 날짜
+   * 판정(분양권=행 `acquisitionDate`, 입주권=행 `inheritedDate`)으로 바뀌었다. 신축주택 갈래는 `generalHouseRightAtInheritance`.
    */
-  generalHouseHeldAtInheritance?: boolean;
   /**
    * §156의2⑮ · §156의3⑫ — 피상속인이 상속개시 당시 **주택은 없고 조합원입주권과 분양권만**
    * 소유한 경우 상속인이 **하나를 선택**해 상속받은 것으로 본다.
@@ -867,6 +868,11 @@ export interface TransferTaxInput {
   /** 동거봉양 합가 정보 */
   parentalCareMerge?: {
     mergeDate: Date;
+    /**
+     * 합가일 현재 직계존속(배우자의 직계존속 포함)의 연령 요건 — 사용자 선언(결정 #9). 미선택(`undefined`) = 모름 →
+     * §155④·§156의2⑧2호 불성립 + 결론을 가를 때만 확인 필요. 판정은 `one-house/parental-care-age.ts`.
+     */
+    parentAge?: ParentalCareParentAge;
   };
   /** 합가·혼인 세대 내 먼저 양도하는 주택 여부 (§155④⑤ "먼저 양도" 요건). 비과세 판정용. */
   isFirstTransferredInMerge?: boolean;

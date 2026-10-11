@@ -208,6 +208,7 @@ function toEnginePresaleRight(r: PresaleRightInput): PresaleRight {
     decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
     parentalCareMergeInheritedRight: r.parentalCareMergeInheritedRight,
     decedentAcquisitionDate: toOptionalDate(r.decedentAcquisitionDate),
+    inheritedDate: toOptionalDate(r.inheritedDate),
   };
 }
 

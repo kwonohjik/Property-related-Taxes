@@ -46,7 +46,7 @@ function form(over: Partial<OneHouseJudgmentFormData> = {}): OneHouseJudgmentFor
     contractTotalPrice: "1000000000",
     assets: [{ ...f.assets[0], assetKind: "housing", acquisitionDate: "2015-06-01" }],
     marriageDate: "2020-01-01",
-    parentalCareMergeDate: "2019-01-01",
+    parentalCareMergeDate: "2019-01-01", parentalCareParentAge: "over_60",
     isFirstTransferredInMerge: true,
     ...over,
   };
@@ -67,7 +67,7 @@ describe("MG-1 ⑤·④·⑧이 같은 게이트를 쓴다", () => {
       const body = buildOneHouseExemptionApiBody(f);
       if (c.visible) {
         expect(body.marriageMerge).toEqual({ marriageDate: "2020-01-01" });
-        expect(body.parentalCareMerge).toEqual({ mergeDate: "2019-01-01" });
+        expect(body.parentalCareMerge).toEqual({ mergeDate: "2019-01-01", parentAge: "over_60" as const });
         expect(body.isFirstTransferredInMerge).toBe(true);
       } else {
         expect(body).not.toHaveProperty("marriageMerge");

@@ -54,7 +54,10 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
         : undefined,
     parentalCareMerge:
       facts.household.parentalCareMergeDate !== undefined
-        ? { mergeDate: facts.household.parentalCareMergeDate }
+        ? {
+            mergeDate: facts.household.parentalCareMergeDate,
+            ...(facts.household.parentalCareParentAge ? { parentAge: facts.household.parentalCareParentAge } : {}),
+          }
         : undefined,
     isFirstTransferredInMerge: facts.household.isFirstTransferredInMerge,
     // ── 거주·지역 ──
@@ -68,7 +71,6 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     decedentSameHouseholdBeforeInheritance: facts.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationResidenceMonths: facts.decedentCohabitationResidenceMonths,
     decedentCohabitationHoldingStartDate: facts.decedentCohabitationHoldingStartDate,
-    generalHouseHeldAtInheritance: facts.generalHouseHeldAtInheritance,
     generalHouseGiftedFromDecedentWithin2yr: facts.generalHouseGiftedFromDecedentWithin2yr,
     generalHouseGiftDate: facts.generalHouseGiftDate,
     generalHouseRightAtInheritance: facts.generalHouseRightAtInheritance,
@@ -127,6 +129,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     householdHousingCount: input.householdHousingCount,
     marriageDate: input.marriageMerge?.marriageDate,
     parentalCareMergeDate: input.parentalCareMerge?.mergeDate,
+    parentalCareParentAge: input.parentalCareMerge?.parentAge,
     isFirstTransferredInMerge: input.isFirstTransferredInMerge,
   } satisfies OneHouseFacts["household"];
 
@@ -147,7 +150,6 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     decedentSameHouseholdBeforeInheritance: input.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationResidenceMonths: input.decedentCohabitationResidenceMonths,
     decedentCohabitationHoldingStartDate: input.decedentCohabitationHoldingStartDate,
-    generalHouseHeldAtInheritance: input.generalHouseHeldAtInheritance,
     generalHouseGiftedFromDecedentWithin2yr: input.generalHouseGiftedFromDecedentWithin2yr,
     generalHouseGiftDate: input.generalHouseGiftDate,
     generalHouseRightAtInheritance: input.generalHouseRightAtInheritance,

@@ -76,6 +76,7 @@ const CLEARED_ONE_HOUSE_FOLLOWUPS: Partial<BurdenedGiftTransferTaxInput> = {
   // E-1 한계 G4 — §155④⑤ 합가
   marriageDate: undefined,
   parentalCareMergeDate: undefined,
+  parentalCareParentAge: undefined,
   isFirstTransferredInMerge: undefined,
 };
 

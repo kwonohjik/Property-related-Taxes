@@ -74,7 +74,7 @@ function mergedCase(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     transferDate: new Date("2024-06-01"),
     residencePeriodMonths: 60,
     presaleRights: [right()],
-    parentalCareMerge: { mergeDate: MERGE_DATE },
+    parentalCareMerge: { mergeDate: MERGE_DATE, parentAge: "over_60" as const },
     isFirstTransferredInMerge: true,
     rightThreeYearException: { kind: "none" }, // 3년 초과 축은 명시적으로 닫는다
     ...over,
@@ -88,22 +88,37 @@ function verdict(input: TransferTaxInput) {
   return resolveArticle89Clause2(input, undefined);
 }
 
-describe("⑧ 미선언 — 판정 불가(종전 동작 유지 + 경고)", () => {
-  it("★ 합가 사실만 있고 합가 전 보유 구성을 선언하지 않으면 §156의2⑧을 안내한다", () => {
+describe("⑧ 미선언 — 불성립 + 확인 필요 (결정 #7: 모름 = 혜택 불성립. 종전: 판정 불가·비과세 유지)", () => {
+  it("★ 합가 사실만 있고 합가 전 보유 구성을 선언하지 않으면 합가 예외를 적용하지 않는다 ⇒ 과세 + 중립 확인 필요 경고", () => {
     const r = run(mergedCase());
-    expect(r.isExempt).toBe(true); // 종전 동작 유지 — 불리하게 뒤집지 않는다
+    expect(r.isExempt).toBe(false); // 종전 0원 → 과세
+    expect(r.totalTax).toBeGreaterThan(0);
     const joined = (r.warnings ?? []).join("\n");
-    expect(joined).toContain("§89②");
+    expect(joined).toContain("§89② 배제를 적용했습니다(확인 필요)");
     expect(joined).toContain("§156의2 ⑧");
+    // 중립 — 「주택 1채만」 선택을 유도하지 않는다
+    expect(joined).not.toContain("주택 1채만");
   });
 
-  it("혼인 합가는 ⑨를 안내한다 (⑧이 아니다)", () => {
+  it("긍정 짝 — 같은 사실에서 구성을 선택하면 고지가 사라지고 ⑧3호면 비과세", () => {
+    const r = run(mergedCase(declare({ kind: "house_only" })));
+    expect(r.isExempt).toBe(true);
+    expect(r.warnings ?? []).toEqual([]);
+  });
+
+  it("혼인 합가는 ⑨를 가리킨다 (⑧이 아니다) — 상태는 excluded + 미선언 조문 표기", () => {
     const v = verdict(
       mergedCase({ parentalCareMerge: undefined, marriageMerge: { marriageDate: MERGE_DATE } }),
     );
-    expect(v.status).toBe("undetermined");
-    expect(v.openArticles).toContain("소득세법 시행령 §156의2 ⑨");
-    expect(v.openArticles).not.toContain("소득세법 시행령 §156의2 ⑧");
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredMergeArticles).toContain("소득세법 시행령 §156의2 ⑨");
+    expect(v.undeclaredMergeArticles).not.toContain("소득세법 시행령 §156의2 ⑧");
+  });
+
+  it("날짜 게이트가 먼저다 — 「먼저 양도」가 아니면 미선언이어도 확인 필요를 말하지 않는다(구성을 몰라서가 아니다)", () => {
+    const v = verdict(mergedCase({ isFirstTransferredInMerge: false }));
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredMergeArticles).toBeUndefined();
   });
 });
 
@@ -256,10 +271,10 @@ describe("⭐ ⑧ 본문은 「1주택과 2조합원입주권」을 명문으로
     expect(v.status).toBe("excluded");
   });
 
-  it("🔑 합가 축이 미선언이면 2권리 세대는 여전히 판정 불가다", () => {
+  it("🔑 합가 축이 미선언이면 2권리 세대는 불성립 + 확인 필요다 (결정 #7 — 종전: 판정 불가)", () => {
     const v = verdict(mergedCase({ presaleRights: twoRights }));
-    expect(v.status).toBe("undetermined");
-    expect(v.openArticles).toContain("소득세법 시행령 §156의2 ⑧");
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredMergeArticles).toContain("소득세법 시행령 §156의2 ⑧");
   });
 
   it("🔑 합가 사실이 아예 없는 2권리 세대도 배제 확정이다", () => {

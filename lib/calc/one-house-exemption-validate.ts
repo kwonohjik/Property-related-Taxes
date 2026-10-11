@@ -17,6 +17,7 @@
  * 「요건 미달이라 계산조차 못 하는」 화면이 되어, 사용자가 왜 비과세가 아닌지 알 수 없다.
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
+import { parentalCareAgeIssues } from "./parental-care-age-issue";
 import {
   isTransferDateBeforeSupported,
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
@@ -179,6 +180,13 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
         );
       }
     });
+  }
+
+  // 동거봉양 직계존속 연령(결정 #9) — 미선택 차단(하위 1 가) + §155② 단서 칩과의 어긋남 비차단 경고. 칸과 같은 게이트(`judgmentMergeInputVisible`).
+  if (judgmentMergeInputVisible(form)) {
+    for (const issue of parentalCareAgeIssues(form)) {
+      errors.push(issue.severity === "error" ? err("parentalCareParentAge", issue.message) : warn("parentalCareParentAge", issue.message));
+    }
   }
 
   // 혼인합가 1199 — 명부 밖 장기임대주택의 혼인 전 보유자(칸과 같은 게이트). 고르지 않으면 엔진은 결론을 가를 때 불성립.

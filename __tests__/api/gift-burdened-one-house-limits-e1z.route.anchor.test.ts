@@ -509,8 +509,8 @@ describe("G4 ④ — 계산기와 같은 leaf(`buildMergeFacts`)로 싣는다", 
       giftForm("2023-06-01"),
     );
     expect(m).toMatchObject({ marriageMerge: { marriageDate: "2020-01-01" }, isFirstTransferredInMerge: true });
-    const p = buildGiftBurdenedTransferBody(giftItem({ ...TWO_HOUSES, parentalCareMergeDate: "2020-01-01" }), giftForm("2023-06-01"));
-    expect(p).toMatchObject({ parentalCareMerge: { mergeDate: "2020-01-01" } });
+    const p = buildGiftBurdenedTransferBody(giftItem({ ...TWO_HOUSES, parentalCareMergeDate: "2020-01-01", parentalCareParentAge: "over_60" }), giftForm("2023-06-01"));
+    expect(p).toMatchObject({ parentalCareMerge: { mergeDate: "2020-01-01", parentAge: "over_60" as const } });
   });
   it("G4-B2 부정 짝 — 세대 1주택(게이트 밖)의 stale 합가일은 싣지 않는다 · 빈 값이면 키 없음", () => {
     const one = buildGiftBurdenedTransferBody(

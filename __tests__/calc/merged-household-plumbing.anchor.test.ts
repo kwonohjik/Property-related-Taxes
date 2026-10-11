@@ -9,7 +9,7 @@
  * ## 🔴 다건 route가 §89② 축을 통째로 버리고 있었다 (2026-08-26 실측)
  *
  * ⑬(`multi-transfer-tax-api.ts`)이 보내고 ⑫가 통과시키는데 다건 route의 명시 매핑에
- * `rightThreeYearException`(Phase 2)·`generalHouseHeldAtInheritance`·
+ * `rightThreeYearException`(Phase 2)·(폐지된 `generalHouseHeldAtInheritance`)·
  * `inheritedRightChoiceWhenBothHeld`(Phase 3)·`generalHouseGiftedFromDecedentWithin2yr`(§155②)가
  * **없었다**. 단건 route에는 있어 TypeScript가 잡지 못한 침묵 strip이다
  * (memory `feedback_api_zod_schema_sync`).
@@ -127,7 +127,6 @@ describe("⑭ 다건 route가 §89② 축을 버리지 않는다", () => {
   it("★ Phase 3·4 필드가 그대로 엔진 입력으로 매핑된다", () => {
     for (const field of [
       "mergedHouseholdFirstHouse",
-      "generalHouseHeldAtInheritance",
       "inheritedRightChoiceWhenBothHeld",
       "generalHouseGiftedFromDecedentWithin2yr",
     ]) {

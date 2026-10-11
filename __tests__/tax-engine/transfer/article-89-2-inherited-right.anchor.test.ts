@@ -29,11 +29,11 @@
  * (`transfer-inheritance-exclusion.ts` `passesRankingGate`). 같은 규약을 권리 축에 얹었다.
  * ⚠️ 단계 수는 다르다 — 입주권 3단계 / 분양권 2단계, 공동상속도 3단계 / 2단계.
  *
- * ## ⭐ 긍정 선언이 없으면 판정하지 않는다
+ * ## ⭐ 「상속개시 당시 보유」는 날짜로 판정한다 (결정 #8 — 종전: 긍정 선언 토글, 미선언 = 판정 불가·비과세 유지)
  *
- * 일반주택이 「상속개시 당시 보유한 주택」이어야 한다는 요건은 **긍정 선언**을 요구한다.
- * 미선언은 `undetermined`(종전 유지 + 경고)이지 `excluded`가 아니다 — 미선언을 미해당으로
- * 읽으면 상속 권리 보유 세대가 갑자기 과세로 뒤집힌다(Phase 2와 같은 규약).
+ * 일반주택이 「상속개시 당시 보유한 주택」이어야 한다는 요건은 양도 주택 취득일과 상속개시일(분양권 = 행 취득일, 입주권 =
+ * `inheritedDate`)로 판정한다. 상속개시 뒤 취득이면 불성립(상속 권리를 일반 권리로 판정 → 대개 과세), 상속개시일을 모르면
+ * 불성립 + 확인 필요다(2026-10-04 원칙 1). 신축주택 갈래는 ⑥·④ 모양에서만 인정한다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -43,13 +43,17 @@ import type { PresaleRight } from "@/lib/tax-engine/types/multi-house-surcharge.
 const mockRates = makeMockRates();
 
 function right(over: Partial<PresaleRight> = {}): PresaleRight {
-  return {
+  const base: PresaleRight = {
     id: "r1",
     type: "redevelopment_right",
     acquisitionDate: new Date("2016-10-01"),
     region: "capital",
     ...over,
   };
+  // 상속 입주권의 상속개시일 칸(`inheritedDate`) — 별도 지정이 없으면 행 날짜와 같은 날로 둔다(상속개시 전 일반주택 보유 시료).
+  return base.isInherited && base.type === "redevelopment_right" && !("inheritedDate" in over)
+    ? { ...base, inheritedDate: base.acquisitionDate }
+    : base;
 }
 
 /** 상속 권리 1개 + 일반주택 1채. 양도 2024-06-01(권리 취득 + 3년 초과 — ⑥엔 무관해야 한다). */
@@ -64,7 +68,6 @@ function inheritedCase(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
     transferDate: new Date("2024-06-01"),
     residencePeriodMonths: 60,
     presaleRights: [right({ isInherited: true })],
-    generalHouseHeldAtInheritance: true,
     ...over,
   });
 }
@@ -187,11 +190,85 @@ describe("§156의2⑥ 본문 괄호·단서 — 인정되지 않는 경우", ()
   });
 });
 
-describe("⭐ 긍정 선언이 없으면 판정하지 않는다", () => {
-  it("★ `generalHouseHeldAtInheritance` 미선언 → **판정 불가** (배제하지 않는다)", () => {
-    const r = run(inheritedCase({ generalHouseHeldAtInheritance: undefined }));
+describe("⭐ 「상속개시 당시 보유한 주택」 — 날짜 판정 (결정 #8)", () => {
+  const txt = (r: ReturnType<typeof run>) => (r.warnings ?? []).join("\n");
+
+  it("★ 상속개시 **뒤**에 산 주택 → 불성립 ⇒ 일반 권리 타이밍 판정(1년 미충족) ⇒ 과세 + 사유 한 줄 (종전: 비과세 + 판정 보류)", () => {
+    // 일반주택 2017-01-01 취득 > 상속개시일 2016-10-01 — 권리 취득 후에 산 주택이라 「종전주택 취득 1년 후 권리 취득」도 못 채운다.
+    const r = run(inheritedCase({ acquisitionDate: new Date("2017-01-01"), rightThreeYearException: { kind: "none" } }));
+    expect(r.isExempt).toBe(false);
+    expect(txt(r)).toContain("상속개시일(2016-10-01)보다 뒤에 취득했습니다");
+    expect(txt(r)).not.toContain("판단 불가");
+  });
+
+  it("긍정 짝 — 같은 사실에서 일반주택을 상속개시 **전**에 샀으면 ⑥ 비과세 · 경고 없음", () => {
+    const r = run(inheritedCase({ acquisitionDate: new Date("2016-09-30") }));
     expect(r.isExempt).toBe(true);
-    expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑥·⑦");
+    expect(txt(r)).toBe("");
+  });
+
+  it("경계 — 일반주택 취득일 = 상속개시일(같은 날)은 보유로 본다(L-9 `<=`)", () => {
+    expect(run(inheritedCase({ acquisitionDate: new Date("2016-10-01") })).isExempt).toBe(true);
+    expect(run(inheritedCase({ acquisitionDate: new Date("2016-10-02"), rightThreeYearException: { kind: "none" } })).isExempt).toBe(false);
+  });
+
+  it("2013-02-15 전 취득 일반주택은 한정이 없다 — 상속개시일을 몰라도(입주권 `inheritedDate` 없음) 비과세", () => {
+    const r = run(
+      inheritedCase({
+        acquisitionDate: new Date("2013-02-14"),
+        presaleRights: [right({ isInherited: true, inheritedDate: undefined })],
+      }),
+    );
+    expect(r.isExempt).toBe(true);
+    expect(txt(r)).toBe("");
+  });
+
+  it("★ 모름 — 입주권 상속개시일이 없고 2013-02-15 이후 취득이면 불성립 + 확인 필요 (종전: 판정 불가·비과세 유지)", () => {
+    const r = run(
+      inheritedCase({
+        presaleRights: [right({ isInherited: true, inheritedDate: undefined })],
+        rightThreeYearException: { kind: "none" },
+      }),
+    );
+    expect(r.isExempt).toBe(false);
+    expect(txt(r)).toContain("상속개시일이 없어");
+    expect(txt(r)).toContain("확인 필요");
+    // 긍정 짝 — 상속개시일을 넣으면 같은 사실이 비과세다
+    expect(run(inheritedCase()).isExempt).toBe(true);
+  });
+
+  it("신축주택 갈래 — 상속개시 뒤 취득이라도 상속개시 당시 보유한 입주권으로 완공된 신축주택이면 ⑥ 성립", () => {
+    const late = { acquisitionDate: new Date("2017-01-01"), rightThreeYearException: { kind: "none" as const } };
+    expect(run(inheritedCase({ ...late, generalHouseRightAtInheritance: "redevelopment_right" })).isExempt).toBe(true);
+    // 부정 짝 — 「해당 없음」 선언이면 불성립
+    expect(run(inheritedCase({ ...late, generalHouseRightAtInheritance: "none" })).isExempt).toBe(false);
+  });
+
+  it("분양권 — 상속개시일은 **행 취득일 원값**이다(동일세대 상속이라도 피상속인 취득일로 바꾸지 않는다)", () => {
+    // 분양권 취득일(=상속개시일) 2021-06-01, 피상속인 취득일 2021-01-05(동일세대 → 정의일), 일반주택 2021-03-01 취득
+    // 정의일(2021-01-05)로 비교하면 「상속개시 뒤 취득」이 되어 잘못 과세된다 — 원값 2021-06-01로 비교해 보유(성립).
+    const presale = right({
+      type: "presale_right",
+      isInherited: true,
+      acquisitionDate: new Date("2021-06-01"),
+      decedentSameHouseholdAtInheritance: true,
+      parentalCareMergeInheritedRight: true,
+      decedentAcquisitionDate: new Date("2021-01-05"),
+    });
+    const r = run(
+      inheritedCase({ acquisitionDate: new Date("2021-03-01"), transferDate: new Date("2023-06-01"), presaleRights: [presale] }),
+    );
+    expect(r.isExempt).toBe(true);
+    // 부정 짝 — 일반주택을 상속개시일(2021-06-01) 뒤인 2021-07-01에 샀으면 불성립
+    const after = run(
+      inheritedCase({
+        acquisitionDate: new Date("2021-07-01"),
+        transferDate: new Date("2023-06-01"),
+        presaleRights: [presale],
+        rightThreeYearException: { kind: "none" },
+      }),
+    );
+    expect(after.isExempt).toBe(false);
   });
 
   it("상속 권리 **2개 이상** → 조문이 「1개」 전제라 판정 불가", () => {
@@ -271,7 +348,7 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
     expect(r.isExempt).toBe(false);
   });
 
-  it("🔑 그 세대도 **합가 사실이 있으면** 판정 불가로 남는다 — ⑧·⑨가 열려 있다", () => {
+  it("🔑 그 세대도 **합가 사실이 있으면** 합가 축이 열려 있다 — 구성을 선택하지 않으면 불성립 + 확인 필요(결정 #7)", () => {
     const r = run(
       inheritedCase({
         presaleRights: [
@@ -279,13 +356,14 @@ describe("§156의2⑦ — 상속 권리 + 일반주택 + **상속 외** 권리 
           right({ id: "o1", acquisitionDate: new Date("2022-01-01") }),
           right({ id: "o2", acquisitionDate: new Date("2022-02-01") }),
         ],
-        parentalCareMerge: { mergeDate: new Date("2020-03-01") },
+        parentalCareMerge: { mergeDate: new Date("2020-03-01"), parentAge: "over_60" as const },
         // 날짜 게이트(먼저 양도 → 합가 이후 → N년)가 구성 판정보다 먼저다(S05-6) — 통과해야 ⑧이 판정 불가로 열려 있다.
         isFirstTransferredInMerge: true,
       }),
     );
-    expect(r.isExempt).toBe(true);
+    expect(r.isExempt).toBe(false);
     expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑧");
+    expect((r.warnings ?? []).join("\n")).toContain("확인 필요");
   });
 });
 

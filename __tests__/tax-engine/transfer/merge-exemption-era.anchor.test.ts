@@ -84,10 +84,10 @@ describe("§155⑤ 혼인 합가 — 양도일 연혁", () => {
 
 describe("§155④ 동거봉양 합가 — 양도일 연혁", () => {
   it("★ 리뷰 M2: 합가 2012-01-01 · 양도 2017-12-01(5년 11개월) → 과세", () => {
-    expect(exempt(merge("2017-12-01", { parentalCareMerge: { mergeDate: d("2012-01-01") } }))).toBe(false);
+    expect(exempt(merge("2017-12-01", { parentalCareMerge: { mergeDate: d("2012-01-01"), parentAge: "over_60" as const } }))).toBe(false);
   });
   it("합가 2012-06-01: 양도 2018-02-12 과세(5년) / 2018-02-13 비과세(10년)", () => {
-    const m = { parentalCareMerge: { mergeDate: d("2012-06-01") } };
+    const m = { parentalCareMerge: { mergeDate: d("2012-06-01"), parentAge: "over_60" as const } };
     expect(exempt(merge("2018-02-12", m))).toBe(false);
     expect(exempt(merge("2018-02-13", m))).toBe(true);
   });
@@ -127,7 +127,7 @@ describe("§156의2⑧⑨ — 입주권 합가 축", () => {
     expect(status(base("2024-11-12", m))).toBe("exception_met");
   });
   it("⑧ 동거봉양 2012-06-01: 양도 2018-02-12 배제(5년) / 2018-02-13 예외 충족(10년)", () => {
-    const m = { parentalCareMerge: { mergeDate: d("2012-06-01") } };
+    const m = { parentalCareMerge: { mergeDate: d("2012-06-01"), parentAge: "over_60" as const } };
     const pre = base("2018-02-12", {
       ...m,
       presaleRights: [

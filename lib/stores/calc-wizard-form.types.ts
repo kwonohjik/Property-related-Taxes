@@ -284,16 +284,17 @@ export interface TransferFormData {
    */
   generalHouseRightAtInheritance: "" | "redevelopment_right" | "presale_right" | "none";
   /**
-   * §156의2⑥·⑦ · §156의3④·⑤ — 양도하는 일반주택을 **상속개시 당시 이미 보유**하고 있었는가.
-   * ⚠️ 긍정 선언이 있어야 상속 권리 예외를 인정한다(미선언 = 판정 불가).
-   */
-  generalHouseHeldAtInheritance: boolean;
-  /**
    * §156의2⑮ · §156의3⑫ — 피상속인이 주택 없이 입주권과 분양권만 남긴 경우 상속인의 선택.
    * 「다른 종류의 권리 미소유」 요건**만** 면제한다.
    */
   inheritedRightChoiceWhenBothHeld: "" | "redevelopment_right" | "presale_right";
   parentalCareMergeDate: string;
+  /**
+   * 동거봉양 합가일 현재 직계존속(배우자의 직계존속 포함) 연령 요건(결정 #9) — `""` = 미선택(모름 → 불성립 + 확인 필요, ⑧이 막는다).
+   * `over_60` 합가일 현재 만 60세 이상 / `care_benefit` 요양급여 받는 60세 미만(§155④3호 — 입주권·분양권 §156의2⑧2호·상속주택 §155② 단서에는 없다) /
+   * `none` 해당 없음(사실의 선언).
+   */
+  parentalCareParentAge: "" | "over_60" | "care_benefit" | "none";
   // §154① 단서 — 비과세 보유·거주 요건 면제 사유 (FLAT; API에서 oneHouseExemptionProviso로 조립)
   provisoReason:
     | ""

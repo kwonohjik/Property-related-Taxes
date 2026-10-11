@@ -36,6 +36,8 @@ import {
 } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionIncomplete, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
+import { PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE, parentalCareParentAgeMissing } from "./parental-care-age-issue";
+import { temporaryTwoHouseSectionVisible } from "./temporary-two-house-section-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
@@ -109,6 +111,17 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
    * ⑤ `HousesListSection` 입력 경로가 열려 있다(§155②③ 상속주택·§89② 분양권은 §89①3호
    * **비과세** 축이라 §104⑦ 중과 한시배제와 무관하다).
    */
+  // 동거봉양 합가일을 넣었는데 직계존속 연령을 고르지 않음 — 차단(결정 #9 하위 1 가). 칸(`MergeDateSection`)과 같은 게이트.
+  if (
+    temporaryTwoHouseSectionVisible({
+      primaryAssetKind: form.assets?.[0]?.assetKind,
+      householdHousingCount: form.householdHousingCount,
+    }) &&
+    parentalCareParentAgeMissing(form)
+  ) {
+    issues.push({ step, message: fieldError("parentalCareParentAge", PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE) });
+  }
+
   const houses = form.houses ?? [];
   // §155④⑤ 합가 전 소유 쪽 — 판정 메뉴와 같은 게이트·같은 분류(PR-2 2026-10-05).
   //   합가일이 없으면 undefined(묻지 않는다). 「모름」은 엔진에서 불성립이 되므로 차단한다

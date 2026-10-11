@@ -159,15 +159,15 @@ describe("E-14f 구 §167의11①1·7호 — route", () => {
     expect(await multiTotal(f)).toBe(768_322_500);
   });
 
-  it("RF-2 주택 1 + 입주권 1 · 혼인 합가(주택 2016 · 입주권 2019 · 혼인 2020-05-01) → 7호 배제 236,365,800 (수정 전 423,115,000)", async () => {
+  it("RF-2 주택 1 + 입주권 1 · 혼인 합가(주택 2016 · 입주권 2019 · 혼인 2020-05-01) → 7호 배제 667,342,500 (수정 전 423,115,000 → 236,365,800, 구성 공란 = §89② 배제 확정으로 장특 표1 · 결정 #7)", async () => {
     const f = form("2016-01-01", [], {
       householdHousingCount: "1",
       wasRegulatedAtAcquisition: false,
       marriageDate: "2020-05-01",
-      // 「먼저 양도」 선언은 §156의2⑨ 본문 공통 요건 — 날짜·선언 게이트가 구성 판정보다 먼저다(S05-6). 구성 미선언(판정 보류) 경로를 본다.
+      // 「먼저 양도」 선언은 §156의2⑨ 본문 공통 요건 — 날짜·선언 게이트가 구성 판정보다 먼저다(S05-6). 구성 미선언(불성립 + 확인 필요 — 결정 #7) 경로를 본다.
       isFirstTransferredInMerge: true,
       presaleRights: RIGHT("2019-01-01"),
     });
-    expect(await single(f)).toMatchObject({ totalTax: 236_365_800, reasons: "marriage_merge" });
+    expect(await single(f)).toMatchObject({ totalTax: 667_342_500, reasons: "marriage_merge" });
   });
 });

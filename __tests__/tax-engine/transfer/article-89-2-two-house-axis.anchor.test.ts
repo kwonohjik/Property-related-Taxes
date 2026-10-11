@@ -250,17 +250,47 @@ describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () =>
     });
   }
 
-  it("🔴 종전에는 후단 요건이 **한 번도 검증되지 않았다** → 이제 판정 불가로 남는다", () => {
-    const r = run(inheritedHouseCase());
-    expect(r.isExempt).toBe(true); // 종전 동작 유지(불리하게 뒤집지 않는다)
+  /** 상속주택 행의 상속개시일 — 결정 #8로 후단 「상속개시 당시 보유」는 날짜로 판정한다(일반주택 2015-06-01). */
+  const withInheritedDate = (inheritedDate: string | undefined, over: Partial<TransferTaxInput> = {}) =>
+    inheritedHouseCase({
+      houses: [
+        house({ id: "sell" }),
+        house({
+          id: "inh",
+          isInherited: true,
+          isCoInherited: true,
+          isLargestCoInheritedShareholder: false,
+          ...(inheritedDate ? { inheritedDate: new Date(inheritedDate) } : {}),
+        }),
+      ],
+      ...over,
+    });
+
+  it("🔴 종전: 후단 요건이 한 번도 검증되지 않았다 → 결정 #8: 상속개시일을 모르면 불성립 + 확인 필요(과세)", () => {
+    const r = run(withInheritedDate(undefined));
+    expect(r.isExempt).toBe(false); // 종전 동작(판정 불가·비과세 유지)에서 바뀜 — 모름 = 혜택 불성립
     const joined = (r.warnings ?? []).join("\n");
-    expect(joined).toContain("§156의2 ⑦");
+    expect(joined).toContain("§156의2 ⑦1호");
+    expect(joined).toContain("확인 필요");
   });
 
-  it("★ 「상속개시 당시 보유한 주택」을 선언하면 ⑦을 준용해 그대로 비과세다", () => {
-    const r = run(inheritedHouseCase({ generalHouseHeldAtInheritance: true }));
+  it("★ 일반주택을 상속개시 **전**에 보유했다는 것이 날짜로 확인되면 ⑦을 준용해 그대로 비과세다", () => {
+    const r = run(withInheritedDate("2016-01-01"));
     expect(r.isExempt).toBe(true);
     expect(r.warnings ?? []).toEqual([]);
+  });
+
+  it("부정 짝 — 상속개시 **뒤**에 산 일반주택이면 후단 불성립 ⇒ 과세 + 사유", () => {
+    const r = run(withInheritedDate("2015-01-01"));
+    expect(r.isExempt).toBe(false);
+    expect((r.warnings ?? []).join("\n")).toContain("상속개시 뒤에 취득했습니다");
+  });
+
+  it("하위 결정 #8-1 — 신축주택 갈래(상속개시 당시 보유한 권리로 완공)도 ⑦1호 후단에는 포함되지 않는다 ⇒ 과세", () => {
+    // §155② 제외는 신축주택 선언으로 통과해(주택 수 1) 이 갈래에 오지만, ⑦ 후단에는 신축주택 포함 문구가 없다.
+    const r = run(withInheritedDate("2015-01-01", { generalHouseRightAtInheritance: "redevelopment_right" }));
+    expect(r.isExempt).toBe(false);
+    // 긍정 짝 — ⑥·④ 모양(상속 외 권리 없음)에서는 신축주택이 인정된다는 것이 상속 권리 anchor(article-89-2-inherited-right)에 있다.
   });
 
   /**
@@ -270,7 +300,7 @@ describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () =>
    */
   it("준용 근거를 ⑦로 남긴다", () => {
     const v = verdict(
-      inheritedHouseCase({ generalHouseHeldAtInheritance: true, householdHousingCount: 1 }),
+      withInheritedDate("2016-01-01", { householdHousingCount: 1 }),
     );
     expect(v.status).toBe("exception_met");
     expect(v.viaArticle).toBe("소득세법 시행령 §156의2 ⑦");

@@ -25,6 +25,7 @@ import { isWithinDeadline } from "../civil-period";
 import { TEMP_TWO_HOUSE_PROVISO_REASONS } from "../legal-codes";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import { marriageRentalSidesOf, resolveDoubleMergeComposition, resolveMergeComposition } from "./merge-composition";
+import { parentalCareAgeVerdict, PARENTAL_CARE_AGE_CONFIRM_NOTICE } from "./parental-care-age";
 import type { TransferTaxInput, TemporaryTwoHouseDelayReason } from "../types/transfer.types";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { DeemedOneHouseBasis, HouseInfo } from "../types/multi-house-surcharge.types";
@@ -235,6 +236,8 @@ function matchMergeWindow(
  */
 function matchMergeGateAndComposition(
   input: MergeDeemingReqInput,
+  /** 확인 필요 고지용 — 연령 요건만 빼고 나머지 게이트를 본다(`resolveParentalCareAgeConfirmNotice`). */
+  skipParentAgeGate = false,
 ): { kind: "marriage" | "parental_care"; mergeDate: Date; composition: ReturnType<typeof resolveMergeComposition> } | undefined {
   if (input.isFirstTransferredInMerge !== true) return undefined;
   const axis = resolveTwoHouseMergeAxis(input);
@@ -243,6 +246,10 @@ function matchMergeGateAndComposition(
   // 합가(혼인) 전 양도는 「합침으로써 2주택」이 아직 성립하지 않았다.
   if (input.transferDate < mergeDate) return undefined;
   if (input.acquisitionDate > mergeDate) return undefined;
+  // 동거봉양은 「60세 이상의 직계존속을 동거봉양하기 위하여」 — 연령 요건(결정 #9). 미선택(모름)·미해당은 불성립이다.
+  if (kind === "parental_care" && !skipParentAgeGate && parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4") !== "met") {
+    return undefined;
+  }
   const composition = resolveMergeComposition({
     householdHousingCount: input.householdHousingCount,
     houses: mergeAxisHouses(input.houses, axis),
@@ -325,22 +332,33 @@ export function matchMergeApartFromWindow(
 }
 
 /**
- * 합가 의제가 성립하지 않은 이유가 **오직** 합가 전 구성을 몰라서(`roster_missing`·
- * `origin_missing`·`rental_origin_missing`)일 때만 확인 필요 문구를 돌려준다 — §155⑳ 선례(`confirmNotice` + 호출부의
- * 「결론을 가를 때만」게이트, `transfer-tax-rental-housing-step.ts`)와 같은 모양이다.
+ * 합가 의제가 성립하지 않은 이유가 **오직** 모르는 사실 때문일 때만 확인 필요 문구를 돌려준다 — 모르는 사실은 둘이다:
+ *   · 합가 전 구성(`roster_missing`·`origin_missing`·`rental_origin_missing`)
+ *   · 동거봉양 합가의 직계존속 연령 요건 미선택(결정 #9)
+ * §155⑳ 선례(`confirmNotice` + 호출부의 「결론을 가를 때만」게이트, `transfer-tax-rental-housing-step.ts`)와 같은 모양이다.
  *
- * 창·날짜 게이트가 먼저 막았거나(날짜 자체가 안 맞음) 구성이 이미 성립/다른 사유로 불성립이면
- * `undefined` — 호출부(`checkExemptionCore` E-3.5)가 §154① 보유·거주까지 **함께** 충족할 때만
- * 불러 결론을 가르는 경우에만 쓴다.
+ * 창·날짜 게이트가 먼저 막았거나(날짜 자체가 안 맞음) 구성이 이미 성립/다른 사유로 불성립이면 `undefined` — 호출부
+ * (`checkExemptionCore` E-3.5)가 §154① 보유·거주까지 **함께** 충족할 때만 불러 결론을 가르는 경우에만 쓴다.
  */
 export function resolveMergeCompositionConfirmNotice(input: MergeDeemingReqInput): string | undefined {
-  const gated = matchMergeGateAndComposition(input);
-  if (!gated || gated.composition.status !== "fails" || !gated.composition.confirmNotice) return undefined;
-  // N년 기한도 함께 충족해야 「구성만 알면 비과세가 된다」가 성립한다 — 기한을 넘겼으면
-  // 구성을 몰라서가 아니라 기한 초과로 과세이므로 확인 필요를 말하지 않는다.
+  // 연령 게이트는 건너뛰고 본다 — 연령이 `unknown`이어도 구성 확인 필요를 함께 말해야 한다(둘 다 모르면 둘 다 알린다).
+  const gated = matchMergeGateAndComposition(input, true);
+  if (!gated) return undefined;
+  // N년 기한도 함께 충족해야 「모르는 사실만 알면 비과세가 된다」가 성립한다 — 기한을 넘겼으면
+  // 몰라서가 아니라 기한 초과로 과세이므로 확인 필요를 말하지 않는다.
   const years = resolveMergeExemptionYears(gated.kind, input.transferDate);
   if (!isWithinDeadline(gated.mergeDate, years, input.transferDate)) return undefined;
-  return gated.composition.confirmNotice;
+  const compositionUnknown = gated.composition.status === "fails" && gated.composition.confirmNotice ? gated.composition.confirmNotice : undefined;
+  // 구성이 확정 불성립(확인 필요 문구 없음)이면 연령을 알아도 결론이 같다 — 연령 고지를 하지 않는다.
+  const compositionSettledFail = gated.composition.status === "fails" && !compositionUnknown;
+  const ageUnknown =
+    gated.kind === "parental_care" &&
+    !compositionSettledFail &&
+    parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4") === "unknown";
+  const notices = [compositionUnknown, ageUnknown ? PARENTAL_CARE_AGE_CONFIRM_NOTICE : undefined].filter(
+    (n): n is string => n !== undefined,
+  );
+  return notices.length > 0 ? notices.join(" ") : undefined;
 }
 
 /**
@@ -433,6 +451,8 @@ export function matchDoubleMergeApartFromWindow(
   if (!doubleMergeHouseCountHolds(input)) return undefined;
   if (input.isFirstTransferredInMerge !== true) return undefined;
   if (input.transferDate < order.secondDate || input.acquisitionDate > order.firstDate) return undefined;
+  // 이중 합가에는 동거봉양 합가가 반드시 들어 있다 — 직계존속 연령 요건(결정 #9).
+  if (parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "155_4") !== "met") return undefined;
   const composition = resolveDoubleMergeComposition({
     householdHousingCount: input.householdHousingCount,
     houses: input.houses,

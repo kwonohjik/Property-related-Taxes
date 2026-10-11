@@ -51,7 +51,7 @@ const input = (over: Record<string, unknown> = {}) =>
   ({
     householdHousingCount: 3,
     marriageMerge: { marriageDate: D("2019-03-01") },
-    parentalCareMerge: { mergeDate: D("2020-01-15") },
+    parentalCareMerge: { mergeDate: D("2020-01-15"), parentAge: "over_60" as const },
     isFirstTransferredInMerge: true,
     acquisitionDate: D("2015-04-01"),
     transferDate: D("2026-04-10"),
@@ -70,12 +70,12 @@ describe("M 이중 합가 의제", () => {
     h("parents", "2005-01-01", { mergeOrigin: "counterpart_side" }),
   ];
   const reverse = (over: Record<string, unknown> = {}) =>
-    input({ parentalCareMerge: { mergeDate: D("2018-06-01") }, houses: reverseHouses(), ...over });
+    input({ parentalCareMerge: { mergeDate: D("2018-06-01"), parentAge: "over_60" as const }, houses: reverseHouses(), ...over });
   it("M-1 역순도 성립", () => expect(resolveDoubleMergeDeeming(reverse())).toBe(true));
   it("M-1d 역순 기한은 먼저 합친 동거봉양 합가일부터 — 2015 합가 + 10년 경과 · 혼인(2019)부터면 기한 안", () =>
     expect(
       resolveDoubleMergeDeeming(
-        reverse({ acquisitionDate: D("2014-01-01"), parentalCareMerge: { mergeDate: D("2015-01-01") }, houses: [h("selling", "2014-01-01"), ...reverseHouses().slice(1)] }),
+        reverse({ acquisitionDate: D("2014-01-01"), parentalCareMerge: { mergeDate: D("2015-01-01"), parentAge: "over_60" as const }, houses: [h("selling", "2014-01-01"), ...reverseHouses().slice(1)] }),
       ),
     ).toBe(false));
   it("M-1d 짝 — 같은 일자에서 양도를 기한 안(2024-12-01)으로 당기면 성립", () =>
@@ -84,7 +84,7 @@ describe("M 이중 합가 의제", () => {
         reverse({
           acquisitionDate: D("2014-01-01"),
           transferDate: D("2024-12-01"),
-          parentalCareMerge: { mergeDate: D("2015-01-01") },
+          parentalCareMerge: { mergeDate: D("2015-01-01"), parentAge: "over_60" as const },
           houses: [h("selling", "2014-01-01"), ...reverseHouses().slice(1)],
         }),
       ),
@@ -95,7 +95,7 @@ describe("M 이중 합가 의제", () => {
         reverse({
           acquisitionDate: D("2014-01-01"),
           transferDate: D("2022-06-01"),
-          parentalCareMerge: { mergeDate: D("2016-01-01") },
+          parentalCareMerge: { mergeDate: D("2016-01-01"), parentAge: "over_60" as const },
           marriageMerge: { marriageDate: D("2017-03-01") },
           houses: [h("selling", "2014-01-01"), ...reverseHouses().slice(1)],
         }),
@@ -141,7 +141,7 @@ describe("불성립 사유 — 역순도 같은 특례", () => {
       baseTransferInput({
         propertyType: "housing",
         isOneHousehold: true,
-        ...input({ parentalCareMerge: { mergeDate: D(parentalCareMergeDate) } }),
+        ...input({ parentalCareMerge: { mergeDate: D(parentalCareMergeDate), parentAge: "over_60" as const } }),
       }),
       rules,
     )
@@ -152,7 +152,7 @@ describe("불성립 사유 — 역순도 같은 특례", () => {
       baseTransferInput({
         propertyType: "housing",
         isOneHousehold: true,
-        ...input({ parentalCareMerge: { mergeDate: D("2018-06-01") }, acquisitionDate: D("2018-09-01") }),
+        ...input({ parentalCareMerge: { mergeDate: D("2018-06-01"), parentAge: "over_60" as const }, acquisitionDate: D("2018-09-01") }),
       }),
       rules,
     )

@@ -67,6 +67,7 @@ import type {
   OneHouseJudgeInput,
   OneHousePendingCondition,
   OneHouseUndetermined,
+  OneHouseUnmetException,
 } from "./types";
 
 type OneHouseRule = OneHouseSpecialRulesData["one_house_exemption"];
@@ -398,6 +399,26 @@ export function undeclaredThreeYearExceptionUndetermined(
 }
 
 /**
+ * §89② 합가(혼인) 전 보유 구성(§156의2⑧⑨) **미선택 → 불성립**(모름=불리)의 확인 필요 고지(결정 #7) — 본체 판정은 통과했는데 이 배제
+ * 때문에만 과세로 갈렸을 때만 낸다(결론을 가를 때만). 문구는 중립이다 — 어느 선택지를 고르라고 유도하지 않는다.
+ */
+export function undeclaredMergeCompositionUndetermined(
+  article89Clause2: Article89Clause2Result,
+  coreWouldPass: boolean,
+): OneHouseUndetermined[] {
+  const articles = article89Clause2.status === "excluded" ? article89Clause2.undeclaredMergeArticles : undefined;
+  if (!coreWouldPass || !articles?.length) return [];
+  return [
+    {
+      id: "89-2-merged-household-composition-undeclared",
+      reason:
+        `합가(혼인) 전 보유 구성을 선택하지 않아 그 예외(${articles.join(" · ")})를 적용하지 않고 「소득세법」 §89② 배제를 적용해 ` +
+        "과세로 판정했습니다(확인 필요) — 합가 전 최초양도주택을 소유하던 사람이 실제로 무엇을 갖고 있었는지 「합가 전 보유 구성」에서 사실대로 선택하면 판정합니다.",
+    },
+  ];
+}
+
+/**
  * §89② 배제가 **모르는 사실 때문에** 특례를 적용하지 않은 것(`confirmNotes` — 원조합원·승계취득 미입력 등)의 확인 필요 고지.
  * 위 3년 경과 예외 고지와 같이 본체 판정이 통과했을 때만 낸다(결론을 가를 때만).
  */
@@ -407,6 +428,26 @@ export function article89ConfirmNotesUndetermined(
 ): OneHouseUndetermined[] {
   if (!coreWouldPass || article89Clause2.status !== "excluded") return [];
   return (article89Clause2.confirmNotes ?? []).map((reason, i) => ({ id: `89-2-confirm:${i}`, reason }));
+}
+
+/**
+ * §89② 배제를 **날짜로 확정된 사실**(상속개시 뒤 취득 등) 때문에 상속 예외를 적용하지 않은 사유 — 불성립 사유 카드(결정 #8).
+ * 종전에 뜨던 조문 지목 카드(판정 보류)가 사라지므로 이유를 한 줄 남긴다. 본체 판정이 통과했는데 이 배제 때문에 과세로 갈린
+ * 경우에만 낸다(`checkExemption`이 `unmetExceptions`에 합친다 — 본체가 불통과면 `collectUnmetExceptions`가 말한다).
+ */
+export function article89ExclusionUnmet(
+  article89Clause2: Article89Clause2Result,
+  coreWouldPass: boolean,
+): OneHouseUnmetException[] {
+  if (!coreWouldPass || article89Clause2.status !== "excluded" || !article89Clause2.exclusionReasons?.length) return [];
+  return [
+    {
+      id: "89-2-inherited-general-house-unheld",
+      label: "상속받은 권리·주택을 이용한 §89② 예외",
+      legalBasis: article89Clause2.exclusionBasis ?? TRANSFER.RIGHT_ONE_HOUSE_SPECIAL,
+      reasons: article89Clause2.exclusionReasons,
+    },
+  ];
 }
 
 /** 별도세대 상속 분양권(피상속인 취득일 2021.1.1. 전) 확인 필요 — 계산기 경고와 같은 id(`transfer-tax.ts`). */

@@ -35,7 +35,7 @@ function input(over: Partial<TransferTaxInput> = {}): TransferTaxInput {
   });
 }
 const verdict = (i: TransferTaxInput) => resolveArticle89Clause2(i, undefined);
-const PARENTAL = { parentalCareMerge: { mergeDate: D("2020-03-01") } };
+const PARENTAL = { parentalCareMerge: { mergeDate: D("2020-03-01"), parentAge: "over_60" as const } };
 
 describe("S05-6 게이트 순서 — 구성 미선언이어도 날짜·선언 게이트가 먼저 불성립을 확정한다", () => {
   it("「먼저 양도」 아님 + 구성 미선언 → 배제 확정(종전: 판정 보류)", () => {
@@ -47,7 +47,7 @@ describe("S05-6 게이트 순서 — 구성 미선언이어도 날짜·선언 �
     expect(v.status).toBe("excluded");
   });
   it("합가 전 양도 + 구성 미선언 → 배제 확정 (S05-1 하한)", () => {
-    const v = verdict(input({ parentalCareMerge: { mergeDate: D("2024-09-01") }, isFirstTransferredInMerge: true }));
+    const v = verdict(input({ parentalCareMerge: { mergeDate: D("2024-09-01"), parentAge: "over_60" as const }, isFirstTransferredInMerge: true }));
     expect(v.status).toBe("excluded");
   });
   it("합가 전 양도 + 구성 선언(house_only)도 배제 확정 — 선언이 있어도 하한이 먼저 막는다", () => {
@@ -61,10 +61,10 @@ describe("S05-6 게이트 순서 — 구성 미선언이어도 날짜·선언 �
     expect(v.status).toBe("excluded");
   });
 
-  it("긍정 짝 — 게이트를 통과한 구성 미선언은 종전대로 판정 보류(현행 유지 · 사용자 결정 대기 축)", () => {
+  it("긍정 짝 — 게이트를 통과한 구성 미선언은 불성립 + 확인 필요(결정 #7 — 종전: 판정 보류·비과세 유지)", () => {
     const v = verdict(input({ ...PARENTAL, isFirstTransferredInMerge: true }));
-    expect(v.status).toBe("undetermined");
-    expect(v.openArticles).toEqual(["소득세법 시행령 §156의2 ⑧"]);
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredMergeArticles).toEqual(["소득세법 시행령 §156의2 ⑧"]);
   });
   it("긍정 짝 — 게이트를 통과한 구성 선언(house_only · 합가 전 취득)은 ⑧3호 성립", () => {
     const v = verdict(
@@ -75,18 +75,18 @@ describe("S05-6 게이트 순서 — 구성 미선언이어도 날짜·선언 �
   it("경계 — 합가일 = 양도일(같은 날)은 하한을 통과한다", () => {
     const v = verdict(
       input({
-        parentalCareMerge: { mergeDate: D("2024-06-01") },
+        parentalCareMerge: { mergeDate: D("2024-06-01"), parentAge: "over_60" as const },
         isFirstTransferredInMerge: true,
         mergedHouseholdFirstHouse: { kind: "house_only" },
       }),
     );
     expect(v.status).toBe("exception_met");
   });
-  it("두 합가일 중 죽은 축은 판정 보류 안내에서 빠진다 — 혼인(2010 · 기한 경과)은 빼고 동거봉양(2020)만 ⑧", () => {
+  it("두 합가일 중 죽은 축은 확인 필요 안내에서 빠진다 — 혼인(2010 · 기한 경과)은 빼고 동거봉양(2020)만 ⑧", () => {
     const v = verdict(
       input({ marriageMerge: { marriageDate: D("2010-01-01") }, ...PARENTAL, isFirstTransferredInMerge: true }),
     );
-    expect(v.status).toBe("undetermined");
-    expect(v.openArticles).toEqual(["소득세법 시행령 §156의2 ⑧"]);
+    expect(v.status).toBe("excluded");
+    expect(v.undeclaredMergeArticles).toEqual(["소득세법 시행령 §156의2 ⑧"]);
   });
 });

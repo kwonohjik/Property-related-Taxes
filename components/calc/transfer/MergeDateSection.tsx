@@ -3,6 +3,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { MergeDateFields } from "@/lib/calc/transfer-tax-api-body-blocks";
 import { mergeExemptionYearsLabel } from "@/lib/calc/one-house-era-labels";
+import { ParentalCareParentAgeField } from "./ParentalCareParentAgeField";
 
 // ============================================================
 // 합가 특례 (P2) — Step 4 섹션
@@ -54,6 +55,13 @@ export function MergeDateSection({
             <p className="text-xs text-muted-foreground">동거봉양 합가 후 {mergeExemptionYearsLabel({ kind: "parental_care" })} 내 먼저 양도 시 1세대1주택 비과세(§155④)·중과 배제. 일시적 2주택(§155①)과 겹쳐 3주택이 된 경우도 적용됩니다(중과 배제는 §167의3①13호 — 2021.2.17. 이후 양도분)</p>
           </div>
         </div>
+        {/* 동거봉양 합가일이 있으면 직계존속 연령 요건을 받는다(결정 #9) — 혼인합가에는 이 요건이 없다. */}
+        {form.parentalCareMergeDate && (
+          <ParentalCareParentAgeField
+            value={form.parentalCareParentAge}
+            onChange={(v) => onChange({ parentalCareParentAge: v })}
+          />
+        )}
         {hasAnyMerge && (
           <ToggleCard
             variant="card"

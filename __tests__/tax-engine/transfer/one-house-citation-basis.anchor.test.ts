@@ -127,7 +127,7 @@ describe("P0-2 엔진이 그 조문을 실제로 낸다 — 상수만 맞고 배
     );
 
   it("★ E-1 동거봉양 합가 → §155④ (⑤·⑦이 아니다)", () => {
-    const r = merge({ parentalCareMerge: { mergeDate: D("2020-01-01") } });
+    const r = merge({ parentalCareMerge: { mergeDate: D("2020-01-01"), parentAge: "over_60" as const } });
     expect(r.isExempt).toBe(true);
     expect(r.exemptReason).toContain(shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT));
     expect(r.exemptReason).not.toContain("§155⑤");

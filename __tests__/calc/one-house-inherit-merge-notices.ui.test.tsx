@@ -136,7 +136,7 @@ describe("S14b-1 — 동일세대 상속 단서 예외 칸 라벨(분양권 §15
 describe("S15-15 — 합가 기한 안내는 엔진 연혁 leaf를 읽는다", () => {
   const text = (marriageDate: string, parentalCareMergeDate: string) => {
     const { container } = render(
-      <MergeDateSection form={{ marriageDate, parentalCareMergeDate, isFirstTransferredInMerge: true }} onChange={() => {}} />,
+      <MergeDateSection form={{ marriageDate, parentalCareMergeDate, parentalCareParentAge: "", isFirstTransferredInMerge: true }} onChange={() => {}} />,
     );
     return container.textContent ?? "";
   };

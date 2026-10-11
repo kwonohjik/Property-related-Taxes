@@ -25,7 +25,7 @@ function mergeDetail(kind: "marriage" | "parental", transferDate: string): strin
     transferDate: D(transferDate),
     ...(kind === "marriage"
       ? { marriageMerge: { marriageDate: D("2020-01-01") }, deemedOneHouseBy155: "marriage_merge" as const }
-      : { parentalCareMerge: { mergeDate: D("2014-01-01") }, deemedOneHouseBy155: "parental_care_merge" as const }),
+      : { parentalCareMerge: { mergeDate: D("2014-01-01"), parentAge: "over_60" as const }, deemedOneHouseBy155: "parental_care_merge" as const }),
   });
   const r = determineSurchargeExclusion(input, 2, null, null, new Set(), false);
   return r.exclusionReasons.map((x) => x.detail).join(" / ");

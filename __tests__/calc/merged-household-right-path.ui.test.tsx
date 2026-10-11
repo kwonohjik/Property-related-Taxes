@@ -85,7 +85,7 @@ describe("가시성", () => {
   });
 
   it("★ 합가일을 넣으면 보유 구성 선택지와 선양도 토글이 열린다", () => {
-    render(<Step2 form={form({ parentalCareMergeDate: "2020-03-01" })} onChange={() => {}} />);
+    render(<Step2 form={form({ parentalCareMergeDate: "2020-03-01", parentalCareParentAge: "over_60" })} onChange={() => {}} />);
     expect(shows(KIND_LABEL)).toBe(true);
     expect(shows(/합가 후 세대 내에서 먼저 양도하는 주택이다/)).toBe(true);
   });
@@ -107,7 +107,7 @@ describe("🔑 ③ 섹션과 **상호 배타**로 합가일을 소유한다", ()
         isInherited: false,
       },
     ] as TransferFormData["houses"],
-    parentalCareMergeDate: "2020-03-01",
+    parentalCareMergeDate: "2020-03-01", parentalCareParentAge: "over_60",
   } satisfies Partial<TransferFormData>;
 
   /**
@@ -134,7 +134,7 @@ describe("🔑 ③ 섹션과 **상호 배타**로 합가일을 소유한다", ()
 });
 
 describe("갈래별 하위 요건 — 가목만 요건이 둘이다", () => {
-  const merged = { parentalCareMergeDate: "2020-03-01" } as const;
+  const merged = { parentalCareMergeDate: "2020-03-01", parentalCareParentAge: "over_60" } as const;
 
   it("⭐ 가목(인가 최초 취득)은 **두 요건**을 각각 묻는다", () => {
     render(

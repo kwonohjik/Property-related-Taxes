@@ -33,9 +33,10 @@ describe("S05-8 anchor", () => {
   it("분양권+상속주택 → §156의3⑤ 준용", () => {
     const hs = [
       { id: "sell", acquisitionDate: D("2015-06-01"), isRegulatedArea: false },
-      { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false },
+      { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false, inheritedDate: D("2015-06-01") },
     ];
-    expect(norm(v(twoHouse("presale_right", { householdHousingCount: 1, sellingHouseId: "sell", houses: hs as never, generalHouseHeldAtInheritance: true })).viaArticle)).toContain("§156의3⑤");
+    // 결정 #8 — 「상속개시 당시 보유」는 날짜로 판정한다(일반주택 2015-06-01 ≤ 상속개시일 2015-06-01).
+    expect(norm(v(twoHouse("presale_right", { householdHousingCount: 1, sellingHouseId: "sell", houses: hs as never })).viaArticle)).toContain("§156의3⑤");
   });
   it("대조: 입주권+문화유산 → §156의2⑩ 그대로", () => {
     expect(norm(v(twoHouse("redevelopment_right", { culturalHeritageHouse: true })).viaArticle)).toContain("§156의2⑩");
@@ -72,18 +73,26 @@ describe("S05-8 — 판정 불가 안내는 세대가 가진 권리 종류의 �
     ]);
   });
 
+  // 결정 #8 — 상속개시일을 모르면 ⑦1호·⑤1호 후단을 판정하지 못해 **불성립 + 확인 필요**(종전: 판정 불가·비과세 유지).
+  //   확인 필요 문구가 세대가 가진 권리 종류의 조문만 가리킨다(S05-8 규약 유지).
   const undatedInheritedHouse = (type: R) => {
     const hs = [
       { id: "sell", acquisitionDate: D("2015-06-01"), isRegulatedArea: false },
       { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false },
     ];
-    return v(twoHouse(type, { householdHousingCount: 1, sellingHouseId: "sell", houses: hs as never })).openArticles;
+    const r = v(twoHouse(type, { householdHousingCount: 1, sellingHouseId: "sell", houses: hs as never }));
+    expect(r.status).toBe("excluded");
+    return (r.confirmNotes ?? []).join(" ");
   };
-  it("상속 주택 후단 미판정 + 분양권 → §156의3 ⑤만", () => {
-    expect(undatedInheritedHouse("presale_right")).toEqual(["소득세법 시행령 §156의3 ⑤"]);
+  it("상속 주택 후단 미판정 + 분양권 → §156의3 ⑤1호만 가리킨다", () => {
+    const note = undatedInheritedHouse("presale_right");
+    expect(note).toContain("§156의3 ⑤1호");
+    expect(note).not.toContain("§156의2 ⑦1호");
   });
-  it("긍정 짝: 상속 주택 후단 미판정 + 입주권 → §156의2 ⑦만", () => {
-    expect(undatedInheritedHouse("redevelopment_right")).toEqual(["소득세법 시행령 §156의2 ⑦"]);
+  it("긍정 짝: 상속 주택 후단 미판정 + 입주권 → §156의2 ⑦1호만 가리킨다", () => {
+    const note = undatedInheritedHouse("redevelopment_right");
+    expect(note).toContain("§156의2 ⑦1호");
+    expect(note).not.toContain("§156의3 ⑤1호");
   });
 });
 
@@ -94,9 +103,8 @@ describe("S05-8 — 상속 외 권리의 종류가 ⑦/§156의3⑤를 가른다
       twoHouse(otherType, {
         householdHousingCount: 1,
         transferDate: D("2024-06-01"),
-        generalHouseHeldAtInheritance: true,
         presaleRights: [
-          { ...right(inheritedType, "2021-02-01"), id: "inh", isInherited: true },
+          { ...right(inheritedType, "2021-02-01"), id: "inh", isInherited: true, inheritedDate: D("2021-02-01") },
           { ...right(otherType, "2022-01-01"), id: "oth" },
         ] as never,
       }),

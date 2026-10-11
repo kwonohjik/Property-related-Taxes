@@ -31,6 +31,8 @@ async function seed(page: Page, spouseOrigin: string) {
     contractTotalPrice: "800000000",
     marriageDate: "2019-03-01",
     parentalCareMergeDate: "2018-06-01",
+    // 결정 #9 — 동거봉양 합가의 직계존속 연령 요건 선언(합가일 현재 만 60세 이상). 없으면 ⑧이 판정을 막고 엔진은 합가 의제를 세우지 않는다.
+    parentalCareParentAge: "over_60",
     isFirstTransferredInMerge: true,
     assets: [{ assetKind: "housing", acquisitionDate: "2015-04-01" }],
     houses: [

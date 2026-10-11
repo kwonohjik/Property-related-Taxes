@@ -348,6 +348,27 @@ export function PresaleRightsSection({
                   <p className="text-caption font-semibold text-violet-700">
                     상속 권리 인정 요건 (시행령 §156의2⑥ · §156의3④)
                   </p>
+                  {/*
+                    상속 입주권의 상속개시일 — §156의2⑥·⑦ 후단 「상속개시 당시 보유한 주택」을 날짜로 판정하는 데만 쓴다(결정 #8).
+                    입주권 행의 위 날짜 칸은 취득 경위에 따라 기존주택 취득일·인가일·승계일이라 상속개시일이 보장되지 않아 따로 둔다.
+                    분양권 행은 위 「취득일(상속개시일)」이 곧 상속개시일이라 이 칸이 없다. 비우면 모름 — 특례를 적용하지 않고 확인 필요.
+                  */}
+                  {r.type === "redevelopment_right" && (
+                    <div className="space-y-1">
+                      <span className="block text-caption text-muted-foreground font-medium">상속개시일</span>
+                      <DateInput
+                        data-testid={`presale-inherited-date-${idx}`}
+                        data-field={`presaleRights.${idx}.inheritedDate`}
+                        value={r.inheritedDate ?? ""}
+                        onChange={(v) => update(r.id, { inheritedDate: v })}
+                      />
+                      <span className="block text-caption text-muted-foreground">
+                        양도하는 주택을 이 날보다 먼저 취득했는지로 「상속개시 당시 보유한 주택」(§156의2⑥·⑦)을 판정합니다.
+                        위 날짜 칸에 이미 상속개시일을 넣었더라도 이 칸에 다시 입력하세요(이 칸은 보유 판정에만 쓰고, 일시적
+                        2주택·3년 기한의 기산일은 바꾸지 않습니다).
+                      </span>
+                    </div>
+                  )}
                   <ToggleCard
                     variant="chip"
                     tone="violet"

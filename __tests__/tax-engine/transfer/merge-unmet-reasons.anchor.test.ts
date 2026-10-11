@@ -278,7 +278,7 @@ describe("UM — §155④⑤ 합가 불성립 사유", () => {
     const r = judge(
       reported({
         marriageMerge: undefined,
-        parentalCareMerge: { mergeDate: new Date("2017-03-11") },
+        parentalCareMerge: { mergeDate: new Date("2017-03-11"), parentAge: "over_60" as const },
       } as Partial<OneHouseJudgeInput>),
     );
     expect(r.unmetExceptions).toHaveLength(1);

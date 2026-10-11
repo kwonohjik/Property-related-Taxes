@@ -268,30 +268,35 @@ describe("E-14f 구 §167의11①6호(동거봉양 10년)·7호(혼인 5년) —
     marriageMerge: { marriageDate: D(d) },
   });
 
-  it("F2-1 7호 — 혼인 전 각자 주택·입주권 · 혼인 후 1년 10개월 양도 → 배제 236,365,800 (종전 423,115,000)", () => {
+  it("F2-1 7호 — 혼인 전 각자 주택·입주권 · 혼인 후 1년 10개월 양도 → 중과 배제 667,342,500 (종전 423,115,000 → 236,365,800)", () => {
+    // 결정 #7 — 합가 전 보유 구성 공란이 판정 보류(비과세 종전 유지)에서 불성립(§89② 배제 확정)이 됐다. 구 7호 중과 배제는 그대로 서지만
+    //   §89②로 1세대1주택 지위가 거둬져 장기보유특별공제가 표2(보유+거주)에서 표1로 내려간다(236,365,800 → 667,342,500).
     const r = calc(oneRight("2016-01-01", "2019-01-01", "2022-03-02", marriage("2020-05-01")));
-    expect(r).toMatchObject({ totalTax: 236_365_800, reasons: "marriage_merge", surchargeType: "none" });
+    expect(r).toMatchObject({ totalTax: 667_342_500, reasons: "marriage_merge", surchargeType: "none" });
     expect(r.detail).toContain(MULTI_HOUSE.HOUSE_RIGHT_MARRIAGE_MERGE_BASIS_OLD);
   });
 
-  it("F2-2 6호 — 동거봉양 합가 8년 후 양도 → 배제 211,233,000 (종전 274,065,000)", () => {
+  it("F2-2 6호 — 동거봉양 합가 8년 후 양도 → 중과 배제 600,022,500 (종전 274,065,000 → 211,233,000, 구성 공란 = §89② 배제 확정으로 장특 표1)", () => {
     const r = calc(
       oneRight("2012-01-01", "2013-06-01", "2022-03-02", {
         wasRegulatedAtAcquisition: false,
         isFirstTransferredInMerge: true,
-        parentalCareMerge: { mergeDate: D("2014-01-01") },
+        parentalCareMerge: { mergeDate: D("2014-01-01"), parentAge: "over_60" as const },
       }),
     );
-    expect(r).toMatchObject({ totalTax: 211_233_000, reasons: "parental_care_merge" });
+    expect(r).toMatchObject({ totalTax: 600_022_500, reasons: "parental_care_merge" });
     expect(r.detail).toContain(MULTI_HOUSE.HOUSE_RIGHT_PARENTAL_CARE_MERGE_BASIS_OLD);
   });
 
-  it("F2-n1 입주권을 혼인 뒤 취득 → 「합침으로써」 아님 · 중과 423,115,000", () => {
-    expect(calc(oneRight("2016-01-01", "2021-01-01", "2022-03-02", marriage("2020-05-01")))).toMatchObject({
-      totalTax: 423_115_000,
-      reasons: "",
-      surchargeType: "multi_house_2",
-    });
+  it("F2-n1 입주권을 혼인 뒤 취득 → 「합침으로써」 아님(7호 아님) — 그러나 종전주택 1년 후 취득 + 3년 이내 양도라 구 1호(§156의2③)로 배제 236,365,800 (종전 423,115,000)", () => {
+    // 결정 #7 — 구성 공란이 판정 보류로 일반 ③ 타이밍을 가리던 것이 걷혀, 합가와 무관하게 서는 ③ 예외가 중과 배제까지 간다(F1-2와 같은 구조).
+    const r = calc(oneRight("2016-01-01", "2021-01-01", "2022-03-02", marriage("2020-05-01")));
+    expect(r).toMatchObject({ totalTax: 236_365_800, reasons: "right_holding_one_house", surchargeType: "none" });
+    expect(r.reasons).not.toContain("marriage_merge");
+  });
+  it("F2-n1' 부정 짝 — 입주권을 혼인 뒤 취득했고 ③ 3년도 지났으면(권리 2018 → 양도 2022-03) 합가 예외 어느 것도 아니라 중과", () => {
+    const r = calc(oneRight("2016-01-01", "2018-01-01", "2022-03-02", marriage("2017-05-01")));
+    expect(r).toMatchObject({ reasons: "", surchargeType: "multi_house_2" });
   });
 
   it("F2-n2 양도 주택을 혼인 뒤 취득 → 7호 아님 · 중과 1,141,772,500", () => {

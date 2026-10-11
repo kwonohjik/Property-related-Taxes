@@ -70,7 +70,7 @@ const merge = (extraHouses: HouseInfo[]) =>
   input({
     householdHousingCount: 3 + extraHouses.length,
     houses: [SELLING, h("b", "2012-01-01", { mergeOrigin: "counterpart_side" }), NEW, ...extraHouses],
-    parentalCareMerge: { mergeDate: D("2022-01-01") },
+    parentalCareMerge: { mergeDate: D("2022-01-01"), parentAge: "over_60" as const },
     isFirstTransferredInMerge: true,
   });
 

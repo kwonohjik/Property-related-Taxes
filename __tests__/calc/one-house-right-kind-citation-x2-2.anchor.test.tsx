@@ -87,7 +87,8 @@ describe("X2-2 상속 분양권 카드 설명", () => {
     const f = formOf([{ ...presale, isInherited: true }], { rightThreeYearExceptionKind: undefined });
     const { container } = render(<InheritedRightExceptionSection form={f as unknown as TransferFormData} onChange={() => {}} />);
     const t = container.textContent ?? "";
-    const desc = t.slice(t.indexOf("상속개시 당시 이미 보유"));
+    // 결정 #8 — 선언 토글을 없앤 자리의 안내문이 같은 조문(분양권 §156의3④·⑤)을 적는다
+    const desc = container.querySelector('[data-testid="inherited-right-held-by-date-notice"]')?.textContent ?? t;
     expect(desc).toMatch(/§156의3\s?④·⑤/);
   });
 });

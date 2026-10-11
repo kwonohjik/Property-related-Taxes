@@ -70,7 +70,7 @@ const DEEMED_CASES: Array<[string, Partial<TransferTaxInput>, string]> = [
   [
     "§155④ 동거봉양 합가",
     {
-      parentalCareMerge: { mergeDate: new Date("2024-01-01") },
+      parentalCareMerge: { mergeDate: new Date("2024-01-01"), parentAge: "over_60" as const },
       isFirstTransferredInMerge: true,
       houses: [
         { id: "selling", acquisitionDate: new Date("2017-05-02"), officialPrice: 500_000_000, region: "capital", isInherited: false, isLongTermRental: false },

@@ -31,6 +31,7 @@
  * (`resolveSurchargeDeemedOneHouse`). 여기서는 재판정하지 않고 **어느 호가 받는지**만 정한다.
  */
 import { doubleMergeOrderOf } from "./one-house/merge-deeming";
+import { parentalCareAgeVerdict } from "./one-house/parental-care-age";
 import {
   MERGE_SURCHARGE_154_GATE_EFFECTIVE_DATE,
   CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE,
@@ -368,7 +369,12 @@ function resolveOldClauseExclusion(
     sellingHouseAcquisitionDate: input.houses.find((x) => x.id === input.sellingHouseId)?.acquisitionDate,
     countedRightAcquisitionDates: countedRights.map((r) => r.acquisitionDate),
     marriageDate: input.marriageMerge?.marriageDate,
-    parentalCareMergeDate: input.parentalCareMerge?.mergeDate,
+    // 구 6호(동거봉양 합가 + 주택 1 + 권리 1)는 §156의2⑧2호 경로라 60세 이상만 인정한다(요양급여 갈래 없음) — 결정 #9.
+    //   연령 요건이 충족되지 않았거나 모름이면 이 합가 의제는 서지 않는다.
+    parentalCareMergeDate:
+      parentalCareAgeVerdict(input.parentalCareMerge?.parentAge, "156_2_8") === "met"
+        ? input.parentalCareMerge?.mergeDate
+        : undefined,
   });
   if (!merge) return undefined;
   const marriage = merge.kind === "marriage";

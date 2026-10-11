@@ -1319,6 +1319,8 @@ export interface BurdenedGiftTransferTaxInput {
   marriageDate?: string;
   /** §155④ 동거봉양 합가일 (YYYY-MM-DD) */
   parentalCareMergeDate?: string;
+  /** 동거봉양 합가일 현재 직계존속 연령 요건(결정 #9) — 양도세 폼 `parentalCareParentAge`와 같은 값. 미선택(`""`·`undefined`) = 모름 */
+  parentalCareParentAge?: "" | "over_60" | "care_benefit" | "none";
   /** §155④⑤ 합가 후 세대 내 먼저 양도하는 주택 */
   isFirstTransferredInMerge?: boolean;
 

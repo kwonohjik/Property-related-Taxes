@@ -158,7 +158,7 @@ describe("P4-1 pending — §155④⑤ 합가 10년", () => {
     const r = judge({
       acquisitionDate: D("2005-01-01"),
       householdHousingCount: 2,
-      parentalCareMerge: { mergeDate: D("2012-03-15") },
+      parentalCareMerge: { mergeDate: D("2012-03-15"), parentAge: "over_60" as const },
       isFirstTransferredInMerge: true,
       houses: [mergeHouse("selling", "2005-01-01"), mergeHouse("h1", "2003-01-01", "counterpart_side")] as TransferTaxInput["houses"],
       sellingHouseId: "selling",

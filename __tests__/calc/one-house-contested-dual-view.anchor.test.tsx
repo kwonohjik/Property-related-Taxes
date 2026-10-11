@@ -82,7 +82,7 @@ describe("D-1 감지", () => {
     expect(ids({ propertyType: "right_to_move_in", houses: [coMinority] })).toEqual([]);
   });
   it("C6 — 입주권 양도 + 동거봉양 합가일이면 감지 · 혼인합가가 함께 있거나 주택 양도면 감지하지 않는다", () => {
-    const care = { parentalCareMerge: { mergeDate: new Date("2003-12-29") } };
+    const care = { parentalCareMerge: { mergeDate: new Date("2003-12-29"), parentAge: "over_60" as const } };
     expect(ids({ propertyType: "right_to_move_in", ...care })).toEqual([C6]);
     const [d] = detectContestedIssues(engineInput({ propertyType: "right_to_move_in", ...care }));
     expect(d.otherPositionInput.contestedRightSaleParentalCareMergeApply).toBe(true);
@@ -103,7 +103,7 @@ describe("L-1 입주권 합가 leaf — 동거봉양", () => {
     isFirstTransferredInMerge: true,
     acquisitionDate: new Date("1998-08-01"),
     transferDate: new Date("2004-03-03"),
-    parentalCareMerge: { mergeDate: new Date("2003-12-29") },
+    parentalCareMerge: { mergeDate: new Date("2003-12-29"), parentAge: "over_60" as const },
     houses: [{ id: "p", acquisitionDate: new Date("1995-05-15"), mergeOrigin: "counterpart_side" }],
   } as unknown as Parameters<typeof resolveRightSaleMarriageMerge>[0];
 

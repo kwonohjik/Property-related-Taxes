@@ -74,7 +74,7 @@ describe("S05-1 — 합가(혼인)일 전 양도에는 §156의2⑧⑨ 불성립
     expect(r.j.isExempt).toBe(false);
   });
   it("판정 메뉴: 동거봉양 합가 2026-09-01 > 양도 → 과세", async () => {
-    const r = await observeRaw(mkCase("2026-10-10", jform({ parentalCareMergeDate: "2026-09-01" })));
+    const r = await observeRaw(mkCase("2026-10-10", jform({ parentalCareMergeDate: "2026-09-01", parentalCareParentAge: "over_60" })));
     expect(r.j.isExempt).toBe(false);
   });
   it("계산기: 합가 전 양도는 합가 없음과 같은 세액(60,621,000)", async () => {

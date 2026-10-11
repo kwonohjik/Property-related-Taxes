@@ -61,7 +61,7 @@ describe("M-1 leaf", () => {
       status: "fails",
       confirmNotice: expect.stringMatching(/혼인 전 보유자/),
     });
-    expect(resolveRightSaleMarriageMerge({ ...base, parentalCareMerge: { mergeDate: D("2019-01-01") } } as never)).toBeNull();
+    expect(resolveRightSaleMarriageMerge({ ...base, parentalCareMerge: { mergeDate: D("2019-01-01"), parentAge: "over_60" as const } } as never)).toBeNull();
     expect(resolveRightSaleMarriageMerge({ ...base, marriageMerge: undefined })).toBeNull();
     expect(oneRightOtherHouseCount({ ...base, isFirstTransferredInMerge: false })).toBe(2);
   });

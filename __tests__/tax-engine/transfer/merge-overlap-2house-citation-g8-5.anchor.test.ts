@@ -22,7 +22,7 @@ const run = (td: string, deemed: "marriage_merge_overlap" | "parental_care_merge
       deemedOneHouseBy155: deemed,
       ...(deemed === "marriage_merge_overlap"
         ? { marriageMerge: { marriageDate: new Date("2019-01-01") } }
-        : { parentalCareMerge: { mergeDate: new Date("2019-01-01") } }),
+        : { parentalCareMerge: { mergeDate: new Date("2019-01-01"), parentAge: "over_60" as const } }),
       sellingHouseMeetsOneHouseRequirements: true,
     }),
     defaultRules,

@@ -89,10 +89,53 @@ describe("상속 권리 요건 ⑤ — 가시성", () => {
     expect(shows(SECTION)).toBe(false);
   });
 
-  it("★ 세대·일반주택 축 섹션도 함께 열린다", () => {
+  it("★ 세대·일반주택 축 섹션도 함께 열린다 — 「보유하고 있었다」 토글은 없다(결정 #8: 날짜 판정)", () => {
     render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(SECTION)).toBe(true);
-    expect(shows(/양도하는 주택을 상속개시 당시 이미 보유하고 있었다/)).toBe(true);
+    expect(shows(/양도하는 주택을 상속개시 당시 이미 보유하고 있었다/)).toBe(false);
+    expect(screen.queryByTestId("inherited-right-held-by-date-notice")).not.toBeNull();
+  });
+});
+
+describe("결정 #8 — 상속개시일 칸(입주권) · 신축주택 취득 경위 칸", () => {
+  it("★ 상속 입주권 행에는 상속개시일 칸이 있고, 분양권 행에는 없다(분양권은 취득일이 상속개시일)", () => {
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    expect(screen.queryByTestId("presale-inherited-date-0")).not.toBeNull();
+    cleanup();
+    render(
+      <Step2 form={form([rightEntry({ type: "presale_right", isInherited: true })])} onChange={() => {}} />,
+    );
+    expect(screen.queryByTestId("presale-inherited-date-0")).toBeNull();
+  });
+
+  it("상속받은 권리가 아니면 상속개시일 칸이 없다", () => {
+    render(<Step2 form={form([rightEntry()])} onChange={() => {}} />);
+    expect(screen.queryByTestId("presale-inherited-date-0")).toBeNull();
+  });
+
+  it("★ 양도 주택을 상속개시일 뒤에 취득했으면 신축주택 취득 경위 칸이 열린다(⑧이 요구하는 칸이 실제로 있다)", () => {
+    const f = form([rightEntry({ isInherited: true, inheritedDate: "2015-01-01" })]);
+    render(<Step2 form={f} onChange={() => {}} />);
+    expect(shows(/상속개시 후 취득한 양도 주택 — 취득 경위/)).toBe(true);
+  });
+
+  it("부정 짝 — 상속개시일 전에 보유했거나 상속개시일을 모르면 열리지 않는다", () => {
+    render(
+      <Step2 form={form([rightEntry({ isInherited: true, inheritedDate: "2016-10-01" })])} onChange={() => {}} />,
+    );
+    expect(shows(/상속개시 후 취득한 양도 주택 — 취득 경위/)).toBe(false);
+    cleanup();
+    render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
+    expect(shows(/상속개시 후 취득한 양도 주택 — 취득 경위/)).toBe(false);
+  });
+
+  it("부정 짝 — ⑦·⑤ 모양(상속 외 권리 동반)에서는 신축주택 칸을 열지 않는다(후단에 신축주택 문구가 없다)", () => {
+    const f = form([
+      rightEntry({ id: "inh", isInherited: true, inheritedDate: "2015-01-01" }),
+      rightEntry({ id: "own", acquisitionDate: "2022-01-01" }),
+    ]);
+    render(<Step2 form={f} onChange={() => {}} />);
+    expect(shows(/상속개시 후 취득한 양도 주택 — 취득 경위/)).toBe(false);
   });
 });
 

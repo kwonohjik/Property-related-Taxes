@@ -7,7 +7,7 @@ import { mkCase, observeRaw } from "./_one-house-pr3a-judge-route";
 
 const fwd = {
   isOneHousehold: true, transferDate: "2026-04-10", contractTotalPrice: "800000000",
-  marriageDate: "2019-03-01", parentalCareMergeDate: "2020-01-15", isFirstTransferredInMerge: true,
+  marriageDate: "2019-03-01", parentalCareMergeDate: "2020-01-15", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true,
   asset: { assetKind: "housing", acquisitionDate: "2015-04-01" },
   houses: [
     { id: "spouse", region: "capital", acquisitionDate: "2014-02-01", mergeOrigin: "counterpart_side" },
@@ -16,7 +16,7 @@ const fwd = {
 };
 const rev = (transferDate: string) => ({
   isOneHousehold: true, transferDate, contractTotalPrice: "800000000",
-  marriageDate: "2019-06-01", parentalCareMergeDate: "2017-01-10", isFirstTransferredInMerge: true,
+  marriageDate: "2019-06-01", parentalCareMergeDate: "2017-01-10", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true,
   asset: { assetKind: "housing", acquisitionDate: "2015-04-01" },
   houses: [
     { id: "parents", region: "capital", acquisitionDate: "2005-01-01", mergeOrigin: "counterpart_side" },
@@ -59,7 +59,7 @@ describe("X4-3 — D4 검토표·고지 정합", () => {
   it("긍정 짝 — 단일 동거봉양 2주택(C3)의 검토표 구성 행은 충족 · 기한 행은 2027-01-11(종전 그대로)", async () => {
     const c3 = {
       isOneHousehold: true, transferDate: "2027-03-01", contractTotalPrice: "800000000",
-      parentalCareMergeDate: "2017-01-10", isFirstTransferredInMerge: true,
+      parentalCareMergeDate: "2017-01-10", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true,
       asset: { assetKind: "housing", acquisitionDate: "2015-04-01" },
       houses: [{ id: "parents", region: "capital", acquisitionDate: "2005-01-01", mergeOrigin: "counterpart_side" }],
     };
@@ -68,7 +68,7 @@ describe("X4-3 — D4 검토표·고지 정합", () => {
     expect(item(r.j, "merge-window")?.facts.find((f) => f.label === "기한")?.value).toBe("2027-01-11");
   });
   it("정방향 D4 기한 초과(혼인 2014 · 동거봉양 2015 · 양도 2025-06-01): 검토표 기한은 혼인일 기준(종전 그대로 맞는 값)", async () => {
-    const f = { ...fwd, marriageDate: "2014-03-04", parentalCareMergeDate: "2015-01-15", transferDate: "2025-06-01" };
+    const f = { ...fwd, marriageDate: "2014-03-04", parentalCareMergeDate: "2015-01-15", parentalCareParentAge: "over_60", transferDate: "2025-06-01" };
     const r = await observeRaw(mkCase("2026-10-10", f));
     expect(r.j.isExempt).toBe(false);
     expect(item(r.j, "merge-composition")?.status).not.toBe("unmet");

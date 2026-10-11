@@ -134,7 +134,7 @@ describe("겸용주택 × 합가 2주택 중과 배제 (§167의10①15호)", ()
   });
 
   it("MUM-3 동거봉양도 같은 정본을 탄다", async () => {
-    const r = await call({ parentalCareMerge: { mergeDate: "2018-01-01" }, isFirstTransferredInMerge: true });
+    const r = await call({ parentalCareMerge: { mergeDate: "2018-01-01", parentAge: "over_60" as const }, isFirstTransferredInMerge: true });
     const reasons = r.multiHouseSurcharge?.exclusionReasons ?? [];
     expect(reasons.some((x) => x.type === "parental_care_merge")).toBe(true);
   });

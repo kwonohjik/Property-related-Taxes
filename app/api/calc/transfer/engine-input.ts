@@ -270,14 +270,16 @@ export function buildTransferEngineInput(
       ? { marriageDate: new Date(data.marriageMerge.marriageDate) }
       : undefined,
     parentalCareMerge: data.parentalCareMerge
-      ? { mergeDate: new Date(data.parentalCareMerge.mergeDate) }
+      ? {
+          mergeDate: new Date(data.parentalCareMerge.mergeDate),
+          ...(data.parentalCareMerge.parentAge ? { parentAge: data.parentalCareMerge.parentAge } : {}),
+        }
       : undefined,
     isFirstTransferredInMerge: data.isFirstTransferredInMerge,
     generalHouseGiftedFromDecedentWithin2yr: data.generalHouseGiftedFromDecedentWithin2yr,
     // ⑭ OH-12c·OH-12 — string 일자 → Date (date-coerce)
     generalHouseGiftDate: toOptionalDate(data.generalHouseGiftDate),
     generalHouseRightAtInheritance: data.generalHouseRightAtInheritance,
-    generalHouseHeldAtInheritance: data.generalHouseHeldAtInheritance,
     inheritedRightChoiceWhenBothHeld: data.inheritedRightChoiceWhenBothHeld,
     // ⑭ 비거주자 — 판정 메뉴 전용 입력(date-coerce)
     transferorNonResidentAtTransfer: data.transferorNonResidentAtTransfer,

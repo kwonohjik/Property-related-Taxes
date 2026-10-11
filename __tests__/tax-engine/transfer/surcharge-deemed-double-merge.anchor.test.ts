@@ -67,7 +67,7 @@ const input = (
     ],
     sellingHouseId: "selling",
     marriageMerge: { marriageDate: D("2019-03-01") },
-    parentalCareMerge: { mergeDate: D(parentalCareMergeDate) },
+    parentalCareMerge: { mergeDate: D(parentalCareMergeDate), parentAge: "over_60" as const },
     isFirstTransferredInMerge: true,
   });
 
