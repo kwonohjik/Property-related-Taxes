@@ -47,6 +47,7 @@ import {
   judgmentTemporaryTwoHouseVisible,
 } from "./one-house-judgment-section-scope";
 import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "./one-house-judgment-temp-two-house";
+import { sellingHouseOriginIssue } from "./selling-house-origin-scope";
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { collectFinalHouseRestartErrors, judgmentFinalHouseRestartInScope } from "./final-house-restart";
@@ -206,6 +207,9 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
 
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(⑤ 노출·④ 전송과 같은 도출 `judgmentDerivedNewHouse`).
   const newHouseRowId = judgmentDerivedNewHouse(form)?.newHouseRowId;
+  // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일 필수 — ⑤ `HousesListSection`·④와 같은 leaf(결정 #43 하위 2).
+  const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], form.houses?.length);
+  if (sellingOrigin) errors.push(err(sellingOrigin.field, sellingOrigin.message));
   form.houses?.forEach((h, i) => {
     if (!h.acquisitionDate) {
       errors.push(err(`houses.${i}.acquisitionDate`, `보유 주택 ${i + 1}: 취득일을 입력하세요.`));

@@ -2,7 +2,8 @@
  * §155① 신규 주택 **취득 경위** 질문의 범위와 ⑧ 필수 규칙 (결정 #43 · G6-4) — ⑤ 노출·⑧ 검증이 같은 술어를 쓴다.
  *
  * - 노출: 양도 주택(§154① 비과세 판정 자산)보다 **나중에 취득한 행** — §155① 신규 주택 후보. 후보가 아닌 행(양도 주택보다 먼저
- *   취득)에는 묻지 않는다. 원조합원·자가 재건축 행은 완공일이 양도 주택보다 뒤여도 기존주택 취득일이 앞서면 후보에서 빠지는데,
+ *   취득)에는 묻지 않는다. 단 ⑧이 필수로 요구하는 행(도출된 신규 주택)은 **항상 연다** — 합가 D8 상대 쪽 짝(B→C)은 C가 양도 주택보다
+ *   먼저 취득돼도 신규 주택이 되는데, 그 행에 답할 칸이 없으면 막다른 오류가 된다. 원조합원·자가 재건축 행은 완공일이 양도 주택보다 뒤여도 기존주택 취득일이 앞서면 후보에서 빠지는데,
  *   그 사실을 입력할 수 있도록 **완공일 기준으로 연다**.
  * - 필수: 명부에서 **신규 주택으로 도출된 행**(`TemporaryTwoHouseDates.newHouseRowId`)만. 후보가 둘 이상이면 도출하지 않으므로 묻지 않는다.
  *   「모름」은 유효한 답이다(막지 않는다).
@@ -14,9 +15,12 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 export function newHouseOriginQuestionVisible(
   primaryKind: string | undefined,
   primaryAcquisitionDate: string | undefined,
-  house: Pick<HouseEntry, "acquisitionDate">,
+  house: Pick<HouseEntry, "acquisitionDate"> & Partial<Pick<HouseEntry, "id">>,
+  /** ⑧이 읽는 도출 결과(`TemporaryTwoHouseDates.newHouseRowId`) — 이 행이면 후보 술어와 무관하게 연다. */
+  derivedNewHouseRowId?: string,
 ): boolean {
   if (!isOneHouseExemptionAsset(primaryKind)) return false;
+  if (derivedNewHouseRowId && house.id === derivedNewHouseRowId) return true;
   if (!primaryAcquisitionDate || !house.acquisitionDate) return false;
   // 문자열 `YYYY-MM-DD`의 사전식 비교가 곧 시간순이다(폼 전역 규약). 같은 날 취득은 양도 후 취득으로 보는 규약이라 후보가 아니다.
   return house.acquisitionDate > primaryAcquisitionDate;

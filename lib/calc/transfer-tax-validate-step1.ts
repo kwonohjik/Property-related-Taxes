@@ -44,6 +44,7 @@ import type { ValidationIssue } from "./transfer-tax-validate";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { houseRowFactIssues } from "./house-row-fact-issues";
 import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
+import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./selling-house-origin-scope";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
@@ -185,6 +186,10 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     })();
     if (firstError) issues.push({ step, message: firstError });
   }
+
+  // ⑧ 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일 필수 — ⑤ `HousesListSection`·④ `deriveCalcTemporaryTwoHouse`와 같은 leaf(결정 #43 하위 2).
+  const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], houses.length);
+  if (sellingOrigin) issues.push({ step, field: sellingOrigin.field as "sellingHouseExistingAcquisitionDate", message: sellingOrigin.message });
 
   // ⑧ 양도 주택 자체 배제 특례(2주택 이상) — 사원주택/어린이집 선택 시 기간(년) 필수
   const se = form.sellingHouseExclusion;
@@ -332,7 +337,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     householdHousingCount: resolveExemptionHousingCount(form),
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: form.assets?.[0]?.assetKind,
-      primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
+      primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
       houses: form.houses,
       transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,

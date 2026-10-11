@@ -22,6 +22,7 @@ import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidat
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 
 /**
  * ④⑬ 기한 후 신고 감면 축 — 「국세기본법」 §48②2호·§48②3호라목 (🔴 G-05)
@@ -143,7 +144,8 @@ export function buildMergeFacts(f: {
 export function deriveCalcTemporaryTwoHouse(form: TransferFormData, primary: AssetForm | undefined) {
   return resolveTemporaryTwoHouse({
     primaryKind: primary?.assetKind,
-    primaryAcquisitionDate: primaryAcquisitionDateOf(primary),
+    // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일이 종전주택 취득일이다(결정 #43 하위 2 · ⑤⑧과 같은 leaf).
+    primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primaryAcquisitionDateOf(primary),
     houses: form.houses,
     transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,

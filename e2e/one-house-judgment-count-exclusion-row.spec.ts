@@ -15,6 +15,7 @@ import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
 const house = (id: string, acquisitionDate: string) => ({
   id,
   region: "non_capital",
+  acquisitionOrigin: "general",
   acquisitionDate,
   officialPrice: "150000000",
   isInherited: false,

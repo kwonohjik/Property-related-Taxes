@@ -48,6 +48,7 @@ export async function gotoJudgmentHoldingsStep(
             {
               id: "h1",
               region: "capital",
+              acquisitionOrigin: "general", // 결정 #43 — 신규 주택 후보 행은 취득 경위를 답해야 판정이 진행된다(⑧)
               acquisitionDate: "2018-01-01",
               officialPrice: "300000000",
               isInherited: false,

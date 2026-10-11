@@ -19,6 +19,7 @@ const GANGNAM = "1168010100";
 const row = (patch: Record<string, unknown> = {}) => ({
   id: "house_e2e_1",
   region: "capital",
+  acquisitionOrigin: "general", // 결정 #43 — 신규 주택 후보 행의 취득 경위(⑧) — 케이스가 비우는 한 칸이 아닌 것은 채워 둔다
   acquisitionDate: "2020-01-01",
   officialPrice: "300000000",
   isInherited: false,

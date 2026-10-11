@@ -15,6 +15,7 @@ const REVERSE_ID = "155-4-5-double-merge-reverse-unverified";
 const house = (id: string, acquisitionDate: string, mergeOrigin: string) => ({
   id,
   region: "capital" as const,
+  acquisitionOrigin: "general" as const,
   acquisitionDate,
   officialPrice: "300000000",
   isInherited: false,

@@ -32,6 +32,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
+import { SellingHouseOriginBlock } from "@/components/calc/transfer/SellingHouseOriginBlock";
+import { sellingHouseOriginQuestionVisible, sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { mergeHouseSideOf, mergeSideLabel, type MergeContext } from "@/lib/calc/merge-house-origin";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSection";
@@ -52,6 +54,9 @@ import { sameDayOrderNotice } from "@/lib/calc/same-day-transfer-notice";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { newHouseOriginQuestionVisible } from "@/lib/calc/new-house-origin-scope";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
+import { deriveCalcTemporaryTwoHouse } from "@/lib/calc/transfer-tax-api-body-blocks";
+import { judgmentDerivedNewHouse } from "@/lib/calc/one-house-judgment-temp-two-house";
+import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { GracePeriodSection } from "./GracePeriodSection";
 
@@ -486,6 +491,14 @@ export function HousesListSection({
           )}
         </div>
 
+        {/* 양도 주택이 기존주택의 연장이면 §155① 종전주택 취득일을 헐기 전 주택 취득일로 본다(결정 #43 하위 2) — 명부가 있을 때만 묻는다. */}
+        {sellingHouseOriginQuestionVisible(form.assets?.[0], houses.length) && (
+          <SellingHouseOriginBlock
+            asset={form.assets[0]}
+            onUpdate={(patch) => onChange({ assets: form.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) })}
+          />
+        )}
+
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-medium">
             양도일 현재 양도하는 주택 외에 세대 구성원이 보유한 주택을 입력하세요. 이미 양도한 주택은 넣지 않고,
@@ -727,8 +740,14 @@ export function HousesListSection({
               sellingAcquisitionDate={primaryAcquisitionDateOf(form.assets?.[0])}
               newHouseOriginEnabled={newHouseOriginQuestionVisible(
                 form.assets?.[0]?.assetKind,
-                primaryAcquisitionDateOf(form.assets?.[0]),
+                // 양도 주택이 기존주택의 연장이면 후보 선후도 헐기 전 주택 취득일 기준이다(④와 같은 leaf).
+                sellingHousePreviousDateOverride(form.assets?.[0], houses.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
                 editingHouse,
+                // ⑧이 필수로 요구하는 행(도출된 신규 주택)은 항상 연다 — 판정 메뉴·계산기가 각자 ⑧과 같은 도출을 읽는다.
+                (judgmentMenu
+                  ? judgmentDerivedNewHouse(form as unknown as OneHouseJudgmentFormData)
+                  : deriveCalcTemporaryTwoHouse(form, form.assets?.[0])
+                )?.newHouseRowId,
               )}
             />
           )}

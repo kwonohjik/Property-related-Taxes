@@ -4,6 +4,7 @@
  */
 
 import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { depreciationSupport } from "./depreciation-scope";
@@ -184,7 +185,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       householdHousingCount: resolveExemptionHousingCount(form),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: form.assets?.[0]?.acquisitionDate,
+        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? form.assets?.[0]?.acquisitionDate,
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,

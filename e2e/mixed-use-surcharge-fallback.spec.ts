@@ -67,6 +67,7 @@ function seedForm(withHouses: boolean, over: Record<string, unknown> = {}) {
           ? [{
               id: "h2",
               region: "capital",
+              acquisitionOrigin: "general",
               acquisitionDate: "2015-03-01",
               officialPrice: "800000000",
               isInherited: false,

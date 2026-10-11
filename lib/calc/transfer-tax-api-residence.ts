@@ -4,6 +4,7 @@
  * 호출 전 form.transferDate·primary.acquisitionDate 존재 보장 필요(toDate는 필수값 미입력 시 throw).
  * transfer-tax-api.ts에서 격리 (800줄 정책).
  */
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
@@ -61,7 +62,7 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
       householdHousingCount: resolveExemptionHousingCount(form),
       temporaryTwoHouseApplies: temporaryTwoHouseApplies({
         primaryKind: form.assets?.[0]?.assetKind,
-        primaryAcquisitionDate: primaryAcquisitionDateOf(form.assets?.[0]),
+        primaryAcquisitionDate: sellingHousePreviousDateOverride(form.assets?.[0], form.houses?.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
         houses: form.houses,
         transferDate: form.transferDate,
         legacyPrecedence: form.legacyHouseCountPrecedence ?? false,

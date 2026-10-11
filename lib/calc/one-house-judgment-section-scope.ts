@@ -7,6 +7,7 @@
  * 🔑 계산기 쪽 게이트 함수(`temporaryTwoHouseSectionVisible` 등)는 **건드리지 않는다** —
  *    다른 화면이 다른 정본을 쓰는 것은 D-3이 이미 승인한 설계다.
  */
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import {
   deriveJudgmentHouseCount,
@@ -133,7 +134,7 @@ export function judgmentProvisoMode(form: OneHouseJudgmentFormData): ProvisoMode
     householdHousingCount: judgmentExemptionHouseCount(form), // 명부 파생값(D-3) − 주택 수 제외 행(S03-4)
     temporaryTwoHouseApplies: temporaryTwoHouseApplies({
       primaryKind: primary?.assetKind,
-      primaryAcquisitionDate: primary?.acquisitionDate,
+      primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate,
       houses: form.houses,
       transferDate: form.transferDate,
       legacyPrecedence: form.legacyHouseCountPrecedence ?? false,

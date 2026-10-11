@@ -32,6 +32,7 @@ function seed(otherAcquisitionDate: string) {
       {
         id: "h1",
         region: "capital",
+        acquisitionOrigin: "general",
         acquisitionDate: otherAcquisitionDate,
         officialPrice: "300000000",
         // 명부 행의 필수 boolean — 화면 입력은 항상 채운다. 없으면 route Zod가 400을 낸다.

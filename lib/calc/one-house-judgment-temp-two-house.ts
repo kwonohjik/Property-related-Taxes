@@ -16,13 +16,15 @@ import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stor
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
 export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
   const primary = form.assets?.[0];
   return resolveTemporaryTwoHouse({
     primaryKind: primary?.assetKind,
-    primaryAcquisitionDate: primary?.acquisitionDate ?? "",
+    // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일이 종전주택 취득일이다(결정 #43 하위 2 · ⑤⑧과 같은 leaf).
+    primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate ?? "",
     houses: form.houses,
     transferDate: form.transferDate,
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
@@ -41,7 +43,8 @@ export function judgmentTempTwoHouseVerdict(
   const primary = form.assets?.[0];
   return judgeTempTwoHouseFromForm({
     // D8 — 합가 세대에서 상대 쪽 두 주택이 짝이면 종전주택은 양도 주택이 아니다(사전-2026-법규재산-0643). ④와 같은 짝을 쓴다.
-    previousAcquisitionDate: derivedNewHouse?.previousAcquisitionDate ?? primary?.acquisitionDate ?? "",
+    previousAcquisitionDate:
+      derivedNewHouse?.previousAcquisitionDate ?? sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate ?? "",
     sellingAcquisitionDate: primary?.acquisitionDate,
     newHouseAcquisitionDate: derivedNewHouse?.newAcquisitionDate ?? "",
     transferDate: form.transferDate,

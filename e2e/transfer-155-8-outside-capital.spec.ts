@@ -37,6 +37,7 @@ function seedForm(over: Record<string, unknown>) {
           {
             id: "h2",
             region: "non_capital",
+            acquisitionOrigin: "general",
             acquisitionDate: "2019-01-01",
             officialPrice: "800000000",
             isInherited: false,

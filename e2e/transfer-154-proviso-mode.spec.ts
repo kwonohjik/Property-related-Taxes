@@ -59,6 +59,7 @@ async function gotoHolding(page: Page, over: Record<string, unknown>) {
 const HOUSE = (id: string) => ({
   id,
   region: "capital" as const,
+  acquisitionOrigin: "general" as const,
   acquisitionDate: "2018-01-01",
   officialPrice: "300000000",
   isInherited: false,

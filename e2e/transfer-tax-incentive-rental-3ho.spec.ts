@@ -46,6 +46,7 @@ function seedForm() {
           {
             id: "house_other_1",
             region: "capital",
+            acquisitionOrigin: "general",
             regionCode: GANGNAM,
             acquisitionDate: "2014-01-01",
             officialPrice: "300000000",
