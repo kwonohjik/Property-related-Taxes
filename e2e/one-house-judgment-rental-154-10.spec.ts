@@ -86,7 +86,9 @@ test.describe("판정 메뉴 §154⑩ 표준 경로 (rentalUnits 0호)", () => {
     await page.getByTestId("one-house-acq-date").getByLabel("일").fill("01");
 
     await expect(page.getByText("사업자등록·임대사업자 등록 이후 거주기간")).toBeVisible();
-    await expect(page.getByText("괄호 준용", { exact: false })).toBeVisible();
+    // 칸 안내문의 근거 표기로 좁힌다 — 결정 #21(S16-5)이 같은 화면에 §154⑩ 경과조치 안내(「…§155⑳1호 괄호 준용)」)를 더해
+    //   「괄호 준용」만으로는 두 요소가 잡힌다(strict mode).
+    await expect(page.getByText("(소령 §155⑳1호 괄호 준용, §154⑩)", { exact: false })).toBeVisible();
   });
 
   test("[I5-4] 2019.2.12 전 취득이면 §154① 원칙 안내가 뜨고 등록일 이후 거주기간 칸은 뜨지 않는다", async ({
