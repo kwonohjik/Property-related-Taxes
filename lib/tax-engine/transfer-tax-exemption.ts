@@ -266,6 +266,10 @@ function checkExemptionCore(
       exemptReason: v.isExempt ? "주택부수토지 — 1세대1주택 비과세" : "주택부수토지 — 1세대1주택 고가주택",
       // 짝 주택이 **어떤 특례로** 비과세가 됐는지는 `appurtenantHouseVerdict`에 담겨 오지 않는다
       // (isExempt·isPartialExempt·houseAcquisitionDate뿐). 여기서는 부수토지 근거만 낸다.
+      // 다만 **표2 「1주택」 축**은 담겨 온다(`oneHouseForTable2` — 실제 1주택 ∨ §155·조특법·§155②③ 제외 반영 후 1주택):
+      // 「소득세법 시행령」 §159의4 괄호·§95② 단서(「이에 딸린 토지를 포함한다」)에 따라 부수토지도 짝 주택과 같은 축이다.
+      // 이 카드의 원시 주택 수는 주 자산 주택 수 복제본이라 의제·제외를 반영하지 못한다(S08-5).
+      ...(v.oneHouseForTable2 === true ? { deemedOneHouseBy155: true } : {}),
       appliedExceptions: [
         {
           id: "89-1-3-appurtenant-land",
@@ -299,11 +303,16 @@ function checkExemptionCore(
           legalBasis: TRANSFER.REPLACEMENT_HOUSE_156_2_5,
         },
       ];
+      // 「소득세법 시행령」 §159의4 괄호 「제156조의2 … 에 따라 1세대 1주택으로 보는 주택을 포함」 — §156의2⑤ 대체주택은
+      // 「1세대1주택으로 보아 제154조제1항을 적용」하는 주택이라 표2 대상 「1주택」에 든다. 신축주택 완성 후(⑤3호 3년 이내)
+      // 세대 2주택으로 양도해도 이 echo로 장특 표2 게이트(`isOneHouseForTable2`)가 열린다(S08-4). 거주 2년 요건은 별개로 남는다.
+      // ⚠️ 중과 배제 축(영 §167의10① — `MultiHouseSurchargeInput.deemedOneHouseBy155`)과는 다른 축이다 — 거기로 넘기지 않는다.
       if (priceCheck <= highValueThreshold) {
         return {
           isExempt: true,
           isPartialExempt: false,
           exemptReason: `대체주택 특례 비과세 (${REPLACEMENT_HOUSE_SHORT})`,
+          deemedOneHouseBy155: true,
           appliedExceptions: exceptions,
         };
       }
@@ -311,6 +320,7 @@ function checkExemptionCore(
         isExempt: false,
         isPartialExempt: true,
         exemptReason: `대체주택 특례 고가주택 (${REPLACEMENT_HOUSE_SHORT})`,
+        deemedOneHouseBy155: true,
         appliedExceptions: exceptions,
       };
     }

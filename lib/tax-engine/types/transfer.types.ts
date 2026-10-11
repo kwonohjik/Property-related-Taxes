@@ -1376,6 +1376,12 @@ export interface TransferTaxInput {
     houseAcquisitionDate: Date;
     /** 짝 주택이 이월과세 §97의2②2호로 배제됐는가 — 부수토지도 따른다(F-13 Q-4) */
     carryoverOneHouseExcluded: boolean;
+    /**
+     * 짝 주택의 장특 표2 「1주택」 축(주택 수 제외 반영 후 1주택 ∨ §155 의제 — `lthdTable2OneHouseAxis`).
+     * 부수토지 카드는 자기 원시 주택 수(주 자산 주택 수 복제본)가 아니라 이 값으로 표2 대상을 본다(S08-5 —
+     * 「소득세법 시행령」 §159의4 괄호·§95② 단서 「이에 딸린 토지를 포함한다」). 미주입이면 종전(카드 자기 판정).
+     */
+    oneHouseForTable2?: boolean;
   };
 
   /**

@@ -85,6 +85,8 @@ const COMPANION_APPURTENANT_LAND = {
   directExpenses: 0,
   isOneHousehold: true,
   reductions: [] as unknown[],
+  // 배율 이내(200㎡ ≤ 정착면적 100㎡ × 3배)로 **확인된** 부수토지 — 면적이 없으면 배율 이내인지 판정하지 못해 표1이다(S08-6).
+  areaM2: 200,
 };
 
 function makeRequest(body: object): NextRequest {
@@ -127,10 +129,15 @@ const APPORTIONED = {
 };
 
 /** 엔진 실측값 (수정 후 route POST 관측 — 산식 추론 아님) */
-const LAND_LTHD_TABLE2 = 320_000_000; // 표2 80%(보유 40% + 거주 40%)
-const LAND_LTHD_TABLE1 = 88_000_000; // 종전(거주 0 → 표1 22%) 값
-const LAND_DETERMINED_TABLE2 = 13_440_000;
-const AGGREGATED_TOTAL_TAX = 28_253_500;
+//
+// 🔁 S08-6(2026-10) 갱신: 이 픽스처의 부수토지에 `areaM2`(200㎡ ≤ 한도 300㎡)를 더했다. 면적이 없는 카드는 배율 이내인지
+//    판정하지 못해 「모름 = 혜택 불성립」으로 표1이다(종전에는 표1·표2 중 큰 값 표2를 받았다). 면적을 확인한 카드는 짝 주택과
+//    1세대1주택 단위(F-13)를 이뤄 합계 20억 기준으로 12억 초과분 안분(×0.4) 후 표2를 받는다 — 값이 바뀐 것은 이 단위 판정 때문이고
+//    F12가 고정하는 「거주기간 상속으로 표2 진입」은 그대로다.
+const LAND_LTHD_TABLE2 = 128_000_000; // 표2 80%(보유 40% + 거주 40%) × 안분 후 양도차익 160,000,000
+const LAND_LTHD_TABLE1 = 35_200_000; // 종전(거주 0 → 표1 22%) 값 × 같은 양도차익
+const LAND_DETERMINED_TABLE2 = 3_540_000;
+const AGGREGATED_TOTAL_TAX = 25_173_500;
 
 describe("F12 — 컴패니언 부수토지 거주기간 상속", () => {
   beforeEach(() => {

@@ -120,6 +120,11 @@ const ALLOWLIST: { file: string; snippet: string; 사유: string }[] = [
   },
   {
     file: "results/transfer/DetailedStatementRedevelopmentBuilders.ts",
+    snippet: "÷ (평가액 ${fmt(rights)})",
+    사유: "수령 구조 취득가액 산식(G3-10) — DetailedCalculationStatementCard가 FormulaText로 렌더, 분모 괄호로 분수 변환",
+  },
+  {
+    file: "results/transfer/DetailedStatementRedevelopmentBuilders.ts",
     snippet: "${fmt(meta.numerator)} ÷ ${fmt(meta.denominator)}",
     사유: "DetailedCalculationStatementCard가 FormulaText로 렌더",
   },

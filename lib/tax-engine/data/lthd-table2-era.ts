@@ -42,6 +42,21 @@ export function table2HoldingOnlyRate(holdingYears: number): number {
 }
 
 /**
+ * 표2 **거주기간 열**의 첫 칸 — 「소득세법」 §95② 표2(2021.1.1. 시행본 MST 224837·현행 MST 280405 원문 확인)는
+ * 거주기간 열이 「2년 이상 3년 미만(보유기간 3년 이상에 한정함) 100분의 8」에서 시작하고 **2년 미만 칸이 없다.**
+ * 그래서 거주 12~23개월의 거주분 공제율은 0이다(종전에는 12개월에도 4%를 줬다 — S08-2).
+ * 표2 대상 판정의 거주 2년 요건(영 §159의4)과는 별개 축이다 — §154⑧3호 통산·§155의3 상생임대로 표2 대상이
+ * 열려도 이 표에는 1년 칸이 생기지 않는다.
+ */
+export const LTHD_TABLE2_RESIDENCE_MIN_YEARS = 2;
+
+/** 표2 거주분 공제율(정수 %) — 거주 2년 미만 0, 2년 이상 연 4%·40% 한도. 거주분 표시·분해가 이 값을 쓴다. */
+export function table2ResidencePct(residenceYears: number): number {
+  if (residenceYears < LTHD_TABLE2_RESIDENCE_MIN_YEARS) return 0;
+  return Math.min(residenceYears * 4, 40);
+}
+
+/**
  * 2009-01-01 전 양도분의 표2 **미지원 고지** — 현행 식으로 계산했다는 사실을 숨기지 않는다
  * (종합부동산세 미지원 연도 고지와 같은 층위 — `comprehensive-tax.ts`).
  */

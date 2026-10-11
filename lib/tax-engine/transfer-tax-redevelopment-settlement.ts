@@ -26,9 +26,13 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { scaleLthdParts, zeroLthdParts } from "./transfer-tax-redevelopment-lthd";
 import type { TransferTaxInput, RedevelopmentResult } from "./types/transfer.types";
+import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 
 /** 청산금분 양도일 — 엔진 입력이 없으면 양도일(조문상 같은 신고 단위)로 본다. */
-function settlementSaleDateOf(input: Pick<TransferTaxInput, "transferDate" | "redevelopment">): Date {
+function settlementSaleDateOf(input: {
+  transferDate: Date;
+  redevelopment?: Pick<RedevelopmentInfo, "settlementSaleDate">;
+}): Date {
   return input.redevelopment?.settlementSaleDate ?? input.transferDate;
 }
 
@@ -57,7 +61,10 @@ function sameDay(a: Date, b: Date): boolean {
  *    §89①4호 나목 미입력과 같은 처리).
  */
 export function resolveOneHouseAtSettlementSale(
-  input: Pick<TransferTaxInput, "transferDate" | "redevelopment">,
+  input: {
+    transferDate: Date;
+    redevelopment?: Pick<RedevelopmentInfo, "oneHouseAtSettlementSale" | "settlementSaleDate">;
+  },
   isOneHouseSingle: boolean,
 ): boolean | undefined {
   const declared = input.redevelopment?.oneHouseAtSettlementSale;

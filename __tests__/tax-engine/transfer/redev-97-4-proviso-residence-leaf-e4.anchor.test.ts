@@ -102,18 +102,20 @@ describe("E-4 ② Step4 거주 36개월 · 분리 입력(신축 12개월)이 표
   });
 });
 
-describe("E-4 ③ 인가일 요건 미충족 선언(표1 강등) + Step4 거주 36개월 — 가산한다", () => {
+describe("E-4 ③ 인가일 요건 미충족 선언 + Step4 거주 36개월 — 신축주택분 표2 판정은 선언과 무관(G3-8)", () => {
   const redev = { priorHouseResidenceMonths: undefined, newHouseResidenceMonths: undefined, exemptionEligibleAtApproval: false };
   const w = run(redev, { residencePeriodMonths: 36 });
   const b = run(redev, { residencePeriodMonths: 36 }, false);
 
-  it("🔴 표1로 계산되므로 §97의4① 단서가 아니다 — 가산", () => {
-    expect(added(w)).toBe(true);
-    expect(w.longTermHoldingDeduction).toBeGreaterThan(b.longTermHoldingDeduction);
-    expect(w.determinedTax).toBeLessThan(b.determinedTax);
-    // 종전 42,409,894 / 20,711,536
-    expect(w.longTermHoldingDeduction).toBe(57_229_894);
-    expect(w.determinedTax).toBe(15_524_536);
+  it("🔴 미충족 선언은 「그 청산금」만 표1로 내린다(부동산거래관리과-380) — 기존건물분은 표2라 §97의4① 단서 해당 → 미가산", () => {
+    // 종전(G3-8 전)에는 이 선언이 완공APT 3분기를 전부 표1로 내려 「표1이므로 가산」(57,229,894 / 15,524,536)이었다.
+    // 선언은 청산금 **수령**분 분기 한정이고 이 픽스처(청산금 납부·API 전용 상태)에서는 표2 판정을 바꾸지 않는다.
+    const detail = b.redevelopmentDetail as unknown as Record<string, { lthdResidencePart?: number }>;
+    expect(detail.postApprovalExistingHouse.lthdResidencePart ?? 0).toBeGreaterThan(0);
+    expect(noticed(w)).toBe(true);
+    expect(added(w)).toBe(false);
+    expect(w.longTermHoldingDeduction).toBe(b.longTermHoldingDeduction);
+    expect(w.determinedTax).toBe(b.determinedTax);
   });
 });
 
@@ -157,6 +159,21 @@ describe("E-4 leaf `redevUsesTable2` — LTHD 분기별 leaf와 같은 인자", 
     expect(redevUsesTable2({ redevelopment: { ...s, priorHouseResidenceMonths: 60, newHouseResidenceMonths: 12 }, isOneHouseSingle: true })).toBe(false);
     expect(redevUsesTable2({ redevelopment: { ...s, newHouseResidenceMonths: 24 }, isOneHouseSingle: true })).toBe(true);
     expect(redevUsesTable2({ redevelopment: { ...s, newHouseResidenceMonths: 24 }, isOneHouseSingle: false })).toBe(false);
+  });
+
+  it("완공APT 청산금 수령 단독신고 — 청산금분 표(신축 거주만 · 미충족 선언이면 표1) (G3-8)", () => {
+    const solo = { ...apt, settlementDirection: "receive" as const, receiveOnlyMode: true, newHouseResidenceMonths: 36 };
+    const base = { isOneHouseSingle: true, transferDate: D("2022-03-01") };
+    expect(redevUsesTable2({ redevelopment: solo, ...base })).toBe(true);
+    expect(redevUsesTable2({ redevelopment: { ...solo, exemptionEligibleAtApproval: false }, ...base })).toBe(false);
+    expect(redevUsesTable2({ redevelopment: { ...solo, oneHouseAtSettlementSale: false }, ...base })).toBe(false);
+    // 동시신고(receiveOnlyMode false)는 신축주택분(기존건물분) 기준 — 미충족 선언이어도 표2 판정은 그대로
+    expect(
+      redevUsesTable2({
+        redevelopment: { ...solo, receiveOnlyMode: false, exemptionEligibleAtApproval: false, priorHouseResidenceMonths: 24 },
+        ...base,
+      }),
+    ).toBe(true);
   });
 
   it("완공APT 원조합원 — prior + new 통산", () => {

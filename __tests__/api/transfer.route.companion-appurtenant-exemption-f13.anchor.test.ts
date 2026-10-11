@@ -79,6 +79,7 @@ type Prop = {
   propertyId: string;
   isExempt?: boolean;
   rateGroup: string;
+  longTermHoldingDeduction?: number;
   carryoverTaxationDetail?: { adoptedScenario: string; exclusionReason?: string };
 };
 type Agg = { totalTax: number; warnings?: string[]; properties: Prop[] };
@@ -135,7 +136,11 @@ describe("F-13 주택 + 배율 이내 부수토지 = 1세대1주택 단위", () 
     const a = await post({ ...primary(1_000_000_000, 400_000_000), companionAssets: [land(400_000_000, { areaM2: 500 })] });
     expect(byId(a, "c1__excess").rateGroup).toBe("non_business_land");
     expect(byId(a, "c1__appurtenant").rateGroup).not.toBe("non_business_land");
-    expect(a.totalTax).toBe(7_254_500);
+    // 🔁 S08-6 갱신: 7,254,500 → 15,996,200. 종전 값은 배율 초과 카드(비사업용 토지 — §104의3①5호)가 `{...base}` 복제로 세대 플래그를
+    // 물려받아 표2 60%(공제 48,000,000)를 받은 값이었다. 표2는 「1세대 1주택(이에 딸린 토지 포함)에 해당하는 자산」 전용이고 배율 초과분은
+    // 주택부수토지가 아니므로(재산세과-791) 표1 24%(공제 19,200,000)다 — 같은 사실의 단건 G-2 초과분과 같은 값이다.
+    expect(byId(a, "c1__excess").longTermHoldingDeduction).toBe(19_200_000);
+    expect(a.totalTax).toBe(15_996_200);
   });
 
   it("F13-4 Q-3 부수토지를 주택보다 늦게 취득해 부수토지로서 2년 미만 → 그 토지는 비과세 아님", async () => {

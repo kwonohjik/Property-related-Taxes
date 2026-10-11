@@ -464,7 +464,8 @@ describe("I: 상속 취득 × 용도변경 — §154⑧3호 통산 배제", () =
 
     // 용도변경이 없으면 「상속받은 주택」 전제가 깨지지 않는다 → 통산 유지.
     expect(r.usageConversionDetail).toBeUndefined();
-    expect(r.longTermHoldingRate).toBeCloseTo(0.32, 10); // 표2 보유 7년 28% + 실거주 1년 4%
+    // 표2 보유 7년 28% + 실거주 1년 0 — 거주기간 열은 「2년 이상」부터다(「소득세법」 §95② 표2, S08-2). 종전 0.32는 거주 1년에 4%를 준 값이다.
+    expect(r.longTermHoldingRate).toBeCloseTo(0.28, 10);
   });
 });
 

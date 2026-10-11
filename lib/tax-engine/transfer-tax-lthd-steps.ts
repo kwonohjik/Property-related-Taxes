@@ -16,7 +16,7 @@ import type { CalculationStep } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
-import { resolveLthdTable2Era } from "./data/lthd-table2-era";
+import { LTHD_TABLE2_RESIDENCE_MIN_YEARS, resolveLthdTable2Era, table2ResidencePct } from "./data/lthd-table2-era";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import { buildSplitLthdFormula, buildSplitLthdSubFormulas } from "./transfer-tax-split-display";
 
@@ -123,7 +123,13 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     ? conv.residencePct
     : singleAxisTable2
       ? 0
-      : Math.min(residenceYearsForStep * 4, 40);
+      : table2ResidencePct(residenceYearsForStep);
+
+  // 표2 거주기간 열은 2년 이상부터다 — 2년 미만이면 「N년×4%」로 쓰지 않는다(합과 어긋난다).
+  const residenceTerm =
+    residenceYearsForStep >= LTHD_TABLE2_RESIDENCE_MIN_YEARS
+      ? `거주 ${residenceYearsForStep}년×4%=${residencePct}%`
+      : `거주 ${residenceYearsForStep}년(2년 미만 — 거주기간 공제 없음)=0%`;
 
   const lthdFormulaRate = fbLthdFormula
     ? `${fbLthdFormula} (소득세법 §95④ 후단)`
@@ -132,11 +138,11 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     : conv
     ? `비주택 보유 ${conv.nonHousingYears}년 표1 ${conv.table1Pct}% + 주택 보유 ${conv.housingYears}년 표2 ${conv.table2HoldingPct}%`
       + ` = 보유분 ${holdingPct}%${conv.holdingRateCapped ? " (40% 한도 적용)" : ""}`
-      + ` + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${holdingPct + residencePct}%`
+      + ` + ${residenceTerm} = ${holdingPct + residencePct}%`
     : singleAxisTable2
     ? `표2 보유 ${holdingPeriod.years}년×8% = ${Math.round(longTermHoldingRate * 100)}% (80% 한도 — 2020.12.31. 이전 양도분)`
     : isOneHouseSpecial
-    ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + 거주 ${residenceYearsForStep}년×4%=${residencePct}% = ${Math.round(longTermHoldingRate * 100)}%`
+    ? `보유 ${holdingPeriod.years}년×4%=${holdingPct}% + ${residenceTerm} = ${Math.round(longTermHoldingRate * 100)}%`
     : `보유 ${holdingPeriod.years}년×2% = ${Math.round(longTermHoldingRate * 100)}% (30% 한도)`;
   const lthdExcluded = lthdExclusionReason !== undefined && !lthd982Applied;
   // split: 파트별 풀어 쓰기. 용도변경(§95⑤)·가업상속 후단·§98의2 특칙과는 병용되지 않지만(엔진 분기가 split을 먼저

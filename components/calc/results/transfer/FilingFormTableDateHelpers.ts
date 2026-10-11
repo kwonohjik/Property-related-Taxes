@@ -7,6 +7,7 @@
 import { partAcquisitionDates } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
+import { table2ResidencePct } from "@/lib/tax-engine/data/lthd-table2-era";
 
 // ── 날짜·기간 포맷 헬퍼 ────────────────────────────────────────
 
@@ -109,7 +110,7 @@ export function splitLtDeduction(
   const hY = Math.floor(holdingMonths / 12);
   const rY = Math.floor(residenceMonths / 12);
   const holdingRate = Math.min(hY * 0.04, 0.40);
-  const residenceRate = Math.min(rY * 0.04, 0.40);
+  const residenceRate = table2ResidencePct(rY) / 100;
   const totalRate = holdingRate + residenceRate;
   if (totalRate <= 0) return { holdingAmount: totalAmount, residenceAmount: 0 };
   // §95② 표2: 보유기간분·거주기간분 각각 자기 공제율로 직접 산정(잔액 방식 아님).

@@ -46,8 +46,8 @@ export function resolveRedevSubject(
  *   `oneRightExemptionFacts`를 보낸다. 그래서 계산기가 소유한다.
  *   `isOneHouseSingle`은 폼-전역이라 자산-수준 술어에 넣지 않는다(엔진이 같은 값을 본다).
  *
- * 엔진은 `=== false`일 때 `isOneHouseSingle`을 강제 false로 내려 장기보유특별공제를
- * 표2(최대 80%)에서 **표1(최대 30%)로 강등**한다 — 「소득세법」 §95② 표1·표2.
+ * 엔진은 `=== false`일 때 입주권은 인가전 분, 완공APT는 **청산금 수령분 분기만** 장기보유특별공제를
+ * 표2(최대 80%)에서 **표1(최대 30%)로 강등**한다(G3-8) — 「소득세법」 §95② 표1·표2.
  */
 export function exemptionAtApprovalInScope(
   asset: Pick<

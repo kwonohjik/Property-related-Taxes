@@ -31,6 +31,9 @@ function appurtenantLandInput(over: Partial<TransferTaxInput>, holdingMonths: nu
   return baseTransferInput({
     propertyType: "land",
     landNature: "appurtenant_to_housing",
+    // 배율 이내로 확인된 부수토지 카드 — 합산 엔진·route가 붙이는 역할. 표2 대상 자산 축(`lthd-table2-subject.ts`, S08-6)이
+    // 이 표지를 요구한다(순수 토지·배율 초과·판정 불가 카드는 표1).
+    oneHouseUnitRole: "appurtenant_land",
     acquisitionDate: new Date("2021-01-01"),
     transferDate: new Date("2024-06-01"),
     isUnregistered: false,
