@@ -2,6 +2,8 @@ import type { CalculationRecord } from "@/lib/storage/types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { generatePropertyId } from "@/lib/stores/multi-transfer-tax-store";
+import { migrateMultiForm } from "@/lib/stores/multi-transfer-tax-store";
+import { migratePersistedTransferForm } from "@/lib/stores/calc-wizard-store";
 import { calcPropertyCompletion } from "@/lib/calc/multi-transfer-tax-validate";
 import { classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
@@ -43,7 +45,8 @@ export function extractLoadPriorPaid(
 
 /** single record → 새 자산(PropertyItem). 라벨은 호출부에서 순번 부여. */
 export function buildPropertyFromSingleRecord(record: CalculationRecord, label: string): PropertyItem {
-  const form = record.inputData as unknown as TransferFormData;
+  // 구 이력의 폐지 값을 현행 스키마로 — 단건 이력 「편집」·세션 복원과 같은 마이그레이션(⑧ 통과 ↔ ⑫ 400 방지)
+  const form: TransferFormData = migratePersistedTransferForm(record.inputData);
   // 자산별 예정신고 세액 포착 — 신고일 필터 기납부세액(§111③) 산정용(computeAutoPriorPaid)
   const pp = extractLoadPriorPaid(record, "single");
   return {
@@ -83,7 +86,7 @@ export function buildPropertyFromSingleRecord(record: CalculationRecord, label: 
  */
 export function buildPropertiesFromMultiRecord(record: CalculationRecord): PropertyItem[] {
   const input = record.inputData as unknown as MultiTransferFormData;
-  return (input.properties ?? []).map((p) => ({ ...p }));
+  return migrateMultiForm({ properties: (input.properties ?? []).map((p) => ({ ...p })) }).properties;
 }
 
 /**

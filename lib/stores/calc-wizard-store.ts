@@ -271,12 +271,13 @@ export interface TransferSummary {
  *
  * export하는 이유는 **테스트 가능성**이다(인라인 클로저는 단위 검증이 불가능했다).
  */
-export function mergePersistedWizard(
-  persisted: unknown,
-  current: CalcWizardState,
-): CalcWizardState {
-  const ps = persisted as Partial<CalcWizardState>;
-  const legacyForm = ps.formData as Record<string, unknown> | undefined;
+/**
+ * 저장된 단건 폼 1건을 현행 스키마로 — sessionStorage 복원(`mergePersistedWizard`)과 **다건 자산 폼**이 같이 쓴다.
+ * 다건은 자산마다 `TransferFormData`를 품는데 종전엔 이 마이그레이션을 거치지 않아, 구 이력·구 세션의 폐지 값이
+ * ⑧은 통과하고 ⑫에서 400이 났다(2026-10-11 실측 — 구 임대주택 유닛 `rentalType`·`region`).
+ */
+export function migratePersistedTransferForm(raw: unknown): TransferFormData {
+  const legacyForm = raw as Record<string, unknown> | undefined;
 
   let formData: TransferFormData;
   if (legacyForm && !Array.isArray(legacyForm.assets)) {
@@ -284,8 +285,8 @@ export function mergePersistedWizard(
   } else {
     formData = {
       ...defaultFormData,
-      ...(ps.formData ?? {}),
-      assets: ((ps.formData as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
+      ...((raw as TransferFormData | undefined) ?? {}),
+      assets: ((raw as TransferFormData | undefined)?.assets ?? [makeDefaultAsset(1)]).map(migrateAsset),
     };
   }
 
@@ -293,8 +294,15 @@ export function mergePersistedWizard(
   formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
 
   // 조특법 주택 수 제외 — 행 id와 함께 저장소에 남은 선언을 그 행 ⑥으로(계획서 Q-5)
-  formData = moveLinkedCountExclusionsToRows(formData);
+  return moveLinkedCountExclusionsToRows(formData);
+}
 
+export function mergePersistedWizard(
+  persisted: unknown,
+  current: CalcWizardState,
+): CalcWizardState {
+  const ps = persisted as Partial<CalcWizardState>;
+  const formData = migratePersistedTransferForm(ps.formData);
   // currentStep은 복원하지 않고 항상 0 — 구 sessionStorage에 남은 잔존값을 무시.
   return { ...current, ...ps, formData, currentStep: 0 };
 }

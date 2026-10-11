@@ -6,6 +6,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TransferFormData } from "./calc-wizard-store";
+import { migratePersistedTransferForm } from "./calc-wizard-store";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 
 /** 건별 자산 항목 (TransferFormData + 식별자) */
@@ -186,6 +187,12 @@ function generatePropertyId(): string {
   return `prop-${Date.now()}-${propertyCounter++}`;
 }
 
+/** 세션 복원 — 자산 폼은 단건과 같은 마이그레이션을 거친다(`migrateMultiForm`). 얕은 병합은 zustand 기본 동작과 같다. */
+export function mergePersistedMulti(persisted: unknown, current: MultiTransferState): MultiTransferState {
+  const ps = persisted as Partial<MultiTransferState> | undefined;
+  return ps?.form ? { ...current, ...ps, form: migrateMultiForm(ps.form) } : { ...current, ...ps };
+}
+
 export const useMultiTransferStore = create<MultiTransferState>()(
   persist(
     (set, get) => ({
@@ -293,6 +300,7 @@ export const useMultiTransferStore = create<MultiTransferState>()(
        *
        * (2026-09-16 — 「높은 세율 우선」 폐지. §103②은 「먼저 양도한 자산부터」다.)
        */
+      merge: mergePersistedMulti,
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         const v = state.form.basicDeductionAllocation as string;
@@ -305,6 +313,16 @@ export const useMultiTransferStore = create<MultiTransferState>()(
 );
 
 export { generatePropertyId };
+
+/**
+ * 다건 폼의 자산마다 단건 저장 폼 마이그레이션(`migratePersistedTransferForm`)을 적용한다.
+ * 진입 경로 셋(세션 복원·이력 편입·다건 「편집」)이 모두 이것을 지난다 — 종전엔 한 곳도 지나지 않아
+ * 구 이력의 폐지 값(예: 구 임대주택 유닛 `rentalType`·`region`)이 ⑧ 통과 ↔ ⑫ 400이 됐다(2026-10-11 실측).
+ */
+export function migrateMultiForm<T extends { properties?: PropertyItem[] }>(form: T): T {
+  if (!Array.isArray(form.properties)) return form;
+  return { ...form, properties: form.properties.map((p) => ({ ...p, form: migratePersistedTransferForm(p.form) })) };
+}
 
 /**
  * 「단건 자동 백업」의 propertyId를 담는 세션 키.
