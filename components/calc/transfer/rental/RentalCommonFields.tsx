@@ -119,6 +119,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
   const circled = (n: number) => CIRCLED_SECTION_NUM[n - 1] ?? String(n);
   const sec3 = circled(sectionOffset);
   const sec4 = circled(sectionOffset + 1);
+  // 🔴 종전 `sec4 + 1`은 이미 원문자 **문자열**이라 덧셈이 연결이 되어 「④1」로 떴다(S16-9). 번호 계산은 숫자로 한다.
+  const sec5 = circled(sectionOffset + 2);
 
   return (
     <>
@@ -286,7 +288,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       {hasGainProration && (
         <ToneCard
           tone="violet"
-          sectionNum={sec4 + 1}
+          sectionNum={sec5}
           title="임대 종료 시점"
           bodyClassName="space-y-2"
           noDark

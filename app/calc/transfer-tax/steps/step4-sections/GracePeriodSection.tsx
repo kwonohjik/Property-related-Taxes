@@ -15,6 +15,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import {
   checkGracePeriodExemption,
   transitionExemptionMonths,
@@ -41,6 +42,17 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
   // 양도 주택(대표 자산) 소재지 법정동코드 — 나목4) 표 4/6개월 판정 기준 (④⑬ 기존 primary.regionCode 단일소스)
   const sellingRegionCode = form.assets?.[0]?.regionCode || undefined;
   const months = transitionExemptionMonths(sellingRegionCode);
+  /**
+   * 양도일 현재 조정대상지역이 **아니다**(S14b-8). §104⑦ 각 호는 「조정대상지역에 있는 주택으로서 …」로 시작하므로 이 경우
+   * 중과 자체가 없다 — 경과조치 「대상 지역 아님 · 중과가 적용됩니다」「미충족」을 띄우면 거짓 단정이다. 엔진이 양도일 기준으로 쓰는
+   * 같은 leaf(`isRegulatedByBjdCode`)이고 인자도 같다(`multi-house-surcharge.ts` Step 2). 판별 불가(신뢰도 low)는 비조정으로 단정하지 않는다.
+   */
+  const regulatedAtTransfer =
+    sellingRegionCode && form.transferDate
+      ? isRegulatedByBjdCode(sellingRegionCode, form.transferDate, form.assets?.[0]?.regionInDesignatedDistrict)
+      : undefined;
+  const notRegulatedAtTransfer =
+    !!regulatedAtTransfer && !regulatedAtTransfer.isRegulated && regulatedAtTransfer.confidence !== "low";
 
   function handleToggle(v: boolean) {
     if (!v) {
@@ -234,10 +246,15 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                     또는 2025.10.16 지정 조정대상지역일 때만 적용됩니다. ① 자산 정보에서 주소를 확인하세요.
                   </p>
                 )}
-                {months === null && sellingRegionCode && (
+                {months === null && sellingRegionCode && notRegulatedAtTransfer && (
+                  <p className="text-caption text-violet-700" data-testid="grace-period-not-regulated-at-transfer">
+                    양도일 현재 조정대상지역이 아니어서 다주택 중과 대상이 아닙니다(경과조치 불필요).
+                  </p>
+                )}
+                {months === null && sellingRegionCode && !notRegulatedAtTransfer && (
                   <p className="text-caption text-rose-700">
                     이 소재지는 나·다목 경과조치 대상 지역이 아닙니다(2026.5.9까지 허가신청·계약 요건이므로
-                    그 시점에 조정대상지역이 아니었던 지역은 대상 제외). 중과가 적용됩니다.
+                    그 시점에 조정대상지역이 아니었던 지역은 대상 제외). 이 경과조치로는 중과가 배제되지 않습니다.
                   </p>
                 )}
                 {months !== null && (
@@ -250,7 +267,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                     계산된 양도 기한: {fmtYmd(preview.deadline)}까지
                   </p>
                 )}
-                {preview && (
+                {preview && !(months === null && notRegulatedAtTransfer) && (
                   <p
                     className={`text-caption font-medium ${preview.suspended ? "text-emerald-700" : "text-rose-700"}`}
                   >

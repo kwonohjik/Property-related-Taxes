@@ -50,6 +50,7 @@ export function HouseCountExemptionInputs({
   mergeContext,
   countExclusionEnabled = false,
   countExclusionApplies,
+  judgmentMenu = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -70,6 +71,8 @@ export function HouseCountExemptionInputs({
   countExclusionEnabled?: boolean;
   /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다(입주권 양도의 배지 한정). */
   countExclusionApplies?: (house: HouseEntry) => boolean;
+  /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다(명시 prop · 계산기는 넘기지 않는다). */
+  judgmentMenu?: boolean;
 }) {
   return (
     <>
@@ -83,6 +86,7 @@ export function HouseCountExemptionInputs({
         mergeContext={mergeContext}
         countExclusionEnabled={countExclusionEnabled}
         countExclusionApplies={countExclusionApplies}
+        judgmentMenu={judgmentMenu}
       />
 
       {/* 조특법 감면주택 주택수 제외 (§89①3호 의제) — 판정 메뉴는 명부 행에서 받는다 */}

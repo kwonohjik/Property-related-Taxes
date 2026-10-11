@@ -48,10 +48,13 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
   const sectionOrder = [
     true, // ① 등록·신분 (항상)
     isProviso, // 단서 분기
-    showsProvisoB, // 단서 나목 요건
     shows1985, // §97①2호 요건
+    showsProvisoB, // 단서 나목 요건
     true, // 임대 호수 요건 (항상)
   ];
+  // 🔴 이 배열의 순서는 아래 JSX가 **그리는 순서**(§97①2호 → 단서 나목)와 같아야 한다. 종전에는 두 항목이 뒤바뀌어 단서(나)+1985년 이전
+  //    신축 조합이 「① ② ④ ③ ⑤」로 떴다(S16-10) — 번호 부여가 호출부 인덱스에 묶여 있어 tsc가 못 잡는다. 순서 단언은
+  //    `__tests__/calc/rental-form-section-numbers-s16-9-s16-10.anchor.test.tsx`.
   /** i번째(0-base) 섹션의 번호 — 앞에서 실제로 렌더되는 것만 센다. */
   const num = (i: number) => CIRCLED[sectionOrder.slice(0, i).filter(Boolean).length];
 
@@ -138,7 +141,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {/* §97①2호 — 1985.12.31 이전 신축 공동주택 (D1-06) */}
       {parseInt(value.constructionYear || "0") > 0 &&
         parseInt(value.constructionYear) <= 1985 && (
-          <ToneCard tone="amber" sectionNum={num(3)} title="§97①2호 요건" bodyClassName="space-y-2" noDark>
+          <ToneCard tone="amber" sectionNum={num(2)} title="§97①2호 요건" bodyClassName="space-y-2" noDark>
             <p className="text-micro text-amber-800">
               조특법 §97①2호 — 「<strong>1985년 12월 31일 이전에 신축된 공동주택</strong>으로서
               <strong>1986년 1월 1일 현재 입주된 사실이 없는 주택</strong>」. 두 가지를 모두
@@ -186,7 +189,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* §97① 단서 나목 — 취득 당시 미입주 (D1-07) */}
       {isProviso && value.provisoCase === "b_purchase" && (
-        <ToneCard tone="rose" sectionNum={num(2)} title="단서 나목 요건" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="rose" sectionNum={num(3)} title="단서 나목 요건" bodyClassName="space-y-2" noDark>
           <p className="text-micro text-rose-800">
             조특법 §97① 단서 — 매입임대주택은 「<strong>취득 당시 입주된 사실이 없는 주택만
             해당한다</strong>」.

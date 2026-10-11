@@ -186,6 +186,8 @@ export function Step2({ form, onChange }: Props) {
         */
         countExclusionEnabled
         countExclusionApplies={(h) => judgmentCountExclusionRowApplies(form, h)}
+        // 명시 prop — 머리말·확인 토글·중과 전용 입력이 이 화면에서 달라진다(S14a-9·S14a-12·S10-9).
+        judgmentMenu
       />
 
       {!judgmentSaleIsHousing(form) &&

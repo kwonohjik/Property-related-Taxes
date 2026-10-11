@@ -318,6 +318,11 @@ export type OneHouseRequirementReview = {
  *
  * 저장소의 `undetermined` 3갈래 철학을 그대로 쓴다 — **억측 결론 금지**.
  * 「요건 미충족」과 「판정 안 함」은 다르다. 전자는 과세, 후자는 사용자에게 되묻는 것이다.
+ *
+ * 🔑 이 채널에는 **결론을 낸 뒤 확인을 요구하는 고지**도 실린다 — 「모름 = 혜택 불성립 + 확인 필요」 원칙으로 결론을 낸
+ *    항목(예: `…-non-resident-unverified`의 「거주자 기준으로 판정했습니다」, `89-2-three-year-exception-undeclared`의
+ *    「과세로 판정했습니다(확인 필요)」). `reason`은 어느 쪽인지 스스로 밝히고, 결과 화면 카드 머리 문구는 두 종류를
+ *    함께 포괄한다(S13-13).
  */
 export type OneHouseUndetermined = {
   id: string;
