@@ -9,7 +9,7 @@
  * 법령 근거: 소득세법 시행령 §155⑳ + §161
  */
 
-import { applyRate, calculateHoldingPeriod, truncateToWon, calculateProgressiveTax } from "./tax-utils";
+import { applyRate, calculateHoldingPeriod, truncateToWon } from "./tax-utils";
 import { TRANSFER_RENTAL_HOUSING, NBL } from "./legal-codes/transfer";
 import { TRANSFER } from "./legal-codes/transfer";
 import { calculateRentalHousingException } from "./transfer-tax/rental-housing-exception";
@@ -22,7 +22,6 @@ import {
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import { buildEligibilityContext, buildPrhpTable2ReadingNotice, buildRentalPeriodPendingNotice } from "./transfer-tax-rental-housing-judge";
-import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type {
   TransferTaxInput,
   CalculationStep,
@@ -30,24 +29,18 @@ import type {
 } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import { calcTax, computeBracketBreakdown, calcReductions } from "./transfer-tax-rate-calc";
+import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
 import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
 import { getReductionLegalBasis } from "./transfer-tax-helpers";
-import type { RateGroup } from "./types/transfer-aggregate.types";
-import {
-  resolveAppurtenantLandExcess,
-  resolveLandStatutoryAcquisitionDate,
-  buildLandRateInput,
-} from "./transfer-tax-appurtenant-land";
-import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
+import { splitAppurtenantExcess, resolveClause5Tax } from "./transfer-tax-rental-housing-nbl-split";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -105,179 +98,6 @@ export interface RentalHousingStepArgs {
   new994Detail?: TransferTaxResult["new994Detail"];
   unsold989Detail?: TransferTaxResult["unsold989Detail"];
   houseCountExclusionDetails?: TransferTaxResult["houseCountExclusionDetails"];
-}
-
-/**
- * 주택 부수토지 **배율 초과분**(「소득세법」 제104조의3 제1항 제5호 비사업용 토지) 분리 결과.
- *
- * §155⑳은 거주주택을 "국내에 1개의 주택을 소유하고 있는 것으로 보아 **제154조제1항을
- * 적용**"할 뿐이다 — 비과세 범위는 §154①과 그 위임인 §154⑦(정착면적 × 지역별 배율)이 정하므로,
- * **배율 초과분은 특례의 의제 대상 밖**이다(§155①·§155②와 같은 문형이며 일반 경로
- * `applyHousingLandExclusions`가 이미 그렇게 구현돼 있다).
- */
-interface AppurtenantExcessSplit {
-  /** 배율 초과분 양도차익 — 12억 안분 대상이 아니라 전액 과세 */
-  gain: number;
-  /** 표1 장기보유특별공제액(「소득세법」 §95② 표1 — 보유연수 × 2%, 최대 30%) */
-  longTermDeduction: number;
-  longTermRate: number;
-  /** 배율 초과분 양도소득금액 = gain − longTermDeduction */
-  income: number;
-  holdingYears: number;
-  /** 한도 면적(정착면적 × 배율)·초과 면적·적용 배율 — 결과 카드 표시용 */
-  limitArea: number;
-  excessArea: number;
-  multiplier: number;
-  /** §104①8호(누진 + 10%p)를 적용할 세율 판정 입력 */
-  rateInput: TransferTaxInput;
-  step: CalculationStep;
-}
-
-/**
- * 배율 초과분을 분리한다. 대상이 아니거나 불변식이 깨지면 `null`(종전 경로 유지 — 안전측).
- *
- * 파트 세율 입력은 split 정본(`computeSplitPartTax`의 `non_business_land` seed)과 **같은 형태**다:
- * `propertyType`을 토지로 두어 `calcTax`의 주택 단기세율(70%/60%) 분기에 걸리지 않게 하고,
- * §104② 기산일은 주택 부수토지의 `max` 규칙이 아니라 **토지 본래 취득일**을 쓴다.
- */
-function splitAppurtenantExcess(
-  input: TransferTaxInput,
-  splitDetail: SplitGainResult | undefined,
-  transferGain: number,
-): AppurtenantExcessSplit | null {
-  if (!splitDetail) return null;
-  const excess = resolveAppurtenantLandExcess(input);
-  if (!excess) return null;
-  const basisDate = resolveLandStatutoryAcquisitionDate(input);
-  if (!basisDate) return null;
-
-  const landGain = Math.max(0, splitDetail.land.gain);
-  const gain = Math.floor(landGain * excess.nonBizRatio);
-  // 불변식 — 초과분이 자산 양도차익 전부를 삼키면 「주택분」이 사라진다. 조용히 clamp하지 않고
-  // 분리를 포기해 종전 경로로 후퇴한다(`computeSplitPartTax`의 게이트와 같은 규약).
-  if (gain <= 0 || gain >= transferGain) return null;
-
-  const holdingYears = splitDetail.land.holdingYears;
-  const longTermRate = calcTable1Rate(holdingYears);
-  const longTermDeduction = applyRate(gain, longTermRate);
-
-  return {
-    gain,
-    longTermRate,
-    longTermDeduction,
-    income: gain - longTermDeduction,
-    holdingYears,
-    limitArea: excess.limitArea,
-    excessArea: excess.excessArea,
-    multiplier: excess.multiplier,
-    rateInput: {
-      ...buildLandRateInput(input, basisDate),
-      propertyType: "land",
-      isNonBusinessLand: true,
-      // 자산 단위 면적안분 비율은 이 파트에 의미가 없다 — 이미 초과분만 떼어냈다.
-      nonBusinessLandAreaRatio: undefined,
-    },
-    step: {
-      label: "부수토지 배율 초과분 분리 (비사업용 토지)",
-      formula:
-        `배율 초과분 ${excess.excessArea.toFixed(2)}㎡(한도 정착면적 × ${excess.multiplier}배 = ` +
-        `${excess.limitArea.toFixed(2)}㎡)는 「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ` +
-        `§155⑳ 특례(§154① 적용 의제)의 대상이 아니므로 양도차익 ${gain.toLocaleString()}을 ` +
-        `분리해 전액 과세 (장기보유특별공제는 §95② 표1 ${Math.round(longTermRate * 100)}% ` +
-        `${longTermDeduction.toLocaleString()})`,
-      amount: gain - longTermDeduction,
-      legalBasis: NBL.MAIN,
-    },
-  };
-}
-
-/**
- * 두 파트는 **같은 자산·같은 납세자**라 세율군 우선순위(다건 엔진이 자산 간 순서를 정하는 장치)가
- * 의미 없다 — split 정본(`PART_RATE_GROUP`)과 같이 한 군으로 두고 한계세율로만 결정하게 한다.
- */
-const PRHP_PART_RATE_GROUP: RateGroup = "progressive";
-
-/**
- * §104⑤ 비교과세 — 「주택분」과 「배율 초과 비사업용 토지분」 2파트.
- *
- * [법령] 「소득세법」 제104조 제5항 — MAX(**1호** 과세표준 합계액에 §55① 세율을 적용한 산출세액,
- *   **2호** 자산별 산출세액 합계). 본문 **후단**이 "한 필지의 토지가 제104조의3에 따른 비사업용
- *   토지와 그 외의 토지로 구분되는 경우에는 **각각을 별개의 자산으로 보아**" 계산하도록 정한다.
- *
- * **신규 세율 로직이 0이다** — 각 파트를 `calcTax`에 그대로 위임하므로 §104①8호(+10%p)·
- * §104① 후단·§104⑦은 정본이 수행한다. `computePartialNblTax`(한 필지 중 일부만 비사업용)와
- * 같은 구조다.
- */
-function resolveClause5Tax(args: {
-  housingIncome: number;
-  nbl: AppurtenantExcessSplit;
-  basicDeduction: number;
-  /** 자산 단위 과세표준 = (주택분 + 비사토분) − 기본공제 */
-  taxBase: number;
-  input: TransferTaxInput;
-  parsedRates: ParsedRates;
-  multiHouseSurchargeResult?: MultiHouseSurchargeResult;
-}): ReturnType<typeof calcTax> {
-  const { housingIncome, nbl, basicDeduction, taxBase, input, parsedRates, multiHouseSurchargeResult } = args;
-  // 배율 초과분을 이미 떼어냈으므로 남은 주택분은 §104의3①5호가 규정한 부분이 아니다 → 중과 제외
-  // (split 정본 `computeSplitPartTax`의 `land` seed와 같은 처리).
-  const housingRateInput: TransferTaxInput = {
-    ...input,
-    isNonBusinessLand: false,
-    nonBusinessLandAreaRatio: undefined,
-  };
-
-  // 기본공제는 세액이 가장 크게 줄어드는 파트에 귀속(§103② · "MAX_BENEFIT") — split 정본과 동일.
-  // 배분 이득은 한계세율이 결정하고 그 값은 `calcTax`의 `appliedRate`가 담고 있다.
-  const preHousing = calcTax(housingIncome, parsedRates, housingRateInput, multiHouseSurchargeResult);
-  const preNbl = calcTax(nbl.income, parsedRates, nbl.rateInput, multiHouseSurchargeResult);
-  const allocation = allocateBasicDeductionAcrossParts(
-    [
-      { idx: 0, income: housingIncome, rate: preHousing.appliedRate },
-      { idx: 1, income: nbl.income, rate: preNbl.appliedRate },
-    ],
-    basicDeduction,
-  );
-  const allocated = (idx: number) => allocation.find((a) => a.idx === idx)?.amount ?? 0;
-  const housingBase = Math.max(0, housingIncome - allocated(0));
-  // 마지막 파트가 잔액을 흡수해 `Σ 파트 과세표준 = 자산 과세표준` 불변식을 지킨다
-  // (memory `feedback_floor_residual_absorption`).
-  const nblBase = Math.max(0, taxBase - housingBase);
-
-  const housingPart = calcTax(housingBase, parsedRates, housingRateInput, multiHouseSurchargeResult);
-  const nblPart = calcTax(nblBase, parsedRates, nbl.rateInput, multiHouseSurchargeResult);
-  const clause2 = housingPart.calculatedTax + nblPart.calculatedTax;
-  // 1호 — 과세표준 **합계액**에 §55① 세율만. 가산 항이 없다.
-  const clause1 = calculateProgressiveTax(taxBase, parsedRates.brackets);
-
-  if (clause1 >= clause2) {
-    const { baseRate, deduction } = computeBracketBreakdown(taxBase, parsedRates.brackets);
-    return {
-      calculatedTax: clause1,
-      appliedRate: baseRate,
-      progressiveDeduction: deduction,
-      surchargeSuspended: false,
-      shortTermNote:
-        `배율 초과 부수토지 분리(소득세법 §104⑤ 본문 후단): 합산 누진세액 ` +
-        `${clause1.toLocaleString()}이 별개 자산별 합계 ${clause2.toLocaleString()}보다 크다`,
-    };
-  }
-  return {
-    calculatedTax: clause2,
-    // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가)
-    appliedRate: Math.max(housingPart.appliedRate, nblPart.appliedRate),
-    progressiveDeduction: 0,
-    surchargeSuspended: false,
-    // 비사업용 토지 중과 사실을 자산 단위로 끌어올린다 — 결과 카드의 배지·법령근거가 사라지지 않도록.
-    surchargeType: nblPart.surchargeType,
-    surchargeRate: nblPart.surchargeRate,
-    ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
-    shortTermNote:
-      `파트별 세율(소득세법 §104⑤2호·본문 후단): 주택분 ` +
-      `${Math.round(housingPart.appliedRate * 100)}% ${housingPart.calculatedTax.toLocaleString()} + ` +
-      `배율 초과 토지(비사업용) ${Math.round(nblPart.appliedRate * 100)}% ` +
-      `${nblPart.calculatedTax.toLocaleString()} (합산 누진세액 ${clause1.toLocaleString()}과 비교한 큰 세액)`,
-  };
 }
 
 /**
