@@ -261,9 +261,10 @@ describe("X2-1 조정대상지역 단축 규정 인용 — 양도일 연혁", ()
     expect(reason).not.toContain("①2호");
     expect(text).toContain("조정대상지역 처분기한 (§155①1호)");
     expect(text).not.toContain("§155①2호)");
-    // #32 — 고지가 가리키는 칸은 이 공용 카드다(판정 메뉴·계산기 Step4·부담부증여가 같은 위젯) — 특정 화면 이름을 대지 않는다.
+    // #32 — 고지가 가리키는 칸은 이 공용 카드다. 그 카드는 판정 메뉴(TemporaryTwoHouseSection full 모드)와 부담부증여에만
+    //   마운트되고 양도세 계산기 Step4(mode="calc")에는 없다 — 그래서 계산기 경로는 판정 메뉴를 함께 안내해야 막다른 안내가 아니다.
     expect(reason).toContain("「조정대상지역 처분기한」 칸");
-    expect(reason).not.toContain("판정 메뉴");
+    expect(reason).toContain("양도세 계산기에는 이 칸이 없어 1세대1주택 판정 메뉴에서 입력해 다시 넘기면");
   });
 
   it("짝 — 2022-06-01 양도는 ①2호가 맞다(유지 — 신규 2020-03-02: 2년 도과·3년 이내)", async () => {
