@@ -261,6 +261,9 @@ describe("X2-1 조정대상지역 단축 규정 인용 — 양도일 연혁", ()
     expect(reason).not.toContain("①2호");
     expect(text).toContain("조정대상지역 처분기한 (§155①1호)");
     expect(text).not.toContain("§155①2호)");
+    // #32 — 고지가 가리키는 칸은 이 공용 카드다(판정 메뉴·계산기 Step4·부담부증여가 같은 위젯) — 특정 화면 이름을 대지 않는다.
+    expect(reason).toContain("「조정대상지역 처분기한」 칸");
+    expect(reason).not.toContain("판정 메뉴");
   });
 
   it("짝 — 2022-06-01 양도는 ①2호가 맞다(유지 — 신규 2020-03-02: 2년 도과·3년 이내)", async () => {
