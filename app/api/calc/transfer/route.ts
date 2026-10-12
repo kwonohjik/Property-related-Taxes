@@ -539,6 +539,7 @@ export async function POST(request: NextRequest) {
         reductions: engineInput.reductions,
         // §155의3 상생임대 (P5-c) — ⚠️ `engineInput`(Date 변환본). raw `data.*`는 계약일이 string이다.
         winWinRentalHouse: engineInput.winWinRentalHouse,
+        giftHouseholdBasis: engineInput.giftHouseholdBasis, // ⑭ 결정 #38 후속 — 증여 세대 사실(Date 변환본) · 겸용 §154① 판정이 단건과 같은 leaf로 읽는다
         filingPenaltyDetails: engineInput.filingPenaltyDetails,
         delayedPaymentDetails: engineInput.delayedPaymentDetails,
         assetContractDate: engineInput.assetContractDate,
