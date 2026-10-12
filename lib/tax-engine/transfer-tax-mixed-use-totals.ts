@@ -300,6 +300,8 @@ export interface MixedUsePostTaxInput {
   selfFarmingRules?: ParsedRates["selfFarmingRules"];
   transferDate: Date;
   acquisitionDate?: Date;
+  /** §77·§77의3 취득일 — 상속받은 토지면 피상속인 취득일(조특법 §77⑨·§77의3③). 미제공이면 `acquisitionDate`. */
+  expropriationAcquisitionDate?: Date;
   /** §97 시리즈 시한 판정 기준일 — 미전달 시 `period-check`가 취득일로 후퇴한다 (CB-05) */
   assetContractDate?: Date;
   /** 조특법 §133 5년 누적 한도 판정용 과거 이력 */
@@ -431,6 +433,9 @@ function computeMixedUsePostTax(
           undefined,
           // 15번 — 시한 기준일. 이것 하나가 실제로 세액을 가른다 (CB-05).
           input.assetContractDate,
+          undefined, // 미등기는 위에서 감면 목록을 비운다
+          undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
+          input.expropriationAcquisitionDate,
         )
       : { reductionAmount: 0, reductionType: undefined, reductionTypeApplied: undefined };
 

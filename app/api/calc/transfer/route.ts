@@ -542,6 +542,8 @@ export async function POST(request: NextRequest) {
         filingPenaltyDetails: engineInput.filingPenaltyDetails,
         delayedPaymentDetails: engineInput.delayedPaymentDetails,
         assetContractDate: engineInput.assetContractDate,
+        decedentAcquisitionDate:
+          engineInput.acquisitionCause === "inheritance" ? engineInput.decedentAcquisitionDate : undefined,
         wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
         regionCode: data.regionCode,
         regionInDesignatedDistrict: data.regionInDesignatedDistrict,

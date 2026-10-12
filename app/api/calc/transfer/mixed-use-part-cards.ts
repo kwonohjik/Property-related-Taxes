@@ -358,6 +358,8 @@ export function buildMixedUseCompanionItems(
     filingPenaltyDetails: undefined,
     delayedPaymentDetails: undefined,
     assetContractDate: companionEngine.assetContractDate,
+    decedentAcquisitionDate:
+      companionEngine.acquisitionCause === "inheritance" ? companionEngine.decedentAcquisitionDate : undefined,
     // ── 폼-전역(세대 단위) — primary와 같은 값을 상속한다 ──
     wasRegulatedAtAcquisition: ctx.primaryEngineInput.wasRegulatedAtAcquisition,
     regionCode: g.regionCode,

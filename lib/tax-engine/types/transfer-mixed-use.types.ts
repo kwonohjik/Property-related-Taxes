@@ -133,6 +133,13 @@ export interface MixedUseAssetInput {
   landAcquisitionDate: Date;
   /** 건물 취득일·신축일. 사례14 = 1997-09-12 */
   buildingAcquisitionDate: Date;
+  /**
+   * 상속받은 겸용주택의 피상속인 취득일 — 상속이 아니면 undefined.
+   * 「소득세법」 §104②1호(단기보유 세율 보유기간)와 「조세특례제한법」 §77⑨·§77의3③(감면 취득 시기 요건)이 이 날을 취득일로 본다.
+   * 장기보유특별공제 보유기간은 상속개시일 기산 그대로다(「소득세법」 §95④).
+   * 상속개시일(`buildingAcquisitionDate`)과 같은 날 취득한 파트에만 쓴다 — 토지를 다른 날 취득했으면 그 원인을 알 수 없다.
+   */
+  decedentAcquisitionDate?: Date;
 
   /** 양도시 기준시가 */
   transferStandardPrice: MixedUseStandardPrice;
