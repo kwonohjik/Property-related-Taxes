@@ -5,6 +5,8 @@
  *
  * 재현(종전): 판정 메뉴에서 넘어온 「배우자 쪽」 두 행(3주택, 혼인 5년 안, 조정 양도)은 칩이 꺼진 채 도착해 고지 없이 3주택 중과(433,686,000).
  * 응답 「예」면 차감되어 197,703,000.
+ *
+ * 게이트(후속): 조정대상지역을 저장된 토글만으로 읽어, 주소=조정·토글 꺼짐이면 엔진은 중과하는데 질문이 숨겨졌다(SQ-11~14).
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -24,13 +26,17 @@ afterEach(cleanup);
 const ROW = (id: string, over: Partial<HouseEntry> = {}): HouseEntry =>
   makeHouse(id, { acquisitionDate: "2018-01-01", mergeOrigin: "counterpart_side", region: "capital", ...over });
 
-/** 3주택(양도 + 배우자 쪽 2) · 혼인 2024-03-01 · 양도 2026-06-15(한시배제 종료 후) · 조정대상지역. */
-const form = (rows: HouseEntry[], over: Record<string, unknown> = {}): TransferFormData =>
+/** 3주택(양도 + 배우자 쪽 2) · 혼인 2024-03-01 · 양도 2026-06-15(한시배제 종료 후) · 조정대상지역(주소 서울 강남구 + 토글). */
+const form = (rows: HouseEntry[], over: Record<string, unknown> = {}, asset: Record<string, unknown> = {}): TransferFormData =>
   calcForm({
     acq: "2019-01-01",
     transfer: "2026-06-15",
+    asset,
     top: { marriageDate: "2024-03-01", householdHousingCount: "3", isRegulatedArea: true, houses: rows, ...over } as never,
   });
+
+/** 양도 주택 주소가 양도일(2026-06-15) 현재 조정대상지역이 아닌 곳(부산 중구) — 엔진은 주소로 판정해 중과하지 않는다. */
+const NON_REGULATED_ADDRESS = { regionCode: "2611010100" };
 
 /** 계산기 결과의 다주택 중과 상세 경고(`multiHouseSurchargeDetail.warnings`) — 확인 필요 고지가 실리는 자리. */
 const surchargeWarnings = (r: Awaited<ReturnType<typeof runCalc>>): string[] =>
@@ -47,7 +53,7 @@ describe("#47 ⑤ 노출 게이트 / ⑧ 응답 요구", () => {
     expect(spouseHoldingQuestionApplies(form(rows))).toBe(true);
     expect(spouseHoldingQuestionApplies(form(rows, { transferDate: "2029-03-05" }))).toBe(false); // 혼인 5년 경과(2029-03-01 삼일절 → 민법 §161로 3-02까지, 3-05 월요일은 경과)
     expect(spouseHoldingQuestionApplies(form(rows, { transferDate: "2029-03-01" }))).toBe(true);
-    expect(spouseHoldingQuestionApplies(form(rows, { isRegulatedArea: false }))).toBe(false);
+    expect(spouseHoldingQuestionApplies(form(rows, {}, NON_REGULATED_ADDRESS))).toBe(false); // 비조정 주소
     expect(spouseHoldingQuestionApplies(form([ROW("b")]))).toBe(false); // 2주택
     expect(spouseHoldingQuestionApplies(form([ROW("b"), ROW("c", { acquisitionDate: "2025-01-01" })]))).toBe(false); // 혼인 뒤 취득
     expect(spouseHoldingQuestionApplies(form(rows, { marriageDate: "" }))).toBe(false);
@@ -62,7 +68,7 @@ describe("#47 ⑤ 노출 게이트 / ⑧ 응답 요구", () => {
     // 옛 저장분의 꺼진 칩(false)은 응답이 아니다 → 요구 / 켜진 칩(true)은 예
     expect(spouseIssues(form([ROW("b", { isSpouseOwned: false }), ROW("c", { isSpouseOwned: true })]))).toHaveLength(1);
     expect(spouseIssues(form([ROW("b", { mergeOrigin: "seller_side" }), ROW("c", { mergeOrigin: "seller_side" })]))).toHaveLength(0);
-    expect(spouseIssues(form([ROW("b"), ROW("c")], { isRegulatedArea: false }))).toHaveLength(0);
+    expect(spouseIssues(form([ROW("b"), ROW("c")], {}, NON_REGULATED_ADDRESS))).toHaveLength(0);
   });
 
   it("[SQ-3] 이중 합가 — 동거봉양이 먼저면 「혼인한 배우자 쪽」(second_merge_side) 행만 필수", () => {
@@ -72,6 +78,52 @@ describe("#47 ⑤ 노출 게이트 / ⑧ 응답 요구", () => {
     expect(spouseHoldingRowRole(f.houses[0], f)).toBe("spouse_side");
     expect(spouseHoldingRowRole(f.houses[1], f)).toBe("other");
     expect(spouseIssues(f)).toHaveLength(1);
+  });
+});
+
+describe("#47 ⑤⑧ 게이트의 조정대상지역 = ④와 같은 실효값 (주소 우선, 없으면 토글)", () => {
+  const rows = () => [ROW("b"), ROW("c")];
+
+  it("[SQ-11] 주소=조정(강남)·토글 꺼짐/미설정 → 엔진은 중과(433,686,000)하므로 질문이 열리고 ⑧이 배우자 쪽 두 행을 요구한다", async () => {
+    for (const isRegulatedArea of [false, undefined]) {
+      const f = form(rows(), { isRegulatedArea });
+      expect(spouseHoldingQuestionApplies(f)).toBe(true);
+      expect(spouseIssues(f)).toHaveLength(2);
+    }
+    // 엔진이 실제로 주소로 중과한다 — 숨겨진 질문이면 「예」로 답할 길이 없다
+    const r = await runCalc(form(rows(), { isRegulatedArea: false }));
+    expect(r.totalTax).toBe(433_686_000);
+    const yes = await runCalc(
+      form([ROW("b", { spouseHeldAtTransfer: "yes" }), ROW("c", { spouseHeldAtTransfer: "yes" })], { isRegulatedArea: false }),
+    );
+    expect(yes.totalTax).toBe(197_703_000);
+  }, 120_000);
+
+  it("[SQ-12] 주소=비조정(부산 중구)·토글 켜짐 → 엔진은 중과하지 않으므로(197,703,000) 질문을 닫고 ⑧도 요구하지 않는다", async () => {
+    const f = form(rows(), { isRegulatedArea: true }, NON_REGULATED_ADDRESS);
+    expect(spouseHoldingQuestionApplies(f)).toBe(false);
+    expect(spouseIssues(f)).toHaveLength(0);
+    expect((await runCalc(f)).totalTax).toBe(197_703_000);
+  }, 60_000);
+
+  it("[SQ-13] 주소가 없으면 저장된 토글을 읽는다 (엔진과 같은 폴백)", () => {
+    expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: true }, { regionCode: "" }))).toBe(true);
+    expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: false }, { regionCode: "" }))).toBe(false);
+  });
+
+  it("[SQ-15] 자산 주소가 없으면 폼 전역 주소(form.regionCode=강남)를 읽는다 — ④ 폴백(primary.regionCode || form.regionCode)과 짝", async () => {
+    const f = form(rows(), { isRegulatedArea: false, regionCode: "1168010100" }, { regionCode: "" });
+    expect(spouseHoldingQuestionApplies(f)).toBe(true);
+    expect(spouseIssues(f)).toHaveLength(2);
+    // 엔진도 폼 전역 주소로 중과한다
+    expect((await runCalc(f)).totalTax).toBe(433_686_000);
+  }, 60_000);
+
+  it("[SQ-14] ⑤ 편집 창 — 주소=조정·토글 꺼짐이면 배우자 쪽 행에 질문이 보인다", () => {
+    const f = form(rows(), { isRegulatedArea: false });
+    render(<HousesListSection form={f} onChange={() => {}} mergeContext={{ kind: "marriage", mergeDate: "2024-03-01" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
+    expect(screen.getByTestId("spouse-holding-spouse_side")).toBeTruthy();
   });
 });
 
@@ -115,6 +167,8 @@ describe("#47 ⑤ 편집 창", () => {
     expect(screen.getByTestId("spouse-holding-spouse_side")).toBeTruthy();
     expect(screen.getByTestId("spouse-holding-unknown-b")).toBeTruthy();
     expect(screen.queryByText("배우자 단독 보유 주택")).toBeNull();
+    // 주택 행의 근거는 §167의3⑨
+    expect(screen.getByTestId("spouse-holding-spouse_side").textContent).toContain("(소득세법 시행령 §167의3⑨)");
     cleanup();
     render(<HousesListSection form={f} onChange={() => {}} mergeContext={{ kind: "marriage", mergeDate: "2024-03-01" }} />);
     fireEvent.click(screen.getByRole("button", { name: "주택 2 편집" }));
@@ -141,12 +195,13 @@ describe("#47 ⑤ 편집 창", () => {
 
 describe("#47 ⑤ 분양권·입주권 행 — 칩이 아니라 조건부 질문 (E2E 대체 근거)", () => {
   const right = { id: "r1", type: "presale_right" as const, acquisitionDate: "2022-01-01", region: "capital" as const };
-  const withRight = (over: Record<string, unknown> = {}) => form([ROW("b")], { presaleRights: [right], ...over });
+  const withRight = (over: Record<string, unknown> = {}, asset: Record<string, unknown> = {}) =>
+    form([ROW("b")], { presaleRights: [right], ...over }, asset);
   const renderRights = (f: TransferFormData) =>
     render(<HousesListSection form={f} onChange={() => {}} mergeContext={{ kind: "marriage", mergeDate: "2024-03-01" }} />);
 
   it("[SQ-9] 혼인일만 입력된 폼(조건 미충족)에서는 질문도 옛 칩도 없다", () => {
-    renderRights(withRight({ isRegulatedArea: false }));
+    renderRights(withRight({}, NON_REGULATED_ADDRESS));
     expect(screen.queryByTestId("spouse-holding-right")).toBeNull();
     expect(screen.queryByRole("switch", { name: /배우자 단독 보유/ })).toBeNull();
   });
@@ -157,5 +212,9 @@ describe("#47 ⑤ 분양권·입주권 행 — 칩이 아니라 조건부 질문
     expect(screen.getByTestId("spouse-holding-yes-r1")).toBeTruthy();
     expect(screen.getByTestId("spouse-holding-unknown-r1")).toBeTruthy();
     expect(screen.queryByRole("switch", { name: /배우자 단독 보유/ })).toBeNull();
+    // 분양권·입주권 행의 근거는 §167의4⑤ — §167의3⑨(주택 수)가 아니다
+    const rightCard = screen.getByTestId("spouse-holding-right").textContent ?? "";
+    expect(rightCard).toContain("(소득세법 시행령 §167의4⑤)");
+    expect(rightCard).not.toContain("§167의3⑨");
   });
 });

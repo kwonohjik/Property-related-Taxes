@@ -12,8 +12,7 @@ import { resolveInheritedHouseExclusionFromInput, buildInheritedExclusionSteps }
 import { resolveHouseCountExclusion, buildHouseCountExclusionStep } from "./transfer-reductions/unsold-98-9";
 import type { New994MergeOrderContext } from "./transfer-reductions/new-99-4";
 import { resolveSpecialHouseExclusions } from "./transfer-reductions/unsold-hybrid-p5";
-import { resolvePopulationDecline71_2, POP_DECLINE_71_2_ARTICLE } from "./transfer-reductions/population-decline-71-2";
-import { resolveInheritedSellingHouseId } from "./transfer-inheritance-exclusion";
+import { resolvePopulationDecline71_2FromInput, POP_DECLINE_71_2_ARTICLE } from "./transfer-reductions/population-decline-71-2";
 import type { SpecialHouseExclusionResolution } from "./transfer-reductions/unsold-hybrid-p5";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
@@ -84,26 +83,16 @@ export function resolveExemptionHouseCountExclusions(
    * 조특법 §71의2① 인구감소지역주택 — 선언이 아니라 **명부에서 도출**한다(결정 #42). 같은 행을 다른 제외가 이미 뺐으면 한 번만 뺀다.
    * 결과 항목은 보유 감면주택 항목 뒤에 이어 붙여(`entries`) 주택 수 제외 개수·행 id·중과 15호 확인 조문·명세 표시가 한 갈래로 읽게 한다.
    */
-  const sellingHouseId = resolveInheritedSellingHouseId(effectiveInput);
-  const popDecline =
-    effectiveInput.isOneHousehold && sellingHouseId && (effectiveInput.houses?.length ?? 0) > 0
-      ? resolvePopulationDecline71_2({
-          houses: effectiveInput.houses!,
-          sellingHouseId,
-          transferDate: effectiveInput.transferDate,
-          presaleRights: effectiveInput.presaleRights ?? [],
-          alreadyExcludedIds: new Set(
-            collectKnownHouseExclusionIds({
-              hceApplied,
-              specialEntries: specialDeclared.entries,
-              inheritedExcludedHouses: inheritedExclusion.excludedHouses,
-            }),
-          ),
-          otherExcludedCount: hceApplied.length + specialDeclared.excludedCount + inheritedExclusion.excludedCount,
-          householdHousingCount: effectiveInput.householdHousingCount,
-          sellingIsHousing: effectiveInput.propertyType !== "right_to_move_in",
-        })
-      : { entries: [], excludedCount: 0 };
+  const popDecline = resolvePopulationDecline71_2FromInput(effectiveInput, {
+    ids: new Set(
+      collectKnownHouseExclusionIds({
+        hceApplied,
+        specialEntries: specialDeclared.entries,
+        inheritedExcludedHouses: inheritedExclusion.excludedHouses,
+      }),
+    ),
+    count: hceApplied.length + specialDeclared.excludedCount + inheritedExclusion.excludedCount,
+  });
   const specialHouseExclusionDetail = {
     entries: [...specialDeclared.entries, ...popDecline.entries],
     excludedCount: specialDeclared.excludedCount + popDecline.excludedCount,

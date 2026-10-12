@@ -8,7 +8,7 @@
  * |---|---|---|
  * | L-1 | 일반 · 모름 · 경위 미수집 | 일반 통과 / 모름 불성립 + 확인 필요 / 미수집 통과 + 확인 필요 |
  * | L-2 | 분양권 | 2020.12.31. 이전 취득 통과 · 순차 불성립 · 같은 날 확인 필요 · 보유 중 분양권 갈래 현행 + 확인 필요 · 양론 B면 불성립 |
- * | L-3 | 승계 입주권·상가토지 원조합원 | 순차 불성립 · 3년 이내 통과(경계 ±1일) · 3년 경과 미선언 확인 필요 / 선언 통과 · 2006 전 인가분 통과 |
+ * | L-3 | 승계 입주권·상가토지 원조합원 | 순차 불성립 · 3년 이내 통과(경계 ±1일) · 3년 경과 미선언 확인 필요 / 선언 통과 · 2006 전 인가분 통과 · 2006 전 승계는 인가일 공란도 통과(⑤ 3년 칸 동일 술어) · ⑧ 인가일 ≤ 승계취득일 |
  * | L-4 | 원조합원(기존주택)·자가 재건축 | 기존주택 취득일 필수 · 있으면 통과(날짜는 클라이언트가 바꿔 싣는다) |
  * | R-* | 판정 메뉴 route | 기존주택 취득일이 선후를 가른다 · 미답 ⑧ · 양론 · 15호 추종 |
  * | C-* | 계산기 route · ④ | 명부 행의 경위가 body에 실린다 · 직접 선언은 not_collected + 확인 필요 · 계약일 칸을 행이 덮는다 |
@@ -24,6 +24,7 @@ import {
 import { ARTICLE_89_2_REDEV_RIGHT_START_DATE } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
 import { newHouseOriginIssue, newHouseOriginQuestionVisible } from "@/lib/calc/new-house-origin-scope";
+import { rightThreeYearExceptionRightKinds } from "@/lib/calc/right-three-year-exception-scope";
 import { effectiveNewHouseAcquisitionDate, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { observeCase, type RulingCase } from "../../calc/one-house-rulings/harness";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -183,6 +184,35 @@ describe("L-3 승계 입주권 · 상가토지 원조합원", () => {
     expect(post.blocked).toBe(true);
   });
 
+  it("2006.1.1. 전 승계 입주권 — 인가일을 비워도 §89② 대상이 아니다(입주권은 인가 뒤에만 생긴다 · 부칙 §12)", () => {
+    const base = { prev: "2004-01-01", next: "2008-09-30", transferDate: D("2012-06-01") };
+    // 승계 2005.6.1. — 인가일 공란도 인가일(2004.12.1.)을 넣은 것과 같은 결론(종전: 공란이면 3년 경과 미선언으로 불성립)
+    expect(succ("2005-06-01", base)).toMatchObject({ blocked: false, reasons: [], unconfirmed: [], confirmNotes: [] });
+    expect(succ("2005-06-01", base, { rightApprovalDate: D("2004-12-01") }).blocked).toBe(false);
+    // 승계 2003.6.1.이 종전주택 2004.1.1.보다 앞서도 §89② 입주권이 아니라 순차 사유로 막지 않는다
+    const seq = succ("2003-06-01", base);
+    expect(seq.blocked).toBe(false);
+    expect(seq.reasons).toEqual([]);
+    // 경계 — 승계 2005.12.31.은 대상 아님 / 2006.1.1.은 부칙 ②로 대상(3년 경과 미선언 → 확인 필요)
+    expect(succ("2005-12-31", base).blocked).toBe(false);
+    const post = succ("2006-01-01", base);
+    expect(post.blocked).toBe(true);
+    expect(post.unconfirmed).toHaveLength(1);
+  });
+
+  it("⑤ 3년 경과 예외 칸 — 2006.1.1. 전 승계 입주권 행은 인가일 공란이어도 묻지 않는다(엔진과 같은 술어)", () => {
+    const def = createDefaultTransferFormData();
+    const form = (R: string) =>
+      ({
+        ...def,
+        transferDate: "2012-06-01",
+        assets: [{ ...def.assets[0], assetKind: "housing" }],
+        houses: [{ id: "b", acquisitionDate: "2008-09-30", acquisitionOrigin: "successor_right", rightAcquisitionDate: R }],
+      }) as never;
+    expect(rightThreeYearExceptionRightKinds(form("2005-06-01"))).toEqual([]);
+    expect(rightThreeYearExceptionRightKinds(form("2006-01-01"))).toEqual(["redevelopment_right"]);
+  });
+
   it("상가·토지 원조합원 — 권리 취득일이 곧 인가일이다(2006 전 인가는 대상 아님)", () => {
     const o = (R: string) => judge({ kind: "original_member_non_house", rightAcquisitionDate: D(R) }, { prev: "2000-01-01", next: "2008-09-30", transferDate: D("2009-06-15") });
     expect(o("2005-12-31").blocked).toBe(false);
@@ -277,6 +307,15 @@ describe("⑧ · ⑤ 범위", () => {
     expect(newHouseOriginIssue(mk({}), "b")?.field).toBe("rightAcquisitionDate");
     expect(newHouseOriginIssue(mk({ rightAcquisitionDate: "2025-09-16" }), "b")?.message).toContain("늦을 수 없");
     expect(newHouseOriginIssue(mk({ rightAcquisitionDate: "2025-09-15" }), "b")).toBeNull();
+  });
+  it("승계 입주권의 관리처분계획 인가일은 승계취득일보다 늦을 수 없다(같은 날·공란은 허용)", () => {
+    const mk = (over: object) =>
+      ({ id: "b", acquisitionDate: "2008-09-30", acquisitionOrigin: "successor_right", rightAcquisitionDate: "2005-06-01", ...over }) as never;
+    const late = newHouseOriginIssue(mk({ rightApprovalDate: "2005-06-02" }), "b");
+    expect(late?.field).toBe("rightApprovalDate");
+    expect(late?.message).toContain("승계취득일보다 늦을 수 없");
+    expect(newHouseOriginIssue(mk({ rightApprovalDate: "2005-06-01" }), "b")).toBeNull();
+    expect(newHouseOriginIssue(mk({}), "b")).toBeNull();
   });
   it("질문은 양도 주택보다 나중에 취득한 행에만 연다 (같은 날은 후보가 아니다)", () => {
     expect(newHouseOriginQuestionVisible("housing", "2015-03-15", { acquisitionDate: "2025-09-15" })).toBe(true);
@@ -378,6 +417,26 @@ describe("R 판정 메뉴 route", () => {
       ),
     );
     expect(o.validationErrors.filter((e) => e.includes("newHouseContractDate"))).toEqual([]);
+  });
+
+  it("R-7 2006.1.1. 전 승계 입주권 — 인가일 공란도 일반 취득과 같이 비과세 (종전: 공란이면 과세 + 확인 필요 · 순차면 확정 과세) · 인가일 > 승계취득일은 ⑧", async () => {
+    // 종전주택 2004-01-01 · 신규 주택 완공 2011-09-30 · 양도 2012-06-01
+    const mk = (o: Record<string, unknown>) =>
+      observeCase(menu([{ id: "b", region: "non_capital", acquisitionDate: "2011-09-30", ...o }], { transferDate: "2012-06-01" }, { acquisitionDate: "2004-01-01" }));
+    for (const o of [
+      { acquisitionOrigin: "general" },
+      { acquisitionOrigin: "successor_right", rightAcquisitionDate: "2005-06-01" },
+      { acquisitionOrigin: "successor_right", rightAcquisitionDate: "2005-06-01", rightApprovalDate: "2004-12-01" },
+      { acquisitionOrigin: "successor_right", rightAcquisitionDate: "2003-06-01" },
+    ]) {
+      const r = await mk(o);
+      expect(r.isExempt).toBe(true);
+      expect(r.appliedExceptions).toContain("155-1-temporary-two-house");
+      expect(r.undetermined).not.toContain("155-1-new-house-origin-unconfirmed");
+      expect(r.validationErrors).toEqual([]);
+    }
+    const bad = await mk({ acquisitionOrigin: "successor_right", rightAcquisitionDate: "2005-06-01", rightApprovalDate: "2005-06-02" });
+    expect(bad.validationErrors.join(" ")).toContain("houses.0.rightApprovalDate");
   });
 });
 

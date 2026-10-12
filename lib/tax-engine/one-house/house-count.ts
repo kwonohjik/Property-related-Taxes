@@ -149,7 +149,7 @@ export function buildOneHouseCountBreakdown(p: {
    *
    * 🔴 조합원입주권 양도(§89①4호) 판정은 상속주택을 「다른 주택」에서 **빼지 않는다** — 시행령 §155②③은 「일반주택을
    *    양도하는 경우」 §154①을 적용하는 규정이라 입주권에 유추할 수 없다는 입장이다(E094 · 조심-2021-서-1117,
-   *    `judgment-pipeline.ts`의 `oneRightInputAfterSpecialActExclusion`). 명세가 그 주택을 「주택 수 제외」로 보이면
+   *    `right-sale-special-act-exclusion.ts`의 `oneRightInputAfterSpecialActExclusionOf` — 판정 메뉴 `judgment-pipeline.ts`와 계산기 §166 분기가 부른다). 명세가 그 주택을 「주택 수 제외」로 보이면
    *    판정(가목 불성립 — 다른 주택 보유)과 명세(0채)가 갈린다(재검증 S03-6). false면 상속주택은 차감하지 않는다.
    */
   inheritedExclusionApplies?: boolean;

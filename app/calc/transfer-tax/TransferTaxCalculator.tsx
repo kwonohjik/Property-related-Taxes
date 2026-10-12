@@ -13,6 +13,7 @@ import { MixedUseResultCard } from "@/components/calc/results/mixed-use/MixedUse
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import type { TransferTaxPenaltyResult } from "@/lib/tax-engine/transfer-tax-penalty";
 import { collectStepIssues, collectStepWarnings, type ValidationIssue } from "@/lib/calc/transfer-tax-validate";
+import { isEmbeddedInMultiPath } from "@/lib/calc/multi-embed-path";
 import { StepWarningBanner } from "@/components/calc/transfer/StepWarningBanner";
 import { ValidationIssuePanel } from "@/components/calc/transfer/ValidationIssuePanel";
 import { jumpToIssueField } from "@/components/calc/transfer/validation-jump";
@@ -52,7 +53,9 @@ export default function TransferTaxCalculator({
   const router = useRouter();
   const pathname = usePathname();
   // 다건 양도 편집 모드 내 임베딩 여부
-  const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
+  const isEmbeddedInMulti = isEmbeddedInMultiPath(pathname);
+  // ⑧ 검증 맥락 — 다건 임베드면 다건 ④가 싣지 않는 사실을 묻지 않는다(⑤ `CompanionAcquisitionCauseSection`과 같은 판정).
+  const validationCtx = useMemo(() => ({ embeddedInMulti: isEmbeddedInMulti }), [isEmbeddedInMulti]);
   // 단건/다건 모두 6단계 — 가산세는 자산별 입력
   const STEPS = STEPS_SINGLE;
   const { currentStep, formData, result, setStep, updateFormData, setResult, reset } =
@@ -66,8 +69,8 @@ export default function TransferTaxCalculator({
   // seq는 패널 key — 새 실패마다 접힘 상태를 펼침으로 되돌린다.
   const [failed, setFailed] = useState<{ step: number; seq: number } | null>(null);
   const issues = useMemo(
-    () => (failed ? collectStepIssues(failed.step, formData) : []),
-    [failed, formData],
+    () => (failed ? collectStepIssues(failed.step, formData, validationCtx) : []),
+    [failed, formData, validationCtx],
   );
   // 자산 카드 인라인 배너 — 오류가 있는 **모든** 자산 카드에 그 카드의 첫 오류(계획서 D-5).
   //   배너가 걸린 카드는 섹션이 전부 펼쳐져(`CompanionAssetCard` forceOpenAll) 입력칸으로 갈 수 있다.
@@ -237,7 +240,7 @@ export default function TransferTaxCalculator({
   }
 
   function handleNext() {
-    const list = collectStepIssues(currentStep, formData);
+    const list = collectStepIssues(currentStep, formData, validationCtx);
     if (list.length > 0) { failWithIssues(currentStep, list); return; }
     clearError();
     setStep(currentStep + 1);
@@ -262,7 +265,7 @@ export default function TransferTaxCalculator({
     // 최종 제출 가드 — 모든 step을 재검증 (사용자가 자유 이동·필드 비우기 후 마지막 step에서 "계산하기" 시 우회 차단).
     // step 0 (자산·취득 정보)이 가장 critical — redev settlementSaleDate, useEstimated PHD 등 entry 검증.
     for (let s = 0; s < totalSteps; s++) {
-      const list = collectStepIssues(s, formData);
+      const list = collectStepIssues(s, formData, validationCtx);
       if (list.length > 0) {
         setStep(s); // 검증 실패 step으로 자동 이동 (사용자가 어디서 누락됐는지 즉시 인지)
         failWithIssues(s, list); // 오류 목록 + 자동 스크롤
@@ -361,11 +364,11 @@ export default function TransferTaxCalculator({
   const stepStatuses = useMemo<StepStatus[]>(
     () =>
       STEPS_SINGLE.map((_, i) => {
-        const hasError = collectStepIssues(i, formData).length > 0;
+        const hasError = collectStepIssues(i, formData, validationCtx).length > 0;
         if (hasError) return i < currentStep ? "attention" : "neutral";
         return i <= currentStep ? "complete" : "neutral";
       }),
-    [formData, currentStep],
+    [formData, currentStep, validationCtx],
   );
 
   // 비차단 경고 (미래 양도일 등) — handleNext/handleSubmit를 막지 않는 amber 배너. 차단 흐름과 독립.
@@ -634,7 +637,7 @@ export default function TransferTaxCalculator({
                     <CtaButton
                       tone="outline"
                       onClick={() => {
-                        const list = collectStepIssues(currentStep, formData);
+                        const list = collectStepIssues(currentStep, formData, validationCtx);
                         if (list.length > 0) { failWithIssues(currentStep, list); return; }
                         clearError();
                         onSaveAndAddNext?.();
@@ -644,7 +647,7 @@ export default function TransferTaxCalculator({
                     </CtaButton>
                     <CtaButton
                       onClick={() => {
-                        const list = collectStepIssues(currentStep, formData);
+                        const list = collectStepIssues(currentStep, formData, validationCtx);
                         if (list.length > 0) { failWithIssues(currentStep, list); return; }
                         clearError();
                         onSaveAndGoToSettings?.();

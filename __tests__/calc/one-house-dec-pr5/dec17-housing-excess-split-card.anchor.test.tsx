@@ -60,6 +60,23 @@ describe("HousingExcessSplitCard 노출", () => {
     expect(screen.queryByTestId("housing-excess-split-card")).toBeNull();
   });
 
+  it("#17-4 환산·감정·매매사례 취득 — 취득시 개별주택가격 칸은 취득가액 칸의 «취득시 기준시가»가 받으므로 여기서 빼고 네 칸만 그린다", () => {
+    render(<Harness init={{ useEstimatedAcquisition: true }} />);
+    expect(screen.getByTestId("housing-excess-split-card")).toBeTruthy();
+    expect(screen.queryByTestId("housing-excess-acq-total")).toBeNull();
+    expect(screen.getByTestId("housing-excess-acq-total-elsewhere")).toBeTruthy();
+    expect(screen.getByText(/아래 네 칸을 모두 입력하세요/)).toBeTruthy();
+    expect(screen.getByTestId("acq-building-std")).toBeTruthy();
+    expect(screen.getByTestId("split-building-std-transfer")).toBeTruthy();
+  });
+
+  it("대조 — 실지거래가액이면 취득시 개별주택가격 칸까지 다섯 칸", () => {
+    render(<Harness />);
+    expect(screen.getByTestId("housing-excess-acq-total")).toBeTruthy();
+    expect(screen.queryByTestId("housing-excess-acq-total-elsewhere")).toBeNull();
+    expect(screen.getByText(/아래 다섯 칸을 모두 입력하세요/)).toBeTruthy();
+  });
+
   it("입력값이 자산에 기록된다 (④ 전송 소스) — 취득시 개별주택가격·건물 기준시가·양도시 건물 기준시가", () => {
     render(<Harness />);
     fireEvent.change(screen.getByTestId("housing-excess-acq-total"), { target: { value: "300,000,000" } });

@@ -7,6 +7,7 @@
 
 import { calculateHoldingPeriod } from "./tax-utils";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
+import { MULTI_HOUSE } from "./legal-codes/transfer-house";
 import {
   checkEligibility,
   type EligibilityContext,
@@ -207,7 +208,7 @@ export function judgeRentalHousingUnmet(
  *  · 명부(`houses[]`)가 있으면 「장기임대로 표시한 행이 없을 때」만 더한다(D12 술어 — 표시한 행이 있으면 이미 센 것).
  *  · 명부가 없으면 판정 주택 수가 **정확히 1**일 때만 더한다(1이면 거주주택만 센 값이 분명하다 — 2 이상은 임대주택을 이미 센 입력으로 본다).
  * @param judgeHouseCount 호출 지점이 보는 주택 수(제외 후)
- * @param scenarios 되돌릴 시나리오 — 비과세는 A·B, 중과 ① 요소는 A만(B의 중과는 해석 미확보라 열지 않는다)
+ * @param scenarios 되돌릴 시나리오 — 비과세·중과 ① 요소·중과 주택 수 모두 A·B(결정 #20 C — 불성립이면 B도 ⑳이 서지 않는 일반 주택이다)
  */
 export function rentalUnitsToRestore(args: {
   effectiveInput: TransferTaxInput;
@@ -226,12 +227,8 @@ export function rentalUnitsToRestore(args: {
 }
 
 /** 다주택 중과가 이 계산에서 실제로 걸릴 수 있는가 — 양도일 조정대상지역이고 한시 배제(데이터 `surcharge_suspended`) 밖. 고지 문장 게이트 전용. */
-function surchargeSentenceApplies(
-  effectiveInput: TransferTaxInput,
-  parsedRates: ParsedRates,
-  surchargeHouseCount: number,
-): boolean {
-  if (effectiveInput.isRegulatedArea !== true || surchargeHouseCount >= 3) return false;
+function surchargeSentenceApplies(effectiveInput: TransferTaxInput, parsedRates: ParsedRates): boolean {
+  if (effectiveInput.isRegulatedArea !== true) return false;
   return !isSurchargeSuspended(parsedRates.surchargeSpecialRules, effectiveInput.transferDate, "multi_house_2");
 }
 
@@ -247,16 +244,14 @@ function surchargeSentenceApplies(
  *    그대로 냈고, 명부에 다른 주택이 있는 A(주택 수 2 이상)도 일시적 2주택 비과세·표2가 남았다 — 불충족 세액(12,840,000)이
  *    요건을 충족한 경우보다도 적었고 판정 메뉴(과세)와 갈렸다. 판정·장특·결과가 한 전제를 보도록 **판정 전에** 주택 수를 되돌린다.
  *
- * 🔑 되돌림은 비과세 판정에만 쓴다 — 중과는 다시 판정하지 않는다(B는 해석 미확보, A의 ① 요소만 STEP 0.5가 같은 규칙으로 정정).
- *    고지는 이 사실을 말한다. §161 안분은 적용하지 않는다(B).
+ * 🔑 이 함수는 비과세 판정의 주택 수만 되돌린다. 중과는 STEP 0.5가 같은 규칙으로 따로 정정한다 — ① 요소(`surchargeDeemingHouseCount`)와
+ *    중과 판정 명부에 카드 행 합성(`unmetRentalSurchargeHouses`, 결정 #20 C). §161 안분은 적용하지 않는다(B).
  */
 export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
   judgeInput: T,
   effectiveInput: TransferTaxInput,
   parsedRates: ParsedRates,
   generalHouseAcquisitionDate: Date | undefined,
-  /** 고지의 중과 문장 게이트용 — 정밀 판정이 있으면 그 산입 주택 수, 없으면 undefined(= 세대 주택 수) */
-  surchargeEffectiveHouseCount?: number,
 ): { input: T; notice?: string } {
   const restore = rentalUnitsToRestore({
     effectiveInput,
@@ -267,11 +262,10 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
   });
   if (!restore) return { input: judgeInput };
   const restored = judgeInput.householdHousingCount + restore.units;
-  const surcharge = surchargeSentenceApplies(
-    effectiveInput,
-    parsedRates,
-    surchargeEffectiveHouseCount ?? effectiveInput.householdHousingCount,
-  );
+  // 중과 판정 명부에 카드 행을 더한 경우(`unmetRentalSurchargeHouses` — 명부 있음, 또는 명부 없음 + 세대 주택 수 1)만 그 사실을 적는다.
+  const surcharge =
+    surchargeSentenceApplies(effectiveInput, parsedRates) &&
+    (restore.hasRoster || effectiveInput.householdHousingCount === 1);
   const cause =
     restore.cause === "composition"
       ? `세대 구성 요건(「장기임대주택과 그 밖의 1주택」)을 충족하지 못해`
@@ -282,10 +276,8 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
     (restore.scenario === "B" ? `(${TRANSFER_RENTAL_HOUSING.PIT_RD_161_1} 안분도 적용하지 않았습니다)` : "") +
     `. 임대주택이 다른 특례(일시적 2주택 등)에 해당하면 임대주택을 포함한 주택 수로 직접 입력해야 판정합니다.` +
     (surcharge
-      ? ` 다주택 중과 판정의 주택 수에는 임대주택이 들어가지 않았습니다(중과를 다시 판정하지 않았습니다) — ` +
-        (restore.hasRoster
-          ? "임대주택을 다른 보유 주택 목록에 「장기임대」로 넣어 다시 계산하세요."
-          : "세대 보유 주택 수에 임대주택을 포함해 다시 입력하세요.")
+      ? ` 다주택 중과 판정의 주택 수에도 임대주택 ${restore.units}호를 넣었습니다 — 임대주택이 중과에서 빠지는 장기임대주택인지는 ` +
+        `${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS} 요건으로 따로 판정했습니다.`
       : "");
   return { input: { ...judgeInput, householdHousingCount: restored }, notice };
 }
@@ -293,7 +285,8 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
 /**
  * STEP 0.5 ① 요소(영 §167의10①15호·§167의3①13호의 「제155조 … 에 따라 … 제154조제1항이 적용되는 주택」)용 — 비과세와 **같은 규칙**으로
  * 임대 호수를 더한 의제용 주택 수를 돌려준다(결정 #20 G8-1). 불성립이면 §155①·②·조특법 의제가 서지 않는다(조심 2021서1571).
- * A만 — B의 과세 기간분이 중과되는지는 해석을 확보하지 못했다(열지 않는다, 확인 필요).
+ * A·B 모두(결정 #20 C, 사용자 결정 2026-10-12) — 불성립이면 B도 ⑳이 서지 않으므로 일반 주택과 같다. 해석을 확보하지 못한 것은
+ * ⑳이 **성립**한 B의 과세 기간분 중과 여부이고(`qualifiesRentalResidenceDeeming`가 A만 연다), 이 함수와는 축이 다르다.
  */
 export function surchargeDeemingHouseCount(
   workingInput: TransferTaxInput,
@@ -306,7 +299,7 @@ export function surchargeDeemingHouseCount(
     parsedRates,
     generalHouseAcquisitionDate,
     judgeHouseCount: count,
-    scenarios: ["A"],
+    scenarios: ["A", "B"],
   });
   return restore ? count + restore.units : count;
 }

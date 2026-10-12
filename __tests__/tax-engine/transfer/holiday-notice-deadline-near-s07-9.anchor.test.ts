@@ -16,6 +16,7 @@ import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { holidayTableNoticeKind, declaredDeadlineEnds } from "@/lib/tax-engine/one-house/holiday-notice-deadlines";
 import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+import type { RentalUnitInput } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 
 const rules = parseRatesFromMap(makeMockRates()).oneHouseSpecialRules;
@@ -122,6 +123,104 @@ describe("선언한 기한 축별 말일 — 합가·⑧·⑦3호·수용·출�
   it("A7 기한 축이 없으면 말일도 고지도 없다 — 단순 1주택", () => {
     expect(ends(base({ householdHousingCount: 1 }))).toEqual([]);
     expect(has({ householdHousingCount: 1, acquisitionDate: D("2022-01-01"), transferDate: D("2028-06-05") })).toBe(false);
+  });
+});
+
+describe("§155① 신규 취득 당시 조정 여부 미입력 — 두 독법의 말일이 모두 후보 (holiday-notice-deadlines.ts §155① 블록)", () => {
+  // 종전 2025-01-01 · 신규 2026-09-01(제36737호 1호 대상 — 2026-08-04 이후 취득) · 양도 2026-10-01 이후
+  //   → 두 주택 모두 조정 독법 2년 말일 2028-09-01(금) · 아닌 독법 3년 말일 2029-09-01(토) → 09-03(월)
+  const tt = (transfer: string, regulated?: boolean): Partial<TransferTaxInput> => ({
+    householdHousingCount: 2,
+    acquisitionDate: D("2025-01-01"),
+    transferDate: D(transfer),
+    residencePeriodMonths: 0,
+    temporaryTwoHouse: {
+      previousAcquisitionDate: D("2025-01-01"),
+      newAcquisitionDate: D("2026-09-01"),
+      ...(regulated === undefined
+        ? {}
+        : { previousHouseRegulatedAtNewAcquisition: regulated, newHouseRegulatedAtAcquisition: regulated }),
+    },
+  });
+  const input = (transfer: string, regulated?: boolean) => baseTransferInput(tt(transfer, regulated)) as OneHouseJudgeInput;
+  const ends = (transfer: string, regulated?: boolean) => declaredDeadlineEnds(input(transfer, regulated), rules, {}).map((e) => iso(e.end));
+  const kind = (transfer: string, regulated?: boolean) => holidayTableNoticeKind(input(transfer, regulated), rules, {});
+
+  it("U1 미입력이면 두 독법의 말일이 모두 후보다 — 2028-09-01(조정) · 2029-09-03(비조정)", () => {
+    expect(ends("2029-09-05")).toEqual(["2028-09-01", "2029-09-03"]);
+  });
+
+  it("U2 ★ 비조정 독법의 3년 말일(2029-09-03) 이틀 뒤 양도(2029-09-05) → 고지 — 조정 독법 말일(2028-09-01)은 1년 앞이다", () => {
+    expect(kind("2029-09-05")).toBe("provisional");
+    expect(has(tt("2029-09-05"))).toBe(true);
+  });
+
+  it("U2 부정 짝 — 같은 사실을 「두 주택 모두 조정」으로 입력하면 3년 말일은 후보가 아니다 → 고지 없음", () => {
+    expect(ends("2029-09-05", true)).toEqual(["2028-09-01"]);
+    expect(kind("2029-09-05", true)).toBeUndefined();
+    expect(has(tt("2029-09-05", true))).toBe(false);
+  });
+
+  it("U3 조정 독법의 2년 말일(2028-09-01) 사흘 뒤 양도(2028-09-04) → 고지 / 「조정 아님」 입력이면 그 말일은 후보가 아니다 → 고지 없음", () => {
+    expect(kind("2028-09-04")).toBe("provisional");
+    expect(ends("2028-09-04", false)).toEqual(["2029-09-03"]);
+    expect(kind("2028-09-04", false)).toBeUndefined();
+  });
+
+  it("U4 두 말일 어디에도 곁에 있지 않은 양도(2029-03-02) → 미입력이어도 고지 없음", () => {
+    expect(kind("2029-03-02")).toBeUndefined();
+  });
+});
+
+describe("§155㉓ 임대주택 등록 말소 후 5년 — 최초 말소일의 5년 말일 (holiday-notice-deadlines.ts §155㉓ 블록)", () => {
+  /** 2018-06-01 등록 매입 비아파트(가목) · 자진말소 */
+  const unit = (cancellation: string, patch: Partial<RentalUnitInput> = {}): RentalUnitInput => ({
+    businessRegistrationDate: D("2018-06-01"),
+    rentalRegistrationDate: D("2018-06-01"),
+    rentalCategory: "long_general",
+    rentalAcquisitionType: "purchase",
+    isApartment: false,
+    region: "seoul-metro",
+    isExcluded918Rule: false,
+    standardPriceAtRentalStart: 300_000_000,
+    hasMinimum2Units: false,
+    rentalMonths: 30,
+    rentalAutoTermination: true,
+    terminatedRegistrationType: "short_term",
+    registrationCancellationDate: D(cancellation),
+    requirementsConfirmed: true,
+    ...patch,
+  });
+  const input = (transfer: string, units: RentalUnitInput[]) =>
+    baseTransferInput({
+      householdHousingCount: 2,
+      acquisitionDate: D("2015-01-10"),
+      transferDate: D(transfer),
+      rentalHousingException: { applyException: true, scenario: "A", rentalUnits: units },
+    }) as OneHouseJudgeInput;
+  const ends = (i: OneHouseJudgeInput) => declaredDeadlineEnds(i, rules, {}).map((e) => iso(e.end));
+  const kind = (i: OneHouseJudgeInput) => holidayTableNoticeKind(i, rules, {});
+
+  it("M1 ★ 말소일 2025-06-02의 5년 말일 2030-06-02(일) → 06-03(월). 양도 2030-06-04 → 고지", () => {
+    const i = input("2030-06-04", [unit("2025-06-02")]);
+    expect(ends(i)).toEqual(["2030-06-03"]);
+    expect(kind(i)).toBe("provisional");
+  });
+
+  it("M1 부정 짝 — 같은 말소, 말일보다 석 달 앞선 양도(2030-03-01) → 고지 없음", () => {
+    expect(kind(input("2030-03-01", [unit("2025-06-02")]))).toBeUndefined();
+  });
+
+  it("M2 2호 이상이면 최초 말소일 기준 — 2025-06-02·2026-01-05 말소 → 말일은 2030-06-03 하나", () => {
+    const i = input("2030-06-04", [unit("2026-01-05"), unit("2025-06-02")]);
+    expect(ends(i)).toEqual(["2030-06-03"]);
+    expect(kind(i)).toBe("provisional");
+  });
+
+  it("M3 부정 짝 — 말소 사실이 없으면(rentalAutoTermination false) 말일도 고지도 없다", () => {
+    const i = input("2030-06-04", [unit("2025-06-02", { rentalAutoTermination: false })]);
+    expect(ends(i)).toEqual([]);
+    expect(kind(i)).toBeUndefined();
   });
 });
 

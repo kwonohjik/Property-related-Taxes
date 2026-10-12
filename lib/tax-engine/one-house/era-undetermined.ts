@@ -13,7 +13,7 @@
  * | `155-1-move-in-requirement-unverified` | §155①2호 가목(신규 2019-12-17 이후 취득 · 양도 2020-02-11~2022-05-09) | 세대전원 전입일 — A2b에서 입력 경로가 생겼다. 미입력 record만 고지 |
  * | `155-1-2002-transition-unverified` | 대통령령 제17555호 부칙 ③ 1호(2001-03-30 ~ 2002-03-29 신규 취득 · 양도가 2003-03-29 뒤 ~ 취득일부터 2년 안) | 1호 단서(보유기간등 충족일 + 6월) — 미구현, 취득일부터 2년으로 계산. 그 밖의 부칙 ③ 구간은 어느 독법이든 결론이 같아 고지하지 않는다 |
  * | `155-1-regulated-announcement-date-unverified` | §155①2호 괄호 「조정대상지역의 공고가 있은 날 이전에」 (L-7) | 신규 주택 지정 구간의 공고일 — 공고일 표(`PRE_DESIGNATION_CONTRACT_EXCLUSION`)에 없으면 제외를 판정하지 않았다 |
- * | `155-1-regulated-at-new-acquisition-unverified` | §155① 조정대상지역 단축 규정(양도일 연혁별 호 — `temporary-two-house-regulated-clause.ts`) 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 양도일 기준 양도주택으로 대신 계산 |
+ * | `155-1-regulated-at-new-acquisition-unverified` | §155① 조정대상지역 단축 규정(양도일 연혁별 호 — `temporary-two-house-regulated-clause.ts`) 「종전의 주택이 조정대상지역에 있는 상태에서 조정대상지역에 있는 신규 주택을 취득」 | 신규 취득일 기준 두 주택의 조정 여부(주소 또는 선언) — 미입력이면 두 주택 모두 조정대상지역인 불성립 독법으로 계산(#30). 두 독법의 기한이 다르고 반사실 판정으로 비과세(부분 포함) 결론이 갈릴 때만 고지(#32) |
  * | `155-2-reinheritance-reference-date-unverified` | §155② 괄호 「상속개시 당시 보유한 주택」 · 단서(동일세대) — D17 재상속 | 재상속이면 그 괄호의 상속개시일이 최초 상속인지 재상속인지 — 정면 해석 미확보, 입력된 재상속일로 판정(서면-2019-법령해석재산-3032와 같은 기준). 괄호가 걸리고(일반주택 2013-02-15 이후 취득) 그 행이 실제로 제외될 때만 |
  * | `155-2-pre2010-parental-care-exception-unverified` | §155② 단서 동거봉양 예외(2010.2.18. 대통령령 제22034호 신설) — 그 전 양도분 | 동일세대 상속 배제는 그 전에도 적용(조세심판관합동회의 조심2009서2497)되나 동거봉양 예외를 그 전 양도분에 인정한 해석은 미확보 — 예외를 인정해 판정 |
  * | `154-1-capital-newtown-location-unverified` | §154① 본문(2003-11-20 ~ 2011-06-02 양도 — 서울·과천·5개 신도시 거주 2년) | 양도 주택이 신도시 지구 안인지(법정동코드는 시·구까지) 또는 주소 — 요건을 적용해 판정, 거주요건 때문에 과세될 때만 |
@@ -86,7 +86,7 @@ import {
   RURAL_FARM_FACTS_UNCONFIRMED_ID,
 } from "./rural-return-to-farm-facts";
 import { qualifiesRuralHouseApartFromDeadline } from "../transfer-tax-exemption-holding";
-import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "../transfer-reductions/population-decline-71-2";
+import { POP_DECLINE_71_2_UNCONFIRMED_ID, popDeclineUnconfirmedNotice } from "../transfer-reductions/population-decline-71-2";
 import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_ORIGIN_UNCONFIRMED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from "./new-house-origin";
 
 // §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
@@ -113,7 +113,13 @@ export const USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID = "154-1-usage-conversion
 export const GIFT_HOUSEHOLD_UNCONFIRMED_ID = "gift-household-continuity-unconfirmed";
 /** 같은 세대 통산을 적용했는데 정면 해석 없는 세부(통산 시작일·주택 전부 증여·「취득 당시」 이동)가 결론을 가른다. */
 export const GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID = "gift-household-consolidation-detail-unverified";
-/** 계산기 일반 증여(이월과세 밖) 화면은 증여자와의 세대 사실을 입력받지 않아 통산을 반영하지 못했다 — 통산하면 결론이 달라질 수 있다. */
+/**
+ * 증여자와의 세대 사실이 엔진에 오지 않아 통산을 반영하지 못했다 — 통산하면 결론이 달라질 수 있다. 판정 메뉴와 계산기 단건 첫 자산은 그 칸을
+ * 필수로 받으므로(결정 #38-1) 이 고지는 세대 사실을 받지 않는 경로에서 난다 — 건물만 증여받은 주택(D2) · 함께 양도하는 두 번째 이후 자산 ·
+ * 다건 계산(#38-3 범위 밖) · 사실 없이 부른 API. 문구는 그 경로들을 그대로 적는다(「이 화면은 입력받지 않아」·「판정 메뉴에서 입력」은
+ * D2처럼 판정 메뉴에도 칸이 없는 경로에서 틀린다).
+ * 겸용주택은 겸용 엔진이 이 판정을 거치지 않아 고지 자체가 나지 않는다(별건).
+ */
 export const GIFT_HOUSEHOLD_NOT_REFLECTED_ID = "gift-household-not-reflected-unverified";
 /** 증여자가 양도 전에 사망해 통산 없이 계산했고, 통산하면 결론이 달라진다. */
 export const GIFT_HOUSEHOLD_DONOR_DECEASED_ID = "gift-household-donor-deceased-unverified";
@@ -203,8 +209,9 @@ export function collectEraUndetermined(
           id: GIFT_HOUSEHOLD_NOT_REFLECTED_ID,
           reason:
             "증여받은 주택은 증여자와 증여일부터 양도일까지 계속 같은 세대였다면 증여자 세대의 보유기간을 통산하고 「취득 당시」도 세대가 보유를 " +
-            "시작한 날로 보지만(조심 2022서7583), 이 화면은 증여자와의 세대 관계를 입력받지 않아 증여일부터 보유기간을 세어 판정했습니다 — " +
-            "같은 세대였다면 결론이 달라질 수 있으니 확인이 필요합니다. 1세대1주택 판정 메뉴에서 같은 사실을 입력해 판정할 수 있습니다.",
+            "시작한 날로 보지만(조심 2022서7583), 이 계산에는 증여자와의 세대 관계가 입력되지 않아 증여일부터 보유기간을 세어 판정했습니다 — " +
+            "같은 세대였다면 결론이 달라질 수 있으니 확인이 필요합니다. 세대 관계는 1세대1주택 판정 메뉴와 양도세 계산기 단건의 첫 번째 자산" +
+            "(주택을 증여받은 경우)에서 입력받으며, 건물만 증여받은 주택·함께 양도하는 두 번째 이후 자산·다건 계산에서는 입력받지 않습니다.",
         }
       : undefined
     : gift.donorDeceased === true
@@ -458,10 +465,12 @@ export function collectEraUndetermined(
   }
 
   /*
-   * OH-01 — §155①2호. 결론과 무관하게 낸다(입력이 없어 판정하지 않은 사실을 밝힌다).
-   *   ① 신규 취득일 기준 두 주택의 조정 여부가 미입력이고 그 값이 기한을 바꾸는 구간이면 —
-   *      종전 대리 지표(양도일 기준 양도주택)로 계산했음을 알린다.
-   *   ② 2019-12-17 체제인데 세대전원 전입일이 없으면 — 가목(1년 내 전입)을 판정하지 않았다.
+   * OH-01 — §155①2호. 모르는 사실을 불성립 쪽으로 읽어 계산하고(#30), **결론을 가를 때만** 낸다(#32).
+   *   ① 신규 취득일 기준 두 주택의 조정 여부가 미입력이면 — 두 주택 모두 조정대상지역인 독법(짧은 기한·전입 요건)으로
+   *      계산했다. 두 독법의 기한이 다르고(`yrs(true) !== yrs(false)`) 「조정 아님」 반사실 판정이 비과세(부분 포함) 결론을
+   *      바꿀 때(`relevance.regulatedReadingDecides`)만 확인 필요를 알린다. 공고일 고지도 같은 게이트다.
+   *   ② 2019-12-17 체제인데 세대전원 전입일이 없으면 — 가목(1년 내 전입)을 불성립으로 읽었다. 전입한 반사실 판정이
+   *      결론을 바꿀 때(`relevance.moveInDecides`)만 알린다.
    */
   const twoHouseRule = oneHouseRules.temporary_two_house;
   const tt = input.temporaryTwoHouse;
@@ -491,7 +500,8 @@ export function collectEraUndetermined(
           `짧아집니다(${TRANSFER.TEMPORARY_TWO_HOUSE}${resolveRegulatedShortenedClauseRef(input.transferDate)}). 그 판정은 신규주택 취득일 기준 두 주택의 소재지로 하는데, ` +
           "주소나 조정대상지역 여부가 입력되지 않아 두 주택 모두 조정대상지역인 것으로 보고 불성립으로 계산했습니다" +
           `(모두 조정대상지역이면 ${yrs(true)}년, 아니면 ${yrs(false)}년 — 이 양도일은 결론이 갈립니다) — ` +
-          "1세대1주택 판정 메뉴의 일시적 2주택 특례 칸에서 입력하세요(확인 필요).",
+          "일시적 2주택 특례의 「조정대상지역 처분기한」 칸에서 두 주택의 조정대상지역 여부를 입력하세요" +
+          "(양도세 계산기에는 이 칸이 없어 1세대1주택 판정 메뉴에서 입력해 다시 넘기면 됩니다 — 확인 필요).",
       });
     }
     /*
@@ -655,16 +665,12 @@ export function collectEraUndetermined(
 
   /*
    * 조특법 §71의2① 인구감소지역주택 — 후보인데 모름·미답·해석 미확보라 소유주택에서 빼지 않았다(결정 #42). **결론을 가를 때만** 알린다 —
-   * 그 후보를 뺀 반사실 판정이 비과세일 때다. 양도 주택·입주권 모두 같은 echo를 읽지만 이 수집기는 주택 양도만 본다.
+   * 그 후보를 뺀 반사실 판정이 비과세일 때다. 이 수집기는 주택 양도만 본다 — 입주권 양도(§89①4호)는
+   * `rightSalePopDeclineUnconfirmedNotice`(가·나목 반사실 판정)가 같은 문장을 낸다.
    */
   const popUnconfirmed = input.popDecline71_2Unconfirmed;
   if (popUnconfirmed && !settled && (relevance?.popDeclineDecides?.() ?? true)) {
-    out.push({
-      id: POP_DECLINE_71_2_UNCONFIRMED_ID,
-      reason:
-        `${TRANSFER.POP_DECLINE_HOUSE_71_2}(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다 — ${popUnconfirmed.reasons.join(" ")} ` +
-        "확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다.",
-    });
+    out.push({ id: POP_DECLINE_71_2_UNCONFIRMED_ID, reason: popDeclineUnconfirmedNotice(popUnconfirmed.reasons) });
   }
 
   // 어느 선언된 기한의 말일이 양도일 곁에 있어 공휴일 표 한계가 판정을 바꿀 수 있을 때만(#32 하위 1 가 — `holiday-notice-deadlines.ts`).

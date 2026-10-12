@@ -31,7 +31,7 @@ const DATE_LABEL: Partial<Record<Origin, { label: string; hint: string }>> = {
   },
   presale: {
     label: "분양권 취득일",
-    hint: "청약으로 받은 분양권은 당첨일, 선착순 분양은 동·호 지정 후 계약을 체결한 날입니다. 2020.12.31. 이전에 취득한 분양권은 주택 수에 들지 않던 때라 완공일을 취득일로 보는 현행 판정이 그대로 적용됩니다.",
+    hint: "청약으로 받은 분양권은 당첨일, 선착순 분양은 동·호 지정 후 계약을 체결한 날입니다. 상속받은 분양권은 상속개시 당시 피상속인과 같은 세대였으면 피상속인이 분양권을 취득한 날, 그 밖의 상속은 상속개시일, 증여받은 분양권은 증여일입니다. 2020.12.31. 이전에 취득한 분양권은 주택 수에 들지 않던 때라 완공일을 취득일로 보는 현행 판정이 그대로 적용됩니다.",
   },
   original_member_non_house: {
     label: "관리처분계획 인가일",
@@ -103,8 +103,8 @@ export function HouseEntryNewHouseOriginBlock({ house, onUpdate }: Props) {
             value={house.rightApprovalDate ?? ""}
             onChange={(v) => onUpdate({ rightApprovalDate: v })}
           />
-          <p className="text-xs text-muted-foreground">
-            2006.1.1. 전에 인가된 입주권을 같은 날 전에 승계취득했다면 §89②의 입주권이 아니라 일반 취득과 같이 판정합니다. 비우면 대상으로 봅니다.
+          <p className="text-xs text-muted-foreground" data-testid="house-row-right-approval-date-hint">
+            입주권은 관리처분계획 인가 뒤에 생기므로 인가일은 승계취득일보다 늦을 수 없습니다. 승계취득일이 2006.1.1. 전이면 인가도 그 전이라 「소득세법」 §89②의 조합원입주권이 아니라 일반 취득과 같이 판정합니다(인가일을 비워도 같습니다).
           </p>
         </div>
       )}

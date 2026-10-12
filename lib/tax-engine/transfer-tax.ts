@@ -56,7 +56,7 @@ import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice } from "./transfer-tax-appurtenant-land";
+import { laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -225,7 +225,7 @@ export function calculateTransferTax(
     specialHouseExclusionDetail,
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
   // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
-  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate, multiHouseSurchargeResult?.effectiveHouseCount);
+  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate);
   // 증여세 마법사는 세대 보유 주택 명부 입력 칸이 없어 합가 전 구성 「모름」을 불리하게 쓰지 않는다(Q-10) — 그 화면이 싣는
   // 표식(`burdenedGiftInfo.houseRosterInputUnavailable`)이 있을 때만 세운다(1h-G1-12). 계산기·판정 메뉴·표식 없는 호출은 세우지 않는다.
   const exemptionJudgeInput = {
@@ -537,8 +537,8 @@ export function calculateTransferTax(
   const laterInheritedNotice = laterLandExemptNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt);
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
-  // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지(세액 불변).
-  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt)].filter((n): n is string => !!n));
+  // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지 · 분리 경로가 쓰지 않은 자산 단위 자본적지출 고지(세액 불변).
+  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt), housingExcessCapexNotice(effectiveInput, splitDetail)].filter((n): n is string => !!n));
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용

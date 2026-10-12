@@ -273,9 +273,28 @@ export function housingExcessUnseparatedNotice(
   const excess = housingExcessAreaOfInput(input);
   if (excess <= 0) return null;
   return (
-    `토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘지만, 이 입력 조합(부담부증여·지분·상속·증여 평가·소유자 분리·재개발·2005년 전 취득 등)은 ` +
+    `토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘지만, 이 입력 조합(부담부증여·지분·상속·증여 평가·소유자 분리·재개발·2005년 전 취득·수용·공매·경락 환산 등)은 ` +
     "토지·건물 가액 구분 입력 경로가 없어 초과분을 분리하지 못했습니다 — 초과분 미분리(과소 가능). " +
     "초과분은 1세대1주택 비과세 대상이 아닌 비사업용 토지입니다(소득세법 §89①3호·§104의3①5호) — 확인이 필요합니다."
+  );
+}
+
+/**
+ * 고지(#17 후속, 세액 불변) — 같은 날 취득 주택의 배율 초과분 분리 경로가 자산 단위 자본적지출을 쓰지 않았다는 사실.
+ *
+ * 분리 경로(`calcSplitGain`)는 파트 칸(`landDirectExpenses`·`buildingDirectExpenses`)만 읽는다 — 「소득세법」 §100② 후문은 공통 취득가액·양도비용만
+ * 안분 대상으로 열거하므로 자본적지출은 귀속 파트를 알아야 하는데, 배율 초과분 카드에는 파트 칸이 없다(일반 분리는 ⑧이 파트 칸으로 보낸다).
+ * 실지거래가액이면 필요경비에서, 환산취득가액이면 §97②2호 단서 비교에서 빠진다 — 금액을 밝히고 확인을 요구한다(입력 경로는 별건).
+ */
+export function housingExcessCapexNotice(input: TransferTaxInput, splitDetail: SplitGainResult | undefined): string | null {
+  const capex = input.capitalExpenditure ?? 0;
+  if (!(capex > 0) || !splitDetail?.nonBusinessLandPart) return null;
+  if (input.landDirectExpenses !== undefined || input.buildingDirectExpenses !== undefined) return null;
+  if (!housingExcessSplitAppliesToInput(input)) return null;
+  return (
+    `자산 전체 자본적지출 ${capex.toLocaleString()}은 배율 초과분을 나눈 토지·건물 계산에 넣지 않았습니다 — 자본적지출은 공통 비용 안분 대상이 아니어서` +
+    "(소득세법 §100② 후문) 토지분·건물분 귀속을 알아야 하는데 이 경로에는 그 입력 칸이 없습니다. 실지거래가액 취득이면 필요경비에, 환산취득가액이면 " +
+    "자본적지출 + 양도비와 환산취득가액 + 개산공제의 비교(소득세법 §97②2호 단서)에 들어가지 않았습니다 — 확인이 필요합니다."
   );
 }
 

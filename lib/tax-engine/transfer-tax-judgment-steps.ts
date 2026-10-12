@@ -27,7 +27,12 @@ import {
 import { meetsPublicInstitutionRelocationRegion } from "./transfer-tax-temporary-two-house-timing";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { clause2BlocksSurchargeDeeming, clause2SurchargeDeemed } from "./transfer-tax-89-2-consequences";
-import { judgeRentalHousingEligibility, surchargeDeemingHouseCount } from "./transfer-tax-rental-housing-judge";
+import {
+  judgeRentalHousingEligibility,
+  rentalUnitsToRestore,
+  surchargeDeemingHouseCount,
+} from "./transfer-tax-rental-housing-judge";
+import { rentalCardSurchargeRows } from "./rental-card-surcharge-rows";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { buildSurchargeExclusionStep } from "./transfer-reductions";
 import {
@@ -94,7 +99,7 @@ export function resolveSurchargeDeemedOneHouseDetail(
    * 종전에는 임대주택을 뺀 수로 §155①②·조특법 의제를 세워 중과를 배제했다 — 요건(호별·거주)을 못 갖췄거나 3중첩이라 비과세는 거둬도
    * 중과 배제는 남았다(STEP 0.5가 STEP 0.96·D12 회수보다 먼저 돌아 두 철회가 닿지 않았다). 영 §155⑳은 요건을 충족한 때만 「1개의 주택을
    * 소유하고 있는 것으로 보아」이므로 불성립이면 임대주택도 주택이고 §155①·②의 「1주택」이 서지 않는다(조심 2021서1571).
-   * 중과 주택 수 자체(`effectiveHouseCount`)는 건드리지 않는다 — 엔진 반영은 후속(고지로 처방).
+   * 중과 주택 수 자체는 STEP 0.5가 카드 행을 명부에 더해 반영한다(`unmetRentalSurchargeHouses` — 결정 #20 C).
    */
   const count = surchargeDeemingHouseCount(
     workingInput,
@@ -273,6 +278,36 @@ function noRosterSellingHouse(workingInput: TransferTaxInput): NonNullable<Trans
 }
 
 /**
+ * §155⑳ **불성립** — 카드의 임대 호를 중과 판정 명부에 더한다(결정 #20 C · 사용자 결정 2026-10-12 A·B 모두).
+ *
+ * 불성립이면 임대주택은 그냥 주택이라 중과 주택 수에 들어간다(영 §167의3① 본문 · §167의10① 본문, 조심 2021서1571).
+ * 2호 장기임대주택이면 중과 대상에서 빠지고 주택 수에는 남으며, 그것을 빼고 남은 주택이 양도 주택 하나면 10호로 배제된다 —
+ * 2호 여부는 중과 술어로 판정한다(`rentalCardSurchargeRows`).
+ *
+ * 되돌림 규칙은 비과세(STEP 0.96)·① 요소와 같은 `rentalUnitsToRestore`다(이중 계상 방지):
+ * - 명부가 있으면 장기임대로 표시한 행이 없을 때만 → 명부 + 카드 행.
+ * - 명부가 없으면 세대 주택 수가 정확히 1일 때만 → 양도 주택 + 카드 행. 2 이상은 임대주택이 이미 들어 있는 수로 보아
+ *   (결정 #20 하위 가) 종전대로 원시 플래그로 판정한다.
+ */
+function unmetRentalSurchargeHouses(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate: Date | undefined,
+  roster: NonNullable<TransferTaxInput["houses"]> | undefined,
+): NonNullable<TransferTaxInput["houses"]> | undefined {
+  const restore = rentalUnitsToRestore({
+    effectiveInput: workingInput,
+    parsedRates,
+    generalHouseAcquisitionDate,
+    judgeHouseCount: workingInput.householdHousingCount,
+    scenarios: ["A", "B"],
+  });
+  if (!restore) return undefined;
+  const rows = rentalCardSurchargeRows(workingInput.rentalHousingException!.rentalUnits, workingInput.transferDate);
+  return [...(roster ?? [noRosterSellingHouse(workingInput)]), ...rows];
+}
+
+/**
  * 명부(`houses[]`) 없이 §155①(일시적 2주택)·⑦(농어촌주택) 의제 또는 조특법 제외만의 1주택 의제
  * (`special_act_house_exclusion`)가 선 세대 — 정밀 중과 판정에 넘길 행을 입력된 사실로 구성한다(사용자 결정
  * 2026-10-04 — #1955 「알게 된 것」, 선례 `noRosterRentalResidenceHouses`).
@@ -368,7 +403,7 @@ export function surchargeSlotInput(workingInput: TransferTaxInput, generalHouseA
 
 /**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
- * 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
+ * §155⑳ 불성립이면 카드의 임대 호를 명부에 더한다(`unmetRentalSurchargeHouses`). 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
  * (확인된 조특법 제외 주택 포함 — `noRosterTwoHouseDeemingHouses`)가 서면 입력된 사실로 행을 구성해 판정한다.
  */
 export function runMultiHouseSurchargeStep(
@@ -382,6 +417,7 @@ export function runMultiHouseSurchargeStep(
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
   const roster = workingInput.houses && workingInput.houses.length > 0 ? workingInput.houses : undefined;
+  const unmetRentalHouses = unmetRentalSurchargeHouses(workingInput, parsedRates, generalHouseAcquisitionDate, roster);
   const rentalResidenceHouses = roster
     ? undefined
     : noRosterRentalResidenceHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
@@ -389,7 +425,7 @@ export function runMultiHouseSurchargeStep(
     roster || rentalResidenceHouses
       ? undefined
       : noRosterTwoHouseDeemingHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
-  const rawHouses = roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
+  const rawHouses = unmetRentalHouses ?? roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
   if (rawHouses && parsedRates.houseCountExclusionRules) {
     const sellingId = workingInput.sellingHouseId ?? rawHouses[0].id;
     // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16 공백 · 겸용과 같은 leaf)

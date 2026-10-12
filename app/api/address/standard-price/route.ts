@@ -16,6 +16,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { classifyVworldStatus, vworldErrorMessage } from "@/lib/address/vworld-status";
 
 const VWORLD_ADDR_URL = "https://api.vworld.kr/req/address";
 const VWORLD_NED_URL  = "https://api.vworld.kr/ned/data";
@@ -35,6 +36,7 @@ interface AddrStructure {
 interface AddrResponse {
   response?: {
     status?: string;
+    error?: { level?: string; code?: string; text?: string };
     refined?: { structure?: AddrStructure };
   };
 }
@@ -59,19 +61,38 @@ export interface NedPriceItem {
   [key: string]: unknown;
 }
 
+/**
+ * NED 는 `req/*` 와 달리 `response.status` 가 없다 — 거부는 `resultCode` 로만 드러난다(2026-10-12 실측, 전부 HTTP 200):
+ *   정상 `{indvdLandPrices:{field:[…],resultCode:""}}` · 자료 없음 `{response:{resultCode:"",totalCount:"0"}}`
+ *   키 오류 `{indvdLandPrices:{resultCode:"INVALID_KEY",resultMsg:"등록되지 않은 인증키입니다."}}`
+ */
+interface NedContainer {
+  field?: NedPriceItem | NedPriceItem[];
+  totalCount?: string;
+  resultCode?: string;
+  resultMsg?: string;
+}
+
 interface NedRawResponse {
-  indvdLandPrices?:      { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  landCharacteristicss?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  apartHousingPrices?:   { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  indvdHousingPrices?:   { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  response?: { totalCount?: string; resultCode?: string };
+  indvdLandPrices?:      NedContainer;
+  landCharacteristicss?: NedContainer;
+  apartHousingPrices?:   NedContainer;
+  indvdHousingPrices?:   NedContainer;
+  response?: { totalCount?: string; resultCode?: string; resultMsg?: string };
 }
 
 // ──────────────────────────────────────────────────
 // 법정동코드 조회 → PNU 구성 (jibun 기반 fallback)
 // ──────────────────────────────────────────────────
 
-async function getLegalDongCode(jibun: string, apiKey: string): Promise<string | null> {
+/**
+ * 지번 → 법정동코드. `error` 는 Vworld 가 요청을 거부했음(인증키 만료 등)을 뜻한다 —
+ * `null`(주소를 못 찾음)과 섞으면 키 만료가 「지번 주소를 확인해 주세요」로 위장된다.
+ */
+async function getLegalDongCode(
+  jibun: string,
+  apiKey: string,
+): Promise<{ code: string | null; error?: string }> {
   const params = new URLSearchParams({
     service: "address", request: "getcoord", version: "2.0",
     crs: "epsg:4326", address: jibun, refine: "true",
@@ -82,12 +103,17 @@ async function getLegalDongCode(jibun: string, apiKey: string): Promise<string |
       cache: "no-store",
       headers: { Accept: "application/json", Referer: VWORLD_DOMAIN },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { code: null, error: `주소 좌표 서비스 HTTP ${res.status}` };
     const data: AddrResponse = await res.json();
-    if (data.response?.status !== "OK") return null;
+    const st = classifyVworldStatus(data);
+    if (st.kind === "error") return { code: null, error: vworldErrorMessage("주소 좌표 서비스", st) };
+    if (st.kind === "not_found") return { code: null };
     const code = data.response?.refined?.structure?.level4LC;
-    return code && code.length >= 10 ? code.slice(0, 10) : null;
-  } catch { return null; }
+    return { code: code && code.length >= 10 ? code.slice(0, 10) : null };
+  } catch (err) {
+    console.warn("[standard-price] getcoord fetch failed", err);
+    return { code: null, error: "주소 좌표 서비스에 연결하지 못했습니다." };
+  }
 }
 
 function buildPnu(legalDongCode: string, jibun: string): string | null {
@@ -112,24 +138,33 @@ function buildPnu(legalDongCode: string, jibun: string): string | null {
 }
 
 // ──────────────────────────────────────────────────
-/** 조회 실패 응답 — 형제 라우트 `reverse-geocode` 의 502 규약과 같은 층위 */
-function nedFetchFailed(pnu: string) {
+/**
+ * 조회 실패 응답 — 형제 라우트 `reverse-geocode` 의 502 규약과 같은 층위.
+ * `rejection` 이 있으면 NED 가 요청을 거부한 것이다(인증키 오류 등) — 원문을 그대로 올린다.
+ */
+function nedFetchFailed(pnu: string, rejection?: string) {
   return NextResponse.json(
     {
-      error: {
-        code: "NED_FETCH_FAILED",
-        message: "공시가격 조회 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.",
-      },
+      error: rejection
+        ? { code: "VWORLD_API_ERROR", message: rejection }
+        : {
+            code: "NED_FETCH_FAILED",
+            message: "공시가격 조회 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.",
+          },
       pnu,
     },
     { status: 502 },
   );
 }
 
-/** NED 수집 결과 — `failed` 는 네트워크·HTTP 실패로 **수집이 중단됐음**을 뜻한다(자료 없음과 구별) */
+/**
+ * NED 수집 결과 — `failed` 는 **수집이 중단됐음**을 뜻한다(자료 없음과 구별).
+ * `rejection` 은 그중 NED 가 요청을 거부한 경우의 원문 메시지다(네트워크·HTTP 실패면 없음).
+ */
 interface NedFetchResult {
   items: NedPriceItem[];
   failed: boolean;
+  rejection?: string;
 }
 
 // NED API 호출 — 전체 페이지 수집
@@ -144,6 +179,7 @@ async function callNedAllPages(
 ): Promise<NedFetchResult> {
   const allItems: NedPriceItem[] = [];
   let failed = false;
+  let rejection: string | undefined;
   let pageNo = 1;
 
   while (true) {
@@ -166,9 +202,21 @@ async function callNedAllPages(
       }
       const data = (await res.json()) as NedRawResponse;
       // case-insensitive key fallback (Vworld API casing은 버전마다 다를 수 있음)
-      const container: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string } | undefined =
+      const container: NedContainer | undefined =
         data[responseKey] ??
         (Object.entries(data).find(([k]) => k.toLowerCase() === responseKey.toLowerCase())?.[1] as typeof container);
+      // 요청 거부(인증키 오류 등) — 정상·자료 없음은 resultCode 가 빈 문자열이다.
+      // 종전엔 field 없는 컨테이너를 빈 결과로 받아 「공시가격 없음(404)」으로 위장했다.
+      const rejectedBy = container?.resultCode ? container : data.response?.resultCode ? data.response : undefined;
+      if (rejectedBy?.resultCode) {
+        rejection = vworldErrorMessage("공시가격 조회 서비스", {
+          code: rejectedBy.resultCode,
+          text: rejectedBy.resultMsg || `NED resultCode=${rejectedBy.resultCode}`,
+        });
+        console.warn(`[NED] ${endpoint} ${rejection}`);
+        failed = true;
+        break;
+      }
       if (!container) break;
 
       const raw = container.field;
@@ -191,7 +239,7 @@ async function callNedAllPages(
     }
   }
 
-  return { items: allItems, failed };
+  return { items: allItems, failed, rejection };
 }
 
 // ──────────────────────────────────────────────────
@@ -273,7 +321,14 @@ export async function GET(request: NextRequest) {
         { status: 400 },
       );
     }
-    const dongCode = await getLegalDongCode(jibun, apiKey);
+    const { code: dongCode, error: dongCodeError } = await getLegalDongCode(jibun, apiKey);
+    if (dongCodeError) {
+      console.error(`[standard-price] ${dongCodeError}`);
+      return NextResponse.json(
+        { error: { code: "VWORLD_API_ERROR", message: dongCodeError } },
+        { status: 502 },
+      );
+    }
     if (!dongCode) {
       return NextResponse.json(
         { error: { code: "DONG_CODE_NOT_FOUND", message: "법정동코드를 조회할 수 없습니다. 지번 주소를 확인해 주세요." } },
@@ -293,12 +348,12 @@ export async function GET(request: NextRequest) {
   try {
     // ── 토지 ──────────────────────────────────────
     if (propertyType === "land") {
-      const { items, failed } = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
+      const { items, failed, rejection } = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
       const hit = pickUnit(items, "pblntfPclnd", dong, ho);
       if (!hit) {
         // 조회 자체가 실패했으면 「없음」이라 단정하지 않는다 — 재시도할지 수기 입력할지
         // 사용자가 판단할 수 있어야 한다(F-20).
-        if (failed) return nedFetchFailed(pnu);
+        if (failed) return nedFetchFailed(pnu, rejection);
         return NextResponse.json(
           { error: { code: "PRICE_NOT_FOUND", message: `개별공시지가 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
           { status: 404 },
@@ -331,7 +386,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 공동주택 우선 → 개별주택 fallback ─────────
-    const { items: aptItems, failed: aptFailed } = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
+    const { items: aptItems, failed: aptFailed, rejection: aptRejection } = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
     const aptHit = pickUnit(aptItems, "pblntfPc", dong, ho);
     if (aptHit) {
       return NextResponse.json({
@@ -354,7 +409,7 @@ export async function GET(request: NextRequest) {
 
     // 공동주택 없음 → 개별단독주택 시도
     // ※ getIndvdHousingPriceAttr 응답 가격 필드는 pblntfPc가 아닌 housePc
-    const { items: indvdItems, failed: indvdFailed } = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
+    const { items: indvdItems, failed: indvdFailed, rejection: indvdRejection } = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
     const indvdHit = pickUnit(indvdItems, "housePc", dong, ho);
     if (indvdHit) {
       // pblntfDe 없음 → stdrYear + "0429" 로 공시일 추정
@@ -377,7 +432,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (aptFailed || indvdFailed) return nedFetchFailed(pnu);
+    if (aptFailed || indvdFailed) return nedFetchFailed(pnu, aptRejection ?? indvdRejection);
     return NextResponse.json(
       { error: { code: "PRICE_NOT_FOUND", message: `공시가격 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
       { status: 404 },

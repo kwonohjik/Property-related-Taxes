@@ -43,6 +43,8 @@ import {
   formatOwnershipPercent,
 } from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { calcGiftHouseholdFactAsked } from "./gift-household-payload";
+import { giftHouseholdFactErrors } from "./gift-household-payload";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -106,10 +108,19 @@ export function getAssetDateOrderError(
  *
  * collectStepIssues(transfer-tax-validate.ts)가 자산별로 호출해 일괄 수집한다.
  */
+/**
+ * 검증 호출 맥락 — 같은 폼이라도 **어느 화면이 묻는가**에 따라 칸이 다르다.
+ * `embeddedInMulti`: 다건 편집 화면에 임베드된 단건 마법사(`isEmbeddedInMultiPath`). 다건 ④가 싣지 않는 사실은 묻지 않는다.
+ */
+export interface StepValidationContext {
+  embeddedInMulti?: boolean;
+}
+
 export function validateAssetEntry(
   a: AssetForm,
   index: number,
   form: TransferFormData,
+  ctx: StepValidationContext = {},
 ): string | null {
   const label = form.assets.length === 1 ? "자산" : `자산 ${index + 1}`;
 
@@ -327,6 +338,13 @@ export function validateAssetEntry(
       : undefined;
   const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true);
   if (acqError) return acqError;
+
+  // ⑧ 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 판정 메뉴와 같은 규칙(`giftHouseholdFactErrors`)으로 필수로 묻는다.
+  //    ⑤(`CompanionAcquisitionCauseSection`)와 같은 게이트(`calcGiftHouseholdFactAsked` — 첫 자산 · 다건 임베드 아님). ④는 `form.assets[0]`만 싣는다.
+  if (calcGiftHouseholdFactAsked(a, { isPrimary: index === 0, embeddedInMulti: ctx.embeddedInMulti === true })) {
+    const giftFact = giftHouseholdFactErrors(a)[0];
+    if (giftFact) return fieldError(giftFact.field as keyof AssetForm, `${label}: ${giftFact.message}`);
+  }
 
   // ⑧ §97③ 감가상각비 — 입력 가능 구조인지 · 취득가액 한도 (⑤ 게이트와 같은 술어 `depreciation-scope.ts`)
   const depreciationError = validateDepreciation(a, label);

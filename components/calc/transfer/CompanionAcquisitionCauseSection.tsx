@@ -18,6 +18,12 @@ import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { GiftHouseStdPriceSection } from "./GiftHouseStdPriceSection";
 import { GiftLandStdPriceSection } from "./GiftLandStdPriceSection";
+import { GiftHouseholdFactInputs } from "./GiftedSameHouseholdField";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { calcGiftHouseholdFactAsked } from "@/lib/calc/gift-household-payload";
+import { isEmbeddedInMultiPath } from "@/lib/calc/multi-embed-path";
+import { usePathname } from "next/navigation";
 import { PreDeemedEstimatedNotice } from "./PreDeemedEstimatedNotice";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
@@ -60,6 +66,8 @@ export function CompanionAcquisitionCauseSection({
   shareAcquisitionOnly,
   isNonPrimaryAsset,
 }: Props) {
+  // 다건 편집 임베드 여부 — 마법사 ⑧(`TransferTaxCalculator` 검증 맥락)과 같은 판정. 아래 early return보다 먼저 부른다(훅 규칙).
+  const embeddedInMulti = isEmbeddedInMultiPath(usePathname());
   // 일반건물(토지+건물 일괄) — 토지/건물 2카드로 분리 표시
   if (asset.assetKind === "general_building") {
     return (
@@ -75,6 +83,9 @@ export function CompanionAcquisitionCauseSection({
   // D2(건물 상속·증여 + 토지 매매) 유효 여부 — **1회 계산해 아래 마운트 조건·매매 블록에 주입**한다(재파생 금지, `landCause` 주입과 같은 규약).
   const buildingCauseMix = effectiveBuildingCauseMix(asset);
   const d2On = !!buildingCauseMix;
+  // 결정 #38-1 — 단건 첫 자산의 증여 주택(D2·겸용 제외)에서만 세대 사실을 묻는다. 다건 임베드는 묻지 않는다(다건 ④가 싣지 않는다 — #38-3).
+  //    ⑧ `validateAssetEntry`와 같은 게이트(`calcGiftHouseholdFactAsked`), ④ `buildCalcGiftHouseholdPayload`와 같은 술어.
+  const giftHouseholdAsked = calcGiftHouseholdFactAsked(asset, { isPrimary: !isNonPrimaryAsset, embeddedInMulti });
 
   return (
     <div className="space-y-2">
@@ -304,7 +315,24 @@ export function CompanionAcquisitionCauseSection({
           fixedAcquisitionPrice={asset.fixedAcquisitionPrice}
           onFixedAcquisitionPriceChange={(v) => onChange({ fixedAcquisitionPrice: v })}
           isBurdenedGift={asset.transferType === "burdened_gift"}
+          donorDateRequiredForHousehold={giftHouseholdAsked}
         />
+      )}
+
+      {/* 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실(판정 메뉴와 같은 칸·같은 ⑧ 규칙). 부담부증여 양도도 같다.
+          ④는 첫 자산만 싣는다 — 함께 양도하는 자산·건물만 증여받은 주택(D2)·겸용주택·다건 편집에는 칸을 열지 않는다(⑧·④와 같은 술어). */}
+      {giftHouseholdAsked && (
+        <ToneCard
+          tone="violet"
+          title="증여자와의 세대 관계 — 1세대1주택 비과세 판정"
+          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §154 ①" label="시행령 §154①" />}
+        >
+          <p className="mb-3 text-caption text-muted-foreground">
+            증여일부터 양도일까지 증여자와 계속 같은 세대였다면 비과세 판정의 보유기간을 세대가 이 주택 보유를 시작한 날부터 통산합니다.
+            장기보유특별공제와 세율의 보유기간은 증여일부터입니다.
+          </p>
+          <GiftHouseholdFactInputs asset={asset} onChange={onChange} showDonorAcquisitionDate={false} />
+        </ToneCard>
       )}
 
       {/* 증여 주택 §164⑤~⑦ 취득당시 기준시가 — max(증여일 상증법 평가액, §164⑤~⑦). 소령 §163⑨2호.

@@ -3,7 +3,9 @@
  *
  * ⑤(질문 노출)·⑧(응답 요구)·④(전송)이 이 파일의 술어를 **함께** 읽는다(3중 패턴). 엔진은 같은 응답을
  * `lib/tax-engine/spouse-holding-at-transfer.ts`(`readSpouseHolding`)로 읽고 확인 필요 고지는 반사실 재계산으로 낸다.
- * 여기 게이트는 엔진 구간의 **보수적 상위집합**이다(주택 수 제외 전 raw 수, 조정대상지역 토글) — 묻는 쪽으로 틀리고 숨기는 쪽으로 틀리지 않는다.
+ * 주택 수는 엔진 구간의 상위집합이다(주택 수 제외 전 raw 수 — 묻는 쪽으로 틀린다). 조정대상지역은 ④와 같은 실효값
+ * (`calcEffectiveIsRegulatedAtTransfer` — 주소가 있으면 주소 판정, 없으면 저장된 토글)을 읽는다. 저장된 토글만 읽으면 주소가 조정대상지역인데
+ * 토글이 꺼진 폼에서 엔진은 중과하는데 질문은 숨겨져, 숨기는 쪽으로 틀린다.
  *
  * ## 질문 대상
  * - 혼인한 배우자 쪽 행(합가 전 보유자 = 「배우자 쪽」) — **필수 응답**(예/아니오/모름). 「모름」은 막지 않는다(차감 없이 계산 + 결론을 가를 때 확인 필요).
@@ -13,6 +15,7 @@
  * 판정 메뉴는 묻지 않는다(`hideSpouseOwned`) — 중과 축 전용 사실이고, 판정 메뉴에서 넘어온 「배우자 쪽」 행은 응답 없이 도착해 ⑧이 요구한다.
  */
 import { isMultiHouseSurchargeSuppressed } from "./transfer-tax-api-helpers";
+import { calcEffectiveIsRegulatedAtTransfer } from "./effective-regulated-at-acquisition";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { mergeContextOf, mergeHouseSideOf, type MergeContext } from "./merge-house-origin";
@@ -28,7 +31,7 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 type Form = Pick<
   TransferFormData,
-  "marriageDate" | "parentalCareMergeDate" | "transferDate" | "houses" | "presaleRights" | "isRegulatedArea" | "assets"
+  "marriageDate" | "parentalCareMergeDate" | "transferDate" | "houses" | "presaleRights" | "isRegulatedArea" | "regionCode" | "assets"
 >;
 
 /** 질문이 열리는가 — 혼인 5년 안 양도 · 혼인 뒤 새 취득 없음 · 주택+권리 3 이상 · 중과가 걸리는 양도(조정대상지역, 한시배제 밖). */
@@ -38,7 +41,7 @@ export function spouseHoldingQuestionApplies(form: Form): boolean {
   const marriage = toOptionalDate(form.marriageDate);
   const transfer = toOptionalDate(form.transferDate);
   if (!marriage || !transfer) return false;
-  if (form.isRegulatedArea !== true) return false;
+  if (!calcEffectiveIsRegulatedAtTransfer(form)) return false;
   const primaryAcquisition = primaryAcquisitionDateOf(primary);
   if (isMultiHouseSurchargeSuppressed(form.transferDate, primaryAcquisition)) return false;
   const houses = form.houses ?? [];

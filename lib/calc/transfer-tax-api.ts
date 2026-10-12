@@ -535,7 +535,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       primary.acquisitionCause === "gift" && primary.donorAcquisitionDate
         ? primary.donorAcquisitionDate
         : undefined,
-    // ④⑬ 결정 #38 — 판정 메뉴에서 넘어온 「증여자와 계속 같은 세대」 사실(이월과세로 바뀌지 않은 증여). 위 `donorAcquisitionDate`와 같은 값.
+    // ④⑬ 결정 #38 — 「증여자와 계속 같은 세대」 사실(화면 입력 또는 판정 메뉴에서 넘어온 값 · 이월과세 밖 증여 · D2 제외). 위 `donorAcquisitionDate`와 같은 값.
     ...buildCalcGiftHouseholdPayload(primary),
     isOneHousehold: form.isOneHousehold,
     reductions,

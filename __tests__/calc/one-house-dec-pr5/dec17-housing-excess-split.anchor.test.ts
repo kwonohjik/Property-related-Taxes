@@ -156,7 +156,8 @@ describe("#17 술어 — 분리 경로 대상 여부 (노출 ⇔ 필수 ⇔ 전�
     ["겸용주택", () => housingExcessNeedsLandSplit(asset({ isMixedUseHouse: true }), TD, true)],
     ["부담부증여", () => housingExcessNeedsLandSplit(asset({ transferType: "burdened_gift" }), TD, true)],
     ["지분 양도(1/2)", () => housingExcessNeedsLandSplit(asset({ ownershipNumerator: "1", ownershipDenominator: "2" }), TD, true)],
-    ["환산 취득가액", () => housingExcessNeedsLandSplit(asset({ useEstimatedAcquisition: true }), TD, true)],
+    // 환산·감정·매매사례 단독은 #17-4로 대상이 됐다(`dec17-housing-excess-b2.anchor.test.ts`) — 환산 + 공익수용만 남는다
+    ["환산 + 공익수용", () => housingExcessNeedsLandSplit(asset({ useEstimatedAcquisition: true, transferCause: "public_expropriation" }), TD, true)],
     ["토지 취득일 별도(별개취득) — 기존 경로", () => housingExcessNeedsLandSplit(asset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2011-06-01" }), TD, true)],
     ["면적 한도 이내", () => housingExcessNeedsLandSplit(asset({ acquisitionArea: "300", transferArea: "300" }), TD, true)],
     ["소재지 구분 없음", () => housingExcessNeedsLandSplit(asset({ appurtenantLandZone: undefined }), TD, true)],
