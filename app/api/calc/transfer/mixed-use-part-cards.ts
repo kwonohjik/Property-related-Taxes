@@ -55,6 +55,7 @@ import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-co
 import type { MixedUseZodPayload } from "./mixed-use-asset-input";
 import type { MixedUseCompanionContext } from "./bundled-split-helpers";
 import { reductionsForCard } from "./general-building-route-cards";
+import { resolveRateBasisAcquisitionDate } from "@/lib/tax-engine/transfer-rate-holding-basis";
 
 /** 파트 카드 id 접미사 — 결과뷰·신고서가 자산을 되짚을 수 있게 `#<assetId>`를 붙인다. */
 export const MIXED_USE_PART_IDS = {
@@ -249,7 +250,7 @@ export function buildMixedUsePartCards(
     ...extra,
   });
 
-  return [
+  const cards = [
     card(
       MIXED_USE_PART_IDS.housingLand,
       "주택 부수토지",
@@ -320,6 +321,20 @@ export function buildMixedUsePartCards(
         ]
       : []),
   ];
+
+  /**
+   * 「소득세법」 §104①2호 괄호 — 주택과 그 부수토지는 **늦은 취득일 하나**로 세율을 판정한다(조심 2024인3140).
+   * 주택 카드는 장특을 파트별로 계산하려고 취득일을 따로 가지므로, 세율 기산일만 주택 카드들의 §104② 기산일 중
+   * 늦은 날로 맞춘다 — 단건 겸용 `rateParts` 주택분(`Math.min` 보유연수)과 같은 규칙. 종전엔 카드마다 자기 취득일로
+   * 판정해 토지 2015·건물 2023-09 매매에서 토지 카드가 누진(정답 70%)이었다. §154③ 본문으로 주택이 된 상가 카드도 포함한다.
+   */
+  const housingDates = cards
+    .filter((c) => c.propertyType === "housing")
+    .map((c) => resolveRateBasisAcquisitionDate(c).getTime());
+  const housingRateBasis = Math.max(...housingDates);
+  if (housingDates.every((t) => t === housingRateBasis)) return cards;
+  const housingRateBasisDate = new Date(housingRateBasis);
+  return cards.map((c) => (c.propertyType === "housing" ? { ...c, housingRateBasisDate } : c));
 }
 
 /**
