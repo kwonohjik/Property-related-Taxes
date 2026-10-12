@@ -61,12 +61,24 @@ export interface NedPriceItem {
   [key: string]: unknown;
 }
 
+/**
+ * NED 는 `req/*` 와 달리 `response.status` 가 없다 — 거부는 `resultCode` 로만 드러난다(2026-10-12 실측, 전부 HTTP 200):
+ *   정상 `{indvdLandPrices:{field:[…],resultCode:""}}` · 자료 없음 `{response:{resultCode:"",totalCount:"0"}}`
+ *   키 오류 `{indvdLandPrices:{resultCode:"INVALID_KEY",resultMsg:"등록되지 않은 인증키입니다."}}`
+ */
+interface NedContainer {
+  field?: NedPriceItem | NedPriceItem[];
+  totalCount?: string;
+  resultCode?: string;
+  resultMsg?: string;
+}
+
 interface NedRawResponse {
-  indvdLandPrices?:      { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  landCharacteristicss?: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  apartHousingPrices?:   { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  indvdHousingPrices?:   { field?: NedPriceItem | NedPriceItem[]; totalCount?: string };
-  response?: { totalCount?: string; resultCode?: string };
+  indvdLandPrices?:      NedContainer;
+  landCharacteristicss?: NedContainer;
+  apartHousingPrices?:   NedContainer;
+  indvdHousingPrices?:   NedContainer;
+  response?: { totalCount?: string; resultCode?: string; resultMsg?: string };
 }
 
 // ──────────────────────────────────────────────────
@@ -126,24 +138,33 @@ function buildPnu(legalDongCode: string, jibun: string): string | null {
 }
 
 // ──────────────────────────────────────────────────
-/** 조회 실패 응답 — 형제 라우트 `reverse-geocode` 의 502 규약과 같은 층위 */
-function nedFetchFailed(pnu: string) {
+/**
+ * 조회 실패 응답 — 형제 라우트 `reverse-geocode` 의 502 규약과 같은 층위.
+ * `rejection` 이 있으면 NED 가 요청을 거부한 것이다(인증키 오류 등) — 원문을 그대로 올린다.
+ */
+function nedFetchFailed(pnu: string, rejection?: string) {
   return NextResponse.json(
     {
-      error: {
-        code: "NED_FETCH_FAILED",
-        message: "공시가격 조회 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.",
-      },
+      error: rejection
+        ? { code: "VWORLD_API_ERROR", message: rejection }
+        : {
+            code: "NED_FETCH_FAILED",
+            message: "공시가격 조회 서비스에 연결하지 못했습니다. 잠시 후 다시 시도하거나 직접 입력하세요.",
+          },
       pnu,
     },
     { status: 502 },
   );
 }
 
-/** NED 수집 결과 — `failed` 는 네트워크·HTTP 실패로 **수집이 중단됐음**을 뜻한다(자료 없음과 구별) */
+/**
+ * NED 수집 결과 — `failed` 는 **수집이 중단됐음**을 뜻한다(자료 없음과 구별).
+ * `rejection` 은 그중 NED 가 요청을 거부한 경우의 원문 메시지다(네트워크·HTTP 실패면 없음).
+ */
 interface NedFetchResult {
   items: NedPriceItem[];
   failed: boolean;
+  rejection?: string;
 }
 
 // NED API 호출 — 전체 페이지 수집
@@ -158,6 +179,7 @@ async function callNedAllPages(
 ): Promise<NedFetchResult> {
   const allItems: NedPriceItem[] = [];
   let failed = false;
+  let rejection: string | undefined;
   let pageNo = 1;
 
   while (true) {
@@ -180,9 +202,21 @@ async function callNedAllPages(
       }
       const data = (await res.json()) as NedRawResponse;
       // case-insensitive key fallback (Vworld API casing은 버전마다 다를 수 있음)
-      const container: { field?: NedPriceItem | NedPriceItem[]; totalCount?: string } | undefined =
+      const container: NedContainer | undefined =
         data[responseKey] ??
         (Object.entries(data).find(([k]) => k.toLowerCase() === responseKey.toLowerCase())?.[1] as typeof container);
+      // 요청 거부(인증키 오류 등) — 정상·자료 없음은 resultCode 가 빈 문자열이다.
+      // 종전엔 field 없는 컨테이너를 빈 결과로 받아 「공시가격 없음(404)」으로 위장했다.
+      const rejectedBy = container?.resultCode ? container : data.response?.resultCode ? data.response : undefined;
+      if (rejectedBy?.resultCode) {
+        rejection = vworldErrorMessage("공시가격 조회 서비스", {
+          code: rejectedBy.resultCode,
+          text: rejectedBy.resultMsg || `NED resultCode=${rejectedBy.resultCode}`,
+        });
+        console.warn(`[NED] ${endpoint} ${rejection}`);
+        failed = true;
+        break;
+      }
       if (!container) break;
 
       const raw = container.field;
@@ -205,7 +239,7 @@ async function callNedAllPages(
     }
   }
 
-  return { items: allItems, failed };
+  return { items: allItems, failed, rejection };
 }
 
 // ──────────────────────────────────────────────────
@@ -314,12 +348,12 @@ export async function GET(request: NextRequest) {
   try {
     // ── 토지 ──────────────────────────────────────
     if (propertyType === "land") {
-      const { items, failed } = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
+      const { items, failed, rejection } = await callNedAllPages("getIndvdLandPriceAttr", pnu, year, apiKey, "indvdLandPrices");
       const hit = pickUnit(items, "pblntfPclnd", dong, ho);
       if (!hit) {
         // 조회 자체가 실패했으면 「없음」이라 단정하지 않는다 — 재시도할지 수기 입력할지
         // 사용자가 판단할 수 있어야 한다(F-20).
-        if (failed) return nedFetchFailed(pnu);
+        if (failed) return nedFetchFailed(pnu, rejection);
         return NextResponse.json(
           { error: { code: "PRICE_NOT_FOUND", message: `개별공시지가 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
           { status: 404 },
@@ -352,7 +386,7 @@ export async function GET(request: NextRequest) {
     }
 
     // ── 공동주택 우선 → 개별주택 fallback ─────────
-    const { items: aptItems, failed: aptFailed } = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
+    const { items: aptItems, failed: aptFailed, rejection: aptRejection } = await callNedAllPages("getApartHousingPriceAttr", pnu, year, apiKey, "apartHousingPrices");
     const aptHit = pickUnit(aptItems, "pblntfPc", dong, ho);
     if (aptHit) {
       return NextResponse.json({
@@ -375,7 +409,7 @@ export async function GET(request: NextRequest) {
 
     // 공동주택 없음 → 개별단독주택 시도
     // ※ getIndvdHousingPriceAttr 응답 가격 필드는 pblntfPc가 아닌 housePc
-    const { items: indvdItems, failed: indvdFailed } = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
+    const { items: indvdItems, failed: indvdFailed, rejection: indvdRejection } = await callNedAllPages("getIndvdHousingPriceAttr", pnu, year, apiKey, "indvdHousingPrices");
     const indvdHit = pickUnit(indvdItems, "housePc", dong, ho);
     if (indvdHit) {
       // pblntfDe 없음 → stdrYear + "0429" 로 공시일 추정
@@ -398,7 +432,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (aptFailed || indvdFailed) return nedFetchFailed(pnu);
+    if (aptFailed || indvdFailed) return nedFetchFailed(pnu, aptRejection ?? indvdRejection);
     return NextResponse.json(
       { error: { code: "PRICE_NOT_FOUND", message: `공시가격 없음 (PNU: ${pnu}, ${year}년)` }, pnu },
       { status: 404 },
