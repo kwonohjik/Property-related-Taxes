@@ -348,7 +348,9 @@ function noRosterTwoHouseDeemingHouses(
 /**
  * 영 §167의10①4호 슬롯(`qualifiesUnavoidableOutsideCapital`)에 넘길 입력 — 주택 수를 §155②③·조특법 제외 **후** 값으로 바꾼다
  * (#16 · `surcharge15HouseCount` — ① 요소와 같은 수). 제외가 없으면 입력 그대로다(종전 동작·참조 동일).
- * 중과 엔진 4호 분기가 「다른 효과 주택이 상속주택이면」 건너뛰는 가드를 따로 건다(`multi-house-surcharge-exclusion.ts`).
+ * 중과 엔진 4호 분기가 가드를 따로 건다(`multi-house-surcharge-exclusion.ts`) — 명부에 ⑧ 행 표시(`isUnavoidableOutsideCapital`)가
+ * 있으면 그 행이 중과 주택 수 2채 안(양도 주택 또는 다른 효과 주택)일 때만 배제하고, 없으면(명부 없는 합성 주택·세대 단위
+ * 레거시 선언) 「다른 효과 주택이 상속주택이면」 건너뛰는 종전 대리 지표를 쓴다(#16-1).
  */
 export function surchargeSlotInput(workingInput: TransferTaxInput, generalHouseAcquisitionDate?: Date): TransferTaxInput {
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);

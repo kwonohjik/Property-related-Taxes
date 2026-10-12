@@ -266,37 +266,58 @@ describe("#16 ⑧·⑥ + 상속 제외 — 비과세 의제를 중과 배제에�
  * (「다른 효과 주택이 상속주택인가」)가 통과시켜 2주택 중과를 면했다. 명부 ⑧ 행 표시를 엔진에 echo해 그 주택이 2채 안인지 본다.
  * 해소일은 양도일 전(2020-06-01 — 3년 내)으로 둔다.
  *
+ * 시료의 다른 주택은 **영 §167의3①2호~8호 밖**이어야 한다 — 그 안이면 §167의10①2호에 해당해 10호(「제1호부터 제7호까지 …
+ * 제외하고 1개의 주택만」)가 4호와 무관하게 배제한다(MST 231965). 조특법 §98 미분양주택(조특령 §98② — 주택 수 제외)은
+ * 영 §167의3①5호 열거(§77·§98의2·§98의3·§98의5~8·§99·§99의2·§99의3)에 없고, 3호는 「§98에 따라 … 감면되는 **임대주택**으로서
+ * 5년 이상 임대한 국민주택」이라 임대하지 않은 §98 미분양은 들지 않는다. §98은 「서울특별시외」 국민주택이라 경기에 둔다.
+ *
  * | 시료 (양도 2021-09-18) | 수정 전 | 수정 후 |
  * |---|---:|---:|
- * | ⑧(경남 1억 — 중과 주택 수 밖) + 확인된 조특법 §99의2 감면주택 (P1) | 340,038,600 (4호) | 597,025,000 (2주택 중과) |
- * | 같은 세대 ⑧ 선언 없음 (P0 대조) | 1,141,772,500 | 1,141,772,500 |
+ * | ⑧(경남 1억 — 중과 주택 수 밖) + 임대하지 않은 §98 미분양(경기) (Q1) | 340,038,600 (4호) | 597,025,000 (2주택 중과) |
+ * | 같은 세대 ⑧ 선언 없음 (Q0 대조) | 1,141,772,500 | 1,141,772,500 |
+ * | ⑧(경남 1억) + §99의2 감면주택 · 행 「조특법 감면주택(5호)」 표시 (S5) | 340,038,600 (4호) | 340,038,600 (10호) |
  * | ⑧(부산 4억 — 2채 안) + 공동상속 소수지분 (K1 짝) | 340,038,600 (4호) | 340,038,600 (4호) |
  */
 describe("#16-1 4호 가드 — ⑧ 주택이 중과 주택 수 2채 안에 있을 때만 (2023.2.28. 전 양도)", () => {
   const TD_2021 = "2021-09-18";
   const UNAV_2021 = (over: Partial<HouseEntry> = {}) => UNAV({ unavoidableOutsideCapitalResolvedDate: "2020-06-01", ...over });
-  const P1 = () =>
-    form([UNAV_2021({ officialPrice: "100000000", regionCode: GYEONGNAM }), SPECIAL_ROW], {
-      specialHouseExclusions: SPECIAL_DECL,
-      transferDate: TD_2021,
-    });
+  const UNAV_OUT = UNAV_2021({ officialPrice: "100000000", regionCode: GYEONGNAM });
+  /** 조특법 §98 미분양(1997 취득 · 경기 · 임대하지 않음) — 주택 수 제외(조특령 §98②), 영 §167의3①2호~8호 밖 */
+  const UNSOLD_98_ROW: HouseEntry = { ...ROW, id: "h5", regionCode: "4113510300", acquisitionDate: "1997-06-01" };
+  const UNSOLD_98_DECL = [
+    { article: "unsold_98", houseAcquisitionDate: "1997-06-01", houseContractDate: "1997-06-01", isNationalHousing: true, requirementsConfirmed: true },
+  ] as Form["specialHouseExclusions"];
+  const Q1 = () => form([UNAV_OUT, UNSOLD_98_ROW], { specialHouseExclusions: UNSOLD_98_DECL, transferDate: TD_2021 });
 
-  it("P1 ⑧(중과 주택 수 밖) + 조특법 감면주택 → 4호 배제 없음, 2주택 중과 597,025,000 (수정 전 340,038,600)", async () => {
-    const r = await run(P1());
+  it("Q1 ⑧(중과 주택 수 밖) + 임대하지 않은 §98 미분양 → 4호 배제 없음, 2주택 중과 597,025,000 (수정 전 340,038,600)", async () => {
+    const r = await run(Q1());
     expect(r).toMatchObject({ totalTax: 597_025_000, reasons: "", eff: 2 });
-    expect(await multiTotal(P1()), "다건 route도 단건과 같은 세액").toBe(597_025_000);
+    expect(await multiTotal(Q1()), "다건 route도 단건과 같은 세액").toBe(597_025_000);
   });
-  it("P0 대조 — 같은 세대 ⑧ 선언 없음 → 1,141,772,500 (⑧ 비과세 의제가 없어 전액 과세)", async () => {
-    const plain = { ...ROW, id: "hu", region: "non_capital", regionCode: GYEONGNAM, acquisitionDate: "2018-01-01", officialPrice: "100000000" } as HouseEntry;
-    const r = await run(form([plain, SPECIAL_ROW], { specialHouseExclusions: SPECIAL_DECL, transferDate: TD_2021 }));
+  it("Q0 대조 — 같은 세대 ⑧ 선언 없음 → 1,141,772,500 (⑧ 비과세 의제가 없어 전액 과세)", async () => {
+    const plain = { ...UNAV_OUT, oneHouseUnavoidableOutsideCapital: false } as HouseEntry;
+    const r = await run(form([plain, UNSOLD_98_ROW], { specialHouseExclusions: UNSOLD_98_DECL, transferDate: TD_2021 }));
     expect(r).toMatchObject({ totalTax: 1_141_772_500, reasons: "", eff: 2 });
   });
+  it("S5 짝 — §99의2 감면주택에 행 「조특법 감면주택(5호)」 표시 → 4호가 아니어도 10호 배제 340,038,600", async () => {
+    const f = () =>
+      form([UNAV_OUT, { ...SPECIAL_ROW, isUnsoldHousing: true }], { specialHouseExclusions: SPECIAL_DECL, transferDate: TD_2021 });
+    expect(await run(f())).toMatchObject({ totalTax: 340_038_600, reasons: "only_general_two_house", eff: 2 });
+    expect(await multiTotal(f()), "다건 route도 단건과 같은 세액").toBe(340_038_600);
+  });
+  /**
+   * 별건 공백(이 PR 전부터) — §99의2 등 영 §167의3①3호·5호 조문을 ⑥ 주택 수 제외(`specialHouseExclusions` · 명부 행 ⑥)로만
+   * 선언하고 행 「조특법 감면주택(5호)」 칩을 켜지 않으면 중과 10호 판정(`isGroupExcludable`)에 닿지 않는다. 수정 전에는 4호가
+   * 우연히 같은 세액(340,038,600)을 냈고, 지금은 597,025,000이다(실측 — 단건·다건, 전역·행 연결 선언 모두). ⑥ 선언을 10호에
+   * 잇는 방식(요건 확인 여부·3호 임대 요건)은 사용자 결정 대상이라 값을 고정하지 않는다.
+   */
+  it.todo("§99의2를 ⑥ 주택 수 제외로만 선언(5호 칩 없음) → 10호 배제 340,038,600이어야 한다 — ⑥ 선언 ↔ 중과 10호 미연결(별건)");
   it("K1 짝 — ⑧(2채 안) + 공동상속 소수지분 → 4호 배제 그대로 340,038,600", async () => {
     const r = await run(form([UNAV_2021(), CO_INH], { transferDate: TD_2021 }));
     expect(r).toMatchObject({ totalTax: 340_038_600, reasons: "unavoidable_outside_capital", eff: 2 });
   });
   it("2023.2.28. 이후 양도(2026-09-18)는 15호가 받아 세액 불변 204,355,800", async () => {
-    const r = await run(form([UNAV({ officialPrice: "100000000", regionCode: GYEONGNAM }), SPECIAL_ROW], { specialHouseExclusions: SPECIAL_DECL }));
+    const r = await run(form([UNAV({ officialPrice: "100000000", regionCode: GYEONGNAM }), UNSOLD_98_ROW], { specialHouseExclusions: UNSOLD_98_DECL }));
     expect(r).toMatchObject({ totalTax: AFTER, reasons: "unavoidable_outside_capital_house", eff: 2 });
   });
 });
