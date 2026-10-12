@@ -358,6 +358,9 @@ export function buildMixedUseCompanionItems(
     filingPenaltyDetails: undefined,
     delayedPaymentDetails: undefined,
     assetContractDate: companionEngine.assetContractDate,
+    // 서브엔진 `total`은 버리므로 세액에는 닿지 않는다 — 단기세율(§104②1호)·§77⑨는 카드(aggregate item)가 물려받은
+    // `companionEngine.decedentAcquisitionDate`로 단건 엔진이 판정한다(anchor `transfer.route.companion-mixed-use-inheritance-decedent`).
+    // 단건 겸용 route와 같은 입력을 만들기 위해서만 싣는다.
     decedentAcquisitionDate:
       companionEngine.acquisitionCause === "inheritance" ? companionEngine.decedentAcquisitionDate : undefined,
     // ── 폼-전역(세대 단위) — primary와 같은 값을 상속한다 ──
