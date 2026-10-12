@@ -10,6 +10,7 @@
  * | W-3 | 신고서 제출은 요건이 아니라 안내다(질문·게이트 없음) |
  * | E-1 | 편집 모달은 후보 행(취득일 창 + 인구감소지역)에서 `popDeclineEnabled`일 때만 그린다 |
  * | E-2 | ④ 세컨드홈 카드 문구가 중과 주택 수 전용임을 밝힌다 |
+ * | E-3 | 계산기 명부(`HousesListSection`)는 주택 양도와 **조합원입주권 양도**에서 질문을 연다 — 분양권 양도는 닫는다(결정 #42) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -17,6 +18,10 @@ import { HouseEntryPopDeclineBlock } from "@/components/calc/transfer/HouseEntry
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import { HousesListSection } from "@/app/calc/transfer-tax/steps/step4-sections/HousesListSection";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+
+vi.mock("@/components/ui/address-search", () => ({ AddressSearch: () => null }));
 
 afterEach(cleanup);
 
@@ -107,5 +112,24 @@ describe("E-2 ④ 세컨드홈 카드", () => {
     render(<HouseEntrySpecialExclusionSection house={row({ isPopulationDeclineArea: true })} onUpdate={vi.fn()} />);
     expect(screen.getByText(/중과 주택 수 전용/)).toBeTruthy();
     expect(screen.getByText(/§71의2 인구감소지역주택/)).toBeTruthy();
+  });
+});
+
+describe("E-3 계산기 명부 — 양도 자산별 노출 (결정 #42 「입주권 양도(§89①4호)에도 적용」)", () => {
+  const calcForm = (kind: string) => {
+    const f = createDefaultTransferFormData();
+    f.isOneHousehold = true;
+    f.transferDate = "2026-06-15";
+    f.assets[0] = { ...f.assets[0], assetKind: kind as never, acquisitionDate: "2010-03-15" };
+    return Object.assign(f, { presaleRights: [], houses: [row()], householdHousingCount: "1" });
+  };
+  it.each([
+    ["housing", true],
+    ["right_to_move_in", true],
+    ["presale_right", false],
+  ])("양도 자산 %s → 질문 %s", (kind, shown) => {
+    render(<HousesListSection form={calcForm(kind)} onChange={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
+    expect(screen.queryByTestId("house-row-pop-decline-intro") !== null).toBe(shown);
   });
 });

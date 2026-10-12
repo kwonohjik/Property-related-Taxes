@@ -7,7 +7,11 @@
  */
 import { presaleRightStartDate, type ParsedRates } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
-import { oneRightInputAfterSpecialActExclusionOf } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
+import {
+  oneRightInputAfterSpecialActExclusionOf,
+  rightSalePopDeclineUnconfirmedNotice,
+} from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
+import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax-rental-residence-composition";
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
@@ -61,12 +65,22 @@ export function runOneHouseJudgmentPipeline(
    *    판정 메뉴가 §89①4호 비과세를 영원히 말하지 못한다.
    */
   // 조특법상 소유주택으로 보지 않는 주택은 가·나목 「다른 주택」에서 뺀다(G065 — §155②③ 상속주택 제외는 빼지 않는다).
+  //   명부에서 도출하는 §71의2① 인구감소지역주택도 함께 뺀다(결정 #42 — 법률이 4호를 직접 적는다).
   //   계산기 §166 분기(`transfer-tax-redevelopment-steps.ts`)가 같은 함수를 부른다(결정 #2).
   const oneRightVerdict = buildOneRightVerdict(
     isRightSale ? oneRightInputAfterSpecialActExclusionOf(engineInput) : engineInput,
     isRightSale,
   );
-  const afterOneRight = applyOneRightVerdict(afterRental, oneRightVerdict);
+  const afterOneRightVerdict = applyOneRightVerdict(afterRental, oneRightVerdict);
+  // §71의2 후보가 모름으로 불성립했고 그것이 가·나목 결론을 가를 때만 확인 필요(결정 #42) — 주택 양도의 고지 수집기는 입주권을 보지 않는다.
+  const popNotice = isRightSale ? rightSalePopDeclineUnconfirmedNotice(engineInput) : undefined;
+  const afterOneRight =
+    popNotice && !afterOneRightVerdict.undetermined.some((u) => u.id === POP_DECLINE_71_2_UNCONFIRMED_ID)
+      ? {
+          ...afterOneRightVerdict,
+          undetermined: [...afterOneRightVerdict.undetermined, { id: POP_DECLINE_71_2_UNCONFIRMED_ID, reason: popNotice }],
+        }
+      : afterOneRightVerdict;
 
   /**
    * 단계 6.7: 양도일 현재 비거주자(소득세법 §121② 단서 · 시행령 §180의2) — 판정 메뉴 전용.

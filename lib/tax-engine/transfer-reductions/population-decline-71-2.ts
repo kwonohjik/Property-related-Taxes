@@ -39,6 +39,8 @@
 import { TRANSFER } from "../legal-codes";
 import { classifyPopulationDeclineArea, toSigunguCode } from "../data/population-decline-areas";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
+import type { TransferTaxInput } from "../types/transfer.types";
+import { resolveInheritedSellingHouseId } from "../transfer-inheritance-exclusion";
 import type { SpecialHouseExclusionEntryResult } from "./unsold-hybrid-p5";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import { normalizeSigunguCode } from "@/lib/geo/sigungu-code-alias";
@@ -100,6 +102,17 @@ export interface PopDeclineResult {
 
 const day = (d: Date) => Math.floor(d.getTime() / 86_400_000);
 const fmt = (d: Date) => `${d.getUTCFullYear()}.${d.getUTCMonth() + 1}.${d.getUTCDate()}.`;
+
+/**
+ * 판정 보류 고지 문장 — 주택 양도(`era-undetermined.ts`)·입주권 양도(`right-sale-special-act-exclusion.ts`) 판정 메뉴와
+ * 계산기 경고가 같은 문장을 쓴다.
+ */
+export function popDeclineUnconfirmedNotice(reasons: readonly string[]): string {
+  return (
+    `${TRANSFER.POP_DECLINE_HOUSE_71_2}(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다 — ${reasons.join(" ")} ` +
+    "확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다."
+  );
+}
 
 /** 신고서 제출 안내 — 요건이 아니라 안내다(법률 ①에 신청 조건이 없다). */
 export const POP_DECLINE_FILING_NOTICE =
@@ -251,4 +264,30 @@ export function resolvePopulationDecline71_2(p: PopDeclineInput): PopDeclineResu
     };
   }
   return { entries, excludedCount: eligible.length };
+}
+
+/**
+ * 엔진 입력에서 평가한다 — 주택 양도(STEP 0.9 `resolveExemptionHouseCountExclusions`)와 입주권 양도(가·나목
+ * `resolveRightSaleSpecialExclusion`)가 함께 쓴다. 두 경로는 「이미 다른 제외로 빠진 것」만 다르다 — 입주권 양도는
+ * 해석례로 확인된 보유 감면주택 조문 선언만 「다른 주택」에서 빼고 §99의4·§98의9·§155②③은 빼지 않는다.
+ */
+export function resolvePopulationDecline71_2FromInput(
+  input: Pick<
+    TransferTaxInput,
+    "isOneHousehold" | "houses" | "sellingHouseId" | "transferDate" | "presaleRights" | "householdHousingCount" | "propertyType"
+  >,
+  already: { ids: ReadonlySet<string>; count: number },
+): PopDeclineResult {
+  const sellingHouseId = resolveInheritedSellingHouseId(input);
+  if (!input.isOneHousehold || !sellingHouseId || !input.houses || input.houses.length === 0) return { entries: [], excludedCount: 0 };
+  return resolvePopulationDecline71_2({
+    houses: input.houses,
+    sellingHouseId,
+    transferDate: input.transferDate,
+    presaleRights: input.presaleRights ?? [],
+    alreadyExcludedIds: already.ids,
+    otherExcludedCount: already.count,
+    householdHousingCount: input.householdHousingCount,
+    sellingIsHousing: input.propertyType !== "right_to_move_in",
+  });
 }

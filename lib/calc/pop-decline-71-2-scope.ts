@@ -5,6 +5,7 @@
  * 2025.11.28. 이후 취득분만이다. 후보가 아니면 묻지 않는다 — 이 칸은 적용 여부를 고르는 토글이 아니라 **명부에 없는 과거 사실**을 받는 칸이다.
  */
 import { classifyPopulationDeclineArea } from "@/lib/tax-engine/data/population-decline-areas";
+import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import {
   POP_DECLINE_INTEREST_ACQ_FROM,
   POP_DECLINE_WINDOW_END,
@@ -15,6 +16,15 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 type Row = Pick<HouseEntry, "acquisitionDate" | "regionCode" | "isPopulationDeclineArea" | "populationAreaType">;
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+/**
+ * 계산기에서 질문을 여는 양도 자산 — §89①3호 주택 양도(`isOneHouseExemptionAsset`)와 §89①4호 조합원입주권 양도.
+ * 법률 ①이 「「소득세법」 제89조제1항제3호 또는 제4호를 적용한다」고 4호를 직접 적는다(결정 #42 — 입주권 양도에도 적용).
+ * 판정 메뉴는 양도 자산과 무관하게 연다(호출부 `judgmentMenu`).
+ */
+export function popDeclineQuestionAsset(assetKind: string | undefined): boolean {
+  return isOneHouseExemptionAsset(assetKind) || assetKind === "right_to_move_in";
+}
 
 /** 이 행이 §71의2① 후보인가 — 취득일 창 + 인구감소(관심)지역. 중과 ④와 같은 인자(`isPopulationDeclineArea ?? 자동판정`)로 읽는다. */
 export function popDeclineRowCandidate(row: Row): boolean {

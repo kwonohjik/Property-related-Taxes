@@ -9,7 +9,9 @@
  * | P-1~P-9 | 평가기 | 양성 · 취득기간 경계 · 양도일 선후 · 가액 한도 연혁 · 관심지역 · 동일 시·군·구(코드 개편 별칭) · 모름은 불성립 + 확인 필요 |
  * | P-10~P-13 | 평가기 | 취득 전 2채 이상 · 종전 주택 권리 유래 · 겹침 · 이중 차감 |
  * | R-* | 판정 메뉴 route | D1·D2 비과세 고정(④ 토글 무관) · 12억 초과 안분 · 모름 + 확인 필요 · 결론 무관이면 고지 없음 · 중과 15호 추종 |
+ * | RS-* | 판정 메뉴 route — 입주권 양도 | §89①4호 가·나목 「다른 주택」에서도 뺀다 · 12억 초과 안분 · 모름 + 확인 필요(결론을 가를 때만) |
  * | M-* | 겸용 경로 | 겸용주택 양도에도 같은 판정 |
+ * | CR-* | 계산기 — 입주권 양도 | 판정 메뉴에서 넘겨받은 같은 사실 → 같은 결론 · 명세 · 모름 경고 · ⑤ 질문 노출 |
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -26,7 +28,10 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { POST as SINGLE } from "@/app/api/calc/transfer/route";
 import { popDeclineRowCandidate, popDeclinePriorRightQuestionVisible } from "@/lib/calc/pop-decline-71-2-scope";
-import { observeCase, type RulingCase } from "../../calc/one-house-rulings/harness";
+import { popDeclineQuestionAsset } from "@/lib/calc/pop-decline-71-2-scope";
+import { toTransferFormPatch } from "@/lib/calc/one-house-judgment-handoff";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
+import { buildCaseForm, observeCase, type RulingCase } from "../../calc/one-house-rulings/harness";
 import { calcMixedUseTransferTaxIdN as calcMixedUseTransferTax } from "../_helpers/mixed-use-identity-std";
 import { makeMockRates, makeHouseInfo } from "../_helpers/mock-rates";
 import { mixedUseCase14 } from "../_helpers/mixed-use-fixture";
@@ -373,6 +378,70 @@ describe("R 판정 메뉴 route", () => {
   });
 });
 
+// ─── 판정 메뉴 — 입주권 양도(§89①4호) ─────────────────────────────────────────────
+/**
+ * 법률이 4호를 직접 적는다(「…「소득세법」 제89조제1항제3호 또는 제4호를 적용한다」) — 입주권 가·나목의 「다른 주택」에서도 뺀다.
+ * 🔴 수정 전: 명부 도출 §71의2가 가·나목 복사본 제외(`oneRightInputAfterSpecialActExclusionOf`)에 들어오지 않아 노원 대조군과 같은 과세였다.
+ */
+const RIGHT_ASSET = {
+  assetKind: "right_to_move_in",
+  redevSubject: "right",
+  redevExemptionEligibleAtApproval: "yes",
+  acquisitionDate: "2010-03-15",
+  redevApprovalDate: "2023-05-15",
+  regionCode: NOWON,
+};
+const rightMenu = (house: Record<string, unknown> = {}, top: Record<string, unknown> = {}) =>
+  menu(house, { transferDate: "2026-06-15", ...top }, RIGHT_ASSET);
+
+describe("RS 판정 메뉴 — 입주권 양도에도 같은 의제 (결정 #42 「입주권 양도(§89①4호)에도 적용」)", () => {
+  it("RS-1 평창 인구감소지역주택(2억) + 입주권 양도 8억 → 가목 비과세 · 명세에 §71의2 행 (수정 전 과세 · 제외 0건)", async () => {
+    const o = await observeCase(rightMenu());
+    expect(o.validationErrors).toEqual([]);
+    expect(o.isExempt).toBe(true);
+    expect(o.appliedExceptions).toContain("one_right_89_1_4_ga");
+    expect(o.excludedHouses).toEqual([expect.objectContaining({ houseId: "p", legalBasis: "조특법 §71의2①" })]);
+    expect(o.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
+  });
+
+  it("RS-2 대조군 — 인구감소지역이 아닌 곳(노원)이면 같은 사실도 과세 · 제외 없음", async () => {
+    const o = await observeCase(rightMenu({ regionCode: NOWON, region: "capital" }));
+    expect(o.isExempt).toBe(false);
+    expect(o.excludedHouses).toEqual([]);
+  });
+
+  it("RS-3 12억 초과 입주권은 안분 과세 (전액 과세가 아니다)", async () => {
+    const o = await observeCase(rightMenu({}, { contractTotalPrice: "1500000000" }));
+    expect(o.isExempt).toBe(false);
+    expect(o.isPartialExempt).toBe(true);
+  });
+
+  it("RS-4 모름 → 과세 + 확인 필요 · 명세에 제외 없음", async () => {
+    const o = await observeCase(rightMenu({ popDeclSoleAtAcquisition: "unknown" }));
+    expect(o.isExempt).toBe(false);
+    expect(o.excludedHouses).toEqual([]);
+    expect(o.undetermined).toContain("71-2-pop-decline-unconfirmed");
+  });
+
+  it("RS-5 결론을 가르지 않으면 고지 없음 — 인가일 현재 요건 미선언(어차피 과세) · 가목이 이미 성립(사실을 다 답함)", async () => {
+    const moot = await observeCase(
+      menu({ popDeclSoleAtAcquisition: "unknown" }, { transferDate: "2026-06-15" }, { ...RIGHT_ASSET, redevExemptionEligibleAtApproval: "no" }),
+    );
+    expect(moot.isExempt).toBe(false);
+    expect(moot.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
+    expect((await observeCase(rightMenu())).undetermined).not.toContain("71-2-pop-decline-unconfirmed");
+  });
+
+  it("RS-6 모름이어도 나목(그 1주택 취득일부터 3년 이내)이 이미 성립하면 비과세 · 고지 없음", async () => {
+    const o = await observeCase(
+      menu({ popDeclSoleAtAcquisition: "unknown" }, { transferDate: "2026-06-15" }, { ...RIGHT_ASSET, redevOtherHouseAcquisitionDate: "2024-03-01" }),
+    );
+    expect(o.isExempt).toBe(true);
+    expect(o.appliedExceptions).toContain("one_right_89_1_4_na");
+    expect(o.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
+  });
+});
+
 // ─── 겸용 경로 ──────────────────────────────────────────────────────────────────
 describe("M 겸용주택 경로 — runHouseCountExclusionStep을 타지 않아 따로 연결한다", () => {
   const TRANSFER = D("2026-06-01");
@@ -504,5 +573,96 @@ describe("C 계산기 — 같은 사실, 같은 결론 + 중과 13·15호 추종
     expect(r).toMatchObject({ totalTax: 299_816_000, isPartialExempt: false });
     expect(r.multiHouseSurchargeEvaluation?.surchargeType).toBe("multi_house_2");
     expect(r.warnings.join(" ")).toContain("조특법 §71의2①");
+  });
+});
+
+// ─── 계산기 — 입주권 양도(§166 분기) ──────────────────────────────────────────────
+describe("CR 계산기 입주권 양도 — 판정 메뉴와 같은 사실, 같은 결론 (결정 #42 · 결정 #2 같은 함수)", () => {
+  /** 판정 메뉴 폼 → 전달 → 계산기 폼. 판정 메뉴가 묻지 않는 §166 산식 입력만 채운다(`right-sale-special-exclusion-calc.anchor.test.ts`와 같다). */
+  const calcFormOf = (c: RulingCase): TransferFormData => {
+    const f = { ...createDefaultTransferFormData(), ...toTransferFormPatch(buildCaseForm(c)) } as TransferFormData;
+    return {
+      ...f,
+      assets: [
+        {
+          ...f.assets[0],
+          fixedAcquisitionPrice: "300,000,000",
+          redevSubject: "right",
+          redevApprovalDate: RIGHT_ASSET.redevApprovalDate,
+          redevApprovalLawBasis: "urban_renovation_art_74",
+          redevRightsValue: "500,000,000",
+          redevSettlementDirection: "pay",
+          redevSettlementAmount: "50,000,000",
+          redevOriginalAssetType: "housing",
+        },
+      ],
+    } as TransferFormData;
+  };
+  type R = {
+    isExempt?: boolean;
+    totalTax?: number;
+    warnings?: string[];
+    specialHouseExclusionDetail?: { entries: { article: string; houseId?: string; eligible: boolean }[] };
+  };
+  const calcRight = async (c: RulingCase) => {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_u: string, init?: RequestInit) => {
+        body = JSON.parse(String(init?.body));
+        return { ok: true, json: async () => ({ mode: "single", result: {} }) } as unknown as Response;
+      }),
+    );
+    try {
+      await callTransferTaxAPI(calcFormOf(c));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    const res = await SINGLE(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
+        body: JSON.stringify(body),
+      }),
+    );
+    const json = (await res.json()) as { data?: { result?: R }; error?: unknown };
+    expect(res.status, JSON.stringify(json.error ?? "").slice(0, 300)).toBe(200);
+    return { body, r: json.data!.result! };
+  };
+
+  it("CR-1 평창 인구감소지역주택(2억) + 입주권 양도 8억 → 비과세 0 · 명세에 §71의2 행 · ④ body에 사실이 실린다 (수정 전 과세 245,751,000)", async () => {
+    const { body, r } = await calcRight(rightMenu());
+    expect((body as { houses: Record<string, unknown>[] }).houses.find((h) => h.id === "p")).toMatchObject({
+      popDeclSoleAtAcquisition: "yes",
+      popDeclAcquiredByGift: "no",
+    });
+    expect(r.isExempt).toBe(true);
+    expect(r.totalTax).toBe(0);
+    expect(r.specialHouseExclusionDetail?.entries).toEqual([
+      expect.objectContaining({ article: POP_DECLINE_71_2_ARTICLE, houseId: "p", eligible: true }),
+    ]);
+  });
+
+  it("CR-2 대조군 노원 → 과세 245,751,000 · 명세 없음", async () => {
+    const { r } = await calcRight(rightMenu({ regionCode: NOWON, region: "capital" }));
+    expect(r.isExempt).toBe(false);
+    expect(r.totalTax).toBe(245_751_000);
+    expect(r.specialHouseExclusionDetail).toBeUndefined();
+  });
+
+  it("CR-3 모름 → 과세(대조군과 같은 세액) + 판정 메뉴와 같은 확인 필요 경고 · 결론을 가르지 않으면(인가일 요건 미선언) 경고 없음", async () => {
+    const { r } = await calcRight(rightMenu({ popDeclSoleAtAcquisition: "unknown" }));
+    expect(r.isExempt).toBe(false);
+    expect(r.totalTax).toBe(245_751_000);
+    expect((r.warnings ?? []).filter((w) => w.includes("§71의2①(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다"))).toHaveLength(1);
+    const moot = await calcRight(
+      menu({ popDeclSoleAtAcquisition: "unknown" }, { transferDate: "2026-06-15" }, { ...RIGHT_ASSET, redevExemptionEligibleAtApproval: "no" }),
+    );
+    expect((moot.r.warnings ?? []).join(" ")).not.toContain("§71의2①");
+  });
+
+  it("CR-4 ⑤ 질문 노출 — 계산기는 주택·재개발 완공 아파트·조합원입주권 양도에서 연다 (분양권·토지는 닫는다)", () => {
+    for (const k of ["housing", "redevelopment_apt", "right_to_move_in"]) expect(popDeclineQuestionAsset(k), k).toBe(true);
+    for (const k of ["presale_right", "land", undefined]) expect(popDeclineQuestionAsset(k), String(k)).toBe(false);
   });
 });

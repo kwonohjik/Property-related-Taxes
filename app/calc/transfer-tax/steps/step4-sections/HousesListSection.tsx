@@ -52,7 +52,7 @@ import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from 
 import { isOwnedAtTransfer, sameDayOrderApplies } from "@/lib/calc/household-house-count";
 import { isSameDayFirstTransferred, isSameDayOrderUndecided } from "@/lib/calc/same-day-transfer-order";
 import { sameDayOrderNotice } from "@/lib/calc/same-day-transfer-notice";
-import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { popDeclineQuestionAsset } from "@/lib/calc/pop-decline-71-2-scope";
 import { newHouseOriginQuestionVisible } from "@/lib/calc/new-house-origin-scope";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { deriveCalcTemporaryTwoHouse } from "@/lib/calc/transfer-tax-api-body-blocks";
@@ -740,7 +740,7 @@ export function HousesListSection({
               // §154⑨ 같은 날 양도 순서는 §89①3호 주택 양도의 규정이다 — 입주권(§89①4호) 양도에는 열지 않는다.
               sameDayEnabled={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
               // §155① 신규 주택 후보(양도 주택보다 나중에 취득한 행)에 취득 경위를 묻는다 — 판정 메뉴·계산기 같은 술어(결정 #43).
-              popDeclineEnabled={judgmentMenu || isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)}
+              popDeclineEnabled={judgmentMenu || popDeclineQuestionAsset(form.assets?.[0]?.assetKind)}
               sellingAcquisitionDate={primaryAcquisitionDateOf(form.assets?.[0])}
               newHouseOriginEnabled={newHouseOriginQuestionVisible(
                 form.assets?.[0]?.assetKind,

@@ -13,6 +13,7 @@
  *    §99의4·§98의9는 효과 문언이 「일반주택을 양도하는 경우」로 한정되고 입주권 적용 해석례가 없어 빼지 않는다. 같은 계열의
  *    나머지 감면주택 조문(§97②·§97의2②·§98의3·§98의6·§98의7·§98의8·§99의2·§99의3)도 해석례 미확보라 빼지 않는다.
  *    §155②③ 상속주택 제외도 빼지 않는다 — 입주권 양도에 주택 특례를 유추 적용할 수 있는지가 양론이다(E094 — 조심-2021-서-1117).
+ *    §71의2① 인구감소지역주택은 선언이 아니라 명부에서 도출해 함께 뺀다 — 법률이 4호를 직접 적는다(결정 #42 · 아래 `RIGHT_SALE_DERIVED_ARTICLES`).
  * 🔑 뺀 행은 명부(`houses`)에서도 지운다 — 혼인합가 leaf(`right-sale-marriage-merge.ts`)가 같은 행을 배우자 쪽으로 한 번 더
  *    빼지 않게(이중 차감 방지).
  *
@@ -36,6 +37,12 @@ import {
   type SpecialHouseExclusionArticle,
   type SpecialHouseExclusionResolution,
 } from "../transfer-reductions/unsold-hybrid-p5";
+import {
+  POP_DECLINE_71_2_ARTICLE,
+  popDeclineUnconfirmedNotice,
+  resolvePopulationDecline71_2FromInput,
+} from "../transfer-reductions/population-decline-71-2";
+import { pickOneRightExemptionFacts, resolveOneRightExemptionClause } from "../transfer-tax-redevelopment-transforms";
 
 /** 입주권 양도의 「다른 주택」에서 뺄 수 있는 조특법 조문 — 해석례로 입주권 적용이 확인된 것만(⑤④⑧·route 공용). */
 export const RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES = [
@@ -82,19 +89,54 @@ export function oneRightInputAfterSpecialActExclusion(input: TransferTaxInput, e
 }
 
 /**
- * 입주권 양도에서 「다른 주택」에서 뺄 보유 감면주택 판정 — `RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES` 4개 조문의 선언만 평가한다.
+ * 입주권 양도에서 「다른 주택」에서 뺄 주택 판정 — `RIGHT_SALE_SPECIAL_EXCLUSION_ARTICLES` 4개 조문의 선언과
+ * 명부에서 도출하는 §71의2①(결정 #42) 항목을 함께 싣는다.
  * 그 밖의 조문 선언(§98의3 등)은 요건을 갖춰도 entries에 싣지 않는다(결과 카드·명세가 쓰지 않는 제외를 보이지 않게).
+ *
+ * §71의2는 주택 양도 STEP 0.9와 **같은 평가기**(`resolvePopulationDecline71_2FromInput`)로 본다. 다른 점은 「이미 빠진 것」뿐이다 —
+ * 입주권 양도는 위 4개 조문 선언만 「다른 주택」에서 빼므로 그것만 이중 차감·겹침 판정 재료로 넘긴다.
  */
-export function resolveRightSaleSpecialExclusion(
-  input: Pick<TransferTaxInput, "specialHouseExclusions" | "transferDate">,
-): SpecialHouseExclusionResolution {
-  const entries = resolveSpecialHouseExclusions(input.specialHouseExclusions, input.transferDate).entries.filter((e) =>
+export function resolveRightSaleSpecialExclusion(input: TransferTaxInput): SpecialHouseExclusionResolution {
+  const declared = resolveSpecialHouseExclusions(input.specialHouseExclusions, input.transferDate).entries.filter((e) =>
     rightSaleSpecialExclusionApplies(e.article),
   );
-  return { entries, excludedCount: entries.filter((e) => e.eligible).length };
+  const declaredEligible = declared.filter((e) => e.eligible);
+  const popDecline = resolvePopulationDecline71_2FromInput(input, {
+    ids: new Set(declaredEligible.flatMap((e) => (e.houseId ? [e.houseId] : []))),
+    count: declaredEligible.length,
+  });
+  return {
+    entries: [...declared, ...popDecline.entries],
+    excludedCount: declaredEligible.length + popDecline.excludedCount,
+  };
 }
 
 /** 입력 자체에서 제외를 평가해 입주권 가·나목 판정용 복사본을 만든다 — 판정 route와 계산기 §166 분기가 함께 쓴다. */
 export function oneRightInputAfterSpecialActExclusionOf(input: TransferTaxInput): TransferTaxInput {
   return oneRightInputAfterSpecialActExclusion(input, { specialHouseExclusionDetail: resolveRightSaleSpecialExclusion(input) });
+}
+
+/**
+ * §71의2① 후보가 모름·미답·해석 미확보로 불성립해 「다른 주택」에 남았고, **그 후보 한 채를 뺐다면 가·나목이 성립할 때만**
+ * 확인 필요 문장을 돌려준다(결정 #42 「모르면 불성립 + 확인 필요 — 결론을 가를 때만」). 주택 양도의 `popDeclineDecides`
+ * (`era-notice-relevance.ts` — 후보 한 채를 뺀 본체 판정)와 같은 모양이다. 판정 메뉴(`judgment-pipeline.ts`)와 계산기
+ * (`transfer-tax-redevelopment-apt-exemption.ts` 경고)가 이 함수 하나를 부른다.
+ */
+export function rightSalePopDeclineUnconfirmedNotice(input: TransferTaxInput): string | undefined {
+  const resolution = resolveRightSaleSpecialExclusion(input);
+  const unconfirmed = resolution.entries.filter(
+    (e) => e.article === POP_DECLINE_71_2_ARTICLE && !e.eligible && e.unconfirmed === true,
+  );
+  if (unconfirmed.length === 0) return undefined;
+  const clauseOf = (i: TransferTaxInput) => {
+    const facts = pickOneRightExemptionFacts(i);
+    return facts ? resolveOneRightExemptionClause(facts, i) : undefined;
+  };
+  const current = oneRightInputAfterSpecialActExclusion(input, { specialHouseExclusionDetail: resolution });
+  if (clauseOf(current)) return undefined; // 이미 성립 — 결론을 가르지 않는다
+  const counterfactual = oneRightInputAfterSpecialActExclusion(current, {
+    specialHouseExclusionDetail: { entries: [{ ...unconfirmed[0], eligible: true }] },
+  });
+  if (!clauseOf(counterfactual)) return undefined;
+  return popDeclineUnconfirmedNotice(unconfirmed.map((e) => e.reason ?? ""));
 }
