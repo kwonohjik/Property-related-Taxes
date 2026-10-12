@@ -669,7 +669,11 @@ export function resolveExemptionHoldingStartDate(input: ExemptionReqInput): Date
   return applyFinalOneHouseRestart(input, excludeNonResidentHoldingPeriod(input, resolveBaseHoldingStartDate(input)));
 }
 
-function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
+/**
+ * 비거주 기간 제외·§154⑤ 단서 재기산을 적용하기 **전**의 기산일 — 겸용주택 컴패니언 파트 카드가 주택 토지 카드의
+ * 기산일을 건물 카드에 맞출 때 쓴다(`mixed-use-part-cards.ts`). 그 카드에서 두 보정은 다시 적용된다.
+ */
+export function resolveBaseHoldingStartDate(input: ExemptionReqInput): Date {
   // 토지만 출자한 원조합원 완공APT — 사용승인서 교부일(시행령 §162①4호 · 서면-2022-부동산-1616). 엔진이 채운 값이라
   // 용도변경·상속 통산과 겹치는 조합이 없다(`redev-apt-judgment-input.ts` — 완공APT 번역에서만 채운다). G3-4.
   if (input.exemptionHoldingStartDate) return input.exemptionHoldingStartDate;
