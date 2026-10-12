@@ -439,16 +439,28 @@ export function resolveSpecialHouseExclusions(
   return { entries, excludedCount: entries.filter((x) => x.eligible).length };
 }
 
+/**
+ * 그 주택이 해당 조문 **제1항의 감면 요건**을 갖췄는가 — 선언의 취득기간·임대개시·본 요건 확인을 보되,
+ * §99②·§99의3②의 「다른 주택을 2007년 12월 31일까지 양도하는 경우에만」(`transferDeadline`)은 보지 않는다.
+ * 그 시한은 「소득세법」 §89①3호 적용(소유주택 의제)에만 붙은 요건이고 감면 자체의 요건이 아니다
+ * (조특법 §99①·② MST 284389 실독) — 영 §167의3①5호 「…에 따라 양도소득세가 감면되는 주택」 판정용이다
+ * (`surcharge-tax-incentive-house-link.ts`).
+ */
+export function meetsSpecialHouseReductionRequirements(e: SpecialHouseExclusionInput, transferDate: Date): boolean {
+  return evaluateSpecialHouseExclusion(e, transferDate, { ignoreTransferDeadline: true }).eligible;
+}
+
 function evaluateSpecialHouseExclusion(
   e: SpecialHouseExclusionInput,
   transferDate: Date,
+  opts: { ignoreTransferDeadline?: boolean } = {},
 ): SpecialHouseExclusionEntryResult {
   const w = SPECIAL_HOUSE_EXCLUSION_WINDOWS[e.article];
   const windows = e.isNationalHousing && w.nationalHousingWindows ? w.nationalHousingWindows : w.windows;
   const inWindow = (d: Date | undefined) =>
     d !== undefined && windows.some(([from, to]) => d.getTime() >= from.getTime() && d.getTime() <= to.getTime());
 
-  if (w.transferDeadline && transferDate.getTime() > w.transferDeadline.getTime()) {
+  if (!opts.ignoreTransferDeadline && w.transferDeadline && transferDate.getTime() > w.transferDeadline.getTime()) {
     return {
       article: e.article,
       articleLabel: w.label,

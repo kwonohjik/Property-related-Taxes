@@ -142,6 +142,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     freeProvisionYears: h.freeProvisionYears,
     isTaxSpecialExemption: h.isTaxSpecialExemption,
     isCulturalHeritage: h.isCulturalHeritage,
+    isUnavoidableOutsideCapital: h.isUnavoidableOutsideCapital,
     isDayCareCenter: h.isDayCareCenter,
     dayCareOperationYears: h.dayCareOperationYears,
     // ⑭ 공고 전 매매계약(영 §167의10①11호 등) — 양도 계약일 Date 변환 + 계약금 수령. 단건·다건·겸용 공유 매퍼.

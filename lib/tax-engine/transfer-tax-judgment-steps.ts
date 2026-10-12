@@ -10,6 +10,7 @@ import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
+import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
 import {
   determineMultiHouseSurcharge,
   type MultiHouseSurchargeInput,
@@ -383,7 +384,9 @@ function noRosterTwoHouseDeemingHouses(
 /**
  * 영 §167의10①4호 슬롯(`qualifiesUnavoidableOutsideCapital`)에 넘길 입력 — 주택 수를 §155②③·조특법 제외 **후** 값으로 바꾼다
  * (#16 · `surcharge15HouseCount` — ① 요소와 같은 수). 제외가 없으면 입력 그대로다(종전 동작·참조 동일).
- * 중과 엔진 4호 분기가 「다른 효과 주택이 상속주택이면」 건너뛰는 가드를 따로 건다(`multi-house-surcharge-exclusion.ts`).
+ * 중과 엔진 4호 분기가 가드를 따로 건다(`multi-house-surcharge-exclusion.ts`) — 명부에 ⑧ 행 표시(`isUnavoidableOutsideCapital`)가
+ * 있으면 그 행이 중과 주택 수 2채 안(양도 주택 또는 다른 효과 주택)일 때만 배제하고, 없으면(명부 없는 합성 주택·세대 단위
+ * 레거시 선언) 「다른 효과 주택이 상속주택이면」 건너뛰는 종전 대리 지표를 쓴다(#16-1).
  */
 export function surchargeSlotInput(workingInput: TransferTaxInput, generalHouseAcquisitionDate?: Date): TransferTaxInput {
   const ex = resolveExemptionHouseCountExclusions(workingInput, generalHouseAcquisitionDate);
@@ -422,9 +425,11 @@ export function runMultiHouseSurchargeStep(
     roster || rentalResidenceHouses
       ? undefined
       : noRosterTwoHouseDeemingHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
-  const houses = unmetRentalHouses ?? roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
-  if (houses && parsedRates.houseCountExclusionRules) {
-    const sellingId = workingInput.sellingHouseId ?? houses[0].id;
+  const rawHouses = unmetRentalHouses ?? roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
+  if (rawHouses && parsedRates.houseCountExclusionRules) {
+    const sellingId = workingInput.sellingHouseId ?? rawHouses[0].id;
+    // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16 공백 · 겸용과 같은 leaf)
+    const houses = linkTaxIncentiveHouse5ho(rawHouses, workingInput.specialHouseExclusions, workingInput.transferDate, sellingId);
     const housesForSurcharge = surchargeExclusionByReduction.excluded
       ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
       : houses;
@@ -480,7 +485,15 @@ export function runMultiHouseSurchargeStep(
         parsedRates.surchargeSpecialRules,
         workingInput.isRegulatedArea,
       );
-    multiHouseSurchargeResult = judge(housesForSurcharge);
+    // 3호 조문(§97·§97의2·§98) ⑥은 잇지 않는다(5년 임대·국민주택 사실 없음 — 모름 = 불성립) — 결론을 가르면 확인 필요
+    multiHouseSurchargeResult = withTaxIncentiveRental3hoNotice(
+      judge(housesForSurcharge),
+      housesForSurcharge,
+      workingInput.specialHouseExclusions,
+      workingInput.transferDate,
+      sellingId,
+      judge,
+    );
     // 구 8호(2023.2.28. 전 양도분)는 신규 주택의 취득 경위 갈래 분리를 적용하지 않는다 — 비과세는 그 갈래로 불성립인데 8호가 성립한 경우만 알린다(결정 #43 하위 1 나).
     if (mhInput.oldClause8TemporaryTwoHouse === true && workingInput.temporaryTwoHouse?.newHouseOrigin) {
       const originVerdict = judgeNewHouseOrigin(workingInput, waivesPriorHouseOneYearGap(workingInput));
@@ -495,7 +508,7 @@ export function runMultiHouseSurchargeStep(
     //   가를 수 있으므로 종전대로 원시 플래그 + 「확인 필요」 고지로 돌린다(`noRosterTwoHouseDeemingHouses`).
     //   구성 행(양도 주택 뒤)의 1호 불산입 여부도 모른다 — 산입 수가 줄어든 모든 경우(앞에서부터 자른 구성)에도
     //   배제될 때만 쓴다(2023.2.28. 전 양도분 3채 → 2채면 15호가 없어 중과 · 2021-09-18 실측 13호 219,087,000 ↔
-    //   1호 불산입 명부 597,025,000).
+    //   1호 불산입 명부 597,025,000 — 그 명부의 남은 주택이 ⑥ §99의2(5호)면 지금은 10호 219,087,000이다(결정 #16)).
     if (
       twoHouseDeemingHouses &&
       (multiHouseSurchargeResult.surchargeType !== "none" ||

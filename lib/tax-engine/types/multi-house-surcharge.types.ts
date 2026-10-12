@@ -251,6 +251,7 @@ export interface HouseInfo {
    * 조특법 감면 미분양·신축주택(§98의2·98의3·98의5~98의8·99·99의2·99의3) — 소령 §167의3①5호.
    * 주택 수에는 **산입**하고 중과 대상에서만 뺀다(양도 주택 자신 · 10호 「유일한 일반주택」 판정). F-11.
    * (필드명은 저장 기록 호환을 위해 유지한다.)
+   * 명부 행 ⑥ 주택 수 제외의 확인된 5호 조문 선언도 엔진이 이 값으로 싣는다(`surcharge-tax-incentive-house-link.ts` — 결정 #16).
    */
   isUnsoldHousing: boolean;
   // ── 소형 신축/미분양 (⑬) ──
@@ -295,6 +296,12 @@ export interface HouseInfo {
   isTaxSpecialExemption?: boolean;
   /** 국가유산(문화재) 주택 여부 (⑥) */
   isCulturalHeritage?: boolean;
+  /**
+   * 명부 행이 §155⑧ 수도권 밖 부득이 주택으로 선언됐는가(`HouseEntry.oneHouseUnavoidableOutsideCapital` echo — #16).
+   * 판정(2주택·해소일부터 3년)은 `MultiHouseSurchargeInput.unavoidableOutsideCapitalHouse` 슬롯이 하고, 이 값은 그 주택이
+   * 중과 주택 수 2채 **안**에 있는지만 가린다(영 §167의10①4호). 명부 없는 합성 주택에는 실리지 않는다.
+   */
+  isUnavoidableOutsideCapital?: boolean;
   /** 어린이집으로 운영 중인 주택 여부 (⑨ 5년 이상 운영 → 3주택+ 중과배제) */
   isDayCareCenter?: boolean;
   /** 어린이집 운영 기간(년) */
