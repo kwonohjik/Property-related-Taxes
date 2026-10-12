@@ -177,11 +177,27 @@ describe("S16-5 12억 초과 — 사유 불성립이 사유 충족보다 세액�
     }
   });
 
-  it("T-10 범위 경계 — 경과조치를 선언하지 않은 0호 입력은 결정 #19가 범위 밖으로 둔 경로라 현행 유지(12억 초과 부분 비과세 + 기존 고지)", () => {
-    const r = calculateTransferTax(input({}, { transferPrice: 1_300_000_000 }), rates);
-    expect(r.isPartialExempt).toBe(true);
-    expect(r.totalTax).toBe(5_512_268);
-    expect((r.warnings ?? []).some((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해"))).toBe(false);
+  it("T-10 ★ 경과조치를 선언하지 않은 0호 불충족도 12억 초과 전액 과세 — 사유 불성립과 같은 세액 (사용자 결정 2026-10-12 · 13억 전 5,512,268 → 후 225,423,000)", () => {
+    for (const [price, metTax, unmetTax] of CASES) {
+      const r = calculateTransferTax(input({}, { transferPrice: price }), rates);
+      expect(r.totalTax).toBe(unmetTax);
+      expect(r.totalTax).toBeGreaterThanOrEqual(metTax);
+      expect(r.isPartialExempt).toBe(false);
+      expect(r.steps.some((s) => s.label.includes("12억 초과분"))).toBe(false);
+      const notice = (r.warnings ?? []).find((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해")) ?? "";
+      expect(notice).toContain("전액 과세로 계산했습니다");
+      // 선언하지 않은 사실은 사유 해석이 결론을 가르지 않는다 — 확인 필요·경과조치 문구 없음
+      expect(notice).not.toContain("확인 필요");
+      expect(notice).not.toContain("경과조치");
+      expect((r.warnings ?? []).some((w) => w.includes("주택수에 산입될 수 있어"))).toBe(false);
+    }
+  });
+
+  it("T-10b 12억 이하 미선언은 세액 불변(이미 전액 과세) — 고지 문장만 §154⑩ 불충족으로 바뀐다", () => {
+    const r = calculateTransferTax(input(), rates);
+    expect(r.totalTax).toBe(NOT_APPLIED_TAX);
+    expect((r.warnings ?? []).some((w) => w.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해"))).toBe(true);
+    expect((r.warnings ?? []).some((w) => w.includes("주택수에 산입될 수 있어"))).toBe(false);
   });
 
   it("T-11 2019.2.12. 전 취득은 사유와 무관하게 종전규정 — 12억 초과도 거두지 않는다", () => {
