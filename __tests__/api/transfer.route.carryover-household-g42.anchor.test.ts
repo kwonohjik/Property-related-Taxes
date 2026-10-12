@@ -100,10 +100,39 @@ describe("G4-2 route — ⑫·⑭", () => {
     expect((no.result!.warnings ?? []).some((w) => w.includes("계속 같은 세대"))).toBe(false);
   });
 
-  it("[R-4] 「예」인데 시작일이 없으면 통산하지 못한다(미확인과 같다) — 같다고 답했는데 효과가 없는 상태를 엔진이 유리하게 메우지 않는다", async () => {
-    const { result } = await post(carry({ donorSameHouseholdContinuous: true }));
-    expect(result!.determinedTax).toBe(0);
-    expect(result!.warnings?.some((w) => w.includes("계속 같은 세대였는지"))).toBe(true);
+  it("[R-4] 「예」인데 시작일이 없으면 400(⑫ refine — 일반 증여 R-6과 같은 규칙, 결정 #38) · 엔진은 미확인으로 읽어 효과가 없으므로 입구에서 막는다", async () => {
+    const bad = await post(carry({ donorSameHouseholdContinuous: true }));
+    expect(bad.status).toBe(400);
+    expect(JSON.stringify(bad.json)).toContain("donorHouseholdHoldingStartDate");
+    // 부정 짝: 「아니오」는 시작일이 없어도 통과
+    expect((await post(carry({ donorSameHouseholdContinuous: false }))).status).toBe(200);
+  });
+
+  it("[R-4b] 시작일 순서 ±1 — 증여자 취득일 하루 전·증여 등기접수일 당일은 400, 증여자 취득일 당일·접수일 하루 전은 통과", async () => {
+    const at = (d: string) => post(carry({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: d }));
+    expect((await at("2000-05-31")).status).toBe(400);
+    expect((await at("2025-06-01")).status).toBe(400);
+    expect((await at("2000-06-01")).status).toBe(200);
+    expect((await at("2025-05-31")).status).toBe(200);
+  });
+
+  it("[R-4c] 컴패니언·GB 파트 shape도 같은 refine — 「예」+시작일 공란·범위 밖은 실패, 「아니오」는 통과", () => {
+    const part = (over: Record<string, unknown>) =>
+      carryoverTaxationEngineShape.safeParse({
+        giftRegistryDate: "2023-06-01",
+        donorAcquisitionDate: "2000-06-01",
+        useEstimatedAcquisition: false,
+        giftTaxAmount: 0,
+        giftDateValuation: 1_500_000_000,
+        ...over,
+      });
+    const missing = part({ donorSameHouseholdContinuous: true });
+    expect(missing.success).toBe(false);
+    expect(missing.error?.issues.map((i) => i.path.join("."))).toContain("donorHouseholdHoldingStartDate");
+    expect(part({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: "2023-06-01" }).success).toBe(false);
+    expect(part({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: "2000-05-31" }).success).toBe(false);
+    expect(part({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: "2023-05-31" }).success).toBe(true);
+    expect(part({ donorSameHouseholdContinuous: false }).success).toBe(true);
   });
 
   it("[R-5] 컴패니언·GB 파트 shape도 두 필드를 보존한다(단건 인라인 shape과 parity)", () => {

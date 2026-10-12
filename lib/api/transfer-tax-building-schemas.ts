@@ -22,6 +22,33 @@ const carryoverExclusionShape = z.object({
 });
 
 /**
+ * 결정 #38 — 이월과세 「증여자와 계속 같은 세대」가 「예」면 세대 보유 시작일(증여자 취득일 ≤ 시작일 < 증여 등기접수일)이 필수다.
+ * 비우면 엔진이 미확인으로 읽어 「같다고 답했는데 효과가 없는」 상태가 된다. 일반 증여 refine(`transfer-tax-schema-refines.ts`)·
+ * ⑧(`transfer-tax-validate-acquisition.ts`)과 같은 조건이다. 단건 인라인 shape(`transfer-tax-schema-base-shape.ts`)과
+ * 아래 엔진 shape(컴패니언·GB 파트)이 함께 쓴다.
+ */
+export function refineCarryoverHouseholdStart(
+  ct: { giftRegistryDate: string; donorAcquisitionDate: string; donorSameHouseholdContinuous?: boolean; donorHouseholdHoldingStartDate?: string },
+  ctx: z.RefinementCtx,
+): void {
+  if (ct.donorSameHouseholdContinuous !== true) return;
+  const start = ct.donorHouseholdHoldingStartDate;
+  if (!start) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["donorHouseholdHoldingStartDate"],
+      message: "증여자와 계속 같은 세대이면 세대 보유 시작일이 필요합니다 (소득세법 시행령 §154①)",
+    });
+  } else if (start >= ct.giftRegistryDate || start < ct.donorAcquisitionDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["donorHouseholdHoldingStartDate"],
+      message: "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다",
+    });
+  }
+}
+
+/**
  * **엔진이 읽는 모양**의 이월과세 서브객체 — 파트마다 완결돼 있다.
  * 토지(`landCarryoverTaxation`)·건물(`buildingCarryoverTaxation`)이 같은 모양을 쓴다.
  *
@@ -61,7 +88,7 @@ export const carryoverTaxationEngineShape = z.object({
    */
   donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
   exclusionDeclared: carryoverExclusionShape.optional(),
-});
+}).superRefine(refineCarryoverHouseholdStart);
 
 /**
  * **UI가 만드는 모양**의 파트별 이월과세 입력 (설계 D9-10).

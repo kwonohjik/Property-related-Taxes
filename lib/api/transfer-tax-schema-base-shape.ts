@@ -41,6 +41,7 @@ import {
   generalBuildingValuationSchema,
   generalBuildingSharesSchema,
   commercialAppurtenantLandSchema,
+  refineCarryoverHouseholdStart,
 } from "./transfer-tax-building-schemas";
 import { commercialBuildingValuationRequiredSchema } from "./transfer-tax-schema-commercial-refines";
 import { sec163_9AcquisitionShape } from "./transfer-tax-schema-sec163-9-shape";
@@ -504,7 +505,7 @@ export const propertyBaseShape = {
       legacyOneHouseExemptionDeclared: z.boolean().optional(),
       isFamilyBusinessInheritedAsset: z.boolean().optional(),
     }).optional(),
-  }).optional(),
+  }).superRefine(refineCarryoverHouseholdStart).optional(),
   /**
    * §163⑨ 상속·증여 취득가액 운반 4키(pre1990Land·inheritedAcquisition·inheritedHouseValuation·
    * commercialInheritanceValuation) — **컴패니언과 같은 shape**을 spread한다(CP-3 · 목록 복사 금지).
