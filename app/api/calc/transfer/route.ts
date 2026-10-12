@@ -41,6 +41,7 @@ import {
 } from "@/lib/api/transfer-tax-schema";
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { shareWholePropertyPrice } from "./bundled-apportionment";
+import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { buildTransferEngineInput } from "./engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import {
@@ -284,6 +285,9 @@ export async function POST(request: NextRequest) {
             }
           : housingCtxFromCompanion;
 
+      // #17 후속(K1) — 배율 한도를 주 자산 주택 카드의 토지와 부수토지 카드들이 함께 쓴다.
+      const appurtenantLimitShare = appurtenantLimitShareOf(engineInput, companions);
+
       // 사례 28 — primary가 land이고 housingCtxFromCompanion이 있으면 primaryCtx 주입 (양방향 자동 분기)
       // landNature는 개별 자산에 명시 입력되므로 폼-수준 userModeOverride 불필요.
       if (engineInput.propertyType === "land") {
@@ -445,6 +449,7 @@ export async function POST(request: NextRequest) {
             appurtenantLandZone: engineInput.appurtenantLandZone,
           },
           bundledSaleMode: data.bundledSaleMode,
+          appurtenantLimitShare,
           adjustedAcqPrice: adjustedAcq.get(c.assetId)?.price,
           /**
            * ⑭ 겸용 컴패니언 서브엔진 컨텍스트 — **`| null`이라 명시가 강제된다**.
