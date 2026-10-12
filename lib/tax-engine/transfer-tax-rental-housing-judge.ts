@@ -8,6 +8,7 @@
 import { calculateHoldingPeriod } from "./tax-utils";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
+import { rentalUnitLowPriceFacts } from "./rental-card-surcharge-rows";
 import {
   checkEligibility,
   type EligibilityContext,
@@ -277,9 +278,25 @@ export function restoreRentalUnitsToHouseCount<T extends TransferTaxInput>(
     `. 임대주택이 다른 특례(일시적 2주택 등)에 해당하면 임대주택을 포함한 주택 수로 직접 입력해야 판정합니다.` +
     (surcharge
       ? ` 다주택 중과 판정의 주택 수에도 임대주택 ${restore.units}호를 넣었습니다 — 임대주택이 중과에서 빠지는 장기임대주택인지는 ` +
-        `${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS} 요건으로 따로 판정했습니다.`
+        `${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS} 요건으로 따로 판정했습니다.` +
+        lowPriceUnknownSentence(effectiveInput)
       : "");
   return { input: { ...judgeInput, householdHousingCount: restored }, notice };
+}
+
+/**
+ * 영 §167의3①1호(지방 3억 이하 주택 수 불산입) 해당 여부를 몰라 중과 주택 수에 넣은 임대 호 — 확인 필요 문장(없으면 "").
+ * 소재지 주소가 없는 비수도권 호, 가액기준 지역인데 거주주택 양도 당시 기준시가가 없는 호가 대상이다(`rentalUnitLowPriceFacts`).
+ */
+function lowPriceUnknownSentence(effectiveInput: TransferTaxInput): string {
+  const unknown = (effectiveInput.rentalHousingException?.rentalUnits ?? [])
+    .map((u, i) => (rentalUnitLowPriceFacts(u).known ? undefined : `${i + 1}호`))
+    .filter((x): x is string => x !== undefined);
+  if (unknown.length === 0) return "";
+  return (
+    ` 임대주택 ${unknown.join("·")}는 소재지 주소 또는 거주주택 양도일 현재 기준시가를 입력하지 않아 주택 수에 넣었습니다 — ` +
+    `수도권·광역시 등 밖의 지방 주택으로서 그 기준시가가 3억원 이하이면 주택 수에서 빠집니다(${MULTI_HOUSE.LOW_PRICE_LOCAL_BASIS}, 확인 필요).`
+  );
 }
 
 /**

@@ -36,6 +36,7 @@ import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { rentalUnitAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { AptDeadlineExtensionFields } from "./AptDeadlineExtensionFields";
+import { rentalUnitLowPriceInScope } from "@/lib/calc/rental-unit-low-price-scope";
 
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
@@ -696,6 +697,25 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         checked={unit.requirementsConfirmed}
         onCheckedChange={(v) => set("requirementsConfirmed", v)}
       />
+
+      {/*
+        영 §167의3①1호 — ⑳이 불성립하면 이 호도 다주택 중과 주택 수에 들어간다(결정 #20 C). 지방 3억 이하면 빠진다.
+        계산기(`mode="calc"`)는 이 카드를 그리지 않고 판정 메뉴(`facts`)에서 입력한 호를 넘겨받는다(`one-house-judgment-handoff.ts`
+        — `assets` 통째 복사). 그래서 판정 메뉴에서도 묻는다.
+      */}
+      {rentalUnitLowPriceInScope(unit) && (
+        <HousingStdPriceLookupField
+          label="거주주택 양도일 현재 이 임대주택의 기준시가"
+          hint="특례 요건을 갖추지 못하면 양도세 계산기가 다주택 중과를 판정할 때 씁니다 — 지방 주택은 3억원 이하면 주택 수에서 빠집니다(소령 §167의3①1호). 비우면 주택 수에 넣습니다."
+          value={unit.officialPriceAtResidenceTransfer ?? ""}
+          onChange={(v) => set("officialPriceAtResidenceTransfer", v)}
+          jibun={unit.rentalAddressJibun || undefined}
+          dong={unit.rentalDong || undefined}
+          ho={unit.rentalHo || undefined}
+          referenceDate={transferDate}
+          testidPrefix={`rental-transfer-stdprice-${index}`}
+        />
+      )}
     </div>
   );
 }
