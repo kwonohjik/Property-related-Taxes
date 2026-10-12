@@ -178,8 +178,8 @@ describe("GJ-5 판정 메뉴 → 계산기 단건 — 이월과세로 바뀌지 
     expect(c.body.giftSameHouseholdContinuous).toBe(true);
     expect(c.body.giftHouseholdHoldingStartDate).toBe("2010-03-01");
     expect(c.isExempt).toBe(true);
-    // 사실이 반영됐으므로 「입력받지 않아」 고지가 없다
-    expect((c.warnings ?? []).some((w: string) => w.includes("이 화면은 증여자와의 세대 관계를 입력받지 않아"))).toBe(false);
+    // 사실이 반영됐으므로 「입력되지 않아」 고지가 없다
+    expect((c.warnings ?? []).some((w: string) => w.includes("세대 관계가 입력되지 않아"))).toBe(false);
   });
 
   it("[GJ-5b] 부정 짝: 아니오 → 판정 메뉴·계산기 모두 증여일 기준 과세, false를 싣는다", async () => {

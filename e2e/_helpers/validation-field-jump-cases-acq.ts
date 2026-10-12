@@ -297,6 +297,23 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "fixedAcquisitionPrice (증여)", field: "fixedAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 증여 신고가액을 입력하세요/,
     form: () => withPrimary({ acquisitionCause: "gift", fixedAcquisitionPrice: "" }),
   },
+  // 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실(첫 자산). 증여 블록 아래 위젯의 칸으로 이동한다.
+  {
+    name: "donorAcquisitionDate (증여 주택 세대 사실)", field: "donorAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 증여받은 주택이면 증여자 취득일을/,
+    form: () => withPrimary({ acquisitionCause: "gift", giftDonorRelation: "lineal", giftSameHousehold: "no" }),
+  },
+  {
+    field: "giftDonorRelation", step: 0, assetIndex: A, message: /^자산: 증여자와의 관계를 선택하세요/,
+    form: () => withPrimary({ acquisitionCause: "gift", donorAcquisitionDate: "2010-01-01" }),
+  },
+  {
+    field: "giftSameHousehold", step: 0, assetIndex: A, message: /^자산: 증여일부터 양도일까지 증여자와 계속 같은 세대였는지/,
+    form: () => withPrimary({ acquisitionCause: "gift", donorAcquisitionDate: "2010-01-01", giftDonorRelation: "lineal" }),
+  },
+  {
+    field: "giftHouseholdHoldingStartDate", step: 0, assetIndex: A, message: /^자산: 세대가 이 주택 보유를 시작한 날을 입력하세요/,
+    form: () => withPrimary({ acquisitionCause: "gift", donorAcquisitionDate: "2010-01-01", giftDonorRelation: "lineal", giftSameHousehold: "yes" }),
+  },
   {
     field: "decedentAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 피상속인 취득일을 입력하세요/,
     form: () => withPrimary({ acquisitionCause: "inheritance", publishedValueAtInheritance: "300000000", decedentAcquisitionDate: "" }),

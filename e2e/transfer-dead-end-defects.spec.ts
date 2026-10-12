@@ -580,7 +580,8 @@ test.describe("B1 — 증여로 바꾸면 사라지는 산정 방식 라디오�
     expect(page.getByRole("button", { name: "보유 상황", exact: true })).toHaveAttribute("aria-current", "step");
 
   for (const [kind, extra] of [
-    ["housing", {}],
+    // 주택은 증여로 바꾸면 「증여자와의 세대 관계」가 필수다(결정 #38-1) — 이 케이스의 관심사(추계 플래그)와 무관하게 답해 둔다.
+    ["housing", { donorAcquisitionDate: "2000-01-01", giftDonorRelation: "other", giftSameHousehold: "no" }],
     ["land", { landNature: "farmland", acquisitionArea: "1000", transferArea: "1000" }],
     ["building", {}],
     ["presale_right", {}],
