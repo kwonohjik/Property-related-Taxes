@@ -113,7 +113,10 @@ export const USAGE_CONVERSION_TRANSITION_UNVERIFIED_ID = "154-1-usage-conversion
 export const GIFT_HOUSEHOLD_UNCONFIRMED_ID = "gift-household-continuity-unconfirmed";
 /** 같은 세대 통산을 적용했는데 정면 해석 없는 세부(통산 시작일·주택 전부 증여·「취득 당시」 이동)가 결론을 가른다. */
 export const GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID = "gift-household-consolidation-detail-unverified";
-/** 계산기 일반 증여(이월과세 밖) 화면은 증여자와의 세대 사실을 입력받지 않아 통산을 반영하지 못했다 — 통산하면 결론이 달라질 수 있다. */
+/**
+ * 증여자와의 세대 사실이 엔진에 오지 않아 통산을 반영하지 못했다 — 통산하면 결론이 달라질 수 있다. 계산기 단건 주 자산은 그 칸을 필수로 받으므로
+ * (결정 #38-1) 이 고지는 세대 사실을 받지 않는 경로(건물만 증여받은 주택 D2 · 사실 없이 부른 API 등)에서 난다.
+ */
 export const GIFT_HOUSEHOLD_NOT_REFLECTED_ID = "gift-household-not-reflected-unverified";
 /** 증여자가 양도 전에 사망해 통산 없이 계산했고, 통산하면 결론이 달라진다. */
 export const GIFT_HOUSEHOLD_DONOR_DECEASED_ID = "gift-household-donor-deceased-unverified";

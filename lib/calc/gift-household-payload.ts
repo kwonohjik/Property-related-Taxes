@@ -3,9 +3,11 @@
  *
  * 이월과세 폼(`CarryoverTaxationForm.donorSameHousehold`)과 **같은 사실·같은 엔진 leaf**
  * (`lib/tax-engine/one-house/gift-household-basis.ts`)를 쓴다 — 판정 메뉴와 계산기가 같은 사실로 같은 판정을 한다.
- * 계산기 일반 증여(이월과세 밖) 화면에는 이 칸이 없다 — 엔진이 같은 확인 필요를 고지한다.
+ * 계산기 단건 일반 증여(이월과세 밖, 부담부증여 양도 포함) 화면도 **주 자산**에서 같은 위젯으로 묻는다(결정 #38-1,
+ * `calcGiftHouseholdFactVisible`). 함께 양도하는 자산·건물만 증여받은 주택(D2)·다건에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 
 type GiftFactFields = Pick<
   AssetForm,
@@ -48,19 +50,37 @@ export function buildGiftHouseholdPayload(primary: GiftFactFields | undefined): 
   };
 }
 
+/** D2 판정에 필요한 키 — 건물만 증여받고 토지는 매수한 주택인가(`effectiveBuildingCauseMix`). */
+type BuildingCauseMixFields = Partial<
+  Pick<AssetForm, "isMixedUseHouse" | "landAcquisitionCause" | "hasSeperateLandAcquisitionDate" | "landCauseHost" | "transferType">
+>;
+
 /**
- * 단건 계산기 ④ 전송 조각 — 판정 메뉴에서 **넘어온** 증여 사실을 일반 증여(`gift`) 계산에도 싣는다(결정 #38 조건: 판정 메뉴와 계산기
+ * 계산기 단건 **주 자산**에서 세대 사실을 묻는가 — ⑤(`CompanionAcquisitionCauseSection`)·⑧(`validateAssetEntry`)·④가 같은 술어를 쓴다.
+ *
+ * 증여 주택(`giftHouseholdFactVisible`)이면서 건물만 증여받고 토지는 매수한 주택(D2)이 **아닌** 경우다. D2는 증여 블록 대신 매매 블록이
+ * 마운트되어 이 칸이 없고, 건물만 증여받은 주택의 통산 범위는 이 묶음에서 정하지 않았다(범위 밖 — 엔진이 확인 필요를 고지한다).
+ * 첫 자산인지는 호출부가 가른다(④는 `form.assets[0]`만 싣고, ⑤·⑧은 첫 자산에서만 묻는다).
+ */
+export function calcGiftHouseholdFactVisible(
+  asset: (Pick<AssetForm, "acquisitionCause" | "assetKind"> & BuildingCauseMixFields) | undefined,
+): boolean {
+  return !!asset && giftHouseholdFactVisible(asset) && !effectiveBuildingCauseMix(asset);
+}
+
+/**
+ * 단건 계산기 ④ 전송 조각 — 주 자산 증여 주택의 세대 사실을 일반 증여(`gift`) 계산에 싣는다(결정 #38 조건: 판정 메뉴와 계산기
  * 단건이 같은 사실로 같은 판정을 한다).
  *
- * 계산기 일반 증여 화면에는 이 칸의 입력 위젯이 없다 — 값은 판정 메뉴가 넘긴 것(`toTransferFormPatch`)이다. 이월과세로 바뀌지 않는
+ * 값은 계산기 화면의 위젯(⑤) 입력이거나 판정 메뉴가 넘긴 것(`toTransferFormPatch`)이다 — 같은 키다. 이월과세로 바뀌지 않는
  * 증여(그 밖의 친족 · 10년(5년) 밖 · 세대 사실이 이월과세 배제를 가르지 않는 경우)도 이 사실이 §154① 보유·「취득 당시」를 가르므로
- * 버리지 않는다. 다만 **불완전·불일치 사실은 보내지 않는다** — ⑫가 400으로 막는 모양(시작일 누락·순서 위반)을 보내면 고칠 칸이 이 화면에
- * 없는 막다른 오류가 된다. 그때는 미전송(엔진이 확인 필요를 고지)이다.
+ * 버리지 않는다. 칸이 없는 D2는 싣지 않는다(⑤·⑧과 같은 술어 `calcGiftHouseholdFactVisible`). **불완전·불일치 사실은 보내지 않는다** —
+ * ⑧이 같은 규칙으로 막으므로 계산 경로에서는 닿지 않지만, ⑧을 거치지 않고 ④만 부르는 호출이 ⑫ 400을 받지 않게 남겨 둔다.
  */
 export function buildCalcGiftHouseholdPayload(
-  primary: (GiftFactFields & Pick<AssetForm, "acquisitionDate">) | undefined,
+  primary: (GiftFactFields & Pick<AssetForm, "acquisitionDate"> & BuildingCauseMixFields) | undefined,
 ): ReturnType<typeof buildGiftHouseholdPayload> {
-  if (!primary || !primary.giftSameHousehold) return {};
+  if (!primary || !primary.giftSameHousehold || !calcGiftHouseholdFactVisible(primary)) return {};
   if (giftHouseholdFactErrors(primary).length > 0) return {};
   return buildGiftHouseholdPayload(primary);
 }

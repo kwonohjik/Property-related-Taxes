@@ -43,6 +43,8 @@ import {
   formatOwnershipPercent,
 } from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { calcGiftHouseholdFactVisible } from "./gift-household-payload";
+import { giftHouseholdFactErrors } from "./gift-household-payload";
 
 /**
  * 오늘 날짜 — 로컬(KST) 기준 `YYYY-MM-DD` 문자열.
@@ -327,6 +329,13 @@ export function validateAssetEntry(
       : undefined;
   const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true);
   if (acqError) return acqError;
+
+  // ⑧ 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 판정 메뉴와 같은 규칙(`giftHouseholdFactErrors`)으로 필수로 묻는다.
+  //    ⑤(`CompanionAcquisitionCauseSection` — 첫 자산에서만 위젯을 연다)·④(`form.assets[0]`만 싣는다)와 같은 게이트.
+  if (index === 0 && calcGiftHouseholdFactVisible(a)) {
+    const giftFact = giftHouseholdFactErrors(a)[0];
+    if (giftFact) return fieldError(giftFact.field as keyof AssetForm, `${label}: ${giftFact.message}`);
+  }
 
   // ⑧ §97③ 감가상각비 — 입력 가능 구조인지 · 취득가액 한도 (⑤ 게이트와 같은 술어 `depreciation-scope.ts`)
   const depreciationError = validateDepreciation(a, label);

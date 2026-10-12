@@ -37,6 +37,11 @@ interface BlockProps {
   isBurdenedGift?: boolean;
   /** 증여일 칸의 검증 오류 이동 앵커 키(기본 `acquisitionDate`) — `CompanionAcqPurchaseBlock.types.ts`의 같은 prop */
   fieldAcquisitionDate?: string;
+  /**
+   * 아래에 「증여자와의 세대 관계」 칸이 붙는가(결정 #38-1, `calcGiftHouseholdFactVisible` + 첫 자산) — 참이면 증여자 취득일이
+   * **필수**다(⑧ `giftHouseholdFactErrors`). 세대 통산의 기산 하한이고 엔진이 그 값 없이는 세대 사실을 반영하지 못한다.
+   */
+  donorDateRequiredForHousehold?: boolean;
 }
 
 export function CompanionAcqGiftBlock(props: BlockProps) {
@@ -59,7 +64,12 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
             onChange={props.onDonorAcquisitionDateChange}
           />
           <p className="text-caption text-muted-foreground">
-            선택 입력 — 세율 보유기간은 <strong>증여받은 날</strong>부터입니다. 증여자 취득일로
+            {props.donorDateRequiredForHousehold ? (
+              <>필수 — 아래 증여자와의 세대 관계(1세대1주택 비과세 판정)에 씁니다. </>
+            ) : (
+              <>선택 입력 — </>
+            )}
+            세율 보유기간은 <strong>증여받은 날</strong>부터입니다. 증여자 취득일로
             통산하려면 취득원인을 <strong>「이월과세(증여)」</strong>로 선택하세요 (소득세법 §104②2호).
           </p>
         </div>

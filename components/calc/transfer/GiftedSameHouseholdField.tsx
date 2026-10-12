@@ -11,9 +11,12 @@
  *    엔진 leaf(`one-house/gift-household-basis.ts`)로 하므로, 계산기로 넘길 때 같은 사실로 「이월과세(증여)」 원인을 정해 넘긴다
  *    (`gift-household-handoff.ts`).
  * 🔑 게이트는 ④(`buildGiftHouseholdPayload`)·⑧(`giftHouseholdFactErrors`)과 같다 — 호출부가 양도 대상이 주택일 때만 렌더한다.
+ * 🔑 계산기 단건(일반 증여·부담부증여 양도)은 같은 칸을 `GiftHouseholdFactInputs`로 재사용한다(결정 #38-1) — 증여자 취득일은 증여 블록이
+ *    이미 받으므로 빼고, 게이트는 `calcGiftHouseholdFactVisible`이다.
  *
  * 통산은 비과세 판정(보유기간·「취득 당시」)에만 쓴다. 장기보유특별공제(표2 대상 판정 포함)와 세율 보유기간은 증여일 기준이다.
  */
+import type { ReactNode } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -58,22 +61,42 @@ export function GiftedSameHouseholdField({ asset, onChange }: Props) {
       tone="violet"
       lawRefs={[{ legalBasis: "소득세법 §88 6호", label: "법 §88 6호" }]}
     >
-      <div className="space-y-3">
-        <FieldCard label="증여자와의 관계" field="giftDonorRelation">
-          <RadioCardGroup
-            name={`gift-donor-relation-${asset.assetId}`}
-            data-field="giftDonorRelation"
-            layout="inline"
-            options={[
-              { value: "spouse", label: "배우자" },
-              { value: "lineal", label: "직계존비속" },
-              { value: "other", label: "그 밖의 친족" },
-            ]}
-            value={asset.giftDonorRelation}
-            onChange={(v) => onChange({ giftDonorRelation: v as AssetForm["giftDonorRelation"] })}
-          />
-        </FieldCard>
+      <GiftHouseholdFactInputs asset={asset} onChange={onChange} showDonorAcquisitionDate>
+        배우자·직계존비속에게서 받은 주택을 증여일부터 10년(2023.1.1. 전 증여는 5년) 안에 양도하는 이월과세 사안은 같은 사실로 계산기에서
+        이어서 판정합니다.
+      </GiftHouseholdFactInputs>
+    </ToggleCard>
+  );
+}
 
+/**
+ * 관계 · (증여자 취득일) · 계속 같은 세대 · 세대 보유 시작일 + 범위 밖 안내 — 판정 메뉴 토글 안과 계산기 증여 블록 아래가 함께 쓴다.
+ * `children`은 안내 문단 끝에 붙는 화면별 문장이다.
+ */
+export function GiftHouseholdFactInputs({
+  asset,
+  onChange,
+  showDonorAcquisitionDate,
+  children,
+}: Props & { showDonorAcquisitionDate: boolean; children?: ReactNode }) {
+  return (
+    <div className="space-y-3">
+      <FieldCard label="증여자와의 관계" field="giftDonorRelation">
+        <RadioCardGroup
+          name={`gift-donor-relation-${asset.assetId}`}
+          data-field="giftDonorRelation"
+          layout="inline"
+          options={[
+            { value: "spouse", label: "배우자" },
+            { value: "lineal", label: "직계존비속" },
+            { value: "other", label: "그 밖의 친족" },
+          ]}
+          value={asset.giftDonorRelation}
+          onChange={(v) => onChange({ giftDonorRelation: v as AssetForm["giftDonorRelation"] })}
+        />
+      </FieldCard>
+
+      {showDonorAcquisitionDate && (
         <FieldCard label="증여자 취득일" field="donorAcquisitionDate" hint="증여자가 이 주택을 취득한 날">
           <DateInput
             data-testid="one-house-donor-acq-date"
@@ -81,54 +104,58 @@ export function GiftedSameHouseholdField({ asset, onChange }: Props) {
             onChange={(donorAcquisitionDate) => onChange({ donorAcquisitionDate })}
           />
         </FieldCard>
+      )}
 
-        <FieldCard
-          label="증여자와 계속 같은 세대였습니까"
-          field="giftSameHousehold"
-          hint={
-            asset.giftDonorRelation
-              ? giftHouseholdQuestionText(asset.giftDonorRelation)
-              : "먼저 증여자와의 관계를 선택하세요 — 관계에 따라 묻는 사실이 다릅니다"
+      <FieldCard
+        label="증여자와 계속 같은 세대였습니까"
+        field="giftSameHousehold"
+        hint={
+          asset.giftDonorRelation
+            ? giftHouseholdQuestionText(asset.giftDonorRelation)
+            : "먼저 증여자와의 관계를 선택하세요 — 관계에 따라 묻는 사실이 다릅니다"
+        }
+      >
+        <RadioCardGroup
+          name={`gift-same-household-${asset.assetId}`}
+          data-field="giftSameHousehold"
+          layout="inline"
+          options={[
+            { value: "yes", label: "예 — 계속 같은 세대" },
+            { value: "no", label: "아니오 — 세대가 달랐거나 중간에 분리" },
+          ]}
+          value={asset.giftSameHousehold}
+          onChange={(v) =>
+            onChange(
+              v === "yes"
+                ? { giftSameHousehold: "yes" }
+                : { giftSameHousehold: "no", giftHouseholdHoldingStartDate: "" },
+            )
           }
+        />
+      </FieldCard>
+
+      {asset.giftSameHousehold === "yes" && (
+        <FieldCard
+          label="세대가 이 주택 보유를 시작한 날"
+          field="giftHouseholdHoldingStartDate"
+          hint="증여자 취득일 이후 혼인·합가했다면 그 날 — 보유기간은 이 날부터 셉니다. 증여자 취득일 이후 증여일 전의 날짜"
         >
-          <RadioCardGroup
-            name={`gift-same-household-${asset.assetId}`}
-            data-field="giftSameHousehold"
-            layout="inline"
-            options={[
-              { value: "yes", label: "예 — 계속 같은 세대" },
-              { value: "no", label: "아니오 — 세대가 달랐거나 중간에 분리" },
-            ]}
-            value={asset.giftSameHousehold}
-            onChange={(v) =>
-              onChange(
-                v === "yes"
-                  ? { giftSameHousehold: "yes" }
-                  : { giftSameHousehold: "no", giftHouseholdHoldingStartDate: "" },
-              )
-            }
+          <DateInput
+            data-testid="one-house-gift-household-start"
+            value={asset.giftHouseholdHoldingStartDate}
+            onChange={(giftHouseholdHoldingStartDate) => onChange({ giftHouseholdHoldingStartDate })}
           />
         </FieldCard>
+      )}
 
-        {asset.giftSameHousehold === "yes" && (
-          <FieldCard
-            label="세대가 이 주택 보유를 시작한 날"
-            field="giftHouseholdHoldingStartDate"
-            hint="증여자 취득일 이후 혼인·합가했다면 그 날 — 보유기간은 이 날부터 셉니다. 증여자 취득일 이후 증여일 전의 날짜"
-          >
-            <DateInput
-              data-testid="one-house-gift-household-start"
-              value={asset.giftHouseholdHoldingStartDate}
-              onChange={(giftHouseholdHoldingStartDate) => onChange({ giftHouseholdHoldingStartDate })}
-            />
-          </FieldCard>
-        )}
-
-        <p className="text-caption text-muted-foreground">
-          이혼 후 같은 사람과 재결합했거나 증여자가 양도 전에 사망한 경우는 「아니오」로 계산하며 확인이 필요합니다. 배우자·직계존비속에게서 받은
-          주택을 증여일부터 10년(2023.1.1. 전 증여는 5년) 안에 양도하는 이월과세 사안은 같은 사실로 계산기에서 이어서 판정합니다.
-        </p>
-      </div>
-    </ToggleCard>
+      <p className="text-caption text-muted-foreground">
+        이혼 후 같은 사람과 재결합했거나 증여자가 양도 전에 사망한 경우는 「아니오」로 계산하며 확인이 필요합니다. {children}
+      </p>
+      {/* 결정 #38-5 — 이 입력으로 표현할 수 없는 경우(입력 모델이 「주택 전부를 단순 증여로 받은 1건」이다) */}
+      <p className="text-caption text-muted-foreground" data-testid="gift-household-out-of-scope">
+        주택의 지분만 증여받은 경우, 부담부증여로 받은 경우, 같은 세대원에게서 매수한 경우, 「다른 보유 주택 목록」에 적은 주택을 증여받은
+        경우의 세대 통산은 이 입력으로 표현하지 않습니다 — 해당하면 확인이 필요합니다.
+      </p>
+    </div>
   );
 }
