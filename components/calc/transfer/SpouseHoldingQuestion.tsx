@@ -12,6 +12,7 @@
  */
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes/transfer-house";
 import type { SpouseHoldingAnswer } from "@/lib/tax-engine/spouse-holding-at-transfer";
 
 type Props = {
@@ -23,10 +24,10 @@ type Props = {
   role: "spouse_side" | "other" | "right";
 };
 
-const BASIS = "소득세법 시행령 §167의3⑨";
-
 export function SpouseHoldingQuestion({ idPrefix, value, onChange, role }: Props) {
   const withUnknown = role !== "other";
+  // 주택 행은 §167의3⑨(주택 수), 분양권·입주권 행은 §167의4⑤(주택+권리 수)
+  const basis = role === "right" ? MULTI_HOUSE.MARRIAGE_SUBTRACT_RIGHT_BASIS : MULTI_HOUSE.MARRIAGE_SUBTRACT_3HOUSE_BASIS;
   const subject = role === "right" ? "이 분양권·입주권" : "이 주택";
   return (
     <div data-testid={`spouse-holding-${role}`}>
@@ -37,7 +38,7 @@ export function SpouseHoldingQuestion({ idPrefix, value, onChange, role }: Props
         noDark
       >
         <p className="text-caption text-muted-foreground">
-          혼인 5년 안에 양도하는 3주택 이상 세대는 <b>양도일 현재</b> 양도자의 배우자가 보유한 주택·분양권·입주권을 수에서 뺍니다({BASIS}).
+          혼인 5년 안에 양도하는 3주택 이상 세대는 <b>양도일 현재</b> 양도자의 배우자가 보유한 주택·분양권·입주권을 수에서 뺍니다({basis}).
           혼인 전 보유자와는 다른 사실입니다 — 혼인 뒤 배우자와 주고받아 지금 누가 보유하는지로 답하세요.
           {role !== "other" && " 배우자 쪽 세대원(예: 배우자의 자녀)이 보유한 경우도 「예」로 답하세요."}
           {role === "other" && " 비워 두면 「아니오」로 봅니다. 「예」로 답하면 차감하지만 이 경우를 다룬 해석례를 확인하지 못해 확인 필요로 알립니다."}
