@@ -36,6 +36,11 @@ describe("판정 메뉴 §89①4호 카드 — 출자 자산 · 세대원 건물
     expect(onChange).toHaveBeenCalledWith({ redevOriginalAssetType: "land" });
   });
 
+  it("출자 자산은 자기선언 토글이 꺼져 있어도 보인다 (판정 사유에 쓰이는 사실)", () => {
+    render(<RedevelopmentRightExemptionSection asset={rightAsset({ redevExemptionEligibleAtApproval: "" })} onChange={() => {}} />);
+    expect(screen.getByText("조합에 출자한 자산")).toBeTruthy();
+  });
+
   it("주택 출자면 세대원 건물 질문을 보이지 않는다 · 토지면 보인다", () => {
     const { unmount } = render(<RedevelopmentRightExemptionSection asset={rightAsset()} onChange={() => {}} />);
     expect(screen.queryByText(/철거 대상 건물\(기존주택\)의 세대 소유/)).toBeNull();

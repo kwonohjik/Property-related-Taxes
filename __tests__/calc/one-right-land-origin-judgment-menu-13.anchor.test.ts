@@ -68,6 +68,7 @@ describe("판정 메뉴 — 토지 출자 입주권의 §89①4호 결론", () =
     expect(o.isExempt).toBe(false);
     expect(o.applied).not.toContain("one_right_89_1_4_ga");
     expect(o.reasons).toMatch(LAND_REASON);
+    expect(o.reasons).not.toMatch(/확인 필요/); // 사실이 확정된 불성립
   });
 
   it("★ 토지 출자 + 선언 없음 → 불성립 (모름 = 혜택 불성립)", async () => {
@@ -75,6 +76,7 @@ describe("판정 메뉴 — 토지 출자 입주권의 §89①4호 결론", () =
     expect(o.facts.landHouseholdOwnedBuilding).toBeUndefined();
     expect(o.isExempt).toBe(false);
     expect(o.reasons).toMatch(LAND_REASON);
+    expect(o.reasons).toMatch(/선언하지 않았습니다\. 확인 필요/); // 「아니오」와 구별된다
   });
 
   it("긍정 짝 — 토지 출자 + 「예」 → 가목 비과세", async () => {

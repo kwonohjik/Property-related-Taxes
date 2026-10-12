@@ -153,6 +153,26 @@ export function RedevelopmentRightExemptionSection({
           <LawArticleModal legalBasis="소득세법 시행령 §154" label="시행령 §154" />
         </div>
 
+        {/* §89①4호 본문 「기존주택을 소유하는 세대」 — 출자 자산(#13 · 판정 메뉴 반영 2026-10-12). 계산기 §166 「출자 자산」과
+            같은 필드(`redevOriginalAssetType`)다 — 두 화면이 한 값을 나눠 갖는다(인가일과 같은 방식).
+            자기선언 토글 밖에 둔다 — 출자 자산은 사실이고, 토글을 꺼도 판정 사유(토지 출자)에 쓰이므로 화면에서 보여야 한다. */}
+        <FieldCard
+          label="조합에 출자한 자산"
+          field="redevOriginalAssetType"
+          hint="토지만 출자했다면 같은 세대가 철거 대상 건물(기존주택)을 소유한 경우에만 §89①4호 비과세가 성립합니다(재산세과-1748). 계산기의 출자 자산과 같은 값입니다."
+        >
+          <RadioCardGroup
+            name={`redevOriginalAssetType-${asset.assetId}`}
+            value={asset.redevOriginalAssetType || "housing"}
+            onChange={(v) => onChange({ redevOriginalAssetType: v as "land" | "housing" })}
+            options={[
+              { value: "housing", label: "주택(건물) 출자", description: "철거 대상 건물(기존주택)과 그 부수토지를 출자했습니다." },
+              { value: "land", label: "토지만 출자", description: "건물 없이 토지만 출자했습니다 — 아래에서 같은 세대의 건물 소유를 선언합니다." },
+            ]}
+            layout="inline"
+          />
+        </FieldCard>
+
         {/* ⚠️ OFF는 `""`(자동 판정)다 — `"no"`가 아니다.
             이 필드는 3-state(`"" | "yes" | "no"`)이고 세 값이 엔진에서 각각 다른 뜻이다.
             `"no"`는 `redevelopment-lthd.ts:119-122`에서 `isOneHouseSingle`을 강제 false로
@@ -206,25 +226,6 @@ export function RedevelopmentRightExemptionSection({
               <DateInput
                 value={asset.redevApprovalDate}
                 onChange={(v) => onChange({ redevApprovalDate: v })}
-              />
-            </FieldCard>
-
-            {/* §89①4호 본문 「기존주택을 소유하는 세대」 — 출자 자산(#13 · 판정 메뉴 반영 2026-10-12). 계산기 §166 「출자 자산」과
-                같은 필드(`redevOriginalAssetType`)다 — 두 화면이 한 값을 나눠 갖는다(인가일과 같은 방식). */}
-            <FieldCard
-              label="조합에 출자한 자산"
-              field="redevOriginalAssetType"
-              hint="토지만 출자했다면 같은 세대가 철거 대상 건물(기존주택)을 소유한 경우에만 §89①4호 비과세가 성립합니다(재산세과-1748). 계산기의 출자 자산과 같은 값입니다."
-            >
-              <RadioCardGroup
-                name={`redevOriginalAssetType-${asset.assetId}`}
-                value={asset.redevOriginalAssetType || "housing"}
-                onChange={(v) => onChange({ redevOriginalAssetType: v as "land" | "housing" })}
-                options={[
-                  { value: "housing", label: "주택(건물) 출자", description: "철거 대상 건물(기존주택)과 그 부수토지를 출자했습니다." },
-                  { value: "land", label: "토지만 출자", description: "건물 없이 토지만 출자했습니다 — 아래에서 같은 세대의 건물 소유를 선언합니다." },
-                ]}
-                layout="inline"
               />
             </FieldCard>
 
