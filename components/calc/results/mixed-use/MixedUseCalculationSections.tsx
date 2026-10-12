@@ -209,8 +209,12 @@ export function MixedUseCalculationSections({
           {breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
             ? "미적용 (전액 과세 + 표1 공제)"
             : breakdown.calculationRoute.highValueRule === "below_threshold_exempt"
-              ? "적용 (12억 이하 비과세)"
-              : "적용 (12억 초과 안분 과세)"}
+              ? h.laterLandExemptExcluded
+                ? "적용 (12억 이하 비과세 — 나중에 취득한 부수토지분은 보유요건 미달로 과세)"
+                : "적용 (12억 이하 비과세)"
+              : h.laterLandExemptExcluded
+                ? "적용 (12억 초과 안분 과세 — 나중에 취득한 부수토지분은 보유요건 미달로 전액 과세)"
+                : "적용 (12억 초과 안분 과세)"}
         </span>
       </div>
 
@@ -381,7 +385,18 @@ export function MixedUseCalculationSections({
             · 12억 초과 안분 — 분모는 엔진 echo `highValueBase`(공유지분이면 물건 전체 주택분, 영 §156①).
             · L-10 — 판정 분모가 다르면 엔진 echo `highValueJudgmentBase`(건물 전체, 영 §156②)를 따로 그린다.
         */}
-        {h.isExempt ? (
+        {h.isExempt && h.laterLandExemptExcluded ? (
+          // #2141 — 나중에 취득한 부수토지가 보유요건(영 §154①) 미만이면 토지분은 비과세 대상이 아니다. 건물분만 비과세.
+          <Row
+            label="12억 이하 → 건물분 비과세 · 나중에 취득한 부수토지분 과세"
+            value={fmt(h.proratedTaxableGain)}
+            formula={`부수토지 양도차익 ${fmtPlain(h.landTransferGain)}${
+              h.nonBusinessTransferredGain > 0
+                ? ` - 비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)}`
+                : ""
+            } — 주택보다 나중에 취득해 보유기간이 보유요건(소득세법 시행령 §154①)에 못 미치므로 비과세에서 제외`}
+          />
+        ) : h.isExempt ? (
           <Row label="12억 이하 → 전액 비과세" value="0" />
         ) : breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation" ? (
           <Row
@@ -575,7 +590,17 @@ export function MixedUseCalculationSections({
           }
         />
         <DivRow />
-        {c.deemedHouseBy154_3Main ? (
+        {c.deemedHouseBy154_3Main && h.laterLandExemptExcluded ? (
+          // #2141 — 주택으로 본 상가 부분도 나중에 취득한 토지분은 보유요건 미달로 과세(건물분은 비과세). 장특은 보유 미달로 0.
+          <Row
+            label="주택으로 봄 → 건물분 비과세 · 나중에 취득한 토지분 과세"
+            value={fmt(c.incomeAmount)}
+            highlight
+            formula={`주택 연면적이 주택 외 연면적보다 커 건물 전부를 주택으로 봅니다(소득세법 시행령 §154③ 본문). 토지는 주택보다 나중에 취득해 보유요건(같은 영 §154①)에 못 미치므로 상가 토지분 양도차익 ${fmtPlain(c.landTransferGain)}${
+              nb ? "(배율 초과분은 ④ 비사업용토지로 이전)" : ""
+            }을 과세합니다 — 세율은 상가 토지 그대로`}
+          />
+        ) : c.deemedHouseBy154_3Main ? (
           // OH-17 — 엔진이 §154③ 본문으로 건물 전부를 주택으로 봤다(주택 연면적 > 상가 · 전체 12억 이하).
           <Row
             label="주택으로 봄 → 1세대1주택 비과세"

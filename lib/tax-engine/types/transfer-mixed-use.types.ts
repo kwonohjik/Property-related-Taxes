@@ -676,6 +676,12 @@ export interface MixedUseHousingPart {
   housingStdSplit?: { acq?: MixedUseHousingStdSplitDetail; transfer?: MixedUseHousingStdSplitDetail };
   /** 12억 이하 → 전액 비과세 */
   isExempt: boolean;
+  /**
+   * 주택보다 나중에 취득한 부수토지가 보유요건(「소득세법 시행령」 §154①) 미만이라 **토지분은 비과세에서 뺐다**(#2141).
+   * 그 토지분은 12억 비과세·안분 없이 전액 과세되고 건물분만 비과세·안분된다. §154③ 본문으로 주택이 된 상가 부분도
+   * 토지분은 과세(`commercialPart.incomeAmount`). 결과 화면·신고서가 「전액 비과세」로 그리지 않도록 싣는다.
+   */
+  laterLandExemptExcluded?: true;
   /** 12억 초과 안분 후 과세대상 양도차익 */
   proratedTaxableGain: number;
   /** 장기보유공제 표 (1 또는 2) */

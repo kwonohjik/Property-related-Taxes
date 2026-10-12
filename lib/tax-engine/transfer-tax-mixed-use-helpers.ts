@@ -674,6 +674,7 @@ export function buildHousingPart(
     buildingStdPriceAtAcq: gainSplit.buildingStdPriceAtAcq,
     ...(gainSplit.housingStdSplit ? { housingStdSplit: gainSplit.housingStdSplit } : {}),
     isExempt,
+    ...(laterLandExemptExcluded ? { laterLandExemptExcluded: true as const } : {}),
     proratedTaxableGain,
     highValueBase,
     ...(highValueJudgmentBase !== undefined ? { highValueJudgmentBase } : {}),

@@ -53,36 +53,56 @@ export function fourPartFinancials(
   const cpNbGain = nbGain - hpNbGain;
   const housingBaseGain = hp.transferGain - hpNbGain;
   const housingExemptRatio = housingBaseGain > 0 ? hp.proratedTaxableGain / housingBaseGain : 1;
-  const housingLandTaxable =
-    Math.floor((hp.landTransferGain - hpNbGain) * housingExemptRatio) + hpNbGain;
-  const housingBuildingTaxable = Math.floor(hp.buildingTransferGain * housingExemptRatio);
+  // #2141 — 나중에 취득한 부수토지가 보유요건 미달이면 토지분은 비율 안분이 아니라 **전액 과세**이고, 나머지가 건물분 과세다.
+  //   엔진과 같이 비사토 이전 후 토지 차익의 음수는 0으로 본다(`buildHousingPart` ②). 장특은 보유 미달로 토지 0 · 건물만.
+  const laterLandGain = hp.laterLandExemptExcluded ? Math.max(hp.landTransferGain - hpNbGain, 0) : 0;
+  const housingLandTaxable = hp.laterLandExemptExcluded
+    ? laterLandGain + hpNbGain
+    : Math.floor((hp.landTransferGain - hpNbGain) * housingExemptRatio) + hpNbGain;
+  const housingBuildingTaxable = hp.laterLandExemptExcluded
+    ? hp.proratedTaxableGain - laterLandGain
+    : Math.floor(hp.buildingTransferGain * housingExemptRatio);
   const commercialExempt = cp.deemedHouseBy154_3Main === true;
+  // 주택으로 본 상가 부분의 과세 토지분(#2141 — 장특 0) — 그 밖에는 0.
+  const commercialLandLaterTaxable = commercialExempt ? cp.incomeAmount + cp.longTermDeductionAmount : 0;
   setNum("taxableGain", "housingLand", housingLandTaxable);
   setNum("taxableGain", "housingBuilding", housingBuildingTaxable);
   // 상가 토지분 배율 초과 몫은 같은 열에서 과세(비과세 대상 아님)로 남긴다 — 열별 과세+비과세 = 양도차익.
-  setNum("taxableGain", "commercialLand", commercialExempt ? cpNbGain : cp.landTransferGain);
+  setNum("taxableGain", "commercialLand", commercialExempt ? cpNbGain + commercialLandLaterTaxable : cp.landTransferGain);
   setNum("taxableGain", "commercialBuilding", commercialExempt ? 0 : cp.buildingTransferGain);
   setNum("exemptGain", "housingLand", hp.landTransferGain - housingLandTaxable);
   setNum("exemptGain", "housingBuilding", hp.buildingTransferGain - housingBuildingTaxable);
-  setNum("exemptGain", "commercialLand", commercialExempt ? cp.landTransferGain - cpNbGain : 0);
+  setNum("exemptGain", "commercialLand", commercialExempt ? cp.landTransferGain - cpNbGain - commercialLandLaterTaxable : 0);
   setNum("exemptGain", "commercialBuilding", commercialExempt ? cp.buildingTransferGain : 0);
   const hpLandRatio = hp.transferGain > 0 ? hp.landTransferGain / hp.transferGain : 0.5;
   const hpBuildRatio = 1 - hpLandRatio;
   const cpLandRatio = cp.transferGain > 0 ? cp.landTransferGain / cp.transferGain : 0.5;
   const cpBuildRatio = 1 - cpLandRatio;
   // 비사토 장특(표1 보유분)은 주택분 토지 열에 함께 싣는다 — 합계 열(§95② 공제 합계)과 정합.
-  setNum("ltDeduction", "housingLand", Math.floor(hp.longTermDeductionAmount * hpLandRatio) + nbLtDeduction);
-  setNum("ltDeduction", "housingBuilding", Math.floor(hp.longTermDeductionAmount * hpBuildRatio));
+  // #2141 — 나중 토지 제외면 주택분 장특은 건물분뿐이고 토지 소득금액은 과세 토지 차익 그대로다. 주택으로 본 상가 부분은
+  //   건물분이 비과세라 상가 소득금액(장특 0)은 전부 토지 열이다. 그 밖에는 종전대로 양도차익 비율로 나눈다.
+  const hpLtLand = hp.laterLandExemptExcluded ? 0 : Math.floor(hp.longTermDeductionAmount * hpLandRatio);
+  const hpLtBuilding = hp.laterLandExemptExcluded
+    ? hp.longTermDeductionAmount
+    : Math.floor(hp.longTermDeductionAmount * hpBuildRatio);
+  const hpIncomeLand = hp.laterLandExemptExcluded ? laterLandGain : Math.floor(hp.incomeAmount * hpLandRatio);
+  const hpIncomeBuilding = hp.laterLandExemptExcluded
+    ? hp.incomeAmount - laterLandGain
+    : Math.floor(hp.incomeAmount * hpBuildRatio);
+  const cpIncomeLand = commercialExempt ? cp.incomeAmount : Math.floor(cp.incomeAmount * cpLandRatio);
+  const cpIncomeBuilding = commercialExempt ? 0 : Math.floor(cp.incomeAmount * cpBuildRatio);
+  setNum("ltDeduction", "housingLand", hpLtLand + nbLtDeduction);
+  setNum("ltDeduction", "housingBuilding", hpLtBuilding);
   setNum("ltDeduction", "commercialLand", Math.floor(cp.longTermDeductionAmount * cpLandRatio));
   setNum("ltDeduction", "commercialBuilding", Math.floor(cp.longTermDeductionAmount * cpBuildRatio));
-  setNum("incomeAmount", "housingLand", Math.floor(hp.incomeAmount * hpLandRatio) + nbIncome);
-  setNum("incomeAmount", "housingBuilding", Math.floor(hp.incomeAmount * hpBuildRatio));
-  setNum("incomeAmount", "commercialLand", Math.floor(cp.incomeAmount * cpLandRatio));
-  setNum("incomeAmount", "commercialBuilding", Math.floor(cp.incomeAmount * cpBuildRatio));
-  setNum("incomeAmountAfter", "housingLand", Math.floor(hp.incomeAmount * hpLandRatio) + nbIncome);
-  setNum("incomeAmountAfter", "housingBuilding", Math.floor(hp.incomeAmount * hpBuildRatio));
-  setNum("incomeAmountAfter", "commercialLand", Math.floor(cp.incomeAmount * cpLandRatio));
-  setNum("incomeAmountAfter", "commercialBuilding", Math.floor(cp.incomeAmount * cpBuildRatio));
+  setNum("incomeAmount", "housingLand", hpIncomeLand + nbIncome);
+  setNum("incomeAmount", "housingBuilding", hpIncomeBuilding);
+  setNum("incomeAmount", "commercialLand", cpIncomeLand);
+  setNum("incomeAmount", "commercialBuilding", cpIncomeBuilding);
+  setNum("incomeAmountAfter", "housingLand", hpIncomeLand + nbIncome);
+  setNum("incomeAmountAfter", "housingBuilding", hpIncomeBuilding);
+  setNum("incomeAmountAfter", "commercialLand", cpIncomeLand);
+  setNum("incomeAmountAfter", "commercialBuilding", cpIncomeBuilding);
 }
 
 export function splitTwoColFinancials(

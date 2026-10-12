@@ -49,9 +49,10 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
   const nbTaxableGain = nb?.transferGain ?? 0;
   const nbLtDeduction = nb?.longTermDeductionAmount ?? 0;
   // OH-17 — §154③ 본문으로 상가 부분까지 비과세면(`deemedHouseBy154_3Main`) 상가분은 과세대상이 아니다
-  //   (배율 초과 토지 몫은 이미 `nonBusinessLandPart`에 들어 있다).
+  //   (배율 초과 토지 몫은 이미 `nonBusinessLandPart`에 들어 있다). 단 나중에 취득한 토지가 보유요건 미달이면(#2141) 그 토지분은
+  //   과세다 — 엔진이 장특 0으로 소득금액에 실어 둔 값(`incomeAmount + longTermDeductionAmount` = 과세대상 차익)을 그대로 쓴다.
   const commercialTaxableGain = b.commercialPart.deemedHouseBy154_3Main
-    ? 0
+    ? b.commercialPart.incomeAmount + b.commercialPart.longTermDeductionAmount
     : b.commercialPart.transferGain;
   const taxableGain = b.housingPart.proratedTaxableGain + commercialTaxableGain + nbTaxableGain;
   const longTermHoldingDeduction =
