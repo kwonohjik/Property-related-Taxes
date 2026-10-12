@@ -185,15 +185,18 @@ export function applyLandContribOverrides(
     ];
   }
 
-  // 보유/거주 분리 항목
+  // 보유/거주 분리 항목 — 같은 세대가 철거 대상 건물을 소유했다고 선언해 §89①4호가 성립하면 표2(거주분 > 0), 아니면 표1
+  const preTable2 = (pre.lthdResidencePart ?? 0) > 0;
   const ltHoldItem = items.get("ltHoldingPart");
   if (ltHoldItem) {
-    ltHoldItem.note = "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표1), 인가후 미적용";
+    ltHoldItem.note = preTable2
+      ? "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표2 · 세대원 건물 소유 선언), 인가후 미적용"
+      : "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표1), 인가후 미적용";
     ltHoldItem.perAsset = undefined;
   }
   const ltResItem = items.get("ltResidencePart");
   if (ltResItem) {
-    ltResItem.note = "토지 출자 — 거주 분리 미적용";
+    ltResItem.note = preTable2 ? "토지 출자 — 인가전 분 거주기간 장기보유특별공제 (표2)" : "토지 출자 — 거주 분리 미적용";
     ltResItem.perAsset = undefined;
   }
 

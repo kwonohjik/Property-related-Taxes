@@ -388,7 +388,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                   : primary?.redevLandHouseholdOwnedBuilding === "no"
                     ? " — 「아니오」로 선언되어 비과세·고가 안분을 적용하지 않습니다."
                     : " — 선언이 없어 비과세·고가 안분을 적용하지 않습니다(확인 필요)."}
-                {" "}장기보유특별공제 표2(1세대1주택 우대)는 토지 출자 입주권에 적용하지 않습니다(§95② 단서).
+                {" "}장기보유특별공제 표2(1세대1주택 우대)도 「예」로 선언해 비과세 요건이 성립할 때만 적용합니다(§95② 단서).
               </p>
             </div>
           )}

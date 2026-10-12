@@ -27,13 +27,16 @@ import {
 import { REDEVELOPMENT } from "./legal-codes";
 import type { TransferTaxInput } from "./types/transfer.types";
 
-/** 표2 대상 판정에 쓰는 가·나목 — 계산기 입주권(`redevelopment.subject === "right"`, 토지만 출자한 입주권 제외)만 판정한다. */
-export function resolveRightTable2Clause(
-  input: TransferTaxInput,
-  isLandContributedRight: boolean,
-): "ga" | "na" | undefined {
+/**
+ * 표2 대상 판정에 쓰는 가·나목 — 계산기 입주권(`redevelopment.subject === "right"`)만 판정한다.
+ *
+ * 토지만 출자한 입주권도 같은 술어다(#13 조건 4 · 사용자 결정 2026-10-12 「나」): 같은 세대가 철거 대상 건물을 소유했다는 선언이
+ * 「예」면 가·나목이 성립해 비과세와 함께 표2도 받는다. 미선언·「아니오」면 술어가 `undefined`(`landContributionBlocksOneRight`)라 표1이다.
+ * 보유기간은 본인 토지 취득일~인가일(영 §166⑤1호)이고, 세대원 건물의 보유기간과 통산하지 않는다.
+ */
+export function resolveRightTable2Clause(input: TransferTaxInput): "ga" | "na" | undefined {
   const redev = input.redevelopment;
-  if (!redev || redev.subject !== "right" || isLandContributedRight) return undefined;
+  if (!redev || redev.subject !== "right") return undefined;
   return resolveOneRightExemptionClause(redev, input);
 }
 
@@ -78,7 +81,7 @@ export function rightTable2Notices(input: TransferTaxInput, clause: "ga" | "na" 
     if (resYears >= 2) {
       out.push(
         `조합원입주권에 장기보유특별공제 표2(1세대1주택)를 적용했습니다 — §89①4호 가·나목 요건 성립 + 거주 2년(소득세법 시행령 §159의4). ` +
-          `거주기간별 공제율은 관리처분계획인가일까지의 거주만 반영하므로 입력한 거주기간 중 종전주택 취득일~인가일을 넘는 부분은 공제율에서 제외했습니다` +
+          `거주기간별 공제율은 관리처분계획인가일까지의 거주만 반영하므로 입력한 거주기간 중 취득일~인가일을 넘는 부분은 공제율에서 제외했습니다` +
           `(${REDEVELOPMENT.RIGHT_TABLE2_POST_APPROVAL_RESIDENCE_RULING}). 입력한 거주기간에 인가 후 철거 전 거주가 들어 있다면 확인이 필요합니다.`,
       );
     }
@@ -99,6 +102,10 @@ export function rightTable2Notices(input: TransferTaxInput, clause: "ga" | "na" 
   if (redev.exemptionEligibleAtApproval === undefined) {
     missing.push("관리처분계획인가일 현재 기존주택 비과세 요건(§89①4호 본문)을 선언하지 않았습니다");
     cfRedev.exemptionEligibleAtApproval = true;
+  }
+  if (redev.originalAssetType === "land" && redev.landHouseholdOwnedBuilding === undefined) {
+    missing.push("토지만 출자한 입주권인데 같은 세대의 철거 대상 건물 소유를 선언하지 않았습니다");
+    cfRedev.landHouseholdOwnedBuilding = true;
   }
   if (oneRightOtherHouseCount(input) === 1 && !redev.otherHouseAcquisitionDate) {
     missing.push("나목 다른 주택의 취득일이 입력되지 않았습니다");

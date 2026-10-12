@@ -33,10 +33,12 @@ export interface RedevLandContribResult {
   /** 총 양도차익 = 인가전 + 인가후 */
   totalGain: number;
   /**
-   * 인가전 LTHD — §95② 표1 보유율 적용
+   * 인가전 LTHD — §95② 표1(또는 표2 — 세대원 건물 소유 「예」 사안) 공제율 적용
    * 근거: REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT
    */
   preApprovalLTHD: number;
+  /** 인가전 LTHD 중 보유분 — 표1이면 `preApprovalLTHD`와 같다(거주분 0) */
+  preApprovalLTHDHoldingPart: number;
   /**
    * 인가후 LTHD = 0
    * 근거: §95② 본문 괄호 — 인가전 분에 한정 적용
@@ -50,7 +52,7 @@ export interface RedevLandContribResult {
   lthdHoldingEndDate: Date;
   /** 보유기간(연수) = floor(보유월수 ÷ 12) */
   lthdHoldingYears: number;
-  /** 적용 LTHD 율 — computeLthdRateSplit().holding (표1 보유 율) */
+  /** 적용 LTHD 율 — computeLthdRateSplit().total (표1이면 보유율과 같다) */
   lthdRate: number;
 }
 
@@ -91,6 +93,13 @@ export interface RedevLandContribInput {
    * 율 산출은 `estimatedDeductionRate()` 단일 경유.
    */
   isUnregistered?: boolean;
+  /**
+   * 표2(1세대1주택) 대상 — 같은 세대가 철거 대상 건물을 소유했다는 선언이 「예」라 §89①4호 가·나목이 성립한 사안만 true
+   * (#13 조건 4 · 2026-10-12 결정). 호출부가 실가 경로와 같은 leaf(`resolveRedevEffectiveOneHouseSingle`)로 넘긴다. 미전달 = 표1.
+   */
+  isOneHouseSingle?: boolean;
+  /** 표2 거주월수 — 실가 경로와 같은 leaf(`resolveRightResidenceMonths`). 미전달 = 0 */
+  residencePeriodMonths?: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -155,16 +164,16 @@ export function calcRedevLandContribEstimated(
   );
 
   // ── Step 5: LTHD 율 산출 ────────────────────────────────────────────────
-  // computeRightLthd 재사용 (사례 36 mirror):
+  // computeRightLthd 재사용 (사례 36 mirror · 실가 경로와 같은 함수):
   //   - 토지 무상귀속도 원조합원 기준 → isSuccessorRightToMoveIn = false
-  //   - 1세대1주택 특례 미적용 → isOneHouseSingle = false
-  //   - 거주기간 0 (토지 — 거주 개념 없음)
+  //   - 표2 대상·거주월수는 호출부가 실가 경로와 같은 leaf로 넘긴다. 종전에는 false·0 고정이라
+  //     세대원 건물 소유 「예」 사안이 실가 경로에서는 표2, 환산 경로에서는 표1로 갈렸을 것이다(#13 조건 4).
   const lthdResult = computeRightLthd({
     acquisitionDate: input.acquisitionDate,
     approvalDate: input.approvalDate,
     isSuccessorRightToMoveIn: false,
-    isOneHouseSingle: false,
-    residencePeriodMonths: 0,
+    isOneHouseSingle: input.isOneHouseSingle ?? false,
+    residencePeriodMonths: input.residencePeriodMonths ?? 0,
   });
 
   // preApproval 브랜치에서 보유율·월수 추출
@@ -172,14 +181,12 @@ export function calcRedevLandContribEstimated(
   const holdingYears = Math.floor(preApprovalBranch.holdingMonths / 12);
 
   // ── Step 6: LTHD 금액 산출 ──────────────────────────────────────────────
-  // §95② 표1 보유율 적용 — holdingRate (residenceRate 미포함)
+  // §95② 공제율 전체(표1 = 보유율 · 표2 = 보유율 + 거주율). 보유분은 따로 떼어 결과 분해에 쓴다.
   // 법령 근거: REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT
   void REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT; // 상수 참조 (dead-code 방어)
 
-  const preApprovalLTHD = applyLthdToGain(
-    preApprovalGain,
-    preApprovalBranch.holdingRate,
-  );
+  const preApprovalLTHD = applyLthdToGain(preApprovalGain, preApprovalBranch.rate);
+  const preApprovalLTHDHoldingPart = applyLthdToGain(preApprovalGain, preApprovalBranch.holdingRate);
 
   // 인가후 LTHD = 0 (§95② 본문 괄호 — 인가전 분에 한정)
   const postApprovalLTHD = 0 as number; // TS 좁힘 회피를 위해 as number
@@ -191,11 +198,12 @@ export function calcRedevLandContribEstimated(
     postApprovalGain,
     totalGain: preApprovalGain + postApprovalGain,
     preApprovalLTHD,
+    preApprovalLTHDHoldingPart,
     postApprovalLTHD,
     totalLTHD: preApprovalLTHD + postApprovalLTHD,
     lthdHoldingStartDate: input.acquisitionDate,
     lthdHoldingEndDate: input.approvalDate,
     lthdHoldingYears: holdingYears,
-    lthdRate: preApprovalBranch.holdingRate,
+    lthdRate: preApprovalBranch.rate,
   };
 }

@@ -152,9 +152,9 @@ export function calculateRedevelopmentTax(
   //
   //   §89①4호 본문 — 「조합원입주권을 1개 보유한 1세대[…관리처분계획의 인가일… 현재
   //     **제3호가목에 해당하는 기존주택을 소유하는 세대**]가 …양도하는 경우」
-  //     ⇒ 토지 출자는 인가일 현재 기존주택이 없어 비과세 요건 자체가 불성립. 비과세·12억 안분은 `resolveOneRightExemptionClause`가
-  //       같은 세대가 건물을 소유한다는 선언(`landHouseholdOwnedBuilding`)이 「예」일 때만 연다(#13 · 재산세과-1748) —
-  //       아래 `isOneHouseSingle`(표2 진입)은 그 예외 사안에서도 계속 막는다(표2 기준은 입주권 표2 결정과 함께).
+  //     ⇒ 토지 출자는 인가일 현재 기존주택이 없어 비과세 요건 자체가 불성립. 비과세·12억 안분·표2는 `resolveOneRightExemptionClause`가
+  //       같은 세대가 건물을 소유한다는 선언(`landHouseholdOwnedBuilding`)이 「예」일 때만 연다(#13 · 재산세과-1748 · 표2는 2026-10-12 결정).
+  //       아래 `isOneHouseSingle`(실제 주택 수 축)은 토지 출자 입주권을 계속 뺀다 — 입주권 표2 축은 `isOneHouseForTable2`(가·나목)다.
   //   §95② 단서 — 「…1세대 1주택(이에 딸린 토지를 포함한다)에 해당하는 **자산**의 경우에는
   //     …표 2…」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가(표1만).
   //
@@ -205,7 +205,7 @@ export function calculateRedevelopmentTax(
   // 입주권(subject="right")의 표2 「1주택」 축은 §89①4호 가·나목 판정 하나다(#14 · 비과세와 같은 술어 — `redevelopment-right-table2.ts`).
   //   다른 주택이 없는 가목 고가 입주권도 표2를 받고, 요건을 못 갖췄거나 선언하지 않은 입주권은 다른 주택 1채여도 표1이다.
   //   완공APT(subject="apt")는 종전대로 실제 1주택 ∨ 의제 축이다.
-  const rightTable2Clause = resolveRightTable2Clause(input, isLandContributedRight);
+  const rightTable2Clause = resolveRightTable2Clause(input);
   const isOneHouseForTable2 =
     input.redevelopment!.subject === "right"
       ? rightTable2Clause !== undefined
