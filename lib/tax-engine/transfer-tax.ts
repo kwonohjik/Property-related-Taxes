@@ -225,7 +225,7 @@ export function calculateTransferTax(
     specialHouseExclusionDetail,
   } = runHouseCountExclusionStep(effectiveInput, steps, hceGeneralHouseAcquisitionDate);
   // STEP 0.96 (E-1 한계 G5): §155⑳ A 미충족이면 「임대주택 제외」 주택 수 1 전제를 되돌린다 — 판정·장특이 한 전제를 본다.
-  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate, multiHouseSurchargeResult?.effectiveHouseCount);
+  const rentalPremise = restoreRentalUnitsToHouseCount(judgeInputBeforeRental, effectiveInput, parsedRates, hceGeneralHouseAcquisitionDate);
   // 증여세 마법사는 세대 보유 주택 명부 입력 칸이 없어 합가 전 구성 「모름」을 불리하게 쓰지 않는다(Q-10) — 그 화면이 싣는
   // 표식(`burdenedGiftInfo.houseRosterInputUnavailable`)이 있을 때만 세운다(1h-G1-12). 계산기·판정 메뉴·표식 없는 호출은 세우지 않는다.
   const exemptionJudgeInput = {

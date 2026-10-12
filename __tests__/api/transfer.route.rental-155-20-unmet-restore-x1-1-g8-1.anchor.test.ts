@@ -6,13 +6,13 @@
  *
  * | 시료 | 전 | 후 |
  * |---|---:|---:|
- * | RS-1 명부 [신규] · 15억 · 임대 상한 초과 | 22,709,500 (일시적 2주택 비과세 · 표2 · 15호 배제) | 783,678,500 (과세 · 중과 2주택) |
- * | RS-3 명부 [상속] · 20억 · 임대 상한 초과 (P2a-cap) | 582,598,500 (15호 배제) | 1,141,178,500 |
+ * | RS-1 명부 [신규] · 15억 · 임대 상한 초과 | 22,709,500 (일시적 2주택 비과세 · 표2 · 15호 배제) | 915,403,500 (과세 · 중과 3주택) |
+ * | RS-3 명부 [상속] · 20억 · 임대 상한 초과 (P2a-cap) | 582,598,500 (15호 배제) | 1,327,903,500 |
  * | RS-4 H-6 명부 [상속·신규] · 3중첩(임대 행 없음) | 582,598,500 (13호 배제) | 1,327,903,500 (= 임대 행을 명부에 넣은 H-3) |
  *
- * 법령 기준값(임대 행을 명부에 넣은 경우)은 15억 915,403,500 · 20억 1,327,903,500이다. 후의 값이 그 아래인 이유 — **중과 주택 수의 엔진 반영(C)은
- * 후속**이라 임대주택을 중과 산입 주택 수에 넣지 않는다(남은 과소분은 고지로 처방). 영 §155⑳은 요건을 충족한 때만 「1개의 주택을 소유하고 있는 것으로
- * 보아」이므로 불성립이면 §155①·②의 「1주택」이 서지 않는다(조심 2021서1571).
+ * 후의 값은 임대 행을 명부에 넣은 법령 기준값과 같다(15억 915,403,500 · 20억 1,327,903,500). 결정 #20 A(#2119)는 ① 요소만 고쳐 그 아래(783,678,500 ·
+ * 1,141,178,500)였고, **C(2026-10-12)** 가 카드의 임대 호를 중과 판정 명부에 더해 메웠다. 영 §155⑳은 요건을 충족한 때만 「1개의 주택을 소유하고 있는
+ * 것으로 보아」이므로 불성립이면 §155①·②의 「1주택」이 서지 않고, 임대주택은 중과 주택 수에도 들어간다(조심 2021서1571 · 영 §167의3① 본문).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -193,34 +193,35 @@ const mh = (s: Single) =>
   s.raw.multiHouseSurchargeEvaluation as { surchargeType: string; effectiveHouseCount: number; exclusionReasons: { type: string }[] };
 
 describe("RS 비과세·중과 배제 ① 요소가 같은 규칙 — A 불성립 + 명부에 장기임대 행 없음", () => {
-  it("RS-1 ★ 명부 [신규] · 주택 수 2 · 15억 · 임대 상한 초과 → 일시적 2주택 비과세·15호 배제가 서지 않는다 (22,709,500 → 783,678,500)", async () => {
+  it("RS-1 ★ 명부 [신규] · 주택 수 2 · 15억 · 임대 상한 초과 → 일시적 2주택 비과세·15호 배제가 서지 않고 중과 3주택 (22,709,500 → 915,403,500)", async () => {
     const f = failRental(withRental(form([NEW_HOUSE], { contractTotalPrice: "1,500,000,000" })));
     const s = await single(f);
-    expect(s.totalTax).toBe(783_678_500);
+    expect(s.totalTax).toBe(915_403_500);
     expect(s.raw.isExempt).toBe(false);
     expect(s.raw.isPartialExempt).toBe(false);
     expect(s.longTermHoldingRate).toBe(0);
     expect(mh(s).exclusionReasons).toEqual([]);
-    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(mh(s).surchargeType).toBe("multi_house_3plus");
+    expect(mh(s).effectiveHouseCount).toBe(3);
     const w = hasRestoreNotice(s.warnings);
     expect(w).toContain("임대주택 1호를 세대 주택 수에 넣어(3주택)");
-    // 중과 주택 수는 다시 세지 않는다 — 고지로 처방(조정대상지역 · 한시 배제 밖 · 중과 주택 수 2)
-    expect(w).toContain("중과를 다시 판정하지 않았습니다");
-    expect(w).toContain("「장기임대」로 넣어 다시 계산하세요");
+    // C — 중과 주택 수에도 넣었다(조정대상지역 · 한시 배제 밖). 종전의 「명부에 넣어 다시 계산」 처방은 없다.
+    expect(w).toContain("다주택 중과 판정의 주택 수에도 임대주택 1호를 넣었습니다");
+    expect(w).not.toContain("「장기임대」로 넣어");
     expect(await multi(f)).toBe(s.totalTax);
   });
-  it("RS-2 대조 기준값 — 임대 행을 명부에 넣은 법령 기준 입력은 915,403,500이고 되돌림 고지가 없다 (엔진 반영 C는 후속)", async () => {
+  it("RS-2 대조 기준값 — 임대 행을 명부에 넣은 법령 기준 입력은 915,403,500(= RS-1)이고 되돌림 고지가 없다", async () => {
     const f = failRental(withRental(form([RENTAL_ROW, NEW_HOUSE], { contractTotalPrice: "1,500,000,000" })));
     const s = await single(f);
     expect(s.totalTax).toBe(915_403_500);
     expect(hasRestoreNotice(s.warnings)).toBe("");
   });
-  it("RS-3 ★ 명부 [상속] · 20억 · 임대 상한 초과 → 15호(inherited_general_house) 배제가 서지 않는다 (582,598,500 → 1,141,178,500)", async () => {
+  it("RS-3 ★ 명부 [상속] · 20억 · 임대 상한 초과 → 15호(inherited_general_house) 배제가 서지 않고 중과 3주택 (582,598,500 → 1,327,903,500)", async () => {
     const f = failRental(withRental(form([INHERITED])));
     const s = await single(f);
-    expect(s.totalTax).toBe(1_141_178_500);
+    expect(s.totalTax).toBe(1_327_903_500);
     expect(mh(s).exclusionReasons).toEqual([]);
-    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(mh(s).surchargeType).toBe("multi_house_3plus");
     expect(hasRestoreNotice(s.warnings)).toContain("(2주택)");
     expect(await multi(f)).toBe(s.totalTax);
   });
@@ -234,8 +235,9 @@ describe("RS 비과세·중과 배제 ① 요소가 같은 규칙 — A 불성�
     const w = hasRestoreNotice(s.warnings);
     expect(w).toContain("세대 구성 요건");
     expect(w).toContain("(3주택)");
-    // 중과 산입 주택 수가 이미 3이라 임대주택을 더해도 세율이 바뀌지 않는다 — 중과 문장을 싣지 않는다
-    expect(w).not.toContain("중과");
+    // C — 중과 판정 명부에도 임대 호를 더했다(3주택 → 4주택, 세율은 같다)
+    expect(mh(s).effectiveHouseCount).toBe(4);
+    expect(w).toContain("다주택 중과 판정의 주택 수에도 임대주택 1호를 넣었습니다");
     expect(await multi(f)).toBe(s.totalTax);
   });
 });
@@ -257,14 +259,16 @@ describe("RS 짝 — 되돌리지 않는 경우", () => {
     expect(s.totalTax).toBe(102_086_600);
     expect(hasRestoreNotice(s.warnings)).toBe("");
   });
-  it("RS-7 명부 없음 · 주택 수 1 → 더한다 (단건 391,743,000 불변) · 중과 문장은 목록 대신 주택 수 입력을 처방한다", async () => {
+  it("RS-7 ★ 명부 없음 · 주택 수 1 → 더한다 — 임대 호가 2호가 아니라 거주주택이 10호를 못 받고 중과 2주택 (391,743,000 → 783,678,500)", async () => {
     const f = failRental(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" })));
     const s = await single(f);
-    expect(s.totalTax).toBe(391_743_000);
+    expect(s.totalTax).toBe(783_678_500);
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(mh(s).exclusionReasons).toEqual([]);
     const w = hasRestoreNotice(s.warnings);
     expect(w).toContain("(2주택)");
-    expect(w).toContain("세대 보유 주택 수에 임대주택을 포함해 다시 입력하세요");
-    expect(w).not.toContain("「장기임대」로 넣어");
+    expect(w).toContain("다주택 중과 판정의 주택 수에도 임대주택 1호를 넣었습니다");
+    expect(await multi(f)).toBe(s.totalTax);
   });
   it("RS-8 임대주택을 명부에 「장기임대」로 표시한 행이 있으면 더하지 않는다 (이중 계상 방지) — 3중첩 H-3 1,327,903,500 불변", async () => {
     const f = withRental(
@@ -280,7 +284,7 @@ describe("RS 짝 — 되돌리지 않는 경우", () => {
     f.assets[0].regionCode = "4311110100";
     const w = hasRestoreNotice((await single(f)).warnings);
     expect(w).toContain("(3주택)");
-    expect(w).not.toContain("중과를 다시 판정하지 않았습니다");
+    expect(w).not.toContain("다주택 중과 판정");
   });
 });
 
@@ -295,7 +299,7 @@ describe("RS 한시 배제 기간 — 중과 문장을 싣지 않는다 (영 §1
     const f = failRental(withRental(form([NEW_HOUSE], { contractTotalPrice: "1,500,000,000", transferDate: SUSPENDED })));
     const w = hasRestoreNotice((await single(f)).warnings);
     expect(w).toContain("(3주택)");
-    expect(w).not.toContain("중과를 다시 판정하지 않았습니다");
+    expect(w).not.toContain("다주택 중과 판정");
   });
 });
 
@@ -382,17 +386,120 @@ describe("X1-1 B + 세대 구성 불성립(3중첩) — 요건은 충족해도 �
     return f;
   }
   const tri = { temporaryTwoHouseSpecial: true, newHouseAcquisitionDate: "2025-01-01" };
-  it("BC-1 ★ 명부 [상속·신규](임대 행 없음) · B 3중첩 → 일시적 2주택 비과세가 서지 않는다 (중과 13호 배제는 B 범위 밖이라 종전 그대로)", async () => {
+  it("BC-1 ★ 명부 [상속·신규](임대 행 없음) · B 3중첩 → 일시적 2주택 비과세도 중과 13호 배제도 서지 않는다 (결정 #20 C — B 포함)", async () => {
     const s = await single(withPrhp(form([INHERITED, NEW_HOUSE], tri)));
     expect(s.raw.isExempt).toBe(false);
     expect(s.raw.isPartialExempt).toBe(false);
     expect(s.rentalApplied).toBe(false);
     expect(hasRestoreNotice(s.warnings)).toContain("세대 구성 요건");
-    // 시나리오 B의 중과 ① 요소는 열지 않는다(해석 미확보 — A 결론을 B로 자동 확장하지 않는다): 중과 판정은 종전 그대로(결정 #19 조건).
-    expect(mh(s).exclusionReasons.map((x) => x.type)).toEqual(["temporary_two_house"]);
+    // 불성립이면 B도 ⑳이 서지 않는 일반 주택이다(사용자 결정 2026-10-12) — ① 요소가 서지 않고 임대 호도 중과 주택 수에 든다.
+    expect(mh(s).exclusionReasons).toEqual([]);
+    expect(mh(s).effectiveHouseCount).toBe(4);
   });
   it("BC-2 짝 — 상속주택 하나만(⑳·② 2중첩)이면 B도 특례 유지", async () => {
     const s = await single(withPrhp(form([INHERITED])));
+    expect(s.rentalApplied).toBe(true);
+    expect(hasRestoreNotice(s.warnings)).toBe("");
+  });
+});
+
+/**
+ * 결정 #20 C — ⑳ 불성립이면 카드의 임대 호를 중과 판정 명부에 더한다. 2호 장기임대주택 여부는 **중과 술어**로 판정한다
+ * (사용자 결정 2026-10-12 — ⑳ 호별 판정과 다르다: 가목 1) 2018.3.31. 등록기한 · 마목 1) 조정대상지역 신규 취득 · ㉓ 말소).
+ * 정답은 「같은 사실을 명부 장기임대 행으로 넣은 입력」이다 — 카드 행과 명부 행이 같은 값을 내야 한다.
+ */
+describe("C 카드 임대 호 → 중과 판정 명부 (결정 #20 C)", () => {
+  /** 카드의 임대 호(withRental)와 같은 사실의 명부 장기임대 행 — 마목(E) · 2019.3.1. 등록 · 90개월 */
+  const cardEquivalentRow = (rentalStartPrice: string, over: Partial<HouseEntry> = {}): HouseEntry => ({
+    ...ROW,
+    id: "h4",
+    acquisitionDate: "2016-01-01",
+    isApartment: false,
+    isLongTermRental: true,
+    isRegisteredRental: true,
+    businessRegistrationDate: "2019-03-01",
+    rentalRegistrationDate: "2019-03-01",
+    rentalPeriodYears: "7.5",
+    rentalType: "E",
+    rentIncreaseUnder5Pct: true,
+    rentalStartOfficialPrice: rentalStartPrice,
+    ...over,
+  });
+  /** ⑳ 거주요건(2년) 불충족 — 임대 호는 ⑳ 호별 요건을 충족한다 */
+  const noResidence = (f: Form): Form => {
+    f.assets[0].residencePeriodMonthsAsset = "0";
+    return f;
+  };
+
+  it("C-1 ★ RS-7(명부 없음 · 임대 상한 초과) = 같은 사실을 명부 장기임대 행으로 넣은 입력 — 783,678,500 · 중과 2주택", async () => {
+    const card = await single(failRental(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" }))));
+    const roster = await single(
+      failRental(withRental(form([cardEquivalentRow("700000000")], { contractTotalPrice: "1,500,000,000" }))),
+    );
+    expect(roster.totalTax).toBe(783_678_500);
+    expect(card.totalTax).toBe(roster.totalTax);
+    expect(mh(card).surchargeType).toBe(mh(roster).surchargeType);
+  });
+
+  it("C-2 ★ 거주요건만 불충족 · 임대 호는 2호(§167의3④ 의무기간 충족 전) → 거주주택이 10호로 중과 배제 — 명부 행 입력과 같은 값", async () => {
+    const card = await single(noResidence(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" }))));
+    expect(card.rentalApplied).toBe(false);
+    expect(mh(card).effectiveHouseCount).toBe(2);
+    expect(mh(card).surchargeType).toBe("none");
+    expect(mh(card).exclusionReasons.map((x) => x.type)).toEqual(["only_general_two_house"]);
+    const roster = await single(noResidence(withRental(form([cardEquivalentRow("250000000")], { contractTotalPrice: "1,500,000,000" }))));
+    expect(card.totalTax).toBe(roster.totalTax);
+    expect(await multi(noResidence(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" }))))).toBe(
+      card.totalTax,
+    );
+  });
+
+  it("C-3 ★ 목 후보 — 2018.3.1. 등록 매입 · 2020.7.11. 이후 단기→장기 변경 신고(마목 3) 배제)여도 가목으로 2호 → 10호 배제", async () => {
+    const f = noResidence(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" })));
+    Object.assign(f.assets[0].rentalHousingException.rentalUnits[0], {
+      businessRegistrationDate: "2018-03-01",
+      rentalRegistrationDate: "2018-03-01",
+      isExcludedShortToLongChange: true,
+      rentalMonths: "70",
+    });
+    const s = await single(f);
+    expect(mh(s).surchargeType).toBe("none");
+    expect(mh(s).exclusionReasons.map((x) => x.type)).toEqual(["only_general_two_house"]);
+  });
+
+  it("C-4 짝 — 같은 호를 2018.5.1. 등록하면 가목 등록기한(2018.3.31.)에 걸리고 마목 3)으로도 배제 → 2호 아님 → 중과 2주택", async () => {
+    const f = noResidence(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" })));
+    Object.assign(f.assets[0].rentalHousingException.rentalUnits[0], {
+      businessRegistrationDate: "2018-05-01",
+      rentalRegistrationDate: "2018-05-01",
+      isExcludedShortToLongChange: true,
+      rentalMonths: "70",
+    });
+    const s = await single(f);
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(mh(s).exclusionReasons).toEqual([]);
+  });
+
+  it("C-6 짝 — 명부 없음 · 주택 수 2(조특법 감면주택 1채 제외 후 1)면 비과세는 되돌리지만 중과 명부는 합성하지 않는다 — 고지에 중과 문장 없음", async () => {
+    const f = failRental(withRental(form([], { householdHousingCount: "2", contractTotalPrice: "1,500,000,000" })));
+    Object.assign(f, {
+      specialHouseExclusions: [
+        {
+          article: "unsold_99_2",
+          houseAcquisitionDate: "2013-06-01",
+          houseContractDate: "2013-06-01",
+          isNationalHousing: false,
+          requirementsConfirmed: true,
+        },
+      ],
+    });
+    const w = hasRestoreNotice((await single(f)).warnings);
+    expect(w).toContain("(2주택)");
+    expect(w).not.toContain("다주택 중과 판정");
+  });
+
+  it("C-5 짝 — ⑳ 요건을 충족하면 카드 행을 더하지 않는다(15호 · 임대 행 없는 2주택 의제 그대로)", async () => {
+    const s = await single(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" })));
     expect(s.rentalApplied).toBe(true);
     expect(hasRestoreNotice(s.warnings)).toBe("");
   });
