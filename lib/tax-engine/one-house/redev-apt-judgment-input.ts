@@ -25,7 +25,7 @@
  * 번역 전 원본을 본다 — 상속주택 제외의 E-8(`transfer-inheritance-exclusion.ts`)이 입주권 취득일과 준공일을
  * 따로 받기 때문에, 취득일을 미리 바꿔 넣으면 그 구분이 사라진다.
  */
-import { resolveAptResidenceMonths } from "../redevelopment-lthd";
+import { isLandContributedNewBuild, resolveAptResidenceMonths } from "../redevelopment-lthd";
 import type { TransferTaxInput } from "../types/transfer.types";
 
 /** 번역 대상인가 — 완공APT(`subject="apt"`)만. 입주권(§89①4호)은 다른 호라 번역하지 않는다. */
@@ -62,13 +62,7 @@ export function redevAptJudgmentAcquisitionDate(
 export function isLandContributedOriginalApt(
   input: Pick<TransferTaxInput, "propertyType" | "redevelopment">,
 ): boolean {
-  const redev = input.redevelopment;
-  return (
-    isRedevApt(input) &&
-    redev?.isSuccessorMember !== true &&
-    redev?.originalAssetType === "land" &&
-    redev.completionDate !== undefined
-  );
+  return isRedevApt(input) && isLandContributedNewBuild(input.redevelopment!);
 }
 
 /**

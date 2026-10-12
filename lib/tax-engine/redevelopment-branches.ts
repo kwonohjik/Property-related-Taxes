@@ -29,7 +29,7 @@ import type {
   RedevelopmentBranchDetail,
 } from "./types/transfer-redevelopment.types";
 
-import { resolveRedevEffectiveOneHouseSingle, resolveRightResidenceMonths } from "./redevelopment-lthd";
+import { isLandContributedNewBuild, resolveRedevEffectiveOneHouseSingle, resolveRightResidenceMonths } from "./redevelopment-lthd";
 
 export function toBranchHolding(
   from: Date,
@@ -430,11 +430,13 @@ export function runOriginalMember(
   const isRight = subject === "right";
 
   // 신고서 표시용 거주기간 분배 — 인가전=prior, 인가후·청산금=new
-  const priorResStart = redevelopment.priorResidenceStartDate;
-  const priorResEnd = redevelopment.priorResidenceEndDate;
+  // #12 — 토지만 출자한 원조합원은 종전주택이 없어 종전 거주를 표시하지 않는다(LTHD가 신축 거주만 센다 — `computeRedevelopmentLthd`).
+  const landNewBuild = isLandContributedNewBuild(redevelopment);
+  const priorResStart = landNewBuild ? undefined : redevelopment.priorResidenceStartDate;
+  const priorResEnd = landNewBuild ? undefined : redevelopment.priorResidenceEndDate;
   const newResStart = redevelopment.newResidenceStartDate;
   const newResEnd = redevelopment.newResidenceEndDate;
-  const priorMonths = redevelopment.priorHouseResidenceMonths;
+  const priorMonths = landNewBuild ? undefined : redevelopment.priorHouseResidenceMonths;
   const newMonths = redevelopment.newHouseResidenceMonths;
 
   // 분기별 LTHD 금액 분리 헬퍼 — total = holdingPart + residencePart (분배법칙 보존)

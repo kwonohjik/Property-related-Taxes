@@ -18,6 +18,7 @@ import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { applyFairMarketRatio } from "./tax-utils";
 import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
 import { calculateProration } from "./tax-utils";
+import { isLandContributedNewBuild } from "./redevelopment-lthd";
 
 export function zeroLthdParts(b: RedevelopmentBranchDetail): Partial<RedevelopmentBranchDetail> {
   return {
@@ -233,14 +234,17 @@ export function applyHighValueAllocation(
   const nontaxableGain = allocationBase - taxableGainTotal;
 
   // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §154⑧ 노출)
-  const prior = redevInfo.priorHouseResidenceMonths ?? 0;
+  // #12 — 토지만 출자한 원조합원은 종전 거주를 세지 않는다(`computeRedevelopmentLthd`와 같은 규칙 — 표시가 적용 공제율과 어긋나지 않게).
+  const landNewBuild = isLandContributedNewBuild(redevInfo);
+  const priorInput = landNewBuild ? undefined : redevInfo.priorHouseResidenceMonths;
+  const prior = priorInput ?? 0;
   const newMonths = redevInfo.newHouseResidenceMonths ?? 0;
   const existingResidenceMonths =
-    redevInfo.priorHouseResidenceMonths !== undefined || redevInfo.newHouseResidenceMonths !== undefined
+    priorInput !== undefined || redevInfo.newHouseResidenceMonths !== undefined
       ? prior + newMonths
       : 0;
   const payResidenceMonths =
-    redevInfo.priorHouseResidenceMonths !== undefined || redevInfo.newHouseResidenceMonths !== undefined
+    priorInput !== undefined || redevInfo.newHouseResidenceMonths !== undefined
       ? newMonths
       : 0;
 
@@ -265,7 +269,7 @@ export function applyHighValueAllocation(
       payResidenceMonths,
       existingTable: preApproval.lthdRate > 0.30 ? "table2" : "table1",
       payTable: settlement.lthdRate > 0.30 ? "table2" : "table1",
-      ...(redevInfo.priorResidenceStartDate && redevInfo.priorResidenceEndDate
+      ...(!landNewBuild && redevInfo.priorResidenceStartDate && redevInfo.priorResidenceEndDate
         ? {
             priorPeriod: {
               start: redevInfo.priorResidenceStartDate,

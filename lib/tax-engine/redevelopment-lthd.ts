@@ -99,6 +99,22 @@ export function resolveRightResidenceMonths(input: {
 }
 
 /**
+ * **토지만 출자한 원조합원**의 완공 신축주택인가 — 보유기간이 사용승인서 교부일부터라(영 §162①4호 · 서면-2022-부동산-1616)
+ * 「그 보유기간 중 거주기간」이 신축주택 거주뿐인 축(#12). 승계조합원과 같은 거주월수 규칙을 쓴다.
+ * 엔진 판정 술어 `isLandContributedOriginalApt`(`one-house/redev-apt-judgment-input.ts`)의 재개발 정보 부분이다 — 두 판정이 같은 술어를 본다.
+ */
+export function isLandContributedNewBuild(
+  redev: Pick<RedevelopmentInfo, "subject" | "isSuccessorMember" | "originalAssetType" | "completionDate">,
+): boolean {
+  return (
+    redev.subject === "apt" &&
+    redev.isSuccessorMember !== true &&
+    redev.originalAssetType === "land" &&
+    redev.completionDate !== undefined
+  );
+}
+
+/**
  * 완공 신축주택(subject="apt") 양도의 **거주월수 단일 소스** — §154① 비과세 판정 · §95② 표2 공용 leaf
  * (2026-09-26 · OH-48 · OH-50).
  *
@@ -115,6 +131,8 @@ export function resolveRightResidenceMonths(input: {
  *
  * - **원조합원**: `prior + new` — 시행령 §154⑧1호 「그 멸실된 주택과 재건축한 주택에 대한
  *   거주기간」 통산. 표2가 종전부터 쓰던 식 그대로다.
+ * - **토지만 출자한 원조합원**(`isLandContributedNewBuild`): 승계조합원과 같이 `new`만(호출부가 `isSuccessorMember: true`로 부른다) —
+ *   멸실된 주택이 없어 §154⑧1호 통산 대상이 없다(#12 · 대법원 2025두34147: 기존건물분은 기존건물 거주 + 신축 거주를 통산).
  * - **승계조합원**: `new`만 — 보유기간이 준공일(사용승인서 교부일, 시행령 §162①4호)부터라
  *   「그 보유기간 중」 거주는 신축주택 거주뿐이다. 서면-2019-부동산-4508(2022.12.06) 요지:
  *   「보유기간은 해당 주택의 취득일(준공인가증 교부일)부터 계산하는 것으로 **멸실 전 거주기간을
@@ -186,7 +204,7 @@ export interface RedevelopmentLthdInput {
 
   /**
    * 종전주택 거주개월수 (시행령 §154⑧ 통산 산식의 prior 분량).
-   * 기존건물분(인가전+인가후 비청산) LTHD 표2 거주분 = prior + new (통산).
+   * 기존건물분(인가전+인가후 비청산) LTHD 표2 거주분 = prior + new (통산). 토지 출자 원조합원은 new만(#12).
    */
   priorHouseResidenceMonths?: number;
 
@@ -258,7 +276,10 @@ export function computeRedevelopmentLthd(
     input.priorHouseResidenceMonths !== undefined || input.newHouseResidenceMonths !== undefined;
   const newMonths = input.newHouseResidenceMonths ?? 0;
   // 식은 §154① 판정과 공용 leaf(`resolveAptResidenceMonths`) — 두 판정이 같은 거주월수를 본다(OH-48).
+  // #12 — 토지만 출자한 원조합원은 종전주택이 없어 신축 거주만 센다(판정 번역 `translateRedevAptForHousingJudgment`와 같다).
+  //   종전에는 표2만 prior + new를 더해, API로 종전 거주를 보내면 비과세 판정(신축만)과 표2가 다른 거주월수를 봤다.
   const existingResidenceMonths = resolveAptResidenceMonths({
+    isSuccessorMember: isLandContributedNewBuild(redevelopment),
     priorHouseResidenceMonths: input.priorHouseResidenceMonths,
     newHouseResidenceMonths: input.newHouseResidenceMonths,
     residencePeriodMonths: input.residencePeriodMonths,
@@ -376,7 +397,7 @@ function computeAptLthd(args: {
   isOneHouseSingle: boolean;
   /** 청산금 **수령**분의 표2 「1주택」 축 — 청산금분 양도일 기준 + 미충족 선언 강등 (`resolveRedevSettlementReceiveOneHouse`) */
   receiveSettlementOneHouseSingle: boolean;
-  /** 기존건물분 거주월수 (= prior + new, §154⑧ 통산) */
+  /** 기존건물분 거주월수 (= prior + new, §154⑧ 통산 — 토지 출자 원조합원은 new만 · #12) */
   existingResidenceMonths: number;
   /** 청산금분 거주월수 (= new, 해석례 2020-386) */
   payResidenceMonths: number;
@@ -398,7 +419,7 @@ function computeAptLthd(args: {
 
   // ─ §166⑤2호나목: 기존건물분 (preApproval + postApprovalExistingHouse) = 취득일 ~ 신축양도일 ─
   // 묶음 동일 보유기간 → 동일 LTHD율 (분배법칙으로 분기별 산출해도 합계 동일)
-  // 거주분 = §154⑧ 통산 (prior + new)
+  // 거주분 = §154⑧ 통산 (prior + new) — 토지 출자 원조합원은 new만(#12, 호출부 `existingResidenceMonths`)
   const existingHolding = calculateHoldingPeriod(acquisitionDate, transferDate);
   const existingMonths = existingHolding.years * 12 + existingHolding.months;
   const existingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears);
@@ -527,6 +548,8 @@ export function redevUsesTable2(input: {
     receiveOnlyMode?: boolean;
     oneHouseAtSettlementSale?: boolean;
     settlementSaleDate?: Date;
+    originalAssetType?: RedevelopmentInfo["originalAssetType"];
+    completionDate?: Date;
   };
   isOneHouseSingle: boolean;
   residencePeriodMonths?: number;
@@ -567,7 +590,11 @@ export function redevUsesTable2(input: {
       Math.floor((hasSplit ? (r.newHouseResidenceMonths ?? 0) : 0) / 12),
     );
   }
-  return usesTable2(input.isOneHouseSingle, Math.floor(resolveAptResidenceMonths(months) / 12));
+  // #12 — 토지 출자 원조합원은 신축 거주만(위 `computeRedevelopmentLthd`와 같은 규칙).
+  return usesTable2(
+    input.isOneHouseSingle,
+    Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: isLandContributedNewBuild(r) }) / 12),
+  );
 }
 
 export function computeLthdRateSplit(
