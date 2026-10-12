@@ -327,7 +327,8 @@ export function buildMixedUsePartCards(
    * 「소득세법」 §104①2호 괄호 — 주택과 그 부수토지는 **늦은 취득일 하나**로 세율을 판정한다(조심 2024인3140).
    * 주택 카드는 장특을 파트별로 계산하려고 취득일을 따로 가지므로, 세율 기산일만 주택 카드들의 §104② 기산일 중
    * 늦은 날로 맞춘다 — 단건 겸용 `rateParts` 주택분(`Math.min` 보유연수)과 같은 규칙. 종전엔 카드마다 자기 취득일로
-   * 판정해 토지 2015·건물 2023-09 매매에서 토지 카드가 누진(정답 70%)이었다. §154③ 본문으로 주택이 된 상가 카드도 포함한다.
+   * 판정해 토지 2015·건물 2023-09 매매에서 토지 카드가 누진(정답 70%)이었다. §154③ 본문으로 주택이 된 상가 카드는 같은 토지·건물
+   * 날짜라 최댓값을 바꾸지 않고, 그 카드에는 이 날짜를 싣지 않는다(아래 `nonHousingForRate`).
    */
   const housingDates = cards
     .filter((c) => c.propertyType === "housing")
@@ -347,8 +348,17 @@ export function buildMixedUsePartCards(
    */
   const buildingCard = cards.find((c) => c.propertyId.startsWith(`${MIXED_USE_PART_IDS.housingBuilding}#`))!;
   const buildingStart = resolveBaseHoldingStartDate(buildingCard);
+  const isCommercialCard = (c: TransferTaxItemInput) =>
+    c.propertyId.startsWith(`${MIXED_USE_PART_IDS.commercialLand}#`) ||
+    c.propertyId.startsWith(`${MIXED_USE_PART_IDS.commercialBuilding}#`);
   return cards.map((c) => {
     if (c.propertyType !== "housing") return c;
+    /**
+     * 「소득세법 시행령」 §154③ 본문은 「법 제89조제1항제3호를 적용할 때」 전부를 주택으로 본다 — 비과세 축 규정이다. 상가 카드는
+     * 비과세 판정 때문에 주택 카드로 싣지만 세율은 상가 토지·건물 그대로(단건 겸용 `rateParts`의 `commercial_land`·`commercial_building`).
+     * 종전엔 나중에 취득한 상가 토지(보유 2년 미만 — 비과세 제외)가 주택 단기세율(1년 미만 70%)을 받았다(정답 50%).
+     */
+    if (isCommercialCard(c)) return { ...c, nonHousingForRate: true };
     const laterStart =
       c.propertyId.startsWith(`${MIXED_USE_PART_IDS.housingLand}#`) && buildingStart > resolveBaseHoldingStartDate(c);
     const exemptionStart = laterStart ? { exemptionHoldingStartDate: buildingStart } : {};

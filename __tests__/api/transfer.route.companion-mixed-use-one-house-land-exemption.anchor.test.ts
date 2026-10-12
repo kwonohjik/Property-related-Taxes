@@ -5,6 +5,7 @@
  * 주택부수토지로서의 보유가 아니다. 종전엔 파트 카드가 자기 취득일로 판정해, 토지 2015·건물 2023-09(주택 보유 2년 미만)에서
  * 주택 토지 카드만 비과세됐다. 단건 겸용(건물 취득일로 판정)·분리취득(`split-part-rate.anchor` A-13)은 전액 과세다.
  * 토지를 나중에 샀으면(2년 미만) 토지 카드는 과세·건물 카드는 비과세 — 분리취득 G-3과 같다(A-12b).
+ * §154③ 본문으로 주택이 된 상가 카드는 비과세만 주택이고 세율은 상가 토지·건물 그대로다(`nonHousingForRate`).
  * primary = 토지(독립 나대지) · companion = 겸용주택(매매) · 1세대1주택 · 양도 2024-06-01. route 경유(⑧ → ④ → ⑫ → ⑭).
  */
 
@@ -118,7 +119,7 @@ function bundledForm(): TransferFormData {
   } as TransferFormData);
 }
 
-type Card = { propertyId: string; isExempt: boolean; transferGain: number; rateGroup: string };
+type Card = { propertyId: string; isExempt: boolean; transferGain: number; rateGroup: string; appliedRate: number };
 
 /** 토지·건물 취득일이 다를 때 — 실거래가로 파트 취득가액을 직접 넣는다. */
 const SEP = (building: string, land: string) => ({
@@ -168,11 +169,16 @@ describe("컴패니언 겸용주택 1세대1주택 — 주택 토지 카드 비�
     expect(a.totalTax).toBe(167_681_142);
   }, 60_000);
 
-  it("토지 나중(2023-10, 보유 2년 미만)·건물 2009 → 토지 카드 과세 · 건물 카드 비과세(분리취득 G-3과 같음, 불변)", async () => {
+  it("토지 나중(2023-10, 보유 2년 미만)·건물 2009 → 토지 카드 과세 · 건물 카드 비과세(분리취득 G-3과 같음)", async () => {
     const { a, card } = await calc(SEP("2009-03-01", "2023-10-01"));
     expect(card("mu-house-land").isExempt).toBe(false);
+    expect(card("mu-house-land").appliedRate).toBe(0.7);
     expect(card("mu-house-bld").isExempt).toBe(true);
-    expect(a.totalTax).toBe(187_004_712);
+    // §154③ 본문으로 주택이 된 상가 토지 카드도 비과세에서 빠지지만 세율은 상가 토지(1년 미만 50%) — §154③은 §89①3호 적용 규정이다.
+    // 종전 주택 단기세율 70% · 187,004,712.
+    expect(card("mu-comm-land").isExempt).toBe(false);
+    expect(card("mu-comm-land").appliedRate).toBe(0.5);
+    expect(a.totalTax).toBe(183_076_140);
   }, 60_000);
 
   it("토지 먼저(2015)·건물 2021-09(주택 보유 2년 이상) → 주택 카드 둘 다 비과세(불변)", async () => {
