@@ -1,0 +1,133 @@
+/**
+ * anchor(⑤⑧④ 게이트 · route) — 결정 #38-1 위젯을 **열지 않는** 두 화면 (검토 지적 보정)
+ *
+ * | # | 화면 | 열면 생기던 결함 (실측) |
+ * |---|---|---|
+ * | GC-5 | 겸용주택을 증여받은 경우 | 겸용 엔진 §154① 보유 판정이 `giftHouseholdBasis`를 받지 않아 「예」·「아니오」 모두 305,678,570 — 묻고도 반영하지 않는다 |
+ * | GC-6 | 다건 편집 임베드 | 다건 ④가 사실을 싣지 않아 단건 「예」 0 ↔ 다건 「예」 229,075,000 + 「입력되지 않아」 고지 — 묻고도 버린다 |
+ *
+ * 둘 다 이번 묶음 범위 밖(겸용 통산 배선 · #38-3 다건)이라 **묻지 않는다**로 고정한다. 부정형 단언에는 긍정 짝을 둔다.
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
+vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/db/tax-rates")>();
+  return { ...actual, preloadTaxRates: vi.fn() };
+});
+vi.mock("@/lib/api/rate-limit", () => ({
+  checkRateLimit: vi.fn().mockReturnValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 }),
+  getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
+  shouldBypassRateLimit: vi.fn().mockReturnValue(false),
+}));
+import { POST } from "@/app/api/calc/transfer/route";
+import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { withIdentityHousingBuildingStdOnForm } from "../tax-engine/_helpers/mixed-use-identity-std-form";
+import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
+import { collectStepIssues, validateStep } from "@/lib/calc/transfer-tax-validate";
+import { isPropertyReady } from "@/lib/calc/multi-transfer-tax-validate";
+import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
+import { calcGiftHouseholdFactAsked, calcGiftHouseholdFactVisible } from "@/lib/calc/gift-household-payload";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { createInitialOneHouseJudgmentForm, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
+import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
+import { handoff } from "./_one-house-pr6a-routes";
+import { runMulti, runSingle } from "./_helpers/single-multi-route-parity";
+
+beforeEach(() => {
+  vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
+});
+
+const issues = (f: TransferFormData) => [0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f).map((i) => i.message));
+async function runSingleMixed(f: TransferFormData) {
+  let body: unknown;
+  vi.stubGlobal("fetch", vi.fn(async (_u: string, init: { body: string }) => { body = JSON.parse(init.body); return new Response(JSON.stringify({ data: {} }), { status: 200 }); }));
+  try { await callTransferTaxAPI(f).catch(() => undefined); } finally { vi.unstubAllGlobals(); }
+  const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }));
+  return { status: res.status, json: await res.json(), body: body as Record<string, unknown> };
+}
+
+// ── GC-5 겸용주택 — `transfer.route.mixed-use-inheritance-decedent-date` 픽스처를 1세대1주택 · 증여 취득으로 둔다 ──
+const MIXED = {
+  assetKind: "housing", isMixedUseHouse: true, acquisitionCause: "purchase", acquisitionDate: "2009-03-01", useEstimatedAcquisition: true,
+  addressRoad: "서울 강남구 테헤란로 1", residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
+  mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedTransferHousingPrice: "900000000",
+  mixedTransferCommercialBuildingPrice: "300000000", mixedTransferLandPricePerSqm: "2000000", mixedAcqHousingPrice: "300000000",
+  mixedAcqCommercialBuildingPrice: "100000000", mixedAcqLandPricePerSqm: "1000000",
+};
+/** 증여자 2000-01-01 취득 → 2023-09-01 증여 → 2024-06-01 양도 · 그 밖의 친족 */
+const MIXED_GIFT = { acquisitionCause: "gift", acquisitionDate: "2023-09-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "500000000",
+  donorAcquisitionDate: "2000-01-01", giftDonorRelation: "other" };
+function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
+  const f = createDefaultTransferFormData();
+  f.assets[0] = { ...f.assets[0], residenceInputMode: "direct", residencePeriods: [], ...MIXED, ...over } as AssetForm;
+  Object.assign(f, { transferDate: "2024-06-01", filingDate: "2024-08-31", contractTotalPrice: "1,200,000,000", householdHousingCount: "1",
+    isOneHousehold: true, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, residencePeriodMonths: "0" });
+  return withIdentityHousingBuildingStdOnForm(f, { acqN: 90_000_000 });
+}
+
+describe("GC-5 겸용주택 증여 — 묻지 않는다(겸용 엔진이 세대 사실을 받지 않는다)", () => {
+  it("[GC-5a] 술어 — 겸용이면 거짓 · 같은 자산이 겸용이 아니면 참(짝)", () => {
+    const a = mixedForm(MIXED_GIFT).assets[0];
+    expect(calcGiftHouseholdFactVisible(a)).toBe(false);
+    expect(calcGiftHouseholdFactVisible({ ...a, isMixedUseHouse: false })).toBe(true);
+  });
+
+  it("[GC-5b] ⑧ — 세대 답이 비어도 막지 않는다(다른 칸은 다 채운 폼이라 「없음」이 공허하지 않다)", () => {
+    expect(issues(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "" }))).toEqual([]);
+  });
+
+  it("[GC-5c] ④ — 남은 「예」를 싣지 않는다 · 세액은 종전(증여일 기준)과 같다", async () => {
+    const r = await runSingleMixed(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2000-01-01" }));
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(r.body.giftSameHouseholdContinuous).toBeUndefined();
+    expect(r.json.data.result.total.determinedTax).toBe(305_678_570);
+  }, 60_000);
+});
+
+// ── GC-6 다건 편집 임베드 — 단건 anchor(GC-4)와 같은 사실 ──
+const giftAsset = (over: Partial<AssetForm> = {}): AssetForm =>
+  ({ ...makeDefaultAsset(1), residenceInputMode: "direct", residencePeriods: [], assetKind: "housing",
+    addressJibun: "서울특별시 종로구 청운동 1-1", acquisitionCause: "gift", acquisitionDate: "2025-06-01",
+    fixedAcquisitionPrice: "600000000", donorAcquisitionDate: "2010-03-01", giftDonorRelation: "other",
+    giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2010-03-01", ...over }) as AssetForm;
+function calcForm(assetOver: Partial<AssetForm> = {}): TransferFormData {
+  const j = { ...createInitialOneHouseJudgmentForm(), assets: [giftAsset()], transferDate: "2026-02-16",
+    contractTotalPrice: "900000000", isOneHousehold: true, isRegulatedArea: false, wasRegulatedAtAcquisition: false,
+    houses: [], presaleRights: [] } as unknown as OneHouseJudgmentFormData;
+  const f = handoff(j);
+  return { ...f, assets: [{ ...f.assets[0], ...assetOver } as AssetForm, ...f.assets.slice(1)] } as TransferFormData;
+}
+const BLANK = { giftDonorRelation: "", giftSameHousehold: "", giftHouseholdHoldingStartDate: "" } as const;
+const item = (form: TransferFormData) => ({ propertyId: "p1", propertyLabel: "p1", form, completionPercent: 100 }) as PropertyItem;
+
+describe("GC-6 다건 편집 임베드 — 묻지 않는다(다건 ④가 싣지 않는다 · #38-3 범위 밖)", () => {
+  it("[GC-6a] 게이트 — 다건 임베드면 거짓 · 단건 첫 자산이면 참(짝)", () => {
+    const a = calcForm(BLANK).assets[0];
+    expect(calcGiftHouseholdFactAsked(a, { isPrimary: true, embeddedInMulti: true })).toBe(false);
+    expect(calcGiftHouseholdFactAsked(a, { isPrimary: true, embeddedInMulti: false })).toBe(true);
+  });
+
+  it("[GC-6b] ⑧ — 다건 맥락은 막지 않고(다건 「다음」 게이트 isPropertyReady 포함) · 단건 맥락은 같은 폼을 막는다(짝)", () => {
+    const blank = calcForm(BLANK);
+    expect(validateStep(0, blank, { embeddedInMulti: true })).toBeNull();
+    expect(isPropertyReady(item(blank))).toBe(true);
+    expect(validateStep(0, blank)).toMatch(/증여자와의 관계를 선택하세요/);
+  });
+
+  it("[GC-6c] route — 다건은 종전대로 증여일 기준 + 「입력되지 않아」 고지(다건 계산은 입력받지 않는다고 적는다) · 단건 「예」는 비과세(짝)", async () => {
+    const f = calcForm();
+    expect(buildPropertyPayload(f)).not.toHaveProperty("giftSameHouseholdContinuous");
+    const m = await runMulti([f]);
+    expect(m.status).toBe(200);
+    expect(m.totalTax).toBe(229_075_000);
+    const text = JSON.stringify(m.json);
+    expect(text).toContain("세대 관계가 입력되지 않아");
+    expect(text).toContain("다건 계산에서는 입력받지 않습니다");
+    const s = await runSingle(f);
+    expect(s.totalTax).toBe(0);
+  }, 60_000);
+});

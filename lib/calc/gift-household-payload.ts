@@ -4,7 +4,8 @@
  * 이월과세 폼(`CarryoverTaxationForm.donorSameHousehold`)과 **같은 사실·같은 엔진 leaf**
  * (`lib/tax-engine/one-house/gift-household-basis.ts`)를 쓴다 — 판정 메뉴와 계산기가 같은 사실로 같은 판정을 한다.
  * 계산기 단건 일반 증여(이월과세 밖, 부담부증여 양도 포함) 화면도 **주 자산**에서 같은 위젯으로 묻는다(결정 #38-1,
- * `calcGiftHouseholdFactVisible`). 함께 양도하는 자산·건물만 증여받은 주택(D2)·다건에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
+ * `calcGiftHouseholdFactAsked`). 함께 양도하는 자산·건물만 증여받은 주택(D2)·다건에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
+ * 겸용주택에도 칸이 없다 — 겸용 엔진이 이 사실을 받지 않는다(별건).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
@@ -58,14 +59,31 @@ type BuildingCauseMixFields = Partial<
 /**
  * 계산기 단건 **주 자산**에서 세대 사실을 묻는가 — ⑤(`CompanionAcquisitionCauseSection`)·⑧(`validateAssetEntry`)·④가 같은 술어를 쓴다.
  *
- * 증여 주택(`giftHouseholdFactVisible`)이면서 건물만 증여받고 토지는 매수한 주택(D2)이 **아닌** 경우다. D2는 증여 블록 대신 매매 블록이
- * 마운트되어 이 칸이 없고, 건물만 증여받은 주택의 통산 범위는 이 묶음에서 정하지 않았다(범위 밖 — 엔진이 확인 필요를 고지한다).
- * 첫 자산인지는 호출부가 가른다(④는 `form.assets[0]`만 싣고, ⑤·⑧은 첫 자산에서만 묻는다).
+ * 증여 주택(`giftHouseholdFactVisible`)이면서 다음 둘이 **아닌** 경우다.
+ *  - 건물만 증여받고 토지는 매수한 주택(D2) — 증여 블록 대신 매매 블록이 마운트되어 이 칸이 없고, 건물만 증여받은 주택의 통산 범위는
+ *    이 묶음에서 정하지 않았다(범위 밖 — 엔진이 확인 필요를 고지한다).
+ *  - 겸용주택(`isMixedUseHouse`) — 겸용 엔진의 §154① 보유 판정(`transfer-tax-mixed-use-exemption.ts` `exemptionReqInput`)은 건물 취득일로
+ *    기산하고 `giftHouseholdBasis`를 받지 않는다. 물으면 「예」가 결과에 반영되지 않는다(「예」·「아니오」 같은 세액 — anchor GC-5).
+ *    겸용의 통산 배선은 별건이다.
+ * 첫 자산인지·다건 임베드인지는 호출부가 가른다(`calcGiftHouseholdFactAsked` — ⑤·⑧. ④는 단건 `form.assets[0]`만 싣는다).
  */
 export function calcGiftHouseholdFactVisible(
   asset: (Pick<AssetForm, "acquisitionCause" | "assetKind"> & BuildingCauseMixFields) | undefined,
 ): boolean {
-  return !!asset && giftHouseholdFactVisible(asset) && !effectiveBuildingCauseMix(asset);
+  return !!asset && giftHouseholdFactVisible(asset) && !asset.isMixedUseHouse && !effectiveBuildingCauseMix(asset);
+}
+
+/**
+ * ⑤ 위젯 노출 · ⑧ 필수 검증의 게이트 — 단건 계산기의 **첫 자산**이고 다건 편집 화면에 임베드되지 **않았을** 때만 묻는다.
+ *
+ * 다건 편집은 같은 단건 마법사를 임베드하지만 다건 ④(`buildPropertyPayload`)는 이 사실을 싣지 않고 다건 ⑫도 받지 않는다(#38-3 범위 밖).
+ * 다건에서 물으면 답이 조용히 버려지고 엔진은 「입력되지 않아」 고지를 낸다 — 같은 입력이 단건 0 · 다건 229,075,000(anchor GC-6).
+ */
+export function calcGiftHouseholdFactAsked(
+  asset: Parameters<typeof calcGiftHouseholdFactVisible>[0],
+  where: { isPrimary: boolean; embeddedInMulti: boolean },
+): boolean {
+  return where.isPrimary && !where.embeddedInMulti && calcGiftHouseholdFactVisible(asset);
 }
 
 /**
@@ -74,7 +92,7 @@ export function calcGiftHouseholdFactVisible(
  *
  * 값은 계산기 화면의 위젯(⑤) 입력이거나 판정 메뉴가 넘긴 것(`toTransferFormPatch`)이다 — 같은 키다. 이월과세로 바뀌지 않는
  * 증여(그 밖의 친족 · 10년(5년) 밖 · 세대 사실이 이월과세 배제를 가르지 않는 경우)도 이 사실이 §154① 보유·「취득 당시」를 가르므로
- * 버리지 않는다. 칸이 없는 D2는 싣지 않는다(⑤·⑧과 같은 술어 `calcGiftHouseholdFactVisible`). **불완전·불일치 사실은 보내지 않는다** —
+ * 버리지 않는다. 칸이 없는 D2·겸용은 싣지 않는다(⑤·⑧과 같은 술어 `calcGiftHouseholdFactVisible`). **불완전·불일치 사실은 보내지 않는다** —
  * ⑧이 같은 규칙으로 막으므로 계산 경로에서는 닿지 않지만, ⑧을 거치지 않고 ④만 부르는 호출이 ⑫ 400을 받지 않게 남겨 둔다.
  */
 export function buildCalcGiftHouseholdPayload(

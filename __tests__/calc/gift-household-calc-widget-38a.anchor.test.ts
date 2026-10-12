@@ -138,7 +138,7 @@ describe("GC-4 route — 계산기에서 직접 입력한 사실로 판정한다
     expect(c.body.giftSameHouseholdContinuous).toBe(false);
     expect(c.isExempt).toBe(false);
     expect(c.totalTax).toBe(229_075_000);
-    // 확정된 별도세대 — 「입력받지 않아」 고지가 없다
-    expect((c.warnings ?? []).some((w: string) => w.includes("세대 관계를 입력받지 않아"))).toBe(false);
+    // 확정된 별도세대 — 「입력되지 않아」 고지가 없다
+    expect((c.warnings ?? []).some((w: string) => w.includes("세대 관계가 입력되지 않아"))).toBe(false);
   });
 });

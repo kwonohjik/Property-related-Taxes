@@ -69,7 +69,7 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
   // 비거주자(판정 메뉴 전용) — 단건 route는 판정 메뉴 경로(`buildTransferEngineInput` 공용)로 엔진에 넘긴다.
   transferorNonResidentAtTransfer: whenPresent(MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE),
   nonResidentHoldingPeriod: whenPresent(MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE),
-  // 증여받은 주택의 세대 사실(결정 #38) — 판정 메뉴 전용 입력. 다건 ④는 만들지 않는다.
+  // 증여받은 주택의 세대 사실(결정 #38) — 판정 메뉴·단건 계산기 입력. 다건 ④는 만들지 않는다(다건 화면도 묻지 않는다 — #38-3).
   giftSameHouseholdContinuous: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
   giftHouseholdHoldingStartDate: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
   // 잔금 전 멸실 특약(판정 메뉴 전용, 결정 #46) — 다건 ⑭는 옮기지 않는다.

@@ -3,7 +3,7 @@
  *
  * · 첫 자산의 증여 주택이면 판정 메뉴와 같은 칸(관계·계속 같은 세대·시작일)을 증여 블록 아래에 연다. 부담부증여 양도도 같다.
  * · 증여자 취득일은 증여 블록이 이미 받으므로 위젯에서 다시 묻지 않는다(같은 키 두 칸 금지) — 블록 안내가 「필수」로 바뀐다.
- * · 함께 양도하는 자산(첫 자산 아님)·토지·건물만 증여(D2)에는 열지 않는다(⑧·④와 같은 술어).
+ * · 함께 양도하는 자산(첫 자산 아님)·토지·건물만 증여(D2)·겸용주택·다건 편집 임베드에는 열지 않는다(⑧·④와 같은 술어).
  * · 범위 밖 안내(지분·부담부증여·같은 세대 매매·다른 보유 주택 목록)는 판정 메뉴와 계산기에 함께 나온다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -13,7 +13,14 @@ import { GiftedSameHouseholdField } from "@/components/calc/transfer/GiftedSameH
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
-afterEach(cleanup);
+// 다건 편집 임베드 판정(`isEmbeddedInMultiPath(usePathname())`) — 기본은 단건 경로.
+const nav = vi.hoisted(() => ({ pathname: "/calc/transfer-tax" }));
+vi.mock("next/navigation", () => ({ usePathname: () => nav.pathname }));
+
+afterEach(() => {
+  cleanup();
+  nav.pathname = "/calc/transfer-tax";
+});
 
 const QUESTION = "증여자와 계속 같은 세대였습니까";
 const OUT_OF_SCOPE = /지분만 증여받은 경우, 부담부증여로 받은 경우, 같은 세대원에게서 매수한 경우, 「다른 보유 주택 목록」/;
@@ -79,6 +86,23 @@ describe("계산기 증여 블록 — 세대 사실 위젯", () => {
     cleanup();
     renderSection(giftHouse({ giftSameHousehold: "yes" }));
     expect(screen.getByText("세대가 이 주택 보유를 시작한 날")).toBeTruthy();
+  });
+});
+
+describe("계산기 증여 블록 — 칸을 열지 않는 화면", () => {
+  it("[CW-6] 다건 편집에 임베드되면 묻지 않는다(다건 ④가 싣지 않는다 — #38-3) · 같은 자산이 단건이면 묻는다(짝)", () => {
+    renderSection(giftHouse());
+    expect(screen.getByText(QUESTION)).toBeTruthy();
+    cleanup();
+    nav.pathname = "/calc/transfer-tax/multi";
+    renderSection(giftHouse());
+    expect(screen.queryByText(QUESTION)).toBeNull();
+    expect(screen.getByText(/선택 입력 —/)).toBeTruthy();
+  });
+
+  it("[CW-7] 겸용주택을 증여받았으면 묻지 않는다(겸용 엔진이 이 사실을 받지 않는다)", () => {
+    renderSection(giftHouse({ isMixedUseHouse: true }));
+    expect(screen.queryByText(QUESTION)).toBeNull();
   });
 });
 

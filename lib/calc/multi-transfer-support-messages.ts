@@ -24,11 +24,11 @@ export const MULTI_COMPANION_UNSUPPORTED_MESSAGE = "한 건 내 다자산 일괄
 /** API 전용 — 비거주자 사실은 1세대1주택 판정 메뉴만 받는다(화면은 계산기로 넘기지 않는다). */
 export const MULTI_NON_RESIDENT_UNSUPPORTED_MESSAGE = "비거주자 입력은 1세대1주택 비과세 판정 메뉴에서만 지원됩니다.";
 /**
- * API 전용 — 증여받은 주택의 증여자와 계속 같은 세대 사실(결정 #38)은 판정 메뉴·단건 계산기(이월과세)만 받는다.
+ * API 전용 — 증여받은 주택의 증여자와 계속 같은 세대 사실(결정 #38)은 판정 메뉴·단건 계산기(이월과세 · 일반 증여 첫 자산 #38-1)만 받는다.
  * 다건 화면은 입력 칸이 없고, 보내면 통산이 조용히 빠지므로 막는다(범위 밖 고지).
  */
 export const MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE =
-  "증여받은 주택의 증여자와 같은 세대 통산은 1세대1주택 판정 메뉴와 단건 계산기(이월과세)에서만 지원됩니다.";
+  "증여받은 주택의 증여자와 같은 세대 통산은 1세대1주택 판정 메뉴와 단건 계산기에서만 지원됩니다.";
 export const MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE = "잔금 전 멸실 특약 입력은 1세대1주택 비과세 판정 메뉴에서만 지원됩니다.";
 /** API 전용 — 화면(⑧)은 신고가액 공란을 막고, 다건은 신고가액을 `acquisitionPrice`로 직접 쓴다. */
 export const MULTI_INHERITANCE_VALUATION_UNSUPPORTED_MESSAGE =

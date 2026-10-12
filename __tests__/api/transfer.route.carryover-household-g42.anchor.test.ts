@@ -141,9 +141,9 @@ describe("G4-5 route — 일반 증여(판정 메뉴가 보내는 모양) ⑫ re
     expect((await post(gift({ giftSameHouseholdContinuous: true, giftHouseholdHoldingStartDate: "2025-06-01" }))).status).toBe(400);
     expect((await post(gift({ giftSameHouseholdContinuous: true, giftHouseholdHoldingStartDate: "2025-05-31" }))).status).toBe(200);
   });
-  it("[R-8] 일반 증여 계산기 화면(세대 사실 미전송)은 종전대로 증여일 기준 + 확인 필요 고지", async () => {
+  it("[R-8] 세대 사실 미전송(D2·두 번째 이후 자산·다건·사실 없는 API)은 종전대로 증여일 기준 + 확인 필요 고지", async () => {
     const { result } = await post(gift({ residencePeriodMonths: 0 }));
     expect(result!.determinedTax).toBeGreaterThan(0);
-    expect(result!.warnings?.some((w) => w.includes("세대 관계를 입력받지 않아"))).toBe(true);
+    expect(result!.warnings?.some((w) => w.includes("세대 관계가 입력되지 않아"))).toBe(true);
   });
 });
