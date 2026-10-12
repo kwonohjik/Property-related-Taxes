@@ -90,7 +90,8 @@ describe("IG-043 · IG-121 · IG-056 · IG-135 — 게이트·배선 (소스 구
   });
 
   it("A-9: RTMS 자동조회 버튼이 평가기준일 미입력을 disabled로 본다", () => {
-    const src = read("components/calc/inheritance/estate-card/variants/EstateBodyRealEstate.tsx");
+    // 평가액 카드는 2026-10-12 EstateValuationAccordionFields.tsx로 분리됐다(800줄 정책)
+    const src = read("components/calc/inheritance/estate-card/variants/EstateValuationAccordionFields.tsx");
     expect(src).toMatch(/!hasStandardPrice \|\| !valuationDate;/);
     expect(src).toMatch(/상속개시일을 먼저 입력해주세요/);
   });
