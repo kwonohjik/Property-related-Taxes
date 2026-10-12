@@ -1,12 +1,12 @@
 /**
- * anchor(⑤⑧④ 게이트 · route) — 결정 #38-1 위젯을 **열지 않는** 두 화면 (검토 지적 보정)
+ * anchor(⑤⑧④ 게이트 · route) — 결정 #38-1 위젯의 겸용·다건 화면 (검토 지적 보정 · #38 후속)
  *
- * | # | 화면 | 열면 생기던 결함 (실측) |
+ * | # | 화면 | 동작 (실측) |
  * |---|---|---|
- * | GC-5 | 겸용주택을 증여받은 경우 | 겸용 엔진 §154① 보유 판정이 `giftHouseholdBasis`를 받지 않아 「예」·「아니오」 모두 305,678,570 — 묻고도 반영하지 않는다 |
+ * | GC-5 | 겸용주택을 증여받은 경우 | **묻는다**(#38 후속) — 겸용 엔진 §154① 판정이 단건과 같은 leaf로 `giftHouseholdBasis`를 읽는다. 종전에는 받지 않아 「예」·「아니오」 모두 305,678,570이었다 → 「예」 140,178,570 · 「아니오」 305,678,570 |
  * | GC-6 | 다건 편집 임베드 | 다건 ④가 사실을 싣지 않아 단건 「예」 0 ↔ 다건 「예」 229,075,000 + 「입력되지 않아」 고지 — 묻고도 버린다 |
  *
- * 둘 다 이번 묶음 범위 밖(겸용 통산 배선 · #38-3 다건)이라 **묻지 않는다**로 고정한다. 부정형 단언에는 긍정 짝을 둔다.
+ * GC-6은 범위 밖(#38-3 다건)이라 **묻지 않는다**로 고정한다. 부정형 단언에는 긍정 짝을 둔다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -69,22 +69,34 @@ function mixedForm(over: Record<string, unknown> = {}): TransferFormData {
   return withIdentityHousingBuildingStdOnForm(f, { acqN: 90_000_000 });
 }
 
-describe("GC-5 겸용주택 증여 — 묻지 않는다(겸용 엔진이 세대 사실을 받지 않는다)", () => {
-  it("[GC-5a] 술어 — 겸용이면 거짓 · 같은 자산이 겸용이 아니면 참(짝)", () => {
+describe("GC-5 겸용주택 증여 — 묻는다(겸용 엔진이 세대 사실을 단건과 같은 leaf로 읽는다 · #38 후속)", () => {
+  it("[GC-5a] 술어 — 겸용이어도 참 · 같은 자산이 겸용이 아니어도 참(짝)", () => {
     const a = mixedForm(MIXED_GIFT).assets[0];
-    expect(calcGiftHouseholdFactVisible(a)).toBe(false);
+    expect(calcGiftHouseholdFactVisible(a)).toBe(true);
     expect(calcGiftHouseholdFactVisible({ ...a, isMixedUseHouse: false })).toBe(true);
+    expect(calcGiftHouseholdFactAsked(a, { isPrimary: true, embeddedInMulti: false })).toBe(true);
   });
 
-  it("[GC-5b] ⑧ — 세대 답이 비어도 막지 않는다(다른 칸은 다 채운 폼이라 「없음」이 공허하지 않다)", () => {
-    expect(issues(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "" }))).toEqual([]);
+  it("[GC-5b] ⑧ — 세대 답이 비면 막는다 · 답하면 통과(짝 — 다른 칸은 다 채운 폼이라 「없음」이 공허하지 않다)", () => {
+    const blank = issues(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "" }));
+    expect(blank).toHaveLength(1);
+    expect(blank[0]).toMatch(/증여일부터 양도일까지 증여자와 계속 같은 세대였는지 선택하세요\.$/);
+    expect(issues(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "no" }))).toEqual([]);
   });
 
-  it("[GC-5c] ④ — 남은 「예」를 싣지 않는다 · 세액은 종전(증여일 기준)과 같다", async () => {
-    const r = await runSingleMixed(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2000-01-01" }));
-    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
-    expect(r.body.giftSameHouseholdContinuous).toBeUndefined();
-    expect(r.json.data.result.total.determinedTax).toBe(305_678_570);
+  it("[GC-5c] ④⑫⑭ — 「예」를 실어 겸용 엔진까지 닿는다: 「예」 140,178,570(§154③ 본문 전부 주택 비과세 · 배율 초과 토지만 과세) · 「아니오」 305,678,570(종전값)", async () => {
+    const yes = await runSingleMixed(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2000-01-01" }));
+    expect(yes.status, JSON.stringify(yes.json).slice(0, 300)).toBe(200);
+    expect(yes.body.giftSameHouseholdContinuous).toBe(true);
+    expect(yes.body.giftHouseholdHoldingStartDate).toBe("2000-01-01");
+    expect(yes.json.data.result.total.determinedTax).toBe(140_178_570);
+    const yw = JSON.stringify(yes.json.data.result.warnings);
+    expect(yw).toContain("증여자와 계속 같은 세대였다는 입력에 따라");
+    expect(yw).toContain("건물 전부를 주택으로 봅니다(소득세법 시행령 §154③ 본문)");
+    const no = await runSingleMixed(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "no" }));
+    expect(no.body.giftSameHouseholdContinuous).toBe(false);
+    expect(no.json.data.result.total.determinedTax).toBe(305_678_570);
+    expect(JSON.stringify(no.json.data.result.warnings)).not.toContain("증여자와 계속 같은 세대였다는 입력에 따라");
   }, 60_000);
 });
 

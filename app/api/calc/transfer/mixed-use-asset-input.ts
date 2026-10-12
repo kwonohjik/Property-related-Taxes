@@ -94,6 +94,11 @@ export interface MixedUseAssetInputSources {
    *    (`Date < string`은 항상 false — 이 파일 헤더 경고와 같은 축).
    */
   winWinRentalHouse: TransferTaxInput["winWinRentalHouse"];
+  /**
+   * 증여받은 겸용주택의 「증여자와 계속 같은 세대」 사실(결정 #38 후속) — §154① 보유 통산·「취득 당시」 기준일.
+   * ⚠️ `engineInput.giftHouseholdBasis`(Date 변환본)를 넘긴다. 파트 카드 경로는 그 item의 값(주 자산 겸용 묶음은 primary item)을 넘긴다.
+   */
+  giftHouseholdBasis: TransferTaxInput["giftHouseholdBasis"];
   isRegulatedArea: boolean;
   isSelfCultivatedExpropriatedLand: boolean | undefined;
   priorReductionUsage: MixedUseAssetInput["priorReductionUsage"];
@@ -239,6 +244,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
      * 법문이 두 조문을 함께 열거하므로 한쪽만 배선하면 축이 어긋난다.
      */
     winWinRentalHouse: s.winWinRentalHouse,
+    // ⑭ 결정 #38 후속 — 증여 세대 통산. §154① 판정(`exemptionReqInput`)과 D4-05 일반주택 취득일만 읽는다(장특·세율은 증여일).
+    giftHouseholdBasis: s.giftHouseholdBasis,
     filingPenaltyDetails: s.filingPenaltyDetails,
     delayedPaymentDetails: s.delayedPaymentDetails,
     priorReductionUsage: s.priorReductionUsage ?? [],

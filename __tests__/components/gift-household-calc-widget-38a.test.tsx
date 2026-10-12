@@ -3,7 +3,7 @@
  *
  * · 첫 자산의 증여 주택이면 판정 메뉴와 같은 칸(관계·계속 같은 세대·시작일)을 증여 블록 아래에 연다. 부담부증여 양도도 같다.
  * · 증여자 취득일은 증여 블록이 이미 받으므로 위젯에서 다시 묻지 않는다(같은 키 두 칸 금지) — 블록 안내가 「필수」로 바뀐다.
- * · 함께 양도하는 자산(첫 자산 아님)·토지·건물만 증여(D2)·겸용주택·다건 편집 임베드에는 열지 않는다(⑧·④와 같은 술어).
+ * · 함께 양도하는 자산(첫 자산 아님)·토지·건물만 증여(D2)·다건 편집 임베드에는 열지 않는다(⑧·④와 같은 술어). 겸용주택은 연다(#38 후속).
  * · 범위 밖 안내(지분·부담부증여·같은 세대 매매·다른 보유 주택 목록)는 판정 메뉴와 계산기에 함께 나온다.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -89,7 +89,7 @@ describe("계산기 증여 블록 — 세대 사실 위젯", () => {
   });
 });
 
-describe("계산기 증여 블록 — 칸을 열지 않는 화면", () => {
+describe("계산기 증여 블록 — 다건·겸용 화면", () => {
   it("[CW-6] 다건 편집에 임베드되면 묻지 않는다(다건 ④가 싣지 않는다 — #38-3) · 같은 자산이 단건이면 묻는다(짝)", () => {
     renderSection(giftHouse());
     expect(screen.getByText(QUESTION)).toBeTruthy();
@@ -100,8 +100,12 @@ describe("계산기 증여 블록 — 칸을 열지 않는 화면", () => {
     expect(screen.getByText(/선택 입력 —/)).toBeTruthy();
   });
 
-  it("[CW-7] 겸용주택을 증여받았으면 묻지 않는다(겸용 엔진이 이 사실을 받지 않는다)", () => {
+  it("[CW-7] 겸용주택을 증여받았어도 묻는다(겸용 엔진이 같은 leaf로 읽는다 — #38 후속) · 함께 양도하는 겸용이면 묻지 않는다(짝)", () => {
     renderSection(giftHouse({ isMixedUseHouse: true }));
+    expect(screen.getByText(QUESTION)).toBeTruthy();
+    expect(screen.getByText(/필수 — 아래 증여자와의 세대 관계/)).toBeTruthy();
+    cleanup();
+    renderSection(giftHouse({ isMixedUseHouse: true }), { isNonPrimaryAsset: true });
     expect(screen.queryByText(QUESTION)).toBeNull();
   });
 });

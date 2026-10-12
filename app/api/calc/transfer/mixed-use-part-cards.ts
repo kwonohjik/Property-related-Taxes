@@ -432,6 +432,12 @@ export function buildMixedUseCompanionItems(
     temporaryTwoHouse: g.temporaryTwoHouse,
     // §155의3 상생임대 (P5-c) — primary와 같은 폼-전역 값을 상속한다.
     winWinRentalHouse: g.winWinRentalHouse,
+    /**
+     * 증여 세대 사실(결정 #38 후속) — **이 item에서** 고른다(`article89Clause2Facts`와 같은 이유). 파트 카드 비과세는 카드마다 도는 단건 엔진이
+     * 같은 item의 `giftHouseholdBasis`로 §154①을 판정하므로, 서브엔진(§154③ 본문 — 상가 카드의 주택 취급)도 같은 사실을 봐야 둘이 갈리지 않는다.
+     * 주 자산이 겸용인 묶음은 primary item(`...engineInput`)에 값이 있고, 함께 양도하는 겸용은 입력 경로가 없어 undefined다(⑤⑧④ 첫 자산만).
+     */
+    giftHouseholdBasis: companionEngine.giftHouseholdBasis,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
     /**
      * §155②③ 상속주택 제외(E-14d)는 **싣지 않는다** — 파트 카드의 비과세는 aggregate item이 재판정하는데

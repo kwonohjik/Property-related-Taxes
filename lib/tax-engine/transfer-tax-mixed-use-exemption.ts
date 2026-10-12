@@ -22,6 +22,9 @@ import {
   landCoveredByExpropriationProviso,
 } from "./transfer-tax-appurtenant-land";
 import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption";
+import { resolveExemptionHoldingStartDate } from "./transfer-tax-exemption-holding";
+import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
+import { giftHouseholdFactDecides, giftHouseholdNotice } from "./one-house/gift-household-notice";
 import {
   qualifiesCulturalHeritageHouse,
   qualifiesRuralHouse,
@@ -97,7 +100,8 @@ export function judgeMixedUseOneHouseExemption(
   // 겸용만 그 규칙을 쓰지 않던 내부 불일치다.
   //
   // 기산일은 **건물 취득일**이다. §154①의 보유기간은 「해당 **주택**」의 보유기간이고,
-  // 겸용 건물의 주택 부분 취득일이 곧 건물 취득일이기 때문이다.
+  // 겸용 건물의 주택 부분 취득일이 곧 건물 취득일이기 때문이다. 예외는 증여받은 겸용주택에서 증여자와 계속 같은
+  // 세대가 확인된 경우 하나다 — 단건과 같은 leaf가 세대 보유 시작일부터 통산한다(아래 `giftHouseholdBasis`).
   //
   // 본문 후단은 **취득 당시 조정대상지역**이면 거주 2년을 더 요구하고, **단서**는
   //   "제1호부터 제3호까지 … 그 **보유기간 및** 거주기간의 제한을 받지 않으며 제5호에 해당하는
@@ -108,7 +112,6 @@ export function judgeMixedUseOneHouseExemption(
   //    면제한다는 점을 놓쳐, 수용·해외이주 등에 해당하는데도 보유 2년 미만이면 비과세를
   //    배제했다(**과다과세**). 단서 면제는 정본의 `meetsHolding` **내부**에 있으므로
   //    거주 축을 AND로 덧붙이는 방식으로는 고칠 수 없다 — 정본 함수 하나를 부른다.
-  const exemptionHolding = calculateHoldingPeriod(asset.buildingAcquisitionDate, transferDate);
   const exemptionReqInput = {
     // 주택 부분의 취득일 = 건물 취득일. §154①의 보유기간은 「해당 **주택**」의 보유기간이고
     // 겸용 건물의 주택 부분 취득일이 곧 건물 취득일이다.
@@ -118,7 +121,7 @@ export function judgeMixedUseOneHouseExemption(
     // (`transfer-tax-api-mixed-use.ts:171`)이 `consolidateResidenceMonths`로 이미 통산해
     // 보내므로, 여기서 `acquisitionCause`·`decedent*`를 함께 넘기면 **통산이 두 번** 걸린다
     // → 의도적으로 미전달. 같은 미전달이 `resolveExemptionHoldingStartDate`의 backdate도
-    // 막아 보유 기산일이 건물 취득일로 고정된다(겸용에는 그 입력 자체가 없다).
+    // 막는다(겸용에는 그 입력 자체가 없다). 보유 기산이 건물 취득일에서 움직이는 경로는 아래 증여 세대 통산뿐이다.
     residencePeriodMonths: (asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12,
     oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
     regionCode: asset.regionCode,
@@ -136,7 +139,16 @@ export function judgeMixedUseOneHouseExemption(
      *    (다른 의제 경로로 면제가 샌다) 호출부 2곳에서만 주입한다. 겸용 × §155의2는 별개 축.
      */
     winWinRentalHouse: asset.winWinRentalHouse,
+    /**
+     * 결정 #38 후속 — 증여받은 겸용주택의 「증여자와 계속 같은 세대」 사실. 단건과 **같은 leaf**(`gift-household-basis.ts`)가
+     * 정본 안에서 §154① 보유 기산(세대 보유 시작일 통산)·「취득 당시」 조정대상지역·경과규정 기준일을 정한다 — 여기서 날짜를 고르지 않는다.
+     * 장기보유특별공제·세율 보유기간은 건물 취득일(증여일) 그대로다(아래 주택분 계산은 이 입력을 읽지 않는다).
+     */
+    giftHouseholdBasis: asset.giftHouseholdBasis,
   };
+  // 경고 문구용 §154① 보유기간 — 정본과 같은 기산일(세대 통산이 성립하면 세대 보유 시작일, 아니면 건물 취득일).
+  const exemptionHoldingStart = resolveExemptionHoldingStartDate(exemptionReqInput);
+  const exemptionHolding = calculateHoldingPeriod(exemptionHoldingStart, transferDate);
   const meetsOneHouseRequirements = meetsOneHouseHoldingResidence(
     exemptionReqInput,
     oneHouseSpecialRules.one_house_exemption,
@@ -169,7 +181,8 @@ export function judgeMixedUseOneHouseExemption(
   let specialEntriesForMerge: SpecialHouseExclusionResolution["entries"] = [];
   if (asset.householdHousingCountForExclusion !== undefined) {
     const hce = resolveHouseCountExclusion(asset.reductions ?? [], {
-      generalHouseAcquisitionDate: asset.buildingAcquisitionDate,
+      // D4-05 — 단건(`transfer-tax-precalc.ts` `resolveHouseCountExclusionDate`)과 같은 leaf: 세대 통산이 확인되면 세대 보유 시작일.
+      generalHouseAcquisitionDate: resolveHouseCountExclusionDate(asset.buildingAcquisitionDate, asset.giftHouseholdBasis),
       transferDate,
       // §99의4 D5 합가 맥락 — 일반 경로와 **같은 함수**(`new994MergeOrderOf`). 겸용 명부(`multiHouse.houses`)에도 `mergeOrigin`이 실린다.
       mergeOrder: new994MergeOrderOf({
@@ -375,6 +388,26 @@ export function judgeMixedUseOneHouseExemption(
     clause2Facts && effectiveHouseCount !== undefined ? clause2Judge(effectiveHouseCount) : undefined;
   const clause2Excluded = article89Clause2?.status === "excluded";
   const isOneHouseExempt = houseCountOk && meetsOneHouseRequirements && !isUnregistered && !clause2Excluded;
+  /**
+   * 결정 #38 후속 — 증여받은 겸용주택의 세대 사실 확인 필요 고지. 단건(`collectEraUndetermined`)과 **같은 문구·같은 반사실 규칙**
+   * (`gift-household-notice.ts`)이고, 겸용 결과에는 판정 보류 칸이 없어 경고로 싣는다. 세대 사실만 바꾼 §154① 판정이 결론을 가를 때만
+   * 낸다 — 주택 수·미등기·§89② 배제로 이미 과세면 말하지 않는다(단건 게이트와 같은 방향).
+   */
+  const giftBasis = asset.giftHouseholdBasis;
+  const giftNotice = giftHouseholdNotice(giftBasis, "gift");
+  if (
+    giftBasis &&
+    giftNotice &&
+    isOneHouseholdForHouseCount &&
+    houseCountOk &&
+    !isUnregistered &&
+    !clause2Excluded &&
+    giftHouseholdFactDecides(giftBasis, String(meetsOneHouseRequirements), (b) =>
+      String(meetsOneHouseHoldingResidence({ ...exemptionReqInput, giftHouseholdBasis: b }, oneHouseSpecialRules.one_house_exemption)),
+    )
+  ) {
+    warnings.push(giftNotice.reason);
+  }
   // §155⑥⑦⑧ 의제가 비과세를 연 경우 — 겸용주택에 이 특례를 적용한 정면 해석례가 없어 사실대로 알린다(S08-3).
   if (!houseCountOkWithoutSpecial155 && special155Basis !== undefined && isOneHouseExempt) {
     warnings.push(
@@ -401,7 +434,8 @@ export function judgeMixedUseOneHouseExemption(
     // 어느 요건이 걸렸는지 사용자가 판별할 수 있도록 세 축을 모두 싣는다(침묵 과세 방지).
     const r = oneHouseSpecialRules.one_house_exemption;
     warnings.push(
-      `건물 보유기간 ${exemptionHolding.years}년 ${exemptionHolding.months}개월 · ` +
+      `${exemptionHoldingStart.getTime() === asset.buildingAcquisitionDate.getTime() ? "건물 보유기간" : "세대 통산 보유기간"} ` +
+        `${exemptionHolding.years}년 ${exemptionHolding.months}개월 · ` +
         `거주기간 ${exemptionReqInput.residencePeriodMonths / 12}년 · ` +
         `취득 당시 조정대상지역 ${asset.wasRegulatedAtAcquisition ? "해당" : "미해당"} — ` +
         `1세대1주택 비과세 요건(보유 ${resolveOneHouseMinHoldingYears(transferDate, r.minHoldingYears)}년, 조정대상지역 취득 시 거주 ` +
