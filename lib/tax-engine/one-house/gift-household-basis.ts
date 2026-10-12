@@ -41,7 +41,8 @@
  * ## 쓰는 곳 — 이 파일 밖에서 날짜를 따로 고르지 않는다
  *
  * `transfer-tax-exemption-holding.ts`(보유 기산 · 조정 판정 · 경과규정) · `transfer-tax-carryover.ts`(A/B 입력) ·
- * 주택 수 제외 특례의 취득일(D4-05, `resolveHouseCountExclusionDate`).
+ * 주택 수 제외 특례의 취득일(D4-05, `resolveHouseCountExclusionDate`). 겸용주택(`transfer-tax-mixed-use-exemption.ts`)도 같은 함수들을
+ * 정본(`meetsOneHouseHoldingResidence`) 경유로 읽는다(결정 #38 후속). 확인 필요 고지 문구는 `gift-household-notice.ts`.
  *
  * ⚠️ 통산은 §154① 비과세 판정에만 쓴다. 장기보유특별공제와 §104② 세율 보유기간은 증여일 기준을 유지한다
  *    (결정 #38 조건). §155② 상속주택 특례로는 넓히지 않는다.

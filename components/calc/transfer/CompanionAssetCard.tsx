@@ -69,6 +69,8 @@ interface Props {
   totalTransferExpense?: string;
   /** 사례 28 — 주된 자산 정보 (부수토지 일체과세 자동 분기 배지 표시용). */
   primaryAsset?: AssetForm;
+  /** #17 후속(K1) — 배율 한도 공유 면적(`appurtenantLimitShareOfAssets`) — 일체과세 배지용. */
+  appurtenantLimitShare?: { houseLandAreaM2?: number; appurtenantCardsAreaM2?: number };
   /** 1세대1주택 + householdHousingCount === 1 충족 여부 (form-전역, 사례 45). */
   isOneHouseSingle?: boolean;
   /**
@@ -116,6 +118,7 @@ export function CompanionAssetCard({
   contractTotalPrice,
   totalTransferExpense,
   primaryAsset,
+  appurtenantLimitShare,
   isOneHouseSingle,
   judgmentLoaded,
   wasRegulatedAtAcquisition,
@@ -164,7 +167,7 @@ export function CompanionAssetCard({
   const isNewConstruction = asset.acquisitionCause === "newConstruction";
 
   // 부수토지 일체과세 자동 분기 배지 (useEffect 금지 — useMemo 훅) / 날짜 순서 실시간 경고
-  const showUnifiedBadge = useUnifiedRateBadge(asset, primaryAsset, transferDate);
+  const showUnifiedBadge = useUnifiedRateBadge(asset, primaryAsset, transferDate, appurtenantLimitShare);
   const dateOrderWarning = getAssetDateOrderError(asset, transferDate);
 
   // 섹션 요약(라벨 전용·금액 없음) — store 미러링 없음, useMemo

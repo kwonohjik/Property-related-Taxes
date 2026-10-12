@@ -8,11 +8,8 @@
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { describeOneHouseHoldingRequirement } from "../transfer-tax-exemption-holding";
 import type { EraNoticeRelevance } from "./era-undetermined";
-import {
-  giftHouseholdConsolidationStart,
-  giftHouseholdUnconfirmed,
-  type GiftHouseholdBasis,
-} from "./gift-household-basis";
+import type { GiftHouseholdBasis } from "./gift-household-basis";
+import { giftHouseholdFactDecides } from "./gift-household-notice";
 import { withUnconfirmedFactsFavorable } from "./rural-return-to-farm-facts";
 import { counterfactualVerdictDiffers, withMoveInWithinYear, withNotBothRegulated } from "./temp-two-house-counterfactual";
 import type { OneHouseCoreVerdict, OneHouseJudgeInput, OneHouseJudgment } from "./types";
@@ -81,32 +78,7 @@ export function buildEraNoticeRelevance(ctx: {
         if (input.acquisitionCause !== "gift") return false;
         return !settled;
       }
-      if (g.householdDateStrict) return false; // 반사실 입력은 고지를 만들지 않는다 — 재귀 차단
-      const base = `${verdict.isExempt}|${verdict.isPartialExempt}`;
-      const separate = (): string => verdictOf({ ...g, donorDeceased: undefined, continuousSameHousehold: false });
-      // 통산 성립 가정 — 시작일을 모르면 증여자 취득일을 시작일로 둔다(세대 보유 시작일의 가장 이른 값).
-      const consolidated = (): string | undefined =>
-        g.donorAcquisitionDate.getTime() < g.giftDate.getTime()
-          ? verdictOf({
-              ...g,
-              donorDeceased: undefined,
-              continuousSameHousehold: true,
-              householdHoldingStartDate: giftHouseholdConsolidationStart(g) ?? g.donorAcquisitionDate,
-            })
-          : undefined;
-      if (g.donorDeceased === true) {
-        const c = consolidated();
-        return c !== undefined && c !== base;
-      }
-      // 통산 성립 — 별도세대 가정과 비교하고, 거울상(세대 보유 시작일에 지정 중 · 증여일에 비지정)을 세대 취득일로 읽는 가정(strict)과도 비교한다.
-      if (giftHouseholdConsolidationStart(g)) {
-        return separate() !== base || verdictOf({ ...g, householdDateStrict: true }) !== base;
-      }
-      if (giftHouseholdUnconfirmed(g)) {
-        const c = consolidated();
-        return separate() !== base || (c !== undefined && c !== base);
-      }
-      return false;
+      return giftHouseholdFactDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, verdictOf);
     },
     // §154①2호 가목 괄호 「사업인정 고시일 전 취득」 — 고시일이 비어 있어 단서를 적용하지 않았다. 고시일을 취득 뒤/앞으로 가정한
     // 두 판정이 다를 때만 확인 필요를 낸다(S02-2). 고시일을 채운 두 판정은 이 함수 자신이고, 채우면 그 고지가 생기지 않아 재귀하지 않는다.

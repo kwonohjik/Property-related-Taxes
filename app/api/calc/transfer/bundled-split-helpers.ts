@@ -40,6 +40,7 @@ import { buildProperties } from "./general-building-route-cards";
 import type { companionAssetSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { resolveCompanionSplit, splitCompanionIntoTwo } from "./bundled-companion-split";
+import type { PrimarySplitContext } from "./bundled-companion-split";
 import {
   calculateHoldingPeriod,
   calculateEstimatedAcquisitionPrice,
@@ -295,6 +296,8 @@ interface CompanionBuildContext {
       | "non_urban";
   };
   bundledSaleMode?: "actual" | "apportioned";
+  /** #17 후속(K1) — 배율 한도를 주택 카드·부수토지 카드가 공유한다(`appurtenantLimitShareOf`). */
+  appurtenantLimitShare?: Pick<PrimarySplitContext, "houseLandAreaM2" | "appurtenantCardsAreaM2">;
   adjustedAcqPrice?: number;
   /**
    * 겸용 컴패니언 전용 컨텍스트. **optional이 아니라 `| null`이다** — 호출부가 「이 축은 없다」를
@@ -724,6 +727,7 @@ export function buildCompanionEngineInputs(
         holdingMonths: ctx.primaryCtxForSplit.holdingMonths,
         propertyType: ctx.primaryEngineInput.propertyType,
         bundledSaleMode: ctx.bundledSaleMode,
+        ...ctx.appurtenantLimitShare,
       },
       ctx.transferDate,
     );

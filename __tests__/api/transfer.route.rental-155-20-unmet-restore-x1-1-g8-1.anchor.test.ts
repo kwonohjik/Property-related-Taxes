@@ -268,6 +268,8 @@ describe("RS 짝 — 되돌리지 않는 경우", () => {
     const w = hasRestoreNotice(s.warnings);
     expect(w).toContain("(2주택)");
     expect(w).toContain("다주택 중과 판정의 주택 수에도 임대주택 1호를 넣었습니다");
+    // 수도권 임대 호(주소 없음)는 지역기준으로 보아 1호 확인 필요 고지를 붙이지 않는다
+    expect(w).not.toContain("§167의3①1호");
     expect(await multi(f)).toBe(s.totalTax);
   });
   it("RS-8 임대주택을 명부에 「장기임대」로 표시한 행이 있으면 더하지 않는다 (이중 계상 방지) — 3중첩 H-3 1,327,903,500 불변", async () => {
@@ -502,5 +504,66 @@ describe("C 카드 임대 호 → 중과 판정 명부 (결정 #20 C)", () => {
     const s = await single(withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" })));
     expect(s.rentalApplied).toBe(true);
     expect(hasRestoreNotice(s.warnings)).toBe("");
+  });
+});
+
+/**
+ * 결정 #20 C 후속 — 카드 임대 호의 영 §167의3①1호(수도권·광역시 등 밖 지방 주택으로서 거주주택 양도 당시 기준시가 3억 이하 →
+ * 중과 주택 수 불산입). 소재지 주소(법정동코드)와 「거주주택 양도일 현재 기준시가」 칸으로 판정한다(명부 행과 같은 분기).
+ * 모르면 산입(불리) + 확인 필요 고지.
+ */
+describe("L 지방 임대 호 — 영 §167의3①1호 (결정 #20 C 후속)", () => {
+  const CHEONGJU = "4311110100"; // 충북 청주 — 가액기준(VALUE)
+  const BUSAN = "2611010100"; // 부산 중구 — 지역기준(REGION, 광역시)
+  /** 명부 없음 · 주택 수 1 · 지방 임대 호(임대개시일 기준시가 4억 — 비수도권 상한 3억 초과로 ⑳ 불성립) */
+  function localRental(regionCode: string, priceAtTransfer: string): Form {
+    const f = withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" }));
+    Object.assign(f.assets[0].rentalHousingException.rentalUnits[0], {
+      region: "non-metro",
+      regionCode,
+      standardPriceAtRentalStart: "400,000,000",
+      officialPriceAtResidenceTransfer: priceAtTransfer,
+    });
+    return f;
+  }
+
+  it("L-1 ★ 청주 · 양도일 기준시가 2억 → 1호로 주택 수에서 빠져 1주택 — 중과 없음 · 확인 필요 고지 없음", async () => {
+    const s = await single(localRental(CHEONGJU, "200,000,000"));
+    expect(mh(s).surchargeType).toBe("none");
+    expect(mh(s).effectiveHouseCount).toBe(1);
+    expect(hasRestoreNotice(s.warnings)).not.toContain("확인 필요");
+    expect(await multi(localRental(CHEONGJU, "200,000,000"))).toBe(s.totalTax);
+  });
+
+  it("L-2 짝 — 같은 호 양도일 기준시가 3억 1천만 → 산입 · 중과 2주택 (783,678,500 = 수도권 임대 호와 같은 값)", async () => {
+    const s = await single(localRental(CHEONGJU, "310,000,000"));
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(s.totalTax).toBe(783_678_500);
+    expect(hasRestoreNotice(s.warnings)).not.toContain("확인 필요");
+  });
+
+  it("L-3 ★ 기준시가를 비우면 모름 → 산입(불리) · 중과 2주택 + 1호 확인 필요 고지", async () => {
+    const s = await single(localRental(CHEONGJU, ""));
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    const w = hasRestoreNotice(s.warnings);
+    expect(w).toContain("임대주택 1호는 소재지 주소 또는 거주주택 양도일 현재 기준시가를 입력하지 않아");
+    expect(w).toContain("소득세법 시행령 §167의3①1호, 확인 필요");
+  });
+
+  it("L-4 짝 — 광역시(부산)는 지역기준이라 기준시가와 무관하게 산입 · ④가 칸 값을 보내지 않는다 · 고지 없음", async () => {
+    const f = localRental(BUSAN, "200,000,000");
+    const body = await bodyOf(() => callTransferTaxAPI(f));
+    const unit = ((body.rentalHousingException as Obj).rentalUnits as Obj[])[0];
+    expect(unit.regionCode).toBe(BUSAN);
+    expect(unit.officialPriceAtTransfer).toBeUndefined();
+    const s = await single(f);
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(hasRestoreNotice(s.warnings)).not.toContain("확인 필요");
+  });
+
+  it("L-5 짝 — 주소 없이 비수도권만 고르면 모름 → 산입 + 확인 필요 고지", async () => {
+    const s = await single(localRental("", ""));
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(hasRestoreNotice(s.warnings)).toContain("확인 필요");
   });
 });

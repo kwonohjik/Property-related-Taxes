@@ -855,6 +855,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
       region: 'seoul-metro' | 'non-metro';
       /** 소재지 법정동코드 10자리 (주소 검색 시 자동 채움 — region 자동판별 소스·자동배지 신호). 미검색 시 "" */
       regionCode: string;
+      /**
+       * 거주주택 양도일 현재 이 임대주택 기준시가(원, 문자열) — 영 §167의3①1호(지방 3억 이하 중과 주택 수 불산입).
+       * 소재지가 가액기준 지역일 때만 묻고 보낸다(`rentalUnitLowPriceInScope`). "" = 모름(산입).
+       */
+      officialPriceAtResidenceTransfer: string;
       /** 918 조정취득 배제(2018.9.14 이후 조정대상지역 신규취득). 마목 hard·아목 carve-out */
       isExcluded918Rule: boolean;
       /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */

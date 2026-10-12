@@ -218,6 +218,15 @@ export interface MixedUseAssetInput {
    */
   winWinRentalHouse?: TransferTaxInput["winWinRentalHouse"];
   /**
+   * 증여받은 겸용주택의 「증여자와 계속 같은 세대」 사실 — 단건 `TransferTaxInput.giftHouseholdBasis`와 **같은 값**(route `engineInput` 변환본).
+   *
+   * §154① 보유 기산·「취득 당시」 조정대상지역·거주요건 경과규정 기준일(`exemptionReqInput` → 정본 `meetsOneHouseHoldingResidence`)과
+   * §99의4·§98의9 일반주택 취득일(D4-05 `resolveHouseCountExclusionDate`)만 읽는다 — 날짜를 이 엔진이 따로 고르지 않는다
+   * (`one-house/gift-household-basis.ts`). 장기보유특별공제·세율 보유기간은 건물 취득일(증여일) 그대로다(단건과 같다).
+   * 미전달이면 종전 동작(건물 취득일 기산).
+   */
+  giftHouseholdBasis?: TransferTaxInput["giftHouseholdBasis"];
+  /**
    * §89①3호 **주택수 제외** 판정용 세대 보유 주택 수 (양도하는 겸용주택 자신을 포함) — D4-02.
    *
    * 겸용 경로는 `calculateTransferTax`를 타지 않아 `runHouseCountExclusionStep`이 한 번도

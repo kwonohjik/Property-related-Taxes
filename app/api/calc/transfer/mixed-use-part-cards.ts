@@ -57,6 +57,7 @@ import type { MixedUseCompanionContext } from "./bundled-split-helpers";
 import { reductionsForCard } from "./general-building-route-cards";
 import { resolveRateBasisAcquisitionDate } from "@/lib/tax-engine/transfer-rate-holding-basis";
 import { resolveBaseHoldingStartDate } from "@/lib/tax-engine/transfer-tax-exemption-holding";
+import { giftHouseholdHoldingStart } from "@/lib/tax-engine/one-house/gift-household-basis";
 
 /** 파트 카드 id 접미사 — 결과뷰·신고서가 자산을 되짚을 수 있게 `#<assetId>`를 붙인다. */
 export const MIXED_USE_PART_IDS = {
@@ -351,6 +352,21 @@ export function buildMixedUsePartCards(
   const isCommercialCard = (c: TransferTaxItemInput) =>
     c.propertyId.startsWith(`${MIXED_USE_PART_IDS.commercialLand}#`) ||
     c.propertyId.startsWith(`${MIXED_USE_PART_IDS.commercialBuilding}#`);
+  /**
+   * 결정 #38 후속 — 증여 세대 통산(`giftHouseholdBasis`)은 카드 자기 취득일을 보지 않고 세대 보유 시작일을 돌려준다. 주택(건물)보다
+   * **나중에** 취득한 토지 카드는 「소득세법 시행령」 §154①의 「해당 주택」 보유가 아니라 그 토지를 취득한 날부터 세야 하므로
+   * 통산을 걸지 않는다 — 단건 겸용 엔진(`isLaterAcquiredLandHeldTooShort(토지, 건물, 양도일)` — 실제 취득일 비교)과 같은 결과.
+   * 종전엔 토지 2023-10·건물 2023-09 증여(통산 시작 2000)에서 컴패니언이 붙으면 토지 카드가 비과세됐고 단건은 과세였다.
+   * 상가 토지 카드도 §154③ 본문으로 주택 카드일 때 같다(단건 `exemptCommercialPartAsHouse`의 토지분 제외).
+   */
+  const landLaterThanBuilding = landAcqDate.getTime() > bldAcqDate.getTime();
+  const laterLandOwnStart = (c: TransferTaxItemInput) =>
+    landLaterThanBuilding &&
+    (c.propertyId.startsWith(`${MIXED_USE_PART_IDS.housingLand}#`) ||
+      c.propertyId.startsWith(`${MIXED_USE_PART_IDS.commercialLand}#`)) &&
+    giftHouseholdHoldingStart(c.giftHouseholdBasis) !== undefined
+      ? { exemptionHoldingStartDate: c.acquisitionDate }
+      : {};
   return cards.map((c) => {
     if (c.propertyType !== "housing") return c;
     /**
@@ -358,11 +374,11 @@ export function buildMixedUsePartCards(
      * 비과세 판정 때문에 주택 카드로 싣지만 세율은 상가 토지·건물 그대로(단건 겸용 `rateParts`의 `commercial_land`·`commercial_building`).
      * 종전엔 나중에 취득한 상가 토지(보유 2년 미만 — 비과세 제외)가 주택 단기세율(1년 미만 70%)을 받았다(정답 50%).
      */
-    if (isCommercialCard(c)) return { ...c, nonHousingForRate: true };
+    if (isCommercialCard(c)) return { ...c, nonHousingForRate: true, ...laterLandOwnStart(c) };
     const laterStart =
       c.propertyId.startsWith(`${MIXED_USE_PART_IDS.housingLand}#`) && buildingStart > resolveBaseHoldingStartDate(c);
     const exemptionStart = laterStart ? { exemptionHoldingStartDate: buildingStart } : {};
-    return { ...c, ...rateBasis, ...exemptionStart };
+    return { ...c, ...rateBasis, ...exemptionStart, ...laterLandOwnStart(c) };
   });
 }
 
@@ -432,6 +448,12 @@ export function buildMixedUseCompanionItems(
     temporaryTwoHouse: g.temporaryTwoHouse,
     // §155의3 상생임대 (P5-c) — primary와 같은 폼-전역 값을 상속한다.
     winWinRentalHouse: g.winWinRentalHouse,
+    /**
+     * 증여 세대 사실(결정 #38 후속) — **이 item에서** 고른다(`article89Clause2Facts`와 같은 이유). 파트 카드 비과세는 카드마다 도는 단건 엔진이
+     * 같은 item의 `giftHouseholdBasis`로 §154①을 판정하므로, 서브엔진(§154③ 본문 — 상가 카드의 주택 취급)도 같은 사실을 봐야 둘이 갈리지 않는다.
+     * 주 자산이 겸용인 묶음은 primary item(`...engineInput`)에 값이 있고, 함께 양도하는 겸용은 입력 경로가 없어 undefined다(⑤⑧④ 첫 자산만).
+     */
+    giftHouseholdBasis: companionEngine.giftHouseholdBasis,
     householdHousingCount: ctx.primaryEngineInput.householdHousingCount,
     /**
      * §155②③ 상속주택 제외(E-14d)는 **싣지 않는다** — 파트 카드의 비과세는 aggregate item이 재판정하는데
