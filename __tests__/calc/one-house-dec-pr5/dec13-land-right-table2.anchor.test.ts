@@ -17,6 +17,8 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../../tax-engine/_helpers/mock-rates";
 import type { RedevelopmentInfo } from "@/lib/tax-engine/types/transfer-redevelopment.types";
+import { applyLandContribOverrides } from "@/components/calc/results/transfer/DetailedStatementRedevOverrides";
+import type { StatementItem } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 
 const rates = makeMockRates();
 
@@ -89,5 +91,43 @@ describe("부정 짝 — 「아니오」·미선언이면 표1", () => {
   it("환산 · 미선언 → 표1 0.16 (환산 경로도 같은 술어)", () => {
     const r = run({ ...ESTIMATED, redevelopment: { ...ESTIMATED.redevelopment, landHouseholdOwnedBuilding: undefined } });
     expect(pre(r).lthdRate).toBe(0.16);
+  });
+});
+
+describe("표시 정합 (검증 반영) — 명세서·신고서·고지가 엔진 분해와 같은 말을 한다", () => {
+  function statementItems(o: Partial<TransferTaxInput>) {
+    const r = run(o);
+    const items = new Map<string, StatementItem>([
+      ["ltHoldingPart", { label: " 보유 기간분 장특", value: -1 } as StatementItem],
+      ["ltResidencePart", { label: " 거주 기간분 장특", value: -1 } as StatementItem],
+    ]);
+    applyLandContribOverrides(items, r.redevelopmentDetail!, 2_000_000_000);
+    return { r, items };
+  }
+
+  it("환산 · 「예」 → 명세서 보유분·거주분 = 엔진 분해(신고서와 같은 값) · 근거 표2", () => {
+    const { r, items } = statementItems(ESTIMATED);
+    const p = pre(r);
+    expect(items.get("ltHoldingPart")!.value).toBe(p.lthdHoldingPart);
+    expect(items.get("ltResidencePart")!.value).toBe(p.lthdResidencePart);
+    expect(items.get("ltResidencePart")!.legalBasis).toContain("표2");
+  });
+
+  it("환산 · 미선언(표1) → 명세서 거주분 0 · 근거 표1", () => {
+    const { r, items } = statementItems({ ...ESTIMATED, redevelopment: { ...ESTIMATED.redevelopment, landHouseholdOwnedBuilding: undefined } });
+    expect(items.get("ltHoldingPart")!.value).toBe(pre(r).lthd);
+    expect(items.get("ltResidencePart")!.value).toBe(0);
+    expect(items.get("ltResidencePart")!.legalBasis).toContain("표1");
+  });
+
+  it("환산 · 「예」 → 인가전 분 거주월수 echo(신고서 거주기간 칸) · 표1이면 없음", () => {
+    expect(pre(run(ESTIMATED)).residenceMonths).toBe(60);
+    expect(pre(run({ ...ESTIMATED, residencePeriodMonths: 12 })).residenceMonths).toBeUndefined();
+  });
+
+  it("미등기(공제 배제)면 「표2를 적용했습니다」를 말하지 않는다 · 긍정 짝은 위 ★ 실가", () => {
+    const r = run({ isUnregistered: true });
+    expect(pre(r).lthd).toBe(0);
+    expect((r.warnings ?? []).some((w) => APPLIED.test(w))).toBe(false);
   });
 });

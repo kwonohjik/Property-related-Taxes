@@ -148,7 +148,7 @@ export function calculateRedevelopmentTax(
   const steps: CalculationStep[] = [...baseSteps];
   /** CB-02·D5-05 — LTHD 계열 특례 미반영 고지(결과 warnings로도 노출) */
   let lthdSpecialNotice: string | undefined;
-  // 토지만 출자한 조합원입주권은 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다.
+  // 토지만 출자한 조합원입주권은 원칙적으로 1세대1주택 특례(비과세·LTHD 표2) 대상이 아니다 — 같은 세대가 건물을 소유한 예외는 아래.
   //
   //   §89①4호 본문 — 「조합원입주권을 1개 보유한 1세대[…관리처분계획의 인가일… 현재
   //     **제3호가목에 해당하는 기존주택을 소유하는 세대**]가 …양도하는 경우」
@@ -156,7 +156,7 @@ export function calculateRedevelopmentTax(
   //       같은 세대가 건물을 소유한다는 선언(`landHouseholdOwnedBuilding`)이 「예」일 때만 연다(#13 · 재산세과-1748 · 표2는 2026-10-12 결정).
   //       아래 `isOneHouseSingle`(실제 주택 수 축)은 토지 출자 입주권을 계속 뺀다 — 입주권 표2 축은 `isOneHouseForTable2`(가·나목)다.
   //   §95② 단서 — 「…1세대 1주택(이에 딸린 토지를 포함한다)에 해당하는 **자산**의 경우에는
-  //     …표 2…」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가(표1만).
+  //     …표 2…」 ⇒ 종전자산이 주택이 아니면 표2 진입 불가(표1만) — 세대원 건물 소유 「예」 예외는 가·나목 술어가 연다(#13 조건 4).
   //
   // 환산 경로는 이미 `isOneHouseSingle: false` 고정이었으나
   // (`redevelopment-land-contribution.ts:166`) 실가 경로(`runOriginalMember`)는
@@ -625,7 +625,8 @@ export function calculateRedevelopmentTax(
       ...(oneRightThresholdNotice ? [oneRightThresholdNotice] : []),
       ...oneRightRequirementNotices,
       ...(oneRightSharedNotice ? [oneRightSharedNotice] : []),
-      ...rightTable2Notices(input, rightTable2Clause),
+      // 표2 대상이어도 공제가 0이면(미등기 배제 · 전액 비과세) 「표2를 적용했습니다」를 말하지 않는다
+      ...(rightTable2Clause !== undefined && redevAfterRight.total.lthd <= 0 ? [] : rightTable2Notices(input, rightTable2Clause)),
       ...(surchargeFallbackNotice ? [surchargeFallbackNotice] : []),
     ],
     transferGain: redevAfterRight.total.gain,

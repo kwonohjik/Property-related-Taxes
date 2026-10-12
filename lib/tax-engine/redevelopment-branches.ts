@@ -80,7 +80,7 @@ export function apportionPreApprovalExpenses(
  * 법령 근거:
  *   §166③  : 환산취득가 = floor(권리가액 × 취득당시공시지가 / 인가당시공시지가)
  *   §163⑥  : 개산공제 = floor(취득당시공시지가 × 3%)
- *   §95②   : 본문 괄호 — 인가전 분에만 LTHD 표1 적용
+ *   §95②   : 본문 괄호 — 인가전 분에만 LTHD (표1 · 세대원 건물 소유 「예」로 §89①4호가 성립하면 표2 — #13 조건 4)
  *   §166⑤1호: LTHD 보유기간 = 취득일 ~ 인가일
  *
  * landStdPriceAtAcq / landStdPriceAtApproval 미입력 시 —
@@ -130,7 +130,9 @@ export function runLandContribEstimated(
     expenses: preApprovalNecessaryExpense(landResult.estimatedDeduction, redevelopment.preApprovalExpenses ?? 0),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
-    residenceMonths: undefined,
+    // 표2(거주분 > 0)일 때만 — 신고서 거주기간 칸이 「-」인데 거주분 공제가 찍히지 않게(표1이면 거주 개념 없음)
+    residenceMonths:
+      landResult.preApprovalLTHD > landResult.preApprovalLTHDHoldingPart ? resolveRightResidenceMonths(input) : undefined,
     lthdHoldingPart: landResult.preApprovalLTHDHoldingPart,    // 표1이면 전액 보유분 (거주분 0)
     lthdResidencePart: landResult.preApprovalLTHD - landResult.preApprovalLTHDHoldingPart,
   };

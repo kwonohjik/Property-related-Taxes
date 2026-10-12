@@ -9,7 +9,7 @@
  * 토지 출자 · 10억 · 인가일 요건 선언 「예」 → 전액 비과세(세액 0) / 20억 → 12억 초과 안분. 엔진 주석·Step4 고지·#1243은
  * 「토지 출자 = 대상 아님」인데 비과세 경로만 이를 따르지 않았다(표2 축만 막음).
  *
- * ⚠️ 수치는 mock 세율표 실측값이다. 장기보유특별공제 표2는 이 결정 범위 밖(입주권 표2 기준 결정과 함께) — 토지 출자는 계속 표1.
+ * ⚠️ 수치는 mock 세율표 실측값이다. 장기보유특별공제 표2는 2026-10-12 결정으로 「예」면 표2(dec13-land-right-table2 anchor).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
