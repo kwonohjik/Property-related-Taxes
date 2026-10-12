@@ -17,7 +17,7 @@
  * | 분양권·승계 입주권·상가토지 원조합원 | R < P (순차) | §155① 부적용 — 불성립 |
  * | 〃 | R = P (같은 날) | 불성립 + 확인 필요 (선후를 알 수 없다 — 구 8호 선례와 같다) |
  * | 승계 입주권·상가토지 원조합원 (R > P) | 권리 취득 후 1년·3년 | 시행령 §156의2③④로 판정 (`rightTimingCore`) |
- * | 승계 입주권, 2006.1.1. 전 인가·승계 | — | §89② 대상이 아니라 현행 §155① |
+ * | 승계 입주권, 2006.1.1. 전 승계(인가일 공란 포함 — 인가는 승계보다 앞선다) | — | §89② 대상이 아니라 현행 §155① (`isOriginRedevRightCounted`) |
  * | 분양권 (R ≥ 2021.1.1., R > P) | 직접 해석 없음 | 계산기: 현행 §155①(완공일) + 확인 필요 / 판정 메뉴: 양론(`contested-issues.ts`) |
  * | 원조합원(기존주택)·자가 재건축 | 기존주택의 연장 | 취득일 = 기존주택 취득일 (클라이언트 `resolveTemporaryTwoHouse`가 날짜를 바꿔 싣는다) |
  * | 모름·미입력 | — | 불성립 + 확인 필요 (원칙 1) |
@@ -211,13 +211,7 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
       if (!R) {
         return { ...PASS, blocked: true, unconfirmed: [`${label}의 ${o.kind === "original_member_non_house" ? "관리처분계획 인가일" : "입주권 승계취득일"}을 입력하지 않아 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용하지 않았습니다.`] };
       }
-      // §89② 조합원입주권 축 — 2006.1.1. 이후 인가분(또는 그 전 인가라도 2006.1.1. 이후 승계취득분)만 대상이다(법률 제7837호 부칙 §12).
-      const approval = o.kind === "original_member_non_house" ? R : o.rightApprovalDate;
-      const countsAsRight =
-        approval === undefined ||
-        approval.getTime() >= NEW_HOUSE_ORIGIN_REDEV_RIGHT_START.getTime() ||
-        R.getTime() >= NEW_HOUSE_ORIGIN_REDEV_RIGHT_START.getTime();
-      if (!countsAsRight) return PASS;
+      if (!isOriginRedevRightCounted(o.kind, R, o.rightApprovalDate)) return PASS;
       if (day(R) < day(P)) return { ...PASS, blocked: true, reasons: [sequentialReason(label, R, P)] };
       if (day(R) === day(P)) return { ...PASS, blocked: true, unconfirmed: [sameDayConfirm(label, R)] };
       const r = rightTimingCore(
@@ -246,6 +240,24 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
       };
     }
   }
+}
+
+/**
+ * 승계 입주권·상가토지 원조합원 행의 권리가 §89②의 조합원입주권인가 — 법률 제7837호 부칙 §12:
+ *   ① 2006.1.1. 이후 관리처분계획이 **인가된 분**부터 적용 · ② 그 전 인가분이라도 2006.1.1. 이후 **승계취득**하면 대상으로 본다.
+ *
+ * 🔑 입주권은 인가 뒤에만 생기므로 승계취득일 R이 2006.1.1. 전이면 인가도 그 전이다 — 인가일을 비워도 대상이 아니다(결정 #43 남김 1).
+ *    인가일이 승계취득일보다 늦은 모순 입력은 ⑧(`newHouseOriginIssue`)이 막고, 엔진은 인가일 쪽을 그대로 읽는다.
+ * 상가·토지 원조합원은 R이 곧 인가일이다. ⑤ 3년 경과 예외 칸 노출(`rightThreeYearExceptionRightKinds`)도 이 술어를 쓴다.
+ */
+export function isOriginRedevRightCounted(
+  kind: "successor_right" | "original_member_non_house",
+  R: Date,
+  approvalDate: Date | undefined,
+): boolean {
+  const start = NEW_HOUSE_ORIGIN_REDEV_RIGHT_START.getTime();
+  const approval = kind === "original_member_non_house" ? R : approvalDate;
+  return R.getTime() >= start || (approval !== undefined && approval.getTime() >= start);
 }
 
 /**

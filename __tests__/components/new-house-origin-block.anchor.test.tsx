@@ -7,7 +7,8 @@
  * |---|---|
  * | W-1 | 경위를 고르면 같은 칸으로 올라가고, 경위가 바뀌면 의미가 다른 날짜를 비운다 |
  * | W-2 | 권리 유래 경위에만 날짜 칸이 열리고 칸 이름이 경위마다 다르다 · 일반·모름에는 없다 |
- * | W-3 | 입주권 승계에만 인가일(선택) 칸이 있다 |
+ * | W-3 | 입주권 승계에만 인가일(선택) 칸이 있다 · 2006.1.1. 전 승계는 비워도 대상 아님 안내 |
+ * | W-4 | 분양권 취득일 안내 — 동일세대 상속 = 피상속인 취득일 · 그 밖의 상속 = 상속개시일 · 증여 = 증여일 |
  * | E-1 | 편집 모달은 `newHouseOriginEnabled`일 때만 이 블록을 그린다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -83,6 +84,24 @@ describe("W-3 인가일", () => {
     cleanup();
     render(<HouseEntryNewHouseOriginBlock house={row({ acquisitionOrigin: "presale" })} onUpdate={vi.fn()} />);
     expect(screen.queryByTestId("house-row-right-approval-date")).toBeNull();
+  });
+  it("인가일 안내 — 2006.1.1. 전 승계취득이면 비워도 대상이 아니고, 인가일은 승계취득일보다 늦을 수 없다", () => {
+    render(<HouseEntryNewHouseOriginBlock house={row({ acquisitionOrigin: "successor_right" })} onUpdate={vi.fn()} />);
+    const hint = screen.getByTestId("house-row-right-approval-date-hint").textContent ?? "";
+    expect(hint).toContain("승계취득일보다 늦을 수 없습니다");
+    expect(hint).toContain("승계취득일이 2006.1.1. 전이면");
+    expect(hint).toContain("인가일을 비워도 같습니다");
+    expect(hint).not.toContain("비우면 대상으로 봅니다");
+  });
+});
+
+describe("W-4 분양권 취득일 안내 (결정 #43 조건 — 권리 종류별 기준일)", () => {
+  it("동일세대 상속은 피상속인 취득일, 그 밖의 상속은 상속개시일, 증여는 증여일을 안내한다", () => {
+    render(<HouseEntryNewHouseOriginBlock house={row({ acquisitionOrigin: "presale" })} onUpdate={vi.fn()} />);
+    const hint = screen.getByText(/청약으로 받은 분양권은 당첨일/).textContent ?? "";
+    expect(hint).toContain("피상속인과 같은 세대였으면 피상속인이 분양권을 취득한 날");
+    expect(hint).toContain("그 밖의 상속은 상속개시일");
+    expect(hint).toContain("증여받은 분양권은 증여일");
   });
 });
 

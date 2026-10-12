@@ -30,7 +30,7 @@ const RIGHT_KINDS = new Set(["successor_right", "original_member_house", "origin
 
 /** ⑧ — 신규 주택으로 도출된 행이 취득 경위(와 권리 취득일)를 답하지 않았다. */
 export function newHouseOriginIssue(
-  row: Pick<HouseEntry, "id" | "acquisitionDate" | "acquisitionOrigin" | "rightAcquisitionDate">,
+  row: Pick<HouseEntry, "id" | "acquisitionDate" | "acquisitionOrigin" | "rightAcquisitionDate"> & Partial<Pick<HouseEntry, "rightApprovalDate">>,
   newHouseRowId: string | undefined,
 ): { field: string; message: string } | null {
   if (!newHouseRowId || row.id !== newHouseRowId) return null;
@@ -52,6 +52,13 @@ export function newHouseOriginIssue(
       return {
         field: "rightAcquisitionDate",
         message: "권리 취득일은 이 주택의 취득일(완공·잔금일)보다 늦을 수 없습니다.",
+      };
+    }
+    // 입주권은 관리처분계획 인가 뒤에만 생긴다 — 인가일이 승계취득일보다 늦으면 모순이다(같은 날은 허용).
+    if (row.acquisitionOrigin === "successor_right" && row.rightApprovalDate && row.rightApprovalDate > row.rightAcquisitionDate) {
+      return {
+        field: "rightApprovalDate",
+        message: "관리처분계획 인가일은 입주권 승계취득일보다 늦을 수 없습니다 — 입주권은 인가 뒤에 생깁니다. 모르면 인가일을 비워 두세요.",
       };
     }
   }
