@@ -599,7 +599,10 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               form.isOneHousehold &&
               !redevSplitResidence &&
               primary?.residenceInputMode === "direct" && (
-                <SuccessorResidenceDirectHint completionDate={residenceJudgmentDate} />
+                <SuccessorResidenceDirectHint
+                  completionDate={residenceJudgmentDate}
+                  isLandContributed={landContributedOriginalApt(primary)}
+                />
               )}
 
             {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}
