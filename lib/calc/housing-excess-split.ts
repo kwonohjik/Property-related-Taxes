@@ -98,7 +98,10 @@ export function housingExcessZonePending(asset: AssetForm, isPrimary: boolean): 
  * 막으려고 그때는 이 칸을 열지 않는다(④ `partInputsActive`와 상보 — 이 경로는 소유자 분리가 아니므로 토글만 보면 된다).
  */
 export function housingExcessNeedsCapexSplit(asset: AssetForm, transferDate: string | undefined, isPrimary: boolean): boolean {
+  // 감정가액·매매사례가액 취득은 필요경비가 개산공제뿐이라(§97②2호 — 단서 비교는 환산취득가액만) 자본적지출이 세액에 닿지 않는다 — 묻지 않는다.
+  const mode = deriveLegacyPartAcqMode(asset);
   return (
+    (mode === "actual" || mode === "estimated") &&
     asset.hasSeperateLandAcquisitionDate !== true &&
     parseAmount(asset.capitalExpenditure ?? "") > 0 &&
     housingExcessNeedsLandSplit(asset, transferDate, isPrimary)

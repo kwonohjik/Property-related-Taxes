@@ -166,6 +166,14 @@ describe("#17 후속 — 배율 초과분 분리의 자본적지출 토지분·�
     expect(r.result.totalTax).toBe(9_296_570);
   });
 
+  it("대조 — 감정가액·매매사례가액 취득은 개산공제뿐이라(§97②2호 단서는 환산만) 자본적지출 칸을 묻지 않는다 · 실가·환산은 묻는다", () => {
+    const capex = { capitalExpenditure: "100000000" };
+    expect(housingExcessNeedsCapexSplit(asset({ ...capex, isAppraisalAcquisition: true }), TD, true)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset({ ...capex, isSalesCaseAcquisition: true }), TD, true)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset({ ...capex, useEstimatedAcquisition: true }), TD, true)).toBe(true);
+    expect(housingExcessNeedsCapexSplit(asset(capex), TD, true)).toBe(true);
+  });
+
   it("대조 — 배율 초과분 분리 경로가 아니면(면적 한도 이내) 자본적지출이 있어도 칸·요구가 없다", async () => {
     const over = { capitalExpenditure: "100000000", acquisitionArea: "250", transferArea: "250" };
     expect(housingExcessNeedsCapexSplit(asset(over), TD, true)).toBe(false);
