@@ -11,7 +11,7 @@
  * | # | 축 | 확인 |
  * |---|---|---|
  * | MG-1 | §154① 보유 통산 | 같은 세대 확인 → 주택분 비과세(상가분은 과세 그대로) · 아니오 → 과세 |
- * | MG-2 | 「취득 당시」 조정대상지역(강남) | 세대 보유 시작일 2018(지정 중) → 거주요건 → 과세 · 2000(지정 전) → 비과세 |
+ * | MG-2 | 「취득 당시」 조정대상지역(강남·마포) | 세대 보유 시작일 2018(지정 중) → 거주요건 → 과세 · 2000(지정 전) → 비과세 · 거울상(시작일 지정 중·증여일 해제 후) → 비과세 |
  * | MG-3 | D4-05 §99의4 일반주택 취득일 | 농어촌주택(2010 취득) 앞의 일반주택 — 통산 시 세대 보유 시작일(2000) → 주택 수 제외 성립 |
  * | MG-4 | 단건 parity | 같은 사실의 단건 주택과 비과세 결론·세대 고지 유무가 같다 |
  * | MG-5 | 장특·세율 | 통산해도 주택분 장특 보유연수는 증여일 기준(0년) — 단건과 같다 |
@@ -31,6 +31,7 @@ const GIFT = D("2023-09-01");
 const TRANSFER = D("2024-06-01");
 const PRICE = 1_000_000_000; // 12억 이하 — 비과세면 주택분 전액 비과세
 const GANGNAM = "1168010100"; // 서울 강남구 역삼동 — 2017-08-03 지정 · 미해제
+const MAPO = "1144010100"; // 서울 마포구 — 2017-08-03 지정 · 2023-09-01(증여일)에는 해제(실측 `isRegulatedByBjdCode`)
 
 const YES = (start = DONOR): GiftHouseholdBasis => ({
   giftDate: GIFT,
@@ -129,6 +130,12 @@ describe("MG-2 「취득 당시」 조정대상지역 — 세대 보유 시작�
   it("[MG-2b] 시작일 2000-01-01(지정 전) → 거주요건 없음 → 비과세(짝)", () => {
     expect(mixedExempt(mixed({ giftHouseholdBasis: YES(), regionCode: GANGNAM }))).toBe(true);
   });
+  it("[MG-2c] 거울상 — 시작일 2018-01-01(지정 중)·증여일(해제 후, 마포) → 둘 다 지정 중이 아니므로 거주요건 없음 → 비과세 + 통산 고지", () => {
+    // 시작일만 보는 판정(strict)이나 어느 하나라도(any)로 읽으면 거주요건이 붙어 과세된다 — 겸용 배선이 all 모드를 지키는지 본다.
+    const r = mixed({ giftHouseholdBasis: YES(D("2018-01-01")), regionCode: MAPO });
+    expect(mixedExempt(r)).toBe(true);
+    expect(hasNotice(r.warnings, CONSOLIDATION_NOTICE)).toBe(true);
+  });
 });
 
 describe("MG-3 D4-05 §99의4 「그 주택 취득 전에 보유하던」 일반주택 취득일 — 단건과 같은 leaf", () => {
@@ -157,6 +164,7 @@ describe("MG-4 단건(비겸용) parity — 같은 사실이면 주택 부분 �
     ["미확인", { giftHouseholdBasis: UNKNOWN }, { giftHouseholdBasis: UNKNOWN }],
     ["예·2018·강남", { giftHouseholdBasis: YES(D("2018-01-01")), regionCode: GANGNAM }, { giftHouseholdBasis: YES(D("2018-01-01")), regionCode: GANGNAM }],
     ["예·2000·강남", { giftHouseholdBasis: YES(), regionCode: GANGNAM }, { giftHouseholdBasis: YES(), regionCode: GANGNAM }],
+    ["예·2018·마포(거울상)", { giftHouseholdBasis: YES(D("2018-01-01")), regionCode: MAPO }, { giftHouseholdBasis: YES(D("2018-01-01")), regionCode: MAPO }],
     [
       "예·2000·§99의4",
       { giftHouseholdBasis: YES(), householdHousingCountForExclusion: 2, isOneHouseExempt: false, reductions: [RURAL_2010] as MixedUseAssetInput["reductions"] },
