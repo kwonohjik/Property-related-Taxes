@@ -19,9 +19,18 @@
  *
  * ## 적용 범위(검증하지 못한 조합은 막지 않고 «초과분 미분리» 고지로 남긴다)
  *
- * 매매 취득(실지거래가액) · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·PHD·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
- * 존재). 환산·감정·매매사례 취득, 상속·증여 평가, 2005-04-30 전 취득, 함께 양도 주택 카드는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
+ * 매매 취득 · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·PHD·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
+ * 존재). 상속·증여 평가, 2005-04-30 전 취득, 함께 양도 주택 카드, 환산 + 공익수용·공매·경락 양도는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
  * «초과분 미분리 — 확인 필요»로 고지한다(`housingExcessUnseparatedNotice`; 함께 양도 주택 카드는 ④가 `companionHousingLand`로 면적 사실을 싣는다).
+ *
+ * 취득가액 산정 방식(실지거래가액·환산·감정·매매사례)은 묻지 않는다(#17-4). 분리 경로(`calcSplitGain` 주택 비-별개)는 개별주택가격을
+ * 가목 : 나목 비례로 나누고 환산 분모(양도시 개별주택가격)도 같은 척도로 나누므로, 토지분 + 건물분 환산취득가액이 자산 전체 환산취득가액
+ * (양도가액 × 취득시 ÷ 양도시 개별주택가격)을 취득시 기준시가 비율로 나눈 값과 같다 — 감정·매매사례도 총액을 같은 비율로 나눈다(영 §166⑥).
+ * 다만 환산 + 공익수용(§164⑨1호 주택 총액 특례)·공매·경락(같은 항 2호)은 환산 분모를 낮추는 특례가 분리 경로에 닿지 않는다 — 특례는 비분리
+ * `calcTransferGain`의 `resolveConversionDenominatorAtTransfer`에서만 적용된다(주택 분리 + 수용 환산 미지원 Q6과 같은 이유) — 범위 밖.
+ *
+ * 자산 단위 자본적지출은 분리 경로가 쓰지 않는다(§100② 후문이 안분 대상으로 열거하지 않아 파트 귀속을 알아야 하는데, 이 경로에는 파트 칸이
+ * 없다). 그 사실은 `housingExcessCapexNotice`가 고지한다 — 반영하지 않은 금액·확인 필요(별건: 파트 귀속 입력 경로).
  */
 import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtenant-land-rate";
 import { round2 } from "./area-utils";
@@ -46,8 +55,12 @@ export interface HousingExcessSplitFacts {
   isPlainHousing: boolean;
   /** 취득원인 매매 — 상속·증여·신축 평가 조합은 범위 밖 */
   isPurchase: boolean;
-  /** 취득가액 실지거래가액(환산·감정·매매사례 아님) — 환산 분모(양도시 개별주택가격 결합)·감정 안분은 범위 밖 */
-  isActualAcquisition: boolean;
+  /**
+   * 환산취득가액 + §164⑨ 특례 양도(1호 공익수용 · 2호 공매·경락) — 특례가 환산 분모(양도시 개별주택가격)를 낮추는데 분리 경로는 그 특례를
+   * 반영하지 못한다(범위 밖). 특례 발동 조건(2009-02-04 이후 양도·보상액·공매·경락가액 입력)까지 따지지 않는 보수적 상위집합이다 —
+   * 걸리면 분리 대신 «초과분 미분리» 고지.
+   */
+  isSec164_9Conversion: boolean;
   /** 토지·건물 소유자 같음(`selfOwns === both`) */
   ownsBoth: boolean;
   /** 별개취득이면 기존 G-2 경로 — 이 경로의 대상이 아니다 */
@@ -77,7 +90,7 @@ export function housingExcessSplitApplies(f: HousingExcessSplitFacts): boolean {
   return (
     f.isPlainHousing &&
     f.isPurchase &&
-    f.isActualAcquisition &&
+    !f.isSec164_9Conversion &&
     f.ownsBoth &&
     !f.isSeparateAcquisition &&
     !f.isBurdenedGift &&
@@ -95,13 +108,15 @@ type EngineFacts = Pick<
   TransferTaxInput,
   | "propertyType"
   | "acquisitionCause"
-  | "acquisitionMethod"
   | "useEstimatedAcquisition"
   | "selfOwns"
   | "isSeparateAcquisition"
   | "transferType"
   | "ownershipRatio"
   | "totalPropertyTransferPrice"
+  | "oneHouseUnitRole"
+  | "transferCause"
+  | "isAuctionTransfer"
   | "preHousingDisclosure"
   | "pre1990Land"
   | "redevelopment"
@@ -128,12 +143,20 @@ export function housingExcessSplitAppliesToInput(input: EngineFacts): boolean {
   return housingExcessSplitApplies({
     isPlainHousing: input.propertyType === "housing" && !input.preHousingDisclosure && !input.pre1990Land && !input.redevelopment,
     isPurchase: (input.acquisitionCause ?? "purchase") === "purchase",
-    isActualAcquisition: input.useEstimatedAcquisition !== true && (input.acquisitionMethod ?? "actual") === "actual",
+    isSec164_9Conversion:
+      input.useEstimatedAcquisition === true && (input.transferCause === "public_expropriation" || input.isAuctionTransfer === true),
     ownsBoth: (input.selfOwns ?? "both") === "both",
     isSeparateAcquisition: input.isSeparateAcquisition === true,
     isBurdenedGift: input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift",
+    /**
+     * 지분 = `ownershipRatio < 1`(클라이언트 술어 `getOwnershipRatio < 1`과 같은 축). `totalPropertyTransferPrice`는 지분 표식이 아니라 12억 판정·안분
+     * 분모다 — 일괄양도 1세대1주택 단위(#18 `applyOneHouseUnitPrice`)는 지분이 아닌 주택 카드(`oneHouseUnitRole === "house"`)에도 주택 + 부수토지
+     * 합계액을 싣는다. 종전에는 그 값만 보고 지분으로 판정해, ⑤⑧이 받고 ④가 보낸 기준시가 5칸을 엔진이 버리고 초과분을 비과세로 남겼다(#17-3).
+     * 그 밖의 경로(겸용 파트 카드의 주택분 합계 등)는 종전대로 지분처럼 범위 밖으로 둔다.
+     */
     isFractional:
-      (input.ownershipRatio !== undefined && input.ownershipRatio < 1) || input.totalPropertyTransferPrice !== undefined,
+      (input.ownershipRatio !== undefined && input.ownershipRatio < 1) ||
+      (input.totalPropertyTransferPrice !== undefined && input.oneHouseUnitRole !== "house"),
     acquiredBeforeFirstDisclosure: isBeforeHousePriceFirstDisclosure(input.acquisitionDate),
     excessAreaM2: housingExcessAreaOfInput(input),
   });
