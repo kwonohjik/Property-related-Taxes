@@ -1,0 +1,112 @@
+[
+ {
+  "id": "STAT-71-2-house",
+  "docNo": "조세특례제한법 §71의2① (법률 본문 — 해석례 아님)",
+  "docDate": "-",
+  "basis": "current",
+  "today": "2026-11-02",
+  "summary": "노원 주택(2023-06-01 취득) 보유 세대가 평창 인구감소지역주택(2024-03-01 취득·취득 당시 기준시가 2억)을 산 뒤 노원 주택 양도(2026-11-01·8억)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-11-01",
+   "contractTotalPrice": "800000000",
+   "asset": { "assetKind": "housing", "acquisitionDate": "2023-06-01", "regionCode": "1135010500" },
+   "houses": [
+    {
+     "id": "p",
+     "region": "non_capital",
+     "regionCode": "5176025021",
+     "acquisitionDate": "2024-03-01",
+     "acquisitionOfficialPrice": "200000000",
+     "popDeclSoleAtAcquisition": "yes",
+     "popDeclAcquiredByGift": "no",
+     "acquisitionOrigin": "general"
+    }
+   ]
+  },
+  "expected": { "isExempt": true, "excludedHouses": ["p"], "undetermined": false },
+  "bucket": "match",
+  "note": "match(결정 #42 — 법률이 「…소유주택이 아닌 것으로 보아 「소득세법」 제89조제1항제3호 또는 제4호를 적용한다」고 정하는 강행 의제라 명부에서 도출한다). 해석례가 아니라 법률 본문 사례다 — 상속·증여·다른 특례 중첩 해석 3건은 본문 미확보라 이 평가셋에 넣지 않았다. 관측: 평창 행을 주택 수에서 빼 1주택 비과세."
+ },
+ {
+  "id": "STAT-71-2-right",
+  "docNo": "조세특례제한법 §71의2① (법률 본문 — 해석례 아님)",
+  "docDate": "-",
+  "basis": "current",
+  "today": "2026-06-16",
+  "summary": "기존주택(2010-03-15 취득)이 관리처분인가(2023-05-15)로 입주권이 된 세대가 평창 인구감소지역주택(2024-03-01·2억)을 산 뒤 입주권 양도(2026-06-15·8억)",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2010-03-15",
+    "redevApprovalDate": "2023-05-15",
+    "regionCode": "1135010500"
+   },
+   "houses": [
+    {
+     "id": "p",
+     "region": "non_capital",
+     "regionCode": "5176025021",
+     "acquisitionDate": "2024-03-01",
+     "acquisitionOfficialPrice": "200000000",
+     "popDeclSoleAtAcquisition": "yes",
+     "popDeclAcquiredByGift": "no",
+     "acquisitionOrigin": "general"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": ["one_right_89_1_4_ga"],
+   "excludedHouses": ["p"],
+   "undetermined": false
+  },
+  "bucket": "match",
+  "note": "match(결정 #42 「입주권 양도(§89①4호)에도 적용」 — 법률이 4호를 직접 적는다). 법률 본문 사례(해석례 아님). 평창 행을 가·나목의 「다른 주택」에서 빼 다른 주택 0채 → 가목 비과세. 표2·12억 축은 원본 주택 수를 그대로 본다(결정 #2). 관측: 가목 비과세 · 주택 수 제외 명세에 평창 행."
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "docNo": "조세특례제한법 §71의2① (법률 본문 — 해석례 아님)",
+  "docDate": "-",
+  "basis": "current",
+  "today": "2026-06-16",
+  "summary": "STAT-71-2-right와 같은 사실에서 인구감소지역주택 취득 당시 1채만 보유했는지 모름 — 과세 + 확인 필요",
+  "form": {
+   "isOneHousehold": true,
+   "transferDate": "2026-06-15",
+   "contractTotalPrice": "800000000",
+   "asset": {
+    "assetKind": "right_to_move_in",
+    "redevSubject": "right",
+    "redevExemptionEligibleAtApproval": "yes",
+    "acquisitionDate": "2010-03-15",
+    "redevApprovalDate": "2023-05-15",
+    "regionCode": "1135010500"
+   },
+   "houses": [
+    {
+     "id": "p",
+     "region": "non_capital",
+     "regionCode": "5176025021",
+     "acquisitionDate": "2024-03-01",
+     "acquisitionOfficialPrice": "200000000",
+     "popDeclSoleAtAcquisition": "unknown",
+     "popDeclAcquiredByGift": "no",
+     "acquisitionOrigin": "general"
+    }
+   ]
+  },
+  "expected": {
+   "isExempt": false,
+   "notAppliedExceptions": ["one_right_89_1_4_ga", "one_right_89_1_4_na"],
+   "undetermined": ["71-2-pop-decline-unconfirmed"]
+  },
+  "bucket": "match",
+  "note": "match(결정 #42 「모르면 불성립 + 확인 필요 — 결론을 가를 때만」). 법률 본문 사례(해석례 아님). 요건 사실을 모르면 의제를 적용하지 않아 평창 행이 다른 주택으로 남고(나목 취득일 미입력) 과세, 그 행을 뺐다면 가목이 성립하므로 확인 필요를 띄운다."
+ }
+]

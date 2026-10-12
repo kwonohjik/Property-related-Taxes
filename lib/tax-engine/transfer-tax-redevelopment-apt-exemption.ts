@@ -24,6 +24,7 @@ import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step"
 import { redevLandAptResidenceNotices } from "./transfer-tax-redevelopment-land-apt-notices";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { resolveRightSaleSpecialExclusion } from "./one-house/right-sale-special-act-exclusion";
+import { rightSalePopDeclineUnconfirmedNotice } from "./one-house/right-sale-special-act-exclusion";
 import { presaleRightStartDate, type ParsedRates } from "./transfer-tax-helpers";
 import {
   resolveRedevAptOneHouseTable2Axis,
@@ -56,8 +57,11 @@ export function judgeRedevAptOneHouseExemption(
   const redev = redevInput.redevelopment;
   if (redev?.subject !== "apt") {
     // 입주권 양도(subject="right")는 §89①4호 판정을 Step A.7이 한다 — 여기서는 그 판정이 「다른 주택」에서 뺀 보유 감면주택
-    // (§98·§98의2·§98의5·§99)의 명세만 결과 카드에 싣는다(결정 #2). §99의4·§98의9는 입주권 양도에서 효과가 없어 싣지 않는다.
+    // (§98·§98의2·§98의5·§99)과 명부 도출 §71의2①(결정 #42)의 명세만 결과 카드에 싣는다(결정 #2). §99의4·§98의9는 입주권 양도에서
+    // 효과가 없어 싣지 않는다. §71의2 후보가 모름으로 불성립해 가·나목 결론을 가르면 판정 메뉴와 같은 확인 필요 문장을 경고로 낸다.
     const rightSaleExclusion = redev?.subject === "right" ? resolveRightSaleSpecialExclusion(redevInput) : undefined;
+    const popNotice = redev?.subject === "right" ? rightSalePopDeclineUnconfirmedNotice(redevInput) : undefined;
+    if (popNotice) warnings?.push(popNotice);
     return {
       exemptionResult: undefined,
       houseCountExclusion: rightSaleExclusion && rightSaleExclusion.entries.length > 0

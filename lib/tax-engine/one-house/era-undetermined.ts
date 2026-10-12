@@ -86,7 +86,7 @@ import {
   RURAL_FARM_FACTS_UNCONFIRMED_ID,
 } from "./rural-return-to-farm-facts";
 import { qualifiesRuralHouseApartFromDeadline } from "../transfer-tax-exemption-holding";
-import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "../transfer-reductions/population-decline-71-2";
+import { POP_DECLINE_71_2_UNCONFIRMED_ID, popDeclineUnconfirmedNotice } from "../transfer-reductions/population-decline-71-2";
 import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_ORIGIN_UNCONFIRMED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from "./new-house-origin";
 
 // §154⑤ 단서 양도 구간 상수는 판정 leaf가 정본이다(OH-22) — 기존 import 경로를 위해 재export.
@@ -655,16 +655,12 @@ export function collectEraUndetermined(
 
   /*
    * 조특법 §71의2① 인구감소지역주택 — 후보인데 모름·미답·해석 미확보라 소유주택에서 빼지 않았다(결정 #42). **결론을 가를 때만** 알린다 —
-   * 그 후보를 뺀 반사실 판정이 비과세일 때다. 양도 주택·입주권 모두 같은 echo를 읽지만 이 수집기는 주택 양도만 본다.
+   * 그 후보를 뺀 반사실 판정이 비과세일 때다. 이 수집기는 주택 양도만 본다 — 입주권 양도(§89①4호)는
+   * `rightSalePopDeclineUnconfirmedNotice`(가·나목 반사실 판정)가 같은 문장을 낸다.
    */
   const popUnconfirmed = input.popDecline71_2Unconfirmed;
   if (popUnconfirmed && !settled && (relevance?.popDeclineDecides?.() ?? true)) {
-    out.push({
-      id: POP_DECLINE_71_2_UNCONFIRMED_ID,
-      reason:
-        `${TRANSFER.POP_DECLINE_HOUSE_71_2}(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다 — ${popUnconfirmed.reasons.join(" ")} ` +
-        "확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다.",
-    });
+    out.push({ id: POP_DECLINE_71_2_UNCONFIRMED_ID, reason: popDeclineUnconfirmedNotice(popUnconfirmed.reasons) });
   }
 
   // 어느 선언된 기한의 말일이 양도일 곁에 있어 공휴일 표 한계가 판정을 바꿀 수 있을 때만(#32 하위 1 가 — `holiday-notice-deadlines.ts`).
