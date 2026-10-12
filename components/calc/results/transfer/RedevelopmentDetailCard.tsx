@@ -483,7 +483,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             )}
             <Row label="인가전 양도차익" value={preApproval.gain} highlight />
             <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
-              장기보유공제 (표1 {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
+              장기보유공제 ({(preApproval.lthdResidencePart ?? 0) > 0 ? "표2" : "표1"} {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
             </p>
             <Row label="장기보유특별공제 (인가전 분)" value={preApproval.lthd} />
             <div className="pt-1 border-t border-violet-100">

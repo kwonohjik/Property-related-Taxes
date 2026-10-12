@@ -185,15 +185,30 @@ export function applyLandContribOverrides(
     ];
   }
 
-  // 보유/거주 분리 항목
+  // 보유/거주 분리 항목 — 같은 세대가 철거 대상 건물을 소유했다고 선언해 §89①4호가 성립하면 표2(거주분 > 0), 아니면 표1.
+  //   값은 엔진 분해(신고서와 같은 값)를 쓴다 — 범용 항목은 자산 거주월수로 표를 짐작해 다시 나눠 엔진·신고서와 어긋났다.
+  const preTable2 = (pre.lthdResidencePart ?? 0) > 0;
+  const preHolding = pre.lthdHoldingPart ?? pre.lthd;
+  const preResidence = pre.lthdResidencePart ?? 0;
+  const tableBasis = preTable2 ? "소득세법 §95② 표2 · 시행령 §166⑤1호" : "소득세법 §95② 표1 · 시행령 §166⑤1호";
   const ltHoldItem = items.get("ltHoldingPart");
   if (ltHoldItem) {
-    ltHoldItem.note = "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표1), 인가후 미적용";
+    ltHoldItem.value = preHolding;
+    ltHoldItem.formula = `인가전 분 장기보유특별공제 중 보유기간분 ${fmt(preHolding)}`;
+    ltHoldItem.legalBasis = tableBasis;
+    ltHoldItem.note = preTable2
+      ? "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표2 · 세대원 건물 소유 선언), 인가후 미적용"
+      : "토지 출자 §166⑤1호 — 인가전 분만 보유기간 장기보유특별공제 (표1), 인가후 미적용";
     ltHoldItem.perAsset = undefined;
   }
   const ltResItem = items.get("ltResidencePart");
   if (ltResItem) {
-    ltResItem.note = "토지 출자 — 거주 분리 미적용";
+    ltResItem.value = preResidence;
+    ltResItem.formula = preTable2
+      ? `인가전 분 장기보유특별공제 중 거주기간분 ${fmt(preResidence)}`
+      : "0 (§95② 표1 적용 — 거주기간 공제 대상 아님)";
+    ltResItem.legalBasis = tableBasis;
+    ltResItem.note = preTable2 ? "토지 출자 — 인가전 분 거주기간 장기보유특별공제 (표2)" : "토지 출자 — 거주 분리 미적용";
     ltResItem.perAsset = undefined;
   }
 

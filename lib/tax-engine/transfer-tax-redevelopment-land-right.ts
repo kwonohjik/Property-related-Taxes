@@ -10,8 +10,8 @@
  * 판정 규칙은 `resolveOneRightExemptionClause`(단일 소스) 안의 `landContributionBlocksOneRight` 한 곳이다. 이 파일은
  * 그 결과를 **사용자에게 말하는** 고지만 만든다 — 결론을 가르는 경우에만(모름 = 혜택 불성립 + 확인 필요).
  *
- * ⚠️ 장기보유특별공제 표2(§95②)는 이 선언과 별개 축이다 — 토지 출자 입주권은 표2 진입을 계속 막는다.
- *    「세대원 건물 소유」 예외 사안의 표2 적용 여부는 입주권 표2 기준(#14)과 함께 정한다.
+ * 장기보유특별공제 표2(§95②)도 같은 술어를 쓴다(#13 조건 4 · 2026-10-12 결정 「나」 — `resolveRightTable2Clause`):
+ * 「예」로 가·나목이 성립하고 거주 2년이면 표2, 미선언·「아니오」면 표1.
  */
 import { resolveOneRightExemptionClause } from "./transfer-tax-redevelopment-transforms";
 import type { TransferTaxInput, RedevelopmentResult } from "./types/transfer.types";
