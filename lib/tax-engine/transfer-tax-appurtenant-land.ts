@@ -15,13 +15,12 @@ import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
 import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-1-proviso-era";
-import { resolveExemptionProviso } from "./transfer-tax-exemption-holding";
+import { resolveExemptionProviso, type ResidenceReqInput } from "./transfer-tax-exemption-holding";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
 import { housingExcessAreaM2, housingExcessAreaOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
-import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 
 /**
  * 「소득세법」 시행령 제154조 제1항 1세대1주택 보유요건의 **현행 연수**(2년) — 양도일 연혁은 `resolveOneHouseMinHoldingYears`가 정한다
@@ -143,7 +142,7 @@ function laterLandFailsHoldingRequirement(input: TransferTaxInput): boolean {
  * 반환: `undefined` 단서 불성립 · `null` 괄호 없는 연혁(취득일 무관) · `Date` 이 날(사업인정 고시일) 전에 취득한 토지만.
  * F-13 부수토지 카드는 짝 주택의 이 값을 `appurtenantHouseVerdict.expropriationLandCutoff`로 받는다.
  */
-export function expropriationProvisoLandCutoff(input: TransferTaxInput | TransferTaxItemInput): Date | null | undefined {
+export function expropriationProvisoLandCutoff(input: ResidenceReqInput): Date | null | undefined {
   const p = input.oneHouseExemptionProviso;
   if (p?.reason !== "expropriation" || resolveExemptionProviso(input) !== "both") return undefined;
   if (!expropriationNoticeDateRequirementApplies(input)) return null;

@@ -16,6 +16,11 @@ import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { TRANSFER } from "./legal-codes";
 import type { MixedUseAssetInput } from "./types/transfer-mixed-use.types";
 import { calculateHoldingPeriod } from "./tax-utils";
+import {
+  expropriationProvisoLandCutoff,
+  isLaterAcquiredLandHeldTooShort,
+  landCoveredByExpropriationProviso,
+} from "./transfer-tax-appurtenant-land";
 import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption";
 import {
   qualifiesCulturalHeritageHouse,
@@ -63,6 +68,8 @@ export function judgeMixedUseOneHouseExemption(
   meetsOneHouseRequirements: boolean;
   isUnregistered: boolean;
   isOneHouseExempt: boolean;
+  /** 주택보다 나중에 취득한 부수토지가 보유요건(영 §154①) 미만 — 그 토지분은 비과세에서 뺀다(분리취득 G-3과 같은 술어). */
+  laterLandExemptExcluded: boolean;
   /** 영 §167의10①15호 ① 요소 — §155①④⑤ 의제 또는 §155②③ 상속주택 경로. */
   surchargeDeemedOneHouseBy155: DeemedOneHouseBasis | undefined;
   /** `surchargeDeemedOneHouseBy155`의 표시용 근거 조문 — 조특법 감면주택 · §156의2·§156의3 경로(E-14a · E-7) */
@@ -444,10 +451,28 @@ export function judgeMixedUseOneHouseExemption(
       ? clause2SurchargeDeemed(clause2ForSurcharge)
       : undefined;
 
+  /**
+   * 분리취득 G-3(`isLaterAcquiredLandExemptExcluded`)과 같은 규칙 — 영 §154①의 보유기간은 「해당 주택」의 것이라 주택보다
+   * **나중에** 취득한 부수토지는 그 토지를 취득한 날부터 센다. 보유요건(양도일 연혁 2년·3년) 미만이면 그 토지분은
+   * 1세대1주택 비과세 대상이 아니다. 같은 항 단서 2호 가목(수용)이 덮는 토지(사업인정 고시일 전 취득 — 5A)는 그대로 비과세다.
+   * 종전 겸용 엔진은 보유요건을 건물 취득일 하나로만 판정해 나중 토지도 통째로 비과세했다.
+   */
+  const laterLandExemptExcluded =
+    isOneHouseExempt &&
+    isLaterAcquiredLandHeldTooShort(asset.landAcquisitionDate, asset.buildingAcquisitionDate, transferDate) &&
+    !landCoveredByExpropriationProviso(asset.landAcquisitionDate, expropriationProvisoLandCutoff(exemptionReqInput));
+  if (laterLandExemptExcluded) {
+    warnings.push(
+      "주택보다 나중에 취득한 부수토지는 그 토지를 취득한 날부터 보유기간을 계산해 보유요건(「소득세법 시행령」 제154조 제1항) " +
+        "미만이므로 그 토지분은 1세대1주택 비과세에서 제외했습니다.",
+    );
+  }
+
   return {
     meetsOneHouseRequirements,
     isUnregistered,
     isOneHouseExempt,
+    laterLandExemptExcluded,
     // E-14d — §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 §155①④⑤ 의제 분기에 걸리지 않는다
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.
     surchargeDeemedOneHouseBy155: surchargeBlocked
