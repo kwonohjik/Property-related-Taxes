@@ -39,6 +39,10 @@ export const rentalUnitSchema = z.object({
   rentalAcquisitionType: RentalAcqTypeEnum,
   isApartment: z.boolean(),
   region: RentalRegionEnum,
+  /** 소재지 법정동코드 10자리 — ⑳ 불성립 시 중과 주택 수의 영 §167의3①1호 지역기준/가액기준 판정(결정 #20 C 후속) */
+  regionCode: z.string().regex(/^\d{10}$/).optional(),
+  /** 거주주택 양도일 현재 이 임대주택 기준시가 — 영 §167의3①1호 3억 판정(가액기준 지역만 전송) */
+  officialPriceAtTransfer: z.number().int().nonnegative().optional(),
   isExcluded918Rule: z.boolean(),
   hasContractDepositProof: z.boolean(),
   isExcludedShortToLongChange: z.boolean(),

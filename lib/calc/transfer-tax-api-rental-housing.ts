@@ -14,6 +14,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
 import { aptDeadlineExtensionPayload, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { rentalUnitTerminationInScope } from "./rental-unit-termination-scope";
+import { rentalUnitLowPriceInScope } from "./rental-unit-low-price-scope";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
 
@@ -57,6 +58,12 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       // ?? false로 방어 — Zod required boolean 400 차단(false = 요건 미해당, validate의 !u.X와 동일 관용).
       isApartment: u.isApartment ?? false,
       region: u.region,
+      // 영 §167의3①1호 — ⑳ 불성립 시 중과 주택 수 판정용. 코드는 주소 검색으로 채워진 10자리만, 기준시가는 ⑤와 같은 범위만 보낸다.
+      regionCode: (u.regionCode ?? "").length >= 10 ? u.regionCode : undefined,
+      officialPriceAtTransfer:
+        rentalUnitLowPriceInScope(u) && parseAmount(u.officialPriceAtResidenceTransfer ?? "")
+          ? parseAmount(u.officialPriceAtResidenceTransfer ?? "")
+          : undefined,
       isExcluded918Rule: u.isExcluded918Rule ?? false,
       hasContractDepositProof: u.hasContractDepositProof ?? false,
       isExcludedShortToLongChange: u.isExcludedShortToLongChange ?? false,

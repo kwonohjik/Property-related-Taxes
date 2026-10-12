@@ -26,6 +26,8 @@ export function toRentalHousingExceptionEngineInput(
       rentalAcquisitionType: u.rentalAcquisitionType,
       isApartment: u.isApartment,
       region: u.region,
+      regionCode: u.regionCode, // 영 §167의3①1호 지역기준(결정 #20 C 후속)
+      officialPriceAtTransfer: u.officialPriceAtTransfer, // 영 §167의3①1호 양도 당시 기준시가
       isExcluded918Rule: u.isExcluded918Rule,
       hasContractDepositProof: u.hasContractDepositProof,
       isExcludedShortToLongChange: u.isExcludedShortToLongChange,

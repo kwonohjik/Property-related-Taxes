@@ -654,6 +654,8 @@ export function migrateAsset(raw: unknown): AssetForm {
         if (u.region !== "seoul-metro" && u.region !== "non-metro") u.region = "seoul-metro";
         // 소재지 법정동코드(주소 자동판별 소스) — 미검색 stale unit은 "" (분기 술어는 length>=10)
         if (u.regionCode === undefined) u.regionCode = "";
+        // 거주주택 양도 당시 기준시가(영 §167의3①1호) — 이 칸 신설 전 복원분은 "" (모름 = 산입)
+        if (typeof u.officialPriceAtResidenceTransfer !== "string") u.officialPriceAtResidenceTransfer = "";
         // isRegulatedAreaNewAcq → isExcluded918Rule rename (Phase 1 데이터 값 보존, C4 D-2)
         if (u.isRegulatedAreaNewAcq !== undefined) {
           if (u.isExcluded918Rule === undefined) u.isExcluded918Rule = u.isRegulatedAreaNewAcq;
