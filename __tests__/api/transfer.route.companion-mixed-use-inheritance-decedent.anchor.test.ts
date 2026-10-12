@@ -178,4 +178,31 @@ describe("컴패니언 겸용주택 — 상속 피상속인 취득일", () => {
     expect((await calc({ ...INH, decedentAcquisitionDate: "2023-06-01" }, true)).a.reductionAmount).toBe(0);
     expect((await calc({ acquisitionDate: "2023-09-01" }, true)).a.reductionAmount).toBe(0);
   }, 60_000);
+
+  describe("토지를 상속개시일과 다른 날(2023-10-01) 취득 — 종전 ⑫ 400(「매매」로 지정하라는데 겸용엔 그 칸이 없음)", () => {
+    const SEP = { landAcquisitionDate: "2023-10-01", hasSeperateLandAcquisitionDate: true, mixedAcqLandPricePerSqmAtBuildingAcq: "1000000" };
+
+    it("계산된다 — 토지 카드는 자기 취득일(70%·50%), 건물 카드는 피상속인 취득일(누진) · 단건 겸용 `isInheritedPart`와 같은 규칙", async () => {
+      const { a, card } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2000-01-01" });
+      expect(card("mu-house-land").appliedRate).toBe(0.7);
+      expect(card("mu-comm-land").appliedRate).toBe(0.5);
+      expect(card("mu-house-bld").rateGroup).toBe("progressive");
+      expect(card("mu-comm-bld").rateGroup).toBe("progressive");
+      expect(a.totalTax).toBe(82_045_239);
+    }, 60_000);
+
+    it("긍정 짝 — 피상속인 2023-06-01이면 건물 카드도 단기(60%·40%)", async () => {
+      const { a, card } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2023-06-01" });
+      expect(card("mu-house-bld").appliedRate).toBe(0.6);
+      expect(card("mu-comm-bld").appliedRate).toBe(0.4);
+      expect(a.totalTax).toBe(92_284_539);
+    }, 60_000);
+
+    it("§77 — 토지 카드는 자기 취득일(2023-10-01)로 불성립, 건물 카드만 감면", async () => {
+      const { a } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2000-01-01" }, true);
+      expect(a.reductionAmount).toBe(3_289_250);
+      expect(a.totalTax).toBe(79_084_913);
+    }, 60_000);
+  });
 });
+

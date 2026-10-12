@@ -86,6 +86,21 @@ export function buildMixedUsePartCards(
 
   const landAcqDate = mixedAsset.landAcquisitionDate;
   const bldAcqDate = mixedAsset.buildingAcquisitionDate;
+  /**
+   * 「소득세법」 §104②1호 · 「조세특례제한법」 §77⑨ — 토지를 상속개시일(건물 취득일)과 **다른 날** 취득했으면 그 토지 카드에는
+   * 피상속인 취득일을 싣지 않는다. 매수했으면 피상속인 취득일이 없고, 다른 때 상속받았으면 피상속인·날짜가 건물과 다르다.
+   * 겸용에는 토지 취득원인 칸이 없어 구별할 수 없다 — 단건 겸용 엔진(`isInheritedPart`)과 같은 규칙.
+   */
+  const landDiffers = landAcqDate.getTime() !== bldAcqDate.getTime();
+  const landOwnDate = landDiffers ? { decedentAcquisitionDate: undefined } : {};
+  /**
+   * 카드는 파트별 취득일(`acquisitionDate`)을 이미 갖는다. 건물이 상속·증여인데 토지 취득일이 다르면, 물려받은 `landAcquisitionDate`가
+   * 단건 엔진의 토지 원인 규칙(`collectSplitPartCauseIssues` — 「토지 취득원인을 「매매」로 지정하세요」)을 카드마다 다시 걸어
+   * 계산이 막힌다(겸용엔 그 칸이 없다). 이 조합에서만 카드에서 뺀다 — 종전엔 항상 400이던 조합이라 다른 경우의 값은 바뀌지 않는다.
+   */
+  const buildingInheritedOrGifted =
+    companionEngine.acquisitionCause === "inheritance" || companionEngine.acquisitionCause === "gift";
+  const landDateNeutral = landDiffers && buildingInheritedOrGifted ? { landAcquisitionDate: undefined } : {};
 
   /**
    * 배율초과 비사토 carve-out — 주택 **토지분**에서 비율만큼 떼어낸다.
@@ -229,6 +244,8 @@ export function buildMixedUsePartCards(
     // (GB와 같은 규칙·같은 함수). §77의3 건물 제외 축도 그대로 따라온다.
     reductions: reductionsForCard(companionEngine.reductions, isBuilding),
     displayAcquisitionMode: modeOf(isBuilding ? "building" : "land"),
+    ...(isBuilding ? {} : landOwnDate),
+    ...landDateNeutral,
     ...extra,
   });
 
