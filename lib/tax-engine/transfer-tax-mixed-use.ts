@@ -111,6 +111,7 @@ export function calcMixedUseTransferTax(
     meetsOneHouseRequirements,
     isUnregistered,
     isOneHouseExempt,
+    laterLandExemptExcluded,
     surchargeDeemedOneHouseBy155,
     surchargeDeemedOneHouseSource,
     surchargeDeemedRestsOnInheritedExclusion,
@@ -450,13 +451,14 @@ export function calcMixedUseTransferTax(
     transferDate,
     // §155의3①1호 「취득한 후 체결」 — 위 `exemptionReqInput`과 같은 취득일(건물 취득일 = 주택 부분 취득일).
     asset.buildingAcquisitionDate,
+    laterLandExemptExcluded,
   );
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
   const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
   // OH-17 — §154③ 본문 + 전체 12억 이하 비과세: 상가 부분도 주택 → 소득금액 0, 배율 초과 토지분만 비사토로.
   const commercialAsHouse = wholeBuildingDeemedHouse
-    ? exemptCommercialPartAsHouse(splitCommercialPart, excessResult.nonBizRatio)
+    ? exemptCommercialPartAsHouse(splitCommercialPart, excessResult.nonBizRatio, laterLandExemptExcluded)
     : undefined;
   const commercialPart = commercialAsHouse?.part ?? splitCommercialPart;
   if (commercialAsHouse) {

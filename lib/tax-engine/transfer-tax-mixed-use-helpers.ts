@@ -522,6 +522,8 @@ export function buildHousingPart(
    * 겸용주택은 건물 취득일이 주택 부분 취득일이다(`transfer-tax-mixed-use-exemption.ts`와 같은 값).
    */
   acquisitionDate?: Date,
+  /** 나중에 취득한 부수토지가 보유요건 미만(`laterLandExemptExcluded`) — 토지분은 12억 비과세·안분 없이 전액 과세. */
+  laterLandExemptExcluded = false,
 ): MixedUseHousingPart {
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
@@ -588,7 +590,10 @@ export function buildHousingPart(
       highValueBase > HIGH_VALUE_THRESHOLD ? (highValueBase - HIGH_VALUE_THRESHOLD) / highValueBase : 0;
   }
 
-  const proratedLandGain = Math.floor(Math.max(housingLandGainAfterNB, 0) * proratio);
+  // 분리취득 G-3과 같다 — 보유요건 미만인 나중 토지분은 비과세 대상이 아니므로 안분하지 않고 전액 과세하고, 12억 초과면 건물분만
+  // 안분한다(분모는 그대로 주택분 전체 — `split-part-rate.anchor` A-12c). 보유 2·3년 미만이라 장특(3년)도 0이다.
+  const landProratio = laterLandExemptExcluded ? 1 : proratio;
+  const proratedLandGain = Math.floor(Math.max(housingLandGainAfterNB, 0) * landProratio);
   const proratedBuildingGain = Math.floor(Math.max(gainSplit.buildingGain, 0) * proratio);
   const proratedTaxableGain = proratedLandGain + proratedBuildingGain;
 
@@ -753,16 +758,25 @@ export function calcWholeBuildingExcessLand(
 export function exemptCommercialPartAsHouse(
   part: MixedUseCommercialPart,
   nonBizRatio: number,
+  /**
+   * 나중에 취득한 부수토지가 보유요건 미만(`laterLandExemptExcluded`) — 주택으로 본 상가 부분의 **토지분**도 비과세 대상이 아니다.
+   * 배율 초과 몫을 뺀 토지 양도차익을 그대로 과세한다(보유 2·3년 미만이라 장특 0). 세율은 상가 토지 파트 그대로다 —
+   * §154③은 「법 제89조제1항제3호를 적용할 때」 주택으로 보는 규정이다.
+   */
+  laterLandExemptExcluded = false,
 ): { part: MixedUseCommercialPart; nonBusinessTransferredGain: number } {
   const nonBusinessTransferredGain = Math.floor(Math.max(part.landTransferGain, 0) * nonBizRatio);
+  const landIncomeAmount = laterLandExemptExcluded
+    ? Math.max(0, part.landTransferGain - nonBusinessTransferredGain)
+    : 0;
   return {
     part: {
       ...part,
-      landIncomeAmount: 0,
+      landIncomeAmount,
       buildingIncomeAmount: 0,
       longTermDeductionRate: 0,
       longTermDeductionAmount: 0,
-      incomeAmount: 0,
+      incomeAmount: landIncomeAmount,
       deemedHouseBy154_3Main: true,
     },
     nonBusinessTransferredGain,
