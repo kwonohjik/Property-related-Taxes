@@ -104,6 +104,27 @@ export function appurtenantLandMultiplier(
 }
 
 /**
+ * #17 후속(K1) — 부수토지 카드 한 장이 받는 배율 한도 몫(㎡). 일괄양도에서 한도(정착면적 × 배율)를 **주 자산 주택 카드의 토지가 먼저 쓰고**,
+ * 남은 한도를 부수토지 카드 묶음이 **면적 비율**로 나눈다(영 §154⑦·§167의5·§168의12에 필지 사이 소진 순서·안분 명문이 없다).
+ * route 분리(`resolveCompanionSplit`)와 화면 일체과세 배지(`useUnifiedRateBadge`)가 같은 값을 쓴다 — 갈리면 배지가 «자동 적용»이라
+ * 말하는 카드를 route가 초과분(비사업용 토지)으로 계산한다.
+ *
+ * @param share 주택 카드 토지 면적·부수토지 카드 합계 면적. 비우면 카드 단독 판정(종전)이다.
+ */
+export function appurtenantCardLimitShare(
+  limitArea: number,
+  cardAreaM2: number,
+  share: { houseLandAreaM2?: number; appurtenantCardsAreaM2?: number } = {},
+): { limitArea: number; excessArea: number } {
+  const remaining = Math.max(0, limitArea - (share.houseLandAreaM2 ?? 0));
+  const group = Math.max(share.appurtenantCardsAreaM2 ?? 0, cardAreaM2);
+  if (group <= remaining) return { limitArea: cardAreaM2, excessArea: 0 };
+  // 부수토지 카드가 하나뿐이면 남은 한도 전부가 이 카드 몫이다(주택 카드 토지가 없으면 종전 값 — 정착면적 × 배율).
+  const cardLimit = group === cardAreaM2 ? remaining : (remaining * cardAreaM2) / group;
+  return { limitArea: cardLimit, excessArea: cardAreaM2 - cardLimit };
+}
+
+/**
  * 영 §154⑦ 후단 · §167의5 · §168의12 후단 — **공익사업 수용** 양도의 용도지역 기준일 개정 시행일.
  *
  * 「…수용되는 경우(사업인정 고시일 전에 해당 토지를 취득한 경우로 한정한다)에는 사업인정 고시일 전날 현재 해당 토지의 용도지역을

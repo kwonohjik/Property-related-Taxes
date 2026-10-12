@@ -21,6 +21,7 @@ import {
   appurtenantLandMultiplier,
   type AppurtenantLandZone,
 } from "@/lib/tax-engine/appurtenant-land-rate";
+import { appurtenantCardLimitShare } from "@/lib/tax-engine/appurtenant-land-rate";
 
 /** 수동 세율 오버라이드 옵션 (부수토지 일체과세 §104①2호·영§167의5) */
 export const MANUAL_RATE_OVERRIDE_OPTIONS = [
@@ -49,14 +50,18 @@ export const MANUAL_RATE_OVERRIDE_OPTIONS = [
  *  1. 이 카드가 토지 자산
  *  2. primaryAsset이 신축(자가건축)
  *  3. 사용승인일 기준 보유 < 365일
- *  4. 면적이 한도 이내
+ *  4. 면적이 한도 이내 — 한도는 주 자산 주택 카드의 토지가 먼저 쓰고 남은 몫을 부수토지 카드들이 면적 비율로 나눈다(route와 같은 leaf)
  *  5. 수동 오버라이드 미지정
  */
 export function useUnifiedRateBadge(
   asset: AssetForm,
   primaryAsset: AssetForm | undefined,
   transferDate: string | undefined,
+  /** #17 후속(K1) — 한도 공유 면적(`appurtenantLimitShareOfAssets`). 비우면 카드 단독 판정(종전). */
+  limitShare?: { houseLandAreaM2?: number; appurtenantCardsAreaM2?: number },
 ): boolean {
+  const houseLandAreaM2 = limitShare?.houseLandAreaM2;
+  const appurtenantCardsAreaM2 = limitShare?.appurtenantCardsAreaM2;
   return useMemo(() => {
     if (!primaryAsset) return false;
     if (asset.assetKind !== "land") return false;
@@ -97,7 +102,11 @@ export function useUnifiedRateBadge(
     const limitArea = footprint * multiplier;
     const companionArea = parseFloat(asset.acquisitionArea || asset.transferArea || "0");
     if (companionArea <= 0) return false;
-    if (companionArea > limitArea) return false;
+    /**
+     * #17 후속(K1) — route(`resolveCompanionSplit`)가 주택 카드 토지를 한도에서 먼저 빼므로 배지도 같은 leaf로 잰다. 종전에는 카드 단독으로
+     * 한도 전체와 비교해, 주택 토지가 이미 한도를 넘은 카드에 «자동 적용»을 띄우고 route는 그 카드를 전부 초과분(비사업용 토지)으로 계산했다.
+     */
+    if (appurtenantCardLimitShare(limitArea, companionArea, { houseLandAreaM2, appurtenantCardsAreaM2 }).excessArea > 0) return false;
 
     return true;
   }, [
@@ -107,6 +116,8 @@ export function useUnifiedRateBadge(
     asset.acquisitionArea,
     asset.transferArea,
     transferDate,
+    houseLandAreaM2,
+    appurtenantCardsAreaM2,
   ]);
 }
 

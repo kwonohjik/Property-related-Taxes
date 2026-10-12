@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CompanionAssetCard } from "./CompanionAssetCard";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import type { AssetSplitMode } from "./OwnershipRatioInput";
+import { appurtenantLimitShareOfAssets } from "@/lib/calc/housing-excess-split";
 
 interface Props {
   assets: AssetForm[];
@@ -63,6 +64,9 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
   }
   /* eslint-enable react-hooks/refs */
 
+  // #17 후속(K1) — 배율 한도를 주 자산 주택 카드 토지와 부수토지 카드들이 함께 쓴다(일체과세 배지가 route와 같은 몫을 잰다).
+  const appurtenantLimitShare = assets.length > 1 ? appurtenantLimitShareOfAssets(assets[0], assets.slice(1)) : undefined;
+
   function commitAssets(next: AssetForm[]) {
     assetsRef.current = next;
     onChange(next);
@@ -105,6 +109,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           onAddAsset={(patch) => addAsset(patch)}
           hasIncrementAsset={assets.some((a) => a.isReplotIncrement)}
           primaryAsset={idx > 0 ? assets[0] : undefined}
+          appurtenantLimitShare={idx > 0 ? appurtenantLimitShare : undefined}
           isOneHouseSingle={isOneHouseSingle}
           judgmentLoaded={judgmentLoaded}
           wasRegulatedAtAcquisition={wasRegulatedAtAcquisition}

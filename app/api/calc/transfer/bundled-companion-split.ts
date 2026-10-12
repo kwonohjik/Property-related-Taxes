@@ -15,6 +15,7 @@
 
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { resolveCompanionLandRate } from "@/lib/tax-engine/appurtenant-land-rate";
+import { appurtenantCardLimitShare } from "@/lib/tax-engine/appurtenant-land-rate";
 
 // ─── 타입 ───────────────────────────────────────────────────────
 
@@ -51,8 +52,9 @@ export interface PrimarySplitContext {
 }
 
 /**
- * #17 후속(K1) — 한도 공유 입력. 주택 카드 토지는 주 자산이 «토지·건물 모두 본인 소유» 주택일 때만 센다(엔진이 그 카드의 배율 초과를
- * 같은 `acquisitionArea`로 따로 판정하는 범위 — `housingExcessAreaOfInput`·`resolveAppurtenantZoneInputs`).
+ * #17 후속(K1) — 한도 공유 입력. 주택 카드 토지는 주 자산이 «토지·건물 모두 본인 소유» 주택일 때만 센다(엔진이 그 카드의 배율 초과
+ * 면적을 같은 `acquisitionArea`로 재는 범위 — `housingExcessAreaOfInput`). 엔진이 그 초과분을 **분리하는지**(`housingExcessSplitAppliesToInput`)는
+ * 보지 않는다 — `resolveCompanionSplit` 주석 «분리 범위 밖» 참조. 화면 배지는 같은 사실을 폼에서 읽는다(`appurtenantLimitShareOfAssets`).
  */
 export function appurtenantLimitShareOf(
   primary: Pick<TransferTaxItemInput, "propertyType" | "selfOwns" | "acquisitionArea">,
@@ -151,19 +153,20 @@ export function resolveCompanionSplit(
    *
    * 영 §154⑦·§167의5·§168의12는 «정착면적 × 배율 이내»라는 면적 범위만 정할 뿐 여러 필지 사이의 소진 순서·안분 명문이 없다.
    * 종전에는 카드마다 한도 전체를 따로 재어 한도가 이중으로 쓰였다(주택 카드 500㎡ · 부수토지 카드 100㎡ · 한도 300㎡ → 주택 카드 초과
-   * 200㎡ 분리 + 부수토지 카드 100㎡ «배율 이내» — 합계 초과 300㎡ 중 200㎡만 과세). 주택 카드의 초과분은 엔진이 그 카드의 토지 면적만으로
-   * 이미 판정한다(#17 `housingExcessAreaOfInput`) — 그 판정을 바꾸지 않고 남은 한도만 부수토지 카드에 준다. 부수토지 카드끼리는 단건 분리
-   * 경로와 같은 면적 비율 규칙이다(파일 헤더 «배분 키»). 땅값·취득일이 필지마다 같으면 결과는 전체를 한 필지로 본 단건 분리와 같다.
+   * 200㎡ 분리 + 부수토지 카드 100㎡ «배율 이내» — 합계 초과 300㎡ 중 200㎡만 과세). 주택 카드의 초과 면적은 엔진이 그 카드의 토지 면적만으로
+   * 잰다(#17 `housingExcessAreaOfInput`) — 그 판정을 바꾸지 않고 남은 한도만 부수토지 카드에 준다. 부수토지 카드끼리는 단건 분리
+   * 경로와 같은 면적 비율 규칙이다(파일 헤더 «배분 키»). 산식은 화면 배지와 같은 leaf다(`appurtenantCardLimitShare`).
+   * 주택 카드가 분리 범위 안이고 땅값·취득일이 필지마다 같으면 결과는 전체를 한 필지로 본 단건 분리와 같다(parity).
+   *
+   * ⚠️ **분리 범위 밖**(`housingExcessSplitAppliesToInput` false — 2005-04-30 전 취득·상속·증여·지분·부담부증여·신축·§164⑨ 환산 등)이면
+   * 엔진은 주택 카드의 초과분을 **분리하지 못하고** 고지만 낸다(«초과분 미분리(과소 가능)» — 초과분은 비사업용 토지라고 함께 말한다).
+   * 그래도 여기서는 한도를 주택 카드 토지에서 먼저 뺀다 — 부수토지 카드는 제 금액을 따로 들고 있어 초과분을 가를 수 있고, 초과분은 법상
+   * 비사업용 토지다(소득세법 §104의3①5호, F-13 Q-2). 그래서 이 모집단에서는 단건(한 필지 — 전액 미분리 · 비과세)과 일괄(카드만 초과분
+   * 과세)이 **일부러 다르다** — 단건이 입력 경로 부재로 과소인 것이지 일괄이 과대인 것이 아니다(anchor `dec17-companion-shared-limit` «분리 범위 밖»).
    */
   const companionArea = companion.areaM2;
-  const remainingLimit = Math.max(0, resolution.limitArea - (primary.houseLandAreaM2 ?? 0));
-  const groupArea = Math.max(primary.appurtenantCardsAreaM2 ?? 0, companionArea);
-  const groupExcess = Math.max(0, groupArea - remainingLimit);
-  if (groupExcess <= 0) return { applied: false, withinLimit: true };
-
-  // 이 카드 몫의 한도 — 부수토지 카드가 하나뿐이고 주택 카드 토지가 없으면 종전 값(정착면적 × 배율) 그대로다.
-  const limitArea = groupArea === companionArea ? remainingLimit : (remainingLimit * companionArea) / groupArea;
-  const excessArea = companionArea - limitArea;
+  const { limitArea, excessArea } = appurtenantCardLimitShare(resolution.limitArea, companionArea, primary);
+  if (excessArea <= 0) return { applied: false, withinLimit: true };
   const totalArea = companionArea;
 
   // 비율은 정밀 부동소수로 유지, 금액 안분 시에만 floor 적용
