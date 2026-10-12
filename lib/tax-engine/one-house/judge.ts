@@ -103,6 +103,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     nonResidentHoldingPeriod: facts.nonResidentHoldingPeriod,
     exemptionHoldingStartDate: facts.exemptionHoldingStartDate,
     residenceRightConversionDate: facts.residenceRightConversionDate,
+    newBuildRightAcquisitionDate: facts.newBuildRightAcquisitionDate,
     giftHouseholdBasis: facts.giftHouseholdBasis,
   } satisfies OneHouseJudgeInput;
 
@@ -181,6 +182,7 @@ export function extractOneHouseFacts(input: OneHouseJudgeInput): OneHouseFacts {
     nonResidentHoldingPeriod: input.nonResidentHoldingPeriod,
     exemptionHoldingStartDate: input.exemptionHoldingStartDate,
     residenceRightConversionDate: input.residenceRightConversionDate,
+    newBuildRightAcquisitionDate: input.newBuildRightAcquisitionDate,
     giftHouseholdBasis: input.giftHouseholdBasis,
   } satisfies OneHouseFacts;
 

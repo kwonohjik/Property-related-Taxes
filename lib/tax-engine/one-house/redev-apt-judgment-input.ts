@@ -110,6 +110,8 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
     ...input,
     propertyType: "housing",
     acquisitionDate: redevAptJudgmentAcquisitionDate(input),
+    // §156의2⑥ 신축주택 갈래 — 이 신축주택이 된 입주권의 취득일(승계조합원 = 입주권 승계일 · 토지 출자 = 인가일).
+    ...(redevNewBuildRightAcquisitionDate(input) ? { newBuildRightAcquisitionDate: redevNewBuildRightAcquisitionDate(input) } : {}),
     ...(landContributed
       ? {
           // 보유 기산일 = 사용승인일(G3-4).
@@ -130,6 +132,22 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
       residencePeriodMonths: input.residencePeriodMonths,
     }),
   };
+}
+
+/**
+ * 재개발 신축주택이 된 **조합원입주권의 취득일** — 취득일이 준공일로 바뀌는 두 축에서만 값이 있다(#12).
+ *   · 승계조합원 — 입주권 승계 취득일(`acquisitionDate` 원값)
+ *   · 토지만 출자한 원조합원 — 관리처분계획 인가일(그 전에는 토지만 보유했다)
+ * 주택을 출자한 원조합원은 종전주택 취득일이 그대로라(§154⑧1호 통산) `undefined`.
+ */
+export function redevNewBuildRightAcquisitionDate(
+  input: Pick<TransferTaxInput, "acquisitionDate" | "redevelopment" | "propertyType">,
+): Date | undefined {
+  const redev = input.redevelopment;
+  if (!isRedevApt(input) || !redev?.completionDate) return undefined;
+  if (redev.isSuccessorMember === true) return input.acquisitionDate;
+  if (isLandContributedOriginalApt(input)) return redev.approvalDate;
+  return undefined;
 }
 
 /**

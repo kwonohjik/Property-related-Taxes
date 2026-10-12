@@ -216,6 +216,7 @@ export type Article89Clause2Input = Pick<
   | "generalHouseGiftedFromDecedentWithin2yr"
   | "generalHouseGiftDate"
   | "generalHouseRightAtInheritance"
+  | "newBuildRightAcquisitionDate"
   | "mergedHouseholdFirstHouse"
   | "isFirstTransferredInMerge"
   | "culturalHeritageHouse"

@@ -16,6 +16,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { qualifiesAsInheritanceGeneralHouse } from "@/lib/tax-engine/data/inheritance-general-house-era";
 import { isSecondClausePoolHouse } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
+import { landContributedOriginalApt } from "./redev-field-scope";
 
 const toDate = (v: string | undefined): Date | undefined => {
   if (!v) return undefined;
@@ -30,10 +31,13 @@ export function generalHouseRightAtInheritanceVisible(
   if (!isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) return false;
   // E-8 — 승계조합원 신축주택은 엔진이 준공일·입주권 승계일로 판정하고 이 선언을 읽지 않는다
   //       (`resolveInheritedHouseExclusionFromInput`). 준공일이 없으면 엔진도 종전 동작이라 그대로 둔다.
+  //       #12 — 토지만 출자한 원조합원 신축주택도 같다(준공일 · 관리처분계획 인가일). 권리 축(§156의2⑥)도 선언 대신
+  //       `newBuildRightAcquisitionDate`로 판정한다. 토지 출자 판정은 ⑤④⑧ 공용 술어(`landContributedOriginalApt`)를 쓴다.
   const primary = form.assets?.[0];
   if (
-    primary?.assetKind === "redevelopment_apt" &&
-    primary.redevIsSuccessorMember === "yes" &&
+    primary &&
+    ((primary.assetKind === "redevelopment_apt" && primary.redevIsSuccessorMember === "yes") ||
+      landContributedOriginalApt(primary)) &&
     toDate(primary.redevCompletionDate) !== undefined
   ) {
     return false;

@@ -103,6 +103,8 @@ const JUDGE_INPUT_KEYS = [
   "exemptionHoldingStartDate",
   // #12 — 토지 출자 원조합원 완공APT의 입주권 전환 완료일(인가일·분양계약일 중 늦은 날) — 거주요건 예외 판정. 엔진이 채운다
   "residenceRightConversionDate",
+  // #12 — 재개발 신축주택이 된 입주권의 취득일(승계일 · 토지 출자는 인가일) — §156의2⑥ 신축주택 갈래. 엔진이 채운다
+  "newBuildRightAcquisitionDate",
   // 결정 #33·#34·#38 — 증여받은 주택의 증여자와 같은 세대 사실
   "giftHouseholdBasis",
   // 결정 #42 — 조특법 §71의2 후보 중 사실을 확정하지 못한 건(엔진이 채운다 · 주택 수 제외 스텝의 echo)
@@ -226,6 +228,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   nonResidentHoldingPeriod: { startDate: D("2019-01-01"), endDate: D("2020-06-01"), residedAtConversion: true },
   exemptionHoldingStartDate: D("2021-02-03"),
   residenceRightConversionDate: D("2020-01-10"),
+  newBuildRightAcquisitionDate: D("2016-03-01"),
   giftHouseholdBasis: {
     giftDate: D("2019-03-04"),
     donorAcquisitionDate: D("2012-05-06"),

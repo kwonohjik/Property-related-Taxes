@@ -101,6 +101,8 @@ export type OneHouseJudgeInput = Pick<
   | "exemptionHoldingStartDate"
   // ── §154① 거주요건 입주권 전환 시점 예외 — 토지 출자 원조합원 완공APT. 엔진이 채운다(#12) ──
   | "residenceRightConversionDate"
+  // ── 재개발 신축주택이 된 입주권의 취득일 — §156의2⑥ 신축주택 갈래. 엔진이 채운다(#12) ──
+  | "newBuildRightAcquisitionDate"
   // ── 증여받은 주택의 증여자와 같은 세대 통산 사실 (결정 #33·#34·#38) ──
   | "giftHouseholdBasis"
 >;
@@ -222,6 +224,9 @@ export type OneHouseFacts = {
 
   /** ⚠️ 사용자 입력이 아니다 — 토지 출자 원조합원 완공APT의 입주권 전환 완료일(인가일·분양계약일 중 늦은 날). 계산기 엔진이 채운다(#12). */
   residenceRightConversionDate?: TransferTaxInput["residenceRightConversionDate"];
+
+  /** ⚠️ 사용자 입력이 아니다 — 재개발 신축주택이 된 조합원입주권의 취득일(승계일 · 토지 출자는 인가일). 계산기 엔진이 채운다(#12). */
+  newBuildRightAcquisitionDate?: TransferTaxInput["newBuildRightAcquisitionDate"];
   /** 증여받은 주택 — 증여자와 계속 같은 세대 사실(통산·「취득 당시」 기준일). 날짜는 `gift-household-basis.ts` leaf가 고른다. */
   giftHouseholdBasis?: TransferTaxInput["giftHouseholdBasis"];
 };
