@@ -117,14 +117,15 @@ describe("X1-1 B 불충족 — 임대주택을 주택 수에 되돌린다", () =
     expect((r.warnings ?? []).some((x) => x.includes("세대 주택 수에 넣어"))).toBe(false);
     expect(r.totalTax).toBe(baseline(1_500_000_000).totalTax);
   });
-  it("B-7 0호 짝(§154⑩ 경로) — 되돌릴 임대주택이 없으므로 종전 경고를 유지한다 (범위 밖)", () => {
+  it("B-7 0호 짝(§154⑩ 경로) — 되돌릴 임대주택은 없지만 §154⑩ 불충족이면 12억 초과도 비과세를 거둔다 (사용자 결정 2026-10-12)", () => {
     const r = calculateTransferTax(
       input(1_500_000_000, 1, [], {}, { wasRegisteredRentalOrChildcare: false }),
       rates,
     );
     expect((r.warnings ?? []).some((x) => x.includes("세대 주택 수에 넣어"))).toBe(false);
-    // 12억 초과인데도 종전 B 경고는 isExempt뿐이라 고지가 없었다 — 부분 비과세에도 고지한다
-    expect(r.isPartialExempt || r.isExempt).toBe(true);
-    expect((r.warnings ?? []).some((x) => x.includes("주택수에 산입될 수 있어"))).toBe(true);
+    // 종전에는 부분 비과세가 남고 「주택수에 산입될 수 있어」 재확인 고지만 붙었다
+    expect(r.isPartialExempt || r.isExempt).toBe(false);
+    expect((r.warnings ?? []).some((x) => x.includes("영 §154⑩ 거주요건 특례가 요건을 충족하지 못해"))).toBe(true);
+    expect((r.warnings ?? []).some((x) => x.includes("주택수에 산입될 수 있어"))).toBe(false);
   });
 });
