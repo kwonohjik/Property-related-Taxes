@@ -196,6 +196,10 @@ export function qualifyInheritedRight(
     transferDate: input.transferDate,
     // 신축주택 갈래는 ⑥·④ 모양에서만(⑦·⑤ 후단에는 포함 문구가 없다).
     rightAtInheritance: newBuildAllowed ? input.generalHouseRightAtInheritance : undefined,
+    // #12 — 재개발 신축주택(승계조합원 · 토지 출자 원조합원)은 「상속개시 당시 보유한 조합원입주권」을 선언이 아니라
+    //   그 입주권의 취득일(승계일 · 인가일)로 정한다 — §155② 경로(`resolveInheritedHouseExclusionFromInput`)와 같은 규칙.
+    //   종전에는 선언만 읽었고 화면은 이 경우 선언 칸을 열지 않아, 상속개시 당시 입주권을 보유했는데도 과세됐다.
+    successorRightAcquisitionDate: newBuildAllowed ? input.newBuildRightAcquisitionDate : undefined,
   });
   if (held !== "yes") {
     // 모름 = 혜택 불성립 + 확인 필요(2026-10-04 원칙 1). 날짜로 확정된 `no`는 확정 불성립이다.
