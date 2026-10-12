@@ -100,6 +100,12 @@ export function buildSplitPayload(
   // 경우만 true(겸용·selfOwns 강제 분리에서 날짜가 같으면 false).
   // 엔진 취득가액 축의 파트별 완결 게이트(§97①1호·§114⑦) — 판정 단일 소스는 그 헬퍼 1곳.
   const separateAcquisition = isSplitActive && isSeparateAcquisition(primary);
+  // 파트 입력(구분 양도가액·양도시 감정평가·파트 취득가액·매매사례·자본적지출)이 **화면에 있는가** — 분리 섹션은 별개취득 토글
+  // (`hasSeperateLandAcquisitionDate`)·소유자 분리일 때만 렌더된다. 배율 초과분 분리만으로 활성이면 그 칸들이 없다(카드는 기준시가 5칸만 받는다).
+  // 별개취득을 켰다 끈 잔존값이 그대로 실리면 엔진이 파트 값을 우선해 §166⑥ 기준시가 안분을 조용히 바꾼다(#17 후속 검토 — 감정 4.5억 시료
+  // 11,077,892 → 잔존 토지 취득가액 1억 25,835,260). 술어는 `isSplitPayloadActive`의 첫 항(별개취득 토글·소유자 분리)과 같다.
+  const partInputsActive =
+    isSplitActive && (primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both");
 
   // 파트 모드 미선택("") 시 자산 전체 레거시 플래그에서 파생 —
   // UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
@@ -133,9 +139,9 @@ export function buildSplitPayload(
   // 파트별 취득가액 직접입력 게이트 — actual·appraisal 모드만(환산·매매사례는 총액을 사용자가 입력하지 않음).
   // UI가 분리 칸을 노출하는 조건과 동일(LandBuildingSplitSection showAcqInputs 파트별 판정).
   const landAcqDirectActive =
-    isSplitActive && landOwned && (landAcqMode === "actual" || landAcqMode === "appraisal");
+    partInputsActive && landOwned && (landAcqMode === "actual" || landAcqMode === "appraisal");
   const buildingAcqDirectActive =
-    isSplitActive && buildingOwned && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
+    partInputsActive && buildingOwned && (buildingAcqMode === "actual" || buildingAcqMode === "appraisal");
   // 양도가액 직접입력 게이트 — saleSplitMode==="actual"(구분양도) 시만.
   //
   // 🔴 **엔진은 `saleSplitMode`를 읽지 않는다** (2026-08-06 실측 — `types/transfer.types.ts`의
@@ -145,7 +151,7 @@ export function buildSplitPayload(
   // ⇒ 그래서 이 게이트는 "사용자 의도 보호"가 아니라 **유일한 방어선**이다. "기준시가 비율 안분"
   //    으로 되돌린 뒤 잔존한 직접 입력값이 여기를 통과하면, 엔진은 그것을 구분 기재로 보고
   //    §100③ 30% 판정까지 태운다(`transfer-tax-split-sale-price.ts`).
-  const saleDirectActive = isSplitActive && saleSplitMode === "actual";
+  const saleDirectActive = partInputsActive && saleSplitMode === "actual";
   // 양도시 기준시가 — 분리 축이 활성이면 **항상 전송**한다(2026-07-29 S1 해소).
   //
   // 종전 게이트는 `apportioned || 어느 파트든 환산`이었다. 그러나 validate V4가
@@ -222,7 +228,7 @@ export function buildSplitPayload(
     //
     // ⚠️ `ratioed`(지분 스케일)를 **걸지 않는다** — 위 기준시가(:88)와 같은 이유다. 비율로만
     //    소비되어 스케일해도 결과가 같고, 물건 전체의 평가액이라 지분으로 깎을 대상이 아니다.
-    ...(isSplitActive
+    ...(partInputsActive
       ? {
           landAppraisalAtTransfer: parseAmount(primary.landAppraisalAtTransfer) || undefined,
           buildingAppraisalAtTransfer: parseAmount(primary.buildingAppraisalAtTransfer) || undefined,
@@ -248,14 +254,14 @@ export function buildSplitPayload(
       : {}),
     // 파트별 매매사례가액 — salesCase 모드 시만. 별개 취득이면 미입력 = 차단(§176의2③1호 —
     // 탐색 창이 파트별 취득일 ±3개월로 달라 총액 안분 근거 없음), 동시 취득이면 §166⑥ 안분 fallback.
-    ...(isSplitActive && landOwned && landAcqMode === "salesCase"
+    ...(partInputsActive && landOwned && landAcqMode === "salesCase"
       ? { landSalesCaseValue: ratioed(primary.landSalesCaseValue) }
       : {}),
-    ...(isSplitActive && buildingOwned && buildingAcqMode === "salesCase"
+    ...(partInputsActive && buildingOwned && buildingAcqMode === "salesCase"
       ? { buildingSalesCaseValue: ratioed(primary.buildingSalesCaseValue) }
       : {}),
-    // 자본적지출 2필드 — 모드 무관 항상 입력 가능(UI 상시 노출).
-    ...(isSplitActive
+    // 자본적지출 2필드 — 모드 무관 항상 입력 가능(분리 섹션 상시 노출 — 배율 초과분 분리만이면 칸이 없다).
+    ...(partInputsActive
       ? {
           landDirectExpenses: ratioed(primary.landDirectExpenses),
           buildingDirectExpenses: ratioed(primary.buildingDirectExpenses),

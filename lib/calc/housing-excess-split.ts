@@ -47,9 +47,11 @@ function factsOf(asset: AssetForm, excessAreaM2: number) {
       !phdFlagEffective(asset) &&
       !hasPre1990LandEstimation(asset),
     isPurchase: asset.acquisitionCause === "purchase",
-    // 환산 + 공익수용만 범위 밖(§164⑨1호 주택 총액 특례가 분리 경로에 닿지 않는다) — 엔진 어댑터는 ④가 싣는 `useEstimatedAcquisition`·`transferCause`로 같은 판정.
-    isExpropriationConversion:
-      deriveLegacyPartAcqMode(asset) === "estimated" && asset.transferCause === "public_expropriation",
+    // 환산 + 공익수용·공매·경락만 범위 밖(§164⑨1호·2호 환산 분모 특례가 분리 경로에 닿지 않는다) — 엔진 어댑터는 ④가 싣는
+    // `useEstimatedAcquisition`·`transferCause`·`isAuctionTransfer`(주택은 2호 전송 대상 — `isAuctionEligibleAssetKind`)로 같은 판정.
+    isSec164_9Conversion:
+      deriveLegacyPartAcqMode(asset) === "estimated" &&
+      (asset.transferCause === "public_expropriation" || asset.isAuctionTransfer === true),
     ownsBoth: (effectiveSelfOwns(asset) ?? "both") === "both",
     isSeparateAcquisition: isSeparateAcquisition(asset),
     isBurdenedGift: asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift",
