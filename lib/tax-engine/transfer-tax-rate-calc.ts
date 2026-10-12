@@ -435,11 +435,13 @@ export function calcTax(
   // T-2.5: 단기보유 특례세율 (소득세법 §104①2~3호, 7~8호)
   // 사례 48 — 승계조합원 신축APT 양도 시 기산일 = 준공일 (사전-2019-법령해석재산-0649).
   // 보유기간 기산(rateBasisAcquisitionDate·holdingMonthsTotal)은 T-2 앞에서 계산됨 (§104② 공유).
+  // 겸용 컴패니언 상가 카드(§154③ 본문 주택 의제)는 비과세만 주택이고 세율은 비주택이다(`nonHousingForRate`).
   const isHousingLikeProp =
-    input.propertyType === "housing" ||
-    input.propertyType === "right_to_move_in" ||
-    input.propertyType === "presale_right" ||
-    input.propertyType === "redevelopment_apt"; // 신축APT는 주택 — §104①2/3호 60%/70%
+    !input.nonHousingForRate &&
+    (input.propertyType === "housing" ||
+      input.propertyType === "right_to_move_in" ||
+      input.propertyType === "presale_right" ||
+      input.propertyType === "redevelopment_apt"); // 신축APT는 주택 — §104①2/3호 60%/70%
   // P3 특칙 (§98의3④·§98의5③·§98의6③): 세율 = §104①1호 강제 — 단기세율(§104①2·3호) 배제.
   // "§104①3호 불구" 법문이나 "세율은 1호" 강제이므로 2호(1년 미만)도 배제됨 (설계 검토 #4).
   /**

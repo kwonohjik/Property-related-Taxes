@@ -670,6 +670,14 @@ export interface TransferTaxInput {
    */
   housingRateBasisDate?: Date;
   /**
+   * [엔진 내부] §104① 단기세율을 **비주택**(「주택, 조합원입주권」 괄호 밖)으로 판정한다 — 겸용주택 컴패니언의 상가 카드 전용.
+   *
+   * 「소득세법 시행령」 §154③ 본문은 「법 제89조제1항제3호를 적용할 때」 겸용주택 전부를 주택으로 보는 규정이라, 그 상가 카드는
+   * 비과세 판정을 위해 `propertyType: "housing"`으로 싣지만 세율은 상가 토지·건물 그대로다(단건 겸용 `rateParts`의
+   * `commercial_land`·`commercial_building`). 사용자 입력 필드가 아니다.
+   */
+  nonHousingForRate?: boolean;
+  /**
    * [엔진 내부] 「소득세법」 §95④ **후단** — 가업상속공제가 적용된 **비율에 해당하는 자산**의
    * LTHD 보유기간을 피상속인 취득일부터 기산한다.
    *
