@@ -9,6 +9,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { applyRatio } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { deriveLegacyPartAcqMode } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
@@ -102,8 +103,10 @@ export function buildSplitPayload(
 
   // 파트 모드 미선택("") 시 자산 전체 레거시 플래그에서 파생 —
   // UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
-  const landAcqMode = effectivePartAcqMode(primary.landAcqMode, primary);
-  const buildingAcqMode = effectivePartAcqMode(primary.buildingAcqMode, primary);
+  // #17-4 — 배율 초과분 분리 경로는 파트 방식 라디오가 화면에 없다(별개취득·소유자 분리가 아니다). 저장된 파트 방식은 별개취득을 켰다 끈
+  //   잔재일 수 있어 자산 단위 방식으로 싣는다 — ⑤⑧의 술어(`housingExcessNeedsLandSplit`)가 읽는 방식과 같은 값.
+  const landAcqMode = excessSplit ? deriveLegacyPartAcqMode(primary) : effectivePartAcqMode(primary.landAcqMode, primary);
+  const buildingAcqMode = excessSplit ? deriveLegacyPartAcqMode(primary) : effectivePartAcqMode(primary.buildingAcqMode, primary);
   const saleSplitMode = primary.saleSplitMode ?? "apportioned";
 
   // 🔴 **비소유 파트 차단** — 소유 축(`selfOwns`)이 취득가액 전송 게이트의 일부다(2026-08-13).

@@ -9,10 +9,13 @@
  * 주 자산(primary)만 대상이다 — 함께 양도 주택 카드는 ④가 소재지·정착면적을 싣지 않아(신축 취득 제외) 분리 입력 경로가 없다.
  * 대신 ④가 `companionHousingLand`로 면적 사실만 실어 엔진 고지(`housingExcessUnseparatedNotice`)를 발화시킨다(분리·세액 불변).
  * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이면 «취득 당시 개별주택가격»이 없어 이 경로를 타지 않는다(막지 않고 고지).
+ *
+ * 취득가액 산정 방식은 자산 단위 방식(`deriveLegacyPartAcqMode`)만 본다(#17-4) — 이 경로는 토지 취득일을 따로 받지 않아 파트별 방식 라디오가
+ * 화면에 없다. 저장된 파트 방식(`landAcqMode`·`buildingAcqMode`)은 별개취득을 켰다 끈 잔재일 수 있어 읽지 않고, ④도 자산 단위 방식을 싣는다.
  */
 import { housingExcessAreaM2, housingExcessSplitApplies, isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
-import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
@@ -44,9 +47,9 @@ function factsOf(asset: AssetForm, excessAreaM2: number) {
       !phdFlagEffective(asset) &&
       !hasPre1990LandEstimation(asset),
     isPurchase: asset.acquisitionCause === "purchase",
-    // ④ `acquisitionMethod` 도출과 같은 플래그 — 환산·감정·매매사례는 범위 밖(엔진 어댑터도 `acquisitionMethod`로 같은 판정).
-    isActualAcquisition:
-      effectivePartAcqMode(asset.landAcqMode, asset) === "actual" && effectivePartAcqMode(asset.buildingAcqMode, asset) === "actual",
+    // 환산 + 공익수용만 범위 밖(§164⑨1호 주택 총액 특례가 분리 경로에 닿지 않는다) — 엔진 어댑터는 ④가 싣는 `useEstimatedAcquisition`·`transferCause`로 같은 판정.
+    isExpropriationConversion:
+      deriveLegacyPartAcqMode(asset) === "estimated" && asset.transferCause === "public_expropriation",
     ownsBoth: (effectiveSelfOwns(asset) ?? "both") === "both",
     isSeparateAcquisition: isSeparateAcquisition(asset),
     isBurdenedGift: asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift",
