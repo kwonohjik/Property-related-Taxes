@@ -545,6 +545,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
             장기보유공제 ({Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월, {fmtPct(preApproval.lthdRate)})
           </p>
+          {preApproval.lthdRateBasis && <p className="text-micro text-violet-600">{preApproval.lthdRateBasis}</p>}
           <Row label="장기보유특별공제" value={preApproval.lthd} />
         </div>
 
@@ -566,6 +567,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-600">
             장기보유공제 ({Math.floor(postApprovalExistingHouse.holdingMonths / 12)}년 {postApprovalExistingHouse.holdingMonths % 12}개월, {fmtPct(postApprovalExistingHouse.lthdRate)})
           </p>
+          {postApprovalExistingHouse.lthdRateBasis && <p className="text-micro text-violet-600">{postApprovalExistingHouse.lthdRateBasis}</p>}
           <Row label="장기보유특별공제" value={postApprovalExistingHouse.lthd} />
         </div>
         )}
