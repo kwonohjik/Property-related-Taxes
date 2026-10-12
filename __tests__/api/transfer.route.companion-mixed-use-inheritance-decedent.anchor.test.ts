@@ -182,26 +182,27 @@ describe("컴패니언 겸용주택 — 상속 피상속인 취득일", () => {
   describe("토지를 상속개시일과 다른 날(2023-10-01) 취득 — 종전 ⑫ 400(「매매」로 지정하라는데 겸용엔 그 칸이 없음)", () => {
     const SEP = { landAcquisitionDate: "2023-10-01", hasSeperateLandAcquisitionDate: true, mixedAcqLandPricePerSqmAtBuildingAcq: "1000000" };
 
-    it("계산된다 — 토지 카드는 자기 취득일(70%·50%), 건물 카드는 피상속인 취득일(누진) · 단건 겸용 `isInheritedPart`와 같은 규칙", async () => {
+    it("계산된다 — 주택 카드는 주택분 늦은 날(토지 2023-10-01)로 둘 다 70%(§104①2호 괄호) · 상가 토지 50% · 상가 건물은 피상속인 취득일(누진)", async () => {
       const { a, card } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2000-01-01" });
       expect(card("mu-house-land").appliedRate).toBe(0.7);
+      expect(card("mu-house-bld").appliedRate).toBe(0.7);
       expect(card("mu-comm-land").appliedRate).toBe(0.5);
-      expect(card("mu-house-bld").rateGroup).toBe("progressive");
       expect(card("mu-comm-bld").rateGroup).toBe("progressive");
-      expect(a.totalTax).toBe(82_045_239);
+      expect(a.totalTax).toBe(88_756_549);
     }, 60_000);
 
-    it("긍정 짝 — 피상속인 2023-06-01이면 건물 카드도 단기(60%·40%)", async () => {
+    it("긍정 짝 — 피상속인 2023-06-01이면 상가 건물 카드도 단기(40%) · 주택 카드는 늦은 날 기준 70%", async () => {
       const { a, card } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2023-06-01" });
-      expect(card("mu-house-bld").appliedRate).toBe(0.6);
+      expect(card("mu-house-bld").appliedRate).toBe(0.7);
       expect(card("mu-comm-bld").appliedRate).toBe(0.4);
-      expect(a.totalTax).toBe(92_284_539);
+      // 주택 토지 카드 차손(-35,714,285)이 같은 70% 세율군의 주택 건물 카드 차익과 먼저 통산된다(「소득세법 시행령」 §167의2①).
+      expect(a.totalTax).toBe(89_497_053);
     }, 60_000);
 
     it("§77 — 토지 카드는 자기 취득일(2023-10-01)로 불성립, 건물 카드만 감면", async () => {
       const { a } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2000-01-01" }, true);
-      expect(a.reductionAmount).toBe(3_289_250);
-      expect(a.totalTax).toBe(79_084_913);
+      expect(a.reductionAmount).toBe(5_866_193);
+      expect(a.totalTax).toBe(84_026_973);
     }, 60_000);
   });
 });

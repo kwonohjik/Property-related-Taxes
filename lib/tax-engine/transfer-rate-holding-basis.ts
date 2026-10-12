@@ -47,6 +47,8 @@ export interface RateBasisFacts {
   decedentAcquisitionDate?: Date;
   /** §104②2호 — 증여자가 그 자산을 취득한 날 */
   donorAcquisitionDate?: Date;
+  /** 겸용주택 컴패니언 주택 카드의 주택분 단일 기산일(§104② 단서 반영 후) — `TransferTaxInput.housingRateBasisDate` */
+  housingRateBasisDate?: Date;
 }
 
 /** 기산일을 정한 규칙 — 본문(own) · 1호 상속(decedent) · 2호 이월과세(donor). 결과 echo가 날짜 비교로 재추론하지 않게 판정이 직접 말한다. */
@@ -69,9 +71,13 @@ export function resolveRateBasis(facts: RateBasisFacts): { date: Date; rule: Rat
   return { date: facts.acquisitionDate, rule: "own" };
 }
 
-/** §104② 세율 판정용 취득일 — `resolveRateBasis`의 날짜만. */
+/**
+ * §104② 세율 판정용 취득일 — `resolveRateBasis`의 날짜만.
+ * 겸용주택 컴패니언 주택 카드는 주택분 단일 기산일(`housingRateBasisDate`)이 앞선다 — 그 날짜는 카드들의
+ * 이 함수 값 중 늦은 날이라 §104② 단서가 이미 반영돼 있다.
+ */
 export function resolveRateBasisAcquisitionDate(facts: RateBasisFacts): Date {
-  return resolveRateBasis(facts).date;
+  return facts.housingRateBasisDate ?? resolveRateBasis(facts).date;
 }
 
 /**
