@@ -111,6 +111,14 @@ describe("#47 ⑤⑧ 게이트의 조정대상지역 = ④와 같은 실효값 (
     expect(spouseHoldingQuestionApplies(form(rows(), { isRegulatedArea: false }, { regionCode: "" }))).toBe(false);
   });
 
+  it("[SQ-15] 자산 주소가 없으면 폼 전역 주소(form.regionCode=강남)를 읽는다 — ④ 폴백(primary.regionCode || form.regionCode)과 짝", async () => {
+    const f = form(rows(), { isRegulatedArea: false, regionCode: "1168010100" }, { regionCode: "" });
+    expect(spouseHoldingQuestionApplies(f)).toBe(true);
+    expect(spouseIssues(f)).toHaveLength(2);
+    // 엔진도 폼 전역 주소로 중과한다
+    expect((await runCalc(f)).totalTax).toBe(433_686_000);
+  }, 60_000);
+
   it("[SQ-14] ⑤ 편집 창 — 주소=조정·토글 꺼짐이면 배우자 쪽 행에 질문이 보인다", () => {
     const f = form(rows(), { isRegulatedArea: false });
     render(<HousesListSection form={f} onChange={() => {}} mergeContext={{ kind: "marriage", mergeDate: "2024-03-01" }} />);
