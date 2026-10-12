@@ -21,6 +21,7 @@ import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
+import { calculateHoldingPeriod } from "./tax-utils";
 import {
   assertMixedSeparateAcqSupported,
   isMixedUsePerPartAcq,
@@ -489,6 +490,13 @@ export function calcMixedUseTransferTax(
   // 그 시점부터가 「주택과 그 부수토지」의 보유기간이다(선행 계획서 G-3 `max(취득일)` 규칙과 동일).
   const commercialLandIncome = commercialPart.landIncomeAmount;
   const commercialBuildingIncome = commercialPart.buildingIncomeAmount;
+  // 「소득세법」 §104②1호 — 상속받은 파트의 세율 보유기간은 피상속인 취득일부터(장특 보유연수는 상속개시일 기산 그대로 — §95④).
+  const landInherited = isInheritedPart(asset, asset.landAcquisitionDate);
+  const decedentYears = asset.decedentAcquisitionDate
+    ? calculateHoldingPeriod(asset.decedentAcquisitionDate, transferDate).years
+    : 0;
+  const landRateYears = (lthdYears: number) => (landInherited ? decedentYears : lthdYears);
+  const buildingRateYears = (lthdYears: number) => (asset.decedentAcquisitionDate ? decedentYears : lthdYears);
 
   // 「소득세법」 제104조 제7항 가산율 — **주택분 전용**.
   //
@@ -516,8 +524,8 @@ export function calcMixedUseTransferTax(
             kind: "housing" as const,
             income: housingPart.incomeAmount,
             holdingYears: Math.min(
-              housingGainSplit.landHoldingYears,
-              housingGainSplit.buildingHoldingYears,
+              landRateYears(housingGainSplit.landHoldingYears),
+              buildingRateYears(housingGainSplit.buildingHoldingYears),
             ),
             // §104⑦ — 상가 파트에는 붙이지 않는다(대상이 「주택+딸린 토지」).
             ...(surchargeAddon !== undefined ? { surchargeAddon } : {}),
@@ -525,12 +533,12 @@ export function calcMixedUseTransferTax(
           {
             kind: "commercial_land" as const,
             income: commercialLandIncome,
-            holdingYears: commercialGainSplit.landHoldingYears,
+            holdingYears: landRateYears(commercialGainSplit.landHoldingYears),
           },
           {
             kind: "commercial_building" as const,
             income: commercialBuildingIncome,
-            holdingYears: commercialGainSplit.buildingHoldingYears,
+            holdingYears: buildingRateYears(commercialGainSplit.buildingHoldingYears),
           },
           // §104⑤ 본문 후단 — 배율 초과분(비사업용 토지)은 **별개 자산**으로 보아
           // §104①8호(§55① 세율 + 10%p)를 자기 과세표준에만 적용한다. 2년 미만이면
@@ -541,7 +549,7 @@ export function calcMixedUseTransferTax(
                 {
                   kind: "non_business_land" as const,
                   income: nonBusinessLandPart!.incomeAmount,
-                  holdingYears: housingGainSplit.landHoldingYears,
+                  holdingYears: landRateYears(housingGainSplit.landHoldingYears),
                   surchargeAddon: nonBusinessLandPart!.additionalRate,
                 },
               ]
@@ -565,6 +573,8 @@ export function calcMixedUseTransferTax(
       selfFarmingRules,
       transferDate,
       acquisitionDate: asset.landAcquisitionDate,
+      // 조특법 §77⑨·§77의3③ — 상속받은 토지는 피상속인 취득일로 「취득 시기」 요건을 판정한다.
+      expropriationAcquisitionDate: landInherited ? asset.decedentAcquisitionDate : undefined,
       // CB-05 — §97의2①2호·§97의5①1호처럼 **계약일이 기준**인 조문의 시한 판정용.
       assetContractDate: asset.assetContractDate,
       priorReductionUsage: asset.priorReductionUsage,
@@ -678,3 +688,11 @@ import {
   buildNonBusinessStep,
   buildTotalStep,
 } from "./transfer-tax-mixed-use-steps";
+
+/** 상속개시일(`buildingAcquisitionDate`)과 같은 날 취득한 파트인가 — 피상속인 취득일은 그 파트에만 쓴다(다른 날 취득한 토지는 원인을 모른다). */
+function isInheritedPart(asset: MixedUseAssetInput, partAcquisitionDate: Date): boolean {
+  return (
+    asset.decedentAcquisitionDate !== undefined &&
+    partAcquisitionDate.getTime() === asset.buildingAcquisitionDate.getTime()
+  );
+}
