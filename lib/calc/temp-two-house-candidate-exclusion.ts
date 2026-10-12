@@ -27,6 +27,7 @@ import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.typ
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { eligibleCountExcludedHouseIds } from "./house-count-exclusion-rows";
 import { housesOwnedAtTransfer } from "./household-house-count";
+import { resolveHouseholdHousingCount } from "./household-house-count";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildInheritanceGeneralHousePayload } from "./inheritance-general-house-scope";
@@ -43,6 +44,9 @@ type CandidateFormLike = Partial<
     | "generalHouseGiftedFromDecedentWithin2yr"
     | "generalHouseGiftDate"
     | "generalHouseRightAtInheritance"
+    | "isOneHousehold"
+    | "householdHousingCount"
+    | "legacyHouseCountPrecedence"
   >
 >;
 
@@ -127,6 +131,11 @@ export function exemptionCountExcludedHouseIds(form: CandidateFormLike): Readonl
  * 엉뚱한 행으로 간다. 양도일·양도 주택 취득일이 없으면 빈 집합.
  *
  * @param alreadyExcluded 다른 제외(조특법 선언·§99의4·§98의9·§155②③)로 이미 빠진 행 — 같은 행을 두 번 빼지 않고 겹침 판정에 쓴다.
+ *
+ * 🔑 평가기 입력은 엔진 STEP 0.9(`resolveExemptionHouseCountExclusions`)와 같게 둔다 — 1세대가 아니면 평가하지 않고,
+ *    세대 주택 수는 ④가 싣는 값(`resolveHouseholdHousingCount` — OH-34 레거시 스칼라 포함)이다. 종전에는 명부 행 수를 세어
+ *    1세대가 아닌 세대·레거시 스칼라 이력에서 엔진이 빼지 않는 행을 여기서만 뺐다(대조 anchor
+ *    `temp-two-house-candidate-exclusion-pop-decline-parity`).
  */
 export function popDeclineCountExcludedHouseIds(
   form: CandidateFormLike,
@@ -134,6 +143,7 @@ export function popDeclineCountExcludedHouseIds(
 ): ReadonlySet<string> {
   const primary = form.assets?.[0];
   const transferDate = toOptionalDate(form.transferDate);
+  if (form.isOneHousehold === false) return new Set(); // 엔진 `effectiveInput.isOneHousehold &&`
   if (!primary || !transferDate || !(form.houses ?? []).length) return new Set();
   const payload = buildHousesPayload(
     primary,
@@ -160,7 +170,14 @@ export function popDeclineCountExcludedHouseIds(
     }),
     alreadyExcludedIds: alreadyExcluded,
     otherExcludedCount: alreadyExcluded.size,
-    householdHousingCount: sellingIsHousing ? houses.length : houses.length - 1,
+    // ④ `householdHousingCount`와 같은 leaf·같은 파싱(`transfer-tax-api.ts`) — 엔진은 그 값을 받는다.
+    householdHousingCount: resolveHouseholdHousingCount({
+      primaryKind: primary.assetKind,
+      declared: parseInt(form.householdHousingCount ?? "") || 0,
+      houses: form.houses,
+      transferDate: form.transferDate,
+      legacyPrecedence: form.legacyHouseCountPrecedence ?? false,
+    }),
     sellingIsHousing,
   });
   return new Set(r.entries.filter((e) => e.eligible && e.houseId).map((e) => e.houseId as string));
