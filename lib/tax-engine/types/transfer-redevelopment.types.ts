@@ -522,6 +522,8 @@ export interface RedevelopmentBranchDetail {
 
   /** 적용 LTHD율 (0~0.8, 표1 또는 표2) */
   lthdRate: number;
+  /** 공제율 산정 근거 한 줄 — 토지 출자 원조합원의 표1·표2 선택/합산(재산세과-1693 · §95⑤ 유추)일 때만. 단계 표시용 */
+  lthdRateBasis?: string;
 
   // ── 신고서 양식 표시용 부착 필드 (재개발 3분할 표 렌더링) ──
 

@@ -23,6 +23,10 @@
 
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
+import { LTHD_CONVERSION_95_5_CUTOFF } from "./tax-utils";
+import { calcUsagePeriodInfo } from "./usage-period-info";
+import { calcConversionHoldingPct } from "./conversion-holding-pct";
+import { table2ResidencePct } from "./data/lthd-table2-era";
 import { completedMonthsInclusive } from "./civil-period";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 import { resolveOneHouseAtSettlementSale } from "./transfer-tax-redevelopment-settlement";
@@ -233,6 +237,8 @@ export interface RedevelopmentLthdBranch {
   applicable: boolean;
   /** 비적용 사유 (UI 표시용) */
   reason?: string;
+  /** 공제율 산정 근거 한 줄 — 토지 출자 원조합원의 표1·표2 선택/합산처럼 표 하나로 설명되지 않을 때만(UI·단계 표시용) */
+  rateBasis?: string;
 }
 
 /** 분기별 LTHD 결과 — 3분기 묶음 */
@@ -325,7 +331,67 @@ export function computeRedevelopmentLthd(
     ),
     existingResidenceMonths,
     payResidenceMonths,
+    landContributedCompletionDate: isLandContributedNewBuild(redevelopment) ? redevelopment.completionDate : undefined,
   });
+}
+
+/**
+ * 토지만 출자한 원조합원 완공APT의 **기존건물분 공제율**(1세대1주택 표2 대상일 때) — 사용자 결정(2026-10-12).
+ *
+ * 영 §166⑤2호나목은 기존건물분 보유기간을 토지 취득일부터 세지만, 그 기간 전부가 「주택」 보유는 아니다(사용승인 전에는 토지뿐이다).
+ *   · 2024-12-31 이전 양도 — 재산세과-1693(2009.08.17.): 나대지 출자 원조합원의 토지 양도차익은 「표1(토지 전체 보유기간)」과
+ *     「주택의 보유기간에 따른 표2」 중 **큰 공제율**. 표2 주택 보유기간은 **사용승인일**부터(결정 ⓐ), 표2는 보유분 + 거주분 전체로
+ *     표1과 비교한다(결정 ⓑ 방법 1). 같은 원칙: 기본통칙 95-0…1 · 대법원 2012두28025(공제율이 다른 자산 기간은 통산하지 않는다).
+ *   · 2025-01-01 이후 양도 — 「소득세법」 §95⑤·⑥(비주택 → 주택 용도변경)을 **유추**한다(결정 ⓒ): 사용승인 전 기간 표1 + 사용승인 후
+ *     기간 표2 보유분(합계 40% 한도) + 표2 거주분. 그 값이 표1(토지 전체 보유기간)보다 낮으면 표1. 같은 항의 대상은 「주택이 아닌 건물」이라 토지 출자는 문언상 포함되지 않는다 —
+ *     유추 적용이다. 거주분 「보유기간 3년 이상」은 용도변경 경로와 같이 총 보유기간 기준(V-4).
+ *
+ * 사용승인일이 취득일~양도일 밖이면(입력 오류) `undefined` — 호출부가 종전 식을 쓴다.
+ */
+export function landContributedExistingLthdRate(p: {
+  acquisitionDate: Date;
+  completionDate: Date;
+  transferDate: Date;
+  residenceYears: number;
+}): { holding: number; residence: number; total: number; basis: string } | undefined {
+  const info = calcUsagePeriodInfo(p.acquisitionDate, p.completionDate, p.transferDate);
+  if (!info) return undefined;
+  const totalYears = calculateHoldingPeriod(p.acquisitionDate, p.transferDate).years;
+  if (p.transferDate >= LTHD_CONVERSION_95_5_CUTOFF) {
+    const { table1Pct, table2HoldingPct, holdingPct, capped } = calcConversionHoldingPct(
+      info.t1HoldingYears,
+      info.t2HoldingYears,
+    );
+    const residencePct = totalYears < 3 ? 0 : table2ResidencePct(p.residenceYears);
+    // 유추 적용이 표1(토지 전체 보유기간)보다 낮아지면 표1 — 1세대1주택이 아닌 사람보다 불리해질 근거가 없다
+    // (구간마다 「3년 이상」 하한이 따로 걸리는 단기 사례 · 기본통칙 95-0…1 「큰 공제율」).
+    const wholeTable1 = computeLthdRateSplit(totalYears, false, 0);
+    if (wholeTable1.total * 100 > holdingPct + residencePct) {
+      return {
+        ...wholeTable1,
+        basis:
+          `토지만 출자한 원조합원 — §95⑤ 유추(보유 ${holdingPct}% + 거주 ${residencePct}%)보다 ` +
+          `표1(토지 보유 ${totalYears}년) ${Math.round(wholeTable1.total * 100)}%가 커 표1 적용`,
+      };
+    }
+    return {
+      holding: holdingPct / 100,
+      residence: residencePct / 100,
+      total: (holdingPct + residencePct) / 100,
+      basis:
+        `토지만 출자한 원조합원 — 사용승인 전 ${info.t1HoldingYears}년 표1 ${table1Pct}% + 사용승인 후 ${info.t2HoldingYears}년 표2 ${table2HoldingPct}%` +
+        ` = 보유 ${holdingPct}%${capped ? "(한도 40%)" : ""} + 거주 ${residencePct}% (소득세법 §95⑤ 유추)`,
+    };
+  }
+  const table1 = computeLthdRateSplit(totalYears, false, 0);
+  const table2 = computeLthdRateSplit(info.t2HoldingYears, true, p.residenceYears);
+  const pick = table2.total > table1.total ? table2 : table1;
+  return {
+    ...pick,
+    basis:
+      `토지만 출자한 원조합원 — 표1(토지 보유 ${totalYears}년) ${Math.round(table1.total * 100)}%와 ` +
+      `표2(사용승인 후 ${info.t2HoldingYears}년 + 거주) ${Math.round(table2.total * 100)}% 중 큰 공제율 (재산세과-1693)`,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -399,6 +465,8 @@ function computeAptLthd(args: {
   receiveSettlementOneHouseSingle: boolean;
   /** 기존건물분 거주월수 (= prior + new, §154⑧ 통산 — 토지 출자 원조합원은 new만 · #12) */
   existingResidenceMonths: number;
+  /** 토지만 출자한 원조합원이면 사용승인일 — 기존건물분 공제율을 `landContributedExistingLthdRate`로 산정한다 */
+  landContributedCompletionDate?: Date;
   /** 청산금분 거주월수 (= new, 해석례 2020-386) */
   payResidenceMonths: number;
 }): RedevelopmentLthdResult {
@@ -412,6 +480,7 @@ function computeAptLthd(args: {
     receiveSettlementOneHouseSingle,
     existingResidenceMonths,
     payResidenceMonths,
+    landContributedCompletionDate,
   } = args;
 
   const existingResidenceYears = Math.floor(existingResidenceMonths / 12);
@@ -422,7 +491,18 @@ function computeAptLthd(args: {
   // 거주분 = §154⑧ 통산 (prior + new) — 토지 출자 원조합원은 new만(#12, 호출부 `existingResidenceMonths`)
   const existingHolding = calculateHoldingPeriod(acquisitionDate, transferDate);
   const existingMonths = existingHolding.years * 12 + existingHolding.months;
-  const existingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears);
+  const baseExistingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears);
+  // 토지 출자 원조합원 + 표2 대상 — 토지만 보유한 기간에 표2를 주지 않는다(재산세과-1693 · §95⑤ 유추). 표1이면 종전 그대로.
+  const landSplit =
+    landContributedCompletionDate && usesTable2(isOneHouseSingle, existingResidenceYears)
+      ? landContributedExistingLthdRate({
+          acquisitionDate,
+          completionDate: landContributedCompletionDate,
+          transferDate,
+          residenceYears: existingResidenceYears,
+        })
+      : undefined;
+  const existingSplit = landSplit ?? baseExistingSplit;
 
   const preApprovalBranch: RedevelopmentLthdBranch = {
     holdingMonths: existingMonths,
@@ -432,6 +512,7 @@ function computeAptLthd(args: {
     holdingRate: existingSplit.holding,
     residenceRate: existingSplit.residence,
     applicable: true,
+    ...(landSplit ? { rateBasis: landSplit.basis } : {}),
   };
   const postApprovalBranch: RedevelopmentLthdBranch = { ...preApprovalBranch };
 

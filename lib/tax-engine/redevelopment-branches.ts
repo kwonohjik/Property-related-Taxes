@@ -532,6 +532,7 @@ export function runOriginalMember(
     holdingDays: lthd.preApproval.holdingDays,
     lthd: preApprovalLthdAmt.total,
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
+    ...(lthd.preApproval.rateBasis ? { lthdRateBasis: lthd.preApproval.rateBasis } : {}),
     branchAcqDate: acquisitionDate,
     branchTransferDate: isRight ? redevelopment.approvalDate : transferDate,
     expenses: preApprovalDisplayExpenses,
@@ -559,6 +560,7 @@ export function runOriginalMember(
     lthdRate: lthd.postApprovalExistingHouse.applicable
       ? lthd.postApprovalExistingHouse.rate
       : 0,
+    ...(lthd.postApprovalExistingHouse.rateBasis ? { lthdRateBasis: lthd.postApprovalExistingHouse.rateBasis } : {}),
     branchAcqDate: isApt ? acquisitionDate : undefined,
     branchTransferDate: isApt ? transferDate : undefined,
     expenses: postApprovalExpenseShare.existingHouse,

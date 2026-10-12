@@ -478,7 +478,8 @@ export function buildRedevLthdFormula(
     }
   }
 
-  return `${fmt(detail.gain)} × ${pct}% (보유 ${years}년 ${months}개월${residenceMemo}) = ${fmt(detail.lthd)}`;
+  const basisMemo = detail.lthdRateBasis ? ` · ${detail.lthdRateBasis}` : "";
+  return `${fmt(detail.gain)} × ${pct}% (보유 ${years}년 ${months}개월${residenceMemo}${basisMemo}) = ${fmt(detail.lthd)}`;
 }
 
 /** 양도소득금액 분할별 산식 */

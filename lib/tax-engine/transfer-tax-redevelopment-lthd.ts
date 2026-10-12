@@ -50,6 +50,7 @@ export function applyLthdExclusion(r: RedevelopmentResult): RedevelopmentResult 
     ...b,
     lthd: 0,
     lthdRate: 0,
+    lthdRateBasis: undefined, // 공제율 선택 근거는 배제된 율에는 맞지 않는다
     ...zeroLthdParts(b),
   });
   return {
@@ -114,14 +115,14 @@ export function applyRental97LthdSpecial(
         applyFairMarketRatio(rentalGain, special.overrideRate) + applyFairMarketRatio(nonRentalGain, b.lthdRate);
       const blendedRate =
         special.overrideRate * special.rentalGainRatio + b.lthdRate * (1 - special.rentalGainRatio);
-      return { ...b, lthd, lthdRate: blendedRate, ...clearLthdParts(b) };
+      return { ...b, lthd, lthdRate: blendedRate, lthdRateBasis: undefined, ...clearLthdParts(b) };
     }
 
     if (special.additionalRate !== undefined) {
       // §97의4 — 기본 공제율이 0(보유 3년 미만)이면 가산하지 않는다. 정상 경로와 같은 규약.
       if (b.lthdRate <= 0) return b;
       const combined = b.lthdRate + special.additionalRate;
-      return { ...b, lthd: applyFairMarketRatio(gain, combined), lthdRate: combined, ...clearLthdParts(b) };
+      return { ...b, lthd: applyFairMarketRatio(gain, combined), lthdRate: combined, lthdRateBasis: undefined, ...clearLthdParts(b) };
     }
     return b;
   };
@@ -153,6 +154,19 @@ function clearLthdParts(
 ): Partial<Pick<RedevelopmentBranchDetail, "lthdHoldingPart" | "lthdResidencePart">> {
   if (b.lthdHoldingPart === undefined && b.lthdResidencePart === undefined) return {};
   return { lthdHoldingPart: undefined, lthdResidencePart: undefined };
+}
+
+/**
+ * 적용된 표 — 거주분이 붙었으면 표2다(표1에는 거주분이 없다).
+ *
+ * 종전에는 「공제율 > 30%」로 짐작했는데, 표2가 30% 이하로 이기는 경우(재산세과-1693 비교·보유 3~4년)
+ * 「표1 (보유만)」으로 잘못 보였다. 분해값이 없으면(분해 전 결과) 종전 짐작을 쓴다.
+ */
+function appliedTable(branches: RedevelopmentBranchDetail[]): "table1" | "table2" {
+  if (branches.every((b) => b.lthdResidencePart === undefined)) {
+    return branches[0].lthdRate > 0.3 ? "table2" : "table1";
+  }
+  return branches.some((b) => (b.lthdResidencePart ?? 0) > 0) ? "table2" : "table1";
 }
 
 /**
@@ -267,8 +281,8 @@ export function applyHighValueAllocation(
     lthdResidenceAttribution: {
       existingResidenceMonths,
       payResidenceMonths,
-      existingTable: preApproval.lthdRate > 0.30 ? "table2" : "table1",
-      payTable: settlement.lthdRate > 0.30 ? "table2" : "table1",
+      existingTable: appliedTable([redevRaw.preApproval, redevRaw.postApprovalExistingHouse]),
+      payTable: appliedTable([redevRaw.settlement]),
       ...(!landNewBuild && redevInfo.priorResidenceStartDate && redevInfo.priorResidenceEndDate
         ? {
             priorPeriod: {
