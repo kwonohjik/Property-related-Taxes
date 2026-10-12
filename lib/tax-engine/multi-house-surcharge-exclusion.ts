@@ -593,9 +593,16 @@ export function determineSurchargeExclusion(
 
     // ④ §167의10①4호 「제155조제8항에 따른 수도권 밖에 소재하는 주택」.
     //   15호(§155 의제)를 거치지 않는 **별개 호**다. caller가 §155⑧ 요건을 판정해 주입한다.
-    //   #16 — 슬롯 주택 수가 제외 후 값으로 바뀌어(③ 공동상속 소수지분 등) 다른 효과 주택이 중과 주택 수에 산입된 상속주택이면
-    //   그 주택은 §155⑧ 주택이 아니다 — 4호로 배제하지 않는다(① 요소 15호가 따로 받는다).
-    if (input.unavoidableOutsideCapitalHouse && !otherEffectiveHouses.some((h) => h.isInherited === true)) {
+    //   #16 — 슬롯 주택 수가 제외 후 값이라(③ 공동상속 소수지분·조특법 제외 등) ⑧ 주택이 중과 주택 수 밖에 있어도
+    //   슬롯이 선다. 4호는 ⑧ 주택이 중과 주택 수 2채 **안**(양도 주택 또는 다른 효과 주택)에 있을 때만 배제한다.
+    //   명부 행에 ⑧ 표시가 하나도 없으면(명부 없는 합성 주택·세대 단위 레거시 선언) 종전 대리 지표 —
+    //   다른 효과 주택이 상속주택이면 그 주택은 §155⑧ 주택이 아니다 — 를 쓴다.
+    const uocRows = input.houses.filter((h) => h.isUnavoidableOutsideCapital === true);
+    const uocInTwoHouses =
+      uocRows.length === 0
+        ? !otherEffectiveHouses.some((h) => h.isInherited === true)
+        : uocRows.some((h) => h === sellingHouse || otherEffectiveHouses.includes(h));
+    if (input.unavoidableOutsideCapitalHouse && uocInTwoHouses) {
       exclusionReasons.push({
         type: "unavoidable_outside_capital",
         detail: `부득이한 사유로 취득한 수도권 밖 주택 보유 — 2주택 중과배제 (${MULTI_HOUSE.TWO_HOUSE_OUTSIDE_CAPITAL})`,

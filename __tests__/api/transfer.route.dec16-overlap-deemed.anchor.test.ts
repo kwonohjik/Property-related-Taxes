@@ -259,3 +259,85 @@ describe("#16 ⑧·⑥ + 상속 제외 — 비과세 의제를 중과 배제에�
     }
   });
 });
+
+/**
+ * #16-1 영 §167의10①4호 가드 — ⑧ 주택이 중과 주택 수 2채 **안**에 있을 때만 배제한다(15호가 없는 2023.2.28. 전 양도분).
+ * 4호 슬롯은 제외 **후** 주택 수로 서므로(#16), ⑧ 주택이 중과 주택 수 밖이고 남은 2채가 상속주택이 아닌 다른 주택이면 종전 대리 지표
+ * (「다른 효과 주택이 상속주택인가」)가 통과시켜 2주택 중과를 면했다. 명부 ⑧ 행 표시를 엔진에 echo해 그 주택이 2채 안인지 본다.
+ * 해소일은 양도일 전(2020-06-01 — 3년 내)으로 둔다.
+ *
+ * | 시료 (양도 2021-09-18) | 수정 전 | 수정 후 |
+ * |---|---:|---:|
+ * | ⑧(경남 1억 — 중과 주택 수 밖) + 확인된 조특법 §99의2 감면주택 (P1) | 340,038,600 (4호) | 597,025,000 (2주택 중과) |
+ * | 같은 세대 ⑧ 선언 없음 (P0 대조) | 1,141,772,500 | 1,141,772,500 |
+ * | ⑧(부산 4억 — 2채 안) + 공동상속 소수지분 (K1 짝) | 340,038,600 (4호) | 340,038,600 (4호) |
+ */
+describe("#16-1 4호 가드 — ⑧ 주택이 중과 주택 수 2채 안에 있을 때만 (2023.2.28. 전 양도)", () => {
+  const TD_2021 = "2021-09-18";
+  const UNAV_2021 = (over: Partial<HouseEntry> = {}) => UNAV({ unavoidableOutsideCapitalResolvedDate: "2020-06-01", ...over });
+  const P1 = () =>
+    form([UNAV_2021({ officialPrice: "100000000", regionCode: GYEONGNAM }), SPECIAL_ROW], {
+      specialHouseExclusions: SPECIAL_DECL,
+      transferDate: TD_2021,
+    });
+
+  it("P1 ⑧(중과 주택 수 밖) + 조특법 감면주택 → 4호 배제 없음, 2주택 중과 597,025,000 (수정 전 340,038,600)", async () => {
+    const r = await run(P1());
+    expect(r).toMatchObject({ totalTax: 597_025_000, reasons: "", eff: 2 });
+    expect(await multiTotal(P1()), "다건 route도 단건과 같은 세액").toBe(597_025_000);
+  });
+  it("P0 대조 — 같은 세대 ⑧ 선언 없음 → 1,141,772,500 (⑧ 비과세 의제가 없어 전액 과세)", async () => {
+    const plain = { ...ROW, id: "hu", region: "non_capital", regionCode: GYEONGNAM, acquisitionDate: "2018-01-01", officialPrice: "100000000" } as HouseEntry;
+    const r = await run(form([plain, SPECIAL_ROW], { specialHouseExclusions: SPECIAL_DECL, transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 1_141_772_500, reasons: "", eff: 2 });
+  });
+  it("K1 짝 — ⑧(2채 안) + 공동상속 소수지분 → 4호 배제 그대로 340,038,600", async () => {
+    const r = await run(form([UNAV_2021(), CO_INH], { transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 340_038_600, reasons: "unavoidable_outside_capital", eff: 2 });
+  });
+  it("2023.2.28. 이후 양도(2026-09-18)는 15호가 받아 세액 불변 204,355,800", async () => {
+    const r = await run(form([UNAV({ officialPrice: "100000000", regionCode: GYEONGNAM }), SPECIAL_ROW], { specialHouseExclusions: SPECIAL_DECL }));
+    expect(r).toMatchObject({ totalTax: AFTER, reasons: "unavoidable_outside_capital_house", eff: 2 });
+  });
+});
+
+/**
+ * #16-2 영 §167의3①13호 연혁 — 13호는 2021.2.17. 이후 양도분부터 있다(그 전에는 ⑧ + 상속 3주택이 중과).
+ * ⑧(부산 4억) + 상속(2019) 3주택 · 해소일 2020-06-01. 13호는 「같은 항(§154①)의 요건을 모두 충족」해야 하므로 보유 2년 미만 양도 주택에는 서지 않는다.
+ *
+ * | 양도일 | ⑧ 선언 | ⑧ 미선언(U0) |
+ * |---|---:|---:|
+ * | 2020-09-18 (13호 신설 전) | 597,025,000 (배제 없음) | — |
+ * | 2021-09-18 | 340,038,600 (13호) | 1,328,497,500 |
+ * | 2022-03-18 | 230,082,600 (13호) | — |
+ * | 2026-09-18 · 2025-03-01 상속 · 양도 주택 2015 취득 | 204,355,800 (13호) | — |
+ * | 2026-09-18 · 2025-03-01 상속 · 양도 주택 2025-01-01 취득(보유 2년 미만) | 1,327,903,500 (배제 없음) | — |
+ *
+ * 경계 짝의 상속은 양도 주택 취득 **뒤**(2025-03-01)로 둔다 — 상속(2019)보다 늦게 취득한 주택은 §155② 「상속개시 당시 보유한 일반주택」이
+ * 아니어서 의제 ① 요소부터 서지 않으므로, §154① 요건(② 요소)만 가르는 짝이 되지 않는다.
+ */
+describe("#16-2 13호 연혁 — ⑧ + 상속 3주택", () => {
+  const U2 = (transferDate: string, over: Partial<Form> = {}) =>
+    form([UNAV({ unavoidableOutsideCapitalResolvedDate: "2020-06-01" }), INH_OLD], { transferDate, ...over });
+
+  it("2021-09-18 → 13호 배제 340,038,600 (⑧ 미선언 대조 1,328,497,500)", async () => {
+    expect(await run(U2("2021-09-18"))).toMatchObject({ totalTax: 340_038_600, reasons: "unavoidable_outside_capital_house", eff: 3 });
+    const u0 = await run(form([INH_OLD, { ...ROW, id: "hz", acquisitionDate: "2018-01-01" }], { transferDate: "2021-09-18" }));
+    expect(u0).toMatchObject({ totalTax: 1_328_497_500, reasons: "" });
+  });
+  it("2022-03-18 → 13호 배제 230,082,600", async () => {
+    expect(await run(U2("2022-03-18"))).toMatchObject({ totalTax: 230_082_600, reasons: "unavoidable_outside_capital_house", eff: 3 });
+  });
+  it("2020-09-18 → 13호 신설 전이라 배제 없음 597,025,000", async () => {
+    expect(await run(U2("2020-09-18"))).toMatchObject({ totalTax: 597_025_000, reasons: "", eff: 3 });
+  });
+  const INH_2025: HouseEntry = { ...INH_OLD, acquisitionDate: "2025-03-01", inheritedDate: "2025-03-01" };
+  it("2026-09-18 · 양도 주택 2015 취득(§154① 충족) → 13호 배제 204,355,800", async () => {
+    expect(await run(form([UNAV(), INH_2025]))).toMatchObject({ totalTax: AFTER, reasons: "unavoidable_outside_capital_house", eff: 3 });
+  });
+  it("양도 주택 보유 2년 미만(2025-01-01 취득 · 2026 양도) → §154① 요건 미충족이라 13호 불성립, 3주택 중과 1,327,903,500", async () => {
+    const f = form([UNAV(), INH_2025]);
+    f.assets[0] = { ...f.assets[0], acquisitionDate: "2025-01-01" };
+    expect(await run(f)).toMatchObject({ totalTax: 1_327_903_500, reasons: "", eff: 3 });
+  });
+});

@@ -335,6 +335,8 @@ export const houseSchema = z.object({
    * 여기에 싣는다(`transfer-tax-api-houses.ts` · `multi-transfer-tax-api.ts`).
    */
   isCulturalHeritage: z.boolean().optional(),
+  /** 명부 행 전용 — §155⑧ 행 표시 echo(#16). 영 §167의10①4호가 ⑧ 주택이 중과 주택 수 2채 안에 있는지 가리는 데 쓴다. */
+  isUnavoidableOutsideCapital: z.boolean().optional(),
   isDayCareCenter: z.boolean().optional(),
   dayCareOperationYears: z.number().nonnegative().optional(),
   // ── 공고 전 매매계약(영 §167의10①11호 등) — selling 전용 · **양도** 계약일 + 계약금 수령(장기임대 `hasContractDepositProof`와 별개) ──

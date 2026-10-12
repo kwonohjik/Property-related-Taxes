@@ -285,6 +285,9 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
        * (`isGroupExcludable`)과 그 행 자신의 중과 배제에만 쓰인다.
        */
       isCulturalHeritage: h.oneHouseCulturalHeritage,
+      // ④⑬ §155⑧ 행 echo(#16) — 판정은 세대 단위 `unavoidableOutsideCapitalHouse`가 하고, 이 값은 영 §167의10①4호가
+      //   「⑧ 주택이 중과 주택 수 2채 안에 있는가」를 가리는 데만 쓴다(`multi-house-surcharge-exclusion.ts`).
+      isUnavoidableOutsideCapital: h.oneHouseUnavoidableOutsideCapital,
       // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목)
       acquisitionPrice: parseAmount(h.acquisitionPrice || "") || undefined,
       exclusiveArea: h.exclusiveArea ? parseFloat(h.exclusiveArea) : undefined,

@@ -295,6 +295,12 @@ export interface HouseInfo {
   isTaxSpecialExemption?: boolean;
   /** 국가유산(문화재) 주택 여부 (⑥) */
   isCulturalHeritage?: boolean;
+  /**
+   * 명부 행이 §155⑧ 수도권 밖 부득이 주택으로 선언됐는가(`HouseEntry.oneHouseUnavoidableOutsideCapital` echo — #16).
+   * 판정(2주택·해소일부터 3년)은 `MultiHouseSurchargeInput.unavoidableOutsideCapitalHouse` 슬롯이 하고, 이 값은 그 주택이
+   * 중과 주택 수 2채 **안**에 있는지만 가린다(영 §167의10①4호). 명부 없는 합성 주택에는 실리지 않는다.
+   */
+  isUnavoidableOutsideCapital?: boolean;
   /** 어린이집으로 운영 중인 주택 여부 (⑨ 5년 이상 운영 → 3주택+ 중과배제) */
   isDayCareCenter?: boolean;
   /** 어린이집 운영 기간(년) */
