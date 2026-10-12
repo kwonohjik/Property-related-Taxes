@@ -12,6 +12,7 @@
  * | LP-2 | 지역기준 지역(부산 광역시) · 주소 없음이면 칸이 없다 |
  * | LP-4 | 섹션 배선 — 카드를 그리는 `facts`(판정 메뉴 — 계산기가 넘겨받는 입력 경로)·`full`(부담부증여)에 칸이 있다.
  * |      | `calc`(계산기)는 카드 자체를 그리지 않는다(판정 메뉴에서 넘겨받는다) |
+ * | LP-5 | 기존사업자(나목) 호에도 소재지 칸이 있고, 가액기준 지역이면 기준시가 칸도 열린다 — 종전에는 나목만 소재지 칸이 빠져 입력 경로가 없었다 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -88,4 +89,19 @@ describe("임대주택 카드 — 거주주택 양도일 현재 기준시가 칸
       expect(screen.queryByText(LABEL) !== null).toBe(shown);
     });
   }
+
+  it("LP-5 ★ 기존사업자(나목) 호 — 소재지 칸이 있고, 가액기준 지역이면 양도일 현재 기준시가 칸도 열린다", () => {
+    render(
+      <RentalUnitCard
+        unit={{ ...unitAt("4311110100"), rentalCategory: "existing_business", businessRegistrationDate: "2003-01-01", rentalRegistrationDate: "2003-01-01" }}
+        index={0}
+        onChange={() => {}}
+        onRemove={() => {}}
+        canRemove={false}
+        transferDate="2026-09-18"
+      />,
+    );
+    expect(screen.getByTestId("rental-address-0")).toBeTruthy();
+    expect(screen.getByText(LABEL)).toBeTruthy();
+  });
 });

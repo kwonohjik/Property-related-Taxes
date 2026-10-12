@@ -149,8 +149,6 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   // F6: 다·바(건설 장기)도 일반 아파트 허용. 나·라목도 허용. 아·자(단기)만 아파트 제외.
   const showApartment = article === "가" || article === "나" || isLa || article === "마" || article === "구법" || article === "다" || article === "바";
   const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
-  // 임대주택 소재지(지번): region 자동판별(showRegion) 또는 임대개시일 기준시가 조회(비-나·라 = !showAcqPrice)에 필요 → 나목만 제외.
-  const showAddress = showRegion || !showAcqPrice;
   // 주소로 법정동코드가 채워지면 소재 지역을 자동판별 배지로 표시(regionCode 비면 수동 라디오 fallback).
   // ?? "" : 타입은 non-optional이나 migrate 미경유 stale sessionStorage 유닛은 undefined일 수 있어 방어.
   const regionAuto = (unit.regionCode ?? "").length >= 10;
@@ -295,44 +293,46 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         </div>
       </ToneCard>
 
-      {/* 임대주택 소재지 (지번) — 소재 지역 자동판별 + 임대개시일 기준시가 조회 소스 (나목만 제외) */}
-      {showAddress && (
-        <FieldCard
-          label="임대주택 소재지 (지번)"
-          hint="소재 지역 자동판별 + 공시가격 자동조회용 (수동입력 시 생략 가능)"
-        >
-          <div data-testid={`rental-address-${index}`}>
-          <AddressSearch
-            value={
-              {
-                road: "",
-                jibun: unit.rentalAddressJibun,
-                building: "",
-                detail: "",
-                lng: "",
-                lat: "",
-              } satisfies AddressValue
+      {/*
+        임대주택 소재지 (지번) — 소재 지역 자동판별 + 기준시가 조회 소스, 그리고 ⑳ 불성립 시 다주택 중과 주택 수의 지방 판정
+        (영 §167의3①1호 — 아래 「거주주택 양도일 현재 기준시가」 칸)에 쓴다. 그 판정은 목과 무관하므로 모든 목에서 묻는다
+        (종전에는 지역·임대개시일 기준시가가 없는 나목에서 칸이 빠져 나목 호의 지방 판정 입력 경로가 없었다).
+      */}
+      <FieldCard
+        label="임대주택 소재지 (지번)"
+        hint="소재 지역 자동판별 + 공시가격 자동조회 + 다주택 중과 지방 주택 판정용 (수동입력 시 생략 가능)"
+      >
+        <div data-testid={`rental-address-${index}`}>
+        <AddressSearch
+          value={
+            {
+              road: "",
+              jibun: unit.rentalAddressJibun,
+              building: "",
+              detail: "",
+              lng: "",
+              lat: "",
+            } satisfies AddressValue
+          }
+          onChange={(v) => {
+            const patch: Partial<typeof unit> = {
+              rentalAddressJibun: v.jibun,
+              // 공동주택 세대(동/호) — 임대개시일 기준시가 세대 식별용. 미선택 시 "".
+              rentalDong: v.dong ?? "",
+              rentalHo: v.ho ?? "",
+            };
+            if (v.pnu && v.pnu.length >= 10) {
+              patch.regionCode = v.pnu.slice(0, 10);
+              patch.region = deriveRentalRegionFromCode(patch.regionCode);
+            } else if (!v.jibun) {
+              // 주소 clear → 자동판별 해제(수동 라디오 fallback 복귀)
+              patch.regionCode = "";
             }
-            onChange={(v) => {
-              const patch: Partial<typeof unit> = {
-                rentalAddressJibun: v.jibun,
-                // 공동주택 세대(동/호) — 임대개시일 기준시가 세대 식별용. 미선택 시 "".
-                rentalDong: v.dong ?? "",
-                rentalHo: v.ho ?? "",
-              };
-              if (v.pnu && v.pnu.length >= 10) {
-                patch.regionCode = v.pnu.slice(0, 10);
-                patch.region = deriveRentalRegionFromCode(patch.regionCode);
-              } else if (!v.jibun) {
-                // 주소 clear → 자동판별 해제(수동 라디오 fallback 복귀)
-                patch.regionCode = "";
-              }
-              onChange({ ...unit, ...patch });
-            }}
-          />
-          </div>
-        </FieldCard>
-      )}
+            onChange({ ...unit, ...patch });
+          }}
+        />
+        </div>
+      </FieldCard>
 
       {/* 소재지역 (매입 장기·단기매입·구법·라목 — cap 지역별 또는 비수도권 요건) */}
       {showRegion && (
@@ -645,7 +645,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
           />
         </FieldCard>
       ) : (
-        // 지번 주소는 상단(showAddress)으로 이동 — jibun은 state 공유라 조회 정상
+        // 지번 주소는 상단(소재지 칸)으로 이동 — jibun은 state 공유라 조회 정상
         <HousingStdPriceLookupField
           label="임대개시일 기준시가"
           required
