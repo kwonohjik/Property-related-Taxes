@@ -16,6 +16,8 @@ import { Step4 } from "@/app/calc/transfer-tax/steps/Step4";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
+import { appurtenantLimitShareOfAssets } from "@/lib/calc/housing-excess-split";
+import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 
@@ -200,5 +202,59 @@ describe("#12·#36 — 일체과세 배지가 §167의5 3/5/10배를 쓴다", ()
       ),
     );
     expect(result.current).toBe(true);
+  });
+
+  /**
+   * #17 후속(K1) — route(`resolveCompanionSplit`)는 한도를 주 자산 주택 카드 토지에서 먼저 뺀다. 배지도 같은 leaf(`appurtenantCardLimitShare`)로 잰다.
+   * route 실측(신축 2025-06-01 · 양도 2026-02-16 · 정착 100㎡ · 수도권 주거 3배): 주택 500 + 카드 100 → 카드 전부 초과분(104-1-1, 일체과세 아님) ·
+   * 주택 100 + 카드 200 → 카드 104-1-3(일체과세) · 주택 200 + 카드 200 → 한도 내 100 + 초과 100.
+   */
+  const landA = (area: string) => ({ ...land(area), landNature: "appurtenant" }) as AssetForm;
+  const badgeWith = (h: string, l: AssetForm) => {
+    const p = primary({ acquisitionArea: h });
+    return renderHook(() => useUnifiedRateBadge(l, p, "2025-06-01", appurtenantLimitShareOfAssets(p, [l]))).result.current;
+  };
+
+  it("🔑 H-4: 주택 카드 토지 500㎡가 이미 한도(300㎡)를 넘었으면 카드 100㎡는 배지가 꺼진다 (수정 전: 카드 단독 비교로 켜졌다)", () => {
+    expect(badgeWith("500", landA("100"))).toBe(false);
+  });
+
+  it("H-5: 주택 100㎡ + 카드 200㎡(합계 한도 이내)는 켜진다 · 주택 200㎡ + 카드 200㎡(남은 한도 100㎡)는 꺼진다", () => {
+    expect(badgeWith("100", landA("200"))).toBe(true);
+    expect(badgeWith("200", landA("200"))).toBe(false);
+  });
+
+  it("H-6: 부수토지 카드끼리는 남은 한도를 함께 쓴다 — 카드 150㎡ 둘이면 각자 한도 안이어도 합계 300㎡ > 남은 200㎡라 꺼진다", () => {
+    const p = primary({ acquisitionArea: "100" });
+    const a = landA("150");
+    const b = { ...landA("150"), assetId: "b" } as AssetForm;
+    expect(renderHook(() => useUnifiedRateBadge(a, p, "2025-06-01", appurtenantLimitShareOfAssets(p, [a, b]))).result.current).toBe(false);
+    expect(renderHook(() => useUnifiedRateBadge(a, p, "2025-06-01", appurtenantLimitShareOfAssets(p, [a]))).result.current).toBe(true);
+  });
+
+  it("🔑 H-8: 화면 배선 — 자산 목록이 배지에 한도 공유 면적을 넘긴다 (주택 500 + 카드 100 꺼짐 · 주택 100 + 카드 200 켜짐)", () => {
+    const BADGE = /주택·부수토지 일체과세 자동 적용 중/;
+    const renderSection = (h: string, l: string) =>
+      render(
+        <CompanionAssetsSection
+          assets={[primary({ acquisitionArea: h, transferArea: h }), { ...landA(l), transferArea: l } as AssetForm]}
+          bundledSaleMode="actual"
+          onChange={() => {}}
+          transferDate="2025-06-01"
+          splitMode="companion"
+          onFractionalToggle={() => {}}
+        />,
+      );
+    renderSection("500", "100");
+    expect(screen.queryByText(BADGE)).toBeNull();
+    cleanup();
+    renderSection("100", "200");
+    expect(screen.queryByText(BADGE)).not.toBeNull();
+  });
+
+  it("H-7: 주 자산이 «건물만 본인 소유»면 주택 카드 토지를 세지 않는다 — route `appurtenantLimitShareOf`와 같은 술어", () => {
+    const p = primary({ acquisitionArea: "500", selfOwns: "building_only" });
+    expect(appurtenantLimitShareOfAssets(p, [landA("100")])).toEqual({ houseLandAreaM2: undefined, appurtenantCardsAreaM2: 100 });
+    expect(appurtenantLimitShareOfAssets(primary({ acquisitionArea: "500" }), [landA("100"), land("70")])).toEqual({ houseLandAreaM2: 500, appurtenantCardsAreaM2: 100 });
   });
 });
