@@ -37,6 +37,7 @@ import { InheritedSameHouseholdField } from "@/components/calc/transfer/Inherite
 import { GiftedSameHouseholdField } from "@/components/calc/transfer/GiftedSameHouseholdField";
 import { giftHouseholdFactVisible } from "@/lib/calc/gift-household-payload";
 import { giftHouseholdConsolidationStart } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { UsageConversionField } from "./UsageConversionField";
 import { judgmentUsageConversionStart } from "@/lib/calc/one-house-judgment-section-scope";
@@ -95,18 +96,16 @@ export function Step3({ form, onChange }: Props) {
   );
   // 결정 #38 — 증여받은 주택의 세대 사실. 계속 같은 세대로 확인되면 「취득 당시」는 세대 보유 시작일(엔진 leaf)이고, 조정대상지역은 세대
   // 보유 시작일과 증여일 둘 다 지정 중일 때만 거주요건이다 — 엔진 `resolveWasRegulatedAtAcquisition`이 같은 basis로 정한다.
+  //   일자는 date-coerce로 바꾼다 — 입력 중 미완성 일자(예: 월 「0」 → 2016-00-01)는 Invalid Date가 아니라 undefined가 되어 통산이 성립하지 않는다.
+  const giftDate = toOptionalDate(primary.acquisitionDate);
+  const giftDonorAcquisitionDate = toOptionalDate(primary.donorAcquisitionDate);
   const giftBasis =
-    giftHouseholdFactVisible(primary) &&
-    primary.acquisitionDate &&
-    primary.donorAcquisitionDate &&
-    primary.giftSameHousehold
+    giftHouseholdFactVisible(primary) && giftDate && giftDonorAcquisitionDate && primary.giftSameHousehold
       ? {
-          giftDate: new Date(primary.acquisitionDate),
-          donorAcquisitionDate: new Date(primary.donorAcquisitionDate),
+          giftDate,
+          donorAcquisitionDate: giftDonorAcquisitionDate,
           continuousSameHousehold: primary.giftSameHousehold === "yes",
-          householdHoldingStartDate: primary.giftHouseholdHoldingStartDate
-            ? new Date(primary.giftHouseholdHoldingStartDate)
-            : undefined,
+          householdHoldingStartDate: toOptionalDate(primary.giftHouseholdHoldingStartDate),
         }
       : undefined;
   const giftConsolidated = giftHouseholdConsolidationStart(giftBasis) !== undefined;

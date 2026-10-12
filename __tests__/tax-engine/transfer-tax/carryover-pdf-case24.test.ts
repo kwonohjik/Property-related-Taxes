@@ -289,3 +289,47 @@ describe("C-01: 배우자 이월과세 + 기준시가 직접 환산 (예제 사�
     expect(detB).toBe(EXAMPLE_B_DETERMINED_TAX);
   });
 });
+
+// ──────────────────────────────────────────────────────────────
+// 변형 — 증여자(배우자)와 증여일부터 양도일까지 계속 같은 세대 「예」 (결정 #33·#34·#38)
+//
+// 같은 세대로 확인되면 §154① 보유·「취득 당시」를 세대 보유 시작일부터 통산한다(엔진 leaf `gift-household-basis.ts`).
+// 세대 보유 시작일이 2017.8.3. 전이면 거주요건 경과규정이 적용돼 거주 0개월이어도 1세대1주택 비과세 → 결정세액 0.
+// 원 사례(세대 사실 미입력)는 위 C-01-12의 64,684,518 그대로다.
+// ──────────────────────────────────────────────────────────────
+
+function makeC01HouseholdInput(ct: Partial<NonNullable<TransferTaxInput["carryoverTaxation"]>>): TransferTaxInput {
+  const input = makeC01Input();
+  return { ...input, carryoverTaxation: { ...input.carryoverTaxation!, donorRelation: "spouse", ...ct } };
+}
+
+describe("C-01 변형: 배우자와 계속 같은 세대 「예」", () => {
+  it("C-01-H1: 「예」 + 세대 보유 시작일 = 증여자 취득일(2006-05-21) → 비과세 · 결정세액 0 + 통산 안내", () => {
+    const result = calculateTransferTax(
+      makeC01HouseholdInput({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: C01_DONOR_ACQUISITION_DATE }),
+      MOCK_RATES,
+    );
+    expect(result.isExempt).toBe(true);
+    expect(result.determinedTax).toBe(0);
+    expect(result.carryoverTaxationDetail?.scenarioB.determinedTax).toBe(0);
+    expect(result.warnings?.some((w) => w.includes("계속 같은 세대였다는 입력에 따라"))).toBe(true);
+  });
+
+  it("C-01-H2: 부정 짝 — 「아니오」면 원 사례와 같은 64,684,518 (증여일 기준)", () => {
+    const result = calculateTransferTax(makeC01HouseholdInput({ donorSameHouseholdContinuous: false }), MOCK_RATES);
+    expect(result.isExempt).toBe(false);
+    expect(result.determinedTax).toBe(ENGINE_A_DETERMINED_TAX);
+    expect(result.carryoverTaxationDetail?.scenarioB.determinedTax).toBe(ENGINE_B_DETERMINED_TAX);
+    expect((result.warnings ?? []).some((w) => w.includes("계속 같은 세대"))).toBe(false);
+  });
+
+  it("C-01-H3: 경과규정 경계 ±1 — 세대 보유 시작일 2017-08-02는 비과세 0, 2017-08-03은 거주요건 적용 64,684,518", () => {
+    const at = (d: string) =>
+      calculateTransferTax(
+        makeC01HouseholdInput({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: new Date(d) }),
+        MOCK_RATES,
+      );
+    expect(at("2017-08-02").determinedTax).toBe(0);
+    expect(at("2017-08-03").determinedTax).toBe(ENGINE_A_DETERMINED_TAX);
+  });
+});
