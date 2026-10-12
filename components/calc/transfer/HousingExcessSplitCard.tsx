@@ -11,6 +11,9 @@
  *
  * 환산·감정·매매사례 취득(#17-4)은 취득가액 칸의 «취득시 기준시가»가 이미 같은 값(취득 당시 개별주택가격 — `standardPriceAtAcq`)을 받는다.
  * 같은 필드를 두 번 그리지 않도록 그때는 이 카드에서 그 칸을 빼고 나머지 네 칸만 받는다(⑧은 같은 필드를 그대로 요구한다).
+ *
+ * #17 후속 — 자산 전체 자본적지출이 있으면 「그중 토지분 자본적지출」 1칸을 더 연다(건물분 = 전체 − 토지분, 계산값 표시). 노출 술어
+ * `housingExcessNeedsCapexSplit`는 ⑧·④와 같다 — 별개취득 토글이 켜져 있으면 분리 섹션의 파트 칸이 받으므로 열지 않는다.
  */
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -20,6 +23,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { TransferBuildingStdFields } from "./TransferStdPriceCards";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit } from "@/lib/calc/housing-excess-split";
+import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "@/lib/calc/housing-excess-split";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -31,19 +35,22 @@ interface Props {
   isFirst?: boolean;
 }
 
+const COUNT_WORD: Record<number, string> = { 4: "네", 5: "다섯", 6: "여섯" };
+
 export function HousingExcessSplitCard({ asset, onChange, transferDate, isFirst }: Props) {
   if (!housingExcessNeedsLandSplit(asset, transferDate, isFirst === true)) return null;
   const excess = housingExcessAreaOfAsset(asset, transferDate);
   const landArea = parseDecimal(asset.transferArea) || parseDecimal(asset.acquisitionArea) || undefined;
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
   const acqTotalElsewhere = deriveLegacyPartAcqMode(asset) !== "actual";
+  const capex = housingExcessNeedsCapexSplit(asset, transferDate, isFirst === true) ? housingExcessCapexParts(asset) : null;
   return (
     <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 토지·건물 기준시가 입력" bodyClassName="space-y-3">
       <div data-testid="housing-excess-split-card" className="space-y-3">
         <p className="text-caption text-amber-900 leading-relaxed">
           토지 면적이 건물 정착면적의 지역별 배율 한도를 <strong>{excess.toFixed(2)}㎡</strong> 넘습니다. 한도 초과분은 1세대1주택 비과세에서 제외되고
           비사업용 토지(소득세법 §104의3①5호)로 과세되므로, 토지·건물 가액을 기준시가 비율로 나눠 초과분을 분리합니다
-          (소득세법 시행령 §166⑥ · 부가가치세법 시행령 §64①1호). {acqTotalElsewhere ? "아래 네 칸을 모두 입력하세요." : "아래 다섯 칸을 모두 입력하세요."}
+          (소득세법 시행령 §166⑥ · 부가가치세법 시행령 §64①1호). 아래 {COUNT_WORD[(acqTotalElsewhere ? 4 : 5) + (capex ? 1 : 0)]} 칸을 모두 입력하세요.
         </p>
 
         <div className="space-y-2">
@@ -96,6 +103,31 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isFirst 
           />
           <TransferBuildingStdFields asset={asset} onChange={onChange} transferDate={transferDate} placement="saleAxis" />
         </div>
+
+        {capex && (
+          <div className="space-y-2" data-testid="housing-excess-capex">
+            <p className="text-xs font-semibold text-amber-900">자본적지출 토지분·건물분</p>
+            <FieldCard
+              field="housingExcessLandCapex"
+              label="그중 토지분 자본적지출"
+              required
+              unit="원"
+              hint={`필요경비 칸의 자본적지출 ${capex.total.toLocaleString()} 중 토지에 들인 금액입니다 (전부 건물분이면 0). 자본적지출은 공통 비용 안분 대상이 아니어서 귀속을 나눠 입력합니다 (소득세법 §100② 후문).`}
+            >
+              <CurrencyInput
+                label=""
+                hideUnit
+                value={asset.housingExcessLandCapex ?? ""}
+                onChange={(v) => onChange({ housingExcessLandCapex: v })}
+                data-testid="housing-excess-land-capex"
+              />
+            </FieldCard>
+            <p className="text-caption text-amber-900" data-testid="housing-excess-building-capex">
+              건물분 자본적지출 = {capex.total.toLocaleString()} − 토지분 ={" "}
+              <strong>{capex.building === null ? "토지분 입력 후 표시" : capex.building.toLocaleString()}</strong>
+            </p>
+          </div>
+        )}
       </div>
     </ToneCard>
   );

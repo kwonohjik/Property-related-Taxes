@@ -29,8 +29,9 @@
  * 다만 환산 + 공익수용(§164⑨1호 주택 총액 특례)·공매·경락(같은 항 2호)은 환산 분모를 낮추는 특례가 분리 경로에 닿지 않는다 — 특례는 비분리
  * `calcTransferGain`의 `resolveConversionDenominatorAtTransfer`에서만 적용된다(주택 분리 + 수용 환산 미지원 Q6과 같은 이유) — 범위 밖.
  *
- * 자산 단위 자본적지출은 분리 경로가 쓰지 않는다(§100② 후문이 안분 대상으로 열거하지 않아 파트 귀속을 알아야 하는데, 이 경로에는 파트 칸이
- * 없다). 그 사실은 `housingExcessCapexNotice`가 고지한다 — 반영하지 않은 금액·확인 필요(별건: 파트 귀속 입력 경로).
+ * 자산 단위 자본적지출은 분리 경로가 쓰지 않는다(§100② 후문이 안분 대상으로 열거하지 않아 파트 귀속을 알아야 한다). 화면은 카드의 「그중 토지분
+ * 자본적지출」 칸(⑧ 필수)을 ④가 파트 값(토지분 · 전체 − 토지분)으로 싣는다(#17 후속 — `housingExcessNeedsCapexSplit`). 파트 값 없이 자산 전체만
+ * 실은 입력은 `housingExcessCapexNotice`가 반영하지 않은 금액을 고지한다.
  */
 import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtenant-land-rate";
 import { round2 } from "./area-utils";

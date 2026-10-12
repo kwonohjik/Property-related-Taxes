@@ -14,6 +14,7 @@ import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
 import { housingExcessNeedsLandSplit } from "./housing-excess-split";
+import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
@@ -163,6 +164,11 @@ export function buildSplitPayload(
   // 과잉 전송은 무해하다 — 양도가액 2칸이 입력되면 `splitPair`가 비율을 쓰지 않고(split-gain.ts:99),
   // 환산 파트가 없으면 분모로도 소비되지 않는다. 기준시가는 물건 속성값이라 지분 스케일 대상도 아니다.
   const saleStdPriceActive = isSplitActive;
+  // #17 후속 — 배율 초과분 분리의 자본적지출 토지분·건물분(카드 1칸). 아래 자본적지출 2필드 참조.
+  const excessCapex =
+    !partInputsActive && primaryCtx !== undefined && housingExcessNeedsCapexSplit(primary, primaryCtx.transferDate, true)
+      ? housingExcessCapexParts(primary)
+      : null;
 
   return {
     // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
@@ -265,6 +271,14 @@ export function buildSplitPayload(
       ? {
           landDirectExpenses: ratioed(primary.landDirectExpenses),
           buildingDirectExpenses: ratioed(primary.buildingDirectExpenses),
+        }
+      : {}),
+    // #17 후속 — 배율 초과분 분리만이면 카드의 「그중 토지분 자본적지출」 1칸이 정본이다(건물분 = 전체 − 토지분). ⑤ 노출·⑧ 필수와 같은 술어 —
+    // 별개취득 토글이 켜져 있으면 위 파트 칸이 싣는다(`partInputsActive`와 상보, 이중 입력 없음). 지분 스케일은 파트 칸과 같은 `ratioed`.
+    ...(excessCapex
+      ? {
+          landDirectExpenses: excessCapex.land === null ? undefined : ratioed(String(excessCapex.land)),
+          buildingDirectExpenses: excessCapex.building === null ? undefined : ratioed(String(excessCapex.building)),
         }
       : {}),
     // 양도시 기준시가 2필드 — 기준시가는 지분 스케일 대상이 아니다(물건 속성값).

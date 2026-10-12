@@ -88,3 +88,25 @@ describe("HousingExcessSplitCard 노출", () => {
     expect(merged.buildingStandardPriceAtTransfer).toContain("400");
   });
 });
+
+describe("#17 후속 — 「그중 토지분 자본적지출」 칸 (⑤ ⇔ ⑧ ⇔ ④ 같은 술어 `housingExcessNeedsCapexSplit`)", () => {
+  it("🔑 자산 전체 자본적지출이 있으면 토지분 칸이 열리고, 건물분 = 전체 − 토지분을 계산값으로 보인다", () => {
+    render(<Harness init={{ capitalExpenditure: "100000000" }} />);
+    expect(screen.getByTestId("housing-excess-land-capex")).toBeTruthy();
+    expect(screen.getByText(/아래 여섯 칸을 모두 입력하세요/)).toBeTruthy();
+    expect(screen.getByTestId("housing-excess-building-capex").textContent).toContain("토지분 입력 후 표시");
+    fireEvent.change(screen.getByTestId("housing-excess-land-capex"), { target: { value: "60,000,000" } });
+    const merged = Object.assign({}, ...patches) as Partial<AssetForm>;
+    expect(merged.housingExcessLandCapex).toContain("60");
+    expect(screen.getByTestId("housing-excess-building-capex").textContent).toContain("40,000,000");
+  });
+
+  it.each([
+    ["자본적지출 없음", { capitalExpenditure: "0" }],
+    ["별개취득 토글 ON(같은 날짜) — 분리 섹션의 파트 칸이 받는다(이중 입력 금지)", { capitalExpenditure: "100000000", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2012-01-02" }],
+  ])("대조 — %s이면 토지분 칸이 없다", (_n, init) => {
+    render(<Harness init={init} />);
+    expect(screen.queryByTestId("housing-excess-land-capex")).toBeNull();
+    expect(screen.queryByTestId("housing-excess-capex")).toBeNull();
+  });
+});
