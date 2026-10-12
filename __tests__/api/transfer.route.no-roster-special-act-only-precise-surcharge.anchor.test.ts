@@ -22,7 +22,7 @@
  * | N-3 §99의4 제외해도 2채 남음(§155 의제 없음) · 3채 | 1,327,903,500 + 고지 | 불변 | — |
  * | N-4 §154① 미충족 + §99의4 · 2채 | 1,141,178,500 + 고지 | 불변 | — |
  * | N-5 2021-09-18 양도(15호 전) + §99의4 · 2채 | 597,025,000 + 고지 | 불변(받는 호 없음) | 597,025,000 |
- * | N-6 2021-09-18 양도 + §99의4·§99의2 · 3채 | 699,600,000 + 고지 | 불변(1호 불산입이면 2채 중과) | 219,087,000(산입) / 597,025,000(1호 불산입) |
+ * | N-6 2021-09-18 양도 + §99의4·§99의2 · 3채 | 699,600,000 + 고지 | 불변(명부 없이는 제외 주택의 호를 모른다) | 219,087,000(산입 — 13호) / 219,087,000(1호 불산입 — 10호, 종전 597,025,000) |
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -370,9 +370,12 @@ describe("음성 짝 — 열지 않는다(원시 플래그 + #1955 고지 · 세
       const s = await single(withSpecials(withReductions(pre(3), [RURAL_994_DECL]), [special("unsold_99_2", "2013-06-01")]));
       expect(s).toMatchObject({ totalTax: 699_600_000, evaluated: false });
       expect(s.warnings).toContain(notice(3));
-      // 같은 세대를 명부에 입력 — 제외 주택이 산입(양도 당시 4억)이면 13호 배제, 1호 불산입(1억)이면 2채 중과(15호 전).
+      // 같은 세대를 명부에 입력 — 제외 주택이 산입(양도 당시 4억)이면 13호 배제. 1호 불산입(1억)이면 2채(양도 주택 + §99의2)가
+      //   남는데, §99의2 행 ⑥(확인된 조문)은 영 §167의3①5호 주택이라 §167의10①10호로 배제된다(결정 #16 공백 수정 —
+      //   `surcharge-tax-incentive-house-link.ts`; 종전 597,025,000은 ⑥이 10호에 닿지 않던 값). 명부 없는 경로는 제외 주택의
+      //   호를 모르므로(행 구성은 2호~8호의2 「없음」 — `noRosterTwoHouseDeemingHouses`) 위 원시 플래그 + 고지 그대로다.
       expect((await single(pre(3, [RURAL_994_ROW("400000000"), SPECIAL_992_ROW]))).totalTax).toBe(219_087_000);
-      expect((await single(pre(3, [RURAL_994_ROW("100000000"), SPECIAL_992_ROW]))).totalTax).toBe(597_025_000);
+      expect((await single(pre(3, [RURAL_994_ROW("100000000"), SPECIAL_992_ROW]))).totalTax).toBe(219_087_000);
     });
   });
 });

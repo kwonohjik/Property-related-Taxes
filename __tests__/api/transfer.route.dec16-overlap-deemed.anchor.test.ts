@@ -39,6 +39,8 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { qualifiesUnavoidableOutsideCapital } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { toTransferFormPatch } from "@/lib/calc/one-house-judgment-handoff";
+import { createInitialOneHouseJudgmentForm, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
@@ -179,6 +181,7 @@ async function run(f: Form) {
     eff: mh.effectiveHouseCount,
     topNotice: notice(r.warnings),
     mhNotice: notice(mh.warnings),
+    mhWarnings: (mh.warnings ?? []) as string[],
   };
 }
 
@@ -277,6 +280,17 @@ describe("#16 ⑧·⑥ + 상속 제외 — 비과세 의제를 중과 배제에�
  * | 같은 세대 ⑧ 선언 없음 (Q0 대조) | 1,141,772,500 | 1,141,772,500 |
  * | ⑧(경남 1억) + §99의2 감면주택 · 행 「조특법 감면주택(5호)」 표시 (S5) | 340,038,600 (4호) | 340,038,600 (10호) |
  * | ⑧(부산 4억 — 2채 안) + 공동상속 소수지분 (K1 짝) | 340,038,600 (4호) | 340,038,600 (4호) |
+ *
+ * ⑥ ↔ 10호 연결(같은 세대 · ⑧ 경남 1억) — 아래 「수정 전」은 B1 뒤·연결 전:
+ *
+ * | 시료 | 연결 전 | 연결 후 |
+ * |---|---:|---:|
+ * | §99의2 명부 행 ⑥만 (L1) · 넘겨받은 행 id 선언 (L2) | 597,025,000 | 340,038,600 (10호) |
+ * | 칩 + ⑥ 같은 행 (L3) | 340,038,600 | 340,038,600 |
+ * | 요건 미확인 ⑥ (L4) · 취득기간 밖 ⑥ (L5) | 1,141,772,500 | 1,141,772,500 |
+ * | 행 id 없는 옛 선언 (L6) | 597,025,000 | 597,025,000 |
+ * | §97 장기임대(3호) ⑥만 (L7) | 597,025,000 | 597,025,000 + 확인 필요 |
+ * | §99 신축주택 ⑥만 (L9 — 2007.12.31. 시한은 §89①3호 의제 전용) | 1,141,772,500 | 667,342,500 (= 칩) |
  */
 describe("#16-1 4호 가드 — ⑧ 주택이 중과 주택 수 2채 안에 있을 때만 (2023.2.28. 전 양도)", () => {
   const TD_2021 = "2021-09-18";
@@ -306,12 +320,83 @@ describe("#16-1 4호 가드 — ⑧ 주택이 중과 주택 수 2채 안에 있�
     expect(await multiTotal(f()), "다건 route도 단건과 같은 세액").toBe(340_038_600);
   });
   /**
-   * 별건 공백(이 PR 전부터) — §99의2 등 영 §167의3①3호·5호 조문을 ⑥ 주택 수 제외(`specialHouseExclusions` · 명부 행 ⑥)로만
-   * 선언하고 행 「조특법 감면주택(5호)」 칩을 켜지 않으면 중과 10호 판정(`isGroupExcludable`)에 닿지 않는다. 수정 전에는 4호가
-   * 우연히 같은 세액(340,038,600)을 냈고, 지금은 597,025,000이다(실측 — 단건·다건, 전역·행 연결 선언 모두). ⑥ 선언을 10호에
-   * 잇는 방식(요건 확인 여부·3호 임대 요건)은 사용자 결정 대상이라 값을 고정하지 않는다.
+   * ⑥ 선언 ↔ 중과 10호 연결(결정 #16 공백 — `surcharge-tax-incentive-house-link.ts`). 영 §167의3①5호 조문을 ⑥ 주택 수 제외로만
+   * 선언해도(5호 칩 없음 — 판정 메뉴는 칩을 숨긴다) 「확인된」 선언이면 10호 「일반주택」 판정에서 그 행을 2~8호 주택으로 뺀다.
+   * 수정 전에는 597,025,000(2주택 중과)이었다.
    */
-  it.todo("§99의2를 ⑥ 주택 수 제외로만 선언(5호 칩 없음) → 10호 배제 340,038,600이어야 한다 — ⑥ 선언 ↔ 중과 10호 미연결(별건)");
+  const SPECIAL_ROW6: HouseEntry = {
+    ...SPECIAL_ROW,
+    countExclusion: {
+      kind: "special",
+      special: { article: "unsold_99_2", houseAcquisitionDate: "", houseContractDate: "2013-06-01", isNationalHousing: false, requirementsConfirmed: true },
+    },
+  } as HouseEntry;
+  it("L1 §99의2를 명부 행 ⑥으로만 선언(5호 칩 없음) → 10호 배제 340,038,600 (수정 전 597,025,000) · 다건 같음", async () => {
+    const f = () => form([UNAV_OUT, SPECIAL_ROW6], { transferDate: TD_2021 });
+    expect(await run(f())).toMatchObject({ totalTax: 340_038_600, reasons: "only_general_two_house", eff: 2 });
+    expect(await multiTotal(f()), "다건 route도 단건과 같은 세액").toBe(340_038_600);
+  });
+  it("L2 판정 메뉴에서 넘겨받은 선언(폼 전역 · 행 id 있음)도 같은 leaf → 340,038,600", async () => {
+    const decl = [{ ...SPECIAL_DECL![0], houseId: SPECIAL_ROW.id }] as Form["specialHouseExclusions"];
+    const r = await run(form([UNAV_OUT, SPECIAL_ROW], { specialHouseExclusions: decl, transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 340_038_600, reasons: "only_general_two_house", eff: 2 });
+  });
+  it("L3 칩 + ⑥이 같은 행 → 한 번만 — 칩만 켠 S5와 같은 세액·사유", async () => {
+    const r = await run(form([UNAV_OUT, { ...SPECIAL_ROW6, isUnsoldHousing: true }], { transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 340_038_600, reasons: "only_general_two_house", eff: 2 });
+  });
+  it("L4 반대 짝 — 요건 미확인 ⑥(requirementsConfirmed=false)은 잇지 않는다 → 10호 없음", async () => {
+    const unconfirmed = { ...SPECIAL_ROW6, countExclusion: { kind: "special", special: { ...(SPECIAL_ROW6.countExclusion as { special: object }).special, requirementsConfirmed: false } } } as HouseEntry;
+    const r = await run(form([UNAV_OUT, unconfirmed], { transferDate: TD_2021 }));
+    // ⑥이 서지 않아 비과세 주택 수도 3 — 연결 전후 1,141,772,500 그대로
+    expect(r).toMatchObject({ totalTax: 1_141_772_500, reasons: "", eff: 2 });
+  });
+  it("L5 반대 짝 — 취득기간 밖 ⑥(최초 매매계약 2014)은 잇지 않는다 → 10호 없음", async () => {
+    const outside = { ...SPECIAL_ROW6, countExclusion: { kind: "special", special: { ...(SPECIAL_ROW6.countExclusion as { special: object }).special, houseContractDate: "2014-06-01" } } } as HouseEntry;
+    const r = await run(form([UNAV_OUT, outside], { transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 1_141_772_500, reasons: "", eff: 2 });
+  });
+  it("L6 반대 짝 — 행 id 없는 옛 선언은 어느 주택인지 몰라 잇지 않는다 → 597,025,000 그대로", async () => {
+    const r = await run(form([UNAV_OUT, SPECIAL_ROW], { specialHouseExclusions: SPECIAL_DECL, transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 597_025_000, reasons: "", eff: 2 });
+  });
+  it("L10 판정 메뉴 → 계산기 넘김(`toTransferFormPatch`) — 칩이 없는 ⑥ 행 그대로 10호 340,038,600", async () => {
+    const jf = Object.assign(createInitialOneHouseJudgmentForm(), {
+      isOneHousehold: true,
+      transferDate: TD_2021,
+      contractTotalPrice: P20,
+      isRegulatedArea: true,
+      wasRegulatedAtAcquisition: false,
+      houses: [UNAV_OUT, SPECIAL_ROW6],
+    }) as OneHouseJudgmentFormData;
+    jf.assets = [{ ...jf.assets[0], assetKind: "housing", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "300,000,000", regionCode: GANGNAM }];
+    const f = Object.assign(createDefaultTransferFormData(), toTransferFormPatch(jf)) as Form;
+    expect(f.houses.find((h) => h.id === SPECIAL_ROW6.id)?.isUnsoldHousing, "판정 메뉴는 5호 칩이 없다").toBe(false);
+    expect(await run(f)).toMatchObject({ totalTax: 340_038_600, reasons: "only_general_two_house", eff: 2 });
+  });
+  const row6 = (base: HouseEntry, special: Record<string, unknown>): HouseEntry =>
+    ({ ...base, countExclusion: { kind: "special", special: { houseAcquisitionDate: "", houseContractDate: "", isNationalHousing: false, requirementsConfirmed: true, ...special } } }) as HouseEntry;
+  /** 조특법 §97 장기임대주택(1999 임대개시 · 경기) — 영 §167의3①3호 후보, 5년 임대·국민주택 사실은 ⑥에 없다 */
+  const RENTAL97_ROW = row6({ ...ROW, id: "h7", regionCode: "4113510300", acquisitionDate: "1999-01-01" }, { article: "rental_97", houseRentalStartDate: "1999-06-01" });
+  it("L7 반대 짝 — 3호(§97 장기임대) ⑥만 → 잇지 않는다(2주택 중과 597,025,000) + 결론을 가르므로 확인 필요 고지", async () => {
+    const r = await run(form([UNAV_OUT, RENTAL97_ROW], { transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 597_025_000, reasons: "", eff: 2 });
+    expect(r.mhWarnings.some((w) => w.includes("§167의3①3호") && w.includes("확인이 필요합니다"))).toBe(true);
+  });
+  it("L8 3호 행에 「조특법 감면 임대주택(3호)」 사실이 있으면 고지하지 않는다(그 칩이 판정한다 — 여기서는 국민주택 아님이라 중과)", async () => {
+    const chip = { ...RENTAL97_ROW, isTaxIncentiveRental: true, rentalPeriodYears: "6", isNationalSizeHousing: false } as HouseEntry;
+    const r = await run(form([UNAV_OUT, chip], { transferDate: TD_2021 }));
+    expect(r).toMatchObject({ totalTax: 597_025_000, reasons: "" });
+    expect(r.mhWarnings.some((w) => w.includes("§167의3①3호") && w.includes("확인이 필요합니다"))).toBe(false);
+  });
+  it("L9 §99 신축주택(1999) — ⑥의 2007.12.31. 양도시한(§99②)은 5호 판정에 쓰지 않는다: ⑥만 = 칩 + ⑥ (10호)", async () => {
+    const NEW99 = row6({ ...ROW, id: "h9", acquisitionDate: "1999-03-01" }, { article: "new_99", houseAcquisitionDate: "1999-03-01", houseContractDate: "1999-03-01", isNationalHousing: true });
+    const only6 = await run(form([UNAV_OUT, NEW99], { transferDate: TD_2021 }));
+    const chip = await run(form([UNAV_OUT, { ...NEW99, isUnsoldHousing: true }], { transferDate: TD_2021 }));
+    // ⑥은 §89①3호 의제가 서지 않아(2007.12.31. 시한) 비과세 주택 수 3 — 수정 전 1,141,772,500 → 667,342,500(칩과 같음)
+    expect(only6).toMatchObject({ totalTax: 667_342_500, reasons: "only_general_two_house", eff: 2 });
+    expect(only6.totalTax).toBe(chip.totalTax);
+  });
   it("K1 짝 — ⑧(2채 안) + 공동상속 소수지분 → 4호 배제 그대로 340,038,600", async () => {
     const r = await run(form([UNAV_2021(), CO_INH], { transferDate: TD_2021 }));
     expect(r).toMatchObject({ totalTax: 340_038_600, reasons: "unavoidable_outside_capital", eff: 2 });
