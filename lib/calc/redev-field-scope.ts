@@ -65,7 +65,7 @@ export function exemptionAtApprovalInScope(
  * 「세대원 건물 소유」 선언(`redevLandHouseholdOwnedBuilding`)이 의미를 갖는 축인가 — ④ payload · 엔진 공용 (#13).
  *
  * 입주권 양도 + 출자 자산 **토지**일 때만이다. 엔진(`landContributionBlocksOneRight`)이 읽는 조건과 같다.
- * 판정 메뉴에는 출자 자산 입력이 없어 선언 위젯은 항상 보이고(계산기에서 토지를 고르면 적용된다), 값은 지우지 않는다 —
+ * 판정 메뉴 §89①4호 카드도 출자 자산을 받아 토지일 때만 선언 위젯을 보인다(판정 메뉴 ④도 이 술어로 싣는다). 값은 지우지 않는다 —
  * `clearOutOfScopeRedevPatch`가 비우면 「판정 불러오기」로 가져온 선언이 사라진다.
  */
 export function landHouseholdBuildingInScope(

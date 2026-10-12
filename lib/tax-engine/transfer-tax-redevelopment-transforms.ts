@@ -162,7 +162,7 @@ export function oneRightPresaleGate(
  */
 export type OneRightExemptionFacts = {
   exemptionEligibleAtApproval?: boolean;
-  /** 계산기 §166 출자 자산 — 판정 메뉴에는 없다(그 상자는 이 키를 싣지 않아 아래 토지 출자 게이트가 꺼진다). */
+  /** 출자 자산 — 계산기는 §166 입력(`redevelopment`), 판정 메뉴는 §89①4호 카드(`oneRightExemptionFacts`)에서 온다(#13). */
   originalAssetType?: "land" | "housing";
   /** 토지 출자일 때만 읽는다 — 인가일·양도일 두 시점 모두 같은 세대가 철거 대상 건물을 소유 (#13). */
   landHouseholdOwnedBuilding?: boolean;
@@ -193,6 +193,8 @@ export function pickOneRightExemptionFacts(
     otherHouseAcquisitionDate: facts.otherHouseAcquisitionDate,
     otherHouseDisposalDelayReason: facts.otherHouseDisposalDelayReason,
     approvalDate: facts.approvalDate,
+    originalAssetType: facts.originalAssetType,
+    landHouseholdOwnedBuilding: facts.landHouseholdOwnedBuilding,
   };
 }
 
@@ -220,7 +222,7 @@ export function oneRightHighValueBase(input: TransferTaxInput): number {
 
 /**
  * 토지만 출자한 입주권이 §89①4호 본문(기존주택 소유 세대)을 **채우지 못하는가** — 세대원 건물 소유 선언이 「예」가 아니면 참.
- * 토지 출자가 아니면(주택 출자 · 판정 메뉴 상자 · 출자 자산 미제공) 거짓이다.
+ * 토지 출자가 아니면(주택 출자 · 출자 자산 미제공) 거짓이다. 계산기·판정 메뉴 두 상자 모두 같은 술어다.
  */
 export function landContributionBlocksOneRight(
   facts: Pick<OneRightExemptionFacts, "originalAssetType" | "landHouseholdOwnedBuilding">,

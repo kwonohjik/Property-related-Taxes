@@ -144,7 +144,7 @@ export function buildOneRightVerdict(
     );
   }
   if (nonResidentExcludesOneRight(input)) reasons.push(NON_RESIDENT_ONE_RIGHT_REASON);
-  // #13 — 판정 메뉴 상자에는 출자 자산이 없어 이 사유가 뜨지 않는다(토지 출자 게이트는 계산기 상자 전용). 규칙과 사유를 같은 술어로 맞춘다.
+  // #13 — 판정 메뉴 §89①4호 카드의 출자 자산·세대원 건물 선언도 같은 술어로 읽는다(규칙과 사유를 같은 술어로 맞춘다).
   if (landContributionBlocksOneRight(facts)) {
     reasons.push(
       "토지만 출자한 입주권은 인가일·양도일 현재 같은 세대가 철거 대상 건물(기존주택)을 소유한 경우에만 성립합니다(「소득세법」 §89①4호 본문).",

@@ -138,6 +138,7 @@ export function RedevelopmentRightExemptionSection({
   );
 
   const isToggleOn = asset.redevExemptionEligibleAtApproval === "yes";
+  const isLandContributed = asset.redevOriginalAssetType === "land";
 
   // 가시성: subject="right" 전용 섹션
   if (!isRightSubject) return null;
@@ -208,26 +209,46 @@ export function RedevelopmentRightExemptionSection({
               />
             </FieldCard>
 
-            {/* §89①4호 본문 — 철거 대상 건물(기존주택)을 본인·같은 세대원이 소유해야 한다(#13). 토지만 출자한 경우에 쓰인다.
-                판정 메뉴에는 출자 자산 입력이 없어 늘 보이고, 계산기에서 출자 자산을 「토지」로 고르면 이 선언이 적용된다
-                (선언이 없으면 불성립 + 확인 필요). 인가일과 양도일 두 시점 모두로 묻는다(재산세과-1748). */}
+            {/* §89①4호 본문 「기존주택을 소유하는 세대」 — 출자 자산(#13 · 판정 메뉴 반영 2026-10-12). 계산기 §166 「출자 자산」과
+                같은 필드(`redevOriginalAssetType`)다 — 두 화면이 한 값을 나눠 갖는다(인가일과 같은 방식). */}
             <FieldCard
-              label="토지만 출자한 경우 — 철거 대상 건물(기존주택)의 세대 소유 (본문)"
+              label="조합에 출자한 자산"
+              field="redevOriginalAssetType"
+              hint="토지만 출자했다면 같은 세대가 철거 대상 건물(기존주택)을 소유한 경우에만 §89①4호 비과세가 성립합니다(재산세과-1748). 계산기의 출자 자산과 같은 값입니다."
+            >
+              <RadioCardGroup
+                name={`redevOriginalAssetType-${asset.assetId}`}
+                value={asset.redevOriginalAssetType || "housing"}
+                onChange={(v) => onChange({ redevOriginalAssetType: v as "land" | "housing" })}
+                options={[
+                  { value: "housing", label: "주택(건물) 출자", description: "철거 대상 건물(기존주택)과 그 부수토지를 출자했습니다." },
+                  { value: "land", label: "토지만 출자", description: "건물 없이 토지만 출자했습니다 — 아래에서 같은 세대의 건물 소유를 선언합니다." },
+                ]}
+                layout="inline"
+              />
+            </FieldCard>
+
+            {/* §89①4호 본문 — 철거 대상 건물(기존주택)을 본인·같은 세대원이 소유해야 한다(#13). 토지만 출자한 경우에만 묻는다
+                (선언이 없으면 불성립 + 확인 필요). 인가일과 양도일 두 시점 모두로 묻는다(재산세과-1748). */}
+            {isLandContributed && (
+            <FieldCard
+              label="철거 대상 건물(기존주택)의 세대 소유 (본문)"
               field="redevLandHouseholdOwnedBuilding"
-              hint="철거 대상 건물(기존주택)을 인가일과 양도일 두 시점 모두 본인이나 같은 세대원이 소유해야 합니다. 건물도 함께 출자했다면 비워 두세요. 계산기에서 출자 자산을 「토지」로 고르면 적용됩니다."
+              hint="철거 대상 건물(기존주택)을 인가일과 양도일 두 시점 모두 본인이나 같은 세대원이 소유해야 합니다."
             >
               <RadioCardGroup
                 name={`redevLandHouseholdOwnedBuilding-${asset.assetId}`}
                 value={asset.redevLandHouseholdOwnedBuilding || ""}
                 onChange={(v) => onChange({ redevLandHouseholdOwnedBuilding: v as "" | "yes" | "no" })}
                 options={[
-                  { value: "", label: "해당 없음 / 모름", description: "건물도 출자했거나 아직 모릅니다. 토지만 출자한 입주권이면 비과세를 적용하지 않습니다." },
+                  { value: "", label: "모름", description: "아직 모릅니다. 비과세를 적용하지 않습니다(확인 필요)." },
                   { value: "yes", label: "예 — 인가일·양도일 모두 같은 세대가 소유", description: "인가일과 양도일 두 시점 모두 같은 세대가 건물을 소유 — 위 요건 선언대로 판정합니다." },
-                  { value: "no", label: "아니오 — 다른 세대 소유", description: "건물은 다른 세대 소유이거나 양도 전에 세대가 갈라졌습니다 — 토지만 출자한 입주권이면 비과세 불성립." },
+                  { value: "no", label: "아니오 — 다른 세대 소유", description: "건물은 다른 세대 소유이거나 양도 전에 세대가 갈라졌습니다 — 비과세 불성립." },
                 ]}
                 layout="inline"
               />
             </FieldCard>
+            )}
 
             {/* §89①4호 나목 — 그 1주택의 취득일 (기한 요건 판정 — 양도일 연혁 1년·2년·3년) */}
             <FieldCard
@@ -284,6 +305,11 @@ export function RedevelopmentRightExemptionSection({
                   비과세 요건 충족 시 전액 비과세가 아닌 {highValue.label} 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
                   안분 상세는 결과 화면에서 확인하세요.
                 </p>
+                {isLandContributed && asset.redevLandHouseholdOwnedBuilding === "yes" && (
+                  <p className="mt-0.5" data-testid="land-right-high-value-166-notice">
+                    토지만 출자한 입주권이라 계산기의 토지 출자 산식(「소득세법 시행령」 §166)이 같은 세대가 가진 건물분을 반영하지 못할 수 있습니다 — 확인 필요.
+                  </p>
+                )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   <LawArticleModal legalBasis="소득세법 §95 ③" label="§95③" />
                   <LawArticleModal legalBasis="소득세법 시행령 §160" label="시행령 §160" />

@@ -27,11 +27,38 @@ const rightAsset = (over: Partial<AssetForm> = {}): AssetForm =>
     ...over,
   }) as AssetForm;
 
-describe("판정 메뉴 §89①4호 카드 — 세대원 건물 소유 선언 위젯", () => {
-  it("선언 칸과 선택지가 보이고, 고르면 onChange로 패치된다", () => {
+describe("판정 메뉴 §89①4호 카드 — 출자 자산 · 세대원 건물 소유 선언 위젯", () => {
+  it("출자 자산을 고르면 onChange로 패치된다 (계산기 출자 자산과 같은 필드)", () => {
     const onChange = vi.fn();
     render(<RedevelopmentRightExemptionSection asset={rightAsset()} onChange={onChange} />);
-    expect(screen.getByText(/토지만 출자한 경우 — 철거 대상 건물\(기존주택\)의 세대 소유/)).toBeTruthy();
+    expect((screen.getByLabelText(/주택\(건물\) 출자/) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByLabelText(/토지만 출자/));
+    expect(onChange).toHaveBeenCalledWith({ redevOriginalAssetType: "land" });
+  });
+
+  it("주택 출자면 세대원 건물 질문을 보이지 않는다 · 토지면 보인다", () => {
+    const { unmount } = render(<RedevelopmentRightExemptionSection asset={rightAsset()} onChange={() => {}} />);
+    expect(screen.queryByText(/철거 대상 건물\(기존주택\)의 세대 소유/)).toBeNull();
+    unmount();
+    render(<RedevelopmentRightExemptionSection asset={rightAsset({ redevOriginalAssetType: "land" })} onChange={() => {}} />);
+    expect(screen.getByText(/철거 대상 건물\(기존주택\)의 세대 소유/)).toBeTruthy();
+  });
+
+  it("「예」 + 고가 기준 초과면 §166 산식 확인 필요를 함께 안내한다 · 주택 출자면 없다", () => {
+    const props = { onChange: () => {}, transferDate: "2026-09-01", contractTotalPrice: "2000000000" };
+    const { unmount } = render(
+      <RedevelopmentRightExemptionSection asset={rightAsset({ redevOriginalAssetType: "land", redevLandHouseholdOwnedBuilding: "yes" })} {...props} />,
+    );
+    expect(screen.getByTestId("land-right-high-value-166-notice").textContent).toContain("§166");
+    unmount();
+    render(<RedevelopmentRightExemptionSection asset={rightAsset({ redevLandHouseholdOwnedBuilding: "yes" })} {...props} />);
+    expect(screen.queryByTestId("land-right-high-value-166-notice")).toBeNull();
+  });
+
+  it("선언 칸과 선택지가 보이고, 고르면 onChange로 패치된다", () => {
+    const onChange = vi.fn();
+    render(<RedevelopmentRightExemptionSection asset={rightAsset({ redevOriginalAssetType: "land" })} onChange={onChange} />);
+    expect(screen.getByText(/철거 대상 건물\(기존주택\)의 세대 소유/)).toBeTruthy();
     fireEvent.click(screen.getByLabelText(/예 — 인가일·양도일 모두 같은 세대가 소유/));
     expect(onChange).toHaveBeenCalledWith({ redevLandHouseholdOwnedBuilding: "yes" });
     fireEvent.click(screen.getByLabelText(/아니오 — 다른 세대 소유/));
@@ -40,13 +67,13 @@ describe("판정 메뉴 §89①4호 카드 — 세대원 건물 소유 선언 �
 
   it("저장된 값이 선택 상태로 반영된다 (라벨만 있고 배선이 없으면 안 된다)", () => {
     render(
-      <RedevelopmentRightExemptionSection asset={rightAsset({ redevLandHouseholdOwnedBuilding: "no" })} onChange={() => {}} />,
+      <RedevelopmentRightExemptionSection asset={rightAsset({ redevOriginalAssetType: "land", redevLandHouseholdOwnedBuilding: "no" })} onChange={() => {}} />,
     );
     expect((screen.getByLabelText(/아니오 — 다른 세대 소유/) as HTMLInputElement).checked).toBe(true);
   });
 
   it("설명에 두 시점(인가일·양도일)과 소유 주체(본인 또는 같은 세대원)가 있다", () => {
-    render(<RedevelopmentRightExemptionSection asset={rightAsset()} onChange={() => {}} />);
+    render(<RedevelopmentRightExemptionSection asset={rightAsset({ redevOriginalAssetType: "land" })} onChange={() => {}} />);
     expect(screen.getAllByText(/본인이나 같은 세대원이 소유해야/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/인가일과 양도일 두 시점 모두/).length).toBeGreaterThan(0);
   });
