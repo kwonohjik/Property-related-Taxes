@@ -552,6 +552,10 @@ export const oneRightExemptionFactsSchema = z.object({
     .optional(),
   /** 양도하는 입주권의 관리처분계획인가일 — 분양권 요건 연혁(법률 제18578호 부칙 제7조②·③) 판정용(E-3 후속) */
   approvalDate: z.string().date().optional(),
+  /** 출자 자산(§89①4호 본문 「기존주택을 소유하는 세대」) — 계산기 `redevelopment.originalAssetType`과 같은 사실(#13 판정 메뉴 반영) */
+  originalAssetType: z.enum(["land", "housing"]).optional(),
+  /** 토지 출자일 때만 — 인가일·양도일 두 시점 모두 같은 세대가 철거 대상 건물을 소유(#13 · 재산세과-1748) */
+  landHouseholdOwnedBuilding: z.boolean().optional(),
 });
 
 // ─── 취득가액 의제·환산 스키마 — 별도 파일로 분리 (800줄 정책, CB-08) ──────

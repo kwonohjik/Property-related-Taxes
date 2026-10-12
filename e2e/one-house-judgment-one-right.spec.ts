@@ -132,3 +132,35 @@ test.describe("판정 메뉴 §89①4호 1세대1입주권", () => {
     await expect(page.getByTestId("one-house-verdict")).toHaveText("부분 비과세");
   });
 });
+
+/**
+ * #13 후속 — 판정 메뉴 §89①4호 카드의 출자 자산. 토지만 출자했으면 같은 세대가 철거 대상 건물을 소유한 경우에만 성립한다
+ * (「소득세법」 §89①4호 본문 · 재산세과-1748). 종전에는 판정 메뉴가 출자 자산을 받지 않아 「아니오」여도 가목 비과세였다.
+ */
+test.describe("판정 메뉴 §89①4호 — 토지만 출자한 입주권", () => {
+  async function judgeLand(page: Page, ownership: RegExp) {
+    await gotoSaleStep(page);
+    await pickRight(page);
+    await page.getByRole("radio", { name: /토지만 출자/ }).click();
+    await page.getByRole("switch", { name: /인가일 현재/ }).click();
+    await page.getByRole("radio", { name: ownership }).click();
+    await fillSaleBasics(page);
+    await gotoHoldingsStep(page);
+    await page.getByTestId("one-house-judge-cta").click();
+    await expect(page.getByTestId("one-house-judgment-result")).toBeVisible();
+  }
+
+  test("[ORR-6] 토지 출자 + 세대원 건물 「아니오」 → 요건 미충족 · 토지 출자 사유", async ({ page }) => {
+    await judgeLand(page, /아니오 — 다른 세대 소유/);
+    await expect(page.getByTestId("one-house-one-right-verdict")).toContainText("요건 미충족");
+    // 사유 목록은 결론 문장(verdict) 형제다 — 결과 화면 안에서 찾는다.
+    await expect(page.getByTestId("one-house-judgment-result")).toContainText("토지만 출자한 입주권은");
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+  });
+
+  test("[ORR-7] 토지 출자 + 세대원 건물 「예」 → 가목 성립 · 비과세 (긍정 짝)", async ({ page }) => {
+    await judgeLand(page, /예 — 인가일·양도일 모두 같은 세대가 소유/);
+    await expect(page.getByTestId("one-house-one-right-verdict")).toContainText("가목 성립");
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("비과세");
+  });
+});

@@ -613,6 +613,8 @@ describe("P4-3b — §89①4호 판정 배선", () => {
     expect(body.oneRightExemptionFacts).toEqual({
       eligibleAtApproval: true,
       otherHouseAcquisitionDate: undefined,
+      // #13 후속 — 출자 자산(기본 주택)도 판정 사실이다. 세대원 건물 선언은 토지일 때만 싣는다.
+      originalAssetType: "housing",
     });
     // 🔴 §166 3분할 산식 블록을 지어내지 않는다 — 이것이 Q-7 분할선이다.
     expect(body.redevelopment).toBeUndefined();

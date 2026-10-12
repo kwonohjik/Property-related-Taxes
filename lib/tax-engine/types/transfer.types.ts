@@ -371,6 +371,10 @@ export interface TransferTaxInput {
      * 재건축 기준일 고지용. 계산기는 같은 값을 `redevelopment.approvalDate`(필수)로 보낸다.
      */
     approvalDate?: Date;
+    /** 출자 자산 — `redevelopment.originalAssetType`과 같은 사실(#13 · 토지면 아래 선언이 「예」일 때만 4호 성립) */
+    originalAssetType?: "land" | "housing";
+    /** 토지 출자일 때만 — 인가일·양도일 두 시점 모두 같은 세대가 철거 대상 건물을 소유(#13) */
+    landHouseholdOwnedBuilding?: boolean;
   };
   /** 거주기간 (월) */
   residencePeriodMonths: number;

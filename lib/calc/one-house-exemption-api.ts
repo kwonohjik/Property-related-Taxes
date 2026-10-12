@@ -39,6 +39,7 @@ import { buildRental4hoPayload } from "./rental-4ho-proviso";
 import { rentalLeaseResidencePayload } from "./exemption-proviso-payload";
 import { departureOnlyHousePayload } from "./exemption-proviso-payload";
 import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
+import { landHouseholdBuildingInScope } from "./redev-field-scope";
 import {
   buildReplacementHousePayload,
   buildRightThreeYearExceptionPayload,
@@ -343,6 +344,16 @@ export function buildOneHouseExemptionApiBody(
             otherHouseDisposalDelayReason: primary.redevOtherHouseDisposalDelayReason || undefined,
             // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 계산기와 같은 필드다.
             approvalDate: primary.redevApprovalDate || undefined,
+            // #13 — 출자 자산과 세대원 건물 소유 선언(§89①4호 본문). 계산기 ④(`transfer-tax-api-redev.ts`)와 같은 규칙:
+            //       선언은 토지 출자일 때만 싣는다(주택으로 되돌린 뒤 남은 값이 엔진에 닿지 않게).
+            originalAssetType: primary.redevOriginalAssetType || undefined,
+            landHouseholdOwnedBuilding: !landHouseholdBuildingInScope(primary)
+              ? undefined
+              : primary.redevLandHouseholdOwnedBuilding === "yes"
+                ? true
+                : primary.redevLandHouseholdOwnedBuilding === "no"
+                  ? false
+                  : undefined,
           },
         }
       : {}),
