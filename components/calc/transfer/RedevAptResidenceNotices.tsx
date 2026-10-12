@@ -14,7 +14,7 @@ export function RedevSplitResidenceNotice({ isSuccessor, isLandContributed = fal
       <p className="font-medium">거주기간은 ① 재개발 카드의 거주기간 입력을 사용합니다</p>
       <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
         {isLandContributed
-          ? "토지만 출자한 조합원은 멸실된 주택이 없어 사용승인일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건에 쓰입니다 (시행령 §162①4호 · §154①)."
+          ? "토지만 출자한 조합원은 멸실된 주택이 없어 사용승인일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §162①4호 · §154⑧1호)."
           : isSuccessor
           ? "승계조합원은 준공일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §162①4호 · 서면-2019-부동산-4508)."
           : "종전주택과 신축주택 거주기간을 통산한 값이 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §154⑧1호)."}
@@ -27,8 +27,15 @@ export function RedevSplitResidenceNotice({ isSuccessor, isLandContributed = fal
  * OH-50 — 승계조합원은 준공일부터 보유기간이라 그 전(멸실 전 종전주택) 거주는 산입하지 않는다.
  * 구간 입력은 ⑧이 준공일과 비교해 막는다. 개월 수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수 없으므로
  * 이 안내를 두고, 준공일~양도일보다 긴 값만 ⑧·⑫가 막는다(I-8 `successorAptResidenceOverflow`).
+ * #12 — 토지만 출자한 원조합원도 같은 축(사용승인일부터 보유)이라 같은 안내를 띄우되, 근거 문구를 그 축에 맞춘다.
  */
-export function SuccessorResidenceDirectHint({ completionDate }: { completionDate: string }) {
+export function SuccessorResidenceDirectHint({
+  completionDate,
+  isLandContributed = false,
+}: {
+  completionDate: string;
+  isLandContributed?: boolean;
+}) {
   return (
     <div
       data-testid="successor-residence-direct-hint"
@@ -36,8 +43,9 @@ export function SuccessorResidenceDirectHint({ completionDate }: { completionDat
     >
       <p className="font-medium">⚠️ 준공일({completionDate}) 이후의 거주기간만 입력하세요</p>
       <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
-        승계조합원의 신축주택 보유기간은 준공일(사용승인서 교부일)부터 계산하며, 멸실 전 종전주택
-        거주기간은 통산하지 않습니다 (시행령 §162①4호 · 서면-2019-부동산-4508).
+        {isLandContributed
+          ? "토지만 출자한 조합원의 신축주택 보유기간은 준공일(사용승인서 교부일)부터 계산하며, 멸실된 주택이 없어 준공 전 거주기간은 통산하지 않습니다 (시행령 §162①4호 · §154⑧1호)."
+          : "승계조합원의 신축주택 보유기간은 준공일(사용승인서 교부일)부터 계산하며, 멸실 전 종전주택 거주기간은 통산하지 않습니다 (시행령 §162①4호 · 서면-2019-부동산-4508)."}
       </p>
     </div>
   );

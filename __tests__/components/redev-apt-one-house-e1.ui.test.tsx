@@ -103,6 +103,8 @@ describe("#12 ⑤ — 토지 출자 원조합원: 종전주택 거주만으로�
     const notice = screen.getByTestId("redev-split-residence-notice");
     expect(notice.textContent).toContain("토지만 출자한 조합원");
     expect(notice.textContent).not.toContain("통산");
+    // #2135 — 표2도 신축 거주만 센다
+    expect(notice.textContent).toContain("장기보유특별공제 표2");
     expect(screen.queryAllByText(RESIDENCE_INPUT).length).toBe(0);
   });
 });
@@ -116,6 +118,22 @@ describe("OH-50 ⑤ — 승계조합원 개월 수 직접 입력 안내", () => 
   it("짝 — 원조합원에는 뜨지 않는다", () => {
     render(<Step4 form={form({ ...ORIGINAL, residenceInputMode: "direct" })} onChange={() => {}} />);
     expect(screen.queryByTestId("successor-residence-direct-hint")).toBeNull();
+  });
+
+  it("🔑 #12 — 토지 출자 원조합원 + direct 모드 → 같은 안내 · 근거 문구는 토지 출자(「승계조합원」 아님)", () => {
+    const land = { ...ORIGINAL, redevOriginalAssetType: "land" as const, redevCompletionDate: "2021-02-15", residenceInputMode: "direct" as const };
+    render(<Step4 form={form(land)} onChange={() => {}} />);
+    const hint = screen.getByTestId("successor-residence-direct-hint").textContent ?? "";
+    expect(hint).toContain("2021-02-15");
+    expect(hint).toContain("토지만 출자한 조합원");
+    expect(hint).not.toContain("승계조합원");
+  });
+
+  it("짝 — 승계조합원 안내는 승계 문구 그대로", () => {
+    render(<Step4 form={form({ ...SUCCESSOR, residenceInputMode: "direct" })} onChange={() => {}} />);
+    const hint = screen.getByTestId("successor-residence-direct-hint").textContent ?? "";
+    expect(hint).toContain("승계조합원");
+    expect(hint).not.toContain("토지만 출자한");
   });
 });
 
