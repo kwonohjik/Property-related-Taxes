@@ -169,10 +169,15 @@ describe("#47 ⑤ 편집 창", () => {
     expect(screen.queryByText("배우자 단독 보유 주택")).toBeNull();
     // 주택 행의 근거는 §167의3⑨
     expect(screen.getByTestId("spouse-holding-spouse_side").textContent).toContain("(소득세법 시행령 §167의3⑨)");
+    // 세대원 보유분 안내는 재산세제과-1400 인용과 함께, 양도자 쪽 행에는 이 안내가 없다
+    expect(screen.getByTestId("spouse-holding-spouse_side").textContent).toContain(
+      "(기획재정부 재산세제과-1400 (2023.12.18.) — 배우자 세대 소유 주택 모두 제외)",
+    );
     cleanup();
     render(<HousesListSection form={f} onChange={() => {}} mergeContext={{ kind: "marriage", mergeDate: "2024-03-01" }} />);
     fireEvent.click(screen.getByRole("button", { name: "주택 2 편집" }));
     expect(screen.getByTestId("spouse-holding-other")).toBeTruthy();
+    expect(screen.getByTestId("spouse-holding-other").textContent).not.toContain("재산세제과-1400");
     expect(screen.queryByTestId("spouse-holding-unknown-c")).toBeNull();
   });
 
@@ -216,5 +221,9 @@ describe("#47 ⑤ 분양권·입주권 행 — 칩이 아니라 조건부 질문
     const rightCard = screen.getByTestId("spouse-holding-right").textContent ?? "";
     expect(rightCard).toContain("(소득세법 시행령 §167의4⑤)");
     expect(rightCard).not.toContain("§167의3⑨");
+    // 권리 행: 세대원 안내는 하되 해석례가 주택에 관한 것임을 밝힌다
+    expect(rightCard).toContain("기획재정부 재산세제과-1400 (2023.12.18.))은 주택에 관한 것이며");
+    // spouse_side 전용 「배우자 세대 소유 주택 모두 제외」 문구가 권리 행에 새면 해석례가 분양권·입주권에도 적용되는 것으로 읽힌다
+    expect(rightCard).not.toContain("배우자 세대 소유 주택 모두 제외");
   });
 });
