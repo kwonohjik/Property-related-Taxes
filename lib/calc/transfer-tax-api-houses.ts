@@ -40,6 +40,8 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
     businessRegistrationDate: ltr.businessRegistrationDate || undefined,
     rentalPeriodYears: ltr.rentalPeriodYears ? parseFloat(ltr.rentalPeriodYears) : undefined,
     rentalCancelledDate: ltr.rentalCancelledDate || undefined,
+    // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
+    rentalCancellationReason: (ltr.rentalCancelledDate && ltr.rentalCancellationReason) || undefined,
     ...(ltr.rentalType
       ? {
           rentalType: ltr.rentalType,
@@ -336,6 +338,9 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       rentalPeriodYears:
         h.isLongTermRental && h.rentalPeriodYears ? parseFloat(h.rentalPeriodYears) : undefined,
       rentalCancelledDate: h.isLongTermRental ? h.rentalCancelledDate || undefined : undefined,
+      // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
+      rentalCancellationReason:
+        (h.isLongTermRental && h.rentalCancelledDate && h.rentalCancellationReason) || undefined,
       // P2 특수 배제 (2주택 전용·인구감소) — 독립 플래그, 토글 ON 시 부속값 전달
       isUnavoidableReason: h.isUnavoidableReason,
       // §167의10①3호는 「**취득 당시** 기준시가 3억 이하」다 — `officialPrice`(양도일 연도 조회값)로

@@ -328,6 +328,8 @@ export interface HouseEntry {
   rentalPeriodYears?: string;
   /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
   rentalCancelledDate?: string;
+  /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족. ""·undefined = 미선택 */
+  rentalCancellationReason?: "" | "auto" | "voluntary";
 
   // ── 장기임대 9유형 매트릭스 (가~자목) — 신규 18필드 ──
   /**
@@ -472,6 +474,7 @@ export type RentalDeclaration = Partial<
     | "businessRegistrationDate"
     | "rentalPeriodYears"
     | "rentalCancelledDate"
+    | "rentalCancellationReason"
     // 9유형 매트릭스 (가~자목)
     | "rentalType"
     | "rentIncreaseUnder5Pct"

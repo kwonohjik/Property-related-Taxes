@@ -26,6 +26,7 @@ import { HousePriceYearLookup } from "@/components/calc/transfer/HousePriceYearL
 import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surcharge-count";
 import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
+import { RentalCancellationReasonField } from "@/components/calc/transfer/RentalCancellationReasonField";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
 import { HouseEntryCountExclusionSection } from "@/components/calc/transfer/HouseEntryCountExclusionSection";
@@ -504,6 +505,7 @@ function LongTermRentalSection({
             // 임대기간은 §167의3①3호와 같은 칸 — 3호가 켜져 있으면 지우지 않는다.
             rentalPeriodYears: v || house.isTaxIncentiveRental ? house.rentalPeriodYears : undefined,
             rentalCancelledDate: v ? house.rentalCancelledDate : undefined,
+            rentalCancellationReason: v ? house.rentalCancellationReason : undefined,
           });
         }}
         title="장기임대 등록주택"
@@ -569,6 +571,13 @@ function LongTermRentalSection({
               양도일 이전 말소된 경우 임대 배제 특례가 해제될 수 있습니다.
             </p>
           </div>
+          {house.rentalCancelledDate && (
+            <RentalCancellationReasonField
+              testIdPrefix={`house-rental-cancel-reason-${house.id}`}
+              value={house.rentalCancellationReason}
+              onChange={(v) => onUpdate({ rentalCancellationReason: v })}
+            />
+          )}
 
           {/*
             🔴 9유형 매트릭스는 「임대사업자 정식 등록」 토글 **밖**의 형제다(R20).

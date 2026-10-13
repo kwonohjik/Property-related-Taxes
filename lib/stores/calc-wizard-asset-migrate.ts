@@ -679,6 +679,8 @@ export function migrateAsset(raw: unknown): AssetForm {
         if (u.terminatedRegistrationType !== "short_term" && u.terminatedRegistrationType !== "long_term_general") {
           u.terminatedRegistrationType = "";
         }
+        // 말소 사유(다주택 중과 §167의3①2호 단서) — 구 세션엔 없다 → 미선택
+        if (u.terminationReason !== "auto" && u.terminationReason !== "voluntary") u.terminationReason = "";
       });
     }
     if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;

@@ -530,6 +530,7 @@ export async function POST(request: NextRequest) {
               rentalAutoTermination: u.rentalAutoTermination,
               registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
               terminatedRegistrationType: u.terminatedRegistrationType,
+              terminationReason: u.terminationReason, // 다주택 중과 §167의3①2호 단서 (단건과 동일)
               aptDeadlineExtension: toEngineAptDeadlineExtension(u.aptDeadlineExtension), // §167의3⑪ (단건과 동일)
               mergeOrigin: u.mergeOrigin, // 혼인합가 1199 (단건과 동일)
               requirementsConfirmed: u.requirementsConfirmed,

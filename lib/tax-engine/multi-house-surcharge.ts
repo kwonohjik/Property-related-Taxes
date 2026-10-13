@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { readSpouseHolding, marriageSubtractionWindowOpen } from "./spouse-holding-at-transfer";
 import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
+import { rentalCancellationNotices } from "./rental-cancellation-deeming";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
@@ -183,6 +184,12 @@ export function determineMultiHouseSurcharge(
   // §167의3⑨·§167의4⑤ 「양도일 현재 배우자 보유」 응답이 결론을 가를 때만 알린다(결정 #47) — 반사실 재계산은 위 함수를 그대로 다시 부른다.
   const notices = spouseHoldingNotices(input, result, (alt) =>
     computeMultiHouseSurcharge(alt, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback),
+  );
+  // §167의3①2호 단서 — 말소 사유(미선택·자진말소)가 결론을 가를 때만 알린다.
+  notices.push(
+    ...rentalCancellationNotices(input, result, (alt) =>
+      computeMultiHouseSurcharge(alt, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback),
+    ),
   );
   return notices.length > 0 ? { ...result, warnings: [...result.warnings, ...notices] } : result;
 }

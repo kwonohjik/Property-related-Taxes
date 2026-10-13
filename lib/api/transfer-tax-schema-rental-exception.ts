@@ -59,6 +59,8 @@ export const rentalUnitSchema = z.object({
   /** §155㉓ 등록 말소일 — 「말소 이후 5년 이내」 기산일 (I-4) */
   registrationCancellationDate: z.string().datetime().optional(),
   terminatedRegistrationType: TerminatedRegistrationTypeEnum.optional(),
+  /** 말소 사유 — 다주택 중과 §167의3①2호 단서(자동말소 임대기간요건 간주) */
+  terminationReason: z.enum(["auto", "voluntary"]).optional(),
   /** §167의3⑪ 연장 사실 — 가·나·라·마목 아파트(미전송 = 모름 · 엔진 판정 보류) */
   aptDeadlineExtension: aptDeadlineExtensionSchema.optional(),
   /** 혼인합가 1199 — 이 임대주택의 혼인 전 보유자(판정 메뉴) */

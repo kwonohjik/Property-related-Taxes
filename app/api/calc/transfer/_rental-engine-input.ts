@@ -43,6 +43,7 @@ export function toRentalHousingExceptionEngineInput(
       rentalAutoTermination: u.rentalAutoTermination,
       registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
       terminatedRegistrationType: u.terminatedRegistrationType,
+      terminationReason: u.terminationReason, // 다주택 중과 §167의3①2호 단서
       aptDeadlineExtension: toEngineAptDeadlineExtension(u.aptDeadlineExtension), // §167의3⑪
       mergeOrigin: u.mergeOrigin, // 혼인합가 1199
       requirementsConfirmed: u.requirementsConfirmed,
