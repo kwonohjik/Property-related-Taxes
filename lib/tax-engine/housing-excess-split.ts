@@ -20,8 +20,11 @@
  * ## 적용 범위(검증하지 못한 조합은 막지 않고 «초과분 미분리» 고지로 남긴다)
  *
  * 매매 취득 · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·PHD·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
- * 존재). 상속·증여 평가, 2005-04-30 전 취득, 함께 양도 주택 카드, 환산 + 공익수용·공매·경락 양도는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
- * «초과분 미분리 — 확인 필요»로 고지한다(`housingExcessUnseparatedNotice`; 함께 양도 주택 카드는 ④가 `companionHousingLand`로 면적 사실을 싣는다).
+ * 존재). 상속·증여 평가, 2005-04-30 전 취득, 환산 + 공익수용·공매·경락 양도는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
+ * «초과분 미분리 — 확인 필요»로 고지한다(`housingExcessUnseparatedNotice`).
+ *
+ * 함께 양도 주택 카드(컴패니언)도 같은 범위·같은 판정이다(#17-1) — 면적 사실만 `companionHousingLand`로 실려 오고
+ * `appurtenantLandFactsOfInput`이 주 자산의 입력 키와 같은 값으로 읽는다.
  *
  * 취득가액 산정 방식(실지거래가액·환산·감정·매매사례)은 묻지 않는다(#17-4). 분리 경로(`calcSplitGain` 주택 비-별개)는 개별주택가격을
  * 가목 : 나목 비례로 나누고 환산 분모(양도시 개별주택가격)도 같은 척도로 나누므로, 토지분 + 건물분 환산취득가액이 자산 전체 환산취득가액
@@ -124,17 +127,37 @@ type EngineFacts = Pick<
   | "appurtenantLandZone"
   | "buildingFootprintArea"
   | "acquisitionArea"
+  | "companionHousingLand"
   | "transferDate"
   | "acquisitionDate"
 >;
 
+/**
+ * 배율 판정에 쓰는 면적 사실 — 소재지 구분 · 건물 정착면적 · 토지 면적(엔진 입력에서 읽는 단일 지점).
+ *
+ * 주 자산 주택은 `appurtenantLandZone`·`buildingFootprintArea`·`acquisitionArea`를 직접 싣는다. 함께 양도 주택 카드(컴패니언)는 앞의 두 키를
+ * 싣지 않는다 — 형제 토지 카드의 주택 컨텍스트 전용 키라 싣는 순간 토지 세율 자동 분기가 움직인다. 그래서 ④가 같은 사실을 `companionHousingLand`로
+ * 운반하고 여기서 같은 값으로 읽는다 — 주 자산과 컴패니언이 **같은 판정**을 하게 하는 유일한 접점이다(#17-1).
+ */
+export function appurtenantLandFactsOfInput(
+  input: Pick<TransferTaxInput, "appurtenantLandZone" | "buildingFootprintArea" | "acquisitionArea" | "companionHousingLand">,
+): { zone: AppurtenantLandZone | undefined; footprintM2: number; landAreaM2: number } {
+  const c = input.companionHousingLand;
+  return {
+    zone: input.appurtenantLandZone ?? c?.zone,
+    footprintM2: input.buildingFootprintArea ?? c?.footprintM2 ?? 0,
+    landAreaM2: input.acquisitionArea ?? c?.landAreaM2 ?? 0,
+  };
+}
+
 /** 배율 초과 면적(㎡) — 별개취득 여부·취득원인과 무관한 순수 면적 판정(고지의 모집단). */
 export function housingExcessAreaOfInput(input: EngineFacts): number {
   if (input.propertyType !== "housing") return 0;
+  const facts = appurtenantLandFactsOfInput(input);
   return housingExcessAreaM2({
-    zone: input.appurtenantLandZone,
-    footprintM2: input.buildingFootprintArea ?? 0,
-    landAreaM2: input.acquisitionArea ?? 0,
+    zone: facts.zone,
+    footprintM2: facts.footprintM2,
+    landAreaM2: facts.landAreaM2,
     transferDate: input.transferDate,
   });
 }

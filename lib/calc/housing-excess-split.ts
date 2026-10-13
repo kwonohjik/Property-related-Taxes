@@ -6,8 +6,9 @@
  * «칸은 있는데 전송 안 함»(침묵 no-op)도 없다.
  *
  * 면적은 ④가 엔진 `acquisitionArea`로 싣는 식(`resolveAcqAreaForStdPrice`)과 같고, 정착면적·소재지 구분도 ④가 싣는 값 그대로다.
- * 주 자산(primary)만 대상이다 — 함께 양도 주택 카드는 ④가 소재지·정착면적을 싣지 않아(신축 취득 제외) 분리 입력 경로가 없다.
- * 대신 ④가 `companionHousingLand`로 면적 사실만 실어 엔진 고지(`housingExcessUnseparatedNotice`)를 발화시킨다(분리·세액 불변).
+ * 주 자산과 함께 양도 주택 카드(컴패니언)가 **같은 술어**를 읽는다(#17-1) — 컴패니언은 ④가 소재지·정착면적을 형제 토지 카드의 주택 컨텍스트 키로 싣지 않으므로
+ * 같은 사실을 `companionHousingLand`로 운반하고, 엔진이 `appurtenantLandFactsOfInput`으로 주 자산과 같은 값으로 읽는다. 범위 밖 조합은 엔진 고지
+ * (`housingExcessUnseparatedNotice`)로 남는다.
  * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이면 «취득 당시 개별주택가격»이 없어 이 경로를 타지 않는다(막지 않고 고지).
  *
  * 취득가액 산정 방식은 자산 단위 방식(`deriveLegacyPartAcqMode`)만 본다(#17-4) — 이 경로는 토지 취득일을 따로 받지 않아 파트별 방식 라디오가
@@ -66,17 +67,8 @@ function factsOf(asset: AssetForm, excessAreaM2: number) {
   };
 }
 
-/**
- * 같은 날 취득 주택의 초과분 분리 입력(취득시 3칸 + 양도시 2칸)이 필요한가.
- *
- * @param isPrimary 주 자산(첫 자산)인가 — 컴패니언 주택은 분리 입력 경로가 없어 false로 둔다.
- */
-export function housingExcessNeedsLandSplit(
-  asset: AssetForm,
-  transferDate: string | undefined,
-  isPrimary: boolean,
-): boolean {
-  if (!isPrimary) return false;
+/** 같은 날 취득 주택의 초과분 분리 입력(취득시 3칸 + 양도시 2칸)이 필요한가 — 주 자산·함께 양도 주택 카드 공통(#17-1). */
+export function housingExcessNeedsLandSplit(asset: AssetForm, transferDate: string | undefined): boolean {
   return housingExcessSplitApplies(factsOf(asset, housingExcessAreaOfAsset(asset, transferDate)));
 }
 
@@ -125,8 +117,8 @@ function sameDayPartRadiosShown(asset: AssetForm): boolean {
  * 소재지 구분이 비어 배율을 정하지 못하는데, 가장 작은 배율(3배)로도 한도를 넘을 수 있는가 — 같은 경로의 대상이면 ⑧이 소재지 구분을 요구한다.
  * (미입력 fallback으로 3배를 쓰면 초과면적을 과다 산출해 납세자에게 불리하고, 아무것도 하지 않으면 초과분이 조용히 비과세된다 — 둘 다 금지.)
  */
-export function housingExcessZonePending(asset: AssetForm, isPrimary: boolean): boolean {
-  if (!isPrimary || asset.appurtenantLandZone !== undefined) return false;
+export function housingExcessZonePending(asset: AssetForm): boolean {
+  if (asset.appurtenantLandZone !== undefined) return false;
   const footprint = parseFloat(asset.buildingFootprintArea) || 0;
   const landArea = resolveAcqAreaForStdPrice(asset) ?? 0;
   if (!(footprint > 0) || !(landArea > footprint * 3)) return false;
@@ -142,14 +134,14 @@ export function housingExcessZonePending(asset: AssetForm, isPrimary: boolean): 
  * 별개취득 토글이 켜져 있으면(같은 날짜라 이 경로를 타더라도) 분리 섹션의 파트 자본적지출 칸이 화면에 있고 ④가 그 값을 싣는다 — 이중 입력을
  * 막으려고 그때는 이 칸을 열지 않는다(④ `partInputsActive`와 상보 — 이 경로는 소유자 분리가 아니므로 토글만 보면 된다).
  */
-export function housingExcessNeedsCapexSplit(asset: AssetForm, transferDate: string | undefined, isPrimary: boolean): boolean {
+export function housingExcessNeedsCapexSplit(asset: AssetForm, transferDate: string | undefined): boolean {
   // 감정가액·매매사례가액 취득은 필요경비가 개산공제뿐이라(§97②2호 — 단서 비교는 환산취득가액만) 자본적지출이 세액에 닿지 않는다 — 묻지 않는다.
   const mode = deriveLegacyPartAcqMode(asset);
   return (
     (mode === "actual" || mode === "estimated") &&
     asset.hasSeperateLandAcquisitionDate !== true &&
     parseAmount(asset.capitalExpenditure ?? "") > 0 &&
-    housingExcessNeedsLandSplit(asset, transferDate, isPrimary)
+    housingExcessNeedsLandSplit(asset, transferDate)
   );
 }
 
