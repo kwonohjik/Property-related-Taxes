@@ -54,6 +54,13 @@ export const redevelopmentSchema = z
     // 사전-2019-법령해석재산-0649 + 시행령 §162①4호.
     isSuccessorMember: z.boolean().optional(),
     completionDate: z.string().date().optional(),
+    // #12 — 세대원 건물 출자 통산(토지 출자 원조합원 완공APT의 §154① 비과세 보유·거주 요건). ★★★ 침묵 stripping 차단.
+    householdBuilding: z
+      .object({
+        acquisitionDate: z.string().date(),
+        residenceMonths: z.number().int().nonnegative().optional(),
+      })
+      .optional(),
     // 사례 36 — 1세대1입주권 비과세 C-1 안전장치 (a) 자동 검증용.
     // 인가일 기준 종전주택 보유 월수. 24개월 미만 시 UI 경고 카드 노출 (차단 X — 자기선언 우선).
     // 엔진 계산에는 직접 미사용 (비과세 판단은 exemptionEligibleAtApproval 기준).

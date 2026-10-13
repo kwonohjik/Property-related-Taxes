@@ -341,6 +341,24 @@ export function redevCompletionDateInScope(
 }
 
 /**
+ * **세대원 건물 출자 통산**(`redevHouseholdBuildingCarryover`·`…AcquisitionDate`·`…ResidenceMonths`)이 의미를 갖는 축인가 — ⑤ · ④ · ⑧ 공용 (#12).
+ *
+ * 토지만 출자한 원조합원 완공APT(`landContributedOriginalApt`)뿐이다. 범위 밖이면 ④가 보내지 않는다(칸이 사라진 뒤 남은 값이 엔진 판정을 바꾸지 않게).
+ */
+export function householdBuildingCarryoverInScope(
+  asset: Parameters<typeof landContributedOriginalApt>[0],
+): boolean {
+  return landContributedOriginalApt(asset);
+}
+
+/** 세대원 건물 출자 통산을 **적용 중**인가 — 범위 안 ∧ 선언 「예」 */
+export function householdBuildingCarryoverApplied(
+  asset: Parameters<typeof landContributedOriginalApt>[0] & Pick<AssetForm, "redevHouseholdBuildingCarryover">,
+): boolean {
+  return householdBuildingCarryoverInScope(asset) && asset.redevHouseholdBuildingCarryover === "yes";
+}
+
+/**
  * I-8 ⑧ — 승계조합원 완공APT의 거주 **개월 수**가 준공일~양도일 개월 수를 넘는가(⑫ 미러:
  * `refinePrimaryAcquisitionInputs`). 넘으면 그 상한, 아니면 null.
  *

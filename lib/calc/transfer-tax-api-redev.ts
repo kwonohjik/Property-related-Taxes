@@ -22,6 +22,7 @@ import {
   postApprovalExpensesInScope,
   settlementOneHouseAtSaleInScope,
   redevCompletionDateInScope,
+  householdBuildingCarryoverApplied,
   landContributedOriginalApt,
   landHouseholdBuildingInScope,
 } from "./redev-field-scope";
@@ -267,5 +268,15 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // 준공일 — 승계조합원(취득시기 · 영 §162①4호) 또는 토지만 출자한 원조합원(§154① 보유 기산일 — G3-4)에서만 의미가 있다.
     // 범위 밖이면 보내지 않는다(카드가 사라진 뒤 남은 값이 엔진 판정을 바꾸지 않게 — U1-01 규약).
     completionDate: redevCompletionDateInScope(asset) ? asset.redevCompletionDate || undefined : undefined,
+    // #12 — 세대원 건물 출자 통산: 토지 출자 원조합원 완공APT가 선언했을 때만(stale 가드). 취득일이 없으면 통산할 기산일이 없어 보내지 않는다(⑧이 먼저 막는다).
+    householdBuilding:
+      householdBuildingCarryoverApplied(asset) && asset.redevHouseholdBuildingAcquisitionDate
+        ? {
+            acquisitionDate: asset.redevHouseholdBuildingAcquisitionDate,
+            residenceMonths: asset.redevHouseholdBuildingResidenceMonths
+              ? parseInt(asset.redevHouseholdBuildingResidenceMonths.replace(/,/g, ""), 10)
+              : undefined,
+          }
+        : undefined,
   };
 }

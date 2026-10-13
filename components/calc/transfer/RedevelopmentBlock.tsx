@@ -45,6 +45,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
 import { RedevelopmentValuationSection } from "./RedevelopmentValuationSection";
 import { RedevelopmentResidenceSplitSection } from "./RedevelopmentResidenceSplitSection";
+import { HouseholdBuildingCarryoverSection } from "./HouseholdBuildingCarryoverSection";
 import { ImportedRedevRightFactsCard } from "./ImportedRedevRightFactsCard";
 import { HousingContribEstimatedSection } from "./HousingContribEstimatedSection";
 import {
@@ -205,6 +206,8 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             />
           </FieldCard>
         )}
+        {/* #12 — 세대원 건물 출자 통산: 토지 출자 원조합원 완공APT가 같은 세대 세대원의 건물 보유·거주를 비과세 요건에 통산한다. */}
+        <HouseholdBuildingCarryoverSection asset={asset} onChange={onChange} />
       </ToneCard>
 
       {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) — **완공 APT 양도 전용**.

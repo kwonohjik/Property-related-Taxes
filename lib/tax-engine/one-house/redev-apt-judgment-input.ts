@@ -25,7 +25,7 @@
  * 번역 전 원본을 본다 — 상속주택 제외의 E-8(`transfer-inheritance-exclusion.ts`)이 입주권 취득일과 준공일을
  * 따로 받기 때문에, 취득일을 미리 바꿔 넣으면 그 구분이 사라진다.
  */
-import { isLandContributedNewBuild, resolveAptResidenceMonths } from "../redevelopment-lthd";
+import { isLandContributedNewBuild, resolveAptResidenceMonths, successorAptMaxResidenceMonths } from "../redevelopment-lthd";
 import type { TransferTaxInput } from "../types/transfer.types";
 
 /** 번역 대상인가 — 완공APT(`subject="apt"`)만. 입주권(§89①4호)은 다른 호라 번역하지 않는다. */
@@ -99,6 +99,7 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
   if (!isRedevApt(input)) return input;
   const redev = input.redevelopment!;
   const landContributed = isLandContributedOriginalApt(input);
+  const carryover = landContributed ? householdBuildingCarryover(redev) : undefined;
   return {
     ...input,
     propertyType: "housing",
@@ -107,8 +108,8 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
     ...(redevNewBuildRightAcquisitionDate(input) ? { newBuildRightAcquisitionDate: redevNewBuildRightAcquisitionDate(input) } : {}),
     ...(landContributed
       ? {
-          // 보유 기산일 = 사용승인일(G3-4).
-          exemptionHoldingStartDate: redev.completionDate,
+          // 보유 기산일 = 사용승인일(G3-4). 세대원 건물 출자 통산(#12)이면 그 건물 취득일 — 세대 기준 보유를 이어 센다.
+          exemptionHoldingStartDate: carryover?.holdingStart ?? redev.completionDate,
           // #12 — 2017.8.3. 경과규정은 **입주권 전환일 = 관리처분계획 인가일**이 2017.8.2. 이전일 때 면제된다
           //   (서면-2018-법령해석재산-1711 · 서면-2022-법규재산-4321). 원조합원에게는 분양계약일이라는 개념이 없다 —
           //   인가일에 보유 부동산(토지·건물)이 입주권으로 바뀐다(사용자 결정 2026-10-13).
@@ -117,14 +118,36 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
           residenceRightConversionDate: redev.approvalDate,
         }
       : {}),
-    residencePeriodMonths: resolveAptResidenceMonths({
-      // 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 신축주택 거주만 센다 — 승계조합원과 같다(준공 전 거주는 보유기간 중 거주가 아니다).
-      isSuccessorMember: redev.isSuccessorMember === true || landContributed,
-      priorHouseResidenceMonths: redev.priorHouseResidenceMonths,
-      newHouseResidenceMonths: redev.newHouseResidenceMonths,
-      residencePeriodMonths: input.residencePeriodMonths,
-    }),
+    residencePeriodMonths:
+      resolveAptResidenceMonths({
+        // 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 신축주택 거주만 센다 — 승계조합원과 같다(준공 전 거주는 보유기간 중 거주가 아니다).
+        isSuccessorMember: redev.isSuccessorMember === true || landContributed,
+        priorHouseResidenceMonths: redev.priorHouseResidenceMonths,
+        newHouseResidenceMonths: redev.newHouseResidenceMonths,
+        residencePeriodMonths: input.residencePeriodMonths,
+      }) + (carryover?.residenceMonths ?? 0),
   };
+}
+
+/**
+ * **세대원 건물 출자 통산**(#12) — 토지 출자 원조합원 완공APT가 세대원 건물을 선언했을 때의 비과세 통산 값.
+ * 건물 취득일이 사용승인일 뒤면(입력 오류 — ⑧·⑫가 먼저 막는다) 통산하지 않는다. 장기보유특별공제(`redevelopment-lthd.ts`)는 이 값을 읽지 않는다.
+ */
+export function householdBuildingCarryover(
+  redev: Pick<NonNullable<TransferTaxInput["redevelopment"]>, "householdBuilding" | "completionDate" | "approvalDate">,
+): { holdingStart: Date; residenceMonths: number } | undefined {
+  const b = redev.householdBuilding;
+  if (!b || !redev.completionDate || b.acquisitionDate > redev.approvalDate) return undefined;
+  return { holdingStart: b.acquisitionDate, residenceMonths: b.residenceMonths ?? 0 };
+}
+
+/**
+ * 세대원 건물 출자 통산의 거주 개월 수 상한 검사 — 건물 취득일부터 관리처분계획 인가일까지의 개월 수(그 전까지만 건물에서 거주할 수 있다).
+ * 넘으면 그 상한, 아니면 null. ⑧(`validateRedevelopmentAsset`)·⑫(`refineRequiredFields`)가 같은 leaf를 쓴다.
+ */
+export function householdBuildingResidenceOverflow(acquisitionDate: Date, approvalDate: Date, months: number): number | null {
+  const max = successorAptMaxResidenceMonths(acquisitionDate, approvalDate);
+  return months > max ? max : null;
 }
 
 /**

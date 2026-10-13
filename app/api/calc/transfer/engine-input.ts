@@ -500,9 +500,9 @@ export function buildTransferEngineInput(
 /**
  * ⑭ 시행령 §166 서브객체의 **Date 변환 단일 소스** — 단건·컴패니언이 함께 쓴다.
  *
- * `RedevelopmentInfo`에서 `Date` 타입인 필드는 **정확히 5개**다(타입 전수 확인:
+ * `RedevelopmentInfo`에서 `Date` 타입인 필드는 **정확히 5개 + 중첩 1개**다(타입 전수 확인:
  * `approvalDate` · `settlementSaleDate` · `firstDisclosureDate` · `completionDate` ·
- * `otherHouseAcquisitionDate`). 거주기간 4필드는 표시용 pass-through라 문자열 그대로 둔다.
+ * `otherHouseAcquisitionDate` · 중첩 `householdBuilding.acquisitionDate`). 거주기간 4필드는 표시용 pass-through라 문자열 그대로 둔다.
  *
  * 🔑 컴패니언 경로(`bundled-split-helpers.ts`)가 이 함수를 부른다. 변환을 복제하면
  *    한쪽만 필드가 늘어 **그 경로에서만 `Date < string` silent false**가 난다 —
@@ -517,6 +517,12 @@ export function toEngineRedevelopment(
     settlementSaleDate: toOptionalDate(redev.settlementSaleDate),
     firstDisclosureDate: toOptionalDate(redev.firstDisclosureDate),
     completionDate: toOptionalDate(redev.completionDate),
+    householdBuilding: redev.householdBuilding
+      ? {
+          ...redev.householdBuilding,
+          acquisitionDate: toDate(redev.householdBuilding.acquisitionDate, "redevelopment.householdBuilding.acquisitionDate"),
+        }
+      : undefined,
     otherHouseAcquisitionDate: toOptionalDate(redev.otherHouseAcquisitionDate),
   };
 }

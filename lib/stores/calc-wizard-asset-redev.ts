@@ -349,4 +349,14 @@ export interface RedevelopmentFormSlice {
    * 시행령 §162①4호 "건축법 §22②에 따른 사용승인서 교부일".
    */
   redevCompletionDate: string;
+  /**
+   * **세대원 건물 출자 통산**(#12) — 토지만 출자한 원조합원 완공APT에서 같은 세대의 세대원이 철거된 기존 건물을 소유했으면
+   * 그 건물의 보유·거주기간을 §154① **비과세** 보유·거주 요건에 통산한다. `"yes"` = 통산 적용. 장기보유특별공제 공제율은 통산하지 않는다
+   * (조심 2025서3843 · 재산세제과-37 · 법규과-1721). 토지 출자 원조합원 완공APT에서만 읽힌다 — ④가 그 밖에는 보내지 않는다.
+   */
+  redevHouseholdBuildingCarryover: "" | "yes";
+  /** 세대원이 기존 건물을 취득한 날(YYYY-MM-DD) — 통산 보유 기산일. 통산 적용(`yes`)일 때 필수 */
+  redevHouseholdBuildingAcquisitionDate: string;
+  /** 기존 건물에서 세대가 거주한 개월 수(관리처분 인가 전까지) — 거주요건 통산. 비우면 0 */
+  redevHouseholdBuildingResidenceMonths: string;
 }
