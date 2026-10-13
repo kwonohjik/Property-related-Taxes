@@ -44,6 +44,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { houseRowFactIssues } from "./house-row-fact-issues";
+import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
 import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./selling-house-origin-scope";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
@@ -133,7 +134,20 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   //   (merge-composition-unknown-unfavorable.plan.md §3-3 · memory `feedback_unknown_fact_applies_unfavorably`).
   const mergeCtx = mergeContextOf(form);
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(④ 전송·⑤ 노출과 같은 도출 `deriveCalcTemporaryTwoHouse`).
-  const newHouseRowId = deriveCalcTemporaryTwoHouse(form, form.assets?.[0])?.newHouseRowId;
+  const derivedTempTwoHouse = deriveCalcTemporaryTwoHouse(form, form.assets?.[0]);
+  const newHouseRowId = derivedTempTwoHouse?.newHouseRowId;
+  // 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 경위 답이 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
+  //   게이트는 ⑤ 마운트(`Step4`: 섹션 노출 + `source === "declared"`)와 같다 — 칸이 없는 화면에서 막지 않는다.
+  if (
+    derivedTempTwoHouse?.source === "declared" &&
+    temporaryTwoHouseSectionVisible({
+      primaryAssetKind: form.assets?.[0]?.assetKind,
+      householdHousingCount: form.householdHousingCount,
+    })
+  ) {
+    const declaredIssue = declaredNewHouseOriginIssue(form, form.newHouseAcquisitionDate);
+    if (declaredIssue) issues.push({ step, field: declaredIssue.field, message: declaredIssue.message });
+  }
   // 결정 #47 — 응답이 필요한 배우자 쪽 행(⑤ 질문과 같은 술어). 「모름」은 응답이라 막지 않는다.
   const spouseHoldingUnanswered = new Set(spouseHoldingUnansweredIndexes(form));
   // §155⑧ 「각각 1개씩」 — 양도일 현재 보유 행 중 둘째 ⑧ 행부터 막는다(판정 메뉴 ⑧·⑫와 같은 leaf). 행의 「편집」으로 가서 끄면 풀린다.

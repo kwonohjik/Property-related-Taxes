@@ -33,10 +33,12 @@ import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 import { resolveIsMinorDonee } from "@/lib/calc/gift-donee-minor";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
-import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
+import { eraFormWithOriginDates, toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
+import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { buildTempTwoHouseDeadlineExceptionFacts } from "@/lib/calc/transfer-tax-api-body-blocks";
 import {
   giftBurdenedDeadlineExceptionFields,
+  giftBurdenedEffectiveNewAcquisitionDate,
   giftBurdenedPreviousAcquisitionDate,
   giftBurdenedTempTwoHouseDeadlineInScope,
   giftBurdenedTempTwoHouseInScope,
@@ -316,18 +318,19 @@ export function buildGiftBurdenedTransferBody(
   // ⑤·⑧과 같은 leaf). 주택 수를 바꿔 칸이 사라졌거나 신규 취득일이 빈 채 객체만 남은 값은 싣지 않는다 — 숨은 값으로 중첩 비과세가
   // 서거나 ⑫ 400이 나던 갭.
   if (isHousingType && bgt.temporaryTwoHouse && giftBurdenedTempTwoHouseInScope(bgt)) {
-    const next = bgt.temporaryTwoHouse.newAcquisitionDate;
+    // 신규 주택 취득 경위(결정 #43-4) — 미답은 `not_collected`(종전과 같이 취득일 그대로 판정 + 확인 필요).
+    const newHouseOrigin = declaredNewHouseOriginOf(bgt.temporaryTwoHouse);
     body.temporaryTwoHouse = {
       // 종전 주택 = 이번 증여(양도) 주택 — ⑤·⑧과 같은 leaf (1h-G1-3). 저장된 옛 자유 입력값은 쓰지 않는다.
       previousAcquisitionDate: giftBurdenedPreviousAcquisitionDate(bgt),
-      newAcquisitionDate: next instanceof Date
-        ? next.toISOString().slice(0, 10)
-        : (next as unknown as string),
+      // 기존주택의 연장인 경위는 선후를 기존주택 취득일로 본다 — ⑤·⑧과 같은 leaf(`giftBurdenedEffectiveNewAcquisitionDate`).
+      newAcquisitionDate: giftBurdenedEffectiveNewAcquisitionDate(bgt),
       // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b · E-1).
       //   양도세 계산기 ④(`buildHouseholdSpecialPayload`)·⑤ 판정 카드와 같은 leaf로 편다.
       //   신규 주택 법정동코드는 신규 주택 소재지 칸에서 온다(E-1 잔여 B — 계산기는 명부 행). 없으면 선언으로 판정.
       ...toTemporaryTwoHouseEraFacts(
-        bgt.temporaryTwoHouse,
+        // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 그 권리 취득일로 본다 — 폼 계약일 칸은 쓰지 않는다(양도세 ④와 같은 leaf).
+        eraFormWithOriginDates(bgt.temporaryTwoHouse, newHouseOrigin),
         bgt.temporaryTwoHouse.newHouseRegionCode || undefined,
         // 지정 지구 안인가(#2055 후속) — leaf가 코드와 함께만 싣는다
         bgt.temporaryTwoHouse.newHouseInDesignatedDistrict,
@@ -337,9 +340,9 @@ export function buildGiftBurdenedTransferBody(
       ...(giftBurdenedTempTwoHouseDeadlineInScope(bgt)
         ? buildTempTwoHouseDeadlineExceptionFacts(giftBurdenedDeadlineExceptionFields(bgt))
         : {}),
-      // 신규 주택의 취득 경위(분양권·조합원입주권 유래)는 이 경로에 보유 주택 목록이 없어 묻지 못한다 — 현행대로 판정하고
-      // 엔진이 §155①만이 비과세 근거일 때 확인 필요를 알린다(결정 #43 · 코드 가드: `not_collected`).
-      newHouseOrigin: { kind: "not_collected" },
+      // 신규 주택의 취득 경위(분양권·조합원입주권 유래) — 이 경로에는 보유 주택 목록이 없어 화면이 한 번만 묻는다(결정 #43-4).
+      // 답하지 않았으면 현행대로 판정하고 엔진이 §155①만이 비과세 근거일 때 확인 필요를 알린다(코드 가드: `not_collected`).
+      newHouseOrigin,
     };
   }
 

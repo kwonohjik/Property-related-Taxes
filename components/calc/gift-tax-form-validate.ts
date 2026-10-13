@@ -33,10 +33,12 @@ import {
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import {
+  giftBurdenedNewHouseOriginError,
   giftBurdenedTempTwoHouseIncompleteError,
   giftBurdenedTempTwoHouseRegulatedGate,
 } from "@/lib/calc/gift-burdened-temp-two-house";
-import { temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
+import { eraFormWithOriginDates, temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
+import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { collectExemptionProvisoErrors } from "@/lib/calc/exemption-proviso-validate";
 import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
@@ -222,9 +224,12 @@ export function validateStep(step: number, form: FormState): string | null {
         // §155① 입력을 건드렸는데 신규 주택 취득일이 비었다 — ④가 싣지 않으니(미완성 사실은 불성립) 침묵하지 않고 막는다(1h-G1-5).
         const tempTwoIncomplete = giftBurdenedTempTwoHouseIncompleteError(bgt);
         if (tempTwoIncomplete) return `${itemLabel}: ${tempTwoIncomplete}`;
+        // 신규 주택 취득 경위(결정 #43-4) — 답했는데 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
+        const newHouseOriginError = giftBurdenedNewHouseOriginError(bgt);
+        if (newHouseOriginError) return `${itemLabel}: ${newHouseOriginError}`;
         const gate = giftBurdenedTempTwoHouseRegulatedGate(bgt, form.giftDate, giftBurdenedRegionCode(bgItem));
         const eraError = gate
-          ? temporaryTwoHouseEraIssues(bgt.temporaryTwoHouse ?? {}, {
+          ? temporaryTwoHouseEraIssues(eraFormWithOriginDates(bgt.temporaryTwoHouse ?? {}, declaredNewHouseOriginOf(bgt.temporaryTwoHouse ?? {})), {
               newAcquisitionDate: gate.newAcquisitionDate,
               determined: gate.regulated.determined,
               moveInRelevant: gate.regulated.moveInRelevant,

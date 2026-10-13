@@ -407,6 +407,12 @@ export interface ResolveTemporaryTwoHouseArgs {
   declaredSpecial: boolean;
   declaredNewHouseDate: string | undefined;
   /**
+   * 직접 선언 폴백의 신규 주택 취득 경위(`declaredNewHouseOriginOf(form)` — 결정 #43-3). 미답은 `not_collected`다.
+   * 🔑 **신규 주택 날짜·경위를 읽는 호출부는 반드시 넘긴다**(④ `deriveCalcTemporaryTwoHouse`·판정 메뉴 `judgmentDerivedNewHouse`·Step4 파생).
+   *    `temporaryTwoHouseApplies`처럼 성립 여부(boolean)만 쓰는 호출부는 생략해도 된다 — 경위는 도출 성립 여부를 바꾸지 않는다.
+   */
+  declaredNewHouseOrigin?: NonNullable<TemporaryTwoHouseDates["newHouseOrigin"]>;
+  /**
    * 혼인·동거봉양 합가 맥락(`mergeContextOf(form)`) — 있으면 §155① 짝을 **합가 전 같은 쪽 안에서** 또는
    * **합가 후 취득분**으로 고른다(D8). 🔑 **필수 인자다** — 합가 폼에서 넘기지 않으면 상대 쪽 주택을 신규 주택으로 오인한다.
    */
@@ -457,7 +463,7 @@ export interface TemporaryTwoHouseDates {
   newHouseRowId?: string;
   /**
    * 신규 주택 취득 경위 — 엔진 `temporaryTwoHouse.newHouseOrigin`(문자열 날짜). 명부 행이면 행의 답(미답 = `unknown`),
-   * 직접 선언 경로는 경위를 묻지 못했으므로 `not_collected`다.
+   * 직접 선언 경로는 그 경로의 질문(`declared-new-house-origin.ts`)에 답했으면 그 답, 답하지 않았으면 `not_collected`다.
    */
   newHouseOrigin?: {
     kind: NewHouseRowOrigin | "not_collected";
@@ -471,15 +477,24 @@ export function resolveTemporaryTwoHouse(
 ): TemporaryTwoHouseDates | undefined {
   const prev = args.primaryAcquisitionDate;
 
-  const fallback = (): TemporaryTwoHouseDates | undefined =>
-    args.declaredSpecial && prev && args.declaredNewHouseDate
-      ? {
-          previousAcquisitionDate: prev,
-          newAcquisitionDate: args.declaredNewHouseDate,
-          source: "declared",
-          newHouseOrigin: { kind: "not_collected" },
-        }
-      : undefined;
+  const fallback = (): TemporaryTwoHouseDates | undefined => {
+    if (!(args.declaredSpecial && prev && args.declaredNewHouseDate)) return undefined;
+    const origin = args.declaredNewHouseOrigin ?? { kind: "not_collected" as const };
+    return {
+      previousAcquisitionDate: prev,
+      // 기존주택의 연장인 경위(원조합원 기존주택·자가 재건축)는 선후를 기존주택 취득일로 본다 — 명부 경로(`effectiveNewHouseAcquisitionDate`)와 같은 술어.
+      newAcquisitionDate:
+        origin.kind === "not_collected"
+          ? args.declaredNewHouseDate
+          : (effectiveNewHouseAcquisitionDate({
+              acquisitionDate: args.declaredNewHouseDate,
+              acquisitionOrigin: origin.kind,
+              rightAcquisitionDate: origin.rightAcquisitionDate,
+            }) ?? args.declaredNewHouseDate),
+      source: "declared",
+      newHouseOrigin: origin,
+    };
+  };
 
   if (args.legacyPrecedence) return fallback(); // OH-34 세액 보존
   if (!isOneHouseExemptionAsset(args.primaryKind)) return fallback(); // F1 — 권리 양도는 축이 다르다

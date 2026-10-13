@@ -28,6 +28,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseCountExemptionInputs } from "@/app/calc/transfer-tax/steps/step4-sections/HouseCountExemptionInputs";
 import { TemporaryTwoHouseSection } from "@/app/calc/transfer-tax/steps/step4-sections/TemporaryTwoHouseSection";
+import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
 import { InheritedRightExceptionSection } from "@/components/calc/transfer/InheritedRightExceptionSection";
 import { MergedHouseholdRightSection } from "@/components/calc/transfer/MergedHouseholdRightSection";
@@ -213,6 +214,11 @@ export function Step2({ form, onChange }: Props) {
             배타 규약·④⑧ 게이트는 `judgmentMergeInputVisible` 한 곳.
           */
         />
+      )}
+
+      {/* 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 취득 경위. 게이트는 ④⑧과 같은 `derivedNewHouse`다. */}
+      {judgmentTemporaryTwoHouseVisible(form) && derivedNewHouse?.source === "declared" && (
+        <DeclaredNewHouseOriginBlock fields={form} newAcquisitionDate={form.newHouseAcquisitionDate} onChange={onChange} />
       )}
 
       {/*

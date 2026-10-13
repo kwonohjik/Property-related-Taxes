@@ -1213,6 +1213,17 @@ export interface BurdenedGiftTransferTaxInput {
     /** 신규 주택이 지정 지구 안인가(사용자 선언 — 「동 안 일부 지구만 조정대상지역」 동일 때만 의미). 소재지가 바뀌면 지운다 */
     newHouseInDesignatedDistrict?: boolean;
     /*
+     * 신규 주택 **취득 경위** (결정 #43-4) — 이 경로에는 보유 주택 목록이 없어 행의 경위 질문을 받지 못한다. 같은 공용 블록으로 한 번만 받는다.
+     * 세 필드는 양도세 폼(`TransferFormData`)과 **같은 이름·모양**이다(`lib/calc/declared-new-house-origin.ts`). 미답(빈 값) = 종전과 같이
+     * 취득일 그대로 판정 + 확인 필요(`not_collected`).
+     */
+    /** 신규 주택 취득 경위 — ""(미답) | 일반·분양권·승계 입주권·원조합원(상가·토지)·원조합원(기존주택)·자가 재건축·모름 */
+    newHouseOriginKind?: "" | "general" | "successor_right" | "original_member_house" | "original_member_non_house" | "presale" | "self_rebuild" | "unknown";
+    /** 권리 취득일(YYYY-MM-DD) — 의미는 경위마다 다르다 */
+    newHouseRightAcquisitionDate?: string;
+    /** 승계 입주권 관리처분계획 인가일(YYYY-MM-DD) — 선택 */
+    newHouseRightApprovalDate?: string;
+    /*
      * §155① 처분기한 예외 (E-1 한계 G3) — 양도세 폼과 **같은 이름**이다. ⑤는 판정 메뉴와 같은 위젯
      * (`TempTwoHouseDeadlineExceptionInputs`), ④는 같은 leaf(`buildTempTwoHouseDeadlineExceptionFacts`).
      * 신규 주택 시·군 코드는 따로 두지 않는다 — 위 `newHouseRegionCode`에서 파생한다(같은 사실 한 칸).
