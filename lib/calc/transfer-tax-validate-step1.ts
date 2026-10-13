@@ -18,7 +18,7 @@ import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
 import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./final-house-restart";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
-import { giftPriorResidenceAsked } from "./gift-household-payload";
+import { calcGiftPriorResidenceAsked } from "./gift-household-payload";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
 import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
@@ -420,7 +420,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       periods: primary.residencePeriods ?? [],
       acquisitionDate: redevAptHoldingStartDate(primary),
       transferDate: form.transferDate,
-      giftPriorHint: giftPriorResidenceAsked(primary),
+      giftPriorHint: calcGiftPriorResidenceAsked(primary),
     }))
       issues.push({ step, message });
   }
@@ -443,7 +443,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
         acquisitionDate: redevAptHoldingStartDate(primary),
         transferDate: form.transferDate,
         field: "residencePeriodMonthsAsset",
-        giftPriorHint: giftPriorResidenceAsked(primary),
+        giftPriorHint: calcGiftPriorResidenceAsked(primary),
       });
       if (overflow) issues.push({ step, message: overflow });
     }

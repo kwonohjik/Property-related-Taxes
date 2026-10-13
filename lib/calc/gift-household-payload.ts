@@ -49,6 +49,16 @@ export function giftPriorResidenceAsked(
 }
 
 /**
+ * 계산기(단건) 거주 구간 오류가 「증여 전 동일세대 거주기간 칸」으로 안내해도 되는가 — 일반 증여 칸은 첫 자산에서 `calcGiftHouseholdFactAsked`가 참일 때만 열린다
+ * (건물만 증여받고 토지는 매수한 D2 등에서는 칸이 없다). 칸이 없는데 안내만 하면 막다른 길이므로 노출 술어와 같은 게이트를 건다.
+ * 이월과세 폼의 칸은 이 게이트와 무관하게 열린다.
+ */
+export function calcGiftPriorResidenceAsked(asset: AssetForm | undefined): boolean {
+  if (!giftPriorResidenceAsked(asset)) return false;
+  return asset?.acquisitionCause !== "gift" || calcGiftHouseholdFactAsked(asset, { isPrimary: true });
+}
+
+/**
  * ⑧ 증여 전 동일세대 거주 개월 검증 — 판정 메뉴·계산기·이월과세 폼 공용. 값이 없으면 통과(필수가 아니다: 모르면 통산 없이 판정하고 결론을 가를 때만 확인 필요).
  * 상한은 세대 보유 시작일부터 증여일까지의 개월 수다 — ⑫와 같은 `maxPriorResidenceMonthsBetween`. 시작일·증여일이 비었거나 범위 밖이면 그 오류는 따로 막으므로 여기서는 보지 않는다.
  */

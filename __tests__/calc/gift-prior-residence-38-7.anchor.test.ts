@@ -23,7 +23,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { buildOneHouseExemptionApiBody } from "@/lib/calc/one-house-exemption-api";
 import { validateStep3 } from "@/lib/calc/one-house-exemption-validate";
 import { collectResidenceIntervalErrors } from "@/lib/calc/residence-interval-validate";
-import { buildCalcGiftHouseholdPayload, giftHouseholdFactErrors, giftPriorResidenceAsked } from "@/lib/calc/gift-household-payload";
+import { buildCalcGiftHouseholdPayload, calcGiftPriorResidenceAsked, giftHouseholdFactErrors, giftPriorResidenceAsked } from "@/lib/calc/gift-household-payload";
 import { buildCarryoverPayload } from "@/lib/calc/transfer-tax-api-carryover";
 import { validateCarryoverHouseholdFact } from "@/lib/calc/transfer-tax-validate-carryover-household";
 import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
@@ -321,6 +321,16 @@ describe("PR-5 거주 구간 오류가 증여 전 거주 칸을 안내한다", (
     const plain = collectResidenceIntervalErrors(args);
     expect(plain.join("\n")).not.toContain("증여 전 동일세대 거주기간");
     expect(plain.join("\n")).toContain("취득 전 임차 거주는 제외하고 입력하세요");
+  });
+  it("[PR-5c] 계산기 안내는 칸이 열리는 위치(첫 자산·D2 아님)에서만 — 건물만 증여받고 토지는 매수한 주택(D2)은 칸이 없어 안내하지 않는다", () => {
+    const gift: AssetForm = { ...makeDefaultAsset(), assetKind: "housing", acquisitionCause: "gift", giftSameHousehold: "yes" };
+    expect(calcGiftPriorResidenceAsked(gift)).toBe(true);
+    const d2: AssetForm = { ...gift, hasSeperateLandAcquisitionDate: true, landCauseHost: "gift", landAcquisitionCause: "purchase" };
+    expect(giftPriorResidenceAsked(d2)).toBe(true); // 판정 메뉴 술어는 D2를 모른다
+    expect(calcGiftPriorResidenceAsked(d2)).toBe(false);
+    // 이월과세 폼의 칸은 D2 게이트와 무관하게 열린다
+    const carry: AssetForm = { ...makeDefaultAsset(), assetKind: "housing", acquisitionCause: "carryover_gift", carryover: { ...CARRYOVER_DEFAULTS, donorSameHousehold: "yes" } };
+    expect(calcGiftPriorResidenceAsked(carry)).toBe(true);
   });
   it("[PR-5b] 판정 메뉴 ⑧이 칸이 있는 증여 주택(예)에서만 안내를 붙인다", () => {
     const interval = { residenceInputMode: "interval" as const, residencePeriods: [{ moveInDate: "2021-01-01", moveOutDate: "2023-01-01" }] };
