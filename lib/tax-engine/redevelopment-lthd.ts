@@ -21,6 +21,7 @@
  * - settlement (apt + pay): 2009-10-23 ~ 2023-02-16 ≈ 13년 3월 → 표1 26%
  */
 
+import { format } from "date-fns";
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { LTHD_CONVERSION_95_5_CUTOFF } from "./tax-utils";
@@ -239,6 +240,11 @@ export interface RedevelopmentLthdBranch {
   reason?: string;
   /** 공제율 산정 근거 한 줄 — 토지 출자 원조합원의 표1·표2 선택/합산처럼 표 하나로 설명되지 않을 때만(UI·단계 표시용) */
   rateBasis?: string;
+  /**
+   * 청산금 **납부**분의 기산일이 인가일이 아닐 때만 — 토지만 출자한 원조합원의 표2 청산금분은 사용승인일(#12).
+   * 신고서 표시(`redevelopment-branches.ts`)가 읽는다.
+   */
+  holdingStartDate?: Date;
 }
 
 /** 분기별 LTHD 결과 — 3분기 묶음 */
@@ -453,6 +459,24 @@ export function computeRightLthd(args: {
 // 완공 APT 양도 (§166⑤2호 + 묶음 동일 율 강제)
 // ──────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 청산금 **납부**분 장기보유특별공제 기산일 — 토지만 출자한 원조합원이 표2(1세대1주택)를 적용받을 때만 사용승인일, 그 밖에는 인가일.
+ * 사용승인일이 인가일 앞이거나 양도일 뒤이면(입력 오류) 인가일 — 호출부가 종전 식을 쓴다(`landContributedExistingLthdRate`와 같은 방어).
+ *
+ * 사용자 결정(2026-10-13): 토지만 출자한 사람은 사용승인 전에는 토지뿐이라 청산금분도 사용승인일 이후에야 「주택」이다.
+ * 기존건물분(`landContributedExistingLthdRate`)과 같이 「주택」 개념이 걸리는 표2일 때만 바꾸고, 표1이면 종전(영 §166⑤2호가목 인가일)이다.
+ */
+function landContributedPayStartDate(p: {
+  approvalDate: Date;
+  completionDate?: Date;
+  transferDate: Date;
+  table2: boolean;
+}): Date {
+  const { approvalDate, completionDate, transferDate, table2 } = p;
+  if (!table2 || !completionDate || completionDate < approvalDate || completionDate > transferDate) return approvalDate;
+  return completionDate;
+}
+
 function computeAptLthd(args: {
   acquisitionDate: Date;
   approvalDate: Date;
@@ -519,8 +543,15 @@ function computeAptLthd(args: {
   // ─ 청산금 분 보유기간 + 거주월수 = new 만 (해석례 2020-386) ─
   let settlementBranch: RedevelopmentLthdBranch;
   if (settlementDirection === "pay") {
-    // §166⑤2호가목: 인가일 ~ 신축양도일
-    const payHolding = calculateHoldingPeriod(approvalDate, transferDate);
+    // §166⑤2호가목: 인가일 ~ 신축양도일. 토지만 출자한 원조합원의 표2는 사용승인일 ~ 신축양도일 — 사용승인 전에는 토지뿐이라
+    // 청산금분을 주택으로 보유한 기간이 아니다(사용자 결정 2026-10-13 — 기존건물분과 같은 원칙, 재산세과-1693 · #12).
+    const payStart = landContributedPayStartDate({
+      approvalDate,
+      completionDate: landContributedCompletionDate,
+      transferDate,
+      table2: usesTable2(isOneHouseSingle, payResidenceYears),
+    });
+    const payHolding = calculateHoldingPeriod(payStart, transferDate);
     const payMonths = payHolding.years * 12 + payHolding.months;
     const paySplit = computeLthdRateSplit(payHolding.years, isOneHouseSingle, payResidenceYears);
     settlementBranch = {
@@ -531,6 +562,12 @@ function computeAptLthd(args: {
       holdingRate: paySplit.holding,
       residenceRate: paySplit.residence,
       applicable: true,
+      ...(payStart !== approvalDate
+        ? {
+            holdingStartDate: payStart,
+            rateBasis: `토지만 출자한 원조합원 — 청산금분은 사용승인일(${format(payStart, "yyyy-MM-dd")})부터 주택으로 보아 보유기간을 셉니다`,
+          }
+        : {}),
     };
   } else {
     // 수령: §95④ + NTS 집행기준 — 취득일 ~ settlementSaleDate (소유권이전 고시일 다음날)
