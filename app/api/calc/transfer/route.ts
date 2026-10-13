@@ -42,6 +42,7 @@ import {
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
+import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
 import { buildTransferEngineInput } from "./engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import {
@@ -272,8 +273,12 @@ export async function POST(request: NextRequest) {
             )
           : undefined;
 
-      const primaryCtxForSplit =
-        engineInput.buildingFootprintArea !== undefined ||
+      // G1 — 사례 28 역방향(첫 자산 주택부수토지 + 함께 양도 주택 1건): 주택 카드가 단위의 주택, 첫 자산 토지는 배율 이내·초과로 나눈다.
+      const reverseUnit = resolveReverseAppurtenantUnit(engineInput, companions, housingCtxFromCompanion);
+
+      const primaryCtxForSplit = reverseUnit
+        ? reverseUnit.houseCtx
+        : engineInput.buildingFootprintArea !== undefined ||
         engineInput.manualHoldingPeriodOverride !== undefined
           ? {
               propertyType: engineInput.propertyType,
@@ -286,7 +291,7 @@ export async function POST(request: NextRequest) {
           : housingCtxFromCompanion;
 
       // #17 후속(K1) — 배율 한도를 주 자산 주택 카드의 토지와 부수토지 카드들이 함께 쓴다.
-      const appurtenantLimitShare = appurtenantLimitShareOf(engineInput, companions);
+      const appurtenantLimitShare = reverseUnit?.limitShare ?? appurtenantLimitShareOf(engineInput, companions);
 
       // 사례 28 — primary가 land이고 housingCtxFromCompanion이 있으면 primaryCtx 주입 (양방향 자동 분기)
       // landNature는 개별 자산에 명시 입력되므로 폼-수준 userModeOverride 불필요.
@@ -400,7 +405,7 @@ export async function POST(request: NextRequest) {
               },
             );
           }
-          return [primaryItem];
+          return reverseUnit ? splitReversePrimaryLand(primaryItem, reverseUnit, transferDate) : [primaryItem];
         }
         // 컴패니언 자산 빌드 + 한도 초과 split — bundled-split-helpers.ts로 추출
         const rawC = companions[idx - 1];
@@ -411,7 +416,7 @@ export async function POST(request: NextRequest) {
             rawC.totalPropertyTransferPrice, rawC.ownershipRatio, a.allocatedSalePrice, isFullFractionalBundle,
           ),
         };
-        return buildCompanionEngineInputs(c, a, {
+        const built = buildCompanionEngineInputs(c, a, {
           primaryCtxForSplit,
           transferDate,
           primaryAcquisitionCause: data.acquisitionCause,
@@ -447,6 +452,8 @@ export async function POST(request: NextRequest) {
             buildingFootprintArea: engineInput.buildingFootprintArea,
             isUrbanArea: engineInput.isUrbanArea,
             appurtenantLandZone: engineInput.appurtenantLandZone,
+            // G1 역방향 — 부수토지 컴패니언의 짝 주택은 함께 양도 주택이다(배율 분리·거주기간 상속).
+            ...(reverseUnit ? reverseUnitHouseFacts(reverseUnit) : {}),
           },
           bundledSaleMode: data.bundledSaleMode,
           appurtenantLimitShare,
@@ -460,6 +467,9 @@ export async function POST(request: NextRequest) {
            */
           mixedUseCtx,
         });
+        return reverseUnit && c.assetId === reverseUnit.houseAssetId
+          ? built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput))
+          : built;
       });
 
       // 축 B(같은 물건 지분 분할 — 한 사람이 나눠 취득해 전부 양도)는 서버가 다자산 구성에서 도출해 표시한다(#11 — 공유와 구별).

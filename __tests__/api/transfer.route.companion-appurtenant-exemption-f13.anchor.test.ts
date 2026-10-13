@@ -234,11 +234,11 @@ describe("#18 12억 판정·안분 분모 — 배율 초과 부수토지 가액�
 
 /**
  * 사례 28 역방향(F3 후속) — 주택부수토지를 주 자산(첫 자산)으로, 주택을 함께 양도 자산으로 넣은 구성.
- * route는 주 자산이 주택일 때만 1세대1주택 단위(F-13)·배율 분리(G-2)를 만든다(`route.ts` `oneHouseUnitRole` ·
- * `resolveCompanionLandRate` 주택 계열 검사). 역방향은 둘 다 없어 같은 사실을 주택 먼저 넣은 경우와 세액이 갈린다(계획서 :110 V-5 미착수).
- * 고치기 전까지 조용히 계산하지 않고 알린다 — 세액은 바꾸지 않는다.
+ * G1(2026-10-13)부터 route가 짝 주택(함께 양도 일반 주택 1건 · 정착면적 있음)을 정하면 주택 먼저 순서와 같이 계산한다
+ * (`transfer.route.reverse-appurtenant-unit-g1.anchor.test.ts`). 아래 시료는 주택 카드에 **정착면적이 없어** 짝 주택을 정하지 못한 구성 —
+ * 단위·배율 분리 없이 종전대로 계산하고 알린다(주택 먼저 순서도 정착면적이 없으면 단위를 만들지 않는다).
  */
-describe("사례 28 역방향 — 주택부수토지가 주 자산이고 주택이 함께 양도 자산이면 판정 생략을 알린다", () => {
+describe("사례 28 역방향 — 짝 주택을 정하지 못하면 판정 생략을 알린다", () => {
   const reversePrimary = (landPrice: number, housePrice: number, over: object = {}) => ({
     ...primary(landPrice, housePrice),
     propertyType: "land",
@@ -260,15 +260,15 @@ describe("사례 28 역방향 — 주택부수토지가 주 자산이고 주택�
     reductions: [],
     ...over,
   });
-  const NOTICE = "주택을 첫 자산으로 입력하면";
+  const NOTICE = "짝 주택을 정하지 못해";
 
-  it("F13-11 역방향(1세대1주택) — 판정 생략 안내", async () => {
+  it("F13-11 역방향(1세대1주택) · 주택 정착면적 없음 — 판정 생략 안내", async () => {
     const a = await post({ ...reversePrimary(300_000_000, 800_000_000), companionAssets: [house(800_000_000)] });
-    // 세액은 바꾸지 않는다 — 같은 사실을 주택 먼저 넣으면 0(F13-1)인데 역방향은 토지를 따로 과세한다(실측 25,943,500).
+    // 짝 주택을 정하지 못해 토지를 따로 과세한다(실측 25,943,500). 정착면적이 있으면 0이다(G1 anchor).
     expect(a.totalTax).toBe(25_943_500);
     expect((a.warnings ?? []).some((w) => w.includes(NOTICE))).toBe(true);
   });
-  it("F13-12 역방향(1세대1주택 아님) — 배율 이내·초과 구분도 하지 않으므로 같은 안내", async () => {
+  it("F13-12 역방향(1세대1주택 아님) · 주택 정착면적 없음 — 배율 이내·초과 구분도 하지 않으므로 같은 안내", async () => {
     const a = await post({
       ...reversePrimary(300_000_000, 800_000_000, { isOneHousehold: false, householdHousingCount: 2 }),
       companionAssets: [house(800_000_000, { isOneHousehold: false })],
