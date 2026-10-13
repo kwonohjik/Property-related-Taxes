@@ -10,7 +10,8 @@
  * 🔑 **그 선언이 결론을 가를 때만** 낸다(`feedback_unknown_fact_applies_unfavorably` — 형제 고지 `era-undetermined`의
  * `regulatedAxisMatters` · `pending`의 `coreWouldPass`와 같은 규약). 양도 주택은 「지구 안·밖 어느 쪽이든 비과세 결론이 같으면」
  * 묻지 않는다 — 판정 메뉴는 중과를 계산하지 않으므로 양도일 지정 상태만으로는 결론이 안 바뀐다(S02-7). 계산기 다주택 중과는
- * 양도일 조정 여부를 실제로 쓰므로 `surchargeSellingDistrictUndeclared`가 따로 맡는다.
+ * 양도일 조정 여부를 실제로 쓰므로 `surchargeSellingDistrictUndeclared`가 따로 맡는다. 입주권 행도 같은 규약이다(#32-4) — 그 행의 답을
+ * 바꿔 본체 판정을 다시 돌려도 비과세 결론이 같으면(처분기한이 이미 지났거나 양도 주택의 보유·거주가 모자라 어차피 과세 등) 묻지 않는다.
  */
 import { format } from "date-fns";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
@@ -42,6 +43,11 @@ export function rightRowDistrictAnswerUsed(row: { type: string; memberOrigin?: s
 export interface DistrictDeclarationRelevance {
   /** 양도 주택의 지구 선언을 true·false로 바꾸면 비과세 결론이 달라지는가 */
   selling: () => boolean;
+  /**
+   * 입주권 행(`presaleRights[rowIndex]`)의 지구 선언을 true·false로 바꾸면 비과세 결론이 달라지는가 — 기존주택 원조합원 §155① 처분기한(#32-4).
+   * 기한이 이미 지났거나 양도 주택의 보유·거주가 모자라 어차피 과세(또는 어차피 비과세)면 그 답은 결론을 바꾸지 못한다.
+   */
+  right: (rowIndex: number) => boolean;
 }
 
 const ymd = (d: Date) => format(d, "yyyy-MM-dd");
@@ -119,7 +125,7 @@ export function designatedDistrictUndeclared(
   (input.presaleRights ?? []).forEach((r, i) => {
     // 입주권 행 소재지가 조정대상지역 판정에 쓰이는 것은 주택 양도의 기존주택 원조합원 경로뿐이다(미입력 포함).
     if (!rightRowDistrictAnswerUsed(r, saleIsHousing)) return;
-    check(`right-${i}`, `분양권·입주권 ${i + 1}`, r.regionCode, r.inDesignatedDistrict, [r.acquisitionDate]);
+    check(`right-${i}`, `분양권·입주권 ${i + 1}`, r.regionCode, r.inDesignatedDistrict, [r.acquisitionDate], () => relevance?.right(i) ?? true);
   });
   return out;
 }

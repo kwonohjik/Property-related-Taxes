@@ -153,6 +153,11 @@ export function judgeRedevAptOneHouseExemption(
         exemptionJudgeInput,
         translatedJudgeInput,
         parsedRates.oneHouseSpecialRules.one_house_exemption,
+        // 고지는 그 사실을 다른 독법으로 읽어 판정 전체를 다시 돌려도 결론이 같으면 내지 않는다(#32-4).
+        (judgeInput) => {
+          const r = judgeOneHouseExemptionFromInput(judgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates));
+          return `${r.isExempt}|${r.isPartialExempt}`;
+        },
       ),
     );
   }
