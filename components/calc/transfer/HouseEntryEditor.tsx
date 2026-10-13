@@ -670,7 +670,7 @@ export function HouseEntryEditor({
         <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
       )}
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
-      <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} otherUocRowNumber={otherUocRowNumber} />
+      <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} otherUocRowNumber={otherUocRowNumber} transferDate={transferDate} />
       {/* ⑥ 조특법 소유주택 의제 — ⑤(소령 §155)와 근거 법률·요건이 다르다 */}
       {countExclusionEnabled && (
         <HouseEntryCountExclusionSection house={house} onUpdate={onUpdate} transferDate={transferDate} />

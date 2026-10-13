@@ -39,7 +39,7 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { validateStep2 as validateJudgmentStep2 } from "@/lib/calc/one-house-exemption-validate";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
-import { otherUocRowNumberOf } from "@/lib/calc/house-row-required-issues";
+import { otherUocRowNumberOf, uocRowAcquiredAfterTransfer } from "@/lib/calc/house-row-required-issues";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 type Form = ReturnType<typeof createDefaultTransferFormData>;
@@ -186,5 +186,22 @@ describe("§155⑧ 행 한 채 — 양도일 현재 보유 행만 (PR #2163 후�
     expect(otherUocRowNumberOf([A, F], "ha", TD, "housing")).toBeUndefined();
     // 입주권 양도에는 §154⑨가 닿지 않는다(`sameDayOrderApplies`) — 남은 선택값으로 빼지 않고 보유 행으로 센다
     expect(otherUocRowNumberOf([A, F], "ha", TD, "right_to_move_in")).toBe(2);
+  });
+  it("O9 「반영 안 됨」 안내(⑤)가 실제 동작과 일치 — 안내가 뜨는 행은 ④ 명부에서 빠지고 ⑧ 사실·세액에 실리지 않는다", async () => {
+    // L은 양도일 뒤 취득 ⑧ 행 — 안내 대상. A는 보유 ⑧ 행 — 안내 없음.
+    expect(uocRowAcquiredAfterTransfer(L, TD)).toBe(true);
+    expect(uocRowAcquiredAfterTransfer(A, TD)).toBe(false);
+    // 경계: 당일 = 안내(양도 후 취득), 하루 전 = 없음
+    expect(uocRowAcquiredAfterTransfer(row("hs", TD), TD)).toBe(true);
+    expect(uocRowAcquiredAfterTransfer(row("hd", "2026-09-17"), TD)).toBe(false);
+    // 양도일 미입력은 단정하지 않는다
+    expect(uocRowAcquiredAfterTransfer(L, "")).toBe(false);
+    // L만 ⑧인 세대: ④ 명부에 L이 없고, ⑧ 사실이 비어 있으며, 세액은 ⑧ 표시가 없는 L과 같다
+    const withMark = await single(form([L]));
+    const withoutMark = await single(form([{ ...L, oneHouseUnavoidableOutsideCapital: undefined } as HouseEntry]));
+    expect((withMark.body.houses as Obj[]).map((h) => h.id)).toEqual(["selling"]);
+    expect(withMark.body.unavoidableOutsideCapitalHouse).toBeUndefined();
+    expect(withMark.status).toBe(200);
+    expect(withMark.totalTax).toBe(withoutMark.totalTax);
   });
 });

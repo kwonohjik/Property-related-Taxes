@@ -49,9 +49,11 @@ interface Props {
   onUpdate: (patch: Partial<HouseEntry>) => void;
   /** 다른 행에 이미 §155⑧ 표시가 있으면 그 행 번호(1부터) */
   otherUocRowNumber?: number;
+  /** 양도일 — ⑧ 행의 「양도일 뒤 취득」 안내용 */
+  transferDate?: string;
 }
 
-export function HouseEntryOneHouseFactsSection({ house, onUpdate, otherUocRowNumber }: Props) {
+export function HouseEntryOneHouseFactsSection({ house, onUpdate, otherUocRowNumber, transferDate }: Props) {
   return (
     <ToneCard
       tone="violet"
@@ -93,7 +95,12 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate, otherUocRowNum
       <HouseEntryRuralHouseBlock house={house} onUpdate={onUpdate} />
 
       {/* §155⑧ 수도권 밖 부득이 주택 (4) — ④의 3호와 **다른 조문**이다 */}
-      <HouseEntryUnavoidableOutsideCapitalBlock house={house} onUpdate={onUpdate} otherUocRowNumber={otherUocRowNumber} />
+      <HouseEntryUnavoidableOutsideCapitalBlock
+        house={house}
+        onUpdate={onUpdate}
+        otherUocRowNumber={otherUocRowNumber}
+        transferDate={transferDate}
+      />
     </ToneCard>
   );
 }
