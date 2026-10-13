@@ -86,6 +86,12 @@ export interface CarryoverTaxationInput {
   /** 세대가 이 주택 보유를 시작한 날 — `donorSameHouseholdContinuous === true`일 때 필수(증여자 취득일 ≤ 이 날 < 증여일). */
   donorHouseholdHoldingStartDate?: Date;
   /**
+   * 증여 뒤 이혼했다가 **같은 배우자와 재결합**했는가 (결정 #34 조건 · #38-6) — `donorRelation === "spouse"`일 때만 의미가 있다.
+   * 「아니오」(통산 안 함)로 계산하고, 통산하면 결론이 달라질 때만 확인 필요를 고지한다(정면 해석이 갈린다 — gift-household-basis.ts).
+   * `donorSameHouseholdContinuous`를 함께 보내면 무시된다(재결합이면 통산하지 않는다).
+   */
+  donorRejoinedAfterDivorce?: boolean;
+  /**
    * 환산 모드 분자 — **증여자 취득 당시** 그 자산(파트)의 기준시가.
    * `useEstimatedAcquisition === true`일 때만 의미가 있다.
    * 분모(양도 당시 기준시가)는 받지 않는다 — 엔진이 아는 값을 쓴다(설계 D9-8).

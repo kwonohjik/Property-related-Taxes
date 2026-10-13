@@ -197,10 +197,14 @@ export function carryoverResidenceJudgmentDate(asset: Pick<AssetForm, "assetKind
 function carryoverHouseholdPayload(asset: AssetForm): {
   donorSameHouseholdContinuous?: boolean;
   donorHouseholdHoldingStartDate?: string;
+  donorRejoinedAfterDivorce?: boolean;
 } {
   const c = asset.carryover;
   if (!c || !carryoverHouseholdFactVisible(asset) || c.donorSameHousehold === "") return {};
   if (c.donorSameHousehold === "no") return { donorSameHouseholdContinuous: false };
+  // 결정 #38-6 — 재결합은 배우자 증여의 사실이다. 관계가 바뀌어 남은 값은 싣지 않는다(⑧도 같은 규칙으로 막는다).
+  if (c.donorSameHousehold === "rejoined")
+    return c.donorRelation === "spouse" ? { donorSameHouseholdContinuous: false, donorRejoinedAfterDivorce: true } : {};
   return {
     donorSameHouseholdContinuous: true,
     ...(c.donorHouseholdHoldingStartDate ? { donorHouseholdHoldingStartDate: c.donorHouseholdHoldingStartDate } : {}),

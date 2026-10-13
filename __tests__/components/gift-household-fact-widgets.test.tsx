@@ -98,6 +98,7 @@ describe("판정 메뉴 — GiftedSameHouseholdField", () => {
     giftDonorRelation: "" as const,
     giftSameHousehold: "" as const,
     giftHouseholdHoldingStartDate: "",
+    giftDonorDeceased: false,
   };
 
   it("[W-4] 토글을 켜면 원인 gift, 끄면 purchase + 세대 값을 비운다", () => {
@@ -121,5 +122,96 @@ describe("판정 메뉴 — GiftedSameHouseholdField", () => {
     render(<GiftedSameHouseholdField asset={{ ...base, giftDonorRelation: "lineal" }} onChange={vi.fn()} />);
     expect(screen.queryByText(/혼인이 유지되었습니까/)).toBeNull();
     expect(screen.getByText(/같은 주소에서 생계를 같이 하는 같은 세대/)).toBeTruthy();
+  });
+});
+
+describe("증여자 사망·이혼 후 재결합 입력 (결정 #34 조건 · #38-6)", () => {
+  const base = {
+    assetId: "a1",
+    acquisitionCause: "gift" as const,
+    donorAcquisitionDate: "2010-03-01",
+    giftDonorRelation: "spouse" as AssetForm["giftDonorRelation"],
+    giftSameHousehold: "" as AssetForm["giftSameHousehold"],
+    giftHouseholdHoldingStartDate: "",
+    giftDonorDeceased: false,
+  };
+  const QUESTION_TITLE = /증여자와 계속 같은 세대였습니까/;
+
+  it("[DR-W1] 판정 메뉴 — 사망 토글은 관계가 있어야 켠다 · 문언이 관계별로 다르다(배우자=사망으로 혼인관계 소멸)", () => {
+    render(<GiftedSameHouseholdField asset={base} onChange={vi.fn()} />);
+    expect(screen.getByRole("switch", { name: /사망으로 혼인관계가 소멸되었습니다/ })).toBeTruthy();
+    cleanup();
+    render(<GiftedSameHouseholdField asset={{ ...base, giftDonorRelation: "lineal" }} onChange={vi.fn()} />);
+    expect(screen.getByRole("switch", { name: /양도 전에 증여자가 사망했습니다/ })).toBeTruthy();
+    cleanup();
+    // 관계 미선택이면 켤 수 없다
+    const onChange = vi.fn();
+    render(<GiftedSameHouseholdField asset={{ ...base, giftDonorRelation: "" }} onChange={onChange} />);
+    const sw = screen.getByRole("switch", { name: /양도 전에 증여자가 사망했습니다/ });
+    fireEvent.click(sw);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("[DR-W2] 사망을 켜면 「계속 같은 세대」 질문을 띄우지 않는다 · 꺼져 있으면 띄운다(긍정 짝)", () => {
+    const onChange = vi.fn();
+    render(<GiftedSameHouseholdField asset={base} onChange={onChange} />);
+    expect(screen.getAllByText(QUESTION_TITLE).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("switch", { name: /사망으로 혼인관계가 소멸되었습니다/ }));
+    expect(onChange).toHaveBeenCalledWith({ giftDonorDeceased: true });
+    cleanup();
+    render(<GiftedSameHouseholdField asset={{ ...base, giftDonorDeceased: true }} onChange={vi.fn()} />);
+    expect(screen.queryByText(QUESTION_TITLE)).toBeNull();
+  });
+
+  it("[DR-W3] 재결합 선택지는 배우자 증여에만 있다 · 고르면 시작일을 비운다", () => {
+    const onChange = vi.fn();
+    render(<GiftedSameHouseholdField asset={base} onChange={onChange} />);
+    fireEvent.click(screen.getByLabelText(/아니오 — 증여 뒤 이혼했다가 같은 사람과 재결합/));
+    expect(onChange).toHaveBeenCalledWith({ giftSameHousehold: "rejoined", giftHouseholdHoldingStartDate: "" });
+    cleanup();
+    render(<GiftedSameHouseholdField asset={{ ...base, giftDonorRelation: "lineal" }} onChange={vi.fn()} />);
+    expect(screen.queryByLabelText(/이혼했다가 같은 사람과 재결합/)).toBeNull();
+    // 「아니오」는 그대로 있다
+    expect(screen.getByLabelText(/아니오 — 세대가 달랐거나/)).toBeTruthy();
+  });
+
+  it("[DR-W4] 관계를 바꾸면 사망·재결합 답을 함께 비운다 — 배우자로 바꾸면 재결합 답은 유지", () => {
+    const onChange = vi.fn();
+    render(
+      <GiftedSameHouseholdField
+        asset={{ ...base, giftSameHousehold: "rejoined", giftDonorDeceased: false }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("직계존비속"));
+    expect(onChange).toHaveBeenCalledWith({ giftDonorRelation: "lineal", giftDonorDeceased: false, giftSameHousehold: "" });
+    cleanup();
+    const keep = vi.fn();
+    render(<GiftedSameHouseholdField asset={{ ...base, giftDonorRelation: "lineal", giftSameHousehold: "yes" }} onChange={keep} />);
+    fireEvent.click(screen.getByLabelText("배우자"));
+    expect(keep).toHaveBeenCalledWith({ giftDonorRelation: "spouse", giftDonorDeceased: false });
+  });
+
+  it("[DR-W5] 이월과세 폼 — 재결합 선택지는 배우자에만 · 고르면 시작일을 비운다", () => {
+    const { onRelationChange } = renderSection();
+    fireEvent.click(screen.getByLabelText(/아니오 — 증여 뒤 이혼했다가 같은 사람과 재결합/));
+    expect(onRelationChange).toHaveBeenCalledWith({ donorSameHousehold: "rejoined", donorHouseholdHoldingStartDate: "" });
+    cleanup();
+    renderSection({ donorRelation: "lineal" });
+    expect(screen.queryByLabelText(/이혼했다가 같은 사람과 재결합/)).toBeNull();
+  });
+
+  it("[DR-W6] 이월과세 폼 — 관계가 배우자가 아니게 되면 재결합 답을 비운다 · 배우자로 바꿀 때는 비우지 않는다(긍정 짝)", () => {
+    const { onRelationChange } = renderSection({ donorSameHousehold: "rejoined" });
+    fireEvent.click(screen.getByLabelText("직계존비속"));
+    expect(onRelationChange).toHaveBeenCalledWith(
+      expect.objectContaining({ donorRelation: "lineal", donorSameHousehold: "" }),
+    );
+    cleanup();
+    const second = renderSection({ donorRelation: "lineal", donorSameHousehold: "yes" });
+    fireEvent.click(screen.getByLabelText("배우자"));
+    const patch = second.onRelationChange.mock.calls[0][0] as Record<string, unknown>;
+    expect(patch.donorRelation).toBe("spouse");
+    expect("donorSameHousehold" in patch).toBe(false);
   });
 });

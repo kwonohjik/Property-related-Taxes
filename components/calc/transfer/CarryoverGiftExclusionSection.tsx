@@ -107,7 +107,13 @@ export function CarryoverGiftExclusionSection({
           onChange={(v) =>
             // 관계가 바뀌면 사망 문항의 **의미가 바뀐다** — 함께 초기화한다(단일 배치 update).
             // 배우자 예외 사실도 배우자에게만 묻는 문항이라 함께 지운다.
-            onRelationChange({ donorRelation: v, donorDeceased: false, spouseGiftOneHouseAtGiftDate: false })
+            // 「이혼 후 재결합」은 배우자 증여의 답이다 — 관계가 배우자가 아니게 되면 그 답도 비운다(#38-6).
+            onRelationChange({
+              donorRelation: v,
+              donorDeceased: false,
+              spouseGiftOneHouseAtGiftDate: false,
+              ...(v !== "spouse" && donorSameHousehold === "rejoined" ? { donorSameHousehold: "" as const } : {}),
+            })
           }
         />
 
@@ -157,7 +163,8 @@ export function CarryoverGiftExclusionSection({
           <p className="text-caption text-muted-foreground">
             증여일부터 양도일까지 증여자와 <strong>계속 같은 세대</strong>였습니까? 배우자는 「소득세법」 §88 6호 기준으로 혼인이
             유지된 경우(법률상 이혼했어도 생계를 같이 하는 등 사실상 이혼으로 보기 어려우면 같은 세대), 그 밖에는 같은 주소·생계를
-            계속한 경우입니다. 이혼 후 같은 사람과 재결합한 경우나 증여자가 양도 전에 사망한 경우는 「아니오」로 계산하며 확인이
+            계속한 경우입니다. 증여자가 양도 전에 사망한 경우는 위 사망 항목을 선택하면 이 질문 없이 통산하지 않고 계산하며,
+            이혼 후 같은 사람과 재결합한 경우(배우자)는 아래 선택지를 고르면 「아니오」로 계산합니다 — 둘 다 확인이
             필요합니다. 같은 세대라면 비과세 판정의 보유기간(과 거주요건 「취득 당시」)을 증여자 세대가 보유를 시작한 날부터 셉니다
             (조심 2022서7583).
           </p>
@@ -168,13 +175,17 @@ export function CarryoverGiftExclusionSection({
             options={[
               { value: "yes", label: "예 — 계속 같은 세대" },
               { value: "no", label: "아니오 — 세대가 달랐거나 중간에 분리" },
+              // 결정 #34 조건 · #38-6 — 정면 해석이 갈려 「아니오」로 계산하고 확인 필요를 고지한다. 배우자 증여에서만 묻는다.
+              ...(donorRelation === "spouse"
+                ? [{ value: "rejoined", label: "아니오 — 증여 뒤 이혼했다가 같은 사람과 재결합" }]
+                : []),
             ]}
             value={donorSameHousehold}
             onChange={(v) =>
               onRelationChange(
                 v === "yes"
                   ? { donorSameHousehold: "yes" }
-                  : { donorSameHousehold: "no", donorHouseholdHoldingStartDate: "" },
+                  : { donorSameHousehold: v === "rejoined" ? "rejoined" : "no", donorHouseholdHoldingStartDate: "" },
               )
             }
           />

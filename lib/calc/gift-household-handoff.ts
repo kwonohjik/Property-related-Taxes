@@ -30,6 +30,8 @@ export function giftHandoffAsset(asset: AssetForm, transferDate: string): AssetF
       giftTaxAmount: 0,
       giftDateValuation: 0,
       donorRelation: relation,
+      // 결정 #38-6 — 증여자 사망은 이월과세 배제를 가를 수 있다(배우자 사별 · 직계존비속 2025.1.1. 이후 증여).
+      donorDeceased: asset.giftDonorDeceased || undefined,
     },
     transfer,
   );
@@ -42,8 +44,11 @@ export function giftHandoffAsset(asset: AssetForm, transferDate: string): AssetF
       giftRegistryDate: asset.acquisitionDate,
       donorAcquisitionDate: asset.donorAcquisitionDate,
       donorRelation: relation,
-      donorSameHousehold: asset.giftSameHousehold,
-      donorHouseholdHoldingStartDate: asset.giftSameHousehold === "yes" ? asset.giftHouseholdHoldingStartDate : "",
+      // 사망이면 질문을 띄우지 않는다 — 이월과세 폼도 같은 술어(`carryoverHouseholdFactVisible`)로 그 질문을 숨기고 답을 싣지 않는다.
+      donorDeceased: asset.giftDonorDeceased,
+      donorSameHousehold: asset.giftDonorDeceased ? "" : asset.giftSameHousehold,
+      donorHouseholdHoldingStartDate:
+        asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased ? asset.giftHouseholdHoldingStartDate : "",
     },
   };
 }

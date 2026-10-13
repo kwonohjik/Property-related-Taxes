@@ -3,6 +3,8 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  carryoverGiftHouseholdBasis,
+  giftHouseholdConfirmedSeparate,
   giftHouseholdConsolidationStart,
   giftHouseholdHoldingStart,
   giftHouseholdUnconfirmed,
@@ -71,5 +73,33 @@ describe("resolveHouseCountExclusionDate — D4-05", () => {
     expect(ymd(resolveHouseCountExclusionDate(acq, { ...base, continuousSameHousehold: true, householdHoldingStartDate: D("2012-01-01") }))).toBe("2012-01-01");
     expect(ymd(resolveHouseCountExclusionDate(acq, base))).toBe("2021-03-02");
     expect(ymd(resolveHouseCountExclusionDate(acq, undefined))).toBe("2021-03-02");
+  });
+});
+
+describe("이혼 후 재결합 (결정 #34 조건 · #38-6) — 「아니오」로 계산한다", () => {
+  const rejoin = { ...base, continuousSameHousehold: true, householdHoldingStartDate: D("2012-01-01"), rejoinedAfterDivorce: true };
+  it("재결합이면 「예」·시작일이 있어도 통산하지 않고 확인된 별도세대로 읽는다 · 재결합이 아니면 통산한다(긍정 짝)", () => {
+    expect(giftHouseholdConsolidationStart(rejoin)).toBeUndefined();
+    expect(giftHouseholdConfirmedSeparate(rejoin)).toBe(true);
+    expect(giftHouseholdUnconfirmed(rejoin)).toBe(false);
+    expect(giftHouseholdConsolidationStart({ ...rejoin, rejoinedAfterDivorce: undefined })).toBeDefined();
+  });
+  it("「취득 당시」 후보일·경과규정 기준일은 별도세대와 같이 증여일이다", () => {
+    const r = resolveGiftResidenceDates(rejoin);
+    expect(r.judgmentDates.map(ymd)).toEqual(["2021-03-02"]);
+    expect(r.mode).toBe("any");
+    expect(ymd(r.transitionDate)).toBe("2021-03-02");
+    expect(ymd(resolveHouseCountExclusionDate(D("2021-03-02"), rejoin))).toBe("2021-03-02");
+  });
+  it("이월과세 입력에서 재결합은 배우자 관계일 때만 읽는다", () => {
+    const ct = {
+      giftRegistryDate: D("2021-03-02"),
+      donorAcquisitionDate: D("2010-03-01"),
+      donorSameHouseholdContinuous: false,
+      donorRejoinedAfterDivorce: true,
+    };
+    expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "spouse" }, false).rejoinedAfterDivorce).toBe(true);
+    expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "lineal" }, false).rejoinedAfterDivorce).toBeUndefined();
+    expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "spouse", donorRejoinedAfterDivorce: undefined }, false).rejoinedAfterDivorce).toBeUndefined();
   });
 });

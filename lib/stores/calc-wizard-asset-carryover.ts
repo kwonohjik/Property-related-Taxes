@@ -108,8 +108,9 @@ export interface CarryoverTaxationForm {
    * 증여일부터 양도일까지 증여자와 **계속 같은 세대**였는가 (결정 #33·#34). 필수 질문이다 — 배우자·직계존비속이고 증여자가 사망하지
    * 않았으며 양도 대상이 주택일 때 ⑧이 막는다. `""` = 아직 답하지 않음(옛 이력 포함 — 엔진은 미확인으로 보수 판정하고 확인 필요를 고지).
    * 배우자는 소득세법 §88 6호 기준 혼인 유지(법률상 이혼했어도 사실상 이혼으로 보기 어려우면 같은 세대).
+   * `"rejoined"` = 증여 뒤 이혼했다가 같은 배우자와 재결합 — 「아니오」로 계산하고 확인 필요를 고지한다(결정 #34 조건 · #38-6, 배우자만 고른다).
    */
-  donorSameHousehold: "" | "yes" | "no";
+  donorSameHousehold: "" | "yes" | "no" | "rejoined";
   /** 세대가 이 주택 보유를 시작한 날 — `donorSameHousehold === "yes"`일 때 필수(증여자 취득일 ≤ 이 날 < 증여 등기접수일). */
   donorHouseholdHoldingStartDate: string;
   /** 이월과세 적용배제 선언 */
@@ -200,7 +201,10 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
     donorDeceased: raw.donorDeceased === true,
     spouseGiftOneHouseAtGiftDate: raw.spouseGiftOneHouseAtGiftDate === true,
     // ③ normalize — 결정 #33·#34 신규 2필드. 구형 sessionStorage에는 없다 → 미답("")이라 ⑧이 답을 요구한다.
-    donorSameHousehold: raw.donorSameHousehold === "yes" || raw.donorSameHousehold === "no" ? raw.donorSameHousehold : "",
+    donorSameHousehold:
+      raw.donorSameHousehold === "yes" || raw.donorSameHousehold === "no" || raw.donorSameHousehold === "rejoined"
+        ? raw.donorSameHousehold
+        : "",
     donorHouseholdHoldingStartDate:
       typeof raw.donorHouseholdHoldingStartDate === "string" ? raw.donorHouseholdHoldingStartDate : "",
     exclusionDeclared: {

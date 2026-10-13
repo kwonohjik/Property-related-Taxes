@@ -19,6 +19,7 @@ type GiftFactFields = Pick<
   | "giftDonorRelation"
   | "giftSameHousehold"
   | "giftHouseholdHoldingStartDate"
+  | "giftDonorDeceased"
 >;
 
 /** 증여받은 주택의 세대 사실을 **묻는가** — 증여로 취득한 주택(`housing`) 한정. 입주권·분양권·토지는 이 사실이 결론을 가르지 않는다. */
@@ -35,12 +36,27 @@ export function buildGiftHouseholdPayload(primary: GiftFactFields | undefined): 
   donorAcquisitionDate?: string;
   giftSameHouseholdContinuous?: boolean;
   giftHouseholdHoldingStartDate?: string;
+  giftDonorDeceased?: boolean;
+  giftRejoinedAfterDivorce?: boolean;
 } {
   if (!primary || !giftHouseholdFactVisible(primary)) return {};
+  // 결정 #34 조건 · #38-6 — 증여자 사망은 「계속 같은 세대」 질문을 띄우지 않으므로 그 답(남아 있는 stale 값 포함)을 싣지 않는다.
+  //   엔진은 통산 없이 계산하고 확인 필요를 고지한다(`GiftHouseholdBasis.donorDeceased`).
+  if (primary.giftDonorDeceased) {
+    return {
+      acquisitionCause: "gift",
+      donorAcquisitionDate: primary.donorAcquisitionDate || undefined,
+      giftDonorDeceased: true,
+    };
+  }
   return {
     acquisitionCause: "gift",
     donorAcquisitionDate: primary.donorAcquisitionDate || undefined,
     ...(primary.giftSameHousehold === "no" ? { giftSameHouseholdContinuous: false } : {}),
+    // 재결합은 배우자 증여의 사실이다 — 관계가 배우자가 아니면(⑧이 막는다) 싣지 않는다. 「아니오」로 계산한다.
+    ...(primary.giftSameHousehold === "rejoined" && primary.giftDonorRelation === "spouse"
+      ? { giftSameHouseholdContinuous: false, giftRejoinedAfterDivorce: true }
+      : {}),
     ...(primary.giftSameHousehold === "yes"
       ? {
           giftSameHouseholdContinuous: true,
@@ -98,7 +114,7 @@ export function calcGiftHouseholdFactAsked(
 export function buildCalcGiftHouseholdPayload(
   primary: (GiftFactFields & Pick<AssetForm, "acquisitionDate"> & BuildingCauseMixFields) | undefined,
 ): ReturnType<typeof buildGiftHouseholdPayload> {
-  if (!primary || !primary.giftSameHousehold || !calcGiftHouseholdFactVisible(primary)) return {};
+  if (!primary || (!primary.giftSameHousehold && !primary.giftDonorDeceased) || !calcGiftHouseholdFactVisible(primary)) return {};
   if (giftHouseholdFactErrors(primary).length > 0) return {};
   return buildGiftHouseholdPayload(primary);
 }
@@ -124,8 +140,15 @@ export function giftHouseholdFactErrors(primary: GiftFactFields & Pick<AssetForm
     out.push({ field: "donorAcquisitionDate", message: "증여자 취득일은 증여일보다 이전이어야 합니다." });
   }
   if (!primary.giftDonorRelation) out.push({ field: "giftDonorRelation", message: "증여자와의 관계를 선택하세요." });
+  // 증여자 사망이면 질문을 띄우지 않는다 — 화면에 없는 질문을 요구하면 막다른 오류다(⑤·④와 같은 술어).
+  if (primary.giftDonorDeceased) return out;
   if (!primary.giftSameHousehold) {
     out.push({ field: "giftSameHousehold", message: "증여일부터 양도일까지 증여자와 계속 같은 세대였는지 선택하세요." });
+  } else if (primary.giftSameHousehold === "rejoined" && primary.giftDonorRelation !== "spouse") {
+    out.push({
+      field: "giftSameHousehold",
+      message: "「이혼 후 같은 사람과 재결합」은 배우자에게서 증여받은 경우에만 선택할 수 있습니다. 계속 같은 세대였는지 다시 선택하세요.",
+    });
   } else if (primary.giftSameHousehold === "yes") {
     const start = primary.giftHouseholdHoldingStartDate;
     if (!start) {

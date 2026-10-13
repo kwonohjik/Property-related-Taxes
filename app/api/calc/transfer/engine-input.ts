@@ -106,12 +106,15 @@ export function buildTransferEngineInput(
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
     // ⑭ 결정 #38 — 증여받은 주택의 증여자와 같은 세대 사실. 다건 route도 같은 함수를 쓴다(#38-3). **답한 경우에만** 만든다 —
     //    칸이 없는 경로(계산기 D2 등)는 미전송이고, 그때는 종전 판정(증여일 기준)에 엔진이 확인 필요를 고지한다.
+    //    결정 #38-6 — 증여자 사망·이혼 후 재결합은 「계속 같은 세대」를 묻지 않고(미전송) 통산 없이 계산하며 엔진이 확인 필요를 고지한다.
     giftHouseholdBasis: mapGiftHouseholdBasis({
       acquisitionCause: data.acquisitionCause,
       acquisitionDate: data.acquisitionDate,
       donorAcquisitionDate: data.donorAcquisitionDate,
       giftSameHouseholdContinuous: data.giftSameHouseholdContinuous,
       giftHouseholdHoldingStartDate: data.giftHouseholdHoldingStartDate,
+      giftDonorDeceased: data.giftDonorDeceased,
+      giftRejoinedAfterDivorce: data.giftRejoinedAfterDivorce,
     }),
     // ⑭ 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).
     //    종전 열거형은 ⑫·④가 실제로 보내던 `donorRelation`·`donorDeceased`(① 관계요건

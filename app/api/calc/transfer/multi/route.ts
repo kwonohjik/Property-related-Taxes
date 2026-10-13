@@ -270,6 +270,8 @@ export async function POST(request: NextRequest) {
         donorAcquisitionDate: p.donorAcquisitionDate,
         giftSameHouseholdContinuous: p.giftSameHouseholdContinuous,
         giftHouseholdHoldingStartDate: p.giftHouseholdHoldingStartDate,
+        giftDonorDeceased: p.giftDonorDeceased,
+        giftRejoinedAfterDivorce: p.giftRejoinedAfterDivorce,
       }),
       /**
        * ⑭ 비주택 → 주택 용도변경 §95⑤·⑥ — 날짜만 Date 로, 절사 개월은 number 그대로.

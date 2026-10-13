@@ -16,12 +16,19 @@ export function mapGiftHouseholdBasis(src: {
   donorAcquisitionDate?: string | Date;
   giftSameHouseholdContinuous?: boolean;
   giftHouseholdHoldingStartDate?: string | Date;
+  /** 결정 #38-6 — 증여자 사망. 「계속 같은 세대」를 묻지 않고 통산 없이 계산한다(엔진이 확인 필요 고지). */
+  giftDonorDeceased?: boolean;
+  /** 결정 #38-6 — 이혼 후 재결합(배우자). 「아니오」로 계산하고 통산하면 결론이 갈릴 때만 엔진이 확인 필요 고지. */
+  giftRejoinedAfterDivorce?: boolean;
 }): GiftHouseholdBasis | undefined {
-  if (src.acquisitionCause !== "gift" || !src.donorAcquisitionDate || src.giftSameHouseholdContinuous === undefined) return undefined;
+  if (src.acquisitionCause !== "gift" || !src.donorAcquisitionDate) return undefined;
+  if (src.giftSameHouseholdContinuous === undefined && src.giftDonorDeceased !== true && src.giftRejoinedAfterDivorce !== true) return undefined;
   return {
     giftDate: toDate(src.acquisitionDate, "acquisitionDate"),
     donorAcquisitionDate: toDate(src.donorAcquisitionDate, "donorAcquisitionDate"),
     continuousSameHousehold: src.giftSameHouseholdContinuous,
     householdHoldingStartDate: toOptionalDate(src.giftHouseholdHoldingStartDate),
+    donorDeceased: src.giftDonorDeceased === true ? true : undefined,
+    rejoinedAfterDivorce: src.giftRejoinedAfterDivorce === true ? true : undefined,
   };
 }

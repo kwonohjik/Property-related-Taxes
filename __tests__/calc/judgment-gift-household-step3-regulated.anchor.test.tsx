@@ -16,6 +16,8 @@
  * | G-3 | 예 · 시작일 공란 | 증여일(통산 불성립) | 해당 |
  * | G-4 | 예 · 시작일 2018-01-10(지정 중) · 증여일 2022-06-01(지정 중) | 둘 다 지정 중 | 해당 |
  * | G-5 | 예 · 입력 중 미완성 시작일(2016-00-01) | 통산 불성립 → 증여일 | 해당 |
+ * | G-6 | 증여자 사망 · 남은 「예」 답 · 시작일 2016-01-01(지정 전) — 결정 #38-6 | 통산 안 함 → 증여일 | 해당 |
+ * | G-7 | 재결합(배우자) · 시작일 2016-01-01 — 결정 #38-6 | 통산 안 함 → 증여일 | 해당 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -30,7 +32,11 @@ afterEach(cleanup);
 
 const MAPO = "1144010100";
 
-const form = (giftSameHousehold: "yes" | "no", giftHouseholdHoldingStartDate: string): OneHouseJudgmentFormData => {
+const form = (
+  giftSameHousehold: "yes" | "no" | "rejoined",
+  giftHouseholdHoldingStartDate: string,
+  over: Record<string, unknown> = {},
+): OneHouseJudgmentFormData => {
   const f = createInitialOneHouseJudgmentForm();
   return {
     ...f,
@@ -46,6 +52,7 @@ const form = (giftSameHousehold: "yes" | "no", giftHouseholdHoldingStartDate: st
         giftSameHousehold,
         giftHouseholdHoldingStartDate,
         regionCode: MAPO,
+        ...over,
       },
     ],
   } as OneHouseJudgmentFormData;
@@ -71,5 +78,14 @@ describe("Step3 증여받은 주택 — 취득 당시 조정대상지역 자동 
   });
   it("[G-5] 입력 중 미완성 시작일(2016-00-01)은 통산하지 않는다 → 증여일 기준 해당", () => {
     expect(verdict(form("yes", "2016-00-01"))).toMatch(/취득 당시 조정대상지역 해당/);
+  });
+  it("[G-6] 증여자 사망이면 남은 「예」 답이 있어도 통산하지 않는다 → 증여일 기준 해당 · 긍정 짝: 사망이 아니면 같은 답은 통산(미해당)", () => {
+    expect(verdict(form("yes", "2016-01-01", { giftDonorDeceased: true }))).toMatch(/취득 당시 조정대상지역 해당/);
+    expect(verdict(form("yes", "2016-01-01", { giftDonorDeceased: false }))).toMatch(/취득 당시 조정대상지역 미해당/);
+    // 사망이면 세대 답이 비어 있어도 증여일 기준으로 판정한다(질문을 띄우지 않으므로)
+    expect(verdict(form("" as never, "", { giftDonorDeceased: true }))).toMatch(/취득 당시 조정대상지역 해당/);
+  });
+  it("[G-7] 재결합(배우자)은 통산하지 않는다 → 증여일 기준 해당", () => {
+    expect(verdict(form("rejoined", "2016-01-01", { giftDonorRelation: "spouse" }))).toMatch(/취득 당시 조정대상지역 해당/);
   });
 });
