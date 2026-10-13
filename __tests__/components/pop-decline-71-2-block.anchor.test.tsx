@@ -8,6 +8,7 @@
  * | W-1 | 적용 토글이 없고 과거 사실 질문(1채 보유·증여)만 있다 — 고르면 같은 칸으로 올라간다 |
  * | W-2 | 「양도 주택이 늦게 기록된 경우」에만 권리 유래 질문이 열리고, 「예」일 때만 날짜 칸이 열린다 |
  * | W-3 | 신고서 제출은 요건이 아니라 안내다(질문·게이트 없음) |
+ * | W-4 | 상속·증여로 받은 행에서만 「피상속인·증여자는 별도세대였는가」를 묻고, 고르면 같은 칸으로 올라간다(결정 #42-2) |
  * | E-1 | 편집 모달은 후보 행(취득일 창 + 인구감소지역)에서 `popDeclineEnabled`일 때만 그린다 |
  * | E-2 | ④ 세컨드홈 카드 문구가 중과 주택 수 전용임을 밝힌다 |
  * | E-3 | 계산기 명부(`HousesListSection`)는 주택 양도와 **조합원입주권 양도**에서 질문을 연다 — 분양권 양도는 닫는다(결정 #42) |
@@ -82,6 +83,49 @@ describe("W-2 권리 유래 질문", () => {
     );
     fireEvent.click(screen.getByTestId("house-row-pop-decline-prior-right-no"));
     expect(onUpdate).toHaveBeenLastCalledWith({ popDeclPriorRight: "no", popDeclPriorRightDate: undefined });
+  });
+});
+
+describe("W-4 피상속인·증여자 세대 질문 (결정 #42-2)", () => {
+  const donorBlock = () => screen.queryByTestId("house-row-pop-decline-donor-block");
+  it("증여·상속이 아니면 묻지 않는다", () => {
+    render(<HouseEntryPopDeclineBlock house={row()} onUpdate={vi.fn()} />);
+    expect(donorBlock()).toBeNull();
+    cleanup();
+    render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "no" })} onUpdate={vi.fn()} />);
+    expect(donorBlock()).toBeNull();
+    cleanup();
+    render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "unknown" })} onUpdate={vi.fn()} />);
+    expect(donorBlock()).toBeNull();
+  });
+  it("증여 「예」면 증여자 · 상속 행이면 피상속인을 묻는다", () => {
+    render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "yes" })} onUpdate={vi.fn()} />);
+    expect(donorBlock()?.textContent).toContain("증여자");
+    cleanup();
+    render(<HouseEntryPopDeclineBlock house={row({ isInherited: true })} onUpdate={vi.fn()} />);
+    expect(donorBlock()?.textContent).toContain("피상속인");
+  });
+  it("고르면 같은 칸으로 올라간다 (같은 세대·모름도 하나의 답)", () => {
+    const onUpdate = vi.fn();
+    render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "yes" })} onUpdate={onUpdate} />);
+    for (const v of ["separate", "same", "unknown"]) {
+      fireEvent.click(screen.getByTestId(`house-row-pop-decline-donor-${v}`));
+      expect(onUpdate).toHaveBeenLastCalledWith({ popDeclDonorHousehold: v });
+    }
+  });
+  it("증여 답을 「예」에서 바꾸면(상속 행이 아닐 때) 낡은 세대 답을 함께 지운다 · 상속 행이면 남긴다", () => {
+    const onUpdate = vi.fn();
+    render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "same" })} onUpdate={onUpdate} />);
+    fireEvent.click(screen.getByTestId("house-row-pop-decline-gift-no"));
+    // toHaveBeenLastCalledWith는 undefined 키를 없는 키와 같게 본다 — 지우는 키가 실제로 실렸는지 키 목록으로 본다
+    expect(onUpdate).toHaveBeenLastCalledWith({ popDeclAcquiredByGift: "no", popDeclDonorHousehold: undefined });
+    expect(Object.keys(onUpdate.mock.lastCall![0])).toContain("popDeclDonorHousehold");
+    cleanup();
+    const onUpdate2 = vi.fn();
+    render(<HouseEntryPopDeclineBlock house={row({ isInherited: true, popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "same" })} onUpdate={onUpdate2} />);
+    fireEvent.click(screen.getByTestId("house-row-pop-decline-gift-no"));
+    expect(onUpdate2).toHaveBeenLastCalledWith({ popDeclAcquiredByGift: "no" });
+    expect(Object.keys(onUpdate2.mock.lastCall![0])).not.toContain("popDeclDonorHousehold");
   });
 });
 
