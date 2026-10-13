@@ -11,6 +11,7 @@
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { unavoidableOutsideCapitalStatusIssue } from "./two-house-exclusion-status";
+import { housesOwnedAtTransfer } from "./household-house-count";
 
 export interface HouseRowIssue {
   field: string;
@@ -107,7 +108,7 @@ export function houseUnavoidableOutsideCapitalIssue(
  *
  * 세대 판정(`findUnavoidableOutsideCapitalRow`)과 중과 4호 분기(`multi-house-surcharge-exclusion.ts`)는 모두 **첫 ⑧ 행**을 본다.
  * 둘째 행을 허용하면 사유·해소일은 첫 행에서, 「중과 주택 수 2채 안인가」는 다른 행에서 읽는 모순이 생겼다(PR #2155 후속).
- * 계산기 ⑧·판정 메뉴 ⑧·⑫ refine·⑤ 경고가 이 leaf를 쓴다. 행 키 이름이 층마다 달라(폼 `oneHouseUnavoidableOutsideCapital` ·
+ * ⑫ refine이 이 leaf를, 계산기 ⑧·판정 메뉴 ⑧은 양도일 보유 행으로 거른 `duplicateOwnedUnavoidableOutsideCapitalRows`를 쓴다. 행 키 이름이 층마다 달라(폼 `oneHouseUnavoidableOutsideCapital` ·
  * API `isUnavoidableOutsideCapital`) 표시 여부 배열을 받는다.
  */
 export function duplicateUnavoidableOutsideCapitalRows(
@@ -118,6 +119,24 @@ export function duplicateUnavoidableOutsideCapitalRows(
   return flags.flatMap((f, index) => (f === true && index > firstIndex ? [{ index, firstIndex }] : []));
 }
 
+/**
+ * ⑧ 계산기·판정 메뉴 — **양도일 현재 보유 행만** 세어 `duplicateUnavoidableOutsideCapitalRows`를 돌린다(색인은 명부 원래 순번).
+ *
+ * 세대 판정(`deriveOneHouseFactsFromHouses`)과 ④ 엔진 명부(`buildHousesPayload`)가 `housesOwnedAtTransfer`로 거른 행만 보므로,
+ * 양도일 당일·이후 취득 행이나 §154⑨ 「먼저 양도」 선택 행의 ⑧ 표시는 어느 판정에도 실리지 않는다 — 그 행과 겹쳐도 막지 않는다.
+ * 양도일이 없으면 leaf가 거르지 않으므로 전체 행을 센다(차단 유지). ⑫는 ④가 이미 거른 명부를 받아 같은 결과가 된다.
+ */
+export function duplicateOwnedUnavoidableOutsideCapitalRows(
+  houses: readonly HouseEntry[] | undefined,
+  transferDate: string | undefined,
+  primaryKind: string | undefined,
+): { index: number; firstIndex: number }[] {
+  const owned = new Set(housesOwnedAtTransfer(houses, transferDate, primaryKind));
+  return duplicateUnavoidableOutsideCapitalRows(
+    (houses ?? []).map((h) => (owned.has(h) ? h.oneHouseUnavoidableOutsideCapital : undefined)),
+  );
+}
+
 /** ⑧·⑫ 공용 문구 — `firstLabel`은 먼저 표시한 행(「보유 주택 N」 등). */
 export function duplicateUnavoidableOutsideCapitalMessage(firstLabel: string): string {
   return (
@@ -126,11 +145,18 @@ export function duplicateUnavoidableOutsideCapitalMessage(firstLabel: string): s
   );
 }
 
-/** ⑤ — 편집 중인 행 말고 §155⑧ 표시가 있는 첫 행의 번호(1부터). 없으면 `undefined`. */
+/**
+ * ⑤ — 편집 중인 행 말고 §155⑧ 표시가 있는 첫 행의 번호(1부터). 없으면 `undefined`.
+ * ⑧과 같은 범위(`housesOwnedAtTransfer`)다 — 편집 중인 행이나 상대 행이 양도일 현재 보유 행이 아니면 겹침이 아니다.
+ */
 export function otherUocRowNumberOf(
-  houses: ReadonlyArray<Pick<HouseEntry, "id" | "oneHouseUnavoidableOutsideCapital">>,
+  houses: readonly HouseEntry[],
   editingId: string,
+  transferDate: string | undefined,
+  primaryKind: string | undefined,
 ): number | undefined {
-  const i = houses.findIndex((h) => h.id !== editingId && h.oneHouseUnavoidableOutsideCapital === true);
+  const owned = new Set(housesOwnedAtTransfer(houses, transferDate, primaryKind));
+  if (!houses.some((h) => h.id === editingId && owned.has(h))) return undefined;
+  const i = houses.findIndex((h) => h.id !== editingId && owned.has(h) && h.oneHouseUnavoidableOutsideCapital === true);
   return i < 0 ? undefined : i + 1;
 }

@@ -73,7 +73,8 @@ export function refineHouseExclusionInputs(
       issue(["houses", i, "rentalPeriodYears"], "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대기간(년)이 필요합니다");
   });
   // §155⑧ 「각각 1개씩」 — ⑧ 표시 행은 한 채(⑧ `duplicateUnavoidableOutsideCapitalRows`의 거울). 둘째 행이 있으면 세대 판정과
-  //   중과 4호가 서로 다른 행을 볼 수 있었다.
+  //   중과 4호가 서로 다른 행을 볼 수 있었다. ⑧은 양도일 현재 보유 행만 세는데(`duplicateOwnedUnavoidableOutsideCapitalRows`)
+  //   ④가 그 행만 실으므로(`housesOwnedAtTransfer`) 여기서는 받은 명부를 그대로 센다 — 엔진 4호의 「첫 ⑧ 행」도 같은 명부에서 찾는다.
   for (const d of duplicateUnavoidableOutsideCapitalRows((houses ?? []).map((h) => h.isUnavoidableOutsideCapital))) {
     issue(["houses", d.index, "isUnavoidableOutsideCapital"], duplicateUnavoidableOutsideCapitalMessage(`houses[${d.firstIndex}]`));
   }

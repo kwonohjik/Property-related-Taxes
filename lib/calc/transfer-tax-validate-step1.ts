@@ -49,7 +49,7 @@ import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./sel
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
-import { duplicateUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
+import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
@@ -136,9 +136,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const newHouseRowId = deriveCalcTemporaryTwoHouse(form, form.assets?.[0])?.newHouseRowId;
   // 결정 #47 — 응답이 필요한 배우자 쪽 행(⑤ 질문과 같은 술어). 「모름」은 응답이라 막지 않는다.
   const spouseHoldingUnanswered = new Set(spouseHoldingUnansweredIndexes(form));
-  // §155⑧ 「각각 1개씩」 — 둘째 ⑧ 행부터 막는다(판정 메뉴 ⑧·⑫와 같은 leaf). 행의 「편집」으로 가서 끄면 풀린다.
+  // §155⑧ 「각각 1개씩」 — 양도일 현재 보유 행 중 둘째 ⑧ 행부터 막는다(판정 메뉴 ⑧·⑫와 같은 leaf). 행의 「편집」으로 가서 끄면 풀린다.
   const uocDuplicateOf = new Map(
-    duplicateUnavoidableOutsideCapitalRows(houses.map((h) => h.oneHouseUnavoidableOutsideCapital)).map((d) => [d.index, d.firstIndex]),
+    duplicateOwnedUnavoidableOutsideCapitalRows(houses, form.transferDate, form.assets?.[0]?.assetKind).map((d) => [d.index, d.firstIndex]),
   );
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];

@@ -72,7 +72,7 @@ import { houseRowFactIssues } from "./house-row-fact-issues";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
-import { duplicateUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
+import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
 
 export interface OneHouseJudgmentValidationError {
@@ -249,8 +249,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(err(`houses.${i}.${uocIssue.field}`, `보유 주택 ${i + 1}: ${uocIssue.message}`));
     }
   });
-  // §155⑧ 「각각 1개씩」 — 둘째 ⑧ 행부터 막는다(계산기 ⑧·⑫와 같은 leaf). 그 행의 ⑤ 토글을 끄면 풀린다.
-  for (const d of duplicateUnavoidableOutsideCapitalRows((form.houses ?? []).map((h) => h.oneHouseUnavoidableOutsideCapital))) {
+  // §155⑧ 「각각 1개씩」 — 양도일 현재 보유 행 중 둘째 ⑧ 행부터 막는다(계산기 ⑧·⑫와 같은 leaf). 그 행의 ⑤ 토글을 끄면 풀린다.
+  for (const d of duplicateOwnedUnavoidableOutsideCapitalRows(form.houses, form.transferDate, form.assets?.[0]?.assetKind)) {
     errors.push(
       err(
         `houses.${d.index}.oneHouseUnavoidableOutsideCapital`,

@@ -744,7 +744,7 @@ export function HousesListSection({
               popDeclineEnabled={judgmentMenu || popDeclineQuestionAsset(form.assets?.[0]?.assetKind)}
               sellingAcquisitionDate={primaryAcquisitionDateOf(form.assets?.[0])}
               // §155⑧ 「각각 1개씩」 — 다른 행의 ⑧ 표시를 ⑤ 카드가 알린다(⑧·⑫는 둘째 행을 막는다).
-              otherUocRowNumber={otherUocRowNumberOf(houses, editingHouse.id)}
+              otherUocRowNumber={otherUocRowNumberOf(houses, editingHouse.id, form.transferDate, form.assets?.[0]?.assetKind)}
               newHouseOriginEnabled={newHouseOriginQuestionVisible(
                 form.assets?.[0]?.assetKind,
                 // 양도 주택이 기존주택의 연장이면 후보 선후도 헐기 전 주택 취득일 기준이다(④와 같은 leaf).

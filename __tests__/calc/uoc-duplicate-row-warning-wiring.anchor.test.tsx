@@ -57,4 +57,14 @@ describe("§155⑧ ⑤ 경고 — HousesListSection → 편집 모달 배선", (
     expect(screen.getByTestId("house-row-unavoidable-outside-capital")).toBeTruthy();
     expect(screen.queryByTestId("house-row-uoc-duplicate-warning")).toBeNull();
   });
+  it("W4 PR #2163 후속 — 상대 행이 양도일 뒤 취득이면 겹침이 아니다(⑧과 같은 `housesOwnedAtTransfer` 범위 · 양도일이 배선된다)", () => {
+    const houses = [
+      row({ id: "ha", region: "non_capital", acquisitionDate: "2019-01-01", ...uoc }),
+      row({ id: "hl", region: "non_capital", acquisitionDate: "2026-10-01", ...uoc }),
+    ];
+    render(<HousesListSection form={form(houses)} onChange={() => {}} />);
+    fireEvent.click(screen.getByLabelText("주택 1 편집"));
+    expect(screen.getByTestId("house-row-unavoidable-outside-capital")).toBeTruthy();
+    expect(screen.queryByTestId("house-row-uoc-duplicate-warning")).toBeNull();
+  });
 });
