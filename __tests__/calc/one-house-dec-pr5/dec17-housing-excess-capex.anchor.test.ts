@@ -150,7 +150,7 @@ describe("#17 후속 — 배율 초과분 분리의 자본적지출 토지분·�
 
   it("이중 입력 없음 — 별개취득 토글 ON(같은 날짜)이면 이 칸을 요구하지 않고, 잔존 토지분 값도 싣지 않는다(파트 칸이 정본)", async () => {
     const over = { capitalExpenditure: "100000000", housingExcessLandCapex: "100000000", ...toggleOn("60000000", "40000000") };
-    expect(housingExcessNeedsCapexSplit(asset(over), TD, true)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset(over), TD)).toBe(false);
     const r = await runCalc(single(over));
     expect(r.issues.some((i) => i.field === "housingExcessLandCapex")).toBe(false);
     expect(r.body.landDirectExpenses).toBe(60_000_000);
@@ -158,7 +158,7 @@ describe("#17 후속 — 배율 초과분 분리의 자본적지출 토지분·�
   });
 
   it("대조 — 자본적지출이 없으면 칸·요구가 없고 잔존 토지분 값도 싣지 않는다", async () => {
-    expect(housingExcessNeedsCapexSplit(asset({ housingExcessLandCapex: "50000000" }), TD, true)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset({ housingExcessLandCapex: "50000000" }), TD)).toBe(false);
     const r = await runCalc(single({ housingExcessLandCapex: "50000000" }));
     expect(r.issues).toEqual([]);
     expect(r.body.landDirectExpenses).toBeUndefined();
@@ -168,15 +168,15 @@ describe("#17 후속 — 배율 초과분 분리의 자본적지출 토지분·�
 
   it("대조 — 감정가액·매매사례가액 취득은 개산공제뿐이라(§97②2호 단서는 환산만) 자본적지출 칸을 묻지 않는다 · 실가·환산은 묻는다", () => {
     const capex = { capitalExpenditure: "100000000" };
-    expect(housingExcessNeedsCapexSplit(asset({ ...capex, isAppraisalAcquisition: true }), TD, true)).toBe(false);
-    expect(housingExcessNeedsCapexSplit(asset({ ...capex, isSalesCaseAcquisition: true }), TD, true)).toBe(false);
-    expect(housingExcessNeedsCapexSplit(asset({ ...capex, useEstimatedAcquisition: true }), TD, true)).toBe(true);
-    expect(housingExcessNeedsCapexSplit(asset(capex), TD, true)).toBe(true);
+    expect(housingExcessNeedsCapexSplit(asset({ ...capex, isAppraisalAcquisition: true }), TD)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset({ ...capex, isSalesCaseAcquisition: true }), TD)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset({ ...capex, useEstimatedAcquisition: true }), TD)).toBe(true);
+    expect(housingExcessNeedsCapexSplit(asset(capex), TD)).toBe(true);
   });
 
   it("대조 — 배율 초과분 분리 경로가 아니면(면적 한도 이내) 자본적지출이 있어도 칸·요구가 없다", async () => {
     const over = { capitalExpenditure: "100000000", acquisitionArea: "250", transferArea: "250" };
-    expect(housingExcessNeedsCapexSplit(asset(over), TD, true)).toBe(false);
+    expect(housingExcessNeedsCapexSplit(asset(over), TD)).toBe(false);
     const r = await runCalc(single(over));
     expect(r.issues).toEqual([]);
     expect(r.body.landDirectExpenses).toBeUndefined();

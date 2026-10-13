@@ -27,7 +27,7 @@ const BASE: Partial<AssetForm> = {
   transferArea: "500",
 };
 
-function Harness({ init, isFirst = true, transferDate = "2026-02-16" }: { init?: Partial<AssetForm>; isFirst?: boolean; transferDate?: string }) {
+function Harness({ init, transferDate = "2026-02-16" }: { init?: Partial<AssetForm>; transferDate?: string }) {
   const [asset, setAsset] = useState<AssetForm>({ ...makeDefaultAsset(1), ...BASE, ...init } as AssetForm);
   return (
     <HousingExcessSplitCard
@@ -37,7 +37,6 @@ function Harness({ init, isFirst = true, transferDate = "2026-02-16" }: { init?:
         setAsset((a) => ({ ...a, ...patch }));
       }}
       transferDate={transferDate}
-      isFirst={isFirst}
     />
   );
 }
@@ -50,7 +49,6 @@ describe("HousingExcessSplitCard 노출", () => {
   });
 
   it.each([
-    ["컴패니언 주택 카드", { isFirst: false }],
     ["면적이 한도 이내", { init: { acquisitionArea: "300", transferArea: "300" } }],
     ["양도일 미입력", { transferDate: "" }],
     ["상속 취득", { init: { acquisitionCause: "inheritance" as const } }],

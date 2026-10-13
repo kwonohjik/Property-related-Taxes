@@ -5,7 +5,8 @@
  * 세액 경로(`taxableAfterReduction`·`groupTaxes`)는 읽지 않는다.
  */
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
-import { summarizeSplitGain } from "./transfer-tax-split-display";
+import { summarizeSplitGain, sumSplitLthdAmounts } from "./transfer-tax-split-display";
+import { LTHD_HOLDING_STEP_LABEL, LTHD_RESIDENCE_STEP_LABEL } from "./transfer-tax-lthd-steps";
 
 /**
  * **[표시 전용]** 배우자등 이월과세(§97의2) 자산의 「취득가액 열」 정본 —
@@ -162,3 +163,20 @@ export function resolveDisplayAcquisitionAndExpense(r: {
   };
 }
 
+
+/**
+ * **[표시 전용]** 자산별 「보유 기간분 장특」·「거주 기간분 장특」 echo(`filingDisplay.lthdHoldingPart`·`lthdResidencePart`).
+ *
+ * 엔진 sub-step이 정본이다. 단 sub-step은 표2 특례(1세대1주택)에서만 나온다 — 그렇지 않은 자산은 신고서 표가 거주 개월수 휴리스틱으로
+ * 총액을 다시 나눈다. 함께 양도 주택이 배율 초과 부수토지(비사업용, 표1 보유분 단독)를 분리하면 그 공제 전액이 보유분인데
+ * 휴리스틱이 거주분으로 쪼개 보였다(총액은 맞고 두 칸만 어긋남 — 실측 20,799,999가 10,400,000 + 10,399,999).
+ * 그 경우에 한해 엔진 파트 echo의 합(`sumSplitLthdAmounts` — 배율초과분은 보유분)을 쓴다. 가드 실패(구 이력 등)면 종전처럼 `undefined`.
+ */
+export function resolveLthdPartsEcho(result: TransferTaxResult): { holding?: number; residence?: number } {
+  const holding = result.steps?.find((st) => st.label === LTHD_HOLDING_STEP_LABEL)?.amount;
+  const residence = result.steps?.find((st) => st.label === LTHD_RESIDENCE_STEP_LABEL)?.amount;
+  if (holding !== undefined || residence !== undefined) return { holding, residence };
+  const sd = result.splitDetail;
+  const sum = sd?.nonBusinessLandPart ? sumSplitLthdAmounts(sd, result.longTermHoldingDeduction) : null;
+  return sum ? { holding: sum.holdingAmount, residence: sum.residenceAmount } : {};
+}

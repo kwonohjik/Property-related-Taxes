@@ -36,7 +36,7 @@ import {
   type CarryoverScenarioOverrides,
 } from "./transfer-tax-aggregate-carryover-scope";
 import { buildAssetRecords } from "./transfer-tax-aggregate-asset-records";
-import { resolveDisplayAcquisitionAndExpense } from "./transfer-tax-aggregate-display-echo";
+import { resolveDisplayAcquisitionAndExpense, resolveLthdPartsEcho } from "./transfer-tax-aggregate-display-echo";
 import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
 import { applyRate } from "./tax-utils";
@@ -68,10 +68,6 @@ import type { RatesByTransferDate } from "./transfer-tax-item-rates";
 // 기존 소비자들을 위해 본체 파일에서 재수출한다.
 // ============================================================
 
-import {
-  LTHD_HOLDING_STEP_LABEL,
-  LTHD_RESIDENCE_STEP_LABEL,
-} from "./transfer-tax-lthd-steps";
 import type {
   RateGroup,
   TransferTaxItemInput,
@@ -526,9 +522,8 @@ function computeAggregateOnce(
           r.result.commercialBuildingValuationDetail?.estimatedAcquisitionTotal,
         commercialEstimatedDeduction:
           r.result.commercialBuildingValuationDetail?.estimatedDeductionTotal,
-        lthdHoldingPart: r.result.steps?.find((st) => st.label === LTHD_HOLDING_STEP_LABEL)?.amount,
-        lthdResidencePart: r.result.steps?.find((st) => st.label === LTHD_RESIDENCE_STEP_LABEL)
-          ?.amount,
+        lthdHoldingPart: resolveLthdPartsEcho(r.result).holding,
+        lthdResidencePart: resolveLthdPartsEcho(r.result).residence,
       },
       // [echo] §166 분할 열 게이트용 (표시 전용 — 세액 불변). 결과탭 코드리뷰 #080 ③.
       redevelopmentDetail: r.result.redevelopmentDetail,

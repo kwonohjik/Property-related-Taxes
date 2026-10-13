@@ -31,19 +31,17 @@ interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
-  /** 첫 자산(주 자산) 여부 — 컴패니언 주택 카드는 이 입력 경로가 없다 */
-  isFirst?: boolean;
 }
 
 const COUNT_WORD: Record<number, string> = { 4: "네", 5: "다섯", 6: "여섯" };
 
-export function HousingExcessSplitCard({ asset, onChange, transferDate, isFirst }: Props) {
-  if (!housingExcessNeedsLandSplit(asset, transferDate, isFirst === true)) return null;
+export function HousingExcessSplitCard({ asset, onChange, transferDate }: Props) {
+  if (!housingExcessNeedsLandSplit(asset, transferDate)) return null;
   const excess = housingExcessAreaOfAsset(asset, transferDate);
   const landArea = parseDecimal(asset.transferArea) || parseDecimal(asset.acquisitionArea) || undefined;
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
   const acqTotalElsewhere = deriveLegacyPartAcqMode(asset) !== "actual";
-  const capex = housingExcessNeedsCapexSplit(asset, transferDate, isFirst === true) ? housingExcessCapexParts(asset) : null;
+  const capex = housingExcessNeedsCapexSplit(asset, transferDate) ? housingExcessCapexParts(asset) : null;
   return (
     <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 토지·건물 기준시가 입력" bodyClassName="space-y-3">
       <div data-testid="housing-excess-split-card" className="space-y-3">

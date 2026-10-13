@@ -181,7 +181,9 @@ export function buildAssetPayload(
       : fixedSalePriceRaw;
 
   // 분리 축(소유자 분리·별개 취득) 활성 — 단건 `transfer-tax-api.ts`의 `isSplitActive`와 같은 술어.
-  const splitActive = isSplitPayloadActive(asset, asset.transferType === "burdened_gift");
+  // #17-1 — 같은 날 취득 주택의 배율 초과분 분리는 함께 양도 주택 카드도 같은 술어(`housingExcessNeedsLandSplit`)로 연다.
+  const excessCtx = { transferDate };
+  const splitActive = isSplitPayloadActive(asset, asset.transferType === "burdened_gift", excessCtx);
 
   return {
     /**
@@ -203,6 +205,7 @@ export function buildAssetPayload(
       // PHD(§164⑦)는 컴패니언 미지원 — N-6 (B)에서 ⑤·⑧을 함께 닫았다.
       usesPhd: false,
       ratioed: makeRatioed(ratio, fractional),
+      primaryCtx: excessCtx,
     }),
     /**
      * ④ 토지분 취득시 기준시가 채널(㎡당 개별공시지가 × 면적, 소득법 §99①1호 가목) — 단건과 **같은 leaf**.
@@ -528,9 +531,9 @@ export function buildAssetPayload(
       return area > 0 ? { areaM2: area } : {};
     })(),
     /**
-     * ⑬ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 «미분리» 고지 전용(세액 불변, #17).
+     * ⑬ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 판정·«미분리» 고지가 읽는다(#17 · #17-1).
      * 컴패니언 주택은 `buildingFootprintArea`·`appurtenantLandZone`을 싣지 않는다(형제 토지 카드의 주택 컨텍스트 키 — 싣는 순간 세율 자동 분기가 움직인다).
-     * 그래서 초과분을 분리하지 않는데, 사실이 엔진에 닿지 않으면 고지도 못 내 초과분이 조용히 비과세됐다. 면적은 물건 사실이라 지분 스케일을 하지 않는다.
+     * 그래서 같은 사실을 별도 키로 싣고 엔진이 `appurtenantLandFactsOfInput`으로 주 자산과 같은 판정을 한다. 면적은 물건 사실이라 지분 스케일을 하지 않는다.
      */
     ...(() => {
       if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return {};
