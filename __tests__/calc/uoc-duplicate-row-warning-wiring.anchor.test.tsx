@@ -18,10 +18,10 @@ afterEach(cleanup);
 
 const uoc = { oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalReason: "work" } as const;
 
-function form(houses: ReturnType<typeof row>[]): TransferFormData {
+function form(houses: ReturnType<typeof row>[], assetKind = "housing"): TransferFormData {
   const f = createDefaultTransferFormData();
   f.transferDate = "2026-09-18";
-  Object.assign(f.assets[0], { assetKind: "housing", acquisitionDate: "2018-01-05" });
+  Object.assign(f.assets[0], { assetKind, acquisitionDate: "2018-01-05" });
   f.householdHousingCount = String(houses.length + 1);
   f.houses = houses;
   return f;
@@ -56,5 +56,29 @@ describe("§155⑧ ⑤ 경고 — HousesListSection → 편집 모달 배선", (
     fireEvent.click(screen.getByLabelText("주택 1 편집"));
     expect(screen.getByTestId("house-row-unavoidable-outside-capital")).toBeTruthy();
     expect(screen.queryByTestId("house-row-uoc-duplicate-warning")).toBeNull();
+  });
+  it("W4 PR #2163 후속 — 상대 행이 양도일 뒤 취득이면 겹침이 아니다(⑧과 같은 `housesOwnedAtTransfer` 범위 · 양도일이 배선된다)", () => {
+    const houses = [
+      row({ id: "ha", region: "non_capital", acquisitionDate: "2019-01-01", ...uoc }),
+      row({ id: "hl", region: "non_capital", acquisitionDate: "2026-10-01", ...uoc }),
+    ];
+    render(<HousesListSection form={form(houses)} onChange={() => {}} />);
+    fireEvent.click(screen.getByLabelText("주택 1 편집"));
+    expect(screen.getByTestId("house-row-unavoidable-outside-capital")).toBeTruthy();
+    expect(screen.queryByTestId("house-row-uoc-duplicate-warning")).toBeNull();
+  });
+  it("W5 상대 행이 §154⑨ 「먼저 양도」면 주택 양도에서는 겹침이 아니다 · 입주권 양도면 겹침(양도 자산 종류가 배선된다)", () => {
+    const houses = [
+      row({ id: "ha", region: "non_capital", acquisitionDate: "2019-01-01", ...uoc }),
+      row({ id: "hf", region: "non_capital", acquisitionDate: "2019-06-01", soldSameDay: true, sameDayTransferOrder: "first", ...uoc }),
+    ];
+    render(<HousesListSection form={form(houses)} onChange={() => {}} />);
+    fireEvent.click(screen.getByLabelText("주택 1 편집"));
+    expect(screen.getByTestId("house-row-unavoidable-outside-capital")).toBeTruthy();
+    expect(screen.queryByTestId("house-row-uoc-duplicate-warning")).toBeNull();
+    cleanup();
+    render(<HousesListSection form={form(houses, "right_to_move_in")} onChange={() => {}} />);
+    fireEvent.click(screen.getByLabelText("주택 1 편집"));
+    expect(screen.getByTestId("house-row-uoc-duplicate-warning").textContent).toContain("주택 2에도 이 표시가 있습니다");
   });
 });

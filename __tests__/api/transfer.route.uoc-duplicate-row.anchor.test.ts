@@ -158,8 +158,8 @@ describe("§155⑧ 행 한 채 — ⑧·⑫ 차단 (PR #2155 후속)", () => {
     ]);
     expect(duplicateUnavoidableOutsideCapitalRows([true, undefined])).toEqual([]);
     expect(duplicateUnavoidableOutsideCapitalRows([])).toEqual([]);
-    expect(otherUocRowNumberOf([A, B_DUP], "hb")).toBe(1);
-    expect(otherUocRowNumberOf([A, B_DUP], "ha")).toBe(2);
-    expect(otherUocRowNumberOf([A, B], "ha")).toBeUndefined();
+    expect(otherUocRowNumberOf([A, B_DUP], "hb", TD, "housing")).toBe(1);
+    expect(otherUocRowNumberOf([A, B_DUP], "ha", TD, "housing")).toBe(2);
+    expect(otherUocRowNumberOf([A, B], "ha", TD, "housing")).toBeUndefined();
   });
 });
