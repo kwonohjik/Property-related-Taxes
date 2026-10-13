@@ -17,7 +17,7 @@ import { hrow, runCalc } from "./_owned-at-transfer-pr1a-helpers";
 
 const T = "2025-06-02";
 const PROVISO = { provisoReason: "expropriation", provisoExpropriationDate: T, provisoBusinessApprovalDate: "2024-12-01" };
-const inh = (d: string) => hrow({ id: "INH", acquisitionDate: d, isInherited: true, inheritedDate: d, isCoInherited: false, decedentSameHouseholdAtInheritance: false, parentalCareMergeInheritedHouse: false } as Partial<HouseEntry>);
+const inh = (d: string) => hrow({ id: "INH", acquisitionDate: d, isInherited: true, inheritedDate: d, isCoInherited: false, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, parentalCareMergeInheritedHouse: false } as Partial<HouseEntry>);
 const rural = () => hrow({ id: "R", region: "non_capital", acquisitionDate: "2024-06-01", countExclusion: { kind: "reduction", reduction: { type: "new_99_4_rural", ruralHouseAcquisitionDate: "2024-06-01", ruralHouseStdPrice: "100000000", isRegisteredHanok: false, isAdjacentArea: false, meetsLocationRequirement: true, meetsHometownRequirement: false } } } as Partial<HouseEntry>);
 const N = () => hrow({ id: "N", acquisitionDate: "2024-10-01" });
 

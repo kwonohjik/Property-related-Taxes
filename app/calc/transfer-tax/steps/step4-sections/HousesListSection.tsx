@@ -358,9 +358,9 @@ export function HousesListSection({
       completionDate: "",
       isSpouseOwned: false,
       isCoInherited: false,
-      // `decedentSameHouseholdAtInheritance`는 **미리 답하지 않는다**(S14a-1) — §155⑦1호 상속 농어촌주택은 동일세대 여부가
-      // 요건 사실이라(§155② 단서 괄호) 「모름」은 ⑧이 막아야 한다(D7). 팩토리가 `false`를 넣으면 「+ 주택 추가」로 만든 행만 그 질문을
-      // 건너뛴다. 비농어촌 상속주택(§155②)은 `undefined`를 `false`와 같이 다룬다(엔진 `=== true` 판정 · 토글은 `?? false` 표시).
+      // `decedentSameHouseholdAtInheritance`는 **미리 답하지 않는다**(S14a-1) — 피상속인 세대는 요건 사실이라(§155② 단서·§155⑦1호·조특법 §71의2①)
+      // 「모름」이 곧 불성립이다. 팩토리가 `false`를 넣으면 「+ 주택 추가」로 만든 행만 그 질문을 건너뛴다.
+      // #42-2부터 미답은 「모름」과 같이 읽는다(`lib/calc/decedent-household.ts` — 종전엔 `undefined`를 `false`와 같이 다뤄 답하지 않아도 특례가 적용됐다).
       isRankingDisqualifiedInheritedHouse: false,
     };
     onChange(patchHouses([...houses, newHouse]));

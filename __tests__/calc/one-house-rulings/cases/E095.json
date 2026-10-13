@@ -29,6 +29,7 @@
           "inheritedDate": "2012-03-07",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         }
       ]

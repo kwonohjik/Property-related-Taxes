@@ -80,6 +80,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isLargestCoInheritedShareholder: h.isLargestCoInheritedShareholder,
     // §155② 단서·1~4호 순위 게이트 — boolean pass-through
     decedentSameHouseholdAtInheritance: h.decedentSameHouseholdAtInheritance,
+    decedentHouseholdUnconfirmed: h.decedentHouseholdUnconfirmed,
     parentalCareMergeInheritedHouse: h.parentalCareMergeInheritedHouse,
     reInheritedFromSeparateHousehold: h.reInheritedFromSeparateHousehold,
     inheritedGiftedToHouseholdMember: h.inheritedGiftedToHouseholdMember,

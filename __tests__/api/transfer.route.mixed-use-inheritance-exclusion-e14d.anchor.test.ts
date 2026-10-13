@@ -63,6 +63,7 @@ const INH: HouseEntry = {
   acquisitionDate: "2015-03-01",
   officialPrice: "300000000",
   isInherited: true,
+  decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
   inheritedDate: "2015-03-01",
   isLongTermRental: false,
   isApartment: true,

@@ -190,6 +190,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
     coExcludedCount: 0,
     excludedCount: 1,
     sameHouseholdDisqualifiedCount: 0,
+    householdUnconfirmedCount: 0,
     rankingDisqualifiedCount: 0,
     excludedHouses: [{ houseId: "inherited-house", basis: "sole" }],
     eligibleSoleCount: 1,

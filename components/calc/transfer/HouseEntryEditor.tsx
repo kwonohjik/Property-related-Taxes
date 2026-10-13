@@ -42,6 +42,7 @@ import { TaxIncentiveRentalFields } from "@/components/calc/transfer/TaxIncentiv
 import type { MergeContext } from "@/lib/calc/merge-house-origin";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import { houseEntrySpecialExclusionVisible } from "@/lib/calc/house-entry-judgment-scope";
+import { decedentHouseholdAnswer, decedentHouseholdPatch, type DecedentHousehold } from "@/lib/calc/decedent-household";
 
 // ============================================================
 // Props
@@ -332,6 +333,8 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             decedentSameHouseholdAtInheritance: v
               ? house.decedentSameHouseholdAtInheritance
               : undefined,
+            decedentHouseholdUnknown: v ? house.decedentHouseholdUnknown : undefined,
+            decedentHouseholdSeparate: v ? house.decedentHouseholdSeparate : undefined,
             parentalCareMergeInheritedHouse: v ? house.parentalCareMergeInheritedHouse : undefined,
             reInheritedFromSeparateHousehold: v ? house.reInheritedFromSeparateHousehold : undefined,
             isRankingDisqualifiedInheritedHouse: v
@@ -401,25 +404,38 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
           </ToggleCard>
         </div>
 
-        {/* §155② 단서 — 상속개시 당시 동일세대(동거봉양 예외) */}
-        <div className="pt-2">
-          <ToggleCard
-            variant="card"
+        {/*
+          피상속인 세대 — 한 칸의 3상태(#42-2). §155② 단서(동일세대 상속은 특례 배제)와 조특법 §71의2①(인구감소지역주택은 별도세대로부터
+          상속받은 경우만)이 **같은 답**을 쓴다. 종전 토글은 미답과 「동일세대 아님」을 구별하지 못해 답하지 않아도 특례가 적용됐다.
+        */}
+        <div className="pt-2 space-y-2" data-testid="house-row-decedent-household-block">
+          <label className="block text-sm font-medium">상속개시 당시 피상속인과 같은 세대였습니까</label>
+          <RadioCardGroup
+            name={`decedentHousehold-${house.id}`}
+            data-testid="house-row-decedent-household"
             tone="amber"
-            checked={house.decedentSameHouseholdAtInheritance ?? false}
-            onCheckedChange={(v) =>
-              onUpdate({
-                decedentSameHouseholdAtInheritance: v,
-                parentalCareMergeInheritedHouse: v
-                  ? house.parentalCareMergeInheritedHouse
-                  : undefined,
-                reInheritedFromSeparateHousehold: v ? house.reInheritedFromSeparateHousehold : undefined,
-              })
-            }
-            title="상속개시 당시 피상속인과 동일세대"
-            description="동일세대에서 상속받으면 상속주택 특례(주택 수 제외)가 원칙적으로 배제됩니다. (소령 §155② 단서)"
-          >
-            <div className="space-y-1 pt-1">
+            layout="inline"
+            options={[
+              { value: "separate", label: "별도세대", testId: "house-row-decedent-household-separate" },
+              { value: "same", label: "동일세대", testId: "house-row-decedent-household-same" },
+              { value: "unknown", label: "모름", testId: "house-row-decedent-household-unknown" },
+            ]}
+            value={decedentHouseholdAnswer(house) ?? ""}
+            onChange={(v) => onUpdate(decedentHouseholdPatch(v as DecedentHousehold, house))}
+          />
+          <p className="text-caption text-muted-foreground/70" data-testid="house-row-decedent-household-hint">
+            이 답은 상속주택 특례(소득세법 시행령 §155② 단서 — 동일세대에서 상속받으면 주택 수 제외가 원칙적으로 배제됩니다)와,
+            인구감소지역주택이면 조세특례제한법 §71의2①(별도세대로부터 상속받은 경우만 적용)에 함께 쓰입니다.
+            모르거나 답하지 않으면 두 규정 모두 적용하지 않고 확인 필요로 알립니다.
+          </p>
+          {/* 표시 없는 낡은 false — 사용자가 고른 별도세대와 구별되지 않아 답으로 읽지 않는다(`decedent-household` leaf). 왜 비어 있는지 밝힌다. */}
+          {house.decedentSameHouseholdAtInheritance === false && decedentHouseholdAnswer(house) === undefined && (
+            <p className="text-caption text-muted-foreground" data-testid="house-row-decedent-household-legacy-note">
+              이전에 저장된 입력에 별도세대로 남아 있던 값은 직접 고른 답인지 알 수 없어 답으로 인정하지 않습니다. 위에서 다시 골라 주세요.
+            </p>
+          )}
+          {decedentHouseholdAnswer(house) === "same" && (
+            <div className="space-y-1">
               <ToggleCard
                 variant="chip"
                 tone="amber"
@@ -442,7 +458,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
                 않습니다.
               </p>
             </div>
-          </ToggleCard>
+          )}
         </div>
 
         {/* §155②1~4호 순위 — 피상속인 2주택↑ 중 순위 부적격 */}

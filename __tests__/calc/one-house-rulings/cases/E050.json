@@ -25,6 +25,7 @@
           "inheritedDate": "2003-04-15",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         },
         {
@@ -71,6 +72,7 @@
           "inheritedDate": "2020-04-15",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         },
         {

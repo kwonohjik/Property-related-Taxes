@@ -17,6 +17,7 @@ import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from ".
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
+import { decedentHouseholdEngineBoolean, decedentHouseholdOf } from "./decedent-household";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
@@ -317,9 +318,10 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       isLargestCoInheritedShareholder:
         h.isInherited && h.isCoInherited ? h.isLargestCoInheritedShareholder : undefined,
       // §155② 단서·순위 게이트 — isInherited=true 일 때만 전달. 동거봉양 예외는 동일세대일 때만.
-      decedentSameHouseholdAtInheritance: h.isInherited
-        ? h.decedentSameHouseholdAtInheritance
-        : undefined,
+      // 피상속인 세대는 한 칸의 3상태다(#42-2) — 별도세대·동일세대는 boolean으로, 모름·미답은 `decedentHouseholdUnconfirmed`로
+      // 싣는다(엔진 게이트가 불성립으로 읽고 확인 필요를 알린다). 같은 답이 아래 §71의2① `popDeclDonorHousehold`에도 쓰인다.
+      decedentSameHouseholdAtInheritance: h.isInherited ? decedentHouseholdEngineBoolean(h) : undefined,
+      decedentHouseholdUnconfirmed: h.isInherited && decedentHouseholdOf(h) === "unknown" ? true : undefined,
       parentalCareMergeInheritedHouse:
         h.isInherited && h.decedentSameHouseholdAtInheritance
           ? h.parentalCareMergeInheritedHouse
@@ -361,8 +363,13 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // 조특법 §71의2① 인구감소지역주택(결정 #42) — 명부에 없는 과거 사실. 키가 없으면 엔진이 「모름」으로 읽는다(불성립 + 확인 필요).
       popDeclSoleAtAcquisition: h.popDeclSoleAtAcquisition,
       popDeclAcquiredByGift: h.popDeclAcquiredByGift,
-      // 피상속인·증여자 세대 — 상속·증여로 받은 행일 때만 싣는다(⑤ 위젯과 같은 술어 — 낡은 값이 남아도 엔진에 닿지 않는다)
-      popDeclDonorHousehold: popDeclineAcquiredFromOther(h) ? h.popDeclDonorHousehold : undefined,
+      // 피상속인·증여자 세대 — 상속·증여로 받은 행일 때만 싣는다(⑤ 위젯과 같은 술어 — 낡은 값이 남아도 엔진에 닿지 않는다).
+      // 상속 행은 「상속 정보」의 피상속인 세대 한 칸에서 옮긴다(§155②와 같은 답 — 질문을 둘로 나누지 않는다). 증여 행만 이 칸이 따로 있다.
+      popDeclDonorHousehold: !popDeclineAcquiredFromOther(h)
+        ? undefined
+        : h.isInherited
+          ? decedentHouseholdOf(h)
+          : h.popDeclDonorHousehold,
       popDeclPriorRight: h.popDeclPriorRight,
       popDeclPriorRightDate: h.popDeclPriorRight === "yes" ? h.popDeclPriorRightDate || undefined : undefined,
       // ④⑬ 장기임대 9유형 매트릭스 — isLongTermRental=true && rentalType 설정 시에만 전달

@@ -23,6 +23,7 @@
           "inheritedDate": "1984-06-09",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "oneHouseRuralHouse": true,
           "ruralHouseKind": "inherited",
           "ruralOutsideCapitalEupMyeon": true,

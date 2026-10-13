@@ -18,7 +18,7 @@ function mc(label: string, o: Over = {}): RulingCase {
       isInherited: true,
       inheritedDate: "2019-01-01",
       isCoInherited: false,
-      decedentSameHouseholdAtInheritance: false,
+      decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
       mergeOrigin: "seller_side",
       ...(o.inh ?? {}),
     });

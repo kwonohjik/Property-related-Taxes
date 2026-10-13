@@ -91,6 +91,7 @@
           "region": "capital",
           "isInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "decedentAcquisitionDate": "2019-06-15",
           "decedentOwnedHouseAtDeath": true
         }

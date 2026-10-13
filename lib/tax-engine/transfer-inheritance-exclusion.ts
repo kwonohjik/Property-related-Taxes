@@ -50,6 +50,8 @@ export interface InheritedHouseExclusionResult {
   excludedCount: number;
   /** §155② 단서(동일세대·비동거봉양)로 제외 배제된 상속주택 수 — 표시용 */
   sameHouseholdDisqualifiedCount: number;
+  /** 피상속인과 같은 세대였는지 모르거나 답하지 않아 제외 배제된 상속주택 수(#42-2 — 모름 = 불성립 + 확인 필요) — 표시용 */
+  householdUnconfirmedCount: number;
   /** §155②1~4호 순위 부적격으로 제외 배제된 상속주택 수 — 표시용 */
   rankingDisqualifiedCount: number;
   /**
@@ -124,13 +126,23 @@ export interface InheritanceGeneralHouseFacts {
  * §155⑦1호 상속 농어촌주택도 같다(단서 괄호 「이하 제3항, 제7항제1호 … 에서 같다」 — D7, `qualifiesRuralHouse`).
  */
 export function passesHouseholdGate(
-  h: Pick<HouseInfo, "decedentSameHouseholdAtInheritance" | "parentalCareMergeInheritedHouse" | "reInheritedFromSeparateHousehold">,
+  h: Pick<
+    HouseInfo,
+    "decedentSameHouseholdAtInheritance" | "decedentHouseholdUnconfirmed" | "parentalCareMergeInheritedHouse" | "reInheritedFromSeparateHousehold"
+  >,
 ): boolean {
+  // 피상속인 세대를 모르거나 답하지 않았으면 불성립(#42-2 — 모름 = 불성립 + 확인 필요). 답이 있으면 그 답이 우선한다.
+  if (isHouseholdUnconfirmed(h)) return false;
   return (
     h.decedentSameHouseholdAtInheritance !== true ||
     h.parentalCareMergeInheritedHouse === true ||
     h.reInheritedFromSeparateHousehold === true
   );
+}
+
+/** 피상속인과 같은 세대였는지 확인되지 않은 행인가 — 답(`decedentSameHouseholdAtInheritance`)이 없고 ④가 「모름·미답」으로 표시했다. */
+export function isHouseholdUnconfirmed(h: Pick<HouseInfo, "decedentSameHouseholdAtInheritance" | "decedentHouseholdUnconfirmed">): boolean {
+  return h.decedentSameHouseholdAtInheritance === undefined && h.decedentHouseholdUnconfirmed === true;
 }
 
 /** 순위(§155②1~4호) 게이트 — 순위 부적격 선언이 없으면 통과. 중과 7호도 공용(D16). */
@@ -149,6 +161,7 @@ export function resolveInheritedHouseExclusion(
     coExcludedCount: 0,
     excludedCount: 0,
     sameHouseholdDisqualifiedCount: 0,
+    householdUnconfirmedCount: 0,
     rankingDisqualifiedCount: 0,
     excludedHouses: [],
     eligibleSoleCount: 0,
@@ -200,10 +213,12 @@ export function resolveInheritedHouseExclusion(
 
   // 표시용 부적격 카운트 — 제외 후보(② 풀 or ③ 소수지분) 전부 대상. household 사유 우선.
   let sameHouseholdDisqualifiedCount = 0;
+  let householdUnconfirmedCount = 0;
   let rankingDisqualifiedCount = 0;
   let rankingDisqualifiedCoMinorityCount = 0;
   for (const h of inheritedOthers) {
-    if (!passesHouseholdGate(h)) sameHouseholdDisqualifiedCount++;
+    if (isHouseholdUnconfirmed(h)) householdUnconfirmedCount++;
+    else if (!passesHouseholdGate(h)) sameHouseholdDisqualifiedCount++;
     else if (!passesRankingGate(h)) {
       rankingDisqualifiedCount++;
       if (!isSecondClausePoolHouse(h)) rankingDisqualifiedCoMinorityCount++;
@@ -240,6 +255,7 @@ export function resolveInheritedHouseExclusion(
     coExcludedCount,
     excludedCount: soleExcludedCount + coExcludedCount,
     sameHouseholdDisqualifiedCount,
+    householdUnconfirmedCount,
     rankingDisqualifiedCount,
     excludedHouses,
     eligibleSoleCount: soleCount,
@@ -381,6 +397,14 @@ export function buildInheritedExclusionSteps(
     steps.push({
       label: "동일세대 상속주택 — 주택수 제외 배제 (§155② 단서)",
       formula: `상속개시 당시 피상속인과 동일세대(동거봉양 합가 아님) ${result.sameHouseholdDisqualifiedCount}채 — 주택수 제외 대상 아님`,
+      amount: 0,
+      legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
+    });
+  }
+  if (result.householdUnconfirmedCount > 0) {
+    steps.push({
+      label: "피상속인 세대 미확인 상속주택 — 주택수 제외 배제 (§155② 단서) · 확인 필요",
+      formula: `상속개시 당시 피상속인과 같은 세대였는지 모르거나 답하지 않았습니다 — 상속주택 ${result.householdUnconfirmedCount}채 주택수 제외 대상 아님(「상속 정보」에서 별도세대·동일세대를 고르면 판정합니다)`,
       amount: 0,
       legalBasis: INHERITED_HOUSE.EXEMPTION_SOLE_BASIS,
     });

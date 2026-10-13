@@ -37,6 +37,7 @@ function form(sameHousehold: boolean) {
       inheritedDate: "2009-02-02",
       isCoInherited: false,
       decedentSameHouseholdAtInheritance: sameHousehold,
+      decedentHouseholdSeparate: !sameHousehold || undefined,
       parentalCareMergeInheritedHouse: false,
     }),
     row({ id: "c", acquisitionDate: "2015-12-21" }),

@@ -58,7 +58,8 @@
      "isInherited": true,
      "inheritedDate": "2003-01-29",
      "isCoInherited": false,
-     "decedentSameHouseholdAtInheritance": false
+     "decedentSameHouseholdAtInheritance": false,
+     "decedentHouseholdSeparate": true
     }
    ]
   },

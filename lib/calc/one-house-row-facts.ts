@@ -23,6 +23,7 @@
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
+import { decedentHouseholdOf } from "./decedent-household";
 import { isOwnedAtTransfer } from "./household-house-count";
 import { unavoidableOutsideCapitalStatusPayload } from "./two-house-exclusion-status";
 
@@ -43,6 +44,8 @@ export type OneHouseFactRow = Partial<
     | "ruralUrbanZone"
     | "ruralDecedentResidenceYears"
     | "decedentSameHouseholdAtInheritance"
+    | "decedentHouseholdUnknown"
+    | "decedentHouseholdSeparate"
     | "parentalCareMergeInheritedHouse"
     | "ruralOwnerResidenceYears"
     | "ruralLandAreaSqm"
@@ -216,10 +219,11 @@ export function ruralReturnToFarmFactsIssue(
  * 판정 메뉴·계산기 ⑧이 같은 leaf를 쓴다(⑤ `HouseEntryRuralHouseBlock` 라디오가 유일한 입력 경로 — 3중 패턴).
  */
 export function ruralInheritedSameHouseholdIssue(
-  row: Pick<HouseEntry, "oneHouseRuralHouse" | "ruralHouseKind" | "decedentSameHouseholdAtInheritance">,
+  row: Pick<HouseEntry, "oneHouseRuralHouse" | "ruralHouseKind" | "decedentSameHouseholdAtInheritance" | "decedentHouseholdUnknown" | "decedentHouseholdSeparate">,
 ): string | null {
   if (row.oneHouseRuralHouse !== true || row.ruralHouseKind !== "inherited") return null;
-  if (row.decedentSameHouseholdAtInheritance !== undefined) return null;
+  // 「모름」도 답이 아니다 — 1호는 동일세대 여부가 요건 사실이라 별도세대·동일세대 중 하나로 확정해야 한다(#42-2 한 칸의 3상태).
+  if (decedentHouseholdOf(row) !== "unknown") return null;
   return "상속받은 농어촌주택(§155⑦1호)은 상속개시 당시 피상속인과 동일세대였는지 선택하세요(§155② 단서 — 동일세대 상속은 원칙적으로 특례 대상이 아닙니다).";
 }
 

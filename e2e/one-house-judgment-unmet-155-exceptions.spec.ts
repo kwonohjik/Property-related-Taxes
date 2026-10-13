@@ -101,6 +101,7 @@ test.describe("판정 결과 — §155② 상속주택 불성립 사유", () => 
         house("inh", "2020-01-01", {
           isInherited: true,
           inheritedDate: "2020-01-01",
+          decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, // 별도세대 상속 — 미답은 모름이라 사유가 달라진다(#42-2)
           isRankingDisqualifiedInheritedHouse: true,
         }),
         house("h3", "2014-03-01"),
@@ -126,7 +127,7 @@ test.describe("판정 결과 — §155② 상속주택 불성립 사유", () => 
     test.setTimeout(60_000);
     await gotoResult(page, {
       houses: [
-        house("inh", "2020-01-01", { isInherited: true, inheritedDate: "2020-01-01" }),
+        house("inh", "2020-01-01", { isInherited: true, inheritedDate: "2020-01-01", decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }),
         house("h3", "2014-03-01"),
       ],
     });
@@ -182,7 +183,7 @@ test.describe("판정 결과 — §155⑦ 농어촌주택 불성립 사유", () 
           ruralHouseKind: "inherited",
           ruralDecedentResidenceYears: "2",
           // D7 — 1호는 상속개시 당시 동일세대 여부가 필수 응답이다(⑧). 이 spec의 축(거주 5년)과 무관한 별도세대로 둔다.
-          decedentSameHouseholdAtInheritance: false,
+          decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
         }),
       ],
     });

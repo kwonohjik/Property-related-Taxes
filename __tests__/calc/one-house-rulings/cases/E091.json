@@ -26,6 +26,7 @@
           "inheritedDate": "2004-06-15",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         },
         {
@@ -36,6 +37,7 @@
           "inheritedDate": "2004-06-15",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         }
       ]
@@ -77,6 +79,7 @@
           "inheritedDate": "2018-06-15",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         },
         {
@@ -87,6 +90,7 @@
           "inheritedDate": "2018-06-15",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "isRankingDisqualifiedInheritedHouse": true,
           "acquisitionOrigin": "general"
         }
@@ -122,6 +126,7 @@
           "inheritedDate": "2018-06-15",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         }
       ]

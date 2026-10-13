@@ -71,7 +71,7 @@ describe("V-1 ⑧ leaf", () => {
     expect(ruralInheritedSameHouseholdIssue(ruralRow({ decedentSameHouseholdAtInheritance: undefined }))).toContain(
       "동일세대",
     );
-    expect(ruralInheritedSameHouseholdIssue(ruralRow({ decedentSameHouseholdAtInheritance: false }))).toBeNull();
+    expect(ruralInheritedSameHouseholdIssue(ruralRow({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }))).toBeNull();
     expect(ruralInheritedSameHouseholdIssue(ruralRow({ decedentSameHouseholdAtInheritance: true }))).toBeNull();
   });
   it("2호·3호 · 농어촌 표시 없음 → 묻지 않는다(짝)", () => {
@@ -88,7 +88,7 @@ describe("V-2 ⑧ 계산기 Step1", () => {
   };
   it("미응답이면 계산기도 막고, 답하면 이 사유는 사라진다", () => {
     expect(issues(ruralRow({ decedentSameHouseholdAtInheritance: undefined }))).toContain("§155⑦1호");
-    expect(issues(ruralRow({ decedentSameHouseholdAtInheritance: false }))).not.toContain("§155⑦1호");
+    expect(issues(ruralRow({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }))).not.toContain("§155⑦1호");
   });
 });
 

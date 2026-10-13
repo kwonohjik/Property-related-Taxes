@@ -104,6 +104,14 @@ export interface HouseInfo {
    */
   decedentSameHouseholdAtInheritance?: boolean;
   /**
+   * 상속개시 당시 피상속인과 같은 세대였는지 **모르거나 답하지 않았다**(#42-2) — 모름 = 불성립 + 확인 필요.
+   * `decedentSameHouseholdAtInheritance`가 비어 있을 때만 의미(답이 있으면 그 답이 우선). true면 §155②·③ 단서 게이트
+   * (`passesHouseholdGate`)를 통과하지 못해 상속주택 특례(주택수 제외)·§167의3①7호 중과 배제를 받지 못한다.
+   * ⚠️ 이 키가 없는 입력(직접 호출·구 저장분)은 종전대로 `decedentSameHouseholdAtInheritance` 미제공 = 별도세대로 읽는다 —
+   * 미답을 모름으로 바꾸는 것은 ④ 변환(`buildOtherHousesPayload`)이다.
+   */
+  decedentHouseholdUnconfirmed?: boolean;
+  /**
    * 동거봉양 합가로 2주택이 되었고 "합치기 이전부터 피상속인이 보유"하던 주택인지 — §155② 단서 예외.
    * decedentSameHouseholdAtInheritance === true(동일세대)일 때만 의미. true면 동일세대라도 특례 적용(제외).
    */

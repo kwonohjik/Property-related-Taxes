@@ -7,7 +7,7 @@ import { observeCase, type RulingCase } from "../one-house-rulings/harness";
 import { INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID } from "@/lib/tax-engine/one-house/overlap-notice";
 
 const base = { region: "non_capital" as const };
-const INH = { ...base, id: "C", acquisitionDate: "2000-01-01", isInherited: true, inheritedDate: "2021-06-01", isCoInherited: false, decedentSameHouseholdAtInheritance: false };
+const INH = { ...base, id: "C", acquisitionDate: "2000-01-01", isInherited: true, inheritedDate: "2021-06-01", isCoInherited: false, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true };
 const HERITAGE = { ...base, id: "H", acquisitionDate: "1998-01-01", oneHouseCulturalHeritage: true };
 const RURAL = { ...base, id: "R", acquisitionDate: "1998-01-01", oneHouseRuralHouse: true, ruralHouseKind: "farm_exit", ruralOwnerResidenceYears: 6, ruralOutsideCapitalEupMyeon: true, ruralReturnedToFarmExitHouse: false };
 // 해소일을 명시한다(양도 2023-02-28 기준 3년 이내) — 해소일 공란을 «유리»로 읽는 S02-8 처리에 이 시료가 기대지 않게 한다(#31이 공란을 불성립·입력 차단으로 바꾼다).

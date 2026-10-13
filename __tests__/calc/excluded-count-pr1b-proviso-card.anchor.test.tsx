@@ -72,7 +72,7 @@ const INH = {
   isInherited: true,
   inheritedDate: "2024-09-01",
   isCoInherited: false,
-  decedentSameHouseholdAtInheritance: false,
+  decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
   parentalCareMergeInheritedHouse: false,
 };
 const PLAIN = { ...H, id: "P", acquisitionDate: "2010-01-01", isApartment: false }; // 양도 주택보다 먼저 취득 — 일시적 2주택 아님

@@ -24,7 +24,8 @@
           "isInherited": true,
           "inheritedDate": "2002-06-29",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },
@@ -59,7 +60,8 @@
           "isInherited": true,
           "inheritedDate": "1998-03-02",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },

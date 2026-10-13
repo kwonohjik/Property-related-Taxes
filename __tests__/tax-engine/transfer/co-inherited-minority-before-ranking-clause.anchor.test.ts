@@ -145,7 +145,7 @@ describe("#10-J — 판정 메뉴: 카드 · 배지 · 개정 전 사유 문구"
     isInherited: true,
     inheritedDate: "2015-12-21",
     isCoInherited: true,
-    decedentSameHouseholdAtInheritance: false,
+    decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
     ...over,
   });
 

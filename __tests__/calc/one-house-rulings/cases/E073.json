@@ -23,7 +23,8 @@
           "isInherited": true,
           "inheritedDate": "2014-10-28",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },
@@ -57,7 +58,8 @@
           "isInherited": true,
           "inheritedDate": "2021-09-10",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },
@@ -94,7 +96,8 @@
           "isInherited": true,
           "inheritedDate": "2021-09-10",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },
