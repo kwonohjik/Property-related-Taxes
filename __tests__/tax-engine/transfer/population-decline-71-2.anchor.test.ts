@@ -229,6 +229,22 @@ describe("D-1 상속·증여 취득 — 피상속인·증여자가 별도세대�
       expect(unconfirmed(r)[0].reason).toContain("상속");
     }
   });
+  it("상속 행은 증여 질문에 답하지 않아도(미답·모름·예) 별도세대면 적용 — 증여 사유로 막히지 않는다", () => {
+    // cand 기본값(popDeclAcquiredByGift: "no")이 이 결함을 가린다 — 키 자체를 비운다
+    for (const g of [undefined, "unknown", "yes"] as const) {
+      const r = run({}, { isInherited: true, popDeclAcquiredByGift: g, popDeclDonorHousehold: "separate" });
+      expect(eligible(r)).toBe(1);
+      expect(r.excludedCount).toBe(1);
+      expect(unconfirmed(r)).toHaveLength(0);
+    }
+    // 같은 세대·미답이면 상속 사유 하나만(증여 미답 사유가 겹쳐 붙지 않는다)
+    for (const v of ["same", undefined] as const) {
+      const r = run({}, { isInherited: true, popDeclAcquiredByGift: undefined, popDeclDonorHousehold: v });
+      expect(eligible(r)).toBe(0);
+      expect(unconfirmed(r)).toHaveLength(1);
+      expect(unconfirmed(r)[0].reason).toContain("상속");
+    }
+  });
   it("상속도 증여도 아니면 세대 답은 읽지 않는다 — 낡은 「같은 세대」가 남아도 적용된다", () => {
     for (const v of ["same", "unknown", "separate", undefined] as const) {
       const r = run({}, { popDeclAcquiredByGift: "no", popDeclDonorHousehold: v });

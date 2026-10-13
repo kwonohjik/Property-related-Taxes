@@ -233,7 +233,8 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
   // 상속·증여로 받은 인구감소지역주택 — 국세청 해석은 **별도세대**로부터 취득한 경우만 적용한다고 회신했다
   // (서면-2025-법규재산-1621 상속 · 서면-2025-법규재산-2010 증여). 같은 세대로부터 받은 경우는 해석이 없어 미적용 + 확인 필요,
   // 피상속인·증여자의 세대를 모르거나 답하지 않았으면 불성립 + 확인 필요다(원칙 1·4).
-  if (h.popDeclAcquiredByGift !== "yes" && h.popDeclAcquiredByGift !== "no") {
+  // 상속으로 받은 행에는 「증여로 받았습니까」가 무의미하다(⑤ 위젯도 묻지 않는다) — 미답이어도 사유를 넣지 않는다.
+  if (h.isInherited !== true && h.popDeclAcquiredByGift !== "yes" && h.popDeclAcquiredByGift !== "no") {
     unconfirmed.push("인구감소지역주택을 증여로 취득했는지 모르거나 답하지 않았습니다.");
   }
   if (popDeclineAcquiredFromOther(h)) {
@@ -244,7 +245,7 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
       );
     } else if (h.popDeclDonorHousehold !== "separate") {
       unconfirmed.push(
-        `${kindLabel}으로 받은 인구감소지역주택은 피상속인·증여자가 별도세대였을 때만 이 특례를 적용합니다 — 취득 당시 같은 세대였는지 모르거나 답하지 않았습니다.`,
+        `${kindLabel}으로 받은 인구감소지역주택은 해석이 있는 피상속인·증여자 별도세대 경우만 이 특례를 적용합니다 — 취득 당시 별도세대였는지 모르거나 답하지 않아 적용하지 않았습니다.`,
       );
     }
   }
