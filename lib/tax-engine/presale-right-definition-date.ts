@@ -27,7 +27,12 @@ import type { PresaleRight } from "./types/multi-house-surcharge.types";
 
 type Row = Pick<
   PresaleRight,
-  "type" | "acquisitionDate" | "isInherited" | "decedentSameHouseholdAtInheritance" | "decedentAcquisitionDate"
+  | "type"
+  | "acquisitionDate"
+  | "isInherited"
+  | "decedentSameHouseholdAtInheritance"
+  | "decedentHouseholdUnconfirmed"
+  | "decedentAcquisitionDate"
 >;
 
 export function presaleRightDefinitionAcquisitionDate(right: Row): Date {
@@ -57,9 +62,33 @@ export function inheritedPresaleRightSeparateHouseholdUnverified(right: Row, pre
   );
 }
 
+/** 피상속인과 같은 세대였는지 모르거나 답하지 않은 상속 분양권인가 — 답(`decedentSameHouseholdAtInheritance`)이 비어 있고 ④가 확인 표시를 실었다. */
+function householdUnconfirmed(right: Row): boolean {
+  return right.decedentSameHouseholdAtInheritance === undefined && right.decedentHouseholdUnconfirmed === true;
+}
+
 /** 위 경우의 확인 필요 문구 — 판정 메뉴(§89②)·계산기 중과(§104⑦)가 같은 문장을 쓴다. */
 export const INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE =
   "별도세대인 피상속인이 2020년 12월 31일 이전에 취득한 분양권을 2021년 1월 1일 이후 상속받았습니다. " +
   "상속개시일에 분양권을 취득한 것으로 보아 주택 수에 넣어 판정했습니다(법률 제17477호 부칙 제4조). " +
   "동일세대원이 상속받은 경우는 피상속인 취득일로 보아 주택 수에서 빼지만(기획재정부 재산세제과-1033), " +
   "별도세대 상속을 다룬 해석은 확인되지 않았으니 확인이 필요합니다.";
+
+/** 같은 경우인데 피상속인 세대를 **모르거나 답하지 않은** 행의 문구 — 별도세대라고 단정하지 않는다(2026-10-14 · 상속 행 세대 3상태). */
+export const INHERITED_PRESALE_RIGHT_HOUSEHOLD_UNKNOWN_NOTICE =
+  "피상속인이 2020년 12월 31일 이전에 취득한 분양권을 2021년 1월 1일 이후 상속받았는데, 상속개시 당시 피상속인과 같은 세대였는지 " +
+  "모르거나 답하지 않았습니다. 상속개시일에 분양권을 취득한 것으로 보아 주택 수에 넣어 판정했습니다(법률 제17477호 부칙 제4조). " +
+  "동일세대원이 상속받은 경우는 피상속인 취득일로 보아 주택 수에서 빼므로(기획재정부 재산세제과-1033) " +
+  "「분양권·입주권」 입력에서 별도세대·동일세대를 고르면 판정합니다.";
+
+/**
+ * `inheritedPresaleRightSeparateHouseholdUnverified` 행들이 밝힐 확인 필요 문구 — 별도세대로 답한 행과 모름·미답 행을 가른다
+ * (둘 다 있으면 둘 다). 해당 행이 없으면 빈 배열.
+ */
+export function inheritedPresaleRightHouseholdNotices(rights: readonly Row[], presaleStartDate: Date): string[] {
+  const hit = rights.filter((r) => inheritedPresaleRightSeparateHouseholdUnverified(r, presaleStartDate));
+  const out: string[] = [];
+  if (hit.some((r) => !householdUnconfirmed(r))) out.push(INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE);
+  if (hit.some(householdUnconfirmed)) out.push(INHERITED_PRESALE_RIGHT_HOUSEHOLD_UNKNOWN_NOTICE);
+  return out;
+}
