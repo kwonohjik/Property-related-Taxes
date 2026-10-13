@@ -5,7 +5,7 @@
  * 신축주택 거주만 읽는다. 화면이 종전주택 거주 칸을 계속 받거나(⑤) 그 입력이 Step4 거주 입력을 가리면(⑧) 사용자가 넣은 값이
  * 조용히 무시된다 — 이 파일은 ⑤ 술어 · ④ payload · ⑧ validate · 엔진이 **같은 축**을 보는지를 고정한다.
  *
- * 시료: P1(대전 유성 · 토지 2005-01-01 출자 · 인가 2019-03-15 · 사용승인 2021-02-15 · 분양계약 2020-07-01(공고 후) ·
+ * 시료: P1(대전 유성 · 토지 2005-01-01 출자 · 인가 2020-07-01(공고 후 — 전환일도 조정) · 사용승인 2021-02-15 ·
  * 양도 2024-06-01). 사용승인일에 조정대상지역이라 거주 2년이 필요하고, 사용승인일~양도일은 약 39개월이다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -38,9 +38,8 @@ const P1 = (over: Record<string, unknown> = {}) => ({
   residenceInputMode: "direct",
   residencePeriods: [],
   redevOriginalAssetType: "land",
-  redevApprovalDate: "2019-03-15",
+  redevApprovalDate: "2020-07-01",
   redevCompletionDate: "2021-02-15",
-  redevRightContractDate: "2020-07-01",
   redevActualAcquisitionPrice: "100000000",
   fixedAcquisitionPrice: "100000000",
   ...over,

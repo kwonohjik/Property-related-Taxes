@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 /**
  * G3-4 ⑤ — 토지만 출자한 원조합원의 완공APT는 ② 「출자 자산」 카드에 **사용승인일(사용승인서 교부일)** 칸이 열린다.
- * #12 — 같은 게이트로 「조합원 분양계약일」(선택) 칸도 열린다(입주권 전환 시점 거주요건 예외 판정).
+ * #12 — 「조합원 분양계약일」 칸은 없다: 입주권 전환일은 관리처분계획 인가일이다(원조합원에게 분양계약일 개념이 없다 — 2026-10-13).
  *
  * 칸이 없으면 ⑧·⑫가 필수로 막는데 채울 곳이 없다(`feedback_ui_gate_removes_sole_input_path`). 승계조합원의 같은 이름
  * 칸(`SuccessorMemberSection`)과 겹쳐 두 개가 뜨지 않는지도 본다 — 한 필드(`redevCompletionDate`)를 두 곳에서 받는다.
@@ -80,17 +80,10 @@ describe("G3-4 ⑤ — 준공일 칸의 노출 게이트", () => {
   });
 });
 
-describe("#12 ⑤ — 조합원 분양계약일 칸의 노출 게이트 (사용승인일 칸과 같은 술어)", () => {
-  it("🔑 토지 출자 + 원조합원 완공APT — 열린다 · 값이 칸에 반영된다", () => {
-    const { container } = render(
-      <RedevelopmentBlock asset={apt({ redevRightContractDate: "2017-02-10" })} onChange={() => {}} isOneHouseSingle={true} />,
-    );
-    expect(has(container, CONTRACT_LABEL)).toBe(true);
-    // 입력값이 칸에 반영된다 — 라벨만 있고 배선이 없으면 안 된다(연도 칸에 2017).
-    expect(screen.getAllByDisplayValue("2017").length).toBeGreaterThan(0);
-  });
-  it("부정 짝 — 주택 출자 · 입주권 · 단독신고 · 승계조합원에는 없다", () => {
+describe("#12 ⑤ — 조합원 분양계약일 칸은 어느 축에도 없다 (전환일 = 인가일)", () => {
+  it("🔑 토지 출자 원조합원 완공APT에도, 그 밖의 축에도 뜨지 않는다", () => {
     for (const o of [
+      {},
       { redevOriginalAssetType: "housing" as const },
       { assetKind: "right_to_move_in" as const, redevSubject: "right" as const },
       { redevSettlementDirection: "receive" as const, redevReceiveOnlyMode: "yes" as const, redevSettlementSaleDate: "2024-06-01" },

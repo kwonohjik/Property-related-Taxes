@@ -205,21 +205,6 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             />
           </FieldCard>
         )}
-        {/* #12 — 토지 출자 신축주택의 거주요건 예외: 입주권 전환 완료일(인가일과 분양계약일 중 늦은 날)이 2017.8.2. 이전이거나
-            그 날 조정대상지역이 아니었으면 사용승인일이 조정대상지역이어도 거주요건이 없다(서면-2022-법규재산-4321 ·
-            서면-2018-법령해석재산-1711 · 서면-2021-부동산-0965). 선택 입력 — 비우면 예외를 적용하지 않는다. */}
-        {landContributedOriginalApt(asset) && (
-          <FieldCard
-            label="조합원 분양계약일 (선택)"
-            field="redevRightContractDate"
-            hint="사용승인일에 조정대상지역이라 거주 2년이 필요할 때만 결론을 바꿉니다. 인가일·분양계약일 중 늦은 날이 2017.8.2. 이전이거나 그날 비조정지역이면 거주요건이 없습니다(주소 필요). 비우면 예외 미적용."
-          >
-            <DateInput
-              value={asset.redevRightContractDate}
-              onChange={(v) => onChange({ redevRightContractDate: v })}
-            />
-          </FieldCard>
-        )}
       </ToneCard>
 
       {/* ②-a rose: 조합원 구분 (사례 48 — 승계조합원) — **완공 APT 양도 전용**.

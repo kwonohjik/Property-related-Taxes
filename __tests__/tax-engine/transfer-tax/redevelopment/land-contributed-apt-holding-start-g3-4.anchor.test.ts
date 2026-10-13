@@ -108,14 +108,24 @@ describe("G3-4 — 토지 출자 원조합원 완공APT의 §154① 보유 기�
 
 describe("G3-4 → #12 — 거주요건 판정 기준일: 사용승인일 (2026-10-11 결정 C로 의도적으로 뒤집음)", () => {
   const GANGNAM = "1168010100";
-  it("사용승인 시점(2020-01-01) 조정지역이면 거주요건이 붙는다 — 거주 0이면 과세 (수정 전 기대값: 토지 취득일(2007) 비조정이라 비과세)", () => {
+  it("사용승인 시점(2020-01-01) 조정지역이면 거주요건이 붙는다 — 거주 0이면 과세 (수정 전 기대값: 토지 취득일(2007) 비조정이라 비과세) — 인가 2017-09-01(전환일도 조정)", () => {
     // 보유는 준공일 기산(2020-01-01 → 양도 2024-05-20 ≥ 2년)이라 충족, 거주 0개월.
     // 「취득 당시」 조정지역 여부는 이제 사용승인일(2020-01-01)로 판정 — 강남은 2017-08-03부터 조정대상지역.
-    // 분양계약일을 모르면 입주권 전환 시점 예외도 성립하지 않는다. 상세는 land-contributed-apt-residence-basis-12 anchor.
+    // 입주권 전환일(= 인가일)도 조정대상지역이거나 2017.8.2. 이후라 전환 시점 예외가 성립하지 않는다. 상세는 land-contributed-apt-residence-basis-12 anchor.
+    const r = calculateTransferTax(
+      landApt(
+        { regionCode: GANGNAM, residencePeriodMonths: 0, wasRegulatedAtAcquisition: false },
+        { completionDate: D("2020-01-01"), approvalDate: D("2017-09-01") },
+      ),
+      rates,
+    );
+    expect(r.isExempt).toBe(false);
+  });
+  it("대조 — 인가일이 2017.8.2. 이전(2014-01-23)이면 입주권 전환 경과규정으로 같은 사실도 거주요건이 없다 → 비과세", () => {
     const r = calculateTransferTax(
       landApt({ regionCode: GANGNAM, residencePeriodMonths: 0, wasRegulatedAtAcquisition: false }, { completionDate: D("2020-01-01") }),
       rates,
     );
-    expect(r.isExempt).toBe(false);
+    expect(r.isExempt).toBe(true);
   });
 });

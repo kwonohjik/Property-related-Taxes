@@ -349,10 +349,4 @@ export interface RedevelopmentFormSlice {
    * 시행령 §162①4호 "건축법 §22②에 따른 사용승인서 교부일".
    */
   redevCompletionDate: string;
-  /**
-   * **조합원 분양계약일** — 토지만 출자한 원조합원 완공APT의 §154① 거주요건 면제 예외 판정 (#12).
-   * 입주권 전환 완료일 = 인가일과 분양계약일 중 늦은 날. 선택 입력(비우면 예외 불성립 + 확인 필요).
-   * 토지 출자 원조합원 완공APT(`landContributedOriginalApt`)에서만 읽힌다 — ④가 그 밖에는 보내지 않는다.
-   */
-  redevRightContractDate: string;
 }

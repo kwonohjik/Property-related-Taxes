@@ -139,16 +139,6 @@ export function validateRedevelopmentAsset(
     return fieldError("redevCompletionDate", `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`);
   }
 
-  // #12 — 조합원 분양계약일은 사용승인일 이전이어야 한다(입주권 전환 완료일은 신축주택 완공 전이다).
-  if (
-    landContributedOriginalApt(asset) &&
-    asset.redevRightContractDate &&
-    asset.redevCompletionDate &&
-    asset.redevRightContractDate > asset.redevCompletionDate
-  ) {
-    return fieldError("redevRightContractDate", `${label}: 조합원 분양계약일은 사용승인일 이전이어야 합니다.`);
-  }
-
   if (approvalLawBasis !== "urban_renovation_art_74") {
     return `${label}: 인가 법령 근거는 본 PR에서 "도정법 §74"만 지원합니다. (빈집소규모법 §29는 후속 PR)`;
   }
