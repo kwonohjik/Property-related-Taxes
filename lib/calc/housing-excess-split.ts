@@ -13,6 +13,7 @@
  * 취득가액 산정 방식은 자산 단위 방식(`deriveLegacyPartAcqMode`)만 본다(#17-4) — 이 경로는 토지 취득일을 따로 받지 않아 파트별 방식 라디오가
  * 화면에 없다. 저장된 파트 방식(`landAcqMode`·`buildingAcqMode`)은 별개취득을 켰다 끈 잔재일 수 있어 읽지 않고, ④도 자산 단위 방식을 싣는다.
  */
+import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { housingExcessAreaM2, housingExcessSplitApplies, isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
@@ -85,6 +86,35 @@ export function housingExcessZonePending(asset: AssetForm, isPrimary: boolean): 
   const landArea = resolveAcqAreaForStdPrice(asset) ?? 0;
   if (!(footprint > 0) || !(landArea > footprint * 3)) return false;
   return housingExcessSplitApplies(factsOf(asset, 1));
+}
+
+/**
+ * #17 후속 — 배율 초과분 분리 경로에서 자산 전체 자본적지출의 **토지분** 칸이 필요한가. ⑤ 칸 노출 · ⑧ 필수 · ④ 전송이 같은 술어를 읽는다.
+ *
+ * 분리 경로(`calcSplitGain`)는 파트 자본적지출(`landDirectExpenses`·`buildingDirectExpenses`)만 읽는다. 「소득세법」 §100② 후문은 공통되는
+ * 취득가액·양도비용만 안분 대상으로 열거하므로 자본적지출은 귀속 파트를 받아야 한다(자동 안분 금지) — 토지분 1칸을 받고 건물분은 전체 − 토지분.
+ *
+ * 별개취득 토글이 켜져 있으면(같은 날짜라 이 경로를 타더라도) 분리 섹션의 파트 자본적지출 칸이 화면에 있고 ④가 그 값을 싣는다 — 이중 입력을
+ * 막으려고 그때는 이 칸을 열지 않는다(④ `partInputsActive`와 상보 — 이 경로는 소유자 분리가 아니므로 토글만 보면 된다).
+ */
+export function housingExcessNeedsCapexSplit(asset: AssetForm, transferDate: string | undefined, isPrimary: boolean): boolean {
+  // 감정가액·매매사례가액 취득은 필요경비가 개산공제뿐이라(§97②2호 — 단서 비교는 환산취득가액만) 자본적지출이 세액에 닿지 않는다 — 묻지 않는다.
+  const mode = deriveLegacyPartAcqMode(asset);
+  return (
+    (mode === "actual" || mode === "estimated") &&
+    asset.hasSeperateLandAcquisitionDate !== true &&
+    parseAmount(asset.capitalExpenditure ?? "") > 0 &&
+    housingExcessNeedsLandSplit(asset, transferDate, isPrimary)
+  );
+}
+
+/** 토지분(미입력이면 null)·건물분(= 전체 − 토지분, 토지분 미입력·초과면 null) — 100% 기준 금액. ⑤ 표시·⑧·④가 같은 값을 쓴다. */
+export function housingExcessCapexParts(asset: AssetForm): { total: number; land: number | null; building: number | null } {
+  const total = parseAmount(asset.capitalExpenditure ?? "");
+  const raw = (asset.housingExcessLandCapex ?? "").trim();
+  const land = raw === "" ? null : parseAmount(raw);
+  const building = land === null || land < 0 || land > total ? null : total - land;
+  return { total, land, building };
 }
 
 /**

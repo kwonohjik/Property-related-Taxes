@@ -239,6 +239,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     buildingAcquisitionPrice: "",
     landDirectExpenses: "",
     buildingDirectExpenses: "",
+    housingExcessLandCapex: "",
     landStandardPriceAtTransfer: "",
     buildingStandardPriceAtTransfer: "",
     standardPriceAtAcq: "",

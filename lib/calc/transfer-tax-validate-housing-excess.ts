@@ -9,6 +9,7 @@
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessZonePending } from "./housing-excess-split";
+import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -46,6 +47,14 @@ export function validateHousingExcessSplitInputs(
   }
   if (!positive(a.buildingStandardPriceAtTransfer)) {
     return fieldError("buildingStandardPriceAtTransfer", `${head} 양도 당시 건물 기준시가를 입력하세요.`);
+  }
+  // #17 후속 — 자산 전체 자본적지출의 토지분(건물분 = 전체 − 토지분). 분리 계산은 파트 값만 읽고, 자본적지출은 §100② 후문의 안분 대상이 아니다.
+  if (housingExcessNeedsCapexSplit(a, transferDate, isPrimary)) {
+    const { total, land, building } = housingExcessCapexParts(a);
+    const capexHead =
+      `${label}: 배율 초과분을 나눠 계산하므로 자본적지출 ${total.toLocaleString()}의 토지분·건물분 귀속이 필요합니다 — 자본적지출은 공통 비용 안분 대상이 아닙니다 (소득세법 §100② 후문 · §97②2호).`;
+    if (land === null) return fieldError("housingExcessLandCapex", `${capexHead} 그중 토지분 자본적지출을 입력하세요 (전부 건물분이면 0).`);
+    if (building === null) return fieldError("housingExcessLandCapex", `${capexHead} 토지분은 0 이상 ${total.toLocaleString()} 이하여야 합니다.`);
   }
   return null;
 }

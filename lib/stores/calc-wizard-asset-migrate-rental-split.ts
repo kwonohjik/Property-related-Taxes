@@ -375,6 +375,8 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
   if (!a.buildingAcquisitionPrice) a.buildingAcquisitionPrice = "";
   if (!a.landDirectExpenses) a.landDirectExpenses = "";
   if (!a.buildingDirectExpenses) a.buildingDirectExpenses = "";
+  // #17 후속 — 배율 초과분 분리의 토지분 자본적지출. 구 세션에는 없다(undefined면 CurrencyInput이 uncontrolled로 시작).
+  if (a.housingExcessLandCapex === undefined) a.housingExcessLandCapex = "";
   if (a.capitalExpenditure === undefined) a.capitalExpenditure = "0";
   if (a.transferExpense === undefined) a.transferExpense = "0";
   if (a.depreciationAmount === undefined) a.depreciationAmount = "0";

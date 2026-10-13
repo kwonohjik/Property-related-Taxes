@@ -294,9 +294,12 @@ describe("#17 후속 검토 보정", () => {
   it.each([
     ["실가 + 자본적지출 1억", { capitalExpenditure: "100000000" }, 9_296_570, "100,000,000"],
     ["환산 + 자본적지출 6억(§97②2호 단서 비교 대상)", { ...EST, capitalExpenditure: "600000000" }, 14_336_406, "600,000,000"],
-  ])("자산 단위 자본적지출 — %s → 분리 경로는 쓰지 않으므로 세액 불변 + 미반영 금액 고지 (보정 전: 고지 없이 누락)", async (_n, over, totalTax, amount) => {
+  ])("자산 단위 자본적지출 — %s → 분리 경로는 파트 값 없이는 쓰지 않으므로 세액 불변 + 미반영 금액 고지 (보정 전: 고지 없이 누락)", async (_n, over, totalTax, amount) => {
     const r = await runCalc(single(over));
-    expect(r.issues).toEqual([]);
+    // #17 후속 — 화면 경로는 ⑧이 카드의 「그중 토지분 자본적지출」 칸으로 막는다(`dec17-housing-excess-capex.anchor.test.ts`).
+    //   고지·세액 불변은 파트 값 없이 자산 전체만 실은 입력(API 직접 호출)의 계약으로 남는다 — runCalc는 ⑧ 결과와 무관하게 route까지 보낸다.
+    expect(r.issues.map((i) => i.field)).toEqual(["housingExcessLandCapex"]);
+    expect(r.body.landDirectExpenses).toBeUndefined();
     expect(r.result.totalTax).toBe(totalTax);
     expect(capexNotice(r.result.warnings)).toContain(amount);
   });
