@@ -105,15 +105,18 @@ export function buildTransferEngineInput(
     donorAcquisitionDate: toOptionalDate(data.donorAcquisitionDate),
     // ⑭ 결정 #38 — 증여받은 주택의 증여자와 같은 세대 사실. **답한 경우에만** 엔진 입력을 만든다: 칸이 없는 경로(계산기 D2 등 — 단건 주 자산은
     //    결정 #38-1로 필수 입력)는 미전송이고, 그때는 종전 판정(증여일 기준)에 엔진이 확인 필요를 고지한다. 증여자 취득일 없이는 만들 수 없다.
+    //    결정 #38-6 — 증여자 사망·이혼 후 재결합은 「계속 같은 세대」를 묻지 않고(미전송) 통산 없이 계산하며 엔진이 확인 필요를 고지한다.
     giftHouseholdBasis:
       data.acquisitionCause === "gift" &&
       data.donorAcquisitionDate &&
-      data.giftSameHouseholdContinuous !== undefined
+      (data.giftSameHouseholdContinuous !== undefined || data.giftDonorDeceased === true || data.giftRejoinedAfterDivorce === true)
         ? {
             giftDate: toDate(data.acquisitionDate, "acquisitionDate"),
             donorAcquisitionDate: toDate(data.donorAcquisitionDate, "donorAcquisitionDate"),
             continuousSameHousehold: data.giftSameHouseholdContinuous,
             householdHoldingStartDate: toOptionalDate(data.giftHouseholdHoldingStartDate),
+            donorDeceased: data.giftDonorDeceased === true ? true : undefined,
+            rejoinedAfterDivorce: data.giftRejoinedAfterDivorce === true ? true : undefined,
           }
         : undefined,
     // ⑭ 이월과세 §97의2 — **키를 열거하지 않는다**(spread + 일자만 덮어쓰기).

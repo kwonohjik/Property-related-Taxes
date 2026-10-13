@@ -510,11 +510,17 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   giftDonorRelation: "" | "spouse" | "lineal" | "other";
   /**
    * 증여일부터 양도일까지 증여자와 **계속 같은 세대**였는가 (결정 #38 — 이월과세 폼의 `donorSameHousehold`와 같은 사실).
-   * `""` = 미답(⑧이 막는다). 판정 메뉴 전용 — 계산기 일반 증여 화면은 이 칸이 없다(확인 필요 고지).
+   * `""` = 미답(⑧이 막는다). `"rejoined"` = 배우자 증여 뒤 이혼했다가 같은 사람과 재결합 — 「아니오」로 계산하고 확인 필요를 고지한다
+   * (결정 #34 조건 · #38-6, 배우자 관계에서만 고를 수 있다). 증여자 사망은 질문을 띄우지 않으므로 아래 `giftDonorDeceased`가 정한다.
    */
-  giftSameHousehold: "" | "yes" | "no";
+  giftSameHousehold: "" | "yes" | "no" | "rejoined";
   /** 세대가 이 주택 보유를 시작한 날 — `giftSameHousehold === "yes"`일 때 필수(증여자 취득일 ≤ 이 날 < 증여일). */
   giftHouseholdHoldingStartDate: string;
+  /**
+   * 증여자가 양도 전에 사망했는가 (결정 #34 조건 · #38-6) — 이월과세 폼의 `donorDeceased`와 같은 사실·같은 문언(배우자=사망으로 혼인관계 소멸,
+   * 직계존비속=양도 당시 사망). 참이면 「계속 같은 세대」 질문을 띄우지 않고 통산 없이 계산하며 엔진이 확인 필요를 고지한다.
+   */
+  giftDonorDeceased: boolean;
   /**
    * §155② 단서 **예외** — 동거봉양 합가 + 합가 이전부터 피상속인이 보유하던 주택인가.
    * `decedentSameHouseholdBeforeInheritance === true`일 때만 의미가 있다.

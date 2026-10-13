@@ -26,6 +26,8 @@ export const GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID = "gift-household-consolidat
 export const GIFT_HOUSEHOLD_NOT_REFLECTED_ID = "gift-household-not-reflected-unverified";
 /** 증여자가 양도 전에 사망해 통산 없이 계산했고, 통산하면 결론이 달라진다. */
 export const GIFT_HOUSEHOLD_DONOR_DECEASED_ID = "gift-household-donor-deceased-unverified";
+/** 증여 뒤 이혼했다가 같은 사람과 재결합해 통산 없이 계산했고, 통산하면 결론이 달라진다 (결정 #34 조건 · #38-6). */
+export const GIFT_HOUSEHOLD_REJOINED_ID = "gift-household-rejoined-unverified";
 
 /**
  * 세대 사실 상태에 맞는 확인 필요 고지. 결론을 가르는지는 호출부가 `giftHouseholdFactDecides`로 따로 본다.
@@ -53,6 +55,14 @@ export function giftHouseholdNotice(
             "증여자가 양도 전에 사망한 경우 증여자 세대의 보유기간을 통산하는지에 대한 정면 해석은 확인하지 못했습니다. " +
             "통산 없이 증여일부터 보유기간을 세어 판정했으니, 증여 후 양도 전까지 증여자와 계속 같은 세대였다면 확인이 필요합니다.",
         }
+      : gift.rejoinedAfterDivorce === true
+        ? {
+            id: GIFT_HOUSEHOLD_REJOINED_ID,
+            reason:
+              "증여 뒤 이혼했다가 같은 사람과 재결합한 경우 증여자 세대의 보유기간을 통산하는지에 대해서는 해석이 갈립니다 — " +
+              "보유기간은 증여를 받은 날부터 센다는 회신(서면5팀-463·921)과 증여자의 취득일부터 센다는 회신(재산세과-445)이 있고 정면 해석은 확인하지 못했습니다. " +
+              "통산 없이 증여일부터 보유기간을 세어 판정했으니, 통산하면 결론이 달라질 수 있어 확인이 필요합니다.",
+          }
       : giftHouseholdConfirmedSeparate(gift)
         ? undefined
         : giftHouseholdUnconfirmed(gift)
@@ -86,18 +96,21 @@ export function giftHouseholdFactDecides(
   verdictOf: (basis: GiftHouseholdBasis) => string,
 ): boolean {
   if (g.householdDateStrict) return false; // 반사실 입력은 고지를 만들지 않는다 — 재귀 차단
-  const separate = (): string => verdictOf({ ...g, donorDeceased: undefined, continuousSameHousehold: false });
+  const separate = (): string =>
+    verdictOf({ ...g, donorDeceased: undefined, rejoinedAfterDivorce: undefined, continuousSameHousehold: false });
   // 통산 성립 가정 — 시작일을 모르면 증여자 취득일을 시작일로 둔다(세대 보유 시작일의 가장 이른 값).
   const consolidated = (): string | undefined =>
     g.donorAcquisitionDate.getTime() < g.giftDate.getTime()
       ? verdictOf({
           ...g,
           donorDeceased: undefined,
+          rejoinedAfterDivorce: undefined,
           continuousSameHousehold: true,
           householdHoldingStartDate: giftHouseholdConsolidationStart(g) ?? g.donorAcquisitionDate,
         })
       : undefined;
-  if (g.donorDeceased === true) {
+  // 사망·재결합 — 통산하지 않고 계산했으므로 「통산했다면」 결론이 달라질 때만 고지한다.
+  if (g.donorDeceased === true || g.rejoinedAfterDivorce === true) {
     const c = consolidated();
     return c !== undefined && c !== base;
   }

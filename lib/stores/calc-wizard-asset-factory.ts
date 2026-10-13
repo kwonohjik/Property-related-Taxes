@@ -181,6 +181,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     giftDonorRelation: "",
     giftSameHousehold: "",
     giftHouseholdHoldingStartDate: "",
+    giftDonorDeceased: false,
     // §155② 단서 예외·순위 — 미선언이 기본값(명부 행과 동일 규약)
     parentalCareMergeInheritedHouse: undefined,
     isRankingDisqualifiedInheritedHouse: undefined,

@@ -100,12 +100,15 @@ export function Step3({ form, onChange }: Props) {
   const giftDate = toOptionalDate(primary.acquisitionDate);
   const giftDonorAcquisitionDate = toOptionalDate(primary.donorAcquisitionDate);
   const giftBasis =
-    giftHouseholdFactVisible(primary) && giftDate && giftDonorAcquisitionDate && primary.giftSameHousehold
+    giftHouseholdFactVisible(primary) && giftDate && giftDonorAcquisitionDate && (primary.giftSameHousehold || primary.giftDonorDeceased)
       ? {
           giftDate,
           donorAcquisitionDate: giftDonorAcquisitionDate,
           continuousSameHousehold: primary.giftSameHousehold === "yes",
           householdHoldingStartDate: toOptionalDate(primary.giftHouseholdHoldingStartDate),
+          // 결정 #38-6 — 사망·재결합은 통산하지 않는다(남은 「예」 답이 있어도 엔진과 같은 판정으로 보여 준다).
+          donorDeceased: primary.giftDonorDeceased || undefined,
+          rejoinedAfterDivorce: primary.giftSameHousehold === "rejoined" || undefined,
         }
       : undefined;
   const giftConsolidated = giftHouseholdConsolidationStart(giftBasis) !== undefined;

@@ -72,6 +72,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
   // 증여받은 주택의 세대 사실(결정 #38) — 판정 메뉴·단건 계산기 입력. 다건 ④는 만들지 않는다(다건 화면도 묻지 않는다 — #38-3).
   giftSameHouseholdContinuous: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
   giftHouseholdHoldingStartDate: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
+  giftDonorDeceased: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
+  giftRejoinedAfterDivorce: whenPresent(MULTI_GIFT_HOUSEHOLD_UNSUPPORTED_MESSAGE),
   // 잔금 전 멸실 특약(판정 메뉴 전용, 결정 #46) — 다건 ⑭는 옮기지 않는다.
   demolishedBeforeBalance: whenPresent(MULTI_DEMOLISHED_UNSUPPORTED_MESSAGE),
   familyBusinessInheritance: whenPresent(MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE),

@@ -100,6 +100,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.giftDonorRelation === undefined) a.giftDonorRelation = "";
   if (a.giftSameHousehold === undefined) a.giftSameHousehold = "";
   if (a.giftHouseholdHoldingStartDate === undefined) a.giftHouseholdHoldingStartDate = "";
+  if (a.giftDonorDeceased === undefined) a.giftDonorDeceased = false;
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";
   // ③ §164⑧ 환산 — 구 sessionStorage에는 이 키들이 없다. 미보정 시 `sapFormula`가 undefined인
