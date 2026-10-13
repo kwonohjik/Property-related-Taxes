@@ -217,6 +217,7 @@ function toEnginePresaleRight(r: PresaleRightInput): PresaleRight {
     decedentOwnedHouseAtDeath: r.decedentOwnedHouseAtDeath,
     decedentOwnedOtherRightTypeAtDeath: r.decedentOwnedOtherRightTypeAtDeath,
     decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
+    decedentHouseholdUnconfirmed: r.decedentHouseholdUnconfirmed,
     parentalCareMergeInheritedRight: r.parentalCareMergeInheritedRight,
     decedentAcquisitionDate: toOptionalDate(r.decedentAcquisitionDate),
     inheritedDate: toOptionalDate(r.inheritedDate),

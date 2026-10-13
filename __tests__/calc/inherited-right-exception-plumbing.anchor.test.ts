@@ -58,7 +58,8 @@ describe("권리 항목 상속 7필드 — ④→⑫→⑭", () => {
   });
 
   it("🔑 `false`도 보존된다 — 「선언 안 함」과 「아님」을 섞지 않는다", () => {
-    const over = Object.fromEntries(RIGHT_FIELDS.map((f) => [f, false]));
+    // 피상속인 세대는 한 칸의 3상태다 — 별도세대는 `false`만이 아니라 직접 고른 표시(`decedentHouseholdSeparate`)가 함께 있어야 답이다.
+    const over = { ...Object.fromEntries(RIGHT_FIELDS.map((f) => [f, false])), decedentHouseholdSeparate: true };
     const engine = throughAllLayers(entry(over)) as unknown as Record<string, unknown>;
     for (const f of RIGHT_FIELDS) {
       expect(engine[f], f).toBe(false);
