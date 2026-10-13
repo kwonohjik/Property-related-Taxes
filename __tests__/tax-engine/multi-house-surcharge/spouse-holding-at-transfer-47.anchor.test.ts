@@ -12,6 +12,7 @@ import {
   spouseSideOriginOf,
   marriageSubtractionWindowOpen,
 } from "@/lib/tax-engine/spouse-holding-at-transfer";
+import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { defaultRules, mockRegulatedHistory, suspensionActive, suspensionNone, makeHouse, makeInput } from "../_helpers/multi-house-mock";
 
 const REGULATED = { regionCode: "11680" };
@@ -86,6 +87,13 @@ describe("#47 엔진 차감·고지 — 본인 1(양도) + 배우자 쪽 2 = 3�
     const no = run(base(rows("no")));
     expect(no.surchargeApplicable).toBe(true);
     expect(has(no, NOTICE_A)).toBe(false);
+  });
+
+  it("[SH-11] 재산세제과-1400 — 상수는 원문 일자·번호이고 미응답 고지가 세대원 보유 포함 근거로 인용한다", () => {
+    expect(MULTI_HOUSE.MARRIAGE_SUBTRACT_SPOUSE_HOUSEHOLD_RULING).toBe("기획재정부 재산세제과-1400 (2023.12.18.)");
+    const r = run(base(rows(undefined)));
+    const notice = r.warnings.find((w) => w.includes(NOTICE_A));
+    expect(notice).toContain(`배우자 쪽 세대원 보유 포함 — 주택은 ${MULTI_HOUSE.MARRIAGE_SUBTRACT_SPOUSE_HOUSEHOLD_RULING}`);
   });
 
   it("[SH-6] 옛 저장분·직접 호출의 꺼진 isSpouseOwned:false는 미응답 → 고지 / 켜진 true는 종전대로 예(차감, 고지 없음)", () => {

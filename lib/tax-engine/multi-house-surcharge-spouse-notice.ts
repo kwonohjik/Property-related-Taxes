@@ -43,7 +43,7 @@ export function spouseHoldingNotices(
       out.push(
         `혼인일(${date}) 5년 안의 양도라 ${MULTI_HOUSE.MARRIAGE_SUBTRACT_3HOUSE_BASIS}·${MULTI_HOUSE.MARRIAGE_SUBTRACT_RIGHT_BASIS}에 따라 양도일 현재 양도자의 배우자가 보유한 주택·분양권·입주권 수를 뺍니다. ` +
           "배우자 쪽 주택·권리 중 양도일 현재 배우자 쪽이 보유한다고 확인되지 않은 것(미응답 또는 모름)은 빼지 않고 계산했습니다 — " +
-          "양도일 현재도 배우자(배우자 쪽 세대원 보유 포함)가 보유하면 중과 여부·세율이 달라질 수 있습니다(확인 필요).",
+          `양도일 현재도 배우자(배우자 쪽 세대원 보유 포함 — 주택은 ${MULTI_HOUSE.MARRIAGE_SUBTRACT_SPOUSE_HOUSEHOLD_RULING})가 보유하면 중과 여부·세율이 달라질 수 있습니다(확인 필요).`,
       );
     }
   }
