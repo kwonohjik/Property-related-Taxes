@@ -597,11 +597,14 @@ export function determineSurchargeExclusion(
     //   슬롯이 선다. 4호는 ⑧ 주택이 중과 주택 수 2채 **안**(양도 주택 또는 다른 효과 주택)에 있을 때만 배제한다.
     //   명부 행에 ⑧ 표시가 하나도 없으면(명부 없는 합성 주택·세대 단위 레거시 선언) 종전 대리 지표 —
     //   다른 효과 주택이 상속주택이면 그 주택은 §155⑧ 주택이 아니다 — 를 쓴다.
-    const uocRows = input.houses.filter((h) => h.isUnavoidableOutsideCapital === true);
+    //   ⑧ 주택은 「각각 1개씩」이라 한 채다 — 세대 판정(`findUnavoidableOutsideCapitalRow`)이 사유·해소일을 읽는 **첫 ⑧ 행**을
+    //   여기서도 본다. 종전 `some`은 둘째 행이 2채 안이면 통과시켜, 첫 행의 사실로 선 슬롯을 다른 행의 위치로 배제했다
+    //   (⑧·⑫가 둘째 행을 막는다 — `duplicateUnavoidableOutsideCapitalRows`).
+    const uocRow = input.houses.find((h) => h.isUnavoidableOutsideCapital === true);
     const uocInTwoHouses =
-      uocRows.length === 0
+      uocRow === undefined
         ? !otherEffectiveHouses.some((h) => h.isInherited === true)
-        : uocRows.some((h) => h === sellingHouse || otherEffectiveHouses.includes(h));
+        : uocRow === sellingHouse || otherEffectiveHouses.includes(uocRow);
     if (input.unavoidableOutsideCapitalHouse && uocInTwoHouses) {
       exclusionReasons.push({
         type: "unavoidable_outside_capital",

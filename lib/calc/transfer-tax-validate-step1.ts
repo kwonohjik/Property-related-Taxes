@@ -49,6 +49,8 @@ import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./sel
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
+import { duplicateUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
+import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -134,6 +136,10 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const newHouseRowId = deriveCalcTemporaryTwoHouse(form, form.assets?.[0])?.newHouseRowId;
   // 결정 #47 — 응답이 필요한 배우자 쪽 행(⑤ 질문과 같은 술어). 「모름」은 응답이라 막지 않는다.
   const spouseHoldingUnanswered = new Set(spouseHoldingUnansweredIndexes(form));
+  // §155⑧ 「각각 1개씩」 — 둘째 ⑧ 행부터 막는다(판정 메뉴 ⑧·⑫와 같은 leaf). 행의 「편집」으로 가서 끄면 풀린다.
+  const uocDuplicateOf = new Map(
+    duplicateUnavoidableOutsideCapitalRows(houses.map((h) => h.oneHouseUnavoidableOutsideCapital)).map((d) => [d.index, d.firstIndex]),
+  );
   for (let i = 0; i < houses.length; i++) {
     const h = houses[i];
     const label = `보유 주택 ${i + 1}`;
@@ -175,6 +181,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 판정 메뉴 ⑧과 같은 leaf.
       const uocIssue = houseUnavoidableOutsideCapitalIssue(h);
       if (uocIssue) return fieldError(rowKey, `${label}: ${uocIssue.message}`);
+      const uocFirst = uocDuplicateOf.get(i);
+      if (uocFirst !== undefined)
+        return fieldError(rowKey, `${label}: ${duplicateUnavoidableOutsideCapitalMessage(`보유 주택 ${uocFirst + 1}`)}`);
       // 명부 행 사실 답 누락 — D7 §155⑦1호 동일세대 · §155⑦2·3호 재귀농 · §155⑦3호 귀농 ⑩3·4호·⑪ · §155① 신규 주택 취득 경위(판정 메뉴 ⑧과 같은 leaf).
       const factIssue = houseRowFactIssues(h, newHouseRowId)[0];
       if (factIssue) return fieldError(rowKey, `${label}: ${factIssue.message}`);

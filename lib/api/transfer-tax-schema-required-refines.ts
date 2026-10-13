@@ -17,6 +17,8 @@ import { refineHouseholdRequiredInputs, type HouseholdRefineInput } from "./tran
 import { refineRequiredInputs2a, type Required2aLike } from "./transfer-tax-schema-required-refines-2a";
 import { twoHouseExclusionStatusConflict } from "@/lib/calc/two-house-exclusion-status";
 import { twoHouseExclusionStatusIssue } from "@/lib/calc/two-house-exclusion-status";
+import { duplicateUnavoidableOutsideCapitalRows } from "@/lib/calc/house-row-required-issues";
+import { duplicateUnavoidableOutsideCapitalMessage } from "@/lib/calc/house-row-required-issues";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -38,6 +40,7 @@ type HouseRow = {
   dayCareOperationYears?: number;
   isTaxIncentiveRental?: boolean;
   rentalPeriodYears?: number;
+  isUnavoidableOutsideCapital?: boolean;
 };
 
 /**
@@ -69,6 +72,11 @@ export function refineHouseExclusionInputs(
     if (h.isTaxIncentiveRental === true && !positive(h.rentalPeriodYears))
       issue(["houses", i, "rentalPeriodYears"], "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대기간(년)이 필요합니다");
   });
+  // §155⑧ 「각각 1개씩」 — ⑧ 표시 행은 한 채(⑧ `duplicateUnavoidableOutsideCapitalRows`의 거울). 둘째 행이 있으면 세대 판정과
+  //   중과 4호가 서로 다른 행을 볼 수 있었다.
+  for (const d of duplicateUnavoidableOutsideCapitalRows((houses ?? []).map((h) => h.isUnavoidableOutsideCapital))) {
+    issue(["houses", d.index, "isUnavoidableOutsideCapital"], duplicateUnavoidableOutsideCapitalMessage(`houses[${d.firstIndex}]`));
+  }
 }
 
 type BurdenedGiftLike = {

@@ -99,6 +99,8 @@ interface Props {
   popDeclineEnabled?: boolean;
   /** 양도(종전) 주택 취득일 — §71의2 「양도 주택을 권리로 받았는가」 질문의 노출 게이트 */
   sellingAcquisitionDate?: string;
+  /** 다른 행에 이미 §155⑧ 표시가 있으면 그 행 번호(1부터) — ⑤ 카드가 「한 채만」을 알린다(⑧·⑫와 같은 축) */
+  otherUocRowNumber?: number;
 }
 
 // ============================================================
@@ -632,6 +634,7 @@ export function HouseEntryEditor({
   newHouseOriginEnabled = false,
   popDeclineEnabled = false,
   sellingAcquisitionDate,
+  otherUocRowNumber,
 }: Props) {
   return (
     <div className="space-y-3">
@@ -667,7 +670,7 @@ export function HouseEntryEditor({
         <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
       )}
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
-      <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} />
+      <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} otherUocRowNumber={otherUocRowNumber} />
       {/* ⑥ 조특법 소유주택 의제 — ⑤(소령 §155)와 근거 법률·요건이 다르다 */}
       {countExclusionEnabled && (
         <HouseEntryCountExclusionSection house={house} onUpdate={onUpdate} transferDate={transferDate} />
