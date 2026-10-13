@@ -12,7 +12,7 @@
  *
  * 취득가액 산정 방식은 자산 단위 방식(`deriveLegacyPartAcqMode`)만 본다(#17-4) — 이 경로는 토지 취득일을 따로 받지 않아 파트별 방식 라디오가
  * 화면에 없다. 저장된 파트 방식(`landAcqMode`·`buildingAcqMode`)은 별개취득을 켰다 끈 잔재일 수 있어 읽지 않고, ④도 자산 단위 방식을 싣는다.
- * 별개취득 토글을 켠 채 같은 날짜면 라디오가 화면에 있다 — 그 값이 자산 단위 방식과 다르면 ⑧이 막는다(`housingExcessPartModeMismatch`).
+ * 별개취득 토글을 켠 채 같은 날짜면 라디오가 화면에 있다 — 그 값이 자산 단위 방식과 다르면 ⑧이 막는다(`housingExcessPartModeMismatch` — 배율 한도 이내·함께 양도 주택 카드도).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { housingExcessAreaM2, housingExcessSplitApplies, isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
@@ -81,21 +81,44 @@ export function housingExcessNeedsLandSplit(
 }
 
 /**
- * #17 후속(F1) — 별개취득 토글 ON + 토지·건물 취득일 같음이면 이 경로를 타면서도 분리 섹션의 파트 방식 라디오가 화면에 있다(토글이 렌더 조건).
- * 이 경로는 자산 단위 방식(위 「취득가액 산정 방식」)으로 계산하므로 라디오가 그와 다르면 ⑧이 그 라디오 칸으로 막는다 — 어긋난 칸(토지 먼저) 또는 null.
- * 파트 방식을 그대로 실으면 환산 파트는 400(양도시 개별주택가격 미전송), 감정·매매사례 파트는 실가 총액의 안분 몫을 그 방식으로 부르는 값이 된다.
+ * #17 후속(F1·G2) — 별개취득 토글 ON + 토지·건물 취득일 같음이면 분리 섹션의 파트 방식 라디오가 자산 단위 「취득가액 산정 방식」과 함께 화면에 있다
+ * (토글이 렌더 조건). 두 라디오가 다르면 그중 하나는 계산에 반영되지 않으므로 ⑧이 어긋난 파트 라디오 칸으로 막는다 — 어긋난 칸(토지 먼저) 또는 null.
+ * - 배율 초과분 분리 경로(F1): 자산 단위 방식으로 계산한다 — 파트 방식을 그대로 실으면 환산 파트는 400(양도시 개별주택가격 미전송), 감정·매매사례
+ *   파트는 실가 총액의 안분 몫을 그 방식으로 부르는 값이 된다.
+ * - 배율 한도 이내(G2): ④는 라디오 값을 싣지만 엔진은 비-별개취득에서 취득시 건물 기준시가(④ 미전송)가 필요한 조합이면 분리를 포기하고 자산 단위로
+ *   계산한다 → 파트 라디오는 «양쪽 실가 + 파트 취득가액»일 때만 계산에 닿고, 그때는 자산 단위 방식이 무시된다(환산이면 총액 0 − 토지분 = 음수 건물분).
+ * 그래서 범위는 분리 경로 사실(`factsOf`)이 아니라 «두 라디오가 함께 화면에 있는가»(`sameDayPartRadiosShown`)다 — 함께 양도 주택 카드(같은 컴포넌트)·
+ * 2005-04-30 전 취득·PHD·지분·§164⑨ 환산도 두 라디오가 함께 뜨고 실측상 그중 하나가 무시된다.
+ * 토글을 켰는데 토지 취득일이 비어 있으면 같은 날인지 다른 날인지 아직 모른다 — 라디오가 어긋날 때 토지 취득일 칸(`landAcquisitionDate`)으로 먼저 보낸다
+ * (다른 날을 넣으면 별개취득이라 파트 방식이 정본이고, 같은 날을 넣으면 다음 검증에서 라디오로 간다).
  * 읽는 값은 ⑤가 라디오에 표시하는 값(`effectivePartAcqMode`)이다. 토지 상속·증여(D1)면 토지 라디오 대신 고정 안내가 떠서 토지는 보지 않는다.
  */
-export function housingExcessPartModeMismatch(
-  asset: AssetForm,
-  transferDate: string | undefined,
-  isPrimary: boolean,
-): "landAcqMode" | "buildingAcqMode" | null {
-  if (asset.hasSeperateLandAcquisitionDate !== true || !housingExcessNeedsLandSplit(asset, transferDate, isPrimary)) return null;
+export function housingExcessPartModeMismatch(asset: AssetForm): "landAcquisitionDate" | "landAcqMode" | "buildingAcqMode" | null {
+  if (!sameDayPartRadiosShown(asset)) return null;
   const mode = deriveLegacyPartAcqMode(asset);
-  if (!effectiveLandAcquisitionCause(asset) && effectivePartAcqMode(asset.landAcqMode, asset) !== mode) return "landAcqMode";
-  if (effectivePartAcqMode(asset.buildingAcqMode, asset) !== mode) return "buildingAcqMode";
+  const land = !effectiveLandAcquisitionCause(asset) && effectivePartAcqMode(asset.landAcqMode, asset) !== mode;
+  const building = effectivePartAcqMode(asset.buildingAcqMode, asset) !== mode;
+  if ((land || building) && !asset.landAcquisitionDate) return "landAcquisitionDate";
+  if (land) return "landAcqMode";
+  if (building) return "buildingAcqMode";
   return null;
+}
+
+/**
+ * 파트 방식 라디오(분리 섹션 — `CompanionAcqPurchaseBlock`의 `isSplit && !isMixedUse`)와 자산 단위 라디오(같은 블록의 `!isSeparateAcq` · 부담부증여·
+ * 건물 원인(D2) 아님)가 함께 화면에 있는 주택인가. 매매 블록만 이 라디오를 그리고(D2는 비-매매 호스트라 `acquisitionCause`로 빠진다), 소유자 분리는
+ * 토글을 강제로 켜는 다른 경로(S3-1)라 범위 밖이다. 취득일이 둘 다 있고 다르면 별개취득 — 자산 단위 라디오가 숨는다.
+ */
+function sameDayPartRadiosShown(asset: AssetForm): boolean {
+  return (
+    asset.hasSeperateLandAcquisitionDate === true &&
+    asset.assetKind === "housing" &&
+    !asset.isMixedUseHouse &&
+    asset.acquisitionCause === "purchase" &&
+    asset.transferType !== "burdened_gift" &&
+    (effectiveSelfOwns(asset) ?? "both") === "both" &&
+    !isSeparateAcquisition(asset)
+  );
 }
 
 /**

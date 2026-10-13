@@ -189,8 +189,10 @@ describe("⑧ — 파트 라디오가 자산 단위 방식과 다르면 그 라�
     expect(modeIssue(r.issues)?.field).toBe("buildingAcqMode");
   });
 
-  it("대조 — 배율 한도 이내(분리 경로 밖)면 이 규칙은 걸리지 않는다", async () => {
+  // G2(2026-10-13 사용자 결정 「지금처럼 막고 안내」) — 배율 한도 이내도 두 라디오 중 하나가 계산에 반영되지 않아 같은 규칙으로 막는다.
+  //   종전 대조(«한도 이내면 걸리지 않는다»)를 뒤집는다 — 한도 이내 매트릭스는 `dec17-housing-same-day-part-mode-within-limit.anchor.test.ts`.
+  it("🔑 배율 한도 이내(분리 경로 밖)도 같은 규칙으로 막는다 (G2)", async () => {
     const r = await runCalc(single({ ...SAME_DAY, acquisitionArea: "250", transferArea: "250", landAcqMode: "estimated", buildingAcqMode: "actual" }));
-    expect(modeIssue(r.issues)).toBeUndefined();
+    expect(modeIssue(r.issues)?.field).toBe("landAcqMode");
   });
 });
