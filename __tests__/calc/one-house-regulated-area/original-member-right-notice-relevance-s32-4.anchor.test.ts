@@ -1,8 +1,8 @@
 /**
  * #32-4 anchor — 기존주택 원조합원 입주권 행의 「지정 지구 안인가」 미선언 고지는 **그 선언이 결론을 가를 때만** 낸다.
  *
- * 결정 #32(「결론을 가르지 않는 조정대상지역·공휴일 판정 보류 고지 정리」)의 하위 4 — 이미 머지된 #32-1~3(#2147)·양도 주택 고지(S02-7)와
- * 같은 규약이다: 모르는 사실을 다른 독법으로 바꿔 **판정 전체를 다시 돌렸을 때** 비과세·부분 비과세 여부가 달라지는지로 정한다.
+ * 결정 #32(「결론을 가르지 않는 조정대상지역·공휴일 판정 보류 고지 정리」) 후속 — 이미 머지된 #32-1~3(#2147)·양도 주택 고지(S02-7)와
+ * 같은 규약(#2147 규약 적용)이다: 모르는 사실을 다른 독법으로 바꿔 **판정 전체를 다시 돌렸을 때** 비과세·부분 비과세 여부가 달라지는지로 정한다.
  *
  * 시료 — 삼송동(4128111100)은 고양시 지구 한정 지정 동(2019.11.8.~2020.6.18.). 입주권 행(원조합원) 기존주택 취득일 2020-01-01.
  *   · 판정 메뉴: 양도 주택 2015-01-01 취득·강남·거주 60개월.
@@ -82,18 +82,18 @@ describe("#32-4 판정 메뉴 — 입주권 행 지구 고지는 결론을 가�
 });
 
 // ───────────────────────── 계산기 ─────────────────────────
-function calcForm(o: { transfer: string; regulatedSell: boolean; district?: boolean }) {
+function calcForm(o: { transfer: string; regulatedSell: boolean; district?: boolean; acq?: string; residence?: string; approval?: string }) {
   const f = newForm();
   f.transferDate = o.transfer; f.isOneHousehold = true; f.householdHousingCount = "1"; f.householdNoOtherHousesConfirmed = true;
   f.contractTotalPrice = "900000000"; f.residencePeriodMonths = "0"; f.isRegulatedArea = o.regulatedSell; f.wasRegulatedAtAcquisition = o.regulatedSell;
   Object.assign(f.assets[0], {
-    assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", actualSalePrice: "900000000",
+    assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: o.acq ?? "2015-01-01", actualSalePrice: "900000000",
     fixedAcquisitionPrice: "500000000", addressJibun: "테스트 주소 1", regionCode: o.regulatedSell ? "1168010100" : "4311000000",
-    residenceInputMode: "direct", residencePeriods: [], residencePeriodMonthsAsset: "60",
+    residenceInputMode: "direct", residencePeriods: [], residencePeriodMonthsAsset: o.residence ?? "60",
   });
   f.presaleRights = [{
     id: "r1", type: "redevelopment_right", acquisitionDate: "2020-01-01", region: "capital", memberOrigin: "original_house",
-    regionCode: SAMSONG, inDesignatedDistrict: o.district, managementDisposalApprovalDate: "2019-01-01",
+    regionCode: SAMSONG, inDesignatedDistrict: o.district, managementDisposalApprovalDate: o.approval ?? "2019-01-01",
   } as never];
   return f;
 }
@@ -129,6 +129,38 @@ describe("#32-4 계산기 — 같은 collector라 경고도 같은 규약", () =
     ];
     expect([none.isExempt, outside.isExempt]).toEqual([true, true]);
     expect(districtWarnings(none.warnings)).toHaveLength(0);
+  });
+});
+
+// ───────────────────────── 키 범위 전제 ─────────────────────────
+// `relevance.right(i)`는 비과세·부분 비과세 두 키만 비교한다. 행 지구 선언이 세액(중과 배제 등)만 바꾸는 사안이 생기면 고지가 소리 없이 빠진다.
+// 원조합원 입주권은 `byTimingClause`를 세우지 않아 구 §167의11①1호 인용이 false라(`clause2SurchargeDeemed`) 지금은 그런 사안이 없다 —
+// 이 전제를 격자로 고정한다: 선언(미선언·true·false)을 바꿔 결과가 갈리면 미선언 결과에 지구 경고가 반드시 있어야 한다.
+describe("#32-4 계산기 격자 — 선언이 결과를 가르면 고지가 있다(키 범위 전제)", () => {
+  it("양도일 5 × 양도 주택 취득일 4 × 조정 2 × 거주 2 × 인가일 2 — 갈리는데 고지 없는 조합 0건", async () => {
+    let valid = 0; let notified = 0; const silent: string[] = [];
+    for (const transfer of ["2020-03-01", "2021-06-01", "2022-06-01", "2023-06-01", "2024-03-01"])
+      for (const acq of ["2012-01-01", "2015-01-01", "2019-06-01", "2021-12-01"])
+        for (const regulatedSell of [true, false])
+          for (const residence of ["0", "60"])
+            for (const approval of ["2019-01-01", "2019-06-01"]) {
+              const base = { transfer, acq, regulatedSell, residence, approval };
+              const out = [
+                await runCalc(calcForm({ ...base })),
+                await runCalc(calcForm({ ...base, district: true })),
+                await runCalc(calcForm({ ...base, district: false })),
+              ];
+              if (out.some((x) => x.status !== 200)) continue;
+              valid++;
+              const sig = (x: (typeof out)[number]) => `${x.isExempt}|${x.r?.isPartialExempt}|${x.totalTax}`;
+              const warned = districtWarnings(out[0].warnings).length > 0;
+              if (warned) notified++;
+              if (!warned && new Set(out.map(sig)).size > 1) silent.push(`${JSON.stringify(base)} ${out.map(sig).join(" / ")}`);
+            }
+    expect(silent).toEqual([]);
+    // 격자가 자명하지 않다 — 유효 조합이 있고 그중 일부는 고지가 실제로 나간다(2026-10-13 실측 144 / 24)
+    expect(valid).toBeGreaterThan(100);
+    expect(notified).toBeGreaterThan(0);
   });
 });
 
