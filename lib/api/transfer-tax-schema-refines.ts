@@ -5,6 +5,8 @@
 
 import { z } from "zod";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { toDate } from "@/lib/api/date-coerce";
+import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
@@ -67,6 +69,7 @@ export function addPropertyRefines(
     donorAcquisitionDate?: string;
     giftSameHouseholdContinuous?: boolean;
     giftHouseholdHoldingStartDate?: string;
+    giftPriorHouseholdResidenceMonths?: number;
     annualBasicDeductionUsed?: number;
     acquisitionMethod?: "actual" | "estimated" | "appraisal" | "salesCase";
     appraisalValue?: number;
@@ -273,7 +276,24 @@ export function addPropertyRefines(
           path: ["giftHouseholdHoldingStartDate"],
           message: "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다",
         });
+      } else if (data.giftPriorHouseholdResidenceMonths !== undefined) {
+        // 결정 #38-7 — 증여 전 동일세대 거주 개월은 세대 보유 시작일부터 증여일까지를 넘을 수 없다(⑧과 같은 상한).
+        const max = maxPriorResidenceMonthsBetween(toDate(start, "giftHouseholdHoldingStartDate"), toDate(data.acquisitionDate, "acquisitionDate"));
+        if (data.giftPriorHouseholdResidenceMonths > max) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["giftPriorHouseholdResidenceMonths"],
+            message: `증여 전 동일세대 거주 개월은 세대 보유 시작일부터 증여일까지(${max}개월)를 넘을 수 없습니다`,
+          });
+        }
       }
+    } else if (data.giftPriorHouseholdResidenceMonths !== undefined) {
+      // 계속 같은 세대가 아니면 통산하지 않는다 — 조용히 무시되는 입력이 되지 않게 막는다(⑧·④는 「예」일 때만 보낸다).
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["giftPriorHouseholdResidenceMonths"],
+        message: "증여 전 동일세대 거주 개월은 증여자와 계속 같은 세대일 때만 입력할 수 있습니다",
+      });
     }
   }
   if (data.annualBasicDeductionUsed !== undefined && data.annualBasicDeductionUsed > 2_500_000) {

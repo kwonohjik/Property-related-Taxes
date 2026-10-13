@@ -9,6 +9,8 @@
  */
 
 import { z } from "zod";
+import { toDate } from "@/lib/api/date-coerce";
+import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -28,10 +30,26 @@ const carryoverExclusionShape = z.object({
  * 아래 엔진 shape(컴패니언·GB 파트)이 함께 쓴다.
  */
 export function refineCarryoverHouseholdStart(
-  ct: { giftRegistryDate: string; donorAcquisitionDate: string; donorSameHouseholdContinuous?: boolean; donorHouseholdHoldingStartDate?: string },
+  ct: {
+    giftRegistryDate: string;
+    donorAcquisitionDate: string;
+    donorSameHouseholdContinuous?: boolean;
+    donorHouseholdHoldingStartDate?: string;
+    donorPriorHouseholdResidenceMonths?: number;
+  },
   ctx: z.RefinementCtx,
 ): void {
-  if (ct.donorSameHouseholdContinuous !== true) return;
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월은 「계속 같은 세대」일 때만 의미가 있다. 아니면 조용히 무시되는 입력이 되므로 막는다(⑧·④와 같은 조건).
+  if (ct.donorSameHouseholdContinuous !== true) {
+    if (ct.donorPriorHouseholdResidenceMonths !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["donorPriorHouseholdResidenceMonths"],
+        message: "증여 전 동일세대 거주 개월은 증여자와 계속 같은 세대일 때만 입력할 수 있습니다",
+      });
+    }
+    return;
+  }
   const start = ct.donorHouseholdHoldingStartDate;
   if (!start) {
     ctx.addIssue({
@@ -45,6 +63,15 @@ export function refineCarryoverHouseholdStart(
       path: ["donorHouseholdHoldingStartDate"],
       message: "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다",
     });
+  } else if (ct.donorPriorHouseholdResidenceMonths !== undefined) {
+    const max = maxPriorResidenceMonthsBetween(toDate(start, "donorHouseholdHoldingStartDate"), toDate(ct.giftRegistryDate, "giftRegistryDate"));
+    if (ct.donorPriorHouseholdResidenceMonths > max) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["donorPriorHouseholdResidenceMonths"],
+        message: `증여 전 동일세대 거주 개월은 세대 보유 시작일부터 증여 등기접수일까지(${max}개월)를 넘을 수 없습니다`,
+      });
+    }
   }
 }
 
@@ -75,6 +102,8 @@ export const carryoverTaxationEngineShape = z.object({
   /** 결정 #33·#34 — 증여일부터 양도일까지 증여자와 계속 같은 세대 (단건 인라인 shape과 parity) */
   donorSameHouseholdContinuous: z.boolean().optional(),
   donorHouseholdHoldingStartDate: z.string().date().optional(),
+  /** 결정 #38-7 — 증여 전 동일세대 거주 개월(단건 인라인 shape과 parity) */
+  donorPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
   /** 결정 #38-6 — 증여 뒤 이혼했다가 같은 배우자와 재결합(단건 인라인 shape과 parity) */
   donorRejoinedAfterDivorce: z.boolean().optional(),
   /**

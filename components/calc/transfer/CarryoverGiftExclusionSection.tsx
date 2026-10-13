@@ -12,6 +12,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Button } from "@/components/ui/button";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
+import { PriorHouseholdResidenceField } from "./PriorHouseholdResidenceField";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
 /** 직계존비속 「양도 당시 사망」 제외 신설 — 2025.1.1. 이후 증여받는 자산부터. */
@@ -31,9 +32,11 @@ interface Props {
    */
   donorSameHousehold: CarryoverTaxationForm["donorSameHousehold"];
   donorHouseholdHoldingStartDate: string;
+  /** 증여 전 동일세대 거주 개월(결정 #38-7) — 「예」일 때만 묻는다. `""` = 미답 */
+  donorPriorHouseholdResidenceMonths: string;
   /** 증여자 취득일 — 세대 보유 시작일 안내용 (YYYY-MM-DD) */
   donorAcquisitionDate: string;
-  /** 위 질문을 보일지 — 주택이고 증여자가 사망하지 않았고 관계가 「그 외」가 아닐 때(`carryoverHouseholdFactVisible`) */
+  /** 위 질문을 보일지 — 주택이고 증여자가 사망하지 않았을 때, 관계 무관(`carryoverHouseholdFactVisible`, 결정 #38-2) */
   showHouseholdFact: boolean;
   /**
    * 배우자 예외 문항을 보일지 — §97조의2②2호는 **주택** 조항이다. 일반건물은 ④가 이 사실을
@@ -55,6 +58,7 @@ export function CarryoverGiftExclusionSection({
   spouseGiftOneHouseAtGiftDate,
   donorSameHousehold,
   donorHouseholdHoldingStartDate,
+  donorPriorHouseholdResidenceMonths,
   donorAcquisitionDate,
   showHouseholdFact,
   showSpouseOneHouseFact,
@@ -185,7 +189,11 @@ export function CarryoverGiftExclusionSection({
               onRelationChange(
                 v === "yes"
                   ? { donorSameHousehold: "yes" }
-                  : { donorSameHousehold: v === "rejoined" ? "rejoined" : "no", donorHouseholdHoldingStartDate: "" },
+                  : {
+                      donorSameHousehold: v === "rejoined" ? "rejoined" : "no",
+                      donorHouseholdHoldingStartDate: "",
+                      donorPriorHouseholdResidenceMonths: "",
+                    },
               )
             }
           />
@@ -204,6 +212,15 @@ export function CarryoverGiftExclusionSection({
                 onChange={(v) => onRelationChange({ donorHouseholdHoldingStartDate: v })}
               />
             </FieldCard>
+          )}
+          {/* 결정 #38-7 — 판정 메뉴·일반 증여 칸과 같은 칸·같은 조건부 노출(계속 같은 세대 = 예) */}
+          {donorSameHousehold === "yes" && (
+            <PriorHouseholdResidenceField
+              field="carryover.donorPriorHouseholdResidenceMonths"
+              testId="carryover-prior-residence"
+              value={donorPriorHouseholdResidenceMonths}
+              onChange={(v) => onRelationChange({ donorPriorHouseholdResidenceMonths: v })}
+            />
           )}
         </ToneCard>
       )}

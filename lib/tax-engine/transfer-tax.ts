@@ -602,6 +602,7 @@ export function calculateTransferTax(
     effectiveInput,
     surchargeExclusionAppliedId: surchargeExclusionByReduction.appliedId,
     deemedOneHouseBy155,
+    isHighValuePartial: exemptionResult.isPartialExempt,
     holdingPeriod,
     longTermHoldingDeduction,
     longTermHoldingRate,

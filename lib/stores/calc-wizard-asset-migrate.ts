@@ -99,6 +99,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.giftDonorRelation === undefined) a.giftDonorRelation = "";
   if (a.giftSameHousehold === undefined) a.giftSameHousehold = "";
   if (a.giftHouseholdHoldingStartDate === undefined) a.giftHouseholdHoldingStartDate = "";
+  // 증여 전 동일세대 거주 개월(결정 #38-7) — 옛 이력에는 칸이 없다. 「0」이 아니라 미답("")이다: 통산 없이 판정하고 거주했다면 결론이 달라질 때만 확인 필요를 고지한다.
+  if (a.giftPriorHouseholdResidenceMonths === undefined) a.giftPriorHouseholdResidenceMonths = "";
   if (a.giftDonorDeceased === undefined) a.giftDonorDeceased = false;
   // 공익수용·협의매수 (2026-07-02): 양도원인·사업인정고시일 (구 세션 복원 방어)
   if (a.transferCause === undefined) a.transferCause = "general";

@@ -82,10 +82,15 @@ describe("계산기 증여 블록 — 세대 사실 위젯", () => {
     fireEvent.click(screen.getByLabelText(/예 — 계속 같은 세대/));
     expect(onChange).toHaveBeenCalledWith({ giftSameHousehold: "yes" });
     fireEvent.click(screen.getByLabelText(/아니오 — 세대가 달랐거나/));
-    expect(onChange).toHaveBeenCalledWith({ giftSameHousehold: "no", giftHouseholdHoldingStartDate: "" });
+    expect(onChange).toHaveBeenCalledWith({
+      giftSameHousehold: "no",
+      giftHouseholdHoldingStartDate: "",
+      giftPriorHouseholdResidenceMonths: "",
+    });
     cleanup();
     renderSection(giftHouse({ giftSameHousehold: "yes" }));
     expect(screen.getByText("세대가 이 주택 보유를 시작한 날")).toBeTruthy();
+    expect(screen.getByText("증여 전 동일세대 거주기간")).toBeTruthy(); // 결정 #38-7 — 같은 조건부 노출
   });
 });
 

@@ -7,6 +7,8 @@ import {
   giftHouseholdConfirmedSeparate,
   giftHouseholdConsolidationStart,
   giftHouseholdHoldingStart,
+  giftHouseholdMaxPriorResidenceMonths,
+  giftHouseholdPriorResidenceMonths,
   giftHouseholdUnconfirmed,
   resolveGiftResidenceDates,
   resolveHouseCountExclusionDate,
@@ -101,5 +103,32 @@ describe("이혼 후 재결합 (결정 #34 조건 · #38-6) — 「아니오」�
     expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "spouse" }, false).rejoinedAfterDivorce).toBe(true);
     expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "lineal" }, false).rejoinedAfterDivorce).toBeUndefined();
     expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "spouse", donorRejoinedAfterDivorce: undefined }, false).rejoinedAfterDivorce).toBeUndefined();
+  });
+});
+
+describe("증여 전 동일세대 거주 개월 (결정 #38-7) — 통산 성립 때만 · 상한은 세대 보유 시작일~증여일 개월 수", () => {
+  // 2012-01-01 → 2021-03-02 = 110개월(9년 2개월 1일) · 2012-01-03 → 109개월
+  const yes = { ...base, continuousSameHousehold: true, householdHoldingStartDate: D("2012-01-01") };
+  it("상한 — 시작일부터 증여일까지의 개월 수(내림) · 통산이 성립하지 않으면 0", () => {
+    expect(giftHouseholdMaxPriorResidenceMonths(yes)).toBe(110);
+    expect(giftHouseholdMaxPriorResidenceMonths({ ...yes, householdHoldingStartDate: D("2012-01-03") })).toBe(109);
+    expect(giftHouseholdMaxPriorResidenceMonths({ ...yes, continuousSameHousehold: false })).toBe(0);
+    expect(giftHouseholdMaxPriorResidenceMonths({ ...yes, donorDeceased: true })).toBe(0);
+    expect(giftHouseholdMaxPriorResidenceMonths(undefined)).toBe(0);
+  });
+  it("더하는 개월 — 입력값 · 상한 초과는 상한으로 · 미답(undefined)·0·음수·통산 불성립은 0", () => {
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, priorHouseholdResidenceMonths: 30 })).toBe(30);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, priorHouseholdResidenceMonths: 110 })).toBe(110);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, priorHouseholdResidenceMonths: 111 })).toBe(110);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, priorHouseholdResidenceMonths: undefined })).toBe(0);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, priorHouseholdResidenceMonths: 0 })).toBe(0);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, priorHouseholdResidenceMonths: -5 })).toBe(0);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, continuousSameHousehold: false, priorHouseholdResidenceMonths: 30 })).toBe(0);
+    expect(giftHouseholdPriorResidenceMonths({ ...yes, rejoinedAfterDivorce: true, priorHouseholdResidenceMonths: 30 })).toBe(0);
+  });
+  it("이월과세 입력에서도 읽는다 — 증여 전 거주 개월이 기본으로 따라온다", () => {
+    const ct = { giftRegistryDate: D("2021-03-02"), donorAcquisitionDate: D("2010-03-01"), donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: D("2012-01-01") };
+    expect(carryoverGiftHouseholdBasis({ ...ct, donorPriorHouseholdResidenceMonths: 24, donorRelation: "lineal" }, true).priorHouseholdResidenceMonths).toBe(24);
+    expect(carryoverGiftHouseholdBasis({ ...ct, donorRelation: "lineal" }, true).priorHouseholdResidenceMonths).toBeUndefined();
   });
 });

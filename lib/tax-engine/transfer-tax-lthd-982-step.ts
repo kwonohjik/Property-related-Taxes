@@ -9,6 +9,7 @@ import { resolveExemptionResidenceMonths } from "./transfer-tax-helpers";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
+import { giftTable2PriorResidenceNotice } from "./one-house/gift-table2-notice";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
@@ -25,6 +26,8 @@ export interface Lthd982StepArgs {
   /** `surchargeExclusionByReduction.appliedId` — "unsold_98_2"일 때만 특칙을 건다. */
   surchargeExclusionAppliedId: string | undefined;
   deemedOneHouseBy155: boolean;
+  /** 12억 초과 고가주택 부분과세인가(`exemptionResult.isPartialExempt`) — 증여 전 동일세대 거주 표2 확인 필요 고지의 게이트(결정 #38-8). */
+  isHighValuePartial: boolean;
   holdingPeriod: { years: number; months: number };
   longTermHoldingDeduction: number;
   longTermHoldingRate: number;
@@ -90,6 +93,15 @@ export function applyLthd982AndPushSteps(
   });
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) a.warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
+
+  // 결정 #38-8 — 증여 전 동일세대 거주를 표2 대상 판정에 통산하면 결론이 갈릴 때만 확인 필요(세액은 통산하지 않은 값 — 별건 #38-9 결정 대기).
+  const giftTable2Notice = giftTable2PriorResidenceNotice({
+    input: exemptionJudgeInput,
+    deemedOneHouseBy155,
+    isHighValuePartial: a.isHighValuePartial,
+    lthdApplies: taxableGain > 0 && holdingPeriod.years >= 3 && a.lthdExclusionReason === undefined && !a.usageConversionDetail && !a.splitDetail,
+  });
+  if (giftTable2Notice) a.warnings.push(giftTable2Notice);
 
   return { longTermHoldingDeduction, longTermHoldingRate };
 }

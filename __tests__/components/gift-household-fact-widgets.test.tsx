@@ -30,6 +30,7 @@ function renderSection(over: Partial<React.ComponentProps<typeof CarryoverGiftEx
       spouseGiftOneHouseAtGiftDate={false}
       donorSameHousehold=""
       donorHouseholdHoldingStartDate=""
+      donorPriorHouseholdResidenceMonths=""
       donorAcquisitionDate="2010-03-01"
       showHouseholdFact
       showSpouseOneHouseFact
@@ -56,7 +57,11 @@ describe("이월과세 폼 — 증여자와 같은 세대 질문", () => {
     fireEvent.click(screen.getByLabelText(/예 — 계속 같은 세대/));
     expect(onRelationChange).toHaveBeenCalledWith({ donorSameHousehold: "yes" });
     fireEvent.click(screen.getByLabelText(/아니오 — 세대가 달랐거나/));
-    expect(onRelationChange).toHaveBeenCalledWith({ donorSameHousehold: "no", donorHouseholdHoldingStartDate: "" });
+    expect(onRelationChange).toHaveBeenCalledWith({
+      donorSameHousehold: "no",
+      donorHouseholdHoldingStartDate: "",
+      donorPriorHouseholdResidenceMonths: "",
+    });
   });
 
   it("[W-3] 시작일 칸은 「예」일 때만 있다(긍정 짝)", () => {
@@ -65,6 +70,43 @@ describe("이월과세 폼 — 증여자와 같은 세대 질문", () => {
     cleanup();
     renderSection({ donorSameHousehold: "yes" });
     expect(screen.getByText("세대가 이 주택 보유를 시작한 날")).toBeTruthy();
+  });
+});
+
+describe("증여 전 동일세대 거주기간 칸 (결정 #38-7) — 「예」일 때만 열린다", () => {
+  const MONTHS = "증여 전 동일세대 거주기간";
+  const gift = (yes: boolean) => ({
+    assetId: "a1",
+    acquisitionCause: "gift" as const,
+    donorAcquisitionDate: "2018-01-01",
+    giftDonorRelation: "lineal" as const,
+    giftSameHousehold: (yes ? "yes" : "no") as AssetForm["giftSameHousehold"],
+    giftHouseholdHoldingStartDate: "2019-03-01",
+    giftPriorHouseholdResidenceMonths: "12",
+    giftDonorDeceased: false,
+  });
+  it("[PR-W1] 판정 메뉴·계산기 증여 칸 — 「예」면 칸이 열리고 현재 값을 보이며, 입력하면 문자열로 올린다 · 「아니오」면 없다(긍정 짝)", () => {
+    const onChange = vi.fn();
+    render(<GiftedSameHouseholdField asset={gift(true)} onChange={onChange} />);
+    expect(screen.getByText(MONTHS)).toBeTruthy();
+    const input = screen.getByLabelText(MONTHS) as HTMLInputElement;
+    expect(input.value).toBe("12");
+    fireEvent.change(input, { target: { value: "30" } });
+    expect(onChange).toHaveBeenCalledWith({ giftPriorHouseholdResidenceMonths: "30" });
+    fireEvent.change(input, { target: { value: "" } });
+    expect(onChange).toHaveBeenCalledWith({ giftPriorHouseholdResidenceMonths: "" });
+    cleanup();
+    render(<GiftedSameHouseholdField asset={gift(false)} onChange={vi.fn()} />);
+    expect(screen.queryByText(MONTHS)).toBeNull();
+  });
+  it("[PR-W2] 이월과세 폼 — 같은 칸 · 「예」일 때만", () => {
+    const { onRelationChange } = renderSection({ donorSameHousehold: "yes", donorPriorHouseholdResidenceMonths: "8" });
+    expect(screen.getByText(MONTHS)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(MONTHS), { target: { value: "9" } });
+    expect(onRelationChange).toHaveBeenCalledWith({ donorPriorHouseholdResidenceMonths: "9" });
+    cleanup();
+    renderSection({ donorSameHousehold: "no" });
+    expect(screen.queryByText(MONTHS)).toBeNull();
   });
 });
 
@@ -83,8 +125,8 @@ describe("carryoverHouseholdFactVisible — ⑤·⑧·④ 공용 술어", () => 
     expect(carryoverHouseholdFactVisible(a({ donorRelation: "lineal" }))).toBe(true);
     expect(carryoverHouseholdFactVisible(a({ donorRelation: "" }))).toBe(true); // 관계 미선택이 구멍이 되지 않는다
   });
-  it("그 외 관계 · 증여자 사망 · 비주택 → 묻지 않는다", () => {
-    expect(carryoverHouseholdFactVisible(a({ donorRelation: "other" }))).toBe(false);
+  it("증여자 사망 · 비주택 → 묻지 않는다 — 관계 「그 외」는 묻는다(결정 #38-2, 판정 메뉴와 같은 필수 질문)", () => {
+    expect(carryoverHouseholdFactVisible(a({ donorRelation: "other" }))).toBe(true);
     expect(carryoverHouseholdFactVisible(a({ donorDeceased: true }))).toBe(false);
     expect(carryoverHouseholdFactVisible(a({ assetKind: "land" }))).toBe(false);
   });
@@ -98,6 +140,7 @@ describe("판정 메뉴 — GiftedSameHouseholdField", () => {
     giftDonorRelation: "" as const,
     giftSameHousehold: "" as const,
     giftHouseholdHoldingStartDate: "",
+    giftPriorHouseholdResidenceMonths: "",
     giftDonorDeceased: false,
   };
 
@@ -133,6 +176,7 @@ describe("증여자 사망·이혼 후 재결합 입력 (결정 #34 조건 · #3
     giftDonorRelation: "spouse" as AssetForm["giftDonorRelation"],
     giftSameHousehold: "" as AssetForm["giftSameHousehold"],
     giftHouseholdHoldingStartDate: "",
+    giftPriorHouseholdResidenceMonths: "",
     giftDonorDeceased: false,
   };
   const QUESTION_TITLE = /증여자와 계속 같은 세대였습니까/;
@@ -167,7 +211,11 @@ describe("증여자 사망·이혼 후 재결합 입력 (결정 #34 조건 · #3
     const onChange = vi.fn();
     render(<GiftedSameHouseholdField asset={base} onChange={onChange} />);
     fireEvent.click(screen.getByLabelText(/아니오 — 증여 뒤 이혼했다가 같은 사람과 재결합/));
-    expect(onChange).toHaveBeenCalledWith({ giftSameHousehold: "rejoined", giftHouseholdHoldingStartDate: "" });
+    expect(onChange).toHaveBeenCalledWith({
+      giftSameHousehold: "rejoined",
+      giftHouseholdHoldingStartDate: "",
+      giftPriorHouseholdResidenceMonths: "",
+    });
     cleanup();
     render(<GiftedSameHouseholdField asset={{ ...base, giftDonorRelation: "lineal" }} onChange={vi.fn()} />);
     expect(screen.queryByLabelText(/이혼했다가 같은 사람과 재결합/)).toBeNull();
@@ -195,7 +243,11 @@ describe("증여자 사망·이혼 후 재결합 입력 (결정 #34 조건 · #3
   it("[DR-W5] 이월과세 폼 — 재결합 선택지는 배우자에만 · 고르면 시작일을 비운다", () => {
     const { onRelationChange } = renderSection();
     fireEvent.click(screen.getByLabelText(/아니오 — 증여 뒤 이혼했다가 같은 사람과 재결합/));
-    expect(onRelationChange).toHaveBeenCalledWith({ donorSameHousehold: "rejoined", donorHouseholdHoldingStartDate: "" });
+    expect(onRelationChange).toHaveBeenCalledWith({
+      donorSameHousehold: "rejoined",
+      donorHouseholdHoldingStartDate: "",
+      donorPriorHouseholdResidenceMonths: "",
+    });
     cleanup();
     renderSection({ donorRelation: "lineal" });
     expect(screen.queryByLabelText(/이혼했다가 같은 사람과 재결합/)).toBeNull();
