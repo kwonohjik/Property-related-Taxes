@@ -18,7 +18,7 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { parentalCareAgeIssues } from "./parental-care-age-issue";
-import { giftHouseholdFactErrors } from "@/lib/calc/gift-household-payload";
+import { giftHouseholdFactErrors, giftPriorResidenceAsked } from "@/lib/calc/gift-household-payload";
 import {
   isTransferDateBeforeSupported,
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
@@ -600,6 +600,7 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       periods: primary.residencePeriods ?? [],
       acquisitionDate: primary.acquisitionDate,
       transferDate: form.transferDate,
+      giftPriorHint: giftPriorResidenceAsked(primary),
     })) {
       errors.push(err("residencePeriods", message));
     }
@@ -616,6 +617,7 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       acquisitionDate: primary.acquisitionDate,
       transferDate: form.transferDate,
       field: "residencePeriodMonthsAsset",
+      giftPriorHint: giftPriorResidenceAsked(primary),
     });
     if (overflow) errors.push(err("residencePeriodMonthsAsset", overflow));
   }

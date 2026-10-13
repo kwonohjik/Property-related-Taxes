@@ -8,7 +8,9 @@
  * 함께 양도하는 자산·건물만 증여받은 주택(D2)에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
  * 겸용주택(주 자산)은 묻는다 — 겸용 엔진의 §154① 판정이 같은 leaf로 이 사실을 읽는다(결정 #38 후속).
  */
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 
 type GiftFactFields = Pick<
@@ -19,8 +21,47 @@ type GiftFactFields = Pick<
   | "giftDonorRelation"
   | "giftSameHousehold"
   | "giftHouseholdHoldingStartDate"
+  | "giftPriorHouseholdResidenceMonths"
   | "giftDonorDeceased"
 >;
+
+/**
+ * 증여 전 동일세대 거주 개월 입력(문자열)을 읽는다 — 비었으면 미답(undefined), 0 이상 정수가 아니면 NaN(⑧이 막는다).
+ * 판정 메뉴·계산기 증여 칸·이월과세 폼이 **같은 파서**를 쓴다(⑤·④·⑧ 3중 패턴 — 결정 #38-7).
+ */
+export function parsePriorResidenceMonths(raw: string | undefined): number | undefined {
+  const t = (raw ?? "").trim();
+  if (t === "") return undefined;
+  return /^\d+$/.test(t) ? Number(t) : Number.NaN;
+}
+
+/**
+ * 증여 전 동일세대 거주 개월 칸을 **묻는가** — 증여자와 계속 같은 세대 = 「예」인 증여·이월과세 주택(결정 #38-7). ⑤(칸 노출)·④(전송)·⑧(거주 구간 오류의 안내 문구)가
+ * 같은 술어를 쓴다. 거주 구간 검증이 「취득 전 거주는 제외하라」고 말할 때 이 칸으로 안내하는 데에도 쓴다(`residence-interval-validate.ts`).
+ */
+export function giftPriorResidenceAsked(
+  asset: Pick<AssetForm, "acquisitionCause" | "assetKind" | "giftSameHousehold" | "giftDonorDeceased" | "carryover"> | undefined,
+): boolean {
+  if (!asset || asset.assetKind !== "housing") return false;
+  if (asset.acquisitionCause === "gift") return asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased;
+  if (asset.acquisitionCause === "carryover_gift") return asset.carryover?.donorSameHousehold === "yes" && !asset.carryover.donorDeceased;
+  return false;
+}
+
+/**
+ * ⑧ 증여 전 동일세대 거주 개월 검증 — 판정 메뉴·계산기·이월과세 폼 공용. 값이 없으면 통과(필수가 아니다: 모르면 통산 없이 판정하고 결론을 가를 때만 확인 필요).
+ * 상한은 세대 보유 시작일부터 증여일까지의 개월 수다 — ⑫와 같은 `maxPriorResidenceMonthsBetween`. 시작일·증여일이 비었거나 범위 밖이면 그 오류는 따로 막으므로 여기서는 보지 않는다.
+ */
+export function priorResidenceMonthsError(raw: string | undefined, householdStart: string, giftDate: string): string | null {
+  const n = parsePriorResidenceMonths(raw);
+  if (n === undefined) return null;
+  if (!Number.isInteger(n)) return "증여 전 동일세대 거주기간은 0 이상의 정수(개월)로 입력하세요.";
+  const start = toOptionalDate(householdStart);
+  const gift = toOptionalDate(giftDate);
+  if (!start || !gift || start.getTime() >= gift.getTime()) return null;
+  const max = maxPriorResidenceMonthsBetween(start, gift);
+  return n > max ? `증여 전 동일세대 거주기간은 세대 보유 시작일부터 증여일까지(${max}개월)를 넘을 수 없습니다.` : null;
+}
 
 /** 증여받은 주택의 세대 사실을 **묻는가** — 증여로 취득한 주택(`housing`) 한정. 입주권·분양권·토지는 이 사실이 결론을 가르지 않는다. */
 export function giftHouseholdFactVisible(asset: Pick<AssetForm, "acquisitionCause" | "assetKind"> | undefined): boolean {
@@ -36,6 +77,7 @@ export function buildGiftHouseholdPayload(primary: GiftFactFields | undefined): 
   donorAcquisitionDate?: string;
   giftSameHouseholdContinuous?: boolean;
   giftHouseholdHoldingStartDate?: string;
+  giftPriorHouseholdResidenceMonths?: number;
   giftDonorDeceased?: boolean;
   giftRejoinedAfterDivorce?: boolean;
 } {
@@ -49,6 +91,8 @@ export function buildGiftHouseholdPayload(primary: GiftFactFields | undefined): 
       giftDonorDeceased: true,
     };
   }
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월은 「계속 같은 세대 = 예」일 때만 싣는다(⑤가 그때만 묻는다). 비었으면 미답이라 싣지 않는다.
+  const priorMonths = primary.giftSameHousehold === "yes" ? parsePriorResidenceMonths(primary.giftPriorHouseholdResidenceMonths) : undefined;
   return {
     acquisitionCause: "gift",
     donorAcquisitionDate: primary.donorAcquisitionDate || undefined,
@@ -63,6 +107,7 @@ export function buildGiftHouseholdPayload(primary: GiftFactFields | undefined): 
           ...(primary.giftHouseholdHoldingStartDate
             ? { giftHouseholdHoldingStartDate: primary.giftHouseholdHoldingStartDate }
             : {}),
+          ...(priorMonths !== undefined && Number.isInteger(priorMonths) ? { giftPriorHouseholdResidenceMonths: priorMonths } : {}),
         }
       : {}),
   };
@@ -158,6 +203,9 @@ export function giftHouseholdFactErrors(primary: GiftFactFields & Pick<AssetForm
       (primary.donorAcquisitionDate && start < primary.donorAcquisitionDate)
     ) {
       out.push({ field: "giftHouseholdHoldingStartDate", message: "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다." });
+    } else {
+      const monthsErr = priorResidenceMonthsError(primary.giftPriorHouseholdResidenceMonths, start, primary.acquisitionDate);
+      if (monthsErr) out.push({ field: "giftPriorHouseholdResidenceMonths", message: monthsErr });
     }
   }
   return out;

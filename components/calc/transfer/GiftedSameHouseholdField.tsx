@@ -21,6 +21,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DateInput } from "@/components/ui/date-input";
+import { PriorHouseholdResidenceField } from "./PriorHouseholdResidenceField";
 import { giftHouseholdQuestionText } from "@/lib/calc/gift-household-payload";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -32,6 +33,7 @@ type GiftFields = Pick<
   | "giftDonorRelation"
   | "giftSameHousehold"
   | "giftHouseholdHoldingStartDate"
+  | "giftPriorHouseholdResidenceMonths"
   | "giftDonorDeceased"
 >;
 
@@ -46,6 +48,7 @@ const CLEARED_GIFT = {
   giftDonorRelation: "" as const,
   giftSameHousehold: "" as const,
   giftHouseholdHoldingStartDate: "",
+  giftPriorHouseholdResidenceMonths: "",
   giftDonorDeceased: false,
 };
 
@@ -162,24 +165,37 @@ export function GiftHouseholdFactInputs({
                 onChange(
                   v === "yes"
                     ? { giftSameHousehold: "yes" }
-                    : { giftSameHousehold: v === "rejoined" ? "rejoined" : "no", giftHouseholdHoldingStartDate: "" },
+                    : {
+                        giftSameHousehold: v === "rejoined" ? "rejoined" : "no",
+                        giftHouseholdHoldingStartDate: "",
+                        giftPriorHouseholdResidenceMonths: "",
+                      },
                 )
               }
             />
           </FieldCard>
 
           {asset.giftSameHousehold === "yes" && (
-            <FieldCard
-              label="세대가 이 주택 보유를 시작한 날"
-              field="giftHouseholdHoldingStartDate"
-              hint="증여자 취득일 이후 혼인·합가했다면 그 날 — 보유기간은 이 날부터 셉니다. 증여자 취득일 이후 증여일 전의 날짜"
-            >
-              <DateInput
-                data-testid="one-house-gift-household-start"
-                value={asset.giftHouseholdHoldingStartDate}
-                onChange={(giftHouseholdHoldingStartDate) => onChange({ giftHouseholdHoldingStartDate })}
+            <>
+              <FieldCard
+                label="세대가 이 주택 보유를 시작한 날"
+                field="giftHouseholdHoldingStartDate"
+                hint="증여자 취득일 이후 혼인·합가했다면 그 날 — 보유기간은 이 날부터 셉니다. 증여자 취득일 이후 증여일 전의 날짜"
+              >
+                <DateInput
+                  data-testid="one-house-gift-household-start"
+                  value={asset.giftHouseholdHoldingStartDate}
+                  onChange={(giftHouseholdHoldingStartDate) => onChange({ giftHouseholdHoldingStartDate })}
+                />
+              </FieldCard>
+              {/* 결정 #38-7 — 상속 「상속개시 전 동일세대 거주기간」과 같은 모양·같은 조건부 노출(계속 같은 세대 = 예) */}
+              <PriorHouseholdResidenceField
+                field="giftPriorHouseholdResidenceMonths"
+                testId="one-house-gift-prior-residence"
+                value={asset.giftPriorHouseholdResidenceMonths}
+                onChange={(giftPriorHouseholdResidenceMonths) => onChange({ giftPriorHouseholdResidenceMonths })}
               />
-            </FieldCard>
+            </>
           )}
         </>
       )}

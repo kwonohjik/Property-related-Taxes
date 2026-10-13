@@ -113,6 +113,7 @@ export function buildTransferEngineInput(
       donorAcquisitionDate: data.donorAcquisitionDate,
       giftSameHouseholdContinuous: data.giftSameHouseholdContinuous,
       giftHouseholdHoldingStartDate: data.giftHouseholdHoldingStartDate,
+      giftPriorHouseholdResidenceMonths: data.giftPriorHouseholdResidenceMonths,
       giftDonorDeceased: data.giftDonorDeceased,
       giftRejoinedAfterDivorce: data.giftRejoinedAfterDivorce,
     }),

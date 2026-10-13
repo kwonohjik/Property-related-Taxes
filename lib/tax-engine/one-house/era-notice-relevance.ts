@@ -9,7 +9,7 @@ import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { describeOneHouseHoldingRequirement } from "../transfer-tax-exemption-holding";
 import type { EraNoticeRelevance } from "./era-undetermined";
 import type { GiftHouseholdBasis } from "./gift-household-basis";
-import { giftHouseholdFactDecides } from "./gift-household-notice";
+import { giftHouseholdFactDecides, giftPriorResidenceDecides } from "./gift-household-notice";
 import { withUnconfirmedFactsFavorable } from "./rural-return-to-farm-facts";
 import { counterfactualVerdictDiffers, withMoveInWithinYear, withNotBothRegulated } from "./temp-two-house-counterfactual";
 import type { OneHouseCoreVerdict, OneHouseJudgeInput, OneHouseJudgment } from "./types";
@@ -79,6 +79,15 @@ export function buildEraNoticeRelevance(ctx: {
         return !settled;
       }
       return giftHouseholdFactDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, verdictOf);
+    },
+    // 결정 #38-7 — 증여 전 동일세대 거주 개월. 통산 성립 입력에서만 의미가 있다 — 개월을 바꾼 반사실 판정이 현재 판정과 다를 때만 확인 필요.
+    giftPriorResidenceDecides: () => {
+      const g = input.giftHouseholdBasis;
+      if (!g || article89Excluded) return false;
+      return giftPriorResidenceDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, (basis) => {
+        const r = check({ ...input, giftHouseholdBasis: basis });
+        return `${r.isExempt}|${r.isPartialExempt}`;
+      });
     },
     // §154①2호 가목 괄호 「사업인정 고시일 전 취득」 — 고시일이 비어 있어 단서를 적용하지 않았다. 고시일을 취득 뒤/앞으로 가정한
     // 두 판정이 다를 때만 확인 필요를 낸다(S02-2). 고시일을 채운 두 판정은 이 함수 자신이고, 채우면 그 고지가 생기지 않아 재귀하지 않는다.

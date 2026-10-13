@@ -113,6 +113,11 @@ export interface CarryoverTaxationForm {
   donorSameHousehold: "" | "yes" | "no" | "rejoined";
   /** 세대가 이 주택 보유를 시작한 날 — `donorSameHousehold === "yes"`일 때 필수(증여자 취득일 ≤ 이 날 < 증여 등기접수일). */
   donorHouseholdHoldingStartDate: string;
+  /**
+   * 증여 전 증여자와 같은 세대로 이 주택에 거주한 기간(개월) (결정 #38-7) — `donorSameHousehold === "yes"`일 때만 묻는다. `""` = 미답(통산 없이 판정, 거주했다면
+   * 결론이 달라질 때만 확인 필요) · `"0"` = 거주한 적 없음. §154① 비과세 거주요건에만 통산한다.
+   */
+  donorPriorHouseholdResidenceMonths: string;
   /** 이월과세 적용배제 선언 */
   exclusionDeclared: CarryoverExclusionDeclared;
 }
@@ -137,6 +142,7 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   spouseGiftOneHouseAtGiftDate: false,
   donorSameHousehold: "",
   donorHouseholdHoldingStartDate: "",
+  donorPriorHouseholdResidenceMonths: "",
   exclusionDeclared: {
     expropriationWithin2Years: false,
     legacyOneHouseExemptionDeclared: false,
@@ -207,6 +213,11 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
         : "",
     donorHouseholdHoldingStartDate:
       typeof raw.donorHouseholdHoldingStartDate === "string" ? raw.donorHouseholdHoldingStartDate : "",
+    // ③ normalize — 결정 #38-7. 구형 이력에는 없다 → 미답(""). 숫자 문자열(0 이상 정수)만 받는다.
+    donorPriorHouseholdResidenceMonths:
+      typeof raw.donorPriorHouseholdResidenceMonths === "string" && /^\d+$/.test(raw.donorPriorHouseholdResidenceMonths)
+        ? raw.donorPriorHouseholdResidenceMonths
+        : "",
     exclusionDeclared: {
       expropriationWithin2Years: !!excl.expropriationWithin2Years,
       /**

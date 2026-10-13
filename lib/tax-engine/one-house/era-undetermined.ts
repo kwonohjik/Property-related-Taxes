@@ -82,9 +82,11 @@ import {
   GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID,
   GIFT_HOUSEHOLD_DONOR_DECEASED_ID,
   GIFT_HOUSEHOLD_NOT_REFLECTED_ID,
+  GIFT_HOUSEHOLD_PRIOR_RESIDENCE_ID,
   GIFT_HOUSEHOLD_REJOINED_ID,
   GIFT_HOUSEHOLD_UNCONFIRMED_ID,
   giftHouseholdNotice,
+  giftPriorResidenceNotice,
 } from "./gift-household-notice";
 import {
   checkReturnToFarmFacts,
@@ -101,6 +103,7 @@ export {
   GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID,
   GIFT_HOUSEHOLD_DONOR_DECEASED_ID,
   GIFT_HOUSEHOLD_NOT_REFLECTED_ID,
+  GIFT_HOUSEHOLD_PRIOR_RESIDENCE_ID,
   GIFT_HOUSEHOLD_REJOINED_ID,
   GIFT_HOUSEHOLD_UNCONFIRMED_ID,
 } from "./gift-household-notice";
@@ -130,6 +133,7 @@ export const ERA_UNDETERMINED_IDS = new Set([
   GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID,
   GIFT_HOUSEHOLD_DONOR_DECEASED_ID,
   GIFT_HOUSEHOLD_REJOINED_ID,
+  GIFT_HOUSEHOLD_PRIOR_RESIDENCE_ID,
   GIFT_HOUSEHOLD_NOT_REFLECTED_ID,
   FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
   "154-1-4ho-rental-registration-unverified",
@@ -180,6 +184,11 @@ export interface EraNoticeRelevance {
    * 미확인이면 「통산 성립」·「별도세대」 두 가정, 통산이 적용됐으면 「별도세대」, 증여자 사망이면 「통산 성립」 가정과 비교한다.
    */
   giftHouseholdDecides: () => boolean;
+  /**
+   * 증여 전 동일세대 거주 개월 고지(결정 #38-7) — 입력이 있으면 「통산하지 않았다면」, 입력이 없으면 「전부 거주했다면」을 가정한 반사실 판정이
+   * 현재 판정과 다를 때만 참. 필수가 아니다(생략하면 이 고지는 나지 않는다).
+   */
+  giftPriorResidenceDecides?: () => boolean;
   /** 귀농주택 ⑩4호·⑪·귀농 전 취득 일반주택 「모름」·미응답 고지(결정 #44) — 그 사실을 유리하게 채운 반사실 판정이 비과세인가 */
   ruralFarmFactsDecide?: () => boolean;
   /** 신규 주택 취득 경위 「모름」·미입력·3년 경과 예외 미선언 고지(결정 #43) — 경위를 일반 취득으로 채운 반사실 판정이 비과세인가 */
@@ -206,6 +215,10 @@ export function collectEraUndetermined(
    */
   const giftNotice = giftHouseholdNotice(input.giftHouseholdBasis, input.acquisitionCause);
   if (giftNotice && (relevance?.giftHouseholdDecides() ?? true)) out.push(giftNotice);
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월. 통산을 적용했거나(입력 > 0) 입력이 없어 통산하지 못했는데 거주했다면 결론이 달라지는 경우만 낸다.
+  //   게이트가 없는 호출(`relevance` 생략)은 결론을 가르는지 알 수 없으므로 말하지 않는다.
+  const priorResidenceNotice = giftPriorResidenceNotice(input.giftHouseholdBasis);
+  if (priorResidenceNotice && (relevance?.giftPriorResidenceDecides?.() ?? false)) out.push(priorResidenceNotice);
 
   /*
    * OH-22 · 결정 #36 — §154⑤ 단서 처분 이력 미답. 세대 유형으로 갈린다.

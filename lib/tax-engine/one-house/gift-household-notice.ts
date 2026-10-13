@@ -6,9 +6,12 @@
  * 판정 날짜는 여기서 고르지 않는다 — `gift-household-basis.ts`가 정한다.
  */
 import type { TransferTaxInput } from "../types/transfer.types";
+import { TRANSFER } from "../legal-codes";
 import {
   giftHouseholdConfirmedSeparate,
   giftHouseholdConsolidationStart,
+  giftHouseholdMaxPriorResidenceMonths,
+  giftHouseholdPriorResidenceMonths,
   giftHouseholdUnconfirmed,
   type GiftHouseholdBasis,
 } from "./gift-household-basis";
@@ -28,6 +31,17 @@ export const GIFT_HOUSEHOLD_NOT_REFLECTED_ID = "gift-household-not-reflected-unv
 export const GIFT_HOUSEHOLD_DONOR_DECEASED_ID = "gift-household-donor-deceased-unverified";
 /** 증여 뒤 이혼했다가 같은 사람과 재결합해 통산 없이 계산했고, 통산하면 결론이 달라진다 (결정 #34 조건 · #38-6). */
 export const GIFT_HOUSEHOLD_REJOINED_ID = "gift-household-rejoined-unverified";
+/**
+ * 증여 전 동일세대 거주 개월(결정 #38-7)이 비과세 거주요건 결론을 가른다 — 통산해 판정했거나(입력 > 0), 입력이 없어 통산하지 못했는데 거주했다면 달라진다.
+ * 통산의 정면 해석(주택 전부 증여·조정대상지역 거주요건)을 확인하지 못해 확인 필요다.
+ */
+export const GIFT_HOUSEHOLD_PRIOR_RESIDENCE_ID = "gift-household-prior-residence-unverified";
+
+/** 증여 전 동일세대 거주 통산의 근거와 한계 — 두 고지 문구(비과세 · 표2)가 같은 문장을 쓴다. 국세청·법원 입장을 단정하지 않는다. */
+const PRIOR_RESIDENCE_BASIS =
+  "서면인터넷방문상담4팀-912(2005.6.10.)는 동일세대원인 가족에게 증여한 뒤 그 수증자가 양도하는 경우 증여자의 보유기간 및 거주기간을 통산해 " +
+  "비과세 여부를 판정한다고 답했으나, 배우자 지분 증여를 다룬 2005년 사안이라 주택 전부 증여나 현재의 조정대상지역 거주요건을 정면으로 다룬 " +
+  "해석은 확인하지 못했습니다.";
 
 /**
  * 세대 사실 상태에 맞는 확인 필요 고지. 결론을 가르는지는 호출부가 `giftHouseholdFactDecides`로 따로 본다.
@@ -123,4 +137,46 @@ export function giftHouseholdFactDecides(
     return separate() !== base || (c !== undefined && c !== base);
   }
   return false;
+}
+
+/**
+ * 증여 전 동일세대 거주 개월(`priorHouseholdResidenceMonths`)의 확인 필요 고지 — 통산이 성립한 경우에만. 결론을 가르는지는 호출부가
+ * `giftPriorResidenceDecides`로 따로 본다. 입력 0(거주한 적 없음)은 고지가 없다.
+ */
+export function giftPriorResidenceNotice(gift: GiftHouseholdBasis | undefined): { id: string; reason: string } | undefined {
+  if (!gift || !giftHouseholdConsolidationStart(gift) || gift.priorHouseholdResidenceMonths === 0) return undefined;
+  const applied = giftHouseholdPriorResidenceMonths(gift);
+  const statute = `${TRANSFER.ONE_HOUSE_REQUIREMENT}①`;
+  return gift.priorHouseholdResidenceMonths === undefined
+    ? {
+        id: GIFT_HOUSEHOLD_PRIOR_RESIDENCE_ID,
+        reason:
+          "증여자와 계속 같은 세대였다고 입력했지만 증여 전 동일세대로 이 주택에 거주한 기간(개월)이 입력되지 않아, 증여 전 거주기간은 통산하지 않고 " +
+          `증여일 이후 거주만으로 ${statute}의 거주요건을 판정했습니다. 증여 전에 같은 세대로 거주한 기간이 있다면 통산 여부에 따라 비과세 결론이 달라질 수 있습니다. ` +
+          `${PRIOR_RESIDENCE_BASIS} 거주한 기간이 있다면 그 개월 수를 입력하고 확인이 필요합니다.`,
+      }
+    : {
+        id: GIFT_HOUSEHOLD_PRIOR_RESIDENCE_ID,
+        reason:
+          `증여 전 동일세대 거주기간 ${applied}개월을 ${statute}의 거주요건에 통산해 판정했습니다. ${PRIOR_RESIDENCE_BASIS} ` +
+          "통산 여부에 따라 비과세 결론이 달라지므로 확인이 필요합니다. 이 통산은 비과세 거주요건에만 쓰고 장기보유특별공제(표2 대상 판정 포함)에는 쓰지 않았습니다.",
+      };
+}
+
+/**
+ * 증여 전 동일세대 거주 개월을 바꾼 **반사실 판정**이 현재 판정(`base`)과 다른가 — 고지 게이트.
+ * 입력이 있으면 「통산하지 않았다면」(0개월), 입력이 없으면 「세대 보유 시작일부터 증여일까지 전부 거주했다면」(상한)과 비교한다.
+ * 반사실 입력은 개월이 확정(0 또는 상한)이라 이 고지를 다시 만들지 않는다 — 재귀 깊이가 2를 넘지 않는다.
+ */
+export function giftPriorResidenceDecides(
+  g: GiftHouseholdBasis,
+  base: string,
+  verdictOf: (basis: GiftHouseholdBasis) => string,
+): boolean {
+  if (g.householdDateStrict || !giftHouseholdConsolidationStart(g) || g.priorHouseholdResidenceMonths === 0) return false;
+  if (g.priorHouseholdResidenceMonths === undefined) {
+    const max = giftHouseholdMaxPriorResidenceMonths(g);
+    return max > 0 && verdictOf({ ...g, priorHouseholdResidenceMonths: max }) !== base;
+  }
+  return giftHouseholdPriorResidenceMonths(g) > 0 && verdictOf({ ...g, priorHouseholdResidenceMonths: 0 }) !== base;
 }

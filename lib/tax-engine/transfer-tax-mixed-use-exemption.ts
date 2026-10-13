@@ -24,7 +24,12 @@ import {
 import { meetsOneHouseHoldingResidence, resolveDeemedOneHouseBy155 } from "./transfer-tax-exemption";
 import { resolveExemptionHoldingStartDate } from "./transfer-tax-exemption-holding";
 import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
-import { giftHouseholdFactDecides, giftHouseholdNotice } from "./one-house/gift-household-notice";
+import {
+  giftHouseholdFactDecides,
+  giftHouseholdNotice,
+  giftPriorResidenceDecides,
+  giftPriorResidenceNotice,
+} from "./one-house/gift-household-notice";
 import {
   qualifiesCulturalHeritageHouse,
   qualifiesRuralHouse,
@@ -407,6 +412,21 @@ export function judgeMixedUseOneHouseExemption(
     )
   ) {
     warnings.push(giftNotice.reason);
+  }
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월 고지. 같은 문구·같은 반사실 규칙(`gift-household-notice.ts`). 개월을 바꾼 §154① 판정이 결론을 가를 때만.
+  const giftPriorNotice = giftPriorResidenceNotice(giftBasis);
+  if (
+    giftBasis &&
+    giftPriorNotice &&
+    isOneHouseholdForHouseCount &&
+    houseCountOk &&
+    !isUnregistered &&
+    !clause2Excluded &&
+    giftPriorResidenceDecides(giftBasis, String(meetsOneHouseRequirements), (b) =>
+      String(meetsOneHouseHoldingResidence({ ...exemptionReqInput, giftHouseholdBasis: b }, oneHouseSpecialRules.one_house_exemption)),
+    )
+  ) {
+    warnings.push(giftPriorNotice.reason);
   }
   // §155⑥⑦⑧ 의제가 비과세를 연 경우 — 겸용주택에 이 특례를 적용한 정면 해석례가 없어 사실대로 알린다(S08-3).
   if (!houseCountOkWithoutSpecial155 && special155Basis !== undefined && isOneHouseExempt) {

@@ -90,6 +90,11 @@ export const propertyBaseShape = {
   giftSameHouseholdContinuous: z.boolean().optional(),
   giftHouseholdHoldingStartDate: z.string().date().optional(),
   /**
+   * 증여 전 증여자와 같은 세대로 이 주택에 거주한 기간(개월) — §154① 비과세 거주요건에만 통산한다(결정 #38-7). 미전송 = 미답.
+   * `giftSameHouseholdContinuous === true`일 때만 보낸다(refine) — 세대 보유 시작일부터 증여일까지의 개월 수를 넘을 수 없다.
+   */
+  giftPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
+  /**
    * 증여자가 양도 전에 사망했다 / 증여 뒤 이혼했다가 같은 사람과 재결합했다 — 둘 다 「계속 같은 세대」를 묻지 않고 통산 없이 계산하며
    * 엔진이 확인 필요를 고지한다(결정 #34 조건 · #38-6). 재결합이 배우자 증여의 사실인지는 ⑧(`giftHouseholdFactErrors`)만 막는다 —
    * 증여자와의 관계는 API 본문에 실리지 않아 이 스키마에는 묶는 refine이 없다. 직접 호출로 비배우자에게 true를 보내도 통산하지 않는
@@ -493,6 +498,8 @@ export const propertyBaseShape = {
     /** 결정 #33·#34 — 증여일부터 양도일까지 증여자와 계속 같은 세대(미전송 = 미확인) */
     donorSameHouseholdContinuous: z.boolean().optional(),
     donorHouseholdHoldingStartDate: z.string().date().optional(),
+    /** 결정 #38-7 — 증여 전 동일세대 거주 개월(§154① 비과세 거주요건에만 통산). 미전송 = 미답, 0 = 거주한 적 없음 */
+    donorPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
     /** 결정 #38-6 — 증여 뒤 이혼했다가 같은 배우자와 재결합(배우자 증여만). 「아니오」로 계산하고 확인 필요를 고지한다 */
     donorRejoinedAfterDivorce: z.boolean().optional(),
     /**

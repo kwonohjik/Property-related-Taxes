@@ -101,6 +101,7 @@ export function calcGiftHouseholdBasis(asset: AssetForm, scope: GiftHouseholdSco
         donorAcquisitionDate,
         donorSameHouseholdContinuous: fact.donorSameHouseholdContinuous,
         donorHouseholdHoldingStartDate: toOptionalDate(fact.donorHouseholdHoldingStartDate),
+        donorPriorHouseholdResidenceMonths: fact.donorPriorHouseholdResidenceMonths,
         donorDeceased: c.donorDeceased || undefined,
         donorRelation: c.donorRelation || undefined,
       },
@@ -121,6 +122,7 @@ export function calcGiftHouseholdBasis(asset: AssetForm, scope: GiftHouseholdSco
     donorAcquisitionDate,
     continuousSameHousehold: fact.giftSameHouseholdContinuous,
     householdHoldingStartDate: fact.giftSameHouseholdContinuous === true ? toOptionalDate(fact.giftHouseholdHoldingStartDate) : undefined,
+    priorHouseholdResidenceMonths: fact.giftSameHouseholdContinuous === true ? fact.giftPriorHouseholdResidenceMonths : undefined,
     donorDeceased: fact.giftDonorDeceased === true ? true : undefined,
     rejoinedAfterDivorce: fact.giftRejoinedAfterDivorce === true ? true : undefined,
   };

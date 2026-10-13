@@ -49,6 +49,9 @@ export function giftHandoffAsset(asset: AssetForm, transferDate: string): AssetF
       donorSameHousehold: asset.giftDonorDeceased ? "" : asset.giftSameHousehold,
       donorHouseholdHoldingStartDate:
         asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased ? asset.giftHouseholdHoldingStartDate : "",
+      // 결정 #38-7 — 증여 전 동일세대 거주 개월도 같은 사실로 넘긴다(「예」일 때만).
+      donorPriorHouseholdResidenceMonths:
+        asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased ? asset.giftPriorHouseholdResidenceMonths : "",
     },
   };
 }

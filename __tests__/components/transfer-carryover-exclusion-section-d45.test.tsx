@@ -33,6 +33,7 @@ function renderSection(over: Partial<React.ComponentProps<typeof CarryoverGiftEx
       spouseGiftOneHouseAtGiftDate={false}
       donorSameHousehold=""
       donorHouseholdHoldingStartDate=""
+      donorPriorHouseholdResidenceMonths=""
       donorAcquisitionDate="2010-03-01"
       showHouseholdFact={false}
       showSpouseOneHouseFact
