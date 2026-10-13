@@ -6,7 +6,7 @@
  *
  * | # | 층 | 주장 |
  * |---|---|---|
- * | P-1~P-9 | 평가기 | 양성 · 취득기간 경계 · 양도일 선후 · 가액 한도 연혁 · 관심지역 · 동일 시·군·구(코드 개편 별칭) · 모름은 불성립 + 확인 필요 |
+ * | P-1~P-9 | 평가기 | 양성 · 취득기간 경계 · 양도일 선후 · 가액 한도 연혁 · 관심지역(양도일 2026-02-27 경계) · 동일 시·군·구(코드 개편 별칭) · 모름은 불성립 + 확인 필요 |
  * | P-10~P-13 | 평가기 | 취득 전 2채 이상 · 종전 주택 권리 유래 · 겹침 · 이중 차감 |
  * | R-* | 판정 메뉴 route | D1·D2 비과세 고정(④ 토글 무관) · 12억 초과 안분 · 모름 + 확인 필요 · 결론 무관이면 고지 없음 · 중과 15호 추종 |
  * | RS-* | 판정 메뉴 route — 입주권 양도 | §89①4호 가·나목 「다른 주택」에서도 뺀다 · 12억 초과 안분 · 모름 + 확인 필요(결론을 가를 때만) |
@@ -133,16 +133,24 @@ describe("P-4 가액 한도 연혁 (취득일 기준)", () => {
   });
 });
 
-describe("P-5 인구감소관심지역 — 법률 부칙 2025.11.28. · 시행령 2호 신설 2026.2.27.", () => {
+describe("P-5 인구감소관심지역 — 법률 부칙 2025.11.28. · 시행령 2호 신설 2026.2.27.(적용례 없음 → 양도일 기준)", () => {
   const ci = (acq: string) => ({ regionCode: GANGNEUNG, acquisitionDate: D(acq), acquisitionOfficialPrice: 400_000_000 });
-  it("2025-11-27 취득 → 후보 아님 · 2025-11-28~2026-02-26 → 시행령 부칙 미확인이라 불성립 + 확인 필요 · 2026-02-27 → 적격", () => {
+  it("취득 2025-11-27 → 후보 아님(법률 부칙 제14조) · 2025-11-28 → 양도일이 2026-02-27 이후면 적격", () => {
     expect(run({}, ci("2025-11-27")).entries).toHaveLength(0);
-    for (const d of ["2025-11-28", "2026-02-26"]) {
-      const r = run({}, ci(d));
-      expect(eligible(r)).toBe(0);
-      expect(unconfirmed(r)).toHaveLength(1);
+    for (const d of ["2025-11-28", "2026-02-26", "2026-02-27"]) expect(eligible(run({}, ci(d))), d).toBe(1);
+  });
+  it("양도일 경계 — 갭 구간 취득(2025-11-28~2026-02-26)을 2026-02-26 이전에 양도하면 불성립 + 확인 필요 · 2026-02-27부터는 적격", () => {
+    for (const acq of ["2025-11-28", "2026-01-15", "2026-02-25"]) {
+      const before = run({ transferDate: D("2026-02-26") }, ci(acq));
+      expect(eligible(before), `${acq} 양도 2026-02-26`).toBe(0);
+      expect(unconfirmed(before)).toHaveLength(1);
+      expect(unconfirmed(before)[0].reason).toContain("2026.2.27.");
+      expect(unconfirmed(before)[0].reason).toContain("조특령 §68의2①");
+      expect(eligible(run({ transferDate: D("2026-02-27") }, ci(acq))), `${acq} 양도 2026-02-27`).toBe(1);
     }
-    expect(eligible(run({}, ci("2026-02-27")))).toBe(1);
+  });
+  it("양도일 경계는 관심지역에만 걸린다 — 인구감소지역(1호)은 2026-02-26 양도도 적격", () => {
+    expect(eligible(run({ transferDate: D("2026-02-26") }, { acquisitionDate: D("2025-12-01") }))).toBe(1);
   });
   it("관심지역은 4억 단일(수도권 밖이어도 9억이 아니다)", () => {
     expect(run({}, { ...ci("2026-03-01"), acquisitionOfficialPrice: 400_000_001 }).entries).toHaveLength(0);
@@ -466,6 +474,22 @@ const RIGHT_ASSET = {
 const rightMenu = (house: Record<string, unknown> = {}, top: Record<string, unknown> = {}) =>
   menu(house, { transferDate: "2026-06-15", ...top }, RIGHT_ASSET);
 
+describe("RS-7 판정 메뉴 route(입주권 양도) — 관심지역 갭 구간 취득은 양도일 2026-02-27 경계 (결정 #42-3)", () => {
+  // 입주권 양도는 일시적 2주택(§155①)이 받쳐 주지 않아 §71의2 적용 여부가 결론을 가른다.
+  const gap = { region: "non_capital", regionCode: GANGNEUNG, acquisitionDate: "2025-12-01", acquisitionOfficialPrice: "300000000" };
+  it("2026-02-27 양도 → 가목 비과세 · 명세에 §71의2 행 / 2026-02-26 양도 → 과세 + 확인 필요 (경계 ±1일)", async () => {
+    const on = await observeCase(rightMenu(gap, { transferDate: "2026-02-27" }));
+    expect(on.validationErrors).toEqual([]);
+    expect(on.isExempt).toBe(true);
+    expect(on.excludedHouses).toEqual([expect.objectContaining({ houseId: "p", legalBasis: "조특법 §71의2①" })]);
+    expect(on.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
+    const before = await observeCase(rightMenu(gap, { transferDate: "2026-02-26" }));
+    expect(before.isExempt).toBe(false);
+    expect(before.excludedHouses).toEqual([]);
+    expect(before.undetermined).toContain("71-2-pop-decline-unconfirmed");
+  });
+});
+
 describe("RS 판정 메뉴 — 입주권 양도에도 같은 의제 (결정 #42 「입주권 양도(§89①4호)에도 적용」)", () => {
   it("RS-1 평창 인구감소지역주택(2억) + 입주권 양도 8억 → 가목 비과세 · 명세에 §71의2 행 (수정 전 과세 · 제외 0건)", async () => {
     const o = await observeCase(rightMenu());
@@ -747,6 +771,17 @@ describe("CR 계산기 입주권 양도 — 판정 메뉴와 같은 사실, 같�
       menu({ popDeclSoleAtAcquisition: "unknown" }, { transferDate: "2026-06-15" }, { ...RIGHT_ASSET, redevExemptionEligibleAtApproval: "no" }),
     );
     expect((moot.r.warnings ?? []).join(" ")).not.toContain("§71의2①");
+  });
+
+  it("CR-5 관심지역 갭 구간 취득(2025-12-01) — 양도일 2026-02-27이면 비과세 0 · 명세 §71의2 / 2026-02-26이면 과세 + 확인 필요 경고 (결정 #42-3 · 계산기 경로)", async () => {
+    const gap = { region: "non_capital", regionCode: GANGNEUNG, acquisitionDate: "2025-12-01", acquisitionOfficialPrice: "300000000" };
+    const on = await calcRight(rightMenu(gap, { transferDate: "2026-02-27" }));
+    expect(on.r.isExempt).toBe(true);
+    expect(on.r.totalTax).toBe(0);
+    expect(on.r.specialHouseExclusionDetail?.entries).toEqual([expect.objectContaining({ article: POP_DECLINE_71_2_ARTICLE, houseId: "p", eligible: true })]);
+    const before = await calcRight(rightMenu(gap, { transferDate: "2026-02-26" }));
+    expect(before.r.isExempt).toBe(false);
+    expect((before.r.warnings ?? []).filter((w) => w.includes("§71의2①(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다"))).toHaveLength(1);
   });
 
   it("CR-4 ⑤ 질문 노출 — 계산기는 주택·재개발 완공 아파트·조합원입주권 양도에서 연다 (분양권·토지는 닫는다)", () => {
