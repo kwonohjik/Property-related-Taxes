@@ -1,7 +1,7 @@
 /**
  * 상속 행의 「상속개시 당시 피상속인과 같은 세대였는가」 — 한 칸의 3상태 (결정 #42-2 합침).
  *
- * 이 답 하나가 두 규정에 쓰인다.
+ * 이 답 하나가 두 규정에 쓰인다(주택 행). 입주권·분양권 행은 §156의2⑥·§156의3④ 단서와 분양권 정의일(재산세제과-1033)에 같은 답을 쓴다.
  *  - 소득세법 시행령 §155② 단서(동일세대 상속은 상속주택 특례 배제)·§167의3①7호·§155⑦1호
  *  - 조세특례제한법 §71의2① 인구감소지역주택(별도세대로부터 상속받은 경우만 적용 — 국세청 해석)
  *
@@ -13,10 +13,11 @@
  *
  * ⑤ 위젯·④ API 변환·⑧ validate가 모두 이 leaf를 쓴다(3중 패턴 — 술어 사본 금지).
  */
-import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import type { HouseEntry, PresaleRightEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 export type DecedentHousehold = "separate" | "same" | "unknown";
 
+/** 주택 행과 입주권·분양권 행이 같은 세 칸을 쓴다 — 술어를 나누지 않는다. */
 type Row = Pick<HouseEntry, "decedentSameHouseholdAtInheritance" | "decedentHouseholdUnknown" | "decedentHouseholdSeparate">;
 
 /** 사용자가 고른 답 — 아직 고르지 않았으면 `undefined`(위젯이 아무것도 선택하지 않은 상태로 그린다). */
@@ -51,5 +52,18 @@ export function decedentHouseholdPatch(
     // 동거봉양·재상속 예외는 동일세대일 때만 의미가 있다
     parentalCareMergeInheritedHouse: v === "same" ? house.parentalCareMergeInheritedHouse : undefined,
     reInheritedFromSeparateHousehold: v === "same" ? house.reInheritedFromSeparateHousehold : undefined,
+  };
+}
+
+/** 입주권·분양권 행에 한 답을 쓰는 patch — 동거봉양 예외(§156의2⑥·§156의3④ 단서)는 동일세대일 때만 의미가 있다. */
+export function decedentHouseholdRightPatch(
+  v: DecedentHousehold,
+  right: Pick<PresaleRightEntry, "parentalCareMergeInheritedRight">,
+): Partial<PresaleRightEntry> {
+  return {
+    decedentSameHouseholdAtInheritance: v === "same" ? true : v === "separate" ? false : undefined,
+    decedentHouseholdUnknown: v === "unknown" ? true : undefined,
+    decedentHouseholdSeparate: v === "separate" ? true : undefined,
+    parentalCareMergeInheritedRight: v === "same" ? right.parentalCareMergeInheritedRight : undefined,
   };
 }

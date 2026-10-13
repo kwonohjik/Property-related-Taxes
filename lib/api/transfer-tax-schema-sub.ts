@@ -382,6 +382,7 @@ export const presaleRightSchema = z.object({
   decedentOwnedHouseAtDeath: z.boolean().optional(),
   decedentOwnedOtherRightTypeAtDeath: z.boolean().optional(),
   decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  decedentHouseholdUnconfirmed: z.boolean().optional(),
   parentalCareMergeInheritedRight: z.boolean().optional(),
   /** ⑫ 상속 분양권 — 피상속인 취득일(동일세대면 §89②·§104⑦ 2021.1.1. 적용례 기준일 — 재산세제과-1033) */
   decedentAcquisitionDate: z.string().date().optional(),

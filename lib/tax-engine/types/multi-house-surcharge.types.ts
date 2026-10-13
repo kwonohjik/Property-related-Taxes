@@ -519,6 +519,12 @@ export interface PresaleRight {
    */
   decedentSameHouseholdAtInheritance?: boolean;
   /**
+   * 피상속인과 같은 세대였는지 **모르거나 답하지 않았다**(주택 축 `HouseInfo.decedentHouseholdUnconfirmed`와 같은 규약).
+   * `decedentSameHouseholdAtInheritance`가 비어 있을 때만 의미 — 불성립 + 확인 필요로 읽는다(별도세대로 읽지 않는다).
+   * ⚠️ 이 키가 없는 입력(직접 호출·구 저장분)은 종전대로 미제공 = 별도세대로 읽는다.
+   */
+  decedentHouseholdUnconfirmed?: boolean;
+  /**
    * 같은 단서의 예외 — 동거봉양 합가로 2주택이 된 경우로서, 입주권은 **합치기 이전부터 보유하던 주택이
    * 조합원입주권으로 전환**된 경우(§156의2⑥ 단서), 분양권은 **합치기 이전부터 보유하던 분양권**(§156의3④ 단서 — 전환 요건 없음).
    * `decedentSameHouseholdAtInheritance === true`일 때만 의미.

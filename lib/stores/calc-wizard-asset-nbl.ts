@@ -547,8 +547,15 @@ export interface PresaleRightEntry {
   decedentOwnedHouseAtDeath?: boolean;
   /** 피상속인이 **다른 종류의 권리**를 소유했는가 — ⑮ 선택이 이 요건만 면제한다 */
   decedentOwnedOtherRightTypeAtDeath?: boolean;
-  /** ⑥ 단서 — 상속개시 당시 상속인·피상속인이 1세대였는가 */
+  /**
+   * ⑥ 단서 — 상속개시 당시 상속인·피상속인이 1세대였는가. 한 칸의 3상태(별도세대·동일세대·모름)로 답한다 —
+   * 이 boolean은 동일세대(true)만 확정하고, 모름·별도세대 표시는 아래 두 칸이 맡는다(`decedent-household` leaf, 주택 행과 같은 규약 · #42-2).
+   */
   decedentSameHouseholdAtInheritance?: boolean;
+  /** 「모름」을 골랐다 — 미답과 같이 읽는다(모름 = 불성립 + 확인 필요). */
+  decedentHouseholdUnknown?: boolean;
+  /** 「별도세대」를 직접 골랐다 — boolean `false`만으로는 답이 아니다(낡은 기본값과 구별되지 않는다). */
+  decedentHouseholdSeparate?: boolean;
   /** 단서의 예외 — 입주권: §156의2⑥ 단서(합가 전부터 보유하던 주택이 입주권으로 전환된 경우) · 분양권: §156의3④ 단서(합치기 이전부터 보유하던 분양권, 전환 요건 없음) */
   parentalCareMergeInheritedRight?: boolean;
   /**

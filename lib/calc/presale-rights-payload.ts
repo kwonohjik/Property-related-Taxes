@@ -25,6 +25,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { decedentHouseholdEngineBoolean, decedentHouseholdOf } from "@/lib/calc/decedent-household";
 import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -54,6 +55,8 @@ export interface PresaleRightPayloadItem {
   decedentOwnedHouseAtDeath?: boolean;
   decedentOwnedOtherRightTypeAtDeath?: boolean;
   decedentSameHouseholdAtInheritance?: boolean;
+  /** 피상속인 세대를 모름·미답으로 답했다 — 엔진이 불성립 + 확인 필요로 읽는다(주택 행 `decedentHouseholdUnconfirmed`와 같은 규약). */
+  decedentHouseholdUnconfirmed?: boolean;
   parentalCareMergeInheritedRight?: boolean;
   decedentAcquisitionDate?: string;
   /** 상속받은 조합원입주권의 상속개시일 — 입주권·상속 행 전용(보유 판정 전용 · 결정 #8). */
@@ -115,7 +118,10 @@ export function buildPresaleRightsPayload(
       isLargestCoInheritedShareholder: p.isLargestCoInheritedShareholder,
       decedentOwnedHouseAtDeath: p.decedentOwnedHouseAtDeath,
       decedentOwnedOtherRightTypeAtDeath: p.decedentOwnedOtherRightTypeAtDeath,
-      decedentSameHouseholdAtInheritance: p.decedentSameHouseholdAtInheritance,
+      // 피상속인 세대는 한 칸의 3상태다 — 별도세대·동일세대는 boolean으로, 모름·미답은 확인 표시로 싣는다(주택 행 ④와 같은 leaf).
+      // 상속 행일 때만 싣는다(상속을 해제한 행에 남은 값이 엔진에 닿지 않게).
+      decedentSameHouseholdAtInheritance: p.isInherited ? decedentHouseholdEngineBoolean(p) : undefined,
+      decedentHouseholdUnconfirmed: p.isInherited && decedentHouseholdOf(p) === "unknown" ? true : undefined,
       parentalCareMergeInheritedRight: p.parentalCareMergeInheritedRight,
       // 상속 분양권의 피상속인 취득일 — 분양권·상속 행에서만(입주권·상속 해제 행에 남은 값은 싣지 않는다).
       ...(p.type === "presale_right" && p.isInherited && p.decedentAcquisitionDate

@@ -24,6 +24,8 @@ export type Article89Clause2Trace = {
   mergeConfirmNotes?: string[];
   mergeExclusionReasons?: string[];
   rights?: { kind: "after" | "unknown"; right: PresaleRight; newBuildAllowed: boolean; inheritedDate?: Date };
+  /** 피상속인과 같은 세대였는지 모르거나 답하지 않아 상속 예외를 적용하지 않은 권리 종류 — 불성립 + 확인 필요(주택 축 `isHouseholdUnconfirmed`와 같은 규약). */
+  householdUnconfirmed?: PresaleRight["type"][];
   houses?: { kind: "after" | "unknown"; rightTypes: PresaleRight["type"][] };
 };
 
@@ -49,6 +51,19 @@ export function withClause2TraceNotes(r: Article89Clause2Result, trace: Article8
         `상속받은 ${name}의 상속개시일이 없어 양도하는 주택이 ${general}인지 판정하지 못했고 ${clause}를 적용하지 않았습니다(확인 필요) — 상속개시일을 입력하면 판정합니다.`,
       );
     }
+  }
+  if (trace.householdUnconfirmed && trace.householdUnconfirmed.length > 0) {
+    const redev = trace.householdUnconfirmed.includes("redevelopment_right");
+    const presale = trace.householdUnconfirmed.includes("presale_right");
+    const clause = [redev && `${TRANSFER.RIGHT_ONE_HOUSE_SPECIAL} ⑥ 단서`, presale && `${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL} ④ 단서`]
+      .filter(Boolean)
+      .join("·");
+    const name = [redev && "조합원입주권", presale && "분양권"].filter(Boolean).join("·");
+    basis ??= redev ? `${TRANSFER.RIGHT_ONE_HOUSE_SPECIAL} ⑥` : `${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL} ④`;
+    confirm.push(
+      `상속받은 ${name}을 받을 때 피상속인과 같은 세대였는지 모르거나 답하지 않아 ${clause}의 상속 예외를 적용하지 않았습니다(확인 필요) — ` +
+        "「분양권·입주권」 입력에서 별도세대·동일세대를 고르면 판정합니다.",
+    );
   }
   if (trace.houses) {
     // 세대가 가진 권리 종류의 조문만 말한다(입주권 → §156의2⑦1호, 분양권 → §156의3⑤1호) — 확인해도 소용없는 조문을 가리키지 않는다.
@@ -161,6 +176,13 @@ export function qualifyInheritedRight(
 
   // ── 공동상속: ⑦3호가목 / ⑤5호가목 — 최대지분 상속인이 소유한 것으로 본다 ──
   if (right.isCoInherited === true && right.isLargestCoInheritedShareholder !== true) {
+    return "disqualified";
+  }
+
+  // ── 피상속인 세대를 모르거나 답하지 않았다 — 모름 = 혜택 불성립 + 확인 필요(2026-10-04 원칙 1, 주택 행 §155②와 같은 규약).
+  //    답은 한 칸의 3상태다. 미답이 별도세대로 읽혀 특례가 조용히 적용되던 것을 막는다.
+  if (right.decedentSameHouseholdAtInheritance === undefined && right.decedentHouseholdUnconfirmed === true) {
+    trace.householdUnconfirmed = [...(trace.householdUnconfirmed ?? []), right.type];
     return "disqualified";
   }
 

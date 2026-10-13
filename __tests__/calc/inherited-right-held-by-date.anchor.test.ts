@@ -38,7 +38,7 @@ const rightRow = (asset: Record<string, unknown>, right: Record<string, unknown>
     contractTotalPrice: "800000000",
     asset: { assetKind: "housing", acquisitionDate: "2015-06-01", ...asset },
     presaleRights: [
-      { id: "r", type: "redevelopment_right", memberOrigin: "successor", acquisitionDate: "2017-01-10", region: "capital", isInherited: true, ...right },
+      { id: "r", type: "redevelopment_right", memberOrigin: "successor", acquisitionDate: "2017-01-10", region: "capital", isInherited: true, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, ...right },
     ],
     ...extra,
   } as never,
