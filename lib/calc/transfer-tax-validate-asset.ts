@@ -33,6 +33,7 @@ import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriatio
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { validateDepreciation } from "./transfer-tax-validate-depreciation";
 import { validateHousingExcessSplitInputs } from "./transfer-tax-validate-housing-excess";
+import { validateSeparateLandDateRequired } from "./separate-land-date-required";
 import { qualifiesWinWinRental } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { toOptionalDate } from "@/lib/api/date-coerce";
@@ -254,6 +255,11 @@ export function validateAssetEntry(
       }
     }
   }
+
+  // G2 후속 — 「토지·건물 취득일 다름」 ON인데 토지 취득일이 비면 같은 날 취득으로 조용히 계산됐다. 일반건물·겸용처럼 필수로 받는다.
+  //   파트 방식 라디오·배율 초과분 검사보다 **앞**이다 — 토지 취득일이 정해져야 같은 날인지 다른 날인지(어느 방식이 정본인지) 알 수 있다.
+  const separateLandDateError = validateSeparateLandDateRequired(a, label);
+  if (separateLandDateError) return separateLandDateError;
 
   // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
   const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index === 0);

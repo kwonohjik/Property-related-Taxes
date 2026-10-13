@@ -24,6 +24,7 @@ import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { LAND_CAUSE_META } from "./land-cause-meta";
 import { buildingCauseDateNotices, landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
+import { separateLandDateRequired } from "@/lib/calc/separate-land-date-required";
 
 const MIN_ACQ_DATE = "1985-01-01";
 
@@ -186,7 +187,8 @@ export function CompanionAcqDateSection(props: {
             <FieldCard
               label={landCause ? `토지 ${LAND_CAUSE_META[landCause].dateLabel}` : "토지 취득일"}
               field="landAcquisitionDate"
-              required={!!landCause || !!buildingCause}
+              // 필수 표시 — D1·D2 원인 모드 + 주택·건물의 일반 분리 ON(⑧ `validateSeparateLandDateRequired`와 같은 술어)
+              required={!!landCause || !!buildingCause || (!!p.asset && separateLandDateRequired(p.asset))}
               trailing={isLandDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
               <DateInput
