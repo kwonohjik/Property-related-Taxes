@@ -99,7 +99,6 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
   if (!isRedevApt(input)) return input;
   const redev = input.redevelopment!;
   const landContributed = isLandContributedOriginalApt(input);
-  const conversion = landContributed ? redevRightConversion(redev) : undefined;
   return {
     ...input,
     propertyType: "housing",
@@ -110,12 +109,12 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
       ? {
           // 보유 기산일 = 사용승인일(G3-4).
           exemptionHoldingStartDate: redev.completionDate,
-          // #12 — 2017.8.3. 경과규정은 **입주권 전환 완료일**(인가일·분양계약일 중 늦은 날)이 2017.8.2. 이전일 때만 면제된다
-          //   (서면-2018-법령해석재산-1711 · 서면-2022-법규재산-4321). 분양계약일을 모르면 전환 완료일을 알 수 없어 면제하지 않는다 —
-          //   사용승인일을 경과규정 기준일로 둔다(사용승인일이 2017.8.2. 이전이면 그 자체로 면제).
-          residenceTransitionAcquisitionDate: conversion ?? redev.completionDate,
-          // 전환 완료일 현재 조정대상지역이 아니면 거주요건 면제 — `describeOneHouseResidenceRequirement`가 읽는다.
-          residenceRightConversionDate: conversion,
+          // #12 — 2017.8.3. 경과규정은 **입주권 전환일 = 관리처분계획 인가일**이 2017.8.2. 이전일 때 면제된다
+          //   (서면-2018-법령해석재산-1711 · 서면-2022-법규재산-4321). 원조합원에게는 분양계약일이라는 개념이 없다 —
+          //   인가일에 보유 부동산(토지·건물)이 입주권으로 바뀐다(사용자 결정 2026-10-13).
+          residenceTransitionAcquisitionDate: redev.approvalDate,
+          // 인가일 현재 조정대상지역이 아니면 거주요건 면제 — `describeOneHouseResidenceRequirement`가 읽는다.
+          residenceRightConversionDate: redev.approvalDate,
         }
       : {}),
     residencePeriodMonths: resolveAptResidenceMonths({
@@ -142,17 +141,6 @@ export function redevNewBuildRightAcquisitionDate(
   if (redev.isSuccessorMember === true) return input.acquisitionDate;
   if (isLandContributedOriginalApt(input)) return redev.approvalDate;
   return undefined;
-}
-
-/**
- * 토지 출자 원조합원 완공APT의 **입주권 전환 완료일** — 관리처분계획 인가일과 분양계약일 중 늦은 날 (#12).
- * 분양계약일을 입력하지 않았으면 `undefined`(전환 완료일을 알 수 없다 — 면제 예외 불성립).
- */
-export function redevRightConversion(
-  redev: Pick<NonNullable<TransferTaxInput["redevelopment"]>, "approvalDate" | "rightContractDate">,
-): Date | undefined {
-  if (!redev.rightContractDate) return undefined;
-  return redev.rightContractDate > redev.approvalDate ? redev.rightContractDate : redev.approvalDate;
 }
 
 /**

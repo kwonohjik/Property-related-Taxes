@@ -722,8 +722,8 @@ export interface TransferTaxInput {
   /** §154① 거주요건 경과규정(2017.8.3) 판정용 실제 취득일 — 이월과세 시 수증자 취득일(보유기산일과 별개). 미지정 시 acquisitionDate */
   residenceTransitionAcquisitionDate?: Date;
   /**
-   * §154① 거주요건 **입주권 전환 시점 예외** 판정일 (#12) — 토지만 출자한 원조합원 완공APT에서 입주권 전환 완료일
-   * (인가일과 분양계약일 중 늦은 날). 그 날 현재 조정대상지역이 아니었으면 사용승인일에 조정대상지역이어도 거주요건이 없다
+   * §154① 거주요건 **입주권 전환 시점 예외** 판정일 (#12) — 토지만 출자한 원조합원 완공APT에서 입주권 전환일
+   * (= 관리처분계획 인가일 — 그날 보유 부동산이 입주권으로 바뀐다). 그 날 현재 조정대상지역이 아니었으면 사용승인일에 조정대상지역이어도 거주요건이 없다
    * (재산세제과-584). 판정 입력 번역(`translateRedevAptForHousingJudgment`)이 싣는 **엔진 내부** 값이다 — 폼·Zod 입력이 아니다.
    */
   residenceRightConversionDate?: Date;

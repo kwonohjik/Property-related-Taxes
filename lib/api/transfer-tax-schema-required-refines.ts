@@ -139,7 +139,6 @@ type PrimaryLike = {
     subject?: string;
     isSuccessorMember?: boolean;
     completionDate?: string;
-    rightContractDate?: string;
     newHouseResidenceMonths?: number;
     originalAssetType?: string;
     receiveOnlyMode?: boolean;
@@ -222,10 +221,6 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   // #12 — 승계조합원과 같은 축: 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 준공 전 거주는 세지 않는다(⑧ 같은 leaf).
   const landContributedApt =
     rd?.subject === "apt" && rd.isSuccessorMember !== true && rd.originalAssetType === "land" && rd.receiveOnlyMode !== true;
-  // 조합원 분양계약일 ≤ 사용승인일 (⑧ `validateRedevelopmentAsset` 미러)
-  if (rd && landContributedApt && rd.rightContractDate && rd.completionDate && rd.rightContractDate > rd.completionDate) {
-    issue(["redevelopment", "rightContractDate"], "조합원 분양계약일은 사용승인일 이전이어야 합니다");
-  }
   if (rd && rd.subject === "apt" && (rd.isSuccessorMember === true || landContributedApt) && rd.completionDate) {
     const max = successorAptMaxResidenceMonths(toDate(rd.completionDate, "completionDate"), toDate(data.transferDate, "transferDate"));
     if (rd.newHouseResidenceMonths !== undefined) {
