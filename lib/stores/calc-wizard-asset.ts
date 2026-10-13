@@ -907,6 +907,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
        */
       terminatedRegistrationType: "" | "short_term" | "long_term_general";
       /**
+       * 말소 사유 — 다주택 중과 판정 전용(영 §167의3①2호 단서: 자동말소면 임대기간요건 간주 충족). "" = 미선택
+       * (자동말소로 보지 않고 확인 필요 고지). optional — 이 칸 신설 전 복원분(undefined)도 미선택과 같다.
+       */
+      terminationReason?: "" | "auto" | "voluntary";
+      /**
        * §167의3⑪ 기한 연장 사실 — 도출 목이 가·나·라·마이고 아파트일 때만 묻는다(§155㉓ 말소 경로 제외).
        * optional — 미입력·stale 복원분(undefined)은 「모름」(엔진 판정 보류). 범위: `apt-deadline-extension-scope.ts`.
        */

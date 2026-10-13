@@ -10,6 +10,7 @@
  * 의존: 단방향(-exclusion → -count). 본 파일은 -exclusion을 import하지 않음(순환 0).
  */
 
+import { rentalCancellationStatus } from "./rental-cancellation-deeming";
 import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isWithinDeadline } from "./civil-period";
@@ -237,7 +238,9 @@ const LEGACY_RENTAL_YEARS = 5;
 export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLongTermRental) return false;
 
-  if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
+  // 양도일 전 말소 — 자동말소(가·다~마목)만 §167의3①2호 단서로 임대기간요건을 갖춘 것으로 본다.
+  const cancellation = rentalCancellationStatus(house, transferDate);
+  if (cancellation === "not_deemed") return false;
 
   if (!house.rentalType) {
     return hasBasicRegistration(house) && calcRentalPeriodYears(house) >= LEGACY_RENTAL_YEARS;
@@ -249,7 +252,9 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
   const article = ARTICLE_BY_RENTAL_TYPE[house.rentalType];
   if (!passesRegistrationCap(house, article)) return false;
 
-  return checkRentalArticle(article, toNormalizedFromHouse(house, transferDate)).passed;
+  const r = checkRentalArticle(article, toNormalizedFromHouse(house, transferDate));
+  if (cancellation === "auto_deemed") return r.failCodes.every((c) => c === "RENTAL_PERIOD_SHORT");
+  return r.passed;
 }
 
 /**

@@ -24,6 +24,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
+import { RentalCancellationReasonField } from "@/components/calc/transfer/RentalCancellationReasonField";
 import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surcharge-count";
 import type { RentalDeclaration, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -129,10 +130,17 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
               onChange={(s) => patch({ rentalCancelledDate: s || undefined })}
             />
             <p className="text-caption text-muted-foreground/70">
-              말소 후 1년 이내 양도(사목)를 주장하려면 이 칸이 아니라 아래 유형에서 사목을 고르고
+              자진말소 후 1년 이내 양도(사목)를 주장하려면 이 칸이 아니라 아래 유형에서 사목을 고르고
               「자진·자동 말소일」에 적으세요.
             </p>
           </div>
+          {ltr.rentalCancelledDate && (
+            <RentalCancellationReasonField
+              testIdPrefix="selling-rental-cancel-reason"
+              value={ltr.rentalCancellationReason}
+              onChange={(v) => patch({ rentalCancellationReason: v })}
+            />
+          )}
 
           {/*
             🔴 명부 행과 같은 함정을 그대로 알린다(R20) — 등록이 미완비면 유형을 다 채워도

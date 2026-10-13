@@ -109,6 +109,12 @@ export type RentalUnitInput = {
    */
   registrationCancellationDate?: Date;
   /**
+   * 말소 사유 — 다주택 중과 판정(⑳ 불성립 시 카드 호를 명부 행으로 옮길 때)에만 쓴다. `auto` 자동말소(민특법 §6⑤)면
+   * 「소득세법 시행령」 §167의3①2호 단서로 임대기간요건을 갖춘 것으로 보고, `voluntary` 자진말소(§6①11호)·미제공은
+   * 간주하지 않는다(`rental-cancellation-deeming.ts`). ⑳㉓ 판정은 자진·자동을 가르지 않으므로 이 값을 보지 않는다.
+   */
+  terminationReason?: "auto" | "voluntary";
+  /**
    * §155㉓1호 자진말소 「같은 법(민특법) 제43조에 따른 **임대의무기간**의 2분의 1 이상」 판정용 —
    * 말소된 주택의 종전 「민간임대주택에 관한 특별법」 등록 유형(OH-39).
    * - `short_term`: 종전 민특법 §2 6호 단기민간임대주택 — 「4년 이상」 → 1/2 = 24개월

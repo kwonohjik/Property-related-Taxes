@@ -16,7 +16,10 @@
  * 카드에 없는 사실은 **불리한 쪽**으로 둔다(사용자 결정 2026-10-04):
  * - 소재지 코드 또는 (가액기준 지역이면) 양도 당시 기준시가 → 모른다 → 지역기준(REGION, 무조건 산입 — 1호 불산입을 주지 않는다).
  * - 취득일 → 모른다 → 양도일(§167의3⑨ 합가 차감 단서 「혼인 후 취득」에 걸리는 쪽).
- * - 말소 선언인데 말소일이 없다 → 양도일에 말소된 것으로 본다(2호 아님).
+ * - 말소 선언인데 말소일이 없다 → 양도일에 말소된 것으로 본다.
+ *
+ * 말소된 호는 말소 사유로 가른다(사용자 결정 2026-10-13, `rental-cancellation-deeming.ts`): 자동말소면 §167의3①2호 단서로
+ * 임대기간요건을 갖춘 것으로 보고 다른 요건으로 2호를 판정한다. 자진말소·사유 미선택은 2호로 보지 않는다(확인 필요 고지).
  */
 import type { HouseInfo, RentalHousingType } from "./types/multi-house-surcharge.types";
 import type { RentalUnitInput } from "./transfer-tax/rental-housing-exception/types";
@@ -101,7 +104,12 @@ function rowFor(unit: RentalUnitInput, index: number, transferDate: Date, rental
     hasContractDepositProof: unit.hasContractDepositProof,
     isExcludedShortToLongChange: unit.isExcludedShortToLongChange,
     rentalAptDeadlineExtension: unit.aptDeadlineExtension,
-    ...(unit.rentalAutoTermination ? { rentalCancelledDate: unit.registrationCancellationDate ?? transferDate } : {}),
+    ...(unit.rentalAutoTermination
+      ? {
+          rentalCancelledDate: unit.registrationCancellationDate ?? transferDate,
+          rentalCancellationReason: unit.terminationReason,
+        }
+      : {}),
   };
 }
 

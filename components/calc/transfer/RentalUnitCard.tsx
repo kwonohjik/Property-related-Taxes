@@ -473,10 +473,28 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
             onChange({
               ...unit,
               rentalAutoTermination: v,
-              ...(v ? {} : { terminatedRegistrationType: "", registrationCancellationDate: "" }),
+              ...(v ? {} : { terminatedRegistrationType: "", registrationCancellationDate: "", terminationReason: "" }),
             })
           }
         >
+          {/*
+            말소 사유 — ⑳㉓ 판정은 자진·자동을 가르지 않지만, ⑳이 불성립해 이 호를 다주택 중과 주택 수에 넣을 때는
+            자동말소만 「소득세법 시행령」 §167의3①2호 단서로 임대기간요건을 갖춘 것으로 본다(미선택 = 자동말소로 보지 않음).
+          */}
+          <FieldCard label="말소 사유" hint="다주택 중과 판정용 — 자동말소면 임대기간요건을 갖춘 것으로 봅니다 (소령 §167의3①2호 단서)">
+            <RadioCardGroup
+              name={`rental-termination-reason-${index}`}
+              data-testid={`rental-termination-reason-${index}`}
+              tone="violet"
+              layout="inline"
+              options={[
+                { value: "auto", label: "자동말소", description: "임대의무기간 종료일 말소 (민특법 §6⑤)", testId: `rental-termination-reason-auto-${index}` },
+                { value: "voluntary", label: "자진말소", description: "임대의무기간 내 말소 신청 (민특법 §6①11호)", testId: `rental-termination-reason-voluntary-${index}` },
+              ]}
+              value={unit.terminationReason ?? ""}
+              onChange={(v) => set("terminationReason", v)}
+            />
+          </FieldCard>
           {/*
             OH-39 — ㉓1호 「같은 법 제43조에 따른 임대의무기간의 2분의 1」은 소득세법 목별 임대기간요건
             (가목 5년 등)이 아니라 말소 전 민특법 등록 유형의 임대의무기간이다(종전 §2 5호 8년 · 6호 4년).

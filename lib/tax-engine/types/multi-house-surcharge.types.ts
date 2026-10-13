@@ -141,6 +141,11 @@ export interface HouseInfo {
   businessRegistrationDate?: Date;
   /** 임대사업자 말소일 (말소 시 중과 산정에 포함됨) */
   rentalCancelledDate?: Date;
+  /**
+   * 말소 사유 — `auto` 자동말소(민특법 §6⑤, 임대의무기간 종료일)면 가·다~마목은 §167의3①2호 단서로 임대기간요건을
+   * 갖춘 것으로 본다(`rental-cancellation-deeming.ts`). `voluntary` 자진말소(§6①11호)·미제공은 간주하지 않는다.
+   */
+  rentalCancellationReason?: "auto" | "voluntary";
   /** 임대사업자 자진·자동 말소일 (사목 G형 판정용) */
   rentalCancellationDate?: Date;
   /** 임대 시작일 */

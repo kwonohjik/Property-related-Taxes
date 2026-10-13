@@ -567,3 +567,124 @@ describe("L 지방 임대 호 — 영 §167의3①1호 (결정 #20 C 후속)", (
     expect(hasRestoreNotice(s.warnings)).toContain("확인 필요");
   });
 });
+
+/**
+ * #20 C 후속 — 말소된 임대 호(㉓)의 중과 2호 판정. 영 §167의3①2호 단서: 가·다~마목 장기임대주택이 자동말소(민특법 §6⑤)되면
+ * 임대의무기간이 끝난 날 임대기간요건을 갖춘 것으로 본다(말소 5년 뒤 일반주택 양도도 10호 — 서면-2022-법규재산-1999).
+ * 자진말소(§6①11호)·사유 미선택은 2호로 보지 않고, 자동말소였다면 결론이 달라질 때만 확인 필요 고지(사용자 결정 2026-10-13).
+ *
+ * 시료: 명부 없음 · 주택 수 1 · ⑳ 거주요건 불충족 · 가목 매입(2018.3.1. 등록) 단기 4년 → 2022.3.1. 말소 · 임대 48개월(가목 5년 미달).
+ */
+describe("M 말소된 임대 호 — 영 §167의3①2호 단서 (#20 C 후속)", () => {
+  const CANCELLED = "2022-03-01";
+  function cancelledCard(reason: "" | "auto" | "voluntary", over: Record<string, unknown> = {}): Form {
+    const f = withRental(form([], { householdHousingCount: "1", contractTotalPrice: "1,500,000,000" }));
+    f.assets[0].residencePeriodMonthsAsset = "0";
+    Object.assign(f.assets[0].rentalHousingException.rentalUnits[0], {
+      businessRegistrationDate: "2018-03-01",
+      rentalRegistrationDate: "2018-03-01",
+      rentalMonths: "48",
+      rentalAutoTermination: true,
+      registrationCancellationDate: CANCELLED,
+      terminatedRegistrationType: "short_term",
+      terminationReason: reason,
+      ...over,
+    });
+    return f;
+  }
+  /** 같은 사실의 명부 장기임대 행(가목 · 4년 · 2022.3.1. 말소) */
+  const cancelledRow = (reason: "" | "auto" | "voluntary", over: Partial<HouseEntry> = {}): HouseEntry => ({
+    ...ROW,
+    id: "h4",
+    acquisitionDate: "2016-01-01",
+    isApartment: false,
+    isLongTermRental: true,
+    isRegisteredRental: true,
+    businessRegistrationDate: "2018-03-01",
+    rentalRegistrationDate: "2018-03-01",
+    rentalPeriodYears: "4",
+    rentalType: "A",
+    rentIncreaseUnder5Pct: true,
+    rentalStartOfficialPrice: "250000000",
+    rentalCancelledDate: CANCELLED,
+    rentalCancellationReason: reason,
+    ...over,
+  });
+  /** 중과 상세 카드(⑦ `MultiHouseSurchargeDetailCard`)의 경고 중 말소 사유 확인 필요 고지 */
+  const cancelNotice = (s: Single) =>
+    (((s.raw.multiHouseSurchargeEvaluation as Obj).warnings ?? []) as string[]).filter(
+      (x) => x.includes("말소") && x.includes("확인 필요") && x.includes("§167의3①2호"),
+    );
+
+  it("M-1 ★ 카드 자동말소 → 임대기간요건 간주(2호) → 거주주택 10호 중과 배제 — 명부 행 입력과 같은 값 · 단건 = 다건", async () => {
+    const s = await single(cancelledCard("auto"));
+    expect(s.rentalApplied).toBe(false);
+    expect(mh(s).effectiveHouseCount).toBe(2);
+    expect(mh(s).surchargeType).toBe("none");
+    expect(mh(s).exclusionReasons.map((x) => x.type)).toEqual(["only_general_two_house"]);
+    expect(cancelNotice(s)).toEqual([]);
+    expect(s.totalTax).toBe(391_743_000);
+    const f = withRental(form([cancelledRow("auto")], { contractTotalPrice: "1,500,000,000" }));
+    f.assets[0].residencePeriodMonthsAsset = "0";
+    const roster = await single(f);
+    expect(mh(roster).surchargeType).toBe("none");
+    expect(roster.totalTax).toBe(s.totalTax);
+    expect(await multi(cancelledCard("auto"))).toBe(s.totalTax);
+  });
+
+  it("M-2 ★ 카드 자진말소 → 2호 아님 → 중과 2주택(783,678,500) + 자진말소 확인 필요 고지", async () => {
+    const s = await single(cancelledCard("voluntary"));
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    expect(s.totalTax).toBe(783_678_500);
+    const n = cancelNotice(s);
+    expect(n).toHaveLength(1);
+    expect(n[0]).toContain("임대주택 1호: 자진말소(민간임대주택에 관한 특별법 §6 ① 11호)");
+    expect(n[0]).toContain("소득세법 시행령 §167의3①2호 사목");
+  });
+
+  it("M-3 ★ 카드 말소 사유 미선택 → 2호 아님(모름 = 불리) → 중과 2주택 + 「자동말소」를 고르라는 확인 필요 고지", async () => {
+    const s = await single(cancelledCard(""));
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+    const n = cancelNotice(s);
+    expect(n).toHaveLength(1);
+    expect(n[0]).toContain("임대주택 1호: 임대사업자 등록이 말소됐는데 말소 사유를 고르지 않아");
+    expect(n[0]).toContain("소득세법 시행령 §167의3①2호 단서");
+  });
+
+  it("M-4 짝 — 자동말소여도 면제되는 것은 기간뿐: 임대개시일 기준시가 7억(수도권 6억 초과)이면 2호 아님 · 고지 없음(사유가 결론을 가르지 않음)", async () => {
+    for (const reason of ["auto", "voluntary"] as const) {
+      const s = await single(cancelledCard(reason, { standardPriceAtRentalStart: RENTAL_UNIT_CAP_FAIL }));
+      expect(mh(s).surchargeType).toBe("multi_house_2");
+      expect(cancelNotice(s)).toEqual([]);
+    }
+  });
+
+  it("M-5 짝 — 자동말소는 법률 제17482호(2020.8.18. 시행)로 생겼다: 그 전 말소일이면 간주하지 않는다", async () => {
+    const s = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17" }));
+    expect(mh(s).surchargeType).toBe("multi_house_2");
+  });
+
+  it("M-6 ★ 명부 행 — 「임대사업자 말소일」 + 자동말소면 2호(10호 배제), 미선택·자진말소면 중과 2주택 + 확인 필요 고지", async () => {
+    const roster = (reason: "" | "auto" | "voluntary") =>
+      single(form([cancelledRow(reason)], { contractTotalPrice: "1,500,000,000" }));
+    const auto = await roster("auto");
+    expect(mh(auto).surchargeType).toBe("none");
+    expect(mh(auto).exclusionReasons.map((x) => x.type)).toEqual(["only_general_two_house"]);
+    const none = await roster("");
+    expect(mh(none).surchargeType).toBe("multi_house_2");
+    expect(cancelNotice(none)[0]).toContain("주택 h4: 임대사업자 등록이 말소됐는데 말소 사유를 고르지 않아");
+    const vol = await roster("voluntary");
+    expect(mh(vol).surchargeType).toBe("multi_house_2");
+    expect(cancelNotice(vol)[0]).toContain("주택 h4: 자진말소");
+  });
+
+  it("M-7 ④ — 말소 사유는 말소 토글·말소일이 있을 때만 보낸다(카드 · 명부)", async () => {
+    const card = await bodyOf(() => callTransferTaxAPI(cancelledCard("auto")));
+    expect(((card.rentalHousingException as Obj).rentalUnits as Obj[])[0].terminationReason).toBe("auto");
+    const off = cancelledCard("auto", { rentalAutoTermination: false });
+    const offBody = await bodyOf(() => callTransferTaxAPI(off));
+    expect(((offBody.rentalHousingException as Obj).rentalUnits as Obj[])[0].terminationReason).toBeUndefined();
+    const rowBody = await bodyOf(() => callTransferTaxAPI(form([cancelledRow("auto", { rentalCancelledDate: "" })])));
+    expect(((rowBody.houses as Obj[]).find((h) => h.id === "h4") as Obj).rentalCancellationReason).toBeUndefined();
+  });
+});

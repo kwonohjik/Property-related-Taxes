@@ -72,6 +72,7 @@ export function makeDefaultRentalUnit(): AssetForm["rentalHousingException"]["re
     rentalAutoTermination: false,
     registrationCancellationDate: "",
     terminatedRegistrationType: "",
+    terminationReason: "",
     requirementsConfirmed: false,
   };
 }
