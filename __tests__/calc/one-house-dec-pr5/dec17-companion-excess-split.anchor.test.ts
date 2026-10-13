@@ -31,6 +31,8 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { housingExcessNeedsLandSplit, housingExcessZonePending } from "@/lib/calc/housing-excess-split";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput } from "@/lib/tax-engine/housing-excess-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { breakdownToFilingResult } from "@/components/calc/results/MultiTransferPropertyBreakdown";
+import { buildRows, deriveColumns } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -230,5 +232,35 @@ describe("#17-1 엔진 직접 — 컴패니언 사실만으로 분리가 돈다"
     expect(viaCompanion.splitDetail?.nonBusinessLandPart).toEqual(viaPrimary.splitDetail?.nonBusinessLandPart);
     expect(viaCompanion.totalTax).toBe(viaPrimary.totalTax);
     expect(viaCompanion.totalTax).toBeGreaterThan(0);
+  });
+});
+
+describe("#17-1 리뷰 후속 — 컴패니언 분리 자산의 장특 보유분·거주분 echo", () => {
+  const LAND = { assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2005-04-07", fixedAcquisitionPrice: "100000000", standardPriceAtTransfer: "200000000", actualSalePrice: "500000000", landNature: "standalone" };
+  it("🔑 독립 나대지 + 컴패니언 주택 500㎡ → 배율초과분 장특 전액(20,799,999)이 보유분, 거주분 0 (수정 전: 신고서가 10,400,000 + 10,399,999로 쪼갬)", async () => {
+    const r = await runCalc(form([mk(1, LAND), mk(2, { ...OVER, ...FIVE })]));
+    expect(exceptSameDay(r)).toEqual([]);
+    const comp = propsOf(r)[1];
+    expect(comp.longTermHoldingDeduction).toBe(20_799_999);
+    expect(comp.filingDisplay.lthdHoldingPart).toBe(20_799_999);
+    expect(comp.filingDisplay.lthdResidencePart).toBe(0);
+  });
+  it("대조 — 주 자산 주택 분리(표2 특례 sub-step 있음)는 종전 echo 그대로", async () => {
+    const r = await runCalc(form([mk(1, { ...OVER, ...FIVE }), mk(2, LAND)]));
+    const prim = propsOf(r)[0];
+    expect(prim.filingDisplay.lthdHoldingPart).toBe(prim.longTermHoldingDeduction);
+    expect(prim.filingDisplay.lthdResidencePart).toBe(0);
+  });
+  it("건별 신고서(자산별 어댑터)도 같은 값 — 거주 기간분 장특 칸이 0 (수정 전: 거주 개월 휴리스틱으로 10,399,999)", async () => {
+    const f = form([mk(1, LAND), mk(2, { ...OVER, ...FIVE })]);
+    const r = await runCalc(f);
+    const comp = propsOf(r)[1];
+    const fr = breakdownToFilingResult(comp);
+    const { mode } = deriveColumns(fr, undefined, undefined, undefined);
+    // 건별 신고서는 그 자산의 입력 폼(property.form)을 받는다 — 컴패니언 주택 카드 하나짜리 폼
+    const rows = buildRows(fr, mode, { ...(f as object), assets: [mk(2, { ...OVER, ...FIVE })] } as never) as never as { label: string; values: Record<string, number | string | null> }[];
+    const cell = (label: string) => rows.find((x) => x.label.trim() === label)?.values.total;
+    expect(cell("보유 기간분 장특")).toBe(20_799_999);
+    expect(cell("거주 기간분 장특")).toBe(0);
   });
 });
