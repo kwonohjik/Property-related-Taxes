@@ -47,6 +47,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { uocRowAcquiredAfterTransfer } from "@/lib/calc/house-row-required-issues";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -57,9 +58,14 @@ interface Props {
    * ⑧·⑫가 둘째 행을 막는다(`duplicateUnavoidableOutsideCapitalRows`). 여기서는 켠 상태에서 그 사실을 알린다.
    */
   otherUocRowNumber?: number;
+  /**
+   * 양도일 — 이 행의 취득일과 견줘 「양도일 뒤 취득이라 반영되지 않음」 안내를 띄운다(`uocRowAcquiredAfterTransfer`).
+   * 모르면(미입력) 안내하지 않는다.
+   */
+  transferDate?: string;
 }
 
-export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate, otherUocRowNumber }: Props) {
+export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate, otherUocRowNumber, transferDate }: Props) {
   const on = house.oneHouseUnavoidableOutsideCapital === true;
   /**
    * 「수도권 밖」 요건 — 행 주소로 **판정만** 한다.
@@ -125,6 +131,15 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate, othe
             <p data-testid="house-row-uoc-duplicate-warning" className="text-xs leading-relaxed">
               <b>주택 {otherUocRowNumber}</b>에도 이 표시가 있습니다. §155⑧은 이 주택과 일반주택을 <b>각각 1개씩</b>{" "}
               소유한 세대에만 적용되므로 <b>한 채만</b> 표시할 수 있습니다 — 해당하는 한 행에만 켜세요.
+            </p>
+          </ToneCard>
+        )}
+
+        {uocRowAcquiredAfterTransfer(house, transferDate) && (
+          <ToneCard tone="amber" bodyClassName="" className="px-3 py-2">
+            <p data-testid="house-row-uoc-after-transfer-notice" className="text-xs leading-relaxed">
+              이 주택은 <b>양도일 당일 또는 그 뒤에 취득</b>한 주택이라 양도일 현재 보유한 주택이 아닙니다. 그래서 이 표시는{" "}
+              <b>1세대1주택 판정과 세액 계산에 반영되지 않습니다</b> — 양도일 현재 보유한 주택에만 켜세요.
             </p>
           </ToneCard>
         )}

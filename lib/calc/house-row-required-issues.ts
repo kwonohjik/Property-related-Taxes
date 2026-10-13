@@ -11,7 +11,7 @@
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { unavoidableOutsideCapitalStatusIssue } from "./two-house-exclusion-status";
-import { housesOwnedAtTransfer } from "./household-house-count";
+import { housesOwnedAtTransfer, isOwnedAtTransfer } from "./household-house-count";
 
 export interface HouseRowIssue {
   field: string;
@@ -84,14 +84,22 @@ export function houseUnavoidableIssue(
 /**
  * §155⑧ 수도권 밖 부득이 주택(영 §167의10①4호 겸용) — 사유 해소일 또는 「사유가 양도일 현재 해소되지 않음」 택일(#31).
  * ⑫ `unavoidableOutsideCapitalHouseSchema`의 거울이다 — 빈 값은 「모름」이라 엔진이 특례를 적용하지 않는다.
+ *
+ * 양도일 당일·뒤 취득 행(`uocRowAcquiredAfterTransfer`)은 ④가 명부에 싣지 않아 ⑫가 보지 않는 행이고, ⑤ 카드가 「반영되지 않음」이라
+ * 밝히는 행이다 — 그 행에 해소일·미해소 택일을 요구하면 화면이 모순이므로 묻지 않는다(⑫ 거울). 양도일을 모르면 거르지 않는다.
  */
 export function houseUnavoidableOutsideCapitalIssue(
   h: Pick<
     HouseEntry,
-    "oneHouseUnavoidableOutsideCapital" | "unavoidableOutsideCapitalResolvedDate" | "unavoidableOutsideCapitalUnresolved"
+    | "oneHouseUnavoidableOutsideCapital"
+    | "unavoidableOutsideCapitalResolvedDate"
+    | "unavoidableOutsideCapitalUnresolved"
+    | "acquisitionDate"
   >,
+  transferDate: string | undefined,
 ): HouseRowIssue | null {
   if (!h.oneHouseUnavoidableOutsideCapital) return null;
+  if (uocRowAcquiredAfterTransfer(h, transferDate)) return null;
   const issue = unavoidableOutsideCapitalStatusIssue({
     resolvedDate: h.unavoidableOutsideCapitalResolvedDate,
     unresolved: h.unavoidableOutsideCapitalUnresolved,
@@ -159,4 +167,21 @@ export function otherUocRowNumberOf(
   if (!houses.some((h) => h.id === editingId && owned.has(h))) return undefined;
   const i = houses.findIndex((h) => h.id !== editingId && owned.has(h) && h.oneHouseUnavoidableOutsideCapital === true);
   return i < 0 ? undefined : i + 1;
+}
+
+/**
+ * ⑤ 「반영 안 됨」 안내 — §155⑧ 표시가 켜진 행이 **양도일 당일 또는 그 뒤에 취득한 행**인가 (사용자 결정 2026-10-13).
+ *
+ * 그 행은 세대 판정(`deriveOneHouseFactsFromHouses`)·④ 엔진 명부(`buildHousesPayload`)가 거르는 `housesOwnedAtTransfer`의
+ * 같은 leaf(`isOwnedAtTransfer` — 같은 날 취득 = 양도 후 취득)에서 빠지므로 ⑧ 표시를 켜도 어느 판정에도 실리지 않는다.
+ * ⑧ 중복 차단(`duplicateOwnedUnavoidableOutsideCapitalRows`)이 그 행을 세지 않게 된 짝이다 — 막지는 않되 화면이 사실을 밝힌다.
+ *
+ * 취득일·양도일을 모르면 `isOwnedAtTransfer`가 「보유」로 보므로 false다(모름을 「뒤 취득」으로 단정하지 않는다).
+ * 저장하지 않고 카드의 취득일·양도일에서 렌더 때마다 도출한다. §154⑨ 「먼저 양도」 선택 행은 취득일 축이 아니라 여기서 다루지 않는다.
+ */
+export function uocRowAcquiredAfterTransfer(
+  house: Pick<HouseEntry, "oneHouseUnavoidableOutsideCapital" | "acquisitionDate">,
+  transferDate: string | undefined,
+): boolean {
+  return house.oneHouseUnavoidableOutsideCapital === true && !isOwnedAtTransfer(house.acquisitionDate, transferDate);
 }

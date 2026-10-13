@@ -179,7 +179,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       const statusIssue = twoHouseExclusionStatusIssue(h);
       if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
       // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 판정 메뉴 ⑧과 같은 leaf.
-      const uocIssue = houseUnavoidableOutsideCapitalIssue(h);
+      const uocIssue = houseUnavoidableOutsideCapitalIssue(h, form.transferDate);
       if (uocIssue) return fieldError(rowKey, `${label}: ${uocIssue.message}`);
       const uocFirst = uocDuplicateOf.get(i);
       if (uocFirst !== undefined)

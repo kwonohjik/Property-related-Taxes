@@ -200,11 +200,11 @@ describe("#31 화면·API — 해소일 또는 「미해소」 택일 (14지점 
   });
 
   it("V6 ⑧ leaf — 토글이 꺼진 행은 요구하지 않는다(부정 짝)", () => {
-    expect(houseUnavoidableOutsideCapitalIssue({})).toBeNull();
-    expect(houseUnavoidableOutsideCapitalIssue({ oneHouseUnavoidableOutsideCapital: true })?.field).toBe("unavoidableOutsideCapitalResolvedDate");
-    expect(houseUnavoidableOutsideCapitalIssue({ oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalUnresolved: true })).toBeNull();
+    expect(houseUnavoidableOutsideCapitalIssue({ acquisitionDate: "2019-01-01" }, undefined)).toBeNull();
+    expect(houseUnavoidableOutsideCapitalIssue({ acquisitionDate: "2019-01-01", oneHouseUnavoidableOutsideCapital: true }, undefined)?.field).toBe("unavoidableOutsideCapitalResolvedDate");
+    expect(houseUnavoidableOutsideCapitalIssue({ acquisitionDate: "2019-01-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalUnresolved: true }, undefined)).toBeNull();
     expect(
-      houseUnavoidableOutsideCapitalIssue({ oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalResolvedDate: "2025-01-01" }),
+      houseUnavoidableOutsideCapitalIssue({ acquisitionDate: "2019-01-01", oneHouseUnavoidableOutsideCapital: true, unavoidableOutsideCapitalResolvedDate: "2025-01-01" }, undefined),
     ).toBeNull();
   });
 

@@ -244,7 +244,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(err(`houses.${i}.${unavoidableIssue.field}`, `보유 주택 ${i + 1}: ${unavoidableIssue.message}`));
     }
     // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 계산기 ⑧과 같은 leaf. 빈 값은 「모름」이라 ⑫가 400을 낸다.
-    const uocIssue = houseUnavoidableOutsideCapitalIssue(h);
+    const uocIssue = houseUnavoidableOutsideCapitalIssue(h, form.transferDate);
     if (uocIssue) {
       errors.push(err(`houses.${i}.${uocIssue.field}`, `보유 주택 ${i + 1}: ${uocIssue.message}`));
     }
