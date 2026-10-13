@@ -180,4 +180,11 @@ describe("§155⑧ 행 한 채 — 양도일 현재 보유 행만 (PR #2163 후�
     expect(otherUocRowNumberOf([L, A, B], "hb", TD, "housing")).toBe(2);
     expect(otherUocRowNumberOf([A, L], "ha", "", "housing")).toBe(2);
   });
+
+  it("O8 ⑤ 경고 — §154⑨ 「먼저 양도」 행은 주택 양도에서만 빠진다(⑧ O5와 같은 축 · `primaryKind` 전달)", () => {
+    const F = row("hf", "2019-06-01", { soldSameDay: true, sameDayTransferOrder: "first" });
+    expect(otherUocRowNumberOf([A, F], "ha", TD, "housing")).toBeUndefined();
+    // 입주권 양도에는 §154⑨가 닿지 않는다(`sameDayOrderApplies`) — 남은 선택값으로 빼지 않고 보유 행으로 센다
+    expect(otherUocRowNumberOf([A, F], "ha", TD, "right_to_move_in")).toBe(2);
+  });
 });
