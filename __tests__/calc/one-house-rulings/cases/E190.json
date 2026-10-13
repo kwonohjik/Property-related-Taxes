@@ -46,6 +46,7 @@
           "inheritedDate": "2008-04-15",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         }
       ]

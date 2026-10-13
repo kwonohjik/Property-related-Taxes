@@ -334,6 +334,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
               ? house.decedentSameHouseholdAtInheritance
               : undefined,
             decedentHouseholdUnknown: v ? house.decedentHouseholdUnknown : undefined,
+            decedentHouseholdSeparate: v ? house.decedentHouseholdSeparate : undefined,
             parentalCareMergeInheritedHouse: v ? house.parentalCareMergeInheritedHouse : undefined,
             reInheritedFromSeparateHousehold: v ? house.reInheritedFromSeparateHousehold : undefined,
             isRankingDisqualifiedInheritedHouse: v
@@ -427,6 +428,12 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             인구감소지역주택이면 조세특례제한법 §71의2①(별도세대로부터 상속받은 경우만 적용)에 함께 쓰입니다.
             모르거나 답하지 않으면 두 규정 모두 적용하지 않고 확인 필요로 알립니다.
           </p>
+          {/* 표시 없는 낡은 false — 사용자가 고른 별도세대와 구별되지 않아 답으로 읽지 않는다(`decedent-household` leaf). 왜 비어 있는지 밝힌다. */}
+          {house.decedentSameHouseholdAtInheritance === false && decedentHouseholdAnswer(house) === undefined && (
+            <p className="text-caption text-muted-foreground" data-testid="house-row-decedent-household-legacy-note">
+              이전에 저장된 입력에 별도세대로 남아 있던 값은 직접 고른 답인지 알 수 없어 답으로 인정하지 않습니다. 위에서 다시 골라 주세요.
+            </p>
+          )}
           {decedentHouseholdAnswer(house) === "same" && (
             <div className="space-y-1">
               <ToggleCard

@@ -23,7 +23,8 @@
           "inheritedDate": "2015-10-18",
           "isCoInherited": true,
           "isLargestCoInheritedShareholder": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },

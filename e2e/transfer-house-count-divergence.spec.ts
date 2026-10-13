@@ -26,7 +26,7 @@ function seedForm(householdHousingCount: string, otherHouseCount: number) {
     completionDate: "",
     isSpouseOwned: false,
     isCoInherited: false,
-    decedentSameHouseholdAtInheritance: false,
+    decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
     isRankingDisqualifiedInheritedHouse: false,
   }));
   return {

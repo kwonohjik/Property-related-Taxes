@@ -169,7 +169,7 @@ const CO_INHERITED: HouseEntry = {
   ...ROW,
   id: "h3",
   isInherited: true,
-  decedentSameHouseholdAtInheritance: false, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
+  decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
   acquisitionDate: "2019-06-01",
   inheritedDate: "2019-06-01",
   isCoInherited: true,

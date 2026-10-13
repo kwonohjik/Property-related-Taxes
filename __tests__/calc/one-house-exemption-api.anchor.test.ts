@@ -87,7 +87,7 @@ const house = (id: string, over: Partial<HouseEntry> = {}): HouseEntry =>
     completionDate: "",
     isSpouseOwned: false,
     isCoInherited: false,
-    decedentSameHouseholdAtInheritance: false,
+    decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
     isRankingDisqualifiedInheritedHouse: false,
     ...over,
   }) as HouseEntry;

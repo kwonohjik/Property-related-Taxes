@@ -25,6 +25,7 @@
           "inheritedDate": "1987-05-15",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         },
         {
@@ -35,6 +36,7 @@
           "inheritedDate": "2003-05-15",
           "isCoInherited": true,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         }
       ]

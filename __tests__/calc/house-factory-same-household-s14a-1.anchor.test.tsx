@@ -33,9 +33,10 @@ function Host() {
 }
 const caseBase = (cases as RulingCase[]).find((c) => c.id === "E146-era-pos")!;
 const ruralFacts = (() => {
-  const { id: _i, decedentSameHouseholdAtInheritance: _d, ...rest } = caseBase.form!.houses![0] as Record<string, unknown>;
+  const { id: _i, decedentSameHouseholdAtInheritance: _d, decedentHouseholdSeparate: _s, ...rest } = caseBase.form!.houses![0] as Record<string, unknown>;
   void _i;
   void _d;
+  void _s;
   return rest;
 })();
 function calcIssues(form: TransferFormData) {
@@ -63,7 +64,7 @@ describe("S14a-1 anchor — 팩토리 기본값", () => {
 
   // 긍정 짝 — 사용자가 「별도세대」를 고르면 ⑧이 통과한다(막다른 길이 아니다).
   it("긍정 짝: 동일세대 여부에 답하면(별도세대) 두 ⑧이 통과한다", () => {
-    const row = { id: "x", region: "capital", acquisitionDate: "2000-01-01", officialPrice: "100000000", isInherited: false, isLongTermRental: false, isApartment: false, isOfficetel: false, isUnsoldHousing: false, ...ruralFacts, decedentSameHouseholdAtInheritance: false } as unknown as HouseEntry;
+    const row = { id: "x", region: "capital", acquisitionDate: "2000-01-01", officialPrice: "100000000", isInherited: false, isLongTermRental: false, isApartment: false, isOfficetel: false, isUnsoldHousing: false, ...ruralFacts, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true } as unknown as HouseEntry;
     const jf = buildCaseForm({ ...caseBase, form: { ...caseBase.form!, houses: [] } });
     jf.houses = [row];
     expect(validateAllSteps(jf).some((e) => e.severity === "error" && e.field === "houses.0.decedentSameHouseholdAtInheritance")).toBe(false);
@@ -81,7 +82,7 @@ describe("S14a-1 anchor — 비농어촌 상속주택(§155②)은 미답 = 모�
         asset: { assetKind: "housing", acquisitionDate: "2016-01-01" },
         houses: [{
           id: "inh", acquisitionDate: "2020-01-01", officialPrice: "300000000", isInherited: true, inheritedDate: "2020-01-01",
-          ...(decedent === undefined ? {} : { decedentSameHouseholdAtInheritance: decedent }),
+          ...(decedent === undefined ? {} : { decedentSameHouseholdAtInheritance: decedent, ...(decedent === false ? { decedentHouseholdSeparate: true } : {}) }),
           ...(unknown ? { decedentHouseholdUnknown: true } : {}),
         }],
       },

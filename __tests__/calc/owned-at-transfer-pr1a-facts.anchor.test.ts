@@ -28,7 +28,7 @@ const FACTS: Record<string, Partial<HouseEntry>> = {
   "§155⑦1호": {
     oneHouseRuralHouse: true,
     ruralHouseKind: "inherited",
-    decedentSameHouseholdAtInheritance: false,
+    decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
     ruralDecedentResidenceYears: "10",
     ruralOutsideCapitalEupMyeon: true,
   } as Partial<HouseEntry>,
@@ -154,7 +154,7 @@ describe("L leaf — 양도일 현재 보유 행만 도출·변환한다(경계:
           ruralHouseKind: "inherited",
           ruralDecedentResidenceYears: "10",
           ruralOutsideCapitalEupMyeon: true,
-          decedentSameHouseholdAtInheritance: false,
+          decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
         } as Partial<HouseEntry>),
       ],
     });

@@ -22,7 +22,8 @@
           "isInherited": true,
           "inheritedDate": "2015-12-21",
           "isCoInherited": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         },
         {
           "id": "co2",
@@ -31,7 +32,8 @@
           "isInherited": true,
           "inheritedDate": "2015-12-21",
           "isCoInherited": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },
@@ -71,7 +73,8 @@
           "isInherited": true,
           "inheritedDate": "2003-10-26",
           "isCoInherited": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         },
         {
           "id": "co2",
@@ -80,7 +83,8 @@
           "isInherited": true,
           "inheritedDate": "2003-10-26",
           "isCoInherited": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         },
         {
           "id": "co3",
@@ -89,7 +93,8 @@
           "isInherited": true,
           "inheritedDate": "2003-10-26",
           "isCoInherited": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },

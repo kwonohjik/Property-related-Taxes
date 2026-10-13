@@ -52,7 +52,7 @@ function form(houses: HouseEntry[]): OneHouseJudgmentFormData {
     houses,
   };
 }
-const INH = house("inh", { acquisitionDate: "2020-03-01", isInherited: true, decedentSameHouseholdAtInheritance: false, inheritedDate: "2020-03-01" });
+const INH = house("inh", { acquisitionDate: "2020-03-01", isInherited: true, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, inheritedDate: "2020-03-01" });
 
 async function resultText(f: OneHouseJudgmentFormData, withForm = true) {
   const res = await POST(

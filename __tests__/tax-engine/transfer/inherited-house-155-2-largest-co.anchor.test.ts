@@ -220,7 +220,7 @@ describe("#6-J — 판정 메뉴 전 구간 (폼 → ④ → ⑫ → route → �
           inheritedDate: "2015-10-18",
           isCoInherited: true,
           isLargestCoInheritedShareholder: true,
-          decedentSameHouseholdAtInheritance: false, // 사실관계가 별도세대 피상속인 — 미답은 모름이라 명시한다(#42-2)
+          decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, // 사실관계가 별도세대 피상속인 — 미답은 모름이라 명시한다(#42-2)
           ...houseOver,
         },
       ],
@@ -351,7 +351,7 @@ describe("#6-R — 평가셋: 동일세대 최대지분(E074-era · E077-era)은
     // 긍정 짝 — 같은 사실에서 동일세대만 끄면 ②로 제외된다(과세 여부는 이 시료의 서울 거주요건 판정 보류에 달려 단언하지 않는다)
     const separate = {
       ...c,
-      form: { ...c.form, houses: c.form!.houses!.map((h) => ({ ...h, decedentSameHouseholdAtInheritance: false })) },
+      form: { ...c.form, houses: c.form!.houses!.map((h) => ({ ...h, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true })) },
     } as RulingCase;
     const p = await observeCase(separate);
     expect(p.unmetExceptions).not.toContain("155-2-inherited-house");

@@ -17,7 +17,7 @@ import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from ".
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
-import { decedentHouseholdOf } from "./decedent-household";
+import { decedentHouseholdEngineBoolean, decedentHouseholdOf } from "./decedent-household";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
@@ -320,9 +320,7 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // §155② 단서·순위 게이트 — isInherited=true 일 때만 전달. 동거봉양 예외는 동일세대일 때만.
       // 피상속인 세대는 한 칸의 3상태다(#42-2) — 별도세대·동일세대는 boolean으로, 모름·미답은 `decedentHouseholdUnconfirmed`로
       // 싣는다(엔진 게이트가 불성립으로 읽고 확인 필요를 알린다). 같은 답이 아래 §71의2① `popDeclDonorHousehold`에도 쓰인다.
-      decedentSameHouseholdAtInheritance: h.isInherited
-        ? h.decedentSameHouseholdAtInheritance
-        : undefined,
+      decedentSameHouseholdAtInheritance: h.isInherited ? decedentHouseholdEngineBoolean(h) : undefined,
       decedentHouseholdUnconfirmed: h.isInherited && decedentHouseholdOf(h) === "unknown" ? true : undefined,
       parentalCareMergeInheritedHouse:
         h.isInherited && h.decedentSameHouseholdAtInheritance

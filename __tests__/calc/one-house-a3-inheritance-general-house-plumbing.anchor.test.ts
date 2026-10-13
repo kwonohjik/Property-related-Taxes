@@ -56,7 +56,7 @@ const inheritedRow = (inheritedDate: string): HouseEntry =>
     acquisitionDate: inheritedDate,
     officialPrice: "300000000",
     isInherited: true,
-    decedentSameHouseholdAtInheritance: false, // 별도세대 상속 (#42-2: 미답은 모름이라 별도세대는 명시한다)
+    decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, // 별도세대 상속 (#42-2: 미답은 모름이라 별도세대는 명시한다)
     inheritedDate,
     isLongTermRental: false,
     isApartment: true,

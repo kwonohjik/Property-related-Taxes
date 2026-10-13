@@ -154,7 +154,7 @@ const CASES: [string, () => Form, string[]][] = [
           isInherited: true,
           inheritedDate: "2025-01-10",
           isCoInherited: false,
-          decedentSameHouseholdAtInheritance: false,
+          decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
           parentalCareMergeInheritedHouse: false,
         },
       ]),

@@ -33,7 +33,7 @@ const row = (patch: Record<string, unknown> = {}) => ({
   completionDate: "",
   isSpouseOwned: false,
   isCoInherited: false,
-  decedentSameHouseholdAtInheritance: false,
+  decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
   isRankingDisqualifiedInheritedHouse: false,
   ...patch,
 });

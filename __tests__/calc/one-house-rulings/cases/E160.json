@@ -28,6 +28,7 @@
           "inheritedDate": "2002-11-15",
           "isCoInherited": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "ruralDecedentResidenceYears": "10"
         }
       ]

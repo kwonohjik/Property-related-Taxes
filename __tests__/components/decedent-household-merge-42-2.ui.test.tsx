@@ -8,7 +8,8 @@
  * | U-1 | 상속 행에 3택 라디오가 열리고 미답이면 아무것도 선택돼 있지 않다 · 질문은 하나(문구 한 번)이고 두 규정에 쓰임을 한 문장으로 밝힌다 |
  * | U-2 | 선택 → patch가 boolean·모름 표시·예외 칩을 모순 없이 쓴다 (별도세대=false · 동일세대=true · 모름=표시) |
  * | U-3 | 동거봉양·재상속 칩은 동일세대일 때만 보인다 |
- * | U-4 | 상속 OFF → 모름 표시까지 리셋 |
+ * | U-4 | 상속 OFF → 모름·별도세대 표시까지 리셋 |
+ * | U-1c | 낡은 boolean false(표시 없음)는 라디오에 아무것도 선택하지 않는다(#42-2 리뷰) |
  * | U-5 | §71의2 블록: 상속 행은 증여자 세대 질문을 열지 않고 「상속 정보」 답을 안내한다 · 증여 행은 종전 질문 |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -58,13 +59,30 @@ describe("U 상속 정보 — 피상속인 세대 한 칸", () => {
 
   it("U-1c 저장된 값은 라디오에 그대로 나타난다 — true=동일세대 · false=별도세대 · 모름 표시=모름", () => {
     const cases: [Partial<HouseEntry>, string][] = [
-      [{ decedentSameHouseholdAtInheritance: false }, "separate"],
+      [{ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }, "separate"],
       [{ decedentSameHouseholdAtInheritance: true }, "same"],
       [{ decedentHouseholdUnknown: true }, "unknown"],
+      // 낡은 기본값 false(표시 없음)는 사용자가 고른 별도세대가 아니다 — 아무것도 고르지 않은 상태로 그린다(#42-2 리뷰)
+      [{ decedentSameHouseholdAtInheritance: false }, "none"],
+      [{}, "none"],
     ];
     for (const [over, expected] of cases) {
       const { unmount } = render(<HouseEntryEditor house={makeHouse(over)} onUpdate={() => {}} />);
       for (const v of ["separate", "same", "unknown"]) expect(radio(v).checked, `${expected}/${v}`).toBe(v === expected);
+      unmount();
+    }
+  });
+
+  it("U-1d 낡은 false 행에는 왜 비어 있는지 안내가 붙고, 직접 고른 별도세대·미답 행에는 붙지 않는다", () => {
+    const note = () => screen.queryByTestId("house-row-decedent-household-legacy-note");
+    const cases: [Partial<HouseEntry>, boolean][] = [
+      [{ decedentSameHouseholdAtInheritance: false }, true],
+      [{ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }, false],
+      [{}, false],
+    ];
+    for (const [over, shown] of cases) {
+      const { unmount } = render(<HouseEntryEditor house={makeHouse(over)} onUpdate={() => {}} />);
+      expect(note() !== null, JSON.stringify(over)).toBe(shown);
       unmount();
     }
   });
@@ -78,7 +96,7 @@ describe("U 상속 정보 — 피상속인 세대 한 칸", () => {
     );
     fireEvent.click(radio("separate"));
     expect(onUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ decedentSameHouseholdAtInheritance: false, decedentHouseholdUnknown: undefined, parentalCareMergeInheritedHouse: undefined }),
+      expect.objectContaining({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, decedentHouseholdUnknown: undefined, parentalCareMergeInheritedHouse: undefined }),
     );
     fireEvent.click(radio("unknown"));
     const p = onUpdate.mock.lastCall![0];
@@ -102,12 +120,15 @@ describe("U 상속 정보 — 피상속인 세대 한 칸", () => {
 
   it("U-4 상속 OFF → 모름 표시까지 리셋", () => {
     const onUpdate = vi.fn();
-    render(<HouseEntryEditor house={makeHouse({ decedentHouseholdUnknown: true })} onUpdate={onUpdate} />);
+    render(<HouseEntryEditor house={makeHouse({ decedentHouseholdUnknown: true, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true })} onUpdate={onUpdate} />);
     fireEvent.click(screen.getByRole("switch", { name: /피상속인으로부터 상속받은 주택/ }));
     const patch = onUpdate.mock.calls[0][0];
     expect(patch.isInherited).toBe(false);
     expect(Object.keys(patch)).toContain("decedentHouseholdUnknown");
     expect(patch.decedentHouseholdUnknown).toBeUndefined();
+    // 「직접 골랐다」 표시도 함께 지운다 — 남으면 다시 상속으로 켰을 때 낡은 별도세대 답이 되살아난다
+    expect(Object.keys(patch)).toContain("decedentHouseholdSeparate");
+    expect(patch.decedentHouseholdSeparate).toBeUndefined();
     expect(patch.decedentSameHouseholdAtInheritance).toBeUndefined();
   });
 });
@@ -117,7 +138,8 @@ describe("U-5 §71의2 블록 — 질문은 하나", () => {
 
   it("상속 행은 증여자 세대 질문을 열지 않고 상속 정보의 답을 안내한다", () => {
     for (const [over, label] of [
-      [{ decedentSameHouseholdAtInheritance: false }, "별도세대"],
+      [{ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }, "별도세대"],
+      [{ decedentSameHouseholdAtInheritance: false }, "모름·미답"],
       [{ decedentSameHouseholdAtInheritance: true }, "동일세대"],
       [{ decedentHouseholdUnknown: true }, "모름·미답"],
       [{}, "모름·미답"],

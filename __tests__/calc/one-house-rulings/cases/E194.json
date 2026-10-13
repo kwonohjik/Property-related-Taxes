@@ -53,6 +53,7 @@
           "isCoInherited": true,
           "isLargestCoInheritedShareholder": false,
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "acquisitionOrigin": "general"
         }
       ],

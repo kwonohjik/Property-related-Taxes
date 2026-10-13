@@ -5,6 +5,15 @@
 
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
+import type { AptDeadlineExtensionForm, TaxIncentiveRentalRegistrationType } from "./calc-wizard-asset-nbl-rental";
+
+// 분리된 장기임대 선언 타입 — 기존 import 경로(`calc-wizard-asset-nbl`)를 유지한다.
+export type {
+  RentalDeclaration,
+  TaxIncentiveRentalRegistrationType,
+  AptDeadlineExtensionForm,
+  TaxIncentiveRentalFacts,
+} from "./calc-wizard-asset-nbl-rental";
 
 /** 행에 붙는 조특법 §99의4·§98의9 선언 — 감면 폼과 같은 모양(입력 폼·④ 변환을 그대로 쓴다). */
 export type RowCountExclusionReduction = Extract<
@@ -151,13 +160,15 @@ export interface HouseEntry {
   /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=소유로 봄, 일반주택 양도 시 §155② 요건으로 제외 판정 · false·미제공=소수지분 §155③ 제외후보) */
   isLargestCoInheritedShareholder?: boolean;
   /**
-   * 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제 · false=별도세대). isInherited=true 시 의미.
-   * 한 칸의 3상태(별도세대·동일세대·모름)의 앞 두 값이다 — 읽기·쓰기는 `lib/calc/decedent-household.ts` leaf를 쓴다(#42-2 합침).
-   * 이 칸이 비어 있고 `decedentHouseholdUnknown`도 없으면 미답이며 「모름」과 같이 불성립 + 확인 필요다.
+   * 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미.
+   * 한 칸의 3상태(별도세대·동일세대·모름) 중 「동일세대」만 이 칸 단독으로 읽는다 — `false`는 별도세대의 **표시일 뿐 답이 아니다**
+   * (종전 「+ 주택 추가」 팩토리가 2026-07-19~10-11에 `false`를 미리 넣어 사용자가 고른 것과 구별되지 않는다). 읽기·쓰기는 `lib/calc/decedent-household.ts` leaf.
    */
   decedentSameHouseholdAtInheritance?: boolean;
-  /** 「상속개시 당시 피상속인과 같은 세대였는지 모름」을 사용자가 명시했다 — 위 boolean이 비어 있을 때만 의미(쓰기는 leaf가 모순 없이) */
+  /** 「모름」을 사용자가 명시했다 — 위 boolean이 비어 있을 때만 의미(쓰기는 leaf가 모순 없이) */
   decedentHouseholdUnknown?: boolean;
+  /** 「별도세대」를 사용자가 **직접 골랐다**(3택 라디오가 쓴다) — 이 표시가 없는 `false`는 낡은 기본값이라 미답으로 읽는다(leaf) */
+  decedentHouseholdSeparate?: boolean;
   /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
   parentalCareMergeInheritedHouse?: boolean;
   /**
@@ -455,118 +466,6 @@ export interface HouseEntry {
   /** 공시가격 조회 기준연도 (사용자 선택) — UI 전용, 엔진 미전송 */
   officialPriceYear?: string;
 }
-
-/**
- * §167의3①2호 장기임대주택 선언 묶음 — **명부 행과 양도 주택이 공유**한다.
- *
- * ## 왜 공유하는가 — 9목 전부가 「양도하는 그 주택」에도 성립한다
- *
- * 법문(실독 2026-09-22 · MST 286211)은 2호의 가~자목 어디에도 「임대주택 **외의** 주택을
- * 양도하는 경우」라는 제한을 두지 않는다. 오히려 그 반대다:
- *   · **사목** = 「등록 말소 이후 1년 이내 **양도하는** 주택」 — 문언 자체가 양도 주택이다.
- *   · **라목** = 「해당 주택을 **양도하는** 거주자는 … 미분양주택 확인서 사본 … 제출해야 한다」.
- *
- * ⇒ 「양도 주택에는 일부 목만 쓰인다」는 추정은 **법문으로 반증됐다**. 목을 골라낼 수 없으므로
- *   명부 행의 매트릭스를 그대로 공유한다 — 복제하면 두 진실이 된다.
- *
- * 🔑 `Partial`인 이유: 명부 행은 `isLongTermRental`·`isApartment`가 필수지만, 양도 주택은
- *   이 묶음 자체가 `sellingHouseExclusion.longTermRental`로 **선택적**이다(미선언 = 장기임대 아님).
- *   `HouseEntry`는 이 타입에 구조적으로 대입되므로 매트릭스 위젯을 양쪽이 함께 쓴다.
- */
-export type RentalDeclaration = Partial<
-  Pick<
-    HouseEntry,
-    // 공통 — 아파트 여부는 아·자목 일괄 제외 / 가·마목 2020.7.11 이후 등록 제외의 판정 입력이다
-    | "isLongTermRental"
-    | "isApartment"
-    // legacy 등록 경로 (rentalType 미선택 시)
-    | "isRegisteredRental"
-    | "rentalRegistrationDate"
-    | "businessRegistrationDate"
-    | "rentalPeriodYears"
-    | "rentalCancelledDate"
-    | "rentalCancellationReason"
-    // 9유형 매트릭스 (가~자목)
-    | "rentalType"
-    | "rentIncreaseUnder5Pct"
-    | "rentIncreaseContractDate"
-    | "isNationalSizeHousing"
-    | "hasMinimum2Units"
-    | "hasMinimum5UnitsInCity"
-    | "rentalLandArea"
-    | "rentalTotalFloorArea"
-    | "isConvertedToSale"
-    | "firstSaleContractDate"
-    | "acquisitionOfficialPrice"
-    | "rentalStartOfficialPrice"
-    | "hasHalfDutyPeriodMet"
-    | "isSoldWithin1YearOfCancellation"
-    | "rentalCancellationDate"
-    | "saMokBaseArticle"
-    | "isExcluded918Rule"
-    | "isExcludedAfter20200711Apt"
-    | "isExcludedShortToLongChange"
-    | "hasContractDepositProof"
-    // §167의3⑪ 기한 연장 사실 (아파트 가·나·라·마목)
-    | "rentalAptDeadlineExtension"
-  >
->;
-
-/** 3호 후단 등록 유형 — 종전 민특법 §2 5호(장기일반)·6호(단기)·그 외. 미입력(undefined) = 모름. */
-export type TaxIncentiveRentalRegistrationType = "long_term_general" | "short_term" | "other";
-
-/**
- * §167의3⑪ 기한 연장 사실 — 엔진 `AptTransferDeadlineExtension`의 폼 문자열판(YYYY-MM-DD).
- *
- * 🔑 3-state(`status`): undefined = 「모름」(기한 2027.12.31. + 확인 필요 고지) · "none" = 「연장 사유 없음」 확인(기한 2027.12.31. 확정) ·
- *    "has" = 「연장 사유 있음」(아래 날짜). 「있음」을 고른 뒤 날짜가 비어 있어도 그 선택이 유지되도록 모드를
- *    데이터에서 파생하지 않는다(빈 값 자기-소멸 방지). #1914 이전 저장분(status 없음 + 날짜)은 「있음」으로 읽는다
- *    — 해석은 `aptDeadlineExtensionStatus` 한 곳(⑤·④·⑧ 공용).
- */
-export interface AptDeadlineExtensionForm {
-  status?: "none" | "has";
-  /** ⑪1호 — 임대의무기간 2027.1.1 이후 종료 주택의 등록말소일 */
-  dutyPeriodEndCancellationDate?: string;
-  /** ⑪2호 — 2027.1.1 이후 조정대상지역 신규 지정 공고일 */
-  newRegulatedAreaAnnouncementDate?: string;
-  /** ⑪3호 — 재건축·재개발·소규모정비 이전고시일 */
-  relocationAnnouncementDate?: string;
-  /** ⑪3호 — 그 사업의 인가 또는 지정일. 비어 있으면 모름(3호 불성립 — 결론을 가를 때 확인 필요 고지) */
-  relocationAuthorizationDate?: string;
-  /** ⑪3호 — 양도일 현재 이전고시 전(이전고시일과 상호 배타 — ⑤ onChange가 정리) */
-  relocationNotYetAnnounced?: boolean;
-  /**
-   * ⑪3호 단서 — 협의·수용재결·매도청구소송에 따른 양도. undefined = 모름(구 저장분 포함) · false 아니오 · true 예.
-   * 3호 사업 사실이 있을 때만 화면에 나오고 전송된다(`aptDeadlineRelocationFactPresent`).
-   */
-  relocationExpropriationTransfer?: boolean;
-}
-
-/**
- * 소령 §167의3①3호 「감면대상장기임대주택」 선언 — **명부 행과 양도 주택이 공유**한다.
- *
- * 법문(MST 290841 실독): 「「조세특례제한법」 제97조ㆍ제97조의2 및 제98조에 따라 양도소득세가 감면되는
- * 임대주택으로서 5년 이상 임대한 국민주택」 + 후단(아파트 민간매입 장기일반·단기 → ⑪ 기한까지 양도).
- *
- * 🔑 후단 4사실은 **3-state**다 — 미입력(undefined)은 「모른다」이고 엔진이 불리 적용(후단 대상으로 보고 ⑪ 기한 적용 +
- *    결론이 갈리면 확인 필요 고지)한다(사용자 결정 2026-10-04 · `isTaxIncentiveRentalAptDeadlinePending`). false로 채우지 말 것.
- * 🔑 명부 행은 `rentalPeriodYears`·`isNationalSizeHousing`·`isApartment`를 2호와 같은 칸으로 쓰고,
- *    양도 주택은 그 세 칸을 `sellingHouseExclusion.taxIncentiveRental` 묶음에 둔다(2호 선언과의 공유는
- *    `lib/calc/tax-incentive-rental-scope.ts`가 정한다).
- */
-export type TaxIncentiveRentalFacts = Partial<
-  Pick<
-    HouseEntry,
-    | "isTaxIncentiveRental"
-    | "isTaxIncentiveRentalPurchase"
-    | "taxIncentiveRentalRegistrationType"
-    | "isUrbanLifeHousingApartment"
-    | "taxIncentiveRentalAptDeadlineExtension"
-    | "rentalPeriodYears"
-    | "isNationalSizeHousing"
-    | "isApartment"
-  >
->;
 
 /**
  * 세대 보유 분양권·입주권 항목 (폼 문자열 버전).

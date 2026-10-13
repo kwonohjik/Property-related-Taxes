@@ -41,7 +41,7 @@ function seedForm(houseRegionCode?: string) {
             completionDate: "",
             isSpouseOwned: false,
             isCoInherited: false,
-            decedentSameHouseholdAtInheritance: false,
+            decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
             isRankingDisqualifiedInheritedHouse: false,
             ...(houseRegionCode ? { regionCode: houseRegionCode } : {}),
           },

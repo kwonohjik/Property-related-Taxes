@@ -21,6 +21,7 @@
           "acquisitionDate": "2003-12-29",
           "ruralHouseKind": "inherited",
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "ruralDecedentResidenceYears": "29",
           "oneHouseRuralHouse": true,
           "ruralOutsideCapitalEupMyeon": true

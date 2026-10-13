@@ -6,11 +6,11 @@
  *
  * | # | 층 | 주장 |
  * |---|---|---|
- * | L-* | leaf | 저장 2값(true/false)은 그대로 별도세대·동일세대, 모름은 별도 표시, 미답은 모름과 같이 읽는다 · patch가 모순 없이 쓴다 |
+ * | L-* | leaf | true=동일세대 · 별도세대는 「직접 골랐다」 표시(`decedentHouseholdSeparate`)가 있을 때만 · 표시 없는 false·미답은 모름과 같이 읽는다 · patch가 모순 없이 쓴다 |
  * | P-* | ④ | 상속 행은 `popDeclDonorHousehold`를 이 칸에서 옮긴다(낡은 값 무시) · 증여 행은 종전 칸 · 모름·미답은 `decedentHouseholdUnconfirmed` |
  * | J-* | 판정 메뉴 route | §155②: 별도세대 비과세 · 동일세대 과세 · 모름·미답 과세 + 확인 필요 사유 |
  * | C-* | 계산기 route | ④ body → ⑫ → ⑭ → 엔진 — 같은 칸이 §71의2①(인구감소 안분 과세)과 §155② 주택 수 제외에 도달한다 |
- * | M-* | 저장값 복원 | 종전 저장 행(true·false·미답)은 옮길 것 없이 그대로 3상태로 읽힌다 — 복원(계산기·판정 메뉴)이 새 칸을 지우지 않는다 |
+ * | M-* | 저장값 복원 | 종전 true는 동일세대로 승계, 표시 없는 false(2026-07-19~10-11 팩토리 기본값과 구별 불가)는 미답 = 모름 — 복원(계산기·판정 메뉴)은 행을 그대로 통과시킨다 |
  * | G-* | 엔진 게이트 | `passesHouseholdGate` — 답이 있으면 그 답이 우선, 미확인 표시는 답이 없을 때만 |
  */
 import { describe, it, expect, vi } from "vitest";
@@ -38,9 +38,12 @@ import { mergePersistedWizard, migratePersistedTransferForm, createDefaultTransf
 import { normalizeOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 
 describe("L leaf — 한 칸의 3상태", () => {
-  it("L-1 저장 boolean은 그대로 별도세대(false)·동일세대(true), 아무것도 없으면 미답", () => {
-    expect(decedentHouseholdAnswer({ decedentSameHouseholdAtInheritance: false })).toBe("separate");
+  it("L-1 동일세대(true)·별도세대(표시 + false)는 답이고, boolean false만 있는 낡은 저장분·아무것도 없는 행은 미답", () => {
     expect(decedentHouseholdAnswer({ decedentSameHouseholdAtInheritance: true })).toBe("same");
+    expect(decedentHouseholdAnswer({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true })).toBe("separate");
+    // 🔴 표시 없는 false — 2026-07-19~10-11 「+ 주택 추가」 팩토리가 미리 넣은 기본값과 구별되지 않아 답이 아니다(#42-2 리뷰)
+    expect(decedentHouseholdAnswer({ decedentSameHouseholdAtInheritance: false })).toBeUndefined();
+    expect(decedentHouseholdOf({ decedentSameHouseholdAtInheritance: false })).toBe("unknown");
     expect(decedentHouseholdAnswer({})).toBeUndefined();
   });
 
@@ -49,8 +52,10 @@ describe("L leaf — 한 칸의 3상태", () => {
     expect(decedentHouseholdOf({})).toBe("unknown");
     expect(decedentHouseholdOf({ decedentHouseholdUnknown: true })).toBe("unknown");
     // 답이 있으면 그 답이 우선 — 낡은 모름 표시가 남아도 답을 가리지 않는다
-    expect(decedentHouseholdOf({ decedentSameHouseholdAtInheritance: false, decedentHouseholdUnknown: true })).toBe("separate");
+    expect(decedentHouseholdOf({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, decedentHouseholdUnknown: true })).toBe("separate");
     expect(decedentHouseholdOf({ decedentSameHouseholdAtInheritance: true, decedentHouseholdUnknown: true })).toBe("same");
+    // 표시 없는 낡은 false는 답이 아니라서 사용자가 명시한 모름을 가리지 못한다
+    expect(decedentHouseholdOf({ decedentSameHouseholdAtInheritance: false, decedentHouseholdUnknown: true })).toBe("unknown");
   });
 
   it("L-3 patch — 값마다 boolean·모름 표시를 함께 쓰고, 동거봉양·재상속 예외는 동일세대일 때만 남긴다", () => {
@@ -58,6 +63,7 @@ describe("L leaf — 한 칸의 3상태", () => {
     expect(decedentHouseholdPatch("same", house)).toEqual({
       decedentSameHouseholdAtInheritance: true,
       decedentHouseholdUnknown: undefined,
+      decedentHouseholdSeparate: undefined,
       parentalCareMergeInheritedHouse: true,
       reInheritedFromSeparateHousehold: true,
     });
@@ -67,11 +73,11 @@ describe("L leaf — 한 칸의 3상태", () => {
       expect(p.reInheritedFromSeparateHousehold, v).toBeUndefined();
       // 키가 patch에 **존재**해야 한다 — 병합 시 낡은 값이 남지 않는다(키 없음 = 보존)
       expect(Object.keys(p), v).toEqual(
-        expect.arrayContaining(["decedentSameHouseholdAtInheritance", "decedentHouseholdUnknown", "parentalCareMergeInheritedHouse", "reInheritedFromSeparateHousehold"]),
+        expect.arrayContaining(["decedentSameHouseholdAtInheritance", "decedentHouseholdUnknown", "decedentHouseholdSeparate", "parentalCareMergeInheritedHouse", "reInheritedFromSeparateHousehold"]),
       );
     }
-    expect(decedentHouseholdPatch("separate", house)).toMatchObject({ decedentSameHouseholdAtInheritance: false, decedentHouseholdUnknown: undefined });
-    expect(decedentHouseholdPatch("unknown", house)).toMatchObject({ decedentSameHouseholdAtInheritance: undefined, decedentHouseholdUnknown: true });
+    expect(decedentHouseholdPatch("separate", house)).toMatchObject({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, decedentHouseholdUnknown: undefined });
+    expect(decedentHouseholdPatch("unknown", house)).toMatchObject({ decedentSameHouseholdAtInheritance: undefined, decedentHouseholdUnknown: true, decedentHouseholdSeparate: undefined });
   });
 
   it("L-4 patch를 거친 행은 어느 순서로 바꿔도 모순되지 않는다", () => {
@@ -82,6 +88,7 @@ describe("L leaf — 한 칸의 3상태", () => {
       // 모름 표시와 boolean이 함께 서지 않는다 — 한쪽을 고르면 다른 쪽은 지워진다
       expect(h.decedentHouseholdUnknown === true, v).toBe(v === "unknown");
       expect(h.decedentSameHouseholdAtInheritance === undefined, v).toBe(v === "unknown");
+      expect(h.decedentHouseholdSeparate === true, v).toBe(v === "separate");
     }
   });
 });
@@ -138,7 +145,7 @@ describe("P ④ payload", () => {
   const payloadOf = (row: ReturnType<typeof makeHouse>) => buildOtherHousesPayload([row])[0] as Record<string, unknown>;
 
   it("P-1 별도세대·동일세대는 boolean으로, 미확인 표시는 싣지 않는다 · 인구감소 세대 답도 같은 값", () => {
-    const sep = payloadOf(inheritedRow({ decedentSameHouseholdAtInheritance: false }));
+    const sep = payloadOf(inheritedRow({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }));
     expect(sep).toMatchObject({ decedentSameHouseholdAtInheritance: false, popDeclDonorHousehold: "separate" });
     expect(sep.decedentHouseholdUnconfirmed).toBeUndefined();
     const same = payloadOf(inheritedRow({ decedentSameHouseholdAtInheritance: true }));
@@ -155,7 +162,7 @@ describe("P ④ payload", () => {
   });
 
   it("P-3 상속 행의 낡은 증여자 세대 답(popDeclDonorHousehold)은 무시한다 — 질문이 하나라 이 칸이 정본이다", () => {
-    const p = payloadOf(inheritedRow({ decedentSameHouseholdAtInheritance: false, popDeclDonorHousehold: "same" }));
+    const p = payloadOf(inheritedRow({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, popDeclDonorHousehold: "same" }));
     expect(p.popDeclDonorHousehold).toBe("separate");
   });
 
@@ -182,7 +189,7 @@ describe("P ④ payload", () => {
 describe("R ⑧ 농어촌 상속주택 — 모름도 답이 아니다", () => {
   const rural = (over = {}) => ({ oneHouseRuralHouse: true as const, ruralHouseKind: "inherited" as const, ...over });
   it("R-1 별도세대·동일세대면 통과 · 모름·미답이면 막는다", () => {
-    expect(ruralInheritedSameHouseholdIssue(rural({ decedentSameHouseholdAtInheritance: false }))).toBeNull();
+    expect(ruralInheritedSameHouseholdIssue(rural({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }))).toBeNull();
     expect(ruralInheritedSameHouseholdIssue(rural({ decedentSameHouseholdAtInheritance: true }))).toBeNull();
     expect(ruralInheritedSameHouseholdIssue(rural({ decedentHouseholdUnknown: true }))).not.toBeNull();
     expect(ruralInheritedSameHouseholdIssue(rural())).not.toBeNull();
@@ -224,7 +231,7 @@ describe("J 판정 메뉴 — E004 짝(상속주택 A' + 일반주택 B 보유 �
   });
 
   it("J-1 별도세대 → 상속주택이 주택 수에서 빠져 비과세 (종전 false/미답과 같은 결과)", async () => {
-    const o = await observeCase(base({ decedentSameHouseholdAtInheritance: false }));
+    const o = await observeCase(base({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }));
     expect(o.status).toBe(200);
     expect(o.isExempt).toBe(true);
     expect(o.excludedHouses.map((x) => x.houseId)).toContain("inh");
@@ -298,7 +305,7 @@ describe("D 판정 메뉴 — 한 답이 §155②와 §71의2①에 함께 쓰�
   });
 
   it("D-1 별도세대 → §71의2①이 평창 행을 빼 비과세 (이 칸 하나로 — 증여자 세대 칸은 상속 행에 없다)", async () => {
-    const o = await observeCase(inheritedPyeongchang({ decedentSameHouseholdAtInheritance: false }));
+    const o = await observeCase(inheritedPyeongchang({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }));
     expect(o.validationErrors).toEqual([]);
     expect(o.isExempt).toBe(true);
     expect(o.excludedHouses).toEqual([expect.objectContaining({ houseId: "p", legalBasis: "조특법 §71의2①" })]);
@@ -319,51 +326,91 @@ describe("D 판정 메뉴 — 한 답이 §155②와 §71의2①에 함께 쓰�
   it("D-3 낡은 증여자 세대 답(popDeclDonorHousehold)이 남아 있어도 상속 행은 이 칸만 본다", async () => {
     const stale = await observeCase(inheritedPyeongchang({ decedentSameHouseholdAtInheritance: true, popDeclDonorHousehold: "separate" }));
     expect(stale.isExempt).toBe(false);
-    const stale2 = await observeCase(inheritedPyeongchang({ decedentSameHouseholdAtInheritance: false, popDeclDonorHousehold: "same" }));
+    const stale2 = await observeCase(inheritedPyeongchang({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, popDeclDonorHousehold: "same" }));
     expect(stale2.isExempt).toBe(true);
   });
 });
 
-describe("M 저장값 복원 — 종전 boolean은 그대로 새 3상태", () => {
+describe("M 저장값 복원 — 종전 true만 답으로 승계하고, 표시 없는 false는 미답으로 읽는다 (#42-2 리뷰)", () => {
+  /**
+   * 🔴 종전 저장분의 `false`는 사용자가 고른 별도세대가 아니다 — 「+ 주택 추가」 팩토리가 2026-07-19~10-11(6356561f9 → 642eef8b7)에
+   * 새 행마다 `false`를 미리 넣었고, 토글 OFF 표시도 같은 `false`라서 구별할 표지가 없다. 별도세대는 3택 라디오가 함께 쓰는
+   * `decedentHouseholdSeparate` 표시가 있을 때만 답이다. 종전 `true`는 토글을 켠 답이라 그대로 동일세대다.
+   */
   const legacyRows = [
     { id: "t", isInherited: true, decedentSameHouseholdAtInheritance: true },
     { id: "f", isInherited: true, decedentSameHouseholdAtInheritance: false },
     { id: "u", isInherited: true },
     { id: "k", isInherited: true, decedentHouseholdUnknown: true },
+    { id: "s", isInherited: true, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true },
   ];
   const readAll = (rows: { id: string }[]) =>
     Object.fromEntries(rows.map((r) => [r.id, decedentHouseholdAnswer(r as never)]));
+  const EXPECT_ANSWERS = { t: "same", f: undefined, u: undefined, k: "unknown", s: "separate" };
 
-  it("M-1 종전 저장분 — true → 동일세대 · false → 별도세대(사용자가 토글을 직접 만진 답) · 미답 → 답 없음(모름과 같이 읽는다)", () => {
-    expect(readAll(legacyRows)).toEqual({ t: "same", f: "separate", u: undefined, k: "unknown" });
-    expect(legacyRows.map((r) => decedentHouseholdOf(r as never))).toEqual(["same", "separate", "unknown", "unknown"]);
+  it("M-1 종전 저장분 — true → 동일세대 · 표시 없는 false → 답 없음(모름과 같이 읽는다) · 표시가 붙은 false → 별도세대", () => {
+    expect(readAll(legacyRows)).toEqual(EXPECT_ANSWERS);
+    expect(legacyRows.map((r) => decedentHouseholdOf(r as never))).toEqual(["same", "unknown", "unknown", "unknown", "separate"]);
   });
 
-  it("M-2 판정 메뉴 복원(normalize) — 행을 그대로 통과시켜 새 칸이 지워지지 않는다", () => {
+  it("M-2 판정 메뉴 복원(normalize) — 행을 그대로 통과시킨다(옛 false를 지우지도, 표시를 만들어 붙이지도 않는다)", () => {
     const restored = normalizeOneHouseJudgmentForm({ houses: JSON.parse(JSON.stringify(legacyRows)) });
     expect(restored.houses).toEqual(legacyRows);
-    expect(readAll(restored.houses)).toEqual({ t: "same", f: "separate", u: undefined, k: "unknown" });
+    expect(readAll(restored.houses)).toEqual(EXPECT_ANSWERS);
   });
 
   it("M-3 계산기 복원(sessionStorage merge · 이력 폼 이전) — 같다", () => {
     const raw = JSON.parse(JSON.stringify({ ...createDefaultTransferFormData(), houses: legacyRows }));
     expect(migratePersistedTransferForm(raw).houses).toEqual(legacyRows);
     const merged = mergePersistedWizard({ formData: raw }, { formData: createDefaultTransferFormData() } as never);
-    expect((merged as { formData: { houses: typeof legacyRows } }).formData.houses).toEqual(legacyRows);
+    const houses = (merged as { formData: { houses: typeof legacyRows } }).formData.houses;
+    expect(houses).toEqual(legacyRows);
+    expect(readAll(houses)).toEqual(EXPECT_ANSWERS);
   });
 
-  it("M-4 복원한 행의 ④ 결과 — 종전 true·false는 종전과 같은 값이 나가고, 미답만 모름으로 나간다", () => {
+  it("M-4 복원한 행의 ④ 결과 — 종전 true·직접 고른 별도세대만 답으로 나가고, 표시 없는 false는 미답과 같이 모름으로 나간다", () => {
     const payload = buildOtherHousesPayload(
       legacyRows.map((r) => makeHouse(r.id, { ...r, inheritedDate: "2020-01-01", acquisitionDate: "2020-01-01" })),
     ) as Record<string, unknown>[];
     const by = Object.fromEntries(payload.map((p) => [p.id as string, p]));
-    expect(by.t).toMatchObject({ decedentSameHouseholdAtInheritance: true });
+    expect(by.t).toMatchObject({ decedentSameHouseholdAtInheritance: true, popDeclDonorHousehold: "same" });
     expect(by.t.decedentHouseholdUnconfirmed).toBeUndefined();
-    expect(by.f).toMatchObject({ decedentSameHouseholdAtInheritance: false });
-    expect(by.f.decedentHouseholdUnconfirmed).toBeUndefined();
-    expect(by.u).toMatchObject({ decedentHouseholdUnconfirmed: true });
-    expect(by.u.decedentSameHouseholdAtInheritance).toBeUndefined();
-    expect(by.k).toMatchObject({ decedentHouseholdUnconfirmed: true });
+    expect(by.s).toMatchObject({ decedentSameHouseholdAtInheritance: false, popDeclDonorHousehold: "separate" });
+    expect(by.s.decedentHouseholdUnconfirmed).toBeUndefined();
+    // 표시 없는 false — 엔진에 별도세대(false)로 닿지 않고 미확인으로 나간다 (§155②와 §71의2① 모두)
+    for (const id of ["f", "u", "k"]) {
+      expect(by[id], id).toMatchObject({ decedentHouseholdUnconfirmed: true, popDeclDonorHousehold: "unknown" });
+      expect(by[id].decedentSameHouseholdAtInheritance, id).toBeUndefined();
+    }
+  });
+
+  it("M-5 판정 메뉴 route — 표시 없는 낡은 false 행은 §155② 특례를 적용하지 않고 확인 필요로 알린다 (표시가 있으면 적용)", async () => {
+    const mk = (over: Record<string, unknown>): RulingCase => ({
+      id: "T42-2-M5",
+      docNo: "-",
+      docDate: "-",
+      basis: "era",
+      today: "2016-06-16",
+      summary: "",
+      bucket: "match",
+      form: {
+        isOneHousehold: true,
+        transferDate: "2016-06-15",
+        contractTotalPrice: "500000000",
+        asset: { assetKind: "housing", acquisitionDate: "2002-08-12" },
+        houses: [
+          { id: "inh", region: "capital", acquisitionDate: "2009-02-02", isInherited: true, inheritedDate: "2009-02-02", isCoInherited: false, acquisitionOrigin: "general", ...over },
+          { id: "c", region: "capital", acquisitionDate: "2015-12-21", acquisitionOrigin: "general" },
+        ],
+      },
+    });
+    const legacy = await observeCase(mk({ decedentSameHouseholdAtInheritance: false }));
+    expect(legacy.isExempt).toBe(false);
+    expect(legacy.excludedHouses.map((x) => x.houseId)).not.toContain("inh");
+    expect((legacy.unmetReasons["155-2-inherited-house"] ?? []).join(" ")).toContain("모르거나 답하지 않았습니다");
+    const chosen = await observeCase(mk({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true }));
+    expect(chosen.isExempt).toBe(true);
+    expect(chosen.excludedHouses.map((x) => x.houseId)).toContain("inh");
   });
 });
 
@@ -433,7 +480,7 @@ describe("C 계산기 — ④ body → ⑫ Zod → ⑭ route → 엔진 (상속�
   };
 
   it("C-1 별도세대 → body에 false·인구감소 세대 separate로 실리고 §71의2①로 안분 과세 (14,124,000)", async () => {
-    const { body, status, r } = await calc({ decedentSameHouseholdAtInheritance: false });
+    const { body, status, r } = await calc({ decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true });
     expect(status).toBe(200);
     expect(body.houses.find((h) => h.id === "p")).toMatchObject({ decedentSameHouseholdAtInheritance: false, popDeclDonorHousehold: "separate" });
     expect(r).toMatchObject({ totalTax: 14_124_000, isPartialExempt: true });
@@ -444,6 +491,14 @@ describe("C 계산기 — ④ body → ⑫ Zod → ⑭ route → 엔진 (상속�
     expect(body.houses.find((h) => h.id === "p")).toMatchObject({ decedentSameHouseholdAtInheritance: true, popDeclDonorHousehold: "same" });
     expect(r).toMatchObject({ totalTax: 299_816_000, isPartialExempt: false });
     expect(r.warnings.join(" ")).toContain("조특법 §71의2①");
+  });
+
+  it("C-4 표시 없는 낡은 false(종전 팩토리 기본값) → body에 미확인으로 실리고 전액 과세 — 별도세대로 읽히지 않는다 (299,816,000)", async () => {
+    const { body, r } = await calc({ decedentSameHouseholdAtInheritance: false });
+    const row = body.houses.find((h) => h.id === "p")!;
+    expect(row).toMatchObject({ decedentHouseholdUnconfirmed: true, popDeclDonorHousehold: "unknown" });
+    expect(row.decedentSameHouseholdAtInheritance).toBeUndefined();
+    expect(r).toMatchObject({ totalTax: 299_816_000, isPartialExempt: false });
   });
 
   it("C-3 모름·미답 → body에 미확인으로 실리고 같은 전액 과세 + 확인 필요 경고 · ⑫가 새 키를 지우지 않는다", async () => {

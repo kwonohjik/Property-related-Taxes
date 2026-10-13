@@ -24,7 +24,8 @@
           "isInherited": true,
           "inheritedDate": "2003-04-14",
           "isCoInherited": true,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },

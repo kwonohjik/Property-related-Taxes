@@ -92,8 +92,23 @@ test("[DH-3] 동일세대를 고르면 true로 실리고 과세", async ({ page 
 });
 
 test("[DH-4] 모름 — 별도세대로 답했던 행도 모름으로 바꾸면 boolean이 지워지고 미확인으로 실린다", async ({ page }) => {
-  await seed(page, { decedentSameHouseholdAtInheritance: false });
+  await seed(page, { decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true });
   await answer(page, "unknown");
+  const body = await judge(page);
+  const row = body.houses?.find((h) => h.id === "a");
+  expect(row).toMatchObject({ decedentHouseholdUnconfirmed: true });
+  expect(row?.decedentSameHouseholdAtInheritance).toBeUndefined();
+  await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+});
+
+test("[DH-5] 낡은 저장분 — 표시 없는 boolean false는 별도세대 답이 아니다: 라디오는 비어 있고 판정은 과세 + 확인 필요", async ({ page }) => {
+  // 2026-07-19~10-11 「+ 주택 추가」 팩토리가 미리 넣은 false와 구별되지 않는다(#42-2 리뷰)
+  await seed(page, { decedentSameHouseholdAtInheritance: false });
+  await page.getByRole("button", { name: "주택 1 편집" }).click();
+  for (const v of ["separate", "same", "unknown"]) {
+    await expect(page.getByTestId(`house-row-decedent-household-${v}`)).not.toBeChecked();
+  }
+  await page.getByRole("button", { name: "완료" }).click();
   const body = await judge(page);
   const row = body.houses?.find((h) => h.id === "a");
   expect(row).toMatchObject({ decedentHouseholdUnconfirmed: true });

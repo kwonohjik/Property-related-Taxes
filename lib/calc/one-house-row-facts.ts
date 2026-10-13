@@ -45,6 +45,7 @@ export type OneHouseFactRow = Partial<
     | "ruralDecedentResidenceYears"
     | "decedentSameHouseholdAtInheritance"
     | "decedentHouseholdUnknown"
+    | "decedentHouseholdSeparate"
     | "parentalCareMergeInheritedHouse"
     | "ruralOwnerResidenceYears"
     | "ruralLandAreaSqm"
@@ -218,7 +219,7 @@ export function ruralReturnToFarmFactsIssue(
  * 판정 메뉴·계산기 ⑧이 같은 leaf를 쓴다(⑤ `HouseEntryRuralHouseBlock` 라디오가 유일한 입력 경로 — 3중 패턴).
  */
 export function ruralInheritedSameHouseholdIssue(
-  row: Pick<HouseEntry, "oneHouseRuralHouse" | "ruralHouseKind" | "decedentSameHouseholdAtInheritance" | "decedentHouseholdUnknown">,
+  row: Pick<HouseEntry, "oneHouseRuralHouse" | "ruralHouseKind" | "decedentSameHouseholdAtInheritance" | "decedentHouseholdUnknown" | "decedentHouseholdSeparate">,
 ): string | null {
   if (row.oneHouseRuralHouse !== true || row.ruralHouseKind !== "inherited") return null;
   // 「모름」도 답이 아니다 — 1호는 동일세대 여부가 요건 사실이라 별도세대·동일세대 중 하나로 확정해야 한다(#42-2 한 칸의 3상태).

@@ -85,7 +85,7 @@ describe("S01-1 판정 메뉴 — 대체주택 취득 뒤 취득해 양도일까
   });
   it("경계 — 대체주택 뒤 취득한 주택이 §155② 상속주택(별도세대 상속)이면 주택 수에서 빠진다 → 비과세 유지", async () => {
     const o = await observeCase(
-      mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2021-05-15", region: "capital" as const, isInherited: true, decedentSameHouseholdAtInheritance: false, inheritedDate: "2021-05-15" }])),
+      mk("2026-06-16", P2([A_ROW, { id: "C", acquisitionOrigin: "general" as const, acquisitionDate: "2021-05-15", region: "capital" as const, isInherited: true, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, inheritedDate: "2021-05-15" }])),
     );
     expect(o.excludedHouses.map((x) => x.houseId)).toContain("C");
     expect(o.isExempt).toBe(true);

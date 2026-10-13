@@ -231,7 +231,7 @@ describe("분기 1 — §155⑳ 명부 없음: 「그 밖의 주택」 특례 �
       ...ROW,
       id: "h3",
       isInherited: true,
-      decedentSameHouseholdAtInheritance: false, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
+      decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
       acquisitionDate: "2019-06-01",
       inheritedDate: "2019-06-01",
     };

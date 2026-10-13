@@ -47,7 +47,7 @@ function seedForm(transferDate: string) {
             completionDate: "",
             isSpouseOwned: false,
             isCoInherited: false,
-            decedentSameHouseholdAtInheritance: false,
+            decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
             isRankingDisqualifiedInheritedHouse: false,
           },
         ],

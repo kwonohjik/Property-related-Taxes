@@ -63,6 +63,7 @@
           "isInherited": true,
           "inheritedDate": "1990-09-18",
           "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
           "ruralHouseKind": "inherited",
           "ruralDecedentResidenceYears": "10",
           "oneHouseRuralHouse": true,

@@ -25,7 +25,7 @@ async function judge(kind: string, houses: HouseEntry[]) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((await res.json()) as any).data as { houseCount: { countedForExemption: number; excluded: { legalBasis: string }[] }; judgment: { isExempt: boolean } };
 }
-const inh = (over: Partial<HouseEntry> = {}) => hrow({ id: "INH", acquisitionDate: "2015-03-01", isInherited: true, inheritedDate: "2015-03-01", isCoInherited: false, decedentSameHouseholdAtInheritance: false, parentalCareMergeInheritedHouse: false, ...over } as Partial<HouseEntry>);
+const inh = (over: Partial<HouseEntry> = {}) => hrow({ id: "INH", acquisitionDate: "2015-03-01", isInherited: true, inheritedDate: "2015-03-01", isCoInherited: false, decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true, parentalCareMergeInheritedHouse: false, ...over } as Partial<HouseEntry>);
 
 describe("S03-6 입주권 양도 — §155②③ 상속주택은 명세에서도 다른 주택으로 센다", () => {
   it("§155② 단독상속 → countedForExemption 1 · excluded에 §155② 없음 · 과세", async () => {

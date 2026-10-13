@@ -31,7 +31,7 @@ async function seed(page: Page, inheritedRow: Record<string, unknown>) {
         isInherited: true,
         inheritedDate: "2024-05-15",
         isCoInherited: false,
-        decedentSameHouseholdAtInheritance: false,
+        decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true,
         isLongTermRental: false,
         isApartment: false,
         isOfficetel: false,

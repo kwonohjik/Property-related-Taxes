@@ -26,7 +26,8 @@
           "isInherited": true,
           "inheritedDate": "2018-08-15",
           "isCoInherited": false,
-          "decedentSameHouseholdAtInheritance": false
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true
         }
       ]
     },
