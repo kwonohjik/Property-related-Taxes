@@ -22,6 +22,7 @@ import {
   type AppurtenantLandZone,
 } from "@/lib/tax-engine/appurtenant-land-rate";
 import { appurtenantCardLimitShare } from "@/lib/tax-engine/appurtenant-land-rate";
+import { appurtenantCardAreaM2 } from "@/lib/calc/transfer-tax-api-helpers";
 
 /** 수동 세율 오버라이드 옵션 (부수토지 일체과세 §104①2호·영§167의5) */
 export const MANUAL_RATE_OVERRIDE_OPTIONS = [
@@ -47,7 +48,7 @@ export const MANUAL_RATE_OVERRIDE_OPTIONS = [
  * useEffect → store 미러링 금지 — useMemo로 파생값만 계산.
  *
  * 조건:
- *  1. 이 카드가 토지 자산
+ *  1. 이 카드가 주택부수토지 카드(토지 · `landNature === "appurtenant"`) — route는 그 밖의 카드에 일체과세를 하지 않는다
  *  2. primaryAsset이 신축(자가건축)
  *  3. 사용승인일 기준 보유 < 365일
  *  4. 면적이 한도 이내 — 한도는 주 자산 주택 카드의 토지가 먼저 쓰고 남은 몫을 부수토지 카드들이 면적 비율로 나눈다(route와 같은 leaf)
@@ -64,7 +65,14 @@ export function useUnifiedRateBadge(
   const appurtenantCardsAreaM2 = limitShare?.appurtenantCardsAreaM2;
   return useMemo(() => {
     if (!primaryAsset) return false;
-    if (asset.assetKind !== "land") return false;
+    // F3(b) — 카드 성질·면적은 ④ `areaM2`와 같은 leaf다(독립 토지는 0 — route `resolveCompanionSplit` 진입 조건과 같다).
+    const companionArea = appurtenantCardAreaM2({
+      assetKind: asset.assetKind,
+      landNature: asset.landNature,
+      transferArea: asset.transferArea,
+      acquisitionArea: asset.acquisitionArea,
+    });
+    if (companionArea <= 0) return false;
     if (asset.manualHoldingPeriodOverride !== undefined) return false;
     if (primaryAsset.acquisitionCause !== "newConstruction") return false;
     if (!primaryAsset.occupancyApprovalDate || !transferDate) return false;
@@ -100,8 +108,6 @@ export function useUnifiedRateBadge(
           : "non_urban");
     const multiplier = appurtenantLandMultiplier(zone, trnDate);
     const limitArea = footprint * multiplier;
-    const companionArea = parseFloat(asset.acquisitionArea || asset.transferArea || "0");
-    if (companionArea <= 0) return false;
     /**
      * #17 후속(K1) — route(`resolveCompanionSplit`)가 주택 카드 토지를 한도에서 먼저 빼므로 배지도 같은 leaf로 잰다. 종전에는 카드 단독으로
      * 한도 전체와 비교해, 주택 토지가 이미 한도를 넘은 카드에 «자동 적용»을 띄우고 route는 그 카드를 전부 초과분(비사업용 토지)으로 계산했다.
@@ -112,6 +118,7 @@ export function useUnifiedRateBadge(
   }, [
     primaryAsset,
     asset.assetKind,
+    asset.landNature,
     asset.manualHoldingPeriodOverride,
     asset.acquisitionArea,
     asset.transferArea,

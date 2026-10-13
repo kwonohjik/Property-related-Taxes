@@ -309,6 +309,16 @@ export function resolveAcqAreaForStdPrice(asset: {
   return tr ?? acq;
 }
 
+/**
+ * ④⑤ 주택부수토지 카드의 배율 한도 판정 면적(㎡) — ④ `areaM2`. 토지이고 `landNature === "appurtenant"`가 아니면 0(독립 토지는 한도 판정·일체과세 대상이 아니다).
+ * 양도하는 토지 면적(`transferArea`)을 우선하고 비면 취득면적이다. ④ 전송 · 한도 공유 합계(`appurtenantLimitShareOfAssets`) · 일체과세 배지
+ * (`useUnifiedRateBadge`)가 같은 값을 읽는다 — 갈리면 배지가 route(`resolveCompanionSplit`)와 다른 카드·면적으로 «자동 적용»을 말한다.
+ */
+export function appurtenantCardAreaM2(asset: Pick<AssetForm, "assetKind" | "landNature" | "transferArea" | "acquisitionArea">): number {
+  if (asset.assetKind !== "land" || asset.landNature !== "appurtenant") return 0;
+  return parseFloat(asset.transferArea) || parseFloat(asset.acquisitionArea) || 0;
+}
+
 // ─── ④ 컴패니언 자산 payload — transfer-tax-api-companion-payload.ts로 분리 (800줄 정책, 재export 호환) ───
 export { buildAssetPayload } from "./transfer-tax-api-companion-payload";
 

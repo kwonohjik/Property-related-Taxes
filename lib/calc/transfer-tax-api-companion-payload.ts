@@ -26,6 +26,7 @@ import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inherita
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
+import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
@@ -522,12 +523,10 @@ export function buildAssetPayload(
      * 부수토지(`landNature === "appurtenant"`)만 싣는다 — 독립 나대지는 한도 판정 대상이 아니다.
      * 금액이 아니라 물건 면적 사실이라 지분 스케일을 하지 않는다.
      */
-    ...(asset.assetKind === "land" && asset.landNature === "appurtenant"
-      ? (() => {
-          const area = parseFloat(asset.transferArea) || parseFloat(asset.acquisitionArea) || 0;
-          return area > 0 ? { areaM2: area } : {};
-        })()
-      : {}),
+    ...(() => {
+      const area = appurtenantCardAreaM2(asset);
+      return area > 0 ? { areaM2: area } : {};
+    })(),
     /**
      * ⑬ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 «미분리» 고지 전용(세액 불변, #17).
      * 컴패니언 주택은 `buildingFootprintArea`·`appurtenantLandZone`을 싣지 않는다(형제 토지 카드의 주택 컨텍스트 키 — 싣는 순간 세율 자동 분기가 움직인다).
