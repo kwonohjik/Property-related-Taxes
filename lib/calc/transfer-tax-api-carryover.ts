@@ -193,8 +193,8 @@ export function carryoverResidenceJudgmentDate(asset: Pick<AssetForm, "assetKind
   return c.giftRegistryDate || undefined;
 }
 
-/** ④ 전송 조각 — 질문을 묻는 경우에만, 답한 값만. */
-function carryoverHouseholdPayload(asset: AssetForm): {
+/** ④ 전송 조각 — 질문을 묻는 경우에만, 답한 값만. 「취득 당시」 표시·⑧도 같은 조각으로 엔진 basis를 만든다(`calcGiftHouseholdBasis`). */
+export function carryoverHouseholdPayload(asset: AssetForm): {
   donorSameHouseholdContinuous?: boolean;
   donorHouseholdHoldingStartDate?: string;
   donorRejoinedAfterDivorce?: boolean;

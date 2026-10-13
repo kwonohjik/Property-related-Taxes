@@ -393,7 +393,10 @@ export function validateAssetEntry(
     }),
     // §154⑩ 표준 경로(I-5) — 거주주택 취득 당시 조정대상지역 여부. 주소(법정동코드)가 있으면 엔진과 같은 주소 판정,
     // 없으면 폼-전역 토글(일반 §154① 흐름과 동일 소스) — ⑤ 카드와 같은 실효값(G1-13).
-    calcEffectiveWasRegulatedAtAcquisition(a, form.wasRegulatedAtAcquisition, form.regionCode),
+    // 결정 #38-10 — 증여받은 주택은 ④와 같은 세대 사실 basis(첫 자산 — ⑤ 위젯과 같은 게이트)로 읽는다.
+    calcEffectiveWasRegulatedAtAcquisition(a, form.wasRegulatedAtAcquisition, form.regionCode, {
+      isPrimary: index === 0,
+    }),
     undefined,
     // §161 취득 뒤 하락했다가 회복한 입력을 12억 이하에서만 연다 — 물건 양도가액은 ④가 보내는 값과 같은 단건 계약 총액이다.
     // 함께양도 묶음·부담부증여는 12억 판정가가 엔진/route에서 정해져 ⑧이 모른다 → 미전달(열지 않는다).

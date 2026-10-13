@@ -19,7 +19,11 @@ import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
-import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
+import {
+  calcEffectiveIsRegulatedAtTransfer,
+  calcEffectiveWasRegulatedAtAcquisition,
+  GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+} from "@/lib/calc/effective-regulated-at-acquisition";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { BundledApportionmentResult } from "@/lib/tax-engine/bundled-sale-apportionment";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -31,7 +35,7 @@ import {
   buildPreHousingDisclosurePayload,
   buildNewConstructionPayload,
 } from "./transfer-tax-api-body-blocks";
-import { toEngineReductions, toSelfCultivatedExpropriatedLand, buildAssetPayload, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, provisoGate, deriveEngineInheritanceAssetKind, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { toEngineReductions, toSelfCultivatedExpropriatedLand, getOwnershipRatio, applyRatio, toRentalHousingExceptionApi, buildExpropriationInput, buildReplacementHousePayload, buildRightThreeYearExceptionPayload, buildMergedHouseholdFirstHousePayload, buildPre1990LandPayload, buildSameHouseholdInheritancePayload, provisoGate, isFullFractionalBundle } from "./transfer-tax-api-helpers";
 // ⚠️ 신규 import는 한 라인에 한 named만 — lint-staged `eslint --fix`가 미사용 import 정리 시
 //    같은 라인의 사용 중인 named까지 제거하는 함정이 있다(루트 CLAUDE.md).
 import { buildPrimaryContext } from "./transfer-tax-api-primary-context";
@@ -41,7 +45,8 @@ import { isReceiveOnlyFiling } from "./redev-field-scope";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
-import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { buildBundledPrimaryPayload } from "./transfer-tax-api-bundled";
+import { postTransferCalc } from "./transfer-tax-api-post";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
@@ -463,7 +468,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     residencePeriodMonths: residence.months,
     // 결정 #5(G7-6) 하위 1 — 주소(법정동코드)가 있으면 저장된 토글이 아니라 주소 판정값을 싣는다(⑤ 토글을 숨긴 화면과 같은 값).
     isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form),
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode),
+    // 결정 #38-10 — 증여받은 주택은 엔진과 같은 세대 사실 basis로 「취득 당시」를 읽는다(단일 기준일이면 거울상·통산 시 엔진과 반대 값이 간다).
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
     // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 그 밖의 자산은 보내지 않는다(3중 패턴).
     presaleRightNoOtherRight:
       primary.assetKind === "presale_right" ? form.presaleRightNoOtherRight : undefined,
@@ -658,60 +664,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     //    payload에 **두 개의 서로 다른 계산 지시**가 실리는 모순 상태가 된다.
     //    companion 경로를 아예 쓰지 않는 것이 이 설계의 회귀 0 근거다(설계 D1-1).
     ...(form.assets.length > 1 && gbShares === undefined
-      ? {
-          totalSalePrice: totalContractPrice,
-          // §166⑥ 안분 키 — 함께양도 묶음의 지분 primary는 물건 전체(100%) 기준시가 × 지분율(양도하는 것이 지분이다).
-          standardPriceAtTransferForApportion:
-            parseAmount(primary.standardPriceAtTransfer) > 0
-              ? primaryShareInCompanion
-                ? applyRatio(parseAmount(primary.standardPriceAtTransfer), primaryRatio)
-                : parseAmount(primary.standardPriceAtTransfer)
-              : undefined,
-          primaryInheritanceValuation:
-            primary.acquisitionCause === "inheritance" && !effectiveBuildingCauseMix(primary) // D2: 건물 평가액은 파트 가액
-              ? {
-                  inheritanceDate: primary.acquisitionDate,
-                  // 보충적평가 자산 구분 — 상단 assetKind 기준 파생(land vs 非land; housing은 개별/공동).
-                  // 상속 자산구분 라디오 폐지 대응(deriveEngineInheritanceAssetKind). 결과는 schema enum 값.
-                  assetKind: deriveEngineInheritanceAssetKind(primary),
-                  landAreaM2: primary.acquisitionArea ? parseFloat(primary.acquisitionArea) : undefined,
-                  // 지분 모드: 100% 기준 입력값(공동주택가격 등)에 × ratio 적용
-                  publishedValueAtInheritance: primaryFractional
-                    ? applyRatio(parseAmount(primary.publishedValueAtInheritance), primaryRatio)
-                    : parseAmount(primary.publishedValueAtInheritance),
-                }
-              : undefined,
-          companionAssets: form.assets
-            .slice(1)
-            // 지분 모드(같은 물건 분할취득): companion ① 기본정보를 UI에서 숨기므로
-            // primary basic(자산종류·면적·토지성격)을 병합해 엔진에 전달 (mergePrimaryBasic).
-            // ⑬ 폼-수준 총 양도비를 **자산에 싣지 않는다** — 아래 `commonTransferExpense`로
-            //    신고 단위 1회만 보내고 엔진이 §100② 후단(가액 비례)으로 안분한다(Q08).
-            //    자산별 직접 입력분(`transferExpense`)은 그대로 `directExpenses`로 더해진다.
-            .map((a, ci) => buildAssetPayload(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
-          // 🔴 신고 단위 선언도 **파생값**이다(H8) — 자산별 계산만 안분하고 여기를 raw로 두면
-          //    한 요청 안에서 「자산은 안분 / 신고는 구분기재」로 어긋난다.
-          bundledSaleMode: effBundledSaleMode,
-          /**
-           * ⑬ 신고 단위 공통 양도비 (§100② 후단) — 「공통되는 … 양도비용은 해당 자산의
-           * 가액에 비례하여 안분계산한다」. 안분은 `apportionBundledSale`의 `commonExpenses`가
-           * 수행하고 마지막 자산이 잔액을 흡수해 Σ가 보존된다.
-           */
-          ...(formTotalTransferExpense > 0
-            ? { commonTransferExpense: formTotalTransferExpense }
-            : {}),
-          // primary 확정 양도가액.
-          //  - 축 B(같은 물건 지분 분할): 총계약가 × ratio 자동 결정 (bundledSaleMode 무관, actualSalePrice 무시 —
-          //    companion `buildAssetPayload` 정책과 일관). route가 fixedSalePrice로 주입해
-          //    기준시가 안분 없이 지분율 안분 성립.
-          //  - actual 모드: 계약서상 양도가액 — 함께양도 묶음의 지분 primary는 물건 전체(100%) 입력 × 지분율.
-          //  - apportioned(축 B 아님): undefined (양도시 기준시가 비율 안분).
-          primaryActualSalePrice: primaryFractional && !primaryShareInCompanion
-            ? applyRatio(totalContractPrice, primaryRatio)
-            : effBundledSaleMode === "actual" && primary.actualSalePrice
-              ? shareOf(parseAmount(primary.actualSalePrice))
-              : undefined,
-        }
+      ? buildBundledPrimaryPayload({ form, primary, fractionalBundleMerge, totalContractPrice, primaryRatio, primaryFractional, primaryShareInCompanion, effBundledSaleMode, shareOf, formTotalTransferExpense, companionBgDebtOverrides })
       : {}),
     // ── 상속 취득가액 의제 (소령 §176조의2 ④ pre-deemed / §163 ⑨ post-deemed) — sibling 격리 ──
     ...buildInheritedAcquisitionPayload(primary, primaryRatio, primaryFractional),
@@ -742,29 +695,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ...buildNewConstructionPayload(primary),
   };
 
-  const res = await fetch("/api/calc/transfer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const json = await res.json();
-  if (!res.ok) {
-    const msg = json?.error?.message ?? "계산 중 오류가 발생했습니다.";
-    const fieldErrors = json?.error?.fieldErrors as
-      | Record<string, string[]>
-      | undefined;
-    if (fieldErrors && Object.keys(fieldErrors).length > 0) {
-      const { logFieldErrorsResponse } = await import("./transfer-tax-api-error-log");
-      logFieldErrorsResponse(fieldErrors, json, body);
-      const { formatFieldErrors } = await import("./transfer-tax-error-format");
-      throw new Error(formatFieldErrors(fieldErrors, msg));
-    }
-    const { logNoFieldErrorsResponse } = await import("./transfer-tax-api-error-log");
-    const detailedMsg = logNoFieldErrorsResponse(json, res, body) ?? msg;
-    throw new Error(detailedMsg);
-  }
-  return json.data as TransferAPIResult;
+  return postTransferCalc<TransferAPIResult>(body);
 }
 
 // 거주요건 판정 입력 빌드 — transfer-tax-api-residence.ts로 격리 (800줄 정책)

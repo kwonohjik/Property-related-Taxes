@@ -23,9 +23,13 @@
  * 다만 `transferPrice`는 **양수 필수**이고 고가주택(12억 초과) 판정에 **실제로 쓰이므로**
  * 사용자에게 받는다(③ 예상 양도가액).
  */
-import { buildGiftHouseholdPayload } from "@/lib/calc/gift-household-payload";
+import { buildGiftHouseholdPayload, giftHouseholdFactErrors } from "@/lib/calc/gift-household-payload";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
-import { calcEffectiveWasRegulatedAtAcquisition, effectiveIsRegulatedAtTransfer } from "@/lib/calc/effective-regulated-at-acquisition";
+import {
+  calcEffectiveWasRegulatedAtAcquisition,
+  effectiveIsRegulatedAtTransfer,
+  GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+} from "@/lib/calc/effective-regulated-at-acquisition";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
@@ -154,7 +158,8 @@ export function buildOneHouseExemptionApiBody(
       transferDate: form.transferDate,
       stored: form.isRegulatedArea,
     }),
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition),
+    // 결정 #38-10 — 증여받은 주택은 아래 `buildGiftHouseholdPayload`가 싣는 세대 사실과 같은 basis로 읽는다(⑤ 2-C·⑧과 한 값).
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, undefined, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
     /**
      * ④ 양도 물건 법정동코드 — ② 화면의 소재지 검색(PNU 앞 10자리)이 세운다.
      *
@@ -220,7 +225,8 @@ export function buildOneHouseExemptionApiBody(
      * 증여받은 주택의 증여자와 계속 같은 세대 (결정 #38) — 상속과 같은 게이트·같은 방식이다. 보유 통산·「취득 당시」 기준일은
      * 엔진 한 leaf(`one-house/gift-household-basis.ts`)가 정한다. 계산기 이월과세 폼의 같은 사실과 같은 엔진 입력이 된다.
      */
-    ...(judgmentSaleIsHousing(form) ? buildGiftHouseholdPayload(primary) : {}),
+    // 불완전·불일치 사실은 싣지 않는다 — 화면 basis(`calcGiftHouseholdBasis`)·계산기 ④(`buildCalcGiftHouseholdPayload`)와 같은 술어다(결정 #38-10). ⑧이 같은 규칙으로 막는다.
+    ...(judgmentSaleIsHousing(form) && giftHouseholdFactErrors(primary).length === 0 ? buildGiftHouseholdPayload(primary) : {}),
 
     /**
      * ── 계산기와 **같은 leaf** ──────────────────────────────
