@@ -32,6 +32,7 @@ type GiftFields = Pick<
   | "giftDonorRelation"
   | "giftSameHousehold"
   | "giftHouseholdHoldingStartDate"
+  | "giftDonorDeceased"
 >;
 
 type Props = {
@@ -45,6 +46,7 @@ const CLEARED_GIFT = {
   giftDonorRelation: "" as const,
   giftSameHousehold: "" as const,
   giftHouseholdHoldingStartDate: "",
+  giftDonorDeceased: false,
 };
 
 export function GiftedSameHouseholdField({ asset, onChange }: Props) {
@@ -79,6 +81,13 @@ export function GiftHouseholdFactInputs({
   showDonorAcquisitionDate,
   children,
 }: Props & { showDonorAcquisitionDate: boolean; children?: ReactNode }) {
+  const relation = asset.giftDonorRelation;
+  // 이월과세 폼(`CarryoverGiftExclusionSection`)과 같은 문언 — 관계별로 묻는 사실이 다르다(이혼 후 전 배우자 사망은 「사망으로 소멸」이 아니다).
+  const deathLabel = relation === "spouse" ? "사망으로 혼인관계가 소멸되었습니다" : "양도 전에 증여자가 사망했습니다";
+  const deathDescription =
+    relation === "spouse"
+      ? "이혼으로 소멸한 경우는 해당하지 않습니다 — 그때는 아래 질문에 답하세요. 사망이면 계속 같은 세대인지는 묻지 않고, 통산 없이 증여일부터 계산하며 확인이 필요합니다."
+      : "증여자가 양도일 전에 사망한 경우입니다. 계속 같은 세대인지는 묻지 않고, 통산 없이 증여일부터 계산하며 확인이 필요합니다.";
   return (
     <div className="space-y-3">
       <FieldCard label="증여자와의 관계" field="giftDonorRelation">
@@ -92,7 +101,14 @@ export function GiftHouseholdFactInputs({
             { value: "other", label: "그 밖의 친족" },
           ]}
           value={asset.giftDonorRelation}
-          onChange={(v) => onChange({ giftDonorRelation: v as AssetForm["giftDonorRelation"] })}
+          onChange={(v) =>
+            // 관계가 바뀌면 사망 문항의 **의미가 바뀐다** — 함께 비운다. 「재결합」은 배우자 증여의 답이라 배우자가 아니게 되면 그 답도 비운다(#38-6).
+            onChange({
+              giftDonorRelation: v as AssetForm["giftDonorRelation"],
+              giftDonorDeceased: false,
+              ...(v !== "spouse" && asset.giftSameHousehold === "rejoined" ? { giftSameHousehold: "" as const } : {}),
+            })
+          }
         />
       </FieldCard>
 
@@ -106,50 +122,71 @@ export function GiftHouseholdFactInputs({
         </FieldCard>
       )}
 
-      <FieldCard
-        label="증여자와 계속 같은 세대였습니까"
-        field="giftSameHousehold"
-        hint={
-          asset.giftDonorRelation
-            ? giftHouseholdQuestionText(asset.giftDonorRelation)
-            : "먼저 증여자와의 관계를 선택하세요 — 관계에 따라 묻는 사실이 다릅니다"
-        }
-      >
-        <RadioCardGroup
-          name={`gift-same-household-${asset.assetId}`}
-          data-field="giftSameHousehold"
-          layout="inline"
-          options={[
-            { value: "yes", label: "예 — 계속 같은 세대" },
-            { value: "no", label: "아니오 — 세대가 달랐거나 중간에 분리" },
-          ]}
-          value={asset.giftSameHousehold}
-          onChange={(v) =>
-            onChange(
-              v === "yes"
-                ? { giftSameHousehold: "yes" }
-                : { giftSameHousehold: "no", giftHouseholdHoldingStartDate: "" },
-            )
-          }
-        />
-      </FieldCard>
+      {/* 결정 #34 조건 · #38-6 — 증여자 사망이면 질문을 띄우지 않고 통산 없이 계산하며 확인 필요를 고지한다 */}
+      <ToggleCard
+        data-testid="one-house-gift-donor-deceased"
+        tone="violet"
+        title={deathLabel}
+        description={relation === "" ? undefined : deathDescription}
+        disabled={relation === ""}
+        disabledReason="증여자와의 관계를 먼저 선택하세요 — 관계에 따라 묻는 사실이 다릅니다."
+        checked={asset.giftDonorDeceased}
+        onCheckedChange={(v) => onChange({ giftDonorDeceased: v })}
+      />
 
-      {asset.giftSameHousehold === "yes" && (
-        <FieldCard
-          label="세대가 이 주택 보유를 시작한 날"
-          field="giftHouseholdHoldingStartDate"
-          hint="증여자 취득일 이후 혼인·합가했다면 그 날 — 보유기간은 이 날부터 셉니다. 증여자 취득일 이후 증여일 전의 날짜"
-        >
-          <DateInput
-            data-testid="one-house-gift-household-start"
-            value={asset.giftHouseholdHoldingStartDate}
-            onChange={(giftHouseholdHoldingStartDate) => onChange({ giftHouseholdHoldingStartDate })}
-          />
-        </FieldCard>
+      {!asset.giftDonorDeceased && (
+        <>
+          <FieldCard
+            label="증여자와 계속 같은 세대였습니까"
+            field="giftSameHousehold"
+            hint={
+              asset.giftDonorRelation
+                ? giftHouseholdQuestionText(asset.giftDonorRelation)
+                : "먼저 증여자와의 관계를 선택하세요 — 관계에 따라 묻는 사실이 다릅니다"
+            }
+          >
+            <RadioCardGroup
+              name={`gift-same-household-${asset.assetId}`}
+              data-field="giftSameHousehold"
+              layout="inline"
+              options={[
+                { value: "yes", label: "예 — 계속 같은 세대" },
+                { value: "no", label: "아니오 — 세대가 달랐거나 중간에 분리" },
+                // 결정 #34 조건 · #38-6 — 정면 해석이 갈려 「아니오」로 계산하고 확인 필요를 고지한다. 배우자 증여에서만 묻는다.
+                ...(relation === "spouse"
+                  ? [{ value: "rejoined", label: "아니오 — 증여 뒤 이혼했다가 같은 사람과 재결합" }]
+                  : []),
+              ]}
+              value={asset.giftSameHousehold}
+              onChange={(v) =>
+                onChange(
+                  v === "yes"
+                    ? { giftSameHousehold: "yes" }
+                    : { giftSameHousehold: v === "rejoined" ? "rejoined" : "no", giftHouseholdHoldingStartDate: "" },
+                )
+              }
+            />
+          </FieldCard>
+
+          {asset.giftSameHousehold === "yes" && (
+            <FieldCard
+              label="세대가 이 주택 보유를 시작한 날"
+              field="giftHouseholdHoldingStartDate"
+              hint="증여자 취득일 이후 혼인·합가했다면 그 날 — 보유기간은 이 날부터 셉니다. 증여자 취득일 이후 증여일 전의 날짜"
+            >
+              <DateInput
+                data-testid="one-house-gift-household-start"
+                value={asset.giftHouseholdHoldingStartDate}
+                onChange={(giftHouseholdHoldingStartDate) => onChange({ giftHouseholdHoldingStartDate })}
+              />
+            </FieldCard>
+          )}
+        </>
       )}
 
-      <p className="text-caption text-muted-foreground">
-        이혼 후 같은 사람과 재결합했거나 증여자가 양도 전에 사망한 경우는 「아니오」로 계산하며 확인이 필요합니다. {children}
+      <p className="text-caption text-muted-foreground" data-testid="gift-household-death-rejoin-notice">
+        증여자가 양도 전에 사망한 경우와 이혼 후 같은 사람과 재결합한 경우는 정면 해석이 없어 통산하지 않고(「아니오」로) 증여일부터 계산하며,
+        통산하면 결론이 달라질 때 결과에 확인 필요를 고지합니다. {children}
       </p>
       {/* 결정 #38-5 — 이 입력으로 표현할 수 없는 경우(입력 모델이 「주택 전부를 단순 증여로 받은 1건」이다) */}
       <p className="text-caption text-muted-foreground" data-testid="gift-household-out-of-scope">

@@ -11,7 +11,7 @@
  * 종전 import 경로 호환을 위해 `transfer-tax-validate-asset.ts`가 재export한다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { carryoverHouseholdFactVisible } from "./transfer-tax-api-carryover";
+import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -339,32 +339,9 @@ export function validateAssetAcquisition(
     if (parseAmount(c.giftTaxAmount) < 0)
       return fieldError("carryover.giftTaxAmount", `${label}: 증여세 상당액은 음수일 수 없습니다.`);
 
-    // (g) 결정 #33·#34 — 증여자와 증여일부터 양도일까지 계속 같은 세대인가 (필수 사실 질문).
-    //   노출·전송과 **같은 술어**(`carryoverHouseholdFactVisible`)로 게이트한다 — 화면에 없는 질문을 요구하면 막다른 오류다.
-    //   관계를 고르지 않았어도 묻는다(관계 미선택이 질문을 건너뛰는 구멍이 되지 않게). 옛 이력은 미답("")이라 답을 요구한다.
-    //   ⑤ 화면에서 이 질문은 가장 아래(적용배제 선언 위)라 오류 순서도 맨 뒤다 — 앞선 입력 오류를 가리지 않는다.
-    if (carryoverHouseholdFactVisible(asset)) {
-      if (c.donorSameHousehold === "")
-        return fieldError(
-          "carryover.donorSameHousehold",
-          `${label}: 증여일부터 양도일까지 증여자와 계속 같은 세대였는지 선택하세요 (소득세법 §88 6호 · 시행령 §154①).`,
-        );
-      if (c.donorSameHousehold === "yes") {
-        const start = c.donorHouseholdHoldingStartDate;
-        if (!start)
-          return fieldError("carryover.donorHouseholdHoldingStartDate", `${label}: 세대가 이 주택 보유를 시작한 날을 입력하세요.`);
-        if (start < c.donorAcquisitionDate)
-          return fieldError(
-            "carryover.donorHouseholdHoldingStartDate",
-            `${label}: 세대 보유 시작일은 증여자 취득일 이후여야 합니다 — 증여자가 취득하기 전에는 보유가 없습니다.`,
-          );
-        if (start >= c.giftRegistryDate)
-          return fieldError(
-            "carryover.donorHouseholdHoldingStartDate",
-            `${label}: 세대 보유 시작일은 증여 등기접수일 이전이어야 합니다.`,
-          );
-      }
-    }
+    // (g) 결정 #33·#34·#38-6 — 증여자와 계속 같은 세대인가(필수 사실 질문) — `validateCarryoverHouseholdFact` 참조.
+    const householdErr = validateCarryoverHouseholdFact(asset, c, label);
+    if (householdErr) return householdErr;
 
     // carryover_gift 검증 완료 — 일반 취득 검증 스킵
     return null;

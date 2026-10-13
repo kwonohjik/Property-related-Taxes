@@ -46,6 +46,17 @@ import type { TransferTaxInput } from "../types/transfer.types";
  */
 export const ORIGINAL_MEMBER_BASE_DEADLINE_YEARS = 3;
 
+/**
+ * 2주택 축 준용(⑦·⑩·⑪) 경로의 원조합원 판정 보류 문장(`openArticles` 항목)의 표지 — 그 문장만 골라내는 술어가 같은 상수를 읽는다.
+ * 이 판정 보류는 비과세가 실제로 선 사안에서만 결론을 가른다(#32-4): 배제를 적용하면 과세, 예외가 성립하면 그대로 비과세이기 때문이다.
+ */
+const ORIGINAL_MEMBER_OPEN_ARTICLE_MARK = "(원조합원 입주권 — ";
+
+/** `openArticles` 항목이 원조합원 입주권의 2주택 축 준용 판정 보류인가 — 고지 게이트(`pending.ts`·`article89Clause2Notices`)가 쓴다. */
+export function isOriginalMemberOpenArticle(article: string): boolean {
+  return article.includes(ORIGINAL_MEMBER_OPEN_ARTICLE_MARK);
+}
+
 type OriginalMemberInput = Pick<
   TransferTaxInput,
   "acquisitionDate" | "transferDate" | "regionCode" | "regionInDesignatedDistrict"
@@ -143,7 +154,7 @@ function asOriginalMember(
   if (viaArticle) {
     return {
       status: "undetermined",
-      openArticles: [`${TRANSFER.ORIGINAL_MEMBER_RIGHT_TEMP_TWO_HOUSE}(원조합원 입주권 — ${viaArticle} 경로)`],
+      openArticles: [`${TRANSFER.ORIGINAL_MEMBER_RIGHT_TEMP_TWO_HOUSE}${ORIGINAL_MEMBER_OPEN_ARTICLE_MARK}${viaArticle} 경로)`],
     };
   }
   const t = judgeTiming(input, right, oneYearWaived);

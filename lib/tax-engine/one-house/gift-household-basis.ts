@@ -75,6 +75,11 @@ export interface GiftHouseholdBasis {
    */
   donorDeceased?: boolean;
   /**
+   * 증여 뒤 이혼했다가 **같은 사람과 재결합**했는가(배우자 증여) — 「아니오」로 계산하고 확인 필요를 고지한다(결정 #34 조건 · #38-6).
+   * 서면5팀-463·921은 증여일, 재산세과-445는 증여자 취득일로 답해 정면 해석이 갈린다. true이면 `continuousSameHousehold`와 무관하게 통산하지 않는다.
+   */
+  rejoinedAfterDivorce?: boolean;
+  /**
    * **반사실 판정 전용** — 같은 세대 확인 시 「취득 당시」 조정대상지역을 증여일을 섞지 않고 세대 보유 시작일만으로 본다(거울상을 세대
    * 취득일로 읽는 쪽). 확인 필요 고지가 「거울상이 결론을 가르는가」를 알아내는 데에만 쓴다 — 입력 경로가 없다.
    */
@@ -88,7 +93,7 @@ export interface GiftHouseholdBasis {
  * 시작일이 범위 밖이면 입력 오류이므로(⑧이 막는다) 통산하지 않고 미확인으로 본다.
  */
 export function giftHouseholdConsolidationStart(b: GiftHouseholdBasis | undefined): Date | undefined {
-  if (!b || b.donorDeceased === true || b.continuousSameHousehold !== true) return undefined;
+  if (!b || b.donorDeceased === true || b.rejoinedAfterDivorce === true || b.continuousSameHousehold !== true) return undefined;
   const s = b.householdHoldingStartDate;
   if (!s) return undefined;
   if (s.getTime() < b.donorAcquisitionDate.getTime()) return undefined;
@@ -96,9 +101,9 @@ export function giftHouseholdConsolidationStart(b: GiftHouseholdBasis | undefine
   return s;
 }
 
-/** 「계속 같은 세대」가 **아니라고 확인**된 경우(별도세대·세대 분리·증여자 사망). 통산하지 않는다. */
+/** 「계속 같은 세대」가 **아니라고 확인**된 경우(별도세대·세대 분리·증여자 사망·이혼 후 재결합). 통산하지 않는다. */
 export function giftHouseholdConfirmedSeparate(b: GiftHouseholdBasis | undefined): boolean {
-  return !!b && (b.donorDeceased === true || b.continuousSameHousehold === false);
+  return !!b && (b.donorDeceased === true || b.rejoinedAfterDivorce === true || b.continuousSameHousehold === false);
 }
 
 /** 세대 관계가 미확인인가 — 통산 여부를 모르는 상태(`true`인데 시작일이 없거나 범위 밖인 경우 포함). */
@@ -170,6 +175,7 @@ export function carryoverGiftHouseholdBasis(
     | "donorSameHouseholdContinuous"
     | "donorHouseholdHoldingStartDate"
     | "donorDeceased"
+    | "donorRejoinedAfterDivorce"
     | "donorRelation"
   >,
   holdingAlreadyAtDonor: boolean,
@@ -184,6 +190,8 @@ export function carryoverGiftHouseholdBasis(
       ct.donorSameHouseholdContinuous ?? (ct.donorRelation === "other" ? false : undefined),
     householdHoldingStartDate: ct.donorHouseholdHoldingStartDate,
     donorDeceased: ct.donorDeceased === true ? true : undefined,
+    // 재결합은 배우자 증여의 사실이다(결정 #38-6) — 직계존비속·그 외에 남은 값은 읽지 않는다(④도 같은 규칙으로 싣지 않는다).
+    rejoinedAfterDivorce: ct.donorRelation === "spouse" && ct.donorRejoinedAfterDivorce === true ? true : undefined,
     ...(holdingAlreadyAtDonor ? { holdingAlreadyAtDonor: true } : {}),
   };
 }

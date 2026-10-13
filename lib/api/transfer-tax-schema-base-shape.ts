@@ -89,6 +89,14 @@ export const propertyBaseShape = {
    */
   giftSameHouseholdContinuous: z.boolean().optional(),
   giftHouseholdHoldingStartDate: z.string().date().optional(),
+  /**
+   * 증여자가 양도 전에 사망했다 / 증여 뒤 이혼했다가 같은 사람과 재결합했다 — 둘 다 「계속 같은 세대」를 묻지 않고 통산 없이 계산하며
+   * 엔진이 확인 필요를 고지한다(결정 #34 조건 · #38-6). 재결합이 배우자 증여의 사실인지는 ⑧(`giftHouseholdFactErrors`)만 막는다 —
+   * 증여자와의 관계는 API 본문에 실리지 않아 이 스키마에는 묶는 refine이 없다. 직접 호출로 비배우자에게 true를 보내도 통산하지 않는
+   * 쪽(보수 방향)이라 세액이 줄지 않는다.
+   */
+  giftDonorDeceased: z.boolean().optional(),
+  giftRejoinedAfterDivorce: z.boolean().optional(),
   expenses: z.number().int().nonnegative(),
   /** §97① 가목 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */
   capitalExpenditure: z.number().int().nonnegative().optional(),
@@ -485,6 +493,8 @@ export const propertyBaseShape = {
     /** 결정 #33·#34 — 증여일부터 양도일까지 증여자와 계속 같은 세대(미전송 = 미확인) */
     donorSameHouseholdContinuous: z.boolean().optional(),
     donorHouseholdHoldingStartDate: z.string().date().optional(),
+    /** 결정 #38-6 — 증여 뒤 이혼했다가 같은 배우자와 재결합(배우자 증여만). 「아니오」로 계산하고 확인 필요를 고지한다 */
+    donorRejoinedAfterDivorce: z.boolean().optional(),
     /**
      * 환산 모드 분자 — 증여자 취득 당시 기준시가 (설계 D9-8).
      * `carryoverTaxationEngineShape`와 **필드·타입 13개 전부 일치**를 유지해야 한다(V-5).

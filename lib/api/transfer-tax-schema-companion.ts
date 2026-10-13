@@ -325,9 +325,9 @@ export const companionAssetSchema = z.object({
     .enum(["metropolitan_residential", "non_metropolitan_or_green", "non_urban"])
     .optional(),
   /**
-   * ⑫ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 «미분리» 고지 전용(세액 불변, #17).
+   * ⑫ 함께 양도 주택 카드의 부수토지 면적 사실 — 배율 초과분 판정(#17-1)·«초과분 미분리» 고지(#17)가 읽는다.
    * `buildingFootprintArea`·`appurtenantLandZone`은 형제 토지 카드의 주택 컨텍스트 전용이라 컴패니언 주택 자기 item에 싣지 않는다 —
-   * 그래서 같은 사실을 별도 키로 운반한다.
+   * 그래서 같은 사실을 별도 키로 운반하고, 엔진은 `appurtenantLandFactsOfInput`으로 주 자산과 같은 값으로 읽는다.
    */
   companionHousingLand: z
     .object({

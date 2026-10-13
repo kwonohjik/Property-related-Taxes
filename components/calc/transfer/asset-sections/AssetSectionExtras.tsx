@@ -10,8 +10,6 @@ import { NblSectionContainer } from "../nbl/NblSectionContainer";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
-import { usePathname } from "next/navigation";
-import { isEmbeddedInMultiPath } from "@/lib/calc/multi-embed-path";
 import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
 
 interface Props {
@@ -39,8 +37,6 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
    *    토글을 켜면 **계산이 차단되는데 다 채워도 세액이 한 푼도 안 달라졌다**(실측).
    */
   const canDeclareRental = canDeclareRentalHousingException(asset.assetKind, assetIndex);
-  // 결정 #38-10 — 증여 세대 사실을 읽는 위치(첫 자산 · 다건 임베드 아님)는 ⑤ 위젯·⑧·④와 같은 게이트다.
-  const embeddedInMulti = isEmbeddedInMultiPath(usePathname());
   /**
    * 🔑 **stale 선언은 말로 밝힌다**(OH-20). 값을 지우지는 않는다 — 세액 영향이 0이라 남아도
    *    무해하고, 첫 자산을 지우면 이 자산이 primary로 승격하므로 그때 선언이 살아 있어야 한다.
@@ -94,7 +90,6 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
           // §154⑩ 표준 경로(I-5) — 2019.2.12 전 취득 분기의 거주요건 실시간 표시. ⑧과 같은 실효값(G1-13).
           wasRegulatedAtAcquisition={calcEffectiveWasRegulatedAtAcquisition(asset, wasRegulatedAtAcquisition, formRegionCode, {
             isPrimary: assetIndex === 0,
-            embeddedInMulti,
           })}
         />
       )}

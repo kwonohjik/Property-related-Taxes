@@ -7,6 +7,7 @@ import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisit
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildRental4hoPayload } from "./rental-4ho-proviso";
+import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
@@ -350,6 +351,9 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       acquisitionCause === "gift" && primary?.donorAcquisitionDate
         ? primary.donorAcquisitionDate
         : undefined,
+    // ④⑬ 결정 #38-3 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 단건 ④(`transfer-tax-api.ts`)와 **같은 빌더** — 다건 화면은
+    //    단건 마법사를 임베드하므로 ⑤(칸)·⑧(필수)이 이미 같은 폼 값을 받는다. 이 층이 빠지면 답이 조용히 버려진다(단건 0 · 다건 229,075,000).
+    ...buildCalcGiftHouseholdPayload(primary),
     isOneHousehold: form.isOneHousehold,
     reductions,
     // ⑬ P5 모드 2 — 보유 감면주택 주택수 제외(§89①3호 의제) · 명부 행 ⑥ special — 단건 ④와 **같은 leaf**.

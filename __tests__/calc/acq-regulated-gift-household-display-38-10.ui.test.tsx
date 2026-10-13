@@ -132,8 +132,7 @@ const card = (f: TransferFormData, formRegionCode = "") => {
   cleanup();
   return t;
 };
-const gate = (f: TransferFormData, embeddedInMulti = false) =>
-  validateAssetEntry(f.assets[0], 0, f, { embeddedInMulti }) ?? "";
+const gate = (f: TransferFormData) => validateAssetEntry(f.assets[0], 0, f) ?? "";
 
 describe("D-1 Step4 ② 자동 판정", () => {
   it("[D-1a] 이월과세 거울상 — 시작일 2018-01-10(지정 중) · 증여 2023-06-01(해제 뒤) → 미해당 · 증여일도 지정 중이면 해당(짝)", () => {
@@ -163,18 +162,19 @@ describe("D-2 ⑤ §155⑳ 카드 · ⑧", () => {
   });
 });
 
-describe("D-3 게이트 — 다건 임베드는 증여 세대 사실을 읽지 않는다", () => {
-  it("[D-3] 같은 반대 방향 입력이 다건 임베드면 증여일 기준(해당 · ⑧ 막음) · 단건이면 미해당(짝)", () => {
-    const f = giftForm("yes", "2016-01-01");
-    pathname = "/calc/transfer-tax/multi/edit";
-    expect(card(f)).toContain(REGULATED_TEXT);
-    expect(gate(f, true)).toContain(BLOCK);
-    // Step4 ② 자동 판정도 같은 게이트(`useAcquisitionRegulatedContext`) — 다건 임베드면 증여일 판정
-    expect(auto(f)).toMatch(/취득일 기준 조정대상지역 해당/);
+describe("D-3 다건 임베드 — #38-3 이후 다건 ④도 증여 세대 사실을 싣는다", () => {
+  it("[D-3] 같은 반대 방향 입력이 다건 임베드여도 단건과 같다(미해당 · ⑧ 막지 않음) · 긍정 짝: 별도 세대(아니오)는 둘 다 해당", () => {
+    for (const path of ["/calc/transfer-tax", "/calc/transfer-tax/multi/edit"]) {
+      pathname = path;
+      const f = giftForm("yes", "2016-01-01");
+      expect(card(f)).toContain(NOT_REGULATED_TEXT);
+      expect(gate(f)).not.toContain(BLOCK);
+      expect(auto(f)).toMatch(/취득일 기준 조정대상지역 미해당/);
+      const g = giftForm("no", "");
+      expect(card(g)).toContain(REGULATED_TEXT);
+      expect(gate(g)).toContain(BLOCK);
+    }
     pathname = "/calc/transfer-tax";
-    expect(card(f)).toContain(NOT_REGULATED_TEXT);
-    expect(gate(f, false)).not.toContain(BLOCK);
-    expect(auto(f)).toMatch(/취득일 기준 조정대상지역 미해당/);
   });
 });
 

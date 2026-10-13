@@ -41,6 +41,7 @@ import { resolve1562Clause3Years } from "../data/article-156-2-completion-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import { designatedDistrictUndeclared, type DistrictDeclarationRelevance } from "./designated-district-undeclared";
+import { isOriginalMemberOpenArticle } from "./original-member-right";
 import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
@@ -530,6 +531,8 @@ export function collectUndetermined(
 
   // §89② — 입력 경로가 없는 예외 항. 기존 `openArticles: string[]`를 구조화 형태로 옮긴다.
   for (const article of article89Clause2.openArticles ?? []) {
+    // 원조합원 입주권의 2주택 축 준용 보류는 비과세가 선 사안에서만 결론을 가른다(#32-4) — 어차피 과세면 그 조문을 확인해도 달라지는 것이 없다.
+    if (isOriginalMemberOpenArticle(article) && !settled) continue;
     undetermined.push({
       id: `89-2-open:${article}`,
       reason: `${article}에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요.`,

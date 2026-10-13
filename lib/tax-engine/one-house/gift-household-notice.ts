@@ -19,13 +19,15 @@ export const GIFT_HOUSEHOLD_UNCONFIRMED_ID = "gift-household-continuity-unconfir
 export const GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID = "gift-household-consolidation-detail-unverified";
 /**
  * 증여자와의 세대 사실이 엔진에 오지 않아 통산을 반영하지 못했다 — 통산하면 결론이 달라질 수 있다. 판정 메뉴와 계산기 단건 첫 자산은 그 칸을
- * 필수로 받으므로(결정 #38-1) 이 고지는 세대 사실을 받지 않는 경로에서 난다 — 건물만 증여받은 주택(D2) · 함께 양도하는 두 번째 이후 자산 ·
- * 다건 계산(#38-3 범위 밖) · 사실 없이 부른 API. 문구는 그 경로들을 그대로 적는다(「이 화면은 입력받지 않아」·「판정 메뉴에서 입력」은
+ * 필수로 받고 다건 계산도 건마다 첫 자산에서 받으므로(결정 #38-1·#38-3) 이 고지는 세대 사실을 받지 않는 경로에서 난다 — 건물만 증여받은
+ * 주택(D2) · 함께 양도하는 두 번째 이후 자산 · 사실 없이 부른 API. 문구는 그 경로들을 그대로 적는다(「이 화면은 입력받지 않아」·「판정 메뉴에서 입력」은
  * D2처럼 판정 메뉴에도 칸이 없는 경로에서 틀린다).
  */
 export const GIFT_HOUSEHOLD_NOT_REFLECTED_ID = "gift-household-not-reflected-unverified";
 /** 증여자가 양도 전에 사망해 통산 없이 계산했고, 통산하면 결론이 달라진다. */
 export const GIFT_HOUSEHOLD_DONOR_DECEASED_ID = "gift-household-donor-deceased-unverified";
+/** 증여 뒤 이혼했다가 같은 사람과 재결합해 통산 없이 계산했고, 통산하면 결론이 달라진다 (결정 #34 조건 · #38-6). */
+export const GIFT_HOUSEHOLD_REJOINED_ID = "gift-household-rejoined-unverified";
 
 /**
  * 세대 사실 상태에 맞는 확인 필요 고지. 결론을 가르는지는 호출부가 `giftHouseholdFactDecides`로 따로 본다.
@@ -42,8 +44,8 @@ export function giftHouseholdNotice(
           reason:
             "증여받은 주택은 증여자와 증여일부터 양도일까지 계속 같은 세대였다면 증여자 세대의 보유기간을 통산하고 「취득 당시」도 세대가 보유를 " +
             "시작한 날로 보지만(조심 2022서7583), 이 계산에는 증여자와의 세대 관계가 입력되지 않아 증여일부터 보유기간을 세어 판정했습니다 — " +
-            "같은 세대였다면 결론이 달라질 수 있으니 확인이 필요합니다. 세대 관계는 1세대1주택 판정 메뉴와 양도세 계산기 단건의 첫 번째 자산" +
-            "(주택을 증여받은 경우)에서 입력받으며, 건물만 증여받은 주택·함께 양도하는 두 번째 이후 자산·다건 계산에서는 입력받지 않습니다.",
+            "같은 세대였다면 결론이 달라질 수 있으니 확인이 필요합니다. 세대 관계는 1세대1주택 판정 메뉴와 양도세 계산기(단건·다건)의 첫 번째 자산" +
+            "(주택을 증여받은 경우)에서 입력받으며, 건물만 증여받은 주택·함께 양도하는 두 번째 이후 자산에서는 입력받지 않습니다.",
         }
       : undefined
     : gift.donorDeceased === true
@@ -53,6 +55,14 @@ export function giftHouseholdNotice(
             "증여자가 양도 전에 사망한 경우 증여자 세대의 보유기간을 통산하는지에 대한 정면 해석은 확인하지 못했습니다. " +
             "통산 없이 증여일부터 보유기간을 세어 판정했으니, 증여 후 양도 전까지 증여자와 계속 같은 세대였다면 확인이 필요합니다.",
         }
+      : gift.rejoinedAfterDivorce === true
+        ? {
+            id: GIFT_HOUSEHOLD_REJOINED_ID,
+            reason:
+              "증여 뒤 이혼했다가 같은 사람과 재결합한 경우 증여자 세대의 보유기간을 통산하는지에 대해서는 해석이 갈립니다 — " +
+              "보유기간은 증여를 받은 날부터 센다는 회신(서면5팀-463·921)과 증여자의 취득일부터 센다는 회신(재산세과-445)이 있고 정면 해석은 확인하지 못했습니다. " +
+              "통산 없이 증여일부터 보유기간을 세어 판정했으니, 통산하면 결론이 달라질 수 있어 확인이 필요합니다.",
+          }
       : giftHouseholdConfirmedSeparate(gift)
         ? undefined
         : giftHouseholdUnconfirmed(gift)
@@ -86,18 +96,21 @@ export function giftHouseholdFactDecides(
   verdictOf: (basis: GiftHouseholdBasis) => string,
 ): boolean {
   if (g.householdDateStrict) return false; // 반사실 입력은 고지를 만들지 않는다 — 재귀 차단
-  const separate = (): string => verdictOf({ ...g, donorDeceased: undefined, continuousSameHousehold: false });
+  const separate = (): string =>
+    verdictOf({ ...g, donorDeceased: undefined, rejoinedAfterDivorce: undefined, continuousSameHousehold: false });
   // 통산 성립 가정 — 시작일을 모르면 증여자 취득일을 시작일로 둔다(세대 보유 시작일의 가장 이른 값).
   const consolidated = (): string | undefined =>
     g.donorAcquisitionDate.getTime() < g.giftDate.getTime()
       ? verdictOf({
           ...g,
           donorDeceased: undefined,
+          rejoinedAfterDivorce: undefined,
           continuousSameHousehold: true,
           householdHoldingStartDate: giftHouseholdConsolidationStart(g) ?? g.donorAcquisitionDate,
         })
       : undefined;
-  if (g.donorDeceased === true) {
+  // 사망·재결합 — 통산하지 않고 계산했으므로 「통산했다면」 결론이 달라질 때만 고지한다.
+  if (g.donorDeceased === true || g.rejoinedAfterDivorce === true) {
     const c = consolidated();
     return c !== undefined && c !== base;
   }

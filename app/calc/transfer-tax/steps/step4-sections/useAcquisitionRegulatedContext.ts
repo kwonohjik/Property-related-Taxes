@@ -7,14 +7,10 @@
  * 자동 판정만 증여받은 주택의 세대 사실을 엔진과 같은 basis로 읽는다: 이월과세·일반 증여에서 계속 같은 세대로 확인되면 엔진은
  * 세대 보유 시작일**과** 증여일 둘 다 지정 중일 때만 거주요건을 걸고, 미확인이면 증여일·증여자 취득일 중 하나라도 지정 중이면 건다.
  * 단일 기준일(`residenceJudgmentDate`)만 보면 거울상에서 화면이 엔진과 반대 값을 「자동」이라 보였다.
- *
- * 다건 편집에 임베드된 화면이면 basis를 만들지 않는다 — 다건 ④는 이 사실을 싣지 않는다(⑤·⑧과 같은 게이트 `calcGiftHouseholdFactAsked`).
  */
 import { useMemo } from "react";
-import { usePathname } from "next/navigation";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
-import { isEmbeddedInMultiPath } from "@/lib/calc/multi-embed-path";
 import { redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
 import { carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
 import {
@@ -24,7 +20,6 @@ import {
 } from "@/lib/calc/effective-regulated-at-acquisition";
 
 export function useAcquisitionRegulatedContext(form: TransferFormData) {
-  const embeddedInMulti = isEmbeddedInMultiPath(usePathname());
   const primary = form.assets?.[0];
   const primaryAcquisitionDate = primary?.acquisitionDate ?? "";
 
@@ -67,10 +62,10 @@ export function useAcquisitionRegulatedContext(form: TransferFormData) {
         regionCode: primary?.regionCode || form.regionCode || undefined,
         regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
         date: residenceJudgmentDate,
-        giftHouseholdBasis: primary ? calcGiftHouseholdBasis(primary, { isPrimary: true, embeddedInMulti }) : undefined,
+        giftHouseholdBasis: primary ? calcGiftHouseholdBasis(primary, { isPrimary: true }) : undefined,
       }),
-    [primary, form.regionCode, residenceJudgmentDate, embeddedInMulti],
+    [primary, form.regionCode, residenceJudgmentDate],
   );
 
-  return { conversionActive, successorCompletionActive, residenceJudgmentDate, judgmentDateLabel, acquisitionVerdict, embeddedInMulti };
+  return { conversionActive, successorCompletionActive, residenceJudgmentDate, judgmentDateLabel, acquisitionVerdict };
 }

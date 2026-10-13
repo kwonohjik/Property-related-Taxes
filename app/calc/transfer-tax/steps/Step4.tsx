@@ -95,7 +95,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const primary = form.assets?.[0];
 
   // 거주요건 「주택 취득 당시」 기준일·라벨·자동 판정 — 엔진 `resolveResidenceJudgmentPlan`과 같은 순서·같은 사실(`useAcquisitionRegulatedContext`).
-  const { conversionActive, successorCompletionActive, residenceJudgmentDate, judgmentDateLabel, acquisitionVerdict, embeddedInMulti } =
+  const { conversionActive, successorCompletionActive, residenceJudgmentDate, judgmentDateLabel, acquisitionVerdict } =
     useAcquisitionRegulatedContext(form);
   /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신하는가(엔진 `resolveAptResidenceMonths`와 같은 조건). */
   const redevSplitResidence = !!primary && redevSplitResidenceSupersedesStep4(primary);
@@ -133,11 +133,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       (p.residencePeriods?.length ?? 0) > 0 || !!p.residencePeriodMonthsAsset;
     if (!hasResidenceInput) return false;
     try {
-      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(form, { embeddedInMulti }), ONE_HOUSE_RESIDENCE);
+      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(form), ONE_HOUSE_RESIDENCE);
     } catch {
       return false;
     }
-  }, [form, embeddedInMulti]);
+  }, [form]);
 
   // 다주택 중과 한시배제(§167의3·167의10 12의2): 양도일 ∈ [2022-05-10, 2026-05-09] AND 보유 2년 이상
   // → 중과 전면배제(일반세율)이므로 ④ 주택수·중과 판정 섹션을 숨기고 안내 카드로 대체.

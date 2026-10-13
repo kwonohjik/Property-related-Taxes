@@ -28,11 +28,9 @@ import { departureOnlyHousePayload, rentalLeaseResidencePayload } from "@/lib/ca
 
 export function buildResidenceReqInput(
   form: TransferFormData,
-  /** 다건 편집에 임베드된 마법사인가(`isEmbeddedInMultiPath`) — 다건 ④는 증여 세대 사실을 싣지 않으므로 그때는 basis를 만들지 않는다. */
-  opts: { embeddedInMulti?: boolean } = {},
 ): ResidenceReqInput {
   const primary = form.assets?.[0];
-  const giftScope = { isPrimary: true, embeddedInMulti: opts.embeddedInMulti === true };
+  const giftScope = { isPrimary: true };
   const conversionOn = isUsageConversionActive(primary);
   // ⚠️ **API 변환(`transfer-tax-api.ts`)과 같은 클램프를 써야 한다.**
   // §95⑤2호 클램프로 거주가 2년 미만이 되면 비과세가 탈락한다(계획 C-10c — 세액이 바뀌는

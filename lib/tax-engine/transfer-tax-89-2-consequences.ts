@@ -11,6 +11,7 @@ import type { Article89Clause2Input, Article89Clause2Result } from "./transfer-t
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { TRANSFER } from "./legal-codes";
+import { isOriginalMemberOpenArticle } from "./one-house/original-member-right";
 import { resolve1562Clause3Years, resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 
@@ -133,13 +134,17 @@ export function article89Clause2Notices(
     }
   }
 
-  if (clause2?.status === "undetermined") {
+  // 원조합원 입주권의 2주택 축 준용 보류는 비과세 또는 중과 배제를 바꿀 때만(#32-4) — 어차피 과세·중과면 그 조문을 확인해도 결론이 같다.
+  const openArticles = (clause2?.openArticles ?? []).filter(
+    (a) => !isOriginalMemberOpenArticle(a) || settled || gate.surchargeDeclarationMatters,
+  );
+  if (clause2?.status === "undetermined" && openArticles.length > 0) {
     notices.push(
       "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +
         "「소득세법」 §89②은 이 경우 1세대1주택 비과세(§89①3호)를 적용하지 않되, 시행령이 정하는 " +
         "예외에 해당하면 그대로 적용합니다. 아래 조문의 요건 충족 여부를 직접 확인하세요 — " +
         "이 계산에는 §89② 배제를 적용하지 않았습니다: " +
-        (clause2.openArticles ?? []).join(" · "),
+        openArticles.join(" · "),
     );
   }
   return notices;

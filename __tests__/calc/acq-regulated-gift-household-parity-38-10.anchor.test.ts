@@ -38,7 +38,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { captureBody } from "./_one-house-pr3a-calc-route";
 
 const MAPO = "1144010100";
-const PRIMARY = { isPrimary: true, embeddedInMulti: false } as const;
+const PRIMARY = { isPrimary: true } as const;
 
 const baseForm = (asset: AssetForm): TransferFormData =>
   ({
@@ -211,16 +211,14 @@ describe("P-3 구별력 — 단일 기준일이면 엔진과 갈리는 칸이 �
   });
 });
 
-describe("P-4 게이트 — 엔진이 증여 세대 사실을 받지 않는 위치는 basis를 만들지 않는다", () => {
+describe("P-4 게이트 — 엔진이 증여 세대 사실을 받지 않는 위치(2번째 이후 자산)는 basis를 만들지 않는다", () => {
   const reverse = () => generalGiftAsset("yes", nonRegStart, regGift, "2010-01-01");
-  it("[P-4a] 다건 임베드·2번째 자산이면 basis 없음(단일 기준일) · 단건 주 자산이면 있다(짝)", () => {
+  it("[P-4a] 2번째 자산이면 basis 없음(단일 기준일) · 첫 자산이면 있다(짝) — 다건 임베드도 #38-3 이후 첫 자산은 같다", () => {
     expect(calcGiftHouseholdBasis(reverse(), PRIMARY)).toBeDefined();
-    expect(calcGiftHouseholdBasis(reverse(), { isPrimary: true, embeddedInMulti: true })).toBeUndefined();
-    expect(calcGiftHouseholdBasis(reverse(), { isPrimary: false, embeddedInMulti: false })).toBeUndefined();
-    // 다건 임베드면 실효값도 증여일 단일 기준일(다건 ④가 사실을 싣지 않아 엔진도 그렇게 읽는다)
-    expect(calcEffectiveWasRegulatedAtAcquisition(reverse(), false, undefined, { isPrimary: true, embeddedInMulti: true })).toBe(true);
+    expect(calcGiftHouseholdBasis(reverse(), { isPrimary: false })).toBeUndefined();
+    expect(calcEffectiveWasRegulatedAtAcquisition(reverse(), false, undefined, { isPrimary: false })).toBe(true);
     expect(calcEffectiveWasRegulatedAtAcquisition(reverse(), false, undefined, PRIMARY)).toBe(false);
-    // scope 인자를 안 주는 호출부(다건 ④)도 종전 그대로
+    // scope 인자를 안 주는 호출부도 종전 그대로
     expect(calcEffectiveWasRegulatedAtAcquisition(reverse(), false)).toBe(true);
   });
   it("[P-4b] 용도변경 주택은 엔진이 용도변경일을 먼저 보므로 basis를 만들지 않는다", () => {
