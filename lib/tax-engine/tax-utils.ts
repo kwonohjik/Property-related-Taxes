@@ -125,7 +125,6 @@ export function coerceOptionalDate(value: string | Date | undefined | null): Dat
 // 절사 유틸
 // ============================================================
 
-/** 천원 미만 절사 — 양도세·재산세·취득세·상속세·증여세 과세표준 */
 /**
  * 비율(0.07)을 화면 표기용 퍼센트 숫자(7)로 정규화한다.
  *
@@ -137,6 +136,11 @@ export function ratePercent(rate: number): number {
   return +(rate * 100).toFixed(2);
 }
 
+/**
+ * 천원 미만 절사 — 순수 산술 헬퍼. 어느 세목의 과세표준을 절사하는지는 호출부가 정한다.
+ * 양도소득 과세표준에는 쓰지 않는다(절사 규정이 없다). 현재 호출은 건물 기준시가 ㎡당 단가
+ * (`stdPriceFromPerM2`)와 상속·증여 `truncateTaxBase`뿐이다.
+ */
 export function truncateToThousand(amount: number): number {
   return Math.floor(amount / 1000) * 1000;
 }
