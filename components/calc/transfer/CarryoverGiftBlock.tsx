@@ -355,6 +355,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           spouseGiftOneHouseAtGiftDate={c.spouseGiftOneHouseAtGiftDate}
           donorSameHousehold={c.donorSameHousehold}
           donorHouseholdHoldingStartDate={c.donorHouseholdHoldingStartDate}
+          donorPriorHouseholdResidenceMonths={c.donorPriorHouseholdResidenceMonths}
           donorAcquisitionDate={c.donorAcquisitionDate}
           showHouseholdFact={carryoverHouseholdFactVisible(asset)}
           showSpouseOneHouseFact={asset.assetKind !== "general_building"}

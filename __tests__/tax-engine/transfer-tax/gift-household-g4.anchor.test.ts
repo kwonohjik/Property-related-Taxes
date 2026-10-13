@@ -133,8 +133,15 @@ describe("G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계
     expect(r.warnings.some((w) => w.includes("계속 같은 세대였는지"))).toBe(true);
   });
 
-  it("G4-1-8 [막다른 고지 수정] 관계 「그 외」는 질문을 묻지 않는다 → 별도 세대(증여일 기준) → 증여자 취득 때만 지정이어도 0 · 고지 없음 (종전 113,060,000)", () => {
+  it("G4-1-8 [결정 #38-2] 관계 「그 외」도 질문을 묻는다 → 답이 없는 직접 호출은 미확인 — 통산하지 않고(증여일·증여자 취득일 중 지정 중이면 거주요건) 확인 필요 고지: 0 → 113,060,000 (종전 #34는 「그 외」를 별도 세대로 읽어 0 · 고지 없음)", () => {
     const r = run(FREV.over, { ...FREV.ct, donorRelation: "other" });
+    expect(r.excl).toBe("relation_invalid");
+    expect(r.tax).toBe(113_060_000);
+    expect(r.warnings.some((w) => w.includes("계속 같은 세대였는지"))).toBe(true);
+  });
+
+  it("G4-1-8a 「그 외」라도 답이 「아니오」(별도 세대)면 종전과 같다 — 증여일 기준 → 0 · 고지 없음 (긍정 짝)", () => {
+    const r = run(FREV.over, { ...FREV.ct, donorRelation: "other", donorSameHouseholdContinuous: false });
     expect(r.excl).toBe("relation_invalid");
     expect(r.tax).toBe(0);
     expect(r.exempt).toBe(true);

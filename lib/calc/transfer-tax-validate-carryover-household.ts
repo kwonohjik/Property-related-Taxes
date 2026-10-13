@@ -1,11 +1,12 @@
 /**
- * ⑧ 이월과세 「증여자와 증여일부터 양도일까지 계속 같은 세대」 사실 검증 (결정 #33·#34·#38-6).
+ * ⑧ 이월과세 「증여자와 증여일부터 양도일까지 계속 같은 세대」 사실 검증 (결정 #33·#34·#38-2·#38-6·#38-7).
  *
  * `transfer-tax-validate-acquisition.ts`에서 분리했다(800줄 정책 — 이 검증을 만지는 김에 기회주의적 분리).
  * 노출(⑤)·전송(④)과 같은 술어를 쓰므로 화면에 없는 질문을 요구하지 않는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { carryoverHouseholdFactVisible } from "./transfer-tax-api-carryover";
+import { priorResidenceMonthsError } from "./gift-household-payload";
 import { fieldError } from "./transfer-tax-validate-field";
 
 export function validateCarryoverHouseholdFact(
@@ -15,7 +16,7 @@ export function validateCarryoverHouseholdFact(
 ): string | null {
   // (g) 결정 #33·#34 — 증여자와 증여일부터 양도일까지 계속 같은 세대인가 (필수 사실 질문).
   //   노출·전송과 **같은 술어**(`carryoverHouseholdFactVisible`)로 게이트한다 — 화면에 없는 질문을 요구하면 막다른 오류다.
-  //   관계를 고르지 않았어도 묻는다(관계 미선택이 질문을 건너뛰는 구멍이 되지 않게). 옛 이력은 미답("")이라 답을 요구한다.
+  //   관계를 고르지 않았어도, 관계 「그 외」여도 묻는다(결정 #38-2 — 관계별 필수 질문, 「모름」 선택지는 없다). 옛 이력은 미답("")이라 답을 요구한다.
   //   ⑤ 화면에서 이 질문은 가장 아래(적용배제 선언 위)라 오류 순서도 맨 뒤다 — 앞선 입력 오류를 가리지 않는다.
   if (carryoverHouseholdFactVisible(asset)) {
     if (c.donorSameHousehold === "")
@@ -43,6 +44,9 @@ export function validateCarryoverHouseholdFact(
           "carryover.donorHouseholdHoldingStartDate",
           `${label}: 세대 보유 시작일은 증여 등기접수일 이전이어야 합니다.`,
         );
+      // 결정 #38-7 — 증여 전 동일세대 거주 개월(선택). 값이 있으면 정수·상한을 본다 — 일반 증여 ⑧·⑫와 같은 파서·같은 상한.
+      const monthsErr = priorResidenceMonthsError(c.donorPriorHouseholdResidenceMonths, start, c.giftRegistryDate);
+      if (monthsErr) return fieldError("carryover.donorPriorHouseholdResidenceMonths", `${label}: ${monthsErr}`);
     }
   }
   return null;

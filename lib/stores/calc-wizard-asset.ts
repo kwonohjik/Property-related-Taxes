@@ -517,6 +517,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 세대가 이 주택 보유를 시작한 날 — `giftSameHousehold === "yes"`일 때 필수(증여자 취득일 ≤ 이 날 < 증여일). */
   giftHouseholdHoldingStartDate: string;
   /**
+   * 증여 전 증여자와 같은 세대로 이 주택에 **거주한 기간(개월)** (결정 #38-7 — 상속 `decedentCohabitationResidenceMonths`와 같은 모양). `giftSameHousehold === "yes"`일
+   * 때만 묻는다. `""` = 미답(통산 없이 판정하고, 거주했다면 결론이 달라질 때만 확인 필요를 고지) · `"0"` = 거주한 적 없음.
+   * §154① 비과세 거주요건에만 통산한다 — 표2 대상 판정·공제율에는 통산하지 않는다(별건 #38-9).
+   */
+  giftPriorHouseholdResidenceMonths: string;
+  /**
    * 증여자가 양도 전에 사망했는가 (결정 #34 조건 · #38-6) — 이월과세 폼의 `donorDeceased`와 같은 사실·같은 문언(배우자=사망으로 혼인관계 소멸,
    * 직계존비속=양도 당시 사망). 참이면 「계속 같은 세대」 질문을 띄우지 않고 통산 없이 계산하며 엔진이 확인 필요를 고지한다.
    */

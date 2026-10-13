@@ -211,3 +211,40 @@ describe("MG-5 장특·세율 보유기간은 증여일 기준 — 통산은 §1
     expect(hi(NO).calculationRoute.highValueRule).toBe("non_one_house_full_taxation"); // 짝 — 통산이 비과세 판정은 바꾼다
   });
 });
+
+describe("MG-6 증여 전 동일세대 거주 개월(결정 #38-7) — 겸용도 같은 leaf로 §154① 거주요건에 통산한다", () => {
+  // 세대 보유 시작일 2018-01-01(지정 중) · 증여일 2023-09-01(강남은 지정 중) → 거주요건 · 거주 0 → 과세. 증여 전 거주 24개월을 통산하면 비과세.
+  const yes = (months: number | undefined): GiftHouseholdBasis => ({ ...YES(D("2018-01-01")), priorHouseholdResidenceMonths: months });
+  const PRIOR_NOTICE = "증여 전 동일세대 거주기간";
+  it("[MG-6a] 24개월 → 주택분 비과세(경계 23개월은 과세) + 통산 확인 필요 고지(정면 해석 미확보)", () => {
+    const at = (m: number | undefined) => mixed({ giftHouseholdBasis: yes(m), regionCode: GANGNAM });
+    expect(mixedExempt(at(23))).toBe(false);
+    const r = at(24);
+    expect(mixedExempt(r)).toBe(true);
+    expect((r.warnings ?? []).some((w) => w.includes(PRIOR_NOTICE) && w.includes("정면으로 다룬 해석은 확인하지 못했습니다"))).toBe(true);
+  });
+  it("[MG-6b] 미답 → 통산하지 않고 과세 + 「거주했다면 달라진다」 고지 · 입력 0은 고지 없음(짝)", () => {
+    const blank = mixed({ giftHouseholdBasis: yes(undefined), regionCode: GANGNAM });
+    expect(mixedExempt(blank)).toBe(false);
+    expect((blank.warnings ?? []).some((w) => w.includes("입력되지 않아"))).toBe(true);
+    const zero = mixed({ giftHouseholdBasis: yes(0), regionCode: GANGNAM });
+    expect(mixedExempt(zero)).toBe(false);
+    expect((zero.warnings ?? []).some((w) => w.includes("입력되지 않아") || w.includes(PRIOR_NOTICE))).toBe(false);
+  });
+  it("[MG-6d] 결론을 가르지 않으면 고지하지 않는다 — 12개월 통산은 거주 12개월이라 어느 쪽이든 과세 · 입력이 없어도 상한(68개월)을 가정하면 비과세로 바뀌므로 고지(짝)", () => {
+    const twelve = mixed({ giftHouseholdBasis: yes(12), regionCode: GANGNAM });
+    expect(mixedExempt(twelve)).toBe(false);
+    expect((twelve.warnings ?? []).some((w) => w.includes(PRIOR_NOTICE))).toBe(false);
+    const blank = mixed({ giftHouseholdBasis: yes(undefined), regionCode: GANGNAM });
+    expect((blank.warnings ?? []).some((w) => w.includes("입력되지 않아"))).toBe(true);
+  });
+  it("[MG-6c] 단건 parity — 같은 사실의 단건 주택과 비과세 결론이 같다 · 계속 같은 세대가 아니면 개월은 쓰이지 않는다(짝)", () => {
+    for (const m of [23, 24]) {
+      const mr = mixed({ giftHouseholdBasis: yes(m), regionCode: GANGNAM });
+      const sr = single({ giftHouseholdBasis: yes(m), regionCode: GANGNAM });
+      expect(mixedExempt(mr), `months ${m}`).toBe(sr.isExempt);
+    }
+    const separate = mixed({ giftHouseholdBasis: { ...NO, priorHouseholdResidenceMonths: 24 }, regionCode: GANGNAM });
+    expect(mixedExempt(separate)).toBe(false);
+  });
+});

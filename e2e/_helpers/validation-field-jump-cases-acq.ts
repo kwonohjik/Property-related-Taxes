@@ -147,6 +147,11 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
     field: "carryover.donorHouseholdHoldingStartDate", step: 0, assetIndex: A, message: /^자산: 세대가 이 주택 보유를 시작한 날을 입력하세요/,
     form: carry({ donorSameHousehold: "yes" }),
   },
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월: 세대 보유 시작일(2012-01-01)~증여 등기접수일(2020-01-01) = 96개월이 상한
+  {
+    field: "carryover.donorPriorHouseholdResidenceMonths", step: 0, assetIndex: A, message: /^자산: 증여 전 동일세대 거주기간은 세대 보유 시작일부터/,
+    form: carry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2012-01-01", donorPriorHouseholdResidenceMonths: "97" }),
+  },
   { field: "carryover.donorAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 증여자 취득가액을 입력하세요/, form: carry({ donorAcquisitionPrice: "" }) },
   { field: "carryover.estimationMode", step: 0, assetIndex: A, message: /^자산: 환산 방식\(/, form: carry({ useEstimatedAcquisition: true }) },
   {
@@ -313,6 +318,14 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
   {
     field: "giftHouseholdHoldingStartDate", step: 0, assetIndex: A, message: /^자산: 세대가 이 주택 보유를 시작한 날을 입력하세요/,
     form: () => withPrimary({ acquisitionCause: "gift", donorAcquisitionDate: "2010-01-01", giftDonorRelation: "lineal", giftSameHousehold: "yes" }),
+  },
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월: 세대 보유 시작일(2015-01-01)~증여일(2020-01-01) = 60개월이 상한
+  {
+    field: "giftPriorHouseholdResidenceMonths", step: 0, assetIndex: A, message: /^자산: 증여 전 동일세대 거주기간은 세대 보유 시작일부터/,
+    form: () => withPrimary({
+      acquisitionCause: "gift", acquisitionDate: "2020-01-01", donorAcquisitionDate: "2010-01-01", giftDonorRelation: "lineal", giftSameHousehold: "yes",
+      giftHouseholdHoldingStartDate: "2015-01-01", giftPriorHouseholdResidenceMonths: "61",
+    }),
   },
   {
     field: "decedentAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 피상속인 취득일을 입력하세요/,

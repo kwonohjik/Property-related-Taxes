@@ -50,15 +50,17 @@ describe("④ 전송", () => {
     const unanswered = ct(asset({ donorSameHousehold: "" }));
     expect(unanswered.donorSameHouseholdContinuous).toBeUndefined();
   });
-  it("[H-2] 부정 짝: 증여자 사망 · 그 외 관계 · 비주택이면 남은 답을 싣지 않는다(stale 차단)", () => {
+  it("[H-2] 부정 짝: 증여자 사망 · 비주택이면 남은 답을 싣지 않는다(stale 차단) — 관계 「그 외」는 묻는 질문이라 싣는다(결정 #38-2)", () => {
     for (const a of [
       asset({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2012-05-05", donorDeceased: true }),
-      asset({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2012-05-05", donorRelation: "other" }),
       asset({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2012-05-05" }, { assetKind: "land" }),
     ]) {
       expect(ct(a).donorSameHouseholdContinuous).toBeUndefined();
       expect(ct(a).donorHouseholdHoldingStartDate).toBeUndefined();
     }
+    const other = ct(asset({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2012-05-05", donorRelation: "other" }));
+    expect(other.donorSameHouseholdContinuous).toBe(true);
+    expect(other.donorHouseholdHoldingStartDate).toBe("2012-05-05");
   });
 });
 
@@ -95,7 +97,7 @@ describe("⑧ 필수 질문", () => {
     expect(f("2019-12-31")).not.toContain("carryover.donorHouseholdHoldingStartDate");
     expect(f("2020-01-01")).toContain("carryover.donorHouseholdHoldingStartDate");
   });
-  it("[H-6] 증여자 사망 · 그 외 관계 · 비주택에서는 묻지 않아 막지 않는다(막다른 오류 방지)", () => {
+  it("[H-6] 증여자 사망 · 비주택에서는 묻지 않아 막지 않는다(막다른 오류 방지)", () => {
     expect(issues(asset({ donorSameHousehold: "", donorDeceased: true }))).not.toContain("carryover.donorSameHousehold");
     expect(issues(asset({ donorSameHousehold: "" }, { assetKind: "land" }))).not.toContain("carryover.donorSameHousehold");
     expect(carryoverHouseholdFactVisible(asset({ donorDeceased: true }))).toBe(false);

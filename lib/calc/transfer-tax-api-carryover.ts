@@ -10,6 +10,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 //    스케일 함수만 엔진 유틸에서 직접 가져온다.
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -117,8 +118,8 @@ export function buildCarryoverPayload(
     // D45 배우자 예외 사실 — ⑤가 배우자일 때만 묻는다. 관계가 바뀐 stale 값은 싣지 않는다(엔진도 관계를 본다).
     spouseGiftOneHouseAtGiftDate:
       c.donorRelation === "spouse" && c.spouseGiftOneHouseAtGiftDate ? true : undefined,
-    // 결정 #33·#34 — 증여자와 계속 같은 세대 사실. 묻는 조건은 ⑤·⑧과 같은 술어(`carryoverHouseholdQuestionApplies`)다:
-    //   증여자가 사망하지 않았고 관계가 「그 외」가 아닐 때만. 아니면 stale 값을 싣지 않는다(미답 "" = 미전송 = 미확인).
+    // 결정 #33·#34·#38-2 — 증여자와 계속 같은 세대 사실. 묻는 조건은 ⑤·⑧과 같은 술어(`carryoverHouseholdFactVisible`)다:
+    //   증여자가 사망하지 않은 주택이면 관계(배우자·직계존비속·그 외)와 무관하게 묻는다. 아니면 stale 값을 싣지 않는다(미답 "" = 미전송 = 미확인).
     ...carryoverHouseholdPayload(asset),
     exclusionDeclared: {
       expropriationWithin2Years: c.exclusionDeclared.expropriationWithin2Years || undefined,
@@ -161,15 +162,18 @@ export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string |
 /**
  * 「증여자와 증여일부터 양도일까지 계속 같은 세대」 질문을 **묻는가** — ⑤(위젯 노출)·⑧(필수)·④(전송)가 같은 술어를 쓴다.
  *
- * §154① 비과세 판정을 받는 주택(`isOneHouseExemptionAsset`)이고, 증여자가 사망하지 않았고, 관계가 「그 외」가 아닐 때.
- * **관계를 고르지 않았어도 묻는다**(결정 #34 조건: 관계 미선택이 질문을 건너뛰는 구멍이 되지 않게). 사망은 질문 없이 통산 없이
- * 계산하고 엔진이 확인 필요를 고지한다. 관계 「그 외」는 묻지 않고, 엔진이 별도 세대(증여일 기준)로 읽는다 — 묻지 않는 질문을
- * 미확인으로 읽어 「입력되지 않아」 고지와 보수 판정을 내면 사용자가 풀 길이 없다(`carryoverGiftHouseholdBasis`). 비주택은 이 사실이
+ * §154① 비과세 판정을 받는 주택(`isOneHouseExemptionAsset`)이고, 증여자가 사망하지 않았을 때.
+ * **관계를 고르지 않았어도, 관계 「그 외」여도 묻는다**(결정 #34 조건: 관계 미선택이 질문을 건너뛰는 구멍이 되지 않게 · 결정 #38-2: 판정 메뉴처럼
+ * 관계별 필수 질문). 사망은 질문 없이 통산 없이 계산하고 엔진이 확인 필요를 고지한다. 답이 없는 값(API 직접 호출·옛 이력)은 관계와 무관하게
+ * 미확인이다 — 통산하지 않고, 통산하면 결론이 달라질 때만 확인 필요를 고지한다(`carryoverGiftHouseholdBasis`). 비주택은 이 사실이
  * 결론을 가르지 않아 묻지 않는다(§154① 판정을 받지 않는 입주권·분양권·토지는 미전송이어도 세액이 같다 — 실측).
+ *
+ * ⚠️ 관계 「그 외」는 §97의2① 이월과세 대상이 아니라 ⑧(`validateAssetAcquisition` (b-3a))이 「취득 원인을 증여로 변경」을 먼저 막는다 —
+ *    이 필수 질문의 ⑧ 오류는 그 차단이 풀린 뒤(취득 원인 변경 후 일반 증여 칸의 같은 질문) 또는 직접 호출에서 닿는다.
  */
 export function carryoverHouseholdFactVisible(asset: Pick<AssetForm, "assetKind" | "carryover">): boolean {
   const c = asset.carryover;
-  return !!c && isOneHouseExemptionAsset(asset.assetKind) && c.donorRelation !== "other" && !c.donorDeceased;
+  return !!c && isOneHouseExemptionAsset(asset.assetKind) && !c.donorDeceased;
 }
 
 /**
@@ -197,6 +201,7 @@ export function carryoverResidenceJudgmentDate(asset: Pick<AssetForm, "assetKind
 export function carryoverHouseholdPayload(asset: AssetForm): {
   donorSameHouseholdContinuous?: boolean;
   donorHouseholdHoldingStartDate?: string;
+  donorPriorHouseholdResidenceMonths?: number;
   donorRejoinedAfterDivorce?: boolean;
 } {
   const c = asset.carryover;
@@ -205,8 +210,11 @@ export function carryoverHouseholdPayload(asset: AssetForm): {
   // 결정 #38-6 — 재결합은 배우자 증여의 사실이다. 관계가 바뀌어 남은 값은 싣지 않는다(⑧도 같은 규칙으로 막는다).
   if (c.donorSameHousehold === "rejoined")
     return c.donorRelation === "spouse" ? { donorSameHouseholdContinuous: false, donorRejoinedAfterDivorce: true } : {};
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월은 「예」일 때만 싣는다. 비었거나 정수가 아니면(⑧이 막는다) 싣지 않는다 — 미답.
+  const priorMonths = parsePriorResidenceMonths(c.donorPriorHouseholdResidenceMonths);
   return {
     donorSameHouseholdContinuous: true,
     ...(c.donorHouseholdHoldingStartDate ? { donorHouseholdHoldingStartDate: c.donorHouseholdHoldingStartDate } : {}),
+    ...(priorMonths !== undefined && Number.isInteger(priorMonths) ? { donorPriorHouseholdResidenceMonths: priorMonths } : {}),
   };
 }

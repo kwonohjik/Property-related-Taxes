@@ -270,6 +270,7 @@ export async function POST(request: NextRequest) {
         donorAcquisitionDate: p.donorAcquisitionDate,
         giftSameHouseholdContinuous: p.giftSameHouseholdContinuous,
         giftHouseholdHoldingStartDate: p.giftHouseholdHoldingStartDate,
+        giftPriorHouseholdResidenceMonths: p.giftPriorHouseholdResidenceMonths,
         giftDonorDeceased: p.giftDonorDeceased,
         giftRejoinedAfterDivorce: p.giftRejoinedAfterDivorce,
       }),

@@ -86,6 +86,12 @@ export interface CarryoverTaxationInput {
   /** 세대가 이 주택 보유를 시작한 날 — `donorSameHouseholdContinuous === true`일 때 필수(증여자 취득일 ≤ 이 날 < 증여일). */
   donorHouseholdHoldingStartDate?: Date;
   /**
+   * 증여 전 증여자와 같은 세대로 이 주택에 **거주한 기간(개월)** (결정 #38-7) — `donorSameHouseholdContinuous === true`(통산 성립)일 때만 의미가 있다.
+   * §154① 비과세 거주요건에만 더한다. **undefined = 미답**(통산 없이 판정, 채우면 결론이 달라질 때만 확인 필요) · 0 = 거주한 적 없음.
+   * 세대 보유 시작일부터 증여 등기접수일까지의 개월 수를 넘을 수 없다(⑫·⑧).
+   */
+  donorPriorHouseholdResidenceMonths?: number;
+  /**
    * 증여 뒤 이혼했다가 **같은 배우자와 재결합**했는가 (결정 #34 조건 · #38-6) — `donorRelation === "spouse"`일 때만 의미가 있다.
    * 「아니오」(통산 안 함)로 계산하고, 통산하면 결론이 달라질 때만 확인 필요를 고지한다(정면 해석이 갈린다 — gift-household-basis.ts).
    * `donorSameHouseholdContinuous`를 함께 보내면 무시된다(재결합이면 통산하지 않는다).
