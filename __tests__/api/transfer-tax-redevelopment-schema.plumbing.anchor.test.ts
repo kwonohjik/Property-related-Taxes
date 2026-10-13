@@ -78,6 +78,8 @@ const FULL_PAYLOAD = {
   rightsValueWhole: 600_000_000,
   // #13 — 토지 출자 입주권의 세대원 건물 소유 선언
   landHouseholdOwnedBuilding: true,
+  // #12 — 세대원 건물 출자 통산(토지 출자 원조합원 완공APT의 비과세 보유·거주)
+  householdBuilding: { acquisitionDate: "2010-05-01", residenceMonths: 36 },
 } as const;
 
 describe("T1-02 · ⑫ redevelopmentSchema 필드 집합 보존", () => {

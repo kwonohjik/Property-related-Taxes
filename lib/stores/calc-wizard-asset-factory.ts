@@ -561,6 +561,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
     redevCompletionDate: "",
+    redevHouseholdBuildingCarryover: "",
+    redevHouseholdBuildingAcquisitionDate: "",
+    redevHouseholdBuildingResidenceMonths: "",
     // 가업상속공제 §97의2④ — UI 시니어 후속 위임. 미사용 시 undefined.
     familyBusinessInheritance: undefined,
     // 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서)

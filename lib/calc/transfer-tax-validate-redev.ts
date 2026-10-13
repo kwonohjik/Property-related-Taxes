@@ -15,8 +15,8 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
-import { landContributedOriginalApt, postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
-import { redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { householdBuildingCarryoverApplied, landContributedOriginalApt, postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
+import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -137,6 +137,34 @@ export function validateRedevelopmentAsset(
   // 입력돼 있으면(1세대 여부와 무관하게) 인가일 이후여야 한다.
   if (landContributedOriginalApt(asset) && asset.redevCompletionDate && asset.redevApprovalDate && asset.redevCompletionDate < asset.redevApprovalDate) {
     return fieldError("redevCompletionDate", `${label}: 준공일은 관리처분 인가일 이후여야 합니다.`);
+  }
+
+  /**
+   * #12 — 세대원 건물 출자 통산: 「예」로 선언했으면 건물 취득일이 필수다(통산 기산일 — 비우면 통산할 날이 없다, 자동 안분 fallback 금지).
+   * 취득일은 관리처분계획 인가일 이전이어야 하고, 거주 개월 수는 그 건물을 취득한 날부터 인가일까지의 개월 수를 넘을 수 없다.
+   * 엔진 술어(`householdBuildingCarryover`)·⑫(`refineRequiredFields`)와 같은 조건이다.
+   */
+  if (householdBuildingCarryoverApplied(asset)) {
+    const acq = asset.redevHouseholdBuildingAcquisitionDate;
+    if (!acq) {
+      return fieldError("redevHouseholdBuildingAcquisitionDate", `${label}: 세대원 건물 출자 통산 — 세대원이 철거된 기존 건물을 취득한 날을 입력하세요. 비과세 보유기간을 그 날부터 통산합니다.`);
+    }
+    if (asset.redevApprovalDate && acq > asset.redevApprovalDate) {
+      return fieldError("redevHouseholdBuildingAcquisitionDate", `${label}: 세대원 건물 취득일은 관리처분계획 인가일 이전이어야 합니다(건물은 인가로 멸실됩니다).`);
+    }
+    const monthsRaw = asset.redevHouseholdBuildingResidenceMonths;
+    if (monthsRaw) {
+      const months = parseInt(monthsRaw.replace(/,/g, ""), 10);
+      if (!Number.isFinite(months) || months < 0) {
+        return fieldError("redevHouseholdBuildingResidenceMonths", `${label}: 세대원 건물 거주 개월 수는 0 이상의 정수여야 합니다.`);
+      }
+      if (asset.redevApprovalDate) {
+        const max = householdBuildingResidenceOverflow(new Date(acq), new Date(asset.redevApprovalDate), months);
+        if (max !== null) {
+          return fieldError("redevHouseholdBuildingResidenceMonths", `${label}: 세대원 건물 거주 ${months}개월이 건물 취득일부터 관리처분계획 인가일까지의 ${max}개월을 넘습니다.`);
+        }
+      }
+    }
   }
 
   if (approvalLawBasis !== "urban_renovation_art_74") {

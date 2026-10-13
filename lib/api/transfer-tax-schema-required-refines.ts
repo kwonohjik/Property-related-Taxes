@@ -6,7 +6,7 @@
  * 다른 분기로 조용히 채운다). 조건은 각 항목에 적은 ⑧ 위치의 거울이다 — 어긋나면 「⑧ 통과 ↔ ⑫ 400」
  * 모순이 된다(14지점 ⑧·⑩).
  */
-import { redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { z } from "zod";
 import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { toDate } from "./date-coerce";
@@ -140,6 +140,8 @@ type PrimaryLike = {
     subject?: string;
     isSuccessorMember?: boolean;
     completionDate?: string;
+    approvalDate?: string;
+    householdBuilding?: { acquisitionDate: string; residenceMonths?: number };
     newHouseResidenceMonths?: number;
     originalAssetType?: string;
     receiveOnlyMode?: boolean;
@@ -222,6 +224,20 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   // #12 — 승계조합원과 같은 축: 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 준공 전 거주는 세지 않는다(⑧ 같은 leaf).
   const landContributedApt =
     rd?.subject === "apt" && rd.isSuccessorMember !== true && rd.originalAssetType === "land" && rd.receiveOnlyMode !== true;
+  // #12 — 세대원 건물 출자 통산(⑧ `validateRedevelopmentAsset` 미러): 건물 취득일 ≤ 인가일, 거주 개월 ≤ 취득일~인가일 개월 수.
+  //   토지 출자 원조합원 완공APT가 아니면 엔진이 읽지 않으므로 검사하지 않는다.
+  if (rd?.householdBuilding && landContributedApt && rd.approvalDate) {
+    const acq = toDate(rd.householdBuilding.acquisitionDate, "householdBuilding.acquisitionDate");
+    const approval = toDate(rd.approvalDate, "approvalDate");
+    if (acq > approval) {
+      issue(["redevelopment", "householdBuilding", "acquisitionDate"], "세대원 건물 취득일은 관리처분계획 인가일 이전이어야 합니다");
+    } else if (rd.householdBuilding.residenceMonths !== undefined) {
+      const max = householdBuildingResidenceOverflow(acq, approval, rd.householdBuilding.residenceMonths);
+      if (max !== null) {
+        issue(["redevelopment", "householdBuilding", "residenceMonths"], `세대원 건물 거주 ${rd.householdBuilding.residenceMonths}개월이 건물 취득일부터 인가일까지의 ${max}개월을 넘습니다`);
+      }
+    }
+  }
   if (rd && rd.subject === "apt" && (rd.isSuccessorMember === true || landContributedApt) && rd.completionDate) {
     const max = successorAptMaxResidenceMonths(toDate(rd.completionDate, "completionDate"), toDate(data.transferDate, "transferDate"));
     if (rd.newHouseResidenceMonths !== undefined) {
