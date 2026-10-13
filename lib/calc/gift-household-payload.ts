@@ -4,7 +4,8 @@
  * 이월과세 폼(`CarryoverTaxationForm.donorSameHousehold`)과 **같은 사실·같은 엔진 leaf**
  * (`lib/tax-engine/one-house/gift-household-basis.ts`)를 쓴다 — 판정 메뉴와 계산기가 같은 사실로 같은 판정을 한다.
  * 계산기 단건 일반 증여(이월과세 밖, 부담부증여 양도 포함) 화면도 **주 자산**에서 같은 위젯으로 묻는다(결정 #38-1,
- * `calcGiftHouseholdFactAsked`). 함께 양도하는 자산·건물만 증여받은 주택(D2)·다건에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
+ * `calcGiftHouseholdFactAsked`). 다건 계산도 건마다 주 자산에서 같은 사실을 받는다(결정 #38-3 — ④⑫⑭ 같은 빌더·같은 함수).
+ * 함께 양도하는 자산·건물만 증여받은 주택(D2)에는 칸이 없다 — 엔진이 확인 필요를 고지한다.
  * 겸용주택(주 자산)은 묻는다 — 겸용 엔진의 §154① 판정이 같은 leaf로 이 사실을 읽는다(결정 #38 후속).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -63,7 +64,7 @@ type BuildingCauseMixFields = Partial<
  * 마운트되어 이 칸이 없고, 건물만 증여받은 주택의 통산 범위는 이 묶음에서 정하지 않았다(범위 밖 — 엔진이 확인 필요를 고지한다).
  * 겸용주택(`isMixedUseHouse`)도 묻는다 — 겸용 엔진의 §154① 판정(`transfer-tax-mixed-use-exemption.ts` `exemptionReqInput`)이 단건과 같은
  * leaf로 `giftHouseholdBasis`를 읽는다(결정 #38 후속 — anchor GC-5).
- * 첫 자산인지·다건 임베드인지는 호출부가 가른다(`calcGiftHouseholdFactAsked` — ⑤·⑧. ④는 단건 `form.assets[0]`만 싣는다).
+ * 첫 자산인지는 호출부가 가른다(`calcGiftHouseholdFactAsked` — ⑤·⑧. ④는 `form.assets[0]`만 싣는다).
  */
 export function calcGiftHouseholdFactVisible(
   asset: (Pick<AssetForm, "acquisitionCause" | "assetKind"> & BuildingCauseMixFields) | undefined,
@@ -72,16 +73,17 @@ export function calcGiftHouseholdFactVisible(
 }
 
 /**
- * ⑤ 위젯 노출 · ⑧ 필수 검증의 게이트 — 단건 계산기의 **첫 자산**이고 다건 편집 화면에 임베드되지 **않았을** 때만 묻는다.
+ * ⑤ 위젯 노출 · ⑧ 필수 검증의 게이트 — 계산기의 **첫 자산**일 때만 묻는다.
  *
- * 다건 편집은 같은 단건 마법사를 임베드하지만 다건 ④(`buildPropertyPayload`)는 이 사실을 싣지 않고 다건 ⑫도 받지 않는다(#38-3 범위 밖).
- * 다건에서 물으면 답이 조용히 버려지고 엔진은 「입력되지 않아」 고지를 낸다 — 같은 입력이 단건 0 · 다건 229,075,000(anchor GC-6).
+ * 다건 편집은 같은 단건 마법사를 임베드하고 다건 ④(`buildPropertyPayload`)가 같은 빌더(`buildCalcGiftHouseholdPayload`)로 건마다 주 자산의
+ * 사실을 싣는다(#38-3) — 그래서 단건과 다건이 같은 게이트·같은 사실로 같은 판정을 한다(anchor GC-6). 함께 양도하는 두 번째 이후 자산은
+ * 칸이 없다(다건은 컴패니언을 막는다).
  */
 export function calcGiftHouseholdFactAsked(
   asset: Parameters<typeof calcGiftHouseholdFactVisible>[0],
-  where: { isPrimary: boolean; embeddedInMulti: boolean },
+  where: { isPrimary: boolean },
 ): boolean {
-  return where.isPrimary && !where.embeddedInMulti && calcGiftHouseholdFactVisible(asset);
+  return where.isPrimary && calcGiftHouseholdFactVisible(asset);
 }
 
 /**

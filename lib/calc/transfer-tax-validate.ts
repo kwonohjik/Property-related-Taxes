@@ -20,7 +20,7 @@ import {
 } from "@/lib/tax-engine/data/transfer-supported-period";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { validateAssetEntry, todayLocalISO, type StepValidationContext } from "./transfer-tax-validate-asset";
+import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { collectStep1Issues } from "./transfer-tax-validate-step1";
 import { collectWithFields, type IssueField } from "./transfer-tax-validate-field";
@@ -54,20 +54,16 @@ export interface ValidationIssue {
  * push 순서는 기존 validateStepDetailed의 검사 순서와 동일하게 유지 —
  * [0]이 기존 첫 오류와 동치 (anchor: transfer-validate-detailed.test.ts).
  */
-export function collectStepIssues(
-  step: number,
-  form: TransferFormData,
-  ctx: StepValidationContext = {},
-): ValidationIssue[] {
+export function collectStepIssues(step: number, form: TransferFormData): ValidationIssue[] {
   // 하위 검증의 `fieldError` 기록을 모아 field 없는 이슈에 붙인다(직접 push는 field를 직접 준다).
-  const { result, fieldOf } = collectWithFields(() => collectStepIssuesRaw(step, form, ctx));
+  const { result, fieldOf } = collectWithFields(() => collectStepIssuesRaw(step, form));
   return result.map((it) => {
     const field = it.field ?? fieldOf(it.message);
     return field ? { ...it, field } : it;
   });
 }
 
-function collectStepIssuesRaw(step: number, form: TransferFormData, ctx: StepValidationContext): ValidationIssue[] {
+function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
 
   // step 0: 자산 목록 (취득 정보 통합)
@@ -408,7 +404,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData, ctx: StepVal
             ? mergeGbPropertyLevel(form.assets[i], primaryAsset)
             : mergePrimaryBasic(form.assets[i], primaryAsset)
           : form.assets[i];
-      const message = validateAssetEntry(entry, i, form, ctx);
+      const message = validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
     }
 
@@ -511,17 +507,13 @@ function collectStepIssuesRaw(step: number, form: TransferFormData, ctx: StepVal
  * 기존 string 반환 API 보존 — 호출처·테스트 호환.
  * 위치 정보가 필요한 UI는 validateStepDetailed를 사용한다.
  */
-export function validateStep(step: number, form: TransferFormData, ctx: StepValidationContext = {}): string | null {
-  return validateStepDetailed(step, form, ctx)?.message ?? null;
+export function validateStep(step: number, form: TransferFormData): string | null {
+  return validateStepDetailed(step, form)?.message ?? null;
 }
 
 /** 첫 번째 차단 오류 1건 — collectStepIssues 위임 (검증 규칙 단일 진실) */
-export function validateStepDetailed(
-  step: number,
-  form: TransferFormData,
-  ctx: StepValidationContext = {},
-): ValidationIssue | null {
-  return collectStepIssues(step, form, ctx)[0] ?? null;
+export function validateStepDetailed(step: number, form: TransferFormData): ValidationIssue | null {
+  return collectStepIssues(step, form)[0] ?? null;
 }
 
 /**
