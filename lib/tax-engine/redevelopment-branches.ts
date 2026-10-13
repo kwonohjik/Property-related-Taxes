@@ -580,7 +580,7 @@ export function runOriginalMember(
   };
 
   // 청산금분 기산일
-  //   - 완공APT(isApt): 납부=인가일~양도일, 수령=취득일~settlementSaleDate
+  //   - 완공APT(isApt): 납부=인가일~양도일(토지만 출자한 원조합원의 표2는 사용승인일~양도일 — `lthd.settlement.holdingStartDate`), 수령=취득일~settlementSaleDate
   //   - 입주권(isRight): 인가일~양도일 (납부·수령 공통)
   //
   // 입주권은 종전에 `isApt ? ... : undefined`라 일자가 비어 신고서 인가후 분 열의
@@ -589,7 +589,7 @@ export function runOriginalMember(
   // §166①2호 가목의 인가후 분은 인가일 이후 기간이다(LTHD 미적용은 §95② 본문 괄호 — 일자 표시와 별개).
   const settlementAcqDate = isApt
     ? redevelopment.settlementDirection === "pay"
-      ? redevelopment.approvalDate
+      ? (lthd.settlement.holdingStartDate ?? redevelopment.approvalDate)
       : acquisitionDate
     : isRight
       ? redevelopment.approvalDate
@@ -610,6 +610,7 @@ export function runOriginalMember(
     holdingDays: lthd.settlement.holdingDays,
     lthd: settlementLthdAmt.total,
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
+    ...(lthd.settlement.rateBasis ? { lthdRateBasis: lthd.settlement.rateBasis } : {}),
     branchAcqDate: settlementAcqDate,
     branchTransferDate: settlementTransferDate,
     // §166①2호 가목(입주권): 인가후 분 필요경비 전액 · 완공APT는 위 `postApprovalExpenseShare` 참조.
