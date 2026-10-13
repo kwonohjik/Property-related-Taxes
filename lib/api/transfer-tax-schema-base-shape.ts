@@ -91,7 +91,9 @@ export const propertyBaseShape = {
   giftHouseholdHoldingStartDate: z.string().date().optional(),
   /**
    * 증여자가 양도 전에 사망했다 / 증여 뒤 이혼했다가 같은 사람과 재결합했다 — 둘 다 「계속 같은 세대」를 묻지 않고 통산 없이 계산하며
-   * 엔진이 확인 필요를 고지한다(결정 #34 조건 · #38-6). 재결합은 배우자 증여의 사실이다(refine).
+   * 엔진이 확인 필요를 고지한다(결정 #34 조건 · #38-6). 재결합이 배우자 증여의 사실인지는 ⑧(`giftHouseholdFactErrors`)만 막는다 —
+   * 증여자와의 관계는 API 본문에 실리지 않아 이 스키마에는 묶는 refine이 없다. 직접 호출로 비배우자에게 true를 보내도 통산하지 않는
+   * 쪽(보수 방향)이라 세액이 줄지 않는다.
    */
   giftDonorDeceased: z.boolean().optional(),
   giftRejoinedAfterDivorce: z.boolean().optional(),
