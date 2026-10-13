@@ -30,8 +30,15 @@ export function validateHousingExcessSplitInputs(
     );
   }
   // #17 후속(F1·G2) — 별개취득 토글 ON + 같은 날짜면 파트 방식 라디오가 자산 단위 라디오와 함께 화면에 있다 → 어긋나면 그 라디오로.
-  //   배율 한도 이내도 같다(두 라디오 중 하나가 계산에 반영되지 않는다) — 그래서 분리 경로 판정보다 앞이다.
-  const modeMismatch = housingExcessPartModeMismatch(a, isPrimary);
+  //   배율 한도 이내·함께 양도 주택 카드도 같다(두 라디오 중 하나가 계산에 반영되지 않는다) — 그래서 분리 경로 판정·주 자산 판정보다 앞이다.
+  const modeMismatch = housingExcessPartModeMismatch(a);
+  if (modeMismatch === "landAcquisitionDate") {
+    return fieldError(
+      "landAcquisitionDate",
+      `${label}: 「토지·건물 취득일 다름」을 켰으므로 토지 취득일을 입력하세요 — 토지·건물 취득가액 방식이 위 「취득가액 산정 방식」과 다릅니다. ` +
+        "토지를 다른 날 취득했으면 토지·건물 방식을 각각 쓰고, 같은 날 취득했으면 위 방식 하나로 계산합니다.",
+    );
+  }
   if (modeMismatch) {
     const part = modeMismatch === "landAcqMode" ? "토지" : "건물";
     return fieldError(

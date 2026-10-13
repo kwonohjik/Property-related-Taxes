@@ -21,6 +21,14 @@
  * ⇒ 사용자 결정(2026-10-13) 「지금처럼 막고 안내」 — F1과 같은 술어(`housingExcessPartModeMismatch`)를 배율 한도와 무관하게 적용해
  *    ⑧이 어긋난 라디오 칸(`landAcqMode`/`buildingAcqMode`, ⑤에 `data-field` 앵커가 이미 있다)으로 막는다.
  * 두 라디오가 같으면 막지 않는다 — 실가·실가 + 파트 취득가액이면 분리 계산(파트 값 반영), 그 밖에는 자산 단위 계산으로 화면과 계산이 같다.
+ *
+ * ## 범위 = «두 라디오가 함께 화면에 있는가» (검토 보정)
+ * 처음에는 배율 초과분 분리 경로의 사실(`factsOf`)에서 면적 조건만 빼 범위로 썼다. 그러면 분리 경로 전용 제외 조건이 딸려 와,
+ * 같은 컴포넌트로 두 라디오가 함께 뜨는데도 ⑧이 통과했다(probe 실측 — 수정 전 전부 issues 없음):
+ * - 함께 양도 주택 카드(2번 자산): 자산 단위 실가 + 토지 환산 → 라디오 비운 대조와 같은 138,270,000(라디오 무시) · 자산 단위 환산 + 실가/실가 + 파트
+ *   1억·4억 → 취득가액 5억(자산 단위 「환산」 무시 — 라디오 비우면 환산 681,818,181 · 117,716,592) · 자산 단위 환산 + 토지 실가/건물 환산 → 681,818,181(라디오 무시).
+ * - 2005-04-30 전 취득(2003-01-02) · PHD 켬: 자산 단위 실가 + 토지 환산 → 대조와 같은 4,801,500(라디오 무시).
+ * 토글을 켰는데 토지 취득일이 비어 있으면 같은 날인지 아직 모른다 — 종전에는 «같은 날 취득한 주택은…»이라 단정하고 라디오로 보냈다 → 토지 취득일 칸으로 보낸다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeMockRates } from "../../tax-engine/_helpers/mock-rates";
@@ -37,6 +45,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { runCalc } from "../_helpers/redev-one-house-route";
+import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 
@@ -145,6 +154,101 @@ describe("대조 — 두 라디오가 같으면 막지 않는다 (화면 = 계�
 
   it("대조 — 토지 취득일이 다르면(별개취득) 파트 방식이 정본이다 → 이 규칙은 걸리지 않는다", async () => {
     const r = await runCalc(form(HIGH, { ...SAME_DAY, landAcquisitionDate: "2010-01-04", landAcqMode: "estimated", buildingAcqMode: "actual" }));
+    expect(modeIssue(r.issues)).toBeUndefined();
+  });
+});
+
+// ── 검토 보정 — 범위를 «두 라디오가 함께 화면에 있는가»로 ──
+const issuesWithIndex = (f: never) => {
+  const out: { assetIndex?: number; field?: string; message: string }[] = [];
+  for (let st = 0; st <= 5; st++) for (const i of collectStepIssues(st, f)) out.push({ assetIndex: i.assetIndex, field: i.field, message: i.message });
+  return out;
+};
+const LAND_FIRST = {
+  assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2012-01-02", fixedAcquisitionPrice: "100000000", actualSalePrice: "500000000",
+  addressJibun: "서울 테스트동 9", acquisitionArea: "100", transferArea: "100", standardPricePerSqmAtTransfer: "800000", landNature: "independent",
+  standardPriceAtTransfer: "80000000",
+};
+/** 1번 자산 토지 · 2번 자산 주택(함께 양도 주택 카드 — `isNonPrimaryAsset`) */
+const withCompanionHouse = (over: Record<string, unknown>) =>
+  ({
+    ...createDefaultTransferFormData(), ...household, contractTotalPrice: "2000000000",
+    assets: [
+      { ...makeDefaultAsset(1), ...LAND_FIRST },
+      { ...makeDefaultAsset(2), ...HOUSE, addressJibun: "서울 테스트동 2", actualSalePrice: HIGH, standardPriceAtTransfer: "800000000", ...SAME_DAY, ...over },
+    ],
+  }) as never;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const companionAcq = (r: any): number => r.json.data.aggregated.properties[1].acquisitionPrice;
+
+describe("검토 보정 — 함께 양도 주택 카드도 두 라디오가 함께 뜬다 → 같은 규칙으로 2번 자산의 라디오 칸에 막는다 (수정 전: ⑧ 통과)", () => {
+  it.each([
+    ["자산 단위 실가 + 토지 환산 / 건물 실가", { landAcqMode: "estimated", buildingAcqMode: "actual" }],
+    // 수정 전: 취득가액 5억(파트 실가) — 자산 단위 「환산」 무시
+    ["자산 단위 환산 + 토지·건물 실가 + 파트 1억·4억", { ...EST, landAcqMode: "actual", buildingAcqMode: "actual", ...PARTS }],
+    // 수정 전: 취득가액 681,818,181(자산 단위 환산) — 건물 「환산」은 맞지만 토지 「실가」 라디오 무시
+    ["자산 단위 환산 + 토지 실가 / 건물 환산 + 토지 1억", { ...EST, landAcqMode: "actual", buildingAcqMode: "estimated", landAcquisitionPrice: "100000000" }],
+  ])("🔑 %s → 2번 자산(assetIndex 1)의 landAcqMode로 차단", (_n, over) => {
+    const hit = issuesWithIndex(withCompanionHouse(over)).find((i) => i.message.includes("토지·건물을 같은 날 취득한 주택"));
+    expect(hit?.assetIndex).toBe(1);
+    expect(hit?.field).toBe("landAcqMode");
+    expect(hit?.message).toContain("자산 2");
+  });
+
+  it.each([
+    ["라디오 미선택 · 자산 단위 실가", {}, 500_000_000, 138_270_000],
+    ["라디오 미선택 · 자산 단위 환산", { ...EST }, 681_818_181, 117_716_592],
+    ["자산 단위 실가 = 토지·건물 실가 + 파트 1억·4억", { landAcqMode: "actual", buildingAcqMode: "actual", ...PARTS }, 500_000_000, 138_270_000],
+    ["자산 단위 환산 = 토지·건물 환산", { ...EST, landAcqMode: "estimated", buildingAcqMode: "estimated" }, 681_818_181, 117_716_592],
+  ])("대조 — %s → 통과(화면 = 계산)", async (_n, over, acq, tax) => {
+    const r = await runCalc(withCompanionHouse(over));
+    expect(r.issues).toEqual([]);
+    expect(r.status).toBe(200);
+    expect(companionAcq(r)).toBe(acq);
+    expect(r.json.data.aggregated.totalTax).toBe(tax);
+  });
+});
+
+describe("검토 보정 — 분리 경로 전용 제외 조건(2005-04-30 전 취득 · PHD · 지분)은 라디오 표시와 무관하다 → 막는다", () => {
+  const PRE = { acquisitionDate: "2003-01-02", landAcquisitionDate: "2003-01-02" };
+  it.each([
+    ["2005-04-30 전 취득(2003-01-02)", { ...PRE }],
+    ["2005-04-30 전 취득 + PHD 켬(⑤ 자동 ON 상태)", { ...PRE, usePreHousingDisclosure: true }],
+    ["공유지분 1/2", { ownershipNumerator: "1", ownershipDenominator: "2" }],
+  ])("🔑 %s · 자산 단위 실가 + 토지 환산 → landAcqMode 차단 (수정 전: ⑧ 통과 · 라디오 무시)", async (_n, over) => {
+    const r = await runCalc(form(HIGH, { ...SAME_DAY, ...over, landAcqMode: "estimated", buildingAcqMode: "actual" }));
+    expect(modeIssue(r.issues)?.field).toBe("landAcqMode");
+  });
+
+  it.each([
+    ["2005-04-30 전 취득(2003-01-02)", { ...PRE }],
+    ["2005-04-30 전 취득 + PHD 켬", { ...PRE, usePreHousingDisclosure: true }],
+  ])("대조 — %s · 라디오 미선택 → 통과 · 4,801,500 (라디오를 고른 위 시료도 수정 전 같은 값 = 라디오 무시)", async (_n, over) => {
+    const r = await runCalc(form(HIGH, { ...SAME_DAY, ...over }));
+    expect(r.issues).toEqual([]);
+    expect(r.result.totalTax).toBe(4_801_500);
+  });
+});
+
+describe("범위 밖 대조 — 자산 단위 라디오가 화면에 없으면 두 라디오의 충돌이 없다", () => {
+  it("부담부증여 양도 — 자산 단위 「취득가액 산정 방식」을 그리지 않는다(⑤ `transferType !== burdened_gift` 게이트) → 이 규칙은 걸리지 않는다", async () => {
+    const r = await runCalc(form(HIGH, { ...SAME_DAY, transferType: "burdened_gift", landAcqMode: "estimated", buildingAcqMode: "actual" }));
+    expect(modeIssue(r.issues)).toBeUndefined();
+  });
+});
+
+describe("검토 보정 — 토글 ON + 토지 취득일 미입력이면 같은 날인지 아직 모른다 → 어긋날 때 토지 취득일 칸으로", () => {
+  const NO_LAND_DATE = { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "" };
+  it("🔑 토지 환산 / 건물 실가 → landAcquisitionDate (수정 전: «같은 날 취득한 주택은…»으로 단정하고 landAcqMode)", async () => {
+    const r = await runCalc(form(HIGH, { ...NO_LAND_DATE, landAcqMode: "estimated", buildingAcqMode: "actual" }));
+    expect(modeIssue(r.issues)).toBeUndefined();
+    const hit = r.issues.find((i: { field?: string }) => i.field === "landAcquisitionDate");
+    expect(hit?.message).toContain("토지 취득일을 입력하세요");
+  });
+
+  it("대조 — 라디오가 자산 단위와 같으면 이 규칙은 걸리지 않는다", async () => {
+    const r = await runCalc(form(HIGH, { ...NO_LAND_DATE, landAcqMode: "actual", buildingAcqMode: "actual" }));
+    expect(r.issues.find((i: { field?: string }) => i.field === "landAcquisitionDate")).toBeUndefined();
     expect(modeIssue(r.issues)).toBeUndefined();
   });
 });
