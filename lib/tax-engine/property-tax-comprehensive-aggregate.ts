@@ -17,7 +17,7 @@
  *   - 세부담상한 → 안분 순서 준수
  */
 
-import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_CAL, PROPERTY_CONST } from "./legal-codes";
 import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";

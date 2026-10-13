@@ -217,7 +217,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           — §95② 본문 괄호 「조합원으로부터 취득한 것은 제외」에 따른 LTHD 배제용으로,
           이 카드(`redevIsSuccessorMember`, §166 우회 산식)와는 다른 사실이다.
           두 카드를 한 화면에 함께 노출하면 같은 질문이 두 번 나온 것처럼 읽힌다. */}
-      {!isRightSubject && <SuccessorMemberSection asset={asset} onChange={onChange} />}
+      {!isRightSubject && <SuccessorMemberSection asset={asset} onChange={onChange} transferDate={transferDate} />}
 
       {/* ③ amber: 청산금 방향 (승계조합원 모드 시 숨김 — 본 PR 미지원) */}
       {asset.redevIsSuccessorMember !== "yes" && (
