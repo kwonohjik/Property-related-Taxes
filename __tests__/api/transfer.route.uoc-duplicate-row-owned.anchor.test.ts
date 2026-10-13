@@ -40,6 +40,7 @@ import { validateStep2 as validateJudgmentStep2 } from "@/lib/calc/one-house-exe
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { otherUocRowNumberOf, uocRowAcquiredAfterTransfer } from "@/lib/calc/house-row-required-issues";
+import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
 type Form = ReturnType<typeof createDefaultTransferFormData>;
@@ -203,5 +204,61 @@ describe("§155⑧ 행 한 채 — 양도일 현재 보유 행만 (PR #2163 후�
     expect(withMark.body.unavoidableOutsideCapitalHouse).toBeUndefined();
     expect(withMark.status).toBe(200);
     expect(withMark.totalTax).toBe(withoutMark.totalTax);
+  });
+
+  // ── 리뷰 지적 — 「반영 안 됨」 안내 행에 ⑧ 검증이 해소일 택일을 요구하던 모순 ──
+  const blank = (id: string, acq: string) => row(id, acq, { unavoidableOutsideCapitalResolvedDate: "", unavoidableOutsideCapitalUnresolved: undefined });
+  const calcUoc = (f: Form) => collectStepIssues(1, f).filter((x) => x.message.includes("사유 해소일")).map((x) => x.field);
+  const judgUoc = (houses: HouseEntry[], transferDate = TD) => {
+    const j = createInitialOneHouseJudgmentForm();
+    j.houses = houses;
+    j.transferDate = transferDate;
+    j.assets[0] = { ...j.assets[0], assetKind: "housing" };
+    return validateJudgmentStep2(j).filter((e) => e.message.includes("사유 해소일")).map((e) => e.field);
+  };
+
+  it("O10 ★ 해소일·미해소를 비운 ⑧ 행 — 양도일 당일·뒤 취득 행은 안내만 뜨고 막지 않는다 · 보유 행·양도일 미입력은 종전대로 막는다", () => {
+    // [취득일, 양도일, 막힘 기대] — 안내(uocRowAcquiredAfterTransfer)가 뜨는 칸과 정확히 반대
+    const grid: Array<[string, string, boolean]> = [
+      ["2026-10-01", TD, false],
+      [TD, TD, false],
+      ["2026-09-17", TD, true],
+      ["2019-06-01", TD, true],
+      ["2026-10-01", "", true],
+    ];
+    for (const [acq, td, blocked] of grid) {
+      const h = blank("hx", acq);
+      expect(uocRowAcquiredAfterTransfer(h, td), `${acq}/${td}`).toBe(!blocked && td !== "");
+      expect(calcUoc(form([h], td)).length > 0, `계산기 ${acq}/${td}`).toBe(blocked);
+      expect(judgUoc([h], td).length > 0, `판정 ${acq}/${td}`).toBe(blocked);
+    }
+    // 보유 ⑧ 행은 비워도 그대로 막는다 — 같은 시료에서 L만 풀린다
+    expect(calcUoc(form([blank("ha", "2018-01-01"), blank("hl", "2026-10-01")]))).toEqual(["houses.0"]);
+    expect(judgUoc([blank("ha", "2018-01-01"), blank("hl", "2026-10-01")])).toEqual(["houses.0.unavoidableOutsideCapitalResolvedDate"]);
+    // ⑧ 토글이 꺼진 행은 처음부터 요구하지 않는다
+    expect(calcUoc(form([{ ...blank("hx", "2018-01-01"), oneHouseUnavoidableOutsideCapital: false } as HouseEntry]))).toEqual([]);
+  });
+
+  it("O11 ⑫ 거울 — 비운 채 양도일 뒤 취득 ⑧ 행이 있어도 ⑫는 200(④가 그 행을 싣지 않는다) · ⑧도 막지 않아 두 층이 같다", async () => {
+    const f = form([A, blank("hl", "2026-10-01")]);
+    expect(calcUoc(f)).toEqual([]);
+    const s = await single(f);
+    expect(s.status).toBe(200);
+    expect(s.totalTax).toBe((await single(form([A]))).totalTax);
+  });
+
+  it("O12 레거시 스칼라(옛 저장값) — 행 표시와 별개의 세대 단위 선언이라 ④에 그대로 실린다 · 행 값은 안 실린다 · OH-30 안내가 레거시 단독임을 밝힌다", async () => {
+    // 레거시 스칼라를 켤 수 있는 화면은 없다 — 옛 저장값 복원으로만 도달한다(`unavoidableOutsideCapitalSpecial`).
+    const f = form([L]);
+    Object.assign(f, { unavoidableOutsideCapitalSpecial: true, unavoidableOutsideCapitalReason: "study", unavoidableOutsideCapitalResolvedDate: "2025-06-01" });
+    const s = await single(f);
+    expect(s.status).toBe(200);
+    // 실리는 값은 레거시(사유 study · 해소일 2025-06-01) — ⑧ 행 L(사유 work · 해소일 2021-01-01)의 값이 아니다.
+    expect(s.body.unavoidableOutsideCapitalHouse).toEqual({ reason: "study", resolvedDate: "2025-06-01" });
+    expect((s.body.houses as Obj[]).map((h) => h.id)).toEqual(["selling"]);
+    // 그 상태를 화면이 감추지 않는다 — 행이 보유 명부에서 빠지므로 「레거시 단독」(OH-30 안내 조건)이다.
+    const facts = deriveOneHouseFactsFromHouses([L], { unavoidableOutsideCapitalHouse: { reason: "study" } }, TD);
+    expect(facts.fromLegacyOnly).toBe(true);
+    expect(uocRowAcquiredAfterTransfer(L, TD)).toBe(true);
   });
 });

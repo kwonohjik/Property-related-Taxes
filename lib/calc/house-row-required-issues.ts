@@ -84,14 +84,22 @@ export function houseUnavoidableIssue(
 /**
  * §155⑧ 수도권 밖 부득이 주택(영 §167의10①4호 겸용) — 사유 해소일 또는 「사유가 양도일 현재 해소되지 않음」 택일(#31).
  * ⑫ `unavoidableOutsideCapitalHouseSchema`의 거울이다 — 빈 값은 「모름」이라 엔진이 특례를 적용하지 않는다.
+ *
+ * 양도일 당일·뒤 취득 행(`uocRowAcquiredAfterTransfer`)은 ④가 명부에 싣지 않아 ⑫가 보지 않는 행이고, ⑤ 카드가 「반영되지 않음」이라
+ * 밝히는 행이다 — 그 행에 해소일·미해소 택일을 요구하면 화면이 모순이므로 묻지 않는다(⑫ 거울). 양도일을 모르면 거르지 않는다.
  */
 export function houseUnavoidableOutsideCapitalIssue(
   h: Pick<
     HouseEntry,
-    "oneHouseUnavoidableOutsideCapital" | "unavoidableOutsideCapitalResolvedDate" | "unavoidableOutsideCapitalUnresolved"
+    | "oneHouseUnavoidableOutsideCapital"
+    | "unavoidableOutsideCapitalResolvedDate"
+    | "unavoidableOutsideCapitalUnresolved"
+    | "acquisitionDate"
   >,
+  transferDate: string | undefined,
 ): HouseRowIssue | null {
   if (!h.oneHouseUnavoidableOutsideCapital) return null;
+  if (uocRowAcquiredAfterTransfer(h, transferDate)) return null;
   const issue = unavoidableOutsideCapitalStatusIssue({
     resolvedDate: h.unavoidableOutsideCapitalResolvedDate,
     unresolved: h.unavoidableOutsideCapitalUnresolved,
