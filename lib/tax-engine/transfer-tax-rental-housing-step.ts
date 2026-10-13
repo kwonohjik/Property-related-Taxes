@@ -21,7 +21,12 @@ import {
 } from "./transfer-tax/rental-housing-exception/display-labels";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
-import { buildEligibilityContext, buildPrhpTable2ReadingNotice, buildRentalPeriodPendingNotice } from "./transfer-tax-rental-housing-judge";
+import {
+  buildEligibilityContext,
+  buildPrhpTable2ReadingNotice,
+  buildRentalPeriodPendingNotice,
+  prhpSurchargeUnverifiedNotice,
+} from "./transfer-tax-rental-housing-judge";
 import type {
   TransferTaxInput,
   CalculationStep,
@@ -324,6 +329,16 @@ export function runRentalHousingExceptionStep(
         multiHouseSurchargeResult,
       })
     : calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
+  // 결정 #20 성립 B — 직전거주주택보유주택이 성립했는데 다주택 중과가 붙으면 그 기간분 중과가 해석 미확보임을 알린다(사용자 결정 2026-10-14: 현행 유지).
+  const prhpSurchargeNotice = prhpSurchargeUnverifiedNotice(effectiveInput, rheTaxResult.surchargeType);
+  if (prhpSurchargeNotice) {
+    steps.push({
+      label: "직전거주주택보유주택 다주택 중과 — 확인 필요",
+      formula: prhpSurchargeNotice,
+      amount: 0,
+      legalBasis: rheBasis,
+    });
+  }
   if (nbl) {
     steps.push(nbl.step);
     // §104⑤ 비교과세를 수행했으면 그 사실을 노출한다 — 종전 특례 경로는 산출세액 단계를
@@ -549,13 +564,14 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || periodPendingNotice || table2ReadingNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
             lthdNotice,
             periodPendingNotice,
             table2ReadingNotice,
+            prhpSurchargeNotice,
             // OH-40·§7-5 판정 보류·확인 필요 고지 — 결론은 바꾸지 않는다.
             ...(rhe.eligibility.notices ?? []),
           ].filter((x): x is string => x !== undefined),

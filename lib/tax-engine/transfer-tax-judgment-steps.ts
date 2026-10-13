@@ -204,7 +204,8 @@ export function resolveSurchargeDeemedOneHouseDetail(
  * 직접 다룬 회신은 없다(사용자 결정 Q1(가) 2026-10-04 — 연다).
  * 판정 보류(`undetermined` — 명부 없음)는 열지 않는다(확인 필요 — 종전 동작).
  * 시나리오 B(직전거주주택보유주택 — 「직전거주주택의 양도일 후의 기간분에 대해서만」)는 과세 기간분이 중과되는지
- * 해석을 확보하지 못했다 → 열지 않는다(확인 필요 — 종전 동작).
+ * 해석을 확보하지 못했다 → 열지 않는다(사용자 결정 2026-10-14: 현행 유지 — 중과를 적용하고 확인 필요를 알린다,
+ * `prhpSurchargeUnverifiedNotice`). 재제안하지 말 것 — 임대 제외 주택 수 1 입력은 중과가 붙지 않는 불일치도 그 결정에 포함된다.
  */
 function qualifiesRentalResidenceDeeming(
   workingInput: TransferTaxInput,
