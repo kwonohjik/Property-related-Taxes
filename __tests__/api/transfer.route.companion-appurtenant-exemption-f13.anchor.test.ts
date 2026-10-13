@@ -231,3 +231,62 @@ describe("#18 12억 판정·안분 분모 — 배율 초과 부수토지 가액�
     expect(a.totalTax).toBe(81_879_285);
   });
 });
+
+/**
+ * 사례 28 역방향(F3 후속) — 주택부수토지를 주 자산(첫 자산)으로, 주택을 함께 양도 자산으로 넣은 구성.
+ * route는 주 자산이 주택일 때만 1세대1주택 단위(F-13)·배율 분리(G-2)를 만든다(`route.ts` `oneHouseUnitRole` ·
+ * `resolveCompanionLandRate` 주택 계열 검사). 역방향은 둘 다 없어 같은 사실을 주택 먼저 넣은 경우와 세액이 갈린다(계획서 :110 V-5 미착수).
+ * 고치기 전까지 조용히 계산하지 않고 알린다 — 세액은 바꾸지 않는다.
+ */
+describe("사례 28 역방향 — 주택부수토지가 주 자산이고 주택이 함께 양도 자산이면 판정 생략을 알린다", () => {
+  const reversePrimary = (landPrice: number, housePrice: number, over: object = {}) => ({
+    ...primary(landPrice, housePrice),
+    propertyType: "land",
+    landNature: "appurtenant_to_housing",
+    buildingFootprintArea: undefined,
+    standardPriceAtTransferForApportion: landPrice / 1000,
+    ...over,
+  });
+  const house = (price: number, over: object = {}) => ({
+    assetId: "h1",
+    assetLabel: "주택",
+    assetKind: "housing",
+    acquisitionCause: "purchase",
+    acquisitionDate: "2014-01-01",
+    fixedAcquisitionPrice: price / 2,
+    standardPriceAtTransfer: price / 1000,
+    directExpenses: 0,
+    isOneHousehold: true,
+    reductions: [],
+    ...over,
+  });
+  const NOTICE = "주택을 첫 자산으로 입력하면";
+
+  it("F13-11 역방향(1세대1주택) — 판정 생략 안내", async () => {
+    const a = await post({ ...reversePrimary(300_000_000, 800_000_000), companionAssets: [house(800_000_000)] });
+    // 세액은 바꾸지 않는다 — 같은 사실을 주택 먼저 넣으면 0(F13-1)인데 역방향은 토지를 따로 과세한다(실측 25,943,500).
+    expect(a.totalTax).toBe(25_943_500);
+    expect((a.warnings ?? []).some((w) => w.includes(NOTICE))).toBe(true);
+  });
+  it("F13-12 역방향(1세대1주택 아님) — 배율 이내·초과 구분도 하지 않으므로 같은 안내", async () => {
+    const a = await post({
+      ...reversePrimary(300_000_000, 800_000_000, { isOneHousehold: false, householdHousingCount: 2 }),
+      companionAssets: [house(800_000_000, { isOneHousehold: false })],
+    });
+    expect((a.warnings ?? []).some((w) => w.includes(NOTICE))).toBe(true);
+  });
+  it("F13-13 대조군 — 주 자산 토지가 독립 토지이거나, 주택이 첫 자산(K1 순서)이면 안내하지 않는다", async () => {
+    const standalone = await post({
+      ...reversePrimary(300_000_000, 800_000_000, { landNature: "non_appurtenant" }),
+      companionAssets: [house(800_000_000)],
+    });
+    expect(standalone.warnings ?? []).not.toContainEqual(expect.stringContaining(NOTICE));
+    const forward = await post({ ...primary(800_000_000, 300_000_000), companionAssets: [land(300_000_000)] });
+    expect(forward.warnings ?? []).not.toContainEqual(expect.stringContaining(NOTICE));
+    // K1 순서에서 면적이 없어 역할을 못 받은 부수토지 카드는 F13-5 안내 대상이다 — 역방향 안내가 겹치지 않는다
+    const forwardNoArea = await post({ ...primary(800_000_000, 300_000_000), companionAssets: [land(300_000_000, { areaM2: undefined })] });
+    expect(forwardNoArea.warnings ?? []).not.toContainEqual(expect.stringContaining(NOTICE));
+    const noHouse = await post({ ...reversePrimary(300_000_000, 300_000_000), companionAssets: [land(300_000_000)] });
+    expect(noHouse.warnings ?? []).not.toContainEqual(expect.stringContaining(NOTICE));
+  });
+});

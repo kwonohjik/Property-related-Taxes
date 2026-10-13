@@ -19,6 +19,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { appurtenantLimitShareOfAssets } from "@/lib/calc/housing-excess-split";
 import { appurtenantCardAreaM2 } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildAssetPayload } from "@/lib/calc/transfer-tax-api-helpers";
+import { primaryEnginePropertyType } from "@/lib/calc/transfer-tax-api-helpers";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
@@ -295,5 +296,25 @@ describe("#12·#36 — 일체과세 배지가 §167의5 3/5/10배를 쓴다", ()
     expect(appurtenantCardAreaM2({ ...partial, assetKind: "housing" } as AssetForm)).toBe(0);
     expect(buildAssetPayload(partial, "actual", "2025-06-01").areaM2).toBe(250);
     expect("areaM2" in buildAssetPayload({ ...partial, landNature: "standalone" } as AssetForm, "actual", "2025-06-01")).toBe(false);
+  });
+
+  /**
+   * F3(b) 후속 — 주 자산 종류도 route와 같은 사실로 본다. route(`resolveCompanionLandRate`)는 ④ `propertyType`이 주택·입주권·분양권일 때만
+   * 일체과세를 하고, 정착면적 칸은 신축 건물·상가에도 열린다(`AssetFootprintField` FOOTPRINT_AREA_KINDS).
+   * route 실측(신축 2025-06-01 · 양도 2026-02-16 · 정착 100㎡ · 부수토지 카드 250㎡): building·commercial_building 주 자산 → 토지 행 104-1-1(일체과세 아님) ·
+   * housing·presale_right 주 자산 → 104-1-3 «부수토지 일체과세 70%». 수정 전 배지는 여섯 종류 모두 켜졌다.
+   */
+  it("🔑 H-12: 주 자산이 신축 건물·상가·겸용주택·재개발(조합원 아파트)이면 배지가 꺼진다 — 주택·분양권은 켜진다", () => {
+    const badge = (over: Partial<AssetForm>) =>
+      renderHook(() => useUnifiedRateBadge(landA("250"), primary(over), "2025-06-01")).result.current;
+    expect(badge({ assetKind: "building" })).toBe(false);
+    expect(badge({ assetKind: "commercial_building" })).toBe(false);
+    expect(badge({ isMixedUseHouse: true })).toBe(false);
+    expect(badge({ assetKind: "redevelopment_apt", redevSubject: "apt" })).toBe(false);
+    expect(badge({})).toBe(true);
+    expect(badge({ assetKind: "presale_right" })).toBe(true);
+    // ④ propertyType과 같은 leaf다 — 겸용주택은 "mixed-use-house"로 실린다
+    expect(primaryEnginePropertyType(primary({ isMixedUseHouse: true }))).toBe("mixed-use-house");
+    expect(primaryEnginePropertyType(primary({ assetKind: "redevelopment_apt", redevSubject: "right" }))).toBe("right_to_move_in");
   });
 });
