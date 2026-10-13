@@ -13,6 +13,9 @@
  *   «분리 없음»으로 읽는 상태 포함)는 칸이 없다. 소유자 분리(S3-1)는 토글을 강제로 켜지만 신축·상속·증여에서는 칸이 없다.
  * - 「토지는 다른 원인으로 취득」(D1)·「건물 상속·증여 + 토지 매매」(D2)는 엔진·⑫와 같은 leaf(`validateLandPartCause`)가 원인별 문구로 요구한다 → 제외(이중 안내 금지).
  * - 소유자 분리 «건물만 소유»는 토지를 내 것으로 보지 않아 토지 취득일이 계산에 쓰이지 않는다(④는 건물 취득일로 후퇴 송신) → 제외.
+ * - 부담부증여 양도(`transferType: "burdened_gift"`)는 토지 취득일이 계산에 쓰이지 않는다 → 제외. ④ `isSplitPayloadActive`가 부담부증여에서 분리 축을 끄고
+ *   (`isSeparateAcquisition` 미송신) 엔진은 소령 §159 안분액·증여자 취득일 하나로 계산한다. probe 실측: 토글 ON에서 토지 취득일 {빈칸·같은 날·더 이른 날·더 늦은 날} ×
+ *   {다주택 과세·1세대1주택 비과세} 전부 세액·양도차익이 같다(62,167,600 / 0). 쓰이지 않는 입력을 필수로 받으면 값을 지어내 적게 하는 막다른 길이 된다.
  *
  * ⑤(`CompanionAcqDateSection`의 필수 표시)·⑧(`validateAssetEntry`)이 이 술어 하나를 쓴다(UI 통과 ↔ validate 차단 모순 방지).
  * API(④·⑫)는 이 토글을 보내지 않는다 — 주택·건물 payload에서 토지 취득일 부재는 정당한 «같은 날»(토글 OFF)이라 서버가 막을 근거가 없고,
@@ -36,6 +39,7 @@ export function separateLandDateRequired(asset: Scope): boolean {
     isLandBuildingSplitable(asset.assetKind) &&
     !asset.isMixedUseHouse &&
     asset.acquisitionCause === "purchase" &&
+    asset.transferType !== "burdened_gift" &&
     !landCauseMixActive(asset) &&
     (effectiveSelfOwns(asset) ?? "both") !== "building_only"
   );

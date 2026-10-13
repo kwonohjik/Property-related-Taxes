@@ -37,6 +37,12 @@ describe("토지 취득일 칸 필수 표시", () => {
     expect(hasStar(landDateCard(asset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2010-01-04" })))).toBe(true);
   });
 
+  it("부담부증여 양도 → 토지 취득일이 계산에 쓰이지 않아 `*` 없음(⑧도 막지 않는다)", () => {
+    const el = landDateCard(asset({ hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "", transferType: "burdened_gift" }));
+    expect(el).not.toBeNull();
+    expect(hasStar(el)).toBe(false);
+  });
+
   it("토글 OFF → 토지 취득일 칸 자체가 없다(건물 취득일 단독)", () => {
     expect(landDateCard(asset({ hasSeperateLandAcquisitionDate: false }))).toBeNull();
   });

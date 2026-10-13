@@ -34,6 +34,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { migrateAsset } from "@/lib/stores/calc-wizard-asset-migrate";
 import { separateLandDateRequired } from "@/lib/calc/separate-land-date-required";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 beforeEach(() => {
@@ -177,7 +178,6 @@ describe("경로 — 취득가액 방식·자산 속성과 무관하게 막는�
     ["개별주택가격 미공시(PHD) 2003 취득", { acquisitionDate: "2003-01-02", usePreHousingDisclosure: true }],
     ["배율 초과 부수토지(400㎡)", { acquisitionArea: "400", transferArea: "400" }],
     ["소유자 분리 — 토지만 본인 소유", { selfOwns: "land_only" }],
-    ["부담부증여 양도", { transferType: "burdened_gift" }],
   ])("🔑 %s · 토글 ON + 빈칸 → landAcquisitionDate", (_n, over) => {
     const hit = required(form({ ...EMPTY, ...over }));
     expect(hit).toHaveLength(1);
@@ -197,6 +197,7 @@ describe("범위 밖 — 칸이 없거나 쓰이지 않거나 자체 게이트�
     ["신축(토글 잔재)", { acquisitionCause: "newConstruction", occupancyApprovalDate: "2012-01-02" }],
     ["토지 자산(주택에서 켠 토글 잔재)", { assetKind: "land" }],
     ["일반건물(자체 게이트 V-1)", { assetKind: "general_building" }],
+    ["부담부증여 양도(토지 취득일이 계산에 쓰이지 않는다 — 아래 값 대조)", { transferType: "burdened_gift" }],
   ])("%s", (_n, over) => {
     expect(required(form({ ...EMPTY, ...over }))).toEqual([]);
   });
@@ -237,6 +238,38 @@ describe("⑤ ↔ ⑧ — 필수 표시(`*`)와 차단이 같은 술어 하나�
     expect(separateLandDateRequired(A({ ...EMPTY, selfOwns: "building_only" }))).toBe(false);
     expect(separateLandDateRequired(A({ ...EMPTY, acquisitionCause: "gift" }))).toBe(false);
     expect(separateLandDateRequired(A({ ...EMPTY, isMixedUseHouse: true }))).toBe(false);
+    expect(separateLandDateRequired(A({ ...EMPTY, transferType: "burdened_gift" }))).toBe(false);
+  });
+});
+
+describe("부담부증여 양도 — 토지 취득일은 계산에 쓰이지 않아 필수로 받지 않는다 (값 대조)", () => {
+  // 채무 6억(전세보증금 3억 + 근저당 3억) · 양도시 기준시가 10억 · 취득시 5억 — 증여자 취득일 2009-03-01 · 양도 2024-03-01
+  const BG = {
+    transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_standard", bgDonorRelation: "lineal_descendant",
+    bgLendingDepositTotal: "300000000", bgMortgageDebtAmount: "300000000",
+    standardPriceAtTransfer: "1000000001", standardPriceAtAcq: "500000001",
+  };
+  const bgForm = (over: Record<string, unknown>) =>
+    ({
+      ...createDefaultTransferFormData(), transferDate: "2024-03-01", filingDate: "2024-05-31", contractTotalPrice: "1000000000",
+      isOneHousehold: false, householdHousingCount: "2", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
+      assets: [{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", assetKind: "housing", acquisitionCause: "purchase",
+        acquisitionDate: "2009-03-01", ownershipNumerator: "100", ownershipDenominator: "100", ...BG, ...over }],
+    }) as never;
+
+  it("🔑 토글 ON + 토지 취득일 {빈칸·같은 날·더 이른 날·더 늦은 날} → 세액·양도차익이 토글 OFF와 모두 같다(62,167,600 · 291,000,000)", async () => {
+    const off = await runCalc(bgForm({}));
+    expect(off.result.totalTax).toBe(62_167_600);
+    for (const d of ["", "2009-03-01", "2001-03-01", "2020-03-01"]) {
+      const r = await runCalc(bgForm({ ...ON, landAcquisitionDate: d }));
+      expect(r.result.totalTax, `landAcquisitionDate=${d || "빈칸"}`).toBe(off.result.totalTax);
+      expect(r.result.transferGain, `landAcquisitionDate=${d || "빈칸"}`).toBe(off.result.transferGain);
+    }
+  });
+
+  it("그러므로 ⑧은 빈칸을 막지 않는다(쓰이지 않는 입력의 막다른 길 금지) — 일반 주택은 같은 빈칸을 막는다(대조)", () => {
+    expect(required(bgForm(EMPTY))).toEqual([]);
+    expect(required(form(EMPTY))).toHaveLength(1);
   });
 });
 
@@ -279,6 +312,8 @@ describe("서버(④⑫) — 토글을 모르는 본문은 같은 날 폴백으�
     const r = await postTransfer(body);
     expect(r.status).toBe(400);
     expect(JSON.stringify(r.json.error.fieldErrors.landAcquisitionDate)).toContain("별개 취득");
+    // 법령 조문은 legal-codes 상수로 인용한다(문자열 리터럴 금지) — 보유기간 = 그 자산의 취득일부터 양도일까지
+    expect(JSON.stringify(r.json.error.fieldErrors.landAcquisitionDate)).toContain(TRANSFER.HOLDING_PERIOD_CALC);
   });
 
   it("대조 — 두 날짜가 다른 정상 별개 취득 본문(④가 보내는 모양)은 막지 않는다", async () => {
