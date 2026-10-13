@@ -740,7 +740,8 @@ test.describe("PHD 3시점 건물기준시가 일괄 계산 (양도)", () => {
     // 토지·건물 취득일 다름 ON → 토지 취득일 2013-06-01
     await page.getByRole("switch", { name: "토지·건물 취득일 다름" }).click();
     await fillDateExact(
-      page.locator("div").filter({ hasText: /^토지 취득일/ }).first(),
+      // 필수 표시 `*`가 라벨 앞에 붙어 `^토지 취득일` 정규식이 닿지 않는다 — 검증 오류 이동 앵커(`data-field`)로 잡는다.
+      page.locator('[data-field="landAcquisitionDate"]').first(),
       { year: "2013", month: "06", day: "01" },
     );
 

@@ -246,9 +246,11 @@ describe("검토 보정 — 토글 ON + 토지 취득일 미입력이면 같은 
     expect(hit?.message).toContain("토지 취득일을 입력하세요");
   });
 
-  it("대조 — 라디오가 자산 단위와 같으면 이 규칙은 걸리지 않는다", async () => {
+  it("대조 — 라디오가 자산 단위와 같으면 라디오 규칙은 걸리지 않는다 (토지 취득일은 G2 후속 필수 게이트가 따로 요구한다)", async () => {
     const r = await runCalc(form(HIGH, { ...NO_LAND_DATE, landAcqMode: "actual", buildingAcqMode: "actual" }));
-    expect(r.issues.find((i: { field?: string }) => i.field === "landAcquisitionDate")).toBeUndefined();
     expect(modeIssue(r.issues)).toBeUndefined();
+    // 종전(이 규칙만 있을 때)은 라디오가 같으면 토지 취득일 미입력이 통과했다 — 같은 날로 조용히 계산. 지금은 라디오와 무관하게 막는다
+    // (`separate-land-date-required.g2.anchor.test.ts`가 격자 전체를 고정한다).
+    expect(r.issues.find((i: { field?: string }) => i.field === "landAcquisitionDate")?.message).toContain("토지 취득일을 입력하세요");
   });
 });

@@ -269,6 +269,9 @@ const owner = (patch: Record<string, unknown>) => () =>
 const splSale = (patch: Record<string, unknown> = {}) => () => withPrimary({ ...SPL, ...SALE, ...patch });
 
 const SPLIT_CASES: FieldJumpCase[] = [
+  // G2 후속 — 토글 ON인데 토지 취득일이 비면 «같은 날»로 읽지 않고 그 칸으로 보낸다(일반건물·겸용과 같은 필수). 소유자 분리(토지만 소유)도 같다.
+  { name: "leaf: split 토지 취득일 필수", field: "landAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 「토지·건물 취득일 다름」을 켰으므로 토지 취득일을 입력하세요/, form: spl({ landAcquisitionDate: "" }) },
+  { name: "leaf: split 소유자 분리(토지) 토지 취득일 필수", field: "landAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 「토지·건물 취득일 다름」을 켰으므로 토지 취득일을 입력하세요/, form: owner({ acquisitionCause: "purchase", landAcquisitionDate: "" }) },
   { name: "leaf: split 토지 취득가액", field: "landAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 토지 취득가액을 입력하세요 — 토지·건물 취득시기가 다르면/, form: spl({ landAcquisitionPrice: "" }) },
   { name: "leaf: split 건물 취득가액", field: "buildingAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 건물 취득가액을 입력하세요 — 토지·건물 취득시기가 다르면/, form: spl({ buildingAcquisitionPrice: "" }) },
   { name: "leaf: split 토지 매매사례가액", field: "landSalesCaseValue", step: 0, assetIndex: A, message: /^자산: 토지 매매사례가액을 입력하세요/, form: spl({ landAcqMode: "salesCase", landSalesCaseValue: "" }) },

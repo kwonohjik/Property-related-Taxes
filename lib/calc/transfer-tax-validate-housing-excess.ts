@@ -32,6 +32,8 @@ export function validateHousingExcessSplitInputs(
   // #17 후속(F1·G2) — 별개취득 토글 ON + 같은 날짜면 파트 방식 라디오가 자산 단위 라디오와 함께 화면에 있다 → 어긋나면 그 라디오로.
   //   배율 한도 이내·함께 양도 주택 카드도 같다(두 라디오 중 하나가 계산에 반영되지 않는다) — 그래서 분리 경로 판정·주 자산 판정보다 앞이다.
   const modeMismatch = housingExcessPartModeMismatch(a);
+  // 토글 ON + 빈 토지 취득일은 일반 게이트(`validateSeparateLandDateRequired` — 이 검사보다 앞)가 라디오와 무관하게 막는다. 여기에 닿는 것은 그 게이트가
+  // 범위 밖으로 두는 «토지를 다른 원인으로 취득(D1)» 호스트뿐이다 — 건물 라디오가 어긋나면 토지 취득일 칸으로 먼저 보낸다(같은 칸·같은 안내).
   if (modeMismatch === "landAcquisitionDate") {
     return fieldError(
       "landAcquisitionDate",

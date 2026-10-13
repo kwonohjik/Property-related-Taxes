@@ -24,6 +24,7 @@ import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfe
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -282,6 +283,12 @@ export function refineSplitAcquisitionInputs(
     return;
   }
   const selfOwnsSplit = d.selfOwns !== undefined && d.selfOwns !== "both";
+  // G2 후속 — «별개 취득»은 토지·건물 취득일이 다르다는 선언인데 토지 취득일이 없으면 엔진은 같은 날로 읽고(분리 계산을 건너뛴다) 200으로
+  // 답한다(실측: isSeparateAcquisition true + 토지 취득일 없음 → 같은 날 값). ④는 두 날짜가 다를 때만 true를 보내므로(`isSeparateAcquisition`)
+  // 화면 경로는 닿지 않는다 — API 직접 호출의 모순 본문을 같은 날 폴백으로 흘리지 않고 막는다. «토글 ON + 빈 토지 취득일»은 이 본문에 토글이
+  // 실리지 않아 서버가 알 수 없고, 그 차단은 토글을 아는 ⑧(`separate-land-date-required.ts`)이 맡는다.
+  if (d.isSeparateAcquisition === true && !d.landAcquisitionDate)
+    issue(["landAcquisitionDate"], `별개 취득(토지·건물 취득일이 다름)이면 토지 취득일이 필요합니다 (${TRANSFER.HOLDING_PERIOD_CALC} — 그 자산의 취득일부터 양도일까지)`);
   if (!d.landAcquisitionDate && !selfOwnsSplit) return;
   const separate = d.isSeparateAcquisition === true;
 
