@@ -60,6 +60,7 @@ import {
 } from "./transfer-tax-api-inheritance";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { selfBuiltActive } from "./self-built-scope";
+import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
@@ -244,23 +245,6 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     ? primary.redevSettlementSaleDate
     : null;
 
-  // 부정합 조합(assetKind="redevelopment_apt" + redevSubject="right") 방어 remap.
-  //
-  //   - 엔진 `isRedevelopmentActive`(lib/tax-engine/redevelopment.ts:786-789)는 propertyType ↔ subject
-  //     1:1 매핑을 요구한다: redevelopment_apt → "apt" / right_to_move_in → "right".
-  //     어긋나면 엔진이 일반 양도 분기로 routing돼 redevelopmentDetail 미생성 +
-  //     LTHD가 전체 양도차익에 일괄 적용되는 회귀가 난다.
-  //
-  //   - **양도 대상 축은 2026-08-13(PR #1245)부터 자산 종류가 단독으로 결정한다.**
-  //     종전 주석의 「assetKind는 사업 분류이고 redevSubject가 실제 양도 객체」 모델은 폐지됐다.
-  //     ① 라디오가 사라졌고 `redevSubjectPatchForAssetKind`가 자산 종류에서 파생하며,
-  //     저장값은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다
-  //     (store persist merge · legacy migration · 이력 복원 3경로 모두 `migrateAsset` 경유).
-  //     ⇒ 정상 경로에서는 **도달하지 않는다**. 마이그레이션을 거치지 않고 조립된 입력
-  //     (직접 fixture 등)만을 위한 안전망으로 남긴다.
-  const isRedevelopmentRightTransfer =
-    primary.assetKind === "redevelopment_apt" && primary.redevSubject === "right";
-
   // ④ 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서).
   // 술어는 단일 소스 — UI·validation과 같은 함수를 쓴다.
   const usageConversionOn = isUsageConversionActive(primary);
@@ -276,11 +260,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const body = {
     // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
-    propertyType: isMixed
-      ? ("mixed-use-house" as const)
-      : isRedevelopmentRightTransfer
-        ? ("right_to_move_in" as const)
-        : (primary.assetKind as "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "commercial_building" | "general_building" | "redevelopment_apt"),
+    // 겸용주택 → "mixed-use-house" · 부정합 재개발 조합 방어 remap — `primaryEnginePropertyType`(일체과세 배지와 같은 leaf)
+    propertyType: primaryEnginePropertyType(primary),
     transferPrice: isReceiveOnly && receiveOnlySettlementAmount > 0
       ? receiveOnlySettlementAmount
       : isBurdenedGiftPrimary

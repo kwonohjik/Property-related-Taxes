@@ -55,6 +55,20 @@ export function resolveOneHouseUnit(
       "주택부수토지로 선언한 토지의 면적(토지 면적·건물 정착면적)이 없어 배율 이내인지 판정하지 못했습니다 — 1세대1주택 비과세(소득세법 §89①3호)를 적용하지 않고 일반 토지로 계산했습니다. 고가주택(12억 초과) 판정에는 그 토지 가액을 합산했습니다.",
     );
   }
+  /**
+   * 사례 28 역방향 — 주 자산이 주택이 아니고(주택 역할 카드 없음) 주택은 함께 양도 자산, 부수토지 선언 토지가 역할 없이 들어온 구성.
+   * route는 주 자산이 주택일 때만 단위 역할과 배율 분리를 붙이므로(`route.ts` `oneHouseUnitRole` · `resolveCompanionLandRate`) 둘 다 없다.
+   * 같은 사실을 주택 먼저 넣으면 판정이 달라지므로 조용히 계산하지 않고 알린다(세액은 바꾸지 않는다 — 계획서 V-5 미착수).
+   */
+  if (
+    houseIdxs.length === 0 &&
+    items.some((it) => it.propertyType === "housing") &&
+    items.some((it) => it.oneHouseUnitRole === undefined && it.propertyType === "land" && it.landNature === "appurtenant_to_housing")
+  ) {
+    warnings.push(
+      "주택부수토지를 주택보다 앞에(첫 자산으로) 입력해 그 토지의 배율 이내·초과 구분과 1세대1주택 합산 판정(소득세법 §89①3호)을 하지 않았습니다 — 주택부수토지는 주택과 따로 일반 토지로 계산했습니다. 주택을 첫 자산으로 입력하면 이 판정을 합니다.",
+    );
+  }
   const valuationOnlyIdxs = [...excessIdxs, ...unverifiedIdxs];
   if (houseIdxs.length !== 1 || (landIdxs.length === 0 && valuationOnlyIdxs.length === 0)) return undefined;
   const members = [houseIdxs[0], ...landIdxs];

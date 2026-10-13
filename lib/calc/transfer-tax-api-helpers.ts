@@ -309,6 +309,43 @@ export function resolveAcqAreaForStdPrice(asset: {
   return tr ?? acq;
 }
 
+/**
+ * ④⑤ 주택부수토지 카드의 배율 한도 판정 면적(㎡) — ④ `areaM2`. 토지이고 `landNature === "appurtenant"`가 아니면 0(독립 토지는 한도 판정·일체과세 대상이 아니다).
+ * 양도하는 토지 면적(`transferArea`)을 우선하고 비면 취득면적이다. ④ 전송 · 한도 공유 합계(`appurtenantLimitShareOfAssets`) · 일체과세 배지
+ * (`useUnifiedRateBadge`)가 같은 값을 읽는다 — 갈리면 배지가 route(`resolveCompanionSplit`)와 다른 카드·면적으로 «자동 적용»을 말한다.
+ */
+export function appurtenantCardAreaM2(asset: Pick<AssetForm, "assetKind" | "landNature" | "transferArea" | "acquisitionArea">): number {
+  if (asset.assetKind !== "land" || asset.landNature !== "appurtenant") return 0;
+  return parseFloat(asset.transferArea) || parseFloat(asset.acquisitionArea) || 0;
+}
+
+/**
+ * ④ 주 자산의 엔진 `propertyType`. 겸용주택(주택 + `isMixedUseHouse`)은 `"mixed-use-house"`다.
+ * 일체과세 배지(`useUnifiedRateBadge`)도 이 값으로 주 자산이 주택 계열인지 본다 — route(`resolveCompanionLandRate`)가 이 값으로 판정하므로 갈리면 배지가 틀린다.
+ *
+ * 부정합 조합(assetKind="redevelopment_apt" + redevSubject="right") 방어 remap.
+ *
+ * - 엔진 `isRedevelopmentActive`(lib/tax-engine/redevelopment.ts:786-789)는 propertyType ↔ subject
+ *   1:1 매핑을 요구한다: redevelopment_apt → "apt" / right_to_move_in → "right".
+ *   어긋나면 엔진이 일반 양도 분기로 routing돼 redevelopmentDetail 미생성 +
+ *   LTHD가 전체 양도차익에 일괄 적용되는 회귀가 난다.
+ *
+ * - **양도 대상 축은 2026-08-13(PR #1245)부터 자산 종류가 단독으로 결정한다.**
+ *   종전 주석의 「assetKind는 사업 분류이고 redevSubject가 실제 양도 객체」 모델은 폐지됐다.
+ *   ① 라디오가 사라졌고 `redevSubjectPatchForAssetKind`가 자산 종류에서 파생하며,
+ *   저장값은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다
+ *   (store persist merge · legacy migration · 이력 복원 3경로 모두 `migrateAsset` 경유).
+ *   ⇒ 정상 경로에서는 **도달하지 않는다**. 마이그레이션을 거치지 않고 조립된 입력
+ *   (직접 fixture 등)만을 위한 안전망으로 남긴다.
+ */
+export function primaryEnginePropertyType(
+  primary: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "redevSubject">,
+): "mixed-use-house" | AssetForm["assetKind"] {
+  if (primary.assetKind === "housing" && primary.isMixedUseHouse) return "mixed-use-house";
+  if (primary.assetKind === "redevelopment_apt" && primary.redevSubject === "right") return "right_to_move_in";
+  return primary.assetKind;
+}
+
 // ─── ④ 컴패니언 자산 payload — transfer-tax-api-companion-payload.ts로 분리 (800줄 정책, 재export 호환) ───
 export { buildAssetPayload } from "./transfer-tax-api-companion-payload";
 

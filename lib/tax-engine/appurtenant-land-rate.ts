@@ -222,6 +222,14 @@ export function housingRateForHoldingPeriod(holdingMonths: number): number | "pr
 }
 
 /**
+ * 부수토지 일체과세(§104①2호·영 §167의5)의 짝이 될 수 있는 주 자산 종류인가 — 주택·입주권·분양권.
+ * 일체과세 배지(`useUnifiedRateBadge`)도 이 술어로 판정한다(④ `primaryEnginePropertyType`을 넣어서).
+ */
+export function isUnifiedRateHousingPrimary(propertyType: TransferTaxInput["propertyType"]): boolean {
+  return propertyType === "housing" || propertyType === "right_to_move_in" || propertyType === "presale_right";
+}
+
+/**
  * companion 토지에 적용할 세율을 결정한다.
  *
  * 호출 순서:
@@ -263,12 +271,7 @@ export function resolveCompanionLandRate(
   }
 
   // ── primary가 주택 계열인지 확인 ──
-  const isPrimaryHousing =
-    primary.propertyType === "housing" ||
-    primary.propertyType === "right_to_move_in" ||
-    primary.propertyType === "presale_right";
-
-  if (!isPrimaryHousing) {
+  if (!isUnifiedRateHousingPrimary(primary.propertyType)) {
     return { applied: false };
   }
 
