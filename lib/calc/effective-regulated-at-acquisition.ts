@@ -12,9 +12,14 @@
  * 근거: 「소득세법 시행령」 제154조제1항(취득 당시 조정대상지역이면 거주 2년) · 제10항(§155⑳ 표준 경로의 2019.2.12. 전 취득 분기).
  * 이 함수는 **읽기 쪽**만 맞춘다 — 주소가 있을 때 토글을 숨기거나 읽기 전용으로 바꾸는 정책은 별개다.
  */
+import { format } from "date-fns";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import {
+  calcGiftHouseholdFactAsked,
+  giftHouseholdFactErrors,
+} from "@/lib/calc/gift-household-payload";
 import { redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
-import { carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
+import { carryoverHouseholdPayload, carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import {
@@ -22,6 +27,8 @@ import {
   type ResidenceReqInput,
 } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import { resolveResidenceJudgmentPlan } from "@/lib/tax-engine/transfer-tax-exemption-holding";
+import { carryoverGiftHouseholdBasis, type GiftHouseholdBasis } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import { resolveIsRegulatedAtTransfer } from "@/lib/tax-engine/transfer-tax-temporary-two-house-timing";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
@@ -55,20 +62,83 @@ export function effectiveWasRegulatedAtAcquisition(o: {
 }
 
 /**
+ * 증여받은 주택의 세대 사실을 **묻는 위치** — ⑤ 위젯(`CompanionAcquisitionCauseSection`)·⑧(`validateAssetEntry`)·④(`buildCalcGiftHouseholdPayload`)와
+ * 같은 값이다(`calcGiftHouseholdFactAsked`의 `where`). 이 위치가 아니면 엔진은 세대 사실 없이 증여일 기준으로 판정하므로 화면도 그렇게 읽는다.
+ */
+export type GiftHouseholdScope = { isPrimary: boolean; embeddedInMulti: boolean };
+
+/** 단건 계산기 주 자산 — 세대 사실을 묻고 ④가 싣는 위치(판정 메뉴도 같다). */
+export const GIFT_HOUSEHOLD_SCOPE_PRIMARY: GiftHouseholdScope = { isPrimary: true, embeddedInMulti: false };
+
+/**
+ * 증여받은 주택의 세대 사실을 엔진 입력(`giftHouseholdBasis`)으로 옮긴다 — **④가 route에 싣는 것과 같은 사실·같은 엔진 leaf**
+ * (결정 #38-10, 취득 당시 조정대상지역 표시 정합).
+ *
+ * 엔진은 이 basis로 「취득 당시」 후보일과 결합 방식을 정한다(`resolveGiftResidenceDates` — 계속 같은 세대면 세대 보유 시작일**과** 증여일
+ * 둘 다 지정 중일 때만, 미확인이면 증여일·증여자 취득일 중 하나라도). 화면·⑧이 증여일 하나만 보면 거울상(세대 보유 시작일에만 지정 중)과
+ * 통산 성립 시 반대 방향(시작일엔 비지정·증여일엔 지정 중)에서 엔진과 다른 값을 「자동」이라며 보였다.
+ *
+ * - 이월과세(`carryover_gift`): 엔진 `carryoverGiftHouseholdBasis`를 그대로 부른다(별도 판정식 금지). 세대 답은 ④ 전송 조각
+ *   (`carryoverHouseholdPayload`)과 같은 것만 — 묻지 않는 경로의 stale 값은 싣지 않아 미확인으로 읽힌다(엔진도 그렇게 읽는다).
+ * - 일반 증여: 묻는 위치(`calcGiftHouseholdFactAsked`)에서 답이 있고 ⑧ 규칙(`giftHouseholdFactErrors`)을 통과할 때만 — `buildCalcGiftHouseholdPayload`
+ *   와 같은 조건이라, 답하지 않은 경로는 엔진도 basis 없이(증여일 기준) 판정한다.
+ * - 용도변경 주택은 엔진이 용도변경일을 먼저 보고 basis를 쓰지 않는다(`resolveResidenceJudgmentPlan`) — 여기서도 만들지 않는다.
+ *
+ * 다건은 이 사실을 싣지 않으므로(다건 ④·⑫) 다건 호출부는 이 함수를 부르지 않는다.
+ */
+export function calcGiftHouseholdBasis(asset: AssetForm, scope: GiftHouseholdScope): GiftHouseholdBasis | undefined {
+  if (isUsageConversionActive(asset)) return undefined;
+  if (asset.acquisitionCause === "carryover_gift") {
+    const c = asset.carryover;
+    const giftRegistryDate = toOptionalDate(c?.giftRegistryDate);
+    const donorAcquisitionDate = toOptionalDate(c?.donorAcquisitionDate);
+    if (!c || !giftRegistryDate || !donorAcquisitionDate) return undefined;
+    const fact = carryoverHouseholdPayload(asset);
+    return carryoverGiftHouseholdBasis(
+      {
+        giftRegistryDate,
+        donorAcquisitionDate,
+        donorSameHouseholdContinuous: fact.donorSameHouseholdContinuous,
+        donorHouseholdHoldingStartDate: toOptionalDate(fact.donorHouseholdHoldingStartDate),
+        donorDeceased: c.donorDeceased || undefined,
+        donorRelation: c.donorRelation || undefined,
+      },
+      true,
+    );
+  }
+  if (!asset.giftSameHousehold || !calcGiftHouseholdFactAsked(asset, scope)) return undefined;
+  if (giftHouseholdFactErrors(asset).length > 0) return undefined;
+  const giftDate = toOptionalDate(asset.acquisitionDate);
+  const donorAcquisitionDate = toOptionalDate(asset.donorAcquisitionDate);
+  if (!giftDate || !donorAcquisitionDate) return undefined;
+  return {
+    giftDate,
+    donorAcquisitionDate,
+    continuousSameHousehold: asset.giftSameHousehold === "yes",
+    householdHoldingStartDate: asset.giftSameHousehold === "yes" ? toOptionalDate(asset.giftHouseholdHoldingStartDate) : undefined,
+  };
+}
+
+/**
  * 양도세 계산기 ⑤ §155⑳ 카드·⑧ 공용 — 자산 폼에서 위 실효값을 낸다.
  * 기준일은 Step4 「조정대상지역 자동 판별」(`residenceJudgmentDate`)과 같은 순서다(용도변경 사용개시일 → 승계조합원 준공일 → 취득일).
  * `stored`는 폼-전역 숨은 토글(`form.wasRegulatedAtAcquisition`), `formRegionCode`는 ④의 폴백(`primary.regionCode || form.regionCode`)이다.
+ *
+ * `giftScope`를 주면 증여받은 주택의 세대 사실(이월과세 · 일반 증여)을 엔진과 같은 basis로 읽는다 — 단건·판정 메뉴 호출부만 준다.
+ * 다건(④가 세대 사실을 싣지 않는다)은 주지 않아 종전처럼 단일 기준일이다.
  */
 export function calcEffectiveWasRegulatedAtAcquisition(
   asset: AssetForm,
   stored: boolean | undefined,
   formRegionCode?: string,
+  giftScope?: GiftHouseholdScope,
 ): boolean {
   return effectiveWasRegulatedAtAcquisition({
     regionCode: asset.regionCode || formRegionCode || undefined,
     regionInDesignatedDistrict: asset.regionCode ? asset.regionInDesignatedDistrict : undefined,
     judgmentDate: calcResidenceJudgmentDate(asset),
     stored,
+    giftHouseholdBasis: giftScope ? calcGiftHouseholdBasis(asset, giftScope) : undefined,
   });
 }
 
@@ -144,4 +214,29 @@ export function regulatedVerdictForDisplay(o: {
 }): ReturnType<typeof isRegulatedByBjdCode> | null {
   if (!o.regionCode || !o.date || !/^\d{4}-\d{2}-\d{2}$/.test(o.date)) return null;
   return isRegulatedByBjdCode(o.regionCode, o.date, o.regionInDesignatedDistrict);
+}
+
+/**
+ * 취득 당시 조정대상지역의 화면용 자동 판정 — **증여받은 주택의 세대 사실을 반영한다**(결정 #38-10).
+ *
+ * 증여 basis가 있으면 엔진 `resolveResidenceJudgmentPlan`이 정한 후보일·결합 방식(`all` 모두 / `any` 하나라도)대로 후보일마다 엔진 leaf
+ * (`isRegulatedByBjdCode`)를 불러 합친다 — `calcEffectiveWasRegulatedAtAcquisition`과 같은 결론이다. 보여 주는 근거(`basis`·신뢰도)는 **결론을
+ * 정한 후보일**의 것이다(`all`이 미해당이면 지정 중이 아닌 날, `any`가 해당이면 지정 중인 날, 그 밖에는 첫 후보).
+ * basis가 없으면 `regulatedVerdictForDisplay`와 같다.
+ */
+export function regulatedVerdictForAcquisition(o: {
+  regionCode?: string;
+  regionInDesignatedDistrict?: boolean;
+  date?: string;
+  giftHouseholdBasis?: GiftHouseholdBasis;
+}): ReturnType<typeof isRegulatedByBjdCode> | null {
+  const base = regulatedVerdictForDisplay(o);
+  if (!base || !o.regionCode || !o.giftHouseholdBasis) return base;
+  const plan = resolveResidenceJudgmentPlan({
+    acquisitionDate: o.giftHouseholdBasis.giftDate,
+    giftHouseholdBasis: o.giftHouseholdBasis,
+  } as ResidenceReqInput);
+  const verdicts = plan.dates.map((d) => isRegulatedByBjdCode(o.regionCode!, format(d, "yyyy-MM-dd"), o.regionInDesignatedDistrict));
+  const decided = verdicts.find((v) => v.isRegulated === (plan.mode === "any"));
+  return decided ?? verdicts[0];
 }

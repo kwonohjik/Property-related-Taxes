@@ -25,7 +25,11 @@
  */
 import { buildGiftHouseholdPayload } from "@/lib/calc/gift-household-payload";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
-import { calcEffectiveWasRegulatedAtAcquisition, effectiveIsRegulatedAtTransfer } from "@/lib/calc/effective-regulated-at-acquisition";
+import {
+  calcEffectiveWasRegulatedAtAcquisition,
+  effectiveIsRegulatedAtTransfer,
+  GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+} from "@/lib/calc/effective-regulated-at-acquisition";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
@@ -154,7 +158,8 @@ export function buildOneHouseExemptionApiBody(
       transferDate: form.transferDate,
       stored: form.isRegulatedArea,
     }),
-    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition),
+    // 결정 #38-10 — 증여받은 주택은 아래 `buildGiftHouseholdPayload`가 싣는 세대 사실과 같은 basis로 읽는다(⑤ 2-C·⑧과 한 값).
+    wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, undefined, GIFT_HOUSEHOLD_SCOPE_PRIMARY),
     /**
      * ④ 양도 물건 법정동코드 — ② 화면의 소재지 검색(PNU 앞 10자리)이 세운다.
      *

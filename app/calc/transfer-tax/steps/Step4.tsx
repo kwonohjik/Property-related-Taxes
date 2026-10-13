@@ -3,7 +3,6 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { meetsOneHouseResidenceRequirement } from "@/lib/tax-engine/transfer-tax-exemption";
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed, provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
-import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -17,7 +16,7 @@ import { TemporaryTwoHouseSection } from "./step4-sections/TemporaryTwoHouseSect
 import { SpecialSituationSection } from "./step4-sections/SpecialSituationSection";
 import { useRegulatedAreaAutoTip } from "./step4-sections/useRegulatedAreaAutoTip";
 import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
-import { calcResidenceJudgmentDate, regulatedVerdictForDisplay } from "@/lib/calc/effective-regulated-at-acquisition";
+import { useAcquisitionRegulatedContext } from "./step4-sections/useAcquisitionRegulatedContext";
 import { ResidencePeriodSection } from "@/components/calc/transfer/ResidencePeriodSection";
 import { ExemptionProvisoSection } from "@/components/calc/transfer/ExemptionProvisoSection";
 import { FinalHouseRestartSection } from "@/components/calc/transfer/FinalHouseRestartSection";
@@ -33,7 +32,7 @@ import { HouseholdHousingCountSection } from "./step4-sections/HouseholdHousingC
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
 // 주택 전용 입력 섹션 가시성을 함께 적용해야 함.
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
-import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate, landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
+import { redevSplitResidenceSupersedesStep4, landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { RedevSplitResidenceNotice, SuccessorResidenceDirectHint } from "@/components/calc/transfer/RedevAptResidenceNotices";
 import { houseCountInputsVisible } from "@/lib/calc/house-count-inputs-scope";
 import { houseRosterRendered } from "@/lib/calc/house-count-inputs-scope";
@@ -49,7 +48,7 @@ import { temporaryTwoHouseSectionVisible } from "@/lib/calc/temporary-two-house-
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import { temporaryTwoHouseCandidateExcludedIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "@/lib/calc/temp-two-house-candidate-exclusion";
-import { primaryAcquisitionDateOf, carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
+import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { countExclusionRowApplies, countExclusionRowsInScope } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
@@ -95,36 +94,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
   const primaryAcquisitionDate = form.assets?.[0]?.acquisitionDate ?? "";
   const primary = form.assets?.[0];
 
-  // 비주택 → 주택 용도변경(§95⑤·⑥). 거주요건 판정의 「주택 취득일」이 주거용 사용 개시일로 바뀐다
-  // (서면-2020-부동산-5098). 엔진 resolveWasRegulatedAtAcquisition과 **같은 술어·같은 기준일**을
-  // 써야 화면 안내와 판정이 어긋나지 않는다.
-  const conversionActive = isUsageConversionActive(primary);
-  /**
-   * 🔴 OH-51 — 승계조합원 완공APT의 「취득 당시」는 **준공일**이다(시행령 §162①4호). 엔진이 그 날짜로
-   *    조정대상지역을 판정하는데(`transfer-tax-redevelopment-apt-exemption.ts`) 화면은 입주권
-   *    취득일로 자동판별·토글을 채워, 준공일에 지정된 지역이 「미지정」으로 보였다.
-   *    ⑧ 거주 구간 검증과 **같은 leaf**(`redevAptHoldingStartDate`)를 쓴다.
-   */
-  const successorCompletionActive =
-    !conversionActive && !!primary && redevAptHoldingStartDate(primary) !== primary.acquisitionDate;
-  // 엔진 `resolveResidenceJudgmentDate`와 같은 순서(용도변경 → 동일세대 상속 보유 개시 → 이월과세 증여일/세대 보유 시작일 → 승계 준공일 → 취득일) — ⑧·⑤ 카드와 같은 leaf.
-  const residenceJudgmentDate = primary ? calcResidenceJudgmentDate(primary) : primaryAcquisitionDate;
-  // 이월과세 자산 카드에는 취득일 칸이 없어(결정 #33) 기준일이 취득일과 달라 보이지만 동일세대 상속 보유 개시일이 아니다.
-  const carryoverDateActive = !!primary && carryoverResidenceJudgmentDate(primary) !== undefined;
-  const sameHouseholdStartActive =
-    !conversionActive &&
-    !successorCompletionActive &&
-    !carryoverDateActive &&
-    !!primary &&
-    residenceJudgmentDate !== primary.acquisitionDate;
-  /** 거주요건 맥락에서 기준일을 부르는 이름 — 라벨·안내 문구가 공유한다. */
-  const judgmentDateLabel = conversionActive
-    ? "용도변경일"
-    : successorCompletionActive
-      ? "준공일"
-      : sameHouseholdStartActive
-        ? "동일세대 보유 개시일"
-        : "취득일";
+  // 거주요건 「주택 취득 당시」 기준일·라벨·자동 판정 — 엔진 `resolveResidenceJudgmentPlan`과 같은 순서·같은 사실(`useAcquisitionRegulatedContext`).
+  const { conversionActive, successorCompletionActive, residenceJudgmentDate, judgmentDateLabel, acquisitionVerdict, embeddedInMulti } =
+    useAcquisitionRegulatedContext(form);
   /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신하는가(엔진 `resolveAptResidenceMonths`와 같은 조건). */
   const redevSplitResidence = !!primary && redevSplitResidenceSupersedesStep4(primary);
 
@@ -149,17 +121,6 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     (form.assets?.[0]?.addressRoad || form.assets?.[0]?.addressJibun) ?? "";
   // 법정동코드(주소검색 PNU 앞 10자리) — 있으면 동 단위 정밀 판정 경로
   const primaryRegionCode = form.assets?.[0]?.regionCode ?? "";
-  // 결정 #5(G7-6) — ④가 싣는 코드(`primary.regionCode || form.regionCode`)와 같은 코드·지구 선언·기준일로 낸 자동 판정.
-  //   코드가 없으면 null이라 토글을 그대로 보인다. 엔진 leaf를 그대로 부른다(별도 판정식 금지).
-  const acquisitionVerdict = useMemo(
-    () =>
-      regulatedVerdictForDisplay({
-        regionCode: primary?.regionCode || form.regionCode || undefined,
-        regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
-        date: residenceJudgmentDate,
-      }),
-    [primary?.regionCode, primary?.regionInDesignatedDistrict, form.regionCode, residenceJudgmentDate],
-  );
 
   // 메시지 ②: 조정대상지역 거주요건(2년) 미충족 — 엔진 §154① 판정과 단일 진실(useMemo 파생, store 미러링 금지).
   const residenceShortfall = useMemo(() => {
@@ -172,11 +133,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       (p.residencePeriods?.length ?? 0) > 0 || !!p.residencePeriodMonthsAsset;
     if (!hasResidenceInput) return false;
     try {
-      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(form), ONE_HOUSE_RESIDENCE);
+      return !meetsOneHouseResidenceRequirement(buildResidenceReqInput(form, { embeddedInMulti }), ONE_HOUSE_RESIDENCE);
     } catch {
       return false;
     }
-  }, [form]);
+  }, [form, embeddedInMulti]);
 
   // 다주택 중과 한시배제(§167의3·167의10 12의2): 양도일 ∈ [2022-05-10, 2026-05-09] AND 보유 2년 이상
   // → 중과 전면배제(일반세율)이므로 ④ 주택수·중과 판정 섹션을 숨기고 안내 카드로 대체.

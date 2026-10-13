@@ -18,7 +18,7 @@ import { provisoGate, effectiveProvisoReason, buildSameHouseholdInheritancePaylo
 import { resolveHouseholdHousingCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
-import { calcEffectiveWasRegulatedAtAcquisition } from "./effective-regulated-at-acquisition";
+import { calcEffectiveWasRegulatedAtAcquisition, calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
 import { isOneHouseExemptionAsset } from "./housing-like-asset";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -26,8 +26,13 @@ import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { departureOnlyHousePayload, rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
 
-export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInput {
+export function buildResidenceReqInput(
+  form: TransferFormData,
+  /** 다건 편집에 임베드된 마법사인가(`isEmbeddedInMultiPath`) — 다건 ④는 증여 세대 사실을 싣지 않으므로 그때는 basis를 만들지 않는다. */
+  opts: { embeddedInMulti?: boolean } = {},
+): ResidenceReqInput {
   const primary = form.assets?.[0];
+  const giftScope = { isPrimary: true, embeddedInMulti: opts.embeddedInMulti === true };
   const conversionOn = isUsageConversionActive(primary);
   // ⚠️ **API 변환(`transfer-tax-api.ts`)과 같은 클램프를 써야 한다.**
   // §95⑤2호 클램프로 거주가 2년 미만이 되면 비과세가 탈락한다(계획 C-10c — 세액이 바뀌는
@@ -89,8 +94,10 @@ export function buildResidenceReqInput(form: TransferFormData): ResidenceReqInpu
     regionInDesignatedDistrict: primary?.regionCode ? primary.regionInDesignatedDistrict : undefined,
     // 결정 #5(G7-6) — 주소가 있으면 주소 판정값(④와 같은 leaf). 이 빌더는 Step4 안내가 엔진과 같은 값을 보게 한다.
     wasRegulatedAtAcquisition: primary
-      ? calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode)
+      ? calcEffectiveWasRegulatedAtAcquisition(primary, form.wasRegulatedAtAcquisition, form.regionCode, giftScope)
       : form.wasRegulatedAtAcquisition,
+    // 결정 #38-10 — 증여받은 주택의 세대 사실. 엔진(④)이 실어 보내는 것과 같은 basis라야 Step4 거주요건 안내가 엔진과 같은 「취득 당시」를 읽는다.
+    giftHouseholdBasis: primary ? calcGiftHouseholdBasis(primary, giftScope) : undefined,
     // §154⑧3호 동일세대 상속 거주 통산 — meetsOneHouseResidenceRequirement가 소비하므로
     // Step4 거주요건 안내(이 빌더 소비)도 엔진과 동일 필드 전달 필수 (UI↔엔진 dual-truth 방지).
     acquisitionCause: primary?.acquisitionCause,
