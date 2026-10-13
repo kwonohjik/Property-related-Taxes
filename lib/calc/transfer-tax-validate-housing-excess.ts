@@ -29,17 +29,18 @@ export function validateHousingExcessSplitInputs(
       `${label}: 토지 면적이 건물 정착면적의 3배를 넘습니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §154⑦·§168의12).`,
     );
   }
-  if (!housingExcessNeedsLandSplit(a, transferDate, isPrimary)) return null;
-  // #17 후속(F1) — 별개취득 토글 ON + 같은 날짜면 파트 방식 라디오가 화면에 있는데 이 경로는 자산 단위 방식으로 계산한다 → 어긋나면 그 라디오로.
-  const modeMismatch = housingExcessPartModeMismatch(a, transferDate, isPrimary);
+  // #17 후속(F1·G2) — 별개취득 토글 ON + 같은 날짜면 파트 방식 라디오가 자산 단위 라디오와 함께 화면에 있다 → 어긋나면 그 라디오로.
+  //   배율 한도 이내도 같다(두 라디오 중 하나가 계산에 반영되지 않는다) — 그래서 분리 경로 판정보다 앞이다.
+  const modeMismatch = housingExcessPartModeMismatch(a, isPrimary);
   if (modeMismatch) {
     const part = modeMismatch === "landAcqMode" ? "토지" : "건물";
     return fieldError(
       modeMismatch,
-      `${label}: 토지·건물을 같은 날 취득한 주택은 배율 초과분을 나눌 때 위 「취득가액 산정 방식」 하나로 토지분·건물분을 함께 계산합니다 — ` +
+      `${label}: 토지·건물을 같은 날 취득한 주택은 위 「취득가액 산정 방식」 하나로 취득가액을 계산합니다 — ` +
         `「${part} 취득가액 방식」을 그 방식과 같게 선택하세요. 토지를 다른 날 취득했다면 토지 취득일을 고치세요.`,
     );
   }
+  if (!housingExcessNeedsLandSplit(a, transferDate, isPrimary)) return null;
   const excess = housingExcessAreaOfAsset(a, transferDate);
   const head =
     `${label}: 토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘습니다 — 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 분리 과세하므로 ` +
