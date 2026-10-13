@@ -69,6 +69,16 @@ export function declaredNewHouseEffectiveAcquisitionDate(
 }
 
 /**
+ * 권리 유래 경위(분양권·승계 입주권·원조합원 상가·토지 등)이면 그 권리 취득일 — §155①1호 괄호의 「권리 취득」 시점은 이 날로 판정하므로
+ * 폼 전역 「매매계약 체결·계약금 지급일」 칸을 받지 않는다(`eraFormWithOriginDates`가 ④에서 그 칸을 이 날로 덮는다). 일반·모름·미수집은 undefined.
+ * 명부 경로(`TemporaryTwoHouseSection`)와 증여 부담부증여 ⑤가 **같은 술어**로 `TempTwoHouseRegulatedInputs.contractDateFromRow`를 정한다.
+ */
+export function contractDateFromRightOrigin(origin: { kind: string; rightAcquisitionDate?: string } | undefined): string | undefined {
+  if (!origin || origin.kind === "general" || origin.kind === "unknown" || origin.kind === "not_collected") return undefined;
+  return origin.rightAcquisitionDate;
+}
+
+/**
  * ⑧ — 답이 앞뒤가 맞지 않는다(권리 취득일 누락·완공일보다 늦음·인가일이 승계취득일보다 늦음). 미답은 막지 않는다.
  * 규칙은 명부 행(`newHouseOriginIssue`)과 **같은 함수**다 — 신규 주택 취득일(완공·잔금일)이 행의 취득일 자리에 선다.
  */

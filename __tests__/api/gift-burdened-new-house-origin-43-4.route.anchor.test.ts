@@ -33,6 +33,10 @@ import { POST as SINGLE } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { buildGiftBurdenedTransferBody } from "@/lib/calc/gift-burdened-transfer-api";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
+import {
+  giftBurdenedNewAcquisitionDatePatch,
+  giftBurdenedTempTwoHouseRegulatedGate,
+} from "@/lib/calc/gift-burdened-temp-two-house";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { normalizeRestoredFormDates } from "@/components/calc/inheritance/normalize-restored-form-dates";
 import { validateStep } from "@/components/calc/gift-tax-form-validate";
@@ -253,3 +257,51 @@ describe("N ③ 복원", () => {
     expect(tt).toMatchObject(origin);
   });
 });
+
+describe("S2 취득일을 비우면 경위도 함께 비운다 (막다른 길 방지)", () => {
+  const prev = new Date(PREV);
+  const answered = (over: Era = {}): TT => ({
+    previousAcquisitionDate: prev,
+    newAcquisitionDate: new Date(NEW_ACQ),
+    newHouseOriginKind: "presale",
+    newHouseRightAcquisitionDate: "2021-09-01",
+    newHouseRightApprovalDate: "2021-08-01",
+    ...over,
+  });
+  it("S2-1 경위 답 + 취득일 비움 → 객체 undefined · ⑧ 오류 없음", () => {
+    const patched = giftBurdenedNewAcquisitionDatePatch(answered(), undefined, prev);
+    expect(patched).toBeUndefined();
+    const it = giftItem({}, { temporaryTwoHouse: patched });
+    expect(validateStep(1, giftForm(GIFT_DATE, [it]))).toBeNull();
+  });
+  it("S2-2 다른 §155① 항목(신규 주택 소재지)이 있으면 객체는 남되 경위 세 필드만 비운다", () => {
+    const patched = giftBurdenedNewAcquisitionDatePatch(answered({ newHouseJibun: "서울 강남구 역삼동 736" }), undefined, prev)!;
+    expect(patched.newHouseJibun).toBe("서울 강남구 역삼동 736");
+    expect(patched.newHouseOriginKind).toBeUndefined();
+    expect(patched.newHouseRightAcquisitionDate).toBeUndefined();
+    expect(patched.newHouseRightApprovalDate).toBeUndefined();
+  });
+  it("S2-3 부정 짝 — 취득일을 넣으면 경위 답을 지우지 않는다", () => {
+    const patched = giftBurdenedNewAcquisitionDatePatch(answered(), new Date("2024-07-01"), prev)!;
+    expect(patched).toMatchObject({ newHouseOriginKind: "presale", newHouseRightAcquisitionDate: "2021-09-01", newHouseRightApprovalDate: "2021-08-01" });
+  });
+});
+
+describe("N2 ⑤ 조정 판정 게이트는 ④와 같이 계약일 칸을 권리 취득일로 덮는다", () => {
+  /** 신규 2020-06-01 · 증여 2021-03-01 — 폼 계약일 2020-05-01은 2019-12-17 이후라 1년·전입 체제(전입일 칸이 열림), 권리 취득일 2019-04-01은 그 전이라 닫힌다. */
+  // 종전(증여) 주택은 2015-01-01 취득 — 신규 취득·계약이 종전주택 보유 뒤여야 계약일이 체제 기준이 된다(D13).
+  const gateOf = (origin: Era) =>
+    giftBurdenedTempTwoHouseRegulatedGate(giftItem(origin, { acquisitionDate: new Date("2015-01-01") }, "2020-06-01").burdenedGiftTransferTax!, "2021-03-01", undefined);
+  it("N2-1 권리 유래 — 전입 요건(moveInRelevant)이 권리 취득일로 판정된다 (계약일 칸 값이 아니라)", () => {
+    expect(gateOf({ newHouseContractDate: "2020-05-01" })?.regulated.moveInRelevant).toBe(true);
+    expect(
+      gateOf({ newHouseContractDate: "2020-05-01", newHouseOriginKind: "presale", newHouseRightAcquisitionDate: "2019-04-01" })?.regulated.moveInRelevant,
+    ).toBe(false);
+  });
+  it("N2-2 부정 짝 — 일반·모름은 계약일 칸 값을 그대로 쓴다", () => {
+    for (const kind of ["general", "unknown"] as const) {
+      expect(gateOf({ newHouseContractDate: "2020-05-01", newHouseOriginKind: kind, newHouseRightAcquisitionDate: "2019-04-01" })?.regulated.moveInRelevant).toBe(true);
+    }
+  });
+});
+

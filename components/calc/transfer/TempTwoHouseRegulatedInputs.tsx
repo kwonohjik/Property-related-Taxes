@@ -113,8 +113,8 @@ export function TempTwoHouseRegulatedInputs({
             <label className="text-sm font-medium">신규 주택을 취득할 수 있는 권리의 취득일</label>
             <p className="text-xs">{contractDateFromRow}</p>
             <p className="text-xs text-muted-foreground">
-              신규 주택을 권리(분양권·조합원입주권)로 취득한 행이라, 조정대상지역 공고 전에 권리를 취득했는지는 보유 주택 목록에 입력한 이 날로
-              판정합니다. 별도의 매매계약일 칸은 받지 않습니다.
+              신규 주택을 권리(분양권·조합원입주권)로 취득한 {hasHouseRoster ? "행" : "주택"}이라, 조정대상지역 공고 전에 권리를 취득했는지는{" "}
+              {hasHouseRoster ? "보유 주택 목록" : "신규 주택 취득 경위 질문"}에 입력한 이 날로 판정합니다. 별도의 매매계약일 칸은 받지 않습니다.
             </p>
           </div>
         ) : (

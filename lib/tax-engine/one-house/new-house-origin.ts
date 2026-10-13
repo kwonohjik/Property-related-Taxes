@@ -140,7 +140,7 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
         ...PASS,
         blocked: true,
         unconfirmed: [
-          `신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답했거나 답하지 않아 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용하지 않았습니다.`,
+          `신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답해(보유 주택 목록 행은 답하지 않은 경우 포함) 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용하지 않았습니다.`,
         ],
       };
 

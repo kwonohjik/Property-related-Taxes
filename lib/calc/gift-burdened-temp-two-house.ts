@@ -157,7 +157,7 @@ export function giftBurdenedTempTwoHouseIncompleteError(bgt: BurdenedGiftTransfe
 }
 
 /**
- * 신규 주택 취득일 칸 저장 patch — 취득일을 비웠고 그 칸 밖에 쓴 §155① 항목이 없으면 객체를 통째로 `undefined`로 되돌린다.
+ * 신규 주택 취득일 칸 저장 patch — 취득일을 비웠고 그 칸 밖에 쓴 §155① 항목(신규 주택 취득 경위는 취득일과 함께 비운다)이 없으면 객체를 통째로 `undefined`로 되돌린다.
  * DateInput은 날짜가 완성되기 전 매 키 입력마다 빈 값을 내므로, 되돌리지 않으면 한 글자만 쳐도 빈 객체가 생겨 ⑧이 막는다
  * (1h-G1-5). 다른 항목(소재지·처분기한 예외 등)이 있으면 지우지 않는다 — 사용자가 쓴 사실을 날려 보내지 않는다.
  */
@@ -172,6 +172,13 @@ export function giftBurdenedNewAcquisitionDatePatch(
     newAcquisitionDate: newAcquisitionDate as unknown as Date,
   } satisfies TempTwoHouseFacts;
   if (newAcquisitionDate) return next;
+  /*
+   * 취득일을 비우면 신규 주택 취득 경위(세 필드 — 결정 #43-4)도 함께 비운다. 경위는 그 신규 주택에 붙은 답이라 주택이 없으면 의미가 없고,
+   * 남겨 두면 경위 라디오에 선택 해제가 없어 ⑧ 「입력한 §155① 항목을 비우세요」가 막다른 길이 된다.
+   */
+  next.newHouseOriginKind = undefined;
+  next.newHouseRightAcquisitionDate = undefined;
+  next.newHouseRightApprovalDate = undefined;
   const hasOtherFacts = Object.entries(next).some(
     ([k, v]) => k !== "previousAcquisitionDate" && k !== "newAcquisitionDate" && v !== undefined && v !== "" && v !== false,
   );

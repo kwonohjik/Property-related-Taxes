@@ -35,6 +35,7 @@ import { RentalHousingExceptionSection } from "@/components/calc/transfer/Rental
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
 import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
+import { contractDateFromRightOrigin, declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import {
   giftBurdenedRentalAsset,
   giftBurdenedRentalExceptionInScope,
@@ -437,6 +438,8 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               regulated={eraGate.regulated}
               newHouseAcquisitionDate={eraGate.newAcquisitionDate}
               hasHouseRoster={false}
+              // 권리 유래 신규 주택은 ④가 계약일 칸을 권리 취득일로 덮는다 — 칸을 그대로 열면 입력이 조용히 버려진다(양도세 판정 메뉴와 같은 술어).
+              contractDateFromRow={contractDateFromRightOrigin(declaredNewHouseOriginOf(bgt.temporaryTwoHouse))}
             />
           )}
         </div>

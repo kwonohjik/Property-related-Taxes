@@ -568,6 +568,10 @@ test("[BT-E2E-7b] 신규 주택 취득 경위 질문 → 요청 본문 newHouseO
   await right.getByRole("textbox", { name: "일" }).fill("1");
   await expect(right.getByRole("textbox", { name: "일" })).toHaveValue("1");
 
+  // 권리 유래 신규 주택은 계약일 칸이 사라지고 권리 취득일로 판정한다는 안내가 뜬다(입력이 ④에서 덮여 버려지지 않게)
+  await expect(dialog.getByTestId("temp-two-house-contract-date-from-row")).toBeVisible();
+  await expect(dialog.getByTestId("temp-two-house-new-contract-date")).toHaveCount(0);
+
   // 조정대상지역 칸이 열리는 시기(2021-03-01) — 조정 여부는 미선택으로 둔다(엔진이 불성립 독법 + 고지). 이 spec은 경위 배선만 본다.
   await dialog.getByRole("button", { name: "닫기" }).click();
   await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();

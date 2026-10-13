@@ -28,8 +28,8 @@ export function DeclaredNewHouseOriginBlock({ fields, newAcquisitionDate, onChan
     // data-field — ⑧ 검증 오류가 이 칸으로 이동한다(`declaredNewHouseOriginIssue`의 field).
     <div data-testid="declared-new-house-origin" data-field="newHouseOriginKind" className="space-y-1.5">
       <p className="text-micro text-muted-foreground" data-testid="declared-new-house-origin-note">
-        신규 주택 취득일{newAcquisitionDate ? `(${newAcquisitionDate})` : ""}을 보유 주택 목록 없이 직접 선언한 경우입니다. 아래 질문에 답하지 않으면
-        그 취득일 그대로 일시적 2주택을 판정하고 확인 필요로 알립니다.
+        보유 주택 목록의 행이 아니라 이전에 입력되었거나 다른 화면에서 넘어온 신규 주택 취득일{newAcquisitionDate ? `(${newAcquisitionDate})` : ""}로
+        일시적 2주택을 판정하는 경우입니다. 아래 질문에 답하지 않으면 그 취득일 그대로 판정하고 확인 필요로 알립니다.
       </p>
       <HouseEntryNewHouseOriginBlock
         house={{
