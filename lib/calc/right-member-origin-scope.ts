@@ -10,6 +10,22 @@ import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { temporaryTwoHouseEraInputRelevance } from "@/lib/tax-engine/data/temporary-two-house-deadline-era";
 
+/**
+ * 행의 「취득 경위」를 판정에 쓰는 값으로 정한다 — ④ payload · ⑤ 칸 노출 · ⑧ 모두 이 함수 하나를 본다.
+ *
+ * 기존주택 원조합원이라도 입주권이 된 건물을 **세대원이** 소유하고 본인은 토지만 출자했다면(`household_member`)
+ * 본인에게는 입주권을 새로 취득한 것과 같아 §156의2③·④(= `original_non_house`)로 본다. 그 밖에는 고른 값 그대로다.
+ * 이 행의 날짜 칸은 그때 관리처분계획 인가일이다(`original_non_house`와 같은 의미).
+ */
+export function effectiveMemberOrigin(
+  row: Pick<PresaleRightEntry, "type" | "memberOrigin" | "originalHouseBuildingOwner">,
+): PresaleRightEntry["memberOrigin"] {
+  if (row.type === "redevelopment_right" && row.memberOrigin === "original_house" && row.originalHouseBuildingOwner === "household_member") {
+    return "original_non_house";
+  }
+  return row.memberOrigin;
+}
+
 export function memberOriginErrors(
   rights: readonly PresaleRightEntry[],
 ): { field: `presaleRights.${number}.memberOrigin`; message: string }[] {
@@ -31,7 +47,7 @@ export function memberOriginErrors(
  * 두 주택이 모두 조정대상지역인지는 엔진이 소재지로 판정한다(모르면 두 경우를 모두 계산) — 여기서는 열어 둔다.
  */
 export function originalMemberMoveInRelevant(row: PresaleRightEntry, transferDate: string | undefined): boolean {
-  if (row.type !== "redevelopment_right" || row.memberOrigin !== "original_house") return false;
+  if (row.type !== "redevelopment_right" || effectiveMemberOrigin(row) !== "original_house") return false;
   const acq = toOptionalDate(row.acquisitionDate);
   const transfer = toOptionalDate(transferDate);
   if (!acq || !transfer) return false;

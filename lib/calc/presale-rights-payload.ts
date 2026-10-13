@@ -25,6 +25,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
+import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
@@ -61,7 +62,7 @@ export interface PresaleRightPayloadItem {
 
 /** 기존주택 원조합원 행의 §155① 사실(전입일·기존 임차인 단서·§155⑱ 사유). 그 밖의 행이면 빈 객체. */
 function originalMemberFacts(p: PresaleRightEntry): Partial<PresaleRightPayloadItem> {
-  if (p.type !== "redevelopment_right" || p.memberOrigin !== "original_house") return {};
+  if (p.type !== "redevelopment_right" || effectiveMemberOrigin(p) !== "original_house") return {};
   return {
     ...(p.originalMemberMoveInDate ? { originalMemberMoveInDate: p.originalMemberMoveInDate } : {}),
     ...(p.originalMemberExistingTenant && p.originalMemberTenantLeaseEndDate
@@ -105,7 +106,7 @@ export function buildPresaleRightsPayload(
       // §89② 조합원입주권 축 시행일 게이트(법률 제7837호 부칙 §12①) — 빈 문자열은 미입력이다.
       managementDisposalApprovalDate: p.managementDisposalApprovalDate || undefined,
       // 취득 경위는 조합원입주권 전용 — 분양권 행에 남은 값은 싣지 않는다.
-      memberOrigin: p.type === "redevelopment_right" ? p.memberOrigin : undefined,
+      memberOrigin: p.type === "redevelopment_right" ? effectiveMemberOrigin(p) : undefined,
       // 기존주택 원조합원 §155① 사실 — 그 경위일 때만(다른 경위·분양권 행에 남은 값은 싣지 않는다).
       ...originalMemberFacts(p),
       isInherited: p.isInherited,

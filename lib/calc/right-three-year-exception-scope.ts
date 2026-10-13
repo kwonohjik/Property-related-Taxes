@@ -28,6 +28,7 @@
  * 즉 카드가 사라지는 세 경로 모두 payload가 **소비되지 않는다**.
  */
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";
 import { isRightThreeYearExceeded } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { presaleRightDefinitionAcquisitionDate } from "@/lib/tax-engine/presale-right-definition-date";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
@@ -50,7 +51,7 @@ export function rightThreeYearExceptionRightKinds(form: TransferFormData): ("red
     (r) =>
       r.acquisitionDate &&
       // 기존주택 원조합원 입주권은 §156의2④·시행규칙 §75①의 대상이 아니다 — §155①로 판정한다.
-      !(r.type === "redevelopment_right" && r.memberOrigin === "original_house") &&
+      !(r.type === "redevelopment_right" && effectiveMemberOrigin(r) === "original_house") &&
       isRightThreeYearExceeded({
         // 동일세대 상속 분양권은 피상속인 취득일부터 센다 — 엔진 기한 판정과 같은 leaf(`resolveAcquiredRightTiming`).
         rightAcquisitionDate: presaleRightDefinitionAcquisitionDate({

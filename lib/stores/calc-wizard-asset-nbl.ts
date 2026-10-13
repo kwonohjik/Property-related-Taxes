@@ -605,6 +605,13 @@ export interface PresaleRightEntry {
    * 1세대1주택 비과세 판정 대상(주택 양도)이면 필수(⑧).
    */
   memberOrigin?: "original_house" | "original_non_house" | "successor";
+  /**
+   * 기존주택 원조합원 행 전용 — 입주권이 된 기존주택(철거 대상 건물)을 누가 소유했는가.
+   * `"household_member"` = 본인은 토지만 출자하고 건물은 같은 세대원 소유 → 입주권을 새로 취득한 경우처럼
+   * §156의2③·④로 판정한다(`effectiveMemberOrigin` — 엔진은 `original_non_house`로 받는다, 사용자 결정 2026-10-13).
+   * 미입력은 `"self"`(종전 동작 — §155①). 다른 경위로 바꾸면 ④가 읽지 않는다.
+   */
+  originalHouseBuildingOwner?: "self" | "household_member";
   /*
    * 기존주택 원조합원 전용(§155① — 엔진 `one-house/original-member-right.ts`). 다른 경위로 바꾸면 ④가 싣지 않는다.
    */
