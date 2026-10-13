@@ -10,6 +10,7 @@
  * 정책: RadioCardGroup/DateInput 전용 · useEffect→store 미러링 금지(onChange 직접 set).
  */
 
+import { decedentHouseholdAnswer, decedentHouseholdRightPatch, type DecedentHousehold } from "@/lib/calc/decedent-household";
 import { RIGHT_TO_MOVE_IN_SCOPE_HINT } from "@/lib/calc/right-to-move-in-scope-hint";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -450,16 +451,36 @@ export function PresaleRightsSection({
                       title="상속지분이 가장 큰 상속인"
                     />
                   )}
-                  <ToggleCard
-                    variant="chip"
-                    tone="violet"
-                    checked={r.decedentSameHouseholdAtInheritance ?? false}
-                    onCheckedChange={(v) =>
-                      update(r.id, { decedentSameHouseholdAtInheritance: v })
-                    }
-                    title="상속개시 당시 피상속인과 동일세대"
-                  />
-                  {r.decedentSameHouseholdAtInheritance && (
+                  {/*
+                    피상속인 세대 — 한 칸의 3상태(주택 행 「상속 정보」와 같은 규약 · #42-2). 종전 토글은 미답과 「동일세대 아님」을
+                    구별하지 못해 답하지 않아도 상속 권리 특례(§156의2⑥·§156의3④ 단서)와 분양권 정의일이 별도세대로 적용됐다.
+                  */}
+                  <div className="space-y-2" data-testid={`presale-decedent-household-block-${idx}`}>
+                    <label className="block text-sm font-medium">상속개시 당시 피상속인과 같은 세대였습니까</label>
+                    <RadioCardGroup
+                      name={`presaleDecedentHousehold-${r.id}`}
+                      data-testid={`presale-decedent-household-${idx}`}
+                      tone="violet"
+                      layout="inline"
+                      options={[
+                        { value: "separate", label: "별도세대", testId: `presale-decedent-household-separate-${idx}` },
+                        { value: "same", label: "동일세대", testId: `presale-decedent-household-same-${idx}` },
+                        { value: "unknown", label: "모름", testId: `presale-decedent-household-unknown-${idx}` },
+                      ]}
+                      value={decedentHouseholdAnswer(r) ?? ""}
+                      onChange={(v) => update(r.id, decedentHouseholdRightPatch(v as DecedentHousehold, r))}
+                    />
+                    <p className="text-caption text-muted-foreground/70" data-testid={`presale-decedent-household-hint-${idx}`}>
+                      동일세대에서 상속받으면 상속받은 권리의 특례가 원칙적으로 배제되고(동거봉양 합가 예외 제외), 분양권은 피상속인이
+                      취득한 날로 정의 적용례를 봅니다. 모르거나 답하지 않으면 특례를 적용하지 않고 확인 필요로 알립니다.
+                    </p>
+                    {r.decedentSameHouseholdAtInheritance === false && decedentHouseholdAnswer(r) === undefined && (
+                      <p className="text-caption text-muted-foreground" data-testid={`presale-decedent-household-legacy-note-${idx}`}>
+                        이전에 저장된 입력에 별도세대로 남아 있던 값은 직접 고른 답인지 알 수 없어 답으로 인정하지 않습니다. 위에서 다시 골라 주세요.
+                      </p>
+                    )}
+                  </div>
+                  {decedentHouseholdAnswer(r) === "same" && (
                     <ToggleCard
                       variant="chip"
                       tone="violet"

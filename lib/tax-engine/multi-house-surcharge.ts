@@ -13,10 +13,7 @@
  * 인구감소지역 상수는 ./data/population-decline-areas.ts 로 분리.
  */
 
-import {
-  INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE,
-  inheritedPresaleRightSeparateHouseholdUnverified,
-} from "./presale-right-definition-date";
+import { inheritedPresaleRightHouseholdNotices } from "./presale-right-definition-date";
 import { format } from "date-fns";
 import { readSpouseHolding, marriageSubtractionWindowOpen } from "./spouse-holding-at-transfer";
 import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
@@ -230,13 +227,12 @@ function computeMultiHouseSurcharge(
   warnings.push(...step1Count.warnings);
   // 별도세대 상속 분양권 — 피상속인 취득일이 2021.1.1. 전인데 상속개시일로 산입했다(해석 미확보 · 확인 필요).
   const presaleStart = new Date(houseCountRules.presaleRightStartDate);
-  if (
-    input.presaleRights.some(
-      (r) => inheritedPresaleRightSeparateHouseholdUnverified(r, presaleStart) && isPresaleRightCounted(r, presaleStart),
-    )
-  ) {
-    warnings.push(INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_NOTICE);
-  }
+  warnings.push(
+    ...inheritedPresaleRightHouseholdNotices(
+      input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStart)),
+      presaleStart,
+    ),
+  );
 
   const rawHouseCount = input.houses.length + input.presaleRights.length;
 

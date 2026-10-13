@@ -80,7 +80,7 @@ describe("상속 권리 요건 ⑤ — 가시성", () => {
     render(<Step2 form={form([rightEntry({ isInherited: true })])} onChange={() => {}} />);
     expect(shows(/상속 권리 인정 요건/)).toBe(true);
     expect(shows(/피상속인이 상속개시 당시 주택을 보유/)).toBe(true);
-    expect(shows(/상속개시 당시 피상속인과 동일세대/)).toBe(true);
+    expect(shows(/상속개시 당시 피상속인과 같은 세대였습니까/)).toBe(true);
   });
 
   it("체크하지 않으면 열리지 않는다", () => {
