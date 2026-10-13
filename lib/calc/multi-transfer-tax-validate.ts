@@ -195,9 +195,8 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
 export function isPropertyReady(item: PropertyItem): boolean {
   // Step1↔Step3 통합 후 4단계 구조: Step 0(자산·취득) ~ Step 2(감면) 검증.
   // Step 3(가산세)은 선택이므로 제외.
-  // 다건 편집 화면과 같은 맥락으로 검증한다 — 다건 ④가 싣지 않는 사실(증여받은 주택의 세대 사실 #38-3)은 묻지 않는다.
   for (let step = 0; step <= 2; step++) {
-    if (validateStep(step, item.form, { embeddedInMulti: true }) !== null) return false;
+    if (validateStep(step, item.form) !== null) return false;
   }
   return true;
 }

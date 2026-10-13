@@ -23,6 +23,7 @@ import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { Badge } from "@/components/ui/badge";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { cn } from "@/lib/utils";
+import { LTHD_HOLDING_STEP_LABEL, LTHD_RESIDENCE_STEP_LABEL } from "@/lib/tax-engine/transfer-tax-lthd-steps";
 import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { PerPropertyBreakdown, RateGroup } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
@@ -128,8 +129,27 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     ruralSurtax: 0,
     localIncomeTax,
     totalTax: determinedTax + totalPenalty + localIncomeTax,
-    steps: b.steps,
+    steps: withLthdPartSteps(b),
   };
+}
+
+/**
+ * 건별 신고서가 읽는 `steps` — 엔진 sub-step(「보유 기간분 장특」·「거주 기간분 장특」)이 없는데 집계 echo
+ * (`filingDisplay.lthdHoldingPart`·`lthdResidencePart`)만 있는 자산에는 그 echo를 sub-step으로 얹는다.
+ *
+ * 표2 특례가 아닌 자산이 배율 초과 부수토지(표1 보유분 단독)를 분리하면 sub-step이 없어 신고서가 거주 개월수 휴리스틱으로 총액을
+ * 다시 나눴다(합산 신고서·명세서는 echo를 읽어 정확했다 — 같은 자산이 두 표에서 달랐다). 엔진이 낸 sub-step이 있으면 손대지 않는다.
+ */
+function withLthdPartSteps(b: PerPropertyBreakdown): PerPropertyBreakdown["steps"] {
+  const h = b.filingDisplay?.lthdHoldingPart;
+  const r = b.filingDisplay?.lthdResidencePart;
+  const has = (label: string) => b.steps.some((s) => s.label === label);
+  if ((h === undefined && r === undefined) || has(LTHD_HOLDING_STEP_LABEL) || has(LTHD_RESIDENCE_STEP_LABEL)) return b.steps;
+  return [
+    ...b.steps,
+    { label: LTHD_HOLDING_STEP_LABEL, formula: "", amount: h ?? b.longTermHoldingDeduction, sub: true },
+    { label: LTHD_RESIDENCE_STEP_LABEL, formula: "", amount: r ?? 0, sub: true },
+  ];
 }
 
 /**

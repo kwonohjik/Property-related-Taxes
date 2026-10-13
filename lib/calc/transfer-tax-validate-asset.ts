@@ -110,19 +110,10 @@ export function getAssetDateOrderError(
  *
  * collectStepIssues(transfer-tax-validate.ts)가 자산별로 호출해 일괄 수집한다.
  */
-/**
- * 검증 호출 맥락 — 같은 폼이라도 **어느 화면이 묻는가**에 따라 칸이 다르다.
- * `embeddedInMulti`: 다건 편집 화면에 임베드된 단건 마법사(`isEmbeddedInMultiPath`). 다건 ④가 싣지 않는 사실은 묻지 않는다.
- */
-export interface StepValidationContext {
-  embeddedInMulti?: boolean;
-}
-
 export function validateAssetEntry(
   a: AssetForm,
   index: number,
   form: TransferFormData,
-  ctx: StepValidationContext = {},
 ): string | null {
   const label = form.assets.length === 1 ? "자산" : `자산 ${index + 1}`;
 
@@ -262,7 +253,7 @@ export function validateAssetEntry(
   if (separateLandDateError) return separateLandDateError;
 
   // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
-  const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index === 0);
+  const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate);
   if (housingExcessError) return housingExcessError;
 
   // 공유 지분율 범위 — ⑤ 인라인 경고(`OwnershipRatioInput`)와 **같은 술어**를 쓴다.
@@ -359,8 +350,9 @@ export function validateAssetEntry(
   if (acqError) return acqError;
 
   // ⑧ 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 판정 메뉴와 같은 규칙(`giftHouseholdFactErrors`)으로 필수로 묻는다.
-  //    ⑤(`CompanionAcquisitionCauseSection`)와 같은 게이트(`calcGiftHouseholdFactAsked` — 첫 자산 · 다건 임베드 아님). ④는 `form.assets[0]`만 싣는다.
-  if (calcGiftHouseholdFactAsked(a, { isPrimary: index === 0, embeddedInMulti: ctx.embeddedInMulti === true })) {
+  //    ⑤(`CompanionAcquisitionCauseSection`)와 같은 게이트(`calcGiftHouseholdFactAsked` — 첫 자산). ④는 `form.assets[0]`만 싣는다.
+  //    다건 화면(단건 마법사 임베드)도 같은 게이트다 — 다건 ④(`buildPropertyPayload`)가 같은 빌더로 싣는다(#38-3).
+  if (calcGiftHouseholdFactAsked(a, { isPrimary: index === 0 })) {
     const giftFact = giftHouseholdFactErrors(a)[0];
     if (giftFact) return fieldError(giftFact.field as keyof AssetForm, `${label}: ${giftFact.message}`);
   }

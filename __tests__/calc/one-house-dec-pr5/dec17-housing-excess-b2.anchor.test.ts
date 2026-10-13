@@ -204,7 +204,7 @@ describe("#17-4 환산·감정·매매사례 취득도 초과분을 분리한다
       useEstimatedAcquisition: true, fixedAcquisitionPrice: "", standardPriceAtTransfer: "800000000", transferCause: "public_expropriation",
       housingCompensationTotal: "700000000", housingCompensationBasisTotal: "650000000",
     };
-    expect(housingExcessNeedsLandSplit({ ...makeDefaultAsset(1), ...HOUSE, ...over } as unknown as AssetForm, TD, true)).toBe(false);
+    expect(housingExcessNeedsLandSplit({ ...makeDefaultAsset(1), ...HOUSE, ...over } as unknown as AssetForm, TD)).toBe(false);
     const r = await runCalc(single(over));
     expect(r.issues.some((i) => i.message.includes("배율 한도를"))).toBe(false);
     expect(r.status).toBe(200);
@@ -215,7 +215,7 @@ describe("#17-4 환산·감정·매매사례 취득도 초과분을 분리한다
 
   it("대조 — 실가 + 공익수용은 범위 안(특례가 환산 분모에만 걸린다)", () => {
     const a = { ...makeDefaultAsset(1), ...HOUSE, transferCause: "public_expropriation" } as unknown as AssetForm;
-    expect(housingExcessNeedsLandSplit(a, TD, true)).toBe(true);
+    expect(housingExcessNeedsLandSplit(a, TD)).toBe(true);
   });
 
   it("실가 + 잔존 파트 방식(별개취득을 켰다 끈 `landAcqMode`·`buildingAcqMode` = 환산) → 자산 단위 실가로 분리 (수정 전: ⑧ 통과 · API 400)", async () => {
@@ -231,7 +231,7 @@ describe("#17 후속 검토 보정", () => {
   const AUCTION = { useEstimatedAcquisition: true, fixedAcquisitionPrice: "", standardPriceAtTransfer: "800000000", isAuctionTransfer: true, auctionPrice: "600000000" };
 
   it("범위 밖 — 환산 + 공매·경락(§164⑨2호)은 분리하지 않고 비과세 + «초과분 미분리» 고지 (보정 전: 2호 분모 특례 없이 분리 14,336,406)", async () => {
-    expect(housingExcessNeedsLandSplit({ ...makeDefaultAsset(1), ...HOUSE, ...AUCTION } as unknown as AssetForm, TD, true)).toBe(false);
+    expect(housingExcessNeedsLandSplit({ ...makeDefaultAsset(1), ...HOUSE, ...AUCTION } as unknown as AssetForm, TD)).toBe(false);
     const r = await runCalc(single(AUCTION));
     expect(r.issues).toEqual([]);
     expect(r.status).toBe(200);
@@ -263,7 +263,7 @@ describe("#17 후속 검토 보정", () => {
 
   it("대조 — 실가 + 공매·경락은 범위 안(2호 특례는 환산 분모에만 걸린다)", () => {
     const a = { ...makeDefaultAsset(1), ...HOUSE, isAuctionTransfer: true, auctionPrice: "600000000" } as unknown as AssetForm;
-    expect(housingExcessNeedsLandSplit(a, TD, true)).toBe(true);
+    expect(housingExcessNeedsLandSplit(a, TD)).toBe(true);
   });
 
   const EST = { useEstimatedAcquisition: true, fixedAcquisitionPrice: "", standardPriceAtTransfer: "800000000" };

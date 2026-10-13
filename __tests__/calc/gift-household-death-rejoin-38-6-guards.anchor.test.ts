@@ -13,6 +13,7 @@
  *
  * 부정형 단언에는 긍정 짝을 둔다.
  */
+import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
 import { describe, it, expect } from "vitest";
 import type { z } from "zod";
 import { migrateCarryoverFields } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -53,17 +54,24 @@ describe("GD-2 ③ 자산 복원", () => {
   });
 });
 
-describe("GD-3 ⑫ 다건 거절", () => {
-  const issues = (data: Record<string, unknown>) => {
+describe("GD-3 ⑭ 다건도 사망·재결합을 같은 함수로 매핑한다 (#38-3 병합 후)", () => {
+  const base = { acquisitionCause: "gift", acquisitionDate: "2023-06-01", donorAcquisitionDate: "2000-06-01" };
+  it("[GD-3a] 다건 ⑫는 사망·재결합 사실을 거절하지 않는다(단건과 같은 사실을 받는다) · 긍정 짝: 비어 있어도 통과", () => {
     const out: string[] = [];
-    refineMultiUnsupported(data, { addIssue: (i: { path?: (string | number)[] }) => out.push(String(i.path?.[0])) } as unknown as z.RefinementCtx);
-    return out;
-  };
-  it("[GD-3a] 사망·재결합 사실이 실리면 다건은 거절한다 · 긍정 짝: 비어 있으면 통과", () => {
-    expect(issues({ giftDonorDeceased: true })).toEqual(["giftDonorDeceased"]);
-    expect(issues({ giftRejoinedAfterDivorce: true })).toEqual(["giftRejoinedAfterDivorce"]);
-    expect(issues({})).toEqual([]);
-    expect(Object.keys(MULTI_REJECT_RULES)).toEqual(expect.arrayContaining(["giftDonorDeceased", "giftRejoinedAfterDivorce"]));
+    const ctx = { addIssue: (i: { path?: (string | number)[] }) => out.push(String(i.path?.[0])) } as unknown as z.RefinementCtx;
+    refineMultiUnsupported({ giftDonorDeceased: true, giftRejoinedAfterDivorce: true }, ctx);
+    refineMultiUnsupported({}, ctx);
+    expect(out).toEqual([]);
+    expect(Object.keys(MULTI_REJECT_RULES)).not.toEqual(expect.arrayContaining(["giftDonorDeceased"]));
+    expect(Object.keys(MULTI_REJECT_RULES)).not.toEqual(expect.arrayContaining(["giftRejoinedAfterDivorce"]));
+  });
+  it("[GD-3b] 공용 매핑이 사망·재결합을 엔진 basis에 싣는다(단건 ⑭·다건 ⑭ 공통) · 긍정 짝: 사실이 없으면 undefined", () => {
+    expect(mapGiftHouseholdBasis({ ...base, giftDonorDeceased: true })).toMatchObject({ donorDeceased: true });
+    expect(mapGiftHouseholdBasis({ ...base, giftSameHouseholdContinuous: false, giftRejoinedAfterDivorce: true })).toMatchObject({
+      continuousSameHousehold: false,
+      rejoinedAfterDivorce: true,
+    });
+    expect(mapGiftHouseholdBasis({ ...base })).toBeUndefined();
   });
 });
 
