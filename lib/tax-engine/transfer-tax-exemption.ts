@@ -200,6 +200,15 @@ export function checkExemption(
           };
           return verdictIf(true) !== verdictIf(false);
         },
+        // 입주권 행(기존주택 원조합원 §155① 처분기한)의 지구 선언도 같은 규약이다(#32-4) — 그 행만 지구 안·밖으로 바꿔 다시 판정한다.
+        right: (rowIndex: number) => {
+          const verdictIf = (inDesignatedDistrict: boolean) => {
+            const presaleRights = (input.presaleRights ?? []).map((r, i) => (i === rowIndex ? { ...r, inDesignatedDistrict } : r));
+            const r = checkExemption({ ...input, presaleRights }, oneHouseRules, presaleRightStartDate, options);
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          return verdictIf(true) !== verdictIf(false);
+        },
       }, buildEraNoticeRelevance({
         input,
         oneHouseRules,

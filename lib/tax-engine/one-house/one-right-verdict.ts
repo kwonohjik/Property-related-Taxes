@@ -146,10 +146,15 @@ export function buildOneRightVerdict(
   if (nonResidentExcludesOneRight(input)) reasons.push(NON_RESIDENT_ONE_RIGHT_REASON);
   // #13 — 판정 메뉴 §89①4호 카드의 출자 자산·세대원 건물 선언도 같은 술어로 읽는다(규칙과 사유를 같은 술어로 맞춘다).
   if (landContributionBlocksOneRight(facts)) {
+    // 「확인 필요」는 선언이 결론을 가를 때만(#32-4) — 같은 판정 leaf에 「예」를 넣어 4호가 성립하는 사안일 때만 붙인다.
+    //   다른 사유(인가일 요건·입주권 수·분양권·다른 주택 등)가 따로 막고 있으면 선언해도 달라지는 것이 없다
+    //   (계산기 `oneRightLandContributionNotices`의 `wouldHold`와 같은 반사실).
+    const declarationDecides =
+      resolveOneRightExemptionClause({ ...facts, landHouseholdOwnedBuilding: true }, input) !== undefined;
     reasons.push(
       "토지만 출자한 입주권은 인가일·양도일 현재 같은 세대가 철거 대상 건물(기존주택)을 소유한 경우에만 성립합니다(「소득세법」 §89①4호 본문)" +
         (facts.landHouseholdOwnedBuilding === undefined
-          ? " — 세대원 건물 소유를 선언하지 않았습니다. 확인 필요."
+          ? ` — 세대원 건물 소유를 선언하지 않았습니다.${declarationDecides ? " 확인 필요." : ""}`
           : " — 다른 세대 소유로 선언했습니다."),
     );
   }
