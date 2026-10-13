@@ -55,7 +55,7 @@ const UNAV: HouseEntry = {
   unavoidableOutsideCapitalReason: "work", unavoidableOutsideCapitalResolvedDate: "2025-06-01",
 } as HouseEntry;
 /** §155② 상속주택 — 2019 상속(5년 경과 → 중과 주택 수에 산입) */
-const INH: HouseEntry = { ...base, id: "hi", acquisitionDate: "2019-06-01", isInherited: true, inheritedDate: "2019-06-01" };
+const INH: HouseEntry = { ...base, id: "hi", acquisitionDate: "2019-06-01", isInherited: true, inheritedDate: "2019-06-01", decedentSameHouseholdAtInheritance: false };
 
 function form(houses: HouseEntry[]) {
   return withIdentityHousingBuildingStdOnForm({

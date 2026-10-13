@@ -261,6 +261,8 @@ export const houseSchema = z.object({
   isLargestCoInheritedShareholder: z.boolean().optional(),
   // §155② 단서(동거봉양·동일세대)·1~4호 순위 게이트
   decedentSameHouseholdAtInheritance: z.boolean().optional(),
+  /** ⑫ 피상속인 세대를 모르거나 답하지 않았다 — 불성립 + 확인 필요(#42-2). 위 boolean이 비어 있을 때만 의미 */
+  decedentHouseholdUnconfirmed: z.boolean().optional(),
   parentalCareMergeInheritedHouse: z.boolean().optional(),
   /** D17 재상속 — 별도세대에서 받은 상속주택을 동일세대원이 재상속 */
   reInheritedFromSeparateHousehold: z.boolean().optional(),

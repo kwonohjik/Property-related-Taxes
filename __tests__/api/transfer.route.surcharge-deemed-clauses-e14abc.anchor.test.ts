@@ -65,7 +65,7 @@ const NEW_GANGNAM: HouseEntry = { ...ROW };
  * 보유한 일반주택). 명부에 양도 주택보다 나중 취득한 행이 둘(신규·상속)이라 명부 도출은 신규 주택을 고르지
  * 않는다(`resolveTemporaryTwoHouse` — 억측 금지) ⇒ 일시적 2주택은 직접 선언 경로(`temporaryTwoHouseSpecial`)로 준다.
  */
-const INH_OLD: HouseEntry = { ...ROW, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01" };
+const INH_OLD: HouseEntry = { ...ROW, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01", decedentSameHouseholdAtInheritance: false };
 /** 장기임대주택 행 — 등록 정보 없이 표시만(영 §167의3①2호 판정 불가 → §167의10①10호로 빠지지 않는다) */
 const RENTAL_ROW: HouseEntry = { ...ROW, id: "h4", acquisitionDate: "2016-01-01", isLongTermRental: true, isApartment: false };
 /** 조특법 §99의2 감면주택(명부에 감면 표시 없음) */

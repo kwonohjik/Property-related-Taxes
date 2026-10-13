@@ -220,6 +220,7 @@ describe("#6-J — 판정 메뉴 전 구간 (폼 → ④ → ⑫ → route → �
           inheritedDate: "2015-10-18",
           isCoInherited: true,
           isLargestCoInheritedShareholder: true,
+          decedentSameHouseholdAtInheritance: false, // 사실관계가 별도세대 피상속인 — 미답은 모름이라 명시한다(#42-2)
           ...houseOver,
         },
       ],

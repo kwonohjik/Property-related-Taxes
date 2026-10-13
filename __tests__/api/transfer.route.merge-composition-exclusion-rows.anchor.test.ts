@@ -132,6 +132,7 @@ const INHERITED_COUNTERPART: HouseEntry = {
   inheritedDate: "2014-01-01",
   officialPrice: "300000000",
   isInherited: true,
+  decedentSameHouseholdAtInheritance: false, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
   isLongTermRental: false,
   isApartment: true,
   isOfficetel: false,

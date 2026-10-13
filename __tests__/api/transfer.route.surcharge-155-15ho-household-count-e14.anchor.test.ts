@@ -101,7 +101,7 @@ const SMALL_NEW: HouseEntry = {
 /** 진짜 일시적 2주택의 신규 주택(중과 주택 수에 산입). */
 const NEW_GANGNAM: HouseEntry = { ...B, id: "h3", acquisitionDate: "2025-01-01" };
 /** §155② 단독 상속주택 — 상속개시 2019(5년 경과 → §167의3①7호·§167의10①10호는 걸리지 않는다). */
-const INH_OLD: HouseEntry = { ...B, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01" };
+const INH_OLD: HouseEntry = { ...B, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01", decedentSameHouseholdAtInheritance: false };
 /** §155② 단독 상속주택 — 상속개시 2025(종전에는 「신규 주택」으로 도출돼 §155① 분기로 우연히 덮였다). */
 const INH_NEW: HouseEntry = { ...INH_OLD, acquisitionDate: "2025-01-01", inheritedDate: "2025-01-01" };
 /** §155② 단서 — 상속개시 당시 동일세대(동거봉양 합가 예외 없음) → 상속주택 특례 불성립. */

@@ -68,7 +68,7 @@ const ROW: HouseEntry = {
  * 보유한 일반주택). 명부에 양도 주택보다 나중 취득한 행이 둘(신규·상속)이라 명부 도출은 신규 주택을 고르지
  * 않는다(`resolveTemporaryTwoHouse` — 억측 금지) ⇒ 일시적 2주택은 직접 선언 경로(`temporaryTwoHouseSpecial`)로 준다.
  */
-const INH_OLD: HouseEntry = { ...ROW, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01" };
+const INH_OLD: HouseEntry = { ...ROW, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01", decedentSameHouseholdAtInheritance: false };
 /** 조특법 §99의2 감면주택(명부에 감면 표시 없음) */
 const SPECIAL_ROW: HouseEntry = { ...ROW, id: "h5", acquisitionDate: "2013-06-01" };
 

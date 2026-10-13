@@ -15,6 +15,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
+import { decedentHouseholdOf } from "@/lib/calc/decedent-household";
 import { popDeclinePriorRightQuestionVisible } from "@/lib/calc/pop-decline-71-2-scope";
 import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
@@ -25,6 +26,8 @@ interface Props {
   /** 양도(종전) 주택 취득일 — 이 행보다 늦으면 「권리로 받은 집인가」를 묻는다 */
   sellingAcquisitionDate?: string;
 }
+
+const DECEDENT_LABEL = { separate: "별도세대", same: "동일세대", unknown: "모름·미답" } as const;
 
 const YNU = [
   { v: "yes", yes: "예" },
@@ -91,16 +94,22 @@ export function HouseEntryPopDeclineBlock({ house, onUpdate, sellingAcquisitionD
             }
           />
           <p className="text-xs text-muted-foreground">
-            증여로 받은 경우 증여자가 <b>별도세대</b>인지 이어서 묻습니다(국세청 해석이 있는 것은 별도세대뿐). 증여 여부를 모르면 적용하지 않고 확인 필요로 알립니다.
+            증여로 받은 경우 증여자가 <b>별도세대</b>인지 이어서 묻습니다(국세청 해석이 있는 것은 별도세대뿐). 증여 여부를 모르면 적용하지 않고 확인 필요로 알립니다. 상속으로 받은 주택은 「상속 정보」의 피상속인 세대 답을 씁니다.
           </p>
         </div>
       )}
 
-      {popDeclineAcquiredFromOther(house) && (
+      {house.isInherited && (
+        <p className="text-xs text-muted-foreground" data-testid="house-row-pop-decline-decedent-note">
+          피상속인이 별도세대였는지는 이 주택의 「상속 정보」에 답한 내용을 그대로 씁니다(현재 답: {DECEDENT_LABEL[decedentHouseholdOf(house)]}).
+          국세청 해석(서면-2025-법규재산-1621)이 이 특례를 적용한다고 밝힌 것은 별도세대로부터 상속받은 경우뿐이라, 같은 세대이거나 모르거나
+          답하지 않았으면 적용하지 않고 확인 필요로 알립니다.
+        </p>
+      )}
+
+      {!house.isInherited && popDeclineAcquiredFromOther(house) && (
         <div className="space-y-1.5" data-testid="house-row-pop-decline-donor-block">
-          <label className="text-sm font-medium">
-            이 주택을 취득할 당시 {house.isInherited ? "피상속인" : "증여자"}는 별도세대였습니까
-          </label>
+          <label className="text-sm font-medium">이 주택을 취득할 당시 증여자는 별도세대였습니까</label>
           <RadioCardGroup
             name={`popDeclDonor-${house.id}`}
             data-testid="house-row-pop-decline-donor"
@@ -115,8 +124,7 @@ export function HouseEntryPopDeclineBlock({ house, onUpdate, sellingAcquisitionD
             onChange={(v) => onUpdate({ popDeclDonorHousehold: v as HouseEntry["popDeclDonorHousehold"] })}
           />
           <p className="text-xs text-muted-foreground">
-            국세청 해석(서면-2025-법규재산-1621·2010)이 이 특례를 적용한다고 밝힌 것은 별도세대로부터 상속·증여받은 경우뿐입니다. 같은 세대로부터 받았거나 모르면 해석이 없어 적용하지 않고 확인 필요로 알립니다.
-            상속 정보의 「동일세대」 칸(소령 §155②)과는 별개의 질문입니다.
+            국세청 해석(서면-2025-법규재산-2010)이 이 특례를 적용한다고 밝힌 것은 별도세대로부터 증여받은 경우뿐입니다. 같은 세대로부터 받았거나 모르면 해석이 없어 적용하지 않고 확인 필요로 알립니다.
           </p>
         </div>
       )}

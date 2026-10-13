@@ -202,6 +202,7 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
           isCoInherited: undefined,
           isLargestCoInheritedShareholder: undefined,
           decedentSameHouseholdAtInheritance: undefined,
+          decedentHouseholdUnconfirmed: undefined,
           parentalCareMergeInheritedHouse: undefined,
           reInheritedFromSeparateHousehold: undefined,
           isRankingDisqualifiedInheritedHouse: undefined,
@@ -212,7 +213,14 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
 
     // C2 — 엔진(A)은 소수지분에도 동일세대 게이트. 반대(B)는 그 행의 게이트를 열어(동일세대 아님과 같은 입력) 판정.
     const minority = otherInheritedRows(input)
-      .filter((h) => h.isCoInherited === true && h.isLargestCoInheritedShareholder !== true && !passesHouseholdGate(h))
+      .filter(
+        // 동일세대로 답한 행만 — 모름·미답(`decedentHouseholdUnconfirmed`)은 같은 세대라는 사실이 아니라 확인 필요라 양론 대상이 아니다(#42-2)
+        (h) =>
+          h.isCoInherited === true &&
+          h.isLargestCoInheritedShareholder !== true &&
+          h.decedentSameHouseholdAtInheritance === true &&
+          !passesHouseholdGate(h),
+      )
       .map((h) => h.id);
     if (minority.length > 0) {
       out.push({

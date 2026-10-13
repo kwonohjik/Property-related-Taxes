@@ -38,6 +38,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { classifyEupMyeon } from "@/lib/geo/rural-house-location";
+import { decedentHouseholdAnswer, decedentHouseholdPatch } from "@/lib/calc/decedent-household";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { resolveRuralLocationQualified } from "@/lib/calc/one-house-row-facts";
 import {
@@ -205,7 +206,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
             <p className="text-xs text-muted-foreground">취득 후 5년 이상이어야 합니다.</p>
             {/*
               D7 — §155② 단서 괄호(「이하 제3항, 제7항제1호 … 에서 같다」)가 1호에도 걸린다. 상속주택 카드의 토글과
-              같은 칸(단일 진실)이지만 여기서는 「아직 답하지 않음」을 가질 수 있게 라디오로 묻는다(⑧ 필수 — 모름은 불리).
+              같은 칸(단일 진실 — `decedent-household` leaf)이지만 여기서는 「아직 답하지 않음」을 가질 수 있게 라디오로 묻는다(⑧ 필수 — 모름·미답은 막는다).
             */}
             <RadioCardGroup
               name={`ruralSameHousehold-${house.id}`}
@@ -222,18 +223,9 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
                 },
               ]}
               value={
-                house.decedentSameHouseholdAtInheritance === true
-                  ? "yes"
-                  : house.decedentSameHouseholdAtInheritance === false
-                    ? "no"
-                    : ""
+                decedentHouseholdAnswer(house) === "same" ? "yes" : decedentHouseholdAnswer(house) === "separate" ? "no" : ""
               }
-              onChange={(v) =>
-                onUpdate({
-                  decedentSameHouseholdAtInheritance: v === "yes",
-                  parentalCareMergeInheritedHouse: v === "yes" ? house.parentalCareMergeInheritedHouse : undefined,
-                })
-              }
+              onChange={(v) => onUpdate(decedentHouseholdPatch(v === "yes" ? "same" : "separate", house))}
             />
             {house.decedentSameHouseholdAtInheritance === true && (
               <ToggleCard

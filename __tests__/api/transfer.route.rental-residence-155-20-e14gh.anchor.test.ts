@@ -82,7 +82,7 @@ const RENTAL_ROW: HouseEntry = { ...ROW, id: "h4", acquisitionDate: "2016-01-01"
 /** 일시적 2주택의 신규 주택(2025) */
 const NEW_HOUSE: HouseEntry = { ...ROW };
 /** §155② 상속주택 — 2019 상속(양도 주택 2015는 상속개시 당시 보유) */
-const INHERITED: HouseEntry = { ...ROW, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01" };
+const INHERITED: HouseEntry = { ...ROW, id: "h3", isInherited: true, acquisitionDate: "2019-06-01", inheritedDate: "2019-06-01", decedentSameHouseholdAtInheritance: false };
 /** 어느 특례에도 걸리지 않는 일반주택(양도 주택보다 먼저 취득) */
 const OTHER_OLD: HouseEntry = { ...ROW, id: "h6", acquisitionDate: "2012-01-01" };
 

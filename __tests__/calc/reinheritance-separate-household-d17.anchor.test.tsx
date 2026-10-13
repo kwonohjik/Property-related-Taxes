@@ -109,11 +109,15 @@ describe("W-1 ⑤ 편집 창", () => {
     render(<HouseEntryEditor house={row({ decedentSameHouseholdAtInheritance: false })} onUpdate={vi.fn()} />);
     expect(screen.queryByTestId(CHIP)).toBeNull();
   });
-  it("동일세대 OFF · 상속 OFF로 바꾸면 지운다", () => {
+  it("별도세대·모름 · 상속 OFF로 바꾸면 지운다", () => {
     const onUpdate = vi.fn();
     render(<HouseEntryEditor house={row({ reInheritedFromSeparateHousehold: true })} onUpdate={onUpdate} />);
-    fireEvent.click(screen.getByRole("switch", { name: /상속개시 당시 피상속인과 동일세대/ }));
-    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ reInheritedFromSeparateHousehold: undefined }));
+    // #42-2 — 동일세대 토글이 3택 라디오로 합쳐졌다. 별도세대·모름으로 바꾸면 재상속 표시를 지운다.
+    fireEvent.click(screen.getByTestId("house-row-decedent-household-separate"));
+    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ decedentSameHouseholdAtInheritance: false, reInheritedFromSeparateHousehold: undefined }));
+    expect(Object.keys(onUpdate.mock.lastCall![0])).toContain("reInheritedFromSeparateHousehold");
+    fireEvent.click(screen.getByTestId("house-row-decedent-household-unknown"));
+    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ decedentHouseholdUnknown: true, reInheritedFromSeparateHousehold: undefined }));
     fireEvent.click(screen.getByRole("switch", { name: /피상속인으로부터 상속받은 주택/ }));
     expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ isInherited: false, reInheritedFromSeparateHousehold: undefined }));
   });

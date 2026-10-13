@@ -249,6 +249,7 @@ const INHERITED_ROW: HouseEntry = {
   acquisitionDate: "2020-03-01",
   officialPrice: "200000000",
   isInherited: true,
+  decedentSameHouseholdAtInheritance: false, // 별도세대 상속 — 미답은 모름(불성립)이라 명시한다(#42-2)
   inheritedDate: "2020-03-01",
   isLongTermRental: false,
   isApartment: true,

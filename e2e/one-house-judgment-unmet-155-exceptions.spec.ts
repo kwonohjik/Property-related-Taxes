@@ -101,6 +101,7 @@ test.describe("판정 결과 — §155② 상속주택 불성립 사유", () => 
         house("inh", "2020-01-01", {
           isInherited: true,
           inheritedDate: "2020-01-01",
+          decedentSameHouseholdAtInheritance: false, // 별도세대 상속 — 미답은 모름이라 사유가 달라진다(#42-2)
           isRankingDisqualifiedInheritedHouse: true,
         }),
         house("h3", "2014-03-01"),
@@ -126,7 +127,7 @@ test.describe("판정 결과 — §155② 상속주택 불성립 사유", () => 
     test.setTimeout(60_000);
     await gotoResult(page, {
       houses: [
-        house("inh", "2020-01-01", { isInherited: true, inheritedDate: "2020-01-01" }),
+        house("inh", "2020-01-01", { isInherited: true, inheritedDate: "2020-01-01", decedentSameHouseholdAtInheritance: false }),
         house("h3", "2014-03-01"),
       ],
     });

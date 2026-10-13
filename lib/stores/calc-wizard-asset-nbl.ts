@@ -150,8 +150,14 @@ export interface HouseEntry {
   isCoInherited?: boolean;
   /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=소유로 봄, 일반주택 양도 시 §155② 요건으로 제외 판정 · false·미제공=소수지분 §155③ 제외후보) */
   isLargestCoInheritedShareholder?: boolean;
-  /** 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미 */
+  /**
+   * 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제 · false=별도세대). isInherited=true 시 의미.
+   * 한 칸의 3상태(별도세대·동일세대·모름)의 앞 두 값이다 — 읽기·쓰기는 `lib/calc/decedent-household.ts` leaf를 쓴다(#42-2 합침).
+   * 이 칸이 비어 있고 `decedentHouseholdUnknown`도 없으면 미답이며 「모름」과 같이 불성립 + 확인 필요다.
+   */
   decedentSameHouseholdAtInheritance?: boolean;
+  /** 「상속개시 당시 피상속인과 같은 세대였는지 모름」을 사용자가 명시했다 — 위 boolean이 비어 있을 때만 의미(쓰기는 leaf가 모순 없이) */
+  decedentHouseholdUnknown?: boolean;
   /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
   parentalCareMergeInheritedHouse?: boolean;
   /**
@@ -415,9 +421,12 @@ export interface HouseEntry {
   //    모름·미답은 불성립 + 확인 필요(`transfer-reductions/population-decline-71-2.ts`). 소재지·가액은 이 행의 주소(`regionCode`)·`acquisitionOfficialPrice`를 쓴다. ──
   /** 이 주택을 취득할 당시 세대가 주택·조합원입주권·분양권 중 1채(1개)만 보유했는가 */
   popDeclSoleAtAcquisition?: "yes" | "no" | "unknown";
-  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 증여·상속이면 `popDeclDonorHousehold`로 별도세대 여부를 본다 */
+  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 증여로 받았으면 `popDeclDonorHousehold`로 증여자의 별도세대 여부를 본다 */
   popDeclAcquiredByGift?: "no" | "yes" | "unknown";
-  /** 상속·증여로 취득한 경우만 — 피상속인·증여자가 **별도세대**였는가(국세청 해석은 별도세대만 적용). 같은 세대·모름·미답은 미적용 + 확인 필요 */
+  /**
+   * **증여**로 취득한 경우만 — 증여자가 **별도세대**였는가(국세청 해석은 별도세대만 적용). 같은 세대·모름·미답은 미적용 + 확인 필요.
+   * 상속 행은 이 칸을 쓰지 않는다 — 「상속 정보」의 피상속인 세대 한 칸(`decedentSameHouseholdAtInheritance`·`decedentHouseholdUnknown`)이 §155②와 이 특례에 함께 쓰인다(④가 엔진 입력으로 옮긴다).
+   */
   popDeclDonorHousehold?: "separate" | "same" | "unknown";
   /** 양도 주택이 이 행보다 늦게 취득된 것으로 기록된 경우에만 — 양도(종전) 주택을 분양권·조합원입주권으로 받았는가 */
   popDeclPriorRight?: "no" | "yes" | "unknown";

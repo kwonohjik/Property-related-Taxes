@@ -98,12 +98,13 @@ describe("W-4 피상속인·증여자 세대 질문 (결정 #42-2)", () => {
     render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "unknown" })} onUpdate={vi.fn()} />);
     expect(donorBlock()).toBeNull();
   });
-  it("증여 「예」면 증여자 · 상속 행이면 피상속인을 묻는다", () => {
+  it("증여 「예」면 증여자를 묻는다 · 상속 행은 이 질문을 묻지 않고 「상속 정보」의 답을 쓴다 (질문 하나 — 결정 #42-2 합침)", () => {
     render(<HouseEntryPopDeclineBlock house={row({ popDeclAcquiredByGift: "yes" })} onUpdate={vi.fn()} />);
     expect(donorBlock()?.textContent).toContain("증여자");
     cleanup();
     render(<HouseEntryPopDeclineBlock house={row({ isInherited: true })} onUpdate={vi.fn()} />);
-    expect(donorBlock()?.textContent).toContain("피상속인");
+    expect(donorBlock()).toBeNull();
+    expect(screen.getByTestId("house-row-pop-decline-decedent-note").textContent).toContain("상속 정보");
   });
   it("고르면 같은 칸으로 올라간다 (같은 세대·모름도 하나의 답)", () => {
     const onUpdate = vi.fn();
@@ -121,10 +122,10 @@ describe("W-4 피상속인·증여자 세대 질문 (결정 #42-2)", () => {
     expect(onUpdate).toHaveBeenLastCalledWith({ popDeclAcquiredByGift: "no", popDeclDonorHousehold: undefined });
     expect(Object.keys(onUpdate.mock.lastCall![0])).toContain("popDeclDonorHousehold");
   });
-  it("상속 행은 「증여로 받았습니까」를 묻지 않고 피상속인 세대만 묻는다", () => {
+  it("상속 행은 「증여로 받았습니까」도 증여자 세대도 묻지 않는다 — 피상속인 세대는 「상속 정보」 한 칸", () => {
     render(<HouseEntryPopDeclineBlock house={row({ isInherited: true })} onUpdate={vi.fn()} />);
     expect(screen.queryByTestId("house-row-pop-decline-gift")).toBeNull();
-    expect(donorBlock()?.textContent).toContain("피상속인");
+    expect(donorBlock()).toBeNull();
   });
 });
 

@@ -694,6 +694,11 @@ function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetExceptio
         "(서면-2015-부동산-1134 · 조심-2018-서-3806). 피상속인이 다른 별개의 상속이면 상속개시일을 확인하세요.",
     );
   }
+  if (x.householdUnconfirmedCount > 0) {
+    reasons.push(
+      `상속주택 ${x.householdUnconfirmedCount}채는 상속개시 당시 피상속인과 같은 세대였는지 모르거나 답하지 않았습니다 — 주택 수에서 빼지 않았습니다(§155② 단서). 「상속 정보」에서 별도세대·동일세대를 고르면 판정합니다.`,
+    );
+  }
   if (x.sameHouseholdDisqualifiedCount > 0) {
     reasons.push(
       `상속주택 ${x.sameHouseholdDisqualifiedCount}채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다.`,
