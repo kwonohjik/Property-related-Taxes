@@ -223,5 +223,7 @@ describe("#47 ⑤ 분양권·입주권 행 — 칩이 아니라 조건부 질문
     expect(rightCard).not.toContain("§167의3⑨");
     // 권리 행: 세대원 안내는 하되 해석례가 주택에 관한 것임을 밝힌다
     expect(rightCard).toContain("기획재정부 재산세제과-1400 (2023.12.18.))은 주택에 관한 것이며");
+    // spouse_side 전용 「배우자 세대 소유 주택 모두 제외」 문구가 권리 행에 새면 해석례가 분양권·입주권에도 적용되는 것으로 읽힌다
+    expect(rightCard).not.toContain("배우자 세대 소유 주택 모두 제외");
   });
 });
