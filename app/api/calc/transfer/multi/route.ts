@@ -28,6 +28,7 @@ import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/ra
 import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
+import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
 import {
   mapHousesToEngine,
@@ -262,6 +263,14 @@ export async function POST(request: NextRequest) {
       decedentCohabitationHoldingStartDate: toOptionalDate(p.decedentCohabitationHoldingStartDate),
       decedentCohabitationResidenceMonths: p.decedentCohabitationResidenceMonths,
       donorAcquisitionDate: toOptionalDate(p.donorAcquisitionDate),
+      // ⑭ 결정 #38-3 — 증여받은 주택의 증여자와 같은 세대 사실. 단건 정본(`engine-input.ts`)과 같은 함수 — 한쪽만 매핑하면 다건에서 침묵 strip된다.
+      giftHouseholdBasis: mapGiftHouseholdBasis({
+        acquisitionCause: p.acquisitionCause,
+        acquisitionDate: p.acquisitionDate,
+        donorAcquisitionDate: p.donorAcquisitionDate,
+        giftSameHouseholdContinuous: p.giftSameHouseholdContinuous,
+        giftHouseholdHoldingStartDate: p.giftHouseholdHoldingStartDate,
+      }),
       /**
        * ⑭ 비주택 → 주택 용도변경 §95⑤·⑥ — 날짜만 Date 로, 절사 개월은 number 그대로.
        * 단건 정본 `app/api/calc/transfer/engine-input.ts:80`.
