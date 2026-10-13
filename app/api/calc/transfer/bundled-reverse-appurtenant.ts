@@ -98,6 +98,62 @@ export function reverseUnitHouseFacts(unit: ReverseAppurtenantUnit) {
 }
 
 /**
+ * 짝 주택 카드가 받는 **세대 단위 1주택 사실** — 주택 먼저 순서에서는 주 자산 주택이 `engineInput`으로 전부 받는 값이다.
+ *
+ * `buildCompanionEngineInputs`는 별개 주택 컴패니언에 이 값을 싣지 않는다(자기 요건 없이 주 자산의 사실로 비과세가 열리지 않게 하는
+ * 규약). 그래서 역방향 단위의 주택 카드는 일시적 2주택·§154① 단서·명부 등을 잃어, 같은 사실인데 토지 먼저가 주택 먼저보다
+ * 크게 과세됐다(실측: 주택 8억 + 토지 400㎡ · 일시적 2주택 — 주택 먼저 5,764,000, 토지 먼저 154,286,000). 이 구성에서 본문 최상위
+ * 사실은 «양도하는 주택이 속한 세대»의 사실이다 — 첫 자산 토지는 이 주택과 일체로만 판정된다.
+ *
+ * 목록: 겸용 컴패니언이 받는 폼-전역 사실(`MixedUseCompanionContext["globals"]` — 원시 명부·자경 수용 제외) + 그 밖의 세대·양도 주택
+ * 사실(§155·§156의2 특례 주택, §155②③ 상속주택 제외, §89② 권리, 비거주, §154⑤ 재기산, §155⑳ 거주주택). `satisfies`가 키 오타를 막는다.
+ */
+const HOUSEHOLD_ONE_HOUSE_FACT_KEYS = [
+  "regionCode",
+  "regionInDesignatedDistrict",
+  "oneHouseExemptionProviso",
+  "temporaryTwoHouse",
+  "winWinRentalHouse",
+  "specialHouseExclusions",
+  "houses",
+  "sellingHouseId",
+  "marriageMerge",
+  "parentalCareMerge",
+  "isFirstTransferredInMerge",
+  "gracePeriod",
+  "unavoidableOutsideCapitalHouse",
+  "ruralHouse",
+  "replacementHouse",
+  "mergedHouseholdFirstHouse",
+  "culturalHeritageHouse",
+  "longTermMortgageHouse",
+  "rentalHousingException",
+  "generalHouseGiftedFromDecedentWithin2yr",
+  "generalHouseGiftDate",
+  "generalHouseRightAtInheritance",
+  "inheritedRightChoiceWhenBothHeld",
+  "householdRightCount",
+  "sameDayAcquiredPresaleRights",
+  "householdNoPresaleRightsConfirmed",
+  "transferorNonResidentAtTransfer",
+  "nonResidentHoldingPeriod",
+  "finalOneHouseRestart",
+] as const satisfies readonly (keyof TransferTaxItemInput)[];
+
+/** 짝 주택 카드 item — 단위의 `house` 역할 + 짝 주택 거주기간 + 세대 단위 1주택 사실(값이 있는 것만 덮는다). */
+export function asReverseUnitHouse(
+  item: TransferTaxItemInput,
+  unit: ReverseAppurtenantUnit,
+  household: Pick<TransferTaxItemInput, (typeof HOUSEHOLD_ONE_HOUSE_FACT_KEYS)[number]>,
+): TransferTaxItemInput {
+  const facts: Partial<TransferTaxItemInput> = {};
+  for (const k of HOUSEHOLD_ONE_HOUSE_FACT_KEYS) {
+    if (household[k] !== undefined) Object.assign(facts, { [k]: household[k] });
+  }
+  return { ...item, ...facts, oneHouseUnitRole: "house", residencePeriodMonths: unit.houseResidenceMonths };
+}
+
+/**
  * 첫 자산 토지 → 배율 이내·초과 항목(결정 ①). 분리 판정·금액 안분은 컴패니언 부수토지와 같은 leaf다.
  * 면적이 없어 판정하지 못하면 역할 없이 한 항목으로 둔다 — 합산 엔진이 «판정 불가»로 알린다(F13-5와 같다).
  */

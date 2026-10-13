@@ -209,6 +209,33 @@ describe("G1 — 첫 자산 주택부수토지 = 주택 먼저(K1)와 같은 계
     expect(rv.totalTax).toBeGreaterThan(0);
   });
 
+  it("🔑 일시적 2주택 짝 — 짝 주택 카드가 세대 단위 1주택 사실(§155①)을 주 자산 주택처럼 받는다 (검토 전 역방향 154,286,000)", async () => {
+    const f: Facts = { house: 800_000_000, houseLand: 0, lands: [[300_000_000, 400]], household: { isOneHousehold: true, householdHousingCount: 2 } };
+    const t2 = <T extends object>(b: T) => ({ ...b, temporaryTwoHouse: { previousAcquisitionDate: "2014-01-01", newAcquisitionDate: "2025-06-01" } });
+    const fw = await post(t2(forward(f)));
+    const rv = await post(t2(reverse(f)));
+    expect(norm(rv, "r")).toEqual(norm(fw, "f"));
+    expect(rv.totalTax).toBe(5_764_000);
+    expect(fw.totalTax).toBe(5_764_000);
+    expect(rv.properties.find((p) => p.propertyId === "h1")?.isExempt).toBe(true);
+  });
+
+  it("🔑 짝 주택 거주기간 — 주택 카드 자신의 값이 주 자산(토지) 행의 값보다 먼저다 · 고가주택 장특 표2 (주택 11억 + 토지 4억 · 주택 카드 거주 24, 토지 행 0)", async () => {
+    const f: Facts = { house: 1_100_000_000, houseLand: 0, lands: [[400_000_000, 400]] };
+    const fw = await post({ ...forward(f), residencePeriodMonths: 24 });
+    const body = reverse(f);
+    const rv = await post({
+      ...body,
+      residencePeriodMonths: 0,
+      companionAssets: body.companionAssets.map((c) => (c.assetId === "h1" ? { ...c, residencePeriodMonths: 24 } : c)),
+    });
+    expect(norm(rv, "r")).toEqual(norm(fw, "f"));
+    expect(rv.totalTax).toBe(24_711_500);
+    // 거주 0으로 보면 표2 거주분이 빠진다 — 우선순위가 뒤집히면 여기서 갈린다.
+    const rv0 = await post({ ...body, residencePeriodMonths: 0 });
+    expect(rv0.totalTax).toBeGreaterThan(rv.totalTax);
+  });
+
   it("1세대1주택 아님 짝 — 비과세 없이도 배율 이내·초과 구분은 같다(초과분 비사업용 토지)", async () => {
     const { rv } = await parity({
       house: 800_000_000,

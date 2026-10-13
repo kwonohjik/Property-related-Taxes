@@ -27,7 +27,6 @@ import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-i
 import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
-import { reverseAppurtenantHouseAssetId } from "./reverse-appurtenant-house";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
 import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
@@ -555,15 +554,7 @@ export function buildAssetPayload(
           temporaryApprovalDate: asset.temporaryApprovalDate || undefined,
           actualUseDate: asset.actualUseDate || undefined,
         }
-      : form && reverseAppurtenantHouseAssetId(form.assets) === asset.assetId
-        ? {
-            // ⑬ G1 — 사례 28 역방향(첫 자산이 주택부수토지)의 짝 주택: 신축이 아니어도 정착면적·소재지 구분을 싣는다 — route가 이 값으로
-            //   첫 자산 토지의 배율 이내·초과를 나누고 1세대1주택 단위를 만든다(`resolveReverseAppurtenantUnit`). 이 주택 카드 자신의 item에는 실리지 않는다.
-            buildingFootprintArea: parseFloat(asset.buildingFootprintArea) > 0 ? parseFloat(asset.buildingFootprintArea) : undefined,
-            isUrbanArea: asset.isUrbanArea,
-            appurtenantLandZone: asset.appurtenantLandZone,
-          }
-        : {}),
+      : {}),
   };
 }
 

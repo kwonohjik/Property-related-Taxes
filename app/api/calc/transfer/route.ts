@@ -42,7 +42,7 @@ import {
 import { prepareBundledApportionment } from "./bundled-apportionment";
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
-import { resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
+import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
 import { buildTransferEngineInput } from "./engine-input";
 import { resolveUnpaidTax } from "@/lib/tax-engine/transfer-tax-unpaid-tax";
 import {
@@ -468,7 +468,7 @@ export async function POST(request: NextRequest) {
           mixedUseCtx,
         });
         return reverseUnit && c.assetId === reverseUnit.houseAssetId
-          ? built.map((it) => ({ ...it, oneHouseUnitRole: "house" as const, residencePeriodMonths: reverseUnit.houseResidenceMonths }))
+          ? built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput))
           : built;
       });
 

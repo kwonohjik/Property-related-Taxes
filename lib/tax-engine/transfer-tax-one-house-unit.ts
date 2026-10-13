@@ -66,7 +66,7 @@ export function resolveOneHouseUnit(
     items.some((it) => it.oneHouseUnitRole === undefined && it.propertyType === "land" && it.landNature === "appurtenant_to_housing")
   ) {
     warnings.push(
-      "주택부수토지를 첫 자산으로 입력한 구성에서 짝 주택을 정하지 못해(함께 양도하는 주택이 일반 주택 1건이고 그 주택의 건물 정착면적이 입력돼 있어야 합니다) 배율 이내·초과 구분과 1세대1주택 합산 판정(소득세법 §89①3호)을 하지 않았습니다 — 주택부수토지는 주택과 따로 일반 토지로 계산했습니다.",
+      "주택부수토지를 첫 자산으로 입력한 구성에서 짝 주택을 정하지 못해(함께 양도하는 주택이 일반 주택 1건이고 그 주택의 건물 정착면적이 입력돼 있어야 합니다) 배율 이내·초과 구분과 1세대1주택 합산 판정(소득세법 §89①3호)을 하지 않았습니다 — 주택부수토지는 주택과 따로 일반 토지로 계산했습니다. 주택을 첫 자산으로 입력하면 이 판정을 합니다.",
     );
   }
   const valuationOnlyIdxs = [...excessIdxs, ...unverifiedIdxs];

@@ -38,6 +38,7 @@ import { toWinWinRentalHouseFact } from "./one-house-extra-facts-payload";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { reverseAppurtenantHouseAssetId } from "./reverse-appurtenant-house";
 import {
   ownershipRatioError,
   formatOwnershipPercent,
@@ -228,6 +229,18 @@ export function validateAssetEntry(
     );
     if (hasHousingInBundle && !a.landNature) {
       return fieldError("landNature", `${label}: 토지 성격(부수토지 / 독립 나대지)을 선택하세요. 주택·입주권과 함께 일괄양도하는 토지는 성격에 따라 세율이 달라집니다.`);
+    }
+    /**
+     * G1 — 사례 28 역방향(첫 자산 주택부수토지 + 함께 양도 일반 주택 1건)은 화면에서 계산하지 않는다(⑤ 보유 상황 단계가 1세대1주택 판정
+     * 입력 — 세대·주택 수·거주기간·취득 당시 조정대상지역·일시적 2주택 등 — 을 **첫 자산이 주택일 때만** 연다). 그대로 계산하면 숨은 기본값
+     * (1세대 해당 · 1주택 · 조정대상지역 아님)으로 주택과 토지가 통째로 비과세된다(검토 실측: 조정대상지역 취득·거주 0 — 주택 먼저 173,646,000,
+     * 토지 먼저 0). 주택을 첫 자산으로 넣으면 같은 사실을 배율 이내·초과 구분과 1세대1주택 합산 판정으로 계산한다(#17 K1 경로).
+     */
+    if (index === 0 && reverseAppurtenantHouseAssetId(form.assets) !== undefined) {
+      return fieldError(
+        "landNature",
+        `${label}: 주택부수토지를 첫 자산으로 넣고 주택을 함께 양도하는 자산으로 넣으면 1세대1주택 판정에 필요한 세대·거주기간·조정대상지역 입력이 열리지 않아 계산할 수 없습니다. 주택을 첫 자산으로, 이 토지를 함께 양도하는 자산(주택부수토지)으로 입력하세요 — 배율 이내·초과 구분과 1세대1주택 합산 판정을 합니다(소득세법 §89①3호).`,
+      );
     }
     // #18 하위 1 — 부수토지로 선언한 토지는 면적이 있어야 배율 이내인지(비과세·표2 대상)와 12억 고가주택 판정 합계를 가를 수 있다.
     //   ④(`transfer-tax-api-companion-payload.ts`)가 `areaM2`로 싣는 식과 **같은 식**(양도면적 우선, 없으면 취득면적)이다 — 3중 패턴.

@@ -1,13 +1,12 @@
 /**
  * G1 — 사례 28 역방향(첫 자산 주택부수토지 · 주택은 함께 양도) **화면 경로** anchor: 폼 → ⑧ → ④ → route → 엔진.
  *
- * ④는 짝 주택(`reverseAppurtenantHouseAssetId`)에 신축이 아니어도 정착면적·소재지 구분을 싣는다 — 종전에는 신축 주택에만 실어
- * route가 배율 한도를 잴 수 없었다. 같은 사실을 주택 먼저 넣은 결과와 총세액·항목이 같다(route 단위 anchor:
- * `__tests__/api/transfer.route.reverse-appurtenant-unit-g1.anchor.test.ts`).
+ * 화면은 이 구성을 **막고 주택을 첫 자산으로 넣도록 안내한다**(⑧ `transfer-tax-validate-asset.ts`). 보유 상황 단계의 1세대1주택 판정 입력
+ * (세대·주택 수·거주기간·취득 당시 조정대상지역·일시적 2주택 등)이 첫 자산이 주택일 때만 열려, 그대로 계산하면 숨은 기본값(1세대 해당 · 1주택 ·
+ * 조정대상지역 아님 — 조정대상지역 리셋 effect가 false로 둔다)으로 주택·토지가 통째로 비과세된다(검토 실측: 조정대상지역 2018 취득 · 거주 0 ·
+ * 배율 이내 300㎡ — 주택 먼저 173,646,000, 토지 먼저 0 · 안내 없음). 주택 먼저 순서는 같은 사실을 #17 K1 경로로 계산한다.
  *
- * ⚠️ 남은 한계: 화면 Step4의 세대·거주기간·조정대상지역 입력은 첫 자산이 주택일 때만 열린다 — 역방향에서 짝 주택의 거주기간은 0으로 간다
- *    (주택 카드 자신의 거주기간 입력 경로가 없다). 그래서 거주기간이 세액을 가르는 구성(12억 초과 고가주택의 장특 표2 등)은 화면 경로에서
- *    주택 먼저 순서와 갈린다 — 아래 시료는 1세대1주택 비과세가 거주기간과 무관한(조정대상지역 아님 · 12억 이하) 구성이다.
+ * route 단위 parity(API 본문으로 들어온 역방향 구성): `__tests__/api/transfer.route.reverse-appurtenant-unit-g1.anchor.test.ts`.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
@@ -23,7 +22,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 }));
 
 import { preloadTaxRates } from "@/lib/db/tax-rates";
-import { runCalc } from "./_helpers/redev-one-house-route";
+import { runCalc, allIssues, captureBody, postTransfer } from "./_helpers/redev-one-house-route";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { reverseAppurtenantHouseAssetId } from "@/lib/calc/reverse-appurtenant-house";
@@ -84,28 +83,11 @@ const form = (...assets: Record<string, unknown>[]) =>
 type Prop = { propertyId: string; transferPrice: number; isExempt: boolean; longTermHoldingDeduction: number; rateClause?: string };
 type Agg = { totalTax: number; properties: Prop[]; warnings?: string[] };
 const aggOf = (r: Awaited<ReturnType<typeof runCalc>>) => r.json.data.aggregated as Agg;
-/** 역할로 맞춘다 — 주택: forward `primary` ↔ reverse `h1` · 토지: forward `l1…` ↔ reverse `primary…` */
-const norm = (a: Agg, dir: "f" | "r") =>
-  a.properties
-    .map((p) => [
-      dir === "f" ? p.propertyId.replace(/^primary$/, "HOUSE") : p.propertyId.replace(/^h1$/, "HOUSE").replace(/^primary/, "l1"),
-      p.transferPrice,
-      p.isExempt,
-      p.longTermHoldingDeduction,
-      p.rateClause ?? null,
-    ])
-    .sort((x, y) => String(x[0]).localeCompare(String(y[0])));
+const BLOCK = "주택부수토지를 첫 자산으로 넣고 주택을 함께 양도하는 자산으로 넣으면";
+const blocked = (issues: { step: number; field?: string; message: string }[]) =>
+  issues.filter((i) => i.message.includes(BLOCK));
 
-describe("G1 화면 경로 — 첫 자산 주택부수토지 = 주택 먼저", () => {
-  it("④ — 짝 주택(신축 아님)에 정착면적·소재지 구분을 싣는다 · 주택 먼저 순서의 함께 양도 주택에는 싣지 않는다(종전)", async () => {
-    const r = await runCalc(form(LAND("l1", 400), HOUSE(0)));
-    const house = (r.body.companionAssets as Record<string, unknown>[]).find((c) => c.assetKind === "housing")!;
-    expect(house).toMatchObject({ buildingFootprintArea: 100, appurtenantLandZone: "metropolitan_residential", isUrbanArea: true });
-    const fw = await runCalc(form(HOUSE(0), LAND("l1", 400), { ...HOUSE(0), assetId: "h2" }));
-    const fwHouse = (fw.body.companionAssets as Record<string, unknown>[]).find((c) => c.assetKind === "housing")!;
-    expect(fwHouse.buildingFootprintArea).toBeUndefined();
-  });
-
+describe("G1 화면 경로 — 첫 자산 주택부수토지 + 함께 양도 주택 1건은 막고 주택 먼저 입력을 안내", () => {
   it("짝 주택 판정 leaf — 주택 계열 컴패니언이 일반 주택 1건일 때만", () => {
     const a = (o: Record<string, unknown>) => ({ ...makeDefaultAsset(1), ...o }) as never;
     expect(reverseAppurtenantHouseAssetId([a(LAND("l1", 1)), a(HOUSE(0))])).toBe("h1");
@@ -115,49 +97,61 @@ describe("G1 화면 경로 — 첫 자산 주택부수토지 = 주택 먼저", (
     expect(reverseAppurtenantHouseAssetId([a(HOUSE(0)), a(LAND("l1", 1))])).toBeUndefined();
   });
 
-  for (const [title, houseLand, landArea, total] of [
-    ["배율 이내 300㎡ — 둘 다 비과세 0 (수정 전 역방향 18,628,498)", 0, 300, 0],
-    ["토지 400㎡ — 이내 300·초과 100 두 항목 (수정 전 18,628,498)", 0, 400, 4_457_750],
-    ["주택 카드 토지 200㎡ + 토지 200㎡ — 남은 한도 100㎡ (수정 전 18,628,498)", 200, 200, 10_989_000],
-  ] as const) {
-    it(`🔑 ${title}`, async () => {
-      const fw = await runCalc(form(HOUSE(houseLand), LAND("l1", landArea)));
-      const rv = await runCalc(form(LAND("l1", landArea), HOUSE(houseLand)));
-      expect(rv.issues).toEqual([]);
-      expect(rv.status).toBe(200);
-      expect(norm(aggOf(rv), "r")).toEqual(norm(aggOf(fw), "f"));
-      expect(aggOf(rv).totalTax).toBe(total);
-      expect(aggOf(fw).totalTax).toBe(total);
-    });
-  }
+  it("🔑 ⑧ — 토지 먼저는 1단계(자산)에서 막는다 · 첫 자산의 토지 성격 칸 · 주택 먼저는 막지 않는다", () => {
+    const rv = blocked(allIssues(form(LAND("l1", 300), HOUSE(0))));
+    expect(rv).toHaveLength(1);
+    expect(rv[0]).toMatchObject({ step: 0, field: "landNature" });
+    expect(rv[0].message).toContain("주택을 첫 자산으로, 이 토지를 함께 양도하는 자산(주택부수토지)으로 입력하세요");
+    expect(blocked(allIssues(form(HOUSE(0), LAND("l1", 300))))).toEqual([]);
+    // 부수토지 컴패니언이 더 있어도 막는 자리는 첫 자산 하나다(같은 안내를 카드마다 되풀이하지 않는다).
+    const many = blocked(allIssues(form(LAND("l1", 200), HOUSE(0), LAND("l2", 200))));
+    expect(many).toHaveLength(1);
+  });
 
-  it("결과뷰 — 신고서 양식의 `primary__appurtenant`·`primary__excess` 열은 첫 자산(토지)의 취득일을 쓴다(컴패니언 분리 열과 같은 규약)", async () => {
+  it("🔑 숨은 기본값 비과세 차단 — 조정대상지역 2018 취득 · 거주 0: 주택 먼저는 과세(거주요건 미충족), 토지 먼저는 계산 전에 막힌다", async () => {
+    const reg = { acquisitionDate: "2018-01-02", residencePeriodMonthsAsset: "0", residencePeriodMonths: "0" };
+    const f = (...assets: Record<string, unknown>[]) =>
+      ({ ...(form(...assets) as object), wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true, residencePeriodMonths: "0" }) as never;
+    const fw = await runCalc(f({ ...HOUSE(0), ...reg }, { ...LAND("l1", 300), acquisitionDate: "2018-01-02" }));
+    expect(fw.issues).toEqual([]);
+    expect(aggOf(fw).totalTax).toBeGreaterThan(0);
+    expect(aggOf(fw).properties.some((p) => p.isExempt)).toBe(false);
+    const rv = allIssues(f({ ...LAND("l1", 300), acquisitionDate: "2018-01-02" }, { ...HOUSE(0), ...reg }));
+    expect(blocked(rv)).toHaveLength(1);
+  });
+
+  it("짝 주택을 정할 수 없는 구성(함께 양도 주택 2건 · 겸용주택)은 막지 않는다 — 종전대로 계산하고 엔진이 안내한다", () => {
+    expect(blocked(allIssues(form(LAND("l1", 300), HOUSE(0), { ...HOUSE(0), assetId: "h2" })))).toEqual([]);
+    expect(blocked(allIssues(form(LAND("l1", 300), { ...HOUSE(0), isMixedUseHouse: true })))).toEqual([]);
+  });
+
+  it("④ — 짝 주택(신축 아님)에는 정착면적을 싣지 않는다(화면에서 역방향 단위를 만들지 않는다 · 종전 동작)", async () => {
+    const body = await captureBody(form(LAND("l1", 400), HOUSE(0)));
+    const house = (body.companionAssets as Record<string, unknown>[]).find((c) => c.assetKind === "housing")!;
+    expect(house.buildingFootprintArea).toBeUndefined();
+  });
+
+  it("결과뷰 — 신고서 양식의 `primary__appurtenant`·`primary__excess` 열은 첫 자산(토지)의 취득일을 쓴다(컴패니언 분리 열과 같은 규약 · route가 API 본문으로 이 구성을 받은 경우)", async () => {
     const f = form({ ...LAND("l1", 400), acquisitionDate: "2012-05-05" }, HOUSE(0));
-    const agg = aggOf(await runCalc(f));
+    const body = await captureBody(f);
+    // route 단위를 만드는 사실(짝 주택 정착면적·소재지 구분) — 화면 ④는 싣지 않으므로 본문에 직접 넣는다.
+    const withFootprint = {
+      ...body,
+      companionAssets: (body.companionAssets as Record<string, unknown>[]).map((c) =>
+        c.assetId === "h1" ? { ...c, buildingFootprintArea: 100, appurtenantLandZone: "metropolitan_residential", isUrbanArea: true } : c,
+      ),
+    };
+    const r = await postTransfer(withFootprint);
+    expect(r.status).toBe(200);
+    const agg = r.json.data.aggregated as Agg;
     const rows = buildAggregateRows(
       {} as unknown as TransferTaxResult,
       { properties: agg.properties, aggregated: agg } as unknown as AggregateMeta,
       f,
     );
-    const acq = rows.find((r) => r.label === "취득일자")!.values as Record<string, unknown>;
+    const acq = rows.find((row) => row.label === "취득일자")!.values as Record<string, unknown>;
     expect(acq["primary__appurtenant"]).toBe("2012-05-05");
     expect(acq["primary__excess"]).toBe("2012-05-05");
     expect(acq["h1"]).toBe("2014-01-02");
-  });
-
-  it("첫 자산 토지에 비사업용 토지 정밀판정을 켜도 배율 이내·초과가 정해지면 그 판정 입력을 쓰지 않는다 — 초과분 비사업용 토지(§104①8호) · 주택 먼저와 같다", async () => {
-    const NBL = {
-      nblUseDetailedJudgment: true,
-      nblLandType: "other_land",
-      nblZoneType: "urban_residential",
-      nblOtherPropertyTaxType: "separate",
-      // 같은 입력을 단건 독립 토지로 넣으면 사업용 토지(§104①1호)로 판정된다(실측) — 정밀판정이 초과분 판정을 덮으면 여기서 드러난다.
-      nblOtherIsRelatedToResidence: true,
-    };
-    const fw = await runCalc(form(HOUSE(0), LAND("l1", 400)));
-    const rv = await runCalc(form({ ...LAND("l1", 400), ...NBL }, HOUSE(0)));
-    expect(rv.body.nonBusinessLandRaw).toBeDefined();
-    expect(aggOf(rv).properties.find((p) => p.propertyId === "primary__excess")?.rateClause).toBe("104-1-8");
-    expect(norm(aggOf(rv), "r")).toEqual(norm(aggOf(fw), "f"));
   });
 });
