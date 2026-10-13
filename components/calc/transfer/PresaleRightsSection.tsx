@@ -19,6 +19,7 @@ import { AddressSearch } from "@/components/ui/address-search";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import { rightRowDistrictAnswerUsed } from "@/lib/tax-engine/one-house/designated-district-undeclared";
+import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { isAddressReplaced } from "@/lib/calc/house-region";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
@@ -188,6 +189,36 @@ export function PresaleRightsSection({
                     원조합원은 보유하던 부동산이 관리처분계획 인가로 입주권이 된 경우, 승계취득은 입주권을 매매 등으로 산
                     경우입니다.
                   </span>
+                  {r.memberOrigin === "original_house" && (
+                    <div className="space-y-1 pt-1">
+                      <span className="block text-caption text-muted-foreground font-medium">
+                        입주권이 된 기존 주택(철거 대상 건물)은 누가 소유했나요?
+                      </span>
+                      <RadioCardGroup
+                        name={`presale-house-owner-${r.id}`}
+                        data-field={`presaleRights.${idx}.originalHouseBuildingOwner`}
+                        layout="inline"
+                        tone="sky"
+                        value={r.originalHouseBuildingOwner ?? "self"}
+                        onChange={(v) =>
+                          update(r.id, { originalHouseBuildingOwner: v as NonNullable<PresaleRightEntry["originalHouseBuildingOwner"]> })
+                        }
+                        options={[
+                          { value: "self", label: "본인(공동 소유 포함)", testId: `presale-house-owner-self-${idx}` },
+                          {
+                            value: "household_member",
+                            label: "같은 세대원 — 본인은 토지만 출자",
+                            testId: `presale-house-owner-member-${idx}`,
+                          },
+                        ]}
+                      />
+                      <span className="block text-caption text-muted-foreground">
+                        {r.originalHouseBuildingOwner === "household_member"
+                          ? "본인은 입주권을 새로 취득한 경우와 같게 보아 §156의2③·④로 판정합니다. 위 날짜 칸에는 관리처분계획 인가일을 입력하세요."
+                          : "본인이 건물을 소유했다면 §155① 일시적 2주택으로 판정합니다(기존주택 취득일 기준). 답하지 않으면 본인 소유로 봅니다."}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
               <div className="space-y-1">
@@ -196,9 +227,9 @@ export function PresaleRightsSection({
                     ? r.isInherited
                       ? "취득일(상속개시일)"
                       : "취득일"
-                    : r.memberOrigin === "original_house"
+                    : effectiveMemberOrigin(r) === "original_house"
                       ? "기존주택 취득일"
-                      : r.memberOrigin === "original_non_house"
+                      : effectiveMemberOrigin(r) === "original_non_house"
                         ? "입주권 취득일(관리처분계획 인가일)"
                         : "취득일"}
                 </span>
@@ -207,14 +238,14 @@ export function PresaleRightsSection({
                   value={r.acquisitionDate}
                   onChange={(v) => update(r.id, { acquisitionDate: v })}
                 />
-                {r.type === "redevelopment_right" && r.memberOrigin === "original_house" && (
+                {r.type === "redevelopment_right" && effectiveMemberOrigin(r) === "original_house" && (
                   <span className="block text-caption text-muted-foreground">
                     입주권으로 바뀐 기존주택을 취득한 날입니다. 일시적 2주택 기한(§155①)은 이 날부터 셉니다.
                   </span>
                 )}
               </div>
               {/* 원조합원 §155① 판정은 주택 양도에서만 일어난다(⑧ `originalMemberFactErrors`와 같은 게이트) — 그 밖에서는 칸을 두지 않는다. */}
-              {r.type === "redevelopment_right" && r.memberOrigin === "original_house" && isOneHouseExemptionAsset(primaryKind) && (
+              {r.type === "redevelopment_right" && effectiveMemberOrigin(r) === "original_house" && isOneHouseExemptionAsset(primaryKind) && (
                 <OriginalMemberTempTwoHouseInputs
                   row={r}
                   idx={idx}
@@ -306,7 +337,7 @@ export function PresaleRightsSection({
                 />
                 {/* 이 답을 엔진이 쓰는 행에만 묻는다 — 고지(`designatedDistrictUndeclared`)와 같은 술어(S14b-7). 분양권·승계취득·
                     상가·토지 원조합원 행과 입주권 양도에서는 답이 결론에 안 쓰이므로 묻지 않는다. */}
-                {rightRowDistrictAnswerUsed(r, isOneHouseExemptionAsset(primaryKind)) && (
+                {rightRowDistrictAnswerUsed({ type: r.type, memberOrigin: effectiveMemberOrigin(r) }, isOneHouseExemptionAsset(primaryKind)) && (
                   <DesignatedDistrictQuestion
                     regionCode={r.regionCode}
                     value={r.inDesignatedDistrict}
