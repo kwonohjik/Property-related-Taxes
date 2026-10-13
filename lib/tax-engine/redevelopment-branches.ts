@@ -107,6 +107,7 @@ export function runLandContribEstimated(
     // 실가 경로(`computeRedevelopmentLthd` right 분기)와 같은 leaf — 표2 대상·거주월수가 경로에 따라 갈리지 않게
     isOneHouseSingle: resolveRedevEffectiveOneHouseSingle(input),
     residencePeriodMonths: resolveRightResidenceMonths(input),
+    transferDate,
   });
 
   // ─ RedevelopmentBranchDetail 로 변환 ─
@@ -133,6 +134,7 @@ export function runLandContribEstimated(
     // 표2(거주분 > 0)일 때만 — 신고서 거주기간 칸이 「-」인데 거주분 공제가 찍히지 않게(표1이면 거주 개념 없음)
     residenceMonths:
       landResult.preApprovalLTHD > landResult.preApprovalLTHDHoldingPart ? resolveRightResidenceMonths(input) : undefined,
+    ...(landResult.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
     lthdHoldingPart: landResult.preApprovalLTHDHoldingPart,    // 표1이면 전액 보유분 (거주분 0)
     lthdResidencePart: landResult.preApprovalLTHD - landResult.preApprovalLTHDHoldingPart,
   };
@@ -267,6 +269,7 @@ export function runHousingContribReceiveEstimated(
     // 맞춰야 「같은 함수를 쓰는데 결과가 다른」 상태가 생기지 않는다 (E2-03).
     isOneHouseSingle: resolveRedevEffectiveOneHouseSingle(input),
     residencePeriodMonths: resolveRightResidenceMonths(input),
+    transferDate,
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
   });
@@ -302,6 +305,7 @@ export function runHousingContribReceiveEstimated(
     residenceStartDate: undefined,
     residenceEndDate: undefined,
     residenceMonths: undefined,
+    ...(housingResult.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
     lthdHoldingPart: housingResult.preApprovalLTHD, // 표1 = 보유분만
     lthdResidencePart: 0,
   };
@@ -538,6 +542,7 @@ export function runOriginalMember(
     lthd: preApprovalLthdAmt.total,
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
     ...(lthd.preApproval.rateBasis ? { lthdRateBasis: lthd.preApproval.rateBasis } : {}),
+    ...(lthd.preApproval.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
     branchAcqDate: acquisitionDate,
     branchTransferDate: isRight ? redevelopment.approvalDate : transferDate,
     expenses: preApprovalDisplayExpenses,
@@ -566,6 +571,7 @@ export function runOriginalMember(
       ? lthd.postApprovalExistingHouse.rate
       : 0,
     ...(lthd.postApprovalExistingHouse.rateBasis ? { lthdRateBasis: lthd.postApprovalExistingHouse.rateBasis } : {}),
+    ...(lthd.postApprovalExistingHouse.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
     branchAcqDate: isApt ? acquisitionDate : undefined,
     branchTransferDate: isApt ? transferDate : undefined,
     expenses: postApprovalExpenseShare.existingHouse,
@@ -611,6 +617,7 @@ export function runOriginalMember(
     lthd: settlementLthdAmt.total,
     lthdRate: lthd.settlement.applicable ? lthd.settlement.rate : 0,
     ...(lthd.settlement.rateBasis ? { lthdRateBasis: lthd.settlement.rateBasis } : {}),
+    ...(lthd.settlement.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
     branchAcqDate: settlementAcqDate,
     branchTransferDate: settlementTransferDate,
     // §166①2호 가목(입주권): 인가후 분 필요경비 전액 · 완공APT는 위 `postApprovalExpenseShare` 참조.

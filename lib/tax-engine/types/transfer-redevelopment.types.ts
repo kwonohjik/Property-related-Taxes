@@ -525,6 +525,11 @@ export interface RedevelopmentBranchDetail {
   lthdRate: number;
   /** 공제율 산정 근거 한 줄 — 토지 출자 원조합원의 표1·표2 선택/합산(재산세과-1693 · §95⑤ 유추)일 때만. 단계 표시용 */
   lthdRateBasis?: string;
+  /**
+   * 표2 단일축 시기(2009~2020 양도)의 보유 연 8%가 적용된 분기 — 거주분이 0이어도 표2라는 표지.
+   * 결과 카드의 「적용 표」 라벨이 읽는다(거주분 유무로만 표를 가르면 단일축 표2가 표1로 보인다).
+   */
+  lthdHoldingOnlyTable2?: true;
 
   // ── 신고서 양식 표시용 부착 필드 (재개발 3분할 표 렌더링) ──
 
@@ -845,6 +850,8 @@ export interface RedevelopmentResult {
     existingTable: "table1" | "table2";
     /** 청산금분 적용 표 */
     payTable: "table1" | "table2";
+    /** 표2가 2009~2020 양도분의 보유 연 8% 단일축(거주분 없음)인 경우 — 라벨이 「보유 + 거주」로 나가지 않게 */
+    table2HoldingOnly?: true;
     /** 종전주택 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드 산정 근거 표시용. UI 자동산정 입력 시 부착 */
     priorPeriod?: { start: string; end: string };
     /** 신축주택 거주기간(입주일·퇴거일, YYYY-MM-DD) — 결과 카드 산정 근거 표시용. UI 자동산정 입력 시 부착 */

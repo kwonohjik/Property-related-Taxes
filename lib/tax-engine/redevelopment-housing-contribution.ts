@@ -58,6 +58,8 @@ export interface RedevHousingContribReceiveEstimatedInput {
    * 입주권은 인가전 분만 LTHD를 받으므로 **종전주택 거주월수**다(신축 거주는 존재할 수 없다).
    */
   residencePeriodMonths: number;
+  /** 양도일 — 표2 연혁 축(2009~2020 양도분은 보유 연 8% 단일축). 호출부가 실가 경로와 같은 값을 넘긴다. 미전달 = 현행 식 */
+  transferDate?: Date;
   /** 인가전 필요경비 (원) — 미입력 시 0 */
   preApprovalExpenses: number;
   /** 인가후 필요경비 (원) — 미입력 시 0 */
@@ -115,6 +117,8 @@ export interface RedevHousingContribReceiveEstimatedResult {
   lthdHoldingYears: number;
   /** 표1 보유 공제율 (0~0.30) */
   lthdRate: number;
+  /** 표2 단일축 시기(2009~2020 양도)의 보유 연 8% — 거주분이 0이어도 표2라는 표지 */
+  holdingOnlyTable2?: true;
   /**
    * 인가전 분 취득가액 안분 (신고서 양식 표시용).
    * = floor(환산취득가 × salePriceTotal / 권리가액)
@@ -234,6 +238,7 @@ export function calcRedevHousingContribReceiveEstimated(
     isSuccessorRightToMoveIn: false,
     isOneHouseSingle: input.isOneHouseSingle,
     residencePeriodMonths: input.residencePeriodMonths,
+    transferDate: input.transferDate,
   });
 
   // preApproval 브랜치에서 보유율·월수 추출
@@ -277,6 +282,7 @@ export function calcRedevHousingContribReceiveEstimated(
     lthdHoldingEndDate: input.approvalDate,
     lthdHoldingYears: holdingYears,
     lthdRate: preApprovalBranch.rate,
+    ...(preApprovalBranch.holdingOnlyTable2 ? { holdingOnlyTable2: true as const } : {}),
     preApprovalApportionedAcquisition,
     preApprovalApportionedTransfer,
   };

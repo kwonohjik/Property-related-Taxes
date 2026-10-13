@@ -13,7 +13,8 @@
  *
  * LTHD 율 산식 (소법 §95② 표1/표2):
  * - 표1 (일반): 3년차 6% / 매년 2% 가산 / 15년+ 30% 캡
- * - 표2 (1세대1주택 + 거주 2년+): 보유 × 4% (40% 캡) + 거주 × 4% (40% 캡) = 80% 캡
+ * - 표2 (1세대1주택 + 거주 2년+): 보유 × 4% (40% 캡) + 거주 × 4% (40% 캡) = 80% 캡 — 2021.1.1. 이후 양도분.
+ *   2009~2020 양도분은 보유 연 8%(10년 80%) 단일축이라 양도일 연혁이 갈린다 → `redevelopment-lthd-table2.ts`
  *
  * 사례 44 검증:
  * - preApproval (apt + housing): 2005-04-09 ~ 2023-02-16 ≈ 17년 10월 → 표1 30% 캡
@@ -28,9 +29,13 @@ import { LTHD_CONVERSION_95_5_CUTOFF } from "./tax-utils";
 import { calcUsagePeriodInfo } from "./usage-period-info";
 import { calcConversionHoldingPct } from "./conversion-holding-pct";
 import { table2ResidencePct } from "./data/lthd-table2-era";
+import { computeLthdRateSplit, usesTable2, type LthdRateSplit } from "./redevelopment-lthd-table2";
 import { completedMonthsInclusive } from "./civil-period";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
 import { resolveOneHouseAtSettlementSale } from "./transfer-tax-redevelopment-settlement";
+
+// 표2 대상 판정·공제율 leaf는 `redevelopment-lthd-table2.ts`(양도일별 연혁 포함)로 옮겼다 — 기존 import 경로 유지를 위해 재수출한다.
+export { computeLthdRateSplit, usesTable2 };
 
 
 /**
@@ -240,6 +245,8 @@ export interface RedevelopmentLthdBranch {
   reason?: string;
   /** 공제율 산정 근거 한 줄 — 토지 출자 원조합원의 표1·표2 선택/합산처럼 표 하나로 설명되지 않을 때만(UI·단계 표시용) */
   rateBasis?: string;
+  /** 표2 단일축 시기(2009~2020 양도)의 보유 연 8% — 거주분이 0이어도 표2라는 표지(결과 카드 「적용 표」 라벨) */
+  holdingOnlyTable2?: true;
   /**
    * 청산금 **납부**분의 기산일이 인가일이 아닐 때만 — 토지만 출자한 원조합원의 표2 청산금분은 사용승인일(#12).
    * 신고서 표시(`redevelopment-branches.ts`)가 읽는다.
@@ -305,6 +312,7 @@ export function computeRedevelopmentLthd(
       approvalDate,
       isSuccessorRightToMoveIn: isSuccessorRightToMoveIn ?? false,
       isOneHouseSingle: effectiveOneHouseSingle,
+      transferDate,
       /**
        * 입주권은 인가전 분만 LTHD → **종전주택 거주월수만** 의미 있다.
        *
@@ -359,7 +367,7 @@ export function landContributedExistingLthdRate(p: {
   completionDate: Date;
   transferDate: Date;
   residenceYears: number;
-}): { holding: number; residence: number; total: number; basis: string } | undefined {
+}): (LthdRateSplit & { basis: string }) | undefined {
   const info = calcUsagePeriodInfo(p.acquisitionDate, p.completionDate, p.transferDate);
   if (!info) return undefined;
   const totalYears = calculateHoldingPeriod(p.acquisitionDate, p.transferDate).years;
@@ -390,7 +398,7 @@ export function landContributedExistingLthdRate(p: {
     };
   }
   const table1 = computeLthdRateSplit(totalYears, false, 0);
-  const table2 = computeLthdRateSplit(info.t2HoldingYears, true, p.residenceYears);
+  const table2 = computeLthdRateSplit(info.t2HoldingYears, true, p.residenceYears, p.residenceYears, p.transferDate);
   const pick = table2.total > table1.total ? table2 : table1;
   return {
     ...pick,
@@ -410,6 +418,8 @@ export function computeRightLthd(args: {
   isSuccessorRightToMoveIn: boolean;
   isOneHouseSingle: boolean;
   residencePeriodMonths: number;
+  /** 양도일 — 표2 연혁 축(2009~2020 양도분은 보유 연 8% 단일축). 미전달 = 현행 식 */
+  transferDate?: Date;
 }): RedevelopmentLthdResult {
   const {
     acquisitionDate,
@@ -417,6 +427,7 @@ export function computeRightLthd(args: {
     isSuccessorRightToMoveIn,
     isOneHouseSingle,
     residencePeriodMonths,
+    transferDate,
   } = args;
 
   // §95② 본문 괄호: 승계조합원은 LTHD 0
@@ -438,6 +449,7 @@ export function computeRightLthd(args: {
     isOneHouseSingle,
     Math.floor(residencePeriodMonths / 12),
     Math.floor(Math.min(residencePeriodMonths, preApprovalMonths) / 12),
+    transferDate,
   );
 
   return {
@@ -449,6 +461,7 @@ export function computeRightLthd(args: {
       holdingRate: preApprovalSplit.holding,
       residenceRate: preApprovalSplit.residence,
       applicable: true,
+      ...(preApprovalSplit.holdingOnly ? { holdingOnlyTable2: true as const } : {}),
     },
     postApprovalExistingHouse: zeroBranch("입주권 양도 시 인가후 기존주택분 양도차익은 LTHD 대상 부존재 (§95② 본문 괄호·§166⑤1호)"),
     settlement: zeroBranch("§94①2호 (조합원입주권 = 부동산을 취득할 수 있는 권리) + 시행령 §166①1호·2호 가목 산식 구조상 LTHD 대상 자산 부존재 (§95② 대상자산 토지·건물 범위 외)"),
@@ -515,10 +528,10 @@ function computeAptLthd(args: {
   // 거주분 = §154⑧ 통산 (prior + new) — 토지 출자 원조합원은 new만(#12, 호출부 `existingResidenceMonths`)
   const existingHolding = calculateHoldingPeriod(acquisitionDate, transferDate);
   const existingMonths = existingHolding.years * 12 + existingHolding.months;
-  const baseExistingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears);
+  const baseExistingSplit = computeLthdRateSplit(existingHolding.years, isOneHouseSingle, existingResidenceYears, existingResidenceYears, transferDate);
   // 토지 출자 원조합원 + 표2 대상 — 토지만 보유한 기간에 표2를 주지 않는다(재산세과-1693 · §95⑤ 유추). 표1이면 종전 그대로.
   const landSplit =
-    landContributedCompletionDate && usesTable2(isOneHouseSingle, existingResidenceYears)
+    landContributedCompletionDate && usesTable2(isOneHouseSingle, existingResidenceYears, transferDate)
       ? landContributedExistingLthdRate({
           acquisitionDate,
           completionDate: landContributedCompletionDate,
@@ -537,6 +550,7 @@ function computeAptLthd(args: {
     residenceRate: existingSplit.residence,
     applicable: true,
     ...(landSplit ? { rateBasis: landSplit.basis } : {}),
+    ...(existingSplit.holdingOnly ? { holdingOnlyTable2: true as const } : {}),
   };
   const postApprovalBranch: RedevelopmentLthdBranch = { ...preApprovalBranch };
 
@@ -549,11 +563,11 @@ function computeAptLthd(args: {
       approvalDate,
       completionDate: landContributedCompletionDate,
       transferDate,
-      table2: usesTable2(isOneHouseSingle, payResidenceYears),
+      table2: usesTable2(isOneHouseSingle, payResidenceYears, transferDate),
     });
     const payHolding = calculateHoldingPeriod(payStart, transferDate);
     const payMonths = payHolding.years * 12 + payHolding.months;
-    const paySplit = computeLthdRateSplit(payHolding.years, isOneHouseSingle, payResidenceYears);
+    const paySplit = computeLthdRateSplit(payHolding.years, isOneHouseSingle, payResidenceYears, payResidenceYears, transferDate);
     settlementBranch = {
       holdingMonths: payMonths,
       holdingDays: payHolding.days,
@@ -562,6 +576,7 @@ function computeAptLthd(args: {
       holdingRate: paySplit.holding,
       residenceRate: paySplit.residence,
       applicable: true,
+      ...(paySplit.holdingOnly ? { holdingOnlyTable2: true as const } : {}),
       ...(payStart !== approvalDate
         ? {
             holdingStartDate: payStart,
@@ -575,7 +590,13 @@ function computeAptLthd(args: {
     const endDate = settlementSaleDate ?? transferDate;
     const receiveHolding = calculateHoldingPeriod(acquisitionDate, endDate);
     const receiveMonths = receiveHolding.years * 12 + receiveHolding.months;
-    const receiveSplit = computeLthdRateSplit(receiveHolding.years, receiveSettlementOneHouseSingle, payResidenceYears);
+    const receiveSplit = computeLthdRateSplit(
+      receiveHolding.years,
+      receiveSettlementOneHouseSingle,
+      payResidenceYears,
+      payResidenceYears,
+      endDate, // 청산금 수령분의 양도일(소유권이전 고시일 다음날) — 표2 연혁도 그 날로 가른다
+    );
     settlementBranch = {
       holdingMonths: receiveMonths,
       holdingDays: receiveHolding.days,
@@ -584,6 +605,7 @@ function computeAptLthd(args: {
       holdingRate: receiveSplit.holding,
       residenceRate: receiveSplit.residence,
       applicable: true,
+      ...(receiveSplit.holdingOnly ? { holdingOnlyTable2: true as const } : {}),
     };
   }
 
@@ -615,26 +637,6 @@ function computeLthdRate(
   residenceYears: number,
 ): number {
   return computeLthdRateSplit(years, isOneHouseSingle, residenceYears).total;
-}
-
-/**
- * 보유분/거주분 분리 율 산정 (신고서 양식 표시용).
- * 표1: holding=rate(≤0.30), residence=0
- * 표2: holding=min(years×0.04,0.40), residence=min(resYears×0.04,0.40) (거주 2년+ 가드)
- */
-/**
- * §95② **단서**(1세대1주택 표2) 진입 여부 — **단일 소스**.
- *
- * 「대통령령으로 정하는 1세대 1주택」 + 보유기간 중 **거주기간 2년 이상**. 조특법 §97의4①
- * 단서(「같은 항 단서에 해당하는 경우에는 그러하지 아니하다」)가 가리키는 것이 이 조건이라,
- * 추가공제율 가산 배제 판정도 같은 술어를 써야 한다 — 두 술어로 판정하면 드리프트한다
- * (memory `feedback_shared_predicate_argument_parity`).
- *
- * ⚠️ 보유기간(3년) 게이트는 여기 넣지 않는다. 표2 **대상**인지와 공제율이 0인지는 다른 축이고,
- *   §97의4 단서는 「표2 대상이면 가산하지 않는다」이지 「공제율이 있으면」이 아니다.
- */
-export function usesTable2(isOneHouseSingle: boolean, residenceYears: number): boolean {
-  return isOneHouseSingle && residenceYears >= 2;
 }
 
 /**
@@ -685,12 +687,14 @@ export function redevUsesTable2(input: {
     return usesTable2(
       resolveRedevEffectiveOneHouseSingle(input),
       Math.floor(resolveRightResidenceMonths(months) / 12),
+      input.transferDate,
     );
   }
   if (r.isSuccessorMember === true) {
     return usesTable2(
       input.isOneHouseSingle,
       Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: true }) / 12),
+      input.transferDate,
     );
   }
   if (
@@ -706,35 +710,15 @@ export function redevUsesTable2(input: {
         input.isOneHouseSingle,
       ),
       Math.floor((hasSplit ? (r.newHouseResidenceMonths ?? 0) : 0) / 12),
+      input.transferDate,
     );
   }
   // #12 — 토지 출자 원조합원은 신축 거주만(위 `computeRedevelopmentLthd`와 같은 규칙).
   return usesTable2(
     input.isOneHouseSingle,
     Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: isLandContributedNewBuild(r) }) / 12),
+    input.transferDate,
   );
-}
-
-export function computeLthdRateSplit(
-  years: number,
-  isOneHouseSingle: boolean,
-  residenceYears: number,
-  /**
-   * 거주분 공제율에 쓰는 거주 연수 — 표2 **대상 판정**(`residenceYears`)과 갈릴 때만 준다(입주권: 인가 후 거주 제외). 생략하면 같은 값.
-   * 표2 거주기간 열은 「2년 이상」부터라(§95② 표2) 공제율용 거주가 2년 미만이면 거주분은 0이다.
-   */
-  rateResidenceYears: number = residenceYears,
-): { holding: number; residence: number; total: number } {
-  if (years < 3) return { holding: 0, residence: 0, total: 0 };
-
-  if (usesTable2(isOneHouseSingle, residenceYears)) {
-    const holding = Math.min(years * 0.04, 0.40);
-    const residence = rateResidenceYears >= 2 ? Math.min(rateResidenceYears * 0.04, 0.40) : 0;
-    return { holding, residence, total: holding + residence };
-  }
-
-  const holding = Math.min(years * 0.02, 0.30);
-  return { holding, residence: 0, total: holding };
 }
 
 /** LTHD 대상 부존재 분기 (입주권 양도 인가후·청산금) */

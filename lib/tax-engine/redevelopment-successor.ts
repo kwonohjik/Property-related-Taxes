@@ -118,10 +118,13 @@ export function runSuccessorMember(
     newHouseResidenceMonths: redevelopment.newHouseResidenceMonths,
     residencePeriodMonths: input.residencePeriodMonths,
   });
+  const successorResidenceYears = Math.floor(successorResidenceMonths / 12);
   const lthdSplit = computeLthdRateSplit(
     holdingPeriod.years,
     input.isOneHouseSingle ?? false,
-    Math.floor(successorResidenceMonths / 12),
+    successorResidenceYears,
+    successorResidenceYears,
+    transferDate, // 표2 연혁 축(2009~2020 양도분은 보유 연 8% 단일축)
   );
   const lthdRate = lthdSplit.total;
   const lthdAmount = gain > 0 && lthdRate > 0 ? applyLthdToGain(gain, lthdRate) : 0;

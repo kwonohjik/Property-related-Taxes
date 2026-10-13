@@ -405,7 +405,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <p className="text-emerald-700">기존건물분 적용 표</p>
               <p className="font-semibold text-emerald-900">
                 {lthdResidenceAttribution.existingTable === "table2"
-                  ? "표2 (보유 + 거주)"
+                  ? lthdResidenceAttribution.table2HoldingOnly
+                    ? "표2 (보유만 · 2020.12.31. 이전 양도분)"
+                    : "표2 (보유 + 거주)"
                   : "표1 (보유만)"}
               </p>
             </div>
@@ -413,7 +415,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <p className="text-emerald-700">청산금분 적용 표</p>
               <p className="font-semibold text-emerald-900">
                 {lthdResidenceAttribution.payTable === "table2"
-                  ? "표2 (보유 + 거주)"
+                  ? lthdResidenceAttribution.table2HoldingOnly
+                    ? "표2 (보유만 · 2020.12.31. 이전 양도분)"
+                    : "표2 (보유 + 거주)"
                   : "표1 (보유만)"}
               </p>
             </div>

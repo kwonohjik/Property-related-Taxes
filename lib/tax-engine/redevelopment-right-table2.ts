@@ -12,12 +12,14 @@
  *
  * 표2의 거주 2년 요건은 별개 축이다(`usesTable2`). 비과세와 표2가 **같은 판정 하나**(`resolveOneRightExemptionClause`)에서 나온다.
  *
- * 범위 밖(한계): 2019년 이전 양도분의 표2 연혁(G3-6)과 2010~2019년 비거주자의 API 직접 호출.
+ * 표2 연혁(2009~2020 양도분 보유 연 8% 단일축 · 2009~2019 거주요건 없음)은 `redevelopment-lthd-table2.ts`가 같은 술어로 처리한다.
+ * 범위 밖(한계): 2010~2019년 비거주자의 API 직접 호출.
  */
 import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveRightResidenceMonths } from "./redevelopment-lthd";
 import { oneRightOtherHouseCount, resolveRightSaleMarriageMerge } from "./one-house/right-sale-marriage-merge";
 import { resolveOneRightHighValueThreshold } from "./data/one-right-high-value-era";
+import { resolveLthdTable2Era } from "./data/lthd-table2-era";
 import {
   oneRightHighValueBase,
   oneRightPresaleGate,
@@ -76,9 +78,11 @@ export function rightTable2Notices(input: TransferTaxInput, clause: "ga" | "na" 
   if (holding.years < 3) return []; // 보유 3년 미만은 표1·표2 모두 공제율 0 — 표 선택이 세액을 가르지 않는다
   const resYears = residenceYearsOf(input);
   const out: string[] = [];
+  // 2009~2019 양도분은 표2에 거주 2년 요건이 없다 — 거주기간을 근거로 한 안내는 의미가 없다(`usesTable2`와 같은 연혁).
+  const noResidenceReqEra = resolveLthdTable2Era(input.transferDate) === "holding_8pct";
 
   if (clause !== undefined) {
-    if (resYears >= 2) {
+    if (resYears >= 2 && !noResidenceReqEra) {
       out.push(
         `조합원입주권에 장기보유특별공제 표2(1세대1주택)를 적용했습니다 — §89①4호 가·나목 요건 성립 + 거주 2년(소득세법 시행령 §159의4). ` +
           `거주기간별 공제율은 관리처분계획인가일까지의 거주만 반영하므로 입력한 거주기간 중 취득일~인가일을 넘는 부분은 공제율에서 제외했습니다` +
@@ -86,7 +90,7 @@ export function rightTable2Notices(input: TransferTaxInput, clause: "ga" | "na" 
       );
     }
     const highValue = oneRightHighValueBase(input) > resolveOneRightHighValueThreshold(input.transferDate);
-    if (highValue && residenceMonthsOf(input) === 0) {
+    if (highValue && residenceMonthsOf(input) === 0 && !noResidenceReqEra) {
       out.push(
         "거주기간이 입력되지 않았거나 0개월이라 장기보유특별공제 표2의 거주분이 반영되지 않았습니다 — 종전주택에 거주한 사실이 있으면 거주기간을 입력하세요. 확인이 필요합니다.",
       );
@@ -95,7 +99,7 @@ export function rightTable2Notices(input: TransferTaxInput, clause: "ga" | "na" 
   }
 
   // 가·나목 불성립 — 표2가 거주 2년까지 채웠는데 모르는 사실 때문에 막힌 경우만 안내한다.
-  if (resYears < 2 || !input.isOneHousehold || input.householdRightCount !== 1) return out;
+  if ((resYears < 2 && !noResidenceReqEra) || !input.isOneHousehold || input.householdRightCount !== 1) return out;
   const missing: string[] = [];
   const cfRedev: OneRightExemptionFacts & NonNullable<TransferTaxInput["redevelopment"]> = { ...redev };
   let cfInput: TransferTaxInput = input;

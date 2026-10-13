@@ -152,10 +152,10 @@ describe("G3-5 — 청산금분 양도일 현재 1주택 「아님」·판정 �
     });
   }
 
-  it("긍정 짝 · 선언 yes → 청산금분 비과세(gain 0 · 공제율은 표2 0.52) · 총세액 67,141,800", () => {
+  it("긍정 짝 · 선언 yes → 청산금분 비과세(gain 0) · 공제율은 청산금분 양도일(2020-03-01)의 표2 연혁 — 보유 19년 × 연 8% = 0.8(종전: 현행 식 0.52) · 총세액 67,141,800", () => {
     const { r, d } = run(split(true));
     expect(d.settlement.gain).toBe(0);
-    expect(d.settlement.lthdRate).toBe(0.52);
+    expect(d.settlement.lthdRate).toBe(0.8);
     expect(r.totalTax).toBe(67_141_800);
   });
 
