@@ -248,6 +248,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
     primaryRegionCode,
     residenceJudgmentDate,
     judgmentDateLabel,
+    acquisitionVerdict,
   });
 
   // assetKind 변경 시 표시되지 않는 필드 값 초기화

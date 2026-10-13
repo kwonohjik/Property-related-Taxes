@@ -101,7 +101,8 @@ export function Step3({ form, onChange }: Props) {
   // 보유 시작일과 증여일 둘 다 지정 중일 때만 거주요건이다 — 엔진 `resolveWasRegulatedAtAcquisition`이 같은 basis로 정한다.
   //   basis는 계산기 ④·⑧과 **같은 leaf**(`calcGiftHouseholdBasis`)로 만든다. 일자는 date-coerce로 바꾼다 — 입력 중 미완성 일자(예: 월 「0」 →
   //   2016-00-01)는 Invalid Date가 아니라 undefined가 되어 통산이 성립하지 않는다.
-  const giftBasis = calcGiftHouseholdBasis(primary, GIFT_HOUSEHOLD_SCOPE_PRIMARY);
+  // 렌더마다 새 객체가 되면 아래 `regulatedVerdict` 메모 의존성이 매번 바뀌어 메모가 무의미하다 — 자산 객체가 같으면 같은 basis다.
+  const giftBasis = useMemo(() => calcGiftHouseholdBasis(primary, GIFT_HOUSEHOLD_SCOPE_PRIMARY), [primary]);
   const giftConsolidated = giftHouseholdConsolidationStart(giftBasis) !== undefined;
   // §154⑤ 단서 용도변경이면 「주택 취득 당시」는 주거용 사용 개시일이 먼저다(엔진 `resolveResidenceJudgmentDate` 순서).
   const conversionStart = judgmentUsageConversionStart(form);

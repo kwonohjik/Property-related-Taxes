@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isHousingLike, isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
+import type { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 
 export function useRegulatedAreaAutoTip({
   form,
@@ -18,6 +19,7 @@ export function useRegulatedAreaAutoTip({
   primaryRegionCode,
   residenceJudgmentDate,
   judgmentDateLabel,
+  acquisitionVerdict,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -26,6 +28,11 @@ export function useRegulatedAreaAutoTip({
   primaryRegionCode: string;
   residenceJudgmentDate: string;
   judgmentDateLabel: string;
+  /**
+   * ② 카드의 「취득 당시」 자동 판정(엔진 basis로 읽은 값 · 결정 #38-10). 이 안내 카드는 단일 기준일로 API를 부르므로 증여받은 주택에서
+   * 값이 갈릴 수 있다 — 갈리면 취득 줄을 숨기고 근거를 ② 카드에 일원화한다(같은 화면에 반대 값 금지).
+   */
+  acquisitionVerdict: ReturnType<typeof isRegulatedByBjdCode> | null;
 }): ReactNode {
   const [regulatedAuto, setRegulatedAuto] = useState<{
     isRegulatedAtTransfer: boolean;
@@ -116,7 +123,8 @@ export function useRegulatedAreaAutoTip({
             </span>{" "}
             — {regulatedAuto.transferBasis}
           </p>
-          {regulatedAuto.acquisitionBasis && (
+          {regulatedAuto.acquisitionBasis &&
+            !(acquisitionVerdict && acquisitionVerdict.isRegulated !== regulatedAuto.wasRegulatedAtAcquisition) && (
             <p className="text-muted-foreground">
               {judgmentDateLabel}({residenceJudgmentDate}):{" "}
               <span className={regulatedAuto.wasRegulatedAtAcquisition ? "font-semibold text-amber-700 dark:text-amber-400" : ""}>
