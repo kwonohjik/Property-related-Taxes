@@ -405,3 +405,26 @@ export function prhpUnappliedExemptionNotice(
       : "일반 과세 경로로 계산되었습니다.")
   );
 }
+
+/**
+ * §155⑳ 시나리오 B(직전거주주택보유주택)가 성립했는데 다주택 중과가 붙은 경우의 확인 필요 (결정 #20 성립 B — 2026-10-14 사용자: 현행 유지).
+ *
+ * B의 과세 기간분(직전거주주택 양도일 전 기간분과 12억 초과분 안분)에 중과를 붙이는지는 정면 해석을 확보하지 못했다 —
+ * §154⑩이 그 기간분은 1주택을 보유한 것으로 보지 않으므로 15호(§167의10①15호) 요건이 서지 않는다고 읽어 중과를 유지했다
+ * (시나리오 A는 `qualifiesRentalResidenceDeeming`이 15호를 열어 중과를 배제한다). 고가주택 12억 초과분에 중과를 배제한
+ * 서면-2021-법규재산-8497·사전-2021-법령해석재산-1719는 A·① 겹침 사안이라 B에 그대로 옮기지 않았다.
+ */
+export const PRHP_SURCHARGE_UNVERIFIED_NOTICE =
+  "직전거주주택보유주택 특례(소득세법 시행령 §155⑳ 후단 · §154⑩)가 성립했지만, 임대주택을 포함한 주택 수로 다주택 중과를 적용했습니다. " +
+  "비과세에서 제외되는 기간분(직전거주주택 양도일 전 기간분 · 12억 초과분)에 중과세율을 적용하는지를 정면으로 다룬 해석은 확인하지 못했으니 확인이 필요합니다.";
+
+export function prhpSurchargeUnverifiedNotice(
+  effectiveInput: TransferTaxInput,
+  surchargeType: string | undefined,
+): string | undefined {
+  // 시나리오 B·요건 통과 검사는 방어 조건이다 — 시나리오 A는 15호(`qualifiesRentalResidenceDeeming`)가 중과를 배제해 이 함수에 중과 유형으로 오지 않는다.
+  // 세액을 낸 `calcTax`의 중과 유형으로 판정한다 — 명부가 없으면 중과 판정 결과(`multiHouseSurchargeResult`)가 없고 원시 플래그로 붙는다.
+  if (!surchargeType?.startsWith("multi_house") || !isPrhpScenarioB(effectiveInput)) return undefined;
+  if (judgeRentalHousingEligibility(effectiveInput)?.passed !== true) return undefined;
+  return PRHP_SURCHARGE_UNVERIFIED_NOTICE;
+}
