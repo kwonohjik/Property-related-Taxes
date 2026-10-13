@@ -351,7 +351,8 @@ export function LandBuildingSplitSection(props: Props) {
               </p>
             </ToneCard>
           ) : (
-            <div data-testid="part-acq-mode-land">
+            // data-field — ⑧ 오류 → 이 라디오로 이동(같은 날 취득 주택의 배율 초과분 분리 방식 어긋남 · `housingExcessPartModeMismatch`)
+            <div data-testid="part-acq-mode-land" data-field="landAcqMode">
               <RadioCardGroup
                 name={`landAcqMode-${props.asset?.assetId ?? "primary"}`}
                 tone="amber"
@@ -437,7 +438,7 @@ export function LandBuildingSplitSection(props: Props) {
               </p>
             </ToneCard>
           ) : (
-            <div data-testid="part-acq-mode-building">
+            <div data-testid="part-acq-mode-building" data-field="buildingAcqMode">
               <RadioCardGroup
                 name={`buildingAcqMode-${props.asset?.assetId ?? "primary"}`}
                 tone="amber"

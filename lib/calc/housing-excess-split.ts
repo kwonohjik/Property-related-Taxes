@@ -12,11 +12,14 @@
  *
  * 취득가액 산정 방식은 자산 단위 방식(`deriveLegacyPartAcqMode`)만 본다(#17-4) — 이 경로는 토지 취득일을 따로 받지 않아 파트별 방식 라디오가
  * 화면에 없다. 저장된 파트 방식(`landAcqMode`·`buildingAcqMode`)은 별개취득을 켰다 끈 잔재일 수 있어 읽지 않고, ④도 자산 단위 방식을 싣는다.
+ * 별개취득 토글을 켠 채 같은 날짜면 라디오가 화면에 있다 — 그 값이 자산 단위 방식과 다르면 ⑧이 막는다(`housingExcessPartModeMismatch`).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { housingExcessAreaM2, housingExcessSplitApplies, isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
+import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
@@ -74,6 +77,24 @@ export function housingExcessNeedsLandSplit(
 ): boolean {
   if (!isPrimary) return false;
   return housingExcessSplitApplies(factsOf(asset, housingExcessAreaOfAsset(asset, transferDate)));
+}
+
+/**
+ * #17 후속(F1) — 별개취득 토글 ON + 토지·건물 취득일 같음이면 이 경로를 타면서도 분리 섹션의 파트 방식 라디오가 화면에 있다(토글이 렌더 조건).
+ * 이 경로는 자산 단위 방식(위 「취득가액 산정 방식」)으로 계산하므로 라디오가 그와 다르면 ⑧이 그 라디오 칸으로 막는다 — 어긋난 칸(토지 먼저) 또는 null.
+ * 파트 방식을 그대로 실으면 환산 파트는 400(양도시 개별주택가격 미전송), 감정·매매사례 파트는 실가 총액의 안분 몫을 그 방식으로 부르는 값이 된다.
+ * 읽는 값은 ⑤가 라디오에 표시하는 값(`effectivePartAcqMode`)이다. 토지 상속·증여(D1)면 토지 라디오 대신 고정 안내가 떠서 토지는 보지 않는다.
+ */
+export function housingExcessPartModeMismatch(
+  asset: AssetForm,
+  transferDate: string | undefined,
+  isPrimary: boolean,
+): "landAcqMode" | "buildingAcqMode" | null {
+  if (asset.hasSeperateLandAcquisitionDate !== true || !housingExcessNeedsLandSplit(asset, transferDate, isPrimary)) return null;
+  const mode = deriveLegacyPartAcqMode(asset);
+  if (!effectiveLandAcquisitionCause(asset) && effectivePartAcqMode(asset.landAcqMode, asset) !== mode) return "landAcqMode";
+  if (effectivePartAcqMode(asset.buildingAcqMode, asset) !== mode) return "buildingAcqMode";
+  return null;
 }
 
 /**

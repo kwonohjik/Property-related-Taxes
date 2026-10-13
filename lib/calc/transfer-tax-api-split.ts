@@ -112,6 +112,7 @@ export function buildSplitPayload(
   // UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
   // #17-4 — 배율 초과분 분리 경로는 파트 방식 라디오가 화면에 없다(별개취득·소유자 분리가 아니다). 저장된 파트 방식은 별개취득을 켰다 끈
   //   잔재일 수 있어 자산 단위 방식으로 싣는다 — ⑤⑧의 술어(`housingExcessNeedsLandSplit`)가 읽는 방식과 같은 값.
+  //   별개취득 토글을 켠 채 같은 날짜면 라디오가 화면에 있다 — 자산 단위 방식과 다르면 ⑧이 그 라디오로 막는다(`housingExcessPartModeMismatch`, F1).
   const landAcqMode = excessSplit ? deriveLegacyPartAcqMode(primary) : effectivePartAcqMode(primary.landAcqMode, primary);
   const buildingAcqMode = excessSplit ? deriveLegacyPartAcqMode(primary) : effectivePartAcqMode(primary.buildingAcqMode, primary);
   const saleSplitMode = primary.saleSplitMode ?? "apportioned";

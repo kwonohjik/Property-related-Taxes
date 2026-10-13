@@ -10,6 +10,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessZonePending } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
+import { housingExcessPartModeMismatch } from "./housing-excess-split";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -29,6 +30,16 @@ export function validateHousingExcessSplitInputs(
     );
   }
   if (!housingExcessNeedsLandSplit(a, transferDate, isPrimary)) return null;
+  // #17 후속(F1) — 별개취득 토글 ON + 같은 날짜면 파트 방식 라디오가 화면에 있는데 이 경로는 자산 단위 방식으로 계산한다 → 어긋나면 그 라디오로.
+  const modeMismatch = housingExcessPartModeMismatch(a, transferDate, isPrimary);
+  if (modeMismatch) {
+    const part = modeMismatch === "landAcqMode" ? "토지" : "건물";
+    return fieldError(
+      modeMismatch,
+      `${label}: 토지·건물을 같은 날 취득한 주택은 배율 초과분을 나눌 때 위 「취득가액 산정 방식」 하나로 토지분·건물분을 함께 계산합니다 — ` +
+        `「${part} 취득가액 방식」을 그 방식과 같게 선택하세요. 토지를 다른 날 취득했다면 토지 취득일을 고치세요.`,
+    );
+  }
   const excess = housingExcessAreaOfAsset(a, transferDate);
   const head =
     `${label}: 토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘습니다 — 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 분리 과세하므로 ` +
