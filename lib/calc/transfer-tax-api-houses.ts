@@ -16,6 +16,7 @@ import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope"
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
+import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import { housesOwnedAtTransfer } from "./household-house-count";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
@@ -360,6 +361,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // 조특법 §71의2① 인구감소지역주택(결정 #42) — 명부에 없는 과거 사실. 키가 없으면 엔진이 「모름」으로 읽는다(불성립 + 확인 필요).
       popDeclSoleAtAcquisition: h.popDeclSoleAtAcquisition,
       popDeclAcquiredByGift: h.popDeclAcquiredByGift,
+      // 피상속인·증여자 세대 — 상속·증여로 받은 행일 때만 싣는다(⑤ 위젯과 같은 술어 — 낡은 값이 남아도 엔진에 닿지 않는다)
+      popDeclDonorHousehold: popDeclineAcquiredFromOther(h) ? h.popDeclDonorHousehold : undefined,
       popDeclPriorRight: h.popDeclPriorRight,
       popDeclPriorRightDate: h.popDeclPriorRight === "yes" ? h.popDeclPriorRightDate || undefined : undefined,
       // ④⑬ 장기임대 9유형 매트릭스 — isLongTermRental=true && rentalType 설정 시에만 전달

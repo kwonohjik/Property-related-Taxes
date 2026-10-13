@@ -16,6 +16,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { popDeclinePriorRightQuestionVisible } from "@/lib/calc/pop-decline-71-2-scope";
+import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
 interface Props {
@@ -67,25 +68,58 @@ export function HouseEntryPopDeclineBlock({ house, onUpdate, sellingAcquisitionD
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="text-sm font-medium">이 주택을 증여로 받았습니까</label>
-        <RadioCardGroup
-          name={`popDeclGift-${house.id}`}
-          data-testid="house-row-pop-decline-gift"
-          tone="rose"
-          layout="inline"
-          options={[
-            { value: "no", label: "아니오(매매 등)", testId: "house-row-pop-decline-gift-no" },
-            { value: "yes", label: "예", testId: "house-row-pop-decline-gift-yes" },
-            { value: "unknown", label: "모름", testId: "house-row-pop-decline-gift-unknown" },
-          ]}
-          value={house.popDeclAcquiredByGift ?? ""}
-          onChange={(v) => onUpdate({ popDeclAcquiredByGift: v as HouseEntry["popDeclAcquiredByGift"] })}
-        />
-        <p className="text-xs text-muted-foreground">
-          상속·증여로 받은 인구감소지역주택에 이 특례를 적용하는지에 관한 국세청 해석의 본문을 확인하지 못해 적용하지 않고 확인 필요로 알립니다.
-        </p>
-      </div>
+      {!house.isInherited && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">이 주택을 증여로 받았습니까</label>
+          <RadioCardGroup
+            name={`popDeclGift-${house.id}`}
+            data-testid="house-row-pop-decline-gift"
+            tone="rose"
+            layout="inline"
+            options={[
+              { value: "no", label: "아니오(매매 등)", testId: "house-row-pop-decline-gift-no" },
+              { value: "yes", label: "예", testId: "house-row-pop-decline-gift-yes" },
+              { value: "unknown", label: "모름", testId: "house-row-pop-decline-gift-unknown" },
+            ]}
+            value={house.popDeclAcquiredByGift ?? ""}
+            onChange={(v) =>
+              onUpdate({
+                popDeclAcquiredByGift: v as HouseEntry["popDeclAcquiredByGift"],
+                // 증여가 아니면 낡은 세대 답을 함께 지운다
+                ...(v !== "yes" ? { popDeclDonorHousehold: undefined } : {}),
+              })
+            }
+          />
+          <p className="text-xs text-muted-foreground">
+            증여로 받은 경우 증여자가 <b>별도세대</b>인지 이어서 묻습니다(국세청 해석이 있는 것은 별도세대뿐). 증여 여부를 모르면 적용하지 않고 확인 필요로 알립니다.
+          </p>
+        </div>
+      )}
+
+      {popDeclineAcquiredFromOther(house) && (
+        <div className="space-y-1.5" data-testid="house-row-pop-decline-donor-block">
+          <label className="text-sm font-medium">
+            이 주택을 취득할 당시 {house.isInherited ? "피상속인" : "증여자"}는 별도세대였습니까
+          </label>
+          <RadioCardGroup
+            name={`popDeclDonor-${house.id}`}
+            data-testid="house-row-pop-decline-donor"
+            tone="rose"
+            layout="inline"
+            options={[
+              { value: "separate", label: "별도세대", testId: "house-row-pop-decline-donor-separate" },
+              { value: "same", label: "같은 세대", testId: "house-row-pop-decline-donor-same" },
+              { value: "unknown", label: "모름", testId: "house-row-pop-decline-donor-unknown" },
+            ]}
+            value={house.popDeclDonorHousehold ?? ""}
+            onChange={(v) => onUpdate({ popDeclDonorHousehold: v as HouseEntry["popDeclDonorHousehold"] })}
+          />
+          <p className="text-xs text-muted-foreground">
+            국세청 해석(서면-2025-법규재산-1621·2010)이 이 특례를 적용한다고 밝힌 것은 별도세대로부터 상속·증여받은 경우뿐입니다. 같은 세대로부터 받았거나 모르면 해석이 없어 적용하지 않고 확인 필요로 알립니다.
+            상속 정보의 「동일세대」 칸(소령 §155②)과는 별개의 질문입니다.
+          </p>
+        </div>
+      )}
 
       {showPriorRight && (
         <div className="space-y-1.5" data-testid="house-row-pop-decline-prior-right-block">

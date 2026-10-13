@@ -324,6 +324,7 @@ export const houseSchema = z.object({
   // ── 조특법 §71의2① 인구감소지역주택 의제(결정 #42) — 명부에 없는 과거 사실 3종. 키가 없으면 「모름」(불성립 + 확인 필요) ──
   popDeclSoleAtAcquisition: z.enum(["yes", "no", "unknown"]).optional(),
   popDeclAcquiredByGift: z.enum(["no", "yes", "unknown"]).optional(),
+  popDeclDonorHousehold: z.enum(["separate", "same", "unknown"]).optional(),
   popDeclPriorRight: z.enum(["no", "yes", "unknown"]).optional(),
   popDeclPriorRightDate: z.string().date().optional(),
   // ── P2 특수 배제 (selling-house 3주택+) ──

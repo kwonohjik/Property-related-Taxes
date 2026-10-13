@@ -328,8 +328,10 @@ export interface HouseInfo {
   // ── 조특법 §71의2① 인구감소지역주택 의제 (결정 #42) — 명부에 없는 **과거 사실** 3종. 비교·모름 처리는 `transfer-reductions/population-decline-71-2.ts` ──
   /** 이 주택 취득 당시 세대가 주택·조합원입주권·분양권 중 1채(1개)만 보유했는가 — 명부에 이미 둘 이상이면 묻지 않고 불성립이다. 미답·모름은 불성립 + 확인 필요. */
   popDeclSoleAtAcquisition?: "yes" | "no" | "unknown";
-  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 해석 본문 확인 전이라 증여·모름은 미적용 + 확인 필요. */
+  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 증여·상속이면 `popDeclDonorHousehold`로 별도세대 여부를 본다. */
   popDeclAcquiredByGift?: "no" | "yes" | "unknown";
+  /** 상속·증여로 취득한 경우만 — 피상속인·증여자가 **별도세대**였는가(국세청 해석은 별도세대만 적용). 같은 세대·모름·미답은 미적용 + 확인 필요 */
+  popDeclDonorHousehold?: "separate" | "same" | "unknown";
   /** 종전(양도) 주택이 이 주택보다 늦게 기록된 경우에만 — 종전 주택을 분양권·조합원입주권으로 받았는가. 그렇다면 선후는 권리를 가진 날로 본다. */
   popDeclPriorRight?: "no" | "yes" | "unknown";
   /** `popDeclPriorRight`가 「그렇다」일 때 그 권리를 가진 날 */

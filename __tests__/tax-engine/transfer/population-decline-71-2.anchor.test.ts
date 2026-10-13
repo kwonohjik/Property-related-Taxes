@@ -10,6 +10,7 @@
  * | P-10~P-13 | 평가기 | 취득 전 2채 이상 · 종전 주택 권리 유래 · 겹침 · 이중 차감 |
  * | R-* | 판정 메뉴 route | D1·D2 비과세 고정(④ 토글 무관) · 12억 초과 안분 · 모름 + 확인 필요 · 결론 무관이면 고지 없음 · 중과 15호 추종 |
  * | RS-* | 판정 메뉴 route — 입주권 양도 | §89①4호 가·나목 「다른 주택」에서도 뺀다 · 12억 초과 안분 · 모름 + 확인 필요(결론을 가를 때만) |
+ * | D-* | 평가기 · 판정 메뉴 · 계산기 | 상속·증여 취득은 피상속인·증여자가 별도세대일 때만 적용(국세청 해석 서면-2025-법규재산-1621·2010) — 같은 세대·모름·미답은 불성립 + 확인 필요 (결정 #42-2) |
  * | M-* | 겸용 경로 | 겸용주택 양도에도 같은 판정 |
  * | CR-* | 계산기 — 입주권 양도 | 판정 메뉴에서 넘겨받은 같은 사실 → 같은 결론 · 명세 · 모름 경고 · ⑤ 질문 노출 |
  */
@@ -187,7 +188,7 @@ describe("P-8 명부에 없는 과거 사실 — 모르면 불성립 + 확인 �
       expect(unconfirmed(r)).toHaveLength(1);
     }
   });
-  it("증여 취득: 예·모름·미답 → 해석 본문 확인 전 미적용 + 확인 필요", () => {
+  it("증여 취득: 예(세대 미답)·모름·미답 → 미적용 + 확인 필요", () => {
     for (const v of ["yes", "unknown", undefined] as const) {
       const r = run({}, { popDeclAcquiredByGift: v });
       expect(eligible(r)).toBe(0);
@@ -198,6 +199,65 @@ describe("P-8 명부에 없는 과거 사실 — 모르면 불성립 + 확인 �
     const r = run({}, { isInherited: true });
     expect(eligible(r)).toBe(0);
     expect(unconfirmed(r)[0].reason).toContain("상속");
+  });
+});
+
+describe("D-1 상속·증여 취득 — 피상속인·증여자가 별도세대일 때만 적용 (결정 #42-2)", () => {
+  it("증여 + 별도세대 → 적용 · 같은 세대 → 미적용 + 확인 필요 · 모름·미답 → 미적용 + 확인 필요", () => {
+    const sep = run({}, { popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "separate" });
+    expect(eligible(sep)).toBe(1);
+    expect(sep.excludedCount).toBe(1);
+    const same = run({}, { popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "same" });
+    expect(eligible(same)).toBe(0);
+    expect(unconfirmed(same)).toHaveLength(1);
+    expect(unconfirmed(same)[0].reason).toContain("같은 세대로부터 받은 경우에는 적용하지 않았습니다");
+    expect(unconfirmed(same)[0].reason).not.toContain("모르거나");
+    expect(unconfirmed(same)[0].reason).toContain("증여");
+    for (const v of ["unknown", undefined] as const) {
+      const r = run({}, { popDeclAcquiredByGift: "yes", popDeclDonorHousehold: v });
+      expect(eligible(r)).toBe(0);
+      expect(unconfirmed(r)).toHaveLength(1);
+      expect(unconfirmed(r)[0].reason).toContain("별도세대");
+    }
+  });
+  it("상속 + 별도세대 → 적용 · 같은 세대·모름·미답 → 미적용 + 확인 필요(문구는 상속)", () => {
+    expect(eligible(run({}, { isInherited: true, popDeclDonorHousehold: "separate" }))).toBe(1);
+    for (const v of ["same", "unknown", undefined] as const) {
+      const r = run({}, { isInherited: true, popDeclDonorHousehold: v });
+      expect(eligible(r)).toBe(0);
+      expect(unconfirmed(r)).toHaveLength(1);
+      expect(unconfirmed(r)[0].reason).toContain("상속");
+    }
+  });
+  it("상속 행은 증여 질문에 답하지 않아도(미답·모름·예) 별도세대면 적용 — 증여 사유로 막히지 않는다", () => {
+    // cand 기본값(popDeclAcquiredByGift: "no")이 이 결함을 가린다 — 키 자체를 비운다
+    for (const g of [undefined, "unknown", "yes"] as const) {
+      const r = run({}, { isInherited: true, popDeclAcquiredByGift: g, popDeclDonorHousehold: "separate" });
+      expect(eligible(r)).toBe(1);
+      expect(r.excludedCount).toBe(1);
+      expect(unconfirmed(r)).toHaveLength(0);
+    }
+    // 같은 세대·미답이면 상속 사유 하나만(증여 미답 사유가 겹쳐 붙지 않는다)
+    for (const v of ["same", undefined] as const) {
+      const r = run({}, { isInherited: true, popDeclAcquiredByGift: undefined, popDeclDonorHousehold: v });
+      expect(eligible(r)).toBe(0);
+      expect(unconfirmed(r)).toHaveLength(1);
+      expect(unconfirmed(r)[0].reason).toContain("상속");
+    }
+  });
+  it("상속도 증여도 아니면 세대 답은 읽지 않는다 — 낡은 「같은 세대」가 남아도 적용된다", () => {
+    for (const v of ["same", "unknown", "separate", undefined] as const) {
+      const r = run({}, { popDeclAcquiredByGift: "no", popDeclDonorHousehold: v });
+      expect(eligible(r)).toBe(1);
+    }
+  });
+  it("증여 여부를 모르면 세대 답이 별도세대여도 적용하지 않는다(증여 모름 사유만 한 번)", () => {
+    for (const g of ["unknown", undefined] as const) {
+      const r = run({}, { popDeclAcquiredByGift: g, popDeclDonorHousehold: "separate" });
+      expect(eligible(r)).toBe(0);
+      expect(unconfirmed(r)).toHaveLength(1);
+      expect(unconfirmed(r)[0].reason).toContain("증여로 취득했는지");
+    }
   });
 });
 
@@ -366,6 +426,18 @@ describe("R 판정 메뉴 route", () => {
       const o = await observeCase(menu(patch));
       expect(o.isExempt).toBe(false);
       expect(o.undetermined).toContain("71-2-pop-decline-unconfirmed");
+    }
+  });
+
+  it("R-6b 증여 취득 — 증여자가 별도세대면 비과세 · 같은 세대·모름·미답이면 과세 + 확인 필요 (결정 #42-2)", async () => {
+    const sep = await observeCase(menu({ popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "separate" }));
+    expect(sep.validationErrors).toEqual([]);
+    expect(sep.isExempt).toBe(true);
+    expect(sep.excludedHouses).toEqual([expect.objectContaining({ houseId: "p", legalBasis: "조특법 §71의2①" })]);
+    for (const v of ["same", "unknown", undefined]) {
+      const o = await observeCase(menu({ popDeclAcquiredByGift: "yes", popDeclDonorHousehold: v }));
+      expect(o.isExempt, String(v)).toBe(false);
+      expect(o.undetermined, String(v)).toContain("71-2-pop-decline-unconfirmed");
     }
   });
 
@@ -566,6 +638,22 @@ describe("C 계산기 — 같은 사실, 같은 결론 + 중과 13·15호 추종
     expect(r).toMatchObject({ totalTax: 14_124_000, isPartialExempt: true });
     expect(r.multiHouseSurchargeEvaluation?.surchargeType).toBe("none");
     expect(r.multiHouseSurchargeEvaluation?.exclusionReasons[0].detail).toContain("조특법 §71의2①");
+  });
+
+  it("C-3 증여 + 별도세대 → body에 싣고 안분 과세 · 같은 세대 → 전액 과세 + 경고 · 증여가 아니면 낡은 세대 답은 body에 싣지 않는다 (결정 #42-2)", async () => {
+    const sep = await calc({ popDeclSoleAtAcquisition: "yes", popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "separate" });
+    expect((sep.body as { houses: Record<string, unknown>[] }).houses.find((h) => h.id === "p")).toMatchObject({
+      popDeclAcquiredByGift: "yes",
+      popDeclDonorHousehold: "separate",
+    });
+    expect(sep.r).toMatchObject({ totalTax: 14_124_000, isPartialExempt: true });
+    const same = await calc({ popDeclSoleAtAcquisition: "yes", popDeclAcquiredByGift: "yes", popDeclDonorHousehold: "same" });
+    expect(same.r).toMatchObject({ totalTax: 299_816_000, isPartialExempt: false });
+    expect(same.r.warnings.join(" ")).toContain("조특법 §71의2①");
+    const stale = await calc({ popDeclSoleAtAcquisition: "yes", popDeclAcquiredByGift: "no", popDeclDonorHousehold: "same" });
+    const stalePayload = (stale.body as { houses: Record<string, unknown>[] }).houses.find((h) => h.id === "p")!;
+    expect(stalePayload.popDeclDonorHousehold).toBeUndefined();
+    expect(stale.r).toMatchObject({ totalTax: 14_124_000, isPartialExempt: true });
   });
 
   it("C-2 모름 → 안분 아닌 전액 과세 + 다주택 중과 + 확인 필요 경고 (수정 전과 같은 세액 299,816,000)", async () => {
