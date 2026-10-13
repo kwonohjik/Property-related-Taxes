@@ -47,6 +47,7 @@ import { SellingHousePreDesignationContractSection } from "@/components/calc/tra
 import { preDesignationContractInScopeOf } from "@/lib/calc/pre-designation-contract-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
+import { otherUocRowNumberOf } from "@/lib/calc/house-row-required-issues";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
 import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
 import { isOwnedAtTransfer, sameDayOrderApplies } from "@/lib/calc/household-house-count";
@@ -742,6 +743,8 @@ export function HousesListSection({
               // §155① 신규 주택 후보(양도 주택보다 나중에 취득한 행)에 취득 경위를 묻는다 — 판정 메뉴·계산기 같은 술어(결정 #43).
               popDeclineEnabled={judgmentMenu || popDeclineQuestionAsset(form.assets?.[0]?.assetKind)}
               sellingAcquisitionDate={primaryAcquisitionDateOf(form.assets?.[0])}
+              // §155⑧ 「각각 1개씩」 — 다른 행의 ⑧ 표시를 ⑤ 카드가 알린다(⑧·⑫는 둘째 행을 막는다).
+              otherUocRowNumber={otherUocRowNumberOf(houses, editingHouse.id)}
               newHouseOriginEnabled={newHouseOriginQuestionVisible(
                 form.assets?.[0]?.assetKind,
                 // 양도 주택이 기존주택의 연장이면 후보 선후도 헐기 전 주택 취득일 기준이다(④와 같은 leaf).

@@ -72,6 +72,8 @@ import { houseRowFactIssues } from "./house-row-fact-issues";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
+import { duplicateUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
+import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
 
 export interface OneHouseJudgmentValidationError {
   field: string;
@@ -247,6 +249,15 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(err(`houses.${i}.${uocIssue.field}`, `보유 주택 ${i + 1}: ${uocIssue.message}`));
     }
   });
+  // §155⑧ 「각각 1개씩」 — 둘째 ⑧ 행부터 막는다(계산기 ⑧·⑫와 같은 leaf). 그 행의 ⑤ 토글을 끄면 풀린다.
+  for (const d of duplicateUnavoidableOutsideCapitalRows((form.houses ?? []).map((h) => h.oneHouseUnavoidableOutsideCapital))) {
+    errors.push(
+      err(
+        `houses.${d.index}.oneHouseUnavoidableOutsideCapital`,
+        `보유 주택 ${d.index + 1}: ${duplicateUnavoidableOutsideCapitalMessage(`보유 주택 ${d.firstIndex + 1}`)}`,
+      ),
+    );
+  }
 
   // ⑧ OH-12c — 증여분 선언이면 증여일 필수. 토글이 열리는 두 자리(② 명부 상속주택 · 상속 권리 카드) 중
   //    어느 하나라도 열려 있어야 요구한다(닫힌 칸을 요구하면 막다른 길).

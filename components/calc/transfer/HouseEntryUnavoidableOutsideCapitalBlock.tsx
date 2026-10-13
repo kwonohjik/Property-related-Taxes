@@ -52,9 +52,14 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 interface Props {
   house: HouseEntry;
   onUpdate: (patch: Partial<HouseEntry>) => void;
+  /**
+   * 다른 행에 이미 이 표시가 있으면 그 행 번호(1부터). ⑧ 주택은 「각각 1개씩」이라 한 채다 —
+   * ⑧·⑫가 둘째 행을 막는다(`duplicateUnavoidableOutsideCapitalRows`). 여기서는 켠 상태에서 그 사실을 알린다.
+   */
+  otherUocRowNumber?: number;
 }
 
-export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Props) {
+export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate, otherUocRowNumber }: Props) {
   const on = house.oneHouseUnavoidableOutsideCapital === true;
   /**
    * 「수도권 밖」 요건 — 행 주소로 **판정만** 한다.
@@ -114,6 +119,15 @@ export function HouseEntryUnavoidableOutsideCapitalBlock({ house, onUpdate }: Pr
             그 요건이 <b>없고</b> 대신 <b>수도권 밖 소재</b>를 요구합니다. 둘 다 해당하면 각각 켜세요.
           </p>
         </ToneCard>
+
+        {on && otherUocRowNumber !== undefined && (
+          <ToneCard tone="rose" bodyClassName="" className="px-3 py-2">
+            <p data-testid="house-row-uoc-duplicate-warning" className="text-xs leading-relaxed">
+              <b>주택 {otherUocRowNumber}</b>에도 이 표시가 있습니다. §155⑧은 이 주택과 일반주택을 <b>각각 1개씩</b>{" "}
+              소유한 세대에만 적용되므로 <b>한 채만</b> 표시할 수 있습니다 — 해당하는 한 행에만 켜세요.
+            </p>
+          </ToneCard>
+        )}
 
         {on && inCapital === true && (
           <ToneCard tone="rose" bodyClassName="" className="px-3 py-2">

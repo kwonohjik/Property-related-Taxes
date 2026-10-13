@@ -97,3 +97,40 @@ export function houseUnavoidableOutsideCapitalIssue(
   });
   return issue ? { field: "unavoidableOutsideCapitalResolvedDate", message: issue.message } : null;
 }
+
+/**
+ * §155⑧ 「각각 1개씩」 — ⑧ 표시 행이 둘 이상이면 **첫 ⑧ 행 다음** 행마다 `{ index, firstIndex }`를 돌려준다.
+ *
+ * 법문(실독 2026-10-13 · MST 290841): ⑧은 「부득이한 사유로 취득한 수도권 밖에 소재하는 주택과 그 밖의 주택(일반주택)을
+ * 국내에 **각각 1개씩** 소유하고 있는 1세대」에만 적용되고, 영 §167의10①4호는 「제155조제8항에 따른 수도권 밖에 소재하는
+ * 주택」을 그대로 인용한다 ⇒ ⑧ 주택은 **한 채**다.
+ *
+ * 세대 판정(`findUnavoidableOutsideCapitalRow`)과 중과 4호 분기(`multi-house-surcharge-exclusion.ts`)는 모두 **첫 ⑧ 행**을 본다.
+ * 둘째 행을 허용하면 사유·해소일은 첫 행에서, 「중과 주택 수 2채 안인가」는 다른 행에서 읽는 모순이 생겼다(PR #2155 후속).
+ * 계산기 ⑧·판정 메뉴 ⑧·⑫ refine·⑤ 경고가 이 leaf를 쓴다. 행 키 이름이 층마다 달라(폼 `oneHouseUnavoidableOutsideCapital` ·
+ * API `isUnavoidableOutsideCapital`) 표시 여부 배열을 받는다.
+ */
+export function duplicateUnavoidableOutsideCapitalRows(
+  flags: ReadonlyArray<boolean | undefined>,
+): { index: number; firstIndex: number }[] {
+  const firstIndex = flags.findIndex((f) => f === true);
+  if (firstIndex < 0) return [];
+  return flags.flatMap((f, index) => (f === true && index > firstIndex ? [{ index, firstIndex }] : []));
+}
+
+/** ⑧·⑫ 공용 문구 — `firstLabel`은 먼저 표시한 행(「보유 주택 N」 등). */
+export function duplicateUnavoidableOutsideCapitalMessage(firstLabel: string): string {
+  return (
+    `§155⑧ 수도권 밖 부득이 주택은 한 채만 표시할 수 있습니다 — ${firstLabel}에도 표시돼 있습니다. ` +
+    `이 특례는 그 주택과 일반주택을 「각각 1개씩」 소유한 세대에만 적용되므로(소득세법 시행령 §155⑧) 해당하는 한 행에만 켜세요.`
+  );
+}
+
+/** ⑤ — 편집 중인 행 말고 §155⑧ 표시가 있는 첫 행의 번호(1부터). 없으면 `undefined`. */
+export function otherUocRowNumberOf(
+  houses: ReadonlyArray<Pick<HouseEntry, "id" | "oneHouseUnavoidableOutsideCapital">>,
+  editingId: string,
+): number | undefined {
+  const i = houses.findIndex((h) => h.id !== editingId && h.oneHouseUnavoidableOutsideCapital === true);
+  return i < 0 ? undefined : i + 1;
+}

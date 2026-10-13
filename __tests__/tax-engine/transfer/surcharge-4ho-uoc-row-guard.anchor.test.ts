@@ -48,3 +48,20 @@ describe("#16-1 4호 — ⑧ 행이 중과 주택 수 2채 안에 있을 때만"
     expect(evaluate([SELLING, inherited])).toEqual({ eff: 2, uoc: false });
   });
 });
+
+/**
+ * PR #2155 후속 — ⑧ 주택은 「각각 1개씩」이라 한 채다. 세대 판정(`findUnavoidableOutsideCapitalRow`)이 사유·해소일을 읽는 **첫 ⑧ 행**을
+ * 4호 분기도 본다(⑧·⑫가 둘째 행을 막는다 — `transfer.route.uoc-duplicate-row.anchor.test.ts`).
+ */
+describe("4호 — ⑧ 행이 여럿이면 첫 행만 본다 (세대 판정과 같은 행)", () => {
+  it("첫 ⑧ 행이 중과 주택 수 밖 · 둘째 ⑧ 행이 2채 안 → 4호 배제 없음 (수정 전: 둘째 행으로 배제)", () => {
+    expect(
+      evaluate([SELLING, OUTSIDE_COUNT({ isUnavoidableOutsideCapital: true }), makeHouse("h2", { isUnavoidableOutsideCapital: true })]),
+    ).toEqual({ eff: 2, uoc: false });
+  });
+  it("순서를 바꾸면(첫 ⑧ 행이 2채 안) → 4호 배제", () => {
+    expect(
+      evaluate([SELLING, makeHouse("h2", { isUnavoidableOutsideCapital: true }), OUTSIDE_COUNT({ isUnavoidableOutsideCapital: true })]),
+    ).toEqual({ eff: 2, uoc: true });
+  });
+});
