@@ -51,6 +51,7 @@ export function applyLthdExclusion(r: RedevelopmentResult): RedevelopmentResult 
     lthd: 0,
     lthdRate: 0,
     lthdRateBasis: undefined, // 공제율 선택 근거는 배제된 율에는 맞지 않는다
+    lthdHoldingOnlyTable2: undefined,
     ...zeroLthdParts(b),
   });
   return {
@@ -115,14 +116,14 @@ export function applyRental97LthdSpecial(
         applyFairMarketRatio(rentalGain, special.overrideRate) + applyFairMarketRatio(nonRentalGain, b.lthdRate);
       const blendedRate =
         special.overrideRate * special.rentalGainRatio + b.lthdRate * (1 - special.rentalGainRatio);
-      return { ...b, lthd, lthdRate: blendedRate, lthdRateBasis: undefined, ...clearLthdParts(b) };
+      return { ...b, lthd, lthdRate: blendedRate, lthdRateBasis: undefined, lthdHoldingOnlyTable2: undefined, ...clearLthdParts(b) };
     }
 
     if (special.additionalRate !== undefined) {
       // §97의4 — 기본 공제율이 0(보유 3년 미만)이면 가산하지 않는다. 정상 경로와 같은 규약.
       if (b.lthdRate <= 0) return b;
       const combined = b.lthdRate + special.additionalRate;
-      return { ...b, lthd: applyFairMarketRatio(gain, combined), lthdRate: combined, lthdRateBasis: undefined, ...clearLthdParts(b) };
+      return { ...b, lthd: applyFairMarketRatio(gain, combined), lthdRate: combined, lthdRateBasis: undefined, lthdHoldingOnlyTable2: undefined, ...clearLthdParts(b) };
     }
     return b;
   };
@@ -163,6 +164,8 @@ function clearLthdParts(
  * 「표1 (보유만)」으로 잘못 보였다. 분해값이 없으면(분해 전 결과) 종전 짐작을 쓴다.
  */
 function appliedTable(branches: RedevelopmentBranchDetail[]): "table1" | "table2" {
+  // 2009~2020 양도분의 표2는 보유 연 8% 단일축이라 거주분이 0이어도 표2다 — 표지가 붙은 분기가 있으면 표2.
+  if (branches.some((b) => b.lthdHoldingOnlyTable2 === true)) return "table2";
   if (branches.every((b) => b.lthdResidencePart === undefined)) {
     return branches[0].lthdRate > 0.3 ? "table2" : "table1";
   }
@@ -283,6 +286,9 @@ export function applyHighValueAllocation(
       payResidenceMonths,
       existingTable: appliedTable([redevRaw.preApproval, redevRaw.postApprovalExistingHouse]),
       payTable: appliedTable([redevRaw.settlement]),
+      ...([redevRaw.preApproval, redevRaw.postApprovalExistingHouse, redevRaw.settlement].some((b) => b.lthdHoldingOnlyTable2 === true)
+        ? { table2HoldingOnly: true as const }
+        : {}),
       ...(!landNewBuild && redevInfo.priorResidenceStartDate && redevInfo.priorResidenceEndDate
         ? {
             priorPeriod: {

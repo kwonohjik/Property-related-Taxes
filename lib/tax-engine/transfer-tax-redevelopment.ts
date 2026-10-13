@@ -216,7 +216,7 @@ export function calculateRedevelopmentTax(
    * `transfer-tax-redevelopment-steps.ts`로 분리했다(800줄 정책 — 이 함수가 828줄이었다).
    * 입력 3개·출력 5개로 이음매가 좁아 **구조분해로 받으면 하류 참조가 바뀌지 않는다**.
    */
-  const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, oneRightSharedNotice, surchargeFallbackNotice } =
+  const { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, oneRightSharedNotice, surchargeFallbackNotice, lthdTable2UnsupportedNotice } =
     runRedevelopmentGainSteps(input, parsedRates, steps, isOneHouseSingle, isOneHouseForTable2, lthdSpecialNotice, multiHouseSurchargeResult, opts?.exemptionResult, opts?.burdenedGift);
 
   // ─ Step B: 양도차익·LTHD steps emit (인가전 / 인가후 기존 / 청산금 3분할) ─
@@ -628,6 +628,7 @@ export function calculateRedevelopmentTax(
       // 표2 대상이어도 공제가 0이면(미등기 배제 · 전액 비과세) 「표2를 적용했습니다」를 말하지 않는다
       ...(rightTable2Clause !== undefined && redevAfterRight.total.lthd <= 0 ? [] : rightTable2Notices(input, rightTable2Clause)),
       ...(surchargeFallbackNotice ? [surchargeFallbackNotice] : []),
+      ...(lthdTable2UnsupportedNotice ? [lthdTable2UnsupportedNotice] : []),
     ],
     transferGain: redevAfterRight.total.gain,
     taxableGain: redevAfterRight.total.gain,

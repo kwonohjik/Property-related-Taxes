@@ -470,10 +470,10 @@ export function buildRedevLthdFormula(
   let residenceMemo = "";
   if (attr) {
     if (branch === "settlement") {
-      const tableLabel = attr.payTable === "table2" ? "표2(보유+거주)" : "표1(보유만)";
+      const tableLabel = attr.payTable === "table2" ? (attr.table2HoldingOnly ? "표2(보유만 — 2020.12.31. 이전 양도분)" : "표2(보유+거주)") : "표1(보유만)";
       residenceMemo = `, 청산금분 거주 ${attr.payResidenceMonths}월 (신축만) → ${tableLabel}`;
     } else {
-      const tableLabel = attr.existingTable === "table2" ? "표2(보유+거주)" : "표1(보유만)";
+      const tableLabel = attr.existingTable === "table2" ? (attr.table2HoldingOnly ? "표2(보유만 — 2020.12.31. 이전 양도분)" : "표2(보유+거주)") : "표1(보유만)";
       residenceMemo = `, 기존건물분 거주 ${attr.existingResidenceMonths}월 (종전+신축 통산) → ${tableLabel}`;
     }
   }

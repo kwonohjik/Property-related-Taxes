@@ -31,6 +31,7 @@ import {
   SETTLEMENT_ONE_HOUSE_UNDETERMINED_WARNING,
 } from "./transfer-tax-redevelopment-settlement";
 import { redevUsesTable2 } from "./redevelopment-lthd";
+import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { oneRightInputAfterSpecialActExclusionOf } from "./one-house/right-sale-special-act-exclusion";
 import { settlementRightsValueBase, oneRightSharedOwnershipNotice } from "./transfer-tax-redevelopment-shared-ownership";
 import { oneRightLandContributionNotices } from "./transfer-tax-redevelopment-land-right";
@@ -503,5 +504,12 @@ export function runRedevelopmentGainSteps(
           ...oneRightLandContributionNotices(input, redevAfterRight),
         ]
       : [];
-  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, oneRightSharedNotice, surchargeFallbackNotice };
+  // 2009-01-01 전 양도분은 표2 연혁을 지원하지 않아 현행 식으로 계산했다 — 일반 경로(`transfer-tax-lthd-982-step.ts`)와 같은 고지.
+  const lthdTable2UnsupportedNotice =
+    table2ActiveForRedev &&
+    redevAfterRight.total.lthd > 0 &&
+    resolveLthdTable2Era(input.transferDate) === "unsupported"
+      ? LTHD_TABLE2_UNSUPPORTED_NOTICE
+      : undefined;
+  return { allocated, isHighValue, lthdExclusionReason, redevAfterRight, rental97Special, settlementWarning, oneRightThresholdNotice, oneRightRequirementNotices, oneRightSharedNotice, surchargeFallbackNotice, lthdTable2UnsupportedNotice };
 }

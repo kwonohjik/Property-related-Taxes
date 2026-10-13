@@ -54,6 +54,8 @@ export interface RedevLandContribResult {
   lthdHoldingYears: number;
   /** 적용 LTHD 율 — computeLthdRateSplit().total (표1이면 보유율과 같다) */
   lthdRate: number;
+  /** 표2 단일축 시기(2009~2020 양도)의 보유 연 8% — 거주분이 0이어도 표2라는 표지 */
+  holdingOnlyTable2?: true;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -100,6 +102,8 @@ export interface RedevLandContribInput {
   isOneHouseSingle?: boolean;
   /** 표2 거주월수 — 실가 경로와 같은 leaf(`resolveRightResidenceMonths`). 미전달 = 0 */
   residencePeriodMonths?: number;
+  /** 양도일 — 표2 연혁 축(2009~2020 양도분은 보유 연 8% 단일축). 호출부가 실가 경로와 같은 값을 넘긴다. 미전달 = 현행 식 */
+  transferDate?: Date;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -174,6 +178,7 @@ export function calcRedevLandContribEstimated(
     isSuccessorRightToMoveIn: false,
     isOneHouseSingle: input.isOneHouseSingle ?? false,
     residencePeriodMonths: input.residencePeriodMonths ?? 0,
+    transferDate: input.transferDate,
   });
 
   // preApproval 브랜치에서 보유율·월수 추출
@@ -205,5 +210,6 @@ export function calcRedevLandContribEstimated(
     lthdHoldingEndDate: input.approvalDate,
     lthdHoldingYears: holdingYears,
     lthdRate: preApprovalBranch.rate,
+    ...(preApprovalBranch.holdingOnlyTable2 ? { holdingOnlyTable2: true as const } : {}),
   };
 }
