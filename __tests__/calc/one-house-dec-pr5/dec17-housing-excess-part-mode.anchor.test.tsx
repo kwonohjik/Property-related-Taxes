@@ -179,6 +179,16 @@ describe("⑧ — 파트 라디오가 자산 단위 방식과 다르면 그 라�
     expect(modeIssue(r.issues)).toBeUndefined();
   });
 
+  it("대조 — 토지 상속(D1)이면 토지 라디오 대신 고정 안내가 뜬다 → 잔존 토지 방식은 보지 않는다", async () => {
+    const r = await runCalc(single({ ...SAME_DAY, landAcquisitionCause: "inheritance", landCauseHost: "purchase", landAcqMode: "estimated", buildingAcqMode: "actual" }));
+    expect(modeIssue(r.issues)).toBeUndefined();
+  });
+
+  it("🔑 토지 상속(D1)이어도 건물 라디오가 어긋나면 건물 칸으로 막는다", async () => {
+    const r = await runCalc(single({ ...SAME_DAY, landAcquisitionCause: "inheritance", landCauseHost: "purchase", landAcqMode: "estimated", buildingAcqMode: "estimated" }));
+    expect(modeIssue(r.issues)?.field).toBe("buildingAcqMode");
+  });
+
   it("대조 — 배율 한도 이내(분리 경로 밖)면 이 규칙은 걸리지 않는다", async () => {
     const r = await runCalc(single({ ...SAME_DAY, acquisitionArea: "250", transferArea: "250", landAcqMode: "estimated", buildingAcqMode: "actual" }));
     expect(modeIssue(r.issues)).toBeUndefined();
