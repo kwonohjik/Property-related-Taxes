@@ -23,13 +23,18 @@ export function buildRentalLthdParts(args: {
   splitDetail: SplitGainResult | undefined;
   /** 배율 초과분 양도차익 — 토지 파트에서 뗀다(없으면 0) */
   nonBusinessGain: number;
+  /**
+   * G-3 — 보유요건 미달 나중 취득 토지분이 주택분에서 빠졌으면 토지 파트 전체가 특례 대상 밖이다(토지 손실도 상쇄하지 않는다).
+   * 이때 토지 파트 양도차익은 0이고 `housingGain`은 건물분만이다.
+   */
+  laterLandExcluded?: boolean;
   /** 호출부가 특례 계산에 쓰는 주택분 양도차익(= 양도차익 − 배율 초과분) */
   housingGain: number;
 }): RentalLthdParts | undefined {
-  const { splitDetail, nonBusinessGain, housingGain } = args;
+  const { splitDetail, nonBusinessGain, laterLandExcluded, housingGain } = args;
   if (!splitDetail) return undefined;
   if ((splitDetail.selfOwns ?? "both") !== "both") return undefined;
-  const landGain = splitDetail.land.gain - nonBusinessGain;
+  const landGain = laterLandExcluded ? 0 : splitDetail.land.gain - nonBusinessGain;
   const buildingGain = splitDetail.building.gain;
   if (landGain + buildingGain !== housingGain) return undefined;
   const landYears = splitDetail.land.holdingYears;

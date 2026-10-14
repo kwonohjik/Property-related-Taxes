@@ -203,6 +203,21 @@ export interface SplitNonBusinessLandPart {
 }
 
 /**
+ * G-3 — 주택보다 **나중에 취득**해 영 §154① 보유요건에 못 미치는 부수토지분(배율 초과분 제외)을 §155⑳ 특례 경로가 비과세 범위에서 뗀 내역.
+ * 일반 경로는 같은 사실을 `land.taxableGainAfterProration`(안분 없이 전액)으로 싣고, 특례 경로는 토지 파트를 주택분(`rhe`)에서 통째로 빼므로
+ * 파트 echo(`land.longTermDeduction` 등 — 주택분 기준)만으로는 이 토지분의 양도차익·공제가 보이지 않아 따로 싣는다. 세액에는 영향이 없다.
+ */
+export interface SplitLaterLandPart {
+  /** 비과세에서 빠져 전액 과세되는 토지분 양도차익(배율 초과분 제외) */
+  gain: number;
+  /** 토지 본래 보유연수 */
+  holdingYears: number;
+  /** 장기보유특별공제율 (표1 — 보유요건 미달 토지분은 보유 3년 미만이라 0) */
+  longTermRate: number;
+  longTermDeduction: number;
+}
+
+/**
  * §100③ 「구분 기장 가액이 안분 가액과 30% 이상 차이 → 불분명 의제」 판정 결과.
  *
  * 「소득세법」 제100조 제3항의 적용 내역이다. 구분 기재가 **없는** 일괄양도에는 비교 대상이
@@ -268,6 +283,8 @@ export interface SplitGainResult {
   building: SplitPartResult;
   /** 배율 초과 부수토지(비사업용 토지) 파트 — 초과분이 있을 때만 (G-2) */
   nonBusinessLandPart?: SplitNonBusinessLandPart;
+  /** G-3 나중 취득 부수토지분 — §155⑳ 특례 경로가 비과세에서 뗄 때만 (`SplitLaterLandPart`) */
+  laterLandPart?: SplitLaterLandPart;
   /**
    * 취득시 기준시가 안분비율. **파트별 실지거래가액을 아는 경우에는 안분 자체를 하지 않으므로
    * 존재하지 않는다**(계획서 transfer-split-acq-std-gate-relaxation §4.3 — `{0,0}` 금지).
