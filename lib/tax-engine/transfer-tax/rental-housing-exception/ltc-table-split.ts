@@ -13,7 +13,7 @@
 
 import { applyFairMarketRatio, applyRate } from "../../tax-utils";
 import { calcLongTermRate } from "../../transfer-tax-mixed-use-inheritance";
-import { resolveAppurtenantLandLthdRate } from "../../appurtenant-land-lthd-rate";
+import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "../../appurtenant-land-lthd-rate";
 
 // ============================================================
 // 공제율 계산 함수
@@ -130,6 +130,7 @@ export type Gain95PartEcho = {
     table1Applied: boolean;
     /** 토지 자신의 보유연수로 표2를 적용했을 때의 공제율과 값이 달라졌다 */
     changedFromOwnYears: boolean;
+    basis: { source: "circular" | "ruling"; twoAxis: boolean };
   };
 };
 
@@ -217,6 +218,7 @@ export function calculateGain95BothTablesByParts(
               table2Rate: appurtenant.table2Rate,
               table1Applied: appurtenant.table1Applied,
               changedFromOwnYears: appurtenant.rate !== landOwnRate2,
+              basis: resolveAppurtenantLthdNoticeBasis(transferDate),
             },
           }
         : {}),

@@ -437,13 +437,13 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
     expect(d.formulaTrace.gain95Table1).toBe(1_136_909_092);
     const w = (r.warnings ?? []).find((x) => x.includes("회신 방식을 적용하지 않았습니다"));
     expect(w).toBeDefined();
-    expect(w).toContain("합치는 순서를 정할 근거를 확인하지 못해");
-    expect(w).toContain("확인이 필요합니다");
+    expect(w).toContain("합치는 순서를 정할 근거를 확인하지 못해, 배율 초과분을 안분 전에 떼어낸 주택분에 §161②를 적용하는 방식으로 계산했습니다 — 확인이 필요합니다");
+    expect(w).not.toContain("종전");
     expect(w).not.toContain("다루지 않았습니다"); // 회신 본문을 직접 확인하지 못한 채 단정하는 서술 금지
     expect(w).not.toMatch(/유리|불리|절감|절세/);
   });
 
-  it("③ 불변 — A2 + G-3(나중 취득 토지 보유요건 미달): 회신 방식을 쓰지 않고 종전 계산(162,393,399) 유지 · 그 사실을 고지 (일반 경로와 같은 술어)", () => {
+  it("③ A2 + G-3(나중 취득 토지 보유요건 미달): 회신 방식을 쓰지 않고(고지) 토지분은 자신의 보유연수로 장특을 구한다 — 총세액 288,684,598 (종전 162,393,399는 건물 연수를 토지분에도 곱했다)", () => {
     // 건물 2014-09 · 토지 2023-10 · 양도 2024-06-01(토지 보유 8개월 < 2년) · 20억 · 660㎡ 비도시
     const over = { landAcquisitionDate: D("2023-10-01") };
     const r = calculateTransferTax(sepInput(2_000_000_000, 1_600_000_000, 400_000_000, true, over), rates);
@@ -464,8 +464,8 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
     const w = (r.warnings ?? []).find((x) => x.includes("나중에 취득한 부수토지가 보유요건"));
     expect(w).toBeDefined();
     expect(w).toContain("회신 방식을 적용하지 않았습니다");
-    expect(w).toContain("12억 초과 비율");
-    expect(w).toContain("확인이 필요합니다");
+    expect(w).toContain("나중에 취득한 부수토지분을 일반 경로처럼 비과세에서 제외하지 않고 배율 초과분만 떼어낸 주택분에 12억 초과 비율 안분을 적용하는 방식으로 계산하므로, 그 토지분의 처리를 별도로 확인해야 합니다 — 확인이 필요합니다");
+    expect(w).not.toContain("종전");
     expect(w).not.toContain("회신 방식으로 계산했습니다");
     expect(w).not.toMatch(/유리|불리|절감|절세/);
     // 같은 사실의 회신 적용 여부는 G-3 술어 하나로 갈린다 — G-3가 아니면(토지를 주택보다 먼저 취득) 회신 방식을 적용한다

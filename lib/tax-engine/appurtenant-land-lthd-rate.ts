@@ -22,6 +22,7 @@
  *   · `transfer-tax-lthd.ts` split 분기(토지·건물 분리취득 주택) + §155⑳ 거주주택 특례(`ltc-table-split.ts`)
  */
 import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
+import { LTHD_TABLE2_SPLIT_TRANSFER_START } from "./data/lthd-table2-era";
 
 export interface AppurtenantLandLthdRateInput {
   /** 「그 토지의 전체보유기간」 — 토지 자신의 보유연수 */
@@ -62,9 +63,33 @@ export function resolveAppurtenantLandLthdRate(p: AppurtenantLandLthdRateInput):
   };
 }
 
+/** 기본통칙 95-0…1의 전신(구 95-0…2) 신설일 — 이 날 전 양도분은 통칙이 아니라 과세관청 해석(예규)이 근거다. */
+export const APPURTENANT_LTHD_CIRCULAR_START = new Date("2019-12-23");
+
+/** 고지 근거·독법 병기 판정 — 양도일로만 정한다. 호출부는 결과(echo)에 이 값을 싣고 표시 계층은 그대로 읽는다. */
+export interface AppurtenantLthdNoticeBasis {
+  /** `circular` = 기본통칙 95-0…1(2019.12.23. 신설) · `ruling` = 통칙 신설 전 과세관청 해석 */
+  source: "circular" | "ruling";
+  /** 표2가 보유분·거주분 2축인 양도분(2021.1.1.~) — 표1과 비교하는 표2의 단위를 다룬 해석례를 확인하지 못한 사실을 병기한다 */
+  twoAxis: boolean;
+}
+
+export function resolveAppurtenantLthdNoticeBasis(transferDate?: Date): AppurtenantLthdNoticeBasis {
+  // 양도일이 없으면(레거시 호출) 현행 기준.
+  if (!transferDate) return { source: "circular", twoAxis: true };
+  return {
+    source: transferDate.getTime() >= APPURTENANT_LTHD_CIRCULAR_START.getTime() ? "circular" : "ruling",
+    twoAxis: transferDate.getTime() >= LTHD_TABLE2_SPLIT_TRANSFER_START.getTime(),
+  };
+}
+
 /**
  * 결과 고지(사실만 — 유불리 표현 없음). 통칙이 적용돼 값이 달라질 수 있는 split 경로(일반·§155⑳)가 쓴다.
  * 숫자는 호출부가 쓴 값 그대로다(재계산 금지 — 엔진 값 표시 드리프트 방지).
+ *
+ * 근거 인용은 양도일 연혁을 따른다 — 통칙은 2019.12.23.에 신설(구 95-0…2, 2024.3.15. 95-0…1로 번호 이동)이라 그 전 양도분에
+ * 「기본통칙에 따라」라고 쓰지 않는다(재산세과-4375(2008.12.24.) 등 과세관청 해석이 같은 결론). 2021.1.1. 이후 양도분은 표2가
+ * 2축이라 표1과 비교하는 표2의 단위(보유분+거주분 합 vs 보유분만)를 다룬 해석례를 확인하지 못했다는 사실을 병기한다.
  */
 export function appurtenantLandLthdNoticeText(p: {
   landHoldingYears: number;
@@ -72,11 +97,18 @@ export function appurtenantLandLthdNoticeText(p: {
   table1Rate: number;
   table2Rate: number;
   table1Applied: boolean;
+  basis: AppurtenantLthdNoticeBasis;
 }): string {
   const pct = (r: number) => Math.round(r * 100);
-  return (
-    `토지가 주택보다 먼저 취득돼 소득세법 기본통칙 95-0…1에 따라 표1(토지 전체 보유기간 ${p.landHoldingYears}년 → ${pct(p.table1Rate)}%)과 ` +
+  const ground =
+    p.basis.source === "circular"
+      ? "소득세법 기본통칙 95-0…1에 따라"
+      : "과세관청 해석(재산세과-4375, 2008.12.24. 등 — 주택보다 보유기간이 오래된 주택 부수토지는 표1과 표2 중 큰 공제율)에 따라";
+  const text =
+    `토지가 주택보다 먼저 취득돼 ${ground} 표1(토지 전체 보유기간 ${p.landHoldingYears}년 → ${pct(p.table1Rate)}%)과 ` +
     `표2(주택 부수토지로서의 보유기간 ${p.houseHoldingYears}년 → ${pct(p.table2Rate)}%) 중 큰 공제율 ` +
-    `${pct(Math.max(p.table1Rate, p.table2Rate))}%(${p.table1Applied ? "표1" : "표2"})를 토지분에 적용했습니다.`
-  );
+    `${pct(Math.max(p.table1Rate, p.table2Rate))}%(${p.table1Applied ? "표1" : "표2"})를 토지분에 적용했습니다.`;
+  return p.basis.twoAxis
+    ? `${text} 표2가 보유분과 거주분으로 나뉜 2021.1.1. 이후 양도분에서 표1과 비교하는 표2의 단위(보유분과 거주분의 합인지 보유분만인지)를 다룬 해석례는 확인하지 못해 확인이 필요합니다.`
+    : text;
 }

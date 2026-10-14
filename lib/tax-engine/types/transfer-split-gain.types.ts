@@ -130,6 +130,8 @@ export interface SplitPartResult {
     table1Applied: boolean;
     /** 통칙을 적용하지 않았다면(토지 자신의 보유연수로 표2) 나왔을 공제율과 값이 달라졌다 — 고지 게이트 */
     changedFromOwnYears: boolean;
+    /** 고지의 근거 인용·독법 병기 판정(양도일 연혁) — 표시 계층이 그대로 읽는다 */
+    basis: { source: "circular" | "ruling"; twoAxis: boolean };
   };
   /** §97② 단서 swap 발동 여부 (자산 단위) */
   swapApplied?: boolean;

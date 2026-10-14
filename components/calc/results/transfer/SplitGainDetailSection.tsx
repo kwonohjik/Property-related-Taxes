@@ -301,6 +301,7 @@ export function SplitGainDetailSection({
                   table1Rate: splitDetail.land.appurtenantLthd.table1Rate,
                   table2Rate: splitDetail.land.appurtenantLthd.table2Rate,
                   table1Applied: splitDetail.land.appurtenantLthd.table1Applied,
+                  basis: splitDetail.land.appurtenantLthd.basis,
                 })}
               </span>
             )}

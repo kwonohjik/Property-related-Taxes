@@ -103,6 +103,7 @@ export function applyLthd982AndPushSteps(
         table1Rate: landAppurtenant.table1Rate,
         table2Rate: landAppurtenant.table2Rate,
         table1Applied: landAppurtenant.table1Applied,
+        basis: landAppurtenant.basis,
       }),
     );
   }

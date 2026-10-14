@@ -186,6 +186,38 @@ describe("95-0…1 일반 split 경로 — 값이 바뀌는 시료 (토지 > 건
     expect(r.splitDetail!.land.appurtenantLthd).toMatchObject({ table2Rate: 0.4, table1Rate: 0.3, table1Applied: false });
   });
 
+  describe("고지 문구의 근거 인용은 양도일 연혁을 따른다 — 통칙 신설(2019.12.23.) 전은 과세관청 해석, 2021.1.1. 이후는 독법 미확인 병기", () => {
+    const noticeOf = (T: string) => {
+      const r = calculateTransferTax(split({ S: 1_500_000_000, T, B: 5, L: 15, res: 60 }), rates);
+      return (r.warnings ?? []).find((w) => w.includes("토지가 주택보다 먼저 취득돼"));
+    };
+    it("2019-06-01 양도(통칙 신설 전) — 「기본통칙」이라 쓰지 않고 재산세과-4375 해석을 인용한다 · 독법 병기 없음(표2 단일축)", () => {
+      const w = noticeOf("2019-06-01")!;
+      expect(w).toBeDefined();
+      expect(w).toContain("과세관청 해석(재산세과-4375, 2008.12.24. 등 — 주택보다 보유기간이 오래된 주택 부수토지는 표1과 표2 중 큰 공제율)에 따라");
+      expect(w).not.toContain("기본통칙");
+      expect(w).not.toContain("확인하지 못해");
+    });
+    it("2020-06-01 양도(통칙 시행 · 표2 단일축) — 통칙 인용 · 독법 병기 없음", () => {
+      const w = noticeOf("2020-06-01")!;
+      expect(w).toContain("소득세법 기본통칙 95-0…1에 따라");
+      expect(w).not.toContain("재산세과-4375");
+      expect(w).not.toContain("확인하지 못해");
+    });
+    it("2024-06-01 양도(표2 2축) — 통칙 인용 + 표1과 비교하는 표2의 단위를 다룬 해석례 미확인 병기", () => {
+      const w = noticeOf("2024-06-01")!;
+      expect(w).toContain("소득세법 기본통칙 95-0…1에 따라");
+      expect(w).toContain(
+        "표2가 보유분과 거주분으로 나뉜 2021.1.1. 이후 양도분에서 표1과 비교하는 표2의 단위(보유분과 거주분의 합인지 보유분만인지)를 다룬 해석례는 확인하지 못해 확인이 필요합니다.",
+      );
+      expect(w).not.toMatch(/유리|불리|절세|절감/);
+    });
+    it("경계 — 통칙 신설일 2019-12-22 → 해석, 2019-12-23 → 통칙", () => {
+      expect(noticeOf("2019-12-22")).toContain("재산세과-4375");
+      expect(noticeOf("2019-12-23")).toContain("기본통칙 95-0…1에 따라");
+    });
+  });
+
   it("합산(aggregate) 경로도 단건과 같은 세액 — 통칙 값이 다건에서 되돌려지지 않는다", () => {
     const c: Case = { S: 1_500_000_000, T: "2026-06-01", B: 9, L: 20, res: 60 };
     const single = calculateTransferTax(split(c), rates);
@@ -218,6 +250,11 @@ describe("95-0…1 일반 split 경로 — 값이 바뀌지 않는 시료 (ancho
       expect(hasNotice(r)).toBe(false);
     });
   }
+
+  it("같은 보유연수(건물 15년 · 토지 15년)는 «주택보다 오래된» 경우가 아니라 통칙 echo 자체가 없다(M12 `>`→`>=` 변형 kill)", () => {
+    const r = calculateTransferTax(split({ S: 1_500_000_000, T: "2026-06-01", B: 15, L: 15, res: 60 }), rates);
+    expect(r.splitDetail!.land.appurtenantLthd).toBeUndefined();
+  });
 
   it("표2 대상이 아니다(2주택 — 표1): 토지·건물 각자 보유연수 표1, 통칙 echo·고지 없음", () => {
     const c: Case = { S: 1_500_000_000, T: "2026-06-01", B: 9, L: 20, res: 60, hc: 2 };

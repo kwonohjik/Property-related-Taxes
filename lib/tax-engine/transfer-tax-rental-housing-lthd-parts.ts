@@ -105,6 +105,7 @@ export function applyRentalLthdPartsToSplit(
         table1Rate: ap.table1Rate,
         table2Rate: ap.table2Rate,
         table1Applied: ap.table1Applied,
+        basis: ap.basis,
       })
     : undefined;
 }

@@ -159,6 +159,7 @@ export { holdingMonthsFromDates, fmtDate, fmtPeriod, holdingPeriodFromDates, get
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
 import { fourPartFinancials, splitTwoColFinancials, splitNonBusinessLandNotes } from "./FilingFormTableFinancials";
+import { hasRentalSplitColumns, rentalSplitTwoColFinancials } from "./FilingFormTableRentalSplit";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
@@ -370,7 +371,12 @@ export function buildRows(
       (sp.selfOwns === "building_only" ? 0 : sp.land.gain) +
       (sp.selfOwns === "land_only" ? 0 : sp.building.gain);
     const taxableRatio = ownedGain > 0 ? result.taxableGain / ownedGain : 1;
+    // §155⑳ 특례 결과(파트 echo가 채워진 분리 취득)는 합계 열 의미가 달라 별도 echo 경로다 — 균일 비율을 곱하면 `result.taxableGain`(장특 차감 후)에서 파트 장특을 또 빼 음수가 된다.
     splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum, spNb);
+    if (isRH && hasRentalSplitColumns(sp, result.rentalHousingExceptionDetail)) {
+      // 양도가·취득가·필요경비·양도차익 행은 위 공통 값을 그대로 쓰고, 과세·장특·소득금액 계열만 특례 의미로 덮어쓴다.
+      rentalSplitTwoColFinancials(sp, result.rentalHousingExceptionDetail!, setNum, setRoseNote);
+    }
     if (spNb) {
       for (const [rowKey, note] of Object.entries(splitNonBusinessLandNotes(sp.land, spNb))) setRoseNote(rowKey, "land", note);
     }
@@ -597,7 +603,8 @@ export function buildRows(
     const landSplit = lthdOfPart(sp.land);
     const buildSplit = lthdOfPart(sp.building);
     // 배율 초과 부수토지분 장특은 표1 **보유분** 단독이다(거주분 없음) — 토지 열의 보유 기간분에 싣는다(합계 열 `sumSplitLthdAmounts`와 같은 규약).
-    const nbLt = spNb?.longTermDeduction ?? 0;
+    // §155⑳ 특례 결과의 초과분 장특도 같은 보유분 규약이다(`spNb`는 특례를 제외하므로 파트 echo가 채워진 특례만 별도로 읽는다).
+    const nbLt = (spNb ?? (isRH && hasRentalSplitColumns(sp, result.rentalHousingExceptionDetail) ? sp.nonBusinessLandPart : undefined))?.longTermDeduction ?? 0;
     setNum("ltHoldingPart", "total", landSplit.holdingAmount + buildSplit.holdingAmount + nbLt);
     setNum("ltResidencePart", "total", landSplit.residenceAmount + buildSplit.residenceAmount);
     setNum("ltHoldingPart", "land", landSplit.holdingAmount + nbLt);

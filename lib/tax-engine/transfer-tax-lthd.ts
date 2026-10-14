@@ -33,7 +33,7 @@ import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { table2ResidencePct } from "./data/lthd-table2-era";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
-import { resolveAppurtenantLandLthdRate } from "./appurtenant-land-lthd-rate";
+import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "./appurtenant-land-lthd-rate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
@@ -428,6 +428,7 @@ export function calcLongTermHoldingDeduction(
         table2Rate: appurtenant.table2Rate,
         table1Applied: appurtenant.table1Applied,
         changedFromOwnYears: appurtenant.rate !== landOwnYearsRate,
+        basis: resolveAppurtenantLthdNoticeBasis(input.transferDate),
       };
     }
     const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
