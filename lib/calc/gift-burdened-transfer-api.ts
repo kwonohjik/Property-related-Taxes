@@ -228,6 +228,16 @@ export function buildGiftBurdenedTransferBody(
             ? { presumedLandAcquisitionPrice: bgt.presumedAcquisitionTotal ?? 0, presumedBuildingAcquisitionPrice: 0 }
             : { presumedAcquisitionTotal: bgt.presumedAcquisitionTotal ?? 0 }
           : {}),
+        // K-7 × 증축 — 증축한 부분의 감정가액(§114조의2① 가산세 base). 신축·증축 입력이 살아 있는 감정가액 증축 건물일 때만 싣는다
+        // (아래 body의 isSelfBuilt 전송 조건과 같은 게이트 — 신축이거나 매매사례가액이면 stale 값이 새지 않게).
+        ...(acquisitionMethod === "appraisal" &&
+        !acquisitionForcedToStandard &&
+        bgt.isSelfBuilt === true &&
+        !isLandType &&
+        bgt.buildingType === "extension" &&
+        (bgt.presumedExtensionAppraisal ?? 0) > 0
+          ? { presumedExtensionAppraisalValue: bgt.presumedExtensionAppraisal }
+          : {}),
         // K-5: 환산 분자/분모용 기준시가 — 양도시 기준시가는 토지·건물 모두 «총액»(item.standardPrice)이다.
         //   종전 토지는 별도 칸의 ㎡당 공시지가(bgt.landStdPriceAtTransfer)를 총액처럼 실어 취득가액이 단가×수만큼 부풀고(실측: 정답
         //   66,666,666이 200억 → 세액 0) 막히지 않았다(1h-G1-2). 이제 증여재산 평가의 «보충적 평가(개별공시지가 총액)»와 같은 한 칸이다.

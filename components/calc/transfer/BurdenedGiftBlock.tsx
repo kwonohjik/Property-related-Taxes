@@ -355,6 +355,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             asset={asset}
             onChange={onChange}
             transferDate={transferDate}
+            fractionalSplit={isFractionalSplit}
           />
 
           {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
@@ -364,6 +365,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               onChange={onChange}
               method={asset.bgAcquisitionMethod}
               fractionalSplit={isFractionalSplit}
+              transferDate={transferDate}
             />
           )}
 

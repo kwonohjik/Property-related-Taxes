@@ -262,7 +262,7 @@ Q-4의 「다음 PR에서 결선」을 이행했다. 증축은 base(「증축한
 |---|---|
 | 신축 5년 이내(양도일 ≥ 2020-01-01) × 감정가액 | 가산세 = **건물 몫 감정가액**(채무비율 안분 후) × 5%. 산출세액이 없어도 부과(§114조의2②) |
 | 신축 × 매매사례가액 · 실지취득가액 | 0 (조문 「감정가액 또는 환산취득가액」에 없음) |
-| 증축(85㎡ 초과) 5년 이내 × 감정가액 | **차단**(엔진·⑤·⑧ 같은 술어 `bgAppraisalExtensionPenaltyApplies`) |
+| 증축(85㎡ 초과) 5년 이내 × 감정가액 | ~~차단~~ → **후속 해소**: 「증축한 부분의 감정가액」 칸을 받아 base로 연결(지분 분할 취득(축 B)만 계속 차단) — `docs/00-pm/burdened-gift-appraisal-extension-penalty.plan.md` |
 | 증축 85㎡ 이하 · 5년 초과 · 2020 이전 양도 | `calculateBuildingPenalty`가 null → 가산세 0, 차단 없음 |
 
 - **배선**: step이 `workingInput.penaltyAxis = { acquisitionMethod: "appraisal", base: building.acquisitionPrice }`를 싣는다(일반건물 카드와 같은 파트-국소 신호 — `acquisitionMethod: "appraisal"`로 바꿔 싣지 않는 이유는 `calcTransferGain` 감정 분기가 §159 안분 취득가액을 `appraisalValue`로 덮어쓰기 때문). 읽는 두 곳(`transfer-tax-finalize.ts` STEP 10.5 · `transfer-tax-loss-return.ts` pb0)을 `input.penaltyAxis ?? effectiveInput.penaltyAxis`로 확장했다. 양도차익은 달라지지 않는다.

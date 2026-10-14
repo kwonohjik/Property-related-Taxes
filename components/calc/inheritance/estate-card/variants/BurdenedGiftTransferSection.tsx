@@ -91,6 +91,7 @@ function createEmptyBgt(): BurdenedGiftTransferTaxInput {
     acquisitionMethod: undefined,
     actualAcquisitionTotal: undefined,
     presumedAcquisitionTotal: undefined,
+    presumedExtensionAppraisal: undefined,
     capitalExpenditure: undefined,
     transferExpense: undefined,
     // §114조의2 신축·증축 가산세 (K-5 + 건물 전용)
@@ -120,6 +121,7 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     bgt.acquisitionMethod !== undefined ||
     !!bgt.actualAcquisitionTotal ||
     !!bgt.presumedAcquisitionTotal ||
+    !!bgt.presumedExtensionAppraisal ||
     !!bgt.capitalExpenditure ||
     !!bgt.transferExpense ||
     bgt.isSelfBuilt === true ||

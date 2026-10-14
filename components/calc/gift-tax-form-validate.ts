@@ -34,7 +34,8 @@ import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate"
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import {
   BG_PRESUMED_LABEL,
-  GIFT_BG_APPRAISAL_EXTENSION_ERROR,
+  GIFT_BG_EXTENSION_APPRAISAL_REQUIRED_ERROR,
+  giftBgExtensionAppraisalExceedsError,
   GIFT_BG_PRESUMED_INHERITED_ERROR,
   giftBgAppraisalExtensionPenaltyApplies,
   giftBgPresumedBlockedByInheritance,
@@ -176,8 +177,14 @@ export function validateStep(step: number, form: FormState): string | null {
             if (bgt.isSelfBuilt === true && !bgt.constructionDate) {
               return `${itemLabel}: 신축·증축 건물의 신축일(취득일)을 입력하세요. (§114조의2 5년 기산 필수)`;
             }
+            // 증축(85㎡ 초과·5년 이내)은 가산세 base인 「증축한 부분의 감정가액」이 필수다 — 건물 전체로 대신하지 않는다
             if (giftBgAppraisalExtensionPenaltyApplies(bgt, false, form.giftDate)) {
-              return `${itemLabel}: ${GIFT_BG_APPRAISAL_EXTENSION_ERROR}`;
+              if (!bgt.presumedExtensionAppraisal || bgt.presumedExtensionAppraisal <= 0) {
+                return `${itemLabel}: ${GIFT_BG_EXTENSION_APPRAISAL_REQUIRED_ERROR}`;
+              }
+              if (bgt.presumedExtensionAppraisal > bgt.presumedAcquisitionTotal) {
+                return `${itemLabel}: ${giftBgExtensionAppraisalExceedsError(bgt.presumedAcquisitionTotal)}`;
+              }
             }
           }
         }

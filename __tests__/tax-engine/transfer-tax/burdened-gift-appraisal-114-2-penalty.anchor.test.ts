@@ -7,7 +7,8 @@
  *
  * PR-1(#2196)은 이 조합을 신호가 없어 가산세가 조용히 빠진다는 이유로 **차단**했다. PR-3은 그 차단을 풀고
  * `penaltyAxis`(일반건물 카드가 쓰는 파트-국소 신호 — `acquisitionMethod: "appraisal"`로 바꿔 싣지 않는다)로 연결한다.
- * 증축은 「증축한 부분에 한정한 감정가액」을 받는 칸이 없어 계속 차단한다.
+ * 증축은 「증축한 부분에 한정한 감정가액」(`presumedExtensionAppraisalValue`)이 base라 별도 anchor가 다룬다
+ * (`burdened-gift-appraisal-extension-penalty.anchor.test.ts`) — 이 파일의 P-10은 그 입력이 없을 때의 차단만 본다.
  *
  * 시나리오(housing — land=0·building 통째, K-5 `burdened-gift-114-2-penalty.test.ts`와 같은 모양):
  *   시가 C=500M · 채무 B=200M → debtRatio 0.4 · 건물 양도가 200M
@@ -156,13 +157,13 @@ describe("§114조의2 부담부증여 K-7 감정가액 × 신축 5년 이내 �
     expect(r.penaltyTax).toBe(0);
   });
 
-  it("[P-10] 증축(85㎡ 초과) × 감정가액 → 증축부분 감정가액 칸이 없어 차단", () => {
+  it("[P-10] 증축(85㎡ 초과) × 감정가액 → 증축부분 감정가액 미입력이면 차단(건물 전체로 대신하지 않는다)", () => {
     expect(() =>
       calculateTransferTax(
         input({ buildingType: "extension", extensionFloorArea: 120 }),
         rates,
       ),
-    ).toThrow(/제114조의2/);
+    ).toThrow(/증축한 부분의 감정가액을 입력해야/);
   });
 
   it("[P-11] 증축(85㎡ 이하)은 §114조의2 대상이 아니라 차단 없이 0", () => {

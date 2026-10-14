@@ -118,14 +118,16 @@ type PenaltyAsset = Pick<
 >;
 
 /**
- * **증축** 5년 이내 × 감정가액 — 소득세법 §114조의2 가산세 대상이지만 base를 만들 수 없는 조합인가.
+ * **증축** 5년 이내 × 감정가액 — 소득세법 §114조의2 가산세 대상이라 「**증축한 부분에 한정한** 감정가액」(`bgPresumedExtensionAppraisal`)을
+ * 받아야 하는 조합인가.
  *
- * 신축 × 감정가액은 PR-3에서 가산세(건물 감정가액의 5%)를 엔진이 `penaltyAxis`로 연결해 계산한다. 증축은 base가
- * 「**증축한 부분에 한정한** 감정가액」인데 그 값을 받는 칸이 없고, 건물 전체 감정가액을 쓰면 과대부과라 계속 막는다
- * (엔진이 같은 조합을 던진다 — `transfer-tax-burdened-gift-step.ts`). 판정은 엔진과 **같은 단일 소스**
+ * 신축 × 감정가액은 건물 전체 감정가액의 안분값이 base라 칸이 없고(PR-3), 증축은 이 술어가 참일 때만 별도 칸을 요구한다
+ * (엔진이 같은 조합에서 같은 값을 요구한다 — `transfer-tax-burdened-gift-step.ts`). 지분 분할 취득(축 B)은 지분마다 그 값을 받을 칸이 없어
+ * 호출부가 이 술어로 **계속 막는다**. 판정은 엔진과 같은 단일 소스
  * `calculateBuildingPenalty`에, 폼 값을 ④가 엔진 입력으로 옮기는 것과 같은 매핑으로 넣는다
  * (`transfer-tax-api.ts` `isSelfBuilt: selfBuiltActive(primary)` · `constructionDate` · `extensionFloorArea`).
  * 매매사례가액은 조문(「감정가액 또는 환산취득가액」)에 없어 대상이 아니므로 호출부가 감정일 때만 부른다.
+ * 계획서: docs/00-pm/burdened-gift-appraisal-extension-penalty.plan.md
  */
 export function bgAppraisalExtensionPenaltyApplies(
   asset: PenaltyAsset,

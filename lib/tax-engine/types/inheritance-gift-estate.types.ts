@@ -1380,6 +1380,13 @@ export interface BurdenedGiftTransferTaxInput {
   presumedAcquisitionTotal?: number;
 
   /**
+   * 증축한 부분의 감정가액 (원) — K-7 × **증축**(85㎡ 초과·5년 이내) 전용. 「소득세법」 §114조의2① 가산세 base(증축한 부분에 한정).
+   * 위 `presumedAcquisitionTotal`과 같은 기준(물건 전체·채무 안분 전)으로 입력하고 엔진이 채무비율을 곱한다. 건물 전체로 대신하지 않는다.
+   * ④가 `presumedExtensionAppraisalValue`로 싣는다. 계획서 docs/00-pm/burdened-gift-appraisal-extension-penalty.plan.md §2
+   */
+  presumedExtensionAppraisal?: number;
+
+  /**
    * 실지 취득가액 합계 (원) — K-4 전용, 건물+토지 통합 입력.
    * 증여 category에는 general_building 없음 → 분리입력 불요, 합계 단일 필드.
    * acquisitionMethod==="actual" 시 필수.

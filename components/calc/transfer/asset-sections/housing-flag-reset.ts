@@ -66,7 +66,7 @@ export function housingFlagResetPatchForAssetKind(
    */
   const selfBuiltReset: Partial<AssetForm> = selfBuiltSectionApplicable(nextKind)
     ? {}
-    : { isSelfBuilt: false, buildingType: "", constructionDate: "", extensionFloorArea: "", extensionStdPriceAtAcquisition: "" };
+    : { isSelfBuilt: false, buildingType: "", constructionDate: "", extensionFloorArea: "", extensionStdPriceAtAcquisition: "", bgPresumedExtensionAppraisal: "" };
 
   if (nextKind === "housing") return rhReset;
   return {

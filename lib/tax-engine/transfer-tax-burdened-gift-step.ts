@@ -6,7 +6,11 @@
  */
 
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible } from "./burdened-gift-apportionment";
-import { MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE } from "./burdened-gift-valuation";
+import {
+  MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE,
+  apportionAcquisitionPrice,
+  scaleBurdenedGiftInfo,
+} from "./burdened-gift-valuation";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
@@ -68,19 +72,45 @@ export function runBurdenedGiftStep(
     // `calcTransferGain` 감정 분기가 §159 안분 취득가액을 `appraisalValue`로 덮어쓰기 때문이다(아래 acquisitionMethod 주석).
     // base = 채무비율 안분 **후** 건물 감정가액 (K-5의 `estimatedBase`와 같은 기준 — 계획서 §2.2의 「강한 해석」).
     // 매매사례가액은 조문(「감정가액 또는 환산취득가액」)에 없어 대상이 아니다.
-    // 증축은 「증축한 부분에 한정한 감정가액」이 base인데 그 값을 받는 칸이 없다 — 건물 전체 감정가액을 쓰면 과대부과라 계속 막는다.
+    // 증축은 base가 「증축한 부분에 한정한 감정가액」이라 `presumedExtensionAppraisalValue`(물건 전체 기준·채무 안분 전)를 따로 받는다.
+    // 건물 전체 감정가액으로 대신하면 과대부과라 미입력은 오류다. base = 입력값 × 채무비율(신축·K-5 증축과 같은 「안분 후」 기준 —
+    // 계획서 docs/00-pm/burdened-gift-appraisal-extension-penalty.plan.md §2). 85㎡ 이하·5년 초과·2020 이전이면 대상이 아니라 읽지 않는다.
     const isAppraisalSelfBuilt =
       transferBurdenedGiftBreakdown.acquisitionMethodUsed === "appraisal" && rawInput.isSelfBuilt === true;
+    let extensionAppraisalPenaltyBase: number | undefined;
     if (
       isAppraisalSelfBuilt &&
       rawInput.buildingType === "extension" &&
       calculateBuildingPenalty({ ...rawInput, acquisitionMethod: "appraisal" }, 1) !== null
     ) {
-      throw new TaxCalculationError(
-        TaxErrorCode.INVALID_INPUT,
-        "[burdened_gift] 건물을 증축하고 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 " +
-          "증축한 부분의 감정가액에 5% 가산세가 붙지만, 증축한 부분만의 감정가액을 입력하는 칸이 아직 없어 계산할 수 없습니다. " +
-          "취득가액 산정방식을 「실지취득가액」으로 선택하거나 별도로 가산세를 검토하세요.",
+      const bgInfo = rawInput.burdenedGiftInfo;
+      const extensionAppraisal = bgInfo.presumedExtensionAppraisalValue ?? 0;
+      if (extensionAppraisal <= 0) {
+        throw new TaxCalculationError(
+          TaxErrorCode.INVALID_INPUT,
+          "[burdened_gift] 건물을 증축하고 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 " +
+            "증축한 부분의 감정가액에 5% 가산세가 붙으므로 증축한 부분의 감정가액을 입력해야 합니다. " +
+            "건물 전체 감정가액으로 대신할 수 없습니다(증축한 부분에 한정한 금액이 기준입니다).",
+        );
+      }
+      // 부분이 전체를 넘을 수 없다 — 분리 입력이면 건물 감정가액, 총액 입력이면 총액(건물 몫은 기준시가 비율 분배라 그 파생값과는 비교하지 않는다).
+      const isSplitInput =
+        bgInfo.presumedLandAcquisitionPrice !== undefined || bgInfo.presumedBuildingAcquisitionPrice !== undefined;
+      const extensionCap = isSplitInput
+        ? (bgInfo.presumedBuildingAcquisitionPrice ?? 0)
+        : (bgInfo.presumedAcquisitionTotal ?? 0);
+      if (extensionAppraisal > extensionCap) {
+        throw new TaxCalculationError(
+          TaxErrorCode.INVALID_INPUT,
+          isSplitInput
+            ? `[burdened_gift] 증축한 부분의 감정가액이 건물 감정가액(${extensionCap.toLocaleString()}원)보다 클 수 없습니다.`
+            : `[burdened_gift] 증축한 부분의 감정가액이 감정가액 총액(${extensionCap.toLocaleString()}원)보다 클 수 없습니다.`,
+        );
+      }
+      extensionAppraisalPenaltyBase = apportionAcquisitionPrice(
+        scaleBurdenedGiftInfo(bgInfo, rawInput.ownershipRatio).presumedExtensionAppraisalValue ?? 0,
+        transferBurdenedGiftBreakdown.assumedDebtAmount,
+        transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
       );
     }
     const isK5SelfBuilt =
@@ -128,8 +158,18 @@ export function runBurdenedGiftStep(
       burdenedGiftDenominator:
         transferBurdenedGiftBreakdown.fractionalHighValueDenominator ??
         transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
+      // 신축은 건물 전체 감정가액의 안분값, 증축은 증축한 부분 감정가액의 안분값(대상 조합일 때만 위에서 채워진다).
+      // 증축인데 대상이 아니면(85㎡ 이하·5년 초과) `calculateBuildingPenalty`가 어차피 null이라 base를 싣지 않아도 같다.
       ...(isAppraisalSelfBuilt && rawInput.buildingType !== "extension"
         ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: building.acquisitionPrice } }
+        : {}),
+      ...(extensionAppraisalPenaltyBase !== undefined
+        ? {
+            penaltyAxis: { acquisitionMethod: "appraisal" as const, base: extensionAppraisalPenaltyBase },
+            // 85㎡ 게이트(`calculateBuildingPenalty`)가 읽는 신호 — 신축 분기와 달리 spread에 의존하지 않고 명시 전달
+            buildingType: rawInput.buildingType,
+            extensionFloorArea: rawInput.extensionFloorArea,
+          }
         : {}),
       ...(isK5SelfBuilt
         ? {

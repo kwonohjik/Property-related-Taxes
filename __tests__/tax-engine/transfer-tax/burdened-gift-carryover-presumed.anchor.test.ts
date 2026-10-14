@@ -146,9 +146,20 @@ describe("미입력 가드 — 양도인 값으로 fallback하지 않는다(A=B 
     expect(() => run(info({ actualAcquisitionTotal: undefined }))).toThrow(/양도인/);
   });
 
-  it("[G-4] 신축 5년 이내 × 감정가액 × 이월과세 → §114조의2 base·기산 미정이라 차단", () => {
+  it("[G-4] 신축 5년 이내 × 감정가액 × 이월과세 → 차단 (양도인이 신축자가 아니고 5년 기산·base도 해석례가 없다 — 계획서 §3)", () => {
     expect(() =>
       run(info(), { isSelfBuilt: true, buildingType: "new", constructionDate: new Date("2024-01-01") }),
+    ).toThrow(/제114조의2/);
+  });
+
+  it("[G-4b] 증축 × 감정가액 × 이월과세도 차단 유지 — 증축한 부분의 감정가액 칸이 생겨도 이월과세는 풀지 않는다", () => {
+    expect(() =>
+      run(info({ presumedExtensionAppraisalValue: 50_000_000 }), {
+        isSelfBuilt: true,
+        buildingType: "extension",
+        extensionFloorArea: 120,
+        constructionDate: new Date("2024-01-01"),
+      }),
     ).toThrow(/제114조의2/);
   });
 
