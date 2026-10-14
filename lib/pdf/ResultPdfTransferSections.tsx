@@ -105,6 +105,7 @@ export function TransferSplitSection({ r }: { r: R }) {
   if (!sd) return null;
   const land = sd.land as R;
   const bldg = sd.building as R;
+  const nb = sd.nonBusinessLandPart as { excessArea: number; gain: number; taxableGainAfterProration?: number; longTermDeduction: number } | undefined;
   /**
    * 파트별 산정방식·취득가액·필요경비는 화면(카드·신고서·명세서)과 **같은 정본**(`summarizeSplitGain`)을 읽는다.
    * 종전에는 취득가액 행을 「환산취득가」로 못 박고 개산공제만 보여, 실거래가 파트·감정가액 파트·§97②2호 단서(swap) 파트가
@@ -239,11 +240,24 @@ export function TransferSplitSection({ r }: { r: R }) {
           <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("land") ? `${num(land.holdingYears)}년` : "-"}</Text>
           <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("building") ? `${num(bldg.holdingYears)}년` : "-"}</Text>
         </View>
-        <View style={s.rowLast}>
+        <View style={nb ? s.row : s.rowLast}>
           <Text style={{ ...s.lbl, flex: 2 }}>장기보유특별공제</Text>
           <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("land") ? fmt(land.longTermDeduction) : "-"}</Text>
           <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("building") ? fmt(bldg.longTermDeduction) : "-"}</Text>
         </View>
+        {/* 배율 초과 부수토지(비사업용 토지) 파트(#17) — 위 토지 열은 기준면적 이내분이라 이 두 행을 더해야 자산 값과 맞는다(화면 분리 카드와 같은 echo). */}
+        {nb && (
+          <>
+            <View style={s.row}>
+              <Text style={{ ...s.lbl, flex: 2 }}>{`배율 초과 부수토지 ${nb.excessArea}㎡ (비사업용 토지) 과세 양도차익`}</Text>
+              <Text style={{ ...s.val, flex: 2 }}>{fmt(nb.taxableGainAfterProration ?? nb.gain)}</Text>
+            </View>
+            <View style={s.rowLast}>
+              <Text style={{ ...s.lbl, flex: 2 }}>배율 초과 부수토지 장기보유특별공제 (표1)</Text>
+              <Text style={{ ...s.val, flex: 2 }}>{fmt(nb.longTermDeduction)}</Text>
+            </View>
+          </>
+        )}
       </View>
     </>
   );
