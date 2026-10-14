@@ -28,6 +28,7 @@ import { PrecedentArticleModal } from "@/components/ui/precedent-article-modal";
 import { useMemo } from "react";
 import { addDays, subDays, isValid, parseISO, format } from "date-fns";
 import { SettlementExemptionGuideCard } from "./SettlementExemptionGuideCard";
+import { table2EntryBullet, table2ResidenceMonthsHint } from "@/lib/calc/lthd-table2-hint";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 청산금 수령 시 소유권이전 고시일 입력 → 양도일(고시일+1일) 자동 표시
@@ -469,9 +470,12 @@ export function ExemptionAtApprovalCard({
 export function SuccessorMemberSection({
   asset,
   onChange,
+  transferDate,
 }: {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 양도일 — 표2 안내 문구를 연혁대로 말한다(비면 현행 식). */
+  transferDate?: string;
 }) {
   // 자동 추정 힌트 3-state (silent 분기 금지 — 안내만)
   const autoSuggestionState = useMemo<"hidden" | "recommend" | "ambiguous">(() => {
@@ -599,7 +603,7 @@ export function SuccessorMemberSection({
           <FieldCard
             label="신축주택 거주기간 (개월)"
             field="redevNewHouseResidenceMonths"
-            hint="준공일~양도일 사이 신축아파트에 실제 거주한 개월 수. 1세대1주택이고 24개월 이상이면 장기보유특별공제가 표2(보유 4%/년 + 거주 4%/년, 최대 80%)로 적용됩니다."
+            hint={table2ResidenceMonthsHint(transferDate)}
             trailing={
               <LawArticleModal
                 legalBasis="소득세법 시행령 §159의4"
@@ -619,7 +623,7 @@ export function SuccessorMemberSection({
             <ul className="list-disc pl-4 space-y-0.5">
               <li>보유기간 = 양도일 − 준공일 (사전-2019-법령해석재산-0649)</li>
               <li>장기보유특별공제·세율의 기산일 = 준공일</li>
-              <li>1세대1주택 + 신축주택 거주 2년 이상 → 장특공제 표2 (§95② 단서·시행령 §159의4)</li>
+              <li>{table2EntryBullet(transferDate)}</li>
               <li>§166 인가전·인가후 안분 산식 미적용 (단순 차감)</li>
               <li>1세대1주택 비과세는 준공일 기준 2년 보유 충족 시 적용</li>
             </ul>

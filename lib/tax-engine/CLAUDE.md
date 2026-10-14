@@ -55,7 +55,8 @@ lib/tax-engine/
 `tax-utils.ts` 제공:
 - `applyRate(amount, rate)` — `Math.floor(amount * rate)`. 세율×금액은 이거로만.
 - `safeMultiply(a, b)` — overflow 시 BigInt fallback (환산취득가 2조×1조 케이스).
-- `truncateToThousand(n)` — 천원 미만 절사 (지방소득세·과세표준).
+- `truncateToThousand(n)` — 천원 미만 절사 순수 산술 헬퍼. 호출은 건물 기준시가 ㎡당 단가(`stdPriceFromPerM2`)뿐이다. **양도소득 과세표준·지방소득세에는 쓰지 않는다**(절사 규정이 없다 — 지방소득세는 원 미만 절사).
+- `truncateToTenThousand(n)` — 만원 미만 절사 (종합부동산세 과세표준).
 - `truncateToWon(n)` — 원 미만 절사 (결정세액).
 - `calculateEstimatedAcquisitionPrice(transfer, stdAtAcq, stdAtTransfer)` — 환산취득가 공식.
 - `calculateProgressiveTax(taxBase, brackets)` — 누진세율 적용.

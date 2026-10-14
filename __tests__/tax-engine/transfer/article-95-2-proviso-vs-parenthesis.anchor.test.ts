@@ -63,7 +63,8 @@ const PARENTHESIS_SITES: { file: string; needle: string }[] = [
 const PROVISO_SITES: { file: string; needle: string }[] = [
   { file: "components/calc/transfer/rental/Rental974InputForm.tsx", needle: "1세대1주택 장기보유특별공제 표2(소득세법 §95② 단서)" },
   { file: "lib/tax-engine/transfer-tax-lthd.ts", needle: '"조특법 §97의4① 단서 · 소득세법 §95② 단서"' },
-  { file: "components/calc/transfer/RedevelopmentBlockCards.tsx", needle: "장특공제 표2 (§95② 단서·시행령 §159의4)" },
+  // 승계조합원 카드의 진입 조건 한 줄은 `table2EntryBullet`(연혁별 문구 leaf)로 옮겼다 — 현행 문구가 이 인용을 그대로 갖는다.
+  { file: "lib/calc/lthd-table2-hint.ts", needle: "장특공제 표2 (§95② 단서·시행령 §159의4)" },
 ];
 
 describe("소득세법 §95② — 본문 괄호 / 단서 인용 축", () => {
