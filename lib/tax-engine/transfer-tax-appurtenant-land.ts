@@ -18,6 +18,7 @@ import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-
 import { resolveExemptionProviso, type ResidenceReqInput } from "./transfer-tax-exemption-holding";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
+import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 export { housingExcessAcqContractNotice } from "./housing-excess-acq-contract";
@@ -282,18 +283,33 @@ export function housingExcessCapexNotice(input: TransferTaxInput, splitDetail: S
 }
 
 /**
- * 고지(#17 하위 1 가, 세액 불변) — 고가주택(12억 초과 부분과세)에 배율 초과 부수토지가 함께 있을 때 과세 양도차익 산식에 대한 중립 고지.
- * 이 저장소는 «초과분의 양도차익 전액 + 나머지(주택·한도 내 토지) 양도차익 × 12억 초과 비율»로 계산한다(서울행정법원 2018구단74696이 기준으로 본 방식).
- * 같은 사안의 산정 방식은 해석마다 달라 어느 쪽이 맞는지 이번에 정하지 않았다 — 별도 결정 대기. 유불리를 말하지 않는다.
+ * 고지(#17-2, 세액 불변) — 고가주택(12억 초과 부분과세)에 배율 초과 부수토지가 함께 있을 때 적용한 과세 양도차익 산식의 근거.
+ * 초과분의 양도차익은 12억 안분 전 전액 과세하고, 기준면적 이내 토지분은 «전체 부수토지 양도차익의 12억 안분값 − 초과분 양도차익(음수면 0)»,
+ * 건물분은 12억 안분값이다. 근거는 기획재정부 재산세제과-915(2011.10.27.) 회신이며 법령이 아닌 해석례다(소득세법 기본통칙 95-1 병기).
+ * 게이트(`isPartialExempt && nonBusinessLandPart`)는 세액 산식이 갈리는 조건과 같다. 나중 취득 토지 보유요건 미달(G-3)이 겹치면 토지분 전체가
+ * 안분 대상이 아니라 이 회신 방식을 쓰지 않는다 — 문구도 그 사실을 따로 밝힌다.
  */
 export function highValueExcessFormulaNotice(
   splitDetail: SplitGainResult | undefined,
   isPartialExempt: boolean,
+  transferDate: Date,
+  laterLandExcluded = false,
 ): string | null {
   if (!isPartialExempt || !splitDetail?.nonBusinessLandPart) return null;
+  // 「12억」 리터럴 금지 — 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이다.
+  const label = formatHighValueThresholdLabel(resolveHighValueHouseThreshold(transferDate));
+  if (laterLandExcluded) {
+    return (
+      "고가주택에 배율 초과 부수토지가 함께 있으나, 주택보다 나중에 취득한 부수토지가 보유요건에 못 미쳐 토지분 전체를 비과세에서 제외했습니다 — " +
+      `초과분과 나머지 토지분의 양도차익은 안분 없이 전액 과세하고 건물분만 ${label} 초과 비율로 안분했습니다. 기획재정부 재산세제과-915(2011.10.27.) 회신 방식은 이 경우 적용하지 않았습니다.`
+    );
+  }
   return (
-    "고가주택(12억 초과)에 배율 초과 부수토지가 함께 있어, 초과분의 양도차익은 전액 과세하고 나머지 양도차익에만 12억 초과 비율을 적용했습니다. " +
-    "이 경우의 양도차익 산정 방식은 해석마다 달라 확인이 필요합니다."
+    "고가주택에 배율 초과 부수토지가 함께 있어 기획재정부 재산세제과-915(2011.10.27.) 회신 방식으로 계산했습니다 — " +
+    `배율 초과분의 양도차익은 ${label} 안분 없이 전액 과세하고, 기준면적 이내 토지분은 전체 부수토지 양도차익의 ${label} 안분값에서 초과분 양도차익을 뺀 금액(음수면 0), ` +
+    `건물분은 ${label} 안분값입니다. ` +
+    "이 방식의 근거는 법령이 아니라 기획재정부의 법령해석 회신이며, 같은 회신이 인용한 소득세법 기본통칙 95-1(고가주택의 양도차익 계산)에 따라 " +
+    "주택과 전체 부수토지의 양도차익을 각각 산정해 안분했습니다."
   );
 }
 
@@ -457,6 +473,9 @@ export interface HousingLandExclusionResult {
  *   ② 12억 안분(영 §160①)은 **잔여 주택분**(배율 내 + 요건 연수 이상 토지 + 건물)에만 적용.
  *      분모는 자산 양도가액 그대로다 — 고가주택 판정(§89①3호)은 주택과 그 부수토지 전체의
  *      실지거래가액 기준이기 때문이다.
+ *      단 **고가주택(일부 비과세) + 배율 초과**의 한도 내 토지분은 기획재정부 재산세제과-915(2011.10.27.) 회신 방식이다 —
+ *      전체 부수토지 양도차익의 12억 안분값에서 초과분 양도차익을 뺀 값(음수면 0). 건물분은 종전대로 안분한다.
+ *      G-3(나중 취득 토지 보유요건 미달)이 겹치면 토지분 전체가 비과세 대상이 아니라 이 방식을 쓰지 않는다.
  *
  * 파트별 과세 양도차익을 `splitDetail`에 역기입해 `calcLongTermHoldingDeduction`이 같은 값으로
  * 장특공제를 산정하게 한다(이중 안분 방지).
@@ -488,8 +507,16 @@ export function applyHousingLandExclusions(args: {
   const exemptApplies = isExempt || isPartialExempt;
   const applyExempt = (gain: number) => (isExempt ? 0 : prorate(gain));
   //   배율 내 토지분: G-3(보유 요건 연수 미만)이면 비과세 대상이 아니라 전액 과세
-  const landTaxableGain =
-    !exemptApplies || laterLand ? housingLandGain : applyExempt(housingLandGain);
+  //   고가주택(일부 비과세) + 배율 초과 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익을 12억 안분한 값에서
+  //   초과분 양도차익을 뺀 것이 한도 내 토지분이고, 음수면 0이다(초과분이 안분 후 토지분보다 크면 그 차액은 없는 것으로 본다).
+  //   G-3(나중 취득 토지 보유요건 미달)은 토지분 전체가 비과세 대상이 아니라 안분 대상이 아니므로 종전대로다.
+  const rulingApplies = excess !== null && isPartialExempt && !isExempt && !laterLand;
+  const wholeLandProrated = rulingApplies ? prorate(landGain) : 0;
+  const landTaxableGain = !exemptApplies || laterLand
+    ? housingLandGain
+    : rulingApplies
+      ? Math.max(0, wholeLandProrated - nonBusinessGain)
+      : applyExempt(housingLandGain);
   const buildingTaxableGain = !exemptApplies ? buildingGain : applyExempt(buildingGain);
 
   splitDetail.land.taxableGainAfterProration = landTaxableGain;
@@ -513,6 +540,15 @@ export function applyHousingLandExclusions(args: {
       `배율 초과분 ${excess.excessArea.toFixed(2)}㎡(한도 정착면적 × ${excess.multiplier}배 = ` +
         `${excess.limitArea.toFixed(2)}㎡)는 「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ` +
         `양도차익 ${nonBusinessGain.toLocaleString()}을 분리해 전액 과세`,
+    );
+  }
+  if (rulingApplies) {
+    const diff = wholeLandProrated - nonBusinessGain;
+    reasons.push(
+      `고가주택(기준금액 초과) — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익 ${landGain.toLocaleString()}의 ` +
+        `안분 후 과세분 ${wholeLandProrated.toLocaleString()} − 배율 초과분 ${nonBusinessGain.toLocaleString()} = ` +
+        `기준면적 이내 토지분 과세 양도차익 ${landTaxableGain.toLocaleString()}` +
+        (diff < 0 ? " (음수여서 0)" : ""),
     );
   }
   if (laterLand) {
