@@ -55,7 +55,7 @@ export default function TransferTaxCalculator({
   const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
   // 단건/다건 모두 6단계 — 가산세는 자산별 입력
   const STEPS = STEPS_SINGLE;
-  const { currentStep, formData, result, setStep, updateFormData, setResult, reset } =
+  const { currentStep, formData, result, setStep, updateFormData, setResult, clearResult, reset } =
     useCalcWizardStore();
   // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
   useResetOnNewParam(reset);
@@ -348,6 +348,8 @@ export default function TransferTaxCalculator({
       form={formData}
       onChange={handleFormChange}
       assetErrors={currentStep === 0 ? assetErrors : undefined}
+      onInvalidateResult={clearResult}
+      embeddedInMulti={isEmbeddedInMulti}
     />,
     <Step4 key={1} form={formData} onChange={updateFormAndInvalidate} />,
     <Step5 key={2} form={formData} onChange={updateFormAndInvalidate} />,

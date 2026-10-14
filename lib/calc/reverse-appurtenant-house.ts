@@ -11,10 +11,19 @@
  * 자산을 짝 주택으로 바꾸는 작업이 먼저다.)
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { isFractionalSplitEntryBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 
-export function reverseAppurtenantHouseAssetId(
-  assets: readonly Pick<AssetForm, "assetId" | "assetKind" | "landNature" | "isMixedUseHouse">[],
-): string | undefined {
+type ReverseAppurtenantAsset = Pick<
+  AssetForm,
+  "assetId" | "assetKind" | "landNature" | "isMixedUseHouse" | "ownershipNumerator" | "ownershipDenominator"
+>;
+
+export function reverseAppurtenantHouseAssetId(assets: readonly ReverseAppurtenantAsset[]): string | undefined {
+  // 지분 분할(축 B) 토글 진입 **직후**(전 자산 지분율 빈칸)의 형제는 짝 주택이 아니다 — 형제는 `makeDefaultAsset(2)`라 원본 `assetKind`가 `"housing"`일 뿐
+  // 같은 토지의 다른 지분이다. 이 묶음을 역방향으로 읽으면 ⑧이 「주택을 첫 자산으로」 안내를 하는데 따를 방법이 없다(막다른 길).
+  // ⚠️ **지분율이 채워진 뒤(지분 < 1)는 건드리지 않는다** — 함께 양도 모드의 «전 자산 부분 소유»와 데이터로 구분되지 않고(구분은 `Step1`의 `splitMode`만 안다),
+  //    넓게 제외하면 함께 양도 묶음을 ⑧이 풀어 숨은 기본값으로 계산한다(리뷰 M1 실측: 토지 1/2 + 주택 1/2, 계약가 11억 — 주택 먼저 0, 토지 먼저 279,477,000).
+  if (isFractionalSplitEntryBundle(assets)) return undefined;
   const [primary, ...companions] = assets;
   if (!primary || primary.assetKind !== "land" || primary.landNature !== "appurtenant") return undefined;
   const houseLike = companions.filter((a) => a.assetKind === "housing" || a.assetKind === "redevelopment_apt");

@@ -52,9 +52,14 @@ interface Props {
   splitMode: AssetSplitMode;
   /** 토글 B(지분분할) on/off 핸들러 — Step1 정의 */
   onFractionalToggle: (yes: boolean) => void;
+  /**
+   * 카드 재마운트 세대 — 올리면 모든 카드가 다시 마운트된다(카드 안 «접기 상태»는 마운트 때만 계산되므로 자산 순서를 바꾼 뒤 새 첫 카드가 ①을 펼친 채 시작하게 한다).
+   * 입력값은 스토어에 있어 보존된다. 기본 0.
+   */
+  remountEpoch?: number;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0 }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -91,7 +96,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
     <div className="space-y-4">
       {assets.map((asset, idx) => (
         <CompanionAssetCard
-          key={asset.assetId}
+          key={`${asset.assetId}:${remountEpoch}`}
           index={idx}
           asset={asset}
           bundledSaleMode={bundledSaleMode}

@@ -10,7 +10,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import { BundledSaleModeToggle } from "@/components/calc/transfer/CompanionSaleModeBlock";
 import type { AssetSplitMode } from "@/components/calc/transfer/OwnershipRatioInput";
-import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
+import { isFractionalSplitRestorable } from "@/lib/calc/transfer-tax-api-asset-basics";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,14 @@ import { Button } from "@/components/ui/button";
 import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
 import { redevOneHouseAxisCandidate } from "@/lib/calc/redev-one-house-axis";
+import {
+  ReverseAppurtenantSwapNotice,
+  ReverseAppurtenantSwapAfterNote,
+} from "@/components/calc/transfer/ReverseAppurtenantSwapNotice";
+import {
+  reverseAppurtenantSwapNewlyReflected,
+  type ReverseAppurtenantSwapPatch,
+} from "@/lib/calc/reverse-appurtenant-swap";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -33,11 +41,17 @@ export function Step1({
   form,
   onChange,
   assetErrors,
+  onInvalidateResult,
+  embeddedInMulti = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
   /** 자산 인덱스 → 그 카드의 첫 검증 오류. 배너 표시 + 섹션 강제 펼침 */
   assetErrors?: Record<number, string>;
+  /** 계산 결과를 비운다 — 자산 순서를 바꾸는 「주택을 첫 자산으로 바꾸기」가 쓴다(사이드바가 결과의 «첫 자산» 매칭을 읽기 때문). */
+  onInvalidateResult?: () => void;
+  /** 다건 편집에 임베드된 마운트 — 다건은 함께 양도 자산을 지원하지 않으므로(`MULTI_COMPANION_UNSUPPORTED_MESSAGE`) 순서 바꾸기 카드를 숨긴다. */
+  embeddedInMulti?: boolean;
 }) {
   // 자산 분할 모드 — 단일 소스(명시 state). length·ratio derive는 초기화(세션 복원) 1회만 —
   // 렌더마다 재계산하면 토글 ON 직후 자기소멸. (memory feedback_three_state_optional_mode_toggle)
@@ -59,14 +73,8 @@ export function Step1({
     // ⚠️ 명시 100%(단독 소유) 자산이 하나라도 있으면 축 B가 아니다 — 함께양도(다른 물건) 묶음에 지분 자산이 섞인 경우다.
     //    종전에는 `some`만 봐서 복원 시 그 묶음을 축 B로 바꿔 ① 기본정보를 숨기고 「총양도가 × 지분율」 자동가를 보였다
     //    (2026-10-10). 빈칸은 축 B 진입 직후의 미입력이라 허용한다(위 `some` 유지 이유).
-    const ratioBlank = (a: (typeof form.assets)[number]) => !a.ownershipNumerator?.trim() || !a.ownershipDenominator?.trim();
-    if (
-      form.assets.length > 1 &&
-      form.assets.some((a) =>
-        isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
-      ) &&
-      form.assets.every((a) => ratioBlank(a) || isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator))
-    )
+    //    판정은 `isFractionalSplitRestorable`(⑧·역방향 leaf가 쓰는 `isFractionalSplitEntryBundle`과 같은 파일의 술어군).
+    if (isFractionalSplitRestorable(form.assets))
       return "fractional";
     if (form.assets.length > 1) return "companion";
     return "none";
@@ -74,6 +82,13 @@ export function Step1({
   const [pendingCompanionOff, setPendingCompanionOff] = useState(false);
   /** 「판정 불러오기」 모달 (P5-b-2) */
   const [judgmentLoadOpen, setJudgmentLoadOpen] = useState(false);
+  /**
+   * 「주택을 첫 자산으로 바꾸기」(G1) 로컬 UI state — 카드 재마운트 세대 + 교환 직후 안내.
+   * 입력값은 스토어(`form`)에 있고 여기에는 화면 보조 상태만 둔다(useEffect 미러링 없음 — 클릭 핸들러에서만 쓴다).
+   */
+  const [swapEpoch, setSwapEpoch] = useState(0);
+  /** 교환으로 첫 자산이 된 주택 id — 안내 한 줄은 이 id만 기억하고 «처음 반영되는 입력» 목록은 렌더마다 현재 폼에서 파생한다(재편집하면 스스로 거둔다). */
+  const [swappedHouseId, setSwappedHouseId] = useState<string | null>(null);
 
   // 증환지 증가분 존재 시: 당초분·증가분은 한 필지·한 계약이라 양도가액 구분 기재(actual)가 불가능.
   // 양도시 기준시가 안분(§166⑥ 단서)만 유효 → 결정방식 토글 숨김 + apportioned 강제(파생).
@@ -128,6 +143,14 @@ export function Step1({
       };
       onChange({ assets: [firstAsset] });
     }
+  }
+
+  // G1 — 사례 28 역방향: 주택을 맨 앞으로(회전) + 순서와 함께 움직이는 값(주 자산 배지·미등기)을 한 번의 패치로 쓴다. 값은 지우지 않는다.
+  function handleReverseAppurtenantSwap(patch: ReverseAppurtenantSwapPatch) {
+    setSwappedHouseId(patch.assets[0].assetId);
+    setSwapEpoch((n) => n + 1);
+    onInvalidateResult?.();
+    onChange(patch);
   }
 
   function updateAssets(assets: AssetForm[]) {
@@ -283,8 +306,19 @@ export function Step1({
           </div>
         )}
 
+        {/* G1 — 첫 자산이 주택부수토지이고 함께 양도 주택이 1건이면(사례 28 역방향) ⑧이 막는다 → 주택을 첫 자산으로 바꾸는 버튼 */}
+        <ReverseAppurtenantSwapNotice
+          form={form}
+          hidden={embeddedInMulti || splitMode === "fractional"}
+          onSwap={handleReverseAppurtenantSwap}
+        />
+        <ReverseAppurtenantSwapAfterNote
+          items={swappedHouseId !== null && form.assets[0]?.assetId === swappedHouseId ? reverseAppurtenantSwapNewlyReflected(form.assets[0]) : []}
+        />
+
         {/* 자산 카드 리스트 */}
         <CompanionAssetsSection
+          remountEpoch={swapEpoch}
           assets={form.assets}
           bundledSaleMode={effBundledSaleMode}
           onChange={updateAssets}

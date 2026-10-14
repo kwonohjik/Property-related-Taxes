@@ -211,6 +211,8 @@ export interface CalcWizardState {
   setStep: (step: number) => void;
   updateFormData: (data: Partial<TransferFormData>) => void;
   setResult: (result: TransferAPIResult) => void;
+  /** 계산 결과만 비운다 — 입력(formData)은 그대로. 자산 순서가 바뀌는 입력(`reverseAppurtenantSwap`)처럼 `result`의 «첫 자산» 매칭이 낡는 경로가 쓴다. */
+  clearResult: () => void;
   clearPendingMigration: () => void;
   reset: () => void;
 }
@@ -323,6 +325,7 @@ export const useCalcWizardStore = create<CalcWizardState>()(
       updateFormData: (data) =>
         set((state) => ({ formData: { ...state.formData, ...data } })),
       setResult: (result) => set({ result, pendingMigration: true }),
+      clearResult: () => set({ result: null }),
       clearPendingMigration: () => set({ pendingMigration: false }),
       reset: () => {
         if (typeof window !== "undefined") {
