@@ -56,7 +56,7 @@ describe("HousingExcessSplitCard — PHD 환산 안내 카드", () => {
     expect(screen.queryByTestId("housing-excess-phd-card")).toBeNull();
     expect(screen.getByTestId("housing-excess-acq-total")).toBeTruthy();
     expect(screen.getByText(/영 §164⑦ 추정값/)).toBeTruthy();
-    expect(screen.getByText(/최초 공시 개별주택가격 ×/)).toBeTruthy();
+    expect(screen.getByText(/최초 공시 개별주택가격에, 취득 당시 토지\+건물 기준시가 합계를/)).toBeTruthy();
   });
 
   it("대조 — 2005-04-30 이후 취득은 일반 문구(§164⑦ 안내 없음)", () => {
