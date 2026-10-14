@@ -19,8 +19,8 @@
  *
  * ## 적용 범위(검증하지 못한 조합은 막지 않고 «초과분 미분리» 고지로 남긴다)
  *
- * 매매 취득 · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
- * 존재) **또는** §164⑦ 3시점 환산(PHD — 자기 3시점 값으로 토지·건물을 나눠 5칸을 받지 않는다, #17-5 ①). 상속·증여 평가, 2005-04-30 전 취득 중
+ * 매매 취득(또는 개별주택가격 보충적 평가로 평가한 상속·증여 주택 — `suppValuedInherited`, #17-5 ②) · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
+ * 존재) **또는** §164⑦ 3시점 환산(PHD — 자기 3시점 값으로 토지·건물을 나눠 5칸을 받지 않는다, #17-5 ①). 시가·감정 등 보충적 평가가 아닌 상속·증여 평가, 2005-04-30 전 취득 중
  * PHD가 아닌 것(실가·감정·매매사례), 환산 + 공익수용·공매·경락 양도(PHD 포함)는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
  * «초과분 미분리 — 확인 필요»로 고지한다(`housingExcessUnseparatedNotice`).
  *
@@ -41,6 +41,7 @@ import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtena
 import { round2 } from "./area-utils";
 import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
 import { deriveLegacyAcqMode, type PartAcqMode } from "./transfer-tax-split-acq-price";
+import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 배율 초과 면적(㎡) — 한도 = 정착면적 × 법정 배율(양도일·지역 연혁). 초과가 없거나 입력이 모자라면 0. */
@@ -59,8 +60,14 @@ export function housingExcessAreaM2(p: {
 export interface HousingExcessSplitFacts {
   /** 일반 주택(겸용·재개발·PHD·pre1990 아님) */
   isPlainHousing: boolean;
-  /** 취득원인 매매 — 상속·증여·신축 평가 조합은 범위 밖 */
+  /** 취득원인 매매 — 상속·증여·신축 평가 조합은 범위 밖(보충적 평가 주택 상속·증여만 `suppValuedInherited`로 연다) */
   isPurchase: boolean;
+  /**
+   * 개별주택가격(보충적 평가)으로 평가한 상속·증여 주택 — 취득가액(= 상증 평가액)을 토지·건물로 나눌 수 있는 경우만이다(#17-5 ②).
+   * 상증 평가액은 이미 하나의 합계이므로 「건물 기준시가 · 토지 개별공시지가」로 안분하는 해석(서면인터넷방문상담4팀-688, 2006.3.23. — 상증법 §61①4호)이 있는
+   * 보충적 평가(개별주택가격)에 한한다. 시가·감정·공매 등 다른 평가 방식은 근거가 없어 범위 밖이다(`isSuppValuedHouseInheritance`).
+   */
+  suppValuedInherited: boolean;
   /**
    * 환산취득가액 + §164⑨ 특례 양도(1호 공익수용 · 2호 공매·경락) — 특례가 환산 분모(양도시 개별주택가격)를 낮추는데 분리 경로는 그 특례를
    * 반영하지 못한다(범위 밖). 특례 발동 조건(2009-02-04 이후 양도·보상액·공매·경락가액 입력)까지 따지지 않는 보수적 상위집합이다 —
@@ -102,7 +109,7 @@ export function isBeforeHousePriceFirstDisclosure(acquisitionDate: string | Date
 export function housingExcessSplitApplies(f: HousingExcessSplitFacts): boolean {
   return (
     f.isPlainHousing &&
-    f.isPurchase &&
+    (f.isPurchase || f.suppValuedInherited) &&
     !f.isSec164_9Conversion &&
     f.ownsBoth &&
     !f.isSeparateAcquisition &&
@@ -132,6 +139,19 @@ export function phdSplitPathTaken(
   return land === "estimated" && building === "estimated";
 }
 
+/**
+ * 상속·증여 주택의 취득가액이 «개별주택가격(보충적 평가) 단일 합계»인가 — 엔진 입력(`inheritedAcquisition`)과 ④ 전송 페이로드가 **같은 술어**를 읽는다.
+ * 의제취득일(1985-01-01) 이후 · 단독·다가구(개별주택가격) · 평가방법 보충적 · 신고가액 > 0. 공동주택가격·시가·감정·공매 평가는 근거가 없어 false(모름 = 불성립).
+ */
+export function isSuppValuedHouseInheritance(v: {
+  assetKind?: string;
+  reportedMethod?: string;
+  reportedValue?: number;
+  postDeemed: boolean;
+}): boolean {
+  return v.postDeemed && v.assetKind === "house_individual" && v.reportedMethod === "supplementary" && (v.reportedValue ?? 0) > 0;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 엔진 입력 어댑터 — `calcSplitGain` 게이트·`resolveTaxableGain` 차단·고지가 같은 값을 읽는다
 // ──────────────────────────────────────────────────────────────────────────────
@@ -142,6 +162,9 @@ type EngineFacts = Pick<
   | "acquisitionCause"
   | "useEstimatedAcquisition"
   | "acquisitionMethod"
+  | "inheritedAcquisition"
+  | "familyBusinessInheritance"
+  | "landAcquisitionCause"
   | "landAcqMode"
   | "buildingAcqMode"
   | "preHousingDisclosure"
@@ -198,6 +221,18 @@ export function housingExcessSplitAppliesToInput(input: EngineFacts): boolean {
   return housingExcessSplitApplies({
     isPlainHousing: input.propertyType === "housing" && !input.pre1990Land && !input.redevelopment,
     isPurchase: (input.acquisitionCause ?? "purchase") === "purchase",
+    // 상속·증여(단순 증여 — 이월과세·부담부증여는 취득원인이 달라 제외) + 보충적 평가 주택 + 가업상속·토지 취득원인 혼합이 아닌 것(#17-5 ②).
+    suppValuedInherited:
+      (input.acquisitionCause === "inheritance" || input.acquisitionCause === "gift") &&
+      !input.familyBusinessInheritance &&
+      input.landAcquisitionCause === undefined &&
+      input.inheritedAcquisition !== undefined &&
+      isSuppValuedHouseInheritance({
+        assetKind: input.inheritedAcquisition.assetKind,
+        reportedMethod: input.inheritedAcquisition.reportedMethod,
+        reportedValue: input.inheritedAcquisition.reportedValue,
+        postDeemed: input.inheritedAcquisition.inheritanceDate.getTime() >= DEEMED_ACQUISITION_DATE.getTime(),
+      }),
     isSec164_9Conversion:
       input.useEstimatedAcquisition === true && (input.transferCause === "public_expropriation" || input.isAuctionTransfer === true),
     ownsBoth: (input.selfOwns ?? "both") === "both",

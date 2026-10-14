@@ -19,6 +19,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 /** 계약서 구분금액 칸(토지·건물 2칸 + 단서 토글)이 화면에 열리는가. */
 export function housingExcessNeedsAcqContract(asset: AssetForm, transferDate: string | undefined): boolean {
   return (
+    // 계약서 구분금액은 «매매계약서»의 가액 구분(§100②·③)이다 — 상속·증여는 상증 평가액 하나라 받지 않는다(#17-5 ②).
+    asset.acquisitionCause === "purchase" &&
     deriveLegacyPartAcqMode(asset) === "actual" &&
     asset.hasSeperateLandAcquisitionDate !== true &&
     housingExcessNeedsLandSplit(asset, transferDate)

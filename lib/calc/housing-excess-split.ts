@@ -23,7 +23,10 @@ import {
   housingExcessNeedsStdInputs,
   housingExcessSplitApplies,
   isBeforeHousePriceFirstDisclosure,
+  isSuppValuedHouseInheritance,
 } from "@/lib/tax-engine/housing-excess-split";
+import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
+import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
@@ -60,11 +63,36 @@ function usesPhdSplit(asset: AssetForm, isNonPrimary: boolean): boolean {
   return usesPhdGate(asset, isNonPrimary) && deriveLegacyPartAcqMode(asset) === "estimated";
 }
 
+/**
+ * 개별주택가격(보충적 평가)으로 평가한 상속·증여 주택인가(#17-5 ②) — 엔진 어댑터(`suppValuedInherited`)와 같은 사실이다.
+ * 평가방법·평가액·상속개시일은 ④가 `inheritedAcquisition`으로 싣는 값 **그대로**(`buildInheritedAcquisitionPayload`)를 읽어 UI와 엔진이 갈리지 않는다.
+ * 첫 자산만이다 — 함께 양도 카드의 상속 평가액은 다른 채널(`inheritanceValuation`)이라 엔진 어댑터가 읽지 못한다.
+ */
+function suppValuedInheritedAsset(asset: AssetForm, isNonPrimary: boolean): boolean {
+  if (isNonPrimary) return false;
+  // 취득원인(상속·단순 증여)·건물 상속 + 토지 매매 혼합(D2 — payload가 비어 있다)은 ④ `buildInheritedAcquisitionPayload`가 이미 걸러 `undefined`로 돌려준다 — 따로 보지 않는다.
+  // 가업상속 의제 취득가액이 켜진 상속 — ④가 `familyBusinessInheritance`를 싣는 조건과 같다
+  if (asset.familyBusinessInheritance !== undefined && allowsFamilyBusinessInheritance(asset)) return false;
+  const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as
+    | { mode?: string; assetKind?: string; reportedMethod?: string; reportedValue?: number }
+    | undefined;
+  return (
+    ia !== undefined &&
+    isSuppValuedHouseInheritance({
+      assetKind: ia.assetKind,
+      reportedMethod: ia.reportedMethod,
+      reportedValue: ia.reportedValue,
+      postDeemed: ia.mode === "post-deemed",
+    })
+  );
+}
+
 function factsOf(asset: AssetForm, excessAreaM2: number, isNonPrimary: boolean) {
   return {
     isPlainHousing: asset.assetKind === "housing" && !asset.isMixedUseHouse && !hasPre1990LandEstimation(asset),
     usesPhd: usesPhdSplit(asset, isNonPrimary),
     isPurchase: asset.acquisitionCause === "purchase",
+    suppValuedInherited: suppValuedInheritedAsset(asset, isNonPrimary),
     // 환산 + 공익수용·공매·경락만 범위 밖(§164⑨1호·2호 환산 분모 특례가 분리 경로에 닿지 않는다) — 엔진 어댑터는 ④가 싣는
     // `useEstimatedAcquisition`·`transferCause`·`isAuctionTransfer`(주택은 2호 전송 대상 — `isAuctionEligibleAssetKind`)로 같은 판정.
     isSec164_9Conversion:
@@ -86,6 +114,21 @@ function factsOf(asset: AssetForm, excessAreaM2: number, isNonPrimary: boolean) 
  */
 export function housingExcessNeedsLandSplit(asset: AssetForm, transferDate: string | undefined, isNonPrimary = false): boolean {
   return housingExcessNeedsStdInputs(factsOf(asset, housingExcessAreaOfAsset(asset, transferDate), isNonPrimary));
+}
+
+/**
+ * 배율 초과분 분리가 «개별주택가격(보충적 평가)으로 평가한 상속·증여 주택»의 평가액을 나누는 경로인가(#17-5 ②) — 5칸 중 취득시 개별주택가격 총액은 평가액 그 자체라
+ * 따로 받지 않는다(⑤ 칸 없음 · ⑧ 요구 없음 · ④가 평가액을 `standardPriceAtAcquisition`으로 싣는다). 나머지 4칸(㎡당 공시지가·건물 기준시가·양도시 2칸)은 매매와 같다.
+ */
+export function housingExcessUsesInheritedTotal(asset: AssetForm, transferDate: string | undefined, isNonPrimary = false): boolean {
+  return housingExcessNeedsLandSplit(asset, transferDate, isNonPrimary) && suppValuedInheritedAsset(asset, isNonPrimary);
+}
+
+/** `housingExcessUsesInheritedTotal`일 때 ④가 취득시 개별주택가격(5칸의 총액)으로 싣는 값 — ④의 상속·증여 평가액(`reportedValue`) 그대로. 아니면 undefined. */
+export function housingExcessInheritedTotal(asset: AssetForm, transferDate: string | undefined, isNonPrimary = false): number | undefined {
+  if (!housingExcessUsesInheritedTotal(asset, transferDate, isNonPrimary)) return undefined;
+  const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as { reportedValue?: number } | undefined;
+  return ia?.reportedValue;
 }
 
 /** 배율 초과분을 §164⑦ PHD 3시점 환산 값으로 나누는 자산인가(5칸 없음 — 카드는 안내만) — 엔진 `phdSplitPathTaken ∧ housingExcessSplitApplies`와 같은 사실. */

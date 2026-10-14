@@ -13,7 +13,7 @@ import { deriveLegacyPartAcqMode } from "./transfer-tax-split-acq-mode";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
-import { housingExcessNeedsLandSplit } from "./housing-excess-split";
+import { housingExcessInheritedTotal, housingExcessNeedsLandSplit } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
 import { housingExcessAcqContractPayload } from "./housing-excess-acq-contract";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -206,6 +206,11 @@ export function buildSplitPayload(
     // 비례에 쓰이는 것을 막는다(3중 패턴).
     ...(separateAcquisition || ownerSplitHousingNeedsBuildingStd(primary) || excessSplit
       ? { buildingStandardPriceAtAcquisition: parseAmount(primary.buildingStandardPriceAtAcq) || undefined }
+      : {}),
+    // #17-5 ② — 개별주택가격(보충적 평가) 상속·증여 주택의 취득시 개별주택가격 총액 = 상속·증여 평가액. 화면은 그 칸을 받지 않으므로(평가액 칸이 정본)
+    //   폼에 남은 `standardPriceAtAcq`가 아니라 평가액을 싣는다 — 두 값이 다르면 화면에 없는 값이 계산에 쓰인다.
+    ...(excessSplit && primaryCtx !== undefined && housingExcessInheritedTotal(primary, primaryCtx.transferDate, primaryCtx.isNonPrimary) !== undefined
+      ? { standardPriceAtAcquisition: housingExcessInheritedTotal(primary, primaryCtx.transferDate, primaryCtx.isNonPrimary) }
       : {}),
     ...(separateAcquisition
       ? {
