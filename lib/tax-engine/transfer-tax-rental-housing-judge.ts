@@ -17,9 +17,9 @@ import type { EligibilityResult } from "./transfer-tax/rental-housing-exception/
 import {
   meetsTable2ResidenceRequirement,
   qualifiesWinWinRental,
-  resolveExemptionResidenceMonths,
   resolveWasRegulatedAtAcquisition,
 } from "./transfer-tax-exemption-requirements";
+import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { resolveLthdTable2Era } from "./data/lthd-table2-era";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -149,7 +149,7 @@ export function buildPrhpTable2ReadingNotice(
   if (scenarioId !== "RH-B2" || !part2 || part2 <= 0 || holdYears < 3) return undefined;
   const era = resolveLthdTable2Era(effectiveInput.transferDate);
   if (era !== "holding_8pct_residence_2y" && era !== "holding_residence_split") return undefined;
-  const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(effectiveInput) / 12);
+  const table2ResidenceYears = Math.floor(resolveExemptionRequirementResidenceMonths(effectiveInput) / 12);
   if (meetsTable2ResidenceRequirement(effectiveInput, table2ResidenceYears)) return undefined;
   return (
     "직전거주주택보유주택 양도의 §161②2호 부분은 소득세법 시행령 §161④ 문언대로 장기보유특별공제 표2(보유기간분)를 " +

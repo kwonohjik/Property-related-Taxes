@@ -9,6 +9,7 @@
  * 설계 문서: docs/02-design/features/transfer-tax-mixed-use-house.engine.design.md
  */
 
+import { giftHouseholdPriorResidenceMonths } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap, presaleRightStartDate } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
@@ -419,7 +420,11 @@ export function calcMixedUseTransferTax(
   }
 
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
-  const table2ResidenceYears = asset.table2ResidencePeriodYears ?? asset.residencePeriodYears;
+  // 결정 #38-9: 증여 전 동일세대 거주 개월을 더한다 — 비과세 거주요건(`transfer-tax-mixed-use-exemption.ts`)과 같은 leaf·같은 값이다.
+  // 공제율의 거주분은 `asset.residencePeriodYears`(본인 거주) 그대로다(사전-2025-법규재산-0506).
+  const table2ResidenceYears = Math.floor(
+    ((asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12 + giftHouseholdPriorResidenceMonths(asset.giftHouseholdBasis)) / 12,
+  );
 
   // ─── 🔴 2026-08-10 — 용도변경일 기반 LTHD **시간 비례 분할을 폐지**했다 ───
   //

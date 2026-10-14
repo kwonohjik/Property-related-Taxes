@@ -87,7 +87,7 @@ export interface CarryoverTaxationInput {
   donorHouseholdHoldingStartDate?: Date;
   /**
    * 증여 전 증여자와 같은 세대로 이 주택에 **거주한 기간(개월)** (결정 #38-7) — `donorSameHouseholdContinuous === true`(통산 성립)일 때만 의미가 있다.
-   * §154① 비과세 거주요건에만 더한다. **undefined = 미답**(통산 없이 판정, 채우면 결론이 달라질 때만 확인 필요) · 0 = 거주한 적 없음.
+   * §154① 비과세 거주요건과 표2 대상 판정(거주 2년)에 더한다(공제율에는 더하지 않는다). **undefined = 미답**(통산 없이 판정, 채우면 결론이 달라질 때만 확인 필요) · 0 = 거주한 적 없음.
    * 세대 보유 시작일부터 증여 등기접수일까지의 개월 수를 넘을 수 없다(⑫·⑧).
    */
   donorPriorHouseholdResidenceMonths?: number;
