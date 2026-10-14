@@ -33,6 +33,14 @@ import {
 import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate";
 import { giftBurdenedValuationBasis } from "@/lib/calc/gift-burdened-valuation-basis";
 import {
+  BG_PRESUMED_LABEL,
+  GIFT_BG_APPRAISAL_EXTENSION_ERROR,
+  GIFT_BG_PRESUMED_INHERITED_ERROR,
+  giftBgAppraisalExtensionPenaltyApplies,
+  giftBgPresumedBlockedByInheritance,
+  isBgPresumedMethod,
+} from "@/lib/calc/gift-burdened-presumed-acquisition";
+import {
   giftBurdenedNewHouseOriginError,
   giftBurdenedTempTwoHouseIncompleteError,
   giftBurdenedTempTwoHouseRegulatedGate,
@@ -150,7 +158,28 @@ export function validateStep(step: number, form: FormState): string | null {
         // K-4/K-5 시가 모드: 분모 C의 시가항은 증여재산 평가의 시가·감정가·매매사례가에서 온다(파생) — 별도 입력 없음.
         // 취득가액 산정방식 필수
         if (!bgt.acquisitionMethod) {
-          return `${itemLabel}: 증여재산을 시가로 평가했으므로 양도소득세 취득가액 산정방식(실지 또는 환산)을 선택하세요.`;
+          return `${itemLabel}: 증여재산을 시가로 평가했으므로 양도소득세 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요.`;
+        }
+        // K-6/K-7 매매사례가액·감정가액(§97①1호나목 · §176의2③1·2호)
+        if (isBgPresumedMethod(bgt.acquisitionMethod)) {
+          const methodLabel = BG_PRESUMED_LABEL[bgt.acquisitionMethod];
+          // 상속받은 자산 — §163⑨ 평가액이 가목이라 나목(매매사례·감정·환산)에 닿지 않는다(⑤ 라디오와 같은 술어)
+          if (giftBgPresumedBlockedByInheritance(bgt)) {
+            return `${itemLabel}: ${GIFT_BG_PRESUMED_INHERITED_ERROR}`;
+          }
+          // 금액 필수 — 미입력을 0으로 두면 취득가액 0 → 양도차익 과대(막히지 않는 오답)
+          if (!bgt.presumedAcquisitionTotal || bgt.presumedAcquisitionTotal <= 0) {
+            return `${itemLabel}: 부담부증여 ${methodLabel} — 취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${bgt.acquisitionMethod === "appraisal" ? "2" : "1"}호).`;
+          }
+          // 감정가액은 신축·증축 5년 이내면 §114조의2 가산세 — 신축일 필수(5년 기산), 증축은 base 칸이 없어 차단
+          if (bgt.acquisitionMethod === "appraisal" && propertyType !== "land") {
+            if (bgt.isSelfBuilt === true && !bgt.constructionDate) {
+              return `${itemLabel}: 신축·증축 건물의 신축일(취득일)을 입력하세요. (§114조의2 5년 기산 필수)`;
+            }
+            if (giftBgAppraisalExtensionPenaltyApplies(bgt, false, form.giftDate)) {
+              return `${itemLabel}: ${GIFT_BG_APPRAISAL_EXTENSION_ERROR}`;
+            }
+          }
         }
         // 상속받은 자산(상속개시일 1985.1.1. 이후) — §163⑨ 평가액이 가목이라 환산(K-5) 불가(E-1 한계 G6 · ⑤ 라디오와 같은 술어)
         if (bgt.acquisitionMethod === "converted" && giftBurdenedInheritedConversionBlocked(bgt)) {

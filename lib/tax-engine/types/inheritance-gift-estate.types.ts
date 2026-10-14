@@ -1365,9 +1365,19 @@ export interface BurdenedGiftTransferTaxInput {
   /**
    * 취득가액 산정 방식 (sangjeungbeop_market 선택 시 필수).
    * - "actual":    실지취득가액 안분 (K-4)
+   * - "salesCase": 매매사례가액 (K-6 — 소령 §176의2③1호, 취득일 전후 3개월)
+   * - "appraisal": 감정가액 (K-7 — 소령 §176의2③2호, 취득일 전후 3개월 · 신축·증축 5년 이내면 §114조의2 가산세)
    * - "converted": 환산취득가액 §176의2②2호 (K-5)
+   * 소법 §97①1호나목 「매매사례가액, 감정가액 또는 환산취득가액을 순차적으로 적용」 — 양도세 화면과 같은 enum이다.
    */
-  acquisitionMethod?: "actual" | "converted";
+  acquisitionMethod?: "actual" | "salesCase" | "appraisal" | "converted";
+
+  /**
+   * 매매사례가액·감정가액 (원) — K-6/K-7 전용, 건물+토지 통합 **한 칸**(증여 category에 general_building 없음).
+   * 토지는 ④가 `presumedLandAcquisitionPrice`로, 그 밖은 `presumedAcquisitionTotal`로 싣는다(엔진이 건물 몫을
+   * 취득시 기준시가 비율로 나눈다). acquisitionMethod가 "salesCase"·"appraisal"일 때 필수.
+   */
+  presumedAcquisitionTotal?: number;
 
   /**
    * 실지 취득가액 합계 (원) — K-4 전용, 건물+토지 통합 입력.
