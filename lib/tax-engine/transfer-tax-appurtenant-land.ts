@@ -20,6 +20,7 @@ import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-ba
 import { TRANSFER } from "./legal-codes";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+export { housingExcessAcqContractNotice } from "./housing-excess-acq-contract";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 
 /**

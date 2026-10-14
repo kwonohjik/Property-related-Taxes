@@ -15,6 +15,7 @@ import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
 import { housingExcessNeedsLandSplit } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
+import { housingExcessAcqContractPayload } from "./housing-excess-acq-contract";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
@@ -282,6 +283,9 @@ export function buildSplitPayload(
           buildingDirectExpenses: excessCapex.building === null ? undefined : ratioed(String(excessCapex.building)),
         }
       : {}),
+    // #17-6 — 취득 당시 계약서 토지·건물 구분금액(+ 영 §166⑧1호 단서 신고). ⑤ 노출·⑧ 필수와 같은 술어(`housingExcessAcqContractPayload`) — 칸이 안 열리면
+    // 실리지 않는다(잔재 무시). 이 경로는 지분이 아니라 `ratioed`를 걸지 않는다(`housingExcessSplitApplies`가 지분을 제외).
+    ...(primaryCtx !== undefined ? (housingExcessAcqContractPayload(primary, primaryCtx.transferDate) ?? {}) : {}),
     // 양도시 기준시가 2필드 — 기준시가는 지분 스케일 대상이 아니다(물건 속성값).
     // ⚠️ 토지분은 저장값이 아니라 **단가 × 면적 파생**을 쓴다 — 면적을 ① 기본정보에서 고치면
     //    저장값이 stale로 남기 때문이다(`resolveLandStdAtTransfer` 주석의 실측 참조).

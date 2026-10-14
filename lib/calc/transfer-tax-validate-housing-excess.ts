@@ -11,6 +11,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessZonePending } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
 import { housingExcessPartModeMismatch } from "./housing-excess-split";
+import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./housing-excess-acq-contract";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -61,6 +62,24 @@ export function validateHousingExcessSplitInputs(
   }
   if (!positive(a.buildingStandardPriceAtAcq)) {
     return fieldError("buildingStandardPriceAtAcq", `${head} 취득 당시 건물 기준시가를 입력하세요 (개별주택가격을 토지 : 건물 기준시가 비율로 나눕니다).`);
+  }
+  // #17-6 — 취득 당시 계약서 토지·건물 구분금액(선택). 하나라도 채우면 둘 다 필수이고 합이 취득가액과 같아야 한다(자동 보정·자동 안분 금지).
+  //   칸이 열리는 조건(`housingExcessNeedsAcqContract`)은 ⑤·④와 같은 술어다 — 칸이 안 열리면 잔재가 있어도 요구하지 않는다.
+  if (housingExcessNeedsAcqContract(a, transferDate)) {
+    const c = housingExcessAcqContractParts(a);
+    if (c.entered) {
+      const contractHead =
+        `${label}: 취득 당시 계약서 토지·건물 구분금액을 입력하면 토지 금액과 건물 금액을 모두 입력해야 하고 합이 취득가액과 같아야 합니다 ` +
+        "(소득세법 §100②·③ — 자동으로 나머지를 채우지 않습니다).";
+      if (c.land === null) return fieldError("acqContractLandPrice", `${contractHead} 토지 금액을 입력하세요.`);
+      if (c.building === null) return fieldError("acqContractBuildingPrice", `${contractHead} 건물 금액을 입력하세요.`);
+      if (c.land + c.building !== c.total) {
+        return fieldError(
+          "acqContractLandPrice",
+          `${contractHead} 토지 금액 ${c.land.toLocaleString()} + 건물 금액 ${c.building.toLocaleString()} = ${(c.land + c.building).toLocaleString()}이 취득가액 ${c.total.toLocaleString()}과 다릅니다.`,
+        );
+      }
+    }
   }
   if (!(resolveLandStdAtTransfer(a) != null && (resolveLandStdAtTransfer(a) ?? 0) > 0)) {
     return fieldError("standardPricePerSqmAtTransfer", `${head} 양도 당시 ㎡당 개별공시지가를 입력하세요 (양도 당시 토지 기준시가 = 단가 × 양도 면적).`);

@@ -437,6 +437,9 @@ export function buildCompanionEngineInputs(
     landStandardPriceAtTransfer: c.landStandardPriceAtTransfer,
     buildingStandardPriceAtTransfer: c.buildingStandardPriceAtTransfer,
     buildingStandardPriceAtAcquisition: c.buildingStandardPriceAtAcquisition,
+    acqContractLandPrice: c.acqContractLandPrice,
+    acqContractBuildingPrice: c.acqContractBuildingPrice,
+    acqContractOtherLaw: c.acqContractOtherLaw,
   };
 
   /**

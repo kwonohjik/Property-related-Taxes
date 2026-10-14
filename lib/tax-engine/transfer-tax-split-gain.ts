@@ -15,9 +15,11 @@ import type {
   SplitGainResult,
   SplitPartResult,
 } from "./types/transfer.types";
+import type { AcqSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { housingExcessSplitAppliesToInput } from "./housing-excess-split";
+import { resolveHousingExcessAcqContract } from "./housing-excess-acq-contract";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
 import { buildSplitPartCauseEcho } from "./transfer-split-part-echo";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -209,6 +211,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     judgment: saleSplitJudgment,
   } = resolveTransferPriceSplit(input);
 
+  // ②-0 취득 당시 계약서 토지·건물 구분금액(#17-6) — 있으면 §100③ 판정 후 계약서 구분금액 또는 안분 가액. 없으면 입력 그대로(미입력 불변).
+  const acqContract = resolveHousingExcessAcqContract(input, earlyLandMode, earlyBuildingMode, landRatio);
+
   // ② 취득가액 분리 (파트별 독립 4-way — 환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
   const {
     land: landAcqPrice,
@@ -219,7 +224,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     landAcquisitionBasis,
     buildingAcquisitionBasis,
   } = calcSplitAcquisitionPrice(
-    input,
+    acqContract.input,
     landTransferPrice,
     buildingTransferPrice,
     landStdAtAcq,
@@ -380,12 +385,15 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     ...(acqStd?.stdSplit ? { stdSplit: acqStd.stdSplit } : {}),
     // §100③ 판정 — 구분 기재가 있고 안분값도 산출된 경우에만 존재한다(위 resolveTransferPriceSplit).
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
+    // 취득 당시 계약서 구분금액 §100③ 판정 — 계약서 구분금액이 있는 같은 날 취득 주택(배율 초과분 분리)에서만 존재한다(#17-6).
+    ...(acqContract.judgment ? { acqSplitJudgment: acqContract.judgment } : {}),
     // 비율 미산출 시 사유 문구는 **파트 모드로 갈린다**(2026-07-30). 종전에는 무조건
     // "파트별 실지거래가액"이었는데, 파트별 게이팅 이후 토지 실가 + 건물 환산도 이 분기에
     // 진입한다 — 건물이 환산인데 "실지거래가액"은 거짓이다.
     note:
       landRatio != null && buildingRatio != null
-        ? `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
+        ? acqContractAppliedNote(acqContract.judgment, landRatio, buildingRatio, landHoldingYears, buildingHoldingYears)
+          ?? `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
         : `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (${
             landMode === "actual" && buildingMode === "actual"
               ? "파트별 실지거래가액"
@@ -565,4 +573,26 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     preHousingDisclosureDetail: phd,
     housingExpropriationValuationDetail: housingExprVal?.detail,
   };
+}
+
+/**
+ * 계약서 구분금액이 취득가액에 적용된 경우(안분 가액이 아닌 경우)의 결과 메모 — 취득가액의 토지·건물 비율은 계약서 금액 기준이고,
+ * `apportionRatio`(기준시가 안분비)는 공통 비용 안분에만 쓰였음을 밝힌다. 안분 가액이 적용되면(`deemed_unclear`) 종전 문구 그대로라 null.
+ */
+function acqContractAppliedNote(
+  judgment: AcqSplitJudgmentDetail | undefined,
+  landRatio: number,
+  buildingRatio: number,
+  landHoldingYears: number,
+  buildingHoldingYears: number,
+): string | null {
+  if (!judgment || judgment.outcome === "deemed_unclear") return null;
+  const { land, building } = judgment.applied;
+  const total = land + building;
+  if (total <= 0) return null;
+  const pct = (n: number) => ((n * 1000) / total / 10).toFixed(1);
+  return (
+    `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (취득가액은 계약서 구분금액 적용 — 토지 ${pct(land)}% : 건물 ${pct(building)}%, ` +
+    `공통 비용 안분비는 기준시가 기준 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
+  );
 }

@@ -461,6 +461,17 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // transfer.ts SPLIT_DEEMED_UNCLEAR — 토지·건물 구분 기장 가액 30% 이상 차이 → 불분명 의제 (KoreanLaw 실측, 소득세법 시행 2026-01-01 본문)
+    id: "TRANSFER.SPLIT_DEEMED_UNCLEAR",
+    citation: "소득세법 §100",
+    keywords: [
+      "구분 기장한 가액이 같은 항에 따라 안분계산한 가액과 100분의 30 이상 차이가 있는 경우",
+      "토지와 건물 등의 가액 구분이 불분명한 때로 본다",
+      "다른 법령에서 정하는 바에 따라 가액을 구분한 경우 등 대통령령으로 정하는 사유",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // stock.ts SECTION_118_17_REENTRY — 국외전출세 재전입 환급·납부유예 취소
     id: "TRANSFER.REENTRY_REFUND",
     citation: "소득세법 §118의17",

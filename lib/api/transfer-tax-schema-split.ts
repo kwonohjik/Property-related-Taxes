@@ -79,4 +79,9 @@ export const splitAcquisitionShape = {
   buildingStandardPriceAtTransfer: z.number().int().positive().optional(),
   /** 건물분 취득시 기준시가(§99①1호 나목) — **별개 취득 전용** */
   buildingStandardPriceAtAcquisition: z.number().int().positive().optional(),
+  /** 취득 당시 계약서 토지·건물 구분금액(#17-6) — 같은 날 취득 주택의 배율 초과분 분리 전용. 둘 다 있어야 하고 합은 취득가액과 같다(엔진이 재검증). ⑫ 침묵 stripping 방지 */
+  acqContractLandPrice: z.number().int().nonnegative().optional(),
+  acqContractBuildingPrice: z.number().int().nonnegative().optional(),
+  /** 영 §166⑧1호 단서 신고 — 양도일 2025.1.1. 이후에만 효력(엔진이 연혁으로 무시) */
+  acqContractOtherLaw: z.boolean().optional(),
 } as const;
