@@ -22,7 +22,7 @@
  *   - DB 세율 맵 fallback: 상수(PROPERTY_SEPARATE_CONST) 사용 (P4-13)
  */
 
-import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";

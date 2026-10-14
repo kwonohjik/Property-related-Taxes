@@ -139,7 +139,7 @@ export function ratePercent(rate: number): number {
 /**
  * 천원 미만 절사 — 순수 산술 헬퍼. 어느 세목의 과세표준을 절사하는지는 호출부가 정한다.
  * 양도소득 과세표준에는 쓰지 않는다(절사 규정이 없다). 현재 호출은 건물 기준시가 ㎡당 단가
- * (`stdPriceFromPerM2`)와 상속·증여 `truncateTaxBase`뿐이다.
+ * (`stdPriceFromPerM2`)뿐이다 — 상속·증여 `truncateTaxBase`는 이 함수를 감싸지만 호출처가 없다.
  */
 export function truncateToThousand(amount: number): number {
   return Math.floor(amount / 1000) * 1000;

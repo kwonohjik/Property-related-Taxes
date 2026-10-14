@@ -14,7 +14,7 @@
  * 판정 우선순위: 중과(4%) → 저율(0.07%) → 일반(0.2%) → 비해당
  */
 
-import { applyRate, truncateToThousand } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import { computeFactoryStandardArea } from "./factory-standard-area";
 import type { EmployeeSportsFacilityUsage } from "./factory-employee-sports-standard";
 import { computeLivestockStandardArea, includedFacilityLabels } from "./livestock-standard-area";
