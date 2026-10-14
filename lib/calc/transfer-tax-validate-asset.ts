@@ -253,7 +253,7 @@ export function validateAssetEntry(
   if (separateLandDateError) return separateLandDateError;
 
   // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
-  const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate);
+  const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index > 0);
   if (housingExcessError) return housingExcessError;
 
   // 공유 지분율 범위 — ⑤ 인라인 경고(`OwnershipRatioInput`)와 **같은 술어**를 쓴다.

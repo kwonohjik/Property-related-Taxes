@@ -26,7 +26,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { TransferBuildingStdFields } from "./TransferStdPriceCards";
-import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit } from "@/lib/calc/housing-excess-split";
+import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessUsesPhdSplit } from "@/lib/calc/housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "@/lib/calc/housing-excess-split";
 import {
   housingExcessAcqContractAsksProviso,
@@ -41,17 +41,32 @@ interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  /** 첫 자산이 아님(함께 양도 카드) — §164⑦ PHD는 첫 자산에만 닿는다 */
+  isNonPrimary?: boolean;
 }
 
 const COUNT_WORD: Record<number, string> = { 4: "네", 5: "다섯", 6: "여섯" };
 
-export function HousingExcessSplitCard({ asset, onChange, transferDate }: Props) {
-  if (!housingExcessNeedsLandSplit(asset, transferDate)) return null;
+export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPrimary = false }: Props) {
+  // §164⑦ 개별주택가격 미공시 3시점 환산 — 분리 경로는 타지만 받을 칸이 없다(환산 칸의 토지 값·건물 값으로 나눈다). 안내만 한다(#17-5).
+  if (housingExcessUsesPhdSplit(asset, transferDate, isNonPrimary)) {
+    return (
+      <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 개별주택가격 미공시 환산 값으로 분리" bodyClassName="space-y-2">
+        <p className="text-caption text-amber-900 leading-relaxed" data-testid="housing-excess-phd-card">
+          토지 면적이 건물 정착면적의 지역별 배율 한도를 <strong>{housingExcessAreaOfAsset(asset, transferDate).toFixed(2)}㎡</strong> 넘습니다.
+          한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지(소득세법 §104의3①5호)로 분리 과세합니다. 이 자산은 취득 당시 개별주택가격이 공시되기 전이라
+          §164⑦ 3시점 환산을 쓰므로, 위 환산 칸의 토지 값·건물 값으로 양도가액과 환산취득가액을 토지분·건물분으로 나누어 초과분을 분리합니다 — 이 카드에서 따로
+          입력할 칸은 없습니다.
+        </p>
+      </ToneCard>
+    );
+  }
+  if (!housingExcessNeedsLandSplit(asset, transferDate, isNonPrimary)) return null;
   const excess = housingExcessAreaOfAsset(asset, transferDate);
   const landArea = parseDecimal(asset.transferArea) || parseDecimal(asset.acquisitionArea) || undefined;
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
   const acqTotalElsewhere = deriveLegacyPartAcqMode(asset) !== "actual";
-  const capex = housingExcessNeedsCapexSplit(asset, transferDate) ? housingExcessCapexParts(asset) : null;
+  const capex = housingExcessNeedsCapexSplit(asset, transferDate, isNonPrimary) ? housingExcessCapexParts(asset) : null;
   const contractOpen = housingExcessNeedsAcqContract(asset, transferDate);
   const contract = housingExcessAcqContractParts(asset);
   const contractEra = housingExcessAcqContractEra(transferDate);
