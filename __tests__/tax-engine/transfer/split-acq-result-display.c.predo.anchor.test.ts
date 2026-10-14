@@ -178,7 +178,8 @@ describe("R-10 파트 과세 양도차익의 합은 taxableGain과 1원 다를 �
     expect(r.splitDetail!.building.taxableGainAfterProration).toBe(bldTaxable);
     // 장특공제는 **파트 값 기준**이다 — 합산 기준 재계산과 1원 어긋날 수 있다(이 값이 정본)
     expect(r.longTermHoldingDeduction).toBe(
-      mulDiv(landTaxable, 68, 100) + mulDiv(bldTaxable, 56, 100),
+      // 🔁 기본통칙 95-0…1: 토지(15년)가 건물(7년)보다 오래돼 토지분 = max(표1 30%, 표2 56%) = 56% (종전 토지 자신의 보유연수 표2 68%)
+      mulDiv(landTaxable, 56, 100) + mulDiv(bldTaxable, 56, 100),
     );
   });
 });
@@ -404,7 +405,9 @@ describe("S 수정 후 기대 — 장기보유특별공제 문구·sub-step (H-2
     const s = step(r, "장기보유특별공제")!;
     expect(s.amount).toBe(m.ltd); // 153,632,000
     expect(s.formula).toBe(
-      `토지분 ${won(m.land.taxableGain)} × 68% = ${won(m.land.ltd)} (보유 15년×4%=40% + 거주 7년×4%=28%)`
+      // 🔁 기본통칙 95-0…1 — 토지(15년)가 건물(7년)보다 오래돼 표1(토지 전체 보유 15년 30%)과 표2(주택 부수토지로서의 보유 7년 + 거주 7년 = 56%) 중 큰 공제율.
+      //    종전: `토지분 × 68% (보유 15년×4%=40% + 거주 7년×4%=28%)` — 토지 자신의 보유연수로 표2를 적용했다.
+      `토지분 ${won(m.land.taxableGain)} × 56% = ${won(m.land.ltd)} (기본통칙 95-0…1: 표1(토지 전체 보유 15년×2% = 30%)과 표2(주택 부수토지로서의 보유 7년 + 거주 = 56%) 중 큰 공제율 56%)`
         + ` + 건물분 ${won(m.building.taxableGain)} × 56% = ${won(m.building.ltd)} (보유 7년×4%=28% + 거주 7년×4%=28%)`,
     );
   });

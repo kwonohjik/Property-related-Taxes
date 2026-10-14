@@ -205,9 +205,10 @@ describe("OV-3 F1 — 합산 명세서 장특 보유분·거주분(자산별·�
   const itemsOf = (agg: ReturnType<typeof aggOf>) =>
     buildStatementItems(aggregateToFilingResult(agg), formOf(), formOf().assets[0], metaOf(agg) as never, undefined);
 
-  it("독립 산식 확인 — 보유 87,916,000 · 거주 65,716,000", () => {
+  // 🔁 기본통칙 95-0…1 — 토지(15년)가 건물(7년)보다 오래돼 토지분 = max(표1 30%, 표2 56%) = 56%(보유 28% + 거주 28%). 종전 보유 87,916,000(토지 40% + 거주 28%) · 거주 65,716,000.
+  it("독립 산식 확인 — 보유 65,716,000 · 거주 65,716,000", () => {
     const m = model(SCN_H, COMBOS.AE);
-    expect(m.land.holdAmt + m.building.holdAmt).toBe(87_916_000);
+    expect(m.land.holdAmt + m.building.holdAmt).toBe(65_716_000);
     expect(m.land.resAmt + m.building.resAmt).toBe(65_716_000);
   });
 
@@ -215,7 +216,7 @@ describe("OV-3 F1 — 합산 명세서 장특 보유분·거주분(자산별·�
     const items = itemsOf(a);
     const hold = lt(items, "ltHoldingPart").perAsset!.map((x) => x.value);
     const res = lt(items, "ltResidencePart").perAsset!.map((x) => x.value);
-    expect(hold[0]).toBe(87_916_000);
+    expect(hold[0]).toBe(65_716_000);
     expect(res[0]).toBe(65_716_000);
     expect(hold[0]).toBe(a.properties[0].filingDisplay!.lthdHoldingPart);
     expect(res[0]).toBe(a.properties[0].filingDisplay!.lthdResidencePart);

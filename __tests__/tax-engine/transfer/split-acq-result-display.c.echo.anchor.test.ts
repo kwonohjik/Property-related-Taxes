@@ -92,7 +92,8 @@ describe("T-1 SplitPartResult 보유·거주 분해 echo (E-1)", () => {
     const P = 1_500_000_001;
     const landT = mulDiv(P, 450_000_000, 600_000_000);
     const landTaxable = mulDiv(landT - 200_000_001, P - 1_200_000_000, P);
-    const ld = mulDiv(landTaxable, 68, 100);
+    // 🔁 기본통칙 95-0…1: 토지 15년 > 건물 7년 → 토지분 = max(표1 30%, 표2(건물 7년 + 거주 7년) 56%) = 56%(종전 68%)
+    const ld = mulDiv(landTaxable, 56, 100);
     const r = calculateTransferTax(
       baseTransferInput({
         propertyType: "housing", transferPrice: P, transferDate: D("2026-07-01"),
@@ -106,8 +107,8 @@ describe("T-1 SplitPartResult 보유·거주 분해 echo (E-1)", () => {
     );
     const land = r.splitDetail!.land;
     expect(land.longTermDeduction).toBe(ld);
-    expect(land.residenceDeductionAmount).toBe(mulDiv(ld, 28, 68));
-    expect(land.holdingDeductionAmount).toBe(ld - mulDiv(ld, 28, 68));
+    expect(land.residenceDeductionAmount).toBe(mulDiv(ld, 28, 56));
+    expect(land.holdingDeductionAmount).toBe(ld - mulDiv(ld, 28, 56));
   });
 });
 
@@ -197,8 +198,9 @@ describe("T-3 문구 후퇴 가드 — 거짓말보다 종전 문구가 낫다",
   });
 
   it("Σ 파트 공제액 ≠ 확정 총액(§98의2 특칙 재할당 등) → 종전 문구·종전 sub-step 산식으로 후퇴", () => {
-    const { r, steps } = lthdArgs({ deduction: 153_632_001 }); // 실제 153,632,000 + 1
-    expect(r.longTermHoldingDeduction).toBe(153_632_000);
+    const actual = model(SCN_H, COMBOS.AE).ltd; // 기본통칙 95-0…1 반영 후 총 공제 — 종전 토지 68%일 때는 153,632,000
+    const { r, steps } = lthdArgs({ deduction: actual + 1 }); // 실제 + 1
+    expect(r.longTermHoldingDeduction).toBe(actual);
     const main = steps.find((s) => s.label === "장기보유특별공제")!;
     expect(main.formula).not.toContain("토지분");
     expect(main.formula).toContain("보유기간 7년 1개월"); // 종전 형식 꼬리
@@ -283,7 +285,7 @@ describe("T-4 문구는 「파트 합 = 전체 과세 양도차익」을 단정�
     expect(r.taxableGain).toBe(230_000_000);
     const f = step(r, "장기보유특별공제")!.formula;
     expect(f).toBe(
-      `토지분 ${won(landTaxable)} × 68% = ${won(mulDiv(landTaxable, 68, 100))} (보유 15년×4%=40% + 거주 7년×4%=28%)`
+      `토지분 ${won(landTaxable)} × 56% = ${won(mulDiv(landTaxable, 56, 100))} (기본통칙 95-0…1: 표1(토지 전체 보유 15년×2% = 30%)과 표2(주택 부수토지로서의 보유 7년 + 거주 = 56%) 중 큰 공제율 56%)`
         + ` + 건물분 ${won(bldTaxable)} × 56% = ${won(mulDiv(bldTaxable, 56, 100))} (보유 7년×4%=28% + 거주 7년×4%=28%)`,
     );
     expect(f).not.toContain(won(r.taxableGain));

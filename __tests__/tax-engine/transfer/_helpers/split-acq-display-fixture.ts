@@ -122,6 +122,8 @@ export function model(s: Scn, c: Combo): Model {
   const bldT = s.price - landT;
   const one = (
     mode: Mode, tp: number, stdA: number, stdT: number, given: number | undefined, years: number,
+    /** 토지 파트에만 — 건물(주택) 보유연수. 토지가 더 오래되면 기본통칙 95-0…1(표1 vs 표2 중 큰 공제율). */
+    houseYears?: number,
   ): PartModel => {
     let acquisition: number;
     let deduction = 0;
@@ -138,8 +140,15 @@ export function model(s: Scn, c: Combo): Model {
     const prorated = s.oneHouse ? mulDiv(gain, s.price - 1_200_000_000, s.price) : gain;
     const table2 = s.oneHouse;
     const resYears = Math.floor(s.residenceMonths / 12);
-    const holdPct = table2 ? Math.min(years * 4, 40) : Math.min(years * 2, 30);
-    const resPct = table2 ? Math.min(resYears * 4, 40) : 0;
+    let holdPct = table2 ? Math.min(years * 4, 40) : Math.min(years * 2, 30);
+    let resPct = table2 ? Math.min(resYears * 4, 40) : 0;
+    if (table2 && houseYears !== undefined && years > houseYears) {
+      // 기본통칙 95-0…1 — 토지 전체 보유기간 표1(연 2%·30%)과 주택 부수토지로서의 보유기간(= 건물 보유연수) 표2(보유 4%·40% + 거주 4%·40%) 중 큰 공제율.
+      const t1 = years >= 3 ? Math.min(years * 2, 30) : 0;
+      const t2Hold = houseYears >= 3 ? Math.min(houseYears * 4, 40) : 0;
+      const t2Res = houseYears >= 3 && resYears >= 2 ? Math.min(resYears * 4, 40) : 0;
+      if (t1 >= t2Hold + t2Res) { holdPct = t1; resPct = 0; } else { holdPct = t2Hold; resPct = t2Res; }
+    }
     const ltd = mulDiv(Math.max(prorated, 0), holdPct + resPct, 100);
     const resAmt = holdPct + resPct > 0 ? mulDiv(ltd, resPct, holdPct + resPct) : 0;
     return {
@@ -147,7 +156,7 @@ export function model(s: Scn, c: Combo): Model {
       holdPct, resPct, ltd, holdAmt: ltd - resAmt, resAmt,
     };
   };
-  const land = one(c.land, landT, s.stdA[0], s.stdT[0], c.landValue, s.landYears);
+  const land = one(c.land, landT, s.stdA[0], s.stdT[0], c.landValue, s.landYears, s.buildingYears);
   const building = one(c.building, bldT, s.stdA[1], s.stdT[1], c.buildingValue, s.buildingYears);
   const transferGain = land.gain + building.gain;
   const taxableGain = s.oneHouse ? mulDiv(transferGain, s.price - 1_200_000_000, s.price) : transferGain;

@@ -169,11 +169,12 @@ describe("⑤ 토지 먼저 취득(별개취득) — 같은 날 취득이 아닌
     expectColumnsMatchEcho(r, price);
   });
 
-  it("20억 — 토지 열 장특 297,818,181(이내 259,636,363 + 초과 38,181,818) · 소득금액 262,181,819 (종전 장특 259,636,363 · 소득금액 300,363,637)", () => {
+  it("20억 — 토지 열 장특 280,509,090(이내 242,327,272 + 초과 38,181,818) · 소득금액 279,490,910 (기본통칙 95-0…1 반영 전 장특 297,818,181 · 소득금액 262,181,819 / 그 전 종전 장특 259,636,363)", () => {
     const rows = filingRows(calc(landFirstInput(2_000_000_000)), 2_000_000_000);
     expect(rows.get(LABEL.taxable)).toMatchObject({ land: 560_000_000, building: 120_000_000, total: 680_000_000 }); // 종전과 같다(L'≥X에서 균일 비율이 우연히 일치)
-    expect(rows.get(LABEL.lt)).toMatchObject({ land: 297_818_181, building: 67_200_000, total: 365_018_181 });
-    expect(rows.get(LABEL.income)).toMatchObject({ land: 262_181_819, building: 52_800_000, total: 314_981_819 });
+    // 🔁 토지(15년)가 건물(9년)보다 오래돼 토지분 = max(표1 30%, 표2 56%) = 56%(종전 토지 자신의 15년 표2 60%): 이내 432,727,273 × 56% = 242,327,272
+    expect(rows.get(LABEL.lt)).toMatchObject({ land: 280_509_090, building: 67_200_000, total: 347_709_090 });
+    expect(rows.get(LABEL.income)).toMatchObject({ land: 279_490_910, building: 52_800_000, total: 332_290_910 });
   });
 
   it("10억(12억 이하) — 토지 열 54,545,454 · 건물 열 0 (종전 46,753,246 · 7,792,207)", () => {
@@ -222,8 +223,8 @@ describe("② 초과분 없는 시료는 종전과 같다 — 수정 전 출력�
   });
 });
 
-describe("⑥ §155⑳ 특례(isRH) + 초과분 — 이번 수정 밖(합계 행 의미가 다름) · 종전 표시 그대로", () => {
-  it("특례 적용 자산은 echo 경로를 타지 않는다 — 종전 값 고정(별도 결함은 보고 항목)", () => {
+describe("⑥ §155⑳ 특례(isRH) + 초과분 — 파트 echo를 읽는다(합계 열 의미: 과세대상 양도차익 = 전체 양도차익)", () => {
+  it("특례 적용 자산 — 종전: 균일 비율(토지 273,651,337 · 건물 58,639,572)·장특 열 0 · 열 합 ≠ 합계 → 지금: 파트 echo, 열 합 = 합계 열", () => {
     const rentalException = {
       applyException: true, scenario: "A",
       rentalUnits: [{
@@ -236,8 +237,15 @@ describe("⑥ §155⑳ 특례(isRH) + 초과분 — 이번 수정 밖(합계 행
     expect(r.rentalHousingExceptionDetail?.applied).toBe(true);
     expect(r.splitDetail!.nonBusinessLandPart).toBeDefined();
     const rows = filingRows(r, 2_000_000_000);
-    expect(rows.get(LABEL.taxable)).toMatchObject({ land: 273_651_337, building: 58_639_572, total: 1_700_000_000 });
-    expect(rows.get(LABEL.lt)).toMatchObject({ land: 0, building: 0, total: 918_909_090 });
+    // 합계 열 의미(특례): 과세대상 양도차익 = 전체 양도차익 · 비과세 양도차익 0
+    expect(rows.get(LABEL.taxable)).toMatchObject({ land: 1_400_000_000, building: 300_000_000, total: 1_700_000_000 });
+    expect(rows.get(LABEL.exempt)).toMatchObject({ land: 0, building: 0, total: 0 });
+    // 장특 = 파트 echo — 이내 토지 1,272,727,273 × 56% = 712,727,272 + 초과분 표1 38,181,818 / 건물 300,000,000 × 56% = 168,000,000 / 합 918,909,090(종전 열 0 · 0)
+    expect(rows.get(LABEL.lt)).toMatchObject({ land: 750_909_090, building: 168_000_000, total: 918_909_090 });
+    // 양도소득금액(§95①) = 열 안 양도차익 − 장특 — 합 781,090,910
+    expect(rows.get(LABEL.income)).toMatchObject({ land: 649_090_910, building: 132_000_000, total: 781_090_910 });
+    // 감면후 소득금액 = 특례 후 과세대상: 이내 토지 190,400,001 + 초과분 89,090,909 / 건물 52,800,000 / 합 332,290,910 (일반 경로와 같은 파트 값)
+    expect(rows.get("감면후 소득금액")).toMatchObject({ land: 279_490_910, building: 52_800_000, total: 332_290_910 });
   });
 });
 

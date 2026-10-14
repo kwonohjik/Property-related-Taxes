@@ -57,6 +57,7 @@ import {
 } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatLumpRate } from "./split-acq-text";
 import { cn } from "@/lib/utils";
+import { appurtenantLandLthdNoticeText } from "@/lib/tax-engine/appurtenant-land-lthd-rate";
 
 type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
 
@@ -289,6 +290,19 @@ export function SplitGainDetailSection({
             {isExempt && (
               <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-exempt-lthd-note">
                 비과세 — 장기보유특별공제 없음
+              </span>
+            )}
+            {/* 기본통칙 95-0…1 — 토지가 주택보다 먼저 취득돼 토지분 공제율이 「표1·표2 중 큰 공제율」로 정해졌다(엔진 echo를 그대로 읽는다). */}
+            {splitDetail.land.appurtenantLthd?.changedFromOwnYears && landIsOwned && !isExempt && (
+              <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-appurtenant-lthd-note">
+                {appurtenantLandLthdNoticeText({
+                  landHoldingYears: splitDetail.land.holdingYears,
+                  houseHoldingYears: splitDetail.land.appurtenantLthd.houseHoldingYears,
+                  table1Rate: splitDetail.land.appurtenantLthd.table1Rate,
+                  table2Rate: splitDetail.land.appurtenantLthd.table2Rate,
+                  table1Applied: splitDetail.land.appurtenantLthd.table1Applied,
+                  basis: splitDetail.land.appurtenantLthd.basis,
+                })}
               </span>
             )}
           </div>

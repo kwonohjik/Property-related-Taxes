@@ -33,6 +33,7 @@ import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { table2ResidencePct } from "./data/lthd-table2-era";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
+import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "./appurtenant-land-lthd-rate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
@@ -43,6 +44,7 @@ import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { LongTermRentalRuleSet } from "./schemas/rate-table.schema";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
+import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
@@ -229,18 +231,17 @@ export function calcLongTermHoldingDeduction(
       isOneHouseSingleForCompanion &&
       isLthdTable2SubjectAsset(input) &&
       meetsTable2ResidenceRequirement(input, table2ResidenceYears);
-    // 표1(일반 보유 × 2%, 30% 캡)은 **토지 자신의** 보유연수 — 통칙의 「그 토지의 전체보유기간」.
-    // 3년 진입요건도 같은 축이다 — `calcLongTermRate` 정본에 3년 가드가 내장돼 있어
-    // 외곽 게이트를 따로 두지 않는다(종전 `ctx.holdingMonths < 36` 외곽 return은 축이 어긋나 있었다).
-    const table1Rate = calcLongTermRate(landHolding.years, residenceYears, false);
-    // 표2(1세대1주택 — 보유분 4% + 실거주분 4%, 각 40% 캡)는 **주택 부수토지로서의** 보유연수
-    // = primary 주택의 보유연수. 거주분은 주택에서 하는 것이라 그대로 `residenceYears`다.
-    const table2Rate = useTable2ForCompanion
-      ? calcLongTermRate(primaryHoldingYears, residenceYears, true, false, input.transferDate)
-      : 0;
-    // 통칙 95-0…1 — 「표1의 공제율과 표2의 공제율 중 **큰 공제율**」.
-    const useTable1Axis = table1Rate >= table2Rate;
-    const companionRate = Math.max(table1Rate, table2Rate);
+    // 통칙 95-0…1 — 표1(토지 전체 보유기간)과 표2(주택 부수토지로서의 보유기간 = primary 주택의 보유연수)의 **큰 공제율**.
+    // 산식은 split 분기·§155⑳ 경로와 같은 leaf(`appurtenant-land-lthd-rate.ts`)다 — 3년 진입요건은 `calcLongTermRate` 정본에 내장.
+    const companion = resolveAppurtenantLandLthdRate({
+      landHoldingYears: landHolding.years,
+      houseHoldingYears: primaryHoldingYears,
+      residenceYears,
+      useTable2: useTable2ForCompanion,
+      transferDate: input.transferDate,
+    });
+    const useTable1Axis = companion.table1Applied;
+    const companionRate = companion.rate;
     const deduction = companionRate > 0 ? applyLthdRate(taxableGain, companionRate) : 0;
     // 표시용 보유기간은 **공제율을 만든 축**과 맞춘다 — 어긋나면 산식이 자기모순으로 출력된다
     // (실측 종전: "보유 2년×2% = 28% | 보유기간 2년 11개월").
@@ -398,7 +399,38 @@ export function calcLongTermHoldingDeduction(
       ? (splitDetail.building.taxableGainAfterProration ?? splitDetail.building.gain)
       : 0;
 
-    const landRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
+    // 토지 파트 — 기본통칙 95-0…1: 1세대1주택(표2 대상) 부수토지가 **주택(건물)보다 보유기간이 오래된** 경우의 장특은
+    //   표1(토지 전체 보유기간)과 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 **큰 공제율**이다.
+    //   종전에는 토지 파트에 표2를 **토지 자신의 보유연수**로 적용해(건물 9년·토지 20년이면 표2 40% + 거주분) 통칙의
+    //   「표2 = 주택 부수토지로서의 보유기간」을 건너뛰었다. 게이트: 두 파트를 모두 본인이 소유하고 표2 대상이며 토지가 더 오래된 경우만 —
+    //   토지가 주택과 같거나 더 짧으면 종전 값(자신의 보유연수)을 그대로 쓴다.
+    //   산식은 L-1b(컴패니언 부수토지 카드)·§155⑳ 경로와 같은 leaf(`appurtenant-land-lthd-rate.ts`)다.
+    const landOwnYearsRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
+    let landRate = landOwnYearsRate;
+    let landAppurtenantLthd: SplitPartResult["appurtenantLthd"];
+    if (
+      ownsLand &&
+      ownsBuilding &&
+      useTable2 &&
+      splitDetail.land.holdingYears > splitDetail.building.holdingYears
+    ) {
+      const appurtenant = resolveAppurtenantLandLthdRate({
+        landHoldingYears: splitDetail.land.holdingYears,
+        houseHoldingYears: splitDetail.building.holdingYears,
+        residenceYears,
+        useTable2,
+        transferDate: input.transferDate,
+      });
+      landRate = appurtenant.rate;
+      landAppurtenantLthd = {
+        houseHoldingYears: splitDetail.building.holdingYears,
+        table1Rate: appurtenant.table1Rate,
+        table2Rate: appurtenant.table2Rate,
+        table1Applied: appurtenant.table1Applied,
+        changedFromOwnYears: appurtenant.rate !== landOwnYearsRate,
+        basis: resolveAppurtenantLthdNoticeBasis(input.transferDate),
+      };
+    }
     const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
     // F-1 (2026-10-07): D10-06이 이 분기를 빠뜨렸다 — `landRate`는 표2에서 보유분+거주분을 double로 더한
     //   값이라(0.6799999999999999) applyRate면 파트 공제액이 1원 과소가 된다(실측 652,799,999 ↔ 652,800,000).
@@ -418,11 +450,19 @@ export function calcLongTermHoldingDeduction(
     const holdOnlyRate = (years: number): number =>
       calcLongTermRate(years, 0, useTable2, false, input.transferDate);
     if (ownsLand) {
+      // 통칙으로 표1이 이긴 토지 파트는 전부 보유분(거주분 0), 표2가 이긴 파트의 보유분은 **건물 보유연수** 기준이다.
+      const landHoldOnlyRate = !landAppurtenantLthd
+        ? holdOnlyRate(splitDetail.land.holdingYears)
+        : landAppurtenantLthd.table1Applied
+          ? landRate
+          : holdOnlyRate(landAppurtenantLthd.houseHoldingYears);
       Object.assign(
         splitDetail.land,
-        deriveSplitLthdEcho({ totalRate: landRate, holdingOnlyRate: holdOnlyRate(splitDetail.land.holdingYears), deduction: landDed }),
+        deriveSplitLthdEcho({ totalRate: landRate, holdingOnlyRate: landHoldOnlyRate, deduction: landDed }),
       );
     }
+    if (landAppurtenantLthd) splitDetail.land.appurtenantLthd = landAppurtenantLthd;
+    else delete splitDetail.land.appurtenantLthd;
     if (ownsBuilding) {
       Object.assign(
         splitDetail.building,

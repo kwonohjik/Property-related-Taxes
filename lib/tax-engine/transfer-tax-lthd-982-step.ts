@@ -10,6 +10,7 @@ import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
 import { giftTable2PriorResidenceNotice } from "./one-house/gift-table2-notice";
+import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
@@ -91,6 +92,21 @@ export function applyLthd982AndPushSteps(
     transferDate: exemptionJudgeInput.transferDate,
     splitDetail: a.splitDetail,
   });
+  // 기본통칙 95-0…1 — 토지가 주택보다 먼저 취득돼 토지분 공제율이 「표1·표2 중 큰 공제율」로 정해졌고 그 값이 토지 자신의
+  // 보유연수로 표2를 적용한 값과 달라졌을 때만 고지한다(사실만 — 세액은 파트별 공제액이 정본). §98의2 특칙이 총액을 덮어쓴 경우는 제외.
+  const landAppurtenant = a.splitDetail?.land.appurtenantLthd;
+  if (landAppurtenant?.changedFromOwnYears && !lthd982Applied) {
+    a.warnings.push(
+      appurtenantLandLthdNoticeText({
+        landHoldingYears: a.splitDetail!.land.holdingYears,
+        houseHoldingYears: landAppurtenant.houseHoldingYears,
+        table1Rate: landAppurtenant.table1Rate,
+        table2Rate: landAppurtenant.table2Rate,
+        table1Applied: landAppurtenant.table1Applied,
+        basis: landAppurtenant.basis,
+      }),
+    );
+  }
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) a.warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 
