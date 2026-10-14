@@ -4,16 +4,18 @@
  * `transfer-tax-rental-housing-step.ts` 800줄 정책 분리 — 로직은 그대로 옮겼다. 순수 함수(DB 호출 없음).
  */
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
-import { NBL } from "./legal-codes/transfer";
+import { NBL, TRANSFER } from "./legal-codes/transfer";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
-import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { SplitGainResult, SplitNonBusinessLandPart } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
 import type { RateGroup } from "./types/transfer-aggregate.types";
 import {
   resolveAppurtenantLandExcess,
   resolveLandStatutoryAcquisitionDate,
+  isLaterAcquiredLandExemptExcluded,
+  laterLandExclusionReason,
   buildNblPartRateInput,
 } from "./transfer-tax-appurtenant-land";
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
@@ -96,6 +98,104 @@ export function splitAppurtenantExcess(
       amount: gain - longTermDeduction,
       legalBasis: NBL.MAIN,
     },
+  };
+}
+
+/**
+ * G-3 — 주택보다 **나중에 취득**해 영 §154① 보유요건에 못 미치는 부수토지분(배율 초과분 제외)을 특례 경로에서도 비과세 범위에서 뗀 결과.
+ *
+ * §155⑳은 거주주택을 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」할 뿐이라 비과세 범위는 §154①이 정한다 — 일반 경로는 같은 술어
+ * (`isLaterAcquiredLandExemptExcluded`)로 이 토지분을 12억 안분 없이 전액 과세한다(`applyHousingLandExclusions`). 특례가 주택 수 의제만 하고 이 범위를
+ * 바꾸지 않으므로 특례 on/off가 같은 사실에서 같은 세액이 되려면 이 경로도 같은 술어로 토지분을 떼어야 한다.
+ * 토지분이 빠진 뒤 특례(A1·A2)가 적용되는 주택분은 **건물분**뿐이다 — 일반 경로와 같이 건물 양도차익의 음수는 0으로 본다(토지 손실로 상쇄하지 않는다).
+ *
+ * 장기보유특별공제는 토지 본래 보유연수(보유요건 미달 = 3년 미만)의 표1이라 0이다 — 일반 경로(`calcLongTermHoldingDeduction` split 분기)가 같은 값을 낸다.
+ * 대상이 아니면 `null`(종전 경로 유지).
+ */
+export interface LaterLandExcludedSplit {
+  /** 비과세에서 빠져 전액 과세되는 토지분 양도차익(배율 초과분 제외) */
+  gain: number;
+  longTermRate: number;
+  longTermDeduction: number;
+  /** 토지분 양도소득금액 = gain − longTermDeduction */
+  income: number;
+  holdingYears: number;
+  /** 특례(A1·A2)가 적용되는 주택분 양도차익 = 건물분(음수는 0) */
+  housingGain: number;
+  step: CalculationStep | null;
+}
+
+export function splitLaterAcquiredLand(
+  input: TransferTaxInput,
+  splitDetail: SplitGainResult | undefined,
+  /** 이미 떼어낸 배율 초과분 양도차익(없으면 0) */
+  nonBusinessGain: number,
+): LaterLandExcludedSplit | null {
+  if (!splitDetail) return null;
+  if (!isLaterAcquiredLandExemptExcluded(input)) return null;
+  const gain = Math.max(0, splitDetail.land.gain) - nonBusinessGain;
+  const holdingYears = splitDetail.land.holdingYears;
+  const longTermRate = calcTable1Rate(holdingYears);
+  const longTermDeduction = applyRate(gain, longTermRate);
+  const housingGain = Math.max(0, splitDetail.building.gain);
+  return {
+    gain,
+    longTermRate,
+    longTermDeduction,
+    income: gain - longTermDeduction,
+    holdingYears,
+    housingGain,
+    step:
+      gain > 0
+        ? {
+            label: "부수토지 비과세 제외 (§155⑳ 특례 경로)",
+            formula:
+              `${laterLandExclusionReason(input, gain)} — §155⑳은 거주주택을 1주택으로 보아 제154조제1항을 적용할 뿐이라 이 토지분은 특례 대상 주택분에 넣지 않았습니다 · ` +
+              `특례 대상 주택분(건물) 양도차익 ${housingGain.toLocaleString()}`,
+            amount: gain - longTermDeduction,
+            legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
+          }
+        : null,
+  };
+}
+
+/**
+ * G-3 토지분이 빠진 특례 결과의 **파트별 세율 판정 입력**(`resolveSplitAwareTax`가 읽는 `splitDetail` 사본).
+ *
+ * 일반 경로는 나중 취득 토지분(보유 2년 미만 — 단기세율)과 건물분(오래 보유 — 누진세율)을 파트별 §104② 기산일로 나눠 §104⑤ 비교과세를 한다.
+ * 특례 경로도 같은 사실에서 같은 세율을 적용해야 하므로 같은 함수에 파트 소득금액을 넘긴다 — 건물 파트 = 특례 적용 후 과세대상 양도소득금액
+ * (`housingIncome` — 장기보유특별공제·12억 안분이 끝난 값이라 공제 0으로 싣는다), 토지 파트 = G-3 토지분, 배율 초과분은 별도 파트.
+ * 원본 `splitDetail`(결과 카드·신고서가 읽는 파트 echo)은 건드리지 않는다.
+ */
+export function buildRentalPartRateDetail(
+  splitDetail: SplitGainResult,
+  args: {
+    housingIncome: number;
+    laterLand: Pick<LaterLandExcludedSplit, "gain" | "longTermDeduction">;
+    /** 배율 초과 파트 — 단건은 방금 분리한 `toNonBusinessLandPart(nbl)`, 다건은 결과 echo(`splitDetail.nonBusinessLandPart`) */
+    nonBusinessLandPart: SplitNonBusinessLandPart | undefined;
+  },
+): SplitGainResult {
+  const { housingIncome, laterLand, nonBusinessLandPart } = args;
+  return {
+    ...splitDetail,
+    land: { ...splitDetail.land, taxableGainAfterProration: laterLand.gain, longTermDeduction: laterLand.longTermDeduction },
+    building: { ...splitDetail.building, taxableGainAfterProration: housingIncome, longTermDeduction: 0 },
+    nonBusinessLandPart,
+  };
+}
+
+/** 배율 초과분 분리 결과 → 결과 echo(`splitDetail.nonBusinessLandPart`) 형태 */
+export function toNonBusinessLandPart(nbl: AppurtenantExcessSplit): SplitNonBusinessLandPart {
+  return {
+    limitArea: nbl.limitArea,
+    excessArea: nbl.excessArea,
+    appliedMultiplier: nbl.multiplier,
+    gain: nbl.gain,
+    taxableGainAfterProration: nbl.gain,
+    holdingYears: nbl.holdingYears,
+    longTermRate: nbl.longTermRate,
+    longTermDeduction: nbl.longTermDeduction,
   };
 }
 

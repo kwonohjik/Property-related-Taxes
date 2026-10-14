@@ -92,9 +92,10 @@ describe("§155⑳ A · B × 같은 날/토지 먼저 × 초과 유무 × 거주
   let applied = 0;
   let withExcess = 0;
   let withB = 0;
+  let withLaterLand = 0;
   it("전 셀", () => {
     for (const price of [1_250_000_000, 1_500_000_000, 2_000_000_000, 3_000_000_000]) {
-      for (const landDate of ["2014-09-01", "2008-07-01"]) {
+      for (const landDate of ["2014-09-01", "2008-07-01", "2023-10-01"]) {
         for (const area of [300, 660]) {
           for (const res of [0, 24, 60, 120]) {
             for (const [name, rhe] of [["A", rentalA], ["B", rentalB]] as const) {
@@ -103,13 +104,15 @@ describe("§155⑳ A · B × 같은 날/토지 먼저 × 초과 유무 × 거주
               applied++;
               if (r.splitDetail.nonBusinessLandPart) withExcess++;
               if (name === "B") withB++;
+              if (r.splitDetail.laterLandPart) withLaterLand++;
               expectConsistent(r, price, `${name} ${price / 1e8}억 토지${landDate} ${area}㎡ 거주${res}`);
             }
           }
         }
       }
     }
-    // 가드 — 시료가 실제로 특례·초과분·B를 모두 거쳤다
+    // 가드 — 시료가 실제로 특례·초과분·B·G-3(나중 취득 토지 `laterLandPart`)을 모두 거쳤다
+    expect(withLaterLand).toBeGreaterThan(0);
     expect(applied).toBeGreaterThan(20);
     expect(withExcess).toBeGreaterThan(0);
     expect(withB).toBeGreaterThan(0);
@@ -123,5 +126,22 @@ describe("§155⑳ A · B × 같은 날/토지 먼저 × 초과 유무 × 거주
     expect(N(rows.get(LABEL.income)!.land)).toBe(1_400_000_000 - Math.floor(1_400_000_000 * 0.56));
     expect(N(rows.get(LABEL.income)!.building)).toBe(300_000_000 - Math.floor(300_000_000 * 0.56));
     expectConsistent(r, price, "같은 날");
+  });
+});
+
+describe("G-3 — 나중 취득 토지(보유 2년 미만) + §155⑳ A: 토지 열에 비과세에서 뗀 토지분이 들어간다", () => {
+  // 20억 · 토지 2023-10-01(보유 8개월) · 건물 2014-09-01 · 660㎡ — 토지 양도차익 1,400,000,000 중 초과분 127,272,727(비사업용) + 나중 취득 토지분 1,272,727,273
+  const price = 2_000_000_000;
+  const r = calc(house(price, { landDate: "2023-10-01", area: 660, res: 60, rhe: rentalA }));
+  const rows = filingRows(r, price);
+  it("감면후 소득금액 — 건물 열은 특례 후 과세대상(52,800,000)뿐, 토지 열은 전액 과세분(1,272,727,273 + 127,272,727)", () => {
+    expect(r.splitDetail!.laterLandPart).toMatchObject({ gain: 1_272_727_273, longTermDeduction: 0 });
+    expect(rows.get(INCOME_AFTER)).toMatchObject({ land: 1_400_000_000, building: 52_800_000, total: 1_452_800_000 });
+    expect(N(rows.get(INCOME_AFTER)!.total)).toBe(r.taxableGain);
+  });
+  it("비과세 양도소득금액 — 토지 열은 0(전액 과세), 건물 열이 모두 가진다(132,000,000 − 52,800,000)", () => {
+    const nontax = [...rows.entries()].find(([k]) => k.trim().startsWith(NONTAX))![1];
+    expect(nontax).toMatchObject({ land: 0, building: 79_200_000, total: 79_200_000 });
+    expectConsistent(r, price, "G-3 20억");
   });
 });

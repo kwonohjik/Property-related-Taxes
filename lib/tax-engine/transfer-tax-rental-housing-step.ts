@@ -19,7 +19,7 @@ import {
   rentalHousingBasisOf,
   rentalHousingBasisShort,
 } from "./transfer-tax/rental-housing-exception/display-labels";
-import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
+import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import {
   buildEligibilityContext,
@@ -34,20 +34,16 @@ import type {
 } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
-import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
-import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
-import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
-import { ALL_INCOME_DEDUCTION_IDS } from "./transfer-reductions/income-deduction-router";
-import { LTHD_SPECIAL_REDUCTION_IDS } from "./transfer-reductions/unsold-hybrid-p3";
-import { getReductionLegalBasis } from "./transfer-tax-helpers";
+import { calcTax } from "./transfer-tax-rate-calc";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
-import { highValueExcessRulingNoticeText, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
-import { splitAppurtenantExcess, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
+import { highValueExcessRulingNoticeText, laterLandExemptNotice, expropriationLaterLandNotices, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
+import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, toNonBusinessLandPart, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
+import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
+import { applyRentalHousingReductions } from "./transfer-tax-rental-housing-reductions";
 import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
@@ -197,21 +193,25 @@ export function runRentalHousingExceptionStep(
   // (일반 경로 `applyHousingLandExclusions`의 ①→② 순서와 같다). 단 고가주택(A2)이면 «나머지»를 다시 안분하지 않고 재산세제과-915 회신 방식
   // (아래 `rulingFacts` — 전체 부수토지 안분값에서 초과분을 한 번만 뺀다)으로 과세 양도차익을 만든다.
   const nbl = splitAppurtenantExcess(effectiveInput, splitDetail, transferGain);
-  const housingGain = transferGain - (nbl?.gain ?? 0);
+  // 나중 취득 부수토지가 보유요건에 못 미치는 경우(G-3)도 같다 — §155⑳은 주택 수만 의제하고 비과세 범위는 §154①이 정하므로, 일반 경로
+  // (`applyHousingLandExclusions`)와 같은 술어(`isLaterAcquiredLandExemptExcluded`)로 그 토지분을 특례 대상 주택분에서 떼어 전액 과세한다.
+  // A 시나리오(거주주택 양도 — 비과세 범위가 §154① 그대로)에 한한다. B(직전거주주택보유주택)는 §161 기준시가 안분이 비과세 범위를 정하는 별개 산식이라
+  // 나중 취득 토지분을 그 안분에 넣을지 뺄지 정할 근거가 없어 종전 계산을 유지한다(결정 필요 — 보고).
+  const laterLand =
+    effectiveInput.rentalHousingException!.scenario === "A"
+      ? splitLaterAcquiredLand(effectiveInput, splitDetail, nbl?.gain ?? 0)
+      : null;
+  const housingGain = laterLand ? laterLand.housingGain : transferGain - (nbl?.gain ?? 0);
   // 고가주택(A2) + 배율 초과 — 단일 주택과 같은 재산세제과-915 회신 방식(초과분을 안분 전에 떼어낸 «나머지»를 다시 안분하면 초과분이 이중으로 빠진다).
   // A 시나리오만이다 — B(§161 안분)와의 결합은 근거가 없어 종전 계산을 유지하고 아래에서 고지한다.
-  // 나중 취득 부수토지가 보유요건에 못 미치는 경우(G-3)는 일반 경로(`applyHousingLandExclusions`)가 같은 술어(`isLaterAcquiredLandExemptExcluded`)로
-  // 회신 방식을 쓰지 않는다 — 이 경로는 G-3 자체를 처리하지 않으므로(별건) 종전 계산을 유지하고 그 사실을 고지한다.
+  // 나중 취득 부수토지가 보유요건에 못 미치는 경우(G-3)는 토지분 전체가 비과세 대상이 아니라 회신 방식(기준면적 이내 토지분 안분)을 쓰지 않는다 —
+  // 일반 경로(`applyHousingLandExclusions`)와 같다. 그 토지분은 위에서 주택분 밖으로 떼어냈다.
   const rulingGateOpen =
-    !!nbl && !!splitDetail && effectiveInput.rentalHousingException!.scenario === "A" &&
+    !!nbl && !laterLand && !!splitDetail && effectiveInput.rentalHousingException!.scenario === "A" &&
     resolveHighValueDenominator(effectiveInput) > resolveHighValueHouseThreshold(effectiveInput.transferDate);
-  const laterLandOverlap = rulingGateOpen && isLaterAcquiredLandExemptExcluded(effectiveInput);
-  const rulingFacts =
-    rulingGateOpen && !laterLandOverlap
-      ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!)
-      : undefined;
+  const rulingFacts = rulingGateOpen ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!) : undefined;
   // 장기보유특별공제는 토지·건물 **파트별 보유연수**로 구한다(§95④ — 일반 경로 split 분기와 같은 규칙). 분리 취득이 아니면 종전 단일 보유연수.
-  const lthdParts = buildRentalLthdParts({ splitDetail, nonBusinessGain: nbl?.gain ?? 0, housingGain });
+  const lthdParts = buildRentalLthdParts({ splitDetail, nonBusinessGain: nbl?.gain ?? 0, laterLandExcluded: !!laterLand, housingGain });
   const rhe = calculateRentalHousingException(
     effectiveInput.rentalHousingException!,
     housingGain,
@@ -297,16 +297,38 @@ export function runRentalHousingExceptionStep(
   }
   // 고가주택 + 배율 초과 부수토지 — 어떤 산식으로 안분했는지 남긴다. A2는 재산세제과-915 회신 방식, B2는 그 회신을 적용하지 않았다는 사실(결합 근거 없음).
   const rulingTrace = rhe.formulaTrace.highValueExcessRuling;
-  const thresholdLabel = formatHighValueThresholdLabel(resolveHighValueHouseThreshold(effectiveInput.transferDate));
   const highValueExcessNotice = rulingTrace
     ? highValueExcessRulingNoticeText(effectiveInput.transferDate)
     : nbl && rhe.scenarioId === "RH-B2"
       ? "고가주택에 배율 초과 부수토지가 함께 있으나, 직전거주주택보유주택(소득세법 시행령 §161② 안분) 계산에는 기획재정부 재산세제과-915(2011.10.27.) 회신 방식을 적용하지 않았습니다 — " +
         "이 경우 회신 방식과 같은 영 §161 안분을 합치는 순서를 정할 근거를 확인하지 못해, 배율 초과분을 안분 전에 떼어낸 주택분에 §161②를 적용하는 방식으로 계산했습니다 — 확인이 필요합니다"
-      : laterLandOverlap && rhe.scenarioId === "RH-A2"
-        ? `고가주택에 배율 초과 부수토지가 함께 있으나, 주택보다 나중에 취득한 부수토지가 보유요건(소득세법 시행령 §154①)에 못 미쳐 기획재정부 재산세제과-915(2011.10.27.) 회신 방식을 적용하지 않았습니다 — ` +
-          `이 특례 경로는 나중에 취득한 부수토지분을 일반 경로처럼 비과세에서 제외하지 않고 배율 초과분만 떼어낸 주택분에 ${thresholdLabel} 초과 비율 안분을 적용하는 방식으로 계산하므로, 그 토지분의 처리를 별도로 확인해야 합니다 — 확인이 필요합니다`
-        : undefined;
+      : undefined;
+  // T-7(나중 상속 토지분 제외)·5A(수용 단서로 나중 취득 토지분 비과세) 고지 — 일반 경로와 같은 함수·문구. 특례가 적용된 결과는 비과세·부분비과세다.
+  // B는 나중 취득 토지분을 제외하지 않으므로 «제외했습니다» 고지(T-7)는 사실과 다르다 — B는 그 토지분이 §161 안분에 들어갔다는 아래 B 고지만 낸다.
+  //   5A(수용 단서로 보유요건 미달 토지분도 비과세로 보았다)는 B가 그 토지분을 주택과 함께 §161 안분에 넣는 처리와 어긋나지 않아 그대로 낸다(T-7·5A는 G-3 성립·불성립으로 갈려 동시에 나지 않는다).
+  const laterLandNotice = isPhrpScenarioId(rhe.scenarioId)
+    ? expropriationLaterLandNotices(effectiveInput)[0]
+    : (laterLandExemptNotice(effectiveInput, splitDetail, true) ?? undefined);
+  // B(직전거주주택보유주택)는 나중 취득 부수토지분을 비과세에서 떼지 않고 §161 기준시가 안분에 그대로 넣는다(종전 계산 유지 — 세액 불변). 일반 경로와 다른 처리라는 사실만 알린다.
+  const laterLandPhrpNotice =
+    isPhrpScenarioId(rhe.scenarioId) && splitDetail && isLaterAcquiredLandExemptExcluded(effectiveInput)
+      ? (() => {
+          const held = calculateHoldingPeriod(effectiveInput.landAcquisitionDate!, effectiveInput.transferDate);
+          return (
+            `주택보다 나중에 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법 시행령」 제154조 제1항 보유요건에 못 미치지만, ` +
+            `직전거주주택보유주택(§155⑳ 시나리오 B) 계산은 이 토지분을 비과세에서 제외하지 않고 §161 기준시가 안분 대상에 주택과 함께 넣었습니다 — ` +
+            `일반 경로는 이 토지분을 비과세에서 제외하고 안분 없이 전액 과세하므로 세액이 다를 수 있습니다 — 확인 필요`
+          );
+        })()
+      : undefined;
+  if (laterLandPhrpNotice) {
+    steps.push({
+      label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
+      formula: laterLandPhrpNotice,
+      amount: 0,
+      legalBasis: rheBasis,
+    });
+  }
   if (rulingTrace) {
     steps.push({
       label: "고가주택 + 배율 초과 부수토지 — 재산세제과-915 회신 방식",
@@ -357,22 +379,37 @@ export function runRentalHousingExceptionStep(
     0,
     parsedRates.basicDeductionRules.annualLimit - (effectiveInput.annualBasicDeductionUsed ?? 0),
   );
-  // 과세 대상 양도소득금액 = 특례 적용 후 **주택분** + 분리된 **배율 초과 비사업용 토지분**.
-  const totalTaxableIncome = rhe.taxableGain + (nbl?.income ?? 0);
+  // 과세 대상 양도소득금액 = 특례 적용 후 **주택분** + 분리된 **배율 초과 비사업용 토지분** + 비과세에서 뗀 **나중 취득 토지분(G-3)**.
+  const laterLandIncome = laterLand?.income ?? 0;
+  const totalTaxableIncome = rhe.taxableGain + (nbl?.income ?? 0) + laterLandIncome;
   const rheBasicDeduction = Math.min(rheBasicDeductionRemaining, Math.max(0, totalTaxableIncome));
   const rheTaxBase = truncateToWon(Math.max(0, totalTaxableIncome - rheBasicDeduction));
-  // 배율 초과분이 분리됐으면 §104⑤ 비교과세, 아니면 종전 자산 단위 단일 세율(회귀 0).
-  const rheTaxResult = nbl
-    ? resolveClause5Tax({
-        housingIncome: rhe.taxableGain,
-        nbl,
-        basicDeduction: rheBasicDeduction,
+  // G-3 토지분이 빠졌으면 일반 경로와 같은 파트별 세율 + §104⑤ 비교과세(`resolveSplitAwareTax`) — 나중 취득 토지분(2년 미만 단기)과 건물분의 §104② 기산일이 다르다.
+  // 배율 초과분만 분리됐으면 §104⑤ 비교과세(`resolveClause5Tax`), 아니면 종전 자산 단위 단일 세율(회귀 0).
+  const laterLandTax = laterLand
+    ? resolveSplitAwareTax({
         taxBase: rheTaxBase,
-        input: effectiveInput,
+        transferIncome: totalTaxableIncome,
+        basicDeduction: rheBasicDeduction,
+        splitDetail: buildRentalPartRateDetail(splitDetail!, { housingIncome: rhe.taxableGain, laterLand, nonBusinessLandPart: nbl ? toNonBusinessLandPart(nbl) : undefined }),
         parsedRates,
+        taxRateInput: effectiveInput,
         multiHouseSurchargeResult,
       })
-    : calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
+    : undefined;
+  const rheTaxResult =
+    laterLandTax ??
+    (nbl
+      ? resolveClause5Tax({
+          housingIncome: rhe.taxableGain,
+          nbl,
+          basicDeduction: rheBasicDeduction,
+          taxBase: rheTaxBase,
+          input: effectiveInput,
+          parsedRates,
+          multiHouseSurchargeResult,
+        })
+      : calcTax(rheTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult));
   // 결정 #20 성립 B — 직전거주주택보유주택이 성립했는데 다주택 중과가 붙으면 그 기간분 중과가 해석 미확보임을 알린다(사용자 결정 2026-10-14: 현행 유지).
   const prhpSurchargeNotice = prhpSurchargeUnverifiedNotice(effectiveInput, rheTaxResult.surchargeType);
   if (prhpSurchargeNotice) {
@@ -385,6 +422,7 @@ export function runRentalHousingExceptionStep(
   }
   if (nbl) {
     steps.push(nbl.step);
+    if (laterLand?.step) steps.push(laterLand.step);
     // §104⑤ 비교과세를 수행했으면 그 사실을 노출한다 — 종전 특례 경로는 산출세액 단계를
     // 아예 emit하지 않아 파트별 세율·비교 결과가 침묵했다(분리가 있을 때만 추가 — 회귀 0).
     steps.push({
@@ -401,15 +439,23 @@ export function runRentalHousingExceptionStep(
     });
     // 결과 카드·신고서가 파트 내역을 읽는다 — 일반 경로(`applyHousingLandExclusions`)와 같은 형태.
     if (splitDetail) {
-      splitDetail.nonBusinessLandPart = {
-        limitArea: nbl.limitArea,
-        excessArea: nbl.excessArea,
-        appliedMultiplier: nbl.multiplier,
-        gain: nbl.gain,
-        taxableGainAfterProration: nbl.gain,
-        holdingYears: nbl.holdingYears,
-        longTermRate: nbl.longTermRate,
-        longTermDeduction: nbl.longTermDeduction,
+      splitDetail.nonBusinessLandPart = toNonBusinessLandPart(nbl);
+    }
+  }
+  // G-3 — 비과세에서 뗀 나중 취득 토지분. 파트 echo(`land.*`)는 주택분 기준이라 이 토지분이 보이지 않으므로 신고서·명세가 읽을 echo를 따로 싣는다.
+  // 배율 초과분이 없으면 위 nbl 블록을 타지 않으므로 사유 단계와 파트별 세율 산출세액 단계를 여기서 싣는다.
+  if (laterLand) {
+    if (!nbl) {
+      if (laterLand.step) steps.push(laterLand.step);
+      steps.push(buildCalculatedTaxStep(rheTaxResult, rheTaxBase));
+    }
+    if (splitDetail) {
+      splitDetail.partRateBasisApplied = laterLandTax?.partRateBasisApplied;
+      splitDetail.laterLandPart = {
+        gain: laterLand.gain,
+        holdingYears: laterLand.holdingYears,
+        longTermRate: laterLand.longTermRate,
+        longTermDeduction: laterLand.longTermDeduction,
       };
     }
   }
@@ -428,148 +474,14 @@ export function runRentalHousingExceptionStep(
     });
   }
 
-  /**
-   * ── 조특법 감면 (F08) ──────────────────────────────────────────────────
-   *
-   * 🔴 종전에는 이 경로가 `finalizeTransferTax`를 거치지 않는다는 **구현상의 이유로**
-   *    사용자가 고른 감면을 한 줄의 안내도 없이 0으로 만들었다(실측: §77 공익수용
-   *    **80,660,250**이 특례를 끄면 잡히고 켜면 0).
-   *
-   * **병용을 막는 명문이 없다.** 「조세특례제한법」 §127(중복지원의 배제)은 ⑦에서
-   * 「둘 이상의 **감면규정**이 동시 적용되면 하나를 선택」이라고 정할 뿐, 「소득세법 시행령」
-   * §155⑳ 비과세 특례와 감면의 병용을 배제하는 규정은 두지 않았다. 비과세분은 애초에
-   * 과세대상이 아니고, **과세되는 부분**(고가주택 초과분·배율 초과 부수토지분)에 대해
-   * 감면을 적용하는 구조 자체는 일반 경로와 다르지 않다.
-   * ⇒ 근거 없이 0으로 만드는 것이 오히려 정당화되지 않는다.
-   *
-   * ## 두 축을 가른다
-   *
-   * · **세액감면형**(§69 자경농지·§77 공익수용·§77의2 대토·§97 시리즈 등) — 산출세액에서
-   *   감면세액을 빼는 구조라 이 경로에도 **그대로 적용된다**. 일반 경로와 **같은 함수**
-   *   (`calcReductions`)와 **같은 한도 규칙**(`applyReductionStatutoryCap`)을 쓴다.
-   * · **차감형·하이브리드**({@link ALL_INCOME_DEDUCTION_IDS} 11종 — §99의3·§99·§98 시리즈) —
-   *   **양도소득금액을 차감**하는 구조인데, 그것을 「소득세법 시행령」 §161 안분의 **앞/뒤
-   *   어디에 얹을지 정한 명문이 없다**. 추정으로 자리를 정하면 조용히 틀린다.
-   *   ⇒ 계산에 넣지 않고 **넣지 않았다는 사실을 표시**한다(종전 고지 유지).
-   *
-   * ✅ **농특세는 붙는다**(2026-08-23 `0b8aa295`로 별건 해소). 「농어촌특별세법」 §5①1호가
-   *    조특법 감면세액 × 20%를 정하고 비과세는 시행령 §4가 **열거**한 것뿐이다.
-   *    판정표는 `transfer-tax-rural-surtax.ts` **단일 소스**를 단건·이 경로·다건이 공유한다 —
-   *    한 곳만 고치면 같은 감면이 경로에 따라 갈린다.
-   *
-   * 계획서: `docs/00-pm/transfer-review-2026-08-open-items.plan.md` §F08
-   */
-  const allReductions = input.reductions ?? [];
-  const incomeDeductionIds = new Set<string>(ALL_INCOME_DEDUCTION_IDS);
-  /** 차감형·하이브리드 — 이 경로가 계산하지 않는 축(§161 안분 위치 명문 부재). */
-  const deferredReductions = allReductions.filter((r) => incomeDeductionIds.has(r.type));
-  /** 세액감면형 — 일반 경로와 동일하게 계산한다. */
-  const taxCreditReductions = allReductions.filter((r) => !incomeDeductionIds.has(r.type));
-  /**
-   * **LTHD 계열 특례 고지** (CB-02·D5-05) — 감면 효과는 3종인데 위 이분법은 2종만 가른다.
-   *
-   * §97의3①(임대기간분 70%)·§97의4①(표1 가산)·§98의2①1호(표2)는 **감면세액이 아니라
-   * 장기보유특별공제율 자체**를 바꾸는 조문이라 `calcReductions`에서 계산되지 않는다.
-   * 세액 반영은 §166⑤ 3분기 구조와의 결합 판단이 남아 있어 **아직 하지 않는다** —
-   * 그때까지 「선택은 되는데 계산엔 없다」는 침묵만은 없앤다.
-   */
-  const lthdSpecialReductions = allReductions.filter((r) =>
-    LTHD_SPECIAL_REDUCTION_IDS.includes(r.type),
-  );
-
-  const reductionResult = calcReductions(
-    rheTaxResult.calculatedTax,
-    taxCreditReductions,
-    parsedRates.selfFarmingRules,
-    effectiveInput.rentalReductionDetails,
-    parsedRates.longTermRentalRules,
-    // 신축주택(§99·§99의3)은 차감형이라 여기 넘기지 않는다 — 위 축 분리와 일관.
-    undefined,
-    parsedRates.newHousingMatrix,
-    effectiveInput.transferDate,
-    // 감면대상 소득 안분의 분모 — 이 경로의 **과세대상** 양도소득금액(장특 반영 후).
-    Math.max(0, totalTaxableIncome),
-    rheBasicDeduction,
-    rheTaxBase,
-    effectiveInput.acquisitionDate,
-    effectiveInput.standardPriceAtAcquisition,
-    effectiveInput.standardPriceAtTransfer,
-    effectiveInput.assetContractDate,
-    effectiveInput.isUnregistered,
-    undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
-    expropriationAcquisitionDate(effectiveInput), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
-  );
-
-  const cap = applyReductionStatutoryCap({
-    reductionAmount: reductionResult.reductionAmount,
-    reductionTypeApplied: reductionResult.reductionTypeApplied,
-    transferYear: effectiveInput.transferDate.getFullYear(),
-    priorUsage: effectiveInput.priorReductionUsage ?? [],
+  const {
+    reductionResult, rheReductionAmount, rheSurtaxVerdict, reductionNotice, lthdNotice,
+  } = applyRentalHousingReductions({
+    input, effectiveInput, parsedRates, steps, calculatedTax: rheTaxResult.calculatedTax, totalTaxableIncome, rheBasicDeduction, rheTaxBase,
   });
-  const rheReductionAmount = cap.cappedAmount;
-
-  if (rheReductionAmount > 0 || reductionResult.reductionType) {
-    steps.push({
-      label: "감면세액",
-      formula: reductionResult.reductionType
-        ? `${reductionResult.reductionType} 감면 ${rheReductionAmount.toLocaleString()}`
-        : "감면 없음",
-      amount: rheReductionAmount,
-      // D1-12 — **id**를 넘긴다(라벨 아님).
-      legalBasis: getReductionLegalBasis(
-        reductionResult.reductionTypeApplied,
-        reductionResult.publicExpropriationDetail?.useLegacyRates,
-        reductionResult.reductionLegalBasisOverride,
-      ),
-    });
-  }
-  if (cap.step) steps.push(cap.step);
-
-  const reductionNotice =
-    deferredReductions.length > 0
-      ? `선택한 감면 중 ${deferredReductions.length}건(양도소득금액 차감형)은 이 계산에 반영되지 않았습니다 — 거주주택 비과세 특례(소득세법 시행령 §155⑳)의 §161 안분과 차감 순서를 정한 규정이 없습니다. 「조세특례제한법」 §99·§99의3은 고가주택 배제 단서가 명문이므로 적용 대상이 아닙니다.`
-      : undefined;
-  if (reductionNotice) {
-    steps.push({
-      label: "조특법 감면 — 미반영 (차감형)",
-      formula: reductionNotice,
-      amount: 0,
-      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
-    });
-  }
-  const lthdNotice =
-    lthdSpecialReductions.length > 0
-      ? `선택한 감면 중 ${lthdSpecialReductions.length}건(장기보유특별공제 특례 — 조세특례제한법 §97의3①·§97의4①·§98의2①1호)은 이 계산에 반영되지 않았습니다. 이 경로가 양도하는 자산은 «거주주택»이고 §97의3·§97의4는 «임대주택»에 붙는 특례이므로 선택 자체를 재확인하시기 바랍니다.`
-      : undefined;
-  if (lthdNotice) {
-    steps.push({
-      label: "조특법 감면 — 미반영 (장기보유특별공제 특례)",
-      formula: lthdNotice,
-      amount: 0,
-      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
-    });
-  }
 
   // L-2 (2026-06-03): 특례 경로는 finalizeTransferTax를 거치지 않으므로
   // 신고불성실·납부지연 가산세를 emitPenaltySteps로 직접 반영 (미입력 시 no-op).
-  /**
-   * 농어촌특별세 — 일반 경로(STEP 8.8)와 **같은 판정표**를 쓴다(`transfer-tax-rural-surtax.ts`).
-   * 여기서만 빼면 같은 감면이 특례 여부에 따라 농특세가 달라진다.
-   */
-  const rheSurtaxVerdict = resolveTaxCreditRuralSurtax({
-    reductionTypeApplied: reductionResult.reductionTypeApplied,
-    reductionAmount: rheReductionAmount,
-    isSelfCultivatedExpropriatedLand: effectiveInput.isSelfCultivatedExpropriatedLand,
-  });
-  if (rheSurtaxVerdict.surtax > 0) {
-    steps.push({
-      label: "농어촌특별세 (감면세액 × 20%)",
-      formula: `감면세액 ${rheReductionAmount.toLocaleString()} × 20% = ${rheSurtaxVerdict.surtax.toLocaleString()} — ${rheSurtaxVerdict.reason}`,
-      amount: rheSurtaxVerdict.surtax,
-      legalBasis: rheSurtaxVerdict.legalBasis,
-    });
-  }
-
   const rheDeterminedTax = Math.max(0, rheTaxResult.calculatedTax - rheReductionAmount);
   const rheLocalIncomeTax = applyRate(rheDeterminedTax, 0.1);
   const { penaltyDetail, filingDelayedPenalty } = emitPenaltySteps(
@@ -608,7 +520,7 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
@@ -618,6 +530,8 @@ export function runRentalHousingExceptionStep(
             table2ReadingNotice,
             prhpSurchargeNotice,
             highValueExcessNotice,
+            laterLandNotice,
+            laterLandPhrpNotice,
             // OH-40·§7-5 판정 보류·확인 필요 고지 — 결론은 바꾸지 않는다.
             ...(rhe.eligibility.notices ?? []),
           ].filter((x): x is string => x !== undefined),
@@ -638,14 +552,14 @@ export function runRentalHousingExceptionStep(
     // 실제 적용한 장특표 기준(A=표2 · B=표1 — `gain95Applied`). 표1 고정이면 A2의 신고서·명세서가 52%가 아닌 20%를 찍는다(S06-8).
     longTermHoldingDeduction: (gain95Applied > 0
       ? housingGain - gain95Applied
-      : 0) + (nbl?.longTermDeduction ?? 0),
+      : 0) + (nbl?.longTermDeduction ?? 0) + (laterLand?.longTermDeduction ?? 0),
     // 장기보유공제율 — 0 강제 시 결과 카드에 "0%"로 잘못 표시되므로 실제 공제율 산출
     longTermHoldingRate: transferGain > 0 && gain95Applied > 0
-      ? ((housingGain - gain95Applied) + (nbl?.longTermDeduction ?? 0)) / transferGain
+      ? ((housingGain - gain95Applied) + (nbl?.longTermDeduction ?? 0) + (laterLand?.longTermDeduction ?? 0)) / transferGain
       : 0,
     lthdStartDate: resolveLTHDStartDate(effectiveInput),
     nontaxableGainAmount,
-    basicDeduction: rhe.taxableGain > 0 ? rheBasicDeduction : 0,
+    basicDeduction: rhe.taxableGain + laterLandIncome > 0 ? rheBasicDeduction : 0,
     taxBase: rheTaxBase,
     appliedRate: rheTaxResult.appliedRate,
     progressiveDeduction: rheTaxResult.progressiveDeduction,

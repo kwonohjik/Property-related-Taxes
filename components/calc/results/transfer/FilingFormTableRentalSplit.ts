@@ -31,7 +31,9 @@ export function rentalSplitTwoColFinancials(
   setNote: SetNote,
 ): void {
   const nb = sp.nonBusinessLandPart;
-  const landLt = sp.land.longTermDeduction + (nb?.longTermDeduction ?? 0);
+  // G-3 — 비과세에서 빠진 나중 취득 토지분(`laterLandPart`)은 주택분(`land.*` 파트 echo) 밖이라 배율 초과분처럼 토지 열에 따로 더한다.
+  const later = sp.laterLandPart;
+  const landLt = sp.land.longTermDeduction + (nb?.longTermDeduction ?? 0) + (later?.longTermDeduction ?? 0);
   const buildingLt = sp.building.longTermDeduction;
   setNum("taxableGain", "land", sp.land.gain);
   setNum("taxableGain", "building", sp.building.gain);
@@ -47,6 +49,7 @@ export function rentalSplitTwoColFinancials(
 
   // 특례 후 과세대상 양도소득금액 T(= rhe.taxableGain, 배율 초과분 제외)의 파트 배분. 초과분은 안분 없이 전액 과세라 토지 열에 그대로 더한다.
   const nbIncome = nb ? (nb.taxableGainAfterProration ?? nb.gain) - nb.longTermDeduction : 0;
+  const laterIncome = later ? later.gain - later.longTermDeduction : 0;
   const ruling = rhe.formulaTrace.highValueExcessRuling;
   const parts = rhe.formulaTrace.partsLthd!;
   const T = rhe.taxableGain;
@@ -54,7 +57,7 @@ export function rentalSplitTwoColFinancials(
   // 그 밖에는 파트의 §95① 양도소득금액(배율 초과분 제외 주택분)이다.
   const wLand = ruling
     ? ruling.landTaxableGain - Math.floor(ruling.landTaxableGain * parts.land.rateTable2)
-    : sp.land.gain - (nb?.gain ?? 0) - sp.land.longTermDeduction;
+    : sp.land.gain - (nb?.gain ?? 0) - (later?.gain ?? 0) - sp.land.longTermDeduction;
   const wBuilding = ruling
     ? ruling.buildingTaxableGain - Math.floor(ruling.buildingTaxableGain * parts.building.rateTable2)
     : sp.building.gain - sp.building.longTermDeduction;
@@ -62,7 +65,7 @@ export function rentalSplitTwoColFinancials(
   const wb = Math.max(wBuilding, 0);
   const landAfterHousing = wl + wb > 0 ? mulDiv(T, wl, wl + wb) : 0;
   const buildingAfterHousing = T - landAfterHousing; // 마지막 파트가 잔액을 흡수 — Σ = T
-  const landAfter = landAfterHousing + nbIncome;
+  const landAfter = landAfterHousing + nbIncome + laterIncome;
   setNum("incomeAmountAfter", "land", landAfter);
   setNum("incomeAmountAfter", "building", buildingAfterHousing);
   // 비과세 양도소득금액 = 양도소득금액 − 과세대상(열 안 항등식) — 합 = 합계 열(`nontaxableGainAmount`).

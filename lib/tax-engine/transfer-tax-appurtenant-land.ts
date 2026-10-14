@@ -493,6 +493,20 @@ export function resolveAppurtenantLandExcess(
   return { multiplier, limitArea, excessArea, nonBizRatio: excessArea / landArea };
 }
 
+/**
+ * G-3 제외 사유 문구 — 일반 경로(`applyHousingLandExclusions`)와 §155⑳ 특례 경로(`runRentalHousingExceptionStep`)가 같은 문장을 쓴다.
+ * `housingLandGain`은 비과세에서 빠져 전액 과세되는 토지분 양도차익(배율 초과분 제외)이다.
+ */
+export function laterLandExclusionReason(input: TransferTaxInput, housingLandGain: number): string {
+  const held = calculateHoldingPeriod(input.landAcquisitionDate!, input.transferDate);
+  return (
+    `주택 취득 후 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법」 ` +
+    `시행령 제154조 제1항 보유요건 미충족으로 1세대1주택 비과세 대상이 아님 — ` +
+    // 「12억」 리터럴 금지 — 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이다.
+    `양도차익 ${housingLandGain.toLocaleString()}을 고가주택 안분 없이 전액 과세`
+  );
+}
+
 /** `applyHousingLandExclusions` 결과 */
 export interface HousingLandExclusionResult {
   /** 배율 초과분(비사업용 토지) 양도차익 — 12억 안분 대상 아님 */
@@ -600,15 +614,7 @@ export function applyHousingLandExclusions(args: {
         (unitShare !== undefined && unitShare !== nonBusinessGain ? " (함께 양도하는 부수토지의 배율 초과분을 단위로 합산해 이 카드 몫으로 나눈 값)" : ""),
     );
   }
-  if (laterLand) {
-    const held = calculateHoldingPeriod(input.landAcquisitionDate!, input.transferDate);
-    reasons.push(
-      `주택 취득 후 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법」 ` +
-        `시행령 제154조 제1항 보유요건 미충족으로 1세대1주택 비과세 대상이 아님 — ` +
-        // 「12억」 리터럴 금지 — 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이다.
-        `양도차익 ${housingLandGain.toLocaleString()}을 고가주택 안분 없이 전액 과세`,
-    );
-  }
+  if (laterLand) reasons.push(laterLandExclusionReason(input, housingLandGain));
   const taxableGain = nonBusinessGain + landTaxableGain + buildingTaxableGain;
   return {
     nonBusinessGain,

@@ -86,16 +86,20 @@ const aggOf = (T: string, items: TransferTaxItemInput[]) =>
   calculateTransferTaxAggregate({ taxYear: Number(T.slice(0, 4)), properties: items, annualBasicDeductionUsed: 0 }, rates);
 
 describe("다건 §155⑳ × split — 독립 산식 anchor", () => {
-  it("배율 초과 부수토지 없음 · 토지가 건물보다 늦게 취득(G-3) — 자산 단위 세율(단건과 같다): 과세표준 70,976,923 → 24% 누진 11,274,461", () => {
-    // 단건 §155⑳ 경로의 과세대상 양도소득금액 73,476,923 − 기본공제 2,500,000 = 70,976,923 → 70,976,923 × 24% − 5,760,000 = 11,274,461(floor).
-    // 지방소득세 floor(11,274,461 × 10%) = 1,127,446 → 총 12,401,907.
+  it("배율 초과 부수토지 없음 · 토지가 건물보다 늦게 취득(G-3) — 나중 취득 토지분은 비과세에서 빠져 파트별 세율(토지분 60% · 건물분 누진): 총 553,334,861 (단건과 같다)", () => {
+    // 🔁 g3(`fix/g3-155-20-later-land-parity`)가 단건 특례 경로의 모델을 바꿨다 — 종전 기대값(자산 단위 세율 · 과세표준 70,976,923 · 총 12,401,907)은
+    //    나중 취득 토지분 840,000,000을 특례 대상 주택분에 넣고 비과세·12억 안분하던 모델이다. 일반 경로(off)는 §154① 보유요건 미달 토지분을 비과세에서 빼고 전액 과세한다.
+    // 독립 산식: 토지 양도차익 1,040,000,000 − 200,000,000 = 840,000,000(보유 1년 — 장특 0 · 전액 과세) · 건물 260,000,000 − 100,000,000 = 160,000,000
+    //   건물 표2 보유 5년 20% + 거주 2년 8% = 28% → 160,000,000 × 72% = 115,200,000 → × (13억−12억)/13억 = 8,861,538
+    //   소득금액 848,861,538 − 기본공제 2,500,000(세액이 가장 크게 줄어드는 최고세율 토지분에 귀속) → 과세표준 846,361,538
+    //   토지분 837,500,000 × 60%(주택 1~2년) = 502,500,000 + 건물분 8,861,538 × 6% = 531,692 → 503,031,692 · 지방소득세 50,303,169 → 총 553,334,861
     const c: Cell = { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 1, res: 24, area: 300, rhe: true };
     const single = calculateTransferTax(house(c), rates);
-    expect(single.taxBase).toBe(70_976_923);
-    expect(single.calculatedTax).toBe(11_274_461);
-    expect(single.totalTax).toBe(12_401_907);
+    expect(single.taxBase).toBe(846_361_538);
+    expect(single.calculatedTax).toBe(503_031_692);
+    expect(single.totalTax).toBe(553_334_861);
     const agg = aggOf(c.T, [asItem(house(c), "p1")]);
-    expect(agg.totalTax).toBe(12_401_907);
+    expect(agg.totalTax).toBe(553_334_861);
   });
 
   it("배율 초과 부수토지 있음 — 주택분 8,861,539 + 초과분 68,727,273 2파트: 초과분 +10%p 가산, 총 19,017,860", () => {
@@ -223,7 +227,7 @@ describe("다건 §155⑳ — 특례 선택(applyException)만 하고 요건 미
 describe("다건 §155⑳ × split — 「세율 기산일」 표시 게이트(partRateBasisApplied)는 켜지지 않는다", () => {
   // 단건 특례 경로는 파트별 §104② 기산일을 판정하지 않는다(값이 비어 있다) — 다건도 `true`가 되면 안 된다.
   for (const [name, c] of [
-    ["배율 초과 없음(자산 단위 세액)", { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 1, res: 24, area: 300, rhe: true }],
+    ["배율 초과 없음(자산 단위 세액)", { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 5, res: 24, area: 300, rhe: true }],
     ["배율 초과 있음(주택분 + 초과분 2파트)", { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 5, res: 24, area: 660, rhe: true }],
   ] as const) {
     it(name, () => {
@@ -240,4 +244,14 @@ describe("다건 §155⑳ × split — 「세율 기산일」 표시 게이트(p
 // 한 자산의 §104⑤ 비교과세 승패가 그 배분에 따라 갈려(특례 off 시료 9셀) 총세액이 입력 순서에 따라 달라진다 — 동순위 기준을 사용자가 정한 뒤 고정한다.
 describe.skip("보류 — §103② 동순위 자산 기본공제 배분의 입력 순서 의존", () => {
   it.todo("[주택 split(배율 초과 있음), 비사업용 토지]와 [비사업용 토지, 주택 split]의 총세액이 같다");
+});
+
+describe("다건 §155⑳ × split — G-3(나중 취득 토지분)은 파트별 세율을 판정한 것이라 단건과 다건이 같은 값을 싣는다", () => {
+  it("13억 · 토지 1년 · 건물 5년 — 단건 = 다건 = true (토지분 기산일로 세율 판정)", () => {
+    const c: Cell = { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 1, res: 24, area: 300, rhe: true };
+    const single = calculateTransferTax(house(c), rates);
+    expect(single.splitDetail?.laterLandPart).toBeDefined();
+    expect(single.splitDetail?.partRateBasisApplied).toBe(true);
+    expect(aggOf(c.T, [asItem(house(c), "p1")]).properties[0].splitDetail?.partRateBasisApplied).toBe(true);
+  });
 });
