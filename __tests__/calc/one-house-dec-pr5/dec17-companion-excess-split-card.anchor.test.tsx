@@ -46,11 +46,11 @@ describe("#17-1 컴패니언 주택 카드 — 배율 초과분 분리 카드 �
     expect(screen.getAllByTestId("housing-excess-split-card")).toHaveLength(2);
   });
 
-  it("대조 — 컴패니언이 한도 이내거나 범위 밖(2005년 전 취득)이면 카드가 없다", () => {
+  it("대조 — 컴패니언이 한도 이내거나 범위 밖(1990-08-30 전 취득)이면 카드가 없다", () => {
     renderSection([mk(1), mk(2)]);
     expect(screen.queryByTestId("housing-excess-split-card")).toBeNull();
     cleanup();
-    renderSection([mk(1), mk(2, { acquisitionArea: "500", transferArea: "500", acquisitionDate: "2000-03-01" })]);
+    renderSection([mk(1), mk(2, { acquisitionArea: "500", transferArea: "500", acquisitionDate: "1989-06-01" })]);
     expect(screen.queryByTestId("housing-excess-split-card")).toBeNull();
   });
 });

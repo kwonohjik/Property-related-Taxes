@@ -23,6 +23,7 @@ import {
   housingExcessNeedsStdInputs,
   housingExcessSplitApplies,
   isBeforeHousePriceFirstDisclosure,
+  isBeforeLandPriceFirstDisclosure,
   isSuppValuedHouseInheritance,
 } from "@/lib/tax-engine/housing-excess-split";
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
@@ -102,6 +103,7 @@ function factsOf(asset: AssetForm, excessAreaM2: number, isNonPrimary: boolean) 
     isSeparateAcquisition: isSeparateAcquisition(asset),
     isBurdenedGift: asset.transferType === "burdened_gift" || asset.acquisitionCause === "burdened_gift",
     isFractional: getOwnershipRatio(asset) < 1,
+    acquiredBeforeLandFirstDisclosure: isBeforeLandPriceFirstDisclosure(asset.acquisitionDate),
     acquiredBeforeFirstDisclosure: isBeforeHousePriceFirstDisclosure(asset.acquisitionDate),
     excessAreaM2,
   };
