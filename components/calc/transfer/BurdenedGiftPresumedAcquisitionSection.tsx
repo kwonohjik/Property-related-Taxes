@@ -48,6 +48,10 @@ export function bgAcquisitionMethodPatch(prev: AcqMethod, next: AcqMethod): Part
     bgPresumedAcquisitionLand: "",
     bgPresumedAcquisitionBuilding: "",
     bgPresumedAcquisitionTotal: "",
+    // 이월과세 × 새 방식의 당초 증여자 값도 같은 이유로 비운다
+    bgCoDonorPresumedAcquisitionLand: "",
+    bgCoDonorPresumedAcquisitionBuilding: "",
+    bgCoDonorPresumedAcquisitionTotal: "",
   };
 }
 
@@ -72,7 +76,7 @@ export function BurdenedGiftAcquisitionMethodField({
     asset.acquisitionCause,
     deriveSec163_9BaseDate(asset),
   );
-  // 매매사례가액·감정가액을 고를 수 없는 자산(상속·이월과세·축 B) — ⑧과 같은 `bgPresumedBlock`
+  // 매매사례가액·감정가액을 고를 수 없는 자산(상속·축 B) — ⑧과 같은 `bgPresumedBlock`
   const presumedBlock = bgPresumedBlock(asset, { isFractionalSplit });
   // 증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`). 신축은 가산세를 연결해 계산한다(PR-3).
   const appraisalPenaltyBlocked = bgAppraisalExtensionPenaltyApplies(asset, transferDate);
@@ -152,6 +156,11 @@ interface SectionProps {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   method: BgPresumedMethod;
+  /**
+   * 이월과세(§97의2) — 입력하는 값이 **당초 증여자**의 취득 당시 금액이다(`bgCoDonorPresumedAcquisition*`). 소법 §97의2①1호가
+   * 취득가액을 당초 증여자 취득 당시 §97①1호 금액으로 정하기 때문이다. 양도인 쪽은 증여받은 자산이라 증여일 평가액(실지 칸).
+   */
+  carryover?: boolean;
 }
 
 /**
@@ -159,13 +168,18 @@ interface SectionProps {
  * 일반건물 토지·건물 2칸 / 토지 1칸 / 그 외(주택·건물·상업용·재개발 완공 APT) 총액 1칸.
  * 취득시 기준시가(개산공제 base)는 자산 종류별 기존 칸에서 받는다 — 일반건물은 취득 정보의 gb* 칸, 그 외는 「② 양도정보」.
  */
-export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method }: SectionProps) {
+export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover }: SectionProps) {
   const label = BG_PRESUMED_LABEL[method];
   const kind = bgPresumedInputKind(asset.assetKind);
+  // 이월과세면 당초 증여자 칸을 읽고 쓴다 — 칸 이름만 다르고 입력 형태·검증 규칙은 같다.
+  const prefix = carryover ? "당초 증여자의 " : "";
+  const f = carryover
+    ? ({ land: "bgCoDonorPresumedAcquisitionLand", building: "bgCoDonorPresumedAcquisitionBuilding", total: "bgCoDonorPresumedAcquisitionTotal" } as const)
+    : ({ land: "bgPresumedAcquisitionLand", building: "bgPresumedAcquisitionBuilding", total: "bgPresumedAcquisitionTotal" } as const);
   return (
     <ToneCard
       tone="amber"
-      title={`${label} 입력`}
+      title={`${prefix}${label} 입력`}
       titleExtra={
         <LawArticleModal
           legalBasis="소득세법 시행령 §176의2 ③"
@@ -180,50 +194,52 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
         <p className="text-caption text-sky-800" data-testid="bg-presumed-expense-notice">
           필요경비는 <b>개산공제</b>(취득시 기준시가 × 채무비율 × 개산공제율)만 인정되고 자본적지출·양도비는 공제하지 않습니다
           (소득세법 §97②2호 — 실비와 비교해 고르는 것은 환산 방식 전용).{" "}
-          {asset.assetKind === "general_building"
-            ? "개산공제 기준이 되는 취득시 토지·건물 기준시가는 아래 일반건물 취득 정보에서 입력하세요."
-            : "개산공제 기준이 되는 취득시 기준시가는 아래 「② 양도정보」에서 입력하세요."}
+          {carryover
+            ? "개산공제 기준이 되는 취득 당시 토지·건물 기준시가는 아래 「당초 증여자」 두 칸에서 입력하세요."
+            : asset.assetKind === "general_building"
+              ? "개산공제 기준이 되는 취득시 토지·건물 기준시가는 아래 일반건물 취득 정보에서 입력하세요."
+              : "개산공제 기준이 되는 취득시 기준시가는 아래 「② 양도정보」에서 입력하세요."}
         </p>
       </ToneCard>
       {kind === "split" ? (
         <>
-          <FieldCard label={`토지 ${label}`} hint={PRESUMED_HINT[method]}>
+          <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]}>
             <CurrencyInput
               label=""
               hideUnit
-              data-field="bgPresumedAcquisitionLand"
-              value={asset.bgPresumedAcquisitionLand}
-              onChange={(v) => onChange({ bgPresumedAcquisitionLand: v })}
+              data-field={f.land}
+              value={asset[f.land]}
+              onChange={(v) => onChange({ [f.land]: v })}
             />
           </FieldCard>
-          <FieldCard label={`건물 ${label}`}>
+          <FieldCard label={`${prefix}건물 ${label}`}>
             <CurrencyInput
               label=""
               hideUnit
-              data-field="bgPresumedAcquisitionBuilding"
-              value={asset.bgPresumedAcquisitionBuilding}
-              onChange={(v) => onChange({ bgPresumedAcquisitionBuilding: v })}
+              data-field={f.building}
+              value={asset[f.building]}
+              onChange={(v) => onChange({ [f.building]: v })}
             />
           </FieldCard>
         </>
       ) : kind === "land" ? (
-        <FieldCard label={`토지 ${label}`} hint={PRESUMED_HINT[method]}>
+        <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]}>
           <CurrencyInput
             label=""
             hideUnit
-            data-field="bgPresumedAcquisitionLand"
-            value={asset.bgPresumedAcquisitionLand}
-            onChange={(v) => onChange({ bgPresumedAcquisitionLand: v })}
+            data-field={f.land}
+            value={asset[f.land]}
+            onChange={(v) => onChange({ [f.land]: v })}
           />
         </FieldCard>
       ) : (
-        <FieldCard label={`${label} (주택·건물 전체)`} hint={PRESUMED_HINT[method]}>
+        <FieldCard label={`${prefix}${label} (주택·건물 전체)`} hint={PRESUMED_HINT[method]}>
           <CurrencyInput
             label=""
             hideUnit
-            data-field="bgPresumedAcquisitionTotal"
-            value={asset.bgPresumedAcquisitionTotal}
-            onChange={(v) => onChange({ bgPresumedAcquisitionTotal: v })}
+            data-field={f.total}
+            value={asset[f.total]}
+            onChange={(v) => onChange({ [f.total]: v })}
           />
         </FieldCard>
       )}

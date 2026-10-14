@@ -218,7 +218,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
   const coDonorNeedsStdPrice =
     asset.bgValuationMode === "sangjeungbeop_standard" ||
-    asset.bgAcquisitionMethod === "converted";
+    asset.bgAcquisitionMethod === "converted" ||
+    // K-6/K-7 — 필요경비가 개산공제라 당초 증여자 취득 당시 기준시가가 base다
+    isBgPresumedMethod(asset.bgAcquisitionMethod);
+  /** 이월과세 × K-6/K-7 — 당초 증여자 값은 이월과세 박스, 양도인 값은 실지취득가액 블록(증여일 상증법 평가액)에서 받는다. */
+  const isCarryoverPresumed = isCarryover && isBgPresumedMethod(asset.bgAcquisitionMethod);
   const fmt = (n: number) => n.toLocaleString("ko-KR");
 
   return (
@@ -355,7 +359,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           />
 
           {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
-          {isBgPresumedMethod(asset.bgAcquisitionMethod) && (
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && (
             <BurdenedGiftPresumedAcquisitionSection
               asset={asset}
               onChange={onChange}
@@ -386,20 +390,30 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         그래서 이 블록을 「시가 모드」 카드 **밖으로** 뺐다. 안에 두면 기준시가 모드를 고른
         입주권 사용자에게 칸이 뜨지 않아 ⑧이 요구하는 값을 넣을 곳이 없어진다.
       */}
-      {((isMarketMode && asset.bgAcquisitionMethod === "actual") || isRightToMoveIn) && (
+      {((isMarketMode && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-semibold text-amber-800">실지취득가액 입력</span>
+              <span className="text-xs font-semibold text-amber-800">
+                {isCarryoverPresumed ? "양도인이 증여받은 때의 상증법 평가액 입력" : "실지취득가액 입력"}
+              </span>
               <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
             </div>
-            <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800">
-              개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
-            </div>
+            {isCarryoverPresumed ? (
+              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800" data-testid="bg-carryover-presumed-transferor-notice">
+                이월과세를 적용하지 않는 경우(시나리오 B)의 <b>양도인</b> 취득가액입니다. 양도인은 이 자산을 증여받았으므로 증여일 현재 상증법 평가액이
+                취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액은 <b>당초 증여자</b> 값만 아래 이월과세 박스에 입력합니다.
+              </div>
+            ) : (
+              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800">
+                개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
+              </div>
+            )}
             {isRightToMoveIn && (
               <div className="rounded border border-fuchsia-200 bg-fuchsia-50 p-2 text-caption text-fuchsia-800">
                 조합원입주권의 취득가액은 <b>종전 부동산의 실지취득가액</b>입니다 (소득세법 시행령
                 §166①1호 「기존건물과 그 부수토지의 취득가액」 · §97①1호가목). 인수 채무 비율만큼
-                안분됩니다.
+                안분됩니다. 종전 부동산의 매매사례가액·감정가액은 취득가액으로 쓰지 않습니다 — 시행령 §166③은 취득가액을 확인할 수 없는 경우를
+                기준시가 환산식으로 직접 정하고, §166④2호의 매매사례가액·감정가액은 취득가액이 아니라 「기존건물과 그 부수토지의 평가액」 산정에 쓰입니다.
               </div>
             )}
             {asset.assetKind === "general_building" ? (
@@ -476,6 +490,14 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
           {coDonorNeedsStdPrice ? (
             <>
+              {isBgPresumedMethod(asset.bgAcquisitionMethod) && (
+                <BurdenedGiftPresumedAcquisitionSection
+                  asset={asset}
+                  onChange={onChange}
+                  method={asset.bgAcquisitionMethod}
+                  carryover
+                />
+              )}
               <FieldCard
                 label="당초 증여자 취득 당시 토지 기준시가"
                 hint="개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."

@@ -14,6 +14,7 @@ import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclos
 import {
   assertCarryoverDonorBasis,
   applyCarryoverDonorBasis,
+  toTransferorBasisInfo,
   isBurdenedGiftCarryover,
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
@@ -150,7 +151,7 @@ export function calcCarryoverScenarios(
   // ─────────────────────────────────────────────────────────
   const isBurdenedGift = isBurdenedGiftCarryover(rawInput);
   if (isBurdenedGift) {
-    assertCarryoverDonorBasis(rawInput.burdenedGiftInfo!, ct);
+    assertCarryoverDonorBasis(rawInput.burdenedGiftInfo!, ct, rawInput);
   }
 
   // ─────────────────────────────────────────────────────────
@@ -605,6 +606,10 @@ function buildInputB(
     useEstimatedAcquisition: false,           // B는 실가(증여 당시 평가액)
     capitalExpenditure: rawInput.capitalExpenditure, // 수증자 capex만 (증여자 capex 제외)
     carryoverTaxation: undefined,             // 재귀 방지
+    // 부담부증여 K-6/K-7: B는 양도인(증여받은 사람) 기준 — 증여일 상증법 평가액을 실지거래가액으로 본다(소령 §163⑨)
+    ...(isBurdenedGiftCarryover(rawInput)
+      ? { burdenedGiftInfo: toTransferorBasisInfo(rawInput.burdenedGiftInfo!) }
+      : {}),
     /**
      * B는 일반 취득으로 처리 — **세율 보유기간도 증여일 기산이 된다**(§104②2호 미적용).
      *

@@ -85,11 +85,16 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: presumed({ acquisitionCause: "inheritance" }),
   },
   {
-    name: "bg: 이월과세 감정가액 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 이월과세\(소득세법 §97의2\)가 적용되는 부담부증여는/,
-    form: () => {
-      const f = carry({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000", bgAcquisitionMethod: "appraisal", bgPresumedAcquisitionTotal: "200000000" })();
-      return f;
-    },
+    name: "bg: 이월과세 × 감정가액 — 당초 증여자 감정가액", field: "bgCoDonorPresumedAcquisitionTotal", step: 0, assetIndex: A, message: /^자산: 이월과세가 적용되므로 「당초 증여자」.*감정가액을\(를\) 입력하세요/,
+    form: carry({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000", bgAcquisitionMethod: "appraisal", bgActualAcquisitionTotal: "300000000" }),
+  },
+  {
+    name: "bg: 이월과세 × 감정가액 — 양도인 증여일 평가액", field: "bgActualAcquisitionTotal", step: 0, assetIndex: A, message: /^자산: 이월과세 — 양도인\(증여받은 사람\)이 증여받은 때의 상증법 평가액을 입력하세요/,
+    form: carry({
+      bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000", bgAcquisitionMethod: "appraisal",
+      bgActualAcquisitionTotal: "", bgCoDonorPresumedAcquisitionTotal: "200000000",
+      bgCoDonorLandStdPriceAtAcq: "0", bgCoDonorBuildingStdPriceAtAcq: "100000000",
+    }),
   },
   {
     name: "bg: 지분 분할 취득 감정가액 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산 1: 지분 분할 취득\(같은 물건을 여러 번에 나눠 취득\)은/,

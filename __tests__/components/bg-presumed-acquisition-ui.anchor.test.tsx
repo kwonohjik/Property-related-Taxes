@@ -73,11 +73,10 @@ describe("⑤ 라디오 4옵션", () => {
     expect(screen.getAllByText(/상증법 평가액이 취득 당시 실지거래가액으로 간주되어 쓸 수 없습니다/).length).toBe(2);
   });
 
-  it("이월과세 자산 — 두 옵션 비활성 + 사유", () => {
+  it("이월과세 자산 — 두 옵션이 활성(당초 증여자 값 입력 경로가 생겼다)", () => {
     renderBlock(land({ acquisitionCause: "carryover_gift", bgAcquisitionMethod: "" }));
-    expect(radio(/매매사례가액/).disabled).toBe(true);
-    expect(radio(/감정가액/).disabled).toBe(true);
-    expect(screen.getAllByText(/이월과세\(§97의2\) 적용 자산은 아직 지원하지 않습니다/).length).toBe(2);
+    expect(radio(/매매사례가액/).disabled).toBe(false);
+    expect(radio(/감정가액/).disabled).toBe(false);
   });
 
   it("축 B(지분 분할 취득) — 두 옵션 비활성, 대조군(축 B 아님)은 활성", () => {

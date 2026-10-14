@@ -108,6 +108,13 @@ export interface BurdenedGiftFormSlice {
   bgCoDonorActualAcquisitionTotal: string;
   /** legacy(시가·산정방식 미선택): 당초 증여자 취득 당시 시가 평가액. 원, string. */
   bgCoDonorMarketValueAtAcquisition: string;
+  /**
+   * K-6/K-7(매매사례가액·감정가액) × 이월과세: **당초 증여자**의 취득 당시 금액 — 소법 §97의2①1호가 당초 증여자 취득 당시 §97①1호 금액을 쓰게 한다.
+   * 입력 형태는 `bgPresumedInputKind`(일반건물 토지·건물 2칸 / 토지 1칸 / 그 밖 총액). 이때 양도인 쪽 값은 `bgActualAcquisition*`(증여일 상증법 평가액, 소령 §163⑨)다.
+   */
+  bgCoDonorPresumedAcquisitionLand: string;
+  bgCoDonorPresumedAcquisitionBuilding: string;
+  bgCoDonorPresumedAcquisitionTotal: string;
 
   // ── 증여세 통합 입력 (Phase 3) ──
   /** 증여자-수증자 관계 (상증법 §53 증여재산공제). "" = 미선택 (엔진 default: lineal_descendant). */

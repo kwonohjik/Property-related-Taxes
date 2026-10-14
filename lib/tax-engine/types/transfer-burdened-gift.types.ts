@@ -323,6 +323,15 @@ export interface BurdenedGiftCarryoverDonorBasis {
   actualAcquisitionTotal?: number;
   /** legacy(market·미지정): 당초 증여자 취득 당시 시가 평가액. */
   marketValueAtAcquisition?: number;
+  /**
+   * K-6/K-7: **당초 증여자**의 취득 당시 매매사례가액·감정가액(소법 §97의2①1호 → §97①1호나목 · 소령 §176의2③1·2호).
+   * 이월과세 × 새 방식에서 `info.acquisitionMethod`(salesCase·appraisal)는 당초 증여자 쪽 방식이다 — 양도인 쪽은
+   * 증여받은 자산이라 소령 §163⑨가 증여일 상증법 평가액을 실지거래가액으로 보므로 `actual*` 칸(시나리오 B)을 쓴다.
+   * 토지 / 건물 분리 또는 단일 총액(`BurdenedGiftInfo.presumed*`와 같은 규칙).
+   */
+  presumedLandAcquisitionPrice?: number;
+  presumedBuildingAcquisitionPrice?: number;
+  presumedAcquisitionTotal?: number;
 }
 
 /** 실제 적용된 취득가액 산정 경로 — `TransferBurdenedGiftBreakdown.acquisitionMethodUsed`·`perAsset.*.acquisitionMethod`. */

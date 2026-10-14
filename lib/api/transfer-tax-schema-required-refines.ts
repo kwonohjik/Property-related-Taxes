@@ -90,6 +90,12 @@ type BurdenedGiftLike = {
   presumedAcquisitionTotal?: number;
   presumedLandAcquisitionPrice?: number;
   presumedBuildingAcquisitionPrice?: number;
+  /** 이월과세 — 당초 증여자 값 한 벌. K-6/K-7이면 `presumed*`가 여기로 온다(양도인 쪽은 `actual*`). */
+  carryoverDonorBasis?: {
+    presumedAcquisitionTotal?: number;
+    presumedLandAcquisitionPrice?: number;
+    presumedBuildingAcquisitionPrice?: number;
+  };
   donorRelation?: string;
 };
 
@@ -122,16 +128,26 @@ export function refineBurdenedGiftInputs(
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    if (
-      (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") &&
-      !positive(bg.presumedAcquisitionTotal) &&
-      !positive(bg.presumedLandAcquisitionPrice) &&
-      !positive(bg.presumedBuildingAcquisitionPrice)
-    ) {
-      issue(
-        ["burdenedGiftInfo", "presumedAcquisitionTotal"],
-        `부담부증여 ${bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액"} 방식은 취득 당시 금액이 필요합니다 (소득세법 §97①1호나목)`,
-      );
+    if (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") {
+      const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
+      const donor = bg.carryoverDonorBasis;
+      if (donor) {
+        // 이월과세 × K-6/K-7 — 방식은 당초 증여자 쪽이고 그 금액은 `carryoverDonorBasis`에 온다(소법 §97의2①1호).
+        // 양도인 쪽(시나리오 B)은 증여일 평가액 = `actual*`(소령 §163⑨) — 둘 다 요구한다(어느 쪽도 다른 쪽으로 대신하지 않는다).
+        if (!positive(donor.presumedAcquisitionTotal) && !positive(donor.presumedLandAcquisitionPrice) && !positive(donor.presumedBuildingAcquisitionPrice))
+          issue(["burdenedGiftInfo", "carryoverDonorBasis", "presumedAcquisitionTotal"], `이월과세 부담부증여 ${label} 방식은 당초 증여자의 취득 당시 ${label}이 필요합니다 (소득세법 §97의2①1호)`);
+        if (!positive(bg.actualAcquisitionTotal) && !positive(bg.actualLandAcquisitionPrice) && !positive(bg.actualBuildingAcquisitionPrice))
+          issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "이월과세 부담부증여는 양도인이 증여받은 때의 상증법 평가액이 필요합니다 (소득세법 시행령 §163⑨ — 시나리오 B)");
+      } else if (
+        !positive(bg.presumedAcquisitionTotal) &&
+        !positive(bg.presumedLandAcquisitionPrice) &&
+        !positive(bg.presumedBuildingAcquisitionPrice)
+      ) {
+        issue(
+          ["burdenedGiftInfo", "presumedAcquisitionTotal"],
+          `부담부증여 ${label} 방식은 취득 당시 금액이 필요합니다 (소득세법 §97①1호나목)`,
+        );
+      }
     }
   }
   if (!bg.donorRelation)

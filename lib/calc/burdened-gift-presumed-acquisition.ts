@@ -30,7 +30,7 @@ export function isBgPresumedMethod(method: string | undefined): method is BgPres
   return method === "salesCase" || method === "appraisal";
 }
 
-export type BgPresumedBlockReason = "inheritance" | "carryover" | "fractionalSplit";
+export type BgPresumedBlockReason = "inheritance" | "fractionalSplit";
 
 export interface BgPresumedBlock {
   reason: BgPresumedBlockReason;
@@ -48,7 +48,6 @@ type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | 
  *
  *  · 상속 — 영 §163⑨가 상속개시일 평가액을 가목(실지거래가액)으로 보므로 나목(감정·매매사례·환산)에 닿지 않는다.
  *    기존 환산 차단 술어(`isPostDeemedInheritance`)와 같은 결론이다.
- *  · 이월과세 — 당초 증여자 값 한 벌을 받는 입력 칸이 없다(엔진 `assertCarryoverDonorBasis`가 같은 조합을 던진다).
  *  · 지분 분할 취득(축 B) — 지분마다 취득일이 달라 「취득일 전후 3개월」 값이 달라지는데 ④가 물건 단위 1값 모델이다
  *    (`mergePrimaryBasic`이 새 필드를 병합하지 않는다).
  */
@@ -61,13 +60,6 @@ export function bgPresumedBlock(
       reason: "inheritance",
       short: "상속받은 자산은 상증법 평가액이 취득 당시 실지거래가액으로 간주되어 쓸 수 없습니다 (소령 §163⑨)",
       long: "상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.",
-    };
-  }
-  if (asset.acquisitionCause === "carryover_gift") {
-    return {
-      reason: "carryover",
-      short: "이월과세(§97의2) 적용 자산은 아직 지원하지 않습니다 — 당초 증여자 값 입력 경로가 없습니다",
-      long: "이월과세(소득세법 §97의2)가 적용되는 부담부증여는 취득가액 산정방식을 「매매사례가액」·「감정가액」으로 선택할 수 없습니다. 당초 증여자 취득 당시의 매매사례가액·감정가액을 입력하는 경로가 아직 없습니다. 「실지취득가액 안분」 또는 「환산취득가액」을 선택하세요.",
     };
   }
   if (ctx.isFractionalSplit) {
@@ -148,7 +140,17 @@ export function bgAppraisalExtensionPenaltyApplies(
   asset: PenaltyAsset,
   transferDate: string | undefined,
 ): boolean {
-  if (asset.buildingType !== "extension") return false;
+  return asset.buildingType === "extension" && bgAppraisalBuildingPenaltyApplies(asset, transferDate);
+}
+
+/**
+ * 신축·증축 5년 이내 × 감정가액 — §114조의2 가산세 대상 조합인가(신축·증축 모두). 판정은 엔진과 같은 단일 소스 `calculateBuildingPenalty`.
+ * 일반 경로에서 신축은 가산세를 연결해 계산하므로 **차단 근거가 아니다** — **이월과세와 함께 쓰는 경우**(기산점·base 미정)만 이 술어로 막는다.
+ */
+export function bgAppraisalBuildingPenaltyApplies(
+  asset: PenaltyAsset,
+  transferDate: string | undefined,
+): boolean {
   const date = toOptionalDate(transferDate);
   if (!date || !selfBuiltActive(asset)) return false;
   const constructionDate = toOptionalDate(asset.constructionDate);
