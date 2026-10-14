@@ -46,13 +46,31 @@ describe("FilingFormTable — 초과분이 있으면 열은 합계·토지·건�
     const taxable = cellsOf("과세대상 양도차익");
     expect(taxable[2].textContent).toContain("기준면적 이내 토지분 0 + 배율 초과 부수토지분 185,714,286");
     expect(taxable[2].textContent).toContain("초과 200㎡");
-    expect(taxable[2].textContent).toContain("소득세법 §104조의3 ①5호");
+    expect(taxable[2].textContent).toContain("「소득세법」 제104조의3 제1항 제5호");
+    expect(taxable[2].textContent).not.toContain("§104조의3"); // 「§104조의3」 혼용 표기 없음 — 저장소 관행(법령명·조·항·호)
     expect(taxable[1].textContent).not.toContain("배율 초과");
     expect(taxable[3].textContent).not.toContain("배율 초과");
     const lt = cellsOf("장기보유특별공제");
     expect(lt[2].textContent).toContain("기준면적 이내 토지분 0 + 배율 초과 부수토지분 52,000,000");
     expect(lt[2].textContent).toContain("공제율 28%");
     expect(lt[3].textContent).not.toContain("배율 초과");
+  });
+
+  it("초과분이 합산된 토지 열의 모든 칸(과세·비과세·장특·보유분·소득금액·감면후 소득금액)에 각주 — 건물·합계 열에는 없다", () => {
+    render(<FilingFormTable result={withExcess()} transferPriceOverride={PRICE} />);
+    const labels = ["과세대상 양도차익", "비과세 양도차익", "장기보유특별공제", "보유 기간분 장특", "양도소득금액", "감면후 소득금액"];
+    for (const l of labels) {
+      const cells = cellsOf(l);
+      expect(within(cells[2]).getAllByTestId("filing-rose-note").length, `${l} 토지 열 각주`).toBe(1);
+      expect(within(cells[1]).queryAllByTestId("filing-rose-note").length, `${l} 합계 열`).toBe(0);
+      expect(within(cells[3]).queryAllByTestId("filing-rose-note").length, `${l} 건물 열`).toBe(0);
+    }
+    // 거주 기간분 장특은 초과분이 섞이지 않는다(표1 보유분 단독) — 각주 없음
+    expect(within(cellsOf("거주 기간분 장특")[2]).queryAllByTestId("filing-rose-note").length).toBe(0);
+    expect(cellsOf("보유 기간분 장특")[2].textContent).toContain("배율 초과 부수토지분의 표1 보유분 포함");
+    expect(cellsOf("양도소득금액")[2].textContent).toContain("기준면적 이내 토지분 0 + 배율 초과 부수토지분 133,714,286");
+    expect(cellsOf("감면후 소득금액")[2].textContent).toContain("기준면적 이내 토지분 0 + 배율 초과 부수토지분 133,714,286");
+    expect(cellsOf("비과세 양도차익")[2].textContent).toContain("비과세 대상이 아니라");
   });
 
   it("초과분이 없으면 각주도 없고 값은 종전(균일 비율) 그대로", () => {
@@ -113,5 +131,30 @@ describe("결과 PDF 「토지/건물 분리 내역」 — 초과분 두 행", (
   });
   it("초과분이 없으면 행이 없다", () => {
     expect(tokens(noExcess()).join("|")).not.toContain("배율 초과 부수토지");
+  });
+});
+
+/** 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이라 이 변경이 추가한 어떤 표시에도 금액이 박히면 안 된다 — 9억 시기(2021-06-10 · 2020-06-10) 시료로 고정. */
+describe("연혁 — 9억 시기 양도의 초과분 표시에 「12억」이 없다 (신고서 표·분리 카드·PDF)", () => {
+  it.each([
+    ["2020-06-10", 900],
+    ["2021-06-10", 700],
+  ])("%s · 토지 %i㎡", (td, area) => {
+    const r = calc(sameDayInput(td, PRICE, area));
+    expect(r.splitDetail!.nonBusinessLandPart).toBeDefined();
+
+    const filing = render(<FilingFormTable result={r} transferPriceOverride={PRICE} />);
+    expect(filing.container.textContent).toContain("배율 초과 부수토지분"); // 각주가 실제로 렌더됐다(공허 통과 방지)
+    expect(filing.container.textContent).not.toContain("12억");
+    filing.unmount();
+
+    const card = render(<SplitGainDetailSection splitDetail={r.splitDetail!} assetKind="housing" />);
+    expect(screen.getByTestId("split-card-nb-part")).toBeTruthy();
+    expect(card.container.textContent).not.toContain("12억");
+    card.unmount();
+
+    const pdf = collect(TransferSplitSection({ r: r as unknown as Record<string, unknown> })).join("|");
+    expect(pdf).toContain("배율 초과 부수토지");
+    expect(pdf).not.toContain("12억");
   });
 });

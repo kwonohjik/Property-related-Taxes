@@ -2,7 +2,7 @@
  * E2E: 단일 주택(같은 날 취득 · 토지·건물 분리) 배율 초과 부수토지 — 신고서 양식이 초과분을 열에 반영한다 (표시 전용 · 세액 불변)
  *
  *   T1. 15억 · 토지 500㎡ · 정착 100㎡(한도 300㎡) → 신고서 열은 합계·토지·건물뿐이고(초과분 전용 열 없음),
- *       열 합 = 합계 열(과세대상 양도차익 · 장기보유특별공제 · 양도소득금액) · 토지 열에만 구성 각주
+ *       열 합 = 합계 열(과세대상 양도차익 · 장기보유특별공제 · 양도소득금액) · 초과분이 합산된 토지 열 칸에만 구성 각주
  *   T2. 대조 — 토지 300㎡(초과 없음) → 구성 각주·초과분 블록 없음
  *
  * ⚠️ 값의 정본은 vitest anchor(`filing-form-split-nonbusiness-land.anchor.test.ts` — echo 대조 · 열 합 불변식)다.
@@ -89,12 +89,14 @@ test.describe("신고서 양식 — 단일 주택 배율 초과 부수토지 열
       const [total, land, building] = [await amount(cells.nth(1)), await amount(cells.nth(2)), await amount(cells.nth(3))];
       expect(land + building, `${label} 열 합 = 합계`).toBe(total);
     }
-    // 과세 양도차익 · 장특 — 토지 열에만 구성 각주(초과분 합산), 합계·건물 열에는 없다
-    for (const label of ["과세대상 양도차익", "장기보유특별공제"]) {
+    // 초과분이 합산된 칸 — 토지 열에만 구성 각주(내용 있음), 합계·건물 열에는 없다
+    for (const label of ["과세대상 양도차익", "비과세 양도차익", "장기보유특별공제", "보유 기간분 장특", "양도소득금액", "감면후 소득금액"]) {
       const cells = rowCells(filing, label);
-      await expect(cells.nth(2).locator("div")).toHaveCount(1);
-      await expect(cells.nth(1).locator("div")).toHaveCount(0);
-      await expect(cells.nth(3).locator("div")).toHaveCount(0);
+      const note = cells.nth(2).getByTestId("filing-rose-note");
+      await expect(note, `${label} 토지 열 각주`).toBeVisible();
+      await expect(note).not.toBeEmpty();
+      await expect(cells.nth(1).getByTestId("filing-rose-note")).toHaveCount(0);
+      await expect(cells.nth(3).getByTestId("filing-rose-note")).toHaveCount(0);
     }
     // 분리 카드의 초과분 블록
     await expect(page.getByTestId("split-card-nb-part").first()).toBeVisible();
@@ -104,9 +106,9 @@ test.describe("신고서 양식 — 단일 주택 배율 초과 부수토지 열
     test.setTimeout(120_000);
     await seedAndCalc(page, "300");
     const filing = page.locator('[data-print-id="form-table"]').first();
-    // 초과가 없으면 같은 날 취득 주택은 분리 경로를 타지 않아 합계 열만 있다 — 칸마다 각주 div가 없다.
-    for (const label of ["과세대상 양도차익", "장기보유특별공제"]) {
-      await expect(rowCells(filing, label).nth(1).locator("div")).toHaveCount(0);
+    // 초과가 없으면 같은 날 취득 주택은 분리 경로를 타지 않아 합계 열만 있다 — 구성 각주가 없다.
+    for (const label of ["과세대상 양도차익", "장기보유특별공제", "양도소득금액"]) {
+      await expect(rowCells(filing, label).nth(1).getByTestId("filing-rose-note")).toHaveCount(0);
     }
     await expect(page.getByTestId("split-card-nb-part")).toHaveCount(0);
   });

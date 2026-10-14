@@ -10,7 +10,6 @@ import type {
 import type { SplitPartResult } from "@/lib/tax-engine/types/transfer.types";
 import type { SplitNonBusinessLandPart } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { splitPartAcquisitionDeducted } from "@/lib/tax-engine/transfer-tax-split-display";
-import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { ColumnKey } from "./FilingFormTableHelpers";
 
 export function fourPartFinancials(
@@ -172,21 +171,43 @@ export function splitTwoColFinancials(
 }
 
 /**
+ * 배율 초과 부수토지 인용 — 엔진 문구(`transfer-tax-appurtenant-land.ts`·`transfer-tax-rental-housing-nbl-split.ts`)와 같은 표기다.
+ * `NBL.*`에는 항·호까지 담은 상수가 없다(`NBL.MAIN`은 조까지) — 새 표기를 만들지 않고 저장소 관행 문자열을 그대로 쓴다.
+ */
+export const NB_EXCESS_CITATION = "「소득세법」 제104조의3 제1항 제5호";
+
+/** 초과분이 합산된 토지 열 칸의 각주 — 행 키(`RowDef` 키)별. 이 다섯 행 외에는 초과분이 숫자에 섞이지 않는다. */
+export type SplitNonBusinessLandNotes = Record<
+  "taxableGain" | "exemptGain" | "ltDeduction" | "ltHoldingPart" | "incomeAmount" | "incomeAmountAfter",
+  string
+>;
+
+/**
  * 초과분을 합산한 토지 열의 구성 각주 — 「기준면적 이내 토지분 + 배율 초과 부수토지분」을 숫자로 밝힌다.
- * 열 값만으로는 초과분이 섞였는지 알 수 없다(겸용 4열은 별도 비사업용 카드가 따로 있다).
- * 엔진 echo를 그대로 읽는다 — 값을 새로 계산하지 않는다. 문구에 `/`·`÷`를 쓰지 않는다(분수 치환 방지).
+ * 열 값만으로는 초과분이 섞였는지 알 수 없다(겸용 4열은 별도 비사업용 카드가 따로 있다). 합산이 숫자에 영향을 주는 모든 행에 단다.
+ * 엔진 echo를 그대로 읽는다 — 값을 새로 계산하지 않는다(소득금액의 파트별 값은 echo 과세 양도차익 − echo 장특의 차이일 뿐이다).
+ * 문구에 `/`·`÷`를 쓰지 않는다(분수 치환 방지). 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이라 금액을 문구에 넣지 않는다.
  */
 export function splitNonBusinessLandNotes(
   land: SplitPartResult,
   nb: SplitNonBusinessLandPart,
-): { taxableGain: string; ltDeduction: string } {
+): SplitNonBusinessLandNotes {
   const f = (n: number) => n.toLocaleString();
+  const nbTaxable = nb.taxableGainAfterProration ?? nb.gain;
+  const landTaxable = land.taxableGainAfterProration ?? land.gain;
+  const income =
+    `기준면적 이내 토지분 ${f(landTaxable - land.longTermDeduction)} + 배율 초과 부수토지분 ${f(nbTaxable - nb.longTermDeduction)} ` +
+    "(과세 양도차익에서 장기보유특별공제를 뺀 금액)";
   return {
     taxableGain:
-      `기준면적 이내 토지분 ${f(land.taxableGainAfterProration ?? land.gain)} + 배율 초과 부수토지분 ${f(nb.taxableGainAfterProration ?? nb.gain)} ` +
-      `(초과 ${nb.excessArea}㎡ — 비사업용 토지로 안분 없이 전액 과세, ${NBL.MAIN} ①5호)`,
+      `기준면적 이내 토지분 ${f(landTaxable)} + 배율 초과 부수토지분 ${f(nbTaxable)} ` +
+      `(초과 ${nb.excessArea}㎡ — 비사업용 토지로 안분 없이 전액 과세, ${NB_EXCESS_CITATION})`,
+    exemptGain: "배율 초과 부수토지분은 비과세 대상이 아니라 이 칸에 들어가지 않습니다",
     ltDeduction:
       `기준면적 이내 토지분 ${f(land.longTermDeduction)} + 배율 초과 부수토지분 ${f(nb.longTermDeduction)} ` +
       `(표1 — 토지 보유 ${nb.holdingYears}년, 공제율 ${Math.round(nb.longTermRate * 100)}%)`,
+    ltHoldingPart: "배율 초과 부수토지분의 표1 보유분 포함",
+    incomeAmount: income,
+    incomeAmountAfter: income,
   };
 }

@@ -4,11 +4,11 @@
  * 토지·건물 분리 카드의 **배율 초과 부수토지(비사업용 토지) 파트** 표시 — `splitDetail.nonBusinessLandPart` echo를 그대로 읽는다.
  *
  * 분리 카드의 열(토지·건물)은 「양도차익」만 초과분을 포함한 토지 전체 값이고 「과세 양도차익」·「장특공제액」은 기준면적 이내 토지분이다.
- * 초과분은 「소득세법」 제104조 제5항 본문 후단에 따라 별개 자산으로 보아 전액 과세하므로(§104조의3 ①5호) 그 값을 이 블록이 따로 보인다 —
+ * 초과분은 「소득세법」 제104조 제5항 본문 후단에 따라 별개 자산으로 보아 전액 과세하므로(제104조의3 제1항 제5호) 그 값을 이 블록이 따로 보인다 —
  * 이 블록이 없으면 열 값을 모두 더해도 자산의 과세 양도차익·장기보유특별공제와 맞지 않는다. 값을 새로 계산하지 않는다(재계산 금지).
  */
 import type { SplitNonBusinessLandPart } from "@/lib/tax-engine/types/transfer-split-gain.types";
-import { NBL } from "@/lib/tax-engine/legal-codes";
+import { NB_EXCESS_CITATION } from "./FilingFormTableFinancials";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 export function SplitNonBusinessLandBlock({ nb }: { nb: SplitNonBusinessLandPart }) {
@@ -23,7 +23,7 @@ export function SplitNonBusinessLandBlock({ nb }: { nb: SplitNonBusinessLandPart
           <span className="font-mono tabular-nums text-right">{nb.limitArea}㎡</span>
           <span className="text-muted-foreground">초과 면적</span>
           <span className="font-mono tabular-nums text-right">{nb.excessArea}㎡</span>
-          <span className="text-muted-foreground">과세 양도차익 (12억 안분 없음)</span>
+          <span className="text-muted-foreground">과세 양도차익 (안분 없음)</span>
           <span className="font-mono tabular-nums text-right" data-testid="split-card-nb-taxable">{f(taxable)}</span>
           <span className="text-muted-foreground">장기보유특별공제 (표1 · 토지 보유 {nb.holdingYears}년 · 공제율 {Math.round(nb.longTermRate * 100)}%)</span>
           <span className="font-mono tabular-nums text-right" data-testid="split-card-nb-lthd">{f(nb.longTermDeduction)}</span>
@@ -31,7 +31,7 @@ export function SplitNonBusinessLandBlock({ nb }: { nb: SplitNonBusinessLandPart
           <span className="font-mono tabular-nums text-right font-semibold" data-testid="split-card-nb-income">{f(taxable - nb.longTermDeduction)}</span>
         </div>
         <p className="text-caption mt-1.5 leading-snug text-muted-foreground">
-          위 표의 「양도차익」 토지 열에는 이 초과분의 양도차익 {f(nb.gain)}이 들어 있고, 「과세 양도차익」·「장특공제액」 토지 열은 기준면적 이내 토지분입니다 ({NBL.MAIN} ①5호).
+          위 표의 「양도차익」 토지 열에는 이 초과분의 양도차익 {f(nb.gain)}이 들어 있고, 「과세 양도차익」·「장특공제액」 토지 열은 기준면적 이내 토지분입니다 ({NB_EXCESS_CITATION}).
         </p>
       </ToneCard>
     </div>

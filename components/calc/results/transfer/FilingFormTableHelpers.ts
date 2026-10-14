@@ -372,9 +372,7 @@ export function buildRows(
     const taxableRatio = ownedGain > 0 ? result.taxableGain / ownedGain : 1;
     splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum, spNb);
     if (spNb) {
-      const nbNotes = splitNonBusinessLandNotes(sp.land, spNb);
-      setRoseNote("taxableGain", "land", nbNotes.taxableGain);
-      setRoseNote("ltDeduction", "land", nbNotes.ltDeduction);
+      for (const [rowKey, note] of Object.entries(splitNonBusinessLandNotes(sp.land, spNb))) setRoseNote(rowKey, "land", note);
     }
     // 세율 기산일(§104②)은 서식 행이 없다 — 원인이 다를 때만 취득일 칸 각주로 밝힌다(D1-3).
     const spSummary = summarizeSplitGain(sp);
