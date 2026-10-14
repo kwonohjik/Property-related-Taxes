@@ -16,6 +16,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { resolveRedevSubject } from "@/lib/calc/redev-field-scope";
 import { settlementOneHouseAtSaleInScope } from "@/lib/calc/redev-field-scope";
+import { successorGiftHouseholdApplies, successorGiftHouseholdInScope } from "@/lib/calc/redev-field-scope";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -507,6 +508,10 @@ export function SuccessorMemberSection({
       onChange({
         ...clearOutOfScopeRedevPatch({ ...asset, ...axisPatch }),
         redevIsSuccessorMember: "yes",
+        // 원조합원으로 입력해 둔 종전주택 거주는 승계 전 타인의 거주라 승계에서는 읽히지 않는다 — 증여 승계 통산(아래 선언)에 조용히 섞이지 않게 비운다.
+        redevPriorHouseResidenceMonths: "",
+        redevPriorResidenceStartDate: "",
+        redevPriorResidenceEndDate: "",
         // 명시 셋팅 (display fallback 의존 차단)
         // 3중 패턴 동기화: right_to_move_in → "right", 그 외 → "apt" (buildRedevelopmentPayload 동일)
         redevSubject: asset.redevSubject || (asset.assetKind === "right_to_move_in" ? "right" : "apt"),
@@ -598,8 +603,58 @@ export function SuccessorMemberSection({
 
             ⚠️ 「신축주택」 거주기간이다 — 이 분기의 보유기간이 **준공일 기산**이라
                그 구간 안의 거주만 §159의4의 「보유기간 중 거주기간」에 해당한다.
-               승계 전 종전주택 거주는 타인의 거주라 무관하다.
+               승계 전 종전주택 거주는 타인의 거주라 무관하다 — 단 증여자와 계속 같은 세대로 입주권을 보유한
+               증여 승계는 그 세대의 종전주택 거주를 통산한다(위 선언 · 사전-2020-법령해석재산-0691).
           */}
+          {successorGiftHouseholdInScope(asset) && (
+            <>
+              <FieldCard
+                label="증여자와 계속 같은 세대 (증여일부터 양도일까지)"
+                field="redevSuccessorGiftSameHousehold"
+                hint="같은 세대로 보유했다면 증여 전 종전주택 거주가 비과세 거주요건과 표2 대상 판정에 통산됩니다."
+                trailing={
+                  <PrecedentArticleModal
+                    citation="사전-2020-법령해석재산-0691 (2021.08.26)"
+                    label="사전-2020-법령해석재산-0691"
+                    kind="ruling"
+                    summary="배우자로부터 조합원입주권을 증여받아 취득한 주택의 영 §159의3에 따른 거주기간은 기존주택과 신축주택에서 1세대로서 거주한 기간을 통산한다."
+                  />
+                }
+              >
+                <RadioCardGroup
+                  name={`redevSuccessorGiftSameHousehold-${asset.assetId}`}
+                  value={asset.redevSuccessorGiftSameHousehold}
+                  onChange={(v) =>
+                    onChange({
+                      redevSuccessorGiftSameHousehold: v as "yes" | "no",
+                      // 「아니오」는 통산하지 않는다 — 통산용으로 입력한 종전주택 거주 칸이 화면에서 사라지므로 값도 함께 비운다.
+                      ...(v === "no"
+                        ? { redevPriorHouseResidenceMonths: "", redevPriorResidenceStartDate: "", redevPriorResidenceEndDate: "" }
+                        : {}),
+                    })
+                  }
+                  options={[
+                    { value: "yes", label: "예", description: "증여자와 같은 세대로 입주권을 보유" },
+                    { value: "no", label: "아니오", description: "세대가 갈렸거나 증여자가 다른 세대" },
+                  ]}
+                  layout="stack"
+                />
+              </FieldCard>
+              {successorGiftHouseholdApplies(asset) && (
+                <FieldCard
+                  label="증여 전 종전주택 거주기간 (개월)"
+                  field="redevPriorHouseResidenceMonths"
+                  hint="증여자와 같은 세대로서 종전주택에서 거주한 기간입니다. 모르면 비워 두면 통산하지 않습니다."
+                >
+                  <DecimalInput
+                    value={asset.redevPriorHouseResidenceMonths}
+                    onChange={(v: string) => onChange({ redevPriorHouseResidenceMonths: v })}
+                    placeholder="종전주택 실거주 개월 수"
+                  />
+                </FieldCard>
+              )}
+            </>
+          )}
           <FieldCard
             label="신축주택 거주기간 (개월)"
             field="redevNewHouseResidenceMonths"

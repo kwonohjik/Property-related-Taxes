@@ -25,6 +25,8 @@ import {
   householdBuildingCarryoverApplied,
   landContributedOriginalApt,
   landHouseholdBuildingInScope,
+  successorGiftHouseholdApplies,
+  successorGiftHouseholdInScope,
 } from "./redev-field-scope";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
@@ -163,9 +165,13 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // 빈문자열 → undefined (legacy fallback 의도 — 엔진에서 residencePeriodMonths 단일값 사용)
     // #12 — 토지만 출자한 원조합원 완공APT는 멸실된 주택이 없어 종전주택 거주 칸이 화면에 없다(엔진도 신축 거주만 읽는다).
     //   남은 값이 표2 거주(통산)에 섞이지 않도록 이 축에서는 보내지 않는다.
-    priorHouseResidenceMonths: asset.redevPriorHouseResidenceMonths && !landContributedOriginalApt(asset)
-      ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
-      : undefined,
+    // 승계조합원은 증여자와 같은 세대로 보유한 증여 승계(`successorGiftHouseholdApplies`)일 때만 — 그 밖의 승계에서 종전주택 거주는 승계 전 타인의 거주라 엔진이 읽지 않는다.
+    priorHouseResidenceMonths:
+      asset.redevPriorHouseResidenceMonths &&
+      !landContributedOriginalApt(asset) &&
+      (asset.redevIsSuccessorMember !== "yes" || successorGiftHouseholdApplies(asset))
+        ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
+        : undefined,
     // 신축 APT 거주월수 — 완공 APT 양도 전용(위 `isApt` 주석).
     newHouseResidenceMonths: isApt && asset.redevNewHouseResidenceMonths
       ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
@@ -263,6 +269,14 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
       asset.redevIsSuccessorMember === "yes"
         ? true
         : asset.redevIsSuccessorMember === "no"
+          ? false
+          : undefined,
+    // 증여 승계의 「증여자와 계속 같은 세대」 선언(사전-2020-법령해석재산-0691) — 범위 밖이면 보내지 않는다(stale 가드). 미답은 보내지 않는다(통산 없이 계산 + 확인 필요).
+    successorGiftSameHousehold: !successorGiftHouseholdInScope(asset)
+      ? undefined
+      : asset.redevSuccessorGiftSameHousehold === "yes"
+        ? true
+        : asset.redevSuccessorGiftSameHousehold === "no"
           ? false
           : undefined,
     // 준공일 — 승계조합원(취득시기 · 영 §162①4호) 또는 토지만 출자한 원조합원(§154① 보유 기산일 — G3-4)에서만 의미가 있다.

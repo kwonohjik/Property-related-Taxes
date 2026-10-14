@@ -562,6 +562,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevHousingStdPriceAtApproval: "", // §166③ 분모 — 인가당시 개별주택가격
     // 사례 48 — 승계조합원 신축APT 양도
     redevIsSuccessorMember: "",
+    redevSuccessorGiftSameHousehold: "",
     redevCompletionDate: "",
     redevHouseholdBuildingCarryover: "",
     redevHouseholdBuildingAcquisitionDate: "",

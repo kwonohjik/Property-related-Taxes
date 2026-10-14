@@ -15,7 +15,7 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
-import { householdBuildingCarryoverApplied, landContributedOriginalApt, postApprovalHousingUseInScope } from "@/lib/calc/redev-field-scope";
+import { householdBuildingCarryoverApplied, landContributedOriginalApt, postApprovalHousingUseInScope, successorGiftHouseholdApplies } from "@/lib/calc/redev-field-scope";
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -465,7 +465,9 @@ export function validateRedevelopmentAsset(
   const priorRaw = (asset.redevPriorHouseResidenceMonths || "").trim();
   const newRaw = (asset.redevNewHouseResidenceMonths || "").trim();
   // #12 — 토지만 출자한 원조합원 완공APT는 종전주택 거주 칸이 없다(④도 보내지 않는다) → 남은 값으로 막지 않는다.
-  const priorInScope = !landContributedOriginalApt(asset);
+  // 승계조합원의 종전주택 거주는 증여자와 같은 세대로 보유한 증여 승계일 때만 읽힌다(`successorGiftHouseholdApplies`) — 그 밖에 남은 값으로 막지 않는다.
+  const priorInScope =
+    !landContributedOriginalApt(asset) && (asset.redevIsSuccessorMember !== "yes" || successorGiftHouseholdApplies(asset));
   if (priorRaw && priorInScope) {
     const v = parseInt(priorRaw.replace(/,/g, ""), 10);
     if (!isFinite(v) || v < 0) {

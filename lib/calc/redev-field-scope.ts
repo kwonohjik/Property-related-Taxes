@@ -149,6 +149,33 @@ export function postApprovalExpensesInScope(
 }
 
 /**
+ * 「증여자와 계속 같은 세대」 선언(`redevSuccessorGiftSameHousehold`)이 의미를 갖는 축인가 — ⑤ UI · ④ payload · ⑧ validate · 정리 patch 공용
+ * (사전-2020-법령해석재산-0691).
+ *
+ * **완공APT + 승계조합원 + 취득원인 증여**일 때만이다. 엔진은 같은 조건(`isSuccessorMember` + `acquisitionCause === "gift"`)에서만 이 값을 읽는다
+ * (`redevSuccessorGiftNotices` · 거주월수 leaf는 승계조합원만). 매매·상속 승계와 원조합원에는 증여자의 세대라는 사실이 없다.
+ */
+export function successorGiftHouseholdInScope(
+  asset: Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "acquisitionCause">,
+): boolean {
+  return (
+    resolveRedevSubject(asset) === "apt" &&
+    asset.redevIsSuccessorMember === "yes" &&
+    asset.acquisitionCause === "gift"
+  );
+}
+
+/**
+ * 증여 승계의 종전주택 거주 통산이 **적용되는가** — 범위 안이고 선언이 「예」. 종전주택 거주 개월(`redevPriorHouseResidenceMonths`)은
+ * 이 축에서만 승계조합원에게 읽힌다(그 밖의 승계는 종전주택 거주가 승계 전 타인의 거주다 — 서면-2019-부동산-4508).
+ */
+export function successorGiftHouseholdApplies(
+  asset: Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "acquisitionCause" | "redevSuccessorGiftSameHousehold">,
+): boolean {
+  return successorGiftHouseholdInScope(asset) && asset.redevSuccessorGiftSameHousehold === "yes";
+}
+
+/**
  * 축이 바뀌어 **범위 밖으로 나간 재개발 필드**를 비우는 patch (2026-09-05 · 코드리뷰 Q20).
  *
  * ## 왜 필요한가 — 마이그레이션만으로는 세션 안에서 늦다
@@ -185,6 +212,18 @@ export function clearOutOfScopeRedevPatch(next: AssetForm): Partial<AssetForm> {
   }
   if (!settlementOneHouseAtSaleInScope(next) && next.redevOneHouseAtSettlementSale) {
     patch.redevOneHouseAtSettlementSale = "";
+  }
+  /**
+   * 증여 승계 선언(`redevSuccessorGiftSameHousehold`). 범위를 벗어나면 선언을 비우고, 「예」였다면 그 통산용으로 입력한 종전주택 거주 칸도 함께 비운다 —
+   * 같은 칸이 원조합원의 종전주택 거주 입력이기도 해서(`redevPriorHouseResidenceMonths`), 남기면 원조합원으로 되돌린 뒤 이 값이 **조용히** 통산에 들어간다.
+   */
+  if (!successorGiftHouseholdInScope(next) && next.redevSuccessorGiftSameHousehold) {
+    if (next.redevSuccessorGiftSameHousehold === "yes") {
+      patch.redevPriorHouseResidenceMonths = "";
+      patch.redevPriorResidenceStartDate = "";
+      patch.redevPriorResidenceEndDate = "";
+    }
+    patch.redevSuccessorGiftSameHousehold = "";
   }
   return patch;
 }
@@ -230,7 +269,8 @@ export function isReceiveOnlyFiling(
  * (채울 칸 없는 영구 차단 방지 — memory `feedback_ui_gate_removes_sole_input_path`).
  *
  * 조건은 ④(`buildRedevelopmentPayload`)가 값을 **보내는 조건**과 엔진이 **읽는 조건**의 교집합이다:
- * - 승계조합원 — 신축주택 거주(`redevNewHouseResidenceMonths`)만 읽는다(종전주택 거주는 승계 전 거주).
+ * - 승계조합원 — 신축주택 거주(`redevNewHouseResidenceMonths`)만 Step4 거주 입력을 대체한다(종전주택 거주는 승계 전 거주). 증여자와 계속
+ *   같은 세대인 증여 승계의 종전주택 거주는 거기에 **더해질** 뿐 Step4 입력을 대체하지 않는다(`successorGiftHouseholdApplies`).
  * - 토지만 출자한 원조합원(#12) — 승계조합원과 같다. 멸실된 주택이 없어 통산할 종전주택 거주가 없고, 엔진 번역 leaf가
  *   신축주택 거주만 읽는다(`translateRedevAptForHousingJudgment`). 종전주택 거주 칸은 화면에도 없다.
  * - 그 밖의 원조합원 — 종전주택 또는 신축주택 거주 중 하나라도 있으면 분리 입력이다.

@@ -22,6 +22,7 @@
  */
 import { runHouseCountExclusionStep } from "./transfer-tax-house-exclusion-step";
 import { redevLandAptResidenceNotices } from "./transfer-tax-redevelopment-land-apt-notices";
+import { redevSuccessorGiftNotices } from "./transfer-tax-redevelopment-successor-gift-notices";
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { resolveRightSaleSpecialExclusion } from "./one-house/right-sale-special-act-exclusion";
 import { rightSalePopDeclineUnconfirmedNotice } from "./one-house/right-sale-special-act-exclusion";
@@ -161,6 +162,8 @@ export function judgeRedevAptOneHouseExemption(
       ),
     );
   }
+  // 증여 승계의 종전주택 거주 통산(사전-2020-법령해석재산-0691) 고지 — 통산 적용(비과세 쪽 정면 해석 없음) · 미확인.
+  if (warnings && !isReceiveOnly) warnings.push(...redevSuccessorGiftNotices(exemptionJudgeInput));
   if (isReceiveOnly) return { exemptionResult: undefined, houseCountExclusion: undefined, oneHouseTable2Axis };
   return { exemptionResult, houseCountExclusion, oneHouseTable2Axis };
 }

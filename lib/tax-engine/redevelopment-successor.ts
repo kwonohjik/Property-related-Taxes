@@ -25,7 +25,7 @@
 
 import { calculateHoldingPeriod } from "./tax-utils";
 import { applyLthdToGain, computeLthdRateSplit } from "./redevelopment-lthd";
-import { resolveAptResidenceMonths } from "./redevelopment-lthd";
+import { resolveAptResidenceMonths, resolveSuccessorOwnResidenceMonths } from "./redevelopment-lthd";
 import { TaxRateNotFoundError } from "./tax-errors";
 import type {
   RedevelopmentBranchDetail,
@@ -107,22 +107,32 @@ export function runSuccessorMember(
    *
    * ⚠️ 거주월수는 **신축주택 거주월수**(`newHouseResidenceMonths`)다 — 이 분기의 보유기간이
    *    **준공일 기산**(시행령 §162①4호)이라 그 구간 안의 거주만 §159의4의 「보유기간 중 거주기간」에
-   *    해당한다. 종전주택 거주월수(`priorHouseResidenceMonths`)는 승계 전 타인의 거주라 무관하다.
+   *    해당한다. 종전주택 거주월수(`priorHouseResidenceMonths`)는 승계 전 타인의 거주라 무관하다 —
+   *    **단 증여자와 계속 같은 세대였다고 선언한 증여 승계**(`successorGiftSameHousehold`)는 그 세대의 종전주택 거주가
+   *    「1세대로서 거주한 기간」이라 표2 대상 판정에 통산한다(사전-2020-법령해석재산-0691). 공제율의 거주분은 본인 신축 거주만이다.
    */
   //
   // 🔑 §154① 비과세 판정과 **같은 leaf**다(OH-48·OH-50) — 신축 거주 입력이 비면 Step4 거주값
   //    (⑧이 「입주일 ≥ 준공일」로 막아 둔 값)을 쓴다. 종전에는 여기만 `?? 0`이라 한 계산 안에서
   //    비과세는 Step4 거주를, 표2는 0개월을 봤다.
-  const successorResidenceMonths = resolveAptResidenceMonths({
-    isSuccessorMember: true,
+  const residenceMonthsInput = {
     newHouseResidenceMonths: redevelopment.newHouseResidenceMonths,
     residencePeriodMonths: input.residencePeriodMonths,
-  });
-  const successorResidenceYears = Math.floor(successorResidenceMonths / 12);
+  };
+  // 표2 **대상 판정**(거주 2년)은 증여 승계의 종전주택 거주 통산을 포함하고(사전-2020-법령해석재산-0691), 공제율의 거주분은 본인의 신축주택 거주만 쓴다(#38-9).
+  const successorGateYears = Math.floor(
+    resolveAptResidenceMonths({
+      ...residenceMonthsInput,
+      isSuccessorMember: true,
+      successorGiftSameHousehold: redevelopment.successorGiftSameHousehold,
+      priorHouseResidenceMonths: redevelopment.priorHouseResidenceMonths,
+    }) / 12,
+  );
+  const successorResidenceYears = Math.floor(resolveSuccessorOwnResidenceMonths(residenceMonthsInput) / 12);
   const lthdSplit = computeLthdRateSplit(
     holdingPeriod.years,
     input.isOneHouseSingle ?? false,
-    successorResidenceYears,
+    successorGateYears,
     successorResidenceYears,
     transferDate, // 표2 연혁 축(2009~2020 양도분은 보유 연 8% 단일축)
   );

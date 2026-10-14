@@ -5,7 +5,16 @@
  */
 
 /** OH-48 — 재개발 카드의 분리 입력이 §154① 거주기간을 대신할 때 Step4 거주 입력 대신 띄운다. */
-export function RedevSplitResidenceNotice({ isSuccessor, isLandContributed = false }: { isSuccessor: boolean; isLandContributed?: boolean }) {
+export function RedevSplitResidenceNotice({
+  isSuccessor,
+  isLandContributed = false,
+  giftCarry = false,
+}: {
+  isSuccessor: boolean;
+  isLandContributed?: boolean;
+  /** 증여자와 같은 세대로 보유한 증여 승계 — 종전주택 거주(① 카드 입력)를 통산한다(사전-2020-법령해석재산-0691). */
+  giftCarry?: boolean;
+}) {
   return (
     <div
       data-testid="redev-split-residence-notice"
@@ -15,6 +24,8 @@ export function RedevSplitResidenceNotice({ isSuccessor, isLandContributed = fal
       <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
         {isLandContributed
           ? "토지만 출자한 조합원은 멸실된 주택이 없어 사용승인일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §162①4호 · §154⑧1호)."
+          : isSuccessor && giftCarry
+          ? "증여자와 같은 세대로서 한 종전주택 거주기간과 준공일 이후 신축주택 거주기간을 통산한 값이 1세대1주택 비과세 거주요건과 표2 대상 판정에 쓰입니다 (사전-2020-법령해석재산-0691). 표2 공제율의 거주분은 본인의 신축주택 거주만 반영합니다."
           : isSuccessor
           ? "승계조합원은 준공일 이후 신축주택 거주기간만 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §162①4호 · 서면-2019-부동산-4508)."
           : "종전주택과 신축주택 거주기간을 통산한 값이 1세대1주택 비과세 거주요건과 장기보유특별공제 표2에 함께 쓰입니다 (시행령 §154⑧1호)."}
@@ -32,9 +43,12 @@ export function RedevSplitResidenceNotice({ isSuccessor, isLandContributed = fal
 export function SuccessorResidenceDirectHint({
   completionDate,
   isLandContributed = false,
+  giftCarry = false,
 }: {
   completionDate: string;
   isLandContributed?: boolean;
+  /** 증여자와 같은 세대로 보유한 증여 승계 — 종전주택 거주는 ① 카드에 따로 입력해 통산한다. */
+  giftCarry?: boolean;
 }) {
   return (
     <div
@@ -45,6 +59,8 @@ export function SuccessorResidenceDirectHint({
       <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
         {isLandContributed
           ? "토지만 출자한 조합원의 신축주택 보유기간은 준공일(사용승인서 교부일)부터 계산하며, 멸실된 주택이 없어 준공 전 거주기간은 통산하지 않습니다 (시행령 §162①4호 · §154⑧1호)."
+          : giftCarry
+          ? "신축주택 거주는 준공일(사용승인서 교부일) 이후만 입력합니다. 증여자와 같은 세대로서 한 종전주택 거주는 ① 재개발 카드에 따로 입력하며 통산됩니다 (시행령 §162①4호 · 사전-2020-법령해석재산-0691)."
           : "승계조합원의 신축주택 보유기간은 준공일(사용승인서 교부일)부터 계산하며, 멸실 전 종전주택 거주기간은 통산하지 않습니다 (시행령 §162①4호 · 서면-2019-부동산-4508)."}
       </p>
     </div>

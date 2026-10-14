@@ -147,6 +147,8 @@ export function isLandContributedNewBuild(
  *   「그 보유기간 중」 거주는 신축주택 거주뿐이다. 서면-2019-부동산-4508(2022.12.06) 요지:
  *   「보유기간은 해당 주택의 취득일(준공인가증 교부일)부터 계산하는 것으로 **멸실 전 거주기간을
  *   통산하지 아니함**」. `prior`는 승계 전 거주라 읽지 않는다.
+ *   **예외 — 증여 승계**(`successorGiftSameHousehold`): 증여자와 계속 같은 세대로 입주권을 보유한 경우 그 세대가 종전주택에서
+ *   거주한 기간은 「1세대로서 거주한 기간」이라 `prior`를 더한다(사전-2020-법령해석재산-0691 — 매매 승계 사안인 4508과 사실이 다르다).
  *
  * ⚠️ 분리 입력이 **없을 때**의 Step4 값은 ⑧(`transfer-tax-validate.ts`)이 「입주일 ≥ 보유 기산일」을
  *    막아 둔 값이다(승계조합원은 준공일 기준 — OH-50). 월수 직접 입력은 날짜가 없어 준공 전 거주를 가려낼 수
@@ -154,19 +156,36 @@ export function isLandContributedNewBuild(
  */
 export function resolveAptResidenceMonths(input: {
   isSuccessorMember?: boolean;
+  /** 증여받은 승계조합원이 증여자와 계속 같은 세대였다고 선언했는가 — 참이면 승계에도 `prior`를 더한다(아래 「증여 승계」). */
+  successorGiftSameHousehold?: boolean;
   priorHouseResidenceMonths?: number;
   newHouseResidenceMonths?: number;
   residencePeriodMonths?: number;
 }): number {
   if (input.isSuccessorMember === true) {
-    return input.newHouseResidenceMonths !== undefined
-      ? input.newHouseResidenceMonths
-      : (input.residencePeriodMonths ?? 0);
+    // 증여 승계 — 증여자와 같은 세대로서 종전주택에서 거주한 기간도 「1세대로서 거주한 기간」이다
+    // (사전-2020-법령해석재산-0691, 2021.8.26. 요지: 「배우자로부터 조합원입주권을 증여받아 취득한 주택의 영 §159의3 거주기간은
+    // 기존주택과 신축주택에서 1세대로서 거주한 기간을 통산」). 매매·상속 승계와 증여자가 다른 세대인 증여는 종전 그대로 신축 거주만이다.
+    return resolveSuccessorOwnResidenceMonths(input) +
+      (input.successorGiftSameHousehold === true ? (input.priorHouseResidenceMonths ?? 0) : 0);
   }
   const hasSplit =
     input.priorHouseResidenceMonths !== undefined || input.newHouseResidenceMonths !== undefined;
   return hasSplit
     ? (input.priorHouseResidenceMonths ?? 0) + (input.newHouseResidenceMonths ?? 0)
+    : (input.residencePeriodMonths ?? 0);
+}
+
+/**
+ * 승계조합원 **본인의** 신축주택 거주월수 — 표2 공제율의 거주분에 쓴다(결정 #38-9: 공제율의 보유·거주기간은 양도자 본인 기간).
+ * 증여자와 같은 세대로서 한 종전주택 거주(`successorGiftSameHousehold`)는 포함하지 않는다 — 그것은 대상 판정·비과세 거주요건에만 더한다.
+ */
+export function resolveSuccessorOwnResidenceMonths(input: {
+  newHouseResidenceMonths?: number;
+  residencePeriodMonths?: number;
+}): number {
+  return input.newHouseResidenceMonths !== undefined
+    ? input.newHouseResidenceMonths
     : (input.residencePeriodMonths ?? 0);
 }
 
@@ -661,6 +680,7 @@ export function redevUsesTable2(input: {
   redevelopment: {
     subject: "apt" | "right";
     isSuccessorMember?: boolean;
+    successorGiftSameHousehold?: boolean;
     exemptionEligibleAtApproval?: boolean;
     priorHouseResidenceMonths?: number;
     newHouseResidenceMonths?: number;
@@ -693,7 +713,7 @@ export function redevUsesTable2(input: {
   if (r.isSuccessorMember === true) {
     return usesTable2(
       input.isOneHouseSingle,
-      Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: true }) / 12),
+      Math.floor(resolveAptResidenceMonths({ ...months, isSuccessorMember: true, successorGiftSameHousehold: r.successorGiftSameHousehold }) / 12),
       input.transferDate,
     );
   }
