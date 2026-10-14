@@ -28,6 +28,12 @@ import {
 } from "@/lib/calc/reverse-appurtenant-swap";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import {
+  isFractionalSplitEntryBundle,
+  isFractionalSplitRestorable,
+  isFullFractionalBundle,
+  isOwnershipRatioBlank,
+} from "@/lib/calc/transfer-tax-api-asset-basics";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -93,16 +99,37 @@ describe("라벨 — 미편집 `자산 N`만 새 위치로 재번호", () => {
   });
 });
 
+describe("라벨 — 부분 일치는 사용자가 고친 라벨이다(재번호하지 않는다)", () => {
+  it.each(["자산 2(본가)", "내 자산 2", "자산 2 ", "자산  2", "자산 2번", "자산"])("«%s»", (label) => {
+    const b = form(L("l1"), HOUSE(0)) as F;
+    const s = swapped({ ...b, assets: b.assets.map((a) => (a.assetId === "h1" ? { ...a, assetLabel: label } : a)) });
+    expect(s.assets[0].assetLabel).toBe(label);
+  });
+});
+
 describe("입력 불변성 — 헬퍼는 폼을 바꾸지 않는다", () => {
   it("패치·사유·안내 목록 호출 전후 폼이 깊게 같다", () => {
     const f = form(L("l1"), L("l2"), HOUSE(0)) as F;
     const before = JSON.parse(JSON.stringify(f));
     reverseAppurtenantSwapPatch(f);
     reverseAppurtenantSwapBlockReason(f);
-    reverseAppurtenantSwapNewlyReflected(f);
+    reverseAppurtenantSwapNewlyReflected(f.assets[1]);
     expect(JSON.parse(JSON.stringify(f))).toEqual(before);
   });
 });
+
+/** 토지등급 환산(§164④) — 주 자산은 매매 취득이어도 환산 모드를 강제하고 `pre1990Land`를 싣는다. */
+const PRE1990_ENABLED = {
+  acquisitionDate: "1985-03-01",
+  pre1990Enabled: true,
+  pre1990GradeMode: "number",
+  pre1990Grade_current: "10",
+  pre1990Grade_prev: "9",
+  pre1990Grade_atAcq: "8",
+  pre1990PricePerSqm_1990: "10000",
+};
+const PRE1990_PURCHASE = { ...PRE1990_ENABLED, useEstimatedAcquisition: true, fixedAcquisitionPrice: "", standardPriceAtTransfer: "200000000" };
+const PRE1990_CONFIRMED_PRICE = { ...PRE1990_ENABLED, fixedAcquisitionPrice: "150000000" };
 
 describe("가드 표(계획서 §5-1) — 전 분기", () => {
   const withPatch = (f: F, patch: Record<string, unknown>) => ({ ...f, assets: f.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) }) as F;
@@ -130,16 +157,24 @@ describe("가드 표(계획서 §5-1) — 전 분기", () => {
     }
   });
 
-  it("지분 분할(축 B) 묶음 — 형제가 짝 주택으로 보이지 않는다(⑧ 오탐 보정 포함 · 지분율 입력 전·후)", () => {
+  it("🔑 지분 분할(축 B) 토글 진입 직후(전 자산 지분율 빈칸) — 형제가 짝 주택으로 보이지 않는다(⑧ 오탐 보정 · 막다른 길 없음)", () => {
+    const blank = { ownershipNumerator: "", ownershipDenominator: "" };
+    const entry = { ...(form(LAND("l1", 300)) as object), assets: [{ ...makeDefaultAsset(1), ...LAND("l1", 300), ...blank }, a({ assetId: "s2", ...blank })] } as unknown as F;
+    expect(reverseAppurtenantSwapPatch(entry)).toBeNull();
+    expect(reverseAppurtenantSwapBlockReason(entry)).toBeNull();
+    expect(blocked(allIssues(entry))).toEqual([]);
+  });
+
+  it("🔑 지분율이 채워진 뒤(지분 < 1)는 데이터로 함께 양도와 구분되지 않는다 — 옛 동작 유지: ⑧ 차단 + 버튼(리뷰 M1: 넓게 풀면 함께 양도 묶음이 숨은 기본값으로 계산된다)", () => {
     const half = { ownershipNumerator: "1", ownershipDenominator: "2" };
     const blank = { ownershipNumerator: "", ownershipDenominator: "" };
-    const sib = (r: Record<string, string>) => a({ assetId: "s2", ...r });
-    const typed = { ...(form({ ...L("l1"), ...half }, HOUSE(0)) as F), assets: [{ ...makeDefaultAsset(1), ...L("l1"), ...half }, sib(half)] } as F;
-    const entry = { ...typed, assets: [{ ...makeDefaultAsset(1), ...L("l1"), ...blank }, sib(blank)] } as F;
-    for (const f of [typed, entry]) {
-      expect(reverseAppurtenantSwapPatch(f)).toBeNull();
-      expect(reverseAppurtenantSwapBlockReason(f)).toBeNull();
-      expect(blocked(allIssues(f))).toEqual([]);
+    const mk = (landR: object, houseR: object) => form({ ...LAND("l1", 300), ...landR }, { ...HOUSE(0), ...houseR }) as F;
+    for (const [name, f] of [
+      ["함께 양도 전 자산 1/2", mk(half, half)],
+      ["한쪽만 빈칸(입력 중)", mk(half, blank)],
+    ] as const) {
+      expect(blocked(allIssues(f)), name).toHaveLength(1);
+      expect(reverseAppurtenantSwapPatch(f), name).not.toBeNull();
     }
   });
 
@@ -148,10 +183,14 @@ describe("가드 표(계획서 §5-1) — 전 분기", () => {
     expect(reverseAppurtenantSwapPatch(f)).not.toBeNull();
   });
 
-  it("증환지 증가분이 하나라도 있으면 숨김(사유 없음)", () => {
+  it("🔑 증환지 증가분이 하나라도 있으면 버튼 없이 사유 한 줄(⑧은 «주택을 첫 자산으로»라 안내하지만 따르면 증가분 기준시가가 깨진다 · 리뷰 S3)", () => {
     const f = form(L("l1"), HOUSE(0), { ...L("l2"), isReplotIncrement: true }) as F;
     expect(reverseAppurtenantSwapPatch(f)).toBeNull();
-    expect(reverseAppurtenantSwapBlockReason(f)).toBeNull();
+    const reason = reverseAppurtenantSwapBlockReason(f)!;
+    expect(reason).toContain("증환지 증가분");
+    expect(reason).toContain("기준시가");
+    // 짝 주택이 없는 구성에는 사유도 없다
+    expect(reverseAppurtenantSwapBlockReason(form(HOUSE(0), { ...L("l2"), isReplotIncrement: true }) as F)).toBeNull();
   });
 
   it.each([
@@ -159,6 +198,7 @@ describe("가드 표(계획서 §5-1) — 전 분기", () => {
     ["parcelMode", { parcelMode: true }, "다필지"],
     ["isSalesCaseAcquisition", { isSalesCaseAcquisition: true }, "매매사례가액"],
     ["familyBusinessInheritance", { familyBusinessInheritance: { decedentAcquisitionPrice: "1" } }, "가업상속"],
+    ["pre1990Enabled(매매 · 1990.8.30. 이전)", PRE1990_PURCHASE, "토지등급 환산"],
   ])("첫 자산 토지의 «첫 자산 전용» 입력(%s)이 있으면 숨김 + 사유 한 줄(입력 이름 포함)", (_n, patch, label) => {
     const f = withPatch(form(L("l1"), HOUSE(0)) as F, patch);
     expect(reverseAppurtenantSwapPatch(f)).toBeNull();
@@ -187,21 +227,111 @@ describe("가드 근거 실측 — 첫 자산 전용 입력은 컴패니언 위�
   });
 });
 
-describe("승격 주택의 «처음 반영되는 입력» (Q3)", () => {
-  const withHouse = (patch: Record<string, unknown>) => {
-    const f = form(L("l1"), HOUSE(0)) as F;
-    return { ...f, assets: f.assets.map((a) => (a.assetId === "h1" ? { ...a, ...patch } : a)) } as F;
-  };
+describe("지분 분할 판정 술어군 — 같은 파일의 세 술어(복원·진입 직후·전 자산 지분)가 갈리는 표", () => {
+  const r = (n: string, d: string) => ({ ownershipNumerator: n, ownershipDenominator: d }) as never;
+  const HALF = r("1", "2");
+  const BLANK = r("", "");
+  const FULL = r("100", "100");
+  it.each([
+    // [이름, 자산들, 진입 직후, 복원, 전 자산 지분]
+    ["전부 빈칸(토글 B 진입 직후)", [BLANK, BLANK], true, false, false],
+    ["전 자산 1/2", [HALF, HALF], false, true, true],
+    ["1/2 + 빈칸(입력 중)", [HALF, BLANK], false, true, false],
+    ["전 자산 100%", [FULL, FULL], false, false, false],
+    ["1/2 + 명시 100%(함께 양도에 지분 자산이 섞임)", [HALF, FULL], false, false, false],
+    ["단건 1/2(공유지분 축 A)", [HALF], false, false, false],
+    ["단건 빈칸", [BLANK], false, false, false],
+  ] as const)("%s", (_n, assets, entry, restorable, full) => {
+    expect(isFractionalSplitEntryBundle(assets)).toBe(entry);
+    expect(isFractionalSplitRestorable(assets)).toBe(restorable);
+    expect(isFullFractionalBundle(assets as never)).toBe(full);
+  });
+  it("빈칸 판정은 분자·분모 어느 쪽이든 비면 빈칸이다", () => {
+    expect(isOwnershipRatioBlank(r("1", ""))).toBe(true);
+    expect(isOwnershipRatioBlank(r(" ", "2"))).toBe(true);
+    expect(isOwnershipRatioBlank(HALF)).toBe(false);
+  });
+});
+
+describe("pre1990 토지등급 환산 가드 근거 실측 (리뷰 M2) — 컴패니언 위치에서 ④가 pre1990Land를 안 싣는다", () => {
+  const TAXED = { wasRegulatedAtAcquisition: true, wasRegulatedAtAcquisitionTouched: true, residencePeriodMonths: "0" };
+  const H18 = { ...HOUSE(0), acquisitionDate: "2018-01-02", residencePeriodMonthsAsset: "0" };
+  const withTax = (f: F) => ({ ...(f as object), ...TAXED }) as unknown as F;
+
+  it("환산 + 취득시 기준시가 없음 — 토지가 첫 자산이면 환산되지만, 컴패니언(주택 먼저)이면 ⑧ 0건인데 API가 400으로 거절한다", async () => {
+    const land = { ...L("l1"), ...PRE1990_PURCHASE };
+    const lf = await runCalc(withTax(form(land, H18) as F));
+    const hf = await runCalc(withTax(form(H18, land) as F));
+    expect(lf.status).toBe(200);
+    expect(hf.issues.filter((i) => !i.message.includes("취득시 기준시가"))).toEqual([]);
+    expect(hf.status).toBe(400);
+    expect(JSON.stringify(hf.json)).toContain("companionAssets.0.standardPriceAtAcquisition");
+    // 가드가 있으므로 이 교환은 사용자에게 제공되지 않는다
+    expect(reverseAppurtenantSwapPatch(withTax(form(land, H18) as F))).toBeNull();
+  });
+
+  it("확정 취득가 + pre1990Enabled — 첫 자산이면 환산액, 컴패니언이면 입력한 확정 취득가로 바뀌어 총세액이 달라진다(알림 없음)", async () => {
+    const land = { ...L("l1"), ...PRE1990_CONFIRMED_PRICE };
+    const lf = await runCalc(withTax(form(land, H18) as F));
+    const hf = await runCalc(withTax(form(H18, land) as F));
+    expect(lf.status).toBe(200);
+    expect(hf.status).toBe(200);
+    expect(aggOf(hf).totalTax).not.toBe(aggOf(lf).totalTax);
+    expect(reverseAppurtenantSwapPatch(withTax(form(land, H18) as F))).toBeNull();
+  });
+
+  it("§163⑨ 취득원인(상속·증여)이면 컴패니언도 pre1990Land를 싣는다 — 가드 대상이 아니다", () => {
+    const inherit = { ...L("l1"), ...PRE1990_ENABLED, acquisitionCause: "inheritance", inheritanceDate: "1985-03-01", fixedAcquisitionPrice: "" };
+    expect(reverseAppurtenantSwapPatch(form(inherit, HOUSE(0)) as F)).not.toBeNull();
+  });
+
+  it("pre1990Enabled 래치가 없거나 1990.8.30. 이후 취득이면 대상이 아니다", () => {
+    expect(reverseAppurtenantSwapPatch(form({ ...L("l1"), ...PRE1990_PURCHASE, pre1990Enabled: false }, HOUSE(0)) as F)).not.toBeNull();
+    expect(reverseAppurtenantSwapPatch(form({ ...L("l1"), ...PRE1990_PURCHASE, acquisitionDate: "2000-01-01" }, HOUSE(0)) as F)).not.toBeNull();
+  });
+});
+
+describe("승격 주택의 «처음 반영되는 입력» (Q3 · 리뷰 S4) — 컴패니언일 때 ④가 안 보내다 첫 자산이 되면 보내는 입력", () => {
+  // HOUSE 시료는 거주기간(120개월)이 입력돼 있다 — «없음» 기준 시료는 그것을 비운다.
+  const bare = { ...HOUSE(0), residencePeriodMonthsAsset: "" };
+  const reflected = (patch: Record<string, unknown>) => reverseAppurtenantSwapNewlyReflected({ ...makeDefaultAsset(2), ...bare, ...patch } as never);
   it("없으면 빈 목록", () => {
-    expect(reverseAppurtenantSwapNewlyReflected(form(L("l1"), HOUSE(0)) as F)).toEqual([]);
+    expect(reflected({})).toEqual([]);
   });
-  it("신축·증축 / 장기임대주택 특례 선언", () => {
-    expect(reverseAppurtenantSwapNewlyReflected(withHouse({ isSelfBuilt: true }))).toEqual(["신축·증축"]);
-    const rental = { ...makeDefaultAsset(2).rentalHousingException, applyException: true };
-    expect(reverseAppurtenantSwapNewlyReflected(withHouse({ rentalHousingException: rental }))).toEqual(["장기임대주택 거주주택 비과세 특례"]);
+  const rental = { ...makeDefaultAsset(2).rentalHousingException, applyException: true };
+  it.each([
+    ["신축·증축", { isSelfBuilt: true }, "신축·증축"],
+    ["장기임대주택 특례 선언", { rentalHousingException: rental }, "장기임대주택 거주주택 비과세 특례"],
+    ["자산별 거주기간(직접 입력)", { residenceInputMode: "direct", residencePeriodMonthsAsset: "120" }, "자산별 거주기간"],
+    ["자산별 거주기간(기간 입력)", { residenceInputMode: "interval", residencePeriods: [{ moveInDate: "2014-01-02", moveOutDate: "" }] }, "자산별 거주기간"],
+    ["감정가액 취득", { isAppraisalAcquisition: true }, "감정가액 취득"],
+    ["매매사례가액 취득", { isSalesCaseAcquisition: true }, "매매사례가액 취득"],
+    ["개별주택가격 미공시", { usePreHousingDisclosure: true }, "개별주택가격 미공시"],
+  ])("%s", (_n, patch, label) => {
+    expect(reflected(patch)).toEqual([label]);
   });
-  it("교환 구성이 아니면 빈 목록", () => {
-    expect(reverseAppurtenantSwapNewlyReflected(form(HOUSE(0), L("l1")) as F)).toEqual([]);
+  it("빈 기간·거주 0 입력은 반영 대상이 아니다(입력이 없다)", () => {
+    expect(reflected({ residenceInputMode: "interval", residencePeriods: [{ moveInDate: "", moveOutDate: "" }] })).toEqual([]);
+    expect(reflected({ residenceInputMode: "direct", residencePeriodMonthsAsset: " " })).toEqual([]);
+  });
+  it("신축·증축 플래그가 남아도 매매 취득이 아니면 대상이 아니다(`selfBuiltActive` 게이트)", () => {
+    expect(reflected({ isSelfBuilt: true, acquisitionCause: "inheritance" })).toEqual([]);
+  });
+  it("여럿이면 모두 나열한다", () => {
+    expect(reflected({ isSelfBuilt: true, isAppraisalAcquisition: true })).toEqual(["신축·증축", "감정가액 취득"]);
+  });
+});
+
+describe("지분·부담부증여 구성은 교환 후 엔진이 합산을 하지 않고 결과에서 알린다(계획서 §5-1 편차 근거 — 리뷰 S5)", () => {
+  it.each([
+    ["주택만 1/2", form(L("l1"), { ...HOUSE(0), ownershipNumerator: "1", ownershipDenominator: "2" })],
+    ["토지만 1/2", form({ ...L("l1"), ownershipNumerator: "1", ownershipDenominator: "2" }, HOUSE(0))],
+  ])("%s — 버튼이 있고, 교환 후 계산 결과 경고에 «합산 판정을 하지 않았습니다»가 실린다", async (_n, f) => {
+    expect(blocked(allIssues(f as F))).toHaveLength(1);
+    const sw = swapped(f as F);
+    const r = await runCalc(sw);
+    expect(r.status).toBe(200);
+    expect((aggOf(r).warnings ?? []).some((w) => w.includes("지분·부담부증여가 함께 있어 1세대1주택 합산 판정"))).toBe(true);
   });
 });
 

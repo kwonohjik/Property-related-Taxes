@@ -115,6 +115,8 @@ test.describe("역방향 «주택을 첫 자산으로 바꾸기» (G1)", () => {
 
     // 카드가 사라지고(같은 구성이 아니다) 주택이 첫 자산(주 자산 배지) · 입력값 보존
     await expect(page.getByTestId(NOTICE)).toHaveCount(0);
+    // 승격 주택에 입력한 자산별 거주기간이 이제 계산에 반영된다 — 교환 직후 한 줄 안내(리뷰 S4)
+    await expect(page.getByTestId("reverse-appurtenant-swap-after-note")).toBeVisible();
     await expect(page.locator('[data-asset-card-index="0"]').getByText("주 자산", { exact: true })).toBeVisible();
     await expect(page.locator('[data-asset-card-index="1"]').getByText("주 자산", { exact: true })).toHaveCount(0);
     await page.screenshot({ path: "e2e/_artifacts/g1-swap-after.png", fullPage: true });

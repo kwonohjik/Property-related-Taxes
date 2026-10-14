@@ -35,8 +35,8 @@ export function ReverseAppurtenantSwapNotice({
     <ToneCard tone="violet" title="첫 자산이 주택부수토지입니다" bodyClassName="space-y-2" className="mb-3">
       <div data-testid="reverse-appurtenant-swap-notice" className="space-y-2">
         <p className="text-xs text-foreground/80">
-          1세대1주택 판정에 필요한 세대·거주기간·조정대상지역 입력은 주택이 첫 자산일 때 열립니다.
-          {patch && ` 주택을 첫 자산으로 바꾸면 입력한 값은 그대로 두고 순서만 바뀝니다(${TRANSFER.ONE_HOUSE_EXEMPT}).`}
+          1세대1주택 판정에 필요한 세대·거주기간·조정대상지역 입력은 주택이 첫 자산일 때 열립니다({TRANSFER.ONE_HOUSE_EXEMPT}).
+          {patch && " 주택을 첫 자산으로 바꾸면 입력은 그대로 두고 순서만 바뀝니다."}
         </p>
         {patch && (
           <Button

@@ -4,11 +4,12 @@
  * 순수 헬퍼의 분기·parity는 `__tests__/calc/g1-reverse-appurtenant-swap.anchor.test.ts`.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { useState } from "react";
-import { render, cleanup, screen, fireEvent, within } from "@testing-library/react";
+import { useEffect, useState } from "react";
+import { render, cleanup, screen, fireEvent, within, act } from "@testing-library/react";
 import { Step1 } from "@/app/calc/transfer-tax/steps/Step1";
 import { useCalcWizardStore, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { HOUSE, LAND, form } from "../calc/_helpers/g1-reverse-appurtenant-fixtures";
+import { reverseAppurtenantHouseAssetId } from "@/lib/calc/reverse-appurtenant-house";
 
 vi.mock("@/components/ui/address-search", () => ({ AddressSearch: () => null }));
 
@@ -26,13 +27,19 @@ function Host({
   embedded = false,
   patches,
   invalidate,
+  apiRef,
 }: {
   init: F;
   embedded?: boolean;
   patches?: Partial<F>[];
   invalidate?: () => void;
+  /** 테스트가 마운트 뒤 폼을 외부에서 고치는 통로(사용자가 다른 칸을 편집한 것과 같다) */
+  apiRef?: { current: ((p: (prev: F) => F) => void) | null };
 }) {
   const [f, setF] = useState<F>(init);
+  useEffect(() => {
+    if (apiRef) apiRef.current = setF;
+  }, [apiRef]);
   return (
     <Step1
       form={f}
@@ -63,6 +70,15 @@ describe("노출 조건", () => {
     expect(screen.queryByTestId(REASON)).toBeNull();
   });
 
+  it("조문 인용은 «판정 입력은 주택이 첫 자산일 때 열린다» 문장에 붙고, 순서 바꾸기 문장에는 붙지 않는다(리뷰 S5)", () => {
+    render(<Host init={form(LAND("l1", 300), HOUSE(0))} />);
+    const text = screen.getByTestId(NOTICE).textContent ?? "";
+    const cite = text.indexOf("§89");
+    expect(cite).toBeGreaterThan(-1);
+    expect(cite).toBeLessThan(text.indexOf("주택을 첫 자산으로 바꾸면"));
+    expect(text.slice(text.indexOf("주택을 첫 자산으로 바꾸면"))).not.toContain("§89");
+  });
+
   it.each([
     ["주택 먼저", () => form(HOUSE(0), LAND("l1", 300))],
     ["토지 성격 독립 나대지", () => form({ ...LAND("l1", 300), landNature: "standalone" }, HOUSE(0))],
@@ -79,9 +95,26 @@ describe("노출 조건", () => {
     expect(screen.queryByTestId(NOTICE)).toBeNull();
   });
 
-  it("지분 분할(축 B) 모드에서는 숨긴다", () => {
+  it("🔑 지분 분할(축 B) 모드에서는 숨긴다 — 리프는 지분율이 채워진 뒤 함께 양도와 구분하지 못하므로(⑧은 그대로 막는다) 이 숨김이 유일한 막이다", () => {
     const half = { ownershipNumerator: "1", ownershipDenominator: "2" };
-    render(<Host init={form({ ...LAND("l1", 300), ...half }, { assetKind: "housing", assetId: "s2", ...half })} />);
+    const f = form({ ...LAND("l1", 300), ...half }, { assetKind: "housing", assetId: "s2", ...half }) as F;
+    expect(reverseAppurtenantHouseAssetId(f.assets)).toBe("s2"); // 데이터만 보는 리프는 형제를 짝 주택으로 읽는다
+    render(<Host init={f} />);
+    expect(screen.queryByTestId(NOTICE)).toBeNull();
+  });
+
+  it("🔑 지분 분할 모드에서 형제 지분을 100%로 고쳐도(리프가 역방향으로 읽는다) 카드가 뜨지 않는다 — splitMode는 마운트 때 정해진 state다", () => {
+    const half = { ownershipNumerator: "1", ownershipDenominator: "2" };
+    const api: { current: ((p: (prev: F) => F) => void) | null } = { current: null };
+    const init = form({ ...LAND("l1", 300), ...half }, { assetKind: "housing", assetId: "s2", ...half }) as F;
+    const edit = (prev: F): F => ({
+      ...prev,
+      assets: prev.assets.map((a) => (a.assetId === "s2" ? { ...a, ownershipNumerator: "100", ownershipDenominator: "100" } : a)),
+    });
+    expect(reverseAppurtenantHouseAssetId(edit(init).assets)).toBe("s2"); // 편집 뒤 리프는 역방향으로 읽는다
+    render(<Host init={init} apiRef={api} />);
+    expect(screen.queryByTestId(NOTICE)).toBeNull();
+    act(() => api.current!(edit));
     expect(screen.queryByTestId(NOTICE)).toBeNull();
   });
 
@@ -90,10 +123,23 @@ describe("노출 조건", () => {
     ["parcelMode", { parcelMode: true }, "다필지"],
     ["isSalesCaseAcquisition", { isSalesCaseAcquisition: true }, "매매사례가액"],
     ["familyBusinessInheritance", { familyBusinessInheritance: { decedentAcquisitionPrice: "1" } }, "가업상속"],
+    [
+      "pre1990Enabled(매매 · 1990.8.30. 이전)",
+      { acquisitionDate: "1985-03-01", pre1990Enabled: true, useEstimatedAcquisition: true, fixedAcquisitionPrice: "" },
+      "토지등급 환산",
+    ],
   ])("첫 자산 전용 입력(%s) — 버튼 없이 사유 한 줄", (_n, patch, label) => {
     render(<Host init={form({ ...LAND("l1", 300), ...patch }, HOUSE(0))} />);
     expect(screen.queryByTestId(BTN)).toBeNull();
     expect(screen.getByTestId(REASON).textContent).toContain(label);
+  });
+});
+
+describe("증환지 증가분 (리뷰 S3)", () => {
+  it("버튼 없이 사유 한 줄 — ⑧ 안내를 따르면 증가분 기준시가가 깨진다", () => {
+    render(<Host init={form(LAND("l1", 300), HOUSE(0), { ...LAND("l2", 100), isReplotIncrement: true })} />);
+    expect(screen.queryByTestId(BTN)).toBeNull();
+    expect(screen.getByTestId(REASON).textContent).toContain("증환지 증가분");
   });
 });
 
@@ -145,16 +191,33 @@ describe("클릭 — 순서·주 자산 배지·미등기·결과 비움·카드
   });
 });
 
-describe("교환 직후 안내 — 처음 반영되는 입력이 있을 때만", () => {
+describe("교환 직후 안내 — 처음 반영되는 입력이 있을 때만(렌더마다 현재 폼에서 파생)", () => {
+  // HOUSE 시료는 거주기간(120개월)이 입력돼 있어 그 자체로 «처음 반영되는 입력»이다 — 없음 기준은 비운다.
+  const BARE = { ...HOUSE(0), residencePeriodMonthsAsset: "" };
   it("없으면 아무것도 띄우지 않는다", () => {
-    render(<Host init={form(LAND("l1", 300), HOUSE(0))} />);
+    render(<Host init={form(LAND("l1", 300), BARE)} />);
     fireEvent.click(screen.getByTestId(BTN));
     expect(screen.queryByTestId(AFTER)).toBeNull();
   });
   it("승격 주택에 신축·증축 입력이 있으면 한 줄", () => {
-    render(<Host init={form(LAND("l1", 300), { ...HOUSE(0), isSelfBuilt: true })} />);
+    render(<Host init={form(LAND("l1", 300), { ...BARE, isSelfBuilt: true })} />);
     fireEvent.click(screen.getByTestId(BTN));
     expect(screen.getByTestId(AFTER).textContent).toContain("신축·증축");
+  });
+  it("자산별 거주기간(기본 시료 120개월)도 처음 반영되는 입력이다", () => {
+    render(<Host init={form(LAND("l1", 300), HOUSE(0))} />);
+    fireEvent.click(screen.getByTestId(BTN));
+    expect(screen.getByTestId(AFTER).textContent).toContain("자산별 거주기간");
+  });
+  it("🔑 안내는 스냅샷이 아니다 — 교환 후 그 입력을 해제하면 스스로 거둔다", () => {
+    const api: { current: ((p: (prev: F) => F) => void) | null } = { current: null };
+    render(<Host init={form(LAND("l1", 300), { ...BARE, isSelfBuilt: true })} apiRef={api} />);
+    fireEvent.click(screen.getByTestId(BTN));
+    expect(screen.queryByTestId(AFTER)).not.toBeNull();
+    act(() => api.current!((prev) => ({ ...prev, assets: prev.assets.map((a) => (a.assetId === "h1" ? { ...a, isSelfBuilt: false } : a)) })));
+    expect(screen.queryByTestId(AFTER)).toBeNull();
+    act(() => api.current!((prev) => ({ ...prev, assets: prev.assets.map((a) => (a.assetId === "h1" ? { ...a, isSelfBuilt: true } : a)) })));
+    expect(screen.queryByTestId(AFTER)).not.toBeNull();
   });
 });
 
@@ -163,6 +226,17 @@ describe("교환 직후 안내의 수명", () => {
     render(<Host init={form(LAND("l1", 300), { ...HOUSE(0), isSelfBuilt: true })} />);
     fireEvent.click(screen.getByTestId(BTN));
     expect(screen.queryByTestId(AFTER)).not.toBeNull();
+    const firstCard = document.querySelector<HTMLElement>('[data-asset-card-index="0"]')!;
+    fireEvent.click(within(firstCard).getByRole("button", { name: "삭제" }));
+    expect(screen.queryByTestId(AFTER)).toBeNull();
+  });
+});
+
+describe("교환 직후 안내는 «승격한 그 주택»에만 붙는다", () => {
+  it("첫 자산이 다른 자산으로 바뀌면(승격 주택 삭제) 새 첫 자산에 처음 반영되는 입력이 있어도 안내를 띄우지 않는다", () => {
+    render(<Host init={form({ ...LAND("l1", 300), isAppraisalAcquisition: true }, { ...HOUSE(0), isSelfBuilt: true })} />);
+    fireEvent.click(screen.getByTestId(BTN));
+    expect(screen.getByTestId(AFTER).textContent).toContain("신축·증축");
     const firstCard = document.querySelector<HTMLElement>('[data-asset-card-index="0"]')!;
     fireEvent.click(within(firstCard).getByRole("button", { name: "삭제" }));
     expect(screen.queryByTestId(AFTER)).toBeNull();

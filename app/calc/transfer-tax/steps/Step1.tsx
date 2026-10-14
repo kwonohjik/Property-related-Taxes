@@ -10,7 +10,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CompanionAssetsSection } from "@/components/calc/transfer/CompanionAssetsSection";
 import { BundledSaleModeToggle } from "@/components/calc/transfer/CompanionSaleModeBlock";
 import type { AssetSplitMode } from "@/components/calc/transfer/OwnershipRatioInput";
-import { isFractionalRatioStr } from "@/lib/calc/transfer-tax-api-helpers";
+import { isFractionalSplitRestorable } from "@/lib/calc/transfer-tax-api-asset-basics";
 import {
   Dialog,
   DialogContent,
@@ -73,14 +73,8 @@ export function Step1({
     // ⚠️ 명시 100%(단독 소유) 자산이 하나라도 있으면 축 B가 아니다 — 함께양도(다른 물건) 묶음에 지분 자산이 섞인 경우다.
     //    종전에는 `some`만 봐서 복원 시 그 묶음을 축 B로 바꿔 ① 기본정보를 숨기고 「총양도가 × 지분율」 자동가를 보였다
     //    (2026-10-10). 빈칸은 축 B 진입 직후의 미입력이라 허용한다(위 `some` 유지 이유).
-    const ratioBlank = (a: (typeof form.assets)[number]) => !a.ownershipNumerator?.trim() || !a.ownershipDenominator?.trim();
-    if (
-      form.assets.length > 1 &&
-      form.assets.some((a) =>
-        isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
-      ) &&
-      form.assets.every((a) => ratioBlank(a) || isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator))
-    )
+    //    판정은 `isFractionalSplitRestorable`(⑧·역방향 leaf가 쓰는 `isFractionalSplitEntryBundle`과 같은 파일의 술어군).
+    if (isFractionalSplitRestorable(form.assets))
       return "fractional";
     if (form.assets.length > 1) return "companion";
     return "none";
@@ -93,7 +87,8 @@ export function Step1({
    * 입력값은 스토어(`form`)에 있고 여기에는 화면 보조 상태만 둔다(useEffect 미러링 없음 — 클릭 핸들러에서만 쓴다).
    */
   const [swapEpoch, setSwapEpoch] = useState(0);
-  const [swapNote, setSwapNote] = useState<{ houseAssetId: string; items: string[] } | null>(null);
+  /** 교환으로 첫 자산이 된 주택 id — 안내 한 줄은 이 id만 기억하고 «처음 반영되는 입력» 목록은 렌더마다 현재 폼에서 파생한다(재편집하면 스스로 거둔다). */
+  const [swappedHouseId, setSwappedHouseId] = useState<string | null>(null);
 
   // 증환지 증가분 존재 시: 당초분·증가분은 한 필지·한 계약이라 양도가액 구분 기재(actual)가 불가능.
   // 양도시 기준시가 안분(§166⑥ 단서)만 유효 → 결정방식 토글 숨김 + apportioned 강제(파생).
@@ -152,7 +147,7 @@ export function Step1({
 
   // G1 — 사례 28 역방향: 주택을 맨 앞으로(회전) + 순서와 함께 움직이는 값(주 자산 배지·미등기)을 한 번의 패치로 쓴다. 값은 지우지 않는다.
   function handleReverseAppurtenantSwap(patch: ReverseAppurtenantSwapPatch) {
-    setSwapNote({ houseAssetId: patch.assets[0].assetId, items: reverseAppurtenantSwapNewlyReflected(form) });
+    setSwappedHouseId(patch.assets[0].assetId);
     setSwapEpoch((n) => n + 1);
     onInvalidateResult?.();
     onChange(patch);
@@ -317,9 +312,9 @@ export function Step1({
           hidden={embeddedInMulti || splitMode === "fractional"}
           onSwap={handleReverseAppurtenantSwap}
         />
-        {swapNote && form.assets[0]?.assetId === swapNote.houseAssetId && (
-          <ReverseAppurtenantSwapAfterNote items={swapNote.items} />
-        )}
+        <ReverseAppurtenantSwapAfterNote
+          items={swappedHouseId !== null && form.assets[0]?.assetId === swappedHouseId ? reverseAppurtenantSwapNewlyReflected(form.assets[0]) : []}
+        />
 
         {/* 자산 카드 리스트 */}
         <CompanionAssetsSection

@@ -163,6 +163,36 @@ export function isFullFractionalBundle(assets: AssetForm[]): boolean {
   );
 }
 
+type RatioFields = Pick<AssetForm, "ownershipNumerator" | "ownershipDenominator">;
+
+/** 지분율 칸이 비었는가 — 토글 B(같은 물건 지분 분할) 진입 직후의 미입력 상태. 함께 양도 자산은 기본 100/100이라 비지 않는다. */
+export function isOwnershipRatioBlank(a: RatioFields): boolean {
+  return !a.ownershipNumerator?.trim() || !a.ownershipDenominator?.trim();
+}
+
+/**
+ * `Step1`이 세션 복원 때 `splitMode`를 "fractional"로 파생하는 판정 — 다자산 + 지분 < 1이 하나 이상 + 나머지는 빈칸 또는 지분 < 1.
+ * (명시 100% 자산이 섞이면 함께 양도 묶음이라 축 B가 아니다. 빈칸은 축 B 진입 직후의 미입력이라 허용한다.)
+ * ⚠️ 이 판정은 «축 B로 **복원**할 만한가»이지 현재 모드가 아니다 — 모드의 정본은 `Step1`의 `splitMode` state다.
+ */
+export function isFractionalSplitRestorable(assets: readonly RatioFields[]): boolean {
+  return (
+    assets.length > 1 &&
+    assets.some((a) => isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator)) &&
+    assets.every(
+      (a) => isOwnershipRatioBlank(a) || isFractionalRatioStr(a.ownershipNumerator, a.ownershipDenominator),
+    )
+  );
+}
+
+/**
+ * 토글 B 진입 **직후**(전 자산 지분율이 빈칸)인가 — 데이터만으로 축 B와 함께 양도를 가를 수 있는 유일한 상태다.
+ * 지분율이 채워진 뒤(지분 < 1)에는 함께 양도(자산마다 부분 소유)와 데이터로 구분되지 않는다 — 구분은 `Step1`의 `splitMode`만 안다.
+ */
+export function isFractionalSplitEntryBundle(assets: readonly RatioFields[]): boolean {
+  return assets.length > 1 && assets.every(isOwnershipRatioBlank);
+}
+
 /**
  * 자산별 effective transferExpense 계산 (B3 폼-수준 안분 로직).
  * 우선순위:

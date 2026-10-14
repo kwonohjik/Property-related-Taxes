@@ -14,6 +14,8 @@
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { reverseAppurtenantHouseAssetId } from "@/lib/calc/reverse-appurtenant-house";
 import { selfBuiltActive } from "@/lib/calc/self-built-scope";
+import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
+import { isSec163_9Cause } from "@/lib/calc/transfer-163-9-base-date";
 
 type SwapForm = Pick<TransferFormData, "assets" | "isUnregistered">;
 
@@ -35,19 +37,30 @@ const FIRST_ASSET_ONLY_INPUTS: readonly { label: string; active: (a: AssetForm) 
   { label: "다필지(환지·합병)", active: (a) => a.parcelMode === true },
   { label: "매매사례가액 추계", active: (a) => a.isSalesCaseAcquisition === true },
   { label: "가업상속 취득가액", active: (a) => !!a.familyBusinessInheritance },
+  /**
+   * 토지등급 환산(1990.8.30. 이전 취득) — 컴패니언 payload는 `pre1990Land`를 §163⑨ 취득원인(상속·증여)일 때만 싣고(`transfer-tax-api-companion-payload.ts:421-425`),
+   * 주 자산은 매매 취득이어도 싣고 환산 모드를 강제한다. 교환하면 환산+기준시가 없음은 API 400이고, 확정 취득가+`pre1990Enabled`는 취득가액이 환산액에서 입력값으로 바뀐다(리뷰 M2 실측).
+   * §163⑨ 취득원인이면 컴패니언도 같은 payload를 싣는다 — 가드에서 제외(같은 술어 `hasPre1990LandEstimation` · `isSec163_9Cause`).
+   */
+  { label: "토지등급 환산(1990.8.30. 이전 취득)", active: (a) => hasPre1990LandEstimation(a) && !isSec163_9Cause(a.acquisitionCause) },
 ];
 
 function firstAssetOnlyLabels(first: AssetForm): string[] {
   return FIRST_ASSET_ONLY_INPUTS.filter((i) => i.active(first)).map((i) => i.label);
 }
 
-/** 교환 대상 짝 주택의 index. 짝 주택이 없거나 증환지 증가분이 있으면 -1 — 사유 문구 없이 버튼만 숨긴다(현행 ⑧·엔진 경고가 그대로 안내). */
-function pairedHouseIndex(form: SwapForm): number {
+/** 구성이 «첫 자산 토지 + 짝 주택»이면 그 주택의 index, 아니면 -1. */
+function pairedHouseIndexRaw(form: SwapForm): number {
   const houseId = reverseAppurtenantHouseAssetId(form.assets);
-  if (houseId === undefined) return -1;
-  // 증가분의 양도시 기준시가가 `assets[0]`(당초분)에서 파생된다(`replot-increment-std-price.ts`) — 주택이 0번이 되면 깨진다.
-  if (form.assets.some((a) => a.isReplotIncrement)) return -1;
-  return form.assets.findIndex((a) => a.assetId === houseId);
+  return houseId === undefined ? -1 : form.assets.findIndex((a) => a.assetId === houseId);
+}
+
+/** 증환지 증가분이 있는가 — 증가분의 양도시 기준시가가 `assets[0]`(당초분)에서 파생된다(`replot-increment-std-price.ts`)라 주택이 0번이 되면 깨진다. */
+const hasReplotIncrement = (form: SwapForm) => form.assets.some((a) => a.isReplotIncrement);
+
+/** 교환 대상 짝 주택의 index. 짝 주택이 없으면 -1 — 사유 문구 없이 버튼만 숨긴다(현행 ⑧·엔진 경고가 그대로 안내). 증환지 증가분은 사유가 따로 있다(`BlockReason`). */
+function pairedHouseIndex(form: SwapForm): number {
+  return hasReplotIncrement(form) ? -1 : pairedHouseIndexRaw(form);
 }
 
 /**
@@ -78,26 +91,38 @@ export function reverseAppurtenantSwapPatch(form: SwapForm): ReverseAppurtenantS
 }
 
 /**
- * 구성은 맞지만 첫 자산 토지의 «첫 자산 전용» 입력 때문에 버튼을 숨길 때 보일 사유 한 줄. 그 밖에는 `null`.
- * 문구는 사실만 적는다 — 이 입력은 주택이 첫 자산이 되면 반영되지 않거나 다른 입력 차단을 만든다.
+ * 구성은 맞지만 버튼을 숨길 때 보일 사유 한 줄(증환지 증가분 · 첫 자산 토지의 «첫 자산 전용» 입력). 그 밖에는 `null`.
+ * 문구는 사실만 적는다.
  */
 export function reverseAppurtenantSwapBlockReason(form: SwapForm): string | null {
-  if (pairedHouseIndex(form) < 0) return null;
+  if (pairedHouseIndexRaw(form) < 0) return null;
+  if (hasReplotIncrement(form)) {
+    return "증환지 증가분이 있어 첫 자산을 바꿀 수 없습니다. 증가분의 양도시 기준시가가 첫 자산(당초분)의 ㎡당 기준시가에서 정해집니다.";
+  }
   const labels = firstAssetOnlyLabels(form.assets[0]);
   if (labels.length === 0) return null;
   return `이 토지에 입력한 ${labels.join("·")}은(는) 첫 자산에서만 반영됩니다. 해당 입력을 해제하면 주택을 첫 자산으로 바꿀 수 있습니다.`;
 }
 
 /**
- * 승격 주택에 **교환으로 처음 반영되는 입력**(컴패니언일 때 ④가 보내지 않던 값) — 있을 때만 교환 직후 안내 한 줄에 쓴다.
+ * 주택이 **컴패니언일 때는 ④가 보내지 않다가 첫 자산이 되면 보내는 입력**(= 교환으로 처음 반영되는 입력) — 표시용 라벨 목록.
+ *
+ * 주택 카드 키를 하나씩 바꿔 «컴패니언 위치의 ④ 본문은 그대로, 주 자산 위치의 본문만 바뀌는» 키를 실측해 확정했다(리뷰 S4 · 1,606건 probe 재실행).
  * 같은 입력은 «주택 먼저»에서는 반영됐으므로 올바른 방향이나, 사용자가 본 세액이 달라질 수 있다.
+ * ⚠️ 제외한 것: 소재지 법정동코드(`regionCode`)는 Step4 조정대상지역 자동 판정이 다시 채우므로 침묵 함정이 아니다(리뷰 결정). 정착면적·소재지 구분(`buildingFootprintArea`·
+ *    `appurtenantLandZone`)은 이 교환이 열려는 바로 그 사실이다. `transferType`(빈 값)·`standardPricePerSqmAtAcq`(분리 축 보조값)는 일반 입력 경로가 아니다.
  */
-export function reverseAppurtenantSwapNewlyReflected(form: SwapForm): string[] {
-  const houseIdx = pairedHouseIndex(form);
-  if (houseIdx < 0) return [];
-  const house = form.assets[houseIdx];
+export function reverseAppurtenantSwapNewlyReflected(house: AssetForm): string[] {
   const out: string[] = [];
   if (selfBuiltActive(house)) out.push("신축·증축");
   if (house.rentalHousingException?.applyException === true) out.push("장기임대주택 거주주택 비과세 특례");
+  const residenceEntered =
+    house.residenceInputMode === "interval"
+      ? (house.residencePeriods ?? []).some((p) => !!p.moveInDate)
+      : !!house.residencePeriodMonthsAsset?.trim();
+  if (residenceEntered) out.push("자산별 거주기간");
+  if (house.isAppraisalAcquisition === true) out.push("감정가액 취득");
+  if (house.isSalesCaseAcquisition === true) out.push("매매사례가액 취득");
+  if (house.usePreHousingDisclosure === true) out.push("개별주택가격 미공시");
   return out;
 }
