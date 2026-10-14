@@ -47,7 +47,7 @@ import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { highValueExcessRulingNoticeText, laterLandExemptNotice, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
-import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
+import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, toNonBusinessLandPart, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
 import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
 import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
 
@@ -392,7 +392,7 @@ export function runRentalHousingExceptionStep(
         taxBase: rheTaxBase,
         transferIncome: totalTaxableIncome,
         basicDeduction: rheBasicDeduction,
-        splitDetail: buildRentalPartRateDetail(splitDetail!, { housingIncome: rhe.taxableGain, laterLand, nbl }),
+        splitDetail: buildRentalPartRateDetail(splitDetail!, { housingIncome: rhe.taxableGain, laterLand, nonBusinessLandPart: nbl ? toNonBusinessLandPart(nbl) : undefined }),
         parsedRates,
         taxRateInput: effectiveInput,
         multiHouseSurchargeResult,
@@ -440,16 +440,7 @@ export function runRentalHousingExceptionStep(
     });
     // 결과 카드·신고서가 파트 내역을 읽는다 — 일반 경로(`applyHousingLandExclusions`)와 같은 형태.
     if (splitDetail) {
-      splitDetail.nonBusinessLandPart = {
-        limitArea: nbl.limitArea,
-        excessArea: nbl.excessArea,
-        appliedMultiplier: nbl.multiplier,
-        gain: nbl.gain,
-        taxableGainAfterProration: nbl.gain,
-        holdingYears: nbl.holdingYears,
-        longTermRate: nbl.longTermRate,
-        longTermDeduction: nbl.longTermDeduction,
-      };
+      splitDetail.nonBusinessLandPart = toNonBusinessLandPart(nbl);
     }
   }
   // G-3 — 비과세에서 뗀 나중 취득 토지분. 파트 echo(`land.*`)는 주택분 기준이라 이 토지분이 보이지 않으므로 신고서·명세가 읽을 echo를 따로 싣는다.

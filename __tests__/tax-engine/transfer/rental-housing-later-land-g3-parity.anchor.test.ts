@@ -16,6 +16,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 const rates = makeMockRates();
@@ -196,5 +198,61 @@ describe("§155⑳ B — 직전거주주택보유주택은 종전 계산을 유�
       expect(r.splitDetail!.laterLandPart).toBeUndefined();
       expect(r.totalTax).toBe(expected);
     }
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// 다건 합산 — G-3 특례 on 자산 1건의 다건 총세액 = 단건 총세액 (둘 다 on 경로라 on/off 연산 순서의 1~2원 잔차와 무관하다)
+// ══════════════════════════════════════════════════════════════════════
+const asItem = (i: TransferTaxInput, id: string) => ({ ...i, propertyId: id, propertyLabel: id }) as unknown as TransferTaxItemInput;
+const aggOf = (T: string, items: TransferTaxItemInput[]) =>
+  calculateTransferTaxAggregate({ taxYear: Number(T.slice(0, 4)), properties: items, annualBasicDeductionUsed: 0 }, rates);
+
+describe("§155⑳ A × G-3 — 다건 = 단건 (격자)", () => {
+  it("양도가(한도 1.5배·3배 포함) × 토지 취득일 × 면적 × 양도일(2020·2024·2026) 격자 — 다건 총세액이 단건과 1원도 다르지 않다", () => {
+    const LD: Record<string, string[]> = {
+      "2020-06-01": ["2020-01-01", "2019-06-01", "2018-10-01", "2017-06-01", "2008-07-01"],
+      "2024-06-01": ["2024-01-01", "2023-06-01", "2022-10-01", "2021-06-01", "2008-07-01"],
+      "2026-06-01": ["2026-01-01", "2025-06-01", "2024-10-01", "2023-06-01", "2008-07-01"],
+    };
+    const bad: string[] = [];
+    let g3Cells = 0;
+    let withExcess = 0;
+    for (const T of Object.keys(LD)) {
+      const H = T < "2021-12-08" ? 900_000_000 : 1_200_000_000;
+      const prices = [800_000_000, H, H + 1, Math.floor(H * 1.25), Math.floor(H * 1.5), H * 2, H * 3, 3_000_000_000];
+      for (const S of prices) {
+        for (const landAcq of LD[T]) {
+          for (const area of [300, 660]) {
+            const base = house(S, { landAcq, T, area, rhe: rentalA });
+            const single = calculateTransferTax(base, rates);
+            if (!single.splitDetail?.laterLandPart) continue;
+            g3Cells++;
+            if (single.splitDetail.nonBusinessLandPart) withExcess++;
+            const agg = aggOf(T, [asItem(base, "p1")]);
+            if (agg.totalTax !== single.totalTax) bad.push(`${T} ${S} 토지 ${landAcq} ${area}㎡ 단건 ${single.totalTax} 다건 ${agg.totalTax}`);
+          }
+        }
+      }
+    }
+    expect(g3Cells).toBeGreaterThan(100);
+    expect(withExcess).toBeGreaterThan(40);
+    expect(bad).toEqual([]);
+  });
+
+  it("둘 이상 자산(양도차손 통산 포함) — 입력 순서와 무관하고 G-3 자산의 파트(토지분·건물분·배율 초과분)가 통산 뒤에도 유지된다", () => {
+    const g3 = house(2_000_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 660, rhe: rentalA });
+    const loss = baseTransferInput({
+      propertyType: "housing", transferPrice: 500_000_000, acquisitionPrice: 600_000_000,
+      acquisitionDate: D("2019-01-10"), transferDate: D("2024-06-01"), isOneHousehold: false, householdHousingCount: 2,
+      expenses: 0, annualBasicDeductionUsed: 0,
+    } as Partial<TransferTaxInput>);
+    const a = aggOf("2024-06-01", [asItem(g3, "g3"), asItem(loss, "loss")]);
+    const b = aggOf("2024-06-01", [asItem(loss, "loss"), asItem(g3, "g3")]);
+    expect(a.totalTax).toBe(b.totalTax);
+    expect(a.totalTax).toBeGreaterThan(0);
+    // 통산으로 소득금액이 줄어도 건물분 파트 역산이 음수가 되지 않아 파트가 유지된다(자산 단위 후퇴가 아님)
+    const parts = a.properties.find((p) => p.propertyId === "g3")!.splitDetail?.partRateBasisApplied;
+    expect(parts).toBe(true);
   });
 });

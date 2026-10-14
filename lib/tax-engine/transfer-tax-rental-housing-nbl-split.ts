@@ -7,7 +7,7 @@ import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { NBL, TRANSFER } from "./legal-codes/transfer";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
-import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { SplitGainResult, SplitNonBusinessLandPart } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
 import type { RateGroup } from "./types/transfer-aggregate.types";
@@ -169,25 +169,33 @@ export function splitLaterAcquiredLand(
  */
 export function buildRentalPartRateDetail(
   splitDetail: SplitGainResult,
-  args: { housingIncome: number; laterLand: LaterLandExcludedSplit; nbl: AppurtenantExcessSplit | null },
+  args: {
+    housingIncome: number;
+    laterLand: Pick<LaterLandExcludedSplit, "gain" | "longTermDeduction">;
+    /** 배율 초과 파트 — 단건은 방금 분리한 `toNonBusinessLandPart(nbl)`, 다건은 결과 echo(`splitDetail.nonBusinessLandPart`) */
+    nonBusinessLandPart: SplitNonBusinessLandPart | undefined;
+  },
 ): SplitGainResult {
-  const { housingIncome, laterLand, nbl } = args;
+  const { housingIncome, laterLand, nonBusinessLandPart } = args;
   return {
     ...splitDetail,
     land: { ...splitDetail.land, taxableGainAfterProration: laterLand.gain, longTermDeduction: laterLand.longTermDeduction },
     building: { ...splitDetail.building, taxableGainAfterProration: housingIncome, longTermDeduction: 0 },
-    nonBusinessLandPart: nbl
-      ? {
-          limitArea: nbl.limitArea,
-          excessArea: nbl.excessArea,
-          appliedMultiplier: nbl.multiplier,
-          gain: nbl.gain,
-          taxableGainAfterProration: nbl.gain,
-          holdingYears: nbl.holdingYears,
-          longTermRate: nbl.longTermRate,
-          longTermDeduction: nbl.longTermDeduction,
-        }
-      : undefined,
+    nonBusinessLandPart,
+  };
+}
+
+/** 배율 초과분 분리 결과 → 결과 echo(`splitDetail.nonBusinessLandPart`) 형태 */
+export function toNonBusinessLandPart(nbl: AppurtenantExcessSplit): SplitNonBusinessLandPart {
+  return {
+    limitArea: nbl.limitArea,
+    excessArea: nbl.excessArea,
+    appliedMultiplier: nbl.multiplier,
+    gain: nbl.gain,
+    taxableGainAfterProration: nbl.gain,
+    holdingYears: nbl.holdingYears,
+    longTermRate: nbl.longTermRate,
+    longTermDeduction: nbl.longTermDeduction,
   };
 }
 
