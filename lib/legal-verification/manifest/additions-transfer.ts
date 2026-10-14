@@ -96,6 +96,16 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // burdened-gift.ts K-6·K-7 — §97①1호 본문 단서·나목 (KoreanLaw 실측, 소득세법 MST 280405 · 2026-10-14)
+    id: "TRANSFER.ACQUISITION_PRESUMED_NA",
+    citation: "소득세법 §97",
+    keywords: [
+      "가목의 실지거래가액을 확인할 수 없는 경우에 한정하여 나목의 금액을 적용한다",
+      "매매사례가액, 감정가액 또는 환산취득가액을 순차적으로 적용한 금액",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER.STANDARD_MARKET_PRICE",
     citation: "소득세법 §99",
     keywords: ["기준시가", "개별공시지가", "배율방법", "기준시가를 산정"],

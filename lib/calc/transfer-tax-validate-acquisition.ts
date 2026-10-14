@@ -117,6 +117,8 @@ export function validateAssetAcquisition(
   contractAssumedDebtTotal?: number,
   /** 폼-전역 1세대 여부 — 재개발 토지 출자 완공APT 준공일 필수 조건(G3-4). */
   isOneHousehold?: boolean,
+  /** 지분 분할 취득(축 B) 묶음 여부 — 부담부증여 K-6/K-7(매매사례가액·감정가액) 차단 술어의 입력. */
+  isFractionalSplitAxis?: boolean,
 ): string | null {
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
   // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
@@ -125,7 +127,7 @@ export function validateAssetAcquisition(
   if (conversionError) return conversionError;
 
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
-  const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal);
+  const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal, formTransferDate, isFractionalSplitAxis);
   if (bgError) return bgError;
 
   // ── 건물 상속·증여 + 토지 매매(D2) — 자산 단위 상속 요구(아래 §164·E-1·PD-1·post-deemed)보다 **앞**에서 갈라 분리 검증으로 ──

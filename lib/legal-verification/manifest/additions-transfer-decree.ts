@@ -389,6 +389,18 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // burdened-gift.ts K-6·K-7 — 순차 적용(③ 본문)·1호 매매사례가액·2호 감정가액·특수관계인 단서 (KoreanLaw 실측, 시행령 MST 290841 · 2026-10-14)
+    id: "TRANSFER_DECREE.ESTIMATED_ORDER_SALES_APPRAISAL",
+    citation: "소득세법 시행령 §176의2",
+    keywords: [
+      "다음 각 호의 방법을 순차적으로 적용",
+      "양도일 또는 취득일 전후 각 3개월 이내에 해당 자산",
+      "둘 이상의 감정평가법인등이 평가한 것으로서 신빙성이 있는 것으로 인정되는 감정가액",
+      "객관적으로 부당하다고 인정되는 경우에는 해당 가액을 적용하지 않는다",
+    ],
+    keywordMode: "ALL",
+  },
 
   // ── §104①4호 단서(조정대상지역 주택분양권 50% 제외) ──────────────────
   {

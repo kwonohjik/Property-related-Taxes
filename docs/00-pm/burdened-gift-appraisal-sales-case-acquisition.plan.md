@@ -241,6 +241,15 @@ else if (method === "appraisal" || method === "salesCase") {
 2. 엔진 ✅: 타입·STEP 4·스케일·입주권/이월과세/§114의2 가드 → anchor 16건 green, 스케일 뮤테이션이 A-10을 잡음
 3. API ✅: Zod enum·필드·refine → route anchor 5건 green, enum 복원 뮤테이션이 4건 잡음
    (PR-1 검증: tsc 0 · 전체 vitest 2988파일/35,079건 통과)
+4. UI ①~⑧·⑬·⑦ ✅ (PR-2): 라디오 4옵션·입력 블록(`BurdenedGiftPresumedAcquisitionSection.tsx`)·차단 술어 leaf
+   (`lib/calc/burdened-gift-presumed-acquisition.ts` — ⑤ 비활성·⑧·④ 공유)·결과 표시 4곳·`DetailedStatementBgFormulas.ts`
+5. E2E ✅: `transfer-burdened-gift-presumed-acquisition.spec.ts` PA-1~PA-5 (문제 20 상황 1 → 28,920,000 감정·매매사례 각 1건)
+6. 브라우저 수동 확인: 미수행 (headless Playwright만)
+   (PR-2 검증: tsc 0 · eslint 0 · 신규 vitest 50건 · E2E 6건 · verify:legal 415건)
+
+**별건 V-4 (미해소)**: 단건 상세 계산 명세서·요약표가 부담부증여에서 틀린다(K-4도 동일, 이번 변경 이전부터).
+문제 20 상황 1에서 「취득가액 −30,000,000」「양도비 1,080,000」으로 표기. 원인: 단건 경로 `buildAcquisitionPriceFormula`·
+`buildNecessaryExpenseFormula`가 부담부증여를 모르고 `receiveOnly.transferPrice`=0이라 역산이 음수.
 4. UI ①~⑧·⑬ + 결과 ⑦                              → verify: tsc 0, 관련 vitest, ui-engine-sync-checker 14지점
 5. E2E: 라디오 4옵션·필드 점프·문제 20 상황 1 화면 재현 → verify: Playwright 해당 spec 통과
 6. 브라우저 수동 확인 (Network 탭 body에 새 필드)    → verify: 결과 화면 28,920,000
