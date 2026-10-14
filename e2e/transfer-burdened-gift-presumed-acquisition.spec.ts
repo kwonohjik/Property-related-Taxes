@@ -9,6 +9,7 @@
  *   PA-2. 감정가액 — 입력 → 계산 → 결과 양도차익 28,920,000
  *   PA-3. 매매사례가액 — 같은 값 (A-2)
  *   PA-4. 축 B(지분 분할 취득) — 두 옵션이 비활성(⑧과 같은 술어)
+ *   PA-6. 단건 상세 계산 명세서·신고서 양식(요약표)이 엔진 값과 일치 — 역산 오표기(음수 취득가액·양도비) 회귀 방지
  *   PA-5. 일반건물 — 토지·건물 감정가액 2칸이 payload(`presumedLand/BuildingAcquisitionPrice`)에 실려 §159로 안분된다
  *
  * ⚠️ 새 옵션의 문구에 「환산취득가액」·「실지취득가액 안분」이 없어야 기존 spec
@@ -215,4 +216,44 @@ test.describe("부담부증여 — 매매사례가액·감정가액 (K-6/K-7)", 
     // 개산공제 — 취득가액이 아니라 취득시 기준시가 × 채무비율 × 3%
     expect(bg.perAsset.land.estimatedDeduction).toBe(Math.floor(Math.floor(2_130_000 * 1279 * 0.25) * 0.03));
   });
+
+  for (const [method, label, presumedNote] of [
+    ["appraisal", "감정가액", "감정가액"],
+    ["salesCase", "매매사례가액", "매매사례가액"],
+  ] as const) {
+    test(`PA-6(${label}): 단건 명세서·신고서 양식 — 양도가액 80,000,000 · 취득가액 50,000,000 · 개산공제 1,080,000`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await seedAndOpen(page, [landSeed({ bgAcquisitionMethod: method })]);
+      await calculate(page);
+
+      // 상세 계산 명세서 — 펼쳐서(기본 펼침이지만 접혀 있으면 펼친다) 행을 읽는다
+      const statement = page.locator('[data-print-section="detailed-statement"]');
+      await expect(statement).toBeVisible({ timeout: 30_000 });
+      const expandAll = statement.getByRole("button", { name: /전체 펼치기/ });
+      if (await expandAll.isVisible().catch(() => false)) await expandAll.click();
+
+      // 취득가액 — 부담부증여 산식으로 적히고, 역산 오표기(실제 거래가액·음수)가 없다
+      await expect(statement).toContainText(`취득가액 = ${presumedNote} × 채무액 / 증여재산 평가액`);
+      // 「a / b」는 결과뷰가 분수(Frac)로 쌓아 그려 DOM 텍스트에는 「/」 없이 분자·분모가 이어진다
+      await expect(statement).toContainText(/= 250,000,000 × 80,000,000\s*400,000,000/);
+      await expect(statement).toContainText("= 50,000,000");
+      await expect(statement).not.toContainText("(실제 거래가액)");
+      await expect(statement).not.toContainText("-30,000,000");
+      // 필요경비 — 개산공제(취득시 기준시가 기준)이고 「양도비」가 아니다
+      await expect(statement).toContainText("필요경비 = 취득시 기준시가 × 채무액 / 증여재산 평가액 × 3%");
+      await expect(statement).toContainText(/= 180,000,000 × 80,000,000\s*400,000,000 × 0\.03/);
+      await expect(statement).toContainText("= 1,080,000");
+      await expect(statement).not.toContainText("중개수수료");
+      // 양도차익
+      await expect(statement).toContainText("28,920,000");
+
+      // 신고서 양식(요약표) — 양도가액·취득가액이 「-」가 아니다
+      const form = page.locator('[data-print-section="form-table"]');
+      const rowText = async (label: string) =>
+        (await form.locator("tr", { hasText: label }).filter({ hasNotText: "전체 양도차익" }).first().innerText()).replace(/\s+/g, " ");
+      expect(await rowText("양도가액")).toContain("80,000,000");
+      expect(await rowText("취득가액")).toContain("50,000,000");
+      expect(await rowText("필요경비")).toContain("1,080,000");
+    });
+  }
 });

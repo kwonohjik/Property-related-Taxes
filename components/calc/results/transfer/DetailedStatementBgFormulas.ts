@@ -15,6 +15,7 @@
  */
 
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 
 type BgAssetBreakdown = TransferBurdenedGiftBreakdown["perAsset"]["land"];
 
@@ -82,4 +83,71 @@ export function buildBgExpenseFormula(
       ? `\n        ※ ${PRESUMED_TEXT[a.acquisitionMethod].label} 경로 — 필요경비는 개산공제만 인정하며 자본적지출·양도비는 공제하지 않습니다 (소득세법 §97②2호).`
       : "";
   return `필요경비 = 취득시 기준시가 × 채무액 / 증여재산 평가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${fmt(bg.assumedDebtAmount)} / ${fmt(bg.giftValuation.max)} × ${a.estimatedDeductionRate}\n        = ${fmt(a.estimatedDeduction)}${presumedNote}`;
+}
+
+// ── 단건(비집계) 결과 — 명세서·신고서 양식 공용 ─────────────────────────────────
+
+/** 단건 부담부증여 표시값 — 엔진 슬롯(`perAsset.*`)의 합. 역산이 아니라 echo다. */
+export interface BgSingleDisplay {
+  breakdown: TransferBurdenedGiftBreakdown;
+  /** 양도가액 = 자산별 양도가액 합 (= 인수 채무액). 폼 `contractTotalPrice`는 부담부증여에서 빈 칸이 정상이라 읽지 않는다. */
+  transferPrice: number;
+  /** 취득가액 슬롯 합 — §97②2호 단서(swap) 발동 시 0이다(`양도가액 − 취득가액 − 필요경비 = 양도차익` 항등식이 성립하는 값). */
+  acquisition: number;
+  /** 필요경비 슬롯 합 — 개산공제 또는 실비 안분. */
+  expenses: number;
+  parts: { label: string; a: BgAssetBreakdown }[];
+}
+
+/**
+ * 단건 부담부증여 결과의 표시값. 해당하지 않으면 undefined — 호출부는 종전 경로를 그대로 탄다.
+ *
+ * 제외(종전 경로 유지): 이월과세 · 재개발 · 겸용 · 토지·건물 별개 취득. 이 조합들은 취득가액·필요경비가 §159 슬롯과 다른 축으로
+ * 정해지므로 슬롯 합을 그대로 표시하면 항등식이 깨질 수 있다(미검증 — 별건). 집계(일반건물·다건)는 호출부가 aggregate로 이미 가른다.
+ */
+export function resolveBgSingleDisplay(result: TransferTaxResult): BgSingleDisplay | undefined {
+  const bg = result.transferBurdenedGiftBreakdown;
+  if (!bg || result.carryoverTaxationDetail || result.redevelopmentDetail || result.mixedUseDetail || result.splitDetail) {
+    return undefined;
+  }
+  const all = [
+    { label: "토지", a: bg.perAsset.land },
+    { label: "건물", a: bg.perAsset.building },
+  ];
+  // 값이 있는 파트만 — 토지 자산은 건물 슬롯이, 주택·건물 자산은 토지 슬롯이 0이다.
+  const parts = all.filter(
+    ({ a }) => a.sangjeungbeopValue > 0 || a.transferPrice > 0 || a.acquisitionPrice > 0 || a.estimatedDeduction > 0,
+  );
+  const sum = (pick: (a: BgAssetBreakdown) => number) => all.reduce((n, { a }) => n + pick(a), 0);
+  return {
+    breakdown: bg,
+    transferPrice: sum((a) => a.transferPrice),
+    acquisition: sum((a) => a.acquisitionPrice),
+    expenses: sum((a) => a.estimatedDeduction),
+    parts,
+  };
+}
+
+/** 파트가 둘이면 「토지 」·「건물 」 접두를 붙여 이어 쓴다 — 한 파트면 접두 없이(자산 하나의 산식이다). */
+function joinParts(d: BgSingleDisplay, build: (a: BgAssetBreakdown) => string): string {
+  return d.parts.length > 1
+    ? d.parts.map(({ label, a }) => `${label} ${build(a)}`).join("\n")
+    : d.parts.map(({ a }) => build(a)).join("\n");
+}
+
+/** 단건 취득가액 산식 — 자산별 산식(`buildBgAcquisitionFormula`)을 재사용한다(산식 단일 소스). */
+export function buildBgSingleAcquisitionFormula(d: BgSingleDisplay): string {
+  return joinParts(d, (a) => buildBgAcquisitionFormula(d.breakdown, a, a.acquisitionPrice));
+}
+
+/** 단건 필요경비 산식 — 자산별 산식(`buildBgExpenseFormula`)을 재사용한다. */
+export function buildBgSingleExpenseFormula(d: BgSingleDisplay): string {
+  return joinParts(d, (a) => buildBgExpenseFormula(d.breakdown, a));
+}
+
+/** §97②2호 단서(swap) 발동 시 취득가액 칸 고지 — 차감하지 않은 환산취득가액을 밝힌다. 미발동이면 undefined. */
+export function bgSwapAcquisitionNote(d: BgSingleDisplay): string | undefined {
+  if (d.breakdown.necessaryExpenseSwap?.chosen !== "direct") return undefined;
+  const before = d.breakdown.convertedAcquisitionBeforeSwap;
+  return `「소득세법」 §97②2호 단서 — 환산취득가액 ${fmt((before?.land ?? 0) + (before?.building ?? 0))}을 차감하지 않고 자본적지출·양도비를 필요경비로 적용`;
 }

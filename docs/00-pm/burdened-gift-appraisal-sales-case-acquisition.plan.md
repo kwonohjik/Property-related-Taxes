@@ -247,24 +247,7 @@ else if (method === "appraisal" || method === "salesCase") {
 6. 브라우저 수동 확인: 미수행 (headless Playwright만)
    (PR-2 검증: tsc 0 · eslint 0 · 신규 vitest 50건 · E2E 6건 · verify:legal 415건)
 
-**별건 V-4 (미해소)**: 단건 상세 계산 명세서·요약표가 부담부증여에서 틀린다(K-4도 동일, 이번 변경 이전부터).
-문제 20 상황 1에서 「취득가액 −30,000,000」「양도비 1,080,000」으로 표기. 원인: 단건 경로 `buildAcquisitionPriceFormula`·
-`buildNecessaryExpenseFormula`가 부담부증여를 모르고 `receiveOnly.transferPrice`=0이라 역산이 음수.
-4. UI ①~⑧·⑬ + 결과 ⑦                              → verify: tsc 0, 관련 vitest, ui-engine-sync-checker 14지점
-5. E2E: 라디오 4옵션·필드 점프·문제 20 상황 1 화면 재현 → verify: Playwright 해당 spec 통과
-6. 브라우저 수동 확인 (Network 탭 body에 새 필드)    → verify: 결과 화면 28,920,000
-```
-
-**PR 분할**
-- PR-1: 엔진+API (1~3)
-- PR-2: UI+결과+E2E (4~6)
-- PR-3: §114의2 결선 (Q-4)
-- PR-4: 증여세 마법사 (Q-9)
-
-**변경 규모 예상 (판독)**
-- 엔진: 타입 1, apportionment 1, valuation(scale) 1, carryover 가드 1
-- API: 스키마 2
-- 클라이언트: 스토어 3, 변환 2, validate 2, acq-std 술어 1
-- UI: 블록 2 (신규 분리 파일 1)
-- 결과: 4
-- 테스트: 신규 anchor 3~4, E2E 2
+**별건 V-4 ✅ 해소 (같은 브랜치)**: 단건 상세 계산 명세서·신고서 양식이 부담부증여에서 틀리던 문제(K-4 포함, 이번 변경 이전부터).
+원인은 단건 경로가 `receiveOnly.transferPrice`(부담부증여에서 빈 칸=0)로 취득가액을 역산해 −30,000,000이 나온 것.
+`transferBurdenedGiftBreakdown.perAsset.*` 슬롯 합 echo + 일반건물 집계 경로의 `buildBg*Formula` 재사용으로 K-1~K-7 정정.
+실패 테스트 20건 선행 → 26건 green, E2E PA-6(감정·매매사례). 미정정(확인 필요): 이월과세·재개발·겸용·별개 취득 × 부담부증여 단건은 종전 경로.
