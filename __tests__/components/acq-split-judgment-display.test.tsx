@@ -44,6 +44,13 @@ describe("#17-6 결과 표시 — 구분 근거 4가지", () => {
     expect(block.textContent).toContain("확인 필요");
   });
 
+  it("경계 직전(건물 −29.99999%)은 「30% 미만」 제목과 어긋나지 않게 30.0%가 아니라 29.9%로 표시한다", () => {
+    renderFor({ acqContractLandPrice: 359_999_999, acqContractBuildingPrice: 140_000_001 });
+    const text = screen.getByTestId("acq-split-judgment").textContent ?? "";
+    expect(text).toContain("29.9%");
+    expect(text).not.toContain("30.0%");
+  });
+
   it("30% 미만 — 계약서 구분금액을 적용", () => {
     renderFor({ acqContractLandPrice: 335_714_285, acqContractBuildingPrice: 164_285_715 });
     expect(screen.getByTestId("acq-split-judgment").textContent).toContain("계약서 구분금액을 적용했습니다");

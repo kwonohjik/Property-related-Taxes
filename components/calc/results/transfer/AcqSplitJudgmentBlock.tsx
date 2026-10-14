@@ -12,7 +12,11 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { cn } from "@/lib/utils";
 
 /** bp → 퍼센트 문자열 — 정수만 거쳐 반올림한다(`SaleSplitJudgmentBlock`과 같은 규약). */
-const pct = (bp: number) => `${(Math.round(bp / 10) / 10).toFixed(1)}%`;
+// 소수 첫째 자리 반올림 — 단, 30% 미만(예: 2999bp)이 반올림으로 「30.0%」로 보여 「30% 미만」 제목과 어긋나지 않게 29.9%로 둔다.
+const pct = (bp: number) => {
+  const v = Math.round(bp / 10) / 10;
+  return `${(bp < 3000 && v >= 30 ? 29.9 : v).toFixed(1)}%`;
+};
 
 const TITLE: Record<AcqSplitJudgmentDetail["outcome"], string> = {
   contract: "취득가액의 토지·건물 구분은 계약서 구분금액을 적용했습니다 (안분 가액과 30% 미만 차이)",

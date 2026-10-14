@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { baseTransferInput, makeMockRates } from "../../tax-engine/_helpers/mock-rates";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { sec100_3Era } from "@/lib/tax-engine/data/sec100-3-split-era";
+import { housingExcessAcqContractNotice } from "@/lib/tax-engine/housing-excess-acq-contract";
 
 vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/db/tax-rates")>();
@@ -88,6 +89,30 @@ describe("#17-6 §100③ 판정 — 경계 (정수 교차곱, 「이상」)", ()
 
   it("이 경로가 아닌 입력(환산 취득)에 구분금액이 실리면 던진다 — 쓰이지 않는 값을 조용히 무시하지 않는다", () => {
     expect(() => contract(300_000_000, 200_000_000, { useEstimatedAcquisition: true, standardPriceAtTransfer: 1_000_000_000 })).toThrow(/에서만 받습니다/);
+  });
+});
+
+describe("#17-6 결과 메모·고지 — 적용된 구분 기준을 거짓 없이 알린다", () => {
+  it("계약서 구분금액이 적용되면 메모가 계약서 비율(토지 67.1% : 건물 32.9%)을 밝히고, 기준시가 안분비(60.0% : 40.0%)는 공통 비용 안분비로만 적는다", () => {
+    const r = contract(335_714_285, 164_285_715);
+    expect(r.splitDetail!.acqSplitJudgment!.outcome).toBe("contract");
+    const note = r.splitDetail!.note;
+    expect(note).toContain("취득가액은 계약서 구분금액 적용 — 토지 67.1% : 건물 32.9%");
+    expect(note).toContain("공통 비용 안분비는 기준시가 기준 토지 60.0% : 건물 40.0%");
+  });
+  it("안분 가액이 적용되면(불분명) 종전 메모 그대로 — 계약서 문구가 섞이지 않는다 / 미입력도 동일", () => {
+    const unclear = contract(380_000_000, 120_000_000).splitDetail!.note;
+    expect(unclear).toContain("안분비 토지 60.0% : 건물 40.0%");
+    expect(unclear).not.toContain("계약서 구분금액 적용");
+    expect(run().splitDetail!.note).toBe(unclear);
+  });
+  it("단서(영 §166⑧1호) 적용 고지는 단서 적용 사실을 밝히고 30% 판정을 했다고 말하지 않는다", () => {
+    const r = contract(380_000_000, 120_000_000, { acqContractOtherLaw: true });
+    expect(r.splitDetail!.acqSplitJudgment!.outcome).toBe("exempt_other_law");
+    const notice = housingExcessAcqContractNotice(r.splitDetail);
+    expect(notice).toContain("제166조 제8항 제1호");
+    expect(notice).toContain("30% 판정을 하지 않고");
+    expect(notice).toContain("확인 필요");
   });
 });
 

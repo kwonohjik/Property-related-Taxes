@@ -15,6 +15,7 @@ import type {
   SplitGainResult,
   SplitPartResult,
 } from "./types/transfer.types";
+import type { AcqSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { housingExcessSplitAppliesToInput } from "./housing-excess-split";
@@ -391,7 +392,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     // 진입한다 — 건물이 환산인데 "실지거래가액"은 거짓이다.
     note:
       landRatio != null && buildingRatio != null
-        ? `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
+        ? acqContractAppliedNote(acqContract.judgment, landRatio, buildingRatio, landHoldingYears, buildingHoldingYears)
+          ?? `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (안분비 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
         : `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (${
             landMode === "actual" && buildingMode === "actual"
               ? "파트별 실지거래가액"
@@ -571,4 +573,26 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
     preHousingDisclosureDetail: phd,
     housingExpropriationValuationDetail: housingExprVal?.detail,
   };
+}
+
+/**
+ * 계약서 구분금액이 취득가액에 적용된 경우(안분 가액이 아닌 경우)의 결과 메모 — 취득가액의 토지·건물 비율은 계약서 금액 기준이고,
+ * `apportionRatio`(기준시가 안분비)는 공통 비용 안분에만 쓰였음을 밝힌다. 안분 가액이 적용되면(`deemed_unclear`) 종전 문구 그대로라 null.
+ */
+function acqContractAppliedNote(
+  judgment: AcqSplitJudgmentDetail | undefined,
+  landRatio: number,
+  buildingRatio: number,
+  landHoldingYears: number,
+  buildingHoldingYears: number,
+): string | null {
+  if (!judgment || judgment.outcome === "deemed_unclear") return null;
+  const { land, building } = judgment.applied;
+  const total = land + building;
+  if (total <= 0) return null;
+  const pct = (n: number) => ((n * 1000) / total / 10).toFixed(1);
+  return (
+    `토지 ${landHoldingYears}년 + 건물 ${buildingHoldingYears}년 분리 (취득가액은 계약서 구분금액 적용 — 토지 ${pct(land)}% : 건물 ${pct(building)}%, ` +
+    `공통 비용 안분비는 기준시가 기준 토지 ${(landRatio * 100).toFixed(1)}% : 건물 ${(buildingRatio * 100).toFixed(1)}%)`
+  );
 }
