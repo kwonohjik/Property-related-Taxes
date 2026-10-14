@@ -355,10 +355,19 @@ function residenceTerm(residenceYears: number, residencePct: number, eq = "="): 
     : `거주 ${residenceYears}년(2년 미만 — 거주기간 공제 없음)${eq}${residencePct}%`;
 }
 
+/** 기본통칙 95-0…1 — 표1(토지 전체 보유기간)·표2(주택 부수토지로서의 보유기간) 후보와 큰 쪽(엔진 echo를 그대로 읽는다). */
+function appurtenantCandidates(p: SplitPartResult, ap: NonNullable<SplitPartResult["appurtenantLthd"]>): string {
+  return (
+    `기본통칙 95-0…1: 표1(토지 전체 보유 ${p.holdingYears}년×2% = ${pct(ap.table1Rate)}%)과 ` +
+    `표2(주택 부수토지로서의 보유 ${ap.houseHoldingYears}년 + 거주 = ${pct(ap.table2Rate)}%) 중 큰 공제율`
+  );
+}
+
 function partReason(p: SplitPartResult, a: SplitLthdDisplayArgs): string {
   const years = p.holdingYears;
   if (years < 3) return `보유 ${years}년 — 3년 미만은 공제 없음`;
   const total = pct(p.longTermRate);
+  if (p.appurtenantLthd) return `${appurtenantCandidates(p, p.appurtenantLthd)} ${total}%`;
   if (a.singleAxis) return `표2 보유 ${years}년×8% = ${total}%, 80% 한도 — 2020.12.31. 이전 양도분`;
   if (a.isTable2) {
     return `보유 ${years}년×4%=${pct(p.holdingDeductionRate!)}% + ${residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!))}`;
@@ -462,10 +471,20 @@ export function buildSplitLthdSubFormulas(
     const res = p.residenceDeductionAmount!;
     holdAmount += hold;
     resAmount += res;
+    const ap = p.appurtenantLthd;
     if (p.holdingYears < 3) {
       const why = `보유 ${p.holdingYears}년 — 3년 미만은 공제 없음`;
       holdItems.push(`${label} ${won(hold)} (${why})`);
       resItems.push(`${label} ${won(res)} (${why})`);
+    } else if (ap) {
+      // 통칙 95-0…1 — 표1이 이기면 전부 보유분(거주분 없음), 표2가 이기면 보유분은 **건물 보유연수** 기준이다.
+      holdItems.push(
+        `${label} ${won(hold)} (${appurtenantCandidates(p, ap)} — ` +
+          `${ap.table1Applied ? `표1 ${pct(ap.table1Rate)}% 적용` : `표2 보유 ${ap.houseHoldingYears}년 = ${pct(p.holdingDeductionRate!)}% 적용`})`,
+      );
+      resItems.push(
+        `${label} ${won(res)} (${ap.table1Applied ? "표1 적용 — 거주기간 공제 없음" : residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`,
+      );
     } else {
       holdItems.push(`${label} ${won(hold)} (보유 ${p.holdingYears}년×4% = ${pct(p.holdingDeductionRate!)}%)`);
       resItems.push(`${label} ${won(res)} (${residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`);

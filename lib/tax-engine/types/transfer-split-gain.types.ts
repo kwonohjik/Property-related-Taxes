@@ -113,6 +113,24 @@ export interface SplitPartResult {
   residenceDeductionRate?: number;
   holdingDeductionAmount?: number;
   residenceDeductionAmount?: number;
+  /**
+   * 소득세법 기본통칙 95-0…1 적용 echo(표시 전용·세액은 `longTermRate`·`longTermDeduction`이 정본) — **토지 파트**이고
+   * 1세대1주택 표2 대상이며 토지가 주택(건물)보다 보유기간이 오래된 경우에만 채운다. 표1(토지 전체 보유기간)과
+   * 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 **큰 공제율**을 `longTermRate`로 삼았다는 사실이다.
+   * 표시 계층은 이 값을 **그대로 읽는다**(재계산 금지).
+   */
+  appurtenantLthd?: {
+    /** 「주택 부수토지로서의 보유기간」 — 건물(주택) 보유연수 */
+    houseHoldingYears: number;
+    /** 표1(토지 전체 보유기간) 공제율 */
+    table1Rate: number;
+    /** 표2(건물 보유연수 + 거주) 공제율 */
+    table2Rate: number;
+    /** 표1이 적용됐다(표1 ≥ 표2) */
+    table1Applied: boolean;
+    /** 통칙을 적용하지 않았다면(토지 자신의 보유연수로 표2) 나왔을 공제율과 값이 달라졌다 — 고지 게이트 */
+    changedFromOwnYears: boolean;
+  };
   /** §97② 단서 swap 발동 여부 (자산 단위) */
   swapApplied?: boolean;
   /** 파트별 취득 방식 echo (결과뷰 라벨 전용, 계산 로직 무영향) */

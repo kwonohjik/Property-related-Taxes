@@ -369,7 +369,7 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
     expect(cls(3_000_000_000).landTaxableGain).toBe(cls(3_000_000_000).p);
   });
 
-  it("경로 고유 차이 분리 — 토지·건물 취득일이 다르면 특례 경로는 건물 취득일 기준 단일 보유연수(§155⑳ 경로 구조)라 일반 경로와 갈리고, 같은 날로 맞추면 정확히 같다", () => {
+  it("토지·건물 취득일이 달라도 특례 경로 = 일반 경로 — 파트별 보유연수 + 기본통칙 95-0…1 (종전: 건물 취득일 단일 보유연수라 7,616,001 갈렸다)", () => {
     // 같은 날(건물 취득일에 맞춤): 20억 · 30억 모두 일치
     for (const [price, land, bld, tax] of [[2_000_000_000, 1_600_000_000, 400_000_000, 123_294_000], [3_000_000_000, 2_400_000_000, 600_000_000, 323_736_600]] as const) {
       const over = { landAcquisitionDate: D("2014-09-01") };
@@ -378,12 +378,13 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
       expect(on.totalTax).toBe(off.totalTax);
       expect(on.totalTax).toBe(tax);
     }
-    // 토지 2008 · 건물 2014 — 일반 경로는 토지 15년·건물 9년 표2를 파트별로, 특례 경로는 9년 하나로 공제한다
+    // 토지 2008 · 건물 2014 — 두 경로 모두 토지분 = max(표1 토지 15년 30%, 표2 건물 9년 36% + 거주 5년 20% = 56%) = 56%, 건물분 56%.
+    //   종전: 일반 경로는 토지 자신의 15년 표2(40% + 20% = 60%)라 off 108,957,999 · on 116,574,000(차이 7,616,001).
     const on = calculateTransferTax(sepInput(2_000_000_000, 1_600_000_000, 400_000_000, true), rates);
     const off = calculateTransferTax(sepInput(2_000_000_000, 1_600_000_000, 400_000_000, false), rates);
-    expect(off.totalTax).toBe(108_957_999);
-    expect(on.totalTax).toBe(116_574_000);
-    expect(on.totalTax - off.totalTax).toBe(7_616_001); // 수정 전 22,400,000 중 14,783,999가 회신 산식 차이였다
+    expect(on.totalTax).toBe(116_574_000); // 특례 경로 값은 그대로(건물 9년 56%가 토지분에도 같아 단일 산식과 같다)
+    expect(off.totalTax).toBe(116_574_000); // 일반 경로 값이 올라 특례 경로와 일치한다(종전 108,957,999)
+    expect(on.totalTax - off.totalTax).toBe(0);
   });
 
   it("⑦ 양도일 연혁 — 9억 시대(2020-06-01) 양도: 기준금액 9억으로 안분 · 고지에 «9억» · 특례 총세액 = 일반 경로", () => {
@@ -429,7 +430,11 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
     expect(d.formulaTrace.highValueExcessRuling).toBeUndefined();
     // 종전 흐름 그대로 — 주택분 스칼라 = 토지·건물 양도차익 합 − 초과분(127,272,727)
     const housingGain = 1_400_000_000 + 300_000_000 - 127_272_727;
-    expect(d.formulaTrace.gain95Table1 + Math.floor(housingGain * 0.18)).toBe(housingGain); // 표1 보유 9년 18%
+    // 🔁 표1 장특만 파트별 보유연수로 바꿨다(§95④): 토지분(초과분 제외) 1,272,727,273 × 토지 15년 30% + 건물 300,000,000 × 건물 9년 18%
+    //    (종전: 주택분 전체에 건물 9년 18% 하나 — gain95Table1 1,289,636,364였다 → 1,136,909,092)
+    const ltc1 = Math.floor((1_272_727_273 * 30) / 100) + Math.floor((300_000_000 * 18) / 100);
+    expect(d.formulaTrace.gain95Table1).toBe(housingGain - ltc1);
+    expect(d.formulaTrace.gain95Table1).toBe(1_136_909_092);
     const w = (r.warnings ?? []).find((x) => x.includes("회신 방식을 적용하지 않았습니다"));
     expect(w).toBeDefined();
     expect(w).toContain("합치는 순서를 정할 근거를 확인하지 못해");
@@ -445,7 +450,16 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
     const d = r.rentalHousingExceptionDetail!;
     expect(d.scenarioId).toBe("RH-A2");
     expect(d.formulaTrace.highValueExcessRuling).toBeUndefined();
-    expect(r.totalTax).toBe(162_393_399); // 종전 계산 — 회신 방식 전체를 끈(M8) 코드의 값과 같다(아래 비교 + 뮤테이션으로 확인)
+    // 🔁 파트별 보유연수(§95④) — 토지는 2023-10 취득(보유 0년 → 장특 없음), 건물 9년 56%만 공제한다.
+    //    종전 162,393,399는 건물 9년 56% 하나를 8개월 보유한 토지분에도 곱했다(토지가 건물보다 **짧은** 시료 — 일반 경로와 같게 바로잡았다).
+    //    독립 산식: 주택분 양도차익 = 토지(초과분 제외) 1,272,727,273 + 건물 300,000,000 → 장특 = 건물분만 floor(300,000,000 × 56%) = 168,000,000
+    //    gain95(표2) = 1,572,727,273 − 168,000,000 = 1,404,727,273 → 과세 = × (20억−12억)/20억 = 561,890,909
+    expect(d.formulaTrace.gain95Table2).toBe(1_572_727_273 - 168_000_000);
+    expect(d.taxableGain).toBe(Math.floor((1_404_727_273 * 8) / 20));
+    expect(d.taxableGain).toBe(561_890_909);
+    expect(r.splitDetail!.land.longTermDeduction).toBe(0);
+    expect(r.splitDetail!.building.longTermDeduction).toBe(168_000_000);
+    expect(r.totalTax).toBe(288_684_598);
     expect(r.steps.some((st) => st.label.includes("재산세제과-915"))).toBe(false);
     const w = (r.warnings ?? []).find((x) => x.includes("나중에 취득한 부수토지가 보유요건"));
     expect(w).toBeDefined();

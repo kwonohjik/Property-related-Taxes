@@ -48,6 +48,7 @@ import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { highValueExcessRulingNoticeText, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
 import { splitAppurtenantExcess, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
+import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -209,6 +210,8 @@ export function runRentalHousingExceptionStep(
     rulingGateOpen && !laterLandOverlap
       ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!)
       : undefined;
+  // 장기보유특별공제는 토지·건물 **파트별 보유연수**로 구한다(§95④ — 일반 경로 split 분기와 같은 규칙). 분리 취득이 아니면 종전 단일 보유연수.
+  const lthdParts = buildRentalLthdParts({ splitDetail, nonBusinessGain: nbl?.gain ?? 0, housingGain });
   const rhe = calculateRentalHousingException(
     effectiveInput.rentalHousingException!,
     housingGain,
@@ -224,6 +227,7 @@ export function runRentalHousingExceptionStep(
     buildEligibilityContext(effectiveInput),
     effectiveInput.transferDate,
     rulingFacts,
+    lthdParts,
   );
 
   // 근거 조문은 판정이 정한 `eligibility.laws`를 따른다 — §154⑩ 표준 경로(B · 0호)는 §155⑳ 본문이 성립하지 않는다(S06-13).
@@ -276,6 +280,8 @@ export function runRentalHousingExceptionStep(
   }
 
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
+  // 파트별 장특을 결과 카드(splitDetail 파트)에 채우고, 기본통칙 95-0…1로 토지분 공제율이 달라졌으면 고지한다.
+  const appurtenantLthdNotice = applyRentalLthdPartsToSplit(splitDetail, rhe, effectiveInput.transferDate);
   const periodPendingNotice = buildRentalPeriodPendingNotice(rhe.eligibility.periodPendingUnitIndexes);
   // #15(S06-5) — 2호 부분 표2 독법 고지. 결론(세액)은 바꾸지 않고 두 독법이 갈릴 때만 단다.
   const table2ReadingNotice = buildPrhpTable2ReadingNotice(
@@ -602,11 +608,12 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
             lthdNotice,
+            appurtenantLthdNotice,
             periodPendingNotice,
             table2ReadingNotice,
             prhpSurchargeNotice,

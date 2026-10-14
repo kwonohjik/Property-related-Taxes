@@ -10,6 +10,7 @@
 import type { ArticleFailCode } from "../../rental-article/check";
 import type { AptTransferDeadlineExtension } from "../../rental-article/rules";
 import type { AddendumTransitionBasis } from "../../data/rental-155-20-era";
+import type { Gain95PartEcho } from "./ltc-table-split";
 
 // ============================================================
 // 임대주택 단위 입력
@@ -311,6 +312,12 @@ export type FormulaTrace = {
    * 이 값에 표2 공제를 적용한 금액이 A2의 과세대상 양도소득금액이다(초과분 자체는 이 특례 밖 — 별도 비사업용 토지 파트).
    */
   highValueExcessRuling?: HighValueExcessRulingTrace;
+  /**
+   * 토지·건물 파트별 보유연수로 표1·표2 장기보유특별공제를 구한 경우의 파트 echo(결과 카드·고지용 — 재계산 금지).
+   * 호출부가 `lthdParts`를 넘긴 경우에만 있다(분리 취득 주택 — 본인이 두 파트를 모두 소유). 없으면 종전 단일 보유연수 산식이다.
+   * `gain95Table1`·`gain95Table2`는 두 경우 모두 정본이고 이 필드는 그 분해다.
+   */
+  partsLthd?: { land: Gain95PartEcho; building: Gain95PartEcho };
 };
 
 /** `FormulaTrace.highValueExcessRuling` — A2 회신 방식 산식 구성값 */

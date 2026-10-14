@@ -23,7 +23,13 @@
 
 import { safeMultiplyThenDivide } from "../../tax-utils";
 import { checkEligibility, type EligibilityContext } from "./eligibility";
-import { calculateGain95BothTables } from "./ltc-table-split";
+import {
+  calculateGain95BothTables,
+  calculateGain95BothTablesByParts,
+  type Gain95BothTables,
+  type Gain95BothTablesByParts,
+  type RentalLthdParts,
+} from "./ltc-table-split";
 import { validatePrices, calculatePrhpAllocation } from "./prhp-allocation";
 import type {
   RentalHousingExceptionInput,
@@ -105,22 +111,40 @@ export function calculateRentalHousingException(
    * (이미 안분이 끝난 값이라 비율을 다시 곱하면 이중 안분이다). B 시나리오에는 쓰지 않는다(§161 안분과의 결합 근거 없음).
    */
   highValueExcessRuling?: HighValueExcessRulingTrace,
+  /**
+   * 토지·건물 **파트별 보유연수**로 장기보유특별공제를 구할 때의 파트 입력(§95④ — 일반 경로 split 분기와 같은 규칙).
+   * 있으면 `gain`·`holdYears`로 만든 단일 보유연수 산식 대신 이 값으로 표1·표2를 산출하고(파트 손실 0 하한,
+   * 토지가 주택보다 오래되면 기본통칙 95-0…1), 없으면(토지·건물 분리 없음 — 단일 자산) 종전 그대로다.
+   * 파트 양도차익의 합은 `gain`과 같아야 한다 — 호출부가 보장하고 어긋나면 넘기지 않는다.
+   */
+  lthdParts?: RentalLthdParts,
 ): RentalHousingExceptionResult {
+  const bothTables = (g: number, parts?: RentalLthdParts): Gain95BothTables | Gain95BothTablesByParts =>
+    parts
+      ? calculateGain95BothTablesByParts(parts, liveYears, transferDate)
+      : calculateGain95BothTables(g, holdYears, liveYears, transferDate);
+  const isByParts = (t: Gain95BothTables | Gain95BothTablesByParts): t is Gain95BothTablesByParts => "land" in t;
+  const withPartsEcho = (r: RentalHousingExceptionResult, t: Gain95BothTables | Gain95BothTablesByParts): RentalHousingExceptionResult =>
+    isByParts(t)
+      ? { ...r, formulaTrace: { ...r.formulaTrace, partsLthd: { land: t.land, building: t.building } } }
+      : r;
+
   // ─── Step 0: 토글 OFF ─────────────────────────────────────
   if (!input.applyException) {
-    const { gain95Table1, gain95Table2 } = calculateGain95BothTables(
-      gain, holdYears, liveYears, transferDate,
-    );
-    return makeIneligibleResult(
-      { passed: false, failReasons: [], residenceFailReasons: ["특례 미적용 (토글 OFF)"], laws: [] },
-      gain95Table1,
-      gain95Table2,
+    const tables = bothTables(gain, lthdParts);
+    return withPartsEcho(
+      makeIneligibleResult(
+        { passed: false, failReasons: [], residenceFailReasons: ["특례 미적용 (토글 OFF)"], laws: [] },
+        tables.gain95Table1,
+        tables.gain95Table2,
+      ),
+      tables,
     );
   }
 
   // ─── Step 1: 표1·표2 동시 산출 ────────────────────────────
-  const { gain95Table1, gain95Table2 } =
-    calculateGain95BothTables(gain, holdYears, liveYears, transferDate);
+  const tables = bothTables(gain, lthdParts);
+  const { gain95Table1, gain95Table2 } = tables;
 
   // ─── Step 2: 요건 판정 ────────────────────────────────────
   const eligibility = checkEligibility(
@@ -132,25 +156,36 @@ export function calculateRentalHousingException(
   );
 
   if (!eligibility.passed) {
-    return makeIneligibleResult(eligibility, gain95Table1, gain95Table2);
+    return withPartsEcho(makeIneligibleResult(eligibility, gain95Table1, gain95Table2), tables);
   }
 
   // ─── Step 3: 시나리오 분기 ────────────────────────────────
   if (input.scenario === "A") {
-    return calculateScenarioA(
-      eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
-      highValueExcessRuling
-        ? {
-            trace: highValueExcessRuling,
-            gain95Table2OfTaxable: calculateGain95BothTables(
-              highValueExcessRuling.taxableBeforeLthd, holdYears, liveYears, transferDate,
-            ).gain95Table2,
-          }
-        : undefined,
+    return withPartsEcho(
+      calculateScenarioA(
+        eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
+        highValueExcessRuling
+          ? {
+              trace: highValueExcessRuling,
+              // 회신 방식 과세 양도차익은 파트별로(토지 기준면적 이내분·건물 안분값) 장기보유특별공제를 적용한다.
+              gain95Table2OfTaxable: bothTables(
+                highValueExcessRuling.taxableBeforeLthd,
+                lthdParts
+                  ? {
+                      land: { ...lthdParts.land, gain: highValueExcessRuling.landTaxableGain },
+                      building: { ...lthdParts.building, gain: highValueExcessRuling.buildingTaxableGain },
+                    }
+                  : undefined,
+              ).gain95Table2,
+            }
+          : undefined,
+      ),
+      tables,
     );
   } else {
-    return calculateScenarioB(
-      input, eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
+    return withPartsEcho(
+      calculateScenarioB(input, eligibility, gain95Table1, gain95Table2, S, highValueThreshold),
+      tables,
     );
   }
 }

@@ -398,7 +398,9 @@ describe("[신고서] 결정 8 — split-2col 장기보유 보유분·거주분�
   // 1원 어긋남 샘플(탐침): 1.5B · 실가/환산 · 거주 60개월 — 토지 공제 111,000,000.
   // echo 보유 74,000,000 · 거주 37,000,000 / 종전 부동소수 재안분 74,000,001 · 36,999,999.
   const scn = { ...SCN_H, stdT: [Math.floor(1_500_000_000 * 0.3), Math.floor(1_500_000_000 * 0.1)] as [number, number], residenceMonths: 60 };
-  const r = run(scn, COMBOS.AE);
+  // 건물도 토지와 같은 15년(2011-06-01 취득)으로 둔다 — 기본통칙 95-0…1(토지가 건물보다 오래되면 표1·표2 중 큰 공제율)이 끼지 않게 해
+  //   종전 부동소수 재안분과 echo의 1원 차이만 가르는 샘플로 유지한다(통칙 적용 샘플은 아래 별도 it).
+  const r = run(scn, COMBOS.AE, { acquisitionDate: D("2011-06-01") });
   const form = { ...FORM, transferDate: "2026-07-01", contractTotalPrice: String(scn.price), assets: [{ residencePeriodMonthsAsset: "60" }] } as unknown as TransferFormData;
   const lthd = (res: TransferTaxResult) => {
     const rows = buildRows(res, deriveColumns(res).mode, form, undefined, scn.price);
@@ -429,6 +431,19 @@ describe("[신고서] 결정 8 — split-2col 장기보유 보유분·거주분�
     expect(v.holdTotal).toBe(v.holdLand + v.holdBld);
     expect(v.resTotal).toBe(v.resLand + v.resBld);
     expect(v.holdTotal + v.resTotal).toBe(r.longTermHoldingDeduction);
+  });
+
+  it("기본통칙 95-0…1 적용 토지분(건물 7년 · 토지 15년) — 신고서 열은 엔진 echo(보유 건물 7년 28% · 거주 20%)를 읽고, 토지 자신의 15년으로 재안분하면 어긋난다", () => {
+    const r2 = run(scn, COMBOS.AE); // 기본 건물 취득 2019-06-01 → 7년
+    const land = r2.splitDetail!.land;
+    expect(land.appurtenantLthd).toMatchObject({ houseHoldingYears: 7, table1Applied: false });
+    expect(land.longTermDeduction).toBe(88_800_000); // 토지분 185,000,000 × (표2 건물 7년 28% + 거주 5년 20% = 48%)
+    expect([land.holdingDeductionAmount, land.residenceDeductionAmount]).toEqual([51_800_000, 37_000_000]);
+    const v = lthd(r2);
+    expect([v.holdLand, v.resLand]).toEqual([51_800_000, 37_000_000]);
+    // 종전 방식(토지 15년 보유 40% : 거주 20%)으로 재안분하면 59,200,001 · 29,599,999로 틀린다 — echo를 읽어야 하는 이유
+    const wrong = splitLtDeduction(land.longTermDeduction, Math.round(land.holdingYears * 12), 60, true);
+    expect([wrong.holdingAmount, wrong.residenceAmount]).toEqual([59_200_001, 29_599_999]);
   });
 
   it("구 이력(echo 부재) — 종전 재안분 그대로 (74,000,001 · 36,999,999)", () => {
