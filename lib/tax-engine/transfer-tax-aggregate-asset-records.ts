@@ -40,8 +40,10 @@ import {
   applyOneHouseUnitPrice,
   oneHouseUnitOrder,
   resolveOneHouseUnit,
+  resolveUnitExcessShares,
   toHouseVerdict,
 } from "./transfer-tax-one-house-unit";
+import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land";
 import {
   classifyRateGroup,
 } from "./transfer-tax-aggregate-helpers";
@@ -243,6 +245,31 @@ export function buildAssetRecords(
           }
         : unitItems[assetIdx];
     perAsset[assetIdx] = computeOne(item, assetIdx);
+  }
+  /**
+   * #17-2 확장 — 고가주택 단위 + 배율 초과 부수토지: 기획재정부 재산세제과-915(2011.10.27.) 회신 방식은 «전체 부수토지»의 안분값에서 초과분 양도차익을 한 번 뺀다.
+   * 위 1차 계산은 카드마다 자기 양도차익만 안분해(한도 내 카드가 초과분 카드를 모른다) 초과분이 반영되지 않는다 — 1차 결과로 단위 몫을 정하고 해당 카드만 다시 계산한다.
+   * 몫을 줄 카드가 없으면(12억 이하 · 비과세 아님 · 초과분 없음) 아무것도 하지 않는다.
+   */
+  if (unit) {
+    const shares = resolveUnitExcessShares(unitItems, unit, perAsset.map((pa) => pa.result));
+    for (const [assetIdx, share] of shares) {
+      const base = unit.landIdxs.includes(assetIdx)
+        ? { ...unitItems[assetIdx], appurtenantHouseVerdict: toHouseVerdict(unitItems[unit.houseIdx], perAsset[unit.houseIdx].result) }
+        : unitItems[assetIdx];
+      perAsset[assetIdx] = computeOne({ ...base, highValueExcessShare: share }, assetIdx);
+    }
+    if (shares.size > 0) {
+      const line = highValueExcessRulingNoticeText(unitItems[unit.houseIdx].transferDate);
+      if (!warnings.includes(line)) warnings.push(line);
+      // 주택 카드가 토지·건물 가액 구분 없이 자기 토지를 들고 있으면(분리 파트 없음) 그 토지는 «전체 부수토지»에 합산할 수 없다 — 한도 내 부수토지 카드끼리만 계산했다는 사실을 밝힌다.
+      if (!perAsset[unit.houseIdx].result.splitDetail && (unitItems[unit.houseIdx].acquisitionArea ?? 0) > 0) {
+        const lumped =
+          "주택 카드가 토지·건물 가액 구분 없이 자기 토지를 포함하고 있어, 그 토지의 양도차익은 위 «전체 부수토지»에 합산하지 못했습니다 — " +
+          "한도 내 부수토지 카드와 배율 초과 카드만으로 계산했습니다(확인 필요).";
+        if (!warnings.includes(lumped)) warnings.push(lumped);
+      }
+    }
   }
 
   // M-2: 세율군 분류 — 정밀판정·이월과세 채택 교정 item 기준 (원시 플래그 오분류 방지)

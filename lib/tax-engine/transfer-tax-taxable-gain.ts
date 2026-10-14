@@ -18,6 +18,7 @@ import {
   applyHousingLandExclusions,
   hasHousingLandExemptExclusion,
 } from "./transfer-tax-split-rate";
+import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 import { TRANSFER } from "./legal-codes";
 import { housingExcessNeedsStdInputsOfInput } from "./housing-excess-split";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -76,6 +77,31 @@ export function resolveTaxableGain(args: {
     return 0;
   }
   if (!isPartialExempt) return transferGain;
+
+  /**
+   * #17-2 확장 — 토지·건물 분리 파트가 없는 한도 내 토지 카드(함께 양도 부수토지 카드 · 겸용 주택 토지 카드)가 같은 1세대1주택 단위의 배율 초과분 몫(X)을 받은 경우.
+   * 기획재정부 재산세제과-915(2011.10.27.) 회신 방식 — 이 카드 양도차익에 X를 더한 «전체 부수토지»를 안분하고 X를 뺀다(음수면 0). 분리 파트가 있는 주택 카드는
+   * 위 `applyHousingLandExclusions`가 같은 함수로 처리한다.
+   */
+  const unitShare = effectiveInput.highValueExcessShare ?? 0;
+  if (unitShare > 0 && !splitDetail && transferGain > 0) {
+    const taxable = highValueExcessLandTaxableGain({ landGain: transferGain + unitShare, excessGain: unitShare, prorate });
+    const label = formatHighValueThresholdLabel(resolveHighValueHouseThreshold(effectiveInput.transferDate));
+    const denom = effectiveInput.burdenedGiftDenominator ?? effectiveInput.totalPropertyTransferPrice ?? effectiveInput.transferPrice;
+    const whole = transferGain + unitShare;
+    const prorated = prorate(whole);
+    steps.push({
+      label: `과세 양도차익 (${label} 초과분 — 재산세제과-915 회신 방식)`,
+      formula:
+        `고가주택(기준금액 초과) + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익 ${whole.toLocaleString()}` +
+        `(이 카드 ${transferGain.toLocaleString()} + 같은 단위 배율 초과분 몫 ${unitShare.toLocaleString()})의 안분 후 과세분 ${prorated.toLocaleString()} (분모 ${denom.toLocaleString()}, ${label}) − ` +
+        `배율 초과분 ${unitShare.toLocaleString()} = 기준면적 이내 토지분 과세 양도차익 ${taxable.toLocaleString()}` +
+        (prorated - unitShare < 0 ? " (음수여서 0)" : ""),
+      amount: taxable,
+      legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
+    });
+    return taxable;
+  }
 
   const taxableGain = prorate(transferGain);
   /**

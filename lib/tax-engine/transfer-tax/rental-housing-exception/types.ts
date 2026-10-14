@@ -305,6 +305,28 @@ export type FormulaTrace = {
   /** B2 각 호 과세 양도소득금액 (1호 + 2호 합산 전 개별값) */
   part1?: number;
   part2?: number;
+  /**
+   * A2 + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식으로 과세 양도차익을 만든 경우의 echo(결과 카드 표기용).
+   * 과세 양도차익(`taxableBeforeLthd`, 표2 장기보유특별공제 적용 전) = 기준면적 이내 토지분(전체 부수토지 안분값 − 초과분, 0 하한) + 건물분 안분값.
+   * 이 값에 표2 공제를 적용한 금액이 A2의 과세대상 양도소득금액이다(초과분 자체는 이 특례 밖 — 별도 비사업용 토지 파트).
+   */
+  highValueExcessRuling?: HighValueExcessRulingTrace;
+};
+
+/** `FormulaTrace.highValueExcessRuling` — A2 회신 방식 산식 구성값 */
+export type HighValueExcessRulingTrace = {
+  /** 전체 부수토지 양도차익(기준면적 이내분 + 초과분, 안분 전) */
+  wholeLandGain: number;
+  /** 그 안분값 */
+  wholeLandProrated: number;
+  /** 배율 초과분 양도차익(안분 전 전액 과세 — 이 특례 밖) */
+  excessGain: number;
+  /** 기준면적 이내 토지분 과세 양도차익 = max(0, 안분값 − 초과분) */
+  landTaxableGain: number;
+  /** 건물분 안분값 */
+  buildingTaxableGain: number;
+  /** 위 둘의 합 — 표2 장기보유특별공제 적용 전 */
+  taxableBeforeLthd: number;
 };
 
 /**

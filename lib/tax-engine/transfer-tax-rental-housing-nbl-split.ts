@@ -17,7 +17,9 @@ import {
   buildLandRateInput,
 } from "./transfer-tax-appurtenant-land";
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
-import type { ParsedRates } from "./transfer-tax-helpers";
+import { calcOneHouseProration, type ParsedRates } from "./transfer-tax-helpers";
+import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
+import type { HighValueExcessRulingTrace } from "./transfer-tax/rental-housing-exception/types";
 
 /**
  * 주택 부수토지 **배율 초과분**(「소득세법」 제104조의3 제1항 제5호 비사업용 토지) 분리 결과.
@@ -189,5 +191,37 @@ export function resolveClause5Tax(args: {
       `${Math.round(housingPart.appliedRate * 100)}% ${housingPart.calculatedTax.toLocaleString()} + ` +
       `배율 초과 토지(비사업용) ${Math.round(nblPart.appliedRate * 100)}% ` +
       `${nblPart.calculatedTax.toLocaleString()} (합산 누진세액 ${clause1.toLocaleString()}과 비교한 큰 세액)`,
+  };
+}
+
+
+/**
+ * A2(거주주택 고가주택 양도) + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식의 과세 양도차익(표2 장기보유특별공제 적용 전).
+ *
+ * §155⑳은 거주주택을 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」할 뿐이라 고가주택 안분(영 §160①)은 일반 1세대1주택과 같은 산식이다 —
+ * 단일 주택 경로(`applyHousingLandExclusions`)와 **같은 leaf**(`highValueExcessLandTaxableGain`)·같은 안분 함수(`calcOneHouseProration`)를 쓴다.
+ * 기준면적 이내 토지분 = max(0, 전체 부수토지 양도차익의 안분값 − 초과분 양도차익), 건물분 = 안분값. 초과분(`nbl.gain`)은 이 특례 밖(비사업용 토지 — 별도 파트)이다.
+ * 토지·건물 양도차익은 분리 계산 결과(`splitDetail`)가 정한다 — 음수는 단일 경로와 같이 0으로 본다.
+ *
+ * ⚠️ A 시나리오 전용이다. B 시나리오(§161 안분)와의 결합 순서는 법령·해석례에 근거가 없어 적용하지 않는다(호출부가 고지).
+ */
+export function buildRentalHighValueExcessRuling(
+  input: Pick<TransferTaxInput, "transferDate" | "transferPrice" | "totalPropertyTransferPrice" | "burdenedGiftDenominator">,
+  splitDetail: SplitGainResult,
+  nbl: Pick<AppurtenantExcessSplit, "gain">,
+): HighValueExcessRulingTrace {
+  const prorate = (gain: number) =>
+    calcOneHouseProration(input.transferDate, gain, input.transferPrice, input.totalPropertyTransferPrice, input.burdenedGiftDenominator);
+  const wholeLandGain = Math.max(0, splitDetail.land.gain);
+  const buildingGain = Math.max(0, splitDetail.building.gain);
+  const landTaxableGain = highValueExcessLandTaxableGain({ landGain: wholeLandGain, excessGain: nbl.gain, prorate });
+  const buildingTaxableGain = prorate(buildingGain);
+  return {
+    wholeLandGain,
+    wholeLandProrated: prorate(wholeLandGain),
+    excessGain: nbl.gain,
+    landTaxableGain,
+    buildingTaxableGain,
+    taxableBeforeLthd: landTaxableGain + buildingTaxableGain,
   };
 }

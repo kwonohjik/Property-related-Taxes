@@ -148,7 +148,8 @@ describe("겸용주택 × 지분 분할 취득 (축 B)", () => {
       Math.floor((single.json.data?.result?.total?.transferTax ?? 0) * 1.1),
     );
     // 값이 0이면 위 단언이 공허해진다.
-    expect(single.json.data?.result?.total?.transferTax).toBe(138_366_556);
+    // 🔁 #17-2b 갱신: 138,366,556 → 133,703,389 (고가주택 + 배율 초과 — 재산세제과-915 회신 방식). 위 aggregate = 단건 × 1.1 동치는 그대로다.
+    expect(single.json.data?.result?.total?.transferTax).toBe(133_703_389);
   });
 
   it("FB-3 지분 카드가 각각 파트 5장으로 펼쳐진다", async () => {

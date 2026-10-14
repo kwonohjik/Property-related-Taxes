@@ -13,6 +13,7 @@ import { giftHouseholdPriorResidenceMonths } from "./one-house/gift-household-ba
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap, presaleRightStartDate } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
+import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
@@ -477,6 +478,11 @@ export function calcMixedUseTransferTax(
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
   const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
+  // 고가주택(일부 비과세) + 배율 초과 — 어떤 산식으로 안분했는지 결과에 남긴다(단일 주택 `highValueExcessFormulaNotice`와 같은 문구).
+  //   G-3(나중 취득 토지)이 겹치면 회신 방식을 쓰지 않았다고 밝힌다. 12억 이하·비과세 아님은 이 산식이 닿지 않아 고지가 없다.
+  if (housingPart.nonBusinessTransferredGain > 0 && isOneHouseExempt && !housingPart.isExempt) {
+    warnings.push(highValueExcessRulingNoticeText(transferDate, laterLandExemptExcluded));
+  }
   // OH-17 — §154③ 본문 + 전체 12억 이하 비과세: 상가 부분도 주택 → 소득금액 0, 배율 초과 토지분만 비사토로.
   const commercialAsHouse = wholeBuildingDeemedHouse
     ? exemptCommercialPartAsHouse(splitCommercialPart, excessResult.nonBizRatio, laterLandExemptExcluded)

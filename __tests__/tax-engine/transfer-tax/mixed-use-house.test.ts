@@ -364,18 +364,22 @@ describe("SC-3b: 12억 안분 vs 비사업용 이전 교차 처리 (회귀)", ()
     expect(result.nonBusinessLandPart!.transferGain).toBe(transferredGain);
   });
 
-  it("주택부분 12억 안분 = (주택 토지차익 - 비사업용 이전분 + 건물차익) × 안분비율", () => {
-    const housingLandAfterNB =
-      result.housingPart.landTransferGain - result.housingPart.nonBusinessTransferredGain;
+  it("주택부분 12억 안분 — 재산세제과-915 회신 방식: 한도 내 토지분 = max(0, 전체 토지차익 × 안분비율 − 비사업용 이전분) + 건물차익 × 안분비율", () => {
+    // 🔁 #17-2b 갱신 — 종전 단언은 (주택 토지차익 − 비사업용 이전분 + 건물차익) × 안분비율이었다(초과분을 떼어낸 나머지를 다시 안분 = 초과분 이중 반영).
+    const transferredGain = result.housingPart.nonBusinessTransferredGain;
+    const landGain = result.housingPart.landTransferGain;
     const buildingGain = result.housingPart.buildingTransferGain;
     const housingTransferPrice = result.apportionment.housingTransferPrice;
     const proratio = (housingTransferPrice - 1_200_000_000) / housingTransferPrice;
 
-    const expectedLandPart = Math.floor(Math.max(housingLandAfterNB, 0) * proratio);
+    const expectedLandPart = Math.max(0, Math.floor(Math.max(landGain, 0) * proratio) - transferredGain);
     const expectedBuildingPart = Math.floor(Math.max(buildingGain, 0) * proratio);
     const expectedProrated = expectedLandPart + expectedBuildingPart;
 
     expect(result.housingPart.proratedTaxableGain).toBe(expectedProrated);
+    // 옛 산식(초과분을 뗀 나머지를 다시 안분)과는 다른 값이어야 한다 — 이 단언이 회신 방식 적용을 고정한다
+    const old = Math.floor(Math.max(landGain - transferredGain, 0) * proratio) + expectedBuildingPart;
+    expect(result.housingPart.proratedTaxableGain).not.toBe(old);
   });
 
   it("주택 + 비사업용 양도소득금액 합계가 합리적 (이중 계산 없음)", () => {

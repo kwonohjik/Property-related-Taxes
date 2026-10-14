@@ -691,6 +691,20 @@ export interface MixedUseHousingPart {
    * 토지분은 과세(`commercialPart.incomeAmount`). 결과 화면·신고서가 「전액 비과세」로 그리지 않도록 싣는다.
    */
   laterLandExemptExcluded?: true;
+  /**
+   * 고가주택(12억 초과 부분과세) + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식을 적용했을 때만 존재하는 echo(세액 불변 · 표시 전용).
+   * 기준면적 이내 토지분 과세 양도차익 = 전체 부수토지 양도차익(`wholeLandGain` — 이내분 + 초과분)의 안분값(`wholeLandProrated`) − 초과분 양도차익
+   * (`nonBusinessTransferredGain`, 음수면 0). 건물분은 안분값. 표시 지점은 이 값을 읽고 다시 만들지 않는다(「집계·표시가 엔진 산식 재작성」 방지).
+   */
+  highValueExcessRuling?: {
+    wholeLandGain: number;
+    wholeLandProrated: number;
+    landTaxableGain: number;
+    buildingTaxableGain: number;
+    /** 위 두 과세 양도차익에 각 파트 보유연수의 공제율을 곱한 장기보유특별공제 — 신고서 4열이 합계 장특을 양도차익 비율로 나누지 않고 읽는다. */
+    landLongTermDeduction: number;
+    buildingLongTermDeduction: number;
+  };
   /** 12억 초과 안분 후 과세대상 양도차익 */
   proratedTaxableGain: number;
   /** 장기보유공제 표 (1 또는 2) */

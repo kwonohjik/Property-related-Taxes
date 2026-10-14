@@ -19,7 +19,7 @@ import {
   rentalHousingBasisOf,
   rentalHousingBasisShort,
 } from "./transfer-tax/rental-housing-exception/display-labels";
-import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
+import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "./one-house/threshold";
 import { qualifiesWinWinRental } from "./transfer-tax-exemption-requirements";
 import {
   buildEligibilityContext,
@@ -46,7 +46,8 @@ import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
-import { splitAppurtenantExcess, resolveClause5Tax } from "./transfer-tax-rental-housing-nbl-split";
+import { highValueExcessRulingNoticeText, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
+import { splitAppurtenantExcess, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -192,9 +193,22 @@ export function runRentalHousingExceptionStep(
   const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
   // 배율 초과 부수토지는 §154①(→§154⑦)의 「이에 딸린 토지」가 아니므로 §155⑳ 의제 대상 밖이다.
   // 특례 계산에 넣기 **전에** 떼어내야 12억 안분·표2 장특이 그 부분에 잘못 미치지 않는다
-  // (일반 경로 `applyHousingLandExclusions`의 ①→② 순서와 같다).
+  // (일반 경로 `applyHousingLandExclusions`의 ①→② 순서와 같다). 단 고가주택(A2)이면 «나머지»를 다시 안분하지 않고 재산세제과-915 회신 방식
+  // (아래 `rulingFacts` — 전체 부수토지 안분값에서 초과분을 한 번만 뺀다)으로 과세 양도차익을 만든다.
   const nbl = splitAppurtenantExcess(effectiveInput, splitDetail, transferGain);
   const housingGain = transferGain - (nbl?.gain ?? 0);
+  // 고가주택(A2) + 배율 초과 — 단일 주택과 같은 재산세제과-915 회신 방식(초과분을 안분 전에 떼어낸 «나머지»를 다시 안분하면 초과분이 이중으로 빠진다).
+  // A 시나리오만이다 — B(§161 안분)와의 결합은 근거가 없어 종전 계산을 유지하고 아래에서 고지한다.
+  // 나중 취득 부수토지가 보유요건에 못 미치는 경우(G-3)는 일반 경로(`applyHousingLandExclusions`)가 같은 술어(`isLaterAcquiredLandExemptExcluded`)로
+  // 회신 방식을 쓰지 않는다 — 이 경로는 G-3 자체를 처리하지 않으므로(별건) 종전 계산을 유지하고 그 사실을 고지한다.
+  const rulingGateOpen =
+    !!nbl && !!splitDetail && effectiveInput.rentalHousingException!.scenario === "A" &&
+    resolveHighValueDenominator(effectiveInput) > resolveHighValueHouseThreshold(effectiveInput.transferDate);
+  const laterLandOverlap = rulingGateOpen && isLaterAcquiredLandExemptExcluded(effectiveInput);
+  const rulingFacts =
+    rulingGateOpen && !laterLandOverlap
+      ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!)
+      : undefined;
   const rhe = calculateRentalHousingException(
     effectiveInput.rentalHousingException!,
     housingGain,
@@ -209,6 +223,7 @@ export function runRentalHousingExceptionStep(
     qualifiesWinWinRental(effectiveInput),
     buildEligibilityContext(effectiveInput),
     effectiveInput.transferDate,
+    rulingFacts,
   );
 
   // 근거 조문은 판정이 정한 `eligibility.laws`를 따른다 — §154⑩ 표준 경로(B · 0호)는 §155⑳ 본문이 성립하지 않는다(S06-13).
@@ -271,6 +286,29 @@ export function runRentalHousingExceptionStep(
       label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
       formula: table2ReadingNotice,
       amount: 0,
+      legalBasis: rheBasis,
+    });
+  }
+  // 고가주택 + 배율 초과 부수토지 — 어떤 산식으로 안분했는지 남긴다. A2는 재산세제과-915 회신 방식, B2는 그 회신을 적용하지 않았다는 사실(결합 근거 없음).
+  const rulingTrace = rhe.formulaTrace.highValueExcessRuling;
+  const thresholdLabel = formatHighValueThresholdLabel(resolveHighValueHouseThreshold(effectiveInput.transferDate));
+  const highValueExcessNotice = rulingTrace
+    ? highValueExcessRulingNoticeText(effectiveInput.transferDate)
+    : nbl && rhe.scenarioId === "RH-B2"
+      ? "고가주택에 배율 초과 부수토지가 함께 있으나, 직전거주주택보유주택(소득세법 시행령 §161② 안분) 계산에는 기획재정부 재산세제과-915(2011.10.27.) 회신 방식을 적용하지 않았습니다 — " +
+        "이 경우 회신 방식과 같은 영 §161 안분을 합치는 순서를 정할 근거를 확인하지 못해, 배율 초과분을 안분 전에 떼어낸 주택분에 §161②를 적용한 종전 계산을 유지했습니다 — 확인이 필요합니다"
+      : laterLandOverlap && rhe.scenarioId === "RH-A2"
+        ? `고가주택에 배율 초과 부수토지가 함께 있으나, 주택보다 나중에 취득한 부수토지가 보유요건(소득세법 시행령 §154①)에 못 미쳐 기획재정부 재산세제과-915(2011.10.27.) 회신 방식을 적용하지 않았습니다 — ` +
+          `이 특례 경로는 나중에 취득한 부수토지분을 일반 경로처럼 비과세에서 제외하지 않고 종전 계산(배율 초과분만 떼어낸 주택분에 ${thresholdLabel} 초과 비율 안분)을 유지했으므로, 그 토지분의 처리를 별도로 확인해야 합니다 — 확인이 필요합니다`
+        : undefined;
+  if (rulingTrace) {
+    steps.push({
+      label: "고가주택 + 배율 초과 부수토지 — 재산세제과-915 회신 방식",
+      formula:
+        `기준면적 이내 토지분 = 전체 부수토지 양도차익 ${rulingTrace.wholeLandGain.toLocaleString()}의 안분값 ${rulingTrace.wholeLandProrated.toLocaleString()} − 배율 초과분 ${rulingTrace.excessGain.toLocaleString()}` +
+        `${rulingTrace.wholeLandProrated - rulingTrace.excessGain < 0 ? " (음수여서 0)" : ""} = ${rulingTrace.landTaxableGain.toLocaleString()} · ` +
+        `건물분 안분값 ${rulingTrace.buildingTaxableGain.toLocaleString()} → 과세 양도차익 ${rulingTrace.taxableBeforeLthd.toLocaleString()}에 표2 장기보유특별공제를 적용해 과세대상 양도소득금액 ${rhe.taxableGain.toLocaleString()}`,
+      amount: rhe.taxableGain,
       legalBasis: rheBasis,
     });
   }
@@ -564,7 +602,7 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
@@ -572,6 +610,7 @@ export function runRentalHousingExceptionStep(
             periodPendingNotice,
             table2ReadingNotice,
             prhpSurchargeNotice,
+            highValueExcessNotice,
             // OH-40·§7-5 판정 보류·확인 필요 고지 — 결론은 바꾸지 않는다.
             ...(rhe.eligibility.notices ?? []),
           ].filter((x): x is string => x !== undefined),

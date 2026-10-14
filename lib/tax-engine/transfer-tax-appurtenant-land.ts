@@ -21,6 +21,8 @@ import { TRANSFER } from "./legal-codes";
 import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
+export { highValueExcessLandTaxableGain, allocateUnitExcessShares } from "./high-value-excess-land";
 export { housingExcessAcqContractNotice } from "./housing-excess-acq-contract";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 
@@ -313,6 +315,14 @@ export function highValueExcessFormulaNotice(
   laterLandExcluded = false,
 ): string | null {
   if (!isPartialExempt || !splitDetail?.nonBusinessLandPart) return null;
+  return highValueExcessRulingNoticeText(transferDate, laterLandExcluded);
+}
+
+/**
+ * `highValueExcessFormulaNotice`의 문구 — 단일 주택 · 겸용주택 · 함께 양도 카드가 같은 사실 서술을 쓴다(게이트는 호출부가 정한다).
+ * `laterLandExcluded`이면 회신 방식을 적용하지 않았다고 밝힌다.
+ */
+export function highValueExcessRulingNoticeText(transferDate: Date, laterLandExcluded = false): string {
   // 「12억」 리터럴 금지 — 고가주택 기준금액은 양도일 연혁(6억·9억·12억)이다.
   const label = formatHighValueThresholdLabel(resolveHighValueHouseThreshold(transferDate));
   if (laterLandExcluded) {
@@ -511,7 +521,9 @@ export function applyHousingLandExclusions(args: {
   if (!splitDetail) return null;
   const excess = resolveAppurtenantLandExcess(input);
   const laterLand = isLaterAcquiredLandExemptExcluded(input);
-  if (!excess && !laterLand) return null;
+  // 함께 양도 1세대1주택 단위의 다른 카드(배율 초과분 · 다른 부수토지 카드)가 있어 합산 엔진이 이 주택 카드 토지분의 몫을 실은 경우 — 자기 초과가 없어도 처리한다.
+  const unitShare = input.highValueExcessShare !== undefined && input.highValueExcessShare > 0 ? input.highValueExcessShare : undefined;
+  if (!excess && !laterLand && unitShare === undefined) return null;
 
   const landGain = Math.max(0, splitDetail.land.gain);
   const buildingGain = Math.max(0, splitDetail.building.gain);
@@ -527,12 +539,15 @@ export function applyHousingLandExclusions(args: {
   //   고가주택(일부 비과세) + 배율 초과 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익을 12억 안분한 값에서
   //   초과분 양도차익을 뺀 것이 한도 내 토지분이고, 음수면 0이다(초과분이 안분 후 토지분보다 크면 그 차액은 없는 것으로 본다).
   //   G-3(나중 취득 토지 보유요건 미달)은 토지분 전체가 비과세 대상이 아니라 안분 대상이 아니므로 종전대로다.
-  const rulingApplies = excess !== null && isPartialExempt && !isExempt && !laterLand;
-  const wholeLandProrated = rulingApplies ? prorate(landGain) : 0;
+  const rulingApplies = (excess !== null || unitShare !== undefined) && isPartialExempt && !isExempt && !laterLand;
+  //   단위 몫(`highValueExcessShare`)이 있으면 한도 내 토지분(자기 토지 − 자기 초과분)에 그 몫을 더해 «전체 부수토지»를 이룬다. 없으면 몫 = 자기 초과분이라 종전과 같다.
+  const excessForRuling = unitShare ?? nonBusinessGain;
+  const wholeLandGain = housingLandGain + excessForRuling;
+  const wholeLandProrated = rulingApplies ? prorate(wholeLandGain) : 0;
   const landTaxableGain = !exemptApplies || laterLand
     ? housingLandGain
     : rulingApplies
-      ? Math.max(0, wholeLandProrated - nonBusinessGain)
+      ? highValueExcessLandTaxableGain({ landGain: wholeLandGain, excessGain: excessForRuling, prorate })
       : applyExempt(housingLandGain);
   const buildingTaxableGain = !exemptApplies ? buildingGain : applyExempt(buildingGain);
 
@@ -560,12 +575,13 @@ export function applyHousingLandExclusions(args: {
     );
   }
   if (rulingApplies) {
-    const diff = wholeLandProrated - nonBusinessGain;
+    const diff = wholeLandProrated - excessForRuling;
     reasons.push(
-      `고가주택(기준금액 초과) — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익 ${landGain.toLocaleString()}의 ` +
-        `안분 후 과세분 ${wholeLandProrated.toLocaleString()} − 배율 초과분 ${nonBusinessGain.toLocaleString()} = ` +
+      `고가주택(기준금액 초과) — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익 ${wholeLandGain.toLocaleString()}의 ` +
+        `안분 후 과세분 ${wholeLandProrated.toLocaleString()} − 배율 초과분 ${excessForRuling.toLocaleString()} = ` +
         `기준면적 이내 토지분 과세 양도차익 ${landTaxableGain.toLocaleString()}` +
-        (diff < 0 ? " (음수여서 0)" : ""),
+        (diff < 0 ? " (음수여서 0)" : "") +
+        (unitShare !== undefined && unitShare !== nonBusinessGain ? " (함께 양도하는 부수토지의 배율 초과분을 단위로 합산해 이 카드 몫으로 나눈 값)" : ""),
     );
   }
   if (laterLand) {

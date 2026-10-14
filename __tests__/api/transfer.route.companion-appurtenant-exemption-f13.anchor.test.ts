@@ -142,7 +142,9 @@ describe("F-13 주택 + 배율 이내 부수토지 = 1세대1주택 단위", () 
     expect(byId(a, "c1__excess").longTermHoldingDeduction).toBe(19_200_000);
     // #18(G… S08-7) — 12억 판정·안분 분모의 합계액에 배율 초과분 가액을 넣는다(법문 괄호 «주택 및 이에 딸린 토지의 … 합계액»에 배율 한정이 없다).
     // 합계 12.4억 → 14억: 안분 비율 (12.4−12)/12.4 → (14−12)/14라 주택분 과세가 늘어 15,996,200 → 19,927,913.
-    expect(a.totalTax).toBe(19_927_913);
+    // 🔁 #17-2b 갱신: 19,927,913 → 18,796,485. 한도 내 카드의 과세 양도차익이 «자기 양도차익 × 안분 비율»에서 재산세제과-915 회신 방식
+    // (전체 부수토지 안분값 − 초과분 양도차익, 음수면 0)으로 바뀌었다 — 단일 주택 입력과 같은 값(`dec17-2b-…-paths.anchor`).
+    expect(a.totalTax).toBe(18_796_485);
   });
 
   it("F13-4 Q-3 부수토지를 주택보다 늦게 취득해 부수토지로서 2년 미만 → 그 토지는 비과세 아님", async () => {
@@ -213,7 +215,7 @@ describe("#18 12억 판정·안분 분모 — 배율 초과 부수토지 가액�
     expect(byId(a, "primary").isExempt).toBe(false);
     expect(byId(a, "c1__appurtenant").isExempt).toBe(false);
     expect(byId(a, "c1__excess").rateGroup).toBe("non_business_land");
-    expect(a.totalTax).toBe(31_005_069);
+    expect(a.totalTax).toBe(29_307_927); // 🔁 #17-2b 갱신: 31,005,069 → 29,307,927 (회신 방식 — F13-3과 같은 사유)
   });
 
   it("F13-9 긍정 짝 — 초과분을 넣어도 합계가 12억 이하면(주택 6억 + 토지 4억 500㎡) 주택·한도 내 토지는 비과세 그대로", async () => {

@@ -559,12 +559,26 @@ export function buildRows(
     const nbLtDeduction = mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
     setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount + nbLtDeduction);
     setNum("ltResidencePart", "total", hpSplit.residenceAmount);
-    setNum("ltHoldingPart", "housingLand", Math.floor(hpSplit.holdingAmount * hpLandRatio) + nbLtDeduction);
-    setNum("ltHoldingPart", "housingBuilding", Math.floor(hpSplit.holdingAmount * hpBuildRatio));
+    // 재산세제과-915 회신 방식(고가주택 + 배율 초과)이면 주택분 토지·건물의 장특이 양도차익 비율이 아니라 **엔진 echo**(`highValueExcessRuling`)로 갈린다 —
+    // 그 비율로 보유·거주분을 나누고 건물 열이 잔액을 흡수한다(위 「장기보유특별공제」 열과 같은 값 · 합 불변식).
+    const ruling = mu.housingPart.highValueExcessRuling;
+    const hpTotalLt = mu.housingPart.longTermDeductionAmount;
+    const splitByRuling = (amount: number) => {
+      const land = hpTotalLt > 0 ? Math.floor((amount * ruling!.landLongTermDeduction) / hpTotalLt) : 0;
+      return { land, building: amount - land };
+    };
+    const hpHolding = ruling
+      ? splitByRuling(hpSplit.holdingAmount)
+      : { land: Math.floor(hpSplit.holdingAmount * hpLandRatio), building: Math.floor(hpSplit.holdingAmount * hpBuildRatio) };
+    const hpResidence = ruling
+      ? splitByRuling(hpSplit.residenceAmount)
+      : { land: Math.floor(hpSplit.residenceAmount * hpLandRatio), building: Math.floor(hpSplit.residenceAmount * hpBuildRatio) };
+    setNum("ltHoldingPart", "housingLand", hpHolding.land + nbLtDeduction);
+    setNum("ltHoldingPart", "housingBuilding", hpHolding.building);
     setNum("ltHoldingPart", "commercialLand", Math.floor(cpSplit.holdingAmount * cpLandRatio));
     setNum("ltHoldingPart", "commercialBuilding", Math.floor(cpSplit.holdingAmount * cpBuildRatio));
-    setNum("ltResidencePart", "housingLand", Math.floor(hpSplit.residenceAmount * hpLandRatio));
-    setNum("ltResidencePart", "housingBuilding", Math.floor(hpSplit.residenceAmount * hpBuildRatio));
+    setNum("ltResidencePart", "housingLand", hpResidence.land);
+    setNum("ltResidencePart", "housingBuilding", hpResidence.building);
     setNum("ltResidencePart", "commercialLand", 0);
     setNum("ltResidencePart", "commercialBuilding", 0);
   } else if (mode === "split-2col" && sp) {

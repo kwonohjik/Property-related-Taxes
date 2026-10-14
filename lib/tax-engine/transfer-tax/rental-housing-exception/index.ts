@@ -29,6 +29,7 @@ import type {
   RentalHousingExceptionInput,
   RentalHousingExceptionResult,
   FormulaTrace,
+  HighValueExcessRulingTrace,
 } from "./types";
 
 export type {
@@ -41,6 +42,7 @@ export type {
   EligibilityResult,
   RentalUnitVerdict,
   FormulaTrace,
+  HighValueExcessRulingTrace,
 } from "./types";
 
 /**
@@ -97,6 +99,12 @@ export function calculateRentalHousingException(
    * 호출부(`runRentalHousingExceptionStep`)는 항상 넘긴다.
    */
   transferDate?: Date,
+  /**
+   * A2(거주주택 고가주택 양도)에 한해 — 배율 초과 부수토지가 함께 있어 호출부가 재산세제과-915 회신 방식으로 만든 과세 양도차익.
+   * 있으면 A2의 `gain95(표2) × (S − 기준)/S` 대신 이 과세 양도차익(`taxableBeforeLthd`)에 표2 장기보유특별공제를 적용한다
+   * (이미 안분이 끝난 값이라 비율을 다시 곱하면 이중 안분이다). B 시나리오에는 쓰지 않는다(§161 안분과의 결합 근거 없음).
+   */
+  highValueExcessRuling?: HighValueExcessRulingTrace,
 ): RentalHousingExceptionResult {
   // ─── Step 0: 토글 OFF ─────────────────────────────────────
   if (!input.applyException) {
@@ -131,6 +139,14 @@ export function calculateRentalHousingException(
   if (input.scenario === "A") {
     return calculateScenarioA(
       eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
+      highValueExcessRuling
+        ? {
+            trace: highValueExcessRuling,
+            gain95Table2OfTaxable: calculateGain95BothTables(
+              highValueExcessRuling.taxableBeforeLthd, holdYears, liveYears, transferDate,
+            ).gain95Table2,
+          }
+        : undefined,
     );
   } else {
     return calculateScenarioB(
@@ -149,6 +165,7 @@ function calculateScenarioA(
   gain95Table2: number,
   S: number,
   highValueThreshold: number,
+  ruling?: { trace: HighValueExcessRulingTrace; gain95Table2OfTaxable: number },
 ): RentalHousingExceptionResult {
   const isHighValue = S > highValueThreshold;
 
@@ -175,7 +192,10 @@ function calculateScenarioA(
   const highNumerator = S - highValueThreshold;
   const ratioHighValue = S > 0 ? highNumerator / S : 0;
 
-  const taxableGain = safeMultiplyThenDivide(gain95Table2, highNumerator, S);
+  // 배율 초과 부수토지가 함께 있으면(`ruling`) 호출부가 재산세제과-915 회신 방식으로 안분을 이미 끝낸 과세 양도차익을 넘긴다 — 표2 공제만 적용한다.
+  const taxableGain = ruling
+    ? ruling.gain95Table2OfTaxable
+    : safeMultiplyThenDivide(gain95Table2, highNumerator, S);
   const exemptGain = gain95Table2 - taxableGain;
 
   return {
@@ -191,6 +211,7 @@ function calculateScenarioA(
       ratioHighValue,
       capApplied: false,
       highValueThreshold,
+      ...(ruling ? { highValueExcessRuling: ruling.trace } : {}),
     },
   };
 }
