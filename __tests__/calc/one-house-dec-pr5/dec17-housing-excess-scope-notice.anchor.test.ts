@@ -30,7 +30,7 @@ import { runCalc } from "../_helpers/redev-one-house-route";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { housingExcessNeedsLandSplit, housingExcessZonePending } from "@/lib/calc/housing-excess-split";
-import { isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
+import { isBeforeHousePriceFirstDisclosure, isBeforeLandPriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 beforeEach(() => {
@@ -72,8 +72,17 @@ const single = (over: Record<string, unknown> = {}) =>
 const warningsOf = (r: Awaited<ReturnType<typeof runCalc>>): string[] =>
   (r.result?.warnings ?? r.json?.data?.aggregated?.warnings ?? []) as string[];
 
-describe("#17 보정 1 — 2005-04-30 전 취득은 분리 경로 밖 (막지 않고 비과세 + 고지)", () => {
-  it("경계 — 취득일이 2005-04-30 전이면 true, 당일·이후·미입력은 false", () => {
+describe("#17 보정 1 · #17-5 ① — 1990-08-30 전 취득은 분리 경로 밖 (막지 않고 비과세 + 고지) · 그 이후 2005-04-30 전 취득은 영 §164⑦ 추정값으로 5칸 경로", () => {
+  it("경계 — 개별공시지가 최초 고시일(1990-08-30) 전이면 true, 당일·이후·미입력은 false", () => {
+    expect(isBeforeLandPriceFirstDisclosure("1990-08-29")).toBe(true);
+    expect(isBeforeLandPriceFirstDisclosure("1990-08-30")).toBe(false);
+    expect(isBeforeLandPriceFirstDisclosure("2000-03-01")).toBe(false);
+    expect(isBeforeLandPriceFirstDisclosure(undefined)).toBe(false);
+    expect(isBeforeLandPriceFirstDisclosure(new Date("1990-08-29T00:00:00.000Z"))).toBe(true);
+    expect(isBeforeLandPriceFirstDisclosure(new Date("1990-08-30T00:00:00.000Z"))).toBe(false);
+  });
+
+  it("경계 — 개별주택가격 최초 공시일(2005-04-30)은 화면 힌트(§164⑦ 추정값) 분기에만 쓴다", () => {
     expect(isBeforeHousePriceFirstDisclosure("2005-04-29")).toBe(true);
     expect(isBeforeHousePriceFirstDisclosure("2005-04-30")).toBe(false);
     expect(isBeforeHousePriceFirstDisclosure("2012-01-02")).toBe(false);
@@ -82,16 +91,19 @@ describe("#17 보정 1 — 2005-04-30 전 취득은 분리 경로 밖 (막지 �
     expect(isBeforeHousePriceFirstDisclosure(new Date("2005-04-30T00:00:00.000Z"))).toBe(false);
   });
 
-  it("④⑤⑧ 술어 — 2000-03-01 취득은 분리 대상 아님 · 소재지 구분 요구도 없음 / 긍정 짝 2005-04-30 취득은 대상", () => {
-    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "2000-03-01" }), TD)).toBe(false);
-    expect(housingExcessZonePending(asset({ acquisitionDate: "2000-03-01", appurtenantLandZone: undefined }))).toBe(false);
-    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "2005-04-29" }), TD)).toBe(false);
+  it("④⑤⑧ 술어 — 1989 취득은 분리 대상 아님 · 소재지 구분 요구도 없음 / 1990-08-30 이후(2000-03-01 · 2005-04-29 · 2005-04-30)는 대상", () => {
+    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "1989-06-01" }), TD)).toBe(false);
+    expect(housingExcessZonePending(asset({ acquisitionDate: "1989-06-01", appurtenantLandZone: undefined }))).toBe(false);
+    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "1990-08-29" }), TD)).toBe(false);
+    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "1990-08-30" }), TD)).toBe(true);
+    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "2000-03-01" }), TD)).toBe(true);
+    expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "2005-04-29" }), TD)).toBe(true);
     expect(housingExcessNeedsLandSplit(asset({ acquisitionDate: "2005-04-30" }), TD)).toBe(true);
-    expect(housingExcessZonePending(asset({ acquisitionDate: "2005-04-30", appurtenantLandZone: undefined }))).toBe(true);
+    expect(housingExcessZonePending(asset({ acquisitionDate: "2000-03-01", appurtenantLandZone: undefined }))).toBe(true);
   });
 
-  it("폼→④→⑧→⑫→⑭→엔진 — 2000-03-01 취득 + 초과 200㎡(기준시가 칸 없음)는 ⑧이 막지 않고 비과세·총세액 0 + «초과분 미분리» 고지", async () => {
-    const r = await runCalc(single({ acquisitionDate: "2000-03-01" }));
+  it("폼→④→⑧→⑫→⑭→엔진 — 1989-06-01 취득 + 초과 200㎡(기준시가 칸 없음)는 ⑧이 막지 않고 비과세·총세액 0 + «초과분 미분리» 고지", async () => {
+    const r = await runCalc(single({ acquisitionDate: "1989-06-01" }));
     expect(r.issues.some((i) => i.message.includes("배율 한도를"))).toBe(false);
     expect(r.issues).toEqual([]);
     expect(r.status).toBe(200);
@@ -101,16 +113,25 @@ describe("#17 보정 1 — 2005-04-30 전 취득은 분리 경로 밖 (막지 �
     const w = warningsOf(r).find((x) => x.includes("초과분 미분리"));
     expect(w, JSON.stringify(warningsOf(r))).toBeDefined();
     expect(w).toContain("200.00㎡");
-    expect(w).toContain("2005년 전 취득");
+    expect(w).toContain("1990-08-30");
     expect(w).toContain("확인이 필요합니다");
   });
 
-  it("긍정 짝 — 같은 시료가 2005-04-30 취득이면 분리 경로라 ⑧이 취득시 개별주택가격을 요구한다", async () => {
-    const r = await runCalc(single({ acquisitionDate: "2005-04-30" }));
-    expect(r.issues.some((i) => i.field === "standardPriceAtAcq" && i.message.includes("배율 한도를"))).toBe(true);
+  it("#17-5 ① 같은 시료가 2000-03-01 취득이면 분리 경로라 ⑧이 영 §164⑦ 추정 기준시가(취득시 개별주택가격 칸)를 요구한다", async () => {
+    const r = await runCalc(single({ acquisitionDate: "2000-03-01" }));
+    const hit = r.issues.find((i) => i.field === "standardPriceAtAcq" && i.message.includes("배율 한도를"));
+    expect(hit, JSON.stringify(r.issues)).toBeDefined();
+    expect(hit?.message).toContain("영 §164⑦");
   });
 
-  it("엔진 직접 호출 — 2005 전 취득은 기준시가 없이도 throw 하지 않고 비과세 + 고지 / 2005-04-30 취득은 종전대로 차단", () => {
+  it("긍정 짝 — 2005-04-30 취득은 공시된 개별주택가격을 요구한다(§164⑦ 문구 없음)", async () => {
+    const r = await runCalc(single({ acquisitionDate: "2005-04-30" }));
+    const hit = r.issues.find((i) => i.field === "standardPriceAtAcq" && i.message.includes("배율 한도를"));
+    expect(hit).toBeDefined();
+    expect(hit?.message).not.toContain("영 §164⑦");
+  });
+
+  it("엔진 직접 호출 — 1990-08-30 전 취득은 기준시가 없이도 throw 하지 않고 비과세 + 고지 / 1990-08-30 이후 취득은 기준시가 없으면 차단", () => {
     const rates = makeMockRates();
     const base = {
       propertyType: "housing" as const, transferPrice: 1_000_000_000, transferDate: new Date(TD),
@@ -118,10 +139,11 @@ describe("#17 보정 1 — 2005-04-30 전 취득은 분리 경로 밖 (막지 �
       isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 120,
       buildingFootprintArea: 100, acquisitionArea: 500, appurtenantLandZone: "metropolitan_residential" as const,
     };
-    const old = calculateTransferTax(baseTransferInput({ ...base, acquisitionDate: new Date("2000-03-01") }), rates);
+    const old = calculateTransferTax(baseTransferInput({ ...base, acquisitionDate: new Date("1989-06-01") }), rates);
     expect(old.isExempt).toBe(true);
     expect(old.totalTax).toBe(0);
-    expect((old.warnings ?? []).some((w) => w.includes("초과분 미분리") && w.includes("2005년 전 취득"))).toBe(true);
+    expect((old.warnings ?? []).some((w) => w.includes("초과분 미분리") && w.includes("1990-08-30"))).toBe(true);
+    expect(() => calculateTransferTax(baseTransferInput({ ...base, acquisitionDate: new Date("2000-03-01") }), rates)).toThrow(/기준시가/);
     expect(() => calculateTransferTax(baseTransferInput({ ...base, acquisitionDate: new Date("2005-04-30") }), rates)).toThrow(/기준시가/);
   });
 });
@@ -139,10 +161,10 @@ describe("#17 보정 2 · #17-1 — 함께 양도 주택 카드(컴패니언): �
     (r.body.companionAssets as { companionHousingLand?: { landAreaM2: number; footprintM2: number; zone?: string } }[])[0];
   // 같은 날 함께양도에 주택 2채가 묶이면 ⑧이 §154⑨ 순서 입력 불가로 따로 막는다(결정 #40 하위 1 가) — 그 차단 외의 오류만 본다.
   const issuesExceptSameDay = (r: Awaited<ReturnType<typeof runCalc>>) => r.issues.filter((i) => !i.message.includes("함께양도로 묶여 있습니다"));
-  // 2005-04-30 전 취득 — 분리 경로 밖(취득 당시 개별주택가격이 없다)이라 막지 않고 «미분리» 고지만 남는다
-  const OUT_OF_SCOPE = { acquisitionDate: "2000-03-01" };
+  // 1990-08-30 전 취득 — 분리 경로 밖(취득 당시 ㎡당 개별공시지가가 없다)이라 막지 않고 «미분리» 고지만 남는다
+  const OUT_OF_SCOPE = { acquisitionDate: "1989-06-01" };
 
-  it("🔑 컴패니언 주택 500㎡ · 정착면적 100㎡ + 범위 밖(2005년 전 취득) → ④가 면적 사실을 싣고 «초과분 미분리» 고지가 난다 · 총세액 0", async () => {
+  it("🔑 컴패니언 주택 500㎡ · 정착면적 100㎡ + 범위 밖(1990-08-30 전 취득) → ④가 면적 사실을 싣고 «초과분 미분리» 고지가 난다 · 총세액 0", async () => {
     const r = await runCalc(bundle(OUT_OF_SCOPE));
     expect(issuesExceptSameDay(r)).toEqual([]);
     expect(r.status).toBe(200);
@@ -179,7 +201,7 @@ describe("#17 보정 2 · #17-1 — 함께 양도 주택 카드(컴패니언): �
     const rates = makeMockRates();
     const base = {
       propertyType: "housing" as const, transferPrice: 500_000_000, transferDate: new Date(TD),
-      acquisitionDate: new Date("2000-03-01"), acquisitionPrice: 400_000_000, expenses: 0, useEstimatedAcquisition: false,
+      acquisitionDate: new Date("1989-06-01"), acquisitionPrice: 400_000_000, expenses: 0, useEstimatedAcquisition: false,
       isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: 120,
       companionHousingLand: { landAreaM2: 500, footprintM2: 100, zone: "metropolitan_residential" as const },
     };

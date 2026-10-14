@@ -39,7 +39,7 @@
  */
 import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtenant-land-rate";
 import { round2 } from "./area-utils";
-import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
+import { SEC_163_9_BUILDING_FIRST_DISCLOSURE, SEC_163_9_LAND_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
 import { deriveLegacyAcqMode, type PartAcqMode } from "./transfer-tax-split-acq-price";
 import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -82,9 +82,15 @@ export interface HousingExcessSplitFacts {
   /** 공유지분 양도 */
   isFractional: boolean;
   /**
-   * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전 — «취득 당시 개별주택가격»이 존재하지 않아 기준시가 안분 입력(취득시 3칸)을 줄 수 없다.
-   * 이 경우 §164⑦ 3시점 환산(`usesPhd`)을 쓰면 분리 경로를 탄다(#17-5 ①) — 쓰지 않으면 막지 않고 비과세를 유지하며 «초과분 미분리 — 확인 필요»
-   * 고지로 남긴다(#17 조건). 취득일 미입력은 false(취득일 필수는 다른 ⑧이 막는다).
+   * 취득일이 개별공시지가 최초 고시일(1990-08-30) 전 — 취득 당시 ㎡당 개별공시지가가 없어(§164④ 등급가액 환산 대상) 기준시가 안분 입력(취득시 ㎡당 공시지가)을
+   * 줄 수 없다. §164⑦ 3시점 환산(`usesPhd`)은 그 환산을 자체 파생해 분리 경로를 타지만(#17-5 ①), 쓰지 않으면 막지 않고 비과세를 유지하며
+   * «초과분 미분리 — 확인 필요» 고지로 남긴다(#17 조건). 취득일 미입력은 false(취득일 필수는 다른 ⑧이 막는다).
+   * (2005-04-30 전 취득은 «취득 당시 개별주택가격»이 없어도 영 §164⑦ 추정값을 그 칸에 입력하면 5칸 경로를 탄다 — 서면인터넷방문상담4팀-685.)
+   */
+  acquiredBeforeLandFirstDisclosure: boolean;
+  /**
+   * 취득일(상속개시일·증여일)이 개별주택가격 최초 공시일(2005-04-30) 전 — 상속·증여는 취득가액이 평가액과 §164⑦ 기준시가 중 큰 금액(영 §163⑨ 2호)이라
+   * «평가액을 건물 기준시가·토지 개별공시지가로 안분»하는 해석(#17-5 ②)이 닿지 않는다 → 범위 밖(`suppValuedInherited`에만 건다).
    */
   acquiredBeforeFirstDisclosure: boolean;
   /**
@@ -96,7 +102,16 @@ export interface HousingExcessSplitFacts {
   excessAreaM2: number;
 }
 
-/** 취득일(ISO `YYYY-MM-DD…`)이 개별주택가격 최초 공시일(2005-04-30) 전인가 — ⑧·④·엔진이 같은 상수·같은 비교를 쓴다. */
+/** 취득일(ISO `YYYY-MM-DD…`)이 개별공시지가 최초 고시일(1990-08-30) 전인가 — ⑧·④·엔진이 같은 상수·같은 비교를 쓴다. */
+export function isBeforeLandPriceFirstDisclosure(acquisitionDate: string | Date | undefined): boolean {
+  if (!acquisitionDate) return false;
+  if (acquisitionDate instanceof Date) {
+    return acquisitionDate.getTime() < new Date(`${SEC_163_9_LAND_FIRST_DISCLOSURE}T00:00:00.000Z`).getTime();
+  }
+  return acquisitionDate.slice(0, 10) < SEC_163_9_LAND_FIRST_DISCLOSURE;
+}
+
+/** 취득일(ISO `YYYY-MM-DD…`)이 개별주택가격 최초 공시일(2005-04-30) 전인가 — 화면 힌트(취득시 개별주택가격 = 영 §164⑦ 추정값)가 쓴다. */
 export function isBeforeHousePriceFirstDisclosure(acquisitionDate: string | Date | undefined): boolean {
   if (!acquisitionDate) return false;
   if (acquisitionDate instanceof Date) {
@@ -109,14 +124,14 @@ export function isBeforeHousePriceFirstDisclosure(acquisitionDate: string | Date
 export function housingExcessSplitApplies(f: HousingExcessSplitFacts): boolean {
   return (
     f.isPlainHousing &&
-    (f.isPurchase || f.suppValuedInherited) &&
+    (f.isPurchase || (f.suppValuedInherited && !f.acquiredBeforeFirstDisclosure)) &&
     !f.isSec164_9Conversion &&
     f.ownsBoth &&
     !f.isSeparateAcquisition &&
     !f.isBurdenedGift &&
     !f.isFractional &&
-    // 2005-04-30 전 취득은 PHD 환산을 쓸 때만 — 취득 당시 개별주택가격이 없어 5칸 안분을 줄 수 없고, PHD가 §164⑦ 3시점으로 대신한다(#17-5 ①).
-    (f.usesPhd || !f.acquiredBeforeFirstDisclosure) &&
+    // 1990-08-30 전 취득은 PHD 환산을 쓸 때만 — 취득 당시 ㎡당 개별공시지가가 없어 5칸 안분을 줄 수 없고, PHD가 §164④ 등급가액 환산까지 파생한다(#17-5 ①).
+    (f.usesPhd || !f.acquiredBeforeLandFirstDisclosure) &&
     f.excessAreaM2 > 0
   );
 }
@@ -247,6 +262,7 @@ export function housingExcessSplitAppliesToInput(input: EngineFacts): boolean {
     isFractional:
       (input.ownershipRatio !== undefined && input.ownershipRatio < 1) ||
       (input.totalPropertyTransferPrice !== undefined && input.oneHouseUnitRole !== "house"),
+    acquiredBeforeLandFirstDisclosure: isBeforeLandPriceFirstDisclosure(input.acquisitionDate),
     acquiredBeforeFirstDisclosure: isBeforeHousePriceFirstDisclosure(input.acquisitionDate),
     usesPhd: phdSplitPathTaken(input),
     excessAreaM2: housingExcessAreaOfInput(input),

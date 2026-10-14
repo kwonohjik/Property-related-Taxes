@@ -14,6 +14,7 @@ import { housingExcessPartModeMismatch } from "./housing-excess-split";
 import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./housing-excess-acq-contract";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
 import { fieldError } from "./transfer-tax-validate-field";
+import { isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const positive = (v: string | undefined): boolean => parseAmount(v ?? "") > 0;
@@ -58,7 +59,12 @@ export function validateHousingExcessSplitInputs(
     "토지·건물 가액을 나눌 기준시가가 필요합니다 (소득세법 §89①3호·§104의3①5호·시행령 §166⑥).";
   // #17-5 ② — 보충적 평가 상속·증여 주택은 취득시 개별주택가격 총액을 상속·증여 평가액으로 쓴다(평가액 칸이 정본 — ⑧이 따로 요구하지 않는다).
   if (!housingExcessUsesInheritedTotal(a, transferDate, isNonPrimary) && !positive(a.standardPriceAtAcq)) {
-    return fieldError("standardPriceAtAcq", `${head} 취득 당시 개별주택가격(부수토지 포함 총액)을 입력하세요.`);
+    return fieldError(
+      "standardPriceAtAcq",
+      isBeforeHousePriceFirstDisclosure(a.acquisitionDate)
+        ? `${head} 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라 영 §164⑦ 산식으로 추정한 취득 당시 기준시가(부수토지 포함 총액)를 입력하세요.`
+        : `${head} 취득 당시 개별주택가격(부수토지 포함 총액)을 입력하세요.`,
+    );
   }
   if (!positive(a.standardPricePerSqmAtAcq)) {
     return fieldError("standardPricePerSqmAtAcq", `${head} 취득 당시 ㎡당 개별공시지가를 입력하세요.`);

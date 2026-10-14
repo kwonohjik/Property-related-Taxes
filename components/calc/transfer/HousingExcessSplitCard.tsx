@@ -32,6 +32,7 @@ import {
   housingExcessUsesInheritedTotal,
   housingExcessUsesPhdSplit,
 } from "@/lib/calc/housing-excess-split";
+import { isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "@/lib/calc/housing-excess-split";
 import {
   housingExcessAcqContractAsksProviso,
@@ -72,6 +73,8 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
   // 개별주택가격(보충적 평가)으로 평가한 상속·증여 주택(#17-5 ②)이면 그 총액이 곧 상속·증여 평가액이다 — 같은 값을 두 번 받지 않는다.
   const inheritedTotal = housingExcessUsesInheritedTotal(asset, transferDate, isNonPrimary);
+  // 2005-04-30 전 취득(PHD 환산이 아닌 경우)은 취득시 개별주택가격 칸에 영 §164⑦ 추정값을 받는다(#17-5 ① — 서면인터넷방문상담4팀-685).
+  const preDisclosure = isBeforeHousePriceFirstDisclosure(asset.acquisitionDate);
   const acqTotalElsewhere = inheritedTotal || deriveLegacyPartAcqMode(asset) !== "actual";
   const capex = housingExcessNeedsCapexSplit(asset, transferDate, isNonPrimary) ? housingExcessCapexParts(asset) : null;
   const contractOpen = housingExcessNeedsAcqContract(asset, transferDate);
@@ -100,10 +103,14 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
           ) : (
             <FieldCard
               field="standardPriceAtAcq"
-              label="취득시 개별주택가격 (부수토지 포함)"
+              label={preDisclosure ? "취득시 개별주택가격 (영 §164⑦ 추정값 · 부수토지 포함)" : "취득시 개별주택가격 (부수토지 포함)"}
               required
               unit="원"
-              hint="취득일 직전 고시된 개별주택가격(토지 포함 결합 공시)입니다. 토지분 : 건물분 기준시가 비율로 취득가액을 나눕니다."
+              hint={
+                preDisclosure
+                  ? "취득일이 개별주택가격 최초 공시일(2005-04-30) 전이라 취득 당시 공시가격이 없습니다 — 영 §164⑦ 산식으로 추정한 취득당시 기준시가(최초 공시 개별주택가격에, 취득 당시 토지+건물 기준시가 합계를 최초 공시 당시 토지+건물 기준시가 합계로 나눈 비율을 곱한 값)를 입력하세요. 토지분 : 건물분은 아래 ㎡당 공시지가 : 건물 기준시가 비율로 나눕니다."
+                  : "취득일 직전 고시된 개별주택가격(토지 포함 결합 공시)입니다. 토지분 : 건물분 기준시가 비율로 취득가액을 나눕니다."
+              }
             >
               <CurrencyInput
                 label=""

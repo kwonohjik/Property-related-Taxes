@@ -17,7 +17,7 @@
  * | 초과분 양도차익 | floor(328,571,429 × 200/500) | 131,428,571 |
  * | 장특(표1 — 상속개시일부터 14년 × 2% = 28%) | floor(131,428,571 × 0.28) | 36,799,999 |
  * | 과세표준 | 131,428,571 − 36,799,999 − 2,500,000 | 92,128,572 |
- * | 산출세액(양도 2026-02-16 — 비사업용 토지 중과 유예 중이라 기본세율, 8,800만 초과 35% · 누진공제 1,544만) | floor(92,128,572 × 0.35) − 15,440,000 | 16,805,000 |
+ * | 산출세액(상속개시 2012-01-02는 중과 유예 취득기간(2009.3.16.~2012.12.31.) 안이라 기본세율, 8,800만 초과 35% · 누진공제 1,544만) | floor(92,128,572 × 0.35) − 15,440,000 | 16,805,000 |
  * | 지방소득세 · 총세액 | 16,805,000 × 10% → | 18,485,500 |
  *
  * 장특 기산: 상속 자산의 장기보유특별공제 보유기간은 상속개시일부터다(§95④ — 피상속인 취득일 통산은 가업상속 비율분 한정, `transfer-tax-lthd.ts`). 세율 보유기간만 §104②1호로 피상속인 취득일 통산.
@@ -174,8 +174,12 @@ describe("#17-5 ② 폼→④→⑧→⑫⑭→엔진 — 개별주택가격(보
 
   it("범위 밖 — 상속개시일이 2005-04-30 전이면(§163⑨ 2호 §164⑦ max 구간) 분리하지 않는다", async () => {
     const r = await runCalc(single({ ...INHERIT, acquisitionDate: "2003-03-01", inheritanceStartDate: "2003-03-01", decedentAcquisitionDate: "1990-01-01" }));
+    expect(r.issues.some((i) => i.message.includes("배율 한도를"))).toBe(false); // ⑧이 엔진이 쓰지 않을 5칸을 요구하지 않는다(칸 있는 요구·쓰이는 입력)
     expect(r.result?.splitDetail?.nonBusinessLandPart).toBeUndefined();
     expect(r.result?.totalTax).toBe(0);
+    const a = asset({ ...INHERIT, acquisitionDate: "2003-03-01", inheritanceStartDate: "2003-03-01", decedentAcquisitionDate: "1990-01-01" });
+    expect(housingExcessNeedsLandSplit(a, TD)).toBe(false);
+    expect(housingExcessUsesInheritedTotal(a, TD)).toBe(false);
   });
 
   it("범위 밖 — 이월과세 증여(취득원인 carryover_gift)는 취득가액 경로가 달라 대상이 아니다", () => {
