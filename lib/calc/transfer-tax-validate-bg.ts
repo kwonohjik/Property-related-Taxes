@@ -32,7 +32,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "./transfer-163-9-base-date";
 import {
   BG_PRESUMED_LABEL,
-  bgAppraisalBuildingPenaltyApplies,
+  bgAppraisalExtensionPenaltyApplies,
   bgPresumedBlock,
   bgPresumedInputKind,
   firstEmptyBgPresumedField,
@@ -236,11 +236,12 @@ export function validateBurdenedGiftAsset(
           `${label}: 부담부증여 ${methodLabel} — ${target}취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${acqMethod === "appraisal" ? "2" : "1"}호).`,
         );
       }
-      // 신축·증축 5년 이내 × 감정가액 — 엔진이 같은 조합(`calculateBuildingPenalty`)을 던진다. 가산세가 조용히 빠지는 것을 막는다.
-      if (acqMethod === "appraisal" && bgAppraisalBuildingPenaltyApplies(asset, formTransferDate)) {
+      // 증축 5년 이내 × 감정가액 — 엔진이 같은 조합(`calculateBuildingPenalty`)을 던진다. 증축한 부분의 감정가액을 받는 칸이 없어 가산세 base를 만들 수 없다.
+      //   (신축은 PR-3에서 가산세를 연결해 계산한다.)
+      if (acqMethod === "appraisal" && bgAppraisalExtensionPenaltyApplies(asset, formTransferDate)) {
         return fieldError(
           "bgAcquisitionMethod",
-          `${label}: 신축·증축한 건물을 취득일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따른 가산세(감정가액의 5%)가 붙는데, 부담부증여 계산에는 아직 반영되지 않아 계산할 수 없습니다. 취득가액 산정방식을 「실지취득가액 안분」으로 선택하거나 별도로 가산세를 검토하세요.`,
+          `${label}: 건물을 증축하고 증축일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙는데, 증축한 부분만의 감정가액을 입력하는 칸이 아직 없어 계산할 수 없습니다. 취득가액 산정방식을 「실지취득가액 안분」으로 선택하거나 별도로 가산세를 검토하세요.`,
         );
       }
     } else if (acqMethod === "converted") {

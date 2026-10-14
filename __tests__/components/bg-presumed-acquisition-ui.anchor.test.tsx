@@ -88,12 +88,19 @@ describe("⑤ 라디오 4옵션", () => {
     expect(radio(/감정가액/).disabled).toBe(false);
   });
 
-  it("신축 5년 이내 × 감정가액 — 감정가액만 비활성(매매사례는 활성)", () => {
-    const a = land({ assetKind: "housing", isSelfBuilt: true, buildingType: "new", constructionDate: "2020-05-01", bgAcquisitionMethod: "" });
+  it("증축 5년 이내(85㎡ 초과) × 감정가액 — 감정가액만 비활성(매매사례는 활성)", () => {
+    const a = land({ assetKind: "housing", isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2020-05-01", bgAcquisitionMethod: "" });
     renderBlock(a, { transferDate: "2023-06-01" });
     expect(radio(/감정가액/).disabled).toBe(true);
     expect(radio(/매매사례가액/).disabled).toBe(false);
-    expect(screen.getByText(/감정가액의 5% 가산세\(소득세법 §114조의2\)/)).toBeTruthy();
+    expect(screen.getByText(/증축한 부분 감정가액의 5% 가산세\(소득세법 §114조의2\)/)).toBeTruthy();
+  });
+
+  it("신축 5년 이내 × 감정가액 — 가산세를 연결해 계산하므로 비활성이 아니다(PR-3)", () => {
+    const a = land({ assetKind: "housing", isSelfBuilt: true, buildingType: "new", constructionDate: "2020-05-01", bgAcquisitionMethod: "" });
+    renderBlock(a, { transferDate: "2023-06-01" });
+    expect(radio(/감정가액/).disabled).toBe(false);
+    expect(screen.queryByText(/5% 가산세\(소득세법 §114조의2\)/)).toBeNull();
   });
 
   it("라디오 선택 시 onChange가 방식 patch(값 초기화 포함)를 낸다", () => {

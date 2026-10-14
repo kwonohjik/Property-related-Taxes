@@ -183,11 +183,15 @@ export function appendLateStageItems(
     result.penaltyTax - section114_2Penalty + (result.penaltyDetail?.totalPenalty ?? 0);
   const penaltyParts: string[] = [];
   if (section114_2Penalty > 0) {
+    // §114조의2①은 「감정가액 또는 환산취득가액」을 취득가액으로 한 경우다 — 산정방식은 엔진이 가산세 step에 싣는
+    // `calculateBuildingPenalty` note(「… + 감정가액 적용」)가 정본이다. 어댑터 경유 result에는 그 step이 없어 종전 표기를 유지한다.
+    const penaltyStep = findStepByLabel(result.steps, "환산가액적용가산세");
+    const penaltyMethod = penaltyStep?.formula?.includes("감정가액 적용") ? "감정가액" : "환산취득가액";
     // 산정기준액은 어댑터 경유 result에서 0이다(자산별 값이 합쳐지지 않는다) — 없으면 꼬리를 생략한다.
     penaltyParts.push(
       result.penaltyBase > 0
-        ? `§114조의2 환산취득가액 가산세 ${section114_2Penalty.toLocaleString()} (= ${result.penaltyBase.toLocaleString()} × 5%)`
-        : `§114조의2 환산취득가액 가산세 ${section114_2Penalty.toLocaleString()}`,
+        ? `§114조의2 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()} (= ${result.penaltyBase.toLocaleString()} × 5%)`
+        : `§114조의2 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()}`,
     );
   }
   if (statutoryPenalty > 0) {

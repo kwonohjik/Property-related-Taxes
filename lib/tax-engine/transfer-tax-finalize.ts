@@ -428,7 +428,9 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   // 🔴 **토지·건물 분리 자산은 「건물 파트」가 §114조의2의 축이다** (2026-08-13).
   //    `resolveSplitBuildingPenaltyAxis` 참조 — 게이트(산정방식)·base 둘 다 건물 파트에서 온다.
   //    일반건물 카드는 `input.penaltyAxis`로 같은 축을 직접 싣는다(Q-A5 — 건물 파트 감정가액).
-  const splitPenaltyAxis = resolveSplitBuildingPenaltyAxis(splitDetailForRate) ?? input.penaltyAxis;
+  // 부담부증여 K-7(감정가액) 신축은 §159 스텝이 `effectiveInput.penaltyAxis`로 싣는다(원본 input에는 없다).
+  const splitPenaltyAxis =
+    resolveSplitBuildingPenaltyAxis(splitDetailForRate) ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   let penaltyBase = splitPenaltyAxis
     ? splitPenaltyAxis.base
     : effectiveInput.acquisitionMethod === "appraisal"

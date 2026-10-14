@@ -10,6 +10,8 @@
  *   PA-3. 매매사례가액 — 같은 값 (A-2)
  *   PA-4. 축 B(지분 분할 취득) — 두 옵션이 비활성(⑧과 같은 술어)
  *   PA-6. 단건 상세 계산 명세서·신고서 양식(요약표)이 엔진 값과 일치 — 역산 오표기(음수 취득가액·양도비) 회귀 방지
+ *   PA-7. 신축 5년 이내 × 감정가액 — §114조의2 가산세(건물 감정가액 안분분의 5%)가 payload·결과 화면에 반영된다 (PR-3)
+ *   PA-8. 증축 5년 이내 × 감정가액 — 증축한 부분의 감정가액 칸이 없어 감정가액 라디오가 비활성
  *   PA-5. 일반건물 — 토지·건물 감정가액 2칸이 payload(`presumedLand/BuildingAcquisitionPrice`)에 실려 §159로 안분된다
  *
  * ⚠️ 새 옵션의 문구에 「환산취득가액」·「실지취득가액 안분」이 없어야 기존 spec
@@ -256,4 +258,59 @@ test.describe("부담부증여 — 매매사례가액·감정가액 (K-6/K-7)", 
       expect(await rowText("필요경비")).toContain("1,080,000");
     });
   }
+
+  /** 주택(건물 통째) — 시가 500M · 채무 200M(B/C 40%) · 취득시 기준시가 100M · 양도시 400M · 감정가액 총액 150M. */
+  function newBuiltSeed(over: Record<string, unknown> = {}) {
+    return {
+      ...makeDefaultAsset(1),
+      addressJibun: "서울 강남구 테스트동 1-1",
+      assetKind: "housing",
+      acquisitionCause: "purchase",
+      acquisitionDate: "2021-01-01",
+      transferType: "burdened_gift",
+      bgValuationMode: "sangjeungbeop_market",
+      bgMarketValueAtTransfer: "500000000",
+      bgMortgageDebtAmount: "200000000",
+      bgDonorRelation: "lineal_descendant",
+      bgAcquisitionMethod: "appraisal",
+      bgPresumedAcquisitionTotal: "150000000",
+      standardPriceAtTransfer: "400000000",
+      standardPriceAtAcq: "100000000",
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: "2021-01-01",
+      ...over,
+    };
+  }
+
+  test("PA-7: 신축 5년 이내 × 감정가액 — 가산세 3,000,000(건물 감정가액 150M × 40% = 60M의 5%)", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, [newBuiltSeed()]);
+    const res = await calculate(page);
+    const body = await res.json();
+    const r = body.data?.result ?? body.result ?? body.data;
+    expect(r.transferBurdenedGiftBreakdown.acquisitionMethodUsed).toBe("appraisal");
+    expect(r.transferBurdenedGiftBreakdown.perAsset.building.acquisitionPrice).toBe(60_000_000);
+    expect(r.penaltyBase).toBe(60_000_000);
+    expect(r.penaltyTax).toBe(3_000_000);
+    // 결과 화면 — 상세 계산 명세서 6단계가 산정방식을 「감정가액」으로 밝히고(환산이라 적지 않는다) 기준액·금액이 맞다
+    const statement = page.locator('[data-print-section="detailed-statement"]');
+    await expect(statement).toBeVisible({ timeout: 30_000 });
+    const expandAll = statement.getByRole("button", { name: /전체 펼치기/ });
+    if (await expandAll.isVisible().catch(() => false)) await expandAll.click();
+    await expect(statement).toContainText("§114조의2 감정가액 가산세 3,000,000 (= 60,000,000 × 5%)");
+    await expect(statement).not.toContainText("§114조의2 환산취득가액 가산세");
+  });
+
+  test("PA-8: 증축 5년 이내 × 감정가액 — 감정가액 라디오 비활성(매매사례는 활성)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, [
+      newBuiltSeed({ buildingType: "extension", extensionFloorArea: "120", bgAcquisitionMethod: "", bgPresumedAcquisitionTotal: "" }),
+    ]);
+    const card = page.locator('[data-asset-card-index="0"]');
+    await expandAssetSection(page, 2);
+    await expect(card.getByRole("radio", { name: /감정가액/ })).toBeDisabled();
+    await expect(card.getByRole("radio", { name: /매매사례가액/ })).toBeEnabled();
+    await expect(card.getByText(/증축한 부분 감정가액의 5% 가산세/)).toBeVisible();
+  });
 });

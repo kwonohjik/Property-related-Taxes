@@ -96,8 +96,8 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: axisB,
   },
   {
-    name: "bg: 신축 5년 이내 감정가액 불가(§114조의2)", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 신축·증축한 건물을 취득일부터 5년 이내에 양도하면서/,
-    form: presumed({ isSelfBuilt: true, buildingType: "new", constructionDate: "2022-01-01" }),
+    name: "bg: 증축 5년 이내 감정가액 불가(§114조의2)", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 건물을 증축하고 증축일부터 5년 이내에 양도하면서/,
+    form: presumed({ isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2022-01-01" }),
   },
   {
     name: "bg: 상속 자산 환산 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 상속받은 자산은 상속개시일 현재/,
