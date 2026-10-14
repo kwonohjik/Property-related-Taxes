@@ -96,7 +96,7 @@
 | A-11 | 이월과세 × K-6/K-7 | 1차에서는 차단(Q-5) |
 | A-12 | 축 B(지분 분할) × K-6/K-7 | 1차에서는 차단(Q-6) |
 | A-13 | 조합원입주권 | K-4 고정 유지. Zod가 K-6/K-7을 거부 |
-| A-14 | 신축 5년 이내 건물 × K-7 | Q-4 결정에 따름 |
+| A-14 | 신축 5년 이내 건물 × K-7 | ✅ PR-3에서 결선 — 건물 감정가액(채무비율 안분 후)의 5% (증축은 계속 차단) |
 
 ---
 
@@ -251,3 +251,22 @@ else if (method === "appraisal" || method === "salesCase") {
 원인은 단건 경로가 `receiveOnly.transferPrice`(부담부증여에서 빈 칸=0)로 취득가액을 역산해 −30,000,000이 나온 것.
 `transferBurdenedGiftBreakdown.perAsset.*` 슬롯 합 echo + 일반건물 집계 경로의 `buildBg*Formula` 재사용으로 K-1~K-7 정정.
 실패 테스트 20건 선행 → 26건 green, E2E PA-6(감정·매매사례). 미정정(확인 필요): 이월과세·재개발·겸용·별개 취득 × 부담부증여 단건은 종전 경로.
+
+---
+
+## PR-3 — 신축 × 감정가액 §114조의2 가산세 결선 (2026-10-14)
+
+Q-4의 「다음 PR에서 결선」을 이행했다. 증축은 base(「증축한 부분에 한정한 감정가액」)를 받는 칸이 없어 계속 막는다.
+
+| 조합 | 결과 |
+|---|---|
+| 신축 5년 이내(양도일 ≥ 2020-01-01) × 감정가액 | 가산세 = **건물 몫 감정가액**(채무비율 안분 후) × 5%. 산출세액이 없어도 부과(§114조의2②) |
+| 신축 × 매매사례가액 · 실지취득가액 | 0 (조문 「감정가액 또는 환산취득가액」에 없음) |
+| 증축(85㎡ 초과) 5년 이내 × 감정가액 | **차단**(엔진·⑤·⑧ 같은 술어 `bgAppraisalExtensionPenaltyApplies`) |
+| 증축 85㎡ 이하 · 5년 초과 · 2020 이전 양도 | `calculateBuildingPenalty`가 null → 가산세 0, 차단 없음 |
+
+- **배선**: step이 `workingInput.penaltyAxis = { acquisitionMethod: "appraisal", base: building.acquisitionPrice }`를 싣는다(일반건물 카드와 같은 파트-국소 신호 — `acquisitionMethod: "appraisal"`로 바꿔 싣지 않는 이유는 `calcTransferGain` 감정 분기가 §159 안분 취득가액을 `appraisalValue`로 덮어쓰기 때문). 읽는 두 곳(`transfer-tax-finalize.ts` STEP 10.5 · `transfer-tax-loss-return.ts` pb0)을 `input.penaltyAxis ?? effectiveInput.penaltyAxis`로 확장했다. 양도차익은 달라지지 않는다.
+- **명세서 정정**: 단건 상세 명세서 6단계가 감정가액 가산세를 「환산취득가액 가산세」로 적던 기존 표기를 엔진 step note(「… + 감정가액 적용」) 기준으로 가른다.
+- **미검증(확인 필요)**: 총액 입력(주택·건물 한 칸)의 건물 몫은 **취득시 기준시가 비율 분배값**이라 V-2(분배의 법적 근거)에 그대로 종속된다 — 토지·건물을 따로 받는 일반건물 입력에서는 입력값 그대로다. 통상(비-부담부) 경로의 주택 감정가액은 총액을 base로 쓰는데(`transfer-tax-finalize.ts` penaltyBase), 부담부증여는 K-5와 같은 「건물 몫」 기준이라 두 경로의 base가 다르다 — 조문 문언(「해당 건물의 감정가액」)과 K-5 선례를 따랐다.
+- **별건(손대지 않음)**: 다건 합산 카드(`BundledAllocationSubCards`·`MultiTransferPropertyBreakdown`)의 가산세 라벨이 「환산취득가액」·「환산가액적용가산세」로 고정돼 감정가액에도 같은 이름이 붙는다 — 일반건물 감정가액 경로에서 이미 그랬다.
+- **테스트**: 엔진 anchor 13(`burdened-gift-appraisal-114-2-penalty.anchor.test.ts`) · 라우트 3 · UI/validate 증축 전환 · 명세서 라벨 2 · E2E PA-7·PA-8. 뮤테이션 3종(finalize·loss-return 읽기 확장, step 신호) 각각 anchor가 잡음.

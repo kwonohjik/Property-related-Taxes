@@ -262,13 +262,24 @@ describe("엔진 층 분기·가드 (A-6~A-13)", () => {
     expect(() => assertCarryoverDonorBasis(marketInfo("salesCase"), ct)).toThrow(/이월과세/);
   });
 
-  it("A-13 신축 5년 이내 × 감정가액 — §114조의2 가산세 미결선이라 차단 (매매사례가액은 대상 아님)", () => {
+  it("A-13 신축 5년 이내 × 감정가액 — 차단하지 않는다(PR-3: §114조의2 가산세 연결, 건물 몫이 없는 토지는 0). 매매사례가액도 통과", () => {
     const selfBuilt = {
       isSelfBuilt: true,
       buildingType: "new",
       constructionDate: new Date("2023-01-01"),
     };
-    expect(() => runTransfer(marketInfo("appraisal"), selfBuilt)).toThrow(/제114조의2/);
+    expect(runTransfer(marketInfo("appraisal"), selfBuilt).transferGain).toBe(28_920_000);
     expect(runTransfer(marketInfo("salesCase"), selfBuilt).transferGain).toBe(28_920_000);
+  });
+
+  it("A-13b 증축 5년 이내 × 감정가액 — 증축한 부분의 감정가액을 받는 칸이 없어 차단 (가산세 연결은 신축만)", () => {
+    const extension = {
+      isSelfBuilt: true,
+      buildingType: "extension",
+      extensionFloorArea: 120,
+      constructionDate: new Date("2023-01-01"),
+    };
+    expect(() => runTransfer(marketInfo("appraisal"), extension)).toThrow(/제114조의2/);
+    expect(runTransfer(marketInfo("salesCase"), extension).transferGain).toBe(28_920_000);
   });
 });

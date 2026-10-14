@@ -135,18 +135,20 @@ type PenaltyAsset = Pick<
 >;
 
 /**
- * 신축·증축 5년 이내 × **감정가액** — 소득세법 §114조의2 가산세 대상 조합인가.
+ * **증축** 5년 이내 × 감정가액 — 소득세법 §114조의2 가산세 대상이지만 base를 만들 수 없는 조합인가.
  *
- * 부담부증여 step은 아직 그 가산세 신호를 세우지 않아, 통과시키면 가산세(감정가액의 5%)가 **조용히 빠진다**
+ * 신축 × 감정가액은 PR-3에서 가산세(건물 감정가액의 5%)를 엔진이 `penaltyAxis`로 연결해 계산한다. 증축은 base가
+ * 「**증축한 부분에 한정한** 감정가액」인데 그 값을 받는 칸이 없고, 건물 전체 감정가액을 쓰면 과대부과라 계속 막는다
  * (엔진이 같은 조합을 던진다 — `transfer-tax-burdened-gift-step.ts`). 판정은 엔진과 **같은 단일 소스**
  * `calculateBuildingPenalty`에, 폼 값을 ④가 엔진 입력으로 옮기는 것과 같은 매핑으로 넣는다
  * (`transfer-tax-api.ts` `isSelfBuilt: selfBuiltActive(primary)` · `constructionDate` · `extensionFloorArea`).
  * 매매사례가액은 조문(「감정가액 또는 환산취득가액」)에 없어 대상이 아니므로 호출부가 감정일 때만 부른다.
  */
-export function bgAppraisalBuildingPenaltyApplies(
+export function bgAppraisalExtensionPenaltyApplies(
   asset: PenaltyAsset,
   transferDate: string | undefined,
 ): boolean {
+  if (asset.buildingType !== "extension") return false;
   const date = toOptionalDate(transferDate);
   if (!date || !selfBuiltActive(asset)) return false;
   const constructionDate = toOptionalDate(asset.constructionDate);

@@ -231,25 +231,31 @@ describe("⑧ validate", () => {
     expect(V(land(), { axisB: false }).msg).toBeNull();
   });
 
-  describe("§114조의2 — 신축 5년 이내 × 감정가액", () => {
-    const newBuilt = (over: Partial<AssetForm> = {}) =>
-      housing({ isSelfBuilt: true, buildingType: "new", constructionDate: "2020-05-01", ...over });
-    it("감정가액 + 신축 5년 이내(양도일 2023-06-01) → 차단", () => {
-      const r = V(newBuilt());
-      expect(r.msg).toMatch(/제114조의2에 따른 가산세\(감정가액의 5%\)/);
+  describe("§114조의2 — 증축 5년 이내 × 감정가액 (신축은 가산세를 연결해 통과 — PR-3)", () => {
+    const extended = (over: Partial<AssetForm> = {}) =>
+      housing({ isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2020-05-01", ...over });
+    it("감정가액 + 증축(85㎡ 초과) 5년 이내(양도일 2023-06-01) → 차단", () => {
+      const r = V(extended());
+      expect(r.msg).toMatch(/제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세/);
       expect(r.field).toBe("bgAcquisitionMethod");
     });
+    it("🔴 구별력 — 신축은 가산세를 연결해 계산하므로 통과한다", () => {
+      expect(V(extended({ buildingType: "new", extensionFloorArea: "" })).msg).toBeNull();
+    });
     it("🔴 구별력 — 매매사례가액은 대상이 아니다", () => {
-      expect(V(newBuilt({ bgAcquisitionMethod: "salesCase" })).msg).toBeNull();
+      expect(V(extended({ bgAcquisitionMethod: "salesCase" })).msg).toBeNull();
+    });
+    it("증축 85㎡ 이하는 §114조의2 대상이 아니라 통과", () => {
+      expect(V(extended({ extensionFloorArea: "60" })).msg).toBeNull();
     });
     it("5년 초과(양도일 2026-01-01) → 통과", () => {
-      expect(V(newBuilt(), { date: "2026-01-01" }).msg).toBeNull();
+      expect(V(extended(), { date: "2026-01-01" }).msg).toBeNull();
     });
     it("신축 아님(isSelfBuilt false) → 통과", () => {
-      expect(V(newBuilt({ isSelfBuilt: false })).msg).toBeNull();
+      expect(V(extended({ isSelfBuilt: false })).msg).toBeNull();
     });
     it("양도일을 모르면 판정을 건너뛴다(옛 호출부 호환)", () => {
-      const { result } = collectWithFields(() => validateBurdenedGiftAsset(newBuilt(), "자산"));
+      const { result } = collectWithFields(() => validateBurdenedGiftAsset(extended(), "자산"));
       expect(result).toBeNull();
     });
   });

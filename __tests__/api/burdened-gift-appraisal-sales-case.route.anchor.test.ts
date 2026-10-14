@@ -32,6 +32,8 @@ type Json = {
   data?: {
     result?: {
       transferGain: number;
+      penaltyTax?: number;
+      penaltyBase?: number;
       transferBurdenedGiftBreakdown?: {
         acquisitionMethodUsed: string;
         perAsset: { land: { acquisitionPrice: number; estimatedDeduction: number } };
@@ -110,5 +112,52 @@ describe("부담부증여 K-6/K-7 라우트 ⑫", () => {
   it("알 수 없는 산정방식은 400", async () => {
     const r = await send({ ...BODY, burdenedGiftInfo: { ...BGI, acquisitionMethod: "estimated" } });
     expect(r.status).toBe(400);
+  });
+
+  // PR-3 — 신축 5년 이내 × 감정가액: Zod → route → 엔진 → `penaltyAxis`까지 가산세가 도달한다.
+  describe("§114조의2 신축 × 감정가액 가산세 (PR-3)", () => {
+    const BUILDING_BGI = {
+      ...BGI,
+      acquisitionMethod: "appraisal",
+      marketValueAtTransfer: 500_000_000,
+      mortgageDebtAmount: 200_000_000,
+      presumedLandAcquisitionPrice: 0,
+      presumedBuildingAcquisitionPrice: 150_000_000,
+      landStdPriceAtTransfer: 0,
+      buildingStdPriceAtTransfer: 400_000_000,
+      landStdPriceAtAcquisition: 0,
+      buildingStdPriceAtAcquisition: 100_000_000,
+    };
+    const BUILDING_BODY = {
+      ...BODY,
+      propertyType: "housing",
+      transferPrice: 200_000_000,
+      transferDate: "2024-03-01",
+      acquisitionDate: "2021-01-01",
+      householdHousingCount: 2,
+      isSelfBuilt: true,
+      buildingType: "new",
+      constructionDate: "2021-01-01",
+      burdenedGiftInfo: BUILDING_BGI,
+    };
+
+    it("건물 감정가액 150M × 채무비율 0.4 = 60M → 가산세 3,000,000", async () => {
+      const r = await send(BUILDING_BODY);
+      expect(r.status, JSON.stringify(r.json.error)).toBe(200);
+      const res = r.json.data!.result!;
+      expect(res.penaltyBase).toBe(60_000_000);
+      expect(res.penaltyTax).toBe(3_000_000);
+    });
+
+    it("🔴 구별력 — 신축이 아니면 0", async () => {
+      const r = await send({ ...BUILDING_BODY, isSelfBuilt: false });
+      expect(r.status).toBe(200);
+      expect(r.json.data!.result!.penaltyTax).toBe(0);
+    });
+
+    it("증축(85㎡ 초과)은 400 — 증축한 부분의 감정가액을 받는 칸이 없다", async () => {
+      const r = await send({ ...BUILDING_BODY, buildingType: "extension", extensionFloorArea: 120 });
+      expect(r.status).toBe(400);
+    });
   });
 });

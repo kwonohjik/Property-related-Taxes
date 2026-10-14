@@ -62,18 +62,24 @@ export function runBurdenedGiftStep(
     // 읽는 penalty 전용 신호이며, 본 양도차익은 위 §159 안분값(useEstimatedAcquisition:false)으로 계산.
     // 발동 게이트(5년·85㎡·acquisitionMethod=estimated)는 calculateBuildingPenalty가 최종 판정.
     // 환산취득가액을 실제로 쓴 경우만 — 시가 평가인데 담보평가가 이겨 취득가액이 기준시가로 강제되면(1h-G1-2) 환산 가산세 신호를 세우지 않는다.
-    // §114조의2 × 감정가액(K-7): 감정가액으로 신축·증축 건물 취득가액을 산정하면 5년 이내 양도 시 감정가액의 5%가
-    // 결정세액에 더해지는데, 부담부증여 step은 아직 그 신호를 세우지 않는다(K-5 환산 전용 — 계획서 Q-4·PR-3).
-    // 통과시키면 가산세가 **조용히 빠져 과소 산출**되므로 발동 조건(통상 경로의 단일 소스 `calculateBuildingPenalty`)이
-    // 성립하는 조합은 막는다. 매매사례가액은 조문(「감정가액 또는 환산취득가액」)에 없어 대상이 아니다.
+    // §114조의2 × 감정가액(K-7): 감정가액으로 신축·증축 건물 취득가액을 산정하면 5년 이내 양도 시 **건물 감정가액**의 5%가
+    // 결정세액에 더해진다. 발동 조건(5년·2020.1.1 게이트·증축 85㎡)은 통상 경로의 단일 소스 `calculateBuildingPenalty`가 판정한다.
+    // 신호는 `penaltyAxis`(일반건물 카드와 같은 파트-국소 축)로 싣는다 — `acquisitionMethod: "appraisal"`로 바꿔 싣지 않는 이유는
+    // `calcTransferGain` 감정 분기가 §159 안분 취득가액을 `appraisalValue`로 덮어쓰기 때문이다(아래 acquisitionMethod 주석).
+    // base = 채무비율 안분 **후** 건물 감정가액 (K-5의 `estimatedBase`와 같은 기준 — 계획서 §2.2의 「강한 해석」).
+    // 매매사례가액은 조문(「감정가액 또는 환산취득가액」)에 없어 대상이 아니다.
+    // 증축은 「증축한 부분에 한정한 감정가액」이 base인데 그 값을 받는 칸이 없다 — 건물 전체 감정가액을 쓰면 과대부과라 계속 막는다.
+    const isAppraisalSelfBuilt =
+      transferBurdenedGiftBreakdown.acquisitionMethodUsed === "appraisal" && rawInput.isSelfBuilt === true;
     if (
-      transferBurdenedGiftBreakdown.acquisitionMethodUsed === "appraisal" &&
+      isAppraisalSelfBuilt &&
+      rawInput.buildingType === "extension" &&
       calculateBuildingPenalty({ ...rawInput, acquisitionMethod: "appraisal" }, 1) !== null
     ) {
       throw new TaxCalculationError(
         TaxErrorCode.INVALID_INPUT,
-        "[burdened_gift] 신축·증축 건물을 5년 이내 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따른 " +
-          "가산세(감정가액의 5%)가 붙지만, 부담부증여 계산에는 아직 반영되지 않아 계산할 수 없습니다. " +
+        "[burdened_gift] 건물을 증축하고 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 " +
+          "증축한 부분의 감정가액에 5% 가산세가 붙지만, 증축한 부분만의 감정가액을 입력하는 칸이 아직 없어 계산할 수 없습니다. " +
           "취득가액 산정방식을 「실지취득가액」으로 선택하거나 별도로 가산세를 검토하세요.",
       );
     }
@@ -122,6 +128,9 @@ export function runBurdenedGiftStep(
       burdenedGiftDenominator:
         transferBurdenedGiftBreakdown.fractionalHighValueDenominator ??
         transferBurdenedGiftBreakdown.sangjeungbeopValuation.max,
+      ...(isAppraisalSelfBuilt && rawInput.buildingType !== "extension"
+        ? { penaltyAxis: { acquisitionMethod: "appraisal" as const, base: building.acquisitionPrice } }
+        : {}),
       ...(isK5SelfBuilt
         ? {
             acquisitionMethod: "estimated" as const,

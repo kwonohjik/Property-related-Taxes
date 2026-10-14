@@ -24,7 +24,7 @@ import { BURDENED_GIFT_TRANSFER } from "@/lib/tax-engine/legal-codes/burdened-gi
 import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
 import {
   BG_PRESUMED_LABEL,
-  bgAppraisalBuildingPenaltyApplies,
+  bgAppraisalExtensionPenaltyApplies,
   bgPresumedBlock,
   bgPresumedInputKind,
   isBgPresumedMethod,
@@ -74,8 +74,8 @@ export function BurdenedGiftAcquisitionMethodField({
   );
   // 매매사례가액·감정가액을 고를 수 없는 자산(상속·이월과세·축 B) — ⑧과 같은 `bgPresumedBlock`
   const presumedBlock = bgPresumedBlock(asset, { isFractionalSplit });
-  // 신축·증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`)
-  const appraisalPenaltyBlocked = bgAppraisalBuildingPenaltyApplies(asset, transferDate);
+  // 증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`). 신축은 가산세를 연결해 계산한다(PR-3).
+  const appraisalPenaltyBlocked = bgAppraisalExtensionPenaltyApplies(asset, transferDate);
 
   return (
     <FieldCard
@@ -115,7 +115,7 @@ export function BurdenedGiftAcquisitionMethodField({
             description:
               presumedBlock?.short ??
               (appraisalPenaltyBlocked
-                ? "신축·증축 건물을 5년 이내 양도하면 감정가액의 5% 가산세(소득세법 §114조의2)가 붙는데 이 계산에는 아직 반영되지 않아 쓸 수 없습니다"
+                ? "증축 건물을 5년 이내 양도하면 증축한 부분 감정가액의 5% 가산세(소득세법 §114조의2)가 붙는데 그 감정가액을 받는 칸이 아직 없어 쓸 수 없습니다"
                 : "매매사례가 없을 때 — 취득일 전후 각 3개월 이내 감정평가법인등의 감정가액 (시행령 §176의2③2호). 필요경비는 개산공제만"),
             disabled: presumedBlock !== null || appraisalPenaltyBlocked,
           },
