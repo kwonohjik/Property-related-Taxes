@@ -156,6 +156,15 @@ export interface TransferFormData {
   temporaryTwoHouseSpecial: boolean;
   // 종전주택 취득일은 별도 필드를 두지 않고 양도 자산(assets[0])의 acquisitionDate를 단일소스로 사용(§155① 종전주택 = 양도주택).
   newHouseAcquisitionDate: string;
+  /**
+   * §155① 신규 주택 **취득 경위** — 직접 선언 경로(`temporaryTwoHouseSpecial` + 위 취득일 · 보유 주택 목록 행이 없다)가 받는 답
+   * (결정 #43-3). 세 필드의 의미·미답 규칙은 `lib/calc/declared-new-house-origin.ts`. ""(미답) = 종전과 같이 취득일 그대로 판정 + 확인 필요.
+   */
+  newHouseOriginKind: "" | NonNullable<HouseEntry["acquisitionOrigin"]>;
+  /** 신규 주택 권리 취득일 (YYYY-MM-DD) — 경위마다 의미가 다르다(`HouseEntry.rightAcquisitionDate`) */
+  newHouseRightAcquisitionDate: string;
+  /** 승계 입주권 관리처분계획 인가일 (YYYY-MM-DD) — 선택 */
+  newHouseRightApprovalDate: string;
   /** §155⑯ 공공기관·법인 지방이전 — 처분기한 3년→5년 + 1년 요건 면제 (효과 둘) */
   publicInstitutionRelocation: boolean;
   /** §155⑯ 이전한 기관 소재지 지번주소 (연접 판정용) */

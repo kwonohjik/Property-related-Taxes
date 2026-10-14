@@ -32,6 +32,7 @@ import {
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import { makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "@/lib/calc/one-house-judgment-temp-two-house";
 
 /**
  * 판정 기준일(오늘)을 고정한다 — route가 이미 지난 「이 날까지 양도」 기한을 빼므로(2026-09-29),
@@ -208,6 +209,35 @@ describe("P4-2b-1 — 계산기 leaf 재사용", () => {
     expect(json.data.judgment.pending.map((p: { id: string }) => p.id)).toEqual([
       "155-1-disposal-deadline",
     ]);
+  });
+
+  /**
+   * 결정 #43-3 — 직접 선언 경로(명부 행 없음)가 신규 주택 취득 경위를 받는다. 판정 메뉴 route(⑫⑭)까지 닿아 결론이 방향을 바꾼다:
+   * 양도 주택 2019-06-01 · 신규 주택 완공 2022-09-01(직접 선언) · 양도 2024-06-01 — 승계 입주권을 종전주택보다 **앞선** 2018-09-01에
+   * 취득했으면 순차 사례라 일시적 2주택이 아니다. 미답은 종전과 같다(not_collected).
+   */
+  it("[LF-1b] 직접 선언 경로의 신규 주택 경위 — 순차 사례는 비과세 → 과세, 미답은 종전과 같다", async () => {
+    const declared = (over: Partial<OneHouseJudgmentFormData> = {}) =>
+      baseForm({ houses: [house("h1")], temporaryTwoHouseSpecial: true, newHouseAcquisitionDate: "2022-09-01", ...over });
+    const unanswered = declared();
+    expect(buildOneHouseExemptionApiBody(unanswered).temporaryTwoHouse).toMatchObject({ newHouseOrigin: { kind: "not_collected" } });
+    const seq = declared({ newHouseOriginKind: "successor_right", newHouseRightAcquisitionDate: "2018-09-01" });
+    expect(buildOneHouseExemptionApiBody(seq).temporaryTwoHouse).toMatchObject({
+      newHouseOrigin: { kind: "successor_right", rightAcquisitionDate: "2018-09-01" },
+    });
+    const a = await postForm(unanswered);
+    const b = await postForm(seq);
+    expect(a.status).toBe(200);
+    expect(b.status).toBe(200);
+    expect(a.json.data.judgment.isExempt).toBe(true);
+    expect(b.json.data.judgment.isExempt).toBe(false);
+    // ⑤ 판정 카드·⑧이 읽는 도출(`judgmentDerivedNewHouse`)도 같은 답을 읽는다 — 카드는 요건 D 미충족, 미답은 확인 필요
+    expect(judgmentDerivedNewHouse(seq)?.newHouseOrigin).toEqual({ kind: "successor_right", rightAcquisitionDate: "2018-09-01" });
+    expect((judgmentTempTwoHouseVerdict(seq) as { origin?: object }).origin).toMatchObject({ blocked: true });
+    expect((judgmentTempTwoHouseVerdict(unanswered) as { origin?: object }).origin).toMatchObject({ blocked: false });
+    // ⑧ — 앞뒤가 안 맞는 답(권리 취득일 누락)은 막고, 미답은 막지 않는다
+    expect(validateStep2(unanswered).some((e) => e.field === "newHouseOriginKind")).toBe(false);
+    expect(validateStep2(declared({ newHouseOriginKind: "presale" })).some((e) => e.field === "newHouseOriginKind")).toBe(true);
   });
 
   it("[LF-2] 명부는 `id:\"selling\"` 행이 앞에 붙어 전송된다", () => {

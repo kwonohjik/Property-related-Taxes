@@ -34,6 +34,8 @@ import { InheritedSameHouseholdField } from "@/components/calc/transfer/Inherite
 import { RentalHousingExceptionSection } from "@/components/calc/transfer/RentalHousingExceptionSection";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { MergeDateSection } from "@/components/calc/transfer/MergeDateSection";
+import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
+import { contractDateFromRightOrigin, declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import {
   giftBurdenedRentalAsset,
   giftBurdenedRentalExceptionInScope,
@@ -353,6 +355,15 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               }
             />
           </FieldCard>
+          {/* 신규 주택 취득 경위(결정 #43-4) — 이 화면에는 보유 주택 목록이 없어 양도세 명부 행의 경위 질문을 한 번만 받는다(같은 공용 블록).
+              ④ 전송·⑧ 검증과 같은 값(`declared-new-house-origin.ts`) — 답하지 않으면 종전과 같이 취득일 그대로 판정 + 확인 필요. */}
+          {bgt.temporaryTwoHouse && (
+            <DeclaredNewHouseOriginBlock
+              fields={bgt.temporaryTwoHouse}
+              newAcquisitionDate={dateToStr(bgt.temporaryTwoHouse.newAcquisitionDate)}
+              onChange={(patch) => set({ temporaryTwoHouse: { ...bgt.temporaryTwoHouse!, ...patch } })}
+            />
+          )}
           {/* 신규 주택 소재지(E-1 잔여 B) — 계산기는 보유 주택 명부 행 주소에서 코드를 얻는다. 이 화면엔 명부가 없어
               같은 주소 위젯으로 한 칸만 받는다. 코드가 있으면 아래 위젯이 신규 주택도 자동 판정한다(④⑧ 같은 값). */}
           {eraGate && bgt.temporaryTwoHouse && !(giftBurdenedTempTwoHouseDeadlineInScope(bgt) && bgt.temporaryTwoHouse.publicInstitutionRelocation) && (
@@ -427,6 +438,8 @@ dateToStr(bgt.temporaryTwoHouse?.newAcquisitionDate)
               regulated={eraGate.regulated}
               newHouseAcquisitionDate={eraGate.newAcquisitionDate}
               hasHouseRoster={false}
+              // 권리 유래 신규 주택은 ④가 계약일 칸을 권리 취득일로 덮는다 — 칸을 그대로 열면 입력이 조용히 버려진다(양도세 판정 메뉴와 같은 술어).
+              contractDateFromRow={contractDateFromRightOrigin(declaredNewHouseOriginOf(bgt.temporaryTwoHouse))}
             />
           )}
         </div>

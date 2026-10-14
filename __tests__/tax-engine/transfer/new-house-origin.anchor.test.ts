@@ -537,7 +537,7 @@ describe("C 계산기", () => {
     const r = await run(f);
     expect((r.body as { temporaryTwoHouse?: Record<string, unknown> }).temporaryTwoHouse?.newHouseOrigin).toEqual({ kind: "not_collected" });
     expect(r.result?.isExempt).toBe(true);
-    expect(r.result?.warnings.join(" ")).toContain("취득한 주택인지 이 화면에서 묻지 못했습니다");
+    expect(r.result?.warnings.join(" ")).toContain("취득한 주택인지 답하지 않았거나 이 경로에서 묻지 못했습니다");
   });
 
   it("C-4 구 중과 배제 8호(2023.2.28. 전 양도분)는 이 갈래 분리를 적용하지 않는다 — 현행 유지 + 비과세와 엇갈릴 때만 확인 필요 (결정 #43 하위 1 나)", async () => {

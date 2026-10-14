@@ -25,6 +25,8 @@ import { PresaleRightsSection } from "@/components/calc/transfer/PresaleRightsSe
 import { ImportedOneHouseFactsCard } from "@/components/calc/transfer/ImportedOneHouseFactsCard";
 import { calcReplacementHouseApplies } from "@/lib/calc/replacement-house-scope";
 import { JudgmentHandoffNoticeCard } from "@/components/calc/transfer/JudgmentHandoffNoticeCard";
+import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
+import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { presaleRightNoHouseExceptionVisible } from "@/lib/calc/presale-right-no-house-exception-scope";
 import { HouseholdHousingCountSection } from "./step4-sections/HouseholdHousingCountSection";
 
@@ -162,6 +164,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         legacyPrecedence: form.legacyHouseCountPrecedence === true,
         declaredSpecial: form.temporaryTwoHouseSpecial === true,
         declaredNewHouseDate: form.newHouseAcquisitionDate,
+        declaredNewHouseOrigin: declaredNewHouseOriginOf(form), // 결정 #43-3 — ④와 같은 leaf
         // D1 — 조특법 제외 행 + §155②③ 상속주택 제외 행(엔진 정본 판정) — ④와 같은 leaf.
         mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
         excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
@@ -616,6 +619,14 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
       }) && (
         <>
           <TemporaryTwoHouseSection form={form} onChange={onChange} mode="calc" />
+          {/* 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 취득 경위. 게이트·판정은 ④⑧과 같은 `tempTwoHouseDates`다. */}
+          {tempTwoHouseDates?.source === "declared" && (
+            <DeclaredNewHouseOriginBlock
+              fields={form}
+              newAcquisitionDate={form.newHouseAcquisitionDate}
+              onChange={onChange}
+            />
+          )}
           <JudgmentHandoffNoticeCard form={form} />
         </>
       )}

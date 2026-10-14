@@ -67,7 +67,7 @@ export type RuralHouseKind = "inherited" | "farm_exit" | "return_to_farm";
  * - `presale` 분양권으로 취득해 완공 — `rightAcquisitionDate` = 분양권 취득일
  * - `self_rebuild` 보유 주택을 헐고 다시 지은 주택(자가 재건축·신축) — 기존주택의 연장이라 취득일 = 헐기 전 주택 취득일
  * - `unknown` 모름(또는 미입력) — §155①만이 근거이면 불성립 + 확인 필요
- * - `not_collected` 명부 행이 없는 경로(계산기 직접 선언·증여 부담부)라 경위를 묻지 못했다 — 현행대로 판정하고 확인 필요를 알린다
+ * - `not_collected` 명부 행이 없는 경로(직접 선언·증여 부담부)에서 경위를 답하지 않았다(그 경로의 질문은 `declared-new-house-origin.ts`) — 현행대로 판정하고 확인 필요를 알린다
  */
 export type NewHouseOriginKind =
   | "general"
@@ -476,7 +476,7 @@ export interface TransferTaxInput {
     /**
      * 신규 주택의 취득 경위 — 권리로 취득한 주택이면 갈래를 가른다(`one-house/new-house-origin.ts`).
      * 🔑 **키 자체가 없으면 판정하지 않는다(종전 동작)** — 직접 호출·옛 기록. 화면 경로는 항상 싣는다
-     * (경위를 묻지 못하는 경로는 `kind: "not_collected"`).
+     * (명부 행이 없는 경로가 경위를 답받지 못하면 `kind: "not_collected"`).
      */
     newHouseOrigin?: {
       kind: NewHouseOriginKind;

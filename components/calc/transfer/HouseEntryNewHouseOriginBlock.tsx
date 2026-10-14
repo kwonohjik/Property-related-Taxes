@@ -16,9 +16,15 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 
+/**
+ * 이 블록이 읽고 쓰는 필드만 — 명부 행(`HouseEntry`)과 명부가 없는 직접 선언 경로(`DeclaredNewHouseOriginBlock` — 결정 #43-3·#43-4)가 함께 쓴다.
+ * 명부 행은 그대로 넘어간다(`HouseEntry`가 이 모양을 포함한다).
+ */
+type OriginFields = Pick<HouseEntry, "id" | "acquisitionOrigin" | "rightAcquisitionDate" | "rightApprovalDate">;
+
 interface Props {
-  house: HouseEntry;
-  onUpdate: (patch: Partial<HouseEntry>) => void;
+  house: OriginFields;
+  onUpdate: (patch: Partial<OriginFields>) => void;
 }
 
 type Origin = NonNullable<HouseEntry["acquisitionOrigin"]>;

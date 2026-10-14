@@ -183,6 +183,19 @@ describe("[§155①] 다건 일시적 2주택 종전취득일 단일소스", () 
     });
   });
 
+  it("TT-7d: 신규 주택 취득 경위 답(결정 #43-3) — 다건 경로도 단건과 같은 leaf로 싣는다(미답은 TT-7 그대로)", () => {
+    const form = baseForm();
+    form.temporaryTwoHouseSpecial = true;
+    form.newHouseAcquisitionDate = "2021-06-01";
+    form.newHouseOriginKind = "presale";
+    form.newHouseRightAcquisitionDate = "2019-03-01";
+    const payload = buildPropertyPayload(form) as Record<string, unknown>;
+    expect(payload.temporaryTwoHouse).toMatchObject({
+      newAcquisitionDate: "2021-06-01",
+      newHouseOrigin: { kind: "presale", rightAcquisitionDate: "2019-03-01" },
+    });
+  });
+
   it("TT-7b: 신규취득일 미입력 → temporaryTwoHouse 미조립(침묵 누락 방지는 validation 담당)", () => {
     const form = baseForm();
     form.temporaryTwoHouseSpecial = true;

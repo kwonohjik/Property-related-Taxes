@@ -55,7 +55,7 @@ export interface NewHouseOriginVerdict {
   reasons: string[];
   /** 모름·미입력·3년 경과 예외 미선언이라 불성립으로 본 사실 — 확인 필요 */
   unconfirmed: string[];
-  /** 불성립은 아니지만 확인 필요 (보유 중 분양권 갈래의 현행 유지 · 경위를 묻지 못한 경로) */
+  /** 불성립은 아니지만 확인 필요 (보유 중 분양권 갈래의 현행 유지 · 경위를 묻지 못했거나 답하지 않은 직접 선언 경로) */
   confirmNotes: string[];
   /** 종전주택 보유 중 분양권을 취득해 완공된 갈래인가(양론 대상) */
   holdingPresale: boolean;
@@ -130,7 +130,7 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
       return {
         ...PASS,
         confirmNotes: [
-          `신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 이 화면에서 묻지 못했습니다 — 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 취득일 그대로 판정했으니, ` +
+          `신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 답하지 않았거나 이 경로에서 묻지 못했습니다 — 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 취득일 그대로 판정했으니, ` +
             "권리를 종전주택 취득 전에 취득했거나 입주권 승계 뒤 3년이 지났다면 적용되지 않을 수 있습니다(확인 필요).",
         ],
       };
@@ -140,7 +140,7 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
         ...PASS,
         blocked: true,
         unconfirmed: [
-          `신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답했거나 답하지 않아 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용하지 않았습니다.`,
+          `신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답해(보유 주택 목록 행은 답하지 않은 경우 포함) 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용하지 않았습니다.`,
         ],
       };
 

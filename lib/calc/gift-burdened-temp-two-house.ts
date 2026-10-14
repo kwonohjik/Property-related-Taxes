@@ -15,6 +15,12 @@ import type { BurdenedGiftTransferTaxInput } from "@/lib/tax-engine/types/inheri
 import { judgeTempTwoHouseFromForm, type TempTwoHouseVerdict } from "@/lib/calc/transfer-temp-two-house-judge";
 import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 import type { TempTwoHouseDeadlineExceptionFields } from "@/lib/calc/transfer-tax-api-body-blocks";
+import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
+import {
+  declaredNewHouseEffectiveAcquisitionDate,
+  declaredNewHouseOriginIssue,
+  declaredNewHouseOriginOf,
+} from "@/lib/calc/declared-new-house-origin";
 
 type TempTwoHouseFacts = NonNullable<BurdenedGiftTransferTaxInput["temporaryTwoHouse"]>;
 type RegulatedVerdict = Extract<TempTwoHouseVerdict, { status: "eligible" | "ineligible" }>["regulated"];
@@ -52,7 +58,8 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
 ): { regulated: RegulatedVerdict; newAcquisitionDate: string } | null {
   const tt = bgt.temporaryTwoHouse;
   if ((bgt.householdHousingCount ?? 1) !== 2 || !tt) return null;
-  const newAcquisitionDate = ymd(tt.newAcquisitionDate);
+  // 기존주택의 연장인 경위(원조합원 기존주택·자가 재건축)는 선후를 기존주택 취득일로 본다 — ④와 같은 값(결정 #43-4).
+  const newAcquisitionDate = giftBurdenedEffectiveNewAcquisitionDate(bgt);
   const v = judgeTempTwoHouseFromForm({
     previousAcquisitionDate: giftBurdenedPreviousAcquisitionDate(bgt),
     newHouseAcquisitionDate: newAcquisitionDate,
@@ -72,7 +79,8 @@ export function giftBurdenedTempTwoHouseRegulatedGate(
     // §155⑯·⑱(E-1 한계 G3) — ④가 싣는 값과 같다. ⑯이 「3년」을 5년으로 덮는 독법이면 조정 여부가 기한을 바꾸지 않아 ①2호 칸이 닫히고,
     //   조정→조정 단축 기한(2년·1년)이 나오는 독법이면 ⑯이어도 열린다(#29 — 판정 메뉴 `judgmentTempTwoHouseVerdict`와 같은 인자).
     ...giftBurdenedDeadlineJudgeArgs(bgt),
-    eraFields: tt,
+    // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 그 권리 취득일로 본다 — ④·⑧과 같은 leaf(결정 #43-4).
+    eraFields: eraFormWithOriginDates(tt, declaredNewHouseOriginOf(tt)),
   });
   if (v.status === "pending" || !v.regulated.relevant) return null;
   return { regulated: v.regulated, newAcquisitionDate };
@@ -113,6 +121,25 @@ export function giftBurdenedTempTwoHouseInScope(bgt: BurdenedGiftTransferTaxInpu
   return (bgt.householdHousingCount ?? 1) === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate);
 }
 
+/**
+ * §155① 신규 주택의 **유효 취득일**(YYYY-MM-DD, 없으면 "") — 기존주택의 연장인 경위(원조합원 기존주택·자가 재건축)는 완공일이 아니라
+ * 기존(헐기 전) 주택 취득일이다. ④ 전송·⑤ 조정 판정·⑧ 검증이 같은 값을 쓴다(결정 #43-4 · 양도세 명부 경로 `effectiveNewHouseAcquisitionDate`와 같은 술어).
+ */
+export function giftBurdenedEffectiveNewAcquisitionDate(bgt: BurdenedGiftTransferTaxInput): string {
+  const tt = bgt.temporaryTwoHouse;
+  const raw = ymd(tt?.newAcquisitionDate);
+  return raw ? declaredNewHouseEffectiveAcquisitionDate(raw, tt ?? {}) : "";
+}
+
+/**
+ * ⑧ — 신규 주택 취득 경위를 답했는데 앞뒤가 맞지 않는다(권리 취득일 누락·완공일보다 늦음·인가일이 승계취득일보다 늦음). 미답은 막지 않는다.
+ * 게이트는 ④가 싣는 범위(`giftBurdenedTempTwoHouseInScope`)와 같다 — 신규 주택 취득일이 비었으면 그쪽 오류가 먼저 막는다.
+ */
+export function giftBurdenedNewHouseOriginError(bgt: BurdenedGiftTransferTaxInput): string | null {
+  if (!giftBurdenedTempTwoHouseInScope(bgt)) return null;
+  return declaredNewHouseOriginIssue(bgt.temporaryTwoHouse ?? {}, ymd(bgt.temporaryTwoHouse?.newAcquisitionDate))?.message ?? null;
+}
+
 /** §155①2호 처분기한 예외 입력(§155⑯·⑱ — E-1 한계 G3)의 ⑤④ 공용 게이트 — 위 {@link giftBurdenedTempTwoHouseInScope}와 같다. ⑧ 규칙은 없다. */
 export function giftBurdenedTempTwoHouseDeadlineInScope(bgt: BurdenedGiftTransferTaxInput): boolean {
   return giftBurdenedTempTwoHouseInScope(bgt);
@@ -130,7 +157,7 @@ export function giftBurdenedTempTwoHouseIncompleteError(bgt: BurdenedGiftTransfe
 }
 
 /**
- * 신규 주택 취득일 칸 저장 patch — 취득일을 비웠고 그 칸 밖에 쓴 §155① 항목이 없으면 객체를 통째로 `undefined`로 되돌린다.
+ * 신규 주택 취득일 칸 저장 patch — 취득일을 비웠고 그 칸 밖에 쓴 §155① 항목(신규 주택 취득 경위는 취득일과 함께 비운다)이 없으면 객체를 통째로 `undefined`로 되돌린다.
  * DateInput은 날짜가 완성되기 전 매 키 입력마다 빈 값을 내므로, 되돌리지 않으면 한 글자만 쳐도 빈 객체가 생겨 ⑧이 막는다
  * (1h-G1-5). 다른 항목(소재지·처분기한 예외 등)이 있으면 지우지 않는다 — 사용자가 쓴 사실을 날려 보내지 않는다.
  */
@@ -145,6 +172,13 @@ export function giftBurdenedNewAcquisitionDatePatch(
     newAcquisitionDate: newAcquisitionDate as unknown as Date,
   } satisfies TempTwoHouseFacts;
   if (newAcquisitionDate) return next;
+  /*
+   * 취득일을 비우면 신규 주택 취득 경위(세 필드 — 결정 #43-4)도 함께 비운다. 경위는 그 신규 주택에 붙은 답이라 주택이 없으면 의미가 없고,
+   * 남겨 두면 경위 라디오에 선택 해제가 없어 ⑧ 「입력한 §155① 항목을 비우세요」가 막다른 길이 된다.
+   */
+  next.newHouseOriginKind = undefined;
+  next.newHouseRightAcquisitionDate = undefined;
+  next.newHouseRightApprovalDate = undefined;
   const hasOtherFacts = Object.entries(next).some(
     ([k, v]) => k !== "previousAcquisitionDate" && k !== "newAcquisitionDate" && v !== undefined && v !== "" && v !== false,
   );

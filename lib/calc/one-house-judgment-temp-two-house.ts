@@ -11,6 +11,7 @@ import { resolveTemporaryTwoHouse, type TemporaryTwoHouseDates } from "@/lib/cal
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
 import { buildRightThreeYearExceptionPayload, buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
+import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import type { RightThreeYearException } from "@/lib/tax-engine/types/transfer.types";
 import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
@@ -30,6 +31,7 @@ export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): Tempora
     legacyPrecedence: form.legacyHouseCountPrecedence === true,
     declaredSpecial: form.temporaryTwoHouseSpecial === true,
     declaredNewHouseDate: form.newHouseAcquisitionDate,
+    declaredNewHouseOrigin: declaredNewHouseOriginOf(form), // 결정 #43-3 — 직접 선언 경로의 신규 주택 경위(미답 = not_collected)
     mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
     excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
     rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),

@@ -35,6 +35,7 @@ import {
   TempTwoHouseRelocationInputs,
 } from "@/components/calc/transfer/TempTwoHouseDeadlineExceptionInputs";
 import type { RelocationRegionVerdict } from "@/lib/calc/relocation-region-verdict";
+import { contractDateFromRightOrigin } from "@/lib/calc/declared-new-house-origin";
 import { ReplacementHouseSpecialBlock } from "./ReplacementHouseSpecialBlock";
 import { SaleHouseSpecialsGroup } from "@/components/calc/transfer/SaleHouseSpecialsGroup";
 
@@ -201,14 +202,7 @@ function TempTwoHouseCoreBlocks({
                 onChange={onChange}
                 regulated={tempTwoHouseVerdict.regulated}
                 newHouseAcquisitionDate={derivedNewHouseAcquisitionDate}
-                contractDateFromRow={
-                  derivedNewHouseOrigin &&
-                  derivedNewHouseOrigin.kind !== "general" &&
-                  derivedNewHouseOrigin.kind !== "unknown" &&
-                  derivedNewHouseOrigin.kind !== "not_collected"
-                    ? derivedNewHouseOrigin.rightAcquisitionDate
-                    : undefined
-                }
+                contractDateFromRow={contractDateFromRightOrigin(derivedNewHouseOrigin)}
               />
             )}
           </div>

@@ -69,6 +69,7 @@ import {
 } from "@/lib/stores/one-house-judgment-form.types";
 import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { houseRowFactIssues } from "./house-row-fact-issues";
+import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
@@ -208,7 +209,14 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   }
 
   // §155① 신규 주택으로 도출된 행 — 그 행의 취득 경위를 답하게 한다(⑤ 노출·④ 전송과 같은 도출 `judgmentDerivedNewHouse`).
-  const newHouseRowId = judgmentDerivedNewHouse(form)?.newHouseRowId;
+  const derivedNewHouse = judgmentDerivedNewHouse(form);
+  const newHouseRowId = derivedNewHouse?.newHouseRowId;
+  // 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 경위 답이 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
+  //   게이트는 ⑤ 마운트(`Step2`: 섹션 노출 + `source === "declared"`)와 같다.
+  if (derivedNewHouse?.source === "declared" && judgmentTemporaryTwoHouseVisible(form)) {
+    const declaredIssue = declaredNewHouseOriginIssue(form, form.newHouseAcquisitionDate);
+    if (declaredIssue) errors.push(err(declaredIssue.field, declaredIssue.message));
+  }
   // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일 필수 — ⑤ `HousesListSection`·④와 같은 leaf(결정 #43 하위 2).
   const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], form.houses?.length);
   if (sellingOrigin) errors.push(err(sellingOrigin.field, sellingOrigin.message));

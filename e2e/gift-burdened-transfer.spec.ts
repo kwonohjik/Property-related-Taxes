@@ -527,6 +527,73 @@ test("[BT-E2E-7] 일시적 2주택 §155①2호 새 입력 → 요청 본문 tem
 });
 
 /**
+ * [BT-E2E-7b] 결정 #43-4 — 신규 주택 취득 경위(분양권)를 답하면 요청 본문 `temporaryTwoHouse.newHouseOrigin`에 실린다.
+ *
+ * BT-E2E-7은 미답이라 `not_collected` 그대로다(불변). 순차 분양권의 판정 방향은 anchor(`gift-burdened-new-house-origin-43-4.route.anchor.test.ts`)가
+ * 실제 route로 고정한다 — 여기서는 **화면 → ④ 본문** 배선과 「미답은 막지 않는다」를 본다.
+ */
+test("[BT-E2E-7b] 신규 주택 취득 경위 질문 → 요청 본문 newHouseOrigin (미답은 막지 않는다)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const mock = await setupTransferApiMock(page);
+
+  await page.goto("/calc/gift-tax");
+  await fillDateAndVerify(page, { year: "2021", month: "3", day: "1" });
+  await page.locator("select").first().selectOption({ index: 1 });
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  const dialog = await addApartmentWithDebt(page);
+  await enableBurdenedTransferToggle(dialog);
+  await fillApartmentTransferInfo(dialog);
+
+  const count = dialog.getByTestId("bg-transfer-house-count");
+  await count.fill("2");
+  await expect(count).toHaveValue("2");
+
+  // 신규 주택 취득일을 넣기 전에는 질문이 없다 — 객체(`temporaryTwoHouse`)가 생긴 뒤에 뜬다
+  await expect(dialog.getByTestId("declared-new-house-origin")).toHaveCount(0);
+  const dateField = dialog
+    .getByText("신규 주택 취득일", { exact: true })
+    .locator("xpath=ancestor::div[.//input[@aria-label='연도']][1]");
+  await dateField.getByRole("textbox", { name: "연도" }).fill("2020");
+  await dateField.getByRole("textbox", { name: "월" }).fill("6");
+  await dateField.getByRole("textbox", { name: "일" }).fill("1");
+  await expect(dateField.getByRole("textbox", { name: "일" })).toHaveValue("1");
+
+  const origin = dialog.getByTestId("declared-new-house-origin");
+  await expect(origin).toBeVisible();
+  await origin.getByTestId("house-row-origin-presale").click();
+  const right = origin.getByTestId("house-row-right-acquisition-date");
+  await right.getByRole("textbox", { name: "연도" }).fill("2019");
+  await right.getByRole("textbox", { name: "월" }).fill("4");
+  await right.getByRole("textbox", { name: "일" }).fill("1");
+  await expect(right.getByRole("textbox", { name: "일" })).toHaveValue("1");
+
+  // 권리 유래 신규 주택은 계약일 칸이 사라지고 권리 취득일로 판정한다는 안내가 뜬다(입력이 ④에서 덮여 버려지지 않게)
+  await expect(dialog.getByTestId("temp-two-house-contract-date-from-row")).toBeVisible();
+  await expect(dialog.getByTestId("temp-two-house-new-contract-date")).toHaveCount(0);
+
+  // 조정대상지역 칸이 열리는 시기(2021-03-01) — 조정 여부는 미선택으로 둔다(엔진이 불성립 독법 + 고지). 이 spec은 경위 배선만 본다.
+  await dialog.getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByTestId("estate-edit-dialog")).toBeHidden();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByRole("button", { name: /^다음/ }).click();
+
+  const transferResponse = page.waitForResponse(
+    (r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST",
+    { timeout: 30_000 },
+  );
+  await page.getByRole("button", { name: /계산하기/ }).click();
+  await transferResponse;
+
+  expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
+  const tt = mock.bodies[0].temporaryTwoHouse as Record<string, unknown>;
+  expect(tt.newAcquisitionDate).toBe("2020-06-01");
+  expect(tt.newHouseOrigin).toEqual({ kind: "presale", rightAcquisitionDate: "2019-04-01" });
+  // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 권리 취득일로 본다 — 계약일 칸을 이 값이 덮는다
+  expect(tt.newHouseContractDate).toBe("2019-04-01");
+});
+
+/**
  * [BT-E2E-8] E-1 후속 — 증여 주택 주소 · §154① 단서(삭제 전 4호) · §154⑤ 단서 재기산이 요청 본문에 실린다.
  *
  * 주소 검색은 `/api/address/search`만 모킹한다(강남 역삼동 PNU — `transfer-regulated-auto.spec.ts`와 같은 방식).
