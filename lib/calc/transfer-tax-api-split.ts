@@ -56,7 +56,11 @@ export function makeRatioed(ratio: number, fractional: boolean) {
  * «같은 날 취득 주택의 배율 초과분 분리»(#17) 컨텍스트 — 양도일이 있어야 배율을 정한다. 주 자산·함께 양도 주택 카드(#17-1)가 같이 넘긴다.
  * 생략하면(감가상각 범위 판정) 그 경로를 보지 않는다.
  */
-export type ExcessSplitCtx = { transferDate: string | undefined };
+export type ExcessSplitCtx = {
+  transferDate: string | undefined;
+  /** 첫 자산이 아님(함께 양도 주택 카드) — §164⑦ PHD는 첫 자산에만 닿는다(`usesPhdGate`). 생략 = 첫 자산. */
+  isNonPrimary?: boolean;
+};
 
 /** 분리 축이 활성인가 — `calcSplitGain` 진입 게이트(transfer-tax-split-gain.ts)와 동일 조건. */
 export function isSplitPayloadActive(
@@ -76,7 +80,7 @@ export function isSplitPayloadActive(
     ((primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both") &&
       !isBurdenedGift) ||
     // #17 — 같은 날 취득 주택의 배율 초과분 분리(기준시가 5칸). ⑤ 카드 노출·⑧ 필수와 같은 술어.
-    (primaryCtx !== undefined && housingExcessNeedsLandSplit(primary, primaryCtx.transferDate))
+    (primaryCtx !== undefined && housingExcessNeedsLandSplit(primary, primaryCtx.transferDate, primaryCtx.isNonPrimary))
   );
 }
 
@@ -97,7 +101,7 @@ export function buildSplitPayload(
   const primary = normalizeBuildingCauseInputs(rawPrimary);
   const isSplitActive = isSplitPayloadActive(primary, isBurdenedGift, primaryCtx);
   // #17 — 같은 날 취득 주택의 배율 초과분 분리 경로(소유자 분리·별개취득이 아니다). 엔진 `housingExcessSplitAppliesToInput`과 같은 술어.
-  const excessSplit = primaryCtx !== undefined && housingExcessNeedsLandSplit(primary, primaryCtx.transferDate);
+  const excessSplit = primaryCtx !== undefined && housingExcessNeedsLandSplit(primary, primaryCtx.transferDate, primaryCtx.isNonPrimary);
   // **별개 취득** — 분리 활성의 부분집합. 취득시점이 실제로 달라 취득가액이 파트별로 실재하는
   // 경우만 true(겸용·selfOwns 강제 분리에서 날짜가 같으면 false).
   // 엔진 취득가액 축의 파트별 완결 게이트(§97①1호·§114⑦) — 판정 단일 소스는 그 헬퍼 1곳.
@@ -168,7 +172,7 @@ export function buildSplitPayload(
   const saleStdPriceActive = isSplitActive;
   // #17 후속 — 배율 초과분 분리의 자본적지출 토지분·건물분(카드 1칸). 아래 자본적지출 2필드 참조.
   const excessCapex =
-    !partInputsActive && primaryCtx !== undefined && housingExcessNeedsCapexSplit(primary, primaryCtx.transferDate)
+    !partInputsActive && primaryCtx !== undefined && housingExcessNeedsCapexSplit(primary, primaryCtx.transferDate, primaryCtx.isNonPrimary)
       ? housingExcessCapexParts(primary)
       : null;
 

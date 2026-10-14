@@ -22,8 +22,10 @@ export function validateHousingExcessSplitInputs(
   a: AssetForm,
   label: string,
   transferDate: string | undefined,
+  /** 첫 자산이 아님(함께 양도 카드) — ④⑤와 같은 술어(`index > 0`). §164⑦ PHD 경로는 첫 자산에만 닿는다. */
+  isNonPrimary = false,
 ): string | null {
-  if (housingExcessZonePending(a)) {
+  if (housingExcessZonePending(a, isNonPrimary)) {
     return fieldError(
       "appurtenantLandZone",
       `${label}: 토지 면적이 건물 정착면적의 3배를 넘습니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §154⑦·§168의12).`,
@@ -49,7 +51,7 @@ export function validateHousingExcessSplitInputs(
         `「${part} 취득가액 방식」을 그 방식과 같게 선택하세요. 토지를 다른 날 취득했다면 토지 취득일을 고치세요.`,
     );
   }
-  if (!housingExcessNeedsLandSplit(a, transferDate)) return null;
+  if (!housingExcessNeedsLandSplit(a, transferDate, isNonPrimary)) return null;
   const excess = housingExcessAreaOfAsset(a, transferDate);
   const head =
     `${label}: 토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘습니다 — 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 분리 과세하므로 ` +
@@ -88,7 +90,7 @@ export function validateHousingExcessSplitInputs(
     return fieldError("buildingStandardPriceAtTransfer", `${head} 양도 당시 건물 기준시가를 입력하세요.`);
   }
   // #17 후속 — 자산 전체 자본적지출의 토지분(건물분 = 전체 − 토지분). 분리 계산은 파트 값만 읽고, 자본적지출은 §100② 후문의 안분 대상이 아니다.
-  if (housingExcessNeedsCapexSplit(a, transferDate)) {
+  if (housingExcessNeedsCapexSplit(a, transferDate, isNonPrimary)) {
     const { total, land, building } = housingExcessCapexParts(a);
     const capexHead =
       `${label}: 배율 초과분을 나눠 계산하므로 자본적지출 ${total.toLocaleString()}의 토지분·건물분 귀속이 필요합니다 — 자본적지출은 공통 비용 안분 대상이 아닙니다 (소득세법 §100② 후문 · §97②2호).`;

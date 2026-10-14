@@ -18,7 +18,7 @@ import type {
 import type { AcqSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
-import { housingExcessSplitAppliesToInput } from "./housing-excess-split";
+import { housingExcessNeedsStdInputsOfInput, phdSplitPathTaken } from "./housing-excess-split";
 import { resolveHousingExcessAcqContract } from "./housing-excess-acq-contract";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
 import { buildSplitPartCauseEcho } from "./transfer-split-part-echo";
@@ -110,7 +110,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // ── 개별주택가격 미공시 취득 경로 (§164⑦) ──
   // 토지·건물 **모두** 환산(estimated)일 때만 진입 — 혼합 모드(예: 토지 실가+건물 환산)는
   // PHD 3-시점 알고리즘이 아니라 아래 파트별 경로로 처리한다(2026-07-28 게이트 강화).
-  if (input.preHousingDisclosure && earlyLandMode === "estimated" && earlyBuildingMode === "estimated") {
+  // 게이트 술어는 배율 초과분 분리(#17-5)의 `usesPhd`와 같은 leaf(`phdSplitPathTaken`)다 — 따로 판정하면 한쪽만 PHD로 읽는다.
+  if (phdSplitPathTaken(input)) {
     return calcSplitGainPreDisclosure(input);
   }
 
@@ -139,7 +140,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     isHousing: input.propertyType === "housing" && input.transferType !== "burdened_gift",
     isSeparate: input.isSeparateAcquisition === true,
     // #17 — 같은 날 취득 주택의 배율 초과분 분리도 같은 비례 안분(개별주택가격 ÷ 가목:나목)을 쓴다 → 나목이 필수다.
-    isOwnerSplit: (input.selfOwns ?? "both") !== "both" || housingExcessSplitAppliesToInput(input),
+    isOwnerSplit: (input.selfOwns ?? "both") !== "both" || housingExcessNeedsStdInputsOfInput(input),
   };
   if (
     requiresHousingBuildingStdAtAcq(stdNeedGate, input, { landMode: earlyLandMode, buildingMode: earlyBuildingMode }) &&
