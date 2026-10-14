@@ -41,6 +41,8 @@ import type { RateClause } from "./transfer-tax-rate-calc";
 import { resolveAppurtenantLandRateBasisDate } from "./transfer-tax-appurtenant-land";
 import { resolveLandStatutoryAcquisitionDate } from "./transfer-tax-appurtenant-land";
 import { buildLandRateInput } from "./transfer-tax-appurtenant-land";
+import { buildNblPartRateInput } from "./transfer-tax-appurtenant-land";
+import { resolveClause5TaxDetailed } from "./transfer-tax-rental-housing-nbl-split";
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { RateGroup } from "./types/transfer-aggregate.types";
@@ -67,8 +69,11 @@ export type {
 
 /** 파트 1건의 산출 결과 */
 export interface SplitRatePart {
-  /** 토지(배율 내 부수토지 포함) / 건물 / 배율 초과분(비사업용 토지) */
-  kind: "land" | "building" | "non_business_land";
+  /**
+   * 토지(배율 내 부수토지 포함) / 건물 / 배율 초과분(비사업용 토지) /
+   * 주택분(§155⑳ 특례 적용 자산 — 토지·건물을 한 파트로 보는 단건 특례 경로와 같은 단위)
+   */
+  kind: "land" | "building" | "non_business_land" | "housing";
   /** §104② 세율 보유기간 기산일 */
   basisDate: Date;
   /** 파트 양도소득금액 (양도차익 − 장기보유특별공제) */
@@ -137,6 +142,15 @@ export interface SplitPartRateContext {
   /** STEP 7이 만든 세율 판정 입력 (특칙 플래그 반영 후) */
   taxRateInput: TransferTaxInput;
   multiHouseSurchargeResult?: MultiHouseSurchargeResult;
+  /**
+   * 「소득세법 시행령」 §155⑳ 특례를 **적용한** 자산의 과세대상 양도소득금액(주택분 + 배율 초과 비사업용 토지분) — 다건 전용.
+   *
+   * 단건 §155⑳ 경로(`transfer-tax-rental-housing-step.ts`)는 토지·건물 파트별 세율을 쓰지 않는다. 자산 단위 `calcTax`이거나, 배율 초과분이 있으면
+   * 주택분 + 배율 초과분 2파트(`resolveClause5Tax`)다. 다건이 `splitDetail`의 파트 양도차익·파트 장특으로 일반 split 경로를 다시 태우면
+   * 12억 안분·비과세 제외 전의 양도차익이 섞인 가중치로 소득금액을 나눠 단건과 갈린다 — 값이 있으면 단건과 같은 모델로 계산한다.
+   * 단건(`transfer-tax.ts`)은 이 경로에 오지 않으므로 넘기지 않는다.
+   */
+  rentalHousingTaxableIncome?: number;
 }
 
 /**
@@ -234,13 +248,7 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
       raw: (nbPart.taxableGainAfterProration ?? nbPart.gain) - nbPart.longTermDeduction,
       // 주택 단기세율(§104①2·3호)이 아니라 §104①8호 누진 + 10%p. `propertyType`을 토지로 두어야
       // `calcTax`의 주택 분기(70%/60%)에 걸리지 않는다.
-      rateInput: {
-        ...buildLandRateInput(input, nbBasisDate),
-        propertyType: "land",
-        isNonBusinessLand: true,
-        // 자산 단위 면적안분 비율은 이 파트에 의미가 없다(이미 초과분만 떼어냈다).
-        nonBusinessLandAreaRatio: undefined,
-      },
+      rateInput: buildNblPartRateInput(input, nbBasisDate),
     });
   }
 
@@ -562,6 +570,80 @@ function computePartialNblTax(
 }
 
 /**
+ * §155⑳ 특례 적용 자산의 산출세액 — 단건 `transfer-tax-rental-housing-step.ts`와 **같은 모델**이다.
+ *
+ * - 배율 초과 부수토지가 없으면(`nonBusinessLandPart` 없음) 자산 단위 `calcTax` — 단건도 파트별 세율을 쓰지 않는다.
+ * - 있으면 주택분 + 배율 초과 비사업용 토지분 2파트(§104⑤ 본문 후단) — 단건과 **같은 함수**(`resolveClause5TaxDetailed`)를 부른다.
+ *
+ * 파트 소득금액은 엔진이 낸 echo를 읽는다: 배율 초과분 = `nonBusinessLandPart`의 양도차익 − 장특(단건 `nbl.income`과 같은 값),
+ * 주택분 = 특례 적용 후 과세대상 소득금액 − 배율 초과분. 다건에서 양도차손 통산으로 자산 소득금액이 달라졌으면 두 파트를 그 비율로 나눈다
+ * (일반 split 경로 `evaluateSplitPartTax`와 같은 규약 — 잔액은 마지막 파트가 흡수).
+ * ※ 주택분은 「슬롯 − 배율 초과분」이라, 소득 슬롯에 주택분·배율 초과분 외의 소득(예: 비과세에서 떼어낸 나중 취득 부수토지분 `laterLandPart`)이 더해지는 엔진 변경이 합류하면 그 소득이 주택분에 섞인다.
+ * ⚠️ `splitDetail`의 파트 양도차익·파트 장특(`land.longTermDeduction` 등)으로 가중치를 만들면 안 된다 — 그 값은 12억 안분 전 양도차익 기준
+ *    표시용이라 특례 경로의 소득금액 슬롯과 축이 다르다.
+ */
+function resolveRentalHousingSplitTax(
+  ctx: SplitPartRateContext,
+  splitDetail: SplitGainResult,
+  grossIncome: number,
+  fallback: () => ReturnType<typeof calcTax>,
+): ReturnType<typeof calcTax> & { splitPartDetail?: SplitPartRateResult; partRateBasisApplied?: boolean } {
+  const plain = () => ({ ...fallback(), partRateBasisApplied: false });
+  const nb = splitDetail.nonBusinessLandPart;
+  if (!nb) return plain();
+  const nbGross = nb.gain - nb.longTermDeduction;
+  const housingGross = grossIncome - nbGross;
+  // 불변식 — 특례 슬롯 = 주택분(≥0) + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(조용히 clamp하지 않는다).
+  if (grossIncome <= 0 || nbGross <= 0 || housingGross < 0) return plain();
+
+  const housingIncome =
+    ctx.transferIncome === grossIncome
+      ? housingGross
+      : Number((BigInt(ctx.transferIncome) * BigInt(housingGross)) / BigInt(grossIncome));
+  const nbBasisDate = resolveLandStatutoryAcquisitionDate(ctx.taxRateInput);
+  if (!nbBasisDate) return plain();
+
+  const d = resolveClause5TaxDetailed({
+    housingIncome,
+    nbl: { income: ctx.transferIncome - housingIncome, rateInput: buildNblPartRateInput(ctx.taxRateInput, nbBasisDate) },
+    basicDeduction: ctx.basicDeduction,
+    taxBase: ctx.taxBase,
+    input: ctx.taxRateInput,
+    parsedRates: ctx.parsedRates,
+    multiHouseSurchargeResult: ctx.multiHouseSurchargeResult,
+  });
+  const toPart = (kind: SplitRatePart["kind"], basisDate: Date, p: typeof d.housing): SplitRatePart => ({
+    kind,
+    basisDate,
+    income: p.income,
+    allocatedBasicDeduction: p.allocatedBasicDeduction,
+    taxBase: p.taxBase,
+    calculatedTax: p.tax.calculatedTax,
+    appliedRate: p.tax.appliedRate,
+    rateClause: p.tax.rateClause,
+    candidateClauses: p.tax.candidateClauses,
+    rateInput: p.rateInput,
+    surchargeType: p.tax.surchargeType,
+    surchargeRate: p.tax.surchargeRate,
+    nblSurchargeExcluded: p.tax.nblSurchargeExcluded,
+  });
+  return {
+    ...d.result,
+    splitPartDetail: {
+      parts: [
+        toPart("housing", ctx.taxRateInput.acquisitionDate, d.housing),
+        toPart("non_business_land", nbBasisDate, d.nbl),
+      ],
+      perAssetTotal: d.clause2,
+      aggregateProgressive: d.clause1,
+      chosen: d.clause1 >= d.clause2 ? "aggregate" : "per_asset",
+    },
+    // 주택분은 자산 단위 기산일로 세율을 정한다 — 파트별 §104② 기산일을 판정한 경우가 아니다(「세율 기산일」 표시 게이트 off, 단건 특례 경로와 같다).
+    partRateBasisApplied: false,
+  };
+}
+
+/**
  * STEP 7 산출세액 — 파트별 세율이 성립하면 §104⑤ 비교과세 결과를, 아니면 기존 자산 단위 세액을 낸다.
  * 반환 형태는 `calcTax`와 동일해 호출부·finalize가 구분 없이 소비한다.
  */
@@ -572,6 +654,10 @@ export function resolveSplitAwareTax(
     calcTax(ctx.taxBase, ctx.parsedRates, ctx.taxRateInput, ctx.multiHouseSurchargeResult);
   // 토지·건물 분리취득이 아니어도 **한 필지 안에서** 비사업용/그 외로 갈리면 §104⑤가 걸린다.
   if (!ctx.splitDetail) return computePartialNblTax(ctx, fallback) ?? fallback();
+  // §155⑳ 특례 적용 자산 — 단건 특례 경로와 같은 모델(파트별 세율 판정을 거치지 않는다).
+  if (ctx.rentalHousingTaxableIncome !== undefined) {
+    return resolveRentalHousingSplitTax(ctx, ctx.splitDetail, ctx.rentalHousingTaxableIncome, fallback);
+  }
 
   const { parts, judged } = evaluateSplitPartTax(ctx);
   // 아래 반환은 모두 파트 판정을 거친 것이다 — 이 값 하나로 「세율 기산일」 표시 여부를 정한다(호출부가 splitDetail에 싣는다).
@@ -601,6 +687,7 @@ export function resolveSplitAwareTax(
     land: "토지",
     building: "건물",
     non_business_land: "배율 초과 토지(비사업용)",
+    housing: "주택",
   };
   // 파트 중 하나라도 중과가 붙으면 자산 단위로도 그 사실을 노출한다 —
   // 결과 카드의 중과 표시·법령근거가 사라지지 않도록(§104①8호 비사업용 토지 등).

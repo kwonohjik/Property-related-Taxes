@@ -102,6 +102,22 @@ export function buildLandRateInput(input: TransferTaxInput, basisDate: Date): Tr
 }
 
 /**
+ * 배율 초과 부수토지 파트(「소득세법」 제104조의3 제1항 제5호 비사업용 토지)의 세율 판정 입력.
+ *
+ * `propertyType`을 토지로 두어 `calcTax`의 주택 단기세율(70%/60%) 분기에 걸리지 않게 하고, §104② 기산일은 주택 부수토지의 `max` 규칙이 아니라
+ * 토지 본래 취득일(`basisDate`)이다. 자산 단위 면적안분 비율은 이미 초과분만 떼어낸 파트에 의미가 없다.
+ * **단일 소스** — 일반 split(`computeSplitPartTax`)·§155⑳ 단건(`splitAppurtenantExcess`)·다건 §155⑳ 재계산이 같은 객체 형태를 써야 한다.
+ */
+export function buildNblPartRateInput(input: TransferTaxInput, basisDate: Date): TransferTaxInput {
+  return {
+    ...buildLandRateInput(input, basisDate),
+    propertyType: "land",
+    isNonBusinessLand: true,
+    nonBusinessLandAreaRatio: undefined,
+  };
+}
+
+/**
  * G-3 비과세 축 — 주택 부수토지를 **나중에** 취득해 보유 2년(2012-06-29 전 양도분은 3년) 미만이면 그 토지분은
  * 1세대1주택 비과세를 적용하지 않는다(「소득세법」 시행령 제154조 제1항 보유요건 미충족).
  * 건물분과 요건 연수 이상 보유한 토지분만 비과세 대상이다(계획서 §5.4).

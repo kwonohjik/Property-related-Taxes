@@ -14,9 +14,9 @@ import type { RateGroup } from "./types/transfer-aggregate.types";
 import {
   resolveAppurtenantLandExcess,
   resolveLandStatutoryAcquisitionDate,
-  buildLandRateInput,
   isLaterAcquiredLandExemptExcluded,
   laterLandExclusionReason,
+  buildNblPartRateInput,
 } from "./transfer-tax-appurtenant-land";
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import { calcOneHouseProration, type ParsedRates } from "./transfer-tax-helpers";
@@ -86,13 +86,7 @@ export function splitAppurtenantExcess(
     limitArea: excess.limitArea,
     excessArea: excess.excessArea,
     multiplier: excess.multiplier,
-    rateInput: {
-      ...buildLandRateInput(input, basisDate),
-      propertyType: "land",
-      isNonBusinessLand: true,
-      // 자산 단위 면적안분 비율은 이 파트에 의미가 없다 — 이미 초과분만 떼어냈다.
-      nonBusinessLandAreaRatio: undefined,
-    },
+    rateInput: buildNblPartRateInput(input, basisDate),
     step: {
       label: "부수토지 배율 초과분 분리 (비사업용 토지)",
       formula:
@@ -214,16 +208,45 @@ const PRHP_PART_RATE_GROUP: RateGroup = "progressive";
  * §104① 후단·§104⑦은 정본이 수행한다. `computePartialNblTax`(한 필지 중 일부만 비사업용)와
  * 같은 구조다.
  */
-export function resolveClause5Tax(args: {
+export function resolveClause5Tax(args: Clause5Args): ReturnType<typeof calcTax> {
+  return resolveClause5TaxDetailed(args).result;
+}
+
+export interface Clause5Args {
   housingIncome: number;
-  nbl: AppurtenantExcessSplit;
+  /** 배율 초과분 — 이 함수가 읽는 것은 소득금액과 세율 판정 입력뿐이다(다건이 echo로 재구성할 수 있게 좁혔다) */
+  nbl: Pick<AppurtenantExcessSplit, "income" | "rateInput">;
   basicDeduction: number;
   /** 자산 단위 과세표준 = (주택분 + 비사토분) − 기본공제 */
   taxBase: number;
   input: TransferTaxInput;
   parsedRates: ParsedRates;
   multiHouseSurchargeResult?: MultiHouseSurchargeResult;
-}): ReturnType<typeof calcTax> {
+}
+
+/** `resolveClause5Tax`가 낸 파트 1건의 내역 — 다건 §104⑤ 호별 합산이 파트 단위로 읽는다. */
+export interface Clause5PartDetail {
+  income: number;
+  allocatedBasicDeduction: number;
+  taxBase: number;
+  /** 파트 `calcTax` 결과 그대로 */
+  tax: ReturnType<typeof calcTax>;
+  /** 파트 세율 판정에 쓴 입력 — 재구성하지 않고 그대로 싣는다(dual-truth 방지) */
+  rateInput: TransferTaxInput;
+}
+
+export interface Clause5Detail {
+  result: ReturnType<typeof calcTax>;
+  housing: Clause5PartDetail;
+  nbl: Clause5PartDetail;
+  /** §104⑤1호 — 과세표준 합계액에 §55① 세율 */
+  clause1: number;
+  /** §104⑤2호 — 파트별 산출세액의 합 */
+  clause2: number;
+}
+
+/** `resolveClause5Tax`와 같은 계산 — 세액 외에 파트 내역을 함께 돌려준다(단건은 `result`만 쓴다). */
+export function resolveClause5TaxDetailed(args: Clause5Args): Clause5Detail {
   const { housingIncome, nbl, basicDeduction, taxBase, input, parsedRates, multiHouseSurchargeResult } = args;
   // 배율 초과분을 이미 떼어냈으므로 남은 주택분은 §104의3①5호가 규정한 부분이 아니다 → 중과 제외
   // (split 정본 `computeSplitPartTax`의 `land` seed와 같은 처리).
@@ -256,33 +279,57 @@ export function resolveClause5Tax(args: {
   // 1호 — 과세표준 **합계액**에 §55① 세율만. 가산 항이 없다.
   const clause1 = calculateProgressiveTax(taxBase, parsedRates.brackets);
 
+  const detail = {
+    housing: {
+      income: housingIncome,
+      allocatedBasicDeduction: allocated(0),
+      taxBase: housingBase,
+      tax: housingPart,
+      rateInput: housingRateInput,
+    },
+    nbl: {
+      income: nbl.income,
+      allocatedBasicDeduction: allocated(1),
+      taxBase: nblBase,
+      tax: nblPart,
+      rateInput: nbl.rateInput,
+    },
+    clause1,
+    clause2,
+  };
   if (clause1 >= clause2) {
     const { baseRate, deduction } = computeBracketBreakdown(taxBase, parsedRates.brackets);
     return {
-      calculatedTax: clause1,
-      appliedRate: baseRate,
-      progressiveDeduction: deduction,
-      surchargeSuspended: false,
-      shortTermNote:
-        `배율 초과 부수토지 분리(소득세법 §104⑤ 본문 후단): 합산 누진세액 ` +
-        `${clause1.toLocaleString()}이 별개 자산별 합계 ${clause2.toLocaleString()}보다 크다`,
+      ...detail,
+      result: {
+        calculatedTax: clause1,
+        appliedRate: baseRate,
+        progressiveDeduction: deduction,
+        surchargeSuspended: false,
+        shortTermNote:
+          `배율 초과 부수토지 분리(소득세법 §104⑤ 본문 후단): 합산 누진세액 ` +
+          `${clause1.toLocaleString()}이 별개 자산별 합계 ${clause2.toLocaleString()}보다 크다`,
+      },
     };
   }
   return {
-    calculatedTax: clause2,
-    // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가)
-    appliedRate: Math.max(housingPart.appliedRate, nblPart.appliedRate),
-    progressiveDeduction: 0,
-    surchargeSuspended: false,
-    // 비사업용 토지 중과 사실을 자산 단위로 끌어올린다 — 결과 카드의 배지·법령근거가 사라지지 않도록.
-    surchargeType: nblPart.surchargeType,
-    surchargeRate: nblPart.surchargeRate,
-    ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
-    shortTermNote:
-      `파트별 세율(소득세법 §104⑤2호·본문 후단): 주택분 ` +
-      `${Math.round(housingPart.appliedRate * 100)}% ${housingPart.calculatedTax.toLocaleString()} + ` +
-      `배율 초과 토지(비사업용) ${Math.round(nblPart.appliedRate * 100)}% ` +
-      `${nblPart.calculatedTax.toLocaleString()} (합산 누진세액 ${clause1.toLocaleString()}과 비교한 큰 세액)`,
+    ...detail,
+    result: {
+      calculatedTax: clause2,
+      // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가)
+      appliedRate: Math.max(housingPart.appliedRate, nblPart.appliedRate),
+      progressiveDeduction: 0,
+      surchargeSuspended: false,
+      // 비사업용 토지 중과 사실을 자산 단위로 끌어올린다 — 결과 카드의 배지·법령근거가 사라지지 않도록.
+      surchargeType: nblPart.surchargeType,
+      surchargeRate: nblPart.surchargeRate,
+      ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+      shortTermNote:
+        `파트별 세율(소득세법 §104⑤2호·본문 후단): 주택분 ` +
+        `${Math.round(housingPart.appliedRate * 100)}% ${housingPart.calculatedTax.toLocaleString()} + ` +
+        `배율 초과 토지(비사업용) ${Math.round(nblPart.appliedRate * 100)}% ` +
+        `${nblPart.calculatedTax.toLocaleString()} (합산 누진세액 ${clause1.toLocaleString()}과 비교한 큰 세액)`,
+    },
   };
 }
 
