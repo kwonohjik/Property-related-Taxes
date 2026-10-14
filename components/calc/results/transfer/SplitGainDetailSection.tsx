@@ -46,6 +46,7 @@ function AcqCell({ owned, part, testId }: { owned: boolean; part: SplitPart; tes
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
 import { AcqSplitJudgmentBlock } from "./AcqSplitJudgmentBlock";
+import { SplitNonBusinessLandBlock } from "./SplitNonBusinessLandBlock";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import {
   splitAcqBasisView,
@@ -304,6 +305,8 @@ export function SplitGainDetailSection({
               </span>
             )}
           </div>
+          {/* 배율 초과 부수토지(비사업용 토지) 파트 — 있을 때만(#17). 열 값(토지 이내분)과 합쳐야 자산 과세 양도차익·장특과 맞는다. */}
+          {splitDetail.nonBusinessLandPart && <SplitNonBusinessLandBlock nb={splitDetail.nonBusinessLandPart} />}
           {/*
             §100③ 판정 — **구분 기재가 있고 안분값도 산출된 경우에만** 채워진다. 일괄양도는
             비교 대상이 없어 판정하지 않으므로 이 블록도 뜨지 않는다(엔진 계약 그대로).
