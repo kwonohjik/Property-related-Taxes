@@ -520,7 +520,7 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /**
    * 증여 전 증여자와 같은 세대로 이 주택에 **거주한 기간(개월)** (결정 #38-7 — 상속 `decedentCohabitationResidenceMonths`와 같은 모양). `giftSameHousehold === "yes"`일
    * 때만 묻는다. `""` = 미답(통산 없이 판정하고, 거주했다면 결론이 달라질 때만 확인 필요를 고지) · `"0"` = 거주한 적 없음.
-   * §154① 비과세 거주요건에만 통산한다 — 표2 대상 판정·공제율에는 통산하지 않는다(별건 #38-9).
+   * §154① 비과세 거주요건과 표2 대상 판정(거주 2년)에 통산한다 — 표2 공제율의 보유·거주기간에는 통산하지 않는다(결정 #38-9).
    */
   giftPriorHouseholdResidenceMonths: string;
   /**

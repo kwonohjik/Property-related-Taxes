@@ -2,7 +2,7 @@
  * anchor(⑬·⑫·⑭ 다건) — 증여 전 동일세대 거주 개월의 다건 경로 (결정 #38-7)
  *
  * 증여 사실 한 벌(`mapGiftHouseholdBasis`)이 단건 `engine-input.ts`·다건 `multi/route.ts` 두 곳에서 쓰인다 — 새 키를 한쪽만 매핑하면 다건에서 침묵 strip되어
- * 같은 입력이 단건 135,806,000 · 다건 484,588,500이 된다(#38-3 선례). 다건 ④(`buildPropertyPayload`)·⑫·⑭가 단건과 같은 세액을 내는지 고정한다.
+ * 같은 입력이 단건 125,246,000 · 다건 484,588,500이 된다(#38-3 선례). 다건 ④(`buildPropertyPayload`)·⑫·⑭가 단건과 같은 세액을 내는지 고정한다.
  *
  * 기대값은 단건 route 결과와의 동일성이다 — 두 route가 같은 엔진을 쓰므로 어긋나면 배관 결함이다. 절댓값은 계산기 anchor(`gift-prior-residence-38-7`)와 같다.
  */
@@ -75,13 +75,13 @@ describe("다건 — 증여 전 동일세대 거주 개월이 단건과 같은 �
     expect(buildPropertyPayload(calcForm({ giftPriorHouseholdResidenceMonths: "" }))).not.toHaveProperty("giftPriorHouseholdResidenceMonths");
   });
 
-  it("[PM-2] ⑫⑭ — 같은 입력이 단건·다건에서 같은 세액이다: 12개월 135,806,000 · 미답 484,588,500(과세 → 부분 비과세 방향)", async () => {
+  it("[PM-2] ⑫⑭ — 같은 입력이 단건·다건에서 같은 세액이다: 12개월 125,246,000 · 미답 484,588,500(과세 → 부분 비과세 방향)", async () => {
     const yes = calcForm({ giftPriorHouseholdResidenceMonths: "12" });
     const single = await runSingle(yes);
     const multi = await runMulti([yes]);
     expect(single.status).toBe(200);
     expect(multi.status, JSON.stringify(multi.json).slice(0, 300)).toBe(200);
-    expect(single.totalTax).toBe(135_806_000);
+    expect(single.totalTax).toBe(125_246_000); // 거주 24개월 통산 → 표2 대상: 보유 3년 × 4% = 12%(결정 #38-9)
     expect(multi.totalTax).toBe(single.totalTax);
 
     const none = calcForm({ giftPriorHouseholdResidenceMonths: "" });
@@ -94,7 +94,7 @@ describe("다건 — 증여 전 동일세대 거주 개월이 단건과 같은 �
     const p0 = (body.properties as Record<string, unknown>[])[0];
     expect(p0.giftPriorHouseholdResidenceMonths).toBe(12);
     const withMonths = await postMulti(body);
-    expect(withMonths.totalTax).toBe(135_806_000);
+    expect(withMonths.totalTax).toBe(125_246_000);
     delete p0.giftPriorHouseholdResidenceMonths;
     expect((await postMulti(body)).totalTax).toBe(484_588_500);
   }, 60_000);

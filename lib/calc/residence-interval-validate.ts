@@ -27,7 +27,7 @@ export type ResidenceIntervalLike = { moveInDate: string; moveOutDate: string };
  * 「취득 전 거주는 제외하라」는 오류가 그 칸의 존재를 모르는 사용자를 막다른 길에 두지 않게 한다. 호출부가 `giftPriorResidenceAsked`로 게이트한다.
  */
 const GIFT_PRIOR_HINT =
-  " 증여 전 증여자와 같은 세대로 거주한 기간은 「증여 전 동일세대 거주기간」 칸에 개월 수로 입력하세요(비과세 거주요건에만 통산됩니다).";
+  " 증여 전 증여자와 같은 세대로 거주한 기간은 「증여 전 동일세대 거주기간」 칸에 개월 수로 입력하세요(비과세 거주요건과 표2 대상 판정에 통산됩니다).";
 
 export function collectResidenceIntervalErrors(args: {
   periods: ResidenceIntervalLike[];

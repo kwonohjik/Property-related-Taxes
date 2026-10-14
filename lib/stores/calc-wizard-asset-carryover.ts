@@ -115,7 +115,7 @@ export interface CarryoverTaxationForm {
   donorHouseholdHoldingStartDate: string;
   /**
    * 증여 전 증여자와 같은 세대로 이 주택에 거주한 기간(개월) (결정 #38-7) — `donorSameHousehold === "yes"`일 때만 묻는다. `""` = 미답(통산 없이 판정, 거주했다면
-   * 결론이 달라질 때만 확인 필요) · `"0"` = 거주한 적 없음. §154① 비과세 거주요건에만 통산한다.
+   * 결론이 달라질 때만 확인 필요) · `"0"` = 거주한 적 없음. §154① 비과세 거주요건과 표2 대상 판정(거주 2년)에 통산한다(공제율에는 통산하지 않는다).
    */
   donorPriorHouseholdResidenceMonths: string;
   /** 이월과세 적용배제 선언 */
