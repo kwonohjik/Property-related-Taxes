@@ -1,7 +1,7 @@
-# 사례 28 역방향 — «주택을 첫 자산으로 바꾸기» 버튼 — 계획서 (G1 화면, v0.1)
+# 사례 28 역방향 — «주택을 첫 자산으로 바꾸기» 버튼 — 계획서 (G1 화면, v0.2)
 
 > 작성 2026-10-14 · 출처: 1주택 코드 리뷰 후속 G1(#2168) 「화면 재설계」 결정 — 사용자가 **버튼 클릭 방식**을 택함(자동 정렬·판정 대상 자산 분리는 기각) · 검증 깊이 **L2**(입력 순서만 바뀌고 세액 산식은 안 바뀐다 — 단 승격 주택의 입력이 처음 반영되는 경로가 있다, §4-7)
-> 상태: **계획서 — 승인 대기(결정 Q1~Q7, §6).** 수치·file:line은 코드 읽기와 grep으로 확인한 것이고, 실행으로 재현하지 않은 항목은 «코드읽기»로 표시했다.
+> 상태: **구현 완료(결정 Q1~Q7 승인 2026-10-14)** — §7에 단계별 실측 결과, §7-0에 Phase 0 표. 수치·file:line은 코드 읽기와 grep으로 확인한 것이고, 실행으로 재현하지 않은 항목은 «코드읽기»로 표시했다(구현 중 실측으로 확정한 항목은 §7에 기록).
 
 ---
 
@@ -124,17 +124,33 @@ reverseAppurtenantSwapBlockReason(form): string | null                 // 버튼
 
 ---
 
-## 7. 작업 순서 (Do) — verify
+## 7. 작업 순서 (Do) — verify · 실측 결과 (2026-10-14)
 
-0. **Phase 0 (실측, 코드 수정 없음)**: ① 축 B 오탐을 form 시료로 재현(fractional 묶음 + `landNature="appurtenant"` 토지 → ⑧ 차단이 나는지) → verify: ⑧ 이슈 목록 ② 현행 «주택 먼저»와 «토지 먼저(API 본문)» 총세액·properties 대조(기존 anchor 시료 재사용) ③ T1·T2 누락 시 실제 오작동(주 자산 배지 없음·미등기가 엉뚱한 자산에 붙음)을 form→④ body로 재현.
-1. 순수 헬퍼 + 단위 anchor → verify: 회전·T1·T2·라벨·가드 표 전 분기(§5-1)
-2. 스토어 `clearResult` + `Step1` 배선 + 카드 → verify: 컴포넌트 테스트(RTL) — 클릭 시 순서·플래그·미등기·result 비움, 가드별 버튼 숨김·사유 문구
-3. **parity anchor** → verify: `swap(form(LAND,HOUSE))` ≡ `form(HOUSE,LAND)` — ⑧ 이슈 0건 · `runCalc` 총세액·properties 일치 · `captureBody`에 `buildingFootprintArea`·`appurtenantLandZone`·`isUrbanArea`가 최상위로 실림(현재 컴패니언 주택에는 안 실림). 시료는 기존 wizard anchor의 `HOUSE`/`LAND`/`form`을 helper로 승격(`__tests__/calc/_helpers/`)해 재사용
-4. 뮤테이션 probe(cp 백업→편집→실행→cp 복원) → verify: 회전 대신 단순 교환 · T1 누락 · T2 누락 · 가드 하나씩 제거 · `result` 비우기 제거가 killed
-5. E2E 1 spec(`E2E_PORT` 워크트리) → verify: 토지 먼저 입력 → 차단 카드 → 버튼 클릭 → Step4에 세대·거주·조정지역 입력이 열림 → 계산 → 사이드바·결과 총세액이 «주택 먼저»와 같음 + 입력값(토지 면적·취득일) 보존. 브라우저 수동 확인은 Playwright 스크린샷으로 대체
-6. 독립 리뷰 → 지적 수정 → master 병합 후 tsc + 영향 vitest → CI 12/12·head 일치 시 머지
+### 7-0. Phase 0 (실측, 코드 수정 없음) — 결과
 
-**완료 점검**: ⑫⑬⑭ 해당 없음을 grep으로 확인 · `npx tsc --noEmit` 0건 · `__tests__/calc/` 전건 + `__tests__/api/transfer.route.*` · 800줄 정책(`Step1.tsx` 355줄, `calc-wizard-store.ts` 548줄 — 여유) · 안내 문구 변경 시 역방향 grep(표시 문구 변경 규칙).
+| # | 실측 | 결과 |
+|---|---|---|
+| ① | 축 B(지분 분할) 묶음 — 첫 자산 토지(`landNature="appurtenant"`, 지분 1/2) + 형제 `makeDefaultAsset(2)`(지분 1/2) | **재현**: 형제 raw `assetKind="housing"` · `reverseAppurtenantHouseAssetId` = 형제 id · ⑧이 자산 1(`landNature`)에 «주택을 첫 자산으로…» 차단 1건. 화면에서 따를 방법이 없는 막다른 길(§4-5가 맞았다). 지분율 미입력(빈칸) 진입 직후도 같은 오탐 → Q6에 따라 ⑧ 가드를 같은 PR에서 수정 |
+| ② | 같은 사실의 «주택 먼저» vs «토지 먼저(API 본문)» | 기본(비조정·거주 120): 주택 먼저 총세액 0(주택·토지 모두 비과세) · 토지 먼저 18,628,498(첫 자산 토지 과세) — 화면은 ⑧이 막는다. 조정 2018·거주 0: 양쪽 173,646,000. ⚠️ 계획서 §0의 «토지 먼저 0»은 **④ 본문이 짝 주택 정착면적을 안 실어 route가 역방향 단위를 못 만드는** 화면 경로에서는 나오지 않는다(숨은 기본값 조정대상지역 false · 거주 0 사실로는 22,478,500) — 막는 이유(보유 상황 입력이 안 열려 사실이 어긋남)는 그대로다 |
+| ③ | T1·T2 누락(단순 배열 교환) 시 오작동 | **T2**: 토지 미등기(폼 전역 true) 시료 — 단순 교환 후 본문 최상위 `isUnregistered:true`(주택에 붙음) · 컴패니언 토지 false, 정본(주택 먼저 + 토지 자산 미등기)은 최상위 false · 토지 true. 총세액 329,576,500 ≠ 96,250,000. **T1**: `isPrimaryForHouseholdFlags`는 `lib/calc` 어디서도 읽지 않는다(grep) — ④ 본문에는 영향이 없고 **화면 전용**(카드 «주 자산» 배지 · 토지 세율 수동 지정 토글, `CompanionAssetCard.tsx:132`→`AssetSectionAcquisition.tsx:196`) |
+
+추가 실측(가드 근거 §4-4): 첫 자산 토지의 `nblUseDetailedJudgment`·`parcelMode`·`isSalesCaseAcquisition`·`familyBusinessInheritance` 4종 모두 토지가 컴패니언일 때 ⑧이 새 오류로 막는다(정밀판정 «지목을 선택하세요» · 다필지 «함께양도 자산은 다필지 입력을 지원하지 않습니다» · 매매사례가액 «첫 번째 자산에서만» · 가업상속 «상속개시일 평가액»). → anchor `가드 근거 실측`으로 고정.
+
+### 7-1~7-6
+
+1. ✅ 순수 헬퍼 `lib/calc/reverse-appurtenant-swap.ts`(회전·T1·T2·라벨·가드·사유·처음 반영 입력) + ⑧ 축 B 오탐 보정(`reverse-appurtenant-house.ts` — 지분 분할 묶음이면 짝 주택 없음) → anchor 33건(회전 3 · T1 · T2 3 · 라벨 · 불변성 · 가드 전 분기 · parity 4 시료).
+2. ✅ 스토어 `clearResult` + `Step1` 배선(`swapEpoch`·`onInvalidateResult`·`embeddedInMulti`) + `ReverseAppurtenantSwapNotice` + `CompanionAssetsSection.remountEpoch` → RTL 20건 + Calculator 배선 3건.
+3. ✅ parity anchor — `swap(form(L…,H)) ≡ form(H,L…)`: 자산 단위 깊은 동치 · ⑧ 이슈 목록 동치(역방향 차단 0) · ④ 본문 동치 · route 총세액·properties 동치. 시료: 토지 1+주택 1 · **토지 2+주택 1** · **과세·안분 모드 비정수(총액 1,000,000,007 — 519,230,774 / 288,461,539 / 192,307,694, 단순 교환 순서면 달라짐을 대조 단언)** · 미등기(폼 전역→토지 자산). 공용 시료 `__tests__/calc/_helpers/g1-reverse-appurtenant-fixtures.ts`로 승격(기존 wizard anchor 단언·`BLOCK` 불변 통과).
+4. ✅ 뮤테이션 probe 21종 — 20 killed · 1 survived(M10: `Step1`의 `splitMode==="fractional"` 숨김은 `fractionalEntryBlockedReason`이 함께 양도 묶음에서 토글 B 진입을 막고 리프가 지분 분할 데이터를 이미 제외해 **도달 불가한 중복 방어** — 등가 변이로 판정).
+5. ✅ E2E `e2e/transfer-reverse-appurtenant-swap.spec.ts` 2건(과세 시료로 토지 먼저→카드·버튼→보유 상황 입력 열림→계산 본문·총세액이 주택 먼저와 동일, 다필지 가드 사유) + 인접 E2E 722건 통과. 스크린샷 `e2e/_artifacts/g1-swap-{before,after,step4}.png`(비추적).
+6. 독립 리뷰·머지는 메인 세션.
+
+**구현 중 확정한 사실(계획서 정정)**:
+- 임베드 판별은 `TransferTaxCalculator`의 `pathname.includes("/multi")`(`isEmbeddedInMulti`) → `Step1`에 `embeddedInMulti` prop으로 내린다(Step1 자체는 경로를 모른다).
+- 법령 표기는 `TRANSFER.ONE_HOUSE_EXEMPT`(«소득세법 §89 ①») 재사용 — «§89①3호» 단독 상수는 없다(`HIGH_VALUE_HOUSE`는 3호 단서).
+- 토지가 첫 자산인 동안 보유 상황 단계를 방문하면 기존 리셋 효과(`Step4.tsx:263-274`)가 `wasRegulatedAtAcquisition`(·Touched)을 false로 되돌린다 — 교환은 이를 복원하지 않고, 교환 후 열린 입력에 사용자가 다시 입력한다(E2E가 그 흐름을 따른다).
+
+**완료 점검**: ⑫⑬⑭·④ 해당 없음 — `git diff 548a85fc6 --name-only`에 `app/api`·`lib/api`·`transfer-tax-api*`·Zod 스키마·route 파일 없음(grep 확인) · 800줄 정책 — `Step1.tsx` 394 · `calc-wizard-store.ts` 551 · `TransferTaxCalculator.tsx` 674 · 신규 파일 103·72줄.
 
 ---
 
@@ -150,3 +166,4 @@ reverseAppurtenantSwapBlockReason(form): string | null                 // 버튼
 | 버전 | 날짜 | 내용 |
 |---|---|---|
 | v0.1 | 2026-10-14 | 최초 작성 — 사용자가 G1 화면을 «버튼 클릭» 방식으로 결정. 필드 역할·입구·⑧ 표시 방식·경계 조사 반영(읽기 전용 조사 117회 도구 호출), 결정 Q1~Q7 |
+| v0.2 | 2026-10-14 | 구현 완료 — 결정 Q1~Q7 권고안 승인. Phase 0 실측표(축 B 오탐 재현 → ⑧ 가드 같은 PR) · §7 단계별 결과 · 계획서 정정 3건(토지 먼저 «0»은 화면 경로가 아님 · T1은 화면 전용 · 법령 상수) · 뮤테이션 21종(20 killed) |

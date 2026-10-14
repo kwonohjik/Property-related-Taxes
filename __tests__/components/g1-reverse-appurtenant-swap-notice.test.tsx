@@ -158,6 +158,17 @@ describe("교환 직후 안내 — 처음 반영되는 입력이 있을 때만",
   });
 });
 
+describe("교환 직후 안내의 수명", () => {
+  it("승격 주택이 더 이상 첫 자산이 아니면(첫 자산 삭제) 안내를 거둔다", () => {
+    render(<Host init={form(LAND("l1", 300), { ...HOUSE(0), isSelfBuilt: true })} />);
+    fireEvent.click(screen.getByTestId(BTN));
+    expect(screen.queryByTestId(AFTER)).not.toBeNull();
+    const firstCard = document.querySelector<HTMLElement>('[data-asset-card-index="0"]')!;
+    fireEvent.click(within(firstCard).getByRole("button", { name: "삭제" }));
+    expect(screen.queryByTestId(AFTER)).toBeNull();
+  });
+});
+
 describe("스토어 clearResult — 결과만 비우고 입력은 그대로", () => {
   beforeEach(() => useCalcWizardStore.getState().reset());
   it("result는 null · formData·currentStep 불변", () => {
