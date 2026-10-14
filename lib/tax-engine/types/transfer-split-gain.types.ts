@@ -221,6 +221,28 @@ export interface SaleSplitJudgmentDetail {
   appraisalRejected?: AppraisalRejectReason;
 }
 
+/**
+ * 취득 당시 계약서 토지·건물 구분금액의 §100③ 판정 결과 (#17-6) — 같은 날 취득한 주택의 배율 초과분 분리 경로에서
+ * 계약서 구분금액을 입력한 경우에만 존재한다(미입력 = 키 없음 = 종전 기준시가 안분).
+ *
+ * `outcome`
+ *  - `contract` 구분 기장 가액이 안분 가액과 30% 미만 차이 → 계약서 구분금액 적용
+ *  - `deemed_unclear` 토지·건물 중 한쪽이라도 30% 이상 차이 → 불분명으로 보아 기준시가 안분 가액 적용
+ *  - `exempt_other_law` 30% 이상 차이가 있으나 영 §166⑧1호(다른 법령 구분)로 계약서 구분금액 적용(양도일 2025.1.1. 이후)
+ *  - `before_effective` 양도일 2016.1.1. 전 — 판정 없이 계약서 구분금액 적용
+ * 이탈률(bp)은 엔진 값을 표시 계층이 그대로 읽는다(재계산 금지).
+ */
+export interface AcqSplitJudgmentDetail {
+  outcome: "contract" | "deemed_unclear" | "exempt_other_law" | "before_effective";
+  declared: SaleSplitPair;
+  apportioned: SaleSplitPair;
+  applied: SaleSplitPair;
+  landDeviationBp: number;
+  buildingDeviationBp: number;
+  landOver: boolean;
+  buildingOver: boolean;
+}
+
 export interface SplitGainResult {
   land: SplitPartResult;
   building: SplitPartResult;
@@ -243,6 +265,8 @@ export interface SplitGainResult {
    * 없어 안분값을 만들 수 없음(⏳ 1-C 한시 — 계획서 §12.7이 1-D에서 필수화를 확정했다).
    */
   saleSplitJudgment?: SaleSplitJudgmentDetail;
+  /** 취득 당시 계약서 구분금액 §100③ 판정 — 계약서 구분금액을 입력한 같은 날 취득 주택(배율 초과분 분리)에서만 (#17-6) */
+  acqSplitJudgment?: AcqSplitJudgmentDetail;
   note: string;
   /** 본인 신고 부분 — UI 결과 뷰 표시용 */
   selfOwns: "both" | "building_only" | "land_only";

@@ -1301,6 +1301,15 @@ export interface TransferTaxInput {
    */
   buildingStandardPriceAtAcquisition?: number;
   /**
+   * 취득 당시 **계약서 토지·건물 구분금액**(#17-6) — 같은 날 취득한 주택의 배율 초과분 분리 경로(`housingExcessSplitAppliesToInput`)에서 취득가액(실지거래가액)을
+   * 토지·건물로 가르는 구분 기장 가액. 둘 다 있어야 하고 합이 `acquisitionPrice`와 같다. 없으면 종전대로 취득시 기준시가 비율 안분.
+   * 엔진이 §100③(30% 이상 차이 → 불분명 의제)을 양도일 연혁대로 판정해 계약서 구분금액 또는 안분 가액을 쓴다(`housing-excess-acq-contract.ts`).
+   */
+  acqContractLandPrice?: number;
+  acqContractBuildingPrice?: number;
+  /** 영 §166⑧1호(다른 법령에서 정하는 바에 따라 가액을 구분) 해당 신고 — 양도일 2025.1.1. 이후에만 효력(그 전 양도분은 무시) */
+  acqContractOtherLaw?: boolean;
+  /**
    * 양도 방식 (구분양도|일괄양도) — 엔진 명시 입력.
    * "actual": 계약서 등 토지·건물 실지 양도가액 구분 기재(land/buildingTransferPrice 직접).
    * "apportioned": 구분 불분명 → 양도시 기준시가 비율 안분(부가세령 §64①1호, 소득령 §166⑥).

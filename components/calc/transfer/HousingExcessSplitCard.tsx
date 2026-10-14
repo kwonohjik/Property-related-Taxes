@@ -14,16 +14,26 @@
  *
  * #17 후속 — 자산 전체 자본적지출이 있으면 「그중 토지분 자본적지출」 1칸을 더 연다(건물분 = 전체 − 토지분, 계산값 표시). 노출 술어
  * `housingExcessNeedsCapexSplit`는 ⑧·④와 같다 — 별개취득 토글이 켜져 있으면 분리 섹션의 파트 칸이 받으므로 열지 않는다.
+ *
+ * #17-6 — 실지거래가액 취득이면 취득 당시 계약서의 토지·건물 구분금액(선택)을 더 받아 「소득세법」 §100③(30% 이상 차이 → 불분명 의제)로 판정한다.
+ * 노출 술어 `housingExcessNeedsAcqContract`는 ④·⑧과 같다. 양도 쪽 구분금액은 받지 않는다(양도 당시 토지·건물 기준시가는 종전처럼 항상 필요).
  */
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { TransferBuildingStdFields } from "./TransferStdPriceCards";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit } from "@/lib/calc/housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "@/lib/calc/housing-excess-split";
+import {
+  housingExcessAcqContractAsksProviso,
+  housingExcessAcqContractEra,
+  housingExcessAcqContractParts,
+  housingExcessNeedsAcqContract,
+} from "@/lib/calc/housing-excess-acq-contract";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -42,6 +52,9 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate }: Props)
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
   const acqTotalElsewhere = deriveLegacyPartAcqMode(asset) !== "actual";
   const capex = housingExcessNeedsCapexSplit(asset, transferDate) ? housingExcessCapexParts(asset) : null;
+  const contractOpen = housingExcessNeedsAcqContract(asset, transferDate);
+  const contract = housingExcessAcqContractParts(asset);
+  const contractEra = housingExcessAcqContractEra(transferDate);
   return (
     <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 토지·건물 기준시가 입력" bodyClassName="space-y-3">
       <div data-testid="housing-excess-split-card" className="space-y-3">
@@ -85,6 +98,64 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate }: Props)
             hint="취득일 직전 고시 개별공시지가 (원/㎡) — 토지 기준시가 = ㎡당 공시지가 × ①의 토지 면적 (§99①1호 가목)"
           />
           <AcqBuildingStdField asset={asset} onChange={onChange} transferDate={transferDate} variant="proportional" />
+
+          {contractOpen && (
+            <div className="space-y-2" data-testid="housing-excess-acq-contract">
+              <p className="text-xs font-semibold text-amber-900">취득 당시 계약서 토지·건물 구분금액 (선택)</p>
+              <p className="text-caption text-amber-900 leading-relaxed">
+                계약서에 토지 금액과 건물 금액이 따로 적혀 있으면 입력하세요. 비우면 위 기준시가 비율로 취득가액을 나눕니다. 입력하면 두 칸을 모두 채워야 하고
+                합이 취득가액({contract.total.toLocaleString()})과 같아야 합니다.
+                {contractEra === "none"
+                  ? " 양도일이 2016년 1월 1일 전이라 「소득세법」 제100조 제3항의 30% 판정을 하지 않고 입력한 금액을 그대로 씁니다."
+                  : " 구분 기재한 가액이 기준시가로 안분계산한 가액과 100분의 30 이상 차이가 있으면 가액 구분이 불분명한 때로 보아 안분 가액을 씁니다(「소득세법」 제100조 제3항). " +
+                    "토지·건물 각각을 안분 가액 대비로 비교하며, 비교 단위를 정면으로 정한 예규·재결은 확인하지 못했습니다 — 확인 필요."}
+              </p>
+              <FieldCard
+                field="acqContractLandPrice"
+                label="계약서 토지 금액"
+                unit="원"
+                hint="취득 당시 매매계약서에 토지 가액으로 적힌 금액입니다."
+              >
+                <CurrencyInput
+                  label=""
+                  hideUnit
+                  value={asset.acqContractLandPrice ?? ""}
+                  onChange={(v) => onChange({ acqContractLandPrice: v })}
+                  data-testid="housing-excess-acq-contract-land"
+                />
+              </FieldCard>
+              <FieldCard
+                field="acqContractBuildingPrice"
+                label="계약서 건물 금액"
+                unit="원"
+                hint="취득 당시 매매계약서에 건물 가액으로 적힌 금액입니다."
+              >
+                <CurrencyInput
+                  label=""
+                  hideUnit
+                  value={asset.acqContractBuildingPrice ?? ""}
+                  onChange={(v) => onChange({ acqContractBuildingPrice: v })}
+                  data-testid="housing-excess-acq-contract-building"
+                />
+              </FieldCard>
+              {contract.entered && contract.land !== null && contract.building !== null && (
+                <p className="text-caption text-amber-900" data-testid="housing-excess-acq-contract-sum">
+                  토지 금액 + 건물 금액 = <strong>{(contract.land + contract.building).toLocaleString()}</strong>
+                  {contract.land + contract.building === contract.total ? " (취득가액과 같음)" : ` (취득가액 ${contract.total.toLocaleString()}과 다름)`}
+                </p>
+              )}
+              {housingExcessAcqContractAsksProviso(asset, transferDate) && (
+                <ToggleCard
+                  tone="amber"
+                  checked={asset.acqContractOtherLaw === true}
+                  onCheckedChange={(v) => onChange({ acqContractOtherLaw: v })}
+                  title="다른 법령에서 정하는 바에 따라 가액을 구분한 경우"
+                  description="켜면 30% 이상 차이가 있어도 계약서 구분금액을 그대로 씁니다. 끄면 해당 없음으로 보아 30% 판정을 적용합니다 (소득세법 시행령 제166조 제8항 제1호)."
+                  data-testid="housing-excess-acq-contract-other-law"
+                />
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">

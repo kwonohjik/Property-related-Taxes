@@ -65,7 +65,8 @@ export type { UsageConversionFormSlice } from "./calc-wizard-asset-usage-convers
 import type { SellingHouseOriginFormSlice } from "./calc-wizard-asset-selling-origin";
 export type { SellingHouseOriginFormSlice } from "./calc-wizard-asset-selling-origin";
 
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice {
+import type { HousingExcessFormSlice } from "./calc-wizard-asset-housing-excess";
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice, HousingExcessFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -695,11 +696,6 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   landDirectExpenses: string;
   /** 건물 자본적지출·필요경비 */
   buildingDirectExpenses: string;
-  /**
-   * 같은 날 취득 주택의 배율 초과분 분리(#17)에서 자산 전체 자본적지출 중 **토지분** (원, 100% 기준) — 건물분은 전체 − 토지분.
-   * 「소득세법」 §100② 후문은 자본적지출을 안분 대상으로 열거하지 않아 귀속 파트를 받는다(자동 안분 금지). 빈 값 = 미입력(⑧ 차단).
-   */
-  housingExcessLandCapex: string;
   /** 토지 양도시 기준시가 — 환산취득가 분리 계산 시 사용 */
   landStandardPriceAtTransfer: string;
   /** 건물 양도시 기준시가 — 환산취득가 분리 계산 시 사용 */

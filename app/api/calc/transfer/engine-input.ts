@@ -376,6 +376,9 @@ export function buildTransferEngineInput(
     // 개산공제(§163⑥) base 축소 — 기준시가는 raw, 엔진이 개산공제에서만 적용
     ownershipRatio: data.ownershipRatio,
     buildingStandardPriceAtAcquisition: data.buildingStandardPriceAtAcquisition,
+    acqContractLandPrice: data.acqContractLandPrice,
+    acqContractBuildingPrice: data.acqContractBuildingPrice,
+    acqContractOtherLaw: data.acqContractOtherLaw,
     saleSplitMode: data.saleSplitMode,
     landSalesCaseValue: data.landSalesCaseValue,
     buildingSalesCaseValue: data.buildingSalesCaseValue,

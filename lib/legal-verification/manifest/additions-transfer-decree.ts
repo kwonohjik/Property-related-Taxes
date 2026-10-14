@@ -368,6 +368,17 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // transfer.ts SPLIT_DEEMED_UNCLEAR_EXEMPTION — 법 §100③ 단서 제외 사유 (2025.2.28. 신설, KoreanLaw 실측)
+    id: "TRANSFER_DECREE.SPLIT_DEEMED_UNCLEAR_EXEMPTION",
+    citation: "소득세법 시행령 §166",
+    keywords: [
+      "법 제100조제3항 단서에서",
+      "다른 법령에서 정하는 바에 따라 토지와 건물 등의 가액을 구분한 경우",
+      "토지와 건물 등을 함께 취득한 후 건물 등을 철거하고 토지만 사용하는 경우",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.ESTIMATED_DETERMINATION",
     citation: "소득세법 시행령 §176의2",
     keywords: [
