@@ -32,6 +32,7 @@ import {
   calculateEstimatedAcquisitionPrice,
 } from "./tax-utils";
 import { calcGiftTax } from "./gift-tax";
+import { apportionByStdPrice } from "./std-price-apportion";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type {
   BurdenedGiftInfo,
@@ -267,6 +268,7 @@ export function buildBurdenedGiftBreakdown(params: {
   //   K-1~K-3 (괄호 발동):        취득시 기준시가 × 채무비율 (§159①1호 A괄호 강제). 분모 giftValuation.max.
   //   K-4 (actual):              실지취득가액 × 채무비율 (§159①1호 본문). 개산공제 미적용.
   //                              시가 모드 + `actual`, 그리고 **조합원입주권**(괄호 미발동)이 여기로 온다.
+  //   K-6/K-7 (market+salesCase/appraisal): 매매사례가액·감정가액 × 채무비율 (§97①1호나목·§176의2③1·2호). 개산공제 적용·실비 swap 없음.
   //   K-5 (market+converted):    환산취득가액 = 자산별 양도가액 × (취득기준시가 ÷ 양도기준시가) (§176의2②2호). 개산공제 적용.
   //   market+미지정 (legacy):    backward-compat — marketValueAtAcquisition 기반 (개산공제 적용).
   let landAcquisitionPrice: number;
@@ -274,6 +276,20 @@ export function buildBurdenedGiftBreakdown(params: {
   let acquisitionMethodUsed: TransferBurdenedGiftBreakdown["acquisitionMethodUsed"];
   let landActualAcquisition: number | undefined;
   let buildingActualAcquisition: number | undefined;
+  let landPresumedAcquisition: number | undefined;
+  let buildingPresumedAcquisition: number | undefined;
+
+  // 조합원입주권은 K-4 고정이다 — 아래 K-4 분기가 입주권을 먼저 잡아 매매사례가액·감정가액을 **조용히 무시**하므로 먼저 막는다.
+  if (
+    isRightToMoveInValuation &&
+    !acqStdPriceForced &&
+    (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase")
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "[burdened_gift] 조합원입주권의 취득가액은 종전 부동산의 실지취득가액이라 매매사례가액·감정가액을 쓸 수 없습니다.",
+    );
+  }
 
   if (acqStdPriceForced) {
     // K-1~K-3: 취득시 기준시가 × 채무비율 (A괄호). 분모 giftValuation.max (Excel 정합).
@@ -298,6 +314,41 @@ export function buildBurdenedGiftBreakdown(params: {
     }
     landAcquisitionPrice = apportionAcquisitionPrice(landActualAcquisition, assumedDebtAmount, giftValuation.max);
     buildingAcquisitionPrice = apportionAcquisitionPrice(buildingActualAcquisition, assumedDebtAmount, giftValuation.max);
+  } else if (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase") {
+    // K-6/K-7: 매매사례가액·감정가액(§97①1호나목 · 소령 §163⑫ → §176의2③1·2호) × 채무비율.
+    //   실지거래가액 불명 시 순차 적용하는 추계가액이라 필요경비는 개산공제(STEP 5 else — 기준시가 × B/C × 율)뿐이고
+    //   실비 택일(§97②2호 단서)은 환산 전용이라 STEP 5.5가 자동으로 꺼진다.
+    //   🔴 미입력을 0으로 두면 취득가액 0 → 양도차익 과대(막히지 않는 오답) — fail-fast.
+    const methodLabel = info.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
+    acquisitionMethodUsed = info.acquisitionMethod;
+    if (info.presumedLandAcquisitionPrice !== undefined || info.presumedBuildingAcquisitionPrice !== undefined) {
+      landPresumedAcquisition = info.presumedLandAcquisitionPrice ?? 0;
+      buildingPresumedAcquisition = info.presumedBuildingAcquisitionPrice ?? 0;
+    } else if (info.presumedAcquisitionTotal !== undefined) {
+      // 단일 총액 → 취득시 기준시가 비율 분배(K-4 단일자산과 같은 근거 — 계획서 Q-3). 분모 0이면 분배 불가.
+      const totalAcqStd = landStdPriceAtAcquisition + buildingStdPriceAtAcquisition;
+      if (totalAcqStd <= 0) {
+        throw new TaxCalculationError(
+          TaxErrorCode.INVALID_INPUT,
+          `[burdened_gift] ${methodLabel}를 토지·건물로 나누려면 취득시 기준시가가 필요합니다 (개산공제 기준이기도 합니다).`,
+        );
+      }
+      const split = apportionByStdPrice(
+        info.presumedAcquisitionTotal,
+        landStdPriceAtAcquisition,
+        buildingStdPriceAtAcquisition,
+      );
+      landPresumedAcquisition = split.land;
+      buildingPresumedAcquisition = split.building;
+    } else {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `[burdened_gift] 취득가액 산정방식 「${methodLabel}」은 취득 당시 ${methodLabel}을 입력해야 합니다 ` +
+          "(「소득세법」 제97조제1항제1호나목 · 같은 법 시행령 제176조의2제3항).",
+      );
+    }
+    landAcquisitionPrice = apportionAcquisitionPrice(landPresumedAcquisition, assumedDebtAmount, giftValuation.max);
+    buildingAcquisitionPrice = apportionAcquisitionPrice(buildingPresumedAcquisition, assumedDebtAmount, giftValuation.max);
   } else if (info.acquisitionMethod === "converted") {
     // K-5: 환산취득가액 (§176의2②2호) = 자산별 양도가액 × (취득시 기준시가 ÷ 양도시 기준시가).
     //   부담부증여 맥락: 자산별 양도가액(채무액 안분분)을 "양도당시 실지거래가액"으로 본다.
@@ -664,6 +715,7 @@ export function buildBurdenedGiftBreakdown(params: {
         acquisitionMethod: acquisitionMethodUsed,
         stdPriceAtTransfer: landStdPriceAtTransfer,
         actualAcquisition: landActualAcquisition,
+        presumedAcquisition: landPresumedAcquisition,
       },
       building: {
         sangjeungbeopValue: buildingSangjeungbeopValue,
@@ -675,6 +727,7 @@ export function buildBurdenedGiftBreakdown(params: {
         acquisitionMethod: acquisitionMethodUsed,
         stdPriceAtTransfer: buildingStdPriceAtTransfer,
         actualAcquisition: buildingActualAcquisition,
+        presumedAcquisition: buildingPresumedAcquisition,
       },
     },
   };
