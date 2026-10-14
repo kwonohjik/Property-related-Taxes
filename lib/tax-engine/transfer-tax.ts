@@ -538,7 +538,7 @@ export function calculateTransferTax(
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
   // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지 · 분리 경로가 쓰지 않은 자산 단위 자본적지출 고지(세액 불변).
-  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt, isLaterAcquiredLandExemptExcluded(effectiveInput)), housingExcessCapexNotice(effectiveInput, splitDetail), housingExcessAcqContractNotice(splitDetail)].filter((n): n is string => !!n));
+  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt, effectiveInput.transferDate, isLaterAcquiredLandExemptExcluded(effectiveInput)), housingExcessCapexNotice(effectiveInput, splitDetail), housingExcessAcqContractNotice(splitDetail)].filter((n): n is string => !!n));
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용

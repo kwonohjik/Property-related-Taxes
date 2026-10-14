@@ -1,5 +1,5 @@
 /**
- * #17-2 고가주택(12억 초과 부분과세) + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.28.) 회신 방식.
+ * #17-2 고가주택(12억 초과 부분과세) + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식.
  *
  * 한도 내(기준면적 이내) 토지분 과세 양도차익 = max(0, 전체 부수토지 양도차익의 12억 안분값 − 초과분 양도차익)
  * 초과분 양도차익(X) = floor(토지 양도차익 × 초과면적 / 토지면적) — 12억 안분 없이 전액 과세(종전과 같다)
@@ -244,13 +244,13 @@ describe("#17-2 ⑤⑥⑦ 불변 — 이 산식이 닿지 않는 경로", () => 
 });
 
 describe("#17-2 고지 — 해석례 근거를 사실로 서술하고 불확실 표현·유불리 표현이 없다", () => {
-  const notice = (r: ReturnType<typeof run>) => (r.warnings ?? []).find((w) => w.includes("고가주택(12억 초과)에 배율 초과 부수토지"));
+  const notice = (r: ReturnType<typeof run>) => (r.warnings ?? []).find((w) => w.includes("고가주택에 배율 초과 부수토지"));
 
   it("고가주택 + 초과분 — 재산세제과-915 회신 방식·기본통칙 95-1을 밝히고 «확인이 필요합니다»는 없다", () => {
     const w = notice(run());
     expect(w).toBeDefined();
     expect(w).toContain("재산세제과-915");
-    expect(w).toContain("2011.10.28.");
+    expect(w).toContain("2011.10.27.");
     expect(w).toContain("기본통칙 95-1");
     expect(w).toContain("법령이 아니라");
     expect(w).not.toContain("해석마다");
@@ -261,6 +261,14 @@ describe("#17-2 고지 — 해석례 근거를 사실로 서술하고 불확실 
   it("12억 이하 · 초과분 없음 — 고지 없음", () => {
     expect(notice(run({ transferPrice: 1_000_000_000 }))).toBeUndefined();
     expect(notice(run({ acquisitionArea: 250 }))).toBeUndefined();
+  });
+
+  it("기준금액은 양도일 연혁 — 9억 시대(2020-06-01) 양도의 고지에 «12억»이 박히지 않고 «9억»으로 쓴다", () => {
+    const w = notice(run({ transferDate: new Date("2020-06-01"), transferPrice: 1_500_000_000 }));
+    expect(w).toBeDefined();
+    expect(w).toContain("9억 안분");
+    expect(w).not.toContain("12억");
+    expect(notice(run())).toContain("12억 안분");
   });
 
   it("나중 취득 토지 겹침 — 회신 방식을 적용하지 않았다고 밝힌다 (거짓 근거 서술 금지)", () => {
@@ -279,8 +287,8 @@ describe("#17-2 고지 — 해석례 근거를 사실로 서술하고 불확실 
   });
 
   it("단위 — 게이트: isPartialExempt가 아니거나 초과 파트가 없으면 null", () => {
-    expect(highValueExcessFormulaNotice(undefined, true)).toBeNull();
-    expect(highValueExcessFormulaNotice(run().splitDetail, false)).toBeNull();
+    expect(highValueExcessFormulaNotice(undefined, true, new Date("2024-01-01"))).toBeNull();
+    expect(highValueExcessFormulaNotice(run().splitDetail, false, new Date("2024-01-01"))).toBeNull();
   });
 
   it("계산 단계(부수토지 비과세 제외)에 회신 방식과 음수 → 0 표기가 남는다", () => {

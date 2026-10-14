@@ -213,10 +213,10 @@ describe("#17 엔진 직접 호출 — 마지막 방어선과 고지", () => {
   it("하위 1 가 → #17-2 — 고가주택(12억 초과)에 초과분이 함께 있으면 재산세제과-915 회신 방식 고지(불확실 표현 없음), 12억 이하면 없다", () => {
     const high = calculateTransferTax(baseTransferInput({ ...base, ...split, transferPrice: 2_000_000_000 }), rates);
     expect(high.isPartialExempt).toBe(true);
-    const w = (high.warnings ?? []).find((x) => x.includes("고가주택(12억 초과)에 배율 초과 부수토지"));
+    const w = (high.warnings ?? []).find((x) => x.includes("고가주택에 배율 초과 부수토지"));
     expect(w).toContain("재산세제과-915");
     expect(w).not.toContain("확인이 필요");
     const low = calculateTransferTax(baseTransferInput({ ...base, ...split }), rates);
-    expect((low.warnings ?? []).some((w) => w.includes("고가주택(12억 초과)에 배율 초과 부수토지"))).toBe(false);
+    expect((low.warnings ?? []).some((w) => w.includes("고가주택에 배율 초과 부수토지"))).toBe(false);
   });
 });
