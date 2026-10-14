@@ -17,8 +17,8 @@
  * | 지방소득세 | floor(4,200,180 × 10%) | 420,018 |
  * | 총세액 | | 4,620,198 |
  *
- * 범위 밖으로 남기는 것(막지 않고 비과세 + «초과분 미분리» 고지): 2005 전 취득 + **환산이 아닌** 취득가액(실가·감정·매매사례), PHD + 공익수용·공매·경락(§164⑨ 분모 특례),
- * 함께 양도 주택 카드(PHD가 첫 자산에만 닿는다).
+ * 범위 밖으로 남기는 것(막지 않고 비과세 + «초과분 미분리» 고지): 1990-08-30 전 취득 + PHD가 아닌 것, PHD + 공익수용·공매·경락(§164⑨ 분모 특례),
+ * 함께 양도 주택 카드(PHD가 첫 자산에만 닿는다). 1990-08-30 이후 2005-04-30 전 취득 + 환산이 아닌 취득가액은 영 §164⑦ 추정값을 취득시 개별주택가격 칸에 받는 5칸 경로다(#17-5 ① 후속).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { baseTransferInput, makeMockRates } from "../../tax-engine/_helpers/mock-rates";
@@ -175,14 +175,14 @@ describe("#17-5 ① 엔진 — PHD(§164⑦) 환산 + 배율 초과 → 초과�
     expect(unseparated(r.warnings)).toBe(true);
   });
 
-  it("범위 밖 — 2005 전 취득 + 환산이 아닌 취득가액(실가)은 PHD가 없어 5칸 안분을 줄 수 없다 — 막지 않고 비과세 + «2005년 전 취득» 고지(종전과 같다)", () => {
+  it("범위 밖 — 1990-08-30 전 취득 + PHD가 아니면 취득 당시 ㎡당 개별공시지가가 없다 — 막지 않고 비과세 + «1990-08-30» 고지", () => {
     const r = calculateTransferTax(
-      phdHouse({ preHousingDisclosure: undefined, useEstimatedAcquisition: false, acquisitionMethod: undefined, acquisitionPrice: 500_000_000, landSplitMode: undefined }),
+      phdHouse({ preHousingDisclosure: undefined, useEstimatedAcquisition: false, acquisitionMethod: undefined, acquisitionPrice: 500_000_000, landSplitMode: undefined, acquisitionDate: new Date("1989-06-01"), landAcquisitionDate: new Date("1989-06-01") }),
       rates,
     );
     expect(r.isExempt).toBe(true);
     expect(r.totalTax).toBe(0);
-    expect((r.warnings ?? []).some((w) => w.includes("초과분 미분리") && w.includes("2005년 전 취득"))).toBe(true);
+    expect((r.warnings ?? []).some((w) => w.includes("초과분 미분리") && w.includes("1990-08-30"))).toBe(true);
   });
 });
 
@@ -278,11 +278,11 @@ describe("#17-5 ① 폼→④→⑧→⑫⑭→엔진 — PHD 환산 주택은 5
     expect(r.result?.totalTax).toBe(0);
   });
 
-  it("2005 전 취득 + 실가(환산 아님) → 종전처럼 ⑧이 5칸을 요구하지 않고 막지 않는다 · 비과세 + 고지(PHD 토글이 꺼진 입력)", async () => {
-    const r = await runCalc(single({ useEstimatedAcquisition: false, usePreHousingDisclosure: false, fixedAcquisitionPrice: "500000000" }));
+  it("1990-08-30 전 취득 + 실가(환산 아님) → ⑧이 5칸을 요구하지 않고 막지 않는다 · 비과세 + «1990-08-30» 고지(PHD 토글이 꺼진 입력)", async () => {
+    const r = await runCalc(single({ acquisitionDate: "1989-06-01", useEstimatedAcquisition: false, usePreHousingDisclosure: false, fixedAcquisitionPrice: "500000000" }));
     expect(r.issues).toEqual([]);
     expect(r.result.totalTax).toBe(0);
-    expect(((r.result.warnings ?? []) as string[]).some((w) => w.includes("초과분 미분리") && w.includes("2005년 전 취득"))).toBe(true);
+    expect(((r.result.warnings ?? []) as string[]).some((w) => w.includes("초과분 미분리") && w.includes("1990-08-30"))).toBe(true);
   });
 });
 
@@ -321,15 +321,18 @@ describe("#17-5 ① 클라이언트 술어 — ⑤ 카드 · ⑧ 요구 · ④ �
     expect(isSplitPayloadActive(a, false, { transferDate: TD, isNonPrimary: true })).toBe(true);
   });
 
-  it("PHD 환산이 아니면(실가) 2005 전 취득은 분리 경로 밖 — 두 술어 모두 false", () => {
-    const a = asset({ useEstimatedAcquisition: false, usePreHousingDisclosure: false });
+  it("PHD 환산이 아니면(실가) 1990-08-30 전 취득은 분리 경로 밖 — 두 술어 모두 false / 그 이후 2005 전 취득은 5칸 경로", () => {
+    const a = asset({ acquisitionDate: "1989-06-01", useEstimatedAcquisition: false, usePreHousingDisclosure: false });
     expect(housingExcessNeedsLandSplit(a, TD)).toBe(false);
     expect(housingExcessUsesPhdSplit(a, TD)).toBe(false);
+    const b = asset({ useEstimatedAcquisition: false, usePreHousingDisclosure: false });
+    expect(housingExcessNeedsLandSplit(b, TD)).toBe(true);
+    expect(housingExcessUsesPhdSplit(b, TD)).toBe(false);
   });
 
-  it("PHD 플래그 + 환산이 아닌 취득가액(실가)이면 PHD 사실이 아니다 — 5칸 경로가 되고 취득일이 2005 전이면 분리 경로 밖", () => {
+  it("PHD 플래그 + 환산이 아닌 취득가액(실가)이면 PHD 사실이 아니다 — 5칸 경로(취득일 1990-08-30 이후)", () => {
     const a = asset({ useEstimatedAcquisition: false });
     expect(housingExcessUsesPhdSplit(a, TD)).toBe(false);
-    expect(housingExcessNeedsLandSplit(a, TD)).toBe(false);
+    expect(housingExcessNeedsLandSplit(a, TD)).toBe(true);
   });
 });
