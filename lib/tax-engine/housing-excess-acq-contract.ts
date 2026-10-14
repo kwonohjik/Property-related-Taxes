@@ -40,7 +40,13 @@ export function housingExcessAcqContractApplies(
   landMode: PartAcqMode,
   buildingMode: PartAcqMode,
 ): boolean {
-  return housingExcessSplitAppliesToInput(input) && landMode === "actual" && buildingMode === "actual";
+  // 매매계약서의 가액 구분(§100②·③)이다 — 상속·증여(상증 평가액 하나)는 받지 않는다(#17-5 ②). ④⑤⑧의 `housingExcessNeedsAcqContract`와 같은 사실.
+  return (
+    (input.acquisitionCause ?? "purchase") === "purchase" &&
+    housingExcessSplitAppliesToInput(input) &&
+    landMode === "actual" &&
+    buildingMode === "actual"
+  );
 }
 
 /**

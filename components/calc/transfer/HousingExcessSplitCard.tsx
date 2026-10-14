@@ -26,7 +26,12 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { AcqBuildingStdField } from "./AcqBuildingStdField";
 import { TransferBuildingStdFields } from "./TransferStdPriceCards";
-import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessUsesPhdSplit } from "@/lib/calc/housing-excess-split";
+import {
+  housingExcessAreaOfAsset,
+  housingExcessNeedsLandSplit,
+  housingExcessUsesInheritedTotal,
+  housingExcessUsesPhdSplit,
+} from "@/lib/calc/housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "@/lib/calc/housing-excess-split";
 import {
   housingExcessAcqContractAsksProviso,
@@ -65,7 +70,9 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
   const excess = housingExcessAreaOfAsset(asset, transferDate);
   const landArea = parseDecimal(asset.transferArea) || parseDecimal(asset.acquisitionArea) || undefined;
   // 환산·감정·매매사례면 취득시 개별주택가격은 취득가액 칸의 «취득시 기준시가»가 받는다 — 여기서 다시 그리지 않는다.
-  const acqTotalElsewhere = deriveLegacyPartAcqMode(asset) !== "actual";
+  // 개별주택가격(보충적 평가)으로 평가한 상속·증여 주택(#17-5 ②)이면 그 총액이 곧 상속·증여 평가액이다 — 같은 값을 두 번 받지 않는다.
+  const inheritedTotal = housingExcessUsesInheritedTotal(asset, transferDate, isNonPrimary);
+  const acqTotalElsewhere = inheritedTotal || deriveLegacyPartAcqMode(asset) !== "actual";
   const capex = housingExcessNeedsCapexSplit(asset, transferDate, isNonPrimary) ? housingExcessCapexParts(asset) : null;
   const contractOpen = housingExcessNeedsAcqContract(asset, transferDate);
   const contract = housingExcessAcqContractParts(asset);
@@ -76,14 +83,19 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
         <p className="text-caption text-amber-900 leading-relaxed">
           토지 면적이 건물 정착면적의 지역별 배율 한도를 <strong>{excess.toFixed(2)}㎡</strong> 넘습니다. 한도 초과분은 1세대1주택 비과세에서 제외되고
           비사업용 토지(소득세법 §104의3①5호)로 과세되므로, 토지·건물 가액을 기준시가 비율로 나눠 초과분을 분리합니다
-          (소득세법 시행령 §166⑥ · 부가가치세법 시행령 §64①1호). 아래 {COUNT_WORD[(acqTotalElsewhere ? 4 : 5) + (capex ? 1 : 0)]} 칸을 모두 입력하세요.
+          {inheritedTotal
+            ? " (상속·증여 평가액을 건물 기준시가와 토지 개별공시지가로 안분 — 상속세및증여세법 §61①4호, 서면인터넷방문상담4팀-688)."
+            : " (소득세법 시행령 §166⑥ · 부가가치세법 시행령 §64①1호)."}{" "}
+          아래 {COUNT_WORD[(acqTotalElsewhere ? 4 : 5) + (capex ? 1 : 0)]} 칸을 모두 입력하세요.
         </p>
 
         <div className="space-y-2">
           <p className="text-xs font-semibold text-amber-900">취득 당시</p>
           {acqTotalElsewhere ? (
             <p className="text-caption text-amber-900" data-testid="housing-excess-acq-total-elsewhere">
-              취득시 개별주택가격(부수토지 포함)은 취득가액 산정 방식에서 입력한 「취득시 기준시가」를 그대로 씁니다.
+              {inheritedTotal
+                ? "취득시 개별주택가격(부수토지 포함)은 위에서 입력한 상속·증여 평가액(개별주택가격)을 그대로 씁니다."
+                : "취득시 개별주택가격(부수토지 포함)은 취득가액 산정 방식에서 입력한 「취득시 기준시가」를 그대로 씁니다."}
             </p>
           ) : (
             <FieldCard

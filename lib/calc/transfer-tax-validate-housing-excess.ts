@@ -8,7 +8,7 @@
  * 노출 ⇔ 요구 ⇔ ④ 전송 ⇔ 엔진 게이트가 한 값이라 칸 없는 요구(막다른 길)가 없다. 입력 순서는 계산 순서(취득시 → 양도시)다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessZonePending } from "./housing-excess-split";
+import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessUsesInheritedTotal, housingExcessZonePending } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
 import { housingExcessPartModeMismatch } from "./housing-excess-split";
 import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./housing-excess-acq-contract";
@@ -56,7 +56,8 @@ export function validateHousingExcessSplitInputs(
   const head =
     `${label}: 토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘습니다 — 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 분리 과세하므로 ` +
     "토지·건물 가액을 나눌 기준시가가 필요합니다 (소득세법 §89①3호·§104의3①5호·시행령 §166⑥).";
-  if (!positive(a.standardPriceAtAcq)) {
+  // #17-5 ② — 보충적 평가 상속·증여 주택은 취득시 개별주택가격 총액을 상속·증여 평가액으로 쓴다(평가액 칸이 정본 — ⑧이 따로 요구하지 않는다).
+  if (!housingExcessUsesInheritedTotal(a, transferDate, isNonPrimary) && !positive(a.standardPriceAtAcq)) {
     return fieldError("standardPriceAtAcq", `${head} 취득 당시 개별주택가격(부수토지 포함 총액)을 입력하세요.`);
   }
   if (!positive(a.standardPricePerSqmAtAcq)) {
