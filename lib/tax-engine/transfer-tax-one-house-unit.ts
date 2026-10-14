@@ -10,7 +10,11 @@
  * - 단위 카드 전부의 12억 판정·안분 분모(`totalPropertyTransferPrice`)를 합계액으로 두고,
  * - 주택 카드를 **먼저** 계산해 그 판정을 부수토지 카드에 넘긴다(`appurtenantHouseVerdict`).
  */
-import { expropriationProvisoLandCutoff } from "./transfer-tax-appurtenant-land";
+import {
+  allocateUnitExcessShares,
+  expropriationProvisoLandCutoff,
+  isLaterAcquiredLandExemptExcluded,
+} from "./transfer-tax-appurtenant-land";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { TransferTaxItemInput } from "./types/transfer-aggregate.types";
 
@@ -23,6 +27,8 @@ export interface OneHouseUnit {
    * 부수토지 선언 카드(#18). 비과세·표2 대상은 아니다(초과분은 비사업용 토지, 판정 불가는 «모름 = 혜택 불성립»).
    */
   valuationOnlyIdxs: number[];
+  /** `valuationOnlyIdxs` 중 **배율 초과분 카드**(`appurtenant_excess`) — 재산세제과-915 회신 방식의 «초과분 양도차익» 합계(X)가 되는 카드(#17-2 확장). */
+  excessIdxs: number[];
   /** §89①3호 괄호 — 주택 + 부수토지(배율 초과분·판정 불가 카드 포함) 양도가액 합계 */
   combinedTransferPrice: number;
 }
@@ -90,7 +96,7 @@ export function resolveOneHouseUnit(
     return undefined;
   }
   const combinedTransferPrice = [...members, ...valuationOnlyIdxs].reduce((sum, i) => sum + items[i].transferPrice, 0);
-  return { houseIdx: houseIdxs[0], landIdxs, valuationOnlyIdxs, combinedTransferPrice };
+  return { houseIdx: houseIdxs[0], landIdxs, valuationOnlyIdxs, excessIdxs, combinedTransferPrice };
 }
 
 /** 단위 카드의 12억 판정·안분 분모를 합계액으로 둔다. */
@@ -124,4 +130,56 @@ export function toHouseVerdict(
     oneHouseForTable2: result.lthdTable2OneHouseAxis === true,
     expropriationLandCutoff: expropriationProvisoLandCutoff(house),
   };
+}
+
+/**
+ * #17-2 확장 — 고가주택(12억 초과 부분과세) 단위에서 **기획재정부 재산세제과-915(2011.10.27.) 회신 방식**이 요구하는 «전체 부수토지»를 카드 단위로 되살린다.
+ *
+ * 회신: 기준면적 이내 토지분 = 전체 부수토지 양도차익의 안분값 − 배율 초과분 양도차익(음수면 0). 함께 양도에서는 주택 카드·한도 내 부수토지 카드·배율 초과 카드가
+ * 따로 계산돼 한도 내 카드가 초과분 카드의 양도차익을 모른다 — 종전에는 카드마다 자기 양도차익만 안분해 초과분이 한 번 더 빠지지 않았다(옛 산식과 같은 구조).
+ * 여기서는 주택 카드를 먼저 계산한 1차 결과로 단위 전체의 한도 내 토지 조각(주택 카드의 토지분 · 한도 내 부수토지 카드)과 초과분 합계(X)를 구해 조각별 몫을 정한다.
+ * 몫은 `allocateUnitExcessShares`(Σ몫 = X)이며, 각 카드는 `highValueExcessShare`로 받아 max(0, 안분(자기 양도차익 + 몫) − 몫)을 과세한다
+ * (`highValueExcessLandTaxableGain` — 단일 주택 입력과 같은 함수).
+ *
+ * 몫을 줄 대상이 없으면(주택이 부분과세가 아님 · 초과분 없음 · 조각 없음) 빈 맵이다 — 종전 계산 그대로.
+ * 주택 카드는 자기 초과분 외에 **다른 카드의 초과분**이나 **다른 한도 내 토지 카드**가 있을 때만 다시 계산한다(그 밖에는 몫 = 자기 초과분이라 값이 같다).
+ *
+ * @returns 카드 인덱스 → 그 카드가 다시 계산돼야 할 때의 몫(`highValueExcessShare`)
+ */
+export function resolveUnitExcessShares(
+  items: readonly TransferTaxItemInput[],
+  unit: OneHouseUnit,
+  results: readonly TransferTaxResult[],
+): Map<number, number> {
+  const out = new Map<number, number>();
+  const house = results[unit.houseIdx];
+  if (!house || house.isPartialExempt !== true || house.isExempt === true) return out;
+
+  const gainOf = (i: number) => Math.max(0, results[i]?.transferGain ?? 0);
+  const externalExcess = unit.excessIdxs.reduce((sum, i) => sum + gainOf(i), 0);
+  const ownExcess = Math.max(0, house.splitDetail?.nonBusinessLandPart?.gain ?? 0);
+  const excessTotal = ownExcess + externalExcess;
+  if (excessTotal <= 0) return out;
+
+  // 한도 내 토지 조각 — 주택 카드의 토지분(분리 파트가 있고 나중 취득 토지로 제외되지 않은 경우) + 부분과세로 판정된 한도 내 부수토지 카드.
+  const pieces: { idx: number; gain: number }[] = [];
+  const houseLand = house.splitDetail?.land;
+  if (houseLand && !isLaterAcquiredLandExemptExcluded(items[unit.houseIdx] as unknown as TransferTaxInput)) {
+    const w = Math.max(0, houseLand.gain) - ownExcess;
+    if (w > 0) pieces.push({ idx: unit.houseIdx, gain: w });
+  }
+  for (const i of unit.landIdxs) {
+    const r = results[i];
+    if (r && r.isPartialExempt === true && r.isExempt !== true && gainOf(i) > 0) pieces.push({ idx: i, gain: gainOf(i) });
+  }
+  if (pieces.length === 0) return out;
+
+  const shares = allocateUnitExcessShares(pieces.map((p) => p.gain), excessTotal);
+  pieces.forEach((p, k) => {
+    if (shares[k] <= 0) return;
+    // 주택 카드는 자기 초과분만으로 계산한 값과 같으면(외부 초과분·다른 조각 없음) 다시 계산하지 않는다.
+    if (p.idx === unit.houseIdx && externalExcess === 0 && pieces.length === 1) return;
+    out.set(p.idx, shares[k]);
+  });
+  return out;
 }

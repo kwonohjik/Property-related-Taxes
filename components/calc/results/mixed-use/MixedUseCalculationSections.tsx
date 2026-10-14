@@ -430,6 +430,23 @@ export function MixedUseCalculationSections({
                   formula={
                     base <= 1_200_000_000 ? (
                       `${baseLabel} ${fmtPlain(base)} ≤ 12억 → 12억 초과분 없음 — 산식은 주택 부분만 (${MIXED_USE.HIGH_VALUE_FORMULA_HOUSING_ONLY})`
+                    ) : h.highValueExcessRuling ? (
+                      // 재산세제과-915(2011.10.27.) 회신 방식 — 엔진 echo를 그대로 읽는다(안분 후 값에서 초과분을 한 번만 뺀다).
+                      <FLine>
+                        기준면적 이내 토지분 [전체 부수토지 양도차익 {fmtPlain(h.highValueExcessRuling.wholeLandGain)} ×{" "}
+                        <Frac
+                          top={`${baseLabel} ${fmtPlain(base)} - 12억`}
+                          bottom={`${baseLabel} ${fmtPlain(base)}`}
+                        />
+                        {" "}= {fmtPlain(h.highValueExcessRuling.wholeLandProrated)} - 비사업용 이전분 {fmtPlain(h.nonBusinessTransferredGain)}
+                        {h.highValueExcessRuling.wholeLandProrated - h.nonBusinessTransferredGain < 0 ? " (음수여서 0)" : ""}
+                        {" "}= {fmtPlain(h.highValueExcessRuling.landTaxableGain)}] + 건물분 {fmtPlain(h.buildingTransferGain)} ×{" "}
+                        <Frac
+                          top={`${baseLabel} ${fmtPlain(base)} - 12억`}
+                          bottom={`${baseLabel} ${fmtPlain(base)}`}
+                        />
+                        {" "}(기획재정부 재산세제과-915, 2011.10.27. 회신 방식)
+                      </FLine>
                     ) : (
                       <FLine>
                         (주택 양도차익 {fmtPlain(h.transferGain)}

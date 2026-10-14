@@ -120,43 +120,47 @@ describe("§155⑳ 특례 + 배율 초과 부수토지 (§104의3①5호 · §10
     expect(a.longTermDeduction).toBe(b.longTermDeduction);
   });
 
-  it("RH-EX-4: 특례 안분(12억 초과분)은 배율 초과분을 **제외한** 주택분에만 적용된다", () => {
-    // 주택분 양도차익 = (1,400,000,000 − 127,272,727) + 300,000,000 = 1,572,727,273
-    // 표2 = min(9년×4%,40%) + min(5년×4%,40%) = 36% + 20% = 56%
-    //   (거주주택 보유 2014-09-01~2024-06-01 = 9년 9개월)
-    // 장특 = floor(1,572,727,273 × 0.56) = 880,727,272 → 양도소득금액 692,000,001
-    // 과세분 = floor(692,000,001 × (20억−12억)/20억) = 276,800,000
-    expect(withRhe.rentalHousingExceptionDetail!.taxableGain).toBe(276_800_000);
+  it("RH-EX-4: 12억 초과 안분은 재산세제과-915 회신 방식 — 한도 내 토지분 = 전체 토지 안분값 − 초과분(0 하한), 건물분 = 안분값 (초과분은 안분 전 전액 과세)", () => {
+    // 🔁 #17-2b 갱신 — 종전 단언은 «초과분을 뗀 주택분 1,572,727,273에 표2 장특 후 (20억−12억)/20억» = 276,800,000이었다(초과분 이중 반영).
+    // 전체 부수토지 양도차익 1,400,000,000 × 8/20 = 560,000,000 − 초과분 127,272,727 = 432,727,273 (한도 내 토지분)
+    // 건물 양도차익 300,000,000 × 8/20 = 120,000,000 → 과세 양도차익 552,727,273
+    // 표2 = min(9년×4%,40%) + min(5년×4%,40%) = 36% + 20% = 56% (거주주택 보유 2014-09-01~2024-06-01 = 9년 9개월)
+    // 장특 = floor(552,727,273 × 0.56) = 309,527,272 → 과세대상 양도소득금액 243,200,001
+    expect(withRhe.rentalHousingExceptionDetail!.formulaTrace.highValueExcessRuling).toMatchObject({
+      wholeLandGain: 1_400_000_000, wholeLandProrated: 560_000_000, excessGain: 127_272_727,
+      landTaxableGain: 432_727_273, buildingTaxableGain: 120_000_000, taxableBeforeLthd: 552_727_273,
+    });
+    expect(withRhe.rentalHousingExceptionDetail!.taxableGain).toBe(243_200_001);
   });
 
   it("RH-EX-5: 과세 대상 양도소득금액 = 주택분 + 비사업용 토지분", () => {
-    // 276,800,000 + 89,090,909 = 365,890,909
-    expect(withRhe.taxableGain).toBe(365_890_909);
+    // 243,200,001 + 89,090,909 = 332,290,910 (🔁 #17-2b: 365,890,909 → 332,290,910)
+    expect(withRhe.taxableGain).toBe(332_290_910);
   });
 
   it("RH-EX-6: 산출세액 = §104⑤ MAX(1호 합산누진, 2호 파트별 합)", () => {
-    // 과세표준 = 365,890,909 − 2,500,000(기본공제) = 363,390,909
-    expect(withRhe.taxBase).toBe(363_390_909);
+    // 과세표준 = 332,290,910 − 2,500,000(기본공제) = 329,790,910
+    expect(withRhe.taxBase).toBe(329_790_910);
 
-    // 1호 = floor(363,390,909 × 40%) − 25,940,000 = 119,416,363
-    const clause1 = Math.floor(363_390_909 * 0.4) - 25_940_000;
-    expect(clause1).toBe(119_416_363);
+    // 1호 = floor(329,790,910 × 40%) − 25,940,000 = 105,976,364
+    const clause1 = Math.floor(329_790_910 * 0.4) - 25_940_000;
+    expect(clause1).toBe(105_976_364);
 
     // 2호 — 기본공제는 한계세율이 높은 비사업용 토지 파트(24% + 10%p)에 귀속(§103② MAX_BENEFIT)
-    //   주택분  276,800,000 → floor(×38%) − 19,940,000            = 85,244,000
+    //   주택분  243,200,001 → floor(×38%) − 19,940,000            = 72,476,000
     //   비사토   86,590,909 → floor(×24%) − 5,760,000 + floor(×10%) = 23,680,908
-    const housingPart = Math.floor(276_800_000 * 0.38) - 19_940_000;
+    const housingPart = Math.floor(243_200_001 * 0.38) - 19_940_000;
     const nblPart =
       Math.floor(86_590_909 * 0.24) - 5_760_000 + Math.floor(86_590_909 * 0.1);
     const clause2 = housingPart + nblPart;
-    expect(clause2).toBe(108_924_908);
+    expect(clause2).toBe(96_156_908);
 
     // 이 픽스처에서는 1호가 크다 — §104⑤ 본문이 "큰 것"이라 법대로다.
     expect(withRhe.calculatedTax).toBe(Math.max(clause1, clause2));
-    expect(withRhe.calculatedTax).toBe(119_416_363);
+    expect(withRhe.calculatedTax).toBe(105_976_364);
 
-    // 종전(결함) 값 92,806,000 — 배율 초과분이 통째로 누락돼 있었다(과소 26,610,363).
-    expect(withRhe.calculatedTax - 92_806_000).toBe(26_610_363);
+    // 종전(결함) 값 92,806,000 — 배율 초과분이 통째로 누락돼 있었다(과소 13,170,364; #17-2b 이전 기대값 119,416,363은 초과분 이중 반영으로 과대).
+    expect(withRhe.calculatedTax - 92_806_000).toBe(13_170_364);
   });
 
   it("RH-EX-7: 배율 초과분 분리 사실이 계산 단계에 노출된다 (침묵 금지)", () => {

@@ -264,7 +264,12 @@ export function buildMixedUsePartCards(
         expenses: hp.landAppraisalDed - nblE,
       },
       landAcqDate,
-      { totalPropertyTransferPrice: housingTotal },
+      {
+        totalPropertyTransferPrice: housingTotal,
+        // 고가주택 + 배율 초과 — 겸용 엔진이 재산세제과-915 회신 방식으로 계산했으면(`highValueExcessRuling` echo) 카드도 같은 산식이어야 한다.
+        // 이 카드의 양도차익은 배율 초과분을 뗀 한도 내 토지분(L − X)이라 X를 몫으로 싣는다(엔진 `resolveTaxableGain`이 max(0, 안분(L) − X)).
+        ...(hp.highValueExcessRuling ? { highValueExcessShare: hp.nonBusinessTransferredGain } : {}),
+      },
     ),
     card(
       MIXED_USE_PART_IDS.housingBuilding,

@@ -56,12 +56,19 @@ export function fourPartFinancials(
   // #2141 — 나중에 취득한 부수토지가 보유요건 미달이면 토지분은 비율 안분이 아니라 **전액 과세**이고, 나머지가 건물분 과세다.
   //   엔진과 같이 비사토 이전 후 토지 차익의 음수는 0으로 본다(`buildHousingPart` ②). 장특은 보유 미달로 토지 0 · 건물만.
   const laterLandGain = hp.laterLandExemptExcluded ? Math.max(hp.landTransferGain - hpNbGain, 0) : 0;
-  const housingLandTaxable = hp.laterLandExemptExcluded
-    ? laterLandGain + hpNbGain
-    : Math.floor((hp.landTransferGain - hpNbGain) * housingExemptRatio) + hpNbGain;
-  const housingBuildingTaxable = hp.laterLandExemptExcluded
-    ? hp.proratedTaxableGain - laterLandGain
-    : Math.floor(hp.buildingTransferGain * housingExemptRatio);
+  // 재산세제과-915 회신 방식(고가주택 + 배율 초과)이면 엔진이 파트별 과세 양도차익·장특을 echo한다(`highValueExcessRuling`) — 안분 비율을 다시 곱해 만들지 않고 그대로 읽는다.
+  //   종전 식(`(토지 − 비사토) × 비율`)은 초과분을 이중으로 빼는 옛 산식이라 이 경우 엔진 값과 어긋난다.
+  const ruling = hp.highValueExcessRuling;
+  const housingLandTaxable = ruling
+    ? ruling.landTaxableGain + hpNbGain
+    : hp.laterLandExemptExcluded
+      ? laterLandGain + hpNbGain
+      : Math.floor((hp.landTransferGain - hpNbGain) * housingExemptRatio) + hpNbGain;
+  const housingBuildingTaxable = ruling
+    ? ruling.buildingTaxableGain
+    : hp.laterLandExemptExcluded
+      ? hp.proratedTaxableGain - laterLandGain
+      : Math.floor(hp.buildingTransferGain * housingExemptRatio);
   const commercialExempt = cp.deemedHouseBy154_3Main === true;
   // 주택으로 본 상가 부분의 과세 토지분(#2141 — 장특 0) — 그 밖에는 0.
   const commercialLandLaterTaxable = commercialExempt ? cp.incomeAmount + cp.longTermDeductionAmount : 0;
@@ -81,14 +88,22 @@ export function fourPartFinancials(
   // 비사토 장특(표1 보유분)은 주택분 토지 열에 함께 싣는다 — 합계 열(§95② 공제 합계)과 정합.
   // #2141 — 나중 토지 제외면 주택분 장특은 건물분뿐이고 토지 소득금액은 과세 토지 차익 그대로다. 주택으로 본 상가 부분은
   //   건물분이 비과세라 상가 소득금액(장특 0)은 전부 토지 열이다. 그 밖에는 종전대로 양도차익 비율로 나눈다.
-  const hpLtLand = hp.laterLandExemptExcluded ? 0 : Math.floor(hp.longTermDeductionAmount * hpLandRatio);
-  const hpLtBuilding = hp.laterLandExemptExcluded
-    ? hp.longTermDeductionAmount
-    : Math.floor(hp.longTermDeductionAmount * hpBuildRatio);
-  const hpIncomeLand = hp.laterLandExemptExcluded ? laterLandGain : Math.floor(hp.incomeAmount * hpLandRatio);
-  const hpIncomeBuilding = hp.laterLandExemptExcluded
-    ? hp.incomeAmount - laterLandGain
-    : Math.floor(hp.incomeAmount * hpBuildRatio);
+  const hpLtLand = ruling
+    ? ruling.landLongTermDeduction
+    : hp.laterLandExemptExcluded ? 0 : Math.floor(hp.longTermDeductionAmount * hpLandRatio);
+  const hpLtBuilding = ruling
+    ? ruling.buildingLongTermDeduction
+    : hp.laterLandExemptExcluded
+      ? hp.longTermDeductionAmount
+      : Math.floor(hp.longTermDeductionAmount * hpBuildRatio);
+  const hpIncomeLand = ruling
+    ? ruling.landTaxableGain - ruling.landLongTermDeduction
+    : hp.laterLandExemptExcluded ? laterLandGain : Math.floor(hp.incomeAmount * hpLandRatio);
+  const hpIncomeBuilding = ruling
+    ? ruling.buildingTaxableGain - ruling.buildingLongTermDeduction
+    : hp.laterLandExemptExcluded
+      ? hp.incomeAmount - laterLandGain
+      : Math.floor(hp.incomeAmount * hpBuildRatio);
   const cpIncomeLand = commercialExempt ? cp.incomeAmount : Math.floor(cp.incomeAmount * cpLandRatio);
   const cpIncomeBuilding = commercialExempt ? 0 : Math.floor(cp.incomeAmount * cpBuildRatio);
   setNum("ltDeduction", "housingLand", hpLtLand + nbLtDeduction);

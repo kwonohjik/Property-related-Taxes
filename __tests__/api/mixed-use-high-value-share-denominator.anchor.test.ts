@@ -134,7 +134,9 @@ describe("겸용 공유지분 × §89①3호 12억 분모 (영 §156①·②)", 
     // 단독 소유면 분모 축이 아예 생기지 않는다(= 양도가액이 곧 분모).
     expect(r.result?.apportionment?.wholeHousingTransferPrice).toBeUndefined();
     expect(r.result?.housingPart?.isExempt).toBe(false);
-    expect(r.result?.total?.transferTax).toBe(153_322_963);
+    // 🔁 #17-2b 갱신: 153,322,963 → 148,150,741. 고가주택(12억 초과 부분과세) + 배율 초과 부수토지라 주택분 과세 양도차익이 재산세제과-915 회신 방식
+    //   (전체 부수토지 안분값 − 초과분, 음수면 0)으로 바뀌었다 — 종전 값은 초과분을 뗀 나머지를 다시 안분한 옛 산식(초과분 이중 반영).
+    expect(r.result?.total?.transferTax).toBe(148_150_741);
   });
 
   it("HV-2 🔴 60% 지분 — 분모가 **물건 전체 주택분**이라 계속 과세된다", async () => {
@@ -157,7 +159,8 @@ describe("겸용 공유지분 × §89①3호 12억 분모 (영 §156①·②)", 
      *    `buildMixedUsePayload`가 그 성분만 지분 스케일하도록 고쳐 값이 올라갔다
      *    (취득가액 5억 → 3억). 기준시가·면적은 물건 전체 유지다.
      */
-    expect(r.result?.total?.transferTax).toBe(81_859_889);
+    // 🔁 #17-2b 갱신: 81,859,889 → 78,911,722 (회신 방식 — 위 HV-1과 같은 사유). 12억 판정 분모는 그대로 물건 전체 주택분이다.
+    expect(r.result?.total?.transferTax).toBe(78_911_722);
   });
 
   /** 주택 기준시가를 낮춰 물건 전체 주택분을 12억 미만으로 만든다(안분 비율이 내려간다). */

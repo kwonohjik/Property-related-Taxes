@@ -263,6 +263,30 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
                 {(formulaTrace.ratioHighValue * 100).toFixed(4)}%
               </span>
             </p>
+            {/* 배율 초과 부수토지가 함께 있으면 엔진이 재산세제과-915 회신 방식으로 과세 양도차익을 만든다 — echo를 그대로 읽는다(재계산 금지). */}
+            {scenarioId === "RH-A2" && formulaTrace.highValueExcessRuling && (
+              <div className="mt-2 space-y-0.5 border-t border-violet-100 pt-2 dark:border-violet-800/30" data-testid="rh-a2-excess-ruling">
+                <p className="font-medium text-foreground">
+                  배율 초과 부수토지가 있어 기획재정부 재산세제과-915(2011.10.27.) 회신 방식으로 과세 양도차익을 계산했습니다
+                </p>
+                <p>
+                  기준면적 이내 토지분 = 전체 부수토지 양도차익{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.highValueExcessRuling.wholeLandGain)}</span>의 안분값{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.highValueExcessRuling.wholeLandProrated)}</span>
+                  {" "}− 배율 초과분{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.highValueExcessRuling.excessGain)}</span>
+                  {formulaTrace.highValueExcessRuling.wholeLandProrated - formulaTrace.highValueExcessRuling.excessGain < 0 ? " (음수여서 0)" : ""}
+                  {" "}= <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.highValueExcessRuling.landTaxableGain)}</span>
+                </p>
+                <p>
+                  건물분 안분값{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.highValueExcessRuling.buildingTaxableGain)}</span>
+                  {" "}→ 과세 양도차익{" "}
+                  <span className="font-mono tabular-nums text-foreground">{formatN(formulaTrace.highValueExcessRuling.taxableBeforeLthd)}</span>
+                  에 표2 장기보유특별공제를 적용한 금액이 과세대상 양도소득금액입니다 (배율 초과분은 이 특례 밖 — 비사업용 토지로 별도 과세).
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -198,7 +198,8 @@ describe("G1 — 첫 자산 주택부수토지 = 주택 먼저(K1)와 같은 계
   it("🔑 토지 200㎡ + 200㎡ 두 필지(합 12억 초과 고가주택) — 남은 한도를 면적 비율로 나눠 필지마다 이내 150·초과 50", async () => {
     const { rv } = await parity({ house: 800_000_000, houseLand: 0, lands: [[300_000_000, 200], [300_000_000, 200]] });
     expect(ids(rv)).toEqual(["c2__appurtenant", "c2__excess", "h1", "primary__appurtenant", "primary__excess"]);
-    expect(rv.totalTax).toBe(18_553_857);
+    // 🔁 #17-2b 갱신: 18,553,857 → 16,432,428. 두 필지의 한도 내 카드가 배율 초과분(두 필지 합)을 몫으로 나눠 받아 회신 방식으로 과세한다(단일 주택 입력과 같은 산식).
+    expect(rv.totalTax).toBe(16_432_428);
   });
 
   it("고가주택 12억 초과 짝 — 주택 10억 + 토지 4억(400㎡): 합계액(초과분 포함) 14억으로 안분 · 장특 표2", async () => {
@@ -230,7 +231,8 @@ describe("G1 — 첫 자산 주택부수토지 = 주택 먼저(K1)와 같은 계
       companionAssets: body.companionAssets.map((c) => (c.assetId === "h1" ? { ...c, residencePeriodMonths: 24 } : c)),
     });
     expect(norm(rv, "r")).toEqual(norm(fw, "f"));
-    expect(rv.totalTax).toBe(24_711_500);
+    // 🔁 #17-2b 갱신: 24,711,500 → 18,705,498 (고가주택 + 배율 초과 — 회신 방식). 정/역 순서 동치(`norm`)와 거주 0 대조는 그대로다.
+    expect(rv.totalTax).toBe(18_705_498);
     // 거주 0으로 보면 표2 거주분이 빠진다 — 우선순위가 뒤집히면 여기서 갈린다.
     const rv0 = await post({ ...body, residencePeriodMonths: 0 });
     expect(rv0.totalTax).toBeGreaterThan(rv.totalTax);
