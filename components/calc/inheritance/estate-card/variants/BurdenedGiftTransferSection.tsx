@@ -90,6 +90,7 @@ function createEmptyBgt(): BurdenedGiftTransferTaxInput {
     // `landStdPriceAtTransfer`(옛 독립 입력)는 새 기록에 쓰지 않는다. 시가 평가일 때의 산정방식·실지취득가액·실비만 입력받는다.
     acquisitionMethod: undefined,
     actualAcquisitionTotal: undefined,
+    presumedAcquisitionTotal: undefined,
     capitalExpenditure: undefined,
     transferExpense: undefined,
     // §114조의2 신축·증축 가산세 (K-5 + 건물 전용)
@@ -118,6 +119,7 @@ function hasData(bgt: BurdenedGiftTransferTaxInput): boolean {
     !!bgt.householdHousingCount ||
     bgt.acquisitionMethod !== undefined ||
     !!bgt.actualAcquisitionTotal ||
+    !!bgt.presumedAcquisitionTotal ||
     !!bgt.capitalExpenditure ||
     !!bgt.transferExpense ||
     bgt.isSelfBuilt === true ||
@@ -312,6 +314,7 @@ export function BurdenedGiftTransferSection({
               set={set}
               item={item}
               isLandType={true}
+              transferDate={transferDate}
             />
 
             {/* 양도시 개별공시지가 — 단가는 local, store(item.standardPrice)에는 «총액». 증여재산 평가의 «보충적 평가» 한 칸이며
@@ -412,6 +415,7 @@ export function BurdenedGiftTransferSection({
                 onTransferStdPriceChange={onTransferStdPriceChange}
                 transferStdPriceLabel={transferStdPriceLabel}
                 item={item}
+                transferDate={transferDate}
               />
             )}
           </div>
@@ -479,9 +483,11 @@ interface NonHousingFieldSetProps {
   onTransferStdPriceChange: (v: number | undefined) => void;
   transferStdPriceLabel: string;
   item: EstateItem;
+  /** 증여일(= 양도일) — 감정가액 × 증축 5년 이내 차단 판정 */
+  transferDate?: string;
 }
 
-function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item }: NonHousingFieldSetProps) {
+function NonHousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate }: NonHousingFieldSetProps) {
   // 평가방식은 증여세 평가에서 파생한다(1h-G1-2 · 결정 #23) — ④·⑧과 같은 leaf.
   const valuation = giftBurdenedValuationBasis(item);
   const isMarketMode = valuation.mode === "sangjeungbeop_market";
@@ -529,7 +535,7 @@ dateToStr(bgt.acquisitionDate)
       </FieldCard>
 
       {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
-      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} />
+      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} transferDate={transferDate} />
 
       {/* 양도시 기준시가 — 평가 입력의 '보충적 평가(기준시가)'와 같은 한 칸. 기준시가 안분·담보평가 승·환산(K-5)에서 필수 */}
       <FieldCard

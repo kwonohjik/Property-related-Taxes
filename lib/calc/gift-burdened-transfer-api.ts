@@ -23,6 +23,7 @@
  *   real_estate_apartment               → housing  (항상 주택)
  */
 
+import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
@@ -130,6 +131,8 @@ export function buildGiftBurdenedTransferBody(
   // 시가 평가인데 담보평가(§66)가 이겨 취득가액도 기준시가로 산정(엔진이 강제) — 산정방식 선택은 의미가 없다(확인 필요 고지는 엔진).
   const acquisitionForcedToStandard = isMarketMode && valuation.collateralForcesStandardAcquisition;
   const acquisitionMethod = acquisitionForcedToStandard ? ("converted" as const) : bgt.acquisitionMethod;
+  // K-6/K-7 — 매매사례가액·감정가액(§176의2③1·2호). 담보평가가 이겨 기준시가로 강제되면 이미 "converted"라 여기 오지 않는다.
+  const isPresumedMethod = isBgPresumedMethod(acquisitionMethod);
 
   // 기준시가 배정: land → landStd, building/housing → buildingStd (§3)
   // 상업용 건물 경로 B(§61①2호+1호): standardPrice(건물분)에 부수토지 개별공시지가를 합산한
@@ -219,6 +222,12 @@ export function buildGiftBurdenedTransferBody(
         actualAcquisitionTotal: acquisitionMethod === "actual" && !acquisitionForcedToStandard
           ? (bgt.actualAcquisitionTotal ?? 0)
           : undefined,
+        // K-6/K-7: 매매사례가액·감정가액 — 토지는 토지 칸으로, 그 밖은 총액으로(엔진이 건물 몫을 취득시 기준시가 비율로 나눈다).
+        ...(isPresumedMethod
+          ? isLandType
+            ? { presumedLandAcquisitionPrice: bgt.presumedAcquisitionTotal ?? 0, presumedBuildingAcquisitionPrice: 0 }
+            : { presumedAcquisitionTotal: bgt.presumedAcquisitionTotal ?? 0 }
+          : {}),
         // K-5: 환산 분자/분모용 기준시가 — 양도시 기준시가는 토지·건물 모두 «총액»(item.standardPrice)이다.
         //   종전 토지는 별도 칸의 ㎡당 공시지가(bgt.landStdPriceAtTransfer)를 총액처럼 실어 취득가액이 단가×수만큼 부풀고(실측: 정답
         //   66,666,666이 200억 → 세액 0) 막히지 않았다(1h-G1-2). 이제 증여재산 평가의 «보충적 평가(개별공시지가 총액)»와 같은 한 칸이다.
@@ -266,8 +275,9 @@ export function buildGiftBurdenedTransferBody(
 
     // 실비 (K-4 실지 모드 시 유효) — Zod strip 방지를 위해 body 최상위에 배치 (⑫⑬ 설계 §4)
     // K-5 환산 모드에서는 엔진이 §176의2②2호 + §163⑥(3% 개산공제) 적용 → 이 값 무시
-    capitalExpenditure: bgt.capitalExpenditure ?? 0,
-    transferExpense: bgt.transferExpense ?? 0,
+    // K-6/K-7은 개산공제만 쓰므로(§97②2호 단서 실비 택일은 환산 전용) 전환 전 방식의 stale 실비를 싣지 않는다.
+    capitalExpenditure: isPresumedMethod ? 0 : (bgt.capitalExpenditure ?? 0),
+    transferExpense: isPresumedMethod ? 0 : (bgt.transferExpense ?? 0),
 
     // 필요경비: 0 (부담부증여는 §159 엔진이 안분 후 자동 계산; 실비는 별도 최상위)
     expenses: 0,
@@ -280,10 +290,11 @@ export function buildGiftBurdenedTransferBody(
     specialHouseExclusions: [] as unknown[],
     isNonBusinessLand: isLandType ? (bgt.isNonBusinessLand ?? false) : false,
 
-    // §114조의2 신축·증축 가산세 (K-5 환산 + 건물 전용) — body 최상위 (Zod propertyBaseShape 수용)
-    // land 제외(건물 행위). 엔진 step override가 converted+isSelfBuilt에서 penalty base 결선.
+    // §114조의2 신축·증축 가산세 (K-5 환산·K-7 감정가액 + 건물 전용) — body 최상위 (Zod propertyBaseShape 수용)
+    // land 제외(건물 행위). 엔진 step이 converted+isSelfBuilt(estimatedBase)·appraisal+isSelfBuilt(penaltyAxis)에서 penalty base 결선.
+    // 매매사례가액은 조문(「감정가액 또는 환산취득가액」)에 없어 싣지 않는다.
     ...(isMarketMode &&
-    acquisitionMethod === "converted" &&
+    (acquisitionMethod === "converted" || acquisitionMethod === "appraisal") &&
     !acquisitionForcedToStandard &&
     bgt.isSelfBuilt === true &&
     !isLandType

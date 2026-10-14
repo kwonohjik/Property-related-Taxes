@@ -170,7 +170,7 @@ dateToStr(bgt.acquisitionDate)
       </FieldCard>
 
       {/* 평가방식·취득가액 산정 (K-4/K-5) — 평가방식은 증여세 평가에서 파생(읽기 전용) */}
-      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} />
+      <ValuationModeSection bgt={bgt} set={set} item={item} isLandType={false} transferDate={transferDate} />
 
       {/* 양도시 기준시가 — 평가 입력의 '보충적 평가(기준시가)'와 같은 한 칸. 기준시가 안분·담보평가 승·환산(K-5)에서 필수 */}
       <FieldCard
