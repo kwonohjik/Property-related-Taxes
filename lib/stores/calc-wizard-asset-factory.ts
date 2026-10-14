@@ -505,6 +505,9 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgCoDonorActualAcquisitionBuilding: "",
     bgCoDonorActualAcquisitionTotal: "",
     bgCoDonorMarketValueAtAcquisition: "",
+    bgCoDonorPresumedAcquisitionLand: "",
+    bgCoDonorPresumedAcquisitionBuilding: "",
+    bgCoDonorPresumedAcquisitionTotal: "",
     // Phase 3: 증여세 통합 입력
     bgDonorRelation: "",
     bgIsMinorDonee: false,

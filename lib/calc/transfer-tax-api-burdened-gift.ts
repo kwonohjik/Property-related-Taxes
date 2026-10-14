@@ -97,6 +97,10 @@ export interface BurdenedGiftInfoPayload {
     actualBuildingAcquisitionPrice?: number;
     actualAcquisitionTotal?: number;
     marketValueAtAcquisition?: number;
+    /** K-6/K-7 × 이월과세 — 당초 증여자의 취득 당시 매매사례가액·감정가액. */
+    presumedLandAcquisitionPrice?: number;
+    presumedBuildingAcquisitionPrice?: number;
+    presumedAcquisitionTotal?: number;
   };
 }
 
@@ -130,7 +134,46 @@ function buildCarryoverDonorBasis(
         : num(primary.bgCoDonorActualAcquisitionBuilding),
     actualAcquisitionTotal: num(primary.bgCoDonorActualAcquisitionTotal),
     marketValueAtAcquisition: num(primary.bgCoDonorMarketValueAtAcquisition),
+    ...buildCoDonorPresumed(primary),
   };
+}
+
+/**
+ * 이월과세 × K-6/K-7 — **당초 증여자**의 매매사례가액·감정가액. 방식이 아니면 비운다.
+ * 자산 종류의 입력 형태에 맞는 칸만 싣는다(양도인 쪽 `buildPresumedAcquisition`과 같은 `bgPresumedInputKind`) —
+ * 엔진 STEP 4가 분리 칸이 하나라도 있으면 총액을 무시하므로 stale 칸이 새면 안 된다.
+ */
+function buildCoDonorPresumed(
+  primary: AssetForm,
+): Pick<
+  NonNullable<BurdenedGiftInfoPayload["carryoverDonorBasis"]>,
+  "presumedLandAcquisitionPrice" | "presumedBuildingAcquisitionPrice" | "presumedAcquisitionTotal"
+> {
+  if (!isBgPresumedMethod(primary.bgAcquisitionMethod)) return {};
+  const num = (v: string | undefined) =>
+    v !== undefined && v !== "" ? parseAmount(v) : undefined;
+  switch (bgPresumedInputKind(primary.assetKind)) {
+    case "split":
+      return {
+        presumedLandAcquisitionPrice: num(primary.bgCoDonorPresumedAcquisitionLand),
+        presumedBuildingAcquisitionPrice: num(primary.bgCoDonorPresumedAcquisitionBuilding),
+      };
+    case "land":
+      return { presumedLandAcquisitionPrice: num(primary.bgCoDonorPresumedAcquisitionLand) };
+    default:
+      return { presumedAcquisitionTotal: num(primary.bgCoDonorPresumedAcquisitionTotal) };
+  }
+}
+
+/**
+ * K-4 실지취득가액 칸을 읽는 조합인가 — 실지 방식이거나, **이월과세 × K-6/K-7**(양도인 쪽 시나리오 B는
+ * 증여받은 자산이라 증여일 상증법 평가액이 실지거래가액이다 — 소령 §163⑨).
+ */
+function usesActualAcquisitionFields(primary: AssetForm): boolean {
+  return (
+    primary.bgAcquisitionMethod === "actual" ||
+    (primary.acquisitionCause === "carryover_gift" && isBgPresumedMethod(primary.bgAcquisitionMethod))
+  );
 }
 
 /** K-6/K-7 금액 3칸 → payload. 방식이 아니면 전부 undefined. */
@@ -140,7 +183,8 @@ function buildPresumedAcquisition(
   BurdenedGiftInfoPayload,
   "presumedLandAcquisitionPrice" | "presumedBuildingAcquisitionPrice" | "presumedAcquisitionTotal"
 > {
-  if (!isBgPresumedMethod(primary.bgAcquisitionMethod)) return {};
+  // 이월과세는 당초 증여자 값(`carryoverDonorBasis.presumed*`)만 쓴다 — 양도인 칸의 stale 값을 싣지 않는다.
+  if (!isBgPresumedMethod(primary.bgAcquisitionMethod) || primary.acquisitionCause === "carryover_gift") return {};
   const num = (v: string | undefined) =>
     v !== undefined && v !== "" ? parseAmount(v) : undefined;
   switch (bgPresumedInputKind(primary.assetKind)) {
@@ -218,15 +262,15 @@ export function buildBurdenedGiftInfo(
     // K-4/K-5 취득가액 산정방식 (시가 모드). 미선택 시 undefined → 엔진 backward-compat.
     acquisitionMethod: primary.bgAcquisitionMethod || undefined,
     actualLandAcquisitionPrice:
-      primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionLand
+      usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionLand
         ? parseAmount(primary.bgActualAcquisitionLand) || undefined
         : undefined,
     actualBuildingAcquisitionPrice:
-      primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionBuilding
+      usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionBuilding
         ? parseAmount(primary.bgActualAcquisitionBuilding) || undefined
         : undefined,
     actualAcquisitionTotal:
-      primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionTotal
+      usesActualAcquisitionFields(primary) && primary.bgActualAcquisitionTotal
         ? parseAmount(primary.bgActualAcquisitionTotal) || undefined
         : undefined,
     /**

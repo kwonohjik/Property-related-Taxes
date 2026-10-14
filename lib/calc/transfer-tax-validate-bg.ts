@@ -135,14 +135,6 @@ export function validateBurdenedGiftAsset(
    * 설계: `docs/02-design/features/burdened-gift-carryover-159-97-2.plan.md` §5.6·§8
    */
   if (asset.acquisitionCause === "carryover_gift") {
-    /**
-     * K-6/K-7 × 이월과세는 1차 범위 밖이다(계획서 Q-5) — 아래 「당초 증여자 값」 요구보다 **앞**이어야 한다.
-     * `missingCoDonorBasisLabel`은 K-6/K-7 칸을 모르고 legacy 「시가」로 떨어져, 화면에 없는 칸을 요구하는 오답 메시지가 된다.
-     * ⑤는 같은 술어(`bgPresumedBlock`)로 두 옵션을 비활성화한다.
-     */
-    if (asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod)) {
-      return fieldError("bgAcquisitionMethod", `${label}: ${bgPresumedBlock(asset)!.long}`);
-    }
     const missing = missingCoDonorBasisLabel(asset);
     if (missing) {
       return fieldError(missing.field, `${label}: 이월과세가 적용되므로 「당초 증여자」(= 양도인에게 이 자산을 증여한 사람)의 ${missing.label}을(를) 입력하세요. 소득세법 제97조의2 제1항 제1호가 취득가액을 당초 증여자의 취득 당시 금액으로 정하는데, 부담부증여의 취득가액은 같은 법 시행령 제159조 제1항 제1호가 양도인 기준으로 따로 산정하므로 두 값이 모두 필요합니다(같은 조 제2항 제3호의 세액 비교).`);
@@ -221,14 +213,33 @@ export function validateBurdenedGiftAsset(
     } else if (isBgPresumedMethod(acqMethod)) {
       /**
        * K-6 매매사례가액(§176의2③1호) · K-7 감정가액(③2호) — 소득세법 §97①1호나목. 필요경비는 개산공제만이다.
-       * 고를 수 없는 자산(상속·이월과세·축 B)은 ⑤가 두 옵션을 비활성화하는 **같은 술어**로 막는다.
+       * 고를 수 없는 자산(상속·축 B)은 ⑤가 두 옵션을 비활성화하는 **같은 술어**로 막는다.
        */
       const methodLabel = BG_PRESUMED_LABEL[acqMethod];
       const block = bgPresumedBlock(asset, { isFractionalSplit: isFractionalSplitAxis });
       if (block) {
         return fieldError("bgAcquisitionMethod", `${label}: ${block.long}`);
       }
-      if (!hasBgPresumedAmount(asset)) {
+      if (asset.acquisitionCause === "carryover_gift") {
+        /**
+         * 이월과세 × K-6/K-7 — 방식은 **당초 증여자** 쪽이다(소법 §97의2①1호). 그 금액은 이월과세 박스의 당초 증여자 칸이고
+         * (`missingCoDonorBasisLabel`이 이미 요구했다), 양도인 쪽(시나리오 B)은 증여받은 자산이라 소령 §163⑨가 증여일 상증법 평가액을
+         * 실지거래가액으로 본다 — K-4 실지취득가액 칸이 그 값이다. 어느 쪽도 다른 쪽으로 대신하지 않는다.
+         */
+        if (asset.assetKind === "general_building") {
+          if (!parseAmount(asset.bgActualAcquisitionLand) && !parseAmount(asset.bgActualAcquisitionBuilding)) {
+            return fieldError("bgActualAcquisitionLand", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액(토지 또는 건물)을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
+          }
+        } else if (asset.assetKind === "land") {
+          if (!parseAmount(asset.bgActualAcquisitionLand)) {
+            return fieldError("bgActualAcquisitionLand", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액(토지)을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
+          }
+        } else if (!parseAmount(asset.bgActualAcquisitionTotal)) {
+          return fieldError("bgActualAcquisitionTotal", `${label}: 이월과세 — 양도인(증여받은 사람)이 증여받은 때의 상증법 평가액을 입력하세요 (소령 §163⑨ · 시나리오 B).`);
+        }
+        // 신축·증축 × 이월과세는 화면에서 도달하지 않는다 — 신축 입력은 매매 취득에서만 열린다(`selfBuiltActive`).
+        //   API 직접 호출은 엔진 `assertCarryoverDonorBasis`가 막는다.
+      } else if (!hasBgPresumedAmount(asset)) {
         const kind = bgPresumedInputKind(asset.assetKind);
         const target = kind === "split" ? "토지 또는 건물의 " : kind === "land" ? "토지 " : "";
         return fieldError(
@@ -425,9 +436,29 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
 
   // K-1~K-3(기준시가 모드) · K-5(환산) — 둘 다 취득시 기준시가 두 칸을 쓴다.
   //   K-5에 전용 칸을 두지 않는 것은 환산이 **이 칸을 분자로** 자동 추종하기 때문이다(이중 진실 방지).
+  // K-6/K-7 — 개산공제 base로 같은 두 칸이 필요하다(필요경비는 개산공제만).
+  const isPresumed =
+    asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod);
   const needsStdPrice =
     asset.bgValuationMode === "sangjeungbeop_standard" ||
-    asset.bgAcquisitionMethod === "converted";
+    asset.bgAcquisitionMethod === "converted" ||
+    isPresumed;
+  if (isPresumed) {
+    const methodLabel = BG_PRESUMED_LABEL[asset.bgAcquisitionMethod as "salesCase" | "appraisal"];
+    const kind = bgPresumedInputKind(asset.assetKind);
+    const has =
+      kind === "split"
+        ? filled(asset.bgCoDonorPresumedAcquisitionLand) || filled(asset.bgCoDonorPresumedAcquisitionBuilding)
+        : kind === "land"
+          ? filled(asset.bgCoDonorPresumedAcquisitionLand)
+          : filled(asset.bgCoDonorPresumedAcquisitionTotal);
+    if (!has) {
+      return {
+        label: methodLabel,
+        field: kind === "total" ? "bgCoDonorPresumedAcquisitionTotal" : "bgCoDonorPresumedAcquisitionLand",
+      };
+    }
+  }
   if (needsStdPrice) {
     if (!filled(asset.bgCoDonorLandStdPriceAtAcq) || !filled(asset.bgCoDonorBuildingStdPriceAtAcq)) {
       // 입력칸 이동 — 빈 쪽(토지 먼저)

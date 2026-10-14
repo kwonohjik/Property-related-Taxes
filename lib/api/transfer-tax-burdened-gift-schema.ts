@@ -71,6 +71,9 @@ export const burdenedGiftInfoSchema = z.object({
       actualBuildingAcquisitionPrice: z.number().int().nonnegative().optional(),
       actualAcquisitionTotal: z.number().int().nonnegative().optional(),
       marketValueAtAcquisition: z.number().int().nonnegative().optional(),
+      presumedLandAcquisitionPrice: z.number().int().nonnegative().optional(),
+      presumedBuildingAcquisitionPrice: z.number().int().nonnegative().optional(),
+      presumedAcquisitionTotal: z.number().int().nonnegative().optional(),
     })
     .optional(),
   /**

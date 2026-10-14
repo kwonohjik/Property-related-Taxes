@@ -155,13 +155,17 @@ describe("⑤ 게이트 — 개산공제 base 칸이 뜬다", () => {
 });
 
 describe("⑤ onChange 패치 — 방식 전환 시 presumed 3칸 초기화 (useEffect 미러링 금지)", () => {
-  it("매매사례 ↔ 감정, 매매사례 → 환산: 3칸을 비운다", () => {
+  it("매매사례 ↔ 감정, 매매사례 → 환산: 양도인 3칸과 당초 증여자 3칸을 비운다", () => {
     for (const [prev, next] of [["salesCase", "appraisal"], ["appraisal", "salesCase"], ["appraisal", "converted"]] as const) {
       expect(bgAcquisitionMethodPatch(prev, next)).toEqual({
         bgAcquisitionMethod: next,
         bgPresumedAcquisitionLand: "",
         bgPresumedAcquisitionBuilding: "",
         bgPresumedAcquisitionTotal: "",
+        // 이월과세 × 새 방식의 당초 증여자 값도 같이 비운다(의미가 달라 stale 해석 위험)
+        bgCoDonorPresumedAcquisitionLand: "",
+        bgCoDonorPresumedAcquisitionBuilding: "",
+        bgCoDonorPresumedAcquisitionTotal: "",
       });
     }
   });
@@ -217,10 +221,52 @@ describe("⑧ validate", () => {
     expect(r.field).toBe("bgAcquisitionMethod");
   });
 
-  it("이월과세 차단 — 「당초 증여자」 값 요구가 아니라 방식 차단 메시지가 먼저다", () => {
-    const r = V(land({ acquisitionCause: "carryover_gift" }));
-    expect(r.msg).toMatch(/이월과세\(소득세법 §97의2\)가 적용되는 부담부증여는 .*매매사례가액.*감정가액/);
-    expect(r.field).toBe("bgAcquisitionMethod");
+  describe("이월과세 × 새 방식 — 당초 증여자 값만 새 방식, 양도인은 증여일 평가액(실지)", () => {
+    /** 토지 + 이월과세: 양도인 증여일 평가액(실지 칸) · 당초 증여자 감정가액·취득시 기준시가 두 칸. */
+    const carry = (over: Partial<AssetForm> = {}) =>
+      land({
+        acquisitionCause: "carryover_gift",
+        bgPresumedAcquisitionLand: "",
+        bgActualAcquisitionLand: "300,000,000",
+        bgCoDonorPresumedAcquisitionLand: "250,000,000",
+        bgCoDonorLandStdPriceAtAcq: "180,000,000",
+        bgCoDonorBuildingStdPriceAtAcq: "0",
+        ...over,
+      });
+    it("모두 입력하면 통과 — 종전 「이월과세 × 새 방식 차단」은 풀렸다", () => {
+      expect(V(carry()).msg).toBeNull();
+    });
+    it("당초 증여자 감정가액 미입력 → 그 칸으로 이동", () => {
+      const r = V(carry({ bgCoDonorPresumedAcquisitionLand: "" }));
+      expect(r.msg).toMatch(/당초 증여자.*감정가액/);
+      expect(r.field).toBe("bgCoDonorPresumedAcquisitionLand");
+    });
+    it("당초 증여자 취득시 기준시가(개산공제 base) 미입력 → 차단", () => {
+      const r = V(carry({ bgCoDonorLandStdPriceAtAcq: "" }));
+      expect(r.msg).toMatch(/당초 증여자/);
+      expect(r.field).toBe("bgCoDonorLandStdPriceAtAcq");
+    });
+    it("양도인 증여일 평가액 미입력 → 차단(당초 증여자 값으로 대신하지 않는다)", () => {
+      const r = V(carry({ bgActualAcquisitionLand: "" }));
+      expect(r.msg).toMatch(/양도인\(증여받은 사람\)이 증여받은 때의 상증법 평가액/);
+      expect(r.field).toBe("bgActualAcquisitionLand");
+    });
+    it("매매사례가액도 같은 규칙", () => {
+      expect(V(carry({ bgAcquisitionMethod: "salesCase" })).msg).toBeNull();
+      expect(V(carry({ bgAcquisitionMethod: "salesCase", bgCoDonorPresumedAcquisitionLand: "" })).msg).toMatch(/매매사례가액/);
+    });
+    it("총액 입력(주택)은 총액 칸으로 이동", () => {
+      const h = housing({
+        acquisitionCause: "carryover_gift",
+        bgPresumedAcquisitionTotal: "",
+        bgActualAcquisitionTotal: "300,000,000",
+        bgCoDonorLandStdPriceAtAcq: "0",
+        bgCoDonorBuildingStdPriceAtAcq: "100,000,000",
+        bgCoDonorPresumedAcquisitionTotal: "",
+      });
+      expect(V(h).field).toBe("bgCoDonorPresumedAcquisitionTotal");
+      expect(V({ ...h, bgCoDonorPresumedAcquisitionTotal: "200,000,000" }).msg).toBeNull();
+    });
   });
 
   it("축 B(지분 분할 취득) 차단", () => {

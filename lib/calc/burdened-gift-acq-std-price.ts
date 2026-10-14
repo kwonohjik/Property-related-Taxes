@@ -18,7 +18,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 
-type AcqStdAsset = Pick<
+type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause">> & Pick<
   AssetForm,
   | "assetKind"
   | "transferType"
@@ -40,6 +40,8 @@ type AcqStdAsset = Pick<
  *    ⚠️ **K-5(환산)는 쓴다** — 환산취득가액 = 양도가액 × 취득시 기준시가 ÷ 양도시 기준시가
  *    (소령 §176의2②2호 · `burdened-gift-apportionment.ts` K-5). 종전에는 시가 모드 전체를 제외해
  *    ⑧(K-5)이 요구하는데 **칸이 없었다**(2026-09-30 B2).
+ *  · **이월과세 × K-6/K-7** — 양도인(증여받은 사람) 쪽은 증여일 평가액(실지)이고 당초 증여자 쪽은 이월과세 박스의 당초 증여자 취득 당시
+ *    기준시가를 개산공제 base로 쓴다(`applyCarryoverDonorBasis`가 치환). 양도인의 취득시 기준시가는 어느 시나리오에서도 읽지 않는다.
  *  · `general_building` — `gbAcqLandPricePerSqm`·`gbAcqBuildingValue` 전용 입력이 있고 API가
  *    그것을 쓴다(`transfer-tax-api-burdened-gift.ts`). 여기 칸을 만들면 **엔진이
  *    쓰지 않는 값**을 입력하게 되고, validate가 그걸 요구하면 gb*를 채운 사용자가 막힌다.
@@ -53,7 +55,7 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
     asset.transferType === "burdened_gift" &&
     (asset.bgValuationMode !== "sangjeungbeop_market" ||
       asset.bgAcquisitionMethod === "converted" ||
-      isBgPresumedMethod(asset.bgAcquisitionMethod)) &&
+      (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift")) &&
     asset.assetKind !== "general_building" &&
     asset.assetKind !== "right_to_move_in"
   );

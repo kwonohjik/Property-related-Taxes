@@ -212,6 +212,9 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgCoDonorActualAcquisitionBuilding === undefined) a.bgCoDonorActualAcquisitionBuilding = "";
   if (a.bgCoDonorActualAcquisitionTotal === undefined) a.bgCoDonorActualAcquisitionTotal = "";
   if (a.bgCoDonorMarketValueAtAcquisition === undefined) a.bgCoDonorMarketValueAtAcquisition = "";
+  if (a.bgCoDonorPresumedAcquisitionLand === undefined) a.bgCoDonorPresumedAcquisitionLand = "";
+  if (a.bgCoDonorPresumedAcquisitionBuilding === undefined) a.bgCoDonorPresumedAcquisitionBuilding = "";
+  if (a.bgCoDonorPresumedAcquisitionTotal === undefined) a.bgCoDonorPresumedAcquisitionTotal = "";
   // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
   if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
   // ── 매매사례가액(추계) 신규 필드 fallback (소령 §176의2③1호, 2026-06-15) ──

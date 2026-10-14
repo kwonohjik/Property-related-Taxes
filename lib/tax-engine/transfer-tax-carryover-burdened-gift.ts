@@ -23,6 +23,7 @@
  */
 
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import type { BurdenedGiftInfo } from "./types/transfer-burdened-gift.types";
 
 /**
@@ -84,6 +85,8 @@ function describeRequiredDonorFields(info: BurdenedGiftInfo): {
 export function assertCarryoverDonorBasis(
   info: BurdenedGiftInfo,
   ct: NonNullable<import("./types/transfer.types").TransferTaxInput["carryoverTaxation"]>,
+  /** 신축·증축 필드를 읽는 §114조의2 가드용 — 생략하면 그 가드를 건너뛴다(단위 테스트 호환). */
+  rawInput?: import("./types/transfer.types").TransferTaxInput,
 ): void {
   /**
    * 이월과세의 환산 플래그는 부담부증여에서 **의미가 없다**.
@@ -106,20 +109,62 @@ export function assertCarryoverDonorBasis(
   }
 
   /**
-   * 매매사례가액·감정가액(K-6/K-7) × 이월과세는 1차 범위 밖이다(계획서 Q-5).
-   * 당초 증여자 값 칸이 없어 `describeRequiredDonorFields`가 legacy 「시가」로 떨어지는데,
-   * K-6/K-7 STEP 4는 그 값을 읽지 않는다 ⇒ 시나리오 A의 취득가액이 조용히 틀린다.
+   * 매매사례가액·감정가액(K-6/K-7) × 이월과세 — 소법 §97의2①1호가 당초 증여자 **취득 당시**의 §97①1호 금액(나목 포함)을 쓰게 한다.
+   * 그래서 `info.acquisitionMethod`는 당초 증여자 쪽 방식이고, 양도인(증여받은 사람) 본인 쪽(시나리오 B)은 증여받은 자산이라
+   * 소령 §163⑨가 증여일 상증법 평가액을 실지거래가액으로 본다 — `actual*`가 B의 취득가액이다(`toTransferorBasisInfo`).
+   * ❌ 어느 쪽이든 미입력을 다른 쪽 값으로 대신하면 A=B가 되어 §97의2가 조용히 무력화된다 — 세 가지를 모두 요구한다.
    */
-  if (
-    info.valuationMode === "sangjeungbeop_market" &&
-    (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase")
-  ) {
-    throw new TaxCalculationError(
-      TaxErrorCode.INVALID_INPUT,
-      "부담부증여의 취득가액 산정방식이 「매매사례가액」·「감정가액」인 경우에는 이월과세(소득세법 제97조의2)를 " +
-        "함께 적용할 수 없습니다. 당초 증여자 취득 당시 값 입력 경로가 아직 없습니다. " +
-        "취득가액 산정방식을 「실지취득가액」 또는 「환산취득가액」으로 선택하세요.",
-    );
+  if (isPresumedCarryover(info)) {
+    const methodLabel = info.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
+    const d = info.carryoverDonorBasis;
+    const hasPresumed =
+      d !== undefined &&
+      (d.presumedAcquisitionTotal !== undefined ||
+        d.presumedLandAcquisitionPrice !== undefined ||
+        d.presumedBuildingAcquisitionPrice !== undefined);
+    if (!hasPresumed) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `부담부증여에 이월과세를 적용하려면 당초 증여자의 ${methodLabel}(취득 당시, 토지·건물 분리 또는 총액)이 필요합니다 ` +
+          "(소득세법 제97조의2 제1항 제1호 → 제97조 제1항 제1호나목 · 같은 법 시행령 제176조의2 제3항).",
+      );
+    }
+    if (d!.landStdPriceAtAcquisition === undefined || d!.buildingStdPriceAtAcquisition === undefined) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `부담부증여에 이월과세를 적용하고 ${methodLabel}으로 산정하려면 당초 증여자 취득 당시 토지·건물 기준시가가 필요합니다 ` +
+          "(필요경비는 개산공제 — 취득 당시 기준시가 × 3%, 소득세법 시행령 제163조 제6항). 건물이 없으면 0을 입력하세요.",
+      );
+    }
+    const positive = (n: number | undefined) => (n ?? 0) > 0;
+    if (
+      !positive(info.actualAcquisitionTotal) &&
+      !positive(info.actualLandAcquisitionPrice) &&
+      !positive(info.actualBuildingAcquisitionPrice)
+    ) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "부담부증여에 이월과세를 적용하려면 양도인(증여받은 사람)이 증여받은 때의 「상속세 및 증여세법」 평가액이 필요합니다 — " +
+          "증여받은 자산은 그 평가액이 취득 당시 실지거래가액이기 때문입니다(소득세법 시행령 제163조 제9항). " +
+          "같은 법 제97조의2 제2항 제3호의 세액 비교가 양도인 기준과 당초 증여자 기준을 동시에 요구합니다.",
+      );
+    }
+    // §114조의2 × 이월과세 — 5년 기산(당초 증여자 취득일 vs 신축일)과 base(A·B 어느 쪽 건물 감정가액)가 정해져 있지 않다.
+    // 통과시키면 가산세가 조용히 빠지거나 틀린 base로 붙는다 — 감정가액만 대상(매매사례가액은 조문에 없다).
+    if (
+      info.acquisitionMethod === "appraisal" &&
+      rawInput !== undefined &&
+      rawInput.isSelfBuilt === true &&
+      calculateBuildingPenalty({ ...rawInput, acquisitionMethod: "appraisal" }, 1) !== null
+    ) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "[burdened_gift] 신축·증축 건물을 5년 이내 양도하면서 이월과세를 적용하고 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따른 " +
+          "가산세가 붙지만, 이월과세와 함께 쓸 때의 기산점과 감정가액 기준이 정해지지 않아 계산할 수 없습니다. " +
+          "취득가액 산정방식을 「실지취득가액」으로 선택하거나 이월과세를 제외하세요.",
+      );
+    }
+    return;
   }
 
   const { mode, satisfied, hint } = describeRequiredDonorFields(info);
@@ -162,6 +207,14 @@ export function applyCarryoverDonorBasis(
     actualBuildingAcquisitionPrice:
       d.actualBuildingAcquisitionPrice ?? info.actualBuildingAcquisitionPrice,
     actualAcquisitionTotal: d.actualAcquisitionTotal ?? info.actualAcquisitionTotal,
+    // K-6/K-7 — 당초 증여자 값을 **직접** 싣는다(`??` fallback 금지: 양도인 쪽은 `actual*`이고 presumed 칸은 당초 증여자 전용).
+    ...(isPresumedCarryover(info)
+      ? {
+          presumedLandAcquisitionPrice: d.presumedLandAcquisitionPrice,
+          presumedBuildingAcquisitionPrice: d.presumedBuildingAcquisitionPrice,
+          presumedAcquisitionTotal: d.presumedAcquisitionTotal,
+        }
+      : {}),
     carryoverGiftTaxAmount: giftTaxAmount > 0 ? giftTaxAmount : undefined,
   };
 }
@@ -175,4 +228,30 @@ export function isBurdenedGiftCarryover(
   input: import("./types/transfer.types").TransferTaxInput,
 ): boolean {
   return input.transferType === "burdened_gift" && input.burdenedGiftInfo !== undefined;
+}
+
+/** 이월과세 × 매매사례가액·감정가액(K-6/K-7)인가 — 이때 `acquisitionMethod`는 당초 증여자 쪽 방식이다. */
+export function isPresumedCarryover(info: BurdenedGiftInfo): boolean {
+  return (
+    info.valuationMode === "sangjeungbeop_market" &&
+    (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase")
+  );
+}
+
+/**
+ * 시나리오 B(이월과세 미적용 = 양도인 기준)용 `burdenedGiftInfo` — K-6/K-7이면 **실지취득가액(K-4)으로 읽게** 바꾼다.
+ *
+ * 양도인은 이 자산을 증여받았으므로 소령 §163⑨가 증여일 현재 상증법 평가액을 실지거래가액(§97①1호가목)으로 본다 —
+ * 매매사례가액·감정가액(나목)에 닿지 않는다. 그 평가액은 `actual*` 칸에 있고, 당초 증여자용 `presumed*`는 B에서 읽지 않는다.
+ * K-6/K-7이 아니면 그대로 돌려준다(기존 K-1~K-5 거동 불변).
+ */
+export function toTransferorBasisInfo(info: BurdenedGiftInfo): BurdenedGiftInfo {
+  if (!isPresumedCarryover(info)) return info;
+  return {
+    ...info,
+    acquisitionMethod: "actual",
+    presumedLandAcquisitionPrice: undefined,
+    presumedBuildingAcquisitionPrice: undefined,
+    presumedAcquisitionTotal: undefined,
+  };
 }
