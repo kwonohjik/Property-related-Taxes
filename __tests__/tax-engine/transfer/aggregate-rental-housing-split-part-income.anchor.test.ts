@@ -165,20 +165,79 @@ describe("다건 §155⑳ × split — 자산 1건 다건 = 단건 (격자)", ()
 });
 
 describe("다건 §155⑳ × split — 둘 이상 자산: 입력 순서와 무관", () => {
-  const cells: Cell[] = [
+  // 수정 전에 순서 의존이 실제로 나던 셀(15억 · 토지를 나중에 취득(1년) · 배율 이내) — 변별력 있는 시료만 둔다.
+  const discriminating: Cell[] = [
+    { S: 1_500_000_000, T: "2022-06-01", B: 5, L: 1, res: 24, area: 300, rhe: true },
     { S: 1_500_000_000, T: "2022-06-01", B: 10, L: 1, res: 120, area: 300, rhe: true },
+    { S: 1_500_000_000, T: "2024-06-01", B: 9, L: 1, res: 60, area: 300, rhe: true },
+    { S: 1_500_000_000, T: "2024-06-01", B: 15, L: 1, res: 24, area: 300, rhe: true },
+    { S: 1_500_000_000, T: "2026-06-01", B: 2, L: 1, res: 120, area: 300, rhe: true },
     { S: 1_500_000_000, T: "2026-06-01", B: 15, L: 1, res: 24, area: 300, rhe: true },
-    { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 5, res: 24, area: 660, rhe: true },
-    { S: 3_000_000_000, T: "2024-06-01", B: 9, L: 20, res: 60, area: 660, rhe: true },
-    { S: 3_000_000_000, T: "2026-06-01", B: 2, L: 1, res: 60, area: 660, rhe: true },
   ];
-  for (const c of cells) {
-    it(`${c.S / 1e8}억 · ${c.T} · 건물 ${c.B}년 · 토지 ${c.L}년 · 면적 ${c.area}`, () => {
+  for (const c of discriminating) {
+    it(`${c.T} · 건물 ${c.B}년 · 토지 ${c.L}년 · 거주 ${c.res}개월`, () => {
       const a = asItem(house(c), "p1");
       const b = asItem(otherAsset(c.T), "p2");
-      const ab = aggOf(c.T, [a, b]);
-      const ba = aggOf(c.T, [b, a]);
-      expect(ab.totalTax).toBe(ba.totalTax);
+      expect(aggOf(c.T, [a, b]).totalTax).toBe(aggOf(c.T, [b, a]).totalTax);
     });
   }
+
+  // 대조 — 수정 전에도 순서와 무관했던 시료(배율 초과 있음). 수정이 이쪽을 깨지 않음을 고정한다.
+  const controls: Cell[] = [
+    { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 5, res: 24, area: 660, rhe: true },
+    { S: 3_000_000_000, T: "2024-06-01", B: 9, L: 20, res: 60, area: 660, rhe: true },
+  ];
+  for (const c of controls) {
+    it(`대조 — ${c.S / 1e8}억 · ${c.T} · 건물 ${c.B}년 · 토지 ${c.L}년 · 면적 ${c.area}`, () => {
+      const a = asItem(house(c), "p1");
+      const b = asItem(otherAsset(c.T), "p2");
+      expect(aggOf(c.T, [a, b]).totalTax).toBe(aggOf(c.T, [b, a]).totalTax);
+    });
+  }
+});
+
+describe("다건 §155⑳ — 특례 선택(applyException)만 하고 요건 미충족이면 일반 split 경로다", () => {
+  // `applyException: true`여도 요건이 확인되지 않으면 특례가 적용되지 않는다 — 소득금액 슬롯은 일반 경로 값이라 특례 모델(주택분 + 초과분)로 읽으면 안 된다.
+  // 엔진은 특례가 적용될 때만 `rentalHousingExceptionDetail`을 싣는다(`transfer-tax-rental-housing-step.ts` — 미적용은 조기 `return null`) —
+  // 그래서 다건 게이트 `applied === true`와 `!== undefined`는 같은 집합이다(동치 변형). 이 describe는 그 전제와 미적용 자산의 단건 = 다건을 고정한다.
+  const notApplied = (c: Cell): TransferTaxInput => ({
+    ...house({ ...c, rhe: false }),
+    rentalHousingException: { ...rentalA, rentalUnits: [{ ...rentalA.rentalUnits[0], requirementsConfirmed: false }] },
+  });
+  const cells: Cell[] = [
+    { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 5, res: 24, area: 660, rhe: true },
+    { S: 2_000_000_000, T: "2024-06-01", B: 9, L: 20, res: 60, area: 660, rhe: true },
+    { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 1, res: 24, area: 300, rhe: true },
+    { S: 3_000_000_000, T: "2026-06-01", B: 2, L: 1, res: 120, area: 660, rhe: true },
+  ];
+  for (const c of cells) {
+    it(`${c.S / 1e8}억 · ${c.T} · 건물 ${c.B}년 · 토지 ${c.L}년 · 면적 ${c.area} — 다건 = 단건`, () => {
+      const single = calculateTransferTax(notApplied(c), rates);
+      expect(single.rentalHousingExceptionDetail).toBeUndefined(); // 전제: 특례 미적용 — 상세가 없다
+      const agg = aggOf(c.T, [asItem(notApplied(c), "p1")]);
+      expect(agg.totalTax).toBe(single.totalTax);
+    });
+  }
+});
+
+describe("다건 §155⑳ × split — 「세율 기산일」 표시 게이트(partRateBasisApplied)는 켜지지 않는다", () => {
+  // 단건 특례 경로는 파트별 §104② 기산일을 판정하지 않는다(값이 비어 있다) — 다건도 `true`가 되면 안 된다.
+  for (const [name, c] of [
+    ["배율 초과 없음(자산 단위 세액)", { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 1, res: 24, area: 300, rhe: true }],
+    ["배율 초과 있음(주택분 + 초과분 2파트)", { S: 1_300_000_000, T: "2022-06-01", B: 5, L: 5, res: 24, area: 660, rhe: true }],
+  ] as const) {
+    it(name, () => {
+      const single = calculateTransferTax(house(c), rates);
+      expect(single.splitDetail?.partRateBasisApplied).not.toBe(true);
+      const agg = aggOf(c.T, [asItem(house(c), "p1")]);
+      expect(agg.properties[0].splitDetail?.partRateBasisApplied).not.toBe(true);
+    });
+  }
+});
+
+
+// 보류 — 특례 미적용 · 비사업용 토지와 함께 · 같은 날 양도 · 같은 표시 세율(48%)인 두 자산의 기본공제 배분은 §103②이 침묵하는 자리라 입력 순서(idx)로 떨어진다.
+// 한 자산의 §104⑤ 비교과세 승패가 그 배분에 따라 갈려(특례 off 시료 9셀) 총세액이 입력 순서에 따라 달라진다 — 동순위 기준을 사용자가 정한 뒤 고정한다.
+describe.skip("보류 — §103② 동순위 자산 기본공제 배분의 입력 순서 의존", () => {
+  it.todo("[주택 split(배율 초과 있음), 비사업용 토지]와 [비사업용 토지, 주택 split]의 총세액이 같다");
 });
