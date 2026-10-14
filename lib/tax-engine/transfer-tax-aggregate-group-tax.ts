@@ -154,6 +154,10 @@ export function aggregateByGroup(
       // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
       // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
       multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
+      // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
+      ...(records[i].result.rentalHousingExceptionDetail?.applied === true
+        ? { rentalHousingTaxableIncome: records[i].income }
+        : {}),
     });
     // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
     // 자산은 그룹 하나에만 속하므로 이 대입은 자산당 1회다.
