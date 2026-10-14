@@ -105,6 +105,23 @@ export function assertCarryoverDonorBasis(
     );
   }
 
+  /**
+   * 매매사례가액·감정가액(K-6/K-7) × 이월과세는 1차 범위 밖이다(계획서 Q-5).
+   * 당초 증여자 값 칸이 없어 `describeRequiredDonorFields`가 legacy 「시가」로 떨어지는데,
+   * K-6/K-7 STEP 4는 그 값을 읽지 않는다 ⇒ 시나리오 A의 취득가액이 조용히 틀린다.
+   */
+  if (
+    info.valuationMode === "sangjeungbeop_market" &&
+    (info.acquisitionMethod === "appraisal" || info.acquisitionMethod === "salesCase")
+  ) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "부담부증여의 취득가액 산정방식이 「매매사례가액」·「감정가액」인 경우에는 이월과세(소득세법 제97조의2)를 " +
+        "함께 적용할 수 없습니다. 당초 증여자 취득 당시 값 입력 경로가 아직 없습니다. " +
+        "취득가액 산정방식을 「실지취득가액」 또는 「환산취득가액」으로 선택하세요.",
+    );
+  }
+
   const { mode, satisfied, hint } = describeRequiredDonorFields(info);
   const donor = info.carryoverDonorBasis;
   if (!donor || !satisfied(donor)) {

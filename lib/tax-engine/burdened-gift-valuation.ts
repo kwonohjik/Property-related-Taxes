@@ -104,6 +104,10 @@ export function scaleBurdenedGiftInfo(
     actualLandAcquisitionPrice: s(info.actualLandAcquisitionPrice),
     actualBuildingAcquisitionPrice: s(info.actualBuildingAcquisitionPrice),
     actualAcquisitionTotal: s(info.actualAcquisitionTotal),
+    // K-6/K-7 매매사례가액·감정가액 3
+    presumedLandAcquisitionPrice: s(info.presumedLandAcquisitionPrice),
+    presumedBuildingAcquisitionPrice: s(info.presumedBuildingAcquisitionPrice),
+    presumedAcquisitionTotal: s(info.presumedAcquisitionTotal),
     /**
      * 조합원입주권 평가 3항 — 평가액 총액이 `buildingStdPriceAtTransfer`에 실리므로
      * **같은 비율로 함께 줄여야** 자기일관 검사(3항 합 == building std)가 성립한다.

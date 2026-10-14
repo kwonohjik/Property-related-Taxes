@@ -352,6 +352,19 @@ function SingleTransferResultCard({
                 </p>
               );
             }
+            if (method === "salesCase" || method === "appraisal") {
+              // K-6/K-7 — 필요경비는 개산공제뿐이다(§97②2호 · 실비 택일은 환산 전용).
+              const label = method === "appraisal" ? "감정가액" : "매매사례가액";
+              const decreeItem = method === "appraisal" ? "2호" : "1호";
+              return (
+                <p className="mt-1 text-amber-700 dark:text-amber-300">
+                  ※ 취득가액 산정: {label} × <Frac top="채무" bottom="시가" /> (소득세법 §97①1호나목 · 시행령 §176의2③{decreeItem})
+                  {deductionTotal > 0
+                    ? ` / 필요경비는 개산공제 ${formatKRW(deductionTotal)} (취득시 기준시가 × 채무비율 × 개산공제율, 「소득세법 시행령」 제163조 제6항) — 자본적지출·양도비는 공제하지 않습니다`
+                    : " / 필요경비는 「소득세법 시행령」 제163조 제6항 개산공제만 인정합니다"}
+                </p>
+              );
+            }
             // standard_price 또는 미확인(구버전 결과)
             return (
               <p className="mt-1">

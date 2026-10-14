@@ -40,16 +40,27 @@ export interface BurdenedGiftFormSlice {
   // ── 취득가액 산정방식 (K-4/K-5, 시가 모드 전용) ──
   /**
    * [신설] 취득가액 산정방식 (시가 모드 `sangjeungbeop_market` 선택 시 필수).
-   * "": 미선택, "actual": 실지취득가액 안분(§159①1호 본문), "converted": 환산취득가액(§176의2②2호).
+   * "": 미선택, "actual": 실지취득가액 안분(§159①1호 본문), "salesCase": 매매사례가액(§176의2③1호),
+   * "appraisal": 감정가액(§176의2③2호), "converted": 환산취득가액(§176의2②2호). 법령 순차 적용 순서.
    * 기준시가 모드에서는 무시 — §159①1호 A괄호가 취득가 기준시가를 강제(K-1~K-3).
    */
-  bgAcquisitionMethod: "" | "actual" | "converted";
+  bgAcquisitionMethod: "" | "actual" | "salesCase" | "appraisal" | "converted";
   /** [신설] K-4 실지취득가액 — 토지 (general_building·land). 원, string. */
   bgActualAcquisitionLand: string;
   /** [신설] K-4 실지취득가액 — 건물 (general_building). 원, string. */
   bgActualAcquisitionBuilding: string;
   /** [신설] K-4 실지취득가액 — 단일자산 (housing·building·commercial_building). 원, string. */
   bgActualAcquisitionTotal: string;
+  /**
+   * [K-6/K-7] 매매사례가액·감정가액(취득 당시) — 토지 (general_building·land). 원, string.
+   * 두 방식이 칸을 **공유**한다 — `bgAcquisitionMethod`가 `salesCase`↔`appraisal`로 바뀌면 onChange 핸들러가 비운다
+   * (의미가 달라 stale 값을 다른 방식의 금액으로 읽을 위험). `bgActualAcquisition*`와 별개 필드다(재사용 금지).
+   */
+  bgPresumedAcquisitionLand: string;
+  /** [K-6/K-7] 매매사례가액·감정가액 — 건물 (general_building). 원, string. */
+  bgPresumedAcquisitionBuilding: string;
+  /** [K-6/K-7] 매매사례가액·감정가액 — 단일자산 (housing·building·commercial_building). 원, string. */
+  bgPresumedAcquisitionTotal: string;
 
   // ── 조합원입주권 증여재산 평가 (상증법 §61③ · 상증령 §51② · 상증칙 §16③) ──
   /**

@@ -21,6 +21,7 @@ import {
   deriveRightValuationTotal,
 } from "./burdened-gift-right-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { bgPresumedInputKind, isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -35,14 +36,20 @@ export interface BurdenedGiftInfoPayload {
   mortgageSetAmount?: number;
   marketValueAtTransfer?: number;
   marketValueAtAcquisition?: number;
-  /** [신설] 취득가액 산정방식 (K-4/K-5, 시가 모드). */
-  acquisitionMethod?: "actual" | "converted";
+  /** [신설] 취득가액 산정방식 (K-4 실지·K-5 환산·K-6 매매사례가액·K-7 감정가액, 시가 모드). */
+  acquisitionMethod?: "actual" | "converted" | "salesCase" | "appraisal";
   /** [신설] K-4 실지취득가액 — 토지. */
   actualLandAcquisitionPrice?: number;
   /** [신설] K-4 실지취득가액 — 건물. */
   actualBuildingAcquisitionPrice?: number;
   /** [신설] K-4 실지취득가액 — 단일자산. */
   actualAcquisitionTotal?: number;
+  /** K-6 매매사례가액·K-7 감정가액(취득 당시) — 토지. 두 방식이 칸을 공유한다. */
+  presumedLandAcquisitionPrice?: number;
+  /** K-6/K-7 — 건물. */
+  presumedBuildingAcquisitionPrice?: number;
+  /** K-6/K-7 — 단일자산 총액. */
+  presumedAcquisitionTotal?: number;
   /** 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용). */
   giftBuildingStdPriceAtTransfer?: number;
   /**
@@ -126,6 +133,29 @@ function buildCarryoverDonorBasis(
   };
 }
 
+/** K-6/K-7 금액 3칸 → payload. 방식이 아니면 전부 undefined. */
+function buildPresumedAcquisition(
+  primary: AssetForm,
+): Pick<
+  BurdenedGiftInfoPayload,
+  "presumedLandAcquisitionPrice" | "presumedBuildingAcquisitionPrice" | "presumedAcquisitionTotal"
+> {
+  if (!isBgPresumedMethod(primary.bgAcquisitionMethod)) return {};
+  const num = (v: string | undefined) =>
+    v !== undefined && v !== "" ? parseAmount(v) : undefined;
+  switch (bgPresumedInputKind(primary.assetKind)) {
+    case "split":
+      return {
+        presumedLandAcquisitionPrice: num(primary.bgPresumedAcquisitionLand),
+        presumedBuildingAcquisitionPrice: num(primary.bgPresumedAcquisitionBuilding),
+      };
+    case "land":
+      return { presumedLandAcquisitionPrice: num(primary.bgPresumedAcquisitionLand) };
+    default:
+      return { presumedAcquisitionTotal: num(primary.bgPresumedAcquisitionTotal) };
+  }
+}
+
 /**
  * Phase 2: assetKind 분기로 propertyType별 기준시가 도출.
  * - general_building: gb* 필드 (토지/건물 분리)
@@ -199,6 +229,13 @@ export function buildBurdenedGiftInfo(
       primary.bgAcquisitionMethod === "actual" && primary.bgActualAcquisitionTotal
         ? parseAmount(primary.bgActualAcquisitionTotal) || undefined
         : undefined,
+    /**
+     * K-6 매매사례가액·K-7 감정가액 — 그 방식일 때만 싣는다(K-4와 같은 게이팅).
+     * **자산 종류의 입력 형태에 맞는 칸만** 싣는다(⑤ 입력 블록·⑧ 「금액 필수」와 같은 `bgPresumedInputKind`):
+     * 엔진 STEP 4가 분리 칸이 하나라도 있으면 총액을 무시하므로, 자산 종류를 바꾸고 남은 stale 칸이 새면 안 된다.
+     * **0과 미입력은 다르다** — 빈 문자열만 undefined로 떨어뜨린다(`parseAmount("") || undefined`로 쓰면 입력한 0이 둔갑한다).
+     */
+    ...buildPresumedAcquisition(primary),
     // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세용 값 fallback)
     giftBuildingStdPriceAtTransfer: primary.bgGiftBuildingStdPriceAtTransfer
       ? parseAmount(primary.bgGiftBuildingStdPriceAtTransfer)

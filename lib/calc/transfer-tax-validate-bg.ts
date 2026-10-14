@@ -30,6 +30,15 @@ import {
 import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "./transfer-163-9-base-date";
+import {
+  BG_PRESUMED_LABEL,
+  bgAppraisalBuildingPenaltyApplies,
+  bgPresumedBlock,
+  bgPresumedInputKind,
+  firstEmptyBgPresumedField,
+  hasBgPresumedAmount,
+  isBgPresumedMethod,
+} from "./burdened-gift-presumed-acquisition";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /**
@@ -76,6 +85,16 @@ export function validateBurdenedGiftAsset(
    *   undefined이므로 종전 자산별 판정이 그대로다.
    */
   contractAssumedDebtTotal?: number,
+  /**
+   * 폼-전역 양도일(= 증여일, YYYY-MM-DD) — K-7(감정가액) × 신축·증축 5년 이내(§114조의2) 판정에 쓴다.
+   * 없으면 그 판정을 건너뛴다(단위 테스트·옛 호출부 호환).
+   */
+  formTransferDate?: string,
+  /**
+   * 지분 분할 취득(축 B) 묶음 여부 — K-6/K-7을 막는 술어의 입력. ⑤ 라디오 비활성(`isFractionalSplit`)과 같은 사실이다
+   * (`isFullFractionalBundle(form.assets)`).
+   */
+  isFractionalSplitAxis?: boolean,
 ): string | null {
   const isBurdenedGift =
     asset.transferType === "burdened_gift" ||
@@ -116,6 +135,14 @@ export function validateBurdenedGiftAsset(
    * 설계: `docs/02-design/features/burdened-gift-carryover-159-97-2.plan.md` §5.6·§8
    */
   if (asset.acquisitionCause === "carryover_gift") {
+    /**
+     * K-6/K-7 × 이월과세는 1차 범위 밖이다(계획서 Q-5) — 아래 「당초 증여자 값」 요구보다 **앞**이어야 한다.
+     * `missingCoDonorBasisLabel`은 K-6/K-7 칸을 모르고 legacy 「시가」로 떨어져, 화면에 없는 칸을 요구하는 오답 메시지가 된다.
+     * ⑤는 같은 술어(`bgPresumedBlock`)로 두 옵션을 비활성화한다.
+     */
+    if (asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod)) {
+      return fieldError("bgAcquisitionMethod", `${label}: ${bgPresumedBlock(asset)!.long}`);
+    }
     const missing = missingCoDonorBasisLabel(asset);
     if (missing) {
       return fieldError(missing.field, `${label}: 이월과세가 적용되므로 「당초 증여자」(= 양도인에게 이 자산을 증여한 사람)의 ${missing.label}을(를) 입력하세요. 소득세법 제97조의2 제1항 제1호가 취득가액을 당초 증여자의 취득 당시 금액으로 정하는데, 부담부증여의 취득가액은 같은 법 시행령 제159조 제1항 제1호가 양도인 기준으로 따로 산정하므로 두 값이 모두 필요합니다(같은 조 제2항 제3호의 세액 비교).`);
@@ -191,6 +218,31 @@ export function validateBurdenedGiftAsset(
       } else if (!parseAmount(asset.bgActualAcquisitionTotal)) {
         return fieldError("bgActualAcquisitionTotal", `${label}: 부담부증여 실지취득가액 안분 — 실지취득가액을 입력하세요.`);
       }
+    } else if (isBgPresumedMethod(acqMethod)) {
+      /**
+       * K-6 매매사례가액(§176의2③1호) · K-7 감정가액(③2호) — 소득세법 §97①1호나목. 필요경비는 개산공제만이다.
+       * 고를 수 없는 자산(상속·이월과세·축 B)은 ⑤가 두 옵션을 비활성화하는 **같은 술어**로 막는다.
+       */
+      const methodLabel = BG_PRESUMED_LABEL[acqMethod];
+      const block = bgPresumedBlock(asset, { isFractionalSplit: isFractionalSplitAxis });
+      if (block) {
+        return fieldError("bgAcquisitionMethod", `${label}: ${block.long}`);
+      }
+      if (!hasBgPresumedAmount(asset)) {
+        const kind = bgPresumedInputKind(asset.assetKind);
+        const target = kind === "split" ? "토지 또는 건물의 " : kind === "land" ? "토지 " : "";
+        return fieldError(
+          firstEmptyBgPresumedField(asset),
+          `${label}: 부담부증여 ${methodLabel} — ${target}취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${acqMethod === "appraisal" ? "2" : "1"}호).`,
+        );
+      }
+      // 신축·증축 5년 이내 × 감정가액 — 엔진이 같은 조합(`calculateBuildingPenalty`)을 던진다. 가산세가 조용히 빠지는 것을 막는다.
+      if (acqMethod === "appraisal" && bgAppraisalBuildingPenaltyApplies(asset, formTransferDate)) {
+        return fieldError(
+          "bgAcquisitionMethod",
+          `${label}: 신축·증축한 건물을 취득일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따른 가산세(감정가액의 5%)가 붙는데, 부담부증여 계산에는 아직 반영되지 않아 계산할 수 없습니다. 취득가액 산정방식을 「실지취득가액 안분」으로 선택하거나 별도로 가산세를 검토하세요.`,
+        );
+      }
     } else if (acqMethod === "converted") {
       // 상속받은 자산(상속개시일 1985.1.1. 이후) — 영 §163⑨ 평가액이 가목이라 환산 불가(E-1 한계 G6 ·
       //   ⑤ 라디오와 같은 술어 · 증여세 부담부증여 경로와 같은 결론).
@@ -225,7 +277,7 @@ export function validateBurdenedGiftAsset(
       }
     } else {
       // 미지정: 취득가액 산정방식 선택 강제 (시가 모드 입력 미완성 — collectStepIssues 단계 차단)
-      return fieldError("bgAcquisitionMethod", `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·환산취득가액)을 선택하세요 (소득세법 §100①).`);
+      return fieldError("bgAcquisitionMethod", `${label}: 부담부증여 시가 모드 — 취득가액 산정방식(실지취득가액·매매사례가액·감정가액·환산취득가액)을 선택하세요 (소득세법 §100①).`);
     }
     // B/C > 1 차단 (C = bgMarketValueAtTransfer)
     //
@@ -275,6 +327,14 @@ export function validateBurdenedGiftAsset(
    *    막힌다」가 된다. `general_building`은 (5-b)가 gb* 축으로 따로 검사한다.
    */
   if (needsBgAcqStdPriceInput(asset) && resolveBgAcqStdPrice(asset) <= 0) {
+    // K-6/K-7도 이 칸이 개산공제 base다 — 위 금액 검사는 통과해도 이 값이 비면 개산공제가 0이 된다.
+    if (asset.bgValuationMode === "sangjeungbeop_market" && isBgPresumedMethod(asset.bgAcquisitionMethod)) {
+      const acqStdInput =
+        asset.assetKind === "land"
+          ? "취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를"
+          : "「② 양도정보」의 취득시 기준시가를";
+      return fieldError("standardPriceAtAcq", `${label}: 부담부증여 ${BG_PRESUMED_LABEL[asset.bgAcquisitionMethod]} — ${acqStdInput} 입력하세요. 필요경비는 개산공제(취득시 기준시가 × 채무비율 × 개산공제율)뿐이라 이 값이 비면 개산공제가 0으로 계산됩니다 (소득세법 시행령 제163조 제6항).`);
+    }
     // 시가 + 환산(K-5)도 이 칸을 쓴다(B2) — 주택·건물은 위 K-5 검사가 먼저 잡으므로 여기 오는 것은 토지다
     if (asset.bgValuationMode === "sangjeungbeop_market")
       return fieldError("standardPriceAtAcq", `${label}: 부담부증여 환산취득가액 — 취득시 기준시가(또는 취득 당시 ㎡당 공시지가 + 면적)를 입력하세요. 환산취득가액은 양도가액에 「취득시 기준시가를 양도시 기준시가로 나눈 비율」을 곱한 값입니다 (소득세법 시행령 제176조의2 제2항 제2호).`);
@@ -405,6 +465,7 @@ function missingCoDonorBasisLabel(asset: AssetForm): { label: string; field: Iss
   }
 
   // legacy — 시가 모드인데 산정방식을 고르지 않은 경우.
+  //   (K-6/K-7은 여기로 오지 않는다 — `validateBurdenedGiftAsset` (1-b)가 같은 자산을 앞에서 차단한다.)
   if (!filled(asset.bgCoDonorMarketValueAtAcquisition)) {
     return { label: "취득 당시 시가 평가액", field: "bgCoDonorMarketValueAtAcquisition" };
   }

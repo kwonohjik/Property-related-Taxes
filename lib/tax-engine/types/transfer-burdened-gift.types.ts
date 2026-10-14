@@ -193,7 +193,7 @@ export interface BurdenedGiftInfo {
    * 미지정(undefined) 시: backward-compat — 기존 `marketValueAtAcquisition` 기반 산정.
    * `sangjeungbeop_standard` 모드에서는 무시 — §159①1호 A괄호가 취득가액 기준시가를 강제(K-1~K-3).
    */
-  acquisitionMethod?: "actual" | "converted";
+  acquisitionMethod?: "actual" | "converted" | "appraisal" | "salesCase";
 
   /** K-4: 증여자 실지취득가액 — 토지 (general_building·land). 미입력 시 validation 차단. */
   actualLandAcquisitionPrice?: number;
@@ -201,6 +201,23 @@ export interface BurdenedGiftInfo {
   actualBuildingAcquisitionPrice?: number;
   /** K-4: 증여자 실지취득가액 — 단일자산 (housing·building·commercial_building). 취득시 기준시가 비율로 토지·건물 분배. */
   actualAcquisitionTotal?: number;
+
+  /**
+   * K-6(`"salesCase"` 매매사례가액)·K-7(`"appraisal"` 감정가액) — 증여자 **취득 당시** 추계가액.
+   * 「소득세법」 §97①1호나목 · 소령 §163⑫ → §176의2③1호(매매사례)·2호(감정). 두 방식이 칸을 공유한다.
+   *
+   * 입력 형태는 K-4 실지취득가액과 같다 — 토지·건물 분리(general_building·land) 또는 단일 총액
+   * (housing·building·commercial_building, 취득시 기준시가 비율로 토지·건물 분배).
+   * 필요경비는 개산공제(취득시 기준시가 × 율 × 채무비율)뿐이다 — 실비 택일(§97②2호 단서)은 환산 전용.
+   *
+   * ❌ 최상위 `appraisalValue`·`similarSalesValue`를 재사용하지 않는다 — 부담부증여 step이 그 필드를
+   *    stale 방어로 무력화한다(`burdened-gift-stale-acquisition-method.plan.md`).
+   * ⚠️ `scaleBurdenedGiftInfo` 스케일 대상이다(공유지분 A·C 축소) — 열거에서 빠지면 100% 값이 남는다.
+   * 계획서: docs/00-pm/burdened-gift-appraisal-sales-case-acquisition.plan.md §5.1
+   */
+  presumedLandAcquisitionPrice?: number;
+  presumedBuildingAcquisitionPrice?: number;
+  presumedAcquisitionTotal?: number;
 
   // === 조합원입주권 평가 명세 (상증법 §61③ · 상증령 §51② · 상증칙 §16③) ===
   /**
@@ -307,6 +324,14 @@ export interface BurdenedGiftCarryoverDonorBasis {
   /** legacy(market·미지정): 당초 증여자 취득 당시 시가 평가액. */
   marketValueAtAcquisition?: number;
 }
+
+/** 실제 적용된 취득가액 산정 경로 — `TransferBurdenedGiftBreakdown.acquisitionMethodUsed`·`perAsset.*.acquisitionMethod`. */
+export type TransferBurdenedGiftAcquisitionMethodUsed =
+  | "standard_price"
+  | "actual"
+  | "converted"
+  | "salesCase"
+  | "appraisal";
 
 /**
  * 부담부증여 양도세 결과 명세.
@@ -424,8 +449,10 @@ export interface TransferBurdenedGiftBreakdown {
    * - "standard_price": K-1~K-3 (기준시가 × 채무비율, §159①1호 A괄호)
    * - "actual": K-4 (실지취득가액 × 채무비율, §159①1호 본문) — 개산공제 미적용
    * - "converted": K-5 (환산취득가액, §176의2②2호) — 개산공제 적용
+   * - "salesCase": K-6 (매매사례가액 × 채무비율, §176의2③1호) — 개산공제 적용
+   * - "appraisal": K-7 (감정가액 × 채무비율, §176의2③2호) — 개산공제 적용
    */
-  acquisitionMethodUsed: "standard_price" | "actual" | "converted";
+  acquisitionMethodUsed: TransferBurdenedGiftAcquisitionMethodUsed;
 
   /**
    * 🔴 §97②2호 **단서** 판정 — **K-5(환산취득가액) 전용** (2026-08-07 W-6).
@@ -556,11 +583,13 @@ export interface TransferBurdenedGiftBreakdown {
        */
       estimatedDeductionRate?: number;
       /** 취득가액 산정 경로 (결과카드 산식 분기): standard_price·actual·converted. */
-      acquisitionMethod: "standard_price" | "actual" | "converted";
+      acquisitionMethod: TransferBurdenedGiftAcquisitionMethodUsed;
       /** 환산(K-5) 산식 분모 — 양도시 자산 기준시가. sangjeungbeopValue(시가 안분값)와 구분. */
       stdPriceAtTransfer: number;
       /** K-4 입력 실지취득가 (채무비율 적용 전, 산식 표시용). */
       actualAcquisition?: number;
+      /** K-6/K-7 입력 매매사례가액·감정가액 (채무비율 적용 전, 산식 표시용). */
+      presumedAcquisition?: number;
     };
     building: {
       sangjeungbeopValue: number;
@@ -570,9 +599,10 @@ export interface TransferBurdenedGiftBreakdown {
       estimatedDeduction: number;
       /** 개산공제율 echo — land와 같다(§163⑥). 실비 안분 경로에서는 undefined. */
       estimatedDeductionRate?: number;
-      acquisitionMethod: "standard_price" | "actual" | "converted";
+      acquisitionMethod: TransferBurdenedGiftAcquisitionMethodUsed;
       stdPriceAtTransfer: number;
       actualAcquisition?: number;
+      presumedAcquisition?: number;
     };
   };
 }

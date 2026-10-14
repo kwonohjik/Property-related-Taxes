@@ -16,6 +16,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 
 type AcqStdAsset = Pick<
   AssetForm,
@@ -33,6 +34,9 @@ type AcqStdAsset = Pick<
  *
  * 제외 이유:
  *  · 시가 모드 + K-4(실지) — 취득가액이 실지취득가액 안분으로 간다(§100①). 이 값을 쓰지 않는다.
+ *    ⚠️ **K-6(매매사례가액)·K-7(감정가액)도 쓴다** — 취득가액은 입력한 금액이지만 필요경비 **개산공제의 base**가
+ *    「취득시 기준시가 × 채무비율 × 율」이다(소령 §163⑥ · `burdened-gift-apportionment.ts` STEP 5). 이 칸이
+ *    안 뜨면 개산공제가 0이 된다(계획서 §4 IN 3).
  *    ⚠️ **K-5(환산)는 쓴다** — 환산취득가액 = 양도가액 × 취득시 기준시가 ÷ 양도시 기준시가
  *    (소령 §176의2②2호 · `burdened-gift-apportionment.ts` K-5). 종전에는 시가 모드 전체를 제외해
  *    ⑧(K-5)이 요구하는데 **칸이 없었다**(2026-09-30 B2).
@@ -47,7 +51,9 @@ type AcqStdAsset = Pick<
 export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
   return (
     asset.transferType === "burdened_gift" &&
-    (asset.bgValuationMode !== "sangjeungbeop_market" || asset.bgAcquisitionMethod === "converted") &&
+    (asset.bgValuationMode !== "sangjeungbeop_market" ||
+      asset.bgAcquisitionMethod === "converted" ||
+      isBgPresumedMethod(asset.bgAcquisitionMethod)) &&
     asset.assetKind !== "general_building" &&
     asset.assetKind !== "right_to_move_in"
   );

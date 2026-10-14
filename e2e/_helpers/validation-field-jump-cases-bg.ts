@@ -5,7 +5,8 @@
  * 대상: `lib/calc/transfer-tax-validate-bg.ts`(부담부증여 — 소령 §159). 한 메시지 = 한 케이스.
  */
 import { CARRYOVER_DEFAULTS } from "../../lib/stores/calc-wizard-asset-carryover";
-import { bundle, withPrimary, type FieldJumpCase } from "./validation-field-jump-cases";
+import { bundle, validBase, withPrimary, type FieldJumpCase } from "./validation-field-jump-cases";
+import { makeDefaultAsset } from "../../lib/stores/calc-wizard-asset-factory";
 
 const A = 0;
 
@@ -23,6 +24,19 @@ const bg = (patch: Record<string, unknown> = {}) => () => withPrimary(bgAsset(pa
 /** 시가 모드 — 양도시 시가 + 취득가액 산정방식 */
 const market = (patch: Record<string, unknown> = {}) =>
   bg({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "200000000", ...patch });
+/** 시가 모드 + 감정가액(K-7, 소령 §176의2③2호) — 취득 당시 감정가액 총액을 채운 정상 입력 */
+const presumed = (patch: Record<string, unknown> = {}) =>
+  market({ bgAcquisitionMethod: "appraisal", bgActualAcquisitionTotal: "", bgPresumedAcquisitionTotal: "200000000", ...patch });
+/** 지분 분할 취득(축 B) 60% + 40% — 감정가액을 고른 채 두 지분으로 나눈 상태 */
+const axisB = () => {
+  const bgPatch = bgAsset({
+    bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000",
+    bgAcquisitionMethod: "appraisal", bgPresumedAcquisitionTotal: "200000000",
+  });
+  const f = validBase();
+  const a = (idx: number, num: string) => ({ ...f.assets[0], ...makeDefaultAsset(idx), addressJibun: "서울 강남구 테스트동 1-1", acquisitionDate: "2015-03-01", ownershipNumerator: num, ownershipDenominator: "100", ...bgPatch });
+  return { ...f, assets: [a(1, "60"), a(2, "40")] };
+};
 /** 이월과세(당초 증여자) — 부담부증여 검증이 당초 증여자 취득 당시 값을 먼저 요구한다 */
 const carry = (patch: Record<string, unknown> = {}) =>
   bg({
@@ -52,6 +66,38 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
   {
     name: "bg: 실지취득가액 (일반건물)", field: "bgActualAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 실지취득가액 안분 — 토지 또는 건물/,
     form: market({ assetKind: "general_building", bgActualAcquisitionTotal: "" }),
+  },
+  { name: "bg: 감정가액 (주택)", field: "bgPresumedAcquisitionTotal", step: 0, assetIndex: A, message: /^자산: 부담부증여 감정가액 — 취득 당시 감정가액을 입력하세요/, form: presumed({ bgPresumedAcquisitionTotal: "" }) },
+  {
+    name: "bg: 매매사례가액 (토지)", field: "bgPresumedAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 매매사례가액 — 토지 취득 당시 매매사례가액/,
+    form: presumed({ assetKind: "land", bgAcquisitionMethod: "salesCase", bgPresumedAcquisitionTotal: "", bgPresumedAcquisitionLand: "" }),
+  },
+  {
+    name: "bg: 감정가액 (일반건물)", field: "bgPresumedAcquisitionLand", step: 0, assetIndex: A, message: /^자산: 부담부증여 감정가액 — 토지 또는 건물의 취득 당시 감정가액/,
+    form: presumed({ assetKind: "general_building", bgPresumedAcquisitionTotal: "" }),
+  },
+  {
+    name: "bg: 감정가액 개산공제 기준 취득시 기준시가", field: "standardPriceAtAcq", step: 0, assetIndex: A, message: /^자산: 부담부증여 감정가액 — 「② 양도정보」의 취득시 기준시가/,
+    form: presumed({ standardPriceAtAcq: "" }),
+  },
+  {
+    name: "bg: 상속 자산 감정가액 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 상속받은 자산은 상속개시일 현재 .*매매사례가액·감정가액을 쓸 수 없습니다/,
+    form: presumed({ acquisitionCause: "inheritance" }),
+  },
+  {
+    name: "bg: 이월과세 감정가액 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 이월과세\(소득세법 §97의2\)가 적용되는 부담부증여는/,
+    form: () => {
+      const f = carry({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "500000000", bgAcquisitionMethod: "appraisal", bgPresumedAcquisitionTotal: "200000000" })();
+      return f;
+    },
+  },
+  {
+    name: "bg: 지분 분할 취득 감정가액 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산 1: 지분 분할 취득\(같은 물건을 여러 번에 나눠 취득\)은/,
+    form: axisB,
+  },
+  {
+    name: "bg: 신축 5년 이내 감정가액 불가(§114조의2)", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 신축·증축한 건물을 취득일부터 5년 이내에 양도하면서/,
+    form: presumed({ isSelfBuilt: true, buildingType: "new", constructionDate: "2022-01-01" }),
   },
   {
     name: "bg: 상속 자산 환산 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산: 상속받은 자산은 상속개시일 현재/,

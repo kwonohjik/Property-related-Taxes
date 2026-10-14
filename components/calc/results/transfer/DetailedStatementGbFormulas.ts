@@ -20,6 +20,7 @@ import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
 import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
+import { buildBgAcquisitionFormula, buildBgExpenseFormula } from "./DetailedStatementBgFormulas";
 
 /**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
@@ -225,9 +226,8 @@ function buildGbAcquisitionFormulaCore(
         ? burdenedGift.perAsset.building
         : undefined;
     if (bgAsset) {
-      const debt = burdenedGift.assumedDebtAmount;
-      const giftMax = burdenedGift.giftValuation.max;
-      return `취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액 (소령 §159①1호 단서 — 기준시가 모드 환산)\n        = ${fmt(bgAsset.stdPriceAtAcquisition)} × ${fmt(debt)} / ${fmt(giftMax)}\n        = ${fmt(p.acquisitionPrice)}`;
+      // 방식(기준시가·실지·환산·매매사례·감정)별 산식 — `DetailedStatementBgFormulas`(Q-7)
+      return buildBgAcquisitionFormula(burdenedGift, bgAsset, p.acquisitionPrice);
     }
   }
 
@@ -425,16 +425,7 @@ export function buildGbExpenseFormula(
         ? burdenedGift.perAsset.building
         : undefined;
     if (bgAsset) {
-      /**
-       * 율 echo가 없으면 **개산공제 경로가 아니다** — K-4(실지취득가)와 §97②2호 swap은
-       * 실비(자본적지출·양도비)를 채무비율로 안분한 값이 이 슬롯에 들어간다. 종전에는 그
-       * 경우에도 「안분 취득가액 × 3% (개산공제)」라고 적어, **없는 근거를 댔다**(F-19).
-       */
-      if (bgAsset.estimatedDeductionRate === undefined) {
-        return `필요경비 = 채무비율 안분 실비 (자본적지출·양도비)\n        = ${fmt(bgAsset.estimatedDeduction)}\n        ※ 실지취득가액 경로라 §163⑥ 개산공제를 적용하지 않습니다.`;
-      }
-      const bgPct = dedRatePct(bgAsset.estimatedDeductionRate);
-      return `필요경비 = 안분 취득가액 × ${bgPct} (개산공제, 소령 §163⑥)\n        = ${fmt(bgAsset.acquisitionPrice)} × ${bgAsset.estimatedDeductionRate}\n        = ${fmt(bgAsset.estimatedDeduction)}`;
+      return buildBgExpenseFormula(burdenedGift, bgAsset);
     }
   }
 
