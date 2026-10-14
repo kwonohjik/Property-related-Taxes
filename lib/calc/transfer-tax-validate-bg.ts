@@ -91,8 +91,9 @@ export function validateBurdenedGiftAsset(
    */
   formTransferDate?: string,
   /**
-   * 지분 분할 취득(축 B) 묶음 여부 — K-6/K-7을 막는 술어의 입력. ⑤ 라디오 비활성(`isFractionalSplit`)과 같은 사실이다
-   * (`isFullFractionalBundle(form.assets)`).
+   * 지분 분할 취득(축 B) 묶음 여부 — B/C>1 검사의 **스케일 규칙**을 가른다.
+   * 축 A(공유 소유)는 공유자마다 별개 증여계약이라 채무를 해당 지분 인수분으로 입력하지만, 축 B는 한 사람의 **하나의 증여계약**이라
+   * 채무·시가를 **물건 전체**로 입력하고 ④가 지분율로 안분한다(`debtScaleRatio`). 그래서 축 B에서는 시가를 줄이지 않고 비교한다.
    */
   isFractionalSplitAxis?: boolean,
 ): string | null {
@@ -213,10 +214,10 @@ export function validateBurdenedGiftAsset(
     } else if (isBgPresumedMethod(acqMethod)) {
       /**
        * K-6 매매사례가액(§176의2③1호) · K-7 감정가액(③2호) — 소득세법 §97①1호나목. 필요경비는 개산공제만이다.
-       * 고를 수 없는 자산(상속·축 B)은 ⑤가 두 옵션을 비활성화하는 **같은 술어**로 막는다.
+       * 고를 수 없는 자산(상속)은 ⑤가 두 옵션을 비활성화하는 **같은 술어**로 막는다.
        */
       const methodLabel = BG_PRESUMED_LABEL[acqMethod];
-      const block = bgPresumedBlock(asset, { isFractionalSplit: isFractionalSplitAxis });
+      const block = bgPresumedBlock(asset);
       if (block) {
         return fieldError("bgAcquisitionMethod", `${label}: ${block.long}`);
       }
@@ -299,10 +300,11 @@ export function validateBurdenedGiftAsset(
     //    채무는 사용자가 **해당 지분 인수분**을 입력하므로 스케일하지 않는다.
     const ratio = getOwnershipRatio(asset);
     const marketWhole = parseAmount(asset.bgMarketValueAtTransfer) || 0;
-    const giftValuationMarket = ratio < 1 ? applyRatio(marketWhole, ratio) : marketWhole;
+    // 축 B는 채무·시가 모두 물건 전체 입력이므로 줄이지 않는다(축 A만 시가를 지분분으로 줄여 지분 인수분 채무와 비교).
+    const giftValuationMarket = ratio < 1 && !isFractionalSplitAxis ? applyRatio(marketWhole, ratio) : marketWhole;
     if (giftValuationMarket > 0 && assumedDebt > giftValuationMarket) {
       const scaleNote =
-        ratio < 1
+        ratio < 1 && !isFractionalSplitAxis
           ? ` (지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)} 해당분 — 물건 전체 ${marketWhole.toLocaleString()}원)`
           : "";
       return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)${scaleNote}을 초과합니다. 부담부증여로는 성립하지 않습니다(상증법 §47③ 검토 필요). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;

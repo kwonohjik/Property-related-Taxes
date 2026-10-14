@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUnifiedRateBadge } from "./CompanionAssetCardNewConstruction";
 import { getAssetDateOrderError } from "@/lib/calc/transfer-tax-validate-asset";
+import { BurdenedGiftTrancheBasisBlock } from "./BurdenedGiftTrancheBasisBlock";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { summarizeAssetSections } from "./asset-section-summary";
@@ -320,6 +321,9 @@ export function CompanionAssetCard({
             자산종류·소재지·면적·양도정보는 자산 1과 동일하게 적용됩니다. 양도가액은 총양도가 × 지분율로 자동 계산됩니다.
           </p>
         </ToneCard>
+      ) : null}
+      {hideInheritedSections ? (
+        <BurdenedGiftTrancheBasisBlock asset={asset} primaryAsset={primaryAsset} onChange={onChange} />
       ) : (
         <AssetSection
           num={1}

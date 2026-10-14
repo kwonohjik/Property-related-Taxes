@@ -79,14 +79,6 @@ describe("⑤ 라디오 4옵션", () => {
     expect(radio(/감정가액/).disabled).toBe(false);
   });
 
-  it("축 B(지분 분할 취득) — 두 옵션 비활성, 대조군(축 B 아님)은 활성", () => {
-    renderBlock(land({ bgAcquisitionMethod: "" }), { isFractionalSplit: true });
-    expect(radio(/감정가액/).disabled).toBe(true);
-    cleanup();
-    renderBlock(land({ bgAcquisitionMethod: "" }), { isFractionalSplit: false });
-    expect(radio(/감정가액/).disabled).toBe(false);
-  });
-
   it("증축 5년 이내(85㎡ 초과) × 감정가액 — 감정가액만 비활성(매매사례는 활성)", () => {
     const a = land({ assetKind: "housing", isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2020-05-01", bgAcquisitionMethod: "" });
     renderBlock(a, { transferDate: "2023-06-01" });

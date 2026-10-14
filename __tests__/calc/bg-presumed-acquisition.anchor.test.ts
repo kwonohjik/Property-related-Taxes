@@ -49,9 +49,9 @@ const housing = (over: Partial<AssetForm> = {}) =>
     ...over,
   });
 
-const V = (a: AssetForm, opts: { date?: string; axisB?: boolean } = {}) => {
+const V = (a: AssetForm, opts: { date?: string } = {}) => {
   const { result, fieldOf } = collectWithFields(() =>
-    validateBurdenedGiftAsset(a, "자산", undefined, opts.date ?? TRANSFER_DATE, opts.axisB),
+    validateBurdenedGiftAsset(a, "자산", undefined, opts.date ?? TRANSFER_DATE),
   );
   return { msg: result, field: result ? fieldOf(result) : undefined };
 };
@@ -269,12 +269,9 @@ describe("⑧ validate", () => {
     });
   });
 
-  it("축 B(지분 분할 취득) 차단", () => {
-    const r = V(land(), { axisB: true });
-    expect(r.msg).toMatch(/^자산: 지분 분할 취득/);
-    expect(r.field).toBe("bgAcquisitionMethod");
-    // 축 A·단건은 통과
-    expect(V(land(), { axisB: false }).msg).toBeNull();
+  it("축 B(지분 분할 취득)는 막지 않는다 — 지분마다 자기 취득일 기준 값을 받는다(검증은 지분 카드별 금액 필수)", () => {
+    expect(V(land()).msg).toBeNull();
+    expect(V(land({ bgPresumedAcquisitionLand: "" })).msg).toMatch(/취득 당시 감정가액을 입력하세요/);
   });
 
   describe("§114조의2 — 증축 5년 이내 × 감정가액 (신축은 가산세를 연결해 통과 — PR-3)", () => {
