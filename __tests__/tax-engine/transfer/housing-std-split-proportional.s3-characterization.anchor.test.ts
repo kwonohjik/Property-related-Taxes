@@ -236,7 +236,7 @@ describe("(b) 단건 주택 고가 + 부수토지 배율 초과분 (별개취득
   // 「별개 취득 + 나목 생략 → 레거시 뺄셈 후퇴」(세액 45,128,160)는 S3-1 D-2에서 **차단**으로 바뀌었다 — predo anchor B-6.
   //  나목을 입력하는 파트 독립 경로의 값은 아래 「비례」 테스트가 고정한다.
 
-  it("파트 독립(나목 입력): 건물 환산취득가 514.3M · 세액 40,001,547 · 초과분 양도차익 112,845,714 (토지 개산공제 5.76M)", () => {
+  it("파트 독립(나목 입력): 건물 환산취득가 514.3M · 세액 35,029,800 · 초과분 양도차익 112,845,714 (토지 개산공제 5.76M)", () => {
     const prop = b({
       standardPricePerSqmAtAcquisition: A_LP / 100,
       buildingStandardPriceAtAcquisition: A.H - A_LP,
@@ -244,10 +244,13 @@ describe("(b) 단건 주택 고가 + 부수토지 배율 초과분 (별개취득
       buildingStandardPriceAtTransfer: T.H - T_LP,
     });
     expect(prop.splitDetail?.nonBusinessLandPart?.gain).toBe(112_845_714);
+    // #17-2 — 재산세제과-915 회신 방식. 한도 내 토지 = floor(451,382,858 × 0.4) − 112,845,714 = 67,707,429 (종전 135,414,857),
+    // 건물 = floor(677,074,286 × 0.4) = 270,829,714. 장특 80%(표2) · 초과분 표1 30% → 양도소득금액 13,541,486 + 54,165,943 + 78,992,000
+    // = 146,699,429 − 기본공제 2,500,000 = 144,199,429 → 35% 구간 P = 144,199,429 × 0.35 − 15,440,000 = 35,029,800 (종전 157,740,915 · 40,001,547).
     expect(snap(prop)).toMatchObject({
-      calculatedTax: 40_001_547,
-      totalTax: 44_001_701,
-      taxBase: 157_740_915,
+      calculatedTax: 35_029_800,
+      totalTax: 38_532_780,
+      taxBase: 144_199_429,
       land: { transferPrice: 800_000_000, acquisitionPrice: 342_857_142, appraisalDeduction: 5_760_000, gain: 451_382_858 },
       building: { transferPrice: 1_200_000_000, acquisitionPrice: 514_285_714, appraisalDeduction: 8_640_000, gain: 677_074_286 },
     });
