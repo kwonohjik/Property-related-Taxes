@@ -59,6 +59,8 @@ const FULL_PAYLOAD = {
   managementDisposalHousingPrice: 160_000_000,
   acquisitionHousingPrice: 110_000_000,
   isSuccessorMember: false,
+  // 사전-2020-법령해석재산-0691 — 증여 승계의 「증여자와 계속 같은 세대」 선언
+  successorGiftSameHousehold: true,
   completionDate: "2021-05-01",
   receiveOnlyMode: false,
   exemptionEligibleAtApproval: true,
