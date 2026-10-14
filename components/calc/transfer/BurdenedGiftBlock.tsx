@@ -31,7 +31,11 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { bgGiftStdPriceLauncherSpec } from "@/lib/calc/burdened-gift-std-price-launcher";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
-import { deriveSec163_9BaseDate, isPostDeemedInheritance } from "@/lib/calc/transfer-163-9-base-date";
+import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
+import {
+  BurdenedGiftAcquisitionMethodField,
+  BurdenedGiftPresumedAcquisitionSection,
+} from "./BurdenedGiftPresumedAcquisitionSection";
 
 interface Props {
   asset: AssetForm;
@@ -120,20 +124,6 @@ const GIFT_STD_PRICE_FIELD: Partial<
   },
 };
 
-// 취득가액 산정방식 (시가 모드 — 소득세법 §100① 양도·취득 산정방식 일치 원칙)
-const ACQUISITION_METHOD_OPTIONS = [
-  {
-    value: "actual",
-    label: "실지취득가액 안분",
-    description: "양도인의 실제 취득가액 확인 시 — 실지취득가액 × 채무비율 (§97①1호가목)",
-  },
-  {
-    value: "converted",
-    label: "환산취득가액",
-    description: "실지취득가 불명 시 — 양도가액 × 「취득기준시가를 양도기준시가로 나눈 비율」 (§176의2③)",
-  },
-] as const;
-
 // Phase 3: 증여자-수증자 관계 (상증법 §53 증여재산공제)
 // 주의: enum 값 의미
 //   lineal_descendant       = 수증자가 직계비속(성년) — 증여자가 직계비속(자녀→부모 방향) (§53③)
@@ -210,8 +200,6 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   }, [asset.bgAnnualRentTotal, asset.bgMortgageSetAmount, lendingDeposit, mortgageDebt]);
 
   const isMarketMode = asset.bgValuationMode === "sangjeungbeop_market";
-  // 상속받은 자산의 환산 차단(E-1 한계 G6) — ⑧ `validateBurdenedGiftAsset`과 같은 술어
-  const inheritedConversionBlocked = isPostDeemedInheritance(asset.acquisitionCause, deriveSec163_9BaseDate(asset));
   /**
    * 조합원입주권 — 증여재산 평가가 상증법 §61③이라 §159①1호 A괄호가 **발동하지 않는다**.
    * ⇒ 취득가액이 실지거래가액(K-4)으로 고정되고, 취득시·양도시 기준시가 칸을 쓰지 않는다.
@@ -358,35 +346,22 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             />
           </FieldCard>
 
-          {/* 취득가액 산정방식 (§100① 일치 원칙) */}
-          <FieldCard
-            label="취득가액 산정방식"
-            hint="§100①: 양도가액을 시가(실지거래가액)로 산정한 경우 취득가액도 실지거래가액 또는 환산취득가액으로 산정."
-            trailing={
-              <div className="flex flex-wrap items-center gap-1.5">
-                <LawArticleModal legalBasis="소득세법 §100" label="§100①" />
-                <LawArticleModal legalBasis="소득세법 §97" label="§97①1호" />
-                <LawArticleModal legalBasis="소득세법 시행령 §176의2" label="시행령 §176의2" />
-              </div>
-            }
-          >
-            <RadioCardGroup
-              name={`bgAcquisitionMethod-${asset.assetId ?? "primary"}`} data-field="bgAcquisitionMethod"
-              layout="stack"
-              value={asset.bgAcquisitionMethod || ""}
-              onChange={(v) => onChange({ bgAcquisitionMethod: v as AssetForm["bgAcquisitionMethod"] })}
-              options={ACQUISITION_METHOD_OPTIONS.map((o) => ({
-                value: o.value,
-                label: o.label,
-                // 상속받은 자산(E-1 한계 G6) — 영 §163⑨ 평가액이 가목이라 환산 불가. ⑧과 같은 술어.
-                description:
-                  o.value === "converted" && inheritedConversionBlocked
-                    ? "상속받은 자산은 상속개시일 현재 상증법 평가액이 취득가액이라 쓸 수 없습니다 (소령 §163⑨)"
-                    : o.description,
-                disabled: o.value === "converted" && inheritedConversionBlocked,
-              }))}
+          {/* 취득가액 산정방식 (§100① 일치 원칙) — 4옵션 라디오는 분리 파일(800줄 한도) */}
+          <BurdenedGiftAcquisitionMethodField
+            asset={asset}
+            onChange={onChange}
+            transferDate={transferDate}
+            isFractionalSplit={isFractionalSplit}
+          />
+
+          {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && (
+            <BurdenedGiftPresumedAcquisitionSection
+              asset={asset}
+              onChange={onChange}
+              method={asset.bgAcquisitionMethod}
             />
-          </FieldCard>
+          )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
           {asset.bgAcquisitionMethod === "converted" && (

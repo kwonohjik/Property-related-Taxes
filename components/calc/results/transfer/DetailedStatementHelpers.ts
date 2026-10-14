@@ -60,6 +60,11 @@ export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatement
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
 import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
+import {
+  resolveBgSingleDisplay,
+  buildBgSingleAcquisitionFormula,
+  buildBgSingleExpenseFormula,
+} from "./DetailedStatementBgFormulas";
 import { aggregateAcqModes } from "./split-acq-text";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
@@ -146,8 +151,10 @@ export function buildStatementItems(
     transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
   }).transferBurdenedGiftBreakdown;
 
-  // 양도가액 우선순위: receiveOnly 보정 > override > result.steps의 amount > 0
-  const totalTransferPrice = receiveOnly.transferPrice;
+  // 단건 부담부증여: §159 슬롯 echo에서 읽는다(`contractTotalPrice`가 빈 칸이라 역산하면 음수).
+  const bgSingle = isAggregate ? undefined : resolveBgSingleDisplay(result);
+  // 양도가액 우선순위: 부담부증여 슬롯 > receiveOnly 보정 > override > result.steps의 amount > 0
+  const totalTransferPrice = bgSingle ? bgSingle.transferPrice : receiveOnly.transferPrice;
 
   // ── 1단계: 일자·기간 ────────────────────────────────────────
   items.set("transferDate", {
@@ -268,7 +275,7 @@ export function buildStatementItems(
     label: "양도가액",
     value: isAggregate ? sumPropTransfer : ownerSplitTransfer ? ownerSplitTransfer.transferPrice : totalTransferPrice,
     formula: burdenedGift
-      ? `양도가액 = 인수 채무액 (보증금 ${burdenedGift.assumedDebtAmount.toLocaleString()} 합계) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
+      ? `양도가액 = 인수 채무액 (임대보증금 + 담보차입금) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
         ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
         : ownerSplitTransfer
@@ -312,7 +319,9 @@ export function buildStatementItems(
     result.usedEstimatedAcquisition === true && result.swapApplied !== true;
   /** §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비(swap이면 비어 있다). `estimatedBase`는 공제 **전** 값. */
   const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
-  const singleAcq = splitSummary
+  const singleAcq = bgSingle
+    ? bgSingle.acquisition
+    : splitSummary
     ? splitSummary.acquisitionDeducted
     : estimatedNoSwap
     ? // 🔴 종전에는 여기서도 `+ capEx`를 했다. 엔진이 차감하지 않은 금액이라 그만큼
@@ -340,15 +349,17 @@ export function buildStatementItems(
   // 단건: 실제 변수값을 풀어쓴 산식 (양도차익 항목과 동일 표기). 다건은 자산별 perAsset이 담당.
   // 집계 소제목은 어댑터 상수 플래그가 아니라 자산별 echo(`splitDetail`·GB 카드 `acquisitionMode`·`filingDisplay`)에서 파생한다(G-4).
   const aggModes = isAggregate ? aggregateAcqModes(properties, gbDetail) : undefined;
-  const acqFormula = buildAcquisitionPriceFormula(
-    result,
-    isAggregate,
-    totalTransferPrice,
-    singleAcq,
-    capEx,
-    depreciation,
-    aggModes,
-  );
+  const acqFormula = bgSingle
+    ? buildBgSingleAcquisitionFormula(bgSingle)
+    : buildAcquisitionPriceFormula(
+        result,
+        isAggregate,
+        totalTransferPrice,
+        singleAcq,
+        capEx,
+        depreciation,
+        aggModes,
+      );
 
   items.set("acquisitionPrice", {
     label: "취득가액",
@@ -376,7 +387,9 @@ export function buildStatementItems(
   // 🔴 그런데도 종전에는 거기서 `capEx`를 **또** 뺐다. 개산공제가 자본적지출보다 작으면 필요경비가
   //   0으로 눌려(실측 3,000,000 − 20,000,000 → 0) 「양도 − 취득 − 경비 = 차익」이 깨졌다.
   //   환산 본문은 자본적지출이 애초에 들어 있지 않으므로 뺄 것이 없다(결과탭 코드리뷰 #069).
-  const singleExp = splitSummary
+  const singleExp = bgSingle
+    ? bgSingle.expenses
+    : splitSummary
     ? splitSummary.necessaryExpense
     : estimatedNoSwap
     ? (result.expenses ?? 0)
@@ -385,7 +398,9 @@ export function buildStatementItems(
   // `assetKind`는 ④가 엔진 `propertyType`으로 그대로 보내는 값이라 같은 인자다
   // (`transfer-tax-api.ts:251`) — 사이드바 합계(`calc-wizard-store.ts`)와도 같은 호출이다.
   const lumpRate = estimatedDeductionRate(formData?.isUnregistered, primary?.assetKind);
-  const expFormula = buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate, aggModes);
+  const expFormula = bgSingle
+    ? buildBgSingleExpenseFormula(bgSingle)
+    : buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate, aggModes);
 
   items.set("expenses", {
     label: "필요경비",

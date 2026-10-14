@@ -87,6 +87,9 @@ type BurdenedGiftLike = {
   actualAcquisitionTotal?: number;
   actualLandAcquisitionPrice?: number;
   actualBuildingAcquisitionPrice?: number;
+  presumedAcquisitionTotal?: number;
+  presumedLandAcquisitionPrice?: number;
+  presumedBuildingAcquisitionPrice?: number;
   donorRelation?: string;
 };
 
@@ -110,7 +113,7 @@ export function refineBurdenedGiftInputs(
     if (!positive(bg.marketValueAtTransfer))
       issue(["burdenedGiftInfo", "marketValueAtTransfer"], "부담부증여 시가 모드는 양도시 시가 평가액이 필요합니다");
     if (!bg.acquisitionMethod) {
-      issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·converted)이 필요합니다 (소득세법 §100①)");
+      issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
     } else if (
       bg.acquisitionMethod === "actual" &&
       !positive(bg.actualAcquisitionTotal) &&
@@ -118,6 +121,17 @@ export function refineBurdenedGiftInputs(
       !positive(bg.actualBuildingAcquisitionPrice)
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
+    }
+    if (
+      (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") &&
+      !positive(bg.presumedAcquisitionTotal) &&
+      !positive(bg.presumedLandAcquisitionPrice) &&
+      !positive(bg.presumedBuildingAcquisitionPrice)
+    ) {
+      issue(
+        ["burdenedGiftInfo", "presumedAcquisitionTotal"],
+        `부담부증여 ${bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액"} 방식은 취득 당시 금액이 필요합니다 (소득세법 §97①1호나목)`,
+      );
     }
   }
   if (!bg.donorRelation)

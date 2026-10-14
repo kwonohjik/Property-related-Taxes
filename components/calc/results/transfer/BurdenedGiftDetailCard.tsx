@@ -10,7 +10,10 @@
  *  - Phase 2: 증여세 통합 (공제·과표·산출세액·신고세액공제·결정세액)
  */
 
-import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import type {
+  TransferBurdenedGiftAcquisitionMethodUsed,
+  TransferBurdenedGiftBreakdown,
+} from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const SELECTED_LABEL: Record<string, string> = {
@@ -19,11 +22,17 @@ const SELECTED_LABEL: Record<string, string> = {
   rental: "임대평가 (상증법 §61⑤ · 시행령 §50⑦)",
 };
 
-const ACQ_METHOD_LABEL: Record<string, string> = {
+// `satisfies`로 키 커버리지를 가둔다 — 방식 union에 값이 늘 때 여기서 컴파일 오류가 나야 「기준시가 안분」으로 조용히 떨어지지 않는다.
+const ACQ_METHOD_LABEL = {
   standard_price: "기준시가 안분 · 소령 §159①1호",
   actual: "실지취득가액 안분 · §97①1호가목",
   converted: "환산취득가액 · 시행령 §176의2②2호",
-};
+  salesCase: "매매사례가액 안분 · §97①1호나목 · 시행령 §176의2③1호",
+  appraisal: "감정가액 안분 · §97①1호나목 · 시행령 §176의2③2호",
+} satisfies Record<TransferBurdenedGiftAcquisitionMethodUsed, string>;
+
+/** 매매사례가액·감정가액(K-6/K-7) 입력값 라벨 — 취득가액 행의 변수명. */
+const PRESUMED_LABEL = { salesCase: "매매사례가액", appraisal: "감정가액" } as const;
 
 // ⚠️ `Record<string, string>`이라 키 커버리지 가드가 없다 — `DonorRelation` 확장 시 함께 볼 것.
 const RELATION_LABEL: Record<string, string> = {
@@ -233,6 +242,51 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
               <tr>
                 <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600">
                   ※ 실지취득가 모드 — 개산공제(§163⑥) 미적용, 자본적지출·양도비를 채무비율 안분하여 필요경비 반영
+                </td>
+              </tr>
+            </>
+          ) : bg.acquisitionMethodUsed === "salesCase" || bg.acquisitionMethodUsed === "appraisal" ? (
+            <>
+              {bg.perAsset.land.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    토지 취득가 = {PRESUMED_LABEL[bg.acquisitionMethodUsed]} {fmt(bg.perAsset.land.presumedAcquisition ?? 0)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}%
+                  </td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.acquisitionPrice)}</td>
+                </tr>
+              )}
+              {bg.perAsset.building.acquisitionPrice > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    건물 취득가 = {PRESUMED_LABEL[bg.acquisitionMethodUsed]} {fmt(bg.perAsset.building.presumedAcquisition ?? 0)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}%
+                  </td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
+                </tr>
+              )}
+              {/* 필요경비는 개산공제뿐이다 — 적힌 산식이 적힌 값을 만들도록 엔진 echo(율·취득시 기준시가)로 적는다 */}
+              {bg.perAsset.land.estimatedDeductionRate !== undefined && bg.perAsset.land.estimatedDeduction > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    토지 개산공제 = 취득시 기준시가 {fmt(bg.perAsset.land.stdPriceAtAcquisition)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}% × 개산공제율 {(bg.perAsset.land.estimatedDeductionRate * 100).toFixed(1).replace(/\.0$/, "")}%
+                  </td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.land.estimatedDeduction)}</td>
+                </tr>
+              )}
+              {bg.perAsset.building.estimatedDeductionRate !== undefined && bg.perAsset.building.estimatedDeduction > 0 && (
+                <tr>
+                  <td className="py-1 pr-2 pl-3">
+                    건물 개산공제 = 취득시 기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
+                    {(bg.debtRatio * 100).toFixed(4)}% × 개산공제율 {(bg.perAsset.building.estimatedDeductionRate * 100).toFixed(1).replace(/\.0$/, "")}%
+                  </td>
+                  <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.estimatedDeduction)}</td>
+                </tr>
+              )}
+              <tr>
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600">
+                  ※ {PRESUMED_LABEL[bg.acquisitionMethodUsed]} 경로 — 필요경비는 개산공제(소령 §163⑥)만 인정하며 자본적지출·양도비는 공제하지 않습니다
                 </td>
               </tr>
             </>

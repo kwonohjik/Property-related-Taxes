@@ -170,6 +170,7 @@ import {
   resolveRuralSurtax,
 } from "./reduction-eligible-income";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
+import { resolveBgSingleDisplay, bgSwapAcquisitionNote } from "./DetailedStatementBgFormulas";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
@@ -226,6 +227,8 @@ export function buildRows(
 
   const mu = result.mixedUseDetail;
   const sp = result.splitDetail;
+  // 단건 부담부증여: 양도가액·취득가액·필요경비는 §159 슬롯 echo다(`contractTotalPrice`는 빈 칸이 정상 — 역산하면 「-」·음수).
+  const bgSingle = resolveBgSingleDisplay(result);
 
   // 입주일 없는 구간(신규 자산 기본값의 빈 구간)은 거주 사실이 없다 — 퇴거일 칸에 양도일을 찍지 않는다.
   const periods = primary?.residenceInputMode === "interval" ? (primary.residencePeriods ?? []).filter((p) => p.moveInDate) : [];
@@ -380,7 +383,7 @@ export function buildRows(
     }
   }
 
-  setNum("transferPrice", "total", totalTransferPrice || null);
+  setNum("transferPrice", "total", (bgSingle?.transferPrice ?? totalTransferPrice) || null);
   if (isRedevMode && result.redevelopmentDetail) {
     const r = result.redevelopmentDetail;
     // ★ 재개발/재건축 합계 취득가액 — 역산 규칙 (memory: feedback_redev_filing_form_acquisition_inverse)
@@ -426,6 +429,11 @@ export function buildRows(
         );
       }
     }
+  } else if (bgSingle) {
+    setNum("acquisitionPrice", "total", bgSingle.acquisition || null);
+    setNum("expenses", "total", bgSingle.expenses || null);
+    const swapNote = bgSwapAcquisitionNote(bgSingle);
+    if (swapNote) setRoseNote("acquisitionPrice", "total", swapNote);
   } else if (estimatedDisplay !== null) {
     /**
      * 환산취득가 모드 — 엔진은 자본적지출·양도비를 **차감하지 않는다**. §97②2호 본문에서

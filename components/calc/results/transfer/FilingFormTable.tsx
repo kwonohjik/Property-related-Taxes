@@ -7,6 +7,7 @@
  */
 
 import { cn } from "@/lib/utils";
+import type { TransferBurdenedGiftAcquisitionMethodUsed } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import {
   type FilingFormTableProps,
   deriveColumns,
@@ -35,7 +36,7 @@ export function FilingFormTable({
   // 부담부증여 §159 산정 여부 — 신고서 표 헤더에 배지 표시
   const burdenedGiftBreakdown = (
     result as unknown as {
-      transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: "standard_price" | "actual" | "converted" };
+      transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed };
     }
   ).transferBurdenedGiftBreakdown;
   const isBurdenedGift = Boolean(burdenedGiftBreakdown);
@@ -45,7 +46,11 @@ export function FilingFormTable({
       ? "실지취득가액 × 채무비율"
       : burdenedGiftBreakdown?.acquisitionMethodUsed === "converted"
         ? "환산취득가액(자산별 양도가액 × 취득시 기준시가를 양도시 기준시가로 나눈 비율)"
-        : "취득시 기준시가 × 채무비율";
+        : burdenedGiftBreakdown?.acquisitionMethodUsed === "salesCase"
+          ? "매매사례가액 × 채무비율"
+          : burdenedGiftBreakdown?.acquisitionMethodUsed === "appraisal"
+            ? "감정가액 × 채무비율"
+            : "취득시 기준시가 × 채무비율";
   const rows = buildRows(
     result,
     mode,
