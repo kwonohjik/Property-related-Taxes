@@ -142,12 +142,12 @@ describe("#17-5 ① 엔진 — PHD(§164⑦) 환산 + 배율 초과 → 초과�
     expect(r.splitDetail?.nonBusinessLandPart).toBeDefined();
   });
 
-  it("고가주택(12억 초과) — 초과분은 12억 안분 밖에서 전액 과세 + 산식 중립 고지, 초과분 양도차익은 같은 규칙(floor(토지 양도차익 × 1/4))", () => {
+  it("고가주택(12억 초과) — 초과분은 12억 안분 밖에서 전액 과세 + 재산세제과-915 회신 방식 고지, 초과분 양도차익은 같은 규칙(floor(토지 양도차익 × 1/4))", () => {
     const r = calculateTransferTax(phdHouse({ transferPrice: 2_000_000_000 }), rates);
     expect(r.isPartialExempt).toBe(true);
     const nbl = r.splitDetail?.nonBusinessLandPart;
     expect(nbl?.gain).toBe(Math.floor((r.splitDetail!.land.gain * 53) / 212));
-    expect((r.warnings ?? []).some((w) => w.includes("고가주택(12억 초과)에 배율 초과 부수토지"))).toBe(true);
+    expect((r.warnings ?? []).some((w) => w.includes("고가주택에 배율 초과 부수토지"))).toBe(true);
     expect(unseparated(r.warnings)).toBe(false);
   });
 
