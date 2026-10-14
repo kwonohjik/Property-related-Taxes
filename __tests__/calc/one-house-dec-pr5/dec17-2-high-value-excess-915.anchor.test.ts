@@ -264,7 +264,7 @@ describe("#17-2 고지 — 해석례 근거를 사실로 서술하고 불확실 
   });
 
   it("기준금액은 양도일 연혁 — 9억 시대(2020-06-01) 양도의 고지에 «12억»이 박히지 않고 «9억»으로 쓴다", () => {
-    const w = notice(run({ transferDate: new Date("2020-06-01"), transferPrice: 1_500_000_000 }));
+    const w = notice(run({ transferDate: new Date("2020-06-01"), transferPrice: 1_500_000_000, acquisitionArea: 700 }));
     expect(w).toBeDefined();
     expect(w).toContain("9억 안분");
     expect(w).not.toContain("12억");
