@@ -9,6 +9,10 @@
  *   (`resolveSplitAwareTax`)에 넘긴다. A 시나리오에 한한다 — B(§161 기준시가 안분)는 비과세 범위를 정하는 산식이 달라 종전 값을 유지한다(결정 보류).
  *
  * 기대값은 엔진 출력을 베끼지 않고 정수 산식으로 독립 도출한다(격자는 같은 사실의 off를 정본으로 한다).
+ *
+ * ⚠️ 「on = off」는 아래 **격자 범위**(양도가 8종 · 토지 취득일 5종 · 면적 2종 · 양도일 2종)에서 성립한 값이다. 격자 밖 양도가(한도 1.5배·3배 등)의 A2에서는
+ *   on이 장기보유특별공제를 먼저 빼고 안분하고 off가 안분 후 장기보유특별공제를 빼는 연산 순서 차이로 floor가 1~2원 갈린다 — G-3와 무관하게 비G-3 A2에도
+ *   있는 별건이며 이 수정이 다루지 않았다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -55,7 +59,7 @@ const LAND_DATES: Record<string, [string, boolean][]> = {
 };
 
 describe("§155⑳ A — 나중 취득 부수토지(G-3): 특례 on = off", () => {
-  it("양도가 × 토지 취득일 × 면적(배율 이내/초과) × 양도일 연혁(12억·9억) 격자 — 총세액·산출세액·과세표준이 같다", () => {
+  it("양도가 × 토지 취득일 × 면적(배율 이내/초과) × 양도일 연혁(12억·9억) 격자(범위 한정) — 총세액·산출세액·과세표준이 같다", () => {
     let g3Cells = 0;
     let nonG3Cells = 0;
     let withExcess = 0;
@@ -171,6 +175,20 @@ describe("§155⑳ A — 나중 취득 부수토지(G-3): 특례 on = off", () =
 });
 
 describe("§155⑳ B — 직전거주주택보유주택은 종전 계산을 유지한다 (결정 보류 · 이 값이 바뀌면 그 결정을 거쳐야 한다)", () => {
+  it("나중 취득 토지 + B: 세액은 종전 그대로이고, 그 토지분이 §161 안분에 들어갔다는 확인 필요 고지가 steps·warnings에 있다", () => {
+    for (const S of [800_000_000, 1_500_000_000]) {
+      const r = calculateTransferTax(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
+      const w = (r.warnings ?? []).filter((x) => x.includes("직전거주주택보유주택(§155⑳ 시나리오 B) 계산은 이 토지분을 비과세에서 제외하지 않고"));
+      expect(w, `${S} warnings`).toHaveLength(1);
+      expect(w[0]).toContain("확인 필요");
+      expect(w[0]).not.toMatch(/유리|불리|절감|절세/);
+      expect(r.steps.some((st) => st.formula === w[0]), `${S} steps`).toBe(true);
+    }
+    // 토지를 먼저 취득한 B(G-3 아님)에는 고지가 없다
+    const ok = calculateTransferTax(house(800_000_000, { landAcq: "2008-07-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
+    expect((ok.warnings ?? []).some((x) => x.includes("시나리오 B) 계산은 이 토지분을"))).toBe(false);
+  });
+
   it("나중 취득 토지 + B: 토지분이 §161 안분 대상에 들어간 종전 값 (8억 38,556,100 · 15억 191,034,800)", () => {
     for (const [S, expected, id] of [[800_000_000, 38_556_100, "RH-B1"], [1_500_000_000, 191_034_800, "RH-B2"]] as const) {
       const r = calculateTransferTax(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);

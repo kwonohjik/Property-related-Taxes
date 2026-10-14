@@ -46,7 +46,7 @@ import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
-import { highValueExcessRulingNoticeText, laterLandExemptNotice } from "./transfer-tax-appurtenant-land";
+import { highValueExcessRulingNoticeText, laterLandExemptNotice, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
 import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
 import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
 import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
@@ -310,6 +310,26 @@ export function runRentalHousingExceptionStep(
       : undefined;
   // T-7(나중 상속 토지분 제외)·5A(수용 단서로 나중 취득 토지분 비과세) 고지 — 일반 경로와 같은 함수·문구. 특례가 적용된 결과는 비과세·부분비과세다.
   const laterLandNotice = laterLandExemptNotice(effectiveInput, splitDetail, true) ?? undefined;
+  // B(직전거주주택보유주택)는 나중 취득 부수토지분을 비과세에서 떼지 않고 §161 기준시가 안분에 그대로 넣는다(종전 계산 유지 — 세액 불변). 일반 경로와 다른 처리라는 사실만 알린다.
+  const laterLandPhrpNotice =
+    isPhrpScenarioId(rhe.scenarioId) && splitDetail && isLaterAcquiredLandExemptExcluded(effectiveInput)
+      ? (() => {
+          const held = calculateHoldingPeriod(effectiveInput.landAcquisitionDate!, effectiveInput.transferDate);
+          return (
+            `주택보다 나중에 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법 시행령」 제154조 제1항 보유요건에 못 미치지만, ` +
+            `직전거주주택보유주택(§155⑳ 시나리오 B) 계산은 이 토지분을 비과세에서 제외하지 않고 §161 기준시가 안분 대상에 주택과 함께 넣었습니다 — ` +
+            `일반 경로는 이 토지분을 비과세에서 제외하고 안분 없이 전액 과세하므로 세액이 다를 수 있습니다 — 확인 필요`
+          );
+        })()
+      : undefined;
+  if (laterLandPhrpNotice) {
+    steps.push({
+      label: "장기임대주택 거주주택 비과세 특례 — 확인 필요",
+      formula: laterLandPhrpNotice,
+      amount: 0,
+      legalBasis: rheBasis,
+    });
+  }
   if (rulingTrace) {
     steps.push({
       label: "고가주택 + 배율 초과 부수토지 — 재산세제과-915 회신 방식",
@@ -644,7 +664,7 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
@@ -655,6 +675,7 @@ export function runRentalHousingExceptionStep(
             prhpSurchargeNotice,
             highValueExcessNotice,
             laterLandNotice,
+            laterLandPhrpNotice,
             // OH-40·§7-5 판정 보류·확인 필요 고지 — 결론은 바꾸지 않는다.
             ...(rhe.eligibility.notices ?? []),
           ].filter((x): x is string => x !== undefined),
