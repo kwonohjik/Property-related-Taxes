@@ -506,6 +506,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevHousingStdPriceAtApproval === undefined) a.redevHousingStdPriceAtApproval = "";
   // 사례 48 — 승계조합원 신축APT 양도
   if (a.redevIsSuccessorMember === undefined) a.redevIsSuccessorMember = "";
+  if (a.redevSuccessorGiftSameHousehold === undefined) a.redevSuccessorGiftSameHousehold = "";
   if (a.redevCompletionDate === undefined) a.redevCompletionDate = "";
   // #12 — 세대원 건물 출자 통산(토지 출자 원조합원 완공APT). 구 저장분은 통산 없음.
   if (a.redevHouseholdBuildingCarryover === undefined) a.redevHouseholdBuildingCarryover = "";

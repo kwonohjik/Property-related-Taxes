@@ -12,7 +12,7 @@
  *   ① `propertyType: "housing"` — §89②(「그 **주택**을 양도하는 경우」)·§154①이 주택 양도에만 걸린다
  *   ② 승계조합원이면 취득일 = **준공일** — 「소득세법 시행령」 §162①4호 「자기가 건설한 건축물에 있어서는
  *      …사용승인서 교부일」(+ 사전-2019-법령해석재산-0649). 원조합원은 종전주택 취득일이 그대로다(§154⑧1호 통산).
- *   ③ 거주월수 = `resolveAptResidenceMonths`(분리 입력 · 승계는 신축 거주만) — 표2와 같은 값
+ *   ③ 거주월수 = `resolveAptResidenceMonths`(분리 입력 · 승계는 신축 거주만 — 단 증여자와 계속 같은 세대인 증여 승계는 종전주택 거주를 더한다, 사전-2020-법령해석재산-0691) — 표2와 같은 값
  *   ④ 토지만 출자한 원조합원이면 보유 기산일(`exemptionHoldingStartDate`) = 사용승인일(G3-4) — 취득일은 그대로
  *
  * 🔴 종전에는 이 번역이 비과세 판정(`judgeRedevAptOneHouseExemption`)에만 있었다. 중과 STEP 0.5의 ① 요소
@@ -122,6 +122,8 @@ export function translateRedevAptForHousingJudgment<T extends TransferTaxInput>(
       resolveAptResidenceMonths({
         // 토지만 출자한 원조합원도 보유기간이 사용승인일부터라 신축주택 거주만 센다 — 승계조합원과 같다(준공 전 거주는 보유기간 중 거주가 아니다).
         isSuccessorMember: redev.isSuccessorMember === true || landContributed,
+        // 증여 승계의 종전주택 거주 통산(사전-2020-법령해석재산-0691) — 승계조합원만. 토지 출자 원조합원에는 닿지 않는다.
+        successorGiftSameHousehold: redev.isSuccessorMember === true ? redev.successorGiftSameHousehold : undefined,
         priorHouseResidenceMonths: redev.priorHouseResidenceMonths,
         newHouseResidenceMonths: redev.newHouseResidenceMonths,
         residencePeriodMonths: input.residencePeriodMonths,

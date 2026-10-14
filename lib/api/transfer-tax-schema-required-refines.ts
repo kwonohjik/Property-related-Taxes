@@ -139,6 +139,7 @@ type PrimaryLike = {
   redevelopment?: {
     subject?: string;
     isSuccessorMember?: boolean;
+    successorGiftSameHousehold?: boolean;
     completionDate?: string;
     approvalDate?: string;
     householdBuilding?: { acquisitionDate: string; residenceMonths?: number };
@@ -195,6 +196,18 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
   // 승계조합원 — 준공일(사용검사필증 교부일)이 취득시기다(소령 §162①4호). 비우면 취득일로 읽었다.
   if (data.redevelopment?.isSuccessorMember === true && !data.redevelopment.completionDate) {
     issue(["redevelopment", "completionDate"], "승계조합원은 준공일(사용검사필증 교부일)이 필요합니다 (소득세법 시행령 §162①4호)");
+  }
+
+  // 증여 승계의 「증여자와 계속 같은 세대」 선언(사전-2020-법령해석재산-0691) — 승계조합원이 증여로 취득한 경우에만 의미가 있다.
+  //   ④(`buildRedevelopmentPayload`)는 그 밖에는 보내지 않는다. 다른 취득원인(매매·상속)에 실어 오면 통산이 조용히 적용되지 않으므로 막는다.
+  if (
+    data.redevelopment?.successorGiftSameHousehold !== undefined &&
+    !(data.redevelopment.isSuccessorMember === true && data.acquisitionCause === "gift")
+  ) {
+    issue(
+      ["redevelopment", "successorGiftSameHousehold"],
+      "「증여자와 계속 같은 세대」 선언은 증여로 승계취득한 승계조합원 입주권에만 보낼 수 있습니다 (사전-2020-법령해석재산-0691)",
+    );
   }
 
   // G3-4 — 토지만 출자한 원조합원의 완공APT: §154① 비과세 보유기간은 사용승인서 교부일부터 센다(영 §162①4호 ·

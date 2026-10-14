@@ -52,6 +52,15 @@ export interface RedevelopmentInfo {
   isSuccessorMember?: boolean;
 
   /**
+   * 승계조합원이 입주권을 **증여자와 계속 같은 세대**로 보유했는가 (사전-2020-법령해석재산-0691 · 2021.8.26.) — 사용자 선언.
+   * `true`이면 증여 전 증여자와 같은 세대로서 종전주택에서 거주한 개월(`priorHouseResidenceMonths`)을 거주기간에 통산한다 —
+   * 표2 대상 판정(영 §159의3)과 §154① 비과세 거주요건이 같은 값을 읽는다(`resolveAptResidenceMonths`).
+   * 표2 공제율의 거주분은 양도자 본인의 신축주택 거주만 쓴다(결정 #38-9). `false`·미선언이면 통산하지 않는다.
+   * `isSuccessorMember !== true`이거나 취득원인이 증여가 아니면 무시한다(④가 그 축 밖에서는 보내지 않는다).
+   */
+  successorGiftSameHousehold?: boolean;
+
+  /**
    * 사례 48 — 신축APT 사용검사필증 교부일(준공일).
    * isSuccessorMember === true 시 LTHD/세율 보유기간 기산일.
    *
