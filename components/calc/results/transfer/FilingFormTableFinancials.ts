@@ -8,7 +8,9 @@ import type {
   MixedUseNonBusinessLandPart,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { SplitPartResult } from "@/lib/tax-engine/types/transfer.types";
+import type { SplitNonBusinessLandPart } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { splitPartAcquisitionDeducted } from "@/lib/tax-engine/transfer-tax-split-display";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { ColumnKey } from "./FilingFormTableHelpers";
 
 export function fourPartFinancials(
@@ -120,11 +122,22 @@ export function fourPartFinancials(
   setNum("incomeAmountAfter", "commercialBuilding", cpIncomeBuilding);
 }
 
+/**
+ * 토지·건물 2열 모드의 열별 재무 값.
+ *
+ * `nb`(배율 초과 부수토지 = 비사업용 토지 파트 — 「소득세법」 제104조 제5항 본문 후단의 별개 자산 의제)가 **없으면**
+ * 종전 그대로 과세 비율(`taxableRatio`)을 파트 양도차익에 곱한다. 있으면 엔진 echo를 그대로 읽는다 —
+ * 균일 비율로는 「토지 이내분 = 안분값 − 초과분(0 하한)」·「초과분 전액 과세」·「초과분 표1 장특」을 만들 수 없다.
+ * 겸용주택 4열(`fourPartFinancials`)과 같은 규약이다: 초과분은 전용 열을 세우지 않고 **토지 열 안에서** 합산한다
+ * (취득가액·필요경비 칸이 토지 전체 기준이라 `양도가 − 취득가 − 필요경비 = 양도차익`이 열 안에서 성립하고,
+ * 파트 단위 양도가·취득가를 엔진이 echo하지 않는 초과분을 따로 지어낼 필요가 없다).
+ */
 export function splitTwoColFinancials(
   land: SplitPartResult,
   building: SplitPartResult,
   taxableRatio: number,
   setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
+  nb?: SplitNonBusinessLandPart,
 ) {
   setNum("transferPrice", "land", land.transferPrice);
   setNum("transferPrice", "building", building.transferPrice);
@@ -136,18 +149,44 @@ export function splitTwoColFinancials(
   setNum("expenses", "building", building.directExpenses + building.appraisalDeduction);
   setNum("transferGain", "land", land.gain);
   setNum("transferGain", "building", building.gain);
-  const landTaxable = Math.floor(land.gain * taxableRatio);
-  const buildingTaxable = Math.floor(building.gain * taxableRatio);
+  const landTaxable = nb
+    ? (land.taxableGainAfterProration ?? land.gain) + (nb.taxableGainAfterProration ?? nb.gain)
+    : Math.floor(land.gain * taxableRatio);
+  const buildingTaxable = nb
+    ? (building.taxableGainAfterProration ?? building.gain)
+    : Math.floor(building.gain * taxableRatio);
   setNum("taxableGain", "land", landTaxable);
   setNum("taxableGain", "building", buildingTaxable);
+  // 비과세 양도차익 = 열의 전체 양도차익 − 열의 과세 양도차익 — 한쪽 파트가 양도차손이면 그 열은 음수로 남는다(전체 양도차익 행과 같은 부호 · 열 합 = 합계 열).
   setNum("exemptGain", "land", land.gain - landTaxable);
   setNum("exemptGain", "building", building.gain - buildingTaxable);
-  setNum("ltDeduction", "land", land.longTermDeduction);
+  const landLt = land.longTermDeduction + (nb?.longTermDeduction ?? 0);
+  setNum("ltDeduction", "land", landLt);
   setNum("ltDeduction", "building", building.longTermDeduction);
-  const landIncome = landTaxable - land.longTermDeduction;
+  const landIncome = landTaxable - landLt;
   const buildingIncome = buildingTaxable - building.longTermDeduction;
   setNum("incomeAmount", "land", landIncome);
   setNum("incomeAmount", "building", buildingIncome);
   setNum("incomeAmountAfter", "land", landIncome);
   setNum("incomeAmountAfter", "building", buildingIncome);
+}
+
+/**
+ * 초과분을 합산한 토지 열의 구성 각주 — 「기준면적 이내 토지분 + 배율 초과 부수토지분」을 숫자로 밝힌다.
+ * 열 값만으로는 초과분이 섞였는지 알 수 없다(겸용 4열은 별도 비사업용 카드가 따로 있다).
+ * 엔진 echo를 그대로 읽는다 — 값을 새로 계산하지 않는다. 문구에 `/`·`÷`를 쓰지 않는다(분수 치환 방지).
+ */
+export function splitNonBusinessLandNotes(
+  land: SplitPartResult,
+  nb: SplitNonBusinessLandPart,
+): { taxableGain: string; ltDeduction: string } {
+  const f = (n: number) => n.toLocaleString();
+  return {
+    taxableGain:
+      `기준면적 이내 토지분 ${f(land.taxableGainAfterProration ?? land.gain)} + 배율 초과 부수토지분 ${f(nb.taxableGainAfterProration ?? nb.gain)} ` +
+      `(초과 ${nb.excessArea}㎡ — 비사업용 토지로 안분 없이 전액 과세, ${NBL.MAIN} ①5호)`,
+    ltDeduction:
+      `기준면적 이내 토지분 ${f(land.longTermDeduction)} + 배율 초과 부수토지분 ${f(nb.longTermDeduction)} ` +
+      `(표1 — 토지 보유 ${nb.holdingYears}년, 공제율 ${Math.round(nb.longTermRate * 100)}%)`,
+  };
 }

@@ -158,7 +158,7 @@ export { holdingMonthsFromDates, fmtDate, fmtPeriod, holdingPeriodFromDates, get
 
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
-import { fourPartFinancials, splitTwoColFinancials } from "./FilingFormTableFinancials";
+import { fourPartFinancials, splitTwoColFinancials, splitNonBusinessLandNotes } from "./FilingFormTableFinancials";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
@@ -227,6 +227,10 @@ export function buildRows(
 
   const mu = result.mixedUseDetail;
   const sp = result.splitDetail;
+  const isRH = result.rentalHousingExceptionDetail?.applied === true;
+  // 배율 초과 부수토지(비사업용 토지) 파트 — 있으면 split-2col 열이 균일 비율이 아니라 엔진 echo를 읽는다(초과분은 토지 열에 합산).
+  // §155⑳ 특례(`isRH`)는 합계 행의 의미(과세대상 양도차익 = 전체 양도차익)가 달라 이 경로 밖이다 — 종전 표시 그대로.
+  const spNb = mode === "split-2col" && !isRH ? sp?.nonBusinessLandPart : undefined;
   // 단건 부담부증여: 양도가액·취득가액·필요경비는 §159 슬롯 echo다(`contractTotalPrice`는 빈 칸이 정상 — 역산하면 「-」·음수).
   const bgSingle = resolveBgSingleDisplay(result);
 
@@ -366,7 +370,12 @@ export function buildRows(
       (sp.selfOwns === "building_only" ? 0 : sp.land.gain) +
       (sp.selfOwns === "land_only" ? 0 : sp.building.gain);
     const taxableRatio = ownedGain > 0 ? result.taxableGain / ownedGain : 1;
-    splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum);
+    splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum, spNb);
+    if (spNb) {
+      const nbNotes = splitNonBusinessLandNotes(sp.land, spNb);
+      setRoseNote("taxableGain", "land", nbNotes.taxableGain);
+      setRoseNote("ltDeduction", "land", nbNotes.ltDeduction);
+    }
     // 세율 기산일(§104②)은 서식 행이 없다 — 원인이 다를 때만 취득일 칸 각주로 밝힌다(D1-3).
     const spSummary = summarizeSplitGain(sp);
     if (spSummary.mixedCause) {
@@ -505,8 +514,7 @@ export function buildRows(
   // §161 적용 분기 (장기임대주택 거주주택 비과세 특례) — 산식 순서:
   // 양도차익 → 장기보유공제 → §95① 양도소득금액 → §161① 안분 → 비과세/과세 분리
   // 비과세는 양도차익 단계가 아닌 양도소득금액 단계에서 분리하므로 비과세 양도차익=0,
-  // 과세대상 양도차익=전체 양도차익으로 표기.
-  const isRH = result.rentalHousingExceptionDetail?.applied === true;
+  // 과세대상 양도차익=전체 양도차익으로 표기. (`isRH`는 위 `mu`·`sp` 옆에서 선언했다.)
 
   // redev 모드는 분기 합으로 이미 설정됨 — 덮어쓰지 않음.
   if (!isRedevMode) {
@@ -590,9 +598,11 @@ export function buildRows(
         : splitLtDeduction(part.longTermDeduction, Math.round(part.holdingYears * 12), residenceMs, useTable2);
     const landSplit = lthdOfPart(sp.land);
     const buildSplit = lthdOfPart(sp.building);
-    setNum("ltHoldingPart", "total", landSplit.holdingAmount + buildSplit.holdingAmount);
+    // 배율 초과 부수토지분 장특은 표1 **보유분** 단독이다(거주분 없음) — 토지 열의 보유 기간분에 싣는다(합계 열 `sumSplitLthdAmounts`와 같은 규약).
+    const nbLt = spNb?.longTermDeduction ?? 0;
+    setNum("ltHoldingPart", "total", landSplit.holdingAmount + buildSplit.holdingAmount + nbLt);
     setNum("ltResidencePart", "total", landSplit.residenceAmount + buildSplit.residenceAmount);
-    setNum("ltHoldingPart", "land", landSplit.holdingAmount);
+    setNum("ltHoldingPart", "land", landSplit.holdingAmount + nbLt);
     setNum("ltResidencePart", "land", landSplit.residenceAmount);
     setNum("ltHoldingPart", "building", buildSplit.holdingAmount);
     setNum("ltResidencePart", "building", buildSplit.residenceAmount);
