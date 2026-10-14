@@ -36,7 +36,8 @@ import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
-import { meetsTable2ResidenceRequirement, resolveExemptionResidenceMonths } from "./transfer-tax-exemption";
+import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
+import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { getLongTermDeductionOverride } from "./rental-housing-reduction";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
@@ -222,7 +223,7 @@ export function calcLongTermHoldingDeduction(
     // `deemedOneHouseBy155`로 싣는다(S08-5).
     const isOneHouseSingleForCompanion = resolveLthdTable2OneHouseAxis(input, deemedOneHouseBy155);
     const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(거주분 공제율)
-    const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12); // 통산(대상 판정)
+    const table2ResidenceYears = Math.floor(resolveExemptionRequirementResidenceMonths(input) / 12); // 통산(대상 판정 — 상속·증여 전 동일세대 거주)
     // 자산 축 — 배율 이내로 확인된 부수토지 카드만 표2 대상이다(판정 불가 카드는 표1 — S08-6).
     const useTable2ForCompanion =
       isOneHouseSingleForCompanion &&
@@ -286,8 +287,8 @@ export function calcLongTermHoldingDeduction(
     input.isOneHousehold && input.householdHousingCount === 1;
   const isOneHouseForTable2 = resolveLthdTable2OneHouseAxis(input, deemedOneHouseBy155);
   const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
-  // §154⑧3호: 표2 "대상 판정"은 동일세대 상속 통산 거주 (공제율은 실거주 residenceYears 유지).
-  const table2ResidenceYears = Math.floor(resolveExemptionResidenceMonths(input) / 12);
+  // §154⑧3호·결정 #38-9: 표2 "대상 판정"은 동일세대 상속 통산 거주 + 증여 전 동일세대 거주 (공제율은 실거주 residenceYears 유지 — 사전-2025-법규재산-0506).
+  const table2ResidenceYears = Math.floor(resolveExemptionRequirementResidenceMonths(input) / 12);
 
   // L-2: 「소득세법」 §95⑤·⑥ — 비주택으로 보유하다 주택으로 용도변경한 뒤 양도하는 경우.
   //   보유분 = 비주택 기간 표1 + 주택 기간 표2 (합계 40% 한도 — 같은 항 1호 단서)

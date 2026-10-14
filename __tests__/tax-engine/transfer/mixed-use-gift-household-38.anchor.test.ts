@@ -185,7 +185,7 @@ describe("MG-4 단건(비겸용) parity — 같은 사실이면 주택 부분 �
   });
 });
 
-describe("MG-5 장특·세율 보유기간은 증여일 기준 — 통산은 §154① 판정에만", () => {
+describe("MG-5 장특·세율 보유기간은 증여일 기준 — 통산은 §154① 판정과 표2 대상 판정에만", () => {
   it("[MG-5] 고가 겸용(50억) · 같은 세대 → 12억 초과분 안분 과세 · 주택분 장특 보유연수 0년(증여일 기산) · 표1", () => {
     const hi = (b: GiftHouseholdBasis) =>
       calcMixedUseTransferTax(
@@ -246,5 +246,38 @@ describe("MG-6 증여 전 동일세대 거주 개월(결정 #38-7) — 겸용도
     }
     const separate = mixed({ giftHouseholdBasis: { ...NO, priorHouseholdResidenceMonths: 24 }, regionCode: GANGNAM });
     expect(mixedExempt(separate)).toBe(false);
+  });
+});
+
+describe("MG-7 증여 전 동일세대 거주 개월은 표2 대상 판정(거주 2년)에 통산하고 공제율에는 쓰지 않는다 (결정 #38-9 — 사전-2025-법규재산-0506)", () => {
+  // 증여 2023-09-01 → 양도 2026-10-01(보유 3년 1개월) · 50억 고가 겸용 · 본인 거주 0년. 증여 전 거주 24개월을 통산하면 거주 2년 → 표2 대상.
+  const LATE = D("2026-10-01");
+  const hi = (months: number | undefined) =>
+    calcMixedUseTransferTax(
+      5_000_000_000,
+      LATE,
+      {
+        ...mixedUseCase14(),
+        landAcquisitionDate: GIFT,
+        buildingAcquisitionDate: GIFT,
+        residencePeriodYears: 0,
+        isOneHousehold: true,
+        isOneHouseExempt: true,
+        householdHousingCountForExclusion: 1,
+        giftHouseholdBasis: { ...YES(D("2018-01-01")), priorHouseholdResidenceMonths: months },
+      } as MixedUseAssetInput,
+      rates,
+    );
+  it("[MG-7a] 24개월 통산 → 표2 · 보유 3년 × 4% = 12%만(거주분은 본인 거주 0이라 0) — 23개월은 표1(경계)", () => {
+    const at24 = hi(24);
+    expect(at24.housingPart.longTermDeductionTable).toBe(2);
+    expect(at24.housingPart.holdingYears).toBe(3);
+    expect(hi(23).housingPart.longTermDeductionTable).toBe(1);
+    expect(hi(undefined).housingPart.longTermDeductionTable).toBe(1); // 미답은 통산하지 않는다
+    expect(hi(0).housingPart.longTermDeductionTable).toBe(1);
+  });
+  it("[MG-7b] 공제율에 통산하지 않는다 — 증여 전 거주를 더 넣어도(36개월) 공제액은 같다(거주분 늘지 않음)", () => {
+    expect(hi(36).housingPart.longTermDeductionAmount).toBe(hi(24).housingPart.longTermDeductionAmount);
+    expect(hi(24).housingPart.longTermDeductionAmount).toBeGreaterThan(hi(23).housingPart.longTermDeductionAmount); // 표2 보유 4% > 표1 2%
   });
 });

@@ -5,7 +5,7 @@
  * `calcLongTermHoldingDeduction`의 결과(공제액·율)를 받아 §98의2 특칙으로 덮어쓸 수 있는 값을 돌려준다.
  */
 import { applyRate } from "./tax-utils";
-import { resolveExemptionResidenceMonths } from "./transfer-tax-helpers";
+import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era } from "./data/lthd-table2-era";
@@ -43,7 +43,7 @@ export function applyLthd982AndPushSteps(
 ): { longTermHoldingDeduction: number; longTermHoldingRate: number } {
   const { exemptionJudgeInput, taxableGain, deemedOneHouseBy155, holdingPeriod } = a;
   let { longTermHoldingDeduction, longTermHoldingRate } = a;
-  const table2ResidenceYearsForStep = Math.floor(resolveExemptionResidenceMonths(exemptionJudgeInput) / 12);
+  const table2ResidenceYearsForStep = Math.floor(resolveExemptionRequirementResidenceMonths(exemptionJudgeInput) / 12);
   // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
   // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
   // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
