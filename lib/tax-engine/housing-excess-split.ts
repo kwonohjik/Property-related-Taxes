@@ -19,8 +19,9 @@
  *
  * ## 적용 범위(검증하지 못한 조합은 막지 않고 «초과분 미분리» 고지로 남긴다)
  *
- * 매매 취득 · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·PHD·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
- * 존재). 상속·증여 평가, 2005-04-30 전 취득, 환산 + 공익수용·공매·경락 양도는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
+ * 매매 취득 · 소유자 같음 · 지분 아님 · 부담부증여 아님 · 겸용·재개발 아님 · 취득일 2005-04-30 이후(취득 당시 개별주택가격이
+ * 존재) **또는** §164⑦ 3시점 환산(PHD — 자기 3시점 값으로 토지·건물을 나눠 5칸을 받지 않는다, #17-5 ①). 상속·증여 평가, 2005-04-30 전 취득 중
+ * PHD가 아닌 것(실가·감정·매매사례), 환산 + 공익수용·공매·경락 양도(PHD 포함)는 이 범위 밖이다 — 막지 않고 비과세를 유지하며
  * «초과분 미분리 — 확인 필요»로 고지한다(`housingExcessUnseparatedNotice`).
  *
  * 함께 양도 주택 카드(컴패니언)도 같은 범위·같은 판정이다(#17-1) — 면적 사실만 `companionHousingLand`로 실려 오고
@@ -39,6 +40,7 @@
 import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtenant-land-rate";
 import { round2 } from "./area-utils";
 import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
+import { deriveLegacyAcqMode, type PartAcqMode } from "./transfer-tax-split-acq-price";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 배율 초과 면적(㎡) — 한도 = 정착면적 × 법정 배율(양도일·지역 연혁). 초과가 없거나 입력이 모자라면 0. */
@@ -74,9 +76,16 @@ export interface HousingExcessSplitFacts {
   isFractional: boolean;
   /**
    * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전 — «취득 당시 개별주택가격»이 존재하지 않아 기준시가 안분 입력(취득시 3칸)을 줄 수 없다.
-   * 이 경우는 막지 않고 비과세를 유지하며 «초과분 미분리 — 확인 필요» 고지로 남긴다(#17 조건). 취득일 미입력은 false(취득일 필수는 다른 ⑧이 막는다).
+   * 이 경우 §164⑦ 3시점 환산(`usesPhd`)을 쓰면 분리 경로를 탄다(#17-5 ①) — 쓰지 않으면 막지 않고 비과세를 유지하며 «초과분 미분리 — 확인 필요»
+   * 고지로 남긴다(#17 조건). 취득일 미입력은 false(취득일 필수는 다른 ⑧이 막는다).
    */
   acquiredBeforeFirstDisclosure: boolean;
+  /**
+   * §164⑦ 개별주택가격 미공시 3시점 환산(PHD) 분리 경로를 타는가 — `phdSplitPathTaken`(엔진 `calcSplitGain` 게이트와 같은 술어)이다.
+   * PHD는 토지·건물 가액을 **자기 3시점 값**으로 안분하므로(양도가액·환산취득가액 모두) 취득시 기준시가 5칸을 받지 않는다 — 그래서 분리 경로는 열되
+   * 5칸 입력은 요구하지 않는다(`housingExcessNeedsStdInputs`).
+   */
+  usesPhd: boolean;
   excessAreaM2: number;
 }
 
@@ -99,9 +108,28 @@ export function housingExcessSplitApplies(f: HousingExcessSplitFacts): boolean {
     !f.isSeparateAcquisition &&
     !f.isBurdenedGift &&
     !f.isFractional &&
-    !f.acquiredBeforeFirstDisclosure &&
+    // 2005-04-30 전 취득은 PHD 환산을 쓸 때만 — 취득 당시 개별주택가격이 없어 5칸 안분을 줄 수 없고, PHD가 §164⑦ 3시점으로 대신한다(#17-5 ①).
+    (f.usesPhd || !f.acquiredBeforeFirstDisclosure) &&
     f.excessAreaM2 > 0
   );
+}
+
+/** 분리 경로 중 **취득시 기준시가 5칸**(개별주택가격·㎡당 공시지가·건물 기준시가 + 양도시 2칸)을 받는 경로인가 — PHD는 자기 3시점 칸을 쓰므로 아니다. */
+export function housingExcessNeedsStdInputs(f: HousingExcessSplitFacts): boolean {
+  return housingExcessSplitApplies(f) && !f.usesPhd;
+}
+
+/**
+ * §164⑦ PHD 3시점 환산 분리 경로(`calcSplitGainPreDisclosure`)를 타는 입력인가 — `calcSplitGain` 게이트와 ④⑤⑧의 PHD 사실이 **같은 술어**를 읽는다.
+ * PHD 페이로드가 있고 토지·건물 파트가 모두 환산일 때만이다(혼합 모드는 PHD 알고리즘이 아니라 파트별 경로 — 2026-07-28 게이트 강화).
+ */
+export function phdSplitPathTaken(
+  input: Pick<TransferTaxInput, "preHousingDisclosure" | "landAcqMode" | "buildingAcqMode" | "useEstimatedAcquisition" | "acquisitionMethod">,
+): boolean {
+  if (!input.preHousingDisclosure) return false;
+  const land: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input as TransferTaxInput);
+  const building: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input as TransferTaxInput);
+  return land === "estimated" && building === "estimated";
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -113,6 +141,10 @@ type EngineFacts = Pick<
   | "propertyType"
   | "acquisitionCause"
   | "useEstimatedAcquisition"
+  | "acquisitionMethod"
+  | "landAcqMode"
+  | "buildingAcqMode"
+  | "preHousingDisclosure"
   | "selfOwns"
   | "isSeparateAcquisition"
   | "transferType"
@@ -121,7 +153,6 @@ type EngineFacts = Pick<
   | "oneHouseUnitRole"
   | "transferCause"
   | "isAuctionTransfer"
-  | "preHousingDisclosure"
   | "pre1990Land"
   | "redevelopment"
   | "appurtenantLandZone"
@@ -165,7 +196,7 @@ export function housingExcessAreaOfInput(input: EngineFacts): number {
 /** 분리 경로(5칸 입력 + 기준시가 안분)를 타는 입력인가 — 엔진 어댑터. */
 export function housingExcessSplitAppliesToInput(input: EngineFacts): boolean {
   return housingExcessSplitApplies({
-    isPlainHousing: input.propertyType === "housing" && !input.preHousingDisclosure && !input.pre1990Land && !input.redevelopment,
+    isPlainHousing: input.propertyType === "housing" && !input.pre1990Land && !input.redevelopment,
     isPurchase: (input.acquisitionCause ?? "purchase") === "purchase",
     isSec164_9Conversion:
       input.useEstimatedAcquisition === true && (input.transferCause === "public_expropriation" || input.isAuctionTransfer === true),
@@ -182,6 +213,12 @@ export function housingExcessSplitAppliesToInput(input: EngineFacts): boolean {
       (input.ownershipRatio !== undefined && input.ownershipRatio < 1) ||
       (input.totalPropertyTransferPrice !== undefined && input.oneHouseUnitRole !== "house"),
     acquiredBeforeFirstDisclosure: isBeforeHousePriceFirstDisclosure(input.acquisitionDate),
+    usesPhd: phdSplitPathTaken(input),
     excessAreaM2: housingExcessAreaOfInput(input),
   });
+}
+
+/** 분리 경로 중 취득시 기준시가 5칸을 받는 경로인가 — 엔진 어댑터(`housingExcessNeedsStdInputs`의 입력 어댑터). */
+export function housingExcessNeedsStdInputsOfInput(input: EngineFacts): boolean {
+  return housingExcessSplitAppliesToInput(input) && !phdSplitPathTaken(input);
 }

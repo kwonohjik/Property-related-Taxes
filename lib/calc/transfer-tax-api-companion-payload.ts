@@ -182,7 +182,7 @@ export function buildAssetPayload(
 
   // 분리 축(소유자 분리·별개 취득) 활성 — 단건 `transfer-tax-api.ts`의 `isSplitActive`와 같은 술어.
   // #17-1 — 같은 날 취득 주택의 배율 초과분 분리는 함께 양도 주택 카드도 같은 술어(`housingExcessNeedsLandSplit`)로 연다.
-  const excessCtx = { transferDate };
+  const excessCtx = { transferDate, isNonPrimary: true };
   const splitActive = isSplitPayloadActive(asset, asset.transferType === "burdened_gift", excessCtx);
 
   return {

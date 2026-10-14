@@ -18,7 +18,7 @@ import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-
 import { resolveExemptionProviso, type ResidenceReqInput } from "./transfer-tax-exemption-holding";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
 import { TRANSFER } from "./legal-codes";
-import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
+import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 export { housingExcessAcqContractNotice } from "./housing-excess-acq-contract";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
@@ -226,9 +226,9 @@ export function laterInheritedLandExemptNotice(
 
 /**
  * 고지(#17, 세액 불변) — 토지 면적이 정착면적 × 배율 한도를 넘는데 초과분(비사업용 토지 — 소득세법 §104의3①5호)을 **분리하지 못한**
- * 주택 양도에 «초과분 미분리 — 과소 가능, 확인 필요»를 알린다. 분리 경로(별개취득 · 같은 날 취득 + 기준시가 안분 입력)에 든 입력은
- * `splitDetail.nonBusinessLandPart`가 있으므로 말하지 않는다. 입력 경로가 없는 조합(부담부증여 · 지분 · 상속·증여 평가 · PHD ·
- * 재개발 · 소유자 분리 · 2005-04-30 전 취득[취득 당시 개별주택가격 부존재])은 막지 않고 비과세·종전 계산을 유지하며 이 고지로 남긴다.
+ * 주택 양도에 «초과분 미분리 — 과소 가능, 확인 필요»를 알린다. 분리 경로(별개취득 · 같은 날 취득 + 기준시가 안분 입력 · §164⑦ 환산)에 든 입력은
+ * `splitDetail.nonBusinessLandPart`가 있으므로 말하지 않는다. 입력 경로가 없는 조합(부담부증여 · 지분 · 상속·증여 평가 ·
+ * 재개발 · 소유자 분리 · 2005-04-30 전 취득[취득 당시 개별주택가격 부존재 — §164⑦ 환산을 쓰면 분리 경로다, #17-5])은 막지 않고 비과세·종전 계산을 유지하며 이 고지로 남긴다.
  * 함께 양도 주택 카드(컴패니언)도 같다 — 면적·정착면적·소재지 구분은 `appurtenantLandFactsOfInput`이 주 자산과 같은 판정으로 읽는다(#17-1).
  * 비과세·부분비과세로 계산됐을 때만이다(과세 계산에서 말할 «놓친 비과세»가 없다).
  */
@@ -254,7 +254,7 @@ export function housingExcessUnseparatedNotice(
   const excess = housingExcessAreaOfInput(input);
   if (excess <= 0) return null;
   return (
-    `토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘지만, 이 입력 조합(부담부증여·지분·상속·증여 평가·소유자 분리·재개발·2005년 전 취득·수용·공매·경락 환산 등)은 ` +
+    `토지 면적이 건물 정착면적의 지역별 배율 한도를 ${excess.toFixed(2)}㎡ 넘지만, 이 입력 조합(부담부증여·지분·상속·증여 평가·소유자 분리·재개발·개별주택가격 미공시 환산이 아닌 2005년 전 취득·수용·공매·경락 환산 등)은 ` +
     "토지·건물 가액 구분 입력 경로가 없어 초과분을 분리하지 못했습니다 — 초과분 미분리(과소 가능). " +
     "초과분은 1세대1주택 비과세 대상이 아닌 비사업용 토지입니다(소득세법 §89①3호·§104의3①5호) — 확인이 필요합니다."
   );
@@ -272,7 +272,8 @@ export function housingExcessCapexNotice(input: TransferTaxInput, splitDetail: S
   const capex = input.capitalExpenditure ?? 0;
   if (!(capex > 0) || !splitDetail?.nonBusinessLandPart) return null;
   if (input.landDirectExpenses !== undefined || input.buildingDirectExpenses !== undefined) return null;
-  if (!housingExcessSplitAppliesToInput(input)) return null;
+  // PHD(§164⑦) 분리 경로는 자산 전체 자본적지출을 토지분 비율로 나눠 쓴다(`calcSplitGainPreDisclosure`) — 반영하지 않았다는 고지는 5칸 경로만이다.
+  if (!housingExcessNeedsStdInputsOfInput(input)) return null;
   return (
     `자산 전체 자본적지출 ${capex.toLocaleString()}은 배율 초과분을 나눈 토지·건물 계산에 넣지 않았습니다 — 자본적지출은 공통 비용 안분 대상이 아니어서` +
     "(소득세법 §100② 후문) 토지분·건물분 귀속을 알아야 하는데 토지분·건물분 자본적지출이 입력되지 않았습니다. 실지거래가액 취득이면 필요경비에, 환산취득가액이면 " +

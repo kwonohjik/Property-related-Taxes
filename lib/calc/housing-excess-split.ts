@@ -9,20 +9,27 @@
  * 주 자산과 함께 양도 주택 카드(컴패니언)가 **같은 술어**를 읽는다(#17-1) — 컴패니언은 ④가 소재지·정착면적을 형제 토지 카드의 주택 컨텍스트 키로 싣지 않으므로
  * 같은 사실을 `companionHousingLand`로 운반하고, 엔진이 `appurtenantLandFactsOfInput`으로 주 자산과 같은 값으로 읽는다. 범위 밖 조합은 엔진 고지
  * (`housingExcessUnseparatedNotice`)로 남는다.
- * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이면 «취득 당시 개별주택가격»이 없어 이 경로를 타지 않는다(막지 않고 고지).
+ * 취득일이 개별주택가격 최초 공시일(2005-04-30) 전이면 «취득 당시 개별주택가격»이 없어 5칸 안분 경로를 타지 않는다(막지 않고 고지) — 다만 §164⑦ 3시점 환산(PHD)을
+ * 쓰는 첫 자산은 자기 3시점 값으로 토지·건물을 나누므로 분리 경로를 타되 5칸은 받지 않는다(`housingExcessUsesPhdSplit` — #17-5 ①). PHD는 첫 자산에만 닿으므로
+ * 함께 양도 카드는 `isNonPrimary`로 PHD 사실을 끈다(④ `usesPhd: false`·⑧ `index > 0`과 같은 술어).
  *
  * 취득가액 산정 방식은 자산 단위 방식(`deriveLegacyPartAcqMode`)만 본다(#17-4) — 이 경로는 토지 취득일을 따로 받지 않아 파트별 방식 라디오가
  * 화면에 없다. 저장된 파트 방식(`landAcqMode`·`buildingAcqMode`)은 별개취득을 켰다 끈 잔재일 수 있어 읽지 않고, ④도 자산 단위 방식을 싣는다.
  * 별개취득 토글을 켠 채 같은 날짜면 라디오가 화면에 있다 — 그 값이 자산 단위 방식과 다르면 ⑧이 막는다(`housingExcessPartModeMismatch` — 배율 한도 이내·함께 양도 주택 카드도).
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { housingExcessAreaM2, housingExcessSplitApplies, isBeforeHousePriceFirstDisclosure } from "@/lib/tax-engine/housing-excess-split";
+import {
+  housingExcessAreaM2,
+  housingExcessNeedsStdInputs,
+  housingExcessSplitApplies,
+  isBeforeHousePriceFirstDisclosure,
+} from "@/lib/tax-engine/housing-excess-split";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { effectiveSelfOwns } from "./self-owns-scope";
-import { phdFlagEffective } from "./phd-toggle-scope";
+import { usesPhdGate } from "./transfer-lump-sum-base-gate";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
@@ -45,13 +52,18 @@ export function housingExcessAreaOfAsset(asset: AssetForm, transferDate: string 
   });
 }
 
-function factsOf(asset: AssetForm, excessAreaM2: number) {
+/**
+ * §164⑦ PHD 3시점 환산 분리 경로(`calcSplitGainPreDisclosure`)를 타는 자산인가 — ④가 `preHousingDisclosure`를 싣는 조건(`usesPhdGate` — 첫 자산만)과
+ * 환산 모드의 합이고, 엔진 `phdSplitPathTaken`(PHD 페이로드 + 토지·건물 모두 환산)과 같은 사실이다. 함께 양도 주택 카드는 PHD가 닿지 않아 항상 false다.
+ */
+function usesPhdSplit(asset: AssetForm, isNonPrimary: boolean): boolean {
+  return usesPhdGate(asset, isNonPrimary) && deriveLegacyPartAcqMode(asset) === "estimated";
+}
+
+function factsOf(asset: AssetForm, excessAreaM2: number, isNonPrimary: boolean) {
   return {
-    isPlainHousing:
-      asset.assetKind === "housing" &&
-      !asset.isMixedUseHouse &&
-      !phdFlagEffective(asset) &&
-      !hasPre1990LandEstimation(asset),
+    isPlainHousing: asset.assetKind === "housing" && !asset.isMixedUseHouse && !hasPre1990LandEstimation(asset),
+    usesPhd: usesPhdSplit(asset, isNonPrimary),
     isPurchase: asset.acquisitionCause === "purchase",
     // 환산 + 공익수용·공매·경락만 범위 밖(§164⑨1호·2호 환산 분모 특례가 분리 경로에 닿지 않는다) — 엔진 어댑터는 ④가 싣는
     // `useEstimatedAcquisition`·`transferCause`·`isAuctionTransfer`(주택은 2호 전송 대상 — `isAuctionEligibleAssetKind`)로 같은 판정.
@@ -67,9 +79,19 @@ function factsOf(asset: AssetForm, excessAreaM2: number) {
   };
 }
 
-/** 같은 날 취득 주택의 초과분 분리 입력(취득시 3칸 + 양도시 2칸)이 필요한가 — 주 자산·함께 양도 주택 카드 공통(#17-1). */
-export function housingExcessNeedsLandSplit(asset: AssetForm, transferDate: string | undefined): boolean {
-  return housingExcessSplitApplies(factsOf(asset, housingExcessAreaOfAsset(asset, transferDate)));
+/**
+ * 같은 날 취득 주택의 초과분 분리 입력(취득시 3칸 + 양도시 2칸)이 필요한가 — 주 자산·함께 양도 주택 카드 공통(#17-1).
+ * §164⑦ PHD 환산 자산은 분리 경로를 타지만 이 5칸을 받지 않는다(자기 3시점 칸) — 그 판정은 `housingExcessUsesPhdSplit`.
+ * `isNonPrimary` = 첫 자산이 아님(함께 양도 카드) — PHD는 첫 자산에만 닿는다(`usesPhdGate`).
+ */
+export function housingExcessNeedsLandSplit(asset: AssetForm, transferDate: string | undefined, isNonPrimary = false): boolean {
+  return housingExcessNeedsStdInputs(factsOf(asset, housingExcessAreaOfAsset(asset, transferDate), isNonPrimary));
+}
+
+/** 배율 초과분을 §164⑦ PHD 3시점 환산 값으로 나누는 자산인가(5칸 없음 — 카드는 안내만) — 엔진 `phdSplitPathTaken ∧ housingExcessSplitApplies`와 같은 사실. */
+export function housingExcessUsesPhdSplit(asset: AssetForm, transferDate: string | undefined, isNonPrimary = false): boolean {
+  const f = factsOf(asset, housingExcessAreaOfAsset(asset, transferDate), isNonPrimary);
+  return housingExcessSplitApplies(f) && f.usesPhd;
 }
 
 /**
@@ -117,12 +139,12 @@ function sameDayPartRadiosShown(asset: AssetForm): boolean {
  * 소재지 구분이 비어 배율을 정하지 못하는데, 가장 작은 배율(3배)로도 한도를 넘을 수 있는가 — 같은 경로의 대상이면 ⑧이 소재지 구분을 요구한다.
  * (미입력 fallback으로 3배를 쓰면 초과면적을 과다 산출해 납세자에게 불리하고, 아무것도 하지 않으면 초과분이 조용히 비과세된다 — 둘 다 금지.)
  */
-export function housingExcessZonePending(asset: AssetForm): boolean {
+export function housingExcessZonePending(asset: AssetForm, isNonPrimary = false): boolean {
   if (asset.appurtenantLandZone !== undefined) return false;
   const footprint = parseFloat(asset.buildingFootprintArea) || 0;
   const landArea = resolveAcqAreaForStdPrice(asset) ?? 0;
   if (!(footprint > 0) || !(landArea > footprint * 3)) return false;
-  return housingExcessSplitApplies(factsOf(asset, 1));
+  return housingExcessSplitApplies(factsOf(asset, 1, isNonPrimary));
 }
 
 /**
@@ -134,14 +156,14 @@ export function housingExcessZonePending(asset: AssetForm): boolean {
  * 별개취득 토글이 켜져 있으면(같은 날짜라 이 경로를 타더라도) 분리 섹션의 파트 자본적지출 칸이 화면에 있고 ④가 그 값을 싣는다 — 이중 입력을
  * 막으려고 그때는 이 칸을 열지 않는다(④ `partInputsActive`와 상보 — 이 경로는 소유자 분리가 아니므로 토글만 보면 된다).
  */
-export function housingExcessNeedsCapexSplit(asset: AssetForm, transferDate: string | undefined): boolean {
+export function housingExcessNeedsCapexSplit(asset: AssetForm, transferDate: string | undefined, isNonPrimary = false): boolean {
   // 감정가액·매매사례가액 취득은 필요경비가 개산공제뿐이라(§97②2호 — 단서 비교는 환산취득가액만) 자본적지출이 세액에 닿지 않는다 — 묻지 않는다.
   const mode = deriveLegacyPartAcqMode(asset);
   return (
     (mode === "actual" || mode === "estimated") &&
     asset.hasSeperateLandAcquisitionDate !== true &&
     parseAmount(asset.capitalExpenditure ?? "") > 0 &&
-    housingExcessNeedsLandSplit(asset, transferDate)
+    housingExcessNeedsLandSplit(asset, transferDate, isNonPrimary)
   );
 }
 
