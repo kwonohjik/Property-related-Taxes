@@ -15,7 +15,8 @@
  *   있는 별건이며 이 수정이 다루지 않았다.
  */
 import { describe, it, expect } from "vitest";
-import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { calculateTransferTax, parseRatesFromMap, calcTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { resolveSplitAwareTax } from "@/lib/tax-engine/transfer-tax-split-rate";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
@@ -176,6 +177,22 @@ describe("§155⑳ A — 나중 취득 부수토지(G-3): 특례 on = off", () =
   });
 });
 
+describe("§155⑳ B × 나중에 상속받은 토지(T-7) — 모순된 고지가 함께 나오지 않는다", () => {
+  it("B는 그 토지분을 제외하지 않는다 — «제외했습니다» 고지 없이 B 고지 1건만, 세액은 종전 그대로", () => {
+    const over = { landAcquisitionCause: "inheritance", landDecedentAcquisitionDate: D("2010-01-01") };
+    const r = calculateTransferTax(house(800_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB, over }), rates);
+    expect(r.rentalHousingExceptionDetail!.scenarioId).toBe("RH-B1");
+    expect(r.totalTax).toBe(38_556_100);
+    const w = r.warnings ?? [];
+    expect(w.filter((x) => x.includes("주택보다 나중에 상속받은 부수토지"))).toHaveLength(0);
+    expect(w.filter((x) => x.includes("제외하지 않고 §161 기준시가 안분 대상에"))).toHaveLength(1);
+    expect(w.some((x) => x.includes("1세대1주택 비과세에서 제외했습니다"))).toBe(false);
+    // A는 같은 시료에서 T-7 고지가 그대로 나온다(제외했으므로)
+    const a = calculateTransferTax(house(800_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA, over }), rates);
+    expect((a.warnings ?? []).filter((x) => x.includes("주택보다 나중에 상속받은 부수토지"))).toHaveLength(1);
+  });
+});
+
 describe("§155⑳ B — 직전거주주택보유주택은 종전 계산을 유지한다 (결정 보류 · 이 값이 바뀌면 그 결정을 거쳐야 한다)", () => {
   it("나중 취득 토지 + B: 세액은 종전 그대로이고, 그 토지분이 §161 안분에 들어갔다는 확인 필요 고지가 steps·warnings에 있다", () => {
     for (const S of [800_000_000, 1_500_000_000]) {
@@ -251,8 +268,34 @@ describe("§155⑳ A × G-3 — 다건 = 단건 (격자)", () => {
     const b = aggOf("2024-06-01", [asItem(loss, "loss"), asItem(g3, "g3")]);
     expect(a.totalTax).toBe(b.totalTax);
     expect(a.totalTax).toBeGreaterThan(0);
-    // 통산으로 소득금액이 줄어도 건물분 파트 역산이 음수가 되지 않아 파트가 유지된다(자산 단위 후퇴가 아님)
+    // 건물분 역산(슬롯 − 토지분 − 배율 초과분)은 통산 전 슬롯 기준이고, 통산 뒤 파트 배분은 `evaluateSplitPartTax`의 소득금액 비율 안분(잔액은 마지막 파트 흡수)이 맡는다 —
+    // 이 시료는 자산 단위 후퇴 없이 파트별 세율 판정(`partRateBasisApplied` true)이 유지된다
     const parts = a.properties.find((p) => p.propertyId === "g3")!.splitDetail?.partRateBasisApplied;
     expect(parts).toBe(true);
+  });
+
+  it("다건 파트 역산 — 슬롯이 어긋나 건물분이 음수가 되면 파트 echo 없이 자산 단위로 후퇴한다(불변식 안전망, 현 입력 경로에서는 도달하지 않는다)", () => {
+    const input = house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA });
+    const r = calculateTransferTax(input, rates);
+    const later = r.splitDetail!.laterLandPart!;
+    const laterGross = later.gain - later.longTermDeduction;
+    const parsedRates = parseRatesFromMap(rates);
+    const ctx = (slot: number) => ({
+      taxBase: r.taxBase, transferIncome: r.taxableGain, basicDeduction: r.basicDeduction, splitDetail: r.splitDetail,
+      parsedRates, taxRateInput: input, rentalHousingTaxableIncome: slot,
+    });
+    // 정상 슬롯(= 건물분 + 토지분) — 파트 3개가 아니라 토지분·건물분 2파트를 낸다
+    const ok = resolveSplitAwareTax(ctx(r.taxableGain));
+    expect(ok.splitPartDetail?.parts.map((p) => p.kind).sort()).toEqual(["building", "land"]);
+    expect(ok.calculatedTax).toBe(r.calculatedTax);
+    // 슬롯 = 토지분 − 1 → 건물분 −1: 파트를 만들지 않고 자산 단위 세액
+    const bad = resolveSplitAwareTax(ctx(laterGross - 1));
+    expect(bad.splitPartDetail).toBeUndefined();
+    expect(bad.partRateBasisApplied).toBe(false);
+    expect(bad.calculatedTax).toBe(calcTax(r.taxBase, parsedRates, input).calculatedTax);
+    // 슬롯 0
+    const zero = resolveSplitAwareTax(ctx(0));
+    expect(zero.splitPartDetail).toBeUndefined();
+    expect(zero.partRateBasisApplied).toBe(false);
   });
 });

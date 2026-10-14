@@ -595,8 +595,9 @@ function resolveRentalHousingSplitTax(
   const later = splitDetail.laterLandPart;
   if (later) {
     const housingGross = grossIncome - (later.gain - later.longTermDeduction) - (nb ? nb.gain - nb.longTermDeduction : 0);
-    // 불변식 — 슬롯 = 건물분(≥0) + 토지분 + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(조용히 clamp하지 않는다).
-    if (grossIncome <= 0 || housingGross < 0) return plain();
+    // 불변식 — 슬롯 = 건물분(≥0) + 토지분 + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(진단 없음 — 현 입력 경로에서는 도달하지 않는 안전망 — 하류 `evaluateSplitPartTax` 결손 게이트도 같은 후퇴를 낸다).
+    // 토지분·배율 초과분 소득은 0 이상이라 `housingGross ≥ 0`이면 슬롯도 0 이상이다 — 슬롯 부호를 따로 보지 않는다.
+    if (housingGross < 0) return plain();
     return resolveSplitAwareTax({
       ...ctx,
       rentalHousingTaxableIncome: undefined,
@@ -606,7 +607,7 @@ function resolveRentalHousingSplitTax(
   if (!nb) return plain();
   const nbGross = nb.gain - nb.longTermDeduction;
   const housingGross = grossIncome - nbGross;
-  // 불변식 — 특례 슬롯 = 주택분(≥0) + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(조용히 clamp하지 않는다).
+  // 불변식 — 특례 슬롯 = 주택분(≥0) + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(진단 없음 — 현 입력 경로에서는 도달하지 않는 안전망).
   if (grossIncome <= 0 || nbGross <= 0 || housingGross < 0) return plain();
 
   const housingIncome =
