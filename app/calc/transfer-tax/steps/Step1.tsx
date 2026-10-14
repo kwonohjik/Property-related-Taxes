@@ -25,6 +25,14 @@ import { Button } from "@/components/ui/button";
 import { OneHouseJudgmentLoadModal } from "@/components/calc/transfer/OneHouseJudgmentLoadModal";
 import { hasJudgmentProvenance } from "@/lib/calc/one-house-judgment-provenance";
 import { redevOneHouseAxisCandidate } from "@/lib/calc/redev-one-house-axis";
+import {
+  ReverseAppurtenantSwapNotice,
+  ReverseAppurtenantSwapAfterNote,
+} from "@/components/calc/transfer/ReverseAppurtenantSwapNotice";
+import {
+  reverseAppurtenantSwapNewlyReflected,
+  type ReverseAppurtenantSwapPatch,
+} from "@/lib/calc/reverse-appurtenant-swap";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -33,11 +41,17 @@ export function Step1({
   form,
   onChange,
   assetErrors,
+  onInvalidateResult,
+  embeddedInMulti = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
   /** 자산 인덱스 → 그 카드의 첫 검증 오류. 배너 표시 + 섹션 강제 펼침 */
   assetErrors?: Record<number, string>;
+  /** 계산 결과를 비운다 — 자산 순서를 바꾸는 「주택을 첫 자산으로 바꾸기」가 쓴다(사이드바가 결과의 «첫 자산» 매칭을 읽기 때문). */
+  onInvalidateResult?: () => void;
+  /** 다건 편집에 임베드된 마운트 — 다건은 함께 양도 자산을 지원하지 않으므로(`MULTI_COMPANION_UNSUPPORTED_MESSAGE`) 순서 바꾸기 카드를 숨긴다. */
+  embeddedInMulti?: boolean;
 }) {
   // 자산 분할 모드 — 단일 소스(명시 state). length·ratio derive는 초기화(세션 복원) 1회만 —
   // 렌더마다 재계산하면 토글 ON 직후 자기소멸. (memory feedback_three_state_optional_mode_toggle)
@@ -74,6 +88,12 @@ export function Step1({
   const [pendingCompanionOff, setPendingCompanionOff] = useState(false);
   /** 「판정 불러오기」 모달 (P5-b-2) */
   const [judgmentLoadOpen, setJudgmentLoadOpen] = useState(false);
+  /**
+   * 「주택을 첫 자산으로 바꾸기」(G1) 로컬 UI state — 카드 재마운트 세대 + 교환 직후 안내.
+   * 입력값은 스토어(`form`)에 있고 여기에는 화면 보조 상태만 둔다(useEffect 미러링 없음 — 클릭 핸들러에서만 쓴다).
+   */
+  const [swapEpoch, setSwapEpoch] = useState(0);
+  const [swapNote, setSwapNote] = useState<{ houseAssetId: string; items: string[] } | null>(null);
 
   // 증환지 증가분 존재 시: 당초분·증가분은 한 필지·한 계약이라 양도가액 구분 기재(actual)가 불가능.
   // 양도시 기준시가 안분(§166⑥ 단서)만 유효 → 결정방식 토글 숨김 + apportioned 강제(파생).
@@ -128,6 +148,14 @@ export function Step1({
       };
       onChange({ assets: [firstAsset] });
     }
+  }
+
+  // G1 — 사례 28 역방향: 주택을 맨 앞으로(회전) + 순서와 함께 움직이는 값(주 자산 배지·미등기)을 한 번의 패치로 쓴다. 값은 지우지 않는다.
+  function handleReverseAppurtenantSwap(patch: ReverseAppurtenantSwapPatch) {
+    setSwapNote({ houseAssetId: patch.assets[0].assetId, items: reverseAppurtenantSwapNewlyReflected(form) });
+    setSwapEpoch((n) => n + 1);
+    onInvalidateResult?.();
+    onChange(patch);
   }
 
   function updateAssets(assets: AssetForm[]) {
@@ -283,8 +311,19 @@ export function Step1({
           </div>
         )}
 
+        {/* G1 — 첫 자산이 주택부수토지이고 함께 양도 주택이 1건이면(사례 28 역방향) ⑧이 막는다 → 주택을 첫 자산으로 바꾸는 버튼 */}
+        <ReverseAppurtenantSwapNotice
+          form={form}
+          hidden={embeddedInMulti || splitMode === "fractional"}
+          onSwap={handleReverseAppurtenantSwap}
+        />
+        {swapNote && form.assets[0]?.assetId === swapNote.houseAssetId && (
+          <ReverseAppurtenantSwapAfterNote items={swapNote.items} />
+        )}
+
         {/* 자산 카드 리스트 */}
         <CompanionAssetsSection
+          remountEpoch={swapEpoch}
           assets={form.assets}
           bundledSaleMode={effBundledSaleMode}
           onChange={updateAssets}

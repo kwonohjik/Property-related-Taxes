@@ -23,7 +23,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { runCalc, allIssues, captureBody, postTransfer } from "./_helpers/redev-one-house-route";
-import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { HOUSE, LAND, form, aggOf, blocked, type Agg } from "./_helpers/g1-reverse-appurtenant-fixtures";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { reverseAppurtenantHouseAssetId } from "@/lib/calc/reverse-appurtenant-house";
 import { buildAggregateRows } from "@/components/calc/results/transfer/FilingFormTableAggregateHelpers";
@@ -33,59 +33,6 @@ import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
 });
-
-const HOUSE = (landArea: number): Record<string, unknown> => ({
-  assetId: "h1",
-  assetKind: "housing",
-  acquisitionCause: "purchase",
-  acquisitionDate: "2014-01-02",
-  fixedAcquisitionPrice: "400000000",
-  actualSalePrice: "800000000",
-  addressJibun: "서울 테스트동 1",
-  residenceInputMode: "direct",
-  residencePeriodMonthsAsset: "120",
-  buildingFootprintArea: "100",
-  appurtenantLandZone: "metropolitan_residential",
-  isUrbanArea: true,
-  ...(landArea > 0 ? { areaScenario: "same", acquisitionArea: String(landArea), transferArea: String(landArea) } : {}),
-  standardPriceAtTransfer: "600000000",
-});
-const LAND = (id: string, area: number): Record<string, unknown> => ({
-  assetId: id,
-  assetKind: "land",
-  landNature: "appurtenant",
-  acquisitionCause: "purchase",
-  acquisitionDate: "2014-01-02",
-  fixedAcquisitionPrice: "150000000",
-  actualSalePrice: "300000000",
-  addressJibun: `서울 테스트동 ${id}`,
-  areaScenario: "same",
-  acquisitionArea: String(area),
-  transferArea: String(area),
-  standardPriceAtTransfer: "200000000",
-});
-const household = {
-  transferDate: "2026-02-16",
-  isOneHousehold: true,
-  householdHousingCount: "1",
-  householdNoOtherHousesConfirmed: true,
-  householdNoPresaleRightsConfirmed: true,
-  residencePeriodMonths: "120",
-};
-const form = (...assets: Record<string, unknown>[]) =>
-  ({
-    ...createDefaultTransferFormData(),
-    ...household,
-    contractTotalPrice: "1100000000",
-    assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a })),
-  }) as never;
-
-type Prop = { propertyId: string; transferPrice: number; isExempt: boolean; longTermHoldingDeduction: number; rateClause?: string };
-type Agg = { totalTax: number; properties: Prop[]; warnings?: string[] };
-const aggOf = (r: Awaited<ReturnType<typeof runCalc>>) => r.json.data.aggregated as Agg;
-const BLOCK = "주택부수토지를 첫 자산으로 넣고 주택을 함께 양도하는 자산으로 넣으면";
-const blocked = (issues: { step: number; field?: string; message: string }[]) =>
-  issues.filter((i) => i.message.includes(BLOCK));
 
 describe("G1 화면 경로 — 첫 자산 주택부수토지 + 함께 양도 주택 1건은 막고 주택 먼저 입력을 안내", () => {
   it("짝 주택 판정 leaf — 주택 계열 컴패니언이 일반 주택 1건일 때만", () => {
