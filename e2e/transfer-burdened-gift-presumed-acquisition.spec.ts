@@ -8,7 +8,7 @@
  *   PA-1. 라디오 4옵션(실지·매매사례·감정·환산) + 선택 시 입력 칸·개산공제 안내 + 방식 전환 시 값 초기화
  *   PA-2. 감정가액 — 입력 → 계산 → 결과 양도차익 28,920,000
  *   PA-3. 매매사례가액 — 같은 값 (A-2)
- *   PA-4. 축 B(지분 분할 취득) — 두 옵션이 비활성(⑧과 같은 술어)
+ *   PA-4. 축 B(지분 분할 취득) — 두 옵션이 활성(지분 카드마다 자기 값을 받는다 — `transfer-burdened-gift-axis-b-presumed.spec.ts`)
  *   PA-6. 단건 상세 계산 명세서·신고서 양식(요약표)이 엔진 값과 일치 — 역산 오표기(음수 취득가액·양도비) 회귀 방지
  *   PA-7. 신축 5년 이내 × 감정가액 — §114조의2 가산세(건물 감정가액 안분분의 5%)가 payload·결과 화면에 반영된다 (PR-3)
  *   PA-8. 증축 5년 이내 × 감정가액 — 증축한 부분의 감정가액 칸이 없어 감정가액 라디오가 비활성
@@ -157,7 +157,7 @@ test.describe("부담부증여 — 매매사례가액·감정가액 (K-6/K-7)", 
     });
   }
 
-  test("PA-4: 축 B(지분 분할 취득) — 두 옵션 비활성", async ({ page }) => {
+  test("PA-4: 축 B(지분 분할 취득) — 두 옵션이 활성이다(지분마다 값을 받는다)", async ({ page }) => {
     test.setTimeout(90_000);
     const half = (idx: number, num: string) =>
       landSeed({ ...makeDefaultAsset(idx), ownershipNumerator: num, ownershipDenominator: "100", bgAcquisitionMethod: "" });
@@ -169,8 +169,8 @@ test.describe("부담부증여 — 매매사례가액·감정가액 (K-6/K-7)", 
     await expandAssetSection(page, 2);
     const group = card.locator('[data-field="bgAcquisitionMethod"]');
     await expect(group.getByRole("radio")).toHaveCount(4);
-    await expect(card.getByRole("radio", { name: /매매사례가액/ })).toBeDisabled();
-    await expect(card.getByRole("radio", { name: /감정가액/ })).toBeDisabled();
+    await expect(card.getByRole("radio", { name: /매매사례가액/ })).toBeEnabled();
+    await expect(card.getByRole("radio", { name: /감정가액/ })).toBeEnabled();
     // 대조군 — 실지·환산은 활성
     await expect(card.getByRole("radio", { name: /실지취득가액 안분/ })).toBeEnabled();
     await expect(card.getByRole("radio", { name: /환산취득가액/ })).toBeEnabled();

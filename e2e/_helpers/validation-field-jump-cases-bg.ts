@@ -34,8 +34,9 @@ const axisB = () => {
     bgAcquisitionMethod: "appraisal", bgPresumedAcquisitionTotal: "200000000",
   });
   const f = validBase();
-  const a = (idx: number, num: string) => ({ ...f.assets[0], ...makeDefaultAsset(idx), addressJibun: "서울 강남구 테스트동 1-1", acquisitionDate: "2015-03-01", ownershipNumerator: num, ownershipDenominator: "100", ...bgPatch });
-  return { ...f, assets: [a(1, "60"), a(2, "40")] };
+  const a = (idx: number, num: string, over: Record<string, unknown> = {}) => ({ ...f.assets[0], ...makeDefaultAsset(idx), addressJibun: "서울 강남구 테스트동 1-1", acquisitionDate: "2015-03-01", ownershipNumerator: num, ownershipDenominator: "100", ...bgPatch, ...over });
+  // 지분 2는 감정가액이 비어 있다 — 지분마다 자기 취득일 기준 값을 받으므로 그 지분 카드에서 막힌다
+  return { ...f, assets: [a(1, "60"), a(2, "40", { bgPresumedAcquisitionTotal: "" })] };
 };
 /** 이월과세(당초 증여자) — 부담부증여 검증이 당초 증여자 취득 당시 값을 먼저 요구한다 */
 const carry = (patch: Record<string, unknown> = {}) =>
@@ -97,7 +98,7 @@ export const BG_FIELD_JUMP_CASES: FieldJumpCase[] = [
     }),
   },
   {
-    name: "bg: 지분 분할 취득 감정가액 불가", field: "bgAcquisitionMethod", step: 0, assetIndex: A, message: /^자산 1: 지분 분할 취득\(같은 물건을 여러 번에 나눠 취득\)은/,
+    name: "bg: 지분 분할 취득 × 감정가액 — 지분 카드별 금액", field: "bgPresumedAcquisitionTotal", step: 0, assetIndex: 1, message: /^자산 2: 부담부증여 감정가액 — 취득 당시 감정가액을 입력하세요/,
     form: axisB,
   },
   {

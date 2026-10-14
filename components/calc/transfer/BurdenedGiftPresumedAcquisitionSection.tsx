@@ -60,8 +60,6 @@ interface FieldProps {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 폼-전역 양도일(= 증여일) — 감정가액 × 신축·증축 5년 이내(§114조의2) 판정. */
   transferDate?: string;
-  /** 지분 분할 취득(축 B) — 새 두 방식을 비활성화하는 술어의 입력. */
-  isFractionalSplit?: boolean;
 }
 
 /** 「취득가액 산정방식」 FieldCard + 4옵션 라디오 (법령 순차 적용 순서: 실지 → 매매사례 → 감정 → 환산). */
@@ -69,15 +67,14 @@ export function BurdenedGiftAcquisitionMethodField({
   asset,
   onChange,
   transferDate,
-  isFractionalSplit,
 }: FieldProps) {
   // 상속받은 자산의 환산 차단(E-1 한계 G6) — ⑧ `validateBurdenedGiftAsset`과 같은 술어
   const inheritedConversionBlocked = isPostDeemedInheritance(
     asset.acquisitionCause,
     deriveSec163_9BaseDate(asset),
   );
-  // 매매사례가액·감정가액을 고를 수 없는 자산(상속·축 B) — ⑧과 같은 `bgPresumedBlock`
-  const presumedBlock = bgPresumedBlock(asset, { isFractionalSplit });
+  // 매매사례가액·감정가액을 고를 수 없는 자산(상속) — ⑧과 같은 `bgPresumedBlock`
+  const presumedBlock = bgPresumedBlock(asset);
   // 증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`). 신축은 가산세를 연결해 계산한다(PR-3).
   const appraisalPenaltyBlocked = bgAppraisalExtensionPenaltyApplies(asset, transferDate);
 
@@ -161,6 +158,13 @@ interface SectionProps {
    * 취득가액을 당초 증여자 취득 당시 §97①1호 금액으로 정하기 때문이다. 양도인 쪽은 증여받은 자산이라 증여일 평가액(실지 칸).
    */
   carryover?: boolean;
+  /**
+   * 지분 분할 취득(축 B) — 값이 「취득일 전후 각 3개월」이라 지분마다 취득일이 다르면 달라진다. 그래서 **지분 카드마다** 자기 취득일 기준의
+   * **물건 전체** 값을 받고 엔진이 지분율을 곱해 합산한다(`scaleBurdenedGiftInfo`). 안내 한 줄만 바꾼다.
+   */
+  fractionalSplit?: boolean;
+  /** 개산공제 base(취득시 기준시가) 입력 위치 안내 — 기본 문구가 가리키는 칸이 이 카드에 없을 때(지분 컴패니언) 덮어쓴다. */
+  basisNote?: string;
 }
 
 /**
@@ -168,7 +172,7 @@ interface SectionProps {
  * 일반건물 토지·건물 2칸 / 토지 1칸 / 그 외(주택·건물·상업용·재개발 완공 APT) 총액 1칸.
  * 취득시 기준시가(개산공제 base)는 자산 종류별 기존 칸에서 받는다 — 일반건물은 취득 정보의 gb* 칸, 그 외는 「② 양도정보」.
  */
-export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover }: SectionProps) {
+export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover, fractionalSplit, basisNote }: SectionProps) {
   const label = BG_PRESUMED_LABEL[method];
   const kind = bgPresumedInputKind(asset.assetKind);
   // 이월과세면 당초 증여자 칸을 읽고 쓴다 — 칸 이름만 다르고 입력 형태·검증 규칙은 같다.
@@ -194,13 +198,21 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
         <p className="text-caption text-sky-800" data-testid="bg-presumed-expense-notice">
           필요경비는 <b>개산공제</b>(취득시 기준시가 × 채무비율 × 개산공제율)만 인정되고 자본적지출·양도비는 공제하지 않습니다
           (소득세법 §97②2호 — 실비와 비교해 고르는 것은 환산 방식 전용).{" "}
-          {carryover
+          {basisNote
+            ? basisNote
+            : carryover
             ? "개산공제 기준이 되는 취득 당시 토지·건물 기준시가는 아래 「당초 증여자」 두 칸에서 입력하세요."
             : asset.assetKind === "general_building"
               ? "개산공제 기준이 되는 취득시 토지·건물 기준시가는 아래 일반건물 취득 정보에서 입력하세요."
               : "개산공제 기준이 되는 취득시 기준시가는 아래 「② 양도정보」에서 입력하세요."}
         </p>
       </ToneCard>
+      {fractionalSplit && (
+        <p className="text-caption text-amber-700" data-testid="bg-presumed-fractional-note">
+          지분 분할 취득 — 이 지분의 <b>취득일 전후 각 3개월</b> 기준으로, <b>물건 전체</b>의 {label}을 입력하세요(지분율은 시스템이 곱합니다).
+          다른 지분은 해당 지분 카드에서 따로 입력합니다.
+        </p>
+      )}
       {kind === "split" ? (
         <>
           <FieldCard label={`${prefix}토지 ${label}`} hint={PRESUMED_HINT[method]}>

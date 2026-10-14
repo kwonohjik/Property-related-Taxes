@@ -30,7 +30,7 @@ export function isBgPresumedMethod(method: string | undefined): method is BgPres
   return method === "salesCase" || method === "appraisal";
 }
 
-export type BgPresumedBlockReason = "inheritance" | "fractionalSplit";
+export type BgPresumedBlockReason = "inheritance";
 
 export interface BgPresumedBlock {
   reason: BgPresumedBlockReason;
@@ -48,25 +48,16 @@ type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | 
  *
  *  · 상속 — 영 §163⑨가 상속개시일 평가액을 가목(실지거래가액)으로 보므로 나목(감정·매매사례·환산)에 닿지 않는다.
  *    기존 환산 차단 술어(`isPostDeemedInheritance`)와 같은 결론이다.
- *  · 지분 분할 취득(축 B) — 지분마다 취득일이 달라 「취득일 전후 3개월」 값이 달라지는데 ④가 물건 단위 1값 모델이다
- *    (`mergePrimaryBasic`이 새 필드를 병합하지 않는다).
+ *  (지분 분할 취득(축 B)은 막지 않는다 — 지분마다 취득일 기준 값을 각 지분 카드가 따로 받고 엔진이 지분율로 합산한다.)
  */
 export function bgPresumedBlock(
   asset: BlockAsset,
-  ctx: { isFractionalSplit?: boolean } = {},
 ): BgPresumedBlock | null {
   if (isPostDeemedInheritance(asset.acquisitionCause, deriveSec163_9BaseDate(asset))) {
     return {
       reason: "inheritance",
       short: "상속받은 자산은 상증법 평가액이 취득 당시 실지거래가액으로 간주되어 쓸 수 없습니다 (소령 §163⑨)",
       long: "상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.",
-    };
-  }
-  if (ctx.isFractionalSplit) {
-    return {
-      reason: "fractionalSplit",
-      short: "지분 분할 취득은 지분마다 취득일이 달라 쓸 수 없습니다",
-      long: "지분 분할 취득(같은 물건을 여러 번에 나눠 취득)은 취득가액 산정방식을 「매매사례가액」·「감정가액」으로 선택할 수 없습니다. 매매사례가액·감정가액은 취득일 전후 각 3개월 이내의 값(소득세법 시행령 §176의2③)인데, 지분마다 취득일이 달라 물건 단위 한 값으로 입력할 수 없기 때문입니다. 「실지취득가액 안분」 또는 「환산취득가액」을 선택하세요.",
     };
   }
   return null;

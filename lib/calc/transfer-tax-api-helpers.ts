@@ -206,9 +206,9 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     bgActualAcquisitionBuilding: primary.bgActualAcquisitionBuilding,
     bgActualAcquisitionTotal: primary.bgActualAcquisitionTotal,
     // 🔴 `bgPresumedAcquisition*`(K-6/K-7 매매사례가액·감정가액)는 **일부러 병합하지 않는다.**
-    //    값이 「취득일 전후 각 3개월 이내」 가액이라 지분마다 취득일이 다르면 달라지는데, 이 병합은 물건 단위 1값 모델이다.
-    //    그래서 축 B에서는 새 두 방식을 ⑤가 비활성화하고 ⑧이 차단한다(`bgPresumedBlock` — `fractionalSplit`).
-    //    여기에 넣으면 지분마다 취득일이 다른데 같은 금액이 모든 지분 카드에 복제된다.
+    //    값이 「취득일 전후 각 3개월 이내」 가액이라 지분마다 취득일이 다르면 달라진다. 지분 카드마다 **자기 취득일 기준의 물건 전체 값**을
+    //    입력(`BurdenedGiftTrancheBasisBlock`)하고 엔진이 지분율을 곱해 합산한다. 여기에 넣으면 지분마다 취득일이 다른데
+    //    같은 금액이 모든 지분 카드에 복제된다.
     isNonBusinessLand: primary.isNonBusinessLand,
   };
 }

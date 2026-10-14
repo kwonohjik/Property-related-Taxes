@@ -117,7 +117,7 @@ export function validateAssetAcquisition(
   contractAssumedDebtTotal?: number,
   /** 폼-전역 1세대 여부 — 재개발 토지 출자 완공APT 준공일 필수 조건(G3-4). */
   isOneHousehold?: boolean,
-  /** 지분 분할 취득(축 B) 묶음 여부 — 부담부증여 K-6/K-7(매매사례가액·감정가액) 차단 술어의 입력. */
+  /** 지분 분할 취득(축 B) 묶음 여부 — 부담부증여 B/C>1 검사의 스케일 규칙(축 B는 물건 전체 채무를 입력한다). */
   isFractionalSplitAxis?: boolean,
 ): string | null {
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
