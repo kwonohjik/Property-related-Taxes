@@ -432,7 +432,41 @@ describe("#17-2b ① §155⑳ A2 — 거주주택 특례 + 배율 초과 부수�
     expect(d.formulaTrace.gain95Table1 + Math.floor(housingGain * 0.18)).toBe(housingGain); // 표1 보유 9년 18%
     const w = (r.warnings ?? []).find((x) => x.includes("회신 방식을 적용하지 않았습니다"));
     expect(w).toBeDefined();
-    expect(w).toContain("확인 필요");
+    expect(w).toContain("합치는 순서를 정할 근거를 확인하지 못해");
+    expect(w).toContain("확인이 필요합니다");
+    expect(w).not.toContain("다루지 않았습니다"); // 회신 본문을 직접 확인하지 못한 채 단정하는 서술 금지
+    expect(w).not.toMatch(/유리|불리|절감|절세/);
+  });
+
+  it("③ 불변 — A2 + G-3(나중 취득 토지 보유요건 미달): 회신 방식을 쓰지 않고 종전 계산(162,393,399) 유지 · 그 사실을 고지 (일반 경로와 같은 술어)", () => {
+    // 건물 2014-09 · 토지 2023-10 · 양도 2024-06-01(토지 보유 8개월 < 2년) · 20억 · 660㎡ 비도시
+    const over = { landAcquisitionDate: D("2023-10-01") };
+    const r = calculateTransferTax(sepInput(2_000_000_000, 1_600_000_000, 400_000_000, true, over), rates);
+    const d = r.rentalHousingExceptionDetail!;
+    expect(d.scenarioId).toBe("RH-A2");
+    expect(d.formulaTrace.highValueExcessRuling).toBeUndefined();
+    expect(r.totalTax).toBe(162_393_399); // 종전 계산 — 회신 방식 전체를 끈(M8) 코드의 값과 같다(아래 비교 + 뮤테이션으로 확인)
+    expect(r.steps.some((st) => st.label.includes("재산세제과-915"))).toBe(false);
+    const w = (r.warnings ?? []).find((x) => x.includes("나중에 취득한 부수토지가 보유요건"));
+    expect(w).toBeDefined();
+    expect(w).toContain("회신 방식을 적용하지 않았습니다");
+    expect(w).toContain("12억 초과 비율");
+    expect(w).toContain("확인이 필요합니다");
+    expect(w).not.toContain("회신 방식으로 계산했습니다");
+    expect(w).not.toMatch(/유리|불리|절감|절세/);
+    // 같은 사실의 회신 적용 여부는 G-3 술어 하나로 갈린다 — G-3가 아니면(토지를 주택보다 먼저 취득) 회신 방식을 적용한다
+    const ok = calculateTransferTax(sepInput(2_000_000_000, 1_600_000_000, 400_000_000, true), rates);
+    expect(ok.rentalHousingExceptionDetail!.formulaTrace.highValueExcessRuling).toBeDefined();
+    // 9억 시대 양도일이면 고지의 기준금액 라벨이 «9억»이다
+    const old = calculateTransferTax(
+      sepInput(1_500_000_000, 1_200_000_000, 300_000_000, true, { landAcquisitionDate: D("2019-11-01"), transferDate: D("2020-06-01"), acquisitionDate: D("2014-09-01"), acquisitionArea: 900 }),
+      rates,
+    );
+    const wOld = (old.warnings ?? []).find((x) => x.includes("나중에 취득한 부수토지가 보유요건"));
+    if (wOld) {
+      expect(wOld).toContain("9억 초과 비율");
+      expect(wOld).not.toContain("12억");
+    }
   });
 
   it("⑥ 다건 합산(aggregate) 경로도 단건과 같은 세액 — 특례 경로의 income은 장특·안분이 끝난 값이라 이중 차감하지 않는다", () => {
