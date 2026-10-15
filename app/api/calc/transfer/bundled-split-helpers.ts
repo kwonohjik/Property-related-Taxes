@@ -485,6 +485,17 @@ export function buildCompanionEngineInputs(
      *    「단건 ≠ 일괄」 dual-truth였다. 어느 취득원인에 환산이 성립하는지는 엔진이 판정한다.
      */
     useEstimatedAcquisition: c.useEstimatedAcquisition ?? false,
+    // ⑭ 신축·증축 특례(§114조의2) — 컴패니언도 자기 자산의 신축·증축 사실을 엔진에 싣는다(종전엔 ⑫에 없어 입력이 사라졌다).
+    //    ⚠️ 날짜는 `toOptionalDate` 필수 — JSON 경유 string이 그대로 도달하면 5년 비교가 침묵 오작동한다.
+    isSelfBuilt: c.isSelfBuilt,
+    buildingType: c.buildingType,
+    constructionDate: toOptionalDate(c.constructionDate),
+    extensionFloorArea: c.extensionFloorArea,
+    extensionStdPriceAtAcquisition: c.extensionStdPriceAtAcquisition,
+    // §114조의2 가산세 게이트(`calculateBuildingPenalty`)는 산정방식을 본다 — 본체 ④는 `acquisitionMethod: "estimated"`를 싣지만 컴패니언 ④는
+    // 방식 필드가 없어 환산 컴패니언은 신축이어도 게이트에서 막혔다. 엔진에서 이 키를 읽는 곳은 가산세·다필지뿐이라 신축·증축 × 환산일 때만 싣는다
+    // (그 밖의 컴패니언은 종전과 입력 바이트가 같다).
+    ...(c.isSelfBuilt && c.useEstimatedAcquisition ? { acquisitionMethod: "estimated" as const } : {}),
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
     // ⑭ 토지분 취득시 기준시가 단가(소득법 §99①1호 가목) — 면적은 아래 `acquisitionArea`.
     //    없으면 `calcAcqStdPair`가 토지분을 못 만들어 소유자 분리가 조용히 무시된다(침묵 strip 주의).

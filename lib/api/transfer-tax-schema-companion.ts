@@ -271,6 +271,16 @@ export const companionAssetSchema = z.object({
   totalPropertyTransferPrice: z.number().int().positive().optional(),
   /** 매매 시 환산취득가 사용 여부 */
   useEstimatedAcquisition: z.boolean().optional(),
+  /**
+   * ⑫ 신축·증축 특례(소득세법 §114조의2) — 컴패니언(함께양도·지분 카드)도 입력 칸이 있는데 종전엔 ⑫에 없어
+   * **입력해도 엔진에 닿지 않았다**(침묵 strip → 가산세 0). 본체(`transfer-tax-schema-base-shape.ts`)와 같은 필드·같은 형태.
+   * 증축 × 감정가액은 이 경로가 base(증축한 부분의 감정가액)를 받지 못해 ⑧이 막는다.
+   */
+  isSelfBuilt: z.boolean().optional(),
+  buildingType: z.enum(["new", "extension"]).optional(),
+  constructionDate: z.string().date().optional(),
+  extensionFloorArea: z.number().nonnegative().optional(),
+  extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
   acquisitionDate: z.string().date().optional(),
   /** Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정 */

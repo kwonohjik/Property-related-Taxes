@@ -6,7 +6,7 @@
  * 규약은 Phase 1 케이스와 같다(`validation-field-jump-cases.ts` 헤더).
  */
 import { CARRYOVER_DEFAULTS } from "../../lib/stores/calc-wizard-asset-carryover";
-import { withPrimary, type FieldJumpCase } from "./validation-field-jump-cases";
+import { bundle, withPrimary, type FieldJumpCase } from "./validation-field-jump-cases";
 
 const A = 0; // 단건 — 자산 카드 0
 
@@ -359,5 +359,14 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
       buildingType: "extension", extensionFloorArea: "120", constructionDate: "2022-01-01", extensionStdPriceAtAcquisition: "10000000",
       isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000", standardPriceAtAcq: "200000000", extensionAppraisalValue: "999999999999",
     }),
+  },
+  // 함께 양도 컴패니언 × 감정가액 × 신축·증축 — 컴패니언 경로는 산정방식·base를 못 실어 막는다(환산은 가산세가 붙는다)
+  {
+    name: "useEstimatedAcquisition (컴패니언 × 감정가액 × 신축)", field: "useEstimatedAcquisition", step: 0, assetIndex: 1, message: /^자산 2: 함께 양도하는 두 번째 이후 자산/,
+    form: () =>
+      bundle({
+        assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2022-01-01", isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000",
+        standardPriceAtAcq: "200000000", isSelfBuilt: true, buildingType: "new", constructionDate: "2022-01-01",
+      }),
   },
 ];
