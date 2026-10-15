@@ -198,6 +198,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     constructionDate: "",
     extensionFloorArea: "",
     extensionStdPriceAtAcquisition: "",
+    extensionAppraisalValue: "",
     selfOwns: "both",
     hasSeperateLandAcquisitionDate: false,
     landAcquisitionDate: "",

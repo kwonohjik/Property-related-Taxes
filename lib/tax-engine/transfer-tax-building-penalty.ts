@@ -11,6 +11,7 @@
 
 import { addYears } from "date-fns";
 import { applyRate, calculateEstimatedAcquisitionPrice } from "./tax-utils";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /**
@@ -68,20 +69,25 @@ export function calculateBuildingPenalty(
 
 /**
  * §114조의2① 증축부분 한정 penalty base — 정상·손실 경로 공통 (single-source).
- * 통상(비-부담부) 환산(K-5) 양도에서 base를 증축부분 한정 환산취득가로 산출.
- *   증축부분 환산취득가 = 양도가 × (증축부분 취득기준시가 ÷ 양도시 건물 기준시가) — calculateEstimatedAcquisitionPrice 재사용.
- * - 부담부증여(transferType/acquisitionCause)는 step override가 effectiveInput.estimatedBase에 증축부분 base를 이미 실으므로 배제(fullBuildingBase 그대로).
- * - 신축·비환산·증축필드 미입력 시 fullBuildingBase(건물 전체) 유지.
+ * 통상(비-부담부) 양도에서 base를 증축부분 한정 값으로 산출.
+ *   · 환산(K-5): 증축부분 환산취득가 = 양도가 × (증축부분 취득기준시가 ÷ 양도시 건물 기준시가) — calculateEstimatedAcquisitionPrice 재사용.
+ *   · 감정가액: 입력한 「증축한 부분의 감정가액」(`extensionAppraisalValue`) — 조문이 「증축한 부분에 한정한 감정가액」이라 건물 전체로 대신하지 않는다.
+ * - 부담부증여(transferType/acquisitionCause)는 step override가 effectiveInput.estimatedBase·`penaltyAxis`에 증축부분 base를 이미 실으므로 배제(fullBuildingBase 그대로).
+ * - 신축·증축필드 미입력 시 fullBuildingBase(건물 전체) 유지(환산). 감정가액 증축은 게이트가 열렸는데 값이 없으면 오류.
  * finalize STEP 10.5(정상 이익)와 transfer-tax.ts 손실 조기반환(§114조의2② 산출세액0) 양쪽에서 호출 — dual-truth 방지.
+ *
+ * @param penaltyMethod 감정가액 증축을 **이 호출이 맡는** 축의 산정방식. 호출부가 넘긴다 —
+ *   일반건물 카드·부담부증여는 `penaltyAxis`가 이미 증축 한정 base를 싣고 있어 넘기지 않는다(undefined).
  */
 export function resolveExtensionPenaltyBase(
   input: TransferTaxInput,
   fullBuildingBase: number,
+  penaltyMethod?: TransferTaxInput["acquisitionMethod"],
 ): number {
   const isBurdenedGiftPath =
     input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift";
+  if (isBurdenedGiftPath) return fullBuildingBase;
   if (
-    !isBurdenedGiftPath &&
     input.useEstimatedAcquisition &&
     input.buildingType === "extension" &&
     (input.extensionStdPriceAtAcquisition ?? 0) > 0 &&
@@ -92,6 +98,28 @@ export function resolveExtensionPenaltyBase(
       input.extensionStdPriceAtAcquisition!,
       input.standardPriceAtTransfer!,
     );
+  }
+  if (
+    penaltyMethod === "appraisal" &&
+    input.buildingType === "extension" &&
+    calculateBuildingPenalty({ ...input, acquisitionMethod: "appraisal" }, 1) !== null
+  ) {
+    const extensionAppraisal = input.extensionAppraisalValue ?? 0;
+    if (extensionAppraisal <= 0) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "건물을 증축하고 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 " +
+          "증축한 부분의 감정가액에 5% 가산세가 붙으므로 증축한 부분의 감정가액을 입력해야 합니다. " +
+          "건물 전체 감정가액으로 대신할 수 없습니다(증축한 부분에 한정한 금액이 기준입니다).",
+      );
+    }
+    if (fullBuildingBase > 0 && extensionAppraisal > fullBuildingBase) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `증축한 부분의 감정가액이 감정가액(${fullBuildingBase.toLocaleString()}원)보다 클 수 없습니다.`,
+      );
+    }
+    return extensionAppraisal;
   }
   return fullBuildingBase;
 }

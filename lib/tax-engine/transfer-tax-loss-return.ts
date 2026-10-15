@@ -96,7 +96,7 @@ export function buildLossTransferTaxResult({
   const penaltyAxis = input.penaltyAxis ?? effectiveInput.penaltyAxis;
   if (penaltyAxis) pb0 = penaltyAxis.base;
   // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지)
-  pb0 = resolveExtensionPenaltyBase(input, pb0);
+  pb0 = resolveExtensionPenaltyBase(input, pb0, penaltyAxis ? undefined : effectiveInput.acquisitionMethod);
   const pr0 = calculateBuildingPenalty(
     penaltyAxis ? { ...effectiveInput, acquisitionMethod: penaltyAxis.acquisitionMethod } : effectiveInput,
     pb0,

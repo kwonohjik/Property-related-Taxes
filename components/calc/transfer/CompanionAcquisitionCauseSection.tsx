@@ -243,6 +243,8 @@ export function CompanionAcquisitionCauseSection({
           onExtensionFloorAreaChange={(v) => onChange({ extensionFloorArea: v })}
           extensionStdPriceAtAcquisition={asset.extensionStdPriceAtAcquisition}
           onExtensionStdPriceAtAcquisitionChange={(v) => onChange({ extensionStdPriceAtAcquisition: v })}
+          extensionAppraisalValue={asset.extensionAppraisalValue}
+          onExtensionAppraisalValueChange={(v) => onChange({ extensionAppraisalValue: v })}
           selfOwns={asset.selfOwns ?? "both"}
           onSelfOwnsChange={(v) => {
             onChange({

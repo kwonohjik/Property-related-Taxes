@@ -49,6 +49,7 @@ import { unpaidTaxPayload } from "./transfer-unpaid-tax-mode";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { selfBuiltActive } from "./self-built-scope";
+import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
@@ -287,6 +288,11 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     extensionStdPriceAtAcquisition:
       primary?.buildingType === "extension" && primary?.extensionStdPriceAtAcquisition
         ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
+        : undefined,
+    // §114조의2① 감정가액 × 증축 — 증축한 부분에 한정한 감정가액. 단건 ④와 같은 술어·같은 지분 스케일.
+    extensionAppraisalValue:
+      primary && !isBurdenedGift && generalExtensionAppraisalApplies(primary, form.transferDate) && primary.extensionAppraisalValue
+        ? ratioed(primary.extensionAppraisalValue) || undefined
         : undefined,
     extensionFloorArea:
       primary?.buildingType === "extension" && primary?.extensionFloorArea

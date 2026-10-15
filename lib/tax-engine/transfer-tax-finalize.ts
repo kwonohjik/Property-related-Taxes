@@ -438,7 +438,13 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
       : (isEstimatedMode ? effectiveEstimatedBase : 0);
   // §114조의2① 통상(비-부담부) 증축: penalty base를 증축부분 환산취득가로 교체 (부담부는 step override가 effectiveInput.estimatedBase에 반영).
   // 손실 조기반환(transfer-tax.ts)과 동일 헬퍼 — single-source, dual-truth 방지.
-  penaltyBase = resolveExtensionPenaltyBase(input, penaltyBase);
+  // 감정가액 증축은 base를 이미 정한 축(`splitPenaltyAxis` — 분리 취득의 건물 파트·일반건물 카드·부담부증여)이 **아닐 때만** 여기서 맡는다.
+  //   분리 취득의 건물 파트 감정가액 × 증축은 입력 칸이 없어 종전대로 둔다(계획서 §범위 밖).
+  penaltyBase = resolveExtensionPenaltyBase(
+    input,
+    penaltyBase,
+    splitPenaltyAxis ? undefined : effectiveInput.acquisitionMethod,
+  );
   const penaltyResult = calculateBuildingPenalty(
     splitPenaltyAxis
       ? { ...effectiveInput, acquisitionMethod: splitPenaltyAxis.acquisitionMethod }

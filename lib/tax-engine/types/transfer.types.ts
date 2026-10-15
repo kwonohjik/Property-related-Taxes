@@ -1122,6 +1122,13 @@ export interface TransferTaxInput {
    */
   extensionStdPriceAtAcquisition?: number;
   /**
+   * 증축부분에 한정한 감정가액 (원) — §114조의2① 「증축한 부분에 한정한 감정가액」의 5%가 가산세 base.
+   * 통상(비-부담부) 경로에서 buildingType==="extension" + 감정가액(acquisitionMethod==="appraisal") 일 때,
+   * 5년·85㎡·2020.1.1 게이트가 열리면 **필수**(건물 전체 감정가액으로 대신하지 않는다) · 상한은 감정가액(건물 전체).
+   * 부담부증여는 `burdenedGiftInfo.presumedExtensionAppraisalValue`가 같은 역할이라 이 필드를 읽지 않는다.
+   */
+  extensionAppraisalValue?: number;
+  /**
    * 환산취득가 이미 계산 여부 (aggregate 경로 전용).
    * aggregate 엔진이 buildProperties()를 통해 이미 계산된 환산취득가를 전달할 때 true.
    * finalize.ts STEP 10.5: penaltyBase 결정 시 useEstimatedAcquisition fallback으로 사용.

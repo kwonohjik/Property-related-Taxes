@@ -295,6 +295,8 @@ export const propertyBaseShape = {
   extensionFloorArea: z.number().nonnegative().optional(),
   // ⑫ Phase 2 증축 — 증축부분 취득시 기준시가 총액(원). §114조의2① 증축부분 환산취득가 분자.
   extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
+  // ⑫ §114조의2① 감정가액 × 증축 — 증축한 부분에 한정한 감정가액(원). 부담부증여는 `burdenedGiftInfo.presumedExtensionAppraisalValue`.
+  extensionAppraisalValue: z.number().nonnegative().optional(),
   // pre1990Land는 아래 `sec163_9AcquisitionShape` spread에 있다(컴패니언과 단일 소스 · CP-3)
   parcels: z.array(parcelSchema).max(10).optional(),
 

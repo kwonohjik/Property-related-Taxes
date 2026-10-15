@@ -488,6 +488,7 @@ export async function POST(request: NextRequest) {
       extensionFloorArea: p.extensionFloorArea,
       // ⑭ ④와 짝 — 한쪽만 배선하면 엔진에 도달하지 않는다(§114조의2 환산 base).
       extensionStdPriceAtAcquisition: p.extensionStdPriceAtAcquisition,
+      extensionAppraisalValue: p.extensionAppraisalValue,
       pre1990Land: p.pre1990Land
         ? {
             acquisitionDate: toDate(p.pre1990Land.acquisitionDate, "pre1990Land.acquisitionDate"),

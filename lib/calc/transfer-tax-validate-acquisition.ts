@@ -28,6 +28,7 @@ import { lumpSumBaseRequired, usesPhdGate } from "./transfer-lump-sum-base-gate"
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
+import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
@@ -740,6 +741,15 @@ export function validateAssetAcquisition(
     // §114조의2① Phase2: 증축부분 취득시 기준시가 필수 (환산 취득가 산출 기준)
     if (asset.buildingType === "extension" && (!asset.extensionStdPriceAtAcquisition || parseAmount(asset.extensionStdPriceAtAcquisition) <= 0))
       return fieldError("extensionStdPriceAtAcquisition", `${label}: 증축부분 취득(완공)당시 기준시가 총액을 입력해 주세요.`);
+    // §114조의2① 감정가액 × 증축 — base는 「증축한 부분에 한정한 감정가액」이라 건물 전체로 대신할 수 없다(⑤ 칸·④ 전송과 같은 술어).
+    if (generalExtensionAppraisalApplies(asset, formTransferDate)) {
+      const extensionAppraisal = parseAmount(asset.extensionAppraisalValue);
+      if (extensionAppraisal <= 0)
+        return fieldError("extensionAppraisalValue", `${label}: 증축한 건물을 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙습니다 — 증축한 부분의 감정가액을 입력하세요(건물 전체로 대신할 수 없습니다).`);
+      const appraisal = parseAmount(asset.fixedAcquisitionPrice);
+      if (appraisal > 0 && extensionAppraisal > appraisal)
+        return fieldError("extensionAppraisalValue", `${label}: 증축한 부분의 감정가액이 감정가액(${appraisal.toLocaleString()}원)보다 클 수 없습니다.`);
+    }
   }
 
   // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.

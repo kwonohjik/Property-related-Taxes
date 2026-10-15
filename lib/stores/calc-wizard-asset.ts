@@ -584,6 +584,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    * ★ extensionStdPriceAtTransfer(증축부분 양도기준시가)는 §176의2②2호 산식에서 상쇄되므로 입력 불필요.
    */
   extensionStdPriceAtAcquisition: string;
+  /**
+   * 증축부분에 한정한 감정가액 (원) — 통상(비-부담부) 경로 §114조의2① 감정가액 가산세의 base.
+   * buildingType === "extension" + 감정가액 + 5년·85㎡ 게이트가 열릴 때만 입력·필수. 부담부증여는 `bgPresumedExtensionAppraisal`.
+   */
+  extensionAppraisalValue: string;
 
   // ── 토지/건물 취득일 분리 (housing·building 공통) ──
   /**
