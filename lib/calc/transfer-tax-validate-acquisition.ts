@@ -29,6 +29,7 @@ import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre19
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
+import { bgAppraisalBuildingPenaltyApplies } from "./burdened-gift-presumed-acquisition";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
@@ -741,6 +742,15 @@ export function validateAssetAcquisition(
     // §114조의2① Phase2: 증축부분 취득시 기준시가 필수 (환산 취득가 산출 기준)
     if (asset.buildingType === "extension" && (!asset.extensionStdPriceAtAcquisition || parseAmount(asset.extensionStdPriceAtAcquisition) <= 0))
       return fieldError("extensionStdPriceAtAcquisition", `${label}: 증축부분 취득(완공)당시 기준시가 총액을 입력해 주세요.`);
+    // 함께양도 컴패니언·지분 카드 × 감정가액 × 신축·증축 — §114조의2 가산세의 산정방식·base를 컴패니언 경로가 엔진에 싣지 못한다
+    //   (환산은 싣는다 — `bundled-split-helpers.ts`). 본체(첫 자산)는 계산되므로 거기서 입력하도록 안내한다. 부담부증여는 전용 경로(`burdenedGiftInfo`)가 맡는다.
+    if (
+      isNonPrimaryAsset &&
+      asset.transferType !== "burdened_gift" &&
+      asset.isAppraisalAcquisition === true &&
+      bgAppraisalBuildingPenaltyApplies(asset, formTransferDate)
+    )
+      return fieldError("useEstimatedAcquisition", `${label}: 함께 양도하는 두 번째 이후 자산(또는 지분 카드)이 신축·증축한 건물을 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 감정가액의 5% 가산세가 붙는데, 이 자산 카드는 그 가산세를 계산하지 못합니다. 취득가액을 실지거래가액 또는 환산취득가액으로 산정하거나, 이 자산을 첫 번째 자산으로 입력하세요.`);
     // §114조의2① 감정가액 × 증축 — base는 「증축한 부분에 한정한 감정가액」이라 건물 전체로 대신할 수 없다(⑤ 칸·④ 전송과 같은 술어).
     if (generalExtensionAppraisalApplies(asset, formTransferDate)) {
       const extensionAppraisal = parseAmount(asset.extensionAppraisalValue);

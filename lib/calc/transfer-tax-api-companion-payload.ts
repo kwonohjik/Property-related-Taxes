@@ -34,6 +34,7 @@ import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
+import { selfBuiltActive } from "./self-built-scope";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 import { buildCommercialAppurtenantLand, buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
@@ -323,6 +324,26 @@ export function buildAssetPayload(
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
     ownershipRatio: fractional ? ratio : undefined,
+    /**
+     * ⑬ 신축·증축 특례(소득세법 §114조의2) — 컴패니언 카드에도 입력 칸이 있는데 종전엔 **한 번도 싣지 않았다**(침묵 strip → 그 자산만 가산세 0).
+     * 게이트는 단건 ④와 같은 leaf(`selfBuiltActive`)이고 겸용은 단건과 같이 제외한다(겸용 컴패니언은 파트 카드 경로).
+     * 면적·기준시가는 물건 단위 값이라 지분 스케일을 하지 않는다(단건 ④와 같다).
+     */
+    ...((asset.assetKind === "housing" && asset.isMixedUseHouse) || !selfBuiltActive(asset)
+      ? {}
+      : {
+          isSelfBuilt: true,
+          buildingType: asset.buildingType || undefined,
+          constructionDate: asset.constructionDate || undefined,
+          extensionFloorArea:
+            asset.buildingType === "extension" && asset.extensionFloorArea
+              ? parseFloat(asset.extensionFloorArea)
+              : undefined,
+          extensionStdPriceAtAcquisition:
+            asset.buildingType === "extension"
+              ? parseAmount(asset.extensionStdPriceAtAcquisition) || undefined
+              : undefined,
+        }),
     /**
      * ⑬ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언. 누락 시 **침묵 stripping**이라
      * 그 지분만 §159를 타지 않아 세액이 조용히 틀린다.
