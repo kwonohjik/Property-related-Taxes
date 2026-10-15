@@ -248,13 +248,32 @@ export function validateBurdenedGiftAsset(
           `${label}: 부담부증여 ${methodLabel} — ${target}취득 당시 ${methodLabel}을 입력하세요 (소득세법 시행령 §176의2③${acqMethod === "appraisal" ? "2" : "1"}호).`,
         );
       }
-      // 증축 5년 이내 × 감정가액 — 엔진이 같은 조합(`calculateBuildingPenalty`)을 던진다. 증축한 부분의 감정가액을 받는 칸이 없어 가산세 base를 만들 수 없다.
-      //   (신축은 PR-3에서 가산세를 연결해 계산한다.)
+      // 증축 5년 이내 × 감정가액 — §114조의2 가산세 base는 「증축한 부분에 한정한 감정가액」이다. 엔진이 같은 조합(`calculateBuildingPenalty`)에서
+      //   그 값을 요구하므로(`transfer-tax-burdened-gift-step.ts`) 같은 술어로 여기서 먼저 알린다. 신축은 건물 전체 감정가액 안분값이 base라 칸이 없다.
       if (acqMethod === "appraisal" && bgAppraisalExtensionPenaltyApplies(asset, formTransferDate)) {
-        return fieldError(
-          "bgAcquisitionMethod",
-          `${label}: 건물을 증축하고 증축일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙는데, 증축한 부분만의 감정가액을 입력하는 칸이 아직 없어 계산할 수 없습니다. 취득가액 산정방식을 「실지취득가액 안분」으로 선택하거나 별도로 가산세를 검토하세요.`,
-        );
+        // 지분 분할 취득(축 B) — 증축 입력은 주 자산에만 있어 지분마다 다른 증축 감정가액을 받을 경로가 없다. 계속 막는다.
+        if (isFractionalSplitAxis) {
+          return fieldError(
+            "bgAcquisitionMethod",
+            `${label}: 지분 분할 취득(같은 물건을 서로 다른 날 나눠 취득)에서 증축 건물을 5년 이내 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙는데, 지분마다 증축한 부분의 감정가액을 받는 칸이 없어 계산할 수 없습니다. 취득가액 산정방식을 「실지취득가액 안분」으로 선택하세요.`,
+          );
+        }
+        const extensionAppraisal = parseAmount(asset.bgPresumedExtensionAppraisal);
+        if (!extensionAppraisal) {
+          return fieldError(
+            "bgPresumedExtensionAppraisal",
+            `${label}: 건물을 증축하고 증축일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙습니다 — 증축한 부분의 감정가액을 입력하세요(건물 전체로 대신할 수 없습니다).`,
+          );
+        }
+        // 부분이 전체를 넘을 수 없다 — 엔진과 같은 상한(분리 입력이면 건물, 총액 입력이면 총액).
+        const kind = bgPresumedInputKind(asset.assetKind);
+        const cap = kind === "split" ? parseAmount(asset.bgPresumedAcquisitionBuilding) : parseAmount(asset.bgPresumedAcquisitionTotal);
+        if (cap > 0 && extensionAppraisal > cap) {
+          return fieldError(
+            "bgPresumedExtensionAppraisal",
+            `${label}: 증축한 부분의 감정가액이 ${kind === "split" ? "건물 감정가액" : "감정가액 총액"}(${cap.toLocaleString()}원)보다 클 수 없습니다.`,
+          );
+        }
       }
     } else if (acqMethod === "converted") {
       // 상속받은 자산(상속개시일 1985.1.1. 이후) — 영 §163⑨ 평가액이 가목이라 환산 불가(E-1 한계 G6 ·

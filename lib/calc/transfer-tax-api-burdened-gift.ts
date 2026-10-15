@@ -22,6 +22,7 @@ import {
 } from "./burdened-gift-right-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { bgPresumedInputKind, isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
+import { selfBuiltActive } from "./self-built-scope";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -50,6 +51,8 @@ export interface BurdenedGiftInfoPayload {
   presumedBuildingAcquisitionPrice?: number;
   /** K-6/K-7 — 단일자산 총액. */
   presumedAcquisitionTotal?: number;
+  /** K-7 × 증축 5년 이내 — 증축한 부분의 감정가액(§114조의2① 가산세 base, 물건 전체 기준·채무 안분 전). */
+  presumedExtensionAppraisalValue?: number;
   /** 증여재산 평가용 양도시 건물 기준시가 (상증법 §61 — 층별 가감율 적용). */
   giftBuildingStdPriceAtTransfer?: number;
   /**
@@ -163,6 +166,25 @@ function buildCoDonorPresumed(
     default:
       return { presumedAcquisitionTotal: num(primary.bgCoDonorPresumedAcquisitionTotal) };
   }
+}
+
+/**
+ * K-7 × 증축 — 증축한 부분의 감정가액(§114조의2① 가산세 base). 감정가액이고 신축·증축 축이 살아 있는 **증축**일 때만 싣는다.
+ * 이월과세는 싣지 않는다(양도인이 신축·증축한 자가 아니고 엔진이 그 조합을 막는다 — 계획서 §3). 빈 문자열은 undefined(0과 미입력은 다르다).
+ */
+function buildExtensionAppraisal(
+  primary: AssetForm,
+): Pick<BurdenedGiftInfoPayload, "presumedExtensionAppraisalValue"> {
+  if (
+    primary.bgAcquisitionMethod !== "appraisal" ||
+    primary.acquisitionCause === "carryover_gift" ||
+    !selfBuiltActive(primary) ||
+    primary.buildingType !== "extension" ||
+    !primary.bgPresumedExtensionAppraisal
+  ) {
+    return {};
+  }
+  return { presumedExtensionAppraisalValue: parseAmount(primary.bgPresumedExtensionAppraisal) };
 }
 
 /**
@@ -280,6 +302,7 @@ export function buildBurdenedGiftInfo(
      * **0과 미입력은 다르다** — 빈 문자열만 undefined로 떨어뜨린다(`parseAmount("") || undefined`로 쓰면 입력한 0이 둔갑한다).
      */
     ...buildPresumedAcquisition(primary),
+    ...buildExtensionAppraisal(primary),
     // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세용 값 fallback)
     giftBuildingStdPriceAtTransfer: primary.bgGiftBuildingStdPriceAtTransfer
       ? parseAmount(primary.bgGiftBuildingStdPriceAtTransfer)

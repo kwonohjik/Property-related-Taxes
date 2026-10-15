@@ -28,7 +28,6 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { giftBurdenedInheritedConversionBlocked } from "@/lib/calc/gift-burdened-one-house";
 import {
   BG_PRESUMED_LABEL,
-  GIFT_BG_APPRAISAL_EXTENSION_ERROR,
   giftBgAppraisalExtensionPenaltyApplies,
   giftBgPresumedBlockedByInheritance,
   isBgPresumedMethod,
@@ -162,6 +161,7 @@ export function ValuationModeSection({
                 acquisitionMethod: v as BurdenedGiftTransferTaxInput["acquisitionMethod"],
                 // 산정방식 전환 시 이전 방식 전용 필드 초기화 — 매매사례가액↔감정가액은 의미가 달라 금액도 지운다
                 presumedAcquisitionTotal: undefined,
+                presumedExtensionAppraisal: undefined,
                 ...(v === "converted"
                   ? {
                       actualAcquisitionTotal: undefined,
@@ -356,14 +356,15 @@ interface SelfBuiltPenaltyFieldsProps {
   bgt: BurdenedGiftTransferTaxInput;
   set: (patch: Partial<BurdenedGiftTransferTaxInput>) => void;
   isLandType: boolean;
-  /** true면 감정가액(K-7) — 가산세 base가 건물 감정가액이고 증축은 base 칸이 없어 5년 이내면 계산할 수 없다. */
+  /** true면 감정가액(K-7) — 가산세 base가 신축은 건물 감정가액, 증축은 「증축한 부분의 감정가액」 칸이다. */
   isAppraisal: boolean;
   transferDate?: string;
 }
 
 function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDate }: SelfBuiltPenaltyFieldsProps) {
   const baseLabel = isAppraisal ? "감정가액" : "환산취득가액";
-  const extensionBlocked = isAppraisal && giftBgAppraisalExtensionPenaltyApplies(bgt, isLandType, transferDate);
+  // 증축 5년 이내 × 감정가액 — 가산세 base인 「증축한 부분의 감정가액」 칸을 받는다(엔진·⑧과 같은 술어).
+  const showExtensionAppraisal = isAppraisal && giftBgAppraisalExtensionPenaltyApplies(bgt, isLandType, transferDate);
   if (isLandType) return null;
   return (
     <>
@@ -385,6 +386,7 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                       constructionDate: undefined,
                       extensionFloorArea: undefined,
                       extensionStdPriceAtAcquisition: undefined,
+                      presumedExtensionAppraisal: undefined,
                     }),
               })
             }
@@ -404,6 +406,7 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                       // 신축↔증축 전환 시 증축 전용 필드 초기화 (store stale 방지)
                       extensionFloorArea: undefined,
                       extensionStdPriceAtAcquisition: undefined,
+                      presumedExtensionAppraisal: undefined,
                     })
                   }
                   options={[
@@ -416,19 +419,12 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                     {
                       value: "extension",
                       label: "증축",
-                      description: isAppraisal ? "바닥면적 합계 85㎡ 초과 — 증축부분 감정가액 칸이 없어 5년 이내면 계산 불가" : "바닥면적 합계 85㎡ 초과·증축부분 한정 환산취득가 × 5%",
+                      description: isAppraisal ? "바닥면적 합계 85㎡ 초과·증축한 부분 감정가액 × 5%" : "바닥면적 합계 85㎡ 초과·증축부분 한정 환산취득가 × 5%",
                       testId: "bg-building-type-extension",
                     },
                   ]}
                 />
               </FieldCard>
-      {extensionBlocked && (
-        <ToneCard tone="amber" title="증축 건물은 감정가액으로 계산할 수 없습니다" className="py-2">
-          <p data-testid="bg-appraisal-extension-blocked" className="text-xs">
-            {GIFT_BG_APPRAISAL_EXTENSION_ERROR}
-          </p>
-        </ToneCard>
-      )}
               {/* ③ 증축 바닥면적 — extension 전용, §114조의2① 85㎡ 초과 판정 */}
               {bgt.buildingType === "extension" && (
                 <FieldCard
@@ -465,6 +461,28 @@ function SelfBuiltPenaltyFields({ bgt, set, isLandType, isAppraisal, transferDat
                   onChange={(v) => set({ constructionDate: toOptionalDate(v) })}
                 />
               </FieldCard>
+              {/* ⑤' 증축한 부분의 감정가액 — 증축 × 감정가액 × 5년 이내, §114조의2① 가산세 base */}
+              {showExtensionAppraisal && (
+                <FieldCard
+                  label="증축한 부분의 감정가액"
+                  unit="원"
+                  required
+                  hint="증축일부터 5년 이내에 양도하면 증축한 부분에 한정한 감정가액의 5%가 가산세로 붙습니다(소득세법 §114조의2①). 위 감정가액과 같은 기준(물건 전체)으로 입력하세요 — 채무비율 안분은 시스템이 합니다. 건물 전체 감정가액으로 대신할 수 없습니다."
+                >
+                  <CurrencyInput
+                    label="증축한 부분의 감정가액"
+                    hideLabel
+                    hideUnit
+                    value={
+                      bgt.presumedExtensionAppraisal && bgt.presumedExtensionAppraisal > 0
+                        ? String(bgt.presumedExtensionAppraisal)
+                        : ""
+                    }
+                    onChange={(v) => set({ presumedExtensionAppraisal: parseAmount(v) || undefined })}
+                    data-testid="bg-extension-appraisal-value"
+                  />
+                </FieldCard>
+              )}
               {/* ⑤ 증축부분 취득시 기준시가 — extension 전용, §176의2②2호 환산 분자 */}
               {!isAppraisal && bgt.buildingType === "extension" && (
                 <FieldCard

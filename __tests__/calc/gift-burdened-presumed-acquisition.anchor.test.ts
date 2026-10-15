@@ -146,6 +146,34 @@ describe("④ 증여세 마법사 → 양도세 body", () => {
     expect(body.isSelfBuilt).toBeUndefined();
   });
 
+  describe("D-6 증축한 부분의 감정가액 (§114조의2① 증축 base)", () => {
+    const ext = { isSelfBuilt: true, buildingType: "extension", constructionDate: new Date("2021-01-01"), extensionFloorArea: 120, extensionStdPriceAtAcquisition: 10_000_000 };
+    const withExt = (over: Record<string, unknown> = {}) =>
+      apt({ acquisitionMethod: "appraisal", presumedAcquisitionTotal: 150_000_000, presumedExtensionAppraisal: 60_000_000, ...ext, ...over });
+    it("감정가액 × 증축이면 burdenedGiftInfo에 싣는다", () => {
+      expect(bgi(buildGiftBurdenedTransferBody(withExt(), form(apt()))).presumedExtensionAppraisalValue).toBe(60_000_000);
+    });
+    it("🔴 구별력 — 신축이면 stale 값이 있어도 싣지 않는다", () => {
+      expect(bgi(buildGiftBurdenedTransferBody(withExt({ buildingType: "new" }), form(apt()))).presumedExtensionAppraisalValue).toBeUndefined();
+    });
+    it("🔴 구별력 — 매매사례가액이면 싣지 않는다", () => {
+      expect(bgi(buildGiftBurdenedTransferBody(withExt({ acquisitionMethod: "salesCase" }), form(apt()))).presumedExtensionAppraisalValue).toBeUndefined();
+    });
+    it("🔴 구별력 — 신축·증축 토글이 꺼져 있으면(stale) 싣지 않는다", () => {
+      expect(bgi(buildGiftBurdenedTransferBody(withExt({ isSelfBuilt: undefined }), form(apt()))).presumedExtensionAppraisalValue).toBeUndefined();
+    });
+    it("토지는 건물 행위가 아니라 싣지 않는다", () => {
+      const body = buildGiftBurdenedTransferBody(
+        land({ acquisitionMethod: "appraisal", presumedAcquisitionTotal: 250_000_000, presumedExtensionAppraisal: 1, ...ext }),
+        form(land()),
+      );
+      expect(bgi(body).presumedExtensionAppraisalValue).toBeUndefined();
+    });
+    it("0·미입력은 싣지 않는다", () => {
+      expect(bgi(buildGiftBurdenedTransferBody(withExt({ presumedExtensionAppraisal: undefined }), form(apt()))).presumedExtensionAppraisalValue).toBeUndefined();
+    });
+  });
+
   it("환산(K-5)·실지(K-4)는 종전과 같다(회귀) — 새 필드를 싣지 않는다", () => {
     const k5 = buildGiftBurdenedTransferBody(apt({ acquisitionMethod: "converted", presumedAcquisitionTotal: 150_000_000 }), form(apt()));
     expect(bgi(k5).acquisitionMethod).toBe("converted");
@@ -194,6 +222,44 @@ describe("④ → /api/calc/transfer 통합", () => {
     expect(r.json.data!.result!.penaltyBase).toBe(60_000_000);
     expect(r.json.data!.result!.penaltyTax).toBe(3_000_000);
   });
+
+  it("증축 5년 이내 아파트 × 감정가액 150M · 증축한 부분 60M — 가산세 1,200,000 (건물 전체 3,000,000이 아니다)", async () => {
+    const body = buildGiftBurdenedTransferBody(
+      apt({
+        acquisitionMethod: "appraisal",
+        presumedAcquisitionTotal: 150_000_000,
+        presumedExtensionAppraisal: 60_000_000,
+        isSelfBuilt: true,
+        buildingType: "extension",
+        constructionDate: new Date("2021-01-01"),
+        extensionFloorArea: 120,
+        extensionStdPriceAtAcquisition: 10_000_000,
+      }),
+      form(apt()),
+    );
+    const r = await send(body);
+    expect(r.status, JSON.stringify(r.json.error)).toBe(200);
+    expect(r.json.data!.result!.penaltyBase).toBe(24_000_000);
+    expect(r.json.data!.result!.penaltyTax).toBe(1_200_000);
+  });
+
+  it("증축한 부분의 감정가액이 없으면 엔진이 건물 전체로 대신하지 않고 거절한다 (④가 칸을 못 실으면 조용히 틀리지 않는다)", async () => {
+    const body = buildGiftBurdenedTransferBody(
+      apt({
+        acquisitionMethod: "appraisal",
+        presumedAcquisitionTotal: 150_000_000,
+        isSelfBuilt: true,
+        buildingType: "extension",
+        constructionDate: new Date("2021-01-01"),
+        extensionFloorArea: 120,
+        extensionStdPriceAtAcquisition: 10_000_000,
+      }),
+      form(apt()),
+    );
+    const r = await send(body);
+    expect(r.status).toBeGreaterThanOrEqual(400);
+    expect(JSON.stringify(r.json.error)).toMatch(/증축한 부분의 감정가액을 입력해야/);
+  });
 });
 
 describe("⑧ 검증", () => {
@@ -218,11 +284,17 @@ describe("⑧ 검증", () => {
     expect(v(apt({ ...ok, isSelfBuilt: true, buildingType: "new" }))).toMatch(/신축일/);
     expect(v(apt({ ...ok, isSelfBuilt: true, buildingType: "new", constructionDate: new Date("2021-01-01") }))).toBeNull();
   });
-  it("V-6 감정가액 + 증축(85㎡ 초과) 5년 이내 → 차단 / 매매사례가액 · 85㎡ 이하는 통과", () => {
+  it("V-6 감정가액 + 증축(85㎡ 초과) 5년 이내 → 증축한 부분의 감정가액 필수 / 매매사례가액 · 85㎡ 이하는 칸 없이 통과", () => {
     const ext = { isSelfBuilt: true, buildingType: "extension", constructionDate: new Date("2021-01-01"), extensionStdPriceAtAcquisition: 10_000_000 };
-    expect(v(apt({ ...ok, ...ext, extensionFloorArea: 120 }))).toMatch(/증축/);
+    expect(v(apt({ ...ok, ...ext, extensionFloorArea: 120 }))).toMatch(/증축한 부분의 감정가액을 입력하세요/);
+    expect(v(apt({ ...ok, ...ext, extensionFloorArea: 120, presumedExtensionAppraisal: 60_000_000 }))).toBeNull();
     expect(v(apt({ ...ok, ...ext, extensionFloorArea: 120, acquisitionMethod: "salesCase" }))).toBeNull();
     expect(v(apt({ ...ok, ...ext, extensionFloorArea: 60 }))).toBeNull();
+  });
+  it("V-6b 증축한 부분의 감정가액이 감정가액 총액보다 크면 차단(엔진과 같은 상한), 같으면 통과", () => {
+    const ext = { isSelfBuilt: true, buildingType: "extension", constructionDate: new Date("2021-01-01"), extensionStdPriceAtAcquisition: 10_000_000, extensionFloorArea: 120 };
+    expect(v(apt({ ...ok, ...ext, presumedExtensionAppraisal: 150_000_001 }))).toMatch(/증축한 부분의 감정가액이 감정가액 총액\(150,000,000원\)보다 클 수 없습니다/);
+    expect(v(apt({ ...ok, ...ext, presumedExtensionAppraisal: 150_000_000 }))).toBeNull();
   });
   it("V-7 새 방식도 취득시 기준시가는 필수(개산공제 base · 총액 분배)", () => {
     expect(v(apt({ ...ok, standardPriceAtAcquisition: 0 }))).toMatch(/취득시 기준시가/);

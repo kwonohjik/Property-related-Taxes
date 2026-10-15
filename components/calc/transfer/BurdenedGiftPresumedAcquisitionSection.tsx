@@ -48,6 +48,8 @@ export function bgAcquisitionMethodPatch(prev: AcqMethod, next: AcqMethod): Part
     bgPresumedAcquisitionLand: "",
     bgPresumedAcquisitionBuilding: "",
     bgPresumedAcquisitionTotal: "",
+    // 증축한 부분의 감정가액은 감정가액 전용이라 방식이 바뀌면 같이 비운다
+    bgPresumedExtensionAppraisal: "",
     // 이월과세 × 새 방식의 당초 증여자 값도 같은 이유로 비운다
     bgCoDonorPresumedAcquisitionLand: "",
     bgCoDonorPresumedAcquisitionBuilding: "",
@@ -60,6 +62,8 @@ interface FieldProps {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 폼-전역 양도일(= 증여일) — 감정가액 × 신축·증축 5년 이내(§114조의2) 판정. */
   transferDate?: string;
+  /** 지분 분할 취득(축 B) — 증축 × 감정가액은 지분마다 증축한 부분의 감정가액을 받을 칸이 없어 이 축에서만 계속 막는다. */
+  fractionalSplit?: boolean;
 }
 
 /** 「취득가액 산정방식」 FieldCard + 4옵션 라디오 (법령 순차 적용 순서: 실지 → 매매사례 → 감정 → 환산). */
@@ -67,6 +71,7 @@ export function BurdenedGiftAcquisitionMethodField({
   asset,
   onChange,
   transferDate,
+  fractionalSplit,
 }: FieldProps) {
   // 상속받은 자산의 환산 차단(E-1 한계 G6) — ⑧ `validateBurdenedGiftAsset`과 같은 술어
   const inheritedConversionBlocked = isPostDeemedInheritance(
@@ -75,8 +80,9 @@ export function BurdenedGiftAcquisitionMethodField({
   );
   // 매매사례가액·감정가액을 고를 수 없는 자산(상속) — ⑧과 같은 `bgPresumedBlock`
   const presumedBlock = bgPresumedBlock(asset);
-  // 증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`). 신축은 가산세를 연결해 계산한다(PR-3).
-  const appraisalPenaltyBlocked = bgAppraisalExtensionPenaltyApplies(asset, transferDate);
+  // 증축 5년 이내 × 감정가액(§114조의2) — 엔진·⑧과 같은 단일 소스(`calculateBuildingPenalty`). 신축은 건물 전체 감정가액으로,
+  // 증축은 「증축한 부분의 감정가액」 칸(아래 입력 블록)으로 가산세를 계산한다. 지분 분할 취득(축 B)만 그 칸을 받을 수 없어 막는다(⑧과 같은 조건).
+  const appraisalPenaltyBlocked = !!fractionalSplit && bgAppraisalExtensionPenaltyApplies(asset, transferDate);
 
   return (
     <FieldCard
@@ -116,7 +122,7 @@ export function BurdenedGiftAcquisitionMethodField({
             description:
               presumedBlock?.short ??
               (appraisalPenaltyBlocked
-                ? "증축 건물을 5년 이내 양도하면 증축한 부분 감정가액의 5% 가산세(소득세법 §114조의2)가 붙는데 그 감정가액을 받는 칸이 아직 없어 쓸 수 없습니다"
+                ? "지분 분할 취득에서 증축 건물을 5년 이내 양도하면 증축한 부분 감정가액의 5% 가산세(소득세법 §114조의2)가 붙는데 지분마다 그 감정가액을 받는 칸이 없어 쓸 수 없습니다"
                 : "매매사례가 없을 때 — 취득일 전후 각 3개월 이내 감정평가법인등의 감정가액 (시행령 §176의2③2호). 필요경비는 개산공제만"),
             disabled: presumedBlock !== null || appraisalPenaltyBlocked,
           },
@@ -165,6 +171,8 @@ interface SectionProps {
   fractionalSplit?: boolean;
   /** 개산공제 base(취득시 기준시가) 입력 위치 안내 — 기본 문구가 가리키는 칸이 이 카드에 없을 때(지분 컴패니언) 덮어쓴다. */
   basisNote?: string;
+  /** 폼-전역 양도일(= 증여일) — 증축 × 5년 이내 판정(「증축한 부분의 감정가액」 칸 노출). */
+  transferDate?: string;
 }
 
 /**
@@ -172,11 +180,14 @@ interface SectionProps {
  * 일반건물 토지·건물 2칸 / 토지 1칸 / 그 외(주택·건물·상업용·재개발 완공 APT) 총액 1칸.
  * 취득시 기준시가(개산공제 base)는 자산 종류별 기존 칸에서 받는다 — 일반건물은 취득 정보의 gb* 칸, 그 외는 「② 양도정보」.
  */
-export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover, fractionalSplit, basisNote }: SectionProps) {
+export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method, carryover, fractionalSplit, basisNote, transferDate }: SectionProps) {
   const label = BG_PRESUMED_LABEL[method];
   const kind = bgPresumedInputKind(asset.assetKind);
   // 이월과세면 당초 증여자 칸을 읽고 쓴다 — 칸 이름만 다르고 입력 형태·검증 규칙은 같다.
   const prefix = carryover ? "당초 증여자의 " : "";
+  // 증축 5년 이내 × 감정가액 — §114조의2 가산세 base인 「증축한 부분의 감정가액」을 받는다(엔진·⑧과 같은 술어). 이월과세·축 B는 받지 않는다.
+  const showExtensionAppraisal =
+    method === "appraisal" && !carryover && !fractionalSplit && bgAppraisalExtensionPenaltyApplies(asset, transferDate);
   const f = carryover
     ? ({ land: "bgCoDonorPresumedAcquisitionLand", building: "bgCoDonorPresumedAcquisitionBuilding", total: "bgCoDonorPresumedAcquisitionTotal" } as const)
     : ({ land: "bgPresumedAcquisitionLand", building: "bgPresumedAcquisitionBuilding", total: "bgPresumedAcquisitionTotal" } as const);
@@ -252,6 +263,21 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
             data-field={f.total}
             value={asset[f.total]}
             onChange={(v) => onChange({ [f.total]: v })}
+          />
+        </FieldCard>
+      )}
+      {showExtensionAppraisal && (
+        <FieldCard
+          label="증축한 부분의 감정가액"
+          hint="건물을 증축하고 증축일부터 5년 이내에 양도하면 증축한 부분에 한정한 감정가액의 5%가 가산세로 붙습니다(소득세법 §114조의2①). 위 감정가액과 같은 기준(물건 전체)으로 입력하세요 — 채무비율 안분은 시스템이 합니다. 건물 전체 감정가액으로 대신할 수 없습니다."
+        >
+          <CurrencyInput
+            label=""
+            hideUnit
+            data-field="bgPresumedExtensionAppraisal"
+            data-testid="bg-presumed-extension-appraisal"
+            value={asset.bgPresumedExtensionAppraisal}
+            onChange={(v) => onChange({ bgPresumedExtensionAppraisal: v })}
           />
         </FieldCard>
       )}

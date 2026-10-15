@@ -44,6 +44,8 @@ export const burdenedGiftInfoSchema = z.object({
   presumedBuildingAcquisitionPrice: z.number().int().nonnegative().optional(),
   /** K-6/K-7 — 단일자산 총액. */
   presumedAcquisitionTotal: z.number().int().nonnegative().optional(),
+  /** K-7 × 증축 5년 이내 — 증축한 부분의 감정가액(§114조의2① 가산세 base, 물건 전체 기준·채무 안분 전). */
+  presumedExtensionAppraisalValue: z.number().int().nonnegative().optional(),
   /** 양도시 토지 기준시가 (개별공시지가 × 면적). */
   landStdPriceAtTransfer: z.number().int().nonnegative(),
   /** 양도시 건물 기준시가 합계 (층별 합계). */

@@ -203,6 +203,7 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgPresumedAcquisitionLand === undefined) a.bgPresumedAcquisitionLand = "";
   if (a.bgPresumedAcquisitionBuilding === undefined) a.bgPresumedAcquisitionBuilding = "";
   if (a.bgPresumedAcquisitionTotal === undefined) a.bgPresumedAcquisitionTotal = "";
+  if (a.bgPresumedExtensionAppraisal === undefined) a.bgPresumedExtensionAppraisal = "";
   // 이월과세 §97의2 「당초 증여자」 한 벌 (D-7b) — stale sessionStorage 가드
   // (신규 필드는 옛 저장분에 없으므로 undefined로 도착한다 — CurrencyInput이 uncontrolled로
   //  전환되는 것을 막으려면 빈 문자열로 채워야 한다. memory `feedback_new_asset_field_stale_sessionstorage_guard`)

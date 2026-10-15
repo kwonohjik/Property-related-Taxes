@@ -8,7 +8,8 @@
  *   PG-1. 라디오 4옵션 · 선택 시 입력 칸·개산공제 안내 · 감정가액에서만 신축 위젯 · 매매사례가액으로 바꾸면 값 초기화
  *   PG-2. 감정가액 + 신축 → body에 방식·금액·신축 필드가 실리고 실비는 0
  *   PG-3. 매매사례가액 → body에 신축 필드가 실리지 않는다(조문에 없음)
- *   PG-4. 감정가액 + 증축(85㎡ 초과) 5년 이내 → 안내 카드(계산 불가)
+ *   PG-4. 감정가액 + 증축(85㎡ 초과) 5년 이내 → 「증축한 부분의 감정가액」 칸이 뜬다(환산 전용 증축 기준시가 칸은 안 뜬다) · 신축이면 칸이 없다
+ *   PG-5. 증축한 부분의 감정가액 입력 → body `burdenedGiftInfo.presumedExtensionAppraisalValue`로 실린다
  *
  * 셀렉터·모킹 정책은 `gift-burdened-transfer.spec.ts` 머리 주석과 같다(API는 모킹, body만 검증).
  */
@@ -122,7 +123,7 @@ test.describe("부담부증여 양도세 — 매매사례가액·감정가액 (K
     expect(body.isSelfBuilt).toBeUndefined();
   });
 
-  test("PG-4: 감정가액 + 증축(85㎡ 초과) 5년 이내 → 계산 불가 안내", async ({ page }) => {
+  test("PG-4: 감정가액 + 증축(85㎡ 초과) 5년 이내 → 증축한 부분의 감정가액 칸 · 신축이면 칸이 없다", async ({ page }) => {
     test.setTimeout(120_000);
     await setupTransferApiMock(page);
     const dialog = await openMarketApartment(page);
@@ -130,11 +131,40 @@ test.describe("부담부증여 양도세 — 매매사례가액·감정가액 (K
     await fillAndVerify(presumedInput(dialog), "250000000");
     const selfBuilt = dialog.getByRole("switch", { name: /신축·증축 건물/ });
     await selfBuilt.click();
+    // 신축이면 칸이 없다(건물 전체 감정가액이 base)
+    await expect(dialog.getByTestId("bg-extension-appraisal-value")).toHaveCount(0);
     await dialog.getByTestId("bg-building-type-extension").click();
     await fillBuildingDate(dialog, "2022", "1", "1");
     await fillAndVerify(dialog.getByTestId("bg-extension-floor-area"), "100");
-    await expect(dialog.getByTestId("bg-appraisal-extension-blocked")).toContainText("증축한 부분만의 감정가액을 입력하는 칸이 아직 없어");
+    await expect(dialog.getByTestId("bg-extension-appraisal-value")).toBeVisible();
+    await expect(dialog.getByTestId("bg-appraisal-extension-blocked")).toHaveCount(0);
     // 증축부분 취득시 기준시가 칸은 환산 전용 — 감정가액에서는 뜨지 않는다
     await expect(dialog.getByTestId("bg-extension-std-price-at-acq")).toHaveCount(0);
+    // 85㎡ 이하로 줄이면 대상이 아니라 칸이 사라진다
+    await fillAndVerify(dialog.getByTestId("bg-extension-floor-area"), "60");
+    await expect(dialog.getByTestId("bg-extension-appraisal-value")).toHaveCount(0);
+  });
+
+  test("PG-5: 증축한 부분의 감정가액 → body burdenedGiftInfo.presumedExtensionAppraisalValue", async ({ page }) => {
+    test.setTimeout(120_000);
+    const mock = await setupTransferApiMock(page);
+    const dialog = await openMarketApartment(page);
+    await dialog.getByTestId("bg-acq-method-appraisal").check();
+    await fillAndVerify(presumedInput(dialog), "250000000");
+    await dialog.getByRole("switch", { name: /신축·증축 건물/ }).click();
+    await dialog.getByTestId("bg-building-type-extension").click();
+    await fillBuildingDate(dialog, "2022", "1", "1");
+    await fillAndVerify(dialog.getByTestId("bg-extension-floor-area"), "100");
+    await fillAndVerify(dialog.getByTestId("bg-extension-appraisal-value"), "100000000");
+    await calculate(page, dialog);
+
+    expect(mock.bodies.length, "양도세 API 호출").toBeGreaterThan(0);
+    const body = mock.bodies[0];
+    const info = body.burdenedGiftInfo as Record<string, unknown>;
+    expect(info.acquisitionMethod).toBe("appraisal");
+    expect(info.presumedAcquisitionTotal).toBe(250_000_000);
+    expect(info.presumedExtensionAppraisalValue).toBe(100_000_000);
+    expect(body.buildingType).toBe("extension");
+    expect(body.extensionFloorArea).toBe(100);
   });
 });

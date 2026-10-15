@@ -108,6 +108,8 @@ export function scaleBurdenedGiftInfo(
     presumedLandAcquisitionPrice: s(info.presumedLandAcquisitionPrice),
     presumedBuildingAcquisitionPrice: s(info.presumedBuildingAcquisitionPrice),
     presumedAcquisitionTotal: s(info.presumedAcquisitionTotal),
+    // K-7 × 증축 — 증축한 부분의 감정가액(가산세 base). 같은 물건 전체 값이라 같은 비율로 줄인다.
+    presumedExtensionAppraisalValue: s(info.presumedExtensionAppraisalValue),
     /**
      * 조합원입주권 평가 3항 — 평가액 총액이 `buildingStdPriceAtTransfer`에 실리므로
      * **같은 비율로 함께 줄여야** 자기일관 검사(3항 합 == building std)가 성립한다.

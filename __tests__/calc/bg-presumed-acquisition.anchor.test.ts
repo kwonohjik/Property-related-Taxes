@@ -49,9 +49,9 @@ const housing = (over: Partial<AssetForm> = {}) =>
     ...over,
   });
 
-const V = (a: AssetForm, opts: { date?: string } = {}) => {
+const V = (a: AssetForm, opts: { date?: string; axisB?: boolean } = {}) => {
   const { result, fieldOf } = collectWithFields(() =>
-    validateBurdenedGiftAsset(a, "자산", undefined, opts.date ?? TRANSFER_DATE),
+    validateBurdenedGiftAsset(a, "자산", undefined, opts.date ?? TRANSFER_DATE, opts.axisB),
   );
   return { msg: result, field: result ? fieldOf(result) : undefined };
 };
@@ -162,6 +162,8 @@ describe("⑤ onChange 패치 — 방식 전환 시 presumed 3칸 초기화 (use
         bgPresumedAcquisitionLand: "",
         bgPresumedAcquisitionBuilding: "",
         bgPresumedAcquisitionTotal: "",
+        // 증축한 부분의 감정가액은 감정가액 전용 — 방식이 바뀌면 같이 비운다
+        bgPresumedExtensionAppraisal: "",
         // 이월과세 × 새 방식의 당초 증여자 값도 같이 비운다(의미가 달라 stale 해석 위험)
         bgCoDonorPresumedAcquisitionLand: "",
         bgCoDonorPresumedAcquisitionBuilding: "",
@@ -274,32 +276,86 @@ describe("⑧ validate", () => {
     expect(V(land({ bgPresumedAcquisitionLand: "" })).msg).toMatch(/취득 당시 감정가액을 입력하세요/);
   });
 
-  describe("§114조의2 — 증축 5년 이내 × 감정가액 (신축은 가산세를 연결해 통과 — PR-3)", () => {
+  describe("§114조의2 — 증축 5년 이내 × 감정가액 (신축은 건물 전체 감정가액 — PR-3, 증축은 증축한 부분의 감정가액 칸)", () => {
     const extended = (over: Partial<AssetForm> = {}) =>
-      housing({ isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2020-05-01", ...over });
-    it("감정가액 + 증축(85㎡ 초과) 5년 이내(양도일 2023-06-01) → 차단", () => {
-      const r = V(extended());
-      expect(r.msg).toMatch(/제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세/);
+      housing({
+        isSelfBuilt: true,
+        buildingType: "extension",
+        extensionFloorArea: "120",
+        constructionDate: "2020-05-01",
+        extensionStdPriceAtAcquisition: "10,000,000",
+        bgPresumedExtensionAppraisal: "60,000,000",
+        ...over,
+      });
+    it("증축부분 감정가액을 입력하면 통과한다", () => {
+      expect(V(extended()).msg).toBeNull();
+    });
+    it("감정가액 + 증축(85㎡ 초과) 5년 이내(양도일 2023-06-01) + 증축부분 감정가액 미입력 → 그 칸으로 차단", () => {
+      const r = V(extended({ bgPresumedExtensionAppraisal: "" }));
+      expect(r.msg).toMatch(/증축한 부분의 감정가액을 입력하세요/);
+      expect(r.field).toBe("bgPresumedExtensionAppraisal");
+    });
+    it("🔴 건물 전체 감정가액으로 대신하지 않는다 — 감정가액만 입력하고 증축부분이 비면 통과 못 한다", () => {
+      expect(V(extended({ bgPresumedExtensionAppraisal: "", bgPresumedAcquisitionTotal: "250,000,000" })).msg).not.toBeNull();
+    });
+    it("증축부분 감정가액이 감정가액 총액보다 크면 차단 (엔진과 같은 상한)", () => {
+      const r = V(extended({ bgPresumedExtensionAppraisal: "250,000,001" }));
+      expect(r.msg).toMatch(/증축한 부분의 감정가액이 감정가액 총액\(250,000,000원\)보다 클 수 없습니다/);
+      expect(r.field).toBe("bgPresumedExtensionAppraisal");
+    });
+    it("상한 경계 — 총액과 같으면 통과", () => {
+      expect(V(extended({ bgPresumedExtensionAppraisal: "250,000,000" })).msg).toBeNull();
+    });
+    it("지분 분할 취득(축 B)에서는 계속 막는다 — 지분마다 증축한 부분의 감정가액을 받을 칸이 없다", () => {
+      const r = V(extended(), { axisB: true });
+      expect(r.msg).toMatch(/지분 분할 취득.*증축한 부분의 감정가액/);
       expect(r.field).toBe("bgAcquisitionMethod");
+    });
+    it("🔴 구별력 — 축 B라도 신축은 막지 않는다", () => {
+      expect(V(extended({ buildingType: "new", extensionFloorArea: "" }), { axisB: true }).msg).toBeNull();
     });
     it("🔴 구별력 — 신축은 가산세를 연결해 계산하므로 통과한다", () => {
       expect(V(extended({ buildingType: "new", extensionFloorArea: "" })).msg).toBeNull();
     });
-    it("🔴 구별력 — 매매사례가액은 대상이 아니다", () => {
-      expect(V(extended({ bgAcquisitionMethod: "salesCase" })).msg).toBeNull();
+    it("🔴 구별력 — 매매사례가액은 대상이 아니다(칸이 비어도 통과)", () => {
+      expect(V(extended({ bgAcquisitionMethod: "salesCase", bgPresumedExtensionAppraisal: "" })).msg).toBeNull();
     });
-    it("증축 85㎡ 이하는 §114조의2 대상이 아니라 통과", () => {
-      expect(V(extended({ extensionFloorArea: "60" })).msg).toBeNull();
+    it("증축 85㎡ 이하는 §114조의2 대상이 아니라 칸이 비어도 통과", () => {
+      expect(V(extended({ extensionFloorArea: "60", bgPresumedExtensionAppraisal: "" })).msg).toBeNull();
     });
-    it("5년 초과(양도일 2026-01-01) → 통과", () => {
-      expect(V(extended(), { date: "2026-01-01" }).msg).toBeNull();
+    it("5년 초과(양도일 2026-01-01) → 칸이 비어도 통과", () => {
+      expect(V(extended({ bgPresumedExtensionAppraisal: "" }), { date: "2026-01-01" }).msg).toBeNull();
     });
-    it("신축 아님(isSelfBuilt false) → 통과", () => {
-      expect(V(extended({ isSelfBuilt: false })).msg).toBeNull();
+    it("신축 아님(isSelfBuilt false) → 칸이 비어도 통과", () => {
+      expect(V(extended({ isSelfBuilt: false, bgPresumedExtensionAppraisal: "" })).msg).toBeNull();
     });
     it("양도일을 모르면 판정을 건너뛴다(옛 호출부 호환)", () => {
-      const { result } = collectWithFields(() => validateBurdenedGiftAsset(extended(), "자산"));
+      const { result } = collectWithFields(() => validateBurdenedGiftAsset(extended({ bgPresumedExtensionAppraisal: "" }), "자산"));
       expect(result).toBeNull();
+    });
+
+    describe("④ 변환 — 증축한 부분의 감정가액", () => {
+      const info = (a: AssetForm) => buildBurdenedGiftInfo(a) as unknown as BurdenedGiftInfo;
+      it("감정가액 × 증축이면 payload에 싣는다", () => {
+        expect(info(extended()).presumedExtensionAppraisalValue).toBe(60_000_000);
+      });
+      it("빈 칸은 undefined (0과 미입력은 다르다)", () => {
+        expect(info(extended({ bgPresumedExtensionAppraisal: "" })).presumedExtensionAppraisalValue).toBeUndefined();
+      });
+      it("🔴 구별력 — 신축이면 stale 값이 있어도 싣지 않는다", () => {
+        expect(info(extended({ buildingType: "new" })).presumedExtensionAppraisalValue).toBeUndefined();
+      });
+      it("🔴 구별력 — 매매사례가액이면 싣지 않는다", () => {
+        expect(info(extended({ bgAcquisitionMethod: "salesCase" })).presumedExtensionAppraisalValue).toBeUndefined();
+      });
+      it("신축·증축 토글이 꺼져 있으면(stale) 싣지 않는다", () => {
+        expect(info(extended({ isSelfBuilt: false })).presumedExtensionAppraisalValue).toBeUndefined();
+      });
+    });
+
+    it("방식을 감정가액에서 다른 방식으로 바꾸면 증축한 부분의 감정가액도 비운다", () => {
+      const patch = bgAcquisitionMethodPatch("appraisal", "salesCase");
+      expect(patch.bgPresumedExtensionAppraisal).toBe("");
     });
   });
 

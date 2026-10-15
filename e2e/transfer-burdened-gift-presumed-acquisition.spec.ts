@@ -11,7 +11,8 @@
  *   PA-4. 축 B(지분 분할 취득) — 두 옵션이 활성(지분 카드마다 자기 값을 받는다 — `transfer-burdened-gift-axis-b-presumed.spec.ts`)
  *   PA-6. 단건 상세 계산 명세서·신고서 양식(요약표)이 엔진 값과 일치 — 역산 오표기(음수 취득가액·양도비) 회귀 방지
  *   PA-7. 신축 5년 이내 × 감정가액 — §114조의2 가산세(건물 감정가액 안분분의 5%)가 payload·결과 화면에 반영된다 (PR-3)
- *   PA-8. 증축 5년 이내 × 감정가액 — 증축한 부분의 감정가액 칸이 없어 감정가액 라디오가 비활성
+ *   PA-8. 증축 5년 이내 × 감정가액 — 「증축한 부분의 감정가액」 칸을 입력 → 가산세 1,200,000(증축부분 60M × 40% = 24M의 5%)이 payload·결과 화면에 반영된다
+ *   PA-9. 칸이 비어 있으면 계산을 막고 그 칸으로 안내한다(건물 전체로 대신하지 않는다) · 신축이면 칸이 없다
  *   PA-5. 일반건물 — 토지·건물 감정가액 2칸이 payload(`presumedLand/BuildingAcquisitionPrice`)에 실려 §159로 안분된다
  *
  * ⚠️ 새 옵션의 문구에 「환산취득가액」·「실지취득가액 안분」이 없어야 기존 spec
@@ -302,15 +303,61 @@ test.describe("부담부증여 — 매매사례가액·감정가액 (K-6/K-7)", 
     await expect(statement).not.toContainText("§114조의2 환산취득가액 가산세");
   });
 
-  test("PA-8: 증축 5년 이내 × 감정가액 — 감정가액 라디오 비활성(매매사례는 활성)", async ({ page }) => {
-    test.setTimeout(90_000);
-    await seedAndOpen(page, [
-      newBuiltSeed({ buildingType: "extension", extensionFloorArea: "120", bgAcquisitionMethod: "", bgPresumedAcquisitionTotal: "" }),
-    ]);
+  /** 증축 5년 이내(증축일 2021-01-01 · 양도일 2023-06-01) 주택 — 감정가액 총액 150M, 증축부분 취득시 기준시가 10M. */
+  function extendedSeed(over: Record<string, unknown> = {}) {
+    return newBuiltSeed({
+      buildingType: "extension",
+      extensionFloorArea: "120",
+      extensionStdPriceAtAcquisition: "10000000",
+      bgPresumedExtensionAppraisal: "60000000",
+      ...over,
+    });
+  }
+
+  test("PA-8: 증축 5년 이내 × 감정가액 — 증축한 부분의 감정가액 60M → 가산세 1,200,000", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, [extendedSeed()]);
     const card = page.locator('[data-asset-card-index="0"]');
     await expandAssetSection(page, 2);
-    await expect(card.getByRole("radio", { name: /감정가액/ })).toBeDisabled();
-    await expect(card.getByRole("radio", { name: /매매사례가액/ })).toBeEnabled();
-    await expect(card.getByText(/증축한 부분 감정가액의 5% 가산세/)).toBeVisible();
+    // 라디오는 활성이고 입력 칸이 보인다
+    await expect(card.getByRole("radio", { name: /감정가액/ })).toBeEnabled();
+    await expect(card.getByTestId("bg-presumed-extension-appraisal")).toHaveValue("60,000,000");
+    const res = await calculate(page);
+    // payload — 증축한 부분의 감정가액이 burdenedGiftInfo로 실린다(④⑫⑭)
+    const sent = res.request().postDataJSON() as { burdenedGiftInfo?: Record<string, unknown> };
+    expect(sent.burdenedGiftInfo?.presumedExtensionAppraisalValue).toBe(60_000_000);
+    const body = await res.json();
+    const r = body.data?.result ?? body.result ?? body.data;
+    expect(r.transferBurdenedGiftBreakdown.perAsset.building.acquisitionPrice).toBe(60_000_000); // 양도차익은 건물 전체 감정가액 안분값 그대로
+    expect(r.penaltyBase).toBe(24_000_000);
+    expect(r.penaltyTax).toBe(1_200_000);
+    const statement = page.locator('[data-print-section="detailed-statement"]');
+    await expect(statement).toBeVisible({ timeout: 30_000 });
+    const expandAll = statement.getByRole("button", { name: /전체 펼치기/ });
+    if (await expandAll.isVisible().catch(() => false)) await expandAll.click();
+    await expect(statement).toContainText("§114조의2 감정가액 가산세 1,200,000 (= 24,000,000 × 5%)");
+  });
+
+  test("PA-9: 증축한 부분의 감정가액이 비면 계산을 막고 그 칸으로 안내 · 신축이면 칸이 없다", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedAndOpen(page, [extendedSeed({ bgPresumedExtensionAppraisal: "" })]);
+    const card = page.locator('[data-asset-card-index="0"]');
+    await expandAssetSection(page, 2);
+    await expect(card.getByTestId("bg-presumed-extension-appraisal")).toHaveValue("");
+    let called = false;
+    page.on("request", (rq) => {
+      if (rq.url().includes("/api/calc/transfer") && rq.method() === "POST") called = true;
+    });
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) {
+      await page.getByRole("button", { name: step }).first().click();
+    }
+    await page.getByRole("button", { name: /계산하기/ }).last().click();
+    await expect(page.getByText(/증축한 부분의 감정가액을 입력하세요/).first()).toBeVisible({ timeout: 15_000 });
+    expect(called).toBe(false);
+
+    // 신축은 건물 전체 감정가액이 base라 칸이 없다 (구별력)
+    await seedAndOpen(page, [newBuiltSeed()]);
+    await expandAssetSection(page, 2);
+    await expect(page.locator('[data-asset-card-index="0"]').getByTestId("bg-presumed-extension-appraisal")).toHaveCount(0);
   });
 });

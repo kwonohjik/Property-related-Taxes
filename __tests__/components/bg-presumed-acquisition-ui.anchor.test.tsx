@@ -79,12 +79,52 @@ describe("⑤ 라디오 4옵션", () => {
     expect(radio(/감정가액/).disabled).toBe(false);
   });
 
-  it("증축 5년 이내(85㎡ 초과) × 감정가액 — 감정가액만 비활성(매매사례는 활성)", () => {
-    const a = land({ assetKind: "housing", isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2020-05-01", bgAcquisitionMethod: "" });
-    renderBlock(a, { transferDate: "2023-06-01" });
+  const extended = (over: Partial<AssetForm> = {}) =>
+    land({ assetKind: "housing", isSelfBuilt: true, buildingType: "extension", extensionFloorArea: "120", constructionDate: "2020-05-01", bgPresumedAcquisitionLand: "", bgPresumedAcquisitionTotal: "250,000,000", ...over });
+
+  it("증축 5년 이내(85㎡ 초과) × 감정가액 — 활성이고 「증축한 부분의 감정가액」 칸이 나온다", () => {
+    renderBlock(extended(), { transferDate: "2023-06-01" });
+    expect(radio(/감정가액/).disabled).toBe(false);
+    expect(radio(/매매사례가액/).disabled).toBe(false);
+    expect(screen.getByTestId("bg-presumed-extension-appraisal")).toBeTruthy();
+    expect(screen.getByText("증축한 부분의 감정가액")).toBeTruthy();
+  });
+
+  it("🔴 구별력 — 칸은 증축·85㎡ 초과·5년 이내·감정가액일 때만 나온다", () => {
+    const shown = (a: AssetForm, transferDate = "2023-06-01") => {
+      const { unmount } = renderBlock(a, { transferDate });
+      const has = screen.queryByTestId("bg-presumed-extension-appraisal") !== null;
+      unmount();
+      return has;
+    };
+    expect(shown(extended({ buildingType: "new" }))).toBe(false);
+    expect(shown(extended({ extensionFloorArea: "60" }))).toBe(false);
+    expect(shown(extended(), "2026-01-01")).toBe(false);
+    expect(shown(extended({ bgAcquisitionMethod: "salesCase" }))).toBe(false);
+    expect(shown(extended({ isSelfBuilt: false }))).toBe(false);
+    expect(shown(extended())).toBe(true);
+  });
+
+  it("증축 칸 입력 시 onChange가 bgPresumedExtensionAppraisal patch를 낸다", () => {
+    const calls: Partial<AssetForm>[] = [];
+    render(<BurdenedGiftBlock asset={extended()} onChange={(p) => calls.push(p)} transferDate="2023-06-01" />);
+    fireEvent.change(screen.getByTestId("bg-presumed-extension-appraisal"), { target: { value: "60000000" } });
+    expect(calls.some((c) => "bgPresumedExtensionAppraisal" in c)).toBe(true);
+  });
+
+  it("지분 분할 취득(축 B) × 증축 5년 이내 × 감정가액 — 감정가액만 비활성(매매사례는 활성), 칸은 나오지 않는다", () => {
+    renderBlock(extended({ bgAcquisitionMethod: "" }), { transferDate: "2023-06-01", isFractionalSplit: true });
     expect(radio(/감정가액/).disabled).toBe(true);
     expect(radio(/매매사례가액/).disabled).toBe(false);
-    expect(screen.getByText(/증축한 부분 감정가액의 5% 가산세\(소득세법 §114조의2\)/)).toBeTruthy();
+    expect(screen.getByText(/지분마다 그 감정가액을 받는 칸이 없어 쓸 수 없습니다/)).toBeTruthy();
+    expect(screen.queryByTestId("bg-presumed-extension-appraisal")).toBeNull();
+  });
+
+  it("🔴 구별력 — 축 B에서 감정가액이 이미 선택돼 있어도(stale) 입력 블록에 증축 칸을 내지 않는다", () => {
+    renderBlock(extended(), { transferDate: "2023-06-01", isFractionalSplit: true });
+    // 입력 블록(감정가액 총액 칸)은 렌더되지만 증축 칸은 없다
+    expect(screen.getByText(/감정가액 \(주택·건물 전체\)/)).toBeTruthy();
+    expect(screen.queryByTestId("bg-presumed-extension-appraisal")).toBeNull();
   });
 
   it("신축 5년 이내 × 감정가액 — 가산세를 연결해 계산하므로 비활성이 아니다(PR-3)", () => {

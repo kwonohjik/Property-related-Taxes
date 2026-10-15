@@ -27,9 +27,9 @@ export const GIFT_BG_PRESUMED_INHERITED_ERROR =
   "매매사례가액·감정가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.";
 
 /**
- * **증축** 5년 이내 × 감정가액 — §114조의2 가산세 대상이지만 base(「증축한 부분에 한정한 감정가액」)를 받을 칸이 없는 조합.
- * 엔진이 같은 조합을 던진다(`transfer-tax-burdened-gift-step.ts`) — 판정은 엔진과 같은 단일 소스 `calculateBuildingPenalty`.
- * 신축은 PR-3에서 가산세를 연결해 계산하므로 여기서 막지 않는다. 토지는 건물 행위가 아니라 제외한다.
+ * **증축** 5년 이내 × 감정가액 — §114조의2 가산세 대상이라 base(「증축한 부분에 한정한 감정가액」)를 받아야 하는 조합.
+ * 엔진이 같은 조합에서 그 값을 요구한다(`transfer-tax-burdened-gift-step.ts`) — 판정은 엔진과 같은 단일 소스 `calculateBuildingPenalty`.
+ * 신축은 건물 전체 감정가액의 안분값이 base라 별도 칸이 없다. 토지는 건물 행위가 아니라 제외한다.
  */
 export function giftBgAppraisalExtensionPenaltyApplies(
   bgt: BurdenedGiftTransferTaxInput,
@@ -50,6 +50,12 @@ export function giftBgAppraisalExtensionPenaltyApplies(
   return calculateBuildingPenalty(input, 1) !== null;
 }
 
-export const GIFT_BG_APPRAISAL_EXTENSION_ERROR =
-  "건물을 증축하고 증축일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙는데, " +
-  "증축한 부분만의 감정가액을 입력하는 칸이 아직 없어 계산할 수 없습니다. 취득가액 산정방식을 「실지취득가액」으로 선택하거나 별도로 가산세를 검토하세요.";
+/** 증축 × 감정가액 — 증축한 부분의 감정가액 미입력(⑧). 건물 전체로 대신하지 않는다. */
+export const GIFT_BG_EXTENSION_APPRAISAL_REQUIRED_ERROR =
+  "건물을 증축하고 증축일부터 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙습니다 — " +
+  "증축한 부분의 감정가액을 입력하세요(건물 전체 감정가액으로 대신할 수 없습니다).";
+
+/** 증축한 부분의 감정가액이 감정가액 총액보다 클 때(⑧) — 엔진과 같은 상한. */
+export function giftBgExtensionAppraisalExceedsError(cap: number): string {
+  return `증축한 부분의 감정가액이 감정가액 총액(${cap.toLocaleString()}원)보다 클 수 없습니다.`;
+}

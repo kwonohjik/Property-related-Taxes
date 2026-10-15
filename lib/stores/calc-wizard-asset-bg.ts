@@ -61,6 +61,12 @@ export interface BurdenedGiftFormSlice {
   bgPresumedAcquisitionBuilding: string;
   /** [K-6/K-7] 매매사례가액·감정가액 — 단일자산 (housing·building·commercial_building). 원, string. */
   bgPresumedAcquisitionTotal: string;
+  /**
+   * [K-7 × 증축] 증축한 부분의 감정가액 — 물건 전체 기준·채무 안분 전. 원, string.
+   * 「소득세법」 §114조의2① 가산세 base(증축은 증축한 부분에 한정). 증축 × 감정가액 × 85㎡ 초과 × 5년 이내일 때만 쓴다(`bgAppraisalExtensionPenaltyApplies`).
+   * 감정가액 3칸과 같이 방식 전환 시 비운다. 계획서 docs/00-pm/burdened-gift-appraisal-extension-penalty.plan.md
+   */
+  bgPresumedExtensionAppraisal: string;
 
   // ── 조합원입주권 증여재산 평가 (상증법 §61③ · 상증령 §51② · 상증칙 §16③) ──
   /**

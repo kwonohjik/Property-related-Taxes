@@ -218,6 +218,13 @@ export interface BurdenedGiftInfo {
   presumedLandAcquisitionPrice?: number;
   presumedBuildingAcquisitionPrice?: number;
   presumedAcquisitionTotal?: number;
+  /**
+   * K-7 × **증축** 5년 이내 — 「**증축한 부분에 한정한** 감정가액」(소득세법 §114조의2① 가산세 base). 물건 전체 기준·채무 안분 **전**.
+   * 엔진이 신축 base와 같은 방식으로 채무비율(소령 §159①1호)을 곱해 가산세 base로 쓴다. 증축 × 감정가액 × 85㎡ 초과 × 5년 이내일 때만 필수 —
+   * 그 밖에는 읽지 않는다(신축은 건물 전체 감정가액 안분값이 base). 건물 전체로 대신하지 않는다(과대부과).
+   * ⚠️ `scaleBurdenedGiftInfo` 스케일 대상이다. 계획서: docs/00-pm/burdened-gift-appraisal-extension-penalty.plan.md §2
+   */
+  presumedExtensionAppraisalValue?: number;
 
   // === 조합원입주권 평가 명세 (상증법 §61③ · 상증령 §51② · 상증칙 §16③) ===
   /**
