@@ -8,6 +8,8 @@
  * [수정] 다건 호출(`keepExcessPartsOnClause1Win`)에서만, 파트 중 비사업용 토지(`non_business_land`)가 있으면 ③ 분기에서도 파트를 남긴다.
  *   근거: 소득세법 §104⑤ 후단 — 비사업용 토지와 그 외 토지를 「제2호의 금액을 계산할 때」 별개 자산으로 본다(승패와 무관).
  *   단건은 합산할 짝이 없어 플래그를 넘기지 않는다(단건 불변). 배율 초과분이 없는 자산도 종전 그대로다.
+ *   가드(`otherGroupBucketKeys`): 배율 초과분과 같은 호 버킷 키의 자산·파트가 **다른 rateGroup**에 있으면 접는다 — 다건은 같은 그룹 안에서만 호 버킷을
+ *   묶으므로(D1) 파트를 남겨도 합산되지 못해 2호만 부당하게 낮아진다. D1(그룹 경계) 재검토 전까지의 보호 장치다.
  *
  * 기대값은 엔진을 베끼지 않고 독립 산식(`prog`)으로 도출했다. 파트 과세표준은 엔진 echo를 입력으로 삼았다(주석에 값 명시) —
  * 호별 합산·누진·비사업용 +10%p·지방소득세 절사는 이 파일의 산식이 낸다. 모의 세율표는 누진 8구간(소득세법 §55①).
@@ -16,6 +18,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import { buildCalculatedTaxFormula } from "@/components/calc/results/transfer/DetailedStatementFormulaBuilders";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 const rates = makeMockRates();
@@ -237,6 +240,39 @@ describe("§155⑳ G-3 재귀 — 나중 취득 토지 특례 자산도 플래�
   });
 });
 
+describe("가드 — 같은 호 키가 다른 rateGroup에 있으면 자산 단위로 둔다(현행 유지)", () => {
+  // P: 16억(토지 0.5) · 건물 2018-03-15 · 토지 2014-09-15 · 700㎡ non_urban · 정착 55㎡ · 거주 24 · 2주택 세대(비과세 아님), 양도 2020-09-15.
+  // 짝 Q: 비사업용 토지 12억 / 3억(취득 2014-08-15). P는 단건 승자가 progressive 그룹, Q는 non_business_land 그룹이라 D1이 8호 버킷 합산을 막는다.
+  //   파트를 남기면 산출세액 803,519,999(8호 버킷이 Q와 합쳐지지 못한 채 2호가 낮아짐) — 가드가 막아 현행 818,960,000을 유지한다.
+  //   오라클 정답(8호를 그룹 너머 합산)은 826,219,999 — D1 별건에서 고친다(아래 todo).
+  const p = () => housePart({ S: 1_600_000_000, T: "2020-09-15", bld: "2018-03-15", land: "2014-09-15", lp: 0.5, area: 700, res: 24, oneHH: false, hh: 2 });
+  const q = () => nblLand("2020-09-15", 1_200_000_000, 300_000_000, "2014-08-15");
+
+  it("[P,Q] = [Q,P]: 산출 818,960,000 · 총 900,856,000 (파트를 남기면 803,519,999로 내려간다)", () => {
+    const { ab, ba } = bothOrders("2020-09-15", p(), q());
+    for (const r of [ab, ba]) {
+      expect(r.properties.find((x) => x.propertyId === "P")?.rateGroup).toBe("progressive");
+      expect(r.properties.find((x) => x.propertyId === "Q")?.rateGroup).toBe("non_business_land");
+      expect(r.calculatedTax).toBe(818_960_000);
+      expect(r.totalTax).toBe(900_856_000);
+    }
+  });
+});
+
+describe("표시 — 파트를 남긴 자산의 「산출세액 (참고)」 산식 문구와 금액이 맞는다", () => {
+  it("사용자 사례 P: 문구가 합산 누진세액 63,755,000(= refCalculatedTax)을 말하고 거짓 등식(과세표준 × 세율 − 누진공제)을 내지 않는다", () => {
+    const { ab } = bothOrders(P_USER.T, housePart(P_USER), N_USER());
+    const pb = ab.properties.find((x) => x.propertyId === "P")!;
+    expect(pb.refCalculatedTax).toBe(63_755_000);
+    expect(pb.refCalculatedTaxNote).toContain("합산 누진세액 63,755,000");
+    expect(pb.refCalculatedTaxNote).toContain("자산별 합계 63,640,000");
+    const formula = buildCalculatedTaxFormula(pb);
+    expect(formula).toBe(pb.refCalculatedTaxNote);
+    expect(formula).not.toContain("×");
+    expect(formula).not.toContain("원");
+  });
+});
+
 describe("대조군 — 불변이어야 하는 경로 (수정 전 값 그대로)", () => {
   it("단건: 배율 초과 split 주택 단독은 단건 = 다건(자산 1건) = 70,130,500", () => {
     const single = calculateTransferTax(housePart(P_USER), rates);
@@ -285,4 +321,7 @@ describe("보류 — 이번 범위 밖 (사용자 결정으로 분리)", () => {
   // ② D1: `classifyRateGroup`이 자산 승자(rateGroup)를 따르는 경계 — P 양도가 1,602,397,704 → 1,602,397,705에서 164,015,074 → 146,457,311.
   //    rateGroup 승자 의존이라 이 수정으로는 사라지지 않는다. 별건으로 재검토한다.
   it.todo("D1 경계: P 양도가 1,602,397,704 → 1,602,397,705에서 164,015,074 → 146,457,311 (rateGroup 승자 의존)");
+  // ③ D1 그룹 경계: 위 가드 셀(P progressive 그룹 · Q non_business_land 그룹)의 오라클 정답은 8호 버킷을 그룹 너머 합산한 산출 826,219,999다.
+  //    현행(가드로 자산 단위 유지)은 818,960,000 — 정답과의 차이는 D1(classifyRateGroup이 자산 승자를 따름) 재검토에서 다룬다.
+  it.todo("가드 셀 [P,Q]: 8호 버킷을 rateGroup 너머 합산해 산출 826,219,999 (현행 818,960,000 — D1 별건)");
 });

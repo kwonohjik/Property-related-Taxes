@@ -5,8 +5,8 @@
  */
 
 import { calcTax, parseRatesFromMap, type TransferTaxInput } from "./transfer-tax";
-import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
-import type { SplitRatePart } from "./transfer-tax-split-rate";
+import { resolveSplitAwareTax, computeSplitPartTax } from "./transfer-tax-split-rate";
+import type { SplitRatePart, SplitPartRateContext } from "./transfer-tax-split-rate";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -141,25 +141,52 @@ export function aggregateByGroup(
    * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
    * 단건 엔진(`transfer-tax.ts` STEP 7)과 **같은 헬퍼**를 쓴다(이중 진실 방지).
    */
+  /** 자산 i의 `resolveSplitAwareTax` 입력 — 가드 평가(`unitKeysOf`)도 같은 입력을 쓴다(이중 진실 방지). */
+  const splitCtxOf = (i: number): SplitPartRateContext => ({
+    taxBase: Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]),
+    transferIncome: incomeAfterOffset[i],
+    basicDeduction: allocatedBasic[i],
+    splitDetail: records[i].result.splitDetail,
+    parsedRates: parsedRatesOf(i),
+    taxRateInput: records[i].correctedSingleInput,
+    // houses[] 정밀 중과 판정 — 단건 엔진이 낸 **그 판정**을 그대로 넘긴다 (2026-08-13 F01).
+    // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
+    // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
+    multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
+    // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
+    ...(records[i].result.rentalHousingExceptionDetail?.applied === true
+      ? { rentalHousingTaxableIncome: records[i].income }
+      : {}),
+  });
+  /**
+   * 자산 j가 내는 합산 단위(파트, 없으면 자산) 호 버킷 키들 — 플래그 없이 계산하므로 j 자신의 가드와 순환하지 않는다.
+   * 1호 승으로 접힌 split 자산은 파트를 다시 평가하고, 파트를 얻을 수 없어도 배율 초과분이 있으면 8호 키를 더한다
+   * (근사 — 키를 모르면 합산될 수 있다고 보는 쪽, 곧 파트를 접는 쪽으로 틀린다).
+   */
+  const unitKeysOf = (j: number): string[] => {
+    const ctx = splitCtxOf(j);
+    const tr = resolveSplitAwareTax(ctx);
+    const parts =
+      tr.splitPartDetail?.parts ?? (ctx.rentalHousingTaxableIncome === undefined ? computeSplitPartTax(ctx)?.parts : undefined);
+    const keys = parts
+      ? parts.map((p) => clauseBucketKey(p.candidateClauses, p.appliedRate, `solo-${j}`))
+      : [clauseBucketKey(tr.candidateClauses, tr.appliedRate, `solo-${j}`)];
+    if (records[j].result.splitDetail?.nonBusinessLandPart) keys.push("104-1-8");
+    return keys;
+  };
+  /** 자산 i와 **다른 rateGroup**(비과세 제외)에 있는 합산 단위 키 — 다건 합산은 같은 그룹 안에서만 묶는다(D1). */
+  const otherGroupKeysOf = (i: number): ReadonlySet<string> =>
+    new Set(
+      records.flatMap((r, j) => (j === i || r.result.isExempt || r.rateGroup === records[i].rateGroup ? [] : unitKeysOf(j))),
+    );
   const assetTaxOf = (i: number) => {
     const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
     const tr = resolveSplitAwareTax({
-      taxBase: assetTaxBase,
-      transferIncome: incomeAfterOffset[i],
-      basicDeduction: allocatedBasic[i],
-      splitDetail: records[i].result.splitDetail,
-      parsedRates: parsedRatesOf(i),
-      taxRateInput: records[i].correctedSingleInput,
-      // houses[] 정밀 중과 판정 — 단건 엔진이 낸 **그 판정**을 그대로 넘긴다 (2026-08-13 F01).
-      // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
-      // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
-      multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
+      ...splitCtxOf(i),
       // 1호가 이겨도 배율 초과 비사업용 토지 파트는 8호 버킷 합산에 쓰도록 남긴다(§104⑤ 후단 — 단건은 넘기지 않는다).
+      // 단, 같은 호 키가 다른 rateGroup에 있으면 합산이 막혀 파트 분리가 2호를 부당하게 낮추므로 접는다(D1 재검토 전까지의 가드).
       keepExcessPartsOnClause1Win: true,
-      // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
-      ...(records[i].result.rentalHousingExceptionDetail?.applied === true
-        ? { rentalHousingTaxableIncome: records[i].income }
-        : {}),
+      otherGroupBucketKeys: () => otherGroupKeysOf(i),
     });
     // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
     // 자산은 그룹 하나에만 속하므로 이 대입은 자산당 1회다.
