@@ -58,6 +58,14 @@ const caseA = (patch: Record<string, unknown>) =>
   });
 
 export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
+  // 겸용주택 × 부담부증여 — 겸용 경로가 §159 안분을 읽지 않아 세액 0이 나오므로 막고 양도 형태 칸으로 보낸다
+  {
+    name: "mixed: 겸용주택 × 부담부증여 — 양도 형태", field: "transferType", step: 0, assetIndex: A, message: /^자산: 겸용주택은 부담부증여로 계산할 수 없습니다/,
+    form: mixed({
+      transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1500000000", bgMortgageDebtAmount: "600000000",
+      bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "700000000",
+    }),
+  },
   // ── 취득일 ──
   { name: "mixed: acquisitionDate (건물 취득일)", field: "acquisitionDate", step: 0, assetIndex: A, message: /^자산: 건물 취득일을 입력하세요/, form: mixed({ acquisitionDate: "" }) },
   {

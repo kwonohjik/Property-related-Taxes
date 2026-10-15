@@ -39,6 +39,20 @@ export function runBurdenedGiftStep(
       info: rawInput.burdenedGiftInfo,
       ownershipRatio,
     });
+    // 재개발·재건축 완공 아파트(원조합원)의 취득가액은 종전 부동산의 취득가액이다 — 영 §166③이 확인 불가 시를 환산식으로 직접 정하고(조합원입주권과 같은 근거),
+    // 같은 조 ④2호의 매매사례가액·감정가액은 「평가액」 산정용이다. §166 경로는 이 방식을 읽지 않아 필요경비도 개산공제로 바뀌지 않는다(실측: 실지와 같은 값). 승계조합원은 §166 밖이라 막지 않는다.
+    if (
+      workingInput.propertyType === "redevelopment_apt" &&
+      rawInput.redevelopment?.isSuccessorMember !== true &&
+      (rawInput.burdenedGiftInfo.acquisitionMethod === "appraisal" || rawInput.burdenedGiftInfo.acquisitionMethod === "salesCase")
+    ) {
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        "[burdened_gift] 재개발·재건축 완공 아파트의 취득가액은 종전 부동산(기존건물과 그 부수토지)의 취득가액이라 매매사례가액·감정가액을 쓸 수 없습니다 — " +
+          "「소득세법 시행령」 제166조 제3항은 그 취득가액을 확인할 수 없는 경우를 기준시가 환산식으로 직접 정하고, 같은 조 제4항 제2호의 매매사례가액·감정가액은 " +
+          "취득가액이 아니라 기존건물과 그 부수토지의 「평가액」(관리처분계획등 인가일 전후) 산정에 쓰입니다. 취득가액 산정방식을 「실지취득가액」으로 선택하세요.",
+      );
+    }
     transferBurdenedGiftBreakdown = buildBurdenedGiftBreakdown({
       landStdPriceAtTransfer: rawInput.burdenedGiftInfo.landStdPriceAtTransfer,
       buildingStdPriceAtTransfer: rawInput.burdenedGiftInfo.buildingStdPriceAtTransfer,
