@@ -231,33 +231,51 @@ describe("축 B(부담부증여 지분 카드) × 신축 × 감정가액 — 지
   });
 });
 
-describe("⑧ — 일반 컴패니언 × 감정가액 × 신축·증축은 계산하지 못해 막는다", () => {
+describe("일반 컴패니언 × 감정가액 × 신축·증축 — 이제 계산된다(종전 ⑧ 차단 해제)", () => {
+  // 종전엔 컴패니언 ④⑫⑭가 산정방식(`acquisitionMethod: "appraisal"`)·`appraisalValue`·증축부분 감정가액을 싣지 못해 ⑧이 막았다.
+  // 근거·실측: `companion-appraisal-lump-sum.anchor.test.ts` 헤더.
   const issues = (f: TransferFormData) => collectStepIssues(0, f as never);
-  const BLOCK = /두 번째 이후 자산\(또는 지분 카드\).*감정가액으로 산정하면/;
+  const OLD_BLOCK = /두 번째 이후 자산\(또는 지분 카드\).*감정가액으로 산정하면/;
 
-  it("[V-1] 두 번째 자산 × 감정가액 × 신축 → 그 자산 카드에서 막는다", () => {
-    const hit = issues(form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...SB })])).find((i) => BLOCK.test(i.message));
+  it("[V-1] 두 번째 자산 × 감정가액 × 신축 → 막지 않고 가산세 15,000,000(= 감정가액 3억 × 5%)", async () => {
+    const f = form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...SB })]);
+    expect(issues(f).some((i) => OLD_BLOCK.test(i.message))).toBe(false);
+    const r = await run(f);
+    expect(r.status).toBe(200);
+    const p = propsOf(r.data);
+    expect(p[0].penaltyTax).toBe(0);
+    expect(p[1].penaltyBase).toBe(300_000_000);
+    expect(p[1].penaltyTax).toBe(15_000_000);
+  });
+
+  it("[V-2] 두 번째 자산 × 감정가액 × 증축 → base는 증축한 부분의 감정가액(6천만 × 5% = 3,000,000)", async () => {
+    const r = await run(form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...EXT, extensionAppraisalValue: "60000000" })]));
+    expect(r.status).toBe(200);
+    expect((r.body.companionAssets as Record<string, unknown>[])[0].extensionAppraisalValue).toBe(60_000_000);
+    const p = propsOf(r.data);
+    expect(p[1].penaltyBase).toBe(60_000_000);
+    expect(p[1].penaltyTax).toBe(3_000_000);
+  });
+
+  it("[V-3] 증축부분 감정가액을 비우면 그 자산 카드의 칸에서 막는다(건물 전체로 대신하지 않는다)", () => {
+    const hit = issues(form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...EXT })])).find(
+      (i) => i.field === "extensionAppraisalValue",
+    );
     expect(hit?.assetIndex).toBe(1);
   });
 
-  it("[V-2] 🔴 대조군 — 첫 자산(본체)은 막지 않는다(본체는 계산된다)", () => {
-    expect(issues(form([plain(1, { ...APPRAISAL, ...SB }), plain(2, APPRAISAL)])).some((i) => BLOCK.test(i.message))).toBe(false);
+  it("[V-4] 함께 양도 묶음 안의 지분 50% 자산 × 증축 — 증축부분 감정가액도 감정가액과 같은 지분 스케일(3천만 × 5% = 1,500,000)", async () => {
+    const r = await run(
+      form([plain(1, APPRAISAL), plain(2, { ...APPRAISAL, ...EXT, extensionAppraisalValue: "60000000", ownershipNumerator: "50" })]),
+    );
+    expect(r.status).toBe(200);
+    expect((r.body.companionAssets as Record<string, unknown>[])[0].extensionAppraisalValue).toBe(30_000_000);
+    expect(propsOf(r.data)[1].penaltyTax).toBe(1_500_000);
   });
 
-  it("[V-3] 🔴 대조군 — 환산·5년 초과·신축 아님은 막지 않는다", () => {
-    for (const over of [
-      { ...ESTIMATED, ...SB },
-      { ...APPRAISAL, ...SB, constructionDate: "2015-01-01", acquisitionDate: "2015-01-01" },
-      { ...APPRAISAL },
-    ]) {
-      expect(issues(form([plain(1, APPRAISAL), plain(2, over)])).some((i) => BLOCK.test(i.message)), JSON.stringify(over)).toBe(false);
-    }
-  });
-
-  it("[V-4] 🔴 대조군 — 부담부증여 지분 카드는 전용 경로가 계산하므로 막지 않는다 (숨겨진 일반 방식 플래그가 남아 있어도)", () => {
+  it("[V-5] 🔴 대조군 — 부담부증여 지분 카드는 일반 증축부분 감정가액을 요구하지 않는다(숨겨진 일반 방식 플래그가 남아 있어도)", () => {
     const [a, b] = bundle();
-    // 부담부증여 UI는 일반 산정방식을 숨기되 폼 상태는 보존한다(재토글 복원) — stale `isAppraisalAcquisition`이 차단을 일으키면 안 된다.
-    const stale = { ...b, ...SB, isAppraisalAcquisition: true } as AssetForm;
-    expect(issues(form([a, stale])).some((i) => BLOCK.test(i.message))).toBe(false);
+    const stale = { ...b, ...EXT, isAppraisalAcquisition: true } as AssetForm;
+    expect(issues(form([a, stale])).some((i) => i.field === "extensionAppraisalValue")).toBe(false);
   });
 });

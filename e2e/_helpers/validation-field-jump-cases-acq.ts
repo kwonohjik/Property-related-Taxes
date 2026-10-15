@@ -360,13 +360,15 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
       isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000", standardPriceAtAcq: "200000000", extensionAppraisalValue: "999999999999",
     }),
   },
-  // 함께 양도 컴패니언 × 감정가액 × 신축·증축 — 컴패니언 경로는 산정방식·base를 못 실어 막는다(환산은 가산세가 붙는다)
+  // 함께 양도 컴패니언 × 감정가액 × 증축 — 컴패니언 카드도 「증축한 부분의 감정가액」 칸이 있고 비면 그 칸으로 안내한다
   {
-    name: "useEstimatedAcquisition (컴패니언 × 감정가액 × 신축)", field: "useEstimatedAcquisition", step: 0, assetIndex: 1, message: /^자산 2: 함께 양도하는 두 번째 이후 자산/,
+    name: "extensionAppraisalValue (컴패니언 × 감정가액 × 증축)", field: "extensionAppraisalValue", step: 0, assetIndex: 1,
+    message: /^자산 2: 증축한 건물을 5년 이내에 양도하면서 .*증축한 부분의 감정가액을 입력하세요/,
     form: () =>
       bundle({
         assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2022-01-01", isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000",
-        standardPriceAtAcq: "200000000", isSelfBuilt: true, buildingType: "new", constructionDate: "2022-01-01",
+        standardPriceAtAcq: "200000000", isSelfBuilt: true, buildingType: "extension", constructionDate: "2022-01-01",
+        extensionFloorArea: "120", extensionStdPriceAtAcquisition: "10000000", extensionAppraisalValue: "",
       }),
   },
 ];

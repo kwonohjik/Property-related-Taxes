@@ -21,6 +21,7 @@ import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { buildInheritedAcquisitionPayload } from "./transfer-tax-api-inheritance";
 import { buildInheritedHouseValuationPayload } from "./transfer-tax-api-inheritance";
 import { buildCommercialInheritanceValuationPayload } from "./transfer-tax-api-inheritance";
@@ -35,6 +36,7 @@ import { isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
+import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 import { buildCommercialAppurtenantLand, buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
@@ -185,6 +187,24 @@ export function buildAssetPayload(
   // #17-1 — 같은 날 취득 주택의 배율 초과분 분리는 함께 양도 주택 카드도 같은 술어(`housingExcessNeedsLandSplit`)로 연다.
   const excessCtx = { transferDate, isNonPrimary: true };
   const splitActive = isSplitPayloadActive(asset, asset.transferType === "burdened_gift", excessCtx);
+  /**
+   * ④ 감정가액 컴패니언 — 엔진 `calcTransferGain`의 감정 분기(§97②2호 본문: 감정가액 + 개산공제 §163⑥)는
+   * `acquisitionMethod === "appraisal"`일 때만 돈다. 종전엔 이 표시를 싣지 않아 감정가액이 실가로 읽혀
+   * **개산공제가 0**이었다(⑧이 필수로 받은 취득시 기준시가가 쓰이지 않았다).
+   * 제외 축은 본체 ④(`transfer-tax-api-primary-context.ts`·`transfer-tax-api.ts`)가 「actual」로 고정하는 범위와 같다 —
+   * pre1990 토지등급 환산 · 겸용 · 분리 축 · D2(건물 상속·증여 + 토지 매매). 부담부증여는 `bgAcquisitionMethod`가 따로 정한다.
+   * 매매사례는 ⑧이 컴패니언에서 차단하므로(F41) 싣지 않는다.
+   */
+  const isAppraisalCompanion =
+    asset.acquisitionCause === "purchase" &&
+    asset.isAppraisalAcquisition === true &&
+    asset.isSalesCaseAcquisition !== true &&
+    !asset.useEstimatedAcquisition &&
+    asset.transferType !== "burdened_gift" &&
+    !(asset.assetKind === "housing" && asset.isMixedUseHouse) &&
+    !splitActive &&
+    !hasPre1990LandEstimation(asset) &&
+    !effectiveBuildingCauseMix(asset);
 
   return {
     /**
@@ -324,6 +344,8 @@ export function buildAssetPayload(
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
     ownershipRatio: fractional ? ratio : undefined,
+    // 감정가액 표시 — 취득가액은 위 `fixedAcquisitionPrice`(지분 스케일 완료)가 그대로 감정가액이다.
+    acquisitionMethod: isAppraisalCompanion ? ("appraisal" as const) : undefined,
     /**
      * ⑬ 신축·증축 특례(소득세법 §114조의2) — 컴패니언 카드에도 입력 칸이 있는데 종전엔 **한 번도 싣지 않았다**(침묵 strip → 그 자산만 가산세 0).
      * 게이트는 단건 ④와 같은 leaf(`selfBuiltActive`)이고 겸용은 단건과 같이 제외한다(겸용 컴패니언은 파트 카드 경로).
@@ -342,6 +364,13 @@ export function buildAssetPayload(
           extensionStdPriceAtAcquisition:
             asset.buildingType === "extension"
               ? parseAmount(asset.extensionStdPriceAtAcquisition) || undefined
+              : undefined,
+          // §114조의2① 감정가액 × 증축 — base는 「증축한 부분에 한정한 감정가액」. 단건 ④와 같은 술어·같은 지분 스케일(감정가액과 같은 축).
+          extensionAppraisalValue:
+            isAppraisalCompanion && generalExtensionAppraisalApplies(asset, transferDate) && parseAmount(asset.extensionAppraisalValue) > 0
+              ? fractional
+                ? applyRatio(parseAmount(asset.extensionAppraisalValue), ratio)
+                : parseAmount(asset.extensionAppraisalValue)
               : undefined,
         }),
     /**
