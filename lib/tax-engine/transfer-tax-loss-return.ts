@@ -19,6 +19,7 @@ import { computeAmendment } from "./transfer-tax-amendment";
 import { emitPenaltySteps } from "./transfer-tax-penalty-steps";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { buildTransferResultDetails } from "./transfer-tax-finalize";
+import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
 import { TRANSFER } from "./legal-codes/transfer";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
@@ -91,12 +92,17 @@ export function buildLossTransferTaxResult({
     : ((input.useEstimatedAcquisition || effectiveInput.usedEstimatedAcquisition)
         ? (estimatedBase || effectiveInput.estimatedBase || 0)
         : 0);
-  // 일반건물 카드의 §114조의2 판정 축(건물 파트 감정가액) — 손실(산출세액 0)에도 적용된다(법 §114의2②).
-  //    정상 경로 finalize와 같은 필드(`input.penaltyAxis`)를 같은 순서로 읽는다(dual-truth 방지).
-  const penaltyAxis = input.penaltyAxis ?? effectiveInput.penaltyAxis;
+  // §114조의2 판정 축 — 손실(산출세액 0)에도 적용된다(법 §114의2②). 정상 경로 finalize와 **같은 축을 같은 순서로** 읽는다(dual-truth 방지):
+  //    ① 토지·건물 분리 자산의 건물 파트(증축이면 증축부분 base) ② 일반건물 카드 ③ 부담부증여 §159 스텝.
+  //    🔴 종전엔 ①을 빠뜨려 분리 취득 건물 파트가 환산·감정이어도 손실이면 가산세가 0이었다(실측 — 2026-10-16).
+  const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetail, input);
+  const penaltyAxis = splitBuildingAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   if (penaltyAxis) pb0 = penaltyAxis.base;
-  // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지)
-  pb0 = resolveExtensionPenaltyBase(input, pb0, penaltyAxis ? undefined : effectiveInput.acquisitionMethod);
+  // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지).
+  //   분리 취득의 건물 파트 축은 증축부분 base까지 정했다 — 다시 덮지 않는다(finalize와 같다).
+  if (!splitBuildingAxis) {
+    pb0 = resolveExtensionPenaltyBase(input, pb0, penaltyAxis ? undefined : effectiveInput.acquisitionMethod);
+  }
   const pr0 = calculateBuildingPenalty(
     penaltyAxis ? { ...effectiveInput, acquisitionMethod: penaltyAxis.acquisitionMethod } : effectiveInput,
     pb0,

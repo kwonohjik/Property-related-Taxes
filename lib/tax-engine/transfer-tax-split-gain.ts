@@ -224,6 +224,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     splitLandExpropriationValuationDetail,
     landAcquisitionBasis,
     buildingAcquisitionBasis,
+    buildingStdAtTransfer,
   } = calcSplitAcquisitionPrice(
     acqContract.input,
     landTransferPrice,
@@ -362,6 +363,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     directExpenses: buildingSwap.effectiveDirect,
     appraisalDeduction: buildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: buildingNonActual ? buildingStdAtAcq : undefined,
+    stdPriceAtTransfer: buildingMode === "estimated" ? buildingStdAtTransfer : undefined,
     lumpDeductionBase: buildingNonActual
       ? computeLumpSumDeductionBase(buildingStdAtAcq, ownRatio)
       : undefined,

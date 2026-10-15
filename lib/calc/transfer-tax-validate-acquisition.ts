@@ -29,6 +29,7 @@ import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "./transfer-pre19
 import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
+import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { validateExprValuationParcel } from "./transfer-tax-validate-expropriation";
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
@@ -746,7 +747,8 @@ export function validateAssetAcquisition(
       const extensionAppraisal = parseAmount(asset.extensionAppraisalValue);
       if (extensionAppraisal <= 0)
         return fieldError("extensionAppraisalValue", `${label}: 증축한 건물을 5년 이내에 양도하면서 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 증축한 부분의 감정가액에 5% 가산세가 붙습니다 — 증축한 부분의 감정가액을 입력하세요(건물 전체로 대신할 수 없습니다).`);
-      const appraisal = parseAmount(asset.fixedAcquisitionPrice);
+      // 상한 = 그 건물의 감정가액 — 토지·건물 분리 자산은 건물 파트 감정가액(자산 단위 감정가액 칸이 아니다)
+      const appraisal = parseAmount(asset.isAppraisalAcquisition ? asset.fixedAcquisitionPrice : splitBuildingAcqPriceInput(asset));
       if (appraisal > 0 && extensionAppraisal > appraisal)
         return fieldError("extensionAppraisalValue", `${label}: 증축한 부분의 감정가액이 감정가액(${appraisal.toLocaleString()}원)보다 클 수 없습니다.`);
     }
