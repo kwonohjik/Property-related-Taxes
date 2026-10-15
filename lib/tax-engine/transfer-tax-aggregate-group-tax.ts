@@ -137,10 +137,6 @@ export function aggregateByGroup(
     }
     return parsed;
   };
-  /**
-   * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
-   * 단건 엔진(`transfer-tax.ts` STEP 7)과 **같은 헬퍼**를 쓴다(이중 진실 방지).
-   */
   /** 자산 i의 `resolveSplitAwareTax` 입력 — 가드 평가(`unitKeysOf`)도 같은 입력을 쓴다(이중 진실 방지). */
   const splitCtxOf = (i: number): SplitPartRateContext => ({
     taxBase: Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]),
@@ -179,6 +175,10 @@ export function aggregateByGroup(
     new Set(
       records.flatMap((r, j) => (j === i || r.result.isExempt || r.rateGroup === records[i].rateGroup ? [] : unitKeysOf(j))),
     );
+  /**
+   * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
+   * 단건 엔진(`transfer-tax.ts` STEP 7)과 **같은 헬퍼**를 쓴다(이중 진실 방지).
+   */
   const assetTaxOf = (i: number) => {
     const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
     const tr = resolveSplitAwareTax({
