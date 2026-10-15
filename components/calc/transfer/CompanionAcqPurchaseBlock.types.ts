@@ -101,6 +101,9 @@ export interface BlockProps {
   /** 증축부분 취득시 기준시가 총액 (원). buildingType==="extension" 시 필수. Phase 2. */
   extensionStdPriceAtAcquisition?: string;
   onExtensionStdPriceAtAcquisitionChange?: (v: string) => void;
+  /** 증축부분에 한정한 감정가액 (원). 감정가액 + 증축 + §114조의2 게이트가 열릴 때만 노출·필수(통상 경로). */
+  extensionAppraisalValue?: string;
+  onExtensionAppraisalValueChange?: (v: string) => void;
   /** 토지/건물 취득일 분리 (housing·building 공통) */
   hasSeperateLandAcquisitionDate?: boolean;
   onHasSeperateLandAcquisitionDateChange?: (v: boolean) => void;

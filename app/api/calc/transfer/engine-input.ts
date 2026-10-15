@@ -356,6 +356,7 @@ export function buildTransferEngineInput(
     extensionFloorArea: data.extensionFloorArea,
     // ⑭ Phase 2 증축 — 침묵 strip 방지 명시 매핑
     extensionStdPriceAtAcquisition: data.extensionStdPriceAtAcquisition,
+    extensionAppraisalValue: data.extensionAppraisalValue,
     // 토지/건물 취득일 분리 (선택)
     landAcquisitionDate: toOptionalDate(data.landAcquisitionDate),
     // §104②1·2호 토지 파트 통산 (G-4) — Date 변환 필수

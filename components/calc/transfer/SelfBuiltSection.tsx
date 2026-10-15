@@ -9,6 +9,7 @@
  *   - constructionDate: 완공일
  *   - extensionFloorArea: 증축 부분 바닥면적 (extension 전용)
  *   - extensionStdPriceAtAcquisition: 증축부분 취득시 기준시가 총액 (extension 전용, Phase 2)
+ *   - extensionAppraisalValue: 증축부분에 한정한 감정가액 (extension × 감정가액 × 가산세 게이트가 열릴 때만)
  *
  * acquisitionCause === "purchase" + assetKind in {housing, building} 인 자산에만 노출.
  */
@@ -31,6 +32,13 @@ export interface SelfBuiltSectionProps {
   /** 증축부분 취득(증축완공)당시 기준시가 총액 (원). buildingType==="extension" 시 필수. Phase 2. */
   extensionStdPriceAtAcquisition: string;
   onExtensionStdPriceAtAcquisitionChange: (v: string) => void;
+  /**
+   * 증축부분에 한정한 감정가액 (원) — §114조의2① 감정가액 가산세 base. `showExtensionAppraisal`이 참일 때만 칸이 뜬다
+   * (감정가액 + 증축 + 5년·85㎡·2020.1.1 게이트 — 호출부가 ⑧·④와 같은 술어로 판정해 넘긴다).
+   */
+  showExtensionAppraisal?: boolean;
+  extensionAppraisalValue?: string;
+  onExtensionAppraisalValueChange?: (v: string) => void;
 }
 
 export function SelfBuiltSection({
@@ -44,6 +52,9 @@ export function SelfBuiltSection({
   onExtensionFloorAreaChange,
   extensionStdPriceAtAcquisition,
   onExtensionStdPriceAtAcquisitionChange,
+  showExtensionAppraisal,
+  extensionAppraisalValue,
+  onExtensionAppraisalValueChange,
 }: SelfBuiltSectionProps) {
   return (
     <ToggleCard
@@ -58,6 +69,7 @@ export function SelfBuiltSection({
           onConstructionDateChange("");
           onExtensionFloorAreaChange("");
           onExtensionStdPriceAtAcquisitionChange("");
+          onExtensionAppraisalValueChange?.("");
         }
       }}
     >
@@ -118,6 +130,26 @@ export function SelfBuiltSection({
           />
           <p className="text-xs text-muted-foreground">
             「소득세법」 §114조의2① 가산세 산정 기준액 산출용. 국세청 건물 기준시가 조회 후 면적 × 단가로 총액 입력.
+          </p>
+        </div>
+      )}
+
+      {buildingType === "extension" && showExtensionAppraisal && onExtensionAppraisalValueChange && (
+        <div className="space-y-1.5">
+          <label className="block text-sm font-medium">
+            증축한 부분의 감정가액 (원) <span className="text-destructive">*</span>
+          </label>
+          <CurrencyInput
+            label="증축한 부분의 감정가액"
+            data-field="extensionAppraisalValue"
+            data-testid="extension-appraisal-value"
+            hideUnit
+            value={extensionAppraisalValue ?? ""}
+            onChange={onExtensionAppraisalValueChange}
+          />
+          <p className="text-xs text-muted-foreground">
+            「소득세법」 §114조의2① — 증축한 건물을 5년 이내 양도하면서 취득가액을 감정가액으로 하면 <strong>증축한 부분에 한정한 감정가액</strong>의 5%가 가산세로 붙습니다.
+            건물 전체 감정가액으로 대신할 수 없습니다.
           </p>
         </div>
       )}

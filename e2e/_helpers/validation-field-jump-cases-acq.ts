@@ -345,4 +345,19 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
     field: "extensionStdPriceAtAcquisition", step: 0, assetIndex: A, message: /^자산: 증축부분 취득\(완공\)당시 기준시가/,
     form: selfBuilt({ buildingType: "extension", extensionFloorArea: "30", extensionStdPriceAtAcquisition: "" }),
   },
+  // §114조의2① 통상 경로 감정가액 × 증축 — 「증축한 부분의 감정가액」(건물 전체로 대신할 수 없다)
+  {
+    name: "extensionAppraisalValue (감정가액 × 증축 5년 이내)", field: "extensionAppraisalValue", step: 0, assetIndex: A, message: /^자산: 증축한 건물을 5년 이내에 양도하면서 .*증축한 부분의 감정가액을 입력하세요/,
+    form: selfBuilt({
+      buildingType: "extension", extensionFloorArea: "120", constructionDate: "2022-01-01", extensionStdPriceAtAcquisition: "10000000",
+      isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000", standardPriceAtAcq: "200000000", extensionAppraisalValue: "",
+    }),
+  },
+  {
+    name: "extensionAppraisalValue (감정가액 초과)", field: "extensionAppraisalValue", step: 0, assetIndex: A, message: /^자산: 증축한 부분의 감정가액이 감정가액\(.+원\)보다 클 수 없습니다/,
+    form: selfBuilt({
+      buildingType: "extension", extensionFloorArea: "120", constructionDate: "2022-01-01", extensionStdPriceAtAcquisition: "10000000",
+      isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000", standardPriceAtAcq: "200000000", extensionAppraisalValue: "999999999999",
+    }),
+  },
 ];

@@ -65,6 +65,7 @@ import {
 } from "./transfer-tax-api-inheritance";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { selfBuiltActive } from "./self-built-scope";
+import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
 
 // 하위 호환 재수출 — 기존 import 경로 유지
@@ -423,6 +424,12 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     extensionStdPriceAtAcquisition:
       primary.buildingType === "extension"
         ? parseAmount(primary.extensionStdPriceAtAcquisition) || undefined
+        : undefined,
+    // ④⑬ §114조의2① 감정가액 × 증축 — 「증축한 부분에 한정한 감정가액」. ⑤ 칸·⑧과 같은 술어(`generalExtensionAppraisalApplies`)이고,
+    // 감정가액(`appraisalValue`)과 같은 지분 스케일을 쓴다(base가 그 부분집합이므로).
+    extensionAppraisalValue:
+      !isBurdenedGift && generalExtensionAppraisalApplies(primary, form.transferDate) && primary.extensionAppraisalValue
+        ? ratioed(primary.extensionAppraisalValue) || undefined
         : undefined,
     // ④⑬ 토지·건물 분리 축 (소령 §166⑥·§168②) — 게이트·파트 필드 전체를 sibling 빌더에 위임.
     ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate } }),

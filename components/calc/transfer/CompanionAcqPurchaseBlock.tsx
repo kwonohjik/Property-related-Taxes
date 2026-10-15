@@ -35,6 +35,7 @@ import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { generalExtensionAppraisalApplies } from "@/lib/calc/extension-appraisal-penalty";
 
 /**
  * 취득가액 산정 방식 — 화면상 **단일 축**. 폼 모델(boolean 3개)의 조합을 하나의 union으로
@@ -563,6 +564,10 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             onExtensionFloorAreaChange={props.onExtensionFloorAreaChange}
             extensionStdPriceAtAcquisition={props.extensionStdPriceAtAcquisition ?? ""}
             onExtensionStdPriceAtAcquisitionChange={props.onExtensionStdPriceAtAcquisitionChange ?? (() => {})}
+            // §114조의2① 감정가액 × 증축 — 칸 노출은 ⑧·④와 같은 술어(`generalExtensionAppraisalApplies`). 부담부증여는 제외된다.
+            showExtensionAppraisal={!!props.asset && generalExtensionAppraisalApplies(props.asset, props.transferDate)}
+            extensionAppraisalValue={props.extensionAppraisalValue ?? ""}
+            onExtensionAppraisalValueChange={props.onExtensionAppraisalValueChange}
           />
         )}
     </div>
