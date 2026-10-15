@@ -30,7 +30,7 @@ export function isBgPresumedMethod(method: string | undefined): method is BgPres
   return method === "salesCase" || method === "appraisal";
 }
 
-export type BgPresumedBlockReason = "inheritance";
+export type BgPresumedBlockReason = "inheritance" | "redevelopment";
 
 export interface BgPresumedBlock {
   reason: BgPresumedBlockReason;
@@ -40,7 +40,8 @@ export interface BgPresumedBlock {
   long: string;
 }
 
-type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | "acquisitionDate">;
+type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | "acquisitionDate"> &
+  Partial<Pick<AssetForm, "assetKind" | "redevIsSuccessorMember">>;
 
 /**
  * 새 두 방식을 **고를 수 없는** 자산인가 — ⑤ 비활성과 ⑧ 오류가 같은 이 함수를 쓴다.
@@ -48,6 +49,9 @@ type BlockAsset = Pick<AssetForm, "acquisitionCause" | "inheritanceStartDate" | 
  *
  *  · 상속 — 영 §163⑨가 상속개시일 평가액을 가목(실지거래가액)으로 보므로 나목(감정·매매사례·환산)에 닿지 않는다.
  *    기존 환산 차단 술어(`isPostDeemedInheritance`)와 같은 결론이다.
+ *  · 재개발·재건축 완공 아파트(원조합원) — §166①②가 쓰는 취득가액은 「기존건물과 그 부수토지의 취득가액」이고 영 §166③이 그것을 확인할 수 없는 경우를
+ *    기준시가 환산식으로 **직접** 정한다(조합원입주권과 같은 근거 — R-9). 같은 조 ④2호의 매매사례가액·감정가액은 취득가액이 아니라 「평가액」(관리처분계획등 인가일 전후)
+ *    산정에 쓰인다. 엔진도 §166 경로에서 `appraisalValue`·`similarSalesValue`를 읽지 않는다. 승계조합원(§166 미적용 — §97①1호 일반 경로)은 막지 않는다.
  *  (지분 분할 취득(축 B)은 막지 않는다 — 지분마다 취득일 기준 값을 각 지분 카드가 따로 받고 엔진이 지분율로 합산한다.)
  */
 export function bgPresumedBlock(
@@ -58,6 +62,13 @@ export function bgPresumedBlock(
       reason: "inheritance",
       short: "상속받은 자산은 상증법 평가액이 취득 당시 실지거래가액으로 간주되어 쓸 수 없습니다 (소령 §163⑨)",
       long: "상속받은 자산은 상속개시일 현재 「상속세 및 증여세법」 평가액이 취득 당시 실지거래가액입니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액을 쓸 수 없습니다(소득세법 §97①1호 단서). 「실지취득가액 안분」에 상속개시일 평가액(상속세 신고·결정가액)을 입력하세요.",
+    };
+  }
+  if (asset.assetKind === "redevelopment_apt" && asset.redevIsSuccessorMember !== "yes") {
+    return {
+      reason: "redevelopment",
+      short: "재개발·재건축 완공 아파트는 종전 부동산의 취득가액을 쓰므로 매매사례가액·감정가액을 쓸 수 없습니다 (소령 §166③)",
+      long: "재개발·재건축 완공 아파트의 취득가액은 종전 부동산(기존건물과 그 부수토지)의 취득가액이고, 「소득세법 시행령」 제166조 제3항은 그 취득가액을 확인할 수 없는 경우를 기준시가 환산식으로 직접 정합니다. 같은 조 제4항 제2호의 매매사례가액·감정가액은 취득가액이 아니라 기존건물과 그 부수토지의 「평가액」(관리처분계획등 인가일 전후) 산정에 쓰입니다 — 취득가액 산정방식을 「실지취득가액 안분」으로 선택하세요.",
     };
   }
   return null;

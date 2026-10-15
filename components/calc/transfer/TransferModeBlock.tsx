@@ -182,6 +182,7 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
 
       <RadioCardGroup
         name={`transferType-${asset.assetId ?? "primary"}`}
+        data-field="transferType"
         layout="inline"
         value={currentMode}
         onChange={selectMode}
