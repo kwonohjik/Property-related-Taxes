@@ -169,6 +169,11 @@ export interface SplitPartRateContext {
    * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-parts-in-aggregate.plan.md`.
    */
   aggregateFiling?: boolean;
+  /**
+   * §77 감면소득이 한 파트에만 생기면 그 파트(`publicExpropriationReducedPart`). 주면 파트 내부 기본공제를 **감면 제외 파트에
+   * 먼저** 준다 — 「소득세법」 §103② 「감면소득금액 외의 양도소득금액에서 먼저 공제」.
+   */
+  reducedPart?: "land" | "building";
 }
 
 /**
@@ -313,10 +318,18 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
   if (uniform && !keepsNonHousingParts(ctx)) return { parts: null, judged: true };
 
   // ── §104⑤ 비교과세 ─────────────────────────────────────
-  const allocation = allocateBasicDeductionAcrossParts(
-    seeds.map((_, i) => ({ idx: i, income: incomes[i], rate: preRates[i].appliedRate })),
-    basicDeduction,
-  );
+  // §103② — 감면 파트가 있으면 감면 제외 파트부터, 그 안에서는 세율 높은 파트부터.
+  const isReduced = (k: SplitRatePart["kind"]) =>
+    ctx.reducedPart === "land" ? k === "land" || k === "non_business_land" : ctx.reducedPart === k;
+  const allocEntries = seeds.map((s, i) => ({ idx: i, income: incomes[i], rate: preRates[i].appliedRate, reduced: isReduced(s.kind) }));
+  const firstAlloc = allocateBasicDeductionAcrossParts(allocEntries.filter((e) => !e.reduced), basicDeduction);
+  const allocation = [
+    ...firstAlloc,
+    ...allocateBasicDeductionAcrossParts(
+      allocEntries.filter((e) => e.reduced),
+      basicDeduction - firstAlloc.reduce((s, a) => s + a.amount, 0),
+    ),
+  ];
   const allocated = seeds.map((_, i) => allocation.find((a) => a.idx === i)?.amount ?? 0);
   const taxBases = seeds.map((_, i) => Math.max(0, incomes[i] - allocated[i]));
   // 불변식 — 조용한 오답 방지. 배분액이 파트 소득금액을 넘지 않으므로 성립해야 한다.

@@ -32,11 +32,11 @@ describe("§77 카드 — 파트별 판정 줄 (5B)", () => {
       ...base,
       parts: {
         land: { acquisitionDate: new Date("2024-01-10"), income: 200_000_000 },
-        building: { acquisitionDate: new Date("2010-03-02"), income: 105_000_000, clauseBasis: { calculatedTax: 16_810_000, taxBase: 105_000_000 } },
+        building: { acquisitionDate: new Date("2010-03-02"), income: 105_000_000, clauseBasis: { calculatedTax: 16_810_000, taxBase: 105_000_000, basicDeduction: 0 } },
       },
     });
     // 현금 100% · 2026 양도 개정율 → 감면소득 = 105,000,000 × 현금율, 감면액 = 16,810,000 × 감면소득 / 105,000,000
-    expect(detail.partWise?.clauseBasis).toEqual({ calculatedTax: 16_810_000, taxBase: 105_000_000 });
+    expect(detail.partWise?.clauseBasis).toEqual({ calculatedTax: 16_810_000, taxBase: 105_000_000, basicDeduction: 0 });
     expect(detail.rawReductionAmount).toBe(Math.floor((16_810_000 * detail.breakdown.reducibleIncome) / 105_000_000));
     const { getByTestId, container } = render(<PublicExpropriationDetailCard detail={detail} calculatedTax={base.calculatedTax} taxBase={base.taxBase} />);
     expect(getByTestId("expropriation-clause-basis").textContent).toContain("감면대상 파트의 호로 계산");

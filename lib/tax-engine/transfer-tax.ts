@@ -55,6 +55,7 @@ import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
+import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
 import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
@@ -691,7 +692,10 @@ export function calculateTransferTax(
       ? { ...taxRateInputBase, suppressShortTermRate: true }
       : taxRateInputBase;
   // 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세 (transfer-tax-split-rate.ts)
-  const taxResult = resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput, multiHouseSurchargeResult });
+  const taxResult = resolveSplitAwareTax({
+    taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput, multiHouseSurchargeResult,
+    reducedPart: publicExpropriationReducedPart(input, splitDetail), // §103② — 감면 제외 파트에 기본공제 먼저
+  });
   if (splitDetail) splitDetail.partRateBasisApplied = taxResult.partRateBasisApplied; // D1-3 「세율 기산일」 표시 게이트
   // D2(계획서 §12 D2-Q1) — 건물 상속·증여 전에 취득한 토지의 세율 기산이 건물 취득일로 정해져 구간이 갈린 사실 고지(세액 불변).
   const landBeforeBuildingNotice = landBeforeBuildingAcquisitionRateNotice(effectiveInput, splitDetail);

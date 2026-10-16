@@ -90,7 +90,7 @@ describe("F2-2 단건 — 토지 8개월(3호 50%) + 건물 15년(1호) split, �
     // 결정세액 281,810,000 − 25,806,000 = 256,004,000 + 지방소득세 25,600,400 + 농특세(감면 × 20%) 5,161,200
     const s = calculateTransferTax(P(), rates);
     expect(s.calculatedTax).toBe(281_810_000);
-    expect(s.publicExpropriationDetail?.partWise?.clauseBasis).toEqual({ calculatedTax: 258_060_000, taxBase: 700_000_000 });
+    expect(s.publicExpropriationDetail?.partWise?.clauseBasis).toEqual({ calculatedTax: 258_060_000, taxBase: 700_000_000, basicDeduction: 0 });
     expect(s.reductionAmount).toBe(25_806_000);
     expect(s.totalTax).toBe(286_765_600);
     expect(agg([P()]).totalTax).toBe(286_765_600);
@@ -106,5 +106,41 @@ describe("F2-3 대조 — 합산 누진(§104⑤1호)이 이기면 호가 하나
     expect(s.publicExpropriationDetail?.partWise?.clauseBasis).toBeUndefined();
     expect(s.reductionAmount).toBe(Math.floor((278_010_000 * 70_000_000) / 747_500_000));
     expect(s.reductionAmount).toBe(26_034_381);
+  });
+});
+
+describe("F2-4 §103② — 감면 제외 파트에 기본공제를 먼저 준다 (리뷰 #4)", () => {
+  // 사업인정고시일 2022-06-01 → 소급 2년 이전(2020-06-01 이전) 취득인 토지만 충족. 토지 2010(13년, 장특 26%) · 건물 1년 6개월(40%).
+  const E77b = (cash: number) => ({ type: "public_expropriation", cashCompensation: cash, bondCompensation: 0, businessApprovalDate: D("2022-06-01") });
+  const P = () =>
+    baseTransferInput({
+      propertyType: "building", transferPrice: 1_000_000_000, transferDate: D(T),
+      acquisitionPrice: 500_000_000, acquisitionDate: D("2021-09-20"), landAcquisitionDate: D("2010-03-20"),
+      isOneHousehold: false, householdHousingCount: 1, isSeparateAcquisition: true, landAcqMode: "actual", buildingAcqMode: "actual",
+      landTransferPrice: 650_000_000, buildingTransferPrice: 350_000_000, landStandardPriceAtTransfer: 650_000_000, buildingStandardPriceAtTransfer: 350_000_000,
+      landAcquisitionPrice: 200_000_000, buildingAcquisitionPrice: 300_000_000, expenses: 0, annualBasicDeductionUsed: 0,
+      reductions: [E77b(1_000_000_000)],
+    } as Partial<TransferTaxInput>);
+  const L = () =>
+    baseTransferInput({
+      propertyType: "land", transferPrice: 650_000_000, acquisitionPrice: 200_000_000, acquisitionDate: D("2010-03-20"), transferDate: D(T),
+      isOneHousehold: false, householdHousingCount: 0, isNonBusinessLand: false, expenses: 0, annualBasicDeductionUsed: 0, reductions: [E77b(650_000_000)],
+    } as Partial<TransferTaxInput>);
+  const B = () =>
+    baseTransferInput({
+      propertyType: "building", transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2021-09-20"), transferDate: D(T),
+      isOneHousehold: false, householdHousingCount: 1, expenses: 0, annualBasicDeductionUsed: 0, reductions: [E77b(350_000_000)],
+    } as Partial<TransferTaxInput>);
+
+  it("단건: 토지 333,000,000 · 건물 50,000,000 세율이 같아도 기본공제는 건물에 — 감면 10,726,000 · 총세액 129,232,600 = 분리 신고", () => {
+    // 토지 1호 prog(333,000,000) = 107,260,000 · 감면 = 107,260,000 × 33,300,000 / 333,000,000 (C = 0 — 분수가 1을 넘지 않는다)
+    // 종전: 기본공제가 토지(감면 파트)로 가 D = 330,500,000인데 C = 0이라 분자 > 분모(감면 10,706,378)
+    const s = calculateTransferTax(P(), rates);
+    expect(s.publicExpropriationDetail?.partWise?.clauseBasis).toEqual({ calculatedTax: 107_260_000, taxBase: 333_000_000, basicDeduction: 0 });
+    expect(s.publicExpropriationDetail?.partWise?.basicDeductionOnExcluded).toBe(2_500_000);
+    expect(s.reductionAmount).toBe(10_726_000);
+    expect(s.totalTax).toBe(129_232_600);
+    expect(agg([P()]).totalTax).toBe(129_232_600);
+    expect(agg([L(), B()]).totalTax).toBe(129_232_600);
   });
 });

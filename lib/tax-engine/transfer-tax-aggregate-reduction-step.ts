@@ -89,9 +89,13 @@ export interface PerClauseContext {
   clauseTaxes: Map<string, ClauseTaxEcho>;
   assetClauseKeys: string[][];
   /** 자산별 파트 종류 → 호 버킷 식별자(`aggregateByGroup` echo). 없으면 귀속하지 않는다. */
-  assetPartClauseKeys?: Partial<Record<"land" | "building" | "non_business_land" | "housing", string[]>>[];
+  assetPartClauseKeys?: Partial<Record<PartKind, string[]>>[];
+  /** 자산별 파트 종류 → 세액 계산에서 그 파트가 받은 기본공제(`aggregateByGroup` echo). */
+  assetPartBasic?: Partial<Record<PartKind, number>>[];
   allocatedBasic: number[];
 }
+
+type PartKind = "land" | "building" | "non_business_land" | "housing";
 
 /**
  * 감면 자산이 §90① A·D를 읽을 **호 버킷**.
@@ -102,14 +106,30 @@ export interface PerClauseContext {
  * 감면 파트 자체가 둘 이상의 호에 걸치면(주택 토지 + 배율 초과분) 귀속할 수 없어 종전 키 그대로 둔다(합산 + 안내).
  */
 function reductionClauseKeysOf(i: number, result: TransferTaxResult, ctx: PerClauseContext): string[] {
-  const keys = ctx.assetClauseKeys[i];
-  if (keys.length <= 1) return keys;
+  return reductionAttributionOf(i, result, ctx)?.keys ?? ctx.assetClauseKeys[i];
+}
+
+/**
+ * 귀속이 성립하면 그 호와 **감면 파트가 세액 계산에서 받은 기본공제**(§90①의 C).
+ * C를 그 값으로 잡아야 분모 D(그 호 버킷의 과세표준 — 파트 내부 기본공제 배분 후)와 축이 같다. 자산 단위 식
+ * `배분 기본공제 − (통산 후 소득 − 통산 전 감면소득)`은 차손이 감면 제외 파트에 닿으면 C를 과대로 잡는다(리뷰 #3).
+ */
+function reductionAttributionOf(
+  i: number,
+  result: TransferTaxResult,
+  ctx: PerClauseContext,
+): { keys: string[]; basic: number } | undefined {
+  if (ctx.assetClauseKeys[i].length <= 1) return undefined;
   const partWise = result.publicExpropriationDetail?.partWise;
-  if (result.reductionTypeApplied !== "public_expropriation" || !partWise) return keys;
+  if (result.reductionTypeApplied !== "public_expropriation" || !partWise) return undefined;
   const byKind = ctx.assetPartClauseKeys?.[i] ?? {};
-  const kinds = partWise.eligiblePart === "land" ? (["land", "non_business_land"] as const) : (["building"] as const);
+  // §155⑳ 특례 자산은 파트가 주택분·배율 초과분이라 토지·건물 귀속이 성립하지 않는다.
+  if (byKind.housing) return undefined;
+  const kinds: readonly PartKind[] = partWise.eligiblePart === "land" ? ["land", "non_business_land"] : ["building"];
   const own = [...new Set(kinds.flatMap((k) => byKind[k] ?? []))];
-  return own.length === 1 ? own : keys;
+  if (own.length !== 1) return undefined;
+  const basicByKind = ctx.assetPartBasic?.[i] ?? {};
+  return { keys: own, basic: kinds.reduce((s, k) => s + (basicByKind[k] ?? 0), 0) };
 }
 
 /** `104-1-10|0.7` → 「§104①10호 (70%)」. 호 불명(`solo-*`)은 「호 미상」. */
@@ -158,7 +178,9 @@ function perClauseRowsOf(
     for (const i of members) {
       const own = bucketsOf(assetRecords[i].result);
       const b = sumBucketIncome(own);
-      const c = Math.max(0, ctx.allocatedBasic[i] - Math.max(0, taxableAfterReduction[i] - b));
+      const c =
+        reductionAttributionOf(i, assetRecords[i].result, ctx)?.basic ??
+        Math.max(0, ctx.allocatedBasic[i] - Math.max(0, taxableAfterReduction[i] - b));
       gross += b;
       basic += c;
       buckets.push(...own);
