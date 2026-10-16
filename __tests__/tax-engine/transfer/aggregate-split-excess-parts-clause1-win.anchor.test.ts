@@ -5,9 +5,10 @@
  *   그러면 다건 합산이 그 자산을 파트(토지·건물·배율 초과분) 대신 자산 하나로 접어, 배율 초과분(§104①8호)이 짝 비사업용 토지의 8호 버킷과 합산되지 못했다.
  *   결과: 입력 순서 의존(같은 두 자산이 [P,n] 145,816,000 ↔ [n,P] 163,548,000)과 양도가 1원 차이의 큰 절벽(163,149,928 → 145,269,502).
  *
- * [수정] 다건 호출(`keepExcessPartsOnClause1Win`)에서만, 파트 중 비사업용 토지(`non_business_land`)가 있으면 ③ 분기에서도 파트를 남긴다.
+ * [수정] 다건 호출(`aggregateFiling` — 종전 이름 `keepExcessPartsOnClause1Win`)에서만, 파트 중 비사업용 토지(`non_business_land`)가 있으면 ③ 분기에서도 파트를 남긴다.
  *   근거: 소득세법 §104⑤ 후단 — 비사업용 토지와 그 외 토지를 「제2호의 금액을 계산할 때」 별개 자산으로 본다(승패와 무관).
- *   단건은 합산할 짝이 없어 플래그를 넘기지 않는다(단건 불변). 배율 초과분이 없는 자산도 종전 그대로다.
+ *   단건은 합산할 짝이 없어 플래그를 넘기지 않는다(단건 불변). 배율 초과분이 없는 주택 split은 종전 그대로다.
+ *   (비주택 토지·건물 split은 2026-10-16 파트 유지로 확장 — `aggregate-split-nonhouse-parts-kept.anchor.test.ts`.)
  *   #2214는 같은 호 키가 다른 rateGroup에 있으면 파트를 접는 가드를 두었다(호 버킷이 세율군 안에서만 합산되던 D1 때문).
  *   2026-10-16 D1 해소로 호 버킷을 신고 전체에서 합산하게 되어 가드를 제거했다(계획서 `transfer-104-5-clause-bucket-return-wide.plan.md`).
  *
@@ -346,9 +347,15 @@ describe("대조군 — 불변이어야 하는 경로 (수정 전 값 그대로)
     const { ab, ba } = bothOrders("2020-09-15", rhe, nblLand("2020-09-15", 1_200_000_000, 300_000_000, "2014-08-15"));
     expect([ab.totalTax, ba.totalTax]).toEqual([499_986_142, 499_986_142]);
   });
+});
 
-  it("DOWN-3: 배율 초과분 없는 비주택 토지·건물 split + 짝 비사업용 12억/3억 — 산출 979,160,000 유지(범위 밖: B-ALL 확장 금지)", () => {
-    // 토지 1년6월 2.5억/2억, 건물 5년 19억/3억, 2020-09-15. 배율 초과분이 없으므로 이 수정은 건드리지 않는다.
+describe("비주택 split 파트 유지(P3)로 값이 바뀐 셀 — 종전 범위 가드", () => {
+  it("DOWN-3: 배율 초과분 없는 비주택 토지·건물 split + 짝 비사업용 12억/3억 — 산출 976,660,000(파트 유지, P3)", () => {
+    // 토지 1년6월 2.5억/2억, 건물 5년 19억/3억, 2020-09-15. 배율 초과분이 없어 이 파일의 수정(#2214)은 건드리지 않았고,
+    // 종전 값 979,160,000은 자산 하나로 접힌 값(자산 전체 1,490,000,000 누진 604,560,000 + 짝 374,600,000)이었다.
+    // 비주택 split 파트 유지(계획서 `transfer-104-5-split-nonhouse-parts-in-aggregate.plan.md`)로
+    // 토지 5천만 × 40% 20,000,000 + 건물 prog(1,440,000,000) 582,060,000 + 짝 374,600,000 = 976,660,000(토지·건물 분리 신고와 같다).
+    // 손계산·분리 신고 대조는 `aggregate-split-nonhouse-parts-kept.anchor.test.ts` P3-2.
     const nh = baseTransferInput({
       propertyType: "building", transferPrice: 2_150_000_000, transferDate: D("2020-09-15"),
       acquisitionPrice: 500_000_000, acquisitionDate: D("2015-09-15"), landAcquisitionDate: D("2019-03-15"),
@@ -359,14 +366,8 @@ describe("대조군 — 불변이어야 하는 경로 (수정 전 값 그대로)
     } as Partial<TransferTaxInput>);
     const { ab, ba } = bothOrders("2020-09-15", nh, nblLand("2020-09-15", 1_200_000_000, 300_000_000, "2014-08-15"));
     for (const r of [ab, ba]) {
-      expect(r.calculatedTax).toBe(979_160_000);
-      expect(r.totalTax).toBe(1_077_076_000);
+      expect(r.calculatedTax).toBe(976_660_000);
+      expect(r.totalTax).toBe(1_074_326_000);
     }
   });
-});
-
-describe("보류 — 이번 범위 밖 (사용자 결정으로 분리)", () => {
-  // ① B-ALL 확장: 배율 초과분이 없는 토지·건물 split(다른 호 유형)까지 파트를 남기면 gate 7(`transfer-tax-split-rate.ts` 세율 동일 합산)과
-  //    Q3 합산 단위 키가 어긋나 새 불연속이 생긴다. 별건으로 재검토한다.
-  it.todo("배율 초과분 없는 토지·건물 split(DOWN-3 유형)도 파트를 남겨 호별 합산되는가 — gate 7 · Q3 키 정합 후");
 });

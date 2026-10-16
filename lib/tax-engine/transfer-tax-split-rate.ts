@@ -152,15 +152,21 @@ export interface SplitPartRateContext {
    */
   rentalHousingTaxableIncome?: number;
   /**
-   * 1호(합산 누진)가 이기고 그 값이 자산 단위 세액과 같아도 **배율 초과 비사업용 토지 파트가 있으면** 파트를 자산에 남긴다 — 다건 전용.
+   * 다건 신고(§104⑤ 합산) 호출 — 파트를 자산의 합산 단위로 **승패와 무관하게** 남긴다. 다건 전용.
    *
-   * 다건 §104⑤ 합산은 파트가 있는 자산만 파트(호별 버킷)로 펼친다. 파트를 떼어 버리면 배율 초과분(§104①8호)이 짝 비사업용 토지의
-   * 8호 버킷과 합산되지 못하고 자산 하나로 접혀, 양도 순서에 따라 세액이 갈리고 1원 경계에서 세액이 크게 뛴다.
-   * 소득세법 §104⑤ 후단이 비사업용 토지와 그 외 토지를 「제2호의 금액을 계산할 때」 별개 자산으로 보므로 승패와 무관하게 분리한다.
+   * 다건 §104⑤ 합산은 파트가 있는 자산만 파트(호별 버킷)로 펼친다. 파트를 떼어 버리면 자산 하나로 접혀
+   * 합산 단위가 금액에 따라 바뀌고, 1원 경계에서 세액이 크게 뛴다. 이 플래그가 켜지면:
+   *   ① 1호(합산 누진)가 이기고 그 값이 자산 단위 세액과 같아도 파트를 남긴다 —
+   *      · 배율 초과 비사업용 토지 파트가 있으면(#2214). 소득세법 §104⑤ 후단이 비사업용 토지와 그 외 토지를
+   *        「제2호의 금액을 계산할 때」 별개 자산으로 본다.
+   *      · 비주택 토지·건물 split이면(P3). 토지·건물은 별개 자산으로 파트별 세율을 적용한다(G-1).
+   *   ② 비주택 토지·건물 split은 파트 세율이 같아도 게이트 7에서 접지 않는다 — 다건 합산 단위는 세율이 아니라
+   *      해당 호 집합(Q3 `clauseBucketKey`)이고, 키가 같은 파트는 다건 버킷이 다시 합산한다.
    * 단건(`transfer-tax.ts`·finalize·§155⑳ 단건 경로)은 합산할 짝이 없어 넘기지 않는다 — 단건 산식·산식 문구는 종전 그대로다.
    * §155⑳ 나중 취득 토지(G-3) 재귀(`...ctx`)에도 그대로 전파된다 — 별도 차단하지 않는다.
+   * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-parts-in-aggregate.plan.md`.
    */
-  keepExcessPartsOnClause1Win?: boolean;
+  aggregateFiling?: boolean;
 }
 
 /**
@@ -190,6 +196,10 @@ export function computeSplitPartTax(ctx: SplitPartRateContext): SplitPartRateRes
  *     건물 기산일 하나로 계산했으므로 파트의 「세율 기산일」 echo를 화면에 내면 계산과 어긋난다.
  */
 const NOT_JUDGED = { parts: null, judged: false } as const;
+
+/** 다건 신고의 비주택 토지·건물 split — 파트를 합산 단위로 항상 남긴다(P3). 비주택 판정은 G-1과 같은 술어(`resolveAppurtenantLandRateBasisDate`). */
+const keepsNonHousingParts = (ctx: SplitPartRateContext) =>
+  ctx.aggregateFiling === true && ctx.taxRateInput.propertyType !== "housing";
 function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRateResult | null; judged: boolean } {
   const { splitDetail, taxRateInput: input, parsedRates, taxBase, transferIncome, basicDeduction } = ctx;
 
@@ -295,7 +305,10 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
       r.appliedRate === preRates[0].appliedRate &&
       r.progressiveDeduction === preRates[0].progressiveDeduction,
   );
-  if (uniform) return { parts: null, judged: true };
+  //    단, 다건 + 비주택은 세율이 같아도 접지 않는다 — 다건 합산 단위는 세율이 아니라 해당 호 집합(Q3 키)이고, 키가 같은 파트는
+  //    다건 버킷이 다시 합산하므로 접지 않아도 값이 같다. 여기서 접으면 파트 단독 1호 ↔ 단기세율 교차점마다 합산 단위가 바뀌어
+  //    1원 절벽이 생기고(계획서 §2.3), 이 시점의 키(기본공제 배분 전)는 버킷 키(배분 후)와 갈릴 수도 있다(§7.5).
+  if (uniform && !keepsNonHousingParts(ctx)) return { parts: null, judged: true };
 
   // ── §104⑤ 비교과세 ─────────────────────────────────────
   const allocation = allocateBasicDeductionAcrossParts(
@@ -696,18 +709,23 @@ export function resolveSplitAwareTax(
     const base = fallback();
     // 1호(합산 누진)가 이겼고 그 값이 기존 자산 단위 세액과 같으면 **세액은 바뀌지 않는다** —
     // 장기보유 split 자산 대부분이 여기다(파트 누진구간만 다름). 산식 문구까지 종전 그대로 둔다.
-    // 단, 다건에서 배율 초과 비사업용 토지 파트가 있으면 그 파트를 8호 버킷 합산에 쓰도록 파트를 남긴다(`keepExcessPartsOnClause1Win`).
+    // 단, 다건(`aggregateFiling`)에서는 파트를 합산 단위로 남긴다 — 배율 초과 비사업용 토지 파트가 있거나(8호 버킷 합산)
+    // 비주택 토지·건물 split이면(토지·건물 각자 호별 합산). 버리면 아래 정정 분기(파트를 붙인다)와 금액에 따라 갈려 1원 절벽이 된다.
     if (base.calculatedTax === chosenTax) {
-      const excess = parts.parts.filter((p) => p.kind === "non_business_land");
-      const keep = ctx.keepExcessPartsOnClause1Win === true && excess.length > 0;
+      const excess = parts.parts.some((p) => p.kind === "non_business_land");
+      const nonHousing = keepsNonHousingParts(ctx);
+      const keep = ctx.aggregateFiling === true && (excess || nonHousing);
       if (!keep) return { ...base, partRateBasisApplied: true };
       // 파트를 남기면 자산 breakdown의 「산출세액 (참고)」 산식 문구가 이 분기의 값(1호 합산 누진)을 설명해야 한다.
+      const clause1Note =
+        `토지·건물 파트별 세율 비교(소득세법 §104⑤): 합산 누진세액 ${chosenTax.toLocaleString()}이 ` +
+        `자산별 합계 ${parts.perAssetTotal.toLocaleString()} 이상이라 합산 누진세액을 산출세액으로 한다`;
       return {
         ...base,
-        shortTermNote:
-          base.shortTermNote ??
-          `토지·건물 파트별 세율 비교(소득세법 §104⑤): 합산 누진세액 ${chosenTax.toLocaleString()}이 ` +
-            `자산별 합계 ${parts.perAssetTotal.toLocaleString()} 이상이라 합산 누진세액을 산출세액으로 한다 (배율 초과 토지는 비사업용 토지로 호별 합산)`,
+        // 비주택은 자산 단위 문구(건물 취득일 하나로 본 단기세율 비교)가 파트 계산을 설명하지 못한다 — 파트 비교 문구로 바꾼다.
+        shortTermNote: excess
+          ? (base.shortTermNote ?? `${clause1Note} (배율 초과 토지는 비사업용 토지로 호별 합산)`)
+          : `${clause1Note} (토지·건물은 별개 자산으로 호별 합산)`,
         splitPartDetail: parts,
         partRateBasisApplied: true,
       };

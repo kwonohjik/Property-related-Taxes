@@ -184,8 +184,8 @@ export function aggregateByGroup(
    */
   const assetTaxOf = (i: number) => {
     const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
-    // 1호가 이겨도 배율 초과 비사업용 토지 파트는 8호 버킷 합산에 쓰도록 남긴다(§104⑤ 후단 — 단건은 넘기지 않는다).
-    const tr = resolveSplitAwareTax({ ...splitCtxOf(i), keepExcessPartsOnClause1Win: true });
+    // 1호가 이겨도 파트(배율 초과 비사업용 토지 · 비주택 토지·건물)를 호별 버킷 합산 단위로 남긴다(§104⑤ — 단건은 넘기지 않는다).
+    const tr = resolveSplitAwareTax({ ...splitCtxOf(i), aggregateFiling: true });
     // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
     if (tr.splitPartDetail) assetPartTax[i] = { tax: tr.calculatedTax, note: tr.shortTermNote };
     // 다건 세액은 이 재계산이 정본이다 — 「세율 기산일」 표시 게이트도 이 판정으로 덮는다(D1-3).
