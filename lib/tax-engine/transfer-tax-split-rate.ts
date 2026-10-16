@@ -160,8 +160,8 @@ export interface SplitPartRateContext {
    *      · 배율 초과 비사업용 토지 파트가 있으면(#2214). 소득세법 §104⑤ 후단이 비사업용 토지와 그 외 토지를
    *        「제2호의 금액을 계산할 때」 별개 자산으로 본다.
    *      · 비주택 토지·건물 split이면(P3). 토지·건물은 별개 자산으로 파트별 세율을 적용한다(G-1).
-   *   ② 비주택 토지·건물 split은 파트 세율이 같아도 **합산 단위 키**(`clauseBucketKey` — 해당 호 집합)가 다르면
-   *      게이트 7에서 접지 않는다 — 다건 합산 단위는 세율이 아니라 해당 호 집합이다(Q3).
+   *   ② 비주택 토지·건물 split은 파트 세율이 같아도 게이트 7에서 접지 않는다 — 다건 합산 단위는 세율이 아니라
+   *      해당 호 집합(Q3 `clauseBucketKey`)이고, 키가 같은 파트는 다건 버킷이 다시 합산한다.
    * 단건(`transfer-tax.ts`·finalize·§155⑳ 단건 경로)은 합산할 짝이 없어 넘기지 않는다 — 단건 산식·산식 문구는 종전 그대로다.
    * §155⑳ 나중 취득 토지(G-3) 재귀(`...ctx`)에도 그대로 전파된다 — 별도 차단하지 않는다.
    * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-parts-in-aggregate.plan.md`.
@@ -305,12 +305,10 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
       r.appliedRate === preRates[0].appliedRate &&
       r.progressiveDeduction === preRates[0].progressiveDeduction,
   );
-  //    단, 다건 + 비주택은 세율이 같아도 합산 단위 키(해당 호 집합)가 다르면 접지 않는다 — 다건 버킷이 그 키로 갈리므로
-  //    여기서 접으면 파트 단독 1호 ↔ 단기세율 교차점마다 합산 단위가 바뀌어 1원 절벽이 생긴다(계획서 §2.3).
-  const keysDiffer =
-    keepsNonHousingParts(ctx) &&
-    new Set(preRates.map((r, i) => clauseBucketKey(r.candidateClauses, r.appliedRate, i))).size > 1;
-  if (uniform && !keysDiffer) return { parts: null, judged: true };
+  //    단, 다건 + 비주택은 세율이 같아도 접지 않는다 — 다건 합산 단위는 세율이 아니라 해당 호 집합(Q3 키)이고, 키가 같은 파트는
+  //    다건 버킷이 다시 합산하므로 접지 않아도 값이 같다. 여기서 접으면 파트 단독 1호 ↔ 단기세율 교차점마다 합산 단위가 바뀌어
+  //    1원 절벽이 생기고(계획서 §2.3), 이 시점의 키(기본공제 배분 전)는 버킷 키(배분 후)와 갈릴 수도 있다(§7.5).
+  if (uniform && !keepsNonHousingParts(ctx)) return { parts: null, judged: true };
 
   // ── §104⑤ 비교과세 ─────────────────────────────────────
   const allocation = allocateBasicDeductionAcrossParts(
