@@ -12,7 +12,8 @@
 import { addYears } from "date-fns";
 import { applyRate, calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
-import type { TransferTaxInput } from "./types/transfer.types";
+import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
+import type { SplitPartResult } from "./types/transfer-split-gain.types";
 
 /**
  * 취득가액 산정방식 × 양도일이 「소득세법」 §114조의2 가산세 **대상 조합**인가 — 엔진·UI 배지가 공유하는 단일 leaf.
@@ -122,4 +123,81 @@ export function resolveExtensionPenaltyBase(
     return extensionAppraisal;
   }
   return fullBuildingBase;
+}
+
+/**
+ * 🔴 **§114조의2 — 토지·건물 분리 자산의 판정 축은 「건물 파트」다** (2026-08-13).
+ *
+ * 「소득세법」 제114조의2 제1항은 base를 **「해당 건물의」 감정가액 또는 환산취득가액**으로
+ * 명시한다(증축은 증축 부분 한정). 그런데 분리(§166⑥) 자산에서 게이트·base는 둘 다
+ * **자산-수준** 값에서 왔다:
+ *
+ *   · 게이트: `calculateBuildingPenalty`가 읽는 `acquisitionMethod` — 파트 라디오
+ *     (`landAcqMode`/`buildingAcqMode`)는 이 값을 갱신하지 않는다. 건물 파트가 환산이어도
+ *     자산-수준이 실가면 **가산세가 발동하지 않는다**(실측: 0원).
+ *   · base: `calcTransferGain`의 split 분기가 `estimatedBase = 토지 + 건물 합계`를 낸다.
+ *     자산-수준을 환산으로 돌려 게이트를 켜면 이번엔 **토지 실취득가까지 base에 섞인다**
+ *     (실측: 425,000,000 × 5% = 21,250,000 — 법정 정답 225,000,000 × 5% = 11,250,000의 약 1.9배).
+ *
+ * ⇒ 두 값을 **파트-국소 신호**(`SplitPartResult.acqMode`·`acquisitionPrice`)에서 가져온다.
+ *   자산-수준 `useEstimatedAcquisition`을 파트에서 역파생하는 방식은 **채택하지 않는다** —
+ *   그 플래그의 소비 지점이 이 엔진 안에만 35곳이고(split-gain `deriveLegacyAcqMode`의 모드
+ *   미지정 파트 자동 환산 승격 · helpers `estimatedBase` 합계화 · 상가 STEP 0.35 · 공익수용
+ *   평가 · 재개발), 과소를 과대로 바꿀 뿐이다. 같은 교리를 이미 쓰는 선례는
+ *   `app/api/calc/transfer/general-building-route-cards.ts`(카드가 속한 파트의 축만 싣는다).
+ *
+ * 건물 파트가 실가·매매사례이면 `undefined`를 반환해 **종전 자산-수준 경로를 그대로 둔다**
+ * (§114조의2 대상이 아니므로 `calculateBuildingPenalty`가 어차피 null을 낸다).
+ *
+ * 정상 경로(finalize STEP 10.5)와 손실 조기반환(`transfer-tax-loss-return.ts` — §114조의2②, 산출세액 0에도 적용)이
+ * **같은 이 함수**를 쓴다(2026-10-16 — 종전엔 손실 경로가 이 축을 안 읽어 분리 취득 건물 파트의 가산세가 0이었다).
+ *
+ * 🔴 **증축은 증축부분 한정 base다**(§114조의2① 괄호 「증축의 경우 증축한 부분에 한정한다」 — 2026-10-16).
+ *   종전엔 건물 파트 전체 환산·감정가액이 base였다(실측 225,000,000 / 250,000,000).
+ *   · 환산: 증축부분 환산취득가 = 건물 파트 양도가액 × 증축부분 취득시 기준시가 ÷ 건물 양도시 기준시가
+ *     — 비분리 경로(`resolveExtensionPenaltyBase`)가 자산 전체 값으로 쓰는 식을 「해당 건물」 값으로 쓴 것이다.
+ *   · 감정가액: 입력한 「증축한 부분의 감정가액」(`extensionAppraisalValue`) — 건물 파트 감정가액으로 대신하지 않는다.
+ */
+export function resolveSplitBuildingPenaltyAxis(
+  splitDetail: TransferTaxResult["splitDetail"],
+  input: TransferTaxInput,
+): { acquisitionMethod: "estimated" | "appraisal"; base: number } | undefined {
+  const mode = splitDetail?.building.acqMode;
+  if (mode !== "estimated" && mode !== "appraisal") return undefined;
+  const building = splitDetail!.building;
+  return { acquisitionMethod: mode, base: splitExtensionPenaltyBase(input, mode, building) };
+}
+
+/** 분리 취득 건물 파트의 §114조의2 base — 증축이고 가산세 게이트가 열릴 때만 증축부분 값, 그 밖은 건물 파트 전체. */
+function splitExtensionPenaltyBase(
+  input: TransferTaxInput,
+  mode: "estimated" | "appraisal",
+  building: SplitPartResult,
+): number {
+  const full = building.acquisitionPrice;
+  if (input.buildingType !== "extension") return full;
+  if (calculateBuildingPenalty({ ...input, acquisitionMethod: mode }, 1) === null) return full;
+  if (mode === "estimated") {
+    const extStdAtAcq = input.extensionStdPriceAtAcquisition ?? 0;
+    const stdAtTransfer = building.stdPriceAtTransfer ?? 0;
+    // 미입력이면 비분리 경로와 같이 건물 전체를 유지한다(⑧이 증축부분 기준시가를 필수로 받는다).
+    if (extStdAtAcq <= 0 || stdAtTransfer <= 0) return full;
+    return calculateEstimatedAcquisitionPrice(building.transferPrice, extStdAtAcq, stdAtTransfer);
+  }
+  const extensionAppraisal = input.extensionAppraisalValue ?? 0;
+  if (extensionAppraisal <= 0) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      "증축한 건물을 5년 이내에 양도하면서 건물 취득가액을 감정가액으로 산정하면 「소득세법」 제114조의2에 따라 " +
+        "증축한 부분의 감정가액에 5% 가산세가 붙으므로 증축한 부분의 감정가액을 입력해야 합니다. " +
+        "건물 감정가액 전체로 대신할 수 없습니다(증축한 부분에 한정한 금액이 기준입니다).",
+    );
+  }
+  if (full > 0 && extensionAppraisal > full) {
+    throw new TaxCalculationError(
+      TaxErrorCode.INVALID_INPUT,
+      `증축한 부분의 감정가액이 건물 감정가액(${full.toLocaleString()}원)보다 클 수 없습니다.`,
+    );
+  }
+  return extensionAppraisal;
 }

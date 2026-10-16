@@ -366,8 +366,9 @@ export function buildAssetPayload(
               ? parseAmount(asset.extensionStdPriceAtAcquisition) || undefined
               : undefined,
           // §114조의2① 감정가액 × 증축 — base는 「증축한 부분에 한정한 감정가액」. 단건 ④와 같은 술어·같은 지분 스케일(감정가액과 같은 축).
+          //   술어가 토지·건물 분리 자산의 건물 파트 감정가액도 포함한다 — 그 축은 `isAppraisalCompanion`(분리 제외) 밖이라 그것으로 다시 거르지 않는다.
           extensionAppraisalValue:
-            isAppraisalCompanion && generalExtensionAppraisalApplies(asset, transferDate) && parseAmount(asset.extensionAppraisalValue) > 0
+            generalExtensionAppraisalApplies(asset, transferDate) && parseAmount(asset.extensionAppraisalValue) > 0
               ? fractional
                 ? applyRatio(parseAmount(asset.extensionAppraisalValue), ratio)
                 : parseAmount(asset.extensionAppraisalValue)

@@ -389,6 +389,8 @@ export function calcSplitAcquisitionPrice(
   landAcquisitionBasis?: LandAcquisitionBasis;
   /** 영 §163⑨ 단서 2호 비교가 적용된 경우만 */
   buildingAcquisitionBasis?: LandAcquisitionBasis;
+  /** 건물 파트 환산 분모로 쓴 양도시 기준시가(결합 공시 비례 안분 후) — §114조의2 증축부분 환산의 분모 */
+  buildingStdAtTransfer: number;
 } {
   const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
@@ -516,6 +518,7 @@ export function calcSplitAcquisitionPrice(
     building: buildingRaw ?? 0,
     landMode,
     buildingMode,
+    buildingStdAtTransfer,
     splitLandExpropriationValuationDetail,
     ...(landPartAcq.basis ? { landAcquisitionBasis: landPartAcq.basis } : {}),
     ...(buildingPartAcq.basis ? { buildingAcquisitionBasis: buildingPartAcq.basis } : {}),

@@ -202,3 +202,83 @@ describe("④ → ⑫ → ⑭ → 엔진", () => {
     expect(json.data?.result?.penaltyTax).toBe(3_000_000);
   });
 });
+
+/**
+ * 토지·건물 분리 자산(별개 취득)의 **건물 파트 감정가액** × 증축 (2026-10-16).
+ * 파트 라디오는 자산 단위 `isAppraisalAcquisition`을 갱신하지 않아 종전엔 칸이 뜨지 않았고, 엔진은 건물 파트 감정가액 전체를 base로 썼다
+ * (250,000,000 × 5% = 12,500,000). 이제 술어가 건물 파트 방식을 읽고, 엔진 분리 축이 증축부분 감정가액을 base로 쓴다.
+ */
+describe("분리 자산 건물 파트 감정가액 × 증축 — ⑤술어·⑧·④·엔진", () => {
+  const SPLIT: Partial<AssetForm> = {
+    assetKind: "building",
+    isAppraisalAcquisition: false,
+    fixedAcquisitionPrice: "",
+    acquisitionDate: "2021-01-01",
+    landAcquisitionDate: "2015-06-01",
+    hasSeperateLandAcquisitionDate: true,
+    landAcqMode: "actual",
+    landAcquisitionPrice: "200,000,000",
+    buildingAcqMode: "appraisal",
+    buildingAcquisitionPrice: "250,000,000",
+    saleSplitMode: "apportioned",
+    landStandardPriceAtTransfer: "480,000,000",
+    buildingStandardPriceAtTransfer: "320,000,000",
+    standardPricePerSqmAtAcq: "1,000,000",
+    acquisitionArea: "200",
+    buildingStandardPriceAtAcq: "200,000,000",
+    standardPriceAtAcq: "",
+  };
+  const split = (o: Partial<AssetForm> = {}) => form({ ...SPLIT, ...o });
+
+  it("[S-1] 술어: 건물 파트가 감정가액이면 참 · 실가·환산이면 거짓 · 건물 비소유면 거짓", () => {
+    expect(generalExtensionAppraisalApplies(asset({ ...SPLIT }), TRANSFER_DATE)).toBe(true);
+    expect(generalExtensionAppraisalApplies(asset({ ...SPLIT, buildingAcqMode: "actual" }), TRANSFER_DATE)).toBe(false);
+    expect(generalExtensionAppraisalApplies(asset({ ...SPLIT, buildingAcqMode: "estimated" }), TRANSFER_DATE)).toBe(false);
+    expect(generalExtensionAppraisalApplies(asset({ ...SPLIT, selfOwns: "land_only" }), TRANSFER_DATE)).toBe(false);
+  });
+
+  it("[S-2] 🔴 대조군: 분리를 끈 잔존 파트 방식은 읽지 않는다(자산 단위 방식이 정본)", () => {
+    expect(generalExtensionAppraisalApplies(asset({ ...SPLIT, hasSeperateLandAcquisitionDate: false }), TRANSFER_DATE)).toBe(false);
+  });
+
+  it("[S-3] ⑧: 비면 그 칸에서 막고, 상한은 건물 파트 감정가액(250,000,000)이다", () => {
+    expect(collectStepIssues(0, split({ extensionAppraisalValue: "" }) as never).some((i) => i.field === "extensionAppraisalValue")).toBe(true);
+    expect(msgsOf(split({ extensionAppraisalValue: "250,000,001" })).some((m) => /250,000,000원\)보다 클 수 없습니다/.test(m))).toBe(true);
+    expect(msgsOf(split()).some((m) => /증축한 부분의 감정가액/.test(m))).toBe(false);
+  });
+
+  it("[S-4] ④: body에 증축부분 감정가액이 실린다", async () => {
+    expect((await singleBody(split())).extensionAppraisalValue).toBe(60_000_000);
+  });
+
+  it("[S-4b] 함께 양도 컴패니언이 분리 자산이어도 ④가 증축부분 감정가액을 싣는다(컴패니언 감정가액 표시는 분리 축을 빼지만 이 값은 빼지 않는다)", async () => {
+    const f = { ...form(), contractTotalPrice: "1,800,000,000", assets: [asset({ addressJibun: "서울 강남구 테스트동 2-2" }), asset({ ...SPLIT })] } as TransferFormData;
+    const body = await singleBody(f);
+    expect((body.companionAssets as Record<string, unknown>[])[0].extensionAppraisalValue).toBe(60_000_000);
+  });
+
+  it("[S-5] 폼 → route → 엔진: base 60,000,000 · 가산세 3,000,000 (종전 건물 파트 전체 250,000,000 → 12,500,000)", async () => {
+    const body = await singleBody(split());
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isRegulatedArea: false,
+          wasRegulatedAtAcquisition: false,
+          isUnregistered: false,
+          isNonBusinessLand: false,
+          annualBasicDeductionUsed: 0,
+          ...body,
+          isOneHousehold: false,
+          householdHousingCount: 2,
+          residencePeriodMonths: 0,
+        }),
+      }),
+    );
+    const json = (await res.json()) as { data?: { result?: { penaltyBase?: number; penaltyTax?: number } }; error?: unknown };
+    expect(res.status, JSON.stringify(json.error ?? "")).toBe(200);
+    expect(json.data?.result?.penaltyBase).toBe(60_000_000);
+    expect(json.data?.result?.penaltyTax).toBe(3_000_000);
+  });
+});

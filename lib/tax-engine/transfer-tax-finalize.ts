@@ -16,6 +16,7 @@ import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
+import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import { summarizeSplitGain } from "./transfer-tax-split-display";
 import { buildPublicExpropriationParts } from "./public-expropriation-reduction";
@@ -78,41 +79,8 @@ function patchNew993SurtaxSteps(
   });
 }
 
-/**
- * 🔴 **§114조의2 — 토지·건물 분리 자산의 판정 축은 「건물 파트」다** (2026-08-13).
- *
- * 「소득세법」 제114조의2 제1항은 base를 **「해당 건물의」 감정가액 또는 환산취득가액**으로
- * 명시한다(증축은 증축 부분 한정). 그런데 분리(§166⑥) 자산에서 게이트·base는 둘 다
- * **자산-수준** 값에서 왔다:
- *
- *   · 게이트: `calculateBuildingPenalty`가 읽는 `acquisitionMethod` — 파트 라디오
- *     (`landAcqMode`/`buildingAcqMode`)는 이 값을 갱신하지 않는다. 건물 파트가 환산이어도
- *     자산-수준이 실가면 **가산세가 발동하지 않는다**(실측: 0원).
- *   · base: `calcTransferGain`의 split 분기가 `estimatedBase = 토지 + 건물 합계`를 낸다.
- *     자산-수준을 환산으로 돌려 게이트를 켜면 이번엔 **토지 실취득가까지 base에 섞인다**
- *     (실측: 425,000,000 × 5% = 21,250,000 — 법정 정답 225,000,000 × 5% = 11,250,000의 약 1.9배).
- *
- * ⇒ 두 값을 **파트-국소 신호**(`SplitPartResult.acqMode`·`acquisitionPrice`)에서 가져온다.
- *   자산-수준 `useEstimatedAcquisition`을 파트에서 역파생하는 방식은 **채택하지 않는다** —
- *   그 플래그의 소비 지점이 이 엔진 안에만 35곳이고(split-gain `deriveLegacyAcqMode`의 모드
- *   미지정 파트 자동 환산 승격 · helpers `estimatedBase` 합계화 · 상가 STEP 0.35 · 공익수용
- *   평가 · 재개발), 과소를 과대로 바꿀 뿐이다. 같은 교리를 이미 쓰는 선례는
- *   `app/api/calc/transfer/general-building-route-cards.ts`(카드가 속한 파트의 축만 싣는다).
- *
- * 건물 파트가 실가·매매사례이면 `undefined`를 반환해 **종전 자산-수준 경로를 그대로 둔다**
- * (§114조의2 대상이 아니므로 `calculateBuildingPenalty`가 어차피 null을 낸다).
- *
- * ⚠️ 손실 조기반환 경로(`transfer-tax.ts` — §114조의2②, 산출세액 0에도 적용)는 **아직 이 축을
- *    쓰지 않는다**. 그쪽도 같은 불일치를 갖고 있으므로 배선할 때 이 함수를 재사용할 것
- *    (재구현하면 dual-truth가 된다 — `resolveExtensionPenaltyBase`와 같은 이유로 export한다).
- */
-export function resolveSplitBuildingPenaltyAxis(
-  splitDetail: TransferTaxResult["splitDetail"],
-): { acquisitionMethod: "estimated" | "appraisal"; base: number } | undefined {
-  const mode = splitDetail?.building.acqMode;
-  if (mode !== "estimated" && mode !== "appraisal") return undefined;
-  return { acquisitionMethod: mode, base: splitDetail!.building.acquisitionPrice };
-}
+// `resolveSplitBuildingPenaltyAxis`는 `transfer-tax-building-penalty.ts`로 옮겼다(손실 경로와 공유) — 종전 import 경로 보존용 재수출.
+export { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
 
 export interface FinalizeArgs {
   input: TransferTaxInput;
@@ -429,8 +397,8 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   //    `resolveSplitBuildingPenaltyAxis` 참조 — 게이트(산정방식)·base 둘 다 건물 파트에서 온다.
   //    일반건물 카드는 `input.penaltyAxis`로 같은 축을 직접 싣는다(Q-A5 — 건물 파트 감정가액).
   // 부담부증여 K-7(감정가액) 신축은 §159 스텝이 `effectiveInput.penaltyAxis`로 싣는다(원본 input에는 없다).
-  const splitPenaltyAxis =
-    resolveSplitBuildingPenaltyAxis(splitDetailForRate) ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
+  const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetailForRate, input);
+  const splitPenaltyAxis = splitBuildingAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   let penaltyBase = splitPenaltyAxis
     ? splitPenaltyAxis.base
     : effectiveInput.acquisitionMethod === "appraisal"
@@ -439,12 +407,15 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   // §114조의2① 통상(비-부담부) 증축: penalty base를 증축부분 환산취득가로 교체 (부담부는 step override가 effectiveInput.estimatedBase에 반영).
   // 손실 조기반환(transfer-tax.ts)과 동일 헬퍼 — single-source, dual-truth 방지.
   // 감정가액 증축은 base를 이미 정한 축(`splitPenaltyAxis` — 분리 취득의 건물 파트·일반건물 카드·부담부증여)이 **아닐 때만** 여기서 맡는다.
-  //   분리 취득의 건물 파트 감정가액 × 증축은 입력 칸이 없어 종전대로 둔다(계획서 §범위 밖).
-  penaltyBase = resolveExtensionPenaltyBase(
-    input,
-    penaltyBase,
-    splitPenaltyAxis ? undefined : effectiveInput.acquisitionMethod,
-  );
+  //   분리 취득의 건물 파트 증축은 `resolveSplitBuildingPenaltyAxis`가 증축부분 base를 직접 낸다.
+  //   분리 취득의 건물 파트 축은 증축부분 base까지 정했다 — 자산 전체 값(환산 분자·분모)으로 다시 덮지 않는다.
+  if (!splitBuildingAxis) {
+    penaltyBase = resolveExtensionPenaltyBase(
+      input,
+      penaltyBase,
+      splitPenaltyAxis ? undefined : effectiveInput.acquisitionMethod,
+    );
+  }
   const penaltyResult = calculateBuildingPenalty(
     splitPenaltyAxis
       ? { ...effectiveInput, acquisitionMethod: splitPenaltyAxis.acquisitionMethod }
