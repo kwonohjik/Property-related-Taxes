@@ -253,6 +253,11 @@ export interface PerPropertyBreakdown
    *   계획서 `docs/00-pm/cross-engine-102-2-loss-offset.plan.md` §4.3 축 1-b.
    */
   lossOffsetRateKey: string;
+  /**
+   * 차손 통산을 **파트 단위**로 한 비주택 토지·건물 split 자산의 파트 행(Q-F3a) — 통산 전 소득금액 · 세율 키.
+   * 있으면 엔진은 자산 한 행(`income`·`lossOffsetRateKey`) 대신 이 행들로 통산했다. 크로스 통산도 같은 행을 써야 한다.
+   */
+  lossOffsetParts?: { income: number; rateKey: string }[];
   /** 같은 그룹에서 받은 차손 공제 (양수) */
   lossOffsetFromSameGroup: number;
   /** 타군에서 안분 받은 차손 공제 (양수) */

@@ -75,16 +75,24 @@ export function buildCrossLossRows(
     };
   }
 
-  const rows: CrossLossAsset[] = props.map((p) => ({
-    source: "real_estate" as const,
-    id: p.propertyId,
-    label: p.propertyLabel,
-    // 🔑 `income`은 **통산 전**이다(`transfer-aggregate.types.ts:175`). `incomeAfterOffset`을
-    //    쓰면 엔진 내부 통산이 **두 번** 반영된다.
-    income: p.income,
-    rateKey: crossLossOffsetRateKey("real_estate", p.lossOffsetRateKey) ?? `x:re:${p.propertyId}`,
-    exempt: p.isExempt,
-  }));
+  const rows: CrossLossAsset[] = props.flatMap((p) =>
+    // 🔑 엔진이 파트 단위로 통산한 split 자산(Q-F3a)은 **같은 파트 행**으로 돌린다 — 자산 한 행으로 돌리면
+    //    엔진과 배분이 달라져 기타자산에 주입할 소득이 어긋난다(차손 이중 공제 18,918,918 실측).
+    //    행 id는 자산 id 그대로다 — 결과는 `computeCrossLossOffset`이 자산 단위로 접는다.
+    (p.lossOffsetParts && !p.isExempt
+      ? p.lossOffsetParts
+      : [{ income: p.income, rateKey: p.lossOffsetRateKey }]
+    ).map((part) => ({
+      source: "real_estate" as const,
+      id: p.propertyId,
+      label: p.propertyLabel,
+      // 🔑 `income`은 **통산 전**이다(`transfer-aggregate.types.ts:175`). `incomeAfterOffset`을
+      //    쓰면 엔진 내부 통산이 **두 번** 반영된다.
+      income: part.income,
+      rateKey: crossLossOffsetRateKey("real_estate", part.rateKey) ?? `x:re:${p.propertyId}`,
+      exempt: p.isExempt,
+    })),
+  );
 
   /**
    * 기타자산은 크로스 §104⑤ 경로가 **단건**으로 돌린다(`recalcOtherAsset` → 단건 API).
@@ -143,14 +151,21 @@ export function computeCrossLossOffset(rows: CrossLossAsset[]): CrossLossOutcome
     rows.map((r) => ({ income: r.income, rateKey: r.rateKey, exempt: r.exempt })),
   );
 
-  const assets: CrossLossAssetOutcome[] = rows.map((r, i) => ({
-    id: r.id,
-    source: r.source,
-    label: r.label,
-    income: r.income,
-    absorbed: (core.fromSame[i] ?? 0) + (core.fromOther[i] ?? 0),
-    incomeAfterOffset: core.incomeAfterOffset[i] ?? 0,
-  }));
+  // 파트 행(같은 id)은 자산 하나로 접는다 — 화면·주입은 자산 단위다.
+  const byId = new Map<string, CrossLossAssetOutcome>();
+  rows.forEach((r, i) => {
+    const absorbed = (core.fromSame[i] ?? 0) + (core.fromOther[i] ?? 0);
+    const after = core.incomeAfterOffset[i] ?? 0;
+    const prev = byId.get(r.id);
+    if (prev) {
+      prev.income += r.income;
+      prev.absorbed += absorbed;
+      prev.incomeAfterOffset += after;
+    } else {
+      byId.set(r.id, { id: r.id, source: r.source, label: r.label, income: r.income, absorbed, incomeAfterOffset: after });
+    }
+  });
+  const assets = [...byId.values()];
 
   // 코어의 행 단위 내역에서 「차손 자산」과 「흡수 자산」의 출처가 갈리는 건이 있는가.
   const sourceOf = new Map(rows.map((r, i) => [i, r.source]));

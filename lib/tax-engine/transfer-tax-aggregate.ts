@@ -554,6 +554,7 @@ function computeAggregateOnce(
       rateGroup: r.rateGroup,
       // §102② 세율축 — `AssetRecord`가 이미 들고 있다(`-asset-records.ts:227`). 재유도 금지.
       lossOffsetRateKey: r.lossOffsetRateKey,
+      ...(r.lossParts ? { lossOffsetParts: r.lossParts } : {}),
       lossOffsetFromSameGroup: lossOffsetFromSame[idx],
       lossOffsetFromOtherGroup: lossOffsetFromOther[idx],
       incomeAfterOffset: incomeAfterOffset[idx],
