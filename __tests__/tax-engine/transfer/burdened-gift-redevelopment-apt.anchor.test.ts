@@ -282,3 +282,110 @@ describe("A-A5 · 12억 비교·안분 분모는 «증여가액 C»다 (D-2)", (
     expect(alloc.taxableGain).toBe(Math.floor((alloc.taxableGain + alloc.nontaxableGain) * 0.5));
   });
 });
+
+/**
+ * A-A6 — 재개발 APT(원조합원) × 부담부증여 × 시가 모드 × **환산(K-5)** — 「소득세법 시행령」 §166③ (2026-10-16).
+ *
+ * 취득가액은 종전 부동산(기존건물과 그 부수토지)의 취득가액이고, 확인할 수 없으면 §166③
+ * 「평가액 × 취득일 기준시가 ÷ 관리처분계획등 인가일 기준시가」다. 필요경비는 §166①1호 「§97①2·3호 **또는** §163⑥」.
+ *
+ * 종전(수정 전 실측): §159 명세의 일반 환산(§176의2②2호 — 안분 양도가 6억 × 취득시 3억 ÷ **신축주택** 양도시 15억 = 120,000,000)을
+ * 취득가액으로 쓰고, 개산공제는 버리고 입력 실비 × r만 뺐다 — 인가전 양도차익 76,000,000(실비 1천만) / 80,000,000(실비 0).
+ *
+ * 정답: 평가액 5억 × r 0.4 × 취득일 기준시가 3억 ÷ 인가일 기준시가 4억 = 150,000,000 · 개산공제 3억 × 0.4 × 3% = 3,600,000
+ *   → 인가전 양도차익 2억 − 1.5억 − 360만 = 46,400,000 (입력 실비는 택일로 쓰지 않는다)
+ */
+describe("A-A6 · 재개발 APT × 부담부증여 × 환산(K-5) — §166③", () => {
+  const K5 = (pre = 10_000_000, redevExtra: Record<string, unknown> = {}) => ({
+    burdenedGiftInfo: {
+      valuationMode: "sangjeungbeop_market",
+      marketValueAtTransfer: 1_500_000_000,
+      acquisitionMethod: "converted",
+      lendingDepositTotal: 0,
+      mortgageDebtAmount: 600_000_000,
+      annualRentTotal: 0,
+      donorRelation: "lineal_descendant",
+      landStdPriceAtTransfer: 0,
+      buildingStdPriceAtTransfer: 1_500_000_000,
+      landStdPriceAtAcquisition: 0,
+      buildingStdPriceAtAcquisition: 300_000_000,
+    },
+    redevelopment: {
+      ...(makeInput().redevelopment as unknown as Record<string, unknown>),
+      preApprovalExpenses: pre,
+      managementDisposalHousingPrice: 400_000_000,
+      acquisitionHousingPrice: 300_000_000,
+      ...redevExtra,
+    },
+  });
+
+  it("[K5-1] 취득가액 = 평가액 × r × 취득일 기준시가 ÷ 인가일 기준시가 = 150,000,000 (일반 환산 120,000,000이 아니다)", () => {
+    const pre = run(K5()).redevelopmentDetail!.preApproval;
+    expect(pre.apportionedTransfer).toBe(200_000_000);
+    expect(pre.apportionedAcquisition).toBe(150_000_000);
+  });
+
+  it("[K5-2] 인가전 필요경비 = 개산공제 3,600,000 (§163⑥ × r) — 입력 실비는 택일로 쓰지 않는다", () => {
+    const r10 = run(K5(10_000_000));
+    const r0 = run(K5(0));
+    expect(r10.redevelopmentDetail!.preApproval.expenses).toBe(3_600_000);
+    expect(r0.redevelopmentDetail!.preApproval.expenses).toBe(3_600_000);
+    expect(r10.redevelopmentDetail!.preApproval.gain).toBe(46_400_000);
+    expect(r10.transferGain).toBe(r0.transferGain);
+  });
+
+  it("[K5-3] 총 양도차익 364,400,000 · 산출세액 82,945,543 (mock 세율표 실측)", () => {
+    const r = run(K5());
+    expect(r.transferGain).toBe(364_400_000);
+    expect(r.calculatedTax).toBe(82_945_543);
+  });
+
+  it("[K5-4] 🔴 대조군 — 실지취득가액(K-4)은 §166③을 켜지 않는다(실지 × r)", () => {
+    const k4 = K5();
+    const r = run({
+      ...k4,
+      burdenedGiftInfo: { ...k4.burdenedGiftInfo, acquisitionMethod: "actual", actualAcquisitionTotal: 300_000_000 },
+    });
+    expect(r.redevelopmentDetail!.preApproval.apportionedAcquisition).toBe(120_000_000);
+    expect(r.redevelopmentDetail!.preApproval.expenses).toBe(4_000_000);
+  });
+
+  it("[K5-1b] 🔴 구별력 — 인가일 기준시가를 5억으로 바꾸면 취득가액도 바뀐다(2억 × 3억 ÷ 5억 = 120,000,000)", () => {
+    const k5 = K5(10_000_000, { managementDisposalHousingPrice: 500_000_000 });
+    expect(run(k5).redevelopmentDetail!.preApproval.apportionedAcquisition).toBe(120_000_000);
+  });
+
+  it("[K5-1c] 공유지분 50% — 개산공제 base = 취득일 기준시가 3억 × 지분 0.5 × r 0.8 = 1.2억 → 3,600,000 (지분 축소가 빠지면 7,200,000)", () => {
+    // ④는 평가액을 지분율로 먼저 줄인다(`buildRedevelopmentPayload` — 기준시가는 비율항이라 줄이지 않는다).
+    // 지분이면 증여가액 C가 지분분(7.5억)이고 채무는 사용자 입력 6억 그대로라 r = 0.8이다.
+    const r = run({ ...K5(10_000_000, { rightsValue: 250_000_000 }), ownershipRatio: 0.5 });
+    expect(r.transferBurdenedGiftBreakdown?.debtRatio).toBeCloseTo(0.8, 10);
+    const d = r.redevelopmentDetail!;
+    expect(d.preApproval.apportionedAcquisition).toBe(150_000_000); // 2.5억 × 0.8 × 3억 ÷ 4억
+    expect(d.valuationMeta?.lumpDeductionBase).toBe(120_000_000);
+    expect(d.preApproval.expenses).toBe(3_600_000);
+  });
+
+  it("[K5-1d] 청산금 수령 — 같은 §166③ 취득가액·개산공제가 인가전 분에 쓰인다", () => {
+    const r = run(K5(10_000_000, { settlementDirection: "receive", settlementAmount: 100_000_000, settlementSaleDate: new Date("2021-09-02") }));
+    const d = r.redevelopmentDetail!;
+    expect(d.valuationMeta?.method).toBe("estimated_post_disclosure_decree_166_3");
+    expect(d.estimatedLumpDeduction).toBe(3_600_000);
+  });
+
+  it("[K5-5] 인가일 기준시가가 없으면 오류 — 0으로 메우지 않는다", () => {
+    expect(() => run(K5(10_000_000, { managementDisposalHousingPrice: undefined }))).toThrow(/§166③ 분모/);
+  });
+
+  it("[K5-6] 🔴 대조군 — 일반 양도(부담부증여 아님)의 §166③ 개산공제는 채무비율로 줄이지 않는다(3억 × 3% = 9,000,000)", () => {
+    const r = run({
+      transferType: "regular",
+      burdenedGiftInfo: undefined,
+      transferPrice: 1_500_000_000,
+      useEstimatedAcquisition: true,
+      redevelopment: K5().redevelopment,
+    });
+    expect(r.redevelopmentDetail!.preApproval.expenses).toBe(9_000_000);
+    expect(r.redevelopmentDetail!.preApproval.apportionedAcquisition).toBe(375_000_000);
+  });
+});

@@ -16,6 +16,7 @@
  */
 
 import { useMemo } from "react";
+import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -370,7 +371,13 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
-          {asset.bgAcquisitionMethod === "converted" && (
+          {asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
+            // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
+            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
+              종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.
+              아래 재개발·재건축 「⑤ 인가전 분 종전 부동산 취득가액」에서 기준시가를 입력하세요. 개산공제(§163⑥ 3%) 자동 적용.
+            </div>
+          ) : asset.bgAcquisitionMethod === "converted" && (
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
               환산취득가액 = 양도가액(채무액) × <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> (시행령 §176의2②2호).
               {asset.assetKind === "general_building"

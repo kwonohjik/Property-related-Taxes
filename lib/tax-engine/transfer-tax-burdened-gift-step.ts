@@ -68,6 +68,19 @@ export function runBurdenedGiftStep(
       isUnregistered: rawInput.isUnregistered,
       ownershipRatio,
     });
+    /**
+     * 재개발·재건축 완공 아파트(원조합원) × 시가 모드 × 환산(K-5) — 취득가액은 **종전 부동산**(기존건물과 그 부수토지)의 취득가액이고,
+     * 그것을 확인할 수 없으면 「소득세법 시행령」 제166조 제3항의 환산식(평가액 × 취득일 기준시가 ÷ 관리처분계획등 인가일 기준시가)을 쓴다.
+     * 필요경비는 같은 조 ①1호 「§97①2·3호 **또는** §163⑥」 — 환산이면 개산공제다.
+     * ⇒ 위 §159 명세의 일반 환산(§176의2②2호 — 신축주택 기준시가 비율)은 이 자산에 쓰지 않고, §166 경로의 §166③ 분기를 켠다
+     *   (`redevelopment-split.ts` Step A·B). 평가액은 β로 채무비율만큼 줄어 들어가므로 §166③ 결과도 §159①1호 안분값이 된다.
+     * 승계조합원은 §166 밖이라 해당 없다.
+     */
+    const redevSec166Conversion =
+      workingInput.propertyType === "redevelopment_apt" &&
+      rawInput.redevelopment !== undefined &&
+      rawInput.redevelopment.isSuccessorMember !== true &&
+      transferBurdenedGiftBreakdown.acquisitionMethodUsed === "converted";
     const land = transferBurdenedGiftBreakdown.perAsset.land;
     const building = transferBurdenedGiftBreakdown.perAsset.building;
     const totalTransferPrice = land.transferPrice + building.transferPrice;
@@ -154,7 +167,8 @@ export function runBurdenedGiftStep(
       transferExpense: undefined,
       // §97③ 감가상각비는 부담부증여에서 미지원(Phase C) — §159 안분 취득가액에서 또 빼지 않는다. ⑧ validate가 먼저 막는다.
       depreciationAmount: undefined,
-      useEstimatedAcquisition: false,
+      // 재개발 완공 아파트 × K-5만 §166③ 환산 분기를 켠다(위 `redevSec166Conversion`). 그 밖은 §159 안분값을 그대로 쓴다.
+      useEstimatedAcquisition: redevSec166Conversion,
       // §159 안분 취득가액을 **그대로** 쓴다는 신호. 부담부증여 UI는 일반 산정방식(환산·감정·매매사례)을
       // 숨기되 폼 상태는 보존하므로(CompanionAcqPurchaseBlock.tsx:338-341 — 재토글 복원) stale 값이 흘러든다.
       // 위 useEstimatedAcquisition:false는 **환산 분기만** 막고 acquisitionMethod 분기(helpers.ts:331·339)는

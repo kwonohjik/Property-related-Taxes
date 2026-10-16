@@ -78,6 +78,7 @@ import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exc
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
+import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -357,6 +358,9 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
       : isCommercialBuilding ? (primary.acquisitionCause === "inheritance" ? false : primary.useEstimatedAcquisition)
       : isGeneralBuilding ? primary.useEstimatedAcquisition
       : isCarryoverGeneral ? true
+      // 재개발 × 부담부증여 — ⑤ 라디오(화면에 없다)가 아니라 부담부증여 K-4/K-5가 정한다(⑤⑧과 같은 leaf). 숨은 라디오의 stale 값이
+      //   ⑫ refine(§166③ 분모 필수)을 일으키지 않게 한다. 엔진은 §159 스텝에서 같은 판정을 다시 한다(`redevSec166Conversion`).
+      : isRedevelopment && primary.transferType === "burdened_gift" ? redevPreApprovalAcqMode(primary) === "estimated"
       : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd
       ? undefined

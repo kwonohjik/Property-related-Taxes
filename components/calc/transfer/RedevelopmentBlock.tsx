@@ -34,8 +34,10 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
+import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -107,6 +109,8 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   // subject="right" (입주권 양도) 포함: assetKind="right_to_move_in" 시에도 활성화
   const isActive = asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
   const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
+  /** ⑤ 「인가전 분 종전 부동산 취득가액」 방식 — ⑧·④·PHD 트리거와 같은 leaf */
+  const redevAcqMode = redevPreApprovalAcqMode(asset);
   // 완공APT 안분 가이드의 고가주택 기준금액 — 양도일 기준(안내 전용, 세액은 엔진이 다시 정한다)
   const highValueLabel = highValueThresholdForDisplay(transferDate).label;
 
@@ -471,7 +475,10 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
 
           모드 값은 기존 `useEstimatedAcquisition` 그대로다 — 신규 필드 없음(API·validate 무변경).
           승계조합원은 취득가액을 상단 자산 카드에서 받으므로 섹션 전체를 숨긴다(종전과 동일). */}
-      {asset.redevIsSuccessorMember !== "yes" && (
+      {/* 부담부증여는 ⑤ 라디오를 쓰지 않는다 — 산정방식은 부담부증여 블록의 K-4/K-5가 정한다(`redevPreApprovalAcqMode`).
+          K-5(환산)인 완공 아파트만 §166③ 입력칸을 이 섹션에 띄우고(라디오 없이), 그 밖의 부담부증여는 섹션 전체를 숨긴다
+          — 엔진이 §159 안분값을 쓰므로 이 섹션의 실가 칸은 계산에 쓰이지 않는다(⑧도 요구하지 않는다). */}
+      {asset.redevIsSuccessorMember !== "yes" && redevAcqMode !== "burdened_gift" && (
         <ToneCard
           tone="sky"
           sectionNum={5}
@@ -484,16 +491,24 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
               섹션 전체에 걸리는 사실이다(실측 8조합). */}
           <RedevelopmentSec163_9PriorityNotice asset={asset} />
 
-          <RadioCardGroup
-            name={`redevAcqMode-${asset.assetId}`}
-            data-field="useEstimatedAcquisition"
-            value={asset.useEstimatedAcquisition ? "estimated" : "actual"}
-            onChange={(v) => onChange({ useEstimatedAcquisition: v === "estimated" })}
-            options={ACQ_MODE_OPTIONS}
-            layout="inline"
-          />
+          {asset.transferType === "burdened_gift" ? (
+            <p className="text-xs text-sky-800" data-testid="redev-bg-sec166-3-notice">
+              부담부증여 취득가액 산정방식을 「환산취득가액」으로 골랐습니다 — 종전 부동산의 취득가액을 「소득세법 시행령」 제166조 제3항
+              (평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)으로 환산하고, 인가전 분 필요경비는 개산공제(같은 영
+              제163조 제6항)를 적용합니다. 두 값 모두 채무액 비율로 안분합니다.
+            </p>
+          ) : (
+            <RadioCardGroup
+              name={`redevAcqMode-${asset.assetId}`}
+              data-field="useEstimatedAcquisition"
+              value={asset.useEstimatedAcquisition ? "estimated" : "actual"}
+              onChange={(v) => onChange({ useEstimatedAcquisition: v === "estimated" })}
+              options={ACQ_MODE_OPTIONS}
+              layout="inline"
+            />
+          )}
 
-          {!asset.useEstimatedAcquisition ? (
+          {redevAcqMode === "actual" ? (
             <FieldCard
               label="실거래가 취득가액"
               field="redevActualAcquisitionPrice"

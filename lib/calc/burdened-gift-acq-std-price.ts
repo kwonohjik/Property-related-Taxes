@@ -17,8 +17,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
+import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 
-type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause">> & Pick<
+type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccessorMember">> & Pick<
   AssetForm,
   | "assetKind"
   | "transferType"
@@ -49,6 +50,8 @@ type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause">> & Pick<
  *    증여재산 평가는 상증법 §61③이고, §159①1호 A괄호의 열거(§61①②⑤·§66)에 **없어**
  *    괄호가 발동하지 않는다 ⇒ 취득가액은 §97①1호 실지거래가액이다. ④ API 변환도
  *    `buildingStdPriceAtAcquisition: 0`을 보낸다 — 칸을 띄우면 **엔진이 버리는 값**을 요구하게 된다.
+ *  · **재개발 완공 아파트 × K-5** — 취득가액은 종전 부동산의 취득가액이라 시행령 §166③으로 환산하고, 그 분자·분모와
+ *    개산공제 base는 재개발 블록 ⑤의 §166③ 칸이 받는다(`redevPreApprovalAcqMode`). 이 칸(일반 환산 분자)은 엔진이 쓰지 않는다(2026-10-16).
  */
 export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
   return (
@@ -57,7 +60,8 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
       asset.bgAcquisitionMethod === "converted" ||
       (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift")) &&
     asset.assetKind !== "general_building" &&
-    asset.assetKind !== "right_to_move_in"
+    asset.assetKind !== "right_to_move_in" &&
+    !(asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated")
   );
 }
 

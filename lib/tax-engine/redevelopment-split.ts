@@ -75,7 +75,19 @@ export function preApprovalNecessaryExpense(
 export interface RedevelopmentSplitInput {
   /** RedevelopmentInfo */
   redevelopment: RedevelopmentInfo;
-
+  /**
+   * 부담부증여 채무비율 `r = B/C` (소령 §159①) — **β 스케일**.
+   *
+   * 미전달·`1`이면 아무 것도 바뀌지 않는다(일반 양도). 값이 오면 §166 산식의 절대 금액항
+   * (평가액·청산금·인가전후 필요경비)을 `r`배로 줄여 §159가 이미 안분한 취득가액·양도가액과
+   * **스케일을 맞춘다**. 근거·적용 범위는 `redevelopment-burdened-gift.ts` 헤더.
+   *
+   * ⚠️ `ownershipRatio`(공유지분)와 **독립**이다 — `scaleBurdenedGiftInfo`가 평가액·채무액을
+   *    먼저 지분분으로 줄이므로 `B/C`는 지분 중립이고, 두 비율은 서로 다른 축이다.
+   *
+   * Step B 개산공제(§163⑥)도 §166①1호의 필요경비항이라 같은 비율로 줄인다(2026-10-16 — 부담부증여 × 완공 아파트 × §166③).
+   */
+  debtRatio?: number;
   /**
    * @param acquisitionDate 자산 취득일 (§164⑦ 단서 트리거 + LTHD 기산일).
    *   의제 양도가액(권리가액)과 별도로 LTHD 종료일은 실제 양도일을 사용.
@@ -221,15 +233,18 @@ export function computeRedevelopmentSplit(
     valuationMeta.method !== "successor_member_decree_162_1_4" &&
     valuationMeta.numerator !== undefined
   ) {
+    // base 축소 비율 = 지분율 × 부담부증여 채무비율(β와 같은 축 — 위 `debtRatio` JSDoc). 둘 다 없으면 1(종전 그대로).
+    const lumpBaseRatio =
+      (input.ownershipRatio ?? 1) * (input.debtRatio !== undefined && input.debtRatio < 1 ? input.debtRatio : 1);
     estimatedLumpDeduction = computeEstimatedDeduction(
       valuationMeta.numerator,
       estimatedDeductionRate(input.isUnregistered),
-      input.ownershipRatio,
+      lumpBaseRatio,
     );
     // 표시 산식 base echo — numerator는 물건 전체(100%) 값이다.
     valuationMeta.lumpDeductionBase = computeLumpSumDeductionBase(
       valuationMeta.numerator,
-      input.ownershipRatio,
+      lumpBaseRatio,
     );
   }
 

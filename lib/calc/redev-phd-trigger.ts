@@ -35,10 +35,11 @@
  *    그래서 날짜 존재를 **여기서 먼저** 확인한 뒤 위임한다.
  */
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { redevPreApprovalAcqMode, type RedevPreApprovalAcqModeFields } from "@/lib/calc/redev-pre-approval-acq-mode";
 
 /** 판정에 필요한 필드만 — 폼 전체(AssetForm)를 요구하지 않아 저장된 input_data에도 쓸 수 있다. */
-export interface RedevPhdTriggerFields {
-  /** ⑤ 「종전 부동산 취득가액」 라디오 — 환산 모드에서만 이 축이 열린다 */
+export interface RedevPhdTriggerFields extends RedevPreApprovalAcqModeFields {
+  /** ⑤ 「종전 부동산 취득가액」 라디오 — 환산 모드에서만 이 축이 열린다(부담부증여는 K-5 — `redevPreApprovalAcqMode`) */
   useEstimatedAcquisition?: boolean;
   acquisitionDate?: string;
   /** 개별주택가격/공동주택가격 최초 공시일 (단독 2005-04-30 · 공동 2006-04-28) */
@@ -50,7 +51,7 @@ export interface RedevPhdTriggerFields {
  * 최초공시일보다 이르면 true.
  */
 export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
-  if (!a.useEstimatedAcquisition) return false;
+  if (redevPreApprovalAcqMode(a) !== "estimated") return false;
   if (!a.acquisitionDate || !a.redevFirstDisclosureDate) return false;
   return isPhdEligible(a.acquisitionDate, a.redevFirstDisclosureDate);
 }
