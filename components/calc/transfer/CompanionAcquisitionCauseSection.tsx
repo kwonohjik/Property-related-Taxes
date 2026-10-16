@@ -33,6 +33,7 @@ import { giftEstimationGenericScope } from "@/lib/calc/transfer-tax-validate-gif
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 import { buildingDatePatch, effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { isMixedBurdenedGift, mixedBgBlockedCause } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 const ACQUISITION_CAUSE_OPTIONS = [
   { value: "purchase", label: "매매" },
@@ -101,7 +102,11 @@ export function CompanionAcquisitionCauseSection({
         tone="sky"
         layout="inline"
         value={asset.acquisitionCause ?? ""}
-        options={ACQUISITION_CAUSE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        options={ACQUISITION_CAUSE_OPTIONS.map((o) => {
+          // 겸용 × 부담부증여는 증여자가 매매로 취득한 경우만 계산한다 — **현재 선택되지 않은** 옵션만 막는다(현재 값이 막힌 값이면 ⑧이 이 칸으로 점프시키고 다른 옵션은 눌린다).
+          const blocked = isMixedBurdenedGift(asset) && o.value !== asset.acquisitionCause ? mixedBgBlockedCause(o.value) : null;
+          return { value: o.value, label: o.label, ...(blocked ? { disabled: true, hint: blocked.short } : {}) };
+        })}
         onChange={(value) =>
           onChange({
             acquisitionCause: value,

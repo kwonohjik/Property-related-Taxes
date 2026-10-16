@@ -834,3 +834,22 @@ mixedBgDebtAttribution(asset): {                // 귀속 3값의 단일 소스 
 | 8 | §3.3 마지막 · §9 ①: 「UI 허용 ⊂ 엔진 허용을 anchor로 고정」 | UI §3.2의 격자 anchor와 같은 의도 | 일치 — UI가 엔진 collector를 호출해 구조로 보장 |
 | 9 | §3.7 MB 번호 순서(MB-13·14가 MB-10 다음, MB-11·12가 뒤) | 순서만 다름 | 무영향. UI 대응표(§3.3)는 번호순 |
 | 10 | §3.3: 신축 취득 언급 없음 | UI X-8은 막는다 | 엔진 확인 필요(잔여 RES-5) — 엔진이 허용하면 UI 좁힘으로 둔다 |
+
+---
+
+## 17. PR-3 구현 반영 (2026-10-16) — 설계 대비 변경·결정
+
+사용자가 통합 계획서 G-1~G-13을 권고안으로 확정한 뒤 구현하며 설계서와 달라진 점. 설계서 본문은 고치지 않고 여기에 이력으로 남긴다.
+
+| # | 설계서 | 구현 | 사유 |
+|---|---|---|---|
+| 1 | §3.1 «숨은 별개취득 토글은 ⑧이 안내» | **④가 BG 겸용에서 `mixedAcqPerPartMode`를 무시**(`isPerPart=false`)하고 취득 산정방식은 BG 산정방식에서 파생(`resolveMixedBgAcquisition`) | BG 화면에서 그 토글을 끌 수 없어 ⑧이 안내해도 막다른 길. 엔진 MB-3은 발동하지 않는다 |
+| 2 | R-1 어댑터가 `transferBurdenedGiftBreakdown: b.burdenedGift` 통과 | **어댑터에 싣지 않는다.** 소비처가 `result.mixedUseDetail.burdenedGift`를 직접 읽는다(`resolveBgMixedDisplay`·`mixedBgFilingNotes`·`FilingFormTable` 배지) | 두 타입(`perAsset` 2부분 vs `perPart` 4부분)이 달라 같은 슬롯에 싣으면 단건 빌더가 `perAsset.land`를 읽다 크래시한다 |
+| 3 | R-4 «① 앞에 신설 + 라벨 교체» | **① 양도가액 안분 섹션을 BG에서 통째로 대체**(`MixedUseBgApportionSection`), ②③의 취득가액·필요경비·양도차익 산식 행을 BG 분기(`MixedUseBgAcqRows`·`mixedBgPartGainFormula`) | 일반 겸용 ①은 «기준시가 비율 안분·내림» 문구라 BG에서 거짓 산식이 된다(렌더 실측) |
+| 4 | R-6 `BurdenedGiftDetailCard` 재사용 | 신설 `MixedUseBurdenedGiftDetailCard`(평가·무상이전분·증여세) + 증여세 행을 `BurdenedGiftGiftTaxRows`로 **추출 공유** | `perAsset`·단일 `debtRatio` 전제를 겸용에 걸 수 없다. 증여세 행은 물건 단위라 두 카드가 같은 행을 쓴다 |
+| 5 | R-7 인쇄 leaf 위치 미정 | `burdened-gift`·`gift-filing-form` 모두 `group:calc`(양도세 `TRANSFER_PRINT_SECTIONS`와 같은 위치) | 신고서식 그룹 첫 행 = `form-table` anchor 유지 |
+| 6 | R-3 `DetailedStatementBgMixedFormulas.ts` + Helpers 분기 1줄 | 신설 파일 + Helpers에 분기 5줄. **`DetailedStatementHelpers.ts` 769줄 → 1단계 일자 항목을 `DetailedStatementDateItems.ts`로 분리해 706줄**, `MixedUseCalculationSections.tsx` 735줄 → ④를 `MixedUseNblSection.tsx`로 분리해 709줄 | 800줄 정책 — 위험구간 파일을 연 김에 분리 |
+| 7 | §5.1 leaf만 신설 | `mixed-use-std-fallback.ts` 추가(`mixedAcqCommercialBuildingStd` 등을 `api-mixed-use`에서 이동·재수출) | `api-mixed-use → helpers → api-burdened-gift` 순환 import 방지 |
+| 8 | §6.4 사이드바 | 정본은 `transfer-per-asset-summary.ts`(행 필드 `saleTransferNote`). `computeTransferSummary`는 무소비 | §16 #6 |
+
+**남은 확인 필요 (추정으로 단정하지 않은 것)**: V-15·V-17·V-18·V-19(법령 미확인 — 구분 불분명 채무의 증여가액 비율 안분, 12억 판정을 증여가액 C로 한 해석, 상가건물 기준시가 동일성, 시가 모드 구분 감정평가 부재 시 기준시가 비례) / 엔진 MB-11이 취득시 4부분 기준시가를 K-4·K-6·K-7에서도 요구하는지의 범위 / 신축(X-8)은 엔진 MB-15가 API `acquisitionCause`만 보므로 UI가 `isSelfBuilt` 값을 별도로 차단한다.

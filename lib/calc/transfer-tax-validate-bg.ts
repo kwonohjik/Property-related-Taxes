@@ -24,6 +24,8 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { needsBgAcqStdPriceInput, resolveBgAcqStdPrice } from "./burdened-gift-acq-std-price";
+import { bgMixedUseBlock, isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { mixedBgCompanionBlockMessage } from "./burdened-gift-mixed-use-preview";
 import {
   deriveMemberRightsValue,
   deriveRightValuationTotal,
@@ -109,12 +111,20 @@ export function validateBurdenedGiftAsset(
   }
 
   /**
-   * (1-a) 겸용주택 × 부담부증여 — 계산할 수 없어 막는다. 겸용주택 경로(`calcMixed`)는 `burdenedGiftInfo`(§159 안분)를 읽지 않고
-   *   부담부증여는 양도가액 입력도 받지 않아, 막지 않으면 **오류 없이 세액 0**이 나온다(실측: 겸용 + 시가 15억 + 채무 6억 → 결정세액 0,
-   *   같은 겸용을 일반 양도로 두면 211,650,000). ④·엔진·Zod가 같은 판단을 한다(`transfer-tax-schema-refines.ts`).
+   * (1-a) 겸용주택 × 부담부증여 — 2026-10-16 PR-1(엔진)·PR-3(화면)으로 **계산한다**. 종전 일괄 차단(「세액 0」 방지)을 대체한다.
+   *
+   * 여기서는 **BG 공통 검증보다 앞**에서 막아야 하는 것만 본다 — 그 뒤 검증은 이 조합에서 채울 수 없는 칸을 요구하기 때문이다:
+   *  · 함께 양도·지분 분할 묶음(엔진 MB-6 — 문구는 엔진 leaf의 것)
+   *  · UI P1 좁힘: 취득원인 상속·증여·이월과세·신축, 남아 있는 신축·증축 값(`bgMixedUseBlock`)
+   * 엔진 차단(MB-1~18)·필수 입력·귀속(MB-13)·구분 감정평가(MB-17)·초과부담부는 `validateMixedUseBurdenedGift`(취득 검증의 겸용 분기)가
+   * 엔진 leaf(`analyzeMixedBurdenedGift`)로 판정한다 — 규칙 복제 없음.
    */
-  if (asset.assetKind === "housing" && asset.isMixedUseHouse) {
-    return fieldError("transferType", `${label}: 겸용주택은 부담부증여로 계산할 수 없습니다 — 겸용주택 계산은 인수 채무에 따른 양도가액·취득가액 안분(소득세법 시행령 §159)을 적용하지 않아 세액이 0으로 나옵니다. 양도 형태를 「일반 양도」로 바꾸거나 주택과 상가를 나누어 각각 입력하세요.`);
+  if (isMixedBurdenedGift(asset)) {
+    if (contractAssumedDebtTotal !== undefined || isFractionalSplitAxis === true) {
+      return fieldError("transferType", `${label}: ${mixedBgCompanionBlockMessage()}`);
+    }
+    const uiBlock = bgMixedUseBlock(asset);
+    if (uiBlock) return fieldError(uiBlock.field, `${label}: ${uiBlock.long}`);
   }
 
   /**
@@ -296,7 +306,8 @@ export function validateBurdenedGiftAsset(
       //   재개발 완공 아파트는 취득시 기준시가(일반 환산 분자)를 쓰지 않는다 — 종전 부동산 취득가액을 §166③으로 환산하고
       //   그 분자·분모는 재개발 블록 ⑤가 받는다(`redevPreApprovalAcqMode` · `needsBgAcqStdPriceInput`과 같은 예외).
       const redevSec166 = asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated";
-      if (asset.assetKind !== "general_building" && asset.assetKind !== "land") {
+      // 겸용주택은 양도시·취득시 기준시가를 4부분 겸용 패널이 받는다 — 총액 칸이 화면에 없다(요구하면 막다른 길). 엔진 MB-11이 4부분을 요구한다.
+      if (asset.assetKind !== "general_building" && asset.assetKind !== "land" && !isMixedBurdenedGift(asset)) {
         if (
           !parseAmount(asset.standardPriceAtTransfer) ||
           (!redevSec166 && !parseAmount(asset.standardPriceAtAcq))

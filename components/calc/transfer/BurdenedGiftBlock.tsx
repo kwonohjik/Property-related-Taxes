@@ -40,6 +40,9 @@ import {
   BurdenedGiftAcquisitionMethodField,
   BurdenedGiftPresumedAcquisitionSection,
 } from "./BurdenedGiftPresumedAcquisitionSection";
+import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { BurdenedGiftDebtAttributionCard } from "./BurdenedGiftDebtAttributionCard";
+import { BurdenedGiftHousingAppraisalField, BurdenedGiftMixedUsePanel } from "./BurdenedGiftMixedUsePanel";
 
 interface Props {
   asset: AssetForm;
@@ -117,6 +120,11 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   }, [asset.bgAnnualRentTotal, asset.bgMortgageSetAmount, lendingDeposit, mortgageDebt]);
 
   const isMarketMode = asset.bgValuationMode === "sangjeungbeop_market";
+  /**
+   * 겸용주택 × 부담부증여 — 4부분 기준시가의 정본은 ③ 겸용 패널이다. 이 블록은 요약(읽기 전용)과 채무 귀속·구분 감정평가 선언만 받는다
+   * (엔진이 읽지 않는 ④ 「증여일 주택 기준시가」·② 총액 칸은 숨긴다 — 설계 UI R2 §4).
+   */
+  const isMixed = isMixedBurdenedGift(asset);
   /**
    * 조합원입주권 — 증여재산 평가가 상증법 §61③이라 §159①1호 A괄호가 **발동하지 않는다**.
    * ⇒ 취득가액이 실지거래가액(K-4)으로 고정되고, 취득시·양도시 기준시가 칸을 쓰지 않는다.
@@ -253,6 +261,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             />
           </FieldCard>
         </div>
+        {/* 겸용주택 — 채무가 주택·상가 어디에 속하는지(부동산거래관리과-119). 총액은 위 두 칸이 정본이다. */}
+        {isMixed && <BurdenedGiftDebtAttributionCard asset={asset} onChange={onChange} />}
       </div>
 
       {/* ③ 시가 모드 — 양도시 시가 + 취득가액 산정방식 (K-4 실지 / K-5 환산) */}
@@ -266,6 +276,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               onChange={(v) => onChange({ bgMarketValueAtTransfer: v })}
             />
           </FieldCard>
+
+          {/* 겸용주택 — 구분 감정평가가액 유무 선언(G-13): 시가를 주택·상가로 나누는 법정 안분의 근거 */}
+          {isMixed && <BurdenedGiftHousingAppraisalField asset={asset} onChange={onChange} />}
 
           {/* 취득가액 산정방식 (§100① 일치 원칙) — 4옵션 라디오는 분리 파일(800줄 한도) */}
           <BurdenedGiftAcquisitionMethodField
@@ -298,7 +311,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               환산취득가액 = 양도가액(채무액) × <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> (시행령 §176의2②2호).
               {asset.assetKind === "general_building"
                 ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
-                : " 아래 「② 양도정보」에서 양도시·취득시 기준시가를 입력하세요."}
+                : isMixed
+                  ? " 겸용주택은 「③ 취득정보 > 겸용주택」의 양도시·취득시 기준시가(주택·상가 4부분)로 계산합니다."
+                  : " 아래 「② 양도정보」에서 양도시·취득시 기준시가를 입력하세요."}
               {" "}개산공제(§163⑥ 3%) 자동 적용.
             </div>
           )}
@@ -362,7 +377,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               </FieldCard>
             ) : (
               <FieldCard
-                label={isRightToMoveIn ? "종전 부동산 실지취득가액" : "실지취득가액 (주택·건물 전체)"}
+                label={isRightToMoveIn ? "종전 부동산 실지취득가액" : isMixed ? "실지취득가액 — 주택·상가 전체 (토지 포함)" : "실지취득가액 (주택·건물 전체)"}
               >
                 <CurrencyInput label="" hideUnit
                   value={asset.bgActualAcquisitionTotal} data-field="bgActualAcquisitionTotal"
@@ -399,7 +414,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         <BurdenedGiftRightValuationSection asset={asset} onChange={onChange} />
       )}
 
-      {!isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && (
+      {isMixed && <BurdenedGiftMixedUsePanel asset={asset} transferDate={transferDate} />}
+
+      {!isMixed && !isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
@@ -477,7 +494,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               여기서 지분율로 스케일하면 그것대로 틀리므로 금액을 단정하지 않는다.
           */}
           <p>
-            인수 채무액{isFractionalSplit ? " (내 지분분 = 양도가액)" : isCompanionBundle ? " (신고 단위 합계)" : " (= 양도가액)"}:{" "}
+            인수 채무액{isFractionalSplit ? " (내 지분분 = 양도가액)" : isCompanionBundle ? " (신고 단위 합계)" : isMixed ? " (물건 전체)" : " (= 양도가액)"}:{" "}
             <span className="font-mono tabular-nums font-semibold">
               {fmt(isFractionalSplit ? applyRatio(assumedDebtAmount, ownRatio) : assumedDebtAmount)}원
             </span>

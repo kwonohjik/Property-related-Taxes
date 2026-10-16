@@ -487,6 +487,17 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     bgMarketValueAtTransfer: "",
     bgMarketValueAtAcquisition: "",
     bgGiftBuildingStdPriceAtTransfer: "",
+    // 겸용주택 × 부담부증여 — 채무 귀속·구분 감정평가 선언 (미선택 = 기본값 없음)
+    bgDepositAttribution: "",
+    bgDepositSplitHousing: "",
+    bgDepositSplitCommercial: "",
+    bgDepositSplitUnallocated: "",
+    bgMortgageAttribution: "",
+    bgMortgageSplitHousing: "",
+    bgMortgageSplitCommercial: "",
+    bgMortgageSplitUnallocated: "",
+    bgHousingAppraisalDeclared: "",
+    bgHousingAppraisalValue: "",
     // K-4/K-5 취득가액 산정방식 (시가 모드)
     bgAcquisitionMethod: "",
     bgActualAcquisitionLand: "",

@@ -18,8 +18,9 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
+import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 
-type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccessorMember">> & Pick<
+type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccessorMember" | "isMixedUseHouse">> & Pick<
   AssetForm,
   | "assetKind"
   | "transferType"
@@ -61,6 +62,8 @@ export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
       (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift")) &&
     asset.assetKind !== "general_building" &&
     asset.assetKind !== "right_to_move_in" &&
+    // 겸용주택 — 취득시 기준시가는 4부분 겸용 패널(`mixedAcq*`)이 정본이다. 총액 칸을 띄우면 엔진이 읽지 않는 값을 받는다(설계 UI R2 §4 DUP-2).
+    !isMixedBurdenedGift({ assetKind: asset.assetKind, transferType: asset.transferType, isMixedUseHouse: asset.isMixedUseHouse }) &&
     !(asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated")
   );
 }

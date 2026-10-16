@@ -28,7 +28,11 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { isMixedUsePerPartAcq, mixedUsePhdEffective } from "./mixed-use-part-acq-split";
 import { validateMixedUsePartAcq } from "./transfer-tax-validate-mixed-use-part-acq";
 
-export function validateMixedUseAsset(
+/**
+ * 겸용 공통 앞부분 — 건물 취득일 · 토지 취득일 · 면적. `validateMixedUseAsset`과 부담부증여 전용 검증(`validateMixedUseBurdenedGift`)이 **같은 함수**를 쓴다.
+ * (분리 전 `validateMixedUseAsset` 본문의 첫 블록을 그대로 옮겼다 — 동작 무변경.)
+ */
+export function validateMixedUseDatesAndAreas(
   asset: AssetForm,
   label: string,
   formTransferDate?: string,
@@ -47,6 +51,16 @@ export function validateMixedUseAsset(
     return fieldError("landAcquisitionDate", `${label}: 토지 취득일을 입력하세요.`);
   const areaErr = validateMixedUseAreas(asset, label, formTransferDate);
   if (areaErr) return areaErr;
+  return null;
+}
+
+export function validateMixedUseAsset(
+  asset: AssetForm,
+  label: string,
+  formTransferDate?: string,
+): string | null {
+  const commonErr = validateMixedUseDatesAndAreas(asset, label, formTransferDate);
+  if (commonErr) return commonErr;
   if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)
     return fieldError("mixedTransferHousingPrice", `${label}: 양도시 개별주택공시가격을 입력하세요. (양도시 기준시가)`);
   // ⑧ Validation fallback — UI 표시·API 변환이 mixedTransfer || phdLandPricePerSqmAtTransfer 로

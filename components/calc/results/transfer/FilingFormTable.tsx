@@ -34,11 +34,12 @@ export function FilingFormTable({
 }: FilingFormTableProps) {
   const { columns, mode } = deriveColumns(result, aggregate, redevSubject, redevSettlementDirection);
   // 부담부증여 §159 산정 여부 — 신고서 표 헤더에 배지 표시
+  // 겸용주택은 `transferBurdenedGiftBreakdown`이 아니라 `mixedUseDetail.burdenedGift`(4부분 구조)에 싣는다.
   const burdenedGiftBreakdown = (
     result as unknown as {
       transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed };
     }
-  ).transferBurdenedGiftBreakdown;
+  ).transferBurdenedGiftBreakdown ?? result.mixedUseDetail?.burdenedGift;
   const isBurdenedGift = Boolean(burdenedGiftBreakdown);
   // 배지 툴팁은 엔진이 실제로 쓴 취득가액 경로를 적는다 — 「기준시가 환산」 일괄 표기는 실지·환산 경로에서 틀린다.
   const burdenedGiftAcqFormula =

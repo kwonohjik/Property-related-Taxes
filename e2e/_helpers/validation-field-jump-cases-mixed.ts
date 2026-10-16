@@ -30,6 +30,11 @@ const mixedAsset = {
   mixedIsMetropolitanArea: true,
   fixedAcquisitionPrice: "700000000",
 };
+/** 겸용 × 부담부증여 정상 시드(귀속만 비움) — 엔진 anchor M-0과 같은 입력. 양도시 4부분 기준시가 합 12억. */
+const BG_MIXED = {
+  transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1500000000", bgMortgageDebtAmount: "600000000",
+  bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "700000000", bgHousingAppraisalDeclared: "none",
+};
 const mixed = (patch: Record<string, unknown>) => () =>
   withPrimary({ ...mixedAsset, ...patch }, { contractTotalPrice: "1500000000" });
 /** 환산취득가 모드 */
@@ -58,13 +63,21 @@ const caseA = (patch: Record<string, unknown>) =>
   });
 
 export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
-  // 겸용주택 × 부담부증여 — 겸용 경로가 §159 안분을 읽지 않아 세액 0이 나오므로 막고 양도 형태 칸으로 보낸다
+  // 겸용주택 × 부담부증여 — 일괄 차단은 사라졌다(PR-3). 조합별 가드가 «그 입력칸»으로 보낸다(엔진 MB-1~18 · UI P1 범위).
   {
-    name: "mixed: 겸용주택 × 부담부증여 — 양도 형태", field: "transferType", step: 0, assetIndex: A, message: /^자산: 겸용주택은 부담부증여로 계산할 수 없습니다/,
-    form: mixed({
-      transferType: "burdened_gift", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1500000000", bgMortgageDebtAmount: "600000000",
-      bgDonorRelation: "lineal_descendant", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "700000000",
-    }),
+    name: "mixed: 겸용 × 부담부증여 — 채무 귀속 미선택", field: "bgMortgageAttribution", step: 0, assetIndex: A,
+    message: /^자산: 담보차입금 600,000,000원이 주택·상가 중 어디에 속하는지 선택하세요/,
+    form: mixed({ ...BG_MIXED }),
+  },
+  {
+    name: "mixed: 겸용 × 부담부증여 — 상속 취득은 계산하지 않는다(P1 범위)", field: "acquisitionCause", step: 0, assetIndex: A,
+    message: /^자산: 증여자가 상속 또는 증여로 취득한 겸용주택의 부담부증여는 현재 계산하지 않습니다/,
+    form: mixed({ ...BG_MIXED, bgMortgageAttribution: "unallocated", acquisitionCause: "inheritance" }),
+  },
+  {
+    name: "mixed: 겸용 × 부담부증여 — 개별주택가격 미공시 환산과 함께 계산 불가", field: "usePreHousingDisclosure", step: 0, assetIndex: A,
+    message: /^자산: 겸용주택 부담부증여는 개별주택가격 미공시 환산/,
+    form: mixed({ ...BG_MIXED, bgMortgageAttribution: "unallocated", usePreHousingDisclosure: true }),
   },
   // ── 취득일 ──
   { name: "mixed: acquisitionDate (건물 취득일)", field: "acquisitionDate", step: 0, assetIndex: A, message: /^자산: 건물 취득일을 입력하세요/, form: mixed({ acquisitionDate: "" }) },

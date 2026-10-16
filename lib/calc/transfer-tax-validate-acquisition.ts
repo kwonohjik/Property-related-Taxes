@@ -14,7 +14,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
-import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { giftEstimatedModeError } from "./transfer-tax-validate-gift-163-9";
 import { sec164PartialInputError, sameAdjustmentPeriodError } from "./transfer-tax-validate-sec164";
 import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
@@ -34,6 +34,8 @@ import { validateExprValuationParcel } from "./transfer-tax-validate-expropriati
 import { validateGeneralBuildingAsset } from "./transfer-tax-validate-gb";
 import { validateBurdenedGiftAsset } from "./transfer-tax-validate-bg";
 import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
+import { validateMixedUseBurdenedGift } from "./transfer-tax-validate-mixed-use-bg";
+import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
 import { classifySameAdjustmentPeriod } from "@/lib/tax-engine/same-adjustment-period-std-price";
@@ -121,6 +123,8 @@ export function validateAssetAcquisition(
   isOneHousehold?: boolean,
   /** 지분 분할 취득(축 B) 묶음 여부 — 부담부증여 B/C>1 검사의 스케일 규칙(축 B는 물건 전체 채무를 입력한다). */
   isFractionalSplitAxis?: boolean,
+  /** 폼 전체 — 겸용 × 부담부증여 검증이 ④와 같은 `buildMixedUsePayload`로 엔진 입력을 만든다(없으면 최소 폼). */
+  form?: TransferFormData,
 ): string | null {
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
   // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
@@ -354,6 +358,13 @@ export function validateAssetAcquisition(
   // 겸용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return.
   // 본체는 transfer-tax-validate-mixed-use-asset.ts 로 분리 (800줄 정책).
   if (asset.isMixedUseHouse === true) {
+    // 부담부증여는 취득가액을 BG 블록이 받는다 — 겸용 일반 검증이 요구하는 칸(`fixedAcquisitionPrice` 등)이 화면에 없다(막다른 길).
+    if (isMixedBurdenedGift(asset)) {
+      return validateMixedUseBurdenedGift(
+        asset, label, form, formTransferDate,
+        contractAssumedDebtTotal !== undefined || isFractionalSplitAxis === true,
+      );
+    }
     return validateMixedUseAsset(asset, label, formTransferDate);
   }
 

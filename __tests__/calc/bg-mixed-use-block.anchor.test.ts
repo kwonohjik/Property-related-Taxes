@@ -1,10 +1,10 @@
 /**
- * anchor — 겸용주택 × 부담부증여: 화면(⑧)은 막고(PR-3까지), API 직접 호출(⑫)은 엔진이 열렸다.
+ * anchor — 겸용주택 × 부담부증여: ⑧(화면)·⑫(API)이 «일괄 차단»이 아니라 «조합별 가드»로 열렸다.
  *
  * 이력: 겸용 경로가 `burdenedGiftInfo`(소령 §159 안분)를 읽지 않아 **오류 없이 결정세액 0**이 나와서 ⑧·⑫ 둘 다 막았다
  * (실측: 겸용 + 시가 15억 + 채무 6억 → 0원, 같은 겸용을 일반 양도로 두면 211,650,000원).
- * PR-1(엔진)이 `mixed-use-burdened-gift.ts` seam을 열면서 ⑫는 «일괄 차단»에서 «MB-1~MB-18 가드 + 채무 귀속 필수»로 바뀌었다.
- * ⑧(M-1)은 UI가 귀속 입력을 갖는 PR-3까지 그대로 막는다 — 화면에서는 귀속을 입력할 수 없어 계산할 수 없다.
+ * PR-1(엔진)이 ⑫를 «MB-1~MB-18 가드 + 채무 귀속 필수»로 바꿨고, PR-3(UI)가 ⑧을 같은 분석(`analyzeMixedBurdenedGift`)에 맞췄다.
+ * M-1은 종전 «겸용주택은 부담부증여로 계산할 수 없습니다» 일괄 차단 단언을 **살아 있는 차단**(귀속 미선택·PHD·상속 취득·신축 값)으로 치환했다.
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -170,11 +170,57 @@ const mk = (over: Record<string, unknown>) =>
   ({ ...form([{ ...makeDefaultAsset(1), addressJibun: "서울 강남구 테스트동 1-1", ...mixed, ...over } as AssetForm]), contractTotalPrice: "1500000000" }) as TransferFormData;
 
 describe("겸용주택 × 부담부증여", () => {
-  it("[M-1] ⑧: 막는다 — 양도 형태 칸으로 이동", () => {
-    const issues = collectStepIssues(0, mk(BG_ON) as never);
-    const hit = issues.find((i) => /겸용주택은 부담부증여로 계산할 수 없습니다/.test(i.message));
-    expect(hit).toBeTruthy();
+  // ── M-1: ⑧은 일괄 차단이 아니라 조합별 가드다. 정상 시드는 통과하고, 막는 조합은 «그 입력칸»으로 보낸다. ──
+  const BG_UI = { ...BG_ON, bgHousingAppraisalDeclared: "none", bgMortgageAttribution: "unallocated" };
+  const firstIssue = (over: Record<string, unknown>) => collectStepIssues(0, mk({ ...BG_UI, ...over }) as never)[0];
+
+  it("[M-1] ⑧: 정상 시드(귀속 선택·구분 감정평가 없음 선언)는 막지 않는다 — 일괄 차단은 사라졌다", () => {
+    expect(collectStepIssues(0, mk(BG_UI) as never)).toEqual([]);
+    expect(collectStepIssues(0, mk(BG_ON) as never).some((i) => /겸용주택은 부담부증여로 계산할 수 없습니다/.test(i.message))).toBe(false);
+  });
+
+  it("[M-1a] ⑧: 귀속 미선택(기본값 없음) → 담보차입금 귀속 칸으로 이동", () => {
+    const hit = collectStepIssues(0, mk({ ...BG_UI, bgMortgageAttribution: "" }) as never)[0];
+    expect(hit?.field).toBe("bgMortgageAttribution");
+    expect(hit?.message).toMatch(/어디에 속하는지 선택하세요/);
     expect(hit?.assetIndex).toBe(0);
+  });
+
+  it("[M-1b] ⑧: 개별주택가격 미공시 환산(PHD) 켠 겸용 → PHD 토글 칸으로 이동 (엔진 MB-2)", () => {
+    const hit = firstIssue({ usePreHousingDisclosure: true });
+    expect(hit?.field).toBe("usePreHousingDisclosure");
+    expect(hit?.message).toMatch(/미공시 환산/);
+  });
+
+  it("[M-1c] ⑧: 증여자 상속·증여 취득 → 취득 원인 칸 (엔진 MB-8 · UI P1 범위)", () => {
+    expect(firstIssue({ acquisitionCause: "inheritance" })?.field).toBe("acquisitionCause");
+  });
+
+  it("[M-1d] ⑧: 화면에 입력칸이 남아 있지 않은 신축 값(isSelfBuilt)이 켜져 있으면 그 칸으로 이동 — 숨은 값으로 계산하지 않는다", () => {
+    expect(firstIssue({ isSelfBuilt: true })?.field).toBe("isSelfBuilt");
+  });
+
+  it("[M-1e] ⑧: 한쪽 귀속 채무가 그 쪽 증여가액을 넘으면(MB-14) 귀속 칸으로 이동 — 자동 재배분 없음", () => {
+    expect(firstIssue({ bgMortgageAttribution: "commercial", bgMortgageDebtAmount: "800000000" })?.field).toBe("bgMortgageAttribution");
+  });
+
+  it("[M-1h] ⑧: 임대료 환산 평가가 증여가액을 정하면(MB-7, 기준시가 모드) 양도 형태 칸으로 이동 — 평가는 사실관계라 고칠 수 없고 일반 양도로 바꾸는 것이 사용자가 할 수 있는 일이다", () => {
+    const hit = firstIssue({ bgValuationMode: "sangjeungbeop_standard", bgAnnualRentTotal: "240000000" });
+    expect(hit?.message).toMatch(/임대료 환산/);
+    expect(hit?.field).toBe("transferType");
+  });
+
+  it("[M-1f] ⑧: 시가 모드에서 구분 감정평가 유무를 선언하지 않으면(G-13, 기본값 없음) 선언 칸으로 이동 — 기준시가 비례로 조용히 나누지 않는다", () => {
+    const hit = firstIssue({ bgHousingAppraisalDeclared: "" });
+    expect(hit?.field).toBe("bgHousingAppraisalDeclared");
+    expect(hit?.message).toMatch(/구분된 감정평가가액이 있는지 선택하세요/);
+  });
+
+  it("[M-1g] ⑧: «있음»을 골랐는데 주택분 시가가 비었거나 증여가액 이상이면 주택분 시가 칸으로 이동", () => {
+    expect(firstIssue({ bgHousingAppraisalDeclared: "exists" })?.field).toBe("bgHousingAppraisalValue");
+    expect(firstIssue({ bgHousingAppraisalDeclared: "exists", bgHousingAppraisalValue: "1500000000" })?.field).toBe("bgHousingAppraisalValue");
+    // 짝 — 0보다 크고 증여가액보다 작으면 통과
+    expect(collectStepIssues(0, mk({ ...BG_UI, bgHousingAppraisalDeclared: "exists", bgHousingAppraisalValue: "900000000" }) as never)).toEqual([]);
   });
 
   it("[M-2] 🔴 대조군 — 같은 겸용주택을 일반 양도로 두면 막지 않고 계산된다(세액 > 0)", async () => {
@@ -185,7 +231,7 @@ describe("겸용주택 × 부담부증여", () => {
     expect(total).toBeGreaterThan(0);
   });
 
-  // ── ⑫ · API 경로 — PR-1 엔진이 겸용 × 부담부증여를 열었다. 화면(⑧)은 PR-3까지 막혀 있고, API 직접 호출만 열린다. ──
+  // ── ⑫ · API 경로 — PR-1 엔진이 겸용 × 부담부증여를 열었다(⑫). 화면(⑧)은 PR-3에서 같은 분석에 맞췄다. ──
   const post = async (body: Record<string, unknown>) =>
     POST(
       new NextRequest("http://localhost/api/calc/transfer", {
