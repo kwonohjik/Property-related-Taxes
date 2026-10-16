@@ -131,3 +131,29 @@ describe("F1-3 split이 아닌 1~2년 비주택 토지 두 건도 같은 규칙"
     expect(bothOrders(items)).toEqual([1_527_526_000, 1_527_526_000]);
   });
 });
+
+describe("F1-4 분양권 단기 40%도 같은 버킷 — `presale:` 구분자는 누진 키에만 (리뷰 #2)", () => {
+  // 2021.6.1. 전 양도 — 분양권 1~2년은 §104①2호 40%. 1호 후보가 늘 실리면서 분양권 키에도 누진 호가 생겨 구분자가 붙었고,
+  // 같은 호·같은 세율인 토지 40%와 합산되지 않았다(산출세액 2,300,000,000 vs 2,334,060,000).
+  const T0 = "2020-03-20";
+  const one = (kind: "presale_right" | "land" | "building", sale: number, on: string) =>
+    baseTransferInput({
+      propertyType: kind, transferPrice: sale, acquisitionPrice: 500_000_000, acquisitionDate: D(on), transferDate: D(T0),
+      isOneHousehold: false, householdHousingCount: kind === "land" ? 0 : 1, ...(kind === "land" ? { isNonBusinessLand: false } : {}),
+      expenses: 0, annualBasicDeductionUsed: 0,
+    } as Partial<TransferTaxInput>);
+  const calc = (items: TransferTaxInput[]) =>
+    calculateTransferTaxAggregate(
+      { taxYear: 2020, properties: items.map((x, i) => asItem(x, `A${i}`)), annualBasicDeductionUsed: 2_500_000 },
+      rates,
+    ).calculatedTax;
+
+  it("분양권 10억 + 토지 10억(각 1년 6개월 40%) + 건물 6개월 50% 30억 → 2,334,060,000 = 토지 + 토지", () => {
+    // 40% 버킷 합산 prog(2,000,000,000) 834,060,000 > 0.4 × 2,000,000,000 + 50% 1,500,000,000
+    expect(prog(2_000_000_000) + 1_500_000_000).toBe(2_334_060_000);
+    const presale = [one("presale_right", 1_500_000_000, "2018-09-20"), one("land", 1_500_000_000, "2018-09-20"), one("building", 3_500_000_000, "2019-09-20")];
+    expect(calc(presale)).toBe(2_334_060_000);
+    expect(calc([...presale].reverse())).toBe(2_334_060_000);
+    expect(calc([one("land", 1_500_000_000, "2018-09-20"), one("land", 1_500_000_000, "2018-09-20"), one("building", 3_500_000_000, "2019-09-20")])).toBe(2_334_060_000);
+  });
+});

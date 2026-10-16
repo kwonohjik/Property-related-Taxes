@@ -300,8 +300,11 @@ export function aggregateByGroup(
    */
   const bucketIdOf = (u: ClausePart, n: number) => {
     const key = clauseBucketKey(u.candidateClauses, u.appliedRate, n, u.bucketFlatRate);
+    // 단일세율(`bucketFlatRate`)이 키에 들어간 버킷은 1호 후보가 있어도 «단일세율 호» 버킷이다(Q-F1 α) —
+    // 같은 호·같은 세율이므로 다른 자산과 합산한다(아래 주석의 마지막 문단).
     const presaleProgressiveKey =
       records[u.assetIdx].item.propertyType === "presale_right" &&
+      u.bucketFlatRate === undefined &&
       (u.candidateClauses ?? []).some((c) => PROGRESSIVE_RATE_CLAUSES.has(c));
     return { key, id: presaleProgressiveKey ? `presale:${key}` : key };
   };
