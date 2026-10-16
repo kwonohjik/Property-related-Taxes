@@ -107,7 +107,7 @@ export function processOtherAssetItem(
       clause1BucketTax: isClause9 ? 0 : calculatedTax,
       clause9TaxBase: isClause9 ? taxBase : 0,
       clause9Tax: isClause9 ? calculatedTax : 0,
-      // `cross1045Adjustment`는 사용자가 `crossClause8TaxBase`를 넣었을 때만 생기고
+      // `cross1045Adjustment`는 사용자가 `crossClause8TaxBase`를 넣었을 때만 생기고(후단 시행 2018.1.1. 전 양도분은 `recalc`가 이미 undefined)
       // `clause9TaxBase: taxBase`로 계산된다 → 통산 후 값으로 재산정.
       ...(recalc.cross1045Adjustment && isClause9
         ? {

@@ -65,8 +65,8 @@ export function CrossEngine1045Notice({
       </p>
       <p className="text-caption text-muted-foreground">
         특히 <strong>비사업용 토지</strong>와 <strong>비사업용 토지 과다소유법인 주식</strong>은
-        §104⑤ 본문 후단이 <strong>「동일한 자산으로 보아」</strong> 계산하도록 정하고 있어 차이가
-        커집니다. 비사업용 토지가 아니더라도 부동산과 기타자산을 함께 양도했다면 §104⑤ 합산
+        §104⑤ 본문 후단이 <strong>「동일한 자산으로 보아」</strong> 계산하도록 정하고 있어(2018.1.1.
+        이후 양도분) 차이가 커집니다. 비사업용 토지가 아니더라도 부동산과 기타자산을 함께 양도했다면 §104⑤ 합산
         대상입니다.
       </p>
       {/*

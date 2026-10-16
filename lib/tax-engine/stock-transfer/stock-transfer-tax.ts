@@ -29,6 +29,7 @@ import { classifyStockTransfer } from "./stock-classification";
 import { isSection94_4Category } from "./stock-classification";
 import { calcHoldingPeriod, calcBasicDeduction, floorTaxBase, floorTen, applyDeemedAcquisitionDate, buildAppliedThreshold } from "./stock-transfer-helpers";
 import { computeCross89Adjustment } from "../comparative-104-5-cross";
+import { isSec104_5LatterClauseInForce } from "../data/sec104-5-latter-clause-era";
 import { NBL_HEAVY_CORP_BRACKETS, NBL_HEAVY_CORP_CATEGORIES } from "./stock-rate-tables";
 import { applyStockTaxRate } from "./stock-transfer-rate-calc";
 import { finalizeStockTax } from "./stock-transfer-finalize";
@@ -611,7 +612,10 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
   //   여기서 `calculatedTax`에 더하면 **주식 신고서 금액이 틀어진다**(계획서 §5-B G-4).
   // ⚠️ §104⑤**1호 비교는 하지 않는다**(G-5) — 반대편 과세표준 합계·산출세액이 필요해 입력이
   //   4칸이 된다. 결과 카드가 그 한계를 문구로 알린다.
-  const cross1045Adjustment = NBL_HEAVY_CORP_CATEGORIES.has(classification.taxCategory)
+  // 후단은 2018.1.1. 양도분부터다 — 그 전 양도분은 8호·9호가 별개의 자산이라 조정액 자체가 없다.
+  const cross1045Adjustment =
+    NBL_HEAVY_CORP_CATEGORIES.has(classification.taxCategory) &&
+    isSec104_5LatterClauseInForce(input.transferDate)
     ? computeCross89Adjustment({
         clause8TaxBase: input.crossClause8TaxBase ?? 0,
         clause9TaxBase: taxBase,
