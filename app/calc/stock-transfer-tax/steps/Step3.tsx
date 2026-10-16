@@ -355,7 +355,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
           {clause9Applicable && (
             <CurrencyInput
               label="같은 해 양도한 부동산 중 비사업용 토지 과세표준"
-              hint="소득세법 §104⑤ 본문 후단이 비사업용 토지(§104①8호)와 과다소유법인 주식(§104①9호)을 「동일한 자산으로 보아」 합산하도록 정합니다. 입력하면 합산 시 늘어나는 세액을 안내합니다 — 모르면 비워두세요."
+              hint="소득세법 §104⑤ 본문 후단이 비사업용 토지(§104①8호)와 과다소유법인 주식(§104①9호)을 「동일한 자산으로 보아」 합산하도록 정합니다(2018.1.1. 이후 양도분). 입력하면 합산 시 늘어나는 세액을 안내합니다 — 모르면 비워두세요."
               value={form.crossClause8TaxBase}
               onChange={(v) => onChange({ crossClause8TaxBase: v })}
             />

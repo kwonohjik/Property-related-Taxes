@@ -146,6 +146,14 @@ export interface Cross1045Input {
   otherClausesTax: number;
   /** 감면세액(호별). 생략 시 감면 없음 */
   reduction?: Cross1045Reduction;
+  /**
+   * §104⑤ 본문 후단 «8호 및 9호의 자산은 **동일한 자산으로 보고**»를 적용하는가. **생략하면 적용**(현행).
+   *
+   * 후단은 **2018.1.1. 양도분부터**다(법률 제15225호 부칙). 그 전 과세기간이면 8호·9호는 **별개의 자산**이라
+   * 2호가 둘을 **따로** 계산한 값의 합(`separate89Tax`)을 쓴다. 시기 판정은 호출부가 한다
+   * (`data/sec104-5-latter-clause-era.ts` — 이 엔진은 날짜를 모른다). 계획서 `transfer-104-5-latter-clause-start-date.plan.md` Q-2.
+   */
+  merge89AsSameAsset?: boolean;
   /** §55① 기본누진 8구간 — 세율 데이터는 **매개변수로 주입**한다(두 엔진 미의존) */
   basicBrackets: Bracket;
   /** §104①8호·9호 표(= 기본세율 + 10%p) */
@@ -161,8 +169,10 @@ export interface Cross1045Result {
   merged1Tax: number;
   /** 1호를 **따로** 계산했을 때의 합 — 현행 대비 조정액 산출용 참고값 */
   separate1Tax: number;
-  /** 8호·9호를 **합산**했을 때의 세액 */
+  /** 8호·9호를 **합산**했을 때의 세액 — `merge89Applied`가 false면 2호에 쓰이지 않는 참고값이다 */
   merged89Tax: number;
+  /** 후단 8호·9호 동일자산 의제를 2호에 적용했는가(false = 2018.1.1. 전 과세기간 — 별개 자산) */
+  merge89Applied: boolean;
   /**
    * 8호·9호를 **따로** 계산했을 때의 합 — 「현행(교차 미적용)」 대비 조정액 산출용 참고값.
    * `merged89Tax − separate89Tax`가 8호·9호 의제로 늘어나는 세액이다.
@@ -196,6 +206,7 @@ export function computeCross1045(input: Cross1045Input): Cross1045Result {
     reduction = { ifClause1: 0, ifClause2: 0 },
     basicBrackets,
     nbl89Brackets,
+    merge89AsSameAsset = true,
   } = input;
 
   const merged89Tax = calculateProgressiveTax(clause8TaxBase + clause9TaxBase, nbl89Brackets);
@@ -212,7 +223,8 @@ export function computeCross1045(input: Cross1045Input): Cross1045Result {
     calculateProgressiveTax(realEstateClause1TaxBase, basicBrackets) +
     calculateProgressiveTax(otherAssetClause1TaxBase, basicBrackets);
 
-  const clause2Tax = otherClausesTax + merged1Tax + merged89Tax;
+  // 8호·9호: 후단 시행(2018.1.1.) 후 = 합산 1회, 전 = 별개의 자산이라 각자 계산
+  const clause2Tax = otherClausesTax + merged1Tax + (merge89AsSameAsset ? merged89Tax : separate89Tax);
   const clause1Tax = calculateProgressiveTax(totalTaxBase, basicBrackets);
 
   // 감면 차감 후 비교 — 같은 값을 빼면 순서가 불변이므로 **호별 감면세액**이어야 의미가 있다.
@@ -226,6 +238,7 @@ export function computeCross1045(input: Cross1045Input): Cross1045Result {
     merged1Tax,
     separate1Tax,
     merged89Tax,
+    merge89Applied: merge89AsSameAsset,
     separate89Tax,
     applied,
     calculatedTax: applied === "clause1" ? clause1Tax : clause2Tax,

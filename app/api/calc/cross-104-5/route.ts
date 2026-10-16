@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       otherAsset: otherAsset as CrossSide,
       basicBrackets,
       nbl89Brackets: deriveNbl89Brackets(basicBrackets),
+      taxYear,
     });
 
     const result = computeCross1045(input);

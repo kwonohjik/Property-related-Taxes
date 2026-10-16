@@ -28,6 +28,7 @@
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { Cross1045Input } from "@/lib/tax-engine/comparative-104-5-cross";
+import { isSec104_5LatterClauseInForceForTaxYear } from "@/lib/tax-engine/data/sec104-5-latter-clause-era";
 
 /** 한쪽 엔진에서 뽑아낸 §104⑤ 재료 */
 export interface CrossSide {
@@ -155,8 +156,10 @@ export function buildCross1045Input(args: {
   basicBrackets: Cross1045Input["basicBrackets"];
   nbl89Brackets: Cross1045Input["nbl89Brackets"];
   reduction?: Cross1045Input["reduction"];
+  /** 과세기간(YYYY) — 후단 8호·9호 동일자산 의제(2018.1.1.~) 적용 여부를 정한다 */
+  taxYear: number;
 }): Cross1045Input {
-  const { realEstate: re, otherAsset: oa, basicBrackets, nbl89Brackets, reduction } = args;
+  const { realEstate: re, otherAsset: oa, basicBrackets, nbl89Brackets, reduction, taxYear } = args;
 
   const otherClausesTax =
     re.clause2Tax - re.clause1Tax - re.nblClauseTax +
@@ -171,6 +174,7 @@ export function buildCross1045Input(args: {
     otherClausesTax,
     basicBrackets,
     nbl89Brackets,
+    merge89AsSameAsset: isSec104_5LatterClauseInForceForTaxYear(taxYear),
     ...(reduction ? { reduction } : {}),
   };
 }

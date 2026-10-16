@@ -155,7 +155,7 @@ describe("어댑터 — `Cross1045Input` 조립 + 도출값", () => {
       nblClauseTaxBase: 0, nblClauseTax: 0,
       clause2Tax: 56_060_000,
     };
-    const input = buildCross1045Input({ realEstate, otherAsset, ...brackets });
+    const input = buildCross1045Input({ realEstate, otherAsset, ...brackets, taxYear: 2026 });
     // (200,120,000 − 56,060,000 − 124,060,000) + (56,060,000 − 56,060,000 − 0) = 20,000,000
     expect(input.otherClausesTax).toBe(20_000_000);
     expect(input.totalTaxBase).toBe(700_000_000);
@@ -174,6 +174,7 @@ describe("어댑터 — `Cross1045Input` 조립 + 도출값", () => {
       clause2Tax: 0,
     });
     const input = buildCross1045Input({
+      taxYear: 2026,
       realEstate: side(200_000_000),
       otherAsset: side(200_000_000),
       ...brackets,
@@ -192,6 +193,7 @@ describe("어댑터 — `Cross1045Input` 조립 + 도출값", () => {
 
   it("B-3: 🔒 1호가 한쪽에만 있으면 합산해도 **변화 없다**", () => {
     const input = buildCross1045Input({
+      taxYear: 2026,
       realEstate: {
         taxBase: 200_000_000, clause1TaxBase: 200_000_000, clause1Tax: 56_060_000,
         nblClauseTaxBase: 0, nblClauseTax: 0, clause2Tax: 56_060_000,
@@ -209,6 +211,7 @@ describe("어댑터 — `Cross1045Input` 조립 + 도출값", () => {
 
   it("B-4: ⭐ 통합 도출값 — 부동산(1호+8호) × 기타자산(1호+9호)", () => {
     const input = buildCross1045Input({
+      taxYear: 2026,
       realEstate: {
         taxBase: 443_500_000,
         clause1TaxBase: 200_000_000, clause1Tax: 56_060_000,

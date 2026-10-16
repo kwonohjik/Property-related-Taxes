@@ -64,6 +64,18 @@ describe("POST /api/calc/cross-104-5", () => {
     expect(b.calculatedTax).not.toBe(a.calculatedTax);
   });
 
+  it("R-2b: ⭐ 후단 8호·9호 «동일한 자산으로 보고»는 2018.1.1. 양도분부터 — 2017 과세기간은 따로 계산, 2018은 합산", async () => {
+    // 세율표가 연도별로 달라도 성립하는 **내부 항등식**으로 본다 (계획서 transfer-104-5-latter-clause-start-date Q-2).
+    const y17 = (await (await POST(req(payload(2017)))).json()).data;
+    const y18 = (await (await POST(req(payload(2018)))).json()).data;
+    expect(y17.merge89Applied).toBe(false);
+    expect(y18.merge89Applied).toBe(true);
+    expect(y17.clause2Tax).toBe(y17.input.otherClausesTax + y17.merged1Tax + y17.separate89Tax);
+    expect(y18.clause2Tax).toBe(y18.input.otherClausesTax + y18.merged1Tax + y18.merged89Tax);
+    // 합산은 누진 열등가성 때문에 따로 계산한 합 이상이다 — 2017은 그만큼 낮다
+    expect(y18.merged89Tax).toBeGreaterThan(y18.separate89Tax);
+  });
+
   it("R-3: 잘못된 입력은 400", async () => {
     const res = await POST(req({ taxYear: 2024, realEstate: {}, otherAsset: {} }));
     expect(res.status).toBe(400);

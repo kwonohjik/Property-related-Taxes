@@ -681,11 +681,21 @@ function CrossResult({ result }: { result: CrossCalcResponse }) {
             value={won(result.merged1Tax)}
           />
           <Row label="  (따로 계산했을 때)" value={won(result.separate1Tax)} />
-          <Row
-            label={`§104①8호·9호 합산 ${won(result.input.clause8TaxBase + result.input.clause9TaxBase)}`}
-            value={won(result.merged89Tax)}
-          />
-          <Row label="  (따로 계산했을 때)" value={won(result.separate89Tax)} />
+          {result.merge89Applied ? (
+            <>
+              <Row
+                label={`§104①8호·9호 합산 ${won(result.input.clause8TaxBase + result.input.clause9TaxBase)}`}
+                value={won(result.merged89Tax)}
+              />
+              <Row label="  (따로 계산했을 때)" value={won(result.separate89Tax)} />
+            </>
+          ) : (
+            // 후단(8호·9호 «동일한 자산으로 보고»)은 2018.1.1. 양도분부터다 — 그 전 과세기간은 별개의 자산
+            <Row
+              label={`§104①8호·9호 각각 계산 (2018.1.1. 전 — 동일 자산 의제 없음) ${won(result.input.clause8TaxBase)} + ${won(result.input.clause9TaxBase)}`}
+              value={won(result.separate89Tax)}
+            />
+          )}
           <Row label="그 밖의 호" value={won(result.input.otherClausesTax)} />
         </dl>
       </details>
