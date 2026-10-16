@@ -1,7 +1,7 @@
 # 첫 자산 삭제 — 주 자산 표시·미등기·사이드바 결과 정합 — 계획서 (v0.1)
 
 > 작성 2026-10-16 · 출처: 1주택 코드 리뷰 후속 G1(#2198) 「남은 한계 — 첫 자산 삭제 시 `isPrimaryForHouseholdFlags` 미보정·사이드바 result stale(기존 갭)」
-> 상태: **계획(Plan) — 결정 Q-1~Q-4 대기**. 코드 수정 없음.
+> 상태: **결정 확정(2026-10-16 사용자 「권고대로」) — Q-1 index 판정 · Q-2 기본 라벨 재번호 · Q-3 입력 변경 시 항상 결과 비움 · Q-4 첫 자산 삭제 시 재마운트** · Do 완료(§7-R) · V-1은 Q-5로 별도 결정.
 > 수치는 throwaway probe(route POST 실행, `__tests__/zz-probe/first-asset-removal.probe.test.ts`, 측정 후 삭제 — 사본은 세션 scratchpad)로 잰 값이다. 실행하지 않고 코드만 읽은 항목은 «코드읽기»로 표시했다.
 
 ---
@@ -111,7 +111,7 @@ export function assetRemovalPatch(
 | Q | 질문 | 권고 | 대안 |
 |---|---|---|---|
 | Q-1 | 「주 자산」 판정 방식 | **index로 판정**(4-1) — 옛 저장분까지 맞음 | 삭제 시 플래그만 다시 씀(옛 저장분은 어긋난 채) |
-| Q-2 | 첫 자산을 지우면 기본 라벨(`자산 N`)을 새 위치로 다시 매길까 | **다시 매김**(사용자가 고친 라벨은 그대로 — 교환과 같은 규칙). P1에서 카드 제목은 「자산 1」, 사이드바는 「자산 2」로 갈렸다 | 그대로 둠. 가운데 삭제에도 적용할지는 함께 결정 |
+| Q-2 | 첫 자산을 지우면 기본 라벨(`자산 N`)을 새 위치로 다시 매길까 | **다시 매김**(사용자가 고친 라벨은 그대로 — 교환과 같은 규칙). 카드 제목·사이드바는 위치 번호(`CompanionAssetCard.tsx:258` `자산 {index + 1}` · `TransferSidebarSummary.tsx:56` `자산 {row.index}`)를 쓰지만, 저장 라벨은 컴패니언 payload(`transfer-tax-api-companion-payload.ts:246`)로 결과 화면 배분표 등에 실린다 — 지우고 나면 입력 화면 「자산 2」가 결과에서 「자산 3」이 된다(코드읽기). ※ v0.1의 「사이드바는 자산 2」는 오기 — 사이드바도 위치 번호다 | 그대로 둠. 가운데 삭제에도 적용할지는 함께 결정 |
 | Q-3 | 결과 비우기 범위 | **B — 입력이 바뀌면 항상**(P5·P6·저장까지 해소) | A — 삭제에서만 |
 | Q-4 | 첫 자산 삭제 시 카드 재마운트 | **올림**(교환과 같게, 새 첫 카드의 ① 펼침) | 그대로 |
 
@@ -142,6 +142,26 @@ export function assetRemovalPatch(
 
 ---
 
+### 7-R. Do 결과 (2026-10-16)
+
+**미검증 항목 확인**
+| V | 결과 |
+|---|---|
+| V-1 | **있다(코드읽기)**. ④가 폼 전역에서 읽어 «양도하는 첫 자산의 사실»로 보내는 값: 거주기간 `residencePeriodMonths` · 취득 당시 조정대상지역 `wasRegulatedAtAcquisition` · 일시적 2주택(`temporaryTwoHouseSpecial`·`newHouseAcquisitionDate`) · 대체주택 `repl*` · §154① 단서 `proviso*` · 혼인·합가 `mergedHousehold*` · 입주권 `right*` · 분양권 `presaleRight*` · 판정 메뉴에서 넘겨받은 사실 `importedOneHouseFacts` 등. 첫 주택을 지우면 이 값이 새 첫 자산의 사실로 읽힌다. 같은 일은 첫 자산을 «그 자리에서 다른 물건으로 고칠 때»도 생긴다(위치 기준 입력이라). **이번 범위에서 제외 — 사용자 결정 Q-5로 넘김** |
+| V-2 | 결과 화면 블록(`isResult && result`)에는 폼 쓰기가 없다. 가산세 `setUnpaidTax`는 `updateFormData` 직통(`TransferTaxCalculator.tsx:309`) |
+| V-3 | 입력 단계 마운트 effect는 Step4 두 개(`Step4.tsx:267`·`:300`) — 값이 어긋났을 때만 쓴다. 정상 상태에서 단계 이동만으로 결과가 비워지지 않는다 |
+| V-4 | 다건 계산기는 자체 스토어 `result`를 쓴다(`MultiTransferTaxCalculator.tsx:268`·`:401`) — 단건 스토어 결과를 비워도 닿지 않는다 |
+| V-5 | 재마운트 없이는 새 첫 카드의 ① 기본정보(양도일·신고일)가 접혀 있다 — E2E 단언(재마운트 제거 뮤테이션 KILLED)로 확인 |
+
+**구현**: `lib/calc/asset-removal.ts`(신규) · `CompanionAssetCard.tsx:133` index 판정 · `CompanionAssetsSection` `onRemoveAsset` · `Step1` `handleRemoveAsset`(첫 자산이면 재마운트, `updateAssets` 분기 그대로 거침) · `TransferTaxCalculator` `updateFormAndInvalidate`에서 `clearResult()`.
+Q-2 재번호는 가운데 삭제에도 적용했다(같은 갈림이 생긴다).
+
+**anchor**: `__tests__/calc/first-asset-removal.anchor.test.ts`(route 실행 — R-1 29,408,500 · R-2 81,966,500 · R-3~R-6) · `__tests__/components/first-asset-primary-badge.anchor.test.tsx`(B-1~B-3, 수정 전 RED 확인) · E2E `e2e/transfer-first-asset-removal.spec.ts`(계산 → 자산 목록 → 첫 자산 삭제 → 배지·① 펼침·저장 폼·사이드바 → 재계산 = 처음부터 [B, C] 폼).
+
+**뮤테이션 8종 전부 KILLED**(파일 백업 복원 하네스, E2E 변형은 테스트 단언 실패로 확인 — 서버 기동 실패 아님): T2 승격 줄 제거 · 폼 전역 미등기 그대로 · 플래그 `i === 1` · 라벨 재번호 제거 · 카드 저장 플래그 복귀 · `clearResult` 제거 · Step1 삭제 배선 제거 · 재마운트 제거.
+
+**회귀**: tsc 0 · eslint 0 · 사이드바·결과 복귀 관련 E2E 24건(겸용 사이드바·환산 프리뷰·split 결과 해소·G1 교환 포함) 통과.
+
 ## 8. 범위 밖 (알려진 한계)
 
 - 순서 이동 UI 없음(교환 버튼은 사례 28 역방향 전용).
@@ -152,3 +172,4 @@ export function assetRemovalPatch(
 
 ## 부록. 변경 이력
 - v0.1 (2026-10-16) 초안 — probe P1~P8 실측, 결정 Q-1~Q-4, 미검증 V-1~V-5.
+- v0.2 (2026-10-16) 결정 확정(권고대로) · Q-2 근거 정정(사이드바도 위치 번호 — 라벨이 갈리는 곳은 결과 화면) · Q-2 재번호는 가운데 삭제에도 적용(같은 갈림이 생긴다).

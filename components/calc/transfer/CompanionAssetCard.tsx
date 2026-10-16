@@ -130,7 +130,8 @@ export function CompanionAssetCard({
   hasSiblings,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
-  const isPrimary = asset.isPrimaryForHouseholdFlags;
+  // 위치로 판정한다 — 저장 필드 `isPrimaryForHouseholdFlags`는 첫 자산 삭제·옛 저장분에서 어긋날 수 있다(같은 카드의 `isFirst`와 같은 축).
+  const isPrimary = index === 0;
   // 지분 모드 companion(자산2+): ① 기본정보·② 양도정보는 같은 물건·같은 양도 사건이라 자산1과
   // 동일 → 숨김(자산1에서 1회 입력·엔진 mergePrimaryBasic 병합). 자산1(index 0)은 항상 노출.
   const hideInheritedSections = splitMode === "fractional" && index > 0;
