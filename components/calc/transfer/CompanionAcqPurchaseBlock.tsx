@@ -565,8 +565,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
             extensionStdPriceAtAcquisition={props.extensionStdPriceAtAcquisition ?? ""}
             onExtensionStdPriceAtAcquisitionChange={props.onExtensionStdPriceAtAcquisitionChange ?? (() => {})}
             // §114조의2① 감정가액 × 증축 — 칸 노출은 ⑧·④와 같은 술어(`generalExtensionAppraisalApplies`). 부담부증여는 제외된다.
-            // 첫 자산이 아니면 칸을 숨긴다 — 컴패니언 ④는 이 값을 싣지 않고 ⑧이 그 조합을 먼저 막는다(칸 없는 값을 요구하지 않는다).
-            showExtensionAppraisal={!!props.asset && !props.isNonPrimaryAsset && generalExtensionAppraisalApplies(props.asset, props.transferDate)}
+            // 컴패니언(두 번째 이후 자산·지분 카드)도 같다 — 컴패니언 ④⑫⑭가 이 값을 싣는다.
+            showExtensionAppraisal={!!props.asset && generalExtensionAppraisalApplies(props.asset, props.transferDate)}
             extensionAppraisalValue={props.extensionAppraisalValue ?? ""}
             onExtensionAppraisalValueChange={props.onExtensionAppraisalValueChange}
           />

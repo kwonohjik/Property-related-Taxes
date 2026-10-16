@@ -492,10 +492,20 @@ export function buildCompanionEngineInputs(
     constructionDate: toOptionalDate(c.constructionDate),
     extensionFloorArea: c.extensionFloorArea,
     extensionStdPriceAtAcquisition: c.extensionStdPriceAtAcquisition,
+    extensionAppraisalValue: c.extensionAppraisalValue,
     // §114조의2 가산세 게이트(`calculateBuildingPenalty`)는 산정방식을 본다 — 본체 ④는 `acquisitionMethod: "estimated"`를 싣지만 컴패니언 ④는
-    // 방식 필드가 없어 환산 컴패니언은 신축이어도 게이트에서 막혔다. 엔진에서 이 키를 읽는 곳은 가산세·다필지뿐이라 신축·증축 × 환산일 때만 싣는다
-    // (그 밖의 컴패니언은 종전과 입력 바이트가 같다).
-    ...(c.isSelfBuilt && c.useEstimatedAcquisition ? { acquisitionMethod: "estimated" as const } : {}),
+    // 방식 필드가 없어 환산 컴패니언은 신축이어도 게이트에서 막혔다. 엔진에서 「estimated」를 읽는 곳은 가산세·다필지뿐이라 신축·증축 × 환산일 때만 싣는다.
+    // 감정가액 컴패니언은 ④가 싣는 표시로 엔진 감정 분기(감정가액 + 개산공제 §163⑥)를 태운다 — 종전엔 이 키가 없어 실가로 읽혀 개산공제가 0이었다.
+    // ⚠️ 키는 항상 둔다(값만 undefined) — 조건부 spread는 아래 키 커버리지 가드에서 「누락」으로 잡힌다.
+    acquisitionMethod:
+      c.acquisitionMethod === "appraisal"
+        ? ("appraisal" as const)
+        : c.isSelfBuilt && c.useEstimatedAcquisition
+          ? ("estimated" as const)
+          : undefined,
+    //   `appraisalValue`도 함께 싣는다 — 양도차익은 `acquisitionPrice`로 대체하지만 §114조의2 가산세 base(finalize·손실 경로)는
+    //   `appraisalValue`만 읽어, 빠지면 신축 가산세가 0이 된다(실측).
+    appraisalValue: c.acquisitionMethod === "appraisal" ? acqPrice : undefined,
     standardPriceAtAcquisition: c.standardPriceAtAcquisition,
     // ⑭ 토지분 취득시 기준시가 단가(소득법 §99①1호 가목) — 면적은 아래 `acquisitionArea`.
     //    없으면 `calcAcqStdPair`가 토지분을 못 만들어 소유자 분리가 조용히 무시된다(침묵 strip 주의).

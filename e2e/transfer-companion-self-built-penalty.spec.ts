@@ -5,7 +5,8 @@
  * 첫 자산만 가산세가 붙고 컴패니언은 조용히 0이었다.
  *   CS-1. 부담부증여 지분 카드(축 B) × 신축 × 감정가액 — 자산 2의 신축이 가산세 6,000,000(감정가액 5억×40%×채무비율 0.6 = 1.2억의 5%)
  *   CS-2. 함께 양도(다른 물건) × 환산 × 신축 — 자산 2의 가산세 4,999,999가 payload·결과에 반영된다
- *   CS-3. 함께 양도 × 감정가액 × 신축(자산 2) — 계산하지 못하므로 그 자산 카드로 막는다(첫 자산이면 막지 않는다)
+ *   CS-3. 함께 양도 × 감정가액 × 신축(자산 2) — 가산세 15,000,000(감정가액 3억 × 5%) · 개산공제 6,000,000(§163⑥)
+ *   CS-4. 함께 양도 × 감정가액 × 증축(자산 2) — 컴패니언 카드에 「증축한 부분의 감정가액」 칸이 뜨고 그 값(6천만)이 base(가산세 3,000,000)
  * 사람이 브라우저로 직접 한 수동 확인은 아니다(headless). 포트는 `baseURL` — 워크트리는 `E2E_PORT=<포트>`.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -127,17 +128,34 @@ test.describe("컴패니언 신축·증축 특례 §114조의2", () => {
     expect(props[1].penaltyTax).toBe(4_999_999);
   });
 
-  test("CS-3: 함께 양도 × 감정가액 × 신축(자산 2)는 막는다 — 계산 요청이 나가지 않는다", async ({ page }) => {
+  test("CS-3: 함께 양도 × 감정가액 × 신축(자산 2) → 가산세 15,000,000 · 개산공제 6,000,000", async ({ page }) => {
     test.setTimeout(120_000);
     const appraisal = { isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000" };
     await seedAndOpen(page, [plain(1, appraisal), plain(2, { ...appraisal, ...SB })]);
-    let called = false;
-    page.on("request", (rq) => {
-      if (rq.url().includes("/api/calc/transfer") && rq.method() === "POST") called = true;
-    });
-    await gotoLastStep(page);
-    await page.getByRole("button", { name: /계산하기/ }).last().click();
-    await expect(page.getByText(/두 번째 이후 자산\(또는 지분 카드\)이 신축·증축한 건물/).first()).toBeVisible({ timeout: 15_000 });
-    expect(called).toBe(false);
+    const resp = await calculate(page);
+    const sent = resp.request().postDataJSON() as { companionAssets?: Record<string, unknown>[] };
+    expect(sent.companionAssets?.[0].acquisitionMethod).toBe("appraisal");
+    const props = (await resp.json()).data.aggregated.properties as (Prop & { necessaryExpense: number })[];
+    expect(props[1].necessaryExpense).toBe(6_000_000);
+    expect(props[1].penaltyBase).toBe(300_000_000);
+    expect(props[1].penaltyTax).toBe(15_000_000);
+  });
+
+  test("CS-4: 함께 양도 × 감정가액 × 증축(자산 2) → 컴패니언 카드의 증축부분 감정가액 6천만이 base(가산세 3,000,000)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const appraisal = { isAppraisalAcquisition: true, fixedAcquisitionPrice: "300000000" };
+    const ext = {
+      isSelfBuilt: true, buildingType: "extension", constructionDate: "2021-06-01",
+      extensionFloorArea: "120", extensionStdPriceAtAcquisition: "40000000", extensionAppraisalValue: "60000000",
+    };
+    await seedAndOpen(page, [plain(1, appraisal), plain(2, { ...appraisal, ...ext })]);
+    for (const n of [1, 2, 3] as const) await expandAssetSection(page, n, 1);
+    await expect(page.locator('[data-asset-card-index="1"]').getByTestId("extension-appraisal-value")).toHaveValue("60,000,000");
+    const resp = await calculate(page);
+    const sent = resp.request().postDataJSON() as { companionAssets?: Record<string, unknown>[] };
+    expect(sent.companionAssets?.[0].extensionAppraisalValue).toBe(60_000_000);
+    const props = (await resp.json()).data.aggregated.properties as Prop[];
+    expect(props[1].penaltyBase).toBe(60_000_000);
+    expect(props[1].penaltyTax).toBe(3_000_000);
   });
 });

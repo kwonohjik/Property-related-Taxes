@@ -272,15 +272,21 @@ export const companionAssetSchema = z.object({
   /** 매매 시 환산취득가 사용 여부 */
   useEstimatedAcquisition: z.boolean().optional(),
   /**
+   * ⑫ 감정가액 취득(§97①1호나목) — 엔진이 감정가액 + 개산공제(§163⑥)로 필요경비를 잡는 표시.
+   * 종전엔 ⑫에 없어 컴패니언 감정가액이 실가로 읽혀 개산공제가 0이었다. 매매사례는 ⑧이 컴패니언에서 막으므로 받지 않는다.
+   */
+  acquisitionMethod: z.enum(["appraisal"]).optional(),
+  /**
    * ⑫ 신축·증축 특례(소득세법 §114조의2) — 컴패니언(함께양도·지분 카드)도 입력 칸이 있는데 종전엔 ⑫에 없어
    * **입력해도 엔진에 닿지 않았다**(침묵 strip → 가산세 0). 본체(`transfer-tax-schema-base-shape.ts`)와 같은 필드·같은 형태.
-   * 증축 × 감정가액은 이 경로가 base(증축한 부분의 감정가액)를 받지 못해 ⑧이 막는다.
    */
   isSelfBuilt: z.boolean().optional(),
   buildingType: z.enum(["new", "extension"]).optional(),
   constructionDate: z.string().date().optional(),
   extensionFloorArea: z.number().nonnegative().optional(),
   extensionStdPriceAtAcquisition: z.number().nonnegative().optional(),
+  /** §114조의2① 감정가액 × 증축 — 증축한 부분에 한정한 감정가액(본체와 같은 필드). */
+  extensionAppraisalValue: z.number().nonnegative().optional(),
   /** 본인 취득일 (YYYY-MM-DD) — 보유기간 산정용 */
   acquisitionDate: z.string().date().optional(),
   /** Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정 */
