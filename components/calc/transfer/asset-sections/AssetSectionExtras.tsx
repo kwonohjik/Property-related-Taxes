@@ -7,6 +7,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NblSectionContainer } from "../nbl/NblSectionContainer";
+import { NblDesignatedAreaQuestion } from "../nbl/NblDesignatedAreaQuestion";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
@@ -60,6 +61,15 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
       */}
       {asset.assetKind === "land" && asset.isNonBusinessLand && (
         <NblSectionContainer asset={asset} onAssetChange={onChange} transferDate={transferDate} />
+      )}
+      {/* 양도일 2009.3.16.~2015.12.31.의 비사업용 토지 — 8호 중과 유예 요건(지정지역 여부). 그 기간에만 뜬다. */}
+      {asset.assetKind === "land" && asset.isNonBusinessLand && (
+        <NblDesignatedAreaQuestion
+          transferDate={transferDate}
+          value={asset.isDesignatedArea}
+          onChange={(isDesignatedArea) => onChange({ isDesignatedArea })}
+          idSuffix={`companion-${assetIndex}`}
+        />
       )}
 
       {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 **주 자산**에만 표시 (소령 §155⑳) */}

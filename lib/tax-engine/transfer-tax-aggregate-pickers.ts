@@ -37,6 +37,7 @@ export function pickValuationDetails(r: SingleResult): TransferValuationDetailSo
     commercialBuildingValuationDetail: r.commercialBuildingValuationDetail,
     nonBusinessLandJudgmentDetail: r.nonBusinessLandJudgmentDetail,
     nblSurchargeExcluded: r.nblSurchargeExcluded,
+    nblSurchargeExcludedBy: r.nblSurchargeExcludedBy,
     multiHouseSurchargeDetail: r.multiHouseSurchargeDetail,
     expropriationValuationDetail: r.expropriationValuationDetail,
     housingExpropriationValuationDetail: r.housingExpropriationValuationDetail,

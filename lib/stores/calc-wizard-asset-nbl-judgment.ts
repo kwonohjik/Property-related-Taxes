@@ -14,6 +14,12 @@ export interface NblJudgmentFormSlice {
   isNonBusinessLand: boolean;
   /** true 시 엔진 자동 판정, isNonBusinessLand 체크박스 무시 */
   nblUseDetailedJudgment: boolean;
+  /**
+   * 양도 당시 이 토지가 §104의2② **지정지역**에 있는가(사용자 선언). 비사업용 토지 8호 세율 유예(양도 2009.3.16.~2015.12.31.)의 요건 사실이다.
+   * 미선언 = 모름 → 중과 유지 + 확인 필요. **토지·비사업용·유예 기간일 때만** 입력칸이 뜬다(그 밖에는 읽히지 않는다).
+   * optional — 초기값 없음(factory·NBL_DEFAULTS 미포함, `regionInDesignatedDistrict`와 같은 규약).
+   */
+  isDesignatedArea?: boolean;
 
   // ── NBL 공통 ──
   /** 지목 (nblLandArea는 acquisitionArea 재사용 — area-taxonomy.md 원칙 B) */

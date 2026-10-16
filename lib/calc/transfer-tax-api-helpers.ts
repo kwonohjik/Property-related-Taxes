@@ -210,6 +210,8 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     //    입력(`BurdenedGiftTrancheBasisBlock`)하고 엔진이 지분율을 곱해 합산한다. 여기에 넣으면 지분마다 취득일이 다른데
     //    같은 금액이 모든 지분 카드에 복제된다.
     isNonBusinessLand: primary.isNonBusinessLand,
+    // 지정지역 선언도 «물건 단위 값»(소재지)이라 전 지분 공통이다 — 비사업용 토지 8호 유예 판정용.
+    isDesignatedArea: primary.isDesignatedArea,
   };
 }
 

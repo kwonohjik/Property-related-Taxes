@@ -331,7 +331,9 @@ export function resolveClause5TaxDetailed(args: Clause5Args): Clause5Detail {
       // 비사업용 토지 중과 사실을 자산 단위로 끌어올린다 — 결과 카드의 배지·법령근거가 사라지지 않도록.
       surchargeType: nblPart.surchargeType,
       surchargeRate: nblPart.surchargeRate,
-      ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+      ...(nblPart.nblSurchargeExcluded
+        ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblPart.nblSurchargeExcludedBy }
+        : {}),
       shortTermNote:
         `파트별 세율(소득세법 §104⑤2호·본문 후단): 주택분 ` +
         `${Math.round(housingPart.appliedRate * 100)}% ${housingPart.calculatedTax.toLocaleString()} + ` +

@@ -259,6 +259,7 @@ export async function POST(request: NextRequest) {
       regionInDesignatedDistrict: p.regionInDesignatedDistrict,
       isUnregistered: p.isUnregistered,
       isNonBusinessLand: p.isNonBusinessLand,
+      isDesignatedArea: p.isDesignatedArea,
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,
       acquisitionCause: p.acquisitionCause,
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),

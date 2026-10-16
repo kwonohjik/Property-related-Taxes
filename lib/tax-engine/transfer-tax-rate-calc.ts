@@ -48,6 +48,8 @@ export {
   clauseBucketKey,
 } from "./transfer-tax-rate-clause";
 import { isCrisisAcqExempt } from "./legal-codes";
+import { judgeNblRateDeferral } from "./data/nbl-rate-deferral-era";
+import type { NblSurchargeExclusionReason } from "./types/transfer-result.types";
 // re-export — §114조의2 가산세 축은 별 파일로 옮겼으나 기존 import 경로를 유지한다.
 export { calculateBuildingPenalty, resolveExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 
@@ -64,8 +66,10 @@ interface CalcTaxResult {
   progressiveDeduction: number;
   surchargeSuspended: boolean;
   shortTermNote?: string;
-  /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특은 표1 유지. */
+  /** 비사업용 토지 +10%p 중과배제(기본세율) — 사유는 `nblSurchargeExcludedBy`. 장특은 표1 유지. */
   nblSurchargeExcluded?: boolean;
+  /** `nblSurchargeExcluded`의 사유 — 취득일 기준 부칙 제9270호 §14① 또는 양도일 기준 §104⑥·제12169호 부칙 제20조 */
+  nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
   /** 적용된 §104 호 — §104⑤2호 단서(동일 호 합산) 판정용. 조특법 특칙 등 §104 밖이면 undefined. */
   rateClause?: RateClause;
   /**
@@ -367,7 +371,17 @@ export function calcTax(
   // T-2: 비사업용 토지 누진 + 10%p (§104①8호)
   if (input.isNonBusinessLand && surchargeRates.non_business_land) {
     // 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 토지는 +10%p 중과 배제(→§104①1호 기본누진). 장특은 표1 유지.
-    const nblCrisisExcluded = isCrisisAcqExempt(input.landAcquisitionDate ?? input.acquisitionDate);
+    const nblAcqExcluded = isCrisisAcqExempt(input.landAcquisitionDate ?? input.acquisitionDate);
+    // 양도일 기준 한시 유예 — 2009.3.16.~2015.12.31. 양도 + 지정지역 아님(§104⑥ · 제12169호 부칙 제20조). 모름은 중과 유지 + 확인 필요.
+    const nblDeferralVerdict = judgeNblRateDeferral({ transferDate: input.transferDate, isDesignatedArea: input.isDesignatedArea });
+    const nblTransferDeferred = nblDeferralVerdict === "deferred";
+    // 두 사유는 효과가 같다(가산 0 · 해당 호 = §104①1호). 사유가 겹치면 영구 배제인 취득일 기준을 먼저 적는다.
+    const nblCrisisExcluded = nblAcqExcluded || nblTransferDeferred;
+    const nblExcludedBy: NblSurchargeExclusionReason | undefined = nblAcqExcluded
+      ? "crisis_acquisition"
+      : nblTransferDeferred
+        ? "transfer_deferral"
+        : undefined;
     const additionalRate = nblCrisisExcluded ? 0 : surchargeRates.non_business_land.additionalRate;
     // 단일 필지 기준면적 초과분 부분 면적안분(목장 §168의10③·기타토지 §168의11①) — 중과분(+10%p)만 비사업용 면적비율로 안분(누진 기본세액은 전체 taxBase). 연접 다필지(§168의11⑤)·복합용도(§168의11⑥) 미구현
     const ratio = input.nonBusinessLandAreaRatio ?? 1;
@@ -411,7 +425,7 @@ export function calcTax(
           progressiveDeduction: 0,
           surchargeSuspended: false,
           shortTermNote: `보유기간 ${holdingMonthsTotal < 12 ? "1년" : "2년"} 미만 단기세율 적용 (§104①후단: 비사업용 누진세액과 비교한 큰 세액)`,
-          ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
+          ...(nblCrisisExcluded ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblExcludedBy } : {}),
           // 8호가 아니라 단기세율(2·3호)이 채택됐다 — **적용** 호는 그쪽이다.
           // 다만 **해당** 호는 둘 다이므로 `candidateClauses`는 아래 8호 반환과 같다.
           rateClause: shortTermClause(holdingMonthsTotal),
@@ -426,7 +440,7 @@ export function calcTax(
       appliedRate: roundRate(baseRate + additionalRate * ratio), // 실효 가산율(면적비율 반영); 부칙배제 시 additionalRate=0 → baseRate
       progressiveDeduction: deduction,
       surchargeSuspended: false,
-      ...(nblCrisisExcluded ? { nblSurchargeExcluded: true } : {}),
+      ...(nblCrisisExcluded ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblExcludedBy } : {}),
       rateClause: nblBaseClause,
       candidateClauses: nblCandidates,
     };

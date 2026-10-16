@@ -131,11 +131,13 @@ export function summarizeAssetSections(
 
   // ⑤ 기타 특례 — NBL 정밀판정(land) / 장기임대 거주주택(housing·입주권). 둘 다 아니면 null
   let extras: SectionSummary | null = null;
-  const nblDetailed =
-    asset.assetKind === "land" && asset.isNonBusinessLand && asset.nblUseDetailedJudgment;
+  // 🔴 `nblUseDetailedJudgment`를 게이트에 넣지 않는다 — 렌더 게이트(`AssetSectionExtras`: `land && isNonBusinessLand`)와 같은 조건이어야 한다.
+  //    다르면 컴패니언에서 상세 판정을 접는 순간 ⑤ 카드가 통째로 사라져 「상세 판정 시작」 복귀 버튼과
+  //    지정지역 질문(양도일 유예 요건)이 함께 도달 불가가 된다.
+  const nblDetailed = asset.assetKind === "land" && asset.isNonBusinessLand;
   const isRentalEligible = asset.assetKind === "housing" || asset.assetKind === "right_to_move_in";
   if (nblDetailed) {
-    extras = { label: "비사업용 토지 정밀판정", filled: true };
+    extras = { label: asset.nblUseDetailedJudgment ? "비사업용 토지 정밀판정" : "비사업용 토지", filled: true };
   } else if (isRentalEligible) {
     extras = {
       label: "장기임대 거주주택 특례",

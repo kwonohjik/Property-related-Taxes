@@ -46,6 +46,13 @@ import type {
  * 조합에서 부동소수 오차가 1원 과소를 만들기 때문에 엔진이 정수 %로 계산하고, 표시 계층도
  * 같은 값을 그대로 쓴다(`conversion-holding-pct.ts` 참조).
  */
+/**
+ * 비사업용 토지 +10%p 중과배제(`nblSurchargeExcluded`)의 사유 — 효과(가산 0 · 해당 호 §104①1호)는 같고 **근거가 다르다**.
+ * - `crisis_acquisition`: 취득일 기준 — 2009.3.16.~2012.12.31. 취득(부칙 제9270호 §14①)
+ * - `transfer_deferral`: 양도일 기준 — 2009.3.16.~2015.12.31. 양도 + 지정지역 아님(§104⑥ · 제12169호 부칙 제20조)
+ */
+export type NblSurchargeExclusionReason = "crisis_acquisition" | "transfer_deferral";
+
 export interface UsageConversionDetail {
   /**
    * 사실상 주거용으로 사용한 날 — `yyyy-MM-dd`.
@@ -220,9 +227,11 @@ export interface TransferTaxResult {
    */
   rateSurchargeStatutoryExcluded?: boolean;
   /**
-   * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo.
+   * 비사업용 토지 +10%p 중과배제(기본세율). 장특 표1 유지. echo. 사유는 `nblSurchargeExcludedBy`.
    */
   nblSurchargeExcluded?: boolean;
+  /** `nblSurchargeExcluded`의 사유 echo */
+  nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
   /**
    * 엔진이 적용한 §104① 호 — 신고서 ③ 세율구분 코드 산정의 단일 소스.
    * §104① 후단·§104⑦ 후단 비교의 **승자**이므로 「해당 호 집합」은 표현하지 않는다.
@@ -573,6 +582,7 @@ export type TransferValuationDetailSource = Pick<
   | "commercialBuildingValuationDetail"
   | "nonBusinessLandJudgmentDetail"
   | "nblSurchargeExcluded"
+  | "nblSurchargeExcludedBy"
   | "multiHouseSurchargeDetail"
   | "expropriationValuationDetail"
   | "housingExpropriationValuationDetail"

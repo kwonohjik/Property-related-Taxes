@@ -323,6 +323,8 @@ export function handleMultiParcelBranch(
     ...(multiHouseSurchargeResult
       ? { multiHouseSurchargeDetail: multiHouseSurchargeResult }
       : {}),
-    ...(mpTaxResult.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+    ...(mpTaxResult.nblSurchargeExcluded
+      ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: mpTaxResult.nblSurchargeExcludedBy }
+      : {}),
   };
 }

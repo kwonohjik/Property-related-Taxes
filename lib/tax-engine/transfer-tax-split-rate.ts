@@ -48,6 +48,7 @@ import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { RateGroup } from "./types/transfer-aggregate.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
+import type { NblSurchargeExclusionReason } from "./types/transfer-result.types";
 
 /**
  * 부수토지 축은 `transfer-tax-appurtenant-land.ts`로 분리했다(800줄 정책).
@@ -116,8 +117,9 @@ export interface SplitRatePart {
   /** 이 파트에 붙은 중과 유형·가산율 (비사업용 토지 등) — 결과 표시용 echo */
   surchargeType?: string;
   surchargeRate?: number;
-  /** 부칙 제9270호 §14① 2008 위기 취득 중과배제 echo */
+  /** 비사업용 토지 중과배제(부칙 제9270호 §14① 위기취득 또는 양도일 유예) echo */
   nblSurchargeExcluded?: boolean;
+  nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
 }
 
 export interface SplitPartRateResult {
@@ -387,6 +389,7 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
     surchargeType: finals[i].surchargeType,
     surchargeRate: finals[i].surchargeRate,
     nblSurchargeExcluded: finals[i].nblSurchargeExcluded,
+    nblSurchargeExcludedBy: finals[i].nblSurchargeExcludedBy,
   }));
   const aggregateProgressive = calculateProgressiveTax(taxBase, parsedRates.brackets);
 
@@ -522,6 +525,7 @@ function computePartialNblTax(
         surchargeType: nblPart.surchargeType,
         surchargeRate: nblPart.surchargeRate,
         nblSurchargeExcluded: nblPart.nblSurchargeExcluded,
+        nblSurchargeExcludedBy: nblPart.nblSurchargeExcludedBy,
       },
       {
         // 비사업용이 아닌 나머지 토지 — split의 「토지」 파트와 같은 자리다.
@@ -557,7 +561,9 @@ function computePartialNblTax(
       appliedRate: baseRate,
       progressiveDeduction: deduction,
       surchargeSuspended: false,
-      ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+      ...(nblPart.nblSurchargeExcluded
+        ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblPart.nblSurchargeExcludedBy }
+        : {}),
       shortTermNote:
         `한 필지 중 비사업용 ${Math.round(ratio * 100)}% 분리(소득세법 §104⑤ 본문 후단): ` +
         `합산 누진세액 ${clause1.toLocaleString()}이 별개 자산별 합계 ` +
@@ -574,7 +580,9 @@ function computePartialNblTax(
     // 파트 중과 사실을 자산 단위로 끌어올린다 — 결과 카드의 중과 배지·법령근거가 사라지지 않도록.
     surchargeType: nblPart.surchargeType,
     surchargeRate: nblPart.surchargeRate,
-    ...(nblPart.nblSurchargeExcluded ? { nblSurchargeExcluded: true } : {}),
+    ...(nblPart.nblSurchargeExcluded
+      ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblPart.nblSurchargeExcludedBy }
+      : {}),
     shortTermNote:
       `한 필지 중 비사업용 ${Math.round(ratio * 100)}% 분리(소득세법 §104⑤ 2호·본문 후단): ` +
       `비사업용 ${nblPart.calculatedTax.toLocaleString()} + 그 외 ` +
@@ -654,6 +662,7 @@ function resolveRentalHousingSplitTax(
     surchargeType: p.tax.surchargeType,
     surchargeRate: p.tax.surchargeRate,
     nblSurchargeExcluded: p.tax.nblSurchargeExcluded,
+    nblSurchargeExcludedBy: p.tax.nblSurchargeExcludedBy,
   });
   return {
     ...d.result,
@@ -743,7 +752,12 @@ export function resolveSplitAwareTax(
     surchargeSuspended: false,
     surchargeType: surcharged?.surchargeType,
     surchargeRate: surcharged?.surchargeRate,
-    ...(parts.parts.some((p) => p.nblSurchargeExcluded) ? { nblSurchargeExcluded: true } : {}),
+    ...(parts.parts.some((p) => p.nblSurchargeExcluded)
+      ? {
+          nblSurchargeExcluded: true,
+          nblSurchargeExcludedBy: parts.parts.find((p) => p.nblSurchargeExcluded)?.nblSurchargeExcludedBy,
+        }
+      : {}),
     shortTermNote:
       `파트별 세율(소득세법 §104⑤2호): ` +
       parts.parts

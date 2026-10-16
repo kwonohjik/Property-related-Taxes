@@ -145,6 +145,8 @@ export const propertyBaseShape = {
   regionInDesignatedDistrict: z.boolean().optional(),
   isUnregistered: z.boolean(),
   isNonBusinessLand: z.boolean(),
+  /** ⑫ 양도 당시 지정지역(§104의2②) 선언 — 비사업용 토지 8호 유예(양도 2009.3.16.~2015.12.31.) 판정용. 미선언 = 모름(중과 유지 + 확인 필요) */
+  isDesignatedArea: z.boolean().optional(),
   /**
    * ⑫ §77 공익수용 감면의 농어촌특별세 비과세 판정(농특세령 §4①1호 「직접 경작한 토지」 한정).
    * 없으면 엔진이 「입증되지 않음 = 과세」로 처리한다.

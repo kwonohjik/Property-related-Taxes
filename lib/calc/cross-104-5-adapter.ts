@@ -29,6 +29,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { Cross1045Input } from "@/lib/tax-engine/comparative-104-5-cross";
 import { isSec104_5LatterClauseInForceForTaxYear } from "@/lib/tax-engine/data/sec104-5-latter-clause-era";
+import { isSec104_5ReductionParenthesisInForceForTaxYear } from "@/lib/tax-engine/data/sec104-5-reduction-parenthesis-era";
 
 /** 한쪽 엔진에서 뽑아낸 §104⑤ 재료 */
 export interface CrossSide {
@@ -175,6 +176,7 @@ export function buildCross1045Input(args: {
     basicBrackets,
     nbl89Brackets,
     merge89AsSameAsset: isSec104_5LatterClauseInForceForTaxYear(taxYear),
+    reductionParenthesisApplies: isSec104_5ReductionParenthesisInForceForTaxYear(taxYear),
     ...(reduction ? { reduction } : {}),
   };
 }

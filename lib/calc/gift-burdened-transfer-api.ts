@@ -299,6 +299,7 @@ export function buildGiftBurdenedTransferBody(
     priorReductionUsage: [] as unknown[],
     specialHouseExclusions: [] as unknown[],
     isNonBusinessLand: isLandType ? (bgt.isNonBusinessLand ?? false) : false,
+    isDesignatedArea: isLandType ? bgt.isDesignatedArea : undefined,
 
     // §114조의2 신축·증축 가산세 (K-5 환산·K-7 감정가액 + 건물 전용) — body 최상위 (Zod propertyBaseShape 수용)
     // land 제외(건물 행위). 엔진 step이 converted+isSelfBuilt(estimatedBase)·appraisal+isSelfBuilt(penaltyAxis)에서 penalty base 결선.

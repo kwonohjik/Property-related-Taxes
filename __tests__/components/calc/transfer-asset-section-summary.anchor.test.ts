@@ -95,6 +95,21 @@ describe("summarizeAssetSections — 헤더 라벨 요약 (금액 없음)", () =
     expect(s.extras).toEqual({ label: "비사업용 토지 정밀판정", filled: true });
   });
 
+  it("토지 + 비사업용인데 상세 판정을 접은 상태 → ⑤ 카드는 남는다(렌더 게이트와 같은 조건)", () => {
+    // 접는 순간 카드가 사라지면 「상세 판정 시작」 복귀 버튼과 지정지역 질문(양도일 유예 요건)이 함께 도달 불가가 된다.
+    const s = summarizeAssetSections(
+      asset({ assetKind: "land", isNonBusinessLand: true, nblUseDetailedJudgment: false }),
+      {},
+    );
+    expect(s.extras).toEqual({ label: "비사업용 토지", filled: true });
+  });
+
+  it("토지라도 비사업용이 아니면 ⑤ 카드가 없다 · 비사업용 플래그가 남은 주택도 없다", () => {
+    expect(summarizeAssetSections(asset({ assetKind: "land", isNonBusinessLand: false }), {}).extras).toBeNull();
+    const h = summarizeAssetSections(asset({ assetKind: "housing", isNonBusinessLand: true }), {});
+    expect(h.extras).toEqual({ label: "장기임대 거주주택 특례", filled: false });
+  });
+
   it("④ 일괄 양도비(폼-전역) 활성 시 자산 transferExpense=0 이어도 filled", () => {
     const s = summarizeAssetSections(
       asset({ assetKind: "land", capitalExpenditure: "0", transferExpense: "0" }),

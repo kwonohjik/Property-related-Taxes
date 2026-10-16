@@ -500,6 +500,8 @@ export function buildAssetPayload(
      * assetKind 게이트는 단건(`transfer-tax-api.ts`)과 같은 조건 — 토지가 아니면 싣지 않는다(3중 패턴).
      */
     isNonBusinessLand: asset.assetKind === "land" ? (asset.isNonBusinessLand ?? false) : undefined,
+    // 단건과 같은 게이트 — 비사업용 토지 8호 유예 판정용 지정지역 선언(컴패니언 토지는 자기 카드의 값).
+    isDesignatedArea: asset.assetKind === "land" ? asset.isDesignatedArea : undefined,
     fixedSalePrice,
     /**
      * 12억 안분 분모용 총 물건 양도가액 — 지분 모드 전용 (단독 소유는 미설정). 축 B = 총양도가(같은 물건 전체).

@@ -154,6 +154,13 @@ export interface Cross1045Input {
    * (`data/sec104-5-latter-clause-era.ts` — 이 엔진은 날짜를 모른다). 계획서 `transfer-104-5-latter-clause-start-date.plan.md` Q-2.
    */
   merge89AsSameAsset?: boolean;
+  /**
+   * §104⑤ 본문 **감면 괄호** — «감면세액을 차감한 세액이 더 큰 경우의 산출세액»으로 1호·2호를 고르는가. **생략하면 적용**(현행).
+   *
+   * 괄호는 **2020.1.1. 양도분부터**다(법률 제16834호 부칙 제2조②). 그 전 과세기간이면 감면 전 산출세액이 더 큰 쪽을 고른다
+   * (그 세액에 감면을 적용한다). 시기 판정은 호출부가 한다(`data/sec104-5-reduction-parenthesis-era.ts`).
+   */
+  reductionParenthesisApplies?: boolean;
   /** §55① 기본누진 8구간 — 세율 데이터는 **매개변수로 주입**한다(두 엔진 미의존) */
   basicBrackets: Bracket;
   /** §104①8호·9호 표(= 기본세율 + 10%p) */
@@ -178,7 +185,9 @@ export interface Cross1045Result {
    * `merged89Tax − separate89Tax`가 8호·9호 의제로 늘어나는 세액이다.
    */
   separate89Tax: number;
-  /** 감면 차감 후 비교에서 채택된 호 */
+  /** 감면 괄호를 적용해 비교했는가(false = 2020.1.1. 전 과세기간 — 감면 전 산출세액 MAX) */
+  reductionParenthesisApplied: boolean;
+  /** 채택된 호(괄호 적용 시 감면 차감 후 비교, 아니면 감면 전 비교) */
   applied: "clause1" | "clause2";
   /** 채택된 호의 **산출세액**(감면 차감 전 — 법문이 「산출세액을 말한다」로 정한다) */
   calculatedTax: number;
@@ -207,6 +216,7 @@ export function computeCross1045(input: Cross1045Input): Cross1045Result {
     basicBrackets,
     nbl89Brackets,
     merge89AsSameAsset = true,
+    reductionParenthesisApplies = true,
   } = input;
 
   const merged89Tax = calculateProgressiveTax(clause8TaxBase + clause9TaxBase, nbl89Brackets);
@@ -228,8 +238,8 @@ export function computeCross1045(input: Cross1045Input): Cross1045Result {
   const clause1Tax = calculateProgressiveTax(totalTaxBase, basicBrackets);
 
   // 감면 차감 후 비교 — 같은 값을 빼면 순서가 불변이므로 **호별 감면세액**이어야 의미가 있다.
-  const net1 = clause1Tax - reduction.ifClause1;
-  const net2 = clause2Tax - reduction.ifClause2;
+  const net1 = reductionParenthesisApplies ? clause1Tax - reduction.ifClause1 : clause1Tax;
+  const net2 = reductionParenthesisApplies ? clause2Tax - reduction.ifClause2 : clause2Tax;
   const applied: "clause1" | "clause2" = net1 > net2 ? "clause1" : "clause2";
 
   return {
@@ -239,6 +249,7 @@ export function computeCross1045(input: Cross1045Input): Cross1045Result {
     separate1Tax,
     merged89Tax,
     merge89Applied: merge89AsSameAsset,
+    reductionParenthesisApplied: reductionParenthesisApplies,
     separate89Tax,
     applied,
     calculatedTax: applied === "clause1" ? clause1Tax : clause2Tax,

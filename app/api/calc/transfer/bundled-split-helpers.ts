@@ -574,6 +574,7 @@ export function buildCompanionEngineInputs(
     wasRegulatedAtAcquisition: ctx.primaryEngineInput.wasRegulatedAtAcquisition,
     isUnregistered: c.isUnregistered ?? false,
     isNonBusinessLand: c.isNonBusinessLand ?? false,
+    isDesignatedArea: c.isDesignatedArea,
     isOneHousehold: c.isOneHousehold ?? false,
     acquisitionCause: c.acquisitionCause,
     decedentAcquisitionDate: decedent,

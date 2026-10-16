@@ -53,6 +53,7 @@ import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
 import { resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
+import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
@@ -100,8 +101,13 @@ export function calculateTransferTax(
   if (unregisteredNotice) warnings.push(unregisteredNotice);
   // 조기반환 경로(다필지)는 이 `warnings`를 싣지 않는다 — 안내만 덧붙인다.
   // (§155⑳ 경로는 미등기면 특례 자체가 적용 불가라(§91① — F-8) 일반 경로로 온다.)
-  const withUnregisteredNotice = (r: TransferTaxResult): TransferTaxResult =>
-    unregisteredNotice ? { ...r, warnings: [...(r.warnings ?? []), unregisteredNotice] } : r;
+  // 비사업용 토지 8호 유예 기간인데 지정지역 여부 미선언 — 8호 중과가 **실제로 적용된 결과**에서만 고지한다(단기세율이 이기면 유예 여부가 세액을 바꾸지 않는다).
+  const nblDeferralNoticeOf = (r: Pick<TransferTaxResult, "surchargeType">, inp: TransferTaxInput): string | undefined =>
+    r.surchargeType === "non_business_land" ? nblDeferralAreaNotice(inp) : undefined;
+  const withUnregisteredNotice = (r: TransferTaxResult, inp: TransferTaxInput): TransferTaxResult => {
+    const extra = [unregisteredNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
+    return extra.length > 0 ? { ...r, warnings: [...(r.warnings ?? []), ...extra] } : r;
+  };
 
 
   // STEP 0.45~0.62: 중과·비사업용 판정 전처리 — 별도 파일로 분리 (800줄 정책, CB-08)
@@ -366,7 +372,7 @@ export function calculateTransferTax(
     { rawInput, effectiveInput, input, parsedRates, multiHouseSurchargeResult, pre1990LandResult, carryoverDetail, options },
     steps,
   );
-  if (mpBranchResult) return withUnregisteredNotice(mpBranchResult);
+  if (mpBranchResult) return withUnregisteredNotice(mpBranchResult, effectiveInput);
   // STEP 2: 양도차익 계산
   const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, depreciationAmount, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
   // 상가(CB) swap은 STEP 0.35 재구성 지점(단건 엔진 밖)에서 판정 → cbStep에서 result로 승격.
@@ -693,6 +699,8 @@ export function calculateTransferTax(
   // 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세 (transfer-tax-split-rate.ts)
   const taxResult = resolveSplitAwareTax({ taxBase, transferIncome, basicDeduction, splitDetail, parsedRates, taxRateInput, multiHouseSurchargeResult });
   if (splitDetail) splitDetail.partRateBasisApplied = taxResult.partRateBasisApplied; // D1-3 「세율 기산일」 표시 게이트
+  const nblDeferralNotice = nblDeferralNoticeOf(taxResult, effectiveInput);
+  if (nblDeferralNotice) warnings.push(nblDeferralNotice);
   // D2(계획서 §12 D2-Q1) — 건물 상속·증여 전에 취득한 토지의 세율 기산이 건물 취득일로 정해져 구간이 갈린 사실 고지(세액 불변).
   const landBeforeBuildingNotice = landBeforeBuildingAcquisitionRateNotice(effectiveInput, splitDetail);
   if (landBeforeBuildingNotice) warnings.push(landBeforeBuildingNotice);

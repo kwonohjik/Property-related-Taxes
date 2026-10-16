@@ -1,11 +1,15 @@
 "use client";
 
 import type { NonBusinessLandJudgment, JudgmentStep, StepStatus, DeemedTransferReason } from "@/lib/tax-engine/non-business-land";
+import type { NblSurchargeExclusionReason } from "@/lib/tax-engine/types/transfer-result.types";
+import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
-  /** 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 토지 +10%p 배제 시 문구 조정(세율만 배제, 판정은 비사업용 유지). */
+  /** +10%p 배제 시 문구 조정(세율만 배제, 판정은 비사업용 유지). 사유는 `nblSurchargeExcludedBy`. */
   nblSurchargeExcluded?: boolean;
+  /** 배제 사유 — 취득일 기준 부칙 §9270호 §14① 또는 양도일 기준 유예(§104⑥). 없으면 위기취득(이력 호환). */
+  nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
 }
 
 const DEEMED_REASON_LABEL: Record<DeemedTransferReason, string> = {
@@ -49,7 +53,7 @@ function residenceMatchLabel(m: {
   }
 }
 
-export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Props) {
+export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblSurchargeExcludedBy }: Props) {
   const isNonBusiness = judgment.isNonBusinessLand;
   const exemption = judgment.unconditionalExemption;
   const area = judgment.areaProportioning;
@@ -68,7 +72,7 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded }: Pr
             <p className={`text-sm font-bold ${isNonBusiness ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
               {isNonBusiness
                 ? nblSurchargeExcluded
-                  ? "비사업용 토지 — 부칙 §9270호 §14① 취득기간(2009.3.16~2012.12.31) 세율 배제로 기본세율 적용(+10%p 미적용). 장기보유특별공제 표1 적용."
+                  ? nblExclusionBannerText(nblSurchargeExcludedBy)
                   : "비사업용 토지 — 기본세율 +10%p 중과 (장기보유특별공제 표1 적용)."
                 : "사업용 토지 — 일반세율이 적용됩니다."}
             </p>
