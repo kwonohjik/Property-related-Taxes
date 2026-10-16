@@ -478,24 +478,24 @@ function permutations<T>(xs: T[]): T[][] {
 
 /**
  * 동순위 묶음의 순서 후보 중 **납세자에게 가장 유리한** 것(재일46014-1685) — 사용자 결정 Q-1:
- * 총 부담(`totalTax`) 최소 → 결정세액 최소 → `propertyId` 순.
+ * 총 부담(`totalTax`) 최소 → 결정세액 최소 → `order` 순.
  *
- * 후보는 묶음 안 순열이고 `propertyId` 사전순으로 나열한다 — 세액이 같으면 **먼저 나온 후보**(= propertyId 순)를
- * 남기므로 입력 순서와 무관하게 같은 배분·같은 세율군 카드가 나온다.
- * 후보 수가 `TIE_CANDIDATE_LIMIT`을 넘으면 묶음마다 첫째 자산만 바꾸고 나머지는 propertyId 순으로 채운다(Q-2).
+ * 후보는 묶음 안 순열이고 `order`로 정렬한 뒤 사전식으로 나열한다 — 세액이 같으면 **먼저 나온 후보**(= `order` 순)를
+ * 남긴다. `order`는 호출측이 정한다: 다건은 propertyId 사전순(입력 순서와 무관), 일괄양도는 한계세율 ↓ → 자산 번호 ↑
+ * (`AggregateTransferInput.sameDayEqualTaxOrder`).
+ * 후보 수가 `TIE_CANDIDATE_LIMIT`을 넘으면 묶음마다 첫째 자산만 바꾸고 나머지는 `order` 순으로 채운다(Q-2).
  *
  * `reducibleGroups`(`sameDayReducibleRateGroups`)가 있으면 그 뒤에 **2단계 자산 블록 순서** 후보를 덧붙인다 —
  * 0893 순서(위 후보들)가 먼저라 세액이 같으면 0893이 남는다. 한도가 안 걸리면 0893이 이미 가장 유리하다(계획서 §2.2 P2).
  */
 export function pickFavorableTieRank(
   groups: number[][],
-  idOf: (idx: number) => string,
+  order: (a: number, b: number) => number,
   evaluate: (candidate: TieCandidate) => { totalTax: number; determinedTax: number },
   reducibleGroups: number[][] = [],
 ): TieCandidate {
-  const byId = (a: number, b: number) => (idOf(a) < idOf(b) ? -1 : idOf(a) > idOf(b) ? 1 : a - b);
   const ranksOf = (gs: number[][]): Map<number, number>[] => {
-    const sorted = gs.map((g) => [...g].sort(byId));
+    const sorted = gs.map((g) => [...g].sort(order));
     const full = sorted.map((g) => permutations(g));
     const fullCount = full.reduce((n, p) => n * p.length, 1);
     const perGroup =

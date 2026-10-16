@@ -235,10 +235,11 @@ function expectRentalPathTax(s: TransferTaxResult, p: PerPropertyBreakdown & Obj
   expect((p.rentalHousingExceptionDetail as { applied?: boolean } | undefined)?.applied).toBe(true);
   expect(p.determinedTax).toBe(RH_DETERMINED);
   expect(p.determinedTax).toBe(s.determinedTax);
-  // 과세표준은 기본공제 귀속만큼 단건과 다를 수 있다 — 주 자산과 컴패니언을 **같은 날** 양도하므로 기본공제는
-  // 납세자에게 유리한 쪽(재일46014-1685)에 붙고, 세액이 같으면 propertyId 순이다(계획서 transfer-basic-deduction-same-day-tie.plan.md Q-1).
-  // 이 사안은 어느 쪽에 붙어도 세액이 같아 컴패니언(`asset-…`)이 받는다 — 단건은 자기 자신이 받는다.
-  expect(p.taxBaseShare + p.allocatedBasicDeduction).toBe(s.taxBase + 2_500_000);
+  // 주 자산과 컴패니언을 **같은 날** 양도하므로 기본공제는 납세자에게 유리한 쪽(재일46014-1685)에 붙는다. 이 사안은
+  // 어느 쪽에 붙어도 세액이 같아, 일괄양도 규약(한계세율 ↓ → 자산 번호 ↑ — 계획서
+  // transfer-basic-deduction-bulk-equal-tax-order.plan.md)대로 세율이 높은 주 자산(0.38 > 토지 0.35)이 받는다 — 단건과 같은 과세표준.
+  expect(p.allocatedBasicDeduction).toBe(2_500_000);
+  expect(p.taxBaseShare).toBe(s.taxBase);
   expect(p.longTermHoldingDeduction).toBe(s.longTermHoldingDeduction);
   expect(p.appliedRate).toBe(s.appliedRate);
 }

@@ -646,8 +646,14 @@ function computeAggregateOnce(
   if (tieGroups.length === 0 && reducibleGroups.length === 0) return finishWith({}, steps, warnings);
   // 후보마다 하류를 임시 사본으로 돌려 가장 유리한 순서를 고른 뒤, 그 순서로 **정식으로 한 번 더** 계산한다 —
   // 하류가 자산 기록의 표시 플래그(`splitDetail.partRateBasisApplied`)를 덮어쓰므로 채택 후보가 마지막이어야 한다.
+  // 세액이 같은 후보 사이의 순서(표시 규약) — 다건은 propertyId 사전순, 일괄양도는 한계세율 ↓ → 자산 번호 ↑.
   const idOf = (idx: number) => assetRecords[idx].item.propertyId;
-  const best = pickFavorableTieRank(tieGroups, idOf, (c) => finishWith(c, [...steps], [...warnings]), reducibleGroups);
+  const rateOf = (idx: number) => assetRecords[idx].result.appliedRate;
+  const equalTaxOrder =
+    input.sameDayEqualTaxOrder === "marginalRateThenAssetNumber"
+      ? (a: number, b: number) => rateOf(b) - rateOf(a) || a - b
+      : (a: number, b: number) => (idOf(a) < idOf(b) ? -1 : idOf(a) > idOf(b) ? 1 : a - b);
+  const best = pickFavorableTieRank(tieGroups, equalTaxOrder, (c) => finishWith(c, [...steps], [...warnings]), reducibleGroups);
   return finishWith(best, steps, warnings);
 }
 

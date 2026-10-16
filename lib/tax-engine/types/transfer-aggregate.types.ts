@@ -108,6 +108,16 @@ export interface AggregateTransferInput {
    *   (2026-09-16 사용자 결정 「법문대로」).
    */
   basicDeductionAllocation?: "FIRST" | "EARLIEST_TRANSFER" | "PARTS_HIGHEST_RATE";
+  /**
+   * 같은 날 양도 묶음에서 **세액이 같은 후보** 사이의 순서 — 유불리가 없는 자리라 결정적 표시 규약일 뿐이다
+   * (총 부담·결정세액 불변 · 계획서 `transfer-basic-deduction-bulk-equal-tax-order.plan.md`).
+   *
+   * · `propertyId`(기본) — propertyId 사전순. 다건 합산의 정본(입력 순서와 무관).
+   * · `marginalRateThenAssetNumber` — 한계세율(자산 단독 `appliedRate`) 높은 자산 → 자산 번호(입력 순서).
+   *   **일괄양도 전용**(2026-10-16 사용자 결정) — 일괄양도의 id(`primary` · `asset-<생성 시각>`)는 사전순이
+   *   화면의 자산 번호와 어긋난다.
+   */
+  sameDayEqualTaxOrder?: "propertyId" | "marginalRateThenAssetNumber";
   /** 과거 4개 과세연도 감면 이력 (§133 5년 누적 한도 계산용, 사용자 직접 입력) */
   priorReductionUsage?: { year: number; type: string; amount: number }[];
   /**
