@@ -22,10 +22,13 @@ import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-ad
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftRightValuationSection } from "./BurdenedGiftRightValuationSection";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
+import { BurdenedGiftCarryoverBlock } from "./BurdenedGiftCarryoverBlock";
+import { BurdenedGiftDonorTaxBlock } from "./BurdenedGiftDonorTaxBlock";
+import { VALUATION_MODE_OPTIONS } from "./burdened-gift-block-options";
+import { GIFT_STD_PRICE_FIELD } from "./burdened-gift-block-options";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "@/lib/calc/transfer-tax-api-helpers";
 import { BuildingStdPriceModalButton } from "@/components/calc/building-std-price/BuildingStdPriceModalButton";
@@ -72,93 +75,6 @@ interface Props {
   isCompanionBundle?: boolean;
 }
 
-const VALUATION_MODE_OPTIONS = [
-  {
-    value: "sangjeungbeop_standard",
-    label: "상증법 기준시가",
-    description: "보충적평가 (개별공시지가 + 건물기준시가)",
-  },
-  {
-    value: "sangjeungbeop_market",
-    label: "상증법 시가",
-    description: "매매사례·감정·보상·경매·공매가",
-  },
-] as const;
-
-/**
- * ④ 「증여재산 평가」 칸의 자산별 라벨 — **그 칸이 무엇을 담는지가 자산마다 다르다**.
- *
- * 종전 라벨 「건물기준시가(상속 증여시)」는 두 방향으로 어긋났다:
- *  · 기준일 — 상증 평가 기준일은 **증여일**이다(양도일과 값은 같지만 용어가 다르다).
- *  · 범위   — `general_building`만 순수 건물분이고, 나머지 3종은 **토지를 포함**한다.
- *    (§61①2호 건물 / 3호 오피스텔·상업용건물 = 토지·건물 일괄 / 4호 주택 = 부수토지 포함)
- *    「건물」이라고만 쓰면 토지분을 뺀 금액을 넣게 되어 평가액이 조용히 과소해진다.
- *
- * `building`은 hint를 두지 않는다 — 아래 부수토지 안내 문단이 같은 말을 이미 한다.
- */
-const GIFT_STD_PRICE_FIELD: Partial<
-  Record<AssetForm["assetKind"], { label: string; hint?: string }>
-> = {
-  general_building: {
-    label: "증여일 건물 기준시가",
-    hint: "건물분만 입력하세요(상증법 §61①2호). 토지분은 개별공시지가로 따로 산출됩니다.",
-  },
-  building: {
-    label: "증여일 기준시가 (부수토지 포함)",
-  },
-  housing: {
-    label: "증여일 주택 기준시가",
-    hint: "개별주택가격·공동주택가격 — 부수토지를 포함해 일괄 고시된 가액(상증법 §61①4호)",
-  },
-  commercial_building: {
-    label: "증여일 기준시가 (토지·건물 일괄)",
-    hint: "국세청장이 토지와 건물을 일괄 고시한 가액(상증법 §61①3호)",
-  },
-  /**
-   * 재개발·재건축으로 **완공된 신축주택**은 상증법 §61①4호(주택)로 평가한다 — `housing`과 같은 축이다.
-   * 엔트리가 없으면 라벨이 「증여일 현재 기준시가」 기본값으로 떨어져 어떤 고시가액을
-   * 넣어야 하는지 알 수 없다.
-   */
-  redevelopment_apt: {
-    label: "증여일 주택 기준시가",
-    hint: "개별주택가격·공동주택가격 — 부수토지를 포함해 일괄 고시된 가액(상증법 §61①4호)",
-  },
-};
-
-// Phase 3: 증여자-수증자 관계 (상증법 §53 증여재산공제)
-// 주의: enum 값 의미
-//   lineal_descendant       = 수증자가 직계비속(성년) — 증여자가 직계비속(자녀→부모 방향) (§53③)
-//   lineal_ascendant_adult  = 증여자가 직계존속, 수증자 성년 (§53② 본문)
-//   lineal_ascendant_minor  = 증여자가 직계존속, 수증자 미성년 (§53② 단서)
-// `description`은 화면에 렌더하지 않는다(2026-08-12 — 3열 배치로 옵션 카드 폭이 좁아져 제거).
-// 공제액 근거로 남겨둔다 — 되살리려면 RadioCardGroup options에 description을 다시 매핑하면 된다.
-const DONOR_RELATION_OPTIONS = [
-  {
-    value: "lineal_descendant",
-    label: "직계비속 (성년 수증자)",
-    description: "수증자가 성년 직계비속(자녀·손자녀) — 증여재산공제 5천만 원",
-  },
-  {
-    value: "lineal_ascendant_minor",
-    label: "직계존속 (미성년 수증자)",
-    description: "증여자가 직계존속, 수증자가 미성년 — 증여재산공제 2천만 원 (§53② 단서)",
-  },
-  {
-    value: "lineal_ascendant_adult",
-    label: "직계존속 (성년 수증자)",
-    description: "증여자가 직계존속(부모·조부모), 수증자 성년 — 증여재산공제 5천만 원 (§53② 본문)",
-  },
-  {
-    value: "spouse",
-    label: "배우자",
-    description: "법률혼 배우자 — 증여재산공제 6억 원",
-  },
-  {
-    value: "other_relative",
-    label: "기타 친족",
-    description: "6촌 이내 혈족·4촌 이내 인척 — 증여재산공제 1천만 원",
-  },
-] as const;
 
 export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle }: Props) {
   /**
@@ -470,127 +386,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
       {/* ③-b 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 한 벌 (D-7b) */}
       {isCarryover && (
-        <div
-          className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2"
-          data-testid="bg-codonor-block"
-        >
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-sky-900">
-              이월과세 — 「당초 증여자」 취득 당시 값
-            </span>
-            <LawArticleModal legalBasis="소득세법 §97조의2" label="§97의2①1호" />
-            <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159①1호" />
-          </div>
-
-          <div className="rounded border border-sky-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-sky-900 space-y-1">
-            <p>
-              <b>당초 증여자</b> = 지금 부담부증여를 하는 <b>양도인에게 이 자산을 증여한 사람</b>입니다.
-              위쪽 취득 입력(양도인 기준)과 <b>다른 사람</b>이니 혼동하지 마세요.
-            </p>
-            <p>
-              국세청 <b>재산세과-1059</b>에 따라, 증여받은 자산을 다시 부담부증여하면 시행령
-              §159①1호의 취득가액에 이월과세가 적용되어 <b>당초 증여자의 취득 당시</b> 가액을 씁니다.
-            </p>
-            <p>
-              두 벌을 <b>모두</b> 입력해야 합니다 — §97의2②3호가 「이월과세를 적용한 세액」과
-              「적용하지 않은 세액」을 <b>비교</b>하므로 양쪽 기준값이 동시에 필요합니다.
-            </p>
-          </div>
-
-          {coDonorNeedsStdPrice ? (
-            <>
-              {isBgPresumedMethod(asset.bgAcquisitionMethod) && (
-                <BurdenedGiftPresumedAcquisitionSection
-                  asset={asset}
-                  onChange={onChange}
-                  method={asset.bgAcquisitionMethod}
-                  carryover
-                />
-              )}
-              <FieldCard
-                label="당초 증여자 취득 당시 토지 기준시가"
-                hint="개별공시지가 × 면적. 토지가 없으면 0을 입력하세요."
-              >
-                <CurrencyInput
-                  label=""
-                  hideUnit
-                  data-testid="bg-codonor-land-std" data-field="bgCoDonorLandStdPriceAtAcq"
-                  value={asset.bgCoDonorLandStdPriceAtAcq}
-                  onChange={(v) => onChange({ bgCoDonorLandStdPriceAtAcq: v })}
-                />
-              </FieldCard>
-              <FieldCard
-                label="당초 증여자 취득 당시 건물 기준시가"
-                hint="건물이 없으면 0을 입력하세요 — 빈칸은 「미입력」으로 처리되어 계산이 차단됩니다."
-              >
-                <CurrencyInput
-                  label=""
-                  hideUnit
-                  data-testid="bg-codonor-building-std" data-field="bgCoDonorBuildingStdPriceAtAcq"
-                  value={asset.bgCoDonorBuildingStdPriceAtAcq}
-                  onChange={(v) => onChange({ bgCoDonorBuildingStdPriceAtAcq: v })}
-                />
-              </FieldCard>
-              {asset.bgAcquisitionMethod === "converted" && (
-                <div className="rounded border border-sky-200 bg-sky-100/60 p-2 text-caption text-sky-800">
-                  환산취득가액은 이 두 칸을 <b>분자로 자동 사용</b>합니다 — 환산 전용 입력은 없습니다.
-                </div>
-              )}
-            </>
-          ) : asset.bgAcquisitionMethod === "actual" ? (
-            <>
-              {asset.assetKind === "general_building" || asset.assetKind === "land" ? (
-                <>
-                  <FieldCard label="당초 증여자의 토지 실지취득가액">
-                    <CurrencyInput
-                      label=""
-                      hideUnit
-                      data-testid="bg-codonor-actual-land" data-field="bgCoDonorActualAcquisitionLand"
-                      value={asset.bgCoDonorActualAcquisitionLand}
-                      onChange={(v) => onChange({ bgCoDonorActualAcquisitionLand: v })}
-                    />
-                  </FieldCard>
-                  {asset.assetKind === "general_building" && (
-                    <FieldCard label="당초 증여자의 건물 실지취득가액">
-                      <CurrencyInput
-                        label=""
-                        hideUnit
-                        data-testid="bg-codonor-actual-building" data-field="bgCoDonorActualAcquisitionBuilding"
-                        value={asset.bgCoDonorActualAcquisitionBuilding}
-                        onChange={(v) => onChange({ bgCoDonorActualAcquisitionBuilding: v })}
-                      />
-                    </FieldCard>
-                  )}
-                </>
-              ) : (
-                <FieldCard
-                  label="당초 증여자의 실지취득가액 (전체)"
-                >
-                  <CurrencyInput
-                    label=""
-                    hideUnit
-                    data-testid="bg-codonor-actual-total" data-field="bgCoDonorActualAcquisitionTotal"
-                    value={asset.bgCoDonorActualAcquisitionTotal}
-                    onChange={(v) => onChange({ bgCoDonorActualAcquisitionTotal: v })}
-                  />
-                </FieldCard>
-              )}
-            </>
-          ) : (
-            <FieldCard
-              label="당초 증여자 취득 당시 시가 평가액"
-              hint="상증법 §60② 시가(매매사례·감정·보상·경매·공매가)"
-            >
-              <CurrencyInput
-                label=""
-                hideUnit
-                data-testid="bg-codonor-market" data-field="bgCoDonorMarketValueAtAcquisition"
-                value={asset.bgCoDonorMarketValueAtAcquisition}
-                onChange={(v) => onChange({ bgCoDonorMarketValueAtAcquisition: v })}
-              />
-            </FieldCard>
-          )}
-        </div>
+        <BurdenedGiftCarryoverBlock asset={asset} onChange={onChange} coDonorNeedsStdPrice={coDonorNeedsStdPrice} />
       )}
 
       {/* ④ 증여재산 평가액 — 증여일 현재 기준시가(상증법 §61). 담는 범위는 자산마다 다르다
@@ -662,88 +458,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       )}
 
       {/* ⑤ Phase 3 — 증여세 통합 입력 (수증자 정보) */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
-            §53
-          </span>
-          <p className="text-xs font-semibold text-violet-800">
-            증여세 통합 입력 (수증자 정보 — 상증법 §53·§56·§57·§69)
-          </p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <LawArticleModal legalBasis="상속세및증여세법 §53" label="상증법 §53" />
-            <LawArticleModal legalBasis="상속세및증여세법 §56" label="상증법 §56" />
-            <LawArticleModal legalBasis="상속세및증여세법 §57" label="상증법 §57" />
-            <LawArticleModal legalBasis="상속세및증여세법 §69" label="상증법 §69" />
-          </div>
-        </div>
-        <p className="text-caption text-violet-700">
-          무상이전분(증여가액 C − 채무액 B)에 대한 증여세 동시 산출. 수증자가 별도 신고·납부.
-        </p>
-        {/*
-          🔴 hint가 「미선택 시 직계비속(성년) 기본값」이라 안내했는데 ⑧은 선택을 **차단**한다
-             (`transfer-tax-validate-bg.ts:192`) — 안내를 믿고 넘어간 사용자는 원인 모를 차단을
-             만났다 (2026-09-05 · 코드리뷰 Q21).
-
-          저장소 정책 둘이 충돌하는 자리다: 3중 패턴은 「④·엔진 fallback이 있으면 validate도
-          인정하라」, 루트 규약은 「미입력은 검증 오류로 차단하라」. **후자를 택했다** —
-          상증법 §53 증여재산공제가 관계에 따라 **5천만 ↔ 6억**으로 갈리므로 사용자가 모르고
-          지나가면 안 되는 크기다. ⇒ 기본값 문장을 걷고 필수로 표기한다.
-
-          ④·엔진의 기본값은 남긴다 — 마법사를 거치지 않고 조립된 입력(직접 fixture)용 안전망이다.
-        */}
-        <FieldCard
-          stacked
-          required
-          label="증여자-수증자 관계"
-          hint="상증법 §53 증여재산공제가 관계에 따라 5천만 ↔ 6억으로 갈립니다. 반드시 선택하세요."
-        >
-          <RadioCardGroup
-            name={`bgDonorRelation-${asset.assetId ?? "primary"}`} data-field="bgDonorRelation"
-            layout="stack"
-            columns={3}
-            value={asset.bgDonorRelation || ""}
-            onChange={(v) =>
-              onChange({ bgDonorRelation: v as AssetForm["bgDonorRelation"] })
-            }
-            options={DONOR_RELATION_OPTIONS.map((o) => ({
-              value: o.value,
-              label: o.label,
-            }))}
-          />
-        </FieldCard>
-        <div className="space-y-2">
-          {/* 세대생략 증여 — ON 시 미성년 토글 펼침 (children은 checked일 때만 렌더) */}
-          <ToggleCard
-            variant="card"
-            size="sm"
-            tone="violet"
-            title="세대생략 증여"
-            description="§57 — 30% 또는 미성년 20억 초과 40% 할증"
-            checked={asset.bgIsGenerationSkip}
-            onCheckedChange={(v) => onChange({ bgIsGenerationSkip: v })}
-          >
-            <ToggleCard
-              variant="card"
-              size="sm"
-              tone="violet"
-              title="수증자 미성년"
-              description="세대생략 증여재산가액 20억 초과 시 40% 할증"
-              checked={asset.bgIsMinorDonee}
-              onCheckedChange={(v) => onChange({ bgIsMinorDonee: v })}
-            />
-          </ToggleCard>
-          <ToggleCard
-            variant="card"
-            size="sm"
-            tone="emerald"
-            title="법정신고기한 내 신고"
-            description="§69 신고세액공제 3%"
-            checked={asset.bgIsFiledOnTime}
-            onCheckedChange={(v) => onChange({ bgIsFiledOnTime: v })}
-          />
-        </div>
-      </div>
+      <BurdenedGiftDonorTaxBlock asset={asset} onChange={onChange} />
 
       {/* ⑤ Phase 3 후속 — 10년 이내 사전증여 (상증법 §47② 합산) */}
       <BurdenedGiftPriorGiftsBlock asset={asset} onChange={onChange} />
