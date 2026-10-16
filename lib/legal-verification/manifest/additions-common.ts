@@ -382,6 +382,13 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // burdened-gift-mixed-use.ts VAT_DECREE_APPORTION_64_1 — 겸용 부담부증여 시가의 주택·상가 안분 (KoreanLaw 실측, 부가가치세법 시행령 MST 283641, 시행 2026-02-27)
+    id: "VAT_DECREE.LAND_BUILDING_APPORTION",
+    citation: "부가가치세법 시행령 §64",
+    keywords: ["건물 등의 공급가액 계산", "기준시가에 따라 계산한 가액에 비례하여 안분", "감정평가가액", "그 가액에 비례하여 안분 계산한 금액"],
+    keywordMode: "ALL",
+  },
+  {
     // transfer.ts NBL REVENUE_DEEMED_RENT — 비사업용 토지 수입금액 판정의 간주임대료 산식
     id: "VAT_DECREE.DEEMED_RENT",
     citation: "부가가치세법 시행령 §65",

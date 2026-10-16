@@ -1,8 +1,10 @@
 /**
- * anchor — 겸용주택 × 부담부증여: 계산할 수 없어 막는다 (⑧ · ⑫ Zod).
+ * anchor — 겸용주택 × 부담부증여: 화면(⑧)은 막고(PR-3까지), API 직접 호출(⑫)은 엔진이 열렸다.
  *
- * 겸용주택 경로(`calcMixed`)는 `burdenedGiftInfo`(소령 §159 안분)를 읽지 않고, 부담부증여는 양도가액 입력도 받지 않아 **오류 없이 결정세액 0**이 나왔다
- * (실측: 겸용 + 시가 15억 + 채무 6억 → 0원, 같은 겸용을 일반 양도로 두면 211,650,000원). ⑧이 못 잡으면 API 직접 호출도 같다.
+ * 이력: 겸용 경로가 `burdenedGiftInfo`(소령 §159 안분)를 읽지 않아 **오류 없이 결정세액 0**이 나와서 ⑧·⑫ 둘 다 막았다
+ * (실측: 겸용 + 시가 15억 + 채무 6억 → 0원, 같은 겸용을 일반 양도로 두면 211,650,000원).
+ * PR-1(엔진)이 `mixed-use-burdened-gift.ts` seam을 열면서 ⑫는 «일괄 차단»에서 «MB-1~MB-18 가드 + 채무 귀속 필수»로 바뀌었다.
+ * ⑧(M-1)은 UI가 귀속 입력을 갖는 PR-3까지 그대로 막는다 — 화면에서는 귀속을 입력할 수 없어 계산할 수 없다.
  */
 import { describe, it, expect, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -183,11 +185,9 @@ describe("겸용주택 × 부담부증여", () => {
     expect(total).toBeGreaterThan(0);
   });
 
-  it("[M-3] 🔴 ⑫: API를 직접 불러도(⑧ 우회) 400 — 오류 없이 세액 0으로 계산되지 않는다", async () => {
-    // ⑧을 거치지 않은 요청 — 일반 양도 body에 양도 형태만 부담부증여로 바꾼다
-    const base = await run(mk({}));
-    const body = { ...base.body, transferType: "burdened_gift" };
-    const res = await POST(
+  // ── ⑫ · API 경로 — PR-1 엔진이 겸용 × 부담부증여를 열었다. 화면(⑧)은 PR-3까지 막혀 있고, API 직접 호출만 열린다. ──
+  const post = async (body: Record<string, unknown>) =>
+    POST(
       new NextRequest("http://localhost/api/calc/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -204,8 +204,78 @@ describe("겸용주택 × 부담부증여", () => {
         }),
       }),
     );
+  /** 설계서 §4 M-0 입력 — 시가 15억 · 채무 6억 전부 불분명 · K-4 실지 7억. 양도시 4부분 기준시가 합 = 12억. */
+  const bgInfo = (over: Record<string, unknown> = {}) => ({
+    valuationMode: "sangjeungbeop_market",
+    lendingDepositTotal: 0,
+    mortgageDebtAmount: 600_000_000,
+    annualRentTotal: 0,
+    marketValueAtTransfer: 1_500_000_000,
+    acquisitionMethod: "actual",
+    actualAcquisitionTotal: 700_000_000,
+    landStdPriceAtTransfer: 0,
+    buildingStdPriceAtTransfer: 1_200_000_000,
+    landStdPriceAtAcquisition: 0,
+    buildingStdPriceAtAcquisition: 700_000_000,
+    donorRelation: "lineal_descendant",
+    debtAttribution: { housing: 0, commercial: 0, unallocated: 600_000_000 },
+    housingAppraisal: { exists: false },
+    ...over,
+  });
+  const bgBody = async (over: Record<string, unknown> = {}, info: Record<string, unknown> = {}) => {
+    const base = await run(mk({}));
+    return { ...base.body, transferType: "burdened_gift", burdenedGiftInfo: bgInfo(info), ...over };
+  };
+
+  it("[M-3] 🔴 ⑫: burdenedGiftInfo 없이 부담부증여로 보내면(⑧ 우회) 400 — 오류 없이 세액 0으로 계산되지 않는다", async () => {
+    const base = await run(mk({}));
+    const res = await post({ ...base.body, transferType: "burdened_gift" });
     expect(res.status).toBe(400);
-    expect(JSON.stringify(await res.json())).toMatch(/겸용주택은 부담부증여로 계산할 수 없습니다/);
+    expect(JSON.stringify(await res.json())).toMatch(/burdenedGiftInfo가 필요합니다/);
+  });
+
+  it("[M-3a] API 경로 계산 — 채무 귀속을 실으면 계산된다: M-0 69,094,001 (일반 양도 15억은 211,650,000)", async () => {
+    const res = await post(await bgBody());
+    expect(res.status).toBe(200);
+    const j = (await res.json()) as { data: { mode: string; result: { total: { determinedTax: number }; burdenedGift?: { assumedDebtAmount: number; debtAttribution: { housingDebt: number; commercialDebt: number } } } } };
+    expect(j.data.mode).toBe("mixed-use");
+    expect(j.data.result.total.determinedTax).toBe(69_094_001);
+    expect(j.data.result.burdenedGift?.assumedDebtAmount).toBe(600_000_000);
+    expect(j.data.result.burdenedGift?.debtAttribution.housingDebt).toBe(300_000_000);
+  });
+
+  it("[M-3b] 🔴 귀속 미입력(기본값 없음, G-4) → 400 — 균일 안분으로 조용히 계산하지 않는다", async () => {
+    const res = await post(await bgBody({}, { debtAttribution: undefined }));
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(await res.json())).toMatch(/귀속/);
+  });
+
+  it("[M-3c] 🔴 귀속 합 ≠ 인수 채무 → 400", async () => {
+    const res = await post(await bgBody({}, { debtAttribution: { housing: 0, commercial: 0, unallocated: 500_000_000 } }));
+    expect(res.status).toBe(400);
+  });
+
+  it("[M-3d] 🔴 임대료 환산 평가가 보충적평가를 이기는 입력(MB-7) → 400", async () => {
+    const res = await post(await bgBody({}, { valuationMode: "sangjeungbeop_standard", annualRentTotal: 600_000_000, marketValueAtTransfer: undefined, acquisitionMethod: undefined, actualAcquisitionTotal: undefined, housingAppraisal: undefined }));
+    expect(res.status).toBe(400);
+  });
+
+  it("[M-3e] 🔴 비겸용에 채무 귀속을 실으면 400 — 조용히 무시되는 입력 금지", async () => {
+    const r = await run(form([asset(1, "100", { acquisitionDate: "2010-03-15" })]));
+    const res = await post({ ...r.body, burdenedGiftInfo: { ...(r.body.burdenedGiftInfo as object), debtAttribution: { housing: 1, commercial: 0, unallocated: 0 } } });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(await res.json())).toMatch(/겸용주택 부담부증여에서만/);
+  });
+
+  it("[M-3f] 🔴 구 표식(acquisitionCause=burdened_gift) → 400", async () => {
+    const res = await post(await bgBody({ acquisitionCause: "burdened_gift" }));
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(await res.json())).toMatch(/양도 형태/);
+  });
+
+  it("[M-3g] 🔴 증여일 2022-01-01 미만 → 400 (엔진 throw가 아니라 ⑫가 먼저)", async () => {
+    const res = await post(await bgBody({ transferDate: "2021-12-31" }));
+    expect(res.status).toBe(400);
   });
 
   it("[M-4] 🔴 대조군(⑫) — 일반 주택 × 부담부증여 API 호출은 막지 않는다(겸용만 막는 refine이다)", async () => {

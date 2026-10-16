@@ -363,3 +363,30 @@ export function buildTotalStep(t: ReturnType<typeof buildTotalTax>): MixedUseSte
     ],
   };
 }
+
+/** 보유 중 일부 용도변경 메타 (결과 카드 표시용) — 오케스트레이터에서 로직 무변경 이전(800줄 정책, 2026-10-16). */
+export function buildPartialUsageChangeMeta(
+  asset: MixedUseAssetInput,
+  phdScopeBranch: "case_a_whole_building" | "case_b_housing_only" | undefined,
+): MixedUseGainBreakdown["partialUsageChange"] {
+  return asset.partialUsageChange
+    ? {
+        direction: asset.partialUsageChange.direction,
+        acqResidentialArea:
+          asset.partialUsageChange.acqResidentialArea
+          ?? (asset.partialUsageChange.direction === "house_to_commercial"
+              ? asset.residentialFloorArea + asset.nonResidentialFloorArea
+              : 0),
+        acqCommercialArea:
+          asset.partialUsageChange.acqCommercialArea
+          ?? (asset.partialUsageChange.direction === "house_to_commercial"
+              ? 0
+              : asset.residentialFloorArea + asset.nonResidentialFloorArea),
+        isAreaCustomized:
+          asset.partialUsageChange.acqResidentialArea !== undefined
+          || asset.partialUsageChange.acqCommercialArea !== undefined,
+        // PHD §164⑦ 환산 분기 — calcHousingEstimatedAcq 가 산출
+        phdScopeBranch,
+      }
+    : undefined;
+}

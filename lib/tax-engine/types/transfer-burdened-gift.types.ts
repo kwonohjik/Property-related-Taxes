@@ -304,6 +304,24 @@ export interface BurdenedGiftInfo {
    *    `TransferTaxInput.noMergeRosterInputPath`(echo)를 공개 입력으로 열지 않고 이 표식에서 파생한다.
    */
   houseRosterInputUnavailable?: boolean;
+
+  /**
+   * **겸용주택 전용** — 인수 채무의 «주택 / 상가» 귀속 선언 (원). 겸용에서 **필수**(기본값 없음), 그 밖의 자산에서는 ⑫가 거부한다.
+   *
+   * 국세청 부동산거래관리과-119(2010.01.22.): 「…증여가액 중 그 채무액에 상당하는 부분이 주택 또는 상가에 대한 부분으로 구분이 분명한
+   * 경우에는 그 채무액이 속하는 주택 또는 상가의 양도로 보아 양도차익을 산정하는 것입니다.」
+   * 합계는 `lendingDepositTotal + mortgageDebtAmount`와 같아야 한다. `unallocated`(구분 불분명)는 주택·상가 증여가액 비율로 나눈다
+   * (해석례가 답하지 않은 부분 — 확인 필요, 설계서 V-17). 전부 `unallocated`로 두면 균일 `B/C`와 같다.
+   * 설계: docs/02-design/features/transfer-burdened-gift-mixed-use.engine.design.md §3.1A
+   */
+  debtAttribution?: { housing: number; commercial: number; unallocated: number };
+
+  /**
+   * **겸용주택 + 시가 모드 전용** — 주택·상가로 구분된 감정평가가액의 유무 선언(G-13, 부가가치세법 시행령 §64①1호 단서).
+   * `exists:true`이면 주택분 시가(`housingValue`)를 한 칸 받는다(상가분 = 시가 총액 − 주택분, 4부분 내부는 기준시가 비례).
+   * `exists:false`이면 기준시가 비례(같은 호 본문). 시가 모드 겸용에서 **선언 필수**(기본값 없음), 기준시가 모드에서는 거부.
+   */
+  housingAppraisal?: { exists: boolean; housingValue?: number };
 }
 
 /**

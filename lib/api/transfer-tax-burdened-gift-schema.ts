@@ -85,6 +85,28 @@ export const burdenedGiftInfoSchema = z.object({
   giftBuildingStdPriceAtTransfer: z.number().int().nonnegative().optional(),
 
   /**
+   * ⑫ 겸용주택 × 부담부증여 — 채무 귀속(국세청 부동산거래관리과-119, 2010.01.22.). 겸용주택에서만 의미가 있다.
+   * 🔴 여기 등록하지 않으면 `z.object`가 침묵 strip해 «귀속 미입력»으로 읽혀 균일 안분과 다른 세액이 나온다(⑫).
+   * 비겸용에 실리면 `refineMixedUseBurdenedGift`가 거부한다. 합계·부분 초과 검증은 엔진 leaf(`collectMixedBurdenedGiftIssues`).
+   */
+  debtAttribution: z
+    .object({
+      housing: z.number().int().nonnegative(),
+      commercial: z.number().int().nonnegative(),
+      unallocated: z.number().int().nonnegative(),
+    })
+    .optional(),
+  /**
+   * ⑫ 겸용주택 × 부담부증여 시가 모드 — 주택·상가로 구분된 감정평가가액의 유무 선언(부가가치세법 시행령 §64①1호 단서).
+   * `exists:true`이면 `housingValue`(주택분 시가) 필수 — 조건은 엔진 leaf가 지킨다.
+   */
+  housingAppraisal: z
+    .object({
+      exists: z.boolean(),
+      housingValue: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  /**
    * ⑫ 조합원입주권 평가 명세 (상증법 §61③ · 상증령 §51② · 상증칙 §16③).
    *
    * 🔴 **여기 등록하지 않으면 `z.object`가 통째로 침묵 strip한다** — TypeScript는 감지하지

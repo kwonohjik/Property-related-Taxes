@@ -13,6 +13,7 @@ import * as property from "@/lib/tax-engine/legal-codes/property";
 import * as comprehensive from "@/lib/tax-engine/legal-codes/comprehensive";
 import * as stock from "@/lib/tax-engine/legal-codes/stock";
 import * as burdenedGift from "@/lib/tax-engine/legal-codes/burdened-gift";
+import * as burdenedGiftMixedUse from "@/lib/tax-engine/legal-codes/burdened-gift-mixed-use";
 import * as common from "@/lib/tax-engine/legal-codes/common";
 // ⚠️ legal-codes 에 모듈이 추가되면 **여기에도** 넣어야 한다 — 빠진 조문은 모수에서도 사라져
 //    uncovered 에 뜨지 않고 게이트가 100% 로 통과한다(F-39).
@@ -36,6 +37,7 @@ const MODULES: unknown[] = [
   comprehensive,
   stock,
   burdenedGift,
+  burdenedGiftMixedUse,
   common,
   buildingStandardPrice,
   surchargeTransition,
