@@ -168,9 +168,13 @@ export default function TransferTaxCalculator({
       if (patchInvalidatesDeterminedTax(patch)) setCalcDeterminedTax(null);
       // 가산세 결과는 어느 쪽이 바뀌어도 낡는다 — 결정세액·가산세 입력 둘 다 반영하므로.
       setPenaltyResult(null);
+      // 계산 결과도 낡는다 — 남겨 두면 사이드바가 옛 엔진 값을 보이고(첫 자산 삭제 시엔 지운 자산의 값이 새 첫 행에 붙는다 — 결과의
+      // 첫 행은 assetId가 아니라 "primary"로 매칭), 「저장」이 고친 입력 + 옛 결과를 최종본으로 남긴다. 결과 화면은 「계산하기」로만
+      // 열리고 매번 다시 계산하므로 잃는 값은 없다. 계획서 first-asset-removal-primary-reindex.plan.md §4-3(Q-3 B).
+      clearResult();
       updateFormData(patch);
     },
-    [updateFormData],
+    [updateFormData, clearResult],
   );
 
   const handleFormChange = useCallback(

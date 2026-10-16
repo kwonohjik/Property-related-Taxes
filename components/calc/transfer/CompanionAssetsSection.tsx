@@ -57,9 +57,14 @@ interface Props {
    * 입력값은 스토어에 있어 보존된다. 기본 0.
    */
   remountEpoch?: number;
+  /**
+   * 자산 삭제 — 있으면 배열 빼기 대신 이것을 부른다. 첫 자산 삭제는 폼 전역 미등기·주 자산 플래그·기본 라벨을
+   * 함께 맞춰야 해서(`lib/calc/asset-removal.ts`) 폼 전역 키를 쓸 수 있는 Step1이 처리한다.
+   */
+  onRemoveAsset?: (currentAssets: AssetForm[], idx: number) => void;
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0 }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -83,6 +88,10 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
   }
 
   function removeAsset(idx: number) {
+    if (onRemoveAsset) {
+      onRemoveAsset(assetsRef.current, idx);
+      return;
+    }
     commitAssets(assetsRef.current.filter((_, i) => i !== idx));
   }
 
