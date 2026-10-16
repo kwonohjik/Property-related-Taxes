@@ -32,7 +32,6 @@ export type {
   PriorReductionUsageItem, SpecialHouseExclusionFormItem,
 } from "./calc-wizard-asset-reduction";
 import type { AssetReductionForm } from "./calc-wizard-asset-reduction";
-import type { AptDeadlineExtensionForm } from "./calc-wizard-asset-nbl";
 
 // ── 팩토리·마이그레이션은 별도 모듈 (800줄 정책) ──
 export { makeDefaultAsset, makeDefaultCompanionAsset, migrateAsset } from "./calc-wizard-asset-factory";
@@ -66,7 +65,10 @@ import type { SellingHouseOriginFormSlice } from "./calc-wizard-asset-selling-or
 export type { SellingHouseOriginFormSlice } from "./calc-wizard-asset-selling-origin";
 
 import type { HousingExcessFormSlice } from "./calc-wizard-asset-housing-excess";
-export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice, HousingExcessFormSlice {
+import type { SplitAcquisitionFormSlice } from "./calc-wizard-asset-split-acq";
+import type { AcqPriceConversionFormSlice } from "./calc-wizard-asset-acq-conversion";
+import type { RentalHousingExceptionFormSlice } from "./calc-wizard-asset-rental-exception";
+export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice, InheritanceAcquisitionFormSlice, NblOtherFormSlice, GeneralBuildingFormSlice, PartialAreaApportionFormSlice, NblJudgmentFormSlice, CommercialBuildingFormSlice, UsageConversionFormSlice, SellingHouseOriginFormSlice, HousingExcessFormSlice, SplitAcquisitionFormSlice, AcqPriceConversionFormSlice, RentalHousingExceptionFormSlice {
   assetId: string;
   assetLabel: string;
   /**
@@ -590,187 +592,9 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    */
   extensionAppraisalValue: string;
 
-  // ── 토지/건물 취득일 분리 (housing·building 공통) ──
-  /**
-   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
-   * "both" (기본): 토지·건물 모두 본인.
-   * "building_only": 건물만 본인 (토지는 배우자·타인 소유).
-   * "land_only": 토지만 본인.
-   */
-  selfOwns: "both" | "building_only" | "land_only";
-  /** 토지와 건물의 취득일이 다른지 여부 (원시취득·신축 등) */
-  hasSeperateLandAcquisitionDate: boolean;
-  /** 토지 취득일 (YYYY-MM-DD) — hasSeperateLandAcquisitionDate === true 시 필수 */
-  landAcquisitionDate: string;
-  /**
-   * **토지 파트의 취득 원인** — 건물을 신축하고 그 토지는 상속·증여로 취득한 경우(2026-07-30).
-   *
-   * `acquisitionCause`는 자산 단위 단일값이라 "건물=신축 / 토지=상속"을 표현할 수 없었다.
-   * ""(미설정)이면 토지도 자산 전체 원인을 따른다(종전 동작).
-   *
-   * 취득가액은 사용자가 입력한 평가액이 `landAcquisitionPrice`(actual 모드)로 흐른다 — 상속 §163⑨ 평가액·증여
-   * 신고가액은 모두 "확인된 취득가액"이다. 원인 자체도 엔진에 전달되어(`buildLandPartCausePayload`) 상속 토지의
-   * 세율 보유기간 통산(「소득세법」 §104②1호)과 추계 차단(D0)에 쓰인다. 읽는 쪽은 저장값이 아니라
-   * `effectiveLandAcquisitionCause`(lib/calc/transfer-land-part-cause.ts)를 쓴다 — 블록이 닫힌 자산의 잔재는 「없음」.
-   *
-   * D2(건물 상속·증여 + 토지 매매): 상속·증여 호스트에서는 `"purchase"`만 유효하다 — 읽는 쪽은 `effectiveBuildingCauseMix`
-   * (D1 술어 `effectiveLandAcquisitionCause`는 `"purchase"`를 돌려주지 않는다 — D1 소비처가 매매 토지를 상속 토지로 읽는 것을 막는다).
-   */
-  landAcquisitionCause: "" | "inheritance" | "gift" | "purchase";
-  /**
-   * 「토지는 다른 원인으로 취득」 토글을 **어느 건물 취득원인에서 켰는가**(D1-2 — 클라이언트 전용, ④가 보내지 않는다).
-   * 유효 원인은 이 값이 현재 `acquisitionCause`와 같을 때만 성립한다(`effectiveLandAcquisitionCause`). 신축에서 켠 뒤
-   * 매매로 바꾼 잔재가 매매 화면에서 「켜짐」으로 되살아나 토지 원인·신축비용 후퇴가 계산에 쓰이는 것을 막는다
-   * (계획서 transfer-acq-cause-mixed.plan.md §10.2 T-8 · UI 설계 §3). 쓰는 곳은 토글 ON/OFF 한 곳뿐.
-   */
-  landCauseHost: "" | "newConstruction" | "purchase" | "inheritance" | "gift";
-  /**
-   * 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 「소득세법」
-   * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).
-   */
-  landDecedentAcquisitionDate: string;
-  /**
-   * 토지 파트 증여자 취득일 — **입력 칸 없음**(D0 G-8). 단순 증여는 §104②2호 통산 대상이 아니다(2호는 §97의2①
-   * 이월과세 자산만). 종전 칸에서 저장된 값이 남을 수 있으나 ④가 보내지 않는다.
-   */
-  landDonorAcquisitionDate: string;
-  /**
-   * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
-   * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
-   * ""(미선택) 시 자산 전체 레거시 플래그에서 파생 — `lib/calc/transfer-tax-split-acq-mode.ts` 참조.
-   */
-  landAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
-  /** 건물 파트 취득 방식 — landAcqMode와 완전 독립(파트별 4-way) */
-  buildingAcqMode: "" | "actual" | "estimated" | "appraisal" | "salesCase";
-  /**
-   * 양도가액 **토지·건물 안분 방식** — 이 자산 **내** 토지·건물 분리 축.
-   * 자산 **간** 일괄양도 안분 축인 `bundledSaleMode`(폼-전역)와 레벨이 달라 공존한다.
-   *
-   * | 값 | 의미 | 근거 |
-   * |---|---|---|
-   * | `"actual"` | 구분양도 — 계약서에 구분 기재 | 「소득세법」 §100② |
-   * | `"appraisal"` | 감정평가액으로 안분 | §166⑥ → 「부가가치세법 시행령」 §64①1호 |
-   * | `"apportioned"` | 양도시 기준시가 비율로 안분 (기본) | §166⑥ → 부가령 §64①2호 |
-   *
-   * 🔴 **`"appraisal"`은 2026-08-07 신설**이다. 종전에는 「일괄양도」 라디오 + 「감정평가가액으로
-   *    안분」 **토글**이 따로 있어, 라디오 라벨이 「기준시가 비율로 안분」인데 토글을 켜면 실제로는
-   *    감정평가액으로 안분되는 **라벨-동작 모순**이 있었다(사용자 보고). 안분 basis는 축 하나이므로
-   *    3-way 라디오로 합쳤다.
-   *
-   * ⚠️ **엔진은 이 필드를 읽지 않는다**(`transfer-tax-api-split.ts:75` 실측). 실제 스위치는
-   *    payload에 값이 실리는지 여부다 — `"actual"`이면 `land/buildingTransferPrice`,
-   *    `"appraisal"`이면 `land/buildingAppraisalAtTransfer`가 전달된다. 그래서 모드를 바꿀 때
-   *    **쓰지 않는 쪽 값을 비워야** 화면에 없는 값이 basis를 조용히 가르지 않는다.
-   */
-  saleSplitMode: "apportioned" | "actual" | "appraisal";
-  /**
-   * 양도시 **감정평가가액** — 안분 basis 서열 **1순위**
-   * (「부가가치세법 시행령」 제64조 제1항 제1호 단서 · 「소득세법 시행령」 제166조 제6항이 차용).
-   * 있으면 양도시 기준시가보다 **우선**해 양도가액을 안분한다.
-   *
-   * ⚠️ 토지·건물 **양쪽 다** 있어야 채택된다 — 한쪽만이면 엔진이 「미평가」로 보고 배제한다.
-   */
-  landAppraisalAtTransfer: string;
-  /** 양도시 감정평가가액 (건물분) — 위와 동일한 규칙 */
-  buildingAppraisalAtTransfer: string;
-  /**
-   * 감정일자 — **시기 요건 판정에 필수**다. 유효 창 = [(양도연도 − 1)-01-01, 양도연도-12-31]
-   * (부가령 §64①1호 괄호 + 「소득세법」 제5조 제1항 역년). 벗어나면 기준시가로 후퇴한다.
-   */
-  appraisalDateAtTransfer: string;
-  /**
-   * 「소득세법 시행령」 제166조 제8항 **예외** — 선택하면 §100③ 30% 의제가 발동하지 않는다.
-   * 3-state(`partialAcqDistinct` 선례): ""(미선택) 기본.
-   */
-  saleSplitExemption: "" | "other_law" | "demolished_land_only";
-  /** 예외 **근거** — 선택 시 필수(validate 차단). 남용 억제 + 신고서 각주 재료. */
-  saleSplitExemptionNote: string;
-  /** 토지 파트 매매사례가액 (원) — landAcqMode === "salesCase" 시 직접입력, 미입력 시 §166⑥ 안분 */
-  landSalesCaseValue: string;
-  /** 건물 파트 매매사례가액 (원) — buildingAcqMode === "salesCase" 시 직접입력 */
-  buildingSalesCaseValue: string;
-  /** 토지 양도가액 (실제 모드 또는 안분 override) */
-  landTransferPrice: string;
-  /** 건물 양도가액 (실제 모드 또는 안분 override) */
-  buildingTransferPrice: string;
-  /** 토지 취득가액 (실거래가 모드 시) */
-  landAcquisitionPrice: string;
-  /** 건물 취득가액 (실거래가 모드 시) */
-  buildingAcquisitionPrice: string;
-  /** 토지 자본적지출·필요경비 */
-  landDirectExpenses: string;
-  /** 건물 자본적지출·필요경비 */
-  buildingDirectExpenses: string;
-  /** 토지 양도시 기준시가 — 환산취득가 분리 계산 시 사용 */
-  landStandardPriceAtTransfer: string;
-  /** 건물 양도시 기준시가 — 환산취득가 분리 계산 시 사용 */
-  buildingStandardPriceAtTransfer: string;
+  // ── 토지/건물 취득일 분리 → SplitAcquisitionFormSlice (calc-wizard-asset-split-acq.ts) ──
 
-  // ── 개별주택가격 미공시 취득 환산 (§164⑦) ──
-  /** true 시 3-시점 미공시 취득 환산 모드 활성화 */
-  usePreHousingDisclosure: boolean;
-  /**
-   * 주택유형 — 「개별주택가격(단독·다가구)」 / 「공동주택가격(아파트)」 라벨 축.
-   *
-   * 🔴 종전에는 `PreHousingDisclosureSection`의 `useState` 로컬이었다(R12). 단계를 옮기거나
-   *    새로고침하면 항상 「단독·다가구」로 되돌아가, **저장된 공동주택가격에 개별주택가격
-   *    라벨**이 붙었다. 표시 축이라 ④⑧에는 싣지 않는다.
-   */
-  phdHousingType: "individual" | "apartment";
-  /** 최초 고시일 (YYYY-MM-DD, 사용자 직접 입력) */
-  phdFirstDisclosureDate: string;
-  /** 최초 고시 개별주택가격 P_F (원) */
-  phdFirstDisclosureHousingPrice: string;
-  /** 취득당시 선택 연도 (문자열 "2013" 등, 자동추천 또는 수동 변경) */
-  phdLandPriceYearAtAcq: string;
-  /** true = 수동 변경됨, false = 자동추천 */
-  phdLandPriceYearAtAcqIsManual: boolean;
-  /** 취득당시 토지 단위 공시지가 (원/㎡) — **토지값 트랙**(부수토지 기준시가 = 공시지가 × 면적). 엔진 입력 */
-  phdLandPricePerSqmAtAcq: string;
-  /**
-   * 취득 ≤2000 — 2001.1.1 현재 단위 공시지가 (원/㎡). **위치지수 트랙**(건물 기준시가 산정, 소령 §164⑤).
-   * `phdLandPricePerSqmAtAcq`(취득당시 연도 토지값)와 의미가 달라 혼용 금지 — 트랙 판정은
-   * `lib/calc/phd-acq-land-price-track.ts` 단일 소스.
-   * **엔진 미전달(UI 전용)**: 배치 모달 입력 보존 + 상가건물 모달 prefill 소스.
-   */
-  phdLandPricePerSqmAtAcq2001: string;
-  /** 취득당시 건물 기준시가 (원) */
-  phdBuildingStdPriceAtAcq: string;
-  /** 최초공시일 선택 연도 */
-  phdLandPriceYearAtFirst: string;
-  /** true = 수동 변경됨 */
-  phdLandPriceYearAtFirstIsManual: boolean;
-  /** 최초공시일 토지 단위 공시지가 (원/㎡) */
-  phdLandPricePerSqmAtFirst: string;
-  /** 최초공시일 건물 기준시가 (원) */
-  phdBuildingStdPriceAtFirst: string;
-  /** 양도시 개별주택가격 P_T (원) */
-  phdTransferHousingPrice: string;
-  /** 양도시 선택 연도 */
-  phdLandPriceYearAtTransfer: string;
-  /** true = 수동 변경됨 */
-  phdLandPriceYearAtTransferIsManual: boolean;
-  /** 양도시 토지 단위 공시지가 (원/㎡) */
-  phdLandPricePerSqmAtTransfer: string;
-  /** 양도시 건물 기준시가 (원) */
-  phdBuildingStdPriceAtTransfer: string;
-  /**
-   * 겸용주택 PHD 주택부수토지 면적 수동 지정 (㎡).
-   * 비어 있으면 엔진이 양도시 주택연면적 비율로 자동 계산.
-   * 최초 공시 당시 전체가 주택이었던 경우 전체 토지 면적으로 수정.
-   */
-  phdResidentialLandArea: string;
-
-  /**
-   * Case A 4부분 안분 전용 (취득시 전체 주택 → 양도시 일부 상가, 최초공시 < 용도변경일).
-   * 엑셀 사례 기준: 취득시·최초공시 시점에는 건물 전체가 주택이었으나
-   * 양도시점 기준으로 "주택건물 부분"과 "상가건물 부분"의 기준시가를 각각 분리 입력.
-   * Case A 비활성 시 빈 문자열 유지.
-   */
-  /** 취득시 상가건물 기준시가 (원) — Case A 4부분 안분용 */
-  phdCommercialBuildingStdPriceAtAcq: string;
-  /** 최초공시일 상가건물 기준시가 (원) — Case A 4부분 안분용 */
-  phdCommercialBuildingStdPriceAtFirst: string;
+  // ── 개별주택가격 미공시 취득 환산 (§164⑦) → AcqPriceConversionFormSlice (calc-wizard-asset-acq-conversion.ts) ──
 
   /** 매매 estimated 시 취득시점 기준시가 (원, 환산 분자) */
   standardPriceAtAcq: string;
@@ -795,178 +619,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
   /** 양도 시점 ㎡당 공시지가 (원/㎡, 토지·비주거건물 전용) */
   standardPricePerSqmAtTransfer: string;
 
-  // ── 상속 주택 환산취득가 보조 입력 (주택 자산 + 상속개시일 < 2005-04-30) ──
-  /** true 시 3-시점 보조 계산 활성화 */
-  inhHouseValEnabled: boolean;
-  /** 최초 고시일 (기본 "2005-04-30") */
-  inhHouseValFirstDisclosureDate: string;
-  /** 토지 면적 (㎡) */
-  inhHouseValLandArea: string;
-  /** 양도시 개별공시지가 (원/㎡) */
-  inhHouseValLandPricePerSqmAtTransfer: string;
-  /** 최초고시 시점 개별공시지가 (원/㎡) */
-  inhHouseValLandPricePerSqmAtFirst: string;
-  /** 상속개시일 시점 개별공시지가 (원/㎡) — 1990-08-30 이후 시 직접 입력 */
-  inhHouseValLandPricePerSqmAtInheritance: string;
-  /** 양도시 개별주택가격 (원) */
-  inhHouseValHousePriceAtTransfer: string;
-  /** 최초고시 시점 개별주택가격 (원) */
-  inhHouseValHousePriceAtFirst: string;
-  /** 양도당시 건물기준시가 (원) — 국세청 기준시가. 양도시 합계 기준시가의 건물 성분 */
-  /** 최초고시 시점 건물기준시가 (원) — §164⑦ Sum_F 분모: 토지기준시가 + 이 값. 국세청 기준시가 */
-  inhHouseValBuildingStdPriceAtFirst: string;
-  /** 상속개시일 시점 건물기준시가 (원) — §164⑦ Sum_A 분자의 건물 성분. 국세청 기준시가 */
-  inhHouseValBuildingStdPriceAtInheritance: string;
-  /** 상속개시일 시점 주택가격 직접 입력 override 사용 여부 */
-  inhHouseValUseHousePriceOverride: boolean;
-  /** 상속개시일 시점 주택가격 직접 입력 override (원) */
-  inhHouseValHousePriceAtInheritanceOverride: string;
-  // 1990-08-30 이전 토지 등급가액 환산은 기존 pre1990* 7필드 재사용
-
-  // ── 1990.8.30. 이전 취득 토지 환산 (assetKind === "land" + acquisitionDate < 1990-08-30) ──
-  pre1990Enabled: boolean;
-  pre1990PricePerSqm_1990: string;
-  pre1990PricePerSqm_atTransfer: string;
-  pre1990Grade_current: string;
-  pre1990Grade_prev: string;
-  pre1990Grade_atAcq: string;
-  pre1990GradeMode: "number" | "value";
+  // ── 상속 주택 환산·1990.8.30. 이전 토지 환산 → AcqPriceConversionFormSlice (calc-wizard-asset-acq-conversion.ts) ──
 
 
   // ── 비사업용 토지 정밀 판정 → NblJudgmentFormSlice (calc-wizard-asset-nbl-judgment.ts)
   // ── 상속 부동산 취득가액 의제 — InheritanceAcquisitionFormSlice (calc-wizard-asset-inheritance-acq.ts) ──
 
-  // ── 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳) ──
-  rentalHousingException: {
-    applyException: boolean;
-    /** 거주주택 양도(A) / PHRP 양도(B) */
-    scenario: 'A' | 'B';
-    rentalUnits: Array<{
-      /**
-       * React 리스트 key 전용 **안정 식별자** — 엔진·④에 전송되지 않는다
-       * (`transfer-tax-api-rental-housing.ts`는 필드를 명시 매핑한다).
-       *
-       * 🔴 종전에는 카드 key가 배열 인덱스였다. 중간 호를 삭제하면 뒤 카드가 삭제된 호의
-       *    인덱스를 물려받아 **자식의 로컬 state가 그대로 남았다** — `AddressSearch`의 검색어는
-       *    마운트 시 1회만 초기화되고(`address-search.tsx:75`) 동기화 useEffect는 외부 값이
-       *    **빈 문자열이 될 때만** 초기화하며(:102~105), `HousingStdPriceLookupField`의
-       *    `selectedYear`·`isManual`·`priceType`·`lookupError`도 로컬 state뿐이다.
-       *    ⇒ 삭제된 호의 주소 검색어·조회 상태가 남은 카드에 그대로 붙어 있었다.
-       *
-       * ⚠️ stale sessionStorage·이력 복원분에는 없다 — ③ `migrateAsset`이 채운다.
-       */
-      unitId: string;
-      /** 세무서 사업자등록일 §168 (YYYY-MM-DD) */
-      businessRegistrationDate: string;
-      /** 지자체 임대사업자등록신청일 민특법§5 (YYYY-MM-DD) */
-      rentalRegistrationDate: string;
-      /** 임대구분 (의무기간·cap 파생 소스). existing_business=나목·unsold_08_09=라목(미분양) */
-      rentalCategory: 'long_general' | 'short_6y' | 'pre_2018' | 'existing_business' | 'unsold_08_09';
-      rentalAcquisitionType: 'purchase' | 'construction';
-      isApartment: boolean;
-      /** 소재지역 수도권/비수도권 (918 조정취득은 isExcluded918Rule 별도) */
-      region: 'seoul-metro' | 'non-metro';
-      /** 소재지 법정동코드 10자리 (주소 검색 시 자동 채움 — region 자동판별 소스·자동배지 신호). 미검색 시 "" */
-      regionCode: string;
-      /**
-       * 거주주택 양도일 현재 이 임대주택 기준시가(원, 문자열) — 영 §167의3①1호(지방 3억 이하 중과 주택 수 불산입).
-       * 소재지가 가액기준 지역일 때만 묻고 보낸다(`rentalUnitLowPriceInScope`). "" = 모름(산입).
-       */
-      officialPriceAtResidenceTransfer: string;
-      /** 918 조정취득 배제(2018.9.14 이후 조정대상지역 신규취득). 마목 hard·아목 carve-out */
-      isExcluded918Rule: boolean;
-      /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
-      hasContractDepositProof: boolean;
-      /** 마·바목 단기→장기 변경신고 배제 여부 */
-      isExcludedShortToLongChange: boolean;
-      /** 임대개시일 기준시가 (원, 문자열) — 가/다/마/바/아/자/구법 */
-      standardPriceAtRentalStart: string;
-      /** 취득당시 기준시가 (원, 문자열) — 나목(취득당시 3억) */
-      acquisitionOfficialPrice: string;
-      /** 국민주택규모 충족 자기확인 — 나목 */
-      isNationalSizeHousing: boolean;
-      /** 대지면적 ㎡ (건설임대 규모요건, 문자열) */
-      rentalLandArea: string;
-      /** 연면적/전용면적 ㎡ (건설임대 규모요건, 문자열) */
-      rentalTotalFloorArea: string;
-      /** 2호 이상 임대 충족 자기확인 (건설임대·나목) */
-      hasMinimum2Units: boolean;
-      /** 같은 시·군 5호 이상 임대 충족 (라목 미분양) */
-      hasMinimum5UnitsInCity: boolean;
-      /** 최초 분양계약일 (라목 미분양 2008.6.11~2009.6.30, YYYY-MM-DD) */
-      firstSaleContractDate: string;
-      /** 실제 임대 개월 수 (direct 모드 값·legacy fallback) */
-      rentalMonths: string;
-      /** 임대기간 입력 모드 — direct(개월 직접)·interval(시작~종료일 다중 기간) */
-      rentalInputMode: "interval" | "direct";
-      /** 임대 구간 (interval 모드, 비연속 허용). 개월은 API 변환 시 deriveRentalMonths로 합산 */
-      rentalPeriods: Array<{ start: string; end: string }>;
-      /** 임대주택 지번 주소 — 임대개시일 기준시가 Vworld 조회용(UI 상태·엔진 미전송) */
-      rentalAddressJibun: string;
-      /** 공동주택 동(예: "324") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */
-      rentalDong: string;
-      /** 공동주택 호(예: "1004") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */
-      rentalHo: string;
-      /** §155㉓ 말소 — 자진(임대의무기간 1/2↑)·자동말소로 등록이 말소된 호 (가·다·라·마목) */
-      rentalAutoTermination: boolean;
-      /**
-       * §155㉓ 등록 말소일(YYYY-MM-DD, I-4) — 「말소 이후(2호 이상이면 최초 말소 이후) 5년 이내 양도」의
-       * 기산일. "" = 미입력(말소 토글 ON이면 ⑧이 차단 · 엔진은 ㉓ 판정 보류).
-       */
-      registrationCancellationDate: string;
-      /**
-       * ㉓1호 자진말소 1/2 판정용 — 말소 주택의 종전 민특법 등록 유형(OH-39). "" = 미선택.
-       * short_term = 단기민간임대(4년 → 24개월) · long_term_general = 장기일반민간임대(8년 → 48개월).
-       */
-      terminatedRegistrationType: "" | "short_term" | "long_term_general";
-      /**
-       * 말소 사유 — 다주택 중과 판정 전용(영 §167의3①2호 단서: 자동말소면 임대기간요건 간주 충족). "" = 미선택
-       * (자동말소로 보지 않고 확인 필요 고지). optional — 이 칸 신설 전 복원분(undefined)도 미선택과 같다.
-       */
-      terminationReason?: "" | "auto" | "voluntary";
-      /**
-       * §167의3⑪ 기한 연장 사실 — 도출 목이 가·나·라·마이고 아파트일 때만 묻는다(§155㉓ 말소 경로 제외).
-       * optional — 미입력·stale 복원분(undefined)은 「모름」(엔진 판정 보류). 범위: `apt-deadline-extension-scope.ts`.
-       */
-      aptDeadlineExtension?: AptDeadlineExtensionForm;
-      /**
-       * 혼인합가(§155⑤) — 이 임대주택의 혼인 전 보유자(판정 메뉴 전용 · 명부 밖 임대주택). undefined = 미선택.
-       * 각각 2주택 이상인 사람끼리의 혼인이면 특례 불가(기획재정부 조세정책과-1199)라 양쪽 주택 수에 센다.
-       */
-      mergeOrigin?: "seller_side" | "counterpart_side" | "after_merge";
-      /** 기타 요건 충족 자기확인 (5%증액 등) */
-      requirementsConfirmed: boolean;
-    }>;
-    /** B 시나리오: 직전거주주택 양도일 (YYYY-MM-DD) */
-    priorResidenceTransferDate?: string;
-    /** B 시나리오: 취득 당시 기준시가 P_acq (원, 문자열) */
-    standardPriceAtAcquisitionForPhrp?: string;
-    /** B 시나리오: 직전양도 당시 기준시가 P_prior (원, 문자열) */
-    standardPriceAtPriorTransfer?: string;
-    /** B 시나리오: 현 양도 당시 기준시가 P_transfer (원, 문자열) */
-    standardPriceAtTransferForPhrp?: string;
-    /**
-     * B 시나리오: 사업자등록·임대사업자 등록 이후 거주기간(개월, 문자열) — §155⑳1호 괄호(OH-15).
-     * "" = 미입력(⑧이 차단).
-     */
-    postRegistrationResidenceMonths?: string;
-    /**
-     * 생애 1회 제한 구간(2019-02-12 이후 취득 · 2025-02-27 이전 양도)의 종전 §155⑳ 적용 이력(OH-40).
-     * "" = 미선택.
-     */
-    priorRentalExemptionHistory?: "" | "none" | "used";
-    /** 대통령령 제29523호 부칙 제7조② 경과조치 해당(2019-02-12 당시 거주 중 · 그 전 계약금 지급) — OH-40 */
-    residenceTransitionUnderAddendum?: boolean;
-    /** 위 경과조치의 사유(D11) — "" = 미선택(판정 메뉴 ⑧이 막는다). 체크를 끄면 함께 비운다. */
-    residenceTransitionBasis?: "" | "residing" | "contract_with_prior_rental" | "contract_without_prior_rental";
-    /**
-     * §154⑩1호(I-5) — 이 주택이 임대주택 등록(민특법§5) 또는 어린이집 설치·운영(영유아보육법§12·§13)
-     * 사실이 있는가. `rentalUnits`가 0호인 B 시나리오(§154⑩ 표준 경로)에서만 UI가 노출·판정에 쓴다.
-     * 거주기간은 별도 필드 없이 취득 시기별로 `postRegistrationResidenceMonths`(2019.2.12 이후
-     * 취득) 또는 일반 거주기간(그 전 취득)을 재사용한다.
-     */
-    wasRegisteredRentalOrChildcare?: boolean;
-  };
+  // ── 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳) → RentalHousingExceptionFormSlice (calc-wizard-asset-rental-exception.ts) ──
 
 
   // ── 일반건물(general_building) + 겸용주택 필드 → GeneralBuildingFormSlice로 분리 ──
