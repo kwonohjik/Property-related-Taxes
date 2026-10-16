@@ -147,7 +147,7 @@ export function assetRemovalPatch(
 **미검증 항목 확인**
 | V | 결과 |
 |---|---|
-| V-1 | **있다(코드읽기)**. ④가 폼 전역에서 읽어 «양도하는 첫 자산의 사실»로 보내는 값: 거주기간 `residencePeriodMonths` · 취득 당시 조정대상지역 `wasRegulatedAtAcquisition` · 일시적 2주택(`temporaryTwoHouseSpecial`·`newHouseAcquisitionDate`) · 대체주택 `repl*` · §154① 단서 `proviso*` · 혼인·합가 `mergedHousehold*` · 입주권 `right*` · 분양권 `presaleRight*` · 판정 메뉴에서 넘겨받은 사실 `importedOneHouseFacts` 등. 첫 주택을 지우면 이 값이 새 첫 자산의 사실로 읽힌다. 같은 일은 첫 자산을 «그 자리에서 다른 물건으로 고칠 때»도 생긴다(위치 기준 입력이라). **이번 범위에서 제외 — 사용자 결정 Q-5로 넘김** |
+| V-1 | **있다(코드읽기)**. ④가 폼 전역에서 읽어 «양도하는 첫 자산의 사실»로 보내는 값: ~~거주기간 `residencePeriodMonths`~~ **(v0.3 정정 — 거주기간 입력은 자산 객체에 있어 새지 않는다; 실측은 `first-asset-change-step4-facts-notice.plan.md` §1 P-b·§2. 이 행의 나머지 항목 중 `presaleRight*`·`importedOneHouseFacts`는 그 문서에서도 미실측)** · 취득 당시 조정대상지역 `wasRegulatedAtAcquisition` · 일시적 2주택(`temporaryTwoHouseSpecial`·`newHouseAcquisitionDate`) · 대체주택 `repl*` · §154① 단서 `proviso*` · 혼인·합가 `mergedHousehold*` · 입주권 `right*` · 분양권 `presaleRight*` · 판정 메뉴에서 넘겨받은 사실 `importedOneHouseFacts` 등. 첫 주택을 지우면 이 값이 새 첫 자산의 사실로 읽힌다. 같은 일은 첫 자산을 «그 자리에서 다른 물건으로 고칠 때»도 생긴다(위치 기준 입력이라). **이번 범위에서 제외 — 사용자 결정 Q-5로 넘김** |
 | V-2 | 결과 화면 블록(`isResult && result`)에는 폼 쓰기가 없다. 가산세 `setUnpaidTax`는 `updateFormData` 직통(`TransferTaxCalculator.tsx:309`) |
 | V-3 | 입력 단계 마운트 effect는 Step4 두 개(`Step4.tsx:267`·`:300`) — 값이 어긋났을 때만 쓴다. 정상 상태에서 단계 이동만으로 결과가 비워지지 않는다 |
 | V-4 | 다건 계산기는 자체 스토어 `result`를 쓴다(`MultiTransferTaxCalculator.tsx:268`·`:401`) — 단건 스토어 결과를 비워도 닿지 않는다 |
@@ -173,3 +173,4 @@ Q-2 재번호는 가운데 삭제에도 적용했다(같은 갈림이 생긴다)
 ## 부록. 변경 이력
 - v0.1 (2026-10-16) 초안 — probe P1~P8 실측, 결정 Q-1~Q-4, 미검증 V-1~V-5.
 - v0.2 (2026-10-16) 결정 확정(권고대로) · Q-2 근거 정정(사이드바도 위치 번호 — 라벨이 갈리는 곳은 결과 화면) · Q-2 재번호는 가운데 삭제에도 적용(같은 갈림이 생긴다).
+- v0.3 (2026-10-16) §7-R V-1 «거주기간» 정정(실측 — 새지 않음). 후속 계획서: `first-asset-change-step4-facts-notice.plan.md`(Q-5 안내 표시).

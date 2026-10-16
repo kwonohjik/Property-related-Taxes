@@ -29,6 +29,7 @@ import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/Declared
 import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import { presaleRightNoHouseExceptionVisible } from "@/lib/calc/presale-right-no-house-exception-scope";
 import { HouseholdHousingCountSection } from "./step4-sections/HouseholdHousingCountSection";
+import { FirstAssetChangeNoticeCard } from "./step4-sections/FirstAssetChangeNoticeCard";
 
 // Step4 내부 공용 헬퍼 — 주택·입주권·분양권·재개발APT 계열 판정
 // 재개발/재건축 완공 APT(시행령 §166②1호)는 신축주택 양도이므로 1세대1주택·12억 안분 등
@@ -313,6 +314,8 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         아래 입력란이 이미 채워져 있는 이유를 먼저 말해 주지 않으면, 사용자는 자기가 넣지 않은
         값이 들어 있는 것을 보고 버그로 읽는다.
       */}
+      {/* 첫 자산 삭제 안내(Q-5) — 값은 그대로 두고 알린다 */}
+      <FirstAssetChangeNoticeCard form={form} gates={{ proviso: proviso.visible }} newFirstLabel={primary ? `${primary.assetLabel}${primary.addressJibun ? ` · ${primary.addressJibun}` : ""}` : ""} onChange={onChange} />
       <ImportedOneHouseFactsCard
         facts={form.importedOneHouseFacts}
         rights={form}

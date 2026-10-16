@@ -120,4 +120,56 @@ test.describe("첫 자산 삭제", () => {
     expect(removed).toBe(reference);
     expect(removed).not.toBe(before);
   });
+
+  test("T2: 첫 자산 삭제 → 보유 상황 상단 안내 카드 → 확인 해제(값은 그대로)", async ({ page }) => {
+    test.setTimeout(120_000);
+    const house = (id: string, acq: string) => ({
+      assetId: id,
+      assetKind: "housing",
+      acquisitionCause: "purchase",
+      acquisitionDate: acq,
+      actualSalePrice: "300000000",
+      fixedAcquisitionPrice: "200000000",
+      addressJibun: `서울 테스트동 ${id}`,
+      residenceInputMode: "direct",
+      residencePeriodMonthsAsset: "0",
+    });
+    const raw = [house("h1", "2018-03-01"), house("h2", "2019-05-02"), house("h3", "2019-06-02")];
+    await page.goto("/calc/transfer-tax");
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+    await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), {
+      ...seedForm(raw, false),
+      state: {
+        ...seedForm(raw, false).state,
+        formData: {
+          ...seedForm(raw, false).state.formData,
+          isOneHousehold: true,
+          householdHousingCount: "1",
+          wasRegulatedAtAcquisition: true,
+          marriageDate: "2020-01-01",
+        },
+      },
+    });
+    await page.reload();
+    await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+
+    await page.locator('[data-asset-card-index="0"]').getByRole("button", { name: "삭제" }).click();
+    const f = await storedForm(page);
+    expect(f.firstAssetChangeNote).toEqual({ newFirstAssetId: "h2", groups: ["regulated", "merge"] });
+
+    await page.getByRole("button", { name: "보유 상황" }).first().click();
+    const notice = page.getByTestId("first-asset-change-notice");
+    await expect(notice).toBeVisible();
+    await expect(notice).toContainText("지금은 ‘자산 1 · 서울 테스트동 h2’이(가)");
+    await expect(page.getByTestId("first-asset-change-notice-regulated")).toBeVisible();
+    await expect(page.getByTestId("first-asset-change-notice-merge")).toBeVisible();
+    await page.screenshot({ path: "e2e/_artifacts/first-asset-change-notice.png", fullPage: true });
+
+    await page.getByTestId("first-asset-change-notice-ack").click();
+    await expect(notice).toHaveCount(0);
+    const g = await storedForm(page);
+    expect(g.firstAssetChangeNote).toBeUndefined();
+    expect(g.wasRegulatedAtAcquisition).toBe(true);
+    expect(g.marriageDate).toBe("2020-01-01");
+  });
 });
