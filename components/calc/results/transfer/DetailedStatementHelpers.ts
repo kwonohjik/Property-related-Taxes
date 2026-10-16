@@ -24,12 +24,7 @@ import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residenc
 import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
-import {
-  fmtDate,
-  fmtPeriod,
-  holdingPeriodFromDates,
-  getAcqDateForCard,
-} from "./FilingFormTableHelpers";
+import { getAcqDateForCard } from "./FilingFormTableHelpers";
 import {
   buildGbTransferFormula,
   buildGbAcquisitionFormula,
@@ -44,6 +39,7 @@ import {
 } from "./DetailedStatementFormulaBuilders";
 import { appendLateStageItems } from "./DetailedStatementLateStages";
 import { setLongTermDeductionItems } from "./DetailedStatementLthdItems";
+import { setDateAndResidenceItems } from "./DetailedStatementDateItems";
 import {
   reductionEligibleIncome,
   incomeDeductionReducible,
@@ -65,6 +61,12 @@ import {
   buildBgSingleAcquisitionFormula,
   buildBgSingleExpenseFormula,
 } from "./DetailedStatementBgFormulas";
+import {
+  resolveBgMixedDisplay,
+  buildBgMixedTransferFormula,
+  buildBgMixedAcquisitionFormula,
+  buildBgMixedExpenseFormula,
+} from "./DetailedStatementBgMixedFormulas";
 import { aggregateAcqModes } from "./split-acq-text";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
@@ -153,68 +155,24 @@ export function buildStatementItems(
 
   // 단건 부담부증여: §159 슬롯 echo에서 읽는다(`contractTotalPrice`가 빈 칸이라 역산하면 음수).
   const bgSingle = isAggregate ? undefined : resolveBgSingleDisplay(result);
+  // 겸용 × 부담부증여 — 4부분 슬롯 합(단건 빌더는 겸용을 제외한다). 폼 `contractTotalPrice`는 빈 칸이라 역산하면 음수다.
+  const bgMixed = isAggregate ? undefined : resolveBgMixedDisplay(result);
   // 양도가액 우선순위: 부담부증여 슬롯 > receiveOnly 보정 > override > result.steps의 amount > 0
-  const totalTransferPrice = bgSingle ? bgSingle.transferPrice : receiveOnly.transferPrice;
+  const totalTransferPrice = bgSingle ? bgSingle.transferPrice : bgMixed ? bgMixed.transferPrice : receiveOnly.transferPrice;
 
-  // ── 1단계: 일자·기간 ────────────────────────────────────────
-  items.set("transferDate", {
-    label: "양도일자",
-    value: fmtDate(transferDate),
-    formula: "사용자 입력 (계약상 잔금청산일 또는 등기접수일 중 빠른 날)",
-    legalBasis: "소득세법 §98",
-    perAsset: isAggregate
-      ? properties.map((p) => ({
-          label: p.propertyLabel,
-          value: fmtDate(transferDateOf(p.propertyId)),
-        }))
-      : undefined,
-  });
-
-  // 취득일자 — override 우선 (이월과세 Scenario A: 증여자 취득일)
-  const displayAcqDate =
-    acquisitionDateOverride && acquisitionDateOverride !== ""
-      ? acquisitionDateOverride
-      : primary?.acquisitionDate ?? "";
-  items.set("acquisitionDate", {
-    label: acquisitionDateLabel ? `취득일자 ${acquisitionDateLabel}` : "취득일자",
-    value: fmtDate(displayAcqDate),
-    formula: acquisitionDateOverride
-      ? "이월과세 적용 시 증여자 취득일 기산 (소득세법 §97조의2 ①)"
-      : "사용자 입력 (등기접수일 또는 잔금청산일 중 빠른 날)",
-    legalBasis: acquisitionDateOverride ? "소득세법 §97조의2" : "소득세법 §98",
-    perAsset: isAggregate
-      ? properties.map((p) => ({
-          label: p.propertyLabel,
-          value: fmtDate(acqDateOf(p.propertyId)),
-        }))
-      : undefined,
-  });
-
-  items.set("holdingPeriod", {
-    label: "보유기간",
-    value: holdingPeriodFromDates(displayAcqDate, transferDate),
-    formula: `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (연·월 차이)`,
-    legalBasis: "소득세법 §95②",
-    perAsset: isAggregate
-      ? properties.map((p) => ({
-          label: p.propertyLabel,
-          value: holdingPeriodFromDates(
-            acqDateOf(p.propertyId),
-            transferDateOf(p.propertyId),
-          ),
-        }))
-      : undefined,
-  });
-
-  // 입주일 없는 구간(신규 자산 기본값의 빈 구간)은 거주 사실이 없다 — 퇴거일 칸에 양도일을 찍지 않는다.
-  const periods = primary?.residenceInputMode === "interval"
-    ? (primary.residencePeriods ?? []).filter((p) => p.moveInDate)
-    : [];
-  const firstMoveIn = periods.length > 0 ? periods[0].moveInDate : "";
-  const lastMoveOut = periods.length > 0
-    ? (periods[periods.length - 1].moveOutDate || transferDate)
-    : "";
   const residenceMs = residenceMonthsOfAsset(primary, transferDate);
+  // ── 1단계: 일자·기간 (DetailedStatementDateItems.ts) ─────────────
+  setDateAndResidenceItems(items, {
+    isAggregate,
+    properties,
+    primary,
+    transferDate,
+    residenceMs,
+    acquisitionDateLabel,
+    acquisitionDateOverride,
+    transferDateOf,
+    acqDateOf,
+  });
   /**
    * 다건 모드에서 **그 양도건 자신의** 거주 개월수. 종전에는 자산별 장특 분할에도
    * 1번 자산의 거주 개월수를 그대로 썼다 — 거주 사실이 없는 토지·상가에까지 「거주 기간분」이
@@ -223,24 +181,6 @@ export function buildStatementItems(
   const residenceMsOf = (pid: string) =>
     residenceMonthsOfAsset(assetOf(pid), transferDateOf(pid));
 
-  items.set("moveOut", {
-    label: "퇴거일",
-    value: lastMoveOut ? fmtDate(lastMoveOut) : "-",
-    formula: "마지막 거주기간 종료일",
-    legalBasis: "소득세법 시행령 §161",
-  });
-  items.set("moveIn", {
-    label: "입주일",
-    value: firstMoveIn ? fmtDate(firstMoveIn) : "-",
-    formula: "최초 거주 시작일",
-    legalBasis: "소득세법 시행령 §161",
-  });
-  items.set("residencePeriod", {
-    label: "거주기간",
-    value: fmtPeriod(residenceMs),
-    formula: periods.length > 0 ? `${periods.map((pp) => `${fmtDate(pp.moveInDate)}~${fmtDate(pp.moveOutDate || transferDate)}`).join(" + ")} = ${fmtPeriod(residenceMs)}` : `${fmtPeriod(residenceMs)} (직접 입력 · 월 단위)`,
-    legalBasis: "소득세법 §95②·시행령 §161",
-  });
 
   // ── 2단계: 양도차익 산정 ─────────────────────────────────────
   /**
@@ -274,14 +214,16 @@ export function buildStatementItems(
   items.set("transferPrice", {
     label: "양도가액",
     value: isAggregate ? sumPropTransfer : ownerSplitTransfer ? ownerSplitTransfer.transferPrice : totalTransferPrice,
-    formula: burdenedGift
+    formula: bgMixed
+      ? buildBgMixedTransferFormula(bgMixed)
+      : burdenedGift
       ? `양도가액 = 인수 채무액 (임대보증금 + 담보차입금) = ${burdenedGift.assumedDebtAmount.toLocaleString()} (소령 §159 — 채무 인수분이 양도가액으로 의제, 자산별 §166⑥ 비율 안분)`
       : isAggregate
         ? "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
         : ownerSplitTransfer
           ? `본인 소유 파트 양도가 — ${ownerSplitTransfer.parts.map((p) => `${p.label} ${p.transferPrice.toLocaleString()}`).join(" + ")} (일괄양도가액 ${totalTransferPrice.toLocaleString()} 중 · 소령 §166⑥·§168②)`
           : "사용자 입력 (실제 매매계약서상 거래금액)",
-    legalBasis: burdenedGift
+    legalBasis: burdenedGift || bgMixed
       ? "소득세법 시행령 §159·§166"
       : "소득세법 시행령 §166",
     perAsset: isAggregate
@@ -321,6 +263,8 @@ export function buildStatementItems(
   const depreciation = result.swapApplied ? 0 : (result.depreciationAmount ?? 0);
   const singleAcq = bgSingle
     ? bgSingle.acquisition
+    : bgMixed
+    ? bgMixed.acquisition
     : splitSummary
     ? splitSummary.acquisitionDeducted
     : estimatedNoSwap
@@ -351,6 +295,8 @@ export function buildStatementItems(
   const aggModes = isAggregate ? aggregateAcqModes(properties, gbDetail) : undefined;
   const acqFormula = bgSingle
     ? buildBgSingleAcquisitionFormula(bgSingle)
+    : bgMixed
+    ? buildBgMixedAcquisitionFormula(bgMixed)
     : buildAcquisitionPriceFormula(
         result,
         isAggregate,
@@ -389,6 +335,8 @@ export function buildStatementItems(
   //   환산 본문은 자본적지출이 애초에 들어 있지 않으므로 뺄 것이 없다(결과탭 코드리뷰 #069).
   const singleExp = bgSingle
     ? bgSingle.expenses
+    : bgMixed
+    ? bgMixed.expenses
     : splitSummary
     ? splitSummary.necessaryExpense
     : estimatedNoSwap
@@ -400,6 +348,8 @@ export function buildStatementItems(
   const lumpRate = estimatedDeductionRate(formData?.isUnregistered, primary?.assetKind);
   const expFormula = bgSingle
     ? buildBgSingleExpenseFormula(bgSingle)
+    : bgMixed
+    ? buildBgMixedExpenseFormula(bgMixed)
     : buildNecessaryExpenseFormula(result, isAggregate, singleExp, lumpRate, aggModes);
 
   items.set("expenses", {

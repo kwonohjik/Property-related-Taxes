@@ -21,6 +21,7 @@ import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
 import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
+import { isMixedBurdenedGift, mixedBgNoTransferNote, mixedBgNoTransferNoteOfForm } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { parseRaw, isParcelMode, isRedevelopmentPath, parcelAcqSum, directAcqRaw, directExpenseRaw } from "./transfer-per-asset-direct";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -69,6 +70,11 @@ export interface TransferAssetSummaryRow {
   expensePending: boolean;
   /** 양도가액이 기준시가 비율 안분값이면 true → «기준시가 안분» 라벨 */
   saleIsApportioned: boolean;
+  /**
+   * 겸용 × 부담부증여에서 한쪽(주택/상가)에 채무가 귀속되지 않아 **양도가 없을 때**의 보조 문구
+   * (예: 「주택분 양도 없음 (채무 귀속: 상가)」). 비과세가 아니라 «양도 여부»다. 없으면 undefined.
+   */
+  saleTransferNote?: string;
   /** < 1 이면 지분 단계취득 → «지분 N%» 라벨 */
   ownershipRatio: number;
 }
@@ -290,6 +296,8 @@ export function computeTransferPerAssetSummary(
   const rows: TransferAssetSummaryRow[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
+    /** 겸용 × 부담부증여(주 자산) — 취득 입력·계약금액이 아니라 BG 블록·엔진 echo가 정본이다. */
+    const bgMixed = i === 0 && isMixedBurdenedGift(a);
 
     /**
      * 전용 환산 프리뷰(일반건물·상가) — 계산 **전** 산출값. 산식은 재구현하지 않고 route가 쓰는
@@ -350,6 +358,12 @@ export function computeTransferPerAssetSummary(
     const receiveOnlySalePrice = isReceiveOnlyFiling(a) ? parseRaw(a.redevSettlementAmount) : 0;
     if (receiveOnlySalePrice > 0) {
       salePrice = receiveOnlySalePrice;
+    } else if (bgMixed) {
+      // 겸용 × 부담부증여 — 양도가액은 채무액을 부분별로 안분한 **엔진 값**이다(A×B/C를 클라이언트에서 다시 계산하지 않는다).
+      // 계산 전에는 «계산 후 표시», 계산 후에는 엔진 echo(4부분 양도가액 합)를 쓴다.
+      const bg = mixedResult?.burdenedGift;
+      if (bg) salePrice = Object.values(bg.perPart).reduce((n, p) => n + p.transferPrice, 0);
+      else salePending = true;
     } else if (bundledMatch) {
       salePrice = bundledMatch.allocatedSalePrice;
       saleIsApportioned = bundledMatch.saleMode === "apportioned";
@@ -401,6 +415,11 @@ export function computeTransferPerAssetSummary(
     if (mixedResult && i === 0) {
       // 겸용주택: 결과 카드와 같은 단일 소스(B1 파트 모델은 단서 판정 후 실제 차감값).
       acqPrice = mixedUseDisplayedAcqPrice(mixedResult);
+      if (bgMixed) acqPending = false;
+    } else if (bgMixed) {
+      // 겸용 × 부담부증여 — 숨은 stale 취득 입력(`fixedAcquisitionPrice` 등)을 보이지 않는다. 취득가액은 채무비율 적용 후 엔진 값이다.
+      acqPrice = 0;
+      acqPending = true;
     } else if (bundledMatch) {
       acqPrice = bundledMatch.allocatedAcquisitionPrice;
       // 엔진이 이 자산의 취득가액을 확정했다 — 입력 단계 pending(환산 파트·필지)을 내린다. 남겨 두면 엔진 값이 0일 때
@@ -534,6 +553,10 @@ export function computeTransferPerAssetSummary(
       const { housingPart: h, commercialPart: c } = mixedResult;
       expense =
         h.landAppraisalDed + h.buildingAppraisalDed + c.landAppraisalDed + c.buildingAppraisalDed;
+    } else if (bgMixed) {
+      // 겸용 × 부담부증여 계산 전 — 개산공제·실비 안분은 취득시 기준시가 × 채무비율이라 엔진만 안다.
+      expense = 0;
+      expensePending = true;
     } else if (bundledMatch) {
       // 엔진이 자산별로 **실제 차감한** 필요경비 — 안분 결과(`allocatedExpenses`)는 입력 경비만
       // 담고 개산공제(§163⑥)는 그 뒤 단건 엔진이 더하므로, 추계 자산에서 0으로 보였다(F-14).
@@ -587,6 +610,13 @@ export function computeTransferPerAssetSummary(
     }
     if (expense === 0 && !result && (isLumpSumMode(a) || isGbNonActualPart(a) || splitHasNonActualOwnedPart(a))) expensePending = true;
 
+    // 한쪽에 양도가 없으면(채무가 한 부분에만 귀속) 사이드바가 그 사실을 한 줄로 말한다 — 「비과세」로 읽히지 않게 «양도 없음»이다.
+    const saleTransferNote = bgMixed
+      ? mixedResult?.burdenedGift
+        ? mixedBgNoTransferNote(mixedResult.burdenedGift.debtAttribution.housingDebt, mixedResult.burdenedGift.debtAttribution.commercialDebt)
+        : mixedBgNoTransferNoteOfForm(a)
+      : undefined;
+
     return {
       assetId: a.assetId,
       index: i + 1,
@@ -615,6 +645,7 @@ export function computeTransferPerAssetSummary(
       acqPending,
       expensePending,
       saleIsApportioned,
+      ...(saleTransferNote ? { saleTransferNote } : {}),
       ownershipRatio: ratio,
     };
   });

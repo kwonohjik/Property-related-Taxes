@@ -23,6 +23,13 @@ import {
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { bgPresumedInputKind, isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { selfBuiltActive } from "./self-built-scope";
+import {
+  isMixedBurdenedGift,
+  mixedAcqStdTotal,
+  mixedBgDebtAttribution,
+  mixedBgHousingAppraisal,
+  mixedTransferStdTotal,
+} from "./burdened-gift-mixed-use-scope";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -89,6 +96,13 @@ export interface BurdenedGiftInfoPayload {
   landStdPriceAtAcquisition: number;
   /** 취득시 건물 기준시가. housing 시 주택 단일 공시가격 통째로. land 시 0. */
   buildingStdPriceAtAcquisition: number;
+  /**
+   * ⑫ 겸용주택 × 부담부증여 전용 — 인수 채무의 주택/상가 귀속(국세청 부동산거래관리과-119). 겸용이 아니면 키 자체를 싣지 않는다
+   * (비겸용에 실리면 ⑫ `refineMixedUseBurdenedGift`가 거부한다). 귀속 입력이 덜 끝났으면 undefined — 엔진 MB-13이 막는다(기본값 없음).
+   */
+  debtAttribution?: { housing: number; commercial: number; unallocated: number };
+  /** ⑫ 겸용 × 시가 모드 전용 — 구분 감정평가 유무 선언(부가가치세법 시행령 §64①1호 단서, G-13). 미선언이면 undefined(MB-17). */
+  housingAppraisal?: { exists: boolean; housingValue?: number };
   /**
    * 이월과세(§97의2①1호) — **당초 증여자** 취득 당시 값 한 벌. 위 필드들은 **양도인** 기준이다.
    * 이월과세 취득원인이 아니면 undefined.
@@ -260,6 +274,8 @@ function buildPresumedAcquisition(
 export function buildBurdenedGiftInfo(
   primary: AssetForm,
   debtScaleRatio?: number,
+  /** 겸용 취득시 기준시가 합계의 1990.8.30. 이전 토지 환산 fallback에 쓰는 양도일(폼-전역). 겸용이 아니면 쓰지 않는다. */
+  transferDate?: string,
 ): BurdenedGiftInfoPayload {
   const scaleDebt =
     debtScaleRatio !== undefined && debtScaleRatio > 0 && debtScaleRatio < 1;
@@ -338,6 +354,38 @@ export function buildBurdenedGiftInfo(
             }))
         : undefined,
   };
+
+  /**
+   * ── 겸용주택 × 부담부증여 (설계 UI R2 §4·§6.2 · 엔진 R4 §3.5) ──
+   *
+   * 기준시가는 **합계**를 건물 슬롯에 싣는다(housing 관행). 엔진은 이 4필드를 계산에 쓰지 않고 `MixedUseAssetInput`에서 4부분을 재파생하되
+   * **양도시 합**은 재파생 Σ와 대조한다(MB-12) — 합 계산은 표시·⑧과 같은 leaf(`mixedTransferStdTotal`)다.
+   *
+   * 🔴 엔진 ⑫는 아래 키가 **존재하면 거부**한다(MB-12, strip이 아니다): 분리 실지/추계(토지·건물), `carryoverDonorBasis`, `rightValuation`,
+   *    `assumedDebtOverride`, `presumedExtensionAppraisalValue`, `giftBuildingStdPriceAtTransfer`. 자산 종류를 바꾸며 남은 stale 값이
+   *    새면 HTTP 400이므로 **명시적으로 비운다**. 취득가액은 총액(`actualAcquisitionTotal`·`presumedAcquisitionTotal`)만 싣는다.
+   */
+  if (isMixedBurdenedGift(primary)) {
+    const attr = mixedBgDebtAttribution(primary);
+    const {
+      actualLandAcquisitionPrice: _al, actualBuildingAcquisitionPrice: _ab,
+      presumedLandAcquisitionPrice: _pl, presumedBuildingAcquisitionPrice: _pb,
+      presumedExtensionAppraisalValue: _pe, giftBuildingStdPriceAtTransfer: _gb, carryoverDonorBasis: _cd,
+      ...allowed
+    } = common;
+    void _al; void _ab; void _pl; void _pb; void _pe; void _gb; void _cd;
+    return {
+      ...allowed,
+      landStdPriceAtTransfer: 0,
+      buildingStdPriceAtTransfer: mixedTransferStdTotal(primary).total,
+      landStdPriceAtAcquisition: 0,
+      buildingStdPriceAtAcquisition: mixedAcqStdTotal(primary, transferDate ?? "").total,
+      ...(attr.issues.length === 0
+        ? { debtAttribution: { housing: attr.housing, commercial: attr.commercial, unallocated: attr.unallocated } }
+        : {}),
+      ...(mixedBgHousingAppraisal(primary) ? { housingAppraisal: mixedBgHousingAppraisal(primary) } : {}),
+    };
+  }
 
   // ── general_building: 사례 34 패턴 (Phase 1 그대로) ──
   if (primary.assetKind === "general_building") {

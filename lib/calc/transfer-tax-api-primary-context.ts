@@ -188,6 +188,7 @@ export function buildPrimaryContext(
     ? buildBurdenedGiftInfo(
         primary,
         fractionalBundleMerge ? getOwnershipRatio(primary) : undefined,
+        form.transferDate,
       )
     : undefined;
   /**

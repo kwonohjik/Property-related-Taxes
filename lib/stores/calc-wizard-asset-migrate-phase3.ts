@@ -195,6 +195,17 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgIsFiledOnTime === undefined) a.bgIsFiledOnTime = true;
   if (!Array.isArray(a.bgPriorGifts)) a.bgPriorGifts = [];
   if (a.bgGiftBuildingStdPriceAtTransfer === undefined) a.bgGiftBuildingStdPriceAtTransfer = "";
+  // 겸용주택 × 부담부증여 — 채무 귀속·구분 감정평가 선언 (옛 저장분엔 없다 → 빈 문자열 = 미선택)
+  if (a.bgDepositAttribution === undefined) a.bgDepositAttribution = "";
+  if (a.bgDepositSplitHousing === undefined) a.bgDepositSplitHousing = "";
+  if (a.bgDepositSplitCommercial === undefined) a.bgDepositSplitCommercial = "";
+  if (a.bgDepositSplitUnallocated === undefined) a.bgDepositSplitUnallocated = "";
+  if (a.bgMortgageAttribution === undefined) a.bgMortgageAttribution = "";
+  if (a.bgMortgageSplitHousing === undefined) a.bgMortgageSplitHousing = "";
+  if (a.bgMortgageSplitCommercial === undefined) a.bgMortgageSplitCommercial = "";
+  if (a.bgMortgageSplitUnallocated === undefined) a.bgMortgageSplitUnallocated = "";
+  if (a.bgHousingAppraisalDeclared === undefined) a.bgHousingAppraisalDeclared = "";
+  if (a.bgHousingAppraisalValue === undefined) a.bgHousingAppraisalValue = "";
   // K-4/K-5 취득가액 산정방식 (시가 모드) — 신규 4필드 fallback
   if (a.bgAcquisitionMethod === undefined) a.bgAcquisitionMethod = "";
   if (a.bgActualAcquisitionLand === undefined) a.bgActualAcquisitionLand = "";

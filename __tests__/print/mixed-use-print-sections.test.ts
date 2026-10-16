@@ -21,12 +21,14 @@ import {
   type MixedUsePrintSectionId,
 } from "@/lib/print/mixed-use-print-sections";
 
-// 설계 §2.8 기준 leaf + 건물 기준시가 계산서(PHD 스냅샷 소속 시) = 4종
+// 설계 §2.8 기준 leaf + 건물 기준시가 계산서(PHD 스냅샷 소속 시) + 부담부증여 전용 2종 = 6종
 const ALL_LEAVES: MixedUsePrintSectionId[] = [
   "calculation",
   "form-table",
   "detailed-statement",
   "building-std-report",
+  "burdened-gift",
+  "gift-filing-form",
 ];
 
 describe("겸용주택 양도세 선택 출력 레지스트리 — Pre-Do anchor (PR-F4)", () => {
@@ -46,7 +48,7 @@ describe("겸용주택 양도세 선택 출력 레지스트리 — Pre-Do anchor
     }
   });
 
-  it("PD-mu-3: flattenPrintSectionIds는 4개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-mu-3: flattenPrintSectionIds는 6개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);

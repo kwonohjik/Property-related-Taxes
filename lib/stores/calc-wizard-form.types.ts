@@ -28,6 +28,15 @@ export interface FinalHouseDisposalRow {
   temporaryTwoHouse: "" | "yes" | "no";
 }
 
+/** 첫 자산 삭제 안내(Q-5)가 묶는 «양도하는 주택에 대한 선언» 묶음 id — 정의·키 목록은 `lib/calc/first-asset-facts.ts`. */
+export type FirstAssetFactGroupId = "regulated" | "proviso" | "finalRestart" | "merge" | "inheritGeneral" | "declared";
+
+/** 첫 자산 삭제 안내 마커 — 새 첫 자산 id · 삭제 시점에 값이 있던 묶음. (삭제한 자산 라벨은 삭제 뒤 재번호로 새 첫 자산과 같아져 문구에 쓸 수 없다.) */
+export interface FirstAssetChangeNote {
+  newFirstAssetId: string;
+  groups: FirstAssetFactGroupId[];
+}
+
 export interface TransferFormData {
   // ── Step 1: 자산 목록 + 양도 기본 정보 ──
   /** 모든 양도 자산 (최소 1건). assets[0]이 대표 자산. */
@@ -495,6 +504,15 @@ export interface TransferFormData {
    * 구 세션·구 record는 `undefined` — 그때는 **「판정 불가」로 다룬다**(추측 금지).
    */
   sourceJudgmentInputHash?: string;
+  /**
+   * 첫 자산 삭제 안내 마커 (Q-5, 계획서 `docs/00-pm/first-asset-change-step4-facts-notice.plan.md` §4-2).
+   *
+   * 폼 전역에 저장된 «양도하는 주택에 대한 선언»(조정대상지역·§154① 단서·합가 등)은 첫 자산을 지우면 새 첫 자산의
+   * 사실로 읽힌다. 값은 건드리지 않고 보유 상황 단계 상단 카드로 알리기 위해, 삭제 시점에 «그때 값이 있던 묶음»을
+   * 스냅샷한다. UI 메타다 — 엔진은 무시하고 ④ 변환은 보내지 않는다(`importedOneHouseFacts`와 같은 규약).
+   * 읽을 때는 `readFirstAssetChangeNote`로 구 기록·깨진 모양을 걸러 낸다.
+   */
+  firstAssetChangeNote?: FirstAssetChangeNote;
 
   // appurtenantLandRateMode 필드 제거 (사례 28 landNature 명시 입력 정책으로 대체, 2026-05-07)
   // 자산-수준 landNature("appurtenant"|"standalone")가 폼-수준 모드 결정을 대체.

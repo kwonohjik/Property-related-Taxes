@@ -59,6 +59,7 @@ export function SelfBuiltSection({
   return (
     <ToggleCard
       tone="amber"
+      data-field="isSelfBuilt"
       title="본인이 신축 또는 증축한 건물입니까?"
       description="「소득세법」 §114조의2 가산세 판정에 영향. 매매 취득 자산 전용."
       checked={isSelfBuilt}

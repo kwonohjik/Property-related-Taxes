@@ -11,6 +11,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isMixedUsePerPartAcq, mixedUsePhdEffective } from "@/lib/calc/mixed-use-part-acq-split";
+import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { MixedUseStandardPriceInputs } from "./mixed-use/MixedUseStandardPriceInputs";
 import { PartialUsageChangeInputs } from "./mixed-use/PartialUsageChangeInputs";
 
@@ -59,9 +60,15 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
         title="보유 중 일부 용도변경"
         description="취득시 자산 구성이 양도시와 다른 경우 (§166⑥ + 집행기준 99-164-10)"
         trailing={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
+        data-field="hasPartialUsageChange"
         checked={!!asset.hasPartialUsageChange}
-        disabled={!asset.isMixedUseHouse}
-        disabledReason="겸용주택 분리계산 활성화 시 사용 가능"
+        // 겸용 × 부담부증여는 보유 중 일부 용도변경과 함께 계산하지 않는다(엔진 MB-4) — 켜는 쪽만 막는다(이미 켜져 있으면 끌 수 있다).
+        disabled={!asset.isMixedUseHouse || (isMixedBurdenedGift(asset) && !asset.hasPartialUsageChange)}
+        disabledReason={
+          asset.isMixedUseHouse
+            ? "겸용주택 부담부증여는 보유 중 일부 용도변경과 함께 계산할 수 없습니다"
+            : "겸용주택 분리계산 활성화 시 사용 가능"
+        }
         onCheckedChange={(checked) => {
           onChange({
             hasPartialUsageChange: checked,
@@ -97,8 +104,12 @@ export function MixedUseExpandedPanel({
       {/* 2022.1.1 이전 경고 */}
       {!isAfter2022 && (
         <div className="px-3 py-2 rounded-lg bg-red-50 text-red-800 text-sm">
-          2022.1.1 이전 양도분은 겸용주택 강제 분리계산 범위 외입니다.
-          주택연면적과 상가연면적을 비교하여 단일 자산 모드로 계산하세요.
+          {isMixedBurdenedGift(asset)
+            ? "겸용주택 부담부증여는 증여(양도)일이 2022.1.1. 이후여야 분리계산 대상입니다 — 소득세법 시행령 제160조 제1항 괄호(주택 외의 부분은 주택으로 보지 않는다)가 2022.1.1. 이후 양도분부터 적용됩니다."
+            : <>
+                2022.1.1 이전 양도분은 겸용주택 강제 분리계산 범위 외입니다.
+                주택연면적과 상가연면적을 비교하여 단일 자산 모드로 계산하세요.
+              </>}
         </div>
       )}
 

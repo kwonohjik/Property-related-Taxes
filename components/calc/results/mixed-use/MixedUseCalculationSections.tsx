@@ -22,6 +22,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { MIXED_USE } from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
+import { MixedUseNblSection } from "@/components/calc/results/mixed-use/MixedUseNblSection";
 import { MixedUseTotalTaxSection } from "@/components/calc/results/mixed-use/MixedUseTotalTaxSection";
 import { MixedUseHousingStdSplit } from "@/components/calc/results/mixed-use/MixedUseHousingStdSplit";
 import {
@@ -29,6 +30,14 @@ import {
   SeparateAcqSummary,
   separatePartGainFormula,
 } from "@/components/calc/results/mixed-use/MixedUseSeparateAcqRows";
+import {
+  MixedBgNoTransferBanner,
+  MixedUseBgAcqRows,
+  MixedUseBgApportionSection,
+  MixedBgNotTransferred,
+  mixedBgPartGainFormula,
+  mixedBgSideTransferred,
+} from "@/components/calc/results/mixed-use/MixedUseBurdenedGiftSection";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import { expandToggleClass } from "@/components/calc/results/shared/ExpandToggleButton";
@@ -36,7 +45,6 @@ import {
   fmt,
   fmtPlain,
   fmtPct,
-  fmtSqm,
   ResultSection,
   Row,
   DivRow,
@@ -66,6 +74,10 @@ export function MixedUseCalculationSections({
 }: Props) {
   const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t, surchargeLthdExclusion } = breakdown;
   const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
+  // 겸용 × 부담부증여 — 이 값의 존재로 분기한다. 양도가액이 «양도로 보는 채무액»이라 일반 겸용 문구가 맞지 않는다.
+  const bg = breakdown.burdenedGift;
+  const bgHousingOn = !bg || mixedBgSideTransferred(bg, "housing");
+  const bgCommercialOn = !bg || mixedBgSideTransferred(bg, "commercial");
   // 상속 취득가액 직접 산정(소령 §163⑨) — 단일 소스: calculationRoute.acquisitionConversionRoute만 판독.
   // (part-level acqPriceSource는 dual-truth 회피로 미채택 — plan §4.5 정본 결정)
   const acqRoute = breakdown.calculationRoute.acquisitionConversionRoute;
@@ -196,7 +208,10 @@ export function MixedUseCalculationSections({
         />
       )}
 
-      {/* 1세대 1주택 비과세 적용 여부 표시 */}
+      {/* 부담부증여 — 양도 없는 쪽은 「양도 없음」(비과세 아님)으로 그린다 */}
+      {bg && <MixedBgNoTransferBanner bg={bg} />}
+      {/* 1세대 1주택 비과세 적용 여부 표시 — 주택분 양도가 없으면 판정 대상이 아니라 그리지 않는다 */}
+      {bgHousingOn && (
       <div
         className={`rounded-md px-3 py-2 text-xs border ${
           breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
@@ -217,6 +232,7 @@ export function MixedUseCalculationSections({
                 : "적용 (12억 초과 안분 과세)"}
         </span>
       </div>
+      )}
 
       {/* 계산 섹션 전체 접기/펼치기 */}
       <div className="flex justify-end">
@@ -230,7 +246,11 @@ export function MixedUseCalculationSections({
         </button>
       </div>
 
-      {/* 1. 양도가액 안분 */}
+      {/* 1. 양도가액 안분 — 부담부증여는 채무 귀속·채무비율 섹션으로 대체 */}
+      {bg && (
+        <MixedUseBgApportionSection bg={bg} open={openSections.apportion} onToggle={() => toggleSection("apportion")} />
+      )}
+      {!bg && (
       <ResultSection
         title="① 양도가액 안분"
         basis="소득세법 §99 + 시행령 §164"
@@ -271,6 +291,7 @@ export function MixedUseCalculationSections({
           formula={`총 양도가액 - 주택 양도가액 = ${fmtPlain(totalTransfer)} - ${fmtPlain(a.housingTransferPrice)}`}
         />
       </ResultSection>
+      )}
 
       {/* 2. 주택부분 */}
       <ResultSection
@@ -280,7 +301,9 @@ export function MixedUseCalculationSections({
         onToggle={() => toggleSection("housing")}
       >
         {sep && <SeparateAcqSummary breakdown={breakdown} />}
-        {sep ? (
+        {bg ? (
+          <MixedUseBgAcqRows bg={bg} side="housing" />
+        ) : sep ? (
           <SeparateAcqPartRows kind="housing" breakdown={breakdown} estimatedFormula={housingAcqFormula()} />
         ) : (
           <Row
@@ -345,7 +368,9 @@ export function MixedUseCalculationSections({
           label="주택 양도차익"
           value={fmt(h.transferGain)}
           formula={
-            sep
+            bg
+              ? "(양도가액 - 취득가액 - 필요경비) — 토지/건물 분리 후 합산, 부분별 채무비율 적용 후 값"
+              : sep
               ? "(양도가액 - 취득가액 - 필요경비[실거래가 파트는 실제 필요경비, 그 밖은 개산공제]) — 토지/건물 분리 후 합산"
               : isDeemedAcq
               ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
@@ -357,7 +382,9 @@ export function MixedUseCalculationSections({
           value={fmt(h.landTransferGain)}
           small
           formula={
-            sep
+            bg
+              ? mixedBgPartGainFormula(bg, "housingLand")
+              : sep
               ? separatePartGainFormula(sep, "housingLand", h.landTransferPrice, h.landAcqPrice, h.landAppraisalDed, h.landStdPriceAtAcq)
               : isDeemedAcq
               ? `양도가액 ${fmtPlain(h.landTransferPrice)} - 취득가액 ${fmtPlain(h.landAcqPrice)}`
@@ -369,7 +396,9 @@ export function MixedUseCalculationSections({
           value={fmt(h.buildingTransferGain)}
           small
           formula={
-            sep
+            bg
+              ? mixedBgPartGainFormula(bg, "housingBuilding")
+              : sep
               ? separatePartGainFormula(sep, "housingBuilding", h.buildingTransferPrice, h.buildingAcqPrice, h.buildingAppraisalDed, h.buildingStdPriceAtAcq)
               : isDeemedAcq
               ? h.buildingAppraisalDed > 0
@@ -385,7 +414,9 @@ export function MixedUseCalculationSections({
             · 12억 초과 안분 — 분모는 엔진 echo `highValueBase`(공유지분이면 물건 전체 주택분, 영 §156①).
             · L-10 — 판정 분모가 다르면 엔진 echo `highValueJudgmentBase`(건물 전체, 영 §156②)를 따로 그린다.
         */}
-        {h.isExempt && h.laterLandExemptExcluded ? (
+        {!bgHousingOn ? (
+          <Row label="고가주택 판정: 해당 없음 (주택분 양도 없음)" value="-" />
+        ) : h.isExempt && h.laterLandExemptExcluded ? (
           // #2141 — 나중에 취득한 부수토지가 보유요건(영 §154①) 미만이면 토지분은 비과세 대상이 아니다. 건물분만 비과세.
           <Row
             label="12억 이하 → 건물분 비과세 · 나중에 취득한 부수토지분 과세"
@@ -466,7 +497,7 @@ export function MixedUseCalculationSections({
             );
           })()
         )}
-        {(() => {
+        {!bgHousingOn ? null : (() => {
           /**
            * §95② 본문 괄호 — §104⑦ 각 호(다주택 중과) 해당 주택은 장기보유특별공제 배제.
            *
@@ -530,7 +561,9 @@ export function MixedUseCalculationSections({
           formula={`상가건물 기준시가 ${fmtPlain(c.acqStandardBuilding)} + 상가부수토지 기준시가 ${fmtPlain(c.acqStandardLand)} (= 개별공시지가 × 상가부수토지 면적, 자동)`}
         />
         )}
-        {sep ? (
+        {bg ? (
+          <MixedUseBgAcqRows bg={bg} side="commercial" />
+        ) : sep ? (
           <SeparateAcqPartRows
             kind="commercial"
             breakdown={breakdown}
@@ -573,7 +606,9 @@ export function MixedUseCalculationSections({
           label="상가 양도차익"
           value={fmt(c.transferGain)}
           formula={
-            sep
+            bg
+              ? "(양도가액 - 취득가액 - 필요경비) — 토지/건물 분리 후 합산, 부분별 채무비율 적용 후 값"
+              : sep
               ? "(양도가액 - 취득가액 - 필요경비[실거래가 파트는 실제 필요경비, 그 밖은 개산공제]) — 토지/건물 분리 후 합산"
               : isDeemedAcq
               ? "(양도가액 - 취득가액 - 실제 필요경비) — 토지/건물 분리 후 합산"
@@ -585,7 +620,9 @@ export function MixedUseCalculationSections({
           value={fmt(c.landTransferGain)}
           small
           formula={
-            sep
+            bg
+              ? mixedBgPartGainFormula(bg, "commercialLand")
+              : sep
               ? separatePartGainFormula(sep, "commercialLand", c.landTransferPrice, c.landAcqPrice, c.landAppraisalDed, c.landStdPriceAtAcq)
               : isDeemedAcq
               ? `양도가액 ${fmtPlain(c.landTransferPrice)} - 취득가액 ${fmtPlain(c.landAcqPrice)}`
@@ -597,7 +634,9 @@ export function MixedUseCalculationSections({
           value={fmt(c.buildingTransferGain)}
           small
           formula={
-            sep
+            bg
+              ? mixedBgPartGainFormula(bg, "commercialBuilding")
+              : sep
               ? separatePartGainFormula(sep, "commercialBuilding", c.buildingTransferPrice, c.buildingAcqPrice, c.buildingAppraisalDed, c.buildingStdPriceAtAcq)
               : isDeemedAcq
               ? c.buildingAppraisalDed > 0
@@ -607,7 +646,9 @@ export function MixedUseCalculationSections({
           }
         />
         <DivRow />
-        {c.deemedHouseBy154_3Main && h.laterLandExemptExcluded ? (
+        {!bgCommercialOn ? (
+          bg && <MixedBgNotTransferred side="commercial" />
+        ) : c.deemedHouseBy154_3Main && h.laterLandExemptExcluded ? (
           // #2141 — 주택으로 본 상가 부분도 나중에 취득한 토지분은 보유요건 미달로 과세(건물분은 비과세). 장특은 보유 미달로 0.
           <Row
             label="주택으로 봄 → 건물분 비과세 · 나중에 취득한 토지분 과세"
@@ -645,42 +686,15 @@ export function MixedUseCalculationSections({
         )}
       </ResultSection>
 
-      {/* 4. 비사업용토지 (조건부) */}
+      {/* 4. 비사업용토지 (조건부) → `MixedUseNblSection.tsx` (800줄 정책 분리) */}
       {nb && (
-        <ResultSection
-          title="④ 비사업용토지 (주택부수토지 배율초과)"
-          basis="시행령 §168의12 + §104의3"
+        <MixedUseNblSection
+          nb={nb}
+          landTransferGain={h.landTransferGain}
+          nonBusinessTransferRatio={h.nonBusinessTransferRatio}
           open={openSections.nbl}
           onToggle={() => toggleSection("nbl")}
-        >
-          <Row
-            label={`적용 배율`}
-            value={`${nb.appliedMultiplier}배`}
-            formula="수도권 주거지역 3배 / 녹지·외곽 5배 / 도시 외 10배"
-          />
-          <Row
-            label="배율초과 면적"
-            value={fmtSqm(nb.excessArea)}
-            formula="주택부수토지 면적 - (주택 정착면적 × 배율)"
-          />
-          <Row
-            label="비사업용 양도차익"
-            value={fmt(nb.transferGain)}
-            formula={`주택 토지분 양도차익 ${fmtPlain(h.landTransferGain)} × 배율초과 비율 ${fmtPct(h.nonBusinessTransferRatio)}`}
-          />
-          <Row
-            label={`장기보유공제 (표1, ${fmtPct(nb.longTermDeductionRate)})`}
-            value={`△ ${fmt(nb.longTermDeductionAmount)}`}
-            formula="토지 보유연수×2% (최대 30%)"
-          />
-          <DivRow />
-          <Row
-            label="비사업용토지 양도소득금액 (+10%p 가산)"
-            value={fmt(nb.incomeAmount)}
-            highlight
-            formula={`양도차익 ${fmtPlain(nb.transferGain)} - 장기보유공제 ${fmtPlain(nb.longTermDeductionAmount)} (세율 가산은 합산세액에서 처리)`}
-          />
-        </ResultSection>
+        />
       )}
 
       <MixedUseTotalTaxSection

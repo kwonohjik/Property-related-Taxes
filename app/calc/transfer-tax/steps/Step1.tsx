@@ -33,6 +33,8 @@ import {
   reverseAppurtenantSwapNewlyReflected,
   type ReverseAppurtenantSwapPatch,
 } from "@/lib/calc/reverse-appurtenant-swap";
+import { assetRemovalPatch } from "@/lib/calc/asset-removal";
+import { firstAssetChangeNoteOnRemoval } from "@/lib/calc/first-asset-facts";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -153,19 +155,31 @@ export function Step1({
     onChange(patch);
   }
 
-  function updateAssets(assets: AssetForm[]) {
+  function updateAssets(assets: AssetForm[], extra: Partial<TransferFormData> = {}) {
     // 외부 자산 추가(증환지 등)로 2개 이상이 되고 모드 미설정이면 companion 자동 승격.
     // fractional은 명시 토글로만 진입 — derive 재계산 없음(자기소멸 차단).
     if (splitMode === "none" && assets.length > 1) {
       setSplitMode("companion");
-      onChange({ assets });
+      onChange({ ...extra, assets });
       return;
     }
     if (splitMode === "none" && assets.length === 1) {
-      onChange({ assets, contractTotalPrice: assets[0].actualSalePrice || "" });
+      onChange({ ...extra, assets, contractTotalPrice: assets[0].actualSalePrice || "" });
       return;
     }
-    onChange({ assets });
+    onChange({ ...extra, assets });
+  }
+
+  // 자산 삭제 — 위치에 묶인 값(주 자산 플래그·폼 전역 미등기·기본 라벨)을 같은 패치로 맞춘다(`lib/calc/asset-removal.ts`).
+  // 첫 자산이면 카드를 다시 마운트해 새 첫 카드가 ①(양도일·신고일)을 펼친 채 시작하게 한다(교환과 같은 이유).
+  function handleRemoveAsset(currentAssets: AssetForm[], idx: number) {
+    const patch = assetRemovalPatch({ assets: currentAssets, isUnregistered: form.isUnregistered }, idx);
+    if (idx === 0) setSwapEpoch((n) => n + 1);
+    // 첫 자산이 바뀌면 폼 전역 «양도 주택 선언»이 새 첫 자산의 사실로 읽힌다 — 값은 두고 Step4에서 알린다(`first-asset-facts.ts`).
+    updateAssets(patch.assets, {
+      isUnregistered: patch.isUnregistered,
+      ...(idx === 0 ? { firstAssetChangeNote: firstAssetChangeNoteOnRemoval({ ...form, assets: currentAssets }, idx, patch) } : {}),
+    });
   }
 
   // §105①3호 — 전 자산 부담부증여 양도는 예정신고 기한 3개월 (일반·혼합은 2개월)
@@ -322,6 +336,7 @@ export function Step1({
           assets={form.assets}
           bundledSaleMode={effBundledSaleMode}
           onChange={updateAssets}
+          onRemoveAsset={handleRemoveAsset}
           singleMode={splitMode === "none"}
           transferDate={form.transferDate}
           filingDate={form.filingDate}

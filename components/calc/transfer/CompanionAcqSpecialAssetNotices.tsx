@@ -10,6 +10,7 @@
 
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }) {
   return (
@@ -43,6 +44,11 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
               <>
                 ※ 산식에 필요한 <b>취득시 기준시가</b>는 아래 일반건물 취득 정보의 토지 공시지가·건물
                 기준시가 입력에서 자동 도출됩니다.
+              </>
+            ) : isMixedBurdenedGift(asset) ? (
+              <>
+                ※ 겸용주택의 <b>취득시·양도시 기준시가</b>(주택·상가 4부분)는 아래 <b>겸용주택 기준시가</b>에서 한 번만 입력합니다.
+                ② 양도정보의 증여재산 평가는 그 값의 합계를 읽기 전용으로 보여 줍니다.
               </>
             ) : (
               <>

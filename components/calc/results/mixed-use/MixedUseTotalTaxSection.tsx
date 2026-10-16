@@ -167,7 +167,10 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
               ? breakdown.amendmentDetail.correctionKind === "refund_claim"
                 ? "경정 후 전체 세액"
                 : "수정 후 전체 세액"
-              : "총 납부세액"
+              : breakdown.burdenedGift
+                // 증여세(수증자 부담)가 같은 화면에 함께 뜬다 — 이 합계는 양도세분뿐이다.
+                ? "총 납부세액 (양도세분)"
+                : "총 납부세액"
           }
           value={fmt(t.totalPayable)}
           highlight
@@ -177,7 +180,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             `지방소득세 ${fmtPlain(t.localTax)}`,
             ...(t.penaltyTax > 0 ? [`가산세 ${fmtPlain(t.penaltyTax)}`] : []),
             ...(t.ruralSurtax > 0 ? [`농어촌특별세 ${fmtPlain(t.ruralSurtax)}`] : []),
-          ].join(" + ")}
+          ].join(" + ") + (breakdown.burdenedGift ? " — 증여세는 수증자가 별도 신고·납부합니다 (아래 부담부증여 카드)" : "")}
         />
       </ResultSection>
 

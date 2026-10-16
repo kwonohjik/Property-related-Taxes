@@ -35,40 +35,19 @@ import { consolidateResidenceMonths } from "@/lib/tax-engine/transfer-tax-exempt
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount } from "./household-house-count";
+import { isMixedBurdenedGift, resolveMixedBgAcquisition } from "./burdened-gift-mixed-use-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
+/**
+ * 겸용 취득시 상가건물 기준시가·취득시 개별공시지가 fallback은 `mixed-use-std-fallback.ts`가 정본이다 — 부담부증여 요약·④·⑧(`burdened-gift-mixed-use-scope.ts`)도
+ * 같은 함수를 불러야 하는데 이 파일은 `transfer-tax-api-helpers` → `transfer-tax-api-burdened-gift`로 이어지는 순환 안쪽이라 직접 import할 수 없다.
+ * 기존 import 경로 호환을 위해 여기서 재수출한다.
+ */
+import { mixedAcqCommercialBuildingStd, mixedAcqLandPricePerSqm } from "./mixed-use-std-fallback";
+export { mixedAcqCommercialBuildingStd, mixedAcqLandPricePerSqm };
+
 /** 겸용주택 mixedUse 페이로드. 비-겸용이면 undefined. */
-/**
- * 겸용 취득시 상가건물 기준시가 — 직접 입력, 없으면 PHD 전체 건물 기준시가 × (상가면적 / 전체면적).
- * ④ 페이로드와 ⑧ `validateMixedUseAsset`이 **같은 값**을 보도록 한 곳에 둔다(2026-09-30).
- */
-export function mixedAcqCommercialBuildingStd(primary: AssetForm): number {
-  const direct = parseAmount(primary.mixedAcqCommercialBuildingPrice);
-  if (direct > 0) return direct;
-  // house_to_commercial Case A: PHD 전체 건물 기준시가 × (상가면적 / 전체면적) 자동 안분
-  const phdBuilding = parseAmount(primary.phdBuildingStdPriceAtAcq);
-  const residentialArea = parseFloat(primary.residentialFloorArea) || 0;
-  const nonResidentialArea = parseFloat(primary.nonResidentialFloorArea) || 0;
-  const totalFloor = residentialArea + nonResidentialArea;
-  if (phdBuilding > 0 && totalFloor > 0) {
-    return Math.floor(phdBuilding * nonResidentialArea / totalFloor);
-  }
-  return 0;
-}
-
-/**
- * 겸용 취득시 개별공시지가(원/㎡) — 직접 입력 → PHD ① → 1990.8.30. 이전 취득 토지 환산.
- * (useEffect→store 미러링 제거 대체 · ④·⑧ 공용)
- */
-export function mixedAcqLandPricePerSqm(primary: AssetForm, transferDate: string): number {
-  return (
-    parseAmount(primary.mixedAcqLandPricePerSqm) ||
-    parseAmount(primary.phdLandPricePerSqmAtAcq) ||
-    (derivePre1990PhdLandPricePerSqmAtAcq(primary, transferDate) ?? 0)
-  );
-}
-
 export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData) {
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
   if (!isMixed) return undefined;
@@ -131,7 +110,15 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
    *    `housingInheritedExpense`·`commercialInheritedExpense`로 싣는다(U-2 — 현행은 레거시 `isMixedActualAcquisition`일 때만이라 침묵 소실).
    *  · PHD는 **실효값**(환산 파트가 있을 때만 — X-7) · 취득시 H는 `mixedPartAcqNeeds`가 참일 때만(B0·나목은 아래 어댑터가 같은 술어).
    */
-  const isPerPart = isMixedUsePerPartAcq(primary);
+  /**
+   * 🔴 겸용 × 부담부증여 — 취득 입력의 정본은 BG 블록이다(설계 UI R2 §4). 겸용 화면의 취득 플래그·총액·파트별 실비·상속증여 reported 값은 BG에서
+   * **숨겨져 있어 사용자가 고칠 수 없는 stale**이다 → 읽지 않는다. 취득 플래그는 BG 산정방식에서 파생한다(`resolveMixedBgAcquisition`).
+   * 별개 취득 파트 모델(`mixedAcqPerPartMode`)도 BG에서는 그 토글이 숨겨져 끌 수 없으므로 **무시**한다(보내면 MB-3이 고칠 수 없는 오류가 된다).
+   * PHD·보유 중 용도변경은 토글이 보이므로(ON 전이만 비활성) 그대로 보내 엔진 MB-2·MB-4가 알린다.
+   */
+  const bgMixed = isMixedBurdenedGift(primary);
+  const bgAcq = resolveMixedBgAcquisition(primary);
+  const isPerPart = !bgMixed && isMixedUsePerPartAcq(primary);
   const partNeeds = isPerPart ? mixedPartAcqNeedsOfForm(primary) : undefined;
   const separateAcquisition = isPerPart ? buildMixedSeparateAcquisition(primary, share) : undefined;
   const phdOn = isPerPart ? mixedUsePhdEffective(primary) : primary.usePreHousingDisclosure;
@@ -345,19 +332,19 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
       (primary.acquisitionDate ?? "") >= "1985-01-01",
     // reported 값(B1) — 엔진은 동일 필드 소비. ⚠️ blind || 금지: 취득원인 전환 시 반대편 override 폼필드가
     // 클리어되지 않으므로(stale), **현재 acquisitionCause에 종속**해 선택(상속→상속필드·증여→증여필드).
-    housingInheritedValue: share(
+    housingInheritedValue: bgMixed ? undefined : share(
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedHousingGiftValueOverride)
         : parseAmount(primary.mixedHousingInheritedValueOverride)) || undefined,
     ),
-    commercialInheritedValue: share(
+    commercialInheritedValue: bgMixed ? undefined : share(
       (primary.acquisitionCause === "gift"
         ? parseAmount(primary.mixedCommercialGiftValueOverride)
         : parseAmount(primary.mixedCommercialInheritedValueOverride)) || undefined,
     ),
     // 실비(자본적지출·양도비) — 상속/증여/매매실가 공용 엔진 슬롯(usesDeemedAcq 경로 건물분 차감).
     // ⚠️ 취득원인 종속 선택(stale 방지): 매매→Actual·증여→Gift·그 외(상속)→Inherited.
-    housingInheritedExpense: share(
+    housingInheritedExpense: bgMixed ? undefined : share(
       (isPerPart
         ? perPartActualExpense(primary.mixedHousingActualExpense)
         : isMixedActualAcquisition
@@ -366,7 +353,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
           ? parseAmount(primary.mixedHousingGiftExpense)
           : parseAmount(primary.mixedHousingInheritedExpense)) || undefined,
     ),
-    commercialInheritedExpense: share(
+    commercialInheritedExpense: bgMixed ? undefined : share(
       (isPerPart
         ? perPartActualExpense(primary.mixedCommercialActualExpense)
         : isMixedActualAcquisition
@@ -390,12 +377,12 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     // 매매 취득 실거래가 직접 안분 (법 §100²·§97①1호가목, R1) — 겸용 매매 + 실거래가 모드.
     // 상속·증여(byInheritance/byGift)와 상호배타(취득원인 purchase라 자동 배타). 환산/감정/매매사례 모드는 제외.
     // 파트 모델은 총액 플래그를 모두 끈다(U-4 — 동시 지정이면 X-4). 레거시 3플래그의 stale 값이 파트 모델로 새지 않는다.
-    useActualAcquisition: isPerPart ? false : isMixedActualAcquisition,
+    useActualAcquisition: bgMixed ? bgAcq.useActualAcquisition : isPerPart ? false : isMixedActualAcquisition,
     // 감정가액·매매사례가액 추계 안분 (R-B) — 개산공제 유지(실거래가와 배타).
-    useAppraisalSalesAcquisition: isPerPart ? false : isMixedAppraisalSales,
+    useAppraisalSalesAcquisition: bgMixed ? bgAcq.useAppraisalSalesAcquisition : isPerPart ? false : isMixedAppraisalSales,
     // B1 — 파트 모델 서브객체. 키 존재 = 파트 모델(⑫·엔진 trigger), 총액 모델은 키 자체가 없다.
     ...(separateAcquisition ? { separateAcquisition } : {}),
-    acquisitionActualTotalPrice: share(
+    acquisitionActualTotalPrice: bgMixed ? bgAcq.acquisitionActualTotalPrice : share(
       isPerPart
         ? undefined
         : isMixedActualAcquisition

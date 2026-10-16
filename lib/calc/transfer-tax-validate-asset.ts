@@ -346,7 +346,7 @@ export function validateAssetEntry(
           0,
         )
       : undefined;
-  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true, isFullFractionalBundle(form.assets));
+  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true, isFullFractionalBundle(form.assets), form);
   if (acqError) return acqError;
 
   // ⑧ 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 판정 메뉴와 같은 규칙(`giftHouseholdFactErrors`)으로 필수로 묻는다.
