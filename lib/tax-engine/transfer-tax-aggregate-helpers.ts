@@ -361,6 +361,11 @@ export function allocateBasicDeduction(
   strategy: "FIRST" | "EARLIEST_TRANSFER",
   /** 같은 날(·같은 감면율) 자산 사이 순위 — 작을수록 먼저. 호출측의 「유리한 순서」 판정 결과다. */
   tieRank?: ReadonlyMap<number, number>,
+  /**
+   * 2단계(감면분)의 같은 날 **자산 블록** 순위 — 있으면 감면율보다 앞선다(자산 안 조각은 감면율 오름차순 그대로).
+   * 조특법 §133 한도 때문에 0893 순서가 불리할 때 호출측이 고른 후보다(계획서 `transfer-basic-deduction-133-cap-order.plan.md`).
+   */
+  reducibleRank?: ReadonlyMap<number, number>,
 ): { idx: number; amount: number }[] {
   if (available <= 0 || eligible.length === 0) return [];
 
@@ -378,8 +383,10 @@ export function allocateBasicDeduction(
       ? [...eligible].sort((a, b) => a.idx - b.idx)
       : [...eligible].sort((a, b) => byDate(a, b) || tie(a.idx, b.idx));
   const stage2 = eligible.flatMap(reducibleSlicesOf);
+  const block = (a: number, b: number) =>
+    reducibleRank ? (reducibleRank.get(a) ?? Number.MAX_SAFE_INTEGER) - (reducibleRank.get(b) ?? Number.MAX_SAFE_INTEGER) : 0;
   if (strategy === "FIRST") stage2.sort((a, b) => a.idx - b.idx || a.rate - b.rate);
-  else stage2.sort((a, b) => byDate(a, b) || a.rate - b.rate || tie(a.idx, b.idx));
+  else stage2.sort((a, b) => byDate(a, b) || block(a.idx, b.idx) || a.rate - b.rate || tie(a.idx, b.idx));
 
   const byIdx = new Map<number, number>();
   /** **흡수 순서**를 그대로 보존한다 — 1단계(감면 외)가 먼저 나와야 조문 순서로 읽힌다. */
@@ -429,6 +436,32 @@ export function sameDayTieGroups(eligible: BasicDeductionEligible[], available: 
   return groups;
 }
 
+/**
+ * 기본공제가 닿는 **같은 날 감면소득** 묶음 중 감면율이 서로 다른 것 — 자산 둘 이상 · 감면율 둘 이상.
+ * 0893(감면율 낮은 것부터)은 감면액만 보면 언제나 유리하지만, 감면율이 높은 쪽이 조특법 §133 한도에 걸리면 그쪽에서
+ * 공제해도 감면이 줄지 않아 불리해진다. 호출측은 이 묶음의 **자산 블록** 순열을 0893 순서 뒤의 후보로 평가한다
+ * (사용자 결정 2026-10-16 — 한도 적용 후 세액으로 순서를 정한다). 1단계(감면 외)를 다 흡수하고도 잔액이 남을 때만 닿는다.
+ */
+export function sameDayReducibleRateGroups(eligible: BasicDeductionEligible[], available: number): number[][] {
+  let remaining = available - eligible.reduce((s, e) => s + Math.max(0, e.income - reducibleOf(e)), 0);
+  const byDay = new Map<number, { idx: Set<number>; rates: Set<number>; room: number }>();
+  for (const sl of eligible.flatMap(reducibleSlicesOf)) {
+    const t = sl.transferDate.getTime();
+    const g = byDay.get(t) ?? { idx: new Set<number>(), rates: new Set<number>(), room: 0 };
+    g.idx.add(sl.idx);
+    g.rates.add(sl.rate);
+    g.room += sl.income;
+    byDay.set(t, g);
+  }
+  const groups: number[][] = [];
+  for (const [, g] of [...byDay.entries()].sort((a, b) => a[0] - b[0])) {
+    if (remaining <= 0) break;
+    if (g.idx.size > 1 && g.rates.size > 1) groups.push([...g.idx].sort((a, b) => a - b));
+    remaining -= Math.min(remaining, g.room);
+  }
+  return groups;
+}
+
 export function applyGeneralProgressive(taxBase: number, rates: TaxRatesMap): number {
   if (taxBase <= 0) return 0;
   const { brackets } = parseRatesFromMap(rates);
@@ -450,44 +483,62 @@ function permutations<T>(xs: T[]): T[][] {
  * 후보는 묶음 안 순열이고 `propertyId` 사전순으로 나열한다 — 세액이 같으면 **먼저 나온 후보**(= propertyId 순)를
  * 남기므로 입력 순서와 무관하게 같은 배분·같은 세율군 카드가 나온다.
  * 후보 수가 `TIE_CANDIDATE_LIMIT`을 넘으면 묶음마다 첫째 자산만 바꾸고 나머지는 propertyId 순으로 채운다(Q-2).
+ *
+ * `reducibleGroups`(`sameDayReducibleRateGroups`)가 있으면 그 뒤에 **2단계 자산 블록 순서** 후보를 덧붙인다 —
+ * 0893 순서(위 후보들)가 먼저라 세액이 같으면 0893이 남는다. 한도가 안 걸리면 0893이 이미 가장 유리하다(계획서 §2.2 P2).
  */
 export function pickFavorableTieRank(
   groups: number[][],
   idOf: (idx: number) => string,
-  evaluate: (rank: ReadonlyMap<number, number>) => { totalTax: number; determinedTax: number },
-): ReadonlyMap<number, number> {
+  evaluate: (candidate: TieCandidate) => { totalTax: number; determinedTax: number },
+  reducibleGroups: number[][] = [],
+): TieCandidate {
   const byId = (a: number, b: number) => (idOf(a) < idOf(b) ? -1 : idOf(a) > idOf(b) ? 1 : a - b);
-  const sorted = groups.map((g) => [...g].sort(byId));
-  const full = sorted.map((g) => permutations(g));
-  const fullCount = full.reduce((n, p) => n * p.length, 1);
-  const perGroup =
-    fullCount <= TIE_CANDIDATE_LIMIT
-      ? full
-      : sorted.map((g) => g.map((first) => [first, ...g.filter((x) => x !== first)]));
-  let candidates: number[][][] = [[]];
-  for (const options of perGroup) {
-    candidates = candidates.flatMap((c) => options.map((o) => [...c, o]));
-    if (candidates.length > TIE_CANDIDATE_LIMIT) candidates = candidates.slice(0, TIE_CANDIDATE_LIMIT);
-  }
-  const rankOf = (cand: number[][]) => {
-    const rank = new Map<number, number>();
-    for (const order of cand) for (const idx of order) if (!rank.has(idx)) rank.set(idx, rank.size);
-    return rank;
+  const ranksOf = (gs: number[][]): Map<number, number>[] => {
+    const sorted = gs.map((g) => [...g].sort(byId));
+    const full = sorted.map((g) => permutations(g));
+    const fullCount = full.reduce((n, p) => n * p.length, 1);
+    const perGroup =
+      fullCount <= TIE_CANDIDATE_LIMIT
+        ? full
+        : sorted.map((g) => g.map((first) => [first, ...g.filter((x) => x !== first)]));
+    let candidates: number[][][] = [[]];
+    for (const options of perGroup) {
+      candidates = candidates.flatMap((c) => options.map((o) => [...c, o]));
+      if (candidates.length > TIE_CANDIDATE_LIMIT) candidates = candidates.slice(0, TIE_CANDIDATE_LIMIT);
+    }
+    return candidates.map((cand) => {
+      const rank = new Map<number, number>();
+      for (const order of cand) for (const idx of order) if (!rank.has(idx)) rank.set(idx, rank.size);
+      return rank;
+    });
   };
-  let best = rankOf(candidates[0]);
+  const base: TieCandidate[] =
+    groups.length > 0 ? ranksOf(groups).map((tieRank) => ({ tieRank })) : [{}];
+  const blocks: TieCandidate[] =
+    reducibleGroups.length > 0
+      ? ranksOf(reducibleGroups).map((reducibleRank) => ({ tieRank: base[0].tieRank, reducibleRank }))
+      : [];
+  const candidates = [...base, ...blocks];
+  let best = candidates[0];
   let bestScore = evaluate(best);
   for (const cand of candidates.slice(1)) {
-    const rank = rankOf(cand);
-    const score = evaluate(rank);
+    const score = evaluate(cand);
     if (
       score.totalTax < bestScore.totalTax ||
       (score.totalTax === bestScore.totalTax && score.determinedTax < bestScore.determinedTax)
     ) {
-      best = rank;
+      best = cand;
       bestScore = score;
     }
   }
   return best;
+}
+
+/** 동순위 후보 — 1단계·같은 감면율 순위(`tieRank`)와 2단계 자산 블록 순위(`reducibleRank` — 있으면 0893 대신). */
+export interface TieCandidate {
+  tieRank?: ReadonlyMap<number, number>;
+  reducibleRank?: ReadonlyMap<number, number>;
 }
 
 /**
