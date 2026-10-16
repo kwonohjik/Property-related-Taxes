@@ -36,8 +36,8 @@
  * ⚠️ **분양권은 「호는 1호, 세율은 단일 60%」다** — §104①1호 본문 괄호(「제55조제1항에 따른
  *   세율(**분양권의 경우에는 양도소득 과세표준의 100분의 60**)」). `PROGRESSIVE_RATE_CLAUSES`가
  *   1호를 담고 있으므로 그대로 두면 `prog:104-1-1`이 되어 **일반 누진 자산과 1호로 통산된다**.
- *   같은 함정이 `clauseBucketKey`에도 있고 거기서는 `classifyRateGroup`이 분양권을
- *   `short_term`으로 빼 막고 있다(`transfer-tax-rate-clause.ts` 주석 · 가드 anchor
+ *   같은 함정이 `clauseBucketKey`에도 있고 거기서는 다건 합산의 버킷 식별자가 분양권에
+ *   구분자를 붙여 막고 있다(`transfer-tax-rate-clause.ts` 주석 · 가드 anchor
  *   `presale-clause-1-bucket-guard.anchor.test.ts`). 여기서는 **자산 종류로 직접** 막는다.
  */
 import { PROGRESSIVE_RATE_CLAUSES, type RateClause } from "./transfer-tax-rate-clause";
