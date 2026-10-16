@@ -501,6 +501,12 @@ export async function POST(request: NextRequest) {
            */
           burdenedGiftWholeInfo: data.burdenedGiftWholeInfo,
           burdenedGiftDate: data.burdenedGiftWholeInfo ? transferDate : undefined,
+          /**
+           * 일괄양도는 모든 자산의 양도일이 같다 — 어느 자산에 기본공제해도 세액이 같으면 한계세율 높은 자산 → 자산 번호
+           * (주 자산 = 자산 1, 이어서 화면 순서)로 정한다(2026-10-16 사용자 결정). 기본값 propertyId 순은 `primary`가
+           * `asset-…`보다 늘 뒤이고 함께 양도 자산끼리는 생성 시각 순이다.
+           */
+          sameDayEqualTaxOrder: "marginalRateThenAssetNumber",
       };
       // 양도일과 같은 날 취득한 권리를 보유로 세면 어느 자산의 결론이 달라질 때만 확인 필요를 싣는다(코드 리뷰 결정 #1) — 단건과 같은 고지.
       const aggregated = aggregateWithSameDayRightWarning(
