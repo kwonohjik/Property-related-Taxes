@@ -27,6 +27,11 @@ import {
 import {
 } from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
 import { MixedUseCalculationSections } from "@/components/calc/results/mixed-use/MixedUseCalculationSections";
+import { MixedUseBurdenedGiftDetailCard } from "@/components/calc/results/mixed-use/MixedUseBurdenedGiftDetailCard";
+import {
+  BurdenedGiftFilingFormSection,
+  hasBurdenedGiftFilingForm,
+} from "@/components/calc/results/transfer/BurdenedGiftFilingFormSection";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import {
   mixedUseToFilingResult,
@@ -56,8 +61,11 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
   const availablePrintIds = useMemo<Set<MixedUsePrintSectionId>>(() => {
     const ids = new Set<MixedUsePrintSectionId>(["calculation", "form-table", "detailed-statement"]);
     if (hasBuildingStdReport({ assets: formData?.assets })) ids.add("building-std-report");
+    // 부담부증여 — 화면 게이트(아래 렌더 조건)와 같은 술어를 쓴다.
+    if (breakdown.burdenedGift) ids.add("burdened-gift");
+    if (hasBurdenedGiftFilingForm(breakdown.burdenedGift)) ids.add("gift-filing-form");
     return ids;
-  }, [formData?.assets]);
+  }, [formData?.assets, breakdown.burdenedGift]);
 
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
@@ -146,6 +154,16 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         setAllSections={setAllSections}
       />
 
+      {/* ── 부담부증여 평가 명세·증여세 (겸용 × 부담부증여일 때만) ── */}
+      {breakdown.burdenedGift && (
+        <PrintSection id="burdened-gift" selectedIds={selectedPrintIds}>
+          <MixedUseBurdenedGiftDetailCard
+            bg={breakdown.burdenedGift}
+            valuationMode={formData?.assets?.[0]?.bgValuationMode}
+          />
+        </PrintSection>
+      )}
+
       {/* ── 계산결과 상세명세서 (겸용주택 모드) ── */}
       {/* 신고서 양식 32 항목별 산식·변수값·법령 노출 — mixedUseDetail은 단건 모드로 처리 */}
       <PrintSection id="detailed-statement" selectedIds={selectedPrintIds}>
@@ -155,6 +173,13 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
         asset={formData?.assets[0]}
       />
       </PrintSection>
+
+      {/* ── 증여세 신고서 양식(별지 제10호) — 부담부증여 무상이전분. 납세의무자는 수증자 ── */}
+      {hasBurdenedGiftFilingForm(breakdown.burdenedGift) && (
+        <PrintSection id="gift-filing-form" selectedIds={selectedPrintIds}>
+          <BurdenedGiftFilingFormSection breakdown={breakdown.burdenedGift} />
+        </PrintSection>
+      )}
 
       {/* ── 건물 기준시가 계산서 (PHD 3시점 일괄 스냅샷 소속 시) ── */}
       {/* 겸용 입력폼 PHD 배치가 bsp-{assetId}-phd-* 스냅샷을 저장 → 여기서 소속 재유도·출력.

@@ -15,6 +15,7 @@ import { MixedUsePreHousingDisclosureSection } from "./MixedUsePreHousingDisclos
 import { MixedUseAcqHousingLandPriceField } from "./MixedUseAcqHousingLandPriceField";
 import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdField";
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
+import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import {
   isMixedUsePerPartAcq,
   mixedAnyPartActual,
@@ -69,7 +70,14 @@ export function MixedUseAssetMajorStdPrice({
   //      (엔진은 actual 파트에 실제 필요경비를 가산하고, 감정·매매사례 파트는 개산공제만 쓴다. 환산 파트는 §97②2호 단서로
   //      이 경비 몫이 「환산취득가액 + 개산공제」보다 크면 그 경비를 쓴다 — U-2). ④의 실비 필드 선택과 같은 술어.
   const isPerPart = isMixedUsePerPartAcq(asset);
-  const isPurchaseActual = isPerPart
+  /**
+   * 겸용 × 부담부증여 — 취득 입력의 정본은 BG 블록이다(실지취득가액 총액 `bgActualAcquisitionTotal` + 공통 자본적지출·양도비).
+   * 파트별 실비 카드는 BG에서 숨긴다 — ④도 그 값을 전송하지 않는다(`buildMixedUsePayload`의 stale 가드). 설계 UI R2 §4 DUP-5.
+   */
+  const bgMixed = isMixedBurdenedGift(asset);
+  const isPurchaseActual = bgMixed
+    ? false
+    : isPerPart
     ? mixedAnyPartActual(asset)
     : asset.acquisitionCause === "purchase" &&
       !useEstimatedAcquisition &&
@@ -248,6 +256,10 @@ export function MixedUseAssetMajorStdPrice({
           <ToggleCard
             tone="amber"
             size="sm"
+            data-field="usePreHousingDisclosure"
+            // 겸용 × 부담부증여는 PHD와 함께 계산하지 않는다(엔진 MB-2). **켜는 쪽만** 막는다 — 이미 켜져 있으면 사용자가 끌 수 있어야 한다(막다른 길 방지).
+            disabled={bgMixed && !asset.usePreHousingDisclosure}
+            disabledReason="겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
             title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
               isPerPart

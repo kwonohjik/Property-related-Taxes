@@ -17,6 +17,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
+import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import {
   stdPriceAtTransferComesFromElsewhere,
   usesSelfComputedTransferPrice,
@@ -91,7 +92,12 @@ export function AssetSectionTransfer({
           </p>
           {/* 양도시 기준시가의 입력 위치·쓰임은 자산종류·평가 모드마다 다르다 — 칸이 없는 경우(시가 모드
               실지취득가·입주권)는 안내하지 않는다. 술어는 아래 CompanionSaleModeBlock 렌더 게이트와 같다. */}
-          {asset.assetKind === "general_building" ? (
+          {isMixedBurdenedGift(asset) ? (
+            <p className="text-caption text-fuchsia-700">
+              ※ <b>양도시·취득시 기준시가</b>(주택·상가 4부분)는 ③ 취득정보의 겸용주택 기준시가에서 입력합니다 —
+              위 부담부증여 카드의 「증여재산 평가」는 그 합계를 보여 줍니다.
+            </p>
+          ) : asset.assetKind === "general_building" ? (
             <p className="text-caption text-fuchsia-700">
               ※ <b>양도시 기준시가</b>(토지 공시지가·건물기준시가)는 ③ 취득정보의 일반건물 카드에서 입력합니다.
             </p>

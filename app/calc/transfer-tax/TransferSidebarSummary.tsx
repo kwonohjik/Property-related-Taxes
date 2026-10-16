@@ -41,7 +41,9 @@ export function TransferSidebarSummary({ summary }: { summary: TransferPerAssetS
   return (
     <div className="space-y-3">
       {summary.rows.map((row, i) => {
-        const saleNote = row.saleIsApportioned
+        const saleNote = row.saleTransferNote
+          ? row.saleTransferNote
+          : row.saleIsApportioned
           ? "기준시가 안분"
           : row.ownershipRatio < 1
             ? `지분 ${(row.ownershipRatio * 100).toLocaleString(undefined, { maximumFractionDigits: 2 })}%`

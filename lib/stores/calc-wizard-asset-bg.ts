@@ -122,6 +122,30 @@ export interface BurdenedGiftFormSlice {
   bgCoDonorPresumedAcquisitionBuilding: string;
   bgCoDonorPresumedAcquisitionTotal: string;
 
+  // ── 겸용주택 × 부담부증여 — 채무 귀속(D-7)·구분 감정평가 선언(G-13) ──
+  /**
+   * 겸용주택에서만 읽는다(`isMixedBurdenedGift`). 인수 채무가 주택·상가 중 어디에 속하는지의 **사실 선언**이다
+   * (국세청 부동산거래관리과-119, 2010.01.22. — 채무액이 주택 또는 상가에 속함이 분명하면 그 부분의 양도).
+   * `""` = 미선택. **기본값이 없다** — 기본값을 두면 «구분 불분명 안분»이라는 쟁점을 사용자가 모르게 고르게 된다(자동 안분 fallback 금지).
+   * 총액(`bgLendingDepositTotal`·`bgMortgageDebtAmount`)은 정본으로 그대로 두고, 이 필드들은 그 총액을 **나누는** 선언만 받는다.
+   */
+  bgDepositAttribution: "" | "housing" | "commercial" | "unallocated" | "split";
+  /** `bgDepositAttribution === "split"`일 때만 읽는 분할 금액(원, string). 합 = 임대보증금 총액이어야 한다. */
+  bgDepositSplitHousing: string;
+  bgDepositSplitCommercial: string;
+  bgDepositSplitUnallocated: string;
+  bgMortgageAttribution: "" | "housing" | "commercial" | "unallocated" | "split";
+  bgMortgageSplitHousing: string;
+  bgMortgageSplitCommercial: string;
+  bgMortgageSplitUnallocated: string;
+  /**
+   * 시가 모드 × 겸용: 주택·상가로 구분된 감정평가가액이 있는가(부가가치세법 시행령 §64①1호 단서, G-13).
+   * `""` = 미선택(**필수·기본값 없음**). `"exists"`이면 `bgHousingAppraisalValue`(주택분 시가) 필수 — 상가분 = 시가 총액 − 주택분.
+   */
+  bgHousingAppraisalDeclared: "" | "none" | "exists";
+  /** 주택분 구분 감정평가가액(원, string). `bgHousingAppraisalDeclared === "exists"`일 때만 읽는다. */
+  bgHousingAppraisalValue: string;
+
   // ── 증여세 통합 입력 (Phase 3) ──
   /** 증여자-수증자 관계 (상증법 §53 증여재산공제). "" = 미선택 (엔진 default: lineal_descendant). */
   bgDonorRelation:

@@ -27,6 +27,8 @@ import { BurdenedGiftBlock } from "./BurdenedGiftBlock";
 import { ExpropriationBlock } from "./ExpropriationBlock";
 import { AuctionBlock } from "./AuctionBlock";
 import { getStandaloneDefault } from "./UnifiedReductionPanel-defaults";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 interface Props {
   asset: AssetForm;
@@ -198,6 +200,21 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
             (현재 선택: {ASSET_KIND_LABELS[asset.assetKind]}) — {UNSUPPORTED_LABELS}는 후속 지원 예정입니다.
           </p>
         </div>
+      )}
+
+      {/* 겸용주택 × 부담부증여 — 입력 위치 안내 (4부분 기준시가는 ③ 겸용 패널이 정본, 여기 부담부증여 카드는 요약만 받는다) */}
+      {isBurdenedGift && isSupported && isMixedBurdenedGift(asset) && (
+        <ToneCard tone="amber" title="겸용주택 × 부담부증여 — 입력 위치" bodyClassName="space-y-1">
+          <div data-testid="bg-mixed-notice" className="space-y-1">
+            <p className="text-caption text-amber-900">
+              주택·상가의 <b>기준시가와 면적은 한 번만</b> 입력합니다 — 면적은 ① 기본정보, 양도시·취득시 기준시가는 ③ 취득정보의 겸용주택 기준시가입니다.
+              아래 부담부증여 카드는 그 합계를 읽기 전용으로 보여 주고, 채무가 주택·상가 중 어디에 속하는지를 받습니다.
+            </p>
+            <p className="text-caption text-amber-800">
+              계산 범위: 증여자가 매매로 취득한 단독 소유 단건. 개별주택가격 미공시 환산·보유 중 일부 용도변경·공유지분·함께 양도는 계산하지 않습니다.
+            </p>
+          </div>
+        </ToneCard>
       )}
 
       {/* 부담부증여 펼침 — BurdenedGiftBlock 재사용 */}

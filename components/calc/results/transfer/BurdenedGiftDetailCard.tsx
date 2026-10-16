@@ -15,6 +15,7 @@ import type {
   TransferBurdenedGiftBreakdown,
 } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { BurdenedGiftGiftTaxRows } from "@/components/calc/results/transfer/BurdenedGiftGiftTaxRows";
 
 const SELECTED_LABEL: Record<string, string> = {
   supplementary: "보충적평가 (상증법 §61)",
@@ -33,16 +34,6 @@ const ACQ_METHOD_LABEL = {
 
 /** 매매사례가액·감정가액(K-6/K-7) 입력값 라벨 — 취득가액 행의 변수명. */
 const PRESUMED_LABEL = { salesCase: "매매사례가액", appraisal: "감정가액" } as const;
-
-// ⚠️ `Record<string, string>`이라 키 커버리지 가드가 없다 — `DonorRelation` 확장 시 함께 볼 것.
-const RELATION_LABEL: Record<string, string> = {
-  spouse: "배우자",
-  lineal_descendant: "직계비속(성년 수증자)",
-  lineal_ascendant_adult: "직계존속(성년 수증자)",
-  lineal_ascendant_minor: "직계존속(미성년 수증자)",
-  other_relative: "기타 친족",
-  none: "비친족",
-};
 
 interface Props {
   breakdown: TransferBurdenedGiftBreakdown;
@@ -335,49 +326,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             <td className="py-1 pr-2 text-fuchsia-700">무상이전분 (증여세 과세 가액)</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700">{fmt(bg.gratuitousPortion)}</td>
           </tr>
-          {bg.giftTax && (
-            <>
-              <tr className="border-t border-fuchsia-300">
-                <td className="py-1 pr-2 font-semibold text-fuchsia-900">
-                  증여세 (수증자 자진납부) — 상증법 §53·§56·§69
-                </td>
-                <td />
-              </tr>
-              <tr>
-                <td className="py-1 pr-2 pl-3">
-                  {"  └ 증여재산공제 ("}
-                  {RELATION_LABEL[bg.giftTax.donorRelation] ?? "기타"}
-                  {")"}
-                </td>
-                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.deduction)}</td>
-              </tr>
-              <tr>
-                <td className="py-1 pr-2 pl-3">{"  └ 증여세 과세표준"}</td>
-                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.taxBase)}</td>
-              </tr>
-              <tr>
-                <td className="py-1 pr-2 pl-3">{"  └ 증여세 산출세액"}</td>
-                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.computedTax)}</td>
-              </tr>
-              {bg.giftTax.priorGiftCredit !== undefined &&
-                bg.giftTax.priorGiftCredit > 0 && (
-                  <tr>
-                    <td className="py-1 pr-2 pl-3">{"  └ §58 기납부세액공제"}</td>
-                    <td className="text-right font-mono tabular-nums whitespace-nowrap">
-                      -{fmt(bg.giftTax.priorGiftCredit)}
-                    </td>
-                  </tr>
-                )}
-              <tr>
-                <td className="py-1 pr-2 pl-3">{"  └ 신고세액공제 (3%)"}</td>
-                <td className="text-right font-mono tabular-nums whitespace-nowrap">-{fmt(bg.giftTax.filingCredit)}</td>
-              </tr>
-              <tr className="font-semibold bg-fuchsia-100/70">
-                <td className="py-1 pr-2">증여세 결정세액 (수증자 부담)</td>
-                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftTax.finalTax)}</td>
-              </tr>
-            </>
-          )}
+          {bg.giftTax && <BurdenedGiftGiftTaxRows giftTax={bg.giftTax} />}
         </tbody>
       </table>
       <p className="text-xs text-fuchsia-600 mt-2">

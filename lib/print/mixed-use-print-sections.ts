@@ -31,12 +31,15 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 3종 (exact 매칭) */
+/** 선택 가능 leaf (exact 매칭) — 부담부증여 2종은 해당 결과에서만 노출 */
 export type MixedUsePrintSectionId =
   | "calculation"
   | "form-table"
   | "detailed-statement"
-  | "building-std-report";
+  | "building-std-report"
+  // 겸용 × 부담부증여 전용 — 증여재산 평가·증여세 카드와 증여세 신고서(별지 제10호). 해당 결과일 때만 availableIds에 든다.
+  | "burdened-gift"
+  | "gift-filing-form";
 
 /** 겸용주택 양도세 leaf로 좁힌 제네릭 타입 (shared 재사용) */
 export type MixedUsePrintSectionNode = GenericNode<MixedUsePrintSectionId>;
@@ -67,6 +70,10 @@ export const MIXED_USE_PRINT_SECTIONS: MixedUsePrintSectionGroup[] = [
     label: "계산 내역",
     children: [
       { id: "calculation", label: "분리계산 (안분·주택·상가·비사업용·합산세액)", channel: SCREEN },
+      // 부담부증여(겸용 × 부담부증여)일 때만 availableIds에 든다 — 증여가액·무상이전분·증여세(수증자 부담).
+      { id: "burdened-gift", label: "부담부증여 평가 명세·증여세", channel: SCREEN },
+      // 증여세 신고서(별지 제10호) — 납세의무자는 수증자. 화면에서는 상세 계산 명세서 뒤에 렌더된다(인쇄 트리는 「계산 내역」 그룹에 둔다).
+      { id: "gift-filing-form", label: "증여세 신고서 양식 (별지 제10호)", channel: SCREEN },
     ],
   },
 ];

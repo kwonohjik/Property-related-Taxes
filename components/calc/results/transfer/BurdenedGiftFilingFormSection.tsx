@@ -16,9 +16,12 @@
 import { GiftTaxFilingFormTable } from "@/components/calc/results/GiftTaxFilingFormTable";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
+/** 증여세 행(`giftTax`)만 읽는다 — 단건(`TransferBurdenedGiftBreakdown`)과 겸용(`MixedUseBurdenedGiftBreakdown`)이 같은 타입을 쓴다. */
+export type BurdenedGiftGiftTaxSource = Pick<TransferBurdenedGiftBreakdown, "giftTax">;
+
 /** 이 섹션이 렌더될 조건 — 선택 출력 가용 목록(availablePrintIds) 판정에도 같은 술어를 쓴다. */
 export function hasBurdenedGiftFilingForm(
-  breakdown: TransferBurdenedGiftBreakdown | undefined,
+  breakdown: BurdenedGiftGiftTaxSource | undefined,
 ): boolean {
   return Boolean(breakdown?.giftTax?.besshi10Rows?.length);
 }
@@ -26,7 +29,7 @@ export function hasBurdenedGiftFilingForm(
 export function BurdenedGiftFilingFormSection({
   breakdown,
 }: {
-  breakdown: TransferBurdenedGiftBreakdown | undefined;
+  breakdown: BurdenedGiftGiftTaxSource | undefined;
 }) {
   const rows = breakdown?.giftTax?.besshi10Rows;
   if (!rows || rows.length === 0) return null;
