@@ -94,6 +94,7 @@ export function ValuationDetailCards({
         <NonBusinessLandResultCard
           judgment={result.nonBusinessLandJudgmentDetail}
           nblSurchargeExcluded={result.nblSurchargeExcluded}
+          nblSurchargeExcludedBy={result.nblSurchargeExcludedBy}
         />
       )}
       {result.expropriationValuationDetail && (

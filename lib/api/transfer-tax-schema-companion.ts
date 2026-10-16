@@ -252,6 +252,8 @@ export const companionAssetSchema = z.object({
   isUnregistered: z.boolean().optional(),
   /** 자산별 비사업용 토지 여부 */
   isNonBusinessLand: z.boolean().optional(),
+  /** 자산별 지정지역(§104의2②) 선언 — 비사업용 토지 8호 유예 판정용(미선언 = 모름) */
+  isDesignatedArea: z.boolean().optional(),
   // ── 일괄양도 보완: 양도가액 모드 + 취득원인 분기 ──
   /**
    * 계약서에 구분 기재된 실제 양도가액 (원, 선택).

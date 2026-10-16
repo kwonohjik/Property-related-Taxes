@@ -11,6 +11,7 @@
  */
 
 import { TRANSFER } from "./legal-codes";
+import { isSec104_5ReductionParenthesisInForceForTaxYear } from "./data/sec104-5-reduction-parenthesis-era";
 import { reductionTypeLabelOf } from "./transfer-reduction-type-labels";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import {
@@ -531,6 +532,8 @@ export function choose104_5AfterReduction(args: {
     perClause: pre.comparedTaxApplied === "general" ? undefined : args.perClause,
     decidedAfterReduction: false,
   };
+  // 괄호는 2020.1.1. 양도분부터다(제16834호 부칙 제2조②) — 그 전 과세기간은 감면 전 MAX를 유지한다.
+  if (!isSec104_5ReductionParenthesisInForceForTaxYear(args.base.taxYear)) return keepPre;
   if (args.perClause.clauseTaxes.size <= 1) return keepPre;
   const reductionOf = (calculatedTax: number, perClause?: PerClauseContext) =>
     aggregateReductions({ ...args.base, calculatedTax, perClause, steps: [], warnings: [] })

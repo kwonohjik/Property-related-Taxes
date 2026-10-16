@@ -16,6 +16,7 @@
 
 import type { BurdenedGiftInfo, TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
 import type { RateClause } from "../transfer-tax-rate-clause";
+import type { NblSurchargeExclusionReason } from "./transfer-result.types";
 import type { TransferTaxPenaltyResult } from "../transfer-tax-penalty";
 import type {
   TransferTaxInput,
@@ -273,8 +274,10 @@ export interface PerPropertyBreakdown
   surchargeRate?: number;
   /** 엔진이 적용한 §104① 호 — 신고서 ③ 세율구분 코드의 단일 소스. */
   rateClause?: RateClause;
-  /** 부칙 <제9270호> §14① 비사업용 +10%p 배제 — 정본 ⑮가 일반세율 코드로 분류한다. */
+  /** 비사업용 +10%p 배제(부칙 <제9270호> §14① 또는 양도일 유예) — 정본 ⑮가 일반세율 코드로 분류한다. */
   nblSurchargeExcluded?: boolean;
+  /** `nblSurchargeExcluded`의 사유 */
+  nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
   /**
    * 자산별 산출세액 (다건 컨텍스트, 참고).
    * = max(0, floor(taxBaseShare × appliedRate) - progressiveDeduction)

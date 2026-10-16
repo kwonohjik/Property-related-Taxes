@@ -1338,6 +1338,8 @@ export interface BurdenedGiftTransferTaxInput {
   // ===== real_estate_land 전용 =====
   /** 비사업용 토지 여부 (중과 +10%p 적용) */
   isNonBusinessLand?: boolean;
+  /** 양도 당시 지정지역(§104의2②) 선언 — 비사업용 토지 8호 유예(양도 2009.3.16.~2015.12.31.) 판정용. 미선언 = 모름(중과 유지 + 확인 필요) */
+  isDesignatedArea?: boolean;
 
   // ===== 공통 선택 =====
   /**

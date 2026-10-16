@@ -32,6 +32,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { getRefDeterminedTax } from "@/components/calc/results/MultiTransferTaxSummaryCard";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
+import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 
 
 /**
@@ -279,7 +280,7 @@ export function PropertyBreakdownAccordion({
           */}
           {breakdown.nblSurchargeExcluded && (
             <Badge variant="secondary" className="text-xs">
-              부칙 §14① 중과배제
+              {nblExclusionBadgeText(breakdown.nblSurchargeExcludedBy)}
             </Badge>
           )}
           {breakdown.isExempt && (

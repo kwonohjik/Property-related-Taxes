@@ -397,6 +397,14 @@ export interface TransferTaxInput {
   /** 미등기 여부 */
   isUnregistered: boolean;
   isNonBusinessLand: boolean; // 비사업용 토지 여부
+  /**
+   * 양도 당시 이 비사업용 토지가 「소득세법」 §104의2② **지정지역**에 있는가(사용자 선언).
+   *
+   * 양도일이 2009.3.16.~2015.12.31.이면 지정지역 **밖**의 비사업용 토지는 8호 중과가 유예된다(§104⑥ · 제12169호 부칙 제20조 — `data/nbl-rate-deferral-era.ts`).
+   * `false`일 때만 유예가 켜진다. **미선언(undefined) = 모름 → 중과 유지 + 확인 필요**(모르는데 유리하게 적용하면 과소신고가산세 부담).
+   * 유예 기간 밖이거나 비사업용 토지가 아니면 읽지 않는다.
+   */
+  isDesignatedArea?: boolean;
   nonBusinessLandAreaRatio?: number; // 부분 면적비율(목장 §168의10③·기타토지 §168의11①·복합용도 §168의11⑥·연접 다필지 §168의11⑤·바닥면적 외 §101①2호나목) — 엔진 파생(judgeNonBusinessLand), 미지정=1 전량중과
   /**
    * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).

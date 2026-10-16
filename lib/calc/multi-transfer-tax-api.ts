@@ -333,6 +333,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     // 다건에만 없어 토지가 아닌 자산의 잔존 플래그가 그대로 중과로 흘렀다 (E6-05).
     isNonBusinessLand:
       primary?.assetKind === "land" ? (primary.isNonBusinessLand ?? false) : false,
+    // 단건(`transfer-tax-api.ts`)과 같은 게이트 — 비사업용 토지 8호 유예 판정용 지정지역 선언.
+    isDesignatedArea: primary?.assetKind === "land" ? primary.isDesignatedArea : undefined,
     isSuccessorRightToMoveIn:
       primaryKind === "right_to_move_in" ? (primary?.isSuccessorRightToMoveIn ?? false) : undefined,
     acquisitionCause,

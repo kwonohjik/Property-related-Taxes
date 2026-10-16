@@ -85,6 +85,8 @@ export function buildTransferEngineInput(
     regionInDesignatedDistrict: data.regionInDesignatedDistrict,
     isUnregistered: data.isUnregistered,
     isNonBusinessLand: data.isNonBusinessLand,
+    // ⑭ 지정지역 선언 — 비사업용 토지 8호 유예 판정(양도 2009.3.16.~2015.12.31.). 미전달 = 모름.
+    isDesignatedArea: data.isDesignatedArea,
     // ⑭ §77 농특세 비과세 판정(농특세령 §4①1호) — 미전달 시 엔진이 과세로 처리한다.
     isSelfCultivatedExpropriatedLand: data.isSelfCultivatedExpropriatedLand,
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,

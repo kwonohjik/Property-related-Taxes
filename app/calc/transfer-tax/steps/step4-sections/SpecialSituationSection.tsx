@@ -21,6 +21,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
+import { NblDesignatedAreaQuestion } from "@/components/calc/transfer/nbl/NblDesignatedAreaQuestion";
 
 interface Props {
   form: TransferFormData;
@@ -181,6 +182,14 @@ export function SpecialSituationSection({
                 ]}
               />
             </div>
+
+            {/* 양도일 2009.3.16.~2015.12.31.이면 지정지역 여부가 8호 중과 유예의 요건 사실이다 — 그 기간에만 뜬다 */}
+            <NblDesignatedAreaQuestion
+              transferDate={form.transferDate}
+              value={primary.isDesignatedArea}
+              onChange={(isDesignatedArea) => patchPrimary({ isDesignatedArea })}
+              idSuffix="primary"
+            />
           </ToggleCard>
         )}
       </div>

@@ -38,6 +38,7 @@ import {
 import { checkRealEstateRecalc, recalcRealEstate, recalcOtherAsset } from "@/lib/calc/cross-104-5-recalc";
 import { pickBestAllocation, type AllocationOutcome } from "@/lib/calc/cross-104-5-allocation";
 import { buildCrossLossRows } from "@/lib/calc/cross-102-2-loss-offset";
+import { isSec104_5ReductionParenthesisInForceForTaxYear } from "@/lib/tax-engine/data/sec104-5-reduction-parenthesis-era";
 
 const won = (n: number) => n.toLocaleString();
 
@@ -201,6 +202,9 @@ export default function Cross1045Client() {
   const reOfYear = useMemo(() => allRe.filter((c) => c.taxYear === year), [allRe, year]);
   const oaOfYear = useMemo(() => allOa.filter((c) => c.taxYear === year), [allOa, year]);
 
+  // 괄호는 2020.1.1. 양도분부터다 — 그 전 과세기간의 «감면 시 합산 안 함» 안내는 괄호를 근거로 삼지 않는다.
+  const parenthesisInForce = year === null || isSec104_5ReductionParenthesisInForceForTaxYear(year);
+
   const rePick = reOfYear.find((c) => c.record.id === reId) ?? null;
   const oaPick = oaOfYear.find((c) => c.record.id === oaId) ?? null;
 
@@ -350,7 +354,9 @@ export default function Cross1045Client() {
       if ((outcome.best.realEstate.reductionAmount ?? 0) > 0) {
         setError(
           "다시 계산해 보니 부동산 쪽에 감면세액이 있어 합산 결과를 제시할 수 없습니다. " +
-            "(§104⑤ 본문 괄호 — 감면세액 차감 후 비교가 필요합니다)",
+            (isSec104_5ReductionParenthesisInForceForTaxYear(year)
+              ? "(§104⑤ 본문 괄호 — 감면세액 차감 후 비교가 필요합니다)"
+              : "(이 화면은 산출세액까지만 내고 감면세액은 산정하지 않습니다)"),
         );
         return;
       }
@@ -613,14 +619,22 @@ export default function Cross1045Client() {
 
           {reReduction > 0 && (
             <ToneCard tone="amber" title="감면이 있는 계산은 합산을 제공하지 않습니다">
-              <p className="text-sm">
-                선택한 부동산 계산에 감면세액 <strong>{won(reReduction)}원</strong>이 있습니다.{" "}
-                <LawArticleModal legalBasis="소득세법 §104 ⑤" label="§104⑤" /> 본문 괄호는{" "}
-                <strong>「감면세액을 차감한 세액이 더 큰 경우의 산출세액」</strong>으로 비교하도록
-                정하는데, 감면세액은 산출세액에 비례해 정해지므로{" "}
-                <strong>1호를 택했을 때와 2호를 택했을 때가 서로 다릅니다</strong>. 그 두 값을
-                이 화면에서 낼 수 없어 합산 결과를 제시하지 않습니다.
-              </p>
+              {parenthesisInForce ? (
+                <p className="text-sm">
+                  선택한 부동산 계산에 감면세액 <strong>{won(reReduction)}원</strong>이 있습니다.{" "}
+                  <LawArticleModal legalBasis="소득세법 §104 ⑤" label="§104⑤" /> 본문 괄호는{" "}
+                  <strong>「감면세액을 차감한 세액이 더 큰 경우의 산출세액」</strong>으로 비교하도록
+                  정하는데, 감면세액은 산출세액에 비례해 정해지므로{" "}
+                  <strong>1호를 택했을 때와 2호를 택했을 때가 서로 다릅니다</strong>. 그 두 값을
+                  이 화면에서 낼 수 없어 합산 결과를 제시하지 않습니다.
+                </p>
+              ) : (
+                <p className="text-sm">
+                  선택한 부동산 계산에 감면세액 <strong>{won(reReduction)}원</strong>이 있습니다.{" "}
+                  이 화면은 산출세액까지만 내고 감면세액은 산정하지 않으며, 감면세액은 채택된 호의
+                  산출세액에 비례해 정해지므로 합산 결과를 제시하지 않습니다.
+                </p>
+              )}
             </ToneCard>
           )}
 

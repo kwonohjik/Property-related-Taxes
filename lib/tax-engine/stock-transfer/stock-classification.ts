@@ -11,6 +11,7 @@
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
 import { getMajorShareholderThreshold } from "./stock-rate-tables";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { isNblRateDeferralWindow } from "@/lib/tax-engine/data/nbl-rate-deferral-era";
 import {
   judgeBlockShareholderGate,
   BLOCK_SHAREHOLDER_REQUIREMENT_LABEL,
@@ -322,6 +323,8 @@ function classifySection94(
   blockShareholderGate?: StockTransferResult["blockShareholderGate"];
   /** `other_asset` 인데 4호가 어느 목으로도 성립하지 않는 상태 — ⑧⑫ 가 막아야 할 입력 */
   otherAssetWithoutAnyClause?: boolean;
+  /** 비사업용 토지 비율이 50% 이상인데 양도일이 9호 유예 기간(2009.3.16.~2015.12.31.)이라 9호 세율을 적용하지 않았다 */
+  nblHeavyCorpRateDeferred?: boolean;
 } {
   const { marketType, isHeavyRealEstateForRate, isKOTCTrading } = input;
 
@@ -364,7 +367,14 @@ function classifySection94(
    *
    * ⚠️ 단위는 **0~1 소수**다(형제 필드 `cumulativeTransferRatio`와 동일 — UI %, API가 ×0.01).
    */
-  const isNblHeavyCorp = (input.nblRatioOfCorpAssets ?? 0) >= 0.5;
+  const nblRatioReached = (input.nblRatioOfCorpAssets ?? 0) >= 0.5;
+  /**
+   * 9호 세율은 **양도일 2009.3.16.~2015.12.31.** 유예된다 — §104⑥(~2013.12.31.) · 제12169호 부칙 제20조(2014.1.1.~2015.12.31.)가
+   * 「8호 또는 9호 자산을 …까지 양도…1호 세율」을 정한다(`data/nbl-rate-deferral-era.ts`). 부동산 8호와 달리 «지정지역» 예외는 주식에 없다.
+   * 비율이 50%를 넘어도 이 기간에는 일반 기타자산 카테고리(§55① 기본세율)로 간다.
+   */
+  const nblHeavyCorpRateDeferred = nblRatioReached && isNblRateDeferralWindow(input.transferDate);
+  const isNblHeavyCorp = nblRatioReached && !nblHeavyCorpRateDeferred;
   /** 다목/라목 카테고리에 9호를 얹는다. 9호 미해당이면 종전 그대로. */
   const otherAssetCategory = (
     isBlockShareholder: boolean,
@@ -397,6 +407,7 @@ function classifySection94(
       // §94② 발동 시 기본공제 1호 그룹 (부동산 합산)
       basicDeductionGroup: "real_estate_and_other_asset",
       ...(blockShareholderGate ? { blockShareholderGate } : {}),
+      ...(nblHeavyCorpRateDeferred ? { nblHeavyCorpRateDeferred: true } : {}),
     };
   }
 
@@ -408,6 +419,7 @@ function classifySection94(
       section94_2Applied: false,
       basicDeductionGroup: "real_estate_and_other_asset",
       ...(blockShareholderGate ? { blockShareholderGate } : {}),
+      ...(nblHeavyCorpRateDeferred ? { nblHeavyCorpRateDeferred: true } : {}),
       // 🔴 다목이 게이트에서 떨어졌는데 라목도 꺼져 있으면 **4호가 어느 목으로도 성립하지
       //    않는다**. 그런데 이 분기는 `marketType` 만 보므로 그대로 두면 «조용히 라목»이 된다.
       //    ⑧ validate·⑫ Zod 가 막는 입력이지만(계획서 PA-3 분기표 4행 = 차단), 엔진이 그
@@ -605,6 +617,14 @@ export function classifyStockTransfer(input: StockTransferInput): Classification
     appliedRules.push("다목요건미충족폴백");
   } else if (classResult.blockShareholderGate?.passed) {
     appliedRules.push("다목요건충족");
+  }
+  // 9호 세율 유예(양도일 기준) — 비율이 50%를 넘는데 중과를 적용하지 않은 이유를 알린다.
+  if (classResult.nblHeavyCorpRateDeferred) {
+    warnings.push(
+      "비사업용 토지 과다소유법인 주식(§104①9호)이지만 양도일이 유예 기간(2009.3.16.~2015.12.31.)이라 " +
+        "9호 세율(기본세율 +10%p)을 적용하지 않고 §104①1호 세율(§55① 기본세율)로 계산합니다" +
+        "(소득세법 §104⑥ · 법률 제12169호 부칙 제20조).",
+    );
   }
   // 🔴 `other_asset` 인데 다목·라목 어느 쪽도 성립하지 않는 입력 — ⑧⑫ 가 막아야 한다.
   if (classResult.otherAssetWithoutAnyClause) {

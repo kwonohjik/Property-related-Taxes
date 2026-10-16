@@ -25,6 +25,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ValuationModeSection } from "./BurdenedGiftValuationModeSection";
+import { NblDesignatedAreaQuestion } from "@/components/calc/transfer/nbl/NblDesignatedAreaQuestion";
 import {
   Dialog,
   DialogContent,
@@ -354,6 +355,15 @@ export function BurdenedGiftTransferSection({
               }
               data-testid="bg-transfer-nonbiz-land"
             />
+            {/* 양도(증여)일 2009.3.16.~2015.12.31.의 비사업용 토지 — 8호 중과 유예 요건(지정지역 여부). 그 기간에만 뜬다. */}
+            {bgt.isNonBusinessLand && (
+              <NblDesignatedAreaQuestion
+                transferDate={transferDate}
+                value={bgt.isDesignatedArea}
+                onChange={(isDesignatedArea) => set({ isDesignatedArea })}
+                idSuffix="bg-transfer"
+              />
+            )}
 
           </div>
         )}
