@@ -47,8 +47,10 @@ import {
   allocateBasicDeduction,
   allocateBasicDeductionAcrossParts,
   sameDayTieGroups,
+  sameDayReducibleRateGroups,
   pickFavorableTieRank,
   sameDayReducibleRatesDiffer,
+  type TieCandidate,
 } from "./transfer-tax-aggregate-helpers";
 // picker 6종 + 세율군 1-pass 집계 — 800줄 정책 분리(Phase A-0)
 import {
@@ -230,17 +232,23 @@ function computeAggregateOnce(
    */
   const tieGroups =
     allocationAxis === "EARLIEST_TRANSFER" ? sameDayTieGroups(eligibleForBasic, availableThisCalc) : [];
+  /**
+   * 같은 날 감면율이 다른 감면소득 — 0893 순서(감면율 낮은 것부터)가 조특법 §133 한도 때문에 불리할 수 있어
+   * 자산 블록 순서를 0893 뒤의 후보로 함께 평가한다(계획서 `transfer-basic-deduction-133-cap-order.plan.md`).
+   */
+  const reducibleGroups =
+    allocationAxis === "EARLIEST_TRANSFER" ? sameDayReducibleRateGroups(eligibleForBasic, availableThisCalc) : [];
 
-  /** M-4 배분부터 끝까지 — 동순위 순서(`tieRank`)만 바꿔 다시 돌릴 수 있게 감싼다. `steps`·`warnings`는 호출마다 사본이다. */
+  /** M-4 배분부터 끝까지 — 동순위 순서(`TieCandidate`)만 바꿔 다시 돌릴 수 있게 감싼다. `steps`·`warnings`는 호출마다 사본이다. */
   const finishWith = (
-    tieRank: ReadonlyMap<number, number> | undefined,
+    { tieRank, reducibleRank }: TieCandidate,
     steps: CalculationStep[],
     warnings: string[],
   ): AggregateTransferResult => {
   const allocation =
     allocationAxis === "PARTS_HIGHEST_RATE"
       ? allocateBasicDeductionAcrossParts(eligibleForBasic, availableThisCalc)
-      : allocateBasicDeduction(eligibleForBasic, availableThisCalc, allocationAxis, tieRank);
+      : allocateBasicDeduction(eligibleForBasic, availableThisCalc, allocationAxis, tieRank, reducibleRank);
   const allocatedBasic: number[] = assetRecords.map(() => 0);
   for (const a of allocation) allocatedBasic[a.idx] = a.amount;
   const totalBasicDeduction = allocatedBasic.reduce((s, v) => s + v, 0);
@@ -254,7 +262,7 @@ function computeAggregateOnce(
     allocationAxis === "PARTS_HIGHEST_RATE"
       ? (() => {
           const byIdx: number[] = assetRecords.map(() => 0);
-          for (const a of allocateBasicDeduction(eligibleForBasic, availableThisCalc, "EARLIEST_TRANSFER", tieRank)) byIdx[a.idx] = a.amount;
+          for (const a of allocateBasicDeduction(eligibleForBasic, availableThisCalc, "EARLIEST_TRANSFER", tieRank, reducibleRank)) byIdx[a.idx] = a.amount;
           return byIdx;
         })()
       : allocatedBasic;
@@ -262,7 +270,9 @@ function computeAggregateOnce(
   /** 같은 날 양도 처리 근거 — 동순위 묶음에 공제가 닿았을 때만(침묵 금지 · 없으면 종전 문구). */
   const basicDeductionTieNote = [
     tieGroups.length > 0 ? " · 같은 날 양도 — 납세자에게 유리한 순서(재일46014-1685)" : "",
-    sameDayReducibleRatesDiffer(eligibleForBasic, allocation) ? " · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
+    reducibleRank
+      ? " · 같은 날 감면소득 — 조특법 §133 감면 한도를 반영해 납세자에게 유리한 순서(재일46014-1685)"
+      : sameDayReducibleRatesDiffer(eligibleForBasic, allocation) ? " · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
   ].join("");
   steps.push({
     label: "기본공제",
@@ -633,11 +643,11 @@ function computeAggregateOnce(
   };
   };
 
-  if (tieGroups.length === 0) return finishWith(undefined, steps, warnings);
+  if (tieGroups.length === 0 && reducibleGroups.length === 0) return finishWith({}, steps, warnings);
   // 후보마다 하류를 임시 사본으로 돌려 가장 유리한 순서를 고른 뒤, 그 순서로 **정식으로 한 번 더** 계산한다 —
   // 하류가 자산 기록의 표시 플래그(`splitDetail.partRateBasisApplied`)를 덮어쓰므로 채택 후보가 마지막이어야 한다.
   const idOf = (idx: number) => assetRecords[idx].item.propertyId;
-  const best = pickFavorableTieRank(tieGroups, idOf, (rank) => finishWith(rank, [...steps], [...warnings]));
+  const best = pickFavorableTieRank(tieGroups, idOf, (c) => finishWith(c, [...steps], [...warnings]), reducibleGroups);
   return finishWith(best, steps, warnings);
 }
 

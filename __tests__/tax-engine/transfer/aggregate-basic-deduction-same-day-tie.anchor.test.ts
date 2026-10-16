@@ -156,9 +156,9 @@ describe("A-4 — 감면율이 다른 감면소득을 같은 날 양도: 감면�
 describe("A-4b — 감면율이 낮은 쪽이 한계세율도 낮아도 감면율이 기준이다", () => {
   // A-4와 반대로 자경농지 F의 소득이 크다(6억 / 3억 → 장특 30% · 210,000,000) · 수용 X는 작다(4억 / 3억 → 70,000,000).
   // 종전 동순위 기준(단독 적용세율 내림차순)이면 F가 먼저라 100% 감면소득에서 공제가 빠진다.
-  // ⚠️ 자경 감면이 조특법 §133 연간 한도(1억)에 걸리는 금액이면 F에서 빼도 감면이 줄지 않아 해석례 순서가 오히려 불리할 수
-  //   있다(실측 F 8억: 103,420,916 < 103,547,616). 해석례는 조건 없이 「감면율 낮은 소득부터」라 엔진은 그대로 따른다 —
-  //   여기서는 한도에 걸리지 않는 금액으로 감면율 기준만 고정한다(계획서 §7 확인 필요).
+  // ⚠️ 자경 감면이 조특법 §133 연간 한도(1억)에 걸리는 금액이면 F에서 빼도 감면이 줄지 않아 해석례 순서가 오히려 불리하다
+  //   (실측 F 8억: 103,420,916 < 103,547,616). 그때는 한도 적용 후 세액으로 순서를 정한다(사용자 결정 2026-10-16 —
+  //   `aggregate-basic-deduction-133-cap-order.anchor.test.ts` C-1). 여기서는 한도에 걸리지 않는 금액으로 감면율 기준만 고정한다.
   const T = "2026-06-01";
   const E77 = { type: "public_expropriation", cashCompensation: 400_000_000, bondCompensation: 0, businessApprovalDate: D("2018-01-01") };
   const F = () => item("F", T, { transferPrice: 600_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2010-06-01"), reductions: [{ type: "self_farming", farmingYears: 10 }] } as Partial<TransferTaxItemInput>);
