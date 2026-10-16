@@ -159,6 +159,20 @@ describe("§103② 기본공제 배분 순서", () => {
     expect(r).toEqual([{ idx: 1, amount: AVAILABLE }]);
   });
 
+  it("B-11: 같은 날 감면소득은 **감면율이 낮은 버킷부터** — 입력 순서와 무관 (부동산거래관리과-0893)", () => {
+    // 자경 100%(소득 70,000,000) + 공익수용 현금 15%(소득 140,000,000)를 같은 날 양도, 비감면소득 없음.
+    const farm = { idx: 0, income: 70_000_000, transferDate: D("2026-06-01"), reducibleIncome: 70_000_000, reducibleBuckets: [{ income: 70_000_000, rate: 1 }] };
+    const expro = { idx: 1, income: 140_000_000, transferDate: D("2026-06-01"), reducibleIncome: 140_000_000, reducibleBuckets: [{ income: 140_000_000, rate: 0.15 }] };
+    expect(allocateBasicDeduction([farm, expro], AVAILABLE, "EARLIEST_TRANSFER")).toEqual([{ idx: 1, amount: AVAILABLE }]);
+    expect(allocateBasicDeduction([expro, farm], AVAILABLE, "EARLIEST_TRANSFER")).toEqual([{ idx: 1, amount: AVAILABLE }]);
+  });
+
+  it("B-12: 감면소득도 양도일이 다르면 먼저 양도한 자산부터 — 감면율보다 양도일이 앞선다", () => {
+    const farm = { idx: 0, income: 70_000_000, transferDate: D("2026-03-01"), reducibleIncome: 70_000_000, reducibleBuckets: [{ income: 70_000_000, rate: 1 }] };
+    const expro = { idx: 1, income: 140_000_000, transferDate: D("2026-06-01"), reducibleIncome: 140_000_000, reducibleBuckets: [{ income: 140_000_000, rate: 0.15 }] };
+    expect(allocateBasicDeduction([expro, farm], AVAILABLE, "EARLIEST_TRANSFER")).toEqual([{ idx: 0, amount: AVAILABLE }]);
+  });
+
   // ── 🟢 감시 ───────────────────────────────────────────────────────
   it("B-7 🟢: 공제 여력이 0이거나 대상이 없으면 빈 배열", () => {
     expect(allocateBasicDeduction([plain(0, 1, "2026-01-01")], 0, "EARLIEST_TRANSFER")).toEqual([]);

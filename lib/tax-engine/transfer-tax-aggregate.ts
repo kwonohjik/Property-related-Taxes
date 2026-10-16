@@ -46,6 +46,9 @@ import {
   offsetLosses,
   allocateBasicDeduction,
   allocateBasicDeductionAcrossParts,
+  sameDayTieGroups,
+  pickFavorableTieRank,
+  sameDayReducibleRatesDiffer,
 } from "./transfer-tax-aggregate-helpers";
 // picker 6종 + 세율군 1-pass 집계 — 800줄 정책 분리(Phase A-0)
 import {
@@ -55,7 +58,7 @@ import {
   ruralSurtaxExemptReducibleOf,
   computeGroupsAndComparison,
 } from "./transfer-tax-aggregate-pickers";
-import { reducibleIncomeOf } from "./transfer-tax-aggregate-reduction-step";
+import { reducibleIncomeOf, bucketsOf } from "./transfer-tax-aggregate-reduction-step";
 
 export { classifyRateGroup };
 
@@ -205,7 +208,9 @@ function computeAggregateOnce(
        * 소득공제형(§90②)은 이미 `taxableAfterReduction`에서 빠져 있다.
        */
       reducibleIncome: reducibleIncomeOf(r.result),
-      /** 한계세율 — `PARTS_HIGHEST_RATE` 축과 §103② 동순위 tie-break에 쓴다. */
+      /** 감면율별 조각 — 같은 날 감면소득은 감면율 낮은 것부터(부동산거래관리과-0893). 감면액 산식과 같은 leaf. */
+      reducibleBuckets: bucketsOf(r.result),
+      /** 한계세율 — `PARTS_HIGHEST_RATE` 축과 §103② 동순위 기본 순서(`tieRank` 없을 때)에 쓴다. */
       rate: r.result.appliedRate,
     }))
     .filter((r) => !r.isExempt && r.rateGroup !== "unregistered" && r.income > 0);
@@ -218,17 +223,50 @@ function computeAggregateOnce(
    *   · 한 물건의 파트 간 → 한계세율 (일반건물 카드 — 양도일이 같아 §103②가 성립하지 않는다)
    */
   const allocationAxis = input.basicDeductionAllocation ?? "EARLIEST_TRANSFER";
+  /**
+   * §103②이 침묵하는 **같은 날 양도** 묶음 — 재일46014-1685 「납세자에게 유리하다고 판단되는 양도자산의
+   * 양도소득금액에서부터」. 무엇이 유리한지는 신고 전체 세액으로만 판정되므로 아래 `finishWith`를 후보 순서마다
+   * 돌려 고른다(계획서 `transfer-basic-deduction-same-day-tie.plan.md` D-1).
+   */
+  const tieGroups =
+    allocationAxis === "EARLIEST_TRANSFER" ? sameDayTieGroups(eligibleForBasic, availableThisCalc) : [];
+
+  /** M-4 배분부터 끝까지 — 동순위 순서(`tieRank`)만 바꿔 다시 돌릴 수 있게 감싼다. `steps`·`warnings`는 호출마다 사본이다. */
+  const finishWith = (
+    tieRank: ReadonlyMap<number, number> | undefined,
+    steps: CalculationStep[],
+    warnings: string[],
+  ): AggregateTransferResult => {
   const allocation =
     allocationAxis === "PARTS_HIGHEST_RATE"
       ? allocateBasicDeductionAcrossParts(eligibleForBasic, availableThisCalc)
-      : allocateBasicDeduction(eligibleForBasic, availableThisCalc, allocationAxis);
+      : allocateBasicDeduction(eligibleForBasic, availableThisCalc, allocationAxis, tieRank);
   const allocatedBasic: number[] = assetRecords.map(() => 0);
   for (const a of allocation) allocatedBasic[a.idx] = a.amount;
   const totalBasicDeduction = allocatedBasic.reduce((s, v) => s + v, 0);
+  /**
+   * §90①의 C를 읽는 배분 — §103② 순서(감면 외 먼저 → 같은 날 감면소득은 감면율 낮은 것부터)여야 한다.
+   * 파트 축(`PARTS_HIGHEST_RATE` — 일반건물 카드)은 세율 높은 파트부터 배분해 1단계를 따르지 않으므로
+   * 감면 계산용으로 §103② 배분을 따로 구한다(종전에도 C는 「총 기본공제 − 비감면소득」으로 1단계를 지켰다 —
+   * GBRT-03 §17 매수청구 39,819,766). 파트 축의 표시 배분 자체는 이번 범위 밖이다.
+   */
+  const allocatedBasicForReduction =
+    allocationAxis === "PARTS_HIGHEST_RATE"
+      ? (() => {
+          const byIdx: number[] = assetRecords.map(() => 0);
+          for (const a of allocateBasicDeduction(eligibleForBasic, availableThisCalc, "EARLIEST_TRANSFER", tieRank)) byIdx[a.idx] = a.amount;
+          return byIdx;
+        })()
+      : allocatedBasic;
 
+  /** 같은 날 양도 처리 근거 — 동순위 묶음에 공제가 닿았을 때만(침묵 금지 · 없으면 종전 문구). */
+  const basicDeductionTieNote = [
+    tieGroups.length > 0 ? " · 같은 날 양도 — 납세자에게 유리한 순서(재일46014-1685)" : "",
+    sameDayReducibleRatesDiffer(eligibleForBasic, allocation) ? " · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
+  ].join("");
   steps.push({
     label: "기본공제",
-    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${BASIC_DEDUCTION_ALLOCATION_LABEL[allocationAxis]} 배분)`,
+    formula: `연 한도 ${annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()} = ${totalBasicDeduction.toLocaleString()} (${BASIC_DEDUCTION_ALLOCATION_LABEL[allocationAxis]} 배분)${basicDeductionTieNote}`,
     amount: totalBasicDeduction,
     legalBasis: TRANSFER.BASIC_DEDUCTION,
   });
@@ -257,6 +295,7 @@ function computeAggregateOnce(
     assetRecords,
     taxableAfterReduction,
     totalBasicDeduction,
+    allocatedBasic: allocatedBasicForReduction,
     taxYear: input.taxYear,
     priorReductionUsage: input.priorReductionUsage ?? [],
   };
@@ -592,6 +631,14 @@ function computeAggregateOnce(
     warnings,
     ...(amendmentDetail ? { amendmentDetail } : {}),
   };
+  };
+
+  if (tieGroups.length === 0) return finishWith(undefined, steps, warnings);
+  // 후보마다 하류를 임시 사본으로 돌려 가장 유리한 순서를 고른 뒤, 그 순서로 **정식으로 한 번 더** 계산한다 —
+  // 하류가 자산 기록의 표시 플래그(`splitDetail.partRateBasisApplied`)를 덮어쓰므로 채택 후보가 마지막이어야 한다.
+  const idOf = (idx: number) => assetRecords[idx].item.propertyId;
+  const best = pickFavorableTieRank(tieGroups, idOf, (rank) => finishWith(rank, [...steps], [...warnings]));
+  return finishWith(best, steps, warnings);
 }
 
 

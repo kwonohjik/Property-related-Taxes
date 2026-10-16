@@ -148,6 +148,7 @@ describe("감면세액 근거 — 없는 것을 있다고 말하지 않는다", 
       calculatedTax: 133_820_000,
       taxableAfterReduction: [0],
       totalBasicDeduction: 2_500_000,
+      allocatedBasic: [0], // 감면 유형이 없어 C를 읽지 않는다 — 소득 0인 자산에는 배분되지 않는다
       taxYear: 2026,
       priorReductionUsage: [],
       steps,
