@@ -146,6 +146,8 @@ test.describe("첫 자산 삭제", () => {
           isOneHousehold: true,
           householdHousingCount: "1",
           wasRegulatedAtAcquisition: true,
+          // 사용자가 직접 지정한 값 — 자동 판별(`/api/address/regulated-area`, 소재지 기준)이 덮지 않는다. 없으면 CI(조회 완료)에서 값이 바뀌어 카드 줄이 사라진다.
+          wasRegulatedAtAcquisitionTouched: true,
           marriageDate: "2020-01-01",
         },
       },
