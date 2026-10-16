@@ -19,6 +19,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
@@ -292,10 +293,13 @@ export function validateBurdenedGiftAsset(
       }
       // K-5 환산취득가액 — 취득·양도시 기준시가 필수. general_building은 (5-b)에서 별도 검사.
       //   칸은 「② 양도정보」에 있다(B2 — 종전에는 시가 모드가 두 칸을 숨겨 채울 곳이 없었다).
+      //   재개발 완공 아파트는 취득시 기준시가(일반 환산 분자)를 쓰지 않는다 — 종전 부동산 취득가액을 §166③으로 환산하고
+      //   그 분자·분모는 재개발 블록 ⑤가 받는다(`redevPreApprovalAcqMode` · `needsBgAcqStdPriceInput`과 같은 예외).
+      const redevSec166 = asset.assetKind === "redevelopment_apt" && redevPreApprovalAcqMode(asset) === "estimated";
       if (asset.assetKind !== "general_building" && asset.assetKind !== "land") {
         if (
           !parseAmount(asset.standardPriceAtTransfer) ||
-          !parseAmount(asset.standardPriceAtAcq)
+          (!redevSec166 && !parseAmount(asset.standardPriceAtAcq))
         ) {
           return fieldError(
             !parseAmount(asset.standardPriceAtTransfer) ? "standardPriceAtTransfer" : "standardPriceAtAcq",

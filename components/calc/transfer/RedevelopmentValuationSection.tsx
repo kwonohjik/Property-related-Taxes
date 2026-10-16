@@ -22,6 +22,7 @@ import { BuildingStdPriceModalButton } from "@/components/calc/building-std-pric
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import { prefillAcqLandPrice } from "@/lib/calc/phd-acq-land-price-track";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
+import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { useMemo } from "react";
@@ -35,9 +36,11 @@ interface Props {
 }
 
 export function RedevelopmentValuationSection({ asset, onChange }: Props) {
+  const acqMode = redevPreApprovalAcqMode(asset);
   // 환산취득가 미리보기 (useMemo) — PHD 패턴, 엔진 redevelopment-valuation.ts 와 동일 산식.
   const valuationPreview = useMemo(() => {
-    if (!asset.useEstimatedAcquisition) return null;
+    // 환산 모드 — 부담부증여 K-5(완공 아파트)도 같다(`redevPreApprovalAcqMode`).
+    if (acqMode !== "estimated") return null;
     const rights = parseAmount(asset.redevRightsValue);
     const D = parseAmount(asset.redevManagementDisposalHousingPrice);
     if (rights <= 0 || D <= 0) return null;
@@ -90,7 +93,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
       step2Formula: `${rights.toLocaleString()} × ${P_A.toLocaleString()} ÷ ${D.toLocaleString()}`,
     };
   }, [
-    asset.useEstimatedAcquisition,
+    acqMode,
     asset.redevRightsValue,
     asset.redevManagementDisposalHousingPrice,
     asset.redevAcquisitionHousingPrice,
@@ -108,7 +111,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
   const isLand = asset.redevOriginalAssetType === "land";
 
   const landContribPreview = useMemo(() => {
-    if (!isLand || !asset.useEstimatedAcquisition) return null;
+    if (!isLand || acqMode !== "estimated") return null;
     const rights = parseAmount(asset.redevRightsValue);
     const landArea = parseDecimal(asset.redevLandArea) || 0;
     const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
@@ -165,7 +168,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     };
   }, [
     isLand,
-    asset.useEstimatedAcquisition,
+    acqMode,
     asset.redevRightsValue,
     asset.redevLandArea,
     asset.redevLandPricePerSqmAtAcq,

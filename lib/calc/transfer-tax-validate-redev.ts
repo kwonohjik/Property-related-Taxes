@@ -23,6 +23,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import type { IssueField } from "./transfer-tax-validate-field";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
+import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 export function validateRedevelopmentAsset(
   asset: AssetForm,
   label: string,
@@ -39,6 +40,13 @@ export function validateRedevelopmentAsset(
   const approvalLawBasis = asset.redevApprovalLawBasis || "urban_renovation_art_74";
   const originalAssetType = asset.redevOriginalAssetType || "housing";
   const settlementDirection = asset.redevSettlementDirection || "pay";
+  // ⑤ 「인가전 분 종전 부동산 취득가액」 방식 — ⑤·④·PHD 트리거와 같은 leaf. 부담부증여는 ⑤ 라디오가 아니라 K-4/K-5가 정한다
+  //   (`burdened_gift`면 이 블록의 실가·환산 칸을 요구하지 않는다 — 엔진이 §159 안분값을 쓴다).
+  const acqMode = redevPreApprovalAcqMode(asset);
+  const isEstimatedMode = acqMode === "estimated";
+  const isActualMode = acqMode === "actual";
+  // 환산 오류가 가리킬 칸 — 부담부증여 K-5는 ⑤ 라디오가 화면에 없고 부담부증여 블록의 산정방식이 정한다.
+  const estimatedModeField = asset.transferType === "burdened_gift" ? "bgAcquisitionMethod" : "useEstimatedAcquisition";
 
   // 지원 분기: subject="apt" (사례 44~48) + subject="right" (사례 36). 그 외 차단.
   if (subject !== "apt" && subject !== "right") {
@@ -64,9 +72,9 @@ export function validateRedevelopmentAsset(
   if (
     isGift163_9 &&
     asset.redevIsSuccessorMember !== "yes" &&
-    asset.useEstimatedAcquisition
+    isEstimatedMode
   ) {
-    return fieldError("useEstimatedAcquisition", `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하고 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`);
+    return fieldError(estimatedModeField, `${label}: 증여 취득 종전자산은 환산취득가를 지원하지 않습니다. 증여일 평가액(증여세 신고가액)이 취득가액이므로 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하고 증여 신고가액을 입력하세요. (소득세법 시행령 §163⑨)`);
   }
 
   // ── subject="right" 전용 검증 (사례 36) ──
@@ -192,7 +200,7 @@ export function validateRedevelopmentAsset(
      */
     // land + right + 환산 + receive: 후속 PR (runLandContribEstimated가 settlementPaid로 pay만 가정 —
     // §166②2호·§166①2호 수령 산식 미구현). 실가 receive는 아래 #1(A)로 개방.
-    if (subject === "right" && settlementDirection !== "pay" && asset.useEstimatedAcquisition) {
+    if (subject === "right" && settlementDirection !== "pay" && isEstimatedMode) {
       return fieldError("useEstimatedAcquisition", `${label}: 토지 출자 + 입주권 양도 + 청산금 수령 + 환산취득가 조합은 후속 PR에서 지원됩니다. 취득가액을 확인할 수 있으면 ⑤ 「인가전 분 종전 부동산 취득가액」에서 "실지거래가액"을 선택하세요.`);
     }
     // land + right + 실가 (pay·receive 모두): #1(A) 지원 — runOriginalMember→computeRightPay(§166①1호, pay)/
@@ -211,7 +219,7 @@ export function validateRedevelopmentAsset(
 
     // 실가 모드 (사례 42 land+apt+receive 등) — 종전 자산 취득가액 필수.
     // 환산 모드는 아래 §166③ 분자·분모 검증 경로.
-    if (!asset.useEstimatedAcquisition) {
+    if (isActualMode) {
       if (parseAmount(asset.redevActualAcquisitionPrice) <= 0) {
         return fieldError("redevActualAcquisitionPrice", `${label}: 실가 모드 — 종전 자산 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)`);
       }
@@ -219,7 +227,7 @@ export function validateRedevelopmentAsset(
 
     // 환산 모드일 때만 §166③ 분자·분모 검증 (사례 37 right+pay+환산)
     // 사례 40 (apt+pay+실가)은 자산-수준 acquisitionPrice 사용 — 별도 §166③ 입력 불필요
-    if (asset.useEstimatedAcquisition) {
+    if (isEstimatedMode) {
       // §166③ 2필드 필수 — 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 fallback.
       const landArea = parseDecimal(asset.redevLandArea) || 0;
       const pricePerSqmAcq = parseAmount(asset.redevLandPricePerSqmAtAcq) || 0;
@@ -355,7 +363,7 @@ export function validateRedevelopmentAsset(
   // ── 실가 모드 검증 — 인가전 분 종전 주택 취득가액(실거래가) 필수 ──
   // 환산 모드(useEstimatedAcquisition=true) 시 비활성. §166①1호 인가전 분 차감 기준.
   // 사례 48 승계조합원 모드는 §166 안분 우회 — 인가전 분 자체가 미산정이므로 본 검증 비활성.
-  if (!asset.useEstimatedAcquisition && !isSuccessor) {
+  if (isActualMode && !isSuccessor) {
     if (parseAmount(asset.redevActualAcquisitionPrice) <= 0) {
       return fieldError("redevActualAcquisitionPrice", `${label}: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)`);
     }
@@ -369,7 +377,7 @@ export function validateRedevelopmentAsset(
     originalAssetType,
     subject,
     settlementDirection,
-    useEstimatedAcquisition: asset.useEstimatedAcquisition,
+    useEstimatedAcquisition: isEstimatedMode,
   });
 
   if (isHousingRightReceiveEstimated) {
@@ -382,7 +390,7 @@ export function validateRedevelopmentAsset(
     }
     // housing+right+receive+estimated 분기는 일반 D(managementDisposalHousingPrice) 검증 skip
     // (§166③ 분모 구조가 다름 — §166③ 산식 별도 적용)
-  } else if (asset.useEstimatedAcquisition) {
+  } else if (isEstimatedMode) {
     // 일반 환산 모드 — D(관리처분 라목값) 필수
     if (parseAmount(asset.redevManagementDisposalHousingPrice) <= 0) {
       return fieldError("redevManagementDisposalHousingPrice", `${label}: 환산 모드 — D(관리처분 인가일 개별주택공시가격)를 입력하세요. (시행령 §166③ 분모)`);
@@ -420,7 +428,7 @@ export function validateRedevelopmentAsset(
     if (parseAmount(asset.redevBuildingStdPriceAtFirst) < 0) {
       return fieldError("redevBuildingStdPriceAtFirst", `${label}: §164⑦ 본문 — 최초공시 당시 건물 기준시가 입력 필수입니다.`);
     }
-  } else if (asset.useEstimatedAcquisition && !isHousingRightReceiveEstimated) {
+  } else if (isEstimatedMode && !isHousingRightReceiveEstimated) {
     // 본문 미발동 — 취득당시 라목값 단일 필수 (housing+right+receive+estimated 분기 제외)
     if (parseAmount(asset.redevAcquisitionHousingPrice) <= 0) {
       return fieldError("redevAcquisitionHousingPrice", `${label}: 환산 모드 — 취득당시 개별주택공시가격을 입력하세요. (취득일 ≥ 최초공시일 또는 최초공시일 미입력)`);
@@ -453,7 +461,7 @@ export function validateRedevelopmentAsset(
    *    엔진은 실거래가 모드에서 §164⑦ 값을 쓰지 않는다(`redevelopment-split.ts` `useEstimatedAcquisition`
    *    게이트) — 좁혀도 계산이 조용히 틀어지지 않는다.
    */
-  const phdInputsOnScreen = asset.useEstimatedAcquisition && !isHousingRightReceiveEstimated;
+  const phdInputsOnScreen = isEstimatedMode && !isHousingRightReceiveEstimated;
   if (phdInputsOnScreen && (hasA || hasAnyPhd) && !hasFirstDisclosureDate) {
     return fieldError("redevFirstDisclosureDate", `${label}: A 또는 PHD 단가를 입력하셨다면 최초공시일도 입력하세요. (§164⑦ 본문 트리거)`);
   }

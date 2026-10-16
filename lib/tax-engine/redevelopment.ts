@@ -90,12 +90,18 @@ export function runRedevelopment(
     rawInput.debtRatio,
   );
   /**
-   * §166③ 환산 분기는 부담부증여에서 **점화되지 않는다** —
-   * `transfer-tax-burdened-gift-step.ts`가 `useEstimatedAcquisition: false`를 강제한다.
-   * 그 전제가 깨지면 기준시가(비율항)는 물건 전체인데 평가액(절대항)만 줄어들어 환산 산식이
-   * 조용히 틀린다 ⇒ 통과시키지 않고 여기서 멈춘다.
+   * §166③ 환산 분기는 부담부증여에서 **완공 아파트(subject="apt")만** 점화된다 —
+   * `transfer-tax-burdened-gift-step.ts`가 재개발 완공 아파트 × K-5에서만 `useEstimatedAcquisition: true`를 준다(2026-10-16).
+   * 그 경로(`runOriginalMember` → `computeRedevelopmentSplit`)의 §166③은 「평가액 × 취득일 기준시가 ÷ 인가일 기준시가」라
+   * β로 줄인 평가액이 그대로 채무비율 안분값을 만든다(기준시가는 비율항이라 함께 줄이지 않는다). 개산공제는 Step B가 같은 비율로 줄인다.
+   * 조합원입주권은 K-4(실지취득가액) 전용이라(설계 D-2) 여전히 여기서 멈춘다.
    */
-  if (rawInput.debtRatio !== undefined && rawInput.debtRatio !== 1 && rawInput.useEstimatedAcquisition) {
+  if (
+    rawInput.debtRatio !== undefined &&
+    rawInput.debtRatio !== 1 &&
+    rawInput.useEstimatedAcquisition &&
+    rawInput.redevelopment.subject !== "apt"
+  ) {
     throw new Error(
       "[redev-burdened-gift] 부담부증여에서 §166③ 환산 분기는 지원하지 않습니다 — " +
         "취득가액은 소령 §159①1호가 정하는 값(기준시가 또는 실지거래가액)을 채무비율로 안분합니다.",
@@ -185,17 +191,6 @@ export interface RedevelopmentOrchestratorInput extends RedevelopmentSplitInput 
    * 사례 45 — 청산금납부분 LTHD 표2 진입 가드 (해석례 2020-386).
    */
   newHouseResidenceMonths?: number;
-  /**
-   * 부담부증여 채무비율 `r = B/C` (소령 §159①) — **β 스케일**.
-   *
-   * 미전달·`1`이면 아무 것도 바뀌지 않는다(일반 양도). 값이 오면 §166 산식의 절대 금액항
-   * (평가액·청산금·인가전후 필요경비)을 `r`배로 줄여 §159가 이미 안분한 취득가액·양도가액과
-   * **스케일을 맞춘다**. 근거·적용 범위는 `redevelopment-burdened-gift.ts` 헤더.
-   *
-   * ⚠️ `ownershipRatio`(공유지분)와 **독립**이다 — `scaleBurdenedGiftInfo`가 평가액·채무액을
-   *    먼저 지분분으로 줄이므로 `B/C`는 지분 중립이고, 두 비율은 서로 다른 축이다.
-   */
-  debtRatio?: number;
 }
 
 // 800줄 분리 — 분기 실행부 3개 + 전용 헬퍼 2개는 `redevelopment-branches.ts` 로 이동했다.

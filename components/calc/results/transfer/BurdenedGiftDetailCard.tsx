@@ -50,6 +50,11 @@ interface Props {
   propertyType?: "housing" | "land" | "building" | "general_building" | string;
   /** Phase 2: 엔진 result.warnings — 다주택 중과 비스코프 등 정보성 경고 */
   warnings?: string[];
+  /**
+   * 재개발 완공 아파트 × 환산(K-5) — 엔진이 §159 명세의 일반 환산(§176의2②2호) 대신 §166③으로 계산한 값(채무비율 안분 후).
+   * 있으면 환산 행을 이것으로 바꾼다 — 명세의 일반 환산값은 계산에 쓰이지 않는다(`transfer-tax-burdened-gift-step.ts` `redevSec166Conversion`).
+   */
+  redevSec166?: { acquisition: number; lumpDeduction: number };
 }
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
@@ -64,7 +69,7 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166 }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const rowSelected = (mode: string) =>
     bg.sangjeungbeopValuation.selectedMode === mode
@@ -189,10 +194,24 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings }
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
           <tr className="border-t border-fuchsia-300">
             <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
-              자산별 취득가액 ({ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed})
+              자산별 취득가액 ({redevSec166 && bg.acquisitionMethodUsed === "converted" ? "환산취득가액 · 시행령 §166③" : (ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed)})
             </td>
           </tr>
-          {bg.acquisitionMethodUsed === "converted" ? (
+          {bg.acquisitionMethodUsed === "converted" && redevSec166 ? (
+            <>
+              <tr>
+                <td className="py-1 pr-2 pl-3" data-testid="bg-redev-sec166-acquisition">
+                  종전 부동산 취득가액 = 평가액 × 채무비율 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />{" "}
+                  (시행령 §166③ — 재개발·재건축 상세 참조)
+                </td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevSec166.acquisition)}</td>
+              </tr>
+              <tr>
+                <td className="py-1 pr-2 pl-3">인가전 분 개산공제 = 취득일 기준시가 × 채무비율 × 3% (시행령 §163⑥)</td>
+                <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevSec166.lumpDeduction)}</td>
+              </tr>
+            </>
+          ) : bg.acquisitionMethodUsed === "converted" ? (
             <>
               {bg.perAsset.land.acquisitionPrice > 0 && (
                 <tr>
