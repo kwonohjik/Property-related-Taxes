@@ -34,6 +34,7 @@ import {
   type ReverseAppurtenantSwapPatch,
 } from "@/lib/calc/reverse-appurtenant-swap";
 import { assetRemovalPatch } from "@/lib/calc/asset-removal";
+import { firstAssetChangeNoteOnRemoval } from "@/lib/calc/first-asset-facts";
 
 // ============================================================
 // Step 1: 자산 목록
@@ -174,7 +175,11 @@ export function Step1({
   function handleRemoveAsset(currentAssets: AssetForm[], idx: number) {
     const patch = assetRemovalPatch({ assets: currentAssets, isUnregistered: form.isUnregistered }, idx);
     if (idx === 0) setSwapEpoch((n) => n + 1);
-    updateAssets(patch.assets, { isUnregistered: patch.isUnregistered });
+    // 첫 자산이 바뀌면 폼 전역 «양도 주택 선언»이 새 첫 자산의 사실로 읽힌다 — 값은 두고 Step4에서 알린다(`first-asset-facts.ts`).
+    updateAssets(patch.assets, {
+      isUnregistered: patch.isUnregistered,
+      ...(idx === 0 ? { firstAssetChangeNote: firstAssetChangeNoteOnRemoval({ ...form, assets: currentAssets }, idx, patch) } : {}),
+    });
   }
 
   // §105①3호 — 전 자산 부담부증여 양도는 예정신고 기한 3개월 (일반·혼합은 2개월)
