@@ -481,7 +481,10 @@ export interface GroupTaxResult {
   groupBasicDeduction: number;
   /** 그룹 과세표준 = max(0, groupIncomeAmount - groupBasicDeduction) */
   groupTaxBase: number;
-  /** 그룹 산출세액 */
+  /**
+   * 그룹 산출세액 — §104⑤2호 호 버킷은 신고 전체에서 합산하므로, 버킷이 세율군을 넘으면 그 버킷 세액을
+   * 세율군별 과세표준 비율로 나눈 몫이 실린다(표시용 · 합은 `calculatedTaxByGroups`).
+   */
   groupCalculatedTax: number;
   appliedRate: number;
   surchargeRate?: number;
@@ -537,8 +540,8 @@ export interface AggregateTransferResult {
    * 예규상 「**각 호별로 합산한 자산**」이므로 **1호끼리도 합산 대상**이다(기재부 재산세제과-536).
    *
    * 🔒 후보 집합이 **정확히 `{104-1-1}`인 버킷**만이다 — 8호와 같은 좁은 규약.
-   * 🔒 **분양권은 포함되지 않는다.** 호는 1호이나 세율이 단일 60%라 `classifyRateGroup`이
-   *   `short_term`으로 분리해 두고, 이 echo는 누진 호 분기에서만 누적되기 때문이다.
+   * 🔒 **분양권은 포함되지 않는다.** 호는 1호이나 세율이 단일 60%라 다건 합산이 버킷 식별자에
+   *   `presale:` 구분자를 붙여 따로 두고, 이 echo는 식별자가 정확히 `"104-1-1"`인 버킷만 누적하기 때문이다.
    *   제외 근거는 **현행 규약 승계**이지 새 법령 해석이 아니다
    *   (계획서 `cross-104-5-c3-ui-design.plan.md` · 가드 `presale-clause-1-bucket-guard`).
    * ⚠️ 조합원입주권 2년+는 1호 누진이라 **포함**된다. 1호 버킷이 없으면 둘 다 0.

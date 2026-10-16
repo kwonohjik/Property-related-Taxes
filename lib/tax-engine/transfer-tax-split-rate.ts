@@ -161,14 +161,6 @@ export interface SplitPartRateContext {
    * §155⑳ 나중 취득 토지(G-3) 재귀(`...ctx`)에도 그대로 전파된다 — 별도 차단하지 않는다.
    */
   keepExcessPartsOnClause1Win?: boolean;
-  /**
-   * 「다른 rateGroup 자산·파트의 호 버킷 키」 — `keepExcessPartsOnClause1Win`의 가드(다건 전용, 느린 평가).
-   *
-   * 다건 합산은 **같은 rateGroup 안에서만** 호 버킷을 묶는다(D1: 그룹은 자산 단위 승자). 배율 초과분과 같은 호 키의 자산·파트가
-   * 다른 그룹에 있으면, 파트를 남겨도 그 버킷이 합산되지 못한 채 자산 단위 세액(1호 승)보다 2호만 부당하게 낮아진다.
-   * 이 경우에만 종전처럼 자산 단위로 둔다 — D1(그룹 경계) 재검토 전까지의 보호 장치다.
-   */
-  otherGroupBucketKeys?: () => ReadonlySet<string>;
 }
 
 /**
@@ -703,10 +695,7 @@ export function resolveSplitAwareTax(
     // 단, 다건에서 배율 초과 비사업용 토지 파트가 있으면 그 파트를 8호 버킷 합산에 쓰도록 파트를 남긴다(`keepExcessPartsOnClause1Win`).
     if (base.calculatedTax === chosenTax) {
       const excess = parts.parts.filter((p) => p.kind === "non_business_land");
-      const keep =
-        ctx.keepExcessPartsOnClause1Win === true &&
-        excess.length > 0 &&
-        !excess.some((p) => ctx.otherGroupBucketKeys?.().has(clauseBucketKey(p.candidateClauses, p.appliedRate, "excess")));
+      const keep = ctx.keepExcessPartsOnClause1Win === true && excess.length > 0;
       if (!keep) return { ...base, partRateBasisApplied: true };
       // 파트를 남기면 자산 breakdown의 「산출세액 (참고)」 산식 문구가 이 분기의 값(1호 합산 누진)을 설명해야 한다.
       return {

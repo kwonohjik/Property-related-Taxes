@@ -84,12 +84,11 @@ export function classifyRateGroup(
   // 조합원입주권(`right_to_move_in`)은 대상이 **아니다** — §104①1호 괄호가 분양권만 지목하고,
   // 2년 이상이면 §55① 누진세율이다(2호·3호는 2년 미만 구간 전용). 현행 분류 유지.
   //
-  // 🔒 **이 분기는 load-bearing이다 — 세율 표시용 분류가 아니라 §104⑤ 오합산 방어선이다.**
-  //   2년 이상 분양권의 **해당 호는 §104①1호**라 `candidateClauses`가 `["104-1-1"]`이고,
-  //   `clauseBucketKey`는 누진 호가 포함되면 세율을 키에서 뺀다(그 규약 자체는 옳다 — 승자
-  //   세율은 묶음 판정에 무의미하므로). 그래서 **분양권과 사업용 토지의 버킷 키가 같다.**
-  //   두 자산을 같은 `rateGroup`에 넣는 순간 위 63,940,000 결함이 그대로 재발한다.
-  //   ⇒ 가드 anchor `presale-clause-1-bucket-guard.anchor.test.ts`(방어선 제거 시 3건 빨개짐).
+  // ℹ️ 2026-10-16 D1 해소 이후 세율군은 §104⑤ 합산 경계가 아니다 — 호 버킷은 신고 전체에서 합산한다.
+  //   2년 이상 분양권의 **해당 호는 §104①1호**라 `candidateClauses`가 `["104-1-1"]`이고 사업용 토지와
+  //   버킷 키가 같으므로, 위 63,940,000 결함의 방어선은 이제 `transfer-tax-aggregate-group-tax.ts`
+  //   `bucketIdOf`의 **분양권 구분자**다(가드 anchor `presale-clause-1-bucket-guard.anchor.test.ts`).
+  //   이 분기는 세율군 카드 표시(단일세율 군)를 위해 남긴다.
   if (item.propertyType === "presale_right") {
     return "short_term";
   }
