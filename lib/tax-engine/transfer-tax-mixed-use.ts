@@ -20,7 +20,12 @@ import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./sur
 import { qualifiesOldClause8TemporaryTwoHouse } from "./data/surcharge-old-clauses-era";
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
-import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
+import { buildMixedRateParts } from "./transfer-tax-mixed-use-rate-parts";
+import { applyStandardProviso } from "./transfer-tax-mixed-use-proviso";
+import {
+  applyBurdenedGiftAssetOverrides, applyMixedBurdenedGift, buildMixedBurdenedGiftStep,
+  mixedBurdenedGiftSurchargeNotice, prepareMixedBurdenedGiftOrThrow,
+} from "./mixed-use-burdened-gift";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
 import { MIXED_USE } from "./legal-codes/transfer";
@@ -75,12 +80,21 @@ const MIXED_USE_EFFECTIVE_DATE = new Date("2022-01-01");
  *                        미전달 시 기존 경로 불변. 2022.1.1 이전 양도(거부) 경로에는 부착하지 않음.
  */
 export function calcMixedUseTransferTax(
-  transferPrice: number,
+  transferPriceInput: number,
   transferDate: Date,
-  asset: MixedUseAssetInput,
+  assetInput: MixedUseAssetInput,
   rates: TaxRatesMap,
   amendment?: AmendmentInput,
 ): MixedUseGainBreakdown {
+  // 겸용 × 부담부증여(소령 §159) — 가드(MB-1~MB-18)는 STEP 1 거부보다 **앞**에서 평가해 throw한다
+  // (2022 이전 양도가 `buildRejectionResult`의 「단일 자산 모드로 재계산」 문구로 새면 BG에 틀린 안내가 나간다).
+  // BG면 양도가액은 «인수 채무 합계»이고, 취득 경로 플래그는 BG 모드가 정본으로 덮어쓴다.
+  const bg = assetInput.burdenedGift
+    ? prepareMixedBurdenedGiftOrThrow({ ...assetInput, burdenedGift: assetInput.burdenedGift, transferDate })
+    : undefined;
+  const transferPrice = bg ? bg.debt.total : transferPriceInput;
+  const asset = bg ? applyBurdenedGiftAssetOverrides(assetInput, bg) : assetInput;
+
   // STEP 1: 2022.1.1 이전 양도일 거부
   if (transferDate < MIXED_USE_EFFECTIVE_DATE) {
     return buildRejectionResult(
@@ -266,8 +280,13 @@ export function calcMixedUseTransferTax(
   const acqDerived = computeAcqDerivedAreas(asset, derived);
 
   // STEP 2: 양도가액 안분
-  const apportionment = apportionTransferPrice(transferPrice, asset, derived);
+  const apportionmentBase = apportionTransferPrice(transferPrice, asset, derived);
+  // BG — 양도가액은 «채무 귀속으로 정한 부분별 양도가액»(B_h'·B_c')으로 덮어쓴다. 고가주택 안분 분모는 주택분 증여가액 C_h(해석 B).
+  const apportionment: MixedUseApportionment = bg
+    ? { ...apportionmentBase, housingTransferPrice: bg.debt.housingDebt, commercialTransferPrice: bg.debt.commercialDebt, wholeHousingTransferPrice: bg.value.housing }
+    : apportionmentBase;
   steps.push(buildApportionmentStep(apportionment));
+  if (bg) steps.unshift(buildMixedBurdenedGiftStep(bg));
 
   // STEP 2.5: 취득가액 총액 안분 (법 §100²) — 실거래가(R1) 또는 감정/매매사례(R-B) 총액을
   // 취득시 기준시가 비율로 주택분/상가분에 안분(양도가액 안분의 취득시 미러). 개산공제 차이는 각 part에서.
@@ -363,16 +382,27 @@ export function calcMixedUseTransferTax(
    * 🔑 **재호출은 3개면 된다** — `calcExcessLandRatio`(STEP 5·6)는 gain에 의존하지 않고
    *    `(asset, derived, transferDate)`만 받으므로 다시 돌릴 필요가 없다.
    */
-  const provisoEligible =
-    !asset.acquisitionByInheritance &&
-    !asset.acquisitionByGift &&
-    !asset.useActualAcquisition &&
-    !asset.useAppraisalSalesAcquisition;
-  const provisoDeclared =
-    asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
   let necessaryExpenseProviso: MixedUseGainBreakdown["necessaryExpenseProviso"];
   let separateAcquisitionEcho: MixedUseGainBreakdown["separateAcquisition"];
-  if (isPartAcqModel) {
+  let bgApplied: ReturnType<typeof applyMixedBurdenedGift> | undefined;
+  if (bg) {
+    /**
+     * 겸용 × 부담부증여 — 위 split은 «채무 귀속 양도가액(B')» 위에서 환산한 est다. 취득가액·개산공제·실비에 부분별 채무비율을
+     * 곱하고 §97②2호 단서를 다시 판정한다(`applyMixedBurdenedGift` — 설계서 §3.2). 양도가액·보유기간은 est 그대로다.
+     */
+    bgApplied = applyMixedBurdenedGift({
+      asset, bg, transferDate,
+      est: { housing: housingGainSplit, commercial: commercialGainSplit },
+      expThunk: () => ({
+        housing: calcHousingGainSplit(apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate, acqDerived, true),
+        commercial: calcCommercialGainSplit(apportionment.commercialTransferPrice, asset, derived, transferDate, acqDerived, housingAcqResult, undefined, true),
+      }),
+    });
+    housingGainSplit = bgApplied.housing;
+    commercialGainSplit = bgApplied.commercial;
+    housingAcqResult = { ...housingAcqResult, estimatedAcq: bgApplied.housingAcqTotal };
+    necessaryExpenseProviso = bgApplied.proviso;
+  } else if (isPartAcqModel) {
     /**
      * B1 파트 모델 — 위 split은 「양쪽 환산」 경로의 값(est)이다. 공통 경비 몫(exp)을 단서 호출로 한 번 더 얻어
      * 파트별 모드로 갈아끼운다(`applyMixedPartAcq`). 양도가액·보유기간·양도시 안분은 est 그대로다.
@@ -398,26 +428,14 @@ export function calcMixedUseTransferTax(
     housingAcqResult = { ...housingAcqResult, estimatedAcq: applied.housingAcqTotal };
     necessaryExpenseProviso = applied.proviso;
     separateAcquisitionEcho = applied.echo;
-  } else if (provisoEligible && provisoDeclared) {
-    const gamok =
-      housingGainSplit.landAcqPrice + housingGainSplit.buildingAcqPrice +
-      housingGainSplit.landAppraisalDed + housingGainSplit.buildingAppraisalDed +
-      commercialGainSplit.landAcqPrice + commercialGainSplit.buildingAcqPrice +
-      commercialGainSplit.landAppraisalDed + commercialGainSplit.buildingAppraisalDed;
-    const namok = (asset.capitalExpenditure ?? 0) + (asset.transferExpense ?? 0);
-    // 동률(==)은 본문 — 단서가 「적은 경우」로 명시한다(일반건물·상업용·부담부증여와 같은 판정).
-    const chosen: "estimated" | "direct" = namok > gamok ? "direct" : "estimated";
-    necessaryExpenseProviso = { estimatedSide: gamok, directSide: namok, chosen };
-    if (chosen === "direct") {
-      housingGainSplit = calcHousingGainSplit(
-        apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate,
-        acqDerived, true,
-      );
-      commercialGainSplit = calcCommercialGainSplit(
-        apportionment.commercialTransferPrice, asset, derived, transferDate, acqDerived,
-        housingAcqResult, acqApportionment?.commercialAcqPrice, true,
-      );
-    }
+  } else {
+    const standard = applyStandardProviso({
+      asset, apportionment, housingAcqResult, derived, transferDate, acqDerived,
+      acqApportionment, housingGainSplit, commercialGainSplit,
+    });
+    housingGainSplit = standard.housing;
+    commercialGainSplit = standard.commercial;
+    necessaryExpenseProviso = standard.proviso;
   }
 
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
@@ -517,8 +535,6 @@ export function calcMixedUseTransferTax(
   //
   // 주택분 기산은 **토지·건물 중 늦은 취득**(= 짧은 보유)이다 — 부수토지를 나중에 취득하면
   // 그 시점부터가 「주택과 그 부수토지」의 보유기간이다(선행 계획서 G-3 `max(취득일)` 규칙과 동일).
-  const commercialLandIncome = commercialPart.landIncomeAmount;
-  const commercialBuildingIncome = commercialPart.buildingIncomeAmount;
   // 「소득세법」 §104②1호 — 상속받은 파트의 세율 보유기간은 피상속인 취득일부터(장특 보유연수는 상속개시일 기산 그대로 — §95④).
   const landInherited = isInheritedPart(asset, asset.landAcquisitionDate);
   const decedentYears = asset.decedentAcquisitionDate
@@ -543,48 +559,10 @@ export function calcMixedUseTransferTax(
 
   // P6(계획서 D-8) — 배율초과 비사업용 토지도 §104⑤2호 파트로 들어가므로 종전의
   // 「중과 세율 가산 미적용」 경고는 더 이상 사실이 아니다. 삭제했다.
-  const rateParts: MixedUseRatePart[] | undefined =
-    commercialLandIncome !== undefined &&
-    commercialBuildingIncome !== undefined &&
-    // 불변식 — 파트 합이 자산 소득금액과 어긋나면(음수 차익 clamp 등) 진입하지 않는다.
-    commercialLandIncome + commercialBuildingIncome === commercialPart.incomeAmount
-      ? [
-          {
-            kind: "housing" as const,
-            income: housingPart.incomeAmount,
-            holdingYears: Math.min(
-              landRateYears(housingGainSplit.landHoldingYears),
-              buildingRateYears(housingGainSplit.buildingHoldingYears),
-            ),
-            // §104⑦ — 상가 파트에는 붙이지 않는다(대상이 「주택+딸린 토지」).
-            ...(surchargeAddon !== undefined ? { surchargeAddon } : {}),
-          },
-          {
-            kind: "commercial_land" as const,
-            income: commercialLandIncome,
-            holdingYears: landRateYears(commercialGainSplit.landHoldingYears),
-          },
-          {
-            kind: "commercial_building" as const,
-            income: commercialBuildingIncome,
-            holdingYears: buildingRateYears(commercialGainSplit.buildingHoldingYears),
-          },
-          // §104⑤ 본문 후단 — 배율 초과분(비사업용 토지)은 **별개 자산**으로 보아
-          // §104①8호(§55① 세율 + 10%p)를 자기 과세표준에만 적용한다. 2년 미만이면
-          // `buildTotalTax`가 §104① 후단으로 토지 단기세율(50%/40%)과 큰 것을 취한다.
-          // 보유연수 기산은 **주택 부수토지의 토지 보유연수** — 배율 초과분도 같은 필지다.
-          ...((nonBusinessLandPart?.incomeAmount ?? 0) > 0
-            ? [
-                {
-                  kind: "non_business_land" as const,
-                  income: nonBusinessLandPart!.incomeAmount,
-                  holdingYears: landRateYears(housingGainSplit.landHoldingYears),
-                  surchargeAddon: nonBusinessLandPart!.additionalRate,
-                },
-              ]
-            : []),
-        ]
-      : undefined;
+  const rateParts = buildMixedRateParts({
+    housingPart, housingGainSplit, commercialGainSplit, commercialPart, nonBusinessLandPart,
+    landRateYears, buildingRateYears, surchargeAddon,
+  });
   const total = buildTotalTax(
     housingPart.incomeAmount,
     commercialPart.incomeAmount,
@@ -614,6 +592,9 @@ export function calcMixedUseTransferTax(
     },
   );
   steps.push(buildTotalStep(total));
+  if (bg && bgApplied) {
+    warnings.push(...bgApplied.notices, ...[mixedBurdenedGiftSurchargeNotice(bg, surchargeApplication)].filter((n): n is string => !!n));
+  }
 
   // 계산 경로 메타 (학습·검증용) — 표2 사유 표시는 게이트에 쓴 통산 값(table2ResidenceYears)을 그대로 주입
   // (재계산 시 게이트와 drift 위험 — feedback_engine_result_display_drift).
@@ -627,26 +608,7 @@ export function calcMixedUseTransferTax(
   );
 
   // 보유 중 일부 용도변경 메타 (결과 카드 표시용)
-  const partialUsageChange = asset.partialUsageChange
-    ? {
-        direction: asset.partialUsageChange.direction,
-        acqResidentialArea:
-          asset.partialUsageChange.acqResidentialArea
-          ?? (asset.partialUsageChange.direction === "house_to_commercial"
-              ? asset.residentialFloorArea + asset.nonResidentialFloorArea
-              : 0),
-        acqCommercialArea:
-          asset.partialUsageChange.acqCommercialArea
-          ?? (asset.partialUsageChange.direction === "house_to_commercial"
-              ? 0
-              : asset.residentialFloorArea + asset.nonResidentialFloorArea),
-        isAreaCustomized:
-          asset.partialUsageChange.acqResidentialArea !== undefined
-          || asset.partialUsageChange.acqCommercialArea !== undefined,
-        // PHD §164⑦ 환산 분기 — calcHousingEstimatedAcq 가 산출
-        phdScopeBranch: housingAcqResult.phdScopeBranch,
-      }
-    : undefined;
+  const partialUsageChange = buildPartialUsageChangeMeta(asset, housingAcqResult.phdScopeBranch);
 
   // 수정신고(경정)·경정청구 — 끝단 append (국세기본법 §45·§45의2).
   // 기준값은 total.transferTax(본세) — 단건 finalize의 determinedTax와 동일 축(지방소득세 제외).
@@ -693,6 +655,7 @@ export function calcMixedUseTransferTax(
     partialUsageChange,
     amendmentDetail,
     ...(separateAcquisitionEcho ? { separateAcquisition: separateAcquisitionEcho } : {}),
+    ...(bgApplied ? { burdenedGift: bgApplied.breakdown } : {}),
     // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.
     acquisitionByInheritance: asset.acquisitionByInheritance,
     // §164⑨1호 공익수용 특례 산출근거 (계획 P7/D8) — 주택분(라목 총액)·상가분(가목 토지). 적용 시만.
@@ -716,6 +679,7 @@ import {
   buildCommercialStep,
   buildNonBusinessStep,
   buildTotalStep,
+  buildPartialUsageChangeMeta,
 } from "./transfer-tax-mixed-use-steps";
 
 /** 상속개시일(`buildingAcquisitionDate`)과 같은 날 취득한 파트인가 — 피상속인 취득일은 그 파트에만 쓴다(다른 날 취득한 토지는 원인을 모른다). */

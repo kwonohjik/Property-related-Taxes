@@ -95,6 +95,19 @@ export interface MixedUseAssetInput {
   /** 겸용주택 분리계산 플래그 */
   isMixedUseHouse: true;
 
+  /**
+   * **부담부증여(소령 §159)** — 존재 = 부담부증여 모델 (B1 `separateAcquisition`과 같은 «존재 = 모델» 규약).
+   * 있으면 엔진이 `calcMixedUseTransferTax`의 `transferPrice` 인자를 **무시**하고 인수 채무 B를 양도가액으로 쓰며,
+   * 증여자의 취득 경로·12억 판정·부분별 채무비율을 `mixed-use-burdened-gift*.ts`가 정한다.
+   * 설계: docs/02-design/features/transfer-burdened-gift-mixed-use.engine.design.md
+   */
+  burdenedGift?: import("./transfer-burdened-gift.types").BurdenedGiftInfo;
+  /**
+   * 증여자의 취득원인 echo(route `data.acquisitionCause`) — 부담부증여 가드(MB-8 상속×K-5/6/7 · MB-9 이월과세 · MB-15 신축)만 읽는다.
+   * 겸용 일반 양도 경로는 읽지 않는다(취득 경로는 아래 `acquisitionBy*`·`use*` 플래그가 정한다).
+   */
+  acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
+
   // ── 면적 (㎡, 건축물대장) ──
   /** 주택 연면적 (4·5층 단독주택 등 거주용 합계) */
   residentialFloorArea: number;
@@ -1106,4 +1119,7 @@ export interface MixedUseGainBreakdown {
    * 총액 모델·구 이력은 undefined.
    */
   separateAcquisition?: MixedUseSeparateAcquisitionEcho;
+
+  /** 부담부증여(소령 §159) 명세 — `MixedUseAssetInput.burdenedGift`가 있을 때만. 결과뷰는 이 값의 존재로 분기한다. */
+  burdenedGift?: import("./mixed-use-burdened-gift.types").MixedUseBurdenedGiftBreakdown;
 }

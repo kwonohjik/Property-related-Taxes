@@ -260,6 +260,43 @@ export function computeSangjeungbeopValuation(
 }
 
 // ============================================================
+// 취득가액 기준시가 강제(§159①1호 A 괄호) 판정 — 단건·겸용 공용
+// ============================================================
+
+/**
+ * §159①1호 **A괄호 발동 판정** — 취득가액을 취득시 기준시가로 강제하는가. `buildBurdenedGiftBreakdown`(단건)에서
+ * 무변경 추출했다 — 겸용주택(`mixed-use-burdened-gift-prepare.ts`)이 같은 판정을 쓰도록 단일 소스로 둔다. 순수(throw 없음).
+ *
+ * | 상황 | 괄호 |
+ * |---|---|
+ * | 기준시가 모드 · 입주권 | 미발동(§61③) |
+ * | 기준시가 모드 · 그 외 | 발동 |
+ * | 시가 모드 · 담보(§66) 승 · 입주권 아님 | 발동(`collateralForcedStdInMarketMode`) |
+ * | 시가 모드 그 밖 | 미발동 |
+ */
+export function resolveBgAcquisitionBasis(
+  info: BurdenedGiftInfo,
+  selectedMode: "supplementary" | "mortgage" | "rental",
+): {
+  isRightToMoveIn: boolean;
+  isStandardMode: boolean;
+  collateralForcedStdInMarketMode: boolean;
+  /** 괄호가 발동하는가 = 취득가액을 취득시 기준시가로 강제하는가. */
+  acqStdPriceForced: boolean;
+} {
+  const isRightToMoveIn = info.rightValuation !== undefined;
+  const isStandardMode = info.valuationMode === "sangjeungbeop_standard";
+  const collateralForcedStdInMarketMode =
+    info.valuationMode === "sangjeungbeop_market" && selectedMode === "mortgage" && !isRightToMoveIn;
+  return {
+    isRightToMoveIn,
+    isStandardMode,
+    collateralForcedStdInMarketMode,
+    acqStdPriceForced: (isStandardMode && !isRightToMoveIn) || collateralForcedStdInMarketMode,
+  };
+}
+
+// ============================================================
 // 채무비율 산정 (소령 §159 — B / C)
 // ============================================================
 

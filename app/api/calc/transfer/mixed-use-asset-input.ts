@@ -128,6 +128,15 @@ export interface MixedUseAssetInputSources {
 
   /** §167의10①4호 3년 기한 판정 기준일. */
   transferDate: Date;
+
+  // ── 겸용 × 부담부증여 (소령 §159) ───────────────────────────
+  /**
+   * 부담부증여 입력(`data.burdenedGiftInfo`) — `transferType === "burdened_gift"`일 때만 싣는다. 있으면 엔진이 겸용 BG seam을 탄다.
+   * ⚠️ 컴패니언 겸용은 `undefined`(MB-6 — ⑫가 입구에서 막는다).
+   */
+  burdenedGift: MixedUseAssetInput["burdenedGift"];
+  /** 증여자(양도인)의 취득원인 echo(`data.acquisitionCause`) — BG 가드(MB-8·9·15)만 읽는다. 컴패니언은 `undefined`. */
+  acquisitionCause: MixedUseAssetInput["acquisitionCause"];
 }
 
 /** 겸용 엔진 입력 1건을 조립한다. 키 커버리지는 함수 안의 가드가 강제한다. */
@@ -251,6 +260,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     priorReductionUsage: s.priorReductionUsage ?? [],
     isSelfCultivatedExpropriatedLand: s.isSelfCultivatedExpropriatedLand,
     preHousingDisclosure: phdInput,
+    burdenedGift: s.burdenedGift,
+    acquisitionCause: s.acquisitionCause,
     partialUsageChange: s.mixedUse.partialUsageChange
       ? {
           ...s.mixedUse.partialUsageChange,

@@ -12,6 +12,7 @@ import { z } from "zod";
 import type { companionAssetSchema } from "./transfer-tax-schema-sub";
 // 의제취득일(1985.1.1.) — ⑧과 같은 상수(단일 소스)
 import { DEEMED_ACQUISITION_DATE } from "@/lib/calc/transfer-163-9-base-date";
+import { refineCompanionMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 
 type CompanionAsset = z.infer<typeof companionAssetSchema>;
 
@@ -21,6 +22,8 @@ export function addCompanionAcquisitionCauseRefines(
   transferDate: string,
   ctx: z.RefinementCtx,
 ): void {
+  // 겸용주택 × 부담부증여(MB-6) — 컴패니언 겸용에는 채무 귀속 입력 경로가 없다.
+  refineCompanionMixedUseBurdenedGift(companions, ctx);
   // ── 컴패니언별 acquisitionCause 검증 ──
   for (let i = 0; i < companions.length; i++) {
     const c = companions[i];

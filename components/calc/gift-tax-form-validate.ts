@@ -315,7 +315,7 @@ export function validateStep(step: number, form: FormState): string | null {
       //   · §47① 3억 + 두 칸 합계 5억   → B=5억      → 45,458,000 (정답 20,351,000 · 25,107,000 과대)
       //
       // 엔진 슬롯의 의미는 바꿀 수 없다 — 양도세 마법사 자체 경로(transfer-tax-api-burdened-gift.ts:107-108)와
-      // §47③ 초과부담부 차단(burdened-gift-eligibility.ts:56-57)이 같은 슬롯을 인수채무로 쓰고 있고,
+      // 초과부담부 차단(burdened-gift-eligibility.ts)이 같은 슬롯을 인수채무로 쓰고 있고,
       // 엔진 anchor 다수가 현행 산식을 고정한다. ⇒ 두 축이 같은 값이 되도록 ⑧에서 강제한다
       // (자동 보정 금지 — 미입력·불일치는 차단이 이 저장소의 정답).
       const bgDebtDetail = (bgItem.leaseDeposit ?? 0) + (bgItem.mortgageAmount ?? 0);

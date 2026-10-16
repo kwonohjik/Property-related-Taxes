@@ -86,7 +86,7 @@ export function scaleRedevelopmentForBurdenedGift(
      */
     throw new Error(
       `[redev-burdened-gift] debtRatio ${debtRatio}는 (0, 1] 범위를 벗어났다 — ` +
-        "소령 §159①의 B/C는 상증법 §47③상 1을 넘을 수 없다.",
+        "소령 §159①의 B/C는 1을 넘을 수 없다(넘으면 증여가액 초과분까지 양도로 보게 된다 — 소득세법 §88 1호 후단).",
     );
   }
   return {

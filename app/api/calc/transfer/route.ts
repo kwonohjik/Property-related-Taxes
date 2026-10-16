@@ -594,6 +594,9 @@ export async function POST(request: NextRequest) {
         isFirstTransferredInMerge: engineInput.isFirstTransferredInMerge,
         gracePeriod: engineInput.gracePeriod,
         unavoidableOutsideCapitalHouse: engineInput.unavoidableOutsideCapitalHouse,
+        // ⑭ 겸용 × 부담부증여(소령 §159) — 양도 형태가 부담부증여일 때만 싣는다. 가드(MB-1~17)는 ⑫가 입구에서, 엔진이 다시 던진다.
+        burdenedGift: data.transferType === "burdened_gift" ? data.burdenedGiftInfo : undefined,
+        acquisitionCause: data.acquisitionCause,
       });
 
       const calcMixed = (ei: TransferTaxInput) =>

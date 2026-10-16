@@ -7,7 +7,7 @@
  *  (1) propertyType 지원 범위 (housing·land·building·general_building·commercial_building)
  *  (2) 평가 모드 선택 필수
  *  (3) 인수 채무 입력 필수 (보증금 + 차입금 ≥ 1)
- *  (4) 시가 모드 — 양도시·취득시 시가 평가액 필수, B/C > 1 차단 (상증법 §47③)
+ *  (4) 시가 모드 — 양도시·취득시 시가 평가액 필수, B/C > 1 차단 (소득세법 §88 1호 후단·소령 §159①)
  *  (5) Phase 3 — donorRelation 필수 (silent default 회피)
  *  (6) Phase 3 — 사전증여 행 부분 입력 차단 (silent drop 회피)
  *
@@ -339,7 +339,7 @@ export function validateBurdenedGiftAsset(
         ratio < 1 && !isFractionalSplitAxis
           ? ` (지분 ${formatOwnershipPercent(asset.ownershipNumerator, asset.ownershipDenominator)} 해당분 — 물건 전체 ${marketWhole.toLocaleString()}원)`
           : "";
-      return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)${scaleNote}을 초과합니다. 부담부증여로는 성립하지 않습니다(상증법 §47③ 검토 필요). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
+      return `${label}: 채무액(${assumedDebt.toLocaleString()}원)이 증여가액(${giftValuationMarket.toLocaleString()}원)${scaleNote}을 초과합니다. 채무액÷증여가액이 1을 넘으면 증여가액을 초과하는 부분까지 양도로 보게 되어 계산할 수 없습니다(소득세법 §88 1호 후단, 소령 §159①). 양도 형태를 "일반 양도"로 변경하거나 평가액·채무액을 재확인하세요.`;
     }
   }
   // 기준시가 모드의 B/C > 1 검사는 엔진에서 fail-fast (giftValuation = Max(보충적·담보·임대) 산정 후).

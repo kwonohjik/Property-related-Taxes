@@ -10,6 +10,7 @@ import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
+import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 /**
  * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
  *
@@ -65,8 +66,12 @@ export function addPropertyRefines(
     acquisitionDate: string;
     transferDate: string;
     acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
-    /** 양도 형태 — 겸용주택 × 부담부증여 차단용 */
+    /** 양도 형태 — 겸용주택 × 부담부증여 판정용 */
     transferType?: string;
+    /** 겸용주택 × 부담부증여 판정 입력(`refineMixedUseBurdenedGift`) */
+    ownershipRatio?: number;
+    burdenedGiftInfo?: unknown;
+    companionAssets?: ReadonlyArray<unknown>;
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
     giftSameHouseholdContinuous?: boolean;
@@ -305,17 +310,8 @@ export function addPropertyRefines(
       message: "연간 기본공제 한도(2,500,000)를 초과할 수 없습니다",
     });
   }
-  // 겸용주택 × 부담부증여 — 겸용 경로는 §159 안분(`burdenedGiftInfo`)을 읽지 않아 오류 없이 세액 0이 된다(⑧과 같은 판단).
-  if (
-    data.propertyType === "mixed-use-house" &&
-    (data.transferType === "burdened_gift" || data.acquisitionCause === "burdened_gift")
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["transferType"],
-      message: "겸용주택은 부담부증여로 계산할 수 없습니다 — 양도 형태를 일반 양도로 바꾸거나 주택과 상가를 나누어 입력하세요",
-    });
-  }
+  // 겸용주택 × 부담부증여 (소령 §159) — 판정은 엔진 leaf 하나(MB-1~MB-18). ⑧·엔진 throw와 같은 함수다.
+  refineMixedUseBurdenedGift(data, ctx);
   if (data.acquisitionMethod === "appraisal" && !data.appraisalValue) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

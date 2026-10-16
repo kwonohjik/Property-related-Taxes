@@ -44,7 +44,7 @@ export const BURDENED_GIFT_SUPPORTED_PROPERTY_TYPES: string[] = [
  *
  * 책임:
  *   (1) propertyType 지원 범위 검증 (housing·land·building·general_building만)
- *   (2) 초과부담부(B/C > 1) fail-fast — 상증법 §47③ 정의 위반 (silent 분모 보정 금지)
+ *   (2) 초과부담부(B/C > 1) fail-fast — 소득세법 §88 1호 후단·소령 §159① (B/C > 1이면 증여가액 초과분까지 양도로 보게 됨; silent 분모 보정 금지)
  *   (3) 1세대1주택 + 12억 초과 부담부증여(케이스 5-a) 차단 — 후속 PR 예정
  *      (D-0-2 채택안 해석 B: 12억 비교·안분 분모 = giftValuation C. 현재 엔진은
  *       transferPrice = C × B/C 기반이라 다운스트림 12억 안분 결과 오류 발생)
@@ -106,7 +106,7 @@ export function assertBurdenedGiftEligible(args: {
         "원)이 증여가액(C=" +
         giftValuation.toLocaleString() +
         "원)을 초과합니다. " +
-        "부담부증여로 성립하지 않습니다 (상속세및증여세법 §47③). " +
+        "채무액÷증여가액이 1을 넘으면 증여가액을 초과하는 부분까지 양도로 보게 되어 계산할 수 없습니다 (소득세법 §88 1호 후단, 소령 §159①). " +
         "다음 중 하나로 재입력하세요: ① 양도 형태 = '일반 양도' + 취득원인 = '매매' (사실상 매매 의제). " +
         "② 평가액(C) 입력값 재확인 (시가 모드/임대평가 누락 등). " +
         "③ 채무액(B) 입력값 재확인 (보증금·차입금 중복 합산 여부).",

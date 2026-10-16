@@ -20,7 +20,7 @@
  * ## 수정 범위 — ⑧ 불일치 차단만
  * 엔진 슬롯의 의미는 바꿀 수 없다. 같은 슬롯을 양도세 마법사 자체 경로
  * (`lib/calc/transfer-tax-api-burdened-gift.ts:107-108` ← `BurdenedGiftBlock`의 "실제 채무잔액" 칸)와
- * §47③ 초과부담부 차단(`lib/tax-engine/burdened-gift-eligibility.ts:56-57`)이 **인수채무**로 쓰고
+ * 초과부담부 차단(`lib/tax-engine/burdened-gift-eligibility.ts`)이 **인수채무**로 쓰고
  * 있고, 엔진 anchor 10여 파일이 현행 산식을 고정한다. 「인수채무 명시 축 신설」은 설계상
  * 「일부 인수」 비범위라 별도 PR이다. ⇒ 두 축이 같은 값이 되도록 ⑧에서 강제한다.
  *
