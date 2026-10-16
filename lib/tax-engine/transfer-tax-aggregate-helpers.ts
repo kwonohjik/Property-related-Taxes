@@ -177,6 +177,13 @@ export interface AssetRecord {
    * `rateGroup`과 **직교**한다(그 파일 헤더에 조문·실측 근거).
    */
   lossOffsetRateKey: string;
+  /**
+   * 차손 통산을 **파트 단위**로 할 비주택 토지·건물 split 자산의 파트 행(Q-F3a — `splitPartsForLossOffset`).
+   * 영 §167의2① 「같은 세율을 적용받는 자산」을 파트마다 판정한다. 없으면 자산 한 행(`income`·`lossOffsetRateKey`).
+   */
+  lossParts?: { income: number; rateKey: string }[];
+  /** `lossParts`의 통산 후 양도소득금액 — 다건 세액이 파트 소득 안분 가중치로 쓴다(`partIncomeWeights`). */
+  lossPartIncomeAfterOffset?: number[];
   taxableGain: number;
   lthd: number;
   income: number;
@@ -187,6 +194,8 @@ export interface LossOffsetOutput {
   lossOffsetFromSame: number[];
   lossOffsetFromOther: number[];
   incomeAfterOffset: number[];
+  /** 파트 단위로 통산한 자산의 파트별 통산 후 양도소득금액(그 밖은 `undefined`). */
+  partIncomeAfterOffset: (number[] | undefined)[];
   unusedLoss: number;
 }
 
@@ -222,34 +231,54 @@ export function offsetLosses(
    * characterization이 그 무영향을 고정한다.
    */
   const cross = external && external.length > 0 ? external : null;
-  const ownKey = (r: AssetRecord) =>
-    cross ? crossLossOffsetRateKey("real_estate", r.lossOffsetRateKey) ?? r.lossOffsetRateKey
-          : r.lossOffsetRateKey;
+  const translate = (key: string) => (cross ? crossLossOffsetRateKey("real_estate", key) ?? key : key);
 
+  // 파트 단위 자산(Q-F3a)은 코어에 **파트 행**으로 펼치고 결과를 자산으로 접는다 — 코어(세목 중립)는 그대로다.
+  const owner: number[] = [];
+  const ownRows = records.flatMap((r, i) => {
+    const rows =
+      r.lossParts && !r.result.isExempt
+        ? r.lossParts.map((p) => ({ income: p.income, rateKey: translate(p.rateKey), exempt: false }))
+        : [{ income: r.income, rateKey: translate(r.lossOffsetRateKey), exempt: r.result.isExempt }];
+    for (let n = 0; n < rows.length; n++) owner.push(i);
+    return rows;
+  });
+  const nOwn = ownRows.length;
   const core = offsetLossesCore([
-    ...records.map((r) => ({
-      income: r.income,
-      rateKey: ownKey(r),
-      exempt: r.result.isExempt,
-    })),
+    ...ownRows,
     ...(cross ?? []).map((e) => ({ income: e.income, rateKey: e.rateKey, exempt: e.exempt })),
   ]);
-
-  /** 코어 인덱스 → 표시용 id. 자기 자산 뒤에 외부 행이 붙는 **고정 순서**다. */
+  /** 코어 행 → 자산 인덱스(외부 행은 자기 자산 뒤에 붙는 **고정 순서**). */
+  const assetAt = (k: number) => (k < nOwn ? owner[k] : records.length + (k - nOwn));
   const idAt = (i: number) =>
     i < records.length ? records[i].item.propertyId : (cross ?? [])[i - records.length].id;
+  /** 🔑 외부 행 몫은 **잘라낸다** — 이 신고서의 자산이 아니다. 파트 행은 자산으로 합친다. */
+  const fold = (arr: number[]) => {
+    const out = records.map(() => 0);
+    arr.slice(0, nOwn).forEach((v, k) => (out[owner[k]] += v));
+    return out;
+  };
+  // 같은 자산 쌍·단계의 파트 행은 한 줄로 합친다 — 통산 표는 자산 단위다.
+  const table = new Map<string, LossOffsetRow>();
+  for (const row of core.rows) {
+    const fromPropertyId = idAt(assetAt(row.from));
+    const toPropertyId = idAt(assetAt(row.to));
+    const k = `${fromPropertyId}\u0000${toPropertyId}\u0000${row.scope}`;
+    const prev = table.get(k);
+    if (prev) prev.amount += row.amount;
+    else table.set(k, { fromPropertyId, toPropertyId, amount: row.amount, scope: row.scope });
+  }
 
   return {
-    lossOffsetTable: core.rows.map((row) => ({
-      fromPropertyId: idAt(row.from),
-      toPropertyId: idAt(row.to),
-      amount: row.amount,
-      scope: row.scope,
-    })),
-    // 🔑 외부 행 몫은 **잘라낸다** — 이 신고서의 자산이 아니다.
-    lossOffsetFromSame: core.fromSame.slice(0, records.length),
-    lossOffsetFromOther: core.fromOther.slice(0, records.length),
-    incomeAfterOffset: core.incomeAfterOffset.slice(0, records.length),
+    lossOffsetTable: [...table.values()],
+    lossOffsetFromSame: fold(core.fromSame),
+    lossOffsetFromOther: fold(core.fromOther),
+    incomeAfterOffset: fold(core.incomeAfterOffset),
+    partIncomeAfterOffset: records.map((r, i) =>
+      r.lossParts && !r.result.isExempt
+        ? core.incomeAfterOffset.slice(0, nOwn).filter((_, k) => owner[k] === i)
+        : undefined,
+    ),
     unusedLoss: core.unusedLoss,
   };
 }

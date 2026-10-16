@@ -25,6 +25,8 @@ import {
   type TransferTaxInput,
 } from "./transfer-tax";
 import { lossOffsetRateKey } from "./loss-offset-rate-key";
+import { splitPartsForLossOffset } from "./transfer-tax-split-part-seeds";
+import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
@@ -110,7 +112,7 @@ export function buildAssetRecords(
   warnings: string[],
   /** E-14n — 자산별 양도일 세율. 없으면 `rates` 하나로 전 자산을 계산한다(종전 · 같은 양도일 번들). */
   ratesByTransferDate?: RatesByTransferDate,
-) {
+): AssetRecord[] {
   // M-1: 건별 단건 엔진 호출 (기본공제 스킵, 차손 허용)
   const computeOne = (item: TransferTaxItemInput, assetIdx: number) => {
     // 단건 route와 같은 기준 — 그 자산의 양도일로 고른 세율 행(E-14n).
@@ -306,8 +308,36 @@ export function buildAssetRecords(
      *    (단건 102,086,600). 결과 화면·신고서 소비층이 같은 플래그로 이미 분기한다(`FilingFormTableHelpers.ts` ·
      *    `DetailedStatementHelpers.ts` `isRentalHousingException`). `lthd`는 단건 echo 그대로 싣는다(표시축).
      */
-    const income = pa.result.rentalHousingExceptionDetail?.applied === true ? taxableGain : taxableGain - lthd;
-    return { ...pa, taxableGain, lthd, income };
+    const rentalException = pa.result.rentalHousingExceptionDetail?.applied === true;
+    const income = rentalException ? taxableGain : taxableGain - lthd;
+    const lossParts = rentalException ? undefined : lossPartsOf(pa, income);
+    return { ...pa, taxableGain, lthd, income, ...(lossParts ? { lossParts } : {}) };
   });
   return assetRecords;
+}
+
+/**
+ * 비주택 토지·건물 split 자산의 차손 통산 파트 행(Q-F3a) — 파트마다 「같은 세율을 적용받는 자산」 키를 만든다.
+ * 파트 소득 합이 자산 양도소득금액과 어긋나면(감면 등으로 축이 다르면) 자산 한 행으로 둔다.
+ */
+function lossPartsOf(
+  pa: Pick<AssetRecord, "item" | "correctedSingleInput" | "rates" | "result">,
+  income: number,
+): { income: number; rateKey: string }[] | undefined {
+  const parts = splitPartsForLossOffset(
+    pa.result.splitDetail,
+    pa.correctedSingleInput,
+    parseRatesFromMap(pa.rates),
+    pa.result.multiHouseSurchargeEvaluation,
+  );
+  if (!parts || parts.reduce((s, p) => s + p.income, 0) !== income) return undefined;
+  return parts.map((p) => ({
+    income: p.income,
+    rateKey: lossOffsetRateKey({
+      rateClause: p.rateClause,
+      appliedRate: p.appliedRate,
+      propertyType: p.propertyType,
+      propertyId: `${pa.item.propertyId}#${p.kind}`,
+    }),
+  }));
 }

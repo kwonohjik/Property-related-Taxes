@@ -185,6 +185,8 @@ export function aggregateByGroup(
     multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
     // §103② — 단건과 같은 술어로 감면 제외 파트에 기본공제를 먼저 준다.
     reducedPart: publicExpropriationReducedPart(records[i].correctedSingleInput, records[i].result.splitDetail),
+    // 차손을 파트 단위로 통산했으면(Q-F3a) 파트 소득 안분을 통산 후 파트 소득으로 한다.
+    ...(records[i].lossPartIncomeAfterOffset ? { partIncomeWeights: records[i].lossPartIncomeAfterOffset } : {}),
     // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
     ...(records[i].result.rentalHousingExceptionDetail?.applied === true
       ? { rentalHousingTaxableIncome: records[i].income }

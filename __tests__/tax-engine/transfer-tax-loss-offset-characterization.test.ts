@@ -312,6 +312,7 @@ describe("C-9: 통산할 상대가 없는 경우 — no-op", () => {
       lossOffsetFromSame: [],
       lossOffsetFromOther: [],
       incomeAfterOffset: [],
+      partIncomeAfterOffset: [],
       unusedLoss: 0,
     });
   });
