@@ -103,6 +103,8 @@ export interface SplitRatePart {
    * 갈린」 파트가 나뉜다(계획서 `transfer-rate-clause-candidates` E-2).
    */
   candidateClauses?: RateClause[];
+  /** §104⑤2호 버킷 키 전용 단일세율 — `CalcTaxResult.bucketFlatRate`를 그대로 싣는다(Q-F1 α). */
+  bucketFlatRate?: number;
   /**
    * 이 파트의 **세율 판정에 실제로 쓰인 입력** — 다건 호별 합산이 같은 규칙을 재현하려면 필요하다.
    *
@@ -349,7 +351,7 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
   // 토지 파트가 `isNonBusinessLand: false`로 강제되기 때문이다(위 seeds).
   const clauseGroups = new Map<string, number[]>();
   seeds.forEach((_, i) => {
-    const k = clauseBucketKey(finals[i].candidateClauses, finals[i].appliedRate, i);
+    const k = clauseBucketKey(finals[i].candidateClauses, finals[i].appliedRate, i, finals[i].bucketFlatRate);
     clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), i]);
   });
 
@@ -396,6 +398,7 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
     // 위 `clauseKey`가 이미 쓰고 있던 값을 밖으로 내보낸다 — 다건 호별 합산의 그룹 키(P12).
     rateClause: finals[i].rateClause,
     candidateClauses: finals[i].candidateClauses,
+    bucketFlatRate: finals[i].bucketFlatRate,
     rateInput: s.rateInput,
     surchargeType: finals[i].surchargeType,
     surchargeRate: finals[i].surchargeRate,
@@ -531,6 +534,7 @@ function computePartialNblTax(
         appliedRate: nblPart.appliedRate,
         rateClause: nblPart.rateClause,
         candidateClauses: nblPart.candidateClauses,
+        bucketFlatRate: nblPart.bucketFlatRate,
         rateInput: nblRateInput,
         surchargeType: nblPart.surchargeType,
         surchargeRate: nblPart.surchargeRate,
@@ -547,6 +551,7 @@ function computePartialNblTax(
         appliedRate: otherPart.appliedRate,
         rateClause: otherPart.rateClause,
         candidateClauses: otherPart.candidateClauses,
+        bucketFlatRate: otherPart.bucketFlatRate,
         rateInput: otherRateInput,
         surchargeType: otherPart.surchargeType,
         surchargeRate: otherPart.surchargeRate,
@@ -663,6 +668,7 @@ function resolveRentalHousingSplitTax(
     appliedRate: p.tax.appliedRate,
     rateClause: p.tax.rateClause,
     candidateClauses: p.tax.candidateClauses,
+    bucketFlatRate: p.tax.bucketFlatRate,
     rateInput: p.rateInput,
     surchargeType: p.tax.surchargeType,
     surchargeRate: p.tax.surchargeRate,

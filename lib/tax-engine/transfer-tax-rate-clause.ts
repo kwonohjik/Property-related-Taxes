@@ -91,6 +91,9 @@ export const clauseSet = (...cs: (RateClause | undefined)[]): RateClause[] | und
  *     묶음 판정에 아무 의미가 없다(교재 사례2 = D-11의 핵심).
  *   · **단일세율 호만**  → `후보|세율`. 세율이 같아야 합산 1회가 성립하고, 그때 자산별 합과의
  *     차이는 floor 횟수뿐이다.
+ *   · **1호 + 단일세율 호**(`bucketFlatRate` 있음) → `후보|그 단일세율`. 1~2년 40% 자산은 1호에도
+ *     해당하므로 후보에 1호가 늘 있지만, 세율을 빼면 60% 주택 단기와 섞인다. 승패와 무관하게 같은
+ *     키여야 1원 절벽이 없다(Q-F1 α — `transfer-104-5-split-nonhouse-followups.plan.md` §1).
  *
  * ⚠️ 후보 배열은 `clauseSet`이 **정렬**해 둔 것이어야 한다 — 순서가 흔들리면 키가 갈려
  *   입력 순서 의존이 재발한다(계획서 R-3).
@@ -99,9 +102,11 @@ export function clauseBucketKey(
   candidates: readonly RateClause[] | undefined,
   appliedRate: number,
   id: string | number,
+  bucketFlatRate?: number,
 ): string {
   if (!candidates || candidates.length === 0) return `solo-${id}`;
   const joined = candidates.join("+");
+  if (bucketFlatRate !== undefined) return `${joined}|${bucketFlatRate}`;
   return candidates.some((c) => PROGRESSIVE_RATE_CLAUSES.has(c))
     ? joined
     : `${joined}|${appliedRate}`;

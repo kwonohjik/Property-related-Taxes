@@ -103,7 +103,8 @@ describe("§104①10호(미등기 70%) × §104⑦(다주택 중과) 우열 — 
       parsedRates,
       baseTransferInput(unregisteredSame) as TransferTaxInput,
     );
-    expect(unreg.candidateClauses).toEqual(["104-1-10"]);
+    // 1호는 §104① 후단으로 늘 함께 해당한다(Q-F1 α) — 이 테스트의 요지는 ⑦ 호 부재다.
+    expect(unreg.candidateClauses).toEqual(["104-1-1", "104-1-10"]);
     expect(unreg.candidateClauses).not.toContain("104-7-3");
     expect(unreg.rateClause).toBe("104-1-10");
 

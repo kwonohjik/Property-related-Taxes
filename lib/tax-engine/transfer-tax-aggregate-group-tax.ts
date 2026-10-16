@@ -203,6 +203,7 @@ export function aggregateByGroup(
        * 나뉘고, 반대로 「해당 호는 다른데 승자만 같은」 자산이 합쳐진다(계획서 E-2).
        */
       candidateClauses: tr.candidateClauses,
+      bucketFlatRate: tr.bucketFlatRate,
       /**
        * §104⑤ 합산 단위인 **파트 목록**(있으면).
        * 본문 후단이 「각각을 **별개의 자산**으로 보아」라고 정하므로, 자산 하나가 둘 이상의
@@ -238,6 +239,7 @@ export function aggregateByGroup(
   type ClausePart = Pick<SplitRatePart, "taxBase" | "calculatedTax" | "appliedRate"> & {
     /** 묶음 키의 **정본** — §104①·⑦ 후단의 승자가 아니라 「해당 호 집합」이다(Q3). */
     candidateClauses: SplitRatePart["candidateClauses"];
+    bucketFlatRate: SplitRatePart["bucketFlatRate"];
     /**
      * ⚠️ 파트가 **실어 보낸 입력**을 그대로 쓴다. 재구성하면 dual-truth다 — 토지 파트는
      *   `buildLandRateInput`으로 §104② 기산일을 확정했고, 비사업용 파트는 `nonBusinessLandAreaRatio`를 1로 되돌린 입력이다.
@@ -261,6 +263,7 @@ export function aggregateByGroup(
           calculatedTax: p.calculatedTax,
           appliedRate: p.appliedRate,
           candidateClauses: p.candidateClauses,
+          bucketFlatRate: p.bucketFlatRate,
           rateInput: p.rateInput,
           surchargeRate: p.surchargeRate,
           mhResult,
@@ -273,6 +276,7 @@ export function aggregateByGroup(
         calculatedTax: a.tax,
         appliedRate: a.rate,
         candidateClauses: a.candidateClauses,
+        bucketFlatRate: a.bucketFlatRate,
         rateInput: r.correctedSingleInput,
         surchargeRate: a.surcharge,
         mhResult,
@@ -295,7 +299,7 @@ export function aggregateByGroup(
    *   주택·조합원입주권·분양권 공통)는 같은 호·같은 세율이므로 종전대로 다른 자산과 합산한다.
    */
   const bucketIdOf = (u: ClausePart, n: number) => {
-    const key = clauseBucketKey(u.candidateClauses, u.appliedRate, n);
+    const key = clauseBucketKey(u.candidateClauses, u.appliedRate, n, u.bucketFlatRate);
     const presaleProgressiveKey =
       records[u.assetIdx].item.propertyType === "presale_right" &&
       (u.candidateClauses ?? []).some((c) => PROGRESSIVE_RATE_CLAUSES.has(c));

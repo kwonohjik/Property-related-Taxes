@@ -94,14 +94,14 @@ describe("Q1 — §104⑦ 후단(다주택 중과) 축도 승패와 무관", () 
     expect(clauses(150_000_000, MH3_SHORT)).toEqual(["104-1-2", "104-7-3"]);
   });
 
-  it("A-3c: 중과 대상이 아니면 단기 호 하나뿐", () => {
-    expect(clauses(300_000_000, { acquisitionDate: D("2025-01-01") })).toEqual(["104-1-2"]);
+  it("A-3c: 중과 대상이 아니면 단기 호와 1호(§104① 후단 — 승패와 무관, Q-F1 α)", () => {
+    expect(clauses(300_000_000, { acquisitionDate: D("2025-01-01") })).toEqual(["104-1-1", "104-1-2"]);
   });
 });
 
 describe("Q1 — 단정 분기 (승패 비교가 없다)", () => {
-  it("A-4a: 미등기 §104①10호", () => {
-    expect(clauses(200_000_000, { isUnregistered: true })).toEqual(["104-1-10"]);
+  it("A-4a: 미등기 §104①10호 — 1호에도 해당(§104① 후단, Q-F1 α)", () => {
+    expect(clauses(200_000_000, { isUnregistered: true })).toEqual(["104-1-1", "104-1-10"]);
   });
 
   it("A-4b: 기본 누진 §104①1호", () => {
