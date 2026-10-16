@@ -132,10 +132,16 @@ export function aggregateByGroup(
   clauseTaxes: Map<string, ClauseTaxEcho>;
   /** 자산별로 파트가 속한 호 버킷 식별자(중복 제거). 비과세 자산은 빈 배열. */
   assetClauseKeys: string[][];
+  /**
+   * 자산별 **파트 종류 → 호 버킷 식별자**(파트가 있는 자산만). 감면소득이 어느 파트 것인지 확정된 자산
+   * (§77 한 파트만 요건 충족 — 5B)을 그 파트의 호로 귀속하는 데 쓴다(Q-F2a — 감면 M-8).
+   */
+  assetPartClauseKeys: Partial<Record<SplitRatePart["kind"], string[]>>[];
 } {
   const groupMap = new Map<RateGroup, number[]>();
   const clauseTaxes = new Map<string, ClauseTaxEcho>();
   const assetClauseKeySets = records.map(() => new Set<string>());
+  const assetPartClauseKeySets = records.map(() => new Map<SplitRatePart["kind"], Set<string>>());
   records.forEach((r, i) => {
     if (r.result.isExempt) return;
     const list = groupMap.get(r.rateGroup) ?? [];
@@ -250,6 +256,8 @@ export function aggregateByGroup(
     mhResult?: MultiHouseSurchargeResult;
     /** 파트가 나온 자산 — 세율군 안분·호 버킷 echo(`assetClauseKeys`)용. */
     assetIdx: number;
+    /** 파트 종류(파트가 있는 자산만) — `assetPartClauseKeys` echo용. */
+    partKind?: SplitRatePart["kind"];
   };
   const units: ClausePart[] = [];
   records.forEach((r, i) => {
@@ -268,6 +276,7 @@ export function aggregateByGroup(
           surchargeRate: p.surchargeRate,
           mhResult,
           assetIdx: i,
+          partKind: p.kind,
         });
       }
     } else {
@@ -335,7 +344,13 @@ export function aggregateByGroup(
       bucketRate = tr.appliedRate;
     }
     clauseTaxes.set(id, { key, tax: bucketTax, taxBase: bucketBase });
-    for (const p of members) assetClauseKeySets[p.assetIdx].add(id);
+    for (const p of members) {
+      assetClauseKeySets[p.assetIdx].add(id);
+      if (p.partKind) {
+        const byKind = assetPartClauseKeySets[p.assetIdx];
+        byKind.set(p.partKind, (byKind.get(p.partKind) ?? new Set<string>()).add(id));
+      }
+    }
 
     // §104⑤ **크로스 조정**(부동산 8호 ↔ 주식 9호)용 echo — 본문 후단이 「제1항제8호 및 제9호의 자산은
     // **동일한 자산으로 보고**」라 정하므로 8호 몫을 분리해 내보낸다.
@@ -455,6 +470,9 @@ export function aggregateByGroup(
     clause1BucketTax,
     clauseTaxes,
     assetClauseKeys: assetClauseKeySets.map((set) => [...set]),
+    assetPartClauseKeys: assetPartClauseKeySets.map((byKind) =>
+      Object.fromEntries([...byKind].map(([kind, ids]) => [kind, [...ids]])),
+    ),
   };
 }
 

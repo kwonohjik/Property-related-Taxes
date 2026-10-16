@@ -188,11 +188,30 @@ export function PublicExpropriationDetailCard({
       ) : (
         <>
           <div className="space-y-0.5 border-t border-primary/20 pt-1.5">
-            <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × <Frac top={RATED_REDUCIBLE_INCOME_LABEL} bottom="과세표준" /></p>
-            <p className="font-medium">
-              {formatKRW(calculatedTax ?? 0)} × <Frac top={formatKRW(bd.reducibleIncome)} bottom={formatKRW(taxBase ?? 0)} />
-              {" = "}{formatKRW(d.rawReductionAmount)}
-            </p>
+            {d.partWise?.clauseBasis ? (
+              <>
+                <p className="text-muted-foreground">
+                  ⑤ 감면세액 = {d.partWise.eligiblePart === "land" ? "토지" : "건물"}분이 속한 호의 산출세액 ×{" "}
+                  <Frac top={RATED_REDUCIBLE_INCOME_LABEL} bottom="그 호의 과세표준" />
+                </p>
+                <p className="text-muted-foreground" data-testid="expropriation-clause-basis">
+                  토지·건물이 서로 다른 세율의 호에 속해 감면대상 파트의 호로 계산합니다(호별 산정 — 재산세과-3820)
+                </p>
+                <p className="font-medium">
+                  {formatKRW(d.partWise.clauseBasis.calculatedTax)} ×{" "}
+                  <Frac top={formatKRW(bd.reducibleIncome)} bottom={formatKRW(d.partWise.clauseBasis.taxBase)} />
+                  {" = "}{formatKRW(d.rawReductionAmount)}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground">⑤ 감면세액 = 산출세액 × <Frac top={RATED_REDUCIBLE_INCOME_LABEL} bottom="과세표준" /></p>
+                <p className="font-medium">
+                  {formatKRW(calculatedTax ?? 0)} × <Frac top={formatKRW(bd.reducibleIncome)} bottom={formatKRW(taxBase ?? 0)} />
+                  {" = "}{formatKRW(d.rawReductionAmount)}
+                </p>
+              </>
+            )}
           </div>
           {d.cappedByAnnualLimit && (
             <div className="space-y-0.5">
