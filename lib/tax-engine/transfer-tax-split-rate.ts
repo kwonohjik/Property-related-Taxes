@@ -151,6 +151,24 @@ export interface SplitPartRateContext {
    * 단건(`transfer-tax.ts`)은 이 경로에 오지 않으므로 넘기지 않는다.
    */
   rentalHousingTaxableIncome?: number;
+  /**
+   * 1호(합산 누진)가 이기고 그 값이 자산 단위 세액과 같아도 **배율 초과 비사업용 토지 파트가 있으면** 파트를 자산에 남긴다 — 다건 전용.
+   *
+   * 다건 §104⑤ 합산은 파트가 있는 자산만 파트(호별 버킷)로 펼친다. 파트를 떼어 버리면 배율 초과분(§104①8호)이 짝 비사업용 토지의
+   * 8호 버킷과 합산되지 못하고 자산 하나로 접혀, 양도 순서에 따라 세액이 갈리고 1원 경계에서 세액이 크게 뛴다.
+   * 소득세법 §104⑤ 후단이 비사업용 토지와 그 외 토지를 「제2호의 금액을 계산할 때」 별개 자산으로 보므로 승패와 무관하게 분리한다.
+   * 단건(`transfer-tax.ts`·finalize·§155⑳ 단건 경로)은 합산할 짝이 없어 넘기지 않는다 — 단건 산식·산식 문구는 종전 그대로다.
+   * §155⑳ 나중 취득 토지(G-3) 재귀(`...ctx`)에도 그대로 전파된다 — 별도 차단하지 않는다.
+   */
+  keepExcessPartsOnClause1Win?: boolean;
+  /**
+   * 「다른 rateGroup 자산·파트의 호 버킷 키」 — `keepExcessPartsOnClause1Win`의 가드(다건 전용, 느린 평가).
+   *
+   * 다건 합산은 **같은 rateGroup 안에서만** 호 버킷을 묶는다(D1: 그룹은 자산 단위 승자). 배율 초과분과 같은 호 키의 자산·파트가
+   * 다른 그룹에 있으면, 파트를 남겨도 그 버킷이 합산되지 못한 채 자산 단위 세액(1호 승)보다 2호만 부당하게 낮아진다.
+   * 이 경우에만 종전처럼 자산 단위로 둔다 — D1(그룹 경계) 재검토 전까지의 보호 장치다.
+   */
+  otherGroupBucketKeys?: () => ReadonlySet<string>;
 }
 
 /**
@@ -680,9 +698,27 @@ export function resolveSplitAwareTax(
   const chosenTax = Math.max(parts.perAssetTotal, parts.aggregateProgressive);
   if (parts.chosen === "aggregate") {
     const base = fallback();
-    // 1호(합산 누진)가 이겼고 그 값이 기존 자산 단위 세액과 같으면 **아무것도 바뀌지 않는다** —
+    // 1호(합산 누진)가 이겼고 그 값이 기존 자산 단위 세액과 같으면 **세액은 바뀌지 않는다** —
     // 장기보유 split 자산 대부분이 여기다(파트 누진구간만 다름). 산식 문구까지 종전 그대로 둔다.
-    if (base.calculatedTax === chosenTax) return { ...base, partRateBasisApplied: true };
+    // 단, 다건에서 배율 초과 비사업용 토지 파트가 있으면 그 파트를 8호 버킷 합산에 쓰도록 파트를 남긴다(`keepExcessPartsOnClause1Win`).
+    if (base.calculatedTax === chosenTax) {
+      const excess = parts.parts.filter((p) => p.kind === "non_business_land");
+      const keep =
+        ctx.keepExcessPartsOnClause1Win === true &&
+        excess.length > 0 &&
+        !excess.some((p) => ctx.otherGroupBucketKeys?.().has(clauseBucketKey(p.candidateClauses, p.appliedRate, "excess")));
+      if (!keep) return { ...base, partRateBasisApplied: true };
+      // 파트를 남기면 자산 breakdown의 「산출세액 (참고)」 산식 문구가 이 분기의 값(1호 합산 누진)을 설명해야 한다.
+      return {
+        ...base,
+        shortTermNote:
+          base.shortTermNote ??
+          `토지·건물 파트별 세율 비교(소득세법 §104⑤): 합산 누진세액 ${chosenTax.toLocaleString()}이 ` +
+            `자산별 합계 ${parts.perAssetTotal.toLocaleString()} 이상이라 합산 누진세액을 산출세액으로 한다 (배율 초과 토지는 비사업용 토지로 호별 합산)`,
+        splitPartDetail: parts,
+        partRateBasisApplied: true,
+      };
+    }
     // 기존 경로가 자산 단위 단기세율을 전체에 물려 1호보다 크게 나온 경우 — §104⑤ 위반이므로 정정.
     const { baseRate, deduction } = computeBracketBreakdown(ctx.taxBase, ctx.parsedRates.brackets);
     return {
