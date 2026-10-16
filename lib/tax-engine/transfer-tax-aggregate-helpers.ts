@@ -291,6 +291,45 @@ export function allocateBasicDeductionAcrossParts(
   return result;
 }
 
+/** §103② 배분 대상 자산 1건 — `allocateBasicDeduction`·`sameDayTieGroups` 공용. */
+export interface BasicDeductionEligible {
+  idx: number;
+  income: number;
+  transferDate: Date;
+  /**
+   * §90①의 **B — 감면대상 양도소득금액**(세액감면형). 없으면 0.
+   * 소득공제형(§90②)은 이미 `income`에서 빠져 있다(`taxableAfterReduction`).
+   */
+  reducibleIncome?: number;
+  /**
+   * 감면소득의 **감면율별 조각**(감면액 산식과 같은 leaf — `bucketsOf`). 2단계(감면분)를 같은 날 양도한
+   * 자산 사이에서 **감면율 낮은 조각부터** 흡수하는 데 쓴다(부동산거래관리과-0893). 없으면 감면율 1 한 조각.
+   */
+  reducibleBuckets?: { income: number; rate: number }[];
+  /**
+   * 한계세율 — `tieRank`가 없을 때의 동순위 기본 순서(같은 날 · 같은 감면율).
+   * 배분 «순서»를 정할 뿐 금액 계산에는 쓰이지 않는다.
+   */
+  rate?: number;
+}
+
+/** 감면분은 income을 넘을 수 없다 — 차손 통산으로 income이 줄어든 자산이 있다. */
+const reducibleOf = (e: BasicDeductionEligible) => Math.min(e.income, Math.max(0, e.reducibleIncome ?? 0));
+
+/** 2단계 흡수 조각 — 자산의 감면분을 감면율별로 펼친다(감면분 상한 안에서, 낮은 율부터). */
+function reducibleSlicesOf(e: BasicDeductionEligible): { idx: number; transferDate: Date; rate: number; income: number }[] {
+  let cap = reducibleOf(e);
+  const declared = e.reducibleBuckets && e.reducibleBuckets.length > 0 ? e.reducibleBuckets : [{ income: cap, rate: 1 }];
+  const out: { idx: number; transferDate: Date; rate: number; income: number }[] = [];
+  for (const b of [...declared].sort((x, y) => x.rate - y.rate)) {
+    const income = Math.min(cap, Math.max(0, b.income));
+    if (income <= 0) continue;
+    out.push({ idx: e.idx, transferDate: e.transferDate, rate: b.rate, income });
+    cap -= income;
+  }
+  return out;
+}
+
 /**
  * §103② **법정 배분 순서** — 감면소득금액 「외」에서 먼저, 그 안에서 「먼저 양도한 자산」부터.
  *
@@ -305,83 +344,169 @@ export function allocateBasicDeductionAcrossParts(
  * ⛔ **`MAX_BENEFIT`(높은 세율 우선)은 폐지됐다** (2026-09-16 사용자 결정 — 「법문대로」).
  *   법정 순서가 아니었고, 게다가 **자기 이름도 지키지 않았다**: `rateGroup` 우선순위로 먼저
  *   정렬했는데 그 순위가 실효세율과 어긋났다(`short_term` 40%가 `multi_house_surcharge` 72%보다
- *   앞). 실측 880,000·330,000원 과대. 구 세션·구 이력의 `"MAX_BENEFIT"` 값은 아래 `order`가
+ *   앞). 실측 880,000·330,000원 과대. 구 세션·구 이력의 `"MAX_BENEFIT"` 값은 아래 순서가
  *   **양도일 순으로 흡수**한다(별도 마이그레이션 불요).
  *
- * ⚠️ **조문은 감면분 «내부» 순서를 정하지 않는다.** 여기서는 1단계와 같은 순서를 쓴다 —
- *   같은 신고에서 두 단계가 다른 축을 쓰면 설명할 수 없다. (감면액 산식 쪽에서 감면 버킷 간
- *   흡수 순서는 `absorbBasicDeduction`이 「감면율 낮은 것부터」로 따로 정한다 — 그쪽은 §77 계열
- *   단건 산식의 기존 해석이다.)
+ * 🔑 **조문이 침묵하는 두 자리는 국세청 해석으로 채운다** (계획서 `transfer-basic-deduction-same-day-tie.plan.md`):
+ *   · **같은 날 양도**(선후 불분명) — 「납세자에게 유리하다고 판단되는 양도자산의 양도소득금액에서부터 순차로
+ *     공제」(재일46014-1685, 1997.7.11.). 무엇이 유리한지는 신고 전체 세액으로만 판정되므로 **호출측**
+ *     (`calculateTransferTaxAggregate`)이 후보 순서를 평가해 `tieRank`로 넘긴다. 없으면 한계세율 내림차순 → idx.
+ *   · **같은 날 감면소득 사이** — 「감면율이 다른 자산을 같은 날 양도하는 경우 … 감면율이 낮은 양도소득금액에서
+ *     먼저 공제」(부동산거래관리과-0893, 2011.10.20.). 2단계는 자산이 아니라 **감면율 조각** 단위로 흡수한다.
+ *   양도일이 다르면 두 단계 모두 먼저 양도한 자산부터다(감면소득 사이의 순서도 조문 침묵 — 양도일 순 유지).
  */
 export function allocateBasicDeduction(
-  eligible: {
-    idx: number;
-    income: number;
-    transferDate: Date;
-    /**
-     * §90①의 **B — 감면대상 양도소득금액**(세액감면형). 없으면 0.
-     * 소득공제형(§90②)은 이미 `income`에서 빠져 있다(`taxableAfterReduction`).
-     */
-    reducibleIncome?: number;
-    /**
-     * 한계세율 — **동순위 tie-break 전용**(§103②이 침묵하는 자리. 아래 `order` 참조).
-     * 배분 «순서»를 정할 뿐 금액 계산에는 쓰이지 않는다.
-     */
-    rate?: number;
-  }[],
+  eligible: BasicDeductionEligible[],
   available: number,
   strategy: "FIRST" | "EARLIEST_TRANSFER",
+  /** 같은 날(·같은 감면율) 자산 사이 순위 — 작을수록 먼저. 호출측의 「유리한 순서」 판정 결과다. */
+  tieRank?: ReadonlyMap<number, number>,
 ): { idx: number; amount: number }[] {
   if (available <= 0 || eligible.length === 0) return [];
 
-  /**
-   * 🔑 **§103②은 「같은 날 양도한 자산」 사이의 순서를 정하지 않는다.**
-   *
-   * 그대로 두면 stable sort가 **입력 순서**로 떨어져 같은 사안의 세액이 목록 순서에 따라
-   * 갈린다 — 이 저장소가 반복해서 고쳐 온 결함이다(§104⑤ 그룹 대표 순서 의존 등).
-   * ⇒ 조문이 비워 둔 자리에 **결정적 기준**을 둔다: 한계세율 내림차순 → idx.
-   *   단건의 파트 축(`allocateBasicDeductionAcrossParts`)과 **같은 기준**이라 경로 간
-   *   같은 사안이 같은 값을 낸다. 실측 고정: T-M17「입력 순서 무관 — [50,40] === [40,50]」.
-   */
-  const order =
+  const rateOf = new Map(eligible.map((e) => [e.idx, e.rate ?? 0]));
+  /** 동순위 순서 — `tieRank`가 있으면 그것, 없으면 한계세율 내림차순 → idx(T-M17·B-9). */
+  const tie = (a: number, b: number) =>
+    tieRank
+      ? (tieRank.get(a) ?? Number.MAX_SAFE_INTEGER) - (tieRank.get(b) ?? Number.MAX_SAFE_INTEGER) || a - b
+      : rateOf.get(b)! - rateOf.get(a)! || a - b;
+  const byDate = (a: { transferDate: Date }, b: { transferDate: Date }) =>
+    a.transferDate.getTime() - b.transferDate.getTime();
+
+  const stage1 =
     strategy === "FIRST"
       ? [...eligible].sort((a, b) => a.idx - b.idx)
-      : [...eligible].sort(
-          (a, b) =>
-            a.transferDate.getTime() - b.transferDate.getTime() ||
-            (b.rate ?? 0) - (a.rate ?? 0) ||
-            a.idx - b.idx,
-        );
-
-  /** 감면분은 income을 넘을 수 없다 — 차손 통산으로 income이 줄어든 자산이 있다. */
-  const reducibleOf = (e: (typeof eligible)[number]) =>
-    Math.min(e.income, Math.max(0, e.reducibleIncome ?? 0));
+      : [...eligible].sort((a, b) => byDate(a, b) || tie(a.idx, b.idx));
+  const stage2 = eligible.flatMap(reducibleSlicesOf);
+  if (strategy === "FIRST") stage2.sort((a, b) => a.idx - b.idx || a.rate - b.rate);
+  else stage2.sort((a, b) => byDate(a, b) || a.rate - b.rate || tie(a.idx, b.idx));
 
   const byIdx = new Map<number, number>();
   /** **흡수 순서**를 그대로 보존한다 — 1단계(감면 외)가 먼저 나와야 조문 순서로 읽힌다. */
   const absorbOrder: number[] = [];
   let remaining = available;
-  /** 한 단계를 소진 순서대로 훑는다 — `sliceOf`가 그 단계에서 흡수 가능한 몫을 준다. */
-  const sweep = (sliceOf: (e: (typeof eligible)[number]) => number) => {
-    for (const e of order) {
-      if (remaining <= 0) return;
-      const take = Math.min(remaining, sliceOf(e));
-      if (take > 0) {
-        if (!byIdx.has(e.idx)) absorbOrder.push(e.idx);
-        byIdx.set(e.idx, (byIdx.get(e.idx) ?? 0) + take);
-        remaining -= take;
-      }
-    }
+  const take = (idx: number, room: number) => {
+    const t = Math.min(remaining, room);
+    if (t <= 0) return;
+    if (!byIdx.has(idx)) absorbOrder.push(idx);
+    byIdx.set(idx, (byIdx.get(idx) ?? 0) + t);
+    remaining -= t;
   };
-
-  sweep((e) => e.income - reducibleOf(e)); // 1단계 — 감면소득금액 «외»
-  sweep((e) => reducibleOf(e));            // 2단계 — 감면소득금액
+  for (const e of stage1) if (remaining > 0) take(e.idx, e.income - reducibleOf(e)); // 1단계 — 감면소득금액 «외»
+  for (const sl of stage2) if (remaining > 0) take(sl.idx, sl.income);              // 2단계 — 감면소득금액(낮은 율부터)
 
   return absorbOrder.map((idx) => ({ idx, amount: byIdx.get(idx)! }));
+}
+
+/**
+ * 기본공제가 **실제로 닿는** 동순위 묶음 — 같은 날 양도한(2단계는 같은 감면율 조각까지 같은) 자산이 둘 이상이고
+ * 그 묶음에 들어설 때 공제 잔액이 남아 있는 것만. 묶음이 흡수하는 총액은 묶음 안 순서와 무관하므로
+ * 이 판정도 순서와 무관하다. 호출측은 묶음 안 순열만 평가하면 된다(재일46014-1685 — 유리한 순서).
+ * `EARLIEST_TRANSFER` 전용이다(`FIRST`는 사용자가 고른 입력 순서).
+ */
+export function sameDayTieGroups(eligible: BasicDeductionEligible[], available: number): number[][] {
+  const groups: number[][] = [];
+  let remaining = available;
+  /** 같은 (양도일, 감면율) 묶음을 양도일 → 감면율 순으로 훑는다 — 1단계는 감면율 자리가 0이다. */
+  const sweep = (items: { time: number; rate: number; idx: number; room: number }[]) => {
+    const byKey = new Map<string, { time: number; rate: number; idx: Set<number>; room: number }>();
+    for (const it of items) {
+      if (it.room <= 0) continue;
+      const key = `${it.time}|${it.rate}`;
+      const g = byKey.get(key) ?? { time: it.time, rate: it.rate, idx: new Set<number>(), room: 0 };
+      g.idx.add(it.idx);
+      g.room += it.room;
+      byKey.set(key, g);
+    }
+    for (const g of [...byKey.values()].sort((a, b) => a.time - b.time || a.rate - b.rate)) {
+      if (remaining <= 0) return;
+      if (g.idx.size > 1) groups.push([...g.idx].sort((a, b) => a - b));
+      remaining -= Math.min(remaining, g.room);
+    }
+  };
+  sweep(eligible.map((e) => ({ time: e.transferDate.getTime(), rate: 0, idx: e.idx, room: e.income - reducibleOf(e) })));
+  sweep(eligible.flatMap(reducibleSlicesOf).map((sl) => ({ time: sl.transferDate.getTime(), rate: sl.rate, idx: sl.idx, room: sl.income })));
+  return groups;
 }
 
 export function applyGeneralProgressive(taxBase: number, rates: TaxRatesMap): number {
   if (taxBase <= 0) return 0;
   const { brackets } = parseRatesFromMap(rates);
   return calculateProgressiveTax(taxBase, brackets);
+}
+
+/** 동순위 후보 상한(사용자 결정 Q-2) — 넘으면 묶음마다 「누가 첫째인가」만 평가한다. */
+const TIE_CANDIDATE_LIMIT = 24;
+
+function permutations<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, i) => permutations([...xs.slice(0, i), ...xs.slice(i + 1)]).map((rest) => [x, ...rest]));
+}
+
+/**
+ * 동순위 묶음의 순서 후보 중 **납세자에게 가장 유리한** 것(재일46014-1685) — 사용자 결정 Q-1:
+ * 총 부담(`totalTax`) 최소 → 결정세액 최소 → `propertyId` 순.
+ *
+ * 후보는 묶음 안 순열이고 `propertyId` 사전순으로 나열한다 — 세액이 같으면 **먼저 나온 후보**(= propertyId 순)를
+ * 남기므로 입력 순서와 무관하게 같은 배분·같은 세율군 카드가 나온다.
+ * 후보 수가 `TIE_CANDIDATE_LIMIT`을 넘으면 묶음마다 첫째 자산만 바꾸고 나머지는 propertyId 순으로 채운다(Q-2).
+ */
+export function pickFavorableTieRank(
+  groups: number[][],
+  idOf: (idx: number) => string,
+  evaluate: (rank: ReadonlyMap<number, number>) => { totalTax: number; determinedTax: number },
+): ReadonlyMap<number, number> {
+  const byId = (a: number, b: number) => (idOf(a) < idOf(b) ? -1 : idOf(a) > idOf(b) ? 1 : a - b);
+  const sorted = groups.map((g) => [...g].sort(byId));
+  const full = sorted.map((g) => permutations(g));
+  const fullCount = full.reduce((n, p) => n * p.length, 1);
+  const perGroup =
+    fullCount <= TIE_CANDIDATE_LIMIT
+      ? full
+      : sorted.map((g) => g.map((first) => [first, ...g.filter((x) => x !== first)]));
+  let candidates: number[][][] = [[]];
+  for (const options of perGroup) {
+    candidates = candidates.flatMap((c) => options.map((o) => [...c, o]));
+    if (candidates.length > TIE_CANDIDATE_LIMIT) candidates = candidates.slice(0, TIE_CANDIDATE_LIMIT);
+  }
+  const rankOf = (cand: number[][]) => {
+    const rank = new Map<number, number>();
+    for (const order of cand) for (const idx of order) if (!rank.has(idx)) rank.set(idx, rank.size);
+    return rank;
+  };
+  let best = rankOf(candidates[0]);
+  let bestScore = evaluate(best);
+  for (const cand of candidates.slice(1)) {
+    const rank = rankOf(cand);
+    const score = evaluate(rank);
+    if (
+      score.totalTax < bestScore.totalTax ||
+      (score.totalTax === bestScore.totalTax && score.determinedTax < bestScore.determinedTax)
+    ) {
+      best = rank;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
+/**
+ * 같은 날 양도한 감면소득의 감면율이 서로 달라 「감면율 낮은 것부터」(부동산거래관리과-0893)가 실제로 작동했는가 —
+ * 기본공제가 2단계(감면분)까지 닿았고, 그 날 감면율이 다른 감면 자산이 둘 이상일 때. 계산 과정 문구 전용.
+ */
+export function sameDayReducibleRatesDiffer(
+  eligible: BasicDeductionEligible[],
+  allocation: { idx: number; amount: number }[],
+): boolean {
+  const onReducible = allocation.some((a) => {
+    const e = eligible.find((x) => x.idx === a.idx);
+    return e !== undefined && a.amount > e.income - reducibleOf(e);
+  });
+  if (!onReducible) return false;
+  const ratesByDate = new Map<number, Set<number>>();
+  for (const sl of eligible.flatMap(reducibleSlicesOf)) {
+    const t = sl.transferDate.getTime();
+    ratesByDate.set(t, (ratesByDate.get(t) ?? new Set<number>()).add(sl.rate));
+  }
+  return [...ratesByDate.values()].some((rates) => rates.size > 1);
 }

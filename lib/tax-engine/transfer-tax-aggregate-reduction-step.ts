@@ -37,7 +37,7 @@ import type { ClauseTaxEcho } from "./transfer-tax-aggregate-group-tax";
  * legacy 신축·하이브리드 — 율은 `aggregateReductionRate`). 율이 이미 박혀 있는 §77 계열은
  * 합성으로는 복원되지 않아 스스로 버킷을 싣는다.
  */
-function bucketsOf(result: TransferTaxResult): ReducibleIncomeBucket[] {
+export function bucketsOf(result: TransferTaxResult): ReducibleIncomeBucket[] {
   const declared = result.reducibleIncomeBuckets;
   if (declared && declared.length > 0) return declared;
   const income = result.reducibleIncome ?? 0;
@@ -64,8 +64,9 @@ export function reducibleIncomeOf(result: TransferTaxResult): number {
  * §90①의 `(B − C) × E` — 기본공제 C를 **감면율이 낮은 버킷부터** 흡수시키고 율을 곱한다.
  *
  * 「소득세법」 §103②은 감면소득 **내부의** 흡수 순서를 정하지 않는다. 낮은 율부터 태우는 것은
- * §77(현금·채권)·§77의2(현금·대토) **단건 산식의 기존 해석**이고, 다건이 다른 순서를 쓰면
- * 같은 사안의 세액이 경로마다 갈리므로 그대로 따른다.
+ * 국세청 해석(부동산거래관리과-0893, 2011.10.20. — 감면율이 다른 자산을 같은 날 양도하면 감면율이 낮은
+ * 양도소득금액에서 먼저 공제)과 §77(현금·채권)·§77의2(현금·대토) 단건 산식이 같은 방향이다. 다건의 자산 간
+ * 배분(`allocateBasicDeduction` 2단계)도 같은 순서를 쓴다.
  *
  * ⚠️ 절사는 버킷 **안에서** 한다 — 조문이 `(B − C)`를 먼저 만들고 그 뒤에 E를 곱하기 때문이다.
  */
@@ -170,6 +171,11 @@ export interface AggregateReductionArgs {
   taxableAfterReduction: number[];
   /** 배분된 기본공제 합계 */
   totalBasicDeduction: number;
+  /**
+   * 자산별 기본공제 배분(§103② — `allocateBasicDeduction`). §90①의 C를 **이 배분에서** 읽는다 —
+   * 감면 유형 사이의 C를 따로 안분하면 배분 표시와 감면액이 다른 순서를 말한다(부동산거래관리과-0893).
+   */
+  allocatedBasic: number[];
   taxYear: number;
   priorReductionUsage: { year: number; type: string; amount: number }[];
   /** F-9 호별 산정 입력 — 없으면 합산 산식(§104⑤ 전체 누진 채택 · Q-2). */
@@ -187,7 +193,7 @@ export interface AggregateReductionResult {
 /** ① M-8 — 유형별 감면 재계산 + 조특법 §133 한도. */
 export function aggregateReductions(args: AggregateReductionArgs): AggregateReductionResult {
   const {
-    assetRecords, calculatedTax, taxableAfterReduction, totalBasicDeduction,
+    assetRecords, calculatedTax, taxableAfterReduction, totalBasicDeduction, allocatedBasic,
     perClause, steps, warnings,
   } = args;
   const input = { taxYear: args.taxYear, priorReductionUsage: args.priorReductionUsage };
@@ -221,8 +227,8 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
    *
    * **C의 크기는 §103②이 정한다** — 「감면소득금액이 있는 경우에는 그 **감면소득금액 외의**
    * 양도소득금액에서 **먼저** 공제하고 …」. 즉 기본공제는 비감면소득이 먼저 흡수하고,
-   * 흡수하지 못한 잔여만 감면소득에 닿는다:
-   *   `C = max(0, 총 기본공제 − 비감면소득)`
+   * 흡수하지 못한 잔여만 감면소득에 닿는다. 자산마다 `c_i = max(0, 배분 기본공제_i − 비감면소득_i)`이고
+   * 그 배분은 `allocateBasicDeduction`이 정한다(같은 날 감면소득은 감면율 낮은 것부터 — 부동산거래관리과-0893).
    * ⇒ 비감면소득이 250만원 이상이면 C = 0이라 **종전 동작과 같다**. 감면 자산만 있는
    *   사안에서만 발현한다(그때 `(B − C)/D = 1`이 되어 단건과 원 단위까지 맞는다).
    *
@@ -253,15 +259,9 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
       buckets: ReducibleIncomeBucket[];
     }
   >();
-  /** §103② — 비감면소득(기본공제를 먼저 흡수하는 쪽) 총액. */
-  let nonReducibleIncome = 0;
-  assetRecords.forEach((r, idx) => {
-    if (r.result.isExempt) return;
-    const b = bucketsOf(r.result);
-    nonReducibleIncome += Math.max(0, taxableAfterReduction[idx] - sumBucketIncome(b));
-  });
-  /** §90①의 C — 비감면소득이 흡수하지 못한 기본공제 잔여. */
-  const basicDeductionOnReducible = Math.max(0, totalBasicDeduction - nonReducibleIncome);
+  /** §90①의 자산별 C — 배분 기본공제 중 그 자산의 비감면소득이 흡수하지 못한 잔여(`perClauseRowsOf`와 같은 식). */
+  const basicOnReducibleOf = (idx: number) =>
+    Math.max(0, (allocatedBasic[idx] ?? 0) - Math.max(0, taxableAfterReduction[idx] - sumBucketIncome(bucketsOf(assetRecords[idx].result))));
 
   assetRecords.forEach((r, idx) => {
     if (r.result.isExempt) return;
@@ -300,12 +300,6 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     perClause && perClause.clauseTaxes.size > 1 && !spansClauses ? perClause : undefined;
   const clauseByType = new Map<string, { rows: ReductionClauseRow[]; weights: number[] }>();
 
-  /** C 안분 분모 — 유형별 감면대상소득(B) 합계. */
-  const totalGrossReducible = [...reducibleByType.values()].reduce(
-    (s2, e) => s2 + sumBucketIncome(e.buckets),
-    0,
-  );
-
   // 조특법 §133 유형별 연간 한도 — `aggregate-reduction-limits.ts` 모듈 사용.
   // 유형별 원시 감면세액을 계산한 뒤 그룹 단위로 capping.
   const rawByType = new Map<string, number>();
@@ -321,9 +315,10 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     //    (코드리뷰 D8-01 — §97① 본문이 다건에서 정확히 2배 감면됐다).
     //    §77·§77의2·§77의3·§69는 rate가 1이라 `ratedIncome === income`이므로 종전과 동일하다.
     /**
-     * §90①의 `− C`. 감면 유형이 여럿이면 C를 **감면대상소득(B) 비중으로 안분**한다 —
-     * 조문은 유형 간 배분을 정하지 않지만 감면 유형이 하나뿐인 통상 사안에서는 전액이 실려
-     * 단건과 정확히 일치한다.
+     * §90①의 `− C`. 자산마다 그 자산에 배분된 C를 **그 자산의 감면율 낮은 조각부터** 흡수시킨다.
+     * 종전에는 감면 유형이 여럿이면 C를 감면대상소득(B) 비중으로 안분했는데, 같은 날 감면율이 다른
+     * 감면소득은 감면율이 낮은 소득에서 먼저 공제한다(부동산거래관리과-0893 — 실측 자경 100% + 수용 15%:
+     * 안분 833,333 / 1,666,666 → 감면 25,527,666, 해석례대로 25,728,765).
      */
     if (clauseCtx) {
       const pc = perClauseRowsOf(entry.idx, assetRecords, taxableAfterReduction, clauseCtx);
@@ -337,15 +332,18 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
       continue;
     }
     const entryGross = sumBucketIncome(entry.buckets);
-    const cShare =
-      totalGrossReducible > 0 && entryGross > 0
-        ? safeMultiplyThenDivide(basicDeductionOnReducible, entryGross, totalGrossReducible)
-        : 0;
-    // §90①은 `(B − C) × E` — **C를 뺀 뒤** 율을 곱한다. 그래서 버킷 안에서 절사한다.
-    const numerator = absorbBasicDeduction(entry.buckets, cShare);
+    let cApplied = 0;
+    let numerator = 0;
+    for (const i of entry.idx) {
+      const own = bucketsOf(assetRecords[i].result);
+      const c = basicOnReducibleOf(i);
+      cApplied += Math.min(c, sumBucketIncome(own));
+      // §90①은 `(B − C) × E` — **C를 뺀 뒤** 율을 곱한다. 그래서 버킷 안에서 절사한다.
+      numerator += absorbBasicDeduction(own, c);
+    }
     displayByType.set(type, {
       eligibleIncomeBeforeRate: entryGross,
-      basicDeductionApplied: Math.min(cShare, entryGross),
+      basicDeductionApplied: cApplied,
       numerator,
     });
     const raw =
