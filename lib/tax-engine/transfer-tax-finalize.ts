@@ -86,7 +86,8 @@ export interface FinalizeArgs {
   input: TransferTaxInput;
   effectiveInput: TransferTaxInput;
   steps: CalculationStep[];
-  taxResult: ReturnType<typeof calcTax>;
+  /** STEP 7 산출세액 — split 자산은 `resolveSplitAwareTax`가 파트별 세율 판정(`splitPartDetail`)을 함께 싣는다. */
+  taxResult: ReturnType<typeof resolveSplitAwareTax>;
   taxRateInput: TransferTaxInput;
   parsedRates: ParsedRates;
   multiHouseSurchargeResult?: MultiHouseSurchargeResult;
@@ -297,7 +298,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     // Phase 2 (2026-06-11): §97의2·§97의5 시한 — 매매계약일 우선
     input.assetContractDate,
     input.isUnregistered,
-    buildPublicExpropriationParts(input, splitDetailForRate), // 5B — §77 「소급 2년 이전 취득」 파트별 판정
+    buildPublicExpropriationParts(input, splitDetailForRate, taxResult.splitPartDetail), // 5B — §77 「소급 2년 이전 취득」 파트별 판정 · Q-F2c 감면 파트의 호
     expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
   );
   steps.push({

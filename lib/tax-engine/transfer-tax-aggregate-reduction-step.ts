@@ -89,7 +89,48 @@ function absorbBasicDeduction(buckets: ReducibleIncomeBucket[], basicDeduction: 
 export interface PerClauseContext {
   clauseTaxes: Map<string, ClauseTaxEcho>;
   assetClauseKeys: string[][];
+  /** 자산별 파트 종류 → 호 버킷 식별자(`aggregateByGroup` echo). 없으면 귀속하지 않는다. */
+  assetPartClauseKeys?: Partial<Record<PartKind, string[]>>[];
+  /** 자산별 파트 종류 → 세액 계산에서 그 파트가 받은 기본공제(`aggregateByGroup` echo). */
+  assetPartBasic?: Partial<Record<PartKind, number>>[];
   allocatedBasic: number[];
+}
+
+type PartKind = "land" | "building" | "non_business_land" | "housing";
+
+/**
+ * 감면 자산이 §90① A·D를 읽을 **호 버킷**.
+ *
+ * 파트가 한 호에만 있으면 그 호다. 파트가 둘 이상의 호에 걸쳐도, 「조세특례제한법」 §77에서 **한 파트만**
+ * 「소급 2년 이전 취득」 요건을 채우면(5B — `partWise`) 감면소득은 그 파트의 양도소득금액이라 **그 파트의
+ * 호**로 귀속한다 — 안분이 아니라 귀속이 확정돼 있다(Q-F2a, `transfer-104-5-split-nonhouse-followups.plan.md` §2).
+ * 감면 파트 자체가 둘 이상의 호에 걸치면(주택 토지 + 배율 초과분) 귀속할 수 없어 종전 키 그대로 둔다(합산 + 안내).
+ */
+function reductionClauseKeysOf(i: number, result: TransferTaxResult, ctx: PerClauseContext): string[] {
+  return reductionAttributionOf(i, result, ctx)?.keys ?? ctx.assetClauseKeys[i];
+}
+
+/**
+ * 귀속이 성립하면 그 호와 **감면 파트가 세액 계산에서 받은 기본공제**(§90①의 C).
+ * C를 그 값으로 잡아야 분모 D(그 호 버킷의 과세표준 — 파트 내부 기본공제 배분 후)와 축이 같다. 자산 단위 식
+ * `배분 기본공제 − (통산 후 소득 − 통산 전 감면소득)`은 차손이 감면 제외 파트에 닿으면 C를 과대로 잡는다(리뷰 #3).
+ */
+function reductionAttributionOf(
+  i: number,
+  result: TransferTaxResult,
+  ctx: PerClauseContext,
+): { keys: string[]; basic: number } | undefined {
+  if (ctx.assetClauseKeys[i].length <= 1) return undefined;
+  const partWise = result.publicExpropriationDetail?.partWise;
+  if (result.reductionTypeApplied !== "public_expropriation" || !partWise) return undefined;
+  const byKind = ctx.assetPartClauseKeys?.[i] ?? {};
+  // §155⑳ 특례 자산은 파트가 주택분·배율 초과분이라 토지·건물 귀속이 성립하지 않는다.
+  if (byKind.housing) return undefined;
+  const kinds: readonly PartKind[] = partWise.eligiblePart === "land" ? ["land", "non_business_land"] : ["building"];
+  const own = [...new Set(kinds.flatMap((k) => byKind[k] ?? []))];
+  if (own.length !== 1) return undefined;
+  const basicByKind = ctx.assetPartBasic?.[i] ?? {};
+  return { keys: own, basic: kinds.reduce((s, k) => s + (basicByKind[k] ?? 0), 0) };
 }
 
 /** `104-1-10|0.7` → 「§104①10호 (70%)」. 호 불명(`solo-*`)은 「호 미상」. */
@@ -123,7 +164,7 @@ function perClauseRowsOf(
 ): { rows: ReductionClauseRow[]; weights: number[] } {
   const byClause = new Map<string, number[]>();
   for (const i of idxList) {
-    const k = ctx.assetClauseKeys[i][0];
+    const k = reductionClauseKeysOf(i, assetRecords[i].result, ctx)[0];
     byClause.set(k, [...(byClause.get(k) ?? []), i]);
   }
   const rows: ReductionClauseRow[] = [];
@@ -138,7 +179,9 @@ function perClauseRowsOf(
     for (const i of members) {
       const own = bucketsOf(assetRecords[i].result);
       const b = sumBucketIncome(own);
-      const c = Math.max(0, ctx.allocatedBasic[i] - Math.max(0, taxableAfterReduction[i] - b));
+      const c =
+        reductionAttributionOf(i, assetRecords[i].result, ctx)?.basic ??
+        Math.max(0, ctx.allocatedBasic[i] - Math.max(0, taxableAfterReduction[i] - b));
       gross += b;
       basic += c;
       buckets.push(...own);
@@ -291,12 +334,13 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
    * F-9 — 호별 산정 발동 조건. 호 버킷이 **하나뿐이면** 호별 = 합산이라 종전 경로를 그대로 탄다
    * (값이 같다 — F9-3이 고정). 감면 자산의 파트가 **둘 이상의 호에 걸치면**(토지·건물 분리취득 ·
    * 한 필지 중 일부만 비사업용) 감면소득을 호에 나눌 근거가 없어 합산으로 두고 안내한다.
+   * 단, 감면소득의 소속 파트가 확정된 자산(§77 한 파트만 요건 충족)은 그 파트의 호로 귀속한다(`reductionClauseKeysOf`).
    */
   const reducibleIdx = [...reducibleByType.values()].flatMap((e) => e.idx);
   const spansClauses =
     perClause !== undefined &&
     perClause.clauseTaxes.size > 1 &&
-    reducibleIdx.some((i) => perClause.assetClauseKeys[i].length !== 1);
+    reducibleIdx.some((i) => reductionClauseKeysOf(i, assetRecords[i].result, perClause).length !== 1);
   const clauseCtx =
     perClause && perClause.clauseTaxes.size > 1 && !spansClauses ? perClause : undefined;
   const clauseByType = new Map<string, { rows: ReductionClauseRow[]; weights: number[] }>();

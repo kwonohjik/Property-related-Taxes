@@ -13,6 +13,7 @@
 import { calcTax, parseRatesFromMap, type TransferTaxInput } from "./transfer-tax";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import type { SplitRatePart, SplitPartRateContext } from "./transfer-tax-split-rate";
+import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import { PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-clause";
@@ -132,10 +133,19 @@ export function aggregateByGroup(
   clauseTaxes: Map<string, ClauseTaxEcho>;
   /** 자산별로 파트가 속한 호 버킷 식별자(중복 제거). 비과세 자산은 빈 배열. */
   assetClauseKeys: string[][];
+  /**
+   * 자산별 **파트 종류 → 호 버킷 식별자**(파트가 있는 자산만). 감면소득이 어느 파트 것인지 확정된 자산
+   * (§77 한 파트만 요건 충족 — 5B)을 그 파트의 호로 귀속하는 데 쓴다(Q-F2a — 감면 M-8).
+   */
+  assetPartClauseKeys: Partial<Record<SplitRatePart["kind"], string[]>>[];
+  /** 자산별 파트 종류 → 세액 계산에서 그 파트가 받은 기본공제(파트 내부 배분 후) — 감면 귀속의 C. */
+  assetPartBasic: Partial<Record<SplitRatePart["kind"], number>>[];
 } {
   const groupMap = new Map<RateGroup, number[]>();
   const clauseTaxes = new Map<string, ClauseTaxEcho>();
   const assetClauseKeySets = records.map(() => new Set<string>());
+  const assetPartClauseKeySets = records.map(() => new Map<SplitRatePart["kind"], Set<string>>());
+  const assetPartBasic = records.map((): Partial<Record<SplitRatePart["kind"], number>> => ({}));
   records.forEach((r, i) => {
     if (r.result.isExempt) return;
     const list = groupMap.get(r.rateGroup) ?? [];
@@ -173,6 +183,8 @@ export function aggregateByGroup(
     // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
     // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
     multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
+    // §103② — 단건과 같은 술어로 감면 제외 파트에 기본공제를 먼저 준다.
+    reducedPart: publicExpropriationReducedPart(records[i].correctedSingleInput, records[i].result.splitDetail),
     // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
     ...(records[i].result.rentalHousingExceptionDetail?.applied === true
       ? { rentalHousingTaxableIncome: records[i].income }
@@ -250,6 +262,8 @@ export function aggregateByGroup(
     mhResult?: MultiHouseSurchargeResult;
     /** 파트가 나온 자산 — 세율군 안분·호 버킷 echo(`assetClauseKeys`)용. */
     assetIdx: number;
+    /** 파트 종류(파트가 있는 자산만) — `assetPartClauseKeys` echo용. */
+    partKind?: SplitRatePart["kind"];
   };
   const units: ClausePart[] = [];
   records.forEach((r, i) => {
@@ -258,6 +272,7 @@ export function aggregateByGroup(
     const mhResult = r.result.multiHouseSurchargeEvaluation;
     if (a.parts) {
       for (const p of a.parts) {
+        assetPartBasic[i][p.kind] = (assetPartBasic[i][p.kind] ?? 0) + p.allocatedBasicDeduction;
         units.push({
           taxBase: p.taxBase,
           calculatedTax: p.calculatedTax,
@@ -268,6 +283,7 @@ export function aggregateByGroup(
           surchargeRate: p.surchargeRate,
           mhResult,
           assetIdx: i,
+          partKind: p.kind,
         });
       }
     } else {
@@ -335,7 +351,13 @@ export function aggregateByGroup(
       bucketRate = tr.appliedRate;
     }
     clauseTaxes.set(id, { key, tax: bucketTax, taxBase: bucketBase });
-    for (const p of members) assetClauseKeySets[p.assetIdx].add(id);
+    for (const p of members) {
+      assetClauseKeySets[p.assetIdx].add(id);
+      if (p.partKind) {
+        const byKind = assetPartClauseKeySets[p.assetIdx];
+        byKind.set(p.partKind, (byKind.get(p.partKind) ?? new Set<string>()).add(id));
+      }
+    }
 
     // §104⑤ **크로스 조정**(부동산 8호 ↔ 주식 9호)용 echo — 본문 후단이 「제1항제8호 및 제9호의 자산은
     // **동일한 자산으로 보고**」라 정하므로 8호 몫을 분리해 내보낸다.
@@ -455,6 +477,10 @@ export function aggregateByGroup(
     clause1BucketTax,
     clauseTaxes,
     assetClauseKeys: assetClauseKeySets.map((set) => [...set]),
+    assetPartClauseKeys: assetPartClauseKeySets.map((byKind) =>
+      Object.fromEntries([...byKind].map(([kind, ids]) => [kind, [...ids]])),
+    ),
+    assetPartBasic,
   };
 }
 

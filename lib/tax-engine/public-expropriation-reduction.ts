@@ -3,6 +3,8 @@ import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import { clauseBucketKey } from "./transfer-tax-rate-clause";
+import type { SplitPartRateResult, SplitRatePart } from "./transfer-tax-split-rate";
 
 /**
  * 조특법 §77① 감면율 — 경계는 **2025-01-01 양도분**이다.
@@ -102,8 +104,23 @@ export interface PublicExpropriationReductionInput {
 
 /** 5B 파트 입력 — `income`은 그 파트의 양도소득금액(과세 양도차익 − 장기보유특별공제) */
 export interface PublicExpropriationParts {
-  land: { acquisitionDate: Date; income: number };
-  building: { acquisitionDate: Date; income: number };
+  land: { acquisitionDate: Date; income: number; clauseBasis?: PartClauseBasis };
+  building: { acquisitionDate: Date; income: number; clauseBasis?: PartClauseBasis };
+}
+
+/**
+ * 「소득세법」 §90①의 A·D를 **감면대상 파트가 속한 호**로 잡을 때의 산출세액·과세표준(Q-F2c).
+ * 토지·건물이 서로 다른 세율의 호에 속하면 다른 호의 세율이 감면으로 번지지 않도록 그 파트의 호 버킷만 쓴다
+ * (재산세과-3820 「각호별로 산출세액과 감면세액을 산정」 — 다건 M-8과 같은 규칙).
+ */
+export interface PartClauseBasis {
+  calculatedTax: number;
+  taxBase: number;
+  /**
+   * 세액 계산(파트 내부 기본공제 배분)에서 감면 파트가 받은 기본공제 — §90①의 C. 분모 D와 같은 배분에서 읽어야
+   * `(B − C) ≤ D`가 지켜진다(감면 제외분 우선이라고 가정하면 D와 축이 갈려 분수가 1을 넘는다 — 리뷰 #4).
+   */
+  basicDeduction: number;
 }
 
 export interface PublicExpropriationReductionResult {
@@ -151,6 +168,8 @@ export interface PublicExpropriationReductionResult {
     excludedIncome: number;
     /** 감면 제외 파트에 먼저 배정한 기본공제 (「소득세법」 §103② — 감면율이 낮은 자산부터) */
     basicDeductionOnExcluded: number;
+    /** 감면대상 파트가 속한 호의 산출세액·과세표준 — 있으면 §90①의 A·D로 쓴다(호별 산정, Q-F2c). */
+    clauseBasis?: PartClauseBasis;
   };
 }
 
@@ -208,7 +227,18 @@ export function calculatePublicExpropriationReduction(
       const basicDeductionOnExcluded = Math.min(Math.max(0, input.basicDeduction), excludedIncome);
       transferIncome = eligibleIncome;
       basicDeductionInput = input.basicDeduction - basicDeductionOnExcluded;
-      partWise = { eligiblePart, eligibleIncome, excludedIncome, basicDeductionOnExcluded };
+      const clauseBasis = input.parts[eligiblePart].clauseBasis;
+      if (clauseBasis && clauseBasis.taxBase > 0) {
+        basicDeductionInput = Math.min(clauseBasis.basicDeduction, eligibleIncome);
+      }
+      partWise = {
+        eligiblePart,
+        eligibleIncome,
+        excludedIncome,
+        basicDeductionOnExcluded:
+          clauseBasis && clauseBasis.taxBase > 0 ? Math.max(0, input.basicDeduction - basicDeductionInput) : basicDeductionOnExcluded,
+        ...(clauseBasis && clauseBasis.taxBase > 0 ? { clauseBasis } : {}),
+      };
     }
   }
 
@@ -332,10 +362,12 @@ export function calculatePublicExpropriationReduction(
   const reducibleIncome = cashReduction + bondReduction;
 
   // ── ④ 감면세액 = 산출세액 × 감면대상소득금액 / 과세표준 ──
+  //   감면대상 파트의 호가 따로 있으면 그 호의 산출세액·과세표준(호별 산정 — Q-F2c).
+  const basis = partWise?.clauseBasis;
   const rawReductionAmount = safeMultiplyThenDivide(
-    input.calculatedTax,
+    basis?.calculatedTax ?? input.calculatedTax,
     reducibleIncome,
-    input.taxBase,
+    basis?.taxBase ?? input.taxBase,
   );
 
   // ── ⑤ 연간 한도(조특법 §133② — 양도연도별) capping ──
@@ -406,6 +438,8 @@ export function buildPublicExpropriationParts(
     | "acquisitionCause" | "decedentAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate"
   >,
   splitDetail: SplitGainResult | undefined,
+  /** 단건 STEP 7의 파트별 세율 판정 — 있으면 각 파트가 속한 호의 산출세액·과세표준을 싣는다(Q-F2c). */
+  partTax?: SplitPartRateResult,
 ): PublicExpropriationParts | undefined {
   if (input.isSeparateAcquisition !== true || !input.landAcquisitionDate || !splitDetail) return undefined;
   if ((input.selfOwns ?? "both") !== "both") return undefined;
@@ -416,10 +450,69 @@ export function buildPublicExpropriationParts(
     input.landAcquisitionDate,
     useLandCause ? input.landDecedentAcquisitionDate : input.decedentAcquisitionDate,
   )!;
+  const landBasis = partClauseBasisOf(partTax, ["land", "non_business_land"]);
+  const buildingBasis = partClauseBasisOf(partTax, ["building"]);
   return {
-    land: { acquisitionDate: landDate, income: income(splitDetail.land) },
-    building: { acquisitionDate: expropriationAcquisitionDate(input)!, income: income(splitDetail.building) },
+    land: { acquisitionDate: landDate, income: income(splitDetail.land), ...(landBasis ? { clauseBasis: landBasis } : {}) },
+    building: {
+      acquisitionDate: expropriationAcquisitionDate(input)!,
+      income: income(splitDetail.building),
+      ...(buildingBasis ? { clauseBasis: buildingBasis } : {}),
+    },
   };
+}
+
+/**
+ * §77 감면소득이 토지·건물 중 **한 파트에만** 생기는 자산이면 그 파트(5B와 같은 판정). 아니면 `undefined`.
+ *
+ * 「소득세법」 §103② — 「감면소득금액이 있는 경우에는 그 감면소득금액 외의 양도소득금액에서 먼저 공제」한다. 파트별 세율
+ * 계산의 파트 내부 기본공제 배분(`evaluateSplitPartTax`)이 이 순서를 따르게 하는 데 쓴다 — 세율 높은 파트부터 주면
+ * 감면 파트가 공제를 먼저 받아 §90①의 C·D가 토지 자산 + 건물 자산 분리 신고와 갈린다(리뷰 #4, 90,000원).
+ * 세액 계산(STEP 7)이 감면 계산보다 앞서므로 입력만으로 판정한다 — 단건·다건이 같은 술어를 쓴다.
+ */
+export function publicExpropriationReducedPart(
+  input: Parameters<typeof buildPublicExpropriationParts>[0] & Pick<TransferTaxInput, "reductions" | "transferDate">,
+  splitDetail: SplitGainResult | undefined,
+): "land" | "building" | undefined {
+  const r = input.reductions?.find((x) => x.type === "public_expropriation");
+  if (!r || r.type !== "public_expropriation") return undefined;
+  if (r.cashCompensation + r.bondCompensation <= 0 || input.transferDate > PUBLIC_EXPROPRIATION_SUNSET) return undefined;
+  const parts = buildPublicExpropriationParts(input, splitDetail);
+  if (!parts) return undefined;
+  const acqCutoff = subYears(input.transferDate < r.businessApprovalDate ? input.transferDate : r.businessApprovalDate, 2);
+  const landOk = parts.land.acquisitionDate <= acqCutoff;
+  const buildingOk = parts.building.acquisitionDate <= acqCutoff;
+  return landOk === buildingOk ? undefined : landOk ? "land" : "building";
+}
+
+/**
+ * 파트 종류(`kinds`)가 속한 §104⑤2호 호 버킷의 산출세액·과세표준 합.
+ *
+ * 자산 세액이 파트별 세율 합계(§104⑤2호)이고 파트가 둘 이상의 호에 걸칠 때만 낸다 — 합산 누진(1호)이 이기거나
+ * 모든 파트가 한 호면 호별 = 자산 전체라 산정할 것이 없다(다건의 「전체 누진 채택 시 합산 유지」 F-9 Q-2와 같다). 파트가 둘 이상의 호에 걸치면
+ * (주택 토지 + 배율 초과분) 귀속할 수 없어 내지 않는다. 키는 `evaluateSplitPartTax`의 묶음과 같은
+ * `clauseBucketKey(…, 파트 순번, …)`다 — 파트 배열은 그 묶음의 순서 그대로다.
+ */
+function partClauseBasisOf(
+  partTax: SplitPartRateResult | undefined,
+  kinds: readonly SplitRatePart["kind"][],
+): PartClauseBasis | undefined {
+  // §155⑳ 특례 자산(주택분 파트)은 토지·건물 귀속이 성립하지 않는다.
+  if (!partTax || partTax.chosen !== "per_asset" || partTax.parts.some((p) => p.kind === "housing")) return undefined;
+  const keys = partTax.parts.map((p, i) => clauseBucketKey(p.candidateClauses, p.appliedRate, i, p.bucketFlatRate));
+  // 모든 파트가 한 호면 그 호 = 자산 전체라 종전 산식과 같다 — 싣지 않는다(카드의 「호별 산정」 안내가 틀려진다).
+  if (new Set(keys).size <= 1) return undefined;
+  const own = new Set(keys.filter((_, i) => kinds.includes(partTax.parts[i].kind)));
+  if (own.size !== 1) return undefined;
+  const [key] = own;
+  return partTax.parts.reduce<PartClauseBasis>(
+    (acc, p, i) => ({
+      calculatedTax: acc.calculatedTax + (keys[i] === key ? p.calculatedTax : 0),
+      taxBase: acc.taxBase + (keys[i] === key ? p.taxBase : 0),
+      basicDeduction: acc.basicDeduction + (kinds.includes(p.kind) ? p.allocatedBasicDeduction : 0),
+    }),
+    { calculatedTax: 0, taxBase: 0, basicDeduction: 0 },
+  );
 }
 
 /**
