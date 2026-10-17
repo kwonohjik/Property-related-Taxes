@@ -85,6 +85,11 @@ interface CalcTaxResult {
    * `undefined`는 「해당 호를 단정할 수 없음」이다(조특법 특칙 등) — **묶지 않는 것이 안전측**.
    */
   candidateClauses?: RateClause[];
+  /**
+   * §104⑤2호 **버킷 키 전용** 단일세율 — 1호와 특례 단일세율 호(2·3·10호·일체과세)에 함께
+   * 해당하는 자산은 승패와 무관하게 이 값으로 키를 만든다(`clauseBucketKey`). 결과 화면에는 쓰지 않는다.
+   */
+  bucketFlatRate?: number;
 }
 
 
@@ -127,14 +132,19 @@ export function computeBracketBreakdown(
  * 낮으니 …」 같은 **세율값 가정을 코드에 심지 않기 위해서**다. 세율은 DB(`tax_rates`)에서
  * 오므로 누진 최고세율이 오르면 그 가정이 조용히 깨진다.
  *
- * 🔑 **`candidateClauses`는 1호가 이길 때만 1호를 싣는다.** §104⑤2호 단서의 그룹핑 조건이
- *   「동일한 호의 세율이 **적용**되고」라 **적용** 호가 기준이기 때문이다. 무조건 실으면
- *   `clauseBucketKey`가 누진 호 포함으로 판정해 **세율을 키에서 빼고**, 40% 비주택과 60% 주택
- *   단기가 같은 버킷이 된다(분양권 함정과 동형 — `presale-clause-1-bucket-guard.anchor.test.ts`).
- *   진 특례 호는 「각 **해당** 호별」 재계산 대상으로 후보에 함께 남긴다.
+ * 🔑 **1호는 승패와 무관하게 후보에 싣고, 버킷 키에는 특례 단일세율(`bucketFlatRate`)을 남긴다**
+ *   (2026-10-16 Q-F1 α — 계획서 `transfer-104-5-split-nonhouse-followups.plan.md` §1).
+ *   종전에는 1호가 **이길 때만** 실었다. 그러면 1~2년 40% 자산이 과세표준 1,318,800,000을 넘는
+ *   순간 버킷이 바뀌어, 경계 아래 40% 자산과의 §104⑤2호 단서 합산이 1원 차이로 켜졌다 꺼졌다
+ *   (1원 절벽 — Q3가 없앤 「해당 호는 같은데 승자만 갈림」 E-2ⓐ와 같은 결함). 세율을 함께 싣는
+ *   이유는 종전과 같다 — 세율 없이 1호만 실으면 `clauseBucketKey`가 누진 호 포함으로 판정해
+ *   40% 비주택과 60% 주택 단기가 같은 버킷이 된다(`presale-clause-1-bucket-guard.anchor.test.ts`).
+ *   ⚠️ 이 함수를 부르는 **모든** 경로가 같이 실어야 한다 — 하나라도 빠지면 일체과세 70%와 일반
+ *   1년 미만 주택 70%처럼 같은 호·같은 세율이 다른 버킷으로 갈린다(사례 28 1원).
  *
  * @param specialTax     특례 호로 계산한 산출세액
  * @param specialClauses 그 특례 호(들) — 1호가 이겨도 「해당 호」로 함께 싣는다
+ * @param bucketFlatRate 특례 단일세율 — 1호 결과에도 버킷 키 세율로 싣는다(생략하면 싣지 않음)
  * @returns 1호가 **더 크면** 1호 결과, 아니면 `null`(호출부가 특례 결과를 그대로 반환)
  */
 /**
@@ -159,6 +169,7 @@ export function compareWithClause1(
   specialTax: number,
   specialClauses: readonly (RateClause | undefined)[] | undefined,
   specialLabel: string,
+  bucketFlatRate?: number,
 ): CalcTaxResult | null {
   const { progressiveTax, baseRate, deduction } = computeBracketBreakdown(taxBase, brackets);
   // 「큰 것」이므로 **동률에서는 바뀌지 않는다** — 특례 호가 그대로 적용 호로 남는다.
@@ -171,7 +182,19 @@ export function compareWithClause1(
     shortTermNote: `§104① 후단: ${specialLabel} 산출세액보다 §55① 누진세액이 커 1호를 적용`,
     rateClause: "104-1-1",
     candidateClauses: clauseSet("104-1-1", ...(specialClauses ?? [])),
+    ...(bucketFlatRate !== undefined ? { bucketFlatRate } : {}),
   };
+}
+
+/**
+ * 특례 단일세율이 **이긴** 쪽 반환의 후보 — 1호를 함께 싣고 그 세율을 버킷 키로 남긴다.
+ * `compareWithClause1`의 1호 결과와 **같은 키**가 되어야 승패에 따라 버킷이 갈리지 않는다(Q-F1 α).
+ */
+function withClause1Candidate(
+  specialClause: RateClause,
+  flatRate: number,
+): Pick<CalcTaxResult, "candidateClauses" | "bucketFlatRate"> {
+  return { candidateClauses: clauseSet("104-1-1", specialClause), bucketFlatRate: flatRate };
 }
 
 export function calcTax(
@@ -190,7 +213,7 @@ export function calcTax(
     // ※ §104⑦ 중과와의 우열은 별개 축이고 **비교하지 않는 것이 맞다** — ④·⑦ 후단이 비교 대상을
     //   「제1항제2호 또는 제3호」로 한정 열거해 10호를 뺐다(계획서 C-6d ·
     //   `unregistered-104-7-precedence.anchor.test.ts`).
-    const clause1 = compareWithClause1(taxBase, brackets, unregisteredTax, ["104-1-10"], "미등기 70%");
+    const clause1 = compareWithClause1(taxBase, brackets, unregisteredTax, ["104-1-10"], "미등기 70%", flatRate);
     if (clause1) return clause1;
     return {
       calculatedTax: unregisteredTax,
@@ -198,7 +221,7 @@ export function calcTax(
       progressiveDeduction: 0,
       surchargeSuspended: false,
       rateClause: "104-1-10",
-      candidateClauses: clauseSet("104-1-10"),
+      ...withClause1Candidate("104-1-10", flatRate),
     };
   }
 
@@ -269,13 +292,15 @@ export function calcTax(
         // §104① 후단 — **자동 분기(주택 단기 §104①2·3호)일 때만** 비교한다.
         // 수동 오버라이드는 사용자가 세율을 강제한 것이라 해당 호를 단정할 수 없고
         // (그래서 아래 반환도 `rateClause`를 싣지 않는다) 후단의 전제가 성립하지 않는다.
+        const manualClause = unifiedShortTermClause(resolution.manualRate);
         if (!isManualOverride) {
           const manualClause1 = compareWithClause1(
             taxBase,
             brackets,
             applyRate(taxBase, resolution.manualRate),
-            [unifiedShortTermClause(resolution.manualRate)],
+            [manualClause],
             `부수토지 일체과세 ${Math.round(resolution.manualRate * 100)}%`,
+            manualClause ? resolution.manualRate : undefined,
           );
           if (manualClause1) return manualClause1;
         }
@@ -291,8 +316,10 @@ export function calcTax(
           ...(isManualOverride
             ? {}
             : {
-                rateClause: unifiedShortTermClause(resolution.manualRate),
-                candidateClauses: clauseSet(unifiedShortTermClause(resolution.manualRate)),
+                rateClause: manualClause,
+                ...(manualClause
+                  ? withClause1Candidate(manualClause, resolution.manualRate)
+                  : { candidateClauses: clauseSet(manualClause) }),
               }),
         };
       }
@@ -310,6 +337,7 @@ export function calcTax(
           applyRate(taxBase, resolution.unifiedRate),
           [unifiedClause],
           `부수토지 일체과세 ${Math.round(resolution.unifiedRate * 100)}%`,
+          unifiedClause ? resolution.unifiedRate : undefined,
         );
         if (unifiedClause1) return unifiedClause1;
         return {
@@ -318,8 +346,10 @@ export function calcTax(
           progressiveDeduction: 0,
           surchargeSuspended: false,
           shortTermNote: `부수토지 일체과세(§104①2호·영§167의5): ${Math.round(resolution.unifiedRate * 100)}%`,
-          rateClause: unifiedShortTermClause(resolution.unifiedRate),
-          candidateClauses: clauseSet(unifiedShortTermClause(resolution.unifiedRate)),
+          rateClause: unifiedClause,
+          ...(unifiedClause
+            ? withClause1Candidate(unifiedClause, resolution.unifiedRate)
+            : { candidateClauses: clauseSet(unifiedClause) }),
         };
       }
     }
@@ -531,11 +561,10 @@ export function calcTax(
       ? resolveSurchargeAddonRate(input.transferDate, stSurchargeType)
       : null;
     // §104⑦ 후단 비교 대상이 되는 **해당 호 집합** — 승자와 무관하게 아래 두 반환이 **공유**한다.
+    const stSurchargeActive = stSurchargeInfo !== undefined && stHistoricalRate !== null;
     const stCandidates = clauseSet(
       stClause,
-      stSurchargeInfo && stHistoricalRate !== null
-        ? surchargeClause(effectiveSurchargeType)
-        : undefined,
+      stSurchargeActive ? surchargeClause(effectiveSurchargeType) : undefined,
     );
     if (stSurchargeInfo && stHistoricalRate !== null) {
       const additionalRateST = stHistoricalRate;
@@ -567,6 +596,7 @@ export function calcTax(
         shortTermTax,
         stCandidates,
         `단기세율 ${Math.round(shortTermFlatRate * 100)}%`,
+        stSurchargeActive ? undefined : shortTermFlatRate,
       );
       if (clause1) return clause1;
     }
@@ -578,7 +608,10 @@ export function calcTax(
       surchargeSuspended: false,
       shortTermNote,
       rateClause: stClause,
-      candidateClauses: stCandidates,
+      // ⑦ 중과가 후보에 있으면 1호는 이길 수 없고(위 ⚠️) 키는 누진 호 조인이라 세율을 싣지 않는다.
+      ...(stClause !== "104-1-1" && !stSurchargeActive
+        ? withClause1Candidate(stClause, shortTermFlatRate)
+        : { candidateClauses: stCandidates }),
     };
   }
 

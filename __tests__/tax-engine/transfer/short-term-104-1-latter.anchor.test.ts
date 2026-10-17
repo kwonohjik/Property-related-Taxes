@@ -24,11 +24,13 @@
  * 오히려 §104④·⑦ 후단이 「§55①(=1호) 계열 세율 ↔ 제1항제2호·제3호」를 비교하라고 하는 것은
  * **1호와 2·3호를 비교 가능한 관계로 본다**는 방증이다. 계획서 §6-B.
  *
- * ── 설계: `candidateClauses`는 **승자 기준** ────────────────────
- * §104⑤2호 단서의 그룹핑 조건이 「동일한 호의 세율이 **적용**되고」라 **적용** 호가 기준이다.
- * 1호를 무조건 실으면 `clauseBucketKey`가 누진 호 포함으로 판정해 **세율을 키에서 빼고**
- * 40% 비주택과 60% 주택 단기가 같은 버킷이 된다(분양권 함정과 동형).
- * ⇒ **1호가 이길 때만** 후보에 1호를 싣는다 — A-2b가 그 회귀 0을 고정한다.
+ * ── 설계: `candidateClauses`는 **해당 기준** + 버킷 세율 ─────────
+ * (2026-10-16 Q-F1 α로 변경 — `transfer-104-5-split-nonhouse-followups.plan.md` §1)
+ * 종전에는 **1호가 이길 때만** 후보에 1호를 실었다(승자 기준). 그러면 40% 자산이 경계를 넘는
+ * 순간 버킷이 바뀌어, 경계 아래 40% 자산과의 §104⑤2호 단서 합산이 1원 차이로 켜졌다 꺼졌다.
+ * 이제 1호를 **늘** 싣고, 키에는 단일세율(`bucketFlatRate`)을 남긴다 — 세율을 빼면
+ * `clauseBucketKey`가 누진 호 포함으로 판정해 40% 비주택과 60% 주택 단기가 같은 버킷이 된다
+ * (분양권 함정과 동형). A-2b가 «승패와 무관하게 같은 키»를 고정한다.
  *
  * ── 발현 구간 ──────────────────────────────────────────────────
  * 단일세율 호는 40·50·60·70%뿐이고 누진 한계는 45%라 **40%(비주택 1~2년)만** 1호에 진다.
@@ -39,6 +41,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { calcTax } from "@/lib/tax-engine/transfer-tax-rate-calc";
+import { clauseBucketKey } from "@/lib/tax-engine/transfer-tax-rate-clause";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
@@ -77,8 +80,8 @@ describe("§104① 후단 — 일반 단기 자산 × 1호 누진 (2026-08-11 �
 
   it("A-2: 구조 — 누진이 이기면 「해당 호」에 **1호와 2호가 함께** 실린다", () => {
     // `candidateClauses`는 §104⑤2호 버킷 키의 정본이다.
-    // ⑤2호 단서의 그룹핑 조건은 「동일한 호의 세율이 **적용**되고」이므로
-    // **적용**된 호(=후단 승자)를 기준으로 싣는다. 2호는 「각 해당 호별」 재계산 대상으로 남는다.
+    // 1호·2호에 모두 **해당**하므로 둘 다 싣는다(승패와 무관 — A-2b). 2호는 「각 해당 호별」
+    // 재계산 대상으로 남는다.
     const st = calcTax(
       1_997_500_000,
       parsedRates,
@@ -88,19 +91,26 @@ describe("§104① 후단 — 일반 단기 자산 × 1호 누진 (2026-08-11 �
     expect(st.candidateClauses).toEqual(["104-1-1", "104-1-2"]);
   });
 
-  it("A-2b: 40%가 이기면 후보는 **종전 그대로** — 버킷 회귀 0", () => {
-    // 🔑 이것이 설계의 핵심이다. 13.188억 이하에서는 승자가 2호라 후보가 바뀌지 않는다.
-    //   ⇒ `clauseBucketKey`가 「단일세율 호만」 규약(`후보|세율`)을 유지해
-    //     40% 비주택 토지와 60% 주택 단기가 **계속 분리**된다.
-    //   1호를 무조건 추가했다면 누진 호 포함으로 판정돼 세율이 키에서 빠지고 둘이 합쳐졌을 것이다.
+  it("A-2b: 40%가 이겨도 후보에 1호가 실리고, 버킷 키는 1호가 이길 때와 **같다**", () => {
+    // 🔑 이것이 설계의 핵심이다(Q-F1 α). 승자가 2호여도 1호에 해당하므로 후보는 {1,2}다.
+    //   키는 `후보|단일세율`이라 ① 경계(1,318,800,000) 위·아래에서 같고
+    //   ② 60% 주택 단기(`…|0.6`)와는 **계속 분리**된다.
     const st = calcTax(
       500_000_000,
       parsedRates,
       baseTransferInput(shortTermLand) as TransferTaxInput,
     );
+    const won = calcTax(
+      1_997_500_000,
+      parsedRates,
+      baseTransferInput(shortTermLand) as TransferTaxInput,
+    );
     expect(st.rateClause).toBe("104-1-2");
-    expect(st.candidateClauses).toEqual(["104-1-2"]);
-    expect(st.candidateClauses).not.toContain("104-1-1");
+    expect(st.candidateClauses).toEqual(["104-1-1", "104-1-2"]);
+    expect(won.rateClause).toBe("104-1-1");
+    const key = clauseBucketKey(st.candidateClauses, st.appliedRate, "a", st.bucketFlatRate);
+    expect(key).toBe("104-1-1+104-1-2|0.4");
+    expect(clauseBucketKey(won.candidateClauses, won.appliedRate, "b", won.bucketFlatRate)).toBe(key);
   });
 
   it("A-3: 40% 미만 구간에서는 쟁점이 발현하지 않는다 (경계 확인)", () => {
