@@ -71,6 +71,16 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
           idSuffix={`companion-${assetIndex}`}
         />
       )}
+      {/* 주택 부수토지 컴패니언 — 토글은 꺼져 있어도 한도 초과분이 엔진에서 자동으로 비사업용 토지 카드(`__excess`)가 된다. 같은 유예 질문을 한다. */}
+      {asset.assetKind === "land" && !asset.isNonBusinessLand && asset.landNature === "appurtenant" && (
+        <NblDesignatedAreaQuestion
+          transferDate={transferDate}
+          value={asset.isDesignatedArea}
+          onChange={(isDesignatedArea) => onChange({ isDesignatedArea })}
+          idSuffix={`companion-appurtenant-${assetIndex}`}
+          subject="한도 초과분 토지(주택 부수토지 배율 초과)"
+        />
+      )}
 
       {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 **주 자산**에만 표시 (소령 §155⑳) */}
       {hasOrphanRentalDeclaration && (

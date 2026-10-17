@@ -27,6 +27,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
+import { NblDesignatedAreaQuestion } from "./nbl/NblDesignatedAreaQuestion";
 import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
@@ -36,9 +37,11 @@ import { APPURTENANT_ZONE_OPTIONS } from "./appurtenant-zone-options";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 양도일 — 지정지역 질문(양도 2009.3.16.~2015.12.31.)의 기간 판정용 */
+  transferDate?: string;
 }
 
-export function GeneralBuildingNblSection({ asset, onChange }: Props) {
+export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Props) {
   // 자동 배율 표시 — 엔진 함수 재사용 (UI 재계산 금지)
   const zoneMultiplier = useMemo(
     () =>
@@ -54,6 +57,10 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
   const multiplierNum = zoneMultiplier?.multiplier;
   const allowedArea =
     footprint > 0 && multiplierNum !== undefined ? footprint * multiplierNum : null;
+  // 엔진이 비사업용 토지 카드(`land_nbl`)를 만드는 경우 — 무허가건축물은 토지 전체, 아니면 한도 초과분. 아래 한도 미리보기와 같은 판정이다.
+  const hasNblPart = asset.gbUnapprovedBuilding
+    ? landArea > 0
+    : footprint > 0 && landArea > 0 && allowedArea !== null && landArea > allowedArea;
   return (
     <>
         {/* 비사업용토지 판정 (rose) — 항상 표시.
@@ -140,6 +147,16 @@ export function GeneralBuildingNblSection({ asset, onChange }: Props) {
             </div>
           )}
         </ToneCard>
+        {/* 양도일 2009.3.16.~2015.12.31.의 비사업용 토지 카드 — 8호 중과 유예 요건(지정지역 여부). 그 기간·그 카드가 있을 때만 뜬다. */}
+        {hasNblPart && (
+          <NblDesignatedAreaQuestion
+            transferDate={transferDate}
+            value={asset.isDesignatedArea}
+            onChange={(isDesignatedArea) => onChange({ isDesignatedArea })}
+            idSuffix={`gb-${asset.assetId ?? "primary"}`}
+            subject="배율 초과 토지(비사업용 토지 카드)"
+          />
+        )}
     </>
   );
 }

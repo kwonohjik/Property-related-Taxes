@@ -493,6 +493,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
       acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
       isNonBusinessLand: true,
+      ...(input.isDesignatedArea !== undefined ? { isDesignatedArea: input.isDesignatedArea } : {}),
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,

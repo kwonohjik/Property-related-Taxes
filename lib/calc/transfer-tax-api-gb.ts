@@ -209,6 +209,8 @@ export function buildGeneralBuildingValuation(
     zoneType: asset.gbZoneType || undefined,
     isMetropolitan: asset.gbIsMetropolitan,
     unapprovedBuilding: asset.gbUnapprovedBuilding,
+    // 「소득세법」 §104의2② 지정지역 선언 — 양도 2009.3.16.~2015.12.31.의 배율초과 토지 카드(8호 중과 유예 판정)만 읽는다.
+    isDesignatedArea: asset.isDesignatedArea,
   };
 
   /**

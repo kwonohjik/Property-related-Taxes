@@ -194,6 +194,11 @@ export const generalBuildingValuationSchema = z.object({
    */
   unapprovedBuilding: z.boolean().optional(),
   /**
+   * 「소득세법」 §104의2② **지정지역** 선언 — 양도일 2009.3.16.~2015.12.31.의 배율초과 토지 카드(`land_nbl`)에만 쓰인다
+   * (§104⑥ · 법률 제12169호 부칙 제20조 8호 중과 유예). 미입력 = 지정지역으로 보고 중과 유지 + 확인 필요.
+   */
+  isDesignatedArea: z.boolean().optional(),
+  /**
    * 「소득세법」 §104③ **미등기양도자산** — 토지 축 / 건물 축.
    *
    * ⚠️ 바로 위 `isUnregistered`와 **전혀 다른 축**이다. 그쪽은 「지방세법 시행령」 §101① 단서의
@@ -573,6 +578,8 @@ export const GB_SHARE_PROPERTY_LEVEL_PATHS = [
   "zoneType",
   "isMetropolitan",
   "unapprovedBuilding",
+  // 물건 속성 — §104의2② 지정지역 선언(배율초과 토지 카드의 8호 중과 유예 판정). 한 필지의 소재지 사실이라 지분이 같다.
+  "isDesignatedArea",
   // 물건 속성 — §104③ 미등기양도자산(위 `unapprovedBuilding`과 별개 축)
   "unregisteredLand",
   "unregisteredBuilding",

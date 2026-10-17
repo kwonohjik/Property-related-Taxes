@@ -194,6 +194,8 @@ export function buildProperties(
       estimatedBase: card.estimatedBase,
       estimatedDeduction: card.estimatedDeduction,
       isNonBusinessLand: card.isNonBusinessLand,
+      // 배율초과 토지 카드만 — 부모 부동산의 지정지역 선언(§104①8호 유예 판정). 다른 카드에는 card.isDesignatedArea가 없다.
+      ...(card.isDesignatedArea !== undefined ? { isDesignatedArea: card.isDesignatedArea } : {}),
       isOneHousehold: false,
       householdHousingCount: 0,
       residencePeriodMonths: 0,
