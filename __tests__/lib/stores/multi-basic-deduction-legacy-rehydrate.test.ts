@@ -7,7 +7,8 @@
  *
  * (2026-09-16 — 「높은 세율 우선」 폐지. §103②은 「감면소득금액 외 → 먼저 양도한 자산」이다.)
  */
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
+import { useMultiTransferStore } from "@/lib/stores/multi-transfer-tax-store";
 
 const KEY = "multi-transfer-tax-wizard";
 
@@ -32,14 +33,14 @@ function seedLegacySession(allocation: string) {
 }
 
 /**
- * 매번 **새로 초기화된** 스토어를 얻는다 — persist 리하이드레이션은 모듈 평가 시 1회뿐이라
- * 모듈 레지스트리를 비우지 않으면 첫 테스트의 상태가 이어진다.
- * (⚠️ `import("...?t=랜덤")`은 확장자 추론이 깨져 TS transform이 실패한다.)
+ * 심어 둔 세션으로 스토어를 다시 리하이드레이션한다 — `persist.rehydrate()`는 모듈 평가 때와 같은
+ * `merge` → `onRehydrateStorage` 경로를 탄다(`wizard-step-reset-on-reentry.test.ts`와 같은 방식).
+ * 종전엔 테스트마다 `vi.resetModules()` 후 스토어를 다시 import해 첫 테스트가 모듈 그래프 평가(≈1초,
+ * 부하 시 5초 한도 초과)를 테스트 시간 안에서 치렀다.
  */
 async function freshStore() {
-  vi.resetModules();
-  const mod = await import("@/lib/stores/multi-transfer-tax-store");
-  return mod.useMultiTransferStore;
+  await useMultiTransferStore.persist.rehydrate();
+  return useMultiTransferStore;
 }
 
 describe("다건 기본공제 배분 — 구 세션 정규화", () => {
