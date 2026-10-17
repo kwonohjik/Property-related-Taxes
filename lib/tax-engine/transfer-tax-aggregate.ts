@@ -277,7 +277,7 @@ function computeAggregateOnce(
     tieGroups.length > 0 ? " · 같은 날 양도 — 납세자에게 유리한 순서(재일46014-1685)" : "",
     reducibleRank
       ? " · 같은 날 감면소득 — 조특법 §133 감면 한도를 반영해 납세자에게 유리한 순서(재일46014-1685)"
-      : sameDayReducibleRatesDiffer(eligibleForBasic, allocation) ? " · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
+      : sameDayReducibleRatesDiffer(eligibleForBasic, allocation, allocationAxis === "FIRST") ?" · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
   ].join("");
   steps.push({
     label: "기본공제",

@@ -231,6 +231,26 @@ describe("D-5 — 계산 과정 「기본공제」 단계에 같은 날 처리 �
     expect(stepOf(r)).not.toContain(FAVORABLE);
   });
 
+  it("FIRST(입력 순서) — 같은 날 다른 자산끼리는 입력 순서로 배분하므로 감면율 문구를 남기지 않는다", () => {
+    const T = "2026-06-01";
+    const F = () => item("F", T, { transferPrice: 400_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2010-06-01"), reductions: [{ type: "self_farming", farmingYears: 10 }] } as Partial<TransferTaxItemInput>);
+    const X = () => item("X", T, { transferPrice: 500_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2010-06-01"), reductions: [E77] } as Partial<TransferTaxItemInput>);
+    for (const props of [[F(), X()], [X(), F()]]) {
+      const r = run(props, "FIRST");
+      expect(allocOf(r)[props[0].propertyId]).toBe(2_500_000);
+      expect(stepOf(r)).not.toContain(LOWER_RATE);
+    }
+  });
+
+  it("FIRST — 한 자산 안의 현금분·채권분(감면율이 다르다)은 감면율 낮은 것부터라 문구를 남긴다", () => {
+    const XB = item("XB", "2026-06-01", {
+      transferPrice: 500_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2010-06-01"),
+      reductions: [{ ...E77, cashCompensation: 250_000_000, bondCompensation: 250_000_000 }],
+    } as Partial<TransferTaxItemInput>);
+    expect(stepOf(run([XB], "FIRST"))).toContain(LOWER_RATE);
+    expect(stepOf(run([XB]))).toContain(LOWER_RATE);
+  });
+
   it("양도일이 다르면 두 문구 모두 없다 — 종전 문구 그대로", () => {
     const r = run([
       item("L", "2023-03-19", { transferPrice: 1_300_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2022-03-20"), isNonBusinessLand: true, nonBusinessLandAreaRatio: 0.8 } as Partial<TransferTaxItemInput>),

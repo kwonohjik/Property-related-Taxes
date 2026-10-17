@@ -573,19 +573,22 @@ export interface TieCandidate {
 /**
  * 같은 날 양도한 감면소득의 감면율이 서로 달라 「감면율 낮은 것부터」(부동산거래관리과-0893)가 실제로 작동했는가 —
  * 기본공제가 2단계(감면분)까지 닿았고, 그 날 감면율이 다른 감면 자산이 둘 이상일 때. 계산 과정 문구 전용.
+ * `withinAssetOnly` — `FIRST` 전략은 자산끼리는 입력 순서로 배분하고 한 자산 안의 감면율 조각(현금분·채권분)만
+ * 감면율 낮은 것부터라(`allocateBasicDeduction` 2단계 정렬), 그 경우는 한 자산 안에서 감면율이 갈릴 때만 참이다.
  */
 export function sameDayReducibleRatesDiffer(
   eligible: BasicDeductionEligible[],
   allocation: { idx: number; amount: number }[],
+  withinAssetOnly = false,
 ): boolean {
   const onReducible = allocation.some((a) => {
     const e = eligible.find((x) => x.idx === a.idx);
     return e !== undefined && a.amount > e.income - reducibleOf(e);
   });
   if (!onReducible) return false;
-  const ratesByDate = new Map<number, Set<number>>();
+  const ratesByDate = new Map<string, Set<number>>();
   for (const sl of eligible.flatMap(reducibleSlicesOf)) {
-    const t = sl.transferDate.getTime();
+    const t = withinAssetOnly ? `asset:${sl.idx}` : `date:${sl.transferDate.getTime()}`;
     ratesByDate.set(t, (ratesByDate.get(t) ?? new Set<number>()).add(sl.rate));
   }
   return [...ratesByDate.values()].some((rates) => rates.size > 1);

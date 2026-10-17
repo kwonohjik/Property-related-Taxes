@@ -24,6 +24,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { POST } from "@/app/api/calc/stock-transfer/route";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import {
   callGiftStockBurdenedTransferAPI,
   callGiftStockBurdenedTransferAggregateAPI,
@@ -40,7 +41,7 @@ beforeAll(() => {
     }
     const req = new Request("http://localhost" + url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-test-bypass-rate-limit": "1" },
+      headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
       body: init?.body as string,
     });
     return POST(req as never);
