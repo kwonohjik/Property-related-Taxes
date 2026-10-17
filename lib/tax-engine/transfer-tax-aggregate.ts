@@ -162,8 +162,13 @@ function computeAggregateOnce(
     lossOffsetFromSame,
     lossOffsetFromOther,
     incomeAfterOffset,
+    partIncomeAfterOffset,
     unusedLoss,
   } = offsetLosses(assetRecords, input.crossLossOffsetExternal);
+  // 파트 단위로 통산한 split 자산은 파트별 통산 후 소득을 세액 단계의 파트 안분 가중치로 넘긴다(Q-F3a).
+  partIncomeAfterOffset.forEach((w, i) => {
+    if (w) assetRecords[i].lossPartIncomeAfterOffset = w;
+  });
 
   // income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후) — 세액 계산용 "감면후 income" 분리.
   // incomeAfterOffset(pre-감면)는 양도소득금액 표시·차손통산·농특세 감면前 기준으로 보존.
@@ -549,6 +554,7 @@ function computeAggregateOnce(
       rateGroup: r.rateGroup,
       // §102② 세율축 — `AssetRecord`가 이미 들고 있다(`-asset-records.ts:227`). 재유도 금지.
       lossOffsetRateKey: r.lossOffsetRateKey,
+      ...(r.lossParts ? { lossOffsetParts: r.lossParts } : {}),
       lossOffsetFromSameGroup: lossOffsetFromSame[idx],
       lossOffsetFromOtherGroup: lossOffsetFromOther[idx],
       incomeAfterOffset: incomeAfterOffset[idx],

@@ -109,7 +109,7 @@ describe("F2-3 대조 — 합산 누진(§104⑤1호)이 이기면 호가 하나
   });
 });
 
-describe("F2-4 §103② — 감면 제외 파트에 기본공제를 먼저 준다 (리뷰 #4)", () => {
+describe("F2-4 §103② — 감면 제외 파트에 기본공제를 먼저 준다 (리뷰 #3·#4)", () => {
   // 사업인정고시일 2022-06-01 → 소급 2년 이전(2020-06-01 이전) 취득인 토지만 충족. 토지 2010(13년, 장특 26%) · 건물 1년 6개월(40%).
   const E77b = (cash: number) => ({ type: "public_expropriation", cashCompensation: cash, bondCompensation: 0, businessApprovalDate: D("2022-06-01") });
   const P = () =>
@@ -131,6 +131,12 @@ describe("F2-4 §103② — 감면 제외 파트에 기본공제를 먼저 준�
       propertyType: "building", transferPrice: 350_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2021-09-20"), transferDate: D(T),
       isOneHousehold: false, householdHousingCount: 1, expenses: 0, annualBasicDeductionUsed: 0, reductions: [E77b(350_000_000)],
     } as Partial<TransferTaxInput>);
+  /** 주택 차손 −100,000,000(누진 — 같은 세율인 토지 파트가 먼저 받는다). */
+  const H = () =>
+    baseTransferInput({
+      propertyType: "housing", transferPrice: 1_900_000_000, acquisitionPrice: 2_000_000_000, acquisitionDate: D("2017-02-20"), transferDate: D(T),
+      isOneHousehold: false, householdHousingCount: 2, expenses: 0, annualBasicDeductionUsed: 0,
+    } as Partial<TransferTaxInput>);
 
   it("단건: 토지 333,000,000 · 건물 50,000,000 세율이 같아도 기본공제는 건물에 — 감면 10,726,000 · 총세액 129,232,600 = 분리 신고", () => {
     // 토지 1호 prog(333,000,000) = 107,260,000 · 감면 = 107,260,000 × 33,300,000 / 333,000,000 (C = 0 — 분수가 1을 넘지 않는다)
@@ -142,5 +148,13 @@ describe("F2-4 §103② — 감면 제외 파트에 기본공제를 먼저 준�
     expect(s.totalTax).toBe(129_232_600);
     expect(agg([P()]).totalTax).toBe(129_232_600);
     expect(agg([L(), B()]).totalTax).toBe(129_232_600);
+  });
+
+  it("다건: 주택 차손이 토지 파트에 닿아도 C는 그 파트가 받은 기본공제(0) — 총세액 87,536,214 = 분리 신고 (종전 C 2,500,000)", () => {
+    // 토지 333,000,000 − 차손 100,000,000 = 233,000,000 → 1호 prog 68,600,000 · 감면 68,600,000 × 33,300,000 / 233,000,000 = 9,804,206
+    expect(agg([P(), H()]).reductionAmount).toBe(9_804_206);
+    expect(agg([P(), H()]).totalTax).toBe(87_536_214);
+    expect(agg([H(), P()]).totalTax).toBe(87_536_214);
+    expect(agg([L(), B(), H()]).totalTax).toBe(87_536_214);
   });
 });
