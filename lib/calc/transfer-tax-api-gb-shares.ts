@@ -28,6 +28,7 @@ import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./
  * | `gbTransferLandPricePerSqm`             | `transferLandPricePerSqm`                         |
  * | `gbTransferBuildingValue`               | `transferBuildingStdPrice`                        |
  * | `gbZoneType`·`gbIsMetropolitan`·`gbUnapprovedBuilding` | `zoneType`·`isMetropolitan`·`unapprovedBuilding` |
+ * | `isDesignatedArea` (자산 공통 필드 — 이름이 같다) | `isDesignatedArea` |
  * | `saleSplitMode`·`landTransferPrice`·`buildingTransferPrice`·`saleSplitExemption` | 양도 계약 단위 |
  * | `landAppraisalAtTransfer`·`buildingAppraisalAtTransfer`·`appraisalDateAtTransfer` | 감정 서열 |
  * | `gbHasExtension` + 증축 6필드(실가 2필드 제외) | `extensionInfo.*`                            |
@@ -52,6 +53,8 @@ const GB_PROPERTY_LEVEL_FORM_FIELDS = [
   "gbZoneType",
   "gbIsMetropolitan",
   "gbUnapprovedBuilding",
+  // 물건 속성 (§104의2② 지정지역 선언 — 배율초과 토지 카드의 8호 중과 유예 판정)
+  "isDesignatedArea",
   // 물건 속성 (§104③ 미등기양도자산 — 위 `gbUnapprovedBuilding`(§101① 단서)과 별개 축)
   "gbLandUnregistered",
   "gbBuildingUnregistered",

@@ -79,6 +79,7 @@ import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
+import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -498,7 +499,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 폼 값 자체는 보존한다 — 토지로 되돌리면 그대로 복귀.
     isNonBusinessLand: primary.assetKind === "land" ? (primary.isNonBusinessLand ?? false) : false,
     // 양도 당시 지정지역(§104의2②) 선언 — 양도일 2009.3.16.~2015.12.31. 비사업용 토지 8호 유예 판정용. 미선언 = 모름(중과 유지 + 확인 필요).
-    isDesignatedArea: primary.assetKind === "land" ? primary.isDesignatedArea : undefined,
+    isDesignatedArea: nblDesignatedAreaPayload(primary),
     /**
      * §77 공익수용 감면의 **농어촌특별세 비과세** 판정값(농특세령 §4①1호 괄호).
      * 감면 항목에 붙어 있는 사실을 **자산 수준**으로 올려 보낸다 — 엔진은 감면 유형이 확정된

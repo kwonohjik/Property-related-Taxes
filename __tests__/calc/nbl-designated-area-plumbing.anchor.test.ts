@@ -88,20 +88,26 @@ describe("R-1: 단건 ④ — 토지 자산의 선언이 body에 실린다", () 
     const body = await buildBody(makeForm([landAsset(1)]));
     expect(body.isDesignatedArea).toBeUndefined();
   });
-  it("토지가 아닌 자산에 남은 잔존 선언은 싣지 않는다(비사업용 토지 플래그와 같은 게이트)", async () => {
-    const body = await buildBody(makeForm([landAsset(1, { assetKind: "housing", isDesignatedArea: false })]));
+  it("토지·주택이 아닌 자산에 남은 잔존 선언은 싣지 않는다(화면에 없는 값이 세액을 바꾸지 않도록)", async () => {
+    const body = await buildBody(makeForm([landAsset(1, { assetKind: "presale_right", isDesignatedArea: false })]));
     expect(body.isNonBusinessLand).toBe(false);
     expect(body.isDesignatedArea).toBeUndefined();
+  });
+  it("주택의 선언은 실린다 — 배율 초과 부수토지 파트(`nonBusinessLandPart`)가 부모 주택 입력을 펼쳐 쓰므로 닿아야 한다 · 비사업용 플래그는 꺼진 채다", async () => {
+    const body = await buildBody(makeForm([landAsset(1, { assetKind: "housing", isNonBusinessLand: false, isDesignatedArea: false })]));
+    expect(body.isNonBusinessLand).toBe(false);
+    expect(body.isDesignatedArea).toBe(false);
   });
 });
 
 describe("R-2: 다건 ④ — 같은 게이트·같은 값", () => {
-  it("토지 · false → false / 미선언 → undefined / 주택 → undefined", () => {
+  it("토지 · false → false / 미선언 → undefined / 주택 → 같은 값 / 그 밖의 종류 → undefined", () => {
     const f = (a: AssetForm) => buildPropertyPayload(makeForm([a])) as unknown as Record<string, unknown>;
     expect(f(landAsset(1, { isDesignatedArea: false })).isDesignatedArea).toBe(false);
     expect(f(landAsset(1, { isDesignatedArea: true })).isDesignatedArea).toBe(true);
     expect(f(landAsset(1)).isDesignatedArea).toBeUndefined();
-    expect(f(landAsset(1, { assetKind: "housing", isDesignatedArea: false })).isDesignatedArea).toBeUndefined();
+    expect(f(landAsset(1, { assetKind: "housing", isDesignatedArea: false })).isDesignatedArea).toBe(false);
+    expect(f(landAsset(1, { assetKind: "presale_right", isDesignatedArea: false })).isDesignatedArea).toBeUndefined();
   });
 });
 

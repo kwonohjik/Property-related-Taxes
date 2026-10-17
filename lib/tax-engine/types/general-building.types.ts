@@ -328,6 +328,12 @@ export type GeneralBuildingInput = {
    *    종전 이름이 `isUnregistered`여서 그 혼동을 실제로 만들었다(2026-08-11 개명).
    */
   unapprovedBuilding?: boolean;
+  /**
+   * 양도 당시 이 부동산이 「소득세법」 §104의2② **지정지역**에 있는가 — 양도일이 2009.3.16.~2015.12.31.일 때 배율초과 토지 카드
+   * (`land_nbl`)의 §104①8호 중과 유예 판정(`judgeNblRateDeferral`)에만 쓴다. 미입력 = 지정지역으로 보고 중과 유지 + 확인 필요.
+   * 사업용 토지 카드·건물 카드에는 싣지 않는다.
+   */
+  isDesignatedArea?: boolean;
   // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684·881) ──
   /** 주택→상가 단일 용도변경 토글. true 시 conversionDate·wasMultiHouseAtConversion 필수. */
   houseToCommercialConversion?: boolean;
@@ -490,6 +496,8 @@ export type AssetCardForAggregate = {
   transferDate: Date;
   /** 비사업용토지 여부 */
   isNonBusinessLand: boolean;
+  /** 비사업용 토지(`land_nbl`) 카드만 set — 부모 부동산의 지정지역 선언(입력 `isDesignatedArea`). 8호 중과 유예 판정용. */
+  isDesignatedArea?: boolean;
   /**
    * 건물 카드만 set. 라우트가 TransferTaxItemInput 매핑 시 isSelfBuilt 패스스루용.
    * 소득세법 §114조의2 ① 가산세 발동 여부 판단에 사용.

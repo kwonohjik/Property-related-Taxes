@@ -53,6 +53,8 @@ import {
   shouldShowRedevValuationSection,
 } from "./AssetAreaRedevelopment";
 import { MixedUseAreaInputs } from "../mixed-use/MixedUseAreaInputs";
+import { NblDesignatedAreaQuestion } from "../nbl/NblDesignatedAreaQuestion";
+import { housingExcessAreaOfAsset } from "@/lib/calc/housing-excess-split";
 import {
   AssetFootprintField,
   isFootprintConsumed,
@@ -278,7 +280,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
                       splitMode==="fractional" && index>0`) 별도 게이트가 필요 없다.
                      종전 게이트 `shareAcquisitionOnly = splitMode==="fractional" && !isFirst`와
                      `isFirst={index === 0}`이라 **동일 조건**이다. */}
-              <GeneralBuildingNblSection asset={asset} onChange={onChange} />
+              <GeneralBuildingNblSection asset={asset} onChange={onChange} transferDate={transferDate} />
               <GeneralBuildingConversionSection
                 asset={asset}
                 onChange={onChange}
@@ -535,6 +537,16 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
       )}
       {/* #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸). 소재지 구분·정착면적·토지 면적이 정해진 뒤에만 열린다(③ 노출 ⇔ ⑧ 필수 ⇔ ④ 전송 ⇔ 엔진). */}
       <HousingExcessSplitCard asset={asset} onChange={onChange} transferDate={transferDate} isNonPrimary={isNonPrimary} />
+      {/* 양도일 2009.3.16.~2015.12.31.이고 배율 초과분이 있는 주택 — 초과분(비사업용 토지)의 8호 중과 유예 요건(지정지역 여부). 초과 판정은 위 카드와 같은 함수다. */}
+      {housingExcessAreaOfAsset(asset, transferDate) > 0 && (
+        <NblDesignatedAreaQuestion
+          transferDate={transferDate}
+          value={asset.isDesignatedArea}
+          onChange={(isDesignatedArea) => onChange({ isDesignatedArea })}
+          idSuffix={`housing-${asset.assetId ?? "primary"}`}
+          subject="배율 초과 부수토지(비사업용 토지)"
+        />
+      )}
     </>
   );
 }
