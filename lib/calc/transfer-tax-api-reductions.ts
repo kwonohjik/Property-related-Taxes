@@ -84,20 +84,6 @@ export function toEngineReductions(
         ...(incorpStdTransfer > 0 ? { standardPriceAtTransfer: incorpStdTransfer } : {}),
       };
     }
-    if (r.type === "new_housing") {
-      const region =
-        r.reductionRegion === "outside_overconcentration"
-          ? "metropolitan"
-          : (r.reductionRegion as "metropolitan" | "non_metropolitan");
-      return { type: "new_housing" as const, region };
-    }
-    if (r.type === "unsold_housing") {
-      const region =
-        r.reductionRegion === "outside_overconcentration"
-          ? "metropolitan"
-          : (r.reductionRegion as "metropolitan" | "non_metropolitan");
-      return { type: "unsold_housing" as const, region };
-    }
     if (r.type === "public_expropriation") {
       const cash = parseAmount(r.expropriationCash || "0");
       const bond = parseAmount(r.expropriationBond || "0");

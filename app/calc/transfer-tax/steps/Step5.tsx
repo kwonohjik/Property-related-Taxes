@@ -24,8 +24,6 @@ import { selfFarmingOwnYearsSufficient } from "@/lib/calc/self-farming-own-years
 // 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
 const REDUCTION_LABELS = {
   self_farming: { label: "자경농지 감면", desc: "8년 이상 자경 (§69, 한도 1억)" },
-  new_housing: { label: "신축주택 감면", desc: "신축주택 취득자 양도세 감면 (§99, 1998~1999 IMF 1차)" },
-  unsold_housing: { label: "미분양주택 감면", desc: "서울 외 미분양 5년 100% (수도권과밀 60%) — §98의3, 2009.2.12~2010.2.11" },
   public_expropriation: { label: "공익사업 수용 감면", desc: "현금 15%/채권 20~45% (§77, 2025+ · 연간 2억)" },
   // new_99_3은 별도 펼침 패널(ReductionExpansion)에서 처리 — 옵션 Y 결정
 } as const;
@@ -36,10 +34,6 @@ function getDefaultReduction(type: ReductionUiType): AssetReductionForm {
   switch (type) {
     case "self_farming":
       return { type: "self_farming", farmingYears: "0" };
-    case "new_housing":
-      return { type: "new_housing", reductionRegion: "metropolitan" };
-    case "unsold_housing":
-      return { type: "unsold_housing", reductionRegion: "metropolitan" };
     case "public_expropriation":
       return {
         type: "public_expropriation",
@@ -83,8 +77,6 @@ function AssetReductionBlock({
   }
 
   const selfFarming = reductions.find((r) => r.type === "self_farming");
-  const newHousing = reductions.find((r) => r.type === "new_housing");
-  const unsoldHousing = reductions.find((r) => r.type === "unsold_housing");
   const expropriation = reductions.find((r) => r.type === "public_expropriation");
   const gbDesignated = reductions.find((r) => r.type === "gb_designated_land");
   const replacementLand = reductions.find((r) => r.type === "replacement_land_comp");
@@ -481,32 +473,6 @@ function AssetReductionBlock({
               />
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 신축·미분양 서브패널 */}
-      {(newHousing || unsoldHousing) && (
-        <div className="rounded-lg border border-dashed border-primary/40 bg-primary/3 p-4 space-y-3">
-          <p className="text-xs font-medium text-primary">물건 소재지</p>
-          {(() => {
-            const activeType = newHousing ? "new_housing" : "unsold_housing";
-            const activeReduction = newHousing ?? unsoldHousing!;
-            return (
-              <RadioCardGroup
-                name={`reductionRegion-${assetIndex}`}
-                tone="amber"
-                value={(activeReduction as { reductionRegion: string }).reductionRegion}
-                onChange={(v) =>
-                  updateReduction(activeType, { reductionRegion: v } as Partial<AssetReductionForm>)
-                }
-                options={[
-                  { value: "metropolitan", label: "수도권 (과밀억제권역)", description: "50% 감면" },
-                  { value: "outside_overconcentration", label: "수도권 (과밀억제권역 외)", description: "조문별 상이" },
-                  { value: "non_metropolitan", label: "비수도권 (지방)", description: "100% 감면" },
-                ]}
-              />
-            );
-          })()}
         </div>
       )}
 
