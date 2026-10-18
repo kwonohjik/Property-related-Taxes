@@ -60,7 +60,10 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ propertyType: "housing" })).toEqual([]);
     expect(issues({ propertyType: "redevelopment_apt" })).toEqual(["propertyType"]);
     expect(issues({ propertyType: "right_to_move_in" })).toEqual(["propertyType"]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType"]);
+    // 주택 split 파트 이월과세(P1) — 토지 파트 취득원인 carryover_gift만 거부, 나머지 원인은 통과
+    expect(issues({ landAcquisitionCause: "carryover_gift" })).toEqual(["landAcquisitionCause"]);
+    for (const c of ["purchase", "inheritance", "gift"]) expect(issues({ landAcquisitionCause: c })).toEqual([]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType", "landAcquisitionCause"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);

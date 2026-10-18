@@ -33,10 +33,14 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import {
-  LAND_CARRYOVER_UNSUPPORTED_MESSAGE,
-  BUILDING_CAUSE_CARRYOVER_BURDENED_MESSAGE,
+  PART_CARRYOVER_INPUT_REQUIRED_MESSAGE,
+  PART_CARRYOVER_STRAY_MESSAGE,
+  PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE,
+  PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE,
+  PART_CARRYOVER_ONE_HOUSE_MESSAGE,
   LAND_CAUSE_ABSENT_MESSAGE,
 } from "@/lib/tax-engine/transfer-split-part-cause";
+import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
 
 const BASE = {
   propertyType: "housing",
@@ -240,27 +244,27 @@ const C_NEW = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────
-// 현행 고정 (활성) — P1 전환 대상은 이름에 [전환 …]을 단다
+// P1 이후 상태 — 종전 «현행 고정» 줄은 설계서 §8.1대로 전환했다 (G-1/`:249` → S1·S3·S0, strip → 명시 거부).
+// SPCO-0g/0h(자산 단위 이월과세 277,590,000 / 322,530,000)는 **불변** — 회귀 방어.
 // ─────────────────────────────────────────────────────────────────────────
 
-describe("SPCO-0 현행 — A 토지만 이월과세", () => {
-  it("SPCO-0a [전환 → A] 토지 파트 이월과세(landAcquisitionCause) → 400 · ⑫ 필드오류 landAcquisitionCause = G-1 (transfer-split-part-cause.ts:296)", async () => {
+describe("SPCO-0 전환 — A 토지만 이월과세 (서브객체 없는 입력은 G-1 대신 S1 필수 누락)", () => {
+  it("SPCO-0a 토지 파트 이월과세 원인만 있고 landCarryoverPart가 없으면 400 · 필드오류 landCarryoverPart = S1 (종전 G-1 `landAcquisitionCause` 전면 차단을 대체; 서브객체가 있는 A는 T1)", async () => {
     const o = await post({ ...A_FIELDS });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).landAcquisitionCause).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o).landCarryoverPart).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 
-  it("SPCO-0b [전환 → 서브객체 필수 문구] 일반건물용 `landCarryoverTaxation`을 동봉해도 G-1 400 — 서브객체가 있어도 차단이 풀리지 않는다", async () => {
+  it("SPCO-0b 일반건물용 엔진 모양 `landCarryoverTaxation`은 와이어 키가 아니다 — strip되어 S1 필수 누락 400 (엔진 모양을 와이어로 받지 않는다 · 설계서 §0 보강 1)", async () => {
     const o = await post({
       ...A_FIELDS,
       landCarryoverTaxation: { ...TOP_CT("2000-01-01"), giftTaxAmount: 20_000_000, giftDateValuation: 300_000_000 },
     });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).landAcquisitionCause).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o).landCarryoverPart).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 
-  it("SPCO-0c [전환 → stray 400] 🔴 새 키는 현재 ⑫가 **조용히 strip**한다 — 이월과세 없이 단순 증여로 계산(169,860,000)하고 200 (⑫에 키를 선언해야 하는 이유)", async () => {
-    // 원인을 gift로 두어 G-1을 피하고, 설계서 §1의 새 키만 얹는다.
+  it("SPCO-0c 🔴 새 키를 원인이 이월과세가 아닌 파트에 얹으면 더는 조용히 strip(200 169,860,000)되지 않고 400 stray", async () => {
     const plain = await post({ ...A_FIELDS, landAcquisitionCause: "gift" });
     const withNewKeys = await post({
       ...A_FIELDS,
@@ -269,21 +273,18 @@ describe("SPCO-0 현행 — A 토지만 이월과세", () => {
       landCarryoverPart: LAND_PART(),
     });
     expect(plain.status).toBe(200);
-    expect(plain.r.determinedTax).toBe(169_860_000);
-    expect(withNewKeys.status).toBe(200);
-    expect(withNewKeys.r.determinedTax).toBe(169_860_000);
-    // 증여자 파트 입력이 장특 기산에 닿지 않는다(토지 보유 2년·장특 0)
-    expect(withNewKeys.r.splitDetail.land.holdingYears).toBe(2);
-    expect(withNewKeys.r.splitDetail.land.longTermRate).toBe(0);
+    expect(plain.r.determinedTax).toBe(169_860_000); // 단순 증여 — 이월과세 아님
+    expect(withNewKeys.status).toBe(400);
+    expect(fieldErrors(withNewKeys).landCarryoverPart).toContain(PART_CARRYOVER_STRAY_MESSAGE);
   });
 
-  it("SPCO-0d [전환 → A′ 200] 신축 건물 + 토지 이월과세도 같은 400 (A′)", async () => {
+  it("SPCO-0d A′ 신축 건물 + 서브객체 없는 토지 이월과세도 S1 400 (서브객체가 있는 A′는 T2)", async () => {
     const o = await post({ ...A_FIELDS, acquisitionCause: "newConstruction" });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).landAcquisitionCause).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o).landCarryoverPart).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 
-  it("SPCO-0e [전환 → 1세대1주택 겹침 전용 400] 1세대1주택(8억) × 토지 이월과세도 지금은 같은 G-1 400 — 비과세 0원이 아니다", async () => {
+  it("SPCO-0e 1세대1주택(8억) × 서브객체 없는 토지 이월과세 → S1 필수 누락이 먼저(비과세 0원으로 새지 않는다). 서브객체가 있는 겹침은 T10 = S9", async () => {
     const o = await post({
       ...A_FIELDS,
       isOneHousehold: true,
@@ -297,20 +298,20 @@ describe("SPCO-0 현행 — A 토지만 이월과세", () => {
       buildingAcquisitionPrice: 200_000_000,
     });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).landAcquisitionCause).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o).landCarryoverPart).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 });
 
-describe("SPCO-0 현행 — B 건물만 이월과세", () => {
-  it("SPCO-0f [전환 → B] 건물 이월과세(자산) + 토지 매매 overlay → 400 · ⑫ 필드오류 landAcquisitionCause = :249 (이월과세·부담부증여 한 문구)", async () => {
+describe("SPCO-0 전환 — B 건물만 이월과세", () => {
+  it("SPCO-0f 건물 이월과세에 **자산 단위** carryoverTaxation + 토지 매매 overlay(split) 병용은 400 · 필드오류 carryoverTaxation = S3 (종전 `:249` 한 문구를 대체; 파트 서브객체 B는 T5 = 200)", async () => {
     const o = await post({ ...B_FIELDS, carryoverTaxation: TOP_CT("2015-06-01") });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).landAcquisitionCause).toEqual([BUILDING_CAUSE_CARRYOVER_BURDENED_MESSAGE]);
+    expect(fieldErrors(o).carryoverTaxation).toEqual([PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE]);
   });
 });
 
 describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취득일이 다를 때)", () => {
-  it("SPCO-0g C1 증여자 취득일 칸에 **토지일(1995)** → 277,590,000 (전체 장특 30% · A 277,590,000 ≥ B 93,110,000 → A)", async () => {
+  it("SPCO-0g C1 증여자 취득일 칸에 **토지일(1995)** → 277,590,000 (전체 장특 30% · A 277,590,000 ≥ B 93,110,000 → A) — 자산 단위 경로 **불변**", async () => {
     const o = await post(WHOLE_HOUSE_CARRYOVER("1995-03-01"));
     expect(o.status).toBe(200);
     expect(o.r.determinedTax).toBe(277_590_000);
@@ -320,14 +321,14 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
     expect(o.r.splitDetail).toBeUndefined();
   });
 
-  it("SPCO-0h C2 증여자 취득일 칸에 **건물일(2015)** → 322,530,000 (전체 장특 20%) — 같은 사건인데 칸 입력만으로 +44,940,000", async () => {
+  it("SPCO-0h C2 증여자 취득일 칸에 **건물일(2015)** → 322,530,000 (전체 장특 20%) — 자산 단위 경로 **불변** (같은 사건인데 칸 입력만으로 +44,940,000 — C는 파트 이월과세 T6이 풀었다)", async () => {
     const o = await post(WHOLE_HOUSE_CARRYOVER("2015-06-01"));
     expect(o.status).toBe(200);
     expect(o.r.determinedTax).toBe(322_530_000);
     expect(o.r.carryoverTaxationDetail.adoptedScenario).toBe("A");
   });
 
-  it("SPCO-0i [전환 → ⑫ 필드오류] C3 자산 이월과세 + 수증자 쪽 토지·건물 같은 날 split → 400 (재귀 시나리오 A가 증여 cause로 Y8 `LAND_CAUSE_ABSENT`에 걸림) · 엔진 throw라 fieldErrors 없음", async () => {
+  it("SPCO-0i C3 자산 이월과세 + 수증자 쪽 토지·건물 같은 날 split → 400 · ⑫ 필드오류 carryoverTaxation = S3 (종전엔 재귀 시나리오 A가 Y8 `LAND_CAUSE_ABSENT`에 걸린 엔진 throw — 필드오류가 없었다)", async () => {
     const o = await post({
       acquisitionCause: "carryover_gift",
       acquisitionDate: "2023-03-01",
@@ -338,11 +339,12 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
       buildingAcquisitionPrice: 660_000_000,
     });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o)).toEqual({});
-    expect(errText(o)).toContain(LAND_CAUSE_ABSENT_MESSAGE.slice(0, 30));
+    expect(fieldErrors(o).carryoverTaxation).toEqual([PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE]);
+    // 「토지 취득원인을 매매로 지정하세요」(Y8)는 그 입력의 레버가 아니라 S3가 짚는다 — 안내가 겹치지 않는다
+    expect(errText(o)).not.toContain(LAND_CAUSE_ABSENT_MESSAGE.slice(0, 30));
   });
 
-  it("SPCO-0j [전환 → ⑫ 필드오류] C4 증여자 토지일을 landAcquisitionDate에 넣어도 400 (같은 사유) — 병용 수단이 없다", async () => {
+  it("SPCO-0j C4 증여자 토지일을 landAcquisitionDate에 넣어도 400 · S3 — 병용 수단은 파트 이월과세(landCarryoverPart/buildingCarryoverPart)다", async () => {
     const o = await post({
       acquisitionCause: "carryover_gift",
       acquisitionDate: "2023-03-01",
@@ -352,10 +354,10 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
       buildingAcquisitionPrice: 50_000_000,
     });
     expect(o.status).toBe(400);
-    expect(errText(o)).toContain(LAND_CAUSE_ABSENT_MESSAGE.slice(0, 30));
+    expect(fieldErrors(o).carryoverTaxation).toEqual([PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE]);
   });
 
-  it("SPCO-0k [전환 → 상호배제 문구] 자산 이월과세 + 토지 overlay carryover_gift 병용 → 400 · G-1 (필드오류 landAcquisitionCause)", async () => {
+  it("SPCO-0k 자산 이월과세 + 토지 overlay carryover_gift 병용 → 400 · S3 (상호배제 문구 — S1 필수 누락은 S3가 가려 같이 뜨지 않는다)", async () => {
     const o = await post({
       acquisitionCause: "carryover_gift",
       acquisitionDate: "2023-03-01",
@@ -364,35 +366,35 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
       carryoverTaxation: TOP_CT("1995-03-01"),
     });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).landAcquisitionCause).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o).carryoverTaxation).toEqual([PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE]);
+    expect(fieldErrors(o).landCarryoverPart ?? []).toEqual([]);
   });
 });
 
-describe("SPCO-0 현행 — 다건·컴패니언은 G-1 한 leaf에 얹혀 막혀 있다 (Q-6·Q-7)", () => {
-  it("SPCO-0l [전환 → 다건 명시 거부 문구] 다건 `landAcquisitionCause: carryover_gift` → 400 · properties.0.landAcquisitionCause = G-1 (MULTI_REJECT_RULES가 아니라 공용 leaf가 막는다)", async () => {
+describe("SPCO-0 전환 — 다건·컴패니언은 명시 거부 (Q-6·Q-7)", () => {
+  it("SPCO-0l 다건 `landAcquisitionCause: carryover_gift` → 400 · properties.0.landAcquisitionCause = MULTI_REJECT_RULES 거부 문구 (공용 leaf G-1이 아니라 다건 규칙이 막는다)", async () => {
     const o = await postMulti({ ...A_FIELDS });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o)["properties.0.landAcquisitionCause"]).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o)["properties.0.landAcquisitionCause"]).toContain(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
   });
 
-  it("SPCO-0m [전환 → 400] 다건 새 키(원인 gift)는 strip되어 200 — 169,860,000 (단건과 같은 값, 이월과세 없음)", async () => {
+  it("SPCO-0m 다건 새 키(원인 gift)는 더는 strip(200 169,860,000)되지 않는다 → 400", async () => {
     const o = await postMulti({
       ...A_FIELDS,
       landAcquisitionCause: "gift",
       carryoverGiftEvent: EVENT(),
       landCarryoverPart: LAND_PART(),
     });
-    expect(o.status).toBe(200);
-    expect(o.r.determinedTax).toBe(169_860_000);
+    expect(o.status).toBe(400);
   });
 
-  it("SPCO-0n [전환 → 컴패니언 명시 거부 문구] 컴패니언 `landAcquisitionCause: carryover_gift` → 400 · companionAssets.0.landAcquisitionCause = G-1", async () => {
+  it("SPCO-0n 컴패니언 `landAcquisitionCause: carryover_gift` → 400 · companionAssets.0.landAcquisitionCause = S0 (컴패니언 호스트 미지원)", async () => {
     const o = await postCompanion({ landAcquisitionCause: "carryover_gift" });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o)["companionAssets.0.landAcquisitionCause"]).toEqual([LAND_CARRYOVER_UNSUPPORTED_MESSAGE]);
+    expect(fieldErrors(o)["companionAssets.0.landAcquisitionCause"]).toContain(PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE);
   });
 
-  it("SPCO-0o [전환 → 400] 컴패니언 새 키(원인 gift)는 strip되어 200 — 원인만 gift인 값과 같다(304,050,000)", async () => {
+  it("SPCO-0o 컴패니언 새 키(원인 gift)는 더는 strip(200 304,050,000)되지 않는다 → 400", async () => {
     const plain = await postCompanion({ landAcquisitionCause: "gift" });
     const withNewKeys = await postCompanion({
       landAcquisitionCause: "gift",
@@ -400,9 +402,8 @@ describe("SPCO-0 현행 — 다건·컴패니언은 G-1 한 leaf에 얹혀 막�
       landCarryoverPart: LAND_PART(),
     });
     expect(plain.status).toBe(200);
-    expect(plain.r.determinedTax).toBe(304_050_000);
-    expect(withNewKeys.status).toBe(200);
-    expect(withNewKeys.r.determinedTax).toBe(304_050_000);
+    expect(plain.r.determinedTax).toBe(304_050_000); // 새 키 없는 값 — 이월과세 아님
+    expect(withNewKeys.status).toBe(400);
   });
 });
 
@@ -411,7 +412,7 @@ describe("SPCO-0 현행 — 다건·컴패니언은 G-1 한 leaf에 얹혀 막�
 // ─────────────────────────────────────────────────────────────────────────
 
 describe("SPCO-T 목표 — A 토지만 이월과세", () => {
-  it.skip("SPCO-T1 A: 172,260,000 — 토지 증여자 2000-01-01(보유 25년·장특 30%)·취득가액 1억+증여세 상당액 2천만, ②3호 A 172,260,000 ≥ B 169,860,000 → A 채택", async () => {
+  it("SPCO-T1 A: 172,260,000 — 토지 증여자 2000-01-01(보유 25년·장특 30%)·취득가액 1억+증여세 상당액 2천만, ②3호 A 172,260,000 ≥ B 169,860,000 → A 채택", async () => {
     const o = await post(A_NEW);
     expect(o.status).toBe(200);
     expect(o.r.determinedTax).toBe(172_260_000);
@@ -435,13 +436,13 @@ describe("SPCO-T 목표 — A 토지만 이월과세", () => {
     expect(o.r.carryoverTaxationDetail).toBeUndefined(); // 자산 단위 detail은 자산 이월과세 전용
   });
 
-  it.skip("SPCO-T2 A′ 신축 건물도 172,260,000 — 건물 원인이 newConstruction이어도 같다", async () => {
+  it("SPCO-T2 A′ 신축 건물도 172,260,000 — 건물 원인이 newConstruction이어도 같다", async () => {
     const o = await post({ ...A_NEW, acquisitionCause: "newConstruction" });
     expect(o.status).toBe(200);
     expect(o.r.determinedTax).toBe(172_260_000);
   });
 
-  it.skip("SPCO-T3 A ②3호 배제: 증여자 취득가 4억(> 증여일 평가액 3억)이면 A 88,550,000 < B 169,860,000 → B 채택 169,860,000 · reason tax_comparison · 장특 기산은 증여일(보유 2년·장특 0)", async () => {
+  it("SPCO-T3 A ②3호 배제: 증여자 취득가 4억(> 증여일 평가액 3억)이면 A 88,550,000 < B 169,860,000 → B 채택 169,860,000 · reason tax_comparison · 장특 기산은 증여일(보유 2년·장특 0)", async () => {
     const o = await post({
       ...A_NEW,
       landCarryoverPart: LAND_PART({ donorAcquisitionPrice: 400_000_000 }),
@@ -458,7 +459,7 @@ describe("SPCO-T 목표 — A 토지만 이월과세", () => {
     });
   });
 
-  it.skip("SPCO-T4 A 한도 = **파트 gain**(영 §163의2② 후단 · 사전-2025-법규재산-0366 「해당 자산」): 증여세 안분 1억 > 토지 gain 1천만 → 1천만만 산입. 자산 gain(건물 1억 포함)으로 한도를 잡으면 토지 차손이 생겨 A가 배제된다", async () => {
+  it("SPCO-T4 A 한도 = **파트 gain**(영 §163의2② 후단 · 사전-2025-법규재산-0366 「해당 자산」): 증여세 안분 1억 > 토지 gain 1천만 → 1천만만 산입. 자산 gain(건물 1억 포함)으로 한도를 잡으면 토지 차손이 생겨 A가 배제된다", async () => {
     // 토지: 증여일 평가 7억(=양도가 → B gain 0), 증여자 6.9억(A gain 1천만) · 증여세 산출 1억/과세가액 7억 → 안분 1억.
     // A: 산입 1천만 → 토지 gain 0 → T(A) = T(B) = 15,884,999 (동률 → A). 자산 한도(1.1억) 오구현이면 안분 1억이 전액 산입돼 토지 gain −9천만 · T(A)=0 < T(B) → B 채택(echo가 갈린다; 대리 실측 landAcquisitionPrice 7.9억 → 0).
     const o = await post({
@@ -481,7 +482,7 @@ describe("SPCO-T 목표 — A 토지만 이월과세", () => {
 });
 
 describe("SPCO-T 목표 — B 건물만 이월과세", () => {
-  it.skip("SPCO-T5 B: 261,210,000 — 건물 증여자 2015-06-01(보유 10년·장특 20%)·취득가액 1억+증여세 상당액 2천만, A 261,210,000 ≥ B 175,530,000 → A 채택", async () => {
+  it("SPCO-T5 B: 261,210,000 — 건물 증여자 2015-06-01(보유 10년·장특 20%)·취득가액 1억+증여세 상당액 2천만, A 261,210,000 ≥ B 175,530,000 → A 채택", async () => {
     const o = await post(B_NEW);
     expect(o.status).toBe(200);
     expect(o.r.determinedTax).toBe(261_210_000);
@@ -500,7 +501,7 @@ describe("SPCO-T 목표 — B 건물만 이월과세", () => {
 });
 
 describe("SPCO-T 목표 — C 주택 통째 이월과세 + 증여자 토지·건물 취득일이 다름", () => {
-  it.skip("SPCO-T6 C(Q-3 파트별 ②3호): 300,018,000 — 토지만 적용 시 T=89,082,000, 건물만 300,018,000, 둘 다 295,566,000. 토지는 「적용 295,566,000 < 미적용 300,018,000」이라 배제(tax_comparison), 건물은 적용 유지. (⚠️ 주택 일체로 비교하면 295,566,000 — 설계서 §4.4·V-1)", async () => {
+  it("SPCO-T6 C(Q-3 파트별 ②3호): 300,018,000 — 토지만 적용 시 T=89,082,000, 건물만 300,018,000, 둘 다 295,566,000. 토지는 「적용 295,566,000 < 미적용 300,018,000」이라 배제(tax_comparison), 건물은 적용 유지. (⚠️ 주택 일체로 비교하면 295,566,000 — 설계서 §4.4·V-1)", async () => {
     const o = await post(C_NEW);
     expect(o.status).toBe(200);
     expect(o.r.determinedTax).toBe(300_018_000);
@@ -519,7 +520,7 @@ describe("SPCO-T 목표 — C 주택 통째 이월과세 + 증여자 토지·건
     expect(building.longTermRate).toBe(0.2);
   });
 
-  it.skip("SPCO-T7 C 양쪽 적용형: 증여 평가 토지 4억/건물 5억(증여세 3천만 → 안분 13,333,333 / 16,666,666)이면 둘 다 A → 295,790,000 (토지 30%·건물 20%)", async () => {
+  it("SPCO-T7 C 양쪽 적용형: 증여 평가 토지 4억/건물 5억(증여세 3천만 → 안분 13,333,333 / 16,666,666)이면 둘 다 A → 295,790,000 (토지 30%·건물 20%)", async () => {
     const o = await post({
       ...C_NEW,
       landAcquisitionPrice: 400_000_000,
@@ -537,7 +538,7 @@ describe("SPCO-T 목표 — C 주택 통째 이월과세 + 증여자 토지·건
     expect(building.carryover.judgment).toBe("applied");
   });
 
-  it.skip("SPCO-T8 C ↔ 자산 단위 이월과세 상호배제: top-level carryoverTaxation + 파트 서브객체를 함께 보내면 400 (이중 적용 금지) — 필드오류 carryoverTaxation", async () => {
+  it("SPCO-T8 C ↔ 자산 단위 이월과세 상호배제: top-level carryoverTaxation + 파트 서브객체를 함께 보내면 400 (이중 적용 금지) — 필드오류 carryoverTaxation", async () => {
     const o = await post({ ...C_NEW, carryoverTaxation: TOP_CT("1995-03-01") });
     expect(o.status).toBe(400);
     expect(Object.keys(fieldErrors(o))).toContain("carryoverTaxation");
@@ -545,7 +546,7 @@ describe("SPCO-T 목표 — C 주택 통째 이월과세 + 증여자 토지·건
 });
 
 describe("SPCO-T 목표 — 순서 의존 사례 (V-8 확인 필요)", () => {
-  it.skip("SPCO-T9 단기 구간에서 두 파트가 서로를 가린다: 양도 2023-09-30, 증여자 토지 2022-07-01(5천만)·건물 2022-09-01(6.6억), 증여 평가 토지 2.4억/건물 6.6억(증여세 0) → T00=208,250,000 · T01=320,250,000 · T10=341,250,000 · T11=292,500,000. 안정 구성이 {01,10} 둘이며 순차 고정점(토지→건물)은 01 = 320,250,000 (건물 우선이면 341,250,000)", async () => {
+  it("SPCO-T9 단기 구간에서 두 파트가 서로를 가린다: 양도 2023-09-30, 증여자 토지 2022-07-01(5천만)·건물 2022-09-01(6.6억), 증여 평가 토지 2.4억/건물 6.6억(증여세 0) → T00=208,250,000 · T01=320,250,000 · T10=341,250,000 · T11=292,500,000. 안정 구성이 {01,10} 둘이며 순차 고정점(토지→건물)은 01 = 320,250,000 (건물 우선이면 341,250,000)", async () => {
     const o = await post({
       ...C_NEW,
       transferDate: "2023-09-30",
@@ -561,7 +562,7 @@ describe("SPCO-T 목표 — 순서 의존 사례 (V-8 확인 필요)", () => {
 });
 
 describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)", () => {
-  it.skip("SPCO-T10 1세대1주택 비과세와 겹치면(isOneHousehold ∧ 주택 ∧ 미등기 아님) P5 전까지 400 + 안내 — 비과세 0원으로 새지 않는다 (SPCO-0e 전환)", async () => {
+  it("SPCO-T10 1세대1주택 비과세와 겹치면(isOneHousehold ∧ 주택 ∧ 미등기 아님) P5 전까지 400 + 안내 — 비과세 0원으로 새지 않는다 (SPCO-0e 전환)", async () => {
     const o = await post({
       ...A_NEW,
       isOneHousehold: true,
@@ -578,10 +579,11 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
     const msgs = Object.values(fieldErrors(o)).flat().join(" | ");
     expect(msgs).toMatch(/1세대1주택/);
     expect(msgs).toMatch(/§97의2/);
-    expect(msgs).not.toContain(LAND_CARRYOVER_UNSUPPORTED_MESSAGE);
+    expect(msgs).toContain(PART_CARRYOVER_ONE_HOUSE_MESSAGE);
+    expect(msgs).not.toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 
-  it.skip("SPCO-T11 다건(합산): 새 키·`landAcquisitionCause: carryover_gift` 모두 MULTI_REJECT_RULES로 명시 거부 — strip(200)이 아니다 (SPCO-0m 전환)", async () => {
+  it("SPCO-T11 다건(합산): 새 키·`landAcquisitionCause: carryover_gift` 모두 MULTI_REJECT_RULES로 명시 거부 — strip(200)이 아니다 (SPCO-0m 전환)", async () => {
     const a = await postMulti({ ...A_NEW });
     expect(a.status).toBe(400);
     expect(Object.keys(fieldErrors(a))).toEqual(expect.arrayContaining(["properties.0.landAcquisitionCause"]));
@@ -590,13 +592,13 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
     expect(Object.keys(fieldErrors(b))).toEqual(expect.arrayContaining(["properties.0.carryoverGiftEvent"]));
   });
 
-  it.skip("SPCO-T12 컴패니언: 새 키는 400 (SPCO-0o 전환) — 첫 자산 전용", async () => {
+  it("SPCO-T12 컴패니언: 새 키는 400 (SPCO-0o 전환) — 첫 자산 전용", async () => {
     const o = await postCompanion({ landAcquisitionCause: "gift", carryoverGiftEvent: EVENT(), landCarryoverPart: LAND_PART() });
     expect(o.status).toBe(400);
     expect(Object.keys(fieldErrors(o))).toEqual(expect.arrayContaining(["companionAssets.0.carryoverGiftEvent"]));
   });
 
-  it.skip("SPCO-T13 주 자산이 파트 이월과세이고 컴패니언이 있으면 400 — 단건 ②3호 비교는 신고 전체 결정세액(§92③2호)을 못 본다(N-1) · 설계서 §4.5", async () => {
+  it("SPCO-T13 주 자산이 파트 이월과세이고 컴패니언이 있으면 400 — 단건 ②3호 비교는 신고 전체 결정세액(§92③2호)을 못 본다(N-1) · 설계서 §4.5", async () => {
     const res = await POST(
       req("/api/calc/transfer", {
         ...BASE,
@@ -609,22 +611,22 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
     expect(res.status).toBe(400);
   });
 
-  it.skip("SPCO-T14 증여 등기접수일 ≠ 파트 취득일이면 400 — 한 곳 입력 규약(Q-8)을 엔진·⑫도 강제한다 (필드오류 landAcquisitionDate)", async () => {
+  it("SPCO-T14 증여 등기접수일 ≠ 파트 취득일이면 400 — 한 곳 입력 규약(Q-8)을 엔진·⑫도 강제한다 (필드오류 landAcquisitionDate)", async () => {
     const o = await post({ ...A_NEW, landAcquisitionDate: "2023-04-01" });
     expect(o.status).toBe(400);
     expect(Object.keys(fieldErrors(o))).toContain("landAcquisitionDate");
   });
 
-  it.skip("SPCO-T15 파트 서브객체가 있는데 해당 파트 원인이 이월과세가 아니면 400 — 조용히 버리지 않는다 (stray)", async () => {
+  it("SPCO-T15 파트 서브객체가 있는데 해당 파트 원인이 이월과세가 아니면 400 — 조용히 버리지 않는다 (stray)", async () => {
     const o = await post({ ...A_NEW, landAcquisitionCause: "gift" });
     expect(o.status).toBe(400);
     expect(Object.keys(fieldErrors(o))).toContain("landCarryoverPart");
   });
 
-  it.skip("SPCO-T16 원인이 이월과세인데 서브객체가 없으면 400 — 취득가액 0 침묵 계산 금지", async () => {
+  it("SPCO-T16 원인이 이월과세인데 서브객체가 없으면 400 — 취득가액 0 침묵 계산 금지", async () => {
     const o = await post({ ...A_FIELDS });
     expect(o.status).toBe(400);
     expect(Object.keys(fieldErrors(o))).toContain("landCarryoverPart");
-    expect(fieldErrors(o).landAcquisitionCause ?? []).not.toContain(LAND_CARRYOVER_UNSUPPORTED_MESSAGE);
+    expect(fieldErrors(o).landCarryoverPart).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 });

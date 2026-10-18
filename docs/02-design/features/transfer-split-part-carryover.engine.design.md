@@ -376,3 +376,24 @@ interface SplitPartCarryoverEcho {                       // SplitPartResult.carr
 7. **P1-6** 지분 anchor(V-5)·⑬ 대조(V-11).
 
 완료 보고 전 자가 점검: 14지점 중 ①~③·⑤~⑦은 UI 단계(P2~), P1은 ④ 계약(§1.6)·⑧ leaf 공유·⑨⑩⑫⑬⑭·엔진. ⑧ 동기화(8번째)는 §6 leaf 단일 소스로 만족 — UI 호출부가 ④와 같은 값을 넣는지는 P2에서 격자(⑧ 차단 ⇔ ⑫ 차단)로 검증한다.
+
+---
+
+## 12. P1 구현 정정 (2026-10-19, Do 환류)
+
+구현 중 설계서와 달라진 점. 전부 anchor로 고정돼 있다 — 뒤집으면 해당 테스트가 빨개진다.
+
+| # | 설계서 | 구현 | 근거 |
+|---|---|---|---|
+| F-1 | §3.1 STEP 0.476은 0.475 **바로 뒤** | **0.475 앞** (`transfer-tax-precalc.ts`) | R-1(자산 단위 + 파트 상호배제)을 leaf S3가 보려면 raw `carryoverTaxation`이 보여야 한다. 0.475가 먼저 돌면 재귀 입력이 `carryoverTaxation`을 비운 채 파트 서브객체를 물고 가 충돌이 안 보인다. 위치를 뒤로 옮기는 뮤테이션(M19)이 `split-part-carryover.resolver.test.ts`에서 red |
+| F-2 | §6.1 `partCarryoverSupported`: 단건만 true, 다건·컴패니언 **생략** | **컴패니언만 명시 `false`**, 생략·true = 받는다. 다건은 `MULTI_REJECT_RULES`(키 단위)가 막는다 | leaf 테스트·⑧이 facts를 생략해도 S0가 오발동하지 않게. 다건에 S0까지 걸면 같은 키에 거부 문구가 둘 뜬다 |
+| F-3 | §6.2 S1 필수 누락 field | `landCarryoverPart`/`buildingCarryoverPart`/`carryoverGiftEvent`(입력 칸) | anchor T15·T16이 이 칸을 단언한다. 종전 `landAcquisitionCause` 칸을 보는 격자 테스트(`d1.predo.anchor` Z1·Z3, `d0.anchor` D0-Z)는 KEYS/기대 칸에 `landCarryoverPart`를 추가했다 |
+| F-4 | §7 A 파트 echo `rateBasisAcquisitionDate`·`appliedRateBasisDate` = 증여자 날짜 | `acquisitionCause`·`rateBasisRule`만 교정. 날짜는 **세율 판정이 쓴 값**을 그대로 둔다 | 주택 토지 파트의 `appliedRateBasisDate`는 `max(토지, 건물 취득일)`(주택 부수토지 보유기간)이라 증여자 날짜와 다를 수 있다(T1: 2021-03-01). 교정하면 echo가 판정과 어긋난다(`feedback_engine_result_display_drift`) |
+| F-5 | §8.1 SPCO-0f → 200 (T5) | 400 (S3, field `carryoverTaxation`) | 0f 입력은 **자산 단위** `carryoverTaxation` + 토지 overlay라 상호배제 대상이다. B의 200은 파트 서브객체 입력(T5) |
+| F-6 | §1.3 refine | `donorAcquisitionDate ≤ giftRegistryDate` 검사 **추가** (field `…Part.donorAcquisitionDate`) | 증여자 취득일이 증여일보다 늦으면 장특 기산이 뒤집힌다. ⑧(P2)도 같은 조건을 거울로 가져야 한다 |
+| F-7 | §6.2 | `isSplitable=false`(토지·건물이 아닌 자산)에 실린 파트 서브객체·사건은 stray 400 | 조용히 버려지는 입력 금지 |
+| F-8 | §6.2 S1 | 사건 ⇔ 파트 짝 검사 추가: 파트가 있는데 사건이 없으면 필수 누락, 사건만 있으면 stray (field `carryoverGiftEvent`) | 사건 없는 파트는 ⑭ 합성기가 키를 내지 않아 «일반 증여로 조용히 계산»된다 |
+
+**V-5 확정**: 지분 스케일 유지(사건 미스케일 + 파트 스케일). 240셀 격자 실측 최대 어긋남 0.99원(`split-part-carryover.compose.test.ts`) → `ownershipRatio<1` 차단(S9) 불요.
+**V-6 확정**: 2주택·조정대상지역·양도 2027-06-30(유예 종료 후, mock 세율)에서 A·B 모두 채택 입력 = 증여자 날짜 치환 일반 split과 세액·중과 유형(`multi_house_2`)이 같다(`p1.test.ts` P1-6). `giftHouseholdBasis`는 건드리지 않는다(수증자 본인 기준).
+**V-11 확정**: `callTransferTaxAPI` body는 허용목록 없이 ④ 출력 최상위 키를 그대로 싣는다 — 새 키가 ⑬→⑫→⑭→엔진까지 strip 없이 통과(`__tests__/calc/transfer-split-part-carryover.body-spread.test.ts`). ④ 빌더(`buildSplitPayload`)가 새 키를 만드는 일은 P2~.

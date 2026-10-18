@@ -35,6 +35,11 @@ import { resolveAcquisitionOverride } from "./transfer-tax-acquisition-override"
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
 import { calcCarryoverScenarios, resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover";
+import {
+  calcSplitCarryoverScenarios,
+  splitCarryoverStepLines,
+  type SplitCarryoverDetail,
+} from "./transfer-tax-split-carryover";
 import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
@@ -66,6 +71,8 @@ export interface PreCalcResult {
   pre1990LandResult?: Pre1990LandValuationResult;
   inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
   carryoverDetail?: CarryoverTaxationDetail;
+  /** STEP 0.476 주택 split 파트 이월과세 echo — 자산 단위 `carryoverDetail`과 **별개**다(의미 오염 방지). 결과 조립 시 `splitDetail`에 부착한다 */
+  splitCarryover?: SplitCarryoverDetail;
   transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
   hceGeneralHouseAcquisitionDate: Date;
 }
@@ -153,6 +160,17 @@ export function runPreCalculationSteps(
     steps.push(samePeriodStep.step);
   }
   let workingInput = input;
+  // STEP 0.476: 주택 split **파트** 이월과세 §97조의2① (토지·건물 파트 서브객체 없으면 skip, 재귀 입력은 서브객체를 비우므로 재진입 없음).
+  //   🔑 0.475보다 **앞**에 둔다 — 자산 단위 `carryoverTaxation`과 파트 서브객체는 상호배제(R-1)인데, 0.475가 먼저 돌면 재귀 입력(A/B)이
+  //   `carryoverTaxation`을 비운 채 파트 서브객체를 그대로 물고 가 leaf S3가 충돌을 못 본다. 이 위치에서는 raw `carryoverTaxation`이 보인다.
+  //   서브객체가 없는 입력(대부분)은 `null`이라 0.475로 그대로 이어진다.
+  let splitCarryover: SplitCarryoverDetail | undefined;
+  const splitCarryoverResult = calcSplitCarryoverScenarios(workingInput, rates, calculateTransferTax);
+  if (splitCarryoverResult) {
+    splitCarryover = splitCarryoverResult.detail;
+    workingInput = splitCarryoverResult.adoptedInput;
+    for (const line of splitCarryoverStepLines(splitCarryoverResult.detail)) steps.push({ ...line, amount: 0 });
+  }
   // STEP 0.475: 배우자등 이월과세 §97조의2 (carryoverTaxation 없으면 skip, 재귀 시 자동 skip)
   let carryoverDetail: CarryoverTaxationDetail | undefined;
   if (rawInput.acquisitionCause === "carryover_gift" && rawInput.carryoverTaxation) {
@@ -243,6 +261,7 @@ export function runPreCalculationSteps(
     pre1990LandResult,
     inheritedAcquisitionStep,
     carryoverDetail,
+    splitCarryover,
     transferBurdenedGiftBreakdown,
     hceGeneralHouseAcquisitionDate,
   };

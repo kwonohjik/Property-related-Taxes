@@ -52,7 +52,7 @@ export interface CalcCarryoverResult {
  * §97조의2 ① 2호 시행일 (2023.12.31. 개정 → 2024.1.1. 이후 양도분부터 적용).
  * 양도일 < 이 날짜이면 donorCapitalExpenditure 를 0으로 처리.
  */
-const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
+export const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
 
 // 「10년 룰」 경계 상수(부칙 제19196호 §18)는 판정 leaf
 // `transfer-tax-carryover-eligibility.ts`가 정본이다 — 여기서 따로 두면 두 벌이 된다.

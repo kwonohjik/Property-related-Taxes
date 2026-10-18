@@ -94,7 +94,7 @@ describe("D0 토지 파트 취득원인 규칙 — 주택 분리 계산", () => 
     expect(body.data.result.determinedTax).toBe(118_660_000);
   });
 
-  it("D0-1 (G-1) 토지 이월과세(carryover_gift)는 400 — 종전 단순 증여와 같은 149,060,000으로 조용히 계산", async () => {
+  it("D0-1 (G-1→S1) 토지 이월과세(carryover_gift)에 파트 서브객체(landCarryoverPart)가 없으면 400 — 종전 단순 증여와 같은 149,060,000으로 조용히 계산하지 않는다 (서브객체가 있으면 열린다 — P1)", async () => {
     const { status, body } = await post({
       acquisitionDate: "2012-03-02",
       landAcquisitionDate: "2022-01-10",
@@ -102,7 +102,7 @@ describe("D0 토지 파트 취득원인 규칙 — 주택 분리 계산", () => 
       landDonorAcquisitionDate: "2005-01-01",
     });
     expect(status).toBe(400);
-    expect(messages(body)).toContain("이월과세로 계산하는 기능은 지원하지 않습니다");
+    expect(messages(body)).toContain("증여자 취득일·취득가액(landCarryoverPart/buildingCarryoverPart)");
   });
 
   it("D0-1′ 단순 증여(gift)는 그대로 계산 — G-1 차단이 증여 전체를 막지 않는다", async () => {
@@ -187,7 +187,8 @@ describe("D0-Z ⑫ 스키마 단독", () => {
   };
 
   it("주 자산: 이월과세·추계·피상속인 취득일 각각 해당 칸", () => {
-    expect(issuePaths({ ...BASE, landAcquisitionCause: "carryover_gift" })).toContain("landAcquisitionCause");
+    // P1: G-1(원인 칸 전면 차단)은 «서브객체 필수»(S1)로 바뀌어 필드오류가 해당 입력 칸 landCarryoverPart에 붙는다
+    expect(issuePaths({ ...BASE, landAcquisitionCause: "carryover_gift" })).toContain("landCarryoverPart");
     expect(
       issuePaths({ ...BASE, landAcquisitionCause: "gift", landAcqMode: "estimated", standardPricePerSqmAtAcquisition: 500_000, acquisitionArea: 200 }),
     ).toContain("landAcqMode");

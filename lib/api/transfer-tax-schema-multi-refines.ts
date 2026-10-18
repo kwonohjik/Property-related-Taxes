@@ -47,6 +47,11 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown) => string | null> =
         ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE
         : null,
   transferType: (v) => (v === "burdened_gift" ? MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE : null),
+  // 주택 split 파트 이월과세(P1) — 다건 ⑭는 이 키를 옮기지 않고, ②3호 비교는 신고 전체 결정세액이 필요하다(N-1). 키가 오면 strip(200 + 이월과세 없는 세액) 대신 400.
+  carryoverGiftEvent: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
+  landCarryoverPart: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
+  buildingCarryoverPart: whenPresent(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE),
+  landAcquisitionCause: (v) => (v === "carryover_gift" ? MULTI_CARRYOVER_UNSUPPORTED_MESSAGE : null),
   burdenedGiftInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
   burdenedGiftWholeInfo: whenPresent(MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE),
   redevelopment: whenPresent(MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE),

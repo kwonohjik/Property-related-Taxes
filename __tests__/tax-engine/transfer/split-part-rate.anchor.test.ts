@@ -425,7 +425,7 @@ describe("G-4 토지 파트 §104② 상속·증여 보유기간 통산", () => 
     ).toThrow("피상속인 취득일이 필요합니다");
   });
 
-  it("A-14c: 토지 파트 이월과세(carryover_gift)는 던진다 — 엔진은 세율 기산만 반영하고 취득가액·장특 기산·비교과세는 하지 않는다(D0 G-1)", () => {
+  it("A-14c: 토지 파트 이월과세(carryover_gift)에 파트 서브객체(landCarryoverTaxation)가 없으면 던진다 — 서브객체 없이는 취득가액·장특 기산·증여세 상당액이 빠진 채 계산된다(D0 G-1 → P1 S1; 서브객체가 있으면 해결자가 계산한다)", () => {
     expect(() =>
       run({
         acquisitionDate: D("2020-01-01"),
@@ -434,7 +434,7 @@ describe("G-4 토지 파트 §104② 상속·증여 보유기간 통산", () => 
         landAcquisitionCause: "carryover_gift",
         landDonorAcquisitionDate: D("2005-01-01"),
       }),
-    ).toThrow("이월과세로 계산하는 기능은 지원하지 않습니다");
+    ).toThrow("증여자 취득일·취득가액(landCarryoverPart/buildingCarryoverPart)");
   });
 
   it("A-14d: 상속 토지 파트를 환산으로 보내면 던진다 — §163⑨ 평가액이 실지거래가액(D0 G-2)", () => {
