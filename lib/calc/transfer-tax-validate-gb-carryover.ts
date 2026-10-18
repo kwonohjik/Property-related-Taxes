@@ -10,6 +10,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { fieldError } from "./transfer-tax-validate-field";
 import { gbCarryoverEventSource } from "./transfer-tax-api-gb-carryover";
+import { carryoverEstimationModeSupported } from "./phd-toggle-scope";
 
 /**
  * ⑧ 이월과세(§97의2) 입력 검증 — 일반건물 전용.
@@ -78,6 +79,13 @@ export function validateGbCarryover(asset: AssetForm, label: string): string | n
     if (p.useEstimatedAcquisition) {
       if (!p.estimationMode)
         return fieldError(isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode", `${partLabel}: 증여자 취득가액의 환산 방식을 선택하세요.`);
+      /**
+       * 일반건물은 `general`만 지원한다(`carryoverEstimationModeSupported` — ⑤ 옵션 노출·④ 전송과 같은 술어). PHD·APD가 남아 있으면
+       * (세션 잔재) 그 방식의 입력 칸이 이 자산에는 없으므로, **방식을 다시 고르게** 한다 — 아래 기준시가 요구가 그 칸 없는
+       * 상태에서 막다른 길이 되는 것(H-6)과, 통과해도 고른 방식이 반영되지 않는 조용한 오인을 함께 막는다.
+       */
+      if (!carryoverEstimationModeSupported("general_building", p.estimationMode))
+        return fieldError(isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode", `${partLabel}: 일반건물 이월과세의 환산취득가액은 「일반 기준시가 환산」만 지원합니다 — 환산 방식을 「일반 기준시가 환산」으로 선택하세요 (개별주택가격 미공시·공동주택 최초고시 전 방식은 이 자산의 계산에 반영되지 않습니다).`);
       if (!parseAmount(p.donorStandardPriceAtAcquisition))
         return fieldError(isBuildingPart ? "buildingCarryover.donorStandardPriceAtAcquisition" : "carryover.donorStandardPriceAtAcquisition", `${partLabel}: 증여자 취득 당시 기준시가를 입력하세요 (환산 분자).`);
     } else if (!parseAmount(p.donorAcquisitionPrice)) {
