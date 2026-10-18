@@ -601,7 +601,7 @@ export function calculateTransferTax(
    */
   const deemedOneHouseBy155 = exemptionResult.deemedOneHouseBy155 === true;
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
-  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula, appurtenantTable1Applied } =
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula, appurtenantTable1Applied, appurtenantLthdNotice } =
     calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, parsedRates.longTermHoldingRules, isSurchargeCase, suspendedResult, parsedRates.longTermRentalRules, splitDetail, deemedOneHouseBy155);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
@@ -622,6 +622,7 @@ export function calculateTransferTax(
     usageConversionDetail,
     fbLthdFormula,
     appurtenantTable1Applied,
+    appurtenantLthdNotice,
     splitDetail,
   });
   longTermHoldingDeduction = lthd982.longTermHoldingDeduction;

@@ -17,9 +17,11 @@
  *   · 양도일 연혁은 `calcLongTermRate`(표2 연혁 `data/lthd-table2-era.ts`)가 가른다 — 통칙이 신설되기 전(2019.12.23.)에도
  *     같은 비교를 예규(2010~)가 정했으므로 이 leaf 자체에는 별도 양도일 게이트가 없다.
  *
- * 호출부 둘이 이 함수를 쓴다 — 복사 금지:
+ * 호출부 — 복사 금지:
  *   · `transfer-tax-lthd.ts` L-1b(컴패니언 부수토지 카드) — 표2 보유연수 = 함께 양도하는 주택(primary)의 보유연수
  *   · `transfer-tax-lthd.ts` split 분기(토지·건물 분리취득 주택) + §155⑳ 거주주택 특례(`ltc-table-split.ts`)
+ *   · 겸용주택 주택분 토지 — 단건 `transfer-tax-mixed-use-helpers.ts` `buildHousingPart` · 다건 파트 카드
+ *     (`transfer-tax-lthd.ts` 단일 취득일 경로 — `appurtenantHouseAcquisitionDate`)
  */
 import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 import { LTHD_TABLE2_SPLIT_TRANSFER_START } from "./data/lthd-table2-era";

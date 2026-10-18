@@ -1,6 +1,7 @@
 import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult, TransferTaxInput } from "./transfer.types";
 import type { AmendmentDetail } from "./transfer-amendment.types";
+import type { SplitPartResult } from "./transfer-split-gain.types";
 import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { InheritedAcquisitionDetail } from "../transfer-tax-mixed-use-inheritance";
 import type {
@@ -737,6 +738,13 @@ export interface MixedUseHousingPart {
   residenceYears?: number;
   holdingDeductionRate?: number;
   residenceDeductionRate?: number;
+  /**
+   * 소득세법 기본통칙 95-0…1 적용 echo(표시 전용 · 세액은 `longTermDeductionAmount`가 정본) — 1세대1주택 표2 대상이고
+   * 토지가 건물(주택)보다 보유기간이 오래된 경우에만 존재한다. 토지분 공제율을 표1(토지 전체 보유기간)과
+   * 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 큰 것으로 정했다는 사실이다. 형태는 일반 경로
+   * `SplitPartResult["appurtenantLthd"]`와 같고 표시 계층은 이 값을 그대로 읽는다(재계산 금지).
+   */
+  appurtenantLthd?: SplitPartResult["appurtenantLthd"];
   /** 양도소득금액 */
   incomeAmount: number;
   /** 주택 토지분 양도차익 중 비사업용으로 이전된 비율 */
