@@ -183,3 +183,36 @@ describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·
     expect(screen.queryByText(/계약서상 구분 기재 금액과 다릅니다/)).toBeNull();
   });
 });
+
+describe("U-9-5 — 양도일 연혁별 표시 (계획서 sale-split-100-3-era-gate §4.2)", () => {
+  it("🔴 양도일 2016.1.1. 전: 판정이 없었다고 말하고 안분값·차이 행을 내지 않는다", () => {
+    renderFor({ ...OVER, transferDate: new Date("2015-12-31") });
+    expect(screen.getByText(/2016년 1월 1일 전이라 30% 판정 없이 구분 기재 가액을 적용/)).toBeTruthy();
+    expect(screen.getByText(/법률 제13558호 부칙 제2조②/)).toBeTruthy();
+    expect(screen.queryByText("안분 가액")).toBeNull();
+    expect(screen.queryByText("차이")).toBeNull();
+    expect(screen.queryByText(/안분 기준:/)).toBeNull();
+    // 적용 가액은 구분 기재 그대로 — 의제로 안분값이 되지 않는다
+    expect(screen.getAllByText("1,400,000,000").length).toBeGreaterThan(0);
+  });
+
+  it("🔴 양도일이 단서 시행 전인데 예외를 입력해 둔 경우: 반영하지 않았다고 밝힌다 — 침묵 후퇴 금지", () => {
+    renderFor({ ...OVER, saleSplitExemption: "other_law" }); // mk 기본 양도일 2024-06-01
+    expect(screen.getByTestId("sale-split-exemption-ignored").textContent).toMatch(/2025년 1월 1일 전이라/);
+    expect(screen.getByTestId("sale-split-exemption-ignored").textContent).toMatch(/법률 제20615호 부칙 제9조/);
+    // 의제가 발동했으므로 «인정했습니다»가 아니라 안분가액 적용 문구다
+    expect(screen.getByText(/구분 기재 가액을 인정하지 않고 안분가액을 적용/)).toBeTruthy();
+    expect(screen.queryByText(/예외로 구분 기재 가액을 인정했습니다/)).toBeNull();
+  });
+
+  it("예외를 입력하지 않았으면 «반영하지 않았다» 고지는 없다", () => {
+    renderFor(OVER);
+    expect(screen.queryByTestId("sale-split-exemption-ignored")).toBeNull();
+  });
+
+  it("양도일 2025.1.1. 이후 + 예외: 종전처럼 인정 문구이고 무시 고지는 없다", () => {
+    renderFor({ ...OVER, ...PROVISO, saleSplitExemption: "other_law" });
+    expect(screen.getByText(/예외로 구분 기재 가액을 인정했습니다/)).toBeTruthy();
+    expect(screen.queryByTestId("sale-split-exemption-ignored")).toBeNull();
+  });
+});

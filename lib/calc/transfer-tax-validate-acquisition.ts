@@ -137,7 +137,7 @@ export function validateAssetAcquisition(
   if (bgError) return bgError;
 
   // ── 건물 상속·증여 + 토지 매매(D2) — 자산 단위 상속 요구(아래 §164·E-1·PD-1·post-deemed)보다 **앞**에서 갈라 분리 검증으로 ──
-  if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label);
+  if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label, formTransferDate);
 
   // ── §164④·⑥·⑤~⑦ 부분 입력 차단 (소령 §163⑨1호·2호) ──
   // ②는 all-or-nothing opt-in이라 일부만 입력하면 payload가 생성되지 않고 ① 단독으로 조용히
@@ -400,7 +400,7 @@ export function validateAssetAcquisition(
     // 토지·건물 분리(「토지는 다른 원인으로 취득」·소유자 분리) — 매매와 같은 분리 검증 전체(D1 G-11). 종전엔
     // 원인 규칙만 불러 양도시 기준시가·구분양도 합계·토지 평가액·파트 자본적지출이 ⑧을 통과하고 ⑫에서 400이
     // 되거나(막다른 길) 200 오답이 났다. 첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)다.
-    return validateSplitDirectInputs(asset, label);
+    return validateSplitDirectInputs(asset, label, formTransferDate);
   }
 
   if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
@@ -767,7 +767,7 @@ export function validateAssetAcquisition(
 
   // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.
   // 판정식은 엔진 splitPair와 단일 소스(isSplitPairOverflow) — ⑧ 규칙(UI 통과 ↔ validate 차단 모순) 방지.
-  const splitErr = validateSplitDirectInputs(asset, label);
+  const splitErr = validateSplitDirectInputs(asset, label, formTransferDate);
   if (splitErr) return splitErr;
 
   return null;

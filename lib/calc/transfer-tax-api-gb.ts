@@ -18,6 +18,7 @@ import { gbFirstDisclosureLandStdPriceOf } from "./gb-first-disclosure";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { gbBuildingOwnDecedentDate } from "./transfer-tax-validate-gb-required";
+import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 
 /**
  * ④ D3(2026-09-30) — 건물 파트 피상속인 취득일. ⑧·⑤와 **같은 술어**(`gbBuildingOwnDecedentDate`)라
@@ -155,12 +156,16 @@ function buildExtensionInfo(
  * ⚠️ 엔진이 읽는 실제 스위치는 **값의 유무**다(`allocateBundledTransferPrice`). `saleSplitMode`는
  *    전송하지 않는다 — 엔진이 읽지 않는 플래그를 나르면 「죽은 모드」가 다시 생긴다(계획서 Q-7).
  */
-function saleSplitFields(asset: AssetForm): Record<string, unknown> {
+function saleSplitFields(asset: AssetForm, transferDate?: string): Record<string, unknown> {
   if (asset.saleSplitMode !== "actual") return {};
   return {
     landTransferPrice: parseAmount(asset.landTransferPrice) || undefined,
     buildingTransferPrice: parseAmount(asset.buildingTransferPrice) || undefined,
-    ...(asset.saleSplitExemption ? { saleSplitExemption: asset.saleSplitExemption } : {}),
+    // 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 칸을 숨긴 구간의 잔존값을 요청 body에 싣지 않는다
+    // (엔진도 era로 무시하는 최종 안전망이다. 3중 패턴: 화면·전송·엔진이 같은 구간을 본다).
+    ...(asset.saleSplitExemption && saleSplitProvisoApplies(transferDate)
+      ? { saleSplitExemption: asset.saleSplitExemption }
+      : {}),
   };
 }
 
@@ -475,7 +480,7 @@ export function buildGeneralBuildingValuation(
       landArea,
       buildingArea,
       buildingFootprintArea,
-      ...saleSplitFields(asset),
+      ...saleSplitFields(asset, transferDate),
       ...saleAppraisalFields(asset),
       ...partModePayload,
       // C2(토지 환산 + 건물 상속) — 결과 카드 파트별 라벨의 유일 소스. 종전 누락(§9-1).
@@ -662,7 +667,7 @@ export function buildGeneralBuildingValuation(
     landArea,
     buildingFootprintArea,
     actualPriceMode: true,
-    ...saleSplitFields(asset),
+    ...saleSplitFields(asset, transferDate),
     ...saleAppraisalFields(asset),
     ...partModePayload,
     // M-1a — 실거래가 모드에서도 파트 취득일을 싣는다. 종전에는 건물 취득일이 여기서 누락돼

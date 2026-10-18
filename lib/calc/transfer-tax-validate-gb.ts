@@ -723,5 +723,5 @@ export function validateGeneralBuildingAsset(
   }
 
   // ── 양도 축(감정평가가액 · 구분양도 §100②) — 800줄 정책으로 분리(2026-08-13) ──
-  return validateGbSaleAxis(asset, label, isBurdenedGiftGB);
+  return validateGbSaleAxis(asset, label, isBurdenedGiftGB, formTransferDate);
 }

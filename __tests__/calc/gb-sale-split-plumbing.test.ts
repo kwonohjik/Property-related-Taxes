@@ -52,25 +52,40 @@ const SPLIT = {
   buildingTransferPrice: "25,000,000",
 };
 
-const payloadOf = (a: AssetForm) => buildGeneralBuildingValuation(a) as Record<string, unknown>;
+const payloadOf = (a: AssetForm, transferDate?: string) =>
+  buildGeneralBuildingValuation(a, transferDate) as Record<string, unknown>;
+
+/** 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 예외가 **전송되는** 케이스만 이 양도일을 쓴다 */
+const PROVISO_DATE = "2025-06-01";
 
 /** ⑫ Zod → 엔진까지 실제로 통과시킨다 (캐스팅으로 건너뛰면 그 구간이 검증에서 빠진다) */
-function throughSchemaToEngine(payload: Record<string, unknown>) {
+function throughSchemaToEngine(payload: Record<string, unknown>, transferDate = "2023-02-19") {
   const parsed = generalBuildingValuationSchema.parse(payload);
   return buildGeneralBuildingAssetCards({
     ...parsed,
     totalTransferPrice: 925_000_000,
-    transferDate: new Date("2023-02-19"),
+    transferDate: new Date(transferDate),
     acquisitionDate: new Date("1999-05-24"),
   } as Parameters<typeof buildGeneralBuildingAssetCards>[0]);
 }
 
 describe("④ — 구분양도 게이트", () => {
   it("구분양도면 3필드를 전송한다", () => {
-    const p = payloadOf(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>));
+    const p = payloadOf(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>), PROVISO_DATE);
     expect(p.landTransferPrice).toBe(900_000_000);
     expect(p.buildingTransferPrice).toBe(25_000_000);
     expect(p.saleSplitExemption).toBe("other_law");
+  });
+
+  it("🔴 양도일이 단서 시행 전(2024-12-31)이면 예외는 전송하지 않는다 — 구분 기재 2필드는 그대로", () => {
+    const p = payloadOf(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>), "2024-12-31");
+    expect(p.landTransferPrice).toBe(900_000_000);
+    expect(p.saleSplitExemption).toBeUndefined();
+  });
+
+  it("양도일이 비어 있으면 단서 구간으로 보지 않는다 — 예외는 전송하지 않는다", () => {
+    const p = payloadOf(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>));
+    expect(p.saleSplitExemption).toBeUndefined();
   });
 
   it("일괄양도로 되돌리면 전송하지 않는다 — 잔존 입력값이 새어나가지 않는다", () => {
@@ -87,7 +102,7 @@ describe("④ — 구분양도 게이트", () => {
 describe("⑫⑭ — Zod가 버리지 않고 엔진에 닿는다", () => {
   it("🔴 Zod가 3필드를 strip하지 않는다", () => {
     const parsed = generalBuildingValuationSchema.parse(
-      payloadOf(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>)),
+      payloadOf(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>), PROVISO_DATE),
     );
     expect(parsed.landTransferPrice).toBe(900_000_000);
     expect(parsed.buildingTransferPrice).toBe(25_000_000);
@@ -145,7 +160,7 @@ describe("④⑫ — 감정평가가액 축", () => {
 });
 
 describe("⑧ — validate 차단 규칙", () => {
-  const v = (a: AssetForm) => validateGeneralBuildingAsset(a, "자산 1");
+  const v = (a: AssetForm, transferDate?: string) => validateGeneralBuildingAsset(a, "자산 1", transferDate);
 
   it("정상 조합은 통과한다", () => {
     expect(v(asset(SPLIT))).toBeNull();
@@ -214,14 +229,18 @@ describe("⑧ — validate 차단 규칙", () => {
   });
 
   it("§166⑧ 예외를 켜고 근거를 비우면 차단한다 (R-5)", () => {
-    expect(v(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>))).toContain(
+    expect(v(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>), PROVISO_DATE)).toContain(
       "근거를 입력하세요",
     );
   });
 
+  it("🔴 양도일이 단서 시행 전(2024-12-31)이면 근거를 요구하지 않는다 — 예외 칸이 숨겨져 입력할 수 없다 (막다른 길 방지)", () => {
+    expect(v(asset({ ...SPLIT, saleSplitExemption: "other_law" } as Partial<AssetForm>), "2024-12-31")).toBeNull();
+  });
+
   it("근거를 채우면 통과한다", () => {
     expect(
-      v(asset({ ...SPLIT, saleSplitExemption: "other_law", saleSplitExemptionNote: "계약서 특약" } as Partial<AssetForm>)),
+      v(asset({ ...SPLIT, saleSplitExemption: "other_law", saleSplitExemptionNote: "계약서 특약" } as Partial<AssetForm>), PROVISO_DATE),
     ).toBeNull();
   });
 

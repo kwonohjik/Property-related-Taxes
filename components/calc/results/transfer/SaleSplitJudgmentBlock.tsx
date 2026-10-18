@@ -61,12 +61,16 @@ export function SaleSplitJudgmentBlock({
    * (`Math.round` 금지는 세액 계산 규칙이고, 여기는 화면 문자열이다.)
    */
   const pct = (bp: number) => `${(Math.round(bp / 10) / 10).toFixed(1)}%`;
-  const tone = j.deemedUnclear ? "rose" : j.exemptionApplied ? "amber" : "emerald";
-  const title = j.deemedUnclear
-    ? "구분 기재 가액을 인정하지 않고 안분가액을 적용했습니다 (소득세법 §100③)"
-    : j.exemptionApplied
-      ? "30% 이상 차이가 있으나 예외로 구분 기재 가액을 인정했습니다"
-      : "구분 기재 가액이 안분가액과 30% 미만 차이로 그대로 적용되었습니다";
+  // 양도일 2016.1.1. 전 — §100③ 자체가 없던 시기라 판정 결과(차이·안분값)를 내지 않고 사유만 말한다(법률 제13558호 부칙 제2조②).
+  const beforeEffective = j.era === "none";
+  const tone = beforeEffective ? "slate" : j.deemedUnclear ? "rose" : j.exemptionApplied ? "amber" : "emerald";
+  const title = beforeEffective
+    ? "양도일이 2016년 1월 1일 전이라 30% 판정 없이 구분 기재 가액을 적용했습니다"
+    : j.deemedUnclear
+      ? "구분 기재 가액을 인정하지 않고 안분가액을 적용했습니다 (소득세법 §100③)"
+      : j.exemptionApplied
+        ? "30% 이상 차이가 있으나 예외로 구분 기재 가액을 인정했습니다"
+        : "구분 기재 가액이 안분가액과 30% 미만 차이로 그대로 적용되었습니다";
 
   const row = (label: string, land: string, building: string, strong = false) => (
     <>
@@ -86,14 +90,32 @@ export function SaleSplitJudgmentBlock({
           <span className="font-medium text-center">토지</span>
           <span className="font-medium text-center">건물</span>
           {row("구분 기재 가액", j.declared.land.toLocaleString(), j.declared.building.toLocaleString())}
-          {row("안분 가액", j.apportioned.land.toLocaleString(), j.apportioned.building.toLocaleString())}
-          {row("차이", pct(j.landDeviationBp), pct(j.buildingDeviationBp))}
+          {!beforeEffective && j.apportioned && (
+            <>
+              {row("안분 가액", j.apportioned.land.toLocaleString(), j.apportioned.building.toLocaleString())}
+              {row("차이", pct(j.landDeviationBp), pct(j.buildingDeviationBp))}
+            </>
+          )}
           {row("적용 가액", j.applied.land.toLocaleString(), j.applied.building.toLocaleString(), true)}
         </div>
-        <p className="text-caption mt-1.5 leading-snug text-muted-foreground">
-          안분 기준: {BASIS_LABEL[j.basisKind]}
-          {j.appraisalRejected && ` — ${REJECT_LABEL[j.appraisalRejected]}`}
-        </p>
+        {beforeEffective ? (
+          <p className="text-caption mt-1.5 leading-snug text-muted-foreground">
+            「소득세법」 제100조 제3항은 2016년 1월 1일 이후 양도하는 분부터 적용됩니다 (법률 제13558호 부칙 제2조②).
+          </p>
+        ) : (
+          j.basisKind && (
+            <p className="text-caption mt-1.5 leading-snug text-muted-foreground">
+              안분 기준: {BASIS_LABEL[j.basisKind]}
+              {j.appraisalRejected && ` — ${REJECT_LABEL[j.appraisalRejected]}`}
+            </p>
+          )
+        )}
+        {j.exemptionIgnoredByEra && (
+          <p className="text-caption leading-snug text-muted-foreground" data-testid="sale-split-exemption-ignored">
+            양도일이 2025년 1월 1일 전이라 「소득세법」 제100조 제3항 단서(시행령 제166조 제8항)가 적용되지 않아 신고하신
+            예외({EXEMPTION_LABEL[j.exemptionIgnoredByEra]})를 반영하지 않았습니다 (법률 제20615호 부칙 제9조).
+          </p>
+        )}
         {j.exemptionApplied && (
           <>
             <p className="text-caption leading-snug text-muted-foreground">

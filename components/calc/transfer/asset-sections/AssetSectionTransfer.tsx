@@ -299,6 +299,7 @@ export function AssetSectionTransfer({
               : undefined
           }
           hasExtension={asset.gbHasExtension === true}
+          transferDate={transferDate}
         />
       )}
     </>

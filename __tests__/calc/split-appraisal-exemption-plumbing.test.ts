@@ -70,8 +70,16 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
   } as AssetForm;
 }
 
-const payloadOf = (a: AssetForm) =>
-  buildSplitPayload(a, { isBurdenedGift: false, usesPhd: false, ratioed });
+/** 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 예외가 **전송되는** 케이스만 이 양도일을 쓴다 */
+const PROVISO_DATE = "2025-06-01";
+
+const payloadOf = (a: AssetForm, transferDate?: string) =>
+  buildSplitPayload(a, {
+    isBurdenedGift: false,
+    usesPhd: false,
+    ratioed,
+    ...(transferDate ? { primaryCtx: { transferDate, isNonPrimary: false } } : {}),
+  });
 
 /** ⑫ Zod → ⑭ Route 까지 실제로 통과시킨다 (캐스팅 금지 — 그 구간이 검증 대상이다) */
 function throughSchemaAndRoute(body: Record<string, unknown>) {
@@ -127,7 +135,11 @@ describe("E-2-2 · E-2-3 — §166⑧ 예외의 게이트와 근거 취급", () 
   const withExemption = { saleSplitExemption: "other_law", saleSplitExemptionNote: "근거 문서 2024-1" };
 
   it("구분양도에서 전송된다", () => {
-    expect(payloadOf(asset(withExemption as Partial<AssetForm>)).saleSplitExemption).toBe("other_law");
+    expect(payloadOf(asset(withExemption as Partial<AssetForm>), PROVISO_DATE).saleSplitExemption).toBe("other_law");
+  });
+
+  it("🔴 양도일이 단서 시행 전(2024-12-31)이면 구분양도여도 예외를 전송하지 않는다 (칸을 숨기는 구간의 잔존값)", () => {
+    expect(payloadOf(asset(withExemption as Partial<AssetForm>), "2024-12-31").saleSplitExemption).toBeUndefined();
   });
 
   it("일괄양도로 되돌리면 전송되지 않는다 — 판정 자체가 구분 기재 전용이다", () => {
@@ -150,7 +162,7 @@ describe("E-2-2 · E-2-3 — §166⑧ 예외의 게이트와 근거 취급", () 
 describe("E-2-4 · E-2-5 — Zod가 버리지 않고, Route가 Date로 바꾼다", () => {
   it("🔴 Zod가 4필드를 strip하지 않는다 (스키마 누락은 타입 오류를 내지 않는다)", () => {
     const { parsed } = throughSchemaAndRoute(
-      payloadOf(asset({ ...APPRAISAL, saleSplitExemption: "other_law" } as Partial<AssetForm>)),
+      payloadOf(asset({ ...APPRAISAL, saleSplitExemption: "other_law" } as Partial<AssetForm>), PROVISO_DATE),
     );
     expect(parsed.landAppraisalAtTransfer).toBe(1_200_000_000);
     expect(parsed.buildingAppraisalAtTransfer).toBe(300_000_000);
@@ -172,7 +184,7 @@ describe("E-2-4 · E-2-5 — Zod가 버리지 않고, Route가 Date로 바꾼다
 });
 
 describe("E-2-6 — validate (⑧)", () => {
-  const v = (a: AssetForm) => validateSplitDirectInputs(a, "자산 1");
+  const v = (a: AssetForm, transferDate?: string) => validateSplitDirectInputs(a, "자산 1", transferDate);
 
   it("🔴 감정일자를 비워도 통과한다 — 시기 요건을 검증하지 않는다 (Q-9)", () => {
     expect(
@@ -190,8 +202,12 @@ describe("E-2-6 — validate (⑧)", () => {
   });
 
   it("예외를 선택하고 근거를 비우면 차단한다", () => {
-    const msg = v(asset({ saleSplitExemption: "other_law" } as Partial<AssetForm>));
+    const msg = v(asset({ saleSplitExemption: "other_law" } as Partial<AssetForm>), PROVISO_DATE);
     expect(msg).toContain("근거를 입력하세요");
+  });
+
+  it("🔴 양도일이 단서 시행 전(2024-12-31)이면 근거를 요구하지 않는다 — 예외 칸이 숨겨져 입력할 수 없다 (막다른 길 방지)", () => {
+    expect(v(asset({ saleSplitExemption: "other_law" } as Partial<AssetForm>), "2024-12-31")).toBeNull();
   });
 
   it("근거를 채우면 통과한다", () => {

@@ -10,6 +10,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
+import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 
 /**
  * @param isBurdenedGiftGB 부담부증여 판정 — 호출부가 이미 도출한 값을 받는다.
@@ -20,6 +21,7 @@ export function validateGbSaleAxis(
   asset: AssetForm,
   label: string,
   isBurdenedGiftGB: boolean,
+  formTransferDate?: string,
 ): string | null {
   // ── 양도시 감정평가가액 — 3필드 all-or-nothing (부가령 §64①1호 단서) ────────────
   // ⚠️ 구분양도 블록 **밖**이다 — 감정가액은 일괄양도의 안분 basis이기도 하다. 안으로 넣으면
@@ -92,7 +94,8 @@ export function validateGbSaleAxis(
 
     // R-5 — §166⑧ 예외는 30% 의제를 면제해 **세액을 바꾼다**. 근거 없이 켤 수 있으면
     // 가드를 무력화하는 스위치가 된다(split V9와 같은 규칙).
-    if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
+    // 단서는 2025.1.1. 이후 양도분부터다 — 그 전에는 예외 칸을 숨기므로(엔진도 무시) 근거를 요구하면 칸 없는 차단이 된다.
+    if (saleSplitProvisoApplies(formTransferDate) && asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
       return fieldError("saleSplitExemptionNote", `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`);
     }
   }
