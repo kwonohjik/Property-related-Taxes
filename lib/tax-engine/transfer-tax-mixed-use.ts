@@ -14,6 +14,7 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap, presaleRightStartDate } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land";
+import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import { determineMultiHouseSurcharge } from "./multi-house-surcharge";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
@@ -495,6 +496,11 @@ export function calcMixedUseTransferTax(
   //   G-3(나중 취득 토지)이 겹치면 회신 방식을 쓰지 않았다고 밝힌다. 12억 이하·비과세 아님은 이 산식이 닿지 않아 고지가 없다.
   if (housingPart.nonBusinessTransferredGain > 0 && isOneHouseExempt && !housingPart.isExempt) {
     warnings.push(highValueExcessRulingNoticeText(transferDate, laterLandExemptExcluded));
+  }
+  // 기본통칙 95-0…1 — 토지분 공제율이 토지 자신의 보유연수 값과 달라졌을 때만 고지한다(일반 분리취득 경로와 같은 문구·조건). 비과세면 장특이 없다.
+  const landAppurtenant = housingPart.appurtenantLthd;
+  if (landAppurtenant?.changedFromOwnYears && !housingPart.isExempt) {
+    warnings.push(appurtenantLandLthdNoticeText({ landHoldingYears: housingGainSplit.landHoldingYears, ...landAppurtenant }));
   }
   // OH-17 — §154③ 본문 + 전체 12억 이하 비과세: 상가 부분도 주택 → 소득금액 0, 배율 초과 토지분만 비사토로.
   const commercialAsHouse = wholeBuildingDeemedHouse

@@ -8,6 +8,7 @@
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 import { applyFairMarketRatio } from "./tax-utils"; // 장특 공제율 × 차익 — double 공제율(0.68 등)의 1원 과소 방지(일반 경로 `applyLthdRate`와 같은 leaf)
 import { getHousingMultiplier } from "./non-business-land/urban-area";
+import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "./appurtenant-land-lthd-rate";
 import {
   calcLongTermRate,
   buildHousingLthdEcho,
@@ -391,12 +392,27 @@ export function buildHousingPart(
     meetsTable2ResidenceRequirement({ winWinRentalHouse, transferDate, acquisitionDate }, table2ResidenceYears);
   const longTermDeductionTable: 1 | 2 = useTable2 ? 2 : 1;
 
-  const landDedRate = calcLongTermRate(
+  // 토지분 — 기본통칙 95-0…1: 1세대1주택(표2 대상) 부수토지가 **주택(건물)보다 보유기간이 오래된** 경우의 장특은
+  //   표1(토지 전체 보유기간)과 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 **큰 공제율**이다.
+  //   종전에는 토지 자신의 보유연수로 표2를 매겼다(토지 34년·건물 7년·거주 7년이면 68% — 통칙으로는 56%).
+  //   게이트·leaf는 일반 분리취득 경로(`transfer-tax-lthd.ts` split 분기)와 같다. 배제(미등기·§104⑦)는 leaf가 모르므로 먼저 거른다.
+  const landOwnYearsRate = calcLongTermRate(
     gainSplit.landHoldingYears,
     residenceYears,
     useTable2,
     housingLthdExcluded,
   );
+  const appurtenant =
+    !housingLthdExcluded && useTable2 && gainSplit.landHoldingYears > gainSplit.buildingHoldingYears
+      ? resolveAppurtenantLandLthdRate({
+          landHoldingYears: gainSplit.landHoldingYears,
+          houseHoldingYears: gainSplit.buildingHoldingYears,
+          residenceYears,
+          useTable2,
+          transferDate,
+        })
+      : undefined;
+  const landDedRate = appurtenant ? appurtenant.rate : landOwnYearsRate;
   const buildingDedRate = calcLongTermRate(
     gainSplit.buildingHoldingYears,
     residenceYears,
@@ -417,7 +433,12 @@ export function buildHousingPart(
     proratedBuildingGain,
     landDedRate,
     buildingDedRate,
-    landHoldingRate: calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2, housingLthdExcluded),
+    // 통칙 95-0…1 — 표1이 이기면 전부 보유분(거주분 없음), 표2가 이기면 보유분은 **건물 보유연수** 기준이다(일반 경로와 같은 규칙).
+    landHoldingRate: appurtenant
+      ? appurtenant.table1Applied
+        ? appurtenant.rate
+        : calcLongTermRate(gainSplit.buildingHoldingYears, 0, true, false, transferDate)
+      : calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2, housingLthdExcluded),
     buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2, housingLthdExcluded),
     longTermDeductionAmount,
     buildingHoldingYears: gainSplit.buildingHoldingYears,
@@ -467,6 +488,19 @@ export function buildHousingPart(
     longTermDeductionRate,
     longTermDeductionAmount,
     ...lthdEcho,
+    // 통칙 95-0…1 적용 echo(표시 전용) — 일반 경로 `SplitPartResult.appurtenantLthd`와 같은 형태다.
+    ...(appurtenant
+      ? {
+          appurtenantLthd: {
+            houseHoldingYears: gainSplit.buildingHoldingYears,
+            table1Rate: appurtenant.table1Rate,
+            table2Rate: appurtenant.table2Rate,
+            table1Applied: appurtenant.table1Applied,
+            changedFromOwnYears: appurtenant.rate !== landOwnYearsRate,
+            basis: resolveAppurtenantLthdNoticeBasis(transferDate),
+          },
+        }
+      : {}),
     incomeAmount,
     nonBusinessTransferRatio: nonBizRatio,
     nonBusinessTransferredGain,

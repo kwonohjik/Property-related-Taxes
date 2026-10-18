@@ -1,4 +1,4 @@
-# 겸용주택 주택분 부수토지 장특 — 기본통칙 95-0…1(표1·표2 중 큰 공제율) 누락 — 버그 수정 계획서 v0.1
+# 겸용주택 주택분 부수토지 장특 — 기본통칙 95-0…1(표1·표2 중 큰 공제율) 누락 — 버그 수정 계획서 v1.0
 
 작성 2026-10-18 · 워크트리 `mixed-95-0-1` · 브랜치 `docs/mixed-use-lthd-circular-95-0-1-plan` · 선행 #2205(통칙 단일 leaf `appurtenant-land-lthd-rate.ts`)
 
@@ -9,6 +9,7 @@
 > - **결함**: 겸용주택 **주택분 토지**의 장기보유특별공제율에 기본통칙 95-0…1이 없다. 1세대1주택 표2 대상이고 토지가 건물(주택)보다 먼저 취득됐으면 공제율은 「표1(토지 전체 보유기간)과 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 큰 것」이어야 한다. 그런데 엔진은 **토지 자신의 보유연수로 표2**를 매긴다. #2205가 일반 토지·건물 분리취득 경로에서 고친 결함이 겸용 경로에 그대로 남아 있다.
 > - **두 경로 모두 결함이 있다**: ① 단건 겸용 엔진(`buildHousingPart`). ② 다건(함께 양도) 파트 카드: 주택 토지 카드가 `housing` 카드라 단건 엔진 L-3가 토지 연수로 표2를 매긴다. 두 경로는 지금 **같은 틀린 값으로 일치**한다(동치 anchor가 통과하는 이유).
 > - **실측(수정안 적용 전→후)**: 토지 1992·건물 2019(7년)·거주 7년·30억이면 주택분 장특 164,343,992 → 158,547,106, 세액 **+2,434,692**. 건물 2023(3년)·거주 3년이면 토지분이 표1(30%)로 바뀌어 장특 81,474,826 → 70,847,202, 세액 **+4,463,602**. 토지가 건물보다 늦게 취득됐거나, 표1이거나, 12억 이하 비과세이거나, 다주택이면 **변화 0**.
+> - **결정(사용자 2026-10-18)**: Q-1~Q-3 권고대로 — 다건 카드 같은 PR · 신고서 열 분해 정밀화는 별건 · 고지는 기존 문구·조건. 구현 기록 §9.
 > - **방향**: 공제가 줄고 세액이 오른다. 통칙 문언과 #2205 일반 경로 정본에 맞추는 수정이다.
 > - #2205 PR 본문은 겸용을 「토지 연수를 건물 연수에 정렬한 구조」라며 범위 밖으로 뺐다. **사실이 아니다** — 겸용 엔진은 토지 취득일로 토지 보유연수를 따로 센다(실측: 토지 34년으로 표2 68%).
 
@@ -170,8 +171,34 @@ const landDedRate = appurtenant ? appurtenant.rate : calcLongTermRate(/* 종전 
 
 ## 8. 결정 필요
 
-| Q | 질문 | 권고 |
+| Q | 질문 | 권고 → **결정(2026-10-18 사용자: 권고대로)** |
 |---|---|---|
 | Q-1 | 다건 파트 카드(W-3)도 같은 PR에서 고치는가 | **같은 PR**. 따로 고치면 그 사이 단건과 다건 세액이 갈라진다 |
 | Q-2 | 신고서 주택분 토지·건물 열의 보유분·거주분 분해를 이번에 정밀화하는가(엔진 echo로 파트별 보유·거주 금액 제공) | **별건**. 비율 근사는 이번 수정 전부터 있던 한계다(토지·건물 공제율이 다르면 이미 어긋남). 합계 열과 장특 합계는 이번 수정으로 정확해진다 |
 | Q-3 | 화면 고지 범위 | 일반 경로와 같은 문구·조건(`changedFromOwnYears`)만 쓴다. 새 문구는 만들지 않는다 |
+
+---
+
+## 9. Do 기록 (2026-10-18)
+
+| 지점 | 변경 |
+|---|---|
+| `lib/tax-engine/transfer-tax-mixed-use-helpers.ts` `buildHousingPart` | §4.1 그대로. `landOwnYearsRate`(종전 값)를 따로 두고 게이트 통과 시 leaf 값으로 바꾼다. echo `landHoldingRate`·결과 `appurtenantLthd` 추가 |
+| `lib/tax-engine/types/transfer-mixed-use.types.ts` | `MixedUseHousingPart.appurtenantLthd?: SplitPartResult["appurtenantLthd"]` |
+| `lib/tax-engine/transfer-tax-mixed-use.ts` | `changedFromOwnYears && !isExempt`이면 `appurtenantLandLthdNoticeText`를 warnings에 싣는다. 겸용 결과 화면은 기존 경고 카드(`CalculationWarningsCard`)가 그린다 — **UI 코드 변경 없음** |
+| `lib/tax-engine/types/transfer.types.ts` | `TransferTaxInput.appurtenantHouseAcquisitionDate?: Date`(엔진 내부 값 — Zod·폼 없음, `highValueExcessShare`와 같은 성격) |
+| `app/api/calc/transfer/mixed-use-part-cards.ts` | 주택 부수토지 카드에만 건물 취득일을 싣는다 |
+| `lib/tax-engine/transfer-tax-lthd.ts` 단일 취득일 경로 | `housing` ∧ 필드 있음 ∧ `useTable2` ∧ 가업상속(L-5) 아님 ∧ 토지 연수 > 건물 연수이면 `rate`를 leaf 값으로 바꾼다. **조기 반환하지 않는다** — 뒤 분기(§97의3·§97의4)는 그대로 탄다. 일반 반환에만 보유기간 표시 축·`appurtenantTable1Applied`·고지 입력 echo를 싣는다. L-5는 거주분을 `rate − 토지 연수 보유분`으로 역산해 통칙 값과 섞이면 틀리므로 게이트에서 뺐다(API 경로로 카드에 실리지 않음 — grep 0건) |
+| `lib/tax-engine/transfer-tax-lthd-982-step.ts`·`transfer-tax.ts` | 카드 고지 입력을 warnings로(일반 split 경로 고지와 같은 자리). 합산 결과 `warnings`로 올라온다 |
+| `lib/tax-engine/appurtenant-land-lthd-rate.ts` | 호출부 목록에 겸용 두 경로 추가 |
+
+**검증**
+
+- 신규 `__tests__/tax-engine/transfer/mixed-use-appurtenant-lthd-95-0-1.anchor.test.ts` 13건: 단건 P1·P2(원 단위 장특·세액·echo·고지)·동률·토지가 짧음·연수 같음·표1·상한·비과세·미등기, 다건 P1·P2(과세표준 = 단건, 토지 카드 공제 = 48,307,382 × 통칙 공제율)·연수 같은 카드 보유기간 표시·카드 고지. 단건↔다건 동치 케이스는 계획서 §6의 «동치 anchor 파일에 추가» 대신 이 파일에 두었다(같은 주제를 한 파일에 모음).
+- 기존 anchor 2파일 5건 갱신(§5 표 그대로). #6 1원 사례는 원래 양도가액에서 double 곱셈으로 되돌리면 68,672,413 · 정수 연산 68,672,414로 **1원 성질이 유지**돼 양도가액을 바꾸지 않았다.
+- 전체 vitest(`npx vitest run __tests__`, json): 3,070파일 · 실패 0. tsc 0. lint 0 error(경고 6건은 기존).
+- 뮤테이션 11종: KILLED 9 · 등가 2.
+  - M-3(단건 배제 항 제거): 미등기·§104⑦이면 비과세 판정에서 `isOneHouseExempt`가 거짓(`transfer-tax-mixed-use-exemption.ts:395`)이라 `useTable2`가 이미 거짓 — 값이 같다. 항은 leaf가 배제를 모른다는 방어로 남겼다.
+  - M-11(카드 `useTable2` 항 제거): 표2 대상이 아니면 leaf가 표1 = 토지 자신의 값을 돌려주므로 공제율이 같다. split 게이트와 같은 모양으로 남겼다.
+- UI anchor는 만들지 않았다 — 고지는 기존 경고 카드가 그대로 그린다. **브라우저 수동 확인은 하지 않았다.**
+- 별건: `lib/tax-engine/transfer-tax.ts` 779줄(750 위험구간, 이번 변경 +1줄) — 분리는 별도.

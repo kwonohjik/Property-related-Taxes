@@ -99,10 +99,15 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     expect(run({}).total.transferTax).toBe(EXEMPT_TAX);
   });
 
+  /**
+   * B-A3·B-A5·B-A6 세액은 기본통칙 95-0…1 반영(2026-10-18)으로 올랐다 — 토지(1992 취득 · 34년)가 건물(2018 · 8년)보다
+   * 오래돼 토지분 공제율이 max(표1 30%, 표2 건물 8년 32% + 거주분)이다. 실거주 2년: 48% → 40%(292,594,423 → 294,217,552) ·
+   * 실거주 0년(통산 2년): 40% → 32%(302,107,250 → 303,730,378). 계획서 `transfer-mixed-use-lthd-circular-95-0-1.plan.md` §5.
+   */
   it("B-A3: 조정대상지역 취득이어도 **실거주** 2년 이상이면 비과세 유지 + 표2 적용", () => {
     const r = run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 2 });
     expect(r.housingPart.longTermDeductionTable).toBe(2);
-    expect(r.total.transferTax).toBe(292_594_423);
+    expect(r.total.transferTax).toBe(294_217_552);
   });
 
   it("B-A5: 거주요건은 **§154⑧3호 통산값**(table2ResidencePeriodYears)으로 판정한다", () => {
@@ -110,7 +115,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     // (표2 '거주분 공제율'은 실거주 0년이라 붙지 않는다 — 대상판정/공제율 분리, 사전법령해석재산 2021-202)
     const consolidated = run({ wasRegulatedAtAcquisition: true, table2ResidencePeriodYears: 2 });
     expect(consolidated.housingPart.longTermDeductionTable).toBe(2);
-    expect(consolidated.total.transferTax).toBe(302_107_250);
+    expect(consolidated.total.transferTax).toBe(303_730_378);
 
     // 통산이 1년이면 여전히 미충족 — **이중 통산이 없음**을 반증한다
     // (한 번 더 더해졌다면 2년이 되어 충족했을 것이다).
@@ -122,7 +127,7 @@ describe("Phase A — 영 §154① 거주요건 (E-1)", () => {
     expect(run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 1 }).total.transferTax)
       .toBe(TAXED_TAX); // 미충족
     expect(run({ wasRegulatedAtAcquisition: true, residencePeriodYears: 2 }).total.transferTax)
-      .toBe(292_594_423); // 충족
+      .toBe(294_217_552); // 충족
   });
 });
 

@@ -36,6 +36,8 @@ export interface Lthd982StepArgs {
   usageConversionDetail?: UsageConversionDetail;
   fbLthdFormula?: string;
   appurtenantTable1Applied?: boolean;
+  /** 겸용 파트 카드 주택 부수토지에 통칙 95-0…1을 적용해 공제율이 달라진 경우의 고지 입력(`calcLongTermHoldingDeduction` echo) */
+  appurtenantLthdNotice?: Parameters<typeof appurtenantLandLthdNoticeText>[0];
   splitDetail?: SplitGainResult;
 }
 
@@ -107,6 +109,7 @@ export function applyLthd982AndPushSteps(
       }),
     );
   }
+  if (a.appurtenantLthdNotice && !lthd982Applied) a.warnings.push(appurtenantLandLthdNoticeText(a.appurtenantLthdNotice));
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) a.warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 

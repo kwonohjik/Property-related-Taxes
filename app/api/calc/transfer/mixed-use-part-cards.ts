@@ -277,6 +277,9 @@ export function buildMixedUsePartCards(
         // 고가주택 + 배율 초과 — 겸용 엔진이 재산세제과-915 회신 방식으로 계산했으면(`highValueExcessRuling` echo) 카드도 같은 산식이어야 한다.
         // 이 카드의 양도차익은 배율 초과분을 뗀 한도 내 토지분(L − X)이라 X를 몫으로 싣는다(엔진 `resolveTaxableGain`이 max(0, 안분(L) − X)).
         ...(hp.highValueExcessRuling ? { highValueExcessShare: hp.nonBusinessTransferredGain } : {}),
+        // 기본통칙 95-0…1 — 카드는 취득일이 토지 취득일뿐이라 «주택 부수토지로서의 보유기간»(건물 보유기간)을 모른다.
+        //   겸용 엔진(`buildHousingPart`)과 같은 표1·표2 비교를 단건 엔진이 하도록 건물 취득일을 싣는다.
+        appurtenantHouseAcquisitionDate: bldAcqDate,
       },
     ),
     card(

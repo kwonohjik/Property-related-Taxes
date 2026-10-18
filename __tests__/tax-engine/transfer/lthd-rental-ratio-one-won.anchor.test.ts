@@ -31,17 +31,19 @@ describe("#6 겸용 장기보유특별공제 — 공제율 0.36 + 0.32(double 0.
     calcMixedUse(
       price,
       D("2026-06-01"),
-      // 건물 2017-06-01 → 보유 9년 · 거주 8년 → 표2 건물분 0.36 + 0.32
+      // 건물 2017-06-01 → 보유 9년 · 거주 8년 → 표2 건물분 0.36 + 0.32. 토지분(1992 취득)도 기본통칙 95-0…1로
+      // max(표1 30%, 표2 건물 9년 36% + 거주 32%) = 같은 0.68이다(종전 토지 자신의 연수로 표2 72%).
       { ...mixedUseCase14(), buildingAcquisitionDate: D("2017-06-01"), residencePeriodYears: 8, table2ResidencePeriodYears: 8 },
       makeMockRates(),
     );
   it("전제: 공제율이 double로 내려가 있다", () => {
     expect(run(3_000_000_000).housingPart.longTermDeductionRate).toBe(0.6799999999999999);
   });
-  it("양도가액 2,598,888,829 → 주택분 장특 69,360,677 → 69,360,678 · 결정세액 200,752,709 → 200,752,708", () => {
+  // 통칙 95-0…1 반영(2026-10-18) 후에도 이 양도가액에서 double 곱셈이면 68,672,413 — 정수 분수연산이 1원을 지킨다(뮤테이션 실측).
+  it("양도가액 2,598,888,829 → 주택분 장특 68,672,413(double) → 68,672,414 · 결정세액 201,041,779", () => {
     const r = run(2_598_888_829);
-    expect(r.housingPart.longTermDeductionAmount).toBe(69_360_678);
-    expect(r.total.transferTax).toBe(200_752_708);
+    expect(r.housingPart.longTermDeductionAmount).toBe(68_672_414);
+    expect(r.total.transferTax).toBe(201_041_779);
   });
   it("토지분만 내려가는 경우 — 토지 2017 · 건물 2012 취득, 양도가액 2,606,666,242 → 주택분 장특 74,541,602 (종전 74,541,601)", () => {
     const r = calcMixedUse(
@@ -52,10 +54,10 @@ describe("#6 겸용 장기보유특별공제 — 공제율 0.36 + 0.32(double 0.
     );
     expect(r.housingPart.longTermDeductionAmount).toBe(74_541_602);
   });
-  it("부정형 짝 — 곱이 정수가 아닌 양도가액(30억)은 종전과 같다 (194,453,782 · 259,826,791)", () => {
+  it("부정형 짝 — 곱이 정수가 아닌 양도가액(30억)은 double 곱셈과 같다 (192,521,486 · 260,638,355)", () => {
     const r = run(3_000_000_000);
-    expect(r.housingPart.longTermDeductionAmount).toBe(194_453_782);
-    expect(r.total.transferTax).toBe(259_826_791);
+    expect(r.housingPart.longTermDeductionAmount).toBe(192_521_486);
+    expect(r.total.transferTax).toBe(260_638_355);
   });
 });
 

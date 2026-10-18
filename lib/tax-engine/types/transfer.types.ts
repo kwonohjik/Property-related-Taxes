@@ -1585,6 +1585,15 @@ export interface TransferTaxInput {
   highValueExcessShare?: number;
 
   /**
+   * **겸용주택 파트 카드 전용 — 주택 부수토지 카드의 「주택(건물) 취득일」** (엔진 내부 값 — `mixed-use-part-cards.ts`가 주입).
+   *
+   * 소득세법 기본통칙 95-0…1: 1세대1주택에 딸린 토지로서 주택보다 보유기간이 오래된 부수토지의 장특은 표1(토지 전체 보유기간)과
+   * 표2(주택 부수토지로서의 보유기간) 중 큰 공제율이다. 파트 카드는 취득일이 토지 취득일 하나뿐이라 «주택 부수토지로서의 보유기간»
+   * (= 건물 보유기간)을 알 수 없어 겸용 엔진이 건물 취득일을 싣는다. 미주입이면 종전 계산이다. API 입력(⑫)이 아니다 — Zod에 없다.
+   */
+  appurtenantHouseAcquisitionDate?: Date;
+
+  /**
    * 상업용건물·오피스텔 환산취득가 계산 입력 (선택).
    * propertyType === "commercial_building" + useEstimatedAcquisition === true 일 때 필수.
    * 소득세법 시행령 §164⑥·§176조의2②2호.

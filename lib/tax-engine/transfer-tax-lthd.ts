@@ -33,7 +33,11 @@ import type { LthdExclusionReason } from "./legal-codes/transfer";
 import { isNblLthdExclusionEra } from "./data/lthd-non-business-land-era";
 import { table2ResidencePct } from "./data/lthd-table2-era";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
-import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "./appurtenant-land-lthd-rate";
+import {
+  appurtenantLandLthdNoticeText,
+  resolveAppurtenantLandLthdRate,
+  resolveAppurtenantLthdNoticeBasis,
+} from "./appurtenant-land-lthd-rate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
@@ -74,6 +78,11 @@ interface LongTermHoldingResult {
    * 이 플래그가 켜지면 표시 계층이 표1 형식으로 내려간다.
    */
   appurtenantTable1Applied?: boolean;
+  /**
+   * 겸용주택 파트 카드(주택 부수토지)에 기본통칙 95-0…1을 적용해 공제율이 토지 자신의 보유연수 값과 **달라진** 경우의
+   * 고지 입력(표시 전용 — `appurtenantLandLthdNoticeText`에 그대로 넘긴다). 세액은 `deduction`이 정본.
+   */
+  appurtenantLthdNotice?: Parameters<typeof appurtenantLandLthdNoticeText>[0];
 }
 
 /**
@@ -499,7 +508,51 @@ export function calcLongTermHoldingDeduction(
   const holding = calculateHoldingPeriod(resolveLTHDStartDate(input), input.transferDate);
   const holdingPeriod = { years: holding.years, months: holding.months };
 
-  const rate = rateForYears(holding.years);
+  /**
+   * 겸용주택 파트 카드의 주택 부수토지 — 기본통칙 95-0…1(표1 토지 전체 보유기간 vs 표2 주택 부수토지로서의 보유기간 중 큰 공제율).
+   * 카드는 `housing`이라 L-1b(`land` 카드)에 걸리지 않고 분리취득 축도 중화돼 있어, 종전에는 여기서 **토지 자신의 연수로 표2**를 매겼다.
+   * 겸용 엔진(`buildHousingPart`)·split 분기와 같은 게이트·leaf다(`appurtenantHouseAcquisitionDate`는 겸용 파트 카드만 싣는다).
+   */
+  const appurtenantHouseDate = input.appurtenantHouseAcquisitionDate;
+  const houseYearsForCard =
+    // L-5(가업상속)는 거주분을 `rate − 토지 연수 보유분`으로 역산하므로 통칙 값과 섞지 않는다(겸용 카드에는 그 축이 실리지 않는다 — API 경로 0건).
+    appurtenantHouseDate && input.propertyType === "housing" && useTable2 && !input.fbLthdLatter
+      ? calculateHoldingPeriod(appurtenantHouseDate, input.transferDate)
+      : undefined;
+  const cardAppurtenant =
+    houseYearsForCard && holding.years > houseYearsForCard.years
+      ? resolveAppurtenantLandLthdRate({
+          landHoldingYears: holding.years,
+          houseHoldingYears: houseYearsForCard.years,
+          residenceYears,
+          useTable2,
+          transferDate: input.transferDate,
+        })
+      : undefined;
+  const ownYearsRate = rateForYears(holding.years);
+  // 공제율만 바꾸고 아래 분기(L-2' §97의3·§97의4)는 그대로 탄다 — 그 분기들의 기본 공제율도 통칙 값이다.
+  const rate = cardAppurtenant ? cardAppurtenant.rate : ownYearsRate;
+  // 표시 echo(일반 반환에만) — 보유기간 표시 축을 공제율을 만든 축과 맞추고(L-1b와 같은 규칙 — 동률은 표1), 값이 달라졌으면 고지 입력을 싣는다.
+  const cardEcho: Partial<LongTermHoldingResult> = cardAppurtenant
+    ? {
+        holdingPeriod: cardAppurtenant.table1Applied
+          ? holdingPeriod
+          : { years: houseYearsForCard!.years, months: houseYearsForCard!.months },
+        ...(cardAppurtenant.table1Applied ? { appurtenantTable1Applied: true } : {}),
+        ...(cardAppurtenant.rate !== ownYearsRate
+          ? {
+              appurtenantLthdNotice: {
+                landHoldingYears: holding.years,
+                houseHoldingYears: houseYearsForCard!.years,
+                table1Rate: cardAppurtenant.table1Rate,
+                table2Rate: cardAppurtenant.table2Rate,
+                table1Applied: cardAppurtenant.table1Applied,
+                basis: resolveAppurtenantLthdNoticeBasis(input.transferDate),
+              },
+            }
+          : {}),
+      }
+    : {};
 
   // L-5: 「소득세법」 §95④ **후단** — 가업상속공제가 적용된 **비율에 해당하는 자산**의 보유기간은
   //      피상속인이 취득한 날부터 기산한다. (법률 제12169호, 2014.1.1 시행 — 연혁 대조 실측)
@@ -657,7 +710,7 @@ export function calcLongTermHoldingDeduction(
 
   if (rate > 0) {
     const deduction = applyLthdRate(taxableGain, rate);
-    return { deduction, rate, holdingPeriod, rental97LthdDetail: rental97Eval };
+    return { deduction, rate, holdingPeriod, rental97LthdDetail: rental97Eval, ...cardEcho };
   }
 
   return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail: rental97Eval };
