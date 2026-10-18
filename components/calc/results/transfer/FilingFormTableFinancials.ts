@@ -6,7 +6,9 @@ import type {
   MixedUseHousingPart,
   MixedUseCommercialPart,
   MixedUseNonBusinessLandPart,
+  MixedUseGainBreakdown,
 } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import { splitLtDeduction } from "./FilingFormTableDateHelpers";
 import type { SplitPartResult } from "@/lib/tax-engine/types/transfer.types";
 import type { SplitNonBusinessLandPart } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { splitPartAcquisitionDeducted } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -60,12 +62,19 @@ export function fourPartFinancials(
   // 재산세제과-915 회신 방식(고가주택 + 배율 초과)이면 엔진이 파트별 과세 양도차익·장특을 echo한다(`highValueExcessRuling`) — 안분 비율을 다시 곱해 만들지 않고 그대로 읽는다.
   //   종전 식(`(토지 − 비사토) × 비율`)은 초과분을 이중으로 빼는 옛 산식이라 이 경우 엔진 값과 어긋난다.
   const ruling = hp.highValueExcessRuling;
-  const housingLandTaxable = ruling
+  // 파트 echo(`partLthd`) — 엔진이 장특을 곱한 파트별 과세 양도차익·장특을 그대로 싣는다(915 회신·나중 취득 토지도 같은 값이다).
+  //   있으면 그것이 정본이고, 아래 비율 근사는 echo가 없는 옛 결과(`resultData`)의 fallback이다.
+  const hpPart = hp.partLthd;
+  const housingLandTaxable = hpPart
+    ? hpPart.land.taxableGain + hpNbGain
+    : ruling
     ? ruling.landTaxableGain + hpNbGain
     : hp.laterLandExemptExcluded
       ? laterLandGain + hpNbGain
       : Math.floor((hp.landTransferGain - hpNbGain) * housingExemptRatio) + hpNbGain;
-  const housingBuildingTaxable = ruling
+  const housingBuildingTaxable = hpPart
+    ? hpPart.building.taxableGain
+    : ruling
     ? ruling.buildingTaxableGain
     : hp.laterLandExemptExcluded
       ? hp.proratedTaxableGain - laterLandGain
@@ -89,28 +98,48 @@ export function fourPartFinancials(
   // 비사토 장특(표1 보유분)은 주택분 토지 열에 함께 싣는다 — 합계 열(§95② 공제 합계)과 정합.
   // #2141 — 나중 토지 제외면 주택분 장특은 건물분뿐이고 토지 소득금액은 과세 토지 차익 그대로다. 주택으로 본 상가 부분은
   //   건물분이 비과세라 상가 소득금액(장특 0)은 전부 토지 열이다. 그 밖에는 종전대로 양도차익 비율로 나눈다.
-  const hpLtLand = ruling
+  const hpLtLand = hpPart
+    ? hpPart.land.longTermDeduction
+    : ruling
     ? ruling.landLongTermDeduction
     : hp.laterLandExemptExcluded ? 0 : Math.floor(hp.longTermDeductionAmount * hpLandRatio);
-  const hpLtBuilding = ruling
+  const hpLtBuilding = hpPart
+    ? hpPart.building.longTermDeduction
+    : ruling
     ? ruling.buildingLongTermDeduction
     : hp.laterLandExemptExcluded
       ? hp.longTermDeductionAmount
       : Math.floor(hp.longTermDeductionAmount * hpBuildRatio);
-  const hpIncomeLand = ruling
+  const hpIncomeLand = hpPart
+    ? hpPart.land.taxableGain - hpPart.land.longTermDeduction
+    : ruling
     ? ruling.landTaxableGain - ruling.landLongTermDeduction
     : hp.laterLandExemptExcluded ? laterLandGain : Math.floor(hp.incomeAmount * hpLandRatio);
-  const hpIncomeBuilding = ruling
+  const hpIncomeBuilding = hpPart
+    ? hpPart.building.taxableGain - hpPart.building.longTermDeduction
+    : ruling
     ? ruling.buildingTaxableGain - ruling.buildingLongTermDeduction
     : hp.laterLandExemptExcluded
       ? hp.incomeAmount - laterLandGain
       : Math.floor(hp.incomeAmount * hpBuildRatio);
-  const cpIncomeLand = commercialExempt ? cp.incomeAmount : Math.floor(cp.incomeAmount * cpLandRatio);
-  const cpIncomeBuilding = commercialExempt ? 0 : Math.floor(cp.incomeAmount * cpBuildRatio);
+  // 상가분 — 파트 echo가 있으면 토지·건물 각자의 공제율로 계산한 장특·소득금액 그대로(주택으로 본 상가 부분은 echo가 없다 — 자체 분기).
+  //   양도소득금액 열은 그 열의 양도차익(음수 그대로 — 위 과세대상 양도차익 열과 같은 값) − 파트 장특이다. 한쪽 차익이 음수여도
+  //   열 합 = 상가 소득금액(차익 합 − 장특 합)이 된다(합계가 음수라 0으로 막힌 경우만 예외).
+  const cpPart = commercialExempt ? undefined : cp.partLthd;
+  const cpIncomeLand = commercialExempt
+    ? cp.incomeAmount
+    : cpPart
+      ? cp.landTransferGain - cpPart.land.longTermDeduction
+      : Math.floor(cp.incomeAmount * cpLandRatio);
+  const cpIncomeBuilding = commercialExempt
+    ? 0
+    : cpPart
+      ? cp.buildingTransferGain - cpPart.building.longTermDeduction
+      : Math.floor(cp.incomeAmount * cpBuildRatio);
   setNum("ltDeduction", "housingLand", hpLtLand + nbLtDeduction);
   setNum("ltDeduction", "housingBuilding", hpLtBuilding);
-  setNum("ltDeduction", "commercialLand", Math.floor(cp.longTermDeductionAmount * cpLandRatio));
-  setNum("ltDeduction", "commercialBuilding", Math.floor(cp.longTermDeductionAmount * cpBuildRatio));
+  setNum("ltDeduction", "commercialLand", cpPart ? cpPart.land.longTermDeduction : Math.floor(cp.longTermDeductionAmount * cpLandRatio));
+  setNum("ltDeduction", "commercialBuilding", cpPart ? cpPart.building.longTermDeduction : Math.floor(cp.longTermDeductionAmount * cpBuildRatio));
   setNum("incomeAmount", "housingLand", hpIncomeLand + nbIncome);
   setNum("incomeAmount", "housingBuilding", hpIncomeBuilding);
   setNum("incomeAmount", "commercialLand", cpIncomeLand);
@@ -210,4 +239,78 @@ export function splitNonBusinessLandNotes(
     incomeAmount: income,
     incomeAmountAfter: income,
   };
+}
+
+/**
+ * 겸용 4열 — 장기보유특별공제 **보유 기간분 · 거주 기간분** 행.
+ *
+ * 엔진 파트 echo(`partLthd`)가 있으면 열마다 그 보유분·거주분을 그대로 싣고 **합계 열 = 열 합**이다(장특 행과 같은 열 값 ·
+ * 열 안에서 보유분 + 거주분 = 장특). 주택분 토지 열에는 배율 초과 비사토 장특(표1 보유분)을 더한다.
+ *
+ * echo가 없는 옛 결과(`resultData`)는 종전 근사 그대로다 — 주택 장특 합계를 건물 보유개월·거주개월 비율로 나누고(`splitLtDeduction`)
+ * 토지·건물 열은 양도차익 비율(915 회신 방식이면 그 echo 비율)로 나눈다. 토지·건물 공제율이 다르면 이 근사는 틀린다(계획서
+ * `transfer-mixed-use-filing-lthd-part-split.plan.md` §2 — 거주분 합계 열이 엔진보다 7,246,107 많았던 사례).
+ */
+export function fourPartLthdSplitRows(
+  mu: MixedUseGainBreakdown,
+  holdingMs: number,
+  residenceMs: number,
+  useTable2: boolean,
+  setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
+) {
+  const nbLtDeduction = mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
+  const hpPart = mu.housingPart.partLthd;
+  const cpPart = mu.commercialPart.deemedHouseBy154_3Main === true ? undefined : mu.commercialPart.partLthd;
+  if (hpPart) {
+    // 상가분: echo가 있으면 그대로(표1이라 전부 보유분). 주택으로 본 상가 부분(OH-17)은 엔진이 echo를 지우고 장특이 0이라
+    //   아래 비율식이 0을 낸다(장특 행 `fourPartFinancials`와 같은 식).
+    const cp = mu.commercialPart;
+    const cpLandRatioFb = cp.transferGain > 0 ? cp.landTransferGain / cp.transferGain : 0.5;
+    const cpHold = cpPart
+      ? [cpPart.land.holdingDeductionAmount, cpPart.building.holdingDeductionAmount]
+      : [Math.floor(cp.longTermDeductionAmount * cpLandRatioFb), Math.floor(cp.longTermDeductionAmount * (1 - cpLandRatioFb))];
+    const cpRes = cpPart ? [cpPart.land.residenceDeductionAmount, cpPart.building.residenceDeductionAmount] : [0, 0];
+    const hold = [hpPart.land.holdingDeductionAmount + nbLtDeduction, hpPart.building.holdingDeductionAmount, ...cpHold];
+    const res = [hpPart.land.residenceDeductionAmount, hpPart.building.residenceDeductionAmount, ...cpRes];
+    const cols = ["housingLand", "housingBuilding", "commercialLand", "commercialBuilding"] as const;
+    cols.forEach((c, i) => {
+      setNum("ltHoldingPart", c, hold[i]);
+      setNum("ltResidencePart", c, res[i]);
+    });
+    setNum("ltHoldingPart", "total", hold.reduce((a, b) => a + b, 0));
+    setNum("ltResidencePart", "total", res.reduce((a, b) => a + b, 0));
+    return;
+  }
+  const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
+  const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
+  const hpLandRatio = mu.housingPart.transferGain > 0 ? mu.housingPart.landTransferGain / mu.housingPart.transferGain : 0.5;
+  const hpBuildRatio = 1 - hpLandRatio;
+  const cpLandRatio = mu.commercialPart.transferGain > 0 ? mu.commercialPart.landTransferGain / mu.commercialPart.transferGain : 0.5;
+  const cpBuildRatio = 1 - cpLandRatio;
+  // 배율초과 비사업용토지 장특은 표1 **보유분** 단독(거주분 없음) — 보유 기간분 행에 싣는다.
+  // 누락하면 「장기보유특별공제 합계 ≠ 보유분 + 거주분」이 되어 합계 열 내부가 어긋난다.
+  setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount + nbLtDeduction);
+  setNum("ltResidencePart", "total", hpSplit.residenceAmount);
+  // 재산세제과-915 회신 방식(고가주택 + 배율 초과)이면 주택분 토지·건물의 장특이 양도차익 비율이 아니라 **엔진 echo**(`highValueExcessRuling`)로 갈린다 —
+  // 그 비율로 보유·거주분을 나누고 건물 열이 잔액을 흡수한다(위 「장기보유특별공제」 열과 같은 값 · 합 불변식).
+  const ruling = mu.housingPart.highValueExcessRuling;
+  const hpTotalLt = mu.housingPart.longTermDeductionAmount;
+  const splitByRuling = (amount: number) => {
+    const land = hpTotalLt > 0 ? Math.floor((amount * ruling!.landLongTermDeduction) / hpTotalLt) : 0;
+    return { land, building: amount - land };
+  };
+  const hpHolding = ruling
+    ? splitByRuling(hpSplit.holdingAmount)
+    : { land: Math.floor(hpSplit.holdingAmount * hpLandRatio), building: Math.floor(hpSplit.holdingAmount * hpBuildRatio) };
+  const hpResidence = ruling
+    ? splitByRuling(hpSplit.residenceAmount)
+    : { land: Math.floor(hpSplit.residenceAmount * hpLandRatio), building: Math.floor(hpSplit.residenceAmount * hpBuildRatio) };
+  setNum("ltHoldingPart", "housingLand", hpHolding.land + nbLtDeduction);
+  setNum("ltHoldingPart", "housingBuilding", hpHolding.building);
+  setNum("ltHoldingPart", "commercialLand", Math.floor(cpSplit.holdingAmount * cpLandRatio));
+  setNum("ltHoldingPart", "commercialBuilding", Math.floor(cpSplit.holdingAmount * cpBuildRatio));
+  setNum("ltResidencePart", "housingLand", hpResidence.land);
+  setNum("ltResidencePart", "housingBuilding", hpResidence.building);
+  setNum("ltResidencePart", "commercialLand", 0);
+  setNum("ltResidencePart", "commercialBuilding", 0);
 }

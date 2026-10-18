@@ -745,6 +745,8 @@ export interface MixedUseHousingPart {
    * `SplitPartResult["appurtenantLthd"]`와 같고 표시 계층은 이 값을 그대로 읽는다(재계산 금지).
    */
   appurtenantLthd?: SplitPartResult["appurtenantLthd"];
+  /** 파트별(토지·건물) 장특 echo(표시 전용 — 합계 보유/거주분 echo는 이 파트 합). 옛 결과(`resultData`)에는 없다. */
+  partLthd?: MixedPartLthd;
   /** 양도소득금액 */
   incomeAmount: number;
   /** 주택 토지분 양도차익 중 비사업용으로 이전된 비율 */
@@ -773,7 +775,29 @@ export interface MixedUseHousingPart {
 }
 
 /** 상가부분 계산 결과 */
+/**
+ * 겸용 파트(토지 또는 건물) 1개의 장기보유특별공제 echo — **표시 전용**(세액은 파트 합계 `longTermDeductionAmount`가 정본).
+ * 엔진은 토지·건물을 각자의 공제율로 계산해 더한다. 신고서 토지·건물 열은 이 값을 그대로 읽는다(양도차익 비율로 다시 나누지 않는다).
+ * 보유·거주 분해는 일반 분리취득 경로(`SplitPartResult`)와 같은 정수 % 규약이다 — `보유분 + 거주분 = longTermDeduction`.
+ */
+export interface MixedPartLthdEcho {
+  /** 장특을 곱한 과세 양도차익(주택분: 12억 초과 안분 후 · 배율 초과 비사토 제외 · 음수 0) */
+  taxableGain: number;
+  longTermRate: number;
+  longTermDeduction: number;
+  holdingDeductionRate: number;
+  residenceDeductionRate: number;
+  holdingDeductionAmount: number;
+  residenceDeductionAmount: number;
+}
+export interface MixedPartLthd {
+  land: MixedPartLthdEcho;
+  building: MixedPartLthdEcho;
+}
+
 export interface MixedUseCommercialPart {
+  /** 파트별 장특 echo(표시 전용 — 표1이라 거주분 0). 옛 결과(`resultData`)에는 없다. */
+  partLthd?: MixedPartLthd;
   /** 상가부분 환산취득가액 */
   estimatedAcquisitionPrice: number;
   /** 상가부분 양도차익 합계 */

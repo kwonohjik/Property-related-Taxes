@@ -218,7 +218,8 @@ describe("F35 케이스 A: 12억 이하 주택분(전액 비과세) + 배율초�
     // ✅ F35 수정 완료: 주택분 장특은 0(안분 과세분 없음)이고 비사토 표1 보유분만 남는다.
     expect(o.cell("ltDeduction", "housingLand")).toBe(2_666_875);
     expect(o.cell("ltDeduction", "housingBuilding")).toBe(0);
-    expect(o.cell("ltDeduction", "commercialLand")).toBe(335_980_441);
+    // 상가 열은 엔진 파트 echo(`partLthd`) 값이다 — 종전 양도차익 비율 근사는 열마다 floor해 열 합이 합계보다 1원 작았다(2026-10-18).
+    expect(o.cell("ltDeduction", "commercialLand")).toBe(335_980_442);
     expect(o.cell("ltDeduction", "commercialBuilding")).toBe(2_149_262);
     // ✅ F35: 종전 338,129,704 → 비사토 장특 가산 후 340,796,579.
     expect(o.cell("ltDeduction", "total")).toBe(340_796_579);
@@ -236,7 +237,7 @@ describe("F35 케이스 A: 12억 이하 주택분(전액 비과세) + 배율초�
     expect(o.cell("incomeAmount", "housingLand")).toBe(6_222_711);
     expect(o.cell("incomeAmount", "housingBuilding")).toBe(0);
     expect(o.cell("incomeAmount", "commercialLand")).toBe(783_954_365);
-    expect(o.cell("incomeAmount", "commercialBuilding")).toBe(5_014_946);
+    expect(o.cell("incomeAmount", "commercialBuilding")).toBe(5_014_947);
     // ✅ F35: 종전 788,969,312 → 비사토 양도소득금액 가산 후 795,192,023.
     expect(o.cell("incomeAmount", "total")).toBe(795_192_023);
   });
@@ -349,15 +350,22 @@ describe("F35 케이스 B: 12억 초과 주택분(안분 과세) + 배율초과"
     // 🔁 #17-2b 갱신: 주택분 토지 칸 594,298,959 → 207,616,124 (비사토 167,544,881 + 한도 내 토지분 장특 40,071,243), 건물 1,993,180,588 → 2,273,897,672.
     expect(o.cell("ltDeduction", "housingLand")).toBe(207_616_124);
     expect(o.cell("ltDeduction", "housingBuilding")).toBe(2_273_897_672);
-    expect(o.cell("ltDeduction", "commercialLand")).toBe(868_545_661);
+    // 상가 열은 엔진 파트 echo(`partLthd`) 값이다 — 종전 양도차익 비율 근사는 열마다 floor해 열 합이 합계보다 1원 작았다(2026-10-18).
+    expect(o.cell("ltDeduction", "commercialLand")).toBe(868_545_662);
     expect(o.cell("ltDeduction", "commercialBuilding")).toBe(20_980_292);
     // ✅ F35: 종전 3,309,460,621 → 3,477,005,502.
     expect(o.cell("ltDeduction", "total")).toBe(3_371_039_750); // 🔁 #17-2b: 3,477,005,502 → 3,371,039,750
     // 보유 기간분 행에도 같은 금액이 반영돼 「합계 = 보유분 + 거주분」이 성립한다.
     const ltHolding = o.rows.find((r) => r.label.includes("보유 기간분"))!;
     const ltResidence = o.rows.find((r) => r.label.includes("거주 기간분"))!;
-    expect(ltHolding.values["total"]).toBe(3_371_039_750);
-    expect(ltHolding.values["housingLand"]).toBe(207_616_124); // 보유 기간분 행도 엔진 echo 비율(위 열과 같은 값)
+    // 🔁 2026-10-18: 보유·거주 기간분은 엔진 파트 echo(`partLthd`)를 읽는다. 종전에는 이 테스트가 폼 데이터(거주개월)를 넘기지 않아
+    //   신고서가 장특 전부를 보유분으로 그렸다(3,371,039,750). 엔진은 표2 거주분을 따로 계산한다 — 행 값 = 엔진 echo.
+    const hp = o.breakdown.housingPart;
+    const nbLt = o.breakdown.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
+    expect(ltHolding.values["total"]).toBe(hp.holdingDeductionAmount! + o.breakdown.commercialPart.longTermDeductionAmount + nbLt);
+    expect(ltResidence.values["total"]).toBe(hp.residenceDeductionAmount);
+    expect(ltHolding.values["housingLand"]).toBe(hp.partLthd!.land.holdingDeductionAmount + nbLt);
+    expect(ltHolding.values["total"]).toBe(2_214_055_293);
     expect(
       (ltHolding.values["total"] as number) + (ltResidence.values["total"] as number),
     ).toBe(o.cell("ltDeduction", "total"));
@@ -369,7 +377,7 @@ describe("F35 케이스 B: 12억 초과 주택분(안분 과세) + 배율초과"
     expect(o.cell("incomeAmount", "housingLand")).toBe(400_955_868);
     expect(o.cell("incomeAmount", "housingBuilding")).toBe(568_474_419);
     expect(o.cell("incomeAmount", "commercialLand")).toBe(2_026_606_547);
-    expect(o.cell("incomeAmount", "commercialBuilding")).toBe(48_954_015);
+    expect(o.cell("incomeAmount", "commercialBuilding")).toBe(48_954_016);
     // ✅ F35: 종전 2,680,544,231 → 3,071,482,288.
     expect(o.cell("incomeAmount", "total")).toBe(3_044_990_850); // 🔁 #17-2b: 3,071,482,288 → 3,044,990,850
   });

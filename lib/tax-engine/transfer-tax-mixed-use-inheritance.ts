@@ -13,14 +13,19 @@
  * 설계 문서: docs/02-design/features/transfer-mixed-use-inheritance-acquisition.engine.design.md
  */
 
-import { applyRate } from "./tax-utils";
 import {
   LTHD_TABLE2_RESIDENCE_MIN_YEARS,
   resolveLthdTable2Era,
   table2HoldingOnlyRate,
 } from "./data/lthd-table2-era";
 import { multiplyByArea } from "./area-utils";
-import type { MixedUseAssetInput, MixedUseDerivedAreas } from "./types/transfer-mixed-use.types";
+import type {
+  MixedPartLthd,
+  MixedPartLthdEcho,
+  MixedUseAssetInput,
+  MixedUseDerivedAreas,
+} from "./types/transfer-mixed-use.types";
+import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import type { PreHousingDisclosureResult } from "./types/transfer.types";
 
 /**
@@ -70,9 +75,11 @@ export function calcLongTermRate(
 
 /**
  * 주택분 장특공제 보유/거주 기간분 분리 echo (표시 전용·세액 불변).
- * 거주분 = 각 부분 거주율(총 부분율 − 보유 부분율)로 직접 산정(applyRate),
- * 보유분 = 총 장특공제 − 거주분(잔액 흡수 → 합 = longTermDeductionAmount 불변식).
- * 표1/보유<3이면 거주율 0 → 거주분 0·보유분 전액. 대표 연수·율은 건물 기준.
+ *
+ * 파트(토지·건물)마다 일반 분리취득 경로와 **같은 규약**(`deriveSplitLthdEcho` — 정수 % 분해,
+ * 거주분 = floor(공제액 × 거주% ÷ 총%), 보유분 = 공제액 − 거주분)으로 나누고, 합계는 **파트 합**이다
+ * (합 = longTermDeductionAmount 불변식). 신고서 토지·건물 열은 `partLthd`를 그대로 읽는다.
+ * 대표 연수·율(`holdingYears`·`holdingDeductionRate` 등)은 종전대로 건물 기준이다.
  */
 export function buildHousingLthdEcho(a: {
   proratedLandGain: number;
@@ -81,7 +88,8 @@ export function buildHousingLthdEcho(a: {
   buildingDedRate: number;
   landHoldingRate: number;
   buildingHoldingRate: number;
-  longTermDeductionAmount: number;
+  landDeductionAmount: number;
+  buildingDeductionAmount: number;
   buildingHoldingYears: number;
   residenceYears: number;
 }): {
@@ -91,17 +99,36 @@ export function buildHousingLthdEcho(a: {
   residenceYears: number;
   holdingDeductionRate: number;
   residenceDeductionRate: number;
+  partLthd: MixedPartLthd;
 } {
-  const residenceDeductionAmount =
-    applyRate(Math.max(a.proratedLandGain, 0), a.landDedRate - a.landHoldingRate) +
-    applyRate(Math.max(a.proratedBuildingGain, 0), a.buildingDedRate - a.buildingHoldingRate);
+  const land = mixedPartLthdEcho(a.proratedLandGain, a.landDedRate, a.landHoldingRate, a.landDeductionAmount);
+  const building = mixedPartLthdEcho(a.proratedBuildingGain, a.buildingDedRate, a.buildingHoldingRate, a.buildingDeductionAmount);
   return {
-    holdingDeductionAmount: a.longTermDeductionAmount - residenceDeductionAmount,
-    residenceDeductionAmount,
+    holdingDeductionAmount: land.holdingDeductionAmount + building.holdingDeductionAmount,
+    residenceDeductionAmount: land.residenceDeductionAmount + building.residenceDeductionAmount,
     holdingYears: a.buildingHoldingYears,
     residenceYears: a.residenceYears,
-    holdingDeductionRate: a.buildingHoldingRate,
-    residenceDeductionRate: a.buildingDedRate - a.buildingHoldingRate,
+    holdingDeductionRate: building.holdingDeductionRate,
+    residenceDeductionRate: building.residenceDeductionRate,
+    partLthd: { land, building },
+  };
+}
+
+/** 겸용 파트 1개의 장특 echo — 주택분·상가분 공용(상가분은 표1이라 `holdingOnlyRate` = 공제율 → 거주분 0). */
+export function mixedPartLthdEcho(
+  taxableGain: number,
+  longTermRate: number,
+  holdingOnlyRate: number,
+  longTermDeduction: number,
+): MixedPartLthdEcho {
+  return {
+    taxableGain: Math.max(taxableGain, 0),
+    longTermRate,
+    longTermDeduction,
+    ...(deriveSplitLthdEcho({ totalRate: longTermRate, holdingOnlyRate, deduction: longTermDeduction }) as Pick<
+      MixedPartLthdEcho,
+      "holdingDeductionRate" | "residenceDeductionRate" | "holdingDeductionAmount" | "residenceDeductionAmount"
+    >),
   };
 }
 
