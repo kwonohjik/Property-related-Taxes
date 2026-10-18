@@ -17,6 +17,11 @@ describe("reductionEligibleIncome (부표2 ⑲ 세액감면대상금액)", () =>
   const fullIncome = 290_841_229; // 양도소득금액
   const reducible = 53_425_403; // 감면율 곱한 값 (§77)
 
+  it("다건에서 차손을 통산받은 자산 → 영 §167의2② 반영 후 B가 유형 분기보다 우선 (Q-3)", () => {
+    expect(reductionEligibleIncome("public_expropriation", fullIncome, reducible, undefined, 190_841_229)).toBe(190_841_229);
+    expect(reductionEligibleIncome("replacement_land_comp", fullIncome, reducible, 203_484_404, 0)).toBe(0);
+  });
+
   it("§77 공익수용 → 양도소득금액 전액 (reducibleIncome 아님)", () => {
     expect(reductionEligibleIncome("public_expropriation", fullIncome, reducible, undefined)).toBe(
       fullIncome,

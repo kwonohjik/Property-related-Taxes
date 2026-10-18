@@ -6,6 +6,9 @@
  *   U-1 ①-a 파트 사이에 다른 자산을 끼울 수 없었다     6,118,416 → 5,993,222
  *   U-2 ①-b 전체 누진 경로 C가 자산 단위 식이었다       323,176,261 → 323,091,083 (감면 42,305,265 → 42,399,907)
  *   U-3 ①-c M-4가 split 자산의 감면 외 소득을 0으로 봤다  72,268,469 → 71,906,896
+ * U-2·U-3은 감면 파트가 차손을 받는다 — 영 §167의2②로 B가 그만큼 줄어 값이 다시 바뀌었다(분리 신고도 같이):
+ *   U-2 323,091,083 → 333,312,489 (감면 42,399,907 → 31,042,789) · U-3 71,906,896 → 75,081,645
+ *   (계획서 `transfer-90-1-reducible-income-after-loss-offset.plan.md`)
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTaxAggregate, type TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
@@ -122,12 +125,12 @@ describe("split 기본공제 배분 단위 — 분리 신고와 같다", () => {
   it("U-2 (①-b): 전체 누진이 이겨도 C는 감면 파트(건물)가 받은 기본공제 — 토지(감면 제외)에 붙은 공제는 C가 아니다", () => {
     const { P, L, B } = split({ landAcqDate: "2021-09-20", landSale: 250_000_000, bldSale: 1_900_000_000, reduced: true });
     const sep = run([L, B, lossHouse300]);
-    expect(sep.totalTax).toBe(323_091_083);
-    expect(sep.reductionAmount).toBe(42_399_907);
+    expect(sep.totalTax).toBe(333_312_489);
+    expect(sep.reductionAmount).toBe(31_042_789);
     for (const order of [[P, lossHouse300], [lossHouse300, P]]) {
       const r = run(order);
       expect(r.comparedTaxApplied).toBe("general");
-      expect(r.reductionAmount).toBe(42_399_907);
+      expect(r.reductionAmount).toBe(31_042_789);
       expect(r.reductionBreakdown[0].basicDeductionApplied).toBe(0);
       expect(r.totalTax).toBe(sep.totalTax);
     }
@@ -137,7 +140,7 @@ describe("split 기본공제 배분 단위 — 분리 신고와 같다", () => {
     const { P, L, B } = split({ landAcqDate: "2022-07-20", landSale: 250_000_000, bldSale: 600_000_000, reduced: true });
     const R = land("R", 600_000_000, false);
     const sep = run([L, B, lossHouse300, R]);
-    expect(sep.totalTax).toBe(71_906_896);
+    expect(sep.totalTax).toBe(75_081_645);
     for (const order of [[P, lossHouse300, R], [R, lossHouse300, P]]) {
       const r = run(order);
       expect(r.totalTax).toBe(sep.totalTax);

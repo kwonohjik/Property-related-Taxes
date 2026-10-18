@@ -598,6 +598,7 @@ export function buildStatementItems(
       p.income,
       p.reducibleIncome ?? 0,
       p.replacementLandDetail?.eligibleTransferIncome,
+      p.eligibleIncomeAfterLoss,
     );
   const eligibleValue = isAggregate
     ? properties.reduce((s, p) => s + eligibleIncomeOf(p), 0)
@@ -606,6 +607,7 @@ export function buildStatementItems(
         singleIncome,
         result.reducibleIncome ?? 0,
         result.replacementLandDetail?.eligibleTransferIncome,
+        result.eligibleIncomeAfterLoss,
       );
   items.set("reductionTargetIncome", {
     label: "세액감면대상금액",

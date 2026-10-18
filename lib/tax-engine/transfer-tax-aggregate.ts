@@ -67,7 +67,8 @@ import {
   ruralSurtaxExemptReducibleOf,
   computeGroupsAndComparison,
 } from "./transfer-tax-aggregate-pickers";
-import { reducibleIncomeOf, bucketsOf } from "./transfer-tax-aggregate-reduction-step";
+import { reducibleIncomeOf, bucketsOfRecord, reducibleIncomeOfRecord } from "./transfer-tax-aggregate-reduction-step";
+import { lossShareOnReducible, reducibleAfterLossOf } from "./transfer-tax-aggregate-reducible-loss-share";
 
 export { classifyRateGroup };
 
@@ -176,6 +177,10 @@ function computeAggregateOnce(
   partIncomeAfterOffset.forEach((w, i) => {
     if (w) assetRecords[i].lossPartIncomeAfterOffset = w;
   });
+  // 영 §167의2② — 세액감면형(§90①)의 B도 받은 차손 중 감면소득 몫만큼 줄인다. 이하 단계는 전부 이 B′를 읽는다.
+  reducibleAfterLossOf(assetRecords, { lossOffsetFromSame, lossOffsetFromOther, partIncomeAfterOffset }).forEach((v, i) => {
+    assetRecords[i].reducibleAfterLoss = v;
+  });
 
   // income-deduction 감면(§99의3·§99·§98의8·하이브리드 5년후) — 세액 계산용 "감면후 income" 분리.
   // incomeAfterOffset(pre-감면)는 양도소득금액 표시·차손통산·농특세 감면前 기준으로 보존.
@@ -185,11 +190,8 @@ function computeAggregateOnce(
   const incomeDeductionReducible = assetRecords.map((r, i) => {
     const reducible = incomeDeductionReducibleOf(r.result);
     if (reducible <= 0) return 0;
-    const income = r.income; // 통산 前 양도소득금액(감면소득금액 포함) — 안분 분모
-    if (income <= 0) return reducible;
-    const lossReceived = lossOffsetFromSame[i] + lossOffsetFromOther[i];
-    const lossToExempt = Math.floor((lossReceived * reducible) / income); // 감면분 흡수 차손(절사·순분 잔여흡수)
-    return Math.max(0, reducible - lossToExempt);
+    // 분모는 통산 前 양도소득금액(감면소득금액 포함). 감면분 흡수 차손은 절사(순분이 잔여 흡수) — 세액감면형과 같은 leaf.
+    return reducible - lossShareOnReducible(lossOffsetFromSame[i] + lossOffsetFromOther[i], reducible, r.income);
   });
   const taxableAfterReduction = incomeAfterOffset.map((v, i) =>
     Math.max(0, v - incomeDeductionReducible[i]),
@@ -221,9 +223,9 @@ function computeAggregateOnce(
        * 두 곳이 B를 따로 유도하면 표시와 세액이 갈린다.
        * 소득공제형(§90②)은 이미 `taxableAfterReduction`에서 빠져 있다.
        */
-      reducibleIncome: reducibleIncomeOf(r.result),
+      reducibleIncome: reducibleIncomeOf(r),
       /** 감면율별 조각 — 같은 날 감면소득은 감면율 낮은 것부터(부동산거래관리과-0893). 감면액 산식과 같은 leaf. */
-      reducibleBuckets: bucketsOf(r.result),
+      reducibleBuckets: bucketsOfRecord(r),
       /** 한계세율 — `PARTS_HIGHEST_RATE` 축과 §103② 동순위 기본 순서(`tieRank` 없을 때)에 쓴다. */
       rate: r.result.appliedRate,
     }))
@@ -504,19 +506,21 @@ function computeAggregateOnce(
   // properties breakdown 조립 — 합산 재계산 후 건별 배분액 포함
   const properties: PerPropertyBreakdown[] = assetRecords.map((r, idx) => {
     const reductionType = r.result.reductionTypeApplied;
-    const reducibleIncome = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
+    /** 표시·배분은 영 §167의2② 반영 후(Q-3), 재계산 경로 판정은 통산 전(C-1 — B′ = 0이어도 단건 감면액으로 돌아가지 않는다). */
+    const reducibleIncome = reducibleIncomeOfRecord(r);
+    const grossReducible = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
     const standalone = r.result.isExempt ? 0 : r.result.reductionAmount ?? 0;
 
     // 유형별 재계산 엔트리가 있으면 비율 배분, 없으면 단독값 그대로
     let reductionAggregated = standalone;
     let reductionAllocationRatio = 0;
-    if (reductionType && reducibleIncome > 0) {
+    if (reductionType && grossReducible > 0) {
       const entry = reductionBreakdown.find((b) => b.type === reductionType);
-      if (entry && entry.totalReducibleIncome > 0) {
+      if (entry) {
         const w = allocationWeightOf(entry, assetRecords)(idx);
         reductionAllocationRatio = w.total > 0 ? w.own / w.total : 0;
         // 배분액은 위 선계산(말단 잔액 흡수)에서 가져온다 — 여기서 재-floor하면 드리프트가 되살아난다.
-        reductionAggregated = reductionAllocations.get(idx) ?? reductionAggregated;
+        reductionAggregated = reductionAllocations.get(idx) ?? 0;
       }
     }
 
@@ -606,6 +610,7 @@ function computeAggregateOnce(
       reducibleIncome,
       reductionAggregated,
       reductionAllocationRatio,
+      ...(r.reducibleAfterLoss ? { eligibleIncomeAfterLoss: reducibleIncomeOf(r) } : {}),
       ...pickReductionDetails(r.result),
       ...pickValuationDetails(r.result),
       penaltyTax: r.result.isExempt ? 0 : r.result.penaltyTax ?? 0,

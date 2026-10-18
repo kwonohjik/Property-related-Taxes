@@ -323,7 +323,7 @@ export function buildAssetRecords(
 function lossPartsOf(
   pa: Pick<AssetRecord, "item" | "correctedSingleInput" | "rates" | "result">,
   income: number,
-): { income: number; rateKey: string }[] | undefined {
+): AssetRecord["lossParts"] {
   const parts = splitPartsForLossOffset(
     pa.result.splitDetail,
     pa.correctedSingleInput,
@@ -332,6 +332,7 @@ function lossPartsOf(
   );
   if (!parts || parts.reduce((s, p) => s + p.income, 0) !== income) return undefined;
   return parts.map((p) => ({
+    kind: p.kind,
     income: p.income,
     rateKey: lossOffsetRateKey({
       rateClause: p.rateClause,

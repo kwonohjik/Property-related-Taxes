@@ -364,6 +364,11 @@ export interface PerPropertyBreakdown
   reductionAggregated: number;
   /** 배분 비율 (= 이 건 reducibleIncome / 유형별 총 reducibleIncome) */
   reductionAllocationRatio: number;
+  /**
+   * 영 §167의2② — 차손을 통산받은 감면 자산의 §90① B(감면율 前, 감면소득 몫 차손을 뺀 금액). 별지 84호 부표1 ⑲가 이 값이다
+   * (「…공제한 금액을 법 제90조의 규정에 의한 감면소득금액으로 본다」). 차손을 받지 않았으면 없다.
+   */
+  eligibleIncomeAfterLoss?: number;
   /** §114조의2 건별 환산가액적용가산세 */
   penaltyTax: number;
   /**

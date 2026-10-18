@@ -103,6 +103,8 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     reductionAmount: b.reductionAggregated,
     reductionType: b.reductionType,
     reducibleIncome: b.reducibleIncome,
+    // 영 §167의2② 반영 후 B — 자산별 신고서 ⑲가 합계 카드와 같은 수를 보이게(Q-3).
+    eligibleIncomeAfterLoss: b.eligibleIncomeAfterLoss,
     /**
      * 🔴 종전에는 이 필드를 싣지 않았다. 신고서 ⑲ 「세액감면대상금액」은
      *   `reductionEligibleIncome(reductionTypeApplied, …)`으로 갈리는데(§77·§77의3은

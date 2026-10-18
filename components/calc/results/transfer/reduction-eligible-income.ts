@@ -35,7 +35,13 @@ export function reductionEligibleIncome(
   fullTransferIncome: number,
   reducibleIncome: number,
   replacementEligibleIncome: number | undefined,
+  /**
+   * 다건에서 차손을 통산받은 자산의 B — 영 §167의2②가 이 금액을 「법 제90조의 감면소득금액으로 본다」.
+   * 엔진이 감면액 산식에 쓴 값(`PerPropertyBreakdown.eligibleIncomeAfterLoss`)이라 유형 분기보다 우선한다.
+   */
+  eligibleIncomeAfterLoss?: number,
 ): number {
+  if (eligibleIncomeAfterLoss !== undefined) return eligibleIncomeAfterLoss;
   switch (reductionTypeApplied) {
     case "public_expropriation":
     case "gb_designated_land":
