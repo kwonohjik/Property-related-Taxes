@@ -24,6 +24,7 @@ import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPricePart } from "./transfer-tax-split-acq-mode";
 import { requiresAcqStdPrice } from "./transfer-tax-split-acq-mode";
 import { needsSaleStdPart } from "./transfer-tax-split-acq-mode";
+import { saleSplitProvisoApplies, saleStdPriceWaivedByEra } from "./sale-split-100-3-era";
 import { ownerSplitHousingNeedsBuildingStd } from "./transfer-tax-split-acq-mode";
 import { acqStdNeedFlagsOfAsset } from "./transfer-tax-split-acq-mode";
 import { ownerSplitHousingNeedsTransferTotal } from "./transfer-tax-split-acq-mode";
@@ -242,7 +243,7 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
  * 검증 대상 게이트 — UI가 양도가액 직접입력 칸을 노출하는 조건과 동일:
  *   `hasSeperateLandAcquisitionDate && saleSplitMode === "actual"`
  */
-export function validateSplitDirectInputs(rawAsset: AssetForm, label: string): string | null {
+export function validateSplitDirectInputs(rawAsset: AssetForm, label: string, formTransferDate?: string): string | null {
   const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   // ⚠️ 게이트는 **API 전송 조건(`isSplitPayloadActive`)과 같아야** 한다(2026-07-30).
   //    종전엔 `hasSeperateLandAcquisitionDate`만 봤는데, 비-매매 취득원인의 소유자 분리는
@@ -456,13 +457,15 @@ export function validateSplitDirectInputs(rawAsset: AssetForm, label: string): s
   // 기준시가 칸이 화면에 없다(계획서 §5.5). 노출 술어와 같은 함수로 파트별로 판정한다.
   // 메시지는 `양도시 기준시가` 연속 토큰을 유지한다 — 기존 anchor 4곳이 그 부분문자열에 의존한다
   // (transfer-tax-validate-split.test.ts:78,86,537,550).
-  if (saleAxisInput && needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
+  // 양도일 2016.1.1. 전 + 구분 기재 + 환산 파트 없음이면 이 값은 어디에도 쓰이지 않아 필수를 풀어 준다(계획서 Q-2 · `saleStdPriceWaivedByEra`).
+  const stdWaived = saleStdPriceWaivedByEra({ transferDate: formTransferDate, saleSplitMode: asset.saleSplitMode, landMode, buildingMode });
+  if (saleAxisInput && !stdWaived && needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
     const saleLandMsg = `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
     // 단가가 있으면 면적이 빈 것이다(`resolveLandStdAtTransfer` = 단가 × 면적, 또는 총액)
     if (opt(asset.standardPricePerSqmAtTransfer) != null) return fieldError("transferArea", saleLandMsg);
     return fieldError("standardPricePerSqmAtTransfer", saleLandMsg);
   }
-  if (saleAxisInput && needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
+  if (saleAxisInput && !stdWaived && needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
     return fieldError("buildingStandardPriceAtTransfer", `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`);
   }
 
@@ -542,7 +545,8 @@ export function validateSplitDirectInputs(rawAsset: AssetForm, label: string): s
     //
     // ⚠️ 구분양도에서만 검사한다 — 예외를 골라 둔 채 일괄양도로 되돌리면 API가 전송하지 않으므로
     //    (`transfer-tax-api-split.ts` `saleDirectActive` 게이트) 차단할 이유가 없다(값은 보존).
-    if (asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
+    // 단서는 2025.1.1. 이후 양도분부터다 — 그 전에는 예외 칸을 숨기므로(엔진도 무시) 근거를 요구하면 칸 없는 차단이 된다.
+    if (saleSplitProvisoApplies(formTransferDate) && asset.saleSplitExemption && !asset.saleSplitExemptionNote?.trim()) {
       return fieldError("saleSplitExemptionNote", `${label}: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거를 입력하세요 — 구분 기재한 가액을 그대로 인정받는 사유이므로 신고서에 기재해야 합니다.`);
     }
 

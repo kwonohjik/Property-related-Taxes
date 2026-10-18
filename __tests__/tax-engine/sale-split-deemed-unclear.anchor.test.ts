@@ -34,7 +34,7 @@ import { judgeDeemedUnclearSplit } from "@/lib/tax-engine/sale-split-deemed-uncl
 const AP = { land: 400_000_000, building: 600_000_000 };
 
 const judge = (land: number, building: number, exemption?: "other_law" | "demolished_land_only") =>
-  judgeDeemedUnclearSplit({ declared: { land, building }, apportioned: AP, exemption });
+  judgeDeemedUnclearSplit({ declared: { land, building }, apportioned: AP, era: "body_and_proviso", exemption });
 
 describe("U-1 — 실무 자료 사례 4건 재현", () => {
   /**
@@ -112,6 +112,7 @@ describe("U-3 — 🔴 정수 연산이어야 판정이 결정적이다", () => 
       // 합 = 567,800,000 = 안분 합. 건물은 12.58%로 범위 안이라 토지 판정만 남는다.
       declared: { land: 117_460_000, building: 450_340_000 },
       apportioned: AP2,
+      era: "body_and_proviso",
     });
     expect(r.deemedUnclear).toBe(true);
     expect(r.detail.landOver).toBe(true);
@@ -127,6 +128,7 @@ describe("U-4 — 양쪽을 모두 검사한다", () => {
     const r = judgeDeemedUnclearSplit({
       declared: { land: 610_000_000, building: 390_000_000 },
       apportioned: { land: 700_000_000, building: 300_000_000 },
+      era: "body_and_proviso",
     });
     expect(r.detail.buildingOver).toBe(true); // 정확히 +30%
     expect(r.detail.landOver).toBe(false); // 12.86%
@@ -167,9 +169,54 @@ describe("U-6 — 방어적 입력", () => {
     const r = judgeDeemedUnclearSplit({
       declared: { land: 1_000_000_000, building: 0 },
       apportioned: { land: 1_000_000_000, building: 0 },
+      era: "body_and_proviso",
     });
     expect(r.detail.buildingOver).toBe(false);
     expect(r.detail.buildingDeviationBp).toBe(0);
     expect(r.deemedUnclear).toBe(false);
+  });
+});
+
+describe("U-7 — 양도일 구간(era)별 동작 (계획서 `sale-split-100-3-era-gate.plan.md` §4.1)", () => {
+  const SKEW = { land: 570_000_000, building: 430_000_000 }; // 토지 42.5% 이탈 — era 무관하게 «벗어남»
+
+  it("none — 판정 없음: 벗어나도 발동하지 않고 구분 기재를 그대로 쓴다", () => {
+    const r = judgeDeemedUnclearSplit({ declared: SKEW, apportioned: AP, era: "none" });
+    expect(r.deemedUnclear).toBe(false);
+    expect(r.applied).toEqual(SKEW);
+    expect(r.detail.era).toBe("none");
+  });
+
+  it("none — 안분값이 null이어도 된다 (판정이 없어 비교 기준이 필요 없다)", () => {
+    const r = judgeDeemedUnclearSplit({ declared: SKEW, apportioned: null, era: "none" });
+    expect(r.deemedUnclear).toBe(false);
+    expect(r.applied).toEqual(SKEW);
+    expect(r.detail).toMatchObject({ landOver: false, buildingOver: false, landDeviationBp: 0, buildingDeviationBp: 0 });
+  });
+
+  it("none 이외에서 안분값이 null이면 **던진다** — 비교 기준 없는 판정을 조용히 통과시키지 않는다", () => {
+    expect(() => judgeDeemedUnclearSplit({ declared: SKEW, apportioned: null, era: "body" })).toThrow();
+    expect(() => judgeDeemedUnclearSplit({ declared: SKEW, apportioned: null, era: "body_and_proviso" })).toThrow();
+  });
+
+  it("body — 판정하고, 예외는 **무시**하며 무시했다는 사실을 남긴다", () => {
+    const r = judgeDeemedUnclearSplit({ declared: SKEW, apportioned: AP, era: "body", exemption: "other_law" });
+    expect(r.deemedUnclear).toBe(true);
+    expect(r.applied).toEqual(AP);
+    expect(r.detail.exemptionApplied).toBeUndefined();
+    expect(r.detail.exemptionIgnoredByEra).toBe("other_law");
+    expect(r.detail.era).toBe("body");
+  });
+
+  it("body — 이탈이 없으면 예외를 무시했다는 기록도 없다 (예외가 결과를 바꾸지 않았다)", () => {
+    const r = judgeDeemedUnclearSplit({ declared: AP, apportioned: AP, era: "body", exemption: "other_law" });
+    expect(r.detail.exemptionIgnoredByEra).toBeUndefined();
+  });
+
+  it("body_and_proviso — 예외가 효력을 갖는다 (현행)", () => {
+    const r = judgeDeemedUnclearSplit({ declared: SKEW, apportioned: AP, era: "body_and_proviso", exemption: "other_law" });
+    expect(r.deemedUnclear).toBe(false);
+    expect(r.detail.exemptionApplied).toBe("other_law");
+    expect(r.detail.exemptionIgnoredByEra).toBeUndefined();
   });
 });

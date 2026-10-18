@@ -30,6 +30,7 @@
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import { sec100_3Era } from "./data/sec100-3-split-era";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
 import type { SaleApportionBasisResult } from "./sale-split-apportion-basis";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -111,7 +112,10 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
   // ⇒ 1-D가 `saleStdPlacement`를 「항상 축 A」로 바꿔 두 파트 기준시가를 **상시 노출·필수**로
   //    만들었다. validate가 같은 술어(`needsSaleStdPart`)로 선차단하므로 여기 도달하는 것은
   //    validate를 우회한 경로(직접 API 호출 등)다 — 조용히 통과시키지 않는다.
-  if (!basis.apportioned || basis.kind == null) {
+  // 양도일로 본 §100③ 구간 — `none`(2016.1.1. 전)은 30% 판정이 없어 안분값이 필요 없다.
+  const era = sec100_3Era(input.transferDate);
+  const hasBasis = !!basis.apportioned && basis.kind != null;
+  if (!hasBasis && era !== "none") {
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
       "토지·건물 양도가액을 구분 기재한 경우에는 「소득세법」 제100조 제3항 판정을 위해 양도시 토지·건물 기준시가가 모두 필요합니다.",
@@ -121,7 +125,8 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
 
   const judged = judgeDeemedUnclearSplit({
     declared,
-    apportioned: basis.apportioned,
+    apportioned: basis.apportioned ?? null,
+    era,
     ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
   });
 
@@ -130,9 +135,8 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
     judgment: {
       deemedUnclear: judged.deemedUnclear,
       declared,
-      apportioned: basis.apportioned,
+      ...(hasBasis ? { apportioned: basis.apportioned!, basisKind: basis.kind! } : {}),
       applied: judged.applied,
-      basisKind: basis.kind,
       // 감정을 넣었는데 기준시가로 안분된 경우 **이유를 싣는다** — 침묵 후퇴 금지(Phase 1-E).
       ...(basis.appraisalRejected ? { appraisalRejected: basis.appraisalRejected } : {}),
       ...judged.detail,

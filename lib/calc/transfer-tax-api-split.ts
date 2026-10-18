@@ -32,6 +32,7 @@ import {
   isPartialAreaScenario,
   landSec164Applies,
 } from "./transfer-pre1990-housing-land-bridge";
+import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 
 /**
  * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
@@ -257,7 +258,8 @@ export function buildSplitPayload(
     // ⚠️ 근거(`saleSplitExemptionNote`)는 **엔진에 보내지 않는다** — 계산에 쓰이지 않는 서술
     //    텍스트이고, 결과 표시는 폼값을 직접 읽는다(`addressDong`·`addressHo`와 같은 UI 전용 취급).
     //    엔진 입력에 넣으면 Zod·Route·엔진 타입 3곳이 계산과 무관한 문자열을 나르게 된다.
-    ...(saleDirectActive && primary.saleSplitExemption
+    //    단서는 양도일 2025.1.1. 이후만 효력이 있어 그 전 구간(칸을 숨긴다)의 잔존값은 싣지 않는다 — 엔진도 era로 무시한다.
+    ...(saleDirectActive && primary.saleSplitExemption && saleSplitProvisoApplies(primaryCtx?.transferDate)
       ? { saleSplitExemption: primary.saleSplitExemption }
       : {}),
     // 취득가액 2필드.

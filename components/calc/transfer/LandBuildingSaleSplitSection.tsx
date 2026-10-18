@@ -31,6 +31,7 @@ import {
   SaleSplitExemptionCard,
 } from "./SaleSplitBasisExemptionCards";
 import { saleSplitModePatch, type SaleSplitMode } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { saleSplitProvisoApplies } from "@/lib/calc/sale-split-100-3-era";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 interface Props {
@@ -130,7 +131,10 @@ export function LandBuildingSaleSplitSection(props: Props) {
 
       {props.saleSplitMode === "actual" && props.asset && props.onAssetChange && (
         <>
-          <SaleSplitExemptionCard asset={props.asset} onChange={props.onAssetChange} />
+          {/* 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 그 전에는 칸을 열지 않는다(엔진·validate·전송이 같은 술어). */}
+          {saleSplitProvisoApplies(props.transferDate) && (
+            <SaleSplitExemptionCard asset={props.asset} onChange={props.onAssetChange} />
+          )}
           {/* 30% 판정의 비교 대상 — 일반건물 경로와 공유한다(§100③ · 부가령 §64① 서열). */}
           <SaleSplitCompareBasisCard asset={props.asset} onChange={props.onAssetChange} />
         </>

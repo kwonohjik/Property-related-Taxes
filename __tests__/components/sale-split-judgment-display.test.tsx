@@ -47,6 +47,9 @@ const mk = (over: Partial<TransferTaxInput> = {}): TransferTaxInput =>
     ...over,
   });
 
+/** 단서(영 §166⑧)는 2025.1.1. 이후 양도분부터다 — 예외가 효력을 갖는 케이스만 이 양도일을 쓴다 */
+const PROVISO = { transferDate: new Date("2025-06-01") };
+
 /** 엔진을 실제로 돌려 그 결과를 렌더한다 */
 function renderFor(over: Partial<TransferTaxInput> = {}, exemptionNote?: string) {
   const result = calculateTransferTax(mk(over), rates);
@@ -97,7 +100,7 @@ describe("U-9-2 — 미발동·예외도 각각 다르게 말한다", () => {
   });
 
   it("§166⑧ 예외로 면한 경우 사유를 밝힌다 — 「차이가 없었다」와 다른 사실이다", () => {
-    const j = renderFor({ ...OVER, saleSplitExemption: "other_law" });
+    const j = renderFor({ ...OVER, ...PROVISO, saleSplitExemption: "other_law" });
     expect(j!.deemedUnclear).toBe(false);
     expect(j!.exemptionApplied).toBe("other_law");
     expect(screen.getByText(/예외로 구분 기재 가액을 인정했습니다/)).toBeTruthy();
@@ -152,7 +155,7 @@ describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·
   const OVER_LOCAL = { landTransferPrice: 1_400_000_000, buildingTransferPrice: 100_000_000 };
 
   it("🔴 예외 근거 문구를 화면에 표시한다 — 엔진을 거치지 않는 값이라 폼에서 받아야 한다", () => {
-    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" }, "매매계약 특약 제3조");
+    renderFor({ ...OVER_LOCAL, ...PROVISO, saleSplitExemption: "other_law" }, "매매계약 특약 제3조");
     expect(screen.getByTestId("sale-split-exemption-note-display")).toBeTruthy();
     expect(screen.getByText(/매매계약 특약 제3조/)).toBeTruthy();
   });
@@ -163,7 +166,7 @@ describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·
   });
 
   it("예외 적용 시 신고서에 사유를 적으라고 안내한다", () => {
-    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" }, "근거 문서");
+    renderFor({ ...OVER_LOCAL, ...PROVISO, saleSplitExemption: "other_law" }, "근거 문서");
     // ⚠️ `<strong>`이 문장을 쪼개므로 **단일 텍스트 노드** 기준으로 찾는다 —
     //    `getByText`는 요소 하나의 텍스트를 보지, 자식으로 나뉜 문장 전체를 잇지 않는다.
     expect(screen.getByText(/사유로 위 내용을 기재하세요/)).toBeTruthy();
@@ -178,5 +181,38 @@ describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·
   it("미발동이면 그 각주는 뜨지 않는다 — 구분값이 그대로 신고되므로 다를 것이 없다", () => {
     renderFor({ landTransferPrice: 1_000_000_000, buildingTransferPrice: 500_000_000 });
     expect(screen.queryByText(/계약서상 구분 기재 금액과 다릅니다/)).toBeNull();
+  });
+});
+
+describe("U-9-5 — 양도일 연혁별 표시 (계획서 sale-split-100-3-era-gate §4.2)", () => {
+  it("🔴 양도일 2016.1.1. 전: 판정이 없었다고 말하고 안분값·차이 행을 내지 않는다", () => {
+    renderFor({ ...OVER, transferDate: new Date("2015-12-31") });
+    expect(screen.getByText(/2016년 1월 1일 전이라 30% 판정 없이 구분 기재 가액을 적용/)).toBeTruthy();
+    expect(screen.getByText(/법률 제13558호 부칙 제2조②/)).toBeTruthy();
+    expect(screen.queryByText("안분 가액")).toBeNull();
+    expect(screen.queryByText("차이")).toBeNull();
+    expect(screen.queryByText(/안분 기준:/)).toBeNull();
+    // 적용 가액은 구분 기재 그대로 — 의제로 안분값이 되지 않는다
+    expect(screen.getAllByText("1,400,000,000").length).toBeGreaterThan(0);
+  });
+
+  it("🔴 양도일이 단서 시행 전인데 예외를 입력해 둔 경우: 반영하지 않았다고 밝힌다 — 침묵 후퇴 금지", () => {
+    renderFor({ ...OVER, saleSplitExemption: "other_law" }); // mk 기본 양도일 2024-06-01
+    expect(screen.getByTestId("sale-split-exemption-ignored").textContent).toMatch(/2025년 1월 1일 전이라/);
+    expect(screen.getByTestId("sale-split-exemption-ignored").textContent).toMatch(/법률 제20615호 부칙 제9조/);
+    // 의제가 발동했으므로 «인정했습니다»가 아니라 안분가액 적용 문구다
+    expect(screen.getByText(/구분 기재 가액을 인정하지 않고 안분가액을 적용/)).toBeTruthy();
+    expect(screen.queryByText(/예외로 구분 기재 가액을 인정했습니다/)).toBeNull();
+  });
+
+  it("예외를 입력하지 않았으면 «반영하지 않았다» 고지는 없다", () => {
+    renderFor(OVER);
+    expect(screen.queryByTestId("sale-split-exemption-ignored")).toBeNull();
+  });
+
+  it("양도일 2025.1.1. 이후 + 예외: 종전처럼 인정 문구이고 무시 고지는 없다", () => {
+    renderFor({ ...OVER, ...PROVISO, saleSplitExemption: "other_law" });
+    expect(screen.getByText(/예외로 구분 기재 가액을 인정했습니다/)).toBeTruthy();
+    expect(screen.queryByTestId("sale-split-exemption-ignored")).toBeNull();
   });
 });

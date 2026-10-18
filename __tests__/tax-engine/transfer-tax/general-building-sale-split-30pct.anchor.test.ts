@@ -249,7 +249,7 @@ describe("G-6 — 🔴 증축 조합도 구분 기재를 받는다 (Q-4 확정 �
     const j = out.saleSplitJudgment!;
     expect(j.declared).toEqual({ land: 900_000_000, building: 25_000_000 });
     // 안분값의 건물은 본체+증축 **합계**다 — 계약서가 구분하지 않은 축은 비교 대상이 아니다
-    expect(j.apportioned.land + j.apportioned.building).toBe(925_000_000);
+    expect(j.apportioned!.land + j.apportioned!.building).toBe(925_000_000);
     expect(j.basisKind).toBe("std_price");
   });
 
@@ -269,13 +269,26 @@ describe("G-6 — 🔴 증축 조합도 구분 기재를 받는다 (Q-4 확정 �
 });
 
 describe("G-5 — §166⑧ 예외를 선택하면 발동하지 않는다", () => {
+  // 단서는 2025.1.1. 이후 양도분부터라(법률 제20615호 부칙 제9조) 예외가 효력을 갖는 케이스만 양도일을 2025년으로 둔다.
   it("30% 초과여도 구분값을 그대로 쓴다", () => {
     const out = mk({
+      transferDate: new Date("2025-06-01"),
       landTransferPrice: 825_000_000,
       buildingTransferPrice: 100_000_000,
       saleSplitExemption: "other_law",
     });
     expect(out.allocation.land).toBe(825_000_000);
     expect(out.allocation.building).toBe(100_000_000);
+  });
+
+  // 안전망 보존: 양도일을 옮기기 전(2023-02-19, 단서 시행 전)에는 같은 입력이 안분값이 된다.
+  it("🔴 반례 — 양도일 2023-02-19(단서 시행 전)이면 예외를 입력해도 의제가 발동한다", () => {
+    const out = mk({
+      landTransferPrice: 825_000_000,
+      buildingTransferPrice: 100_000_000,
+      saleSplitExemption: "other_law",
+    });
+    expect(out.allocation.land).toBe(APPORTIONED.land);
+    expect(out.allocation.building).toBe(APPORTIONED.building);
   });
 });

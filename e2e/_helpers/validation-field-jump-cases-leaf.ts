@@ -335,7 +335,8 @@ const SPLIT_CASES: FieldJumpCase[] = [
   { name: "leaf: split 감정평가 선택 후 미입력", field: "landAppraisalAtTransfer", step: 0, assetIndex: A, message: /^자산: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요/, form: splSale({ saleSplitMode: "appraisal" }) },
   {
     name: "leaf: split §166⑧ 예외 근거", field: "saleSplitExemptionNote", step: 0, assetIndex: A, message: /^자산: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면 그 근거/,
-    form: splSale({ saleSplitMode: "actual", landTransferPrice: "300000000", buildingTransferPrice: "200000000", saleSplitExemption: true }),
+    // 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 그 전에는 예외 칸이 숨겨져 근거를 요구하지 않는다.
+    form: () => ({ ...splSale({ saleSplitMode: "actual", landTransferPrice: "300000000", buildingTransferPrice: "200000000", saleSplitExemption: true })(), transferDate: "2025-06-01", filingDate: "2025-08-31" }),
   },
   { name: "leaf: split 토지 양도가액 > 총액", field: "landTransferPrice", step: 0, assetIndex: A, message: /^자산: 토지 양도가액이 양도가액\(500,000,000원\)을 초과합니다/, form: splSale({ saleSplitMode: "actual", landTransferPrice: "900000000" }) },
   {

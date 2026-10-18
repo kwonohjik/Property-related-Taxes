@@ -336,6 +336,7 @@ export function buildActualGeneralBuildingCards(
   function resolveSaleAllocation() {
     return allocateBundledTransferPrice({
       totalTransferPrice,
+      transferDate,
       landArea,
       transferLandPricePerSqm,
       transferBuildingStdPrice,

@@ -46,6 +46,8 @@
  * anchor: `__tests__/tax-engine/sale-split-deemed-unclear.anchor.test.ts` U-3
  */
 
+import type { Sec100_3Era } from "./data/sec100-3-split-era";
+
 /** §166⑧ 예외 사유 — 자동 판정이 불가해 사용자 신고로 받는다(계획서 §12.6). */
 export type SaleSplitExemption = "other_law" | "demolished_land_only";
 
@@ -57,9 +59,21 @@ export interface SaleSplitPair {
 export interface DeemedUnclearInput {
   /** 구분 기장 가액 (계약서 등에 각각 기재된 값) */
   declared: SaleSplitPair;
-  /** 안분 가액 — 부가령 §64① basis로 산출한 값(감정평가가액 우선 · 없으면 기준시가) */
-  apportioned: SaleSplitPair;
-  /** §166⑧ 예외. 있으면 30% 판정을 건너뛴다(이탈 사실은 `detail`에 기록한다). */
+  /**
+   * 안분 가액 — 부가령 §64① basis로 산출한 값(감정평가가액 우선 · 없으면 기준시가).
+   * `null`은 **`era === "none"`에서만** 허용한다 — 그 구간은 판정 자체가 없어 안분값이 필요 없다.
+   */
+  apportioned: SaleSplitPair | null;
+  /**
+   * 양도일로 본 §100③ 적용 구간(`sec100_3Era`) — **필수**다. 선택 인자로 두면 호출부가 날짜를 빠뜨려도
+   * 컴파일이 통과해 «모든 양도일에 현행 규칙 적용»이 조용히 된다(2026-10 양도가액 축 3곳이 그랬다).
+   * 계획서: `docs/00-pm/sale-split-100-3-era-gate.plan.md` §4.1.
+   */
+  era: Sec100_3Era;
+  /**
+   * §166⑧ 예외. `body_and_proviso`에서만 효력이 있고, 그 전 구간에서는 **무시**한다(이탈 사실은 `detail`에 기록한다).
+   * 단서(법률 제20615호 부칙 제9조)가 2025.1.1. 이후 양도분부터라 그 전에는 예외 규정 자체가 없다.
+   */
   exemption?: SaleSplitExemption;
 }
 
@@ -72,6 +86,13 @@ export interface DeemedUnclearDetail {
   buildingOver: boolean;
   /** 예외가 적용돼 발동을 면한 경우의 사유. */
   exemptionApplied?: SaleSplitExemption;
+  /** 양도일로 본 §100③ 적용 구간 — 표시 계층이 문구를 가르는 값(재계산 금지). */
+  era: Sec100_3Era;
+  /**
+   * 예외가 입력됐으나 **양도일이 단서 시행(2025.1.1.) 전이라 무시한** 경우의 사유 — 침묵 후퇴 금지.
+   * 이탈이 있어 예외가 실제로 결과를 바꿨을 경우에만 채운다(이탈이 없으면 예외는 어차피 무관).
+   */
+  exemptionIgnoredByEra?: SaleSplitExemption;
 }
 
 export interface DeemedUnclearResult {
@@ -99,26 +120,43 @@ function deviationBp(declared: number, apportioned: number): number {
  *
  * 차단이 아니라 **의제**다 — 조문이 「불분명한 때로 **본다**」이므로 계산을 진행하고, 발동 시
  * 안분값으로 되돌린다. 화면·신고서는 `detail`을 읽어 그 사실을 표시한다(계획서 §12.5 D).
+ *
+ * 양도일 구간별 동작 (계획서 §1):
+ *   · `none`             — 판정 없음. 구분 기재를 그대로 쓴다. `apportioned`가 있으면 이탈 사실만 기록한다.
+ *   · `body`             — 30% 판정 적용. 예외 입력은 **무시**한다(단서 없음).
+ *   · `body_and_proviso` — 30% 판정 + 단서(예외).
  */
 export function judgeDeemedUnclearSplit(input: DeemedUnclearInput): DeemedUnclearResult {
-  const { declared, apportioned, exemption } = input;
+  const { declared, apportioned, era, exemption } = input;
 
-  const landOver = isOver30(declared.land, apportioned.land);
-  const buildingOver = isOver30(declared.building, apportioned.building);
+  if (apportioned === null && era !== "none") {
+    // 판정 구간인데 비교 기준이 없다 — 호출부가 안분값 없이 판정을 요구한 프로그래밍 오류다.
+    throw new Error(`§100③ 판정에는 안분 가액이 필요합니다 (era=${era})`);
+  }
 
-  // 예외가 있으면 발동하지 않는다. 다만 이탈 사실(`landOver`·`buildingOver`)은 지우지 않는다 —
-  // 「예외로 인정받은 이탈」과 「애초에 이탈이 없었음」은 신고서에서 다른 사실이다.
-  const deemedUnclear = !exemption && (landOver || buildingOver);
+  const landOver = apportioned !== null && isOver30(declared.land, apportioned.land);
+  const buildingOver = apportioned !== null && isOver30(declared.building, apportioned.building);
+  const anyOver = landOver || buildingOver;
+
+  // 예외는 단서가 시행된 구간에서만 효력이 있다.
+  const effectiveExemption = era === "body_and_proviso" ? exemption : undefined;
+
+  // `none`은 판정 자체가 없다. 그 외에는 예외가 없고 한쪽이라도 벗어나면 발동한다.
+  const deemedUnclear = era !== "none" && !effectiveExemption && anyOver;
 
   return {
     deemedUnclear,
-    applied: deemedUnclear ? { ...apportioned } : { ...declared },
+    applied: deemedUnclear && apportioned !== null ? { ...apportioned } : { ...declared },
     detail: {
-      landDeviationBp: deviationBp(declared.land, apportioned.land),
-      buildingDeviationBp: deviationBp(declared.building, apportioned.building),
+      landDeviationBp: apportioned !== null ? deviationBp(declared.land, apportioned.land) : 0,
+      buildingDeviationBp: apportioned !== null ? deviationBp(declared.building, apportioned.building) : 0,
       landOver,
       buildingOver,
-      ...(exemption && (landOver || buildingOver) ? { exemptionApplied: exemption } : {}),
+      era,
+      // 예외가 있어도 이탈 사실(`landOver`·`buildingOver`)은 지우지 않는다 —
+      // 「예외로 인정받은 이탈」과 「애초에 이탈이 없었음」은 신고서에서 다른 사실이다.
+      ...(effectiveExemption && anyOver ? { exemptionApplied: effectiveExemption } : {}),
+      ...(era === "body" && exemption && anyOver ? { exemptionIgnoredByEra: exemption } : {}),
     },
   };
 }

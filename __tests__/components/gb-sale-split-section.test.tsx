@@ -27,10 +27,12 @@ function Harness({
   init,
   blockedReason,
   hasExtension,
+  transferDate = "2025-06-01", // 단서(영 §166⑧)는 2025.1.1. 이후 양도분부터 — 기본은 효력이 있는 양도일
 }: {
   init?: Partial<AssetForm>;
   blockedReason?: string;
   hasExtension?: boolean;
+  transferDate?: string;
 }) {
   const [asset, setAsset] = useState<AssetForm>({
     ...makeDefaultAsset(1),
@@ -48,6 +50,7 @@ function Harness({
       sectionNum="③"
       {...(blockedReason ? { blockedReason } : {})}
       {...(hasExtension ? { hasExtension } : {})}
+      transferDate={transferDate}
     />
   );
 }
@@ -78,6 +81,13 @@ describe("⑤-1 — 모드에 따라 입력 칸이 갈린다", () => {
     cleanup();
     render(<Harness init={{ saleSplitMode: "actual" }} />);
     expect(screen.getByTestId("sale-split-exemption-toggle")).toBeTruthy();
+  });
+
+  it("🔴 양도일 2024-12-31(단서 시행 전)에는 구분양도여도 예외 카드가 없다 (법률 제20615호 부칙 제9조)", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} transferDate="2024-12-31" />);
+    expect(screen.queryByTestId("sale-split-exemption-toggle")).toBeNull();
+    // 구분 기재 칸은 그대로 열려 있다 — 예외 카드만 닫힌다
+    expect(screen.getByTestId("gb-land-transfer-price")).toBeTruthy();
   });
 
   it("30% 규칙과 잔액 도출을 화면에서 안내한다", () => {

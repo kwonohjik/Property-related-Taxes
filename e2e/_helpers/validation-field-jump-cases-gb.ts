@@ -387,6 +387,7 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
   },
   {
     name: "gb: saleSplitExemptionNote", field: "saleSplitExemptionNote", step: 0, assetIndex: A, message: /^자산: 「소득세법 시행령」 제166조 제8항 예외를 선택했으면/,
-    form: gb({ saleSplitMode: "actual", landTransferPrice: "600000000", buildingTransferPrice: "400000000", saleSplitExemption: true, saleSplitExemptionNote: "" }),
+    // 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 그 전에는 예외 칸이 숨겨져 근거를 요구하지 않는다.
+    form: () => ({ ...gb({ saleSplitMode: "actual", landTransferPrice: "600000000", buildingTransferPrice: "400000000", saleSplitExemption: true, saleSplitExemptionNote: "" })(), transferDate: "2025-06-01", filingDate: "2025-08-31" }),
   },
 ];

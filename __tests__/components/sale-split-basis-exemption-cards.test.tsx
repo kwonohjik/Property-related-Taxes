@@ -47,7 +47,10 @@ const EXEMPTION_TOGGLE = "구분 기재 가액을 그대로 인정받는 예외"
  */
 let lastPatch: Partial<AssetForm> = {};
 
-function Harness({ init }: { init?: Partial<AssetForm> }) {
+/** 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 기본은 효력이 있는 양도일로 둔다. */
+const PROVISO_DATE = "2025-06-01";
+
+function Harness({ init, transferDate = PROVISO_DATE }: { init?: Partial<AssetForm>; transferDate?: string }) {
   const [asset, setAsset] = useState<AssetForm>({
     ...makeDefaultAsset(1),
     hasSeperateLandAcquisitionDate: true,
@@ -70,7 +73,7 @@ function Harness({ init }: { init?: Partial<AssetForm> }) {
       showStdCard={saleStdPlacement().saleAxis}
       asset={asset}
       onAssetChange={apply}
-      transferDate="2024-06-01"
+      transferDate={transferDate}
     />
   );
 }
@@ -173,5 +176,26 @@ describe("⑤-2 — §166⑧ 예외는 구분양도 전용이다", () => {
   it("2호(철거)를 고르면 건물 양도가액이 0에 가까운 것이 정상이라고 안내한다", () => {
     render(<Harness init={{ saleSplitMode: "actual", saleSplitExemption: "demolished_land_only" }} />);
     expect(screen.getByText(/0에 가까운 것이 정상/)).toBeTruthy();
+  });
+});
+
+describe("⑤-3 — 예외 카드는 단서 시행(2025.1.1.) 이후 양도에서만 열린다 (계획서 sale-split-100-3-era-gate §4.2)", () => {
+  it("🔴 양도일 2024-12-31(단서 시행 전): 구분양도여도 예외 카드가 없다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} transferDate="2024-12-31" />);
+    expect(screen.queryByLabelText(EXEMPTION_TOGGLE)).toBeNull();
+    // 같은 구분양도 블록의 다른 카드는 그대로 열려 있다 — 예외 카드만 닫힌다
+    expect(screen.getByTestId("sale-compare-basis-toggle")).toBeTruthy();
+  });
+
+  it("양도일 2025-01-01(경계 첫날): 카드가 열린다", () => {
+    render(<Harness init={{ saleSplitMode: "actual" }} transferDate="2025-01-01" />);
+    expect(screen.getByLabelText(EXEMPTION_TOGGLE)).toBeTruthy();
+  });
+
+  it("카드를 숨겨도 저장된 예외 값은 지우지 않는다 — 양도일을 다시 바꾸면 복원돼야 한다", () => {
+    lastPatch = {};
+    render(<Harness init={{ saleSplitMode: "actual", saleSplitExemption: "other_law" }} transferDate="2024-12-31" />);
+    expect(screen.queryByLabelText(EXEMPTION_TOGGLE)).toBeNull();
+    expect(lastPatch).toEqual({}); // 숨김이 값을 지우는 patch를 내지 않는다
   });
 });

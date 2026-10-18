@@ -36,6 +36,7 @@ import {
 } from "./SaleSplitBasisExemptionCards";
 import { saleSplitModePatch } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { saleSplitProvisoApplies } from "@/lib/calc/sale-split-100-3-era";
 
 // 선택지·전환 patch는 주택 경로(`LandBuildingSaleSplitSection`)와 **공유**한다 — 각자 두면
 // 같은 축을 다르게 부르거나 비우는 값이 갈린다(2026-08-08 주택 경로 통합).
@@ -63,6 +64,8 @@ interface Props {
    * 감정평가가액을 쓸 수 없다는 제약을 안내하기 위해서만 쓴다.
    */
   hasExtension?: boolean;
+  /** 양도일(`YYYY-MM-DD`) — §166⑧ 예외 칸을 열지(2025.1.1. 이후) 결정한다. 폼-전역 값이라 호출부가 내려준다. */
+  transferDate?: string;
 }
 
 export function GeneralBuildingSaleSplitSection({
@@ -71,6 +74,7 @@ export function GeneralBuildingSaleSplitSection({
   blockedReason,
   sectionNum,
   hasExtension,
+  transferDate,
 }: Props) {
   const mode = asset.saleSplitMode ?? "apportioned";
 
@@ -163,7 +167,8 @@ export function GeneralBuildingSaleSplitSection({
               <strong> 당초 건물의 자본적 지출</strong>로 처리하는 편이 간명합니다.
             </p>
           )}
-          <SaleSplitExemptionCard asset={asset} onChange={onChange} />
+          {/* 단서(영 §166⑧)는 양도일 2025.1.1. 이후만 효력이 있다 — 그 전에는 칸을 열지 않는다. */}
+          {saleSplitProvisoApplies(transferDate) && <SaleSplitExemptionCard asset={asset} onChange={onChange} />}
 
           {/* 30% 판정의 비교 대상 — 주택 경로와 공유한다(§100③ · 부가령 §64① 서열). */}
           <SaleSplitCompareBasisCard asset={asset} onChange={onChange} />
