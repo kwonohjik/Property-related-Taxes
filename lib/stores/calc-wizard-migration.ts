@@ -12,6 +12,7 @@ import {
 } from "./calc-wizard-store";
 import { derivePenaltyFields, isAllBurdenedGift } from "@/lib/calc/filing-deadline";
 import { legacyLongTermRentalToRental973 } from "./legacy-rental-reduction";
+import { isLegacyHousingReductionType, legacyHousingReductionToForm } from "./legacy-housing-reduction";
 
 /**
  * gracePeriod(다주택 중과 한시 유예) 구 필드 마이그레이션 — §167의3①12의2 나·다목 확장(2026-07-24).
@@ -183,16 +184,11 @@ export function migrateLegacyForm(
       primaryAsset.reductions = [
         legacyLongTermRentalToRental973(legacy.rentIncreaseRate) as AssetReductionForm,
       ];
-    } else if (legacyReductionType === "new_housing") {
-      primaryAsset.reductions = [{
-        type: "new_housing",
-        reductionRegion: (legacy.reductionRegion as "metropolitan" | "non_metropolitan" | "outside_overconcentration") ?? "metropolitan",
-      }];
-    } else if (legacyReductionType === "unsold_housing") {
-      primaryAsset.reductions = [{
-        type: "unsold_housing",
-        reductionRegion: (legacy.reductionRegion as "metropolitan" | "non_metropolitan" | "outside_overconcentration") ?? "metropolitan",
-      }];
+    } else if (isLegacyHousingReductionType(legacyReductionType)) {
+      // 레거시 신축·미분양 단순 감면은 폼 union·④·⑫에서 제거됐다 — 조문 ID로 이관한다(`legacy-housing-reduction.ts`).
+      primaryAsset.reductions = [
+        legacyHousingReductionToForm(legacyReductionType, primaryAsset.acquisitionDate) as AssetReductionForm,
+      ];
     } else if (legacyReductionType === "public_expropriation") {
       primaryAsset.reductions = [{
         type: "public_expropriation",

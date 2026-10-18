@@ -78,14 +78,6 @@ export const reductionSchema = z.discriminatedUnion("type", [
     standardPriceAtTransfer: z.number().int().nonnegative().optional(),
   }),
   z.object({
-    type: z.literal("new_housing"),
-    region: z.enum(["metropolitan", "non_metropolitan"]),
-  }),
-  z.object({
-    type: z.literal("unsold_housing"),
-    region: z.enum(["metropolitan", "non_metropolitan"]),
-  }),
-  z.object({
     type: z.literal("public_expropriation"),
     cashCompensation: z.number().int().nonnegative(),
     bondCompensation: z.number().int().nonnegative(),

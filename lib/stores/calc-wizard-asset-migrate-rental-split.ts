@@ -9,6 +9,7 @@
  *    뒤집히고, validate의 `opt()`도 빈 문자열과 다르게 다룬다(신규 자산 필드 stale 가드).
  */
 import { legacyLongTermRentalToRental973 } from "./legacy-rental-reduction";
+import { isLegacyHousingReductionType, legacyHousingReductionToForm } from "./legacy-housing-reduction";
 
 export function hasPositiveAmount(v: unknown): boolean {
   if (typeof v === "number") return v > 0;
@@ -30,6 +31,10 @@ export function normalizeRentalAndSplitFields(a: Record<string, unknown>): void 
       // 값을 그대로 두면 감면이 **조용히 사라진다** ⇒ 여기서 `rental_97_3`로 이관한다.
       if (r && r.type === "long_term_rental") {
         return legacyLongTermRentalToRental973(r.rentIncreaseRate);
+      }
+      // 레거시 신축·미분양 단순 감면도 같은 이유로 조문 ID로 이관한다(`legacy-housing-reduction.ts`).
+      if (r && isLegacyHousingReductionType(r.type)) {
+        return legacyHousingReductionToForm(r.type, a.acquisitionDate);
       }
       if (r && typeof r.type === "string" && (r.type as string).startsWith("rental_97") && r.type !== "rental_97_3_legacy") {
         return {

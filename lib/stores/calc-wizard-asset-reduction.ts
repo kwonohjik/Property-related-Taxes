@@ -41,16 +41,6 @@ export type AssetReductionForm =
       selfFarmingStandardPriceAtTransfer?: string;
     }
   | {
-      type: "new_housing";
-      /** 소재지 유형 — 감면율 결정 */
-      reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
-    }
-  | {
-      type: "unsold_housing";
-      /** 소재지 유형 */
-      reductionRegion: "metropolitan" | "non_metropolitan" | "outside_overconcentration";
-    }
-  | {
       type: "public_expropriation";
       /** 현금 보상액 (원) */
       expropriationCash: string;

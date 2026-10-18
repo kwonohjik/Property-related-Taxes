@@ -41,8 +41,22 @@ const NEW_99_3_END = D("2003-06-30");
 
 function isInNew993Period(acqDate: string | Date | undefined): boolean {
   if (!acqDate) return false;
-  const d = typeof acqDate === "string" ? new Date(acqDate) : acqDate;
+  // 문자열은 기준일(`D` — 로컬 자정)과 같은 축으로 읽는다. `new Date("2003-06-30")`은 UTC 자정이라
+  // UTC보다 빠른 시간대(KST)에서 종료일 당일 취득분이 기간 밖으로 갈렸다.
+  const d = typeof acqDate === "string" ? D(acqDate.slice(0, 10)) : acqDate;
   return d >= NEW_99_3_START && d <= NEW_99_3_END;
+}
+
+/**
+ * 레거시 신축·미분양 단순 감면 타입 → 조문 ID. 이력(아래 Dexie upgrade)과 세션 복원
+ * (`lib/stores/legacy-housing-reduction.ts`)이 **같은 규칙**을 쓴다.
+ */
+export function reclassifiedLegacyHousingType(
+  type: "new_housing" | "unsold_housing",
+  acquisitionDate: string | Date | undefined,
+): "new_99" | "new_99_3" | "unsold_98_3" {
+  if (type === "new_housing") return "new_99";
+  return isInNew993Period(acquisitionDate) ? "new_99_3" : "unsold_98_3";
 }
 
 /**
@@ -62,13 +76,13 @@ export async function migrateReductionReclassification(tx: Transaction): Promise
         if (!Array.isArray(reductions)) continue;
         for (const red of reductions) {
           if (red.type === "unsold_housing") {
-            red.type = isInNew993Period(asset.acquisitionDate) ? "new_99_3" : "unsold_98_3";
+            red.type = reclassifiedLegacyHousingType("unsold_housing", asset.acquisitionDate);
             transformed += 1;
           } else if (red.type === "long_term_rental") {
             red.type = "rental_97_3";
             transformed += 1;
           } else if (red.type === "new_housing") {
-            red.type = "new_99";
+            red.type = reclassifiedLegacyHousingType("new_housing", asset.acquisitionDate);
             transformed += 1;
           }
         }
