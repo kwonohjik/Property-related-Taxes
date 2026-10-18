@@ -58,12 +58,7 @@ import {
   buildNonBusinessPart,
   buildTotalTax,
 } from "./transfer-tax-mixed-use-helpers";
-
-// ──────────────────────────────────────────
-// 상수
-// ──────────────────────────────────────────
-
-const MIXED_USE_EFFECTIVE_DATE = new Date("2022-01-01");
+import { isMixedUseSplitTransfer } from "./data/mixed-use-split-era";
 
 // ──────────────────────────────────────────
 // 메인 함수
@@ -95,8 +90,8 @@ export function calcMixedUseTransferTax(
   const transferPrice = bg ? bg.debt.total : transferPriceInput;
   const asset = bg ? applyBurdenedGiftAssetOverrides(assetInput, bg) : assetInput;
 
-  // STEP 1: 2022.1.1 이전 양도일 거부
-  if (transferDate < MIXED_USE_EFFECTIVE_DATE) {
+  // STEP 1: 2022.1.1 이전 양도일 거부 — ⑧(`validateMixedUseAsset`)과 같은 leaf
+  if (!isMixedUseSplitTransfer(transferDate)) {
     return buildRejectionResult(
       "2022.1.1 이전 양도분은 겸용주택 분리계산 범위 외입니다. 단일 자산 모드로 재계산하세요.",
     );

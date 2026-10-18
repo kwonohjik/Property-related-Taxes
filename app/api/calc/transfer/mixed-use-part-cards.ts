@@ -50,6 +50,7 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
 import { pickArticle89Clause2Facts } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import type { MixedUseZodPayload } from "./mixed-use-asset-input";
@@ -83,6 +84,13 @@ export function buildMixedUsePartCards(
   assetLabel: string,
 ): TransferTaxItemInput[] {
   const r = calcMixedUseTransferTax(partTransferPrice, transferDate, mixedAsset, rates);
+  /**
+   * 2022.1.1. 전 양도는 엔진이 전부 0인 거부 결과를 낸다. 단건은 그 결과를 그대로 보여 주지만 여기서는 0인 파트 카드가 합산에 섞여
+   * 겸용 주택이 **조용히 빠졌다**(실측 2026-10-18). ⑧이 먼저 막고, API 직접 호출은 여기서 400으로 막는다(주 자산·컴패니언 공통 지점).
+   */
+  if (r.splitMode === "pre-2022-rejected") {
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `${assetLabel}: ${r.warnings.join(" ")}`);
+  }
   const hp = r.housingPart;
   const cp = r.commercialPart;
   const nb = r.nonBusinessLandPart;

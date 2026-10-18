@@ -294,7 +294,7 @@ export function buildHousingPart(
    * (`one-house/threshold.ts` `resolveHighValueHouseThreshold` — 6억/9억/12억)다.
    *
    * 겸용 경로만 리터럴을 남긴 이유: `calcMixedUseTransferTax`가 **2022-01-01 이전 양도를
-   * 거부한다**(`transfer-tax-mixed-use.ts` `MIXED_USE_EFFECTIVE_DATE`). 12억 시행일이
+   * 거부한다**(`data/mixed-use-split-era.ts` `isMixedUseSplitTransfer`). 12억 시행일이
    * 2021-12-08이므로 이 경로에 도달하는 양도일은 **항상 12억 시대**다 — 시점 함수로 바꿔도
    * 값이 달라지는 입력이 없다(뮤테이션 실측: 구별력 0).
    *

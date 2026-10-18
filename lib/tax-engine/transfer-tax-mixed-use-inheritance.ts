@@ -45,7 +45,7 @@ export function calcLongTermRate(
   /**
    * 양도일 — 표2 **연혁**(OH-31, `data/lthd-table2-era.ts`). 2009-01-01~2020-12-31 양도분은 보유 연 8%
    * (10년 80%) 단일축이라 거주분이 없다. 미제공이면 현행 식(보유 4% + 거주 4%) — 겸용주택 경로는
-   * 2022-01-01 이후 양도만 받으므로(`MIXED_USE_EFFECTIVE_DATE`) 넘기지 않아도 값이 같다.
+   * 2022-01-01 이후 양도만 받으므로(`isMixedUseSplitTransfer`) 넘기지 않아도 값이 같다.
    * 2009-01-01 전(미지원)도 현행 식으로 계산하고 호출부가 고지한다.
    */
   transferDate?: Date,

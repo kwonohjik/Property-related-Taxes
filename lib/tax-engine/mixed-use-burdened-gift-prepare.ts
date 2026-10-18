@@ -29,7 +29,7 @@ import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause
 import { computeSangjeungbeopValuation } from "./burdened-gift-valuation";
 import { safeMultiplyThenDivide } from "./tax-utils";
 
-/** 겸용 분리계산 시행일 — 영 §160① 괄호(부칙 제1조3호·제42조: 2022.1.1. 전 양도분은 종전 규정). `MIXED_USE_EFFECTIVE_DATE`와 같은 날. */
+/** 겸용 분리계산 시행일 — 영 §160① 괄호(부칙 제1조3호·제42조: 2022.1.1. 전 양도분은 종전 규정). `isMixedUseSplitTransfer`(`data/mixed-use-split-era.ts`)와 같은 날. */
 const MIXED_BG_EFFECTIVE_TIME = new Date("2022-01-01").getTime();
 /** 의제취득일 — 1984.12.31. 이전 취득 토지·건물은 1985.1.1. 취득으로 본다(법률 제4803호 부칙 §8). */
 const DEEMED_ACQUISITION_TIME = new Date("1985-01-01").getTime();

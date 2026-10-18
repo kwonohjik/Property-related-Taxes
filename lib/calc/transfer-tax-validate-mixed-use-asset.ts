@@ -27,6 +27,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isMixedUsePerPartAcq, mixedUsePhdEffective } from "./mixed-use-part-acq-split";
 import { validateMixedUsePartAcq } from "./transfer-tax-validate-mixed-use-part-acq";
+import { isMixedUseSplitTransfer } from "@/lib/tax-engine/data/mixed-use-split-era";
 
 /**
  * 겸용 공통 앞부분 — 건물 취득일 · 토지 취득일 · 면적. `validateMixedUseAsset`과 부담부증여 전용 검증(`validateMixedUseBurdenedGift`)이 **같은 함수**를 쓴다.
@@ -59,6 +60,13 @@ export function validateMixedUseAsset(
   label: string,
   formTransferDate?: string,
 ): string | null {
+  // 2022.1.1. 전 양도는 엔진이 분리계산을 거부한다(같은 leaf). 단건은 0원 + 붉은 카드, 함께 양도는 0인 파트 카드로 합산에서 조용히 빠졌다
+  // (계획서 `docs/00-pm/transfer-nbl-deferral-derived-followups.plan.md` F-3 · D-1 ⓐ) — 계산 전에 막고 «겸용주택 분리계산» 토글로 보낸다.
+  if (formTransferDate && !isMixedUseSplitTransfer(formTransferDate))
+    return fieldError(
+      "isMixedUseHouse",
+      `${label}: 2022.1.1. 전 양도분은 겸용주택 분리계산 범위 밖입니다 — 「겸용주택 분리계산」을 끄고 주택연면적과 상가연면적을 비교하여 단일 자산으로 계산하세요.`,
+    );
   const commonErr = validateMixedUseDatesAndAreas(asset, label, formTransferDate);
   if (commonErr) return commonErr;
   if (!asset.mixedTransferHousingPrice || parseAmount(asset.mixedTransferHousingPrice) <= 0)

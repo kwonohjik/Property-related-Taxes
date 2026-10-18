@@ -40,6 +40,7 @@ export function MixedUseToggleRow({ asset, onChange }: Pick<Props, "asset" | "on
         tone="amber"
         title="겸용주택 분리계산"
         description="주택+상가 복합건물 (§160①단서)"
+        data-field="isMixedUseHouse"
         trailing={<LawArticleModal legalBasis="소득세법 시행령 §160①" label="§160①단서 겸용주택" />}
         checked={!!asset.isMixedUseHouse}
         // §95⑤(건물 전부가 주택이 된 경우)과 배타 — 반대 방향 잠금.
