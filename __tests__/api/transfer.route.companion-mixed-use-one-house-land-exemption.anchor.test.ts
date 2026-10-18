@@ -166,7 +166,8 @@ describe("컴패니언 겸용주택 1세대1주택 — 주택 토지 카드 비�
     expect(card("mu-house-land").isExempt).toBe(false);
     expect(card("mu-house-land").transferGain).toBe(26_785_714);
     expect(card("mu-house-bld").isExempt).toBe(false);
-    expect(a.totalTax).toBe(167_681_142);
+  // §102② 차손 안분 잔액 1원의 자리 — 입력상 마지막 카드가 아니라 소수부가 큰 카드로(최대잉여법, 계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6). 종전 167,681,142.
+    expect(a.totalTax).toBe(167_681_141);
   }, 60_000);
 
   it("토지 나중(2023-10, 보유 2년 미만)·건물 2009 → 토지 카드 과세 · 건물 카드 비과세(분리취득 G-3과 같음)", async () => {

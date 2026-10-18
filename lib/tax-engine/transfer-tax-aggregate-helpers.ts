@@ -234,8 +234,19 @@ export function offsetLosses(
   const translate = (key: string) => (cross ? crossLossOffsetRateKey("real_estate", key) ?? key : key);
 
   // 파트 단위 자산(Q-F3a)은 코어에 **파트 행**으로 펼치고 결과를 자산으로 접는다 — 코어(세목 중립)는 그대로다.
+  // 행은 **propertyId 순**으로 넘긴다(자산 안 파트 순서는 그대로). 코어의 동률 처리(잔액 1원이 같은 소수부 중 앞 행으로,
+  // 그룹은 최초 등장 순)가 입력 순서를 따르면 같은 신고가 순서만 바꿔 1~3원 갈린다(계획서
+  // `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6 — 3건 격자 391·395행).
+  const byId = records
+    .map((_, i) => i)
+    .sort((a, b) => {
+      const x = records[a].item.propertyId;
+      const y = records[b].item.propertyId;
+      return x < y ? -1 : x > y ? 1 : a - b;
+    });
   const owner: number[] = [];
-  const ownRows = records.flatMap((r, i) => {
+  const ownRows = byId.flatMap((i) => {
+    const r = records[i];
     const rows =
       r.lossParts && !r.result.isExempt
         ? r.lossParts.map((p) => ({ income: p.income, rateKey: translate(p.rateKey), exempt: false }))

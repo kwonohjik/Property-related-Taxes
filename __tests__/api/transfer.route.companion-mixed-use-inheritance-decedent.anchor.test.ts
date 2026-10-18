@@ -165,7 +165,8 @@ describe("컴패니언 겸용주택 — 상속 피상속인 취득일", () => {
     const { a, card } = await calc({ ...INH, decedentAcquisitionDate: "2023-06-01" });
     expect(card("mu-house-bld").appliedRate).toBe(0.6);
     expect(card("mu-comm-land").appliedRate).toBe(0.4);
-    expect(a.totalTax).toBe(85_264_628);
+  // §102② 차손 안분 잔액 1원의 자리 — 입력상 마지막 카드가 아니라 소수부가 큰 카드로(최대잉여법, 계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6). 종전 85,264,628.
+    expect(a.totalTax).toBe(85_264_630);
   }, 60_000);
 
   it("§77⑨ — 사업인정고시 2024-03-01 · 피상속인 2000 → 감면 성립", async () => {

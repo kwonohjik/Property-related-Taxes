@@ -37,11 +37,15 @@
  *
  * 양도소득에는 결손금 이월이 없다. 통산하지 못한 차손은 `unusedLoss`로 보고만 하고 버린다.
  *
- * ## 배분 규약 — floor + 마지막 잔액 흡수
+ * ## 배분 규약 — 이익 자산 몫은 최대잉여법, 차손 출처 귀속은 floor + 마지막 잔액 흡수
  *
- * 비례 배분은 `Math.floor`라 그대로 더하면 총합이 pool에 못 미친다. **마지막 항목이 잔액을
- * 흡수**해 `Σ배분 = pool`을 강제한다(면적 안분 `residualArea`와 같은 사고). 순서 의존이므로
- * **입력 순서와 그룹 최초 등장 순서가 결과를 바꾼다** — 호출자는 순서를 안정적으로 유지할 것.
+ * 이익 자산이 받는 몫(소득을 줄이는 값)은 floor 뒤 남은 원을 **소수부가 큰 자산부터 1원씩** 준다(최대잉여법,
+ * 동률은 행 순서). `Σ배분 = pool`이고, 「입력상 마지막 자산」이 잔액을 다 받던 종전 규약과 달리 자리가 몫의 크기로
+ * 정해진다 — 같은 신고를 순서만 바꿔 넣어도 소득이 1원 움직이지 않는다(2026-10-18, 계획서
+ * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6 — 교재 사례 33 예제값과도 맞는다).
+ * 차손 출처 귀속(통산 표의 「어느 차손에서」)은 세액에 쓰이지 않아 종전 규약 그대로다.
+ * 동률·그룹 최초 등장 순서는 여전히 행 순서를 따른다 — 호출자는 순서를 안정적으로 유지할 것
+ * (부동산 어댑터는 propertyId 순으로 넘긴다).
  *
  * 거동 고정: `__tests__/tax-engine/transfer-tax-loss-offset-characterization.test.ts` (38건).
  * mutation M1·M2·M3에서 각각 6·5·11건이 빨개짐을 확인했다.
@@ -79,6 +83,22 @@ export interface LossOffsetCoreOutput {
   unusedLoss: number;
 }
 
+/** 최대잉여법 — `pool × w / total`을 floor한 뒤 남은 원을 소수부 큰 순(동률은 앞 행)으로 1원씩. Σ = pool. */
+function largestRemainderShares(weights: number[], pool: number, total: number): number[] {
+  const shares = weights.map((w) => Number((BigInt(w) * BigInt(pool)) / BigInt(total)));
+  const remainders = weights.map((w) => (BigInt(w) * BigInt(pool)) % BigInt(total));
+  let left = pool - shares.reduce((a, b) => a + b, 0);
+  const order = weights
+    .map((_, i) => i)
+    .sort((a, b) => (remainders[b] > remainders[a] ? 1 : remainders[b] < remainders[a] ? -1 : a - b));
+  for (const i of order) {
+    if (left <= 0) break;
+    shares[i] += 1;
+    left -= 1;
+  }
+  return shares;
+}
+
 export function offsetLossesCore(records: LossOffsetCoreRecord[]): LossOffsetCoreOutput {
   const n = records.length;
   const fromSame: number[] = new Array(n).fill(0);
@@ -106,12 +126,9 @@ export function offsetLossesCore(records: LossOffsetCoreRecord[]): LossOffsetCor
     const offsetPool = Math.min(totalGain, totalLossAbs);
 
     if (offsetPool > 0 && totalGain > 0) {
-      let distributed = 0;
+      const gainShares = largestRemainderShares(gainIdx.map((gi) => records[gi].income), offsetPool, totalGain);
       gainIdx.forEach((gi, pos) => {
-        const isLast = pos === gainIdx.length - 1;
-        const share = isLast
-          ? offsetPool - distributed
-          : Math.floor((records[gi].income * offsetPool) / totalGain);
+        const share = gainShares[pos];
         if (share > 0) {
           fromSame[gi] += share;
           remainingGainByAsset[gi] -= share;
@@ -130,7 +147,6 @@ export function offsetLossesCore(records: LossOffsetCoreRecord[]): LossOffsetCor
             }
           });
         }
-        distributed += share;
       });
     }
 
@@ -148,12 +164,9 @@ export function offsetLossesCore(records: LossOffsetCoreRecord[]): LossOffsetCor
       .map((g, i) => ({ i, g }))
       .filter((x) => x.g > 0);
 
-    let consumedGain = 0;
+    const gainShares = largestRemainderShares(gainIndices.map((x) => x.g), offsetPool2, totalRemainingGain);
     gainIndices.forEach((gx, pos) => {
-      const isLast = pos === gainIndices.length - 1;
-      const share = isLast
-        ? offsetPool2 - consumedGain
-        : Math.floor((gx.g * offsetPool2) / totalRemainingGain);
+      const share = gainShares[pos];
       if (share > 0) {
         fromOther[gx.i] += share;
         let remainingShare = share;
@@ -193,7 +206,6 @@ export function offsetLossesCore(records: LossOffsetCoreRecord[]): LossOffsetCor
           }
         });
       }
-      consumedGain += share;
     });
   }
 

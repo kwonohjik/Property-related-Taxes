@@ -75,7 +75,10 @@ export function buildCrossLossRows(
     };
   }
 
-  const rows: CrossLossAsset[] = props.flatMap((p) =>
+  // 엔진 어댑터(`offsetLosses`)와 **같은 순서**(propertyId 순 — 파트는 자산 안 순서 그대로)로 돌린다. 코어의 동률·그룹 등장
+  // 순서가 행 순서를 따르므로, 순서가 다르면 엔진 2패스와 여기 배분이 1원 갈릴 수 있다.
+  const ordered = [...props].sort((a, b) => (a.propertyId < b.propertyId ? -1 : a.propertyId > b.propertyId ? 1 : 0));
+  const rows: CrossLossAsset[] = ordered.flatMap((p) =>
     // 🔑 엔진이 파트 단위로 통산한 split 자산(Q-F3a)은 **같은 파트 행**으로 돌린다 — 자산 한 행으로 돌리면
     //    엔진과 배분이 달라져 기타자산에 주입할 소득이 어긋난다(차손 이중 공제 18,918,918 실측).
     //    행 id는 자산 id 그대로다 — 결과는 `computeCrossLossOffset`이 자산 단위로 접는다.

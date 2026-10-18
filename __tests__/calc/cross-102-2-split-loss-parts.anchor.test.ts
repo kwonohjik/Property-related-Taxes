@@ -80,12 +80,14 @@ function cross(items: TransferTaxInput[]) {
 }
 
 describe("크로스 통산 × split 파트 행", () => {
-  it("차손 3억이 정확히 3억만 공제된다 — 부동산 218,918,918 + 기타자산 81,081,082 = 분리 신고", () => {
+  it("차손 3억이 정확히 3억만 공제된다 — 부동산 218,918,919 + 기타자산 81,081,081 = 분리 신고", () => {
     const s = cross([split(), houseLoss()]);
     expect(s.realEstateAbsorbed + (100_000_000 - s.otherAssetIncome)).toBe(300_000_000);
     const sep = cross([...separated(), houseLoss()]);
-    expect(sep.realEstateAbsorbed).toBe(218_918_918);
-    expect(sep.otherAssetIncome).toBe(18_918_918);
+    // 건물 270,000,000 × 3억 / 370,000,000 = 218,918,918.92 · 기타자산 81,081,081.08 — 잔액 1원은 소수부가 큰 건물로(최대잉여법).
+    // 종전(마지막 행 흡수)은 기타자산이 받아 218,918,918 / 81,081,082였다.
+    expect(sep.realEstateAbsorbed).toBe(218_918_919);
+    expect(sep.otherAssetIncome).toBe(18_918_919);
     expect([s.realEstateAbsorbed, s.otherAssetIncome]).toEqual([sep.realEstateAbsorbed, sep.otherAssetIncome]);
   });
 
@@ -96,3 +98,44 @@ describe("크로스 통산 × split 파트 행", () => {
     expect(rows[0].absorbed).toBe(s.realEstateAbsorbed);
   });
 });
+
+describe("크로스 통산 행 순서 = 엔진 순서(propertyId 순)", () => {
+  /** 2년 6개월 보유 토지(누진 · 장특 없음) — 양도소득금액 = 양도가 − 취득가. */
+  const land = (price: number, acq: number) =>
+    baseTransferInput({
+      propertyType: "land", transferPrice: price, acquisitionPrice: acq, acquisitionDate: D("2020-09-20"), transferDate: D(T),
+      isOneHousehold: false, householdHousingCount: 0, isNonBusinessLand: false, expenses: 0, annualBasicDeductionUsed: 0,
+    } as Partial<TransferTaxInput>);
+  const runIds = (items: [TransferTaxInput, string][], external?: { id: string; income: number; rateKey: string; exempt: boolean }[]) =>
+    calculateTransferTaxAggregate(
+      {
+        taxYear: 2023,
+        properties: items.map(([x, id]) => asItem(x, id)),
+        annualBasicDeductionUsed: 2_500_000,
+        ...(external ? { crossLossOffsetExternal: external } : {}),
+      },
+      rates,
+    );
+
+  it("소수부 동률(같은 이익 두 건)의 잔액 1원이 엔진과 같은 자산(propertyId 앞)에 붙는다 — 입력 순서가 B, A여도", () => {
+    // 이익 100,000,001 × 2(B·A) + 기타자산 100,000,000 · 차손 100,000,000 → 몫 33,333,333.44(B·A 동률) · 33,333,333.11(기타자산).
+    // floor 합 99,999,999 — 잔액 1원은 동률 중 **앞 행**으로 간다. 엔진은 propertyId 순(A 먼저)이라 크로스도 A여야 한다.
+    const items: [TransferTaxInput, string][] = [
+      [land(300_000_001, 200_000_000), "B"],
+      [land(300_000_001, 200_000_000), "A"],
+      [land(100_000_001, 200_000_001), "L"],
+    ];
+    const injection = buildCrossInjection(runIds(items), otherAsset);
+    if (!injection.ok) throw new Error(injection.reason);
+    const pass2 = runIds(items, injection.injection.realEstateExternalRows);
+    const engineAbsorbed = Object.fromEntries(
+      pass2.properties.filter((p) => p.income > 0).map((p) => [p.propertyId, p.income - p.incomeAfterOffset]),
+    );
+    const crossAbsorbed = Object.fromEntries(
+      injection.injection.outcome.assets.filter((a) => a.source === "real_estate" && a.income > 0).map((a) => [a.id, a.absorbed]),
+    );
+    expect(crossAbsorbed).toEqual(engineAbsorbed);
+    expect(engineAbsorbed.A).toBe(engineAbsorbed.B + 1);
+  });
+});
+
