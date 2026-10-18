@@ -38,6 +38,7 @@ import {
   type CarryoverScenarioOverrides,
 } from "./transfer-tax-aggregate-carryover-scope";
 import { TaxCalculationError } from "./tax-errors";
+import { soleSplitRightShareDateNotice } from "./transfer-tax-redevelopment-shared-ownership";
 import {
   applyOneHouseUnitPrice,
   oneHouseUnitOrder,
@@ -156,7 +157,13 @@ export function buildAssetRecords(
      *    같은 문구가 세 번 나오고 무엇을 확인해야 하는지 알 수 없다.
      * ⚠️ 같은 자산에서 중복은 그대로 둔다(단건 엔진이 이미 dedupe한다).
      */
-    for (const w of result.warnings ?? []) {
+    // 축 B 입주권 — 첫 지분 판정 선언을 쓴 지분의 취득일 차이 고지(지분 전부를 보는 이 층에서만 판정된다).
+    const shareDateNotice = soleSplitRightShareDateNotice(
+      item,
+      input.properties[0],
+      result.redevelopmentDetail,
+    );
+    for (const w of [...(result.warnings ?? []), ...(shareDateNotice ? [shareDateNotice] : [])]) {
       const label = item.propertyLabel ? `[${item.propertyLabel}] ` : "";
       const line = `${label}${w}`;
       if (!warnings.includes(line)) warnings.push(line);

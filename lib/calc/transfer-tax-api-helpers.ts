@@ -13,6 +13,7 @@ import {
   isSplitLandExprEligibleAssetKind,
 } from "@/lib/tax-engine/expropriation-scope";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
 import {
   isWithinSurchargeSuspensionWindow,
@@ -212,6 +213,8 @@ export function mergePrimaryBasic(a: AssetForm, primary: AssetForm): AssetForm {
     isNonBusinessLand: primary.isNonBusinessLand,
     // 지정지역 선언도 «물건 단위 값»(소재지)이라 전 지분 공통이다 — 비사업용 토지 8호 유예 판정용.
     isDesignatedArea: primary.isDesignatedArea,
+    // 조합원입주권 §89①4호 판정 선언 — 판정 메뉴가 첫 카드에만 받는다. 입주권·비승계일 때만(완공APT는 카드별 입력).
+    ...soleSplitRightJudgmentFacts(a, primary),
   };
 }
 
