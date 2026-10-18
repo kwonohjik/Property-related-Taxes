@@ -90,6 +90,7 @@ export function buildHousingLthdEcho(a: {
   buildingHoldingRate: number;
   landDeductionAmount: number;
   buildingDeductionAmount: number;
+  landHoldingYears: number;
   buildingHoldingYears: number;
   residenceYears: number;
 }): {
@@ -101,8 +102,14 @@ export function buildHousingLthdEcho(a: {
   residenceDeductionRate: number;
   partLthd: MixedPartLthd;
 } {
-  const land = mixedPartLthdEcho(a.proratedLandGain, a.landDedRate, a.landHoldingRate, a.landDeductionAmount);
-  const building = mixedPartLthdEcho(a.proratedBuildingGain, a.buildingDedRate, a.buildingHoldingRate, a.buildingDeductionAmount);
+  const land = mixedPartLthdEcho(a.proratedLandGain, a.landDedRate, a.landHoldingRate, a.landDeductionAmount, a.landHoldingYears);
+  const building = mixedPartLthdEcho(
+    a.proratedBuildingGain,
+    a.buildingDedRate,
+    a.buildingHoldingRate,
+    a.buildingDeductionAmount,
+    a.buildingHoldingYears,
+  );
   return {
     holdingDeductionAmount: land.holdingDeductionAmount + building.holdingDeductionAmount,
     residenceDeductionAmount: land.residenceDeductionAmount + building.residenceDeductionAmount,
@@ -120,11 +127,13 @@ export function mixedPartLthdEcho(
   longTermRate: number,
   holdingOnlyRate: number,
   longTermDeduction: number,
+  holdingYears: number,
 ): MixedPartLthdEcho {
   return {
     taxableGain: Math.max(taxableGain, 0),
     longTermRate,
     longTermDeduction,
+    holdingYears,
     ...(deriveSplitLthdEcho({ totalRate: longTermRate, holdingOnlyRate, deduction: longTermDeduction }) as Pick<
       MixedPartLthdEcho,
       "holdingDeductionRate" | "residenceDeductionRate" | "holdingDeductionAmount" | "residenceDeductionAmount"
