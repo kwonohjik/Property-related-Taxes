@@ -11,6 +11,8 @@
 import { describe, it, expect } from "vitest";
 import { calc, filingRows, sameDayInput, landFirstInput, LABEL, type Calc } from "./_helpers/filing-split-excess-fixture";
 import { deriveColumns } from "@/components/calc/results/transfer/FilingFormTableHelpers";
+import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHelpers";
+import { COMBOS, SCN_N, run as runOwned } from "../tax-engine/transfer/_helpers/split-acq-display-fixture";
 
 const N = (v: number | string | null | undefined) => v as number;
 
@@ -185,16 +187,16 @@ describe("⑤ 토지 먼저 취득(별개취득) — 같은 날 취득이 아닌
 });
 
 describe("② 초과분 없는 시료는 종전과 같다 — 수정 전 출력을 박아 고정(균일 비율 경로 유지)", () => {
-  it("15억 · 토지 300㎡(한도와 같음 → 초과 0) — 수정 전 값 그대로", () => {
+  it("15억 · 토지 300㎡(한도와 같음 → 초과 0) — 수정 전 값 그대로(건물 열 잔액 흡수 3칸만 +1·−1 — 별건 ②)", () => {
     const r = calc(sameDayInput("2026-02-16", 1_500_000_000, 300));
     expect(r.splitDetail!.nonBusinessLandPart).toBeUndefined();
     const rows = filingRows(r, 1_500_000_000);
-    expect(rows.get(LABEL.taxable)).toMatchObject({ land: 105_555_555, building: 94_444_444, total: 200_000_000 });
-    expect(rows.get(LABEL.exempt)).toMatchObject({ land: 422_222_224, building: 377_777_777, total: 800_000_000 });
+    expect(rows.get(LABEL.taxable)).toMatchObject({ land: 105_555_555, building: 94_444_445, total: 200_000_000 });
+    expect(rows.get(LABEL.exempt)).toMatchObject({ land: 422_222_224, building: 377_777_776, total: 800_000_000 });
     expect(rows.get(LABEL.lt)).toMatchObject({ land: 84_444_444, building: 75_555_555, total: 159_999_999 });
     expect(rows.get(LABEL.hold)).toMatchObject({ land: 42_222_222, building: 37_777_778, total: 80_000_000 });
     expect(rows.get(LABEL.res)).toMatchObject({ land: 42_222_222, building: 37_777_777, total: 79_999_999 });
-    expect(rows.get(LABEL.income)).toMatchObject({ land: 21_111_111, building: 18_888_889, total: 40_000_001 });
+    expect(rows.get(LABEL.income)).toMatchObject({ land: 21_111_111, building: 18_888_890, total: 40_000_001 });
   });
 
   it("초과분이 없으면 초과분 각주도 없다 — 취득가액 행 외 roseNotes 없음", () => {
@@ -205,21 +207,55 @@ describe("② 초과분 없는 시료는 종전과 같다 — 수정 전 출력�
     expect(r.splitDetail!.nonBusinessLandPart).toBeUndefined();
   });
 
-  it("균일 비율 경로 현행 유지(판단 요청 항목) — 파트별 floor로 1원 어긋남: 건물 열 과세 3,410,679 ≠ 엔진 echo 3,410,680 · 열 합 = 합계 − 1", () => {
-    // 초과분이 없는 고가주택 split도 엔진은 12억 안분을 파트별로 echo하고(Σ echo = 합계 열) 표는 합계 비율을 파트마다 floor해 열 합이 합계보다 1원 작다.
-    // 이번 작업 범위(초과분 열 반영) 밖이고 「초과분 없으면 표시 불변」 요구에 따라 그대로 둔다 — 값을 박아 의도치 않은 변경을 막는다.
-    // 이 경로를 echo로 바꾸면 이 테스트를 갱신한다(판단 요청 항목).
+  it("균일 비율 경로 — 건물 열이 합계 잔액을 흡수한다: 건물 열 과세 3,410,680(종전 3,410,679) · 열 합 = 합계 열(과세·비과세·소득금액·감면후 4행)", () => {
+    // 종전에는 합계 비율을 파트마다 floor해 열 합이 합계보다 1원 작았다(이 테스트가 그 값을 고정하고 있었다 — 별건 ②).
+    // 지금은 토지 열 floor · 건물 열 = 합계 − 토지 열(§155⑳ 경로 `rentalSplitTwoColFinancials`와 같은 규약). 토지 열은 종전과 같다.
     const r = calc(sameDayInput("2026-02-16", 1_210_000_000, 300, {
       standardPriceAtAcquisition: 550_000_000, standardPricePerSqmAtAcquisition: 800_000, buildingStandardPriceAtAcquisition: 150_000_000,
     }));
     expect(r.splitDetail!.nonBusinessLandPart).toBeUndefined();
     const rows = filingRows(r, 1_210_000_000);
     const sd = r.splitDetail!;
-    const tableTaxable = N(rows.get(LABEL.taxable)!.land) + N(rows.get(LABEL.taxable)!.building);
-    const echoSum = (sd.land.taxableGainAfterProration ?? sd.land.gain) + (sd.building.taxableGainAfterProration ?? sd.building.gain);
-    expect(echoSum).toBe(r.taxableGain);
-    expect(tableTaxable).toBe(r.taxableGain - 1);
-    expect(N(rows.get(LABEL.taxable)!.building)).toBe((sd.building.taxableGainAfterProration ?? 0) - 1);
+    const ratio = r.taxableGain / (sd.land.gain + sd.building.gain);
+    expect(N(rows.get(LABEL.taxable)!.land)).toBe(Math.floor(sd.land.gain * ratio));
+    expect(N(rows.get(LABEL.taxable)!.building)).toBe(3_410_680);
+    for (const label of [LABEL.taxable, LABEL.exempt, LABEL.income, "감면후 소득금액"]) {
+      const row = rows.get(label)!;
+      expect(N(row.land) + N(row.building), label).toBe(N(row.total));
+    }
+  });
+
+  it("잔액 흡수는 두 파트를 모두 소유할 때만 — 한 파트만 소유하면 합계 열이 그 파트 하나라 건물 열을 «합계 − 토지 열»로 만들지 않는다", () => {
+    // 가드를 빼면 건물만 소유(N·AE)에서 건물 열이 111,000,000 → −364,000,000, 토지만 소유에서 0이 된다(실측).
+    for (const [own, building] of [["building_only", 111_000_000], ["land_only", 111_000_000]] as const) {
+      const r = runOwned(SCN_N, COMBOS.AE, { selfOwns: own } as never);
+      const { mode } = deriveColumns(r);
+      expect(mode).toBe("split-2col");
+      const v = buildRows(r, mode, undefined, undefined, SCN_N.price).find((x) => x.label === LABEL.taxable)!.values;
+      expect(N(v.building), own).toBe(building);
+    }
+  });
+
+  it("균일 비율 경로 스캔 — 양도가 12억 초과 구간 1원 단위 이웃까지 4행 열 합 = 합계 열", () => {
+    const misses: string[] = [];
+    let checked = 0;
+    for (const base of [1_210_000_000, 1_333_333_333, 1_500_000_000, 1_777_777_777, 2_345_678_901]) {
+      for (const d of [0, 1, 2, 3, 7]) {
+        const price = base + d;
+        const r = calc(sameDayInput("2026-02-16", price, 300, {
+          standardPriceAtAcquisition: 550_000_000, standardPricePerSqmAtAcquisition: 800_000, buildingStandardPriceAtAcquisition: 150_000_000,
+        }));
+        if (r.splitDetail?.nonBusinessLandPart || deriveColumns(r).mode !== "split-2col") continue;
+        checked++;
+        const rows = filingRows(r, price);
+        for (const label of [LABEL.taxable, LABEL.exempt, LABEL.income, "감면후 소득금액"]) {
+          const row = rows.get(label)!;
+          if (N(row.land) + N(row.building) !== N(row.total)) misses.push(`${price} ${label}`);
+        }
+      }
+    }
+    expect(checked).toBe(25);
+    expect(misses).toEqual([]);
   });
 });
 

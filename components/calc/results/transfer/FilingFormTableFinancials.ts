@@ -159,6 +159,9 @@ export function fourPartFinancials(
  * 겸용주택 4열(`fourPartFinancials`)과 같은 규약이다: 초과분은 전용 열을 세우지 않고 **토지 열 안에서** 합산한다
  * (취득가액·필요경비 칸이 토지 전체 기준이라 `양도가 − 취득가 − 필요경비 = 양도차익`이 열 안에서 성립하고,
  * 파트 단위 양도가·취득가를 엔진이 echo하지 않는 초과분을 따로 지어낼 필요가 없다).
+ *
+ * `taxableTotal`(합계 열 과세대상 양도차익)을 넘기면 균일 비율 경로에서 건물 열이 잔액을 흡수한다 — 두 열을 각각 floor하면
+ * 열 합이 합계 열보다 1원 작아졌다(과세·비과세·소득금액·감면후 4행). §155⑳ 경로(`rentalSplitTwoColFinancials`)와 같은 규약이다.
  */
 export function splitTwoColFinancials(
   land: SplitPartResult,
@@ -166,6 +169,7 @@ export function splitTwoColFinancials(
   taxableRatio: number,
   setNum: (rowKey: string, col: ColumnKey, n: number | null) => void,
   nb?: SplitNonBusinessLandPart,
+  taxableTotal?: number,
 ) {
   setNum("transferPrice", "land", land.transferPrice);
   setNum("transferPrice", "building", building.transferPrice);
@@ -182,7 +186,9 @@ export function splitTwoColFinancials(
     : Math.floor(land.gain * taxableRatio);
   const buildingTaxable = nb
     ? (building.taxableGainAfterProration ?? building.gain)
-    : Math.floor(building.gain * taxableRatio);
+    : taxableTotal !== undefined
+      ? taxableTotal - landTaxable
+      : Math.floor(building.gain * taxableRatio);
   setNum("taxableGain", "land", landTaxable);
   setNum("taxableGain", "building", buildingTaxable);
   // 비과세 양도차익 = 열의 전체 양도차익 − 열의 과세 양도차익 — 한쪽 파트가 양도차손이면 그 열은 음수로 남는다(전체 양도차익 행과 같은 부호 · 열 합 = 합계 열).

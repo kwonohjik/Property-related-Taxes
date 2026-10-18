@@ -103,10 +103,17 @@ export function setLongTermDeductionItems(
   const lthSplit = splitLtDeduction(totalLth, totalHoldingMs, residenceMs, useTable2);
 
   // 다건 모드 자산별 보유/거주분 (자산별 holdingMs 기준)
+  // 토지·건물 분리 자산은 엔진 echo(소유 파트 보유분·거주분 합)가 정본이다 — 공제 총액을 폼값으로 다시 안분하지 않는다.
+  // 재개발·재건축 자산은 분기별 보유분·거주분 합의 echo(`filingDisplay.lthd*` — `resolveLthdPartsEcho`)다.
+  // 둘 다 신고서(`FilingFormTableAggregateHelpers`)가 읽는 `filingDisplay.lthd*`와 같은 값이다. echo가 없는 구 이력은 아래 종전 재안분.
+  const engineEcho = (p: PerPropertyBreakdown) => {
+    if (p.splitDetail) return sumSplitLthdAmounts(p.splitDetail, p.longTermHoldingDeduction);
+    const fd = p.filingDisplay;
+    if (!p.redevelopmentDetail || (fd?.lthdHoldingPart === undefined && fd?.lthdResidencePart === undefined)) return null;
+    return { holdingAmount: fd.lthdHoldingPart ?? p.longTermHoldingDeduction, residenceAmount: fd.lthdResidencePart ?? 0 };
+  };
   const splitForAsset = (p: PerPropertyBreakdown) => {
-    // 토지·건물 분리 자산은 엔진 echo(소유 파트 보유분·거주분 합)가 정본이다 — 공제 총액을 폼값으로 다시 안분하지 않는다.
-    // 신고서(`FilingFormTableAggregateHelpers`)가 읽는 `filingDisplay.lthd*`와 같은 값이다. echo가 없는 구 이력은 아래 종전 재안분.
-    const echo = p.splitDetail ? sumSplitLthdAmounts(p.splitDetail, p.longTermHoldingDeduction) : null;
+    const echo = engineEcho(p);
     if (echo) return echo;
     // 자산별 거주 개월수 — 거주 사실이 없는 자산은 0이 되어 거주분이 배정되지 않는다.
     const rms = residenceMsOf(p.propertyId);
@@ -129,7 +136,7 @@ export function setLongTermDeductionItems(
    * 종전에는 합계 공제액을 대표 자산의 폼값으로 한 번에 안분해 자산별 행과 합계가 어긋났다. 분리 자산이 없으면 종전 그대로.
    */
   const aggLthdTotals =
-    isAggregate && properties.some((p) => p.splitDetail && sumSplitLthdAmounts(p.splitDetail, p.longTermHoldingDeduction))
+    isAggregate && properties.some((p) => engineEcho(p))
       ? properties.reduce(
           (acc, p) => {
             const s = splitForAsset(p);
