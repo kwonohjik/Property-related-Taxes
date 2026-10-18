@@ -53,6 +53,7 @@ import {
 // [800줄 정책 2차] 단건·each_item 단축 경로 → -each-item.ts · §102② 통산 → -loss-offset.ts
 import { aggregateEachItem, type CalcOneFn } from "./stock-transfer-aggregate-each-item";
 import { runStockLossOffset, sumOffset } from "./stock-transfer-aggregate-loss-offset";
+import { evaluateSameDayOrder } from "./stock-transfer-same-day-order";
 
 import {
   computeOtherAssetComparativeTax,
@@ -246,11 +247,29 @@ export function calculateStockTransferTaxAggregate(
   return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode, filing);
 }
 
-/** 합산 계산 본체 — 이월과세 A/B가 **이미 확정된** 입력을 받는다. */
+/**
+ * 합산 계산 — 이월과세 A/B가 **이미 확정된** 입력을 받는다.
+ * 같은 날 양도한 종목 사이의 §103② 순서는 신고 세액으로 고른다(`evaluateSameDayOrder` — 재일46014-1685 준용).
+ */
 function aggregateCore(
   inputs: AggregateStockItemInput[],
   deductionMode: "each_item" | "aggregate",
   filing: StockAggregateFilingOptions = {},
+): StockTransferAggregateResult {
+  if (deductionMode === "each_item" || inputs.length === 1) return aggregateInOrder(inputs, deductionMode, filing);
+  return evaluateSameDayOrder(
+    inputs,
+    (order) => aggregateInOrder(inputs, deductionMode, filing, order),
+    resolveRealEstateGroupUsedSeed(inputs),
+  );
+}
+
+/** 합산 계산 본체 — §103② 순회 순서(`allocationOrder`)를 받는다. 없으면 양도일 → 입력 순서. */
+function aggregateInOrder(
+  inputs: AggregateStockItemInput[],
+  deductionMode: "each_item" | "aggregate",
+  filing: StockAggregateFilingOptions = {},
+  allocationOrderOverride?: number[],
 ): StockTransferAggregateResult {
   /** §103①1호 기소진액 — 신고 단위 선언값(leaf 주석 참조, 리뷰 #16). */
   const realEstateGroupUsedSeed = resolveRealEstateGroupUsedSeed(inputs);
@@ -310,7 +329,8 @@ function aggregateCore(
   //   순서만 바꾸면 세액이 달라졌다(실측: 20% 종목 2월 + 30% 종목 11월 → 4,250,000 vs 4,500,000,
   //   **250,000 차이**). 세율이 다른 종목이 섞이면 어느 쪽이 공제를 받느냐가 세액을 바꾼다.
   //
-  // ⚠️ 동일 양도일의 우선순위는 **법문·서식 어디에도 없다** — 입력 순서로 안정 정렬한다.
+  // ⚠️ 동일 양도일의 우선순위는 법문·서식에 없다 — 재일46014-1685를 준용해 **신고 세액이 가장 낮은 순서**를
+  //    호출자(`aggregateCore` → `evaluateSameDayOrder`)가 골라 `allocationOrderOverride`로 넘긴다.
   // ⚠️ §103② 전단의 「감면소득금액 외의 양도소득금액에서 먼저 공제」는 **주식에 해당 사항이
   //    없다** — 조특법 「양도소득세의 감면」 조문(§43·§69·§70·§77·§85·§97·§99)이 전부
   //    부동산·토지·주택이고, 주식 특례(조특법 §14①·§13)는 감면이 아니라 **양도소득 불산입**이다.
@@ -325,14 +345,16 @@ function aggregateCore(
   let otherAssetUsed = realEstateGroupUsedSeed;     // 기타자산 그룹 — **기소진액에서 시작**(리뷰 #16)
 
   /**
-   * §103② 배분 순회 순서 — **양도일 오름차순**, 동일자는 입력 순서(안정 정렬).
+   * §103② 배분 순회 순서 — **양도일 오름차순**, 같은 날은 호출자가 고른 순서(없으면 입력 순서).
    * 결과 배열은 **입력 순서를 유지**한다(결과뷰·신고서식이 입력 순서를 전제한다) —
    * 순회 순서와 출력 순서를 분리하는 것이 이 두 줄의 목적이다.
    */
-  const allocationOrder = inputs
-    .map((input, i) => ({ i, t: input.transferDate.getTime() }))
-    .sort((a, b) => a.t - b.t || a.i - b.i)
-    .map((x) => x.i);
+  const allocationOrder =
+    allocationOrderOverride ??
+    inputs
+      .map((input, i) => ({ i, t: input.transferDate.getTime() }))
+      .sort((a, b) => a.t - b.t || a.i - b.i)
+      .map((x) => x.i);
 
   const processedByIndex = new Array<StockTransferResult>(inputs.length);
   const processItem = (i: number): StockTransferResult => {

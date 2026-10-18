@@ -88,8 +88,11 @@ describe("MA-06: aggregate — 첫 종목 부분 소진 시 후속 종목은 잔
    *   과표 = 50,000,000 − 1,500,000 = 48,500,000
    *   산출세액 = floor(48,500,000 × 20%) = 9,700,000  (§104①11 가목2, 3억 이하)
    * 그룹 기본공제 실적용 합 = 1,000,000 + 1,500,000 = 2,500,000 (한도 정확 소진)
+   *
+   * 종목A를 **먼저 양도**한다(§103② 「먼저 양도한 자산부터」). 같은 날이면 두 배분의 세액이 같아
+   * 정준 순서가 B에 250만을 줄 수 있다(`same-day-basic-deduction-order.anchor.test.ts`).
    */
-  const stockA = stockInput(); // 소득 1,000,000
+  const stockA = stockInput({ transferDate: new Date("2024-05-01") }); // 소득 1,000,000
   const stockB = stockInput({
     shareCount: 1_000,
     perShareTransferPrice: 60_000, // 60,000,000
