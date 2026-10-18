@@ -9,6 +9,8 @@
  *   (memory `feedback_800line_split_export_preservation`).
  */
 
+import { isSec104_5_2ProvisoInForce } from "./data/sec104-5-2-proviso-era";
+
 /**
  * 「소득세법」 제104조 중 **실제로 적용된 호**.
  *
@@ -97,6 +99,8 @@ export const clauseSet = (...cs: (RateClause | undefined)[]): RateClause[] | und
  *
  * ⚠️ 후보 배열은 `clauseSet`이 **정렬**해 둔 것이어야 한다 — 순서가 흔들리면 키가 갈려
  *   입력 순서 의존이 재발한다(계획서 R-3).
+ * ⚠️ 단서는 **2019.1.1. 이후 양도분**부터다(법률 제16104호 부칙 제2조②). 이 키는 시점을 보지 않는다 —
+ *   그 전 양도의 복수 호 단위를 합산에서 빼는 것은 합산 식별자 `provisoMergeId`(아래)가 한다.
  */
 export function clauseBucketKey(
   candidates: readonly RateClause[] | undefined,
@@ -110,4 +114,26 @@ export function clauseBucketKey(
   return candidates.some((c) => PROGRESSIVE_RATE_CLAUSES.has(c))
     ? joined
     : `${joined}|${appliedRate}`;
+}
+
+/**
+ * §104⑤2호 **합산 식별자** — `clauseBucketKey`(호 키)는 그대로 두고, **단서 시행 전**(2019.1.1. 전 양도)의
+ * **둘 이상의 호에 해당하는** 단위만 단위 번호를 붙여 합산에서 뺀다.
+ *
+ * 단서(「…동일한 호의 세율이 적용되고, 그 적용세율이 둘 이상인 경우 … 합산한 것에 대하여 … 큰 산출세액」)는
+ * 법률 제16104호 부칙 제2조②로 **2019.1.1. 이후 양도분**부터다(`data/sec104-5-2-proviso-era.ts`). 그 전에는 그런 자산을
+ * 합산하지 않고 자산마다 §104① 후단·⑦ 후단의 큰 세액을 더한다(β — 2026-10-18 사용자 결정). 단일 호 단위의 호별 합산
+ * (본문 · 기획재정부 재산세제과-536)은 시점과 무관하게 키 그대로 묶는다.
+ *
+ * 🔑 키가 아니라 **식별자**만 가른다 — 다건 감면의 호 라벨(`clauseLabelOf`)이 키를 읽는다. `solo-*`로 바꾸면 「호 미상」이 된다.
+ * ⚠️ 다건 버킷(`transfer-tax-aggregate-group-tax.ts`) · 단건 파트 묶음(`transfer-tax-split-rate.ts`) · 감면 파트 호
+ *   (`public-expropriation-reduction.ts` `partClauseBasisOf`) **세 곳이 같은 식**이어야 한다 — 어긋나면 묶음과 감면 호가 갈린다.
+ */
+export function provisoMergeId(
+  key: string,
+  candidates: readonly RateClause[] | undefined,
+  transferDate: Date,
+  unit: string | number,
+): string {
+  return (candidates?.length ?? 0) >= 2 && !isSec104_5_2ProvisoInForce(transferDate) ? `${key}#${unit}` : key;
 }

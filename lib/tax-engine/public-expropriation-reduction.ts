@@ -3,7 +3,7 @@ import { TRANSFER } from "./legal-codes";
 import { applyRate, safeMultiplyThenDivide } from "./tax-utils";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
-import { clauseBucketKey } from "./transfer-tax-rate-clause";
+import { clauseBucketKey, provisoMergeId } from "./transfer-tax-rate-clause";
 import type { SplitPartRateResult, SplitRatePart } from "./transfer-tax-split-rate";
 
 /**
@@ -436,6 +436,7 @@ export function buildPublicExpropriationParts(
     TransferTaxInput,
     | "isSeparateAcquisition" | "landAcquisitionDate" | "acquisitionDate" | "selfOwns"
     | "acquisitionCause" | "decedentAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate"
+    | "transferDate"
   >,
   splitDetail: SplitGainResult | undefined,
   /** 단건 STEP 7의 파트별 세율 판정 — 있으면 각 파트가 속한 호의 산출세액·과세표준을 싣는다(Q-F2c). */
@@ -450,8 +451,8 @@ export function buildPublicExpropriationParts(
     input.landAcquisitionDate,
     useLandCause ? input.landDecedentAcquisitionDate : input.decedentAcquisitionDate,
   )!;
-  const landBasis = partClauseBasisOf(partTax, ["land", "non_business_land"]);
-  const buildingBasis = partClauseBasisOf(partTax, ["building"]);
+  const landBasis = partClauseBasisOf(partTax, ["land", "non_business_land"], input.transferDate);
+  const buildingBasis = partClauseBasisOf(partTax, ["building"], input.transferDate);
   return {
     land: { acquisitionDate: landDate, income: income(splitDetail.land), ...(landBasis ? { clauseBasis: landBasis } : {}) },
     building: {
@@ -491,15 +492,19 @@ export function publicExpropriationReducedPart(
  * 자산 세액이 파트별 세율 합계(§104⑤2호)이고 파트가 둘 이상의 호에 걸칠 때만 낸다 — 합산 누진(1호)이 이기거나
  * 모든 파트가 한 호면 호별 = 자산 전체라 산정할 것이 없다(다건의 「전체 누진 채택 시 합산 유지」 F-9 Q-2와 같다). 파트가 둘 이상의 호에 걸치면
  * (주택 토지 + 배율 초과분) 귀속할 수 없어 내지 않는다. 키는 `evaluateSplitPartTax`의 묶음과 같은
- * `clauseBucketKey(…, 파트 순번, …)`다 — 파트 배열은 그 묶음의 순서 그대로다.
+ * `provisoMergeId(clauseBucketKey(…, 파트 순번, …), …, 양도일, 파트 순번)`이다 — 파트 배열은 그 묶음의 순서 그대로다
+ * (§104⑤2호 단서 시행 전 양도의 복수 호 파트는 따로 — `transfer-tax-rate-clause.ts` `provisoMergeId`).
  */
 function partClauseBasisOf(
   partTax: SplitPartRateResult | undefined,
   kinds: readonly SplitRatePart["kind"][],
+  transferDate: Date,
 ): PartClauseBasis | undefined {
   // §155⑳ 특례 자산(주택분 파트)은 토지·건물 귀속이 성립하지 않는다.
   if (!partTax || partTax.chosen !== "per_asset" || partTax.parts.some((p) => p.kind === "housing")) return undefined;
-  const keys = partTax.parts.map((p, i) => clauseBucketKey(p.candidateClauses, p.appliedRate, i, p.bucketFlatRate));
+  const keys = partTax.parts.map((p, i) =>
+    provisoMergeId(clauseBucketKey(p.candidateClauses, p.appliedRate, i, p.bucketFlatRate), p.candidateClauses, transferDate, i),
+  );
   // 모든 파트가 한 호면 그 호 = 자산 전체라 종전 산식과 같다 — 싣지 않는다(카드의 「호별 산정」 안내가 틀려진다).
   if (new Set(keys).size <= 1) return undefined;
   const own = new Set(keys.filter((_, i) => kinds.includes(partTax.parts[i].kind)));

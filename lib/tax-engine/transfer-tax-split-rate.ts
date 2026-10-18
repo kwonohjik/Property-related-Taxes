@@ -38,6 +38,7 @@ import { TRANSFER } from "./legal-codes";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { calcTax, computeBracketBreakdown, clauseBucketKey } from "./transfer-tax-rate-calc";
 import type { RateClause } from "./transfer-tax-rate-calc";
+import { provisoMergeId } from "./transfer-tax-rate-clause";
 import { resolveLandStatutoryAcquisitionDate } from "./transfer-tax-appurtenant-land";
 import { buildNblPartRateInput } from "./transfer-tax-appurtenant-land";
 import { buildSplitPartSeeds } from "./transfer-tax-split-part-seeds";
@@ -289,6 +290,8 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
   // 파트별로 따로 계산하면 **누진공제를 파트 수만큼 중복**해 2호가 과소해진다.
   //
   // 다건 정본(`transfer-tax-aggregate-helpers.ts`)과 **같은 키 함수**를 쓴다(단일 소스).
+  // ⚠️ 단서는 **2019.1.1. 이후 양도분**부터다(법률 제16104호 부칙 제2조②) — 그 전 양도의 복수 호 파트는
+  //   합산하지 않고 파트마다 큰 세액을 더한다(`provisoMergeId` · β).
   //
   // 2026-08-02 **Q3**(계획서 `transfer-rate-clause-candidates.plan.md` §4 — **세액 변경**):
   //   종전에는 `rateClause`(**승자**)로 묶어 묶음이 **과세표준 크기에 따라** 달라졌다.
@@ -308,7 +311,13 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
   // 토지 파트가 `isNonBusinessLand: false`로 강제되기 때문이다(위 seeds).
   const clauseGroups = new Map<string, number[]>();
   seeds.forEach((_, i) => {
-    const k = clauseBucketKey(finals[i].candidateClauses, finals[i].appliedRate, i, finals[i].bucketFlatRate);
+    // 단서 시행 전(2019.1.1. 전 양도)의 복수 호 파트는 묶지 않는다 — `partClauseBasisOf`(감면 파트 호)와 같은 식.
+    const k = provisoMergeId(
+      clauseBucketKey(finals[i].candidateClauses, finals[i].appliedRate, i, finals[i].bucketFlatRate),
+      finals[i].candidateClauses,
+      input.transferDate,
+      i,
+    );
     clauseGroups.set(k, [...(clauseGroups.get(k) ?? []), i]);
   });
 

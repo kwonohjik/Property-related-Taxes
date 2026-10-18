@@ -16,6 +16,7 @@ import type { SplitRatePart, SplitPartRateContext } from "./transfer-tax-split-r
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
+import { provisoMergeId } from "./transfer-tax-rate-clause";
 import { PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-clause";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -240,6 +241,8 @@ export function aggregateByGroup(
   //    단서는 그 위에서 「그 자산이 **둘 이상의 호**에 해당해 적용세율이 둘 이상이면 합산액에
   //    **각 해당 호별** 세율을 적용해 **큰** 산출세액을 취한다」를 정한 것이다 — 그 MAX는 `calcTax`가
   //    합산 과세표준에 대해 내부에서 수행한다(§104①·⑦ 후단, 교재 사례2 = D-11/P9). 계획서 §D-13.
+  //    ⚠️ 단서는 **2019.1.1. 이후 양도분**부터다(법률 제16104호 부칙 제2조②) — 그 전 양도의 복수 호 단위는
+  //    `bucketIdOf`가 `provisoMergeId`로 따로 둔다(자산별 큰 세액의 합 · β, 계획서 `transfer-104-5-2-proviso-era.plan.md`).
   //
   // 이력(전부 **세액 변경**):
   //   · 2026-07-29 #591 R7 — 같은 군 안에서 §104⑦1호(+20%p)·3호(+30%p)가 섞이면 첫 자산 세율을
@@ -324,7 +327,9 @@ export function aggregateByGroup(
       records[u.assetIdx].item.propertyType === "presale_right" &&
       u.bucketFlatRate === undefined &&
       (u.candidateClauses ?? []).some((c) => PROGRESSIVE_RATE_CLAUSES.has(c));
-    return { key, id: presaleProgressiveKey ? `presale:${key}` : key };
+    // §104⑤2호 단서 시행 전(2019.1.1. 전 양도)의 복수 호 단위는 합산하지 않는다 — 식별자만 단위별로(`provisoMergeId`).
+    const mergeId = provisoMergeId(key, u.candidateClauses, u.rateInput.transferDate, n);
+    return { key, id: presaleProgressiveKey ? `presale:${mergeId}` : mergeId };
   };
   const buckets = new Map<string, { key: string; members: ClausePart[] }>();
   units.forEach((u, n) => {
