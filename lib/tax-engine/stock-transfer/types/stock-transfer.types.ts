@@ -898,8 +898,13 @@ export interface LotMatchingDetail {
     deemedStdPerShare: number;
     /** 매도 주식수 합 */
     soldShares: number;
-    /** ① 채택 sub-lot 의 매도 주식수 합 (moving_avg 는 풀 비율 안분이라 소수 가능) */
+    /** ① 채택 sub-lot 의 매도 주식수 합 (moving_avg 는 풀 비율 안분이라 소수 가능 — 표시용 근삿값) */
     clause1Shares: number;
+    /**
+     * `clause1Shares` 가 정수가 아닐 때만 — 정확한 분수(BigInt 십진 문자열, 결과 저장을 위해 문자열).
+     * 필요경비 정산(`settlePreDeemedLotExpenses`)의 개산공제 기준액·실비 몫이 이 값으로 floor 한다.
+     */
+    clause1SharesExact?: { numerator: string; denominator: string };
     /** 그 외(② 채택·의제 대상 아님) 매도 주식수 합 = soldShares − clause1Shares */
     otherShares: number;
     /** ① 채택 sub-lot 의 취득가액 합 (총액 floor) — 단서 비교·swap 제거분 */

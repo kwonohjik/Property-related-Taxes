@@ -27,6 +27,19 @@ import { calcAcquisitionStdPerShareSupplementary } from "./stock-valuation-unlis
 import { evaluateMarketSample, isMarketSampleAllowedMarket } from "./stock-valuation-market-sample";
 import { resolveLotAcquisitionPrice } from "./stock-carryover";
 import { stockDeemedAcquisitionDate } from "./stock-deemed-acquisition-date";
+import {
+  FRAC_ZERO,
+  frac,
+  fracAdd,
+  fracAddLazy,
+  fracDiv,
+  fracFloor,
+  fracIsZero,
+  fracMul,
+  fracReduce,
+  fracToNumber,
+  type Frac,
+} from "./exact-fraction";
 import type {
   AcquisitionLot,
   LotMatchingDetail,
@@ -171,31 +184,38 @@ export function subLotEcho(acq: AcquisitionLot, trn: TransferLot, sp: SubLotPric
   };
 }
 
-/** ① 채택 누적기 — fifo·specific 은 정수, moving_avg 는 풀 비율 안분이라 소수 */
+/**
+ * ① 채택 누적기 — fifo·specific 은 정수, moving_avg 는 풀 비율 안분이라 분수가 될 수 있다.
+ * 정확 유리수로 든다 — 부동소수로 더하면 정확히 593주가 592.9999…가 되어 개산공제 기준액이 1원 내려간다.
+ */
 export interface Clause1Acc {
-  clause1Shares: number;
-  clause1Amount: number;
+  clause1Shares: Frac;
+  clause1Amount: Frac;
   /** ① 을 산정하지 못해 ②만 쓴 의제 lot 매도 주식수 — 엔진 직접 호출 방어 경고용(⑧·⑫가 막는 입력) */
   unresolvedShares: number;
   pooled: boolean;
 }
 
-export const newClause1Acc = (pooled: boolean): Clause1Acc => ({ clause1Shares: 0, clause1Amount: 0, unresolvedShares: 0, pooled });
+export const newClause1Acc = (pooled: boolean): Clause1Acc => ({ clause1Shares: FRAC_ZERO, clause1Amount: FRAC_ZERO, unresolvedShares: 0, pooled });
 
 /** fifo·specific — sub-lot 하나가 ① 채택이면 주식수·취득가액을 더한다 */
 export function addClause1(acc: Clause1Acc | undefined, sp: SubLotPrice, shares: number): void {
   if (!acc) return;
   if (sp.selected === "clause2" && sp.clause1PerShare === undefined) acc.unresolvedShares += shares;
   if (sp.selected !== "clause1") return;
-  acc.clause1Shares += shares;
-  acc.clause1Amount += shares * sp.perShare;
+  acc.clause1Shares = fracAdd(acc.clause1Shares, frac(shares));
+  acc.clause1Amount = fracAdd(acc.clause1Amount, frac(shares * sp.perShare));
 }
 
-/** moving_avg — 풀의 ① 채택 지분(f)만큼의 매도분이 ① 몫이다(평균 보존과 같은 비례) */
-export function addClause1Pooled(acc: Clause1Acc | undefined, soldShares: number, clause1Fraction: number, clause1PerShare: number | undefined): void {
-  if (!acc || !(clause1Fraction > 0) || clause1PerShare === undefined) return;
-  acc.clause1Shares += soldShares * clause1Fraction;
-  acc.clause1Amount += soldShares * clause1Fraction * clause1PerShare;
+/**
+ * moving_avg — 풀의 ① 채택 지분(f)만큼의 매도분이 ① 몫이다(평균 보존과 같은 비례).
+ * f 는 약분하지 않은 Σ_{①}w ÷ Σw 로 받아 약분 없이 누적한다(`fracAddLazy`) — 정리는 `buildClause1Summary`가 한 번.
+ */
+export function addClause1Pooled(acc: Clause1Acc | undefined, soldShares: number, clause1Fraction: Frac, clause1PerShare: number | undefined): void {
+  if (!acc || fracIsZero(clause1Fraction) || clause1PerShare === undefined) return;
+  const shares: Frac = { n: BigInt(soldShares) * clause1Fraction.n, d: clause1Fraction.d };
+  acc.clause1Shares = fracAddLazy(acc.clause1Shares, shares);
+  acc.clause1Amount = fracAddLazy(acc.clause1Amount, { n: shares.n * BigInt(clause1PerShare), d: shares.d });
 }
 
 export function buildClause1Summary(
@@ -204,17 +224,23 @@ export function buildClause1Summary(
   matched: MatchedSubLot[],
 ): NonNullable<LotMatchingDetail["preDeemedClause1Summary"]> {
   const soldShares = matched.reduce((s, m) => s + m.saleShares, 0);
+  const c = fracReduce(acc.clause1Shares);
   return {
     method: ctx.method,
     deemedStdPerShare: ctx.deemedStdPerShare,
     soldShares,
-    clause1Shares: acc.clause1Shares,
-    otherShares: soldShares - acc.clause1Shares,
-    clause1Amount: Math.floor(acc.clause1Amount),
+    clause1Shares: fracToNumber(c),
+    ...(c.d !== 1n ? { clause1SharesExact: { numerator: c.n.toString(), denominator: c.d.toString() } } : {}),
+    otherShares: fracToNumber(frac(BigInt(soldShares) * c.d - c.n, c.d)),
+    clause1Amount: fracFloor(acc.clause1Amount),
     ...(acc.unresolvedShares > 0 ? { unresolvedShares: acc.unresolvedShares } : {}),
     pooled: acc.pooled,
   };
 }
+
+/** 요약의 ① 채택 주식수 — 분수면 정확값, 아니면 정수 */
+const clause1SharesOf = (s: NonNullable<LotMatchingDetail["preDeemedClause1Summary"]>): Frac =>
+  s.clause1SharesExact ? frac(BigInt(s.clause1SharesExact.numerator), BigInt(s.clause1SharesExact.denominator)) : frac(s.clause1Shares);
 
 export interface PreDeemedLotSettlement {
   totalActualExpenses: number;
@@ -226,13 +252,6 @@ export interface PreDeemedLotSettlement {
   swapComparison?: { estimatedSide: number; directSide: number; chosen: "direct" | "estimated" };
   swapRemovedAcquisition: number;
   expenses: number;
-}
-
-/** floor(a × b ÷ c) — 정수면 BigInt, 소수(moving_avg 풀 비율)면 float */
-function mulDivFloor(a: number, b: number, c: number): number {
-  if (c <= 0) return 0;
-  if (Number.isInteger(a) && Number.isInteger(b) && Number.isInteger(c)) return Number((BigInt(a) * BigInt(b)) / BigInt(c));
-  return Math.floor((a * b) / c);
 }
 
 /**
@@ -249,9 +268,10 @@ export function settlePreDeemedLotExpenses(args: {
   const { summary, actualExpenses, lotDonorCapex } = args;
   if (!(summary.clause1Shares > 0)) return undefined;
 
-  const clause1SideActual = mulDivFloor(actualExpenses, summary.clause1Shares, summary.soldShares);
+  const c = clause1SharesOf(summary);
+  const clause1SideActual = fracFloor(fracDiv(fracMul(frac(actualExpenses), c), frac(summary.soldShares)));
   const otherSideActual = actualExpenses - clause1SideActual; // 잔액 흡수 — Σ = 입력 실비
-  const estimatedBase = mulDivFloor(summary.deemedStdPerShare, summary.clause1Shares, 1);
+  const estimatedBase = fracFloor(fracMul(frac(summary.deemedStdPerShare), c));
   // 영 §163⑥4 — 취득당시 기준시가 × 1/100 (정수 나눗셈 — 부동소수 0.01 곱셈 오차 배제)
   const estimatedDeduction = Math.floor(estimatedBase / 100);
 
@@ -296,22 +316,28 @@ export function settledGroupGains(
   if (!summary || !(summary.clause1Shares > 0)) return undefined;
   const clause1Expense = settlement.swapApplied ? settlement.clause1SideActual : settlement.estimatedDeduction;
   const otherExpense = settlement.expenses - clause1Expense;
-  const clause1Ratio = summary.soldShares > 0 ? summary.clause1Shares / summary.soldShares : 0;
+  // ① 몫·그 외 몫 주식수는 정확 유리수 — moving_avg 풀 몫은 분수일 수 있다
+  const clause1Shares = clause1SharesOf(summary);
+  const otherShares = frac(BigInt(summary.soldShares) * clause1Shares.d - clause1Shares.n, clause1Shares.d);
+  const clause1Ratio = summary.soldShares > 0 ? fracDiv(clause1Shares, frac(summary.soldShares)) : FRAC_ZERO;
   let shortGross = 0;
-  let shortC = 0;
-  let shortO = 0;
+  let shortSale = 0;
+  let shortC = FRAC_ZERO;
   for (const m of lotDetail.matched) {
     if (!m.isShortTerm) continue;
-    const c = summary.pooled ? m.saleShares * clause1Ratio : m.preDeemedSelected === "clause1" ? m.saleShares : 0;
+    const c = summary.pooled ? fracMul(frac(m.saleShares), clause1Ratio) : frac(m.preDeemedSelected === "clause1" ? m.saleShares : 0);
     shortGross += m.perLotGain;
-    shortC += c;
-    shortO += m.saleShares - c;
+    shortSale += m.saleShares;
+    shortC = fracAdd(shortC, c);
   }
+  const shortO = frac(BigInt(shortSale) * shortC.d - shortC.n, shortC.d);
+  /** floor(금액 × 단기 몫 ÷ 그룹 주식수) */
+  const part = (amount: number, short: Frac, group: Frac) => fracFloor(fracDiv(fracMul(frac(amount), short), group));
   const shortGain =
     shortGross -
-    mulDivFloor(clause1Expense, shortC, summary.clause1Shares) -
-    (summary.otherShares > 0 ? mulDivFloor(otherExpense, shortO, summary.otherShares) : 0) +
-    mulDivFloor(settlement.swapRemovedAcquisition, shortC, summary.clause1Shares);
+    part(clause1Expense, shortC, clause1Shares) -
+    (fracIsZero(otherShares) ? 0 : part(otherExpense, shortO, otherShares)) +
+    part(settlement.swapRemovedAcquisition, shortC, clause1Shares);
   return {
     shortGain,
     totalGain: lotDetail.totalGain - settlement.expenses + settlement.swapRemovedAcquisition,
