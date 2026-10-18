@@ -13,6 +13,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PreHousingDisclosureSection } from "./PreHousingDisclosureSection";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
+import { carryoverEstimationModeSupported } from "@/lib/calc/phd-toggle-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm, CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -70,6 +71,13 @@ export function CarryoverEstimationSection({
   part = "land",
 }: Props) {
   const isBuildingPart = part === "building";
+  /**
+   * 이 자산이 지원하는 환산 방식만 연다(`carryoverEstimationModeSupported` — ⑧·④와 같은 술어, H-6).
+   * 일반건물은 `general`만 — 엔진이 PHD·APD를 읽지 않아 고르면 칸이 없는 막다른 길이거나 고른 방식이 반영되지 않는다.
+   * 세션에 PHD·APD가 남은 경우(구형 입력)엔 라디오가 비선택 상태가 되고 ⑧이 다시 고르게 한다.
+   */
+  const modeOptions = ESTIMATION_MODE_OPTIONS.filter((o) => carryoverEstimationModeSupported(asset.assetKind, o.value));
+  const phdPanelsOpen = carryoverEstimationModeSupported(asset.assetKind, "phd");
   return (
     <div className="space-y-3">
       {/* 환산 방식 선택 */}
@@ -80,8 +88,8 @@ export function CarryoverEstimationSection({
           data-field={isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode"}
           tone="amber"
           layout="stack"
-          options={ESTIMATION_MODE_OPTIONS}
-          value={c.estimationMode ?? ""}
+          options={modeOptions}
+          value={modeOptions.some((o) => o.value === c.estimationMode) ? (c.estimationMode ?? "") : ""}
           onChange={(v) =>
             onCarryoverChange({ estimationMode: v as CarryoverEstimationMode })
           }
@@ -162,7 +170,7 @@ export function CarryoverEstimationSection({
       )}
 
       {/* PHD §164⑦ 입력 — PreHousingDisclosureSection 재사용 */}
-      {c.estimationMode === "phd" && (
+      {phdPanelsOpen && c.estimationMode === "phd" && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground text-amber-700">
             증여자 취득일이 개별주택가격 최초 고시 이전인 경우, 3-시점 기준시가로 취득시가를 역산합니다.
@@ -188,7 +196,7 @@ export function CarryoverEstimationSection({
       )}
 
       {/* APD — 공동주택 최초고시 전 (PHD와 동일 경로 재사용) */}
-      {c.estimationMode === "apd" && (
+      {phdPanelsOpen && c.estimationMode === "apd" && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground text-amber-700">
             공동주택(아파트 등)이 최초로 공시된 날 이전에 증여자가 취득한 경우,

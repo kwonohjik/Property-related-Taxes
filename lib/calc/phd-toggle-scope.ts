@@ -22,6 +22,7 @@
  * 차단이 아니라 **조용한 오산**이므로 여기서도 같은 술어로 막는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import type { CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
 import { landCauseMixActive } from "./transfer-land-part-cause";
 
 /**
@@ -77,12 +78,35 @@ export function phdToggleCauseReachable(asset: { acquisitionCause?: string; isMi
  * ⇒ 축은 `carryover.estimationMode`다. ④·⑧·⑤가 같은 사실을 보게 한다.
  */
 export function carryoverPhdMode(
-  asset: Pick<AssetForm, "acquisitionCause" | "carryover">,
+  asset: Pick<AssetForm, "acquisitionCause" | "carryover"> & { assetKind?: AssetForm["assetKind"] },
 ): boolean {
   if (asset.acquisitionCause !== "carryover_gift") return false;
   const c = asset.carryover;
   if (!c?.useEstimatedAcquisition) return false;
+  // 일반건물은 PHD·APD 환산을 계산에 쓰지 않는다 — 아래 `carryoverEstimationModeSupported`. ⑤가 옵션을 숨기고 ⑧이 막으므로
+  // 여기(④)도 같은 술어로 닫는다(세션에 남은 phd/apd 잔재가 `preHousingDisclosure`를 싣는 일이 없게).
+  if (!carryoverEstimationModeSupported(asset.assetKind, c.estimationMode)) return false;
   return c.estimationMode === "phd" || c.estimationMode === "apd";
+}
+
+/**
+ * 이 자산 종류가 이월과세 **환산 방식**을 지원하는가 — ⑤ 옵션 노출 · ⑧ 선택 검증 · ④ PHD 전송 공용 술어(H-6).
+ *
+ * 일반건물(`general_building`)은 `general`만 지원한다. ④ `buildGbCarryoverPayload`는 `estimationMode`를 싣지 않고
+ * 증여자 취득 당시 기준시가(`donorStandardPriceAtAcquisition`) 하나만 보내며, 엔진(`applyCarryoverEstimationBasis`)·⑫도
+ * 그 값 하나만 읽는다 — PHD·APD를 고르고 3-시점 칸을 전부 채워도 응답이 `general`과 **바이트 단위로 같다**(실측).
+ * 옵션을 열어 두면 ⑤는 일반 기준시가 칸을 숨기는데 ⑧은 그 칸을 요구해 막다른 길이 되고, 칸을 채워 통과해도 고른 방식이
+ * 반영되지 않는 조용한 오인이 된다.
+ *
+ * 그 외 자산 종류(주택 등)는 세 방식 모두 지원한다(`general`은 최상위 기준시가, phd·apd는 `preHousingDisclosure` 경로).
+ * `mode`가 null·undefined면(미선택) 지원 여부를 따지지 않는다 — 미선택은 별도 필수 규칙의 몫이다.
+ */
+export function carryoverEstimationModeSupported(
+  assetKind: AssetForm["assetKind"] | undefined,
+  mode: CarryoverEstimationMode | null | undefined,
+): boolean {
+  if (mode == null) return true;
+  return assetKind === "general_building" ? mode === "general" : true;
 }
 
 /**
