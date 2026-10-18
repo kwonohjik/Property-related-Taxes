@@ -314,6 +314,10 @@ export function resolveClause5TaxDetailed(args: Clause5Args): Clause5Detail {
         appliedRate: baseRate,
         progressiveDeduction: deduction,
         surchargeSuspended: false,
+        // 1호가 이겨도 배율 초과 파트의 8호 중과 배제 사유는 echo한다 — 일반 split(`transfer-tax-split-rate.ts` 1호 분기)과 같은 규약(F-2).
+        ...(nblPart.nblSurchargeExcluded
+          ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblPart.nblSurchargeExcludedBy }
+          : {}),
         shortTermNote:
           `배율 초과 부수토지 분리(소득세법 §104⑤ 본문 후단): 합산 누진세액 ` +
           `${clause1.toLocaleString()}이 별개 자산별 합계 ${clause2.toLocaleString()}보다 크다`,

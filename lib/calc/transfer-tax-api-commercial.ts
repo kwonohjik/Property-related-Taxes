@@ -10,6 +10,7 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
 import { resolveCbEra } from "./commercial-cb-era";
+import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 // ─── ④ 상업용건물·오피스텔 환산취득가 API 변환 헬퍼 (소령 §164⑥, §176조의2②2호) ───
@@ -38,6 +39,31 @@ export function buildCommercialAppurtenantLand(asset: AssetForm): object | undef
     ...(asset.cbUnapprovedBuilding ? {} : { zoneType: asset.cbZoneType || undefined }),
     ...(asset.cbUnapprovedBuilding ? { unapprovedBuilding: true } : {}),
   };
+}
+
+/**
+ * 상업용건물 부수토지 **기준면적 초과 면적**(㎡) — 이 값이 양수면 엔진이 자산을 비사업용 토지로 본다(면적 비율).
+ *
+ * ④ payload(`buildCommercialAppurtenantLand`)를 만들어 엔진 판정(`judgeAppurtenantLandExcess` — `runCommercialAppurtenantLandStep`이 쓰는
+ * 함수)에 그대로 넘긴다 ⇒ 화면 노출(지정지역 질문)과 엔진 판정이 **같은 함수**다. 무허가 단서(전량 비사업용)도 함께 따른다.
+ * payload가 없거나(면적 공란) 용도지역이 없어 판정 함수가 거부하면 0 — 그 입력은 ⑧이 막는다.
+ */
+export function commercialAppurtenantNblAreaOfAsset(asset: AssetForm): number {
+  const cal = buildCommercialAppurtenantLand(asset) as
+    | { totalLandArea: number; totalBuildingFootprintArea: number; zoneType?: string; unapprovedBuilding?: boolean }
+    | undefined;
+  if (!cal) return 0;
+  try {
+    return judgeAppurtenantLandExcess({
+      landArea: cal.totalLandArea,
+      buildingFootprintArea: cal.totalBuildingFootprintArea,
+      zoneType: cal.zoneType,
+      unapprovedBuilding: cal.unapprovedBuilding,
+      context: "상업용건물",
+    }).nonBusinessArea;
+  } catch {
+    return 0;
+  }
 }
 
 /**

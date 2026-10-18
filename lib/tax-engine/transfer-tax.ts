@@ -105,6 +105,10 @@ export function calculateTransferTax(
   // 비사업용 토지 8호 유예 기간인데 지정지역 여부 미선언 — 8호 중과가 **실제로 적용된 결과**에서만 고지한다(단기세율이 이기면 유예 여부가 세액을 바꾸지 않는다).
   const nblDeferralNoticeOf = (r: Pick<TransferTaxResult, "surchargeType">, inp: TransferTaxInput): string | undefined =>
     r.surchargeType === "non_business_land" ? nblDeferralAreaNotice(inp) : undefined;
+  // 배율 초과 부수토지 분리 파트(`splitDetail.nonBusinessLandPart`)도 비사업용 토지다 — 자산 단위 `isNonBusinessLand`가 꺼진 주택이라도 고지 대상에 든다.
+  // 일반 경로(STEP 7 뒤)와 §155⑳ 특례 조기 반환(STEP 2.5)이 같은 입력으로 고지를 판정한다.
+  const nblNoticeInputOf = (inp: TransferTaxInput, sd: TransferTaxResult["splitDetail"]): TransferTaxInput =>
+    sd?.nonBusinessLandPart ? { ...inp, isNonBusinessLand: true } : inp;
   const withUnregisteredNotice = (r: TransferTaxResult, inp: TransferTaxInput): TransferTaxResult => {
     const extra = [unregisteredNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
     return extra.length > 0 ? { ...r, warnings: [...(r.warnings ?? []), ...extra] } : r;
@@ -523,7 +527,8 @@ export function calculateTransferTax(
       unsold989Detail,
       houseCountExclusionDetails,
     });
-    if (rheResult) return rheResult;
+    // 특례 경로의 배율 초과 파트도 8호 유예 «지정지역 확인 필요» 고지를 일반 경로와 같이 받는다(F-2). 미등기 고지는 이 경로에 없다(위 주석 — 미등기면 특례 부적용).
+    if (rheResult) return withUnregisteredNotice(rheResult, nblNoticeInputOf(effectiveInput, rheResult.splitDetail));
     // B + applied=false: 특례 부존재면 임대주택 주택수 산입으로 "1채" 전제 무효 가능 — 침묵 비과세 소급 금지.
     const prhpNotice = prhpUnappliedExemptionNotice(effectiveInput, exemptionResult);
     if (prhpNotice) warnings.push(prhpNotice);
@@ -703,11 +708,7 @@ export function calculateTransferTax(
     reducedPart: publicExpropriationReducedPart(input, splitDetail), // §103② — 감면 제외 파트에 기본공제 먼저
   });
   if (splitDetail) splitDetail.partRateBasisApplied = taxResult.partRateBasisApplied; // D1-3 「세율 기산일」 표시 게이트
-  // 배율 초과 부수토지 분리 파트(`splitDetail.nonBusinessLandPart`)도 비사업용 토지다 — 자산 단위 `isNonBusinessLand`가 꺼진 주택이라도 고지 대상에 든다.
-  const nblDeferralNotice = nblDeferralNoticeOf(
-    taxResult,
-    splitDetail?.nonBusinessLandPart ? { ...effectiveInput, isNonBusinessLand: true } : effectiveInput,
-  );
+  const nblDeferralNotice = nblDeferralNoticeOf(taxResult, nblNoticeInputOf(effectiveInput, splitDetail));
   if (nblDeferralNotice) warnings.push(nblDeferralNotice);
   // D2(계획서 §12 D2-Q1) — 건물 상속·증여 전에 취득한 토지의 세율 기산이 건물 취득일로 정해져 구간이 갈린 사실 고지(세액 불변).
   const landBeforeBuildingNotice = landBeforeBuildingAcquisitionRateNotice(effectiveInput, splitDetail);

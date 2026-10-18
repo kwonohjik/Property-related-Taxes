@@ -2,7 +2,7 @@
 
 - 작성: 2026-10-18 · 기준 master `42e9110f8`
 - **결정(2026-10-18 사용자 «D-1과 D-2 모두 권고대로»)**: D-1 ⓐ 단건·함께 양도 모두 ⑧ 차단 · D-2 ② F-3 단독 PR 먼저, F-1·F-2 묶어 두 번째 PR.
-- **진행**: F-3 구현 완료(첫 PR) — §4.4. F-1·F-2는 두 번째 PR.
+- **진행**: F-3 구현 완료(첫 PR #2235) — §4.4. F-1·F-2 구현 완료(두 번째 PR, F-3 브랜치 위 stacked) — §2.5·§3.4.
 - 출처: `docs/02-design/features/transfer-104-5-adjacent-era-gates.review.md` §5.6 «남은 미측정 경로» 3건을 실측한 결과, 셋 다 결함이었다.
 - 실측 조건: 양도일 2012-09-01(8호 중과 유예 기간 2009.3.16.~2015.12.31. 안) · mock 세율표(`makeMockRates`). 금액은 **구조 증거**이지 연혁 세율의 확정값이 아니다(review.md §5.5 한계 5).
 - 실측 도구: 워크트리 `-pm`의 미커밋 probe 3개 — 폼 → ④ → Zod(⑫) → route(⑭) → 엔진 실제 파이프라인(`__tests__/calc/_helpers/redev-one-house-route.ts`의 `captureBody`·`postTransfer`) 또는 엔진 직접 호출.
@@ -36,7 +36,7 @@
 | 단건 | 도달 | ④ leaf · ⑫ base-shape · ⑭ engine-input |
 | 함께 양도(컴패니언) | 도달 | ④ companion-payload · ⑫ companion · bundled-split-helpers:577 |
 | 다건 | 해당 없음 | 다건 refine이 `commercialAppurtenantLand`를 막는다(`transfer-tax-schema-multi-refines.ts:65`) |
-| 지분 분할 | **확인 필요** | `transfer-tax-api-helpers.ts:214`가 지분 카드에 `primary.isDesignatedArea`를 leaf 없이 병합한다. 상업용 × 지분 조합의 실제 도달은 구현 시 실측한다 |
+| 지분 분할 | 도달 (실측) | `mergePrimaryBasic`(`transfer-tax-api-helpers.ts:214`)가 주 자산 값을 지분 카드 **폼**에 병합한 뒤 같은 ④ leaf를 지난다 — 60:40 시료에서 두 지분 모두 `transfer_deferral`, 미선언 고지 1건 |
 
 ### 2.4 테스트
 - anchor(신규 `__tests__/calc/nbl-designated-area-commercial.anchor.test.ts`, 폼 파이프라인):
@@ -46,6 +46,11 @@
 - RTL 배치(`nbl-designated-area-derived-placement.anchor.test.tsx`에 추가): 초과 있음·기간 안 → 렌더 / 초과 없음 → 미렌더 / 무허가 → 렌더 / 용도지역 미선택 → 미렌더 / 기간 밖 → 미렌더.
 - 기존 계약 갱신: `nbl-designated-area-plumbing.anchor.test.ts`의 «싣는 종류» 단언에 상업용 추가.
 - **RED 먼저**: anchor의 «아님 → 유예» 케이스가 수정 전에 실패하는 것을 확인한다.
+
+### 2.5 구현 기록 (F-1)
+- ④ leaf에 `commercial_building` 추가 · 노출 술어 `commercialAppurtenantNblAreaOfAsset`(`transfer-tax-api-commercial.ts`, ④ payload → 엔진 `judgeAppurtenantLandExcess`) · 위젯(`CommercialAppurtenantLandSection` 끝, `transferDate` prop 신설 · 마운트 `AssetSectionAcquisition`에서 전달).
+- 독립 도출(anchor): 과세표준 697,500,000 — 미선언은 §104⑤ 2호(비사업용 60% 파트 418,500,000 × 50% − 25,400,000 + 나머지 279,000,000 × 38% − 19,400,000 = 270,470,000)가 1호(253,600,000)보다 크고, «아님»은 가산이 빠져 1호가 이긴다.
+- anchor `nbl-designated-area-commercial.anchor.test.ts`(10) · 배치(`nbl-designated-area-derived-placement`) +5 · plumbing 계약 +1. RED 4건 확인.
 
 ## 3. F-2 §155⑳ 특례 경로 — 고지·사유 echo
 
@@ -66,6 +71,13 @@
   - 대조: 같은 사실의 특례 off(일반 경로)와 고지·사유가 같다(특례 on/off 패리티).
 - 다건: §155⑳ 자산 1건 + 다른 자산 1건 합산에서 고지가 `aggregated.warnings`로 올라오는지, 세율군이 바뀌지 않는지 실측(수정 전·후 세액 동일 단언).
 - **RED 먼저**: 고지 1건 · 사유 echo 단언이 수정 전 실패.
+
+### 3.4 구현 기록 (F-2)
+- `transfer-tax.ts`: 파트 판정 입력 조립을 지역 함수 `nblNoticeInputOf`로 빼 일반 경로와 STEP 2.5가 함께 쓰고, 특례 조기 반환을 `withUnregisteredNotice`로 감쌌다.
+- 사유 echo: `transfer-tax-rental-housing-step.ts`(결과 조립) **그리고** `transfer-tax-rental-housing-nbl-split.ts`의 §104⑤ **1호 분기**(합산 누진이 이길 때) — 계획서 작성 시 놓쳤던 두 번째 지점이다. 일반 split(`transfer-tax-split-rate.ts`)은 두 분기 모두 echo한다. RH-A1 시료는 «아님»일 때 1호 = 2호(동액)라 1호 분기로 가서 echo가 비었다.
+- 다건(실측): 미선언 합산 고지 0 → 1건 · «아님» 사유 echo 추가 · 세율군(미선언 non_business_land · «아님» progressive)과 총세액 134,327,600은 수정 전과 같다. 이 다건 시료는 선언값과 무관하게 총세액이 같다.
+- anchor `rental-housing-nbl-deferral.anchor.test.ts`(10). RED 3건 확인.
+- 뮤테이션(F-1·F-2 9종 전부 KILLED): leaf 상업용 제거 · 노출 술어 0 고정 · 무허가 무시 · 마운트 `transferDate` 미전달 · 위젯 조건 무력화 · 조기 반환 래퍼 제거 · 파트 판정 입력 무시 · 결과 조립 echo 제거 · 1호 분기 echo 제거.
 
 ## 4. F-3 겸용 2022.1.1. 전 양도 — 함께 양도 차단
 

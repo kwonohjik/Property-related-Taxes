@@ -4,12 +4,15 @@
  * 기존 배치 anchor(`nbl-designated-area-placement`)는 «비사업용 토지 토글을 켠 토지»만 본다. 그 밖의 파트는 토글이 꺼져 있어
  * 질문이 뜰 자리가 없었다 — 여기서는 각 파트가 있을 때만 뜨는지(없는데 뜨면 소음, 있는데 안 뜨면 유예가 영영 켜지지 않는다)를 고정한다.
  *  - 주택 부수토지 컴패니언(`AssetSectionExtras`) · 일반건물(`GeneralBuildingNblSection`) · 주택 배율초과(`AssetAreaSection`)
+ *  - 상업용건물 부수토지 기준면적 초과(`CommercialAppurtenantLandSection` — 마운트 `AssetSectionAcquisition`, 계획서 `transfer-nbl-deferral-derived-followups.plan.md` F-1)
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { AssetSectionExtras } from "@/components/calc/transfer/asset-sections/AssetSectionExtras";
 import { GeneralBuildingNblSection } from "@/components/calc/transfer/GeneralBuildingNblSection";
 import { AssetAreaSection } from "@/components/calc/transfer/asset-sections/AssetAreaSection";
+import { CommercialAppurtenantLandSection } from "@/components/calc/transfer/CommercialAppurtenantLandSection";
+import { AssetSectionAcquisition } from "@/components/calc/transfer/asset-sections/AssetSectionAcquisition";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -125,5 +128,45 @@ describe("일반건물 — AssetAreaSection이 양도일을 섹션에 넘긴다 
     unmount();
     render(<AssetAreaSection asset={a} onChange={vi.fn()} transferDate={OUT} />);
     expect(document.querySelector('[data-testid^="nbl-designated-area-question-gb-"]')).toBeNull();
+  });
+});
+
+describe("상업용건물 부수토지 기준면적 초과 — CommercialAppurtenantLandSection", () => {
+  // 집합건물 전체 대지 1,000㎡ · 바닥 100㎡ · 일반주거 4배 → 한도 400㎡ · 초과 600㎡
+  const cb = (over: Partial<AssetForm> = {}) =>
+    mk({ assetKind: "commercial_building", cbTotalLandArea: "1000", cbTotalBuildingFootprintArea: "100", cbZoneType: "general_residential", ...over });
+  const render1 = (a: AssetForm, d: string, onChange = vi.fn()) => render(<CommercialAppurtenantLandSection asset={a} onChange={onChange} transferDate={d} />);
+  const q = () => document.querySelector('[data-testid^="nbl-designated-area-question-commercial-"]');
+
+  it("초과 600㎡ + 2012-06-01 → 질문이 뜨고 무엇이 비사업용인지 밝힌다", () => {
+    render1(cb(), IN);
+    expect(q()).not.toBeNull();
+    expect(q()!.textContent).toContain("부수토지 기준면적 초과분(비사업용 토지)");
+  });
+  it("배율 이내(400㎡)·용도지역 미선택·면적 공란·기간 밖이면 뜨지 않는다", () => {
+    for (const [a, d] of [[cb({ cbTotalLandArea: "400" }), IN], [cb({ cbZoneType: "" }), IN], [cb({ cbTotalLandArea: "" }), IN], [cb(), OUT]] as const) {
+      const { unmount } = render1(a, d);
+      expect(q()).toBeNull();
+      unmount();
+    }
+  });
+  it("허가·사용승인 미이행(부속토지 전체 비사업용)이면 용도지역 없이도 뜬다", () => {
+    render1(cb({ cbUnapprovedBuilding: true, cbZoneType: "" }), IN);
+    expect(q()).not.toBeNull();
+  });
+  it("«지정지역 아님» 클릭 → 그 자산에 isDesignatedArea:false 패치", () => {
+    const onChange = vi.fn();
+    render1(cb(), IN, onChange);
+    fireEvent.click(document.querySelector('[data-testid^="nbl-designated-area-out-commercial-"]') as HTMLElement);
+    expect(onChange).toHaveBeenLastCalledWith({ isDesignatedArea: false });
+  });
+  it("통과 배선 — AssetSectionAcquisition이 양도일을 섹션에 넘긴다 (기간 안이면 뜨고 밖이면 안 뜬다)", () => {
+    const a = cb({ acquisitionCause: "purchase" });
+    const props = { onChange: vi.fn(), isNewConstruction: false, isPrimary: true, splitMode: "none" as const, onFractionalToggle: vi.fn(), isFirst: true, hasSiblings: false };
+    const { unmount } = render(<AssetSectionAcquisition asset={a} transferDate={IN} {...props} />);
+    expect(q()).not.toBeNull();
+    unmount();
+    render(<AssetSectionAcquisition asset={a} transferDate={OUT} {...props} />);
+    expect(q()).toBeNull();
   });
 });
