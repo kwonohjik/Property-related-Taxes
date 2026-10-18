@@ -111,6 +111,8 @@ export function TransferSplitSection({ r }: { r: R }) {
    * 파트별 산정방식·취득가액·필요경비는 화면(카드·신고서·명세서)과 **같은 정본**(`summarizeSplitGain`)을 읽는다.
    * 종전에는 취득가액 행을 「환산취득가」로 못 박고 개산공제만 보여, 실거래가 파트·감정가액 파트·§97②2호 단서(swap) 파트가
    * 화면과 다르게 적혔다. 구 이력(파트 `acqMode` echo 부재)은 종전 표를 그대로 쓴다.
+   * 소유 판정(`partOf` — `summary.parts`는 `selfOwns`로 거른 소유 파트)은 구 이력에도 건다 — 종전에는 `modern`일 때만 걸려
+   * 구 이력의 타인 소유 파트 값이 표지 없이 찍혔다(계획서 `split-owner-nonowned-part-display.plan.md`).
    */
   const summary = summarizeSplitGain(sd as unknown as SplitGainResult);
   const modern = summary.parts.length > 0 && summary.parts.every((p) => p.mode !== undefined);
@@ -135,8 +137,8 @@ export function TransferSplitSection({ r }: { r: R }) {
       <View style={s.table}>
         <View style={[s.row, { backgroundColor: "#f3f4f6" }]}>
           <Text style={{ ...s.lbl, flex: 2 }}> </Text>
-          <Text style={{ ...s.val, flex: 1, textAlign: "center" }}>토지{modern ? ownerNote("land") : ""}</Text>
-          <Text style={{ ...s.val, flex: 1, textAlign: "center" }}>건물{modern ? ownerNote("building") : ""}</Text>
+          <Text style={{ ...s.val, flex: 1, textAlign: "center" }}>토지{ownerNote("land")}</Text>
+          <Text style={{ ...s.val, flex: 1, textAlign: "center" }}>건물{ownerNote("building")}</Text>
         </View>
         {modern && (
           <View style={s.row}>
@@ -173,8 +175,8 @@ export function TransferSplitSection({ r }: { r: R }) {
         )}
         <View style={s.row}>
           <Text style={{ ...s.lbl, flex: 2 }}>양도가액</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("land", (p) => fmt(p.transferPrice)) : fmt(land.transferPrice)}</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("building", (p) => fmt(p.transferPrice)) : fmt(bldg.transferPrice)}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("land", (p) => fmt(p.transferPrice)) : partOf("land") ? fmt(land.transferPrice) : "-"}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("building", (p) => fmt(p.transferPrice)) : partOf("building") ? fmt(bldg.transferPrice) : "-"}</Text>
         </View>
         {modern ? (
           <>
@@ -219,32 +221,32 @@ export function TransferSplitSection({ r }: { r: R }) {
           <>
             <View style={s.row}>
               <Text style={{ ...s.lbl, flex: 2 }}>환산취득가</Text>
-              <Text style={{ ...s.val, flex: 1 }}>{fmt(land.acquisitionPrice)}</Text>
-              <Text style={{ ...s.val, flex: 1 }}>{fmt(bldg.acquisitionPrice)}</Text>
+              <Text style={{ ...s.val, flex: 1 }}>{partOf("land") ? fmt(land.acquisitionPrice) : "-"}</Text>
+              <Text style={{ ...s.val, flex: 1 }}>{partOf("building") ? fmt(bldg.acquisitionPrice) : "-"}</Text>
             </View>
-            {(num(land.appraisalDeduction) ?? 0) > 0 || (num(bldg.appraisalDeduction) ?? 0) > 0 ? (
+            {(partOf("land") && (num(land.appraisalDeduction) ?? 0) > 0) || (partOf("building") && (num(bldg.appraisalDeduction) ?? 0) > 0) ? (
               <View style={s.row}>
                 <Text style={{ ...s.lbl, flex: 2 }}>개산공제 (필요경비, §163⑥)</Text>
-                <Text style={{ ...s.val, flex: 1 }}>{num(land.appraisalDeduction) ? fmt(land.appraisalDeduction) : "-"}</Text>
-                <Text style={{ ...s.val, flex: 1 }}>{num(bldg.appraisalDeduction) ? fmt(bldg.appraisalDeduction) : "-"}</Text>
+                <Text style={{ ...s.val, flex: 1 }}>{partOf("land") && num(land.appraisalDeduction) ? fmt(land.appraisalDeduction) : "-"}</Text>
+                <Text style={{ ...s.val, flex: 1 }}>{partOf("building") && num(bldg.appraisalDeduction) ? fmt(bldg.appraisalDeduction) : "-"}</Text>
               </View>
             ) : null}
           </>
         )}
         <View style={s.row}>
           <Text style={{ ...s.lbl, flex: 2 }}>양도차익</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("land", (p) => fmt(p.gain)) : fmt(land.gain)}</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("building", (p) => fmt(p.gain)) : fmt(bldg.gain)}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("land", (p) => fmt(p.gain)) : partOf("land") ? fmt(land.gain) : "-"}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{modern ? cell("building", (p) => fmt(p.gain)) : partOf("building") ? fmt(bldg.gain) : "-"}</Text>
         </View>
         <View style={s.row}>
           <Text style={{ ...s.lbl, flex: 2 }}>보유연수</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("land") ? `${num(land.holdingYears)}년` : "-"}</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("building") ? `${num(bldg.holdingYears)}년` : "-"}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{partOf("land") ? `${num(land.holdingYears)}년` : "-"}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{partOf("building") ? `${num(bldg.holdingYears)}년` : "-"}</Text>
         </View>
         <View style={nb ? s.row : s.rowLast}>
           <Text style={{ ...s.lbl, flex: 2 }}>장기보유특별공제</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("land") ? fmt(land.longTermDeduction) : "-"}</Text>
-          <Text style={{ ...s.val, flex: 1 }}>{!modern || partOf("building") ? fmt(bldg.longTermDeduction) : "-"}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{partOf("land") ? fmt(land.longTermDeduction) : "-"}</Text>
+          <Text style={{ ...s.val, flex: 1 }}>{partOf("building") ? fmt(bldg.longTermDeduction) : "-"}</Text>
         </View>
         {/* 배율 초과 부수토지(비사업용 토지) 파트(#17) — 위 토지 열은 기준면적 이내분이라 이 두 행을 더해야 자산 값과 맞는다(화면 분리 카드와 같은 echo). */}
         {nb && (
