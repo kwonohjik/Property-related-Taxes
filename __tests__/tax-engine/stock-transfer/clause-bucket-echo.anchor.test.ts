@@ -151,13 +151,16 @@ describe("주식 §104① 호별 버킷 echo — aggregate (2b-2)", () => {
       otherAsset(300_000_000, { nblRatioOfCorpAssets: 0.6 }),
     ]);
     const c = r.otherAssetComparativeTax!;
+    // 같은 날 양도 — 기본공제 250만은 신고 세액이 낮은 9호 종목으로 간다(재일46014-1685 준용, 2026-10-18).
+    //   1호 300,000,000 × 38% − 19,940,000 = 94,060,000 · 9호 297,500,000 × 48% − 19,940,000 = 122,860,000
+    //   (종전 입력 순서로 1호가 받으면 93,110,000 + 124,060,000 = 217,170,000 — 250,000 높다)
     expect(c.aggregatedTaxBase).toBe(597_500_000);
-    expect(c.clause1BucketTaxBase).toBe(297_500_000);
-    expect(c.clause1BucketTax).toBe(93_110_000);
-    expect(c.clause9TaxBase).toBe(300_000_000);
-    expect(c.clause9Tax).toBe(124_060_000);
+    expect(c.clause1BucketTaxBase).toBe(300_000_000);
+    expect(c.clause1BucketTax).toBe(94_060_000);
+    expect(c.clause9TaxBase).toBe(297_500_000);
+    expect(c.clause9Tax).toBe(122_860_000);
     expect(c.clause1BucketTax + c.clause9Tax).toBe(c.clause2Tax);
-    expect(c.clause2Tax).toBe(217_170_000);
+    expect(c.clause2Tax).toBe(216_920_000);
     // §104⑤1호(합계액 × §55①)와는 **다른 값**이다 — 이름이 겹치지 않아야 하는 이유.
     expect(c.clause1Tax).toBe(215_010_000);
     expect(c.clause1Tax).not.toBe(c.clause1BucketTax);

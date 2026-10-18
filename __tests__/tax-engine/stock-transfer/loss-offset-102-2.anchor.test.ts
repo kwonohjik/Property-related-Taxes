@@ -274,7 +274,8 @@ describe("M-7 🔴 영 §167의2①: 같은 세율 먼저 → 다른 세율 pro-
     const r = calculateStockTransferTaxAggregate([SHORT_GAIN, SHORT_LOSS, GAIN]);
     // 30% 군: 1천만 − 5백만 = 5백만 / 20% 군: 1천만
     // 합계 소득 1,500만 − 기본공제 250만.
-    // 기본공제는 §103② 「먼저 양도한 자산부터」인데 셋 다 같은 양도일이라 입력 순서(D-D Q-2).
+    // 기본공제는 §103② 「먼저 양도한 자산부터」인데 셋 다 같은 양도일이라 신고 세액이 낮은 순서(재일46014-1685 준용).
+    // 총 과세표준은 배분과 무관하게 같다.
     expect(r.totalTransferIncome).toBe(15_000_000);
     expect(r.totalTaxBase).toBe(12_500_000);
     expect(r.lossOffset).toEqual({
@@ -548,17 +549,20 @@ describe("M-10 🔒 기타자산 그룹(§102①1호)도 §102② 통산 대상�
 
   it("M-10-6 🟢 대조군: 1호 이익 + 9호 이익 — §104⑤ MAX 거동이 그대로다", () => {
     // 구현 전 실측(2026-09-12). 차손이 없으니 통산이 개입할 자리가 없다.
+    // 2026-10-18 — 같은 날 양도라 기본공제 250만은 신고 세액이 낮은 9호 종목으로 간다(재일46014-1685 준용).
+    //   종전(입력 순서 → 1호): 1호 버킷 7,500,000 × 6% 450,000 + 9호 10,000,000 × 16% 1,600,000 = 2,050,000
+    //   지금(9호): 1호 버킷 10,000,000 × 6% 600,000 + 9호 7,500,000 × 16% 1,200,000 = 1,800,000
     const r = calculateStockTransferTaxAggregate([OA1_GAIN, OA9_GAIN]);
     expect(r.totalTaxBase).toBe(17_500_000);
-    expect(r.totalCalculatedTax).toBe(2_050_000);
+    expect(r.totalCalculatedTax).toBe(1_800_000);
     expect(r.otherAssetComparativeTax).toMatchObject({
       clause1Tax: 1_365_000,
-      clause2Tax: 2_050_000,
-      clause9TaxBase: 10_000_000,
-      clause9Tax: 1_600_000,
-      clause1BucketTaxBase: 7_500_000,
+      clause2Tax: 1_800_000,
+      clause9TaxBase: 7_500_000,
+      clause9Tax: 1_200_000,
+      clause1BucketTaxBase: 10_000_000,
       applied: "clause2",
-      aggregatedTax: 2_050_000,
+      aggregatedTax: 1_800_000,
     });
   });
 });
