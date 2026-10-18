@@ -18,6 +18,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { validateSplitDirectInputs } from "@/lib/calc/transfer-tax-validate-split";
+import { validateAssetAcquisition } from "@/lib/calc/transfer-tax-validate-acquisition";
 import { saleSplitEra, saleSplitProvisoApplies, saleStdPriceWaivedByEra } from "@/lib/calc/sale-split-100-3-era";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -110,5 +111,57 @@ describe("V9 — 예외 근거 필수는 단서가 시행된 양도일에만 (�
 
   it("🔴 2024-12-31 이전: 근거를 요구하지 않는다", () => {
     expect(v(asset(WITH_EXEMPTION), "2024-12-31")).toBeNull();
+  });
+});
+
+describe("체인 — 양도일이 진입 함수(`validateAssetAcquisition`)에서 split 검증까지 실제로 닿는다", () => {
+  // 단위 테스트가 `validateSplitDirectInputs`를 직접 부르면 상위 함수가 양도일을 **넘기는지**는 검증되지 않는다
+  // (스레딩이 끊겨도 단위 테스트는 초록). 그래서 진입 함수를 통과시킨다.
+  const WITH_EXEMPTION = {
+    saleSplitExemption: "other_law",
+    landStandardPriceAtTransfer: "900,000,000",
+    buildingStandardPriceAtTransfer: "600,000,000",
+  } as Partial<AssetForm>;
+
+  it("2025-01-01 이후: 근거 없는 예외가 진입 함수에서도 차단된다", () => {
+    expect(validateAssetAcquisition(asset(WITH_EXEMPTION), "자산 1", "2025-06-01")).toContain("근거를 입력하세요");
+  });
+
+  it("🔴 2024-12-31 이전: 같은 입력이 진입 함수에서 근거 요구 없이 통과한다 — 양도일이 체인 끝까지 전달됐다는 증거", () => {
+    const msg = validateAssetAcquisition(asset(WITH_EXEMPTION), "자산 1", "2024-12-31");
+    expect(msg ?? "").not.toContain("근거를 입력하세요");
+  });
+
+  it("🔴 기준시가 해제도 진입 함수를 통과한다 — 양도일 2015-12-31", () => {
+    const msg = validateAssetAcquisition(asset(), "자산 1", "2015-12-31");
+    expect(msg ?? "").not.toContain(STD_MSG);
+  });
+
+  it("양도일 2016-01-01이면 같은 입력이 기준시가를 요구한다", () => {
+    expect(validateAssetAcquisition(asset(), "자산 1", "2016-01-01")).toContain(STD_MSG);
+  });
+
+  // 진입 함수 안에는 split 검증으로 가는 길이 **세 갈래**다(건물 원인 혼합 · 신축 · 일반). 한 갈래만 덮으면 나머지 둘의 스레딩이 끊겨도 초록이다.
+  it("🔴 건물 상속 + 토지 매매(원인 혼합) 갈래도 양도일을 전달한다", () => {
+    const mix = asset({
+      ...WITH_EXEMPTION,
+      acquisitionCause: "inheritance",
+      landCauseHost: "inheritance",
+      landAcquisitionCause: "purchase",
+      decedentAcquisitionDate: "1990-01-01",
+    } as Partial<AssetForm>);
+    expect(validateAssetAcquisition(mix, "자산 1", "2025-06-01")).toContain("근거를 입력하세요");
+    expect(validateAssetAcquisition(mix, "자산 1", "2024-12-31")).toBeNull();
+  });
+
+  it("🔴 신축 갈래도 양도일을 전달한다", () => {
+    const nc = asset({
+      ...WITH_EXEMPTION,
+      acquisitionCause: "newConstruction",
+      occupancyApprovalDate: "2005-06-01",
+      fixedAcquisitionPrice: "500,000,000",
+    } as Partial<AssetForm>);
+    expect(validateAssetAcquisition(nc, "자산 1", "2025-06-01")).toContain("근거를 입력하세요");
+    expect(validateAssetAcquisition(nc, "자산 1", "2024-12-31") ?? "").not.toContain("근거를 입력하세요");
   });
 });

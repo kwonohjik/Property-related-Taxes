@@ -22,7 +22,7 @@
  * ## 이 파일이 덮는 것 / 덮지 않는 것
  *
  * - 덮는다: 주택 split(`calculateTransferTax`) · 일반건물 환산(`buildGeneralBuildingAssetCards`) · 일반건물 실가(`calculateGeneralBuildingActualTransfer`)
- * - 덮지 않는다: 증축 경로(`general-building-extension.ts`) — Step 2에서 별도 fixture로 추가
+ * - 덮는다: 증축 경로(`general-building-extension.ts`, D절) · 안분값 없는 `none` 구간(E-5)
  * - 덮지 않는다: validate·UI(Step 3), 취득가액 축 불변(기존 `dec17-6-acq-contract-split.anchor.test.ts`가 고정)
  */
 import { describe, it, expect } from "vitest";
@@ -72,7 +72,7 @@ const runHousing = (d: string | Date, over: Partial<TransferTaxInput> = {}) => {
     land: r.splitDetail!.land.transferPrice,
     building: r.splitDetail!.building.transferPrice,
     judgment: r.splitDetail!.saleSplitJudgment as unknown as
-      | { deemedUnclear: boolean; exemptionApplied?: string; era?: string }
+      | { deemedUnclear: boolean; exemptionApplied?: string; era?: string; apportioned?: unknown; basisKind?: string }
       | undefined,
   };
 };
@@ -162,6 +162,23 @@ describe("E-3 — 양도일 ≥ 2025-01-01: 본문 + 단서 (현행 유지 — �
       const r = runHousing(d, { ...SKEW, saleSplitExemption: "other_law" });
       expect(r.judgment?.exemptionApplied, d).toBe("other_law");
     }
+  });
+});
+
+describe("E-5 — `none` 구간은 안분값(양도시 기준시가) 없이도 계산된다 (Q-2 엔진 쪽 — 판정이 없으면 비교 기준이 필요 없다)", () => {
+  const NO_STD = { landStandardPriceAtTransfer: undefined, buildingStandardPriceAtTransfer: undefined };
+
+  it("🔴 2015-12-31: 기준시가 없이 구분 기재 그대로 계산한다 (차단하지 않는다)", () => {
+    const r = runHousing("2015-12-31", { ...SKEW, ...NO_STD });
+    expect(r.land).toBe(DECLARED.land);
+    expect(r.building).toBe(DECLARED.building);
+    expect(r.judgment?.deemedUnclear).toBe(false);
+    expect(r.judgment?.apportioned).toBeUndefined(); // 안분값을 만들지 않았다
+    expect(r.judgment?.basisKind).toBeUndefined();
+  });
+
+  it("🔴 2016-01-01: 같은 입력이 **차단**된다 — 30% 판정의 비교 기준이 없다", () => {
+    expect(() => runHousing("2016-01-01", { ...SKEW, ...NO_STD })).toThrow(/제100조 제3항 판정을 위해 양도시/);
   });
 });
 
@@ -287,5 +304,38 @@ describe("A-E — 일반건물 실가 경로", () => {
     const r = actual("2025-01-01", { ...ACT_SKEW, saleSplitExemption: "other_law" });
     expect(r.land).toBe(900_000_000);
     expect(r.building).toBe(100_000_000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// D. 일반건물 증축 경로 — 토지 ↔ 건물 합계 2-way 판정 (`general-building-extension.ts`)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GB_EXT = {
+  extensionInfo: {
+    extensionDate: new Date("2010-05-01"),
+    extensionAcquisitionCause: "newConstruction" as const,
+    transferExtensionBuildingStdPrice: 5_000_000,
+    acquisitionExtensionBuildingStdPrice: 4_000_000,
+  },
+};
+
+describe("X-E — 일반건물 증축 경로", () => {
+  const ext = (d: string, over: Partial<GeneralBuildingInput> = {}) => gb(d, { ...GB_EXT, ...GB_SKEW, ...over });
+
+  it("🔴 2015-12-31: 구분 기재 토지 825,000,000을 그대로 쓴다 (판정 없음)", () => {
+    expect(ext("2015-12-31").allocation.land).toBe(825_000_000);
+  });
+
+  it("2016-01-01: 의제 발동 — 토지가 구분값이 아니라 3-way 안분값이 된다", () => {
+    expect(ext("2016-01-01").allocation.land).not.toBe(825_000_000);
+  });
+
+  it("🔴 2024-12-31 + other_law: 예외 무시 — 의제 발동", () => {
+    expect(ext("2024-12-31", { saleSplitExemption: "other_law" }).allocation.land).not.toBe(825_000_000);
+  });
+
+  it("2025-01-01 + other_law: 예외 인정 — 토지가 구분값 그대로 (현행 유지)", () => {
+    expect(ext("2025-01-01", { saleSplitExemption: "other_law" }).allocation.land).toBe(825_000_000);
   });
 });
