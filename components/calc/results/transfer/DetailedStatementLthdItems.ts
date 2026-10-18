@@ -13,6 +13,8 @@ import { isTable2Applied } from "@/components/calc/results/transfer/lthd-split-d
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-helpers";
+import { mixedPartLthdRates } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
+import type { MixedPartLthdEcho } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { sumSplitLthdAmounts } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildLthdFallbackFormulas } from "./DetailedStatementLthdFormulas";
 import {
@@ -187,32 +189,95 @@ export function setLongTermDeductionItems(
         ? { holdingAmount: h.holdingDeductionAmount, residenceAmount: h.residenceDeductionAmount }
         : splitLtDeduction(h.longTermDeductionAmount, totalHoldingMs, residenceMs, hT2);
     const cYears = c.holdingYears ?? Math.floor(totalHoldingMs / 12);
-    items.set("ltHousingPart", {
-      label: " 주택분 장특",
-      value: h.longTermDeductionAmount,
-      formula: hT2
-        ? `주택분 과세대상 양도차익 × 표2 [보유 ${hHoldYears}년 ${pct(hHoldRate)} + 거주 ${hResYears}년 ${pct(hResRate)}] = ${h.longTermDeductionAmount.toLocaleString()}`
-        : `주택분 과세대상 양도차익 × 표1 [보유 ${hHoldYears}년 ${pct(hHoldRate)}] = ${h.longTermDeductionAmount.toLocaleString()}`,
-      legalBasis: hBasis,
-    });
-    items.set("ltHousingHolding", {
-      label: " · 주택 보유 기간분",
-      value: hSplit.holdingAmount,
-      formula: `주택분 과세대상 양도차익 × 보유 ${pct(hHoldRate)}(보유 ${hHoldYears}년) = ${hSplit.holdingAmount.toLocaleString()}`,
-      legalBasis: hBasis,
-    });
-    items.set("ltHousingResidence", {
-      label: " · 주택 거주 기간분",
-      value: hSplit.residenceAmount,
-      formula: hT2
-        ? `주택분 과세대상 양도차익 × 거주 ${pct(hResRate)}(거주 ${hResYears}년) = ${hSplit.residenceAmount.toLocaleString()}`
-        : "0 (표1 — 거주기간 공제 대상 아님)",
-      legalBasis: hBasis,
-    });
+    // 토지·건물 공제율이 다르면 대표 연수·율(건물 기준) 한 줄로는 실제 공제액을 설명하지 못한다 —
+    //   엔진 파트 echo(`partLthd`)로 토지분·건물분을 풀어 쓴다. 공제율이 같거나 echo가 없는 옛 결과는 종전 한 줄 그대로.
+    const amt = (n: number) => n.toLocaleString();
+    const years = (y: number | undefined) => (y === undefined ? "" : ` ${y}년`);
+    const hRates = mixedPartLthdRates(h);
+    if (hRates) {
+      const hp = { land: hRates.land.echo, building: hRates.building.echo };
+      const app = h.appurtenantLthd;
+      // 통칙 95-0…1로 표1이 이긴 토지는 거주분이 없고, 표2가 이긴 토지의 보유분은 「주택 부수토지로서의 보유기간」(건물 보유연수) 기준이다.
+      const landT2 = hRates.land.table === 2;
+      const landHoldLabel = app && !app.table1Applied ? "주택 부수토지로서 보유" : "보유";
+      const landHoldYears = app && !app.table1Applied ? app.houseHoldingYears : hp.land.holdingYears;
+      const bracket = (
+        e: MixedPartLthdEcho,
+        t2: boolean,
+        holdLabel: string,
+        holdYears: number | undefined,
+      ) =>
+        t2
+          ? `표2 [${holdLabel}${years(holdYears)} ${pct(e.holdingDeductionRate)} + 거주 ${hResYears}년 ${pct(e.residenceDeductionRate)}]`
+          : `표1 [${holdLabel}${years(holdYears)} ${pct(e.longTermRate)}]`;
+      const landBracket = bracket(hp.land, landT2, landHoldLabel, landHoldYears);
+      const bldBracket = bracket(hp.building, hT2, "보유", hp.building.holdingYears ?? h.holdingYears);
+      const ground = app
+        ? ` (토지분: ${app.basis.source === "circular" ? "소득세법 기본통칙 95-0…1" : "과세관청 해석 재산세과-4375(2008.12.24.)"} — 표1 ${pct(app.table1Rate)}와 표2 ${pct(app.table2Rate)} 중 큰 공제율)`
+        : "";
+      const partBasis = landT2 === hT2 ? hBasis : "소득세법 §95② 표1·표2";
+      items.set("ltHousingPart", {
+        label: " 주택분 장특",
+        value: h.longTermDeductionAmount,
+        formula:
+          `토지분 ${amt(hp.land.taxableGain)} × ${landBracket} = ${amt(hp.land.longTermDeduction)}` +
+          ` + 건물분 ${amt(hp.building.taxableGain)} × ${bldBracket} = ${amt(hp.building.longTermDeduction)}` +
+          ` → ${amt(h.longTermDeductionAmount)}${ground}`,
+        legalBasis: partBasis,
+      });
+      items.set("ltHousingHolding", {
+        label: " · 주택 보유 기간분",
+        value: hSplit.holdingAmount,
+        formula:
+          `토지분 보유 ${pct(hp.land.holdingDeductionRate)} ${amt(hp.land.holdingDeductionAmount)}` +
+          ` + 건물분 보유 ${pct(hp.building.holdingDeductionRate)} ${amt(hp.building.holdingDeductionAmount)}` +
+          ` = ${amt(hSplit.holdingAmount)}`,
+        legalBasis: partBasis,
+      });
+      items.set("ltHousingResidence", {
+        label: " · 주택 거주 기간분",
+        value: hSplit.residenceAmount,
+        formula: hT2
+          ? `토지분 ${landT2 ? `거주 ${pct(hp.land.residenceDeductionRate)} ${amt(hp.land.residenceDeductionAmount)}` : "0 (표1 — 거주기간 공제 없음)"}` +
+            ` + 건물분 거주 ${pct(hp.building.residenceDeductionRate)} ${amt(hp.building.residenceDeductionAmount)}` +
+            ` = ${amt(hSplit.residenceAmount)}`
+          : "0 (표1 — 거주기간 공제 대상 아님)",
+        legalBasis: partBasis,
+      });
+    } else {
+      items.set("ltHousingPart", {
+        label: " 주택분 장특",
+        value: h.longTermDeductionAmount,
+        formula: hT2
+          ? `주택분 과세대상 양도차익 × 표2 [보유 ${hHoldYears}년 ${pct(hHoldRate)} + 거주 ${hResYears}년 ${pct(hResRate)}] = ${h.longTermDeductionAmount.toLocaleString()}`
+          : `주택분 과세대상 양도차익 × 표1 [보유 ${hHoldYears}년 ${pct(hHoldRate)}] = ${h.longTermDeductionAmount.toLocaleString()}`,
+        legalBasis: hBasis,
+      });
+      items.set("ltHousingHolding", {
+        label: " · 주택 보유 기간분",
+        value: hSplit.holdingAmount,
+        formula: `주택분 과세대상 양도차익 × 보유 ${pct(hHoldRate)}(보유 ${hHoldYears}년) = ${hSplit.holdingAmount.toLocaleString()}`,
+        legalBasis: hBasis,
+      });
+      items.set("ltHousingResidence", {
+        label: " · 주택 거주 기간분",
+        value: hSplit.residenceAmount,
+        formula: hT2
+          ? `주택분 과세대상 양도차익 × 거주 ${pct(hResRate)}(거주 ${hResYears}년) = ${hSplit.residenceAmount.toLocaleString()}`
+          : "0 (표1 — 거주기간 공제 대상 아님)",
+        legalBasis: hBasis,
+      });
+    }
+    // 상가분도 토지·건물 보유연수가 달라 공제율이 다르면 대표 율(긴 보유연수 기준) 한 줄로는 공제액을 설명하지 못한다 — 파트별로 풀어 쓴다.
+    const cRates = mixedPartLthdRates(c);
     items.set("ltCommercialPart", {
       label: " 비주택분(상가) 장특",
       value: c.longTermDeductionAmount,
-      formula: `상가분 과세대상 양도차익 × 표1 [보유 ${cYears}년 ${pct(c.longTermDeductionRate)}] = ${c.longTermDeductionAmount.toLocaleString()} (거주기간 공제 없음)`,
+      formula: cRates
+        ? `토지분 ${amt(cRates.land.echo.taxableGain)} × 표1 [보유${years(cRates.land.echo.holdingYears)} ${pct(cRates.land.echo.longTermRate)}] = ${amt(cRates.land.echo.longTermDeduction)}` +
+          ` + 건물분 ${amt(cRates.building.echo.taxableGain)} × 표1 [보유${years(cRates.building.echo.holdingYears)} ${pct(cRates.building.echo.longTermRate)}] = ${amt(cRates.building.echo.longTermDeduction)}` +
+          ` → ${amt(c.longTermDeductionAmount)} (거주기간 공제 없음)`
+        : `상가분 과세대상 양도차익 × 표1 [보유 ${cYears}년 ${pct(c.longTermDeductionRate)}] = ${c.longTermDeductionAmount.toLocaleString()} (거주기간 공제 없음)`,
       legalBasis: "소득세법 §95② 표1",
     });
     // 배율초과 부수토지(비사업용) — 1세대1주택 비과세 안분 대상이 아니라 전액 과세되므로

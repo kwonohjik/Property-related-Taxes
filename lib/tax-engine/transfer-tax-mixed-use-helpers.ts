@@ -444,6 +444,7 @@ export function buildHousingPart(
     buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2, housingLthdExcluded),
     landDeductionAmount,
     buildingDeductionAmount,
+    landHoldingYears: gainSplit.landHoldingYears,
     buildingHoldingYears: gainSplit.buildingHoldingYears,
     residenceYears,
   });
@@ -536,8 +537,14 @@ export function buildCommercialPart(
     buildingIncomeAmount: Math.max(0, gainSplit.buildingGain - buildingDeductionAmount),
     // 파트별 장특 echo(표시 전용) — 표1이라 거주분 0. 신고서 상가 토지·건물 열이 그대로 읽는다.
     partLthd: {
-      land: mixedPartLthdEcho(gainSplit.landGain, landDedRate, landDedRate, landDeductionAmount),
-      building: mixedPartLthdEcho(gainSplit.buildingGain, buildingDedRate, buildingDedRate, buildingDeductionAmount),
+      land: mixedPartLthdEcho(gainSplit.landGain, landDedRate, landDedRate, landDeductionAmount, gainSplit.landHoldingYears),
+      building: mixedPartLthdEcho(
+        gainSplit.buildingGain,
+        buildingDedRate,
+        buildingDedRate,
+        buildingDeductionAmount,
+        gainSplit.buildingHoldingYears,
+      ),
     },
     landTransferGain: gainSplit.landGain,
     buildingTransferGain: gainSplit.buildingGain,
