@@ -414,6 +414,8 @@ export function buildCompanionEngineInputs(
     isPartialAreaTransfer: c.isPartialAreaTransfer,
     buildingSec164Value: c.buildingSec164Value,
     buildingHouseKind: c.buildingHouseKind,
+    landHouseExisted: c.landHouseExisted,
+    landHouseSec164Value: c.landHouseSec164Value,
     landDonorAcquisitionDate: toOptionalDate(c.landDonorAcquisitionDate),
     selfOwns: c.selfOwns,
     landAcqMode: c.landAcqMode,

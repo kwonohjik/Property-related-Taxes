@@ -1402,9 +1402,17 @@ export interface TransferTaxInput {
   buildingSec164Value?: number;
   /**
    * 주택 구분 — 단독·다가구(`house_individual`)만 단서 2호 ②가 열린다(공동주택은 영 §164⑥ 체계). 생략 = 단독이 아님(모름 = 불성립).
-   * ④가 `deriveInheritanceHouseKind`로 파생해 단서 구간에서만 싣는다.
+   * ④가 `deriveInheritanceHouseKind`로 파생해 단서 구간에서만 싣는다. D1-H(주택 부수토지 단서 2호)도 같은 사실을 쓴다.
    */
   buildingHouseKind?: "house_individual" | "house_apart";
+  /**
+   * D1-H — 토지 상속·증여 + 건물 매매에서 토지를 받을 당시 지금의 주택이 그 위에 있었는가. `"yes"`일 때만 토지 취득일이
+   * 1990-08-30 이후·2005-04-30 전이면(영 §163⑨ 단서 2호 — 주택 부수토지) `landAcquisitionPrice`와 `landHouseSec164Value` 중
+   * **많은 금액**을 토지 취득가액으로 한다(주택 구분은 `buildingHouseKind` — 단독·다가구만). 생략·`"unknown"`은 비교하지 않고 결과에 확인 필요를 고지한다.
+   */
+  landHouseExisted?: "yes" | "no" | "unknown";
+  /** D1-H — 토지 몫 영 §164⑦ 가액(②, 총액·지분 스케일 후). ④가 `inhHouseVal*` 3필드 + 수증일 공시지가 × 면적을 한 함수로 산출해 보낸다. 그 구간이 아니면 무시한다 */
+  landHouseSec164Value?: number;
   /**
    * 토지 파트 증여자 취득일 — §104②2호 통산은 `carryover_gift`(§97의2① 자산)만이다(단순 증여는 통산 없음).
    * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).

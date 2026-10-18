@@ -149,7 +149,8 @@ describe("⑧ validateLandPartCause (D1-4a·b) — 일부 양도는 첫 칸 area
     expect(r.fieldOf(r.result!)).toBe("areaScenario");
   });
   it("긍정 짝: 일부 양도라도 단서 밖(1991)이면 통과", () => {
-    expect(v8(asset({ areaScenario: "partial", landAcquisitionDate: "1991-05-01" })).result).toBeNull();
+    // D1-H — 1991은 단서 2호 주택 부수토지 구간이라 ⑧이 「받을 당시 주택」을 묻는다. 「없었음」이면 비교가 없어 일부 양도도 통과한다.
+    expect(v8(asset({ areaScenario: "partial", landAcquisitionDate: "1991-05-01", landHouseExisted: "no" })).result).toBeNull();
   });
   it("② 필수 위반(D1-4b): 화면 입력 칸 중 첫 미완 칸으로 이동 — 엔진 문구(landSec164Value)를 화면에 내지 않는다", () => {
     const r = v8(asset({ pre1990Grade_current: "" }));

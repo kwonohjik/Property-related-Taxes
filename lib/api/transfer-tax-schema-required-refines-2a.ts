@@ -75,6 +75,8 @@ export type Required2aLike = {
   isPartialAreaTransfer?: boolean;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
+  landHouseExisted?: "yes" | "no" | "unknown";
+  landHouseSec164Value?: number;
   selfOwns?: string;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
@@ -394,6 +396,7 @@ export function refineSplitPartCause(
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
     | "buildingSec164Value" | "buildingHouseKind" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
+    | "landHouseExisted" | "landHouseSec164Value"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
@@ -431,6 +434,9 @@ export function refineSplitPartCause(
     isHousing,
     buildingHouseKind: d.buildingHouseKind,
     buildingSec164Value: d.buildingSec164Value,
+    // D1-H — 주택 부수토지 단서 2호(받을 당시 주택 있음 · 토지 몫 ②)
+    landHouseExisted: d.landHouseExisted,
+    landHouseSec164Value: d.landHouseSec164Value,
     // D2 — 건물 상속·증여 + 토지 매매. 건물 방식은 엔진과 같은 규칙(명시값, 없으면 자산 단위 플래그에서 파생).
     buildingMode: partMode(d.buildingAcqMode, d),
     buildingAcquisitionDate: d.acquisitionDate,

@@ -38,6 +38,10 @@ export const splitAcquisitionShape = {
   buildingSec164Value: z.number().int().positive().optional(),
   /** 주택 구분 — 단독·다가구(house_individual)만 단서 2호 ②가 열린다(D2-4). 생략 = 단독이 아님 */
   buildingHouseKind: z.enum(["house_individual", "house_apart"]).optional(),
+  /** D1-H — 토지를 받을 당시 지금의 주택이 그 위에 있었는가(토지 상속·증여 + 건물 매매). "yes"만 주택 부수토지 단서 2호 비교를 연다 */
+  landHouseExisted: z.enum(["yes", "no", "unknown"]).optional(),
+  /** D1-H — 토지 몫 영 §164⑦ 가액(②, 총액·지분 스케일 후) — 1990.8.30.~2005.4.29. 상속·증여 주택 부수토지(영 §163⑨ 단서 2호, 받을 당시 주택 있음·단독·다가구)에서 필수 */
+  landHouseSec164Value: z.number().int().positive().optional(),
   /** 토지 파트 증여자 취득일 (§104②2호 — 이월과세 자산만. 분리 계산의 토지 이월과세는 미지원으로 차단 — D0 G-1) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /** 토지·건물 소유자 분리 (§166⑥) */

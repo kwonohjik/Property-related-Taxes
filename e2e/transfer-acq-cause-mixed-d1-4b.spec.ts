@@ -113,7 +113,8 @@ test.describe("D1-4b 1990.8.30. 전 상속 토지 — ② 입력 카드 → 계�
 
   test("부정형 짝 — 토지 상속개시일을 1991로 고치면 카드가 사라지고 body에 landSec164Value가 없다", async ({ page }) => {
     test.setTimeout(150_000);
-    await seedWizard(page, singleSeed([mixed({ ...SEC164_BIG, landAcquisitionDate: "1991-05-01" })]));
+    // D1-H — 1991은 단서 2호 주택 부수토지 구간이라 「받을 당시 주택」을 묻는다. 이 테스트는 단서 1호 카드가 주제라 「없었음」으로 고정.
+    await seedWizard(page, singleSeed([mixed({ ...SEC164_BIG, landAcquisitionDate: "1991-05-01", landHouseExisted: "no" })]));
     await expect(sec164Card(page)).toHaveCount(0);
     const body = await calculate(page);
     expect(body.landSec164Value).toBeUndefined();

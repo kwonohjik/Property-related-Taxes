@@ -370,6 +370,8 @@ export function buildTransferEngineInput(
     // D2-4 영 §163⑨ 단서 2호 — 건물 몫 ②(영 §164⑦ 가액)와 주택 구분. 엔진 split 파트가 max/차단
     buildingSec164Value: data.buildingSec164Value,
     buildingHouseKind: data.buildingHouseKind,
+    landHouseExisted: data.landHouseExisted,
+    landHouseSec164Value: data.landHouseSec164Value,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
     landSplitMode: data.landSplitMode,
     // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)

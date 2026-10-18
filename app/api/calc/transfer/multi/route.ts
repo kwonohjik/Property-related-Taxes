@@ -218,6 +218,8 @@ export async function POST(request: NextRequest) {
       isPartialAreaTransfer: p.isPartialAreaTransfer,
       buildingSec164Value: p.buildingSec164Value,
       buildingHouseKind: p.buildingHouseKind,
+      landHouseExisted: p.landHouseExisted,
+      landHouseSec164Value: p.landHouseSec164Value,
       landDonorAcquisitionDate: toOptionalDate(p.landDonorAcquisitionDate),
       landAcqMode: p.landAcqMode,
       buildingAcqMode: p.buildingAcqMode,

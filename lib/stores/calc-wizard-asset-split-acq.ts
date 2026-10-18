@@ -38,6 +38,12 @@ export interface SplitAcquisitionFormSlice {
    */
   landCauseHost: "" | "newConstruction" | "purchase" | "inheritance" | "gift";
   /**
+   * D1-H — 「토지는 다른 원인으로 취득」(건물 매매 + 토지 상속·증여)에서 토지를 받을 당시 지금의 주택이 그 위에 있었는가.
+   * 토지 취득일이 1990.8.30.~2005.4.29.인 주택에서만 묻는다(`houseLandSec164Applies`). `"yes"`만 영 §163⑨ 단서 2호 비교를 연다 —
+   * 미선택·`"unknown"`은 평가액만으로 계산하고 결과에 확인 필요를 고지한다(계획서 transfer-house-land-163-9-2.plan.md Q-1).
+   */
+  landHouseExisted: "" | "yes" | "no" | "unknown";
+  /**
    * 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 「소득세법」
    * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).
    */
