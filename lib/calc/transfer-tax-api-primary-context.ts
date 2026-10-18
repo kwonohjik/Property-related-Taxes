@@ -154,7 +154,7 @@ export function buildPrimaryContext(
    * 보내면 route의 `bundledOk`가 참이 되어 5-a(일괄)가 먼저 잡는다.
    */
   const gbShares = isGeneralBuilding
-    ? buildGeneralBuildingShares(form.assets, form.transferDate)
+    ? buildGeneralBuildingShares(form.assets, form.transferDate, form.assetSplitMode)
     : undefined;
 
   // ⑬ 재개발/재건축 (시행령 §166) — assetKind "redevelopment_apt" 또는 "right_to_move_in" 시 빌드.

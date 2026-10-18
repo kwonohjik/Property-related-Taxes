@@ -172,9 +172,12 @@ export const propertySchema = z
       // 자동 계산되므로 검증 면제. 함께양도 묶음에 지분 자산이 섞인 경우는 면제하지 않는다 — 그 자산도 계약서 가액·안분 키를
       // 가져야 하고(④가 100% 입력 × 지분율로 싣는다), 면제하면 route 안분이 500(actual)·양도가액 0(apportioned)이 된다
       // (2026-10-10 실측). route `isFullFractionalBundle`과 같은 판정.
+      // 명시 플래그(⑬ — 사용자의 선택)가 있으면 그것, 없으면(종전 클라이언트) 본문 모양 추론. 함께 양도 묶음의 전 자산이 지분이면
+      // 모양만으로는 축 B와 구분되지 않는다(2026-10-18 — 계획서 `transfer-companion-all-fractional-distinct-assets.plan.md`).
       const primaryIsFractional = data.totalPropertyTransferPrice !== undefined;
       const fullFractionalBundle =
-        primaryIsFractional && companions.every((c) => c.totalPropertyTransferPrice !== undefined);
+        data.fractionalSplitBundle ??
+        (primaryIsFractional && companions.every((c) => c.totalPropertyTransferPrice !== undefined));
 
       if (data.bundledSaleMode === "actual") {
         // 주 자산 actual 가액 필수 (단, 축 B면 자동 계산되므로 면제)

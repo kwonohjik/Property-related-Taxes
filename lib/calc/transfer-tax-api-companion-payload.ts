@@ -129,7 +129,7 @@ export function buildAssetPayload(
    * (종전: 그 자산 하나의 ratio만 보고 자동가를 써 actual 500 · apportioned 양도가액 0 — 2026-10-10 실측).
    * route `isFullFractionalBundle`(전 자산 `totalPropertyTransferPrice`)과 같은 판정이다. 폼 없이 부르는 호출(테스트)은 종전 동작.
    */
-  const axisB = form ? isFullFractionalBundle(form.assets) : fractional;
+  const axisB = form ? isFullFractionalBundle(form.assets, form.assetSplitMode) : fractional;
   /** 함께양도 묶음 안의 지분 자산 — 금액은 물건 전체(100%) 기준 입력이고 여기서 지분율을 곱한다(화면 규약). */
   const shareInCompanion = fractional && !axisB;
 

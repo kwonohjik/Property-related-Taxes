@@ -32,6 +32,8 @@ import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acqu
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { computeEstimatedDeduction } from "@/lib/tax-engine/tax-utils";
 import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes/transfer-nbl";
 import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
@@ -145,15 +147,17 @@ function isPlainLumpSumAsset(a: AssetForm): boolean {
 
 /**
  * 안분 모드에서 자산별 양도가액을 산출 가능한지 판정.
- * 조건: 안분 모드 · 자산 2건 이상 · 총액 > 0 · **비지분(variable) 자산**의 양도시 기준시가 > 0.
- * (지분 자산은 총액×지분을 §166⑥ 본문 구분 기재로 넘겨 안분 대상에서 제외되므로 기준시가 불요.)
+ * 조건: 안분 모드 · 자산 2건 이상 · 총액 > 0 · **안분 대상 자산**의 양도시 기준시가 > 0.
+ * (축 B — 같은 물건 지분 분할 — 의 지분 자산만 총액×지분 자동가라 기준시가가 필요 없다. 함께 양도 묶음의 지분 자산은
+ *  물건 전체 기준시가 × 지분율이 안분 키다 — ④ `buildAssetPayload`와 같은 규칙.)
  */
 function canApportion(formData: TransferFormData): boolean {
   if (formData.bundledSaleMode !== "apportioned") return false;
   if (formData.assets.length < 2) return false;
   if (parseRaw(formData.contractTotalPrice) <= 0) return false;
+  const axisB = isFullFractionalBundle(formData.assets, formData.assetSplitMode);
   return formData.assets.every(
-    (a, i) => ownershipRatioOf(a) < 1 || apportionStdPriceAtTransfer(formData, a, i) > 0,
+    (a, i) => (axisB && ownershipRatioOf(a) < 1) || apportionStdPriceAtTransfer(formData, a, i) > 0,
   );
 }
 
@@ -176,20 +180,24 @@ function apportionStdPriceAtTransfer(
 
 /**
  * 안분 결과를 assetId → allocatedSalePrice 맵으로 (계산 전 프리뷰).
- * 엔진 `buildAssetPayload`(transfer-tax-api-helpers:489-495)와 동일하게 지분 자산은
- * `fixedSalePrice = 총액 × 지분`으로 넘겨 §166⑥ 본문 안분 제외 → 잔여만 비지분 자산에 안분.
- * (미러링 누락 시 형제 자산이 잔여 아닌 전체총액 기준으로 안분되어 합계가 어긋남 — 이중계상.)
+ * ④(`buildAssetPayload` · `transfer-tax-api-companion-payload.ts`)와 같은 규칙이다:
+ *   · 축 B(같은 물건 지분 분할)의 지분 자산 — `fixedSalePrice = 총액 × 지분`(안분 제외, 자동가).
+ *   · 함께 양도 묶음의 지분 자산 — 안분 키 = 물건 전체 기준시가 × 지분율(양도하는 것이 지분이다).
+ * 종전에는 지분 자산이면 모두 「총액 × 지분」으로 미리 보여 줘, #2080(혼합)·전 자산 지분 함께 양도에서 계산 전 값이 엔진과 달랐다
+ * (2026-10-18 실측 — 혼합 안분 5억·5억 vs 엔진 666,666,667·333,333,333).
  */
 function computeApportionedSaleMap(formData: TransferFormData): Map<string, number> | null {
   const total = parseRaw(formData.contractTotalPrice);
+  const axisB = isFullFractionalBundle(formData.assets, formData.assetSplitMode);
   const assets: BundledAssetInput[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
+    const std = apportionStdPriceAtTransfer(formData, a, i);
     return {
       assetId: a.assetId,
       assetLabel: a.assetLabel,
       assetKind: toBundledKind(a.assetKind),
-      standardPriceAtTransfer: apportionStdPriceAtTransfer(formData, a, i),
-      fixedSalePrice: ratio < 1 ? Math.floor(total * ratio) : undefined,
+      standardPriceAtTransfer: ratio < 1 && !axisB ? applyRatio(std, ratio) : std,
+      fixedSalePrice: ratio < 1 && axisB ? Math.floor(total * ratio) : undefined,
     };
   });
   try {
@@ -293,6 +301,8 @@ export function computeTransferPerAssetSummary(
     primary.assetKind !== "commercial_building" &&
     !isRedevelopmentPath(primary);
 
+  /** 축 B(같은 물건 지분 분할)인가 — 함께 양도 묶음의 지분 자산과 갈린다(④와 같은 판정). */
+  const axisBBundle = isFullFractionalBundle(formData.assets, formData.assetSplitMode);
   const rows: TransferAssetSummaryRow[] = formData.assets.map((a, i) => {
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
@@ -373,10 +383,13 @@ export function computeTransferPerAssetSummary(
       salePrice = bundledCards.sale;
     } else if (apportionedMap && apportionedMap.has(a.assetId)) {
       // 안분 프리뷰 (지분 자산 포함 — 엔진과 동일하게 fixedSalePrice 제외·잔여흡수 반영).
-      // 지분 자산은 고정값(«지분 N%»), 비지분 자산은 기준시가 안분값(«기준시가 안분»).
+      // 축 B 지분 자산만 고정값(«지분 N%»), 나머지(함께 양도 묶음의 지분 자산 포함)는 기준시가 안분값(«기준시가 안분»).
       salePrice = apportionedMap.get(a.assetId)!;
-      saleIsApportioned = !fractional;
-    } else if (fractional) {
+      saleIsApportioned = !(fractional && axisBBundle);
+    } else if (fractional && !axisBBundle && !isSingle && formData.bundledSaleMode === "actual") {
+      // 함께 양도 묶음의 지분 자산(실거래가 구분 기재) — 물건 전체(100%) 입력 × 지분율(④와 같다)
+      salePrice = applyRatio(parseRaw(a.actualSalePrice), ratio);
+    } else if (fractional && (axisBBundle || isSingle)) {
       // 지분 단계취득 (안분 프리뷰 불가 시) — 총액 × 지분 (API :493-495와 일치)
       salePrice = Math.floor(parseRaw(formData.contractTotalPrice) * ratio);
     } else if (formData.bundledSaleMode === "apportioned" && !isSingle) {

@@ -461,6 +461,11 @@ export const propertyBaseShape = {
    * - "apportioned": 구분 불분명 → 기준시가 비율 안분 (§166⑥ 단서, 기본값)
    */
   bundledSaleMode: z.enum(["actual", "apportioned"]).default("apportioned"),
+  /**
+   * ⑫ 같은 물건 지분 분할(축 B)인가 — 화면의 사용자 선택에서 온다(④ `buildBundledPrimaryPayload`).
+   * 있으면 본문 모양 추론(주 자산·전 컴패니언이 `totalPropertyTransferPrice`를 가짐)보다 앞선다. 없으면(종전 클라이언트) 추론 그대로.
+   */
+  fractionalSplitBundle: z.boolean().optional(),
   /** actual 모드 시 주 자산의 계약서상 양도가액 (원) */
   primaryActualSalePrice: z.number().int().positive().optional(),
   /**

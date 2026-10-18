@@ -56,6 +56,12 @@ export interface TransferFormData {
    * - "apportioned": 구분 불분명 → 기준시가 비율 안분 (§166⑥ 단서)
    */
   bundledSaleMode: "actual" | "apportioned";
+  /**
+   * 다자산 구성에 대한 **사용자의 선택** — 「같은 날 다른 부동산도 함께」(companion) / 「지분별 취득」(fractional, 축 B).
+   * 지분율이 모두 채워지면 두 경우가 데이터로 구분되지 않아(전 자산 지분) 이 값으로 가른다. 없으면(종전 세션·이력) 지분율로 추론한다.
+   * Step1 토글 핸들러만 쓴다. 계획서 `transfer-companion-all-fractional-distinct-assets.plan.md`.
+   */
+  assetSplitMode?: "companion" | "fractional";
   /** 양도일 (YYYY-MM-DD) */
   transferDate: string;
   /** 양도소득세 신고일 (YYYY-MM-DD) */

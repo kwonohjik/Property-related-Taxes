@@ -90,7 +90,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     }
 
     // 지분 모드(같은 물건 분할취득) 여부 — companion ① 기본정보 UI 숨김 대응.
-    const fullFractional = isFullFractionalBundle(form.assets);
+    const fullFractional = isFullFractionalBundle(form.assets, form.assetSplitMode);
     const primaryAsset = form.assets[0];
     // 일반건물 × 지분 분할 — ④가 `generalBuildingShares` 전용 배열을 보내고 `companionAssets`를
     // 아예 만들지 않는 경로(`transfer-tax-api.ts:672`). companion 축 가드·병합 양쪽이 이 술어를 쓴다.

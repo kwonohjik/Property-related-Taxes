@@ -76,6 +76,9 @@ export function Step1({
     //    종전에는 `some`만 봐서 복원 시 그 묶음을 축 B로 바꿔 ① 기본정보를 숨기고 「총양도가 × 지분율」 자동가를 보였다
     //    (2026-10-10). 빈칸은 축 B 진입 직후의 미입력이라 허용한다(위 `some` 유지 이유).
     //    판정은 `isFractionalSplitRestorable`(⑧·역방향 leaf가 쓰는 `isFractionalSplitEntryBundle`과 같은 파일의 술어군).
+    // 🔑 저장된 사용자 선택(`assetSplitMode`)이 있으면 그것이 우선이다 — 전 자산이 지분인 함께 양도 묶음은 지분율로 추론하면
+    //    축 B가 된다(2026-10-18). 추론은 선택이 저장되지 않은 종전 세션·이력에만 쓴다.
+    if (form.assets.length > 1 && form.assetSplitMode) return form.assetSplitMode;
     if (isFractionalSplitRestorable(form.assets))
       return "fractional";
     if (form.assets.length > 1) return "companion";
@@ -100,10 +103,13 @@ export function Step1({
 
   // 토글 A — 함께 양도(다른 물건 N개)
   function handleCompanionToggle(yes: boolean) {
+    // 사용자의 선택을 폼에 함께 기록한다(`assetSplitMode`) — ④⑧·서버가 전 자산 지분 묶음을 축 B와 가르는 유일한 근거다.
     if (yes) {
       setSplitMode("companion");
-      if (form.assets.length === 1)
-        onChange({ assets: [...form.assets, makeDefaultAsset(2)] });
+      onChange({
+        assetSplitMode: "companion",
+        ...(form.assets.length === 1 ? { assets: [...form.assets, makeDefaultAsset(2)] } : {}),
+      });
     } else {
       setSplitMode("none");
       if (form.assets.length > 1) {
@@ -111,7 +117,9 @@ export function Step1({
           ...form.assets[0],
           actualSalePrice: form.contractTotalPrice || form.assets[0].actualSalePrice,
         };
-        onChange({ assets: [firstAsset] });
+        onChange({ assetSplitMode: undefined, assets: [firstAsset] });
+      } else {
+        onChange({ assetSplitMode: undefined });
       }
     }
   }
@@ -132,9 +140,9 @@ export function Step1({
           ownershipNumerator: "",
           ownershipDenominator: "",
         };
-        onChange({ assets: [first, sib] });
+        onChange({ assetSplitMode: "fractional", assets: [first, sib] });
       } else {
-        onChange({ assets: [first, ...form.assets.slice(1)] });
+        onChange({ assetSplitMode: "fractional", assets: [first, ...form.assets.slice(1)] });
       }
     } else {
       setSplitMode("none");
@@ -143,7 +151,7 @@ export function Step1({
         ownershipNumerator: "100",
         ownershipDenominator: "100",
       };
-      onChange({ assets: [firstAsset] });
+      onChange({ assetSplitMode: undefined, assets: [firstAsset] });
     }
   }
 
@@ -160,14 +168,16 @@ export function Step1({
     // fractional은 명시 토글로만 진입 — derive 재계산 없음(자기소멸 차단).
     if (splitMode === "none" && assets.length > 1) {
       setSplitMode("companion");
-      onChange({ ...extra, assets });
+      onChange({ ...extra, assets, assetSplitMode: "companion" });
       return;
     }
     if (splitMode === "none" && assets.length === 1) {
       onChange({ ...extra, assets, contractTotalPrice: assets[0].actualSalePrice || "" });
       return;
     }
-    onChange({ ...extra, assets });
+    // 선택이 저장되지 않은 종전 세션(복원 때 추론한 모드)은 자산을 고치는 이 자리에서 화면의 모드를 함께 기록한다 —
+    // 이후 지분율을 바꿔 전 자산이 지분이 되어도 ④⑧·서버가 화면과 같은 모드를 본다(effect 미러링 아님 — 사용자 입력 핸들러).
+    onChange({ ...extra, assets, ...(splitMode !== "none" && form.assetSplitMode !== splitMode ? { assetSplitMode: splitMode } : {}) });
   }
 
   // 자산 삭제 — 위치에 묶인 값(주 자산 플래그·폼 전역 미등기·기본 라벨)을 같은 패치로 맞춘다(`lib/calc/asset-removal.ts`).

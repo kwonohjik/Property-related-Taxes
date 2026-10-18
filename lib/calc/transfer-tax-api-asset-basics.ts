@@ -153,8 +153,17 @@ export function isFractionalOwnership(asset: AssetForm): boolean {
  * route.ts:423 `isFullFractionalBundle`(primary + 전 companion fractional)와 동일 기준.
  * companion 모드(다른 물건 함께양도)에 우연히 부분소유(1/2) 자산이 섞인 경우(primary=100/100)는
  * every=false로 배제 — 그 경우 각 자산 basic이 상이하므로 primary 병합을 하면 안 됨.
+ *
+ * 🔑 `declaredMode`(폼 `assetSplitMode` — 사용자의 선택)가 `"companion"`이면 **전 자산이 지분이어도** 축 B가 아니다.
+ *   지분율이 모두 채워지면 「서로 다른 물건을 각각 일부 소유」와 「같은 물건 지분 분할」이 데이터로 구분되지 않는다 —
+ *   종전에는 전자를 축 B로 읽어 자산별 양도가액을 「총양도가 × 지분율」로 바꿨다(T1 실측 229,812,000 vs 218,724,000).
+ *   선택이 저장되지 않은 폼(종전 세션·이력)은 지분율 추론 그대로다(계획서 Q-2).
  */
-export function isFullFractionalBundle(assets: AssetForm[]): boolean {
+export function isFullFractionalBundle(
+  assets: AssetForm[],
+  declaredMode?: "companion" | "fractional",
+): boolean {
+  if (declaredMode === "companion") return false;
   return (
     assets.length > 1 &&
     assets.every((a) =>

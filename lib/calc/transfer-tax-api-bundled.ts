@@ -74,6 +74,12 @@ export function buildBundledPrimaryPayload(c: {
     //    한 요청 안에서 「자산은 안분 / 신고는 구분기재」로 어긋난다.
     bundledSaleMode: effBundledSaleMode,
     /**
+     * ⑬ 같은 물건 지분 분할(축 B)인가 — 서버(⑫⑭)는 이 값을 본문 모양 추론보다 앞세운다.
+     * 함께 양도 지분 자산도 물건 전체 양도가액(`totalPropertyTransferPrice`)을 실으므로, 전 자산이 지분이면 모양만으로는
+     * 축 B와 구분되지 않는다(계획서 `transfer-companion-all-fractional-distinct-assets.plan.md`).
+     */
+    fractionalSplitBundle: fractionalBundleMerge,
+    /**
      * ⑬ 신고 단위 공통 양도비 (§100② 후단) — 「공통되는 … 양도비용은 해당 자산의
      * 가액에 비례하여 안분계산한다」. 안분은 `apportionBundledSale`의 `commonExpenses`가
      * 수행하고 마지막 자산이 잔액을 흡수해 Σ가 보존된다.

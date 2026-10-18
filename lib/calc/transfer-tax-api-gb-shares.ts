@@ -181,11 +181,13 @@ export interface GeneralBuildingSharePayloadOut {
 export function buildGeneralBuildingShares(
   assets: AssetForm[],
   transferDate: string,
+  /** 폼 `assetSplitMode` — 함께 양도(서로 다른 물건)면 전 자산이 지분이어도 지분 배열을 만들지 않는다. */
+  declaredMode?: "companion" | "fractional",
 ): GeneralBuildingSharePayloadOut[] | undefined {
   const primary = assets[0];
   if (!primary || assets.length < 2) return undefined;
   if (primary.assetKind !== "general_building") return undefined;
-  if (!isFullFractionalBundle(assets)) return undefined;
+  if (!isFullFractionalBundle(assets, declaredMode)) return undefined;
 
   const out: GeneralBuildingSharePayloadOut[] = [];
   for (let i = 0; i < assets.length; i++) {
