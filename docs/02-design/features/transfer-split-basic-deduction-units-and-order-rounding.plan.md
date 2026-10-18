@@ -308,3 +308,26 @@ Do-4  각 PR check:pre-pr(워크트리라 husky가 안 돈다 — 수동) · CI 
 - anchor `__tests__/tax-engine/transfer-tax/aggregate-rural-surtax-order.anchor.test.ts` 3건
   - 뮤테이션 2종 모두 잡힘: 정렬 제거 → 1건 실패 · 자산별 절사 복귀 → 2건 실패
 - 기존 엔진·calc 테스트 25,204건 실패 0 — 종전 자산별 절사 값을 단언한 테스트는 없었다.
+
+### Do-2 — ① F-A + F-B (브랜치 `fix/split-basic-deduction-units`, Do-1 위에 누적)
+- 구현
+  - `transfer-tax-aggregate-basic-units.ts`(신설): `expandSplitBasicUnits`(배분 행 펼침) · `foldBasicUnitAllocation`(자산·파트로 접기) · `unitIdOf`(동률 순서 `propertyId#파트`).
+  - `transfer-tax-split-part-seeds.ts`: `prepareSplitParts`(시드 → 소득 안분 → 1차 세율 → 게이트 6·7)를 split-rate에서 옮겼다. 세액 계산과 `splitPartBasicUnits`가 함께 쓴다. split-rate 758 → 724줄.
+  - `transfer-tax-split-rate.ts`: `partBasicDeduction` 주입.
+  - `transfer-tax-aggregate-group-tax.ts`: `aggregateSplitContextOf`(세액·배분 단위 공용 컨텍스트) · `partBasic` 인자.
+  - `transfer-tax-aggregate-reduction-step.ts`: `reducedPartBasicOf`(F-A) — `basicOnReducibleOf`와 `reductionAttributionOf`가 같은 종류·합산 leaf. `AggregateReductionArgs.assetPartBasic`은 필수(누락을 TS가 잡게).
+- 격자: 3건·감면+차손·감면+이익+차손 세 격자 모두 시험 패치(F-A+F-B)와 **0행 차이** · 단건 1,344행·§133 28,512셀 master 대비 0셀.
+- §4.4 추가 측정
+  - 두 파트 모두 §77 충족 split(Q-①b) 108행: 수정 전후 모두 분리 신고와 불일치 0 → 자산 단위 유지로 충분.
+  - 주택 split(P1·P4 표본) 1,734행: 0행 변동. 입력 순서 갈림 158행은 수정 전후 같다(②-2 축).
+  - 같은 날 배분 행 5~7개(split 2파트 + 이익 3~4 + 차손) 32행: 분리 신고와 불일치 0 · 변동 0.
+- anchor `split-basic-deduction-units.anchor.test.ts` 6건(U-1~U-4 분리 신고 대조 · I-1·I-2 주입 단위).
+- 뮤테이션 5종:
+
+| 변형 | 결과 |
+|---|---|
+| M1 펼침 제거 | 잡힘(2건) |
+| M2 split 주입 무시 | 잡힘(1건, I-2) |
+| M3 C 자산 단위 식 복귀 | 잡힘(1건, U-2) |
+| M4 감면 파트 B 누락(§103② 1단계 위반) | 잡힘(1건, U-4 — §133 한도로 세액이 같아도 배분이 갈린다) |
+| M5 세액 단계에 파트 배분 미전달 | **살아남음** — 세 격자·추가 측정 전부 0행 차이. 측정 범위에서는 유리한 순서가 고른 파트 배분이 파트 안 배분(감면 외 먼저 → 세율 높은 파트부터)과 늘 같았다. 후보 평가와 세액 계산이 같은 배분을 쓰게 하는 정합 장치로 둔다(주입 동작은 I-2가 고정) |
