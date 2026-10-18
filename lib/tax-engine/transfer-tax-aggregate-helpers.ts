@@ -14,6 +14,7 @@ import { calculateProgressiveTax } from "./tax-utils";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { offsetLossesCore } from "./loss-offset-core";
 import { crossLossOffsetRateKey } from "./cross-loss-offset-rate-key";
+import type { ReducibleAfterLoss } from "./transfer-tax-aggregate-reducible-loss-share";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
   RateGroup,
@@ -181,9 +182,14 @@ export interface AssetRecord {
    * 차손 통산을 **파트 단위**로 할 비주택 토지·건물 split 자산의 파트 행(Q-F3a — `splitPartsForLossOffset`).
    * 영 §167의2① 「같은 세율을 적용받는 자산」을 파트마다 판정한다. 없으면 자산 한 행(`income`·`lossOffsetRateKey`).
    */
-  lossParts?: { income: number; rateKey: string }[];
+  lossParts?: { kind: string; income: number; rateKey: string }[];
   /** `lossParts`의 통산 후 양도소득금액 — 다건 세액이 파트 소득 안분 가중치로 쓴다(`partIncomeWeights`). */
   lossPartIncomeAfterOffset?: number[];
+  /**
+   * 영 §167의2② — 통산받은 차손 중 감면소득 몫을 뺀 세액감면형 B′(`transfer-tax-aggregate-reducible-loss-share.ts`).
+   * 없으면 통산 전 B 그대로다. 감면 단계·§103② 배분·자산별 표시가 모두 이 값을 읽는다(`bucketsOfRecord`).
+   */
+  reducibleAfterLoss?: ReducibleAfterLoss;
   taxableGain: number;
   lthd: number;
   income: number;

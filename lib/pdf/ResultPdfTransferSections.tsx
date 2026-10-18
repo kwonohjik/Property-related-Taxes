@@ -44,6 +44,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
     incomeAmount,
     reducibleIncome,
     (r.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
+    num(r.eligibleIncomeAfterLoss),
   );
   const new993 = r.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
   const new993Reducible = (new993?.isEligible && new993.reducibleTransferIncome) ? new993.reducibleTransferIncome : 0;
@@ -286,6 +287,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
       (num(p.income) ?? 0) as number,
       (num(p.reducibleIncome) ?? 0) as number,
       (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
+      num(p.eligibleIncomeAfterLoss),
     );
     const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
     if (np?.isEligible) {
@@ -382,6 +384,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
               propIncome,
               (num(p.reducibleIncome) ?? 0) as number,
               (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
+              num(p.eligibleIncomeAfterLoss),
             );
             const propNew993Reducible = (np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0;
             // 영 §163⑨ 단서 1호·2호 채택값 각주 — 화면 합산 신고서(`FilingFormTableAggregateHelpers` acqNotes)와 같은 leaf·문구(#11).

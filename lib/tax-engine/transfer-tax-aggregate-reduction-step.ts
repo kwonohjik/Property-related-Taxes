@@ -30,6 +30,7 @@ import type {
   TransferTaxItemInput,
 } from "./types/transfer-aggregate.types";
 import type { ClauseTaxEcho } from "./transfer-tax-aggregate-group-tax";
+import type { ReducibleAfterLoss } from "./transfer-tax-aggregate-reducible-loss-share";
 
 /**
  * 자산 결과에서 §90①의 감면대상소득 버킷을 꺼낸다 — 없으면 단일 버킷으로 합성한다.
@@ -56,9 +57,24 @@ function sumBucketIncome(buckets: ReducibleIncomeBucket[]): number {
  * 적용하려면 같은 B가 필요하다. 이 모듈이 이미 `nonReducibleIncome` 총액으로 쓰고 있던 값이라
  * **여기서 내보내 단일 소스로 삼는다** — 배분 쪽에서 따로 유도하면 표시와 감면액이 갈린다.
  */
-export function reducibleIncomeOf(result: TransferTaxResult): number {
-  if (result.isExempt) return 0;
-  return sumBucketIncome(bucketsOf(result));
+export function reducibleIncomeOf(record: AggregateAssetRecord): number {
+  if (record.result.isExempt) return 0;
+  return sumBucketIncome(bucketsOfRecord(record));
+}
+
+/**
+ * 감면액 산식·§103② 배분·자산별 표시가 읽는 B — 영 §167의2② 반영 후(B′, `transfer-tax-aggregate-reducible-loss-share.ts`).
+ * ⚠️ 감면 재계산 경로의 **진입 판정**은 통산 전 값(`result.reducibleIncome`)으로 한다 —
+ *    B′가 0이라고 빠지면 레거시 합산이 단건 감면액을 그대로 더한다(계획서 §4.4 C-1).
+ */
+export function bucketsOfRecord(record: AggregateAssetRecord): ReducibleIncomeBucket[] {
+  return record.reducibleAfterLoss?.buckets ?? bucketsOf(record.result);
+}
+
+/** 자산 결과 `reducibleIncome`의 B′ 판(§77 계열은 감면율이 박힌 값) — 자산별 배분 가중치·표시용. */
+export function reducibleIncomeOfRecord(record: AggregateAssetRecord): number {
+  if (record.result.isExempt) return 0;
+  return record.reducibleAfterLoss?.reducibleIncome ?? record.result.reducibleIncome ?? 0;
 }
 
 /**
@@ -133,7 +149,7 @@ function reductionAttributionOf(
 }
 
 /** §77 감면소득이 생긴 파트 종류(5B `partWise`). */
-const reducedPartKindsOf = (partWise: { eligiblePart: "land" | "building" }): readonly PartKind[] =>
+export const reducedPartKindsOf = (partWise: { eligiblePart: "land" | "building" }): readonly PartKind[] =>
   partWise.eligiblePart === "land" ? ["land", "non_business_land"] : ["building"];
 const partBasicOfKinds = (kinds: readonly PartKind[], basicByKind: Partial<Record<PartKind, number>>) =>
   kinds.reduce((s, k) => s + (basicByKind[k] ?? 0), 0);
@@ -200,7 +216,7 @@ function perClauseRowsOf(
     let basic = 0;
     const buckets: ReducibleIncomeBucket[] = [];
     for (const i of members) {
-      const own = bucketsOf(assetRecords[i].result);
+      const own = bucketsOfRecord(assetRecords[i]);
       const b = sumBucketIncome(own);
       const c =
         reductionAttributionOf(i, assetRecords[i].result, ctx)?.basic ??
@@ -228,6 +244,8 @@ function perClauseRowsOf(
 export interface AggregateAssetRecord {
   item: TransferTaxItemInput;
   result: TransferTaxResult;
+  /** 영 §167의2② 반영 후 B′ — 없으면 통산 전 B(`bucketsOfRecord`). */
+  reducibleAfterLoss?: ReducibleAfterLoss;
 }
 
 export interface AggregateReductionArgs {
@@ -334,13 +352,14 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   /** §90①의 자산별 C — 배분 기본공제 중 그 자산의 비감면소득이 흡수하지 못한 잔여(`perClauseRowsOf`와 같은 식). */
   const basicOnReducibleOf = (idx: number) =>
     reducedPartBasicOf(assetRecords[idx].result, args.assetPartBasic[idx]) ??
-    Math.max(0, (allocatedBasic[idx] ?? 0) - Math.max(0, taxableAfterReduction[idx] - sumBucketIncome(bucketsOf(assetRecords[idx].result))));
+    Math.max(0, (allocatedBasic[idx] ?? 0) - Math.max(0, taxableAfterReduction[idx] - sumBucketIncome(bucketsOfRecord(assetRecords[idx]))));
 
   assetRecords.forEach((r, idx) => {
     if (r.result.isExempt) return;
     const type = r.result.reductionTypeApplied;
-    const income = r.result.reducibleIncome ?? 0;
-    if (!type || income <= 0) return;
+    // 진입은 통산 전 값으로 판정하고(C-1), 누적은 영 §167의2② 반영 후 B′로 한다.
+    if (!type || (r.result.reducibleIncome ?? 0) <= 0) return;
+    const income = reducibleIncomeOfRecord(r);
     const existing =
       reducibleByType.get(type) ??
       { income: 0, ratedIncome: 0, assetIds: [], idx: [], rates: new Set<number>(), buckets: [] };
@@ -352,7 +371,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     const rate = r.result.aggregateReductionRate ?? 1;
     existing.income += income;
     existing.ratedIncome += rate === 1 ? income : applyRate(income, rate);
-    existing.buckets.push(...bucketsOf(r.result));
+    existing.buckets.push(...bucketsOfRecord(r));
     existing.assetIds.push(r.item.propertyId);
     existing.idx.push(idx);
     existing.rates.add(rate);
@@ -409,7 +428,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
     let cApplied = 0;
     let numerator = 0;
     for (const i of entry.idx) {
-      const own = bucketsOf(assetRecords[i].result);
+      const own = bucketsOfRecord(assetRecords[i]);
       const c = basicOnReducibleOf(i);
       cApplied += Math.min(c, sumBucketIncome(own));
       // §90①은 `(B − C) × E` — **C를 뺀 뒤** 율을 곱한다. 그래서 버킷 안에서 절사한다.
@@ -652,7 +671,7 @@ export function allocationWeightOf(
     };
   }
   return (idx) => ({
-    own: assetRecords[idx].result.reducibleIncome ?? 0,
+    own: reducibleIncomeOfRecord(assetRecords[idx]),
     total: entry.totalReducibleIncome,
   });
 }
@@ -684,7 +703,8 @@ export function allocateAggregateReductions(
     const groupIdx = new Map<string, number[]>();
     assetRecords.forEach((r, idx) => {
       const type = r.result.reductionTypeApplied;
-      const reducible = r.result.isExempt ? 0 : r.result.reducibleIncome ?? 0;
+      // B′가 0인 자산(받은 차손이 감면소득을 다 덮음)은 배분 대상이 아니다 — 말단 잔액을 받으면 안 된다.
+      const reducible = reducibleIncomeOfRecord(r);
       if (!type || reducible <= 0) return;
       const entry = reductionBreakdown.find((b) => b.type === type);
       if (!entry || entry.totalReducibleIncome <= 0) return;

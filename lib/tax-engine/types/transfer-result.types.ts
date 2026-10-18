@@ -253,6 +253,10 @@ export interface TransferTaxResult {
    */
   reducibleIncome?: number;
   /**
+   * 다건 어댑터 전용(`breakdownToFilingResult`) — 영 §167의2② 반영 후 §90①의 B(별지 84호 부표1 ⑲). 단건 엔진은 싣지 않는다.
+   */
+  eligibleIncomeAfterLoss?: number;
+  /**
    * 다건 합산 M-8이 `reducibleIncome`에 **추가로** 곱해야 할 감면율 (미설정 = 1).
    * §97 계열·legacy 장기임대·legacy 신축·하이브리드는 별지84호 부표1 ⑲ 표시 계약 때문에
    * `reducibleIncome`에 감면율을 곱하지 않으므로, 그 잔여 감면율을 여기로 운반한다.

@@ -653,6 +653,7 @@ export function buildRows(
       incomeAmount,
       result.reducibleIncome ?? 0,
       result.replacementLandDetail?.eligibleTransferIncome,
+      result.eligibleIncomeAfterLoss,
     ),
   );
   // 소득금액차감방식(§90②) 5년 안분 차감액 — §99의3·§99·§98의8·하이브리드 공용.

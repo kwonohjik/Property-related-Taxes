@@ -190,6 +190,45 @@ describe("다건 감면 카드 — 「합산 감면대상소득」은 §90①의
     );
   });
 
+  it("E7: 차손을 통산받은 감면 자산 — 카드 B · 건별 표 · 신고서 ⑲가 모두 영 §167의2② 반영 후 값이다 (Q-3)", () => {
+    // 양도소득금액 288,000,000 − 받은 차손 100,000,000 = 188,000,000 (감면소득 전액이라 차손 전액이 감면분)
+    const land = {
+      ...(baseTransferInput({
+        propertyType: "land", isOneHousehold: false, householdHousingCount: 0, transferPrice: 600_000_000,
+        acquisitionPrice: 200_000_000, acquisitionDate: D("2010-01-01"), transferDate: D("2024-06-01"), reductions: [EXPROPRIATION],
+      } as never) as object),
+      propertyId: "A", propertyLabel: "A",
+    };
+    const house = {
+      ...(baseTransferInput({
+        propertyType: "housing", isOneHousehold: false, householdHousingCount: 2, transferPrice: 1_900_000_000,
+        acquisitionPrice: 2_000_000_000, acquisitionDate: D("2017-02-20"), transferDate: D("2024-06-01"),
+      } as never) as object),
+      propertyId: "H", propertyLabel: "H",
+    };
+    const agg = calculateTransferTaxAggregate(
+      { taxYear: 2024, annualBasicDeductionUsed: 0, properties: [land as never, house as never] },
+      rates,
+    );
+    expect(agg.reductionBreakdown[0].eligibleIncomeBeforeRate).toBe(188_000_000);
+    const nineteen = agg.properties.reduce(
+      (s, p) =>
+        s +
+        reductionEligibleIncome(
+          p.reductionType,
+          p.income,
+          p.reducibleIncome ?? 0,
+          p.replacementLandDetail?.eligibleTransferIncome,
+          p.eligibleIncomeAfterLoss,
+        ),
+      0,
+    );
+    expect(nineteen).toBe(188_000_000);
+    const { map, rows } = readCard(agg);
+    expect(map.get("합산 감면대상소득 (감면율 前)")).toBe("188,000,000");
+    expect(rows.find((r) => r[0] === "A")![3]).toBe("188,000,000"); // 종전 288,000,000(통산 전 양도소득금액)
+  });
+
   it("E6: 옛 저장 결과(신규 필드 없음)에서도 죽지 않고 종전 값으로 폴백한다", () => {
     const agg = aggregate([EXPROPRIATION]);
     const stale = {
