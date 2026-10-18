@@ -183,7 +183,7 @@ describe("5B — 파트 입력 게이트 (`buildPublicExpropriationParts`)", () 
   const part = (gain: number, lthd: number) => ({ gain, longTermDeduction: lthd }) as SplitGainResult["land"];
   const split = { land: part(200_000_000, 0), building: part(150_000_000, 45_000_000) } as SplitGainResult;
   const d = (s: string) => new Date(s);
-  const ok = { isSeparateAcquisition: true, landAcquisitionDate: d("2024-01-10"), acquisitionDate: d("2010-03-02"), selfOwns: "both" as const };
+  const ok = { isSeparateAcquisition: true, landAcquisitionDate: d("2024-01-10"), acquisitionDate: d("2010-03-02"), selfOwns: "both" as const, transferDate: d("2026-06-30") };
 
   it("별개취득 · 둘 다 본인 소유 → 파트 입력(양도소득금액 = 과세 양도차익 − 장특)", () => {
     expect(buildPublicExpropriationParts(ok, split)).toEqual({

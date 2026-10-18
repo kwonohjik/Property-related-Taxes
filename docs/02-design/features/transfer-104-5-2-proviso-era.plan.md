@@ -1,4 +1,4 @@
-# §104⑤2호 단서 적용 시기(2019.1.1. 양도분부터) — 수정 계획서 v0.1
+# §104⑤2호 단서 적용 시기(2019.1.1. 양도분부터) — 수정 계획서 v1.0
 
 작성 2026-10-18 · 선행 [[transfer-104-5-adjacent-era-gates.review.md]] §1.3·§2.3(A1) · 워크트리 `a1-proviso` · 브랜치 `plan/sec104-5-2-proviso-era`
 
@@ -8,7 +8,7 @@
 >
 > - **확정(사용자 결정 2026-10-18)**: 단서는 부칙 문언대로 **2019.1.1. 이후 양도분부터** 적용한다. 「명확화(그 전에도 같은 결과)」 독법은 채택하지 않는다. 다시 논의하지 않는다.
 > - **현행 결함**: 엔진은 날짜 분기 없이 **모든 양도일에 단서 방식**(같은 «해당 호 집합» 자산을 합산한 뒤 호별로 큰 것)을 적용한다. 2019년 전 양도분에도 적용된다.
-> - **남은 결정 1건(Q-1)**: 2019년 전에 «둘 이상의 호에 해당하는 자산»을 어떻게 계산하는가. **β(자산별로 큰 세액을 따로 합산) 권고.** α(승자 호끼리 합산)는 1원 차이로 세액이 **19,866,669원** 뛰는 절벽이 생긴다(§3.3).
+> - **Q-1 결정(2026-10-18 사용자): β** — 2019년 전 «둘 이상의 호에 해당하는 자산»은 자산별로 큰 세액을 따로 합산한다. Q-2(문구 없음)·Q-3(한 PR)은 권고안대로. α(승자 호끼리 합산)는 1원 차이로 세액이 **19,866,669원** 뛰는 절벽이 생긴다(§3.3).
 > - **실측 영향(β)**: 2018년 1년 미만 3주택 ⑦ 사례에서 **−6,000,000 ~ −23,400,000**. 2017년 단기 비사업용 토지 2필지 사례에서 **−3,000,000**. 토지·건물 1~2년 사례는 §104⑤1호(합산 누진)가 이겨 **최종 세액 변화 0**.
 > - 입력·결과 필드는 바꾸지 않는다(엔진 내부 변경). 14개 동기화 지점은 해당하지 않는다.
 
@@ -210,3 +210,37 @@ export function provisoMergeId(key: string, candidates: readonly RateClause[] | 
 | **Q-1** | 2019 전 복수 호 자산 모델 | **β** — 자산별로 큰 세액을 따로 합산(합산하지 않음) |
 | **Q-2** | 화면 문구 | **ⓐ** — 추가하지 않음 |
 | Q-3 | PR 단위 | 엔진 + anchor + 주석을 **한 PR**로(입력·화면 변경 없음) |
+
+---
+
+## 8. Do 기록 (v1.0 · 2026-10-18)
+
+**결정**: Q-1 β(사용자) · Q-2 ⓐ 문구 없음 · Q-3 한 PR.
+
+### 8.1 변경
+
+| 파일 | 내용 |
+|---|---|
+| `lib/tax-engine/data/sec104-5-2-proviso-era.ts` (신규) | `SEC104_5_2_PROVISO_FROM = "2019-01-01"` · `isSec104_5_2ProvisoInForce(양도일)` — 로컬 달력 일자 키(`nbl-rate-deferral-era.ts`와 같은 규약) |
+| `lib/tax-engine/transfer-tax-rate-clause.ts` | `provisoMergeId(key, candidates, transferDate, unit)` — 시행 전 · 후보 2개 이상이면 `키#단위`, 아니면 키 그대로. `clauseBucketKey` 주석에 시행일 |
+| `transfer-tax-aggregate-group-tax.ts` `bucketIdOf` (S-1) | 버킷 식별자 = `provisoMergeId(...)`(분양권 `presale:` 접두는 그 위에). `key`는 그대로 → 감면 호 라벨 불변 |
+| `transfer-tax-split-rate.ts` `clauseGroups` (S-2) | 파트 묶음 키 = `provisoMergeId(..., input.transferDate, i)` |
+| `public-expropriation-reduction.ts` `partClauseBasisOf` (S-3) | S-2와 같은 식. `buildPublicExpropriationParts` 입력 Pick에 `transferDate` 추가(호출부 2곳은 이미 실어 옴) |
+| `__tests__/api/transfer.route.expropriation-77-part-wise-5b.anchor.test.ts` | 위 Pick 변경으로 픽스처 `ok`에 `transferDate`(파일 기준 양도일 2026-06-30) 1개 추가 — 단언 불변 |
+
+설계 §4 D-2에서 S-3을 «같은 식»으로 둔 그대로 구현했다. D-3대로 `solo-*`를 쓰지 않고 식별자에만 `#단위`를 붙였다.
+
+### 8.2 검증
+
+- **anchor** `__tests__/tax-engine/transfer/aggregate-104-5-2-proviso-era.anchor.test.ts` 16건 — RED 7건(E-1·E-3·E-4·E-5·E-6·E-7·E-8) → GREEN. E-2·E-5b·E-8b와 식별자 단위 테스트 4건은 수정 전에도 통과(보존 고정).
+  - §5.1 E-9(감면 라벨)는 실제 신고로 도달하지 않는다 — §77은 「소급 2년 이전 취득」이 요건이라 복수 호(단기) 감면 자산이 나오지 않는다. 대신 `buildPublicExpropriationParts`에 파트 판정을 직접 넣어 S-3 미러를 구조로 고정했다(2건).
+  - E-8 실측: 단건 주택 split(토지 3천만·건물 3억, 둘 다 1년 미만 · 조정 3주택) 2018 → 166,600,000(단서 172,600,000), 2019 → 172,600,000.
+- **route anchor** `__tests__/api/transfer.route.multi-104-5-2-proviso-era.anchor.test.ts` 2건 — 화면 폼 → `callMultiTransferTaxAPI` → 다건 route: 2018-10-01 166,600,000 · 2019-01-02 172,600,000.
+- **뮤테이션 7종 전부 KILLED**: 시행일 2018·2020 · 경계 `>=`→`>` · `>= 2`→`>= 1`(단일 호까지 분리) · S-1 미적용 · S-2 미적용 · S-3 미러 누락.
+- 범위 실행 `__tests__/tax-engine/ __tests__/calc/ __tests__/api/` **2,179파일 통과**(1 skipped) · tsc 0 · lint 0 error(기존 경고 `PART_RATE_GROUP` 미사용 1건, 이번 변경 무관).
+- 화면 변경이 없어 Playwright 확인은 하지 않았다 — 폼 변환 경로는 route anchor가 대신한다. 사람이 브라우저로 직접 하는 확인도 하지 않았다.
+
+### 8.3 남김
+
+- `transfer-tax-split-rate.ts` 758줄(+7) — 750 위험구간. 이번 PR에서는 분리하지 않았다(별건).
+- W-1(2019 전 복수 호 자산 해석례) · W-2(§104④ 각 호 `RateClause` 부재) · W-3(2018.4.1. 전 1년 미만 주택 실측)은 그대로.
