@@ -1,4 +1,4 @@
-# 겸용주택 신고서 토지·건물 열 — 장기보유특별공제·보유분·거주분 분해 정밀화 계획서 v0.1
+# 겸용주택 신고서 토지·건물 열 — 장기보유특별공제·보유분·거주분 분해 정밀화 계획서 v1.0
 
 작성 2026-10-18 · 워크트리 `filing-lthd-split` · 브랜치 `plan/filing-mixed-lthd-part-split` · **기준 #2243**(겸용 통칙 95-0…1, 미머지 — 이 브랜치는 그 위에 쌓았다) · 선행 계획서 `transfer-mixed-use-lthd-circular-95-0-1.plan.md` Q-2
 
@@ -9,6 +9,7 @@
 > - **세액은 바뀌지 않는다.** 신고서 표시만의 문제다.
 > - **원인**: 엔진은 주택분·상가분의 토지·건물 장특을 **파트별 공제율로 따로 계산해 더하지만** 결과에는 합계만 싣는다(재산세제과-915 회신 방식일 때만 예외). 그래서 신고서(`FilingFormTableFinancials.ts` `fourPartFinancials` · `FilingFormTableHelpers.ts:565-597`)가 열 값을 다시 만든다. ① 장특·양도소득금액은 **양도차익 비율로** 토지·건물 열에 나누고, ② 보유분·거주분은 **건물 보유개월·거주개월로 다시 계산한 비율**(`splitLtDeduction`)로 나눈 뒤 다시 양도차익 비율로 나눈다.
 > - **어긋남은 보유·거주분보다 넓다.** 토지·건물 공제율이 다르면 열별 장특·양도소득금액부터 틀린다. 상가분 열도 같다. 거주분 **합계 열**까지 틀리는 경우가 있다(아래 B: 35,423,601 vs 엔진 28,177,494).
+> - **결정(사용자 2026-10-18)**: Q-1~Q-4 권고대로. 구현 기록 §7.
 > - **방향**: 엔진이 파트별 과세 양도차익·공제율·공제액·보유분·거주분을 echo하고, 신고서는 그것을 그대로 읽는다. 일반 분리취득 경로(`split-2col`)가 이미 이렇게 한다(`FilingFormTableHelpers.ts:599-`).
 
 ---
@@ -125,9 +126,33 @@ interface MixedPartLthdEcho {
 
 ## 6. 결정 필요
 
-| Q | 질문 | 권고 |
+| Q | 질문 | 권고 → **결정(2026-10-18 사용자: 권고대로)** |
 |---|---|---|
 | Q-1 | 범위를 보유·거주분 행으로 한정할지, 같은 원인인 열별 장특·양도소득금액·과세대상 양도차익(주택·상가)까지 넓힐지 | **넓힌다.** 원인과 고칠 함수가 같고, 보유·거주분만 고치면 「보유분 + 거주분 ≠ 그 열 장특」이 된다 |
 | Q-2 | 보유·거주 분해 규약 — 일반 분리취득 경로와 같은 정수 % 분해로 통일하고 합계 echo를 파트 합으로 바꿀지 | **통일한다.** 한 화면의 두 표가 같은 규약을 써야 한다. 1원 차이가 생기는 입력은 Do에서 스캔해 기록한다 |
 | Q-3 | 상세명세서 주택분 장특 산식 문구(L-1)도 파트별로 풀어 쓸지 | **별건.** 금액은 이미 엔진 합계라 맞고 문구만의 문제다 |
 | Q-4 | #2243 머지 전에 진행할지 | **#2243 머지 후 rebase해서 진행한다.** 토지분 표1 승(B) 같은 사례가 #2243에서 생긴다 |
+
+---
+
+## 7. Do 기록 (2026-10-18)
+
+| 지점 | 변경 |
+|---|---|
+| `lib/tax-engine/types/transfer-mixed-use.types.ts` | `MixedPartLthdEcho`·`MixedPartLthd` 추가. `MixedUseHousingPart.partLthd?`·`MixedUseCommercialPart.partLthd?` |
+| `lib/tax-engine/transfer-tax-mixed-use-inheritance.ts` `buildHousingLthdEcho` | 파트마다 `deriveSplitLthdEcho`(일반 분리취득 경로와 같은 정수 % 분해)로 나누고 합계 보유·거주분 = 파트 합. 대표 율 echo도 정수 % 값(종전 double 뺄셈). 새 `mixedPartLthdEcho`(주택·상가 공용). 고아가 된 `applyRate` import 제거 |
+| `lib/tax-engine/transfer-tax-mixed-use-helpers.ts` | 주택분: 파트 공제액을 넘겨 `partLthd`를 받는다. 상가분: 파트 공제액을 변수로 빼서 `landIncomeAmount`·`buildingIncomeAmount`와 `partLthd`가 같은 값을 쓴다. `exemptCommercialPartAsHouse`(OH-17)는 스프레드로 실려 온 상가 `partLthd`를 지운다(장특 0인데 낡은 값이 남는 것을 막음) |
+| `components/calc/results/transfer/FilingFormTableFinancials.ts` | `fourPartFinancials`: `partLthd`가 있으면 주택분 과세대상 양도차익·장특·양도소득금액 열과 상가분 장특·양도소득금액 열을 echo에서 읽는다. 상가 소득금액 열 = 그 열 양도차익(음수 그대로) − 파트 장특. 새 `fourPartLthdSplitRows`: 보유·거주 기간분 열을 echo에서 읽고 합계 = 열 합. echo가 없으면 종전 근사(코드는 Helpers에서 옮김) |
+| `components/calc/results/transfer/FilingFormTableHelpers.ts` | 보유·거주분 블록을 `fourPartLthdSplitRows` 호출로 대체(730 → 699줄) |
+
+**계획 대비 변경**
+
+- 계획서 §3.1의 «상가분 불변식 가드»는 넣었다가 뺐다. 상가 한쪽 차익이 음수면 가드가 돌려보내는 비율 근사가 토지 비율 > 1로 더 틀린 값을 냈다(뮤테이션 M-7이 살아남아 발견). 대신 상가 소득금액 열을 「열 양도차익 − 파트 장특」으로 계산해 열 합 = 상가 소득금액이 되게 했다(상가 합계가 음수라 0으로 막힌 경우만 예외).
+- Q-2 1원 스캔: 6개 조합 × 400개 양도가액 = 2,400건 중 **77건(3.2%)**에서 합계 거주분이 종전 규약(`차익 × (총율 − 보유율)`, double 뺄셈)보다 1~2원 작다. 전부 공제율이 double 0.68(보유 36% + 거주 32%)인 조합(건물 2017·거주 8년)이었다. 예: 양도가액 2,387,487,543 → 종전 1,613,311 · 새 1,613,310.
+
+**검증**
+
+- 신규 `__tests__/components/mixed-use-filing-lthd-part-split.anchor.test.ts` 12건: §2 A~D 열 값(원 단위) · A~C 항등식(열 합 = 합계, 열마다 보유 + 거주 = 장특, 합계 장특 = 결과) · 옛 결과 fallback(§2 «신고서» 값 그대로) · 상가 건물 차익 음수 · OH-17(echo 삭제·상가 열 0) · 엔진 파트 합 = 합계.
+- 기존 갱신 `mixed-use-appurtenant-excess-filing-form-f35.test.ts`: 상가 열 1원(열 합이 합계와 맞게 됨) 4건 · B-5 보유분 합계(종전엔 테스트가 폼 데이터 없이 그려 장특 전부를 보유분으로 표시 → 엔진 echo의 표2 거주분이 분리됨).
+- 뮤테이션 8종 전부 KILLED.
+- **사람의 브라우저 수동 확인은 하지 않았다.**

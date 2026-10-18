@@ -158,7 +158,7 @@ export { holdingMonthsFromDates, fmtDate, fmtPeriod, holdingPeriodFromDates, get
 
 // ── 행 정의 생성 ───────────────────────────────────────────────
 
-import { fourPartFinancials, splitTwoColFinancials, splitNonBusinessLandNotes } from "./FilingFormTableFinancials";
+import { fourPartFinancials, fourPartLthdSplitRows, splitTwoColFinancials, splitNonBusinessLandNotes } from "./FilingFormTableFinancials";
 import { hasRentalSplitColumns, rentalSplitTwoColFinancials } from "./FilingFormTableRentalSplit";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
@@ -563,39 +563,8 @@ export function buildRows(
     : (isRHTable1Only ? false : isTable2Applied(result.steps, residenceMs >= 24));
 
   if ((mode === "fourpart" || mode === "mixed-4col") && mu) {
-    const hpSplit = splitLtDeduction(mu.housingPart.longTermDeductionAmount, holdingMs, residenceMs, useTable2);
-    const cpSplit = { holdingAmount: mu.commercialPart.longTermDeductionAmount, residenceAmount: 0 };
-    const hpLandRatio = mu.housingPart.transferGain > 0 ? mu.housingPart.landTransferGain / mu.housingPart.transferGain : 0.5;
-    const hpBuildRatio = 1 - hpLandRatio;
-    const cpLandRatio = mu.commercialPart.transferGain > 0 ? mu.commercialPart.landTransferGain / mu.commercialPart.transferGain : 0.5;
-    const cpBuildRatio = 1 - cpLandRatio;
-    // 배율초과 비사업용토지 장특은 표1 **보유분** 단독(거주분 없음) — 보유 기간분 행에 싣는다.
-    // 누락하면 「장기보유특별공제 합계 ≠ 보유분 + 거주분」이 되어 합계 열 내부가 어긋난다.
-    const nbLtDeduction = mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0;
-    setNum("ltHoldingPart", "total", hpSplit.holdingAmount + cpSplit.holdingAmount + nbLtDeduction);
-    setNum("ltResidencePart", "total", hpSplit.residenceAmount);
-    // 재산세제과-915 회신 방식(고가주택 + 배율 초과)이면 주택분 토지·건물의 장특이 양도차익 비율이 아니라 **엔진 echo**(`highValueExcessRuling`)로 갈린다 —
-    // 그 비율로 보유·거주분을 나누고 건물 열이 잔액을 흡수한다(위 「장기보유특별공제」 열과 같은 값 · 합 불변식).
-    const ruling = mu.housingPart.highValueExcessRuling;
-    const hpTotalLt = mu.housingPart.longTermDeductionAmount;
-    const splitByRuling = (amount: number) => {
-      const land = hpTotalLt > 0 ? Math.floor((amount * ruling!.landLongTermDeduction) / hpTotalLt) : 0;
-      return { land, building: amount - land };
-    };
-    const hpHolding = ruling
-      ? splitByRuling(hpSplit.holdingAmount)
-      : { land: Math.floor(hpSplit.holdingAmount * hpLandRatio), building: Math.floor(hpSplit.holdingAmount * hpBuildRatio) };
-    const hpResidence = ruling
-      ? splitByRuling(hpSplit.residenceAmount)
-      : { land: Math.floor(hpSplit.residenceAmount * hpLandRatio), building: Math.floor(hpSplit.residenceAmount * hpBuildRatio) };
-    setNum("ltHoldingPart", "housingLand", hpHolding.land + nbLtDeduction);
-    setNum("ltHoldingPart", "housingBuilding", hpHolding.building);
-    setNum("ltHoldingPart", "commercialLand", Math.floor(cpSplit.holdingAmount * cpLandRatio));
-    setNum("ltHoldingPart", "commercialBuilding", Math.floor(cpSplit.holdingAmount * cpBuildRatio));
-    setNum("ltResidencePart", "housingLand", hpResidence.land);
-    setNum("ltResidencePart", "housingBuilding", hpResidence.building);
-    setNum("ltResidencePart", "commercialLand", 0);
-    setNum("ltResidencePart", "commercialBuilding", 0);
+    // 엔진 파트 echo가 정본, 옛 결과는 종전 근사 — `FilingFormTableFinancials.ts` `fourPartLthdSplitRows`.
+    fourPartLthdSplitRows(mu, holdingMs, residenceMs, useTable2, setNum);
   } else if (mode === "split-2col" && sp) {
     // 보유분·거주분은 **엔진 echo가 정본**이다(E-1 — 파트별 정수 % 분해, 합 = 파트 공제액). 종전에는 파트 공제액을 여기서
     // `splitLtDeduction`(부동소수 율 재안분)으로 다시 쪼개 1원 어긋날 수 있었다. echo가 없는 구 이력은 종전대로 재안분한다.

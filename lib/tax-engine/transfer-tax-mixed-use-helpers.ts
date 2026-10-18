@@ -12,6 +12,7 @@ import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } fro
 import {
   calcLongTermRate,
   buildHousingLthdEcho,
+  mixedPartLthdEcho,
 } from "./transfer-tax-mixed-use-inheritance";
 import type { TransferTaxInput } from "./types/transfer.types";
 /**
@@ -427,7 +428,8 @@ export function buildHousingPart(
   // 단일 공제율은 "혼합" — 대표값을 건물 기준으로 표시 (UI용)
   const longTermDeductionRate = buildingDedRate;
 
-  // echo — 보유/거주 기간분 분리(표시 전용·세액 불변). 계산은 inheritance leaf에 위임(800줄 정책).
+  // echo — 파트별(토지·건물) 과세 양도차익·공제율·공제액·보유/거주 기간분(표시 전용·세액 불변). 합계 보유/거주분 = 파트 합.
+  //   계산은 inheritance leaf에 위임(800줄 정책). 신고서 토지·건물 열이 `partLthd`를 그대로 읽는다.
   const lthdEcho = buildHousingLthdEcho({
     proratedLandGain,
     proratedBuildingGain,
@@ -440,7 +442,8 @@ export function buildHousingPart(
         : calcLongTermRate(gainSplit.buildingHoldingYears, 0, true, false, transferDate)
       : calcLongTermRate(gainSplit.landHoldingYears, 0, useTable2, housingLthdExcluded),
     buildingHoldingRate: calcLongTermRate(gainSplit.buildingHoldingYears, 0, useTable2, housingLthdExcluded),
-    longTermDeductionAmount,
+    landDeductionAmount,
+    buildingDeductionAmount,
     buildingHoldingYears: gainSplit.buildingHoldingYears,
     residenceYears,
   });
@@ -517,9 +520,9 @@ export function buildCommercialPart(
   const landDedRate = calcLongTermRate(gainSplit.landHoldingYears, 0, false, isUnregistered);
   const buildingDedRate = calcLongTermRate(gainSplit.buildingHoldingYears, 0, false, isUnregistered);
 
-  const longTermDeductionAmount =
-    applyFairMarketRatio(Math.max(gainSplit.landGain, 0), landDedRate) +
-    applyFairMarketRatio(Math.max(gainSplit.buildingGain, 0), buildingDedRate);
+  const landDeductionAmount = applyFairMarketRatio(Math.max(gainSplit.landGain, 0), landDedRate);
+  const buildingDeductionAmount = applyFairMarketRatio(Math.max(gainSplit.buildingGain, 0), buildingDedRate);
+  const longTermDeductionAmount = landDeductionAmount + buildingDeductionAmount;
 
   const longTermDeductionRate = calcLongTermRate(holdingYears, 0, false, isUnregistered);
 
@@ -529,11 +532,13 @@ export function buildCommercialPart(
     transferGain: gainSplit.totalGain,
     // 파트별 양도소득금액 — §104①2·3호 단기세율은 토지·건물 각각의 보유기간으로 갈린다.
     // 장특이 이미 파트별(landDedRate·buildingDedRate)이므로 같은 축으로 노출한다(재도출 금지).
-    landIncomeAmount: Math.max(0, gainSplit.landGain - applyFairMarketRatio(Math.max(gainSplit.landGain, 0), landDedRate)),
-    buildingIncomeAmount: Math.max(
-      0,
-      gainSplit.buildingGain - applyFairMarketRatio(Math.max(gainSplit.buildingGain, 0), buildingDedRate),
-    ),
+    landIncomeAmount: Math.max(0, gainSplit.landGain - landDeductionAmount),
+    buildingIncomeAmount: Math.max(0, gainSplit.buildingGain - buildingDeductionAmount),
+    // 파트별 장특 echo(표시 전용) — 표1이라 거주분 0. 신고서 상가 토지·건물 열이 그대로 읽는다.
+    partLthd: {
+      land: mixedPartLthdEcho(gainSplit.landGain, landDedRate, landDedRate, landDeductionAmount),
+      building: mixedPartLthdEcho(gainSplit.buildingGain, buildingDedRate, buildingDedRate, buildingDeductionAmount),
+    },
     landTransferGain: gainSplit.landGain,
     buildingTransferGain: gainSplit.buildingGain,
     landTransferPrice: gainSplit.landTransferPrice,
@@ -596,6 +601,8 @@ export function exemptCommercialPartAsHouse(
       buildingIncomeAmount: 0,
       longTermDeductionRate: 0,
       longTermDeductionAmount: 0,
+      // 위 스프레드가 실어 온 상가 파트 장특 echo는 더 이상 사실이 아니다(장특 0) — 남기지 않는다. 신고서는 이 경우 자체 분기를 쓴다.
+      partLthd: undefined,
       incomeAmount: landIncomeAmount,
       deemedHouseBy154_3Main: true,
     },
