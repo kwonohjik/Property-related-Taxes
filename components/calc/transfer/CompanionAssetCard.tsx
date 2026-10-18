@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useUnifiedRateBadge } from "./CompanionAssetCardNewConstruction";
 import { getAssetDateOrderError } from "@/lib/calc/transfer-tax-validate-asset";
+import { soleSplitRightJudgmentFacts } from "@/lib/calc/sole-split-right-judgment-facts";
 import { BurdenedGiftTrancheBasisBlock } from "./BurdenedGiftTrancheBasisBlock";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import { ASSET_KIND_LABELS } from "./asset-labels";
@@ -149,10 +150,14 @@ export function CompanionAssetCard({
    * ⚠️ **`assetKind` 하나만** 덮는다. 병합 자산 전체를 넘기면 ③의 `onChange`가 물건-수준 값을
    *    지분 카드에서 편집하는 경로를 열어 primary와 갈라진다(설계 D4-2 ㉯).
    *    API·validate 쪽 동일 규칙은 `mergePrimaryBasic`이 담당한다 — **같은 축**이다.
+   *
+   * 예외 — 조합원입주권 §89①4호 판정 선언 6필드도 덮는다(`soleSplitRightJudgmentFacts`). 판정 메뉴만 받는 값이라
+   *    계산기에는 편집 위젯이 없고(읽기 전용 요약만), ④가 같은 함수로 첫 카드 값을 보낸다 — 덮지 않으면 이 카드의
+   *    요약이 엔진이 쓰지 않는 빈 값을 보여 준다.
    */
   const acquisitionAsset =
     hideInheritedSections && primaryAsset
-      ? { ...asset, assetKind: primaryAsset.assetKind }
+      ? { ...asset, assetKind: primaryAsset.assetKind, ...soleSplitRightJudgmentFacts(asset, primaryAsset) }
       : asset;
   /**
    * 카드 제목의 자산종류 — 지분 companion은 **primary값**으로 표시한다.
