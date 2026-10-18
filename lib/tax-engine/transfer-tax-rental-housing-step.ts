@@ -574,6 +574,9 @@ export function runRentalHousingExceptionStep(
     surchargeType: rheTaxResult.surchargeType,
     surchargeRate: rheTaxResult.surchargeRate,
     isSurchargeSuspended: rheTaxResult.surchargeSuspended,
+    // 비사업용 토지(배율 초과 파트) 8호 중과 배제 사유 echo — 일반 경로(`transfer-tax-normal-return.ts`)와 같은 필드(F-2). 세액 불변.
+    nblSurchargeExcluded: rheTaxResult.nblSurchargeExcluded,
+    nblSurchargeExcludedBy: rheTaxResult.nblSurchargeExcludedBy,
     rateSurchargeStatutoryExcluded: multiHouseSurchargeResult?.rateSurchargeStatutoryExcluded,
     multiHouseSurchargeEvaluation: multiHouseSurchargeResult,
     /**

@@ -88,7 +88,7 @@ describe("R-1: 단건 ④ — 토지 자산의 선언이 body에 실린다", () 
     const body = await buildBody(makeForm([landAsset(1)]));
     expect(body.isDesignatedArea).toBeUndefined();
   });
-  it("토지·주택이 아닌 자산에 남은 잔존 선언은 싣지 않는다(화면에 없는 값이 세액을 바꾸지 않도록)", async () => {
+  it("토지·주택·상업용건물이 아닌 자산에 남은 잔존 선언은 싣지 않는다(화면에 없는 값이 세액을 바꾸지 않도록)", async () => {
     const body = await buildBody(makeForm([landAsset(1, { assetKind: "presale_right", isDesignatedArea: false })]));
     expect(body.isNonBusinessLand).toBe(false);
     expect(body.isDesignatedArea).toBeUndefined();
@@ -101,12 +101,14 @@ describe("R-1: 단건 ④ — 토지 자산의 선언이 body에 실린다", () 
 });
 
 describe("R-2: 다건 ④ — 같은 게이트·같은 값", () => {
-  it("토지 · false → false / 미선언 → undefined / 주택 → 같은 값 / 그 밖의 종류 → undefined", () => {
+  it("토지 · false → false / 미선언 → undefined / 주택·상업용건물 → 같은 값 / 그 밖의 종류 → undefined", () => {
     const f = (a: AssetForm) => buildPropertyPayload(makeForm([a])) as unknown as Record<string, unknown>;
     expect(f(landAsset(1, { isDesignatedArea: false })).isDesignatedArea).toBe(false);
     expect(f(landAsset(1, { isDesignatedArea: true })).isDesignatedArea).toBe(true);
     expect(f(landAsset(1)).isDesignatedArea).toBeUndefined();
     expect(f(landAsset(1, { assetKind: "housing", isDesignatedArea: false })).isDesignatedArea).toBe(false);
+    // 상업용건물 부수토지 기준면적 초과분(F-1) — 같은 leaf다. 다건은 상업용 부수토지 입력을 refine이 막아 세액에는 닿지 않는다.
+    expect(f(landAsset(1, { assetKind: "commercial_building", isDesignatedArea: false })).isDesignatedArea).toBe(false);
     expect(f(landAsset(1, { assetKind: "presale_right", isDesignatedArea: false })).isDesignatedArea).toBeUndefined();
   });
 });

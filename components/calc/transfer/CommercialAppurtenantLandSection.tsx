@@ -31,13 +31,17 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { APPURTENANT_ZONE_OPTIONS } from "./appurtenant-zone-options";
+import { NblDesignatedAreaQuestion } from "./nbl/NblDesignatedAreaQuestion";
+import { commercialAppurtenantNblAreaOfAsset } from "@/lib/calc/transfer-tax-api-commercial";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 양도일 — 기준면적 초과분(비사업용 토지)의 8호 중과 유예 질문(지정지역 여부) 기간 판정용 */
+  transferDate?: string;
 }
 
-export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
+export function CommercialAppurtenantLandSection({ asset, onChange, transferDate }: Props) {
   // 배율은 엔진 정본(§101② 표)에서 가져온다 — UI 재계산 금지.
   const zone = useMemo(
     () => (asset.cbZoneType ? getZoneAreaMultiplier(asset.cbZoneType) : undefined),
@@ -170,6 +174,18 @@ export function CommercialAppurtenantLandSection({ asset, onChange }: Props) {
             </div>
           )}
         </>
+      )}
+
+      {/* 양도일 2009.3.16.~2015.12.31. + 기준면적 초과분이 있으면 그 초과분(비사업용 토지)의 8호 중과 유예 요건(지정지역 여부).
+          초과 판정은 엔진과 같은 함수(`commercialAppurtenantNblAreaOfAsset` → `judgeAppurtenantLandExcess`)다 — 무허가 단서 포함. */}
+      {commercialAppurtenantNblAreaOfAsset(asset) > 0 && (
+        <NblDesignatedAreaQuestion
+          transferDate={transferDate}
+          value={asset.isDesignatedArea}
+          onChange={(isDesignatedArea) => onChange({ isDesignatedArea })}
+          idSuffix={`commercial-${asset.assetId ?? "primary"}`}
+          subject="부수토지 기준면적 초과분(비사업용 토지)"
+        />
       )}
     </ToneCard>
   );
