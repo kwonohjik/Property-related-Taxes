@@ -141,6 +141,44 @@ export function mixedPartLthdEcho(
   };
 }
 
+/** `mixedPartLthdRates`가 돌려주는 파트 1개 — 그 파트에 적용된 표와 echo. */
+export interface MixedPartLthdRate {
+  table: 1 | 2;
+  echo: MixedPartLthdEcho;
+}
+
+/**
+ * 겸용 파트(주택분·상가분)의 토지·건물 장특 공제율이 **서로 다를 때만** 파트별 표·echo를 돌려준다(같거나 echo가 없으면 undefined).
+ *
+ * 다르면 대표 율(주택분 = 건물 기준, 상가분 = 긴 보유연수 기준) 하나로는 공제액을 설명하지 못한다 — 상세명세서·결과 카드·계산 단계가
+ * 이 판정 하나를 쓴다. 총 공제율이 같아도 보유·거주 분해가 다르면(통칙 95-0…1 동률 — 토지 표1·건물 표2) 다른 것으로 본다.
+ * 주택분 토지는 통칙으로 표1이 이겼으면(`appurtenantLthd.table1Applied`) 표1이다. 상가분은 `longTermDeductionTable`이 없어 둘 다 표1.
+ */
+export function mixedPartLthdRates(part: {
+  partLthd?: MixedPartLthd;
+  longTermDeductionTable?: 1 | 2;
+  appurtenantLthd?: { table1Applied: boolean };
+}): { land: MixedPartLthdRate; building: MixedPartLthdRate } | undefined {
+  const p = part.partLthd;
+  if (!p) return undefined;
+  if (p.land.longTermRate === p.building.longTermRate && p.land.holdingDeductionRate === p.building.holdingDeductionRate) {
+    return undefined;
+  }
+  const table = part.longTermDeductionTable ?? 1;
+  return {
+    land: { table: table === 2 && !part.appurtenantLthd?.table1Applied ? 2 : 1, echo: p.land },
+    building: { table, echo: p.building },
+  };
+}
+
+/** 장특 라벨의 괄호 안 — 「토지 표1 30% · 건물 표2 24%」. 율 표기는 표시 지점마다 달라 `pct`로 받는다. */
+export function mixedPartLthdRateText(
+  r: { land: MixedPartLthdRate; building: MixedPartLthdRate },
+  pct: (rate: number) => string,
+): string {
+  return `토지 표${r.land.table} ${pct(r.land.echo.longTermRate)} · 건물 표${r.building.table} ${pct(r.building.echo.longTermRate)}`;
+}
+
 /** 상속 취득가액 산정 상세 — 산식 표시용 echo (housing·commercial 공용). */
 export interface InheritedAcquisitionDetail {
   /** 사용자 입력 신고가액(housingInheritedValue/commercialInheritedValue). 미입력 null. */

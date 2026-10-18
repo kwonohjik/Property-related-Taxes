@@ -7,7 +7,11 @@
  */
 
 import { calculateHoldingPeriod } from "./tax-utils";
-import { inheritedCapexUsesReportedRatio } from "./transfer-tax-mixed-use-inheritance";
+import {
+  inheritedCapexUsesReportedRatio,
+  mixedPartLthdRateText,
+  mixedPartLthdRates,
+} from "./transfer-tax-mixed-use-inheritance";
 import { MIXED_USE, TRANSFER } from "./legal-codes/transfer";
 // §159의4 표2 거주 하한 — 사유 문구가 게이트와 **같은 상수**를 본다(2를 손으로 적으면 갈린다).
 import { TABLE2_MIN_RESIDENCE_YEARS } from "./transfer-tax-exemption";
@@ -263,10 +267,15 @@ export function buildApportionmentStep(a: MixedUseApportionment): MixedUseStep {
   };
 }
 
+/** 계산 단계 장특 라벨의 정수 % — 「장기보유공제 (표2, 56%)」. */
+const stepPct = (r: number) => `${(r * 100).toFixed(0)}%`;
+
 export function buildHousingStep(
   h: ReturnType<typeof buildHousingPart>,
   a: MixedUseApportionment,
 ): MixedUseStep {
+  // 토지·건물 공제율이 다르면 대표 율(건물 기준) 하나 대신 파트별 표·율을 적는다(상세명세서·결과 카드와 같은 판정).
+  const rates = mixedPartLthdRates(h);
   return {
     id: "step-5-housing",
     title: "주택부분",
@@ -275,7 +284,12 @@ export function buildHousingStep(
       { label: "주택 환산취득가액", value: h.estimatedAcquisitionPrice },
       { label: "주택 양도차익", value: h.transferGain },
       { label: "12억 초과 비과세 적용 후 과세대상 양도차익", value: h.proratedTaxableGain },
-      { label: `장기보유공제 (표${h.longTermDeductionTable}, ${(h.longTermDeductionRate * 100).toFixed(0)}%)`, value: h.longTermDeductionAmount },
+      {
+        label: rates
+          ? `장기보유공제 (${mixedPartLthdRateText(rates, stepPct)})`
+          : `장기보유공제 (표${h.longTermDeductionTable}, ${stepPct(h.longTermDeductionRate)})`,
+        value: h.longTermDeductionAmount,
+      },
       { label: "주택부분 양도소득금액", value: h.incomeAmount, isResult: true },
     ],
   };
@@ -287,6 +301,8 @@ export function buildCommercialStep(
 ): MixedUseStep {
   // 취득시 상가부분 기준시가는 항상 사용자 직접 입력 (자동 안분 fallback 폐지)
   const acqStdLabel = "취득시 상가부분 기준시가 합계";
+  // 토지·건물 보유연수가 달라 공제율이 다르면 대표 율(긴 보유연수 기준) 하나 대신 파트별로 적는다.
+  const rates = mixedPartLthdRates(c);
 
   return {
     id: "step-7-commercial",
@@ -296,7 +312,12 @@ export function buildCommercialStep(
       { label: acqStdLabel, value: c.acqStandardTotal },
       { label: "상가 환산취득가액", value: c.estimatedAcquisitionPrice },
       { label: "상가 양도차익", value: c.transferGain },
-      { label: `장기보유공제 (표1, ${(c.longTermDeductionRate * 100).toFixed(0)}%)`, value: c.longTermDeductionAmount },
+      {
+        label: rates
+          ? `장기보유공제 (${mixedPartLthdRateText(rates, stepPct)})`
+          : `장기보유공제 (표1, ${stepPct(c.longTermDeductionRate)})`,
+        value: c.longTermDeductionAmount,
+      },
       { label: "상가부분 양도소득금액", value: c.incomeAmount, isResult: true },
     ],
   };

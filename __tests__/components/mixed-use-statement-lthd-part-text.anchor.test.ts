@@ -35,7 +35,7 @@ function statement(r: MixedUseGainBreakdown) {
     if (!x) throw new Error(`item not found: ${k}`);
     return x;
   };
-  return { part: get("ltHousingPart"), hold: get("ltHousingHolding"), res: get("ltHousingResidence") };
+  return { part: get("ltHousingPart"), hold: get("ltHousingHolding"), res: get("ltHousingResidence"), commercial: get("ltCommercialPart") };
 }
 
 describe("겸용 상세명세서 주택분 장특 — 파트별 문구", () => {
@@ -103,5 +103,21 @@ describe("겸용 상세명세서 주택분 장특 — 파트별 문구", () => {
     delete r.housingPart.partLthd;
     const { part } = statement(r);
     expect(part.formula).toBe("주택분 과세대상 양도차익 × 표2 [보유 3년 12% + 거주 3년 12%] = 70,847,202");
+  });
+
+  it("상가분 A 토지 34년 30% · 건물 7년 14% — 파트별 (종전 「× 표1 [보유 34년 30%] = 257,718,598」 → 877,113,019 × 30% = 263,133,905)", () => {
+    const r = engine({ buildingAcquisitionDate: D("2019-06-01"), residencePeriodYears: 7 });
+    const { commercial } = statement(r);
+    expect(Math.floor((843_267_352 * 30) / 100)).toBe(252_980_205);
+    expect(Math.floor((33_845_667 * 14) / 100)).toBe(4_738_393);
+    expect(252_980_205 + 4_738_393).toBe(r.commercialPart.longTermDeductionAmount);
+    expect(commercial.formula).toBe(
+      "토지분 843,267,352 × 표1 [보유 34년 30%] = 252,980,205 + 건물분 33,845,667 × 표1 [보유 7년 14%] = 4,738,393 → 257,718,598 (거주기간 공제 없음)",
+    );
+  });
+
+  it("상가분 — 토지·건물 공제율이 같으면(둘 다 30%) 종전 한 줄 그대로", () => {
+    const { commercial } = statement(engine({ buildingAcquisitionDate: D("1992-01-01"), residencePeriodYears: 7 }));
+    expect(commercial.formula).toBe("상가분 과세대상 양도차익 × 표1 [보유 34년 30%] = 263,133,905 (거주기간 공제 없음)");
   });
 });
