@@ -92,6 +92,27 @@ describe("②3호 순차 고정점 — 토지 → 건물, 동률 A", () => {
     expect(bb!.adoptedInput.buildingAcquisitionPrice).toBe(100_000_000);
   });
 
+  it("증여자 취득일이 같은 날인 두 파트(AA): 비-별개로 재파생되고 파트 취득가액 명시값·증여자 날짜가 그대로 들어간다 (리뷰 anchor 부재 (2))", () => {
+    const same = D("2010-01-01");
+    const input = inputC({
+      landCarryoverTaxation: ct(same, 50_000_000),
+      buildingCarryoverTaxation: ct(same, 60_000_000),
+    });
+    const seen: { sep: boolean | undefined; landDate: number; bldgDate: number; landPrice?: number; bldgPrice?: number }[] = [];
+    const out = calcSplitCarryoverScenarios(input, rates, (i) => {
+      seen.push({ sep: i.isSeparateAcquisition, landDate: i.landAcquisitionDate!.getTime(), bldgDate: i.acquisitionDate.getTime(), landPrice: i.landAcquisitionPrice, bldgPrice: i.buildingAcquisitionPrice });
+      return { determinedTax: 100 }; // 전부 동률 → AA 유지
+    });
+    expect(out!.detail.land!.judgment).toBe("applied");
+    expect(out!.detail.building!.judgment).toBe("applied");
+    expect(out!.adoptedInput).toMatchObject({ isSeparateAcquisition: false, landAcquisitionPrice: 50_000_000, buildingAcquisitionPrice: 60_000_000 });
+    expect(out!.adoptedInput.landAcquisitionDate!.getTime()).toBe(same.getTime());
+    expect(out!.adoptedInput.acquisitionDate.getTime()).toBe(same.getTime());
+    // 한쪽만 A인 시나리오는 증여일(2023-03-01)과 증여자일이 달라 별개로 읽힌다 — 재파생이 시나리오마다 다르다
+    expect(seen.some((s) => s.sep === true)).toBe(true);
+    expect(seen.some((s) => s.sep === false)).toBe(true);
+  });
+
   it("메모이즈 — 같은 assignment를 두 번 계산하지 않는다(파트 2개 상한 4조합)", () => {
     const calls: string[] = [];
     calcSplitCarryoverScenarios(inputC(), rates, stub(T9, calls));
@@ -129,7 +150,9 @@ describe("적격 판정(①·③) — 부적격이면 본 엔진을 부르지 �
     expect(out!.detail.event.applicablePeriodYears).toBe(5);
     // B 고정 입력 — 증여자 값으로 치환되지 않는다
     expect(out!.adoptedInput.landAcquisitionDate!.getTime()).toBe(old.getTime());
-    expect(out!.adoptedInput.acquisitionCause).toBe("purchase"); // 건물이 이월과세 대상이었으면 `buildInputB` 규약(통산 방지)
+    // B 고정 파트는 일반 증여(`gift`)로 계산한다(영 §163⑨ 단서 술어가 일반 증여와 같이 돈다 · 통산은 carryover_gift 전용이라 없다). 둘 다 B면 토지 원인은 없다(D3 회피).
+    expect(out!.adoptedInput.acquisitionCause).toBe("gift");
+    expect(out!.adoptedInput.landAcquisitionCause).toBeUndefined();
   });
 });
 

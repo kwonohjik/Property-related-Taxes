@@ -96,13 +96,25 @@ function buildScenarioInput(
   sideOf: Record<PartKey, Side>,
   addedOf: Record<PartKey, number>,
 ): TransferTaxInput {
+  // 파트 취득원인 — 시나리오가 «그 파트가 실제로 어떻게 취득됐는가»를 말해야 영 §163⑨ 단서 1호·2호(max(평가액, 영 §164④·⑦ 가액))
+  // 술어(`resolveLandPartAcquisition`·`resolveBuildingPartAcquisition`)와 장특·세율 기산이 일반 입력과 같이 돈다.
+  //   · A(적용) 파트: 증여자의 **매매** 취득으로 치환했다 → `purchase`(증여자 기산은 아래 취득일 치환이 만든다).
+  //   · B(미적용·배제) 파트: 수증자 본인의 **일반 증여**로 계산한다 → `gift`. 이월과세 미적용이므로 §104②2호 통산은 없다 —
+  //     통산은 `carryover_gift`만이고(`transfer-rate-holding-basis.ts`) 증여자 취득일 입력이 없는 `gift`는 증여일 기산이다(anchor로 고정).
+  //     `purchase`로 두면 단서 술어가 꺼져 일반 증여보다 취득가액이 작아진다(리뷰 C-2: 같은 입력 121,860,000 ↔ 67,270,000).
+  //   토지가 건물 `gift`와 함께 쓰일 수 없는 결합(D3)을 피하려고: 건물 B + 토지 A → 토지 overlay `purchase`(D2), 건물 B + 토지 B(C 둘 다 B) →
+  //   토지 원인 없음(같은 날 비-별개 — 일반 통째 증여와 같은 입력).
+  const buildingCause = !plans.building ? raw.acquisitionCause : sideOf.building === "A" ? ("purchase" as const) : ("gift" as const);
+  let landCause = raw.landAcquisitionCause;
+  if (plans.land) {
+    if (sideOf.land === "A") landCause = buildingCause === "gift" ? "purchase" : undefined;
+    else landCause = buildingCause === "gift" ? undefined : "gift";
+  }
   const next: TransferTaxInput = {
     ...raw,
-    // 건물 파트가 이월과세 대상이었으면 `purchase`로 둔다 — `carryover_gift`로 두면 배제 자산에 §104②2호 통산이 들어가 과소과세가 된다
-    // (`buildInputB`와 같은 이유, `transfer-tax-carryover.ts` 주석). A 파트의 증여자 기산은 아래 취득일 치환이 만든다.
-    acquisitionCause: plans.building ? "purchase" : raw.acquisitionCause,
-    // 토지 overlay·§104②1·2호 입력은 치환 날짜로 이미 반영된다 — 비우지 않으면 leaf가 S1/Y8로 다시 막고 세율 기산이 이중으로 읽힌다.
-    landAcquisitionCause: undefined,
+    acquisitionCause: buildingCause,
+    // §104②1·2호 입력은 치환 날짜로 이미 반영된다 — 남기면 세율 기산이 이중으로 읽힌다.
+    landAcquisitionCause: landCause,
     landDecedentAcquisitionDate: undefined,
     landDonorAcquisitionDate: undefined,
     // 재귀 방지(R-4) — 서브객체 3키를 비운다. 이 입력은 STEP 0.476을 다시 타지 않는다.

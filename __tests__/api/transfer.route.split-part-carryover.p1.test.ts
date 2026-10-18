@@ -380,7 +380,7 @@ describe("P1-7 독립 proxy 대조 — T1·T5·T6의 채택 세액이 proxy와 �
   });
 });
 
-describe("P1-8 echo — 적용(A) 파트는 이월과세 취득원인·증여자 기산 규칙, 배제(B) 파트는 증여일 기산(gift 계열 없음)", () => {
+describe("P1-8 echo — 적용(A) 파트는 이월과세 취득원인·증여자 기산 규칙, 배제(B) 파트는 증여일 기산(일반 증여 — 통산 없음)", () => {
   it("A 적용 토지: acquisitionCause carryover_gift · rateBasisRule donor · rateBasisAcquisitionDate 증여자 취득일 · 자산 단위 detail은 비워 둔다", async () => {
     const o = await post(A_NEW);
     const land = o.r.splitDetail.land;
@@ -390,13 +390,170 @@ describe("P1-8 echo — 적용(A) 파트는 이월과세 취득원인·증여자
     expect(o.r.splitDetail.carryoverEvent).toEqual({ giftRegistryDate: "2023-03-01", giftTaxCalculated: 20_000_000, giftTaxBase: 300_000_000, applicablePeriodYears: 10 });
     expect(o.r.carryoverTaxationDetail).toBeUndefined();
   });
-  it("B 배제 토지(②3호): 증여일 기산 · rateBasisRule own — §104②2호 통산이 배제 자산에 들어가지 않는다(buildInputB 규약)", async () => {
+  it("B 배제 토지(②3호): 증여일 기산 · rateBasisRule own — 일반 증여(gift)로 계산하되 §104②2호 통산(carryover_gift 전용)은 들어가지 않는다", async () => {
     const o = await post({ ...A_NEW, landCarryoverPart: LAND_PART({ donorAcquisitionPrice: 400_000_000 }) });
-    expect(o.r.splitDetail.land).toMatchObject({ rateBasisRule: "own", acquisitionDate: "2023-03-01", acquisitionCause: "purchase" });
+    expect(o.r.splitDetail.land).toMatchObject({ rateBasisRule: "own", acquisitionDate: "2023-03-01", acquisitionCause: "gift" });
   });
   it("계산 단계에 파트별 판정 한 줄이 남는다", async () => {
     const o = await post(C_NEW);
     const labels = (o.r.steps as { label: string }[]).map((s) => s.label);
     expect(labels).toEqual(expect.arrayContaining(["토지 파트 이월과세 판정", "건물 파트 이월과세 판정"]));
+  });
+});
+
+/**
+ * 리뷰 C-2 — B 고정 파트(기간 초과·관계 부적격·②3호 배제)는 **이월과세 키 없는 일반 증여와 같은 계산**이어야 한다.
+ * 파트 취득원인을 `purchase`로 두면 영 §163⑨ 단서 1호·2호(max(평가액, 영 §164④·⑦ 가액)) 술어가 꺼져 일반 증여보다 취득가액이 작아졌다
+ * (토지 증여 1989-05-01 · 평가액 3억 · 영 §164④ 가액 5억 → 121,860,000 ↔ 일반 증여 67,270,000).
+ */
+describe("P1-9 B 고정 파트 = 일반 증여 (영 §163⑨ 단서 1호·2호 구간)", () => {
+  const SEC164 = 500_000_000;
+  // 단서 1호: 토지 1990.8.30. 전 증여. 토지 B(증여일·평가액) + 건물 매매 2021
+  const LAND_PROVISO = {
+    ...A_FIELDS,
+    landAcquisitionDate: "1989-05-01",
+    landSec164Value: SEC164,
+  };
+  const landNew = (event: Record<string, unknown>, part: Record<string, unknown> = {}) => ({
+    ...LAND_PROVISO,
+    carryoverGiftEvent: EVENT({ giftRegistryDate: "1989-05-01", ...event }),
+    landCarryoverPart: LAND_PART({ donorAcquisitionDate: "1980-01-01", ...part }),
+  });
+  const landPlain = () => ({ ...LAND_PROVISO, landAcquisitionCause: "gift" });
+
+  it("토지 단서 1호 · 기간 초과(period_exceeded): 취득가액 max(3억, 5억)=5억 · 일반 증여와 같은 세액", async () => {
+    const plain = await post(landPlain());
+    expect(plain.status).toBe(200);
+    expect(plain.r.splitDetail.land.acquisitionPrice).toBe(SEC164);
+    const o = await post(landNew({}));
+    expect(o.status).toBe(200);
+    expect(o.r.splitDetail.land.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "period_exceeded" });
+    expect(o.r.splitDetail.land.acquisitionPrice).toBe(SEC164);
+    expect(o.r.splitDetail.land.acquisitionBasis).toMatchObject({ rule: "sec163_9_1", adopted: "sec164" });
+    expect(num(o)).toBe(num(plain));
+  });
+
+  it("토지 단서 1호 · 관계 부적격(relation other): 같다", async () => {
+    const o = await post(landNew({ donorRelation: "other" }));
+    expect(o.status).toBe(200);
+    expect(o.r.splitDetail.land.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "relation_invalid" });
+    expect(num(o)).toBe(num(await post(landPlain())));
+  });
+
+  it("토지 단서 1호 · ②3호 배제(tax_comparison): 양도 1993-06-30(증여 4년 — 5년 창 안) · 증여자 취득가 과다로 A < B → B = 일반 증여", async () => {
+    const base = { ...LAND_PROVISO, transferDate: "1993-06-30", acquisitionDate: "1990-03-01" };
+    const plain = await post({ ...base, landAcquisitionCause: "gift" });
+    expect(plain.status, JSON.stringify(plain.body?.error ?? {})).toBe(200);
+    const o = await post({
+      ...base,
+      carryoverGiftEvent: EVENT({ giftRegistryDate: "1989-05-01" }),
+      landCarryoverPart: LAND_PART({ donorAcquisitionDate: "1980-01-01", donorAcquisitionPrice: 900_000_000 }),
+    });
+    expect(o.status, JSON.stringify(o.body?.error ?? {})).toBe(200);
+    expect(o.r.splitDetail.land.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "tax_comparison" });
+    expect(o.r.splitDetail.land.acquisitionPrice).toBe(SEC164);
+    expect(num(o)).toBe(num(plain));
+  });
+
+  // 단서 2호: 건물 2005.4.30. 전 증여(단독·다가구주택, 영 §164⑦ 건물 몫 ②). 건물 B(증여일·평가액) + 토지 매매 overlay
+  const BUILDING_SEC164 = 600_000_000;
+  const BUILDING_PROVISO = {
+    ...B_FIELDS,
+    acquisitionDate: "2004-06-01",
+    buildingHouseKind: "house_individual",
+    buildingSec164Value: BUILDING_SEC164,
+  };
+  const buildingNew = (event: Record<string, unknown>, part: Record<string, unknown> = {}, over: Record<string, unknown> = {}) => ({
+    ...BUILDING_PROVISO,
+    ...over,
+    carryoverGiftEvent: EVENT({ giftRegistryDate: "2004-06-01", giftTaxBase: 400_000_000, ...event }),
+    buildingCarryoverPart: { donorAcquisitionDate: "1995-06-01", donorAcquisitionPrice: 100_000_000, ...part },
+  });
+  const buildingPlain = (over: Record<string, unknown> = {}) => ({ ...BUILDING_PROVISO, ...over, acquisitionCause: "gift" });
+
+  it("건물 단서 2호 · 기간 초과: 취득가액 max(4억, 6억)=6억 · 일반 증여와 같은 세액", async () => {
+    const plain = await post(buildingPlain());
+    expect(plain.status, JSON.stringify(plain.body?.error ?? {})).toBe(200);
+    expect(plain.r.splitDetail.building.acquisitionPrice).toBe(BUILDING_SEC164);
+    const o = await post(buildingNew({}));
+    expect(o.status, JSON.stringify(o.body?.error ?? {})).toBe(200);
+    expect(o.r.splitDetail.building.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "period_exceeded" });
+    expect(o.r.splitDetail.building.acquisitionPrice).toBe(BUILDING_SEC164);
+    expect(o.r.splitDetail.building.acquisitionBasis).toMatchObject({ rule: "sec163_9_2", adopted: "sec164" });
+    expect(num(o)).toBe(num(plain));
+  });
+
+  it("건물 단서 2호 · 관계 부적격: 같다", async () => {
+    const o = await post(buildingNew({ donorRelation: "other" }));
+    expect(o.status).toBe(200);
+    expect(o.r.splitDetail.building.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "relation_invalid" });
+    expect(num(o)).toBe(num(await post(buildingPlain())));
+  });
+
+  it("건물 단서 2호 · ②3호 배제: 양도 2008-06-30(증여 4년) · 증여자 취득가 과다 → B = 일반 증여", async () => {
+    const over = { transferDate: "2008-06-30", landAcquisitionDate: "2005-01-01" };
+    const plain = await post(buildingPlain(over));
+    expect(plain.status, JSON.stringify(plain.body?.error ?? {})).toBe(200);
+    const o = await post(buildingNew({}, { donorAcquisitionPrice: 900_000_000 }, over));
+    expect(o.status, JSON.stringify(o.body?.error ?? {})).toBe(200);
+    expect(o.r.splitDetail.building.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "tax_comparison" });
+    expect(o.r.splitDetail.building.acquisitionPrice).toBe(BUILDING_SEC164);
+    expect(num(o)).toBe(num(plain));
+  });
+
+  it("건물 단순 증여(gift)는 §104②2호 통산을 만들지 않는다 — 배제된 건물의 세율 기산은 증여일(own)", async () => {
+    const o = await post(buildingNew({ donorRelation: "other" }));
+    expect(o.r.splitDetail.building).toMatchObject({ acquisitionCause: "gift", rateBasisRule: "own", rateBasisAcquisitionDate: "2004-06-01" });
+  });
+
+  it("C 둘 다 B(같은 날 비-별개): 토지 원인 없는 일반 통째 증여 입력과 같은 세액 — D3(토지 gift + 건물 gift 금지)를 피한다", async () => {
+    const bothB = { ...C_NEW, carryoverGiftEvent: EVENT({ giftTaxCalculated: 30_000_000, giftTaxBase: 900_000_000, donorRelation: "other" }) };
+    const o = await post(bothB);
+    expect(o.status, JSON.stringify(o.body?.error ?? {})).toBe(200);
+    const plain = await post({
+      ...C_FIELDS, acquisitionCause: "gift", landAcquisitionCause: "__DEL__", isSeparateAcquisition: false,
+    });
+    expect(plain.status, JSON.stringify(plain.body?.error ?? {})).toBe(200);
+    expect(num(o)).toBe(num(plain));
+  });
+
+  it("C 토지 A·건물 B(건물 기간 후 증여자 값 있음 아님 — 건물만 관계 부적격은 사건 수준이라 두 파트 모두 B): 건물 gift + 토지 overlay purchase 조합이 leaf를 통과한다", async () => {
+    // 토지만 적격·건물만 ②3호 배제가 되는 입력은 T6/T7이 고정한다(토지 B·건물 A). 반대 방향(토지 A·건물 B) 구성이 leaf에서 막히지 않는지 본다.
+    const o = await post({
+      ...C_NEW,
+      landAcquisitionPrice: 400_000_000,
+      buildingAcquisitionPrice: 500_000_000,
+      buildingCarryoverPart: { donorAcquisitionDate: "2015-06-01", donorAcquisitionPrice: 900_000_000 }, // 건물 A < B → 건물 배제
+    });
+    expect(o.status, JSON.stringify(o.body?.error ?? {})).toBe(200);
+    expect(o.r.splitDetail.building.carryover).toMatchObject({ judgment: "excluded", exclusionReason: "tax_comparison" });
+    expect(o.r.splitDetail.land.carryover.judgment).toBe("applied");
+  });
+});
+
+describe("P1-10 증여자 취득일이 같은 날인 두 파트(AA) — 비-별개로 재파생돼도 파트 명시값을 쓴다 (리뷰 anchor 부재 (2))", () => {
+  // 증여자가 토지·건물을 같은 날(2010-01-01) 취득: 치환 날짜가 같아 isSeparateAcquisition=false. 파트 취득가액 명시값은 그대로 쓰여야 한다.
+  const SAME_DAY = {
+    ...C_NEW,
+    landCarryoverPart: LAND_PART({ donorAcquisitionDate: "2010-01-01", donorAcquisitionPrice: 50_000_000 }),
+    buildingCarryoverPart: { donorAcquisitionDate: "2010-01-01", donorAcquisitionPrice: 50_000_000 },
+  };
+  it("AA 비교 세액(echo)이 «치환한 일반 split»(비-별개 · 파트 명시값 · 증여세 상당액 8,000,000/22,000,000)과 같다", async () => {
+    const o = await post(SAME_DAY);
+    expect(o.status, JSON.stringify(o.body?.error ?? {})).toBe(200);
+    const proxy = await post({
+      ...C_FIELDS, acquisitionCause: "purchase", landAcquisitionCause: "__DEL__", isSeparateAcquisition: false,
+      acquisitionDate: "2010-01-01", landAcquisitionDate: "2010-01-01",
+      landAcquisitionPrice: 50_000_000, buildingAcquisitionPrice: 50_000_000, landDirectExpenses: 8_000_000, buildingDirectExpenses: 22_000_000,
+    });
+    expect(proxy.status, JSON.stringify(proxy.body?.error ?? {})).toBe(200);
+    const { land, building } = o.r.splitDetail;
+    // 채택이 어느 쪽이든 «건물 A를 고정한 상태의 토지 적용 세액» 또는 «토지 적용 상태의 건물 적용 세액»이 AA다
+    const aa = building.carryover.judgment === "applied" ? land.carryover.comparison.determinedTaxWithCarryover : building.carryover.comparison.determinedTaxWithCarryover;
+    expect(land.carryover.judgment === "applied" || building.carryover.judgment === "applied").toBe(true);
+    if (land.carryover.judgment === "applied" && building.carryover.judgment === "applied") expect(num(o)).toBe(num(proxy));
+    else expect(aa).toBe(num(proxy));
+    expect(land.carryover.giftTaxApportioned).toBe(8_000_000);
+    expect(building.carryover.giftTaxApportioned).toBe(22_000_000);
   });
 });
