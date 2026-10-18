@@ -87,7 +87,8 @@ export function resolveHousingExcessAcqContract(
   const judged = judgeDeemedUnclearSplit({
     declared,
     apportioned,
-    ...(era === "body_and_proviso" && input.acqContractOtherLaw === true ? { exemption: "other_law" as const } : {}),
+    era,
+    ...(input.acqContractOtherLaw === true ? { exemption: "other_law" as const } : {}),
   });
   const outcome: AcqSplitJudgmentDetail["outcome"] =
     era === "none"

@@ -29,6 +29,7 @@ import { splitLandCarryover } from "./carryover-land-split";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import { sec100_3Era } from "./data/sec100-3-split-era";
 import { applyPartAcqModes } from "./general-building-part-acq";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { estimatedDeductionRate } from "./legal-codes";
@@ -140,6 +141,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     const judged = judgeDeemedUnclearSplit({
       declared,
       apportioned,
+      era: sec100_3Era(input.transferDate),
       ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
     });
 

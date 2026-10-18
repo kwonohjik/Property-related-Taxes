@@ -30,6 +30,7 @@ import { calculateConvertedAcquisition } from "./general-building-converted-acqu
 import { applyPartAcqModes } from "./general-building-part-acq";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
+import { sec100_3Era } from "./data/sec100-3-split-era";
 import type { SaleSplitExemption } from "./sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 
@@ -117,8 +118,13 @@ export interface BundledSaleAllocationInput {
   /** 계약서상 구분 기재 양도가액(§100②). 한쪽만 주면 반대쪽은 총액에서 도출된다 */
   landTransferPrice?: number;
   buildingTransferPrice?: number;
-  /** §166⑧ 30% 의제 예외 사유 */
+  /** §166⑧ 30% 의제 예외 사유 — 양도일이 단서 시행(2025.1.1.) 전이면 무시된다 */
   saleSplitExemption?: SaleSplitExemption;
+  /**
+   * 양도일 — §100③ 적용 구간(`sec100_3Era`)을 가른다. **필수**: 빠뜨리면 모든 양도일에 현행 규칙이 적용된다.
+   * 두 경로(환산·실가)가 이 leaf를 공유하므로 둘 다 넘겨야 한다.
+   */
+  transferDate: Date;
 }
 
 export function allocateBundledTransferPrice(input: BundledSaleAllocationInput): {
@@ -197,6 +203,7 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
   const judged = judgeDeemedUnclearSplit({
     declared,
     apportioned,
+    era: sec100_3Era(input.transferDate),
     ...(input.saleSplitExemption ? { exemption: input.saleSplitExemption } : {}),
   });
 

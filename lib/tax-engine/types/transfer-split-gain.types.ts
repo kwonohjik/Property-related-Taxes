@@ -5,6 +5,7 @@
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
 import type { HousingExpropriationValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { SaleSplitExemption, SaleSplitPair } from "../sale-split-deemed-unclear";
+import type { Sec100_3Era } from "../data/sec100-3-split-era";
 import type { ApportionBasisKind, AppraisalRejectReason } from "../sale-split-apportion-basis";
 
 /**
@@ -237,12 +238,15 @@ export interface SaleSplitJudgmentDetail {
   deemedUnclear: boolean;
   /** 구분 기장 가액 — 한쪽만 입력된 경우 반대쪽은 `총액 − 입력값`으로 도출된 값 */
   declared: SaleSplitPair;
-  /** 안분 가액 — 부가령 §64① basis 서열 적용 결과 */
-  apportioned: SaleSplitPair;
+  /**
+   * 안분 가액 — 부가령 §64① basis 서열 적용 결과.
+   * **양도일 2016.1.1. 전(`era === "none"`)에는 생략**한다 — 그 구간은 판정이 없어 안분값을 만들지 않는다.
+   */
+  apportioned?: SaleSplitPair;
   /** 실제 적용된 가액 = 발동 시 `apportioned`, 아니면 `declared` */
   applied: SaleSplitPair;
-  /** 안분에 쓴 basis 종류 (감정평가가액 / 기준시가) */
-  basisKind: ApportionBasisKind;
+  /** 안분에 쓴 basis 종류 (감정평가가액 / 기준시가) — `apportioned`와 함께 `none`에서는 생략 */
+  basisKind?: ApportionBasisKind;
   /** 이탈률 (basis point — 1% = 100) */
   landDeviationBp: number;
   buildingDeviationBp: number;
@@ -251,6 +255,10 @@ export interface SaleSplitJudgmentDetail {
   buildingOver: boolean;
   /** §166⑧ 예외로 발동을 면한 경우의 사유 */
   exemptionApplied?: SaleSplitExemption;
+  /** 양도일로 본 §100③ 적용 구간 — 표시 계층이 문구를 가르는 값(재계산 금지) */
+  era: Sec100_3Era;
+  /** 예외가 입력됐으나 양도일이 단서 시행(2025.1.1.) 전이라 무시한 경우의 사유 — 침묵 후퇴 금지 */
+  exemptionIgnoredByEra?: SaleSplitExemption;
   /**
    * 감정평가가액을 basis로 **쓰지 못한 사유** — 감정 입력이 있었는데 배제된 경우만 채운다
    * (`out_of_window` 시기 요건 이탈 · `incomplete` 한쪽 미평가).

@@ -171,16 +171,32 @@ describe("U-8-5 — §166⑧ 예외를 선택하면 발동하지 않는다", () 
     expect(taxOf(over)).toBe(TAX_APPORTIONED);
   });
 
-  it("1호(다른 법령에 따라 구분) → 구분값 유지 = 190,366,000", () => {
-    expect(taxOf({ ...over, saleSplitExemption: "other_law" })).toBe(190_366_000);
+  // 단서(영 §166⑧)는 2025.1.1. 이후 양도분부터다(법률 제20615호 부칙 제9조) — 그 전 양도일에서는 예외가 효력이 없다
+  // (`sale-split-100-3-era.anchor.test.ts`). 그래서 예외가 **효력을 갖는** 케이스만 양도일을 2025년으로 둔다.
+  const PROVISO = { transferDate: new Date("2025-06-01") };
+
+  // 세액 181,566,000은 양도일을 2024-06-01 → 2025-06-01로 옮겨 **보유기간이 1년 늘어난** 값이다(종전 190,366,000 · 장특공제율 상승).
+  // 「구분값을 유지했다」는 사실은 세액이 아니라 파트별 양도가액으로 함께 고정한다(세액만 맞추면 순환 단언이 된다).
+  it("1호(다른 법령에 따라 구분) → 구분값 유지 = 181,566,000", () => {
+    const x = { ...over, ...PROVISO, saleSplitExemption: "other_law" as const };
+    expect(splitOf(x)!.land.transferPrice).toBe(over.landTransferPrice);
+    expect(splitOf(x)!.building.transferPrice).toBe(over.buildingTransferPrice);
+    expect(taxOf(x)).toBe(181_566_000);
   });
 
   it("2호(철거 후 토지만 사용) → 구분값 유지", () => {
-    expect(taxOf({ ...over, saleSplitExemption: "demolished_land_only" })).toBe(190_366_000);
+    const x = { ...over, ...PROVISO, saleSplitExemption: "demolished_land_only" as const };
+    expect(splitOf(x)!.land.transferPrice).toBe(over.landTransferPrice);
+    expect(taxOf(x)).toBe(181_566_000);
+  });
+
+  // 안전망 보존: 위 두 케이스의 양도일을 옮긴 대신, 옮기기 전 날짜(2024-06-01)에서 예외가 **무시되는** 반례를 같은 자리에 둔다.
+  it("🔴 반례 — 양도일 2024-06-01(단서 시행 전)이면 예외를 입력해도 의제가 발동한다", () => {
+    expect(taxOf({ ...over, saleSplitExemption: "other_law" })).toBe(TAX_APPORTIONED);
   });
 
   it("예외로 면했어도 **이탈 사실은 기록**한다 — 신고서 각주 재료다", () => {
-    const d = splitOf({ ...over, saleSplitExemption: "other_law" })!.saleSplitJudgment!;
+    const d = splitOf({ ...over, ...PROVISO, saleSplitExemption: "other_law" })!.saleSplitJudgment!;
     expect(d.deemedUnclear).toBe(false);
     expect(d.buildingOver).toBe(true);
     expect(d.exemptionApplied).toBe("other_law");

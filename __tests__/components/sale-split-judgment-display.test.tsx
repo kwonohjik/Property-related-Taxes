@@ -47,6 +47,9 @@ const mk = (over: Partial<TransferTaxInput> = {}): TransferTaxInput =>
     ...over,
   });
 
+/** 단서(영 §166⑧)는 2025.1.1. 이후 양도분부터다 — 예외가 효력을 갖는 케이스만 이 양도일을 쓴다 */
+const PROVISO = { transferDate: new Date("2025-06-01") };
+
 /** 엔진을 실제로 돌려 그 결과를 렌더한다 */
 function renderFor(over: Partial<TransferTaxInput> = {}, exemptionNote?: string) {
   const result = calculateTransferTax(mk(over), rates);
@@ -97,7 +100,7 @@ describe("U-9-2 — 미발동·예외도 각각 다르게 말한다", () => {
   });
 
   it("§166⑧ 예외로 면한 경우 사유를 밝힌다 — 「차이가 없었다」와 다른 사실이다", () => {
-    const j = renderFor({ ...OVER, saleSplitExemption: "other_law" });
+    const j = renderFor({ ...OVER, ...PROVISO, saleSplitExemption: "other_law" });
     expect(j!.deemedUnclear).toBe(false);
     expect(j!.exemptionApplied).toBe("other_law");
     expect(screen.getByText(/예외로 구분 기재 가액을 인정했습니다/)).toBeTruthy();
@@ -152,7 +155,7 @@ describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·
   const OVER_LOCAL = { landTransferPrice: 1_400_000_000, buildingTransferPrice: 100_000_000 };
 
   it("🔴 예외 근거 문구를 화면에 표시한다 — 엔진을 거치지 않는 값이라 폼에서 받아야 한다", () => {
-    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" }, "매매계약 특약 제3조");
+    renderFor({ ...OVER_LOCAL, ...PROVISO, saleSplitExemption: "other_law" }, "매매계약 특약 제3조");
     expect(screen.getByTestId("sale-split-exemption-note-display")).toBeTruthy();
     expect(screen.getByText(/매매계약 특약 제3조/)).toBeTruthy();
   });
@@ -163,7 +166,7 @@ describe("U-9-4 — 신고서 각주 + §166⑧ 예외 근거 문구 (§12.5 3·
   });
 
   it("예외 적용 시 신고서에 사유를 적으라고 안내한다", () => {
-    renderFor({ ...OVER_LOCAL, saleSplitExemption: "other_law" }, "근거 문서");
+    renderFor({ ...OVER_LOCAL, ...PROVISO, saleSplitExemption: "other_law" }, "근거 문서");
     // ⚠️ `<strong>`이 문장을 쪼개므로 **단일 텍스트 노드** 기준으로 찾는다 —
     //    `getByText`는 요소 하나의 텍스트를 보지, 자식으로 나뉜 문장 전체를 잇지 않는다.
     expect(screen.getByText(/사유로 위 내용을 기재하세요/)).toBeTruthy();
