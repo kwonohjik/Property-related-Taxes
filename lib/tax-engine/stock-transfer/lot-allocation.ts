@@ -54,6 +54,7 @@ import {
   type Clause1Acc,
   type PreDeemedLotClause1Ctx,
 } from "./stock-pre-deemed-lot-clause1";
+import { FRAC_ZERO, type Frac } from "./exact-fraction";
 
 /**
  * §97의2①2호·3호 누적기 — 매칭 3종이 공유한다.
@@ -502,8 +503,15 @@ function matchMovingAvg(
    * 매도 후 잔여는 **모든 lot을 같은 비율로** 줄인다 — 평균 보존(이동평균의 정의)이며,
    * FIFO로 지우면 오래된 lot부터 사라져 잔고 평균이 튄다.
    * 단가가 상수인 일반 lot에서는 종전 누적과 같은 값이 나온다.
+   *
+   * 잔여 지분은 **정수 가중치**(`w`, BigInt)로 든다 — 부동소수로 줄이면 425가 424.99999…가 되어
+   * 나누어떨어지는 평균이 1원 내려가고 그 1원이 매도 주식수만큼 곱해진다(`moving-avg-exact-rational.anchor.test.ts`).
+   *   lot 잔여 = w × (balanceQty ÷ Σw). 매도는 모든 lot을 같은 비율로 줄이므로 **w를 건드리지 않고**
+   *   balanceQty만 줄인다. 평균 = Σ w·단가 ÷ Σw, ① 지분 = Σ_{①} w ÷ Σw — 공통 배율이 약분된다.
+   *   매수 흡수 때만 기존 w에 balanceQty를 곱하고 새 lot은 주식수 × Σw로 넣는다(같은 배율로 맞춤).
+   *   lot별 분수로 매번 약분하면 매수·매도 100건씩에 3초가 걸렸다(계획서 §9).
    */
-  const priceTrack: { lot: RemainingAcqLot; qty: number }[] = [];
+  const priceTrack: { lot: RemainingAcqLot; w: bigint }[] = [];
   let balanceQty = 0;
   let nextAcqToAbsorb = 0; // 잔고에 아직 반영 안 된 매수 lot 포인터
   // 보유기간 FIFO 트랙 (lot 잔여 차감)
@@ -517,18 +525,23 @@ function matchMovingAvg(
       sortedAcq[nextAcqToAbsorb].acquisitionDate.getTime() <= trn.transferDate.getTime()
     ) {
       const lot = sortedAcq[nextAcqToAbsorb];
-      priceTrack.push({ lot, qty: lot.shareCount });
+      // 기존 lot 배율에 맞춘다 — 잔고가 비어 있으면(전량 매도 뒤) 기존 w는 이미 0이다
+      const sumW = priceTrack.reduce((s, e) => s + e.w, 0n);
+      if (balanceQty > 0) for (const e of priceTrack) e.w *= BigInt(balanceQty);
+      priceTrack.push({ lot, w: BigInt(lot.shareCount) * (balanceQty > 0 ? sumW : 1n) });
       balanceQty += lot.shareCount;
       nextAcqToAbsorb += 1;
     }
     // 이 매도 시점 기준으로 잔고 원가를 재도출 (①1호 승계 판정이 매도일에 달려 있다)
     // 의제 lot 은 매도 lot 별 max(①, ②) — ① 환산이 매도마다 달라 풀 평균도 매도마다 달라질 수 있다(고지는 엔진 경고)
     const subPrices = priceTrack.map((e) => ({ e, sp: resolveSubLotBuyPrice(e.lot, trn, ctx) }));
-    const balanceCost = subPrices.reduce((s, x) => s + x.e.qty * x.sp.perShare, 0);
-    const clause1Qty = subPrices.reduce((s, x) => (x.sp.selected === "clause1" ? s + x.e.qty : s), 0);
-    const clause1Fraction = balanceQty > 0 ? clause1Qty / balanceQty : 0;
+    const sumW = subPrices.reduce((s, x) => s + x.e.w, 0n);
+    const balanceCostW = subPrices.reduce((s, x) => s + x.e.w * BigInt(x.sp.perShare), 0n);
+    const clause1W = subPrices.reduce((s, x) => (x.sp.selected === "clause1" ? s + x.e.w : s), 0n);
+    // 약분하지 않는다 — Σw 는 매수 때만 정수배로 커져 누적 쪽이 곱셈만으로 통분한다(`fracAddLazy`)
+    const clause1Fraction: Frac = balanceQty > 0 && sumW > 0n ? { n: clause1W, d: sumW } : FRAC_ZERO;
     const clause1Missing = ctx !== undefined && subPrices.some((x) => x.sp.selected === "clause2" && x.sp.clause1PerShare === undefined);
-    const movingAvgPrice = balanceQty > 0 ? Math.floor(balanceCost / balanceQty) : 0;
+    const movingAvgPrice = balanceQty > 0 && sumW > 0n ? Number(balanceCostW / sumW) : 0;
     lastMovingAvgPrice = movingAvgPrice;
 
     let remainingSaleShares = trn.shareCount;
@@ -580,10 +593,9 @@ function matchMovingAvg(
     // ① 채택 지분 — 매도분이 풀을 같은 비율로 소진하므로 ① 몫도 그 비율이다(필요경비 정산 입력)
     addClause1Pooled(clause1Acc, soldQty, clause1Fraction, ctx?.clause1PerShare(trn));
     if (clause1Acc && clause1Missing) clause1Acc.unresolvedShares += soldQty;
-    const qtyBeforeSale = balanceQty;
+    // 같은 비율 축소는 w 를 그대로 두고 balanceQty 만 줄이는 것과 같다. 전량 매도면 잔여가 0 이다
     balanceQty = Math.max(0, balanceQty - soldQty);
-    const remainRatio = qtyBeforeSale > 0 ? balanceQty / qtyBeforeSale : 0;
-    for (const e of priceTrack) e.qty *= remainRatio;
+    if (balanceQty === 0) for (const e of priceTrack) e.w = 0n;
   }
 
   // echo: 마지막 매도에 적용된 이동평균단가 (매도에 실제 적용된 단가 대표 —

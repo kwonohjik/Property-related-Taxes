@@ -7,6 +7,11 @@
  *   - §165⑨ 본체 (비상장 환산 양도·취득 기준시가 동일): EstimatedUnlistedBlock — "취득·양도" 문구, 종점 = 양도일
  *
  * 전전연도 NI/NA·직전사업연도 월수는 동일 form 키 공유(두 경로 동시 활성 없음).
+ *
+ * 「전전사업연도 기준시가」 = **전전사업연도 실적**(그 해 순손익액 · 그 해 종료일 순자산)으로 잰 §165④ 평가액.
+ * §81④1호 산식의 첫 항(직전사업연도 기준시가)은 영 §165⑨ 트리거의 「같은 값」이어야 보정이 되므로
+ * 같은 문장의 「전전」도 그 해 자료로 읽는다 — 한 해 더 이른 자료가 아니다(계획서
+ * `docs/02-design/features/stock-valuation-details-moving-avg-81-4.plan.md` §3.2, 직접 해석례 0건).
  * 토글 필드만 경로별 상이 → checked/onToggle을 부모가 주입. UI dual-truth 방지(단일 컴포넌트).
  */
 
@@ -66,14 +71,14 @@ export function MonthlyAccrual81Section({
         <CurrencyInput
           label="전전사업연도 1주당 순손익가치"
           allowNegative
-          hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순손익가치 (원, §81④ 1호)"
+          hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순손익액을 이자율(소득세법 시행규칙 §81②)로 나눈 값 — 전전사업연도 실적으로 잰 값입니다 (§81④ 1호)"
           value={prePriorNI}
           onChange={onChangePrePriorNI}
         />
         <CurrencyInput
           label="전전사업연도 1주당 순자산가치"
           allowNegative
-          hint="취득일이 속하는 사업연도의 전전사업연도 1주당 순자산가치 (원, §81④ 1호)"
+          hint="취득일이 속하는 사업연도의 전전사업연도 종료일 현재 순자산(장부가액)을 그날 발행주식총수로 나눈 값 (§81④ 1호)"
           value={prePriorNA}
           onChange={onChangePrePriorNA}
         />
