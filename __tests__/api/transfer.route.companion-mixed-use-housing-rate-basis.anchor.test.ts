@@ -168,7 +168,8 @@ describe("컴패니언 겸용주택 — 주택 카드 세율 기산일 = 주택�
     // 장특은 파트별 — 주택 토지 카드는 자기 취득일(2015) 기준 공제가 남는다(취득일은 바꾸지 않았다).
     expect(card("mu-house-land").longTermHoldingDeduction).toBeGreaterThan(0);
     expect(card("mu-house-bld").longTermHoldingDeduction).toBe(0);
-    expect(a.totalTax).toBe(167_681_142);
+  // §102② 차손 안분 잔액 1원의 자리 — 입력상 마지막 카드가 아니라 소수부가 큰 카드로(최대잉여법, 계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6). 종전 167,681,142.
+    expect(a.totalTax).toBe(167_681_141);
   }, 60_000);
 
   it("토지 나중(2023-10-01)·건물 2009-03-01 → 주택 건물 카드도 70%(종전 누진 · 183,971,855) · 상가 건물은 누진 그대로", async () => {
@@ -185,6 +186,7 @@ describe("컴패니언 겸용주택 — 주택 카드 세율 기산일 = 주택�
     expect(card("mu-house-land").appliedRate).toBe(0.6);
     expect(card("mu-house-bld").appliedRate).toBe(0.6);
     expect(card("mu-comm-land").rateGroup).toBe("progressive");
-    expect(a.totalTax).toBe(159_358_930);
+  // §102② 차손 안분 잔액 1원의 자리 — 입력상 마지막 카드가 아니라 소수부가 큰 카드로(최대잉여법, 계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6). 종전 159,358,930.
+    expect(a.totalTax).toBe(159_358_929);
   }, 60_000);
 });

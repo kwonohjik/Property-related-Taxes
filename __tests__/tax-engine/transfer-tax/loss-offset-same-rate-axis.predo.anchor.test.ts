@@ -158,10 +158,11 @@ describe("§102② 통산 축 — 「세율」(영 §167의2①1호)", () => {
     const r = scenarioB();
     expect(prop(r, "B2").lossOffsetFromSameGroup, "종전 19,000,000 전액 흡수").toBe(0);
     expect(r.lossOffsetTable.every((x) => x.scope === "other_group")).toBe(true);
-    // 전액 2호 안분 — 19,000,000 : 60,000,000 : 140,000,000
-    expect(prop(r, "B2").lossOffsetFromOtherGroup).toBe(1_735_159);
+    // 전액 2호 안분 — 19,000,000 : 60,000,000 : 140,000,000 (pool 20,000,000)
+    //   B2 1,735,159.82 · B3 5,479,452.05 · B4 12,785,388.13 → floor 합 19,999,999, 잔액 1원은 소수부가 큰 B2(최대잉여법)
+    expect(prop(r, "B2").lossOffsetFromOtherGroup).toBe(1_735_160);
     expect(prop(r, "B3").lossOffsetFromOtherGroup).toBe(5_479_452);
-    expect(prop(r, "B4").lossOffsetFromOtherGroup).toBe(12_785_389);
+    expect(prop(r, "B4").lossOffsetFromOtherGroup).toBe(12_785_388);
   });
 
   // ── 🔴 A-4 — **세액이 바뀐다**(A와 정확히 반대 부호) ──────────────
@@ -210,8 +211,9 @@ describe("§102② 통산 축 — 「세율」(영 §167의2①1호)", () => {
     ]);
     expect(prop(r, "D2").appliedRate).not.toBe(prop(r, "D3").appliedRate); // 실효세율이 다르다
     expect(r.lossOffsetTable.every((x) => x.scope === "same_group"), "그래도 §55① 한 표다").toBe(true);
-    expect(prop(r, "D2").lossOffsetFromSameGroup).toBe(909_090);
-    expect(prop(r, "D3").lossOffsetFromSameGroup).toBe(9_090_910);
+    // 10,000,000 × 30 / 330 = 909,090.91 · × 300 / 330 = 9,090,909.09 → 잔액 1원은 소수부가 큰 D2(최대잉여법)
+    expect(prop(r, "D2").lossOffsetFromSameGroup).toBe(909_091);
+    expect(prop(r, "D3").lossOffsetFromSameGroup).toBe(9_090_909);
   });
 
   it("A-6 🟢: 차손 자산도 세율 키를 갖는다 — 미등기 차손 ↔ 미등기 차익은 1호다", () => {

@@ -31,9 +31,11 @@
  * ## 알고리즘 요약 (영 §167의2①)
  *
  *   1호 — 같은 세율군 안에서 먼저 통산. 그룹별 `pool = min(Σ이익, Σ차손)`.
- *         이익 쪽 배분은 이익 비례 floor, **마지막 이익 자산이 잔액 흡수**.
- *         차손 쪽 귀속도 차손 비례 floor, **마지막 차손 자산이 잔액 흡수**.
- *   2호 — 그룹별 잔여 차손을 남은 이익에 **pro-rata 안분**. 같은 잔액 흡수 규약.
+ *         이익 쪽 배분은 이익 비례 floor + **최대잉여법**(남은 원을 소수부 큰 자산부터 1원씩 · 동률은 앞 행).
+ *         차손 쪽 귀속은 차손 비례 floor, **마지막 차손 자산이 잔액 흡수**(통산 표 표시용 — 세액 무관).
+ *   2호 — 그룹별 잔여 차손을 남은 이익에 **pro-rata 안분**. 이익 쪽은 같은 최대잉여법.
+ *   (2026-10-18 이익 쪽 규약 변경 — 계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §6.
+ *    종전 「마지막 이익 자산이 잔액 흡수」를 고정한 C-5·C-10·C-12를 새 값으로 갱신했다.)
  *   잔여 차손은 **소멸**(이월 불인정).
  */
 
@@ -200,7 +202,8 @@ describe("C-5: 1호 우선 — 같은 군을 먼저 쓰고 남은 것만 타군�
   // 누진: 이익 100 · 차손 60 → 같은 군에서 60 통산
   // 단기: 이익 200
   // 비사업용: 차손 100 → 타군 안분 (남은 이익: 누진 40 + 단기 200 = 240)
-  //   누진 A 몫 = floor(40 × 100 / 240) = 16, 마지막 단기 C가 100 − 16 = 84
+  //   누진 A 몫 = 40 × 100 / 240 = 16.67, 단기 C 몫 = 200 × 100 / 240 = 83.33 → floor 합 99,
+  //   잔액 1은 소수부가 큰 A로(최대잉여법 — 종전은 마지막 C가 흡수해 16 / 84)
   const records = [
     rec("A", "progressive", 100),
     rec("B", "progressive", -60),
@@ -214,11 +217,11 @@ describe("C-5: 1호 우선 — 같은 군을 먼저 쓰고 남은 것만 타군�
   });
 
   it("C-5-2: 잔여 차손이 남은 이익에 pro-rata", () => {
-    expect(out.lossOffsetFromOther).toEqual([16, 0, 84, 0]);
+    expect(out.lossOffsetFromOther).toEqual([17, 0, 83, 0]);
   });
 
   it("C-5-3: 통산 후 소득 · 잔여 차손 0", () => {
-    expect(out.incomeAfterOffset).toEqual([24, 0, 116, 0]);
+    expect(out.incomeAfterOffset).toEqual([23, 0, 117, 0]);
     expect(out.unusedLoss).toBe(0);
   });
 
@@ -318,9 +321,10 @@ describe("C-9: 통산할 상대가 없는 경우 — no-op", () => {
   });
 });
 
-describe("C-10: 나눠떨어지지 않는 3분할 — floor 잔차가 마지막에 몰린다", () => {
+describe("C-10: 나눠떨어지지 않는 3분할 — 잔차는 1원씩, 소수부 동률이면 앞 행부터", () => {
   // 이익 1·1·1 (합 3), 차손 2 → pool 2
-  // A: floor(1 × 2 / 3) = 0, B: floor(1 × 2 / 3) = 0, 마지막 C가 2 − 0 = 2
+  // 각 몫 2/3 → floor 0, 잔차 2를 소수부 동률(2/3)인 세 행 중 앞 행 A·B에 1원씩(최대잉여법).
+  // 종전(마지막 흡수)은 C가 2를 받아 소득 1을 넘었다(clamp로 0) — I-5가 깨졌다.
   const records = [
     rec("A", "progressive", 1),
     rec("B", "progressive", 1),
@@ -329,16 +333,13 @@ describe("C-10: 나눠떨어지지 않는 3분할 — floor 잔차가 마지막�
   ];
   const out = offsetLosses(records);
 
-  it("C-10-1: 잔차가 마지막 이익 자산에 흡수된다", () => {
-    expect(out.lossOffsetFromSame).toEqual([0, 0, 2, 0]);
+  it("C-10-1: 잔차가 앞 행부터 1원씩 간다", () => {
+    expect(out.lossOffsetFromSame).toEqual([1, 1, 0, 0]);
   });
 
-  it("C-10-2: 마지막 자산 소득이 음수로 내려가지 않는다 (clamp)", () => {
-    // C의 이익은 1인데 2를 배정받는다 → Math.max(0, …)로 0에 멈춘다.
-    // 🔴 이 순간 I-5(총소득 = 총이익 − 배분액)가 깨진다: 3 − 2 = 1 이어야 하는데 실제는 2.
-    //    현재 거동을 그대로 고정한다 — 추출 리팩터에서 조용히 달라지면 안 되기 때문이다.
-    expect(out.incomeAfterOffset).toEqual([1, 1, 0, 0]);
-    expect(out.incomeAfterOffset.reduce((s, v) => s + v, 0)).toBe(2);
+  it("C-10-2: 어느 자산도 제 이익보다 많이 받지 않는다 — I-5(총소득 = 총이익 − 배분액) 성립", () => {
+    expect(out.incomeAfterOffset).toEqual([0, 0, 1, 0]);
+    expect(out.incomeAfterOffset.reduce((s, v) => s + v, 0)).toBe(1);
   });
 
   it("C-10-3: 배분 총액과 unusedLoss는 정합", () => {
@@ -400,10 +401,12 @@ describe("C-13: 🐛 2호 안분에서 **비과세 차손이 table에 끼어든�
     expect(out.unusedLoss).toBe(0);
   });
 
-  it("C-13-2: 🐛 그런데 table에는 비과세 자산이 34로 등장한다", () => {
+  it("C-13-2: 🐛 그런데 table에는 비과세 자산이 33으로 등장한다", () => {
+    // 어댑터가 행을 propertyId 순(EXL → G → L)으로 넘기므로 차손 귀속 루프의 마지막은 L이다:
+    // EXL floor(50 × 100 / 150) = 33, L이 잔액 67(종전 입력 순서 L → EXL에서는 L 66 · EXL 34).
     expect(out.lossOffsetTable).toEqual([
-      { fromPropertyId: "L", toPropertyId: "G", amount: 66, scope: "other_group" },
-      { fromPropertyId: "EXL", toPropertyId: "G", amount: 34, scope: "other_group" },
+      { fromPropertyId: "EXL", toPropertyId: "G", amount: 33, scope: "other_group" },
+      { fromPropertyId: "L", toPropertyId: "G", amount: 67, scope: "other_group" },
     ]);
   });
 
@@ -432,9 +435,9 @@ describe("C-12: 5개 세율군 전부 등장 — 그룹 분리가 유지되는�
   });
 
   it("C-12-2: 이익 3건에 pro-rata (1000 : 800 : 600 = 합 2400)", () => {
-    // P floor(1000 × 700 / 2400) = 291, M floor(800 × 700 / 2400) = 233,
-    // 마지막 U가 700 − 291 − 233 = 176
-    expect(out.lossOffsetFromOther).toEqual([291, 0, 233, 0, 176]);
+    // P 1000 × 700 / 2400 = 291.67, M 800 × 700 / 2400 = 233.33, U 600 × 700 / 2400 = 175 → floor 합 699,
+    // 잔액 1은 소수부가 큰 P로(최대잉여법 — 종전은 마지막 U가 흡수해 291 / 233 / 176)
+    expect(out.lossOffsetFromOther).toEqual([292, 0, 233, 0, 175]);
   });
 
   it("C-12-inv", () => assertInvariants(records, out));
