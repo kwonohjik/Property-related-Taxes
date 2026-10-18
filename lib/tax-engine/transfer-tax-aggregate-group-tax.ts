@@ -86,10 +86,45 @@ function allocateBucketTax(
   return shares;
 }
 
+/**
+ * 다건에서 자산 1건의 split 세액 컨텍스트 — 세액 계산(`aggregateByGroup`)과 §103② 파트 배분 단위(F-B,
+ * `splitPartBasicUnits`)가 **같은 컨텍스트**를 쓴다. 따로 만들면 파트 소득 안분(차손 통산 후 가중치 등)이 갈린다.
+ */
+export function aggregateSplitContextOf(
+  record: AssetRecord,
+  income: number,
+  basic: number,
+  parsedRates: ReturnType<typeof parseRatesFromMap>,
+): SplitPartRateContext {
+  return {
+    taxBase: Math.max(0, income - basic),
+    transferIncome: income,
+    basicDeduction: basic,
+    splitDetail: record.result.splitDetail,
+    parsedRates,
+    taxRateInput: record.correctedSingleInput,
+    // houses[] 정밀 중과 판정 — 단건 엔진이 낸 **그 판정**을 그대로 넘긴다 (2026-08-13 F01).
+    // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
+    // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
+    multiHouseSurchargeResult: record.result.multiHouseSurchargeEvaluation,
+    // §103② — 단건과 같은 술어로 감면 제외 파트에 기본공제를 먼저 준다.
+    reducedPart: publicExpropriationReducedPart(record.correctedSingleInput, record.result.splitDetail),
+    // 차손을 파트 단위로 통산했으면(Q-F3a) 파트 소득 안분을 통산 후 파트 소득으로 한다.
+    ...(record.lossPartIncomeAfterOffset ? { partIncomeWeights: record.lossPartIncomeAfterOffset } : {}),
+    // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
+    ...(record.result.rentalHousingExceptionDetail?.applied === true
+      ? { rentalHousingTaxableIncome: record.income }
+      : {}),
+    aggregateFiling: true,
+  };
+}
+
 export function aggregateByGroup(
   records: AssetRecord[],
   incomeAfterOffset: number[],
   allocatedBasic: number[],
+  /** split 자산의 파트별 기본공제(`splitPartBasicUnits` 순서 — F-B). 있으면 파트 내부 배분 대신 쓴다. */
+  partBasic?: (number[] | undefined)[],
 ): {
   groupTaxes: GroupTaxResult[];
   /**
@@ -174,24 +209,8 @@ export function aggregateByGroup(
     return parsed;
   };
   const splitCtxOf = (i: number): SplitPartRateContext => ({
-    taxBase: Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]),
-    transferIncome: incomeAfterOffset[i],
-    basicDeduction: allocatedBasic[i],
-    splitDetail: records[i].result.splitDetail,
-    parsedRates: parsedRatesOf(i),
-    taxRateInput: records[i].correctedSingleInput,
-    // houses[] 정밀 중과 판정 — 단건 엔진이 낸 **그 판정**을 그대로 넘긴다 (2026-08-13 F01).
-    // 빠뜨리면 `calcTax`가 원시 플래그(householdHousingCount·isRegulatedArea)로 중과를
-    // **재판정**해 단건이 배제한 중과가 다건에서 되살아난다(optional이라 TS가 못 잡는다).
-    multiHouseSurchargeResult: records[i].result.multiHouseSurchargeEvaluation,
-    // §103② — 단건과 같은 술어로 감면 제외 파트에 기본공제를 먼저 준다.
-    reducedPart: publicExpropriationReducedPart(records[i].correctedSingleInput, records[i].result.splitDetail),
-    // 차손을 파트 단위로 통산했으면(Q-F3a) 파트 소득 안분을 통산 후 파트 소득으로 한다.
-    ...(records[i].lossPartIncomeAfterOffset ? { partIncomeWeights: records[i].lossPartIncomeAfterOffset } : {}),
-    // §155⑳ 특례 적용 자산은 단건 특례 경로와 같은 모델로 계산한다 — 엔진이 슬롯(`income`)에 싣는 과세대상 소득금액을 그대로 넘긴다.
-    ...(records[i].result.rentalHousingExceptionDetail?.applied === true
-      ? { rentalHousingTaxableIncome: records[i].income }
-      : {}),
+    ...aggregateSplitContextOf(records[i], incomeAfterOffset[i], allocatedBasic[i], parsedRatesOf(i)),
+    ...(partBasic?.[i] ? { partBasicDeduction: partBasic[i] } : {}),
   });
   /**
    * 자산 1건의 산출세액 — 토지·건물 취득일이 다른 split 자산은 파트별 세율 + §104⑤ 비교과세.
@@ -200,7 +219,7 @@ export function aggregateByGroup(
   const assetTaxOf = (i: number) => {
     const assetTaxBase = Math.max(0, incomeAfterOffset[i] - allocatedBasic[i]);
     // 1호가 이겨도 파트(배율 초과 비사업용 토지 · 비주택 토지·건물)를 호별 버킷 합산 단위로 남긴다(§104⑤ — 단건은 넘기지 않는다).
-    const tr = resolveSplitAwareTax({ ...splitCtxOf(i), aggregateFiling: true });
+    const tr = resolveSplitAwareTax(splitCtxOf(i));
     // 파트가 있는 자산만 **자산 단독 세액**을 기록한다(§4.12 — 표시 정확화용).
     if (tr.splitPartDetail) assetPartTax[i] = { tax: tr.calculatedTax, note: tr.shortTermNote };
     // 다건 세액은 이 재계산이 정본이다 — 「세율 기산일」 표시 게이트도 이 판정으로 덮는다(D1-3).

@@ -126,11 +126,34 @@ function reductionAttributionOf(
   const byKind = ctx.assetPartClauseKeys?.[i] ?? {};
   // §155⑳ 특례 자산은 파트가 주택분·배율 초과분이라 토지·건물 귀속이 성립하지 않는다.
   if (byKind.housing) return undefined;
-  const kinds: readonly PartKind[] = partWise.eligiblePart === "land" ? ["land", "non_business_land"] : ["building"];
+  const kinds = reducedPartKindsOf(partWise);
   const own = [...new Set(kinds.flatMap((k) => byKind[k] ?? []))];
   if (own.length !== 1) return undefined;
-  const basicByKind = ctx.assetPartBasic?.[i] ?? {};
-  return { keys: own, basic: kinds.reduce((s, k) => s + (basicByKind[k] ?? 0), 0) };
+  return { keys: own, basic: partBasicOfKinds(kinds, ctx.assetPartBasic?.[i] ?? {}) };
+}
+
+/** §77 감면소득이 생긴 파트 종류(5B `partWise`). */
+const reducedPartKindsOf = (partWise: { eligiblePart: "land" | "building" }): readonly PartKind[] =>
+  partWise.eligiblePart === "land" ? ["land", "non_business_land"] : ["building"];
+const partBasicOfKinds = (kinds: readonly PartKind[], basicByKind: Partial<Record<PartKind, number>>) =>
+  kinds.reduce((s, k) => s + (basicByKind[k] ?? 0), 0);
+
+/**
+ * F-A — 감면 파트가 확정된 split 자산(§77 5B `partWise`)의 C를 **감면 파트가 세액 계산에서 받은 기본공제**로 읽는다.
+ * 전체 누진 경로(`perClause` 없음)용이다. 호별 경로는 `reductionAttributionOf`가 같은 값을 쓴다.
+ *
+ * 자산 단위 식 `배분 기본공제 − (통산 후 소득 − B)`는 받은 차손이 감면 파트에 닿아 통산 후 소득이 B보다 작아지면
+ * 감면 외 소득을 0으로 보아 C를 과대로 잡는다(실측 30셀, 최대 92,760 — 계획서
+ * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §2). 파트가 없거나 주택 파트면 `undefined`(자산 단위 식).
+ */
+function reducedPartBasicOf(
+  result: TransferTaxResult,
+  basicByKind: Partial<Record<PartKind, number>> | undefined,
+): number | undefined {
+  const partWise = result.publicExpropriationDetail?.partWise;
+  if (result.reductionTypeApplied !== "public_expropriation" || !partWise) return undefined;
+  if (!basicByKind || Object.keys(basicByKind).length === 0 || basicByKind.housing !== undefined) return undefined;
+  return partBasicOfKinds(reducedPartKindsOf(partWise), basicByKind);
 }
 
 /** `104-1-10|0.7` → 「§104①10호 (70%)」. 호 불명(`solo-*`)은 「호 미상」. */
@@ -220,6 +243,11 @@ export interface AggregateReductionArgs {
    * 감면 유형 사이의 C를 따로 안분하면 배분 표시와 감면액이 다른 순서를 말한다(부동산거래관리과-0893).
    */
   allocatedBasic: number[];
+  /**
+   * 자산별 파트 종류 → 세액 계산에서 그 파트가 받은 기본공제(`aggregateByGroup` echo). 감면 파트가 확정된 split 자산의 C를
+   * 전체 누진 경로에서도 파트 귀속으로 읽는다(F-A — `reducedPartBasicOf`).
+   */
+  assetPartBasic: Partial<Record<PartKind, number>>[];
   taxYear: number;
   priorReductionUsage: { year: number; type: string; amount: number }[];
   /** F-9 호별 산정 입력 — 없으면 합산 산식(§104⑤ 전체 누진 채택 · Q-2). */
@@ -305,6 +333,7 @@ export function aggregateReductions(args: AggregateReductionArgs): AggregateRedu
   >();
   /** §90①의 자산별 C — 배분 기본공제 중 그 자산의 비감면소득이 흡수하지 못한 잔여(`perClauseRowsOf`와 같은 식). */
   const basicOnReducibleOf = (idx: number) =>
+    reducedPartBasicOf(assetRecords[idx].result, args.assetPartBasic[idx]) ??
     Math.max(0, (allocatedBasic[idx] ?? 0) - Math.max(0, taxableAfterReduction[idx] - sumBucketIncome(bucketsOf(assetRecords[idx].result))));
 
   assetRecords.forEach((r, idx) => {

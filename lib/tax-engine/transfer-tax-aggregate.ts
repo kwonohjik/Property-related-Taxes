@@ -36,6 +36,13 @@ import {
   type CarryoverScenarioOverrides,
 } from "./transfer-tax-aggregate-carryover-scope";
 import { buildAssetRecords } from "./transfer-tax-aggregate-asset-records";
+import {
+  expandSplitBasicUnits,
+  foldBasicUnitAllocation,
+  unitAssetOf,
+  unitIdOf,
+  type BasicDeductionUnits,
+} from "./transfer-tax-aggregate-basic-units";
 import { resolveDisplayAcquisitionAndExpense, resolveLthdPartsEcho } from "./transfer-tax-aggregate-display-echo";
 import { computeSettlement } from "./transfer-tax-settlement";
 import { TRANSFER } from "./legal-codes";
@@ -231,18 +238,26 @@ function computeAggregateOnce(
    */
   const allocationAxis = input.basicDeductionAllocation ?? "EARLIEST_TRANSFER";
   /**
+   * §103② 배분 행 — split 자산은 파트로 펼친다(F-B, `transfer-tax-aggregate-basic-units.ts`). 법정 순서 축에서만이다 —
+   * 입력 순서(`FIRST`)·일반건물 카드 파트 축·일괄양도(`sameDayEqualTaxOrder`)는 자산 한 행 그대로.
+   */
+  const units: BasicDeductionUnits =
+    allocationAxis === "EARLIEST_TRANSFER" && input.sameDayEqualTaxOrder === undefined
+      ? expandSplitBasicUnits(assetRecords, eligibleForBasic)
+      : { eligible: eligibleForBasic, partOf: new Map() };
+  /**
    * §103②이 침묵하는 **같은 날 양도** 묶음 — 재일46014-1685 「납세자에게 유리하다고 판단되는 양도자산의
    * 양도소득금액에서부터」. 무엇이 유리한지는 신고 전체 세액으로만 판정되므로 아래 `finishWith`를 후보 순서마다
    * 돌려 고른다(계획서 `transfer-basic-deduction-same-day-tie.plan.md` D-1).
    */
   const tieGroups =
-    allocationAxis === "EARLIEST_TRANSFER" ? sameDayTieGroups(eligibleForBasic, availableThisCalc) : [];
+    allocationAxis === "EARLIEST_TRANSFER" ? sameDayTieGroups(units.eligible, availableThisCalc) : [];
   /**
    * 같은 날 감면율이 다른 감면소득 — 0893 순서(감면율 낮은 것부터)가 조특법 §133 한도 때문에 불리할 수 있어
    * 자산 블록 순서를 0893 뒤의 후보로 함께 평가한다(계획서 `transfer-basic-deduction-133-cap-order.plan.md`).
    */
   const reducibleGroups =
-    allocationAxis === "EARLIEST_TRANSFER" ? sameDayReducibleRateGroups(eligibleForBasic, availableThisCalc) : [];
+    allocationAxis === "EARLIEST_TRANSFER" ? sameDayReducibleRateGroups(units.eligible, availableThisCalc) : [];
 
   /** M-4 배분부터 끝까지 — 동순위 순서(`TieCandidate`)만 바꿔 다시 돌릴 수 있게 감싼다. `steps`·`warnings`는 호출마다 사본이다. */
   const finishWith = (
@@ -253,9 +268,8 @@ function computeAggregateOnce(
   const allocation =
     allocationAxis === "PARTS_HIGHEST_RATE"
       ? allocateBasicDeductionAcrossParts(eligibleForBasic, availableThisCalc)
-      : allocateBasicDeduction(eligibleForBasic, availableThisCalc, allocationAxis, tieRank, reducibleRank);
-  const allocatedBasic: number[] = assetRecords.map(() => 0);
-  for (const a of allocation) allocatedBasic[a.idx] = a.amount;
+      : allocateBasicDeduction(units.eligible, availableThisCalc, allocationAxis, tieRank, reducibleRank);
+  const { allocatedBasic, partBasic } = foldBasicUnitAllocation(assetRecords, units, allocation);
   const totalBasicDeduction = allocatedBasic.reduce((s, v) => s + v, 0);
   /**
    * §90①의 C를 읽는 배분 — §103② 순서(감면 외 먼저 → 같은 날 감면소득은 감면율 낮은 것부터)여야 한다.
@@ -277,7 +291,7 @@ function computeAggregateOnce(
     tieGroups.length > 0 ? " · 같은 날 양도 — 납세자에게 유리한 순서(재일46014-1685)" : "",
     reducibleRank
       ? " · 같은 날 감면소득 — 조특법 §133 감면 한도를 반영해 납세자에게 유리한 순서(재일46014-1685)"
-      : sameDayReducibleRatesDiffer(eligibleForBasic, allocation, allocationAxis === "FIRST") ?" · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
+      : sameDayReducibleRatesDiffer(units.eligible, allocation, allocationAxis === "FIRST") ?" · 같은 날 감면소득 — 감면율 낮은 소득부터(부동산거래관리과-0893)" : "",
   ].join("");
   steps.push({
     label: "기본공제",
@@ -305,7 +319,7 @@ function computeAggregateOnce(
     assetClauseKeys,
     assetPartClauseKeys,
     assetPartBasic,
-  } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates);
+  } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates, partBasic);
 
   // §104⑤ 괄호 — 호별 감면(F-9)이 두 경로에서 달라지면 **감면 차감 후** 세액으로 고른다.
   const m8Base = {
@@ -313,6 +327,7 @@ function computeAggregateOnce(
     taxableAfterReduction,
     totalBasicDeduction,
     allocatedBasic: allocatedBasicForReduction,
+    assetPartBasic,
     taxYear: input.taxYear,
     priorReductionUsage: input.priorReductionUsage ?? [],
   };
@@ -342,7 +357,7 @@ function computeAggregateOnce(
       const isExemptAsset = ruralSurtaxExemptReducibleOf(assetRecords[i].result) > 0;
       return Math.max(0, v - (isExemptAsset ? incomeDeductionReducible[i] : 0));
     });
-    const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, allocatedBasic, rates).calculatedTax;
+    const beforeTax = computeGroupsAndComparison(assetRecords, surtaxBaseline, allocatedBasic, rates, partBasic).calculatedTax;
     ruralSurtax = applyRate(Math.max(0, beforeTax - calculatedTax), 0.2);
     if (ruralSurtax > 0) {
       steps.push({
@@ -656,8 +671,8 @@ function computeAggregateOnce(
   // 후보마다 하류를 임시 사본으로 돌려 가장 유리한 순서를 고른 뒤, 그 순서로 **정식으로 한 번 더** 계산한다 —
   // 하류가 자산 기록의 표시 플래그(`splitDetail.partRateBasisApplied`)를 덮어쓰므로 채택 후보가 마지막이어야 한다.
   // 세액이 같은 후보 사이의 순서(표시 규약) — 다건은 propertyId 사전순, 일괄양도는 한계세율 ↓ → 자산 번호 ↑.
-  const idOf = (idx: number) => assetRecords[idx].item.propertyId;
-  const rateOf = (idx: number) => assetRecords[idx].result.appliedRate;
+  const idOf = (idx: number) => unitIdOf(assetRecords, units, idx);
+  const rateOf = (idx: number) => assetRecords[unitAssetOf(units, idx)].result.appliedRate;
   const equalTaxOrder =
     input.sameDayEqualTaxOrder === "marginalRateThenAssetNumber"
       ? (a: number, b: number) => rateOf(b) - rateOf(a) || a - b

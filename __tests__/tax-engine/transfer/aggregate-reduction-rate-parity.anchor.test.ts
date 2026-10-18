@@ -53,6 +53,7 @@ function runM8(
     taxableAfterReduction,
     totalBasicDeduction: 0,
     allocatedBasic: taxableAfterReduction.map(() => 0),
+    assetPartBasic: taxableAfterReduction.map(() => ({})),
     taxYear: 2025,
     priorReductionUsage: [],
     steps: [] as CalculationStep[],

@@ -1,11 +1,13 @@
 /**
  * 토지·건물 분리취득(split) 자산의 **파트 구성** — 게이트(0~4) + 파트별 양도소득금액·세율 판정 입력.
  *
- * 두 소비처의 **단일 소스**다(2026-10-16 `transfer-tax-split-rate.ts`에서 분리 — 800줄 정책):
- *   · `evaluateSplitPartTax` — §104⑤ 파트별 세율 + 비교과세
+ * 세 소비처의 **단일 소스**다(2026-10-16 `transfer-tax-split-rate.ts`에서 분리 — 800줄 정책):
+ *   · `evaluateSplitPartTax` — §104⑤ 파트별 세율 + 비교과세(파트 소득·1차 세율까지는 `prepareSplitParts`)
  *   · `splitPartsForLossOffset` — 다건 차손 통산을 파트 단위로(「소득세법 시행령」 §167의2①, Q-F3a)
- * 게이트를 두 곳에 복제하면 한쪽만 바뀌어 **세율 단위와 차손 통산 단위가 갈린다**.
- * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-followups.plan.md` §3.
+ *   · `splitPartBasicUnits` — 다건 §103② 기본공제 배분을 파트 단위로(F-B, 2026-10-18)
+ * 게이트를 여러 곳에 복제하면 한쪽만 바뀌어 **세율 단위·차손 통산 단위·기본공제 배분 단위가 갈린다**.
+ * 계획서 `docs/02-design/features/transfer-104-5-split-nonhouse-followups.plan.md` §3 ·
+ * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §4.
  */
 import { calcTax } from "./transfer-tax-rate-calc";
 import type { RateClause } from "./transfer-tax-rate-clause";
@@ -17,7 +19,7 @@ import {
 } from "./transfer-tax-appurtenant-land";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import type { SplitRatePart } from "./transfer-tax-split-rate";
+import type { SplitPartRateContext, SplitRatePart } from "./transfer-tax-split-rate";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 
@@ -135,4 +137,79 @@ export function splitPartsForLossOffset(
     const t = calcTax(s.raw, parsedRates, s.rateInput, multiHouseSurchargeResult);
     return { kind: s.kind, income: s.raw, rateClause: t.rateClause, appliedRate: t.appliedRate, propertyType: s.rateInput.propertyType };
   });
+}
+
+/** 다건 신고의 비주택 토지·건물 split — 파트를 합산 단위로 항상 남긴다(P3). 비주택 판정은 G-1과 같은 술어(`resolveAppurtenantLandRateBasisDate`). */
+export const keepsNonHousingParts = (ctx: SplitPartRateContext) =>
+  ctx.aggregateFiling === true && ctx.taxRateInput.propertyType !== "housing";
+
+/**
+ * 기본공제 배분 **전** 파트 — 시드 · 소득 안분 · 1차 세율, 게이트 6·7까지. 세액 계산(`evaluateSplitPartTax`)과
+ * 다건 §103② 배분 단위(`splitPartBasicUnits`)가 함께 쓴다 — 둘이 파트 소득을 따로 구하면 배분과 세액이 갈린다.
+ */
+export function prepareSplitParts(
+  ctx: SplitPartRateContext,
+):
+  | { ready: false; judged: boolean }
+  | { ready: true; seeds: SplitPartSeed[]; incomes: number[]; preRates: ReturnType<typeof calcTax>[] } {
+  const { splitDetail, taxRateInput: input, parsedRates, transferIncome } = ctx;
+  const notJudged = { ready: false, judged: false } as const;
+
+  const seeds = buildSplitPartSeeds(splitDetail, input);
+  if (!seeds) return notJudged;
+
+  // 6. 어느 파트든 결손이면 자산 내부에서 이미 통산된 뒤다(`transfer-tax-helpers.ts` 합산).
+  //    파트별로 쪼개면 Σ파트 ≠ 자산 과세표준이 되므로 진입하지 않는다.
+  if (seeds.some((s) => s.raw < 0)) return notJudged;
+  if (seeds.reduce((s, p) => s + p.raw, 0) <= 0) return notJudged;
+  const weights =
+    ctx.partIncomeWeights?.length === seeds.length ? ctx.partIncomeWeights : seeds.map((s) => s.raw);
+  const rawSum = weights.reduce((s, w) => s + w, 0);
+
+  // 자산 단위 양도소득금액과 어긋나면(감면 등) 비율 안분 후 잔액은 **마지막 파트가 흡수**한다.
+  // 큰 금액의 곱(최대 1e18)이 2^53을 넘길 수 있어 BigInt로 계산한다.
+  let allocatedIncome = 0;
+  const incomes = seeds.map((_, i) => {
+    if (i === seeds.length - 1) return transferIncome - allocatedIncome;
+    const v =
+      transferIncome === rawSum
+        ? weights[i]
+        : rawSum === 0
+          ? 0
+          : Number((BigInt(transferIncome) * BigInt(weights[i])) / BigInt(rawSum));
+    allocatedIncome += v;
+    return v;
+  });
+  if (incomes.some((v) => v < 0)) return notJudged;
+
+  // 1차: 기본공제 배분 전 세율 확인 (§103② MAX_BENEFIT 판정에 적용세율이 필요하다)
+  const preRates = seeds.map((s, i) =>
+    calcTax(incomes[i], parsedRates, s.rateInput, ctx.multiHouseSurchargeResult),
+  );
+
+  // 7. 파트별 확정세율이 모두 같으면 분해해도 결과가 같다 — 진입하지 않는다(회귀 0의 핵심).
+  //    세율**군**이 아니라 **확정세율 + 누진공제쌍**으로 판정한다. 1년 미만 50% + 1~2년 40%는
+  //    둘 다 short_term 군이라 군 단위로 보면 누락된다.
+  const uniform = preRates.every(
+    (r) =>
+      r.appliedRate === preRates[0].appliedRate &&
+      r.progressiveDeduction === preRates[0].progressiveDeduction,
+  );
+  //    단, 다건 + 비주택은 세율이 같아도 접지 않는다 — 다건 합산 단위는 세율이 아니라 해당 호 집합(Q3 키)이고, 키가 같은 파트는
+  //    다건 버킷이 다시 합산하므로 접지 않아도 값이 같다. 여기서 접으면 파트 단독 1호 ↔ 단기세율 교차점마다 합산 단위가 바뀌어
+  //    1원 절벽이 생기고(계획서 §2.3), 이 시점의 키(기본공제 배분 전)는 버킷 키(배분 후)와 갈릴 수도 있다(§7.5).
+  if (uniform && !keepsNonHousingParts(ctx)) return { ready: false, judged: true };
+  return { ready: true, seeds, incomes, preRates };
+}
+
+/**
+ * 다건 §103② 배분 단위로 쓸 파트(F-B). 파트가 만들어지지 않는 자산은 `null` — 자산 한 행으로 배분한다.
+ * 세액 계산과 같은 준비 단계(`prepareSplitParts`)를 거치므로 파트 소득이 세액 쪽과 갈리지 않는다.
+ */
+export function splitPartBasicUnits(
+  ctx: SplitPartRateContext,
+): { kind: SplitRatePart["kind"]; income: number; rate: number }[] | null {
+  const prep = prepareSplitParts(ctx);
+  if (!prep.ready) return null;
+  return prep.seeds.map((s, i) => ({ kind: s.kind, income: prep.incomes[i], rate: prep.preRates[i].appliedRate }));
 }

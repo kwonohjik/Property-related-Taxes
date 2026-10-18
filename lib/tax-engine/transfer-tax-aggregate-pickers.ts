@@ -134,11 +134,13 @@ export function computeGroupsAndComparison(
   allocatedBasic: number[],
   /** 신고 단위(과세기간) 세율 — §104⑤1호 §55① 누진표 전용. 자산 세액은 `records[i].rates`(E-14n). */
   rates: TaxRatesMap,
+  /** split 자산의 파트별 기본공제(§103② 배분을 파트 단위로 마친 것 — F-B). 없으면 파트 내부 배분. */
+  partBasic?: (number[] | undefined)[],
 ) {
   const {
     groupTaxes, assetPartTax, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax,
     clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic,
-  } = aggregateByGroup(records, incomeArray, allocatedBasic);
+  } = aggregateByGroup(records, incomeArray, allocatedBasic, partBasic);
   const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
   const totalIncome = incomeArray.reduce((s, v) => s + v, 0);
   const totalBasic = allocatedBasic.reduce((s, v) => s + v, 0);
