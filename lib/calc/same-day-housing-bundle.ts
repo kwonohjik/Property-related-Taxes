@@ -17,10 +17,10 @@ import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store
 
 /** 차단 사유 + 사유를 붙일 자산 인덱스(첫 번째 컴패니언 주택). 해당 없으면 null. */
 export function sameDayHousingBundleIssue(
-  form: Pick<TransferFormData, "assets" | "isOneHousehold" | "isRegulatedArea">,
+  form: Pick<TransferFormData, "assets" | "isOneHousehold" | "isRegulatedArea" | "assetSplitMode">,
 ): { message: string; assetIndex: number } | null {
   const assets = form.assets ?? [];
-  if (assets.length < 2 || isFullFractionalBundle(assets)) return null;
+  if (assets.length < 2 || isFullFractionalBundle(assets, form.assetSplitMode)) return null;
   const housing = assets
     .map((asset, index) => ({ asset, index }))
     .filter(({ asset }) => isOneHouseExemptionAsset(asset.assetKind));

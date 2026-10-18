@@ -224,7 +224,9 @@ export async function POST(request: NextRequest) {
     // 혼합(함께양도 묶음에 지분 자산이 섞임)은 축 B가 아니다 — 지분 자산도 계약서 가액(actual) 또는 안분 키(apportioned)를
     // 가진다(④가 100% 입력 × 지분율로 싣는다). 종전에는 한쪽만 지분이어도 키를 면제해 actual 500·apportioned 양도가액 0이었다
     // (2026-10-10 실측). ⑫ `transfer-tax-schema.ts`의 면제도 같은 판정이다.
-    const isFullFractionalBundle = primaryIsFractional && allCompanionsFractional;
+    // ⑭ 명시 플래그(⑬ — 화면의 사용자 선택)가 앞선다. 함께 양도 묶음의 전 자산이 지분이면 모양(전 자산 `totalPropertyTransferPrice`)만으로는
+    //    축 B와 구분되지 않아, 종전에는 자산별 양도가액을 「총양도가 × 지분율」로 바꿨다(2026-10-18 실측 T1 229,812,000 vs 218,724,000).
+    const isFullFractionalBundle = data.fractionalSplitBundle ?? (primaryIsFractional && allCompanionsFractional);
     const bundledOk =
       companions.length > 0 &&
       data.totalSalePrice !== undefined &&

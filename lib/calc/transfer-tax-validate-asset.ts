@@ -134,7 +134,7 @@ export function validateAssetEntry(
     index > 0 &&
     a.assetKind === "general_building" &&
     a.isUnregistered &&
-    !isFullFractionalBundle(form.assets)
+    !isFullFractionalBundle(form.assets, form.assetSplitMode)
   ) {
     return `${label}: 일반건물은 토지·건물의 미등기를 따로 고릅니다. 이전에 저장된 「미등기 양도」 값은 계산에 반영되지 않았으니 안내 카드에서 옮기거나 지우세요.`;
   }
@@ -298,7 +298,7 @@ export function validateAssetEntry(
   // 자동 결정되므로 actualSalePrice·standardPriceAtTransfer 모두 검증 면제(사례 27 — 안분 키 입력 강요 차단).
   // 함께양도(다른 물건) 묶음에 지분 자산이 섞이면 그 자산도 요구한다 — 물건 전체(100%) 입력이고 ④가 지분율을 곱한다.
   // 종전에는 그 자산 하나의 ratio만 보고 면제해 route가 500(actual)·양도가액 0(apportioned)이었다(2026-10-10 실측).
-  const axisBBundle = isFullFractionalBundle(form.assets);
+  const axisBBundle = isFullFractionalBundle(form.assets, form.assetSplitMode);
   // 증환지 증가분 존재 시 양도가액 구분 기재(actual) 불가 → 양도시 기준시가 안분 강제 (Step1 토글 숨김과 일치)
   const effBundledMode = effectiveBundledSaleMode(form);
   if (form.assets.length > 1 && !axisBBundle) {
@@ -336,7 +336,7 @@ export function validateAssetEntry(
    */
   const contractAssumedDebtTotal =
     form.assets.length > 1 &&
-    !isFullFractionalBundle(form.assets) &&
+    !isFullFractionalBundle(form.assets, form.assetSplitMode) &&
     form.assets.some((x) => x.transferType === "burdened_gift")
       ? form.assets.reduce(
           (sum, x) =>
@@ -346,7 +346,7 @@ export function validateAssetEntry(
           0,
         )
       : undefined;
-  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true, isFullFractionalBundle(form.assets), form);
+  const acqError = validateAssetAcquisition(a, label, form.transferDate, index > 0, contractAssumedDebtTotal, form.isOneHousehold === true, isFullFractionalBundle(form.assets, form.assetSplitMode), form);
   if (acqError) return acqError;
 
   // ⑧ 결정 #38-1 — 증여받은 주택의 「증여자와 계속 같은 세대」 사실. 판정 메뉴와 같은 규칙(`giftHouseholdFactErrors`)으로 필수로 묻는다.

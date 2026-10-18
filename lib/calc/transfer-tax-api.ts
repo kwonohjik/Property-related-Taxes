@@ -100,7 +100,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   if (!primary) throw new Error("자산이 없습니다.");
 
   // 지분 모드(같은 물건 분할취득) 여부 — companion basic을 primary에서 병합할지 게이트.
-  const fractionalBundleMerge = isFullFractionalBundle(form.assets);
+  const fractionalBundleMerge = isFullFractionalBundle(form.assets, form.assetSplitMode);
 
   // ── 대표 자산 감면 (자산별 reductions 배열 + 명부 행 ⑥의 §99의4·§98의9 — 게이트는 공용 술어) ──
   const reductions = toEngineReductions(primaryReductionsWithRows(form), primary.acquisitionCause, primary.expropriationNoticeDate);

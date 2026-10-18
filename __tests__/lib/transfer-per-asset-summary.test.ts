@@ -214,9 +214,9 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
         contractTotalPrice: "225000000",
         bundledSaleMode: "apportioned",
         assets: [
-          // 자산1: 지분 50% (총액×0.5 = 112,500,000 구분 기재로 안분 제외)
+          // 자산1: 함께 양도 묶음의 지분 50% — 안분 키 = 물건 전체 기준시가 90,000,000 × 50% = 45,000,000(#2080 ④ 규칙)
           { ...makeDefaultAsset(1), assetId: "A", assetKind: "housing", ownershipNumerator: "50", ownershipDenominator: "100", standardPriceAtTransfer: "90000000" },
-          // 자산2: 단독 — 잔여 112,500,000 단독 안분
+          // 자산2: 단독 — 키 60,000,000
           { ...makeDefaultAsset(2), assetId: "B", assetKind: "land", standardPriceAtTransfer: "60000000" },
         ],
       },
@@ -225,9 +225,11 @@ describe("computeTransferPerAssetSummary — 자산별 요약 + 안분 양도가
     const s = compute();
     const rowA = s.rows.find((r) => r.assetId === "A")!;
     const rowB = s.rows.find((r) => r.assetId === "B")!;
-    expect(rowA.salePrice).toBe(112_500_000); // 총액 × 지분
-    expect(rowB.salePrice).toBe(112_500_000); // 잔여 흡수 (전체총액 기준 90M 아님)
-    expect(rowA.saleIsApportioned).toBe(false); // 지분 라벨
+    // 2026-10-18 — 계산 전 미리보기를 ④·엔진 값으로 맞췄다(실제 route 실측 96,428,571 · 128,571,429).
+    //   종전 기대 112,500,000 · 112,500,000(총액 × 지분)은 #2080 전 규칙이라 엔진과 달랐다. 「총액 × 지분」은 축 B(지분별 취득)에만 맞다.
+    expect(rowA.salePrice).toBe(96_428_571); // 225,000,000 × 45M / 105M
+    expect(rowB.salePrice).toBe(128_571_429); // 잔여 흡수
+    expect(rowA.saleIsApportioned).toBe(true); // 함께 양도 지분 자산도 기준시가 안분
     expect(rowB.saleIsApportioned).toBe(true); // 기준시가 안분 라벨
     expect(s.totalSalePrice).toBe(225_000_000); // 합계 무결성
   });
