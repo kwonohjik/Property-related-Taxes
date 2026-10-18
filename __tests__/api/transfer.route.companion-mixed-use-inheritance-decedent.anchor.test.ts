@@ -171,7 +171,9 @@ describe("컴패니언 겸용주택 — 상속 피상속인 취득일", () => {
   it("§77⑨ — 사업인정고시 2024-03-01 · 피상속인 2000 → 감면 성립", async () => {
     const { a } = await calc({ ...INH, decedentAcquisitionDate: "2000-01-01" }, true);
     expect(a.reductionAmount).toBe(4_258_726);
-    expect(a.totalTax).toBe(76_016_145);
+    // 농특세는 과세 대상 감면세액 합계에 한 번 — floor(4,258,726 × 20%) = 851,745. 종전 카드별 절사 합 851,744보다 1원 많다
+    // (계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §5 · 별지 제84호서식 농특세 납부계산서 한 줄).
+    expect(a.totalTax).toBe(76_016_146);
   }, 60_000);
 
   it("§77 긍정 짝 — 피상속인도 소급 2년 안(2023-06-01) · 매매 2023-09-01 → 불성립", async () => {
@@ -202,7 +204,8 @@ describe("컴패니언 겸용주택 — 상속 피상속인 취득일", () => {
     it("§77 — 토지 카드는 자기 취득일(2023-10-01)로 불성립, 건물 카드만 감면", async () => {
       const { a } = await calc({ ...INH, ...SEP, decedentAcquisitionDate: "2000-01-01" }, true);
       expect(a.reductionAmount).toBe(5_866_193);
-      expect(a.totalTax).toBe(84_026_973);
+      // 농특세 floor(5,866,193 × 20%) = 1,173,238 — 종전 카드별 절사 합보다 1원 많다(위 §77⑨ 사례와 같은 사유).
+      expect(a.totalTax).toBe(84_026_974);
     }, 60_000);
   });
 });

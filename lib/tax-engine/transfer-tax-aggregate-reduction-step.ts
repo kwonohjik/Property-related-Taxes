@@ -21,7 +21,7 @@ import {
   lookupLimit,
 } from "./aggregate-reduction-limits";
 import { resolveTypeLegalBasis } from "./transfer-tax-aggregate-pickers";
-import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { RURAL_SURTAX_RATE, resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
 import type { CalculationStep, TransferTaxResult } from "./transfer-tax";
 import type { ReducibleIncomeBucket } from "./types/transfer-result.types";
 import type {
@@ -643,11 +643,15 @@ export function allocateAggregateReductions(
   // 화면에는 "감면 합계"와 "자산별 감면"이 나란히 나오므로 1원 차이도 자기모순으로 보인다.
   //
   // 정책: 안분은 마지막 항목이 잔액을 흡수해 `Σ = 전체` 불변식을 지킨다
-  // (memory `feedback_floor_residual_absorption`). 총 감면액(capped) 자체는 불변이므로
-  // 세액에는 영향이 없다.
+  // (memory `feedback_floor_residual_absorption`). 총 감면액(capped) 자체는 불변이다.
+  //
+  // 「마지막」은 **propertyId 순**이다(입력 순서가 아니다). 잔액 1원이 농특세 비과세 자산(§77 직접 경작 토지)과
+  // 과세 자산 사이를 넘나들면 농특세가 1원 갈린다 — 입력 순서만 바꿔 총 부담이 달라지면 안 된다
+  // (계획서 `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §5).
   const reductionAllocations = new Map<number, number>();
+  const idOf = (idx: number) => assetRecords[idx].item.propertyId;
   {
-    /** 감면유형 → 그 유형에 속하는 자산 인덱스(입력 순서 유지) */
+    /** 감면유형 → 그 유형에 속하는 자산 인덱스(아래에서 propertyId 순으로 정렬한다) */
     const groupIdx = new Map<string, number[]>();
     assetRecords.forEach((r, idx) => {
       const type = r.result.reductionTypeApplied;
@@ -660,7 +664,8 @@ export function allocateAggregateReductions(
       else groupIdx.set(type, [idx]);
     });
 
-    for (const [type, idxList] of groupIdx) {
+    for (const [type, inputOrder] of groupIdx) {
+      const idxList = [...inputOrder].sort((a, b) => (idOf(a) < idOf(b) ? -1 : idOf(a) > idOf(b) ? 1 : a - b));
       const entry = reductionBreakdown.find((b) => b.type === type)!;
       const weightOf = allocationWeightOf(entry, assetRecords);
       let allocated = 0;
@@ -683,7 +688,7 @@ export function allocateAggregateReductions(
   return reductionAllocations;
 }
 
-/** ③ 세액감면형 감면의 농어촌특별세 — 자산별 배분액 기준. */
+/** ③ 세액감면형 감면의 농어촌특별세 — 과세 판정은 자산별 배분액, 세액은 과세 대상 합계에 한 번. */
 export function computeAggregateTaxCreditRuralSurtax(
   assetRecords: AggregateAssetRecord[],
   reductionAllocations: Map<number, number>,
@@ -697,10 +702,13 @@ export function computeAggregateTaxCreditRuralSurtax(
    * 한 원도 붙지 않았다. 「농어촌특별세법」 §5①1호는 조특법 감면세액 × 20%를 정하고, 비과세는
    * 시행령 §4가 **열거**한 것뿐이다(§69는 비과세 · §77은 **직접 경작한 토지**만 비과세).
    *
-   * 🔑 **자산별 배분액으로 판정한다** — 「직접 경작」 여부는 자산마다 다르므로 유형 합계로는
+   * 🔑 **과세 여부는 자산별 배분액으로 판정한다** — 「직접 경작」 여부는 자산마다 다르므로 유형 합계로는
    *    가를 수 없다. 그래서 `reductionAllocations`(§133 한도까지 반영된 자산별 몫)를 쓴다.
+   * 🔑 **세액은 과세 대상 감면세액의 합계에 한 번** 곱한다 — 과세표준은 「감면을 받는 소득세의 감면세액」(§5①1호)이고
+   *    신고서(「소득세법 시행규칙」 별지 제84호서식 「농어촌특별세 납부계산서」)도 감면세액 한 줄이다. 종전처럼 자산마다
+   *    절사해 더하면 합계보다 최대 (자산 수 − 1)원 작고, 잔액이 붙는 자산에 따라 1원씩 갈렸다.
    */
-  let ruralSurtaxCredit = 0;
+  let taxableReduction = 0;
   for (const [idx, allocated] of reductionAllocations) {
     if (allocated <= 0) continue;
     const rec = assetRecords[idx];
@@ -710,12 +718,13 @@ export function computeAggregateTaxCreditRuralSurtax(
       isSelfCultivatedExpropriatedLand: (rec.item as { isSelfCultivatedExpropriatedLand?: boolean })
         .isSelfCultivatedExpropriatedLand,
     });
-    ruralSurtaxCredit += verdict.surtax;
+    if (verdict.verdict === "taxable") taxableReduction += allocated;
   }
+  const ruralSurtaxCredit = applyRate(taxableReduction, RURAL_SURTAX_RATE);
   if (ruralSurtaxCredit > 0) {
     steps.push({
       label: "농어촌특별세 (감면세액 × 20%)",
-      formula: `자산별 감면세액 합계 × 20% = ${ruralSurtaxCredit.toLocaleString()} (농어촌특별세법 §5①1호 · 시행령 §4 비과세 열거 제외분)`,
+      formula: `과세 대상 감면세액 ${taxableReduction.toLocaleString()} × 20% = ${ruralSurtaxCredit.toLocaleString()} (농어촌특별세법 §5①1호 · 시행령 §4 비과세 열거 제외분)`,
       amount: ruralSurtaxCredit,
       legalBasis: "농어촌특별세법 §5①1호",
     });
