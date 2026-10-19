@@ -98,6 +98,23 @@ describe("POST /api/one-house-ai/extract", () => {
     expect(q).toContainEqual(expect.objectContaining({ path: "contractTotalPrice", source: "validation", question: "예상 양도가액을 입력하세요." }));
   });
 
+  it("LLM이 거주를 행 이름 없이 물었으면 검증의 거주 질문은 덧붙이지 않고, 라벨은 사전에서 찾는다", async () => {
+    const facts = extraction().facts.filter((f) => f.path !== "asset.residencePeriodMonthsAsset");
+    extract.mockResolvedValueOnce({
+      extraction: extraction({
+        facts,
+        missingFacts: [{ path: "asset.residencePeriods[].moveInDate", question: "A에 입주한 날은 언제입니까?", why: "거주기간" }],
+      }),
+      model: "m",
+      usage: { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 },
+    });
+    const { data } = await (await call({ text: "사실관계" })).json();
+    const q = data.questions as { path: string; source: string; label?: string }[];
+    expect(q.filter((x) => x.path.startsWith("asset.residencePeriods"))).toEqual([
+      expect.objectContaining({ path: "asset.residencePeriods[].moveInDate", source: "llm", label: expect.any(String) }),
+    ]);
+  });
+
   it("사전에 없는 경로·형식 오류는 넣지 않고 issues로 돌려준다", async () => {
     extract.mockResolvedValueOnce({
       extraction: extraction({ facts: [...extraction().facts, { path: "transferDate2", value: "x", evidence: "" }] }),
