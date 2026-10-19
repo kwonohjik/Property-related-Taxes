@@ -62,7 +62,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
         <button
           type="button"
           onClick={add}
-          className="ml-auto rounded border border-violet-300 bg-white dark:bg-gray-900 px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
+          className="ml-auto rounded border border-violet-300 bg-white dark:bg-gray-900 px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 dark:text-violet-300"
         >
           + 행 추가
         </button>
@@ -88,7 +88,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
       </div>
 
       {isLotMode && (
-        <div className="rounded border border-violet-200 bg-violet-50/70 px-3 py-2 text-xs text-violet-700">
+        <div className="rounded border border-violet-200 bg-violet-50/70 px-3 py-2 text-xs text-violet-700 dark:text-violet-300 dark:bg-violet-950/40">
           매수 다건/분할 모드: 발생일 이전 보유한 매수 건만 희석됩니다. 무상주 보유기간은 원주 취득일로 통산되며(국세청 서면-2019-자본거래-1671),
           각 매수 건의 총취득원가는 불변·1주당 단가만 환산됩니다. 배정 수량은 매수 당시(원주) 기준으로 입력하세요.
         </div>
@@ -105,11 +105,11 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
             return (
               <div key={idx} className="rounded border border-violet-200 bg-white dark:bg-gray-900 p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-violet-800">자본조정 #{idx + 1}</p>
+                  <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">자본조정 #{idx + 1}</p>
                   <button
                     type="button"
                     onClick={() => remove(idx)}
-                    className="text-xs text-rose-600 hover:underline"
+                    className="text-xs text-rose-600 hover:underline dark:text-rose-400"
                   >
                     삭제
                   </button>
@@ -151,14 +151,14 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                 />
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-xs font-medium text-violet-700">발생일</label>
+                    <label className="text-xs font-medium text-violet-700 dark:text-violet-300">발생일</label>
                     <DateInput
                       value={r.eventDate}
                       onChange={(v) => update(idx, { eventDate: v })}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-violet-700">비율</label>
+                    <label className="text-xs font-medium text-violet-700 dark:text-violet-300">비율</label>
                     <DecimalInput
                       value={r.ratio}
                       onChange={(v) => update(idx, { ratio: v })}
@@ -167,7 +167,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-violet-700">메모 (선택)</label>
+                  <label className="text-xs font-medium text-violet-700 dark:text-violet-300">메모 (선택)</label>
                   <input
                     type="text"
                     className="w-full rounded border border-violet-200 px-3 py-2 text-sm"

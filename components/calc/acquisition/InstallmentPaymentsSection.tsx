@@ -133,11 +133,11 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
         {installments.map((row, idx) => (
           <div
             key={row.id}
-            className="rounded-md border border-amber-100 bg-amber-50/20 p-3 space-y-2"
+            className="rounded-md border border-amber-100 bg-amber-50/20 p-3 space-y-2 dark:bg-amber-950/40"
           >
             {/* 회차 헤더 */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-amber-800">{idx + 1}회차</span>
+              <span className="text-xs font-medium text-amber-800 dark:text-amber-200">{idx + 1}회차</span>
               <button
                 type="button"
                 onClick={() => onChange(removeRow(installments, row.id))}
@@ -192,17 +192,17 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
 
       {/* 합계 표시 */}
       {total > 0 && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm dark:bg-emerald-950/40">
           <div className="flex justify-between items-center">
-            <span className="text-emerald-700 font-medium">
+            <span className="text-emerald-700 font-medium dark:text-emerald-300">
               {installments.length}회차 합계
             </span>
-            <span className="font-bold text-emerald-800">
+            <span className="font-bold text-emerald-800 dark:text-emerald-200">
               {total.toLocaleString("ko-KR")}
             </span>
           </div>
           {lastDate && (
-            <p className="text-xs text-emerald-600 mt-0.5">
+            <p className="text-xs text-emerald-600 mt-0.5 dark:text-emerald-400">
               마지막 회차 지급일: {lastDate}
             </p>
           )}

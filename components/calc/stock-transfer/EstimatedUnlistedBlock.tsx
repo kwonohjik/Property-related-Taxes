@@ -273,8 +273,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       <div
         className={`rounded-lg border px-4 py-3 text-sm ${
           isHeavyRE
-            ? "border-violet-200 bg-violet-50/70 text-violet-800"
-            : "border-fuchsia-200 bg-fuchsia-50/60 text-fuchsia-800"
+            ? "border-violet-200 bg-violet-50/70 text-violet-800 dark:text-violet-200 dark:bg-violet-950/40"
+            : "border-fuchsia-200 bg-fuchsia-50/60 text-fuchsia-800 dark:text-fuchsia-200 dark:bg-fuchsia-950/40"
         }`}
       >
         <p className="font-semibold">
@@ -312,7 +312,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             </>
           )}
         </p>
-        <p className="text-xs text-fuchsia-600 mt-1">
+        <p className="text-xs text-fuchsia-600 mt-1 dark:text-fuchsia-400">
           입력값: 순손익가치 = <Frac top="1주당 순손익액" bottom="10%" /> (이미 반영된 값으로 입력)
         </p>
         {naOnlySideCaption && !eraUnsupported && (
@@ -362,7 +362,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             },
           ]}
         />
-        <p className="mt-2 text-xs text-fuchsia-700">ⓘ {UNLISTED_MESSAGES.TOGGLE_DATA_PERSIST}</p>
+        <p className="mt-2 text-xs text-fuchsia-700 dark:text-fuchsia-300">ⓘ {UNLISTED_MESSAGES.TOGGLE_DATA_PERSIST}</p>
       </FieldCard>
       )}
 
@@ -493,8 +493,8 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           <div
             className={`mt-2 rounded border px-3 py-2 text-sm ${
               transferStdPricePreview.floor80Applied
-                ? "border-rose-200 bg-rose-50/60 text-rose-700"
-                : "border-emerald-200 bg-emerald-50/60 text-emerald-700"
+                ? "border-rose-200 bg-rose-50/60 text-rose-700 dark:text-rose-300 dark:bg-rose-950/40"
+                : "border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-950/40"
             }`}
           >
             <span className="font-medium">
@@ -547,7 +547,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       {mode === "simple" && acqFaceValueOnly && !acquisitionSideOnly && !transferSideOnly && (
         <p
           data-testid="eu-simple-acq-hidden-notice"
-          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
         >
           ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NI/NA 입력 비노출 (액면가 대체)
         </p>
@@ -555,10 +555,10 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
 
       {/* 취득기준시가 미리보기 — simple·full 양 모드 공통 노출 (양도측 전용 모드는 분자가 증여자 값이라 숨김) */}
       {!transferSideOnly && acquisitionStdPricePreview !== null && (
-        <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700">
+        <div className="mt-2 rounded border border-sky-200 bg-sky-50/60 px-3 py-2 text-sm text-sky-700 dark:text-sky-300 dark:bg-sky-950/40">
           취득기준시가 (1주당): {acquisitionStdPricePreview.toLocaleString()}원
           {acqFaceValueOnly && !acquisitionSideOnly && (
-            <span className="ml-2 text-xs text-amber-700">(액면가 — §99①4 후단)</span>
+            <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">(액면가 — §99①4 후단)</span>
           )}
           <span className="ml-2 text-xs">
             (개산공제 기준 = {acquisitionStdPricePreview.toLocaleString()} ×{" "}
@@ -596,7 +596,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       {acqFaceValueOnly && !acquisitionSideOnly && !transferSideOnly && conversionPreview !== null && transferStdPricePreview && (
         <div
           data-testid="eu-conversion-preview"
-          className="mt-2 rounded border border-fuchsia-200 bg-fuchsia-50/60 px-3 py-2 text-sm text-fuchsia-800 space-y-1"
+          className="mt-2 rounded border border-fuchsia-200 bg-fuchsia-50/60 px-3 py-2 text-sm text-fuchsia-800 space-y-1 dark:text-fuchsia-200 dark:bg-fuchsia-950/40"
         >
           <p className="font-medium">환산취득가 (사례 49 — §99①4 후단 + §165④)</p>
           <p className="text-xs">
@@ -609,7 +609,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
               bottom={transferStdPricePreview.perShare.toLocaleString()}
             />
           </p>
-          <p className="font-semibold text-fuchsia-900">
+          <p className="font-semibold text-fuchsia-900 dark:text-fuchsia-200">
             = {conversionPreview.toLocaleString()}원
           </p>
         </div>

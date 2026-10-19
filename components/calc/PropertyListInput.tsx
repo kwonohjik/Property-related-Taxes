@@ -119,7 +119,7 @@ export function PropertyListInput({
       {/* 요약 테이블 (행 클릭 → 편집 모달) — 0채면 테이블이 null이므로 빈 상태 안내 */}
       {properties.length === 0 ? (
         <div
-          className="rounded-lg border border-sky-200 bg-sky-50/40 px-4 py-5 text-center text-sm text-sky-800"
+          className="rounded-lg border border-sky-200 bg-sky-50/40 px-4 py-5 text-center text-sm text-sky-800 dark:text-sky-200 dark:bg-sky-950/40"
           data-testid="property-empty-state"
         >
           보유 주택이 없습니다. 토지만 보유한 경우 이대로 다음 단계(토지 정보)에서 입력하세요.

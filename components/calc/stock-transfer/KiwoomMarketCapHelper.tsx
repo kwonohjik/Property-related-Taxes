@@ -126,11 +126,11 @@ export function KiwoomMarketCapHelper({
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2 dark:bg-sky-950/40">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-sky-900">
+        <div className="text-sm text-sky-900 dark:text-sky-200">
           <p className="font-semibold">키움증권 시가총액 자동 산정 (§157①)</p>
-          <p className="text-xs text-sky-700 mt-0.5">
+          <p className="text-xs text-sky-700 mt-0.5 dark:text-sky-300">
             종목코드 + 직전 사업연도말 일자 + 보유 주식수 입력 후 클릭 시 시가총액이 자동 계산됩니다.
           </p>
         </div>
@@ -160,7 +160,7 @@ export function KiwoomMarketCapHelper({
             <p>
               ✓ 직전 사업연도말 종가:{" "}
               <strong>{info.close.toLocaleString()}</strong>원{" "}
-              <span className="text-emerald-700">
+              <span className="text-emerald-700 dark:text-emerald-300">
                 ({info.priorTradingDate && info.priorTradingDate !== info.date
                   ? `${info.date} 비거래일 → 직전 거래일 ${info.priorTradingDate}`
                   : info.date})
@@ -168,7 +168,7 @@ export function KiwoomMarketCapHelper({
             </p>
           </div>
           <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1.5">
-            <p className="text-micro text-emerald-700 border-b border-emerald-100 pb-1">
+            <p className="text-micro text-emerald-700 border-b border-emerald-100 pb-1 dark:text-emerald-300">
               시총 산식 검증 (시행령 §157①)
             </p>
             <div className="space-y-0.5 font-mono text-caption">
@@ -183,11 +183,11 @@ export function KiwoomMarketCapHelper({
                 <strong className="tabular-nums">{info.selfCap.toLocaleString()}원</strong>
               </div>
               {info.selfCap >= 5_000_000_000 ? (
-                <p className="text-rose-700 font-semibold text-right">
+                <p className="text-rose-700 font-semibold text-right dark:text-rose-300">
                   → 50억 이상 → 대주주 임계 충족
                 </p>
               ) : (
-                <p className="text-emerald-700 text-right">→ 50억 미만 → 임계 미달</p>
+                <p className="text-emerald-700 text-right dark:text-emerald-300">→ 50억 미만 → 임계 미달</p>
               )}
             </div>
             {isLargestShareholderGroup && (
@@ -203,11 +203,11 @@ export function KiwoomMarketCapHelper({
                   <strong className="tabular-nums">{info.combinedCap.toLocaleString()}원</strong>
                 </div>
                 {info.combinedCap >= 5_000_000_000 ? (
-                  <p className="text-rose-700 font-semibold text-right">
+                  <p className="text-rose-700 font-semibold text-right dark:text-rose-300">
                     → 50억 이상 → 대주주 임계 충족
                   </p>
                 ) : (
-                  <p className="text-emerald-700 text-right">→ 50억 미만 → 임계 미달</p>
+                  <p className="text-emerald-700 text-right dark:text-emerald-300">→ 50억 미만 → 임계 미달</p>
                 )}
               </div>
             )}

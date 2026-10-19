@@ -248,7 +248,7 @@ export function PriorGiftInput({
               onClick={() =>
                 selectedIndex !== null && handleRemove(selectedIndex)
               }
-              className="px-4 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+              className="px-4 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors dark:text-rose-400"
             >
               삭제
             </button>

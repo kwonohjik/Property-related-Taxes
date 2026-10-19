@@ -94,11 +94,11 @@ export function KiwoomValuationAutoFetchButton({
 
   // card (기본) — 헤더+설명+버튼+결과 카드 통합 sky 박스 (기존 동작)
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2 dark:bg-sky-950/40">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-sky-900">
+        <div className="text-sm text-sky-900 dark:text-sky-200">
           <p className="font-semibold">키움증권 자동조회 (전후 2개월 평균)</p>
-          <p className="text-xs text-sky-700 mt-0.5">
+          <p className="text-xs text-sky-700 mt-0.5 dark:text-sky-300">
             종목코드 + 평가기준일 입력 후 클릭 시 전후 2개월 종가 단순평균이 자동 계산됩니다 (§63①1가).
           </p>
         </div>

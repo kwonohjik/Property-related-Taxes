@@ -355,7 +355,7 @@ export function HistoryClient() {
                 onMouseDown={(e) => { e.preventDefault(); selectClient("all"); }}
                 className={[
                   "w-full px-3 py-2 text-left text-xs hover:bg-muted/60 transition-colors",
-                  activeClientFilter === "all" ? "font-semibold text-violet-700" : "text-foreground",
+                  activeClientFilter === "all" ? "font-semibold text-violet-700 dark:text-violet-300" : "text-foreground",
                 ].join(" ")}
               >
                 모든 의뢰인
@@ -367,7 +367,7 @@ export function HistoryClient() {
                   onMouseDown={(e) => { e.preventDefault(); selectClient(c.id); }}
                   className={[
                     "w-full px-3 py-2 text-left text-xs hover:bg-muted/60 transition-colors",
-                    activeClientFilter === c.id ? "font-semibold text-violet-700" : "text-foreground",
+                    activeClientFilter === c.id ? "font-semibold text-violet-700 dark:text-violet-300" : "text-foreground",
                   ].join(" ")}
                 >
                   {c.name}
@@ -382,7 +382,7 @@ export function HistoryClient() {
                   onMouseDown={(e) => { e.preventDefault(); selectClient(null); }}
                   className={[
                     "w-full px-3 py-2 text-left text-xs hover:bg-muted/60 transition-colors",
-                    activeClientFilter === null ? "font-semibold text-violet-700" : "text-muted-foreground",
+                    activeClientFilter === null ? "font-semibold text-violet-700 dark:text-violet-300" : "text-muted-foreground",
                   ].join(" ")}
                 >
                   미지정

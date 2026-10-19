@@ -43,7 +43,7 @@ export function TransferStdPriceSection({ form, onChange }: TransferStdPriceSect
   if (form.acquisitionStdMode === "halt_transfer") {
     return (
       <ToneCard tone="emerald" sectionNum={1} title="양도 당시 기준시가 (환산비율의 분모)">
-        <p className="text-sm text-emerald-800 leading-relaxed">
+        <p className="text-sm text-emerald-800 leading-relaxed dark:text-emerald-200">
           양도일 이전 1개월에 거래정지·관리종목 구간이 있어 종가평균을 쓸 수 없습니다
           (「소득세법 시행령」 제165조 제3항). 아래 <strong>비상장 보충 평가</strong>에서
           양도 당시 기준시가도 함께 산정합니다.

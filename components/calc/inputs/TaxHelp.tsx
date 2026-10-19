@@ -103,7 +103,7 @@ export function TaxHelp({
           title={summary}
           aria-label={`도움말: ${title}`}
           onClick={() => setOpen(true)}
-          className={`inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50/70 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-colors select-none ${className ?? ""}`}
+          className={`inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50/70 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-colors select-none dark:text-blue-300 dark:bg-blue-950/40 ${className ?? ""}`}
         >
           <span aria-hidden className="text-caption">ⓘ</span>
           {triggerLabel}
@@ -127,7 +127,7 @@ export function TaxHelp({
           </DialogHeader>
 
           {/* 한 줄 요약 */}
-          <div className="rounded-md bg-blue-50/60 border border-blue-200 px-3 py-2 text-xs text-blue-800 font-medium">
+          <div className="rounded-md bg-blue-50/60 border border-blue-200 px-3 py-2 text-xs text-blue-800 font-medium dark:text-blue-200 dark:bg-blue-950/40">
             {summary}
           </div>
 

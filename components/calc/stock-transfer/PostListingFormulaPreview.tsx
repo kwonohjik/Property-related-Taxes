@@ -71,7 +71,7 @@ function PlaceholderRow({ message }: { message: string }) {
  */
 function Floor80Row({ netAsset, value }: { netAsset: number; value: number }) {
   return (
-    <p className="text-violet-800">
+    <p className="text-violet-800 dark:text-violet-200">
       → 순자산가치 {netAsset.toLocaleString()} × 80% = <strong>{value.toLocaleString()}</strong>{" "}
       <span className="text-caption">
         (가중평균이 순자산가치의 80%에 미달 — 소득세법 시행령 §165④1 단서)
@@ -154,13 +154,13 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
   }, [form, mode, isHeavyRE, shareCount]);
 
   return (
-    <div className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-3 text-sm">
-      <p className="font-semibold text-violet-800 mb-2">환산취득가 미리보기</p>
+    <div className="rounded-lg border border-violet-300 bg-violet-50 px-4 py-3 text-sm dark:bg-violet-950/40">
+      <p className="font-semibold text-violet-800 mb-2 dark:text-violet-200">환산취득가 미리보기</p>
 
-      <div className="space-y-2 text-violet-700 text-xs">
+      <div className="space-y-2 text-violet-700 text-xs dark:text-violet-300">
         {/* [1] 종가 평균 */}
         <div>
-          <p className="font-medium text-violet-800">[1] 종가 1개월 평균</p>
+          <p className="font-medium text-violet-800 dark:text-violet-200">[1] 종가 1개월 평균</p>
           {(data.listingAvg ?? 0) > 0 ? (
             <p>
               상장일 이후 1개월 종가평균 ={" "}
@@ -173,7 +173,7 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
 
         {/* [2] 상장연도 가중평균 */}
         <div>
-          <p className="font-medium text-violet-800">[2] 상장연도 1주당 평가액</p>
+          <p className="font-medium text-violet-800 dark:text-violet-200">[2] 상장연도 1주당 평가액</p>
           {(data.listingEval ?? 0) > 0 ? (
             <div className="space-y-0.5">
               {data.isMaxModel ? (
@@ -200,7 +200,7 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
 
         {/* [3] 취득연도 가중평균 */}
         <div>
-          <p className="font-medium text-violet-800">[3] 취득연도 1주당 평가액</p>
+          <p className="font-medium text-violet-800 dark:text-violet-200">[3] 취득연도 1주당 평가액</p>
           {(data.acqEval ?? 0) > 0 ? (
             <div className="space-y-0.5">
               {data.isMaxModel ? (
@@ -227,7 +227,7 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
 
         {/* [4] 환산비율 + 1주당 + 총취득가 */}
         <div>
-          <p className="font-medium text-violet-800">[4] 환산비율 → 1주당 취득기준시가 → 총취득가</p>
+          <p className="font-medium text-violet-800 dark:text-violet-200">[4] 환산비율 → 1주당 취득기준시가 → 총취득가</p>
           {(data.perShareStdPrice ?? 0) > 0 ? (
             <div className="space-y-0.5">
               <p>
@@ -245,7 +245,7 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
                 <strong>{(data.perShareStdPrice ?? 0).toLocaleString()}</strong>
               </p>
               {(data.shareCount ?? 0) > 0 && (
-                <p className="text-violet-900 font-medium">
+                <p className="text-violet-900 font-medium dark:text-violet-200">
                   취득가액 = {(data.perShareStdPrice ?? 0).toLocaleString()} ×{" "}
                   {(data.shareCount ?? 0).toLocaleString()}주 ={" "}
                   <strong>{(data.totalAcqPrice ?? 0).toLocaleString()}</strong>
@@ -259,11 +259,11 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
       </div>
 
       {data.isMaxModel && (
-        <p className="mt-2 text-micro text-violet-600">※ {UNLISTED_MESSAGES.MAX_MODEL_CAPTION}</p>
+        <p className="mt-2 text-micro text-violet-600 dark:text-violet-400">※ {UNLISTED_MESSAGES.MAX_MODEL_CAPTION}</p>
       )}
 
       {/* 80% 하한 미적용 안내 (D-12 강화) */}
-      <div className="mt-3 pt-2 border-t border-violet-200 text-micro text-violet-600">
+      <div className="mt-3 pt-2 border-t border-violet-200 text-micro text-violet-600 dark:text-violet-400">
         ※ 환산「비율」자체에는 80% 하한을 적용하지 않습니다 — 하한은 분자·분모 **각 평가액에 개별로** 걸립니다 (§165④1 단서)
       </div>
     </div>

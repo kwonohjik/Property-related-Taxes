@@ -56,7 +56,7 @@ function DeemedDateNotice({ date, is94_4, subject }: { date: string; is94_4: boo
   return (
     <p
       data-testid="deemed-acquisition-notice"
-      className="mt-2 rounded-md border border-amber-300 bg-amber-100/70 px-2 py-1.5 text-xs text-amber-900"
+      className="mt-2 rounded-md border border-amber-300 bg-amber-100/70 px-2 py-1.5 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-900/40"
     >
       ⓘ {subject} {date}은 {l.cutoff} 이전이므로 {l.asset}의 의제취득일 <strong>{l.deemed}</strong>을
       적용합니다 (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label={l.clause} />)
@@ -143,10 +143,10 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
   const handlePreMergerDateChange = (v: string) => onChange({ preMergerAcquisitionDate: v });
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-4">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-4 dark:bg-amber-950/40">
       {/* 헤더 — §104② 안내는 FieldCard hint에서 단일 노출 (디자인 §2-E-1) */}
       <div className="flex items-center gap-2 mb-1">
-        <span className="text-amber-800 font-semibold text-sm">📋 취득 정보</span>
+        <span className="text-amber-800 font-semibold text-sm dark:text-amber-200">📋 취득 정보</span>
       </div>
       <div className="flex flex-wrap gap-1.5 mb-2">
         <LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label={deemed.clause} />
@@ -208,7 +208,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
 
       {/* inheritance nested 카드 */}
       {cause === "inheritance" && (
-        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
+        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
           <FieldCard
             label="피상속인 취득일 (§104②1)"
             required
@@ -220,7 +220,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             />
             <DeemedDateNotice date={form.decedentAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 피상속인 취득일" />
           </FieldCard>
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             ⓘ {deemed.cutoff} 이전 취득 {deemed.asset}: 의제취득일 {deemed.deemed} 적용 (<LawArticleModal legalBasis="소득세법 시행령 §162 ⑦" label={deemed.clause} />)
           </p>
         </div>
@@ -228,8 +228,8 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
 
       {/* gift nested 안내 */}
       {cause === "gift" && (
-        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3">
-          <p className="text-xs text-amber-800">
+        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 dark:bg-amber-900/40">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             ⓘ 단순 증여 주식은 <strong>수증일</strong>(= 취득일)부터 기산합니다
             (<LawArticleModal legalBasis="소득세법 §104 ②" label="§104② 본문" />).
             배우자·직계존비속에게서 <strong>2025.1.1. 이후</strong> 증여받아 <strong>1년 이내</strong>에
@@ -241,7 +241,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
 
       {/* carryover_gift nested 카드 — §104②2호 */}
       {cause === "carryover_gift" && (
-        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
+        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
           <FieldCard
             label="증여자 취득일 (§104②2)"
             required
@@ -253,7 +253,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             />
             <DeemedDateNotice date={form.donorAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 증여자 취득일" />
           </FieldCard>
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             ⓘ 주식은 <strong>2024.12.31. 개정(법률 제20615호)</strong>으로 2025.1.1.부터
             이월과세 대상이 되었습니다. <strong>증여일 기준</strong>이므로 2024.12.31. 이전에
             증여받았다면 이 항목을 골라도 수증일 기산이 유지됩니다.
@@ -326,7 +326,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
               ]}
             />
             {isListedMarket && (
-              <p className="mt-2 text-xs text-amber-800">
+              <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
                 상장주식은 매매사례가액을 쓸 수 없습니다 (소득세법 시행령 §176의2③1호 — 주권상장법인 주식등 제외).
               </p>
             )}
@@ -429,7 +429,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
               onChange={(v) => onChange({ giftTaxableValue: v })}
             />
           </FieldCard>
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             ⓘ 산입되는 증여세는 <strong>양도가액에서 취득가액·필요경비를 뺀 잔액</strong>을
             한도로 합니다 (<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="영 §163의2②" />).
             <br />
@@ -442,7 +442,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
 
       {/* merger_split nested 카드 */}
       {cause === "merger_split" && (
-        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3">
+        <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 dark:bg-amber-900/40">
           <FieldCard
             label="종전 주식 취득일 (§104②3)"
             required

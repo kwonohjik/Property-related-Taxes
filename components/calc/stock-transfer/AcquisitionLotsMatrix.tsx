@@ -135,8 +135,8 @@ export function AcquisitionLotsMatrix({
         <div
           className={`rounded-lg border p-3 text-sm ${
             allocSum === transferShareCount && transferShareCount > 0
-              ? "border-emerald-200 bg-emerald-50/60 text-emerald-800"
-              : "border-rose-200 bg-rose-50/60 text-rose-800"
+              ? "border-emerald-200 bg-emerald-50/60 text-emerald-800 dark:text-emerald-200 dark:bg-emerald-950/40"
+              : "border-rose-200 bg-rose-50/60 text-rose-800 dark:text-rose-200 dark:bg-rose-950/40"
           }`}
         >
           개별법: 각 매수 건에 배정한 수량의 합계가 양도 주식수와 일치해야 합니다.
@@ -147,14 +147,14 @@ export function AcquisitionLotsMatrix({
       )}
 
       {/* 매수 lot 행 목록 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3 dark:bg-amber-950/40">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-sm font-semibold text-amber-800">매수 건 (취득 정보)</h3>
+          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">매수 건 (취득 정보)</h3>
           <LawArticleModal legalBasis="소득세법 §104 ②" label="§104②" />
           <LawArticleModal legalBasis="소득세법 §97의2" label="§97의2" />
         </div>
         {lots.length === 0 ? (
-          <p className="text-xs text-amber-700 bg-amber-100/60 rounded p-3">
+          <p className="text-xs text-amber-700 bg-amber-100/60 rounded p-3 dark:text-amber-300 dark:bg-amber-900/40">
             매수 행 추가부터 시작하세요.
           </p>
         ) : (
@@ -189,12 +189,12 @@ export function AcquisitionLotsMatrix({
       </div>
 
       {/* 합계 미리보기 */}
-      <ToneCard tone="sky" className="text-sm text-sky-900" bodyClassName="">
+      <ToneCard tone="sky" className="text-sm text-sky-900 dark:text-sky-200" bodyClassName="">
         <p>
           총 매수 <strong>{summary.totalAcq.toLocaleString()}주</strong>
         </p>
         {summary.weightedAvg !== null && summary.weightedAvg > 0 && (
-          <p className="text-xs mt-1 text-sky-700">
+          <p className="text-xs mt-1 text-sky-700 dark:text-sky-300">
             참고용 평균단가:{" "}
             <strong>{summary.weightedAvg.toLocaleString()}</strong>{" "}
             — 실제 이동평균은 매도 순서·시점에 따라 달라질 수 있습니다 (정확한 값은 계산 결과 참조)

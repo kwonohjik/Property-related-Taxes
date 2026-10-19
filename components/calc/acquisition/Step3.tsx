@@ -286,7 +286,7 @@ export function Step3({
                 ]}
               />
             </div>
-            <div className="rounded-md bg-rose-50/70 border border-rose-200 p-2 text-xs text-rose-700">
+            <div className="rounded-md bg-rose-50/70 border border-rose-200 p-2 text-xs text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
               처분기한: 2023.2.28 이후 잔금 기준 모두 3년<br />
               (이전 잔금: 조정+조정 1~2년, 그 외 3년)
             </div>

@@ -164,7 +164,7 @@ export function Pre1MonthClosingPriceTable({
 
   if (!baseDate) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
         <p className="font-semibold mb-1">{dateLabel}을 먼저 입력하세요 (Step 1).</p>
         <p className="text-xs">{dateLabel}을 포함한 이전 1개월 일자가 자동 채워집니다.</p>
       </div>
@@ -182,7 +182,7 @@ export function Pre1MonthClosingPriceTable({
       }
     >
       {anchorShifted && (
-        <p className="text-caption text-amber-700/90 leading-relaxed">
+        <p className="text-caption text-amber-700/90 leading-relaxed dark:text-amber-300/90">
           {dateLabel} <strong>{baseDate}</strong>이(가) 휴장일이므로 직전 거래일{" "}
           <strong>{anchor}</strong>을(를) 기산점으로 1개월 범위를 산정했습니다.
         </p>
@@ -214,7 +214,7 @@ export function Pre1MonthClosingPriceTable({
                       {pos + 1}. {displayDates[idx] || "-"}
                     </span>
                     {nonTrading ? (
-                      <div className="rounded-md border border-amber-200/60 bg-amber-100/40 px-3 py-2 text-caption text-amber-700 select-none">
+                      <div className="rounded-md border border-amber-200/60 bg-amber-100/40 px-3 py-2 text-caption text-amber-700 select-none dark:text-amber-300 dark:bg-amber-900/40">
                         {label}
                       </div>
                     ) : (
@@ -236,10 +236,10 @@ export function Pre1MonthClosingPriceTable({
 
       {/* 평균 미리보기 */}
       {preview.tradingDays > 0 && (
-        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
           거래일 <strong>{preview.tradingDays}</strong>일 · 종가합계{" "}
           <strong>{preview.sum.toLocaleString()}</strong> · 1개월 종가평균{" "}
-          <strong className="text-amber-900">{preview.avg.toLocaleString()}</strong>
+          <strong className="text-amber-900 dark:text-amber-200">{preview.avg.toLocaleString()}</strong>
           {" "}→ 「{targetLabel}」로 자동 입력됩니다 (§99①3 환산 {roleLabel})
         </div>
       )}

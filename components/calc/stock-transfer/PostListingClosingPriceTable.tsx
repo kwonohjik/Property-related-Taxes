@@ -175,7 +175,7 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
 
   if (!form.listingDate) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
         <p className="font-semibold mb-1">상장일을 먼저 입력하세요</p>
         <p className="text-xs">상장일부터 다음달 전일까지 1개월간 일자가 자동 채워집니다.</p>
       </div>
@@ -211,7 +211,7 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
                       {idx + 1}. {displayDates[idx] || "-"}
                     </span>
                     {isWeekend ? (
-                      <div className="rounded-md border border-emerald-200/60 bg-emerald-100/40 px-3 py-2 text-caption text-emerald-700 select-none">
+                      <div className="rounded-md border border-emerald-200/60 bg-emerald-100/40 px-3 py-2 text-caption text-emerald-700 select-none dark:text-emerald-300 dark:bg-emerald-900/40">
                         {weekendLabel} · 거래일 제외
                       </div>
                     ) : (
@@ -233,10 +233,10 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
 
       {/* 평균 미리보기 */}
       {preview.tradingDays > 0 && (
-        <div className="rounded border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-xs text-emerald-800">
+        <div className="rounded border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-200 dark:bg-emerald-900/40">
           거래일 <strong>{preview.tradingDays}</strong>일 · 종가합계{" "}
           <strong>{preview.sum.toLocaleString()}</strong> · 1개월 종가평균{" "}
-          <strong className="text-emerald-900">{preview.avg.toLocaleString()}</strong>
+          <strong className="text-emerald-900 dark:text-emerald-200">{preview.avg.toLocaleString()}</strong>
         </div>
       )}
     </ToneCard>

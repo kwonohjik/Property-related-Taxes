@@ -49,7 +49,7 @@ export function PreDeemedAcquisitionCard({ form, onChange }: Props) {
         title="의제취득일 전 취득 — 「많은 것」 (소득세법 시행령 §176의2④)"
         bodyClassName="space-y-3"
       >
-        <p className="text-xs text-amber-800 leading-relaxed">
+        <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
           의제취득일({deemed}) 전에 취득한 주식의 취득가액은 ① 의제취득일 현재 매매사례가액·환산취득가액과
           ② 취득 당시 실지거래가액에 취득일부터 의제취득일 직전일까지의 <strong>생산자물가상승분</strong>을 더한 금액
           중 <strong>많은 것</strong>입니다 (
@@ -60,7 +60,7 @@ export function PreDeemedAcquisitionCard({ form, onChange }: Props) {
         </p>
 
         {mode === "actual" ? (
-          <p className="text-xs text-amber-800 leading-relaxed" data-testid="pre-deemed-actual-note">
+          <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200" data-testid="pre-deemed-actual-note">
             아래에 입력한 취득 당시 실지거래가액으로 ②를 계산합니다(취득월 생산자물가지수 대비 의제취득일 직전 달 지수).
             ①과 견주려면 위에서 「환산취득가」 또는 「매매사례가액」을 고르고 취득 당시 실가를 함께 입력하세요.
           </p>

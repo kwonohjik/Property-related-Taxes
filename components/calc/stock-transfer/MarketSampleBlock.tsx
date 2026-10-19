@@ -30,7 +30,7 @@ export function MarketSampleBlock({ form, onChange, isListed, baseDateLabel = "�
   return (
     <div className="space-y-4">
       {isListed && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
           상장주식에는 매매사례가액을 적용할 수 없습니다 (영§176의2③1호 단서 — 주권상장법인 주식등 제외). 비상장·기타자산 전용.
         </div>
       )}

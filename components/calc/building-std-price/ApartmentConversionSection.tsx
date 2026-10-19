@@ -40,9 +40,9 @@ function MiniCard({
   children: React.ReactNode;
 }) {
   const T: Record<string, { border: string; bg: string; badge: string; text: string }> = {
-    emerald: { border: "border-emerald-200", bg: "bg-emerald-50/50", badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700" },
-    amber: { border: "border-amber-200", bg: "bg-amber-50/50", badge: "bg-amber-200 text-amber-800", text: "text-amber-700" },
-    sky: { border: "border-sky-200", bg: "bg-sky-50/50", badge: "bg-sky-200 text-sky-800", text: "text-sky-700" },
+    emerald: { border: "border-emerald-200", bg: "bg-emerald-50/50 dark:bg-emerald-950/40", badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700 dark:text-emerald-300" },
+    amber: { border: "border-amber-200", bg: "bg-amber-50/50 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", text: "text-amber-700 dark:text-amber-300" },
+    sky: { border: "border-sky-200", bg: "bg-sky-50/50 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", text: "text-sky-700 dark:text-sky-300" },
   };
   const t = T[tone];
   return (

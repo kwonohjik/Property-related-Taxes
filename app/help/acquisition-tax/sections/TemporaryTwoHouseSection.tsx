@@ -36,7 +36,7 @@ export function TemporaryTwoHouseSection() {
       </table>
 
       <div className="space-y-2">
-        <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1">
+        <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
           <p><strong>현행(2023.2.28~)</strong>: 조정지역 여부 무관하게 모든 경우 <strong>3년 단일</strong></p>
           <p>종전 주택 처분기한(3년) 내에 처분하면 중과 배제 → 기본세율 적용</p>
         </div>

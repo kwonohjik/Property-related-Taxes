@@ -11,7 +11,7 @@ export function StandardRateSection() {
 
       {/* 주택 유상취득 */}
       <div>
-        <h3 className="text-sm font-semibold mb-2 text-sky-700">주택 유상취득 (매매·경매·공매)</h3>
+        <h3 className="text-sm font-semibold mb-2 text-sky-700 dark:text-sky-300">주택 유상취득 (매매·경매·공매)</h3>
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-sky-50 text-sky-800">
@@ -28,7 +28,7 @@ export function StandardRateSection() {
             </tr>
             <tr className="bg-muted/20">
               <td className="border border-border px-3 py-2">6억 초과 ~ 9억 이하</td>
-              <td className="border border-border px-3 py-2 text-right font-medium text-violet-700">선형보간</td>
+              <td className="border border-border px-3 py-2 text-right font-medium text-violet-700 dark:text-violet-300">선형보간</td>
               <td className="border border-border px-3 py-2 text-xs">
                 세율 = (취득가액 × 2 ÷ 3억 − 3) ÷ 100<br />
                 6억+1원 ≒ 1.0%, 7.5억 ≒ 2%, 9억−1원 ≒ 3%
@@ -45,7 +45,7 @@ export function StandardRateSection() {
 
       {/* 물건별 기타 세율 */}
       <div>
-        <h3 className="text-sm font-semibold mb-2 text-sky-700">물건 유형 × 취득 원인별 세율</h3>
+        <h3 className="text-sm font-semibold mb-2 text-sky-700 dark:text-sky-300">물건 유형 × 취득 원인별 세율</h3>
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-sky-50 text-sky-800">
@@ -80,7 +80,7 @@ export function StandardRateSection() {
         </table>
       </div>
 
-      <div className="rounded-md bg-blue-50/60 border border-blue-200 p-3 text-xs text-blue-800">
+      <div className="rounded-md bg-blue-50/60 border border-blue-200 p-3 text-xs text-blue-800 dark:text-blue-200 dark:bg-blue-950/40">
         <strong>중과기준세율</strong>: 지방세법 §13의2의 &ldquo;중과기준세율&rdquo;은 <strong>2%</strong>입니다.
         다주택 중과는 §11①7나(4%)를 표준세율로 하여 산정.
       </div>

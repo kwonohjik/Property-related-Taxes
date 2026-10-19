@@ -62,38 +62,38 @@ export function CaseFortyNineFormulaCard({
   return (
     <div
       data-testid="case49-formula-card"
-      className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/60 p-4 space-y-4 text-sm"
+      className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/60 p-4 space-y-4 text-sm dark:bg-fuchsia-950/40"
     >
-      <p className="font-semibold text-fuchsia-900">
+      <p className="font-semibold text-fuchsia-900 dark:text-fuchsia-200">
         사례 49 산식 풀어쓰기 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4 후단" /> + <LawArticleModal legalBasis="소득세법 시행령 §165 ④" label="§165④" /> 혼합)
       </p>
 
       {/* 양도기준시가 */}
       <section className="space-y-1">
-        <p className="font-semibold text-fuchsia-800">① 양도기준시가 (<LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />)</p>
+        <p className="font-semibold text-fuchsia-800 dark:text-fuchsia-200">① 양도기준시가 (<LawArticleModal legalBasis="소득세법 시행령 §165 ④ 1호" label="§165④1" />)</p>
         {isNetAssetOnly ? (
-          <p className="text-fuchsia-700">
+          <p className="text-fuchsia-700 dark:text-fuchsia-300">
             순자산가치 단독 평가 ({netAssetOnlyCitationLabel(netAssetOnlyReason)}) = 1주당 순자산가치 ={" "}
             <strong>{naPerShare.toLocaleString()}</strong>
           </p>
         ) : isMaxModel ? (
           <>
-            <p className="text-fuchsia-700">
+            <p className="text-fuchsia-700 dark:text-fuchsia-300">
               양도기준시가 = 순손익가치 {niPerShare.toLocaleString()}·순자산가치 {naPerShare.toLocaleString()} 중 큰 금액 ={" "}
               <strong>{transferStdPriceAfterFloor.toLocaleString()}</strong>
             </p>
-            <p className="text-caption text-fuchsia-700">({UNLISTED_MESSAGES.MAX_MODEL_CAPTION})</p>
+            <p className="text-caption text-fuchsia-700 dark:text-fuchsia-300">({UNLISTED_MESSAGES.MAX_MODEL_CAPTION})</p>
           </>
         ) : (
           <>
-            <p className="text-fuchsia-700">
+            <p className="text-fuchsia-700 dark:text-fuchsia-300">
               가중평균 ={" "}
               <Frac
                 top={`1주당 순손익가치 × ${niWeight} + 1주당 순자산가치 × ${naWeight}`}
                 bottom="5"
               />
             </p>
-            <p className="text-fuchsia-700">
+            <p className="text-fuchsia-700 dark:text-fuchsia-300">
               ={" "}
               <Frac
                 top={`${niPerShare.toLocaleString()} × ${niWeight} + ${naPerShare.toLocaleString()} × ${naWeight}`}
@@ -102,14 +102,14 @@ export function CaseFortyNineFormulaCard({
               = <strong>{weighted.toLocaleString()}</strong>
             </p>
             {floor80Applied && (
-              <p className="text-rose-700">
+              <p className="text-rose-700 dark:text-rose-300">
                 ※ 80% 하한 발동 (§165④1 단서): 1주당 순자산가치 × 80% ={" "}
                 {naPerShare.toLocaleString()} × 80% = <strong>{floor80Value.toLocaleString()}</strong>
                 {" "}→ 양도기준시가 = <strong>{transferStdPriceAfterFloor.toLocaleString()}</strong>
               </p>
             )}
             {!floor80Applied && (
-              <p className="text-emerald-700">
+              <p className="text-emerald-700 dark:text-emerald-300">
                 양도기준시가 = <strong>{transferStdPriceAfterFloor.toLocaleString()}</strong>{" "}
                 (80% 하한 미발동)
               </p>
@@ -120,10 +120,10 @@ export function CaseFortyNineFormulaCard({
 
       {/* 취득기준시가 */}
       <section className="space-y-1">
-        <p className="font-semibold text-fuchsia-800">
+        <p className="font-semibold text-fuchsia-800 dark:text-fuchsia-200">
           ② 취득기준시가 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4 후단" /> — 장부분실 액면가)
         </p>
-        <p className="text-fuchsia-700">
+        <p className="text-fuchsia-700 dark:text-fuchsia-300">
           = 1주당 액면가 × 주식수 = {acqFaceValuePerShare.toLocaleString()} ×{" "}
           {shareCount.toLocaleString()}주 ={" "}
           <strong>{acquisitionStdPriceTotal.toLocaleString()}</strong>
@@ -132,29 +132,29 @@ export function CaseFortyNineFormulaCard({
 
       {/* 환산취득가 */}
       <section className="space-y-1">
-        <p className="font-semibold text-fuchsia-800">
+        <p className="font-semibold text-fuchsia-800 dark:text-fuchsia-200">
           ③ 환산취득가 (<LawArticleModal legalBasis="소득세법 §99 ① 4호" label="§99①4" /> 후단 + <LawArticleModal legalBasis="소득세법 시행령 §165 ④" label="§165④" /> 혼합)
         </p>
-        <p className="text-fuchsia-700">
+        <p className="text-fuchsia-700 dark:text-fuchsia-300">
           = 양도가 × <Frac top="1주당 액면가" bottom="양도기준시가" />
         </p>
-        <p className="text-fuchsia-700">
+        <p className="text-fuchsia-700 dark:text-fuchsia-300">
           = {transferPrice.toLocaleString()} ×{" "}
           <Frac
             top={acqFaceValuePerShare.toLocaleString()}
             bottom={transferStdPriceAfterFloor.toLocaleString()}
           />{" "}
           ={" "}
-          <strong className="text-fuchsia-900">{acquisitionPrice.toLocaleString()}</strong>
+          <strong className="text-fuchsia-900 dark:text-fuchsia-200">{acquisitionPrice.toLocaleString()}</strong>
         </p>
       </section>
 
       {/* 개산공제 */}
       <section className="space-y-1">
-        <p className="font-semibold text-fuchsia-800">
+        <p className="font-semibold text-fuchsia-800 dark:text-fuchsia-200">
           ④ 개산공제 (<LawArticleModal legalBasis="소득세법 시행령 §163 ⑥ 4호" label="§163⑥4" /> — 1% 자동 적용)
         </p>
-        <p className="text-fuchsia-700">
+        <p className="text-fuchsia-700 dark:text-fuchsia-300">
           = 취득기준시가 × 1% = {acquisitionStdPriceTotal.toLocaleString()} × 1% ={" "}
           <strong>{expenses.toLocaleString()}</strong>
         </p>

@@ -77,13 +77,13 @@ export function AcquisitionLotCard({
   return (
     <div className="rounded border border-amber-300 bg-white dark:bg-gray-900 p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-amber-700">매수 #{idx + 1}</p>
+        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">매수 #{idx + 1}</p>
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={onDelete}
-          className="text-red-500 hover:text-red-700"
+          className="text-red-500 hover:text-red-700 dark:text-red-400"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

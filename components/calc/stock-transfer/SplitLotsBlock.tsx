@@ -176,10 +176,10 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
   return (
     <div className="space-y-6">
       {/* ⓐ 매수 lot 행렬 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-amber-800">ⓐ 매수 건 (취득 정보)</h3>
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3 dark:bg-amber-950/40">
+        <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">ⓐ 매수 건 (취득 정보)</h3>
         {form.acquisitionLots.length === 0 ? (
-          <p className="text-xs text-amber-700 bg-amber-100/60 rounded p-3">
+          <p className="text-xs text-amber-700 bg-amber-100/60 rounded p-3 dark:text-amber-300 dark:bg-amber-900/40">
             매수 행 추가부터 시작하세요. 동일 종목을 여러 차례 매수한 경우 건별로 입력하세요.
           </p>
         ) : (
@@ -200,23 +200,23 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
       </div>
 
       {/* ⓑ 매도 lot 행렬 */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-emerald-800">ⓑ 매도 건 (양도 정보)</h3>
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 dark:bg-emerald-950/40">
+        <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">ⓑ 매도 건 (양도 정보)</h3>
         {form.transferLots.length === 0 ? (
-          <p className="text-xs text-emerald-700 bg-emerald-100/60 rounded p-3">
+          <p className="text-xs text-emerald-700 bg-emerald-100/60 rounded p-3 dark:text-emerald-300 dark:bg-emerald-900/40">
             매도 행 추가부터 시작하세요. 분할 양도인 경우 건별로 입력하세요.
           </p>
         ) : (
           form.transferLots.map((lot, idx) => (
             <div key={lot.id} className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-emerald-700">매도 #{idx + 1}</p>
+                <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">매도 #{idx + 1}</p>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => deleteTransferLot(idx)}
-                  className="text-red-500 hover:text-red-700"
+                  className="text-red-500 hover:text-red-700 dark:text-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -252,7 +252,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
       </div>
 
       {/* ⓒ 합계 미리보기 */}
-      <div className={`rounded-lg border p-3 text-sm ${summary.excess ? "border-red-300 bg-red-50/60 text-red-800" : "border-sky-200 bg-sky-50/40 text-sky-900"}`}>
+      <div className={`rounded-lg border p-3 text-sm ${summary.excess ? "border-red-300 bg-red-50/60 text-red-800 dark:text-red-200 dark:bg-red-950/40" : "border-sky-200 bg-sky-50/40 text-sky-900 dark:text-sky-200 dark:bg-sky-950/40"}`}>
         <p>
           총 매수 <strong>{summary.totalAcq.toLocaleString()}주</strong> / 총 매도{" "}
           <strong>{summary.totalTrn.toLocaleString()}주</strong> / 잔량{" "}
@@ -260,7 +260,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
           {summary.excess ? "⚠️ 매도 > 매수 (FIFO 매칭 불가)" : "✓"}
         </p>
         {summary.weightedAvg !== null && (
-          <p className="text-xs mt-1 text-sky-700">
+          <p className="text-xs mt-1 text-sky-700 dark:text-sky-300">
             가중평균 단가: <strong>{summary.weightedAvg.toLocaleString()}원</strong>
           </p>
         )}
@@ -280,7 +280,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
           tone="violet"
           onChange={(v) => onChange({ costAllocationMethod: v })}
         />
-        <p className="text-xs text-violet-700 bg-violet-50/40 rounded p-2">
+        <p className="text-xs text-violet-700 bg-violet-50/40 rounded p-2 dark:text-violet-300 dark:bg-violet-950/40">
           {COST_METHOD_HINT[form.costAllocationMethod]}
         </p>
         <p className="text-xs text-slate-500">
@@ -290,10 +290,10 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
 
       {/* ⓔ specific 매칭 행렬 */}
       {form.costAllocationMethod === "specific" && (
-        <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-fuchsia-800">ⓔ 개별법 매칭</h3>
+        <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-3 dark:bg-fuchsia-950/40">
+          <h3 className="text-sm font-semibold text-fuchsia-800 dark:text-fuchsia-200">ⓔ 개별법 매칭</h3>
           {form.specificMatchings.length === 0 ? (
-            <p className="text-xs text-fuchsia-700">매칭 추가부터 시작하세요.</p>
+            <p className="text-xs text-fuchsia-700 dark:text-fuchsia-300">매칭 추가부터 시작하세요.</p>
           ) : (
             form.specificMatchings.map((m, idx) => (
               <div key={idx} className="rounded border border-fuchsia-300 bg-white dark:bg-gray-900 p-2 grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
@@ -343,7 +343,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => deleteMatching(idx)}
-                  className="text-red-500"
+                  className="text-red-500 dark:text-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

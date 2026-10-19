@@ -224,11 +224,11 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         <SectionTitle n={1} title="필요경비" />
         <div className="space-y-4">
           {expenseLocked ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-800">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200 dark:bg-emerald-950/40">
               <p className="font-semibold mb-0.5">
                 개산공제 자동 적용 — 취득가액 방식 &quot;{ACQUISITION_MODE_LABEL[acquisitionMode]}&quot;
               </p>
-              <p className="text-xs text-emerald-700">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
                 소령 §163⑥4 — 취득가액을 추계(환산·매매사례·액면가)로 산정한 경우 필요경비는
                 <strong> 취득기준시가 × 1%</strong>의 개산공제로 자동 적용됩니다.
                 {swapEligibleMode
@@ -237,16 +237,16 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               </p>
             </div>
           ) : (
-            <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-sm text-sky-800">
+            <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-sm text-sky-800 dark:text-sky-200 dark:bg-sky-950/40">
               <p className="font-semibold mb-0.5">
                 실제 필요경비 입력 — 취득가액 방식 &quot;실가&quot;
               </p>
-              <p className="text-xs text-sky-700">
+              <p className="text-xs text-sky-700 dark:text-sky-300">
                 실가 취득에서는 개산공제(§163⑥4)가 적용되지 않으며, 증권거래세·매매수수료 등
                 실제 발생한 경비를 직접 입력해야 합니다.
               </p>
               {isPreDeemedLotClause1On(form) && (
-                <p className="text-xs text-sky-700 mt-1" data-testid="pre-deemed-lots-expense-note">
+                <p className="text-xs text-sky-700 mt-1 dark:text-sky-300" data-testid="pre-deemed-lots-expense-note">
                   다만 의제취득일 전 매수 건의 ① 의제취득일 현재 가액(영 §176의2④1호)이 채택된 부분은 개산공제
                   (의제취득일 기준시가 × 1% — 영 §163⑥4)가 적용되고 실제 경비는 산입되지 않습니다. 입력한 실제 경비는 양도 주식수
                   비례로 ① 채택분과 그 외 몫에 나뉘어 그 외 몫만 필요경비가 됩니다(귀속 기준에 대한 법령상 명문은 없습니다 —
@@ -292,7 +292,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
       <section>
         <SectionTitle n={2} title="기본공제 (§103①)" />
         <div className="space-y-3">
-          <div className="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-700">
+          <div className="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-700 dark:text-sky-300 dark:bg-sky-950/40">
             {isExitTax ? (
               <>
                 {/*
@@ -385,7 +385,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
       {isExitTax && (
         <section>
           <SectionTitle n={3} title="신고·납부 (소득세법 §118의15)" />
-          <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-violet-700 space-y-2">
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-violet-700 space-y-2 dark:text-violet-300 dark:bg-violet-950/40">
             <p className="font-medium">국외전출세는 신고 축이 다릅니다</p>
             <ul className="list-disc pl-4 space-y-1 text-xs leading-relaxed">
               <li>
@@ -451,7 +451,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
           />
 
           {foreignOnlyFiling && (
-            <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-700">
+            <div className="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-700 dark:text-violet-300 dark:bg-violet-950/40">
               <p className="font-medium">국외주식은 예정신고 대상이 아닙니다 (소득세법 §105①)</p>
               <p className="mt-1 leading-relaxed">
                 §105① 본문이 예정신고 대상에서 <strong>제94조제1항제3호다목</strong>(국외주식)을
@@ -466,7 +466,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               className={`rounded-lg border px-4 py-3 text-sm ${
                 isDeadlineNear
                   ? "border-amber-300 bg-amber-50 text-amber-800"
-                  : "border-violet-200 bg-violet-50/60 text-violet-700"
+                  : "border-violet-200 bg-violet-50/60 text-violet-700 dark:text-violet-300 dark:bg-violet-950/40"
               }`}
             >
               <p className="font-medium">
@@ -576,9 +576,9 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         <SectionTitle n={4} title="가산세 (국세기본법 §47조의2·§47조의3·§47조의4)" />
         <div className="space-y-3">
           {/* PR-3-c 신규 — 신고-단위 안내 카드 */}
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs text-sky-800">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-3 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40">
             <p className="font-semibold mb-1">ⓘ 신고-단위 적용</p>
-            <p className="leading-relaxed text-sky-700">
+            <p className="leading-relaxed text-sky-700 dark:text-sky-300">
               가산세(국세기본법 §47조의2 무신고 / §47조의3 과소신고 / §47조의4 납부지연)는{" "}
               <strong>신고서 1매 단위</strong>로 적용됩니다.
               다종목 신고에서는 종목마다 매기지 않고 <strong>합산 결정세액에 한 번</strong> 산정하며,

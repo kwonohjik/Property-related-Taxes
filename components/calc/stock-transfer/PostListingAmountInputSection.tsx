@@ -160,7 +160,7 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
       </div>
 
       {showIncome && (
-        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5">
+        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5 dark:text-amber-200 dark:bg-amber-900/40">
           <div className="flex justify-between font-mono tabular-nums">
             <span>
               1주당 순손익액 = <Frac top="순손익액" bottom="발행주식총수" />
@@ -173,7 +173,7 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
             </span>
             <strong>{won(derived.netIncomePerShare)}</strong>
           </div>
-          <p className="text-micro text-amber-700">
+          <p className="text-micro text-amber-700 dark:text-amber-300">
             환원율 {SIMPLE_DISCOUNT_RATE * 100}% — 소득세법 시행규칙 §81② → 상속세 및 증여세법
             시행규칙 §17
           </p>
@@ -209,7 +209,7 @@ export function PostListingAmountInputSection({ title, axisLabel, form, onChange
       </div>
 
       {showAsset && (
-        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5">
+        <div className="rounded border border-amber-300 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-0.5 dark:text-amber-200 dark:bg-amber-900/40">
           <div className="flex justify-between font-mono tabular-nums">
             <span>순자산가액 = 영업권 포함 전 순자산가액 + 영업권</span>
             <span>{won(derived.netAssetTotal)}</span>

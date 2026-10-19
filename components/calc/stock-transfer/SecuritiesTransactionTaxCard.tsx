@@ -85,8 +85,8 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
   if (props.variant === "inline") {
     const { transferPrice, showExpenseInclusionHint } = props;
     return (
-      <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs space-y-1">
-        <p className="font-semibold text-sky-700">증권거래세 참고 (정보용)</p>
+      <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs space-y-1 dark:bg-sky-950/40">
+        <p className="font-semibold text-sky-700 dark:text-sky-300">증권거래세 참고 (정보용)</p>
         {stx.totalTax > 0 && isZeroRate && (
           <>
             <p className="text-slate-600">
@@ -96,7 +96,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
               양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedAgriRateNum, stx.appliedRateDen)} (농특세)
               = <span className="font-medium text-slate-800">{fmt(stx.agriculturalTax)}</span>
             </p>
-            <p className="text-sky-600 font-medium">합계 {fmt(stx.totalTax)}</p>
+            <p className="text-sky-600 font-medium dark:text-sky-400">합계 {fmt(stx.totalTax)}</p>
           </>
         )}
         {stx.totalTax > 0 && !isZeroRate && (
@@ -111,20 +111,20 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
               )}
             </p>
             {stx.agriculturalTax > 0 && (
-              <p className="text-sky-600 font-medium">합계 {fmt(stx.totalTax)}</p>
+              <p className="text-sky-600 font-medium dark:text-sky-400">합계 {fmt(stx.totalTax)}</p>
             )}
           </>
         )}
         {stx.warning && (
-          <p className="text-amber-600 text-micro">{stx.warning}</p>
+          <p className="text-amber-600 text-micro dark:text-amber-400">{stx.warning}</p>
         )}
         <p className="text-micro text-slate-400">{stx.rateReference}</p>
         {showExpenseInclusionHint ? (
-          <p className="text-micro text-sky-600">
+          <p className="text-micro text-sky-600 dark:text-sky-400">
             ※ 이 금액을 필요경비에 포함하여 직접 입력하세요 (자동 합산 안 됨).
           </p>
         ) : (
-          <p className="text-micro text-rose-400">
+          <p className="text-micro text-rose-400 dark:text-rose-300">
             증권거래세는 양도소득세와 별도 납부 의무입니다.
           </p>
         )}
@@ -147,7 +147,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
           <LawArticleModal legalBasis="증권거래세법 시행령 §5" label="증거세령§5" />
           <LawArticleModal legalBasis="농어촌특별세법 §5 ① 5호" label="농특법§5①5호" />
         </div>
-        <p className="text-xs text-sky-600 mt-0.5">
+        <p className="text-xs text-sky-600 mt-0.5 dark:text-sky-400">
           {stx.rateReference}
         </p>
       </div>
@@ -187,8 +187,8 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
               </div>
             )}
             <div className="flex justify-between items-center pt-1 border-t border-sky-200">
-              <span className="font-semibold text-sky-800">합계</span>
-              <span className="font-bold text-sky-800 text-right font-mono tabular-nums whitespace-nowrap">
+              <span className="font-semibold text-sky-800 dark:text-sky-200">합계</span>
+              <span className="font-bold text-sky-800 text-right font-mono tabular-nums whitespace-nowrap dark:text-sky-200">
                 {fmt(stx.totalTax)}
               </span>
             </div>

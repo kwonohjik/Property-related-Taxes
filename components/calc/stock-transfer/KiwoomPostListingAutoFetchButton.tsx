@@ -159,11 +159,11 @@ export function KiwoomPostListingAutoFetchButton({
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2 dark:bg-sky-950/40">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-sky-900">
+        <div className="text-sm text-sky-900 dark:text-sky-200">
           <p className="font-semibold">키움증권 자동조회 (상장일 이후 1개월)</p>
-          <p className="text-xs text-sky-700 mt-0.5">
+          <p className="text-xs text-sky-700 mt-0.5 dark:text-sky-300">
             종목코드 + 상장일 입력 후 클릭하면 상장일 이후 1개월 종가가 자동으로 채워집니다 (§165⑤).
           </p>
         </div>
@@ -203,9 +203,9 @@ export function KiwoomPostListingAutoFetchButton({
                 bottom={<strong>{info.tradingDays}</strong>}
               />{" "}
               ={" "}
-              <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
+              <strong className="text-emerald-900 text-sm dark:text-emerald-200">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
-            <p className="text-emerald-700">→ §165⑤ 상장 후 1개월 평균에 자동 입력됩니다</p>
+            <p className="text-emerald-700 dark:text-emerald-300">→ §165⑤ 상장 후 1개월 평균에 자동 입력됩니다</p>
           </div>
           <button
             type="button"
@@ -217,7 +217,7 @@ export function KiwoomPostListingAutoFetchButton({
           </button>
           {showDetail && (
             <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1 max-h-96 overflow-y-auto">
-              <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100">
+              <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100 dark:text-emerald-300">
                 상장일 이후 1개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">
@@ -238,7 +238,7 @@ export function KiwoomPostListingAutoFetchButton({
                   );
                 })}
               </div>
-              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white dark:bg-gray-900">
+              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white dark:bg-gray-900 dark:text-emerald-300">
                 합계 = {info.sum.toLocaleString()} · 거래일 = {info.tradingDays} · 평균 = floor(합계/거래일) = {info.average.toLocaleString()}
               </p>
             </div>
