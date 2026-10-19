@@ -54,6 +54,8 @@ import {
   splitAcqModeLabel,
   splitCauseLabel,
   splitRateBasisNote,
+  splitRateBasisDateText,
+  splitRateHoldingAggregationLines,
   summarizeSplitGain,
 } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatLumpRate } from "./split-acq-text";
@@ -102,6 +104,7 @@ export function SplitGainDetailSection({
     // D1-4·D2-4 — 영 §163⑨ 단서 1호(토지)·2호(건물) 비교가 적용된 파트. 엔진 echo를 그대로 읽는다.
     // 두 파트에 동시에 서지 않는다(1호는 건물 매매, 2호는 토지 매매일 때만) — 하나만 렌더한다.
     const acqBasis = splitAcqBasisView(splitDetail.land) ?? splitAcqBasisView(splitDetail.building);
+    const rebuildLines = splitRateHoldingAggregationLines(splitDetail.land);
   return (
         <div className="rounded-lg border border-border p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -139,7 +142,7 @@ export function SplitGainDetailSection({
                     <span className="text-muted-foreground">세율 기산일 (소득세법 §104②)</span>
                     {(["land", "building"] as const).map((k) => (
                       <span key={k} className="font-mono tabular-nums text-right" data-testid={`split-card-rate-basis-${k}`}>
-                        {splitDetail[k].appliedRateBasisDate ?? "-"}
+                        {splitRateBasisDateText(splitDetail[k])}
                         {splitRateBasisNote(splitDetail[k], splitDetail.building.acquisitionCause) && (
                           <span className="block text-caption font-sans font-normal text-muted-foreground/80 text-left leading-snug">
                             {splitRateBasisNote(splitDetail[k], splitDetail.building.acquisitionCause)}
@@ -150,6 +153,18 @@ export function SplitGainDetailSection({
                   </>
                 )}
               </>
+            )}
+            {/*
+              구주택 멸실·신축 통산(해석 (5)) — 토지 파트의 세율 보유기간이 두 구간의 합이다. `appliedRateBasisDate`는 그 합을 만드는 환산 기산일이라
+              실제 취득일로 읽히지 않게 구간·합산 개월을 풀어 보인다(`mixedCause`와 무관 — 엔진 echo가 있으면 항상).
+            */}
+            {rebuildLines.length > 0 && (
+              <div className="col-span-3 space-y-0.5 rounded-md bg-muted/40 px-2 py-1.5 text-caption leading-snug text-muted-foreground" data-testid="split-card-rate-holding">
+                <span className="block font-medium text-foreground/80">토지 세율 보유기간 — 구주택 멸실·신축 통산 (서면법규과-1222 · 사전-2023-법규재산-0097)</span>
+                {rebuildLines.map((line, i) => (
+                  <span key={i} className="block" data-testid={`split-card-rate-holding-line-${i}`}>{line}</span>
+                ))}
+              </div>
             )}
             <span className="text-muted-foreground">양도가액</span>
             <span className={colCls(landIsOwned)}>{splitDetail.land.transferPrice.toLocaleString()}</span>

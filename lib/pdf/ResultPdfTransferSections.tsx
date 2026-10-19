@@ -18,6 +18,8 @@ import {
   splitAcqModeLabel,
   splitCauseLabel,
   splitRateBasisNote,
+  splitRateBasisDateText,
+  splitRateHoldingAggregationLines,
   summarizeSplitGain,
   type SplitGainPartSummary,
 } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -167,8 +169,8 @@ export function TransferSplitSection({ r }: { r: R }) {
             {summary.rateBasisShown && (
               <View style={s.row}>
                 <Text style={{ ...s.lbl, flex: 2 }}>세율 기산일 (소득세법 §104②)</Text>
-                <Text style={{ ...s.val, flex: 1 }}>{cell("land", (p) => p.appliedRateBasisDate ?? "-")}</Text>
-                <Text style={{ ...s.val, flex: 1 }}>{cell("building", (p) => p.appliedRateBasisDate ?? "-")}</Text>
+                <Text style={{ ...s.val, flex: 1 }}>{cell("land", (p) => splitRateBasisDateText(p))}</Text>
+                <Text style={{ ...s.val, flex: 1 }}>{cell("building", (p) => splitRateBasisDateText(p))}</Text>
               </View>
             )}
             {summary.rateBasisShown && summary.parts.map((p) => {
@@ -179,6 +181,19 @@ export function TransferSplitSection({ r }: { r: R }) {
                 </View>
               ) : null;
             })}
+          </>
+        )}
+        {/* 구주택 멸실·신축 통산(해석 (5)) — 토지 세율 보유기간의 두 구간·합산 개월·환산 기산일(화면 카드와 같은 문구). `mixedCause`와 무관. */}
+        {summary.parts.some((p) => p.rateHoldingAggregation) && (
+          <>
+            <View style={s.row}>
+              <Text style={{ ...s.lbl, flex: 4 }}>토지 세율 보유기간 — 구주택 멸실·신축 통산 (서면법규과-1222 · 사전-2023-법규재산-0097)</Text>
+            </View>
+            {splitRateHoldingAggregationLines(sd.land as unknown as SplitGainResult["land"]).map((line, i) => (
+              <View key={i} style={s.row}>
+                <Text style={{ ...s.lbl, flex: 4 }}>{line}</Text>
+              </View>
+            ))}
           </>
         )}
         <View style={s.row}>

@@ -92,7 +92,7 @@ export function splitRateBasisNote(
   // 구주택 멸실·신축 통산(해석 (5)) — `appliedRateBasisDate`는 실제 취득일이 아니라 합산 개월을 만드는 등가 기산일이다. 「주택 취득일부터」로 읽히지 않게 구간을 밝힌다.
   const agg = p.rateHoldingAggregation;
   if (agg) {
-    return `구주택 부수토지 ${agg.priorHouse.months}개월(${agg.priorHouse.from}~${agg.priorHouse.to}) + 신축주택 부수토지 ${agg.newHouse.months}개월(${agg.newHouse.from}~${agg.newHouse.to}) = ${agg.totalMonths}개월 통산 — 이 개월 수를 만드는 환산 기산일`;
+    return `구주택 부수토지 ${agg.priorHouse.months}개월(${agg.priorHouse.from}~${agg.priorHouse.to}) + 신축주택 부수토지 ${agg.newHouse.months}개월(${agg.newHouse.from}~${agg.newHouse.to}) = ${agg.totalMonths}개월 통산 (멸실일~신축 취득일 기간 제외 · 일수 버림)`;
   }
   const { label, law } = RATE_BASIS_RULE[p.rateBasisRule];
   if (p.rateBasisAcquisitionDate && p.rateBasisAcquisitionDate !== p.appliedRateBasisDate) {
@@ -100,6 +100,32 @@ export function splitRateBasisNote(
     return `${label} ${p.rateBasisAcquisitionDate}(${law})보다 ${subject}이 늦어 ${from}부터 — 주택부수토지로서의 보유기간`;
   }
   return `${label} — ${law}`;
+}
+
+/** 「세율 기산일」 날짜 칸 값 — 통산(해석 (5))이면 합산 개월을 만드는 환산 기산일이라 「환산」을 붙여 실제 취득일과 구분한다. */
+export function splitRateBasisDateText(p: Pick<SplitPartResult, "appliedRateBasisDate" | "rateHoldingAggregation">): string {
+  if (!p.appliedRateBasisDate) return "-";
+  return p.rateHoldingAggregation ? `환산 ${p.appliedRateBasisDate}` : p.appliedRateBasisDate;
+}
+
+/** 「세율 기산일」 항목 이름 — 통산이면 「세율 판정용 환산 기산일」(문장형 뷰: 상세명세서·신고서 각주). */
+export function splitRateBasisDateTitle(p: Pick<SplitPartResult, "rateHoldingAggregation">, plain = "세율 기산일"): string {
+  return p.rateHoldingAggregation ? "세율 판정용 환산 기산일" : plain;
+}
+
+/**
+ * 구주택 멸실·신축 통산(해석 (5)) 구간 안내 — 엔진 echo를 그대로 풀어 쓴다(값을 새로 계산하지 않는다). 통산이 없으면 빈 배열.
+ * 카드·PDF·상세명세서가 같은 줄을 낸다. 문구에 `/`·`÷`를 쓰지 않는다(`FormulaText`가 분수로 치환한다).
+ */
+export function splitRateHoldingAggregationLines(p: Pick<SplitPartResult, "rateHoldingAggregation">): string[] {
+  const agg = p.rateHoldingAggregation;
+  if (!agg) return [];
+  return [
+    `구주택 부수토지 기간 ${agg.priorHouse.from}~${agg.priorHouse.to} (${agg.priorHouse.months}개월${agg.startRule === "input_date" ? " · 입력한 구주택 취득일부터" : " · 토지 법정 기산일부터"})`,
+    `신축주택 부수토지 기간 ${agg.newHouse.from}~${agg.newHouse.to} (${agg.newHouse.months}개월)`,
+    `세율 판정 보유기간 ${agg.priorHouse.months}개월 + ${agg.newHouse.months}개월 = ${agg.totalMonths}개월 — 멸실일부터 신축 취득일까지의 기간은 제외하고 각 구간의 일수는 버림`,
+    `세율 판정용 환산 기산일 ${agg.equivalentBasisDate} — 위 ${agg.totalMonths}개월을 만드는 날짜이며 실제 취득일이 아님`,
+  ];
 }
 
 /**
@@ -195,6 +221,8 @@ export interface SplitGainPartSummary {
   rateBasisAcquisitionDate: string | undefined;
   rateBasisRule: SplitPartResult["rateBasisRule"];
   appliedRateBasisDate: string | undefined;
+  /** 구주택 멸실·신축 통산 echo 그대로(해석 (5)) — 통산이 적용된 토지 파트만. 있으면 `appliedRateBasisDate`는 실제 취득일이 아니라 환산 기산일이다 */
+  rateHoldingAggregation: SplitPartResult["rateHoldingAggregation"];
   /** 영 §163⑨ 단서 1호·2호 비교 echo 그대로(D1-4·D2-4) — 비교가 적용된 파트만, 구 결과·단서 밖은 `undefined` */
   acquisitionBasis: SplitPartResult["acquisitionBasis"];
 }
@@ -259,6 +287,7 @@ export function summarizeSplitGain(sd: SplitGainResult): SplitGainSummary {
       rateBasisAcquisitionDate: p.rateBasisAcquisitionDate,
       rateBasisRule: p.rateBasisRule,
       appliedRateBasisDate: p.appliedRateBasisDate,
+      rateHoldingAggregation: p.rateHoldingAggregation,
       acquisitionBasis: p.acquisitionBasis,
     };
   });
