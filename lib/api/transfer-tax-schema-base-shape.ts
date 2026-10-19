@@ -11,6 +11,7 @@
 
 import { z } from "zod";
 import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
+import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
 import { oneRightExemptionFactsSchema } from "./transfer-tax-schema-sub";
 import {
   temporaryTwoHouseSchema,
@@ -319,6 +320,12 @@ export const propertyBaseShape = {
   buildingHouseKind: z.enum(["house_individual", "house_apart"]).optional(),
   /** 토지 파트 증여자 취득일 (§104②2호) */
   landDonorAcquisitionDate: z.string().date().optional(),
+  /**
+   * 주택 split 파트 이월과세(소득세법 §97의2①) — 증여 사건 1벌 + 파트 N벌. 단건·컴패니언·다건이 같은 shape를 spread한다
+   * (이 파일은 `splitAcquisitionShape`를 spread하지 않고 인라인 복사본을 가진다 — 키를 여기에도 둬야 단건이 strip하지 않는다).
+   * 설계: transfer-split-part-carryover.engine.design.md §1
+   */
+  ...splitCarryoverShape,
   /** 분리 입력 방식 (@deprecated — landAcqMode/buildingAcqMode + saleSplitMode로 대체. 하위호환용 유지, 엔진 미소비) */
   landSplitMode: z.enum(["apportioned", "actual"]).optional(),
   /**

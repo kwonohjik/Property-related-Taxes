@@ -21,6 +21,7 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { housingExcessNeedsStdInputsOfInput, phdSplitPathTaken } from "./housing-excess-split";
 import { resolveHousingExcessAcqContract } from "./housing-excess-acq-contract";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
+import { splitPartCauseFactsOfInput } from "./transfer-split-part-cause-input";
 import { buildSplitPartCauseEcho } from "./transfer-split-part-echo";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -60,12 +61,6 @@ export {
  * 이 함수는 양도차익·파트 echo만 만든다. (종전 「미구현」 주석은 G-1 종결 후에도 남은 낡은 기재였다 —
  * docs/00-pm/transfer-split-part-rate-shortterm.plan.md, `split-part-rate.anchor.test.ts` 37건.)
  */
-/** YYYY-MM-DD — Date·문자열 모두. */
-function dayKey(d: Date | string | undefined): string | undefined {
-  if (!d) return undefined;
-  return d instanceof Date ? d.toISOString().slice(0, 10) : d.slice(0, 10);
-}
-
 export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   if (input.propertyType !== "housing" && input.propertyType !== "building") return null;
 
@@ -73,37 +68,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const earlyLandMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const earlyBuildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
 
-  // 토지 파트 취득원인 규칙(D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호) — ⑫·⑧과 같은 leaf.
+  // 토지 파트 취득원인 규칙(D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호 · P1 파트 이월과세 S0~S9) — ⑫·⑧과 같은 leaf.
   // 토지 취득일 조기 반환보다 **앞**이다: 토지 상속·증여가 지정됐는데 토지 취득일이 없으면 토지 파트가
-  // 통째로 빠진 채 계산됐다(D1 G-12).
-  const [causeIssue] = collectSplitPartCauseIssues({
-    isSplitable: true,
-    hasLandAcquisitionDate: !!input.landAcquisitionDate,
-    landAcquisitionCause: input.landAcquisitionCause,
-    hasLandDecedentAcquisitionDate: !!input.landDecedentAcquisitionDate,
-    landMode: earlyLandMode,
-    // ④ payload를 Route 변환 없이 엔진에 바로 넣는 호출부(테스트)도 있다 — 날짜 문자열도 받는다(`mixed-use-acq-date.ts` 같은 규약).
-    landAcquisitionDate: dayKey(input.landAcquisitionDate as Date | string | undefined),
-    buildingAcquisitionCause: input.acquisitionCause,
-    selfOwns: input.selfOwns,
-    isBurdenedGift: input.transferType === "burdened_gift" || input.acquisitionCause === "burdened_gift",
-    hasPreHousingDisclosure: !!input.preHousingDisclosure,
-    hasFamilyBusinessInheritance: !!input.familyBusinessInheritance,
-    landSec164Value: input.landSec164Value,
-    isPartialAreaTransfer: input.isPartialAreaTransfer,
-    // D2-4 — 건물 상속·증여 §163⑨ 단서 2호(단독·다가구주택만). 주택 여부는 엔진 입력의 자산 종류에서 읽는다.
-    isHousing: input.propertyType === "housing",
-    buildingHouseKind: input.buildingHouseKind,
-    buildingSec164Value: input.buildingSec164Value,
-    // D2 — 건물 상속·증여 + 토지 매매. 자산 단위 평가 payload는 호출 시점 입력에서 읽는다(STEP 0.45는 필드를 지우지 않는다).
-    buildingMode: earlyBuildingMode,
-    buildingAcquisitionDate: dayKey(input.acquisitionDate as Date | string | undefined),
-    hasAssetLevelAcquisitionValuation: !!(
-      input.inheritedAcquisition || input.inheritedHouseValuation || input.pre1990Land || input.commercialInheritanceValuation
-    ),
-    hasBuildingAcquisitionPrice: (input.buildingAcquisitionPrice ?? 0) > 0,
-    hasLandAcquisitionPrice: (input.landAcquisitionPrice ?? 0) > 0,
-  });
+  // 통째로 빠진 채 계산됐다(D1 G-12). 사실 조립은 해결자(`calcSplitCarryoverScenarios`)와 같은 어댑터다.
+  const [causeIssue] = collectSplitPartCauseIssues(splitPartCauseFactsOfInput(input));
   if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
   if (!input.landAcquisitionDate) return null;
 

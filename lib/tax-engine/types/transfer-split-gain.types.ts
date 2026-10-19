@@ -7,6 +7,8 @@ import type { HousingExpropriationValuationDetail } from "../transfer-tax-exprop
 import type { SaleSplitExemption, SaleSplitPair } from "../sale-split-deemed-unclear";
 import type { Sec100_3Era } from "../data/sec100-3-split-era";
 import type { ApportionBasisKind, AppraisalRejectReason } from "../sale-split-apportion-basis";
+import type { CarryoverExclusionReason } from "../transfer-tax-carryover-eligibility";
+import type { FilingUnitCarryoverComparison } from "../transfer-tax-aggregate-carryover-scope";
 
 /**
  * §164⑨ 1호 건물 split 토지분 산출근거 (총액 3후보) — Record(Map 금지, JSON 소실).
@@ -65,6 +67,45 @@ export interface LandAcquisitionBasis {
   sec164: number;
   /** 많은 금액 쪽 — 동점은 reported */
   adopted: "reported" | "sec164";
+}
+
+/**
+ * 파트 이월과세(소득세법 §97의2①) echo — 이월과세 입력이 있던 파트만(`SplitPartResult.carryover`). 표시 전용·세액 불변.
+ * 생성은 해결자(`transfer-tax-split-carryover.ts`) 한 곳이다. 설계: transfer-split-part-carryover.engine.design.md §7.
+ */
+export interface SplitPartCarryoverEcho {
+  /** 이 파트에 §97의2①을 적용했는가(A) / 적용하지 않았는가(B) */
+  judgment: "applied" | "excluded";
+  /** 미적용 사유 — 적격 판정(①·③·②1호) 사유 또는 ②3호(`tax_comparison`) */
+  exclusionReason?: CarryoverExclusionReason | "tax_comparison";
+  /** 증여자의 취득일(YYYY-MM-DD) — 적용 시 장특·세율 기산일(§95④ 단서·§104②2호) */
+  donorAcquisitionDate: string;
+  /** 증여자의 취득 당시 금액(§97의2①1호) — 입력 그대로 */
+  donorAcquisitionPrice: number;
+  /** 증여자 자본적지출(§97의2①2호)로 필요경비에 더한 금액 — 미적용 파트·2024.1.1. 전 양도분은 0 */
+  donorCapexAdded: number;
+  /** 양도일이 2024.1.1. 전이라 증여자 자본적지출을 0으로 처리했는가 */
+  donorCapexGuardApplied: boolean;
+  /** 증여 당시 평가액 = 증여세 상당액 안분 분자 = 미적용(B) 시 취득가액 */
+  giftDateValuation: number;
+  /** 영 §163의2② 안분 증여세 상당액 — **한도 전** */
+  giftTaxApportioned: number;
+  /** 한도 = 이 파트의 양도차익(영 §163의2② 후단) — 적격이 아니면 0 */
+  giftTaxLimitCap: number;
+  /** 필요경비에 실제로 더한 증여세 상당액(미적용 파트는 0) — echo `directExpenses`에는 이 값이 섞여 있다 */
+  giftTaxAddedToExpense: number;
+  giftTaxLimitApplied: boolean;
+  /** §97의2②3호 비교 — 신고 전체 결정세액. 적격 판정에서 이미 배제된 파트는 없다 */
+  comparison?: FilingUnitCarryoverComparison;
+}
+
+/** 파트 이월과세의 증여 사건 echo (`SplitGainResult.carryoverEvent`) */
+export interface SplitCarryoverEventEcho {
+  giftRegistryDate: string;
+  giftTaxCalculated: number;
+  giftTaxBase: number;
+  /** §97의2③ 적용기간(증여 등기접수일 기준 5년 / 10년) */
+  applicablePeriodYears: 5 | 10;
 }
 
 /** 토지/건물 분리 계산 결과 */
@@ -164,7 +205,8 @@ export interface SplitPartResult {
   acquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction" | "burdened_gift";
   /**
    * 이 파트의 취득일(YYYY-MM-DD) — 상속개시일·증여일(영 §162①5호) / 매매 취득일 = **장특 기산일**(법 §95④).
-   * 장특 기산일을 따로 두지 않는다: 둘이 갈리는 것은 §95④ 단서(이월과세·가업상속공제 자산)뿐이고 그 파트는 D1 범위 밖이다.
+   * 해당 시나리오가 실제로 쓴 취득일 = 장특 기산일이다. 이월과세(§95④ 단서) 적용(A) 파트는 증여자 취득일, 배제(B) 파트는 증여 등기접수일이다.
+   * (가업상속공제 자산은 여전히 이 분리 계산의 범위 밖이다.)
    */
   acquisitionDate?: string;
   /** 법 §104② 세율 보유기간 **법정 기산일**(YYYY-MM-DD) — 단서 1호(피상속인)·2호(증여자) 적용 후, 주택 `max` 적용 **전**. */
@@ -177,6 +219,8 @@ export interface SplitPartResult {
    * 파트 세율이 모두 같아 자산 단위 경로로 계산된 경우에도 세액은 같다(설계 R-4).
    */
   appliedRateBasisDate?: string;
+  /** 파트 이월과세(§97의2①) echo — 이월과세 입력이 있던 파트만. 생략 = 그 파트는 이월과세 입력 없음 */
+  carryover?: SplitPartCarryoverEcho;
 }
 
 /**
@@ -317,6 +361,8 @@ export interface SplitGainResult {
   saleSplitJudgment?: SaleSplitJudgmentDetail;
   /** 취득 당시 계약서 구분금액 §100③ 판정 — 계약서 구분금액을 입력한 같은 날 취득 주택(배율 초과분 분리)에서만 (#17-6) */
   acqSplitJudgment?: AcqSplitJudgmentDetail;
+  /** 파트 이월과세의 증여 사건 echo — 파트 이월과세 입력이 있을 때만 */
+  carryoverEvent?: SplitCarryoverEventEcho;
   note: string;
   /** 본인 신고 부분 — UI 결과 뷰 표시용 */
   selfOwns: "both" | "building_only" | "land_only";

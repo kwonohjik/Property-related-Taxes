@@ -14,14 +14,10 @@ import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { carryoverExclusionShape, carryoverGiftEventShape } from "./transfer-tax-schema-split-carryover";
 
-/** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물 공통. */
-const carryoverExclusionShape = z.object({
-  expropriationWithin2Years: z.boolean().optional(),
-  /** D45 · Q-3 — 옛 이력의 「② 2호 선언」(레거시). 옛 키 `oneHouseExemptionApplies`는 strip된다. */
-  legacyOneHouseExemptionDeclared: z.boolean().optional(),
-  isFamilyBusinessInheritedAsset: z.boolean().optional(),
-});
+// 이월과세 적용배제 선언 shape(`carryoverExclusionShape`)과 증여 사건 shape(`carryoverGiftEventShape`)는
+// 주택 split 파트 이월과세(P1)와 공유하는 leaf(`transfer-tax-schema-split-carryover.ts`)가 정본이다.
 
 /**
  * 결정 #38 — 이월과세 「증여자와 계속 같은 세대」가 「예」면 세대 보유 시작일(증여자 취득일 ≤ 시작일 < 증여 등기접수일)이 필수다.
@@ -404,19 +400,7 @@ export const generalBuildingValuationSchema = z.object({
    * 이것이 있으면 route가 파트별 증여세 상당액을 **직접 산정**한다
    * (`apportionGiftTax`). 없으면 `*CarryoverTaxation.giftTaxAmount`를 그대로 쓴다(하위 호환).
    */
-  carryoverGiftEvent: z
-    .object({
-      giftRegistryDate: z.string().date(),
-      /** 영 §163의2②1호 증여세 산출세액 */
-      giftTaxCalculated: z.number().int().nonnegative(),
-      /** 영 §163의2②3호 증여세 과세가액 — 안분 분모 */
-      giftTaxBase: z.number().int().positive(),
-      /** §97의2① 관계요건 — 하나의 증여이므로 사건-수준이 정본이다. route가 두 파트에 복사한다. */
-      donorRelation: z.enum(["spouse", "lineal", "other"]).optional(),
-      donorDeceased: z.boolean().optional(),
-      exclusionDeclared: carryoverExclusionShape.optional(),
-    })
-    .optional(),
+  carryoverGiftEvent: carryoverGiftEventShape.optional(),
   /**
    * ⑫ **파트별** 이월과세 입력 — `carryoverGiftEvent`와 짝을 이룬다(설계 D9-10).
    *

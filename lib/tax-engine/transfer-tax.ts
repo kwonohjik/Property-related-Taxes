@@ -61,6 +61,7 @@ import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gai
 import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
+import { attachSplitCarryoverEcho } from "./transfer-tax-split-carryover";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { judgeRedevAptOneHouseExemption } from "./transfer-tax-redevelopment-apt-exemption";
 import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-gift";
@@ -379,7 +380,9 @@ export function calculateTransferTax(
   );
   if (mpBranchResult) return withUnregisteredNotice(mpBranchResult, effectiveInput);
   // STEP 2: 양도차익 계산
-  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, depreciationAmount, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
+  const { gain: rawGain, usedEstimated, estimatedBase, estimatedDeduction, expenses: appliedExpenses, splitDetail: gainSplitDetail, swapApplied: gainSwapApplied, swapComparison: gainSwapComparison, depreciationAmount, expropriationValuationDetail: gainExprDetail, auctionValuationDetail, housingExpropriationValuationDetail } = calcTransferGain(effectiveInput);
+  // 주택 split 파트 이월과세(STEP 0.476) echo — 결과 조립 경로 전부가 이 변수를 쓴다(입력에 숨은 필드를 싣지 않는다).
+  const splitDetail = attachSplitCarryoverEcho(gainSplitDetail, pre.splitCarryover);
   // 상가(CB) swap은 STEP 0.35 재구성 지점(단건 엔진 밖)에서 판정 → cbStep에서 result로 승격.
   // (calcTransferGain은 CB를 실가 모드로 보므로 swapApplied를 내지 않는다.)
   const swapApplied = gainSwapApplied || cbStep?.swapApplied;

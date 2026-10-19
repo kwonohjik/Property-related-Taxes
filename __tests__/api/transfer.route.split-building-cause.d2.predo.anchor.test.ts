@@ -318,10 +318,14 @@ describe("D2-C 침묵 통과를 막는다 [전환 D2 · Y*] (상속·증여 건�
     expect((await post({ ...D2_INH, ...same })).status).toBe(200);
   });
 
-  it("D2-C9 [R-X5 개정] 건물 이월과세·부담부증여 acquisitionCause + 토지 매매 → 400", async () => {
+  it("D2-C9 [R-X5 개정 → P1] 건물 부담부증여 acquisitionCause + 토지 매매 → 400 (이월과세 어휘 제거 — 건물 이월과세 + 토지 매매는 파트 서브객체 필수로 열렸다: SPCO-T5)", async () => {
     const x = await post({ ...D2_INH, acquisitionCause: "burdened_gift" });
     expect(x.status).toBe(400);
-    expect(messages(x.body)).toContain("이월과세(증여)·부담부증여로 취득한 자산에서는 토지 취득원인을 따로 지정할 수 없습니다");
+    expect(messages(x.body)).toContain("건물을 부담부증여로 취득한 자산에서는 토지 취득원인을 따로 지정할 수 없습니다");
+    // 이월과세 + 토지 매매 overlay: 서브객체가 없으면 S1 필수 누락(조용히 일반 증여로 계산하지 않는다)
+    const y = await post({ ...D2_INH, acquisitionCause: "carryover_gift" });
+    expect(y.status).toBe(400);
+    expect(messages(y.body)).toContain("buildingCarryoverPart");
   });
 });
 
