@@ -59,3 +59,57 @@ describe("nblShareExemptionWithheldNotice", () => {
     expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: first.nonBusinessLandDetails }, first)).toBeUndefined();
   });
 });
+
+describe("임야·목장 「상속 3년 이내」 — 지분 사실로 (forest-pasture-inheritance §3-1)", () => {
+  const first = {
+    ...primary, acquisitionDate: "2020-01-01",
+    nblForestInheritedWithin3Years: true, nblForestInheritanceDate: "2020-01-01", nblPastureInheritanceDate: "2020-01-01",
+  } as AssetForm;
+  const facts = (r: AssetForm) => [r.nblForestInheritedWithin3Years, r.nblForestInheritanceDate, r.nblPastureInheritanceDate];
+
+  it("같은 경위면 첫 카드 값 그대로", () => {
+    expect(facts(buildFractionalShareNblRecord({ ...first }, first))).toEqual([true, "2020-01-01", "2020-01-01"]);
+  });
+  it("경위가 다른 상속 지분 → 상속일 = 그 지분 상속개시일(취득일)", () => {
+    const s = { ...makeDefaultAsset(2), acquisitionCause: "inheritance", acquisitionDate: "2022-01-01" } as AssetForm;
+    expect(facts(buildFractionalShareNblRecord(s, first))).toEqual([true, "2022-01-01", "2022-01-01"]);
+  });
+  it("상속이 아닌 지분 → 끈다", () => {
+    const s = { ...makeDefaultAsset(2), acquisitionCause: "purchase", acquisitionDate: "2022-06-01" } as AssetForm;
+    expect(facts(buildFractionalShareNblRecord(s, first))).toEqual([false, "", ""]);
+  });
+  it("Q-2 첫 카드에 선언이 없으면 상속 지분도 끈 채로", () => {
+    const bare = { ...first, nblForestInheritedWithin3Years: false, nblForestInheritanceDate: "", nblPastureInheritanceDate: "" } as AssetForm;
+    const s = { ...makeDefaultAsset(2), acquisitionCause: "inheritance", acquisitionDate: "2022-01-01" } as AssetForm;
+    expect(facts(buildFractionalShareNblRecord(s, bare))).toEqual([false, "", ""]);
+  });
+});
+
+describe("nblShareExemptionWithheldNotice — 임야·목장 상속 3년", () => {
+  const det = (o: Record<string, unknown>) => o as unknown as NonBusinessLandInput;
+  const first = {
+    nonBusinessLandDetails: det({
+      unconditionalExemption: { isAncestor8YearFarming: true },
+      forestDetail: { inheritedForestWithin3Years: true, forestInheritanceDate: new Date("2022-01-01") },
+      pasture: { inheritanceDate: new Date("2022-01-01") },
+    }),
+  };
+  it("둘 다 빠지면 사유별 인용으로 알리고 6종 문구 뒤에 잇는다", () => {
+    const w = nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: det({}) }, first);
+    expect(w).toBe(
+      "같은 토지를 지분별로 나눠 취득했고 이 지분의 취득원인·취득일이 첫 지분과 다릅니다 — " +
+        "첫 지분 카드에서 선언한 비사업용 토지 무조건 사업용 의제(직계존속 8년 이상 재촌·자경 토지의 상속·증여 — 소득세법 시행령 §168조의14 ③)는 " +
+        "이 지분의 취득 경위에도 해당하는지 확인되지 않아 이 지분의 판정에는 적용하지 않았습니다 — 확인 필요. " +
+        "이 지분은 상속받은 지분이 아니어서 첫 지분 카드에 입력한 상속 3년 이내 임야(소득세법 시행령 §168조의9 ③ 7호) · " +
+        "상속 3년 이내 목장용지(소득세법 시행령 §168조의10 ② 1호) 사유를 이 지분의 판정에는 적용하지 않았습니다.",
+    );
+  });
+  it("지분에 자기 상속일이 있으면(날짜가 달라도) 알리지 않는다", () => {
+    const own = det({
+      unconditionalExemption: { isAncestor8YearFarming: true },
+      forestDetail: { inheritedForestWithin3Years: true, forestInheritanceDate: new Date("2023-01-01") },
+      pasture: { inheritanceDate: new Date("2023-01-01") },
+    });
+    expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: own }, first)).toBeUndefined();
+  });
+});

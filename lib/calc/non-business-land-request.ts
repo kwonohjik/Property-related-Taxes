@@ -162,6 +162,7 @@ export const NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS = [
  *
  * 취득원인·취득일이 첫 카드와 다르면 취득 경위에 달린 의제 선언 6종을 끈다 — 첫 카드에서 한 선언이 이 지분의
  * 취득 경위에도 맞는지 확인되지 않았기 때문이다(결과 안내는 다건 엔진 `nblShareExemptionWithheldNotice`).
+ * 임야·목장 「상속 3년 이내」 입력은 끄지 않고 지분 사실로 다시 정한다(`shareInheritanceWithin3YearsFacts`).
  */
 export function buildFractionalShareNblRecord(share: AssetForm, primary: AssetForm): AssetForm {
   const sameAcquisition =
@@ -177,6 +178,30 @@ export function buildFractionalShareNblRecord(share: AssetForm, primary: AssetFo
     ownershipDenominator: share.ownershipDenominator,
     ...(sameAcquisition
       ? {}
-      : Object.fromEntries(NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS.map((f) => [f, false]))),
+      : {
+          ...Object.fromEntries(NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS.map((f) => [f, false])),
+          ...shareInheritanceWithin3YearsFacts(share, primary),
+        }),
+  };
+}
+
+/**
+ * 임야·목장 「상속 3년 이내」 입력 — 취득 경위가 첫 카드와 다른 지분은 **그 지분 사실로** 정한다
+ * (계획서 `docs/00-pm/axis-b-share-nbl-forest-pasture-inheritance.plan.md` §3-1·§3-2).
+ *
+ * 「소득세법 시행령」 §168의9③7호·§168의10②1호는 「상속받은 … 상속개시일부터 3년이 경과하지 아니한」 것이다.
+ * 두 요건(상속 여부·상속개시일)은 지분 카드의 취득원인·취득일(상속이면 상속개시일)이 이미 받는다.
+ * 첫 카드에 선언이 있을 때만 적용한다 — 단건도 토글·상속일을 넣어야만 적용되는 규약과 같다(Q-2 a).
+ */
+function shareInheritanceWithin3YearsFacts(
+  share: AssetForm,
+  primary: AssetForm,
+): Pick<AssetForm, "nblForestInheritedWithin3Years" | "nblForestInheritanceDate" | "nblPastureInheritanceDate"> {
+  const inherited = share.acquisitionCause === "inheritance";
+  const forest = inherited && primary.nblForestInheritedWithin3Years === true;
+  return {
+    nblForestInheritedWithin3Years: forest,
+    nblForestInheritanceDate: forest ? share.acquisitionDate : "",
+    nblPastureInheritanceDate: inherited && primary.nblPastureInheritanceDate ? share.acquisitionDate : "",
   };
 }

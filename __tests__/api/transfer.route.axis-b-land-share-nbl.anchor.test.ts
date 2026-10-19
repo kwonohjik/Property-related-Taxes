@@ -166,3 +166,57 @@ describe("축 B 토지 — 비사업용 정밀판정은 지분마다", () => {
     expect(r.shareRaw).toEqual([false]);
   });
 });
+
+/**
+ * 임야·목장 「상속 3년 이내」(소령 §168의9③7호·§168의10②1호) — 경위가 다른 지분은 그 지분 사실로 (2026-10-19)
+ * 계획서: docs/00-pm/axis-b-share-nbl-forest-pasture-inheritance.plan.md
+ * 종전(#2268 `3f322a7b0`): 첫 카드 토글·상속일을 그대로 써서 F1 236,511,000(매매 지분 사업용) · F2 288,508,000(3년 미경과 상속 지분 비사업용).
+ */
+describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시일로", () => {
+  const inherit = (d: string) => ({ acquisitionCause: "inheritance", acquisitionDate: d, decedentAcquisitionDate: "1990-01-01", publishedValueAtInheritance: "400000000" }) as Partial<AssetForm>;
+  const RURAL = {
+    assetKind: "land", acquisitionArea: "3000", transferArea: "3000", addressJibun: "강원 홍천군 테스트리 1", fixedAcquisitionPrice: "400000000",
+    standardPriceAtTransfer: "500000000", isNonBusinessLand: true, nblUseDetailedJudgment: true, nblZoneType: "agriculture_forest",
+  } as Partial<AssetForm>;
+  const forest = (d: string) => ({ ...RURAL, ...inherit(d), nblLandType: "forest", nblForestInheritedWithin3Years: true, nblForestInheritanceDate: d }) as Partial<AssetForm>;
+  const pasture = (d: string) => ({ ...RURAL, ...inherit(d), nblLandType: "pasture", nblPastureInheritanceDate: d }) as Partial<AssetForm>;
+  const BOUGHT = { acquisitionCause: "purchase", acquisitionDate: "2022-06-01" } as Partial<AssetForm>;
+  const NOT_INHERITED = (item: string) =>
+    "[자산 2] 같은 토지를 지분별로 나눠 취득했고 이 지분의 취득원인·취득일이 첫 지분과 다릅니다 — 이 지분은 상속받은 지분이 아니어서 " +
+    `첫 지분 카드에 입력한 ${item} 사유를 이 지분의 판정에는 적용하지 않았습니다.`;
+
+  for (const [kind, first, item] of [
+    ["임야", forest, "상속 3년 이내 임야(소득세법 시행령 §168조의9 ③ 7호)"],
+    ["목장", pasture, "상속 3년 이내 목장용지(소득세법 시행령 §168조의10 ② 1호)"],
+  ] as const) {
+    it(`${kind} F1 둘째 지분 매매: 첫 지분 상속 사유를 빌리지 않는다 → 비사업용 · 고지(확인 필요 없음)`, async () => {
+      const f = form([share("50", first("2022-01-01")), share("50", BOUGHT)], {});
+      expect(v8(f)).toEqual([]);
+      const r = await run(f);
+      expect(r.nbl).toEqual([false, true]);
+      expect(r.total).toBe(238_612_000);
+      expect(r.shareWarnings).toEqual([NOT_INHERITED(item)]);
+    });
+    it(`${kind} F2 둘째 지분 2022 상속(3년 미경과) · 첫 지분 2020 상속: 둘째 지분은 자기 상속개시일로 사업용 · 고지 없음`, async () => {
+      const f = form([share("50", first("2020-01-01")), share("50", inherit("2022-01-01"))], {});
+      expect(v8(f)).toEqual([]);
+      const r = await run(f);
+      expect(r.nbl).toEqual([true, false]);
+      expect(r.total).toBe(225_940_000);
+      expect(r.shareWarnings).toEqual([]);
+    });
+    it(`${kind} F3 같은 날 상속: 첫 카드 값 그대로(부정 짝)`, async () => {
+      const r = await run(form([share("50", first("2022-01-01")), share("50", inherit("2022-01-01"))], {}));
+      expect(r.nbl).toEqual([false, false]);
+      expect(r.total).toBe(236_511_000);
+      expect(r.shareWarnings).toEqual([]);
+    });
+  }
+
+  it("Q-2 첫 카드에 선언이 없으면 상속 지분에도 적용하지 않는다(단건 규약)", async () => {
+    const plain = { ...RURAL, ...inherit("2020-01-01"), nblLandType: "forest" } as Partial<AssetForm>;
+    const r = await run(form([share("50", plain), share("50", inherit("2022-01-01"))], {}));
+    expect(r.nbl).toEqual([true, true]);
+    expect(r.shareWarnings).toEqual([]);
+  });
+});
