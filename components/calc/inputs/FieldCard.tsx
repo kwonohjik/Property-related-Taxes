@@ -77,9 +77,13 @@ export function FieldCard({
           {badge && <span className="ml-auto text-xs text-muted-foreground font-normal">{badge}</span>}
         </label>
       )}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">{children}</div>
+      {/* min-w-0: grid 항목은 최소 폭이 콘텐츠 폭이라, 없으면 본문이 카드보다 넓어져 trailing이 카드 밖으로 나간다.
+          trailing이 있으면 입력의 최소 폭(min-content)과 한 줄에 안 들어갈 때만 다음 줄로 내린다 —
+          줄어드는 입력칸은 최소 폭이 작아 그대로 한 줄이고, 날짜·Select처럼 줄지 않는 입력만 배지가 내려간다
+          (내리지 않으면 입력이 짓눌려 글자가 잘리거나 배지와 겹친다). */}
+      <div className="min-w-0 space-y-1.5">
+        <div className={cn("flex items-center gap-2", trailing && "flex-wrap")}>
+          <div className={cn("flex-1 min-w-0", trailing && "basis-[min-content]")}>{children}</div>
           {trailing ? (
             <div className="shrink-0">{trailing}</div>
           ) : unit ? (
