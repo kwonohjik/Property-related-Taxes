@@ -33,6 +33,11 @@ import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./
 import { fieldError } from "./transfer-tax-validate-field";
 import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
+import { consolidateResidenceMonths } from "@/lib/tax-engine/one-house/residence-months";
+import { giftHouseholdPriorResidenceMonths } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { calcGiftHouseholdBasis } from "./effective-regulated-at-acquisition";
+import { buildSameHouseholdInheritancePayload } from "./transfer-tax-api-helpers";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 
 export function validateRentalHousingException(
   rh: AssetForm["rentalHousingException"] | undefined,
@@ -387,11 +392,16 @@ export function validateRentalHousingException(
   // interval 모드는 residencePeriodMonthsAsset(raw)를 sync하지 않으므로 도출값 사용 —
   // 엔진 deriveResidencePeriodMonths와 동일 소스(interval 모드 거주기간 오차단 방지).
   const liveMonthsVal = deriveResidencePeriodMonths(asset, formTransferDate ?? "", "");
+  // 별건 ⑥ — 거주요건(2년)은 증여·상속 전 동일세대 거주를 통산한 값으로 본다(엔진 `judgeRentalHousingEligibility`와 같은 leaf).
+  // B의 등록 이후 거주기간 검증은 본인 전체 거주기간과 비교하므로 통산값을 쓰지 않는다.
+  const priorMonths = rentalResidencePriorHouseholdMonths(asset, assetIndex);
+  const requirementMonths = (liveMonthsVal || 0) + priorMonths;
+  const requirementText = priorMonths > 0 ? `${requirementMonths}개월 — 같은 세대 거주 통산 ${priorMonths}개월 포함` : `${requirementMonths}개월`;
 
   if (isStandalone154_10 && preRegime154_10) {
     // 「종전규정」 — §154① 원칙: 취득 당시 조정대상지역인 경우에만 거주 2년(일반 거주기간)
-    if (wasRegulatedAtAcquisition && (!liveMonthsVal || liveMonthsVal < 24) && !winWinResidenceExempt) {
-      return fieldError("residencePeriods", `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${liveMonthsVal || 0}개월)`);
+    if (wasRegulatedAtAcquisition && requirementMonths < 24 && !winWinResidenceExempt) {
+      return fieldError("residencePeriods", `${label}: 장기임대주택 특례(§154⑩) — 2019.2.12 전 취득으로 소령 §154① 원칙이 적용됩니다. 조정대상지역 취득 주택은 거주기간 2년(24개월) 이상이 필요합니다. (현재: ${requirementText})`);
     }
   } else if (rh.scenario === "B") {
     // OH-15 — 등록 이후 거주기간은 전체 거주기간의 일부다. 더 길면 두 입력 중 하나가 틀렸다.
@@ -402,8 +412,8 @@ export function validateRentalHousingException(
     if (postReg < 24 && !winWinResidenceExempt) {
       return fieldError("rentalHousingException.postRegistrationResidenceMonths", `${label}: 장기임대주택 특례 — 임대→거주 전환 주택은 사업자등록·임대사업자 등록 이후 거주기간이 2년(24개월) 이상이어야 합니다 (현재: ${postReg}개월, 소령 §155⑳1호${isStandalone154_10 ? " 괄호 준용" : ""}).`);
     }
-  } else if ((!liveMonthsVal || liveMonthsVal < 24) && !winWinResidenceExempt) {
-    return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. (현재: ${liveMonthsVal || 0}개월)`);
+  } else if (requirementMonths < 24 && !winWinResidenceExempt) {
+    return fieldError("residencePeriods", `${label}: 장기임대주택 특례 — 거주주택 거주기간 2년(24개월) 이상이 필요합니다. "거주주택 거주기간"(개월 직접 또는 입주·퇴거 구간)을 24개월 이상으로 입력하세요. 증여·상속 전 같은 세대로 거주한 기간은 그 칸에 입력하면 통산합니다. (현재: ${requirementText})`);
   }
 
   // 보유기간 2년 검증 (취득일 ~ 양도일) — §154⑩ 표준 경로도 포함(재기산하지 않는다,
@@ -422,4 +432,18 @@ export function validateRentalHousingException(
   }
 
   return null;
+}
+
+/**
+ * §155⑳1호 거주요건에 더하는 **증여·상속 전 동일세대 거주 개월** — 엔진 `resolveExemptionRequirementResidenceMonths`에서 본인 거주를 뺀 몫과 같다
+ * (별건 ⑥ · 서면-2022-부동산-2643 · 서면-2016-부동산-3992). 판정식 사본을 만들지 않고 엔진 leaf에 ④와 같은 사실을 넣는다:
+ * 상속은 `buildSameHouseholdInheritancePayload`(④ 단건)를 `consolidateResidenceMonths`에, 증여는 ④와 같은 basis(`calcGiftHouseholdBasis`)를
+ * `giftHouseholdPriorResidenceMonths`에. 용도변경 주택은 엔진이 상속 통산을 하지 않는다(`resolveExemptionResidenceMonths`) — 같은 게이트.
+ * 입력된 개월만 통산한다(미답 = 0 — 사용자 결정 2026-10-19 Q-2). §155⑳은 첫 자산만 선언한다(`canDeclareRentalHousingException`).
+ */
+function rentalResidencePriorHouseholdMonths(asset: AssetForm, assetIndex: number): number {
+  const inheritance = isUsageConversionActive(asset)
+    ? 0
+    : consolidateResidenceMonths(0, { acquisitionCause: asset.acquisitionCause, ...buildSameHouseholdInheritancePayload(asset) });
+  return inheritance + giftHouseholdPriorResidenceMonths(calcGiftHouseholdBasis(asset, { isPrimary: assetIndex === 0 }));
 }
