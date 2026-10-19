@@ -37,7 +37,7 @@ export function BusinessUsePeriodsInput({
       {periods.map((p, i) => (
         <div
           key={i}
-          className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end rounded-md border px-3 py-2 bg-muted/30"
+          className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end rounded-md border px-3 py-2 bg-muted/30"
         >
           <div className="space-y-1">
             <label className="block text-xs text-muted-foreground">시작일</label>
