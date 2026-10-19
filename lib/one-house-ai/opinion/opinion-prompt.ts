@@ -44,10 +44,11 @@ export function buildOpinionUserMessage(input: {
   if (input.sourceText) parts.push(`## 사용자가 붙여 넣은 원문\n${input.sourceText}`);
   if (input.notes && input.notes.length > 0) parts.push(`## 폼으로 표현할 수 없는 사정(추출 메모)\n${input.notes.map((n) => `- ${n}`).join("\n")}`);
   // 카드 파일 경로·검증일은 의견과 무관하다
-  const cards = input.cards.map(({ rawFile: _r, verifiedAt: _v, ...c }) => c);
+  const omit = (k: string, v: unknown) => (k === "rawFile" || k === "verifiedAt" ? undefined : v);
+  const cards = input.cards;
   parts.push(
     cards.length > 0
-      ? `## 관련 해석례 카드 (${cards.length}건)\n${JSON.stringify(cards, null, 1)}`
+      ? `## 관련 해석례 카드 (${cards.length}건)\n${JSON.stringify(cards, omit, 1)}`
       : "## 관련 해석례 카드\n(맞는 카드가 없습니다 — 조문과 사실만으로 의견을 내고, 근거가 부족하면 insufficient_basis로 답하세요)",
   );
   return parts.join("\n\n");

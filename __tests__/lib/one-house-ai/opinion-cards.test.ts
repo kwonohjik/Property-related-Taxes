@@ -77,3 +77,18 @@ describe("compactJudgmentForm", () => {
     });
   });
 });
+
+describe("buildOpinionUserMessage", () => {
+  it("카드 파일 경로·검증일은 보내지 않고, 맞는 카드가 없으면 근거 부족으로 답하라고 알린다", async () => {
+    const { buildOpinionUserMessage } = await import("@/lib/one-house-ai/opinion/opinion-prompt");
+    const withCard = buildOpinionUserMessage({
+      judgment: {},
+      facts: {},
+      cards: [{ ...card("E9", [], "기타"), rawFile: "raw/nts/E9.txt", verifiedAt: "2026-10-06" }],
+    });
+    expect(withCard).toContain("DOC-E9");
+    expect(withCard).not.toContain("raw/nts");
+    expect(withCard).not.toContain("2026-10-06");
+    expect(buildOpinionUserMessage({ judgment: {}, facts: {}, cards: [] })).toContain("insufficient_basis");
+  });
+});
