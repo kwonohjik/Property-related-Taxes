@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 import { articleTokens, selectCards, topicsIn, type OneHouseCard } from "@/lib/one-house-ai/opinion/cards";
 import { compactJudgmentForm } from "@/lib/one-house-ai/opinion/compact-form";
+import { OPINION_SYSTEM_PROMPT } from "@/lib/one-house-ai/opinion/opinion-prompt";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { createHouseEntry } from "@/lib/stores/house-entry-factory";
 
@@ -90,5 +91,19 @@ describe("buildOpinionUserMessage", () => {
     expect(withCard).not.toContain("raw/nts");
     expect(withCard).not.toContain("2026-10-06");
     expect(buildOpinionUserMessage({ judgment: {}, facts: {}, cards: [] })).toContain("insufficient_basis");
+  });
+});
+
+// 첫 실호출 의견(2026-10-20)에서 본 세 가지 — 카드 메모를 해석례 결론으로 인용 · 입력 밖 지정일 단정 · 쓰지 않은 카드 나열
+describe("OPINION_SYSTEM_PROMPT", () => {
+  it("docNo는 질의·회신이 직접 말한 내용에만 붙이고 eraCaution·currentRule에는 붙이지 않는다", () => {
+    expect(OPINION_SYSTEM_PROMPT).toContain("질의(question)·회신(answer)이 직접 말한 내용에만");
+    expect(OPINION_SYSTEM_PROMPT).toContain("그 내용을 말하는 문장에는 docNo를 붙이지 않는다");
+  });
+  it("입력·카드에 없는 사실을 단정하지 않고 확인 사항으로 넘긴다", () => {
+    expect(OPINION_SYSTEM_PROMPT).toContain("당신의 지식으로 단정하지 않는다");
+  });
+  it("쓰지 않은 카드를 나열하지 않는다", () => {
+    expect(OPINION_SYSTEM_PROMPT).toContain("쓰지 않은 카드는 나열하지 않는다");
   });
 });
