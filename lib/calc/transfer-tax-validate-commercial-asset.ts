@@ -32,8 +32,8 @@ import { isSec164_5ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso
 import { isSec164_8ProvisoApplicable } from "@/lib/calc/commercial-164-6-proviso";
 import { isBeforeBuildingStdPriceNotice } from "@/lib/calc/commercial-164-6-proviso";
 import { resolveCbEra } from "@/lib/calc/commercial-cb-era";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { sec164CommercialStatus, isFullyFilled } from "./sec164-required-fields";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";

@@ -20,7 +20,7 @@
 
 import { hasStaleSplitInput } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import {
   usesSelfComputedTransferPrice,
 } from "./burdened-gift-transfer-price-scope";

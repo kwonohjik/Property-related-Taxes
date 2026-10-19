@@ -10,7 +10,7 @@
  *    증가분에서 사이드바가 환산 전 값을 보여줬다. 술어를 공유해야 네 번째·다섯 번째
  *    호출부가 같은 방식으로 어긋나지 않는다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 

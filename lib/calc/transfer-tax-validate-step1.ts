@@ -6,7 +6,7 @@
  * 순서도 그대로다: push 순서가 곧 오류 목록 순서이고 `[0]`이 자동 이동 대상이다.
  */
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { memberOriginErrors } from "./right-member-origin-scope";

@@ -24,8 +24,8 @@ import {
   calculatePre1990LandValuation,
   type LandGradeInput,
 } from "@/lib/tax-engine/pre-1990-land-valuation";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별공시지가 최초 고시일 — 이 날 이전 취득은 가목의 가액이 없다(§164④ 적용 구간). */

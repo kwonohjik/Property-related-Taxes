@@ -17,7 +17,7 @@
  * 화면에 없다. 저장된 파트 방식(`landAcqMode`·`buildingAcqMode`)은 별개취득을 켰다 끈 잔재일 수 있어 읽지 않고, ④도 자산 단위 방식을 싣는다.
  * 별개취득 토글을 켠 채 같은 날짜면 라디오가 화면에 있다 — 그 값이 자산 단위 방식과 다르면 ⑧이 막는다(`housingExcessPartModeMismatch` — 배율 한도 이내·함께 양도 주택 카드도).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import {
   housingExcessAreaM2,
   housingExcessNeedsStdInputs,

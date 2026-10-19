@@ -10,7 +10,7 @@
  * ⚠️ 여기서 쓰는 fallback은 ⑧ validation과 **같아야** 한다 —
  *    조정월수 미입력 → 엔진 기본 12(전송하지 않음). validate가 이걸 차단하면 모순이 된다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { calcPriorStdPriceSubstitute } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { SameAdjustmentPeriodTransferInput } from "@/lib/tax-engine/types/transfer.types";

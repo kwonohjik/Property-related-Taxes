@@ -11,7 +11,7 @@
  *   취득가액이 계산값이라 여기서 알 수 없다 — 엔진이 취득가액까지로 절삭한다(`calcTransferGain`).
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { depreciationSupport } from "./depreciation-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 

@@ -5,7 +5,7 @@
  * houses 인라인 map + 장기임대 9유형 매트릭스 18필드 게이트를 담당.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { HouseEntry, RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";

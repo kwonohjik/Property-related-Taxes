@@ -23,7 +23,7 @@
  *    보내면 ⑫에서 400이 나거나 엔진이 Invalid Date를 본다. 「입력 중인 빈 행」은 계산 대상이 아니다.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { decedentHouseholdEngineBoolean, decedentHouseholdOf } from "@/lib/calc/decedent-household";
 import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";

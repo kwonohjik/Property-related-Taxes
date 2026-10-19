@@ -6,7 +6,7 @@
  * - §168의11⑤ 연접 다필지 (nblOtherUseParcels ON 시 필지·면적·취득일 필수, 건축물 필지는 바닥면적 필수)
  * - §168의11⑥ 복합용도 건축물 안분 (mode 선택 시 분자·분모 필수·분자≤분모)
  */
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";

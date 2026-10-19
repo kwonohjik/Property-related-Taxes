@@ -22,8 +22,8 @@
  *    `effectiveGbLandPriceAtAcq` **하나**를 쓴다. 한 곳만 파생값을 보면 「화면엔 있는데
  *    계산엔 없다」가 된다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import {
   calculatePre1990LandValuation,

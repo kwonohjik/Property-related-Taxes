@@ -7,7 +7,7 @@
  * 요구는 ⑤ 입력 카드(`HousingExcessSplitCard`)가 열리는 조건과 **같은 술어**(`housingExcessNeedsLandSplit`)에서만 걸린다 —
  * 노출 ⇔ 요구 ⇔ ④ 전송 ⇔ 엔진 게이트가 한 값이라 칸 없는 요구(막다른 길)가 없다. 입력 순서는 계산 순서(취득시 → 양도시)다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessUsesInheritedTotal, housingExcessZonePending } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
 import { housingExcessPartModeMismatch } from "./housing-excess-split";

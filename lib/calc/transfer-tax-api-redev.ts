@@ -12,9 +12,9 @@
  * - firstDisclosureDate/Price → undefined (단서 미발동)
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "./transfer-tax-api-helpers";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import {
   resolveRedevSubject,

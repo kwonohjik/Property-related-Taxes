@@ -21,7 +21,7 @@
  * 나중에 신고 유형을 바꾸면 앞서 확정한 종목에는 옛 값이 남는다. 엔진의 `pickFilingAxisInput`이
  * 신고 축을 한 종목에서 뽑는 것과 같은 층위다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { isForeignOnlyFiling } from "@/lib/calc/stock-filing-type";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 

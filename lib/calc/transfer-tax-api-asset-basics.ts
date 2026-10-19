@@ -13,7 +13,7 @@
  *
  * 종전 경로 호환을 위해 `transfer-tax-api-helpers.ts`가 전부 재export한다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 

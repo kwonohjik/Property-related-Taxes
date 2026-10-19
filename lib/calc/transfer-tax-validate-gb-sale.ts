@@ -7,7 +7,7 @@
  * 검증들과 달리 **양도 사실**만 본다 — 그것이 분리 이음매다.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";

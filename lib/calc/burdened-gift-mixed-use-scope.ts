@@ -11,7 +11,7 @@
  *    그 파일을 거꾸로 import하지 않는다(순환 방지).
  *  · 읽기 전용이다 — `useEffect → store` 미러링으로 쓰지 않는다. 비어 있는 값은 **0으로 메우지 않고** `missing`/`issues`에 싣는다(자동 안분 fallback 금지).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {

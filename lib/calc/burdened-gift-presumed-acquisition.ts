@@ -10,7 +10,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { calculateBuildingPenalty } from "@/lib/tax-engine/transfer-tax-building-penalty";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";

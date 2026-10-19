@@ -6,8 +6,8 @@
  *
  * 종전 import 경로 호환을 위해 `building-std-price-form.ts`가 재export한다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import {
   hasUsageIndexYear,
   hasLocationIndexYear,

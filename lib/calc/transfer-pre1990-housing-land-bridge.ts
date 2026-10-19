@@ -16,7 +16,7 @@
  * ⚠️ 3중 패턴 — ⑤ 표시·④ 전송·⑧ 검증이 이 파일의 `landSec164Applies`/`deriveHousingLandSec164Total`을 **같이** 읽는다.
  *    파생값은 store에 쓰지 않는다(useEffect → store 미러링 금지).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import { getGradeValue } from "@/lib/tax-engine/data/land-grade-values";

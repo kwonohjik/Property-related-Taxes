@@ -6,8 +6,8 @@
  * 종전 import 경로 호환을 위해 helpers가 재export한다 — `transfer-tax-api-gb.ts`와 같은 형태.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";

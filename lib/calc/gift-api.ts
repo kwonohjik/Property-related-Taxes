@@ -7,8 +7,8 @@
  * G-H3: buildInput 테스트 전무 → 순수 함수로 추출하여 단위 테스트 가능하게 함.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import { injectSuperficiesRemainingYears, injectIntangibleRemainingYears, injectSavingsAccrualIfAuto, injectReceivableValuationDate, injectCbValuationDate, injectTrustBenefitRemainingYears, injectPeriodicRemainingYears, injectCryptoUnitPriceIfTimeseries } from "@/lib/calc/estate-item-valuation";
 import { buildAppraisalFee } from "@/lib/calc/appraisal-fee-form";

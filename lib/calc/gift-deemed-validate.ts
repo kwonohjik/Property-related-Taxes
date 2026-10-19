@@ -1,8 +1,8 @@
 /**
  * 증여로 보는 경우 — 입력 검증 (⑧ 동기화). Zod superRefine과 동일 fallback.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { CI_SHARES_LABEL } from "@/components/calc/deemed-gift/capital-forms-shared";
 import type { DeemedFormState } from "@/components/calc/deemed-gift/shared";
 import { validateDeemedPhase3 } from "./gift-deemed-validate-phase3";

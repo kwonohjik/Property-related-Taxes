@@ -8,7 +8,7 @@
  * memory feedback_validation_sync_8th_point). 판정 기준은 UI와 동일 어댑터(단일 진실).
  * 면적은 UI 비활성 대상이 아니고 평가에 필요할 수 있으므로 의제 시에도 유지.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";

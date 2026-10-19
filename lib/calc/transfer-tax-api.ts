@@ -11,7 +11,7 @@ import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";

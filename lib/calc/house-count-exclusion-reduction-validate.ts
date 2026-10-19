@@ -8,8 +8,8 @@
  * 🔑 계산기(`transfer-tax-validate-reductions.ts`)와 판정 메뉴(`one-house-exemption-validate.ts`)가
  *    **같은 함수**를 부른다 — 두 벌이면 한쪽만 개정 반영된다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset";
 import type { SpecialHouseExclusionFormItem } from "@/lib/stores/calc-wizard-asset-reduction";
 import { usesContractDateOnly, usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold-hybrid-p5";

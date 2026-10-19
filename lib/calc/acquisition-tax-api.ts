@@ -6,7 +6,7 @@
  * 빈 값은 undefined로 정규화하여 전송. Zod 서버 스키마와 일치.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { FormState, OwnedHouseInfo as FormOwnedHouseInfo } from "@/components/calc/acquisition/shared";
 // 간주취득 판별 leaf — ⑤·⑧과 같은 술어를 쓴다(손술어 사본 금지)
 import { isDeemedAcquisitionCause } from "@/components/calc/acquisition/shared";

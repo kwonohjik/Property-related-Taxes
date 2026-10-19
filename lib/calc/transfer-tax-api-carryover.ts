@@ -3,7 +3,7 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리 (2026-05-04).
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 // ⚠️ `getOwnershipRatio`(transfer-tax-api-helpers)를 여기서 import하면 **순환 참조**다 —
 //    helpers가 이 파일을 import한다(`transfer-tax-api-helpers.ts:12`). 그래서 ratio는 **인자**로 받고

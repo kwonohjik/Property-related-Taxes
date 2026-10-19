@@ -7,8 +7,8 @@
  * 해당 유형이 아니면 null을 돌려주고 호출자가 Phase 1·2 switch로 넘어간다.
  */
 import type { DeemedGiftInput, RcExclusionType } from "@/lib/tax-engine/gift-deemed/types";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { sameClauseFields } from "./gift-deemed-43-2";
 import type { DeemedFormState } from "@/components/calc/deemed-gift/shared";

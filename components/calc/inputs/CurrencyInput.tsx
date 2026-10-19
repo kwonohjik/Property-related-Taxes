@@ -15,15 +15,8 @@ export function formatWithCommas(value: string, allowNegative = false): string {
   return neg ? (num ? `-${commas}` : "-") : commas;
 }
 
-/**
- * 콤마 제거 후 정수 반환. undefined/null 안전.
- * 음수 부호(`-`)는 보존하되, 파싱 불가(예: 전이 상태 `"-"`)는 0으로 가드 (NaN 전파 방지).
- */
-export function parseAmount(value: string | undefined | null): number {
-  if (value == null) return 0;
-  const n = parseInt(value.replace(/,/g, "") || "0", 10);
-  return Number.isNaN(n) ? 0 : n;
-}
+// 정본은 `lib/calc/number-parse.ts`(서버에서도 부를 수 있게) — 화면 쪽 기존 import를 위해 다시 내보낸다
+export { parseAmount } from "@/lib/calc/number-parse";
 
 /** 원화 표시 (아라비아 숫자 + 천단위 콤마, "원" 단위 생략 — 사용자 정책 2026-05-03) */
 export function formatKRW(amount: number): string {

@@ -15,7 +15,7 @@ import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { scaleBurdenedGiftInfo } from "@/lib/tax-engine/burdened-gift-valuation";
 import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import {
   deriveMemberRightsValue,
   deriveRightValuationTotal,

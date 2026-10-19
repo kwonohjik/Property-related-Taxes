@@ -7,7 +7,7 @@
  *
  * 엔진 쪽 짝: `resolveUnpaidTax`(`lib/tax-engine/transfer-tax-unpaid-tax.ts`).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 export type UnpaidTaxMode = "auto" | "manual";

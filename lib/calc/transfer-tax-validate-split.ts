@@ -15,8 +15,8 @@
  * 재현하면 dual-truth가 되므로, **총액이 자산 필드와 1:1인 단순 경로에서만** 검증한다.
  * 그 외 경로는 미검증(엔진이 음수를 그대로 노출 — 눈에 띄는 이상값).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { isSplitPairOverflow } from "@/lib/tax-engine/transfer-tax-split-gain";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";

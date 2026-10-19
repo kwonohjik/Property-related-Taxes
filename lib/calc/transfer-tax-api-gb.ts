@@ -4,9 +4,9 @@
  * `transfer-tax-api-helpers.ts` 800줄 정책에 따라 GB 전용 변환(buildExtensionInfo·
  * buildGeneralBuildingValuation)을 분리. 함수 로직 변경 없이 순수 추출 + §163⑨ 상속 게이트.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { depreciationSupport } from "./depreciation-scope";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { partAcquisitionDates, gbPartModes } from "./transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "./transfer-tax-split-acq-mode";
 // §163⑨ 단서 게이트 — 상가 경로와 **같은 상수·같은 술어**를 쓴다(경계가 갈리면 조문 하나에 두 정책이 된다).

@@ -4,7 +4,7 @@
  * `transfer-tax-validate-gb.ts`(700줄 근접)에서 분리한 신규 규칙이다. ⑫ 거울은
  * `lib/api/transfer-tax-schema-required-refines-gb.ts`(D1·D3·I3) — 조건이 어긋나면 「⑧ 통과 ↔ ⑫ 400」이 된다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { PartAcqMode } from "./transfer-tax-split-acq-mode";
 import { gbPartAllowedModes } from "./transfer-tax-gb-toggle-patches";

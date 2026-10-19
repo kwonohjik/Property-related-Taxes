@@ -18,7 +18,7 @@
  * @returns 차단 메시지 (검증 실패 시) | null (통과)
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { formatOwnershipPercent } from "./transfer-tax-api-helpers";

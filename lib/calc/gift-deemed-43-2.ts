@@ -8,7 +8,7 @@
  * 명부·매트릭스 경로(합병 매트릭스·감자 멀티·현물출자 고가 명부·증자 cap-table)는 표가 아니라 행마다
  * 「선행 이익 합계」 칸을 쓴다 — 수증자별로 금액기준을 따로 판정하기 때문이다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { DeemedFormState } from "@/components/calc/deemed-gift/deemed-form-state";
 import type { ScPriorTxRow } from "@/components/calc/deemed-gift/deemed-form-rows";
