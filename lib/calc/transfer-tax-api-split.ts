@@ -28,6 +28,11 @@ import {
   deriveBuildingSec164Total,
 } from "./transfer-building-sec164-bridge";
 import {
+  deriveHouseLandSec164Total,
+  houseLandKindSent,
+  landHouseExistedSent,
+} from "./transfer-house-land-sec164-bridge";
+import {
   deriveHousingLandSec164Total,
   isPartialAreaScenario,
   landSec164Applies,
@@ -337,6 +342,8 @@ export function buildLandPartCausePayload(primary: AssetForm): {
   isPartialAreaTransfer?: true;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
+  landHouseExisted?: "yes" | "no" | "unknown";
+  landHouseSec164Value?: number;
 } {
   const cause = effectiveLandAcquisitionCause(primary);
   // D2 — 건물 상속·증여 + 토지 매매: 엔진에는 overlay `purchase`만 보낸다(토지는 자기 취득일 — 피상속인·§164④ 키는 해당 없음).
@@ -366,5 +373,27 @@ export function buildLandPartCausePayload(primary: AssetForm): {
       : {}),
     // 일부 양도는 단서 구간에서 차단(평가액의 기준 면적 미확정, 자동 안분 금지) — 그 사실을 엔진·⑫에 알린다.
     ...(landSec164Applies(primary) && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),
+    // D1-H 영 §163⑨ 단서 2호 주택 부수토지(1990.8.30.~2005.4.29. 상속·증여 토지 + 건물 매매) — 「받을 당시 주택이 있었는가」·주택 구분·
+    // ②(영 §164⑦ 가액의 토지 몫 총액, ①과 같은 지분 스케일)를 따로 보낸다. max·echo·「② 필수」 차단은 엔진·⑫가 한다.
+    ...houseLandPayload(primary),
+  };
+}
+
+/** D1-H 페이로드 — 구간 밖이면 빈 객체. 주택 구분·②는 「있었다」일 때만(브리지가 판정). */
+function houseLandPayload(primary: AssetForm): {
+  landHouseExisted?: "yes" | "no" | "unknown";
+  buildingHouseKind?: "house_individual" | "house_apart";
+  landHouseSec164Value?: number;
+  isPartialAreaTransfer?: true;
+} {
+  const existed = landHouseExistedSent(primary);
+  if (!existed) return {};
+  const kind = houseLandKindSent(primary);
+  const sec164 = deriveHouseLandSec164Total(primary);
+  return {
+    landHouseExisted: existed,
+    ...(kind ? { buildingHouseKind: kind } : {}),
+    ...(sec164 > 0 ? { landHouseSec164Value: sec164 } : {}),
+    ...(existed === "yes" && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),
   };
 }

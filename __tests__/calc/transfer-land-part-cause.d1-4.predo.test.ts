@@ -104,6 +104,9 @@ function purchase(over: Partial<AssetForm> = {}): AssetForm {
     acquisitionDate: "2018-03-02",
     landCauseHost: "purchase",
     buildingAcquisitionPrice: "350,000,000",
+    // D1-H(2026-10-19) — 1990.8.30. 이후 매매 호스트 주택 토지는 ⑧이 「받을 당시 주택이 있었는가」를 묻는다. 이 파일은 단서 1호 경계가 주제라
+    //   「없었음」(단서 2호 비교 없음 = 종전 계산)으로 고정한다. 단서 2호 쪽은 `transfer.route.split-house-land.d1h.anchor.test.ts`.
+    landHouseExisted: "no",
     ...over,
   });
 }

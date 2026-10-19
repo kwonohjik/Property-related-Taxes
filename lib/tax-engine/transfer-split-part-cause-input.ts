@@ -39,6 +39,9 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     isHousing: input.propertyType === "housing",
     buildingHouseKind: input.buildingHouseKind,
     buildingSec164Value: input.buildingSec164Value,
+    // D1-H — 주택 부수토지 단서 2호(받을 당시 주택 있음 · 토지 몫 ②). 주택 구분은 위 `buildingHouseKind`를 같이 쓴다.
+    landHouseExisted: input.landHouseExisted,
+    landHouseSec164Value: input.landHouseSec164Value,
     // D2 — 건물 상속·증여 + 토지 매매. 자산 단위 평가 payload는 호출 시점 입력에서 읽는다(STEP 0.45는 필드를 지우지 않는다).
     buildingMode: earlyBuildingMode,
     buildingAcquisitionDate: dayKey(input.acquisitionDate as Date | string | undefined),

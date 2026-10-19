@@ -343,6 +343,8 @@ describe("D. D1-4a 구현 기대값 (Pre-Do todo → 활성)", () => {
               landCauseHost: host,
               landDecedentAcquisitionDate: cause === "inheritance" ? "1960-01-01" : "",
               landAcqMode: "actual",
+              // D1-H — 1990.8.30. 이후 매매 호스트는 ⑧이 「받을 당시 주택」을 묻는다. 단서 1호 격자이므로 「없었음」으로 고정.
+              landHouseExisted: "no",
             } as AssetForm;
             const eight = !!validateLandPartCause(asset, "x");
             expect(eight, `⑧ ${host}/${cause}/${date}`).toBe(proviso);

@@ -11,7 +11,9 @@ import type {
   SplitLandExpropriationValuationDetail,
 } from "./types/transfer.types";
 import type { LandAcquisitionBasis, StdSplitDetail } from "./types/transfer-split-gain.types";
-import { isSec163_9BuildingProviso, isSec163_9BuildingSec164Open, isSec163_9LandProviso } from "./transfer-split-part-cause";
+import {
+  isSec163_9BuildingProviso, isSec163_9BuildingSec164Open, isSec163_9HouseLandTarget, isSec163_9LandProviso,
+} from "./transfer-split-part-cause";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   calcLandStdPriceAtAcq,
@@ -318,20 +320,40 @@ export function deriveUseEstimatedAcquisitionFromParts(
 export function resolveLandPartAcquisition(
   input: Pick<
     TransferTaxInput,
-    "landAcquisitionPrice" | "landSec164Value" | "landAcquisitionCause" | "landAcquisitionDate" | "isSeparateAcquisition"
+    | "landAcquisitionPrice" | "landSec164Value" | "landAcquisitionCause" | "landAcquisitionDate" | "isSeparateAcquisition"
+    | "propertyType" | "acquisitionCause" | "landHouseExisted" | "landHouseSec164Value"
   >,
 ): { price: number | undefined; basis?: LandAcquisitionBasis } {
   const d = input.landAcquisitionDate as Date | string | undefined;
   const dayKey = d instanceof Date ? d.toISOString().slice(0, 10) : d?.slice(0, 10);
-  const sec164 = input.landSec164Value ?? 0;
   const reported = input.landAcquisitionPrice;
-  if (!isSec163_9LandProviso(input.landAcquisitionCause, dayKey) || !(sec164 > 0) || reported === undefined
-    || input.isSeparateAcquisition !== true)
-    return { price: reported };
-  return {
-    price: Math.max(reported, sec164),
-    basis: { rule: "sec163_9_1", reported, sec164, adopted: reported >= sec164 ? "reported" : "sec164" },
-  };
+  if (reported === undefined || input.isSeparateAcquisition !== true) return { price: reported };
+  const sec164 = input.landSec164Value ?? 0;
+  if (isSec163_9LandProviso(input.landAcquisitionCause, dayKey) && sec164 > 0) {
+    return {
+      price: Math.max(reported, sec164),
+      basis: { rule: "sec163_9_1", reported, sec164, adopted: reported >= sec164 ? "reported" : "sec164" },
+    };
+  }
+  // D1-H — 주택 부수토지 단서 2호(1990.8.30.~2005.4.29. 상속·증여 토지 + 건물 매매, 받을 당시 주택 있음). 조건은 leaf와 같은 술어다.
+  // 단독·다가구 여부는 다시 보지 않는다 — 유일한 호출부 `calcSplitGain`이 먼저 leaf를 돌려 대상인데 단독·다가구가 아니면 이미 던졌다.
+  const houseLand = input.landHouseSec164Value ?? 0;
+  if (
+    houseLand > 0
+    && isSec163_9HouseLandTarget({
+      isHousing: input.propertyType === "housing",
+      buildingAcquisitionCause: input.acquisitionCause,
+      landAcquisitionCause: input.landAcquisitionCause,
+      landAcquisitionDate: dayKey,
+      landHouseExisted: input.landHouseExisted,
+    })
+  ) {
+    return {
+      price: Math.max(reported, houseLand),
+      basis: { rule: "sec163_9_2_land", reported, sec164: houseLand, adopted: reported >= houseLand ? "reported" : "sec164" },
+    };
+  }
+  return { price: reported };
 }
 
 /**

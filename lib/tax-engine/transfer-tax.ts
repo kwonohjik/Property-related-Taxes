@@ -59,7 +59,7 @@ import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclu
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
 import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
-import { buildingSec164ApportionNotice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
+import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { attachSplitCarryoverEcho } from "./transfer-tax-split-carryover";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -718,8 +718,8 @@ export function calculateTransferTax(
   const landBeforeBuildingNotice = landBeforeBuildingAcquisitionRateNotice(effectiveInput, splitDetail);
   if (landBeforeBuildingNotice) warnings.push(landBeforeBuildingNotice);
   // D2-4(계획서 §13 Q-D24-1) — 건물 취득가액 단서 2호 비교(영 §164⑦ 건물 몫 안분)가 돈 경우의 방법·한계 고지(세액 불변).
-  const buildingSec164Notice = buildingSec164ApportionNotice(splitDetail);
-  if (buildingSec164Notice) warnings.push(buildingSec164Notice);
+  // D1-H(계획서 transfer-house-land-163-9-2.plan.md) — 주택 부수토지 단서 2호 비교의 방법·한계 또는 비교하지 않은 사실(세액 불변).
+  for (const n of [buildingSec164ApportionNotice(splitDetail), houseLandSec164Notice(effectiveInput, splitDetail)]) if (n) warnings.push(n);
   steps.push(buildCalculatedTaxStep(taxResult, taxBase));
 
   // STEP 7.5 ~ 11/12: 산출세액 이후 단계 + 결과 조립 (transfer-tax-normal-return.ts)

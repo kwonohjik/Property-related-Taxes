@@ -65,6 +65,11 @@ export interface SplitPartCauseFacts {
   buildingHouseKind?: BuildingHouseKind;
   /** 건물 몫 영 §164⑦ 가액(②) 총액(지분 스케일 후) — 양수면 「있음」. 생략·0 = ② 없음 */
   buildingSec164Value?: number;
+  // ── D1-H (토지 상속·증여 + 건물 매매, 주택 부수토지 영 §163⑨ 단서 2호 — 단독·다가구주택만) ──
+  /** 토지를 받을 당시 지금의 주택이 그 위에 있었는가 — `"yes"`만 비교를 연다. 생략·`"unknown"`·`"no"` = 비교하지 않는다(모름 = 불성립) */
+  landHouseExisted?: LandHouseExisted;
+  /** 토지 몫 영 §164⑦ 가액(②) 총액(지분 스케일 후) — 양수면 「있음」. 생략·0 = ② 없음. 주택 구분은 `buildingHouseKind`를 같이 쓴다 */
+  landHouseSec164Value?: number;
   // ── P1 파트 이월과세 (전부 선택 — 생략 = 그 결합이 아니다) ──
   /** 토지·건물 파트 이월과세 서브객체 존재 (와이어 `*CarryoverPart` ⇔ 엔진 `*CarryoverTaxation`) */
   hasLandCarryover?: boolean;
@@ -84,6 +89,9 @@ export interface SplitPartCauseFacts {
   hasLegacyExpenses?: boolean;
 }
 
+/** D1-H — 토지를 받을 당시 지금의 주택이 그 위에 있었는가(계획서 transfer-house-land-163-9-2.plan.md Q-1). */
+export type LandHouseExisted = "yes" | "no" | "unknown";
+
 /** 단서 2호 ②가 열리는 주택 구분 — ④가 `deriveInheritanceHouseKind`(UI·API 공용 파생)로 보낸다. */
 export type BuildingHouseKind = "house_individual" | "house_apart";
 
@@ -94,6 +102,9 @@ export type SplitPartCauseField =
   | "landAcquisitionDate"
   | "landSec164Value"
   | "buildingSec164Value"
+  // D1-H — 주택 부수토지 단서 2호(주택 구분 · ②)
+  | "buildingHouseKind"
+  | "landHouseSec164Value"
   | "areaScenario"
   // D2 — 건물 파트 칸
   | "buildingAcqMode"
@@ -271,6 +282,50 @@ export function isSec163_9BuildingProviso(cause: string | undefined, buildingDat
   return (cause === "inheritance" || cause === "gift") && !!buildingDate && buildingDate.slice(0, 10) < SEC_163_9_BUILDING_FIRST_DISCLOSURE;
 }
 
+// ── D1-H (토지 상속·증여 + 건물 매매 — 주택 부수토지, 영 §163⑨ 단서 2호) ──
+// 계획서: docs/00-pm/transfer-house-land-163-9-2.plan.md · 근거 부동산거래관리과-364(2010.3.10.) — 부수토지만 증여받은 사람에게
+// 「건물의 기준시가가 고시되기 전에 증여받은 주택부수토지」로 단서 2호를 적용했다. 1990.8.30. 전은 단서 1호(D1-4)를 그대로 쓴다(Q-4).
+
+/**
+ * 주택 부수토지 단서 2호 구간인가 — 토지 상속·증여 ∧ 1990-08-30 ≤ 토지 취득일 < 2005-04-30(엄격 — 최초공시일 당일은 「고시되기 전」이 아니다).
+ * 구간의 끝은 다른 단서 2호 경로와 같은 고정 경계다(주택마다의 최초공시일은 세 경로를 함께 바꾸는 별건 — Q-5).
+ */
+export function isSec163_9HouseLandProviso(cause: string | undefined, landDate: string | undefined): boolean {
+  if (cause !== "inheritance" && cause !== "gift") return false;
+  const d = landDate?.slice(0, 10);
+  return !!d && d >= SEC_163_9_LAND_FIRST_DISCLOSURE && d < SEC_163_9_BUILDING_FIRST_DISCLOSURE;
+}
+
+/**
+ * D1-H 비교 대상인가(주택 구분은 따로 본다) — 주택 ∧ 건물 매매(신축 호스트는 받을 당시 지금 건물이 없었다 — Q-2) ∧ 구간
+ * ∧ 「받을 당시 주택이 있었다」. leaf·엔진 해결자·④ 브리지가 이 술어 하나를 쓴다.
+ */
+export function isSec163_9HouseLandTarget(f: {
+  isHousing?: boolean;
+  buildingAcquisitionCause?: string;
+  landAcquisitionCause?: string;
+  landAcquisitionDate?: string;
+  landHouseExisted?: string;
+}): boolean {
+  return !!f.isHousing && f.buildingAcquisitionCause === "purchase" && f.landHouseExisted === "yes"
+    && isSec163_9HouseLandProviso(f.landAcquisitionCause, f.landAcquisitionDate);
+}
+
+export const HOUSE_LAND_APARTMENT_MESSAGE =
+  "토지를 받을 당시 주택이 있었던 주택 부수토지의 평가액과 「소득세법 시행령」 제164조 제7항 가액의 토지 몫 비교(같은 영 제163조 제9항 단서 제2호)는 "
+  + "단독·다가구주택으로 확인된 주택만 지원합니다 — 공동주택은 국세청장이 고시한 공동주택가격이 있었는지에 따라 적용 조문(같은 영 제164조 제6항·제7항)이 "
+  + "달라 이 계산기는 다루지 않습니다. 단독·다가구주택으로 확인되지 않으면(공동주택 포함) 계산하지 않습니다";
+
+export const HOUSE_LAND_SEC164_REQUIRED_MESSAGE =
+  "건물 기준시가(개별주택가격)가 고시되기 전에 상속·증여받은 주택 부수토지의 취득가액은 상속개시일(증여일) 현재 평가액과 "
+  + "「소득세법 시행령」 제164조 제7항 가액의 토지 몫 중 많은 금액이므로 그 토지 몫(landHouseSec164Value)이 필요합니다 "
+  + "(같은 영 제163조 제9항 단서 제2호 · 부동산거래관리과-364, 2010.3.10.)";
+
+export const HOUSE_LAND_SEC164_PARTIAL_MESSAGE =
+  "토지 일부만 양도하는 경우(면적 입력 방식 「일부 양도」)는 건물 기준시가 고시 전에 상속·증여받은 주택 부수토지의 "
+  + "「소득세법 시행령」 제164조 제7항 가액 비교(같은 영 제163조 제9항 단서 제2호)를 지원하지 않습니다 — "
+  + "최초공시 당시 부수토지 전체 면적이 정해지지 않고 면적으로 자동 안분하지 않습니다";
+
 /** 건물(자산 단위) 원인이 이 값이면 **토지 상속·증여** 혼합은 지원하지 않는다(D3). 미지정은 매매로 본다(엔진 헬퍼 기본값). */
 const BUILDING_CAUSE_UNSUPPORTED = new Set(["inheritance", "gift", "carryover_gift", "burdened_gift"]);
 /** 토지가 **이월과세**일 때 함께 지원하지 않는 건물 원인 — 건물도 이월과세(C)는 허용한다. */
@@ -438,6 +493,16 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
     if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: LAND_SEC164_PARTIAL_MESSAGE });
     else if (!((f.landSec164Value ?? 0) > 0))
       issues.push({ field: "landSec164Value", message: LAND_SEC164_REQUIRED_MESSAGE });
+  }
+
+  // D1-H — 영 §163⑨ 단서 2호 주택 부수토지: 받을 당시 주택이 있었다고 한 경우에만 ②가 필수다(D2-4 Y4 미러 — 구분 → 일부 양도 → ②).
+  // 모름·없었음은 ① 단독이다(모름 = 불성립 — 엔진이 결과에 확인 필요를 고지한다).
+  if (isSec163_9HouseLandTarget({ ...f, landAcquisitionCause: cause })) {
+    if (!isSec163_9BuildingSec164Open(true, f.buildingHouseKind))
+      issues.push({ field: "buildingHouseKind", message: HOUSE_LAND_APARTMENT_MESSAGE });
+    else if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: HOUSE_LAND_SEC164_PARTIAL_MESSAGE });
+    else if (!((f.landHouseSec164Value ?? 0) > 0))
+      issues.push({ field: "landHouseSec164Value", message: HOUSE_LAND_SEC164_REQUIRED_MESSAGE });
   }
 
   // G-2·S6 — 일반건물 파트 규칙(`transfer-tax-validate-gb.ts` blockEstimation · `gbPartAllowedModes`)과 같다.

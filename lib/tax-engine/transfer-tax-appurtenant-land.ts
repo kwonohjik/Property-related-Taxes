@@ -21,6 +21,7 @@ import { TRANSFER } from "./legal-codes";
 import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import { isSec163_9HouseLandProviso } from "./transfer-split-part-cause";
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 export { highValueExcessLandTaxableGain, allocateUnitExcessShares } from "./high-value-excess-land";
 export { housingExcessAcqContractNotice } from "./housing-excess-acq-contract";
@@ -406,6 +407,47 @@ export function buildingSec164ApportionNotice(splitDetail: SplitGainResult | und
     "건물 몫은 같은 영 제164조 제7항으로 환산한 취득당시 주택가격을 토지·건물의 취득당시 기준시가 비율로 안분한 값입니다(재산세과-1702, 2009.8.17.의 " +
     "자산별 안분 방법). 상속·증여받은 건물과 따로 매수한 토지에 이 안분을 적용한 정면 해석례는 확인하지 못했습니다 — 확인 필요"
   );
+}
+
+/**
+ * 고지(D1-H) — 토지 상속·증여 + 건물 매매·신축에서 토지를 1990.8.30.~2005.4.29.에 받은 주택(영 §163⑨ 단서 2호 — 주택 부수토지).
+ * 계획서 docs/00-pm/transfer-house-land-163-9-2.plan.md · 근거 부동산거래관리과-364(2010.3.10.).
+ *  · 비교가 돌았으면(토지 echo `rule === "sec163_9_2_land"`) 방법과 한계(토지 몫 산식의 정면 해석례 없음 — U-1).
+ *  · 매매 호스트에서 「받을 당시 주택이 있었는가」가 모름·미입력이면 비교하지 않은 사실(Q-1 — 모름 = 불성립 + 확인 필요).
+ *  · 신축 호스트는 받을 당시 지금 건물이 없었으므로 비교하지 않는다(Q-2) — 종전 주택이 있었던 경우는 그 가액을 받지 않는다는 한계.
+ * 어느 쪽이 채택됐는지·방향은 말하지 않는다(echo가 표시한다).
+ */
+export function houseLandSec164Notice(
+  input: Pick<TransferTaxInput, "propertyType" | "acquisitionCause" | "landAcquisitionCause" | "landAcquisitionDate" | "landHouseExisted">,
+  splitDetail: SplitGainResult | undefined,
+): string | null {
+  if (!splitDetail) return null;
+  if (splitDetail.land.acquisitionBasis?.rule === "sec163_9_2_land") {
+    return (
+      "토지 취득가액은 상속개시일(증여일) 평가액과 「소득세법 시행령」 제164조 제7항 가액의 토지 몫 중 많은 금액으로 정했습니다(같은 영 제163조 제9항 단서 제2호 — " +
+      "건물 기준시가가 고시되기 전에 상속·증여받은 주택 부수토지, 부동산거래관리과-364, 2010.3.10.). 토지 몫은 같은 영 제164조 제7항으로 환산한 취득당시 주택가격을 " +
+      "토지·건물의 취득당시 기준시가 비율로 안분한 값입니다(재산세과-371, 2009.10.5.의 자산별 안분 방법). 이 안분을 토지 몫에 쓴 정면 해석례는 확인하지 못했습니다 — 확인 필요"
+    );
+  }
+  if (input.propertyType !== "housing") return null;
+  const d = input.landAcquisitionDate as Date | string | undefined;
+  const dayKey = d instanceof Date ? d.toISOString().slice(0, 10) : d?.slice(0, 10);
+  if (!isSec163_9HouseLandProviso(input.landAcquisitionCause, dayKey)) return null;
+  if (input.acquisitionCause === "purchase" && input.landHouseExisted !== "yes" && input.landHouseExisted !== "no") {
+    return (
+      "토지를 받을 당시 지금의 주택이 그 위에 있었다면, 개별주택가격 공시 전(2005.4.30. 전)에 상속·증여받은 주택 부수토지의 취득가액은 평가액과 " +
+      "「소득세법 시행령」 제164조 제7항 가액의 토지 몫 중 많은 금액입니다(같은 영 제163조 제9항 단서 제2호, 부동산거래관리과-364). 그 사실이 확인되지 않아 " +
+      "평가액만으로 계산했습니다 — 확인 필요"
+    );
+  }
+  if (input.acquisitionCause === "newConstruction") {
+    return (
+      "토지를 받을 당시 다른 주택이 그 위에 있었다면 개별주택가격 공시 전(2005.4.30. 전)에 상속·증여받은 주택 부수토지로서 평가액과 " +
+      "「소득세법 시행령」 제164조 제7항 가액의 토지 몫을 비교해야 할 수 있습니다(같은 영 제163조 제9항 단서 제2호). 이 계산기는 종전 주택의 가액을 받지 않아 " +
+      "평가액만으로 계산했습니다 — 확인 필요"
+    );
+  }
+  return null;
 }
 
 /**

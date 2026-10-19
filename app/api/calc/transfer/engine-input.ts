@@ -371,6 +371,8 @@ export function buildTransferEngineInput(
     // D2-4 영 §163⑨ 단서 2호 — 건물 몫 ②(영 §164⑦ 가액)와 주택 구분. 엔진 split 파트가 max/차단
     buildingSec164Value: data.buildingSec164Value,
     buildingHouseKind: data.buildingHouseKind,
+    landHouseExisted: data.landHouseExisted,
+    landHouseSec164Value: data.landHouseSec164Value,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
     // ⑭ 주택 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. Date 변환·증여세 안분은 합성기가 한다(TypeScript 미감지 영역).
     // 컴패니언은 매핑하지 않는다(`bundled-split-helpers.ts`) — ⑫(leaf S0)가 컴패니언의 파트 이월과세를 명시 거부한다.

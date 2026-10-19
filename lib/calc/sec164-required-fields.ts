@@ -236,6 +236,26 @@ export function sec164BuildingPartStatus(asset: AssetForm): Sec164FieldStatus {
   );
 }
 
+/**
+ * 주택 분리 계산의 **혼합 원인 토지 파트(주택 부수토지)** §164⑦ 토지 몫 (§163⑨ 단서 2호, D1-H) — `deriveHouseLandSec164Total`(브리지)과 같은 5필드.
+ *
+ * D2-4 건물 몫과 같이 **필수**다. 건물 몫과 다른 칸은 하나다 — 취득 당시 **건물** 기준시가(약분돼 필요 없다) 대신 수증일 **토지** ㎡당 공시지가.
+ * 순서가 ⑧ 칸 이동 순서(= 카드 위→아래)다: 면적 → 최초공시 개별주택가격 → 최초공시 개별공시지가 → 최초공시 건물 기준시가 → 취득 당시 개별공시지가.
+ * 게이트(구간·받을 당시 주택 있음·단독·다가구 여부)는 호출부 몫이다.
+ */
+export function sec164HouseLandPartStatus(asset: AssetForm): Sec164FieldStatus {
+  return merge(
+    "§164⑦",
+    tally(asset, [
+      decimalField("acquisitionArea", "토지 면적", true),
+      amountField("inhHouseValHousePriceAtFirst", "최초 공시된 개별주택가격"),
+      amountField("inhHouseValLandPricePerSqmAtFirst", "최초공시 개별공시지가"),
+      amountField("inhHouseValBuildingStdPriceAtFirst", "최초공시 시점 건물 기준시가"),
+      amountField("inhHouseValLandPricePerSqmAtInheritance", "취득 당시 개별공시지가"),
+    ]),
+  );
+}
+
 /** 등급은 번호(정수)·등급가액 두 모드 공통으로 "양수면 채움" — `buildGrade`와 같은 판정. */
 function gradeFilled(raw: string | undefined): boolean {
   const n = Number(String(raw ?? "").replace(/,/g, ""));

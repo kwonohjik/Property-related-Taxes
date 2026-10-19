@@ -190,7 +190,8 @@ export function LandPartCauseBlock(props: {
             <p className="text-caption text-muted-foreground">
               토지 {meta.dateLabel}은 아래 <strong>토지 {meta.dateLabel}</strong> 칸에, 평가액은{" "}
               <strong>취득가액 산정 방식</strong>의 토지 칸에 입력합니다. 토지는 실거래가(평가액)로 고정되고 개별주택가격
-              미공시 3-시점 환산(소득세법 시행령 §164⑦)은 적용되지 않습니다.
+              미공시 3-시점 환산(소득세법 시행령 §164⑦)은 적용되지 않습니다 — 다만 1990.8.30.~2005.4.29.에 받은 주택 부수토지로
+              받을 당시 이 주택이 있었다면 평가액과 영 §164⑦ 가액의 토지 몫 중 많은 금액입니다(입력은 평가액 아래).
             </p>
           </div>
         )}

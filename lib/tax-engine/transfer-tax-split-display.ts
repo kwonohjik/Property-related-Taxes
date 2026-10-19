@@ -109,10 +109,14 @@ export const SPLIT_SEC164_VALUE_LABEL = "영 §164④ 가액";
 /** 건물 파트 ② 가액의 이름 — 2005.4.30. 전 상속·증여 건물은 영 §164⑦로 환산한 주택가격을 건물 몫으로 안분한다(D2-4). */
 export const SPLIT_SEC164_BUILDING_VALUE_LABEL = "영 §164⑦ 가액의 건물 몫";
 
+/** 토지 파트 ② 가액의 이름(D1-H) — 1990.8.30.~2005.4.29. 상속·증여 주택 부수토지는 영 §164⑦로 환산한 주택가격을 토지 몫으로 안분한다. */
+export const SPLIT_SEC164_HOUSE_LAND_VALUE_LABEL = "영 §164⑦ 가액의 토지 몫";
+
 /** 비교 규칙별 파트·② 이름·근거 — 엔진 echo `rule`이 단일 키다(호출부가 파트·조문을 하드코딩하지 않는다). */
 const SPLIT_ACQ_BASIS_RULE = {
   sec163_9_1: { partLabel: "토지", sec164Label: SPLIT_SEC164_VALUE_LABEL, legalBasis: "소득세법 시행령 §163조 제9항 단서 1호" },
   sec163_9_2: { partLabel: "건물", sec164Label: SPLIT_SEC164_BUILDING_VALUE_LABEL, legalBasis: "소득세법 시행령 §163조 제9항 단서 2호" },
+  sec163_9_2_land: { partLabel: "토지", sec164Label: SPLIT_SEC164_HOUSE_LAND_VALUE_LABEL, legalBasis: "소득세법 시행령 §163조 제9항 단서 2호" },
 } as const satisfies Record<NonNullable<SplitPartResult["acquisitionBasis"]>["rule"], { partLabel: string; sec164Label: string; legalBasis: string }>;
 
 export interface SplitAcqBasisView {
