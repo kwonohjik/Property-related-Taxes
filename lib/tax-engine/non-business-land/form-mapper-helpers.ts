@@ -113,8 +113,7 @@ export function hasDeclaredUnconditionalExemption(a: Record<string, unknown>): b
   return (
     asBool(a.nblExemptLongOwned20y) || asBool(a.nblExemptAncestor8YearFarming) ||
     asBool(a.nblExemptPublicExpropriation) || asString(a.transferCause) === "public_expropriation" ||
-    asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) ||
-    asBool(a.nblExemptUrbanFarmlandJongjoong) || asBool(a.nblExemptInong)
+    asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) || asBool(a.nblExemptInong)
   );
 }
 
@@ -152,10 +151,14 @@ export function buildUnconditionalExemption(
     publicNoticeDate:                    parseDate(asString(a.nblExemptPublicNoticeDate) || asString(a.expropriationNoticeDate)),
     expropriationAcquisitionDate,
     isFactoryAdjacent:                   asBool(a.nblExemptFactoryAdjacent),
+    /*
+     * 종중 소유는 선언 하나로 받고 근거 조문(③4호 가목 · §168의8③6호 · §168의9③8호 · §168의10②2호)은 엔진이 지목·도시지역으로
+     * 고른다. 종중의 취득일은 자산 취득일이다 — 명의신탁 해지로 환원해도 취득시기는 종중(명의신탁자)의 취득일
+     * (서면인터넷방문상담5팀-219). 종전의 별도 칸 `nblExemptJongjoongAcqDate`와 ③4호 토글 `nblExemptUrbanFarmlandJongjoong`
+     * (#2282 전에는 「종중 또는 상속」)은 읽지 않는다(계획서 `docs/00-pm/nbl-jongjoong-toggle-merge.plan.md`).
+     */
     isJongjoongOwned:                    asBool(a.nblExemptJongjoongOwned),
-    jongjoongAcquisitionDate:            parseDate(asString(a.nblExemptJongjoongAcqDate)),
-    // ③4호 가목(종중) 선언 — 나목(상속)은 위 `inheritanceDate`로 엔진이 자동 판정한다
-    isUrbanFarmlandJongjoongOrInherited: asBool(a.nblExemptUrbanFarmlandJongjoong),
+    jongjoongAcquisitionDate:            acquired,
     isInong:                             asBool(a.nblExemptInong),
     inongDate:                           parseDate(asString(a.nblExemptInongDate)),
   };

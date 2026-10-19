@@ -10,6 +10,7 @@ import type {
   NblExemptionEval,
   ToggleExemptionStatus,
 } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { jongjoongLegalBadge } from "@/lib/calc/nbl-unconditional-exemption-status";
 
 export interface UnconditionalExemptionSectionProps {
   asset: AssetForm;
@@ -45,6 +46,7 @@ export function UnconditionalExemptionSection({
   onAssetChange,
   status,
 }: UnconditionalExemptionSectionProps) {
+  const jongjoongBadge = jongjoongLegalBadge(asset);
   return (
     <div className="space-y-3">
       <SectionHeader
@@ -158,41 +160,19 @@ export function UnconditionalExemptionSection({
 
       <ToggleCard
         tone="violet"
-        title="종중 소유 + 2005.12.31. 이전 취득"
+        title="종중 소유 (2005.12.31. 이전 취득)"
+        description="농지·임야·목장용지 — 위 취득일이 2005.12.31. 이전이어야 합니다. 명의신탁 해지로 종중 명의로 되돌린 토지는 취득일에 종중이 처음 취득한 날을 넣으세요(서면인터넷방문상담5팀-219)."
         trailing={
           <LawArticleModal
-            legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168의14③4호가목"
+            legalBasis={jongjoongBadge.legalBasis}
+            label={jongjoongBadge.label}
             className={LAW_BADGE_CLASS}
           />
         }
         checked={asset.nblExemptJongjoongOwned}
         onCheckedChange={(v) => onAssetChange({ nblExemptJongjoongOwned: v })}
       >
-        <div>
-          <label className="block text-xs text-muted-foreground mb-1">취득일</label>
-          <DateInput
-            value={asset.nblExemptJongjoongAcqDate}
-            onChange={(v) => onAssetChange({ nblExemptJongjoongAcqDate: v })}
-          />
-        </div>
         <ExemptionStatusBadge status={status.perToggle.jongjoongOwned} />
-      </ToggleCard>
-
-      <ToggleCard
-        tone="violet"
-        title="도시지역 농지 — 종중 소유 (2005.12.31. 이전 취득)"
-        trailing={
-          <LawArticleModal
-            legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168의14③4호가목"
-            className={LAW_BADGE_CLASS}
-          />
-        }
-        checked={asset.nblExemptUrbanFarmlandJongjoong}
-        onCheckedChange={(v) => onAssetChange({ nblExemptUrbanFarmlandJongjoong: v })}
-      >
-        <ExemptionStatusBadge status={status.perToggle.urbanFarmland} />
       </ToggleCard>
 
       <ToggleCard

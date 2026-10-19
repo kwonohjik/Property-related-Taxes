@@ -139,18 +139,18 @@ export function buildNonBusinessLandRaw(
 }
 
 /**
- * 취득 경위에 달린 무조건 사업용 의제 선언 5종 — 축 B 지분 판정에서 첫 카드 선언을 그대로 쓸 수 없는 것.
+ * 취득 경위에 달린 무조건 사업용 의제 선언 4종 — 축 B 지분 판정에서 첫 카드 선언을 그대로 쓸 수 없는 것.
  * (계획서 `docs/00-pm/axis-b-land-share-nbl-detailed-judgment.plan.md` §4-2)
  *
  * 공익수용(③3호)은 선언이 땅 단위이고 취득일은 지분 값을 쓰므로 빠진다. 공장 인접도 땅 단위다.
  * ③1호(2006.12.31. 이전 상속)는 선언이 아니라 지분의 취득원인·취득일로 자동 판정하므로 빠진다
- * (계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md`).
+ * (계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md`). ③4호 가목(도시지역 농지 종중)은 「종중 소유」 하나로 받는다
+ * (계획서 `docs/00-pm/nbl-jongjoong-toggle-merge.plan.md`).
  */
 export const NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS = [
   "nblExemptLongOwned20y",
   "nblExemptAncestor8YearFarming",
   "nblExemptJongjoongOwned",
-  "nblExemptUrbanFarmlandJongjoong",
   "nblExemptInong",
 ] as const satisfies readonly (keyof AssetForm)[];
 
@@ -161,7 +161,7 @@ export const NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS = [
  * 그래서 **땅에 관한 사실**(지목·용도지역·사용기간·재촌·면적·소재지·양도원인·고시일 — 지분 카드에는 입력이 없다)은
  * 첫 카드 값을, **지분에 관한 사실**(취득일·취득원인·피상속인·증여자 취득일·지분율)은 그 지분 카드 값을 쓴다.
  *
- * 취득원인·취득일이 첫 카드와 다르면 취득 경위에 달린 의제 선언 5종을 끈다 — 첫 카드에서 한 선언이 이 지분의
+ * 취득원인·취득일이 첫 카드와 다르면 취득 경위에 달린 의제 선언 4종을 끈다 — 첫 카드에서 한 선언이 이 지분의
  * 취득 경위에도 맞는지 확인되지 않았기 때문이다(결과 안내는 다건 엔진 `nblShareExemptionWithheldNotice`).
  * 임야·목장 「상속 3년 이내」와 무조건 의제 ③1호·③4호 나목은 선언이 아니라 취득원인·취득일에서 정해지므로(서버 매퍼 `resolveInheritanceStartDate`)
  * 위 지분 사실을 싣는 것만으로 지분마다 따로 판정된다.

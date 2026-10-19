@@ -4,6 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/types";
+import { NBL } from "@/lib/tax-engine/legal-codes/transfer-nbl";
 
 const d = (iso: string) => new Date(iso);
 
@@ -190,13 +191,13 @@ describe("[B5] §168-14 ③3호나목 취득일 소급", () => {
  *    본문(도시지역)·가목(취득일)·나목(5년) **세 요건 모두** 미검사였고, 형제 분기(이농·레거시 종중)는
  *    같은 파일에서 날짜를 검증하고 있었으므로 이 분기만 예외였다.
  */
-describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내", () => {
+describe("§168-14 ③4호 — 도시지역 內 농지 종중(「종중 소유」 선언)/상속 5년 이내", () => {
   it("가목: 도시지역 + 종중 2005.12.31 이전 취득 → 의제", () => {
     const r = checkUnconditionalExemption(
       baseInput({
         zoneType: "commercial",
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
+          isJongjoongOwned: true,
           jongjoongAcquisitionDate: d("2004-06-01"),
         },
       }),
@@ -204,6 +205,7 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
     );
     expect(r.isExempt).toBe(true);
     expect(r.reason).toBe("jongjoong_or_inherit_urban_farmland");
+    expect(r.legalBasis).toBe(NBL.UNCONDITIONAL_URBAN_FARMLAND_JONGJOONG);
   });
 
   it("나목: 도시지역 + 상속개시일부터 5년 이내 양도 → 의제", () => {
@@ -212,7 +214,6 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
         zoneType: "commercial",
         transferDate: d("2024-01-01"),
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
           inheritanceDate: d("2020-06-01"),
         },
       }),
@@ -226,7 +227,7 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
       baseInput({
         zoneType: "commercial",
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
+          isJongjoongOwned: true,
           jongjoongAcquisitionDate: d("2006-06-01"),
         },
       }),
@@ -241,7 +242,6 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
         zoneType: "commercial",
         transferDate: d("2024-01-01"),
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
           inheritanceDate: d("2018-06-01"),
         },
       }),
@@ -250,14 +250,28 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
     expect(r.isExempt).toBe(false);
   });
 
-  it("🔴 본문 요건: 도시지역 밖 농지는 대상이 아니다 (법 §104의3①1호 나목 한정)", () => {
+  it("🔴 본문 요건: 도시지역 밖 종중 농지는 4호 가목이 아니라 §168의8③6호 (법 §104의3①1호 가목 단서)", () => {
     const r = checkUnconditionalExemption(
       baseInput({
         zoneType: "agriculture_forest",
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
+          isJongjoongOwned: true,
           jongjoongAcquisitionDate: d("2004-06-01"),
         },
+      }),
+      "farmland",
+    );
+    expect(r.isExempt).toBe(true);
+    expect(r.reason).toBe("jongjoong_owned");
+    expect(r.legalBasis).toBe(NBL.JONGJOONG_FARMLAND);
+  });
+
+  it("🔴 도시지역 밖 상속 농지는 4호 나목이 아니다", () => {
+    const r = checkUnconditionalExemption(
+      baseInput({
+        zoneType: "agriculture_forest",
+        transferDate: d("2024-01-01"),
+        unconditionalExemption: { inheritanceDate: d("2022-06-01") },
       }),
       "farmland",
     );
@@ -268,7 +282,7 @@ describe("§168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내
     const r = checkUnconditionalExemption(
       baseInput({
         zoneType: "commercial",
-        unconditionalExemption: { isUrbanFarmlandJongjoongOrInherited: true },
+        unconditionalExemption: { isJongjoongOwned: true },
       }),
       "farmland",
     );

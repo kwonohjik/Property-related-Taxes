@@ -73,12 +73,13 @@ describe("시나리오 1~7 — 무조건 사업용 면제", () => {
     expect(result!.isNonBusinessLand).toBe(false);
   });
 
+  /** 종중의 취득일은 자산 취득일이다(서면인터넷방문상담5팀-219 — 계획서 nbl-jongjoong-toggle-merge.plan.md Q-2 a) */
   it("시나리오 4: 종중 소유 + 2005.12.31. 이전 취득 → 사업용 (무조건 면제)", () => {
     const asset = makeLandAsset({
       nblLandType: "farmland",
       nblZoneType: "agriculture_forest",
+      acquisitionDate: "2003-11-20",
       nblExemptJongjoongOwned: true,
-      nblExemptJongjoongAcqDate: "2003-11-20",
     });
     const result = judge(asset, "2003-11-20", "2023-01-01");
     expect(result).not.toBeNull();

@@ -89,7 +89,7 @@ describe("[U3-05] 무조건 의제 legalBasis에 법령명이 들어간다", () 
       input: base({
         zoneType: "residential",
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
+          isJongjoongOwned: true,
           jongjoongAcquisitionDate: new Date("2004-01-01"),
         },
       }),
@@ -101,7 +101,6 @@ describe("[U3-05] 무조건 의제 legalBasis에 법령명이 들어간다", () 
         zoneType: "residential",
         transferDate: new Date("2008-06-01"),
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
           inheritanceDate: new Date("2005-01-01"),
         },
       }),

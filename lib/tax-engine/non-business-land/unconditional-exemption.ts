@@ -116,44 +116,23 @@ export function checkUnconditionalExemption(
    *        가목 종중 소유(2005.12.31. 이전 취득) 또는 나목 상속(상속개시일부터 5년 이내 양도)
    *
    * 🔴 종전에는 `isUrbanFarmlandJongjoongOrInherited` **boolean 하나만** 보고 의제를 확정했다
-   *    (E5-01·V4-b, 2026-09-02 코드리뷰). detail 문자열은 요건을 말하면서 **아무것도 검사하지
-   *    않아** 요건 미달 토지까지 사업용으로 확정됐고(중과 전액 소실), 형제 분기(이농·레거시 종중)는
-   *    같은 파일에서 날짜를 검증하고 있었으므로 이 분기만 예외였다.
+   *    (E5-01·V4-b, 2026-09-02 코드리뷰). 누락 요건은 본문(도시지역 안의 농지)·가목(종중 취득일)·나목(상속개시일부터 5년)이었다.
    *
-   *    누락 요건은 셋이다:
-   *      1. 본문 — 법 §104의3①1호**나목** 대상, 즉 **도시지역 안의** 농지일 것
-   *      2. 가목 — 종중 취득일 ≤ 2005.12.31.
-   *      3. 나목 — 상속개시일부터 5년 이내 양도
-   *    날짜 미입력은 의제 미성립으로 둔다(자동 fallback 금지 — ⑧이 토글 ON 시 날짜를 요구한다).
+   * 나목은 선언 없이 상속개시일(`inheritanceDate` — 매퍼가 취득원인=상속일 때만 취득일로 채운다)로 본다. 강행규정이라
+   * 선언을 요구하지 않는다(계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md` Q-1 a).
+   * 가목(종중)은 아래 종중 분기가 도시지역 농지일 때 이 조문으로 인용한다 — 종중 소유는 지목·도시지역과 관계없이 사업용이고
+   * 근거만 갈리므로 선언을 하나로 받는다(계획서 `docs/00-pm/nbl-jongjoong-toggle-merge.plan.md`).
    */
-  /*
-   * 가목은 선언(`isUrbanFarmlandJongjoongOrInherited` — 이름은 레거시, 이제 종중 전용)이 있어야 보고, 나목은 선언 없이
-   * 상속개시일(`inheritanceDate` — 매퍼가 취득원인=상속일 때만 취득일로 채운다)로 본다. 강행규정이라 선언을 요구하지
-   * 않는다(계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md` Q-1 a).
-   */
-  if (categoryGroup === "farmland") {
-    // 본문 요건 — 1호 나목은 도시지역(주·상·공) 안의 농지에만 적용된다.
-    if (isUrbanForFarmland(input.zoneType)) {
-      // 가목 — 종중 소유 (2005.12.31. 이전 취득)
-      if (u.isUrbanFarmlandJongjoongOrInherited && u.jongjoongAcquisitionDate && u.jongjoongAcquisitionDate <= JONGJOONG_CUTOFF) {
-        return {
-          isExempt: true,
-          reason: "jongjoong_or_inherit_urban_farmland",
-          detail: `도시지역 內 농지 — 종중 소유 2005.12.31 이전 취득(${u.jongjoongAcquisitionDate.toISOString().slice(0, 10)})`,
-          legalBasis: NBL.UNCONDITIONAL_URBAN_FARMLAND_JONGJOONG,
-        };
-      }
-      // 나목 — 상속개시일부터 5년 이내 양도
-      if (u.inheritanceDate && transferDate <= addYears(u.inheritanceDate, 5)) {
-        return {
-          isExempt: true,
-          reason: "jongjoong_or_inherit_urban_farmland",
-          detail: `도시지역 內 농지 — 상속개시일(${u.inheritanceDate.toISOString().slice(0, 10)})부터 5년 이내 양도`,
-          legalBasis: NBL.UNCONDITIONAL_URBAN_FARMLAND_INHERIT,
-        };
-      }
+  if (categoryGroup === "farmland" && isUrbanForFarmland(input.zoneType)) {
+    if (u.inheritanceDate && transferDate <= addYears(u.inheritanceDate, 5)) {
+      return {
+        isExempt: true,
+        reason: "jongjoong_or_inherit_urban_farmland",
+        detail: `도시지역 內 농지 — 상속개시일(${u.inheritanceDate.toISOString().slice(0, 10)})부터 5년 이내 양도`,
+        legalBasis: NBL.UNCONDITIONAL_URBAN_FARMLAND_INHERIT,
+      };
     }
-    // 요건 미충족 — 의제하지 않고 지목별 판정으로 진행한다.
+    // 요건 미충족 — 의제하지 않고 다음 사유·지목별 판정으로 진행한다.
   }
 
   // 공장 오염피해 인접토지 (§168-14③5호 → 시행규칙 §83의5④1호):
@@ -185,15 +164,25 @@ export function checkUnconditionalExemption(
   }
 
   /**
-   * 레거시: 종중 소유 2005.12.31 이전 취득 (농·임·목)
+   * 종중 소유 2005.12.31. 이전 취득 (농·임·목) — 근거 조문은 **지목·도시지역마다 다르다**.
+   *   - 도시지역 농지: §168의14③4호 가목 (법 §104의3①1호 나목 농지)
+   *   - 그 밖의 농지: §168의8③6호 (법 §104의3①1호 가목 단서 — 나목은 덮지 않는다)
+   *   - 임야: §168의9③8호 (법 §104의3①2호 다목) · 목장용지: §168의10②2호 (법 §104의3①3호 각 목 외의 부분 단서)
    *
-   * 🔴 근거 조문은 **지목마다 다르다**(E5-05, 2026-09-02 코드리뷰). 종전에는 셋 다
-   *    「§168조의14 ③ 4호 가목 · §168-8 ③ 6호 등」을 달았는데 둘 다 **농지 전용 조문**이라
-   *    임야·목장 판정의 근거가 될 수 없었다 — 신고서·산출근거를 그대로 신뢰한 이용자가
-   *    잘못된 근거를 제시하게 된다.
+   * 🔴 E5-05(2026-09-02): 종전에는 셋 다 농지 전용 조문을 달았다. 그 뒤에도 도시지역을 보지 않아 도시지역 농지를
+   *    §168의8③6호로 인용했다(③4호 가목은 별도 토글을 켰을 때만 — 계획서 `nbl-jongjoong-toggle-merge.plan.md` §3 J1).
    */
   if (u.isJongjoongOwned && u.jongjoongAcquisitionDate && isAgriLike) {
     if (u.jongjoongAcquisitionDate <= JONGJOONG_CUTOFF) {
+      const acquired = u.jongjoongAcquisitionDate.toISOString().slice(0, 10);
+      if (categoryGroup === "farmland" && isUrbanForFarmland(input.zoneType)) {
+        return {
+          isExempt: true,
+          reason: "jongjoong_or_inherit_urban_farmland",
+          detail: `도시지역 內 농지 — 종중 소유 2005.12.31 이전 취득(${acquired})`,
+          legalBasis: NBL.UNCONDITIONAL_URBAN_FARMLAND_JONGJOONG,
+        };
+      }
       const jongjoongBasis =
         categoryGroup === "forest"
           ? NBL.JONGJOONG_FOREST
@@ -203,7 +192,7 @@ export function checkUnconditionalExemption(
       return {
         isExempt: true,
         reason: "jongjoong_owned",
-        detail: `종중 소유 — 2005.12.31 이전 취득(${u.jongjoongAcquisitionDate.toISOString().slice(0, 10)})`,
+        detail: `종중 소유 — 2005.12.31 이전 취득(${acquired})`,
         legalBasis: jongjoongBasis,
       };
     }

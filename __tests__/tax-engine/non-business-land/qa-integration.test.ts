@@ -137,7 +137,7 @@ describe("§168-14 ③ 무조건 사업용 의제", () => {
   /**
    * QA-074: §168-14 ③4호 — 도시지역 內 농지 종중/상속 5년 이내 → 의제
    */
-  it("QA-074: §168-14 ③4호 — 도시지역 내 농지 종중/상속 5년 이내 플래그 → 의제", () => {
+  it("QA-074: §168-14 ③4호 나목 — 도시지역 내 농지 상속 5년 이내 → 의제", () => {
     const r = checkUnconditionalExemption(
       {
         landType: "farmland",
@@ -148,7 +148,6 @@ describe("§168-14 ③ 무조건 사업용 의제", () => {
         businessUsePeriods: [],
         gracePeriods: [],
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
           // 나목 — 상속개시일부터 5년 이내 양도(2020-06-01 → 2024-01-01).
           // 플래그만으로 의제하던 것을 요건 검사로 바꿨다 (E5-01·V4-b, 2026-09-02 코드리뷰).
           inheritanceDate: d("2020-06-01"),
@@ -175,7 +174,8 @@ describe("§168-14 ③ 무조건 사업용 의제", () => {
         businessUsePeriods: [],
         gracePeriods: [],
         unconditionalExemption: {
-          isUrbanFarmlandJongjoongOrInherited: true,
+          // 상속 5년 이내라도 4호 나목은 농지만이다
+          inheritanceDate: d("2022-01-01"),
         },
       },
       "forest", // 임야 카테고리 → 4호 해당 없음
