@@ -11,7 +11,7 @@ import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
@@ -29,6 +29,7 @@ import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandPartCausePayload } from "@/lib/calc/transfer-tax-api-split";
+import { buildLandRebuildPayload } from "@/lib/calc/transfer-land-rebuild";
 import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
 import {
@@ -306,6 +307,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(primary ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate } }) : {}),
     ...(primary ? buildLandStdAtAcquisitionPayload(primary) : {}),
     ...(primary ? buildLandPartCausePayload(primary) : {}),
+    // 구주택 멸실·신축 통산(해석 (5)) — 단건 ④와 같은 leaf.
+    ...(primary ? buildLandRebuildPayload(primary) : {}),
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다
     ...(primary ? buildHouseFirstDisclosurePayload(primary) : {}),
     // 부수토지 배율 한도(영 §168의12) 입력 — 분리 축(별개 취득)에서 엔진이 소비한다.

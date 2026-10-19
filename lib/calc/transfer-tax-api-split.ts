@@ -5,7 +5,7 @@
  * "UI는 칸을 노출하는데 API는 전송하지 않는" 침묵 누락이 재발한다(PR #837 §3.1 실사고).
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio, getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";

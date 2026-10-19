@@ -3,7 +3,7 @@
  * calcMixedUseTransferTax 엔진이 주택분·상가분을 별도 처리하므로 generic 취득 검증과 분리한다.
  * validateAssetAcquisition 내 isMixedUseHouse 분기의 본체를 그대로 이관.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { isPhdEligible } from "./phd-eligibility";
 import { isMixedUseCaseA } from "./mixed-use-case";
 import { validateMixedUseAreas } from "./transfer-tax-validate-mixed-area";

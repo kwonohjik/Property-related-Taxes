@@ -22,7 +22,7 @@
  * 프리미엄」으로 밝혔다 ⇒ 승계취득가액 1칸 + 추가분담금 1칸.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 // 술어·합산은 `transfer-successor-right.ts` 단일 소스 — ④ 변환·⑤ UI와 같은 함수를 쓴다.

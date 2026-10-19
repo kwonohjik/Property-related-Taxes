@@ -91,9 +91,5 @@ export function DecimalInput({
   );
 }
 
-/** 문자열 → 숫자 변환 (parseAmount의 소수점 버전). undefined/null 안전. */
-export function parseDecimal(value: string | undefined | null): number {
-  if (value == null || value === "") return 0;
-  const n = parseFloat(value.replace(/,/g, ""));
-  return isNaN(n) ? 0 : n;
-}
+// 정본은 `lib/calc/number-parse.ts`(서버에서도 부를 수 있게) — 화면 쪽 기존 import를 위해 다시 내보낸다
+export { parseDecimal } from "@/lib/calc/number-parse";

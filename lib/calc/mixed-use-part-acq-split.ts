@@ -14,7 +14,7 @@
  *
  * ⚠️ 이 파일의 파생은 전부 **읽기 전용**이다 — `useEffect → store` 미러링으로 쓰지 않는다(무한 루프 정책).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { areMixedAcqDatesSeparate } from "@/lib/tax-engine/mixed-use-acq-date";

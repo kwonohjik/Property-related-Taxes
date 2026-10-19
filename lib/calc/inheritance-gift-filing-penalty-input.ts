@@ -22,7 +22,7 @@
  * 당초 신고세액 1억이 남아 base 가 1억 줄었다). 대상 밖 값은 여기서 **보내지 않는다**.
  * 게이트를 세목마다 복제하면 B2(부정행위)·B3(납부지연)가 양쪽을 건드릴 때 드리프트한다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type {
   InheritanceGiftFilingStatus,
   InheritanceGiftPenaltyInput,

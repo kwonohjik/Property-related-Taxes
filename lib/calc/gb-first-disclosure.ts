@@ -10,8 +10,8 @@
  * (memory `feedback_shared_predicate_argument_parity` · `feedback_ui_engine_dual_truth_avoidance`).
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { gbPartModes } from "./transfer-tax-split-acq-mode";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";

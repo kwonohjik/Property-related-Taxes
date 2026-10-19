@@ -37,12 +37,13 @@ function judge(asset: AssetForm, acqDate: string, trfDate: string) {
 
 describe("시나리오 1~7 — 무조건 사업용 면제", () => {
 
+  /** ③1호는 선언 없이 취득원인·상속개시일로 자동 판정한다 (계획서 nbl-unconditional-inherit-cause.plan.md Q-1 a) */
   it("시나리오 1: 2006.12.31. 이전 상속 농지 → 사업용 (무조건 면제)", () => {
     const asset = makeLandAsset({
       nblLandType: "farmland",
       nblZoneType: "agriculture_forest",
-      nblExemptInheritBefore2007: true,
-      nblExemptInheritDate: "2004-05-15",
+      acquisitionCause: "inheritance",
+      acquisitionDate: "2004-05-15",
     });
     const result = judge(asset, "2004-05-15", "2009-06-01");
     expect(result).not.toBeNull();

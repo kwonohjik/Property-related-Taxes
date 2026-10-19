@@ -5,7 +5,7 @@
  * houses 인라인 map + 장기임대 9유형 매트릭스 18필드 게이트를 담당.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { HouseEntry, RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -18,7 +18,7 @@ import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
 import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import { decedentHouseholdEngineBoolean, decedentHouseholdOf } from "./decedent-household";
-import { housesOwnedAtTransfer } from "./household-house-count";
+import { effectiveNewHouseAcquisitionDate, housesOwnedAtTransfer } from "./household-house-count";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 
@@ -270,6 +270,10 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       regionCode: h.regionCode?.length === 10 ? h.regionCode : undefined,
       inDesignatedDistrict: h.regionCode?.length === 10 ? h.inDesignatedDistrict : undefined,
       acquisitionDate: h.acquisitionDate,
+      // ④⑬ 결정 #43 — 기존주택의 연장인 행(원조합원 기존주택·자가 재건축)의 기존주택 취득일. 취득 선후는 이 날짜로 가린다
+      //   (§155① 명부 경로와 같은 술어 `effectiveNewHouseAcquisitionDate` · 엔진 §156의2⑤ `replacement-house.ts`).
+      predecessorHouseAcquisitionDate:
+        effectiveNewHouseAcquisitionDate(h) !== h.acquisitionDate ? effectiveNewHouseAcquisitionDate(h) : undefined,
       officialPrice: parseInt(h.officialPrice) || 0,
       isInherited: h.isInherited,
       isLongTermRental: h.isLongTermRental,

@@ -10,7 +10,7 @@
  *
  * 종전 import 경로 호환을 위해 `transfer-tax-validate-asset.ts`가 재export한다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverAsset } from "./transfer-tax-validate-carryover-asset";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";

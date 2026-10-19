@@ -8,7 +8,7 @@
  * ⚠️ **명시 필드 매핑**(spread 아님)이라 신규 엔진 필드는 여기 추가하지 않으면 **침묵 strip**된다
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { depreciationSupport } from "./depreciation-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";

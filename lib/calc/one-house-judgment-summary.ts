@@ -2,7 +2,7 @@
  * ⑥ 판정 메뉴 사이드바 요약 — `one-house-exemption-validate.ts`에서 800줄 정책으로 분리했다(export 보존:
  * validate 파일이 이 함수를 그대로 다시 내보낸다).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import {
   judgmentHouseCountExclusionReductions,
   judgmentReplacementHouseVisible,

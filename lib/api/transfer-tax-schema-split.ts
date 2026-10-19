@@ -22,6 +22,7 @@
  */
 import { z } from "zod";
 import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
+import { landRebuildShape } from "./transfer-tax-schema-land-rebuild";
 
 export const splitAcquisitionShape = {
   // ─── 취득일 분리 (소득령 §166⑥·§168②) ────────────────────────────
@@ -52,6 +53,8 @@ export const splitAcquisitionShape = {
    * 이월과세 없이 단순 증여로 계산한다(anchor SPCO-0o). 설계: transfer-split-part-carryover.engine.design.md §1.3
    */
   ...splitCarryoverShape,
+  /** 구주택 멸실·신축 통산 — 컴패니언은 키를 받아서 명시 거부한다(`refineLandRebuild`의 `host.supported: false`). 받지 않으면 Zod가 조용히 strip한다 */
+  ...landRebuildShape,
   /** 토지·건물 소유자 분리 (§166⑥) */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
 

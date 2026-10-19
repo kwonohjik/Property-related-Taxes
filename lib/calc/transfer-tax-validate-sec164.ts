@@ -20,7 +20,7 @@ import {
   type Sec164FieldStatus,
 } from "./sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { resolveSapPriorStdPrice } from "./transfer-same-adjustment-period-input";
 import { calcStdPriceMonths } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";

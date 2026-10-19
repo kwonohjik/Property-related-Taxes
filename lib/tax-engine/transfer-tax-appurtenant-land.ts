@@ -17,6 +17,8 @@ import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residen
 import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-1-proviso-era";
 import { resolveExemptionProviso, type ResidenceReqInput } from "./transfer-tax-exemption-holding";
 import { resolveRateBasis, type RateBasisRule } from "./transfer-rate-holding-basis";
+import { aggregateLandRebuildPeriods, landRebuildApplies, type LandRebuildAggregation } from "./transfer-land-rebuild-rate";
+import { coerceOptionalDate } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
@@ -41,16 +43,41 @@ const ONE_HOUSE_HOLDING_YEARS = 2;
  *   §104①2호 괄호의 "주택… 이에 딸린 토지"는 **주택부수토지로서의** 보유기간을 뜻하므로,
  *   토지를 먼저 샀으면 주택 취득일(= 현행 동작 · 조심 2024인3140 정합), 토지를 나중에 샀으면
  *   토지 취득일이 기산일이 된다. `max` 하나가 양방향을 모두 설명한다.
- *   근거 수준은 **간접**이다 — 국세청 상속증여세과-466(2013.8.12.)·부동산거래관리과-435(2010.3.22.)가
- *   부수토지의 **취득시기를 개별 판정**하도록 한 데서 논리적으로 이어진 것이고, "세율 보유기간을
- *   `max`로" 라는 명시 판단은 없다(계획서 §10-1). ⇒ 되돌릴 수 있도록 이 함수 하나에 격리한다.
+ *   근거 수준: **토지를 먼저, 주택을 나중에** 취득한 방향은 직접 근거가 있다 — 사전-2025-법규재산-0289(2025.6.4.: 토지 상속(1991) 후 주택 매수(2024.7.) →
+ *   1년 내 양도, 토지 중 영 §167의5 부수토지분은 70%·장기보유특별공제는 토지 전체 보유기간), 나대지 위 주택 신축도 기획재정부 재산세제과-1354(2022.10.27.)·
+ *   사전-2021-법규재산-1232(2022.10.31.)·조심 2024인3140. **토지를 나중에** 취득한 방향은 여전히 간접이다 — 국세청 상속증여세과-466(2013.8.12.)·
+ *   부동산거래관리과-435(2010.3.22.)가 부수토지의 취득시기를 개별 판정하도록 한 데서 논리적으로 이어진 것이고 "세율 보유기간을 `max`로" 라는 명시 판단은 없다(계획서 §10-1).
+ *   ⇒ 되돌릴 수 있도록 이 함수 하나에 격리한다.
+ * - **구주택 멸실·신축 통산**(`landRebuildPriorHouse`, 서면법규과-1222 · 사전-2023-법규재산-0097): 입력이 있으면 `max` 대신 두 구간 통산 개월을 만드는
+ *   **등가 기산일**을 돌려준다(`resolveLandRebuildAggregation`). 입력이 없으면 위 규칙 그대로 — 나대지·상가 철거 후 신축((7) 계열)은 입력이 없어 불변이다.
  */
 export function resolveAppurtenantLandRateBasisDate(input: TransferTaxInput): Date | undefined {
   const effective = resolveLandStatutoryAcquisitionDate(input);
   if (!effective) return undefined;
   // ② 주택은 "주택부수토지로서의" 보유기간 → `max`
   if (input.propertyType !== "housing") return effective;
+  const rebuilt = resolveLandRebuildAggregation(input);
+  if (rebuilt) return rebuilt.equivalentBasisDate;
   return effective.getTime() >= input.acquisitionDate.getTime() ? effective : input.acquisitionDate;
+}
+
+/**
+ * 구주택 멸실·신축 통산 — 입력이 유효한 호스트(`landRebuildApplies`)면 두 구간·합산 개월·등가 기산일, 아니면 `undefined`.
+ * 구주택 부수토지 기간의 시작은 **토지 §104② 법정 기산일**(`resolveLandRateBasis` — 상속은 피상속인·이월과세는 증여자 취득일)과
+ * 입력한 구주택 취득일(`later`) 중 늦은 날이다. 결과 echo(`transfer-split-part-echo.ts`)·고지·세율 시드가 이 함수 하나를 부른다.
+ */
+export function resolveLandRebuildAggregation(input: TransferTaxInput): LandRebuildAggregation | undefined {
+  if (!landRebuildApplies(input)) return undefined;
+  const land = resolveLandRateBasis(input);
+  const acquisition = coerceOptionalDate(input.acquisitionDate as Date | string | undefined);
+  const transfer = coerceOptionalDate(input.transferDate as Date | string | undefined);
+  if (!land || !acquisition || !transfer) return undefined;
+  return aggregateLandRebuildPeriods({
+    landBasisDate: land.date,
+    rebuild: input.landRebuildPriorHouse!,
+    newHouseAcquisitionDate: acquisition,
+    transferDate: transfer,
+  });
 }
 
 /**

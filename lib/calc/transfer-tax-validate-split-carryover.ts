@@ -11,7 +11,7 @@
  * ## 의도적으로 ⑫보다 엄격한 곳 (⑧ 전용 — 안내가 더 구체적이거나 이미 같은 화면 규칙을 따른다)
  *   · 증여 등기접수일 ≥ 양도일 · 관계 「그 외」 · 사망 선언 + 관계 미선택 · 가업상속 선언 — 자산 전체 이월과세 ⑧(`transfer-tax-validate-carryover-asset.ts`)과 같다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { SplitPartCauseFacts, SplitPartCauseIssue } from "@/lib/tax-engine/transfer-split-part-cause";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";

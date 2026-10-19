@@ -5,8 +5,8 @@
  * 사례 31(환산취득가 모드) + 사례 32(신축 단기양도) 검증 포함.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { partAcquisitionDates } from "./transfer-tax-split-acq-mode";
 import { gbPartModes } from "./transfer-tax-split-acq-mode";

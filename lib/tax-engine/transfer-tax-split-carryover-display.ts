@@ -8,7 +8,7 @@
  * 구 이력(echo 없음)은 `undefined`를 돌려줘 소비처가 종전 화면을 그대로 낸다.
  */
 import { CARRYOVER_EXCLUSION_REASON_LABELS } from "./transfer-carryover-exclusion-labels";
-import { splitRateBasisNote } from "./transfer-tax-split-display";
+import { splitRateBasisDateText, splitRateBasisNote } from "./transfer-tax-split-display";
 import type { SplitGainResult, SplitPartCarryoverEcho, SplitPartResult } from "./types/transfer-split-gain.types";
 
 type PartKey = "land" | "building";
@@ -72,7 +72,8 @@ function partView(
   houseCause: SplitPartResult["acquisitionCause"],
 ): SplitCarryoverPartView {
   const applied = e.judgment === "applied";
-  const rateBasisDate = rateJudgedByPart ? p.appliedRateBasisDate : undefined;
+  // 구주택 멸실·신축 통산(해석 (5))이면 `appliedRateBasisDate`는 합산 개월을 만드는 환산 기산일이다 — 다른 3뷰와 같이 「환산」을 붙여 실제 취득일로 읽히지 않게 한다.
+  const rateBasisDate = rateJudgedByPart && p.appliedRateBasisDate ? splitRateBasisDateText(p) : undefined;
   const rateBasisNote = rateBasisDate ? splitRateBasisNote(p, houseCause) : undefined;
   const exclusionLabel = applied || !e.exclusionReason ? undefined : CARRYOVER_EXCLUSION_REASON_LABELS[e.exclusionReason];
   return {

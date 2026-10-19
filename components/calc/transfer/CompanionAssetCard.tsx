@@ -155,10 +155,13 @@ export function CompanionAssetCard({
    *    계산기에는 편집 위젯이 없고(읽기 전용 요약만), ④가 같은 함수로 첫 카드 값을 보낸다 — 덮지 않으면 이 카드의
    *    요약이 엔진이 쓰지 않는 빈 값을 보여 준다.
    */
-  const acquisitionAsset =
-    hideInheritedSections && primaryAsset
-      ? { ...asset, assetKind: primaryAsset.assetKind, ...soleSplitRightJudgmentFacts(asset, primaryAsset) }
-      : asset;
+  const acquisitionAsset = useMemo(
+    () =>
+      hideInheritedSections && primaryAsset
+        ? { ...asset, assetKind: primaryAsset.assetKind, ...soleSplitRightJudgmentFacts(asset, primaryAsset) }
+        : asset,
+    [hideInheritedSections, primaryAsset, asset],
+  );
   /**
    * 카드 제목의 자산종류 — 지분 companion은 **primary값**으로 표시한다.
    *
@@ -180,12 +183,14 @@ export function CompanionAssetCard({
   // 섹션 요약(라벨 전용·금액 없음) — store 미러링 없음, useMemo
   const summary = useMemo(
     () =>
-      summarizeAssetSections(asset, {
+      // 축 B 지분 카드는 ③ 섹션이 렌더하는 값(`acquisitionAsset` — 첫 카드 자산 종류)으로 요약한다 — 저장값 «주택»으로 요약하면
+      // ③ 칩 라벨이 갈리고 토지·분양권 지분 카드에 내용 없는 ⑤ 「장기임대 거주주택 특례」 섹션이 떴다.
+      summarizeAssetSections(acquisitionAsset, {
         totalTransferExpense,
         bundledSaleMode,
         isFractionalSplit: splitMode === "fractional",
       }),
-    [asset, totalTransferExpense, bundledSaleMode, splitMode],
+    [acquisitionAsset, totalTransferExpense, bundledSaleMode, splitMode],
   );
 
   // 접기 상태 — 첫 자산(양도일·신고일 호스트)은 ① 자동 펼침, 그 외 전부 접힘.

@@ -63,7 +63,8 @@ export interface OneHouseJudgmentExtraFields {
   winWinRentalLeaseMonths: string;
   /**
    * ①3호 임대기간이 **종료된 날** — 2026-09-30 개정(대통령령 제36737호) §155① 본문 양도기한
-   * 산정용. 2026-10-01 이후 양도분부터만 필수(그 전에는 양도기한 자체가 없었다).
+   * 산정용. 결론을 가르는 것은 2028-01-01 이후 양도분뿐이다 — 양도기한이 종료일과 관계없이 2027-12-31 이후라서
+   * (`isWinWinLeaseEndDateRequired`, 결정 #45). 2026-10-01 전 양도는 양도기한 자체가 없었다.
    */
   winWinRentalLeaseEndDate: string;
 }

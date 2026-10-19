@@ -10,7 +10,7 @@
  *
  * 설계: docs/02-design/features/transfer-mixed-use-inheritance-acquisition.ui.design.md §7
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
 

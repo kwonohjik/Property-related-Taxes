@@ -15,7 +15,7 @@
  * 계획서: docs/02-design/features/sec164-partial-input-silent-noop.plan.md §5.1
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { isSec163_9Cause, deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";

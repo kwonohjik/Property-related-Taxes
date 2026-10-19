@@ -21,7 +21,8 @@ async function setupNewConstruction(page: Page) {
   await expandAssetSection(page, 3);
   await page.getByRole("radio", { name: "신축(자가건축)" }).click();
 }
-const landAcqToggle = (p: Page) => p.getByTestId("newconstruction-land-acq").getByRole("switch");
+// 구주택 멸실·신축 통산 토글(해석 (5))이 같은 패널에 생겨 `newconstruction-land-acq` 안의 switch가 둘이다 — 토지 원인 토글(data-field)로 좁힌다
+const landAcqToggle = (p: Page) => p.getByTestId("newconstruction-land-acq").locator('[data-field="landAcquisitionCause"]').getByRole("switch");
 const ownerToggle = (p: Page) => p.getByTestId("asset-ownership-split").getByRole("switch");
 
 test.describe("D1-1 — 신축 + 토지 상속·증여 화면", () => {

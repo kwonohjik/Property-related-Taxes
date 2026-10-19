@@ -18,6 +18,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createHouseEntry } from "@/lib/stores/house-entry-factory";
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import {
   sellingHouseExclusionVisible,
@@ -342,27 +343,7 @@ export function HousesListSection({
   const editingHouse = editingId ? houses.find((h) => h.id === editingId) ?? null : null;
 
   function addHouse() {
-    const newHouse: HouseEntry = {
-      id: `house_${Date.now()}`,
-      region: "capital",
-      acquisitionDate: "",
-      officialPrice: "",
-      isInherited: false,
-      isLongTermRental: false,
-      isApartment: false,
-      isOfficetel: false,
-      isUnsoldHousing: false,
-      acquisitionPrice: "",
-      exclusiveArea: "",
-      isUnsoldNewHouse: false,
-      completionDate: "",
-      isSpouseOwned: false,
-      isCoInherited: false,
-      // `decedentSameHouseholdAtInheritance`는 **미리 답하지 않는다**(S14a-1) — 피상속인 세대는 요건 사실이라(§155② 단서·§155⑦1호·조특법 §71의2①)
-      // 「모름」이 곧 불성립이다. 팩토리가 `false`를 넣으면 「+ 주택 추가」로 만든 행만 그 질문을 건너뛴다.
-      // #42-2부터 미답은 「모름」과 같이 읽는다(`lib/calc/decedent-household.ts` — 종전엔 `undefined`를 `false`와 같이 다뤄 답하지 않아도 특례가 적용됐다).
-      isRankingDisqualifiedInheritedHouse: false,
-    };
+    const newHouse = createHouseEntry(`house_${Date.now()}`);
     onChange(patchHouses([...houses, newHouse]));
     // 추가 즉시 편집 모달 오픈
     setEditingId(newHouse.id);

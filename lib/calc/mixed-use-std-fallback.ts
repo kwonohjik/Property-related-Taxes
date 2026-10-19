@@ -8,7 +8,7 @@
  *
  * ⚠️ 읽기 전용 파생이다 — `useEffect → store` 미러링으로 쓰지 않는다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";

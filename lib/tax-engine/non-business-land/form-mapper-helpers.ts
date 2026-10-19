@@ -98,19 +98,41 @@ export function mapBusinessUsePeriods(
 type ParseDate   = (s: string) => Date | undefined;
 type ParseNumber = (s: string) => number | undefined;
 
+/**
+ * 「소득세법 시행령」 §168의14③1의2호 「… 해당 직계존속 또는 해당 배우자로부터 상속ㆍ증여받은 토지」 — 취득원인 게이트.
+ * 이월과세 증여(§97의2 — 배우자·직계존비속 증여)도 증여다. 관계·8년 재촌·자경은 입력이 없어 선언(토글)으로 받는다.
+ */
+const INHERITED_OR_GIFTED_CAUSES: ReadonlySet<string> = new Set(["inheritance", "gift", "carryover_gift"]);
+
+/**
+ * 선언·양도원인만으로 무조건 의제 판정에 들어가는가 — 취득원인에서 자동으로 정하는 상속 사유(③1호·③4호 나목)는 빼고 본다.
+ * 지목 미선택 자산의 진입 게이트(`mapAssetToNblInput`)가 쓴다. 자동 사유는 지목(농·임·목 / 농지)이 있어야만 성립하기 때문이다.
+ */
+export function hasDeclaredUnconditionalExemption(a: Record<string, unknown>): boolean {
+  // 양도원인=공익수용 단일 선택도 §168의14③3호 의제 판정을 트리거 (섹션 토글 미설정 방어)
+  return (
+    asBool(a.nblExemptLongOwned20y) || asBool(a.nblExemptAncestor8YearFarming) ||
+    asBool(a.nblExemptPublicExpropriation) || asString(a.transferCause) === "public_expropriation" ||
+    asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) ||
+    asBool(a.nblExemptUrbanFarmlandJongjoong) || asBool(a.nblExemptInong)
+  );
+}
+
 export function buildUnconditionalExemption(
   a: Record<string, unknown>,
   parseDate: ParseDate,
 ): UnconditionalExemptionInput | undefined {
-  // 양도원인=공익수용 단일 선택도 §168의14③3호 의제 판정을 트리거 (섹션 토글 미설정 방어)
+  /**
+   * ③1호(2006.12.31. 이전 상속)·③4호 나목(도시지역 농지 상속 5년)의 「상속받은」·「상속개시일」은 취득원인·취득일에서 정한다
+   * (계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md`). 종전에는 ③1호 토글과 그 아래 「상속일」 칸
+   * (`nblExemptInheritBefore2007`·`nblExemptInheritDate`)만 읽어, 매매 자산에서 켜면 사업용, 상속 자산에서 안 켜거나
+   * 날짜를 비우면 비사업용이 됐다. ③4호 나목은 자기 입력칸이 없어 ③1호 칸에 남은 값으로만 성립했다. 두 필드는 읽지 않는다.
+   */
+  const acquired = parseDate(asString(a.acquisitionDate));
+  const inheritanceDate = acquired ? resolveInheritanceStartDate(a, acquired) : undefined;
+  if (!hasDeclaredUnconditionalExemption(a) && !inheritanceDate) return undefined;
   const isExpropriation =
     asBool(a.nblExemptPublicExpropriation) || asString(a.transferCause) === "public_expropriation";
-  const has =
-    asBool(a.nblExemptInheritBefore2007) || asBool(a.nblExemptLongOwned20y) ||
-    asBool(a.nblExemptAncestor8YearFarming) || isExpropriation ||
-    asBool(a.nblExemptFactoryAdjacent) || asBool(a.nblExemptJongjoongOwned) ||
-    asBool(a.nblExemptUrbanFarmlandJongjoong) || asBool(a.nblExemptInong);
-  if (!has) return undefined;
   // §168의14③3호나목 취득일 소급: 상속=피상속인 취득일 / §97의2①(carryover_gift)=증여자 취득일.
   // 그 외(직접취득·일반증여)는 undefined → 엔진이 양수인 취득일로 fallback.
   const cause = asString(a.acquisitionCause);
@@ -121,10 +143,10 @@ export function buildUnconditionalExemption(
         ? parseDate(asString(a.donorAcquisitionDate))
         : undefined;
   return {
-    isInheritedBefore2007:               asBool(a.nblExemptInheritBefore2007),
-    inheritanceDate:                     parseDate(asString(a.nblExemptInheritDate)),
+    isInheritedBefore2007:               inheritanceDate !== undefined,
+    inheritanceDate,
     ownedOver20YearsBefore2007:          asBool(a.nblExemptLongOwned20y),
-    isAncestor8YearFarming:              asBool(a.nblExemptAncestor8YearFarming),
+    isAncestor8YearFarming:              asBool(a.nblExemptAncestor8YearFarming) && INHERITED_OR_GIFTED_CAUSES.has(cause),
     isPublicExpropriation:               isExpropriation,
     // 고시일 fallback: NBL 섹션 미입력 시 Step1 단일 소스(expropriationNoticeDate)
     publicNoticeDate:                    parseDate(asString(a.nblExemptPublicNoticeDate) || asString(a.expropriationNoticeDate)),
@@ -132,6 +154,7 @@ export function buildUnconditionalExemption(
     isFactoryAdjacent:                   asBool(a.nblExemptFactoryAdjacent),
     isJongjoongOwned:                    asBool(a.nblExemptJongjoongOwned),
     jongjoongAcquisitionDate:            parseDate(asString(a.nblExemptJongjoongAcqDate)),
+    // ③4호 가목(종중) 선언 — 나목(상속)은 위 `inheritanceDate`로 엔진이 자동 판정한다
     isUrbanFarmlandJongjoongOrInherited: asBool(a.nblExemptUrbanFarmlandJongjoong),
     isInong:                             asBool(a.nblExemptInong),
     inongDate:                           parseDate(asString(a.nblExemptInongDate)),
@@ -155,10 +178,24 @@ export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemin
   };
 }
 
+/**
+ * 「소득세법 시행령」 §168의9③7호·§168의10②1호 「상속받은 … 상속개시일부터 3년이 경과하지 아니한」 — 상속개시일.
+ *
+ * 두 요건(상속받았는가 · 상속개시일)은 자산의 취득원인·취득일이 이미 받는다(상속 자산의 취득일 칸이 상속개시일이다).
+ * 종전에는 비사업용 섹션의 별도 입력(임야 토글·상속일, 목장 상속일)만 읽어, 매매 자산에서 켜면 사업용이 되고
+ * 상속 자산에서 안 켜거나 날짜를 틀리면 비사업용이 됐다(계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md`).
+ * 그 입력은 이제 읽지 않는다 — 옛 저장값이 남아 있어도 판정에 닿지 않는다.
+ *
+ * @returns 상속이면 취득일(상속개시일), 아니면 undefined
+ */
+export function resolveInheritanceStartDate(a: Record<string, unknown>, acquisitionDate: Date): Date | undefined {
+  return asString(a.acquisitionCause) === "inheritance" ? acquisitionDate : undefined;
+}
+
 export function buildForestDetail(
   a: Record<string, unknown>,
   landType: LandType,
-  parseDate?: ParseDate,
+  inheritanceStartDate: Date | undefined,
 ): ForestUsageDetail | undefined {
   if (landType !== "forest") return undefined;
   return {
@@ -166,8 +203,8 @@ export function buildForestDetail(
     isPublicInterest:            asBool(a.nblForestIsPublicInterest),
     isSpecialForestZone:         asBool(a.nblForestIsProtected),
     isForestSuccessor:           asBool(a.nblForestIsSuccessor),
-    inheritedForestWithin3Years: asBool(a.nblForestInheritedWithin3Years),
-    forestInheritanceDate:       parseDate?.(asString(a.nblForestInheritanceDate)),
+    inheritedForestWithin3Years: inheritanceStartDate !== undefined,
+    forestInheritanceDate:       inheritanceStartDate,
   };
 }
 
@@ -176,6 +213,7 @@ export function buildPasture(
   landType: LandType,
   parseDate: ParseDate,
   parseNumber: ParseNumber,
+  inheritanceStartDate: Date | undefined,
 ): PastureUsage | undefined {
   if (landType !== "pasture") return undefined;
   return {
@@ -186,7 +224,7 @@ export function buildPasture(
     hasFodder:           asBool(a.nblPastureHasFodder),
     livestockCount:      parseNumber(asString(a.nblPastureLivestockCount)),
     livestockPeriods:    mapBusinessUsePeriods(asArray<NblBusinessUsePeriod>(a.nblPastureLivestockPeriods), parseDate),
-    inheritanceDate:     parseDate(asString(a.nblPastureInheritanceDate)),
+    inheritanceDate:     inheritanceStartDate,
     isSpecialOrgUse:     asBool(a.nblPastureIsSpecialOrgUse),
   };
 }

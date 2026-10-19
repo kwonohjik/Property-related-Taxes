@@ -6,8 +6,8 @@
  */
 
 import { addYears } from "date-fns";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { isWithin5YearsCheck } from "@/lib/tax-engine/transfer-reductions/new-99-3";
 import {
   isIncomeDeductionTrack,

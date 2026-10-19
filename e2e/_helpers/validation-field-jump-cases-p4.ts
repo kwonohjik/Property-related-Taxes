@@ -4,6 +4,7 @@ import { LEAF_FIELD_JUMP_CASES } from "./validation-field-jump-cases-leaf";
 import { REDUCTION_FIELD_JUMP_CASES } from "./validation-field-jump-cases-reduction";
 import { STEP1_FIELD_JUMP_CASES } from "./validation-field-jump-cases-step1";
 import { SPLIT_CARRYOVER_FIELD_JUMP_CASES } from "./validation-field-jump-cases-split-carryover";
+import { LAND_REBUILD_FIELD_JUMP_CASES } from "./validation-field-jump-cases-land-rebuild";
 
 export const P4_FIELD_JUMP_CASES = [
   ...NBL_FIELD_JUMP_CASES,
@@ -11,4 +12,5 @@ export const P4_FIELD_JUMP_CASES = [
   ...REDUCTION_FIELD_JUMP_CASES,
   ...STEP1_FIELD_JUMP_CASES,
   ...SPLIT_CARRYOVER_FIELD_JUMP_CASES,
+  ...LAND_REBUILD_FIELD_JUMP_CASES,
 ];

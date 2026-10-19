@@ -5,8 +5,8 @@
  * 폼 문자열 → 엔진 입력 숫자 변환 + fetch body 구성.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { ComprehensiveFormData, LandParcelForm } from "@/lib/stores/comprehensive-wizard-store";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { resolveCorporateHousingClass } from "@/lib/tax-engine/comprehensive-corporate-class";

@@ -12,7 +12,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 
 /** ⑫ `carryoverGiftEvent` — 증여 그 자체의 사실. */

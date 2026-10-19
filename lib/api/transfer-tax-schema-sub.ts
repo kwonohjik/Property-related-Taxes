@@ -248,6 +248,8 @@ export const houseSchema = z.object({
   exclusiveArea: z.number().nonnegative().optional(),
   isUnsoldNewHouse: z.boolean().optional(),
   completionDate: z.string().date().optional(),
+  // ⑫ 결정 #43 — 기존주택의 연장인 행(원조합원 기존주택·자가 재건축)의 기존주택 취득일(취득 선후 판정용)
+  predecessorHouseAcquisitionDate: z.string().date().optional(),
   // #2a 배우자 단독 보유 (§167의3⑨ 혼인 5년내 차감) — 레거시. 있으면 아래 3-state 응답이 우선한다
   isSpouseOwned: z.boolean().optional(),
   // ⑫ 결정 #47 — 「양도일 현재 배우자 보유」 3-state 응답(예/아니오/모름). 미응답(키 없음)과 모름은 차감하지 않는다

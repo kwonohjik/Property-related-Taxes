@@ -25,9 +25,11 @@ import {
   asString, asBool, asArray,
   mapBusinessUsePeriods,
   buildUnconditionalExemption,
+  hasDeclaredUnconditionalExemption,
   buildFarmlandDeeming,
   buildForestDetail,
   buildPasture,
+  resolveInheritanceStartDate,
   buildVilla,
   buildOtherLand,
   buildRevenueTest,
@@ -65,7 +67,7 @@ export function mapAssetToNblInput(
   if (!asset.nblUseDetailedJudgment) return null;
   // 지목 미선택이라도 무조건 사업용 의제(§168의14③) 토글이 있으면 의제 판정(engine Step 2)을 위해 진행.
   // 빈 landType → classifyLandCategory "unknown" → 의제 성립 시 지목별 judge 이전 즉시 사업용 반환.
-  if (!asset.nblLandType && !buildUnconditionalExemption(asset, context.parseDate)) return null;
+  if (!asset.nblLandType && !hasDeclaredUnconditionalExemption(asset)) return null;
 
   const { acquisitionDate, transferDate, parseDate, parseNumber } = context;
   const landType = asString(asset.nblLandType) as LandType;
@@ -93,6 +95,9 @@ export function mapAssetToNblInput(
         (code) => lookupSigungu(code)?.adjacentCodes ?? [],
       )
     : undefined;
+
+  // §168의9③7호·§168의10②1호 상속개시일 — 취득원인·취득일 단일 소스
+  const inheritanceStartDate = resolveInheritanceStartDate(asset, acquisitionDate);
 
   // 사업용 사용기간
   const businessUsePeriods = mapBusinessUsePeriods(
@@ -166,8 +171,8 @@ export function mapAssetToNblInput(
     disqualifiedTaxPeriods:  parseTaxPeriodYears(asString(asset.nblDisqualifiedTaxPeriods)).years,
     farmerResidenceDistance: parseNumber(asString(asset.nblFarmerResidenceDistance)),
     farmlandDeeming:         buildFarmlandDeeming(asset),
-    forestDetail:            buildForestDetail(asset, landType, parseDate),
-    pasture:                 buildPasture(asset, landType, parseDate, parseNumber),
+    forestDetail:            buildForestDetail(asset, landType, inheritanceStartDate),
+    pasture:                 buildPasture(asset, landType, parseDate, parseNumber, inheritanceStartDate),
     villa:                   buildVilla(asset, landType, parseDate, parseNumber),
     otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate, zoneType),
     revenueTest:             buildRevenueTest(asset, landType, parseNumber, parseDate, transferDate, acquisitionDate),

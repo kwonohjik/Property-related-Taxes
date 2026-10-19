@@ -20,6 +20,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
+import { RebuiltHouseLandBlock } from "./RebuiltHouseLandBlock";
 import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { LAND_CAUSE_META } from "./land-cause-meta";
@@ -222,6 +223,11 @@ export function CompanionAcqDateSection(props: {
               )}
             </FieldCard>
           </div>
+        )}
+        {/* 구주택 멸실·신축 통산(해석 (5)) 매매 호스트 — 토지·건물 날짜 2열 **직후**(토지 법정 기산일 → 구주택 구간 → 신축 구간 순서).
+            노출 술어 `landRebuildHost`(매매 ∧ 토지 상속·증여 overlay 없음 ∧ 주택 ∧ 소유자 같음 ∧ 첫 자산 …)는 ④·⑧과 같은 것이다. 신축 호스트는 `LandPartCauseBlock`이 연다. */}
+        {isSplit && p.asset && p.onAssetChange && (
+          <RebuiltHouseLandBlock host="purchase" asset={p.asset} onChange={p.onAssetChange} isNonPrimary={p.isNonPrimaryAsset} />
         )}
         {/* D1-2 — 같은 날(Q-4)·1990.8.30. 전(Q-7) 안내. ⑧과 같은 술어(차단은 ⑧·⑫). */}
         {landCause && p.asset && landPartCauseDateNotice(p.asset) && (

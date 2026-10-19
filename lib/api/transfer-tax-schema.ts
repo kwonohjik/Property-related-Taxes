@@ -28,6 +28,7 @@ import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-
 import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
 import { refineHouseFirstDisclosureDate, refineSplitPartCause } from "./transfer-tax-schema-required-refines-2a";
 import { refineApartNtsPrice } from "./transfer-tax-schema-required-refines-2a";
+import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 import { refineSplitAcquisitionInputs } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
 
@@ -152,6 +153,8 @@ export const propertySchema = z
         supported: false, // 컴패니언은 파트 이월과세를 받지 않는다(leaf S0) — 키는 받아서 명시 거부한다
         hasCompanions: false,
       });
+      // 구주택 멸실·신축 통산 — 컴패니언은 받지 않는다(키는 받아서 명시 거부 — strip하면 통산 없이 계산한다)
+      refineLandRebuild(c, c.assetKind === "housing", ctx, ["companionAssets", i], { supported: false });
       // 주택별 개별주택가격 최초공시일 범위(주 자산과 같은 규칙)
       refineHouseFirstDisclosureDate(c.houseFirstDisclosureDate, data.transferDate, ctx, ["companionAssets", i]);
       // 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호 — 주 자산과 같은 규칙)

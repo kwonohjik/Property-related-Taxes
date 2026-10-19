@@ -9,8 +9,8 @@
  * 계획서: docs/01-plan/features/commercial-164-6-proviso-164-5-application.plan.md
  */
 import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "@/lib/tax-engine/data/building-standard-price";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { resolveCbEra } from "./commercial-cb-era";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";

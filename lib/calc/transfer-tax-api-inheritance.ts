@@ -5,7 +5,7 @@
  * acquisitionCause === "inheritance" + 자동(보충적평가) 모드에서만 호출.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";

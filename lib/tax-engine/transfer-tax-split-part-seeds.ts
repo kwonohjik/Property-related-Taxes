@@ -10,6 +10,8 @@
  * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §4.
  */
 import { calcTax } from "./transfer-tax-rate-calc";
+import { offsetLossesCore } from "./loss-offset-core";
+import { lossOffsetRateKey } from "./loss-offset-rate-key";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import {
   resolveAppurtenantLandRateBasisDate,
@@ -19,7 +21,7 @@ import {
 } from "./transfer-tax-appurtenant-land";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import type { SplitPartRateContext, SplitRatePart } from "./transfer-tax-split-rate";
+import type { SplitPartLossOffset, SplitPartRateContext, SplitRatePart } from "./transfer-tax-split-rate";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 
@@ -139,6 +141,30 @@ export function splitPartsForLossOffset(
   });
 }
 
+/**
+ * 파트 차손 통산(「소득세법 시행령」 §167의2①) — 다건과 같은 코어(`offsetLossesCore`)·같은 「같은 세율」 키(`lossOffsetRateKey`)를 쓴다.
+ * 세율 사실은 다건 차손 자산 규약과 같다(`transfer-tax-aggregate-asset-records.ts` `resolveRateFacts`) — 차손 파트는 `calcTax(0)`.
+ */
+function offsetPartLosses(
+  seeds: SplitPartSeed[],
+  parsedRates: ParsedRates,
+  multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined,
+): { incomes: number[]; rows: SplitPartLossOffset[] } {
+  const out = offsetLossesCore(
+    seeds.map((s) => {
+      const t = calcTax(Math.max(0, s.raw), parsedRates, s.rateInput, multiHouseSurchargeResult);
+      return {
+        income: s.raw,
+        rateKey: lossOffsetRateKey({ rateClause: t.rateClause, appliedRate: t.appliedRate, propertyType: s.rateInput.propertyType, propertyId: s.kind }),
+      };
+    }),
+  );
+  return {
+    incomes: out.incomeAfterOffset,
+    rows: out.rows.map((r) => ({ from: seeds[r.from].kind, to: seeds[r.to].kind, amount: r.amount, scope: r.scope })),
+  };
+}
+
 /** 다건 신고의 비주택 토지·건물 split — 파트를 합산 단위로 항상 남긴다(P3). 비주택 판정은 G-1과 같은 술어(`resolveAppurtenantLandRateBasisDate`). */
 export const keepsNonHousingParts = (ctx: SplitPartRateContext) =>
   ctx.aggregateFiling === true && ctx.taxRateInput.propertyType !== "housing";
@@ -151,19 +177,29 @@ export function prepareSplitParts(
   ctx: SplitPartRateContext,
 ):
   | { ready: false; judged: boolean }
-  | { ready: true; seeds: SplitPartSeed[]; incomes: number[]; preRates: ReturnType<typeof calcTax>[] } {
+  | {
+      ready: true;
+      seeds: SplitPartSeed[];
+      incomes: number[];
+      preRates: ReturnType<typeof calcTax>[];
+      lossOffset?: SplitPartLossOffset[];
+    } {
   const { splitDetail, taxRateInput: input, parsedRates, transferIncome } = ctx;
   const notJudged = { ready: false, judged: false } as const;
 
   const seeds = buildSplitPartSeeds(splitDetail, input);
   if (!seeds) return notJudged;
 
-  // 6. 어느 파트든 결손이면 자산 내부에서 이미 통산된 뒤다(`transfer-tax-helpers.ts` 합산).
-  //    파트별로 쪼개면 Σ파트 ≠ 자산 과세표준이 되므로 진입하지 않는다.
-  if (seeds.some((s) => s.raw < 0)) return notJudged;
+  // 6. 자산 전체가 차손이면 산출세액이 없다 — 파트로 나눌 것이 없다.
   if (seeds.reduce((s, p) => s + p.raw, 0) <= 0) return notJudged;
+  //    한 파트만 차손이면 다른 파트의 양도소득금액에서 「소득세법 시행령」 §167의2① 순서로 공제한다 —
+  //    1호 같은 세율 파트 먼저, 2호 남은 차손은 다른 세율 파트에 소득 비율로 안분(국심2007중3718: 토지·건물 차손익 통산).
+  //    종전에는 자산 단위 세율(건물 기산일)로 후퇴해 토지 기산일이 버려졌다(계획서 `transfer-split-part-loss-offset-167-2.plan.md`).
+  //    Σ파트 > 0이면 차손은 전액 흡수되어 통산 후 합 = 통산 전 합이다 — 아래 안분·잔액 흡수가 그대로 성립한다.
+  const lossOffset = seeds.some((s) => s.raw < 0) ? offsetPartLosses(seeds, parsedRates, ctx.multiHouseSurchargeResult) : undefined;
+  const partRaw = lossOffset ? lossOffset.incomes : seeds.map((s) => s.raw);
   const weights =
-    ctx.partIncomeWeights?.length === seeds.length ? ctx.partIncomeWeights : seeds.map((s) => s.raw);
+    ctx.partIncomeWeights?.length === seeds.length ? ctx.partIncomeWeights : partRaw;
   const rawSum = weights.reduce((s, w) => s + w, 0);
 
   // 자산 단위 양도소득금액과 어긋나면(감면 등) 비율 안분 후 잔액은 **마지막 파트가 흡수**한다.
@@ -199,7 +235,7 @@ export function prepareSplitParts(
   //    다건 버킷이 다시 합산하므로 접지 않아도 값이 같다. 여기서 접으면 파트 단독 1호 ↔ 단기세율 교차점마다 합산 단위가 바뀌어
   //    1원 절벽이 생기고(계획서 §2.3), 이 시점의 키(기본공제 배분 전)는 버킷 키(배분 후)와 갈릴 수도 있다(§7.5).
   if (uniform && !keepsNonHousingParts(ctx)) return { ready: false, judged: true };
-  return { ready: true, seeds, incomes, preRates };
+  return { ready: true, seeds, incomes, preRates, ...(lossOffset ? { lossOffset: lossOffset.rows } : {}) };
 }
 
 /**

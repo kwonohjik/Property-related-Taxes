@@ -9,7 +9,7 @@
  *
  * 호출 전제: `isMixedUsePerPartAcq(asset)`. 아니면 호출하지 않는다(총액 모델은 기존 검증 그대로).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { collectMixedPartAcqIssues } from "@/lib/tax-engine/mixed-use-part-acq";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import {

@@ -1,4 +1,4 @@
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 import { isPhdEligible } from "./phd-eligibility";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";

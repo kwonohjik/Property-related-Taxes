@@ -15,7 +15,7 @@ import {
   calculatePre1990LandValuation,
   type LandGradeInput,
 } from "@/lib/tax-engine/pre-1990-land-valuation";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 

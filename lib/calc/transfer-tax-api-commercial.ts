@@ -6,8 +6,8 @@
  * 종전 import 경로 호환을 위해 helpers가 재export한다 — `transfer-tax-api-gb.ts`와 같은 형태.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { effectiveCommercialLandPriceAtAcq } from "./transfer-pre1990-commercial-bridge";
 import { resolveCbEra } from "./commercial-cb-era";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";

@@ -9,7 +9,7 @@
  *    `?.trim()` 금지 — undefined일 때 `undefined !== ""` → true가 되어 0을 전송한다.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { isMixedUseCaseA } from "./mixed-use-case";
 import {
   mixedAcqLandPricePerSqmAtBuildingAcq,

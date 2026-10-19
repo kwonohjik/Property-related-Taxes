@@ -16,6 +16,7 @@ import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { sec163_9AcquisitionShape } from "./transfer-tax-schema-sec163-9-shape";
 // ⑫ 분리취득 축 — 단건·컴패니언 공용 shape (leaf라 TDZ 안전).
 import { splitAcquisitionShape } from "./transfer-tax-schema-split";
+import { nonBusinessLandRawSchema } from "./transfer-tax-schema-nbl";
 
 // ─── 일괄양도 안분 — 상속 보충적평가액 입력 스키마 ───────────────
 
@@ -252,6 +253,8 @@ export const companionAssetSchema = z.object({
   isUnregistered: z.boolean().optional(),
   /** 자산별 비사업용 토지 여부 */
   isNonBusinessLand: z.boolean().optional(),
+  // ⑫ 축 B 토지 지분의 비사업용 정밀판정 입력 — 주 자산과 같은 스키마(없으면 z.object가 조용히 strip해 지분은 표지만 남는다).
+  nonBusinessLandRaw: nonBusinessLandRawSchema.optional(),
   /** 자산별 지정지역(§104의2②) 선언 — 비사업용 토지 8호 유예 판정용(미선언 = 모름) */
   isDesignatedArea: z.boolean().optional(),
   // ── 일괄양도 보완: 양도가액 모드 + 취득원인 분기 ──

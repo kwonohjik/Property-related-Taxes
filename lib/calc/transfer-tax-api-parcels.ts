@@ -5,7 +5,7 @@
  * 감환지 면적 정정·환산 단가 게이트)이 한 덩어리로 응집돼 있어 그대로 옮겼다 — 로직 무변경.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio, resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 

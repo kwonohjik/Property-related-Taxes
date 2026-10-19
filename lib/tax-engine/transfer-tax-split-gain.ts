@@ -22,6 +22,7 @@ import { housingExcessNeedsStdInputsOfInput, phdSplitPathTaken } from "./housing
 import { resolveHousingExcessAcqContract } from "./housing-excess-acq-contract";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
 import { splitPartCauseFactsOfInput } from "./transfer-split-part-cause-input";
+import { collectLandRebuildIssues, landRebuildFactsOfInput } from "./transfer-land-rebuild-rate";
 import { buildSplitPartCauseEcho } from "./transfer-split-part-echo";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -73,6 +74,9 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // 통째로 빠진 채 계산됐다(D1 G-12). 사실 조립은 해결자(`calcSplitCarryoverScenarios`)와 같은 어댑터다.
   const [causeIssue] = collectSplitPartCauseIssues(splitPartCauseFactsOfInput(input));
   if (causeIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, causeIssue.message, { field: causeIssue.field });
+  // 구주택 멸실·신축 통산 입력(해석 (5)) — ⑫·⑧과 같은 leaf. 입력이 없으면 빈 배열이라 회귀 0.
+  const [rebuildIssue] = collectLandRebuildIssues(landRebuildFactsOfInput(input));
+  if (rebuildIssue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, rebuildIssue.message, { field: rebuildIssue.field });
   if (!input.landAcquisitionDate) return null;
 
   // ── 개별주택가격 미공시 취득 경로 (§164⑦) ──

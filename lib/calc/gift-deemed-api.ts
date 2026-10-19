@@ -4,8 +4,8 @@
 import type { DeemedGiftInput, DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
 import type { ContributionParty } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { resolveFreeLoanRate } from "@/lib/tax-engine/data/gift-deemed-rates";
 import { applyRateFraction } from "@/lib/tax-engine/tax-utils";
