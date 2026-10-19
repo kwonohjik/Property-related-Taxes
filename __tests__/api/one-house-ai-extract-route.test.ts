@@ -89,6 +89,12 @@ describe("POST /api/one-house-ai/extract", () => {
     const { data } = await res.json();
     expect(data.form).toMatchObject({ transferDate: "2024-06-15", houses: [{ id: "B", acquisitionDate: "2023-05-01" }] });
     expect(data.facts).toHaveLength(7);
+    // 화면은 필드 사전을 싣지 않으므로 칸 이름·선택지 뜻을 응답에 붙인다
+    expect(data.facts).toContainEqual(
+      expect.objectContaining({ path: "houses[B].region", value: "capital", label: expect.any(String), valueLabel: expect.any(String) }),
+    );
+    expect(data.facts.find((f: { path: string }) => f.path === "transferDate")).toMatchObject({ label: expect.any(String) });
+    expect(data.facts.find((f: { path: string }) => f.path === "transferDate").valueLabel).toBeUndefined();
     const q = data.questions as { path: string; source: string; question: string }[];
     // LLM이 물은 칸은 한 번만
     expect(q.filter((x) => x.path === "houses[B].acquisitionOrigin")).toEqual([
