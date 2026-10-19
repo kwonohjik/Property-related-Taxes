@@ -44,11 +44,12 @@ describe("buildFractionalShareNblRecord", () => {
 
 describe("nblShareExemptionWithheldNotice", () => {
   const det = (u: Record<string, boolean> | undefined) => ({ unconditionalExemption: u }) as unknown as NonBusinessLandInput;
-  const first = { nonBusinessLandDetails: det({ isAncestor8YearFarming: true, isInheritedBefore2007: true, isFactoryAdjacent: true }) };
+  const first = { nonBusinessLandDetails: det({ isAncestor8YearFarming: true, ownedOver20YearsBefore2007: true, isFactoryAdjacent: true }) };
 
-  it("첫 지분에서 켜진 6종 중 꺼진 것만 이름을 든다(공장 인접은 대상 아님)", () => {
+  // ③1호(2006.12.31. 이전 상속)는 선언 목록에서 빠졌다 — 취득원인·상속개시일 자동 판정(nbl-unconditional-inherit-cause.plan.md)
+  it("첫 지분에서 켜진 5종 중 꺼진 것만 이름을 든다(공장 인접은 대상 아님)", () => {
     const w = nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: det({ isFactoryAdjacent: true } as never) }, first);
-    expect(w).toContain("(2006.12.31. 이전 상속 · 직계존속 8년 이상 재촌·자경 토지의 상속·증여 — 소득세법 시행령 §168조의14 ③)");
+    expect(w).toContain("(2006.12.31. 이전 20년 이상 소유 · 직계존속 8년 이상 재촌·자경 토지의 상속·증여 — 소득세법 시행령 §168조의14 ③)");
     // 의제 입력 자체가 없는 지분(선언 전부 꺼짐)도 같다
     expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: det(undefined) }, first)).toBe(w);
   });

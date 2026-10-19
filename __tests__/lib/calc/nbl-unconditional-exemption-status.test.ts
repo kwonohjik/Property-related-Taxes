@@ -103,33 +103,37 @@ describe("[NBL-UI] evaluateUnconditionalExemption — 엔진 실제 판정 기�
     expect(r.isExempt).toBe(false);
   });
 
-  it("지목 미선택 + 상속 토글 ON (상속일 2005·양도 2009) → categoryGroup unknown → isExempt=false", () => {
+  /** ③1호는 토글이 없다 — 취득원인·상속개시일로 자동 판정 (계획서 nbl-unconditional-inherit-cause.plan.md Q-1 a) */
+  it("지목 미선택 + 상속 2005·양도 2009 → categoryGroup unknown → isExempt=false (토글 없음)", () => {
     // 농지의존 사유는 지목 선택 전까지 확정 불가 → 지목별 판정을 잠그지 않는다(원래 버그의 핵심).
     const r = evaluateUnconditionalExemption(
-      asset({
-        nblLandType: "", // 지목 미선택
-        nblExemptInheritBefore2007: true,
-        nblExemptInheritDate: "2005-06-01",
-      }),
+      asset({ nblLandType: "", acquisitionCause: "inheritance", acquisitionDate: "2005-06-01" }),
       "2009-06-01",
     );
-    expect(r.anyToggleOn).toBe(true);
+    expect(r.anyToggleOn).toBe(false);
     expect(r.isExempt).toBe(false);
-    expect(r.perToggle.inheritBefore2007?.qualifies).toBe(false);
   });
 
-  it("상속 ③1호 충족: 농지·상속일 2005·양도 2009 → isExempt=true", () => {
+  it("상속 ③1호 충족: 농지·상속 2005·양도 2009 → 선언 없이 isExempt=true", () => {
     const r = evaluateUnconditionalExemption(
-      asset({
-        nblLandType: "farmland",
-        nblZoneType: "agriculture_forest",
-        nblExemptInheritBefore2007: true,
-        nblExemptInheritDate: "2005-06-01",
-      }),
+      asset({ nblLandType: "farmland", nblZoneType: "agriculture_forest", acquisitionCause: "inheritance", acquisitionDate: "2005-06-01" }),
       "2009-06-01",
     );
     expect(r.isExempt).toBe(true);
-    expect(r.perToggle.inheritBefore2007?.qualifies).toBe(true);
+    expect(r.anyToggleOn).toBe(false);
+    expect(r.matched?.reason).toBe("inheritance_before_2007");
+  });
+
+  it("옛 ③1호 토글·상속일 저장값은 읽지 않는다: 매매 자산 → isExempt=false", () => {
+    const r = evaluateUnconditionalExemption(
+      asset({
+        nblLandType: "farmland", nblZoneType: "agriculture_forest", acquisitionCause: "purchase", acquisitionDate: "2000-01-01",
+        nblExemptInheritBefore2007: true, nblExemptInheritDate: "2000-01-01",
+      }),
+      "2009-06-01",
+    );
+    expect(r.isExempt).toBe(false);
+    expect(r.anyToggleOn).toBe(false);
   });
 
   it("공장 인접(날짜 무관): 토글 ON → 항상 qualifies=true", () => {
