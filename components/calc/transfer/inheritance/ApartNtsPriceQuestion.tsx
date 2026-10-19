@@ -104,7 +104,7 @@ export function ApartNtsPriceQuestion({ asset, onChange, baseDateLabel }: {
       </div>
 
       {existed === "yes" && (
-        <ToneCard tone="amber" noDark>
+        <ToneCard tone="amber">
           <p className="text-xs text-amber-900" data-testid="apart-nts-existed-note">
             {baseDateLabel} 당시 국세청 고시 공동주택 기준시가가 있었으므로 영 §164⑥·⑦ 가액과 비교하지 않고 평가액을 취득가액으로
             합니다(소득세법 시행령 §163⑨ 본문).
@@ -147,7 +147,7 @@ export function ApartFirstPriceEntryCard({ asset, onChange, baseDate, baseDateLa
   if (!isApartSec163_9Asset(asset) || apartNtsQuestionRelevant(asset) || !base || base < SEC_163_9_BUILDING_FIRST_DISCLOSURE) return null;
   return (
     <div className="space-y-2" data-testid="apart-first-price-entry">
-      <ToneCard tone="amber" noDark>
+      <ToneCard tone="amber">
         <p className="text-xs text-amber-900">
           {baseDateLabel}({base})에 이 공동주택에 아직 가격(국세청 고시 기준시가·국토교통부 공시 공동주택가격)이 없었다면(그 뒤 신축 등으로
           처음 매겨짐), 평가액과 첫 가격으로 환산한 영 §164⑥·⑦ 가액 중 <strong>많은 금액</strong>이 취득가액입니다(소득세법 시행령

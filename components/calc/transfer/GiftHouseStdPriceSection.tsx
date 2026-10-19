@@ -55,7 +55,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
       return <ApartFirstPriceEntryCard asset={asset} onChange={onChange} baseDate={giftDate} baseDateLabel="증여일" />;
     }
     return (
-      <ToneCard tone="amber" title="공동주택 — 증여일 당시 국세청 고시 공동주택 기준시가" noDark>
+      <ToneCard tone="amber" title="공동주택 — 증여일 당시 국세청 고시 공동주택 기준시가">
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
           <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
