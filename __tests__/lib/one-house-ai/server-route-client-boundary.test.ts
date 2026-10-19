@@ -1,5 +1,5 @@
 /**
- * AI 사실 추출 서버 경로가 `"use client"` 모듈에 닿지 않는다.
+ * AI 사실 추출·참고 의견 서버 경로가 `"use client"` 모듈에 닿지 않는다.
  *
  * 닿으면 Next가 그 모듈의 함수를 클라이언트 참조로 바꿔 서버에서 부르는 순간 500이 난다
  * (2026-10-19 실측 — 「Attempted to call parseAmount() from the server」). vitest는 그 변환을 하지 않아
@@ -47,7 +47,7 @@ function clientModulesReachedFrom(entry: string): string[] {
 }
 
 describe("서버 경로 ↛ 클라이언트 모듈", () => {
-  it("/api/one-house-ai/extract", () => {
-    expect(clientModulesReachedFrom("app/api/one-house-ai/extract/route.ts")).toEqual([]);
+  it.each(["app/api/one-house-ai/extract/route.ts", "app/api/one-house-ai/opinion/route.ts"])("%s", (entry) => {
+    expect(clientModulesReachedFrom(entry)).toEqual([]);
   });
 });

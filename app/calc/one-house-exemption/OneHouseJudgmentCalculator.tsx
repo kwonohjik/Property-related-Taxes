@@ -38,6 +38,7 @@ import {
   type OneHouseAiReview,
 } from "@/components/calc/one-house/OneHouseAiExtractDialog";
 import { OneHouseAiReviewCard } from "@/components/calc/one-house/OneHouseAiReviewCard";
+import { OneHouseAiOpinionPanel } from "@/components/calc/one-house/OneHouseAiOpinionPanel";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 /**
@@ -57,7 +58,7 @@ const STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판�
 const RESULT_STEP = 3;
 
 type Props = {
-  /** 「원문으로 채우기 (AI)」 — 로컬 개발 서버이고 API 키가 있을 때만 서버 페이지가 켠다(하이브리드 AI 검토 도구 P4) */
+  /** 「원문으로 채우기 (AI)」·「AI 참고 의견」 — 로컬 개발 서버이고 API 키가 있을 때만 서버 페이지가 켠다(하이브리드 AI 검토 도구) */
   aiExtractEnabled?: boolean;
 };
 
@@ -373,6 +374,15 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
                 onCalculateTax={handleCalculateTax}
                 transferDate={formData.transferDate || undefined}
                 houses={formData.houses}
+              />
+            )}
+            {/* AI 참고 의견 — 판정이 나온 뒤, 버튼을 누를 때만(로컬 개발 서버 전용 — 원문으로 채우기와 같은 게이트) */}
+            {aiExtractEnabled && currentStep === RESULT_STEP && result && (
+              <OneHouseAiOpinionPanel
+                form={formData}
+                result={result}
+                sourceText={aiReview?.sourceText}
+                notes={aiReview?.notes}
               />
             )}
 
