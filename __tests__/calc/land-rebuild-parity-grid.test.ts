@@ -9,6 +9,9 @@
  *   (B) leaf 소관 사유는 ⑧ 차단 ⇔ ⑫ 400(같은 칸).
  *   (C) 호스트가 닫힌 폼(토글 OFF·토지 원인 OFF·취득원인 변경·소유자 분리·부담부증여·겸용·건물 종류·컴패니언)은 입력이 있어도
  *       ⑧ 결과·④ body가 입력 없음과 **같다**(저장값은 지우지 않고 읽는 쪽이 「없음」으로 읽는다).
+ *
+ * 호스트가 두 곳이다 — 건물 신축 + 토지 상속·증여(`rebuildAsset`) / 매매 + 「토지·건물 취득일 다름」 + 토지 overlay 없음(`purchaseRebuildAsset`).
+ * (A)(B) 격자는 두 호스트에 같은 셀을 돌리고, (C)는 호스트별 닫힘 목록을 따로 둔다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
@@ -30,13 +33,14 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { buildPropertyPayload } from "@/lib/calc/multi-transfer-tax-api";
 import { bodyOf, routeOf, issuesOf } from "./_helpers/split-carryover-c-form";
-import { rebuildAsset, rebuildForm } from "./_helpers/land-rebuild-form";
+import { rebuildAsset, rebuildForm, purchaseRebuildAsset } from "./_helpers/land-rebuild-form";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 });
 
 const asForm = (over: Record<string, unknown>) => rebuildForm({}, rebuildAsset(over));
+const asPurchaseForm = (over: Record<string, unknown>) => rebuildForm({}, purchaseRebuildAsset(over));
 
 type Cell = {
   name: string;
@@ -49,8 +53,8 @@ type Cell = {
   pass?: boolean;
 };
 
-const CELLS: Cell[] = [
-  { name: "기준 — 구주택 토지 취득 때부터(since_land) · 멸실 2023-05-31 · 정착면적 확인", make: () => rebuildForm(), pass: true },
+const cellsOf = (asForm: (over: Record<string, unknown>) => TransferFormData, base: () => TransferFormData): Cell[] => [
+  { name: "기준 — 구주택 토지 취득 때부터(since_land) · 멸실 2023-05-31 · 정착면적 확인", make: base, pass: true },
   { name: "later + 구주택 취득일(토지 법정 기산일 이후)", make: () => asForm({ landRebuildStartMode: "later", landRebuildPriorHouseStartDate: "2018-03-01" }), pass: true },
   { name: "later + 구주택 취득일이 토지 법정 기산일보다 앞 → 법정 기산일부터(통과)", make: () => asForm({ landRebuildStartMode: "later", landRebuildPriorHouseStartDate: "2005-03-01" }), pass: true },
   { name: "since_land인데 구주택 취득일 잔재 → 보내지 않는다(통과)", make: () => asForm({ landRebuildPriorHouseStartDate: "2018-03-01" }), pass: true },
@@ -66,6 +70,11 @@ const CELLS: Cell[] = [
   { name: "정착면적 미확인", make: () => asForm({ landRebuildFootprintUnchanged: false }), leafKey: "footprintUnchanged" },
   // ── ⑧ 전용 — 시작 구분 미선택은 ④가 키를 싣지 않아 ⑫는 통과한다(⑧이 더 엄격한 방향: 모름 = 혜택 불성립 + 확인 필요) ──
   { name: "시작 구분 미선택", make: () => asForm({ landRebuildStartMode: "" }), strictOnly: true },
+];
+
+const HOSTS = [
+  { host: "신축 호스트", asForm, cells: cellsOf(asForm, () => rebuildForm()) },
+  { host: "매매 호스트", asForm: asPurchaseForm, cells: cellsOf(asPurchaseForm, () => rebuildForm({}, purchaseRebuildAsset())) },
 ];
 
 describe("구주택 멸실·신축 통산 — ⑧≡⑫ 격자", () => {
@@ -86,6 +95,33 @@ describe("구주택 멸실·신축 통산 — ⑧≡⑫ 격자", () => {
     expect(r.json.data.result.calculatedTax).toBeLessThan(await offTax);
   });
 
+  it("[매매 호스트] 기준 셀: ⑧ 통과 · ④ body에 키 3필드 · ⑫ 200 · 세율 개월 17 + 8 = 25 · 세액이 입력 없음보다 낮다 · 건물 원인 purchase echo", async () => {
+    const form = rebuildForm({}, purchaseRebuildAsset());
+    expect(issuesOf(form)).toEqual([]);
+    const body = await bodyOf(form);
+    expect(body.acquisitionCause).toBe("purchase");
+    expect(body.landRebuildPriorHouse).toEqual({ startMode: "since_land", demolitionDate: "2023-05-31", footprintUnchanged: true });
+    const r = await routeOf(POST, body);
+    expect(r.status, JSON.stringify(r.fieldErrors)).toBe(200);
+    const land = r.json.data.result.splitDetail.land;
+    expect(land.rateHoldingAggregation).toMatchObject({ totalMonths: 25, priorHouse: { from: "2022-01-01", to: "2023-05-31", months: 17 }, newHouse: { from: "2025-01-01", to: "2025-09-01", months: 8 }, startRule: "land_basis" });
+    expect(land.acquisitionCause).toBe("purchase");
+    const off = await routeOf(POST, await bodyOf(rebuildForm({}, purchaseRebuildAsset({ landRebuildEnabled: false }))));
+    expect(r.json.data.result.calculatedTax).toBeLessThan(off.json.data.result.calculatedTax);
+  });
+
+  it("[매매 호스트] 다건(합산) ④도 같은 키", async () => {
+    const form = rebuildForm({}, purchaseRebuildAsset());
+    expect((buildPropertyPayload(form) as Record<string, unknown>).landRebuildPriorHouse).toEqual((await bodyOf(form)).landRebuildPriorHouse);
+  });
+
+  it("[매매 호스트] API 직접 호출 — 건물 매매 + 토지 상속 overlay + 통산은 ⑫ 400(건물을 산 것이지 신축이 아니다). 화면은 그 호스트를 닫아 키를 싣지 않는다", async () => {
+    const body = { ...(await bodyOf(rebuildForm({}, purchaseRebuildAsset()))), landAcquisitionCause: "inheritance", landDecedentAcquisitionDate: "2010-01-01" };
+    const r = await routeOf(POST, body);
+    expect(r.status).toBe(400);
+    expect(JSON.stringify(r.fieldErrors)).toContain("건물을 산 것이지 같은 토지 위에 신축한 것이 아닙니다");
+  });
+
   it("다건(합산) ④도 같은 leaf — body 키가 단건과 같다(⑬ 도달) · 시작 구분 미선택이면 싣지 않는다", async () => {
     const form = rebuildForm();
     expect((buildPropertyPayload(form) as Record<string, unknown>).landRebuildPriorHouse).toEqual((await bodyOf(form)).landRebuildPriorHouse);
@@ -100,8 +136,8 @@ describe("구주택 멸실·신축 통산 — ⑧≡⑫ 격자", () => {
     expect(r.json.data.result.splitDetail.land.rateHoldingAggregation).toBeUndefined();
   });
 
-  for (const cell of CELLS) {
-    it(cell.name, async () => {
+  for (const { host, cells } of HOSTS) for (const cell of cells) {
+    it(`[${host}] ${cell.name}`, async () => {
       const form = cell.make();
       const issues = issuesOf(form);
       const body = await bodyOf(form);
@@ -145,7 +181,7 @@ describe("호스트가 닫힌 폼 — ⑧·④가 입력 없음과 같다 (저�
   const CLOSED: [string, Record<string, unknown>][] = [
     ["토지 원인 토글 OFF(호스트 태그 비움)", { landCauseHost: "" }],
     ["토지 원인 값 비움", { landAcquisitionCause: "" }],
-    ["취득원인을 매매로 전환", { acquisitionCause: "purchase" }],
+    ["취득원인을 상속으로 전환(건물 상속·증여는 호스트가 아니다)", { acquisitionCause: "inheritance" }],
     ["소유자 분리(건물만 본인)", { selfOwns: "building_only" }],
     ["부담부증여 양도", { transferType: "burdened_gift" }],
     ["겸용주택", { isMixedUseHouse: true }],
@@ -164,6 +200,40 @@ describe("호스트가 닫힌 폼 — ⑧·④가 입력 없음과 같다 (저�
       expect("landRebuildPriorHouse" in buildPropertyPayload(on)).toBe(false);
     });
   }
+
+  const CLOSED_PURCHASE: [string, Record<string, unknown>][] = [
+    ["토지 상속 overlay 켬(건물은 매수 — 신축 아님)", { landAcquisitionCause: "inheritance", landCauseHost: "purchase", landDecedentAcquisitionDate: "2010-01-01" }],
+    ["토지 증여 overlay 켬", { landAcquisitionCause: "gift", landCauseHost: "purchase" }],
+    ["D2 건물 상속 + 토지 매매", { acquisitionCause: "inheritance", landAcquisitionCause: "purchase", landCauseHost: "inheritance" }],
+    ["취득일 다름 OFF", { hasSeperateLandAcquisitionDate: false }],
+    ["소유자 분리(토지만 본인)", { selfOwns: "land_only" }],
+    ["부담부증여 양도", { transferType: "burdened_gift" }],
+    ["겸용주택", { isMixedUseHouse: true }],
+    ["자산 종류가 건물(주택 아님)", { assetKind: "building" }],
+  ];
+  for (const [name, patch] of CLOSED_PURCHASE) {
+    it(`[매매 호스트] ${name} — 통산 입력이 켜져 있어도 ⑧ 결과·④ body가 토글 OFF와 같다`, async () => {
+      const on = rebuildForm({}, purchaseRebuildAsset({ ...patch, landRebuildEnabled: true }));
+      const off = rebuildForm({}, purchaseRebuildAsset({ ...patch, landRebuildEnabled: false }));
+      expect(issuesOf(on)).toEqual(issuesOf(off));
+      const [bOn, bOff] = [await bodyOf(on), await bodyOf(off)];
+      expect("landRebuildPriorHouse" in bOn).toBe(false);
+      expect(bOn).toEqual(bOff);
+      expect("landRebuildPriorHouse" in buildPropertyPayload(on)).toBe(false);
+    });
+  }
+
+  it("[매매 호스트] 신축 호스트에서 켠 뒤 취득원인을 매매로 전환 — 화면에 보이는 매매 호스트 블록이 열려 ④·⑧이 같은 값을 읽는다(침묵 누수 아님)", async () => {
+    const form = rebuildForm({}, rebuildAsset({ acquisitionCause: "purchase", buildingAcquisitionPrice: "250,000,000" }));
+    expect((await bodyOf(form)).landRebuildPriorHouse).toBeTruthy();
+  });
+
+  it("[매매 호스트] 저장값을 지우지 않는다 — 취득일 다름 OFF → ON 복원", async () => {
+    const closed = purchaseRebuildAsset({ hasSeperateLandAcquisitionDate: false });
+    expect(closed.landRebuildEnabled).toBe(true);
+    expect("landRebuildPriorHouse" in (await bodyOf(rebuildForm({}, closed)))).toBe(false);
+    expect((await bodyOf(rebuildForm({}, purchaseRebuildAsset()))).landRebuildPriorHouse).toBeTruthy();
+  });
 
   it("저장값을 지우지 않는다 — 호스트를 닫았다 다시 열면 통산 입력이 복원된다", async () => {
     const closed = rebuildAsset({ landCauseHost: "" });

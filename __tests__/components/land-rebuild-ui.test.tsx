@@ -26,11 +26,12 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { CompanionAcquisitionCauseSection } from "@/components/calc/transfer/CompanionAcquisitionCauseSection";
+import { RebuiltHouseLandBlock } from "@/components/calc/transfer/RebuiltHouseLandBlock";
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { buildRows, deriveColumns } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { TransferSplitSection } from "@/lib/pdf/ResultPdfTransferSections";
-import { rebuildAsset, rebuildForm } from "../calc/_helpers/land-rebuild-form";
+import { rebuildAsset, rebuildForm, purchaseRebuildAsset } from "../calc/_helpers/land-rebuild-form";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -46,7 +47,7 @@ const TITLE = /같은 토지 위 구주택을 멸실하고 신축했다/;
 
 function mount(a: AssetForm, onChange: (p: Partial<AssetForm>) => void = () => {}, extra: { isNonPrimaryAsset?: boolean } = {}) {
   return render(
-    <CompanionAcquisitionCauseSection asset={a} onChange={onChange} transferDate={TRANSFER_DATE} isNewConstruction {...extra} />,
+    <CompanionAcquisitionCauseSection asset={a} onChange={onChange} transferDate={TRANSFER_DATE} isNewConstruction={a.acquisitionCause === "newConstruction"} {...extra} />,
   );
 }
 const block = () => screen.queryByTestId("land-rebuild-block");
@@ -61,10 +62,10 @@ describe("⑤ 노출 — 주택 · 신축 · 「토지는 다른 원인으로 �
     expect(screen.queryByTestId("land-rebuild-demolition-date")).toBeNull();
   });
 
-  it("부정형 짝 — 토지 원인 OFF · 취득원인 매매 · 소유자 분리 · 부담부증여 · 겸용 · 컴패니언 → 블록 없음(저장값이 켜져 있어도)", () => {
+  it("부정형 짝 — 토지 원인 OFF · 취득원인 상속(건물) · 소유자 분리 · 부담부증여 · 겸용 · 컴패니언 → 블록 없음(저장값이 켜져 있어도)", () => {
     for (const over of [
       { landCauseHost: "" },
-      { acquisitionCause: "purchase" },
+      { acquisitionCause: "inheritance" },
       { selfOwns: "building_only" },
       { transferType: "burdened_gift" },
       { isMixedUseHouse: true },
@@ -83,6 +84,81 @@ describe("⑤ 노출 — 주택 · 신축 · 「토지는 다른 원인으로 �
     mount(rebuildAsset({ landRebuildEnabled: false }), (p) => calls.push(p));
     fireEvent.click(screen.getByRole("switch", { name: TITLE }));
     expect(calls.at(-1)).toEqual({ landRebuildEnabled: true });
+  });
+});
+
+describe("⑤ 노출 — 매매 호스트: 취득원인 매매 + 「토지·건물 취득일 다름」 + 토지 상속·증여 overlay 없음", () => {
+  it("호스트 열림 → 블록이 토지·건물 날짜 2열 직후·양도가액 구분(축 A) 앞에 한 번만 나온다", () => {
+    const { container } = mount(purchaseRebuildAsset({ landRebuildEnabled: false }));
+    expect(screen.getAllByTestId("land-rebuild-block")).toHaveLength(1);
+    expect(screen.getByRole("switch", { name: TITLE })).toBeTruthy();
+    const grid = container.querySelector('[data-testid="acq-date-split-grid"]')!;
+    const blk = block()!;
+    expect(grid.compareDocumentPosition(blk) & Node.DOCUMENT_POSITION_FOLLOWING, "날짜 2열 뒤").toBeTruthy();
+    const axisA = container.querySelector('[data-testid="sale-split-mode"]');
+    expect(axisA, "양도가액 구분(축 A)이 같은 화면에 있다").not.toBeNull();
+    expect(blk.compareDocumentPosition(axisA!) & Node.DOCUMENT_POSITION_FOLLOWING, "축 A 앞").toBeTruthy();
+  });
+
+  it("신축 호스트도 블록은 한 번만 — 두 마운트 자리가 같은 자산에서 겹치지 않는다", () => {
+    mount(rebuildAsset());
+    expect(screen.getAllByTestId("land-rebuild-block")).toHaveLength(1);
+  });
+
+  it("매매 호스트 안내 — 「건물 취득일」 칸에 신축 주택의 취득일을 넣는다(사용승인서 교부일 · 사실상 사용일·임시사용승인일 중 빠른 날 · 영 §162①4호) · 신축 호스트에는 이 문단이 없다", () => {
+    mount(purchaseRebuildAsset());
+    const p = screen.getByTestId("land-rebuild-purchase-notice").textContent!;
+    expect(p).toContain("건물 취득일 칸에는 신축 주택의 취득일을 넣으세요");
+    expect(p).toContain("사용승인서 교부일");
+    expect(p).toContain("사실상 사용일 또는 임시사용승인일 중 빠른 날");
+    expect(p).toContain("소득세법 시행령 §162 ① 4호");
+    cleanup();
+    mount(rebuildAsset());
+    expect(screen.queryByTestId("land-rebuild-purchase-notice")).toBeNull();
+  });
+
+  it("부정형 짝 — 토지 상속·증여 overlay · D2 · 취득일 다름 OFF · 소유자 분리 · 부담부증여 · 겸용 · 건물 · 컴패니언 → 블록 없음(저장값이 켜져 있어도)", () => {
+    for (const over of [
+      { landAcquisitionCause: "inheritance", landCauseHost: "purchase", landDecedentAcquisitionDate: "2010-01-01" },
+      { landAcquisitionCause: "gift", landCauseHost: "purchase" },
+      { acquisitionCause: "inheritance", landAcquisitionCause: "purchase", landCauseHost: "inheritance" },
+      { hasSeperateLandAcquisitionDate: false },
+      { selfOwns: "land_only" },
+      { transferType: "burdened_gift" },
+      { isMixedUseHouse: true },
+      { assetKind: "building" },
+    ] as Record<string, unknown>[]) {
+      mount(purchaseRebuildAsset(over));
+      expect(block(), JSON.stringify(over)).toBeNull();
+      cleanup();
+    }
+    mount(purchaseRebuildAsset(), () => {}, { isNonPrimaryAsset: true });
+    expect(block(), "컴패니언").toBeNull();
+  });
+
+  it("블록은 자기 호스트일 때만 렌더한다 — host prop과 자산의 호스트가 다르면 null(두 마운트 자리가 겹치지 않는다)", () => {
+    render(<RebuiltHouseLandBlock host="newConstruction" asset={purchaseRebuildAsset()} onChange={() => {}} />);
+    expect(block()).toBeNull();
+    cleanup();
+    render(<RebuiltHouseLandBlock host="purchase" asset={rebuildAsset()} onChange={() => {}} />);
+    expect(block()).toBeNull();
+    cleanup();
+    render(<RebuiltHouseLandBlock host="purchase" asset={purchaseRebuildAsset()} onChange={() => {}} />);
+    expect(block()).not.toBeNull();
+  });
+
+  it("토글 클릭 → landRebuildEnabled 한 키만 쓴다 · 구주택 취득일 칸은 later일 때만 · ⑧ 앵커 5칸이 모두 화면에 있다", () => {
+    const calls: Partial<AssetForm>[] = [];
+    mount(purchaseRebuildAsset({ landRebuildEnabled: false }), (p) => calls.push(p));
+    fireEvent.click(screen.getByRole("switch", { name: TITLE }));
+    expect(calls.at(-1)).toEqual({ landRebuildEnabled: true });
+    cleanup();
+    const { container } = mount(purchaseRebuildAsset({ landRebuildStartMode: "later" }));
+    const found = dataFields(container);
+    for (const f of ["landRebuildEnabled", "landRebuildStartMode", "landRebuildPriorHouseStartDate", "landRebuildDemolitionDate", "landRebuildFootprintUnchanged"]) {
+      expect(found.has(f), f).toBe(true);
+    }
+    expect(container.querySelector('input[type="date"]')).toBeNull();
   });
 });
 
@@ -253,3 +329,66 @@ describe("⑦ 결과 4뷰 — 환산 기산일이 실제 취득일로 읽히지 
     expect(w).not.toContain("2년 미만 구간");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ⑦ 매매 호스트 — 토지·건물 취득원인이 같아(`mixedCause` = false) 세율 기산일 행이 없는 경우에도 구간이 4뷰에 나온다 (UI 설계 R-4)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 시드: 토지 매수 2022-01-01 ~ 멸실 2023-05-31 = 17개월 + 신축 2025-01-01 ~ 양도 2025-09-01 = 8개월 → 25개월. 환산 기산일 2023-08-02 */
+const P_LINES = {
+  prior: "구주택 부수토지 기간 2022-01-01~2023-05-31 (17개월 · 토지 법정 기산일부터)",
+  built: "신축주택 부수토지 기간 2025-01-01~2025-09-01 (8개월)",
+  sum: "세율 판정 보유기간 17개월 + 8개월 = 25개월",
+  equiv: "세율 판정용 환산 기산일 2023-08-02",
+};
+
+describe("⑦ 매매 호스트 4뷰 — 취득원인이 같아도(mixedCause=false) 구간·합산 개월·환산 기산일이 나온다", () => {
+  it("전제: 매매 호스트 결과는 토지·건물 취득원인이 같은 purchase다(mixedCause=false)", async () => {
+    const r = await run(purchaseRebuildAsset());
+    expect(r.splitDetail!.land.acquisitionCause).toBe("purchase");
+    expect(r.splitDetail!.building.acquisitionCause).toBe("purchase");
+    expect(r.splitDetail!.land.rateHoldingAggregation?.totalMonths).toBe(25);
+  });
+
+  it("① 카드 — 세율 기산일 행은 없고(원인 동일) 구간 블록에 두 구간·합산 개월·환산 기산일·실제 취득일이 아님", async () => {
+    const r = await run(purchaseRebuildAsset());
+    render(<SplitGainDetailSection splitDetail={r.splitDetail!} assetKind="housing" />);
+    expect(screen.queryByTestId("split-card-rate-basis-land")).toBeNull();
+    const lines = screen.getByTestId("split-card-rate-holding").textContent!;
+    for (const l of Object.values(P_LINES)) expect(lines, l).toContain(l);
+    expect(lines).toContain("실제 취득일이 아님");
+  });
+
+  it("① 카드 부정형 짝 — 입력 없음이면 구간 블록이 없다", async () => {
+    const r = await run(purchaseRebuildAsset({ landRebuildEnabled: false }));
+    render(<SplitGainDetailSection splitDetail={r.splitDetail!} assetKind="housing" />);
+    expect(screen.queryByTestId("split-card-rate-holding")).toBeNull();
+  });
+
+  it("② 상세명세서 — 산출세액 행 note에 두 구간·합산 개월·환산 기산일", async () => {
+    const r = await run(purchaseRebuildAsset());
+    const note = buildStatementItems(r, FORM, undefined, undefined, 1_000_000_000).get("calculatedTax")!.note ?? "";
+    expect(note).toContain("토지 세율 보유기간 통산");
+    expect(note).toContain(P_LINES.equiv);
+    expect(note).toContain("25개월");
+    expect(note).toContain("2022-01-01~2023-05-31");
+    expect(note).toContain("2025-01-01~2025-09-01");
+  });
+
+  it("③ 신고서 split-2col — 토지 열 취득일 각주에 두 구간·합산 개월·환산 기산일", async () => {
+    const r = await run(purchaseRebuildAsset());
+    const row = buildRows(r, "split-2col", FORM, undefined, 1_000_000_000).find((x) => x.roseNotes && /환산 기산일/.test(JSON.stringify(x.roseNotes)))!;
+    expect(row, "신고서에 통산 각주 행이 있다").toBeTruthy();
+    expect(row.roseNotes!.land).toContain(P_LINES.equiv);
+    expect(row.roseNotes!.land).toContain("25개월");
+    expect(row.roseNotes!.building ?? "").not.toContain("환산");
+  });
+
+  it("④ PDF — 구간 줄(두 구간·합산 개월·환산 기산일) · 부정형 짝은 구간 줄 없음", async () => {
+    const tokens = collect(TransferSplitSection({ r: (await run(purchaseRebuildAsset())) as unknown as Record<string, unknown> }));
+    for (const line of Object.values(P_LINES)) expect(tokens.some((t) => t.includes(line)), line).toBe(true);
+    const off = collect(TransferSplitSection({ r: (await run(purchaseRebuildAsset({ landRebuildEnabled: false }))) as unknown as Record<string, unknown> }));
+    expect(off.some((t) => t.includes("구주택 멸실·신축 통산"))).toBe(false);
+  });
+});
+

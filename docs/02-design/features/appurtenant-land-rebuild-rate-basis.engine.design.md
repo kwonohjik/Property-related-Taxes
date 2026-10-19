@@ -38,11 +38,14 @@ interface LandRebuildPriorHouse {
 
 엔진 진입(`calcSplitGain`)·⑫(`refineLandRebuild`)·⑧(UI 단계)이 **`collectLandRebuildIssues(facts)` 한 함수**를 공유한다(⑫≡⑧≡엔진). 입력이 없으면 빈 배열(회귀 0).
 
+**호스트 두 곳(2026-10-19 사용자 결정 — 계획서 §9.2)**: ① 건물 `newConstruction` ② 건물 `purchase` + 토지 취득일 분리(= 「매수한 토지 + 그 위에 신축한 주택」의 관례 입력 경로, 서면법규과-1222의 사실관계). 「토지 취득일 분리 존재」는 이미 모든 호스트의 공통 사실(`hasLandAcquisitionDate`)이라 건물 원인 `purchase`는 같은 leaf가 그대로 받는다. 이때 건물 취득일이 곧 신축 건물의 취득일이다(자기가 건설한 건축물 — 영 §162①4호). 매매 호스트는 **토지 상속·증여 overlay가 없어야** 한다(건물을 산 것이지 신축이 아니다) — `LandRebuildFacts.landAcquisitionCause`가 그 사실이며 ⑫·엔진이 `input.landAcquisitionCause`를, ⑧이 유효 overlay(`effectiveLandAcquisitionCause`)를 넣는다. `landRebuildApplies`(통산이 실제로 도는 입력)도 같은 규칙이다. `transfer-tax-appurtenant-land.ts`는 변경하지 않았다(711줄 유지).
+
 | 규칙 | field | 문구 상수 |
 |---|---|---|
 | 컴패니언·겸용 자리 | `landRebuildPriorHouse` | `LAND_REBUILD_COMPANION_MESSAGE` |
 | 주택이 아님 | 〃 | `LAND_REBUILD_HOST_MESSAGE` |
-| 건물 취득원인 ≠ `newConstruction` | 〃 | `LAND_REBUILD_BUILDING_CAUSE_MESSAGE` |
+| 건물 취득원인 ∉ {`newConstruction`, `purchase`} (상속·증여·이월과세·부담부증여) | 〃 | `LAND_REBUILD_BUILDING_CAUSE_MESSAGE` |
+| 건물 취득원인 `purchase` + 토지 상속·증여 overlay(`landAcquisitionCause` ∉ {없음, `purchase`}) | 〃 | `LAND_REBUILD_PURCHASE_LAND_CAUSE_MESSAGE` |
 | 소유자 분리·부담부증여 | 〃 | `LAND_REBUILD_OWNER_BURDENED_MESSAGE` |
 | 토지 취득일 없음 | `landAcquisitionDate` | `LAND_REBUILD_LAND_DATE_REQUIRED_MESSAGE` |
 | `footprintUnchanged !== true` | `….footprintUnchanged` | `LAND_REBUILD_FOOTPRINT_MESSAGE` |
@@ -76,7 +79,7 @@ E    = 양도일 다음날 − M개월 (UTC 달력, 해당일 없으면 말일, 
 | 단순 증여 `gift` | 증여일(통산 없음) | 증여일 | RB-D4 |
 
 - 파트 이월과세 해결자(`calcSplitCarryoverScenarios`)가 시나리오 입력을 `...raw`로 만들므로 `landRebuildPriorHouse`는 그대로 전달되고, 시나리오 A(토지 증여자 값)/B(증여일)의 법정 기산일이 각자 적용된다 — 검증 leaf의 「멸실일 ≥ 토지 취득일」은 시나리오 A에서 증여자 취득일이 더 이르므로 안전.
-- 건물이 `newConstruction`이어야 하므로 건물 상속·증여(D2 계열)와는 겹치지 않는다.
+- 건물이 `newConstruction` 또는 `purchase`(토지 overlay 없음)여야 하므로 건물 상속·증여(D2 계열)와는 겹치지 않는다.
 
 ### 2.5 echo·고지·표시
 
@@ -130,6 +133,7 @@ E    = 양도일 다음날 − M개월 (UTC 달력, 해당일 없으면 말일, 
 
 ```ts
 landRebuildApplicable(asset: AssetForm, opts?: { isNonPrimary?: boolean }): boolean
+  // ✅ 최종형은 UI 설계 §2 `landRebuildHost`(newConstruction | purchase | null) — 매매 호스트(R-5)가 추가됐다.
   // assetKind === "housing" && !isMixedUseHouse && acquisitionCause === "newConstruction"
   //   && hasSeperateLandAcquisitionDate && effectiveSelfOwns === "both"
   //   && transferType !== "burdened_gift" && !opts?.isNonPrimary

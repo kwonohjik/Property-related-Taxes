@@ -282,8 +282,13 @@ describe("E) 입력 검증 leaf — 엔진 진입·⑫·⑧ 공유 (UI 통과 �
     expect(f(D("2025-01-01")).map((i) => i.field)).toEqual(["landRebuildPriorHouse.demolitionDate"]);
     expect(f(D("2024-12-31"))).toEqual([]);
   });
-  it("RB-E4 호스트: 건물 취득원인이 신축이 아니면 / 토지 취득일 없으면 / 소유자 분리면 거부", () => {
-    rejects({ acquisitionCause: "purchase", landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) }, "신축(자가건축)");
+  it("RB-E4 호스트: 건물 취득원인이 신축·매매가 아니면 / 토지 취득일 없으면 / 소유자 분리면 거부", () => {
+    // 건물 원인이 신축·매매(+ 토지 취득일 분리)가 아니면 거부 — 상속·증여·이월과세·부담부증여(매매는 H절에서 받는다)
+    // (엔진 진입은 토지 취득원인 leaf가 먼저 던지는 조합이 있어, 통산 leaf 문구는 leaf 직접으로 단언한다)
+    for (const acquisitionCause of ["inheritance", "gift", "carryover_gift", "burdened_gift"] as const) {
+      const f = landRebuildFactsOfInput(asset({ acquisitionCause, landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) }));
+      expect(collectLandRebuildIssues(f).map((i) => i.message).join("|"), acquisitionCause).toContain("상속·증여·이월과세로 받은 건물은 받지 않습니다");
+    }
     rejects({ selfOwns: "land_only", landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) }, "소유자가 갈리는");
     const f = landRebuildFactsOfInput(asset({ landAcquisitionDate: undefined, landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) }));
     expect(collectLandRebuildIssues(f).map((i) => i.field)).toContain("landAcquisitionDate");
@@ -332,5 +337,99 @@ describe("G) 표시 — 환산 기산일을 실제 취득일로 오독하게 두
     // 입력이 없는 토지 파트는 종전 문구(법정 기산일과 적용 기산일 비교)를 그대로 쓴다
     const plain = splitRateBasisNote(run().splitDetail!.land, "newConstruction");
     expect(plain).toContain("주택부수토지로서의 보유기간");
+  });
+});
+
+describe("H) 매매 호스트 — 매수한 토지 + 그 위에 신축한 주택 (서면법규과-1222 사실관계 · 「토지·건물 취득일 다름」 경로)", () => {
+  // 시드: 토지 매수 2022-01-01 · 구주택 멸실 · 신축 취득(사용승인) 2025-01-01 = 건물 취득일 · 양도 2025-09-01. 건물 취득원인 purchase.
+  const purchase = (o: Partial<TransferTaxInput> = {}) => ({ acquisitionCause: "purchase" as const, ...o });
+
+  it("RB-H1 서면법규과-1222형: 구주택 17개월(2022-01-01~2023-05-31) + 신축 8개월 = 25 → 토지 기본세율(104-1-1) · 195,309,999 — 신축 호스트(RB-B1)와 같은 값", () => {
+    const o = purchase({ landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) });
+    const r = run(o);
+    expect(r.calculatedTax).toBe(195_309_999);
+    expect(landRate(o).clause).toBe("104-1-1");
+    expect([0.7, 0.6]).not.toContain(landRate(o).appliedRate);
+    expect(r.splitDetail?.land.rateHoldingAggregation).toEqual({
+      priorHouse: { from: "2022-01-01", to: "2023-05-31", months: 17 },
+      newHouse: { from: "2025-01-01", to: "2025-09-01", months: 8 },
+      totalMonths: 25,
+      equivalentBasisDate: "2023-08-02",
+      startRule: "land_basis",
+    });
+    expect(r.splitDetail?.land.acquisitionCause).toBe("purchase");
+    expect(r.splitDetail?.building.acquisitionDate).toBe("2025-01-01");
+    expect(run({ landRebuildPriorHouse: o.landRebuildPriorHouse }).calculatedTax).toBe(r.calculatedTax);
+  });
+
+  it("RB-H2 같은 사례에서 입력이 없으면 현행 결과 — 토지 70%(신축일 기산) · 362,250,000", () => {
+    const o = purchase();
+    const r = run(o);
+    expect(r.calculatedTax).toBe(362_250_000);
+    expect(landRate(o).appliedRate).toBe(0.7);
+    expect(r.splitDetail?.land.rateHoldingAggregation).toBeUndefined();
+    expect(r.splitDetail?.land.appliedRateBasisDate).toBe("2025-01-01");
+  });
+
+  // 신축 8개월 고정. 구주택 개월을 바꿔 합산 경계(24/23, 12/11)를 건드린다 — 멸실일 = 시작 + (개월)에서 하루 전.
+  it.each([
+    ["24개월(16+8) — 기본세율", "since_land", undefined, "2023-04-30", 24, "104-1-1"],
+    ["23개월(15+8) — 60%", "since_land", undefined, "2023-03-31", 23, "104-1-2"],
+    ["12개월(4+8) — 60%", "later", "2023-01-01", "2023-04-30", 12, "104-1-2"],
+    ["11개월(3+8) — 70%", "later", "2023-01-01", "2023-03-31", 11, "104-1-3"],
+  ] as const)("RB-H3 경계 %s", (_n, startMode, start, demolition, total, clause) => {
+    const o = purchase({
+      landRebuildPriorHouse: rb({ startMode, ...(start ? { priorHouseStartDate: D(start) } : {}), demolitionDate: D(demolition) }),
+    });
+    const r = run(o);
+    expect(r.splitDetail?.land.rateHoldingAggregation?.totalMonths).toBe(total);
+    expect(landRate(o).clause).toBe(clause);
+    // 신축 호스트와 같은 세율 판정
+    expect(landRate({ ...o, acquisitionCause: "newConstruction" }).clause).toBe(clause);
+  });
+
+  it("RB-H4 상속·증여·이월과세·부담부증여 건물 원인은 거부 · 건물 매매 + 토지 상속·증여 overlay도 거부(건물을 산 것이지 신축이 아니다)", () => {
+    const input = { landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) };
+    const leafMsg = (o: Partial<TransferTaxInput>) => collectLandRebuildIssues(landRebuildFactsOfInput(asset({ ...input, ...o }))).map((i) => i.message).join("|");
+    for (const acquisitionCause of ["inheritance", "gift", "carryover_gift", "burdened_gift"] as const) {
+      expect(leafMsg({ acquisitionCause }), acquisitionCause).toContain("상속·증여·이월과세로 받은 건물은 받지 않습니다");
+    }
+    // D2(건물 상속·증여 + 토지 매매)도 건물 원인이 매매가 아니라 같은 문구로 거부
+    expect(leafMsg({ acquisitionCause: "inheritance", landAcquisitionCause: "purchase" })).toContain("상속·증여·이월과세로 받은 건물은 받지 않습니다");
+    for (const landAcquisitionCause of ["inheritance", "gift", "carryover_gift"] as const) {
+      expect(leafMsg({ acquisitionCause: "purchase", landAcquisitionCause }), landAcquisitionCause).toContain("건물을 산 것이지 같은 토지 위에 신축한 것이 아닙니다");
+    }
+    // 신축 호스트는 토지 overlay가 호스트의 전제라 같은 overlay를 막지 않는다(회귀)
+    expect(leafMsg({ acquisitionCause: "newConstruction", landAcquisitionCause: "inheritance", landDecedentAcquisitionDate: D("2010-01-01") })).toBe("");
+    // D2 호스트 잔재 landAcquisitionCause: purchase는 overlay가 아니다
+    expect(leafMsg({ acquisitionCause: "purchase", landAcquisitionCause: "purchase" })).toBe("");
+  });
+
+  it("RB-H5 매매 호스트 + 토지 취득일 없음 / 소유자 분리 / 비주택은 신축 호스트와 같이 거부", () => {
+    const input = { landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) };
+    expect(() => run({ ...input, acquisitionCause: "purchase", selfOwns: "land_only" })).toThrow("소유자가 갈리는");
+    const f = landRebuildFactsOfInput(asset({ ...input, acquisitionCause: "purchase", landAcquisitionDate: undefined }));
+    expect(collectLandRebuildIssues(f).map((i) => i.field)).toContain("landAcquisitionDate");
+    expect(collectLandRebuildIssues(landRebuildFactsOfInput(asset({ ...input, acquisitionCause: "purchase", propertyType: "building" }))).length).toBeGreaterThan(0);
+  });
+
+  // 매매 하위 모드와의 상호작용(UI 설계 R-5 근거) — 통산은 세율 기산일 축 하나만 바꾸므로 취득가액 산정 방식·양도가액 구분·배율 초과·비과세·PHD·1990 이전 토지와 독립이다.
+  // 모든 변형에서 매매 호스트 = 신축 호스트(같은 입력) — 한쪽만 다르면 이 매트릭스가 깨진다.
+  const MODES: [string, Partial<TransferTaxInput>][] = [
+    ["건물 환산취득가", { buildingAcqMode: "estimated", standardPricePerSqmAtAcquisition: 1_000_000, acquisitionArea: 200, standardPriceAtAcquisition: 500_000_000, buildingStandardPriceAtAcquisition: 300_000_000 }],
+    ["토지 매매사례가액", { landAcqMode: "salesCase", landSalesCaseValue: 200_000_000, standardPricePerSqmAtAcquisition: 1_000_000, acquisitionArea: 200, standardPriceAtAcquisition: 500_000_000, buildingStandardPriceAtAcquisition: 300_000_000 }],
+    ["양도가액 기준시가 안분", { saleSplitMode: "apportioned", landTransferPrice: undefined, buildingTransferPrice: undefined }],
+    ["배율 초과분 분리(3배 지역)", { buildingFootprintArea: 50, appurtenantLandZone: "metropolitan_residential", acquisitionArea: 400, transferArea: 400 }],
+    ["1세대1주택(신축 보유 8개월 → 과세)", { isOneHousehold: true, householdHousingCount: 1 }],
+    ["1990 이전 취득 토지", { landAcquisitionDate: D("1988-01-01") }],
+  ];
+  it.each(MODES)("RB-H6 매매 하위 모드 — %s: 매매 호스트 = 신축 호스트(세액·통산 echo)", (_n, mode) => {
+    const rebuild = { landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) };
+    const a = run({ ...mode, ...rebuild });
+    const b = run({ ...mode, ...rebuild, acquisitionCause: "purchase" });
+    expect(b.calculatedTax).toBe(a.calculatedTax);
+    expect(b.splitDetail?.land.rateHoldingAggregation).toEqual(a.splitDetail?.land.rateHoldingAggregation);
+    expect(b.splitDetail?.land.rateHoldingAggregation).toBeDefined();
+    expect((b.warnings ?? []).filter((w) => w.includes("통산한"))).toEqual((a.warnings ?? []).filter((w) => w.includes("통산한")));
   });
 });

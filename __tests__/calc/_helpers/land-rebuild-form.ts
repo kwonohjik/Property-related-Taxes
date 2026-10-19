@@ -41,6 +41,24 @@ export function rebuildAsset(over: Record<string, unknown> = {}): AssetForm {
   } as unknown as AssetForm;
 }
 
+/**
+ * 매매 호스트 시드 — 취득원인 매매 + 「토지·건물 취득일 다름」(원시취득·신축 등) · 토지 상속·증여 overlay 없음.
+ * 서면법규과-1222의 사실관계(토지 매수 2022-01-01 → 구주택 멸실 → 신축 취득 2025-01-01 → 양도 2025-09-01)와 같은 수치다.
+ * 건물 취득가액은 매매 split의 파트 칸(`buildingAcquisitionPrice`)이 받는다(신축 호스트의 «신축비용» 후퇴 없음).
+ */
+export function purchaseRebuildAsset(over: Record<string, unknown> = {}): AssetForm {
+  return rebuildAsset({
+    acquisitionCause: "purchase",
+    occupancyApprovalDate: "",
+    fixedAcquisitionPrice: "",
+    landAcquisitionCause: "",
+    landCauseHost: "",
+    landDecedentAcquisitionDate: "",
+    buildingAcquisitionPrice: "250,000,000",
+    ...over,
+  });
+}
+
 export function rebuildForm(over: Partial<TransferFormData> = {}, asset: AssetForm = rebuildAsset()): TransferFormData {
   return {
     ...createDefaultTransferFormData(),

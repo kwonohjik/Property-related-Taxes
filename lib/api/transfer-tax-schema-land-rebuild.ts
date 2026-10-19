@@ -38,6 +38,7 @@ export function refineLandRebuild(
     landRebuildPriorHouse?: WireRebuild;
     mixedUse?: unknown;
     acquisitionCause?: string;
+    landAcquisitionCause?: string;
     acquisitionDate?: string;
     landAcquisitionDate?: string;
     selfOwns?: string;
@@ -54,6 +55,7 @@ export function refineLandRebuild(
     isMixedUse: !!d.mixedUse,
     hostSupported: host.supported,
     buildingAcquisitionCause: d.acquisitionCause,
+    landAcquisitionCause: d.landAcquisitionCause,
     buildingAcquisitionDate: d.acquisitionDate,
     hasLandAcquisitionDate: !!d.landAcquisitionDate,
     landAcquisitionDate: d.landAcquisitionDate,

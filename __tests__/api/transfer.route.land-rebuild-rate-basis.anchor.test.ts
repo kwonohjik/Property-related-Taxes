@@ -116,8 +116,12 @@ describe("⑫ 거부 — 엔진 진입·⑧과 같은 leaf 문구", () => {
     }
   });
 
-  it("RR-5 호스트: 건물 신축이 아님 / 토지 취득일 없음 / 비주택 / 겸용 → 400", async () => {
-    expect((await single({ acquisitionCause: "purchase", landRebuildPriorHouse: REBUILD })).text).toContain("신축(자가건축)");
+  it("RR-5 호스트: 건물 신축·매매가 아님(상속·증여) / 토지 취득일 없음 / 비주택 / 겸용 → 400", async () => {
+    for (const acquisitionCause of ["inheritance", "gift", "carryover_gift"]) {
+      const r = await single({ acquisitionCause, landRebuildPriorHouse: REBUILD });
+      expect(r.status, acquisitionCause).toBe(400);
+      expect(r.text).toContain("상속·증여·이월과세로 받은 건물은 받지 않습니다");
+    }
     expect((await single({ landAcquisitionDate: undefined, isSeparateAcquisition: undefined, landRebuildPriorHouse: REBUILD })).status).toBe(400);
     const nonHousing = await single({ propertyType: "building", landRebuildPriorHouse: REBUILD });
     expect(nonHousing.status).toBe(400);

@@ -25,18 +25,30 @@ export interface WireLandRebuild {
   footprintUnchanged: boolean;
 }
 
+/** 호스트 종류 — 건물 신축(토지는 상속·증여) / 매매 + 「토지·건물 취득일 다름」(토지 overlay 없음). */
+export type LandRebuildHost = "newConstruction" | "purchase";
+
 /**
- * ⑤ 블록 노출 · ④·⑧ 읽기의 호스트 술어.
+ * ⑤ 블록 노출 · ④·⑧ 읽기의 호스트 판정 — **단일 소스**. 호스트가 아니면 `null`.
  *
- * 주택(겸용 아님) ∧ 건물 신축 ∧ 토지·건물 취득일 분리 ∧ 소유자 같음 ∧ 부담부증여 아님 ∧ 첫 자산 ∧ 「토지는 다른 원인으로 취득」 유효.
- * 마지막 항은 UI 설계 §1 R-1 — 신축 건물에서 토지 취득일 칸이 열리는 유일한 경로이며 블록이 그 토글의 펼침 안에 있다.
+ * 공통: 주택(겸용 아님) ∧ 토지·건물 취득일 분리 ∧ 소유자 같음 ∧ 부담부증여 아님 ∧ 첫 자산. 그 위에서 갈린다.
+ *  · `newConstruction` — 「토지는 다른 원인으로 취득」 유효(UI 설계 §1 R-1 — 신축 건물에서 토지 취득일 칸이 열리는 유일한 경로이며 블록이 그 토글의 펼침 안에 있다).
+ *  · `purchase` — 취득원인 매매 + 토지 상속·증여 overlay **없음**(UI 설계 §1 R-5). 「건물은 매수, 토지는 상속·증여」는 건물을 산 것이지 신축이 아니다.
+ *    건물 원인 혼합(D2)은 건물 원인이 상속·증여일 때만 켜지므로 취득원인 `purchase` 조건이 이미 닫는다.
  */
+export function landRebuildHost(asset: AssetForm, opts?: LandRebuildScopeOpts): LandRebuildHost | null {
+  if (opts?.isNonPrimary) return null;
+  if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return null;
+  if (asset.hasSeperateLandAcquisitionDate !== true) return null;
+  if ((effectiveSelfOwns(asset) ?? "both") !== "both" || asset.transferType === "burdened_gift") return null;
+  const landOverlay = !!effectiveLandAcquisitionCause(asset);
+  if (asset.acquisitionCause === "newConstruction") return landOverlay ? "newConstruction" : null;
+  if (asset.acquisitionCause === "purchase") return landOverlay ? null : "purchase";
+  return null;
+}
+
 export function landRebuildApplicable(asset: AssetForm, opts?: LandRebuildScopeOpts): boolean {
-  if (opts?.isNonPrimary) return false;
-  if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return false;
-  if (asset.acquisitionCause !== "newConstruction" || asset.hasSeperateLandAcquisitionDate !== true) return false;
-  if ((effectiveSelfOwns(asset) ?? "both") !== "both" || asset.transferType === "burdened_gift") return false;
-  return !!effectiveLandAcquisitionCause(asset);
+  return landRebuildHost(asset, opts) !== null;
 }
 
 /**
@@ -68,6 +80,7 @@ export function landRebuildFactsOfAsset(asset: AssetForm, opts?: LandRebuildScop
     isMixedUse: !!asset.isMixedUseHouse,
     hostSupported: !opts?.isNonPrimary,
     buildingAcquisitionCause: asset.acquisitionCause,
+    landAcquisitionCause: effectiveLandAcquisitionCause(asset) || undefined,
     buildingAcquisitionDate: asset.acquisitionDate || undefined,
     hasLandAcquisitionDate: !!land,
     landAcquisitionDate: land,

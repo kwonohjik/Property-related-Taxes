@@ -12,19 +12,51 @@
 | R-3 | 결과 표시는 `splitRateBasisNote`가 이미 한다 | 카드(`SplitGainDetailSection`)·신고서는 raw 파트를 읽어 echo가 닿지만 **상세명세서·PDF는 `summarizeSplitGain().parts`를 읽고 그 파트 요약에 `rateHoldingAggregation`이 없다** — 두 뷰에서 환산 기산일 E가 구 문구(`주택 취득일이 늦어 …부터`)로 나가 실제 취득일로 오독된다 | 파트 요약에 echo를 싣는다(§6) |
 | R-4 | 세율 기산일 행은 취득원인이 다를 때(`mixedCause`)만 보인다 | 통산이 적용된 토지 파트는 API 직접 호출로 «매매 토지»일 때 `mixedCause=false`라 행이 통째로 없다 | 통산 echo가 있으면 `mixedCause`와 무관하게 구간 블록을 낸다 |
 
-**남은 확인 필요(보고 대상)**: 매수 토지 + 신축 건물(서면법규과-1222의 사실관계)을 화면에서 입력하는 경로는 이번 범위가 아니다 — 그 경로가 열리면 R-1의 술어 한 줄만 바꾸면 된다.
+| R-5 | (R-1 이후 추가) 매수한 토지 + 신축 건물(서면법규과-1222의 사실관계)을 화면에서 입력하는 경로가 없다 | 이 앱에서 «매수 토지 + 그 위에 신축한 주택»의 관례 입력은 **취득원인 「매매」 + 「토지·건물 취득일 다름」 칩**(칩 설명 「원시취득·신축 등」) + 토지·건물 취득일 두 칸이다. 사용자 결정(2026-10-19, 재론 금지): **이 경로에도 같은 통산 블록을 연다**(신축 경로에 매수 토지 칸을 새로 만드는 안은 기각) | 호스트 술어를 **두 개**로 만든다 — §2 `landRebuildHost`. 엔진 leaf·⑫·⑧이 건물 원인 `purchase`도 받는다(토지 취득일 분리가 이미 모든 호스트의 공통 전제). 매매 호스트 상세는 §1.1 |
+
+### 1.1 매매 호스트(R-5)
+
+**호스트 조건(`landRebuildHost(asset) === "purchase"`)** — 공통(주택 ∧ 겸용 아님 ∧ `hasSeperateLandAcquisitionDate` ∧ 소유자 `both` ∧ 부담부증여 아님 ∧ 첫 자산) + **취득원인 `purchase` ∧ 토지 상속·증여 overlay 없음**(`effectiveLandAcquisitionCause(asset)` 거짓).
+
+| 조건 | 근거 |
+|---|---|
+| 토지 overlay 없음 | 「건물은 매수, 토지는 상속·증여」(D1-2 매매 호스트)는 건물을 산 것이지 같은 토지 위에 신축한 것이 아니다. API 직접 호출(건물 매매 + `landAcquisitionCause` 상속·증여 + 통산)은 leaf가 `LAND_REBUILD_PURCHASE_LAND_CAUSE_MESSAGE`로 거부한다(⑫ 400·엔진 throw) — 화면은 그 호스트를 닫아 키를 보내지 않는다 |
+| D2(건물 상속·증여 + 토지 매매) 배제 | `effectiveBuildingCauseMix`는 건물 원인이 상속·증여일 때만 켜진다. 취득원인 `purchase` 조건이 이미 닫으므로 D2 항을 따로 두지 않는다(죽은 절 금지) — 술어 테스트가 D2 폼의 닫힘을 고정한다 |
+| 첫 자산 · 소유자 `both` · 부담부증여 아님 · 겸용 아님 | 신축 호스트와 같은 사유(엔진 설계 §2·§3) |
+| 신축 → 매매 전환 | 신축 호스트에서 켠 통산 입력은 취득원인을 매매로 바꾸면 «토지는 다른 원인으로 취득» overlay가 풀리고(`landCauseHost`가 비워진다) 「취득일 다름」은 켜진 채라 **매매 호스트가 열린다**. 블록이 화면에 보이는 채로 ④·⑧이 같은 값을 읽는다(침묵 누수 아님). 건물 원인이 상속·증여면 닫힌다 |
+
+**그 밖의 매매 하위 모드와의 상호작용 — 코드·엔진 실측(2026-10-19)**: 통산은 **세율 기산일(`resolveAppurtenantLandRateBasisDate`) 한 축**만 바꾸고 하류(`buildSplitPartSeeds` → `calcTax`)는 날짜를 받는다. 취득가액 산정 방식·양도가액 구분·비과세 판정은 이 값을 읽지 않는다. 같은 입력에서 건물 원인만 신축 ↔ 매매로 바꿔 세액·통산 echo를 비교했다(엔진 anchor RB-H6, 변형마다 `calculatedTax`·`rateHoldingAggregation`·고지가 **일치**):
+
+| 변형 | 매매 호스트 = 신축 호스트 |
+|---|---|
+| 토지·건물 실거래가(기준) | 195,309,999 (통산 25개월) — 입력 없음 362,250,000 |
+| 건물 환산취득가 | 일치(양쪽 320,950,000 — 통산 입력 유무와도 같다: 이 시료는 건물 파트 양도차익이 −9,000,000(결손)이라 `partRateBasisApplied=false`, 자산 단위 세율 경로(1년 미만 70%)로 나가 통산이 세액에 닿지 않는다. 엔진 단계의 기존 거동이며 두 호스트가 같다 — 통산 echo·고지는 나가는데 세액엔 반영되지 않는 점은 **별건 확인 필요**) |
+| 토지 매매사례가액 | 일치(양쪽 193,053,999) |
+| 양도가액 기준시가 안분 | 일치 |
+| 배율 초과분 분리(3배 지역) | 일치(양쪽 201,344,999 — 초과분은 토지 본래 기산, 통산 대상 아님) |
+| 1세대1주택 | 일치(신축 보유 8개월이라 과세 — 통산은 비과세 보유기간에 닿지 않음) |
+| 개별주택가격 미공시 PHD(토지·건물 모두 환산) | 일치(`calcSplitGainPreDisclosure` 경로도 세율 시드는 같은 함수) |
+| 1990 이전 취득 토지 | 일치 |
+
+⇒ **추가로 배제할 하위 모드가 없다.** 입력 칸은 이 모드들 위에서 독립이다(취득일 다름 ON 화면에서 이미 파트별 방식 라디오가 따로 열린다).
+
+**건물 취득일 입력 안내**: 매매 경로에서는 위 날짜 2열의 «건물 취득일» 칸이 신축 건물의 취득일이다. 블록 안내 카드(`land-rebuild-purchase-notice`)가 이를 밝힌다 — 자기가 건설한 건축물의 취득시기는 **「건축법」 제22조제2항에 따른 사용승인서 교부일**이고, 그 전에 사실상 사용하거나 임시사용승인을 받은 경우에는 **사실상 사용일 또는 임시사용승인을 받은 날 중 빠른 날**이며 건축허가 없이 건축한 건물은 사실상 사용일이다(소득세법 시행령 §162①4호 — KoreanLaw MCP 현행 본문 대조 2026-10-19, 상수 `TRANSFER.SELF_BUILT_ACQUISITION_DATE`). ※ 지시문의 「사용승인일·사용승인서 교부일」은 같은 날(사용승인서 교부일)이라 한 항목으로 적는다.
+
+**남은 확인 필요(보고 대상)**: 타인이 지은 건물을 완성 후 매수한 경우(건물 취득일 = 대금청산일 등)는 이 입력의 사실관계(본인이 구주택을 멸실하고 신축)가 아니다 — 블록은 매매 + 취득일 다름이면 열리므로 그 구분은 안내 문구가 한다. 안내가 아닌 입력 차단은 하지 않는다(사실관계를 화면이 알 수 없다).
 
 ## 2. 공통 술어 — 신규 `lib/calc/transfer-land-rebuild.ts` (단일 소스)
 
 ```ts
-landRebuildApplicable(asset, opts?: { isNonPrimary?: boolean }): boolean
-  // assetKind === "housing" && !isMixedUseHouse && acquisitionCause === "newConstruction"
-  //   && hasSeperateLandAcquisitionDate && effectiveSelfOwns(asset) === "both" && transferType !== "burdened_gift"
-  //   && !opts?.isNonPrimary && !!effectiveLandAcquisitionCause(asset)            // R-1
+landRebuildHost(asset, opts?: { isNonPrimary?: boolean }): "newConstruction" | "purchase" | null   // 단일 소스
+  // 공통: assetKind === "housing" && !isMixedUseHouse && hasSeperateLandAcquisitionDate && effectiveSelfOwns(asset) === "both"
+  //       && transferType !== "burdened_gift" && !opts?.isNonPrimary
+  // acquisitionCause === "newConstruction" → 토지 overlay 유효(!!effectiveLandAcquisitionCause)일 때만 "newConstruction"   // R-1
+  // acquisitionCause === "purchase"        → 토지 overlay 없을 때만 "purchase"                                          // R-5
+landRebuildApplicable(asset, opts): boolean   // = landRebuildHost(...) !== null
 effectiveLandRebuild(asset, opts): LandRebuildFacts["rebuild"] | undefined
   // 술어가 거짓이거나 landRebuildEnabled !== true → undefined (stale 제거).
   // 참이면 { startMode, priorHouseStartDate(later일 때만 · 빈 문자열은 undefined), demolitionDate(빈 문자열은 undefined), footprintUnchanged }
-landRebuildFactsOfAsset(asset, opts): LandRebuildFacts   // ⑧이 엔진 leaf `collectLandRebuildIssues`에 넣는 사실 — ④가 보내는 값 그대로
+landRebuildFactsOfAsset(asset, opts): LandRebuildFacts   // ⑧이 엔진 leaf `collectLandRebuildIssues`에 넣는 사실 — ④가 보내는 값 그대로(`landAcquisitionCause` = 유효 overlay)
 buildLandRebuildPayload(asset, opts): { landRebuildPriorHouse?: {...} }   // ④: effective가 있고 startMode가 유효할 때만 키를 싣는다(거짓이면 키 없음 — 기존 body 불변)
 ```
 
@@ -45,6 +77,10 @@ buildLandRebuildPayload(asset, opts): { landRebuildPriorHouse?: {...} }   // ④
 | ⑬ | ④의 body에 키가 실려 route까지 닿음을 E2E Network 본문 + 격자 테스트(`bodyOf`)로 단언 |
 
 ## 4. ⑤ 위젯 (tone: amber = 취득·분리계산, 안내 카드 amber)
+
+마운트 자리 두 곳 — 같은 `RebuiltHouseLandBlock`에 `host` prop을 주고 `landRebuildHost(asset) === host`일 때만 렌더한다(한 자산에서 한 호스트만 열려 testid가 둘이 되지 않는다):
+- `host="newConstruction"`: `LandPartCauseBlock` 신축 호스트 패널(§3 ⑤).
+- `host="purchase"`: `CompanionAcqDateSection`의 「토지·건물 취득일」 2열(`acq-date-split-grid`) **직후**, 양도가액 구분(축 A) 앞. 계산 로직 순서 = 토지 취득일 → 건물(신축) 취득일 → 구주택 구간 → 양도가액 구분. 매매 호스트에는 안내 카드에 「건물 취득일 칸에는 신축 주택의 취득일」 문단이 더해진다(§1.1).
 
 ```
 ToggleCard(card, amber) 「같은 토지 위 구주택을 멸실하고 신축했다」   data-field=landRebuildEnabled
@@ -72,6 +108,10 @@ ToggleCard(card, amber) 「같은 토지 위 구주택을 멸실하고 신축했
 | U5 | 호스트 닫힘 — 토지 원인 토글 OFF · 취득원인 매매 전환 · 소유자 분리 · 부담부증여 · 겸용 · 컴패니언 | 블록 없음 · body 키 없음 · ⑧ 통과 |
 | U6 | 구 세션(5필드 없음) 복원 | 기본값 보강 · 기존 입력 값 불변 |
 | U7 | 다건(합산) 경로 | 같은 카드·같은 ④ — 속성별 body에 키 |
+| U8 | 매매 호스트 — 취득원인 매매 + 취득일 다름 ON + 토지 overlay 없음, 토글 ON + since_land | 날짜 2열 직후 블록 · body `acquisitionCause: "purchase"` + `landRebuildPriorHouse` 3필드 · 17+8 = 25개월 · 카드·명세서·신고서·PDF 구간(취득원인이 같아 세율 기산일 행은 없다) |
+| U9 | 매매 호스트 닫힘 — 토지 overlay 켬 · D2 · 취득일 다름 OFF · 소유자 분리 · 부담부증여 · 겸용 · 건물 · 컴패니언 | 블록 없음 · body 키 없음 · ⑧이 토글 OFF와 같음 |
+| U10 | 신축 호스트에서 통산을 켠 뒤 취득원인 매매로 전환 | 매매 호스트 블록이 열려 보이고 ④·⑧이 같은 값을 읽는다 · 상속(건물)으로 바꾸면 닫힌다 |
+| U11 | 매매 호스트 경계 | 합산 24/23개월(기본세율/60%)·12/11개월(60%/70%) — 엔진 anchor RB-H3 |
 
 ⑧≡⑫ 격자(`__tests__/calc/land-rebuild-parity-grid.test.ts`): 폼 변형 → ⑧(`collectStepIssues`) · ④(`callTransferTaxAPI` body) · ⑫(route). 불변식 (A) ⑧ 통과 ⇒ ⑫ 200 · (B) ⑧ 차단 ⇔ ⑫ 400(leaf 소관) · (C) 호스트가 닫힌 폼은 키가 없고 세액이 입력 없음과 같다.
 
@@ -83,4 +123,5 @@ ToggleCard(card, amber) 「같은 토지 위 구주택을 멸실하고 신축했
 - 상세명세서(`DetailedStatementLateStages` 「취득일자」 행 note): 환산 문구를 `splitCauseDateText`가 받고, 통산 구간 줄은 같은 행 note에 이어 붙인다.
 - 신고서(`FilingFormTableHelpers`): 취득일 칸 각주(rose note)에서 「세율 판정 기산일」→ 통산이면 「세율 판정용 환산 기산일」.
 - PDF(`ResultPdfTransferSections`): 날짜 칸 「환산 …」 + 구간 줄.
+- **R-4 실측(매매 호스트, `mixedCause=false`)**: 카드는 `split-card-rate-holding` 블록(세율 기산일 행 없이), 상세명세서·신고서는 `splitRateHoldingNote`가 `mixedCause`가 아닐 때 구간 줄을 낸다(원인이 다르고 기산일 행이 보이는 경우는 `splitCauseDateText`가 이미 내므로 중복 방지), PDF는 `parts.some(rateHoldingAggregation)`. 4뷰 모두 vitest(`land-rebuild-ui.test.tsx`)·E2E가 잠근다.
 - 엔진 고지(`warnings` — 0097은 2년 이상만 직접 판단 · 공백 제외·일수 버림은 해석례가 직접 정하지 않음 · 비과세 보유·거주·장특 미반영)는 결과 화면의 기존 경고 영역이 노출하는지 E2E로 확인한다.

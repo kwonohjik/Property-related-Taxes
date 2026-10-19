@@ -12,6 +12,11 @@
  *    ⚠️ 회신은 **2년 이상**인 경우만 직접 답했다 — 2년 미만(60%·70%) 구간은 §104①2·3호 괄호의 같은 기준
  *    (「주택부수토지로서의 보유기간」, 기재부 재산세제과-1354)에 따른 **확장 적용**이다(결과에 확인 필요 고지).
  *
+ * ── 호스트 두 곳 (2026-10-19 사용자 결정) ───────────────────────────────────
+ *  · 건물 신축(`newConstruction`) — 토지는 다른 원인(상속·증여)으로 취득.
+ *  · 매매(`purchase`) + 토지·건물 취득일 분리 — 「매수한 토지 + 그 위에 신축한 주택」(서면법규과-1222의 사실관계)의 관례 입력 경로. 건물 취득일이 곧
+ *    신축 건물의 취득일(자기가 건설한 건축물의 취득시기 — 영 §162①4호)이다. 토지 상속·증여 overlay가 있는 매매는 «건물을 산 것»이라 받지 않는다.
+ *
  * ── 이번 범위가 아닌 것 ─────────────────────────────────────────────────────
  *  · 나대지·상가 철거 후 신축((7) 계열 — 구주택이 없다)은 입력이 없으므로 현행 `max(토지, 주택 취득일)` 그대로다.
  *  · 비과세 보유·거주기간 통산(영 §154⑧)·장기보유특별공제 보유기간 통산은 이 leaf가 다루지 않는다(고지만).
@@ -28,7 +33,7 @@ import type { TransferTaxInput } from "./types/transfer.types";
 /** 구주택이 토지 취득 때부터 있었는가(`since_land`) / 토지 취득 뒤에 생겼는가(`later` — 날짜 필수). */
 export type LandRebuildStartMode = "since_land" | "later";
 
-/** 엔진 입력 — 같은 토지 위 **본인 소유 구주택**을 멸실하고 신축한 주택을 양도하는 경우(split 주택 + 건물 신축 호스트 전용). */
+/** 엔진 입력 — 같은 토지 위 **본인 소유 구주택**을 멸실하고 신축한 주택을 양도하는 경우(split 주택 + 건물 신축 호스트, 또는 매매 + 토지·건물 취득일 분리 호스트 — 토지 상속·증여 overlay가 없는 매매). */
 export interface LandRebuildPriorHouse {
   startMode: LandRebuildStartMode;
   /** `later`일 때만(필수) — 구주택 부수토지 기간의 시작일(본인 소유 개시일). `since_land`에서는 보낼 수 없다 */
@@ -129,6 +134,12 @@ export interface LandRebuildFacts {
   hostSupported?: boolean;
   /** 자산 단위 취득원인 = 주택 split 컨벤션상 **건물** 파트 원인 */
   buildingAcquisitionCause?: string;
+  /**
+   * 「토지는 다른 원인으로 취득」(토지 상속·증여) overlay — **건물 원인이 매매(`purchase`)일 때** 이 입력을 막는 사실이다.
+   * 「건물은 매수, 토지는 상속·증여」는 건물을 산 것이지 같은 토지 위에 신축한 것이 아니다. 신축 호스트는 이 overlay가 오히려 호스트의 전제라 보지 않는다.
+   * 생략·`""`·`"purchase"`(D2 호스트 잔재) = overlay 없음.
+   */
+  landAcquisitionCause?: string;
   /** 건물(신축) 취득일 YYYY-MM-DD */
   buildingAcquisitionDate?: string;
   hasLandAcquisitionDate: boolean;
@@ -165,7 +176,12 @@ export const LAND_REBUILD_COMPANION_MESSAGE =
   "함께 양도(일괄양도) 자산과 겸용주택에서는 구주택 멸실·신축 통산을 지원하지 않습니다 — 토지·건물 분리 입력의 단건·다건 주택 자산에서만 입력할 수 있습니다";
 
 export const LAND_REBUILD_BUILDING_CAUSE_MESSAGE =
-  "구주택 멸실·신축 통산은 건물을 신축(자가건축)으로 취득한 주택에서만 입력할 수 있습니다 — 신축 취득일은 사용승인일 등(소득세법 시행령 §162①4호)입니다 (사전-2023-법규재산-0097, 2023.6.15.)";
+  "구주택 멸실·신축 통산은 건물을 신축(자가건축)한 주택, 또는 토지를 따로 취득(매매)한 뒤 그 위에 신축한 건물을 취득일을 달리해 입력한 매매 주택에서만 입력할 수 있습니다 — " +
+  "상속·증여·이월과세로 받은 건물은 받지 않습니다. 신축 건물의 취득일은 자기가 건설한 건축물의 취득시기(사용승인서 교부일 등, 소득세법 시행령 §162①4호)입니다 " +
+  "(서면법규과-1222, 2014.11.19. · 사전-2023-법규재산-0097, 2023.6.15.)";
+
+export const LAND_REBUILD_PURCHASE_LAND_CAUSE_MESSAGE =
+  "건물을 매매로 취득하고 토지는 상속·증여로 받은 주택은 구주택 멸실·신축 통산을 받지 않습니다 — 건물을 산 것이지 같은 토지 위에 신축한 것이 아닙니다";
 
 export const LAND_REBUILD_OWNER_BURDENED_MESSAGE =
   "토지·건물 소유자가 갈리는 자산과 부담부증여 양도에서는 구주택 멸실·신축 통산을 지원하지 않습니다";
@@ -193,6 +209,20 @@ export const LAND_REBUILD_ORDER_MESSAGE =
 
 const key = (d: string | undefined) => d?.slice(0, 10);
 
+/**
+ * 이 입력을 받는 **건물** 취득원인 — 신축(`newConstruction`)과 매매(`purchase` + 토지 취득일 분리).
+ * 매매 호스트는 「토지·건물 취득일 다름」(원시취득·신축 등) 경로다 — 토지 취득일 분리 존재는 아래 `hasLandAcquisitionDate` 검사가 모든 호스트에 공통으로 요구한다.
+ * 상속·증여·이월과세·부담부증여 건물 원인은 받지 않는다.
+ */
+function isRebuildBuildingCause(cause: string | undefined): boolean {
+  return cause === "newConstruction" || cause === "purchase";
+}
+
+/** 토지 상속·증여 overlay가 있는가 — `purchase`는 D2(건물 상속·증여 + 토지 매매) 호스트의 잔재 표지라 overlay가 아니다. */
+function hasLandCauseOverlay(cause: string | undefined): boolean {
+  return !!cause && cause !== "purchase";
+}
+
 /** 위반 항목을 모두 돌려준다(엔진은 첫 항목으로 던지고, ⑫는 전부 기록하고, ⑧은 첫 항목을 칸에 붙인다). 입력이 없으면 빈 배열. */
 export function collectLandRebuildIssues(f: LandRebuildFacts): LandRebuildIssue[] {
   const r = f.rebuild;
@@ -203,7 +233,8 @@ export function collectLandRebuildIssues(f: LandRebuildFacts): LandRebuildIssue[
   // 호스트 — 앞이 레버가 다른 항목을 가리지 않게 구조부터.
   if (f.hostSupported === false || f.isMixedUse) at("landRebuildPriorHouse", LAND_REBUILD_COMPANION_MESSAGE);
   if (!f.isHousing) at("landRebuildPriorHouse", LAND_REBUILD_HOST_MESSAGE);
-  if (f.buildingAcquisitionCause !== "newConstruction") at("landRebuildPriorHouse", LAND_REBUILD_BUILDING_CAUSE_MESSAGE);
+  if (!isRebuildBuildingCause(f.buildingAcquisitionCause)) at("landRebuildPriorHouse", LAND_REBUILD_BUILDING_CAUSE_MESSAGE);
+  else if (f.buildingAcquisitionCause === "purchase" && hasLandCauseOverlay(f.landAcquisitionCause)) at("landRebuildPriorHouse", LAND_REBUILD_PURCHASE_LAND_CAUSE_MESSAGE);
   if (f.isBurdenedGift || (f.selfOwns !== undefined && f.selfOwns !== "both")) at("landRebuildPriorHouse", LAND_REBUILD_OWNER_BURDENED_MESSAGE);
   if (!f.hasLandAcquisitionDate) at("landAcquisitionDate", LAND_REBUILD_LAND_DATE_REQUIRED_MESSAGE);
 
@@ -238,6 +269,7 @@ export function landRebuildFactsOfInput(input: TransferTaxInput): LandRebuildFac
   return {
     isHousing: input.propertyType === "housing",
     buildingAcquisitionCause: input.acquisitionCause,
+    landAcquisitionCause: input.landAcquisitionCause,
     buildingAcquisitionDate: day(input.acquisitionDate),
     hasLandAcquisitionDate: !!input.landAcquisitionDate,
     landAcquisitionDate: day(input.landAcquisitionDate),
@@ -254,14 +286,14 @@ export function landRebuildFactsOfInput(input: TransferTaxInput): LandRebuildFac
   };
 }
 
-/** 세율 통산이 **실제로 도는** 입력인가 — 입력 존재 ∧ 주택 ∧ 건물 신축 ∧ 토지 취득일. 검증을 통과한 입력은 모두 참이다(엔진은 진입 게이트가 먼저 던진다). */
+/**
+ * 세율 통산이 **실제로 도는** 입력인가 — 입력 존재 ∧ 주택 ∧ 건물 신축·매매 ∧ 토지 취득일 (매매는 토지 overlay 없음).
+ * 검증을 통과한 입력은 모두 참이다(엔진은 진입 게이트가 먼저 던진다).
+ */
 export function landRebuildApplies(input: TransferTaxInput): boolean {
-  return (
-    !!input.landRebuildPriorHouse &&
-    input.propertyType === "housing" &&
-    input.acquisitionCause === "newConstruction" &&
-    !!input.landAcquisitionDate
-  );
+  if (!input.landRebuildPriorHouse || input.propertyType !== "housing" || !input.landAcquisitionDate) return false;
+  if (input.acquisitionCause === "newConstruction") return true;
+  return input.acquisitionCause === "purchase" && !hasLandCauseOverlay(input.landAcquisitionCause);
 }
 
 /** 결과 고지(세액 불변) — 통산을 적용했고 그 한계를 숨기지 않는다. 판정 근거 수준: 0097은 2년 이상만 직접 판단. */
