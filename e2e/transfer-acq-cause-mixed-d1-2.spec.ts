@@ -68,7 +68,7 @@ test.describe("D1-2 — 건물 매매 + 토지 상속·증여 화면", () => {
     test.setTimeout(90_000);
     await setupHouse(page);
     await page.getByRole("radio", { name: "신축(자가건축)" }).click();
-    await page.getByTestId("newconstruction-land-acq").getByRole("switch").click();
+    await page.getByTestId("newconstruction-land-acq").locator('[data-field="landAcquisitionCause"]').getByRole("switch").click();
 
     await page.getByRole("radio", { name: "매매", exact: true }).click();
     await expect(purchaseToggle(page)).not.toBeChecked();

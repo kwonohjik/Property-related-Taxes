@@ -124,6 +124,8 @@ E    = 양도일 다음날 − M개월 (UTC 달력, 해당일 없으면 말일, 
 
 ## 5. UI 다음 단계 — 지점별 명세
 
+> ✅ UI 구현 완료 — 실측으로 보정한 최종 명세는 `appurtenant-land-rebuild-rate-basis.ui.design.md` §1(R-1 호스트 술어에 「토지는 다른 원인으로 취득」 유효 추가 · R-3 파트 요약 echo 누락 정정 · R-4). 아래 표는 엔진 단계의 초안이다.
+
 공통 술어(단일 소스, **신규 `lib/calc/transfer-land-rebuild.ts`**):
 
 ```ts

@@ -56,6 +56,7 @@ import { landHouseExistedSent } from "./transfer-house-land-sec164-bridge";
 import { houseLandKindSent } from "./transfer-house-land-sec164-bridge";
 import { deriveHouseLandSec164Total } from "./transfer-house-land-sec164-bridge";
 import { houseFirstDisclosureSent } from "./house-first-disclosure";
+import { validateLandRebuild } from "./transfer-tax-validate-land-rebuild";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -271,7 +272,8 @@ export function validateLandPartCause(
   // D1-H Q-1 — 화면은 「받을 당시 주택이 있었는가」를 명시 선택으로 받는다(⑧ 전용 — 엔진·⑫는 미선택을 모름으로 읽는다: ⑧이 더 엄격한 방향).
   if (!issue && houseLandSec164Applies(asset) && !landHouseExistedSent(asset))
     return fieldError("landHouseExisted", `${label}: ${LAND_HOUSE_EXISTED_REQUIRED_MESSAGE}`);
-  if (!issue) return null;
+  // 구주택 멸실·신축 통산 — 위 원인 규칙을 모두 통과한 뒤(토지 취득일·원인 칸이 먼저). 입력이 없으면 null(회귀 0).
+  if (!issue) return validateLandRebuild(asset, label, opts);
   // ② 필수 위반 = 화면 입력 칸(`LandSec164Card` 5칸 + 기본 정보의 토지 면적) 중 첫 미완 칸으로 이동시킨다(엔진 문구는 API 소비자용).
   if (issue.field === "landSec164Value") return validateLandSec164Inputs(asset, label);
   // D2-4b — 단서 2호 ② 필수 위반 = 카드(`BuildingSec164Card`) 5칸 + 기본 정보의 토지 면적 중 첫 미완 칸으로.

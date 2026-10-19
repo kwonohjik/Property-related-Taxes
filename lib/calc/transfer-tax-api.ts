@@ -50,6 +50,7 @@ import { postTransferCalc } from "./transfer-tax-api-post";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
+import { buildLandRebuildPayload } from "./transfer-land-rebuild";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
@@ -525,6 +526,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
     // §104②1·2호를 **토지 파트**에 적용 (G-4) — 다건과 같은 leaf.
     ...buildLandPartCausePayload(primary),
+    // 구주택 멸실·신축 통산(해석 (5)) — 유효 입력이 있을 때만 키를 싣는다(거짓이면 키 없음 — 기존 body 불변). 첫 자산 전용(컴패니언은 ⑫가 400).
+    ...buildLandRebuildPayload(primary),
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다
     ...buildHouseFirstDisclosurePayload(primary),
     // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 미정의 시 침묵 stripping 방지를 위해 명시 선언.

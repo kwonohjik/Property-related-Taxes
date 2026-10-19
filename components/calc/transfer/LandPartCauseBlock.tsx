@@ -38,6 +38,7 @@ import { landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
 import { LandSec164Card } from "./LandSec164Card";
+import { RebuiltHouseLandBlock } from "./RebuiltHouseLandBlock";
 import { LAND_CAUSE_META, type LandCause } from "./land-cause-meta";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -101,6 +102,8 @@ export function LandPartCauseBlock(props: {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
+  /** 함께 양도하는 두 번째 이후 자산 — 구주택 멸실·신축 통산 블록을 열지 않는다(⑫가 400). */
+  isNonPrimaryAsset?: boolean;
 }) {
   const { asset, onChange } = props;
 
@@ -254,6 +257,10 @@ export function LandPartCauseBlock(props: {
               <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{dateNotice}</p>
             </ToneCard>
           )}
+
+          {/* 구주택 멸실·신축 통산(해석 (5)) — 토지 법정 기산일(위 날짜 칸)과 건물 사용승인일(위 취득정보) 다음, 세율 보유기간 입력.
+              노출 술어 `landRebuildApplicable`(자체 게이트 — 주택·신축·소유자 같음·부담부증여 아님·첫 자산)은 ④·⑧과 같은 것이다. */}
+          <RebuiltHouseLandBlock asset={asset} onChange={onChange} isNonPrimary={props.isNonPrimaryAsset} />
 
           {/* 파트 자본적지출(D1 G-11) — 분리 계산은 파트 칸만 읽는다(자산 전체 칸은 계산에 닿지 않아 ⑧이 이 칸으로
               안내한다). 두 파트 모두 실거래가 고정(토지 = 평가액, 건물 = 신축비용)이라 hint도 실거래가 문구다. */}
