@@ -28,6 +28,7 @@
  */
 import { calculateHoldingPeriod, coerceOptionalDate } from "./tax-utils";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { TRANSFER } from "./legal-codes";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 /** 구주택이 토지 취득 때부터 있었는가(`since_land`) / 토지 취득 뒤에 생겼는가(`later` — 날짜 필수). */
@@ -177,7 +178,7 @@ export const LAND_REBUILD_COMPANION_MESSAGE =
 
 export const LAND_REBUILD_BUILDING_CAUSE_MESSAGE =
   "구주택 멸실·신축 통산은 건물을 신축(자가건축)한 주택, 또는 토지를 따로 취득(매매)한 뒤 그 위에 신축한 건물을 취득일을 달리해 입력한 매매 주택에서만 입력할 수 있습니다 — " +
-  "상속·증여·이월과세로 받은 건물은 받지 않습니다. 신축 건물의 취득일은 자기가 건설한 건축물의 취득시기(사용승인서 교부일 등, 소득세법 시행령 §162①4호)입니다 " +
+  `상속·증여·이월과세로 받은 건물은 받지 않습니다. 신축 건물의 취득일은 자기가 건설한 건축물의 취득시기(사용승인서 교부일 등, ${TRANSFER.SELF_BUILT_ACQUISITION_DATE})입니다 ` +
   "(서면법규과-1222, 2014.11.19. · 사전-2023-법규재산-0097, 2023.6.15.)";
 
 export const LAND_REBUILD_PURCHASE_LAND_CAUSE_MESSAGE =
