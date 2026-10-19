@@ -5,7 +5,7 @@
  * 호출부는 `validateGeneralBuildingAsset` 하나뿐이고, 그 함수의 **첫 관문**이다.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { fieldError } from "./transfer-tax-validate-field";

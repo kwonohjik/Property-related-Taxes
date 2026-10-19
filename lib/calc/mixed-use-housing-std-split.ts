@@ -12,7 +12,7 @@
  *
  * 값 해소에 **폴백이 없다** — 미입력은 0 그대로이고 ⑧이 막는다(자동 안분 fallback 금지).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { mixedPartAcqNeedsOfForm, mixedUsePhdEffective } from "./mixed-use-part-acq-split";
 import {

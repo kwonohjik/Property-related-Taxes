@@ -13,11 +13,11 @@
  *  - §164⑦ 단서 차단 — 취득일 < 최초공시일이면 firstDisclosureStdPrice 필수
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { householdBuildingCarryoverApplied, landContributedOriginalApt, postApprovalHousingUseInScope, successorGiftHouseholdApplies } from "@/lib/calc/redev-field-scope";
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { IssueField } from "./transfer-tax-validate-field";

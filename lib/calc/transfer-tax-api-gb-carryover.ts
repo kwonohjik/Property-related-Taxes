@@ -19,7 +19,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 
 /** 빈 문자열·0을 `undefined`로 — payload에 0을 실으면 「입력했다」와 구별되지 않는다. */

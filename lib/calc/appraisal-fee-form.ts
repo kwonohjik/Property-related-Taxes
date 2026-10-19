@@ -2,7 +2,7 @@
  * 감정평가수수료 폼 필드 ↔ 엔진 입력(AppraisalFeeInput) 변환 (상속·증여 공용 순수 헬퍼).
  * AppraisalFeeSection(client) 과 InheritanceTaxForm·gift-api(빌더)가 공유.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AppraisalFeeInput } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 export interface AppraisalFeeFormFields {

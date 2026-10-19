@@ -16,7 +16,7 @@
  * 불일치 시 "UI 통과 ↔ validate 차단" 모순이 난다. 적격 자산 판정은
  * `lib/tax-engine/expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면 드리프트다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE } from "@/lib/tax-engine/expropriation-scope";
 import {
   type ExprGateFacts,

@@ -19,7 +19,7 @@
  * ⇒ 「승계취득가액(권리가액 상당 + 프리미엄)」 + 「취득 후 납입 추가분담금」 2칸으로 받아 합산한다.
  */
 
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 /**

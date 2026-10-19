@@ -4,9 +4,9 @@
  * 설계: docs/02-design/features/building-standard-price.ui.design.md
  * 엔진을 클라이언트에서 직접 호출(정적 데이터·순수 함수). 용도는 번호(usageNo) 기반.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { phdTimepointLabel } from "@/lib/calc/building-std-snapshot-keys";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type {
   BuildingStandardPriceInput,
   BuildingStdPriceTaxType,

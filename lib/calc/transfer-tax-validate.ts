@@ -18,7 +18,7 @@ import {
   isTransferDateBeforeSupported,
   TRANSFER_DATE_BEFORE_SUPPORTED_MESSAGE,
 } from "@/lib/tax-engine/data/transfer-supported-period";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
 import { evaluateUnconditionalExemption } from "./nbl-unconditional-exemption-status";

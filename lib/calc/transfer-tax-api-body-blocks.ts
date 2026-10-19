@@ -6,7 +6,7 @@
  * 조건 미충족 시 `{}`를 반환해 필드를 아예 보내지 않는다(Zod optional 계약).
  * 선례: `buildReplacementHousePayload`(transfer-tax-api-helpers.ts).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
 import { getFilingDeadline, isAllBurdenedGift } from "@/lib/calc/filing-deadline";

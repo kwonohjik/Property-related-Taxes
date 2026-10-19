@@ -13,7 +13,7 @@
  *
  * 값 해소에 **폴백이 없다** — 토지 취득일 값(`mixedAcqLandPricePerSqm`)·PHD·1990 환산으로 대체하지 않는다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
   areMixedAcqDatesSeparate,

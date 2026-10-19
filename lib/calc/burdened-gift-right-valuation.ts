@@ -22,7 +22,7 @@
  * 사용자가 덮어쓸 수 있어야 한다**. 그래서 store에 써 넣지 않고 「비어 있으면 파생」으로 둔다.
  * 파생값이 쓰이는 동안 화면에 그 사실을 배지로 알린다(⑤ 소관).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RightValuationAsset = Pick<

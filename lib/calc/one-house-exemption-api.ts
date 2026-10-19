@@ -30,7 +30,7 @@ import {
   effectiveIsRegulatedAtTransfer,
   GIFT_HOUSEHOLD_SCOPE_PRIMARY,
 } from "@/lib/calc/effective-regulated-at-acquisition";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";

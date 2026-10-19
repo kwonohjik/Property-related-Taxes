@@ -4,8 +4,8 @@
  * `lib/validators/gift-deemed-input-phase3.ts`와 같은 경계다. 공통 가드(증여일·유형)와 §43² 선행 표 검증은
  * 본 파일(`validateDeemedInput`)에 남는다.
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { parseAmount } from "@/lib/calc/number-parse";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import { resolveScEraExclusion } from "@/lib/tax-engine/gift-deemed/specific-corp-era";
 import { resolveRcEraExclusion } from "@/lib/tax-engine/gift-deemed/related-corp-era";
 import type { DeemedFormState, EdShareholderRow } from "@/components/calc/deemed-gift/shared";

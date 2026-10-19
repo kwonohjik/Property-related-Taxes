@@ -10,7 +10,7 @@
  *  · 별개취득 토글이 꺼져 있다 — 켜져 있으면 분리 섹션의 파트 취득가액 칸이 같은 일을 하므로 이중 입력을 막는다(`housingExcessNeedsCapexSplit`과 같은 규약)
  * 미입력(둘 다 빈칸)이면 아무것도 보내지 않아 종전 기준시가 안분과 세액·판정이 같다(옛 저장분도 키 없음 = 비움).
  */
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { sec100_3Era, type Sec100_3Era } from "@/lib/tax-engine/data/sec100-3-split-era";
 import { housingExcessNeedsLandSplit } from "./housing-excess-split";
 import { deriveLegacyPartAcqMode } from "./transfer-tax-split-acq-mode";

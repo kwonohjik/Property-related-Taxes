@@ -14,7 +14,7 @@
  */
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { parseAmount } from "@/lib/calc/number-parse";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
