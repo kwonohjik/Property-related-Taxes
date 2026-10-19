@@ -1,6 +1,6 @@
 import OneHouseJudgmentCalculator from "./OneHouseJudgmentCalculator";
 import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
-import { checkOneHouseAiAdmin } from "@/lib/one-house-ai/admin-guard";
+import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
 
 export const metadata = {
   title: "1세대1주택 비과세 판정",
@@ -13,22 +13,12 @@ export const metadata = {
   },
 };
 
-/**
- * 「원문으로 채우기 (AI)」는 개발 중 관리자 전용이다(하이브리드 AI 검토 도구 P4 — 사용자 결정 2026-10-19).
- * 관리자가 아니면 버튼을 그리지 않는다. 서버 경로(`/api/one-house-ai/extract`)도 같은 게이트로 다시 막는다.
- * 확인 중 오류가 나도 판정 메뉴는 그대로 열린다 — 버튼만 숨긴다.
- */
-async function isAiExtractEnabled(): Promise<boolean> {
-  if (!process.env.ANTHROPIC_API_KEY) return false;
-  try {
-    return (await checkOneHouseAiAdmin()).ok;
-  } catch {
-    return false;
-  }
-}
-
-export default async function OneHouseExemptionPage() {
-  const aiExtractEnabled = await isAiExtractEnabled();
+export default function OneHouseExemptionPage() {
+  /*
+    「원문으로 채우기 (AI)」는 로컬 개발 서버에서 API 키가 있을 때만 그린다(하이브리드 AI 검토 도구 P4 — 사용자 결정 2026-10-19).
+    서버 경로(`/api/one-house-ai/extract`)도 같은 게이트로 다시 막는다.
+  */
+  const aiExtractEnabled = !!process.env.ANTHROPIC_API_KEY && checkOneHouseAiAccess().ok;
   return (
     <ProfessionalClientGate>
       <OneHouseJudgmentCalculator aiExtractEnabled={aiExtractEnabled} />

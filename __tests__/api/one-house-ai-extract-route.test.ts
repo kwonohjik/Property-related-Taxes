@@ -1,5 +1,5 @@
 /**
- * POST /api/one-house-ai/extract — 관리자 게이트 · 원문 길이 · API 키 · 추출 실패 · 질문 합치기.
+ * POST /api/one-house-ai/extract — 개발 서버 게이트 · 원문 길이 · API 키 · 추출 실패 · 질문 합치기.
  * LLM 호출(`extractOneHouseFacts`)과 로그인 확인은 모의한다(비용·네트워크 없음).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -9,7 +9,7 @@ import type { OneHouseExtraction } from "@/lib/one-house-ai/extraction-schema";
 
 const gate = vi.fn();
 const extract = vi.fn();
-vi.mock("@/lib/one-house-ai/admin-guard", () => ({ checkOneHouseAiAdmin: () => gate() }));
+vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate() }));
 vi.mock("@/lib/one-house-ai/extract", async (orig) => ({
   ...(await orig<typeof import("@/lib/one-house-ai/extract")>()),
   extractOneHouseFacts: (text: string) => extract(text),
@@ -45,7 +45,7 @@ const extraction = (over: Partial<OneHouseExtraction> = {}): OneHouseExtraction 
 
 const OLD_KEY = process.env.ANTHROPIC_API_KEY;
 beforeEach(() => {
-  gate.mockResolvedValue({ ok: true, email: "admin@example.com" });
+  gate.mockReturnValue({ ok: true });
   extract.mockResolvedValue({ extraction: extraction(), model: "claude-opus-5-5", usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } });
   process.env.ANTHROPIC_API_KEY = "test-key";
 });
@@ -56,8 +56,8 @@ afterEach(() => {
 });
 
 describe("POST /api/one-house-ai/extract", () => {
-  it("관리자가 아니면 막고 추출을 부르지 않는다", async () => {
-    gate.mockResolvedValue({ ok: false, status: 403, code: "FORBIDDEN", message: "AI 사실 추출은 관리자 전용입니다." });
+  it("개발 서버가 아니면 막고 추출을 부르지 않는다", async () => {
+    gate.mockReturnValue({ ok: false, status: 403, code: "FORBIDDEN", message: "AI 사실 추출은 로컬 개발 서버에서만 쓸 수 있습니다." });
     const res = await call({ text: "사실관계" });
     expect(res.status).toBe(403);
     expect(extract).not.toHaveBeenCalled();

@@ -1,9 +1,9 @@
 /**
- * 1세대1주택 AI 사실 추출 API Route (하이브리드 AI 검토 도구 P3) — **관리자 전용**(개발 중).
+ * 1세대1주택 AI 사실 추출 API Route (하이브리드 AI 검토 도구 P3) — **로컬 개발 서버 전용**.
  *
  * POST /api/one-house-ai/extract  { text }
  *
- *   Rate limit → 관리자 게이트 → Zod(원문 1만 자 이하) → API 키 확인 → LLM 추출(`extractOneHouseFacts`)
+ *   Rate limit → 개발 서버 게이트 → Zod(원문 1만 자 이하) → API 키 확인 → LLM 추출(`extractOneHouseFacts`)
  *   → 필드 사전 재검증(`applyExtraction`) → 판정 메뉴 폼에 합쳐 ⑧ 검증·본문 스키마가 막는 칸을 질문으로(`collectValidationQuestions`)
  *
  * 판정은 하지 않는다 — LLM은 사실 추출만 맡고, 사용자가 확인한 폼으로 판정 메뉴(`/api/calc/one-house-exemption`)가 판정한다.
@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
-import { checkOneHouseAiAdmin } from "@/lib/one-house-ai/admin-guard";
+import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
 import {
   extractOneHouseFacts,
   ExtractionFailedError,
@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
   });
   if (!rl.allowed) return fail(429, "RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도하세요");
 
-  // 단계 1: 관리자 게이트
-  const gate = await checkOneHouseAiAdmin();
+  // 단계 1: 개발 서버 게이트
+  const gate = checkOneHouseAiAccess();
   if (!gate.ok) return fail(gate.status, gate.code, gate.message);
 
   // 단계 2: 본문

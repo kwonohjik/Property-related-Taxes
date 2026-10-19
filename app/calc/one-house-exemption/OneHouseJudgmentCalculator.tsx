@@ -57,7 +57,7 @@ const STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판�
 const RESULT_STEP = 3;
 
 type Props = {
-  /** 「원문으로 채우기 (AI)」 — 관리자이고 API 키가 있을 때만 서버 페이지가 켠다(하이브리드 AI 검토 도구 P4) */
+  /** 「원문으로 채우기 (AI)」 — 로컬 개발 서버이고 API 키가 있을 때만 서버 페이지가 켠다(하이브리드 AI 검토 도구 P4) */
   aiExtractEnabled?: boolean;
 };
 

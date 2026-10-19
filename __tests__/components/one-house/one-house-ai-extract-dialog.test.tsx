@@ -60,7 +60,7 @@ async function extract(text = "甲이 2018.3.15. A아파트를 취득…") {
 }
 
 describe("판정 메뉴 AI 사실 추출 (P4)", () => {
-  it("관리자가 아니면(서버가 끄면) 버튼이 없다", () => {
+  it("서버 페이지가 끄면(배포·키 없음) 버튼이 없다", () => {
     render(<OneHouseJudgmentCalculator />);
     expect(screen.queryByTestId("one-house-ai-extract-open")).toBeNull();
   });
@@ -107,11 +107,11 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
   });
 
   it("서버 오류 문구를 그대로 보여 주고 폼은 바꾸지 않는다", async () => {
-    respond(403, { error: { code: "FORBIDDEN", message: "AI 사실 추출은 관리자 전용입니다." } });
+    respond(403, { error: { code: "FORBIDDEN", message: "AI 사실 추출은 로컬 개발 서버에서만 쓸 수 있습니다." } });
     render(<OneHouseJudgmentCalculator aiExtractEnabled />);
     await extract();
 
-    expect((await screen.findByRole("alert")).textContent).toBe("AI 사실 추출은 관리자 전용입니다.");
+    expect((await screen.findByRole("alert")).textContent).toBe("AI 사실 추출은 로컬 개발 서버에서만 쓸 수 있습니다.");
     expect(screen.queryByTestId("one-house-ai-extract-apply")).toBeNull();
     expect(useOneHouseJudgmentStore.getState().formData.transferDate).toBe("");
   });

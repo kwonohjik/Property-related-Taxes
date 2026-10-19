@@ -8,7 +8,7 @@
  * 기존 명부 행과 섞으면 「A주택 = 몇 번째 행」 규칙이 따로 필요하고, 섞인 폼은 원문과 다른 사실로 판정된다.
  *
  * 판정은 하지 않는다. 적용한 폼으로 판정 메뉴가 같은 엔진으로 판정한다. 원문에 없는 사실은 비워 두고 질문으로 남긴다.
- * 관리자 전용 — 버튼 노출 여부는 서버 페이지가 정한다(`page.tsx`).
+ * 로컬 개발 서버 전용 — 버튼 노출 여부는 서버 페이지가 정한다(`page.tsx`).
  */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -96,7 +96,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
         variant="modalLauncher"
         size="sm"
         data-testid="one-house-ai-extract-open"
-        title="해석례·질의 원문에서 사실을 뽑아 판정 메뉴 입력을 채웁니다(관리자 전용)"
+        title="해석례·질의 원문에서 사실을 뽑아 판정 메뉴 입력을 채웁니다(로컬 개발 서버 전용)"
         onClick={() => setOpen(true)}
       >
         원문으로 채우기 (AI)
