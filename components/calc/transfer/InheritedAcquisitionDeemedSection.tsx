@@ -57,9 +57,10 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
   return (
     <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-3">
       {/* 헤더 — 상속개시일 + 모드 배지 + 법령 링크 */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm font-semibold shrink-0">취득가액 의제 특례 (소령 §176조의2④·§163⑨)</p>
+      <div className="flex items-center justify-between gap-2" data-testid="deemed-section-header">
+        {/* 좁은 화면에서 제목이 줄바꿈되고 배지는 다음 줄로 — 제목이 줄지 않으면 375px에서 배지가 화면 밖으로 밀린다 */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
+          <p className="text-sm font-semibold">취득가액 의제 특례 (소령 §176조의2④·§163⑨)</p>
           {mode === "pre-deemed" && (
             <span className="inline-flex items-center rounded px-1.5 py-0.5 text-caption font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
               의제취득일 이전

@@ -1,6 +1,6 @@
 # 상속 「취득가액 의제 특례」 헤더 — 375px 가로 넘침·겹침 수정
 
-> 작성 2026-10-19 · 상태 **Plan — 결정 대기(Q-1·Q-2)** · 워크트리 `../Property-related-Taxes-dbov` · 브랜치 `docs/deemed-badge-375-overflow-plan`
+> 작성 2026-10-19 · 상태 **Do 완료 — Q-1 B·Q-2 별건 분리(2026-10-19 사용자 「권고대로」)** · 워크트리 `../Property-related-Taxes-dbov` · 브랜치 `fix/deemed-section-header-375`
 > 발견 경위: 공동주택 국세청 고시 가액 질문 작업(PR #2266)의 375px 화면 확인 중. 그 PR과 무관한 기존 결함이라 손대지 않았다.
 
 ## 1. 문제
@@ -88,3 +88,33 @@
 
 - **Q-1 헤더 정렬**: **B(권고)** — 안쪽 헤더와 같은 `items-center` · 2곳만 변경. / C — 법령 배지를 제목 첫 줄에 붙임 · 3곳 변경.
 - **Q-2 FieldCard 별건**: **별도 계획서로 분리(권고)** — 공용 컴포넌트라 사용처 전수 측정이 먼저다. / 이번에 함께 수정.
+
+**결정(2026-10-19 사용자 「권고대로」)**: Q-1 **B** · Q-2 **별도 계획서로 분리**(이번 PR에서 `FieldCard`는 건드리지 않는다).
+
+## 7. Do 결과
+
+**변경**
+- `InheritedAcquisitionDeemedSection.tsx`
+  - 왼쪽 묶음을 `flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0`로 바꾸고, 제목의 `shrink-0`을 제거했다.
+  - E2E 셀렉터용으로 헤더 줄에 `data-testid="deemed-section-header"`를 붙였다.
+- 신규 `e2e/transfer-deemed-section-header-375.spec.ts`(3건)
+  - 375px 이후·이전: 가로 폭 = 화면 폭, 제목↔법령 배지 겹침 없음, 의제 배지가 헤더 줄 안에 있음, 의제 배지가 제목 아래 줄로 내려감.
+  - 1280px: 한 줄 유지.
+
+**계획과 다른 점**: §4 1번 단언에 「배지가 제목 아래 줄」을 추가했다. 첫 뮤테이션에서 M2가 살아남았기 때문이다. M2는 제목 `shrink-0`만 빼고 `flex-wrap`은 넣지 않은 상태로, 넘침·겹침은 없지만 제목이 약 51px로 눌린다.
+
+**검증**
+| 항목 | 결과 |
+|---|---|
+| 신규 spec 3건(수정 후) | 통과 |
+| M0 master 원형 복원 | 375 2건 실패(scrollWidth 430) |
+| M1 제목 `shrink-0`만 복원 | 375 2건 실패(제목↔법령 배지 겹침) |
+| M2 `flex-wrap`만 제거 | 375 2건 실패(배지가 제목과 같은 줄) — 단언 추가 후 |
+| 관련 E2E 4 spec(신규 + §4 4번의 3종) | 56 passed |
+| RTL `post-deemed-house-valuation-visibility` · `sec164-land-fields-always-open-b3` | 19 passed |
+| `tsc --noEmit` · eslint(변경 2파일) | 0건 |
+| 375 라이트·다크 스크린샷 | 제목 2줄 + 배지 다음 줄, 겹침 없음 |
+
+뮤테이션은 파일 사본으로 복원했다(`git checkout` 미사용).
+
+**별건 관찰(범위 밖)**: 다크 모드 375px에서 「1990.8.30. 이전 취득 토지 기준시가 환산 (§164④)」 안쪽 카드의 글자 대비가 매우 낮다(밝은 배경에 주황 글자). 이번 변경과 무관한 기존 상태이며 원인은 확인 필요다.
