@@ -24,6 +24,10 @@ import { CarryoverGiftExclusionSection } from "./CarryoverGiftExclusionSection";
 import { CarryoverEstimationSection } from "./CarryoverEstimationSection";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import { carryoverHouseholdFactVisible } from "@/lib/calc/transfer-tax-api-carryover";
+import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
+import { CarryoverDonorSplitToggle } from "./CarryoverDonorSplitToggle";
+import { SplitCarryoverParts } from "./SplitCarryoverParts";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
@@ -75,6 +79,10 @@ interface Props {
    * (`transfer-tax-validate-gb-carryover.ts`가 파트별 객체를 가리킨다). 기본은 `carryover.*`.
    */
   part?: "land" | "building";
+  /** 함께 양도하는 두 번째 이후 자산 — 파트 이월과세(C)를 쓸 수 없다(토글 대신 안내). */
+  isNonPrimaryAsset?: boolean;
+  /** 함께 양도하는 다른 자산이 있다(assets.length>1) — C를 켜 둔 첫 자산에 안내한다(엔진 S2′ 400과 같은 사실). */
+  hasCompanions?: boolean;
 }
 
 /** carryover 서브객체 패치 헬퍼 */
@@ -95,9 +103,12 @@ function patchExclusion(
 }
 
 // ── 메인 컴포넌트 ────────────────────────────────────────────────
-export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land" }: Props) {
+export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land", isNonPrimaryAsset, hasCompanions }: Props) {
   const isBuildingPart = part === "building";
   const c = asset.carryover ?? CARRYOVER_DEFAULTS;
+  // P2 C — 증여자가 토지·건물을 다른 날 취득(파트 이월과세). 이 값 하나로 카드 구성·⑥·④·⑧이 갈린다(`effectiveCarryoverDonorSplit`).
+  //   일반건물 파트 블록(`part` 지정)에서는 쓰지 않는다 — 일반건물은 자체 파트 카드가 있다.
+  const splitMode = effectiveCarryoverDonorSplit(asset, { isNonPrimary: isNonPrimaryAsset });
 
   // 시행시기 가드: 양도일 < 2024-01-01 이면 증여자 자본적지출 비활성
   const isAfter2024 = transferDate >= "2024-01-01";
@@ -139,6 +150,26 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         그 밖의 관계로부터 증여받았다면 취득 원인을 <strong>「증여」</strong>로 선택하세요.
       </p>
 
+      {/* 파트 이월과세(C) 안내 — 1세대1주택 비과세 판정 대상은 아직 계산하지 못하고(N4), 함께 양도 자산이 있으면 계산하지 못한다(N8). */}
+      {splitMode && (
+        <div className="space-y-2" data-testid="split-carryover-notices">
+          <ToneCard tone="amber" bodyClassName="space-y-1">
+            <p className="text-caption text-amber-900" data-testid="split-carryover-onehouse-notice">
+              토지·건물 중 한 부분이라도 이월과세(소득세법 §97의2) 대상으로 입력하면 <strong>1세대1주택 비과세(§89①3호) 판정 대상인 양도는 아직 계산하지 못합니다</strong> —
+              이월과세 적용 여부(§97의2②2호)가 비과세 판정에 따라 달라지기 때문입니다. 비과세 판정 대상이 아닌 양도에서만 이 입력을 쓸 수 있습니다.
+            </p>
+          </ToneCard>
+          {hasCompanions && (
+            <ToneCard tone="rose" bodyClassName="space-y-1">
+              <p className="text-caption text-rose-800" data-testid="split-carryover-companion-exists-note">
+                함께 양도하는 다른 자산이 있으면 토지·건물 파트 이월과세를 아직 계산하지 못합니다 — 파트별 비교과세(§97의2②3호)가 신고 전체의 결정세액을 보지 못하기 때문입니다.
+                이 입력은 이 자산 한 건만 양도할 때 쓸 수 있습니다.
+              </p>
+            </ToneCard>
+          )}
+        </div>
+      )}
+
       {/* ① 증여 기본 정보 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">
@@ -158,6 +189,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           />
         </FieldCard>
 
+        {/* 모드 토글은 영향받는 필드(증여자 취득일) 직전 — 켜면 아래 입력이 토지·건물 파트 카드로 바뀐다. 일반건물 파트 블록에는 두지 않는다. */}
+        <CarryoverDonorSplitToggle asset={asset} onChange={onChange} isNonPrimaryAsset={isNonPrimaryAsset} />
+
+        {!splitMode && (<>
         <FieldCard
           label="증여자 취득일"
           field={isBuildingPart ? "buildingCarryover.donorAcquisitionDate" : "carryover.donorAcquisitionDate"}
@@ -187,8 +222,12 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
               : "상속·증여로 취득한 경우 증여자의 취득가액은 상속개시일·증여일 현재 「상속세 및 증여세법」 평가액입니다 (소득세법 시행령 §163⑨). 그 금액을 아래 ②에 입력하세요."}
           </p>
         </div>
+        </>)}
       </div>
 
+      {splitMode ? (
+        <SplitCarryoverParts asset={asset} onChange={onChange} isAfter2024={isAfter2024} giftTaxShareHint={giftTaxShareHint} />
+      ) : (<>
       {/* ② 증여자 취득가액 */}
       <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
         <div className="flex items-center gap-1.5">
@@ -343,6 +382,8 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         </FieldCard>
       </div>
 
+      </>)}
+
       {/* ⑤ 적용배제 선언 */}
       <div className="rounded-md border border-rose-200/70 bg-rose-50/40 p-3">
         <CarryoverGiftExclusionSection
@@ -358,12 +399,20 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           donorPriorHouseholdResidenceMonths={c.donorPriorHouseholdResidenceMonths}
           donorAcquisitionDate={c.donorAcquisitionDate}
           showHouseholdFact={carryoverHouseholdFactVisible(asset)}
-          showSpouseOneHouseFact={asset.assetKind !== "general_building"}
+          // C는 §97의2②2호(배우자 증여 1세대1주택) 판정을 하지 않는다(P5) — ④가 이 사실을 싣지 않으므로 묻지 않는다.
+          showSpouseOneHouseFact={asset.assetKind !== "general_building" && !splitMode}
           giftRegistryDate={c.giftRegistryDate}
           assetId={asset.assetId}
           onRelationChange={updateCarryover}
         />
       </div>
+
+      {splitMode && (
+        <p className="text-caption text-muted-foreground" data-testid="split-carryover-household-note">
+          증여자와 증여일부터 양도일까지 계속 같은 세대였는지는 묻지 않습니다. 이 사실은 1세대1주택 비과세 판정의 보유기간 통산·거주요건에 쓰이는데 이 입력은 그 판정과 함께
+          계산하지 않으므로 세액에 반영되지 않습니다 — 해당하는 양도라면 <strong>확인 필요</strong>입니다.
+        </p>
+      )}
     </div>
   );
 }

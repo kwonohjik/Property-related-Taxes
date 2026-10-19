@@ -47,6 +47,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
 import { AcqSplitJudgmentBlock } from "./AcqSplitJudgmentBlock";
 import { SplitNonBusinessLandBlock } from "./SplitNonBusinessLandBlock";
+import { SplitCarryoverComparisonCard } from "./SplitCarryoverComparisonCard";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import {
   splitAcqBasisView,
@@ -320,6 +321,8 @@ export function SplitGainDetailSection({
               {...(exemptionNote ? { exemptionNote } : {})}
             />
           )}
+          {/* 파트 이월과세(§97의2①) 판정·비교 — 엔진 echo가 있을 때만(P2 C). 구 이력·이월과세 아님은 렌더하지 않는다. */}
+          {splitDetail.carryoverEvent && <SplitCarryoverComparisonCard splitDetail={splitDetail} />}
         </div>
   );
 }

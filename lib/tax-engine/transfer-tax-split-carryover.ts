@@ -242,6 +242,7 @@ export function calcSplitCarryoverScenarios(
     };
   };
   const period = (plans.land ?? plans.building)!.eligibility.applicablePeriodYears;
+  const orderDependent = hasTwoStableConfigurations(plans, determinedTaxOf);
   const detail: SplitCarryoverDetail = {
     ...(plans.land ? { land: echoOf("land") } : {}),
     ...(plans.building ? { building: echoOf("building") } : {}),
@@ -250,9 +251,30 @@ export function calcSplitCarryoverScenarios(
       giftTaxCalculated: event.giftTaxCalculated,
       giftTaxBase: event.giftTaxBase,
       applicablePeriodYears: period,
+      ...(orderDependent ? { orderDependent: true as const } : {}),
     },
   };
   return { adoptedInput, detail };
+}
+
+/**
+ * 안정 구성이 **둘 이상**인가 — 두 파트가 모두 ②3호 비교 대상일 때만 본다(한 파트면 구성이 둘뿐이라 순서가 없다).
+ * 안정 구성 = 각 파트가 자기 쪽을 뒤집으면 판정이 바뀌는 지점: 적용(A) 파트는 `T(X) ≥ T(X∖p)`, 배제(B) 파트는 `T(X∪p) < T(X)` (②3호는 적용한 세액이 «적은 경우»에만 배제).
+ * 4조합의 결정세액은 순차 고정점이 이미 대부분 계산해 메모에 있다 — 추가 호출은 많아야 한두 번이다. 표시 전용(`SplitCarryoverEventEcho.orderDependent`), 세액·채택은 바꾸지 않는다.
+ */
+function hasTwoStableConfigurations(plans: Plans, tax: (ov: CarryoverScenarioOverrides) => number): boolean {
+  if (!plans.land?.eligibility.isEligible || !plans.building?.eligibility.isEligible) return false;
+  const T = (land: Side, building: Side) => tax({ [INDEX.land]: land, [INDEX.building]: building });
+  let stable = 0;
+  for (const land of ["A", "B"] as const) {
+    for (const building of ["A", "B"] as const) {
+      const here = T(land, building);
+      const landStable = land === "A" ? here >= T("B", building) : T("A", building) < here;
+      const buildingStable = building === "A" ? here >= T(land, "B") : T(land, "A") < here;
+      if (landStable && buildingStable) stable++;
+    }
+  }
+  return stable >= 2;
 }
 
 /**

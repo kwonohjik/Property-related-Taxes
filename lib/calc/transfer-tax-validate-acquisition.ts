@@ -11,7 +11,7 @@
  * 종전 import 경로 호환을 위해 `transfer-tax-validate-asset.ts`가 재export한다.
  */
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
+import { validateCarryoverAsset } from "./transfer-tax-validate-carryover-asset";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
 import { successorAptResidenceOverflowMessage } from "./redev-field-scope";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -45,7 +45,6 @@ import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateLandPartCause } from "./transfer-tax-validate-split";
-import { effectiveSelfOwns } from "./self-owns-scope";
 import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -146,7 +145,7 @@ export function validateAssetAcquisition(
   if (hfdIssue === "kind") return fieldError("inheritanceAssetKind", `${label}: ${HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE}`);
 
   // ── 건물 상속·증여 + 토지 매매(D2) — 자산 단위 상속 요구(아래 §164·E-1·PD-1·post-deemed)보다 **앞**에서 갈라 분리 검증으로 ──
-  if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label, formTransferDate);
+  if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
 
   // ── §164④·⑥·⑤~⑦ 부분 입력 차단 (소령 §163⑨1호·2호) ──
   // ②는 all-or-nothing opt-in이라 일부만 입력하면 payload가 생성되지 않고 ① 단독으로 조용히
@@ -268,109 +267,9 @@ export function validateAssetAcquisition(
   const nblErr = validateNblDetailedJudgment(asset, label, formTransferDate);
   if (nblErr) return nblErr;
 
-  // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 ──
+  // ── 이월과세(증여) 전용 검증 — carryover_gift 시 일반 취득 검증 스킵 (본체는 transfer-tax-validate-carryover-asset.ts, 800줄 정책) ──
   if (asset.acquisitionCause === "carryover_gift") {
-    const c = asset.carryover;
-
-    // (a) 가업상속공제 최우선 차단 (§97조의2 ④)
-    if (c?.exclusionDeclared?.isFamilyBusinessInheritedAsset === true) {
-      return `${label}: 가업상속공제 적용 자산은 현재 버전에서 지원하지 않습니다. 세무사에게 수동 계산을 의뢰하세요 (소득세법 §97조의2 ④).`;
-    }
-
-    if (!c) return fieldError("carryover.giftRegistryDate", `${label}: 이월과세 증여 정보를 입력하세요.`);
-
-    // (b) 필수 날짜 필드
-    if (!c.giftRegistryDate) return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일을 입력하세요.`);
-    if (!c.donorAcquisitionDate) return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일을 입력하세요.`);
-
-    // (b-2) 날짜 순서 — 증여자 취득 → 증여 등기 → 양도 (gift/inheritance 원인과 동일 수준 차단)
-    if (c.donorAcquisitionDate >= c.giftRegistryDate)
-      return fieldError("carryover.donorAcquisitionDate", `${label}: 증여자 취득일은 증여 등기접수일보다 이전이어야 합니다.`);
-    if (formTransferDate && c.giftRegistryDate >= formTransferDate)
-      return fieldError("carryover.giftRegistryDate", `${label}: 증여 등기접수일은 양도일보다 이전이어야 합니다.`);
-
-    // (b-3a) §97조의2 ① 본문 — 대상은 **배우자·직계존비속뿐**이다.
-    // 그 외 관계는 이월과세 자체가 성립하지 않으므로 취득원인을 바꿔야 한다.
-    if (c.donorRelation === "other")
-      return fieldError("acquisitionCause", `${label}: 이월과세는 배우자 또는 직계존비속으로부터 증여받은 경우에만 적용됩니다 (「소득세법」 제97조의2 제1항). 취득 원인을 "증여"로 변경하세요.`);
-
-    // (b-3) §97조의2 ① 관계요건 — 사망을 선언했으면 관계가 있어야 판정이 갈린다.
-    //
-    // ⚠️ 관계를 **단독으로 필수화하지 않는다**. 구형 sessionStorage에는 이 필드가 없어
-    //    필수화하면 기존 이월과세 입력이 전부 차단된다
-    //    (memory `feedback_blocking_validation_full_e2e_regression`).
-    //    사망 미선언이면 관계는 판정에 영향이 없다(`isCarryoverRelationExcluded`).
-    if (c.donorDeceased && !c.donorRelation)
-      return fieldError("carryover.donorRelation", `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`);
-
-    // (c) 비교과세 B 시나리오 취득가
-    if (parseAmount(c.giftDateValuation) <= 0)
-      return fieldError("carryover.giftDateValuation", `${label}: 증여 당시 평가액을 입력하세요.`);
-
-    // (d) 취득가액 — 환산 미사용 시 직접 입력 필수
-    if (!c.useEstimatedAcquisition && parseAmount(c.donorAcquisitionPrice) <= 0) {
-      return fieldError("carryover.donorAcquisitionPrice", `${label}: 증여자 취득가액을 입력하세요. (환산취득가 사용 시 토글 켜기)`);
-    }
-
-    // (e) 환산 사용 시 모드 선택 필수 + 모드별 필수 필드 검증
-    if (c.useEstimatedAcquisition) {
-      // 환산 모드 미선택 차단
-      if (!c.estimationMode) {
-        return fieldError("carryover.estimationMode", `${label}: 환산 방식(일반 기준시가/개별주택가격 미공시/공동주택 최초고시 전)을 선택하세요.`);
-      }
-
-      if (c.estimationMode === "general") {
-        // 일반 기준시가 환산 — donorStandardPrice* 2개 필수
-        if (parseAmount(c.donorStandardPriceAtAcquisition) <= 0)
-          return fieldError("carryover.donorStandardPriceAtAcquisition", `${label}: 취득시 기준시가를 입력하세요.`);
-        if (parseAmount(c.donorStandardPriceAtTransfer) <= 0)
-          return fieldError("carryover.donorStandardPriceAtTransfer", `${label}: 양도시 기준시가를 입력하세요.`);
-      } else if (c.estimationMode === "phd") {
-        // PHD §164⑦ — asset 수준 phdFirstDisclosureDate 등 필수
-        if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일을 입력하세요.`);
-        // §164⑦ 게이트 — 이월과세는 증여자 취득가액 기준: 비교일 = 증여자 취득일
-        if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
-          return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
-        if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-          return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초 고시 개별주택가격을 입력하세요.`);
-        const transferPrice =
-          parseAmount(asset.phdTransferHousingPrice) || parseAmount(asset.standardPriceAtTransfer);
-        if (transferPrice <= 0) return fieldError("phdTransferHousingPrice", `${label}: 양도시 개별주택가격을 입력하세요.`);
-      } else if (c.estimationMode === "apd") {
-        // APD — PHD와 동일 경로(preHousingDisclosure)를 사용하므로 같은 필드 검증
-        if (!asset.phdFirstDisclosureDate) return fieldError("phdFirstDisclosureDate", `${label}: 최초 고시일(공동주택 최초공시일)을 입력하세요.`);
-        // §164⑦ 게이트 — 비교일 = 증여자 취득일 (phd 모드와 동일)
-        if (!isPhdEligible(c.donorAcquisitionDate, asset.phdFirstDisclosureDate))
-          return fieldError("phdFirstDisclosureDate", `${label}: 증여자 취득일(의제취득일 1985-01-01 반영)이 최초 고시일 이후입니다. 취득 당시 주택공시가격이 고시되어 있으므로 3-시점 환산(§164⑦) 대상이 아닙니다 — 일반 기준시가 환산을 선택하세요.`);
-        if (parseAmount(asset.phdFirstDisclosureHousingPrice) <= 0)
-          return fieldError("phdFirstDisclosureHousingPrice", `${label}: 최초공시 공동주택가격을 입력하세요.`);
-        const transferPrice =
-          parseAmount(asset.phdTransferHousingPrice) || parseAmount(asset.standardPriceAtTransfer);
-        if (transferPrice <= 0) return fieldError("phdTransferHousingPrice", `${label}: 양도시 공동주택가격을 입력하세요.`);
-      }
-    }
-
-    // (f) 음수 차단
-    if (parseAmount(c.donorCapitalExpenditure) < 0)
-      return fieldError("carryover.donorCapitalExpenditure", `${label}: 증여자 자본적지출은 음수일 수 없습니다.`);
-    if (parseAmount(c.giftTaxAmount) < 0)
-      return fieldError("carryover.giftTaxAmount", `${label}: 증여세 상당액은 음수일 수 없습니다.`);
-
-    // (g) 결정 #33·#34·#38-6 — 증여자와 계속 같은 세대인가(필수 사실 질문) — `validateCarryoverHouseholdFact` 참조.
-    const householdErr = validateCarryoverHouseholdFact(asset, c, label);
-    if (householdErr) return householdErr;
-
-    // (h) 토지·건물 소유자 분리(`selfOwns≠both`) — 신축 분기·일반 취득 꼬리와 같은 분리 검증 전체.
-    //     이월과세는 `NonPurchaseSplitInputsBlock`이 취득시 기준시가·양도시 기준시가를 받는 호스트인데(화면에 칸이 있다),
-    //     종전엔 아래 `return null`이 그 규칙을 통째로 건너뛰어 ⑧ 통과 → ⑫ 400(`standardPricePerSqmAtAcquisition` 등 5필드)이었다.
-    //     게이트는 ④ `isSplitPayloadActive`의 소유 축과 같은 술어(`effectiveSelfOwns`) — 분리가 아니면 `null`(회귀 0).
-    //     첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)이고 칸 순서는 취득시 → 양도시 → 파트별이다.
-    if ((effectiveSelfOwns(asset) ?? "both") !== "both") {
-      return validateSplitDirectInputs(asset, label, formTransferDate);
-    }
-
-    // carryover_gift 검증 완료 — 일반 취득 검증 스킵
-    return null;
+    return validateCarryoverAsset(asset, label, formTransferDate, { isNonPrimaryAsset, form });
   }
 
   // 겸용주택 분리계산은 calcMixedUseTransferTax 엔진이 별도 처리 — 전용 검증 후 return.
@@ -418,13 +317,13 @@ export function validateAssetAcquisition(
     // 토지·건물 분리(「토지는 다른 원인으로 취득」·소유자 분리) — 매매와 같은 분리 검증 전체(D1 G-11). 종전엔
     // 원인 규칙만 불러 양도시 기준시가·구분양도 합계·토지 평가액·파트 자본적지출이 ⑧을 통과하고 ⑫에서 400이
     // 되거나(막다른 길) 200 오답이 났다. 첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)다.
-    return validateSplitDirectInputs(asset, label, formTransferDate);
+    return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
   }
 
   if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
   // D1-2 「토지는 다른 원인으로 취득」(매매 호스트) — 총액·산정 방식 규칙보다 먼저. 늦으면 같은 날·토지일 비움이
   //   「취득가액 합 초과」 같은 엉뚱한 메시지로 뜬다(UI 설계 §4). 원인이 없으면 null(회귀 0).
-  const landCauseErr = validateLandPartCause(asset, label);
+  const landCauseErr = validateLandPartCause(asset, label, { isNonPrimary: isNonPrimaryAsset });
   if (landCauseErr) return landCauseErr;
 
   const isSalesCase = asset.isSalesCaseAcquisition === true;
@@ -785,7 +684,7 @@ export function validateAssetAcquisition(
 
   // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.
   // 판정식은 엔진 splitPair와 단일 소스(isSplitPairOverflow) — ⑧ 규칙(UI 통과 ↔ validate 차단 모순) 방지.
-  const splitErr = validateSplitDirectInputs(asset, label, formTransferDate);
+  const splitErr = validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
   if (splitErr) return splitErr;
 
   return null;

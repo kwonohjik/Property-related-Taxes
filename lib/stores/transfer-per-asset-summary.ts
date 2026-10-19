@@ -16,6 +16,7 @@
 
 import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 import { hasStaleSplitInput } from "@/lib/calc/transfer-land-part-cause";
+import { neutralizeCarryoverDonorSplitForCompanion } from "@/lib/calc/transfer-land-part-cause";
 import type { TransferFormData } from "./calc-wizard-store";
 import type { AssetForm } from "./calc-wizard-asset";
 import type { ReductionType } from "./calc-wizard-asset-reduction";
@@ -303,7 +304,9 @@ export function computeTransferPerAssetSummary(
 
   /** 축 B(같은 물건 지분 분할)인가 — 함께 양도 묶음의 지분 자산과 갈린다(④와 같은 판정). */
   const axisBBundle = isFullFractionalBundle(formData.assets, formData.assetSplitMode);
-  const rows: TransferAssetSummaryRow[] = formData.assets.map((a, i) => {
+  const rows: TransferAssetSummaryRow[] = formData.assets.map((rawAsset, i) => {
+    // 함께 양도 자산은 파트 이월과세(C) 토글을 꺼진 것으로 읽는다 — ④·⑧과 같은 사실(`neutralizeCarryoverDonorSplitForCompanion`).
+    const a = neutralizeCarryoverDonorSplitForCompanion(rawAsset, i > 0);
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
     /** 겸용 × 부담부증여(주 자산) — 취득 입력·계약금액이 아니라 BG 블록·엔진 echo가 정본이다. */

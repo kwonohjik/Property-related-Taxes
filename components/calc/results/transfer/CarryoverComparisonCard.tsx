@@ -30,7 +30,7 @@ function fmt(n: number): string {
 
 // ── 서브 컴포넌트: 단일 시나리오 컬럼 ───────────────────────────
 
-interface ScenarioColProps {
+export interface ScenarioColProps {
   label: string;
   adopted: boolean;
   children: React.ReactNode;
@@ -48,7 +48,7 @@ interface ScenarioColProps {
   compared: boolean;
 }
 
-function ScenarioCol({ label, adopted, children, determinedTax, filingUnit, compared }: ScenarioColProps) {
+export function ScenarioCol({ label, adopted, children, determinedTax, filingUnit, compared }: ScenarioColProps) {
   return (
     <div
       className={cn(
@@ -82,7 +82,7 @@ function ScenarioCol({ label, adopted, children, determinedTax, filingUnit, comp
 
 // ── 행 헬퍼 ─────────────────────────────────────────────────────
 
-function InfoRow({ label, value, sub = false }: { label: string; value: string; sub?: boolean }) {
+export function InfoRow({ label, value, sub = false }: { label: string; value: string; sub?: boolean }) {
   return (
     <div className={cn("flex justify-between text-xs", sub && "pl-2 text-muted-foreground")}>
       <span>{label}</span>

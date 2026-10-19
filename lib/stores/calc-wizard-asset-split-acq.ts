@@ -1,3 +1,5 @@
+import type { CarryoverTaxationForm } from "./calc-wizard-asset-carryover";
+
 /**
  * SplitAcquisitionFormSlice — 토지·건물 취득일 분리(소령 §166⑥) 파트별 입력.
  * AssetForm이 extends. 800줄 정책으로 calc-wizard-asset.ts에서 분리.
@@ -124,4 +126,17 @@ export interface SplitAcquisitionFormSlice {
   landStandardPriceAtTransfer: string;
   /** 건물 양도시 기준시가 — 환산취득가 분리 계산 시 사용 */
   buildingStandardPriceAtTransfer: string;
+
+  // ── 파트 이월과세(소득세법 §97의2①) — C: 통째 이월과세인데 증여자가 토지·건물을 다른 날 취득 (P2) ──
+  /**
+   * 「증여자가 토지·건물을 다른 날 취득」 토글(클라이언트 전용 — ④가 보내지 않는다). 유효 여부는 이 값 단독이 아니라
+   * `effectiveCarryoverDonorSplit`(lib/calc/transfer-land-part-cause.ts)가 정한다 — 취득 원인·소유자 분리·부담부증여·첫 자산을 함께 본다.
+   * 켜면 기존 `carryover`(자산 전체 증여자 입력)는 **건물 파트**로 읽히고 토지 파트는 `landCarryover`가 받는다.
+   */
+  carryoverDonorSplit: boolean;
+  /**
+   * 파트 이월과세의 **토지 서브폼**(증여자의 토지 취득일·취득가액·자본적지출). 증여 사건(등기접수일·산출세액·과세가액·관계·적용배제)은
+   * C에서 `carryover`가 정본이다. 취득 원인을 바꿔도 지우지 않는다(읽는 쪽 술어가 「없음」으로 읽는다).
+   */
+  landCarryover: CarryoverTaxationForm;
 }

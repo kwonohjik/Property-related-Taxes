@@ -54,11 +54,21 @@ import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
 
+import { splitCarryoverOneHouseIssue } from "./transfer-tax-validate-split-carryover";
+
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
   const issues: ValidationIssue[] = [];
   if (!form.householdHousingCount)
     issues.push({ step, field: "householdHousingCount", message: "세대 보유 주택 수를 선택하세요." });
+
+  // P2 C — 파트 이월과세 × 1세대1주택 비과세(§89①3호) 겹침 (leaf S9). 1세대 여부는 이 단계에서 정해지므로 자산 단계(0)가 아니라 여기서 막는다.
+  //   ④가 body에 싣는 `isOneHousehold`·`isUnregistered`와 같은 값을 넣는다(3중 패턴 — ⑫ 400과 같은 판정).
+  const splitCarryoverOneHouse = splitCarryoverOneHouseIssue(form.assets?.[0], {
+    isOneHousehold: form.isOneHousehold,
+    isUnregistered: form.isUnregistered,
+  });
+  if (splitCarryoverOneHouse) issues.push({ step, field: "isOneHousehold", message: splitCarryoverOneHouse });
 
   /**
    * ⑧ 명부 필수화(PR-1·PR-B·PR-C) — 세대 보유 주택 수를 명부에서 도출하는 자산 양도

@@ -172,6 +172,7 @@ export function buildStatementItems(
     acquisitionDateOverride,
     transferDateOf,
     acqDateOf,
+    splitDetail: result.splitDetail,
   });
   /**
    * 다건 모드에서 **그 양도건 자신의** 거주 개월수. 종전에는 자산별 장특 분할에도

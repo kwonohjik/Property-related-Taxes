@@ -10,6 +10,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { fmtDate, fmtPeriod, holdingPeriodFromDates } from "./FilingFormTableHelpers";
 import type { StatementItem } from "./DetailedStatementConfig";
+import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
+import { splitCarryoverDateText } from "./split-acq-text";
+import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 
 interface DateItemsArgs {
   isAggregate: boolean;
@@ -25,6 +28,8 @@ interface DateItemsArgs {
   acquisitionDateOverride: string | undefined;
   transferDateOf: (pid: string) => string;
   acqDateOf: (pid: string) => string;
+  /** 파트 이월과세(P2 C) echo — 취득일자·보유기간 행이 파트별 기산일을 밝힌다. 없으면 종전 */
+  splitDetail?: SplitGainResult;
 }
 
 export function setDateAndResidenceItems(items: Map<string, StatementItem>, args: DateItemsArgs): void {
@@ -38,7 +43,9 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
     acquisitionDateOverride,
     transferDateOf,
     acqDateOf,
+    splitDetail,
   } = args;
+  const splitCarryover = isAggregate ? undefined : splitCarryoverView(splitDetail);
   items.set("transferDate", {
     label: "양도일자",
     value: fmtDate(transferDate),
@@ -56,14 +63,17 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
   const displayAcqDate =
     acquisitionDateOverride && acquisitionDateOverride !== ""
       ? acquisitionDateOverride
-      : primary?.acquisitionDate ?? "";
+      : // 파트 이월과세(P2 C)는 수증자 취득일 = 증여 등기접수일이다(자산 카드에 취득일 칸이 없다).
+        (splitCarryover?.giftRegistryDate || primary?.acquisitionDate) ?? "";
   items.set("acquisitionDate", {
     label: acquisitionDateLabel ? `취득일자 ${acquisitionDateLabel}` : "취득일자",
     value: fmtDate(displayAcqDate),
     formula: acquisitionDateOverride
       ? "이월과세 적용 시 증여자 취득일 기산 (소득세법 §97조의2 ①)"
-      : "사용자 입력 (등기접수일 또는 잔금청산일 중 빠른 날)",
-    legalBasis: acquisitionDateOverride ? "소득세법 §97조의2" : "소득세법 §98",
+      : splitCarryover
+        ? `수증자 취득일 = 증여 등기접수일 — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
+        : "사용자 입력 (등기접수일 또는 잔금청산일 중 빠른 날)",
+    legalBasis: acquisitionDateOverride || splitCarryover ? "소득세법 §97조의2" : "소득세법 §98",
     perAsset: isAggregate
       ? properties.map((p) => ({
           label: p.propertyLabel,
@@ -72,11 +82,17 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
       : undefined,
   });
 
+  // 파트 이월과세 — 장기보유특별공제 보유기간은 파트마다 기산일이 다르다(적용 파트는 증여자 취득일). 엔진 파트 취득일 echo에서 센다.
+  const splitHoldingValue = splitCarryover
+    ? splitCarryover.parts.map((p) => `${p.label} ${holdingPeriodFromDates(p.lthdStartDate, transferDate)}`).join(" / ")
+    : undefined;
   items.set("holdingPeriod", {
     label: "보유기간",
-    value: holdingPeriodFromDates(displayAcqDate, transferDate),
-    formula: `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (연·월 차이)`,
-    legalBasis: "소득세법 §95②",
+    value: splitHoldingValue ?? holdingPeriodFromDates(displayAcqDate, transferDate),
+    formula: splitCarryover
+      ? `양도일 ${fmtDate(transferDate)} − 파트별 장기보유특별공제 기산일 (${splitCarryoverDateText(splitDetail)}) (연·월 차이) — 장기보유특별공제 보유기간이며 세율 기산일과 다를 수 있습니다`
+      : `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (연·월 차이)`,
+    legalBasis: splitCarryover ? "소득세법 §95④ 단서·§97조의2" : "소득세법 §95②",
     perAsset: isAggregate
       ? properties.map((p) => ({
           label: p.propertyLabel,

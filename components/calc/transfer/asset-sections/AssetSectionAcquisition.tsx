@@ -182,6 +182,8 @@ export function AssetSectionAcquisition({
         /* §164⑦ PHD는 ④가 primary에만 싣는다 — 첫 자산이 아니면 토글 대신 안내를 띄운다.
            `shareAcquisitionOnly`와 달리 **분할 모드를 가리지 않는다**(함께양도 컴패니언도 대상). */
         isNonPrimaryAsset={!isFirst}
+        /* 파트 이월과세(C)는 함께 양도 자산이 있으면 계산하지 못한다 — 첫 자산 카드의 안내(N8) 근거. */
+        hasCompanions={hasSiblings}
       />
 
       {/* 신축주택 — 부수토지 한도 산정 섹션 (영 §154⑦) */}

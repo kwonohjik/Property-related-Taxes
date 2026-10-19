@@ -151,26 +151,17 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
 };
 
 /**
- * 구형 sessionStorage 데이터에서 carryover 서브객체 마이그레이션.
- * acquisitionCause !== "carryover_gift" 이면 기본값으로 초기화.
+ * 이월과세 서브폼 한 벌의 필드별 정규화 — `carryover`(자산 전체)와 `landCarryover`(파트 이월과세의 토지 서브폼)가 **같은 본문**을 쓴다.
+ * 구형 sessionStorage에 없는 필드는 기본값으로 채우고, 형이 틀린 값은 기본값으로 되돌린다(값 비교 판별자 금지 — D45).
  */
-export function migrateCarryoverFields(a: Record<string, unknown>): void {
-  const cause = a.acquisitionCause as string;
-
-  // carryover_gift 이외 취득원인에서는 carryover 스트리핑 (sessionStorage 잔재 정리)
-  if (cause !== "carryover_gift") {
-    a.carryover = { ...CARRYOVER_DEFAULTS };
-    return;
-  }
-
-  // carryover_gift: 각 서브필드 개별 migrate
-  const raw = (a.carryover ?? {}) as Record<string, unknown>;
+export function normalizeCarryoverForm(rawInput: unknown): CarryoverTaxationForm {
+  const raw = (rawInput ?? {}) as Record<string, unknown>;
   const excl = (raw.exclusionDeclared ?? {}) as Record<string, unknown>;
 
   const validDonorCauses = ["purchase", "inheritance", "gift"];
   const validEstimationModes: CarryoverEstimationMode[] = ["general", "phd", "apd"];
 
-  a.carryover = {
+  return {
     giftRegistryDate: typeof raw.giftRegistryDate === "string" ? raw.giftRegistryDate : "",
     donorAcquisitionDate: typeof raw.donorAcquisitionDate === "string" ? raw.donorAcquisitionDate : "",
     donorAcquisitionCause: validDonorCauses.includes(raw.donorAcquisitionCause as string)
@@ -229,5 +220,33 @@ export function migrateCarryoverFields(a: Record<string, unknown>): void {
         excl.legacyOneHouseExemptionDeclared === true || excl.oneHouseExemptionApplies === true,
       isFamilyBusinessInheritedAsset: !!excl.isFamilyBusinessInheritedAsset,
     },
-  } satisfies CarryoverTaxationForm;
+  };
+}
+
+/**
+ * 구형 sessionStorage 데이터에서 carryover 서브객체 마이그레이션.
+ * acquisitionCause !== "carryover_gift" 이면 기본값으로 초기화.
+ */
+export function migrateCarryoverFields(a: Record<string, unknown>): void {
+  const cause = a.acquisitionCause as string;
+
+  // carryover_gift 이외 취득원인에서는 carryover 스트리핑 (sessionStorage 잔재 정리)
+  if (cause !== "carryover_gift") {
+    a.carryover = { ...CARRYOVER_DEFAULTS };
+    return;
+  }
+
+  // carryover_gift: 각 서브필드 개별 migrate
+  a.carryover = normalizeCarryoverForm(a.carryover);
+}
+
+/**
+ * 주택 split **파트 이월과세**(소득세법 §97의2①)의 신규 키 3종을 정규화한다 — 구 세션·이력에는 없다.
+ *
+ * ⚠️ `carryover`와 달리 **호스트 스트리핑을 하지 않는다**: `landCarryover`는 취득 원인을 바꿔도 값을 보존한다(토글 OFF·재ON 복원).
+ *    유효 여부는 읽는 쪽 술어(`effectiveCarryoverDonorSplit`)가 정한다 — 잔재는 「없음」으로 읽고 지우지 않는다(D0 G-6).
+ */
+export function migrateSplitPartCarryoverFields(a: Record<string, unknown>): void {
+  a.carryoverDonorSplit = a.carryoverDonorSplit === true;
+  a.landCarryover = normalizeCarryoverForm(a.landCarryover);
 }

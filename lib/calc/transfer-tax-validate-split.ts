@@ -34,6 +34,7 @@ import { effectiveSelfOwns } from "./self-owns-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { engineLandOverlay } from "./transfer-land-part-cause";
+import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
@@ -207,7 +208,12 @@ function validateHouseLandSec164Inputs(asset: AssetForm, label: string): string 
  * ⚠️ 신축 분기(`transfer-tax-validate-acquisition.ts`)도 직접 부른다 — 그 분기는 `validateSplitDirectInputs`에
  *    닿기 전에 반환하는데, 이 규칙의 범위(건물 신축 + 토지 상속·증여)가 정확히 그 분기다.
  */
-export function validateLandPartCause(rawAsset: AssetForm, label: string): string | null {
+export function validateLandPartCause(
+  rawAsset: AssetForm,
+  label: string,
+  /** 함께 양도 자산(첫 자산이 아님) — 파트 이월과세를 받지 않는 자리라 leaf에 `partCarryoverSupported: false`(S0)를 넘긴다. ⑫가 컴패니언에 넘기는 값과 같다. */
+  opts?: { isNonPrimary?: boolean },
+): string | null {
   const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";
   const selfOwnsSplit = selfOwnsEff !== "both";
@@ -258,6 +264,7 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
     buildingAcquisitionDate: asset.acquisitionDate || undefined,
     hasBuildingAcquisitionPrice: parseAmount(splitBuildingAcqPriceInput(asset) ?? "") > 0,
     hasLandAcquisitionPrice: parseAmount(asset.landAcquisitionPrice ?? "") > 0,
+    ...(opts?.isNonPrimary ? { partCarryoverSupported: false } : {}),
   });
   // Q-4 — ⑫는 막지 않는 ⑤·⑧ 정책(엔진 값은 원인 없음과 같다 — 계획서 §10.2 T-4).
   if (!issue && landPartCauseSameDay(asset)) return fieldError("landAcquisitionDate", `${label}: ${LAND_CAUSE_SAME_DAY_MESSAGE}`);
@@ -304,7 +311,12 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
  * 검증 대상 게이트 — UI가 양도가액 직접입력 칸을 노출하는 조건과 동일:
  *   `hasSeperateLandAcquisitionDate && saleSplitMode === "actual"`
  */
-export function validateSplitDirectInputs(rawAsset: AssetForm, label: string, formTransferDate?: string): string | null {
+export function validateSplitDirectInputs(
+  rawAsset: AssetForm,
+  label: string,
+  formTransferDate?: string,
+  opts?: { isNonPrimary?: boolean },
+): string | null {
   const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   // ⚠️ 게이트는 **API 전송 조건(`isSplitPayloadActive`)과 같아야** 한다(2026-07-30).
   //    종전엔 `hasSeperateLandAcquisitionDate`만 봤는데, 비-매매 취득원인의 소유자 분리는
@@ -313,9 +325,12 @@ export function validateSplitDirectInputs(rawAsset: AssetForm, label: string, fo
   //    반환하고 `selfOwns`가 무시되어 비소유 파트까지 과세된다.
   // M2 — ④ `isSplitPayloadActive`와 같은 유효 소유 축(`self-owns-scope.ts`). 토지 등의 잔재는 보지 않는다.
   const selfOwnsSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
-  if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit) return null;
+  // P2 C — 파트 이월과세(증여자 토지·건물 취득일 상이)도 ④가 분리 축을 싣는다(`isSplitPayloadActive`). 구조 규칙(leaf)은 호출부
+  //   (`validateSplitCarryoverInputs`)가 C 사실로 이미 걸었으므로 여기서는 양도가액 구분·양도시 기준시가·파트 자본적지출만 본다.
+  const carryoverSplit = effectiveCarryoverDonorSplit(asset);
+  if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit && !carryoverSplit) return null;
 
-  const causeErr = validateLandPartCause(asset, label);
+  const causeErr = carryoverSplit ? null : validateLandPartCause(asset, label, opts);
   if (causeErr) return causeErr;
 
   // ── V9. 주택 부수토지 배율 판정 필수 입력 (「소득세법 시행령」 제168조의12) ──────────
@@ -584,7 +599,9 @@ export function validateSplitDirectInputs(rawAsset: AssetForm, label: string, fo
   const skipTotals =
     asset.transferType === "burdened_gift" ||
     asset.assetKind === "redevelopment_apt" ||
-    getOwnershipRatio(asset) < 1.0;
+    getOwnershipRatio(asset) < 1.0 ||
+    // P2 C — 자산 단위 취득가액 총액은 숨은 잔재이다. ④는 `acquisitionPrice`를 그대로 싣고(설계 U-4) 엔진은 C에서 그 총액을 읽지 않는다(파트 증여 신고가액이 정본).
+    carryoverSplit;
 
   /**
    * 🔴 **early-return 범위 정정**(2026-08-13).
@@ -674,7 +691,8 @@ export function validateSplitDirectInputs(rawAsset: AssetForm, label: string, fo
   //    `directExpenses`는 deprecated(legacy 마이그레이션 전용)라 신규 입력에선 0 → 엔진도
   //    총액 0일 때 잔액 규칙을 쓰지 않고 독립 입력으로 처리하므로 모순 자체가 발생하지 않는다.
   const totalExp = parseAmount(asset.directExpenses ?? "");
-  if (totalExp > 0) {
+  // P2 C — ④가 `expenses: 0`을 싣는다(자산 단위 총액은 파트에 안분하지 않는다). 보이는 잔재는 `validateSplitCarryoverInputs`가 먼저 막는다.
+  if (totalExp > 0 && !carryoverSplit) {
     const land = opt(asset.landDirectExpenses);
     const building = opt(asset.buildingDirectExpenses);
     if (isSplitPairOverflow(totalExp, land, building)) {

@@ -9,6 +9,7 @@
  *    의존하는 파생은 옮기지 말 것(파라미터가 늘면 이 파일의 존재 이유가 사라진다).
  */
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
@@ -60,7 +61,8 @@ export function buildPrimaryContext(
   const blocksAppraisalSalesCase = isRightToMoveIn && !isSuccessorRight;
   // D2(건물 상속·증여 + 토지 매매) — 자산 단위 추계 플래그(stale 포함)는 무시한다: 건물은 평가액(실가) 고정, 토지 방식은 파트 모드가 정한다.
   // ⑧ D2 분기·다건 ④와 같은 술어 — 남은 환산 플래그가 ⑫에 「환산 기준시가 필수」를 일으키는 칸 없는 400을 막는다.
-  const d2Mix = !!effectiveBuildingCauseMix(primary);
+  //   P2 C(파트 이월과세)도 같다: 두 파트가 실가(증여자 취득가액·증여 신고가액) 고정이라 자산 단위 추계 플래그 잔재를 읽지 않는다(`normalizeBuildingCauseInputs`의 파트 방식 고정과 짝).
+  const d2Mix = !!effectiveBuildingCauseMix(primary) || effectiveCarryoverDonorSplit(primary);
   const isSalesCase = !d2Mix && !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
   const isAppraisal =
     !d2Mix && !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
@@ -102,10 +104,12 @@ export function buildPrimaryContext(
   const usesPhd = phdFlagEffective(primary);
   // 이월과세 "general" 환산 모드: donorStandardPrice*를 최상위 standardPrice*로 override.
   // PHD/APD 모드와 달리 preHousingDisclosure 없이 기준시가를 직접 입력하므로 usesPhd=false 필요.
+  // P2 C(증여자 토지·건물 취득일 상이)는 환산을 지원하지 않는다(I-4) — 건물 파트가 읽는 `carryover`에 남은 환산 잔재를 쓰지 않는다.
   const isCarryoverGeneral =
     primary.acquisitionCause === "carryover_gift" &&
     primary.carryover?.useEstimatedAcquisition === true &&
-    primary.carryover?.estimationMode === "general";
+    primary.carryover?.estimationMode === "general" &&
+    !effectiveCarryoverDonorSplit(primary);
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
   // A15(2026-09-02): 환지 의제 필지는 `acquisitionDate`가 빈 문자열이라 종전 `|| form.transferDate`

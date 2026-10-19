@@ -11,6 +11,7 @@ import { normalizeRentalAndSplitFields, hasPositiveAmount } from "./calc-wizard-
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
 import { migrateRentalHousingException } from "./calc-wizard-asset-migrate-rhe";
 import { migrateCarryoverFields } from "./calc-wizard-asset-carryover";
+import { migrateSplitPartCarryoverFields } from "./calc-wizard-asset-carryover";
 import {
   applyPhase3Normalize,
   migrateGeneralBuildingFields,
@@ -275,6 +276,8 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.useStandardPriceAtTransferOverride === undefined) a.useStandardPriceAtTransferOverride = false;
   // 이월과세(증여) carryover 서브객체 마이그레이션
   migrateCarryoverFields(a);
+  // 파트 이월과세(§97의2①) 신규 키 — 구 세션·이력은 항상 「꺼짐」(P2 C)
+  migrateSplitPartCarryoverFields(a);
   // 겸용주택 분리계산 + 보유 중 일부 용도변경 필드 (별도 모듈)
   migrateMixedUseFields(a);
   // 거주 정보 (자산-수준)

@@ -132,6 +132,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: P
        && parseInt(asset.transferExpense || "0", 10) === 0 && (
         <CurrencyInput
           label="직접 귀속 필요경비 (원) — 이전 입력 형식"
+          data-field="directExpenses"
           value={asset.directExpenses}
           onChange={(v) => onChange({ directExpenses: v })}
           hint={isPartial ? PARTIAL_CAPEX_NOTE : undefined}

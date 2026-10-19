@@ -16,6 +16,7 @@ import { splitCauseLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitRateBasisNote } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitAcqBasisView } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import {
   resolveLthdSplit,
   isTable2Applied,
@@ -160,6 +161,7 @@ export { holdingMonthsFromDates, fmtDate, fmtPeriod, holdingPeriodFromDates, get
 
 import { fourPartFinancials, fourPartLthdSplitRows, splitTwoColFinancials, splitNonBusinessLandNotes } from "./FilingFormTableFinancials";
 import { hasRentalSplitColumns, rentalSplitTwoColFinancials } from "./FilingFormTableRentalSplit";
+import { fillSplitCarryoverCells } from "./FilingFormTableSplitCarryover";
 import { buildAggregateRows } from "./FilingFormTableAggregateHelpers";
 import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightReceiveBranchData, fillRedevRightLandPayBranchData } from "./FilingFormTableRedevRows";
 import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
@@ -192,10 +194,12 @@ export function buildRows(
   }
 
   const primary = asset ?? formData?.assets[0];
+  // 파트 이월과세(P2 C) — 수증자 취득일 = 증여 등기접수일(자산 카드에 취득일 칸이 없다). 파트 열은 아래에서 파트별 기산일로 덮는다.
+  const splitCarryover = mode === "split-2col" ? splitCarryoverView(result.splitDetail) : undefined;
   const acquisitionDate =
     acquisitionDateOverride && acquisitionDateOverride !== ""
       ? acquisitionDateOverride
-      : primary?.acquisitionDate ?? "";
+      : (splitCarryover?.giftRegistryDate || primary?.acquisitionDate) ?? "";
 
   // 양도가액 표시 — 지분 모드(자산 1건 + ratio < 1.0) 방어적 처리:
   //   form.contractTotalPrice는 100% 기준값이므로, 자산이 지분이라면 × ratio 적용해서 본 자산의 지분분 표시.
@@ -387,6 +391,8 @@ export function buildRows(
     }
     // 세율 기산일(§104②)은 서식 행이 없다 — 원인이 다를 때만 취득일 칸 각주로 밝힌다(D1-3).
     const spSummary = summarizeSplitGain(sp);
+    // 파트 이월과세(§97의2①) — 파트별 기산일·취득가액 분해·증여세 상당액 안분 (P2 C, 별도 파일)
+    if (splitCarryover) fillSplitCarryoverCells(splitCarryover, transferDate, spSummary.mixedCause, setStr, setRoseNote);
     if (spSummary.mixedCause) {
       for (const k of ["land", "building"] as const) {
         const cause = splitCauseLabel(sp[k].acquisitionCause!);

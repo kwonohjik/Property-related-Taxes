@@ -17,7 +17,12 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 
-export function validateBuildingCauseSplit(asset: AssetForm, label: string, formTransferDate?: string): string | null {
+export function validateBuildingCauseSplit(
+  asset: AssetForm,
+  label: string,
+  formTransferDate?: string,
+  opts?: { isNonPrimary?: boolean },
+): string | null {
   const isInheritance = asset.acquisitionCause === "inheritance";
   const dayLabel = isInheritance ? "상속개시일" : "증여일";
   if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 건물 ${dayLabel}을 입력하세요.`);
@@ -32,5 +37,5 @@ export function validateBuildingCauseSplit(asset: AssetForm, label: string, form
         `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`,
       );
   }
-  return validateSplitDirectInputs(asset, label, formTransferDate);
+  return validateSplitDirectInputs(asset, label, formTransferDate, opts);
 }

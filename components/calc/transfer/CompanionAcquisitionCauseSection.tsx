@@ -24,6 +24,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { calcGiftHouseholdFactAsked } from "@/lib/calc/gift-household-payload";
 import { PreDeemedEstimatedNotice } from "./PreDeemedEstimatedNotice";
 import { CarryoverGiftBlock } from "./CarryoverGiftBlock";
+import { CarryoverPartsSaleAxis } from "./CarryoverPartsSaleAxis";
 import { NewConstructionDateBlock } from "./NewConstructionDateBlock";
 import { GeneralBuildingAcquisitionCards } from "./GeneralBuildingAcquisitionCards";
 import { FamilyBusinessInheritanceTransferSection } from "./FamilyBusinessInheritanceTransferSection";
@@ -32,7 +33,7 @@ import { giftEstimationClearPatch } from "@/lib/calc/transfer-tax-split-acq-mode
 import { giftEstimationGenericScope } from "@/lib/calc/transfer-tax-validate-gift-163-9";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
-import { buildingDatePatch, effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { buildingDatePatch, effectiveBuildingCauseMix, effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
 import { isMixedBurdenedGift, mixedBgBlockedCause } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 const ACQUISITION_CAUSE_OPTIONS = [
@@ -55,6 +56,8 @@ interface Props {
    * 근거는 `CompanionAcqPurchaseBlock.types.ts`의 `isNonPrimaryAsset` 주석.
    */
   isNonPrimaryAsset?: boolean;
+  /** 함께 양도하는 다른 자산이 있다(assets.length>1) — 파트 이월과세(C) 안내용 */
+  hasCompanions?: boolean;
 }
 
 export function CompanionAcquisitionCauseSection({
@@ -64,6 +67,7 @@ export function CompanionAcquisitionCauseSection({
   isNewConstruction,
   shareAcquisitionOnly,
   isNonPrimaryAsset,
+  hasCompanions,
 }: Props) {
   // 일반건물(토지+건물 일괄) — 토지/건물 2카드로 분리 표시
   if (asset.assetKind === "general_building") {
@@ -372,7 +376,15 @@ export function CompanionAcquisitionCauseSection({
           asset={asset}
           transferDate={transferDate ?? ""}
           onChange={onChange}
+          isNonPrimaryAsset={isNonPrimaryAsset}
+          hasCompanions={hasCompanions}
         />
+      )}
+
+      {/* 파트 이월과세 C(증여자가 토지·건물을 다른 날 취득) — 수증자 파트 자본적지출 + 양도가액 구분·양도시 기준시가(축 A).
+          노출 술어는 ④ 전송·⑧ 필수와 같은 `effectiveCarryoverDonorSplit` 하나다. */}
+      {effectiveCarryoverDonorSplit(asset, { isNonPrimary: isNonPrimaryAsset }) && (
+        <CarryoverPartsSaleAxis asset={asset} onChange={onChange} transferDate={transferDate} />
       )}
 
       {/* 비-매매 취득원인의 소유자 분리 입력 — 취득시 기준시가(§166⑥ 안분 비율) + 축 A.

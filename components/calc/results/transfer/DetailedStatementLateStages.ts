@@ -39,7 +39,9 @@ import {
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevOverrides";
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
 import type { StatementItem } from "./DetailedStatementConfig";
-import { splitCauseDateText } from "./split-acq-text";
+import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
+import { splitCarryoverNotices, splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
+import { splitCarryoverDateText, splitCarryoverRateDateText, splitCauseDateText } from "./split-acq-text";
 import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 /** 후반 단계 — `items` 에 **append 만** 한다(반환 없음 · out 0 실측). */
@@ -114,7 +116,8 @@ export function appendLateStageItems(
           : closedFormText),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     // D1-3 — 토지·건물 취득원인이 다르면 파트별 원인·세율 기산일(§104②) 한 줄(명세서는 일자 그룹을 렌더하지 않는다 — 세율이 있는 이 행에 단다).
-    note: [result.shortTermNote, splitCauseDateText(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
+    // 파트 이월과세(P2 C)는 파트별 장기보유특별공제 기산일(적용: 증여자 취득일)·세율 기산일이 계산에 쓰인 근거라 같은 행에 밝힌다 — 일자 그룹은 렌더하지 않는다.
+    note: [result.shortTermNote, splitCauseDateText(result.splitDetail), splitCarryoverNote(result.splitDetail), splitCarryoverNoticeNote(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -287,4 +290,21 @@ function describeAggregateCalculatedTax(
   }
   // 세율군은 하나지만 그 안에서 적용 호가 갈린다 — 호별 산출세액의 합계다.
   return `적용 호가 둘 이상이라 단일 산식으로 표시할 수 없습니다(최고세율 ${formatRatePct(result.appliedRate)}) — 호별 산출세액의 합계입니다. ${tail}`;
+}
+
+/**
+ * 산출세액 행 각주용 — 파트 이월과세 「확인 필요」 고지(카드·PDF와 같은 `splitCarryoverNotices`: 파트별 비교 단위 해석례 미확인 · 동일세대 사실 미반영 ·
+ * 판정 순서 의존). 신고서는 설계서 §6대로 채택 주석만 둔다 — 고지는 설명 매체(카드·상세명세서·PDF)에만 싣는다.
+ */
+function splitCarryoverNoticeNote(sd: SplitGainResult | undefined): string | undefined {
+  const v = splitCarryoverView(sd);
+  return v ? `확인 필요 — ${splitCarryoverNotices(v).join(" ")}` : undefined;
+}
+
+/** 산출세액 행 각주용 — 파트 이월과세 echo가 있을 때만 「장기보유특별공제 기산일」(+ 파트별 세율을 판정했으면 「세율 기산일」) 한 줄. */
+function splitCarryoverNote(sd: Parameters<typeof splitCarryoverDateText>[0]): string | undefined {
+  const t = splitCarryoverDateText(sd);
+  if (!t) return undefined;
+  const rate = splitCarryoverRateDateText(sd);
+  return `이월과세(§97의2①) 장기보유특별공제 기산일: ${t}${rate ? ` · 세율 기산일: ${rate}` : ""}`;
 }
