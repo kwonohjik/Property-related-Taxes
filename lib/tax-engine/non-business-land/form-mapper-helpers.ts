@@ -155,10 +155,24 @@ export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemin
   };
 }
 
+/**
+ * 「소득세법 시행령」 §168의9③7호·§168의10②1호 「상속받은 … 상속개시일부터 3년이 경과하지 아니한」 — 상속개시일.
+ *
+ * 두 요건(상속받았는가 · 상속개시일)은 자산의 취득원인·취득일이 이미 받는다(상속 자산의 취득일 칸이 상속개시일이다).
+ * 종전에는 비사업용 섹션의 별도 입력(임야 토글·상속일, 목장 상속일)만 읽어, 매매 자산에서 켜면 사업용이 되고
+ * 상속 자산에서 안 켜거나 날짜를 틀리면 비사업용이 됐다(계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md`).
+ * 그 입력은 이제 읽지 않는다 — 옛 저장값이 남아 있어도 판정에 닿지 않는다.
+ *
+ * @returns 상속이면 취득일(상속개시일), 아니면 undefined
+ */
+export function resolveInheritanceStartDate(a: Record<string, unknown>, acquisitionDate: Date): Date | undefined {
+  return asString(a.acquisitionCause) === "inheritance" ? acquisitionDate : undefined;
+}
+
 export function buildForestDetail(
   a: Record<string, unknown>,
   landType: LandType,
-  parseDate?: ParseDate,
+  inheritanceStartDate: Date | undefined,
 ): ForestUsageDetail | undefined {
   if (landType !== "forest") return undefined;
   return {
@@ -166,8 +180,8 @@ export function buildForestDetail(
     isPublicInterest:            asBool(a.nblForestIsPublicInterest),
     isSpecialForestZone:         asBool(a.nblForestIsProtected),
     isForestSuccessor:           asBool(a.nblForestIsSuccessor),
-    inheritedForestWithin3Years: asBool(a.nblForestInheritedWithin3Years),
-    forestInheritanceDate:       parseDate?.(asString(a.nblForestInheritanceDate)),
+    inheritedForestWithin3Years: inheritanceStartDate !== undefined,
+    forestInheritanceDate:       inheritanceStartDate,
   };
 }
 
@@ -176,6 +190,7 @@ export function buildPasture(
   landType: LandType,
   parseDate: ParseDate,
   parseNumber: ParseNumber,
+  inheritanceStartDate: Date | undefined,
 ): PastureUsage | undefined {
   if (landType !== "pasture") return undefined;
   return {
@@ -186,7 +201,7 @@ export function buildPasture(
     hasFodder:           asBool(a.nblPastureHasFodder),
     livestockCount:      parseNumber(asString(a.nblPastureLivestockCount)),
     livestockPeriods:    mapBusinessUsePeriods(asArray<NblBusinessUsePeriod>(a.nblPastureLivestockPeriods), parseDate),
-    inheritanceDate:     parseDate(asString(a.nblPastureInheritanceDate)),
+    inheritanceDate:     inheritanceStartDate,
     isSpecialOrgUse:     asBool(a.nblPastureIsSpecialOrgUse),
   };
 }

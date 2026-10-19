@@ -28,6 +28,7 @@ import {
   buildFarmlandDeeming,
   buildForestDetail,
   buildPasture,
+  resolveInheritanceStartDate,
   buildVilla,
   buildOtherLand,
   buildRevenueTest,
@@ -93,6 +94,9 @@ export function mapAssetToNblInput(
         (code) => lookupSigungu(code)?.adjacentCodes ?? [],
       )
     : undefined;
+
+  // §168의9③7호·§168의10②1호 상속개시일 — 취득원인·취득일 단일 소스
+  const inheritanceStartDate = resolveInheritanceStartDate(asset, acquisitionDate);
 
   // 사업용 사용기간
   const businessUsePeriods = mapBusinessUsePeriods(
@@ -166,8 +170,8 @@ export function mapAssetToNblInput(
     disqualifiedTaxPeriods:  parseTaxPeriodYears(asString(asset.nblDisqualifiedTaxPeriods)).years,
     farmerResidenceDistance: parseNumber(asString(asset.nblFarmerResidenceDistance)),
     farmlandDeeming:         buildFarmlandDeeming(asset),
-    forestDetail:            buildForestDetail(asset, landType, parseDate),
-    pasture:                 buildPasture(asset, landType, parseDate, parseNumber),
+    forestDetail:            buildForestDetail(asset, landType, inheritanceStartDate),
+    pasture:                 buildPasture(asset, landType, parseDate, parseNumber, inheritanceStartDate),
     villa:                   buildVilla(asset, landType, parseDate, parseNumber),
     otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate, zoneType),
     revenueTest:             buildRevenueTest(asset, landType, parseNumber, parseDate, transferDate, acquisitionDate),
