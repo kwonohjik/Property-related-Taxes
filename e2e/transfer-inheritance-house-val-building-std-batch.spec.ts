@@ -4,7 +4,7 @@
  * HouseValuationSection(상속취득 평가 경로)에 MultiPointBuildingStdPriceModal을 배선.
  * 검증(F2 게이팅 — live app):
  *   T1. 상속 + 단독주택(house_individual) + 상속개시일 < 2005 → "3시점 건물기준시가 일괄 계산" 버튼 노출.
- *   T2. 공동주택(house_apart)으로 전환 → 버튼 미노출(구조·용도 방식 부적합).
+ *   T2. 공동주택(house_apart)으로 전환 → 국세청 고시 가액 「없었음」 → 버튼 미노출(구조·용도 방식 부적합).
  *
  * 계획서: docs/02-design/features/inheritance-house-valuation-3point-building-std-batch.plan.md
  * 정책: [[feedback_browser_verify_with_playwright]]
@@ -78,8 +78,10 @@ test.describe("상속취득 주택 3시점 — 건물기준시가 일괄 계산�
 
     // 자산 구분 = 공동주택(house_apart)
     await page.getByRole("radio", { name: /공동주택/ }).click();
+    // 공동주택은 「상속개시일 당시 국세청 고시 공동주택 기준시가」 질문이 먼저다(2026-10-19 · 모름 없음) — 「없었음」이어야 환산 섹션이 열린다.
+    await page.getByTestId("apart-nts-existed-no").click();
 
-    const section = page.locator("div").filter({ hasText: HOUSE_VAL }).first();
+    const section = page.locator("div").filter({ hasText: "공동주택 첫 가격 전 — 3-시점 기준시가 환산 보조" }).first();
     await expect(section).toBeVisible();
     await expect(section.getByRole("button", { name: BATCH_BTN })).toHaveCount(0);
   });

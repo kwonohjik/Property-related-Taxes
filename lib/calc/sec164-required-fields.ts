@@ -18,6 +18,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isSec163_9Cause, deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
+import { apartSec164FormOpen, isApartSec163_9Asset } from "./apart-nts-price";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별공시지가 최초고시 — 이 날 前 상속·증여 토지가 §163⑨1호(§164④) 대상. */
@@ -111,8 +112,13 @@ export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
   if (!isHouse || !isSec163_9Cause(asset.acquisitionCause)) return null;
   const baseDate = deriveSec163_9BaseDate(asset);
-  // 구간 끝 = 2005-04-30, 단독·다가구로 명시한 주택은 그 주택의 최초공시일(`houseDisclosureBoundaryOf` — 엔진·D2-4·D1-H와 같다).
-  if (!baseDate || baseDate >= houseDisclosureBoundaryOf(asset)) return null;
+  if (isApartSec163_9Asset(asset)) {
+    // 공동주택 — 「상속·증여 당시 국세청 고시 가액 없었음」일 때만 단서 2호 구간이다(`apart-nts-price.ts` — 엔진·⑫와 같은 판정).
+    if (!apartSec164FormOpen(asset)) return null;
+  } else if (!baseDate || baseDate >= houseDisclosureBoundaryOf(asset)) {
+    // 구간 끝 = 2005-04-30, 단독·다가구로 명시한 주택은 그 주택의 최초공시일(`houseDisclosureBoundaryOf` — 엔진·D2-4·D1-H와 같다).
+    return null;
+  }
 
   const base = tally(asset, [
     decimalField("inhHouseValLandArea", "토지 면적"),

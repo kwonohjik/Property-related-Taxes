@@ -115,6 +115,13 @@ export interface InheritanceHouseValuationInput {
    * - 엑셀처럼 별도 산정근거가 있을 때 직접 입력.
    */
   housePriceAtInheritanceOverride?: number;
+
+  /**
+   * 공동주택의 첫 가격 기관 — 국세청장 고시(영 §164⑥) / 국토교통부장관 공시(⑦). **API로 받지 않는다** — 엔진
+   * (`inheritance-acquisition-helpers.ts`)이 `inheritedAcquisition.apartFirstPriceAgency`에서 채운다. 산식 표기·근거 조문용(값 무관).
+   * 생략 = 단독·다가구(개별주택가격, §164⑦) 표기.
+   */
+  apartFirstPriceAgency?: "nts" | "molit";
 }
 
 /** 주택가격 추정 방법 */
@@ -149,6 +156,9 @@ export interface InheritanceHouseValuationResult {
 
   // ── 1990 환산 상세 (pre1990 입력이 있을 때) ──
   pre1990Result?: Pre1990LandValuationResult;
+
+  /** 공동주택이면 첫 가격 기관(입력 echo) — 결과 카드의 조문(§164⑥·⑦)·가격 이름 표기용. 생략 = 단독·다가구 */
+  apartFirstPriceAgency?: "nts" | "molit";
 
   /** 한국어 계산 산식 (UI 표시용, 변수약어 금지) */
   formula: string;
