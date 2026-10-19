@@ -27,8 +27,8 @@ export function MultiHouseSurchargeSection() {
             ].map(([count, reg, nonReg, basis], i) => (
               <tr key={i} className={i % 2 === 0 ? "" : "bg-muted/20"}>
                 <td className="border border-border px-3 py-2">{count}</td>
-                <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 1 ? "text-rose-700" : "text-foreground"}`}>{reg}</td>
-                <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 2 ? "text-rose-600" : "text-foreground"}`}>{nonReg}</td>
+                <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 1 ? "text-rose-700 dark:text-rose-300" : "text-foreground"}`}>{reg}</td>
+                <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 2 ? "text-rose-600 dark:text-rose-400" : "text-foreground"}`}>{nonReg}</td>
                 <td className="border border-border px-3 py-2 text-xs">{basis}</td>
               </tr>
             ))}
@@ -36,7 +36,7 @@ export function MultiHouseSurchargeSection() {
         </table>
       </div>
 
-      <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1">
+      <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
         <p><strong>산식</strong>: §11①7나(4%) + 중과기준세율(2%) × N% = 8% 또는 12%</p>
         <p><strong>사치성 재산 중복</strong>: 다주택 중과세율 + 8%p 추가 (§13의2③)</p>
         <p><strong>무상취득 중과</strong>: 조정지역 + 시가표준액 3억 이상 증여 → 12% (§13의2②)</p>

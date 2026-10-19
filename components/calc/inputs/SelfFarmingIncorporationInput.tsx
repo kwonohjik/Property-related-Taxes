@@ -231,17 +231,17 @@ export function SelfFarmingIncorporationInput({
               <label className="block text-sm font-medium">취득시 기준시가 <span className="text-xs text-muted-foreground font-normal">(원)</span></label>
               {isDeemedAcq ? (
                 effectiveAcqPrice > 0 ? (
-                  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 space-y-1">
+                  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 space-y-1 dark:bg-amber-950/40">
                     <div className="text-right font-mono tabular-nums whitespace-nowrap text-sm font-medium">
                       {effectiveAcqPrice.toLocaleString()}
                     </div>
-                    <p className="text-caption text-amber-700">
+                    <p className="text-caption text-amber-700 dark:text-amber-300">
                       1985.1.1. 이전 취득(취득시기 의제) — 자산 목록의 취득시 기준시가를 자동 적용합니다.
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2">
-                    <p className="text-caption text-amber-700">
+                  <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 dark:bg-amber-950/40">
+                    <p className="text-caption text-amber-700 dark:text-amber-300">
                       1985.1.1. 이전 취득(취득시기 의제) — 개별공시지가 조회 불가. 자산 목록에서 취득시 기준시가(환산 등)를 먼저 입력하세요.
                     </p>
                   </div>

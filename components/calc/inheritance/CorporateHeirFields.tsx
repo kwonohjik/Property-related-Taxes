@@ -248,7 +248,7 @@ function ShareholderRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-micro text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+          className="text-micro text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
         >
           삭제
         </button>
@@ -393,14 +393,14 @@ export function CorporateHeirFields({
           <span
             className={
               "text-micro font-mono " +
-              (sumOver ? "text-red-600 font-bold" : "text-gray-500")
+              (sumOver ? "text-red-600 font-bold dark:text-red-400" : "text-gray-500")
             }
           >
             합 {(sumRatio * 100).toFixed(2)}%
           </span>
         </div>
         {sumOver && (
-          <p className="text-micro text-red-600">
+          <p className="text-micro text-red-600 dark:text-red-400">
             ⚠ 지분율 합이 100%를 초과합니다 (외부 주주분 제외).
           </p>
         )}

@@ -26,7 +26,7 @@ export function BurdenedGiftGiftTaxRows({ giftTax }: { giftTax: GiftTax }) {
   return (
     <>
     <tr className="border-t border-fuchsia-300">
-      <td className="py-1 pr-2 font-semibold text-fuchsia-900">
+      <td className="py-1 pr-2 font-semibold text-fuchsia-900 dark:text-fuchsia-200">
         증여세 (수증자 자진납부) — 상증법 §53·§56·§69
       </td>
       <td />
@@ -60,7 +60,7 @@ export function BurdenedGiftGiftTaxRows({ giftTax }: { giftTax: GiftTax }) {
       <td className="py-1 pr-2 pl-3">{"  └ 신고세액공제 (3%)"}</td>
       <td className="text-right font-mono tabular-nums whitespace-nowrap">-{fmt(giftTax.filingCredit)}</td>
     </tr>
-    <tr className="font-semibold bg-fuchsia-100/70">
+    <tr className="font-semibold bg-fuchsia-100/70 dark:bg-fuchsia-900/40">
       <td className="py-1 pr-2">증여세 결정세액 (수증자 부담)</td>
       <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(giftTax.finalTax)}</td>
     </tr>

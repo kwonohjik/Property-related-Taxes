@@ -200,13 +200,13 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
       <ToneCard tone="violet" title="증여시기 (원본·수익 별개 — §33①·§25①)" bodyClassName="space-y-2">
         {form.tbBeneficiaryType !== "diff_principal" && (
           <div className="space-y-1" data-testid="tb-income-gift-date">
-            <label className="block text-xs text-violet-700">수익권 증여시기 (수익 최초지급일 등)</label>
+            <label className="block text-xs text-violet-700 dark:text-violet-300">수익권 증여시기 (수익 최초지급일 등)</label>
             <DateInput value={form.tbIncomeGiftDate} onChange={(v) => set({ tbIncomeGiftDate: v })} />
           </div>
         )}
         {form.tbBeneficiaryType !== "diff_income" && (
           <div className="space-y-1" data-testid="tb-principal-gift-date">
-            <label className="block text-xs text-violet-700">원본권 증여시기 (원본 실제지급일 — 예: 신탁 종료)</label>
+            <label className="block text-xs text-violet-700 dark:text-violet-300">원본권 증여시기 (원본 실제지급일 — 예: 신탁 종료)</label>
             <DateInput value={form.tbPrincipalGiftDate} onChange={(v) => set({ tbPrincipalGiftDate: v })} />
           </div>
         )}
@@ -267,11 +267,11 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
           />
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <label className="block text-xs text-sky-700">수익자 연령 (만)</label>
+              <label className="block text-xs text-sky-700 dark:text-sky-300">수익자 연령 (만)</label>
               <DecimalInput value={form.tbBeneficiaryAge} onChange={(v) => set({ tbBeneficiaryAge: v })} placeholder="만 나이" />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs text-sky-700">기대여명 직접 입력 (선택, 연)</label>
+              <label className="block text-xs text-sky-700 dark:text-sky-300">기대여명 직접 입력 (선택, 연)</label>
               <DecimalInput value={form.tbExpectedRemainingYears} onChange={(v) => set({ tbExpectedRemainingYears: v })} placeholder="미입력 시 생명표 조회" />
             </div>
           </div>
@@ -423,11 +423,11 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           <ToneCard tone="amber" title="대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)" bodyClassName="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1" data-testid="loan-start-date">
-                <label className="block text-xs text-amber-700">대출 시작일</label>
+                <label className="block text-xs text-amber-700 dark:text-amber-300">대출 시작일</label>
                 <DateInput value={form.loanStartDate} onChange={(v) => set({ loanStartDate: v })} />
               </div>
               <div className="space-y-1" data-testid="loan-end-date">
-                <label className="block text-xs text-amber-700">대출 종료일</label>
+                <label className="block text-xs text-amber-700 dark:text-amber-300">대출 종료일</label>
                 <DateInput value={form.loanEndDate} onChange={(v) => set({ loanEndDate: v })} />
               </div>
             </div>
@@ -438,14 +438,14 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
 
       {isMulti && (
         <div className="space-y-2" data-testid="loan-items-table">
-          <p className="text-xs font-semibold text-rose-700">대출 건 (1년 이내 동일거래 합산)</p>
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">대출 건 (1년 이내 동일거래 합산)</p>
           {loans.map((item, i) => (
             <div key={item.id} data-testid={`loan-item-${i}`} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 dark:bg-white/5 p-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-rose-600">대출 {i + 1}</span>
+                <span className="text-xs font-medium text-rose-600 dark:text-rose-400">대출 {i + 1}</span>
                 <button
                   type="button"
-                  className="text-xs text-rose-500 hover:text-rose-700"
+                  className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
                   data-testid={`loan-item-delete-${i}`}
                   onClick={() => set({ loanLoans: loans.filter((_, idx) => idx !== i) })}
                 >
@@ -462,7 +462,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           ))}
           <button
             type="button"
-            className="w-full rounded-lg border border-dashed border-rose-300 py-2 text-xs text-rose-600 hover:bg-rose-50"
+            className="w-full rounded-lg border border-dashed border-rose-300 py-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400"
             data-testid="loan-item-add"
             onClick={() => set({ loanLoans: [...loans, makeLoanItem(newLoanId())] })}
           >

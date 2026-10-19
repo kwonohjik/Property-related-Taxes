@@ -112,19 +112,19 @@ export function InstallmentResultCard({
   });
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3 dark:bg-amber-950/40">
       {/* 헤더 */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
           연
         </span>
-        <p className="text-sm font-semibold text-amber-800">연부취득 신고 일정</p>
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">연부취득 신고 일정</p>
         <LawArticleModal legalBasis="지방세법 §10의3" label="§10의3" />
         <LawArticleModal legalBasis="지방세법 시행령 §20⑤" label="시행령 §20⑤" />
       </div>
 
       {/* 과세표준 결정 방식 안내 */}
-      <div className="text-xs text-amber-700 space-y-1">
+      <div className="text-xs text-amber-700 space-y-1 dark:text-amber-300">
         <p>각 회차 지급액을 합산하여 과세표준 결정 (지방세법 §10의3 유상승계)</p>
         <p>각 회차 지급일로부터 <strong>60일 이내</strong> 신고·납부 의무 (시행령 §20⑤·§20①)</p>
       </div>
@@ -133,7 +133,7 @@ export function InstallmentResultCard({
       <div className="overflow-x-auto">
         <table className="w-full text-xs border-collapse">
           <thead>
-            <tr className="border-b border-amber-200 text-amber-700 text-left">
+            <tr className="border-b border-amber-200 text-amber-700 text-left dark:text-amber-300">
               <th className="py-1.5 pr-2 font-medium">회차</th>
               <th className="py-1.5 pr-2 font-medium">지급일</th>
               {installmentRows && installmentRows.some((r) => (parseInt(r.amount.replace(/,/g, ""), 10) || 0) > 0) && (
@@ -174,8 +174,8 @@ export function InstallmentResultCard({
 
       {/* 취득세 합산 참고 */}
       <div className="flex justify-between items-center text-xs border-t border-amber-200 pt-2">
-        <span className="text-amber-700">합산 취득세 본세 (간이 계산)</span>
-        <span className="font-bold text-amber-800">{formatKRW(acquisitionTax)}</span>
+        <span className="text-amber-700 dark:text-amber-300">합산 취득세 본세 (간이 계산)</span>
+        <span className="font-bold text-amber-800 dark:text-amber-200">{formatKRW(acquisitionTax)}</span>
       </div>
 
       {/* 다주택 + 연부 주의 배너 */}

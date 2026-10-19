@@ -279,15 +279,15 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       */}
       {(aggregated.generalBuildingValuationDetail?.acquisitionByInheritance ||
         aggregated.generalBuildingValuationDetail?.buildingAcquisitionByInheritance) && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1">
-          <p className="font-semibold text-violet-900">
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1 dark:bg-violet-950/40">
+          <p className="font-semibold text-violet-900 dark:text-violet-200">
             상속 취득가액 직접 산정 — 소득세법 시행령 §163⑨
           </p>
-          <p className="text-xs text-violet-800">
+          <p className="text-xs text-violet-800 dark:text-violet-200">
             상속개시일 현재 「상속세 및 증여세법」 §60~§66 평가액을 취득당시의 실지거래가액으로
             봅니다. 그 파트는 환산취득가·개산공제(§163⑥)를 적용하지 않습니다.
           </p>
-          <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
+          <ul className="text-xs text-violet-900 space-y-0.5 pt-1 dark:text-violet-200">
             {(["land", "building"] as const).map((kind) => {
               const inherited =
                 kind === "land"
@@ -299,7 +299,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                 <li key={kind} className="flex items-baseline justify-between gap-3">
                   <span>
                     {kind === "land" ? "토지분" : "건물분"} 취득가액
-                    <span className="ml-1 text-violet-600">
+                    <span className="ml-1 text-violet-600 dark:text-violet-400">
                       {inherited ? "(상속개시일 평가액)" : "(상속 아님 — 종전 산정)"}
                     </span>
                   </span>
@@ -322,11 +322,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
            (memory `feedback_transfer_result_view_is_not_one` — 2회 재발한 함정).
       */}
       {aggregated.generalBuildingValuationDetail?.convertedHousing && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1">
-          <p className="font-semibold text-violet-900">
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 text-sm space-y-1 dark:bg-violet-950/40">
+          <p className="font-semibold text-violet-900 dark:text-violet-200">
             환산주택가격 — 양도소득세 집행기준 99-164-10
           </p>
-          <p className="text-xs text-violet-800">
+          <p className="text-xs text-violet-800 dark:text-violet-200">
             취득 당시 주택으로 개별주택가격이 고시된 뒤 상가로 용도변경했으므로, 최초공시주택가격을
             자산별 기준시가 비율로 환산해 <b>취득 당시 기준시가</b>로 사용합니다.
           </p>
@@ -341,7 +341,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
             ];
             return (
               <>
-                <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
+                <ul className="text-xs text-violet-900 space-y-0.5 pt-1 dark:text-violet-200">
                   {rows.map(([label, v]) => (
                     <li key={label} className="flex items-baseline justify-between gap-3">
                       <span>{label}</span>
@@ -351,14 +351,14 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                     </li>
                   ))}
                 </ul>
-                <p className="pt-1 text-xs text-violet-800">
+                <p className="pt-1 text-xs text-violet-800 dark:text-violet-200">
                   환산주택가격 = 최초공시주택가격 {formatKRW(c.firstDisclosurePrice)} ×{" "}
                   <Frac
                     top={`취득 당시 기준시가 합계 ${formatKRW(c.acqTotal)}`}
                     bottom={`최초공시 당시 기준시가 합계 ${formatKRW(c.firstDiscTotal)}`}
                   />
                 </p>
-                <ul className="text-xs text-violet-900 space-y-0.5 pt-1">
+                <ul className="text-xs text-violet-900 space-y-0.5 pt-1 dark:text-violet-200">
                   <li className="flex items-baseline justify-between gap-3">
                     <span className="font-semibold">환산주택가격</span>
                     <span className="font-mono tabular-nums font-semibold whitespace-nowrap">
@@ -367,7 +367,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                   </li>
                   <li className="flex items-baseline justify-between gap-3">
                     <span>
-                      토지분<span className="ml-1 text-violet-600">(취득 당시 기준시가 비율 안분)</span>
+                      토지분<span className="ml-1 text-violet-600 dark:text-violet-400">(취득 당시 기준시가 비율 안분)</span>
                     </span>
                     <span className="font-mono tabular-nums whitespace-nowrap">
                       {formatKRW(c.convertedLand)}
@@ -388,15 +388,15 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
 
       {/* §97② 2호 단서 swap 발동 표시 (일반건물 환산 자산총액 판정 — F10) */}
       {aggregated.swapApplied && aggregated.swapComparison && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1">
-          <p className="font-semibold text-amber-900">
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1 dark:bg-amber-950/40">
+          <p className="font-semibold text-amber-900 dark:text-amber-200">
             필요경비 swap 적용 — 소득세법 §97② 2호 단서
           </p>
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             환산취득가{aggregated.swapComparison.depreciation ? ` − 감가상각비 ${formatKRW(aggregated.swapComparison.depreciation)}` : ""} + 개산공제 합 {formatKRW(aggregated.swapComparison.estimatedSide)}
             {" < "}자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}
           </p>
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             → 자본적지출 + 양도비 {formatKRW(aggregated.swapComparison.directSide)}을 필요경비로 적용(환산취득가 미차감, 자산별 비율 배분)
           </p>
         </div>

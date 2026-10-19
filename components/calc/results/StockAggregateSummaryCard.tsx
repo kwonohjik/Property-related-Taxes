@@ -111,12 +111,12 @@ export function StockAggregateSummaryCard({
                       「0원 흡수」 행은 표만 늘린다.
                     */}
                     {(r.lossOffsetFromSameGroup ?? 0) > 0 && (
-                      <div className="text-caption text-amber-700">
+                      <div className="text-caption text-amber-700 dark:text-amber-300">
                         동일그룹 {won(-r.lossOffsetFromSameGroup!)}
                       </div>
                     )}
                     {(r.lossOffsetFromOtherGroup ?? 0) > 0 && (
-                      <div className="text-caption text-amber-700">
+                      <div className="text-caption text-amber-700 dark:text-amber-300">
                         타군안분 {won(-r.lossOffsetFromOtherGroup!)}
                       </div>
                     )}

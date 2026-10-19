@@ -214,7 +214,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                       onChange={(v) => update(i, { replottingConfirmDate: v })}
                     />
                     {p.replottingConfirmDate && (
-                      <p className="text-xs text-blue-600">
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
                         취득일 = {p.replottingConfirmDate} 다음날 자동 적용
                       </p>
                     )}
@@ -291,8 +291,8 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
 
                 {/* reduction: 감환지 3필드 + 자동계산 뱃지 */}
                 {scenario === "reduction" && (
-                  <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/40 p-3">
-                    <p className="text-xs text-amber-800">
+                  <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40">
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
                       권리면적·교부면적·종전토지면적을 입력하면 의제 취득면적이 자동 계산됩니다.
                       <span className="ml-1 text-muted-foreground">(소득령 §162①9호 단서)</span>
                     </p>
@@ -372,7 +372,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                       const all = parseFloat(p.allocatedArea);
                       if (ent > 0 && all > 0 && ent < all) {
                         return (
-                          <p className="text-xs text-orange-700">
+                          <p className="text-xs text-orange-700 dark:text-orange-300">
                             ⚠ 증환지(권리 {ent}㎡ &lt; 교부 {all}㎡) — 증가면적은 별도 취득으로 분리 계산 필요
                           </p>
                         );

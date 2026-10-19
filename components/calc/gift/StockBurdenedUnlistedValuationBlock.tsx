@@ -146,7 +146,7 @@ export function StockBurdenedUnlistedValuationBlock({ item, bgt, transferDate, o
       tone="amber"
       sectionNum="A"
       bodyClassName="space-y-3"
-      title={<>환산취득가 산정용 비상장 보충적 평가 <span className="text-rose-500">*</span></>}
+      title={<>환산취득가 산정용 비상장 보충적 평가 <span className="text-rose-500 dark:text-rose-400">*</span></>}
     >
       <div data-testid={`stock-bg-unlisted-valuation-${item.id}`} className="space-y-3">
         <p className="text-caption text-amber-700 dark:text-amber-400">

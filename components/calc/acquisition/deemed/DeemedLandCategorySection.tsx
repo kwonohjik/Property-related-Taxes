@@ -51,7 +51,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
   return (
     <ToneCard tone="sky" bodyClassName="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold text-sky-700">지목변경 간주취득 상세</p>
+        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">지목변경 간주취득 상세</p>
         <TaxHelp
           title="지목변경 간주취득 (지방세법 §7④)"
           summary="지목 변경으로 시가표준액이 증가하면, 증가분 가치에 해당하는 취득으로 간주 과세"
@@ -166,27 +166,27 @@ export function DeemedLandCategorySection({ form, set }: Props) {
 
       {/* 과세 미리보기 */}
       {showPreview && (
-        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-sm space-y-1">
-          <p className="font-medium text-sky-800">과세 미리보기</p>
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-sm space-y-1 dark:bg-sky-900/40">
+          <p className="font-medium text-sky-800 dark:text-sky-200">과세 미리보기</p>
           {diff > 0 ? (
             <>
-              <p className="text-sky-700">
+              <p className="text-sky-700 dark:text-sky-300">
                 {actualKnown
                   ? `과세표준 = 사실상취득가격 ${formatKRW(actualPrice)}`
                   : `과세표준 = 변경 후 ${formatKRW(newSv)} - 변경 전 ${formatKRW(prevSv)} = ${formatKRW(diff)}`}
               </p>
-              <p className="font-medium text-sky-800">
+              <p className="font-medium text-sky-800 dark:text-sky-200">
                 예상 취득세 = {formatKRW(diff)} × {deemedRateLabel} = {formatKRW(Math.floor(diff * deemedRate))}
               </p>
             </>
           ) : (
-            <p className="text-amber-700">
+            <p className="text-amber-700 dark:text-amber-300">
               {actualKnown
                 ? "증가한 가액이 없음 — 과세 대상 없음"
                 : "변경 후 시가표준액이 변경 전 이하 — 과세 대상 없음"}
             </p>
           )}
-          <p className="text-xs text-sky-600">* 농어촌특별세·지방교육세 별도</p>
+          <p className="text-xs text-sky-600 dark:text-sky-400">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
 

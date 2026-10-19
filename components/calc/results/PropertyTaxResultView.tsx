@@ -95,12 +95,12 @@ const TAXPAYER_TYPE_LABEL: Record<string, string> = {
 function TaxpayerSection({ taxpayer }: { taxpayer: PropertyTaxpayerInfo }) {
   const typeLabel = TAXPAYER_TYPE_LABEL[taxpayer.type] ?? taxpayer.type;
   return (
-    <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+    <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 space-y-2 dark:bg-sky-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           §
         </span>
-        <p className="text-xs font-semibold text-sky-700">납세의무자 유형</p>
+        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">납세의무자 유형</p>
       </div>
       <div className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 divide-y text-sm">
         <div className="flex items-start justify-between py-2 px-3">
@@ -117,9 +117,9 @@ function TaxpayerSection({ taxpayer }: { taxpayer: PropertyTaxpayerInfo }) {
         </div>
       </div>
       {taxpayer.warnings.length > 0 && (
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-2 space-y-0.5">
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-2 space-y-0.5 dark:bg-amber-950/40">
           {taxpayer.warnings.map((w, i) => (
-            <p key={i} className="text-xs text-amber-800">
+            <p key={i} className="text-xs text-amber-800 dark:text-amber-200">
               ⚠ {w}
             </p>
           ))}
@@ -414,9 +414,9 @@ export function PropertyTaxResultView({ result }: Props) {
       {/* ─── 경고 메시지 ─── */}
       {warnings.length > 0 && (
         <PrintSection id="warnings" selectedIds={selectedPrintIds}>
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1 dark:bg-amber-950/40">
           {warnings.map((w, i) => (
-            <p key={i} className="text-xs text-amber-800">
+            <p key={i} className="text-xs text-amber-800 dark:text-amber-200">
               ⚠ {w}
             </p>
           ))}
@@ -452,12 +452,12 @@ export function PropertyTaxResultView({ result }: Props) {
           taxBaseBeforeCap != null &&
           taxBaseCapLimit != null &&
           priorYearTaxBaseEquivalent != null && (
-            <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+            <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2 dark:bg-sky-950/40">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
                   §
                 </span>
-                <p className="text-xs font-semibold text-sky-700">
+                <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
                   과세표준상한 적용 (지방세법 §110③)
                 </p>
               </div>
@@ -475,7 +475,7 @@ export function PropertyTaxResultView({ result }: Props) {
                 />
                 <TaxRow label="과세표준상한액" amount={taxBaseCapLimit} highlight />
               </div>
-              <p className="text-caption text-sky-700">
+              <p className="text-caption text-sky-700 dark:text-sky-300">
                 당해연도 과세표준이 과세표준상한액보다 커서, 과세표준을 상한액으로 제한합니다.
               </p>
             </div>
@@ -640,11 +640,11 @@ export function PropertyTaxResultView({ result }: Props) {
       {/* ─── 분납 안내 ─── */}
       {installment.eligible && (
         <PrintSection id="installment" selectedIds={selectedPrintIds}>
-        <section className="rounded-md bg-blue-50 border border-blue-200 p-4 space-y-2">
-          <h4 className="text-sm font-semibold text-blue-800">
+        <section className="rounded-md bg-blue-50 border border-blue-200 p-4 space-y-2 dark:bg-blue-950/40">
+          <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-200">
             분납 안내 (지방세법 §115)
           </h4>
-          <p className="text-xs text-blue-700">
+          <p className="text-xs text-blue-700 dark:text-blue-300">
             재산세 산출세액이 20만원을 초과하여 7월과 9월에 나누어 납부할 수 있습니다.
           </p>
           <div className="grid grid-cols-2 gap-2 text-sm">

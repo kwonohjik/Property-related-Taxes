@@ -722,13 +722,13 @@ function MultiFamilyBreakdownRow({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1 text-xs text-violet-700 hover:underline"
+        className="flex items-center gap-1 text-xs text-violet-700 hover:underline dark:text-violet-300"
       >
         <span className={expandToggleClass("violet")}>{expandToggleLabel(expanded)}</span>
         다가구 구별 안분 명세 ({bd.length}개 구)
       </button>
       {expanded && (
-        <div className="mt-1 rounded-md border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900 space-y-0.5">
+        <div className="mt-1 rounded-md border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900 space-y-0.5 dark:text-violet-200 dark:bg-violet-950/40">
           {bd.map((row, i) => (
             <div key={i} className="flex justify-between">
               <span>{row.label}</span>

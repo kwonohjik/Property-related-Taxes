@@ -80,7 +80,7 @@ export function ShortTermReinheritSection({
       </FieldCard>
 
       {bandInfo && (
-        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-xs text-sky-800">
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
           경과 구간 <b>{bandInfo.band}년 이내</b> → 공제율{" "}
           <b>{(bandInfo.rate * 100).toFixed(0)}%</b>
           {bandInfo.rate === 0 && " (10년 초과 — 공제 없음)"}
@@ -115,7 +115,7 @@ export function ShortTermReinheritSection({
 
           {/* 재상속분 재산 목록 (재산별 구분) */}
           <div className="rounded-md border border-sky-100 bg-white/60 dark:bg-white/5 p-2.5 space-y-2">
-            <p className="text-caption font-semibold text-sky-700">
+            <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">
               재상속분 재산 (재산별 구분 — 집행 30-22-1②)
             </p>
             <p className="text-caption text-gray-500 dark:text-gray-400">
@@ -142,7 +142,7 @@ export function ShortTermReinheritSection({
                 <button
                   type="button"
                   onClick={() => removeAsset(i)}
-                  className="shrink-0 rounded-md border border-rose-200 px-2 py-2 text-xs text-rose-600 hover:bg-rose-50"
+                  className="shrink-0 rounded-md border border-rose-200 px-2 py-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400"
                 >
                   삭제
                 </button>
@@ -151,7 +151,7 @@ export function ShortTermReinheritSection({
             <button
               type="button"
               onClick={addAsset}
-              className="w-full rounded-md border border-dashed border-sky-300 py-2 text-xs text-sky-700 hover:bg-sky-50"
+              className="w-full rounded-md border border-dashed border-sky-300 py-2 text-xs text-sky-700 hover:bg-sky-50 dark:text-sky-300"
             >
               + 재상속 재산 추가
             </button>

@@ -266,9 +266,9 @@ export function Step1({ form, onChange }: Step1Props) {
               <AcquisitionInfoBlock form={form} onChange={onChange} />
 
               {/* ⓑ 양도 정보 (emerald tone grid 2cell) */}
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4">
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="text-emerald-800 font-semibold text-sm">📤 양도 정보</span>
+                  <span className="text-emerald-800 font-semibold text-sm dark:text-emerald-200">📤 양도 정보</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FieldCard label="양도일" required>

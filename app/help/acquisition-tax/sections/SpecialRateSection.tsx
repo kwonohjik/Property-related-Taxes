@@ -35,7 +35,7 @@ export function SpecialRateSection() {
         </tbody>
       </table>
 
-      <div className="rounded-md bg-violet-50/60 border border-violet-200 p-3 text-xs text-violet-800 space-y-1">
+      <div className="rounded-md bg-violet-50/60 border border-violet-200 p-3 text-xs text-violet-800 space-y-1 dark:text-violet-200 dark:bg-violet-950/40">
         <p><strong>§15 + §13②(대도시 법인) 동시 적용</strong>: (기본세율 − 2%) × 3</p>
         <p>예) 상속 1가구1주택 + 대도시 법인 → (2.8% − 2%) × 3 = 2.4% (§13⑦ 1,000분의 24)</p>
         <p><strong>§13①(본점·공장 중과)은 §15 배제</strong>: 중과세율 직접 적용됨.</p>

@@ -102,7 +102,7 @@ export function OtherUnlistedHoldingSection({
         <button
           type="button"
           onClick={addRow}
-          className="w-full rounded-md border border-dashed border-emerald-300 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100/50"
+          className="w-full rounded-md border border-dashed border-emerald-300 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-100/50 dark:text-emerald-300"
         >
           + 다른 비상장법인 주식 보유 추가
         </button>
@@ -128,7 +128,7 @@ export function OtherUnlistedHoldingSection({
               <button
                 type="button"
                 onClick={() => removeRow(idx)}
-                className="rounded px-1.5 py-1 text-caption text-rose-600 hover:bg-rose-50"
+                className="rounded px-1.5 py-1 text-caption text-rose-600 hover:bg-rose-50 dark:text-rose-400"
               >
                 삭제
               </button>
@@ -142,7 +142,7 @@ export function OtherUnlistedHoldingSection({
                 {r === null ? (
                   <span className="text-muted-foreground">발행주식총수 입력 필요</span>
                 ) : (
-                  <span className={over10 ? "text-amber-700" : "text-emerald-700"}>
+                  <span className={over10 ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}>
                     보유비율 {(r * 100).toFixed(2)}% — {over10 ? "10% 초과" : "10% 이하"}
                   </span>
                 )}
@@ -151,7 +151,7 @@ export function OtherUnlistedHoldingSection({
 
             {/* 10% 이하: 시가 / 이동평균법 취득가액 */}
             {!over10 && (
-              <div className="grid grid-cols-2 gap-2 rounded bg-emerald-50/60 p-2">
+              <div className="grid grid-cols-2 gap-2 rounded bg-emerald-50/60 p-2 dark:bg-emerald-950/40">
                 <LabeledNum label="시가 (있으면 우선)" value={h.marketValue ?? 0} onChange={(v) => setRow(idx, { marketValue: v || undefined })} />
                 <LabeledNum label="이동평균법 취득가액" value={h.movingAverageAcquisitionValue ?? 0} onChange={(v) => setRow(idx, { movingAverageAcquisitionValue: v || undefined })} />
               </div>
@@ -159,7 +159,7 @@ export function OtherUnlistedHoldingSection({
 
             {/* 10% 초과: 장부가액 + Max(장부,보충적), 상호출자 토글 */}
             {over10 && (
-              <div className="space-y-2 rounded bg-amber-50/50 p-2">
+              <div className="space-y-2 rounded bg-amber-50/50 p-2 dark:bg-amber-950/40">
                 <LabeledNum label="장부가액" value={h.bookValue ?? 0} onChange={(v) => setRow(idx, { bookValue: v || undefined })} />
                 <ToggleCard
                   tone="amber"
@@ -197,7 +197,7 @@ export function OtherUnlistedHoldingSection({
                   )}
                 </ToggleCard>
                 {!hasCounterparty && (
-                  <p className="text-caption text-amber-700">
+                  <p className="text-caption text-amber-700 dark:text-amber-300">
                     상호출자가 아니면 상대 보충적평가가액을 직접 산정해 시가/장부 중 큰 값으로 처리하세요.
                   </p>
                 )}

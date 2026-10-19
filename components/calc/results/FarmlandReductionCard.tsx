@@ -86,7 +86,7 @@ export function FarmlandReductionCard({ detail, computedTax, priorTaxCredit }: P
         </div>
         <div className="flex items-center gap-1.5 flex-wrap px-3 text-xs text-emerald-700 dark:text-emerald-300">
           <span>= 농지가액 {formatKRW(detail.farmlandValue)}</span>
-          <span className="text-emerald-400">×</span>
+          <span className="text-emerald-400 dark:text-emerald-300">×</span>
           <Frac
             top={`감면세액 ${formatKRW(detail.reductionAmount)}`}
             bottom={`농지분 산출세액 ${formatKRW(detail.farmlandComputedTax)}`}

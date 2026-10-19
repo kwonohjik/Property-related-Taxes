@@ -88,7 +88,7 @@ export function SpecialTreatmentAssetSelector({
   // 자산 0개
   if (allItems.length === 0) {
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-3 text-sm text-amber-700">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-4 py-3 text-sm text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
         증여재산을 먼저 입력하세요. (Step 1)
       </div>
     );
@@ -102,12 +102,12 @@ export function SpecialTreatmentAssetSelector({
     // 재산 종류 부적격 — 자동 귀속 불가 경고 (validateStep ⑧·Zod ⑩이 차단)
     if (!isSpecialTreatmentEligibleCategory(item.category, specialTreatment)) {
       return (
-        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 space-y-1.5">
-          <p className="text-xs font-semibold text-amber-800">
+        <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 space-y-1.5 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
             특례 귀속 불가 재산 ({streamLabel})
           </p>
-          <p className="text-sm text-amber-800">{label}</p>
-          <p className="text-caption text-amber-700">
+          <p className="text-sm text-amber-800 dark:text-amber-200">{label}</p>
+          <p className="text-caption text-amber-700 dark:text-amber-300">
             {SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]}. 특례
             선택을 해제하거나 해당 재산 종류로 입력하세요.
           </p>
@@ -121,13 +121,13 @@ export function SpecialTreatmentAssetSelector({
         bodyClassName="space-y-2"
         title={<>특례 귀속 자산 ({streamLabel}) — 자동 귀속</>}
       >
-        <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2">
-          <span className="text-sm text-emerald-800 font-medium">{label}</span>
-          <span className="text-sm font-mono tabular-nums text-emerald-800">
+        <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2 dark:bg-emerald-900/40">
+          <span className="text-sm text-emerald-800 font-medium dark:text-emerald-200">{label}</span>
+          <span className="text-sm font-mono tabular-nums text-emerald-800 dark:text-emerald-200">
             {val > 0 ? formatKRW(val) : "—"}
           </span>
         </div>
-        <p className="text-caption text-emerald-600">
+        <p className="text-caption text-emerald-600 dark:text-emerald-400">
           자산이 1개이므로 전체가 {streamLabel} 특례 스트림으로 자동 귀속됩니다.
         </p>
       </ToneCard>
@@ -142,7 +142,7 @@ export function SpecialTreatmentAssetSelector({
       bodyClassName="space-y-2"
       title={<>특례 귀속 자산 선택 ({streamLabel})</>}
     >
-      <p className="text-caption text-emerald-600">
+      <p className="text-caption text-emerald-600 dark:text-emerald-400">
         {streamLabel} 과세특례를 적용할 자산을 선택하세요. 미선택 자산은 일반 스트림(§47·§53·§56)으로 계산됩니다.
       </p>
       <div className="space-y-1.5">
@@ -160,9 +160,9 @@ export function SpecialTreatmentAssetSelector({
               key={item.id ?? i}
               className={`flex items-center justify-between rounded-md border px-3 py-2 transition-colors ${
                 !eligible
-                  ? "border-emerald-200/60 bg-emerald-50/30 opacity-60 cursor-not-allowed"
+                  ? "border-emerald-200/60 bg-emerald-50/30 opacity-60 cursor-not-allowed dark:bg-emerald-950/40"
                   : isChecked
-                    ? "border-emerald-400 bg-emerald-100/80 cursor-pointer"
+                    ? "border-emerald-400 bg-emerald-100/80 cursor-pointer dark:bg-emerald-900/40"
                     : "border-emerald-200 bg-white dark:bg-transparent hover:bg-emerald-50 cursor-pointer"
               }`}
               title={
@@ -178,7 +178,7 @@ export function SpecialTreatmentAssetSelector({
                   // 부적격은 신규 체크 차단. 단 이미 체크된 상태(이력 복원 등)는 해제 가능해야 함
                   disabled={!eligible && !isChecked}
                   onChange={(e) => onItemChange(i, e.target.checked)}
-                  className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
+                  className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed dark:text-emerald-400"
                 />
                 <span className="text-sm">{label}</span>
                 {isChecked && (

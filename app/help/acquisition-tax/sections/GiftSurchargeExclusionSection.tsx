@@ -8,8 +8,8 @@ export function GiftSurchargeExclusionSection() {
       </p>
 
       <div className="space-y-3">
-        <div className="rounded-md border border-violet-200 bg-violet-50/40 p-3">
-          <h3 className="text-sm font-semibold text-violet-700 mb-2">1호 단서 — 증여자가 1세대 1주택자 + 가족 수증</h3>
+        <div className="rounded-md border border-violet-200 bg-violet-50/40 p-3 dark:bg-violet-950/40">
+          <h3 className="text-sm font-semibold text-violet-700 mb-2 dark:text-violet-300">1호 단서 — 증여자가 1세대 1주택자 + 가족 수증</h3>
           <p className="text-xs text-muted-foreground mb-2">
             증여자(贈與者)가 무상취득 직전 <strong>1세대 1주택자</strong>이고,
             수증자가 다음 관계에 해당하면 중과 배제:
@@ -37,15 +37,15 @@ export function GiftSurchargeExclusionSection() {
           </p>
         </div>
 
-        <div className="rounded-md border border-violet-200 bg-violet-50/40 p-3">
-          <h3 className="text-sm font-semibold text-violet-700 mb-2">2호 단서 — 이혼 재산분할 (§15①6호 세율특례)</h3>
+        <div className="rounded-md border border-violet-200 bg-violet-50/40 p-3 dark:bg-violet-950/40">
+          <h3 className="text-sm font-semibold text-violet-700 mb-2 dark:text-violet-300">2호 단서 — 이혼 재산분할 (§15①6호 세율특례)</h3>
           <p className="text-xs text-muted-foreground">
             §15①6호 이혼 재산분할 세율특례가 적용되는 경우 무상취득 중과 배제.
             재산분할 명목의 증여는 중과 12% 미적용 → 특례세율(기본세율 − 2%) 적용.
           </p>
         </div>
 
-        <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1">
+        <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
           <p><strong>단서 미해당 시 중과 적용 조건</strong> (3가지 모두 충족):</p>
           <p>① 조정대상지역 소재 주택 취득</p>
           <p>② 전체 주택 시가표준액 3억 원 이상</p>

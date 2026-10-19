@@ -27,8 +27,8 @@ export function CapitalDecreaseShareholderTable({ shareholders, onChange }: Prop
   const remove = (i: number) => onChange(shareholders.filter((_, idx) => idx !== i));
 
   return (
-    <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3" data-testid="cd-shareholder-table">
-      <p className="text-xs font-semibold text-amber-700">주주 명단</p>
+    <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40" data-testid="cd-shareholder-table">
+      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">주주 명단</p>
 
       <div className="space-y-2">
         {shareholders.map((row, i) => {
@@ -40,12 +40,12 @@ export function CapitalDecreaseShareholderTable({ shareholders, onChange }: Prop
               className="space-y-2 rounded-md border border-amber-200 bg-white/70 dark:bg-white/5 p-2"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-amber-800">주주 {i + 1}</span>
+                <span className="text-xs font-medium text-amber-800 dark:text-amber-200">주주 {i + 1}</span>
                 <button
                   type="button"
                   onClick={() => remove(i)}
                   data-testid={`cd-sh-delete-${i}`}
-                  className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                  className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
                 >
                   × 삭제
                 </button>

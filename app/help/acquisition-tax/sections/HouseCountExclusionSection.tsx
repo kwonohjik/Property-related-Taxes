@@ -44,7 +44,7 @@ export function HouseCountExclusionSection() {
       </div>
 
       <div className="mt-2">
-        <h3 className="text-sm font-semibold mb-2 text-emerald-700">한시 특례 6종 (2024.1.10~2027.12.31, §28의4②)</h3>
+        <h3 className="text-sm font-semibold mb-2 text-emerald-700 dark:text-emerald-300">한시 특례 6종 (2024.1.10~2027.12.31, §28의4②)</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse min-w-[500px]">
             <thead>
@@ -74,7 +74,7 @@ export function HouseCountExclusionSection() {
         </div>
       </div>
 
-      <div className="rounded-md bg-emerald-50/60 border border-emerald-200 p-3 text-xs text-emerald-800">
+      <div className="rounded-md bg-emerald-50/60 border border-emerald-200 p-3 text-xs text-emerald-800 dark:text-emerald-200 dark:bg-emerald-950/40">
         <strong>취득일 기준 anchor</strong>: 보유 주택 수는 <strong>잔금지급일(취득일)</strong> 기준으로 보유한 주택만 카운트.
         분양권 취득 시 기준일은 권리취득일(분양계약일) 소급 적용 (§28의4①).
       </div>

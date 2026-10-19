@@ -94,9 +94,9 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
   const post = result.postListingDetail;
 
   return (
-    <div className="rounded-lg border border-violet-300 bg-violet-50 p-4 space-y-2 text-sm">
+    <div className="rounded-lg border border-violet-300 bg-violet-50 p-4 space-y-2 text-sm dark:bg-violet-950/40">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-violet-900">
+        <h3 className="font-semibold text-violet-900 dark:text-violet-200">
           취득 후 상장 환산취득가 (소령 §165⑤)
         </h3>
         <span className="text-micro uppercase rounded-full bg-violet-200 text-violet-800 px-2 py-0.5">
@@ -105,7 +105,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
       </div>
 
       {/* 6 중간값 */}
-      <div className="space-y-1 text-xs text-violet-800">
+      <div className="space-y-1 text-xs text-violet-800 dark:text-violet-200">
         {post.detail?.closing && (
           <p>
             상장일 이후 1개월 종가평균 ={" "}
@@ -117,13 +117,13 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           </p>
         )}
         {post.capitalEventTruncation && (
-          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800">
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
             <p className="font-medium">증자·합병 기간 조정 (상증령 §52의2② · §63①1가목 준용 해석)</p>
             <p>
               발생일 {post.capitalEventTruncation.eventDate} — 상장일~발생일 전일 종가만 평균 (포함{" "}
               {post.capitalEventTruncation.includedDays}거래일 · 제외 {post.capitalEventTruncation.excludedDays}일)
             </p>
-            <p className="text-amber-700">ⓘ 명문·예규 미확정 해석 적용</p>
+            <p className="text-amber-700 dark:text-amber-300">ⓘ 명문·예규 미확정 해석 적용</p>
           </div>
         )}
         <WeightedAvgRow
@@ -145,7 +145,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           value={post.acquisitionYearPerShareValue}
         />
         {post.monthlyAccrualDetail && (
-          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800">
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
             <p className="font-medium">월할 가산 보정 (소칙 §81④ 1호 — 같은 사업연도 취득·상장)</p>
             <p>
               전전사업연도 1주당 가중평균 ={" "}
@@ -187,9 +187,9 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             <>종가평균 × 환산비율</>
           )}{" "}
           (절사) = <strong>{post.finalPerShareValue.toLocaleString()}</strong>{" "}
-          <span className="text-violet-600">(§163⑨ 분자)</span>
+          <span className="text-violet-600 dark:text-violet-400">(§163⑨ 분자)</span>
         </p>
-        <p className="font-medium text-violet-900">
+        <p className="font-medium text-violet-900 dark:text-violet-200">
           §163⑨ 환산취득가 = 양도가 × <Frac top="1주당 취득기준" bottom="1주당 양도기준" />
           <br />
           {/* 당회차분 — 기신고 합산(영 §158②) 시 `transferPrice`·`acquisitionPrice` 는 합계라 이 산식의 항이 아니다 · 구 이력은 own 이 없다 */}
@@ -230,7 +230,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
       </div>
 
       {/* 80% 하한 미적용 안내 (Round 4 C-05) */}
-      <div className="mt-2 pt-2 border-t border-violet-200 text-micro text-violet-700">
+      <div className="mt-2 pt-2 border-t border-violet-200 text-micro text-violet-700 dark:text-violet-300">
         ※ 환산「비율」자체에는 80% 하한을 적용하지 않습니다 — 하한은 분자·분모 **각 평가액에 개별로** 걸립니다 (§165④1 단서)
         {post.monthlyAccrualApplied && " · 시행규칙 §81④ 월할 가산 발동"}
       </div>

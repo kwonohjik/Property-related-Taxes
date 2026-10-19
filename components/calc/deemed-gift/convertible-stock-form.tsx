@@ -13,8 +13,8 @@ import { THIRD_PARTY_UNDERWRITER_NOTE } from "./capital-forms-shared";
 import { statuteFixesShareholderStatus } from "@/lib/tax-engine/gift-deemed/taxpayer-gate";
 
 const CS_SECTION_TONE = {
-  sky: { box: "border-sky-200 bg-sky-50/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700" },
-  amber: { box: "border-amber-200 bg-amber-50/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700" },
+  sky: { box: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", title: "text-sky-700 dark:text-sky-300" },
+  amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
 } as const;
 
 type CsKeys = {

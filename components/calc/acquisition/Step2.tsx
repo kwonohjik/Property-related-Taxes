@@ -430,7 +430,7 @@ export function Step2({
   return (
     <div className="space-y-4">
       {/* 취득일 기준 anchor 배너 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2.5 text-xs text-sky-800">
+      <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2.5 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40">
         <span className="font-semibold">취득일 기준</span>으로 보유 주택만 카운트합니다.
         잔금일 또는 등기접수일 중 빠른 날이 취득일입니다.
         분양권·입주권은 <span className="font-semibold">권리취득일(분양계약일)</span> 기준으로 소급 산정됩니다.
@@ -519,7 +519,7 @@ export function Step2({
         <button
           type="button"
           onClick={addHouse}
-          className="w-full rounded-lg border-2 border-dashed border-sky-300 py-2 text-sm text-sky-700 hover:bg-sky-50/50 transition-colors"
+          className="w-full rounded-lg border-2 border-dashed border-sky-300 py-2 text-sm text-sky-700 hover:bg-sky-50/50 transition-colors dark:text-sky-300"
         >
           + 보유 주택 추가
         </button>

@@ -270,8 +270,8 @@ function RentalExclusionDetail({
           const previous = parseInt(property.previousRent.replace(/,/g, "") || "0");
           if (previous > 0 && current > previous * 1.05) {
             return (
-              <div className="rounded-md bg-red-50 border border-red-200 p-3">
-                <p className="text-xs text-red-700">
+              <div className="rounded-md bg-red-50 border border-red-200 p-3 dark:bg-red-950/40">
+                <p className="text-xs text-red-700 dark:text-red-300">
                   ⚠ 임대료 증가율이 5%를 초과합니다. 합산배제 요건을 충족하지 못할 수 있습니다.
                 </p>
               </div>
@@ -360,8 +360,8 @@ function DaycareHousingDetail({
       />
 
       {(!property.hasDaycarePermit || !property.isActuallyUsedAsDaycare) && (
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-3">
-          <p className="text-xs text-amber-700">
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 dark:bg-amber-950/40">
+          <p className="text-xs text-amber-700 dark:text-amber-300">
             인가증 보유 및 실사용 두 요건 모두 충족해야 합산배제가 적용됩니다.
           </p>
         </div>
@@ -444,11 +444,11 @@ export function ExclusionInfoInput({ index, property, onUpdate }: Props) {
       senior_welfare: "노인복지주택",
     };
     return (
-      <div className="rounded-lg border bg-blue-50/50 border-blue-200 p-4">
-        <p className="text-sm text-blue-800">
+      <div className="rounded-lg border bg-blue-50/50 border-blue-200 p-4 dark:bg-blue-950/40">
+        <p className="text-sm text-blue-800 dark:text-blue-200">
           <span className="font-medium">주택 {index + 1}</span> — {labels[exclusionType] ?? exclusionType}
         </p>
-        <p className="mt-1 text-xs text-blue-600">
+        <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
           해당 유형은 별도 요건 정보 입력 없이 합산배제가 신청됩니다.
         </p>
       </div>
@@ -493,8 +493,8 @@ export function ExclusionInfoInput({ index, property, onUpdate }: Props) {
       )}
 
       {/* 신고 기간 안내 */}
-      <div className="rounded-md bg-amber-50 border border-amber-100 p-3">
-        <p className="text-xs text-amber-700">
+      <div className="rounded-md bg-amber-50 border border-amber-100 p-3 dark:bg-amber-950/40">
+        <p className="text-xs text-amber-700 dark:text-amber-300">
           📅 합산배제 신고 기간: 매년 9월 16일 ~ 9월 30일
         </p>
       </div>

@@ -78,7 +78,7 @@ export function Step2Separated({ form, onChange }: Props) {
           title="가축별 기준면적 (「지방세법 시행령」 §102①3호 [표])"
           className="p-3"
         >
-          <p className="text-xs text-sky-800">
+          <p className="text-xs text-sky-800 dark:text-sky-200">
             §102①3호는 <b>가축별 기준면적으로 계산한 토지면적의 범위</b>만 분리과세로 정합니다.
             초과분은 종합합산과세대상으로 이관됩니다.
           </p>
@@ -135,9 +135,9 @@ export function Step2Separated({ form, onChange }: Props) {
               </FieldCard>
 
 
-              <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-                <p className="text-xs font-semibold text-sky-700">보유 시설 (해당하는 것을 모두 선택)</p>
-                <p className="text-caption text-sky-800">
+              <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2 dark:bg-sky-950/40">
+                <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">보유 시설 (해당하는 것을 모두 선택)</p>
+                <p className="text-caption text-sky-800 dark:text-sky-200">
                   표의 4개 열은 <b>항목별 인정 한도</b>입니다. 없는 시설의 몫은 기준면적에 더하지
                   않습니다. 축사는 축산업의 전제이므로 항상 포함됩니다.
                 </p>
@@ -195,7 +195,7 @@ export function Step2Separated({ form, onChange }: Props) {
               도달하지 않는다(하이픈 JSX 속성이라 TS는 통과시킨다). 테스트는 텍스트로 조회한다. */}
           {form.stFactoryLocation === "urban" && (
             <ToneCard tone="rose">
-              <p className="text-xs text-rose-800">
+              <p className="text-xs text-rose-800 dark:text-rose-200">
                 이 지역의 공장용지는 <b>분리과세 대상이 아닙니다</b>. 「지방세법 시행령」
                 §101①1호에 따라 <b>별도합산과세대상</b>이며 기준면적은 공장용 건축물{" "}
                 <b>바닥면적 × 용도지역별 적용배율</b>입니다. 앞 단계에서 「토지 과세 유형」을{" "}
@@ -210,7 +210,7 @@ export function Step2Separated({ form, onChange }: Props) {
               title="공장입지기준면적 (「지방세법 시행규칙」 §50 [별표6])"
               className="p-3"
             >
-              <p className="text-xs text-sky-800">
+              <p className="text-xs text-sky-800 dark:text-sky-200">
                 §102①1호는 <b>공장입지기준면적 범위의 토지</b>만 분리과세로 정합니다. 초과분은
                 종합합산과세대상으로 이관됩니다.
               </p>
@@ -391,7 +391,7 @@ export function Step2Separated({ form, onChange }: Props) {
         tone="amber"
         summary="대중형·간이 골프장 부속토지 분리과세 제외 안내"
       >
-        <div className="space-y-1 text-amber-800">
+        <div className="space-y-1 text-amber-800 dark:text-amber-200">
           <p>
             대중형·간이 골프장 부속토지는 분리과세 대상이 아닙니다 (회원제
             골프장만 해당). 영업용 건축물 부속토지 요건을 충족하면 &ldquo;토지

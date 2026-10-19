@@ -165,7 +165,7 @@ export function Step5({
                 disabled={form.residesInSameOrAdjacentJurisdiction}
               />
             </div>
-            <div className="rounded-md bg-violet-50/70 border border-violet-200 p-2 text-xs text-violet-700 space-y-1">
+            <div className="rounded-md bg-violet-50/70 border border-violet-200 p-2 text-xs text-violet-700 space-y-1 dark:text-violet-300 dark:bg-violet-950/40">
               <p>요건: 2년 이상 영농 + 거주 기준 충족 + 면적 한도</p>
               <p>감면 후 5년 이내 처분 시 감면세액 추징</p>
             </div>

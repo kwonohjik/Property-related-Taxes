@@ -133,7 +133,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
         title="의제취득일 전 매수 건 — ① 의제취득일 현재 가액과 견주기 (소득세법 시행령 §176의2④)"
         bodyClassName="space-y-3"
       >
-        <p className="text-xs text-amber-800 leading-relaxed">
+        <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
           의제취득일({deemedLabel}) 전에 매수한 건의 취득가액은 매수 건마다 ① 의제취득일 현재 환산취득가액·매매사례가액과
           ② 취득 당시 실지거래가액에 생산자물가상승분을 더한 금액 중 <strong>많은 것</strong>입니다 (
           <LawArticleModal legalBasis="소득세법 시행령 §176의2" label="영 §176의2④" />
@@ -141,7 +141,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
           <LawArticleModal legalBasis="소득세법 시행규칙 §85의2" label="규칙 §85의2" />
           ). ②는 1단계 입력으로 자동 계산합니다. ①은 아래에서 고르고 입력하면 견줍니다.
         </p>
-        <p className="text-xs text-amber-700" data-testid="pre-deemed-lots-targets">
+        <p className="text-xs text-amber-700 dark:text-amber-300" data-testid="pre-deemed-lots-targets">
           대상 매수 건:{" "}
           {preDeemedIdx
             .map((i) => `매수 #${i + 1}(${form.acquisitionLots[i].acquisitionDate})`)
@@ -168,7 +168,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
         )}
 
         {mode === "none" && (
-          <p className="text-xs text-amber-800" data-testid="pre-deemed-lots-none-note">
+          <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="pre-deemed-lots-none-note">
             ① 미산정 — 결과에는 ② 만 적용했다고 표시됩니다. ①을 견주려면 위에서 방식을 고르세요.
           </p>
         )}
@@ -211,7 +211,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
             >
               {isSplit ? (
                 touched.length === 0 ? (
-                  <p className="text-xs text-emerald-800" data-testid="pre-deemed-lots-no-sale-rows">
+                  <p className="text-xs text-emerald-800 dark:text-emerald-200" data-testid="pre-deemed-lots-no-sale-rows">
                     기준시가가 필요한 매도 건이 아직 없습니다 — 1단계의 매수·매도 건(일자·주식수·단가, 개별법은 배정)을 다
                     입력하면 의제취득일 전 매수분과 매칭되는 매도 건이 여기에 나타납니다.
                   </p>
@@ -224,7 +224,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
                         data-testid={`pre-deemed-lots-sale-row-${i}`}
                         className="rounded-lg border border-emerald-200 bg-white p-3 space-y-2 dark:bg-gray-900"
                       >
-                        <p className="text-xs font-semibold text-emerald-700">
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                           매도 #{i + 1} · 양도일 {lot.transferDate || "미입력"}
                         </p>
                         <KiwoomAutoFetchButton
@@ -270,7 +270,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
                 </>
               )}
             </ToneCard>
-            <p className="text-xs text-emerald-700">
+            <p className="text-xs text-emerald-700 dark:text-emerald-300">
               ※ ① 채택 건의 필요경비는 개산공제(의제취득일 기준시가 × 1%)입니다. 환산취득가액은 §97②2호 단서 비교가 따릅니다.
             </p>
           </div>
@@ -285,7 +285,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
               title="의제취득일 현재 기준시가 — 개산공제 기준 (소령 §163⑥4·§165④)"
               bodyClassName="space-y-3"
             >
-              <p className="text-xs text-emerald-700/80">
+              <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
                 매매사례가액을 채택한 건의 필요경비는 <strong>의제취득일 현재 기준시가 × 1%</strong>(개산공제)입니다. 기준시가는
                 비상장·기타자산 주식등의 보충적 평가(영 §165④)로 산정하므로 의제취득일 직전 사업연도의 1주당 순손익가치와
                 순자산가치를 입력하세요.

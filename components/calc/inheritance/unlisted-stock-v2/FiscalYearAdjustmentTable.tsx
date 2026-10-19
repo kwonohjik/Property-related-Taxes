@@ -164,10 +164,10 @@ export function FiscalYearAdjustmentTable({
 
   return (
     <ToneCard tone="emerald" sectionNum={sectionNum} title="사업연도별 순손익액 (별지 6쪽 ①~㉒)" bodyClassName="space-y-3">
-      <p className="text-caption text-emerald-700/80">
+      <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80">
         평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균한 뒤 환원율(10%)로 나누면 1주당 순손익가치 ⑤
       </p>
-      <p className="text-micro text-emerald-600/80">
+      <p className="text-micro text-emerald-600/80 dark:text-emerald-400/80">
         사업연도 변경 시: 평가기준일 이전 1·2·3년이 되는 날이 속하는 사업연도를 입력.
         1년 미만이면 자동 1년 환산(§17의3②).
         합병 후 3년 미경과 법인은 아래 &ldquo;합병 후 3년 미경과 순손익 보정&rdquo; 토글로 합병법인·피합병법인을 합산 입력하세요.
@@ -185,7 +185,7 @@ export function FiscalYearAdjustmentTable({
           const isShortYear = fy.fiscalYearStartDate !== undefined && months < 12;
           return (
             <div key={idx} className="space-y-1">
-              <div className="text-emerald-700">
+              <div className="text-emerald-700 dark:text-emerald-300">
                 {idx === 0 ? "1년전 ×3" : idx === 1 ? "2년전 ×2" : "3년전 ×1"}
               </div>
               <input
@@ -213,7 +213,7 @@ export function FiscalYearAdjustmentTable({
               <div className="space-y-0.5">
                 <p className="text-micro text-gray-500 font-normal">
                   종료일
-                  <span className="ml-1 text-rose-600 font-semibold">*</span>
+                  <span className="ml-1 text-rose-600 font-semibold dark:text-rose-400">*</span>
                 </p>
                 <DateInput
                   value={isValidDate(fy.fiscalYearEndDate) ? dateToStr(fy.fiscalYearEndDate) : ""}
@@ -223,7 +223,7 @@ export function FiscalYearAdjustmentTable({
                   }}
                 />
                 {!isValidDate(fy.fiscalYearEndDate) && (
-                  <p className="text-micro text-rose-600 font-semibold leading-snug">
+                  <p className="text-micro text-rose-600 font-semibold leading-snug dark:text-rose-400">
                     종료일 필수 — §56⑤·환산주식수 계산에 필요
                   </p>
                 )}
@@ -266,16 +266,16 @@ export function FiscalYearAdjustmentTable({
               <Fragment key={row.key}>
                 {/* 가산항목 그룹 헤더 (②~⑦) */}
                 {isFirstAdd && (
-                  <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-sky-200 bg-sky-100/70 px-2 py-1">
-                    <span className="text-xs font-bold text-sky-800">＋ 가산항목</span>
-                    <span className="text-micro text-sky-700/80">§56④ 1호 · ②~⑦</span>
+                  <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-sky-200 bg-sky-100/70 px-2 py-1 dark:bg-sky-900/40">
+                    <span className="text-xs font-bold text-sky-800 dark:text-sky-200">＋ 가산항목</span>
+                    <span className="text-micro text-sky-700/80 dark:text-sky-300/80">§56④ 1호 · ②~⑦</span>
                   </div>
                 )}
                 {/* 차감항목 그룹 헤더 (⑧~㉒) */}
                 {isFirstSub && (
-                  <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-rose-200 bg-rose-100/70 px-2 py-1">
-                    <span className="text-xs font-bold text-rose-800">－ 차감항목</span>
-                    <span className="text-micro text-rose-700/80">§56④ 2호 · ⑧~㉒</span>
+                  <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-rose-200 bg-rose-100/70 px-2 py-1 dark:bg-rose-900/40">
+                    <span className="text-xs font-bold text-rose-800 dark:text-rose-200">－ 차감항목</span>
+                    <span className="text-micro text-rose-700/80 dark:text-rose-300/80">§56④ 2호 · ⑧~㉒</span>
                   </div>
                 )}
                 <div
@@ -284,8 +284,8 @@ export function FiscalYearAdjustmentTable({
                 >
                   <div className="pr-2">
                     <span className={`inline-block w-6 text-center font-mono ${
-                      row.group === "income" ? "text-emerald-700 font-bold" :
-                      row.group === "add" ? "text-sky-700" : "text-rose-700"
+                      row.group === "income" ? "text-emerald-700 font-bold dark:text-emerald-300" :
+                      row.group === "add" ? "text-sky-700 dark:text-sky-300" : "text-rose-700 dark:text-rose-300"
                     }`}>{row.cellNum}</span>
                     <span className="ml-1">{row.label}</span>
                     {row.description && (
@@ -313,14 +313,14 @@ export function FiscalYearAdjustmentTable({
                 {isLastAdd && (
                   <div
                     role="row"
-                    className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-l-2 border-sky-400 bg-sky-50/70 pl-1.5 py-1.5"
+                    className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-l-2 border-sky-400 bg-sky-50/70 pl-1.5 py-1.5 dark:bg-sky-950/40"
                   >
-                    <div className="pr-2 font-semibold text-sky-800">
+                    <div className="pr-2 font-semibold text-sky-800 dark:text-sky-200">
                       <span className="inline-block w-6 text-center">＋</span>
                       <span className="ml-1">가산 소계 (②~⑦)</span>
                     </div>
                     {perYear.map((p, idx) => (
-                      <div key={idx} className="text-right font-mono tabular-nums font-semibold text-sky-900">
+                      <div key={idx} className="text-right font-mono tabular-nums font-semibold text-sky-900 dark:text-sky-200">
                         {p.add.toLocaleString()}
                       </div>
                     ))}
@@ -330,14 +330,14 @@ export function FiscalYearAdjustmentTable({
                 {isLastSub && (
                   <div
                     role="row"
-                    className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-l-2 border-rose-400 bg-rose-50/70 pl-1.5 py-1.5"
+                    className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-l-2 border-rose-400 bg-rose-50/70 pl-1.5 py-1.5 dark:bg-rose-950/40"
                   >
-                    <div className="pr-2 font-semibold text-rose-800">
+                    <div className="pr-2 font-semibold text-rose-800 dark:text-rose-200">
                       <span className="inline-block w-6 text-center">－</span>
                       <span className="ml-1">차감 소계 (⑧~㉒)</span>
                     </div>
                     {perYear.map((p, idx) => (
-                      <div key={idx} className="text-right font-mono tabular-nums font-semibold text-rose-900">
+                      <div key={idx} className="text-right font-mono tabular-nums font-semibold text-rose-900 dark:text-rose-200">
                         {p.sub.toLocaleString()}
                       </div>
                     ))}
@@ -350,14 +350,14 @@ export function FiscalYearAdjustmentTable({
           {/* 다.순손익액 미리보기 행 */}
           <div
             role="row"
-            className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-t-2 border-l-2 border-emerald-400 bg-emerald-100/60 pl-1.5 py-2"
+            className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 items-center border-t-2 border-l-2 border-emerald-400 bg-emerald-100/60 pl-1.5 py-2 dark:bg-emerald-900/40"
           >
-            <div className="pr-2 font-bold text-emerald-800">
+            <div className="pr-2 font-bold text-emerald-800 dark:text-emerald-200">
               <span className="inline-block w-6 text-center">다</span>
               <span className="ml-1">순손익액 (= ① + 가산 − 차감)</span>
             </div>
             {previewAdjustedIncomes.map((val, idx) => (
-              <div key={idx} className="text-right font-mono tabular-nums font-semibold text-emerald-900">
+              <div key={idx} className="text-right font-mono tabular-nums font-semibold text-emerald-900 dark:text-emerald-200">
                 {val.toLocaleString()}
                 <span className="ml-1 text-micro">원</span>
               </div>

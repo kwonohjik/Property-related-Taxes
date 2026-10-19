@@ -103,11 +103,11 @@ export function CasualtyLossSection({
           hint="보험금 수령액·구상권 행사로 보전 가능한 금액. 없으면 0 또는 빈칸."
         />
         {/* 자동계산 박스 */}
-        <div className="rounded-md border border-rose-200 bg-rose-100/60 px-3 py-2 text-xs space-y-1">
-          <p className="text-rose-700 font-medium">
+        <div className="rounded-md border border-rose-200 bg-rose-100/60 px-3 py-2 text-xs space-y-1 dark:bg-rose-900/40">
+          <p className="text-rose-700 font-medium dark:text-rose-300">
             공제 신청액 = 재해손실재산가액 − 보전가능금액
           </p>
-          <p className="text-right font-mono tabular-nums text-rose-900 font-semibold text-sm">
+          <p className="text-right font-mono tabular-nums text-rose-900 font-semibold text-sm dark:text-rose-200">
             {autoDeduction.toLocaleString("ko-KR")}
           </p>
         </div>

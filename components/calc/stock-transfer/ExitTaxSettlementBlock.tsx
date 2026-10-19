@@ -68,7 +68,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
     <div className="space-y-5">
       {/* ── 섹션 5: 실양도 정보 (경정청구 §118의12~§118의15⑤) ── */}
       <SectionBox label="실양도 정보 — 경정청구용 (§118의12, 선택)" tone="emerald">
-        <p className="text-xs text-emerald-700 leading-relaxed">
+        <p className="text-xs text-emerald-700 leading-relaxed dark:text-emerald-300">
           납부유예 후 해외에서 실제로 양도한 경우, 실양도가액이 출국일 시가보다 낮으면
           §118의12 조정공제를 통해 환급청구할 수 있습니다.
           아직 실양도하지 않은 경우 비워두세요.
@@ -132,7 +132,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
               options={DEFERRAL_REASON_OPTIONS}
             />
           </FieldCard>
-          <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs text-sky-700 leading-relaxed">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs text-sky-700 leading-relaxed dark:text-sky-300 dark:bg-sky-950/40">
             이자상당액 = 유예 세액 × 유예 일수 × 1일당 이자율 (§118의16④·시행령 §178의12③).
             아래 일수·이자율 입력 시 산출되며, 미입력 시 결과 화면에 안내만 표시됩니다.
           </div>
@@ -272,7 +272,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
 
         {!form.etHasFiledHoldingsReport && (
           <div className="space-y-2">
-            <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-700 leading-relaxed">
+            <div className="rounded-lg border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-700 leading-relaxed dark:text-rose-300 dark:bg-rose-950/40">
               미신고 가산세 = 보유 주식 액면금액 합계 × 2% (§118의15).
               액면금액이 없는 무액면주식은 자본금을 발행총주수로 나누어 환산합니다.
             </div>

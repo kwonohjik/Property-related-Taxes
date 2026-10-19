@@ -84,16 +84,16 @@ function SectionTitle({ number, text, tone }: { number: string; text: string; to
     violet:  "bg-violet-200 text-violet-800 border-violet-300 text-violet-700",
   }[tone];
   const bgClass = {
-    emerald: "bg-emerald-50/40 border-emerald-200",
-    amber:   "bg-amber-50/40 border-amber-200",
-    sky:     "bg-sky-50/40 border-sky-200",
-    violet:  "bg-violet-50/40 border-violet-200",
+    emerald: "bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/40",
+    amber:   "bg-amber-50/40 border-amber-200 dark:bg-amber-950/40",
+    sky:     "bg-sky-50/40 border-sky-200 dark:bg-sky-950/40",
+    violet:  "bg-violet-50/40 border-violet-200 dark:bg-violet-950/40",
   }[tone];
   const textClass = {
-    emerald: "text-emerald-700",
-    amber:   "text-amber-700",
-    sky:     "text-sky-700",
-    violet:  "text-violet-700",
+    emerald: "text-emerald-700 dark:text-emerald-300",
+    amber:   "text-amber-700 dark:text-amber-300",
+    sky:     "text-sky-700 dark:text-sky-300",
+    violet:  "text-violet-700 dark:text-violet-300",
   }[tone];
   return (
     <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${bgClass}`}>
@@ -192,10 +192,10 @@ export function GeneralBuildingValuationDetailCard({
   const incomeTotal = totalIncome ?? incomeLandPost;
 
   return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50/20 p-4 space-y-4">
-      <h3 className="text-sm font-bold text-violet-900">
+    <div className="rounded-xl border border-violet-200 bg-violet-50/20 p-4 space-y-4 dark:bg-violet-950/40">
+      <h3 className="text-sm font-bold text-violet-900 dark:text-violet-200">
         일반건물(토지+건물 일괄) 환산취득가 산정 근거
-        <span className="ml-2 text-micro font-normal text-violet-500">
+        <span className="ml-2 text-micro font-normal text-violet-500 dark:text-violet-400">
           (소득세법 시행령 §176의2② · §163⑥ · §102②)
         </span>
       </h3>
@@ -230,7 +230,7 @@ export function GeneralBuildingValuationDetailCard({
              되돌아간 경우는 산식이 다시 맞으므로 종전 표시를 그대로 쓴다.
         */}
         {detail.saleSplitJudgment && !detail.saleSplitJudgment.deemedUnclear ? (
-          <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1">
+          <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
             <p className="font-medium">산식</p>
             <p>계약서에 구분 기재된 금액을 그대로 적용했습니다 (소득세법 §100② — 안분은 구분이 불분명할 때의 예외).</p>
             <p className="pl-2">
@@ -239,7 +239,7 @@ export function GeneralBuildingValuationDetailCard({
             </p>
           </div>
         ) : (
-          <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1">
+          <div className="rounded bg-emerald-50/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
             <p className="font-medium">산식</p>
             <p>토지 양도가액 = INT(총양도가 {formatKRW(totalTransferPrice)} × 토지 기준시가 / 합계 기준시가)</p>
             <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(allocation.land)}</span></p>
@@ -284,7 +284,7 @@ export function GeneralBuildingValuationDetailCard({
             </tbody>
           </table>
         </div>
-        <div className="rounded bg-amber-50/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
+        <div className="rounded bg-amber-50/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1 dark:text-amber-200 dark:bg-amber-950/40">
           <p className="font-medium">산식</p>
           {isInherited ? (
             <>
@@ -292,14 +292,14 @@ export function GeneralBuildingValuationDetailCard({
               <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.land)}</span></p>
               <p>건물 취득가액 = 상속개시일 건물 신고가액(상증법 §60~66)</p>
               <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.building)}</span></p>
-              <p className="text-amber-600">취득당시 실지거래가액으로 의제(소득세법 시행령 §163⑨) — 환산·개산공제 미적용</p>
+              <p className="text-amber-600 dark:text-amber-400">취득당시 실지거래가액으로 의제(소득세법 시행령 §163⑨) — 환산·개산공제 미적용</p>
             </>
           ) : (
             <>
               {exprVal ? (
                 <>
                   <p>토지 환산취득가 = INT(토지 양도가액 {formatKRW(allocation.land)} × 취득시 토지 기준시가 / <span className="font-semibold">양도시 토지 기준시가(§164⑨ 적용 후 {formatKRW(exprVal.denominator)})</span>)</p>
-                  <p className="pl-2 text-amber-700">
+                  <p className="pl-2 text-amber-700 dark:text-amber-300">
                     └ 공익수용 특례(소득세법 시행령 §164⑨ 1호) — 양도시 토지 기준시가를
                     min[기준시가 {formatKRW(exprVal.perSqmCandidates.standard)}, 보상가액 {formatKRW(exprVal.perSqmCandidates.compensation)}, 보상기초 {formatKRW(exprVal.perSqmCandidates.basis)}]
                     = {formatKRW(exprVal.chosenPerSqm)} 원/㎡ × {exprVal.area}㎡ 로 낮춤(토지분만)
@@ -348,7 +348,7 @@ export function GeneralBuildingValuationDetailCard({
             </tbody>
           </table>
         </div>
-        <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1">
+        <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1 dark:text-sky-200 dark:bg-sky-950/40">
           {isInherited ? (
             <p>상속개시일 평가액을 취득당시 실지거래가액으로 보므로(소령 §163⑨), 환산취득가 전용 개산공제(§163⑥)는 적용하지 않습니다.</p>
           ) : (
@@ -409,7 +409,7 @@ export function GeneralBuildingValuationDetailCard({
           </table>
         </div>
         {gainBuilding < 0 && (
-          <div className="rounded bg-rose-50/60 border border-rose-200 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded bg-rose-50/60 border border-rose-200 px-3 py-2 text-xs text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
             건물 양도차익 {formatKRW(gainBuilding)} (차손) → 장기보유특별공제 미적용 (소득세법 §95①: 양도차익에서 차감)
           </div>
         )}
@@ -445,7 +445,7 @@ export function GeneralBuildingValuationDetailCard({
               </tbody>
             </table>
           </div>
-          <div className="rounded bg-violet-50/60 border border-violet-200 px-3 py-2 text-xs text-violet-800">
+          <div className="rounded bg-violet-50/60 border border-violet-200 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 dark:bg-violet-950/40">
             <p>흡수액 = 건물 차손 절댓값 <span className="font-semibold tabular-nums">{formatKRW(offset)}</span></p>
             <p>토지 양도소득금액 = 통산 전 {incomeLandPre !== undefined ? formatKRW(incomeLandPre) : "—"} − 흡수액 {formatKRW(offset)} = <span className="font-semibold tabular-nums">{incomeLandPost !== undefined ? formatKRW(incomeLandPost) : "—"}</span></p>
           </div>
@@ -459,7 +459,7 @@ export function GeneralBuildingValuationDetailCard({
              판정 근거를 반쪽만 보여주는 것보다 낫다. */}
       {typeof detail.buildingFootprintArea === "number" &&
        typeof detail.allowedLandArea === "number" && (
-      <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1">
+      <div className="rounded bg-sky-50/60 border border-sky-200 px-3 py-2 text-xs text-sky-800 space-y-1 dark:text-sky-200 dark:bg-sky-950/40">
         <p className="font-semibold">비사업용토지 판정 (§104의3·§168의12)</p>
         <p>건물 수평투영면적 = <span className="tabular-nums font-medium">{detail.buildingFootprintArea.toFixed(2)} ㎡</span></p>
         {'multiplierDetail' in detail && (
@@ -467,15 +467,15 @@ export function GeneralBuildingValuationDetailCard({
         )}
         <p>인정 한도 = {detail.buildingFootprintArea.toFixed(2)}㎡ × {('appliedMultiplier' in detail ? (detail as { appliedMultiplier?: number }).appliedMultiplier ?? 3 : 3)}배 = <span className="tabular-nums font-medium">{detail.allowedLandArea.toFixed(2)} ㎡</span></p>
         {detail.isWithinNblRatio
-          ? <p className="text-emerald-700 font-semibold">→ 사업용 (배율 내 — 중과 미발동)</p>
+          ? <p className="text-emerald-700 font-semibold dark:text-emerald-300">→ 사업용 (배율 내 — 중과 미발동)</p>
           : <>
-              <p className="text-rose-700 font-semibold">
+              <p className="text-rose-700 font-semibold dark:text-rose-300">
                 → 초과분 <span className="tabular-nums">
                   {('nonBusinessArea' in detail ? (detail as { nonBusinessArea?: number }).nonBusinessArea ?? 0 : 0).toFixed(2)}㎡
                 </span>
                 {' '}({Math.round(('nonBusinessRatio' in detail ? (detail as { nonBusinessRatio?: number }).nonBusinessRatio ?? 0 : 0) * 100)}%) 비사업용 — +10%p 중과
               </p>
-              <p className="text-micro text-rose-600">토지 카드 사업용·비사업용 분리 계산</p>
+              <p className="text-micro text-rose-600 dark:text-rose-400">토지 카드 사업용·비사업용 분리 계산</p>
             </>
         }
       </div>

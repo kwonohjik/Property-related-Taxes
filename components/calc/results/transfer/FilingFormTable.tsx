@@ -81,7 +81,7 @@ export function FilingFormTable({
           <div className={cn(
             "px-4 py-3 border-b print:bg-white",
             adopted === true
-              ? "bg-emerald-50 border-emerald-300"
+              ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40"
               : adopted === false
                 ? "bg-zinc-50 border-zinc-200"
                 : "bg-slate-100 dark:bg-slate-800 border-slate-300",
@@ -91,7 +91,7 @@ export function FilingFormTable({
                 <h3 className={cn(
                   "text-sm font-bold",
                   adopted === true
-                    ? "text-emerald-800"
+                    ? "text-emerald-800 dark:text-emerald-200"
                     : adopted === false
                       ? "text-zinc-600"
                       : "text-slate-800 dark:text-slate-100",
@@ -189,7 +189,7 @@ export function FilingFormTable({
                       >
                         {fmtCell(row.values[c.key])}
                         {roseNote && (
-                          <div data-testid="filing-rose-note" className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div data-testid="filing-rose-note" className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
                             {roseNote}
                           </div>
                         )}

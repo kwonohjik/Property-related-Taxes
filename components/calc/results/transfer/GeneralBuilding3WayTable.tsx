@@ -87,8 +87,8 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
   // 결손 통산 분배량 — 결손 기여는 `+`(emerald), 흡수는 `△`(rose).
   const offsetCell = (a: Parameters<typeof offsetOf>[0]) => {
     const { contributed, absorbed } = offsetOf(a);
-    if (contributed > 0) return { text: `+${formatKRW(contributed)}`, tone: "text-emerald-600" };
-    if (absorbed > 0) return { text: `△${formatKRW(absorbed)}`, tone: "text-rose-600" };
+    if (contributed > 0) return { text: `+${formatKRW(contributed)}`, tone: "text-emerald-600 dark:text-emerald-400" };
+    if (absorbed > 0) return { text: `△${formatKRW(absorbed)}`, tone: "text-rose-600 dark:text-rose-400" };
     return { text: "-", tone: "text-muted-foreground" };
   };
   const landOffsetCell = offsetCell(land);
@@ -109,15 +109,15 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <th className="pb-1 pr-2 text-left font-normal">구분</th>
               <th className="pb-1 pr-2 text-right font-normal">
                 토지
-                <span className="ml-1 text-micro text-sky-600">(1001)</span>
+                <span className="ml-1 text-micro text-sky-600 dark:text-sky-400">(1001)</span>
               </th>
               <th className="pb-1 pr-2 text-right font-normal">
                 건물1
-                <span className="ml-1 text-micro text-emerald-600">(3001)</span>
+                <span className="ml-1 text-micro text-emerald-600 dark:text-emerald-400">(3001)</span>
               </th>
               <th className="pb-1 pr-2 text-right font-normal">
                 건물2
-                <span className="ml-1 text-micro text-fuchsia-600">(3002·증축)</span>
+                <span className="ml-1 text-micro text-fuchsia-600 dark:text-fuchsia-400">(3002·증축)</span>
               </th>
               <th className="pb-1 text-right font-normal">합계</th>
             </tr>
@@ -138,15 +138,15 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <td className="py-1 pr-2 text-muted-foreground">취득가액</td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(land.acquisitionPrice)}
-                {acqBadge("land", "text-sky-600")}
+                {acqBadge("land", "text-sky-600 dark:text-sky-400")}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld1.acquisitionPrice)}
-                {acqBadge("building1", "text-emerald-600")}
+                {acqBadge("building1", "text-emerald-600 dark:text-emerald-400")}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {formatKRW(bld2.acquisitionPrice)}
-                {acqBadge("building2", "text-fuchsia-600")}
+                {acqBadge("building2", "text-fuchsia-600 dark:text-fuchsia-400")}
               </td>
               <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
                 {formatKRW(land.acquisitionPrice + bld1.acquisitionPrice + bld2.acquisitionPrice)}
@@ -174,7 +174,7 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 font-medium">양도차익</td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(land.transferGain)}</td>
-              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium ${bld1.transferGain < 0 ? "text-rose-600" : ""}`}>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium ${bld1.transferGain < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>
                 {fmt(bld1.transferGain)}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(bld2.transferGain)}</td>
@@ -200,7 +200,7 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
             <tr className="border-b border-border/40 bg-muted/20">
               <td className="py-1 pr-2 font-medium">양도소득금액</td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(land.income)}</td>
-              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium ${bld1.income < 0 ? "text-rose-600" : ""}`}>
+              <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium ${bld1.income < 0 ? "text-rose-600 dark:text-rose-400" : ""}`}>
                 {fmt(bld1.income)}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap font-medium">{fmt(bld2.income)}</td>

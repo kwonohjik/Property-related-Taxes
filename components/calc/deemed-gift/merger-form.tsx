@@ -33,8 +33,8 @@ function ShareholderRows({
   /** 수증자(과대평가) 행에만 — 증여자 행에 두면 켜도 엔진이 읽지 않는 거짓 입력 경로가 된다 */
   forProfitToggle?: boolean;
 }) {
-  const border = tone === "emerald" ? "border-emerald-200 bg-emerald-50/40" : "border-rose-200 bg-rose-50/40";
-  const text = tone === "emerald" ? "text-emerald-700" : "text-rose-700";
+  const border = tone === "emerald" ? "border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/40" : "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40";
+  const text = tone === "emerald" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300";
   const update = (i: number, patch: Partial<ShRow>) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   return (
     <div className={`space-y-2 rounded-lg border ${border} p-2`}>
@@ -55,7 +55,7 @@ function ShareholderRows({
             </div>
             <button
               type="button"
-              className="text-xs text-rose-600 hover:underline"
+              className="text-xs text-rose-600 hover:underline dark:text-rose-400"
               onClick={() => onChange(rows.filter((_, j) => j !== i))}
             >
               삭제
@@ -168,7 +168,7 @@ export function MergerFields({ form, set }: Props) {
           {!splitNet && (
             <>
               <CurrencyInput label={form.mrgIsSplitMerger ? "과대평가(이익측)법인 1주당 평가가액 (보충평가액)" : "과대평가(이익측)법인 1주당 평가가액"} value={form.mrgOvervaluedPrice} onChange={(v) => set({ mrgOvervaluedPrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-over-price" />
-              <p className="text-caption text-emerald-700">합병비율 산정상 상대적으로 과대평가된(이익을 얻는) 측 법인. 1주 평가액 크기와 무관.</p>
+              <p className="text-caption text-emerald-700 dark:text-emerald-300">합병비율 산정상 상대적으로 과대평가된(이익을 얻는) 측 법인. 1주 평가액 크기와 무관.</p>
             </>
           )}
           {!useSh && (
@@ -179,8 +179,8 @@ export function MergerFields({ form, set }: Props) {
           )}
           {/* 합병 후 1주평가 §28⑤ */}
           {useSh ? (
-            <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
-              <p className="text-xs font-semibold text-emerald-700">합병 후 1주당 평가가액 — 단순평균액 (§28⑤)</p>
+            <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2 dark:bg-emerald-950/40">
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">합병 후 1주당 평가가액 — 단순평균액 (§28⑤)</p>
               <CurrencyInput label="과소평가(반대)법인 1주당 평가가액" value={form.mrgUnderSharePrice} onChange={(v) => set({ mrgUnderSharePrice: v })} placeholder="1주당 평가가액 (원)" data-testid="mrg-under-price" />
               <CurrencyInput label="합병 후 존속법인 주식수 (합병비율 반영)" value={form.mrgPostMergerTotalShares} onChange={(v) => set({ mrgPostMergerTotalShares: v })} placeholder="합병 후 주식수" data-testid="mrg-post-total" />
               <ToggleCard tone="emerald" checked={form.mrgIsListed} onCheckedChange={(v) => set({ mrgIsListed: v })} title="상장법인" description="합병등기일 후 2개월 종가평균과 단순평균액 중 작은 금액 적용">
@@ -220,7 +220,7 @@ export function MergerFields({ form, set }: Props) {
           {useSh ? (
             <>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-emerald-700">교부 환산비 (과대평가법인 합병전→합병후)</span>
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-300">교부 환산비 (과대평가법인 합병전→합병후)</span>
                 <div className="w-16"><CurrencyInput label="분자" hideLabel value={form.mrgExchangeNumer} onChange={(v) => set({ mrgExchangeNumer: v })} data-testid="mrg-ex-numer" /></div>
                 <span className="text-xs">주당</span>
                 <div className="w-16"><CurrencyInput label="분모" hideLabel value={form.mrgExchangeDenom} onChange={(v) => set({ mrgExchangeDenom: v })} data-testid="mrg-ex-denom" /></div>

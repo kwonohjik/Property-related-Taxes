@@ -112,14 +112,14 @@ export function computeShareRatioFromShares(
 function IssuedSharesReadout({ total }: { total: string }) {
   const parsed = total?.trim() ? parseDecimal(total) : 0;
   return (
-    <p className="text-xs text-violet-700">
+    <p className="text-xs text-violet-700 dark:text-violet-300">
       발행주식 총수{" "}
       {parsed > 0 ? (
         <strong>{parsed.toLocaleString()}주</strong>
       ) : (
-        <strong className="text-violet-500">미입력</strong>
+        <strong className="text-violet-500 dark:text-violet-400">미입력</strong>
       )}
-      <span className="ml-1 text-violet-600">
+      <span className="ml-1 text-violet-600 dark:text-violet-400">
         — 「양도·취득 일자 및 주식수」 단계에서 입력합니다.
       </span>
     </p>
@@ -311,19 +311,19 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     <div className={isAutoJudgmentActive ? "space-y-4" : "mt-4 space-y-4"}>
         {/* 동적 임계 박스 — 직전 사업연도 종료일 + 시장 선택 후 자동 표시 */}
         {threshold && form.priorYearEndDate && (
-          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm">
-            <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1">
+          <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-sm dark:bg-violet-950/40">
+            <p className="font-semibold text-violet-900 mb-1 flex items-center gap-1 dark:text-violet-200">
               대주주 판정 기준 (
               {form.marketType === "unlisted"
                 ? <LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호" />
                 : <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" />}
               )
             </p>
-            <p className="text-violet-800">
+            <p className="text-violet-800 dark:text-violet-200">
               지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
               시총 <strong>{(threshold.marketCapThreshold / 100_000_000).toFixed(0)}억</strong>
             </p>
-            <p className="text-xs text-violet-600 mt-1">
+            <p className="text-xs text-violet-600 mt-1 dark:text-violet-400">
               {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
               {resolveThresholdFromDate(
                 form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
@@ -331,7 +331,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               )}~ 적용
             </p>
             {form.marketType === "unlisted" && threshold.isVentureRule && (
-              <p className="text-xs text-violet-700 mt-1 font-semibold flex items-center gap-1 flex-wrap">
+              <p className="text-xs text-violet-700 mt-1 font-semibold flex items-center gap-1 flex-wrap dark:text-violet-300">
                 ✓ 자동 적용 중 — 비상장 벤처기업 시총 기준 <strong>40억</strong>{" "}
                 (<LawArticleModal legalBasis="소득세법 시행령 §167의8 ①" label="§167의8①2호 나목" />)
               </p>
@@ -382,7 +382,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               ⚠️ {form.priorYearEndDate}은 {priorYearEndTradingStatus.reason}입니다
               (<LawArticleModal legalBasis="소득세법 시행령 §157 ①" label="§157①" />)
             </p>
-            <p className="mt-1 text-amber-800">
+            <p className="mt-1 text-amber-800 dark:text-amber-200">
               해당 일자 종가가 없으므로 <strong>직전거래일 최종시세가액</strong>으로
               시가총액을 산정해 입력하세요.
             </p>
@@ -426,7 +426,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 onChange={(v) => onChange({ judgmentDateOverride: v })}
               />
             </FieldCard>
-            <p className="text-micro text-rose-700 bg-rose-100/70 px-2 py-1 rounded">
+            <p className="text-micro text-rose-700 bg-rose-100/70 px-2 py-1 rounded dark:text-rose-300 dark:bg-rose-900/40">
               ✓ 입력된 기준일로 대주주 기준 매트릭스가 조회됩니다 (시기별 1%/2%/4% 등). 위 「직전 사업연도 종료일」은 표시용으로만 쓰입니다.
             </p>
           </div>
@@ -466,14 +466,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 />
               </FieldCard>
               {selfRatioFromShares !== null ? (
-                <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900">
+                <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900 dark:text-violet-200 dark:bg-violet-900/40">
                   산출 지분율: <strong>{selfRatioFromShares}%</strong>
-                  <span className="ml-1 text-xs text-violet-700">
+                  <span className="ml-1 text-xs text-violet-700 dark:text-violet-300">
                     (<Frac top={form.selfOwnedShares} bottom={form.totalIssuedShares} /> × 100)
                   </span>
                 </div>
               ) : (
-                <p className="text-xs text-violet-600">
+                <p className="text-xs text-violet-600 dark:text-violet-400">
                   발행주식 총수와 본인 보유 주식수가 모두 입력되면 지분율이 자동 산출됩니다.
                 </p>
               )}
@@ -514,10 +514,10 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             두면 「본인 단독 판정 + 대여 주식 보유」에 입력 경로가 아예 없다
             (ToggleCard는 `{checked && children}`이라 OFF면 렌더조차 안 된다). */}
         <div className={`rounded-lg border p-3 space-y-3 ${
-          f15f16Eligible ? "border-amber-300 bg-amber-50/60" : "border-slate-200 bg-slate-50/40"
+          f15f16Eligible ? "border-amber-300 bg-amber-50/60 dark:bg-amber-950/40" : "border-slate-200 bg-slate-50/40"
         }`}>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-amber-900">
+            <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
               대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
             </span>
             {!f15f16Eligible && (
@@ -551,7 +551,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             />
           </FieldCard>
           {f15f16Eligible && (parseDecimal(form.lentSharesCount) > 0 || parseDecimal(form.pefIndirectSharesCount) > 0) && (
-            <p className="text-micro text-amber-700 bg-amber-100/70 px-2 py-1 rounded">
+            <p className="text-micro text-amber-700 bg-amber-100/70 px-2 py-1 rounded dark:text-amber-300 dark:bg-amber-900/40">
               ✓ 양도일 2013.2.15. 이후 — 엔진이 지분율에 자동 가산합니다.
               시가총액 가산은 사용자 입력 책임 (가격 외부 의존).
             </p>
@@ -599,14 +599,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   />
                 </FieldCard>
                 {combinedRatioFromShares !== null ? (
-                  <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900">
+                  <div className="rounded-md bg-violet-100/60 px-3 py-2 text-sm text-violet-900 dark:text-violet-200 dark:bg-violet-900/40">
                     산출 합산 지분율: <strong>{combinedRatioFromShares}%</strong>
-                    <span className="ml-1 text-xs text-violet-700">
+                    <span className="ml-1 text-xs text-violet-700 dark:text-violet-300">
                       (<Frac top={form.combinedOwnedShares} bottom={form.totalIssuedShares} /> × 100)
                     </span>
                   </div>
                 ) : (
-                  <p className="text-xs text-violet-600">
+                  <p className="text-xs text-violet-600 dark:text-violet-400">
                     발행주식 총수와 합산 보유 주식수가 모두 입력되면 지분율이 자동 산출됩니다.
                   </p>
                 )}
@@ -656,7 +656,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             return (
               <div className={`rounded-lg border px-4 py-3 text-sm ${
                 judgment.isMajor
-                  ? "border-violet-300 bg-violet-100/60 text-violet-900"
+                  ? "border-violet-300 bg-violet-100/60 text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
                   : "border-slate-200 bg-slate-50 text-slate-600"
               }`}>
                 <p className="font-medium mb-1">

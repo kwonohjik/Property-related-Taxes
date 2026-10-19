@@ -120,14 +120,14 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
   if (items.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2 dark:bg-amber-950/40">
       <div className="flex items-center gap-2">
-        <span className="text-amber-600 text-sm font-bold">!</span>
-        <p className="text-xs font-semibold text-amber-800">
+        <span className="text-amber-600 text-sm font-bold dark:text-amber-400">!</span>
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
           추가 감면·배제 가능성 확인
         </p>
       </div>
-      <p className="text-xs text-amber-700">
+      <p className="text-xs text-amber-700 dark:text-amber-300">
         이 사례에서 적용 가능할 수 있는 항목입니다. 해당 단계로 이동하여 확인하세요.
       </p>
       <ul className="space-y-2">
@@ -140,7 +140,7 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-amber-900 group-hover:text-amber-700">
+                  <p className="text-sm font-medium text-amber-900 group-hover:text-amber-700 dark:text-amber-200">
                     {item.label}
                     {item.badge && (
                       <span className="ml-1.5 inline-block rounded-full bg-amber-100 px-1.5 py-0.5 text-micro font-semibold text-amber-700">
@@ -151,7 +151,7 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
                   <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
                 </div>
                 {onGoToStep && (
-                  <span className="shrink-0 text-xs text-amber-600 group-hover:text-amber-800">
+                  <span className="shrink-0 text-xs text-amber-600 group-hover:text-amber-800 dark:text-amber-400">
                     Step {item.step + 1} →
                   </span>
                 )}

@@ -199,7 +199,7 @@ export function BuildingStdValuationSections({
                 <button
                   type="button"
                   onClick={() => onOpenAdjustment()}
-                  className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
+                  className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900 dark:text-green-300"
                 >
                   다시 계산
                 </button>

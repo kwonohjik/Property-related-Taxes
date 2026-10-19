@@ -430,9 +430,9 @@ export function MultiPointBuildingStdPriceModal({
           </DialogHeader>
 
           {/* 소재지 + 건축물대장 자동조회 (L-4 이식 — 계획서 §4.5) */}
-          <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
-            <p className="text-sm font-semibold text-rose-700">소재지 (공시지가·건축물대장 조회용)</p>
-            <p className="text-caption text-rose-600/90">
+          <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3 dark:bg-rose-950/40">
+            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">소재지 (공시지가·건축물대장 조회용)</p>
+            <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
               주소를 입력하면 아래 공시지가를 연도별로 자동 조회하고, 건축물대장에서 신축연도·연면적을
               불러올 수 있습니다. 미입력 시 직접 입력하세요.
             </p>
@@ -459,7 +459,7 @@ export function MultiPointBuildingStdPriceModal({
               onAutoFill={applyRegisterPatch}
             />
             {(!!addr.unitDong || !!addr.unitHo) && (
-              <p className="text-caption text-rose-600/90">
+              <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
                 집합건물 세대는 건축물대장 조회 시 전유+공용 연면적이 첫 부분의 연면적으로 자동
                 입력됩니다(국세청 「건물 기준시가 계산방법 고시」상 건물면적 기준). 조회되지 않으면
                 전유+공용 연면적을 직접 입력하세요.
@@ -468,17 +468,17 @@ export function MultiPointBuildingStdPriceModal({
           </div>
 
           {/* 신축연도(건물 공통) */}
-          <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3">
-            <p className="text-xs font-semibold text-sky-700">건물 정보 ({pointCount}시점 공통)</p>
+          <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3 dark:bg-sky-950/40">
+            <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">건물 정보 ({pointCount}시점 공통)</p>
             <FieldCard label="신축연도" hint="준공연도 4자리">
               <DecimalInput value={builtYear} onChange={setBuiltYear} placeholder="신축연도 (4자리)" />
             </FieldCard>
           </div>
 
           {/* 부분(층/구역) 목록 */}
-          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3">
+          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-amber-700">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
                 {enableCommercial ? "부분(층/구역) — 구조·용도·연면적·구분" : "부분(층/구역) — 구조·용도·연면적"}
               </p>
               <Button type="button" variant="outline" size="xs" onClick={() => setRows((rs) => [...rs, emptyRow(rs.length ? rs[rs.length - 1].category : "housing")])}>
@@ -503,7 +503,7 @@ export function MultiPointBuildingStdPriceModal({
                         ))}
                       </div>
                     ) : (
-                      <span className="text-caption font-medium text-amber-700">부분 {idx + 1}</span>
+                      <span className="text-caption font-medium text-amber-700 dark:text-amber-300">부분 {idx + 1}</span>
                     )}
                     {rows.length > 1 && (
                       <Button type="button" variant="ghost" size="xs" onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))}>
@@ -515,8 +515,8 @@ export function MultiPointBuildingStdPriceModal({
                 <div className="space-y-2">
                   {/* 취득당시 (취득 연도 체계) — 주택만. 상가 취득·최초공시는 Case A 주택값 자동/Case B 미산출 → 숨김 */}
                   {row.category === "housing" && acqOptionYear != null && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 space-y-2">
-                      <p className="text-caption font-semibold text-amber-700">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 space-y-2 dark:bg-amber-950/40">
+                      <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">취득당시 (구조·용도 — {acqOptionYear}년 체계)</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <FieldCard label="구조">
                           <BuildingStructureSelect year={acqOptionYear} value={row.acqStructureKey} onChange={(v) => updateRow(idx, { acqStructureKey: v })} />
@@ -529,8 +529,8 @@ export function MultiPointBuildingStdPriceModal({
                   )}
                   {/* 최초공시 (최초공시 연도 체계) — 주택만(상가 사유 위와 동일) */}
                   {row.category === "housing" && firstOptionYear != null && (
-                    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2 space-y-2">
-                      <p className="text-caption font-semibold text-violet-700">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
+                    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2 space-y-2 dark:bg-violet-950/40">
+                      <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">최초공시 (구조·용도 — {firstOptionYear}년 체계)</p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <FieldCard label="구조">
                           <BuildingStructureSelect year={firstOptionYear} value={row.firstStructureKey} onChange={(v) => updateRow(idx, { firstStructureKey: v })} />
@@ -542,8 +542,8 @@ export function MultiPointBuildingStdPriceModal({
                     </div>
                   )}
                   {/* 양도당시 (양도 연도 체계) — 항상 */}
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
-                    <p className="text-caption font-semibold text-emerald-700">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 space-y-2 dark:bg-emerald-950/40">
+                    <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도당시 (구조·용도 — {transferOptionYear}년 체계)</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <FieldCard label="구조">
                         <BuildingStructureSelect year={transferOptionYear} value={row.transferStructureKey} onChange={(v) => updateRow(idx, { transferStructureKey: v })} />
@@ -557,7 +557,7 @@ export function MultiPointBuildingStdPriceModal({
                       층/구역을 나눈 뒤에는 행마다 자기 연면적이 필요하다(상위엔 전체 연면적 하나뿐). */}
                   {hideFloorAreaInput && rows.length === 1 ? (
                     !(parseDecimal(row.floorArea) > 0) && (
-                      <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                      <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                         연면적이 비어 있습니다 — ① 기본정보 「면적·규모」에서 입력하면 이 계산기에 자동 반영됩니다.
                       </p>
                     )
@@ -572,8 +572,8 @@ export function MultiPointBuildingStdPriceModal({
           </div>
 
           {/* 시점별 공시지가 */}
-          <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-            <p className="text-xs font-semibold text-violet-700">위치지수 산정 공시지가</p>
+          <div className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3 dark:bg-violet-950/40">
+            <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">위치지수 산정 공시지가</p>
             {points.map((p) => {
               // 공시지가 기준연도 — 고시 체계 연도(`year`)와 별개 축(landPriceYear 주석 참조).
               const lpYear = p.landPriceYear ?? p.year;

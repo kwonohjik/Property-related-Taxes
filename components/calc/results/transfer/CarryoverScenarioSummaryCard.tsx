@@ -41,13 +41,13 @@ export function CarryoverScenarioSummaryCard({
       {/* 헤더 */}
       <div className={cn(
         "px-4 py-3 border-b print:bg-white",
-        adopted ? "bg-emerald-50 border-emerald-300" : "bg-zinc-50 border-zinc-200",
+        adopted ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40" : "bg-zinc-50 border-zinc-200",
       )}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className={cn(
               "text-sm font-bold",
-              adopted ? "text-emerald-800" : "text-zinc-600",
+              adopted ? "text-emerald-800 dark:text-emerald-200" : "text-zinc-600",
             )}>
               {title}
             </h3>

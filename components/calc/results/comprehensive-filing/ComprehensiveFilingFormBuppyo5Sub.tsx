@@ -58,7 +58,7 @@ export function ComprehensiveFilingFormBuppyo5Sub({ result }: Props) {
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
         <p className="text-micro text-gray-500">{header.formCode} ({header.revised})</p>
-        <p className="text-micro text-amber-600">※ 주택만 기재 (토지 행은 빈칸)</p>
+        <p className="text-micro text-amber-600 dark:text-amber-400">※ 주택만 기재 (토지 행은 빈칸)</p>
       </div>
 
       <div className="overflow-x-auto">

@@ -326,11 +326,11 @@ export function CorporateInfoSection({
       </ToneCard>
 
       {/* 2. 평가 분기·할증 선택 (칩 그룹 — 평가방식 분기 / 할증 2개 sub-header) */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3 dark:bg-violet-950/40">
         <div>
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">2</span>
-            <p className="text-xs font-semibold text-violet-700">평가 분기·할증 선택</p>
+            <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">평가 분기·할증 선택</p>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             해당되는 항목을 체크하면 아래에 옵션·입력란이 열립니다. (없으면 건너뛰기)

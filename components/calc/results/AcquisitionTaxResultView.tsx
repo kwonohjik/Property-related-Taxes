@@ -125,8 +125,8 @@ function SpecialRateDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxR
     timber: "입목 취득(벌채용 원목)",
   };
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm">
-      <p className="font-semibold text-violet-800 mb-1">세율특례 적용 (지방세법 §15①)</p>
+    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm dark:bg-violet-950/40">
+      <p className="font-semibold text-violet-800 mb-1 dark:text-violet-200">세율특례 적용 (지방세법 §15①)</p>
       <div className="space-y-1 text-muted-foreground text-xs">
         <p>특례 사유: {specialTypeLabels[detail.type] ?? detail.type}</p>
         <p>특례 전 세율: {formatRate(detail.basicRate)} → 적용 세율: {formatRate(detail.appliedRate)}</p>
@@ -143,8 +143,8 @@ function SpecialRateDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxR
 
 function CorpSurchargeDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxResult["corpSurchargeDetail"]> }) {
   return (
-    <div className="rounded-lg border border-rose-200 bg-rose-50/30 p-3 text-sm">
-      <p className="font-semibold text-rose-800 mb-1">법인·공장 중과 적용</p>
+    <div className="rounded-lg border border-rose-200 bg-rose-50/30 p-3 text-sm dark:bg-rose-950/40">
+      <p className="font-semibold text-rose-800 mb-1 dark:text-rose-200">법인·공장 중과 적용</p>
       <div className="space-y-1 text-muted-foreground text-xs">
         <p>중과 유형: {detail.surchargeType}</p>
         <p>기본세율 {formatRate(detail.basicRate)} → 중과세율 {formatRate(detail.surchargeRate)}</p>
@@ -163,21 +163,21 @@ function CorpSurchargeDetailCard({ detail }: { detail: NonNullable<AcquisitionTa
 
 function SelfCultivationDetailCard({ detail }: { detail: NonNullable<AcquisitionTaxResult["selfCultivationReductionDetail"]> }) {
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm">
-      <p className="font-semibold text-violet-800 mb-1">자경농지 감면 (지특법 §6)</p>
+    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-3 text-sm dark:bg-violet-950/40">
+      <p className="font-semibold text-violet-800 mb-1 dark:text-violet-200">자경농지 감면 (지특법 §6)</p>
       <div className="space-y-1 text-muted-foreground text-xs">
         {detail.isEligible ? (
           <p>감면액: {formatKRW(detail.reductionAmount)} (50% 감면)</p>
         ) : (
           <>
-            <p className="text-amber-700">요건 미충족 — 감면 미적용</p>
+            <p className="text-amber-700 dark:text-amber-300">요건 미충족 — 감면 미적용</p>
             {detail.ineligibleReasons?.map((r, i) => (
               <p key={i}>• {r}</p>
             ))}
           </>
         )}
         {detail.warnings.map((w, i) => (
-          <p key={i} className="text-amber-600">• {w}</p>
+          <p key={i} className="text-amber-600 dark:text-amber-400">• {w}</p>
         ))}
       </div>
     </div>
@@ -201,7 +201,7 @@ function AdditionalTaxDetailCard({ detail, acquisitionTax }: {
           <span>{formatKRW(detail.ruralSpecialTax)}</span>
         </div>
         {detail.isRuralExemption && (
-          <p className="text-green-700 pl-2">읍·면 지역 100㎡ 이하 — 면제</p>
+          <p className="text-green-700 pl-2 dark:text-green-300">읍·면 지역 100㎡ 이하 — 면제</p>
         )}
         <div className="flex justify-between">
           <span>지방교육세</span>
@@ -242,11 +242,11 @@ function TemporaryTwoHouseDeadlineCard({
   const isUrgent = !isExpired && daysLeft <= 5;
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
-      <p className="text-sm font-semibold text-sky-800 mb-2">
+    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 dark:bg-sky-950/40">
+      <p className="text-sm font-semibold text-sky-800 mb-2 dark:text-sky-200">
         일시적 2주택 — 처분 기한 안내
       </p>
-      <p className="text-sm text-sky-700">
+      <p className="text-sm text-sky-700 dark:text-sky-300">
         종전 주택을{" "}
         <strong>{deadline.toLocaleDateString("ko-KR")}까지</strong> 처분하면
         취득세 중과가 적용되지 않습니다
@@ -256,8 +256,8 @@ function TemporaryTwoHouseDeadlineCard({
         isExpired
           ? "text-destructive"
           : isUrgent
-          ? "text-red-600"
-          : "text-sky-600"
+          ? "text-red-600 dark:text-red-400"
+          : "text-sky-600 dark:text-sky-400"
       }`}>
         {isExpired
           ? `처분기한 경과 (${Math.abs(daysLeft)}일 초과)`
@@ -275,7 +275,7 @@ function TemporaryTwoHouseDeadlineCard({
 
 function PreRegulationContractBadge() {
   return (
-    <span className="inline-flex items-center rounded-full border border-emerald-400 px-2 py-0.5 text-xs text-emerald-700 font-medium">
+    <span className="inline-flex items-center rounded-full border border-emerald-400 px-2 py-0.5 text-xs text-emerald-700 font-medium dark:text-emerald-300">
       §13의2④ 지정 전 계약 — 비조정지역 간주 적용
     </span>
   );
@@ -602,7 +602,7 @@ export function AcquisitionTaxResultView({ result, isRegulatedArea = false, isCo
       {/* ④ 중과 배제 사유 목록 — 간주취득 시 숨김 */}
       {!isDeemedAcquisition && result.surchargeDetail?.surchargeExceptions &&
         result.surchargeDetail.surchargeExceptions.length > 0 && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:bg-emerald-950/40">
           <SurchargeExceptionsList exceptions={result.surchargeDetail.surchargeExceptions} />
         </div>
       )}

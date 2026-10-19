@@ -34,12 +34,12 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
   if (!showArea && !showQuantity) return null;
 
   return (
-    <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50/40 p-3">
+    <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50/40 p-3 dark:bg-emerald-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
           §
         </span>
-        <p className="text-xs font-semibold text-emerald-700">
+        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
           수량·면적 (상속개시자료 요약 표시용)
         </p>
       </div>

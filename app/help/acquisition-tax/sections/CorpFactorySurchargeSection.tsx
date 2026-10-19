@@ -36,11 +36,11 @@ export function CorpFactorySurchargeSection() {
       </table>
 
       <div className="space-y-2">
-        <div className="rounded-md bg-amber-50/60 border border-amber-200 p-3 text-xs text-amber-800 space-y-1">
+        <div className="rounded-md bg-amber-50/60 border border-amber-200 p-3 text-xs text-amber-800 space-y-1 dark:text-amber-200 dark:bg-amber-950/40">
           <p><strong>중과제외업종 (§13②단서)</strong>: 사회기반시설·은행업·해외건설·주택건설(주택법§4)·전기통신·첨단기술·유통·운송·국가출자20%+ (9종)</p>
           <p>→ §13② 대도시 법인 중과에서 제외</p>
         </div>
-        <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1">
+        <div className="rounded-md bg-rose-50/60 border border-rose-200 p-3 text-xs text-rose-800 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
           <p><strong>§13의2①1호(법인 주택) 단서 중과제외 (v4 D8)</strong>: §13②단서 9종과 다름.</p>
           <p>§13의2①1호 단서는 시행령 §28의2 8호 나목 <strong>5종만</strong> 해당:
           주택건설사업자·주택조합·민간임대·공공주택건설·도시정비사업자.</p>

@@ -64,7 +64,7 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitio
     return (
       <div
         data-testid="eu-ni-hidden-notice"
-        className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-800"
+        className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
       >
         ⓘ {hiddenMessage}
       </div>
@@ -72,19 +72,19 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitio
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/30 p-4 space-y-3">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/30 p-4 space-y-3 dark:bg-sky-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           1
         </span>
-        <p className="text-sm font-semibold text-sky-800">
+        <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">
           순손익 계산서 (소령 §165④1 가목 — 24행 × {showTransfer && showAcq ? "양도/취득연도" : showTransfer ? "양도연도" : "취득연도"})
         </p>
       </div>
       {hideAcqColumn && (
         <p
           data-testid="eu-ni-acq-hidden-notice"
-          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
         >
           ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NI 입력 비노출
         </p>
@@ -92,7 +92,7 @@ export function EstimatedUnlistedNetIncomeStatement({ form, onChange, acquisitio
       {(skipTransfer || skipAcq) && (
         <p
           data-testid="eu-ni-side-hidden-notice"
-          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
         >
           ⓘ {skipTransfer ? "양도연도" : "취득연도"} — {hiddenMessage}
         </p>

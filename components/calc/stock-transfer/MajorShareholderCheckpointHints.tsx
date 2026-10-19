@@ -33,8 +33,8 @@ import {
 // 카드 외곽 tone 정적 매핑 (feedback_tailwind_static_tone_mapping — dynamic bg-${tone} 금지)
 type HintTone = "sky" | "amber";
 const HINT_CARD_TONE: Record<HintTone, string> = {
-  sky: "border-sky-200 bg-sky-50/40",
-  amber: "border-amber-200 bg-amber-50/40",
+  sky: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40",
+  amber: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40",
 };
 
 /** 공통 collapsible hint 카드 — native <details> 대체 표준 토글. */
@@ -74,7 +74,7 @@ function CollapsibleHintCard({
  */
 export function ListingConversionHint() {
   return (
-    <p className="text-xs text-violet-700 mt-2 flex items-start gap-1 flex-wrap">
+    <p className="text-xs text-violet-700 mt-2 flex items-start gap-1 flex-wrap dark:text-violet-300">
       <span className="font-medium shrink-0">상장 전환:</span>
       <span className="flex-1">
         직전사업연도 종료일에 비상장이었던 법인이 양도시점 코스닥 상장이면{" "}
@@ -97,17 +97,17 @@ export function MarketCapAndSharesHintsCard() {
       tone="sky"
       summary="💡 시가총액·발행주식총수 산정 시 포함·제외 항목 (6건)"
     >
-      <p className="mb-1.5 font-semibold text-sky-800">시가총액 (4건)</p>
-      <ul className="space-y-2 pl-2 text-sky-900">
+      <p className="mb-1.5 font-semibold text-sky-800 dark:text-sky-200">시가총액 (4건)</p>
+      <ul className="space-y-2 pl-2 text-sky-900 dark:text-sky-200">
         <li className="flex items-start gap-2">
-          <span className="font-medium text-sky-700">무상증자:</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">무상증자:</span>
           <span className="flex-1">
             당해 법인 증자로 취득한 신주(직전사업연도 종료일 현재 미상장)는 시총 산정에 <strong>포함</strong>
             <LawArticleModal legalBasis="서면4팀-716" label="서면4팀-716" className="ml-1" />
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-sky-700">신주인수권:</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">신주인수권:</span>
           <span className="flex-1">
             시총 산정 시 신주인수권 <strong>포함</strong>
             <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157④" className="ml-1" />
@@ -115,14 +115,14 @@ export function MarketCapAndSharesHintsCard() {
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-sky-700">콜옵션·주식매수선택권:</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">콜옵션·주식매수선택권:</span>
           <span className="flex-1">
             시총 산정에서 <strong>제외</strong>
             <LawArticleModal legalBasis="서면법령해석 재산 2014-22136" label="재산 2014-22136" className="ml-1" />
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-sky-700">전환사채:</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">전환사채:</span>
           <span className="flex-1">
             전환사채 가액은 시총 산정 시 <strong>제외</strong>
             <LawArticleModal legalBasis="법령해석 재산 2015-0434" label="재산 2015-0434" className="ml-1" />
@@ -130,17 +130,17 @@ export function MarketCapAndSharesHintsCard() {
         </li>
       </ul>
 
-      <p className="mb-1.5 mt-3 font-semibold text-sky-800">발행주식총수 (2건)</p>
-      <ul className="space-y-2 pl-2 text-sky-900">
+      <p className="mb-1.5 mt-3 font-semibold text-sky-800 dark:text-sky-200">발행주식총수 (2건)</p>
+      <ul className="space-y-2 pl-2 text-sky-900 dark:text-sky-200">
         <li className="flex items-start gap-2">
-          <span className="font-medium text-sky-700">자기주식:</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">자기주식:</span>
           <span className="flex-1">
             의결권 없는 자기주식도 발행주식총수에 <strong>포함</strong>
             <LawArticleModal legalBasis="법령해석 재산 2015-2137" label="재산 2015-2137" className="ml-1" />
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-sky-700">우선주:</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">우선주:</span>
           <span className="flex-1">
             무의결권 우선주 <strong>포함</strong>
             <LawArticleModal legalBasis="서면부동산 2015-2562" label="서면부동산 2015-2562" className="ml-1" />
@@ -148,7 +148,7 @@ export function MarketCapAndSharesHintsCard() {
         </li>
       </ul>
 
-      <p className="mt-3 rounded-md bg-sky-100/70 px-2 py-1 text-micro text-sky-700">
+      <p className="mt-3 rounded-md bg-sky-100/70 px-2 py-1 text-micro text-sky-700 dark:text-sky-300 dark:bg-sky-900/40">
         ※ 본 앱은 자동 가산하지 않습니다 — 위 항목이 해당되면 시가총액·발행주식수 입력값에
         사전 반영해 주세요.
       </p>
@@ -164,9 +164,9 @@ export function MarketCapAndSharesHintsCard() {
 export function CombinedShareHintsCard() {
   return (
     <CollapsibleHintCard tone="amber" summary="💡 특수관계인 합산 범위 — 포함·제외 항목 (5건)">
-      <ul className="space-y-2 pl-2 text-amber-900">
+      <ul className="space-y-2 pl-2 text-amber-900 dark:text-amber-200">
         <li className="flex items-start gap-2">
-          <span className="font-medium text-amber-700">대차주식:</span>
+          <span className="font-medium text-amber-700 dark:text-amber-300">대차주식:</span>
           <span className="flex-1">
             2013.2.15. 이후 대차거래는 대여자 주식으로 보아 대주주 판정. 지분율은 엔진이
             자동 가산하고, <strong>시가총액은 사용자가 사전 합산</strong>해 입력합니다.
@@ -174,35 +174,35 @@ export function CombinedShareHintsCard() {
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-amber-700">사모펀드 간접소유:</span>
+          <span className="font-medium text-amber-700 dark:text-amber-300">사모펀드 간접소유:</span>
           <span className="flex-1">
             2013.2.15. 이후 사모펀드 간접소유 주식 합산. 대차주식과 동일하게 지분율만 자동 가산됩니다.
             <LawArticleModal legalBasis="소득세법 시행령 §157" label="§157 (2013.2.15.)" className="ml-1" />
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-amber-700">비거주자:</span>
+          <span className="font-medium text-amber-700 dark:text-amber-300">비거주자:</span>
           <span className="flex-1">
             특수관계 기타주주에 비거주자 <strong>포함</strong>
             <LawArticleModal legalBasis="부동산거래관리-866" label="부동산거래관리-866" className="ml-1" />
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-amber-700">§178 투자기구:</span>
+          <span className="font-medium text-amber-700 dark:text-amber-300">§178 투자기구:</span>
           <span className="flex-1">
             자본시장법 §178 투자기구를 통한 간접투자 주식은 시총·지분율에 <strong>합산하지 않음</strong>
             <LawArticleModal legalBasis="재산-1237" label="재산-1237" className="ml-1" />
           </span>
         </li>
         <li className="flex items-start gap-2">
-          <span className="font-medium text-amber-700">창업투자조합:</span>
+          <span className="font-medium text-amber-700 dark:text-amber-300">창업투자조합:</span>
           <span className="flex-1">
             중소기업창업투자조합의 주식양도차익은 <strong>조합원 기준</strong>으로 대주주 판정 (조합 합산 ❌)
             <LawArticleModal legalBasis="재재산-466" label="재재산-466" className="ml-1" />
           </span>
         </li>
       </ul>
-      <p className="mt-3 rounded-md bg-amber-100/70 px-2 py-1 text-micro text-amber-700">
+      <p className="mt-3 rounded-md bg-amber-100/70 px-2 py-1 text-micro text-amber-700 dark:text-amber-300 dark:bg-amber-900/40">
         ※ 대차·사모펀드 지분율 외에는 자동 가산하지 않습니다 — 해당 시 합산 시총·지분율
         입력값에 사전 반영해 주세요.
       </p>

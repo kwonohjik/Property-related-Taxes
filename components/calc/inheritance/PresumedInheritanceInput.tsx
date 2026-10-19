@@ -355,7 +355,7 @@ export function PresumedInheritanceInput({
             <button
               type="button"
               onClick={() => remove(selectedIndex)}
-              className="px-3 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+              className="px-3 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors dark:text-rose-400"
             >
               삭제
             </button>

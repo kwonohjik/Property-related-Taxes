@@ -63,11 +63,11 @@ export function DeemedGiftResultView({
   const isRefund = result.direction === "refund";
   const headLabel = isRefund ? "평가손실 환급 대상액" : "증여재산가액 (증여이익)";
   const headValue = isRefund ? result.refundBase ?? 0 : result.deemedGiftValue;
-  const cardCls = isRefund ? "border-blue-200 bg-blue-50/50" : "border-rose-200 bg-rose-50/50";
-  const titleCls = isRefund ? "text-blue-800" : "text-rose-800";
-  const valueCls = isRefund ? "text-blue-900" : "text-rose-900";
+  const cardCls = isRefund ? "border-blue-200 bg-blue-50/50 dark:bg-blue-950/40" : "border-rose-200 bg-rose-50/50 dark:bg-rose-950/40";
+  const titleCls = isRefund ? "text-blue-800 dark:text-blue-200" : "text-rose-800 dark:text-rose-200";
+  const valueCls = isRefund ? "text-blue-900 dark:text-blue-200" : "text-rose-900 dark:text-rose-200";
   const rowBorderCls = isRefund ? "border-blue-100" : "border-rose-100";
-  const noteCls = isRefund ? "text-blue-600" : "text-rose-600";
+  const noteCls = isRefund ? "text-blue-600 dark:text-blue-400" : "text-rose-600 dark:text-rose-400";
 
   return (
     <div className="space-y-4" data-testid="deemed-result">
@@ -86,7 +86,7 @@ export function DeemedGiftResultView({
           <LawArticleModal legalBasis={result.legalBasis} />
         </div>
         {isRefund && (
-          <p className="mt-2 text-xs text-blue-700" data-testid="deemed-result-refund-notice">
+          <p className="mt-2 text-xs text-blue-700 dark:text-blue-300" data-testid="deemed-result-refund-notice">
             정산기준일 가액이 당초 증여세 과세가액보다 하락하여 그 차액이 기준금액 이상입니다. 당초 납부한 증여세액을 경정청구로 환급받을 수 있습니다 (§41의3④ 단서).
           </p>
         )}
@@ -122,9 +122,9 @@ export function DeemedGiftResultView({
       )}
 
       {result.nomineeCapitalIncrease && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="nominee-capital-increase">
-          <p className="text-sm font-semibold text-emerald-800">유상증자 신주 명의신탁 평가 (§45의2 · 명의개서일 §63 평가)</p>
-          <div className="mt-2 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 p-2 text-sm text-emerald-900">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40" data-testid="nominee-capital-increase">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">유상증자 신주 명의신탁 평가 (§45의2 · 명의개서일 §63 평가)</p>
+          <div className="mt-2 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 p-2 text-sm text-emerald-900 dark:text-emerald-200">
             1주당 평가액{" "}
             <b className="font-mono tabular-nums">{result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")}</b>
             {" × 명의신탁 신주 "}
@@ -139,7 +139,7 @@ export function DeemedGiftResultView({
               {result.nomineeCapitalIncrease.preIncreasePerShare ? (
                 <p>
                   증자 전 1주당 {result.nomineeCapitalIncrease.preIncreasePerShare.toLocaleString("ko-KR")} → 유상증자 희석으로 명의개서일 §63 평가{" "}
-                  {result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")} <span className="text-emerald-700">(적용)</span>
+                  {result.nomineeCapitalIncrease.perSharePrice.toLocaleString("ko-KR")} <span className="text-emerald-700 dark:text-emerald-300">(적용)</span>
                 </p>
               ) : null}
               {result.nomineeCapitalIncrease.subscriptionPrice || result.nomineeCapitalIncrease.theoreticalExRightsPrice ? (
@@ -211,10 +211,10 @@ export function DeemedGiftResultView({
       {/* ── §43²·영 §32의4 11호 1년 합산 내역 — 합산은 조용히 일어나면 안 된다 ── */}
       {result.specificCorpTransaction?.aggregation && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm"
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm dark:bg-amber-950/40"
           data-testid="sc-aggregation"
         >
-          <p className="font-semibold text-amber-900">
+          <p className="font-semibold text-amber-900 dark:text-amber-200">
             §43² 소급 1년 합산 (영 §32의4 11호 — 같은 호 거래)
           </p>
           <table className="mt-2 w-full text-sm">
@@ -235,10 +235,10 @@ export function DeemedGiftResultView({
                   {formatKRW(result.specificCorpTransaction.aggregation.currentBenefit)}
                 </td>
               </tr>
-              <tr className="border-t border-amber-200 bg-amber-100/50">
-                <td className="py-1.5 pr-2 font-semibold text-amber-900">합산 거래이익</td>
+              <tr className="border-t border-amber-200 bg-amber-100/50 dark:bg-amber-900/40">
+                <td className="py-1.5 pr-2 font-semibold text-amber-900 dark:text-amber-200">합산 거래이익</td>
                 <td
-                  className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-amber-900"
+                  className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-amber-900 dark:text-amber-200"
                   data-testid="sc-aggregation-total"
                 >
                   {formatKRW(result.specificCorpTransaction.benefit)}
@@ -262,11 +262,11 @@ export function DeemedGiftResultView({
       {/* ── §45의5② 한도 (single 모드) — roster는 SpecificCorpMultiResultView가 같은 표를 쓴다 ── */}
       {result.specificCorpLimit && (
         <div
-          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40"
           data-testid="sc-single-limit"
         >
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-violet-800">증여세 한도 (§45의5②)</p>
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">증여세 한도 (§45의5②)</p>
             <LawArticleModal legalBasis="상증법 §45의5②" />
           </div>
           <div className="mt-3">
@@ -326,17 +326,17 @@ export function DeemedGiftResultView({
 
       {result.subGifts && result.subGifts.length > 0 && (
         <div
-          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40"
           data-testid="deemed-subgifts"
         >
-          <p className="text-sm font-semibold text-violet-800">
+          <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
             증여시기별 분리 (§33①1·2호 — 원본·수익 별개 증여)
           </p>
           <table className="mt-2 w-full text-sm">
             <tbody>
               {result.subGifts.map((sg, i) => (
                 <tr key={i} className="border-t border-violet-100">
-                  <td className="py-1.5 pr-2 text-violet-700">
+                  <td className="py-1.5 pr-2 text-violet-700 dark:text-violet-300">
                     {sg.right === "principal" ? "원본권 증여" : "수익권 증여"}
                     <span className="ml-1 text-xs text-muted-foreground">
                       (증여시기 {fmtGiftDate(sg.giftDate)})
@@ -358,10 +358,10 @@ export function DeemedGiftResultView({
       {/* §39의3 현물출자 — gross echo + 당사자별 안분 명세 */}
       {result.grossDeemedGiftValue !== undefined && (
         <div
-          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40"
           data-testid="deemed-contribution-gross"
         >
-          <p className="text-sm font-semibold text-violet-800">
+          <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
             §39의3 현물출자 — 이익 산출 근거
           </p>
           <table className="mt-2 w-full text-sm">
@@ -404,12 +404,12 @@ export function DeemedGiftResultView({
           {/* roster 有 — 당사자별 안분 표 */}
           {result.contributionBreakdown && result.contributionBreakdown.length > 0 && (
             <div className="mt-3" data-testid="deemed-contribution-breakdown">
-              <p className="text-xs font-semibold text-violet-700 mb-1">
+              <p className="text-xs font-semibold text-violet-700 mb-1 dark:text-violet-300">
                 {result.caseType === "high" ? "수증자별" : "증여자별"} 안분 명세
               </p>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-violet-600">
+                  <tr className="text-xs text-violet-600 dark:text-violet-400">
                     <th className="py-1 text-left font-medium">
                       {result.caseType === "high" ? "수증자" : "증여자"}
                     </th>
@@ -459,10 +459,10 @@ export function DeemedGiftResultView({
                   선례: 감자 §39의2 `cd-multi-donee-select` · 특정법인 §45의5 */}
               {result.caseType === "high" && contribTaxableDonees.length > 1 && (
                 <div
-                  className="mt-3 rounded-md border border-rose-200 bg-rose-50/40 p-3"
+                  className="mt-3 rounded-md border border-rose-200 bg-rose-50/40 p-3 dark:bg-rose-950/40"
                   data-testid="con-high-donee-select"
                 >
-                  <p className="text-sm font-semibold text-rose-800">증여세 계산 대상 수증자 선택</p>
+                  <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">증여세 계산 대상 수증자 선택</p>
                   <select
                     value={selectedDoneeIndex}
                     onChange={(e) => onSelectDonee?.(Number(e.target.value))}
@@ -486,15 +486,15 @@ export function DeemedGiftResultView({
       )}
 
       {result.periodBreakdown && result.periodBreakdown.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4" data-testid="deemed-period-breakdown">
-          <p className="text-sm font-semibold text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 dark:bg-amber-950/40" data-testid="deemed-period-breakdown">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
             {result.type === "free_loan"
               ? "연도별 증여 (§41의4② — 1년 되는 날 다음 날 매년 새로 대출받은 것으로 봄)"
               : "기간별 증여 (§37·시행령§27③⑤ — 5년/1년 단위)"}
           </p>
           <table className="mt-2 w-full text-sm">
             <thead>
-              <tr className="text-xs text-amber-700">
+              <tr className="text-xs text-amber-700 dark:text-amber-300">
                 <th className="py-1 text-left font-medium">증여일</th>
                 <th className="py-1 text-right font-medium">{result.type === "free_loan" ? "대출금액" : "평가액"}</th>
                 {result.type === "free_loan" && <th className="py-1 text-right font-medium">일수</th>}
@@ -522,7 +522,7 @@ export function DeemedGiftResultView({
             각 기간은 별개 증여 — 해당 증여일 도래 시 별도 신고 대상입니다. 위 증여재산가액은 첫 기간(현재 증여) 기준입니다.
           </p>
           {result.type === "free_loan" && (
-            <p className="mt-1 text-xs text-amber-600">
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
               ※ §41의4② 의제 도출 — 일수/365 명문 조항 없음, 분모 365 고정(교재 기준)
             </p>
           )}
@@ -530,11 +530,11 @@ export function DeemedGiftResultView({
       )}
 
       {result.aggregationBreakdown && result.aggregationBreakdown.length > 0 && (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4" data-testid="loan-aggregation-result">
-          <p className="text-sm font-semibold text-sky-800">§43② 동일거래 합산 증여이익 (1년 이내)</p>
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 dark:bg-sky-950/40" data-testid="loan-aggregation-result">
+          <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">§43② 동일거래 합산 증여이익 (1년 이내)</p>
           <table className="mt-2 w-full text-sm">
             <thead>
-              <tr className="text-xs text-sky-700">
+              <tr className="text-xs text-sky-700 dark:text-sky-300">
                 <th className="py-1 text-left font-medium">대출일</th>
                 <th className="py-1 text-right font-medium">대출금액</th>
                 <th className="py-1 text-right font-medium">건별 이익</th>
@@ -545,11 +545,11 @@ export function DeemedGiftResultView({
               {result.aggregationBreakdown.map((b, i) => (
                 <tr
                   key={i}
-                  className={`border-t ${b.isThresholdCrossing ? "bg-sky-100 font-semibold border-sky-300" : "border-sky-100"}`}
+                  className={`border-t ${b.isThresholdCrossing ? "bg-sky-100 font-semibold border-sky-300 dark:bg-sky-900/40" : "border-sky-100"}`}
                 >
                   <td className="py-1.5 pr-2 text-muted-foreground">
                     {b.loanDate}
-                    {b.isThresholdCrossing && <span className="ml-1 text-xs font-medium text-sky-700">▶ 증여시기</span>}
+                    {b.isThresholdCrossing && <span className="ml-1 text-xs font-medium text-sky-700 dark:text-sky-300">▶ 증여시기</span>}
                     {!b.eligible && <span className="ml-1 text-xs text-muted-foreground">(정당사유 제외)</span>}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(b.loanAmount)}</td>
@@ -560,8 +560,8 @@ export function DeemedGiftResultView({
             </tbody>
           </table>
           <div className="mt-3 flex items-center justify-between">
-            <p className="text-sm text-sky-800">합산 증여재산가액</p>
-            <p className="text-right font-mono text-lg font-bold tabular-nums text-sky-900">{formatKRW(result.deemedGiftValue)}</p>
+            <p className="text-sm text-sky-800 dark:text-sky-200">합산 증여재산가액</p>
+            <p className="text-right font-mono text-lg font-bold tabular-nums text-sky-900 dark:text-sky-200">{formatKRW(result.deemedGiftValue)}</p>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             개별 건으로는 1천만 미만이더라도 1년 이내 동일거래를 합산하여 과세합니다.
@@ -571,15 +571,15 @@ export function DeemedGiftResultView({
       )}
 
       {result.rectification && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="deemed-rectification">
-          <p className="text-sm font-semibold text-emerald-800">경정청구 가능 세액 (§79②1호·시행령§81⑨)</p>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40" data-testid="deemed-rectification">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">경정청구 가능 세액 (§79②1호·시행령§81⑨)</p>
           <table className="mt-2 w-full text-sm">
             <tbody>
               {result.rectification.steps.map((step, i) => (
                 <tr key={i} className="border-t border-emerald-100">
                   <td className="py-1.5 pr-2 text-muted-foreground">
                     {step.label}
-                    {step.note ? <span className="ml-1 text-xs text-emerald-600">({step.note})</span> : null}
+                    {step.note ? <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">({step.note})</span> : null}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(step.amount)}</td>
                   <td className="py-1.5 pl-2">{step.lawRef ? <LawArticleModal legalBasis={step.lawRef} /> : null}</td>
@@ -588,7 +588,7 @@ export function DeemedGiftResultView({
             </tbody>
           </table>
           <p
-            className="mt-2 text-right font-mono text-lg font-bold tabular-nums text-emerald-900"
+            className="mt-2 text-right font-mono text-lg font-bold tabular-nums text-emerald-900 dark:text-emerald-200"
             data-testid="deemed-rectification-value"
           >
             {formatKRW(result.rectification.refundableTax)}
@@ -600,8 +600,8 @@ export function DeemedGiftResultView({
       )}
 
       {result.mergerMatrix && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="merger-matrix">
-          <p className="text-sm font-semibold text-emerald-800">수증자별 증여이익 (§38 합병 — 주주 매트릭스)</p>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40" data-testid="merger-matrix">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">수증자별 증여이익 (§38 합병 — 주주 매트릭스)</p>
           <table className="mt-2 w-full text-sm">
             <thead>
               <tr className="text-xs text-muted-foreground">
@@ -615,7 +615,7 @@ export function DeemedGiftResultView({
             <tbody>
               {result.mergerMatrix.recipients.map((r, i) => (
                 <tr key={i} className="border-t border-emerald-100">
-                  <td className="py-1.5 pr-2 text-emerald-700">{r.name.trim() || "주주"}</td>
+                  <td className="py-1.5 pr-2 text-emerald-700 dark:text-emerald-300">{r.name.trim() || "주주"}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.grossGain)}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{r.selfGift > 0 ? formatKRW(r.selfGift) : "-"}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.netGain)}</td>
@@ -627,7 +627,7 @@ export function DeemedGiftResultView({
               ))}
             </tbody>
           </table>
-          <p className="mt-3 text-xs font-semibold text-emerald-700">증여자별 안분</p>
+          <p className="mt-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300">증여자별 안분</p>
           {result.mergerMatrix.recipients.map((rec, i) => {
             const alloc = result.mergerMatrix!.allocation[rec.id] ?? {};
             const entries = Object.entries(alloc).filter(([, v]) => v > 0);
@@ -642,7 +642,7 @@ export function DeemedGiftResultView({
           {/* 수증자는 각자 독립 납세의무자 ⇒ 이관 대상 1명 선택. 목록 기준 = prefill과 같은 `applied` */}
           {mergerTaxable.length > 1 && (
             <div className="mt-3 rounded-md border border-emerald-200 bg-white/60 dark:bg-white/5 p-3" data-testid="mrg-donee-select">
-              <p className="text-sm font-semibold text-emerald-800">증여세 계산 대상 수증자 선택</p>
+              <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">증여세 계산 대상 수증자 선택</p>
               <select
                 value={selectedDoneeIndex}
                 onChange={(e) => onSelectDonee?.(Number(e.target.value))}
@@ -669,7 +669,7 @@ export function DeemedGiftResultView({
           §33·§34·§43·§44·§45의2(열거 밖)에 잘못 붙으면 거짓 고지가 된다. */}
       {result.donorJointLiabilityExempt === true && (
         <div
-          className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-800"
+          className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40"
           data-testid="deemed-joint-liability-exempt"
         >
           <b>증여자 연대납부의무 면제</b> (「상증법」§4의2⑥ 단서) — 이 유형은 배제 열거 조문에
@@ -714,19 +714,19 @@ export function DeemedGiftResultView({
 
       {/* ── §42의3 재산취득 후 가치증가 — 적용요건 echo ── */}
       {result.valueIncreaseDetail && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 space-y-1.5" data-testid="deemed-vi-detail">
+        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 space-y-1.5 dark:bg-rose-950/40" data-testid="deemed-vi-detail">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-rose-800">재산취득 후 가치증가 — 적용요건 (상증법 §42의3)</span>
+            <span className="text-sm font-semibold text-rose-800 dark:text-rose-200">재산취득 후 가치증가 — 적용요건 (상증법 §42의3)</span>
             <LawArticleModal legalBasis={GIFT.VALUE_INCREASE} />
           </div>
           {result.valueIncreaseDetail.acquisitionCauseLabel && (
-            <p className="text-xs text-rose-700">취득사유: {result.valueIncreaseDetail.acquisitionCauseLabel}</p>
+            <p className="text-xs text-rose-700 dark:text-rose-300">취득사유: {result.valueIncreaseDetail.acquisitionCauseLabel}</p>
           )}
           {result.valueIncreaseDetail.reasonLabel && (
-            <p className="text-xs text-rose-700">가치증가사유: {result.valueIncreaseDetail.reasonLabel}</p>
+            <p className="text-xs text-rose-700 dark:text-rose-300">가치증가사유: {result.valueIncreaseDetail.reasonLabel}</p>
           )}
           {result.valueIncreaseDetail.withinFiveYears !== undefined && (
-            <p className="text-xs text-rose-700">
+            <p className="text-xs text-rose-700 dark:text-rose-300">
               취득~사유발생 {result.valueIncreaseDetail.holdingYears}년 — 5년 이내{" "}
               {result.valueIncreaseDetail.withinFiveYears ? "○" : "✕ (초과)"}
             </p>

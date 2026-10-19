@@ -150,9 +150,9 @@ export default function SeparateTaxationDetailCard({ result }: Props) {
               <span className="text-sm font-semibold text-gray-800">{formatRate(appliedRate)}</span>
             </div>
             {calculatedTax !== undefined && (
-              <div className="flex justify-between items-center px-3 py-2 bg-blue-50">
-                <span className="text-xs font-semibold text-blue-700">산출세액</span>
-                <span className="text-base font-bold text-blue-800">{formatKRW(calculatedTax)}</span>
+              <div className="flex justify-between items-center px-3 py-2 bg-blue-50 dark:bg-blue-950/40">
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">산출세액</span>
+                <span className="text-base font-bold text-blue-800 dark:text-blue-200">{formatKRW(calculatedTax)}</span>
               </div>
             )}
           </div>

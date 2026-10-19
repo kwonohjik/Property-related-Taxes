@@ -147,7 +147,7 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
           <div className="flex justify-end">
             <button
               onClick={onCalculate}
-              className="px-4 py-1.5 rounded border border-sky-300 text-sky-700 text-sm hover:bg-sky-50 transition-colors"
+              className="px-4 py-1.5 rounded border border-sky-300 text-sky-700 text-sm hover:bg-sky-50 transition-colors dark:text-sky-300"
             >
               다시 계산
             </button>

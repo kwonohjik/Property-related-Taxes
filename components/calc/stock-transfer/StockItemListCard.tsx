@@ -155,7 +155,7 @@ export function StockItemListCard({
             + 이 종목을 확정하고 다음 종목 입력
           </Button>
           {!canAddCurrent && addDisabledReason && (
-            <p className="text-caption text-amber-700">{addDisabledReason}</p>
+            <p className="text-caption text-amber-700 dark:text-amber-300">{addDisabledReason}</p>
           )}
         </>
       )}

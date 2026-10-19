@@ -293,7 +293,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
           >
             삭제
           </button>
@@ -338,7 +338,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
       {!isCorporate && (
         <div className="space-y-1">
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-            주민등록번호 <span className="text-rose-600">(필수)</span>
+            주민등록번호 <span className="text-rose-600 dark:text-rose-400">(필수)</span>
           </label>
           <input
             type="text"
@@ -371,13 +371,13 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
           <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
             생년월일{" "}
             {heir.relation === "child" && (
-              <span className="text-amber-600">(미성년자 여부 판별용)</span>
+              <span className="text-amber-600 dark:text-amber-400">(미성년자 여부 판별용)</span>
             )}
             {heir.relation === "lineal_ascendant" && (
-              <span className="text-amber-600">(만 65세 이상 연로자 공제 판별용)</span>
+              <span className="text-amber-600 dark:text-amber-400">(만 65세 이상 연로자 공제 판별용)</span>
             )}
             {isLegatee && (
-              <span className="text-rose-600">(40% 할증·미성년 판별용 — §27②)</span>
+              <span className="text-rose-600 dark:text-rose-400">(40% 할증·미성년 판별용 — §27②)</span>
             )}
           </label>
           <DateInput
@@ -422,7 +422,7 @@ export function HeirEditor({ heir, index, deathDate, allHeirs, onUpdate, onRemov
                 상속개시일 기준 미성년자 (자동 판정:{" "}
                 <strong>{autoIsMinor ? "예 (미성년)" : "아니오 (성년)"}</strong>)
                 {autoIsMinor && (
-                  <span className="ml-1 text-rose-600">
+                  <span className="ml-1 text-rose-600 dark:text-rose-400">
                     — 과세표준 20억 초과 시 40% 할증 적용
                   </span>
                 )}

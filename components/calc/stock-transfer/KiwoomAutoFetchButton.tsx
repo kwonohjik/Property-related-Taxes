@@ -206,11 +206,11 @@ export function KiwoomAutoFetchButton({
   }
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 space-y-2 dark:bg-sky-950/40">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm text-sky-900">
+        <div className="text-sm text-sky-900 dark:text-sky-200">
           <p className="font-semibold">키움증권 자동조회 — {dateLabel} 이전 1개월</p>
-          <p className="text-xs text-sky-700 mt-0.5">
+          <p className="text-xs text-sky-700 mt-0.5 dark:text-sky-300">
             종목코드 + {dateLabel} 입력 후 클릭하면 1개월 종가평균이 자동으로 채워집니다.
           </p>
         </div>
@@ -250,9 +250,9 @@ export function KiwoomAutoFetchButton({
                 bottom={<strong>{info.tradingDays}</strong>}
               />{" "}
               ={" "}
-              <strong className="text-emerald-900 text-sm">{info.average.toLocaleString()}</strong>원 (원미만 절사)
+              <strong className="text-emerald-900 text-sm dark:text-emerald-200">{info.average.toLocaleString()}</strong>원 (원미만 절사)
             </p>
-            <p className="text-emerald-700">
+            <p className="text-emerald-700 dark:text-emerald-300">
               → §99①3 환산 {isAcquisition ? "분자" : "분모"}에 자동 입력됩니다
             </p>
 
@@ -314,7 +314,7 @@ export function KiwoomAutoFetchButton({
           </button>
           {showDetail && (
             <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1 max-h-96 overflow-y-auto">
-              <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100">
+              <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100 dark:text-emerald-300">
                 {/* 축을 따라간다 — 카드 제목·버튼은 `dateLabel`을 쓰는데 이 줄만 「양도일」·「분모」로
                     하드코딩돼 있어 **취득일 축에서도 양도일이라 표시**됐다. §99①3에서 취득일 축은
                     환산비율의 **분자**다(위 요약줄은 이미 축으로 갈린다). */}
@@ -348,7 +348,7 @@ export function KiwoomAutoFetchButton({
                   );
                 })}
               </div>
-              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white dark:bg-gray-900">
+              <p className="text-micro text-emerald-700 pt-1 border-t border-emerald-100 sticky bottom-0 bg-white dark:bg-gray-900 dark:text-emerald-300">
                 합계 = {info.sum.toLocaleString()} · 거래일 = {info.tradingDays} · 평균 = floor(합계/거래일) = {info.average.toLocaleString()}
               </p>
             </div>

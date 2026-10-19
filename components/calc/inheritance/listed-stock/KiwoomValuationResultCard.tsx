@@ -81,12 +81,12 @@ export function KiwoomValuationResultCard({
             bottom={<strong>{info.tradingDays}</strong>}
           />{" "}
           ={" "}
-          <strong className="text-emerald-900 text-sm">
+          <strong className="text-emerald-900 text-sm dark:text-emerald-200">
             {info.average.toLocaleString()}
           </strong>
           원 (원미만 절사)
         </p>
-        <p className="text-emerald-700">→ 아래 &quot;전후 2개월 종가 단순평균&quot;에 자동 입력됩니다</p>
+        <p className="text-emerald-700 dark:text-emerald-300">→ 아래 &quot;전후 2개월 종가 단순평균&quot;에 자동 입력됩니다</p>
       </div>
 
       {/* 검증용 일자별 종가 상세 토글 */}
@@ -101,7 +101,7 @@ export function KiwoomValuationResultCard({
 
       {showDetail && (
         <div className="rounded border border-emerald-300 bg-white dark:bg-gray-900 p-2 space-y-1 max-h-96 overflow-y-auto">
-          <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100">
+          <p className="text-micro text-emerald-700 sticky top-0 bg-white dark:bg-gray-900 pb-1 border-b border-emerald-100 dark:text-emerald-300">
             평가기준일 전후 2개월 일자별 종가 — 거래일만 분모 산입 (상증령 §52의2④ 공휴일·토요일 제외)
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-0.5 text-caption font-mono">
@@ -114,7 +114,7 @@ export function KiwoomValuationResultCard({
                   key={iso}
                   className={
                     "flex justify-between gap-2 px-1 " +
-                    (isTrading ? "text-emerald-900" : "text-gray-400")
+                    (isTrading ? "text-emerald-900 dark:text-emerald-200" : "text-gray-400")
                   }
                 >
                   <span>{iso}</span>

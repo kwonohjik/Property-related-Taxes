@@ -99,7 +99,7 @@ export function EstateAllocationTable({
             <GroupRows key={g.group} group={g} heirs={heirs} />
           ))}
           {/* 상속재산 합계 */}
-          <tr className="bg-amber-50 font-semibold">
+          <tr className="bg-amber-50 font-semibold dark:bg-amber-950/40">
             <td
               colSpan={3}
               className="border border-slate-200 px-2 py-1.5 text-center"
@@ -121,7 +121,7 @@ export function EstateAllocationTable({
           </tr>
           {presumedTotal > 0 && (
             <>
-              <tr className="bg-rose-50">
+              <tr className="bg-rose-50 dark:bg-rose-950/40">
                 <td className="border border-slate-200 px-2 py-1.5 text-center">
                   추정상속
                 </td>
@@ -142,7 +142,7 @@ export function EstateAllocationTable({
                 </td>
                 <td className="border border-slate-200"></td>
               </tr>
-              <tr className="bg-amber-100 font-semibold">
+              <tr className="bg-amber-100 font-semibold dark:bg-amber-900/40">
                 <td
                   colSpan={3}
                   className="border border-slate-200 px-2 py-1.5 text-center"

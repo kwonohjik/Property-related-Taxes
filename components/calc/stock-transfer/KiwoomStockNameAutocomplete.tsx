@@ -198,7 +198,7 @@ export function KiwoomStockNameAutocomplete({
               }}
               onMouseEnter={() => setActiveIdx(i)}
               className={`px-3 py-2 cursor-pointer flex justify-between items-center ${
-                i === activeIdx ? "bg-sky-100" : "hover:bg-sky-50"
+                i === activeIdx ? "bg-sky-100 dark:bg-sky-900/40" : "hover:bg-sky-50"
               }`}
             >
               <span className="flex-1">

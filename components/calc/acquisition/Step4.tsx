@@ -60,7 +60,7 @@ export function Step4({
           checked={form.isCorpMetroSurcharge}
           onCheckedChange={(v) => set("isCorpMetroSurcharge", v)}
         >
-          <div className="rounded-md bg-rose-50/70 border border-rose-200 p-2 text-xs text-rose-700 space-y-1">
+          <div className="rounded-md bg-rose-50/70 border border-rose-200 p-2 text-xs text-rose-700 space-y-1 dark:text-rose-300 dark:bg-rose-950/40">
             <p>주택: 기본세율 + 12%p (§13⑦ 단서 — 예: 9억 초과 3% → 15%)</p>
             <p>주택 외: 기본세율 × 3 + 4%p (예: 토지 4% → 16%)</p>
           </div>

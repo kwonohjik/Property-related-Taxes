@@ -49,7 +49,7 @@ function ReqRow({
 }) {
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className={ok ? "text-emerald-600" : "text-rose-600"}>
+      <span className={ok ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
         {ok ? "✓" : "✗"}
       </span>
       <span className="flex-1">
@@ -166,7 +166,7 @@ export function PaymentInKindCard({
                   <span>
                     {s.order} {s.label}
                     {s.note ? (
-                      <span className="text-micro text-amber-600"> ※{s.note}</span>
+                      <span className="text-micro text-amber-600 dark:text-amber-400"> ※{s.note}</span>
                     ) : null}
                   </span>
                   <span className={amountCell}>
@@ -184,7 +184,7 @@ export function PaymentInKindCard({
             ※ 물납 신청은 상속세 신고기한까지(상속개시월 말일 + {filingMonths}개월).
           </p>
           {data.warnings.map((w, i) => (
-            <p key={i} className="text-amber-600">
+            <p key={i} className="text-amber-600 dark:text-amber-400">
               ※ {w}
             </p>
           ))}

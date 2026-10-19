@@ -37,7 +37,7 @@ export function Cross1045AdjustmentCard({ detail }: { detail: Cross1045Adjustmen
         <strong>「동일한 자산으로 보아」</strong> 과세표준을 합산해 세율을 적용하도록 정하고 있습니다.
       </p>
 
-      <div className="rounded-lg bg-amber-100/60 px-3 py-2 text-sm">
+      <div className="rounded-lg bg-amber-100/60 px-3 py-2 text-sm dark:bg-amber-900/40">
         <dl className="space-y-1">
           <div className="flex justify-between gap-3">
             <dt className="text-muted-foreground">부동산 §104①8호 과세표준</dt>

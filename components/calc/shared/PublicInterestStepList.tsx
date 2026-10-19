@@ -27,7 +27,7 @@ export function PublicInterestStepList({
           <div key={i} className="flex justify-between gap-3 text-xs">
             <span className="text-muted-foreground">
               {s.label}
-              <span className="ml-1 text-micro text-blue-700">{s.legalBasis}</span>
+              <span className="ml-1 text-micro text-blue-700 dark:text-blue-300">{s.legalBasis}</span>
               <span className="block text-caption"><FormulaText value={s.formula} /></span>
             </span>
             {s.amount > 0 && (
@@ -40,9 +40,9 @@ export function PublicInterestStepList({
       </div>
 
       {warnings.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1">
+        <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1 dark:bg-amber-950/40">
           {warnings.map((w, i) => (
-            <p key={i} className="text-caption text-amber-800">
+            <p key={i} className="text-caption text-amber-800 dark:text-amber-200">
               · {w}
             </p>
           ))}

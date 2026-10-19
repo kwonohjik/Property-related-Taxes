@@ -91,7 +91,7 @@ export function StockTaxpayerHeaderCard({
                   <span className="text-slate-500 w-20 shrink-0">의뢰인</span>
                   <span className="font-medium text-slate-800">
                     {clientName ? `${clientName} 님` : (
-                      <span className="text-amber-700">의뢰인 미선택 — 계정 없이 저장됩니다</span>
+                      <span className="text-amber-700 dark:text-amber-300">의뢰인 미선택 — 계정 없이 저장됩니다</span>
                     )}
                   </span>
                 </div>
@@ -145,7 +145,7 @@ export function StockTaxpayerHeaderCard({
         {/* 정보 수정 링크 */}
         <Link
           href={editLink}
-          className="shrink-0 text-xs text-sky-600 hover:text-sky-700 hover:underline print:hidden"
+          className="shrink-0 text-xs text-sky-600 hover:text-sky-700 hover:underline print:hidden dark:text-sky-400"
         >
           {editLabel} →
         </Link>

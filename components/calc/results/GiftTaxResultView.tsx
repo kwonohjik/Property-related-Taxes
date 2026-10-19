@@ -497,7 +497,7 @@ export function GiftTaxResultView({
           선택 출력: 할증 산출근거와 같은 gen-skip-surcharge 섹션으로 편입 (availablePrintIds 가드 동기화) */}
       {result.generationSkipProvisoApplied === true && (
         <PrintSection id="gen-skip-surcharge" selectedIds={selectedPrintIds}>
-          <div className="border border-rose-200 rounded-xl bg-rose-50/30 px-4 py-3 text-sm text-rose-700">
+          <div className="border border-rose-200 rounded-xl bg-rose-50/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
             세대생략 할증과세 배제 (상증법 §57① 단서) — 증여자의 최근친 직계비속(부·모) 사망으로 인해
             세대생략 할증(30%·40%)이 적용되지 않습니다.
           </div>

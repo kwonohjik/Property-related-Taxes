@@ -44,7 +44,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
   return (
     <ToneCard tone="violet" bodyClassName="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold text-violet-700">건물 개수 간주취득 상세</p>
+        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">건물 개수 간주취득 상세</p>
         <TaxHelp
           title="건물 개수 간주취득 (지방세법 §10의6③)"
           summary="구조변경·용도변경·대수선으로 시가표준액이 증가하면 증가분에 취득세 과세"
@@ -120,23 +120,23 @@ export function DeemedRenovationSection({ form, set }: Props) {
 
       {/* 과세 미리보기 */}
       {showPreview && (
-        <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-sm space-y-1">
-          <p className="font-medium text-violet-800">과세 미리보기</p>
+        <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-sm space-y-1 dark:bg-violet-900/40">
+          <p className="font-medium text-violet-800 dark:text-violet-200">과세 미리보기</p>
           {diff > 0 ? (
             <>
-              <p className="text-violet-700">
+              <p className="text-violet-700 dark:text-violet-300">
                 과세표준 = 개수 후 {formatKRW(newSv)} - 개수 전 {formatKRW(prevSv)} = {formatKRW(diff)}
               </p>
-              <p className="font-medium text-violet-800">
+              <p className="font-medium text-violet-800 dark:text-violet-200">
                 예상 취득세 = {formatKRW(diff)} × {deemedRateLabel} = {formatKRW(Math.floor(diff * deemedRate))}
               </p>
             </>
           ) : (
-            <p className="text-amber-700">
+            <p className="text-amber-700 dark:text-amber-300">
               개수 후 시가표준액이 개수 전 이하 — 과세 대상 없음
             </p>
           )}
-          <p className="text-xs text-violet-600">* 농어촌특별세·지방교육세 별도</p>
+          <p className="text-xs text-violet-600 dark:text-violet-400">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
 

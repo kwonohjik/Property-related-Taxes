@@ -75,12 +75,12 @@ export function StockTransferPenaltySection({
   return (
     <div className="space-y-3">
       {/* 가산세·공제 상세 표 */}
-      <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-5 py-4 space-y-2">
-        <p className="font-semibold text-rose-800 text-sm">가산세·공제 상세</p>
+      <div className="rounded-xl border border-rose-200 bg-rose-50/60 px-5 py-4 space-y-2 dark:bg-rose-950/40">
+        <p className="font-semibold text-rose-800 text-sm dark:text-rose-200">가산세·공제 상세</p>
         <div className="divide-y divide-rose-100 text-sm">
           {result.underReportPenalty > 0 && (
             <div className="flex justify-between py-2">
-              <span className="text-rose-600">
+              <span className="text-rose-600 dark:text-rose-400">
                 {isNonReport ? "무신고" : "과소신고"} 가산세{split ? " (가목·나목 혼합)" : ` (${underRate}%)`}
                 {/*
                   base 를 함께 보인다 — 「산출세액 × 세율」로 오해하지 않도록.
@@ -94,25 +94,25 @@ export function StockTransferPenaltySection({
                   분해값(`fraudSplit`)이 있으면 그것을 단일 소스로 삼는다.
                 */}
                 {split ? (
-                  <span className="block text-xs text-rose-500 mt-0.5">
+                  <span className="block text-xs text-rose-500 mt-0.5 dark:text-rose-400">
                     가목 {fmt(split.fraudBase)} × {Math.round(split.fraudRate * 100)}% + 나목{" "}
                     {fmt(split.normalBase)} × {Math.round(split.normalRate * 100)}%
                   </span>
                 ) : (
                   result.penaltyBase !== undefined && (
-                    <span className="block text-xs text-rose-500 mt-0.5">
+                    <span className="block text-xs text-rose-500 mt-0.5 dark:text-rose-400">
                       기준금액 {fmt(result.penaltyBase)} × {underRate}%
                     </span>
                   )
                 )}
               </span>
-              <span className="font-medium text-rose-900">{fmt(result.underReportPenalty)}</span>
+              <span className="font-medium text-rose-900 dark:text-rose-200">{fmt(result.underReportPenalty)}</span>
             </div>
           )}
           {result.latePaymentPenalty > 0 && (
             <div className="flex justify-between py-2">
-              <span className="text-rose-600">납부지연 가산세 (국세기본법 §47조의4)</span>
-              <span className="font-medium text-rose-900">{fmt(result.latePaymentPenalty)}</span>
+              <span className="text-rose-600 dark:text-rose-400">납부지연 가산세 (국세기본법 §47조의4)</span>
+              <span className="font-medium text-rose-900 dark:text-rose-200">{fmt(result.latePaymentPenalty)}</span>
             </div>
           )}
           {result.electronicFilingCredit > 0 && (
@@ -120,24 +120,24 @@ export function StockTransferPenaltySection({
               {/* 🔴 G-26: 전자신고 세액공제는 조특법 §104의8①이다. 「§52의2」는 이 저장소 안에서
                   상증법 §52의2(장애인신탁 불산입)·상증령 §52의2(증자·합병 기간조정)로 이미
                   쓰이고 있어 법령명 없이는 판별이 불가능하다. 상수를 단일 소스로 참조한다. */}
-              <span className="text-emerald-600">
+              <span className="text-emerald-600 dark:text-emerald-400">
                 전자신고 세액공제 ({STOCK.ELECTRONIC_FILING_CREDIT})
               </span>
-              <span className="font-medium text-emerald-700">−{fmt(result.electronicFilingCredit)}</span>
+              <span className="font-medium text-emerald-700 dark:text-emerald-300">−{fmt(result.electronicFilingCredit)}</span>
             </div>
           )}
         </div>
       </div>
 
       {/* 가산세 분기 안내 카드 */}
-      <div className="rounded-xl border border-rose-200 bg-rose-50/40 px-5 py-4 space-y-3">
+      <div className="rounded-xl border border-rose-200 bg-rose-50/40 px-5 py-4 space-y-3 dark:bg-rose-950/40">
         <div className="flex items-start gap-2">
-          <span className="text-rose-700 text-base">ⓘ</span>
+          <span className="text-rose-700 text-base dark:text-rose-300">ⓘ</span>
           <div className="flex-1">
-            <p className="font-semibold text-rose-800 text-sm">가산세 분기 안내</p>
-            <p className="text-xs text-rose-700 mt-1">
+            <p className="font-semibold text-rose-800 text-sm dark:text-rose-200">가산세 분기 안내</p>
+            <p className="text-xs text-rose-700 mt-1 dark:text-rose-300">
               현재 적용된 분기:{" "}
-              <strong className="text-rose-900">{underBasis}</strong>
+              <strong className="text-rose-900 dark:text-rose-200">{underBasis}</strong>
             </p>
           </div>
         </div>
@@ -154,37 +154,37 @@ export function StockTransferPenaltySection({
               </tr>
             </thead>
             <tbody className="divide-y divide-rose-50">
-              <tr className={isUnderReport && !isFraud ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isUnderReport && !isFraud ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700">일반 과소신고</td>
                 <td className="px-3 py-2 text-center font-mono">10%</td>
                 <td className="px-3 py-2 text-slate-500">국세기본법 §47조의3 ①2호</td>
                 <td className="px-3 py-2 text-slate-600">신고한 세액이 신고하여야 할 세액보다 적은 경우</td>
               </tr>
-              <tr className={isNonReport && !isFraud ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isNonReport && !isFraud ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700">일반 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">20%</td>
                 <td className="px-3 py-2 text-slate-500">국세기본법 §47조의2 ①2호</td>
                 <td className="px-3 py-2 text-slate-600">법정 신고기한까지 신고서 미제출</td>
               </tr>
-              <tr className={isFraud && !isIntl && isUnderReport ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && !isIntl && isUnderReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700">부정행위 과소</td>
                 <td className="px-3 py-2 text-center font-mono">40%</td>
                 <td className="px-3 py-2 text-slate-500">국세기본법 §47조의3 ①1호 가목</td>
                 <td className="px-3 py-2 text-slate-600">부정행위(허위 증빙 등) 동반 과소신고</td>
               </tr>
-              <tr className={isFraud && !isIntl && isNonReport ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && !isIntl && isNonReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700">부정행위 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">40%</td>
                 <td className="px-3 py-2 text-slate-500">국세기본법 §47조의2 ①1호</td>
                 <td className="px-3 py-2 text-slate-600">부정행위 동반 무신고</td>
               </tr>
-              <tr className={isFraud && isIntl && isUnderReport ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && isIntl && isUnderReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700">역외 + 부정 과소</td>
                 <td className="px-3 py-2 text-center font-mono">60%</td>
                 <td className="px-3 py-2 text-slate-500">국세기본법 §47조의3 ①1호 가목 (괄호)</td>
                 <td className="px-3 py-2 text-slate-600">역외거래에서 발생한 부정행위로 인한 과소신고</td>
               </tr>
-              <tr className={isFraud && isIntl && isNonReport ? "bg-rose-100/40 font-semibold" : ""}>
+              <tr className={isFraud && isIntl && isNonReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700">역외 + 부정 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">60%</td>
                 <td className="px-3 py-2 text-slate-500">국세기본법 §47조의2 ①1호 (괄호)</td>
@@ -203,7 +203,7 @@ export function StockTransferPenaltySection({
         {/* 신고기한 안내 */}
         <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs text-sky-800 space-y-1">
           <p className="font-semibold">주식 양도세 신고기한 (§105①2호)</p>
-          <p className="text-sky-700 leading-relaxed">
+          <p className="text-sky-700 leading-relaxed dark:text-sky-300">
             예정신고: <strong>양도일이 속한 반기 말일 + 2개월</strong> (상반기 양도→8.31 / 하반기 양도→다음해 2월 말)
             <br />
             확정신고: <strong>양도일 다음해 5.1 ~ 5.31</strong> (§110)

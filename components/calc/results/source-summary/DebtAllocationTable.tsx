@@ -101,7 +101,7 @@ export function DebtAllocationTable({ debtItems, heirs, deathDate }: Props) {
             );
           })}
           {/* 합계 */}
-          <tr className="bg-amber-50 font-semibold">
+          <tr className="bg-amber-50 font-semibold dark:bg-amber-950/40">
             <td
               colSpan={3}
               className="border border-slate-200 px-2 py-1.5 text-center"

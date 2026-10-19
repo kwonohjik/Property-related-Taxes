@@ -131,7 +131,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             <button
               type="button"
               onClick={() => removeHolding(holding.id)}
-              className="ml-auto text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors"
+              className="ml-auto text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400"
             >
               삭제
             </button>
@@ -204,7 +204,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                     "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                     holding.marketType === opt.value
                       ? "border-amber-400 bg-amber-100 text-amber-800"
-                      : "border-amber-200 bg-amber-50/40 text-amber-600 hover:bg-amber-50",
+                      : "border-amber-200 bg-amber-50/40 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40",
                   ].join(" ")}
                 >
                   {opt.label}
@@ -349,7 +349,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             const val = shares * price;
             if (val <= 0) return null;
             return (
-              <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+              <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                 간주양도가액 참고: {shares.toLocaleString()}주 × {price.toLocaleString()} ={" "}
                 <span className="font-semibold">{val.toLocaleString()}</span>
               </div>
@@ -362,14 +362,14 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
       <button
         type="button"
         onClick={addHolding}
-        className="w-full rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/30 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50/60 transition-colors"
+        className="w-full rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/30 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50/60 transition-colors dark:text-amber-300 dark:bg-amber-950/40"
       >
         + 종목 추가
       </button>
 
       {/* 합산 미리보기 */}
       {holdings.length > 1 && totalDepartureDayValue > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
           <span className="font-semibold">보유 종목 합계 간주양도가액 (참고):</span>{" "}
           {totalDepartureDayValue.toLocaleString()}
         </div>

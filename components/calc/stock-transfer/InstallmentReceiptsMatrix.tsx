@@ -79,7 +79,7 @@ export function InstallmentReceiptsMatrix({
   return (
     <div className="space-y-3">
       {/* 법령 안내 */}
-      <div className="rounded-lg border border-fuchsia-200/70 bg-fuchsia-50/60 px-3 py-2 text-xs text-fuchsia-700 leading-relaxed">
+      <div className="rounded-lg border border-fuchsia-200/70 bg-fuchsia-50/60 px-3 py-2 text-xs text-fuchsia-700 leading-relaxed dark:text-fuchsia-300 dark:bg-fuchsia-950/40">
         <LawArticleModal legalBasis="소득세법 시행령 §178의5 ②" label="§178의5②" /> 장기할부조건 양도: 각 수령일의 기준환율(외국환거래법)을
         수령액에 적용하여 원화 환산 후 합산합니다. 수령 건수는 2건 이상이어야 합니다.
       </div>
@@ -130,7 +130,7 @@ export function InstallmentReceiptsMatrix({
               {/* 원화 환산 미리보기 + 삭제 */}
               <div className="w-20 flex flex-col items-end gap-1">
                 {krw !== null ? (
-                  <span className="text-xs tabular-nums text-fuchsia-700 font-medium">
+                  <span className="text-xs tabular-nums text-fuchsia-700 font-medium dark:text-fuchsia-300">
                     {krw.toLocaleString()}
                   </span>
                 ) : (
@@ -139,7 +139,7 @@ export function InstallmentReceiptsMatrix({
                 <button
                   type="button"
                   onClick={() => removeRow(idx)}
-                  className="text-micro text-rose-400 hover:text-rose-600 underline"
+                  className="text-micro text-rose-400 hover:text-rose-600 underline dark:text-rose-300"
                   aria-label={`${idx + 1}번째 수령 삭제`}
                 >
                   삭제
@@ -150,7 +150,7 @@ export function InstallmentReceiptsMatrix({
         })}
 
         {rows.length === 0 && (
-          <div className="rounded-lg border border-dashed border-fuchsia-200 bg-fuchsia-50/30 px-4 py-3 text-xs text-fuchsia-500 text-center">
+          <div className="rounded-lg border border-dashed border-fuchsia-200 bg-fuchsia-50/30 px-4 py-3 text-xs text-fuchsia-500 text-center dark:text-fuchsia-400 dark:bg-fuchsia-950/40">
             수령 내역을 추가하세요 (2건 이상 필수)
           </div>
         )}
@@ -158,11 +158,11 @@ export function InstallmentReceiptsMatrix({
 
       {/* 합계 미리보기 */}
       {hasAllKrw && (
-        <div className="rounded bg-fuchsia-100/60 border border-fuchsia-200 px-3 py-2 flex items-center justify-between text-xs">
-          <span className="text-fuchsia-700 font-medium flex items-center gap-1">
+        <div className="rounded bg-fuchsia-100/60 border border-fuchsia-200 px-3 py-2 flex items-center justify-between text-xs dark:bg-fuchsia-900/40">
+          <span className="text-fuchsia-700 font-medium flex items-center gap-1 dark:text-fuchsia-300">
             <LawArticleModal legalBasis="소득세법 시행령 §178의5 ②" label="§178의5②" /> 원화 환산 합계 ({rows.length}건)
           </span>
-          <span className="text-fuchsia-800 font-bold tabular-nums">
+          <span className="text-fuchsia-800 font-bold tabular-nums dark:text-fuchsia-200">
             {totalKrw.toLocaleString()}
           </span>
         </div>
@@ -172,14 +172,14 @@ export function InstallmentReceiptsMatrix({
       <button
         type="button"
         onClick={addRow}
-        className="w-full rounded-lg border border-dashed border-fuchsia-300 bg-fuchsia-50/40 py-2 text-xs text-fuchsia-600 hover:bg-fuchsia-100/50 transition-colors"
+        className="w-full rounded-lg border border-dashed border-fuchsia-300 bg-fuchsia-50/40 py-2 text-xs text-fuchsia-600 hover:bg-fuchsia-100/50 transition-colors dark:text-fuchsia-400 dark:bg-fuchsia-950/40"
       >
         + 수령 내역 추가
       </button>
 
       {/* 건수 경고 */}
       {rows.length === 1 && (
-        <p className="text-xs text-amber-600">
+        <p className="text-xs text-amber-600 dark:text-amber-400">
           1건만 입력된 경우 단일 수령(single 모드) 사용을 권장합니다. §178의5② 분할 수령은 2건 이상이어야 합니다.
         </p>
       )}

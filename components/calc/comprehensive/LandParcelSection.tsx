@@ -108,7 +108,7 @@ export function LandParcelSection({ kind }: { kind: Kind }) {
           {/* 요약 테이블 (행 클릭 → 편집 모달) — 0필지면 빈 상태 안내 */}
           {parcels.length === 0 ? (
             <div
-              className="rounded-lg border border-sky-200 bg-sky-50/40 px-4 py-5 text-center text-sm text-sky-800"
+              className="rounded-lg border border-sky-200 bg-sky-50/40 px-4 py-5 text-center text-sm text-sky-800 dark:text-sky-200 dark:bg-sky-950/40"
               data-testid={`land-${kind}-parcel-empty-state`}
             >
               필지가 없습니다. 아래 &lsquo;필지 추가&rsquo;를 눌러 입력하세요.
@@ -182,8 +182,8 @@ export function LandParcelSection({ kind }: { kind: Kind }) {
           </button>
 
           {/* 직전연도(세부담상한) 서브모드 */}
-          <div className="rounded-md border border-violet-200 bg-violet-50/40 p-3 space-y-2">
-            <p className="text-xs font-semibold text-violet-700">직전연도 세부담 상한 (§15)</p>
+          <div className="rounded-md border border-violet-200 bg-violet-50/40 p-3 space-y-2 dark:bg-violet-950/40">
+            <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">직전연도 세부담 상한 (§15)</p>
             <RadioCardGroup
               name={`land-prior-${kind}`}
               tone="violet"

@@ -339,7 +339,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
                 기신고 불러오기
               </Button>
               {form.blockShareholderSourceIds.length > 0 && (
-                <span className="text-caption text-emerald-700">
+                <span className="text-caption text-emerald-700 dark:text-emerald-300">
                   기신고 {form.blockShareholderSourceIds.length}건 반영됨 — 아래 값을 직접 고치면 이
                   표시가 사라집니다
                 </span>
@@ -479,7 +479,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
             엔진도 이 경우 반전 토글을 읽지 않는다(`resolveNetAssetOnlyBasis`).
           */}
           {raMokNetAssetOnly && (
-            <p data-testid="ra-mok-net-asset-only-notice" className="mt-3 text-xs text-rose-800">
+            <p data-testid="ra-mok-net-asset-only-notice" className="mt-3 text-xs text-rose-800 dark:text-rose-200">
               양도일이 2023.2.28. 이후라 라목 주식등은 순자산가치 단독으로 평가합니다 — 가중평균·80% 하한·가중치
               반전은 적용되지 않습니다.{" "}
               <LawArticleModal legalBasis="소득세법 시행령 §165 ⑧ 1호" label="영§165⑧1" />
