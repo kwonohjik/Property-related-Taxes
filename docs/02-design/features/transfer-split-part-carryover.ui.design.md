@@ -396,3 +396,30 @@ PC1~PC7의 B판 + **D2 회귀**(상속·증여 호스트 D2 격자 `transfer-lan
 - 사용자에게 다시 물을 것: **없음.** (하위 UI 선택은 이 문서가 정했다 — C 토글 ON 시 기존 입력을 건물로 재해석+고지, B·C 날짜는 읽는 쪽 파생, A만 write-through, H-5 선행 PR.) 단 **E-1(사용자 가정 키 ≠ 엔진 draft 와이어)** 은 엔진 설계서 확정을 따른다.
 - 미검증: V-U1 H-4 손상 저장값의 복원 크래시 루프 여부 · V-U2 데스크톱·모바일 화면(§3.2·§5.2 목업은 코드 추적 기반, 구현 시 Playwright 확인) · V-U3 환산 분모 = 파트 양도시 기준시가 가정(E-6) · V-U4 H-5 수정의 통합 효과(함수 단독 호출만 확인, 이월과세 leaf 충돌 격자 미검증) · V-U5 일반건물 ④의 phd/apd payload 송신 여부 · V-U6 파트 모드에서 배우자 예외 사실(`spouseGiftOneHouseAtGiftDate`) 질문 숨김 가정(P5와 연동, 엔진 확인).
 - 법령 인용은 계획서 §2(KoreanLaw 조회 2026-10-19)를 따르며 이 문서가 새 해석을 추가하지 않는다. 비교과세 단위(Q-3)는 정면 해석례 미확보(V-1) — 결과 화면에 「확인 필요」를 싣는다.
+
+---
+
+## 12. P2(C) 구현 환류 (2026-10-19, Do 단계 — 설계와 달라진 점 · 설계가 말하지 않은 것)
+
+구현·검증 중 설계서와 달라지거나 설계가 비워 둔 곳을 모았다. 전부 anchor·E2E로 고정돼 있다 — 뒤집으면 해당 테스트가 빨개진다.
+
+| # | 설계 | 구현 | 근거 |
+|---|---|---|---|
+| U-1 | §2.4 일반건물 비공개 빌더(`buildPart`·`PART_SCALE` 등)를 공용 모듈로 **추출** | **추출하지 않았다.** 신규 `transfer-tax-api-split-carryover.ts`가 와이어(사건 1벌 + 파트 2벌)를 독립 구현하고 일반건물 코드는 한 줄도 바꾸지 않았다 | 파트에 평가액·환산 필드가 없어 모양이 다르다(일반건물은 `giftDateAssetValue`·`useEstimatedAcquisition` 포함). 추출은 일반건물 회귀 위험만 키운다(Surgical). 지분 규약(I-3)은 같은 식 — 사건 금액 미스케일, 파트 금액만 `ratioed` |
+| U-2 | §2.2 `effectiveCarryoverDonorSplit` 첫 자산 조건 | `opts.isNonPrimary`를 받는다. 순서를 모르는 곳(정규화 사본 · `carryoverHouseholdFactVisible` · 거주 구간 안내 술어)은 생략한다 | 그 자리의 값은 ⑤·⑧·④가 모두 같은 술어를 읽으므로 어긋나지 않는다. 지분 분할 카드가 첫 자산을 복제해 컴패니언에 잔재 토글이 남을 수 있으나 그 입력은 N8(⑧)·⑫ 400이 어차피 막는다 |
+| U-3 | §3.1 ④ | `isSplitPayloadActive` · `partInputsActive` · 토지 취득일에 C 항 외에 **같은 술어로 막아야 하는 잔재 5곳**을 더 넣었다 — `isSeparateAcquisition`(취득일 분리 잔재) · `normalizeBuildingCauseInputs`(파트 방식 actual 고정) · `phdFlagEffective`(PHD 자동 ON 잔재) · `isCarryoverGeneral`·`carryoverPhdMode`(환산 잔재) · `d2Mix`(자산 단위 추계 플래그 잔재) · `carryoverAcquisitionDateFallback`(남은 `acquisitionDate`) | 격자 `c.parity-grid`의 「잔재」 9셀이 각각 ⑫ 400을 냈다(엔진 S4·S5·`appraisalValue` 요구). 화면에 없는 값이 ④로 새면 막다른 길 |
+| U-4 | — (설계 없음) | C에서 ④는 `expenses: 0`을 싣는다(`acquisitionPrice`는 그대로 — 뮤테이션으로 0 고정이 불필요함을 확인했다: 엔진이 C에서 총액을 읽지 않고 ⑧의 «파트 합 ≤ 총액» 검사만 `skipTotals`로 건너뛴다). ⑧은 «이전 입력 형식 필요경비»가 **보이는 경우만** 막고(`data-field="directExpenses"` 추가) 숨은 잔재는 무시한다 | 자산 단위 필요경비 총액은 파트에 안분되지 않는다(엔진 S8: `expenses > 0` 400). 보이면 입력을 조용히 버리지 않고, 숨었으면 화면에 없는 값을 보내지 않는다 |
+| U-5 | §3.5 ⑧ 순서 | 화면 순서대로 구현(가업 선언 → 등기접수일 → 관계 → 토지 파트 → 건물 파트 → 증여세 → leaf → 축 A). 증여자 취득일 ≤ 증여일을 **거울**로 둔다(엔진 F-6, 같은 날 허용 — 자산 전체 이월과세 ⑧의 「이전이어야」보다 느슨) | 격자: ⑧ 통과 ⇒ ⑫ 200, leaf 소관(S9·S2′·F-6·Σ·필수 칸) ⑧ 차단 ⇔ ⑫ 400 |
+| U-6 | §3.5 S9 | S9(1세대1주택 겹침)는 **보유 상황 단계(UI 인덱스 1)**에서 검증하고 앵커는 «1세대 해당» 토글(`data-field="isOneHousehold"` 추가). 자산 단계에서는 `isOneHousehold`를 넘기지 않는다 | 1세대 여부는 그 단계에서 정해진다. 자산 단계에서 막으면 고칠 칸이 다른 화면에 있다 |
+| U-7 | §3.4 ⑥ | `directAcqRaw`가 C이면 `pending`, `splitHasNonActualOwnedPart`가 C이면 참 → 입력 단계는 «계산 후 표시», 결과 후 기존 분기(`summarizeSplitGain`)가 푼다. 추가 분기 없음 | `__tests__/lib/transfer-per-asset-summary.split-carryover-c.test.ts` |
+| U-8 | §6 ⑦ | 4뷰 공용 view `transfer-tax-split-carryover-display.ts`. 상세명세서는 일자 그룹을 렌더하지 않으므로 파트별 기산일은 **산출세액 행 ※**와 숨은 일자 행에 싣는다. 신고서는 `FilingFormTableSplitCarryover.ts`(`FilingFormTableHelpers.ts` 증가 8줄) | 일자 그룹 미렌더 규약(`DetailedStatementConfig.ts`) |
+| U-9 | §6 「확인 필요」 | **엔진 echo에 표지가 없어 최소 추가**: `SplitCarryoverEventEcho.orderDependent?: true` — 두 파트 모두 ②3호 대상이고 안정 구성이 둘 이상일 때만. 해결자가 4조합 결정세액(대부분 메모에 있음)으로 판정하고 **세액·채택은 바꾸지 않는다** | 설계서 §4.2(100/1,050) |
+| U-10 | §3.2 건물 카드 caption | «토글 ON 시 입력이 건물로 재해석된다» 고지를 **조건 없이 항상** 건물 카드에 둔다(「토글을 켜기 전에 입력한 값이 있다면」) | 토글 시점에만 보이는 고지는 상태로 표현할 수 없다(`useEffect`→store 금지) |
+| U-11 | 범위 밖(미지원) | 증여일 < 2005-04-30(영 §163⑨ 단서 2호) C는 ⑧이 막는다 — ④가 `buildingHouseKind`·`buildingSec164Value`를 싣지 않아 엔진 Y4가 400. 앵커는 증여 등기접수일. 증여일이 그 구간이 되려면 양도일 ≤ 2010-04-30(5년 적용기간)이라 도달이 매우 좁다 | P5 이후 |
+| U-12 | N2·N3 | H-2 중간본을 `BuildingCauseMixBlock`에 반영(`building-gift-carryover-notice` testid 유지) | §2.7 |
+
+### 12.1 검증 요약
+
+- 격자 `__tests__/calc/transfer-split-part-carryover.c.parity-grid.test.ts` — 폼 → ④ body → ⑫ route와 ⑧(단계 0·1)을 같은 폼에서 나란히. 기준 셀 결정세액 300,018,000(엔진 C_NEW와 일치).
+- E2E `e2e/transfer-split-part-carryover-c.spec.ts`(요청 body 새 키·결과 4뷰·컴패니언·다건·1세대1주택·이력 복원·구 이력·handoff 상태·⑧ 순서·모바일) + `transfer-validation-field-jump.spec.ts` «c: » 18건.
+- 개발 서버: 워크트리 `node_modules`가 심볼릭 링크라 Turbopack이 root 밖으로 보고 panic한다 — E2E를 돌릴 때만 `next.config.ts`에 `turbopack.root`를 임시로 줬다(커밋하지 않는다).

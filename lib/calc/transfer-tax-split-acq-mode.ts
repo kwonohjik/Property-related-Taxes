@@ -19,6 +19,7 @@ import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
 import { houseLandSec164Open } from "./transfer-house-land-sec164-bridge";
@@ -183,6 +184,8 @@ interface SeparateAcquisitionFlags {
   acquisitionDate?: string;
   isMixedUseHouse?: boolean;
   assetKind?: string;
+  /** P2 C(파트 이월과세) 유효 판정용 — 일부만 넘기면 C가 꺼진 것으로 읽는다(종전 동작) */
+  carryoverDonorSplit?: boolean;
 }
 
 /**
@@ -294,6 +297,8 @@ export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: numbe
  * 총액으로 보이지 않게 「계산 후 표시」로 둔다. 파트·모드 판정은 `separateAcqPartsSum`과 같은 사본·같은 leaf다.
  */
 export function splitHasNonActualOwnedPart(rawAsset: SeparatePartAmounts & SeparateAcquisitionFlags): boolean {
+  // P2 C — 파트 이월과세의 필요경비에는 증여세 상당액(영 §163의2②, 파트 양도차익 한도)·증여자 자본적지출이 들어가고 둘 다 엔진이 확정한다. 입력 부분합을 총액으로 보이지 않는다.
+  if (effectiveCarryoverDonorSplit(rawAsset)) return true;
   if (!isSeparateAcquisition(rawAsset)) return false;
   const asset = normalizeBuildingCauseInputs(rawAsset);
   const selfOwns = asset.selfOwns ?? "both";
@@ -356,6 +361,8 @@ export function partAcquisitionDates(a: {
 export function isSeparateAcquisition(rawAsset: SeparateAcquisitionFlags): boolean {
   // 상속·증여 호스트의 화면에 없는 분리 입력(stale)은 「분리 없음」으로 읽는다 — `hasStaleSplitInput`.
   const asset = normalizeBuildingCauseInputs(rawAsset);
+  // P2 C — 수증자 쪽 두 취득일은 증여 등기접수일 하나다(증여자 쪽 날짜가 다른 것은 파트 이월과세 서브객체가 표현한다). 화면에 없는 취득일 분리 잔재가 «별개 취득»을 켜지 않는다.
+  if (effectiveCarryoverDonorSplit(asset)) return false;
   if (!asset.hasSeperateLandAcquisitionDate) return false;
   if (!asset.landAcquisitionDate || !asset.acquisitionDate) return false;
   if (asset.landAcquisitionDate === asset.acquisitionDate) return false;

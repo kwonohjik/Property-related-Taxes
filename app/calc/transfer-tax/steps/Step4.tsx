@@ -336,6 +336,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
         <div className="space-y-3">
           {/* 1세대 여부 */}
           <ToggleCard
+            data-field="isOneHousehold"
             checked={isOneHouseholdEffective}
             onCheckedChange={(v) => onChange({ isOneHousehold: v })}
             title="1세대 해당"

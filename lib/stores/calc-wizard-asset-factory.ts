@@ -160,6 +160,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     ownershipRemainderThirdParty: "",
     acquisitionCause: "purchase",
     carryover: { ...CARRYOVER_DEFAULTS },
+    carryoverDonorSplit: false,
+    landCarryover: { ...CARRYOVER_DEFAULTS },
     acquisitionDate: "",
     assetContractDate: "", // Round 9 (2026-05-06): 매매계약일 (감면 시한 판정용)
     // 신축(자가건축) 취득일 4-시점 (영 §162①4호) — 사례 28 + G-5

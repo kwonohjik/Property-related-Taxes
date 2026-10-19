@@ -6,7 +6,7 @@
  */
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
-import { applyRatio } from "./transfer-tax-api-helpers";
+import { applyRatio, getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { effectivePartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { deriveLegacyPartAcqMode } from "./transfer-tax-split-acq-mode";
@@ -21,6 +21,10 @@ import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
+import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { buildSplitCarryoverPayload } from "./transfer-tax-api-split-carryover";
+import type { SplitCarryoverPayload } from "./transfer-tax-api-split-carryover";
+import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import {
   buildingHouseKindSent,
@@ -82,6 +86,8 @@ export function isSplitPayloadActive(
   //    (계약 10억·§159 채무 4억에서 토지 6억 입력 → 건물 = 4억 − 6억 = −2억).
   //    부담부증여는 기준시가 비율 안분만 사용한다.
   return (
+    // P2 C — 통째 이월과세 + 증여자 토지·건물 취득일 상이(파트 이월과세). 취득일 분리 토글이 없어도 분리 계산이 성립한다.
+    effectiveCarryoverDonorSplit(primary, { isNonPrimary: primaryCtx?.isNonPrimary }) ||
     // M2 — 소유 축은 ⑤가 여는 범위에서만 읽는다(`self-owns-scope.ts`). 토지 등에 남은 잔재는 `both`.
     ((primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both") &&
       !isBurdenedGift) ||
@@ -117,7 +123,11 @@ export function buildSplitPayload(
   // 별개취득을 켰다 끈 잔존값이 그대로 실리면 엔진이 파트 값을 우선해 §166⑥ 기준시가 안분을 조용히 바꾼다(#17 후속 검토 — 감정 4.5억 시료
   // 11,077,892 → 잔존 토지 취득가액 1억 25,835,260). 술어는 `isSplitPayloadActive`의 첫 항(별개취득 토글·소유자 분리)과 같다.
   const partInputsActive =
-    isSplitActive && (primary.hasSeperateLandAcquisitionDate === true || effectiveSelfOwns(primary) !== "both");
+    isSplitActive &&
+    (primary.hasSeperateLandAcquisitionDate === true ||
+      effectiveSelfOwns(primary) !== "both" ||
+      // P2 C — 파트 취득가액(증여 신고가액)·수증자 자본적지출·양도가액 구분 칸이 화면에 있다(`CarryoverPartsSaleAxis`).
+      effectiveCarryoverDonorSplit(primary, { isNonPrimary: primaryCtx?.isNonPrimary }));
 
   // 파트 모드 미선택("") 시 자산 전체 레거시 플래그에서 파생 —
   // UI 표시·validate와 단일 소스(effectivePartAcqMode, dual-truth 방지).
@@ -192,8 +202,10 @@ export function buildSplitPayload(
     //    → 비소유 파트까지 전액 과세되는 조용한 오답. `usesPhd`가 쓰는 것과 같은 후퇴 패턴이다.
     //    같은 날짜가 되므로 `isSeparateAcquisition`은 false — 파트별 취득가액 완결 규칙은
     //    발동하지 않고 §166⑥ 기준시가 비율 안분 경로로 흐른다(의도된 동작).
-    landAcquisitionDate:
-      (primary.hasSeperateLandAcquisitionDate || selfOwnsEff !== "both") && primary.landAcquisitionDate
+    landAcquisitionDate: effectiveCarryoverDonorSplit(primary, { isNonPrimary: primaryCtx?.isNonPrimary })
+      ? // P2 C — 수증자 쪽 두 취득일은 증여 등기접수일 하나다(엔진 S5). 칸이 없는 토지 취득일 잔재가 이기지 않는다.
+        carryoverAcquisitionDateFallback(primary) || undefined
+      : (primary.hasSeperateLandAcquisitionDate || selfOwnsEff !== "both") && primary.landAcquisitionDate
         ? primary.landAcquisitionDate
         : usesPhd || selfOwnsEff !== "both" || excessSplit
           ? primary.acquisitionDate
@@ -335,8 +347,12 @@ export function buildLandStdAtAcquisitionPayload(primary: AssetForm) {
  * ⚠️ 저장값이 아니라 **유효** 원인을 읽는다(D0 G-6) — 블록이 닫힌 자산의 잔재를 보내지 않는다.
  * ⚠️ 단순 증여의 증여자 취득일은 보내지 않는다(D0 G-8) — §104②2호 통산은 §97의2① 이월과세 자산만이다.
  */
-export function buildLandPartCausePayload(primary: AssetForm): {
-  landAcquisitionCause?: "inheritance" | "gift" | "purchase";
+export function buildLandPartCausePayload(
+  primary: AssetForm,
+  /** 함께 양도 자산(첫 자산이 아님)은 파트 이월과세를 싣지 않는다 — 엔진 S0이 거부하는 자리라 ⑧이 막고 ④는 키를 내지 않는다. */
+  opts?: { isNonPrimary?: boolean },
+): Omit<Partial<SplitCarryoverPayload>, "landAcquisitionCause"> & {
+  landAcquisitionCause?: "inheritance" | "gift" | "purchase" | "carryover_gift";
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
   isPartialAreaTransfer?: true;
@@ -345,6 +361,10 @@ export function buildLandPartCausePayload(primary: AssetForm): {
   landHouseExisted?: "yes" | "no" | "unknown";
   landHouseSec164Value?: number;
 } {
+  // P2 C — 통째 이월과세 + 증여자 토지·건물 취득일 상이: 사건 1벌 + 파트 2벌. 술어가 거짓이면 키를 하나도 내지 않는다(stray 400 방지).
+  const ratio = getOwnershipRatio(primary);
+  const splitCarryover = buildSplitCarryoverPayload(primary, makeRatioed(ratio, ratio < 1), opts);
+  if (splitCarryover) return splitCarryover;
   const cause = effectiveLandAcquisitionCause(primary);
   // D2 — 건물 상속·증여 + 토지 매매: 엔진에는 overlay `purchase`만 보낸다(토지는 자기 취득일 — 피상속인·§164④ 키는 해당 없음).
   if (!cause) {

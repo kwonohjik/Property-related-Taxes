@@ -243,7 +243,7 @@ export function buildAssetPayload(
     ...(splitActive ? buildLandStdAtAcquisitionPayload(asset) : {}),
     // ④ 토지 파트 취득원인(§104②1호 통산) — 단건·다건과 같은 leaf(D0 G-4). 종전엔 싣지 않아 ⑫·⑭에 칸이 있는데도
     //    함께 양도 자산의 토지 상속 통산이 조용히 빠졌다.
-    ...(splitActive ? buildLandPartCausePayload(asset) : {}),
+    ...(splitActive ? buildLandPartCausePayload(asset, { isNonPrimary: true }) : {}),
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다(분리 축 무관 — 자산 단위 경로도 읽는다)
     ...buildHouseFirstDisclosurePayload(asset),
     assetId: asset.assetId,

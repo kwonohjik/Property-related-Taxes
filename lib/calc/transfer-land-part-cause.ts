@@ -117,8 +117,11 @@ export function hasStaleSplitInput(
  * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) D2 유효 시 건물 방식을
  * `actual`로. 둘 다 해당 없으면 같은 객체를 돌려준다.
  */
-export function normalizeBuildingCauseInputs<T extends BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only"; buildingAcqMode?: string }>(asset: T): T {
+export function normalizeBuildingCauseInputs<T extends BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only"; buildingAcqMode?: string; landAcqMode?: string; carryoverDonorSplit?: boolean }>(asset: T): T {
   if (hasStaleSplitInput(asset)) return { ...asset, hasSeperateLandAcquisitionDate: false };
+  // P2 C — 파트 이월과세는 두 파트 모두 실가(증여자 취득가액·증여 당시 평가액)다. 숨은 환산·감정 플래그(stale)가 ⑧ 요구·⑥ 합계·④ 전송 모드를 바꾸지 않게 한다.
+  if (effectiveCarryoverDonorSplit(asset) && (asset.landAcqMode !== "actual" || asset.buildingAcqMode !== "actual"))
+    return { ...asset, landAcqMode: "actual", buildingAcqMode: "actual" };
   return withBuildingActualWhenMix(asset);
 }
 
@@ -224,4 +227,35 @@ export function splitBuildingAcqPriceInput(
   return asset.acquisitionCause === "newConstruction" && effectiveLandAcquisitionCause(asset)
     ? asset.fixedAcquisitionPrice
     : asset.buildingAcquisitionPrice;
+}
+
+// ─── P2 C — 통째 이월과세인데 증여자가 토지·건물을 다른 날 취득 (docs/02-design/features/transfer-split-part-carryover.ui.design.md §2.2·§3) ───
+// 증여자 취득일·가액이 파트(토지/건물)마다 다르다 — 자산 전체 1벌(`carryover`)로는 표현하지 못해 토지는 `landCarryover`, 건물은 기존 `carryover`가 받는다.
+// 유효 여부는 이 술어 하나가 정한다(⑤ 카드·④ 전송·⑥ 사이드바·⑧ 검증이 같은 값을 읽는다). 저장 토글은 잔재일 수 있어 단독으로 읽지 않는다.
+
+type CarryoverDonorSplitScope = LandPartCauseScope & {
+  carryoverDonorSplit?: boolean;
+  selfOwns?: "both" | "building_only" | "land_only";
+  transferType?: string;
+};
+
+/**
+ * C 유효 여부 — 토글 ∧ 취득 원인 「이월과세(증여)」 ∧ 주택·건물(겸용 아님) ∧ 소유자 분리 아님 ∧ 부담부증여 아님 ∧ **첫 자산**.
+ *
+ * 파트 이월과세는 첫 자산(주 자산)에서만 계산된다(엔진 S0 — 컴패니언은 신고 전체 결정세액 비교 불가). `opts.isNonPrimary`로 함께 양도 자산이면 「없음」으로 읽는다.
+ * 호출부가 순서를 모르는 곳(정규화 사본·세대 사실 술어)은 생략한다 — 그 자리의 값은 표시·전송·검증이 모두 같은 술어를 읽으므로 어긋나지 않는다.
+ * 값은 지우지 않는다(D0 G-6 — 토글을 되돌리면 복원).
+ */
+export function effectiveCarryoverDonorSplit(asset: CarryoverDonorSplitScope, opts?: { isNonPrimary?: boolean }): boolean {
+  if (opts?.isNonPrimary) return false;
+  if (asset.carryoverDonorSplit !== true || asset.acquisitionCause !== "carryover_gift") return false;
+  if (!isLandBuildingSplitable(asset.assetKind) || asset.isMixedUseHouse) return false;
+  if (asset.transferType === "burdened_gift") return false;
+  return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") === "both";
+}
+
+/** 파트별 이월과세 여부 — 사건·파트 서브객체를 ④가 싣는지, ⑧이 파트 입력을 요구하는지의 공통 질의. P2는 C(토지·건물 둘 다)뿐이다. */
+export function partCarryover(asset: CarryoverDonorSplitScope, opts?: { isNonPrimary?: boolean }): { land: boolean; building: boolean } {
+  const c = effectiveCarryoverDonorSplit(asset, opts);
+  return { land: c, building: c };
 }

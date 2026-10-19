@@ -22,6 +22,13 @@ import {
   type SplitGainPartSummary,
 } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
+import {
+  splitCarryoverAcquisitionText,
+  splitCarryoverApportionText,
+  splitCarryoverNotices,
+  splitCarryoverVerdictText,
+  splitCarryoverView,
+} from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
@@ -123,6 +130,7 @@ export function TransferSplitSection({ r }: { r: R }) {
   };
   const ownerNote = (key: "land" | "building") => (partOf(key) ? "" : " (타인 소유)");
   const swapParts = summary.parts.filter((p) => p.swapApplied);
+  const carryover = splitCarryoverView(sd as unknown as SplitGainResult);
   return (
     <>
       <Text style={s.sectionTitle}>토지/건물 분리 내역 (§164⑤·§166⑥)</Text>
@@ -214,6 +222,19 @@ export function TransferSplitSection({ r }: { r: R }) {
                 <Text style={{ ...s.lblSub, flex: 1 }}>
                   {p.label}: 「소득세법」 §97②2호 단서 — 환산취득가액 {fmt(p.acquisitionPrice)}을 차감하지 않고 자본적지출·양도비를 필요경비로 적용
                 </Text>
+              </View>
+            ))}
+            {/* 파트 이월과세(§97의2①) — 파트별 판정·기산일·취득가액 분해·증여세 상당액 안분·②3호 비교 (화면 카드·상세명세서·신고서와 같은 view). */}
+            {carryover?.parts.map((p) => (
+              <View key={`co-${p.key}`} style={s.row}>
+                <Text style={{ ...s.lblSub, flex: 1 }}>
+                  {`${splitCarryoverVerdictText(p)} — ${splitCarryoverAcquisitionText(p)} — ${splitCarryoverApportionText(carryover, p)}`}
+                </Text>
+              </View>
+            ))}
+            {carryover && splitCarryoverNotices(carryover).map((n, i) => (
+              <View key={`co-note-${i}`} style={s.row}>
+                <Text style={{ ...s.lblSub, flex: 1 }}>{`확인 필요 — ${n}`}</Text>
               </View>
             ))}
           </>

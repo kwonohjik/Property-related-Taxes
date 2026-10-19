@@ -39,7 +39,7 @@ import {
 import { applyRedevelopmentOverrides } from "./DetailedStatementRedevOverrides";
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
 import type { StatementItem } from "./DetailedStatementConfig";
-import { splitCauseDateText } from "./split-acq-text";
+import { splitCarryoverDateText, splitCauseDateText } from "./split-acq-text";
 import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 /** 후반 단계 — `items` 에 **append 만** 한다(반환 없음 · out 0 실측). */
@@ -114,7 +114,8 @@ export function appendLateStageItems(
           : closedFormText),
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     // D1-3 — 토지·건물 취득원인이 다르면 파트별 원인·세율 기산일(§104②) 한 줄(명세서는 일자 그룹을 렌더하지 않는다 — 세율이 있는 이 행에 단다).
-    note: [result.shortTermNote, splitCauseDateText(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
+    // 파트 이월과세(P2 C)는 파트별 보유기간·세율 기산일(적용: 증여자 취득일)이 계산에 쓰인 근거라 같은 행에 밝힌다 — 일자 그룹은 렌더하지 않는다.
+    note: [result.shortTermNote, splitCauseDateText(result.splitDetail), splitCarryoverNote(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -287,4 +288,10 @@ function describeAggregateCalculatedTax(
   }
   // 세율군은 하나지만 그 안에서 적용 호가 갈린다 — 호별 산출세액의 합계다.
   return `적용 호가 둘 이상이라 단일 산식으로 표시할 수 없습니다(최고세율 ${formatRatePct(result.appliedRate)}) — 호별 산출세액의 합계입니다. ${tail}`;
+}
+
+/** 산출세액 행 각주용 — 파트 이월과세 echo가 있을 때만 「보유기간·세율 기산일」 한 줄. */
+function splitCarryoverNote(sd: Parameters<typeof splitCarryoverDateText>[0]): string | undefined {
+  const t = splitCarryoverDateText(sd);
+  return t ? `이월과세(§97의2①) 보유기간·세율 기산일: ${t}` : undefined;
 }

@@ -11,6 +11,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
+import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -141,6 +142,8 @@ export function buildCarryoverPayload(
  * 빈 값을 보내 ⑭가 **주 자산 취득일**로 대신 채웠다(다른 물건의 날짜). ⑧은 등기접수일을 필수로 요구한다.
  */
 export function carryoverAcquisitionDateFallback(asset: AssetForm): string {
+  // P2 C — 두 파트의 취득일은 증여 등기접수일 한 곳이다(엔진 S5 — 어긋나면 400). 화면에 취득일 칸이 없어 남은 `acquisitionDate` 잔재가 이기면 안 된다.
+  if (effectiveCarryoverDonorSplit(asset)) return asset.carryover?.giftRegistryDate || "";
   return asset.acquisitionDate || asset.carryover?.giftRegistryDate || "";
 }
 
@@ -171,8 +174,19 @@ export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string |
  * ⚠️ 관계 「그 외」는 §97의2① 이월과세 대상이 아니라 ⑧(`validateAssetAcquisition` (b-3a))이 「취득 원인을 증여로 변경」을 먼저 막는다 —
  *    이 필수 질문의 ⑧ 오류는 그 차단이 풀린 뒤(취득 원인 변경 후 일반 증여 칸의 같은 질문) 또는 직접 호출에서 닿는다.
  */
-export function carryoverHouseholdFactVisible(asset: Pick<AssetForm, "assetKind" | "carryover">): boolean {
+export function carryoverHouseholdFactVisible(
+  asset: Pick<AssetForm, "assetKind" | "carryover"> & {
+    acquisitionCause?: AssetForm["acquisitionCause"];
+    carryoverDonorSplit?: boolean;
+    isMixedUseHouse?: boolean;
+    selfOwns?: AssetForm["selfOwns"];
+    transferType?: string;
+  },
+): boolean {
   const c = asset.carryover;
+  // P2 C — 파트 이월과세는 이 질문을 묻지 않는다(Q-9): 세대 사실은 1세대1주택 비과세 판정에 쓰이는데 파트 이월과세는 그 판정과 함께 계산하지 않는다(N5).
+  //   ⑤ 위젯·⑧ 필수·④ 전송이 이 술어 하나를 읽으므로 셋이 함께 묻지 않는다. 첫 자산 여부는 보지 않는다 — 어느 쪽이든 셋이 같은 값을 읽는다.
+  if (effectiveCarryoverDonorSplit(asset)) return false;
   return !!c && isOneHouseExemptionAsset(asset.assetKind) && !c.donorDeceased;
 }
 

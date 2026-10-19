@@ -20,6 +20,12 @@ import {
   type SplitAcqMode,
   type SplitGainPartSummary,
 } from "@/lib/tax-engine/transfer-tax-split-display";
+import {
+  splitCarryoverAcquisitionText,
+  splitCarryoverApportionText,
+  splitCarryoverVerdictText,
+  splitCarryoverView,
+} from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
@@ -40,7 +46,9 @@ export function formatLumpRate(rate: number | undefined): string {
  * 원인이 다르고(`mixedCause`) 그 파트가 상속·증여면 입력 화면 라벨과 같은 어휘로 「토지(상속개시일 평가액)」(D1-3) ·
  * 건물이 상속·증여면 「건물(상속개시일 평가액)」(D2 — 같은 파트 중립 상수).
  */
-function partTag(p: SplitGainPartSummary, mixedCause: boolean): string {
+function partTag(p: SplitGainPartSummary, mixedCause: boolean, carryover?: "applied" | "excluded"): string {
+  // 파트 이월과세(§97의2①) — 적용 파트의 취득가액은 증여자 취득가액, 미적용 파트는 증여 신고가액이다(엔진 echo `carryover.judgment`).
+  if (carryover) return `${p.label}(${carryover === "applied" ? "이월과세 — 증여자 취득가액" : SPLIT_CAUSE_VALUE_LABEL.gift})`;
   // D1-4·D2-4 — 영 §163⑨ 단서 1호·2호 비교가 적용된 파트는 **채택된 쪽** 이름을 쓴다(② 채택인데 「평가액」이라 적으면 거짓 라벨).
   const basis = splitAcqBasisView(p);
   if (basis) return `${p.label}(${basis.adoptedLabel})`;
@@ -78,7 +86,7 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
   if (!sd) return undefined;
   const s = summarizeSplitGain(sd);
   if (s.parts.length === 0) return undefined;
-  const body = s.parts.map((p) => `${partTag(p, s.mixedCause)} ${fmt(p.acquisitionDeducted)}`).join(" + ");
+  const body = s.parts.map((p) => `${partTag(p, s.mixedCause, sd[p.key].carryover?.judgment)} ${fmt(p.acquisitionDeducted)}`).join(" + ");
   const swapped = s.parts.filter((p) => p.swapApplied);
   const swapNote =
     swapped.length > 0
@@ -88,7 +96,24 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
   // `find` 1개로 충분하다 — 단서 1호(토지)는 건물 매매, 2호(건물)는 토지 매매일 때만 서므로 두 파트에 동시에 서지 않는다.
   const basis = s.parts.map((p) => splitAcqBasisView(p)).find((v) => v !== undefined);
   const basisNote = basis ? ` ※ ${splitAcqBasisFormula(basis)} (${basis.legalBasis})` : "";
-  return `${body} — 토지·건물 파트별 산정 (소득세법 §97①1호 가목·나목)${swapNote}${basisNote}`;
+  return `${body} — 토지·건물 파트별 산정 (소득세법 §97①1호 가목·나목)${swapNote}${basisNote}${splitCarryoverAcqNote(sd)}`;
+}
+
+/** 파트 이월과세 판정·취득가액 분해 — 상세명세서 「취득가액」 행 각주. 이월과세 echo가 없으면 빈 문자열(종전 문구 그대로). */
+function splitCarryoverAcqNote(sd: SplitGainResult): string {
+  const v = splitCarryoverView(sd);
+  if (!v) return "";
+  return v.parts.map((p) => ` ※ ${splitCarryoverVerdictText(p)} — ${splitCarryoverAcquisitionText(p)} (소득세법 §97의2①·②3호)`).join("");
+}
+
+/**
+ * 상세명세서 「취득일자」·「보유기간」 행의 파트 이월과세 문구 — 파트별 보유기간·세율 기산일(적용: 증여자 취득일, 미적용: 증여 등기접수일).
+ * 이월과세 echo가 없으면 `undefined`. 예: `토지 증여자 취득일 1995-03-01 / 건물 증여 등기접수일 2023-03-01`
+ */
+export function splitCarryoverDateText(sd: SplitGainResult | undefined): string | undefined {
+  const v = splitCarryoverView(sd);
+  if (!v) return undefined;
+  return v.parts.map((p) => `${p.label} ${p.lthdStartLabel} ${p.lthdStartDate}${p.applied ? "" : " (이월과세 미적용)"}`).join(" / ");
 }
 
 /**
@@ -101,7 +126,8 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
 export function splitExpenseText(sd: SplitGainResult | undefined, fallbackRate?: number): string | undefined {
   if (!sd) return undefined;
   const s = summarizeSplitGain(sd);
-  if (!s.parts.some((p) => p.appraisalDeduction > 0 || p.swapApplied)) return undefined;
+  const carryover = splitCarryoverView(sd);
+  if (!carryover && !s.parts.some((p) => p.appraisalDeduction > 0 || p.swapApplied)) return undefined;
   const items: string[] = [];
   for (const p of s.parts) {
     const raw = sd[p.key];
@@ -121,7 +147,18 @@ export function splitExpenseText(sd: SplitGainResult | undefined, fallbackRate?:
     }
   }
   if (items.length === 0) return undefined;
-  return `필요경비 ${fmt(s.necessaryExpense)} = ${items.join(" + ")} — 소득세법 §97①·§97②2호·시행령 §163⑥`;
+  // 파트 이월과세 — 직접경비 안에 증여자 자본적지출·증여세 상당액이 섞여 있다. 수증자 입력분과 가산분을 풀어 쓰고 안분 산식을 밝힌다(영 §163의2②).
+  const carryoverNote = (carryover?.parts ?? [])
+    .map((p) => {
+      const adds = [
+        p.donorCapexAdded > 0 ? ` + 증여자 자본적지출 ${fmt(p.donorCapexAdded)}` : "",
+        p.giftTaxAdded > 0 ? ` + 증여세 상당액 ${fmt(p.giftTaxAdded)}` : "",
+      ].join("");
+      const head = p.applied && adds ? ` ※ ${p.label} 자본적지출·양도비 = 수증자 자본적지출·양도비 ${fmt(p.recipientExpense)}${adds}` : "";
+      return `${head} ※ ${splitCarryoverApportionText(carryover!, p)}`;
+    })
+    .join("");
+  return `필요경비 ${fmt(s.necessaryExpense)} = ${items.join(" + ")} — 소득세법 §97①·§97②2호·시행령 §163⑥${carryoverNote}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -132,7 +132,7 @@ export function BuildingCauseMixBlock(props: {
               <FieldCard
                 label="증여자 취득일"
                 field="donorAcquisitionDate"
-                hint="선택 입력 — 단순 증여의 세율 보유기간은 증여받은 날부터입니다 (소득세법 §104② 본문). 통산이 필요하면 취득원인을 「이월과세(증여)」로 선택하세요."
+                hint="선택 입력 — 단순 증여의 세율 보유기간은 증여받은 날부터입니다 (소득세법 §104② 본문). 건물만 이월과세이고 토지는 매수한 조합은 아직 계산하지 못합니다."
               >
                 <DateInput
                   value={asset.donorAcquisitionDate}
@@ -148,8 +148,9 @@ export function BuildingCauseMixBlock(props: {
             <ToneCard tone="amber" noDark>
               <p className="text-xs text-amber-900" data-testid="building-gift-carryover-notice">
                 양도일부터 소급하여 10년 이내에 <strong>배우자·직계존비속</strong>으로부터 증여받은 건물은 취득가액·보유기간을 증여자 기준으로
-                계산하는 이월과세 대상인지 확인하세요(소득세법 §97의2①). 이 화면은 그 계산을 지원하지 않으며, 건물은 일반 증여(증여일
-                평가액·증여일 취득)로 계산됩니다. 이월과세 대상이면 취득 원인을 「이월과세(증여)」로 선택하세요.
+                계산하는 이월과세 대상인지 확인하세요(소득세법 §97의2①). 이 화면은 <strong>건물만 이월과세이고 토지는 매수한 경우를 아직 계산하지
+                못하며</strong>, 건물은 일반 증여(증여일 평가액·증여일 취득)로 계산됩니다. 토지·건물이 모두 이월과세 대상이면 취득 원인을
+                「이월과세(증여)」로 선택하세요 — 증여자가 토지와 건물을 다른 날 취득했다면 그 화면에서 따로 입력합니다.
               </p>
             </ToneCard>
           )}

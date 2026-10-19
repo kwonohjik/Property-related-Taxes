@@ -24,6 +24,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
 import { landCauseMixActive } from "./transfer-land-part-cause";
+import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 
 /**
  * 이 자산에서 §164⑦ PHD 토글에 **도달할 수 있는가**.
@@ -78,9 +79,17 @@ export function phdToggleCauseReachable(asset: { acquisitionCause?: string; isMi
  * ⇒ 축은 `carryover.estimationMode`다. ④·⑧·⑤가 같은 사실을 보게 한다.
  */
 export function carryoverPhdMode(
-  asset: Pick<AssetForm, "acquisitionCause" | "carryover"> & { assetKind?: AssetForm["assetKind"] },
+  asset: Pick<AssetForm, "acquisitionCause" | "carryover"> & {
+    assetKind?: AssetForm["assetKind"];
+    carryoverDonorSplit?: boolean;
+    isMixedUseHouse?: boolean;
+    selfOwns?: AssetForm["selfOwns"];
+    transferType?: string;
+  },
 ): boolean {
   if (asset.acquisitionCause !== "carryover_gift") return false;
+  // P2 C — 파트 이월과세는 환산을 지원하지 않는다(I-4). 건물 파트가 읽는 `carryover.estimationMode`의 phd/apd 잔재로 PHD payload를 싣지 않는다.
+  if (effectiveCarryoverDonorSplit(asset)) return false;
   const c = asset.carryover;
   if (!c?.useEstimatedAcquisition) return false;
   // 일반건물은 PHD·APD 환산을 계산에 쓰지 않는다 — 아래 `carryoverEstimationModeSupported`. ⑤가 옵션을 숨기고 ⑧이 막으므로
@@ -122,8 +131,10 @@ export function phdFlagEffective(
   asset: Pick<
     AssetForm,
     "usePreHousingDisclosure" | "acquisitionCause" | "assetKind" | "isMixedUseHouse" | "landAcquisitionCause" | "hasSeperateLandAcquisitionDate"
-  > & { landCauseHost?: string; transferType?: string },
+  > & { landCauseHost?: string; transferType?: string; carryoverDonorSplit?: boolean; selfOwns?: AssetForm["selfOwns"] },
 ): boolean {
+  // P2 C — 파트 이월과세는 환산을 지원하지 않는다(I-4). 취득일이 오래된 주택에서 매매 블록이 자동으로 켠 PHD 잔재가 남아 있어도 무시한다(엔진 S4 PHD 차단과 같은 입력).
+  if (effectiveCarryoverDonorSplit(asset)) return false;
   // D2 합성 술어 — 건물 상속·증여 + 토지 매매도 PHD를 무시한다(상속·증여 건물은 환산 불가, 엔진 R-X2 purchase판).
   // 토글이 렌더되지 않는 취득원인(상속·증여·신축)에 남은 자동 ON 잔재도 무시한다(`phdToggleCauseReachable` — D2-2 Check).
   return asset.usePreHousingDisclosure === true && !landCauseMixActive(asset) && phdToggleCauseReachable(asset);
@@ -147,6 +158,9 @@ export function phdPayloadActive(
     | "isMixedUseHouse"
     | "landAcquisitionCause"
     | "landCauseHost"
+    | "carryoverDonorSplit"
+    | "selfOwns"
+    | "transferType"
   >,
 ): boolean {
   if (carryoverPhdMode(asset)) return true;
