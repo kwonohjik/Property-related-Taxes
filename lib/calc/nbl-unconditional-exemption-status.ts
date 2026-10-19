@@ -15,6 +15,7 @@
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { buildUnconditionalExemption } from "@/lib/tax-engine/non-business-land/form-mapper-helpers";
+import { hasDeclaredUnconditionalExemption } from "@/lib/tax-engine/non-business-land/form-mapper-helpers";
 import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import type {
@@ -24,9 +25,12 @@ import type {
   UnconditionalExemptionReason,
 } from "@/lib/tax-engine/non-business-land/types";
 
-/** 무조건 의제 토글 식별자 (AssetForm nblExempt* 8종) */
+/**
+ * 무조건 의제 토글 식별자 (AssetForm nblExempt* 7종).
+ * ③1호(2006.12.31. 이전 상속)는 토글이 없다 — ③4호 나목과 함께 취득원인·상속개시일로 자동 판정한다
+ * (계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md`).
+ */
 export type NblExemptToggleKey =
-  | "inheritBefore2007"
   | "longOwned20y"
   | "ancestor8Year"
   | "publicExpropriation"
@@ -44,7 +48,7 @@ export interface ToggleExemptionStatus {
 }
 
 export interface NblExemptionEval {
-  /** 8토글 중 하나라도 ON (기존 anyExempt 대체) */
+  /** 선언 토글(또는 양도원인 공익수용) 중 하나라도 ON — 자동 판정 사유(상속)는 포함하지 않는다 */
   anyToggleOn: boolean;
   /** 엔진 실제 판정 — 하나라도 요건 충족 */
   isExempt: boolean;
@@ -68,13 +72,6 @@ interface ToggleDef {
 
 const TOGGLE_DEFS: readonly ToggleDef[] = [
   {
-    key: "inheritBefore2007",
-    flagField: "nblExemptInheritBefore2007",
-    uncondField: "isInheritedBefore2007",
-    requirementHint:
-      "상속일이 2006.12.31. 이전이고 2009.12.31.까지 양도, 지목이 농지·임야·목장이어야 사업용으로 확정됩니다.",
-  },
-  {
     key: "longOwned20y",
     flagField: "nblExemptLongOwned20y",
     uncondField: "ownedOver20YearsBefore2007",
@@ -86,7 +83,7 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
     flagField: "nblExemptAncestor8YearFarming",
     uncondField: "isAncestor8YearFarming",
     requirementHint:
-      "직계존속·배우자가 8년 이상 재촌·자경한 농지·임야·목장을 상속·증여받고, 양도 당시 도시지역(주거·상업·공업)이 아니어야 확정됩니다.",
+      "직계존속·배우자가 8년 이상 재촌·자경한 농지·임야·목장을 상속·증여받고(취득원인이 상속·증여), 양도 당시 도시지역(주거·상업·공업)이 아니어야 확정됩니다.",
   },
   {
     key: "publicExpropriation",
@@ -114,7 +111,7 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
     flagField: "nblExemptUrbanFarmlandJongjoong",
     uncondField: "isUrbanFarmlandJongjoongOrInherited",
     requirementHint:
-      "지목이 농지여야 확정됩니다 (도시지역 內 종중 또는 상속 5년 이내 양도 농지).",
+      "지목이 농지이고 양도 당시 도시지역(주거·상업·공업) 안이며, 종중이 2005.12.31. 이전에 취득한 농지여야 확정됩니다.",
   },
   {
     key: "inong",
@@ -154,10 +151,7 @@ export function buildUncondSourceRecord(asset: AssetForm): Record<string, unknow
  * 클라이언트는 의제 미성립, 서버는 성립으로 갈렸다 (A1-03·A2-03·A3-03).
  */
 function hasAnyExemptionTrigger(asset: AssetForm): boolean {
-  return (
-    TOGGLE_DEFS.some((d) => asset[d.flagField] === true) ||
-    asset.transferCause === "public_expropriation"
-  );
+  return hasDeclaredUnconditionalExemption(buildUncondSourceRecord(asset));
 }
 
 function buildMinimalInput(
@@ -175,21 +169,27 @@ function buildMinimalInput(
   } as unknown as NonBusinessLandInput;
 }
 
-/** 특정 토글 하나만 true 로 격리한 uncond 사본 (날짜는 유지) */
+/**
+ * 특정 토글 하나만 남긴 uncond 사본 (날짜는 유지).
+ * 남기는 표지도 매퍼가 정한 값을 그대로 쓴다 — `true`로 덮으면 매퍼 게이트(③1의2호 취득원인 등)가 배지에서만 풀린다.
+ * 상속개시일은 어느 토글의 것도 아니라(③1호·③4호 나목 자동 판정) 지운다 — 남기면 다른 토글의 배지가 상속 사유로 「충족」이 된다.
+ */
 function isolate(
   uncond: UnconditionalExemptionInput,
   only: keyof UnconditionalExemptionInput,
 ): UnconditionalExemptionInput {
+  const keep = (f: keyof UnconditionalExemptionInput) => only === f && uncond[f] === true;
   return {
     ...uncond,
-    isInheritedBefore2007: only === "isInheritedBefore2007",
-    ownedOver20YearsBefore2007: only === "ownedOver20YearsBefore2007",
-    isAncestor8YearFarming: only === "isAncestor8YearFarming",
-    isPublicExpropriation: only === "isPublicExpropriation",
-    isFactoryAdjacent: only === "isFactoryAdjacent",
-    isJongjoongOwned: only === "isJongjoongOwned",
-    isUrbanFarmlandJongjoongOrInherited: only === "isUrbanFarmlandJongjoongOrInherited",
-    isInong: only === "isInong",
+    isInheritedBefore2007: false,
+    inheritanceDate: undefined,
+    ownedOver20YearsBefore2007: keep("ownedOver20YearsBefore2007"),
+    isAncestor8YearFarming: keep("isAncestor8YearFarming"),
+    isPublicExpropriation: keep("isPublicExpropriation"),
+    isFactoryAdjacent: keep("isFactoryAdjacent"),
+    isJongjoongOwned: keep("isJongjoongOwned"),
+    isUrbanFarmlandJongjoongOrInherited: keep("isUrbanFarmlandJongjoongOrInherited"),
+    isInong: keep("isInong"),
   };
 }
 
@@ -204,14 +204,10 @@ export function evaluateUnconditionalExemption(
   const record = buildUncondSourceRecord(asset);
   const anyToggleOn = hasAnyExemptionTrigger(asset);
 
-  if (!anyToggleOn) {
-    return { anyToggleOn: false, isExempt: false, perToggle: {} };
-  }
-
+  // 선언이 없어도 상속 자산이면 정의된다(③1호·③4호 나목 자동 판정 — 서버 매퍼와 같은 함수).
   const uncond = buildUnconditionalExemption(record, toOptionalDate);
-  // anyToggleOn 이면 buildUnconditionalExemption 은 항상 정의됨(내부 has 가드와 동일 조건).
   if (!uncond) {
-    return { anyToggleOn: true, isExempt: false, perToggle: {} };
+    return { anyToggleOn, isExempt: false, perToggle: {} };
   }
 
   const categoryGroup = getLandCategoryGroup((asset.nblLandType ?? "") as LandType);
@@ -240,7 +236,7 @@ export function evaluateUnconditionalExemption(
   }
 
   return {
-    anyToggleOn: true,
+    anyToggleOn,
     isExempt: agg.isExempt,
     matched: agg.isExempt
       ? { reason: agg.reason, detail: agg.detail, legalBasis: agg.legalBasis }

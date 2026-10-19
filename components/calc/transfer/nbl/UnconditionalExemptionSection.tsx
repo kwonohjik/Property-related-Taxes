@@ -2,6 +2,7 @@
 
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -66,28 +67,19 @@ export function UnconditionalExemptionSection({
         </div>
       ) : null}
 
-      <ToggleCard
-        tone="violet"
-        title="2006.12.31. 이전 상속받은 토지"
-        trailing={
-          <LawArticleModal
-            legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168의14③1호"
-            className={LAW_BADGE_CLASS}
-          />
-        }
-        checked={asset.nblExemptInheritBefore2007}
-        onCheckedChange={(v) => onAssetChange({ nblExemptInheritBefore2007: v })}
-      >
-        <div>
-          <label className="block text-xs text-muted-foreground mb-1">상속일</label>
-          <DateInput
-            value={asset.nblExemptInheritDate}
-            onChange={(v) => onAssetChange({ nblExemptInheritDate: v })}
-          />
-        </div>
-        <ExemptionStatusBadge status={status.perToggle.inheritBefore2007} />
-      </ToggleCard>
+      {/*
+        ③1호(2006.12.31. 이전 상속)·③4호 나목(도시지역 농지 상속 5년)은 「상속받은」·「상속개시일」 외 요건이 양도일·지목·
+        용도지역뿐이라 토글 없이 자동 판정한다(계획서 docs/00-pm/nbl-unconditional-inherit-cause.plan.md). 성립하면 위 배너가 밝힌다.
+      */}
+      {asset.acquisitionCause === "inheritance" && (
+        <ToneCard tone="violet">
+          <p className="text-caption" data-testid="nbl-uncond-inherit-auto-notice">
+            상속받은 토지입니다. 2006.12.31. 이전 상속 후 2009.12.31.까지 양도한 농지·임야·목장용지(소득령 §168의14③1호)와
+            도시지역 농지로서 상속개시일부터 5년 이내에 양도하는 토지(③4호 나목)는 취득일 칸의
+            상속개시일({asset.acquisitionDate || "취득일 칸에 입력"})로 자동 판정하므로 따로 선택하지 않습니다.
+          </p>
+        </ToneCard>
+      )}
 
       <ToggleCard
         tone="violet"
@@ -189,11 +181,11 @@ export function UnconditionalExemptionSection({
 
       <ToggleCard
         tone="violet"
-        title="도시지역 농지 종중·상속 5년 이내 양도 특례"
+        title="도시지역 농지 — 종중 소유 (2005.12.31. 이전 취득)"
         trailing={
           <LawArticleModal
             legalBasis="소득세법시행령 §168조의14"
-            label="소득령 §168의14③4호"
+            label="소득령 §168의14③4호가목"
             className={LAW_BADGE_CLASS}
           />
         }

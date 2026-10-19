@@ -25,6 +25,7 @@ import {
   asString, asBool, asArray,
   mapBusinessUsePeriods,
   buildUnconditionalExemption,
+  hasDeclaredUnconditionalExemption,
   buildFarmlandDeeming,
   buildForestDetail,
   buildPasture,
@@ -66,7 +67,7 @@ export function mapAssetToNblInput(
   if (!asset.nblUseDetailedJudgment) return null;
   // 지목 미선택이라도 무조건 사업용 의제(§168의14③) 토글이 있으면 의제 판정(engine Step 2)을 위해 진행.
   // 빈 landType → classifyLandCategory "unknown" → 의제 성립 시 지목별 judge 이전 즉시 사업용 반환.
-  if (!asset.nblLandType && !buildUnconditionalExemption(asset, context.parseDate)) return null;
+  if (!asset.nblLandType && !hasDeclaredUnconditionalExemption(asset)) return null;
 
   const { acquisitionDate, transferDate, parseDate, parseNumber } = context;
   const landType = asString(asset.nblLandType) as LandType;

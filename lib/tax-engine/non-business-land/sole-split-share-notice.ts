@@ -5,20 +5,31 @@
  * 정밀판정 입력을 싣는다(계획서 `docs/00-pm/axis-b-land-share-nbl-detailed-judgment.plan.md` §4-2). 세액은 그 입력대로이고
  * 여기서는 바꾸지 않는다 — 꺼진 선언을 말로 밝힐 뿐이다. 지분 전부를 함께 보는 다건 엔진(`transfer-tax-aggregate-asset-records.ts`)이 부른다.
  *
- * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 6종이나 임야·목장 「상속 3년 이내」 중 이 지분에서 꺼진 것이 있음.
+ * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 5종이나, 첫 지분에 적용된 상속 사유(임야·목장 「상속 3년 이내」,
+ * 무조건 의제 ③1호·③4호 나목) 중 이 지분이 상속이 아니어서 빠진 것이 있음.
  */
 import { addYears } from "date-fns";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { UnconditionalExemptionInput } from "./types";
 import { NBL } from "../legal-codes";
+import { checkUnconditionalExemption } from "./unconditional-exemption";
+import { getLandCategoryGroup } from "./land-category";
 
 const ACQUISITION_DEPENDENT: ReadonlyArray<[keyof UnconditionalExemptionInput, string]> = [
-  ["isInheritedBefore2007", "2006.12.31. 이전 상속"],
   ["ownedOver20YearsBefore2007", "2006.12.31. 이전 20년 이상 소유"],
   ["isAncestor8YearFarming", "직계존속 8년 이상 재촌·자경 토지의 상속·증여"],
   ["isJongjoongOwned", "종중 소유"],
-  ["isUrbanFarmlandJongjoongOrInherited", "도시지역 농지(종중·상속)"],
+  ["isUrbanFarmlandJongjoongOrInherited", "도시지역 농지 종중 소유"],
   ["isInong", "이농"],
+];
+
+/**
+ * 취득원인·상속개시일로 자동 판정하는 무조건 의제 — 첫 지분에서 성립한 사유(엔진 판정)를 근거 조문으로 고른다.
+ * (계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md` §4-3 E5)
+ */
+const AUTO_INHERITANCE_BASIS: ReadonlyArray<[string, string]> = [
+  [NBL.UNCONDITIONAL_INHERIT_BEFORE_2007, "2006.12.31. 이전 상속 무조건 사업용 의제"],
+  [NBL.UNCONDITIONAL_URBAN_FARMLAND_INHERIT, "도시지역 농지 상속 5년 무조건 사업용 의제"],
 ];
 
 export function nblShareExemptionWithheldNotice(
@@ -37,7 +48,10 @@ export function nblShareExemptionWithheldNotice(
    * 알린다(계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md` §3-3 E5).
    */
   const appliedToFirst = (start: Date | undefined) => start !== undefined && f !== undefined && f.transferDate < addYears(start, 3);
+  const firstUncond = f ? checkUnconditionalExemption(f, getLandCategoryGroup(f.landType)) : undefined;
   const notInherited = [
+    ...AUTO_INHERITANCE_BASIS.filter(([basis]) => firstUncond?.legalBasis === basis && s.unconditionalExemption?.inheritanceDate === undefined)
+      .map(([basis, label]) => `${label}(${basis})`),
     ...(appliedToFirst(f?.forestDetail?.forestInheritanceDate) && s.forestDetail?.forestInheritanceDate === undefined
       ? [`상속 3년 이내 임야(${NBL.FOREST_INHERIT_3Y})`]
       : []),

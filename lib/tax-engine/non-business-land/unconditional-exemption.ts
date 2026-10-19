@@ -126,11 +126,16 @@ export function checkUnconditionalExemption(
    *      3. 나목 — 상속개시일부터 5년 이내 양도
    *    날짜 미입력은 의제 미성립으로 둔다(자동 fallback 금지 — ⑧이 토글 ON 시 날짜를 요구한다).
    */
-  if (u.isUrbanFarmlandJongjoongOrInherited && categoryGroup === "farmland") {
+  /*
+   * 가목은 선언(`isUrbanFarmlandJongjoongOrInherited` — 이름은 레거시, 이제 종중 전용)이 있어야 보고, 나목은 선언 없이
+   * 상속개시일(`inheritanceDate` — 매퍼가 취득원인=상속일 때만 취득일로 채운다)로 본다. 강행규정이라 선언을 요구하지
+   * 않는다(계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md` Q-1 a).
+   */
+  if (categoryGroup === "farmland") {
     // 본문 요건 — 1호 나목은 도시지역(주·상·공) 안의 농지에만 적용된다.
     if (isUrbanForFarmland(input.zoneType)) {
       // 가목 — 종중 소유 (2005.12.31. 이전 취득)
-      if (u.jongjoongAcquisitionDate && u.jongjoongAcquisitionDate <= JONGJOONG_CUTOFF) {
+      if (u.isUrbanFarmlandJongjoongOrInherited && u.jongjoongAcquisitionDate && u.jongjoongAcquisitionDate <= JONGJOONG_CUTOFF) {
         return {
           isExempt: true,
           reason: "jongjoong_or_inherit_urban_farmland",
