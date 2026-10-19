@@ -10,9 +10,16 @@
  * | C-2 | 상속주택은 세지 않는다(§156의2⑦) |
  * | C-3 | 2개 이상이면 요건 불충족 · 1개(사업 대상)·0개(명부 없음)는 다른 요건으로 판정 |
  * | C-4 | §89② 예외는 요건을 갖췄을 때만 — 선언만으로는 예외가 아니다 |
+ * | C-5 | 기존주택의 연장인 행(원조합원 신축주택 — 결정 #43)은 완공일이 아니라 기존주택 취득일로 선후를 가린다 |
+ *
+ * route 결론(C-5)은 평가셋 G120-era-origin · G128-era-origin이 고정한다.
  */
 import { describe, it, expect } from "vitest";
-import { meetsReplacementHouse, replacementHouseHeldUnits } from "@/lib/tax-engine/one-house/replacement-house";
+import {
+  meetsReplacementHouse,
+  replacementHouseHeldAfterAcquisitionUnits,
+  replacementHouseHeldUnits,
+} from "@/lib/tax-engine/one-house/replacement-house";
 import { resolveArticle89Clause2 } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import type { HouseInfo, PresaleRight } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 
@@ -71,5 +78,25 @@ describe("C-4 §89② 예외", () => {
     expect(met.status).toBe("exception_met");
     const unmet = resolveArticle89Clause2(input([], [right("A1", "1995-05-15")], 6) as never, undefined);
     expect(unmet.status).not.toBe("exception_met");
+  });
+});
+
+describe("C-5 기존주택의 연장인 행 — 선후는 기존주택 취득일", () => {
+  // 대체주택 2015-07-24 취득 · 원조합원 신축주택은 2017-03-01 완공(기존주택 2010-03-15 취득) · 양도 2018-10-29
+  const rebuilt = { ...house("A", "2017-03-01"), predecessorHouseAcquisitionDate: D("2010-03-15") } as HouseInfo;
+  it("대체주택 취득 당시 보유한 사업 대상으로 세고, 대체주택 뒤 취득분으로 세지 않는다 → 성립", () => {
+    const i = input([house("B", "2015-07-24"), rebuilt]);
+    expect(replacementHouseHeldUnits(i)).toBe(1);
+    expect(replacementHouseHeldAfterAcquisitionUnits(i)).toBe(0);
+    expect(meetsReplacementHouse(i)).toBe(true);
+  });
+  it("음성 짝 — 기존주택 취득일이 없으면(완공일만) 대체주택 뒤 취득분이라 불충족", () => {
+    const i = input([house("B", "2015-07-24"), house("A", "2017-03-01")]);
+    expect(replacementHouseHeldAfterAcquisitionUnits(i)).toBe(1);
+    expect(meetsReplacementHouse(i)).toBe(false);
+  });
+  it("기존주택 취득일이 대체주택 뒤면 연장이어도 뒤 취득분이다", () => {
+    const late = { ...house("A", "2017-03-01"), predecessorHouseAcquisitionDate: D("2016-01-10") } as HouseInfo;
+    expect(replacementHouseHeldAfterAcquisitionUnits(input([house("B", "2015-07-24"), late]))).toBe(1);
   });
 });

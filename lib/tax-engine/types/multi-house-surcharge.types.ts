@@ -51,6 +51,12 @@ export interface HouseInfo {
   id: string;
   /** 취득일 */
   acquisitionDate: Date;
+  /**
+   * 기존주택의 연장인 행(원조합원이 기존주택을 재개발·재건축한 주택 · 자가 재건축)의 **기존(헐기 전) 주택 취득일** — 결정 #43.
+   * 명부 화면은 `acquisitionDate`에 완공일을 받고 경위·기존주택 취득일을 따로 받는다. 취득 선후는 이 날짜로 가린다
+   * (§155① `effectiveNewHouseAcquisitionDate`와 같은 술어 · §156의2⑤ `replacement-house.ts`). 없으면 `acquisitionDate`.
+   */
+  predecessorHouseAcquisitionDate?: Date;
   /** 공시가격 (원) — 취득 시 기준 */
   officialPrice: number;
   /**

@@ -59,6 +59,8 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     regionCode: h.regionCode,
     inDesignatedDistrict: h.inDesignatedDistrict,
     acquisitionDate: new Date(h.acquisitionDate),
+    // ⑭ 결정 #43 — 기존주택의 연장인 행의 기존주택 취득일(Date 변환)
+    predecessorHouseAcquisitionDate: toOptionalDate(h.predecessorHouseAcquisitionDate),
     officialPrice: h.officialPrice,
     isInherited: h.isInherited,
     isLongTermRental: h.isLongTermRental,
