@@ -328,7 +328,7 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
     expect(o.r.carryoverTaxationDetail.adoptedScenario).toBe("A");
   });
 
-  it("SPCO-0i C3 자산 이월과세 + 수증자 쪽 토지·건물 같은 날 split → 400 · ⑫ 필드오류 carryoverTaxation = S3 (종전엔 재귀 시나리오 A가 Y8 `LAND_CAUSE_ABSENT`에 걸린 엔진 throw — 필드오류가 없었다)", async () => {
+  it("SPCO-0i C3 자산 이월과세 + 수증자 쪽 토지·건물 같은 날 split → 400 (재귀 시나리오 A가 Y8 `LAND_CAUSE_ABSENT`에 걸린 엔진 throw — 종전과 같다: 필드오류 없음). 파트 서브객체 없는 기존 입력은 P1 전과 같다(`regression-grid.test.ts`) — 병용은 파트 이월과세로", async () => {
     const o = await post({
       acquisitionCause: "carryover_gift",
       acquisitionDate: "2023-03-01",
@@ -339,12 +339,11 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
       buildingAcquisitionPrice: 660_000_000,
     });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o).carryoverTaxation).toEqual([PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE]);
-    // 「토지 취득원인을 매매로 지정하세요」(Y8)는 그 입력의 레버가 아니라 S3가 짚는다 — 안내가 겹치지 않는다
-    expect(errText(o)).not.toContain(LAND_CAUSE_ABSENT_MESSAGE.slice(0, 30));
+    expect(fieldErrors(o)).toEqual({});
+    expect(errText(o)).toContain(LAND_CAUSE_ABSENT_MESSAGE.slice(0, 30));
   });
 
-  it("SPCO-0j C4 증여자 토지일을 landAcquisitionDate에 넣어도 400 · S3 — 병용 수단은 파트 이월과세(landCarryoverPart/buildingCarryoverPart)다", async () => {
+  it("SPCO-0j C4 증여자 토지일을 landAcquisitionDate에 넣어도 400 (같은 사유 — 종전과 같다)", async () => {
     const o = await post({
       acquisitionCause: "carryover_gift",
       acquisitionDate: "2023-03-01",
@@ -353,6 +352,12 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
       landAcquisitionPrice: 50_000_000,
       buildingAcquisitionPrice: 50_000_000,
     });
+    expect(o.status).toBe(400);
+    expect(errText(o)).toContain(LAND_CAUSE_ABSENT_MESSAGE.slice(0, 30));
+  });
+
+  it("SPCO-0i′ 파트 서브객체와 자산 단위 병용은 S3 — 병용 수단이 필요하면 파트 이월과세만 쓴다", async () => {
+    const o = await post({ ...C_NEW, carryoverTaxation: TOP_CT("1995-03-01") });
     expect(o.status).toBe(400);
     expect(fieldErrors(o).carryoverTaxation).toEqual([PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE]);
   });
@@ -372,10 +377,10 @@ describe("SPCO-0 현행 — C 통째 이월과세 (증여자 토지·건물 취�
 });
 
 describe("SPCO-0 전환 — 다건·컴패니언은 명시 거부 (Q-6·Q-7)", () => {
-  it("SPCO-0l 다건 `landAcquisitionCause: carryover_gift` → 400 · properties.0.landAcquisitionCause = MULTI_REJECT_RULES 거부 문구 (공용 leaf G-1이 아니라 다건 규칙이 막는다)", async () => {
+  it("SPCO-0l 다건 `landAcquisitionCause: carryover_gift`(서브객체 없음) → 400 · 공용 leaf S1(종전 G-1 자리) — 서브객체가 있는 입력은 MULTI_REJECT_RULES(T11)", async () => {
     const o = await postMulti({ ...A_FIELDS });
     expect(o.status).toBe(400);
-    expect(fieldErrors(o)["properties.0.landAcquisitionCause"]).toContain(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
+    expect(fieldErrors(o)["properties.0.landCarryoverPart"]).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 
   it("SPCO-0m 다건 새 키(원인 gift)는 더는 strip(200 169,860,000)되지 않는다 → 400", async () => {
@@ -586,7 +591,8 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
   it("SPCO-T11 다건(합산): 새 키·`landAcquisitionCause: carryover_gift` 모두 MULTI_REJECT_RULES로 명시 거부 — strip(200)이 아니다 (SPCO-0m 전환)", async () => {
     const a = await postMulti({ ...A_NEW });
     expect(a.status).toBe(400);
-    expect(Object.keys(fieldErrors(a))).toEqual(expect.arrayContaining(["properties.0.landAcquisitionCause"]));
+    expect(Object.keys(fieldErrors(a))).toEqual(expect.arrayContaining(["properties.0.landCarryoverPart", "properties.0.carryoverGiftEvent"]));
+    expect(fieldErrors(a)["properties.0.landCarryoverPart"]).toContain(MULTI_CARRYOVER_UNSUPPORTED_MESSAGE);
     const b = await postMulti({ ...A_FIELDS, landAcquisitionCause: "gift", carryoverGiftEvent: EVENT(), landCarryoverPart: LAND_PART() });
     expect(b.status).toBe(400);
     expect(Object.keys(fieldErrors(b))).toEqual(expect.arrayContaining(["properties.0.carryoverGiftEvent"]));

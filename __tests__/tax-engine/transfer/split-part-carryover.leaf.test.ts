@@ -120,14 +120,28 @@ describe("S3 — 자산 단위 이월과세와 상호배제", () => {
       collectSplitPartCauseIssues({ ...A, hasLandCarryover: false, carryoverGiftDate: undefined, hasTopLevelCarryover: true }),
     ).toEqual([{ field: "landCarryoverPart", message: PART_CARRYOVER_INPUT_REQUIRED_MESSAGE }]);
   });
-  it("자산 단위 이월과세 + 건물 이월과세 호스트 + 토지 취득일 분리 입력도 닫는다(R-3) — Y8 안내는 겹치지 않는다", () => {
+  it("서브객체 없는 자산 단위 이월과세는 종전에 막히던 결합만 닫는다: 토지 overlay purchase(종전 `:249`)·이월과세(종전 G-1)", () => {
+    const f: SplitPartCauseFacts = {
+      ...A, landAcquisitionCause: "purchase", landAcquisitionDate: "2008-01-01", buildingAcquisitionCause: "carryover_gift", buildingAcquisitionDate: GIFT,
+      hasLandCarryover: false, carryoverGiftDate: undefined, hasTopLevelCarryover: true,
+    };
+    expect(collectSplitPartCauseIssues(f)[0]).toEqual({ field: "carryoverTaxation", message: PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE });
+    expect(fields({ ...f, hasLandAcquisitionDate: false, landAcquisitionDate: undefined })).toContain("carryoverTaxation"); // 종전 `:249`는 토지 취득일과 무관했다
+  });
+  it("토지 원인이 없는 자산 단위 이월과세 + 토지 취득일 분리 입력(소유자 분리·PHD 후퇴 송신 포함)은 여기서 닫지 않는다 — 종전 200/엔진 재귀(Y8) 경로 그대로 (회귀 격자)", () => {
     const f: SplitPartCauseFacts = {
       ...A, landAcquisitionCause: undefined, landAcquisitionDate: "2023-03-01", buildingAcquisitionCause: "carryover_gift",
       buildingAcquisitionDate: "2023-03-01", hasLandCarryover: false, carryoverGiftDate: undefined, hasTopLevelCarryover: true,
     };
-    expect(collectSplitPartCauseIssues(f)).toEqual([{ field: "carryoverTaxation", message: PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE }]);
-    // 토지 취득일이 없는 자산 단위 이월과세(종전 경로)는 무영향
-    expect(msgs({ ...f, hasLandAcquisitionDate: false, landAcquisitionDate: undefined })).toEqual([]);
+    expect(collectSplitPartCauseIssues(f)).toEqual([]);
+    expect(collectSplitPartCauseIssues({ ...f, selfOwns: "building_only" })).toEqual([]);
+    expect(collectSplitPartCauseIssues({ ...f, landAcquisitionDate: "1995-03-01" })).toEqual([]);
+  });
+  it("서브객체·사건·토지 취득일이 모두 없는 원인만의 토지 이월과세는 종전처럼 통과(엔진이 읽지 않는다) · 토지 취득일이 있으면 S1", () => {
+    const f: SplitPartCauseFacts = { ...A, hasLandCarryover: false, carryoverGiftDate: undefined, hasLandAcquisitionDate: false, landAcquisitionDate: undefined };
+    expect(collectSplitPartCauseIssues(f)).toEqual([]);
+    expect(collectSplitPartCauseIssues({ ...f, partCarryoverSupported: false })).toEqual([]);
+    expect(fields({ ...f, hasLandAcquisitionDate: true, landAcquisitionDate: GIFT })).toContain("landCarryoverPart");
   });
   it("stale 자산 단위 객체 — 건물 원인이 이월과세가 아니고 파트 입력도 없으면 무영향(종전 경로 회귀 0)", () => {
     expect(msgs({ ...A, landAcquisitionCause: "purchase", hasLandCarryover: false, carryoverGiftDate: undefined, hasTopLevelCarryover: true })).toEqual([]);

@@ -300,18 +300,20 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   const issues: SplitPartCauseIssue[] = [];
   const cause = f.landAcquisitionCause;
   const buildingCause = f.buildingAcquisitionCause;
-  const landCarry = cause === "carryover_gift";
-  const buildingCarry = buildingCause === "carryover_gift";
   const hasLand = !!f.hasLandCarryover;
   const hasBuilding = !!f.hasBuildingCarryover;
   const hasPart = hasLand || hasBuilding;
   const hasEvent = !!f.carryoverGiftDate;
   const hasTop = !!f.hasTopLevelCarryover;
+  // 🔑 **파트 서브객체가 없는 기존 입력은 P1 전과 상태·세액이 같아야 한다**(회귀 격자 `regression-grid.test.ts`). 종전 G-1은 토지 취득일이 있을 때만
+  //    토지 이월과세 원인을 읽었다 — 토지 취득일도 서브객체·사건도 없는 원인만의 토지 이월과세는 엔진이 읽지 않아 종전에도 통과했다. 그 입력을 새로 막지 않는다.
+  const landCarry = cause === "carryover_gift" && (!!f.hasLandAcquisitionDate || hasLand || !!f.carryoverGiftDate);
+  const buildingCarry = buildingCause === "carryover_gift";
   const mixed = cause === "inheritance" || cause === "gift" || landCarry;
 
   // ── P1 입구 규칙 (S0·S2′·S3·S1) — 앞이 레버가 다른 항목을 가리지 않게 호스트 → 상호배제 → 입력 짝 순이다.
   // S0 — 파트 이월과세를 받지 않는 자리(컴패니언). 입력이 있는 칸마다 짚는다(칸 없는 400 금지).
-  if (f.partCarryoverSupported === false && (hasPart || hasEvent || landCarry || (buildingCarry && f.hasLandAcquisitionDate && !hasTop))) {
+  if (f.partCarryoverSupported === false && (hasPart || hasEvent || landCarry)) {
     issues.push({ field: "landAcquisitionCause", message: PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE });
     if (hasEvent) issues.push({ field: "carryoverGiftEvent", message: PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE });
     if (hasLand) issues.push({ field: "landCarryoverPart", message: PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE });
@@ -320,8 +322,11 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   // S2′ — 주 자산 파트 이월과세 + 함께 양도 자산: 단건 ②3호 비교가 신고 전체 결정세액을 못 본다(N-1).
   if (f.hasCompanions && hasPart)
     issues.push({ field: hasLand ? "landCarryoverPart" : "buildingCarryoverPart", message: PART_CARRYOVER_COMPANION_MESSAGE });
-  // S3 — 자산 단위 이월과세와의 상호배제(R-1·R-3). 자산 단위 + 토지·건물 취득일 분리 입력도 닫는다(종전엔 엔진 throw뿐이었다).
-  const topConflict = hasTop && (hasPart || (!!f.hasLandAcquisitionDate && buildingCarry));
+  // S3 — 자산 단위 이월과세와의 상호배제(R-1). 파트 서브객체가 있으면 자산 단위와 함께 쓸 수 없다.
+  //   서브객체가 **없는** 입력은 종전에 막히던 결합만 같은 집합으로 닫는다: 건물 이월과세 호스트 + 토지 overlay `purchase`(종전 `:249`) /
+  //   + 토지 overlay 이월과세(종전 G-1). 토지 원인이 없는 «자산 단위 + 토지·건물 취득일 분리 입력»(소유자 분리·PHD 후퇴 송신 포함)은 종전에 통과하는 정상 경로이거나
+  //   엔진 재귀(Y8)가 던지는 경로라 **여기서 닫지 않는다**(첫 구현이 닫아 소유자 분리 H-5 정상 경로를 400으로 만든 회귀를 고쳤다).
+  const topConflict = hasTop && (hasPart || (buildingCarry && (cause === "purchase" || landCarry)));
   if (topConflict) issues.push({ field: "carryoverTaxation", message: PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE });
   // S1 — 취득원인 ⇔ 서브객체. 필수 누락(G-1을 대체: 서브객체가 없으면 취득가액 0 침묵 계산)과 stray(조용히 버리지 않는다).
   if (!topConflict) {
@@ -409,7 +414,7 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   }
 
   // S8 — 자산 단위 필요경비 총액이 있으면 반대 파트 경비가 증여세 산입에 밀린다(`splitPair`가 한쪽만 입력된 파트의 반대편을 총액 − 입력값으로 도출).
-  if (f.hasLegacyExpenses && (hasPart || landCarry || (buildingCarry && f.hasLandAcquisitionDate && !hasTop)))
+  if (f.hasLegacyExpenses && hasPart)
     issues.push({ field: "expenses", message: PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE });
   // S9 — 1세대1주택 비과세와 겹치면 §97의2②2호 판정이 필요하다(P5 전까지 막는다). 게이트는 `checkExemptionCore`가 비과세 평가를 시작하는 조건과 같다
   // (비주택 `building`은 비과세 평가가 없다 · 모름 = 불성립). `isOneHousehold`는 ④가 폼에서 실제로 싣는 값이어야 한다(3중 패턴).
