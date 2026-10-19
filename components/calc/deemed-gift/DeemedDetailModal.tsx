@@ -159,7 +159,7 @@ export function DeemedDetailModal({
 
           {error && (
             <p
-              className="mt-3 text-sm font-medium text-rose-600"
+              className="mt-3 text-sm font-medium text-rose-600 dark:text-rose-400"
               data-testid="deemed-detail-error"
             >
               {error}

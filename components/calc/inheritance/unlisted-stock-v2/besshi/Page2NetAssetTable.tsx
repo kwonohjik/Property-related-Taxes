@@ -120,9 +120,9 @@ function NetAssetTr({
   topBorder?: boolean;
 }) {
   const rowClass = emphasis
-    ? "bg-yellow-50 font-bold print:bg-yellow-50"
+    ? "bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40"
     : isFinal
-      ? "bg-emerald-50 font-bold print:bg-emerald-50"
+      ? "bg-emerald-50 font-bold print:bg-emerald-50 dark:bg-emerald-950/40"
       : topBorder
         ? "border-t-2 border-black"
         : "";

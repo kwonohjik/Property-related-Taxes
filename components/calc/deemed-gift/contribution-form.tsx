@@ -46,13 +46,13 @@ function ConPartyRow({
   return (
     <div className="rounded-md border border-violet-200 bg-white dark:bg-gray-900 p-2 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-violet-700">
+        <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
           {isHigh ? `수증자 ${idx + 1}` : `증여자 ${idx + 1}`}
         </span>
         <button
           type="button"
           onClick={onRemove}
-          className="text-xs text-rose-500 hover:text-rose-700"
+          className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
           aria-label={`${idx + 1}번 행 삭제`}
         >
           삭제
@@ -184,8 +184,8 @@ export function ContributionFields({ form, set }: Props) {
         }
       >
         {/* §63①1가 종가평균 키움 자동조회 (선택) — 평가기준일 = 증여일 = 현물출자 납입일(법 §39의3① 본문) */}
-        <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
-          <p className="text-xs font-semibold text-emerald-700">
+        <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 dark:bg-emerald-950/40">
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             §63①1가 종가평균 자동조회 (키움, 선택)
           </p>
           <input
@@ -297,7 +297,7 @@ export function ContributionFields({ form, set }: Props) {
           <button
             type="button"
             onClick={addParty}
-            className="w-full rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs text-violet-600 hover:bg-violet-50"
+            className="w-full rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs text-violet-600 hover:bg-violet-50 dark:text-violet-400"
           >
             + {isHigh ? "수증자" : "증여자"} 추가
           </button>
@@ -305,7 +305,7 @@ export function ContributionFields({ form, set }: Props) {
             <p className="text-xs text-muted-foreground text-right">
               합계 주식수: {sumShares.toLocaleString()}주
               {sumExceedsBase && (
-                <span className="ml-1 text-rose-500">(기준 주식수 초과)</span>
+                <span className="ml-1 text-rose-500 dark:text-rose-400">(기준 주식수 초과)</span>
               )}
             </p>
           )}

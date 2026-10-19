@@ -77,7 +77,7 @@ export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps)
             ))}
           </tr>
           {/* ① / ② 합계 (맨 위) */}
-          <tr className="bg-yellow-50 print:bg-yellow-50 font-bold">
+          <tr className="bg-yellow-50 print:bg-yellow-50 font-bold dark:bg-yellow-950/40">
             <td className={TD} data-besshi-cell="p4-①" data-testid="p4-①">{C5.assetTotalLabel}</td>
             <td className={TD_AMT}>{fmt(assetEvalSum)}</td>
             <td className={TD_AMT}>{fmt(assetBookSum)}</td>
@@ -105,7 +105,7 @@ export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps)
             );
           })}
           {/* 가. 평가차액 */}
-          <tr className="bg-emerald-50 print:bg-emerald-50 font-bold border-t-2 border-black" data-besshi-cell="p4-가" data-testid="p4-가">
+          <tr className="bg-emerald-50 print:bg-emerald-50 font-bold border-t-2 border-black dark:bg-emerald-950/40" data-besshi-cell="p4-가" data-testid="p4-가">
             <td colSpan={7} className={TD}>{C5.deltaLabel}</td>
             <td className={TD_AMT}>{renderDelta(resolved.evaluationDelta)}</td>
           </tr>

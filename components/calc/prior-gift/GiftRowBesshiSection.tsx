@@ -30,7 +30,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
   const [besshiOpen, setBesshiOpen] = useState(false);
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3 dark:bg-sky-950/40">
       <button
         type="button"
         onClick={() => setBesshiOpen((o) => !o)}
@@ -40,7 +40,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-sky-200 text-micro font-bold text-sky-800 select-none">
           부표
         </span>
-        <p className="text-xs font-semibold text-sky-700 flex-1">
+        <p className="text-xs font-semibold text-sky-700 flex-1 dark:text-sky-300">
           증여재산 및 평가명세서 (별지 제10호서식 부표 1) 표시 (선택 입력)
         </p>
         <span className={expandToggleClass("sky")} aria-hidden>{expandToggleLabel(besshiOpen)}</span>
@@ -50,7 +50,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
 
       {/* 자산 종류 — 부표 1 ② 컬럼 */}
       <div className="space-y-1">
-        <label className="block text-xs font-medium text-sky-700">
+        <label className="block text-xs font-medium text-sky-700 dark:text-sky-300">
           자산 종류 — ② 재산종류코드
         </label>
         <select
@@ -76,7 +76,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
       {/* PR 3 (2026-05-22): 토지 부수토지 토글 — 02/03 코드 분기 */}
       {gift.propertyCategory === "real_estate_land" && (
         <div className="space-y-1">
-          <label className="block text-xs font-medium text-sky-700">
+          <label className="block text-xs font-medium text-sky-700 dark:text-sky-300">
             부수토지 여부 — 02/03 코드 분기
           </label>
           <RadioCardGroup<"pure" | "attached" | "unspecified">
@@ -107,7 +107,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
 
       {/* 자산 명칭 */}
       <div className="space-y-1">
-        <label className="block text-xs font-medium text-sky-700">
+        <label className="block text-xs font-medium text-sky-700 dark:text-sky-300">
           자산 명칭
         </label>
         <input
@@ -123,7 +123,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
 
       {/* 소재지 — 부표 1 ③ 컬럼 */}
       <div className="space-y-1">
-        <label className="block text-xs font-medium text-sky-700">
+        <label className="block text-xs font-medium text-sky-700 dark:text-sky-300">
           소재지·법인명 — ③ 컬럼
         </label>
         <input
@@ -135,7 +135,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
           placeholder="부동산 소재지·법인명 입력"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-        <p className="text-caption text-sky-600">
+        <p className="text-caption text-sky-600 dark:text-sky-400">
           미입력 시 결과 화면 ③ 컬럼에 &quot;사전증여 (YYYY-MM-DD)&quot;로 표시됩니다.
         </p>
       </div>

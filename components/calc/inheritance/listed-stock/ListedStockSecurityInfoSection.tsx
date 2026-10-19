@@ -38,13 +38,13 @@ export function ListedStockSecurityInfoSection({
 
   return (
     <section
-      className="rounded-lg border border-sky-300 bg-sky-50/70 p-3"
+      className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 dark:bg-sky-950/40"
       data-testid="ls-security-info-section"
     >
       <div className="flex items-center justify-between mb-2">
         <div>
-          <h4 className="text-sm font-semibold text-sky-900">종목 정보 입력</h4>
-          <p className="text-xs text-sky-700 mt-0.5">
+          <h4 className="text-sm font-semibold text-sky-900 dark:text-sky-200">종목 정보 입력</h4>
+          <p className="text-xs text-sky-700 mt-0.5 dark:text-sky-300">
             종목명·종목코드·보유 주식 수
           </p>
         </div>

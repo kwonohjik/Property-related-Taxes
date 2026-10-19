@@ -113,7 +113,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
             </FieldCard>
 
             {/* 연도별 회수 스케줄 */}
-            <p className="text-xs font-semibold text-amber-700">연도별 회수 스케줄 (원본 + 이자상당액)</p>
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">연도별 회수 스케줄 (원본 + 이자상당액)</p>
             {schedule.map((row, idx) => (
               <div
                 key={idx}
@@ -140,7 +140,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
                   type="button"
                   onClick={() => removeRow(idx)}
                   data-testid={`receivable-row-${idx}-remove`}
-                  className="mb-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50"
+                  className="mb-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400"
                 >
                   ✕
                 </button>
@@ -150,7 +150,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
               type="button"
               onClick={addRow}
               data-testid="receivable-row-add"
-              className="rounded-md border border-amber-300 bg-amber-100/60 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100"
+              className="rounded-md border border-amber-300 bg-amber-100/60 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:bg-amber-900/40"
             >
               + 회수 연도 추가
             </button>

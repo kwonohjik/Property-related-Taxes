@@ -191,12 +191,12 @@ export function EstimatedProfitToggle({
 
   return (
     <>
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3 dark:bg-violet-950/40">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
             {sectionNum}
           </span>
-          <p className="text-xs font-semibold text-violet-700">추정이익 갈음 (선택)</p>
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">추정이익 갈음 (선택)</p>
         </div>
         <ToggleCard
           lawLinks="상증법"
@@ -230,17 +230,17 @@ export function EstimatedProfitToggle({
                   return (
                     <div
                       key={idx}
-                      className="rounded-md border border-violet-200 bg-violet-50/60 p-2.5 space-y-2"
+                      className="rounded-md border border-violet-200 bg-violet-50/60 p-2.5 space-y-2 dark:bg-violet-950/40"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-caption font-semibold text-violet-800">
+                        <span className="text-caption font-semibold text-violet-800 dark:text-violet-200">
                           평가기관 {idx + 1}
                         </span>
                         {value.agencyEstimates.length > 2 && (
                           <button
                             type="button"
                             onClick={() => handleRemoveAgency(idx)}
-                            className="text-xs text-rose-600 hover:text-rose-700"
+                            className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400"
                             data-testid={`estimated-profit-remove-${idx}`}
                           >
                             삭제
@@ -249,9 +249,9 @@ export function EstimatedProfitToggle({
                       </div>
                       {/* 기관 유형 선택 — RadioCardGroup inline */}
                       <div data-testid={`estimated-profit-agency-type-${idx}`}>
-                        <p className="text-micro text-violet-700 mb-1">
+                        <p className="text-micro text-violet-700 mb-1 dark:text-violet-300">
                           유형{" "}
-                          <span className="text-violet-500">
+                          <span className="text-violet-500 dark:text-violet-400">
                             (<LawArticleModal
                               legalBasis={VALUATION.UNLISTED_ESTIMATED_AGENCY_TYPE}
                               label={VALUATION.UNLISTED_ESTIMATED_AGENCY_TYPE}
@@ -302,7 +302,7 @@ export function EstimatedProfitToggle({
                 <button
                   type="button"
                   onClick={handleAddAgency}
-                  className="text-xs font-medium text-violet-700 hover:text-violet-900"
+                  className="text-xs font-medium text-violet-700 hover:text-violet-900 dark:text-violet-300"
                   data-testid="estimated-profit-add-agency"
                 >
                   + 평가기관 추가
@@ -340,7 +340,7 @@ export function EstimatedProfitToggle({
               {/* ④ 미리보기 — evaluationMethod 배지 포함 */}
               {preview && (
                 <div
-                  className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-xs text-violet-900 space-y-1"
+                  className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-xs text-violet-900 space-y-1 dark:text-violet-200 dark:bg-violet-900/40"
                   data-testid="estimated-profit-preview"
                 >
                   {preview.applied ? (
@@ -358,7 +358,7 @@ export function EstimatedProfitToggle({
                       <b>{fmt(preview.perShareIncomeValue)}</b>
                     </p>
                   ) : (
-                    <p className="text-amber-700">
+                    <p className="text-amber-700 dark:text-amber-300">
                       요건 미충족으로 갈음 미적용 — {preview.warnings.filter((w) => !w.startsWith("[시점 안내]")).join(" / ")}
                     </p>
                   )}
@@ -377,7 +377,7 @@ export function EstimatedProfitToggle({
                       </span>
                       <span
                         className={`text-micro leading-snug ${
-                          preview.evaluationMethod === "legacy" ? "text-amber-700" : "text-violet-700"
+                          preview.evaluationMethod === "legacy" ? "text-amber-700 dark:text-amber-300" : "text-violet-700 dark:text-violet-300"
                         }`}
                       >
                         {preview.evaluationMethodNote}

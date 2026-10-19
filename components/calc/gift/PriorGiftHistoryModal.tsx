@@ -179,7 +179,7 @@ function CandidateCard({
 
       {/* 동일 수증자 일치 배지 — 상속세 모드에는 그 필터가 없다 (IG-026) */}
       {!isInheritanceMode && (
-        <p className="text-caption text-violet-700">
+        <p className="text-caption text-violet-700 dark:text-violet-300">
           ✓ 동일 수증자(=의뢰인) 이력
         </p>
       )}
@@ -321,29 +321,29 @@ export function PriorGiftHistoryModal({
             `filterInheritancePriorGiftCandidates`에는 donor 매칭도 clientId 격리도 **없다**.
             그런데도 종전 요약은 「증여자 관계: 기타」·「동일 수증자(=의뢰인)」를 적용된
             필터인 양 출력했다 — 다른 의뢰인의 이력이 섞여 나오는데 걸렀다고 단언한 것이다. */}
-        <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800" data-testid="prior-gift-filter-summary">
+        <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800 dark:text-sky-200 dark:bg-sky-950/40" data-testid="prior-gift-filter-summary">
           <div>
-            <span className="text-sky-600">{isInheritanceMode ? "상속개시일:" : "현재 증여일:"}</span>{" "}
+            <span className="text-sky-600 dark:text-sky-400">{isInheritanceMode ? "상속개시일:" : "현재 증여일:"}</span>{" "}
             {currentGiftDate}
           </div>
           {isInheritanceMode ? (
-            <div className="text-sky-600">
+            <div className="text-sky-600 dark:text-sky-400">
               필터: 상속개시일 기준 10년 이내 ({tenYearsAgo} 이후) 전수 조회 — 수증자·증여자
               필터는 적용되지 않습니다. 목록에서 피상속인의 증여분인지 직접 확인하세요.
             </div>
           ) : (
             <>
               <div>
-                <span className="text-sky-600">수증자:</span>{" "}
+                <span className="text-sky-600 dark:text-sky-400">수증자:</span>{" "}
                 {currentClientId
                   ? "현재 의뢰인의 사전증여 이력"
                   : "본인(일반 납세자)의 사전증여 이력"}
               </div>
               <div>
-                <span className="text-sky-600">증여자 관계:</span>{" "}
+                <span className="text-sky-600 dark:text-sky-400">증여자 관계:</span>{" "}
                 {DONOR_LABEL[currentDonor]}
               </div>
-              <div className="text-sky-600">
+              <div className="text-sky-600 dark:text-sky-400">
                 필터: 10년 이내 ({tenYearsAgo} 이후) + 동일 수증자(=의뢰인)
               </div>
             </>
@@ -370,7 +370,7 @@ export function PriorGiftHistoryModal({
             <>
               {candidates.length > 0 ? (
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-violet-700">
+                  <h4 className="text-xs font-semibold text-violet-700 dark:text-violet-300">
                     사전증여 이력 — {candidates.length}건
                   </h4>
                   <div className="space-y-3">
@@ -398,7 +398,7 @@ export function PriorGiftHistoryModal({
               )}
 
               {warnings.length > 0 && (
-                <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3">
+                <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40">
                   <button
                     type="button"
                     onClick={() => setWarningsOpen((o) => !o)}
@@ -408,12 +408,12 @@ export function PriorGiftHistoryModal({
                     {expandToggleLabel(warningsOpen)} · ⚠️ 제외된 이력 {warnings.length}건
                   </button>
                   {warningsOpen && (
-                    <ul className="mt-2 space-y-1 text-caption text-amber-700">
+                    <ul className="mt-2 space-y-1 text-caption text-amber-700 dark:text-amber-300">
                       {warnings.slice(0, 20).map((w, i) => (
                         <li key={`${w.calculationId}-${i}`}>• {w.message}</li>
                       ))}
                       {warnings.length > 20 && (
-                        <li className="text-amber-600">(외 {warnings.length - 20}건)</li>
+                        <li className="text-amber-600 dark:text-amber-400">(외 {warnings.length - 20}건)</li>
                       )}
                     </ul>
                   )}

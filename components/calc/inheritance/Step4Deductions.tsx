@@ -520,9 +520,9 @@ export function Step4({
         )}
 
         {/* 신고 상태 — 항상 노출(공제 아닌 공통 상태) */}
-        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2 dark:bg-violet-950/40">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-semibold text-violet-700">
+            <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
               신고 상태 (상증법 §67 · §69 신고세액공제 · §21① 일괄공제 / 국세기본법 §47의2·§47의3)
             </p>
             <LawArticleModal legalBasis="상속세및증여세법 §69" label="§69 신고세액공제" />
@@ -694,9 +694,9 @@ export function Step4({
 
         {/* 외국납부세액공제 §29 — 수동 항목 */}
         {manualActive.foreignTax && (
-          <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+          <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3 dark:bg-violet-950/40">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-xs font-semibold text-violet-700">외국납부세액공제 (§29)</p>
+              <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">외국납부세액공제 (§29)</p>
               <LawArticleModal legalBasis="상속세및증여세법 §29" label="§29" />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">

@@ -134,7 +134,7 @@ export function UnlistedStockHistoryModal({
             {currentCorpName ? (
               <>
                 현재 법인: <strong>{currentCorpName}</strong> · 선택 시 법인 정보가 자동 채워집니다.{" "}
-                <span className="text-amber-700">평가기준일·보유주식수·할증 여부는 보존됩니다.</span>
+                <span className="text-amber-700 dark:text-amber-300">평가기준일·보유주식수·할증 여부는 보존됩니다.</span>
               </>
             ) : (
               "이력에서 선택 시 법인 정보가 자동 채워집니다. 평가기준일·보유주식수는 사용자 입력을 보존합니다."
@@ -159,7 +159,7 @@ export function UnlistedStockHistoryModal({
 
         {data.loaded && sameCorp.length > 0 && (
           <section className="space-y-2" data-testid="same-corp-section">
-            <h3 className="text-xs font-semibold text-indigo-700">
+            <h3 className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
               동일 법인 ({sameCorp.length}건)
             </h3>
             <ul className="space-y-2">
@@ -220,7 +220,7 @@ function CandidateCard({ candidate, onSelect, variant = "same" }: CandidateCardP
   const fmt = (n: number) => n.toLocaleString();
   const tone =
     variant === "same"
-      ? "border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50"
+      ? "border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50 dark:bg-indigo-950/40"
       : "border-gray-200 bg-gray-50/40 hover:bg-gray-50";
   const badgeTone =
     candidate.sourceTaxType === "inheritance"
@@ -252,7 +252,7 @@ function CandidateCard({ candidate, onSelect, variant = "same" }: CandidateCardP
           </p>
         )}
         {candidate.totalValuation === 0 && (
-          <p className="text-amber-700">⚠ 평가 결과 누락 — 법인 정보만 채워집니다</p>
+          <p className="text-amber-700 dark:text-amber-300">⚠ 평가 결과 누락 — 법인 정보만 채워집니다</p>
         )}
       </div>
     </button>

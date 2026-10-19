@@ -250,7 +250,7 @@ export function StockBurdenedDebtSection({
               {/* ① 시장 구분 */}
               <div>
                 <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mb-2">
-                  시장 구분 <span className="text-rose-500">*</span>
+                  시장 구분 <span className="text-rose-500 dark:text-rose-400">*</span>
                 </p>
                 <RadioCardGroup<"kospi" | "kosdaq" | "konex" | "unlisted">
                   name={`stock-bg-market-${item.id}`}
@@ -307,7 +307,7 @@ export function StockBurdenedDebtSection({
               {/* ③ 취득가액 산정 방식 */}
               <div>
                 <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mb-2">
-                  취득가액 산정 방식 <span className="text-rose-500">*</span>
+                  취득가액 산정 방식 <span className="text-rose-500 dark:text-rose-400">*</span>
                 </p>
                 <RadioCardGroup<"actual" | "estimated">
                   name={`stock-bg-acq-mode-${item.id}`}
@@ -364,7 +364,7 @@ export function StockBurdenedDebtSection({
                   tone="amber"
                   sectionNum="A"
                   bodyClassName="space-y-3"
-                  title={<>환산취득가 산정용 1개월 종가평균 <span className="text-rose-500">*</span></>}
+                  title={<>환산취득가 산정용 1개월 종가평균 <span className="text-rose-500 dark:text-rose-400">*</span></>}
                 >
                   <p className="text-caption text-amber-700 dark:text-amber-400">
                     환산취득가 = 양도가액(채무인수액) ×{" "}

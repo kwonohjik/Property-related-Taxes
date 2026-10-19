@@ -37,7 +37,7 @@ export interface ResultTableRowProps {
 export function ResultTableRow({ cellNum, label, value, emphasized, testid, unit = "" }: ResultTableRowProps) {
   return (
     <tr
-      className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50" : ""}
+      className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40" : ""}
       data-testid={testid}
       data-besshi-cell={testid}
     >
@@ -62,7 +62,7 @@ export interface BreakdownRowProps {
 export function BreakdownRow({ label, values, emphasized, unit = "", testid }: BreakdownRowProps) {
   return (
     <tr
-      className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50" : ""}
+      className={emphasized ? "bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40" : ""}
       data-testid={testid}
       data-besshi-cell={testid}
     >

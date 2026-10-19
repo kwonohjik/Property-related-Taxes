@@ -197,7 +197,7 @@ export function SimultaneousGiftCard({
           <button
             type="button"
             onClick={() => setGiftAddOpen(true)}
-            className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100"
+            className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 dark:text-sky-200 dark:bg-sky-900/40"
           >
             + 증여재산 추가
           </button>
@@ -227,7 +227,7 @@ export function SimultaneousGiftCard({
           <button
             type="button"
             onClick={() => setStockAddOpen(true)}
-            className="rounded-md border border-emerald-300 bg-emerald-100/60 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100"
+            className="rounded-md border border-emerald-300 bg-emerald-100/60 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 dark:text-emerald-200 dark:bg-emerald-900/40"
           >
             + 주식·지분 추가
           </button>

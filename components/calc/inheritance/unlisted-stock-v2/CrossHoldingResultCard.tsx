@@ -68,7 +68,7 @@ export function CrossHoldingResultCard({
         </tbody>
       </table>
 
-      <div className="rounded bg-emerald-100/60 px-2 py-1.5 text-caption text-emerald-800">
+      <div className="rounded bg-emerald-100/60 px-2 py-1.5 text-caption text-emerald-800 dark:text-emerald-200 dark:bg-emerald-900/40">
         ②평가차액 자동 주입액 ={" "}
         <span className="font-mono tabular-nums font-semibold">
           {won(reflection.assetValuationDeltaInjection)}

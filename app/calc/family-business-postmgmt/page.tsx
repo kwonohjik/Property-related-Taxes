@@ -391,7 +391,7 @@ function FamilyBusinessPostMgmtPageInner() {
                 <button
                   type="button"
                   onClick={() => setViolations((p) => p.filter((_, i) => i !== idx))}
-                  className="text-caption text-rose-600 hover:text-rose-800 underline"
+                  className="text-caption text-rose-600 hover:text-rose-800 underline dark:text-rose-400"
                 >
                   삭제
                 </button>
@@ -547,7 +547,7 @@ function FamilyBusinessPostMgmtPageInner() {
               <p className="font-semibold">정규직·총급여 §⑤4호 판정 (각 목 모두 미달 = 위반)</p>
               <p>정규직 5년 평균 {result.employmentResult.fiveYearAvg} / 기준 {result.employmentResult.threshold.toFixed(1)} → {result.employmentResult.employmentDrop ? "미달" : "유지"}</p>
               <p>총급여 → {result.employmentResult.salaryDrop ? "미달" : "유지"}</p>
-              <p className={result.employmentResult.bothViolated ? "font-bold text-rose-600" : "text-emerald-600"}>
+              <p className={result.employmentResult.bothViolated ? "font-bold text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>
                 4호 위반: {result.employmentResult.bothViolated ? "예 (가 AND 나)" : "아니오"}
               </p>
               {/* 🔴 IG-012: ③ 판정과 ② 선택이 어긋날 수 있다. 엔진의 위반 루프는 employmentResult를

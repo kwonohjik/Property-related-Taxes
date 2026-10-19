@@ -148,7 +148,7 @@ export function FbAdditionalBusinessesSection({
                 <button
                   type="button"
                   onClick={() => removeItem(idx)}
-                  className="rounded-md px-2 py-1 text-caption font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                  className="rounded-md px-2 py-1 text-caption font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 dark:text-rose-400"
                 >
                   삭제
                 </button>

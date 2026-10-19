@@ -57,12 +57,12 @@ export function EvaluationCommitteeFilingGuideCard({
 
   return (
     <div
-      className="rounded-lg border border-sky-300 bg-sky-50/40 p-4 space-y-3"
+      className="rounded-lg border border-sky-300 bg-sky-50/40 p-4 space-y-3 dark:bg-sky-950/40"
       data-testid="evaluation-committee-filing-guide-card"
     >
       <div className="flex items-center gap-2 pb-2 border-b border-sky-200">
-        <span className="text-sky-600 text-base">📋</span>
-        <h4 className="text-sm font-bold text-sky-900">
+        <span className="text-sky-600 text-base dark:text-sky-400">📋</span>
+        <h4 className="text-sm font-bold text-sky-900 dark:text-sky-200">
           §49의2 평가심의위 신청 행정 안내
         </h4>
       </div>
@@ -72,7 +72,7 @@ export function EvaluationCommitteeFilingGuideCard({
         className="space-y-2"
         data-testid="evaluation-committee-attachments-checklist"
       >
-        <p className="text-xs font-semibold text-sky-800">
+        <p className="text-xs font-semibold text-sky-800 dark:text-sky-200">
           ① 첨부 자료 체크리스트 (§49의2⑤2호)
         </p>
         <ul className="space-y-1.5">
@@ -87,8 +87,8 @@ export function EvaluationCommitteeFilingGuideCard({
                   ({item.no})
                 </span>
                 <div>
-                  <p className="font-semibold text-sky-900">{item.title}</p>
-                  <p className="text-sky-700/80 text-caption mt-0.5">{item.desc}</p>
+                  <p className="font-semibold text-sky-900 dark:text-sky-200">{item.title}</p>
+                  <p className="text-sky-700/80 text-caption mt-0.5 dark:text-sky-300/80">{item.desc}</p>
                 </div>
               </div>
             </li>
@@ -101,11 +101,11 @@ export function EvaluationCommitteeFilingGuideCard({
         className="rounded border border-sky-200 bg-white dark:bg-gray-900 p-2.5 text-xs space-y-1"
         data-testid="evaluation-committee-deadline-guide"
       >
-        <p className="font-semibold text-sky-900">
+        <p className="font-semibold text-sky-900 dark:text-sky-200">
           ② 신청기한 §49의2⑤ · 통지기한 §49의2⑥ ({taxKind === "inheritance" ? "상속세" : "증여세"})
         </p>
-        <p className="text-sky-700">{deadlineLabel}</p>
-        <p className="text-sky-700/70 text-micro">
+        <p className="text-sky-700 dark:text-sky-300">{deadlineLabel}</p>
+        <p className="text-sky-700/70 text-micro dark:text-sky-300/70">
           ※ 신청기한 미준수 시 평가심의위 부의 불가 — 보충적 평가가액으로 신고 (§54①·②)
         </p>
       </section>
@@ -115,8 +115,8 @@ export function EvaluationCommitteeFilingGuideCard({
         className="rounded border border-sky-200 bg-white dark:bg-gray-900 p-2.5 text-xs space-y-1"
         data-testid="evaluation-committee-review-criteria"
       >
-        <p className="font-semibold text-sky-900">③ 심의 고려사항 (§49의2⑦)</p>
-        <ul className="space-y-0.5 text-sky-700">
+        <p className="font-semibold text-sky-900 dark:text-sky-200">③ 심의 고려사항 (§49의2⑦)</p>
+        <ul className="space-y-0.5 text-sky-700 dark:text-sky-300">
           {REVIEW_CRITERIA.map((c) => (
             <li key={c}>{c}</li>
           ))}
@@ -125,13 +125,13 @@ export function EvaluationCommitteeFilingGuideCard({
 
       {/* §49의2⑨ 신용평가전문기관 의뢰 안내 */}
       <section
-        className="rounded border border-amber-300 bg-amber-50 p-2.5 text-xs"
+        className="rounded border border-amber-300 bg-amber-50 p-2.5 text-xs dark:bg-amber-950/40"
         data-testid="evaluation-committee-credit-rating-notice"
       >
-        <p className="font-semibold text-amber-900">
+        <p className="font-semibold text-amber-900 dark:text-amber-200">
           ④ 신용평가전문기관 의뢰 (§49의2⑨)
         </p>
-        <p className="text-amber-800 mt-1">
+        <p className="text-amber-800 mt-1 dark:text-amber-200">
           평가심의위가 신용평가전문기관에 평가 의뢰 결정 시 <strong>수수료는 납세자 부담</strong>.
           사전 비용 산정·동의 필수.
         </p>

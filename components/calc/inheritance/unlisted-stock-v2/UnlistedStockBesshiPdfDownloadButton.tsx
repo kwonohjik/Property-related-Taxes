@@ -65,7 +65,7 @@ export function UnlistedStockBesshiPdfDownloadButton({
     <PDFDownloadLink
       document={document}
       fileName={filename}
-      className="text-xs px-2.5 py-1 rounded border border-indigo-300 bg-white dark:bg-gray-900 hover:bg-indigo-100 text-indigo-700 font-medium transition-colors no-underline"
+      className="text-xs px-2.5 py-1 rounded border border-indigo-300 bg-white dark:bg-gray-900 hover:bg-indigo-100 text-indigo-700 font-medium transition-colors no-underline dark:text-indigo-300"
       data-testid="unlisted-stock-pdf-download-button"
     >
       {({ loading, error }) =>

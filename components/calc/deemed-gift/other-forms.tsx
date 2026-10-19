@@ -43,7 +43,7 @@ export function ExcessDividendFields({ form, set }: Props) {
             않으므로(§0.5) 특수관계인 행 전부를 나열한다 — 초과수령이 없는 사람을 고르면 「초과배당 없음」. */}
         {edRelatedRows.length > 1 && (
           <div className="mt-3 space-y-1">
-            <label className="text-xs font-semibold text-sky-800" htmlFor="ed-target-donee">
+            <label className="text-xs font-semibold text-sky-800 dark:text-sky-200" htmlFor="ed-target-donee">
               계산 대상 수증자 (소득세·정산·증여자 관계 입력은 이 수증자의 값)
             </label>
             <select
@@ -291,8 +291,8 @@ export function ListingGainFields({ form, set }: Props) {
         ]}
       />
       {/* §63①1 정산기준일 평가가액 키움 자동조회 (선택) — onFill로 lgSettlementPrice 자동채움, 미설정 시 수동 입력 */}
-      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
-        <p className="text-xs font-semibold text-emerald-700">§63①1 정산기준일 평가가액 자동조회 (키움, 선택)</p>
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 dark:bg-emerald-950/40">
+        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">§63①1 정산기준일 평가가액 자동조회 (키움, 선택)</p>
         <input
           type="text"
           inputMode="numeric"
@@ -337,7 +337,7 @@ export function ListingGainFields({ form, set }: Props) {
       <CurrencyInput label="1주당 증여세 과세가액(취득가액)" value={form.lgAcqValue} onChange={(v) => set({ lgAcqValue: v })} placeholder="1주당 과세가액(취득가액) (원)" />
 
       {/* 1주당 기업가치 실질증가이익 — 직접입력 / 월수 산식 자동계산 (령§31의3⑤) */}
-      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2">
+      <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/60 p-2 dark:bg-emerald-950/40">
         <RadioCardGroup
           name="lg-corp-growth-mode"
           tone="emerald"
@@ -356,7 +356,7 @@ export function ListingGainFields({ form, set }: Props) {
             <CurrencyInput label="사업연도별 1주당 순손익액 합계" allowNegative value={form.lgTotalNetIncome} onChange={(v) => set({ lgTotalNetIncome: v })} hint="증여·취득일 속한 사업연도개시일~상장전일 합계 (령§31의3⑤1, 결손 시 음수)" />
             <CurrencyInput label="사업연도개시일~상장전일 월수" value={form.lgMonthsBusinessStart} onChange={(v) => set({ lgMonthsBusinessStart: v })} hint="분모 월수 (1월미만은 1월)" placeholder="월수" />
             <CurrencyInput label="증여·취득일~정산기준일 월수" value={form.lgMonthsAcqToSettlement} onChange={(v) => set({ lgMonthsAcqToSettlement: v })} hint="곱수 월수 (령§31의3⑤2, 1월미만은 1월)" placeholder="월수" />
-            <p className="text-xs font-medium text-emerald-800" data-testid="lg-corp-growth-echo">
+            <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200" data-testid="lg-corp-growth-echo">
               → 1주당 기업가치 실질증가이익 {autoCorpGrowth.toLocaleString()}
             </p>
           </>
@@ -367,7 +367,7 @@ export function ListingGainFields({ form, set }: Props) {
 
       {/* 무상주 환산 안내 (령§31의3⑦ → 칙§17의3⑤) — 환산은 §56 평가의 발행주식총수 조정이라 1주당 입력값에 반영 */}
       <div
-        className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 text-xs leading-relaxed text-amber-800"
+        className="rounded-lg border border-amber-200 bg-amber-50/40 p-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
         data-testid="lg-bonus-share-notice"
       >
         ※ 증여·취득일부터 상장 전일까지 <b>무상주(증자)</b>를 발행한 경우, 환산주식수 기준으로 1주당 평가가액·순손익액을 산정해 입력하세요 (령§31의3⑦ → 칙§17의3⑤).
@@ -478,14 +478,14 @@ export function ValueIncreaseFields({ form, set }: Props) {
     <ToneCard tone="rose" bodyClassName="space-y-3">
       {/* 계산사례 프리셋 */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-rose-700">계산사례:</span>
+        <span className="text-xs font-semibold text-rose-700 dark:text-rose-300">계산사례:</span>
         {VI_PRESETS.map((p) => (
           <button
             key={p.testId}
             type="button"
             data-testid={p.testId}
             onClick={() => set(p.v)}
-            className="rounded-md border border-rose-300 bg-white/70 dark:bg-white/5 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+            className="rounded-md border border-rose-300 bg-white/70 dark:bg-white/5 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100 dark:text-rose-300"
           >
             {p.label}
           </button>
@@ -494,7 +494,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
 
       {/* ① 취득사유 (§42의3①1·2·3호) */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-rose-700">취득사유 (§42의3①)</p>
+        <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">취득사유 (§42의3①)</p>
         <RadioCardGroup
           name="deemed-vi-cause"
           tone="amber"
@@ -511,7 +511,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
 
       {/* ② 재산가치증가사유 (시행령 §32의3①) */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-rose-700">재산가치증가사유 (시행령 §32의3①)</p>
+        <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">재산가치증가사유 (시행령 §32의3①)</p>
         <RadioCardGroup
           name="deemed-vi-reason"
           tone="amber"

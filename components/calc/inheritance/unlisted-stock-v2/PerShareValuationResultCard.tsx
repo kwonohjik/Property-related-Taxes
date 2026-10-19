@@ -89,10 +89,10 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
   const preIpoLabel = preIpoIsAssoc ? "거래소 상장신청·협회 등록 준비" : "기업공개 준비";
 
   return (
-    <div className="rounded-lg border border-indigo-300 bg-indigo-50/60 p-4 space-y-3">
+    <div className="rounded-lg border border-indigo-300 bg-indigo-50/60 p-4 space-y-3 dark:bg-indigo-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-200 text-caption font-bold text-indigo-800 select-none">{sectionNum}</span>
-        <p className="text-sm font-semibold text-indigo-800">1주당 가액의 평가 (별지 1쪽 ③~⑨)</p>
+        <p className="text-sm font-semibold text-indigo-800 dark:text-indigo-200">1주당 가액의 평가 (별지 1쪽 ③~⑨)</p>
       </div>
 
       {/* ③·④·⑤·⑥-㉠·㉡·⑥ */}
@@ -107,7 +107,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
         {/* PR-G2: §59③ 영업권 가중평균 추정이익 준용 안내 (적용 + 영업권>0 시) */}
         {result.estimatedProfitResult?.applied && result.goodwillCalculation.goodwillFinal > 0 && (
           <p
-            className="rounded border border-violet-300 bg-violet-50/60 px-3 py-1.5 text-caption text-violet-900"
+            className="rounded border border-violet-300 bg-violet-50/60 px-3 py-1.5 text-caption text-violet-900 dark:text-violet-200 dark:bg-violet-950/40"
             data-testid="result-goodwill-section59-3"
           >
             영업권 가중평균 순손익액: §59③ 추정이익 기준 — 추정이익 평균가액{" "}
@@ -148,8 +148,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           <div
             className={`rounded border px-3 py-2 text-caption ${
               result.estimatedProfitResult.applied
-                ? "border-violet-300 bg-violet-50/60 text-violet-900"
-                : "border-amber-300 bg-amber-50/60 text-amber-800"
+                ? "border-violet-300 bg-violet-50/60 text-violet-900 dark:text-violet-200 dark:bg-violet-950/40"
+                : "border-amber-300 bg-amber-50/60 text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
             }`}
             data-testid="result-estimated-profit-notice"
           >
@@ -170,8 +170,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
               <div
                 className={`mt-1 flex items-center gap-1.5 text-micro ${
                   result.estimatedProfitResult.evaluationMethod === "legacy"
-                    ? "text-amber-700"
-                    : "text-violet-600"
+                    ? "text-amber-700 dark:text-amber-300"
+                    : "text-violet-600 dark:text-violet-400"
                 }`}
                 data-testid="result-evaluation-method-badge"
               >
@@ -206,21 +206,21 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
         )}
         {/* §17의3② 연환산 echo — 1년 미만 사업연도 있을 때만 표시. 합병 적용 시 대신 합병 명세 카드 표시 (상호 배타) */}
         {!result.mergerApplied && result.annualizationApplied?.some((a) => a) && result.annualizedPerShareNetIncome && (
-          <div className="rounded border border-amber-300 bg-amber-50/60 px-3 py-2 space-y-1 text-caption">
-            <p className="font-semibold text-amber-800">§17의3② 1년 미만 사업연도 연환산 내역</p>
+          <div className="rounded border border-amber-300 bg-amber-50/60 px-3 py-2 space-y-1 text-caption dark:bg-amber-950/40">
+            <p className="font-semibold text-amber-800 dark:text-amber-200">§17의3② 1년 미만 사업연도 연환산 내역</p>
             {result.annualizationApplied.map((applied, i) => {
               if (!applied) return null;
               const label = i === 0 ? "1년전(×3)" : i === 1 ? "2년전(×2)" : "3년전(×1)";
               const before = result.fiscalYearBreakdowns[i]?.perShareNetIncome ?? 0;
               const after = result.annualizedPerShareNetIncome![i];
               return (
-                <div key={i} className="flex items-baseline gap-1 text-amber-900">
+                <div key={i} className="flex items-baseline gap-1 text-amber-900 dark:text-amber-200">
                   <span className="font-mono text-micro w-16">{label}</span>
                   <span>1주당 순손익액</span>
                   <span className="font-mono tabular-nums">{fmt(before)}</span>
                   <span>→ ×12/N개월 →</span>
                   <span className="font-mono tabular-nums font-semibold">{fmt(after)}</span>
-                  <span className="text-micro text-amber-600">(연환산)</span>
+                  <span className="text-micro text-amber-600 dark:text-amber-400">(연환산)</span>
                 </div>
               );
             })}
@@ -261,7 +261,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
         {/* 자기주식 보유 — 목적별 평가 내역 (result 필드만 표시, 재계산 금지) */}
         {result.treasuryStockApplied && (
           <div
-            className="rounded border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-caption text-emerald-900 space-y-1"
+            className="rounded border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40"
             data-testid="result-treasury-block"
           >
             {result.treasuryStockApplied.purpose === "temporary_holding" ? (
@@ -299,8 +299,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           <div
             className={`rounded border px-3 py-2 text-caption ${
               result.preIpoListingResult.applied
-                ? "border-emerald-300 bg-emerald-50/60 text-emerald-900"
-                : "border-amber-300 bg-amber-50/60 text-amber-800"
+                ? "border-emerald-300 bg-emerald-50/60 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-950/40"
+                : "border-amber-300 bg-amber-50/60 text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
             }`}
             data-testid="result-pre-ipo-notice"
           >
@@ -376,8 +376,8 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
       {/* 영업권 평가 상세 */}
       {result.goodwillCalculation.goodwillFinal > 0 && (
-        <div className="rounded border border-amber-200 bg-amber-50 p-2 space-y-1 text-caption">
-          <p className="font-semibold text-amber-800">영업권 평가 (상증령 §59 ②)</p>
+        <div className="rounded border border-amber-200 bg-amber-50 p-2 space-y-1 text-caption dark:bg-amber-950/40">
+          <p className="font-semibold text-amber-800 dark:text-amber-200">영업권 평가 (상증령 §59 ②)</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
             <span>가. 3년 가중평균 순손익액</span>
             <span className="font-mono tabular-nums text-right">{fmt(result.goodwillCalculation.weightedAvg3y)}원</span>
@@ -397,14 +397,14 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
       {/* §55③ 영업권 배제 안내 */}
       {result.goodwillCalculation.excludedByLaw && (
-        <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
+        <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
           ⚠️ 영업권 자동 배제 — {GOODWILL_EXCLUSION_LABELS[result.goodwillCalculation.excludedByLaw]}
         </div>
       )}
 
       {/* 할증 배제 안내 */}
       {result.premiumExclusionReason && (
-        <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-caption text-violet-800">
+        <div className="rounded border border-violet-300 bg-violet-100/60 p-2 text-caption text-violet-800 dark:text-violet-200 dark:bg-violet-900/40">
           ℹ️ 최대주주 할증평가 배제 — {STOCK_PREMIUM_EXCLUSION_LABELS[result.premiumExclusionReason]}
         </div>
       )}
@@ -456,10 +456,10 @@ function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }
   const section22Applied = input.isSection22MajorShareholder === true;
 
   return (
-    <div className="rounded border border-violet-200 bg-violet-50/60 p-2 text-caption space-y-1">
-      <p className="font-semibold text-violet-800">판정 결과</p>
+    <div className="rounded border border-violet-200 bg-violet-50/60 p-2 text-caption space-y-1 dark:bg-violet-950/40">
+      <p className="font-semibold text-violet-800 dark:text-violet-200">판정 결과</p>
       <div className="flex items-baseline gap-2">
-        <span className="text-violet-700">§22② 금융재산공제 배제 최대주주:</span>
+        <span className="text-violet-700 dark:text-violet-300">§22② 금융재산공제 배제 최대주주:</span>
         <span
           className={
             section22Applied
@@ -471,7 +471,7 @@ function AutoJudgmentEchoLines({ input }: { input: UnlistedStockValuationInput }
         </span>
       </div>
       <div className="flex items-baseline gap-2">
-        <span className="text-violet-700">§54① 부동산과다보유법인:</span>
+        <span className="text-violet-700 dark:text-violet-300">§54① 부동산과다보유법인:</span>
         <span
           className={
             input.isRealEstateHeavy
@@ -498,11 +498,11 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
 
   return (
     <div
-      className="rounded border border-amber-400 bg-amber-50/70 px-3 py-2 space-y-1 text-caption"
+      className="rounded border border-amber-400 bg-amber-50/70 px-3 py-2 space-y-1 text-caption dark:bg-amber-950/40"
       data-testid="merger-breakdown-card"
     >
       <div className="flex items-center justify-between">
-        <p className="font-semibold text-amber-800">§56③ 합병법인 순손익 합산 내역</p>
+        <p className="font-semibold text-amber-800 dark:text-amber-200">§56③ 합병법인 순손익 합산 내역</p>
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
@@ -512,7 +512,7 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
           {expandToggleLabel(open)}
         </button>
       </div>
-      <p className="text-micro text-amber-700">
+      <p className="text-micro text-amber-700 dark:text-amber-300">
         합병 후 3년 미경과 — 합병법인+피합병법인 순손익 합산 후 합병후 발행주식총수로 나눈 1주당 순손익액 적용
       </p>
       <div
@@ -524,7 +524,7 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
             className="rounded border border-amber-200 bg-white/60 dark:bg-white/5 p-2 grid grid-cols-2 gap-x-3 gap-y-0.5 font-mono tabular-nums"
             data-testid={`merger-breakdown-row-${i}`}
           >
-            <span className="col-span-2 font-semibold text-amber-800 not-font-mono text-caption">
+            <span className="col-span-2 font-semibold text-amber-800 not-font-mono text-caption dark:text-amber-200">
               {YEAR_LABELS[i]}
             </span>
             <span className="text-gray-600">합병법인 순손익액</span>
@@ -535,8 +535,8 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
             <span className="text-right">{fmt(row.combinedNetIncome)}원</span>
             <span className="text-gray-600">적용 주식수</span>
             <span className="text-right">{fmt(row.sharesUsed)}주</span>
-            <span className="font-semibold text-amber-900">1주당 순손익액</span>
-            <span className="text-right font-semibold text-amber-900">{fmt(row.perShare)}원</span>
+            <span className="font-semibold text-amber-900 dark:text-amber-200">1주당 순손익액</span>
+            <span className="text-right font-semibold text-amber-900 dark:text-amber-200">{fmt(row.perShare)}원</span>
           </div>
         ))}
       </div>
@@ -555,13 +555,13 @@ interface ResultRowProps {
 
 function ResultRow({ cellNum, label, value, hint, law, emphasized }: ResultRowProps) {
   return (
-    <div className={`grid grid-cols-[3rem_1fr_auto] gap-2 items-baseline py-1 ${emphasized ? "bg-indigo-100/60 rounded px-2" : ""}`}>
-      <span className={`font-mono text-caption ${emphasized ? "text-indigo-900 font-bold" : "text-indigo-700"}`}>{cellNum}</span>
+    <div className={`grid grid-cols-[3rem_1fr_auto] gap-2 items-baseline py-1 ${emphasized ? "bg-indigo-100/60 rounded px-2 dark:bg-indigo-900/40" : ""}`}>
+      <span className={`font-mono text-caption ${emphasized ? "text-indigo-900 font-bold dark:text-indigo-200" : "text-indigo-700 dark:text-indigo-300"}`}>{cellNum}</span>
       <div>
-        <div className={`${emphasized ? "font-bold text-indigo-900" : ""}`}>{label}</div>
+        <div className={`${emphasized ? "font-bold text-indigo-900 dark:text-indigo-200" : ""}`}>{label}</div>
         {hint && <div className="text-micro text-gray-500">{hint}</div>}
         {law && (
-          <div className="text-micro text-indigo-600 italic flex flex-wrap items-center gap-1">
+          <div className="text-micro text-indigo-600 italic flex flex-wrap items-center gap-1 dark:text-indigo-400">
             <span>{law}</span>
             {parseLawRefsForModal(law).map((r, i) => (
               <LawArticleModal
@@ -573,7 +573,7 @@ function ResultRow({ cellNum, label, value, hint, law, emphasized }: ResultRowPr
           </div>
         )}
       </div>
-      <span className={`font-mono ${emphasized ? "text-indigo-900 font-bold text-sm" : "text-indigo-800"}`}>
+      <span className={`font-mono ${emphasized ? "text-indigo-900 font-bold text-sm dark:text-indigo-200" : "text-indigo-800 dark:text-indigo-200"}`}>
         {value}
       </span>
     </div>

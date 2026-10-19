@@ -52,11 +52,11 @@ export function SpecificCorpPriorTxTable({ rows, onChange, testIdPrefix = "sc", 
 
   return (
     <div
-      className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3"
+      className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40"
       data-testid={tid("prior-tx-table")}
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-amber-800">
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
           소급 1년 이내 같은 호 거래 (§43²)
         </p>
         <button
@@ -84,12 +84,12 @@ export function SpecificCorpPriorTxTable({ rows, onChange, testIdPrefix = "sc", 
             className="space-y-2 rounded-md border border-amber-200 bg-white/70 dark:bg-white/5 p-2"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-amber-800">{copy.item} {i + 1}</span>
+              <span className="text-xs font-medium text-amber-800 dark:text-amber-200">{copy.item} {i + 1}</span>
               <button
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
                 data-testid={tid(`pt-delete-${i}`)}
-                className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
               >
                 × 삭제
               </button>

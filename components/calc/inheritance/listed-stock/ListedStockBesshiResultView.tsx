@@ -45,7 +45,7 @@ export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Pr
         </div>
         <div className="text-right">
           <div className="text-xs text-slate-600">평가액</div>
-          <div className="text-xl font-bold text-rose-700 tabular-nums">
+          <div className="text-xl font-bold text-rose-700 tabular-nums dark:text-rose-300">
             {valuatedAmount.toLocaleString()}원
           </div>
         </div>

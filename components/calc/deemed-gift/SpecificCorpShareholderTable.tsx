@@ -57,9 +57,9 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
   const remove = (i: number) => onChange(rows.filter((_, idx) => idx !== i));
 
   return (
-    <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3" data-testid="sc-shareholder-table">
+    <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/40 p-3 dark:bg-sky-950/40" data-testid="sc-shareholder-table">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-sky-700">지배주주등 주주 명단</p>
+        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">지배주주등 주주 명단</p>
         <button
           type="button"
           onClick={add}
@@ -91,12 +91,12 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
             className="space-y-2 rounded-md border border-sky-200 bg-white/70 dark:bg-white/5 p-2"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-sky-800">주주 {i + 1}</span>
+              <span className="text-xs font-medium text-sky-800 dark:text-sky-200">주주 {i + 1}</span>
               <button
                 type="button"
                 onClick={() => remove(i)}
                 data-testid={`sc-sh-delete-${i}`}
-                className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
               >
                 × 삭제
               </button>

@@ -262,8 +262,8 @@ export default function PublicInterestPenaltyPage() {
           <div
             className={
               result.totalPenalty > 0
-                ? "rounded-lg border border-rose-300 bg-rose-50/60 p-4 space-y-1"
-                : "rounded-lg border border-emerald-300 bg-emerald-50/60 p-4 space-y-1"
+                ? "rounded-lg border border-rose-300 bg-rose-50/60 p-4 space-y-1 dark:bg-rose-950/40"
+                : "rounded-lg border border-emerald-300 bg-emerald-50/60 p-4 space-y-1 dark:bg-emerald-950/40"
             }
           >
             <p className="text-sm font-semibold">

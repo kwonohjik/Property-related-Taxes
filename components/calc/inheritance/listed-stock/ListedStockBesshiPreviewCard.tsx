@@ -58,7 +58,7 @@ export function ListedStockBesshiPreviewCard({ item, valuationDate }: Props) {
 
   return (
     <section
-      className="rounded-lg border border-sky-200 bg-sky-50/40 p-3"
+      className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 dark:bg-sky-950/40"
       data-testid="ls-besshi-preview-card"
     >
       <button
@@ -69,7 +69,7 @@ export function ListedStockBesshiPreviewCard({ item, valuationDate }: Props) {
         data-testid="ls-besshi-preview-toggle"
       >
         <span className={expandToggleClass("sky")}>{expandToggleLabel(open)}</span>
-        <span className="text-sm font-semibold text-sky-900">
+        <span className="text-sm font-semibold text-sky-900 dark:text-sky-200">
           상장주식 평가조서(갑·을) 미리보기
         </span>
       </button>

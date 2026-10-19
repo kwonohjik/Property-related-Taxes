@@ -46,24 +46,24 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
       >
         <div className="space-y-3">
           {periods.map((p, i) => (
-            <div key={i} className="space-y-2 rounded-md border border-amber-200 bg-amber-50/60 p-2" data-testid={`free-period-${i}`}>
+            <div key={i} className="space-y-2 rounded-md border border-amber-200 bg-amber-50/60 p-2 dark:bg-amber-950/40" data-testid={`free-period-${i}`}>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-800">기간 {i + 1}</span>
+                <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">기간 {i + 1}</span>
                 {periods.length > 1 && (
-                  <button type="button" className="text-xs text-rose-600" data-testid={`free-period-remove-${i}`} onClick={() => set({ freePeriods: periods.filter((_, idx) => idx !== i) })}>
+                  <button type="button" className="text-xs text-rose-600 dark:text-rose-400" data-testid={`free-period-remove-${i}`} onClick={() => set({ freePeriods: periods.filter((_, idx) => idx !== i) })}>
                     삭제
                   </button>
                 )}
               </div>
               <div className="space-y-1" data-testid={`free-period-date-wrap-${i}`}>
-                <label className="block text-xs text-amber-700">개시일(증여일)</label>
+                <label className="block text-xs text-amber-700 dark:text-amber-300">개시일(증여일)</label>
                 <DateInput value={p.startDate} onChange={(v) => updatePeriod(i, { startDate: v })} />
               </div>
               <CurrencyInput label={valueLabel} value={p.value} onChange={(v) => updatePeriod(i, { value: v })} placeholder={`${valueLabel} (원)`} />
               {!isFreeUse && <CurrencyInput label="실제 지급이자" value={p.interest} onChange={(v) => updatePeriod(i, { interest: v })} />}
             </div>
           ))}
-          <button type="button" className="text-xs font-medium text-amber-700" data-testid="free-period-add" onClick={() => set({ freePeriods: [...periods, { startDate: "", value: "", interest: "" }] })}>
+          <button type="button" className="text-xs font-medium text-amber-700 dark:text-amber-300" data-testid="free-period-add" onClick={() => set({ freePeriods: [...periods, { startDate: "", value: "", interest: "" }] })}>
             + 기간 추가
           </button>
         </div>
@@ -119,11 +119,11 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
           <div className="space-y-2">
             <CurrencyInput label="증여세 산출세액" value={form.freeRectTax} onChange={(v) => set({ freeRectTax: v })} hint="세대생략 할증(§57) 포함" />
             <div className="space-y-1" data-testid="free-rect-giftdate-wrap">
-              <label className="block text-xs text-emerald-700">당초 증여일({isFreeUse ? "무상사용" : "담보이용"} 개시일)</label>
+              <label className="block text-xs text-emerald-700 dark:text-emerald-300">당초 증여일({isFreeUse ? "무상사용" : "담보이용"} 개시일)</label>
               <DateInput value={form.freeRectGiftDate} onChange={(v) => set({ freeRectGiftDate: v })} />
             </div>
             <div className="space-y-1" data-testid="free-rect-termdate-wrap">
-              <label className="block text-xs text-emerald-700">중단사유 발생일(소유자 사망·양도 등)</label>
+              <label className="block text-xs text-emerald-700 dark:text-emerald-300">중단사유 발생일(소유자 사망·양도 등)</label>
               <DateInput value={form.freeRectTermDate} onChange={(v) => set({ freeRectTermDate: v })} />
             </div>
           </div>
