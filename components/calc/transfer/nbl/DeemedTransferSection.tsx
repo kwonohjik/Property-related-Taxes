@@ -42,7 +42,6 @@ export function DeemedTransferSection({
       tone="rose"
       title="양도일 의제 (경매·공매·장기매각)"
       titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §168의14②" label="§168의14②" />}
-      noDark
     >
       <p className="text-caption text-muted-foreground leading-snug">
         경매·공매·장기매각으로 양도가 지연된 경우, 해당 일자를 양도일로 보아 기간기준(§168의6)만 재판정합니다.

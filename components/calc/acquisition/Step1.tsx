@@ -71,7 +71,7 @@ export function Step1({
   return (
     <div className="space-y-4">
       {/* 면적·시가표준액 — sky 카드 */}
-      <ToneCard tone="sky" sectionNum={1} title="물건 상세" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="sky" sectionNum={1} title="물건 상세" bodyClassName="space-y-3">
         {isHousing && (
           <div>
             <p className="text-sm font-medium mb-1">전용면적 (㎡)</p>

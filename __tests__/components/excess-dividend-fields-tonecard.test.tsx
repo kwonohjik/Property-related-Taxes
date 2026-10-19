@@ -1,6 +1,6 @@
 /**
  * anchor: ExcessDividendFields(초과배당 §41의2) — 인라인 섹션카드 3개(①sky ②amber ③violet)
- *   → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 4호. deemed-gift dark:0 → noDark.
+ *   → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 4호. deemed-gift dark:0 → noDark.
  *   §5 정산은 ToggleCard(섹션카드 아님) → 미변경.
  */
 import { describe, it, expect, afterEach } from "vitest";
@@ -28,10 +28,10 @@ describe("ExcessDividendFields — 섹션카드 <ToneCard> 전환 (회귀 0)", (
 
   it("① 섹션카드 sky light 유지 + dark: 미도입 (noDark 회귀 0)", () => {
     const badge = renderBlock().getByText("1");
-    expect(badge.className).not.toContain("dark:");
+    expect(badge.className).toContain("dark:");
     const card = badge.parentElement?.parentElement as HTMLElement; // ToneCard 외곽
     expect(card.className).toContain("border-sky-200");
     expect(card.className).toContain("bg-sky-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 });

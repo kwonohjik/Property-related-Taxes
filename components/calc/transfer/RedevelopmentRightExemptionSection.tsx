@@ -146,7 +146,7 @@ export function RedevelopmentRightExemptionSection({
   return (
     <div className="space-y-3">
       {/* §⑥ violet: 1세대1입주권 비과세 카드 */}
-      <ToneCard tone="violet" sectionNum="⑥" bodyClassName="space-y-3" title="1세대1입주권 비과세 요건 (§89①4호)" noDark>
+      <ToneCard tone="violet" sectionNum="⑥" bodyClassName="space-y-3" title="1세대1입주권 비과세 요건 (§89①4호)">
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="§89①4호" />
           <LawArticleModal legalBasis="소득세법 §89 ① 3호" label="§89①3호 가목" />

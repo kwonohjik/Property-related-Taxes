@@ -173,7 +173,7 @@ export function ConvertibleStockFields({ form, set }: Props) {
   const needsLowDanmok = !isHigh && form.csSubType === "no_realloc"; // §29②2호 다목
   const sharesLabel = CI_SHARES_LABEL[form.csDirection][form.csSubType];
   return (
-    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="rose" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="cs-direction"

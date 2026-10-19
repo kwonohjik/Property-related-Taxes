@@ -75,7 +75,6 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
               (§104의3①4호나목 · 지방세령 §101)
             </span>
           }
-          noDark
         >
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />

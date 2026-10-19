@@ -130,7 +130,7 @@ export function AssetAreaRedevelopment({ asset, onChange }: Props) {
   const isLand = asset.redevOriginalAssetType === "land";
 
   return (
-    <ToneCard tone="sky" title="면적 정보 (㎡)" noDark>
+    <ToneCard tone="sky" title="면적 정보 (㎡)">
       <FieldCard
         label="토지 면적 (㎡)"
         field="redevLandArea"

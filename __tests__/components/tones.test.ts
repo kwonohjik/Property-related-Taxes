@@ -7,7 +7,7 @@
  * 계획서: docs/02-design/features/ui-color-tone-tokenization.plan.md §8
  */
 import { describe, it, expect } from "vitest";
-import { TONE, stripDark, type Tone } from "@/components/calc/shared/tones";
+import { TONE, type Tone } from "@/components/calc/shared/tones";
 import { expandToggleClass } from "@/components/calc/results/shared/ExpandToggleButton";
 
 const TONES: Tone[] = ["sky", "emerald", "amber", "violet", "rose", "slate"];
@@ -65,19 +65,4 @@ describe("ExpandToggleButton 파생 (회귀 0)", () => {
   it("blue 는 리터럴 유지로 계속 동작", () => {
     expect(expandToggleClass("blue")).toContain("text-blue-700");
   });
-});
-
-describe("stripDark (dark 미대응 레거시 카드 회귀 0 전환용)", () => {
-  it("dark: 세그먼트만 제거하고 light 클래스는 보존", () => {
-    expect(stripDark(TONE.rose.card)).toBe("border-rose-200 bg-rose-50/40");
-    expect(stripDark(TONE.amber.badge)).toBe("bg-amber-200 text-amber-800");
-    expect(stripDark(TONE.sky.title)).toBe("text-sky-700");
-  });
-  it.each(["sky", "emerald", "amber", "violet", "rose", "slate"] as Tone[])(
-    "stripDark 결과에 dark: 없음 — %s",
-    (t) => {
-      expect(stripDark(TONE[t].card)).not.toContain("dark:");
-      expect(stripDark(TONE[t].badge)).not.toContain("dark:");
-    },
-  );
 });

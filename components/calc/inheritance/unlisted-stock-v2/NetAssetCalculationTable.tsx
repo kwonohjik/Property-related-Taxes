@@ -187,7 +187,6 @@ export function NetAssetCalculationTable({
           <LawArticleModal legalBasis="상증규 §17의2" label="규§17의2" />
         </>
       }
-      noDark
     >
       <p className="text-caption text-violet-700/80">
         자산총액 ⑧ − 부채총액 ⑲ = 다.영업권 포함 전 순자산가액 (§55① 후단 — 0 이하 시 0)

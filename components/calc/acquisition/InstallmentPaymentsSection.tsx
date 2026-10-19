@@ -98,7 +98,6 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
       sectionNum={2}
       title="연부 회차 정보"
       bodyClassName="space-y-3"
-      noDark
       titleExtra={
         <>
           {installments.length > 0 && (

@@ -50,7 +50,7 @@ export function DoneeMinorField({
   }, [autoMinor, parsed, giftDate]);
 
   return (
-    <ToneCard tone="violet" sectionNum="§57" title="수증자 미성년자 (§57① 40% 할증 판정)" noDark>
+    <ToneCard tone="violet" sectionNum="§57" title="수증자 미성년자 (§57① 40% 할증 판정)">
       <FieldCard
         label="수증자 주민등록번호 (선택)"
         hint="앞 7자리(생년월일·성별)로 생년월일을 도출해 미성년 여부를 자동판정합니다. 검증 없이 생년월일만 사용하며 저장·전송되지 않습니다. 미입력 시 아래에서 직접 선택하세요."

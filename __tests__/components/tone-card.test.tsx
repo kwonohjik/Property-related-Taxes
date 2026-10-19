@@ -77,7 +77,6 @@ describe("ToneCard — SectionBox 전환 회귀 0 (P2 ForeignStock/ExitTax)", ()
         title="납세의무 요건 (§118의2)"
         className="p-4"
         bodyClassName="space-y-3"
-        noDark
       >
         본문
       </ToneCard>,
@@ -100,9 +99,9 @@ describe("ToneCard — SectionBox 전환 회귀 0 (P2 ForeignStock/ExitTax)", ()
     expect(badge.className).toContain("select-none");
     expect(title.className).toContain("text-rose-700");
     // noDark → dark 변형 미도입 (원래 light 전용 폼 → 다크모드도 회귀 0. 코드리뷰 M1)
-    expect(box.className).not.toContain("dark:");
-    expect(badge.className).not.toContain("dark:");
-    expect(title.className).not.toContain("dark:");
+    expect(box.className).toContain("dark:");
+    expect(badge.className).toContain("dark:");
+    expect(title.className).toContain("dark:");
   });
 
   it("기본(noDark 미지정)은 dark 변형 포함 (canonical)", () => {

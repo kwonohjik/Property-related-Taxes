@@ -89,7 +89,6 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
       tone="amber"
       title="물건별 구분 (§15② 단서)"
       bodyClassName="space-y-3"
-      noDark
       titleExtra={
         <>
           {rows.length > 0 && (

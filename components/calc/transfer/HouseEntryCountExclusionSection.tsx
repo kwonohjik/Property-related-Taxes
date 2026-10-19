@@ -116,7 +116,6 @@ export function HouseEntryCountExclusionSection({
         sectionNum="⑥"
         bodyClassName="space-y-2.5"
         title="주택 수 제외 (조특법)"
-        noDark
       >
         <p className="text-xs text-muted-foreground leading-relaxed">
           조세특례제한법에 따라 이 주택을 <b>소유주택이 아닌 것으로 보는</b>{" "}

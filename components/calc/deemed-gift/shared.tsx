@@ -164,7 +164,7 @@ export function DeemedInputFields({ form, set }: { form: DeemedFormState; set: S
 
 function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="rose" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="tb-beneficiary"
@@ -197,7 +197,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
       </div>
 
       {/* 증여시기 분리 (§33①1·2호 별개 증여 · §25①) */}
-      <ToneCard tone="violet" title="증여시기 (원본·수익 별개 — §33①·§25①)" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="violet" title="증여시기 (원본·수익 별개 — §33①·§25①)" bodyClassName="space-y-2">
         {form.tbBeneficiaryType !== "diff_principal" && (
           <div className="space-y-1" data-testid="tb-income-gift-date">
             <label className="block text-xs text-violet-700">수익권 증여시기 (수익 최초지급일 등)</label>
@@ -253,7 +253,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
         </div>
       )}
       {form.tbAnnuityType === "lifetime" && (
-        <ToneCard tone="sky" title="종신 기대여명 (§62 3호 — 2023 생명표, 소수점 버림)" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="sky" title="종신 기대여명 (§62 3호 — 2023 생명표, 소수점 버림)" bodyClassName="space-y-2">
           <RadioCardGroup
             name="tb-gender"
             tone="sky"
@@ -285,7 +285,7 @@ function TrustBenefitFields({ form, set }: { form: DeemedFormState; set: SetFn }
 
 function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="sky" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="ins-case"
@@ -320,7 +320,7 @@ function InsuranceFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
 
 function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="emerald" bodyClassName="space-y-3">
       <div className="flex justify-end">
         <TaxHelp
           triggerLabel="특수관계인 범위 조회"
@@ -376,7 +376,7 @@ function BargainFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
 
 function DebtFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   return (
-    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="amber" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="debt-occur"
@@ -404,7 +404,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
   const loans = form.loanLoans;
   const isMulti = loans !== undefined;
   return (
-    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="rose" bodyClassName="space-y-3">
       <div data-testid="loan-multi-toggle">
         <ToggleCard
           lawLinks="상증법"
@@ -420,7 +420,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         <>
           <CurrencyInput label="대출금액" value={form.loanAmount} onChange={(v) => set({ loanAmount: v })} hint="증여이익(대출금×4.6%−실제이자)이 1천만 이상이면 과세" />
           <CurrencyInput label="실제 지급이자" value={form.loanInterest} onChange={(v) => set({ loanInterest: v })} hint="다년 기간 입력 시 연간 실제이자" placeholder="실제 지급이자 (무이자면 빈칸)" />
-          <ToneCard tone="amber" title="대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)" bodyClassName="space-y-2" noDark>
+          <ToneCard tone="amber" title="대출 기간 (선택 — 입력 시 §41의4② 매년 별개 증여로 분할)" bodyClassName="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1" data-testid="loan-start-date">
                 <label className="block text-xs text-amber-700">대출 시작일</label>
@@ -440,7 +440,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
         <div className="space-y-2" data-testid="loan-items-table">
           <p className="text-xs font-semibold text-rose-700">대출 건 (1년 이내 동일거래 합산)</p>
           {loans.map((item, i) => (
-            <div key={item.id} data-testid={`loan-item-${i}`} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 p-2">
+            <div key={item.id} data-testid={`loan-item-${i}`} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 dark:bg-white/5 p-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-rose-600">대출 {i + 1}</span>
                 <button

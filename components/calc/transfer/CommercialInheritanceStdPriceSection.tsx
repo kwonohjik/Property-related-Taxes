@@ -74,7 +74,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
   const stdPriceAddress = stdPriceAddressOf(asset);
 
   return (
-    <ToneCard tone="amber" title="§164⑥ 취득당시 기준시가 (선택 — 상증법 평가액과 큰 금액 적용)" noDark>
+    <ToneCard tone="amber" title="§164⑥ 취득당시 기준시가 (선택 — 상증법 평가액과 큰 금액 적용)">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
@@ -92,7 +92,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
           ⚠️ `totalFloorArea` 계산은 유지한다 — 아래 기준시가 모달 prefill이 소비한다. */}
 
       {/* ① 최초고시(2005) ㎡당 호별고시가 */}
-      <ToneCard tone="emerald" sectionNum="1" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)" noDark>
+      <ToneCard tone="emerald" sectionNum="1" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)">
         <div className="flex flex-col items-end gap-1">
           <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
         </div>
@@ -102,7 +102,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       </ToneCard>
 
       {/* ② 건물 기준시가 (취득시·최초고시) */}
-      <ToneCard tone="amber" sectionNum="2" title="건물 기준시가 — 취득시·최초고시 (원, 총액)" noDark>
+      <ToneCard tone="amber" sectionNum="2" title="건물 기준시가 — 취득시·최초고시 (원, 총액)">
         {isBeforeBuildingStdPriceNotice(inheritanceDate) && (
           <div data-field="cbAcqBuildingStdBy164_5">
             <Sec164_5ProvisoNotice
@@ -125,7 +125,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       </ToneCard>
 
       {/* ③ 개별공시지가 (취득시·최초고시) */}
-      <ToneCard tone="amber" sectionNum="3" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="amber" sectionNum="3" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3">
         <div>
           <p className="mb-1 text-caption font-medium text-amber-700">취득시({acqTimeLabel})</p>
           {isCommercialPre1990Acquisition(asset) && (

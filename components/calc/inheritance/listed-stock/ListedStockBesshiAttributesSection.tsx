@@ -294,7 +294,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: 
       </FieldCard>
 
       {unlistedMode !== "none" && (
-        <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+        <ToneCard tone="violet" bodyClassName="space-y-3">
           {unlistedMode === "capital_increase" && (
             <FieldCard label="⑦ 증자일자">
               <DateInput

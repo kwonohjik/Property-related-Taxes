@@ -146,7 +146,6 @@ export function ValuationDeltaTable({
       sectionNum={sectionNum}
       bodyClassName="space-y-3"
       title="평가차액 (별지 3쪽 — 자산·부채 계정과목별)"
-      noDark
     >
       <p className="text-caption text-emerald-700/80">
         상증법 §60·§66 평가액 vs 재무상태표 차액. ① 자산 합 − ② 부채 합 = 평가차액 →{" "}

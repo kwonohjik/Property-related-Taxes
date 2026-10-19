@@ -96,7 +96,6 @@ export function OtherUnlistedHoldingSection({
           </button>
         )
       }
-      noDark
     >
 
       {!enabled && (
@@ -116,7 +115,7 @@ export function OtherUnlistedHoldingSection({
         return (
           <div
             key={h.rowId}
-            className="rounded-md border border-emerald-200 bg-white/70 p-2.5 space-y-2"
+            className="rounded-md border border-emerald-200 bg-white/70 dark:bg-white/5 p-2.5 space-y-2"
           >
             <div className="flex items-center justify-between gap-2">
               <input

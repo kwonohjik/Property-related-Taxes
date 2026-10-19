@@ -51,7 +51,7 @@ export function AssetAreaCommercial({ asset, onChange }: Props) {
   }, [asset.cbExclusiveArea, asset.cbSharedArea]);
 
   return (
-    <ToneCard tone="sky" title="면적 정보 (㎡)" noDark>
+    <ToneCard tone="sky" title="면적 정보 (㎡)">
       {/* 3필드 1행 (3열, 라벨 상단 stacked) — 모바일은 1열 */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <FieldCard label="전용면적" field="cbExclusiveArea" unit="㎡" stacked>

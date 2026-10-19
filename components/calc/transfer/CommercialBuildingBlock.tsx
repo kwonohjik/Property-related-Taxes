@@ -223,7 +223,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
 
         {/* ① 호별 ㎡당 고시가 (emerald/amber) — cbEra 선택 후 표시 */}
         {hasEra && (
-          <ToneCard tone="emerald" sectionNum="1" title="호별 ㎡당 고시가 (원/㎡)" noDark>
+          <ToneCard tone="emerald" sectionNum="1" title="호별 ㎡당 고시가 (원/㎡)">
             {/* 국세청 고시분 자동조회 — 호 선택 시 단가·전용·공유면적을 단일 배치로 채운다 */}
             <div className="flex flex-col items-end gap-1">
               <CommercialStdPriceLookupModal
@@ -295,7 +295,6 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             sectionNum="2"
             title={`개별공시지가 — ${isPreDisclosure ? "3시점" : "2시점"} (원/㎡)`}
             bodyClassName="space-y-3"
-            noDark
           >
 
             {/* 취득시 — amber (공통 필수) */}
@@ -367,7 +366,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
 
         {/* ③ 건물 기준시가 3시점 — 총액 (pre_disclosure 시만 표시). 위 ② 공시지가 뒤에 온다. */}
         {isPreDisclosure && (
-          <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 3시점 (원, 총액)" noDark>
+          <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 3시점 (원, 총액)">
             <div className="text-xs text-amber-700 mb-1">
               건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>

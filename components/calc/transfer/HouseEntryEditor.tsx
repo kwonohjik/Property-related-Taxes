@@ -110,7 +110,7 @@ interface Props {
 
 function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEnabled, judgmentMenu }: Props) {
   return (
-    <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보" noDark>
+    <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보">
 
       {/* 소재지 — Vworld 주소검색 → regionCode·지역구분 자동파생 + (공동주택 동/호 선택 시) 공시가격·전유면적 자동조회 */}
       <div className="space-y-1">
@@ -316,7 +316,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
 
 function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
   return (
-    <ToneCard tone="amber" sectionNum="②" bodyClassName="space-y-2.5" title="상속 정보" noDark>
+    <ToneCard tone="amber" sectionNum="②" bodyClassName="space-y-2.5" title="상속 정보">
 
       {/* 상속주택 여부 토글 */}
       <ToggleCard
@@ -506,7 +506,7 @@ function LongTermRentalSection({
   aptDeadlineExtensionEnabled,
 }: Pick<Props, "house" | "onUpdate"> & { aptDeadlineExtensionEnabled?: boolean }) {
   return (
-    <ToneCard tone="violet" sectionNum="③" bodyClassName="space-y-2.5" title="장기임대 정보" noDark>
+    <ToneCard tone="violet" sectionNum="③" bodyClassName="space-y-2.5" title="장기임대 정보">
 
       {/* 장기임대 여부 토글 */}
       <ToggleCard

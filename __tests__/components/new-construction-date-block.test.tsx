@@ -1,5 +1,5 @@
 /**
- * anchor: NewConstructionDateBlock — 인라인 amber 섹션카드 5개 → <ToneCard noDark> 전환(회귀 0).
+ * anchor: NewConstructionDateBlock — 인라인 amber 섹션카드 5개 → <ToneCard> 전환(회귀 0).
  *   색상 ToneCard 점진 채택 첫 파일럿(계획 §4.1 P4 점진 이월분).
  *   noDark: 원래 light 전용 → dark 변형 미도입, 양 모드 회귀 0.
  * + computeEarliestDate 순수함수(영 §162①4호, 기존 무테스트).
@@ -53,11 +53,11 @@ describe("NewConstructionDateBlock — ToneCard 전환 (회귀 0)", () => {
   it("섹션카드가 amber light 클래스 유지 + dark: 미도입 (noDark 회귀 0)", () => {
     const badge = renderBlock().getByText("①");
     expect(badge.className).toContain("bg-amber-200");
-    expect(badge.className).not.toContain("dark:");
+    expect(badge.className).toContain("dark:");
     const card = badge.parentElement?.parentElement as HTMLElement; // ToneCard 외곽
     expect(card.className).toContain("border-amber-200");
     expect(card.className).toContain("bg-amber-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("입력 없으면 자동판정 안내 문구", () => {

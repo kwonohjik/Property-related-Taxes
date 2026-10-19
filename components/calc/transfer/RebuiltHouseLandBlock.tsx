@@ -55,7 +55,7 @@ export function RebuiltHouseLandBlock(props: {
         checked={asset.landRebuildEnabled === true}
         onCheckedChange={(checked) => onChange({ landRebuildEnabled: checked })}
       >
-        <ToneCard tone="amber" noDark>
+        <ToneCard tone="amber">
           <p className="text-xs text-amber-900" data-testid="land-rebuild-notice">
             <strong>본인 소유였던 구주택</strong>의 부수토지 기간만 통산합니다 — 주택과 토지의 소유자가 달랐던 기간과 나대지·상가였던 기간은
             주택 부수토지가 아니므로 제외합니다. 멸실일부터 신축 취득일(사용승인일 등)까지의 기간은 합산하지 않고, 각 구간의 남는 일수는 버립니다

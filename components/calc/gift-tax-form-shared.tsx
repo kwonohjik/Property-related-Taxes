@@ -343,7 +343,7 @@ export function Step0({
 
       {/* Phase A: 증여자 (donor) — §47 합산 그룹 + §57 적용 판정
           G-M3: donor 변경 시 donorRelation 자동 도출 (단일 진실화) */}
-      <ToneCard tone="violet" sectionNum="§47" title="증여자 (동일인 합산 그룹 + §57 적용 판정)" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="violet" sectionNum="§47" title="증여자 (동일인 합산 그룹 + §57 적용 판정)" bodyClassName="space-y-2">
         <select
           value={form.donor}
           data-testid="gift-donor-select"

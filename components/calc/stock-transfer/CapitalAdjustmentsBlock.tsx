@@ -58,12 +58,11 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
       sectionNum="CA"
       title="무상증자·무상감자 (자본조정) — 법§17② 단서 + 시행령 §27②"
       bodyClassName="space-y-3"
-      noDark
       titleExtra={
         <button
           type="button"
           onClick={add}
-          className="ml-auto rounded border border-violet-300 bg-white px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
+          className="ml-auto rounded border border-violet-300 bg-white dark:bg-gray-900 px-3 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100"
         >
           + 행 추가
         </button>
@@ -104,7 +103,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
           {sorted.map((r) => {
             const idx = r._idx;
             return (
-              <div key={idx} className="rounded border border-violet-200 bg-white p-3 space-y-2">
+              <div key={idx} className="rounded border border-violet-200 bg-white dark:bg-gray-900 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-violet-800">자본조정 #{idx + 1}</p>
                   <button

@@ -74,7 +74,6 @@ export function Step4({
           sectionNum={1}
           title="법인·공장 중과 (§13①②)"
           bodyClassName="space-y-3"
-          noDark
           titleExtra={
             <TaxHelp
               title="본점·주사무소 중과 vs 산업단지 (§13①②)"
@@ -256,7 +255,6 @@ export function Step4({
         sectionNum={2}
         title="세율특례 §15① (7호)"
         bodyClassName="space-y-3"
-        noDark
         titleExtra={
           <TaxHelp
             title="세율특례 §15① (7호)"

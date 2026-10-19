@@ -57,7 +57,7 @@ export function HouseEntryNewHouseOriginBlock({ house, onUpdate }: Props) {
   const origin = house.acquisitionOrigin;
   const dateSpec = origin ? DATE_LABEL[origin] : undefined;
   return (
-    <ToneCard tone="violet" sectionNum="취득 경위" bodyClassName="space-y-2.5" title="이 주택을 어떻게 취득했습니까 (일시적 2주택)" noDark>
+    <ToneCard tone="violet" sectionNum="취득 경위" bodyClassName="space-y-2.5" title="이 주택을 어떻게 취득했습니까 (일시적 2주택)">
       <p className="text-micro text-muted-foreground" data-testid="house-row-origin-intro">
         양도 주택보다 나중에 취득한 주택입니다. 분양권·조합원입주권으로 취득해 완공된 주택이면 완공일이 아니라 <b>권리를 취득한 날</b>이 판정의 기준이 될 수 있습니다.
       </p>

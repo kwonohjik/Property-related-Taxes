@@ -58,7 +58,7 @@ export function CasualtyLossSection({
       onCheckedChange={(v) => set({ casualtyLossEnabled: v })}
     >
       {/* ① 재난 정보 (sky 카드) */}
-      <ToneCard tone="sky" sectionNum={1} title="재난 정보" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="sky" sectionNum={1} title="재난 정보" bodyClassName="space-y-3">
         <div className="space-y-1">
           <p className="text-xs font-medium text-gray-700 dark:text-gray-300">재난 종류</p>
           <RadioCardGroup
@@ -89,7 +89,7 @@ export function CasualtyLossSection({
       </ToneCard>
 
       {/* ② 손실 산정 (rose 카드) */}
-      <ToneCard tone="rose" sectionNum={2} title="손실 산정" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="rose" sectionNum={2} title="손실 산정" bodyClassName="space-y-3">
         <CurrencyInput
           label="재해손실재산가액"
           value={form.casualtyLossValue}

@@ -99,7 +99,7 @@ export function PartAcqInputs(props: {
   // estimated — 실입력 칸은 두지 않고 **위치만 지시**한다(입력 칸을 여기 복제하면 dual-truth).
   if (props.estimatedNote !== undefined) {
     return (
-      <ToneCard tone="amber" noDark bodyClassName="space-y-1">
+      <ToneCard tone="amber" bodyClassName="space-y-1">
         <div className="text-xs text-amber-900" data-testid={`${tid}-${props.part}-estimated-note`}>
           {props.estimatedNote}
         </div>
@@ -119,7 +119,7 @@ export function PartAcqInputs(props: {
     ? `위 「${label} 양도시 기준시가」 카드`
     : "위 「양도시 기준시가」 카드(양도가액 토지·건물 안분 방식 아래)";
   return (
-    <ToneCard tone="amber" noDark bodyClassName="space-y-1">
+    <ToneCard tone="amber" bodyClassName="space-y-1">
       <p className="text-xs text-amber-900" data-testid={`${tid}-${props.part}-estimated-note`}>
         {label} 환산취득가 = {label} 양도가액 × <Frac top="취득시 기준시가" bottom="양도시 기준시가" />
         <br />· 취득시 기준시가 → {acqSource}

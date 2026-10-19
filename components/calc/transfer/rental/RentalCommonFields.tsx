@@ -125,7 +125,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
   return (
     <>
       {/* ③ 임대료 증액 제한 */}
-      <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="violet" sectionNum={sec3} title="임대료 증액 제한 (§97의3①2호)" bodyClassName="space-y-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">임대료 5% 증액 위반 이력</p>
           <RadioCardGroup
@@ -224,7 +224,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       </ToneCard>
 
       {/* ④ 공실 기간 */}
-      <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">
             {graceLabel}을 초과하는 공실 구간
@@ -291,7 +291,6 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           sectionNum={sec5}
           title="임대 종료 시점"
           bodyClassName="space-y-2"
-          noDark
         >
           <div>
             <p className="mb-1.5 text-xs text-muted-foreground">임대가 양도일까지 계속되었습니까?</p>

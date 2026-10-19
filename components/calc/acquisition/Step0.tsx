@@ -86,7 +86,6 @@ export function Step0({
         sectionNum={1}
         title="취득자 유형"
         bodyClassName="space-y-2"
-        noDark
         titleExtra={
           <TaxHelp
             title="법인 취득자 — 휴면법인 판정"
@@ -131,7 +130,6 @@ export function Step0({
         sectionNum={2}
         title="물건 유형"
         bodyClassName="space-y-2"
-        noDark
         titleExtra={isDeemed ? (
           <span className="text-micro rounded-full bg-violet-100 text-violet-700 px-1.5 py-0.5 font-medium">자동 설정</span>
         ) : undefined}
@@ -159,7 +157,6 @@ export function Step0({
         sectionNum={3}
         title="취득 원인"
         bodyClassName="space-y-2"
-        noDark
         titleExtra={
           <TaxHelp
             title="신축·증축 취득 (원시취득)"

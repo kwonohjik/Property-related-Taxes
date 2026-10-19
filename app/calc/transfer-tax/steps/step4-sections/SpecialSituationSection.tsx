@@ -106,7 +106,7 @@ export function SpecialSituationSection({
             엔진은 제외 사유를 판정하지 않는다(입력이 없다). 사용자가 제외 대상인데 토글을 켜면
             70%가 그대로 적용돼 과대 계산되므로, 켠 시점에 확인을 유도한다. */}
         {anyUnregisteredOn && (
-          <ToneCard tone="amber" title="미등기양도자산에서 제외되는 경우" noDark>
+          <ToneCard tone="amber" title="미등기양도자산에서 제외되는 경우">
             <div className="flex flex-wrap items-center gap-1.5">
               <LawArticleModal
                 legalBasis="소득세법 시행령 §168"

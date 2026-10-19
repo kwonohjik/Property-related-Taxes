@@ -88,7 +88,6 @@ export function PresaleRightsSection({
           + 추가
         </button>
       }
-      noDark
     >
       <p className="text-caption text-muted-foreground/80">
         세대가 보유한 분양권·조합원입주권을 취득일과 무관하게 모두 입력하세요. 주택 수 산정

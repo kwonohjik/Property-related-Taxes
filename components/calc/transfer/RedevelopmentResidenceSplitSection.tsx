@@ -94,7 +94,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
   if (shouldHide) return null;
 
   return (
-    <ToneCard tone="emerald" sectionNum="6" title={`거주개월 분리 입력 (1세대1주택 + ${hv} 초과 시)`} noDark>
+    <ToneCard tone="emerald" sectionNum="6" title={`거주개월 분리 입력 (1세대1주택 + ${hv} 초과 시)`}>
       <p className="text-caption text-emerald-800 leading-relaxed">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
         {" "}—{" "}
@@ -217,7 +217,7 @@ function ResidencePeriodGroup({
         : undefined;
 
   return (
-    <div className="rounded-md border border-emerald-200 bg-white/60 p-3 space-y-2">
+    <div className="rounded-md border border-emerald-200 bg-white/60 dark:bg-white/5 p-3 space-y-2">
       <div className="flex flex-col gap-0.5">
         <p className="text-xs font-semibold text-emerald-900">{label}</p>
         <p className="text-caption text-emerald-700">{hint}</p>

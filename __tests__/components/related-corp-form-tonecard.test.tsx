@@ -1,5 +1,5 @@
 /**
- * anchor: related-corp-form(§45의3 일감몰아주기) 섹션카드 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 9호.
+ * anchor: related-corp-form(§45의3 일감몰아주기) 섹션카드 → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 9호.
  *   로컬 SectionHeader + TONE_CLASS 헬퍼 제거 → ToneCard 헤더(sectionNum 배지 + title)로 통합.
  *   - sec1 수혜법인(sky)·sec3 간접출자법인(amber): sectionNum+title (헤더 byte-1:1)
  *   - sec2 주주현황(emerald)·sec4 매출처(violet): sectionNum+title+titleExtra(우측 합계 span, ml-auto)
@@ -29,13 +29,13 @@ describe("related-corp-form 섹션카드 <ToneCard> 전환 (회귀 0)", () => {
     const c1 = cardOf(getByText("수혜법인 기본 정보"));
     expect(c1.className).toContain("border-sky-200");
     expect(c1.className).toContain("bg-sky-50/40");
-    expect(c1.className).not.toContain("dark:");
+    expect(c1.className).toContain("dark:");
     expect(getByText("1").className).toContain("bg-sky-200"); // 번호배지
 
     // sec2 emerald — titleExtra(우측 합계 span) 보존 + ml-auto
     const c2 = cardOf(getByText("주주현황"));
     expect(c2.className).toContain("border-emerald-200");
-    expect(c2.className).not.toContain("dark:");
+    expect(c2.className).toContain("dark:");
     const sum2 = getByTestId("rc-shareholder-sum");
     expect(sum2.className).toContain("ml-auto");
     expect(sum2.textContent).toContain("지분합계");
@@ -43,7 +43,7 @@ describe("related-corp-form 섹션카드 <ToneCard> 전환 (회귀 0)", () => {
     // sec4 violet — titleExtra 보존 + ml-auto
     const c4 = cardOf(getByText("매출처"));
     expect(c4.className).toContain("border-violet-200");
-    expect(c4.className).not.toContain("dark:");
+    expect(c4.className).toContain("dark:");
     const sum4 = getByTestId("rc-sales-sum");
     expect(sum4.className).toContain("ml-auto");
     expect(sum4.textContent).toContain("매출합계");
@@ -60,7 +60,7 @@ describe("related-corp-form 섹션카드 <ToneCard> 전환 (회귀 0)", () => {
     const c3 = cardOf(getByText("간접출자법인 (법인주주의 개인소유주)"));
     expect(c3.className).toContain("border-amber-200");
     expect(c3.className).toContain("bg-amber-50/40");
-    expect(c3.className).not.toContain("dark:");
+    expect(c3.className).toContain("dark:");
     expect(getByText("3").className).toContain("bg-amber-200");
   });
 });

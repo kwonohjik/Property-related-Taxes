@@ -398,7 +398,7 @@ export function GeneralBuildingBlock({
             </FieldCard>
 
             {convertedHousingPreview && (
-              <ToneCard tone="violet" noDark className="p-2.5">
+              <ToneCard tone="violet" className="p-2.5">
                 <p className="text-xs font-semibold text-violet-900">
                   환산주택가격 = {convertedHousingPreview.converted.toLocaleString("ko-KR")} 원
                 </p>
@@ -425,7 +425,6 @@ export function GeneralBuildingBlock({
           sectionNum="①"
           title="토지 공시지가 (토지기준시가)"
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
-          noDark
         >
           <p className="text-caption text-slate-600">
             {bgStdUse === "standard"
@@ -445,7 +444,7 @@ export function GeneralBuildingBlock({
 
           {showAcqStdPrice && (
             <div data-gb-stdprice="acq">
-              <ToneCard tone="amber" title="취득시" noDark>
+              <ToneCard tone="amber" title="취득시">
                 <LandPriceLookupField
                   data-field="gbAcqLandPricePerSqm"
                   label="취득시 토지 공시지가"
@@ -469,7 +468,7 @@ export function GeneralBuildingBlock({
               tone violet은 3시점 화면(`ThreePointAssetMajorRender`)의 최초공시 계약과 같다. */}
           {fdOn && (
             <div data-gb-stdprice="first">
-              <ToneCard tone="violet" title="최초공시시" noDark>
+              <ToneCard tone="violet" title="최초공시시">
                 <LandPriceLookupField
                   data-field="gbFirstDisclosureLandPricePerSqm"
                   label="최초공시시 토지 공시지가"
@@ -489,7 +488,7 @@ export function GeneralBuildingBlock({
                 {/* 구형 자산 — 단가 없이 총액만 저장된 상태. 안내가 없으면 화면은 비어 있는데
                     계산은 그 총액으로 도는 유령 값이 된다. 지우면 fallback이 끊긴다. */}
                 {fdUsesLegacyLandTotal && (
-                  <ToneCard tone="amber" noDark className="p-2.5">
+                  <ToneCard tone="amber" className="p-2.5">
                     <p className="text-caption text-amber-800">
                       이전에 저장된 토지 기준시가 총액{" "}
                       <b>{parseAmount(asset.gbFirstDisclosureLandStdPrice).toLocaleString("ko-KR")}원</b>
@@ -513,7 +512,7 @@ export function GeneralBuildingBlock({
 
           {!shareAcquisitionOnly && (
           <div data-gb-stdprice="transfer">
-            <ToneCard tone="emerald" title="양도시" noDark>
+            <ToneCard tone="emerald" title="양도시">
               <LandPriceLookupField
                 data-field="gbTransferLandPricePerSqm"
                 label="양도시 토지 공시지가"
@@ -539,12 +538,11 @@ export function GeneralBuildingBlock({
               <LawArticleModal legalBasis="소득세법 시행령 §163⑥" label="§163⑥ 개산공제" />
             ) : undefined
           }
-          noDark
         >
           {/* 증축이 있을 때만 — 이 섹션이 무엇을 받는 자리인지 못 박는다.
               증축분(건물2) 기준시가는 아래 증축 항목이 따로 받는다. */}
           {gbExtOn && (
-            <ToneCard tone="violet" noDark className="p-2.5">
+            <ToneCard tone="violet" className="p-2.5">
               <p className="text-caption text-violet-800">
                 이 섹션은 <b>증축 전 원건물(건물1)</b>의 기준시가만 받습니다. 증축분(건물2)
                 기준시가는 아래 <b>증축 항목</b>에서 따로 입력합니다 — 여기에 증축분까지 합치면
@@ -599,7 +597,7 @@ export function GeneralBuildingBlock({
 
           {showAcqBuildingStdPrice && (
             <div data-gb-stdprice="acq">
-              <ToneCard tone="amber" title="취득시" noDark>
+              <ToneCard tone="amber" title="취득시">
                 <FieldCard
                   field="gbAcqBuildingValue"
                   label={gbExtOn ? "취득시 원건물 기준시가" : "취득시 건물기준시가"}
@@ -638,7 +636,7 @@ export function GeneralBuildingBlock({
                  override한다 — `general-building-converted-housing.ts`). */}
           {fdOn && (
             <div data-gb-stdprice="first">
-              <ToneCard tone="violet" title="최초공시시" noDark>
+              <ToneCard tone="violet" title="최초공시시">
                 <FieldCard
                   field="gbFirstDisclosureBuildingStdPrice"
                   label="최초공시시 건물 기준시가"
@@ -663,7 +661,7 @@ export function GeneralBuildingBlock({
 
           {!shareAcquisitionOnly && (
           <div data-gb-stdprice="transfer">
-            <ToneCard tone="emerald" title="양도시" noDark>
+            <ToneCard tone="emerald" title="양도시">
               {/* hint의 계산기 위치 안내는 실제 런처 위치를 따라간다 — 일괄이면 위, 아니면 아래. */}
               <FieldCard
                 field="gbTransferBuildingValue"

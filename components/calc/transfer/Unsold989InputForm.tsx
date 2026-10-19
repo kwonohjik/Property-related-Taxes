@@ -52,7 +52,7 @@ export function Unsold989InputForm({ value, onChange, rowFacts }: Props) {
       </div>
 
       {/* ① 취득 정보 */}
-      <ToneCard tone="sky" sectionNum="①" title="준공후미분양주택 취득 정보" noDark>
+      <ToneCard tone="sky" sectionNum="①" title="준공후미분양주택 취득 정보">
         <div>
           <label className="mb-1 block text-xs font-medium">준공후미분양주택 취득일</label>
           {rowFacts ? (
@@ -71,7 +71,7 @@ export function Unsold989InputForm({ value, onChange, rowFacts }: Props) {
       </ToneCard>
 
       {/* ② 가액·면적 요건 */}
-      <ToneCard tone="sky" sectionNum="②" title="가액·면적 요건" noDark>
+      <ToneCard tone="sky" sectionNum="②" title="가액·면적 요건">
         <div>
           <label className="mb-1 block text-xs font-medium">취득가액</label>
           {rowFacts ? (
@@ -108,7 +108,7 @@ export function Unsold989InputForm({ value, onChange, rowFacts }: Props) {
       </ToneCard>
 
       {/* ③ 소재지·자격 */}
-      <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건" noDark>
+      <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건">
         {rowFacts && rowFacts.nonCapital !== null ? (
           // 조특법 §2①9호 「수도권」= 수도권정비계획법 §2제1호(서울·인천·경기) — 행 주소의 법정동코드로 판정
           <p className="text-xs" data-testid="unsold989-row-region">

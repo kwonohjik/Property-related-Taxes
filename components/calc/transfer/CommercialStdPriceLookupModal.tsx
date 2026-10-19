@@ -231,7 +231,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
           </DialogHeader>
 
           <div className="space-y-3">
-            <ToneCard tone="sky" title="조회 대상" noDark>
+            <ToneCard tone="sky" title="조회 대상">
               <p className="text-xs text-sky-800">
                 {asset.addressJibun || asset.addressRoad || "소재지 미상"}
               </p>
@@ -247,7 +247,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
             <StatusBox loading={loading} error={error} res={res} points={points} />
 
             {res && res.units.length > 0 && (
-              <ToneCard tone="emerald" sectionNum="1" title="호 목록" noDark>
+              <ToneCard tone="emerald" sectionNum="1" title="호 목록">
                 {/*
                   🔴 **노출 조건은 원본 호 수(`res.units`)다** (2026-09-07 UI 리뷰).
                   종전에는 **검색 결과 수**(`filtered`)를 봐서, 한 글자만 입력해 결과가 임계 이하로
@@ -336,7 +336,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
             )}
 
             {selected && (
-              <ToneCard tone="amber" sectionNum="2" title="선택한 호 — 시점별 고시가" noDark>
+              <ToneCard tone="amber" sectionNum="2" title="선택한 호 — 시점별 고시가">
                 <p className="text-caption text-amber-700">{unitLabel(selected)}</p>
                 {selected.linkedBy === "position" && selected.buildingNameByDate && (
                   <p className="text-caption text-amber-800">
@@ -462,7 +462,7 @@ function StatusBox({
 
   if (!message) return null;
   return (
-    <ToneCard tone={tone} noDark>
+    <ToneCard tone={tone}>
       <p className="text-xs" data-testid="cb-stdprice-status">
         {message}
       </p>

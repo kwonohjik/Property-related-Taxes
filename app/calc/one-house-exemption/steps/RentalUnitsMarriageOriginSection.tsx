@@ -40,7 +40,7 @@ export function RentalUnitsMarriageOriginSection({ form, onChange }: Props) {
   // `ToneCard`는 data-testid를 전달하지 않는다 — 바깥 div에 붙인다.
   return (
     <div data-testid="rental-units-marriage-origin">
-      <ToneCard tone="violet" bodyClassName="space-y-3" title="장기임대주택의 혼인 전 보유자" noDark>
+      <ToneCard tone="violet" bodyClassName="space-y-3" title="장기임대주택의 혼인 전 보유자">
         <p className="text-caption text-muted-foreground">
           각각 2주택 이상을 보유한 사람끼리 혼인해 1세대가 4주택 이상이 되면 혼인합가 특례가 적용되지 않습니다
           (기획재정부 조세정책과-1199). 장기임대주택도 이 주택 수에 들어가므로, 앞에서 입력한 장기임대주택마다 혼인 전에

@@ -104,7 +104,6 @@ export function EvaluationCommitteeToggle({ value, onChange, sectionNum = 8 }: E
         sectionNum={sectionNum}
         bodyClassName="space-y-3"
         title="평가심의위원회 신청 (선택)"
-        noDark
       >
       <ToggleCard
         lawLinks="상증법"

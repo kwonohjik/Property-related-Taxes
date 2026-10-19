@@ -20,7 +20,7 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
   const updatePeriod = (i: number, patch: Partial<{ startDate: string; value: string; interest: string }>) =>
     set({ freePeriods: periods.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
   return (
-    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="violet" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="free-subtype"

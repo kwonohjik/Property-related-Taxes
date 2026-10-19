@@ -27,7 +27,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         <LawArticleModal legalBasis="농어촌특별세법 §5" label="농특세법 §5" />
       </div>
 
-      <ToneCard tone="rose" title="① 적용 주체" noDark>
+      <ToneCard tone="rose" title="① 적용 주체">
         <ToggleCard
           tone="rose"
           title="국내사업장 없는 비거주자"
@@ -37,7 +37,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         />
       </ToneCard>
 
-      <ToneCard tone="sky" title="② 취득·계약 시기" noDark>
+      <ToneCard tone="sky" title="② 취득·계약 시기">
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate984} onChange={(v) => onChange({ contractDate984: v })} />
@@ -48,7 +48,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         </div>
       </ToneCard>
 
-      <ToneCard tone="rose" title="③ 대상 주택" noDark>
+      <ToneCard tone="rose" title="③ 대상 주택">
         <ToggleCard
           tone="rose"
           title="§98의3 미분양주택이 아닌 주택"

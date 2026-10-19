@@ -84,15 +84,3 @@ export const TONE: Record<Tone, ToneSurface> = {
       "border-slate-300 text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700/40",
   },
 };
-
-/**
- * dark: 변형 제거 — dark 미대응 레거시 카드를 **회귀 0**으로 ToneCard에 태울 때 사용.
- * 예: 스톡양도 ForeignStock/ExitTax의 SectionBox는 원래 light 전용이라, dark를 새로 입히면
- *     내부 콘텐츠(light 전용)와 불일치 → `<ToneCard noDark>`로 원본 외관 그대로 보존.
- */
-export function stripDark(surface: string): string {
-  return surface
-    .split(" ")
-    .filter((c) => !c.startsWith("dark:"))
-    .join(" ");
-}

@@ -54,7 +54,7 @@ function setSlot(types: RcExclusionTypeStr[], n: number, v: RcExclusionTypeStr):
 }
 
 const newId = () => crypto.randomUUID();
-const selectClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm bg-white";
+const selectClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm bg-white dark:bg-gray-900";
 const textClass = "w-full rounded border border-gray-200 px-2 py-1 text-sm";
 
 export function RelatedCorpFields({ form, set }: Props) {
@@ -103,7 +103,7 @@ export function RelatedCorpFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 수혜법인 기본 정보 [sky] ── */}
-      <ToneCard tone="sky" sectionNum={1} title="수혜법인 기본 정보" noDark>
+      <ToneCard tone="sky" sectionNum={1} title="수혜법인 기본 정보">
         <RadioCardGroup
           name="rc-size"
           tone="sky"
@@ -147,10 +147,9 @@ export function RelatedCorpFields({ form, set }: Props) {
             지분합계 {summary.totalDirectPct.toFixed(2)}%
           </span>
         }
-        noDark
       >
         {form.rcShareholders.map((row, idx) => (
-          <div key={row.id} data-testid={`rc-sh-row-${idx}`} className="space-y-2 rounded-md border border-emerald-200 bg-white p-2">
+          <div key={row.id} data-testid={`rc-sh-row-${idx}`} className="space-y-2 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 p-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-emerald-700">주주 {idx + 1}</span>
               <button
@@ -212,9 +211,9 @@ export function RelatedCorpFields({ form, set }: Props) {
 
       {/* ── 섹션 3: 간접출자법인 roster [amber] — 법인주주 있을 때만 ── */}
       {corpOptions.length > 0 && (
-        <ToneCard tone="amber" sectionNum={3} title="간접출자법인 (법인주주의 개인소유주)" noDark>
+        <ToneCard tone="amber" sectionNum={3} title="간접출자법인 (법인주주의 개인소유주)">
           {form.rcIntermediaryCorps.map((row, idx) => (
-            <div key={row.id} data-testid={`rc-int-row-${idx}`} className="space-y-2 rounded-md border border-amber-200 bg-white p-2">
+            <div key={row.id} data-testid={`rc-int-row-${idx}`} className="space-y-2 rounded-md border border-amber-200 bg-white dark:bg-gray-900 p-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-amber-700">간접출자법인 {idx + 1}</span>
                 <button
@@ -320,10 +319,9 @@ export function RelatedCorpFields({ form, set }: Props) {
             매출합계 {summary.salesSum.toLocaleString()}
           </span>
         }
-        noDark
       >
         {form.rcSalesPartners.map((row, idx) => (
-          <div key={row.id} data-testid={`rc-sales-row-${idx}`} className="space-y-2 rounded-md border border-violet-200 bg-white p-2">
+          <div key={row.id} data-testid={`rc-sales-row-${idx}`} className="space-y-2 rounded-md border border-violet-200 bg-white dark:bg-gray-900 p-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-violet-700">매출처 {idx + 1}</span>
               <button

@@ -44,7 +44,7 @@ export function BurdenedGiftRightValuationSection({ asset, onChange }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
 
   return (
-    <ToneCard tone="emerald" title="증여재산 평가 — 조합원입주권" bodyClassName="space-y-2" noDark>
+    <ToneCard tone="emerald" title="증여재산 평가 — 조합원입주권" bodyClassName="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61③" />
         <LawArticleModal legalBasis="상속세및증여세법 시행령 §51" label="시행령 §51②" />
