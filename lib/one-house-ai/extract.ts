@@ -12,6 +12,9 @@ import { buildExtractionSystemPrompt, buildExtractionUserMessage } from "./promp
 
 export const ONE_HOUSE_EXTRACTION_MODEL = "claude-opus-5-5";
 
+/** 원문 길이 상한(사용자 결정 2026-10-19) — 입력 토큰이 곧 비용이다. */
+export const ONE_HOUSE_AI_TEXT_MAX = 10_000;
+
 export type ExtractionRun = {
   extraction: OneHouseExtraction;
   model: string;
