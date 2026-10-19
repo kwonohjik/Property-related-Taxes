@@ -45,6 +45,7 @@ import { validateRedevelopmentAsset } from "./transfer-tax-validate-redev";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateLandPartCause } from "./transfer-tax-validate-split";
+import { effectiveSelfOwns } from "./self-owns-scope";
 import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -350,6 +351,15 @@ export function validateAssetAcquisition(
     // (g) 결정 #33·#34·#38-6 — 증여자와 계속 같은 세대인가(필수 사실 질문) — `validateCarryoverHouseholdFact` 참조.
     const householdErr = validateCarryoverHouseholdFact(asset, c, label);
     if (householdErr) return householdErr;
+
+    // (h) 토지·건물 소유자 분리(`selfOwns≠both`) — 신축 분기·일반 취득 꼬리와 같은 분리 검증 전체.
+    //     이월과세는 `NonPurchaseSplitInputsBlock`이 취득시 기준시가·양도시 기준시가를 받는 호스트인데(화면에 칸이 있다),
+    //     종전엔 아래 `return null`이 그 규칙을 통째로 건너뛰어 ⑧ 통과 → ⑫ 400(`standardPricePerSqmAtAcquisition` 등 5필드)이었다.
+    //     게이트는 ④ `isSplitPayloadActive`의 소유 축과 같은 술어(`effectiveSelfOwns`) — 분리가 아니면 `null`(회귀 0).
+    //     첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)이고 칸 순서는 취득시 → 양도시 → 파트별이다.
+    if ((effectiveSelfOwns(asset) ?? "both") !== "both") {
+      return validateSplitDirectInputs(asset, label, formTransferDate);
+    }
 
     // carryover_gift 검증 완료 — 일반 취득 검증 스킵
     return null;

@@ -21,6 +21,7 @@
  *    생긴다(N-7이 기록한 `preHousingDisclosureSchema` 사례). 그래서 별도 파일이다.
  */
 import { z } from "zod";
+import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
 
 export const splitAcquisitionShape = {
   // ─── 취득일 분리 (소득령 §166⑥·§168②) ────────────────────────────
@@ -44,6 +45,11 @@ export const splitAcquisitionShape = {
   landHouseSec164Value: z.number().int().positive().optional(),
   /** 토지 파트 증여자 취득일 (§104②2호 — 이월과세 자산만. 분리 계산의 토지 이월과세는 미지원으로 차단 — D0 G-1) */
   landDonorAcquisitionDate: z.string().date().optional(),
+  /**
+   * 주택 split 파트 이월과세(§97의2①) 와이어 — 컴패니언은 이 키를 **받아서** 명시 거부한다(leaf S0·S2′). 받지 않으면 Zod가 조용히 strip해
+   * 이월과세 없이 단순 증여로 계산한다(anchor SPCO-0o). 설계: transfer-split-part-carryover.engine.design.md §1.3
+   */
+  ...splitCarryoverShape,
   /** 토지·건물 소유자 분리 (§166⑥) */
   selfOwns: z.enum(["both", "building_only", "land_only"]).optional(),
 

@@ -182,6 +182,9 @@ type PrimaryLike = {
   mixedUse?: unknown;
   commercialBuildingValuation?: unknown;
   carryoverTaxation?: Parameters<typeof refineCarryoverTaxation>[0];
+  // 주택 split 파트 이월과세 — 있으면 B·C 호스트(`acquisitionCause: carryover_gift`)가 자산 단위 `carryoverTaxation` 없이 통과한다
+  landCarryoverPart?: unknown;
+  buildingCarryoverPart?: unknown;
 };
 
 /**
@@ -193,7 +196,10 @@ export function refinePrimaryAcquisitionInputs(data: PrimaryLike, ctx: z.Refinem
     !!data.generalBuildingValuation || !!data.redevelopment || !!data.mixedUse || !!data.commercialBuildingValuation;
 
   // 이월과세(§97의2) — 컴패니언 arm과 같은 규칙. 비우면 일반 증여로 계산됐다.
-  if (data.acquisitionCause === "carryover_gift" && !ownValuation) {
+  // 파트 이월과세(B·C 호스트)는 자산 단위 `carryoverTaxation` 대신 파트 서브객체를 받는다 — 둘의 상호배제와 서브객체 필수는 leaf(S1·S3)가 본다.
+  // (이 면제가 없으면 B·C가 「carryoverTaxation이 필요합니다」로 400이다.)
+  const hasSplitPartCarryover = !!(data.landCarryoverPart || data.buildingCarryoverPart);
+  if (data.acquisitionCause === "carryover_gift" && !ownValuation && !hasSplitPartCarryover) {
     const ct = data.carryoverTaxation;
     if (!ct) {
       issue(["carryoverTaxation"], "이월과세(증여) 자산은 증여 정보(carryoverTaxation)가 필요합니다 (소득세법 §97의2)");

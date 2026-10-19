@@ -174,19 +174,21 @@ describe("#32-4 gate leaf — `relevance.right(i)`", () => {
     ],
   };
   const selling = () => false;
+  /** 일시적 2주택 명부 행 게이트(별건 ⑤) — 이 시료에는 명부 행이 없어 값과 무관하다. */
+  const rows = { previousHouse: () => true, newHouse: () => true };
 
   it("right(i)가 거짓이면 고지하지 않는다 · 인자는 입주권 행 번호", () => {
     const seen: number[] = [];
-    expect(designatedDistrictUndeclared(input, { selling, right: (i) => (seen.push(i), false) })).toEqual([]);
+    expect(designatedDistrictUndeclared(input, { selling, ...rows, right: (i) => (seen.push(i), false) })).toEqual([]);
     expect(seen).toEqual([0]);
   });
   it("긍정 짝 — right(i)가 참이면 고지 · relevance를 안 넘기면 게이트 없음(기존 호출부 호환)", () => {
-    expect(designatedDistrictUndeclared(input, { selling, right: () => true }).map((x) => x.id)).toEqual([ID]);
+    expect(designatedDistrictUndeclared(input, { selling, ...rows, right: () => true }).map((x) => x.id)).toEqual([ID]);
     expect(designatedDistrictUndeclared(input).map((x) => x.id)).toEqual([ID]);
   });
   it("양도 주택 게이트(selling)와 독립 — right만 거짓이어도 selling 고지는 selling 게이트가 정한다", () => {
     const both = { ...input, regionCode: "4159710200", acquisitionDate: D("2018-01-02") };
-    const ids = designatedDistrictUndeclared(both, { selling: () => true, right: () => false }).map((x) => x.id);
+    const ids = designatedDistrictUndeclared(both, { selling: () => true, ...rows, right: () => false }).map((x) => x.id);
     expect(ids).toEqual(["regulated-district-undeclared:selling"]);
   });
 });

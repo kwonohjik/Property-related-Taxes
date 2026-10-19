@@ -328,6 +328,11 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "gb: carryover.estimationMode (토지)", field: "carryover.estimationMode", step: 0, assetIndex: A, message: /^자산 토지: 증여자 취득가액의 환산 방식/,
     form: gb({ acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", carryover: carry({ useEstimatedAcquisition: true }) }),
   },
+  // H-6 — 일반건물은 「일반 기준시가 환산」만 지원한다. 세션에 phd·apd가 남았으면 없는 칸(기준시가)이 아니라 방식 라디오로 보낸다.
+  {
+    name: "gb: carryover.estimationMode (토지 · phd 잔재)", field: "carryover.estimationMode", step: 0, assetIndex: A, message: /^자산 토지: 일반건물 이월과세의 환산취득가액은/,
+    form: gb({ acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", carryover: carry({ useEstimatedAcquisition: true, estimationMode: "phd" }) }),
+  },
   {
     name: "gb: carryover.donorStandardPriceAtAcquisition (토지)", field: "carryover.donorStandardPriceAtAcquisition", step: 0, assetIndex: A, message: /^자산 토지: 증여자 취득 당시 기준시가/,
     form: gb({ acquisitionCause: "carryover_gift", gbBuildingAcquisitionCause: "carryover_gift", carryover: carry({ useEstimatedAcquisition: true, estimationMode: "general" }) }),

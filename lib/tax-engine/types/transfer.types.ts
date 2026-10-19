@@ -1418,6 +1418,17 @@ export interface TransferTaxInput {
    * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).
    */
   landDonorAcquisitionDate?: Date;
+  /**
+   * 토지 파트 배우자등 이월과세(소득세법 §97의2①) — 토지만(A)·둘 다(C). **자산 단위 `carryoverTaxation`과 상호배제**다.
+   * ⑭ 합성기(`composeSplitCarryover`)가 와이어(`landCarryoverPart` + `carryoverGiftEvent`)에서 만든다 — 증여세 상당액은
+   * 영 §163의2②로 안분된 값(한도 전)이고, 한도(파트 gain)는 해결자(`calcSplitCarryoverScenarios`)가 건다.
+   * 설계: docs/02-design/features/transfer-split-part-carryover.engine.design.md §1.5
+   */
+  landCarryoverTaxation?: CarryoverTaxationInput;
+  /** 건물 파트 배우자등 이월과세 — 건물만(B)·둘 다(C). 위 `landCarryoverTaxation`과 같은 규약 */
+  buildingCarryoverTaxation?: CarryoverTaxationInput;
+  /** 파트 이월과세의 증여 사건 echo 전용 — 계산에는 쓰이지 않는다(파트 `*CarryoverTaxation`이 사건 사실을 이미 싣는다) */
+  carryoverGiftEvent?: { giftRegistryDate: Date; giftTaxCalculated: number; giftTaxBase: number };
   /** 토지 자본적지출·필요경비 */
   landDirectExpenses?: number;
   /** 건물 자본적지출·필요경비 */

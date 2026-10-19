@@ -789,6 +789,8 @@ export interface MixedPartLthdEcho {
   residenceDeductionRate: number;
   holdingDeductionAmount: number;
   residenceDeductionAmount: number;
+  /** 그 파트 자신의 보유연수(취득일 → 양도일) — 상세명세서 산식 문구용. #2247 이후·이 필드 추가 전 결과에는 없다. */
+  holdingYears?: number;
 }
 export interface MixedPartLthd {
   land: MixedPartLthdEcho;

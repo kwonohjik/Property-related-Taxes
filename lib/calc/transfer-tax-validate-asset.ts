@@ -212,7 +212,9 @@ export function validateAssetEntry(
   // ⑧ landNature 필수 차단 — 토지 자산이 포함된 일괄양도 시 명시 선택 강제
   // 자동 안분 fallback 금지 원칙 준수 (부수토지/독립 나대지에 따라 세율 분기가 달라짐)
   if (a.assetKind === "land") {
-    const hasHousingInBundle = form.assets.some(
+    // 「같은 물건 지분 분할」(사용자 선택 — #2246)의 형제는 같은 토지의 다른 지분이다 — 저장 `assetKind`(기본값 `"housing"`)로 주택을 세지 않는다.
+    //   그 묶음은 주택이 없는 토지 단건과 같은 요구다(단건 토지는 토지 성격 필수가 아니다 — 계획서 `axis-b-appurtenant-land-dead-end.plan.md` F2).
+    const hasHousingInBundle = form.assetSplitMode !== "fractional" && form.assets.some(
       (other) =>
         other.assetId !== a.assetId &&
         (other.assetKind === "housing" ||
@@ -228,7 +230,7 @@ export function validateAssetEntry(
      * (1세대 해당 · 1주택 · 조정대상지역 아님)으로 주택과 토지가 통째로 비과세된다(검토 실측: 조정대상지역 취득·거주 0 — 주택 먼저 173,646,000,
      * 토지 먼저 0). 주택을 첫 자산으로 넣으면 같은 사실을 배율 이내·초과 구분과 1세대1주택 합산 판정으로 계산한다(#17 K1 경로).
      */
-    if (index === 0 && reverseAppurtenantHouseAssetId(form.assets) !== undefined) {
+    if (index === 0 && reverseAppurtenantHouseAssetId(form.assets, form.assetSplitMode) !== undefined) {
       return fieldError(
         "landNature",
         `${label}: 주택부수토지를 첫 자산으로 넣고 주택을 함께 양도하는 자산으로 넣으면 1세대1주택 판정에 필요한 세대·거주기간·조정대상지역 입력이 열리지 않아 계산할 수 없습니다. 주택을 첫 자산으로, 이 토지를 함께 양도하는 자산(주택부수토지)으로 입력하세요 — 배율 이내·초과 구분과 1세대1주택 합산 판정을 합니다(소득세법 §89①3호).`,

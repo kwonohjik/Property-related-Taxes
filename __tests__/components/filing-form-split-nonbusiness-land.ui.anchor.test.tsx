@@ -73,10 +73,10 @@ describe("FilingFormTable — 초과분이 있으면 열은 합계·토지·건�
     expect(cellsOf("비과세 양도차익")[2].textContent).toContain("비과세 대상이 아니라");
   });
 
-  it("초과분이 없으면 각주도 없고 값은 종전(균일 비율) 그대로", () => {
+  it("초과분이 없으면 각주도 없고 값은 종전(균일 비율) 그대로 — 건물 열만 합계 잔액 흡수(별건 ②, 94,444,444 → 94,444,445)", () => {
     render(<FilingFormTable result={noExcess()} transferPriceOverride={PRICE} />);
     expect(screen.queryByText(/배율 초과 부수토지분/)).toBeNull();
-    expect([1, 2, 3].map((i) => num(cellsOf("과세대상 양도차익")[i]))).toEqual(["200,000,000", "105,555,555", "94,444,444"]);
+    expect([1, 2, 3].map((i) => num(cellsOf("과세대상 양도차익")[i]))).toEqual(["200,000,000", "105,555,555", "94,444,445"]);
     expect([1, 2, 3].map((i) => num(cellsOf("장기보유특별공제")[i]))).toEqual(["159,999,999", "84,444,444", "75,555,555"]);
   });
 });

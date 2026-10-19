@@ -25,6 +25,7 @@ import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-a
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
+import { refineSplitCarryoverValues } from "./transfer-tax-schema-split-carryover";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -78,6 +79,14 @@ export type Required2aLike = {
   landHouseExisted?: "yes" | "no" | "unknown";
   landHouseSec164Value?: number;
   selfOwns?: string;
+  // 주택 split 파트 이월과세 (splitCarryoverShape · 자산 단위 carryoverTaxation과 상호배제)
+  carryoverGiftEvent?: { giftRegistryDate: string; giftTaxCalculated: number; giftTaxBase: number; donorRelation?: "spouse" | "lineal" | "other" };
+  landCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
+  buildingCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
+  carryoverTaxation?: unknown;
+  isOneHousehold?: boolean;
+  isUnregistered?: boolean;
+  companionAssets?: ReadonlyArray<unknown>;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
   buildingAcqMode?: string;
@@ -397,6 +406,8 @@ export function refineSplitPartCause(
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
     | "buildingSec164Value" | "buildingHouseKind" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
     | "landHouseExisted" | "landHouseSec164Value"
+    | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation" | "isOneHousehold" | "isUnregistered"
+    | "expenses"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
@@ -415,6 +426,11 @@ export function refineSplitPartCause(
   isHousing: boolean,
   ctx: z.RefinementCtx,
   prefix: (string | number)[] = [],
+  /**
+   * 파트 이월과세 호스트 — 주 자산(단건·다건)은 지원(`supported`), 컴패니언은 지원하지 않는다(leaf S0). `hasCompanions`는 주 자산에 함께 양도 자산이
+   * 있는가(leaf S2′). 다건 합산의 거부는 `MULTI_REJECT_RULES`가 한다(키 단위 — 다건 ⑭가 이 키를 옮기지 않는다).
+   */
+  host: { supported: boolean; hasCompanions: boolean } = { supported: true, hasCompanions: false },
 ) {
   const issues = collectSplitPartCauseIssues({
     isSplitable,
@@ -446,10 +462,22 @@ export function refineSplitPartCause(
     ),
     hasBuildingAcquisitionPrice: (d.buildingAcquisitionPrice ?? 0) > 0,
     hasLandAcquisitionPrice: (d.landAcquisitionPrice ?? 0) > 0,
+    // P1 파트 이월과세 — 와이어 `*CarryoverPart` 존재가 엔진 `*CarryoverTaxation` 존재와 같은 사실이다(⑭ 합성기가 1:1로 옮긴다).
+    hasLandCarryover: !!d.landCarryoverPart,
+    hasBuildingCarryover: !!d.buildingCarryoverPart,
+    hasTopLevelCarryover: !!d.carryoverTaxation,
+    partCarryoverSupported: host.supported,
+    hasCompanions: host.hasCompanions,
+    carryoverGiftDate: d.carryoverGiftEvent?.giftRegistryDate,
+    isOneHousehold: d.isOneHousehold,
+    isUnregistered: d.isUnregistered,
+    hasLegacyExpenses: (d.expenses ?? 0) > 0,
   });
   const issue = issuer(ctx);
   // ⑫ 경로는 실제 입력 필드다 — `areaScenario`는 ⑧(폼 칸) 전용 앵커이고 API에는 사실 `isPartialAreaTransfer`로 온다.
   for (const i of issues) issue([...prefix, i.field === "areaScenario" ? "isPartialAreaTransfer" : i.field], i.message);
+  // 파트 이월과세 값 검사(평가액 합 ≤ 증여세 과세가액 · 증여자 취득일 ≤ 증여일) — 호스트가 받는 자리에서만. 거부 자리는 leaf가 이미 짚었다.
+  if (host.supported) refineSplitCarryoverValues(d, issue, prefix);
 }
 
 // ─── PD · 의제취득일 전 상속·증여 취득가액 ─────────────────────────────
@@ -509,7 +537,10 @@ export function refinePreDeemedAcquisitionSource(
 export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) {
   refineExpropriationInputs(d, ctx);
   refineSplitAcquisitionInputs(d, ctx);
-  refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx);
+  refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx, [], {
+    supported: true,
+    hasCompanions: (d.companionAssets?.length ?? 0) > 0,
+  });
   refinePreDeemedAcquisitionSource(d, ctx);
 }
 

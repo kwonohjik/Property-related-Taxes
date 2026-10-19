@@ -147,7 +147,10 @@ export const propertySchema = z
       // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
       // D0 — 토지 파트 취득원인(이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — 주 자산과 같은 leaf
-      refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i]);
+      refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i], {
+        supported: false, // 컴패니언은 파트 이월과세를 받지 않는다(leaf S0) — 키는 받아서 명시 거부한다
+        hasCompanions: false,
+      });
       // 소유자 분리·별개 취득 입력 완결(V1~V8) — 종전엔 주 자산에만 걸려 컴패니언은 3종이 비면 엔진이 분리를 조용히 포기하고
       // **비소유 파트까지 과세**했다(⑧ `validateSplitDirectInputs`는 컴패니언도 차단 — ⑧≡⑫). 양도시 파트 기준시가(V7)도 ⑧이 요구하고,
       // 빠지면 엔진이 칸 없는 400을 내던 것을 정확한 칸으로 짚는다.

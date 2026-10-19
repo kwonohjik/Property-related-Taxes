@@ -387,7 +387,8 @@ describe("D1-Z ⑫ 격자 40셀 (현행 = D1 후 동일)", () => {
     standardPricePerSqmAtAcquisition: 500_000,
     acquisitionArea: 200,
   } as Record<string, unknown>;
-  const KEYS = ["landAcquisitionCause", "landAcqMode", "landDecedentAcquisitionDate"];
+  // P1: 토지 이월과세 원인(carry 셀)의 차단 칸이 G-1 `landAcquisitionCause` → S1 필수 누락 `landCarryoverPart`로 바뀌었다(서브객체 없는 이월과세 = 여전히 차단)
+  const KEYS = ["landAcquisitionCause", "landAcqMode", "landDecedentAcquisitionDate", "landCarryoverPart"];
   type LC = "none" | "inh+dec" | "inh-nodec" | "gift" | "carry";
   const LCS: LC[] = ["none", "inh+dec", "inh-nodec", "gift", "carry"];
   const BCS = ["purchase", "newConstruction"] as const;

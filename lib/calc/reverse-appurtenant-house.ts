@@ -11,6 +11,7 @@
  * 자산을 짝 주택으로 바꾸는 작업이 먼저다.)
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isFractionalSplitEntryBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 
 type ReverseAppurtenantAsset = Pick<
@@ -18,7 +19,14 @@ type ReverseAppurtenantAsset = Pick<
   "assetId" | "assetKind" | "landNature" | "isMixedUseHouse" | "ownershipNumerator" | "ownershipDenominator"
 >;
 
-export function reverseAppurtenantHouseAssetId(assets: readonly ReverseAppurtenantAsset[]): string | undefined {
+export function reverseAppurtenantHouseAssetId(
+  assets: readonly ReverseAppurtenantAsset[],
+  declaredMode?: TransferFormData["assetSplitMode"],
+): string | undefined {
+  // 사용자가 «같은 물건 지분 분할»을 골랐으면(폼 `assetSplitMode` — #2246) 형제는 같은 물건의 다른 지분이지 짝 주택이 아니다.
+  //   형제 카드의 저장 `assetKind`는 `makeDefaultAsset(2)` 기본값(`"housing"`)이고 ① 기본정보가 숨겨져 바꿀 수 없다 — ④는 첫 카드 종류로 보낸다.
+  //   종전에는 지분율이 채워지면 이 묶음을 역방향으로 읽어 ⑧이 막다른 길을 냈다(계획서 `axis-b-appurtenant-land-dead-end.plan.md`).
+  if (declaredMode === "fractional") return undefined;
   // 지분 분할(축 B) 토글 진입 **직후**(전 자산 지분율 빈칸)의 형제는 짝 주택이 아니다 — 형제는 `makeDefaultAsset(2)`라 원본 `assetKind`가 `"housing"`일 뿐
   // 같은 토지의 다른 지분이다. 이 묶음을 역방향으로 읽으면 ⑧이 「주택을 첫 자산으로」 안내를 하는데 따를 방법이 없다(막다른 길).
   // ⚠️ **지분율이 채워진 뒤(지분 < 1)는 건드리지 않는다** — 함께 양도 모드의 «전 자산 부분 소유»와 데이터로 구분되지 않고(구분은 `Step1`의 `splitMode`만 안다),

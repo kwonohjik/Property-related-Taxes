@@ -171,11 +171,23 @@ export function resolveDisplayAcquisitionAndExpense(r: {
  * 총액을 다시 나눈다. 함께 양도 주택이 배율 초과 부수토지(비사업용, 표1 보유분 단독)를 분리하면 그 공제 전액이 보유분인데
  * 휴리스틱이 거주분으로 쪼개 보였다(총액은 맞고 두 칸만 어긋남 — 실측 20,799,999가 10,400,000 + 10,399,999).
  * 그 경우에 한해 엔진 파트 echo의 합(`sumSplitLthdAmounts` — 배율초과분은 보유분)을 쓴다. 가드 실패(구 이력 등)면 종전처럼 `undefined`.
+ *
+ * 재개발·재건축(§166)도 sub-step이 없다 — 분기별 보유분·거주분(`redevelopmentDetail.*.lthdHoldingPart`·`lthdResidencePart`)의 합을 쓴다.
+ * 건별 신고서 분기 열(`FilingFormTableRedevRows` — 보유분 = `lthdHoldingPart ?? lthd`, 거주분 = `lthdResidencePart ?? 0`)과 같은 정의라
+ * 두 표가 같은 값이 된다. 종전에는 휴리스틱이 거주 개월수로 다시 나눠 완공 아파트 지분 1건이 보유분 121,347,367 → 104,814,034로 보였다.
  */
 export function resolveLthdPartsEcho(result: TransferTaxResult): { holding?: number; residence?: number } {
   const holding = result.steps?.find((st) => st.label === LTHD_HOLDING_STEP_LABEL)?.amount;
   const residence = result.steps?.find((st) => st.label === LTHD_RESIDENCE_STEP_LABEL)?.amount;
   if (holding !== undefined || residence !== undefined) return { holding, residence };
+  const rd = result.redevelopmentDetail;
+  if (rd) {
+    const branches = [rd.preApproval, rd.postApprovalExistingHouse, rd.settlement];
+    const h = branches.reduce((s, b) => s + (b.lthdHoldingPart ?? b.lthd), 0);
+    const r = branches.reduce((s, b) => s + (b.lthdResidencePart ?? 0), 0);
+    // 분기 합이 자산 공제액과 다르면(분기 밖에서 공제액을 고친 경로) 나눌 근거가 없다 — 종전 휴리스틱으로 둔다.
+    return h + r === result.longTermHoldingDeduction ? { holding: h, residence: r } : {};
+  }
   const sd = result.splitDetail;
   const sum = sd?.nonBusinessLandPart ? sumSplitLthdAmounts(sd, result.longTermHoldingDeduction) : null;
   return sum ? { holding: sum.holdingAmount, residence: sum.residenceAmount } : {};
