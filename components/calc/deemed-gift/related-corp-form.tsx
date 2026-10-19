@@ -141,7 +141,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         title="주주현황"
         titleExtra={
           <span
-            className={`ml-auto text-xs font-mono ${Math.abs(summary.totalDirectPct - 100) > 0.01 ? "text-rose-600" : "text-emerald-700"}`}
+            className={`ml-auto text-xs font-mono ${Math.abs(summary.totalDirectPct - 100) > 0.01 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-300"}`}
             data-testid="rc-shareholder-sum"
           >
             지분합계 {summary.totalDirectPct.toFixed(2)}%
@@ -151,11 +151,11 @@ export function RelatedCorpFields({ form, set }: Props) {
         {form.rcShareholders.map((row, idx) => (
           <div key={row.id} data-testid={`rc-sh-row-${idx}`} className="space-y-2 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 p-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-700">주주 {idx + 1}</span>
+              <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">주주 {idx + 1}</span>
               <button
                 type="button"
                 onClick={() => setShareholders(form.rcShareholders.filter((_, i) => i !== idx))}
-                className="text-xs text-rose-500 hover:text-rose-700"
+                className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
                 aria-label={`주주 ${idx + 1} 삭제`}
               >
                 삭제
@@ -202,7 +202,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         <button
           type="button"
           onClick={() => set({ rcShareholders: [...form.rcShareholders, makeRcShareholderRow(newId())] })}
-          className="w-full rounded border border-dashed border-emerald-300 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100/50"
+          className="w-full rounded border border-dashed border-emerald-300 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100/50 dark:text-emerald-300"
           data-testid="rc-add-shareholder"
         >
           + 주주 추가
@@ -215,11 +215,11 @@ export function RelatedCorpFields({ form, set }: Props) {
           {form.rcIntermediaryCorps.map((row, idx) => (
             <div key={row.id} data-testid={`rc-int-row-${idx}`} className="space-y-2 rounded-md border border-amber-200 bg-white dark:bg-gray-900 p-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-amber-700">간접출자법인 {idx + 1}</span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">간접출자법인 {idx + 1}</span>
                 <button
                   type="button"
                   onClick={() => set({ rcIntermediaryCorps: form.rcIntermediaryCorps.filter((_, i) => i !== idx) })}
-                  className="text-xs text-rose-500 hover:text-rose-700"
+                  className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
                   aria-label={`간접출자법인 ${idx + 1} 삭제`}
                 >
                   삭제
@@ -243,7 +243,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               <FieldCard label="수혜법인 직접지분" unit="%">
                 <DecimalInput value={row.stakeInBeneficiaryPctStr} onChange={(v) => updIntermediary(idx, { ...row, stakeInBeneficiaryPctStr: v })} placeholder="수혜법인 지분율" />
               </FieldCard>
-              <p className="text-caption font-medium text-amber-700">개인소유주 (§⑱ 자동판정 — 지배주주등 합산 30%↑)</p>
+              <p className="text-caption font-medium text-amber-700 dark:text-amber-300">개인소유주 (§⑱ 자동판정 — 지배주주등 합산 30%↑)</p>
               {row.owners.map((owner, oIdx) => (
                 <div key={oIdx} className="flex items-center gap-2">
                   <select
@@ -279,7 +279,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                   <button
                     type="button"
                     onClick={() => updIntermediary(idx, { ...row, owners: row.owners.filter((_, i) => i !== oIdx) })}
-                    className="text-xs text-rose-500 hover:text-rose-700"
+                    className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
                     aria-label={`소유주 ${oIdx + 1} 삭제`}
                   >
                     삭제
@@ -289,7 +289,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               <button
                 type="button"
                 onClick={() => updIntermediary(idx, { ...row, owners: [...row.owners, { individualId: "", ratioPctStr: "", dividendIncomeStr: "" }] })}
-                className="text-xs font-medium text-amber-700 hover:underline"
+                className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
               >
                 + 개인소유주 추가
               </button>
@@ -298,7 +298,7 @@ export function RelatedCorpFields({ form, set }: Props) {
           <button
             type="button"
             onClick={() => set({ rcIntermediaryCorps: [...form.rcIntermediaryCorps, makeRcIntermediaryRow(newId())] })}
-            className="w-full rounded border border-dashed border-amber-300 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100/50"
+            className="w-full rounded border border-dashed border-amber-300 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100/50 dark:text-amber-300"
             data-testid="rc-add-intermediary"
           >
             + 간접출자법인 추가
@@ -313,7 +313,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         title="매출처"
         titleExtra={
           <span
-            className={`ml-auto text-xs font-mono ${summary.totalSales > 0 && summary.salesSum !== summary.totalSales ? "text-rose-600" : "text-violet-700"}`}
+            className={`ml-auto text-xs font-mono ${summary.totalSales > 0 && summary.salesSum !== summary.totalSales ? "text-rose-600 dark:text-rose-400" : "text-violet-700 dark:text-violet-300"}`}
             data-testid="rc-sales-sum"
           >
             매출합계 {summary.salesSum.toLocaleString()}
@@ -323,11 +323,11 @@ export function RelatedCorpFields({ form, set }: Props) {
         {form.rcSalesPartners.map((row, idx) => (
           <div key={row.id} data-testid={`rc-sales-row-${idx}`} className="space-y-2 rounded-md border border-violet-200 bg-white dark:bg-gray-900 p-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-violet-700">매출처 {idx + 1}</span>
+              <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">매출처 {idx + 1}</span>
               <button
                 type="button"
                 onClick={() => set({ rcSalesPartners: form.rcSalesPartners.filter((_, i) => i !== idx) })}
-                className="text-xs text-rose-500 hover:text-rose-700"
+                className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
                 aria-label={`매출처 ${idx + 1} 삭제`}
               >
                 삭제
@@ -441,8 +441,8 @@ export function RelatedCorpFields({ form, set }: Props) {
               </FieldCard>
             )}
             {row.isRelated && row.exclusionTypes.filter((t) => t !== "").length === 0 && (
-              <div className="rounded border border-violet-100 bg-violet-50/60 p-2">
-                <p className="text-caption font-medium text-violet-700">§⑭1호 — 이 매출처가 간접출자법인인가</p>
+              <div className="rounded border border-violet-100 bg-violet-50/60 p-2 dark:bg-violet-950/40">
+                <p className="text-caption font-medium text-violet-700 dark:text-violet-300">§⑭1호 — 이 매출처가 간접출자법인인가</p>
                 <select
                   className={`${selectClass} mt-1`}
                   value={row.intermediaryCorpShareholderId}
@@ -459,10 +459,10 @@ export function RelatedCorpFields({ form, set }: Props) {
                     );
                   })}
                 </select>
-                <p className="mt-1 text-caption text-violet-600">
+                <p className="mt-1 text-caption text-violet-600 dark:text-violet-400">
                   간접출자법인이면 이 매출처 매출액 전액이 과세제외됩니다 (§⑱ 지배주주등 합산 30% 이상일 때만 성립).
                 </p>
-                <p className="mt-2 text-caption font-medium text-violet-700">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
+                <p className="mt-2 text-caption font-medium text-violet-700 dark:text-violet-300">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
                 {row.rulingStakes.map((stake, sIdx) => (
                   <div key={sIdx} className="mt-1 flex items-center gap-2">
                     <select
@@ -498,7 +498,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                     <button
                       type="button"
                       onClick={() => updSales(idx, { ...row, rulingStakes: row.rulingStakes.filter((_, i) => i !== sIdx) })}
-                      className="text-xs text-rose-500 hover:text-rose-700"
+                      className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
                       aria-label={`§⑭ ${sIdx + 1} 삭제`}
                     >
                       삭제
@@ -508,7 +508,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                 <button
                   type="button"
                   onClick={() => updSales(idx, { ...row, rulingStakes: [...row.rulingStakes, { shareholderId: "", ratioPctStr: "" }] })}
-                  className="mt-1 text-xs font-medium text-violet-700 hover:underline"
+                  className="mt-1 text-xs font-medium text-violet-700 hover:underline dark:text-violet-300"
                 >
                   + 지배주주등 보유비율 추가
                 </button>
@@ -519,7 +519,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         <button
           type="button"
           onClick={() => set({ rcSalesPartners: [...form.rcSalesPartners, makeRcSalesRow(newId())] })}
-          className="w-full rounded border border-dashed border-violet-300 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100/50"
+          className="w-full rounded border border-dashed border-violet-300 py-1.5 text-xs font-medium text-violet-700 hover:bg-violet-100/50 dark:text-violet-300"
           data-testid="rc-add-sales"
         >
           + 매출처 추가
@@ -548,7 +548,7 @@ export function RelatedCorpFields({ form, set }: Props) {
           />
 
           <div>
-            <p className="text-caption font-medium text-sky-700">
+            <p className="text-caption font-medium text-sky-700 dark:text-sky-300">
               ⑮1호 — 수혜법인으로부터 받은 배당소득 (주주별)
             </p>
             {individualShareholders.length === 0 ? (
@@ -581,7 +581,7 @@ export function RelatedCorpFields({ form, set }: Props) {
 
           {form.rcIntermediaryCorps.length > 0 && (
             <div>
-              <p className="text-caption font-medium text-sky-700">
+              <p className="text-caption font-medium text-sky-700 dark:text-sky-300">
                 ⑮2호 — 간접출자법인으로부터 받은 배당소득
               </p>
               <p className="text-caption text-muted-foreground">
@@ -590,7 +590,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               </p>
               {form.rcIntermediaryCorps.map((row, idx) => (
                 <div key={row.id} className="mt-2 rounded border border-sky-200 p-2">
-                  <span className="text-xs font-semibold text-sky-700">간접출자법인 {idx + 1}</span>
+                  <span className="text-xs font-semibold text-sky-700 dark:text-sky-300">간접출자법인 {idx + 1}</span>
                   <CurrencyInput
                     label="이 법인의 배당가능이익 (사업연도 말일)"
                     value={row.distributableProfitStr}

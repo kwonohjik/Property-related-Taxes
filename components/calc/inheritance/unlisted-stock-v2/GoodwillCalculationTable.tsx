@@ -50,13 +50,13 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
 
   return (
     <div className={`rounded-lg border-2 p-3 space-y-3 ${
-      isExcluded ? "border-rose-300 bg-rose-50/60" : "border-amber-300 bg-amber-50/60"
+      isExcluded ? "border-rose-300 bg-rose-50/60 dark:bg-rose-950/40" : "border-amber-300 bg-amber-50/60 dark:bg-amber-950/40"
     }`}>
       <div className="flex items-center gap-2">
         <span className={`flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none ${
           isExcluded ? "bg-rose-200 text-rose-800" : "bg-amber-200 text-amber-800"
         }`}>{sectionNum}</span>
-        <p className={`text-xs font-semibold ${isExcluded ? "text-rose-800" : "text-amber-800"}`}>
+        <p className={`text-xs font-semibold ${isExcluded ? "text-rose-800 dark:text-rose-200" : "text-amber-800 dark:text-amber-200"}`}>
           영업권 평가 (별지 5쪽 + 상증령 §59 ② + 상증규 §19 ①){" "}
           <LawArticleModal legalBasis="상증령 §59" label="§59" />{" "}
           <LawArticleModal legalBasis="상증규 §19" label="규§19" />
@@ -64,7 +64,7 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
       </div>
 
       {isExcluded ? (
-        <div className="rounded border border-rose-300 bg-rose-100/60 p-3 text-xs text-rose-800">
+        <div className="rounded border border-rose-300 bg-rose-100/60 p-3 text-xs text-rose-800 dark:text-rose-200 dark:bg-rose-900/40">
           ⚠️ <strong>영업권 자동 배제 (상증령 §55 ③)</strong>
           <ul className="list-disc ml-4 mt-1 text-caption space-y-0.5">
             {goodwill.excludedByLaw === "liquidation" && <li>1호 — 청산절차 진행 (§54④ 1호 + §55③ 1호)</li>}
@@ -97,10 +97,10 @@ export function GoodwillCalculationTable({ goodwill, sectionNum = 6 }: GoodwillC
               hint="(나 − 마)를 1년차부터 5년차까지 각각 연 10% 할인율로 현재가치 환산해 합한 금액"
             />
             <RowDisplay cellNum="아" label="매입 무체재산권 차감액" value={goodwill.intangibleDeduction} />
-            <tr className="border-t-2 border-amber-400 bg-amber-100/60">
-              <td className="py-2 pr-2 font-bold text-amber-900">자.</td>
-              <td className="py-2 px-1 font-bold text-amber-900">영업권 평가액 = 사 − 아 (음수면 0)</td>
-              <td className="py-2 pl-1 text-right font-mono tabular-nums font-bold text-amber-900">
+            <tr className="border-t-2 border-amber-400 bg-amber-100/60 dark:bg-amber-900/40">
+              <td className="py-2 pr-2 font-bold text-amber-900 dark:text-amber-200">자.</td>
+              <td className="py-2 px-1 font-bold text-amber-900 dark:text-amber-200">영업권 평가액 = 사 − 아 (음수면 0)</td>
+              <td className="py-2 pl-1 text-right font-mono tabular-nums font-bold text-amber-900 dark:text-amber-200">
                 {fmt(goodwill.goodwillFinal)}원
               </td>
             </tr>
@@ -122,13 +122,13 @@ interface RowDisplayProps {
 
 function RowDisplay({ cellNum, label, value, unit = "원", hint, emphasized }: RowDisplayProps) {
   return (
-    <tr className={`border-b border-amber-100 ${emphasized ? "bg-amber-100/40" : ""}`}>
-      <td className={`py-1 pr-2 font-mono ${emphasized ? "text-amber-900 font-bold" : "text-amber-700"}`}>{cellNum}.</td>
+    <tr className={`border-b border-amber-100 ${emphasized ? "bg-amber-100/40 dark:bg-amber-900/40" : ""}`}>
+      <td className={`py-1 pr-2 font-mono ${emphasized ? "text-amber-900 font-bold dark:text-amber-200" : "text-amber-700 dark:text-amber-300"}`}>{cellNum}.</td>
       <td className="py-1 px-1">
-        <div className={emphasized ? "font-semibold text-amber-900" : ""}>{label}</div>
+        <div className={emphasized ? "font-semibold text-amber-900 dark:text-amber-200" : ""}>{label}</div>
         {hint && <div className="text-micro text-gray-500">{hint}</div>}
       </td>
-      <td className={`py-1 pl-1 text-right font-mono tabular-nums ${emphasized ? "text-amber-900 font-bold" : ""}`}>
+      <td className={`py-1 pl-1 text-right font-mono tabular-nums ${emphasized ? "text-amber-900 font-bold dark:text-amber-200" : ""}`}>
         {fmt(value)}{unit}
       </td>
     </tr>

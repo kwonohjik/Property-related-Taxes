@@ -92,8 +92,8 @@ export function Page6NetIncomeBreakdown({
             </tr>
           ))}
           {/* 가. 소계 */}
-          <tr className="bg-yellow-50 font-bold print:bg-yellow-50" data-besshi-cell="p6-가" data-testid="p6-가">
-            <td className={`${TD} bg-yellow-50`} aria-hidden />
+          <tr className="bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40" data-besshi-cell="p6-가" data-testid="p6-가">
+            <td className={`${TD} bg-yellow-50 dark:bg-yellow-950/40`} aria-hidden />
             <td className={TD}>{P6.addSubtotalLabel}</td>
             {valCells(fyb.map((fy) => fy.taxableIncome + fy.addTotal))}
           </tr>
@@ -111,15 +111,15 @@ export function Page6NetIncomeBreakdown({
             </tr>
           ))}
           {/* 나. 소계 */}
-          <tr className="bg-yellow-50 font-bold print:bg-yellow-50" data-besshi-cell="p6-나" data-testid="p6-나">
-            <td className={`${TD} bg-yellow-50`} aria-hidden />
+          <tr className="bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40" data-besshi-cell="p6-나" data-testid="p6-나">
+            <td className={`${TD} bg-yellow-50 dark:bg-yellow-950/40`} aria-hidden />
             <td className={TD}>{P6.subSubtotalLabel}</td>
             {valCells(fyb.map((fy) => fy.subTotal))}
           </tr>
 
           {/* 다·라·마·바·사 */}
-          <tr className="bg-yellow-50 font-bold print:bg-yellow-50" data-besshi-cell="p6-다" data-testid="p6-다">
-            <td className={`${TD} bg-yellow-50`} aria-hidden />
+          <tr className="bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40" data-besshi-cell="p6-다" data-testid="p6-다">
+            <td className={`${TD} bg-yellow-50 dark:bg-yellow-950/40`} aria-hidden />
             <td className={TD}>{P6.netLabel}</td>
             {valCells(fyb.map((fy) => fy.adjustedNetIncome))}
           </tr>
@@ -128,8 +128,8 @@ export function Page6NetIncomeBreakdown({
             <td className={TD}>{P6.capAdjLabel}</td>
             {valCells(fyb.map((fy) => fy.capitalIncreaseAdjustment))}
           </tr>
-          <tr className="bg-yellow-50 font-bold print:bg-yellow-50" data-besshi-cell="p6-마" data-testid="p6-마">
-            <td className={`${TD} bg-yellow-50`} aria-hidden />
+          <tr className="bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40" data-besshi-cell="p6-마" data-testid="p6-마">
+            <td className={`${TD} bg-yellow-50 dark:bg-yellow-950/40`} aria-hidden />
             <td className={TD}>{P6.finalLabel}</td>
             {valCells(fyb.map((fy) => fy.finalNetIncome))}
           </tr>
@@ -147,17 +147,17 @@ export function Page6NetIncomeBreakdown({
           </tr>
           {/* §17의3② 연환산 행 — 1년 미만 사업연도 있을 때만 표시 */}
           {hasAnnualization && annualizedValues && appliedFlags && (
-            <tr className="bg-amber-50/60 border-t border-amber-200">
-              <td className={`${TD} bg-amber-50/60`} aria-hidden />
-              <td className={`${TD} text-amber-800 font-semibold`}>
+            <tr className="bg-amber-50/60 border-t border-amber-200 dark:bg-amber-950/40">
+              <td className={`${TD} bg-amber-50/60 dark:bg-amber-950/40`} aria-hidden />
+              <td className={`${TD} text-amber-800 font-semibold dark:text-amber-200`}>
                 사-환산. 연환산 후 1주당 순손익액 (§17의3②)
               </td>
               {annualizedValues.map((val, i) => (
                 <td key={i} className={TD_VAL}>
                   {appliedFlags[i] ? (
-                    <span className="text-amber-800 font-semibold">
+                    <span className="text-amber-800 font-semibold dark:text-amber-200">
                       {fmt(fyb[i]?.perShareNetIncome ?? 0)} → {fmt(val)}
-                      <span className="block text-micro font-normal text-amber-600">
+                      <span className="block text-micro font-normal text-amber-600 dark:text-amber-400">
                         1년 미만 사업연도 ×12/N개월 환산
                       </span>
                     </span>
@@ -173,7 +173,7 @@ export function Page6NetIncomeBreakdown({
       <p className="mb-2">
         <strong>{P6.weightedAvgLabel}</strong> = {fmt(result.weightedNetIncomePerShare)}
         {hasAnnualization && (
-          <span className="ml-2 text-micro text-amber-700">※ §17의3② 1년 미만 사업연도 연환산 반영</span>
+          <span className="ml-2 text-micro text-amber-700 dark:text-amber-300">※ §17의3② 1년 미만 사업연도 연환산 반영</span>
         )}
       </p>
       <p className="mb-2">
@@ -183,7 +183,7 @@ export function Page6NetIncomeBreakdown({
         <strong>{P6.finalPerShareLabel}</strong> = {fmt(result.netIncomePerShare)} (제1쪽 ⑤)
       </p>
       {result.estimatedProfitResult?.applied && (
-        <p className="mb-3 text-micro text-violet-700" data-testid="p6-추정이익">
+        <p className="mb-3 text-micro text-violet-700 dark:text-violet-300" data-testid="p6-추정이익">
           ※ §56② 추정이익 갈음 적용 — 위 가중평균(아.) 대신 2 이상 신용평가기관 추정이익 평균가액{" "}
           {fmt(result.estimatedProfitResult.estimatedProfitAverage)}을 환원율로 나누어 산출
         </p>

@@ -143,7 +143,7 @@ export function GiftCreditChecklist({
   return (
     <div className="space-y-4">
       {/* 칩 패널 (2그룹) */}
-      <div className="rounded-lg border border-violet-200/70 bg-violet-50/40 p-3 space-y-3">
+      <div className="rounded-lg border border-violet-200/70 bg-violet-50/40 p-3 space-y-3 dark:bg-violet-950/40">
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             공제·세액공제 항목 선택
@@ -185,8 +185,8 @@ export function GiftCreditChecklist({
        * ④가 §69 신고세액공제 축과 §47의2·§47의3 가산세 축을 **둘 다 파생**한다.
        * 상속세 `Step4Deductions.tsx`의 3-state와 같은 축이다.
        */}
-      <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3">
-        <p className="text-xs font-semibold text-violet-700">
+      <div className="space-y-3 rounded-lg border border-violet-200 bg-violet-50/40 p-3 dark:bg-violet-950/40">
+        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
           신고 상태 (상증법 §68① · §69 / 국세기본법 §47의2·§47의3)
         </p>
         <RadioCardGroup
@@ -424,7 +424,7 @@ export function GiftCreditChecklist({
 
       {/* 혼인·출산 공제 (직계존속만 칩 노출) */}
       {active("marriageBirth") && (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-3">
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-3 dark:bg-sky-950/40">
           <h4 className="text-sm font-semibold text-sky-700 dark:text-sky-300">
             혼인·출산 공제 (§53의2, 최대 1억원)
           </h4>
@@ -451,7 +451,7 @@ export function GiftCreditChecklist({
 
       {/* 10년 내 기사용 공제 */}
       {active("priorUsed") && (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 dark:bg-sky-950/40">
           <CurrencyInput
             label="10년 내 기사용 증여재산공제 합계"
             value={form.priorUsedDeduction}
@@ -520,7 +520,7 @@ export function GiftCreditChecklist({
                 ],
               });
             }}
-            className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-2 text-xs font-medium text-sky-800 hover:bg-sky-100"
+            className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-2 text-xs font-medium text-sky-800 hover:bg-sky-100 dark:text-sky-200 dark:bg-sky-900/40"
           >
             + 동시증여 추가
           </button>
@@ -542,7 +542,7 @@ export function GiftCreditChecklist({
 
       {/* 외국납부세액 (§59) */}
       {active("foreignTax") && (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+        <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3 dark:bg-violet-950/40">
           <CurrencyInput
             label="외국납부세액 (§59)"
             value={form.foreignTaxPaid}
@@ -562,7 +562,7 @@ export function GiftCreditChecklist({
 
       {/* 조특법 과세특례 (§30의5·6) + 종속 입력 */}
       {active("specialTreatment") && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 dark:bg-emerald-950/40">
           <div className="space-y-2">
             <label className="block text-sm font-medium text-emerald-700 dark:text-emerald-300">
               조특법 과세특례 (창업·가업)

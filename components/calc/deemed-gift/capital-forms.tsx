@@ -278,16 +278,16 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
            종전 주석의 「상장 여부를 입력받지 않으므로」는 이 토글 도입으로 더 이상 사실이 아니다.
       */}
       <ToneCard tone="amber" title="주권상장법인이라면 이 모드를 쓰지 마세요">
-        <p className="text-xs text-amber-800">
+        <p className="text-xs text-amber-800 dark:text-amber-200">
           주권상장법인등은 「상증령」 §29②1가·3나 단서에 따라 <b>증자 후 1주당 평가가액</b>이 산식값이 아닌
           <b> 종가평균</b>(평가기준일 전후 각 2개월, 상증법 §63①1가)으로 바뀔 수 있습니다.
         </p>
-        <p className="text-xs text-amber-800">
+        <p className="text-xs text-amber-800 dark:text-amber-200">
           <b>다주주 모드는 이 단서를 반영하지 않습니다.</b> 지분 증감(equity-delta) 방식이라 외생 시장가를
           넣으면 &ldquo;증여자 손해 합계 = 수증자 이익 합계&rdquo; 항등식이 깨지기 때문입니다. 상장법인은
           <b> 「증자 §39」 단일 모드</b>에서 <b>주권상장법인등</b> 토글을 켜고 계산하세요.
         </p>
-        <p className="text-caption text-amber-700">
+        <p className="text-caption text-amber-700 dark:text-amber-300">
           비상장법인이면 이 안내는 해당하지 않습니다.
         </p>
         <ToggleCard
@@ -305,7 +305,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
         title="주주 목록 (증자 전 보유·배정·인수)"
         bodyClassName="space-y-2"
         titleExtra={
-          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="ml-auto rounded-md border border-emerald-300 bg-white/70 dark:bg-white/5 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
+          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="ml-auto rounded-md border border-emerald-300 bg-white/70 dark:bg-white/5 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60 dark:text-emerald-200">
             + 주주 추가
           </button>
         }
@@ -322,7 +322,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                 className="flex-1 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 px-2 py-1 text-sm"
               />
               {rows.length > 2 && (
-                <button type="button" onClick={() => removeRow(r.id)} data-testid={`ci-alloc-remove-${idx}`} className="shrink-0 rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">
+                <button type="button" onClick={() => removeRow(r.id)} data-testid={`ci-alloc-remove-${idx}`} className="shrink-0 rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400">
                   삭제
                 </button>
               )}
@@ -354,7 +354,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
               hint="이 주주가 수증자로서 증여일 전 1년 이내 같은 호(저가·고가) 증자로 얻은 이익 — 실권처리(나목) 3억 금액기준 판정에만 더하고, 과세는 이번 이익입니다"
             />
             <div className="space-y-1">
-              <p className="text-caption text-emerald-700">배정 방법 (§39① 공모 모집 제외)</p>
+              <p className="text-caption text-emerald-700 dark:text-emerald-300">배정 방법 (§39① 공모 모집 제외)</p>
               <select
                 value={r.allocationMethod}
                 onChange={(e) => updateRow(r.id, { allocationMethod: e.target.value as CapTableRow["allocationMethod"] })}
@@ -380,7 +380,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
               data-testid={`ci-alloc-corp-${idx}`}
             />
             <div className="space-y-1">
-              <p className="text-caption text-emerald-700">특수관계인</p>
+              <p className="text-caption text-emerald-700 dark:text-emerald-300">특수관계인</p>
               <div className="flex flex-wrap gap-1.5" data-testid={`ci-alloc-related-${idx}`}>
                 {rows.filter((o) => o.id !== r.id).map((o) => {
                   const on = isRelatedPair(r, o);
@@ -533,7 +533,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
             options={[...CB_CLAUSE_OPTIONS]}
           />
           <ToneCard tone="violet" title="목 선택은 증여재산가액을 바꾸지 않습니다">
-            <p className="text-xs text-violet-800">
+            <p className="text-xs text-violet-800 dark:text-violet-200">
               「상증령」 §30①이 각 목을 <b>한 산식</b>으로 규정합니다. 목이 가르는 것은{" "}
               <b>공모 발행 제외 대상인지</b>(나·다목만)입니다.
               {isIssuerClause && (
@@ -564,7 +564,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
                 options={[...CB_ISSUANCE_OPTIONS]}
               />
               <ToneCard tone="sky">
-                <p className="text-xs text-sky-800">{cbIssuanceHint(form.cbIssuanceMethod, form.cbIsListed)}</p>
+                <p className="text-xs text-sky-800 dark:text-sky-200">{cbIssuanceHint(form.cbIssuanceMethod, form.cbIsListed)}</p>
               </ToneCard>
             </>
           )}

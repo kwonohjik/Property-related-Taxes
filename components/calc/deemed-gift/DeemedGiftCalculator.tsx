@@ -139,13 +139,13 @@ export function DeemedGiftCalculator() {
       {form.type && (
         <div
           data-testid="deemed-summary-card"
-          className="flex items-start justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3"
+          className="flex items-start justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50/40 p-3 dark:bg-rose-950/40"
         >
           <div className="space-y-0.5">
-            <p className="text-sm font-semibold text-rose-900">
+            <p className="text-sm font-semibold text-rose-900 dark:text-rose-200">
               {DEEMED_TYPE_META[form.type].label}
             </p>
-            <p className="text-xs text-rose-700">{DEEMED_TYPE_META[form.type].law}</p>
+            <p className="text-xs text-rose-700 dark:text-rose-300">{DEEMED_TYPE_META[form.type].law}</p>
             <p className="text-xs text-muted-foreground">
               증여일 {form.giftDate || "미입력"}
             </p>
@@ -172,7 +172,7 @@ export function DeemedGiftCalculator() {
       />
 
       {error && (
-        <p className="text-sm font-medium text-rose-600" data-testid="deemed-error">
+        <p className="text-sm font-medium text-rose-600 dark:text-rose-400" data-testid="deemed-error">
           {error}
         </p>
       )}

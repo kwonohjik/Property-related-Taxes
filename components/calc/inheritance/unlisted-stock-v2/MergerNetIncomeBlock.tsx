@@ -126,8 +126,8 @@ export function MergerNetIncomeBlock({
           {/* 기본 정보 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
-              <p className="text-caption font-semibold text-amber-800">
-                합병등기일 <span className="text-rose-600">*</span>
+              <p className="text-caption font-semibold text-amber-800 dark:text-amber-200">
+                합병등기일 <span className="text-rose-600 dark:text-rose-400">*</span>
               </p>
               <div data-testid="merger-reg-date">
                 <DateInput
@@ -159,9 +159,9 @@ export function MergerNetIncomeBlock({
           </div>
 
           {/* 합병법인 전1/2/3년 */}
-          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
-            <p className="text-xs font-semibold text-amber-800">합병법인 (전1·2·3년 사업연도)</p>
-            <p className="text-micro text-amber-700/80">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3 dark:bg-amber-950/40">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">합병법인 (전1·2·3년 사업연도)</p>
+            <p className="text-micro text-amber-700/80 dark:text-amber-300/80">
               합병법인의 각 평가기준연도 사업연도별 주식수·순손익을 입력합니다. 순손익은 결손(음수) 허용.
             </p>
             {([0, 1, 2] as const).map((idx) => {
@@ -171,10 +171,10 @@ export function MergerNetIncomeBlock({
                   key={idx}
                   className="rounded border border-amber-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2"
                 >
-                  <p className="text-caption font-semibold text-amber-700">{YEAR_LABELS[idx]}</p>
+                  <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">{YEAR_LABELS[idx]}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <p className="text-micro text-gray-600">사업연도 개시일 <span className="text-rose-600">*</span></p>
+                      <p className="text-micro text-gray-600">사업연도 개시일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                       <div data-testid={`merger-acquirer-${idx}-start`}>
                         <DateInput
                           value={dateToStr(yr.startDate)}
@@ -186,7 +186,7 @@ export function MergerNetIncomeBlock({
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-micro text-gray-600">사업연도 종료일 <span className="text-rose-600">*</span></p>
+                      <p className="text-micro text-gray-600">사업연도 종료일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                       <div data-testid={`merger-acquirer-${idx}-end`}>
                         <DateInput
                           value={dateToStr(yr.endDate)}
@@ -238,25 +238,25 @@ export function MergerNetIncomeBlock({
           </div>
 
           {/* 피합병법인 사업연도 (가변 목록) */}
-          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
+          <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3 dark:bg-sky-950/40">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-sky-800">피합병법인 사업연도 (해당분만)</p>
+              <p className="text-xs font-semibold text-sky-800 dark:text-sky-200">피합병법인 사업연도 (해당분만)</p>
               <button
                 type="button"
                 onClick={addTarget}
-                className="text-caption px-2 py-1 rounded border border-sky-300 bg-white dark:bg-gray-900 hover:bg-sky-50 text-sky-700 font-medium"
+                className="text-caption px-2 py-1 rounded border border-sky-300 bg-white dark:bg-gray-900 hover:bg-sky-50 text-sky-700 font-medium dark:text-sky-300"
                 data-testid="merger-target-add"
               >
                 + 사업연도 추가
               </button>
             </div>
-            <p className="text-micro text-sky-700/80">
+            <p className="text-micro text-sky-700/80 dark:text-sky-300/80">
               피합병법인 중 합병법인의 각 평가연도와 겹치는 사업연도만 입력합니다.
               소멸·합병전 미존재 연도는 입력하지 않으면 합병법인 단독으로 계산됩니다.
             </p>
 
             {context.targetFiscalYears.length === 0 && (
-              <p className="text-caption text-sky-600 italic">
+              <p className="text-caption text-sky-600 italic dark:text-sky-400">
                 피합병법인 사업연도를 추가하면 합병법인 연도와의 겹침 개월수만큼 비례 합산합니다.
               </p>
             )}
@@ -267,7 +267,7 @@ export function MergerNetIncomeBlock({
                 className="rounded border border-sky-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <p className="text-caption font-semibold text-sky-700">피합병 #{idx + 1}</p>
+                  <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">피합병 #{idx + 1}</p>
                   <button
                     type="button"
                     onClick={() => removeTarget(idx)}
@@ -279,7 +279,7 @@ export function MergerNetIncomeBlock({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <p className="text-micro text-gray-600">사업연도 개시일 <span className="text-rose-600">*</span></p>
+                    <p className="text-micro text-gray-600">사업연도 개시일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                     <div data-testid={`merger-target-${idx}-start`}>
                       <DateInput
                         value={dateToStr(tyr.startDate)}
@@ -291,7 +291,7 @@ export function MergerNetIncomeBlock({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-micro text-gray-600">사업연도 종료일 <span className="text-rose-600">*</span></p>
+                    <p className="text-micro text-gray-600">사업연도 종료일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                     <div data-testid={`merger-target-${idx}-end`}>
                       <DateInput
                         value={dateToStr(tyr.endDate)}

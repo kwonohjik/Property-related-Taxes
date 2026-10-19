@@ -158,8 +158,8 @@ export function ListedAvgAutoFetch({
 }) {
   const { startOverrideDate, endOverrideDate } = valuationWindowOverride(valuationDate, eventDate);
   return (
-    <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2">
-      <p className="text-xs font-semibold text-emerald-700">§63①1가 종가평균 자동조회 (키움, 선택)</p>
+    <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-2 dark:bg-emerald-950/40">
+      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">§63①1가 종가평균 자동조회 (키움, 선택)</p>
       <input
         type="text"
         inputMode="text"

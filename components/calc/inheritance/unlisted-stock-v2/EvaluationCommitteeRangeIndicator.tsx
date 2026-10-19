@@ -58,13 +58,13 @@ export function EvaluationCommitteeRangeIndicator({
 
   return (
     <div
-      className="rounded-md border border-emerald-200 bg-emerald-50/40 p-3 space-y-2"
+      className="rounded-md border border-emerald-200 bg-emerald-50/40 p-3 space-y-2 dark:bg-emerald-950/40"
       data-testid="evaluation-committee-range-active"
     >
       <div className="flex items-baseline justify-between text-xs">
-        <span className="font-semibold text-emerald-800">70~130% 허용 범위</span>
+        <span className="font-semibold text-emerald-800 dark:text-emerald-200">70~130% 허용 범위</span>
         <span
-          className={isWithinRange ? "text-emerald-700" : "text-rose-700"}
+          className={isWithinRange ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}
           data-testid="evaluation-committee-range-status"
         >
           {isWithinRange ? "범위 내 ✓" : "범위 밖 ✗"}

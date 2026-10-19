@@ -50,9 +50,9 @@ function P5Tr({
 }) {
   const rowClass =
     variant === "head"
-      ? "bg-yellow-50 font-bold print:bg-yellow-50"
+      ? "bg-yellow-50 font-bold print:bg-yellow-50 dark:bg-yellow-950/40"
       : variant === "final"
-        ? "bg-emerald-50 font-bold border-t-2 border-black print:bg-emerald-50"
+        ? "bg-emerald-50 font-bold border-t-2 border-black print:bg-emerald-50 dark:bg-emerald-950/40"
         : "";
   return (
     <tr className={rowClass} data-besshi-cell={testid} data-testid={testid}>

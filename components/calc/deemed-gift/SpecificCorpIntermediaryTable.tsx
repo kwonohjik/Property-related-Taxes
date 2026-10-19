@@ -41,11 +41,11 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
 
   return (
     <div
-      className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3"
+      className="space-y-2 rounded-lg border border-violet-200 bg-violet-50/40 p-3 dark:bg-violet-950/40"
       data-testid="sc-intermediary-table"
     >
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-violet-700">간접출자관계 (개인 → 법인 → 특정법인)</p>
+        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">간접출자관계 (개인 → 법인 → 특정법인)</p>
         <button
           type="button"
           onClick={() => onChange([...rows, newRow()])}
@@ -77,12 +77,12 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
             className="space-y-2 rounded-md border border-violet-200 bg-white/70 dark:bg-white/5 p-2"
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-violet-800">간접출자관계 {i + 1}</span>
+              <span className="text-xs font-medium text-violet-800 dark:text-violet-200">간접출자관계 {i + 1}</span>
               <button
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
                 data-testid={`sc-im-delete-${i}`}
-                className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
               >
                 × 삭제
               </button>
@@ -147,7 +147,7 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
                     type="button"
                     onClick={() => update(i, { owners: row.owners.filter((_, idx) => idx !== j) })}
                     data-testid={`sc-im-owner-delete-${i}-${j}`}
-                    className="text-xs font-medium text-rose-600 hover:text-rose-700"
+                    className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
                   >
                     ×
                   </button>

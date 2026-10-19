@@ -228,7 +228,7 @@ export function PreIpoListingToggle({
               {/* ④ 윈도우 미리보기 */}
               {preview && (
                 <div
-                  className="rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2 text-xs text-emerald-900"
+                  className="rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-200 dark:bg-emerald-900/40"
                   data-testid="pre-ipo-window-preview"
                 >
                   {preview.withinWindow ? (
@@ -240,11 +240,11 @@ export function PreIpoListingToggle({
                           평가됩니다 (결과 화면에서 MAX 확인).
                         </>
                       ) : (
-                        <span className="text-amber-700"> — 공모가격을 입력하세요.</span>
+                        <span className="text-amber-700 dark:text-amber-300"> — 공모가격을 입력하세요.</span>
                       )}
                     </>
                   ) : (
-                    <span className="text-amber-700">
+                    <span className="text-amber-700 dark:text-amber-300">
                       평가기준일이 [신고일 − {preview.windowMonths}개월, {terminalLabel}) 윈도우 밖 — {clauseLabel}
                       미적용, 보충적평가(§54)가 유지됩니다.
                     </span>

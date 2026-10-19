@@ -147,7 +147,7 @@ export function ValuationDeltaTable({
       bodyClassName="space-y-3"
       title="평가차액 (별지 3쪽 — 자산·부채 계정과목별)"
     >
-      <p className="text-caption text-emerald-700/80">
+      <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80">
         상증법 §60·§66 평가액 vs 재무상태표 차액. ① 자산 합 − ② 부채 합 = 평가차액 →{" "}
         <strong>2쪽 4.가.② 기재</strong> (상증령 §55② + §17의2)
       </p>
@@ -167,9 +167,9 @@ export function ValuationDeltaTable({
       >
         <div className="space-y-3">
           {/* 자산 평가차액 */}
-          <div className="rounded border border-sky-200 bg-sky-50/60 p-2 space-y-1">
+          <div className="rounded border border-sky-200 bg-sky-50/60 p-2 space-y-1 dark:bg-sky-950/40">
             <div className="flex items-center justify-between">
-              <p className="text-caption font-semibold text-sky-800">
+              <p className="text-caption font-semibold text-sky-800 dark:text-sky-200">
                 자산 평가차액 ({assetRows.length}/{MAX_ASSET_ROWS})
               </p>
               <button
@@ -183,7 +183,7 @@ export function ValuationDeltaTable({
             </div>
 
             {assetRows.length === 0 && (
-              <p className="text-micro text-sky-700/70 py-2 text-center">
+              <p className="text-micro text-sky-700/70 py-2 text-center dark:text-sky-300/70">
                 &quot;+ 자산 행 추가&quot; 버튼으로 계정과목을 입력하세요
               </p>
             )}
@@ -222,7 +222,7 @@ export function ValuationDeltaTable({
                   />
                   <div
                     className={`text-caption font-mono tabular-nums text-right ${
-                      delta < 0 ? "text-rose-700" : "text-sky-900"
+                      delta < 0 ? "text-rose-700 dark:text-rose-300" : "text-sky-900 dark:text-sky-200"
                     }`}
                   >
                     {delta < 0 ? `△${Math.abs(delta).toLocaleString()}` : delta.toLocaleString()}
@@ -230,7 +230,7 @@ export function ValuationDeltaTable({
                   <button
                     type="button"
                     onClick={() => removeRow(row.rowId)}
-                    className="text-rose-600 hover:text-rose-800 px-1 text-xs"
+                    className="text-rose-600 hover:text-rose-800 px-1 text-xs dark:text-rose-400"
                     aria-label="행 삭제"
                   >
                     ×
@@ -239,16 +239,16 @@ export function ValuationDeltaTable({
               );
             })}
 
-            <div className="border-t border-sky-300 pt-1 mt-1 flex justify-between text-caption font-bold text-sky-900">
+            <div className="border-t border-sky-300 pt-1 mt-1 flex justify-between text-caption font-bold text-sky-900 dark:text-sky-200">
               <span>① 자산 합계</span>
               <span className="font-mono tabular-nums">{assetTotal.toLocaleString()}</span>
             </div>
           </div>
 
           {/* 부채 평가차액 */}
-          <div className="rounded border border-rose-200 bg-rose-50/60 p-2 space-y-1">
+          <div className="rounded border border-rose-200 bg-rose-50/60 p-2 space-y-1 dark:bg-rose-950/40">
             <div className="flex items-center justify-between">
-              <p className="text-caption font-semibold text-rose-800">
+              <p className="text-caption font-semibold text-rose-800 dark:text-rose-200">
                 부채 평가차액 ({liabilityRows.length}/{MAX_LIABILITY_ROWS})
               </p>
               <button
@@ -262,7 +262,7 @@ export function ValuationDeltaTable({
             </div>
 
             {liabilityRows.length === 0 && (
-              <p className="text-micro text-rose-700/70 py-2 text-center">
+              <p className="text-micro text-rose-700/70 py-2 text-center dark:text-rose-300/70">
                 &quot;+ 부채 행 추가&quot; 버튼으로 계정과목을 입력하세요
               </p>
             )}
@@ -301,7 +301,7 @@ export function ValuationDeltaTable({
                   />
                   <div
                     className={`text-caption font-mono tabular-nums text-right ${
-                      delta < 0 ? "text-rose-700" : "text-rose-900"
+                      delta < 0 ? "text-rose-700 dark:text-rose-300" : "text-rose-900 dark:text-rose-200"
                     }`}
                   >
                     {delta < 0 ? `△${Math.abs(delta).toLocaleString()}` : delta.toLocaleString()}
@@ -309,7 +309,7 @@ export function ValuationDeltaTable({
                   <button
                     type="button"
                     onClick={() => removeRow(row.rowId)}
-                    className="text-rose-600 hover:text-rose-800 px-1 text-xs"
+                    className="text-rose-600 hover:text-rose-800 px-1 text-xs dark:text-rose-400"
                     aria-label="행 삭제"
                   >
                     ×
@@ -318,23 +318,23 @@ export function ValuationDeltaTable({
               );
             })}
 
-            <div className="border-t border-rose-300 pt-1 mt-1 flex justify-between text-caption font-bold text-rose-900">
+            <div className="border-t border-rose-300 pt-1 mt-1 flex justify-between text-caption font-bold text-rose-900 dark:text-rose-200">
               <span>② 부채 합계</span>
               <span className="font-mono tabular-nums">{liabilityTotal.toLocaleString()}</span>
             </div>
           </div>
 
           {/* 평가차액 (자산 − 부채) */}
-          <div className="rounded border-2 border-emerald-400 bg-emerald-100/80 p-3 flex justify-between items-center">
+          <div className="rounded border-2 border-emerald-400 bg-emerald-100/80 p-3 flex justify-between items-center dark:bg-emerald-900/40">
             <div>
-              <p className="text-caption font-bold text-emerald-900">평가차액 (① − ②)</p>
-              <p className="text-micro text-emerald-700">
+              <p className="text-caption font-bold text-emerald-900 dark:text-emerald-200">평가차액 (① − ②)</p>
+              <p className="text-micro text-emerald-700 dark:text-emerald-300">
                 → 2쪽 4.가.② &quot;평가차액&quot;으로 자동 흡수 (엔진 resolveEvaluationDelta 처리)
               </p>
             </div>
             <span
               className={`font-mono text-sm font-bold ${
-                evaluationDelta < 0 ? "text-rose-700" : "text-emerald-900"
+                evaluationDelta < 0 ? "text-rose-700 dark:text-rose-300" : "text-emerald-900 dark:text-emerald-200"
               }`}
             >
               {evaluationDelta < 0
@@ -348,11 +348,11 @@ export function ValuationDeltaTable({
 
       {/* 총액 fallback 모드 */}
       {!inputMode && (
-        <div className="rounded border border-emerald-300 bg-emerald-50/60 p-2 space-y-1">
-          <p className="text-caption font-semibold text-emerald-800">
+        <div className="rounded border border-emerald-300 bg-emerald-50/60 p-2 space-y-1 dark:bg-emerald-950/40">
+          <p className="text-caption font-semibold text-emerald-800 dark:text-emerald-200">
             총액 직접 입력 (자산 평가차액 단일 값)
           </p>
-          <p className="text-micro text-emerald-700/80">
+          <p className="text-micro text-emerald-700/80 dark:text-emerald-300/80">
             ※ 행 단위 입력하려면 위 토글을 ON. 본 입력은 NetAssetCalculation의 ②(평가차액)에
             직접 반영됩니다.
           </p>

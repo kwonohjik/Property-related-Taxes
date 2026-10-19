@@ -83,7 +83,7 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
         <div className="overflow-x-auto rounded-lg border border-sky-200">
           <table className="w-full min-w-[520px] text-sm">
             <thead>
-              <tr className="border-b border-sky-200 bg-sky-50/70 text-xs text-sky-700">
+              <tr className="border-b border-sky-200 bg-sky-50/70 text-xs text-sky-700 dark:text-sky-300 dark:bg-sky-950/40">
                 <th className="py-2 pl-3 pr-2 text-left font-medium">이름</th>
                 <th className="py-2 pr-2 text-left font-medium">역할 (클릭변경)</th>
                 <th className="py-2 pr-2 text-right font-medium">실수령 배당금</th>
@@ -151,7 +151,7 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
                     <button
                       type="button"
                       onClick={() => removeRow(row.id)}
-                      className="rounded p-1 text-rose-500 hover:bg-rose-50 hover:text-rose-700"
+                      className="rounded p-1 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400"
                       aria-label="주주 삭제"
                     >
                       ×
@@ -168,17 +168,17 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
       <button
         type="button"
         onClick={addRow}
-        className="rounded-lg border border-dashed border-sky-300 bg-sky-50/40 px-3 py-2 text-sm text-sky-700 hover:bg-sky-100 hover:border-sky-400 transition-colors"
+        className="rounded-lg border border-dashed border-sky-300 bg-sky-50/40 px-3 py-2 text-sm text-sky-700 hover:bg-sky-100 hover:border-sky-400 transition-colors dark:text-sky-300 dark:bg-sky-950/40"
       >
         + 주주 추가
       </button>
 
       {/* 총 실수령 배당합계 — 미리보기 (§0.5: 자동산정 미리보기 금지, 합계만 표시) */}
       {safeRows.length > 0 && (
-        <div className="rounded-lg border border-sky-200 bg-sky-100/60 px-3 py-2 text-sm">
+        <div className="rounded-lg border border-sky-200 bg-sky-100/60 px-3 py-2 text-sm dark:bg-sky-900/40">
           <div className="flex items-center justify-between">
-            <span className="text-sky-700">총 실수령 배당합계</span>
-            <span className="font-mono tabular-nums whitespace-nowrap text-sky-900 font-semibold">
+            <span className="text-sky-700 dark:text-sky-300">총 실수령 배당합계</span>
+            <span className="font-mono tabular-nums whitespace-nowrap text-sky-900 font-semibold dark:text-sky-200">
               {formatKRW(totalActualDividend)}
             </span>
           </div>
@@ -191,11 +191,11 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
       {/* 역할 안내 */}
       <div className="text-xs text-muted-foreground space-y-0.5 pl-1">
         <p>
-          <span className="inline-block w-2 h-2 rounded-full bg-rose-300 mr-1" />
+          <span className="inline-block w-2 h-2 rounded-full bg-rose-300 mr-1 dark:bg-rose-700/50" />
           <strong>최대주주등</strong> — 배당을 포기하거나 과소수령한 주주
         </p>
         <p>
-          <span className="inline-block w-2 h-2 rounded-full bg-sky-300 mr-1" />
+          <span className="inline-block w-2 h-2 rounded-full bg-sky-300 mr-1 dark:bg-sky-700/50" />
           <strong>특수관계인</strong> — 초과배당을 수령한 수증자 (증여세 납세의무자)
         </p>
         <p>

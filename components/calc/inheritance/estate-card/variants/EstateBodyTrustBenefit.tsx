@@ -77,7 +77,7 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
         {/* ② 신탁재산 구성 (결정 B 경량 — Σ value = 신탁재산 가액) */}
         <ToneCard tone="sky" title="신탁재산 구성 (평가기준일 현재 가액)" bodyClassName="space-y-2">
           {assets.map((row, idx) => (
-            <div key={idx} data-testid={`trust-asset-row-${idx}`} className="flex items-end gap-2 rounded-md border border-sky-200/70 bg-sky-50/30 p-2">
+            <div key={idx} data-testid={`trust-asset-row-${idx}`} className="flex items-end gap-2 rounded-md border border-sky-200/70 bg-sky-50/30 p-2 dark:bg-sky-950/40">
               <div className="flex-1">
                 <input
                   type="text"
@@ -96,10 +96,10 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
                   data-testid={`trust-asset-row-${idx}-value`}
                 />
               </div>
-              <button type="button" onClick={() => removeAsset(idx)} className="mb-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">✕</button>
+              <button type="button" onClick={() => removeAsset(idx)} className="mb-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400">✕</button>
             </div>
           ))}
-          <button type="button" onClick={addAsset} data-testid="trust-asset-add" className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100">
+          <button type="button" onClick={addAsset} data-testid="trust-asset-add" className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 dark:text-sky-200 dark:bg-sky-900/40">
             + 신탁재산 항목 추가
           </button>
         </ToneCard>
