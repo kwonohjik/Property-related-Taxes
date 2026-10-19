@@ -31,6 +31,7 @@ import type {
   Pre1990LandValuationInput,
 } from "../pre-1990-land-valuation";
 import type { ParcelInput } from "../multi-parcel-transfer";
+import type { LandRebuildPriorHouse } from "../transfer-land-rebuild-rate";
 import type { SaleSplitExemption } from "../sale-split-deemed-unclear";
 import type { InheritanceAcquisitionInput, CommercialInheritanceValuationInput } from "./inheritance-acquisition.types";
 export type { TransferReductionStub } from "./transfer-reductions-stub.types";
@@ -1425,6 +1426,13 @@ export interface TransferTaxInput {
    * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).
    */
   landDonorAcquisitionDate?: Date;
+  /**
+   * 구주택 멸실·신축 통산(해석 (5) — 서면법규과-1222, 사전-2023-법규재산-0097) — 같은 토지 위 **본인 소유 구주택**을 멸실하고 주택을 신축해 양도한 경우,
+   * 토지 파트의 §104② 세율 보유기간을 「구주택 부수토지 기간 + 신축주택 부수토지 기간」(멸실~신축 취득일 제외, 일수 버림)으로 판정한다.
+   * 주택 split(토지 취득일 있음) + 건물 취득원인 `newConstruction`에서만 유효하다(그 밖은 엔진 진입 leaf가 거부). 생략 = 현행 `max(토지, 주택 취득일)`.
+   * 설계: docs/02-design/features/appurtenant-land-rebuild-rate-basis.engine.design.md
+   */
+  landRebuildPriorHouse?: LandRebuildPriorHouse;
   /**
    * 토지 파트 배우자등 이월과세(소득세법 §97의2①) — 토지만(A)·둘 다(C). **자산 단위 `carryoverTaxation`과 상호배제**다.
    * ⑭ 합성기(`composeSplitCarryover`)가 와이어(`landCarryoverPart` + `carryoverGiftEvent`)에서 만든다 — 증여세 상당액은

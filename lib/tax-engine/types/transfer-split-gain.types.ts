@@ -225,6 +225,12 @@ export interface SplitPartResult {
    * 파트 세율이 모두 같아 자산 단위 경로로 계산된 경우에도 세액은 같다(설계 R-4).
    */
   appliedRateBasisDate?: string;
+  /**
+   * 구주택 멸실·신축 통산(`landRebuildPriorHouse`)이 적용된 **토지 파트**만 — 세율 보유기간을 정한 두 구간·합산 개월·등가 기산일.
+   * 이때 `appliedRateBasisDate`는 실제 취득일이 아니라 합산 개월을 만드는 **등가 기산일**(= `equivalentBasisDate`)이다 — 표시는 이 echo를 우선 읽는다.
+   * 장기보유특별공제·건물 파트는 불변이다.
+   */
+  rateHoldingAggregation?: SplitRateHoldingAggregation;
   /** 파트 이월과세(§97의2①) echo — 이월과세 입력이 있던 파트만. 생략 = 그 파트는 이월과세 입력 없음 */
   carryover?: SplitPartCarryoverEcho;
 }
@@ -385,4 +391,17 @@ export interface SplitGainResult {
   splitLandExpropriationValuationDetail?: SplitLandExpropriationValuationDetail;
   /** §164⑨1호 주택 PHD split 총액 특례 산출근거 (계획 P6b/D15) — 적용 시만 포함 */
   housingExpropriationValuationDetail?: HousingExpropriationValuationDetail;
+}
+
+/** `landRebuildPriorHouse` 통산 echo — 날짜는 YYYY-MM-DD */
+export interface SplitRateHoldingAggregation {
+  /** 구주택 부수토지 기간 [시작일, 멸실일] */
+  priorHouse: { from: string; to: string; months: number };
+  /** 신축주택 부수토지 기간 [신축 취득일, 양도일] */
+  newHouse: { from: string; to: string; months: number };
+  totalMonths: number;
+  /** `calculateHoldingPeriod(이 날짜, 양도일)`의 개월 수가 `totalMonths`가 되는 날 */
+  equivalentBasisDate: string;
+  /** 구주택 시작일의 근거 — `land_basis` 토지 법정 기산일 / `input_date` 입력한 구주택 취득일 */
+  startRule: "land_basis" | "input_date";
 }

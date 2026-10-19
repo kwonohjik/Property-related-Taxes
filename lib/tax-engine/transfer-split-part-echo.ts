@@ -13,13 +13,14 @@ import { coerceOptionalDate } from "./tax-utils";
 import {
   resolveAppurtenantLandRateBasisDate,
   resolveLandRateBasis,
+  resolveLandRebuildAggregation,
 } from "./transfer-tax-appurtenant-land";
 import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput } from "./types/transfer.types";
 
 type CauseEcho = Pick<
   SplitPartResult,
-  "acquisitionCause" | "acquisitionDate" | "rateBasisAcquisitionDate" | "rateBasisRule" | "appliedRateBasisDate"
+  "acquisitionCause" | "acquisitionDate" | "rateBasisAcquisitionDate" | "rateBasisRule" | "appliedRateBasisDate" | "rateHoldingAggregation"
 >;
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
@@ -41,6 +42,13 @@ function withDates(input: TransferTaxInput): TransferTaxInput {
     donorAcquisitionDate: c(input.donorAcquisitionDate),
     landDecedentAcquisitionDate: c(input.landDecedentAcquisitionDate),
     landDonorAcquisitionDate: c(input.landDonorAcquisitionDate),
+    landRebuildPriorHouse: input.landRebuildPriorHouse
+      ? {
+          ...input.landRebuildPriorHouse,
+          priorHouseStartDate: c(input.landRebuildPriorHouse.priorHouseStartDate),
+          demolitionDate: c(input.landRebuildPriorHouse.demolitionDate) ?? input.landRebuildPriorHouse.demolitionDate,
+        }
+      : undefined,
   };
 }
 
@@ -55,12 +63,25 @@ export function buildSplitPartCauseEcho(raw: TransferTaxInput): { land: CauseEch
   });
   const land = resolveLandRateBasis(input);
   const applied = resolveAppurtenantLandRateBasisDate(input);
+  // 구주택 멸실·신축 통산 — `applied`가 등가 기산일이 되므로 두 구간을 따로 싣는다(표시가 실제 취득일로 오독하지 않게).
+  const agg = resolveLandRebuildAggregation(input);
   return {
     land: {
       ...causeOf(input.landAcquisitionCause ?? input.acquisitionCause),
       ...(input.landAcquisitionDate ? { acquisitionDate: day(input.landAcquisitionDate) } : {}),
       ...(land ? { rateBasisAcquisitionDate: day(land.date), rateBasisRule: land.rule } : {}),
       ...(applied ? { appliedRateBasisDate: day(applied) } : {}),
+      ...(agg
+        ? {
+            rateHoldingAggregation: {
+              priorHouse: { from: day(agg.priorHouse.from), to: day(agg.priorHouse.to), months: agg.priorHouse.months },
+              newHouse: { from: day(agg.newHouse.from), to: day(agg.newHouse.to), months: agg.newHouse.months },
+              totalMonths: agg.totalMonths,
+              equivalentBasisDate: day(agg.equivalentBasisDate),
+              startRule: agg.startRule,
+            },
+          }
+        : {}),
     },
     building: {
       ...causeOf(input.acquisitionCause),

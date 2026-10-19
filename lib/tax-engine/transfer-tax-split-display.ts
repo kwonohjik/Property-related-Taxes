@@ -85,10 +85,15 @@ function houseDateName(houseCause: SplitPartCause | undefined): { subject: strin
  * `houseCause`는 건물 파트 echo 원인이다(상대편 날짜의 이름). echo가 없는 구 결과는 `undefined`.
  */
 export function splitRateBasisNote(
-  p: Pick<SplitPartResult, "rateBasisRule" | "rateBasisAcquisitionDate" | "appliedRateBasisDate">,
+  p: Pick<SplitPartResult, "rateBasisRule" | "rateBasisAcquisitionDate" | "appliedRateBasisDate" | "rateHoldingAggregation">,
   houseCause: SplitPartCause | undefined,
 ): string | undefined {
   if (!p.rateBasisRule || !p.appliedRateBasisDate) return undefined;
+  // 구주택 멸실·신축 통산(해석 (5)) — `appliedRateBasisDate`는 실제 취득일이 아니라 합산 개월을 만드는 등가 기산일이다. 「주택 취득일부터」로 읽히지 않게 구간을 밝힌다.
+  const agg = p.rateHoldingAggregation;
+  if (agg) {
+    return `구주택 부수토지 ${agg.priorHouse.months}개월(${agg.priorHouse.from}~${agg.priorHouse.to}) + 신축주택 부수토지 ${agg.newHouse.months}개월(${agg.newHouse.from}~${agg.newHouse.to}) = ${agg.totalMonths}개월 통산 — 이 개월 수를 만드는 환산 기산일`;
+  }
   const { label, law } = RATE_BASIS_RULE[p.rateBasisRule];
   if (p.rateBasisAcquisitionDate && p.rateBasisAcquisitionDate !== p.appliedRateBasisDate) {
     const { subject, from } = houseDateName(houseCause);
