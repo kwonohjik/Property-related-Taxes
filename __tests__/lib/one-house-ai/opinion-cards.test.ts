@@ -106,4 +106,9 @@ describe("OPINION_SYSTEM_PROMPT", () => {
   it("쓰지 않은 카드를 나열하지 않는다", () => {
     expect(OPINION_SYSTEM_PROMPT).toContain("쓰지 않은 카드는 나열하지 않는다");
   });
+  // 3차 실호출(2026-10-20)에서 wasRegulatedAtAcquisition=true·not_required·regionCode가 화면에 그대로 나왔다
+  it("영문 필드 이름·코드 값 대신 화면 말로 쓴다", () => {
+    expect(OPINION_SYSTEM_PROMPT).toContain("영문 필드 이름");
+    expect(OPINION_SYSTEM_PROMPT).toContain("그대로 쓰지 않는다. 화면 말로 바꿔 쓴다");
+  });
 });
