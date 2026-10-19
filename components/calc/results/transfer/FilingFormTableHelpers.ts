@@ -375,7 +375,9 @@ export function buildRows(
       (sp.selfOwns === "land_only" ? 0 : sp.building.gain);
     const taxableRatio = ownedGain > 0 ? result.taxableGain / ownedGain : 1;
     // §155⑳ 특례 결과(파트 echo가 채워진 분리 취득)는 합계 열 의미가 달라 별도 echo 경로다 — 균일 비율을 곱하면 `result.taxableGain`(장특 차감 후)에서 파트 장특을 또 빼 음수가 된다.
-    splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum, spNb);
+    // 잔액 흡수는 두 파트를 모두 소유할 때만 — 한 파트만 소유하면 합계 열이 그 파트 하나라 열 합과 같은 정의가 아니다.
+    const taxableTotal = (sp.selfOwns ?? "both") === "both" ? result.taxableGain : undefined;
+    splitTwoColFinancials(sp.land, sp.building, taxableRatio, setNum, spNb, taxableTotal);
     if (isRH && hasRentalSplitColumns(sp, result.rentalHousingExceptionDetail)) {
       // 양도가·취득가·필요경비·양도차익 행은 위 공통 값을 그대로 쓰고, 과세·장특·소득금액 계열만 특례 의미로 덮어쓴다.
       rentalSplitTwoColFinancials(sp, result.rentalHousingExceptionDetail!, setNum, setRoseNote);

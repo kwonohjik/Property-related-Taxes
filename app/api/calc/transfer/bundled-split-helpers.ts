@@ -192,7 +192,14 @@ type CompanionContextOnlyKeys =
    * ⚠️ 타입도 다르다 — ⑫는 **Zod payload**, 엔진은 `MixedUseAssetInput`이다. 그 사이는
    *    `buildMixedUseAssetInput` leaf가 잇는다.
    */
-  | "mixedUse";
+  | "mixedUse"
+  /**
+   * 🔑 **컴패니언은 주택 split 파트 이월과세를 받지 않는다** — ⑫ leaf S0·`splitAcquisitionShape`가 키를 받아서 **명시 거부**(400)하므로
+   * 이 키는 컴패니언 item에 도달할 수 없다(싣지 않는 것이 의도다). 엔진 input의 `carryoverGiftEvent`는 파트 이월과세의 echo 전용이다.
+   * ②3호 비교가 신고 전체 결정세액을 봐야 해서 컴패니언 병용은 별도 작업이다
+   * (docs/02-design/features/transfer-split-part-carryover.engine.design.md §4.5 · 계획서 §11 I-6).
+   */
+  | "carryoverGiftEvent";
 
 /**
  * ⑭ 컴패니언 원시 자산 — **⑫ 스키마에서 전면 파생**한다 (장치 1, 2026-09-04).

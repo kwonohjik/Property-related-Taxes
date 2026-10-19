@@ -209,6 +209,23 @@ export function checkExemption(
           };
           return verdictIf(true) !== verdictIf(false);
         },
+        // 일시적 2주택 명부 행(합가 D8 짝의 종전 주택 · 신규 주택)의 지구 선언도 같은 규약이다 — 그 행만 지구 안·밖으로 바꿔 다시 판정한다.
+        previousHouse: () => {
+          const verdictIf = (previousHouseInDesignatedDistrict: boolean) => {
+            const temporaryTwoHouse = input.temporaryTwoHouse && { ...input.temporaryTwoHouse, previousHouseInDesignatedDistrict };
+            const r = checkExemption({ ...input, temporaryTwoHouse }, oneHouseRules, presaleRightStartDate, options);
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          return verdictIf(true) !== verdictIf(false);
+        },
+        newHouse: () => {
+          const verdictIf = (newHouseInDesignatedDistrict: boolean) => {
+            const temporaryTwoHouse = input.temporaryTwoHouse && { ...input.temporaryTwoHouse, newHouseInDesignatedDistrict };
+            const r = checkExemption({ ...input, temporaryTwoHouse }, oneHouseRules, presaleRightStartDate, options);
+            return `${r.isExempt}|${r.isPartialExempt}`;
+          };
+          return verdictIf(true) !== verdictIf(false);
+        },
       }, buildEraNoticeRelevance({
         input,
         oneHouseRules,

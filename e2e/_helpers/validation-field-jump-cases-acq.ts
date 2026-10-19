@@ -162,6 +162,19 @@ export const ACQ_FIELD_JUMP_CASES: FieldJumpCase[] = [
     field: "carryover.donorStandardPriceAtTransfer", step: 0, assetIndex: A, message: /^자산: 양도시 기준시가를 입력하세요/,
     form: carry({ useEstimatedAcquisition: true, estimationMode: "general", donorStandardPriceAtAcquisition: "100000000" }),
   },
+  // H-5 — 이월과세 × 토지·건물 소유자 분리: 취득시 → 양도시 순으로 비어 있는 첫 칸(NonPurchaseSplitInputsBlock · 양도가액 축)
+  {
+    name: "standardPricePerSqmAtAcq (이월과세 · 소유자 분리)", field: "standardPricePerSqmAtAcq", step: 0, assetIndex: A, message: /^자산: 토지·건물 소유자가 다르면/,
+    form: carry({ donorSameHousehold: "no" }, { assetKind: "housing", selfOwns: "building_only", fixedAcquisitionPrice: "" }),
+  },
+  {
+    name: "buildingStandardPriceAtTransfer (이월과세 · 소유자 분리)", field: "buildingStandardPriceAtTransfer", step: 0, assetIndex: A, message: /^자산: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분/,
+    form: carry({ donorSameHousehold: "no" }, {
+      assetKind: "housing", selfOwns: "building_only", fixedAcquisitionPrice: "",
+      standardPricePerSqmAtAcq: "1000000", acquisitionArea: "100", standardPriceAtAcq: "300000000", buildingStandardPriceAtAcq: "100000000",
+      standardPricePerSqmAtTransfer: "1500000", transferArea: "100",
+    }),
+  },
   { name: "phdFirstDisclosureDate (이월과세)", field: "phdFirstDisclosureDate", step: 0, assetIndex: A, message: /^자산: 최초 고시일을 입력하세요/, form: carryPhd("phd", { phdFirstDisclosureDate: "" }) },
   {
     name: "phdFirstDisclosureDate (이월과세 §164⑦ 대상 아님)", field: "phdFirstDisclosureDate", step: 0, assetIndex: A, message: /^자산: 증여자 취득일\(의제취득일/,

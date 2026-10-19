@@ -17,7 +17,8 @@ import {
   BUILDING_CAUSE_ESTIMATION_MESSAGE,
   BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE,
   BUILDING_CAUSE_ASSET_VALUATION_MESSAGE,
-  BUILDING_CAUSE_CARRYOVER_BURDENED_MESSAGE,
+  BUILDING_CAUSE_BURDENED_OVERLAY_MESSAGE,
+  PART_CARRYOVER_INPUT_REQUIRED_MESSAGE,
   BUILDING_CAUSE_BUILDING_PRICE_REQUIRED_MESSAGE,
   BUILDING_CAUSE_LAND_PRICE_REQUIRED_MESSAGE,
   LAND_CAUSE_ABSENT_MESSAGE,
@@ -117,8 +118,19 @@ describe("leaf — D2 규칙별 발동·긍정 짝", () => {
   });
 
   it("R-X5 개정: 건물 이월과세·부담부증여 + 토지 매매 → 차단 / 건물 상속·증여 + 토지 상속·증여 → 계속 차단(D3) / 건물 매매·신축 + 토지 매매 → 무영향", () => {
-    for (const buildingAcquisitionCause of ["carryover_gift", "burdened_gift"])
-      expect(first({ buildingAcquisitionCause })).toEqual({ field: "landAcquisitionCause", message: BUILDING_CAUSE_CARRYOVER_BURDENED_MESSAGE });
+    // P1: 부담부증여는 차단 유지(문구에서 이월과세 어휘만 뺐다), 이월과세는 파트 서브객체 필수(S1)로 갈렸다 — 서브객체가 있으면 통과(B)
+    expect(first({ buildingAcquisitionCause: "burdened_gift" })).toEqual({ field: "landAcquisitionCause", message: BUILDING_CAUSE_BURDENED_OVERLAY_MESSAGE });
+    expect(first({ buildingAcquisitionCause: "carryover_gift" })).toEqual({ field: "buildingCarryoverPart", message: PART_CARRYOVER_INPUT_REQUIRED_MESSAGE });
+    expect(
+      msgs({
+        buildingAcquisitionCause: "carryover_gift",
+        hasBuildingCarryover: true,
+        carryoverGiftDate: "2025-05-01",
+        partCarryoverSupported: true,
+        hasBuildingAcquisitionPrice: true,
+        hasLandAcquisitionPrice: true,
+      }),
+    ).toEqual([]);
     for (const landAcquisitionCause of ["inheritance", "gift"])
       expect(msgs({ landAcquisitionCause, hasLandDecedentAcquisitionDate: true })).toContain(LAND_CAUSE_BUILDING_CAUSE_MESSAGE);
     for (const buildingAcquisitionCause of ["purchase", "newConstruction", undefined])

@@ -20,6 +20,8 @@
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { MIXED_USE } from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
+import { mixedPartLthdRates } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
+import { mixedPartLthdRateText } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
 import { MixedUseNblSection } from "@/components/calc/results/mixed-use/MixedUseNblSection";
@@ -507,12 +509,17 @@ export function MixedUseCalculationSections({
            *    「장기보유공제 (표1, **0.0%**)」로 표시돼 **보유기간이 짧아서 0인 것처럼** 읽혔다.
            */
           const excl = surchargeLthdExclusion;
+          // 토지·건물 공제율이 다르면 대표 율(건물 기준) 하나 대신 파트별 표·율과 산식을 적는다(상세명세서·계산 단계와 같은 판정).
+          const rates = mixedPartLthdRates(h);
+          const app = h.appurtenantLthd;
           return (
             <Row
               label={
                 excl
                   ? "장기보유공제 (배제)"
-                  : `장기보유공제 (표${h.longTermDeductionTable}, ${fmtPct(h.longTermDeductionRate)})`
+                  : rates
+                    ? `장기보유공제 (${mixedPartLthdRateText(rates, fmtPct)})`
+                    : `장기보유공제 (표${h.longTermDeductionTable}, ${fmtPct(h.longTermDeductionRate)})`
               }
               value={`△ ${fmt(h.longTermDeductionAmount)}`}
               formula={
@@ -521,6 +528,12 @@ export function MixedUseCalculationSections({
                     (excl.fromFallback
                       ? " ※ 다른 보유 주택 목록 미입력 — 「세대 보유 주택 수」로 판정한 근사입니다."
                       : "")
+                  : rates
+                    ? `토지분 ${fmtPlain(rates.land.echo.taxableGain)} × ${fmtPct(rates.land.echo.longTermRate)} = ${fmtPlain(rates.land.echo.longTermDeduction)}` +
+                      ` + 건물분 ${fmtPlain(rates.building.echo.taxableGain)} × ${fmtPct(rates.building.echo.longTermRate)} = ${fmtPlain(rates.building.echo.longTermDeduction)}` +
+                      (app?.table1Applied
+                        ? ` — 토지분은 주택보다 먼저 취득해 표1·표2 중 큰 공제율(${app.basis.source === "circular" ? "소득세법 기본통칙 95-0…1" : "과세관청 해석 재산세과-4375(2008.12.24.)"})`
+                        : "")
                   : h.longTermDeductionTable === 2
                     ? "보유연수×4% + 거주연수×4% (최대 80%)"
                     : "보유연수×2% (최대 30%)"
@@ -670,11 +683,27 @@ export function MixedUseCalculationSections({
           />
         ) : (
           <>
-            <Row
-              label={`장기보유공제 (표1, ${fmtPct(c.longTermDeductionRate)})`}
-              value={`△ ${fmt(c.longTermDeductionAmount)}`}
-              formula="보유연수×2% (최대 30%) — 토지/건물 별 보유연수 적용"
-            />
+            {(() => {
+              // 토지·건물 보유연수가 달라 공제율이 다르면 대표 율(긴 보유연수 기준) 하나 대신 파트별로 적는다.
+              const rates = mixedPartLthdRates(c);
+              const yrs = (y: number | undefined) => (y === undefined ? "" : `(보유 ${y}년)`);
+              return (
+                <Row
+                  label={
+                    rates
+                      ? `장기보유공제 (${mixedPartLthdRateText(rates, fmtPct)})`
+                      : `장기보유공제 (표1, ${fmtPct(c.longTermDeductionRate)})`
+                  }
+                  value={`△ ${fmt(c.longTermDeductionAmount)}`}
+                  formula={
+                    rates
+                      ? `토지분 ${fmtPlain(rates.land.echo.taxableGain)} × ${fmtPct(rates.land.echo.longTermRate)}${yrs(rates.land.echo.holdingYears)} = ${fmtPlain(rates.land.echo.longTermDeduction)}` +
+                        ` + 건물분 ${fmtPlain(rates.building.echo.taxableGain)} × ${fmtPct(rates.building.echo.longTermRate)}${yrs(rates.building.echo.holdingYears)} = ${fmtPlain(rates.building.echo.longTermDeduction)}`
+                      : "보유연수×2% (최대 30%) — 토지/건물 별 보유연수 적용"
+                  }
+                />
+              );
+            })()}
             <DivRow />
             <Row
               label="상가부분 양도소득금액"

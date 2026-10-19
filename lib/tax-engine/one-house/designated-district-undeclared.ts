@@ -12,6 +12,7 @@
  * 묻지 않는다 — 판정 메뉴는 중과를 계산하지 않으므로 양도일 지정 상태만으로는 결론이 안 바뀐다(S02-7). 계산기 다주택 중과는
  * 양도일 조정 여부를 실제로 쓰므로 `surchargeSellingDistrictUndeclared`가 따로 맡는다. 입주권 행도 같은 규약이다(#32-4) — 그 행의 답을
  * 바꿔 본체 판정을 다시 돌려도 비과세 결론이 같으면(처분기한이 이미 지났거나 양도 주택의 보유·거주가 모자라 어차피 과세 등) 묻지 않는다.
+ * 일시적 2주택 명부 행(종전·신규 주택)도 같은 규약이다(1주택 코드 리뷰 별건 ⑤) — 종전에는 게이트 없이 지구 한정 지정 구간이면 늘 냈다.
  */
 import { format } from "date-fns";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
@@ -48,6 +49,13 @@ export interface DistrictDeclarationRelevance {
    * 기한이 이미 지났거나 양도 주택의 보유·거주가 모자라 어차피 과세(또는 어차피 비과세)면 그 답은 결론을 바꾸지 못한다.
    */
   right: (rowIndex: number) => boolean;
+  /**
+   * 일시적 2주택 명부 행(합가 D8 짝의 종전 주택 · 신규 주택)의 지구 선언을 true·false로 바꾸면 비과세 결론이 달라지는가.
+   * 이 두 답은 §155①2호 「신규 주택 취득 당시 두 주택 모두 조정대상지역」 판정(처분기한·전입 요건)에만 쓰인다
+   * (`resolveRegulatedAtNewAcquisition`) — 기한 안에 양도하고 전입했거나, 보유요건이 모자라 어차피 과세면 그 답은 결론을 바꾸지 못한다.
+   */
+  previousHouse: () => boolean;
+  newHouse: () => boolean;
 }
 
 const ymd = (d: Date) => format(d, "yyyy-MM-dd");
@@ -113,14 +121,23 @@ export function designatedDistrictUndeclared(
   );
   // 합가 D8 상대 쪽 짝(B → C)의 종전 주택(명부 행) — 양도 주택이 아니라 이 행의 소재로 조정 여부를 판정한다(S15-2).
   if (tt?.previousHouseIsRosterRow) {
-    check("previous-house", "종전 주택(보유 주택 목록)", tt.previousHouseRegionCode, tt.previousHouseInDesignatedDistrict, [
-      tt.newAcquisitionDate,
-    ]);
+    check(
+      "previous-house",
+      "종전 주택(보유 주택 목록)",
+      tt.previousHouseRegionCode,
+      tt.previousHouseInDesignatedDistrict,
+      [tt.newAcquisitionDate],
+      relevance?.previousHouse,
+    );
   }
-  check("new-house", "신규 주택(보유 주택 목록)", tt?.newHouseRegionCode, tt?.newHouseInDesignatedDistrict, [
-    tt?.newAcquisitionDate,
-    tt?.newHouseContractDate,
-  ]);
+  check(
+    "new-house",
+    "신규 주택(보유 주택 목록)",
+    tt?.newHouseRegionCode,
+    tt?.newHouseInDesignatedDistrict,
+    [tt?.newAcquisitionDate, tt?.newHouseContractDate],
+    relevance?.newHouse,
+  );
   const saleIsHousing = input.propertyType === "housing" && input.isOneHousehold === true;
   (input.presaleRights ?? []).forEach((r, i) => {
     // 입주권 행 소재지가 조정대상지역 판정에 쓰이는 것은 주택 양도의 기존주택 원조합원 경로뿐이다(미입력 포함).

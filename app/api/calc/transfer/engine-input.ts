@@ -31,6 +31,7 @@ import { mapSpecialHouseExclusionsToEngine } from "@/lib/api/transfer-route-mult
 import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { toRentalHousingExceptionEngineInput } from "./_rental-engine-input";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
+import { composeSplitCarryover } from "@/lib/tax-engine/transfer-split-carryover-compose";
 
 type ValidatedTransferInput = z.infer<typeof propertySchema>;
 
@@ -375,6 +376,9 @@ export function buildTransferEngineInput(
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다
     houseFirstDisclosureDate: data.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
+    // ⑭ 주택 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. Date 변환·증여세 안분은 합성기가 한다(TypeScript 미감지 영역).
+    // 컴패니언은 매핑하지 않는다(`bundled-split-helpers.ts`) — ⑫(leaf S0)가 컴패니언의 파트 이월과세를 명시 거부한다.
+    ...composeSplitCarryover(data),
     landSplitMode: data.landSplitMode,
     // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)
     landAcqMode: data.landAcqMode,

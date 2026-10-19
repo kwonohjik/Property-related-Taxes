@@ -285,7 +285,17 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
   // 달지 않고 방법을 적는다. 남은 값은 그 고정을 거치지 않은 잔재다.
   if (issue.field === "landAcqMode") return `${msg} — 「토지는 다른 원인으로 취득」을 껐다가 다시 켜면 실거래가로 고정됩니다.`;
   // Y7 `inheritedAcquisition`은 ④가 D2 유효 시 싣지 않는 payload라 ⑧에는 고칠 칸이 없다(발동하지 않음) — 앵커만 토글 칸으로.
-  return fieldError(issue.field === "inheritedAcquisition" ? "landAcquisitionCause" : issue.field, msg);
+  // P1 파트 이월과세 입력 칸(landCarryoverPart 등)은 아직 폼에 없다(P2~) — 토지 취득원인 앵커로 모은다.
+  const anchor =
+    issue.field === "inheritedAcquisition" ||
+    issue.field === "landCarryoverPart" ||
+    issue.field === "buildingCarryoverPart" ||
+    issue.field === "carryoverGiftEvent" ||
+    issue.field === "carryoverTaxation" ||
+    issue.field === "expenses"
+      ? "landAcquisitionCause"
+      : issue.field;
+  return fieldError(anchor, msg);
 }
 
 /**
