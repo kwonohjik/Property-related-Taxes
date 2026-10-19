@@ -23,6 +23,8 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { HouseValuationSection } from "./HouseValuationSection";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
+import { ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
+import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -52,7 +54,13 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
 
   // 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 → 3-시점 보조 입력
   const inheritanceDate = asset.inheritanceStartDate || asset.acquisitionDate || "";
-  const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
+  // 공동주택은 「상속개시일 당시 국세청 고시 가액」 질문이 정한다 — 「없었음」일 때만 3-시점 환산(②)과 그 값의 ③ 자동 주입이 열린다
+  // (있었음이면 의제취득일 기준시가는 아래 칸에 직접 입력 — 계획서 Q-3, 엔진 `inheritance-acquisition-helpers.ts`와 같은 게이트).
+  const isApart = isApartSec163_9Asset(asset);
+  const showHouseBlock = isApart
+    ? apartNtsQuestionRelevant(asset)
+    : isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
+  const showHouseValuation = isApart ? apartSec164FormOpen(asset) : showHouseBlock;
 
   // 토지인 경우 의제취득일(1985.1.1.) 자체가 1990.8.30. 이전이므로 항상 환산 대상
   const showPre1990 = isLand;
@@ -220,9 +228,14 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
       </div>
 
       {/* 주택 자산 + 상속개시일 < 2005-04-30: 개별주택가격 미공시 3-시점 보조 입력 */}
-      {showHouseValuation && (
+      {showHouseBlock && (
         <>
           <InheritanceHouseKindPicker asset={asset} onChange={onChange} />
+          {isApart && <ApartNtsPriceQuestion asset={asset} onChange={onChange} baseDateLabel="상속개시일" />}
+        </>
+      )}
+      {showHouseValuation && (
+        <>
           <HouseValuationSection
             asset={asset}
             onChange={onChange}

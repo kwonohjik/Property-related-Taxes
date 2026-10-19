@@ -10,6 +10,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api-helpers";
 import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { buildApartNtsPricePayload } from "./apart-nts-price";
 import {
   sec164HouseStatus,
   sec164CommercialStatus,
@@ -78,6 +79,8 @@ export function buildInheritedAcquisitionPayload(
         ...(reportedValue && { reportedValue }),
         ...(stdAtDeemed > 0 && { standardPriceAtDeemedDate: stdAtDeemed }),
         ...(stdAtTransfer > 0 && { standardPriceAtTransfer: stdAtTransfer }),
+        // 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호) — 「있었음」이면 ②·③ 주입이 닫힌다(계획서 Q-3)
+        ...buildApartNtsPricePayload(primary),
       },
     };
   }
@@ -126,6 +129,8 @@ export function buildInheritedAcquisitionPayload(
         landAreaM2: parseFloat(primary.acquisitionArea),
       }),
       publishedValueAtInheritance: reportedValue,
+      // 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호) — 「없었음」일 때만 엔진이 ②(§164⑥·⑦)를 연다
+      ...buildApartNtsPricePayload(primary),
     },
   };
 }

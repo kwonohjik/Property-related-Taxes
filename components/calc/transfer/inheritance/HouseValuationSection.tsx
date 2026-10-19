@@ -178,6 +178,8 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { HouseFirstDisclosureDateField } from "../HouseFirstDisclosureFields";
 import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
+import { housePriceLabels } from "@/lib/tax-engine/inheritance-house-valuation";
 
 interface Props {
   asset: AssetForm;
@@ -206,6 +208,15 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   // "개별"이 선택돼 보이는데 이 게이트만 false가 되어 아래 일괄 계산 버튼이 영구 미노출된다
   // (이미 checked인 라디오는 다시 눌러도 change가 나지 않는다). 2026-07-30 정정.
   const isHouseIndividual = deriveInheritanceHouseKind(asset) === "house_individual";
+
+  // 자산 단위 공동주택(「국세청 고시 가액 없었음」에서만 이 섹션이 열린다) — 첫 가격 날짜·기관이 따로다(`apart-nts-price.ts`).
+  // 날짜 칸은 공동주택 질문(`ApartNtsPriceQuestion`)에 있다. 산식 모양은 같고 가격 이름·조문만 갈린다(영 §164⑥·⑦ — 계획서 Q-1).
+  const isApart = isApartSec163_9Asset(asset);
+  const firstRef = isApart
+    ? asset.inhApartFirstPriceDate || HOUSE_FIRST_DISCLOSURE_DATE
+    : asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
+  const labels = housePriceLabels(isApart ? asset.inhApartFirstPriceAgency || "molit" : undefined);
+  const clauseLabel = isApart ? labels.clause : "§164⑦";
 
   // 1990 이전 토지기준시가는 매 렌더 시 동기적으로 직접 계산 (useEffect 콜백 의존성 제거).
   // 엔진 측은 어차피 inheritedHouseValuation.pre1990 등급 데이터를 받아 자체 계산하므로
@@ -265,7 +276,6 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   // 3시점 일괄 계산기 points — 취득시 공시지가(위치지수 driver)는 pre-1990이면 등급가액 환산 per-sqm
   // (개별공시지가 미존재) 자동 주입, 그 외는 store의 상속개시일 개별공시지가.
   const batchPoints = useMemo(() => {
-    const firstRef = asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE;
     // 국세청 건물기준시가(신축가격기준액 방식)는 2001.1.1. 최초 고시 → 그 이전 취득 건물의 위치지수
     // 공시지가는 2001.1.1. 현재 공시지가를 사용(§164⑤). 상속개시일 개별공시지가·§164④ 1990.8.30
     // 이전 등급가액 환산값(토지 트랙)을 건물 위치지수로 전용하지 않는다 → 빈 값 시드 + 모달 힌트로 안내.
@@ -300,7 +310,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   }, [
     inheritanceDate,
     transferDate,
-    asset.inhHouseValFirstDisclosureDate,
+    firstRef,
     asset.inhHouseValLandPricePerSqmAtInheritance,
     asset.inhHouseValLandPricePerSqmAtFirst,
     asset.inhHouseValLandPricePerSqmAtTransfer,
@@ -328,12 +338,12 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       {/* 헤더 */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
-          개별주택가격 미공시 — 3-시점 기준시가 환산 보조
+          {isApart ? "공동주택 첫 가격 전" : "개별주택가격 미공시"} — 3-시점 기준시가 환산 보조
         </p>
         <div className="flex items-center gap-1.5">
           <LawArticleModal
             legalBasis="소득세법시행령 §164"
-            label="소령 §164⑦"
+            label={`소령 ${clauseLabel}`}
             className={LAW_BADGE_CLASS}
           />
           <LawArticleModal
@@ -345,7 +355,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       </div>
 
       <p className="text-caption text-muted-foreground">
-        {baseDateLabel}({inheritanceDate || "미입력"})이 이 주택의 개별주택가격 최초 공시일({asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}) 이전이므로
+        {baseDateLabel}({inheritanceDate || "미입력"})이 이 {isApart ? `공동주택의 첫 가격 ${labels.first}일` : "주택의 개별주택가격 최초 공시일"}({firstRef}) 이전이므로
         토지·주택 분리 입력으로 {acqTimeLabel} 합계 기준시가를 환산합니다.
         {isDeemedAcq && (
           <span className="ml-1 font-medium text-rose-700 dark:text-rose-400">
@@ -415,13 +425,15 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           jibun={asset.addressJibun || undefined}
         />
         <StandardPriceInput
-          propertyKind="house_individual"
+          propertyKind={isApart ? "house_apart" : "house_individual"}
           totalPrice={asset.inhHouseValHousePriceAtTransfer}
           onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtTransfer: v })}
           jibun={asset.addressJibun || undefined}
+          dong={isApart ? asset.addressDong || undefined : undefined}
+          ho={isApart ? asset.addressHo || undefined : undefined}
           referenceDate={transferDate}
-          label="양도 당시 공시된 개별주택 가격"
-          hint="홈택스/부동산공시가격알리미 — 양도일 직전 공시된 개별주택가격"
+          label={isApart ? "양도 당시 공시된 공동주택가격" : "양도 당시 공시된 개별주택 가격"}
+          hint={`홈택스/부동산공시가격알리미 — 양도일 직전 공시된 ${isApart ? "공동주택가격" : "개별주택가격"}`}
         />
       </div>
 
@@ -432,31 +444,37 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             2
           </span>
           <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
-            최초고시 시점 ({asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE})
+            최초고시 시점 ({firstRef})
           </p>
         </div>
         {/* 이 주택의 최초 공시일 — D2(건물 상속·증여 + 토지 매매)에서는 분리 섹션 카드(`BuildingSec164Card`)가 같은 칸을 가진다(한 곳에만). */}
-        {!effectiveBuildingCauseMix(asset) && <HouseFirstDisclosureDateField asset={asset} onChange={onChange} />}
+        {!effectiveBuildingCauseMix(asset) && !isApart && <HouseFirstDisclosureDateField asset={asset} onChange={onChange} />}
         <LandPriceLookupField
           label="최초고시 토지 개별공시지가"
           data-field="inhHouseValLandPricePerSqmAtFirst"
-          referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
+          referenceDate={firstRef}
           pricePerSqm={asset.inhHouseValLandPricePerSqmAtFirst}
           onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtFirst: v })}
           area={parseFloat(asset.inhHouseValLandArea || "0") || undefined}
           jibun={asset.addressJibun || undefined}
         />
         <StandardPriceInput
-          propertyKind="house_individual"
+          propertyKind={isApart ? "house_apart" : "house_individual"}
           totalPrice={asset.inhHouseValHousePriceAtFirst}
           data-field="inhHouseValHousePriceAtFirst"
           onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
           jibun={asset.addressJibun || undefined}
-          referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
+          dong={isApart ? asset.addressDong || undefined : undefined}
+          ho={isApart ? asset.addressHo || undefined : undefined}
+          referenceDate={firstRef}
           // 이 날짜는 그 주택의 최초 공시일 자체다 — 그해 공시된 가격을 조회한다(공용 기본값의 「4.29. 전이면 전년도」 규칙을 쓰지 않는다).
-          forceYear={(asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE).slice(0, 4)}
-          label="최초 공시된 개별주택가격"
-          hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑦ 추정 공식의 분자 승수."
+          forceYear={firstRef.slice(0, 4)}
+          label={`${labels.first.replace("최초공시", "최초 공시된")} ${labels.price}`}
+          hint={
+            isApart && asset.inhApartFirstPriceAgency === "nts"
+              ? "국세청장이 이 공동주택에 처음 고시한 기준시가(토지·건물 일괄). 영 §164⑥ 추정 공식의 분자 승수."
+              : `홈택스/부동산공시가격알리미 — 최초 공시 시점 ${labels.price}. ${clauseLabel} 추정 공식의 분자 승수.`
+          }
         />
         <FieldCard label="최초 공시 당시 건물기준시가" unit="원" hint="국세청 기준시가 — 취득시 개별주택가격 역산 시 최초공시 합계(토지기준시가 + 이 값)의 건물 부분. 개별주택가격과 별개입니다." className="sm:grid-cols-[200px_1fr]">
           <div className="w-1/2">
@@ -477,7 +495,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           if (sumF <= 0) return null;
           return (
             <div className="flex items-center justify-between rounded bg-muted/40 px-3 py-2">
-              <span className="text-caption text-muted-foreground">최초고시 합산기준시가 (§164⑦ 분모)</span>
+              <span className="text-caption text-muted-foreground">최초고시 합산기준시가 ({clauseLabel} 분모)</span>
               <span className="text-sm font-semibold tabular-nums">{sumF.toLocaleString()}</span>
             </div>
           );
@@ -577,11 +595,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
 
           return (
             <div className="space-y-1">
-              <p className="text-caption text-muted-foreground font-medium">환산 가격 (§164⑦)</p>
+              <p className="text-caption text-muted-foreground font-medium">환산 가격 ({clauseLabel})</p>
               <div className="flex items-start justify-between rounded bg-muted/40 px-3 py-2 gap-3">
                 <div className="space-y-0.5">
                   <span className="text-caption text-muted-foreground leading-relaxed block">
-                    최초 공시된 개별주택가격 ×{" "}
+                    {`${labels.first.replace("최초공시", "최초 공시된")} ${labels.price}`} ×{" "}
                     <Frac
                       top="취득시 토지기준시가 + 취득시 건물기준시가"
                       bottom="최초고시 토지기준시가 + 최초고시 건물기준시가"

@@ -33,6 +33,8 @@ import { HouseFirstDisclosureEntryCard } from "@/components/calc/transfer/HouseF
 import { InheritanceHouseKindPicker } from "@/components/calc/transfer/inheritance/InheritanceHouseKindPicker";
 import { sec164HouseStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { ApartFirstPriceEntryCard, ApartNtsPriceQuestion } from "@/components/calc/transfer/inheritance/ApartNtsPriceQuestion";
+import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
 
 interface Props {
   asset: AssetForm;
@@ -47,6 +49,34 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
   // 필수 항목 개수는 단일 소스에서 받는다 — 문구에 숫자를 하드코딩하면 필드가 늘 때 낡는다.
   const status = sec164HouseStatus(asset);
   if (asset.acquisitionCause !== "gift" || !isSec163_9House(asset.assetKind) || !giftDate) return null;
+  // 공동주택 — 증여일 당시 국세청 고시 가액 유무를 먼저 묻는다(필수·모름 없음). 「없었음」일 때만 아래 비교 입력을 연다(`apart-nts-price.ts`).
+  if (isApartSec163_9Asset(asset)) {
+    if (!apartNtsQuestionRelevant(asset)) {
+      return <ApartFirstPriceEntryCard asset={asset} onChange={onChange} baseDate={giftDate} baseDateLabel="증여일" />;
+    }
+    return (
+      <ToneCard tone="amber" title="공동주택 — 증여일 당시 국세청 고시 공동주택 기준시가" noDark>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
+          <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
+          <LawArticleModal legalBasis="소득세법 시행령 §164 ⑦" label="§164⑦" />
+        </div>
+        <InheritanceHouseKindPicker asset={asset} onChange={onChange} />
+        <ApartNtsPriceQuestion asset={asset} onChange={onChange} baseDateLabel="증여일" />
+        {apartSec164FormOpen(asset) && (
+          <>
+            <p className="text-xs text-amber-700">
+              <b>증여일 상증법 평가액과 첫 가격으로 환산한 §164⑥·⑦ 취득당시 기준시가 중 큰 금액</b>을 취득가액으로 봅니다. 위
+              「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다.{" "}
+              <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 비교합니다. 전부 비워두면 증여
+              신고가액만 사용하고, <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
+            </p>
+            <HouseValuationSection asset={asset} onChange={onChange} transferDate={transferDate} />
+          </>
+        )}
+      </ToneCard>
+    );
+  }
   // 구간 끝 = 이 주택의 최초 공시일(단독·다가구 명시일 때만, 아니면 2005-04-30) — ④ payload 빌더와 같은 `sec164HouseStatus` 경계.
   const boundary = houseDisclosureBoundaryOf(asset);
   if (giftDate >= boundary) {

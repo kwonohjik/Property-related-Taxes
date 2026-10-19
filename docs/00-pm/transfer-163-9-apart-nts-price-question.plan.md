@@ -1,6 +1,6 @@
 # 자산 단위 공동주택 — 「상속·증여 당시 국세청 고시 공동주택가격」 필수 확인 (영 §163⑨ 단서 2호)
 
-> 작성 2026-10-19 · 상태 **Plan — Q-1~Q-3 결정 대기** · 워크트리 `../Property-related-Taxes-hfdu` · 브랜치 `docs/house-first-disclosure-u1-u3`(문서 PR #2260)
+> 작성 2026-10-19 · 상태 **Do 완료 — Q-1~Q-3 A 확정(2026-10-19 사용자 「권고대로」)** · 계획 워크트리 `../Property-related-Taxes-hfdu`(문서 PR #2260) · 구현 워크트리 `../Property-related-Taxes-apnt` · 브랜치 `feat/apart-nts-price-question`
 > 선행: `transfer-house-first-disclosure-per-house.plan.md` §10 U-3(조사 결과) · 관련 미결 `transfer-acq-cause-mixed.plan.md` U-4(공동주택 경계)
 > 사용자 지시(2026-10-19): **A안**. 「국세청 고시 공동주택가격이 있었는지 **반드시 확인받고**, **모름은 항목 자체를 없앤다**」.
 
@@ -99,7 +99,7 @@ apartNtsQuestionRelevant(asset) =
   - 컴패니언 payload도 같은 빌더를 쓴다(`transfer-tax-api-companion-payload.ts:475-476`).
 - 「있었음」이면 `HouseValuationSection`을 렌더하지 않고 안내 카드(ToneCard)를 띄운다.
 
-## 4. 결정 (Q)
+## 4. 결정 (Q) — ✅ 2026-10-19 Q-1~Q-3 모두 A(권고)
 
 | # | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -134,3 +134,47 @@ apartNtsQuestionRelevant(asset) =
 - 「1994.7.1.」 국세청 공동주택 가격 고시의 범위(원문 미확인 — §2). 안내 문구에 넣기 전 확인한다.
 - 2005.4.30. 이후 국세청 결정·고시 공동주택가격(공시법 §17① 단서)이 실제로 있었는지와 그 대상.
 - 아파트 2호 정면 해석례(찾지 못함 — 검색 범위는 앞 계획서 §10 U-3).
+
+## 7. Do 결과 (2026-10-19)
+
+**계획과 달라진 점**
+
+- **첫 가격 날짜는 별도 필드 `inhApartFirstPriceDate`(기본 `""`)다** — 계획 §3·Q-2는 단독주택의 `inhHouseValFirstDisclosureDate`를 함께 쓰려 했다.
+  그 필드는 기본값이 `"2005-04-30"`이고 복원 마이그레이션이 빈 값을 다시 채운다(`calc-wizard-asset-migrate.ts`). 그러면 「없었음」의 날짜가
+  입력 없이 채워져 **필수(Q-2)가 성립하지 않는다**. 공동주택의 첫 가격은 2005.4.30. 전일 수 있어 단독주택의 범위 규칙(≥ 2005-04-30)과도 맞지 않는다.
+  - 자산 단위 공동주택에서는 단독주택 날짜를 읽지도 검증하지도 않는다. 남은 값으로 막지 않는다(`transfer-tax-validate-acquisition.ts`).
+  - 그 결과 기존 route anchor `transfer.route.house-first-disclosure.anchor.test.ts`의 세 단언을 고쳤다(B-2·D-3·G-1 63→65). 바뀐 셀은 손으로 셈한 근거를 주석에 적었다.
+- **주택 구분은 ④가 싣는 파생(`deriveInheritanceHouseKind`)을 쓴다** — 계획 §3.2는 「명시 선택만」이었다.
+  - 저장소 기본값은 `inheritanceAssetKind: "land"`다. 주택 자산은 픽커를 건드리지 않으면 동·호 유무로 공동주택이 되고, ④가 그대로 `house_apart`를 싣는다.
+  - 명시 선택만 보면 「④는 공동주택으로 싣는데 질문이 없는」 칸이 생긴다. 픽커도 같은 파생으로 표시하므로 화면과 어긋나지 않는다.
+- **⑫ 필수 조건은 「② 가액(`inheritedHouseValuation`)을 함께 보낼 때」다** — 계획 §3.2의 「관련이면 필수」보다 좁다.
+  - `deriveEngineInheritanceAssetKind`는 비주택 자산(상가·일반건물 등)도 `house_apart`로 보낸다. 날짜만으로 필수로 하면 그 자산들이 400이 된다.
+  - ② 없이 답만 오거나 답이 없으면 ① 단독이라 값이 같다. ⑧이 더 엄격한 방향이라 「⑧ 통과 ⇒ ⑫ 200」이 유지된다(격자 432셀 위반 0).
+  - 「있었음」 + ② 동봉은 400으로 막는다(엔진이 닫힌 게이트에서 값을 조용히 버리지 않게).
+- **2005.4.30. 뒤에 받은 공동주택**(Q-2·U-3): 진입 카드(`ApartFirstPriceEntryCard`)에서 첫 가격 날짜를 받는다. 그 날짜가 기준일 뒤면 질문이 열린다.
+  자산 단위 공동주택에서는 단독주택 진입 카드를 대신한다(한 곳에만).
+
+**구현 위치**
+
+| 층 | 파일 |
+|---|---|
+| leaf(엔진·⑫·④·⑧ 공용) | `lib/tax-engine/apart-nts-price.ts` — 구간 끝·날짜 범위·② 개폐·조문·문구 |
+| 엔진 | `inheritance-acquisition-helpers.ts`(공동주택 게이트·②③ 주입·환산 미산출·「있었음」 근거·Q-3 확인 필요) · `inheritance-acquisition-price.ts`(§164⑥·⑦ 표기) · `inheritance-house-valuation.ts`(가격 이름·조문 `housePriceLabels`) · 타입 2 · `legal-codes`(§164⑥ 상수 2 — 조문 커버리지는 기존 §164⑥으로 충족) |
+| ⑫ | `transfer-tax-schema-acq-deemed.ts`(3키, 두 모드) · `refineApartNtsPrice`(주 자산 `refineRequiredInputs2a` · 컴패니언 `transfer-tax-schema.ts`) |
+| ⑭ | `route-inherited-acquisition.ts`(두 모드 · 날짜 `toOptionalDate`) — 주 자산·컴패니언 공용 leaf. 다건은 `inheritedAcquisition` 자체를 받지 않는다 |
+| ①②③ | `calc-wizard-asset-acq-conversion.ts` 3필드 · factory 기본 `""` · migrate 미선택 채움 |
+| ④ | `lib/calc/apart-nts-price.ts` `buildApartNtsPricePayload` → `buildInheritedAcquisitionPayload` 두 모드(컴패니언도 같은 빌더) · `sec164HouseStatus` 공동주택 게이트(「있었음」이면 ② 미송신) |
+| ⑤ | `ApartNtsPriceQuestion.tsx`(질문·기관·날짜·진입 카드) → `PostDeemedInputs`·`PreDeemedInputs`·`GiftHouseStdPriceSection` · `HouseValuationSection`(조회 기준일·가격 이름·조문) |
+| ⑦ | `InheritedHouseValuationDetailCard`(§164⑥·⑦·가격 이름) · 엔진 산식·근거 문구 |
+| ⑧ | `apartNtsPriceIssue` → `validateAssetAcquisition`(D2 분기 뒤 · §164 부분 입력 차단 앞) |
+
+**검증**
+
+- route anchor `transfer.route.apart-nts-price.anchor.test.ts` 30건 — 양도차익 실측: 단독 대조 1,026,923,077 · 공동주택 「있었음」 1,100,000,000(①) ·
+  「없었음」 국세청/국토교통부 1,026,923,077(근거 §164⑥/⑦) · 의제 전(Q-3) 「있었음」 ① 채택·③ 자동 주입 없음 · 첫 가격 ≤ 1985-01-01 확인 필요 고지 ·
+  2005.5.12. 수증 + 첫 가격 2006.4.28. · 컴패니언 ②=173,076,923/①=100,000,000 · ⑫ 400 경로 4종 · ⑧⇔⑫ 격자 432셀 위반 0(통과 330·② 비교 154, 손 셈 일치).
+- UI anchor `apart-nts-price.ui.anchor.test.tsx` 18건 — 세 화면 × (미선택·있었음·없었음·patch·단독), 의제 전 자동값, 2005.4.30. 뒤 진입 카드.
+- 엔진 직접 `apart-nts-price-gate.test.ts` 6건 — ⑫가 먼저 막아 route로는 닿지 않는 조합(답 없음 + 날짜·「있었음」 + ② 동봉·첫 가격 = 기준일).
+- E2E `transfer-apart-nts-price.spec.ts` 3건 · 기존 `transfer-inheritance-house-val-building-std-batch.spec.ts` T2를 질문 경로로 갱신 · 관련 4 spec 13건 통과.
+- 뮤테이션 35종 — 34 KILLED. M10(Q-3 고지의 「의제취득일 전」 조건 제거)은 **동등 변형**이다: 의제취득일 이후면 첫 가격 날짜가 기준일(≥ 1985-01-01) 뒤라 1985-01-01 이하가 될 수 없다.
+- `check:pre-pr` 통과(3117파일 · 36,995건 · lint 오류 0). 브라우저(Playwright) 375·1280px 확인 — 375px 가로 넘침(scrollWidth 430)은 단독주택 경로에도 있는 기존 「의제취득일 이후」 배지 때문이라 이번 변경과 무관(별건).

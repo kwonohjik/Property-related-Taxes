@@ -49,6 +49,7 @@ import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cau
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE, houseFirstDisclosureIssue } from "./house-first-disclosure";
+import { apartNtsPriceIssue, isApartSec163_9Asset } from "./apart-nts-price";
 import { HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
@@ -140,12 +141,18 @@ export function validateAssetAcquisition(
 
   // ── 주택별 개별주택가격 최초공시일(영 §163⑨ 단서 2호 구간의 끝) — 세 경로(자산 단위·D2-4·D1-H) 공용이라 경로 분기보다 앞 ──
   // 범위 밖이면 ⑫도 막는다(같은 leaf 판정). 주택 구분 요구는 ⑧ 전용(④가 명시 단독·다가구일 때만 싣는다 — ⑧이 더 엄격한 방향).
-  const hfdIssue = houseFirstDisclosureIssue(asset, formTransferDate);
+  // 자산 단위 공동주택은 그 날짜를 쓰지 않는다(첫 가격 날짜는 `inhApartFirstPriceDate` — 아래 공동주택 질문) ⇒ 남은 값으로 막지 않는다.
+  const hfdIssue = isApartSec163_9Asset(asset) ? null : houseFirstDisclosureIssue(asset, formTransferDate);
   if (hfdIssue === "range") return fieldError("inhHouseValFirstDisclosureDate", `${label}: ${HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE}`);
   if (hfdIssue === "kind") return fieldError("inheritanceAssetKind", `${label}: ${HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE}`);
 
   // ── 건물 상속·증여 + 토지 매매(D2) — 자산 단위 상속 요구(아래 §164·E-1·PD-1·post-deemed)보다 **앞**에서 갈라 분리 검증으로 ──
   if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
+
+  // ── 공동주택 — 상속·증여 당시 국세청 고시 가액 유무(영 §163⑨ 단서 2호) · 「모름」 없음 ──
+  // 답이 ② 카드(§164⑥·⑦)를 여닫으므로 그 카드의 부분 입력 차단(아래)보다 앞. ⑫ `refineApartNtsPrice`와 같은 leaf.
+  const apartIssue = apartNtsPriceIssue(asset, formTransferDate);
+  if (apartIssue) return fieldError(apartIssue.field, `${label}: ${apartIssue.message}`);
 
   // ── §164④·⑥·⑤~⑦ 부분 입력 차단 (소령 §163⑨1호·2호) ──
   // ②는 all-or-nothing opt-in이라 일부만 입력하면 payload가 생성되지 않고 ① 단독으로 조용히

@@ -22,6 +22,19 @@ import { z } from "zod";
 
 // ─── 상속 부동산 취득가액 의제 스키마 (소령 §176조의2④·§163⑨) ──
 
+/**
+ * 공동주택 — 상속개시일·증여일 당시 국세청장 고시 공동주택 기준시가 유무(영 §163⑨ 단서 2호 · `lib/tax-engine/apart-nts-price.ts`).
+ * `assetKind: "house_apart"`에서만 읽는다. 필수·범위 판정은 `refineApartNtsPrice`(계획서 transfer-163-9-apart-nts-price-question.plan.md).
+ */
+const apartNtsPriceShape = {
+  /** 고시 가액이 있었는가 — `false`일 때만 ②(§164⑥·⑦)가 열린다 */
+  apartNtsPriceExisted: z.boolean().optional(),
+  /** 「없었음」일 때 첫 가격 기관 — 국세청 고시(§164⑥) / 국토교통부 공시(§164⑦) */
+  apartFirstPriceAgency: z.enum(["nts", "molit"]).optional(),
+  /** 「없었음」일 때 첫 가격 고시·공시일 — 기준일 < 날짜 ≤ 양도일 */
+  apartFirstPriceDate: z.string().date().optional(),
+};
+
 export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
   // case A: 의제취득일(1985.1.1.) 전 상속·증여 — max(① 상증법 평가액, ③ 환산취득가)
   z
@@ -37,6 +50,7 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
       standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),
       /** 양도시 기준시가 (원) */
       standardPriceAtTransfer: z.number().int().positive().optional(),
+      ...apartNtsPriceShape,
       /**
        * ⚠️ **아래 3키와 refine은 현재 도달하지 않는다** (2026-09-05 · 코드리뷰 Q22).
        *
@@ -91,6 +105,7 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
     landAreaM2: z.number().nonnegative().optional(),
     /** 보조계산: 개별공시지가 (원/㎡) 또는 주택 공시가격 (원) */
     publishedValueAtInheritance: z.number().int().nonnegative().optional(),
+    ...apartNtsPriceShape,
   }),
 ]);
 
