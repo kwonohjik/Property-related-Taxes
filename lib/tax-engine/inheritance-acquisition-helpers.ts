@@ -9,6 +9,11 @@ import { calculateInheritanceAcquisitionPrice } from "./inheritance-acquisition-
 import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
 import { calculateInheritanceHouseValuation } from "./inheritance-house-valuation";
 import { houseDisclosureBoundary } from "./transfer-split-part-cause";
+import {
+  apartSec164Open,
+  APART_NTS_PRICE_EXISTED_NOTE,
+  APART_PRE_DEEMED_FIRST_PRICE_NOTE,
+} from "./apart-nts-price";
 import { calcStdPriceSum, calcEstimatedStdPriceAtAcq } from "./commercial-building-valuation";
 import type { InheritanceAcquisitionInput, InheritanceAcquisitionResult, CommercialInheritanceValuationInput } from "./types/inheritance-acquisition.types";
 import type { InheritanceHouseValuationResult } from "./types/inheritance-house-valuation.types";
@@ -41,8 +46,12 @@ export function runInheritedAcquisitionStep(
 ): InheritedAcquisitionStepResult | null {
   if (!rawInput.inheritedAcquisition) return null;
 
+  // 공동주택은 「국세청 고시 가액 없었음」일 때만 단서 2호 구간이다(`apart-nts-price.ts`) — 닫혀 있으면 환산 자체를 하지 않는다
+  // (②·③ 주입도, 결과의 환산 카드도 없다). 단독·다가구·토지는 종전 그대로.
+  const apartGate = resolveApartGate(rawInput);
+
   // 주택 미공시 환산이 필요하면 먼저 산출
-  const houseValuationResult = resolveHouseValuation(rawInput);
+  const houseValuationResult = apartGate.closed ? undefined : resolveHouseValuation(rawInput);
 
   const resolvedInput = resolveInheritedAcquisitionInput(
     rawInput,
@@ -51,7 +60,7 @@ export function runInheritedAcquisitionStep(
     houseValuationResult,
   );
 
-  const result = calculateInheritanceAcquisitionPrice(resolvedInput);
+  const result = withApartNotes(calculateInheritanceAcquisitionPrice(resolvedInput), apartGate);
 
   const updatedInput = applyResultToInput(currentInput, result, resolvedInput);
 
@@ -138,7 +147,47 @@ function resolveHouseValuation(
   rawInput: TransferTaxInput,
 ): InheritanceHouseValuationResult | undefined {
   if (!rawInput.inheritedHouseValuation) return undefined;
-  return calculateInheritanceHouseValuation(rawInput.inheritedHouseValuation);
+  // 공동주택이면 첫 가격 기관을 산식 표기에 싣는다(§164⑥·⑦ — 값 무관, 계획서 Q-1)
+  const agency = rawInput.inheritedAcquisition?.assetKind === "house_apart"
+    ? rawInput.inheritedAcquisition.apartFirstPriceAgency
+    : undefined;
+  return calculateInheritanceHouseValuation({
+    ...rawInput.inheritedHouseValuation,
+    ...(agency && { apartFirstPriceAgency: agency }),
+  });
+}
+
+/** 공동주택 단서 2호 게이트 — `closed`면 ②·③ 주입을 하지 않는다. 고지는 결과에 붙는다. */
+interface ApartGate {
+  closed: boolean;
+  /** 「있었음」 — 본문 평가액 근거 고지 */
+  existedNote: boolean;
+  /** 의제취득일 전인데 첫 가격이 1985.1.1. 이전(계획서 Q-3 확인 필요) */
+  preDeemedFirstPriceNote: boolean;
+}
+
+function resolveApartGate(rawInput: TransferTaxInput): ApartGate {
+  const ia = rawInput.inheritedAcquisition!;
+  if (ia.assetKind !== "house_apart") return { closed: false, existedNote: false, preDeemedFirstPriceNote: false };
+  const baseKey = ia.inheritanceDate.toISOString().slice(0, 10);
+  const firstKey = ia.apartFirstPriceDate?.toISOString().slice(0, 10);
+  const open = apartSec164Open(ia.apartNtsPriceExisted, firstKey, baseKey);
+  return {
+    closed: !open,
+    existedNote: ia.apartNtsPriceExisted === true,
+    preDeemedFirstPriceNote:
+      open && ia.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime() && !!firstKey && firstKey <= "1985-01-01",
+  };
+}
+
+/** 공동주택 고지를 결과에 붙인다 — 「있었음」 근거는 산식 끝에, 확인 필요는 경고에. 값은 바꾸지 않는다. */
+function withApartNotes(result: InheritanceAcquisitionResult, gate: ApartGate): InheritanceAcquisitionResult {
+  if (!gate.existedNote && !gate.preDeemedFirstPriceNote) return result;
+  return {
+    ...result,
+    ...(gate.existedNote && { formula: [result.formula, APART_NTS_PRICE_EXISTED_NOTE].filter(Boolean).join("\n") }),
+    ...(gate.preDeemedFirstPriceNote && { warnings: [...(result.warnings ?? []), APART_PRE_DEEMED_FIRST_PRICE_NOTE] }),
+  };
 }
 
 function resolveInheritedAcquisitionInput(
@@ -153,10 +202,15 @@ function resolveInheritedAcquisitionInput(
     base.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime();
 
   // 구간 끝 = 이 주택의 개별주택가격 최초공시일(단독·다가구로 확인되고 2005-04-30보다 뒤일 때만 — D2-4·D1-H와 같은
-  // `houseDisclosureBoundary`, 계획서 transfer-house-first-disclosure-per-house.plan.md). 그 밖은 2005-04-30(공동주택 포함).
+  // `houseDisclosureBoundary`, 계획서 transfer-house-first-disclosure-per-house.plan.md). 그 밖은 2005-04-30.
+  // 공동주택은 날짜가 아니라 「상속·증여 당시 국세청 고시 가액이 없었음」 + 첫 가격 날짜가 기준일 뒤일 때만이다(`apart-nts-price.ts` —
+  // 고시 가액이 있었으면 「건물의 기준시가가 고시되기 전」이 아니다. 답이 없으면 닫는다 = 모름은 불성립).
+  const baseKey = base.inheritanceDate.toISOString().slice(0, 10);
   const isHousePreDisclosure =
-    base.inheritanceDate.toISOString().slice(0, 10) < houseDisclosureBoundary(rawInput.houseFirstDisclosureDate, base.assetKind) &&
-    (base.assetKind === "house_individual" || base.assetKind === "house_apart");
+    base.assetKind === "house_apart"
+      ? apartSec164Open(base.apartNtsPriceExisted, base.apartFirstPriceDate?.toISOString().slice(0, 10), baseKey)
+      : base.assetKind === "house_individual" &&
+        baseKey < houseDisclosureBoundary(rawInput.houseFirstDisclosureDate, base.assetKind);
 
   // case A(pre-deemed) + 주택 미공시: houseValuationResult로 standardPriceAtDeemedDate / standardPriceAtTransfer 주입
   // (§176조의2④ 환산취득가 = 양도가 × 취득기준시가/양도기준시가)

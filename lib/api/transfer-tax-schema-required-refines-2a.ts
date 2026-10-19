@@ -29,6 +29,12 @@ import {
   houseFirstDisclosureDateInRange,
 } from "@/lib/tax-engine/transfer-split-part-cause";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
+import {
+  apartFirstPriceDateInRange,
+  APART_FIRST_PRICE_AGENCY_REQUIRED_MESSAGE,
+  APART_FIRST_PRICE_DATE_RANGE_MESSAGE,
+  APART_NTS_PRICE_REQUIRED_MESSAGE,
+} from "@/lib/tax-engine/apart-nts-price";
 import { refineSplitCarryoverValues } from "./transfer-tax-schema-split-carryover";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 
@@ -557,10 +563,52 @@ export function refineHouseFirstDisclosureDate(
     issuer(ctx)([...prefix, "houseFirstDisclosureDate"], HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE);
 }
 
+/** 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호) — `inheritedAcquisition`의 공동주택 3키. */
+type ApartNtsLike = {
+  assetKind?: string;
+  inheritanceStartDate?: string;
+  apartNtsPriceExisted?: boolean;
+  apartFirstPriceAgency?: string;
+  apartFirstPriceDate?: string;
+};
+
+export const APART_NTS_PRICE_EXISTED_WITH_SEC164_MESSAGE =
+  "상속개시일·증여일 당시 국세청장이 고시한 공동주택 기준시가가 있었던 공동주택에는 「소득세법 시행령」 제164조 제6항·제7항 가액"
+  + "(inheritedHouseValuation)을 보내지 마세요 — 「건물의 기준시가가 고시되기 전」이 아니어서 같은 영 제163조 제9항 단서 제2호 비교를 하지 않습니다";
+
+/**
+ * 공동주택 국세청 고시 가액 유무(계획서 transfer-163-9-apart-nts-price-question.plan.md · 엔진 `apart-nts-price.ts`).
+ *
+ * - §164⑥·⑦ 가액(`inheritedHouseValuation`)을 보내는 공동주택은 답이 필수이고, 「있었음」이면 그 가액을 받지 않는다 — 엔진이 닫힌
+ *   게이트에서 값을 조용히 버리는 대신 경로를 짚는다. ④는 「없었음」 + 4칸 완성일 때만 그 가액을 싣는다.
+ * - 「없었음」이면 첫 가격 기관(Q-1)과 날짜(Q-2 — 기준일 < 날짜 ≤ 양도일)가 필수다. ⑧과 같은 leaf 판정.
+ * - 그 가액 없이 답만 오거나 답이 없으면 ① 단독이다(값이 같다) — ⑧은 화면에서 답을 항상 받지만 ⑫가 그만큼 넓히면
+ *   공동주택으로 파생되는 비주택 자산(`deriveEngineInheritanceAssetKind`)까지 막는다. ⑧이 더 엄격한 방향이다.
+ */
+export function refineApartNtsPrice(
+  ia: ApartNtsLike | undefined,
+  hasHouseValuation: boolean,
+  transferDate: string | undefined,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[] = [],
+) {
+  if (!ia || ia.assetKind !== "house_apart") return;
+  const issue = issuer(ctx);
+  const at = (key: string) => [...prefix, "inheritedAcquisition", key];
+  if (hasHouseValuation && ia.apartNtsPriceExisted === undefined) issue(at("apartNtsPriceExisted"), APART_NTS_PRICE_REQUIRED_MESSAGE);
+  if (hasHouseValuation && ia.apartNtsPriceExisted === true)
+    issue([...prefix, "inheritedHouseValuation"], APART_NTS_PRICE_EXISTED_WITH_SEC164_MESSAGE);
+  if (ia.apartNtsPriceExisted !== false) return;
+  if (!ia.apartFirstPriceAgency) issue(at("apartFirstPriceAgency"), APART_FIRST_PRICE_AGENCY_REQUIRED_MESSAGE);
+  if (!apartFirstPriceDateInRange(ia.apartFirstPriceDate, ia.inheritanceStartDate, transferDate))
+    issue(at("apartFirstPriceDate"), APART_FIRST_PRICE_DATE_RANGE_MESSAGE);
+}
+
 /** `refinePropertyRequiredInputs`(단건·다건 공용 진입점)에서 부른다. */
 export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) {
   refineExpropriationInputs(d, ctx);
   refineHouseFirstDisclosureDate(d.houseFirstDisclosureDate, d.transferDate, ctx);
+  refineApartNtsPrice(d.inheritedAcquisition as ApartNtsLike | undefined, !!d.inheritedHouseValuation, d.transferDate, ctx);
   refineSplitAcquisitionInputs(d, ctx);
   refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx, [], {
     supported: true,

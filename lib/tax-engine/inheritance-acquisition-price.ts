@@ -248,10 +248,17 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
     const std = Math.floor(sec164Std);
     const sec164Wins = std >= reported;
     const acquisitionPrice = sec164Wins ? std : reported;
-    const clause = kind === "house" ? "§164⑦" : kind === "commercial" ? "§164⑥" : "§164④";
+    // 공동주택은 「국세청 고시 가액 없었음」일 때만 여기 온다 — 첫 가격이 국세청 고시면 §164⑥, 국토교통부 공시면 ⑦(계획서 Q-1).
+    const apartAgency = kind === "house" && input.assetKind === "house_apart" ? input.apartFirstPriceAgency : undefined;
+    const clause =
+      kind === "house" ? (apartAgency === "nts" ? "§164⑥" : "§164⑦") : kind === "commercial" ? "§164⑥" : "§164④";
     const disclosureLabel =
       kind === "house"
-        ? "개별주택가격 미공시"
+        ? apartAgency === "nts"
+          ? "국세청 공동주택 기준시가 미고시"
+          : apartAgency === "molit"
+            ? "공동주택가격 미공시"
+            : "개별주택가격 미공시"
         : kind === "commercial"
           ? "상가 기준시가 미공시"
           : "개별공시지가 미공시";
@@ -260,7 +267,9 @@ function calcPostDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisit
       method: "supplementary",
       legalBasis:
         kind === "house"
-          ? TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX
+          ? apartAgency === "nts"
+            ? TRANSFER.INHERITED_AFTER_DEEMED_APART_NTS_MAX
+            : TRANSFER.INHERITED_AFTER_DEEMED_HOUSE_MAX
           : kind === "commercial"
             ? TRANSFER.INHERITED_AFTER_DEEMED_COMMERCIAL_MAX
             : TRANSFER.INHERITED_AFTER_DEEMED_LAND_MAX,

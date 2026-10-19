@@ -9,6 +9,7 @@
 import type { InheritanceHouseValuationResult } from "@/lib/tax-engine/types/inheritance-house-valuation.types";
 import type { InheritanceAcquisitionResult } from "@/lib/tax-engine/types/inheritance-acquisition.types";
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
+import { housePriceLabels } from "@/lib/tax-engine/inheritance-house-valuation";
 
 interface Props {
   detail: InheritanceHouseValuationResult;
@@ -47,8 +48,13 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
     formula,
     legalBasis,
     warnings,
+    apartFirstPriceAgency,
   } = detail;
   const isEstimated = estimationMethod === "estimated_phd";
+  // 공동주택이면 가격 이름·조문이 첫 가격 기관으로 갈린다(영 §164⑥ 국세청 고시 / ⑦ 국토교통부 공시) — 엔진 산식과 같은 표기 함수
+  const { price, first } = housePriceLabels(apartFirstPriceAgency);
+  const clause = apartFirstPriceAgency === "nts" ? "§164⑥" : "§164⑦";
+  const transferPriceName = apartFirstPriceAgency ? "공동주택가격" : "개별주택가격";
 
   /**
    * (B) 환산취득가액의 **적용 상태** — 판정은 옆 카드와 같은 소스에서 읽는다.
@@ -77,7 +83,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
         <span className="text-micro text-muted-foreground">{legalBasis}</span>
         {estimationMethod === "estimated_phd" && (
           <span className="text-micro rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5">
-            §164⑦ 개별주택가격 추정
+            {clause} {price} 추정
           </span>
         )}
         {estimationMethod === "user_override" && (
@@ -111,7 +117,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
       {isEstimated && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-sky-800 dark:text-sky-300">
-            취득당시 개별주택가격 추정 (§164⑦ — 합계기준시가 = 토지 + 건물)
+            취득당시 {price} 추정 ({clause} — 합계기준시가 = 토지 + 건물)
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
@@ -131,7 +137,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
                   <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap font-semibold">{formatN(sumAtInheritance)}</td>
                 </tr>
                 <tr>
-                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">최초 공시일</td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{apartFirstPriceAgency === "nts" ? "최초 고시일" : "최초 공시일"}</td>
                   <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(landStdAtFirstDisclosure)}</td>
                   <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap">{formatN(buildingStdAtFirstDisclosure)}</td>
                   <td className="px-3 py-2 font-mono tabular-nums text-right whitespace-nowrap font-semibold">{formatN(sumAtFirstDisclosure)}</td>
@@ -140,7 +146,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
             </table>
           </div>
           <p className="text-caption text-muted-foreground">
-            취득당시 개별주택가격 = 최초공시 개별주택가격{" "}
+            취득당시 {price} = {first} {price}{" "}
             <span className="font-mono text-foreground">{formatN(housePriceAtFirstDisclosure)}</span>
             {" "}× <Frac top={formatN(sumAtInheritance)} bottom={formatN(sumAtFirstDisclosure)} /> ={" "}
             <span className="font-mono text-foreground font-semibold">{formatN(housePriceAtInheritanceUsed)}</span>
@@ -177,13 +183,13 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
           <Frac
             top={
               <>
-                취득당시 개별주택가격{" "}
+                취득당시 {price}{" "}
                 <span className="font-mono text-foreground">{formatN(housePriceAtInheritanceUsed)}</span>
               </>
             }
             bottom={
               <>
-                양도당시 개별주택가격{" "}
+                양도당시 {transferPriceName}{" "}
                 <span className="font-mono text-foreground">{formatN(housePriceAtTransfer)}</span>
               </>
             }

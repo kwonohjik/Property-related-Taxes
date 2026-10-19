@@ -98,7 +98,8 @@ export function calculateInheritanceHouseValuation(
 
   const legalBasis = [
     INHERITED_HOUSE.PRE_DEEMED_MAX,
-    INHERITED_HOUSE.PHD_VALUATION,
+    // 공동주택의 첫 가격이 국세청장 고시면 영 §164⑥(그 밖은 ⑦) — `apart-nts-price.ts`
+    input.apartFirstPriceAgency === "nts" ? INHERITED_HOUSE.APART_NTS_VALUATION : INHERITED_HOUSE.PHD_VALUATION,
     ...(pre1990Result ? [INHERITED_HOUSE.PRE1990_GRADE] : []),
   ].join(" · ");
 
@@ -115,6 +116,7 @@ export function calculateInheritanceHouseValuation(
     housePriceAtTransfer: input.housePriceAtTransfer,
     estimationMethod,
     pre1990Result,
+    ...(input.apartFirstPriceAgency && { apartFirstPriceAgency: input.apartFirstPriceAgency }),
     formula,
     legalBasis,
     warnings,
@@ -235,6 +237,16 @@ function resolveHousePriceAtInheritance(
 
 // ─── 산식 문자열 ────────────────────────────────────────────────────────────
 
+/**
+ * 가격 이름·조문 — 단독·다가구(생략) = 개별주택가격 · §164⑦(⑤ 준용) / 공동주택 국세청 첫 고시 = 공동주택 기준시가 · §164⑥ /
+ * 공동주택 국토교통부 첫 공시 = 공동주택가격 · §164⑦. 산식 모양은 셋 다 같다(계획서 Q-1).
+ */
+export function housePriceLabels(agency: "nts" | "molit" | undefined): { price: string; clause: string; first: string } {
+  if (agency === "nts") return { price: "공동주택 기준시가", clause: "§164⑥", first: "국세청 최초 고시" };
+  if (agency === "molit") return { price: "공동주택가격", clause: "§164⑦", first: "최초공시" };
+  return { price: "개별주택가격", clause: "§164⑦ · ⑤ 준용", first: "최초공시" };
+}
+
 function buildFormula(
   input: InheritanceHouseValuationInput,
   landPricePerSqmAtInheritance: number,
@@ -256,12 +268,13 @@ function buildFormula(
   }
   lines.push(``);
 
-  // 취득당시 개별주택가격 (§164⑦ 추정 또는 직접 입력) — 부수토지 포함 단일값
+  // 취득당시 주택가격 (§164⑥·⑦ 추정 또는 직접 입력) — 부수토지 포함 단일값. 이름·조문은 주택 구분·첫 가격 기관으로 갈린다.
+  const { price, clause, first } = housePriceLabels(input.apartFirstPriceAgency);
   if (estimationMethod === "user_override") {
-    lines.push(`취득당시 개별주택가격 = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
+    lines.push(`취득당시 ${price} = ${fmt(housePriceAtInheritanceUsed)} (직접 입력)`);
   } else {
-    lines.push(`취득당시 개별주택가격 추정 (§164⑦ · ⑤ 준용)`);
-    lines.push(`  = 최초공시 개별주택가격(${fmt(input.housePriceAtFirstDisclosure)}) × (취득 합계기준시가) ÷ (최초공시 합계기준시가)`);
+    lines.push(`취득당시 ${price} 추정 (${clause})`);
+    lines.push(`  = ${first} ${price}(${fmt(input.housePriceAtFirstDisclosure)}) × (취득 합계기준시가) ÷ (${first} 합계기준시가)`);
     lines.push(`  = ${fmt(input.housePriceAtFirstDisclosure)} × ${fmt(sumAtInheritance)} ÷ ${fmt(sumAtFirstDisclosure)}`);
     lines.push(`  = ${fmt(housePriceAtInheritanceUsed)}`);
     lines.push(`  (합계기준시가 = 토지기준시가 + 건물기준시가)`);
@@ -269,7 +282,7 @@ function buildFormula(
   lines.push(``);
 
   // 환산취득가액 — 취득/양도 개별주택가격 비율 (토지 별도 가산 없음, 부수토지 포함)
-  lines.push(`환산취득가액 = 양도가액 × (취득당시 개별주택가격) ÷ (양도당시 개별주택가격)`);
+  lines.push(`환산취득가액 = 양도가액 × (취득당시 ${price}) ÷ (양도당시 ${input.apartFirstPriceAgency ? "공동주택가격" : "개별주택가격"})`);
   lines.push(`  = 양도가액 × (${fmt(housePriceAtInheritanceUsed)} ÷ ${fmt(input.housePriceAtTransfer)})`);
 
   return lines.join("\n");
