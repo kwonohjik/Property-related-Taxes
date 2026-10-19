@@ -16,6 +16,7 @@ import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce"
 import type { z } from "zod";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineLandRebuild } from "@/lib/api/transfer-tax-schema-land-rebuild";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
@@ -376,6 +377,8 @@ export function buildTransferEngineInput(
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다
     houseFirstDisclosureDate: data.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
+    // ⑭ 구주택 멸실·신축 통산(해석 (5)) — Date 변환은 공용 변환기. 컴패니언은 매핑하지 않는다(⑫가 명시 거부).
+    landRebuildPriorHouse: toEngineLandRebuild(data.landRebuildPriorHouse),
     // ⑭ 주택 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. Date 변환·증여세 안분은 합성기가 한다(TypeScript 미감지 영역).
     // 컴패니언은 매핑하지 않는다(`bundled-split-helpers.ts`) — ⑫(leaf S0)가 컴패니언의 파트 이월과세를 명시 거부한다.
     ...composeSplitCarryover(data),

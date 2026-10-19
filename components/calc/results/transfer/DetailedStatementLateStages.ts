@@ -41,7 +41,7 @@ import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLe
 import type { StatementItem } from "./DetailedStatementConfig";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { splitCarryoverNotices, splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
-import { splitCarryoverDateText, splitCarryoverRateDateText, splitCauseDateText } from "./split-acq-text";
+import { splitCarryoverDateText, splitCarryoverRateDateText, splitCauseDateText, splitRateHoldingNote } from "./split-acq-text";
 import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 /** 후반 단계 — `items` 에 **append 만** 한다(반환 없음 · out 0 실측). */
@@ -117,7 +117,7 @@ export function appendLateStageItems(
     legalBasis: calcStep?.legalBasis ?? "소득세법 §104·§55",
     // D1-3 — 토지·건물 취득원인이 다르면 파트별 원인·세율 기산일(§104②) 한 줄(명세서는 일자 그룹을 렌더하지 않는다 — 세율이 있는 이 행에 단다).
     // 파트 이월과세(P2 C)는 파트별 장기보유특별공제 기산일(적용: 증여자 취득일)·세율 기산일이 계산에 쓰인 근거라 같은 행에 밝힌다 — 일자 그룹은 렌더하지 않는다.
-    note: [result.shortTermNote, splitCauseDateText(result.splitDetail), splitCarryoverNote(result.splitDetail), splitCarryoverNoticeNote(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
+    note: [result.shortTermNote, splitCauseDateText(result.splitDetail), splitRateHoldingNote(result.splitDetail), splitCarryoverNote(result.splitDetail), splitCarryoverNoticeNote(result.splitDetail)].filter(Boolean).join(" · ") || undefined,
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,

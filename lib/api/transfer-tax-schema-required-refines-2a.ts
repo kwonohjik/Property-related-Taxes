@@ -30,6 +30,7 @@ import {
 } from "@/lib/tax-engine/transfer-split-part-cause";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { refineSplitCarryoverValues } from "./transfer-tax-schema-split-carryover";
+import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -84,6 +85,8 @@ export type Required2aLike = {
   landHouseSec164Value?: number;
   houseFirstDisclosureDate?: string;
   selfOwns?: string;
+  // 구주택 멸실·신축 통산 (landRebuildShape)
+  landRebuildPriorHouse?: { startMode: "since_land" | "later"; priorHouseStartDate?: string; demolitionDate: string; footprintUnchanged: boolean };
   // 주택 split 파트 이월과세 (splitCarryoverShape · 자산 단위 carryoverTaxation과 상호배제)
   carryoverGiftEvent?: { giftRegistryDate: string; giftTaxCalculated: number; giftTaxBase: number; donorRelation?: "spouse" | "lineal" | "other" };
   landCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
@@ -563,6 +566,8 @@ export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) 
     supported: true,
     hasCompanions: (d.companionAssets?.length ?? 0) > 0,
   });
+  // 구주택 멸실·신축 통산(해석 (5)) — 엔진 진입·⑧과 같은 leaf. 주 자산(단건·다건)은 받는다.
+  refineLandRebuild(d, d.propertyType === "housing", ctx);
   refinePreDeemedAcquisitionSource(d, ctx);
 }
 

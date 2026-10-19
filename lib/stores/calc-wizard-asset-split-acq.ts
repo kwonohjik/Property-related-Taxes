@@ -46,6 +46,21 @@ export interface SplitAcquisitionFormSlice {
    */
   landHouseExisted: "" | "yes" | "no" | "unknown";
   /**
+   * 구주택 멸실·신축 통산(해석 (5) — 서면법규과-1222 · 사전-2023-법규재산-0097) 입력 5필드 — 토지 파트 §104② 세율 보유기간을
+   * 「구주택 부수토지 기간 + 신축주택 부수토지 기간」으로 통산한다. 건물 신축 + 「토지는 다른 원인으로 취득」 호스트 전용(UI 설계 §1 R-1).
+   * 읽는 쪽은 저장값이 아니라 `effectiveLandRebuild`(lib/calc/transfer-land-rebuild.ts)를 쓴다 — 호스트가 닫힌 자산의 잔재는 「없음」.
+   * 미선택·미확인 = 통산 없음(모름 = 혜택 불성립). 시작일·정착면적은 자동으로 채우지 않는다.
+   */
+  landRebuildEnabled: boolean;
+  /** 구주택이 토지 취득 때부터 있었는가(`since_land`) / 토지 취득 뒤에 생겼는가(`later` — 구주택 취득일 필수). ""(미선택) = ⑧이 선택을 요구 */
+  landRebuildStartMode: "" | "since_land" | "later";
+  /** 구주택 취득일(본인 소유 개시일, YYYY-MM-DD) — `landRebuildStartMode === "later"`일 때만 읽는다 */
+  landRebuildPriorHouseStartDate: string;
+  /** 구주택 멸실일(YYYY-MM-DD) — 구주택 부수토지 기간의 끝. 멸실~신축 취득일 기간은 통산하지 않는다 */
+  landRebuildDemolitionDate: string;
+  /** 신축주택의 정착면적이 구주택보다 늘지 않았음을 확인했는가 — `true`가 아니면 계산하지 않는다(사전-2023-법규재산-0097 전제 · 자동 안분 금지) */
+  landRebuildFootprintUnchanged: boolean;
+  /**
    * 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 「소득세법」
    * 제104조 제2항 제1호 보유기간 통산(세율 판정)에 쓰인다. 미입력 시 토지 취득일 기준(현행).
    */

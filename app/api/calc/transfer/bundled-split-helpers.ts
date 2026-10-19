@@ -200,7 +200,13 @@ type CompanionContextOnlyKeys =
    * ②3호 비교가 신고 전체 결정세액을 봐야 해서 컴패니언 병용은 별도 작업이다
    * (docs/02-design/features/transfer-split-part-carryover.engine.design.md §4.5 · 계획서 §11 I-6).
    */
-  | "carryoverGiftEvent";
+  | "carryoverGiftEvent"
+  /**
+   * 🔑 **컴패니언은 구주택 멸실·신축 통산(해석 (5))을 받지 않는다** — ⑫ `refineLandRebuild`(`host.supported: false`)가 키를 받아서 **명시 거부**(400)하므로
+   * 이 키는 컴패니언 item에 도달할 수 없다(싣지 않는 것이 의도다). 컴패니언 토지 카드 세율(`resolveCompanionLandRate`)은 토지 취득일을 보지 않는 별개 구현이라
+   * 같은 통산을 넣으면 두 경로가 갈린다 — 별건(계획서 §사용자 결정 Q-3).
+   */
+  | "landRebuildPriorHouse";
 
 /**
  * ⑭ 컴패니언 원시 자산 — **⑫ 스키마에서 전면 파생**한다 (장치 1, 2026-09-04).

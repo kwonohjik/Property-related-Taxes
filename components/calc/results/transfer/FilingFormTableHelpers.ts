@@ -13,8 +13,9 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitCauseLabel } from "@/lib/tax-engine/transfer-tax-split-display";
-import { splitRateBasisNote } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitRateBasisDateTitle, splitRateBasisNote } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitAcqBasisFormula } from "@/lib/tax-engine/transfer-tax-split-display";
+import { splitRateHoldingNote } from "@/components/calc/results/transfer/split-acq-text";
 import { splitAcqBasisView } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import {
@@ -393,6 +394,9 @@ export function buildRows(
     const spSummary = summarizeSplitGain(sp);
     // 파트 이월과세(§97의2①) — 파트별 기산일·취득가액 분해·증여세 상당액 안분 (P2 C, 별도 파일)
     if (splitCarryover) fillSplitCarryoverCells(splitCarryover, transferDate, spSummary.mixedCause, setStr, setRoseNote);
+    // 구주택 멸실·신축 통산(해석 (5)) — 원인이 같아 아래 각주가 없을 때도 토지 세율 판정 보유기간의 근거(두 구간·합산 개월)를 밝힌다.
+    const rebuildNote = splitRateHoldingNote(sp);
+    if (rebuildNote) setRoseNote("acquisitionDate", "land", rebuildNote);
     if (spSummary.mixedCause) {
       for (const k of ["land", "building"] as const) {
         const cause = splitCauseLabel(sp[k].acquisitionCause!);
@@ -402,7 +406,7 @@ export function buildRows(
           continue;
         }
         const note = splitRateBasisNote(sp[k], sp.building.acquisitionCause);
-        setRoseNote("acquisitionDate", k, `${cause} · 세율 판정 기산일 ${sp[k].appliedRateBasisDate}${note ? ` (${note})` : ""}`);
+        setRoseNote("acquisitionDate", k, `${cause} · ${splitRateBasisDateTitle(sp[k], "세율 판정 기산일")} ${sp[k].appliedRateBasisDate}${note ? ` (${note})` : ""}`);
       }
     }
   }

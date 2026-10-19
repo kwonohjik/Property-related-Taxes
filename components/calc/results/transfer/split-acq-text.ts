@@ -15,6 +15,8 @@ import {
   splitAcqBasisView,
   splitCauseLabel,
   splitRateBasisNote,
+  splitRateBasisDateTitle,
+  splitRateHoldingLines,
   SPLIT_CAUSE_VALUE_LABEL,
   summarizeSplitGain,
   type SplitAcqMode,
@@ -71,9 +73,23 @@ export function splitCauseDateText(sd: SplitGainResult | undefined): string | un
       // 세율 기산일은 엔진이 파트별로 판정했을 때만(`rateBasisShown`) — 자산 단위 세율이면 계산과 어긋난다.
       if (!s.rateBasisShown) return head;
       const note = splitRateBasisNote(p, sd.building.acquisitionCause);
-      return `${head} · 세율 기산일 ${p.appliedRateBasisDate ?? "-"}${note ? ` (${note})` : ""}`;
+      return `${head} · ${splitRateBasisDateTitle(p)} ${p.appliedRateBasisDate ?? "-"}${note ? ` (${note})` : ""}`;
     })
     .join(" / ");
+}
+
+/**
+ * 구주택 멸실·신축 통산(해석 (5)) 구간 문구 — 취득원인이 같아 `splitCauseDateText`가 비는 경우에도 통산 근거를 밝힌다.
+ * 원인이 다르고 파트별 세율 기산일이 표시되는 경우(`splitCauseDateText`가 구간·합산 개월·환산 기산일을 이미 낸다)는 중복이라 `undefined`.
+ * 통산이 없으면 `undefined`(종전 문구 그대로).
+ */
+export function splitRateHoldingNote(sd: SplitGainResult | undefined): string | undefined {
+  if (!sd) return undefined;
+  const lines = splitRateHoldingLines(sd);
+  if (!lines.length) return undefined;
+  const s = summarizeSplitGain(sd);
+  if (s.mixedCause && s.rateBasisShown) return undefined;
+  return `토지 세율 보유기간 통산 — ${lines.join(" · ")}`;
 }
 
 /**

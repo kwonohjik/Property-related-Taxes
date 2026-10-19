@@ -27,6 +27,7 @@ import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { assertFiniteResponse } from "@/lib/api/non-finite-guard";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineLandRebuild } from "@/lib/api/transfer-tax-schema-land-rebuild";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
 import { multiInputSchema } from "@/lib/api/transfer-tax-schema";
@@ -222,6 +223,7 @@ export async function POST(request: NextRequest) {
       landHouseSec164Value: p.landHouseSec164Value,
       houseFirstDisclosureDate: p.houseFirstDisclosureDate,
       landDonorAcquisitionDate: toOptionalDate(p.landDonorAcquisitionDate),
+      landRebuildPriorHouse: toEngineLandRebuild(p.landRebuildPriorHouse),
       landAcqMode: p.landAcqMode,
       buildingAcqMode: p.buildingAcqMode,
       isSeparateAcquisition: p.isSeparateAcquisition,
