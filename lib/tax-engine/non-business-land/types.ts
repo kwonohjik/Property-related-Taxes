@@ -187,13 +187,10 @@ export interface UnconditionalExemptionInput {
   isFactoryAdjacent?: boolean;
   isInong?: boolean;
   inongDate?: Date;
+  /** 종중 소유 선언 — 근거 조문은 지목·도시지역으로 엔진이 고른다(도시지역 농지면 §168의14③4호 가목) */
   isJongjoongOwned?: boolean;
+  /** 종중의 취득일 — 매퍼가 자산 취득일로 채운다(서면인터넷방문상담5팀-219) */
   jongjoongAcquisitionDate?: Date;
-  /**
-   * §168-14 ③4호: 도시지역 內 농지로서 종중(2005.12.31 이전 취득) 또는
-   * 상속 5년 이내 양도에 해당하는지. v2 신규.
-   */
-  isUrbanFarmlandJongjoongOrInherited?: boolean;
 }
 
 // ============================================================

@@ -18,17 +18,21 @@ import { buildUnconditionalExemption } from "@/lib/tax-engine/non-business-land/
 import { hasDeclaredUnconditionalExemption } from "@/lib/tax-engine/non-business-land/form-mapper-helpers";
 import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
+import { isUrbanForFarmland } from "@/lib/tax-engine/non-business-land/urban-area";
 import type {
   LandType,
   NonBusinessLandInput,
+  ZoneType,
   UnconditionalExemptionInput,
   UnconditionalExemptionReason,
 } from "@/lib/tax-engine/non-business-land/types";
 
 /**
- * 무조건 의제 토글 식별자 (AssetForm nblExempt* 7종).
+ * 무조건 의제 토글 식별자 (AssetForm nblExempt* 6종).
  * ③1호(2006.12.31. 이전 상속)는 토글이 없다 — ③4호 나목과 함께 취득원인·상속개시일로 자동 판정한다
  * (계획서 `docs/00-pm/nbl-unconditional-inherit-cause.plan.md`).
+ * ③4호 가목(도시지역 농지 종중)도 토글이 없다 — 「종중 소유」 하나로 받고 근거 조문은 지목·도시지역으로 고른다
+ * (계획서 `docs/00-pm/nbl-jongjoong-toggle-merge.plan.md`).
  */
 export type NblExemptToggleKey =
   | "longOwned20y"
@@ -36,7 +40,6 @@ export type NblExemptToggleKey =
   | "publicExpropriation"
   | "factoryAdjacent"
   | "jongjoongOwned"
-  | "urbanFarmland"
   | "inong";
 
 /** 각 토글의 개별 상태 (ON일 때만 존재) */
@@ -104,14 +107,7 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
     flagField: "nblExemptJongjoongOwned",
     uncondField: "isJongjoongOwned",
     requirementHint:
-      "취득일이 2005.12.31. 이전이고 지목이 농지·임야·목장이어야 확정됩니다.",
-  },
-  {
-    key: "urbanFarmland",
-    flagField: "nblExemptUrbanFarmlandJongjoong",
-    uncondField: "isUrbanFarmlandJongjoongOrInherited",
-    requirementHint:
-      "지목이 농지이고 양도 당시 도시지역(주거·상업·공업) 안이며, 종중이 2005.12.31. 이전에 취득한 농지여야 확정됩니다.",
+      "자산 취득일이 2005.12.31. 이전이고 지목이 농지·임야·목장이어야 확정됩니다.",
   },
   {
     key: "inong",
@@ -121,6 +117,24 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
       "이농일이 2006.12.31. 이전이고 2009.12.31.까지 양도, 지목이 농지여야 확정됩니다.",
   },
 ];
+
+/**
+ * 「종중 소유」 토글의 법령 배지 — 엔진 종중 분기(`unconditional-exemption.ts`)와 같은 기준으로 근거 조문을 고른다.
+ * 지목 미선택이면 농지 조문을 「등」으로 보인다.
+ */
+export function jongjoongLegalBadge(asset: Pick<AssetForm, "nblLandType" | "nblZoneType">): {
+  legalBasis: string;
+  label: string;
+} {
+  const group = getLandCategoryGroup((asset.nblLandType ?? "") as LandType);
+  if (group === "forest") return { legalBasis: "소득세법시행령 §168조의9", label: "소득령 §168의9③8호" };
+  if (group === "pasture") return { legalBasis: "소득세법시행령 §168조의10", label: "소득령 §168의10②2호" };
+  if (group === "farmland" && isUrbanForFarmland((asset.nblZoneType || "undesignated") as ZoneType)) {
+    return { legalBasis: "소득세법시행령 §168조의14", label: "소득령 §168의14③4호가목" };
+  }
+  if (group === "farmland") return { legalBasis: "소득세법시행령 §168조의8", label: "소득령 §168의8③6호" };
+  return { legalBasis: "소득세법시행령 §168조의8", label: "소득령 §168의8③6호 등" };
+}
 
 /** Invalid Date — 미입력 날짜의 비교는 항상 false가 되어 조기 확정을 막는다 */
 const INVALID_DATE = new Date(NaN);
@@ -188,7 +202,6 @@ function isolate(
     isPublicExpropriation: keep("isPublicExpropriation"),
     isFactoryAdjacent: keep("isFactoryAdjacent"),
     isJongjoongOwned: keep("isJongjoongOwned"),
-    isUrbanFarmlandJongjoongOrInherited: keep("isUrbanFarmlandJongjoongOrInherited"),
     isInong: keep("isInong"),
   };
 }

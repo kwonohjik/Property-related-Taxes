@@ -5,7 +5,7 @@
  * 정밀판정 입력을 싣는다(계획서 `docs/00-pm/axis-b-land-share-nbl-detailed-judgment.plan.md` §4-2). 세액은 그 입력대로이고
  * 여기서는 바꾸지 않는다 — 꺼진 선언을 말로 밝힐 뿐이다. 지분 전부를 함께 보는 다건 엔진(`transfer-tax-aggregate-asset-records.ts`)이 부른다.
  *
- * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 5종이나, 첫 지분에 적용된 상속 사유(임야·목장 「상속 3년 이내」,
+ * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 4종이나, 첫 지분에 적용된 상속 사유(임야·목장 「상속 3년 이내」,
  * 무조건 의제 ③1호·③4호 나목) 중 이 지분이 상속이 아니어서 빠진 것이 있음.
  */
 import { addYears } from "date-fns";
@@ -19,7 +19,6 @@ const ACQUISITION_DEPENDENT: ReadonlyArray<[keyof UnconditionalExemptionInput, s
   ["ownedOver20YearsBefore2007", "2006.12.31. 이전 20년 이상 소유"],
   ["isAncestor8YearFarming", "직계존속 8년 이상 재촌·자경 토지의 상속·증여"],
   ["isJongjoongOwned", "종중 소유"],
-  ["isUrbanFarmlandJongjoongOrInherited", "도시지역 농지 종중 소유"],
   ["isInong", "이농"],
 ];
 

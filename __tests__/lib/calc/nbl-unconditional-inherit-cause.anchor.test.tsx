@@ -53,14 +53,14 @@ describe("상속 자동 사유의 경계", () => {
     expect(mapAssetToNblInput({ nblUseDetailedJudgment: true, nblLandType: "", acquisitionCause: "inheritance", acquisitionDate: "2000-01-01" }, ctx)).toBeNull();
   });
 
-  it("토글 배지는 상속 자동 사유를 빌리지 않는다: 도시지역 농지 상속 2022(③4호 나목 성립) + 종중 토글(날짜 없음) → 전체 성립 · 종중 배지 미충족", () => {
+  it("토글 배지는 상속 자동 사유를 빌리지 않는다: 도시지역 농지 상속 2022(③4호 나목 성립) + 종중 토글(취득 2022) → 전체 성립 · 종중 배지 미충족", () => {
     const a = {
       ...makeDefaultAsset(1), nblLandType: "farmland", nblZoneType: "general_residential",
-      acquisitionCause: "inheritance", acquisitionDate: "2022-01-01", nblExemptUrbanFarmlandJongjoong: true,
+      acquisitionCause: "inheritance", acquisitionDate: "2022-01-01", nblExemptJongjoongOwned: true,
     } as AssetForm;
     const r = evaluateUnconditionalExemption(a, "2024-06-03");
     expect(r.isExempt).toBe(true);
-    expect(r.perToggle.urbanFarmland?.qualifies).toBe(false);
+    expect(r.perToggle.jongjoongOwned?.qualifies).toBe(false);
   });
 });
 
@@ -112,12 +112,13 @@ describe("화면 — ③1호 입력 없음 · 상속 자산 자동 판정 안내
     expect(container.textContent).not.toContain("엔진이 무조건 사업용으로 판정합니다");
   });
 
-  it("③1호 토글·상속일 칸이 없고, ③4호 토글은 종중 소유 전용", () => {
+  it("③1호 토글·상속일 칸이 없고, ③4호 가목은 「종중 소유」 하나로 받는다", () => {
     const { container } = show({ acquisitionCause: "inheritance", acquisitionDate: "2000-01-01" });
     expect(container.textContent).not.toContain("2006.12.31. 이전 상속받은 토지");
     expect(screen.queryByText("상속일")).toBeNull();
     expect(container.textContent).not.toContain("도시지역 농지 종중·상속 5년 이내 양도 특례");
-    expect(container.textContent).toContain("도시지역 농지 — 종중 소유 (2005.12.31. 이전 취득)");
+    expect(container.textContent).not.toContain("도시지역 농지 — 종중 소유");
+    expect(container.textContent).toContain("종중 소유 (2005.12.31. 이전 취득)");
   });
 
   it("③1의2호 매매 자산: 선언해도 배지 「요건 미충족」(취득원인 안내)", () => {
