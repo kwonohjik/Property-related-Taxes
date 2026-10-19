@@ -6,7 +6,8 @@
  *   토지·건물 전체를 특례 대상 주택분으로 계산했다. §155⑳은 거주주택을 1주택으로 「보아 제154조제1항을 적용」할 뿐이라 주택 수만 의제하고 비과세 범위·장기보유특별공제는
  *   바꾸지 않는데도 같은 사실에서 on/off 총세액이 갈렸다(8억 · 토지 2023-10 취득 · 건물 2014-09: off 336,875,000 / on 0 — 토지분 양도차익 440,000,000이 통째로 비과세).
  * [수정] 특례 경로도 같은 술어(`isLaterAcquiredLandExemptExcluded`)로 그 토지분을 특례 대상 주택분에서 떼어 전액 과세하고, 일반 경로와 같은 파트별 세율 함수
- *   (`resolveSplitAwareTax`)에 넘긴다. A 시나리오에 한한다 — B(§161 기준시가 안분)는 비과세 범위를 정하는 산식이 달라 종전 값을 유지한다(결정 보류).
+ *   (`resolveSplitAwareTax`)에 넘긴다. B(§161 기준시가 안분)도 같다 — 1주택 코드 리뷰 별건 ⑦ 사용자 결정(2026-10-19 「일반 경로와 맞춰 토지분 제외」)으로
+ *   그 토지분을 떼고 나머지 주택분에만 §161 안분을 적용한다(종전에는 B만 토지분까지 §161 안분에 넣었다 — 8억 38,556,100 · 15억 191,034,800).
  *
  * 기대값은 엔진 출력을 베끼지 않고 정수 산식으로 독립 도출한다(격자는 같은 사실의 off를 정본으로 한다).
  *
@@ -177,43 +178,84 @@ describe("§155⑳ A — 나중 취득 부수토지(G-3): 특례 on = off", () =
   });
 });
 
-describe("§155⑳ B × 나중에 상속받은 토지(T-7) — 모순된 고지가 함께 나오지 않는다", () => {
-  it("B는 그 토지분을 제외하지 않는다 — «제외했습니다» 고지 없이 B 고지 1건만, 세액은 종전 그대로", () => {
+describe("§155⑳ B × 나중에 상속받은 토지(T-7) — B도 제외하므로 A와 같은 고지", () => {
+  it("B도 그 토지분을 제외한다 — T-7 «제외했습니다» 고지(A와 같은 문장) + B 결합 확인 필요 고지", () => {
     const over = { landAcquisitionCause: "inheritance", landDecedentAcquisitionDate: D("2010-01-01") };
     const r = calculateTransferTax(house(800_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB, over }), rates);
     expect(r.rentalHousingExceptionDetail!.scenarioId).toBe("RH-B1");
-    expect(r.totalTax).toBe(38_556_100);
     const w = r.warnings ?? [];
-    expect(w.filter((x) => x.includes("주택보다 나중에 상속받은 부수토지"))).toHaveLength(0);
-    expect(w.filter((x) => x.includes("제외하지 않고 §161 기준시가 안분 대상에"))).toHaveLength(1);
-    expect(w.some((x) => x.includes("1세대1주택 비과세에서 제외했습니다"))).toBe(false);
-    // A는 같은 시료에서 T-7 고지가 그대로 나온다(제외했으므로)
     const a = calculateTransferTax(house(800_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA, over }), rates);
-    expect((a.warnings ?? []).filter((x) => x.includes("주택보다 나중에 상속받은 부수토지"))).toHaveLength(1);
+    const t7 = (x: { warnings?: string[] }) => (x.warnings ?? []).filter((m) => m.includes("주택보다 나중에 상속받은 부수토지"));
+    expect(t7(r)).toHaveLength(1);
+    expect(t7(r)).toEqual(t7(a));
+    // B 결합 고지는 B에만 — A는 §161 안분이 없다
+    expect((a.warnings ?? []).some((m) => m.includes("시나리오 B) 계산도 일반 경로와 같이"))).toBe(false);
+    expect(w.filter((x) => x.includes("나머지 주택분에만 §161 기준시가 안분을 적용했습니다"))).toHaveLength(1);
+    expect(r.splitDetail!.laterLandPart!.gain).toBe(440_000_000);
   });
 });
 
-describe("§155⑳ B — 직전거주주택보유주택은 종전 계산을 유지한다 (결정 보류 · 이 값이 바뀌면 그 결정을 거쳐야 한다)", () => {
-  it("나중 취득 토지 + B: 세액은 종전 그대로이고, 그 토지분이 §161 안분에 들어갔다는 확인 필요 고지가 steps·warnings에 있다", () => {
+describe("§155⑳ B — 나중 취득 토지분을 떼고 나머지 주택분에만 §161 안분 (별건 ⑦ · 사용자 결정 2026-10-19)", () => {
+  it("나중 취득 토지 + B: 결합에 정면 해석이 없다는 확인 필요 고지가 steps·warnings에 1건 — 토지를 먼저 취득한 B(G-3 아님)에는 없다", () => {
     for (const S of [800_000_000, 1_500_000_000]) {
       const r = calculateTransferTax(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
-      const w = (r.warnings ?? []).filter((x) => x.includes("직전거주주택보유주택(§155⑳ 시나리오 B) 계산은 이 토지분을 비과세에서 제외하지 않고"));
+      const w = (r.warnings ?? []).filter((x) => x.includes("직전거주주택보유주택(§155⑳ 시나리오 B) 계산도 일반 경로와 같이"));
       expect(w, `${S} warnings`).toHaveLength(1);
+      expect(w[0]).toContain("부수토지분(보유 0년 8개월)을 비과세에서 제외해 전액 과세하고 나머지 주택분에만 §161 기준시가 안분을 적용했습니다");
       expect(w[0]).toContain("확인 필요");
       expect(w[0]).not.toMatch(/유리|불리|절감|절세/);
       expect(r.steps.some((st) => st.formula === w[0]), `${S} steps`).toBe(true);
+      expect(r.steps.some((st) => st.label === "부수토지 비과세 제외 (§155⑳ 특례 경로)"), `${S} 제외 단계`).toBe(true);
     }
-    // 토지를 먼저 취득한 B(G-3 아님)에는 고지가 없다
     const ok = calculateTransferTax(house(800_000_000, { landAcq: "2008-07-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
-    expect((ok.warnings ?? []).some((x) => x.includes("시나리오 B) 계산은 이 토지분을"))).toBe(false);
+    expect(ok.splitDetail!.laterLandPart).toBeUndefined();
+    expect((ok.warnings ?? []).some((x) => x.includes("시나리오 B) 계산도 일반 경로와 같이"))).toBe(false);
   });
 
-  it("나중 취득 토지 + B: 토지분이 §161 안분 대상에 들어간 종전 값 (8억 38,556,100 · 15억 191,034,800)", () => {
-    for (const [S, expected, id] of [[800_000_000, 38_556_100, "RH-B1"], [1_500_000_000, 191_034_800, "RH-B2"]] as const) {
-      const r = calculateTransferTax(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
-      expect(r.rentalHousingExceptionDetail!.scenarioId).toBe(id);
-      expect(r.splitDetail!.laterLandPart).toBeUndefined();
-      expect(r.totalTax).toBe(expected);
+  it("8억(B1) ★ — 토지분 4.4억 전액 과세(보유 8개월 70%) + 건물분만 §161①: (6천만 − 표1 18%) × 30% = 14,760,000 → 총세액 337,924,400 (종전 38,556,100)", () => {
+    const r = calculateTransferTax(house(800_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
+    const d = r.rentalHousingExceptionDetail!;
+    expect(d.scenarioId).toBe("RH-B1");
+    // 독립 도출 — 건물 1.6억 − 1억 = 6천만 · 표1(보유 9년 18%) → 49,200,000 · §161① 비율 (4.5억−3억)/(8억−3억) = 30%
+    const bldGain95 = 60_000_000 - Math.floor(60_000_000 * 0.18);
+    const bldIncome = Math.floor((bldGain95 * 3) / 10);
+    expect(bldIncome).toBe(14_760_000);
+    expect(d.taxableGain).toBe(bldIncome);
+    const landGain = 640_000_000 - 200_000_000;
+    expect(r.splitDetail!.laterLandPart).toMatchObject({ gain: landGain, holdingYears: 0, longTermRate: 0, longTermDeduction: 0 });
+    expect(r.taxableGain).toBe(landGain + bldIncome);
+    // 기본공제는 최고세율인 토지분에 귀속 — 토지분 단기 70% + 건물분 누진(1,400만~5,000만 15% · 누진공제 126만)
+    const landTax = Math.floor((landGain - 2_500_000) * 0.7);
+    const bldTax = Math.floor(bldIncome * 0.15) - 1_260_000;
+    expect(r.taxBase).toBe(landGain + bldIncome - 2_500_000);
+    expect(r.calculatedTax).toBe(landTax + bldTax);
+    expect(r.calculatedTax).toBe(307_204_000);
+    expect(r.totalTax).toBe(337_924_400);
+  });
+
+  it("15억(B2) — 건물분 §161②: 1호 164,000,000 × 30% + 2호 88,000,000 × 70% × (15억−12억)/15억 = 61,520,000 · 토지분 10억 전액 과세 → 총세액 777,980,280 (종전 191,034,800)", () => {
+    const r = calculateTransferTax(house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
+    const d = r.rentalHousingExceptionDetail!;
+    expect(d.scenarioId).toBe("RH-B2");
+    // 독립 도출 — 건물 3억 − 1억 = 2억 · 표1 18% → 164,000,000 · 표2(보유 9년 36% + 거주 5년 20%) 56% → 88,000,000
+    const part1 = Math.floor((164_000_000 * 3) / 10);
+    const part2 = Math.floor((88_000_000 * 7 * 300_000_000) / (10 * 1_500_000_000));
+    expect(part1 + part2).toBe(61_520_000);
+    expect(d.taxableGain).toBe(part1 + part2);
+    const landGain = 1_200_000_000 - 200_000_000;
+    expect(r.taxableGain).toBe(landGain + part1 + part2);
+    const landTax = Math.floor((landGain - 2_500_000) * 0.7);
+    const bldTax = Math.floor((part1 + part2) * 0.24) - 5_760_000; // 5,000만~8,800만 24% · 누진공제 576만
+    expect(r.calculatedTax).toBe(landTax + bldTax);
+    expect(r.calculatedTax).toBe(707_254_800);
+    expect(r.totalTax).toBe(777_980_280);
+  });
+
+  it("다건 합산 1건 = 단건 (B1·B2) — 파트(토지분·건물분) 세율 판정이 다건에서도 유지된다", () => {
+    for (const S of [800_000_000, 1_500_000_000]) {
+      const input = house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB });
+      const agg = aggOf("2024-06-01", [asItem(input, "b")]);
+      expect(agg.totalTax, `${S}`).toBe(calculateTransferTax(input, rates).totalTax);
     }
   });
 });
