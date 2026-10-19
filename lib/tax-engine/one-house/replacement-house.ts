@@ -39,11 +39,19 @@ export type ReplacementHouseInput = Pick<
   // 양도일 현재 구성(S01-1) — 엔진 경로는 항상 채우고, 명부·주택 수가 없는 부분 입력은 막지 않는다.
   Partial<Pick<TransferTaxInput, "householdHousingCount" | "knownHouseExclusionHouseIds">>;
 
+type RosterHouse = NonNullable<ReplacementHouseInput["houses"]>[number];
+
+/**
+ * 취득 선후를 가리는 날짜 — 기존주택의 연장인 행(원조합원 기존주택·자가 재건축)은 완공일이 아니라 기존주택 취득일이다(결정 #43).
+ * 그 신축주택은 대체주택 취득 당시 이미 보유한 재개발·재건축 대상이고, 대체주택 「뒤」에 취득한 주택이 아니다.
+ */
+const acquiredOn = (h: RosterHouse): Date => h.predecessorHouseAcquisitionDate ?? h.acquisitionDate;
+
 /** 대체주택 취득 당시 세대가 보유한 재개발·재건축 대상(명부 주택 + 조합원입주권) 수 — 상속주택 제외 */
 export function replacementHouseHeldUnits(input: ReplacementHouseInput): number {
   const acq = input.acquisitionDate.getTime();
   const houses = (input.houses ?? []).filter(
-    (h) => h.id !== input.sellingHouseId && !h.isInherited && h.acquisitionDate.getTime() < acq,
+    (h) => h.id !== input.sellingHouseId && !h.isInherited && acquiredOn(h).getTime() < acq,
   ).length;
   const rights = (input.presaleRights ?? []).filter(
     (r) => r.type === "redevelopment_right" && r.acquisitionDate.getTime() < acq,
@@ -64,7 +72,11 @@ export function replacementHouseHeldAfterAcquisitionUnits(input: ReplacementHous
   const excluded = new Set(input.knownHouseExclusionHouseIds ?? []);
   const heldAfter = (d: Date) => d.getTime() >= acq && d.getTime() < transfer;
   const houses = (input.houses ?? []).filter(
-    (h) => h.id !== input.sellingHouseId && !excluded.has(h.id) && heldAfter(h.acquisitionDate),
+    (h) =>
+      h.id !== input.sellingHouseId &&
+      !excluded.has(h.id) &&
+      acquiredOn(h).getTime() >= acq &&
+      h.acquisitionDate.getTime() < transfer,
   ).length;
   const rights = (input.presaleRights ?? []).filter((r) => r.isInherited !== true && heldAfter(r.acquisitionDate)).length;
   return houses + rights;
