@@ -189,7 +189,7 @@ export function AcquisitionLotsMatrix({
       </div>
 
       {/* 합계 미리보기 */}
-      <ToneCard tone="sky" noDark className="text-sm text-sky-900" bodyClassName="">
+      <ToneCard tone="sky" className="text-sm text-sky-900" bodyClassName="">
         <p>
           총 매수 <strong>{summary.totalAcq.toLocaleString()}주</strong>
         </p>

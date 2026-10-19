@@ -64,7 +64,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분">
 
         <RegistrationFields
           fieldType={value.type}
@@ -86,12 +86,12 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
       </ToneCard>
 
       {/* ② 추가공제율 안내 (§95② 보유기간 공제율에 가산) */}
-      <ToneCard tone="amber" sectionNum="②" title="임대기간별 추가공제율 (§97의4①)" noDark>
+      <ToneCard tone="amber" sectionNum="②" title="임대기간별 추가공제율 (§97의4①)">
 
         <p className="text-micro text-amber-800">
           §95② 보유기간별 장기보유특별공제율에 아래 추가율을 <strong>가산</strong>합니다 (대체 아님).
         </p>
-        <div className="rounded-md border border-amber-200 bg-white/70 divide-y divide-amber-100">
+        <div className="rounded-md border border-amber-200 bg-white/70 dark:bg-white/5 divide-y divide-amber-100">
           {ADDITIONAL_RATE_ROWS.map(([label, rate]) => (
             <div key={label} className="flex items-center justify-between px-2.5 py-1 text-caption">
               <span className="text-muted-foreground">{label}</span>
@@ -105,7 +105,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
       </ToneCard>
 
       {/* ③ 대상 요건 — 조특령 §97의4① → 소령 §167의3①2호 가목·다목 (D2-04) */}
-      <ToneCard tone="sky" sectionNum="③" title="장기임대주택 요건" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="sky" sectionNum="③" title="장기임대주택 요건" bodyClassName="space-y-2">
         <div>
           <p className="mb-1.5 text-xs text-muted-foreground">장기임대주택 유형</p>
           <p className="mb-1.5 text-micro text-muted-foreground">

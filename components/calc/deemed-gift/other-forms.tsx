@@ -33,7 +33,7 @@ export function ExcessDividendFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 주주 입력 (배당지급일=증여일은 상단 공통 증여일 사용 — §41의2①) ── */}
-      <ToneCard tone="sky" sectionNum="1" title="주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)" noDark>
+      <ToneCard tone="sky" sectionNum="1" title="주주별 배당 내역 — 비례배당·초과배당금액 자동산정 (시행령 §31의2②)">
         <ExcessShareholderTable
           rows={form.edShareholders}
           onChange={(rows) => set({ edShareholders: rows })}
@@ -68,7 +68,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       </ToneCard>
 
       {/* ── 섹션 3: 소득세 상당액 모드 ── */}
-      <ToneCard tone="amber" sectionNum="2" title="소득세 상당액 확정 여부 — 시행규칙 §10의3" noDark>
+      <ToneCard tone="amber" sectionNum="2" title="소득세 상당액 확정 여부 — 시행규칙 §10의3">
         <RadioCardGroup
           name="ed-income-tax-mode"
           tone="amber"
@@ -157,7 +157,7 @@ export function ExcessDividendFields({ form, set }: Props) {
       </ToneCard>
 
       {/* ── 섹션 4: 증여세 계산 맥락 (giftTaxContext) — 정산·구법 결과 표시용 ── */}
-      <ToneCard tone="violet" sectionNum="3" title="증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)" noDark>
+      <ToneCard tone="violet" sectionNum="3" title="증여자와의 관계 (선택 — 입력 시 정산·구법 세액 추가 표시)">
         <RadioCardGroup
           name="ed-donor-relationship"
           tone="violet"
@@ -278,7 +278,7 @@ export function ListingGainFields({ form, set }: Props) {
   }, [form.lgTotalNetIncome, form.lgMonthsBusinessStart, form.lgMonthsAcqToSettlement]);
 
   return (
-    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="emerald" bodyClassName="space-y-3">
       <RadioCardGroup
         name="lg-event"
         tone="emerald"
@@ -404,7 +404,7 @@ export function ListingGainFields({ form, set }: Props) {
 export function PropertyServiceUseFields({ form, set }: Props) {
   const isFree = form.psuSubType === "free_use";
   return (
-    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="violet" bodyClassName="space-y-3">
       <RadioCardGroup
         name="psu-subtype"
         tone="violet"
@@ -435,7 +435,7 @@ export function PropertyServiceUseFields({ form, set }: Props) {
 export function OrgChangeFields({ form, set }: Props) {
   const isShare = form.ocSubType === "share_change";
   return (
-    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="amber" bodyClassName="space-y-3">
       <RadioCardGroup
         name="oc-subtype"
         tone="amber"
@@ -475,7 +475,7 @@ const VI_PRESETS: { label: string; testId: string; v: Partial<DeemedFormState> }
 /** §42의3 재산취득 후 가치증가 */
 export function ValueIncreaseFields({ form, set }: Props) {
   return (
-    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="rose" bodyClassName="space-y-3">
       {/* 계산사례 프리셋 */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-semibold text-rose-700">계산사례:</span>
@@ -485,7 +485,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
             type="button"
             data-testid={p.testId}
             onClick={() => set(p.v)}
-            className="rounded-md border border-rose-300 bg-white/70 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
+            className="rounded-md border border-rose-300 bg-white/70 dark:bg-white/5 px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-100"
           >
             {p.label}
           </button>

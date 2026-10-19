@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * anchor: acquisition Step0~4 + InstallmentPaymentsSection 섹션카드 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 23호.
+ * anchor: acquisition Step0~4 + InstallmentPaymentsSection 섹션카드 → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 23호.
  *   Step0(취득자유형 violet①·물건유형 sky②·취득원인 violet③)·Step1(물건상세 sky①)·
  *   Step2(보유주택 sky·취득후주택수 sky①·한시특례 violet③)·Step3(무상취득단서 rose★)·
  *   Step4(법인공장중과 rose①·세율특례 violet②)·Installment(연부회차 amber②).
@@ -29,19 +29,19 @@ describe("acquisition Step0~4 + Installment <ToneCard> 전환 회귀 0 (23호)",
     ] as const;
     for (const c of cases) {
       const { container } = render(
-        <ToneCard tone={c.tone} sectionNum={c.num} title={c.title} bodyClassName="space-y-2" noDark />,
+        <ToneCard tone={c.tone} sectionNum={c.num} title={c.title} bodyClassName="space-y-2" />,
       );
       const box = container.firstChild as HTMLElement;
       expect(box.className).toContain(`border-${c.tone}-200`);
       expect(box.className).toContain(`bg-${c.tone}-50/40`);
       expect(box.className).toContain("p-3");
-      expect(box.className).not.toContain("dark:");
+      expect(box.className).toContain("dark:");
       const badge = box.querySelector("span.rounded-full") as HTMLElement;
       expect(badge).not.toBeNull();
       expect(badge.textContent).toBe(String(c.num));
       expect(badge.className).toContain(`bg-${c.tone}-200`);
       expect(badge.className).toContain(`text-${c.tone}-800`);
-      expect(badge.className).not.toContain("dark:");
+      expect(badge.className).toContain("dark:");
       const titleP = box.querySelector("p.font-semibold") as HTMLElement;
       expect(titleP.className).toContain(`text-${c.tone}-700`);
       expect(titleP.textContent).toBe(c.title);
@@ -51,13 +51,13 @@ describe("acquisition Step0~4 + Installment <ToneCard> 전환 회귀 0 (23호)",
 
   it("문자열 sectionNum '★' (Step3 무상취득단서 rose) 배지 렌더", () => {
     const { container } = render(
-      <ToneCard tone="rose" sectionNum="★" title="무상취득 중과 배제 단서" noDark />,
+      <ToneCard tone="rose" sectionNum="★" title="무상취득 중과 배제 단서" />,
     );
     const box = container.firstChild as HTMLElement;
     const badge = box.querySelector("span.rounded-full") as HTMLElement;
     expect(badge.textContent).toBe("★");
     expect(badge.className).toContain("bg-rose-200");
-    expect(box.className).not.toContain("dark:");
+    expect(box.className).toContain("dark:");
   });
 
   it("titleExtra(헤더 우측 요소) — ml-auto 삭제/추가 버튼 보존 (Step2 보유주택·Installment)", () => {
@@ -66,7 +66,6 @@ describe("acquisition Step0~4 + Installment <ToneCard> 전환 회귀 0 (23호)",
         tone="sky"
         sectionNum={1}
         title="보유 주택 #1"
-        noDark
         titleExtra={<button className="ml-auto">삭제</button>}
       />,
     );

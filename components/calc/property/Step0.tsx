@@ -519,7 +519,7 @@ function OwnershipSection({
         {/* §107①2호: 건물·부속토지 소유자 분리 입력 */}
         {form.ownershipType === "house_split" && (
           <div className="space-y-3">
-            <ToneCard tone="amber" title="건물·부속토지 소유자 정보 (§107①2호)" bodyClassName="space-y-3" noDark>
+            <ToneCard tone="amber" title="건물·부속토지 소유자 정보 (§107①2호)" bodyClassName="space-y-3">
               <FieldCard
                 label="건물 소유자"
               >
@@ -543,7 +543,7 @@ function OwnershipSection({
                 />
               </FieldCard>
             </ToneCard>
-            <ToneCard tone="amber" title="시가표준액 (안분 기준, §4)" bodyClassName="space-y-3" noDark>
+            <ToneCard tone="amber" title="시가표준액 (안분 기준, §4)" bodyClassName="space-y-3">
               <FieldCard
                 label="건축물 시가표준액"
                 hint="§4② 기준 — 재산세 고지서·주택가격 공시의 건물분 가액 (§146④ 소방분 과세표준과 동일 필드)"

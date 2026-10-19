@@ -1,5 +1,5 @@
 /**
- * anchor: mixed-use 입력 섹션카드 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 6호.
+ * anchor: mixed-use 입력 섹션카드 → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 6호.
  *   - PartialUsageChangeInputs(용도변경, amber): badge+title
  *   (MixedUseResidencyInput 케이스는 겸용 거주기간 단일 소스화로 위젯 제거되어 삭제.)
  */
@@ -22,6 +22,6 @@ describe("mixed-use 입력 섹션카드 <ToneCard> 전환 (회귀 0)", () => {
     const card = title.parentElement?.parentElement as HTMLElement;
     expect(card.className).toContain("border-amber-200");
     expect(card.className).toContain("bg-amber-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 });

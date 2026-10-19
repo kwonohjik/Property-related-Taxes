@@ -146,7 +146,7 @@ function PartAcqStdPrice(props: {
       // testid는 **카드 wrapper**에 둔다 — 내부 면적 input으로 카드 존재를 대리 판정하면
       // 카드가 남고 면적 칸만 빠졌을 때 거짓 통과한다(계획서 §7 testid 계획).
       <div data-testid="split-land-std-acq-card">
-      <ToneCard tone="amber" title="토지 취득시 기준시가 (§99①1호 가목)" noDark>
+      <ToneCard tone="amber" title="토지 취득시 기준시가 (§99①1호 가목)">
         {props.notOwnedReason && (
           <p className="text-xs text-amber-800" data-testid="split-land-std-not-owned-note">
             {props.notOwnedReason}
@@ -186,13 +186,13 @@ function PartAcqStdPrice(props: {
   // 취득시 단독 칸은 비-별개(소유자 분리) 경로와 **같은 컴포넌트**를 쓴다(S3-1 — 모달 prefill 사본 3중화 방지).
   if (!both) {
     return (
-      <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)" noDark>
+      <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)">
         <AcqBuildingStdField asset={asset} onChange={onChange} transferDate={props.transferDate} variant="separate" />
       </ToneCard>
     );
   }
   return (
-    <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)" noDark>
+    <ToneCard tone="amber" title="건물 기준시가 (§99①1호 나목)">
       <div className={both ? "grid grid-cols-1 gap-2 sm:grid-cols-2 items-start" : undefined}>
         <div data-testid="split-building-std-acq-card">
           <FieldCard
@@ -348,7 +348,7 @@ export function LandBuildingSplitSection(props: Props) {
             <p className="text-xs font-semibold text-amber-800">토지 취득가액 방식</p>
           </div>
           {props.landCause ? (
-            <ToneCard tone="amber" noDark>
+            <ToneCard tone="amber">
               <p className="text-xs text-amber-900" data-testid="part-acq-mode-land-fixed">
                 <strong>{LAND_CAUSE_META[props.landCause].fixedMode}</strong> — 상속·증여로 취득한 토지는 평가액이
                 취득당시 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
@@ -449,7 +449,7 @@ export function LandBuildingSplitSection(props: Props) {
             <p className="text-xs font-semibold text-amber-800">건물 취득가액 방식</p>
           </div>
           {props.buildingCause ? (
-            <ToneCard tone="amber" noDark>
+            <ToneCard tone="amber">
               <p className="text-xs text-amber-900" data-testid="part-acq-mode-building-fixed">
                 <strong>{BUILDING_CAUSE_META[props.buildingCause].fixedMode}</strong> — 상속·증여로 취득한 건물은 평가액이 취득당시
                 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).

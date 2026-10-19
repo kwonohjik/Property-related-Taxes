@@ -28,7 +28,7 @@ export function Unsold982InputForm({ value, onChange }: Props) {
         <LawArticleModal legalBasis="조세특례제한법 시행령 §98의2" label="조특령 §98의2" />
       </div>
 
-      <ToneCard tone="sky" title="① 취득·계약 시기" noDark>
+      <ToneCard tone="sky" title="① 취득·계약 시기">
         <div>
           <label className="mb-1 block text-xs font-medium">매매계약일 (선택)</label>
           <DateInput value={value.contractDate982} onChange={(v) => onChange({ contractDate982: v })} />
@@ -39,7 +39,7 @@ export function Unsold982InputForm({ value, onChange }: Props) {
         </div>
       </ToneCard>
 
-      <ToneCard tone="rose" title="② 자격 요건 확인" noDark>
+      <ToneCard tone="rose" title="② 자격 요건 확인">
         <ToggleCard
           tone="rose"
           title="수도권 밖 미분양주택 확인"

@@ -196,7 +196,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
   // (종전에는 이 컴포넌트가 「환산취득가 사용」 ToggleCard로 모드까지 겸했다 — 2026-08-13 통합).
   // 여기는 **환산을 고른 뒤의 입력 본문**만 렌더한다.
   return (
-    <ToneCard tone="rose" noDark bodyClassName="space-y-2">
+    <ToneCard tone="rose" bodyClassName="space-y-2">
       <div className="space-y-2">
 
         {/* ── 사례 37: 토지 출자 분기 ── */}
@@ -280,7 +280,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 종전에는 「취득시(Sum_A)」·「최초공시 당시(Sum_F)」 **시점축** 2박스가
                 각각 토지·건물을 담았다. 같은 종류의 값을 나란히 보게 항목축으로 바꿨다.
                 Sum_A·Sum_F 합계는 아래 미리보기 박스가 값과 함께 그대로 보여준다. */}
-            <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
+            <div className="rounded-md border border-rose-100 bg-white/70 dark:bg-white/5 p-2 space-y-2">
               <p className="text-caption font-semibold text-rose-700">토지 기준시가</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
@@ -308,7 +308,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 종전에는 두 칸 모두 "수동 입력"이라 이 자산에는 계산기 진입점이 아예 없었다.
                 감면 PHD(`ReductionPhdInput`)와 **같은 2시점 구조**이므로 같은 모달을
                 `onApplyBoth`로 배선한다 — 한 번 계산해 두 필드를 동시에 채운다. */}
-            <div className="rounded-md border border-rose-100 bg-white/70 p-2 space-y-2">
+            <div className="rounded-md border border-rose-100 bg-white/70 dark:bg-white/5 p-2 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-caption font-semibold text-rose-700">건물 기준시가</p>
                 <BuildingStdPriceModalButton

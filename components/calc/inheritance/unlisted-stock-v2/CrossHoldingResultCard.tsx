@@ -39,7 +39,6 @@ export function CrossHoldingResultCard({
       tone="emerald"
       sectionNum={sectionNum}
       title="다른 비상장법인 주식 평가 (상호출자 연립방정식 — 평가준칙 §60②)"
-      noDark
     >
       <table className="w-full text-caption">
         <thead>

@@ -35,7 +35,6 @@ export function SpouseHoldingQuestion({ idPrefix, value, onChange, role }: Props
         tone="violet"
         bodyClassName="space-y-2"
         title={role === "other" ? "양도일 현재 배우자가 보유하나요 (선택)" : "양도일 현재도 배우자 쪽이 보유하나요"}
-        noDark
       >
         <p className="text-caption text-muted-foreground">
           혼인 5년 안에 양도하는 3주택 이상 세대는 <b>양도일 현재</b> 양도자의 배우자가 보유한 주택·분양권·입주권을 수에서 뺍니다({basis}).

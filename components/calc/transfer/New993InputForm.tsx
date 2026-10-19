@@ -228,7 +228,7 @@ export function New993InputForm({
 
       {/* ① 형제 감면 폼 10종과 같은 「색상 카드 + 섹션 번호」 패턴 (2026-09-07 UI 리뷰 L5).
           외곽 primary 래퍼는 저장소 관용구라 그대로 둔다 — 갈린 것은 번호 축뿐이었다. */}
-      <ToneCard tone="sky" sectionNum="①" title="취득 유형 · 소재지" noDark bodyClassName="space-y-3">
+      <ToneCard tone="sky" sectionNum="①" title="취득 유형 · 소재지" bodyClassName="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium">취득 유형</label>
@@ -283,7 +283,7 @@ export function New993InputForm({
 
       {/* ② 기준시가 3시점 + 전용면적. PHD 환산은 취득시 기준시가 직전 배치(입력→출력 순서) —
           ON 시 취득시 기준시가는 아래 echo로 자동 산출된다. */}
-      <ToneCard tone="emerald" sectionNum="②" title="기준시가 · 전용면적" noDark bodyClassName="space-y-3">
+      <ToneCard tone="emerald" sectionNum="②" title="기준시가 · 전용면적" bodyClassName="space-y-3">
       {phdSection}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

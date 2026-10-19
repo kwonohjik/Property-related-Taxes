@@ -36,7 +36,7 @@ export function MarketSampleBlock({ form, onChange, isListed, baseDateLabel = "�
       )}
 
       {/* 취득 매매사례 (amber tone) */}
-      <ToneCard tone="amber" sectionNum={1} title={deemed ? "의제취득일 현재 매매사례가액 (영§176의2③1호·④1호)" : "취득 매매사례가액 (영§176의2③1호)"} bodyClassName="space-y-3" noDark>
+      <ToneCard tone="amber" sectionNum={1} title={deemed ? "의제취득일 현재 매매사례가액 (영§176의2③1호·④1호)" : "취득 매매사례가액 (영§176의2③1호)"} bodyClassName="space-y-3">
         <CurrencyInput
           label="1주당 취득 매매사례가액"
           hint={`유사 매매사례 가액 (원) — ${baseDateLabel} 전후 3개월 이내`}

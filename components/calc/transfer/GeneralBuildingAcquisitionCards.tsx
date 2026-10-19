@@ -313,7 +313,7 @@ export function GeneralBuildingAcquisitionCards({
         하위 원인별 블록은 두 모드가 **그대로 공유**한다 — `setLandAcqDate`·`landCardOnChange`가
         이미 `isSeparate`로 쓰기 축을 가르므로, 갈라야 하는 것은 카드 제목과 취득원인 라디오뿐이다.
       */}
-      <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="sky" bodyClassName="space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-base">{isSeparate ? "📌" : "🧾"}</span>
           <p className="text-xs font-semibold text-sky-700">
@@ -566,7 +566,7 @@ export function GeneralBuildingAcquisitionCards({
 
       {/* ── 🏗 건물 취득 카드 (amber) — 분리 ON 전용 ── */}
       {isSeparate && (
-      <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="amber" bodyClassName="space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-base">🏗</span>
           <p className="text-xs font-semibold text-amber-700">건물 취득</p>

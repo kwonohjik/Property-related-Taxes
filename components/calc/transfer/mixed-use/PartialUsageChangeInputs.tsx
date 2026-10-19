@@ -52,7 +52,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
     !!asset.partialChangeAcqCommercialArea;
 
   return (
-    <ToneCard tone="amber" sectionNum={sectionNum} title="취득시점 자산 구성 (보유 중 일부 용도변경)" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="amber" sectionNum={sectionNum} title="취득시점 자산 구성 (보유 중 일부 용도변경)" bodyClassName="space-y-3">
 
       {/* 방향 Select — 양도시점/취득시점 혼동 방지 라벨 */}
       <FieldCard label="취득시 자산 구성" field="partialChangeDirection" hint="양도시와 다른 경우 선택">

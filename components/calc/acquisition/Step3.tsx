@@ -352,7 +352,6 @@ export function Step3({
           sectionNum="★"
           title="무상취득 중과 배제 단서"
           bodyClassName="space-y-3"
-          noDark
           titleExtra={
             <TaxHelp
               title="무상취득 중과 배제 단서 (시행령 §28의6②)"

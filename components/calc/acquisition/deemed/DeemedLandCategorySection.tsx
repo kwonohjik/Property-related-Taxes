@@ -49,7 +49,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
   const deemedRateLabel = `${(deemedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
   return (
-    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="sky" bodyClassName="space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-sky-700">지목변경 간주취득 상세</p>
         <TaxHelp

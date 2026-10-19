@@ -327,7 +327,7 @@ export function EstateBodyConvertibleBond({ item, onUpdate, valuationDate }: Var
               )}
 
               {/* 배당차액 §57③ — auto-derive + override */}
-              <ToneCard tone="emerald" title="배당차액 (§57③) — 자동 산정 입력" bodyClassName="space-y-2" noDark>
+              <ToneCard tone="emerald" title="배당차액 (§57③) — 자동 산정 입력" bodyClassName="space-y-2">
                 <FieldCard label="1주당 액면가액" unit="원">
                   <CurrencyInput
                     label="1주당 액면가액"

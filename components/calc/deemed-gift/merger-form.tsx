@@ -103,7 +103,7 @@ export function MergerFields({ form, set }: Props) {
   const isAuto = useSh || form.mrgMergedPriceMode === "auto";
   const splitNet = form.mrgIsSplitMerger && form.mrgSplitMode === "net_asset_ratio"; // 과대평가 1주평가 안분 대체
   return (
-    <ToneCard tone="emerald" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="emerald" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="mrg-case"

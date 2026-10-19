@@ -36,7 +36,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
   }
 
   return (
-    <ToneCard tone="rose" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 시)" noDark>
+    <ToneCard tone="rose" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 시)">
       <p className="text-caption text-muted-foreground/80">
         양도하는 주택 자체가 아래 사유에 해당하면 2주택이어도 중과 배제됩니다 (소령 §167의10①3호·7호).
         유효 주택 수(§167의10① 괄호의 불산입 주택 제외)가 2채일 때만 적용됩니다.

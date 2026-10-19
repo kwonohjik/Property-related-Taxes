@@ -47,7 +47,7 @@ export function PreDeemedEstimatedNotice({
   const causeLabel = sec163_9CauseLabel(asset);
 
   return (
-    <ToneCard tone="amber" title="§163⑨ 평가액이 계산에 반영되지 않습니다" noDark>
+    <ToneCard tone="amber" title="§163⑨ 평가액이 계산에 반영되지 않습니다">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 §97 ①" label="§97①1호" />
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="§163⑨" />

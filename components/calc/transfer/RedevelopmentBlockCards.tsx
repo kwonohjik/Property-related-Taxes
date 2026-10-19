@@ -293,7 +293,6 @@ export function ExemptionAtApprovalCard({
       sectionNum="ⓘ"
       title="비과세 보유 요건 (관리처분계획인가일 기준 보유 2년)"
       bodyClassName="space-y-2"
-      noDark
     >
       <p className="text-caption text-violet-800 leading-relaxed">
         부동산거래관리과-380 (2012.07.20) — 청산금 수령분의 1세대1주택 비과세는 청산금분
@@ -362,7 +361,7 @@ export function ExemptionAtApprovalCard({
         </FieldCard>
       </ToggleCard>
 
-      <div className="rounded-md border border-violet-200 bg-white/70 p-2 text-caption text-violet-900">
+      <div className="rounded-md border border-violet-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-violet-900">
         {labelText}
       </div>
 
@@ -540,7 +539,6 @@ export function SuccessorMemberSection({
       sectionNum="2a"
       title="조합원 구분"
       bodyClassName="space-y-2"
-      noDark
     >
       <RadioCardGroup
         name={`redevIsSuccessor-${asset.assetId}`}

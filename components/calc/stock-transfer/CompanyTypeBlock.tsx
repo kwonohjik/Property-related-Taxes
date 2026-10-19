@@ -107,7 +107,7 @@ export function CompanyTypeBlock({ form, onChange }: CompanyTypeBlockProps) {
       */}
       {isListedMarket && (
         <div className="mt-2">
-          <ToneCard tone="amber" noDark>
+          <ToneCard tone="amber">
             <p className="text-xs leading-relaxed">
               <strong>벤처기업</strong>을 다자간매매체결회사(ATS)에서 양도했다면 조특법 §14①7호
               비과세 대상이므로 이 토글을 켜세요.

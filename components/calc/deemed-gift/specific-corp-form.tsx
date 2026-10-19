@@ -70,7 +70,7 @@ export function SpecificCorpFields({ form, set }: Props) {
   return (
     <div className="space-y-3">
       {/* ── 섹션 1: 입력 방식 ── */}
-      <ToneCard tone="sky" sectionNum="1" title="입력 방식 선택" noDark>
+      <ToneCard tone="sky" sectionNum="1" title="입력 방식 선택">
         <RadioCardGroup
           name="sc-mode"
           tone="sky"
@@ -92,7 +92,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       </ToneCard>
 
       {/* ── 섹션 2: 거래상대방 + 거래유형 (법 §45의5① · 영 §34의5②④⑥⑦) ── */}
-      <ToneCard tone="rose" sectionNum="2" title="거래상대방 · 거래유형 (§45의5①)" noDark>
+      <ToneCard tone="rose" sectionNum="2" title="거래상대방 · 거래유형 (§45의5①)">
         <FieldCard
           label="거래상대방"
           hint={
@@ -256,7 +256,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       </ToneCard>
 
       {/* ── 섹션 3: 법인세 상당액 ── */}
-      <ToneCard tone="amber" sectionNum="3" title="법인세 상당액 (시행령 §34의5④2호)" noDark>
+      <ToneCard tone="amber" sectionNum="3" title="법인세 상당액 (시행령 §34의5④2호)">
         <RadioCardGroup
           name="sc-corp-tax-mode"
           tone="amber"
@@ -323,7 +323,6 @@ export function SpecificCorpFields({ form, set }: Props) {
         tone="violet"
         sectionNum="4"
         title={isRoster ? "발행주식 총수 + 지배주주등 주주 명단" : "해당 지배주주등의 주식보유비율"}
-        noDark
       >
         {!isRoster && (
           <FieldCard
@@ -403,7 +402,7 @@ export function SpecificCorpFields({ form, set }: Props) {
       </CollapsibleHintCard>
 
       {/* ── 섹션 5: §45의5② 한도 — 증여재산공제 ── */}
-      <ToneCard tone="emerald" sectionNum="5" title="§45의5② 한도 — 증여재산공제 (선택)" noDark>
+      <ToneCard tone="emerald" sectionNum="5" title="§45의5② 한도 — 증여재산공제 (선택)">
         <CurrencyInput
           label="증여재산공제"
           value={form.scGiftDeduction}
@@ -417,7 +416,7 @@ export function SpecificCorpFields({ form, set }: Props) {
           속하는 달의 말일부터 3개월이 되는 날」. §45의5의 증여일은 「거래한 날」(§45의5①)이라
           사업연도와 무관하므로 여기서 따로 받아야 신고기한이 선다(§45의3은 증여시기 자체가
           사업연도 종료일이라 추가 입력이 없다). 값은 증여세 마법사로 이관된다. */}
-      <ToneCard tone="slate" sectionNum="6" title="신고기한 (§68① 단서)" noDark>
+      <ToneCard tone="slate" sectionNum="6" title="신고기한 (§68① 단서)">
         <FieldCard
           label="특정법인의 사업연도 종료일"
           hint="이 거래가 속한 사업연도의 종료일 — 증여일(거래한 날)과 다른 축입니다. 법인세 신고기한이 여기서 파생됩니다"

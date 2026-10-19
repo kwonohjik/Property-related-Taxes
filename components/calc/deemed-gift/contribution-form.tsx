@@ -44,7 +44,7 @@ function ConPartyRow({
   ];
   const relLabel = RELATION_OPTIONS.find((o) => o.value === party.relation)?.label ?? "관계 선택";
   return (
-    <div className="rounded-md border border-violet-200 bg-white p-2 space-y-2">
+    <div className="rounded-md border border-violet-200 bg-white dark:bg-gray-900 p-2 space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-violet-700">
           {isHigh ? `수증자 ${idx + 1}` : `증여자 ${idx + 1}`}
@@ -81,7 +81,7 @@ function ConPartyRow({
       {/* 관계 — RadioCardGroup 은 세로 레이아웃 디폴트로 지면 과다 → 드롭다운 대용 select */}
       <FieldCard label={isHigh ? "수증자와 현물출자자의 관계" : "증여자 관계"}>
         <select
-          className="w-full rounded border border-gray-200 px-2 py-1 text-sm bg-white"
+          className="w-full rounded border border-gray-200 px-2 py-1 text-sm bg-white dark:bg-gray-900"
           value={party.relation}
           onChange={(e) => onChange({ ...party, relation: e.target.value as GiftDonorRelation | "" })}
           aria-label={`${idx + 1}번 관계`}
@@ -151,7 +151,7 @@ export function ContributionFields({ form, set }: Props) {
   }
 
   return (
-    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="violet" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="con-case"

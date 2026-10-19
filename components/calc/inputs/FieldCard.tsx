@@ -51,10 +51,14 @@ export function FieldCard({
         // 짧은 라벨("별칭" 등)은 168px로 수축해 우측 입력폭을 확보하고, 긴 라벨(배지 포함)은
         // 240px까지 늘어 한 줄 유지·초과 시 240px 내 줄바꿈(좁은 편집 모달에서 입력 데이터 잘림 방지).
         // minmax(168,240)는 1fr 형제와 함께 쓰면 240 고정이 되어 불가 — 라벨 min/max로 제어(브라우저 실측 확인).
-        // 모바일(sm 미만)은 grid-cols-1로 라벨이 입력 위에 올라가므로 min/max 미적용.
+        // 모바일(sm 미만)은 라벨이 입력 위에 올라가므로 min/max 미적용.
+        // sm 이상은 grid가 아니라 flex-wrap이다 — 입력의 **최소 폭**이 라벨 옆에 안 들어가면(카드가 좁은 다열 배치 등)
+        // 본문이 라벨 아래로 내려간다. grid(auto_1fr)는 화면 폭만 보고 라벨-좌를 고정해, 330px 카드에서 날짜칸(약 150px)이
+        // 122px 자리에 밀려 카드 밖으로 넘쳤다(768 전체 E2E 실측 2,319회 → 15회).
+        // 배치를 className으로 덮어쓰는 호출부는 `grid sm:grid-cols-[…]`처럼 grid를 함께 넘긴다(cn이 flex를 대체).
         stacked
           ? "grid gap-1.5"
-          : "grid gap-2 sm:grid-cols-[auto_1fr] sm:items-start",
+          : "flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start",
         disabled && "opacity-60",
         className
       )}
@@ -77,11 +81,15 @@ export function FieldCard({
           {badge && <span className="ml-auto text-xs text-muted-foreground font-normal">{badge}</span>}
         </label>
       )}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">{children}</div>
+      {/* min-w-0: grid 항목은 최소 폭이 콘텐츠 폭이라, 없으면 본문이 카드보다 넓어져 trailing이 카드 밖으로 나간다.
+          trailing이 있으면 입력의 최소 폭(min-content)과 한 줄에 안 들어갈 때만 다음 줄로 내린다 —
+          줄어드는 입력칸은 최소 폭이 작아 그대로 한 줄이고, 날짜·Select처럼 줄지 않는 입력만 배지가 내려간다
+          (내리지 않으면 입력이 짓눌려 글자가 잘리거나 배지와 겹친다). */}
+      <div className={cn("min-w-0 space-y-1.5", !stacked && "sm:flex-[1_1_min-content]")}>
+        <div className={cn("flex items-center gap-2", trailing && "flex-wrap")}>
+          <div className={cn("flex-1 min-w-0", trailing && "basis-[min-content]")}>{children}</div>
           {trailing ? (
-            <div className="shrink-0">{trailing}</div>
+            <div className="shrink-0 max-w-full">{trailing}</div>
           ) : unit ? (
             <span className="shrink-0 text-xs text-muted-foreground">{unit}</span>
           ) : null}

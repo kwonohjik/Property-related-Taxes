@@ -175,7 +175,6 @@ export function Pre1MonthClosingPriceTable({
     <ToneCard
       tone="amber"
       bodyClassName="space-y-3"
-      noDark
       title={
         <>
           {dateLabel} 이전 1개월 종가 (소득세법 §99①3 {roleLabel} — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일, 휴일·주말은 빈칸으로 두면 자동 제외)

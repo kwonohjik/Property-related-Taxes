@@ -176,8 +176,10 @@ export function LandPriceLookupField({
     <div className={`grid grid-cols-1 gap-2 ${hideLandStdPrice ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
       {/* ① 공시지가 연도 — Select + 조회 버튼 인라인 */}
       <FieldCard label="공시지가 연도" badge={yearBadge} stacked>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 min-w-0">
+        {/* 연도 칸이 8rem보다 좁아지면 조회 버튼이 아래 줄로 내려간다 — 한 줄로 묶으면 값이 잘리거나 화살표·버튼이 카드 밖으로 밀린다.
+            최소 폭은 카드 폭을 넘지 않는다(중첩이 깊은 화면은 375에서 카드가 125px). */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex-1 min-w-[min(8rem,100%)]">
             <Select
               value={effectiveYear}
               onValueChange={handleYearSelect}

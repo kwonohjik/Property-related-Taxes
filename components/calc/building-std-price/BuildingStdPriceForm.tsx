@@ -460,16 +460,16 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 : "grid gap-2"
           }
         >
-          <FieldCard label="신축연도" hint="준공·사용승인 연도" className="sm:grid-cols-[88px_1fr]">
+          <FieldCard label="신축연도" hint="준공·사용승인 연도" className="grid sm:grid-cols-[88px_1fr]">
             <DecimalInput value={f.builtYear} onChange={(v) => set("builtYear", v)} placeholder="신축연도 (4자리)" thousandSeparator={false} />
           </FieldCard>
           {showFloorArea && (
-            <FieldCard label="건물 연면적" className="sm:grid-cols-[88px_1fr]">
+            <FieldCard label="건물 연면적" className="grid sm:grid-cols-[88px_1fr]">
               <DecimalInput value={f.floorArea} onChange={(v) => set("floorArea", v)} unit="㎡" placeholder="건물 연면적" />
             </FieldCard>
           )}
           {showLandArea && (
-            <FieldCard label="토지 면적" className="sm:grid-cols-[88px_1fr]">
+            <FieldCard label="토지 면적" className="grid sm:grid-cols-[88px_1fr]">
               <DecimalInput value={f.landAreaM2} onChange={(v) => set("landAreaM2", v)} unit="㎡" placeholder="부속토지 면적" />
             </FieldCard>
           )}
@@ -481,10 +481,10 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
         )}
         {!isMech && (
           <div className="grid grid-cols-2 gap-2">
-            <FieldCard label="지상 층수" hint="계산서 표기용(선택)" className="sm:grid-cols-[88px_1fr]">
+            <FieldCard label="지상 층수" hint="계산서 표기용(선택)" className="grid sm:grid-cols-[88px_1fr]">
               <DecimalInput value={f.floorsAbove} onChange={(v) => set("floorsAbove", v)} unit="층" thousandSeparator={false} />
             </FieldCard>
-            <FieldCard label="지하 층수" hint="계산서 표기용(선택)" className="sm:grid-cols-[88px_1fr]">
+            <FieldCard label="지하 층수" hint="계산서 표기용(선택)" className="grid sm:grid-cols-[88px_1fr]">
               <DecimalInput value={f.floorsBelow} onChange={(v) => set("floorsBelow", v)} unit="층" thousandSeparator={false} />
             </FieldCard>
           </div>
@@ -511,7 +511,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 취득당시 기준시가를 환산해 쓰므로(소득령 §164⑧), 아래 취득연도만 확인합니다.
               </p>
             )}
-            <div className={transferOnly ? "" : "grid grid-cols-2 gap-2"}>
+            <div className={transferOnly ? "" : "grid grid-cols-1 sm:grid-cols-2 gap-2"}>
               <FieldCard label="취득연도" stacked={!transferOnly}>
                 <YearSelect
                   years={acqYearOpts}
@@ -533,7 +533,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               </p>
             )}
             {!transferOnly && !isMech && !apartmentConv && !composite && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <FieldCard label="취득당시 구조" stacked>
                   <BuildingStructureSelect year={acqIndexYear} value={f.acqStructureKey} onChange={(v) => set("acqStructureKey", v)} />
                 </FieldCard>
@@ -635,7 +635,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
           {transferYearVisible(f) && (
           <>
           <SectionCard num={3} title={transferSectionLabel ?? "양도 시점"} tone="emerald" testId="bsp-section-transfer">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <FieldCard label={`${t2}연도`} stacked>
                 <YearSelect
                   years={yearOpts}
@@ -657,7 +657,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               </p>
             )}
             {!sec1648Active && !isMech && !composite && (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <FieldCard label={`${t2}당시 구조`} stacked>
                   <BuildingStructureSelect
                     year={f.transferYear ? parseInt(f.transferYear, 10) : undefined}

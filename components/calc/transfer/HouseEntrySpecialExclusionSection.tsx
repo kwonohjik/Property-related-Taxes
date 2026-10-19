@@ -33,7 +33,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
     : null;
 
   return (
-    <ToneCard tone="rose" sectionNum="④" bodyClassName="space-y-2.5" title="특수 배제 사유 (2주택·인구감소)" noDark>
+    <ToneCard tone="rose" sectionNum="④" bodyClassName="space-y-2.5" title="특수 배제 사유 (2주택·인구감소)">
 
       {/* 부득이한 사유 (취학·근무·질병) */}
       <ToggleCard

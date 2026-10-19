@@ -37,7 +37,7 @@ export function Sec164_8ProvisoInput({ asset, onChange }: Props) {
   const sum = stdPriceSumAt(asset, "acq");
 
   return (
-    <ToneCard tone="rose" title="§164⑧ 준용 — 취득당시·최초고시당시 기준시가합이 동일" noDark>
+    <ToneCard tone="rose" title="§164⑧ 준용 — 취득당시·최초고시당시 기준시가합이 동일">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥ 산식 단서" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑧" label="§164⑧" />

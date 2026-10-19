@@ -95,7 +95,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <ToneCard tone="violet" sectionNum="①" title="등록·신분" noDark>
+      <ToneCard tone="violet" sectionNum="①" title="등록·신분">
 
         <div>
           <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
@@ -135,7 +135,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
       </ToneCard>
 
       {/* ② 임대 개시 정보 */}
-      <ToneCard tone="violet" sectionNum="②" title="임대 개시 정보" noDark>
+      <ToneCard tone="violet" sectionNum="②" title="임대 개시 정보">
 
         <div>
           <label className="mb-1 block text-xs font-medium">임대개시 당시 기준시가 (원)</label>

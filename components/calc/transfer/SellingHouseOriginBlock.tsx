@@ -23,7 +23,7 @@ interface Props {
 export function SellingHouseOriginBlock({ asset, onUpdate }: Props) {
   const kind = asset.sellingHouseRebuildKind;
   return (
-    <ToneCard tone="violet" sectionNum="양도 주택 취득 경위" bodyClassName="space-y-2.5" title="양도하는 주택은 어떻게 취득했습니까 (일시적 2주택)" noDark>
+    <ToneCard tone="violet" sectionNum="양도 주택 취득 경위" bodyClassName="space-y-2.5" title="양도하는 주택은 어떻게 취득했습니까 (일시적 2주택)">
       <p className="text-micro text-muted-foreground" data-testid="selling-house-origin-intro">
         헐고 다시 지은 주택은 기존주택의 연장이라 일시적 2주택의 선후를 사용승인일이 아니라 <b>헐기 전 주택 취득일</b>로 봅니다. 해당하지 않으면 「일반 취득」을 두세요.
       </p>

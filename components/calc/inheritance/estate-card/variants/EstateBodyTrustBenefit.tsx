@@ -75,7 +75,7 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
         </FieldCard>
 
         {/* ② 신탁재산 구성 (결정 B 경량 — Σ value = 신탁재산 가액) */}
-        <ToneCard tone="sky" title="신탁재산 구성 (평가기준일 현재 가액)" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="sky" title="신탁재산 구성 (평가기준일 현재 가액)" bodyClassName="space-y-2">
           {assets.map((row, idx) => (
             <div key={idx} data-testid={`trust-asset-row-${idx}`} className="flex items-end gap-2 rounded-md border border-sky-200/70 bg-sky-50/30 p-2">
               <div className="flex-1">

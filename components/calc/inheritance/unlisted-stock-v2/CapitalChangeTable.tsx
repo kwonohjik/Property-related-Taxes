@@ -97,20 +97,19 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
           + 변동 추가
         </button>
       }
-      noDark
     >
       <p className="text-caption text-amber-700/80">
         평가기준일 이전 3년 이내 유상증자·무상증자·감자. 유상증자는 §56⑤로 이전 사업연도 순손익액에 가산. 환산주식수는 §17의3⑤로 자동 산정.
       </p>
 
       {capitalChanges.length === 0 ? (
-        <div className="rounded border border-dashed border-amber-300 bg-white/60 p-4 text-center text-caption text-amber-700">
+        <div className="rounded border border-dashed border-amber-300 bg-white/60 dark:bg-white/5 p-4 text-center text-caption text-amber-700">
           자본금 변동 없음 — 환산주식수 = 평가시점 발행주식수 (단순 케이스)
         </div>
       ) : (
         <div className="space-y-3">
           {capitalChanges.map((c, idx) => (
-            <div key={idx} className="rounded border border-amber-300 bg-white p-3 space-y-2">
+            <div key={idx} className="rounded border border-amber-300 bg-white dark:bg-gray-900 p-3 space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <select
                   value={c.changeType}

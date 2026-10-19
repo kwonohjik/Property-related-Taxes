@@ -76,7 +76,7 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
       </div>
 
       {/* ① 취득 정보 */}
-      <ToneCard tone="amber" sectionNum="①" title={`${houseLabel} 취득 정보`} noDark>
+      <ToneCard tone="amber" sectionNum="①" title={`${houseLabel} 취득 정보`}>
         <div>
           <label className="mb-1 block text-xs font-medium">{houseLabel} 취득일</label>
           {rowFacts ? (
@@ -98,7 +98,7 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
       </ToneCard>
 
       {/* ② 가액 요건 */}
-      <ToneCard tone="sky" sectionNum="②" title="가액 요건" noDark>
+      <ToneCard tone="sky" sectionNum="②" title="가액 요건">
         {/* 행에서 쓸 때는 주소도 행 값이다(기본 정보의 주소 검색). */}
         {!rowFacts && (
           <>
@@ -145,7 +145,7 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
       </ToneCard>
 
       {/* ③ 소재지·자격 */}
-      <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건" noDark>
+      <ToneCard tone="rose" sectionNum="③" title="소재지·자격 요건">
         <ToggleCard
           checked={value.meetsLocationRequirement}
           onCheckedChange={(v) => onChange({ meetsLocationRequirement: v })}

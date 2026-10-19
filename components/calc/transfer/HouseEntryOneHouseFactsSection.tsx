@@ -60,7 +60,6 @@ export function HouseEntryOneHouseFactsSection({ house, onUpdate, otherUocRowNum
       sectionNum="⑤"
       bodyClassName="space-y-2.5"
       title="1세대1주택 비과세 특례 사실 (§155)"
-      noDark
     >
       <p className="text-xs text-muted-foreground leading-relaxed">
         이 주택을 <b>보유</b>한 상태에서 <b>다른 주택(일반주택)을 양도</b>할 때 1세대1주택으로 보는

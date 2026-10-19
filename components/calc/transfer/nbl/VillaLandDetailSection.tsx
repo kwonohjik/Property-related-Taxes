@@ -83,7 +83,7 @@ export function VillaLandDetailSection({
       >
         <div className="space-y-3">
           {/* ① 면적 요건 (§168의13①1호) */}
-          <ToneCard tone="sky" sectionNum="1" title="면적 요건 (①1호)" noDark>
+          <ToneCard tone="sky" sectionNum="1" title="면적 요건 (①1호)">
             <FieldCard label="건물 연면적" unit="㎡" hint="150㎡ 이내">
               <DecimalInput
                 value={asset.nblVillaBuildingFloorArea}
@@ -99,7 +99,7 @@ export function VillaLandDetailSection({
           </ToneCard>
 
           {/* ② 기준시가 요건 (§168의13①2호) */}
-          <ToneCard tone="emerald" sectionNum="2" title="기준시가 요건 (①2호)" noDark>
+          <ToneCard tone="emerald" sectionNum="2" title="기준시가 요건 (①2호)">
             <FieldCard label="건물+부속토지 합산 기준시가" unit="원" hint="2억원 이하">
               <CurrencyInput
                 label="합산 기준시가"
@@ -112,7 +112,7 @@ export function VillaLandDetailSection({
           </ToneCard>
 
           {/* ③ 지역 요건 (§168의13①3호) */}
-          <ToneCard tone="rose" sectionNum="3" title="지역 요건 (①3호)" noDark>
+          <ToneCard tone="rose" sectionNum="3" title="지역 요건 (①3호)">
             <ToggleCard
               tone="rose"
               title="제외지역 소재 (수도권·도시지역·조정대상지역·허가구역)"

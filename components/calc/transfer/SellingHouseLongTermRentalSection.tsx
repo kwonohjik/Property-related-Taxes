@@ -44,7 +44,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
   }
 
   return (
-    <ToneCard tone="violet" bodyClassName="space-y-2.5" title="양도 주택이 장기임대주택인 경우" noDark>
+    <ToneCard tone="violet" bodyClassName="space-y-2.5" title="양도 주택이 장기임대주택인 경우">
       <p className="text-caption text-muted-foreground/80">
         양도하는 주택 자체가 등록 장기임대주택이면 중과 대상에서 제외됩니다 (소령 §167의3①2호 ·
         2주택은 §167의10①2호 준용).

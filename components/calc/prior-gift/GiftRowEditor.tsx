@@ -540,7 +540,7 @@ export function GiftRowEditor({
        * giftTaxBase 입력 건은 §53의2 이미 반영 → 위젯 숨김 + 안내 표시 */}
       {showIsHeir &&
         isInheritancePriorGiftMarriageBirthEligible(gift.doneeRelation) && (
-          <ToneCard tone="sky" sectionNum="§53의2" title="혼인·출산 증여재산공제 (직계존속 한정)" bodyClassName="space-y-2" noDark>
+          <ToneCard tone="sky" sectionNum="§53의2" title="혼인·출산 증여재산공제 (직계존속 한정)" bodyClassName="space-y-2">
             {gift.giftTaxBase != null ? (
               <p className="text-caption text-sky-600 dark:text-sky-400">
                 ⓘ 과세표준을 직접 입력한 경우 §53의2는 이미 반영된 것으로 간주합니다.
@@ -634,7 +634,7 @@ export function GiftRowEditor({
        * donor·⑤·⑦·할증·⑫ 블록(§47 카드)은 showGiftPhaseA 단독 유지(상속 모드 숨김).
        */}
       {(showGiftPhaseA || showSpecialType) && (
-        <ToneCard tone="emerald" sectionNum="§30" title="이 사전증여의 조특법 과세특례 여부" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="emerald" sectionNum="§30" title="이 사전증여의 조특법 과세특례 여부" bodyClassName="space-y-2">
           <RadioCardGroup<"none" | "startup" | "family_business">
             name={`priorGiftSpecialType-${index}`}
             tone="emerald"

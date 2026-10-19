@@ -140,7 +140,7 @@ export function NewConstructionFootprintSection({
   }, [footprint, companionArea, limitArea, excessArea, isExcess, hasCompanionArea]);
 
   return (
-    <ToneCard tone="sky" sectionNum="§" bodyClassName="space-y-3" title="부수토지 한도 산정 (소득세법 시행령 §154⑦)" noDark>
+    <ToneCard tone="sky" sectionNum="§" bodyClassName="space-y-3" title="부수토지 한도 산정 (소득세법 시행령 §154⑦)">
 
       <p className="text-caption text-sky-600 leading-relaxed">
         주택과 함께 양도되는 부수토지의 인정 한도 = 건물 정착면적 × 배율.
@@ -152,7 +152,7 @@ export function NewConstructionFootprintSection({
           여기에 입력 위젯을 다시 넣지 말 것. 특히 소재지 구분에 display fallback
           (`?? "metropolitan_residential"`)을 걸면 store가 미선택인데 선택된 것처럼 보여
           validate 차단과 어긋난다 — 그것이 이 카드가 표시 전용이 된 이유다. */}
-      <div className="rounded-md border border-sky-200 bg-white/60 px-3 py-2 text-caption text-sky-900 space-y-1">
+      <div className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 px-3 py-2 text-caption text-sky-900 space-y-1">
         <p>
           <b>건물 정착면적</b>{" "}
           {footprint > 0 ? `${buildingFootprintArea}㎡` : "— 미입력"}

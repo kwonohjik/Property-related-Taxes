@@ -62,7 +62,7 @@ export function SuccessorRightStdPriceSection({
   const needsTransfer = mode === "estimated";
 
   return (
-    <ToneCard tone="amber" title="기준시가 — 납입액 + 프리미엄" bodyClassName="space-y-2" noDark>
+    <ToneCard tone="amber" title="기준시가 — 납입액 + 프리미엄" bodyClassName="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §165 ①" label="시행령 §165①" />
         <LawArticleModal legalBasis="소득세법 §99 ① 2호" label="§99①2호 가목" />

@@ -96,7 +96,7 @@ const SECTION_TONE: Record<SectionTone, { wrap: string; circle: string; title: s
 
 // 간편평가 전용 FieldCard 그리드 — 좌 라벨 확대 / 우 입력 축소 (공용 FieldCard 기본 [160px_1fr] override).
 // 금액 입력란 폭을 기본 대비 약 절반으로 줄이고 그만큼 라벨 영역을 넓힘 (twMerge가 grid-cols 충돌 해소).
-const FIELD_GRID = "sm:grid-cols-[3fr_2fr]";
+const FIELD_GRID = "grid sm:grid-cols-[3fr_2fr]";
 
 function SimpleSectionCard({
   num,

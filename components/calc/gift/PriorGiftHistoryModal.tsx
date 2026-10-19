@@ -125,7 +125,7 @@ function CandidateCard({
     : "본인";
 
   return (
-    <ToneCard tone="violet" className="p-4" noDark>
+    <ToneCard tone="violet" className="p-4">
       {/* 헤더 — 증여 회차 정보 */}
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-semibold">

@@ -212,7 +212,7 @@ export function CorporateInfoSection({
   return (
     <div className="space-y-4">
       {/* 1. 평가대상 비상장법인 */}
-      <ToneCard tone="sky" sectionNum={1} title="평가대상 비상장법인 (별지 1쪽)" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="sky" sectionNum={1} title="평가대상 비상장법인 (별지 1쪽)" bodyClassName="space-y-3">
         {/* 행 1 — 법인명·사업자등록번호·대표자 (3열, 라벨 상단 stacked) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <FieldCard label="법인명" required stacked>

@@ -68,7 +68,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
   const deemedRateLabel = `${(deemedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
   return (
-    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="amber" bodyClassName="space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-amber-700">과점주주 간주취득 상세</p>
         <TaxHelp

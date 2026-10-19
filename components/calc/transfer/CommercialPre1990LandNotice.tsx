@@ -16,7 +16,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 export function CommercialPre1990LandNotice({ acquisitionDate }: { acquisitionDate?: string }) {
   const year = acquisitionDate?.slice(0, 4);
   return (
-    <ToneCard tone="amber" noDark className="mb-2">
+    <ToneCard tone="amber" className="mb-2">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §164 ④" label="§164④" />
       </div>
