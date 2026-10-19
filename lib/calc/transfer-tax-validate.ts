@@ -21,6 +21,8 @@ import {
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { validateAssetEntry, todayLocalISO } from "./transfer-tax-validate-asset";
+import { evaluateUnconditionalExemption } from "./nbl-unconditional-exemption-status";
+import { buildFractionalShareNblRecord } from "./non-business-land-request";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { collectStep1Issues } from "./transfer-tax-validate-step1";
 import { collectWithFields, type IssueField } from "./transfer-tax-validate-field";
@@ -406,6 +408,26 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
           : form.assets[i];
       const message = validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
+    }
+
+    /**
+     * 축 B 토지 지분 정밀판정 — ④가 지분마다 「첫 카드 땅 사실 + 그 지분 취득 사실」로 다시 판정한다(`buildFractionalShareNblRecord`).
+     * 첫 지분은 무조건 사업용 의제가 성립해 지목·용도지역 없이 통과해도, 취득일·취득원인이 다른 지분은 의제가 성립하지 않을 수 있다.
+     * 그때 지목·용도지역이 없으면 ④가 그 지분 입력을 버리고(`buildNonBusinessLandRaw` 지목 게이트) 표지 `true`로 조용히 떨어진다 —
+     * 입력칸은 첫 카드에만 있으므로 첫 카드에 요구한다(첫 지분 자신이 의제 불성립이면 자산 1 검증이 이미 요구한다).
+     */
+    if (fullFractional && primaryAsset?.assetKind === "land" && primaryAsset.nblUseDetailedJudgment) {
+      const missing = !primaryAsset.nblLandType ? "nblLandType" : !primaryAsset.nblZoneType ? "nblZoneType" : undefined;
+      const shareIdx = missing && evaluateUnconditionalExemption(primaryAsset, form.transferDate).isExempt
+        ? form.assets.findIndex((a, i) => i > 0 && !evaluateUnconditionalExemption(buildFractionalShareNblRecord(a, primaryAsset), form.transferDate).isExempt)
+        : -1;
+      if (missing && shareIdx > 0)
+        issues.push({
+          step,
+          assetIndex: 0,
+          field: missing,
+          message: `자산 1: 자산 ${shareIdx + 1} 지분은 취득일·취득원인이 달라 무조건 사업용 의제가 성립하지 않습니다 — 비사업용 토지 정밀판정에 ${missing === "nblLandType" ? "지목" : "용도지역"}을 선택하세요.`,
+        });
     }
 
     // 지분 분할 모드(토글 B) 미입력 차단 — ownership 분자/분모 빈칸 = "지분율 미입력" 신호.
