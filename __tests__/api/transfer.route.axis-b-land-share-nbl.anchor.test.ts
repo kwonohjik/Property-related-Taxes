@@ -171,6 +171,8 @@ describe("축 B 토지 — 비사업용 정밀판정은 지분마다", () => {
  * 임야·목장 「상속 3년 이내」(소령 §168의9③7호·§168의10②1호) — 경위가 다른 지분은 그 지분 사실로 (2026-10-19)
  * 계획서: docs/00-pm/axis-b-share-nbl-forest-pasture-inheritance.plan.md
  * 종전(#2268 `3f322a7b0`): 첫 카드 토글·상속일을 그대로 써서 F1 236,511,000(매매 지분 사업용) · F2 288,508,000(3년 미경과 상속 지분 비사업용).
+ * 이후 판정이 취득원인·상속개시일 단일 소스가 되어(계획서 nbl-forest-pasture-inherit-3y-cause.plan.md) 시료의 옛 토글·상속일은
+ * 판정에 닿지 않는다 — F1~F3 수치는 그대로이고, 첫 카드에 옛 입력이 없어도 같은 값이 나온다(아래 Q-2).
  */
 describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시일로", () => {
   const inherit = (d: string) => ({ acquisitionCause: "inheritance", acquisitionDate: d, decedentAcquisitionDate: "1990-01-01", publishedValueAtInheritance: "400000000" }) as Partial<AssetForm>;
@@ -183,7 +185,7 @@ describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시�
   const BOUGHT = { acquisitionCause: "purchase", acquisitionDate: "2022-06-01" } as Partial<AssetForm>;
   const NOT_INHERITED = (item: string) =>
     "[자산 2] 같은 토지를 지분별로 나눠 취득했고 이 지분의 취득원인·취득일이 첫 지분과 다릅니다 — 이 지분은 상속받은 지분이 아니어서 " +
-    `첫 지분 카드에 입력한 ${item} 사유를 이 지분의 판정에는 적용하지 않았습니다.`;
+    `첫 지분에 적용된 ${item} 사유를 이 지분의 판정에는 적용하지 않았습니다.`;
 
   for (const [kind, first, item] of [
     ["임야", forest, "상속 3년 이내 임야(소득세법 시행령 §168조의9 ③ 7호)"],
@@ -213,10 +215,14 @@ describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시�
     });
   }
 
-  it("Q-2 첫 카드에 선언이 없으면 상속 지분에도 적용하지 않는다(단건 규약)", async () => {
-    const plain = { ...RURAL, ...inherit("2020-01-01"), nblLandType: "forest" } as Partial<AssetForm>;
-    const r = await run(form([share("50", plain), share("50", inherit("2022-01-01"))], {}));
-    expect(r.nbl).toEqual([true, true]);
-    expect(r.shareWarnings).toEqual([]);
+  /** 종전(#2269 Q-2 a «첫 카드에 선언이 있을 때만»): [true, true] — 3년 미경과 상속 지분도 비사업용이었다 */
+  it("Q-2 첫 카드에 옛 입력이 없어도 지분은 자기 상속개시일로 판정 → F2와 같다", async () => {
+    for (const land of ["forest", "pasture"] as const) {
+      const plain = { ...RURAL, ...inherit("2020-01-01"), nblLandType: land } as Partial<AssetForm>;
+      const r = await run(form([share("50", plain), share("50", inherit("2022-01-01"))], {}));
+      expect(r.nbl).toEqual([true, false]);
+      expect(r.total).toBe(225_940_000);
+      expect(r.shareWarnings).toEqual([]);
+    }
   });
 });

@@ -1,9 +1,10 @@
 "use client";
 
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
-import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { NBL } from "@/lib/tax-engine/legal-codes";
+import { InheritanceWithin3YearsNotice } from "./shared/InheritanceWithin3YearsNotice";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface ForestDetailSectionProps {
@@ -60,31 +61,7 @@ export function ForestDetailSection({
         onCheckedChange={(v) => onAssetChange({ nblForestIsSuccessor: v })}
       />
 
-      {/* 상속 3년 이내 — 체크 + 날짜 입력 필수 (forest.ts: inheritedFlag && forestInheritanceDate) */}
-      <ToggleCard
-        tone="sky"
-        title="상속 3년 이내 양도"
-        checked={asset.nblForestInheritedWithin3Years}
-        onCheckedChange={(v) =>
-          onAssetChange({
-            nblForestInheritedWithin3Years: v,
-            nblForestInheritanceDate: v ? asset.nblForestInheritanceDate : "",
-          })
-        }
-      >
-        <div>
-          <label className="block text-xs text-muted-foreground mb-1">
-            상속일 <span className="text-destructive">*</span>
-          </label>
-          <DateInput
-            value={asset.nblForestInheritanceDate}
-            onChange={(v) => onAssetChange({ nblForestInheritanceDate: v })}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            상속일로부터 3년 이내 양도 여부를 엔진이 자동 계산합니다.
-          </p>
-        </div>
-      </ToggleCard>
+      <InheritanceWithin3YearsNotice asset={asset} landLabel="임야" legalBasis={NBL.FOREST_INHERIT_3Y} />
 
       <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground">
         임야는 주민등록 있는 재촌이 필수입니다. 거주 이력 섹션에서 주민등록 체크를 확인하세요.

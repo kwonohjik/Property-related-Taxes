@@ -7,6 +7,7 @@
  *
  * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 6종이나 임야·목장 「상속 3년 이내」 중 이 지분에서 꺼진 것이 있음.
  */
+import { addYears } from "date-fns";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { UnconditionalExemptionInput } from "./types";
 import { NBL } from "../legal-codes";
@@ -31,14 +32,18 @@ export function nblShareExemptionWithheldNotice(
   const shareU = s.unconditionalExemption;
   const withheld = ACQUISITION_DEPENDENT.filter(([k]) => firstU?.[k] === true && shareU?.[k] !== true).map(([, l]) => l);
   /**
-   * 임야·목장 「상속 3년 이내」 — ④는 경위가 다른 지분이 상속이면 그 지분의 상속개시일로 바꿔 싣고(고지 불필요),
-   * 상속이 아니면 끈다. 끈 것은 사실로 정해진 결론이라 「확인 필요」 없이 알린다(계획서 forest-pasture-inheritance §3-3).
+   * 임야·목장 「상속 3년 이내」 — 서버 매퍼가 지분마다 취득원인·취득일(상속개시일)에서 정한다. 첫 지분에는 그 사유가
+   * 적용됐는데(상속 · 양도일이 상속개시일부터 3년 전) 이 지분은 상속이 아니면, 사실로 정해진 결론이라 「확인 필요」 없이
+   * 알린다(계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md` §3-3 E5).
    */
+  const appliedToFirst = (start: Date | undefined) => start !== undefined && f !== undefined && f.transferDate < addYears(start, 3);
   const notInherited = [
-    ...(f?.forestDetail?.inheritedForestWithin3Years === true && s.forestDetail?.inheritedForestWithin3Years !== true
+    ...(appliedToFirst(f?.forestDetail?.forestInheritanceDate) && s.forestDetail?.forestInheritanceDate === undefined
       ? [`상속 3년 이내 임야(${NBL.FOREST_INHERIT_3Y})`]
       : []),
-    ...(f?.pasture?.inheritanceDate && !s.pasture?.inheritanceDate ? [`상속 3년 이내 목장용지(${NBL.PASTURE_INHERIT_3Y})`] : []),
+    ...(appliedToFirst(f?.pasture?.inheritanceDate) && s.pasture?.inheritanceDate === undefined
+      ? [`상속 3년 이내 목장용지(${NBL.PASTURE_INHERIT_3Y})`]
+      : []),
   ];
   if (withheld.length === 0 && notInherited.length === 0) return undefined;
   const parts = [
@@ -47,7 +52,7 @@ export function nblShareExemptionWithheldNotice(
         `해당하는지 확인되지 않아 이 지분의 판정에는 적용하지 않았습니다 — 확인 필요.`
       : undefined,
     notInherited.length > 0
-      ? `이 지분은 상속받은 지분이 아니어서 첫 지분 카드에 입력한 ${notInherited.join(" · ")} 사유를 이 지분의 판정에는 적용하지 않았습니다.`
+      ? `이 지분은 상속받은 지분이 아니어서 첫 지분에 적용된 ${notInherited.join(" · ")} 사유를 이 지분의 판정에는 적용하지 않았습니다.`
       : undefined,
   ].filter(Boolean);
   return `같은 토지를 지분별로 나눠 취득했고 이 지분의 취득원인·취득일이 첫 지분과 다릅니다 — ${parts.join(" ")}`;

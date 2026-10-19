@@ -3,7 +3,6 @@
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
-import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
@@ -15,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
+import { InheritanceWithin3YearsNotice } from "./shared/InheritanceWithin3YearsNotice";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface PastureDetailSectionProps {
@@ -135,13 +136,7 @@ export function PastureDetailSection({
         />
       </div>
 
-      <FieldCard label="상속일">
-        <DateInput
-          value={asset.nblPastureInheritanceDate}
-          onChange={(v) => onAssetChange({ nblPastureInheritanceDate: v })}
-        />
-        <p className="text-xs text-muted-foreground mt-1">상속 3년 내 해당 시 입력</p>
-      </FieldCard>
+      <InheritanceWithin3YearsNotice asset={asset} landLabel="목장용지" legalBasis={NBL.PASTURE_INHERIT_3Y} />
 
       <ToggleCard
         tone="sky"
