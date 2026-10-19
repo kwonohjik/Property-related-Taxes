@@ -27,8 +27,10 @@ import { ONE_HOUSE_AI_TEXT_MAX } from "@/lib/one-house-ai/text-limit";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
-/** 적용 뒤 화면에 남기는 검토 정보 */
-export type OneHouseAiReview = Pick<OneHouseAiExtractData, "facts" | "questions" | "notes" | "issues">;
+/** 적용 뒤 화면에 남기는 검토 정보 — 원문은 참고 의견(`OneHouseAiOpinionPanel`)이 맥락으로 쓴다 */
+export type OneHouseAiReview = Pick<OneHouseAiExtractData, "facts" | "questions" | "notes" | "issues"> & {
+  sourceText: string;
+};
 
 type Props = {
   form: OneHouseJudgmentFormData;
@@ -84,6 +86,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
       questions: data.questions,
       notes: data.notes,
       issues: data.issues,
+      sourceText: text.trim(),
     });
     setOpen(false);
     setData(null);

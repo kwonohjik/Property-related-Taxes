@@ -1,0 +1,79 @@
+/** AI 참고 의견 — 관련 카드 고르기 · 폼 요약. 카드는 가짜다(실제 카드는 비공개 — 저장소에 넣지 않는다). */
+import { describe, it, expect } from "vitest";
+import { articleTokens, selectCards, topicsIn, type OneHouseCard } from "@/lib/one-house-ai/opinion/cards";
+import { compactJudgmentForm } from "@/lib/one-house-ai/opinion/compact-form";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
+import { createHouseEntry } from "@/lib/stores/house-entry-factory";
+
+const card = (id: string, lawAxis: string[], topic: string, assertable = true): OneHouseCard => ({
+  id,
+  docNo: `DOC-${id}`,
+  kind: "해석",
+  date: "2020.01.01.",
+  url: `https://example.test/${id}`,
+  title: `제목 ${id}`,
+  lawAxis,
+  topic,
+  facts: [],
+  question: "",
+  answer: "",
+  verdict: "기타",
+  assertable,
+});
+
+describe("articleTokens", () => {
+  it("조·항을 뽑고 법·령 층위와 공백은 버린다", () => {
+    expect([...articleTokens("소득세법 시행령 §155 ⑳ · 영 §154의2① · 소득세법 §89①3호")]).toEqual([
+      "155",
+      "155⑳",
+      "154의2",
+      "154의2①",
+      "89",
+      "89①",
+    ]);
+  });
+  it("㉑ 이후 항도 뽑는다", () => {
+    expect(articleTokens("시행령 §155㉓").has("155㉓")).toBe(true);
+  });
+});
+
+describe("selectCards", () => {
+  const cards = [
+    card("E001", ["소득세법 시행령 §155⑳"], "장기임대거주주택"),
+    card("E002", ["소득세법 시행령 §155①"], "일시적2주택"),
+    card("E003", ["소득세법 시행령 §155②"], "상속"),
+    card("E004", ["소득세법 시행령 §155①"], "일시적2주택", false),
+    card("E005", ["소득세법 §98"], "기타"),
+  ];
+  it("항 일치 2점 · 조 일치 1점 · 주제 3점 — 0점 카드는 넣지 않는다", () => {
+    const got = selectCards(cards, "판정 보류: 시행령 §155① 일시적 2주택 처분기한", 10).map((c) => c.id);
+    // E002·E004: 주제 3 + 항 2 + 조 1 = 6 (동점 → 단언 가능 먼저) · E001·E003: 조 1 · E005: 0
+    expect(got).toEqual(["E002", "E004", "E001", "E003"]);
+  });
+  it("개수 상한", () => {
+    expect(selectCards(cards, "§155①", 2)).toHaveLength(2);
+  });
+  it("주제어", () => {
+    expect([...topicsIn("동거봉양 합가 · 상속받은 주택")].sort()).toEqual(["동거봉양", "상속"].sort());
+  });
+});
+
+describe("compactJudgmentForm", () => {
+  it("빈 폼은 아무것도 남지 않는다", () => {
+    expect(compactJudgmentForm(createInitialOneHouseJudgmentForm() as never)).toEqual({});
+  });
+  it("입력한 칸과 명부 행의 기본값과 다른 칸만 남긴다", () => {
+    const base = createInitialOneHouseJudgmentForm();
+    const form = {
+      ...base,
+      transferDate: "2024-04-30",
+      assets: [{ ...base.assets[0], acquisitionDate: "2018-03-15" }],
+      houses: [{ ...createHouseEntry("B"), acquisitionDate: "2022-05-20" }],
+    };
+    expect(compactJudgmentForm(form as never)).toEqual({
+      transferDate: "2024-04-30",
+      asset: { acquisitionDate: "2018-03-15" },
+      houses: [{ id: "B", acquisitionDate: "2022-05-20" }],
+    });
+  });
+});
