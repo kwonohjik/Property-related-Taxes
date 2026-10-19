@@ -17,7 +17,7 @@ import { selfBuiltActive } from "@/lib/calc/self-built-scope";
 import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
 import { isSec163_9Cause } from "@/lib/calc/transfer-163-9-base-date";
 
-type SwapForm = Pick<TransferFormData, "assets" | "isUnregistered">;
+type SwapForm = Pick<TransferFormData, "assets" | "isUnregistered" | "assetSplitMode">;
 
 /** 교환이 폼에 쓰는 두 키 — 한 번의 `onChange`로 같이 쓴다. */
 export interface ReverseAppurtenantSwapPatch {
@@ -51,7 +51,7 @@ function firstAssetOnlyLabels(first: AssetForm): string[] {
 
 /** 구성이 «첫 자산 토지 + 짝 주택»이면 그 주택의 index, 아니면 -1. */
 function pairedHouseIndexRaw(form: SwapForm): number {
-  const houseId = reverseAppurtenantHouseAssetId(form.assets);
+  const houseId = reverseAppurtenantHouseAssetId(form.assets, form.assetSplitMode);
   return houseId === undefined ? -1 : form.assets.findIndex((a) => a.assetId === houseId);
 }
 
