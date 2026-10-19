@@ -52,10 +52,12 @@ const run = (o: Partial<TransferTaxInput> = {}) => calculateTransferTax(input(o)
 const MIXED = run();
 const SAME = run({ landAcquisitionCause: undefined, landDecedentAcquisitionDate: undefined });
 /**
- * 원인 혼합이지만 건물(2025-03-01 취득)분 차손 → 파트 세율 게이트(결손)로 자산 단위 세율(건물 기산 단기) —
- * 파트 세율 기산일은 계산에 쓰이지 않았다. (2018 건물의 차손은 과세 양도차익이 0으로 잡혀 파트 판정을 거친다 — 게이트 아님)
+ * 원인 혼합이지만 **자산 전체가 차손**(토지·건물 모두 −100,000,000) → 파트로 나눌 산출세액이 없어 파트 세율 판정을 하지 않는다 —
+ * 파트 세율 기산일은 계산에 쓰이지 않았다.
+ * (건물분만 차손이면 후퇴하지 않는다 — 「소득세법 시행령」 §167의2①로 토지에서 공제한 뒤 파트 판정을 거친다: 아래 `BUILDING_LOSS`)
  */
-const FALLBACK = run({ acquisitionDate: D("2025-03-01"), buildingAcquisitionPrice: 600_000_000 });
+const FALLBACK = run({ acquisitionDate: D("2025-03-01"), buildingAcquisitionPrice: 600_000_000, landAcquisitionPrice: 800_000_000 });
+const BUILDING_LOSS = run({ acquisitionDate: D("2025-03-01"), buildingAcquisitionPrice: 600_000_000 });
 
 const ECHO_KEYS = [
   "acquisitionCause",
@@ -102,9 +104,19 @@ describe("① 단건 결과 카드 — SplitGainDetailSection", () => {
     expect(screen.getByText("보유연수 (장기보유특별공제)")).toBeTruthy();
   });
 
-  it("원인 혼합 + 자산 단위 세율(건물 차손) → 원인 행은 있고 세율 기산일 행은 없다", () => {
+  it("원인 혼합 + 건물분만 차손 → 토지에서 공제(영 §167의2①) 후 파트 판정 → 세율 기산일 행이 있다", () => {
+    expect(BUILDING_LOSS.splitDetail!.building.gain).toBeLessThan(0);
+    expect(BUILDING_LOSS.splitDetail!.land.gain).toBeGreaterThan(0);
+    expect(BUILDING_LOSS.splitDetail!.partRateBasisApplied).toBe(true);
+    card(BUILDING_LOSS);
+    expect(screen.getByTestId("split-card-cause-land").textContent).toBe("상속");
+    expect(screen.queryByTestId("split-card-rate-basis-land")).not.toBeNull();
+  });
+
+  it("원인 혼합 + 자산 단위(자산 전체 차손) → 원인 행은 있고 세율 기산일 행은 없다", () => {
     expect(FALLBACK.splitDetail!.building.gain).toBeLessThan(0);
-    expect(FALLBACK.splitDetail!.partRateBasisApplied).toBe(false);
+    expect(FALLBACK.splitDetail!.land.gain).toBeLessThan(0);
+    expect(FALLBACK.splitDetail!.partRateBasisApplied).not.toBe(true);
     card(FALLBACK);
     expect(screen.getByTestId("split-card-cause-land").textContent).toBe("상속");
     expect(screen.queryByTestId("split-card-rate-basis-land")).toBeNull();

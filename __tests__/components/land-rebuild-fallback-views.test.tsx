@@ -1,5 +1,6 @@
 /**
- * 구주택 멸실·신축 통산 — 자산 단위 세율로 후퇴한 경우 결과 4뷰(카드·상세명세서·신고서·PDF)가 통산 구간·「환산」 표기를 내지 않는다.
+ * 구주택 멸실·신축 통산 — 자산 단위 세율로 후퇴한 경우(§155⑳ 특례 등) 결과 4뷰(카드·상세명세서·신고서·PDF)가 통산 구간·「환산」 표기를 내지 않는다.
+ * 건물 파트 결손은 후퇴 사유가 아니다 — 「소득세법 시행령」 §167의2①로 토지에서 공제한 뒤 파트별 세율을 판정하므로 4뷰가 구간을 낸다.
  *
  * 게이트는 `splitRebuildShown`(partRateBasisApplied === true) 한 곳이다 — 통산 echo(`rateHoldingAggregation`)가 있어도 4뷰는 같은 판정을 읽는다.
  * 입력은 엔진 결과를 그대로 먹인다(손으로 만든 echo 아님). 시드·세액은 엔진 anchor `appurtenant-land-rebuild-fallback.anchor.test.ts`와 같다.
@@ -71,35 +72,41 @@ describe("정상 적용(대조군) — 4뷰에 통산 구간·환산이 나온�
   });
 });
 
-describe("건물 파트 결손 후퇴 — echo가 있어도 4뷰에 구간 줄·환산이 없다", () => {
+describe("건물 파트 결손 — 영 §167의2①로 토지에서 공제한 뒤 파트별 세율을 판정한다: 4뷰에 통산 구간이 나오고 내역에 차손 공제 줄이 있다", () => {
   const r = calculateTransferTax(seed(LOSS), rates);
-  it("전제: 통산 echo 있음 · 플래그 false · 게이트 닫힘 · 카드 testid 없음", () => {
+  it("전제: 통산 echo 있음 · 플래그 true · 게이트 열림 · 카드 testid 있음", () => {
     expect(r.splitDetail?.land.rateHoldingAggregation).toBeDefined();
-    expect(r.splitDetail?.partRateBasisApplied).toBe(false);
-    expect(splitRebuildShown(r.splitDetail!)).toBe(false);
+    expect(r.splitDetail?.partRateBasisApplied).toBe(true);
+    expect(splitRebuildShown(r.splitDetail!)).toBe(true);
     render(<SplitGainDetailSection splitDetail={r.splitDetail!} assetKind="housing" />);
-    expect(screen.queryByTestId("split-card-rate-holding")).toBeNull();
+    expect(screen.queryByTestId("split-card-rate-holding")).not.toBeNull();
   });
-  it("카드·상세명세서·신고서·PDF 어디에도 통산 문구·환산 표기가 없다", () => {
+  it("카드·상세명세서·신고서·PDF 모두 구간 줄이 있고, 상세명세서 산출세액 내역에 건물 차손 공제 줄이 있다", () => {
     const v = allViewText(r);
-    for (const [view, text] of Object.entries(v)) for (const m of MARKERS) expect(text, `${view} ← ${m}`).not.toContain(m);
+    expect(v.card).toContain("구주택 부수토지 기간 2022-01-01~2023-05-31");
+    expect(v.statement).toContain("세율 판정용 환산 기산일");
+    expect(v.filing).toContain("25개월");
+    expect(v.pdf).toContain("세율 판정용 환산 기산일");
+    expect(v.statement).toContain("건물 양도차손 9,000,000을 토지 양도소득금액에서 공제");
   });
-  it("대체 고지는 엔진 warnings에 1건만 — 결과 화면의 경고 영역이 읽는 값", () => {
-    expect((r.warnings ?? []).filter((w) => w.includes("반영되지 않았습니다"))).toHaveLength(1);
+  it("고지: 적용 고지 1건 · 대체 고지 없음", () => {
+    expect((r.warnings ?? []).filter((w) => w.includes("통산한"))).toHaveLength(1);
+    expect((r.warnings ?? []).filter((w) => w.includes("반영되지 않았습니다"))).toEqual([]);
   });
 });
 
-describe("다건 최종 플래그 — 자산 breakdown의 splitDetail이 후퇴를 반영하면 4뷰가 같은 게이트를 읽는다", () => {
-  it("다건 결손 후퇴 자산: 최종 플래그 false → 카드·PDF·명세서 모두 구간·환산 없음", () => {
+describe("다건 최종 플래그 — 자산 breakdown의 splitDetail을 4뷰가 같은 게이트로 읽는다", () => {
+  it("다건 건물 결손 자산: 최종 플래그 true → 카드·PDF·명세서 모두 구간 줄이 있다", () => {
     const item = { ...seed(LOSS), propertyId: "a", propertyLabel: "a" } as unknown as TransferTaxItemInput;
     const a = calculateTransferTaxAggregate({ taxYear: 2025, properties: [item], annualBasicDeductionUsed: 0 }, rates);
     const sd = (a.properties[0] as unknown as { splitDetail: NonNullable<TransferTaxResult["splitDetail"]> }).splitDetail;
-    expect(sd.partRateBasisApplied).toBe(false);
+    expect(sd.partRateBasisApplied).toBe(true);
     expect(sd.land.rateHoldingAggregation).toBeDefined();
-    expect(splitRebuildShown(sd)).toBe(false);
+    expect(splitRebuildShown(sd)).toBe(true);
     const r = { ...calculateTransferTax(seed(LOSS), rates), splitDetail: sd } as TransferTaxResult;
     const v = allViewText(r);
-    for (const [view, text] of Object.entries(v)) for (const m of MARKERS) expect(text, `${view} ← ${m}`).not.toContain(m);
+    expect(v.card).toContain("구주택 부수토지 기간 2022-01-01~2023-05-31");
+    expect(v.pdf).toContain("세율 판정용 환산 기산일");
   });
 });
 

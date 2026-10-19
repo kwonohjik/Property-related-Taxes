@@ -210,7 +210,7 @@ export const LAND_REBUILD_ORDER_MESSAGE =
 
 /** 통산 입력은 유효하나 파트별 세율 판정을 거치지 않아 세율에 반영되지 않은 경우의 대체 고지 — 숫자 구간을 주장하지 않는다(세액 불변). */
 export const LAND_REBUILD_NOT_APPLIED_NOTICE =
-  "구주택 멸실·신축 통산 입력은 유효하지만, 건물 파트 양도차손 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다 — 확인 필요";
+  "구주택 멸실·신축 통산 입력은 유효하지만, 장기임대주택 거주주택 특례·세율 특칙 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다 — 확인 필요";
 
 const key = (d: string | undefined) => d?.slice(0, 10);
 
@@ -304,8 +304,9 @@ export function landRebuildApplies(input: TransferTaxInput): boolean {
 /**
  * 결과 고지(세액 불변). 판정 근거 수준: 0097은 2년 이상만 직접 판단.
  *
- * `applied` = 엔진이 **파트별 세율 판정을 거쳤는가**(`splitDetail.partRateBasisApplied === true`). 아니면(건물 파트 양도차손·세율 특칙·§155⑳ 특례 등으로
+ * `applied` = 엔진이 **파트별 세율 판정을 거쳤는가**(`splitDetail.partRateBasisApplied === true`). 아니면(세율 특칙·§155⑳ 특례 등으로
  * 자산 단위 세율) 통산은 세율에 닿지 않았다 — 적용 고지를 내면 화면·고지가 실제 계산과 어긋난다. 이때는 숫자 구간을 주장하지 않는 대체 고지만 낸다.
+ * 건물 파트 양도차손은 후퇴 사유가 아니다 — 「소득세법 시행령」 §167의2①로 토지 파트에서 공제한 뒤 파트별 세율을 판정한다.
  */
 export function landRebuildRateNotice(agg: LandRebuildAggregation | undefined, applied: boolean): string | null {
   if (!agg) return null;

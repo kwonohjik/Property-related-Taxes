@@ -138,7 +138,8 @@ ToggleCard(card, amber) 「같은 토지 위 구주택을 멸실하고 신축했
 
 **엔진 고지** `landRebuildRateNotice(agg, applied)`(`transfer-land-rebuild-rate.ts`) · 호출은 `landRebuildNoticeOf`(`transfer-tax-rebuild-notice.ts`)
 - 적용(`applied`): 종전 고지(구간·합산 개월·확인 필요).
-- 후퇴(`!applied`): **대체 고지 1건** `LAND_REBUILD_NOT_APPLIED_NOTICE` — 「건물 파트 양도차손 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다 — 확인 필요」. 숫자 구간을 주장하지 않는다. 세액 불변.
+- 후퇴(`!applied`): **대체 고지 1건** `LAND_REBUILD_NOT_APPLIED_NOTICE` — 「장기임대주택 거주주택 특례·세율 특칙 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다 — 확인 필요」. 숫자 구간을 주장하지 않는다. 세액 불변.
+  - 2026-10-19 정정: 건물 파트 양도차손은 더 이상 후퇴 사유가 아니다 — 「소득세법 시행령」 §167의2①로 토지에서 공제한 뒤 파트별 세율을 판정한다(`transfer-split-part-loss-offset-167-2.plan.md`). 사유 문구도 그에 맞춰 바꿨다.
 - 일반 경로(`transfer-tax.ts`)와 §155⑳ 특례 경로(`transfer-tax-rental-housing-step.ts` — 종전에는 이 경로에 통산 고지가 아예 없었다)가 같은 헬퍼를 부른다.
 - 다건은 자산별 단건 결과의 경고를 `[라벨]`을 붙여 모은다 — 단건의 판정을 따른다. 실측: 정상·결손·§155⑳(배율 초과 포함) 시료에서 다건 최종 플래그와 단건 플래그가 같은 쪽(true / false / !== true)이었다. 차손 통산을 더한 2자산 시료에서도 갈리지 않았다 — 갈리는 입력은 구성하지 못했다(**확인 필요**). 갈려도 4뷰는 최종 플래그를 읽는다.
 

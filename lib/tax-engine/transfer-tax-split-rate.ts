@@ -132,6 +132,16 @@ export interface SplitPartRateResult {
   /** §104⑤1호 — 합산 과세표준 누진세액 */
   aggregateProgressive: number;
   chosen: "per_asset" | "aggregate";
+  /** 파트 차손을 다른 파트에서 공제한 내역(「소득세법 시행령」 §167의2①) — 차손 파트가 있을 때만. `parts[].income`은 공제 후 값이다 */
+  lossOffset?: SplitPartLossOffset[];
+}
+
+/** 파트 차손 통산 1행 — `scope`: `same_group` = §167의2①1호(같은 세율), `other_group` = 2호(다른 세율 안분) */
+export interface SplitPartLossOffset {
+  from: SplitRatePart["kind"];
+  to: SplitRatePart["kind"];
+  amount: number;
+  scope: "same_group" | "other_group";
 }
 
 export interface SplitPartRateContext {
@@ -345,6 +355,7 @@ function evaluateSplitPartTax(ctx: SplitPartRateContext): { parts: SplitPartRate
       perAssetTotal,
       aggregateProgressive,
       chosen: perAssetTotal >= aggregateProgressive ? "per_asset" : "aggregate",
+      ...(prep.lossOffset ? { lossOffset: prep.lossOffset } : {}),
     },
     judged: true,
   };
@@ -629,6 +640,20 @@ function resolveRentalHousingSplitTax(
   };
 }
 
+const PART_LABEL: Record<SplitRatePart["kind"], string> = {
+  land: "토지",
+  building: "건물",
+  non_business_land: "배율 초과 토지(비사업용)",
+  housing: "주택",
+};
+
+/** 파트 차손 통산 내역 — 산출세액 단계 문구 끝에 붙인다. 파트 소득금액이 공제 후 값이라, 이 줄이 없으면 차손 파트가 소득 0으로만 보인다. */
+function lossOffsetNote(d: SplitPartRateResult): string {
+  if (!d.lossOffset?.length) return "";
+  const rows = d.lossOffset.map((r) => `${PART_LABEL[r.from]} 양도차손 ${r.amount.toLocaleString()}을 ${PART_LABEL[r.to]} 양도소득금액에서 공제`);
+  return ` · ${rows.join(", ")}(${TRANSFER.LOSS_OFFSET})`;
+}
+
 /**
  * STEP 7 산출세액 — 파트별 세율이 성립하면 §104⑤ 비교과세 결과를, 아니면 기존 자산 단위 세액을 낸다.
  * 반환 형태는 `calcTax`와 동일해 호출부·finalize가 구분 없이 소비한다.
@@ -670,7 +695,7 @@ export function resolveSplitAwareTax(
         // 비주택은 자산 단위 문구(건물 취득일 하나로 본 단기세율 비교)가 파트 계산을 설명하지 못한다 — 파트 비교 문구로 바꾼다.
         shortTermNote: excess
           ? (base.shortTermNote ?? `${clause1Note} (배율 초과 토지는 비사업용 토지로 호별 합산)`)
-          : `${clause1Note} (토지·건물은 별개 자산으로 호별 합산)`,
+          : `${clause1Note} (토지·건물은 별개 자산으로 호별 합산)${lossOffsetNote(parts)}`,
         splitPartDetail: parts,
         partRateBasisApplied: true,
       };
@@ -684,24 +709,20 @@ export function resolveSplitAwareTax(
       surchargeSuspended: false,
       shortTermNote:
         `토지·건물 파트별 세율 비교(소득세법 §104⑤): 합산 누진세액 ${chosenTax.toLocaleString()}이 ` +
-        `자산별 합계 ${parts.perAssetTotal.toLocaleString()}보다 크다`,
+        `자산별 합계 ${parts.perAssetTotal.toLocaleString()}보다 크다${lossOffsetNote(parts)}`,
       splitPartDetail: parts,
       partRateBasisApplied: true,
     };
   }
-  const label: Record<SplitRatePart["kind"], string> = {
-    land: "토지",
-    building: "건물",
-    non_business_land: "배율 초과 토지(비사업용)",
-    housing: "주택",
-  };
+  const label = PART_LABEL;
   // 파트 중 하나라도 중과가 붙으면 자산 단위로도 그 사실을 노출한다 —
   // 결과 카드의 중과 표시·법령근거가 사라지지 않도록(§104①8호 비사업용 토지 등).
   const surcharged = parts.parts.find((p) => p.surchargeType !== undefined);
   return {
     calculatedTax: chosenTax,
-    // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가)
-    appliedRate: Math.max(...parts.parts.map((p) => p.appliedRate)),
+    // 표시용 적용세율은 파트 최고세율 (누진공제는 파트별로 달라 합산 표시 불가).
+    // 과세표준이 0인 파트(차손을 다른 파트에서 공제한 파트)의 세율은 적용되지 않았으므로 뺀다 — 없으면 「× 70%」처럼 쓰이지 않은 세율이 산식 머리에 선다.
+    appliedRate: Math.max(...(parts.parts.some((p) => p.taxBase > 0) ? parts.parts.filter((p) => p.taxBase > 0) : parts.parts).map((p) => p.appliedRate)),
     progressiveDeduction: 0,
     surchargeSuspended: false,
     surchargeType: surcharged?.surchargeType,
@@ -717,7 +738,8 @@ export function resolveSplitAwareTax(
       parts.parts
         .map((p) => `${label[p.kind]} ${pct(p.appliedRate)} ${p.calculatedTax.toLocaleString()}`)
         .join(" + ") +
-      ` (합산 누진세액 ${parts.aggregateProgressive.toLocaleString()}과 비교한 큰 세액)`,
+      ` (합산 누진세액 ${parts.aggregateProgressive.toLocaleString()}과 비교한 큰 세액)` +
+      lossOffsetNote(parts),
     splitPartDetail: parts,
     partRateBasisApplied: true,
   };
