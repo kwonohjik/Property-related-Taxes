@@ -93,10 +93,10 @@ function CandidateCard({
   onSelectAsset: (itemId: string) => void;
 }) {
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 dark:bg-emerald-950/40">
       {/* 헤더 */}
       <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold text-emerald-900">
+        <div className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
           {candidate.deathDate} 상속 · {candidate.title}
         </div>
         {candidate.usedDirectInput && (
@@ -115,14 +115,14 @@ function CandidateCard({
         <span className="text-right font-medium">{formatKRW(candidate.deduction)}</span>
 
         <span className="text-gray-600">가업상속공제적용률</span>
-        <span className="text-right font-semibold text-emerald-700">
+        <span className="text-right font-semibold text-emerald-700 dark:text-emerald-300">
           {(candidate.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%
         </span>
       </div>
 
       {/* 자산 라디오 */}
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-emerald-800">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
           양도할 가업 자산 선택 (1건)
         </p>
         {candidate.familyBusinessAssets.map((a) => (
@@ -139,7 +139,7 @@ function CandidateCard({
                   · {CATEGORY_LABEL[a.category] ?? a.category}
                 </span>
               </div>
-              <span className="text-right font-semibold text-emerald-700">
+              <span className="text-right font-semibold text-emerald-700 dark:text-emerald-300">
                 {formatKRW(a.marketValue)}
               </span>
             </div>
@@ -148,7 +148,7 @@ function CandidateCard({
       </div>
 
       {/* decedentAcquisitionPrice 안내 */}
-      <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 text-micro text-rose-800">
+      <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 text-micro text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
         ⚠️ 피상속인 원취득가액은 상속세 마법사에서 추적하지 않습니다 — 선택 후 별도 입력하세요.
       </div>
     </div>
@@ -231,11 +231,11 @@ export function FamilyBusinessInheritanceHistoryModal({
         </DialogHeader>
 
         {/* 필터 요약 */}
-        <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800">
+        <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800 dark:text-sky-200 dark:bg-sky-950/40">
           <div>
-            <span className="text-sky-600">현재 양도일:</span> {currentTransferDate}
+            <span className="text-sky-600 dark:text-sky-400">현재 양도일:</span> {currentTransferDate}
           </div>
-          <div className="text-sky-600">
+          <div className="text-sky-600 dark:text-sky-400">
             필터: 상속세 이력 + 가업상속공제 적용액 &gt; 0 + 적용률 &gt; 0 + 상속개시일 ≤ 양도일
           </div>
         </div>

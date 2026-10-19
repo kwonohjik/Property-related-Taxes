@@ -91,7 +91,7 @@ export function CarryoverGiftExclusionSection({
     <div className="space-y-3">
       <ToneCard tone="violet" title="증여자와의 관계 (§97조의2 ①)">
         {donorRelation === "other" && (
-          <p className="text-caption text-rose-700">
+          <p className="text-caption text-rose-700 dark:text-rose-300">
             이월과세는 <strong>배우자 또는 직계존비속</strong>으로부터 증여받은 경우에만
             적용됩니다. 취득 원인을 <strong>「증여」</strong>로 변경하세요.
           </p>
@@ -227,7 +227,7 @@ export function CarryoverGiftExclusionSection({
 
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-1.5">
-          <p className="text-xs font-semibold text-rose-700">이월과세 적용배제 선언 (해당 시 선택)</p>
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">이월과세 적용배제 선언 (해당 시 선택)</p>
           <LawArticleModal legalBasis="소득세법 §97의2 ②" label="§97의2②" />
         </div>
 

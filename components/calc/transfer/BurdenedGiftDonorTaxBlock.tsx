@@ -18,12 +18,12 @@ interface Props {
 
 export function BurdenedGiftDonorTaxBlock({ asset, onChange }: Props) {
   return (
-        <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2">
+        <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 space-y-2 dark:bg-violet-950/40">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
               §53
             </span>
-            <p className="text-xs font-semibold text-violet-800">
+            <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
               증여세 통합 입력 (수증자 정보 — 상증법 §53·§56·§57·§69)
             </p>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -33,7 +33,7 @@ export function BurdenedGiftDonorTaxBlock({ asset, onChange }: Props) {
               <LawArticleModal legalBasis="상속세및증여세법 §69" label="상증법 §69" />
             </div>
           </div>
-          <p className="text-caption text-violet-700">
+          <p className="text-caption text-violet-700 dark:text-violet-300">
             무상이전분(증여가액 C − 채무액 B)에 대한 증여세 동시 산출. 수증자가 별도 신고·납부.
           </p>
           {/*

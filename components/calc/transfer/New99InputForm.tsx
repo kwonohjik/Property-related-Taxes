@@ -42,9 +42,9 @@ function SectionShell({
   num, title, tone, children,
 }: { num: string; title: string; tone: "amber" | "violet" | "rose"; children: React.ReactNode }) {
   const toneMap = {
-    amber: { box: "border-amber-200 bg-amber-50/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700" },
-    violet: { box: "border-violet-200 bg-violet-50/40", badge: "bg-violet-200 text-violet-800", title: "text-violet-700" },
-    rose: { box: "border-rose-200 bg-rose-50/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700" },
+    amber: { box: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", title: "text-amber-700 dark:text-amber-300" },
+    violet: { box: "border-violet-200 bg-violet-50/40 dark:bg-violet-950/40", badge: "bg-violet-200 text-violet-800", title: "text-violet-700 dark:text-violet-300" },
+    rose: { box: "border-rose-200 bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", title: "text-rose-700 dark:text-rose-300" },
   } as const;
   const t = toneMap[tone];
   return (
@@ -234,7 +234,7 @@ export function New99InputForm({
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
         <p>
           · 적용 효과: 5년 이내 양도 시 취득일부터 양도일까지 발생한 양도소득금액 전액,
           5년 후 양도 시 취득일부터 5년간 발생한 양도소득금액을 과세대상소득금액에서 뺍니다 (법 §99①).

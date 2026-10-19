@@ -101,7 +101,7 @@ export function Unsold98InputForm({ value, onChange }: Props) {
         />
       </div>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
         <p>
           · 적용 효과 (①1호 양도소득세 방식): 세율을 §104①에도 불구하고 100분의 20 단일세율로
           적용합니다 — 누진·단기보유·중과세율을 대체합니다 (법 §98①1호).

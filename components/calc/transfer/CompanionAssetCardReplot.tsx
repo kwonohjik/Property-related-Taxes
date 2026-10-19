@@ -36,8 +36,8 @@ export function ReplotReductionFields({
   const isIncrease = ent > 0 && alloc > 0 && ent < alloc;
 
   return (
-    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/40 p-3">
-      <p className="text-xs text-amber-800">
+    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
         권리면적·교부면적·종전면적을 입력하면 의제 취득면적이 자동 계산됩니다.
         <span className="ml-1 text-muted-foreground">(소득령 §162①9호 단서)</span>
       </p>
@@ -50,7 +50,7 @@ export function ReplotReductionFields({
           onChange={(v) => onChange({ replottingConfirmDate: v })}
         />
         {asset.replottingConfirmDate && (
-          <p className="text-xs text-blue-600">
+          <p className="text-xs text-blue-600 dark:text-blue-400">
             취득일은 ③ 취득정보에 환지 이전 원취득일을 입력하세요
           </p>
         )}
@@ -99,7 +99,7 @@ export function ReplotReductionFields({
       </div>
 
       {isIncrease ? (
-        <p className="text-xs text-orange-700">
+        <p className="text-xs text-orange-700 dark:text-orange-300">
           ⚠ 증환지(권리 {ent}㎡ &lt; 교부 {alloc}㎡) — 증환지는 아래 옵션을 선택하세요.
         </p>
       ) : effArea ? (
@@ -183,8 +183,8 @@ export function ReplotIncreaseFields({
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-orange-200 bg-orange-50/40 p-3">
-      <p className="text-xs text-orange-800">
+    <div className="space-y-3 rounded-md border border-orange-200 bg-orange-50/40 p-3 dark:bg-orange-950/40">
+      <p className="text-xs text-orange-800 dark:text-orange-200">
         증환지: 권리면적 초과분은 환지처분확정일 익일에 별도 취득한 것으로 봅니다.
         이 자산에는 <strong>원래 토지분</strong>만 입력하고,
         증가분 자산을 자동 추가하여 취득가액을 별도 입력하세요.
@@ -200,7 +200,7 @@ export function ReplotIncreaseFields({
             data-field="replottingConfirmDate"
           />
           {asset.replottingConfirmDate && (
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-blue-600 dark:text-blue-400">
               증가분 취득일 = {asset.replottingConfirmDate} 다음날 · 당초분 취득일은 ③ 취득정보에 원취득일을 입력하세요
             </p>
           )}
@@ -265,7 +265,7 @@ export function ReplotIncreaseFields({
                 type="button"
                 onClick={handleAddIncrease}
                 data-testid="replot-inc-add-btn"
-                className="w-full rounded-md border border-orange-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors"
+                className="w-full rounded-md border border-orange-300 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-orange-700 hover:bg-orange-50 transition-colors dark:text-orange-300"
               >
                 + 증가분 {increaseM2.toFixed(2)}㎡ 자산 자동 추가
               </button>

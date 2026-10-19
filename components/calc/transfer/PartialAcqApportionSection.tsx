@@ -83,7 +83,7 @@ export function PartialAcqApportionSection({ asset, onChange, onApply }: Props) 
 
   return (
     <ToneCard tone="amber" title="일부 양도 — 취득가액 안분" sectionNum="B4">
-      <p className="text-caption text-amber-800">
+      <p className="text-caption text-amber-800 dark:text-amber-200">
         양도한 부분에 대응하는 취득가액만 공제된다. 전체 취득가액을 그대로 넣으면 양도차익이 과소
         계상된다.
       </p>
@@ -117,7 +117,7 @@ export function PartialAcqApportionSection({ asset, onChange, onApply }: Props) 
       </FieldCard>
 
       {asset.partialAcqDistinct === "yes" && (
-        <p className="text-caption text-amber-800" data-testid="partial-acq-distinct-note">
+        <p className="text-caption text-amber-800 dark:text-amber-200" data-testid="partial-acq-distinct-note">
           위 「취득가액」 칸에 <strong>양도한 부분의</strong> 취득가액을 입력하세요.
         </p>
       )}
@@ -167,7 +167,7 @@ export function PartialAcqApportionSection({ asset, onChange, onApply }: Props) 
 
               {computed !== null && (
                 <div
-                  className="rounded border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-1"
+                  className="rounded border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs text-amber-900 space-y-1 dark:text-amber-200 dark:bg-amber-900/40"
                   data-testid="partial-acq-result"
                 >
                   <p>

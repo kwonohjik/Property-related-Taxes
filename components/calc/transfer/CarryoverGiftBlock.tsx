@@ -132,10 +132,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
   }
 
   return (
-    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-4">
+    <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/40 p-4 dark:bg-amber-950/40">
       {/* 헤더 */}
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-semibold text-amber-800">이월과세(증여) 정보</p>
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">이월과세(증여) 정보</p>
         <LegalBadge text="소득세법 §97조의2" />
         <LawArticleModal legalBasis="소득세법 §97의2" label="§97의2" />
       </div>
@@ -144,7 +144,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         요건 안내 — 오입력을 **선택 시점에** 줄이는 주 방어.
         「증여」와 「이월과세(증여)」의 차이를 모르면 형제 증여에도 이 원인을 고르게 된다.
       */}
-      <p className="text-caption text-amber-800">
+      <p className="text-caption text-amber-800 dark:text-amber-200">
         <strong>배우자 또는 직계존비속</strong>으로부터 증여받고, 증여일부터{" "}
         <strong>10년</strong>(2023.1.1. 전 증여는 5년) 이내에 양도하는 경우에 적용됩니다.
         그 밖의 관계로부터 증여받았다면 취득 원인을 <strong>「증여」</strong>로 선택하세요.
@@ -154,14 +154,14 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
       {splitMode && (
         <div className="space-y-2" data-testid="split-carryover-notices">
           <ToneCard tone="amber" bodyClassName="space-y-1">
-            <p className="text-caption text-amber-900" data-testid="split-carryover-onehouse-notice">
+            <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="split-carryover-onehouse-notice">
               토지·건물 중 한 부분이라도 이월과세(소득세법 §97의2) 대상으로 입력하면 <strong>1세대1주택 비과세(§89①3호) 판정 대상인 양도는 아직 계산하지 못합니다</strong> —
               이월과세 적용 여부(§97의2②2호)가 비과세 판정에 따라 달라지기 때문입니다. 비과세 판정 대상이 아닌 양도에서만 이 입력을 쓸 수 있습니다.
             </p>
           </ToneCard>
           {hasCompanions && (
             <ToneCard tone="rose" bodyClassName="space-y-1">
-              <p className="text-caption text-rose-800" data-testid="split-carryover-companion-exists-note">
+              <p className="text-caption text-rose-800 dark:text-rose-200" data-testid="split-carryover-companion-exists-note">
                 함께 양도하는 다른 자산이 있으면 토지·건물 파트 이월과세를 아직 계산하지 못합니다 — 파트별 비교과세(§97의2②3호)가 신고 전체의 결정세액을 보지 못하기 때문입니다.
                 이 입력은 이 자산 한 건만 양도할 때 쓸 수 있습니다.
               </p>
@@ -171,10 +171,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
       )}
 
       {/* ① 증여 기본 정보 */}
-      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
+      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
         <div className="flex items-center gap-1.5">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">1</span>
-          <p className="text-xs font-semibold text-amber-700">증여 기본 정보</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">증여 기본 정보</p>
         </div>
 
         <FieldCard
@@ -229,10 +229,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         <SplitCarryoverParts asset={asset} onChange={onChange} isAfter2024={isAfter2024} giftTaxShareHint={giftTaxShareHint} />
       ) : (<>
       {/* ② 증여자 취득가액 */}
-      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
+      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
         <div className="flex items-center gap-1.5">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">2</span>
-          <p className="text-xs font-semibold text-amber-700">증여자 취득가액</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">증여자 취득가액</p>
         </div>
 
         <ToggleCard
@@ -278,10 +278,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
       </div>
 
       {/* ③ 필요경비 가산 */}
-      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
+      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
         <div className="flex items-center gap-1.5">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">3</span>
-          <p className="text-xs font-semibold text-amber-700">필요경비 가산</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">필요경비 가산</p>
         </div>
 
         {/*
@@ -362,10 +362,10 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
       </div>
 
       {/* ④ 비교과세 기준 — Scenario B 취득가 */}
-      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
+      <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
         <div className="flex items-center gap-1.5">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">4</span>
-          <p className="text-xs font-semibold text-amber-700">비교과세 기준 (미적용 시나리오)</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">비교과세 기준 (미적용 시나리오)</p>
         </div>
 
         <FieldCard
@@ -385,7 +385,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
       </>)}
 
       {/* ⑤ 적용배제 선언 */}
-      <div className="rounded-md border border-rose-200/70 bg-rose-50/40 p-3">
+      <div className="rounded-md border border-rose-200/70 bg-rose-50/40 p-3 dark:bg-rose-950/40">
         <CarryoverGiftExclusionSection
           exclusionDeclared={c.exclusionDeclared}
           onChange={(patch) =>

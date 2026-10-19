@@ -194,19 +194,19 @@ export function Rental973InputForm({ value, onChange, transferDate }: Props) {
       />
 
       {/* emerald 자동 표시 박스 */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
-        <p className="text-xs font-semibold text-emerald-800">자동 산출 (참고용, 저장 안 됨)</p>
+      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1 dark:bg-emerald-900/40">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">자동 산출 (참고용, 저장 안 됨)</p>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">등록일별 적용 공제율</span>
-          <span className="font-mono font-medium text-emerald-900">
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">
             {rateGuide ?? "등록일 입력 시 표시"}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
-          <span className="font-mono font-medium text-emerald-900">{rentalDuration}</span>
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
         </div>
-        <p className="text-micro text-emerald-700">
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 2022.12.31 이전 등록분은 8년 이상 50%, 10년 이상 70%. 2023.1.1 이후 등록분은 10년 이상 70%만 적용됩니다.
           공실 차감 후 실제 유효임대기간은 엔진이 계산합니다.
         </p>

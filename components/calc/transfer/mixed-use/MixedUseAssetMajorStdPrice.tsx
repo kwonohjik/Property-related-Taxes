@@ -251,7 +251,7 @@ export function MixedUseAssetMajorStdPrice({
               />
             </ToneCard>
           )}
-          <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
+          <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">{acqLabel}</p>
           {showPhdToggle && (
           <ToggleCard
             tone="amber"
@@ -291,7 +291,7 @@ export function MixedUseAssetMajorStdPrice({
           )}
 
           {!phdOn && showHousingPrice && (
-            <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 dark:bg-amber-950/40">
               <StandardPriceInput
                 propertyKind="house_individual"
                 totalPrice={asset.mixedAcqHousingPrice}
@@ -327,8 +327,8 @@ export function MixedUseAssetMajorStdPrice({
 
         {/* 양도 sub-block — PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
         {!phdOn && (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-2">
-            <p className="text-caption font-semibold text-emerald-700">양도시</p>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-2 dark:bg-emerald-950/40">
+            <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
             <StandardPriceInput
               propertyKind="house_individual"
               totalPrice={asset.mixedTransferHousingPrice}
@@ -442,8 +442,8 @@ export function MixedUseAssetMajorStdPrice({
           )}
         </p>
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
-            <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
+          <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1 dark:bg-amber-950/40">
+            <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">{acqLabel}</p>
             <CurrencyInput
               label=""
               value={asset.mixedAcqCommercialBuildingPrice}
@@ -453,8 +453,8 @@ export function MixedUseAssetMajorStdPrice({
               hideUnit
             />
           </div>
-          <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
-            <p className="text-caption font-semibold text-emerald-700">양도시</p>
+          <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1 dark:bg-emerald-950/40">
+            <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
             <CurrencyInput
               label=""
               value={asset.mixedTransferCommercialBuildingPrice}
@@ -499,8 +499,8 @@ export function MixedUseAssetMajorStdPrice({
             <span className="ml-1 text-caption font-normal text-slate-500">토지 취득일 기준</span>
           )}
         </p>
-        <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1">
-          <p className="text-caption font-semibold text-amber-700">{acqLabel}</p>
+        <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1 dark:bg-amber-950/40">
+          <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">{acqLabel}</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}
             data-field="mixedAcqLandPricePerSqm"
@@ -512,8 +512,8 @@ export function MixedUseAssetMajorStdPrice({
             placeholder={`${acqLabel} 개별공시지가 /㎡`}
           />
         </div>
-        <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1">
-          <p className="text-caption font-semibold text-emerald-700">양도시</p>
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1 dark:bg-emerald-950/40">
+          <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
           <LandPriceLookupField
             pricePerSqm={asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer}
             data-field="mixedTransferLandPricePerSqm"
@@ -536,19 +536,19 @@ export function MixedUseAssetMajorStdPrice({
                 게이트는 면적 OR 자기 값 — 면적 게이트만 두면 상가부수토지 0(주택 부수토지
                 override = 전체토지)일 때 상가건물 기준시가가 있어도 취득 합계가 통째로 사라진다. */}
             {(commercialLandArea > 0 || acqCommercialLandStd > 0 || acqCommercialBuilding > 0) && (
-              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
+              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1 dark:bg-amber-900/40">
                 {commercialLandArea > 0 && (
-                  <div className="flex justify-between text-xs text-amber-700">
+                  <div className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
                     <span>상가부수토지 면적</span>
                     <span>{fmtSqm(commercialLandArea)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xs text-amber-700">
+                <div className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
                   <span>{acqSummaryLabel} 상가부수토지 기준시가 (자동)</span>
                   <span>{fmtKrw(acqCommercialLandStd)}</span>
                 </div>
                 {acqCommercialBuilding > 0 && (
-                  <div className="flex justify-between text-sm font-semibold text-amber-900">
+                  <div className="flex justify-between text-sm font-semibold text-amber-900 dark:text-amber-200">
                     <span>{acqSummaryLabel} 상가부분 기준시가 합계 (자동)</span>
                     <span>{fmtKrw(acqCommercialTotal)}</span>
                   </div>
@@ -556,12 +556,12 @@ export function MixedUseAssetMajorStdPrice({
               </div>
             )}
             {(transferCommercialLandStd > 0 || transferCommercialBuilding > 0) && (
-              <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm space-y-1">
-                <div className="flex justify-between text-xs text-emerald-700">
+              <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm space-y-1 dark:bg-emerald-900/40">
+                <div className="flex justify-between text-xs text-emerald-700 dark:text-emerald-300">
                   <span>양도 상가부수토지 기준시가 (자동)</span>
                   <span>{fmtKrw(transferCommercialLandStd)}</span>
                 </div>
-                <div className="flex justify-between text-sm font-semibold text-emerald-900">
+                <div className="flex justify-between text-sm font-semibold text-emerald-900 dark:text-emerald-200">
                   <span>양도 상가부분 기준시가 합계 (자동)</span>
                   <span>{fmtKrw(transferCommercialTotal)}</span>
                 </div>

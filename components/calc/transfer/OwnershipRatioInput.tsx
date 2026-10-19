@@ -153,20 +153,20 @@ export function OwnershipRatioBlock({
         />
       )}
       {fractional && (
-        <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm">
+        <div className="rounded-lg border-2 border-amber-300 bg-amber-50/70 px-4 py-3 text-sm dark:bg-amber-950/40">
           <div className="flex items-start gap-2">
             <span
               aria-hidden
-              className="text-amber-600 font-bold text-base leading-none mt-0.5"
+              className="text-amber-600 font-bold text-base leading-none mt-0.5 dark:text-amber-400"
             >
               ⚠
             </span>
             <div className="space-y-1.5 flex-1">
-              <p className="font-semibold text-amber-900">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
                 지분 모드 — 모든 금액을{" "}
                 <span className="underline">100% 기준</span>으로 입력하세요
               </p>
-              <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside">
+              <ul className="text-xs text-amber-800 space-y-0.5 leading-relaxed list-disc list-inside dark:text-amber-200">
                 <li>
                   <strong>양도가액·취득가액·필요경비</strong>는 물건 전체(100%) 기준으로
                   입력합니다. 시스템이 지분율({formatOwnershipPercent(numerator, denominator)})을

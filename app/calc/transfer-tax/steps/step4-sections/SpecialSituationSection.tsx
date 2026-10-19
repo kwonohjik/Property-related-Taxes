@@ -91,9 +91,9 @@ export function SpecialSituationSection({
               tone="rose"
             />
             {(primary.gbLandUnregistered || primary.gbBuildingUnregistered) && (
-              <div className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-800">
+              <div className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
                 <p className="font-medium">미등기 파트만 70%가 적용됩니다</p>
-                <p className="mt-0.5 text-caption leading-relaxed text-rose-700">
+                <p className="mt-0.5 text-caption leading-relaxed text-rose-700 dark:text-rose-300">
                   토지·건물은 별개 부동산이므로 한쪽만 미등기이면 그 파트만 「소득세법」
                   §104①10호(70%)로 계산하고, 나머지 파트는 원래 세율을 유지합니다.
                 </p>
@@ -113,11 +113,11 @@ export function SpecialSituationSection({
                 label="§168① 미등기양도제외 자산"
               />
             </div>
-            <p className="text-caption text-amber-700">
+            <p className="text-caption text-amber-700 dark:text-amber-300">
               아래에 해당하면 등기를 하지 않고 양도해도 <strong>미등기양도자산으로 보지 않습니다</strong>.
               계산기는 이 사유를 자동 판정하지 않으므로, 해당한다면 위 토글을 끄고 계산하세요.
             </p>
-            <ul className="space-y-1 text-xs text-amber-900">
+            <ul className="space-y-1 text-xs text-amber-900 dark:text-amber-200">
               <li>• <strong>1호</strong> 장기할부조건으로 취득해 <strong>계약조건상</strong> 양도 당시 등기가 불가능한 자산</li>
               <li>• <strong>2호</strong> 법률의 규정 또는 <strong>법원의 결정</strong>에 따라 양도 당시 등기가 불가능한 자산</li>
               <li>• <strong>3호</strong> 농지의 교환·분합(법 §89①2호), 자경농지(조특법 §69①)·농지대토(§70①) 대상 토지</li>
@@ -125,7 +125,7 @@ export function SpecialSituationSection({
               <li>• <strong>6호</strong> 「도시개발법」상 도시개발사업이 끝나지 않아 토지 취득등기를 하지 못하고 양도하는 토지</li>
               <li>• <strong>7호</strong> 건설사업자가 「도시개발법」에 따라 공사용역 대가로 취득한 체비지를 <strong>토지구획환지처분공고 전</strong>에 양도하는 토지</li>
             </ul>
-            <p className="text-micro text-amber-600">
+            <p className="text-micro text-amber-600 dark:text-amber-400">
               ※ 5호는 삭제된 조항이라 표시하지 않았습니다.
             </p>
           </ToneCard>

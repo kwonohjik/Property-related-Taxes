@@ -176,21 +176,21 @@ export function New994InputForm({ value, onChange, transferDate, rowFacts }: Pro
       </ToneCard>
 
       {/* emerald 자동 표시 */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
-        <p className="text-xs font-semibold text-emerald-800">자동 산출 (참고용, 저장 안 됨)</p>
+      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1 dark:bg-emerald-900/40">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">자동 산출 (참고용, 저장 안 됨)</p>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{houseLabel} 보유기간 (취득일→양도일)</span>
-          <span className="font-mono font-medium text-emerald-900">
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">
             {holdingYears === null ? "—" : `${holdingYears}년`}
           </span>
         </div>
         {holdingYears !== null && holdingYears < 3 && (
-          <p className="text-micro text-amber-700">
+          <p className="text-micro text-amber-700 dark:text-amber-300">
             ⚠ 보유 3년 미만 — 양도 후에도 특례는 적용되지만(④), 이후 {houseLabel}을 3년 이상
             보유하지 못하게 되면 줄어든 세액을 2개월 내 납부해야 합니다 (§99의4⑥)
           </p>
         )}
-        <p className="text-micro text-emerald-700">
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 적격 여부·1세대1주택 판정은 계산 시 엔진이 수행합니다. 다주택 중과 주택 수에는
           반영되지 않습니다.
         </p>

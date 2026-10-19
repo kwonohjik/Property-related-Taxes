@@ -316,7 +316,7 @@ export function GeneralBuildingAcquisitionCards({
       <ToneCard tone="sky" bodyClassName="space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-base">{isSeparate ? "📌" : "🧾"}</span>
-          <p className="text-xs font-semibold text-sky-700">
+          <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
             {isSeparate ? "토지 취득" : "취득 (토지·건물 공통)"}
           </p>
         </div>
@@ -470,7 +470,7 @@ export function GeneralBuildingAcquisitionCards({
             tone="amber"
             title={`1990.8.30. 이전 ${asset.acquisitionCause === "gift" ? "증여" : "상속"} 토지 — §164④ 등급환산 (소득세법 시행령 §163⑨1호)`}
           >
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               {asset.acquisitionCause === "gift" ? "증여일" : "상속개시일"} 현재 개별공시지가가 고시되기 전이라
               토지등급으로 환산합니다. 아래 환산값과 {asset.acquisitionCause === "gift" ? "증여 신고가액" : "상속개시일 평가액"} 중{" "}
               <span className="font-semibold">많은 금액</span>이 토지 취득가액이 됩니다.
@@ -569,7 +569,7 @@ export function GeneralBuildingAcquisitionCards({
       <ToneCard tone="amber" bodyClassName="space-y-3">
         <div className="flex items-center gap-2">
           <span className="text-base">🏗</span>
-          <p className="text-xs font-semibold text-amber-700">건물 취득</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">건물 취득</p>
         </div>
 
         <FieldCard label="취득원인">
@@ -598,7 +598,7 @@ export function GeneralBuildingAcquisitionCards({
 
         {/* Q4 자동 전환 안내 — 조용한 상태 변경 금지 */}
         {asset.gbBuildingAcquisitionCause === "newConstruction" && (
-          <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+          <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
             신축(자가건축)은 토지 취득일과 건물 취득일이 다르므로 「토지·건물 취득일 다름」을 자동으로 켰습니다.
           </p>
         )}
@@ -655,7 +655,7 @@ export function GeneralBuildingAcquisitionCards({
         {asset.gbBuildingAcquisitionCause === "carryover_gift" && (
           <>
             {asset.acquisitionCause === "carryover_gift" && (
-              <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+              <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                 증여 등기접수일·증여세 산출세액·과세가액은 <strong>토지 취득</strong> 카드의 이월과세 정보에서
                 한 번만 입력합니다(하나의 증여이기 때문입니다).
               </p>
@@ -678,13 +678,13 @@ export function GeneralBuildingAcquisitionCards({
 
         {/* §114조의2 가산세 5년 이내 안내 배지 (순수 파생 — 환산·감정) */}
         {penaltyBadgeMethod && (
-          <div className="rounded bg-amber-100/80 border border-amber-300 px-3 py-2 space-y-1">
-            <p className="text-xs text-amber-800 font-semibold">
+          <div className="rounded bg-amber-100/80 border border-amber-300 px-3 py-2 space-y-1 dark:bg-amber-900/40">
+            <p className="text-xs text-amber-800 font-semibold dark:text-amber-200">
               {penaltyBadgeMethod === "appraisal"
                 ? "감정가액 가산세 적용 대상 — 건물 감정가액의 5% (소득세법 §114조의2 ①)"
                 : "환산취득가액 가산세 적용 대상 — 건물 환산취득가액의 5% (소득세법 §114조의2 ①)"}
             </p>
-            <p className="text-caption text-amber-700">
+            <p className="text-caption text-amber-700 dark:text-amber-300">
               ※ 잠정 안내 — 정확한 가산세 발동 여부는 계산 결과에서 확인
             </p>
           </div>

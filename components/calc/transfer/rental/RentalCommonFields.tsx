@@ -141,23 +141,23 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             ]}
           />
           {value.rentIncreaseViolationMode === "" && (
-            <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
         {value.rentIncreaseViolationMode === "has_violation" && (
           <div className="mt-2 space-y-2" data-field={`reduction.${fieldType}.rentHistory`}>
-            <p className="text-xs font-medium text-violet-800">
+            <p className="text-xs font-medium text-violet-800 dark:text-violet-200">
               계약 이력 입력 (최소 2건 이상 — 위반 시점 확인용)
             </p>
             {(value.rentHistory ?? []).map((item, idx) => (
               <div key={idx} className="rounded-md border border-violet-200 bg-white/70 dark:bg-white/5 p-2.5 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-violet-700">계약 {idx + 1}</span>
+                  <span className="text-xs font-medium text-violet-700 dark:text-violet-300">계약 {idx + 1}</span>
                   <button
                     type="button"
                     onClick={() => removeRentHistory(idx)}
-                    className="text-micro text-rose-600 hover:underline"
+                    className="text-micro text-rose-600 hover:underline dark:text-rose-400"
                   >
                     삭제
                   </button>
@@ -208,14 +208,14 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               </div>
             ))}
             {(value.rentHistory ?? []).length < 2 && (
-              <p className="text-micro text-amber-700">
+              <p className="text-micro text-amber-700 dark:text-amber-300">
                 ※ 최소 2건 입력 필요 (현재 {(value.rentHistory ?? []).length}건)
               </p>
             )}
             <button
               type="button"
               onClick={addRentHistory}
-              className="text-xs text-violet-700 hover:underline font-medium"
+              className="text-xs text-violet-700 hover:underline font-medium dark:text-violet-300"
             >
               + 계약 추가
             </button>
@@ -243,13 +243,13 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             ]}
           />
           {value.hasVacancyOverGrace === null && (
-            <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
         {value.hasVacancyOverGrace === true && (
           <div className="mt-2 space-y-2" data-field={`reduction.${fieldType}.vacancyPeriods`}>
-            <p className="text-xs font-medium text-sky-800">공실 구간 입력</p>
+            <p className="text-xs font-medium text-sky-800 dark:text-sky-200">공실 구간 입력</p>
             {(value.vacancyPeriods ?? []).map((period, idx) => (
               <div key={idx} className="flex items-center gap-2 flex-wrap">
                 <DateInput
@@ -264,19 +264,19 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
                 <button
                   type="button"
                   onClick={() => removeVacancy(idx)}
-                  className="text-micro text-rose-600 hover:underline"
+                  className="text-micro text-rose-600 hover:underline dark:text-rose-400"
                 >
                   삭제
                 </button>
               </div>
             ))}
             {(value.vacancyPeriods ?? []).length === 0 && (
-              <p className="text-micro text-amber-700">※ 공실 구간을 1개 이상 추가하세요</p>
+              <p className="text-micro text-amber-700 dark:text-amber-300">※ 공실 구간을 1개 이상 추가하세요</p>
             )}
             <button
               type="button"
               onClick={addVacancy}
-              className="text-xs text-sky-700 hover:underline font-medium"
+              className="text-xs text-sky-700 hover:underline font-medium dark:text-sky-300"
             >
               + 구간 추가
             </button>
@@ -318,7 +318,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               ]}
             />
             {value.rentalContinuesToTransfer === null && (
-              <p className="mt-1 text-micro text-rose-600">
+              <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
                 ※ 반드시 선택하세요 (미선택 시 계산 불가)
               </p>
             )}

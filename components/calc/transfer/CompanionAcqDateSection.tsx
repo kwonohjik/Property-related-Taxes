@@ -166,7 +166,7 @@ export function CompanionAcqDateSection(props: {
                표명이라 둘 다 채울 의사가 있고, 안내는 노이즈가 된다. */}
         {isSplit && isMixedUse && (
           <ToneCard tone="amber" bodyClassName="space-y-1">
-            <p className="text-xs text-amber-900" data-testid="split-acq-date-mixed-note">
+            <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="split-acq-date-mixed-note">
               {/* B1 — 취득일이 다르고 「각각 입력」이 켜져 있으면 파트 모델 문구, 그 밖에는 종전 문구.
                   종전 문구의 「시행령 §166⑥」 인용은 본문 미대조(계획서 M-2·V-9 — 오기 의심)라 싣지 않는다. */}
               {p.asset && isMixedUsePerPartAcq(p.asset) ? (
@@ -232,20 +232,20 @@ export function CompanionAcqDateSection(props: {
         {/* D1-2 — 같은 날(Q-4)·1990.8.30. 전(Q-7) 안내. ⑧과 같은 술어(차단은 ⑧·⑫). */}
         {landCause && p.asset && landPartCauseDateNotice(p.asset) && (
           <ToneCard tone="amber">
-            <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{landPartCauseDateNotice(p.asset)}</p>
+            <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-cause-date-notice">{landPartCauseDateNotice(p.asset)}</p>
           </ToneCard>
         )}
         {/* D2-2 — 건물 상속·증여 + 토지 매매: 건물 경계일(< 2005.4.30.)·같은 날 안내. ⑧·⑫와 같은 술어(차단은 거기서). */}
         {buildingCause && p.asset && buildingCauseDateNotices(p.asset).length > 0 && (
           <ToneCard tone="amber" bodyClassName="space-y-1">
             {buildingCauseDateNotices(p.asset).map((m) => (
-              <p key={m} className="text-xs text-amber-900" data-testid="building-cause-date-notice">{m}</p>
+              <p key={m} className="text-xs text-amber-900 dark:text-amber-200" data-testid="building-cause-date-notice">{m}</p>
             ))}
           </ToneCard>
         )}
         {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}
         {isDeemedAcquisitionDate && p.hasSeperateLandAcquisitionDate && !isMixedUse && (
-          <p className="text-caption text-amber-700 leading-relaxed">
+          <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-300">
             ⚠ 의제취득(1985.1.1)은 토지·건물이 동일 취득일로 의제됩니다. 분리 토글 비활성화 권장.
           </p>
         )}

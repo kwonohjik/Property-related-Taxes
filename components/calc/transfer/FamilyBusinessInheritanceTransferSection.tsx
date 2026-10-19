@@ -189,10 +189,10 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           </div>
 
           {/* K10 — 상속세 이력에서 prefill */}
-          <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2">
-            <div className="text-xs text-emerald-800">
+          <div className="flex items-center justify-between rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2 dark:bg-emerald-950/40">
+            <div className="text-xs text-emerald-800 dark:text-emerald-200">
               <p className="font-semibold">상속세 이력에서 자동 채우기</p>
-              <p className="text-micro text-emerald-600 mt-0.5">
+              <p className="text-micro text-emerald-600 mt-0.5 dark:text-emerald-400">
                 적용률·상속개시일·평가액 자동 prefill (원취득가액은 별도 입력)
               </p>
             </div>
@@ -331,7 +331,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
           {/* G-1 미충족 안내 — 이때는 미리보기·강제적용 카드를 함께 끈다(A17). */}
           {!cgtEraOk && (
-            <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+            <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
               <p className="font-semibold">§97의2④ 의제 취득가액 특례 미적용</p>
               <p className="mt-0.5">
                 상속개시일이 2014.1.1. 전이라 「소득세법」 부칙(법률 제12169호) §12의 적용 대상이
@@ -342,9 +342,9 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
           {/* 의제 취득가액 미리보기 */}
           {cgtEraOk && previewValue !== null && (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs space-y-1">
-              <p className="font-semibold text-emerald-800">의제 취득가액 미리보기 (소법 §97의2④)</p>
-              <p className="text-emerald-700">
+            <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs space-y-1 dark:bg-emerald-950/40">
+              <p className="font-semibold text-emerald-800 dark:text-emerald-200">의제 취득가액 미리보기 (소법 §97의2④)</p>
+              <p className="text-emerald-700 dark:text-emerald-300">
                 {/* 🔴 자본적지출이 있으면 **괄호로 묶는다** (2026-09-07 대장 재대조).
                     엔진은 `(원취득가 + 자본적지출) × 적용률`인데 괄호가 없으면
                     「원취득가 + (자본적지출 × 적용률)」로 읽힌다 — 산식이 거짓이 된다. */}
@@ -359,7 +359,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 {" = "}
                 <strong>{previewValue.toLocaleString()}</strong>
               </p>
-              <p className="text-micro text-emerald-600">
+              <p className="text-micro text-emerald-600 dark:text-emerald-400">
                 ※ 최종 의제 취득가액은 엔진 계산 결과로 확인하세요. 일반 §97 산식과 비교과세 후 불리한 경우 §18의2⑩ 공제 적용.
               </p>
             </div>
@@ -367,7 +367,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
           {/* §97의2④ 강제 적용 안내 — G-1 충족 시에만(A17: 미충족 시 허위 서술이 된다) */}
           {cgtEraOk && (
-          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-800">
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
             <p className="font-semibold">소법 §97의2④ 본문 강제 적용</p>
             <p className="mt-0.5">
               의제 취득가액이 일반 §97 취득가액보다 불리하더라도 반드시 적용됩니다.

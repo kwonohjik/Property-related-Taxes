@@ -71,7 +71,7 @@ export function SuccessorRightStdPriceSection({
         )}
       </div>
 
-      <p className="text-xs text-amber-800">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
         조합원입주권의 기준시가는 <b>그 시점까지 납입한 금액</b>과 <b>그 시점 현재의 프리미엄</b>을
         합한 금액입니다. 두 칸에 나누어 입력하면 합계를 아래에 보여 드립니다.
       </p>
@@ -127,7 +127,7 @@ export function SuccessorRightStdPriceSection({
       )}
 
       {(stdAtAcq > 0 || stdAtTransfer > 0) && (
-        <div className="rounded-md border border-amber-200 bg-amber-100/60 p-2.5 text-caption text-amber-900 space-y-1">
+        <div className="rounded-md border border-amber-200 bg-amber-100/60 p-2.5 text-caption text-amber-900 space-y-1 dark:text-amber-200 dark:bg-amber-900/40">
           <div className="font-semibold">미리보기 — §165① 기준시가</div>
           {stdAtAcq > 0 && (
             <div className="font-mono tabular-nums">

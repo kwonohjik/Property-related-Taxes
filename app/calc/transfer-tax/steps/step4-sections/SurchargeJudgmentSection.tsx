@@ -101,14 +101,14 @@ export function SurchargeJudgmentSection({
             미도달 — 여기서는 B2(윈도우 내·보유 2년 미만)·B3(종료일 이후)의 혼선만 보강.
             (plan: step4-regulated-tip-surcharge-suspension) */}
         {primaryKind === "housing" && regulatedAtTransfer && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-950/40">
             <p className="font-medium">⚠️ 양도일 현재 조정대상지역</p>
-            <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+            <p className="mt-0.5 text-caption leading-relaxed text-amber-800 dark:text-amber-200">
               조정대상지역 주택 양도는 중과세 적용 여부를 검토하세요.
             </p>
             {/* B2: 양도일은 한시배제 윈도우 내이나 보유 2년 미만 (충족 시 섹션 대체로 미도달) */}
             {isWithinSurchargeSuspensionWindow(form.transferDate) && !!primaryAcquisitionDate && (
-              <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+              <p className="mt-0.5 text-caption leading-relaxed text-amber-800 dark:text-amber-200">
                 보유 2년 미만은 다주택 중과 한시배제(§167의3①12의2) 대상이 아닙니다(단기양도세율과
                 비교 적용).
               </p>
@@ -128,7 +128,7 @@ export function SurchargeJudgmentSection({
             */}
             {!!form.transferDate &&
               form.transferDate > SURCHARGE_SUSPENSION_TRANSFER_DATE_WINDOW.end && (
-                <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+                <p className="mt-0.5 text-caption leading-relaxed text-amber-800 dark:text-amber-200">
                   {SUSPENSION_END_KO}까지 매매계약 체결(계약금 수령)·토지거래허가 신청분은
                   경과조치로 중과가 배제될 수 있습니다(§167의3①12의2 나·다, §167의10①12의2 나·다).
                   {gracePeriodInScope(form)

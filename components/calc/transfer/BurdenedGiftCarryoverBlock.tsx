@@ -21,18 +21,18 @@ interface Props {
 export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPrice }: Props) {
   return (
     <div
-      className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2"
+      className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2 dark:bg-sky-950/40"
       data-testid="bg-codonor-block"
     >
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs font-semibold text-sky-900">
+        <span className="text-xs font-semibold text-sky-900 dark:text-sky-200">
           이월과세 — 「당초 증여자」 취득 당시 값
         </span>
         <LawArticleModal legalBasis="소득세법 §97조의2" label="§97의2①1호" />
         <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159①1호" />
       </div>
 
-      <div className="rounded border border-sky-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-sky-900 space-y-1">
+      <div className="rounded border border-sky-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-sky-900 space-y-1 dark:text-sky-200">
         <p>
           <b>당초 증여자</b> = 지금 부담부증여를 하는 <b>양도인에게 이 자산을 증여한 사람</b>입니다.
           위쪽 취득 입력(양도인 기준)과 <b>다른 사람</b>이니 혼동하지 마세요.
@@ -82,7 +82,7 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
             />
           </FieldCard>
           {asset.bgAcquisitionMethod === "converted" && (
-            <div className="rounded border border-sky-200 bg-sky-100/60 p-2 text-caption text-sky-800">
+            <div className="rounded border border-sky-200 bg-sky-100/60 p-2 text-caption text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
               환산취득가액은 이 두 칸을 <b>분자로 자동 사용</b>합니다 — 환산 전용 입력은 없습니다.
             </div>
           )}

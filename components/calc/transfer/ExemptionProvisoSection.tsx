@@ -139,21 +139,21 @@ export function ExemptionProvisoSection({
   );
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2 dark:bg-violet-950/40">
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
           §
         </span>
-        <p className="text-xs font-semibold text-violet-700">
+        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
           §154① 단서 — 보유·거주 요건 면제 사유 (선택)
         </p>
         <LawArticleModal legalBasis="소득세법 시행령 §154①" label="§154① 단서" />
       </div>
-      <p className="text-caption text-violet-700">
+      <p className="text-caption text-violet-700 dark:text-violet-300">
         보유 2년(조정취득 시 거주 2년) 미달이라도 아래 사유에 해당하면 1세대1주택 비과세가 적용됩니다.
       </p>
       {mode === "temporary_two_house" && (
-        <p className="text-caption text-violet-700">
+        <p className="text-caption text-violet-700 dark:text-violet-300">
           일시적 2주택 종전주택은 §155① 준용으로 1호·2호가목·3호 사유만 적용됩니다.
         </p>
       )}
@@ -266,7 +266,7 @@ export function ExemptionProvisoSection({
       )}
 
       {effReason === "unavoidable" && (
-        <p className="text-caption text-violet-700">위 거주기간 입력이 1년 이상이어야 적용됩니다.</p>
+        <p className="text-caption text-violet-700 dark:text-violet-300">위 거주기간 입력이 1년 이상이어야 적용됩니다.</p>
       )}
     </div>
   );

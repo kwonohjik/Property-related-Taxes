@@ -275,7 +275,7 @@ export function RedevelopmentRightExemptionSection({
             />
 
             {/* 보유 상황 안내 — 단계 번호를 쓰지 않는다(재배치 때 ②→③으로 어긋났다, S13-9). */}
-            <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed">
+            <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 text-caption text-violet-900 leading-relaxed dark:text-violet-200 dark:bg-violet-900/40">
               <p className="font-semibold">
                 「보유 주택·권리」 단계 입력 필요
               </p>
@@ -300,7 +300,7 @@ export function RedevelopmentRightExemptionSection({
 
             {/* 고가 기준금액 초과 자동 안내 (양도일 연혁 — E-3) */}
             {isHighValue && (
-              <div className="rounded-md border border-violet-300 bg-violet-100/70 p-2.5 text-caption text-violet-900">
+              <div className="rounded-md border border-violet-300 bg-violet-100/70 p-2.5 text-caption text-violet-900 dark:text-violet-200 dark:bg-violet-900/40">
                 <p className="font-semibold">양도가액 {highValue.label} 초과 → §89①4호 각 목 외의 부분 단서 안분과세 적용</p>
                 <p className="mt-0.5">
                   비과세 요건 충족 시 전액 비과세가 아닌 {highValue.label} 초과분에 대해 과세됩니다 (§95③ + 시행령 §160 준용).
@@ -328,7 +328,7 @@ export function RedevelopmentRightExemptionSection({
 
         {/* C-1 (b) rose 경고 카드 — 조건부 노출 (차단 아님, 자기선언 우선) */}
         {warningState && (
-          <div className="rounded-md border border-rose-300 bg-rose-50/70 p-2.5 text-caption text-rose-900 space-y-1">
+          <div className="rounded-md border border-rose-300 bg-rose-50/70 p-2.5 text-caption text-rose-900 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
             <p className="font-semibold">⚠️ 비과세 요건 미충족 가능성</p>
             {warningState.holdingWarning && (
               <p>
@@ -342,7 +342,7 @@ export function RedevelopmentRightExemptionSection({
                 거주 요건 미충족 시 비과세 불인정될 수 있습니다.
               </p>
             )}
-            <p className="text-rose-700 text-micro">
+            <p className="text-rose-700 text-micro dark:text-rose-300">
               ※ 차단 아님 — 토글 ON 유지 가능. 자기선언 우선. 세무 전문가 확인 권장.
             </p>
           </div>

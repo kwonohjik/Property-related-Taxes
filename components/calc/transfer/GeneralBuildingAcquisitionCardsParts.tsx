@@ -303,7 +303,7 @@ export function GbBuildingCarryoverCard({
 }) {
   return (
     <ToneCard tone="violet" title="건물 파트 이월과세 (소득세법 §95④·§97의2①1호)">
-      <p className="mb-2 text-caption text-violet-800">
+      <p className="mb-2 text-caption text-violet-800 dark:text-violet-200">
         증여자의 취득일·취득가액과 증여 당시 평가액은 <strong>토지·건물이 각각</strong> 다릅니다
         (증여세 신고서에 물건별로 적혀 있습니다).
         {/* 토지 블록이 없으면(건물만 이월과세) 사건 정보도 이 블록에서 받는다 — `gbCarryoverEventSource` */}

@@ -67,7 +67,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑦" label="§164⑦" />
       </div>
-      <p className="text-xs text-amber-700">
+      <p className="text-xs text-amber-700 dark:text-amber-300">
         이 주택의 개별주택가격 최초공시({disclosureDateLabel(boundary)}) 전 증여받은 주택은{" "}
         <b>증여일 상증법 평가액과 §164⑤~⑦ 취득당시 기준시가 중 큰 금액</b>를 취득가액으로 봅니다. 위
         「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다.{" "}

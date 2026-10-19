@@ -56,14 +56,14 @@ export function RebuiltHouseLandBlock(props: {
         onCheckedChange={(checked) => onChange({ landRebuildEnabled: checked })}
       >
         <ToneCard tone="amber">
-          <p className="text-xs text-amber-900" data-testid="land-rebuild-notice">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-rebuild-notice">
             <strong>본인 소유였던 구주택</strong>의 부수토지 기간만 통산합니다 — 주택과 토지의 소유자가 달랐던 기간과 나대지·상가였던 기간은
             주택 부수토지가 아니므로 제외합니다. 멸실일부터 신축 취득일(사용승인일 등)까지의 기간은 합산하지 않고, 각 구간의 남는 일수는 버립니다
             (서면법규과-1222, 2014.11.19. · 사전-2023-법규재산-0097, 2023.6.15.). 신축주택의 정착면적이 구주택보다 늘었다면 이 계산기로
             계산하지 않습니다. 비과세 보유·거주기간과 장기보유특별공제 보유기간의 통산은 별도로 판정해야 합니다.
           </p>
           {isPurchase && (
-            <p className="text-xs text-amber-900" data-testid="land-rebuild-purchase-notice">
+            <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-rebuild-purchase-notice">
               <strong>건물 취득일 칸에는 신축 주택의 취득일을 넣으세요.</strong> 자기가 건설한 건축물의 취득시기는 사용승인서 교부일이고, 그 전에 사실상 사용하거나
               임시사용승인을 받았다면 사실상 사용일 또는 임시사용승인일 중 빠른 날입니다(건축허가 없이 지은 건물은 사실상 사용일) — {TRANSFER.SELF_BUILT_ACQUISITION_DATE}.
               구주택이 아닌 신축 건물의 취득일이어야 구주택 기간과 신축 기간이 나뉩니다.
@@ -72,7 +72,7 @@ export function RebuiltHouseLandBlock(props: {
         </ToneCard>
 
         <div className="space-y-1.5">
-          <p className="text-xs font-semibold text-amber-800">구주택이 토지 취득 때부터 있었나요?</p>
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">구주택이 토지 취득 때부터 있었나요?</p>
           <RadioCardGroup
             name={`landRebuildStartMode-${asset.assetId ?? "primary"}`}
             data-field="landRebuildStartMode"

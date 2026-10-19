@@ -114,7 +114,7 @@ export function ResidenceHistorySection({
               />
             </div>
             {h.sigunguName && (
-              <p className="mt-1 text-xs text-emerald-700">
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
                 시·군·구 <span className="font-medium">{h.sigunguName}</span> 자동 인식됨
               </p>
             )}

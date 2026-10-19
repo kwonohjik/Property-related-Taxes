@@ -376,8 +376,8 @@ export function PresaleRightsSection({
                 ⚠️ 순위 단계 수가 다르다 — 입주권 3단계 / 분양권 2단계.
               */}
               {r.isInherited && (
-                <div className="space-y-1.5 rounded-md border border-violet-200 bg-violet-50/50 p-2">
-                  <p className="text-caption font-semibold text-violet-700">
+                <div className="space-y-1.5 rounded-md border border-violet-200 bg-violet-50/50 p-2 dark:bg-violet-950/40">
+                  <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">
                     상속 권리 인정 요건 (시행령 §156의2⑥ · §156의3④)
                   </p>
                   {/*

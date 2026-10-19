@@ -233,7 +233,7 @@ export function Step1({
           {hasJudgmentProvenance(form) && (
             <span
               data-testid="one-house-judgment-loaded"
-              className="text-caption text-emerald-700"
+              className="text-caption text-emerald-700 dark:text-emerald-300"
             >
               판정 불러옴 — 세대·주택 현황을 판정 메뉴 값으로 채웠습니다
             </span>
@@ -281,7 +281,7 @@ export function Step1({
               badge={hasReplotIncrement ? "증환지 양도가액 입력란" : undefined}
               className={
                 hasReplotIncrement
-                  ? "border-amber-300 bg-amber-50/50 ring-1 ring-amber-200"
+                  ? "border-amber-300 bg-amber-50/50 ring-1 ring-amber-200 dark:bg-amber-950/40"
                   : undefined
               }
               hint={

@@ -129,7 +129,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
   ]);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2.5">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2.5 dark:bg-violet-950/40">
       <ToggleCard
         variant="card"
         tone="violet"
@@ -183,7 +183,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
             {gp.isLandPermitTarget === true && (
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">
-                  토지거래허가 신청일 <span className="text-rose-500">*</span>
+                  토지거래허가 신청일 <span className="text-rose-500 dark:text-rose-400">*</span>
                 </label>
                 <DateInput
                   data-field="gracePeriod.permitApplicationDate"
@@ -209,7 +209,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
             {gp.isLandPermitTarget !== undefined && (
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">
-                  매매계약일 <span className="text-rose-500">*</span>
+                  매매계약일 <span className="text-rose-500 dark:text-rose-400">*</span>
                 </label>
                 <DateInput
                   data-field="gracePeriod.contractDate"
@@ -236,40 +236,40 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
 
             {/* 4/6개월 소재지 자동 판정 + 기한 미리보기 */}
             {gp.isLandPermitTarget !== undefined && (
-              <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1">
-                <p className="text-caption font-medium text-violet-800">
+              <div className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1 dark:bg-violet-900/40">
+                <p className="text-caption font-medium text-violet-800 dark:text-violet-200">
                   소재지 강남·서초·송파·용산 → 4개월 / 그 외 조정대상지역(2025.10.16 지정) → 6개월
                 </p>
                 {months === null && !sellingRegionCode && (
-                  <p className="text-caption text-amber-700">
+                  <p className="text-caption text-amber-700 dark:text-amber-300">
                     양도 주택 소재지(법정동코드) 미확보 — 나·다목 경과조치는 소재지가 강남·서초·송파·용산
                     또는 2025.10.16 지정 조정대상지역일 때만 적용됩니다. ① 자산 정보에서 주소를 확인하세요.
                   </p>
                 )}
                 {months === null && sellingRegionCode && notRegulatedAtTransfer && (
-                  <p className="text-caption text-violet-700" data-testid="grace-period-not-regulated-at-transfer">
+                  <p className="text-caption text-violet-700 dark:text-violet-300" data-testid="grace-period-not-regulated-at-transfer">
                     양도일 현재 조정대상지역이 아니어서 다주택 중과 대상이 아닙니다(경과조치 불필요).
                   </p>
                 )}
                 {months === null && sellingRegionCode && !notRegulatedAtTransfer && (
-                  <p className="text-caption text-rose-700">
+                  <p className="text-caption text-rose-700 dark:text-rose-300">
                     이 소재지는 나·다목 경과조치 대상 지역이 아닙니다(2026.5.9까지 허가신청·계약 요건이므로
                     그 시점에 조정대상지역이 아니었던 지역은 대상 제외). 이 경과조치로는 중과가 배제되지 않습니다.
                   </p>
                 )}
                 {months !== null && (
-                  <p className="text-caption text-violet-700">
+                  <p className="text-caption text-violet-700 dark:text-violet-300">
                     적용 개월수: {months}개월
                   </p>
                 )}
                 {preview?.deadline && (
-                  <p className="text-caption text-violet-700">
+                  <p className="text-caption text-violet-700 dark:text-violet-300">
                     계산된 양도 기한: {fmtYmd(preview.deadline)}까지
                   </p>
                 )}
                 {preview && !(months === null && notRegulatedAtTransfer) && (
                   <p
-                    className={`text-caption font-medium ${preview.suspended ? "text-emerald-700" : "text-rose-700"}`}
+                    className={`text-caption font-medium ${preview.suspended ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}
                   >
                     {preview.suspended
                       ? "충족 — 중과 경과조치 배제 대상"

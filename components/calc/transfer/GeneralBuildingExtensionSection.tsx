@@ -267,7 +267,7 @@ export function GeneralBuildingExtensionSection({
                 </div>
               ) : (
                 gbExtBatchBlockReason && (
-                  <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                  <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                     {MULTI_POINT_BLOCK_MESSAGE[gbExtBatchBlockReason]}
                   </p>
                 )
@@ -425,7 +425,7 @@ export function GeneralBuildingExtensionSection({
 
           {/* 안분 미리보기 — 4가지 조합 모두 지원, 필수 입력 완료 시에만 표시 */}
           {allocationPreview && (
-            <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1">
+            <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 space-y-1 dark:text-amber-200 dark:bg-amber-900/40">
               <p className="font-semibold">
                 안분 미리보기 (참고용)
                 <span className="ml-1.5 rounded-full px-1.5 py-0.5 bg-amber-200 text-amber-900 text-micro">
@@ -441,7 +441,7 @@ export function GeneralBuildingExtensionSection({
                 건물2 취득가: {fmt(allocationPreview.b2Acq)}
                 {allocationPreview.extMode === "actual" ? " (실거래가)" : " (환산취득가)"}
               </p>
-              <p className="text-micro text-amber-700">엔진 실제 계산값은 결과 단계에서 확인됩니다.</p>
+              <p className="text-micro text-amber-700 dark:text-amber-300">엔진 실제 계산값은 결과 단계에서 확인됩니다.</p>
             </div>
           )}
         </ToneCard>

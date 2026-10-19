@@ -81,7 +81,7 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
           title="취득가액 — 부담부증여 §159 자동 산정"
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §159" label="§159 부담부증여" />}
         >
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             부담부증여에서 <strong>양도로 보는 부분</strong>의 취득가액은 취득당시 기준시가에
             <strong> 채무비율</strong>을 곱해 산정합니다. 증여 신고가액을 따로 적어도 계산에 쓰이지
             않으므로 입력란을 표시하지 않습니다. 위 <strong>증여일</strong>이 보유기간 기산일입니다

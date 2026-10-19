@@ -58,7 +58,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
   if (housingExcessUsesPhdSplit(asset, transferDate, isNonPrimary)) {
     return (
       <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 개별주택가격 미공시 환산 값으로 분리" bodyClassName="space-y-2">
-        <p className="text-caption text-amber-900 leading-relaxed" data-testid="housing-excess-phd-card">
+        <p className="text-caption text-amber-900 leading-relaxed dark:text-amber-200" data-testid="housing-excess-phd-card">
           토지 면적이 건물 정착면적의 지역별 배율 한도를 <strong>{housingExcessAreaOfAsset(asset, transferDate).toFixed(2)}㎡</strong> 넘습니다.
           한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지(소득세법 §104의3①5호)로 분리 과세합니다. 이 자산은 취득 당시 개별주택가격이 공시되기 전이라
           §164⑦ 3시점 환산을 쓰므로, 위 환산 칸의 토지 값·건물 값으로 양도가액과 환산취득가액을 토지분·건물분으로 나누어 초과분을 분리합니다 — 이 카드에서 따로
@@ -83,7 +83,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
   return (
     <ToneCard tone="amber" title="배율 초과 부수토지 분리 — 토지·건물 기준시가 입력" bodyClassName="space-y-3">
       <div data-testid="housing-excess-split-card" className="space-y-3">
-        <p className="text-caption text-amber-900 leading-relaxed">
+        <p className="text-caption text-amber-900 leading-relaxed dark:text-amber-200">
           토지 면적이 건물 정착면적의 지역별 배율 한도를 <strong>{excess.toFixed(2)}㎡</strong> 넘습니다. 한도 초과분은 1세대1주택 비과세에서 제외되고
           비사업용 토지(소득세법 §104의3①5호)로 과세되므로, 토지·건물 가액을 기준시가 비율로 나눠 초과분을 분리합니다
           {inheritedTotal
@@ -93,9 +93,9 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
         </p>
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-amber-900">취득 당시</p>
+          <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">취득 당시</p>
           {acqTotalElsewhere ? (
-            <p className="text-caption text-amber-900" data-testid="housing-excess-acq-total-elsewhere">
+            <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="housing-excess-acq-total-elsewhere">
               {inheritedTotal
                 ? "취득시 개별주택가격(부수토지 포함)은 위에서 입력한 상속·증여 평가액(개별주택가격)을 그대로 씁니다."
                 : "취득시 개별주택가격(부수토지 포함)은 취득가액 산정 방식에서 입력한 「취득시 기준시가」를 그대로 씁니다."}
@@ -135,8 +135,8 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
 
           {contractOpen && (
             <div className="space-y-2" data-testid="housing-excess-acq-contract">
-              <p className="text-xs font-semibold text-amber-900">취득 당시 계약서 토지·건물 구분금액 (선택)</p>
-              <p className="text-caption text-amber-900 leading-relaxed">
+              <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">취득 당시 계약서 토지·건물 구분금액 (선택)</p>
+              <p className="text-caption text-amber-900 leading-relaxed dark:text-amber-200">
                 계약서에 토지 금액과 건물 금액이 따로 적혀 있으면 입력하세요. 비우면 위 기준시가 비율로 취득가액을 나눕니다. 입력하면 두 칸을 모두 채워야 하고
                 합이 취득가액({contract.total.toLocaleString()})과 같아야 합니다.
                 {contractEra === "none"
@@ -173,7 +173,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
                 />
               </FieldCard>
               {contract.entered && contract.land !== null && contract.building !== null && (
-                <p className="text-caption text-amber-900" data-testid="housing-excess-acq-contract-sum">
+                <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="housing-excess-acq-contract-sum">
                   토지 금액 + 건물 금액 = <strong>{(contract.land + contract.building).toLocaleString()}</strong>
                   {contract.land + contract.building === contract.total ? " (취득가액과 같음)" : ` (취득가액 ${contract.total.toLocaleString()}과 다름)`}
                 </p>
@@ -193,7 +193,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-amber-900">양도 당시</p>
+          <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">양도 당시</p>
           <LandPriceLookupField
             label="양도시 토지 공시지가"
             data-field="standardPricePerSqmAtTransfer"
@@ -209,7 +209,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
 
         {capex && (
           <div className="space-y-2" data-testid="housing-excess-capex">
-            <p className="text-xs font-semibold text-amber-900">자본적지출 토지분·건물분</p>
+            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">자본적지출 토지분·건물분</p>
             <FieldCard
               field="housingExcessLandCapex"
               label="그중 토지분 자본적지출"
@@ -225,7 +225,7 @@ export function HousingExcessSplitCard({ asset, onChange, transferDate, isNonPri
                 data-testid="housing-excess-land-capex"
               />
             </FieldCard>
-            <p className="text-caption text-amber-900" data-testid="housing-excess-building-capex">
+            <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="housing-excess-building-capex">
               건물분 자본적지출 = {capex.total.toLocaleString()} − 토지분 ={" "}
               <strong>{capex.building === null ? "토지분 입력 후 표시" : capex.building.toLocaleString()}</strong>
             </p>

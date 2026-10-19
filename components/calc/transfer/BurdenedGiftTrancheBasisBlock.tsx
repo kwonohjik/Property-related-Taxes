@@ -51,7 +51,7 @@ export function BurdenedGiftTrancheBasisBlock({ asset, primaryAsset, onChange }:
       )}
       {needsStd && (
         <ToneCard tone="amber" title="이 지분의 취득시 기준시가 (물건 전체)">
-          <p className="text-caption text-amber-700">
+          <p className="text-caption text-amber-700 dark:text-amber-300">
             지분마다 취득일이 다르므로 <b>이 지분의 취득일</b> 현재 물건 전체 기준시가를 입력하세요(지분율은 시스템이 곱합니다).
           </p>
           <StandardPriceInput

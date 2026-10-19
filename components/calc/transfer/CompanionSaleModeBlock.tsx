@@ -197,14 +197,14 @@ function FractionalAutoSalePriceCard({
   const allocated = total > 0 && ratio > 0 ? Math.floor(total * ratio) : 0;
   const ratioPct = ratio > 0 ? (ratio * 100).toFixed(2).replace(/\.?0+$/, "") : "—";
   return (
-    <div className="rounded-lg border border-amber-300 bg-amber-50/50 px-3 py-2">
-      <div className="text-caption font-medium text-amber-700 mb-0.5">
+    <div className="rounded-lg border border-amber-300 bg-amber-50/50 px-3 py-2 dark:bg-amber-950/40">
+      <div className="text-caption font-medium text-amber-700 mb-0.5 dark:text-amber-300">
         자동 계산 (총 양도가액 × 지분율)
       </div>
-      <div className="font-mono tabular-nums text-base font-semibold text-amber-900">
+      <div className="font-mono tabular-nums text-base font-semibold text-amber-900 dark:text-amber-200">
         {allocated.toLocaleString()} 원
       </div>
-      <div className="text-micro text-amber-700 mt-0.5">
+      <div className="text-micro text-amber-700 mt-0.5 dark:text-amber-300">
         {total.toLocaleString()} × {numerator || "?"}/{denominator || "?"} = {ratioPct}% × 총양도가
       </div>
     </div>
@@ -253,7 +253,7 @@ export function CompanionSaleModeBlock(props: BlockProps) {
             contractTotalPrice={props.contractTotalPrice!}
           />
         ) : (
-          <p className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+          <p className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
             취득 지분율(분자/분모)을 입력하면 양도가액이 총양도가 × 지분율로 자동 계산됩니다.
           </p>
         )}

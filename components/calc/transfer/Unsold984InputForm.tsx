@@ -58,7 +58,7 @@ export function Unsold984InputForm({ value, onChange }: Props) {
         />
       </ToneCard>
 
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
         <p>· 적용 효과: 양도소득세의 100분의 10에 상당하는 세액을 감면합니다 (5년 구분 없음 — 법 §98의4).</p>
         <p>· 농어촌특별세: 감면세액의 20%가 부과됩니다 (농어촌특별세법 §5).</p>
         <p>

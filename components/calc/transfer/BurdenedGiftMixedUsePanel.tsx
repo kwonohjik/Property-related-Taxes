@@ -73,7 +73,7 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
       bodyClassName="space-y-3"
     >
       <div data-testid="bg-mixed-valuation-summary" className="space-y-3">
-        <p className="text-caption text-emerald-800">
+        <p className="text-caption text-emerald-800 dark:text-emerald-200">
           겸용주택의 기준시가는 <b>③ 취득정보의 겸용주택 기준시가</b>에서 한 번만 입력합니다. 아래는 그 값의 합계이며 여기서는 고칠 수 없습니다.
           {isMarket && " 시가 모드에서는 이 합계가 시가를 주택분·상가분으로 나누는 비율의 근거입니다(부가가치세법 시행령 §64①1호)."}
         </p>
@@ -103,10 +103,10 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
         {/* 부분별 채무비율 (채무 귀속 반영) — 엔진 준비 값 그대로 */}
         {d && v ? (
           <div data-testid="bg-attr-parts" className="space-y-1">
-            <p className="text-xs font-semibold text-emerald-800">부분별 채무비율 (채무 귀속 반영)</p>
+            <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">부분별 채무비율 (채무 귀속 반영)</p>
             <table className="w-full text-xs border-collapse">
               <thead>
-                <tr className="text-emerald-800">
+                <tr className="text-emerald-800 dark:text-emerald-200">
                   <th className="text-left font-medium py-1" />
                   <th className="text-right font-medium py-1">주택분</th>
                   <th className="text-right font-medium py-1">상가분</th>
@@ -146,7 +146,7 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
               </div>
             )}
             {d.unallocated > 0 && (
-              <p className="text-caption text-amber-800">구분 불분명 채무를 주택·상가 증여가액 비율로 나눈 것은 해석례가 직접 답하지 않아 확인이 필요합니다.</p>
+              <p className="text-caption text-amber-800 dark:text-amber-200">구분 불분명 채무를 주택·상가 증여가액 비율로 나눈 것은 해석례가 직접 답하지 않아 확인이 필요합니다.</p>
             )}
           </div>
         ) : (

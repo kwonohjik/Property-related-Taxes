@@ -53,12 +53,12 @@ export function PreDeemedEstimatedNotice({
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="§163⑨" />
         <LawArticleModal legalBasis="소득세법 시행령 §176조의2" label="§176조의2④" />
       </div>
-      <p className="text-xs text-amber-700">
+      <p className="text-xs text-amber-700 dark:text-amber-300">
         의제취득일(1985.1.1.) 이전에 {causeLabel}받은 자산입니다. 「{dateLabel} 상증법 평가액」이나
         §164④~⑦ 취득당시 기준시가를 입력하면 <b>그 중 많은 금액</b>이 취득가액이 됩니다.{" "}
         <b>지금은 그 두 값이 계산에 등장하지 않습니다.</b>
       </p>
-      <p className="text-xs text-amber-700">
+      <p className="text-xs text-amber-700 dark:text-amber-300">
         환산 등 추계(나목)는 <b>가목을 확인할 수 없는 경우에 한정</b>해 적용합니다(§97①1호 단서).
         해당한다면 아래에서 선택하세요.
       </p>

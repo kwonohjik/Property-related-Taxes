@@ -160,7 +160,7 @@ export function SaleAppraisalFields({ asset, onChange }: Props) {
            괄호의 기간 제한을 양도소득세에 적용하는 근거가 확정되지 않아, 엔진이 대신 판단하는
            대신 사실을 알리고 사용자 판단에 맡긴다.
       */}
-      <p className="text-caption leading-snug text-amber-800">
+      <p className="text-caption leading-snug text-amber-800 dark:text-amber-200">
         「부가가치세법 시행령」 제64조 제1항 제1호 괄호는 감정평가 시기에 제한을 두고 있습니다
         (공급시기가 속하는 과세기간의 <strong>직전 과세기간 개시일 ~ 종료일</strong>).
         이 프로그램은 그 요건을 <strong>검증하지 않으므로</strong> 충족 여부는 직접 확인하세요.
@@ -221,7 +221,7 @@ export function SaleSplitExemptionCard({ asset, onChange }: Props) {
           />
         </FieldCard>
         {asset.saleSplitExemption === "demolished_land_only" && (
-          <p className="text-caption leading-snug text-amber-800">
+          <p className="text-caption leading-snug text-amber-800 dark:text-amber-200">
             건물을 철거하고 토지만 사용하는 경우이므로 <strong>건물 양도가액이 0에 가까운 것이 정상</strong>입니다.
           </p>
         )}

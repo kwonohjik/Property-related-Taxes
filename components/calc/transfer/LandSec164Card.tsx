@@ -51,7 +51,7 @@ export function LandSec164Card(props: {
   return (
     <div className="space-y-2" data-testid="land-sec164-card" data-field="landSec164Value">
       <ToneCard tone="amber">
-        <p className="text-xs text-amber-900">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
           토지를 {meta.dateLabel}에 {meta.label}받았는데 그때는 개별공시지가가 고시되기 전(1990.8.30. 이전)이라 토지등급으로 환산한{" "}
           <strong>{SPLIT_SEC164_VALUE_LABEL}</strong>을 구합니다. 이 가액과 위 {meta.valueLabel} 중{" "}
           <strong>많은 금액</strong>이 토지 취득가액입니다 (소득세법 시행령 §163조 제9항 단서 1호). 토지 면적은 기본 정보의 토지 면적을
@@ -71,7 +71,7 @@ export function LandSec164Card(props: {
 
       {partial ? (
         <ToneCard tone="amber">
-          <p className="text-xs text-amber-900" data-testid="land-sec164-partial-note">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-sec164-partial-note">
             면적 입력 방식이 「일부 양도」이면 이 비교를 지원하지 않습니다 — 평가액이 취득 전체분인지 양도분인지 정해지지 않았고 면적으로
             자동 안분하지 않습니다. 기본 정보에서 면적 입력 방식을 확인하세요.
           </p>

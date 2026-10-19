@@ -214,7 +214,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             `HousingContribEstimatedSection`이 이미 「5a」를 쓴다(세 분기는 상호배타적). */}
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800 select-none">5a</span>
-          <p className="text-xs font-semibold text-rose-700">환산 기준시가</p>
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">환산 기준시가</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
@@ -257,8 +257,8 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         )}
 
         {isPreDisclosureTriggered && (
-          <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3">
-            <p className="text-caption font-semibold text-rose-700">
+          <div className="rounded-md border border-rose-200 bg-rose-50/60 p-3 space-y-3 dark:bg-rose-950/40">
+            <p className="text-caption font-semibold text-rose-700 dark:text-rose-300">
               §164⑦ 본문 발동 — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
               <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
             </p>
@@ -281,7 +281,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 각각 토지·건물을 담았다. 같은 종류의 값을 나란히 보게 항목축으로 바꿨다.
                 Sum_A·Sum_F 합계는 아래 미리보기 박스가 값과 함께 그대로 보여준다. */}
             <div className="rounded-md border border-rose-100 bg-white/70 dark:bg-white/5 p-2 space-y-2">
-              <p className="text-caption font-semibold text-rose-700">토지 기준시가</p>
+              <p className="text-caption font-semibold text-rose-700 dark:text-rose-300">토지 기준시가</p>
               <LandPriceLookupField
                 label="취득시 개별공시지가 (원/㎡)"
                 data-field="redevLandPricePerSqmAtAcq"
@@ -310,7 +310,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 `onApplyBoth`로 배선한다 — 한 번 계산해 두 필드를 동시에 채운다. */}
             <div className="rounded-md border border-rose-100 bg-white/70 dark:bg-white/5 p-2 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-caption font-semibold text-rose-700">건물 기준시가</p>
+                <p className="text-caption font-semibold text-rose-700 dark:text-rose-300">건물 기준시가</p>
                 <BuildingStdPriceModalButton
                   buttonLabel="건물 기준시가 계산"
                   transferSectionLabel="최초공시 시점"
@@ -370,36 +370,36 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
         )}
 
         {valuationPreview && (
-          <div className="mt-2 rounded-md bg-rose-100/60 border border-rose-200 p-2 text-xs space-y-1">
-            <p className="font-semibold text-rose-800">환산취득가 미리보기</p>
+          <div className="mt-2 rounded-md bg-rose-100/60 border border-rose-200 p-2 text-xs space-y-1 dark:bg-rose-900/40">
+            <p className="font-semibold text-rose-800 dark:text-rose-200">환산취득가 미리보기</p>
             {valuationPreview.canApplyMain && valuationPreview.step1Formula && (
               <>
-                <p className="text-rose-700">
+                <p className="text-rose-700 dark:text-rose-300">
                   취득시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
                   <span className="font-mono tabular-nums">{valuationPreview.sumAtAcq.toLocaleString()}</span>
                 </p>
-                <p className="text-rose-700">
+                <p className="text-rose-700 dark:text-rose-300">
                   최초공시 당시 합계 기준시가 = 공시지가 × 면적 + 건물 기준시가 ={" "}
                   <span className="font-mono tabular-nums">{valuationPreview.sumAtFirst.toLocaleString()}</span>
                 </p>
-                <p className="text-rose-700">
+                <p className="text-rose-700 dark:text-rose-300">
                   1단계 (§164⑦ 본문) — 취득당시 주택가격 = 최초공시 주택가격 ×{" "}
               <Frac top="취득시 합계 기준시가" bottom="최초공시 당시 합계 기준시가" />
                 </p>
-                <p className="text-rose-700 font-mono tabular-nums">
+                <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">
                   = <FormulaText value={valuationPreview.step1Formula} /> = {valuationPreview.P_A.toLocaleString()}
                 </p>
               </>
             )}
-            <p className="text-rose-700">
+            <p className="text-rose-700 dark:text-rose-300">
               2단계 (§166③) — 환산취득가 = 권리가액 ×{" "}
               <Frac top="취득당시 주택가격" bottom="관리처분 인가일 주택가격" />
             </p>
-            <p className="text-rose-700 font-mono tabular-nums">= <FormulaText value={valuationPreview.step2Formula} /></p>
-            <p className="text-rose-700 font-mono tabular-nums">= {valuationPreview.converted.toLocaleString()}</p>
-            <p className="text-rose-700">
+            <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">= <FormulaText value={valuationPreview.step2Formula} /></p>
+            <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">= {valuationPreview.converted.toLocaleString()}</p>
+            <p className="text-rose-700 dark:text-rose-300">
               §164⑦ 본문:{" "}
-              <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900" : "text-rose-600"}>
+              <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900 dark:text-rose-200" : "text-rose-600 dark:text-rose-400"}>
                 {valuationPreview.canApplyMain
                   ? "발동 — 2단계 산식 적용"
                   : valuationPreview.provisionTriggered
@@ -408,7 +408,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
               </span>
             </p>
             {valuationPreview.missingFields && (
-              <p className="text-rose-800 font-semibold">
+              <p className="text-rose-800 font-semibold dark:text-rose-200">
                 ⚠ §164⑦ 본문 트리거 발동이지만 필수입력(최초공시 주택가격·토지면적·개별공시지가·건물 기준시가) 중 일부 누락 — 위 영역을 모두 채워주세요.
               </p>
             )}
@@ -469,23 +469,23 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
   return (
     <div className="space-y-2">
       {/* 안내 헤더 */}
-      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-2 space-y-1">
+      <div className="rounded-md border border-amber-200 bg-amber-50/70 p-2 space-y-1 dark:bg-amber-950/40">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">5a</span>
-          <p className="text-xs font-semibold text-amber-700">토지 출자 — §166③ 비율 환산 (사례 37)</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">토지 출자 — §166③ 비율 환산 (사례 37)</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
           <LawArticleModal legalBasis="소득세법 시행령 §163 ⑥" label="시행령 §163⑥" />
         </div>
-        <p className="text-caption text-amber-700">
+        <p className="text-caption text-amber-700 dark:text-amber-300">
           환산취득가 = 권리가액 ×{" "}
           <Frac
             top={<strong>취득당시 토지기준시가</strong>}
             bottom={<strong>관리처분 직전 토지기준시가</strong>}
           />
         </p>
-        <p className="text-caption text-amber-600">
+        <p className="text-caption text-amber-600 dark:text-amber-400">
           기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능
         </p>
       </div>
@@ -519,7 +519,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
       />
 
       {/* §99①1호 시점 모호성 안내 */}
-      <div className="rounded-md border border-violet-200 bg-violet-50/70 p-2 text-caption text-violet-700 space-y-0.5">
+      <div className="rounded-md border border-violet-200 bg-violet-50/70 p-2 text-caption text-violet-700 space-y-0.5 dark:text-violet-300 dark:bg-violet-950/40">
         <p className="font-semibold">§99①1호 시점 모호성 안내</p>
         <p>관리처분 인가일 직전 공시기준일 해석이 실무상 분분합니다.</p>
         <p>• 2007년 개정 전 취득 시 공시기준일 2006.1.1 기준값을 사용하는 견해가 있습니다.</p>
@@ -529,32 +529,32 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
 
       {/* 환산취득가 미리보기 */}
       {preview && (
-        <div className="mt-2 rounded-md bg-amber-100/60 border border-amber-200 p-2 text-xs space-y-1">
-          <p className="font-semibold text-amber-800">환산취득가 미리보기 (§166③)</p>
-          <p className="text-amber-700">
+        <div className="mt-2 rounded-md bg-amber-100/60 border border-amber-200 p-2 text-xs space-y-1 dark:bg-amber-900/40">
+          <p className="font-semibold text-amber-800 dark:text-amber-200">환산취득가 미리보기 (§166③)</p>
+          <p className="text-amber-700 dark:text-amber-300">
             취득당시 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtAcq) || 0)} 원/㎡ = {fmt(preview.acq)}
           </p>
-          <p className="text-amber-700">
+          <p className="text-amber-700 dark:text-amber-300">
             관리처분 직전 토지기준시가 = {landAreaNumber ? `${fmt(landAreaNumber)} ㎡ × ` : ""}{fmt(parseAmount(asset.redevLandPricePerSqmAtApproval) || 0)} 원/㎡ = {fmt(preview.approval)}
           </p>
-          <p className="text-amber-700">
+          <p className="text-amber-700 dark:text-amber-300">
             환산취득가 = {fmt(preview.rights)} × <Frac top={fmt(preview.acq)} bottom={fmt(preview.approval)} />
           </p>
-          <p className="text-amber-700 font-mono tabular-nums">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
-          <p className="text-amber-700">
+          <p className="text-amber-700 font-mono tabular-nums dark:text-amber-300">= <FormulaText value={preview.formula} /> = {fmt(preview.convertedAcq)}</p>
+          <p className="text-amber-700 dark:text-amber-300">
             개산공제 (§163⑥) = {fmt(preview.acq)} × 3% = {fmt(preview.estDeduction)}
           </p>
-          <p className="text-amber-700">
+          <p className="text-amber-700 dark:text-amber-300">
             인가전 양도차익 = 권리가액 {fmt(preview.rights)} − 환산취득가 {fmt(preview.convertedAcq)} − 개산공제 {fmt(preview.estDeduction)} ={" "}
             <strong>{fmt(preview.preApprovalGain)}</strong>
           </p>
           {preview.postApprovalGain !== null && (
-            <p className="text-amber-700">
+            <p className="text-amber-700 dark:text-amber-300">
               인가후 양도차익 = 양도가액 − 분양가({preview.settlementDirection === "receive" ? "권리가액 − 수령 청산금" : "권리가액 + 납부 청산금"}) ={" "}
               <strong>{fmt(preview.postApprovalGain)}</strong>
             </p>
           )}
-          <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-micro text-rose-700">
+          <div className="mt-1 rounded border border-rose-200 bg-rose-50/70 p-1 text-micro text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
             인가후 분 장기보유특별공제 = 0 — 소득세법 §95② 본문 괄호
           </div>
         </div>

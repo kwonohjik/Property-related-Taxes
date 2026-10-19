@@ -39,9 +39,9 @@ interface Props {
  */
 export function CompanionLandNatureBlock({ landNature, assetId, onChange }: Props) {
   return (
-    <div className="rounded-lg border border-violet-200/70 bg-violet-50/70 p-3 space-y-2" data-field="landNature">
+    <div className="rounded-lg border border-violet-200/70 bg-violet-50/70 p-3 space-y-2 dark:bg-violet-950/40" data-field="landNature">
       <div className="space-y-0.5">
-        <p className="text-sm font-semibold text-violet-900">토지 성격</p>
+        <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">토지 성격</p>
         <p className="text-xs text-muted-foreground">
           이 토지가 주택·건물에 딸린 부수토지인지, 독립적인 나대지인지
           선택하세요. 부수토지는 주택 비과세(§89①3가) 요건 충족 시 주택과 일체

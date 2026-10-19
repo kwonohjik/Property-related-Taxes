@@ -87,7 +87,7 @@ export function HouseLandSec164Card(props: {
   return (
     <div className="space-y-2" data-testid="house-land-sec164-card" data-field="landHouseSec164Value">
       <ToneCard tone="amber">
-        <p className="text-xs text-amber-900">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
           토지를 {landDate}에 {meta.label}받았는데 그때는 이 주택의 개별주택가격이 공시되기 전({disclosureDateLabel(boundary)} 이전)입니다. 받을 당시 지금의 주택이 그 위에
           있었다면 이 토지는 주택 부수토지라서, 위 {meta.valueLabel}과 최초 공시된 개별주택가격으로 환산한 주택가격의 토지 몫(
           <strong>{SPLIT_SEC164_HOUSE_LAND_VALUE_LABEL}</strong>) 중 <strong>많은 금액</strong>이 토지 취득가액입니다 (소득세법 시행령 §163조
@@ -113,7 +113,7 @@ export function HouseLandSec164Card(props: {
 
       {existed === "unknown" && (
         <ToneCard tone="amber">
-          <p className="text-xs text-amber-900" data-testid="house-land-sec164-unknown-note">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="house-land-sec164-unknown-note">
             받을 당시 주택이 있었는지 확인되지 않으면 이 비교를 하지 않고 평가액만으로 계산합니다. 결과에 확인 필요로 표시됩니다.
           </p>
         </ToneCard>
@@ -135,7 +135,7 @@ export function HouseLandSec164Card(props: {
 
           {kind === "house_apart" && (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="house-land-sec164-apart-note">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="house-land-sec164-apart-note">
                 {HOUSE_LAND_APARTMENT_MESSAGE}
               </p>
             </ToneCard>
@@ -194,7 +194,7 @@ export function HouseLandSec164Card(props: {
 
               {partial ? (
                 <ToneCard tone="amber">
-                  <p className="text-xs text-amber-900" data-testid="house-land-sec164-partial-note">
+                  <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="house-land-sec164-partial-note">
                     면적 입력 방식이 「일부 양도」이면 이 비교를 지원하지 않습니다 — 최초공시 당시 부수토지 전체 면적이 정해지지 않고 면적으로
                     자동 안분하지 않습니다. 기본 정보에서 면적 입력 방식을 확인하세요.
                   </p>

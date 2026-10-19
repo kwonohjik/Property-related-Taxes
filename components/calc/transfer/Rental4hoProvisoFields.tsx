@@ -70,7 +70,7 @@ export function Rental4hoProvisoFields({ value, onChange }: Props) {
   });
   return (
     <div className="space-y-2" data-testid="proviso-4ho-fields">
-      <p className="text-caption text-violet-700">
+      <p className="text-caption text-violet-700 dark:text-violet-300">
         2020년 2월 11일 이후 양도는 2019년 12월 16일 이전에 두 등록을 모두 신청한 경우에만 적용됩니다
         (대통령령 제30395호 부칙 제38조). 거주요건만 면제되고 보유 2년은 필요합니다.
       </p>

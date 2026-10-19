@@ -158,14 +158,14 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
     : `${(cap / 100_000_000).toFixed(0)}억${showRegion ? (unit.region === "seoul-metro" ? "(수도권)" : "(비수도권)") : ""}`;
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-3 dark:bg-emerald-950/40">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             {index + 1}
           </span>
-          <p className="text-xs font-semibold text-emerald-700">임대주택 {index + 1}호</p>
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">임대주택 {index + 1}호</p>
         </div>
         {canRemove && (
           <button
@@ -270,7 +270,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       <ToneCard tone={bothRegMissing ? "rose" : "sky"} title="판정 기준">
         <div data-testid={`rental-verdict-badge-${index}`} className="text-xs space-y-0.5">
           {bothRegMissing ? (
-            <p className="text-rose-700 font-medium">
+            <p className="text-rose-700 font-medium dark:text-rose-300">
               세무서·지자체 등록일을 모두 입력해야 사업자등록등 요건이 성립합니다.
             </p>
           ) : (
@@ -557,9 +557,9 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
 
       {/* 규모요건 (대지 298㎡ · 연면적/전용 149㎡) — 건설(다·바·자) + 라목(미분양) */}
       {showSize && (
-        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
+        <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2 dark:bg-sky-950/40">
           <div className="flex items-center gap-2">
-            <p className="text-xs font-semibold text-sky-700">{isLa ? "미분양 규모요건" : "건설임대 규모요건"}</p>
+            <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">{isLa ? "미분양 규모요건" : "건설임대 규모요건"}</p>
           </div>
           <FieldCard label="대지면적" required hint="298㎡ 이하" unit="㎡">
             <DecimalInput
@@ -618,7 +618,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         </p>
       )}
       {aptRestricted && (
-        <div className="rounded border border-rose-200 bg-rose-50/60 p-1.5 text-caption text-rose-800">
+        <div className="rounded border border-rose-200 bg-rose-50/60 p-1.5 text-caption text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
           현재 입력 기준 아파트가 특례 제외 대상입니다 — 요건 미충족.
         </div>
       )}
@@ -626,7 +626,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       {/* 실제 임대 기간 (시작~종료일 다중 구간) — 임대개시일 기준시가 조회연도의 소스라 먼저 배치 */}
       <div className="space-y-1">
         <p className="text-sm font-medium">
-          실제 임대 기간 <span className="text-rose-500">*</span>
+          실제 임대 기간 <span className="text-rose-500 dark:text-rose-400">*</span>
         </p>
         <PeriodRangeEditor
           tone="emerald"

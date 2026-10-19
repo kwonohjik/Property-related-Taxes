@@ -133,7 +133,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
           title="취득가액 — 부담부증여 §159 자동 산정"
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §159" label="§159 부담부증여" />}
         >
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             부담부증여에서 <strong>양도로 보는 부분</strong>의 취득가액은 취득당시 기준시가에
             <strong> 채무비율</strong>을 곱해 산정합니다. 상속개시일 평가액을 따로 적어도 계산에
             쓰이지 않으므로 입력란을 표시하지 않습니다. 위 <strong>상속개시일</strong>은 보유기간
@@ -149,7 +149,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
           title="취득가액 — 상속개시일 상증법 평가액"
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
         >
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             상업용건물·오피스텔은 상속개시일 현재 상증법 §60~66 평가액(상속세 신고가액)을 취득가액으로 봅니다.
             아래에 신고가액을 직접 입력하세요. (2005.1.1 전 상속은 §164⑥ 취득당시 기준시가와 비교하여 큰 금액 적용 —
             아래 취득 정보의 §164⑥ 섹션 참조.)
@@ -174,7 +174,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
           title="취득가액 — 겸용주택 상속개시일 평가액 자동 적용"
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
         >
-          <p className="text-xs text-violet-800">
+          <p className="text-xs text-violet-800 dark:text-violet-200">
             겸용주택(주택+상가)은 상속개시일 현재 상증법 §60~66 평가액을 취득가액으로 직접
             사용합니다. 아래 &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션의
             &ldquo;상속개시일&rdquo; 입력에서 산정하므로, 이 화면의 자산 구분·취득가액 의제

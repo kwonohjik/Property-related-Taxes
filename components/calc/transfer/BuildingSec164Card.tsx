@@ -118,7 +118,7 @@ export function BuildingSec164Card(props: {
   return (
     <div className="space-y-2" data-testid="building-sec164-card" data-field="buildingSec164Value">
       <ToneCard tone="amber">
-        <p className="text-xs text-amber-900">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
           건물을 {buildingDate}에 {meta.label}받았는데 그때는 이 주택의 개별주택가격이 공시되기 전({disclosureDateLabel(boundary)} 이전)이라, 위 {meta.valueLabel}과 최초
           공시된 개별주택가격으로 환산한 주택가격의 건물 몫(<strong>{SPLIT_SEC164_BUILDING_VALUE_LABEL}</strong>) 중{" "}
           <strong>많은 금액</strong>이 건물 취득가액입니다 (소득세법 시행령 §163조 제9항 단서 2호). 토지 면적은 기본 정보의 토지 면적을
@@ -140,7 +140,7 @@ export function BuildingSec164Card(props: {
 
       {kind === "house_apart" && (
         <ToneCard tone="amber">
-          <p className="text-xs text-amber-900" data-testid="building-sec164-apart-note">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="building-sec164-apart-note">
             {BUILDING_CAUSE_APARTMENT_MESSAGE}
           </p>
         </ToneCard>
@@ -230,7 +230,7 @@ export function BuildingSec164Card(props: {
 
           {partial ? (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="building-sec164-partial-note">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="building-sec164-partial-note">
                 면적 입력 방식이 「일부 양도」이면 이 비교를 지원하지 않습니다 — 최초공시 당시 부수토지 전체 면적이 정해지지 않고 면적으로
                 자동 안분하지 않습니다. 기본 정보에서 면적 입력 방식을 확인하세요.
               </p>

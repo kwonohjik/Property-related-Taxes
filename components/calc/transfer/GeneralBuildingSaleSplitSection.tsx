@@ -122,7 +122,7 @@ export function GeneralBuildingSaleSplitSection({
       {/* inline 레이아웃은 옵션 `hint`를 렌더하지 않으므로 사유를 그룹 아래에 적는다. */}
       {hasExtension && (
         <p
-          className="text-caption leading-snug text-amber-800"
+          className="text-caption leading-snug text-amber-800 dark:text-amber-200"
           data-testid="gb-sale-split-appraisal-disabled"
         >
           증축이 있는 건물은 <strong>감정평가가액으로 안분</strong>할 수 없습니다 — 감정평가가액은
@@ -160,7 +160,7 @@ export function GeneralBuildingSaleSplitSection({
             그 금액도 같은 판정을 받습니다.
           </p>
           {hasExtension && (
-            <p className="text-caption leading-snug text-amber-800" data-testid="gb-split-extension-note">
+            <p className="text-caption leading-snug text-amber-800 dark:text-amber-200" data-testid="gb-split-extension-note">
               증축이 있으므로 입력한 <strong>건물 양도가액</strong>은 본체분과 증축분에
               <strong> 양도 당시 기준시가 비율</strong>로 나뉩니다. 30% 판정은 토지와 건물
               <strong> 합계</strong>를 기준으로 합니다. 증축분이 미미하다면 구분 계산 대신

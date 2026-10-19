@@ -167,17 +167,17 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
   }
 
   return (
-    <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/70 p-4 space-y-3">
+    <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/70 p-4 space-y-3 dark:bg-fuchsia-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
           💎
         </span>
         {/* 이 카드는 ② 「양도정보」 섹션 안에만 뜬다 — 제목을 「양도 정보」로 두면
             섹션 헤더와 같은 말을 두 번 하게 된다. 카드가 **무엇을 고르는 곳인지**를 쓴다. */}
-        <p className="text-sm font-semibold text-fuchsia-900">양도 형태·원인</p>
+        <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">양도 형태·원인</p>
       </div>
 
-      <p className="text-xs text-fuchsia-700">
+      <p className="text-xs text-fuchsia-700 dark:text-fuchsia-300">
         부담부증여 시 양도가액은 인수 채무액으로 자동 산정되고(소령 §159),
         공익수용·협의매수 시 §77 감면·비사업용 토지 사업용 의제가 함께 적용됩니다.
       </p>
@@ -206,11 +206,11 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
       {isBurdenedGift && isSupported && isMixedBurdenedGift(asset) && (
         <ToneCard tone="amber" title="겸용주택 × 부담부증여 — 입력 위치" bodyClassName="space-y-1">
           <div data-testid="bg-mixed-notice" className="space-y-1">
-            <p className="text-caption text-amber-900">
+            <p className="text-caption text-amber-900 dark:text-amber-200">
               주택·상가의 <b>기준시가와 면적은 한 번만</b> 입력합니다 — 면적은 ① 기본정보, 양도시·취득시 기준시가는 ③ 취득정보의 겸용주택 기준시가입니다.
               아래 부담부증여 카드는 그 합계를 읽기 전용으로 보여 주고, 채무가 주택·상가 중 어디에 속하는지를 받습니다.
             </p>
-            <p className="text-caption text-amber-800">
+            <p className="text-caption text-amber-800 dark:text-amber-200">
               계산 범위: 증여자가 매매로 취득한 단독 소유 단건. 개별주택가격 미공시 환산·보유 중 일부 용도변경·공유지분·함께 양도는 계산하지 않습니다.
             </p>
           </div>

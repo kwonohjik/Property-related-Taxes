@@ -140,7 +140,7 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
             onChange={(v) => onChange({ phdFirstDisclosureDate: v })}
           />
           {housingType === "apartment" && (
-            <p className="mt-1 text-caption text-amber-700">
+            <p className="mt-1 text-caption text-amber-700 dark:text-amber-300">
               공동주택은 단지별 최초고시일이 다릅니다. 홈택스 기준시가 조회에서 해당 단지의 최초 고시일을 확인하세요.
             </p>
           )}
@@ -149,9 +149,9 @@ export function PreHousingDisclosureSection({ asset, transferDate, onChange }: P
 
       {/* §164⑦ 적용가능 게이트 경고 — 취득일(이월과세는 증여자 취득일·의제 1985-01-01 반영) ≥ 최초고시일 (validate ⑧과 동일 게이트) */}
       {!isPhdEligible(phdCompareDate, asset.phdFirstDisclosureDate) && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-900">
+        <div className="rounded-lg border border-rose-200 bg-rose-50/70 px-3 py-2 text-xs text-rose-900 dark:text-rose-200 dark:bg-rose-950/40">
           <p className="font-medium">⚠️ 3-시점 환산(§164⑦) 대상이 아닙니다</p>
-          <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
+          <p className="mt-0.5 text-caption leading-relaxed text-rose-800 dark:text-rose-200">
             취득일(이월과세는 증여자 취득일, 의제취득일 1985-01-01 반영)이 최초 고시일 이후이므로
             취득 당시 주택공시가격이 이미 고시되어 있습니다. 3-시점 환산을 끄고 취득일 현재 고시된
             주택공시가격(취득시 기준시가)을 직접 입력하세요. 이 상태로는 계산이 진행되지 않습니다.

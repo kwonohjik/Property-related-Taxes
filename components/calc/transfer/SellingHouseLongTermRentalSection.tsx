@@ -152,7 +152,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
             ltr.businessRegistrationDate,
           ) && (
             <p
-              className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-caption text-amber-900"
+              className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-caption text-amber-900 dark:text-amber-200 dark:bg-amber-950/40"
               data-testid="selling-rental-registration-incomplete-warning"
             >
               위 <strong>「임대사업자 정식 등록」</strong>이 완료되지 않아, 아래 유형을 모두 채워도

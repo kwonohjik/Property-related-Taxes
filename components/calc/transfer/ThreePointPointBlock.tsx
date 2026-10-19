@@ -66,17 +66,17 @@ const TONE_CLASSES: Record<PointBlockTone, { container: string; label: string; s
   amber: {
     container: "border-amber-200 bg-amber-50/60 dark:border-amber-900/40 dark:bg-amber-950/20",
     label: "text-amber-800 dark:text-amber-300",
-    summary: "bg-amber-100/60 border border-amber-200 text-amber-900",
+    summary: "bg-amber-100/60 border border-amber-200 text-amber-900 dark:text-amber-200 dark:bg-amber-900/40",
   },
   violet: {
     container: "border-violet-200 bg-violet-50/60 dark:border-violet-900/40 dark:bg-violet-950/20",
     label: "text-violet-800 dark:text-violet-300",
-    summary: "bg-violet-100/60 border border-violet-200 text-violet-900",
+    summary: "bg-violet-100/60 border border-violet-200 text-violet-900 dark:text-violet-200 dark:bg-violet-900/40",
   },
   emerald: {
     container: "border-emerald-200 bg-emerald-50/60 dark:border-emerald-900/40 dark:bg-emerald-950/20",
     label: "text-emerald-800 dark:text-emerald-300",
-    summary: "bg-emerald-100/60 border border-emerald-200 text-emerald-900",
+    summary: "bg-emerald-100/60 border border-emerald-200 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-900/40",
   },
 };
 

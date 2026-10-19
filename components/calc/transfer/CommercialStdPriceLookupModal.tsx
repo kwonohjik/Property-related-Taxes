@@ -232,10 +232,10 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
 
           <div className="space-y-3">
             <ToneCard tone="sky" title="조회 대상">
-              <p className="text-xs text-sky-800">
+              <p className="text-xs text-sky-800 dark:text-sky-200">
                 {asset.addressJibun || asset.addressRoad || "소재지 미상"}
               </p>
-              <p className="text-caption text-sky-700">
+              <p className="text-caption text-sky-700 dark:text-sky-300">
                 {points.length > 0
                   ? points
                       .map((p) => `${p.label} ${p.noticeDate ?? "고시분 없음"}`)
@@ -273,7 +273,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
                     className="min-w-[36rem]"
                     onKeyDown={(e) => handleListKeyDown(e, visible, selectedKey, setSelectedKey)}
                   >
-                    <div className="grid grid-cols-[1fr_5rem_5rem_4rem_5rem_5rem_4rem] gap-x-2 border-b border-emerald-200 pb-1 text-caption font-medium text-emerald-700">
+                    <div className="grid grid-cols-[1fr_5rem_5rem_4rem_5rem_5rem_4rem] gap-x-2 border-b border-emerald-200 pb-1 text-caption font-medium text-emerald-700 dark:text-emerald-300">
                       <span>건물명</span>
                       <span>동</span>
                       <span>층</span>
@@ -294,7 +294,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
                           data-testid={`cb-stdprice-unit-${fcCode(u.floorClass)}__${u.floor}__${u.ho}`}
                           onClick={() => setSelectedKey(u.key)}
                           className={`grid w-full grid-cols-[1fr_5rem_5rem_4rem_5rem_5rem_4rem] gap-x-2 rounded px-1 py-1 text-left text-xs ${
-                            isSel ? "bg-emerald-100 ring-1 ring-emerald-300" : "hover:bg-emerald-50"
+                            isSel ? "bg-emerald-100 ring-1 ring-emerald-300 dark:bg-emerald-900/40" : "hover:bg-emerald-50"
                           }`}
                         >
                           <span className="truncate">
@@ -337,9 +337,9 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
 
             {selected && (
               <ToneCard tone="amber" sectionNum="2" title="선택한 호 — 시점별 고시가">
-                <p className="text-caption text-amber-700">{unitLabel(selected)}</p>
+                <p className="text-caption text-amber-700 dark:text-amber-300">{unitLabel(selected)}</p>
                 {selected.linkedBy === "position" && selected.buildingNameByDate && (
-                  <p className="text-caption text-amber-800">
+                  <p className="text-caption text-amber-800 dark:text-amber-200">
                     건물명 표기가 시점마다 다릅니다 —{" "}
                     {Object.entries(selected.buildingNameByDate)
                       .map(([d, n]) => `${d.slice(0, 4)}년 "${n}"`)
@@ -352,7 +352,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
                     const price = p.noticeDate ? selected.prices[p.noticeDate] : null;
                     return (
                       <div key={p.id} className="grid grid-cols-[6rem_7rem_1fr_6rem] gap-2 text-xs">
-                        <span className="text-amber-700">{p.label}</span>
+                        <span className="text-amber-700 dark:text-amber-300">{p.label}</span>
                         <span className="text-muted-foreground">{p.noticeDate ?? "—"}</span>
                         <span className="text-right font-mono tabular-nums whitespace-nowrap">
                           {price ? `${price.price.toLocaleString()} 원/㎡` : "해당 고시분에 이 호가 없습니다"}
@@ -385,7 +385,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
                   대지면적은 고시 자료에 없습니다 — 등기부에서 직접 입력하세요.
                 </p>
                 {variant === "inheritance" && (
-                  <p className="text-caption text-amber-800">
+                  <p className="text-caption text-amber-800 dark:text-amber-200">
                     §164⑥ 적용에는 <b>대지면적 · 취득시·최초고시 개별공시지가 · 취득시·최초고시 건물
                     기준시가</b>를 추가로 입력해야 합니다. 일부만 입력하면 계산이 차단됩니다.
                   </p>
@@ -396,7 +396,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
 
           <DialogFooter>
             {selected && filledCount < points.length && (
-              <p className="text-caption text-amber-700">
+              <p className="text-caption text-amber-700 dark:text-amber-300">
                 {points.length}개 시점 중 {filledCount}개만 채워집니다
               </p>
             )}

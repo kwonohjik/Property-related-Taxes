@@ -301,7 +301,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
       {!judgmentMenu &&
         (house.isUnsoldNewHouse || !!house.completionDate) &&
         (!house.acquisitionPrice || !house.exclusiveArea) && (
-          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-caption text-amber-700">
+          <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-caption text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
             신축·준공후미분양 특례 판정에는 취득가액·전용면적 입력이 필요합니다. 미입력 시 특례가 적용되지 않습니다.
           </p>
         )}
@@ -611,7 +611,7 @@ function LongTermRentalSection({
             house.businessRegistrationDate,
           ) && (
             <p
-              className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-caption text-amber-900"
+              className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-caption text-amber-900 dark:text-amber-200 dark:bg-amber-950/40"
               data-testid="rental-registration-incomplete-warning"
             >
               위 <strong>「임대사업자 정식 등록」</strong>이 완료되지 않아, 아래 유형을 모두

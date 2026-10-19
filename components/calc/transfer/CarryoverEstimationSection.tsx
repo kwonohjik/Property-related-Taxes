@@ -82,7 +82,7 @@ export function CarryoverEstimationSection({
     <div className="space-y-3">
       {/* 환산 방식 선택 */}
       <div className="space-y-1.5">
-        <p className="text-sm font-medium text-amber-800">환산 방식 선택</p>
+        <p className="text-sm font-medium text-amber-800 dark:text-amber-200">환산 방식 선택</p>
         <RadioCardGroup
           name={`carryoverEstimationMode-${asset.assetId ?? "primary"}`}
           data-field={isBuildingPart ? "buildingCarryover.estimationMode" : "carryover.estimationMode"}
@@ -98,8 +98,8 @@ export function CarryoverEstimationSection({
 
       {/* 일반 기준시가 환산 입력 */}
       {c.estimationMode === "general" && (
-        <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3">
-          <p className="text-xs font-semibold text-amber-700">
+        <div className="rounded-md border border-amber-200/70 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
             취득시·양도시 기준시가 입력
           </p>
           <p className="text-xs text-muted-foreground">
@@ -116,7 +116,7 @@ export function CarryoverEstimationSection({
             판정 술어는 `OwnershipRatioInput`과 동일 소스(`isFractionalOwnership`).
           */}
           {isFractionalOwnership(asset) && (
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               지분 모드 — 취득시·양도시 기준시가는 공시된 가격(물건 전체 기준)을 두 칸 모두 그대로
               입력합니다. 지분율로 나누지 않습니다.
             </p>
@@ -153,7 +153,7 @@ export function CarryoverEstimationSection({
           {/* 환산취득가 미리보기 */}
           {parseAmount(c.donorStandardPriceAtAcquisition) > 0 &&
             parseAmount(c.donorStandardPriceAtTransfer) > 0 && (
-              <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+              <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-900/40">
                 <span className="font-medium">개산공제 (참고)</span>
                 <br />
                 개산공제 = 취득시 기준시가{" "}
@@ -172,7 +172,7 @@ export function CarryoverEstimationSection({
       {/* PHD §164⑦ 입력 — PreHousingDisclosureSection 재사용 */}
       {phdPanelsOpen && c.estimationMode === "phd" && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground text-amber-700">
+          <p className="text-xs text-muted-foreground text-amber-700 dark:text-amber-300">
             증여자 취득일이 개별주택가격 최초 고시 이전인 경우, 3-시점 기준시가로 취득시가를 역산합니다.
             <br />
             취득일은 증여자 취득일(위 ① 섹션 입력값)을 사용합니다.
@@ -198,7 +198,7 @@ export function CarryoverEstimationSection({
       {/* APD — 공동주택 최초고시 전 (PHD와 동일 경로 재사용) */}
       {phdPanelsOpen && c.estimationMode === "apd" && (
         <div className="space-y-2">
-          <p className="text-xs text-muted-foreground text-amber-700">
+          <p className="text-xs text-muted-foreground text-amber-700 dark:text-amber-300">
             공동주택(아파트 등)이 최초로 공시된 날 이전에 증여자가 취득한 경우,
             최초공시일을 기준으로 공동주택가격 3-시점 역산을 적용합니다.
           </p>

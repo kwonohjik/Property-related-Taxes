@@ -368,7 +368,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
                 </span>
               </div>
             )}
-            <div className="pt-1 text-micro text-sky-700">
+            <div className="pt-1 text-micro text-sky-700 dark:text-sky-300">
               ※ 시행령 §166④의 &ldquo;권리가액&rdquo;은 관리처분 인가일 기준 평가액이며 원조합원 전용 개념입니다.
               승계조합원의 신축APT 취득가액은 시행령 §162①5호(상속·증여 시점 평가액) 또는 §97①(매매 실가)이 적용됩니다.
             </div>
@@ -451,15 +451,15 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
 
         {/* 미리보기 카드 — useMemo 순수 계산 */}
         {preview && (
-          <div className="mt-2 rounded-md bg-violet-100/60 border border-violet-200 p-2 text-xs space-y-1">
-            <p className="font-semibold text-violet-800">미리보기 — 분양가 (인가후 분 취득가) 자동 산정</p>
-            <p className="text-violet-700">
+          <div className="mt-2 rounded-md bg-violet-100/60 border border-violet-200 p-2 text-xs space-y-1 dark:bg-violet-900/40">
+            <p className="font-semibold text-violet-800 dark:text-violet-200">미리보기 — 분양가 (인가후 분 취득가) 자동 산정</p>
+            <p className="text-violet-700 dark:text-violet-300">
               분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono tabular-nums font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
             </p>
-            <p className="text-caption text-violet-600">
+            <p className="text-caption text-violet-600 dark:text-violet-400">
               ※ §166②1호 인가후 분 양도차익 산정 시 양도가액에서 차감되는 분양가. 상단 일반 &ldquo;취득가액&rdquo; 입력 대신 본 값이 자동 사용됩니다.
             </p>
-            <p className="text-violet-700">
+            <p className="text-violet-700 dark:text-violet-300">
               기존건물분 비율: <span className="font-mono">{preview.existingRatio}%</span> /
               청산금분 비율: <span className="font-mono">{preview.settlementRatio}%</span>
             </p>
@@ -490,7 +490,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           <RedevelopmentSec163_9PriorityNotice asset={asset} />
 
           {asset.transferType === "burdened_gift" ? (
-            <p className="text-xs text-sky-800" data-testid="redev-bg-sec166-3-notice">
+            <p className="text-xs text-sky-800 dark:text-sky-200" data-testid="redev-bg-sec166-3-notice">
               부담부증여 취득가액 산정방식을 「환산취득가액」으로 골랐습니다 — 종전 부동산의 취득가액을 「소득세법 시행령」 제166조 제3항
               (평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" />)으로 환산하고, 인가전 분 필요경비는 개산공제(같은 영
               제163조 제6항)를 적용합니다. 두 값 모두 채무액 비율로 안분합니다.
