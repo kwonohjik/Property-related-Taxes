@@ -157,14 +157,14 @@ function AggregationExclusionSection({
   return (
     <section className="space-y-2">
       <SectionHeader>합산배제 적용 내역</SectionHeader>
-      <div className="rounded-md border bg-blue-50/50 divide-y">
+      <div className="rounded-md border bg-blue-50/50 divide-y dark:bg-blue-950/40">
         <div className="flex justify-between px-3 py-2 text-sm">
           <span>합산배제 주택 수</span>
           <span className="font-medium">{aggregationExclusion.excludedCount}건</span>
         </div>
         <div className="flex justify-between px-3 py-2 text-sm">
           <span>합산배제 공시가격 합계</span>
-          <span className="font-medium text-blue-700">
+          <span className="font-medium text-blue-700 dark:text-blue-300">
             {formatKRW(aggregationExclusion.totalExcludedValue)}
           </span>
         </div>
@@ -178,12 +178,12 @@ function AggregationExclusionSection({
       {aggregationExclusion.propertyResults.some(
         (r) => r.warnings && r.warnings.length > 0,
       ) && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
-          <p className="text-xs font-semibold text-amber-800">의무임대기간 확인 필요</p>
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">의무임대기간 확인 필요</p>
           <ul className="mt-1 space-y-1">
             {aggregationExclusion.propertyResults.flatMap((r, idx) =>
               (r.warnings ?? []).map((w, wi) => (
-                <li key={`${idx}-${wi}`} className="text-xs text-amber-700">
+                <li key={`${idx}-${wi}`} className="text-xs text-amber-700 dark:text-amber-300">
                   임대주택 {idx + 1}번째: {w}
                 </li>
               )),
@@ -251,8 +251,8 @@ function HousingTaxBaseSection({
         />
       </div>
       {!result.isSubjectToHousingTax && (
-        <div className="rounded-md bg-green-50 border border-green-200 p-3">
-          <p className="text-sm text-green-800 font-medium">
+        <div className="rounded-md bg-green-50 border border-green-200 p-3 dark:bg-green-950/40">
+          <p className="text-sm text-green-800 font-medium dark:text-green-200">
             ✓ 기본공제 이하 — 종합부동산세 납세의무 없음
           </p>
         </div>
@@ -390,7 +390,7 @@ function HousingTaxSection({
                 <span>
                   합산 공제율
                   {oneHouseDeduction.isMaxCapApplied && (
-                    <span className="ml-1 text-xs text-amber-600">(80% 상한 적용)</span>
+                    <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">(80% 상한 적용)</span>
                   )}
                 </span>
                 <span>{formatRate(oneHouseDeduction.combinedRate)}</span>
@@ -679,9 +679,9 @@ export function ComprehensiveTaxResultView({ result }: Props) {
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (
         <PrintSection id="warnings" selectedIds={selectedPrintIds}>
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1">
+        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 space-y-1 dark:bg-amber-950/40">
           {result.warnings.map((w, i) => (
-            <p key={i} className="text-xs text-amber-800">
+            <p key={i} className="text-xs text-amber-800 dark:text-amber-200">
               ⚠ {w}
             </p>
           ))}

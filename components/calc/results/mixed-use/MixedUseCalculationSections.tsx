@@ -217,8 +217,8 @@ export function MixedUseCalculationSections({
       <div
         className={`rounded-md px-3 py-2 text-xs border ${
           breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
-            ? "bg-amber-50/60 border-amber-200 text-amber-900"
-            : "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+            ? "bg-amber-50/60 border-amber-200 text-amber-900 dark:text-amber-200 dark:bg-amber-950/40"
+            : "bg-emerald-50/60 border-emerald-200 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-950/40"
         }`}
       >
         <span className="font-semibold">

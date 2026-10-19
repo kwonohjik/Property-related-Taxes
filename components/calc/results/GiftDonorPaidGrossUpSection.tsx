@@ -84,9 +84,9 @@ export function GiftDonorPaidGrossUpSection({ grossUp }: Props) {
       {/* 흐름 표시 — A + D = V* (P 미포함) */}
       <div className="flex items-center gap-1.5 flex-wrap text-xs text-violet-700 dark:text-violet-300 bg-violet-100/60 dark:bg-violet-900/20 rounded-lg px-3 py-2">
         <span>{formatKRW(grossUp.originalNetGift)}</span>
-        <span className="text-violet-400">+</span>
+        <span className="text-violet-400 dark:text-violet-300">+</span>
         <span>{formatKRW(grossUp.donorPaidTax)} (증여자 대납분)</span>
-        <span className="text-violet-400">=</span>
+        <span className="text-violet-400 dark:text-violet-300">=</span>
         <span className="font-semibold">{formatKRW(grossUp.grossedUpNetGift)} (과세가액)</span>
       </div>
 

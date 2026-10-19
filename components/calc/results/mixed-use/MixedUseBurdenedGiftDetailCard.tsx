@@ -31,9 +31,9 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
         ? "증여가액 = 보충적평가 (상증법 §61 — 개별주택가격 + 상가 부수토지 + 상가건물 기준시가)"
         : "증여가액 (상증법 §60~§66 평가)";
   return (
-    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid" data-testid="bg-mixed-detail-card">
+    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid dark:bg-fuchsia-950/40" data-testid="bg-mixed-detail-card">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm font-semibold text-fuchsia-900">
+        <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
           부담부증여 평가 명세 — 겸용주택 (소득세법 시행령 §159)
         </p>
         <span className="text-xs text-fuchsia-700 px-2 py-0.5 rounded-full bg-fuchsia-100 border border-fuchsia-300">
@@ -59,15 +59,15 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.assumedDebtAmount)}</td>
           </tr>
           <tr>
-            <td className="py-1 pr-2 text-fuchsia-700">
+            <td className="py-1 pr-2 text-fuchsia-700 dark:text-fuchsia-300">
               무상이전분 (증여세 과세 가액) = 증여가액 {fmt(whole)} - 인수 채무액 {fmt(bg.assumedDebtAmount)}
             </td>
-            <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700">{fmt(bg.gratuitousPortion)}</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700 dark:text-fuchsia-300">{fmt(bg.gratuitousPortion)}</td>
           </tr>
           {bg.giftTax && <BurdenedGiftGiftTaxRows giftTax={bg.giftTax} />}
         </tbody>
       </table>
-      <p className="text-xs text-fuchsia-600 mt-2">
+      <p className="text-xs text-fuchsia-600 mt-2 dark:text-fuchsia-400">
         ※ 양도가액은 «양도로 보는 채무액»이고 부분별 채무비율은 위 ①에 있습니다. 증여세는 무상이전분에 대해 수증자가 별도 신고·납부합니다.
       </p>
     </div>

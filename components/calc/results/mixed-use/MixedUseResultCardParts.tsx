@@ -103,9 +103,9 @@ export function PartialUsageChangeCard({
   // 기본 펼침 — 인쇄 시 print-only-css-toggle로 항상 표시. 경고 배지는 헤더에 유지(접힘에도 노출).
   const [open, setOpen] = useState(true);
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2">
+    <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-2 dark:bg-amber-950/40">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-sm font-semibold text-amber-900">
+        <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
           취득시점 자산 구성 (보유 중 일부 용도변경)
         </p>
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -128,7 +128,7 @@ export function PartialUsageChangeCard({
         </div>
       </div>
       <div className={open ? "block space-y-2" : "hidden print:block print:space-y-2"}>
-      <p className="text-xs text-amber-800">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
         취득시 자산 구성:{" "}
         <span className="font-semibold">
           {puc.direction === "house_to_commercial"
@@ -138,12 +138,12 @@ export function PartialUsageChangeCard({
       </p>
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-md bg-white/60 dark:bg-white/5 border border-amber-200 px-3 py-2">
-          <div className="text-caption text-amber-700">취득시 주택 연면적</div>
-          <div className="font-mono tabular-nums text-amber-900">{puc.acqResidentialArea.toFixed(2)}㎡</div>
+          <div className="text-caption text-amber-700 dark:text-amber-300">취득시 주택 연면적</div>
+          <div className="font-mono tabular-nums text-amber-900 dark:text-amber-200">{puc.acqResidentialArea.toFixed(2)}㎡</div>
         </div>
         <div className="rounded-md bg-white/60 dark:bg-white/5 border border-amber-200 px-3 py-2">
-          <div className="text-caption text-amber-700">취득시 상가 연면적</div>
-          <div className="font-mono tabular-nums text-amber-900">{puc.acqCommercialArea.toFixed(2)}㎡</div>
+          <div className="text-caption text-amber-700 dark:text-amber-300">취득시 상가 연면적</div>
+          <div className="font-mono tabular-nums text-amber-900 dark:text-amber-200">{puc.acqCommercialArea.toFixed(2)}㎡</div>
         </div>
       </div>
       {puc.isAreaCustomized && (
@@ -167,7 +167,7 @@ export function PartialUsageChangeCard({
         </div>
       )}
       {reason && (
-        <p className="text-caption text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed">
+        <p className="text-caption text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-2 py-1.5 leading-relaxed dark:text-amber-200 dark:bg-amber-900/40">
           💡 {reason}
         </p>
       )}

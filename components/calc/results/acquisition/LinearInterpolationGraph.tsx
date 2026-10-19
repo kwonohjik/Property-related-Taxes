@@ -117,11 +117,11 @@ export function LinearInterpolationGraph({ acquisitionValue, appliedRate }: Prop
       </svg>
 
       {/* 세율 결과 highlight */}
-      <div className="flex items-center justify-between rounded-md bg-violet-50/70 border border-violet-200 px-3 py-2">
-        <span className="text-xs text-violet-700">
+      <div className="flex items-center justify-between rounded-md bg-violet-50/70 border border-violet-200 px-3 py-2 dark:bg-violet-950/40">
+        <span className="text-xs text-violet-700 dark:text-violet-300">
           취득가액 {(acquisitionValue / 100_000_000).toLocaleString("ko-KR")}억 원 적용 세율
         </span>
-        <span className="text-sm font-bold text-violet-800">
+        <span className="text-sm font-bold text-violet-800 dark:text-violet-200">
           {ratePercent}%
         </span>
       </div>

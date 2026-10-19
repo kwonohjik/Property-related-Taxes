@@ -30,11 +30,11 @@ export function LotCapitalAdjustmentsCard({
   const hasDonor = changed.some((d) => d.adjustedDonorPerShareCost !== undefined);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
-      <h3 className="text-sm font-semibold text-violet-800">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3 dark:bg-violet-950/40">
+      <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
         자본조정 lot별 환산 (분할·다건 모드)
       </h3>
-      <p className="text-xs text-violet-600">
+      <p className="text-xs text-violet-600 dark:text-violet-400">
         발생일 이전 보유 lot만 희석 — 총취득원가 불변, 1주당 단가 환산이 양도차익에 반영(소득세법 시행령 §27② · 무상감자는 집행기준 97-163-10).
         {hasDonor && (
           <>
@@ -46,7 +46,7 @@ export function LotCapitalAdjustmentsCard({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-xs text-violet-700 border-b border-violet-200">
+            <tr className="text-xs text-violet-700 border-b border-violet-200 dark:text-violet-300">
               <th className="text-left py-1 pr-2">매수 lot</th>
               <th className="text-right py-1 px-2">조정 전</th>
               <th className="text-right py-1 px-2">조정 후</th>
@@ -60,7 +60,7 @@ export function LotCapitalAdjustmentsCard({
           <tbody>
             {changed.map((d, i) => (
               <tr key={d.lotId ?? i} className="border-b border-violet-100 last:border-0">
-                <td className="py-1 pr-2 text-violet-900">{d.lotId ?? `lot ${i + 1}`}</td>
+                <td className="py-1 pr-2 text-violet-900 dark:text-violet-200">{d.lotId ?? `lot ${i + 1}`}</td>
                 <td className="py-1 px-2 text-right font-mono tabular-nums whitespace-nowrap">
                   {d.beforeShares.toLocaleString()}
                 </td>
@@ -77,7 +77,7 @@ export function LotCapitalAdjustmentsCard({
                       : "—"}
                   </td>
                 )}
-                <td className="py-1 pl-2 text-xs text-violet-700">
+                <td className="py-1 pl-2 text-xs text-violet-700 dark:text-violet-300">
                   {d.appliedTypes.map((t) => TYPE_LABEL[t]).join(", ") || "—"}
                 </td>
               </tr>

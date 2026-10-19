@@ -47,7 +47,7 @@ function Row({
       className={[
         "flex items-start justify-between py-1.5",
         indent ? "pl-4" : "",
-        highlight ? "font-semibold text-sky-800" : warn ? "text-rose-700" : "text-slate-700",
+        highlight ? "font-semibold text-sky-800 dark:text-sky-200" : warn ? "text-rose-700 dark:text-rose-300" : "text-slate-700",
       ].join(" ")}
     >
       <span className="text-sm leading-relaxed">{label}</span>
@@ -85,8 +85,8 @@ function EligibilityBadge({ label, ok }: { label: string; ok: boolean }) {
 // ── 종목별 결과 행 ──
 function HoldingDetailRow({ h }: { h: ExitTaxHoldingResult }) {
   return (
-    <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1 text-xs">
-      <p className="font-semibold text-amber-800">{h.stockName}</p>
+    <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1 text-xs dark:bg-amber-950/40">
+      <p className="font-semibold text-amber-800 dark:text-amber-200">{h.stockName}</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-600">
         <span>간주양도가액</span>
         <span className="text-right tabular-nums">{fmt(h.departureDayValue)}</span>
@@ -104,13 +104,13 @@ function HoldingDetailRow({ h }: { h: ExitTaxHoldingResult }) {
         </span>
         <span>취득가액</span>
         <span className="text-right tabular-nums">{fmt(h.acquisitionCost)}</span>
-        <span className={h.transferGain >= 0 ? "font-medium text-slate-700" : "font-medium text-rose-600"}>
+        <span className={h.transferGain >= 0 ? "font-medium text-slate-700" : "font-medium text-rose-600 dark:text-rose-400"}>
           양도차익
         </span>
         <span
           className={[
             "text-right tabular-nums font-medium",
-            h.transferGain >= 0 ? "text-slate-700" : "text-rose-600",
+            h.transferGain >= 0 ? "text-slate-700" : "text-rose-600 dark:text-rose-400",
           ].join(" ")}
         >
           {h.transferGain < 0 ? "▼ " : ""}{fmt(Math.abs(h.transferGain))}
@@ -124,16 +124,16 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
   // ── 납세의무 없음 ──
   if (!result.isLiable) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:bg-amber-950/40">
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-sm font-semibold text-amber-800">납세의무 없음 (§118의9)</span>
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">납세의무 없음 (§118의9)</span>
           <EligibilityBadge label="거주자 요건" ok={result.residencyEligible} />
           <EligibilityBadge label="대주주 요건" ok={result.majorShareholderEligible} />
         </div>
-        <p className="text-sm text-amber-700 leading-relaxed">
+        <p className="text-sm text-amber-700 leading-relaxed dark:text-amber-300">
           {result.ineligibleReason ?? "§118의9① 요건 미충족으로 납세의무가 없습니다."}
         </p>
-        <p className="text-xs text-amber-600 mt-2">세액: 0</p>
+        <p className="text-xs text-amber-600 mt-2 dark:text-amber-400">세액: 0</p>
       </div>
     );
   }
@@ -231,7 +231,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
         {result.reentryRefund && (
           <>
             <Divider />
-            <p className="text-xs font-semibold text-emerald-600 pt-1">재전입 환급 (§118의17①1호)</p>
+            <p className="text-xs font-semibold text-emerald-600 pt-1 dark:text-emerald-400">재전입 환급 (§118의17①1호)</p>
             <Row
               label={result.reentryRefund.isDeferralCancel ? "납부유예 취소 예정액" : "환급 예정액"}
               value={result.reentryRefund.amount}
@@ -283,7 +283,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
         {hasPenalty && (
           <>
             <Divider />
-            <p className="text-xs font-semibold text-rose-600 pt-1">가산세</p>
+            <p className="text-xs font-semibold text-rose-600 pt-1 dark:text-rose-400">가산세</p>
             <Row
               label="보유현황 미신고 가산세 (§118의15) = 액면금액 합계 × 2%"
               value={result.holdingsReportPenalty!}
@@ -312,10 +312,10 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
 
       {/* ── 경고·적용 규칙 ── */}
       {result.warnings.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1">
-          <p className="text-xs font-semibold text-amber-700">주의사항</p>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-1 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">주의사항</p>
           {result.warnings.map((w, i) => (
-            <p key={i} className="text-xs text-amber-600 leading-relaxed">
+            <p key={i} className="text-xs text-amber-600 leading-relaxed dark:text-amber-400">
               • {w}
             </p>
           ))}

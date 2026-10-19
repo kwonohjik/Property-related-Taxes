@@ -50,8 +50,8 @@ export function MajorShareholderResultCard({
   const isUnlisted = t.marketType === "unlisted";
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 space-y-2">
-      <h4 className="text-sm font-semibold text-violet-900 flex flex-wrap items-center gap-2">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-4 space-y-2 dark:bg-violet-950/40">
+      <h4 className="text-sm font-semibold text-violet-900 flex flex-wrap items-center gap-2 dark:text-violet-200">
         대주주 판정 ({lawRef})
         {/* Phase B (2026-05-19) — 비상장 벤처기업 임계 적용 배지 */}
         {t.isVentureRule && (
@@ -78,7 +78,7 @@ export function MajorShareholderResultCard({
           </span>
         )}
       </h4>
-      <dl className="text-sm text-violet-800 space-y-1">
+      <dl className="text-sm text-violet-800 space-y-1 dark:text-violet-200">
         <div>· 시장: <strong>{MARKET_LABEL[t.marketType]}</strong></div>
         <div>· 판정 기준일: {t.priorYearEndDate}</div>
         <div>· 임계 적용 시작: {t.fromDate}</div>
@@ -88,19 +88,19 @@ export function MajorShareholderResultCard({
         )}
         {/* Phase B (2026-05-19) — 적용 규칙 출처 명시 */}
         {t.ruleSource && (
-          <div className="text-xs text-violet-600">
+          <div className="text-xs text-violet-600 dark:text-violet-400">
             · 적용 규칙: {RULE_SOURCE_LABEL[t.ruleSource]}
           </div>
         )}
         {/* F-09/F-10/F-14/F-23 (2026-05-19) — 판정 기준일 사유 명시 */}
         {t.judgmentBasis && t.judgmentBasis !== "default" && (
-          <div className="text-xs text-rose-700 font-medium">
+          <div className="text-xs text-rose-700 font-medium dark:text-rose-300">
             · 판정 기준일 사유: {JUDGMENT_BASIS_LABEL[t.judgmentBasis]}
           </div>
         )}
         {/* F-24 (2026-05-19) — 본인 미보유 강제 합산 안내 */}
         {t.forcedCombinedJudgment && (
-          <div className="text-xs text-sky-700 font-medium">
+          <div className="text-xs text-sky-700 font-medium dark:text-sky-300">
             · 직전사업연도 종료일 본인 미보유 → 특수관계 기타주주 합산하여 판정 (기획재정부 금융세제-327, 2020.12.10.)
           </div>
         )}
@@ -110,13 +110,13 @@ export function MajorShareholderResultCard({
         </div>
         {/* 비상장 벤처 미적용 시 안내 */}
         {isUnlisted && !t.isVentureRule && (
-          <div className="text-xs text-violet-600 mt-1">
+          <div className="text-xs text-violet-600 mt-1 dark:text-violet-400">
             ※ 벤처기업 주식의 시총 기준은 40억원 (§167의8①2호 나목 단서). 회사 분류에서 &quot;벤처기업&quot; 선택 시 자동 적용
           </div>
         )}
         {/* 상장 비과세 사유 표시 */}
         {result.isExempt && !isUnlisted && (
-          <div className="text-xs text-violet-600 mt-1">→ 비과세 (§94①3 가목 단서)</div>
+          <div className="text-xs text-violet-600 mt-1 dark:text-violet-400">→ 비과세 (§94①3 가목 단서)</div>
         )}
       </dl>
     </div>

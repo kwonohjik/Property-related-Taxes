@@ -20,9 +20,9 @@ const VERDICT_LABEL: Record<ContestedVerdict, string> = {
 };
 
 const VERDICT_CLASS: Record<ContestedVerdict, string> = {
-  exempt: "text-emerald-700",
-  partial: "text-amber-700",
-  taxable: "text-rose-700",
+  exempt: "text-emerald-700 dark:text-emerald-300",
+  partial: "text-amber-700 dark:text-amber-300",
+  taxable: "text-rose-700 dark:text-rose-300",
 };
 
 type Props = {
@@ -52,7 +52,7 @@ export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
                 className="space-y-1 rounded-md border border-violet-200 bg-card p-3"
                 data-testid={`one-house-contested-${issue.id}-${p.key}`}
               >
-                <p className="text-xs font-semibold text-violet-800">
+                <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                   입장 {p.key}
                   {p.key === issue.enginePosition && (
                     <span className="ml-1 font-normal text-muted-foreground">(아래 판정 내역)</span>

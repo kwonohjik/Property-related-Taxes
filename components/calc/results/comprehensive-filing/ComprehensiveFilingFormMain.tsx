@@ -139,7 +139,7 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
         <p className="text-micro text-gray-500">
           {header.formCode} ({header.revised})
-          <span className="ml-2 text-amber-600">※ {header.hint}</span>
+          <span className="ml-2 text-amber-600 dark:text-amber-400">※ {header.hint}</span>
         </p>
         <p className="text-micro text-gray-500 mt-0.5">
           정기신고 ☑ (정기신고란에 체크)

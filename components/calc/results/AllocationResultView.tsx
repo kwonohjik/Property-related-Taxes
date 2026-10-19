@@ -33,9 +33,9 @@ export function AllocationResultView({
       {result.appliedLawDate && (
         <CapitalIncreaseAppliedLawDate appliedLawDate={result.appliedLawDate} eraNotice={result.eraNotice} />
       )}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4">
+      <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4 dark:bg-rose-950/40">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-rose-800">증자에 따른 이익의 증여 (증자 후 1주당 평가 {formatKRW(result.perShareAfter)})</span>
+          <span className="text-sm font-semibold text-rose-800 dark:text-rose-200">증자에 따른 이익의 증여 (증자 후 1주당 평가 {formatKRW(result.perShareAfter)})</span>
           <ExpandToggleButton open={open} onClick={() => setOpen(!open)} tone="rose" />
         </div>
         <div className="mt-2 flex justify-end">
@@ -45,8 +45,8 @@ export function AllocationResultView({
           {result.perBeneficiary.map((b) => (
             <div key={b.beneficiaryId} className="rounded-md border border-rose-100 bg-white/60 dark:bg-white/5 p-3" data-testid={`ci-alloc-beneficiary-${b.beneficiaryId}`}>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-rose-900">{nameById.get(b.beneficiaryId)}</span>
-                <span className="text-right font-mono text-lg font-bold tabular-nums text-rose-900" data-testid={`ci-alloc-total-${b.beneficiaryId}`}>
+                <span className="text-sm font-semibold text-rose-900 dark:text-rose-200">{nameById.get(b.beneficiaryId)}</span>
+                <span className="text-right font-mono text-lg font-bold tabular-nums text-rose-900 dark:text-rose-200" data-testid={`ci-alloc-total-${b.beneficiaryId}`}>
                   {formatKRW(b.total)}
                 </span>
               </div>
@@ -62,7 +62,7 @@ export function AllocationResultView({
                           {d.imputedSmallShareholderIds ? (
                             <>
                               증여자 소액주주 {d.imputedSmallShareholderIds.length}명
-                              <span className="ml-1 text-xs text-violet-700">
+                              <span className="ml-1 text-xs text-violet-700 dark:text-violet-300">
                                 (§39② 1인 의제 — {d.imputedSmallShareholderIds.map((id) => nameById.get(id)).join("·")})
                               </span>
                             </>
@@ -113,8 +113,8 @@ export function AllocationResultView({
       {/* 과세 수증자 선택 (2명 이상일 때) — 「상증법」§4의2①·§68①상 수증자별 독립 신고다.
           선례: 감자 §39의2 `cd-multi-donee-selector` · 특정법인 §45의5 · 일감몰아주기 §45의3. */}
       {taxedBeneficiaries.length > 1 && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4" data-testid="ci-alloc-donee-select">
-          <p className="text-sm font-semibold text-rose-800">증여세 계산 대상 수증자 선택</p>
+        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 dark:bg-rose-950/40" data-testid="ci-alloc-donee-select">
+          <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">증여세 계산 대상 수증자 선택</p>
           <select
             value={Math.min(selectedDoneeIndex, taxedBeneficiaries.length - 1)}
             onChange={(e) => onSelectDonee(Number(e.target.value))}
@@ -138,7 +138,7 @@ export function AllocationResultView({
           §33·§34·§43·§44·§45의2(열거 밖)에 잘못 붙으면 거짓 고지가 된다. */}
       {result.donorJointLiabilityExempt === true && (
         <div
-          className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-800"
+          className="rounded-lg border border-sky-200 bg-sky-50/60 p-3 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40"
           data-testid="deemed-joint-liability-exempt"
         >
           <b>증여자 연대납부의무 면제</b> (「상증법」§4의2⑥ 단서) — 이 유형은 배제 열거 조문에

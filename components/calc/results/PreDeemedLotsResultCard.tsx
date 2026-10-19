@@ -51,7 +51,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
       bodyClassName="space-y-3"
     >
       <div data-testid="pre-deemed-lots-result-card" className="space-y-3">
-        <p className="text-xs text-amber-800 leading-relaxed">
+        <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
           의제취득일({deemedLabel}) 전에 매수한 건마다 ② 취득 당시 실지거래가액에 생산자물가상승분을 더한 금액
           {c1 ? ` 과 ① 의제취득일 현재 ${method} 중` : " 을"} <strong>{c1 ? "많은 것" : "취득가액으로 합니다"}</strong>
           {c1 ? "을 취득가액으로 합니다." : "."}
@@ -61,7 +61,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
         <div className="overflow-x-auto">
           <table className="w-full text-xs" data-testid="pre-deemed-lots-clause2-table">
             <thead>
-              <tr className="border-b border-amber-200 text-amber-700">
+              <tr className="border-b border-amber-200 text-amber-700 dark:text-amber-300">
                 <th className="px-3 py-2 text-left font-semibold">매수 건</th>
                 <th className="px-3 py-2 text-left font-semibold">취득월</th>
                 <th className="px-3 py-2 text-right font-semibold">입력 1주당 실가 (원)</th>
@@ -86,7 +86,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
         </div>
 
         {!c1 && (
-          <p className="text-xs text-amber-800" data-testid="pre-deemed-lots-clause1-none">
+          <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="pre-deemed-lots-clause1-none">
             ① 미산정 — 의제취득일 현재 환산취득가액·매매사례가액을 입력하지 않아 ② 만 적용했습니다. 2단계의 ① 비교 카드에서
             방식을 고르면 견줍니다.
           </p>
@@ -94,7 +94,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
 
         {c1 && (
           <>
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               ① {method} — 의제취득일 현재 1주당 기준시가 <strong className="font-mono tabular-nums">{num(c1.deemedStdPerShare)}</strong>
               {c1.method === "estimated" ? " (환산비율의 분자 · 개산공제 기준)" : " (개산공제 기준)"}. ① 채택{" "}
               <strong>{shares(c1.clause1Shares)}</strong>주 · 그 외 <strong>{shares(c1.otherShares)}</strong>주 / 매도{" "}
@@ -102,7 +102,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
             </p>
 
             {c1.pooled ? (
-              <p className="text-xs text-amber-800" data-testid="pre-deemed-lots-pooled">
+              <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="pre-deemed-lots-pooled">
                 이동평균법은 매수 건을 합친 풀 평균 단가라 매수 건별 ①·② 선택이 없습니다. ① 환산이 매도 건마다 달라 풀 평균
                 단가가 매도마다 달라질 수 있고, ① 채택분은 매도분이 풀을 소진하는 비율로 안분했습니다(주식수 소수 가능).
               </p>
@@ -111,7 +111,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs" data-testid="pre-deemed-lots-sublot-table">
                     <thead>
-                      <tr className="border-b border-amber-200 text-amber-700">
+                      <tr className="border-b border-amber-200 text-amber-700 dark:text-amber-300">
                         <th className="px-3 py-2 text-left font-semibold">매수 건</th>
                         <th className="px-3 py-2 text-left font-semibold">매도일</th>
                         <th className="px-3 py-2 text-right font-semibold">매도 주식수</th>
@@ -124,7 +124,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                       {subLots.map((m, i) => {
                         const p1 = m.preDeemedSelected === "clause1";
                         return (
-                          <tr key={i} className={`border-b border-amber-100 ${p1 ? "bg-amber-100/40" : ""}`}>
+                          <tr key={i} className={`border-b border-amber-100 ${p1 ? "bg-amber-100/40 dark:bg-amber-900/40" : ""}`}>
                             <td className="px-3 py-2">{lotNo(m.acquisitionLotId)}</td>
                             <td className="px-3 py-2">{iso(m.saleDate)}</td>
                             <td className={AMT}>{num(m.buyShares)}</td>
@@ -147,7 +147,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
             )}
 
             {c1.unresolvedShares ? (
-              <p className="text-xs text-rose-700" data-testid="pre-deemed-lots-unresolved">
+              <p className="text-xs text-rose-700 dark:text-rose-300" data-testid="pre-deemed-lots-unresolved">
                 양도 당시 기준시가가 없어 ① 환산을 산정하지 못한 매도 {shares(c1.unresolvedShares)}주는 ②로 계산했습니다.
               </p>
             ) : null}
@@ -156,7 +156,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
               <div className="overflow-x-auto" data-testid="pre-deemed-lots-settlement">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-amber-200 text-amber-700">
+                    <tr className="border-b border-amber-200 text-amber-700 dark:text-amber-300">
                       <th className="px-3 py-2 text-left font-semibold">필요경비 귀속</th>
                       <th className="px-3 py-2 text-right font-semibold">금액 (원)</th>
                     </tr>
@@ -182,14 +182,14 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                       </td>
                       <td className={AMT}>{num(st.estimatedDeduction)}</td>
                     </tr>
-                    <tr className="border-b border-amber-100 bg-amber-100/40 font-semibold">
+                    <tr className="border-b border-amber-100 bg-amber-100/40 font-semibold dark:bg-amber-900/40">
                       <td className="px-3 py-2">필요경비 (최종)</td>
                       <td className={AMT}>{num(st.expenses)}</td>
                     </tr>
                   </tbody>
                 </table>
                 {st.swapApplied && (
-                  <p className="mt-2 text-xs text-amber-800" data-testid="pre-deemed-lots-swap">
+                  <p className="mt-2 text-xs text-amber-800 dark:text-amber-200" data-testid="pre-deemed-lots-swap">
                     §97②2호 단서 적용 — ① 채택분의 (환산취득가액 + 개산공제) {num(st.swapComparison?.estimatedSide ?? 0)}보다 귀속
                     실비 {num(st.clause1SideActual)}가 커 후자를 필요경비로 하고, 해당 환산취득가액 {num(st.swapRemovedAcquisition)}은 양도차익
                     계산에서 차감하지 않습니다(결과의 취득가액은 이를 뺀 값입니다).

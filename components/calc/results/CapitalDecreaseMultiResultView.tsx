@@ -21,16 +21,16 @@ export function CapitalDecreaseMultiResultView({
   return (
     <>
       {/* 카드① 수증자별 증여재산가액 매트릭스 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4" data-testid="cd-multi-matrix">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 dark:bg-amber-950/40" data-testid="cd-multi-matrix">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-amber-800">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
             수증자별 증여재산가액 ({multi.caseType === "high" ? "고가소각 §39의2①2호" : "저가소각 §39의2①1호"})
           </p>
           <LawArticleModal legalBasis="상증법 §39의2" />
         </div>
         <table className="mt-2 w-full text-sm">
           <thead>
-            <tr className="text-xs text-amber-700">
+            <tr className="text-xs text-amber-700 dark:text-amber-300">
               <th className="py-1 text-left font-medium">수증자</th>
               <th className="py-1 text-left font-medium">증여자별 내역</th>
               <th className="py-1 text-right font-medium">합계</th>
@@ -61,9 +61,9 @@ export function CapitalDecreaseMultiResultView({
       </div>
 
       {/* 카드② 감자 후 1주당 평가액 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4" data-testid="cd-multi-post-value">
-        <p className="text-sm font-semibold text-sky-800">감자 후 1주당 평가액</p>
-        <p className="mt-1 text-right font-mono text-lg font-bold tabular-nums text-sky-900">
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 dark:bg-sky-950/40" data-testid="cd-multi-post-value">
+        <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">감자 후 1주당 평가액</p>
+        <p className="mt-1 text-right font-mono text-lg font-bold tabular-nums text-sky-900 dark:text-sky-200">
           {formatKRW(multi.postPerShareDisplay)}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -75,11 +75,11 @@ export function CapitalDecreaseMultiResultView({
       </div>
 
       {/* 카드③ 감자 전·후 검증표 */}
-      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4" data-testid="cd-multi-verification">
-        <p className="text-sm font-semibold text-violet-800">감자 전·후 검증</p>
+      <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40" data-testid="cd-multi-verification">
+        <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">감자 전·후 검증</p>
         <table className="mt-2 w-full text-sm">
           <thead>
-            <tr className="text-xs text-violet-700">
+            <tr className="text-xs text-violet-700 dark:text-violet-300">
               <th className="py-1 text-left font-medium">주주</th>
               <th className="py-1 text-right font-medium">감자전 주식가액</th>
               <th className="py-1 text-right font-medium">감자대가</th>
@@ -108,8 +108,8 @@ export function CapitalDecreaseMultiResultView({
 
       {/* 카드④ 과세 수증자 선택 (2명 이상일 때) */}
       {taxable.length > 1 && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4" data-testid="cd-multi-donee-select">
-          <p className="text-sm font-semibold text-rose-800">증여세 계산 대상 수증자 선택</p>
+        <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-4 dark:bg-rose-950/40" data-testid="cd-multi-donee-select">
+          <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">증여세 계산 대상 수증자 선택</p>
           <select
             value={selectedDoneeIndex}
             onChange={(e) => onSelectDonee(Number(e.target.value))}

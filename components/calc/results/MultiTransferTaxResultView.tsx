@@ -119,11 +119,11 @@ function ReductionRecalculationSection({
             const taxLabel = clauseRows.length > 0 ? `해당 호 산출세액${clauseSuffix}` : "합산 산출세액";
             const baseLabel = clauseRows.length > 0 ? `해당 호 과세표준${clauseSuffix}` : "합산 과세표준";
             return (
-              <div key={entry.type} className="rounded border border-amber-200/60 bg-amber-50/30 p-3">
+              <div key={entry.type} className="rounded border border-amber-200/60 bg-amber-50/30 p-3 dark:bg-amber-950/40">
                 <p className="text-sm font-medium">
                   {reductionTypeLabelOf(entry.type)}
                   {entry.cappedByLimit && (
-                    <span className="ml-2 text-xs text-amber-700">
+                    <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">
                       ⚠ 한도 적용 ({entry.annualLimit.toLocaleString()})
                     </span>
                   )}
@@ -335,14 +335,14 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
               <span className="text-muted-foreground">
                 [{labelMap.get(row.toPropertyId) ?? row.toPropertyId}]
               </span>
-              <span className="ml-auto font-medium text-red-600">
+              <span className="ml-auto font-medium text-red-600 dark:text-red-400">
                 -{formatKRW(row.amount)}
               </span>
               <Badge
                 variant="outline"
                 className={cn(
                   "text-micro",
-                  row.scope === "same_group" ? "border-blue-300 text-blue-700" : "border-purple-300 text-purple-700",
+                  row.scope === "same_group" ? "border-blue-300 text-blue-700 dark:text-blue-300" : "border-purple-300 text-purple-700 dark:text-purple-300",
                 )}
               >
                 {row.scope === "same_group" ? "동일그룹" : "타군안분"}
@@ -437,7 +437,7 @@ function ResultRow({
       )}
     >
       <span>{label}</span>
-      <span className={value < 0 ? "text-red-600" : ""}>{formatKRW(value)}</span>
+      <span className={value < 0 ? "text-red-600 dark:text-red-400" : ""}>{formatKRW(value)}</span>
     </div>
   );
 }

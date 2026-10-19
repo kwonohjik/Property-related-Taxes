@@ -36,7 +36,7 @@ export function ReductionStatutoryCapRow({
   return (
     <div className="space-y-0.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <p className="text-red-600">
+        <p className="text-red-600 dark:text-red-400">
           ※ 조특법 §133 종합한도(5년 누적) 반영 — 과거 4개 과세연도 감면 이력 차감
         </p>
         <LawArticleModal legalBasis="조세특례제한법 §133" label="§133" />

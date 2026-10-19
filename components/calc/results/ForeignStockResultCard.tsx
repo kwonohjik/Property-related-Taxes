@@ -49,7 +49,7 @@ function Row({
     <div
       className={`flex items-start justify-between py-1.5 ${
         indent ? "pl-4" : ""
-      } ${highlight ? "font-semibold text-sky-800" : "text-slate-700"}`}
+      } ${highlight ? "font-semibold text-sky-800 dark:text-sky-200" : "text-slate-700"}`}
     >
       <span className="text-sm leading-relaxed">{label}</span>
       <div className="text-right ml-4 shrink-0">
@@ -68,14 +68,14 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
   // 납세의무 없음 (§118의2 5년 미만)
   if (!result.isLiable) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:bg-amber-950/40">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-sm font-semibold text-amber-800">납세의무 없음 (§118의2)</span>
+          <span className="text-sm font-semibold text-amber-800 dark:text-amber-200">납세의무 없음 (§118의2)</span>
         </div>
-        <p className="text-sm text-amber-700 leading-relaxed">
+        <p className="text-sm text-amber-700 leading-relaxed dark:text-amber-300">
           {result.ineligibleReason ?? "국내 거주 기간이 5년 미만이어서 §118의2에 따라 납세의무가 없습니다."}
         </p>
-        <p className="text-xs text-amber-600 mt-2">세액: 0</p>
+        <p className="text-xs text-amber-600 mt-2 dark:text-amber-400">세액: 0</p>
       </div>
     );
   }
@@ -88,9 +88,9 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
   return (
     <div className="space-y-4">
       {/* 헤더 */}
-      <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4">
+      <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4 dark:bg-sky-950/40">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-semibold text-sky-800">
+          <span className="text-sm font-semibold text-sky-800 dark:text-sky-200">
             해외주식 양도소득세 결과 (§94①3 다목)
           </span>
           {stockName && (
@@ -100,8 +100,8 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           )}
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-bold text-sky-700">{fmt(result.totalTax)}</span>
-          <span className="text-sm text-sky-600">총 납부세액 (소득세 + 지방소득세)</span>
+          <span className="text-2xl font-bold text-sky-700 dark:text-sky-300">{fmt(result.totalTax)}</span>
+          <span className="text-sm text-sky-600 dark:text-sky-400">총 납부세액 (소득세 + 지방소득세)</span>
         </div>
       </div>
 
@@ -112,7 +112,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
         {result.transferReceiptDetail ? (
           /* FS-09 §178의5② 분할 수령 — 시점별 환율 표 */
           <div className="space-y-1">
-            <p className="text-xs text-fuchsia-700 font-medium mb-1">
+            <p className="text-xs text-fuchsia-700 font-medium mb-1 dark:text-fuchsia-300">
               §178의5② 장기할부 분할 수령 — 수령일별 기준환율 적용
             </p>
             {result.transferReceiptDetail.receipts.map((r, i) => {
@@ -308,10 +308,10 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1">
-          <p className="text-xs font-semibold text-amber-700 mb-2">참고 사항</p>
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-1 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-700 mb-2 dark:text-amber-300">참고 사항</p>
           {result.warnings.map((w, i) => (
-            <p key={i} className="text-xs text-amber-700 leading-relaxed">{w}</p>
+            <p key={i} className="text-xs text-amber-700 leading-relaxed dark:text-amber-300">{w}</p>
           ))}
         </div>
       )}

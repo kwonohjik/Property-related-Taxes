@@ -215,7 +215,7 @@ export function PublicExpropriationDetailCard({
           </div>
           {d.cappedByAnnualLimit && (
             <div className="space-y-0.5">
-              <p className="text-red-600">※ 연간 한도 {formatKRW(d.appliedAnnualLimit)} 초과 → 한도 적용</p>
+              <p className="text-red-600 dark:text-red-400">※ 연간 한도 {formatKRW(d.appliedAnnualLimit)} 초과 → 한도 적용</p>
               <p className="font-medium">→ 적용 감면세액 (한도 후) = {formatKRW(d.reductionAmount)}</p>
             </div>
           )}
@@ -226,7 +226,7 @@ export function PublicExpropriationDetailCard({
         </>
       )}
       {d.useLegacyRates && (
-        <p className="text-amber-700">※ 조특법 법률 제13560호(2015-12-15 일부개정) 부칙 제53조 종전 감면율 적용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도)</p>
+        <p className="text-amber-700 dark:text-amber-300">※ 조특법 법률 제13560호(2015-12-15 일부개정) 부칙 제53조 종전 감면율 적용 (2015-12-31 이전 고시 + 2017-12-31 이전 양도)</p>
       )}
       {/* 엔진이 채우는 나머지 경고 — 렌더러가 0개였다(결과탭 코드리뷰 #057).
           위 두 줄이 이미 말한 사실(연간 한도·종전 감면율)은 leaf가 걸러낸다. */}

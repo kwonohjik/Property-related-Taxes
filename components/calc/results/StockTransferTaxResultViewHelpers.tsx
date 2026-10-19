@@ -62,22 +62,22 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
   const isHaltAcquisition = detail.method === "halt_acquisition_conversion";
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-2">
-      <p className="font-semibold text-amber-800 text-sm">
+    <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-2 dark:bg-amber-950/40">
+      <p className="font-semibold text-amber-800 text-sm dark:text-amber-200">
         {isHaltAcquisition ? "환산취득가 산식 분해 (소령 §165③·§165④)" : "환산취득가 산식 분해 (소령 §165⑤)"}
       </p>
       {isTradingHaltBypass && (
-        <p className="text-xs text-rose-700">
+        <p className="text-xs text-rose-700 dark:text-rose-300">
           양도일 거래정지·관리종목 — 소령 §165③에 따라 1개월 종가평균 대신 비상장 보충 평가(§165④)로 환산했습니다.
         </p>
       )}
       {isHaltAcquisition && (
-        <p className="text-xs text-rose-700">
+        <p className="text-xs text-rose-700 dark:text-rose-300">
           취득일 거래정지·관리종목 — 소령 §165③에 따라 취득시 기준시가만 비상장 보충 평가(§165④)로
           산정했습니다 (양도시 기준시가는 1개월 종가평균 유지).
         </p>
       )}
-      <div className="space-y-1 text-xs text-amber-700 font-mono">
+      <div className="space-y-1 text-xs text-amber-700 font-mono dark:text-amber-300">
         {isHaltAcquisition && detail.conversionAcqStdPerShare !== undefined && (
           <>
             {detail.acquisitionNetAssetOnlyReason ? (
@@ -122,12 +122,12 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
           </p>
         )}
         {detail.netAssetFloorApplied && detail.netAssetFloorValue !== undefined && (
-          <p className="text-fuchsia-600 font-semibold">
+          <p className="text-fuchsia-600 font-semibold dark:text-fuchsia-400">
             80% 하한 발동: 가중평균 &lt; 순자산 × 80% → max(가중평균, {fmt(detail.netAssetFloorValue)})
           </p>
         )}
         {detail.section1659Detail && (
-          <div className="mt-1 rounded border border-sky-200 bg-sky-50/60 px-2 py-1.5 text-sky-700 not-italic space-y-0.5">
+          <div className="mt-1 rounded border border-sky-200 bg-sky-50/60 px-2 py-1.5 text-sky-700 not-italic space-y-0.5 dark:text-sky-300 dark:bg-sky-950/40">
             <p className="font-semibold">§165⑨ 본체 — 양도·취득 기준시가 동일 → 소칙 §81④ 1호 월할 보정</p>
             <p>
               양도 기준시가 보정: {fmt(detail.section1659Detail.prior)} → {fmt(detail.section1659Detail.adjusted)}
@@ -161,7 +161,7 @@ export function SwapComparisonBlock({ result }: { result: StockTransferResult })
     <div
       className={`mt-2 rounded-lg border px-4 py-3 space-y-1 text-xs ${
         applied
-          ? "border-fuchsia-300 bg-fuchsia-50/70 text-fuchsia-800"
+          ? "border-fuchsia-300 bg-fuchsia-50/70 text-fuchsia-800 dark:text-fuchsia-200 dark:bg-fuchsia-950/40"
           : "border-slate-200 bg-slate-50/60 text-slate-600"
       }`}
     >
@@ -224,9 +224,9 @@ export function ProgressiveTaxBreakdown({ result }: { result: StockTransferResul
     : "누진세율 산식 분해 (소득세법 §55① 기본세율 8단계)";
 
   return (
-    <div className="rounded-xl border border-sky-200 bg-sky-50/60 px-5 py-4 space-y-2">
-      <p className="font-semibold text-sky-800 text-sm">{title}</p>
-      <div className="space-y-1 text-xs text-sky-700">
+    <div className="rounded-xl border border-sky-200 bg-sky-50/60 px-5 py-4 space-y-2 dark:bg-sky-950/40">
+      <p className="font-semibold text-sky-800 text-sm dark:text-sky-200">{title}</p>
+      <div className="space-y-1 text-xs text-sky-700 dark:text-sky-300">
         {upperPart > 0 && (
           <>
             <p>3억 이하 분: {fmt(lowerPart)} × 20% = {fmt(Math.floor(lowerPart * 0.2))}</p>
@@ -337,9 +337,9 @@ export function RuleBadges({ appliedRules }: { appliedRules: StockTransferResult
 export function Warnings({ warnings }: { warnings: string[] }) {
   if (!warnings || warnings.length === 0) return null;
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 space-y-1">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 space-y-1 dark:bg-amber-950/40">
       {warnings.map((w, i) => (
-        <p key={i} className="text-xs text-amber-700">⚠ {w}</p>
+        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">⚠ {w}</p>
       ))}
     </div>
   );

@@ -88,7 +88,7 @@ export function HouseCountVerifier({ result }: Props) {
   const excludedCount = detail.totalCount - detail.effectiveCount;
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/30">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/30 dark:bg-sky-950/40">
       {/* 헤더 요약 */}
       <button
         type="button"
@@ -96,9 +96,9 @@ export function HouseCountVerifier({ result }: Props) {
         className="w-full flex items-center justify-between px-4 py-3 text-left"
       >
         <div>
-          <p className="text-sm font-semibold text-sky-800">주택 수 산정 결과</p>
+          <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">주택 수 산정 결과</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            실효 주택 수: <strong className="text-sky-700">{detail.effectiveCount}주택</strong>
+            실효 주택 수: <strong className="text-sky-700 dark:text-sky-300">{detail.effectiveCount}주택</strong>
             {excludedCount > 0 && ` (보유 ${detail.totalCount}주택 중 ${excludedCount}주택 제외)`}
           </p>
         </div>
@@ -116,11 +116,11 @@ export function HouseCountVerifier({ result }: Props) {
           {/* 제외 내역 */}
           {detail.excludedDetails && detail.excludedDetails.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-sky-700 mb-2">제외 항목</p>
+              <p className="text-xs font-semibold text-sky-700 mb-2 dark:text-sky-300">제외 항목</p>
               <div className="space-y-1">
                 {detail.excludedDetails.map((excl, i) => (
-                  <div key={i} className="flex items-start gap-2 rounded bg-sky-50/70 px-2 py-1.5 text-xs">
-                    <span className="text-sky-500 shrink-0 mt-0.5">✓</span>
+                  <div key={i} className="flex items-start gap-2 rounded bg-sky-50/70 px-2 py-1.5 text-xs dark:bg-sky-950/40">
+                    <span className="text-sky-500 shrink-0 mt-0.5 dark:text-sky-400">✓</span>
                     <div>
                       <span className="font-medium">
                         {EXCLUSION_TYPE_LABELS[excl.reason] ?? "기타 제외 사유"}
@@ -137,8 +137,8 @@ export function HouseCountVerifier({ result }: Props) {
 
           {/* 세대 별도 인정 정보 */}
           {detail.separateHousehold && (
-            <div className="rounded bg-violet-50/70 border border-violet-200 p-2 text-xs">
-              <p className="font-semibold text-violet-700 mb-1">세대 별도 인정</p>
+            <div className="rounded bg-violet-50/70 border border-violet-200 p-2 text-xs dark:bg-violet-950/40">
+              <p className="font-semibold text-violet-700 mb-1 dark:text-violet-300">세대 별도 인정</p>
               <p className="text-muted-foreground">
                 {detail.separateHousehold.description ??
                   (detail.separateHousehold.reason
@@ -153,14 +153,14 @@ export function HouseCountVerifier({ result }: Props) {
 
           {/* 신탁 주택 */}
           {detail.trustedHouseCount && detail.trustedHouseCount > 0 && (
-            <div className="rounded bg-sky-50/70 border border-sky-200 p-2 text-xs">
+            <div className="rounded bg-sky-50/70 border border-sky-200 p-2 text-xs dark:bg-sky-950/40">
               신탁재산 위탁자 주택: {detail.trustedHouseCount}채 가산 (§13의3 1호)
             </div>
           )}
 
           {/* 일시적 2주택 경고 */}
           {detail.temporaryTwoHouseWarning && (
-            <div className="rounded bg-amber-50/70 border border-amber-200 p-2 text-xs text-amber-700">
+            <div className="rounded bg-amber-50/70 border border-amber-200 p-2 text-xs text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
               {detail.temporaryTwoHouseWarning}
             </div>
           )}
@@ -169,7 +169,7 @@ export function HouseCountVerifier({ result }: Props) {
           {detail.warnings && detail.warnings.length > 0 && (
             <div className="space-y-1">
               {detail.warnings.map((w, i) => (
-                <p key={i} className="text-xs text-amber-700">• {w}</p>
+                <p key={i} className="text-xs text-amber-700 dark:text-amber-300">• {w}</p>
               ))}
             </div>
           )}

@@ -495,16 +495,16 @@ export function TransferTaxResultView({
 
         {/* §97② 단서 swap 발동 표시 */}
         {!result.isExempt && result.swapApplied && result.swapComparison && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1">
-            <p className="font-semibold text-amber-900">
+          <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1 dark:bg-amber-950/40">
+            <p className="font-semibold text-amber-900 dark:text-amber-200">
               필요경비 swap 적용 — 소득세법 §97② 2호 단서
             </p>
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               환산취득가(또는 감정가액·매매사례가액)
               {result.swapComparison.depreciation ? ` − 감가상각비 ${formatKRW(result.swapComparison.depreciation)}` : ""} + 개산공제 {formatKRW(result.swapComparison.estimatedSide)}
               {" < "}자본적지출 + 양도비 {formatKRW(result.swapComparison.directSide)}
             </p>
-            <p className="text-xs text-amber-800">
+            <p className="text-xs text-amber-800 dark:text-amber-200">
               → 자본적지출 + 양도비 {formatKRW(result.swapComparison.directSide)}을 필요경비로 적용
             </p>
           </div>

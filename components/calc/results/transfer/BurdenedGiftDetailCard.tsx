@@ -64,12 +64,12 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const rowSelected = (mode: string) =>
     bg.sangjeungbeopValuation.selectedMode === mode
-      ? "font-semibold bg-fuchsia-100/70"
+      ? "font-semibold bg-fuchsia-100/70 dark:bg-fuchsia-900/40"
       : "";
   const ptLabel = propertyType ? PROPERTY_TYPE_LABEL[propertyType] : undefined;
 
   return (
-    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid">
+    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid dark:bg-fuchsia-950/40">
       {/* Phase 2: warnings[] 상단 amber/rose 배너 — 8개 동기화 지점 ⑦ */}
       {warnings && warnings.length > 0 && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
@@ -80,10 +80,10 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
         </div>
       )}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-sm font-semibold text-fuchsia-900">
+        <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
           부담부증여 평가 명세 (소득세법 시행령 §159)
           {ptLabel && (
-            <span className="ml-2 text-xs font-normal text-fuchsia-700">— {ptLabel}</span>
+            <span className="ml-2 text-xs font-normal text-fuchsia-700 dark:text-fuchsia-300">— {ptLabel}</span>
           )}
         </p>
         <span className="text-xs text-fuchsia-700 px-2 py-0.5 rounded-full bg-fuchsia-100 border border-fuchsia-300">
@@ -94,7 +94,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
         <tbody>
           {bg.ownershipRatio !== undefined && (
             <tr>
-              <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800">
+              <td colSpan={2} className="py-1 pr-2 text-caption text-fuchsia-800 dark:text-fuchsia-200">
                 공유지분 {(bg.ownershipRatio * 100).toFixed(4).replace(/\.?0+$/, "")}% 적용 —
                 아래 평가액은 <b>지분 해당분</b>입니다(소령 §159의 A·C). 인수 채무는 입력한
                 실제 인수액 그대로입니다.{" "}
@@ -116,7 +116,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             </tr>
           )}
           <tr>
-            <td colSpan={2} className="py-1 pr-2 text-caption font-semibold text-fuchsia-700">
+            <td colSpan={2} className="py-1 pr-2 text-caption font-semibold text-fuchsia-700 dark:text-fuchsia-300">
               양도세 보충적평가 (자산별 양도가액 안분 분모)
             </td>
           </tr>
@@ -132,15 +132,15 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           {bg.rightValuationDetail && (
             <>
               <tr>
-                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700">· 조합원권리가액 (상증법 시행규칙 §16③)</td>
+                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700 dark:text-fuchsia-300">· 조합원권리가액 (상증법 시행규칙 §16③)</td>
                 <td className="text-right font-mono tabular-nums whitespace-nowrap text-caption">{fmt(bg.rightValuationDetail.memberRightsValue)}</td>
               </tr>
               <tr>
-                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700">· 증여일까지 납입한 계약금·중도금</td>
+                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700 dark:text-fuchsia-300">· 증여일까지 납입한 계약금·중도금</td>
                 <td className="text-right font-mono tabular-nums whitespace-nowrap text-caption">{fmt(bg.rightValuationDetail.paidInstallments)}</td>
               </tr>
               <tr>
-                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700">· 증여일 현재 프리미엄</td>
+                <td className="py-1 pr-2 pl-4 text-caption text-fuchsia-700 dark:text-fuchsia-300">· 증여일 현재 프리미엄</td>
                 <td className="text-right font-mono tabular-nums whitespace-nowrap text-caption">{fmt(bg.rightValuationDetail.premium)}</td>
               </tr>
             </>
@@ -160,7 +160,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           {bg.giftValuation && bg.giftValuation.max !== bg.sangjeungbeopValuation.max && (
             <>
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
+                <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700 dark:text-fuchsia-300">
                   증여재산 평가 (취득가액 안분·채무비율 분모 — 상증법 §61 층별 가감율 적용)
                 </td>
               </tr>
@@ -184,7 +184,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           </tr>
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
           <tr className="border-t border-fuchsia-300">
-            <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700">
+            <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700 dark:text-fuchsia-300">
               자산별 취득가액 ({redevSec166 && bg.acquisitionMethodUsed === "converted" ? "환산취득가액 · 시행령 §166③" : (ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed)})
             </td>
           </tr>
@@ -250,7 +250,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 </tr>
               )}
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600">
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600 dark:text-fuchsia-400">
                   ※ 실지취득가 모드 — 개산공제(§163⑥) 미적용, 자본적지출·양도비를 채무비율 안분하여 필요경비 반영
                 </td>
               </tr>
@@ -295,7 +295,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 </tr>
               )}
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600">
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600 dark:text-fuchsia-400">
                   ※ {PRESUMED_LABEL[bg.acquisitionMethodUsed]} 경로 — 필요경비는 개산공제(소령 §163⑥)만 인정하며 자본적지출·양도비는 공제하지 않습니다
                 </td>
               </tr>
@@ -323,13 +323,13 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             </>
           )}
           <tr>
-            <td className="py-1 pr-2 text-fuchsia-700">무상이전분 (증여세 과세 가액)</td>
-            <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700">{fmt(bg.gratuitousPortion)}</td>
+            <td className="py-1 pr-2 text-fuchsia-700 dark:text-fuchsia-300">무상이전분 (증여세 과세 가액)</td>
+            <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700 dark:text-fuchsia-300">{fmt(bg.gratuitousPortion)}</td>
           </tr>
           {bg.giftTax && <BurdenedGiftGiftTaxRows giftTax={bg.giftTax} />}
         </tbody>
       </table>
-      <p className="text-xs text-fuchsia-600 mt-2">
+      <p className="text-xs text-fuchsia-600 mt-2 dark:text-fuchsia-400">
         ※ 자산별 양도가액·취득가액은 위 Max 평가액을 분모로 채무비율 안분 (소령 §159 ① 1호·2호).
         증여세는 무상이전분에 대해 수증자가 별도 신고.
       </p>
