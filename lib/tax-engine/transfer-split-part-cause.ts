@@ -66,6 +66,9 @@ export interface SplitPartCauseFacts {
   landHouseExisted?: LandHouseExisted;
   /** 토지 몫 영 §164⑦ 가액(②) 총액(지분 스케일 후) — 양수면 「있음」. 생략·0 = ② 없음. 주택 구분은 `buildingHouseKind`를 같이 쓴다 */
   landHouseSec164Value?: number;
+  // ── 주택별 개별주택가격 최초공시일 (단서 2호 구간의 끝 — 계획서 transfer-house-first-disclosure-per-house.plan.md) ──
+  /** 이 주택의 개별주택가격 최초공시일 YYYY-MM-DD — 단독·다가구(`buildingHouseKind`)일 때만 2005-04-30 대신 구간의 끝이 된다. 생략 = 2005-04-30 */
+  houseFirstDisclosureDate?: string;
 }
 
 /** D1-H — 토지를 받을 당시 지금의 주택이 그 위에 있었는가(계획서 transfer-house-land-163-9-2.plan.md Q-1). */
@@ -180,6 +183,40 @@ export const BUILDING_CAUSE_ESTIMATION_MESSAGE =
 /** 「소득세법 시행령」 §163⑨ 단서 2호 — 건물 기준시가(개별주택가격 등)가 고시되기 전. 개별주택가격 최초공시일 2005-04-30(저장소 주택 게이트 상수와 같은 보수적 상위 집합). */
 export const SEC_163_9_BUILDING_FIRST_DISCLOSURE = "2005-04-30";
 
+/**
+ * 주택 단서 2호 구간의 끝 — 영 §164⑦ 「당해 주택에 대하여 … 최초로 공시한 주택가격」은 주택마다다(부동산거래관리과-364:
+ * 2005.5.12. 수증 · 2006.4.28. 최초공시 사안에 단서 2호 적용). 주택의 최초공시일이 2005-04-30보다 뒤면 그 날, 아니면 2005-04-30.
+ * 공동주택(`house_apart`)은 고정 경계를 유지한다(국세청 고시 공동주택 기준시가가 있던 경우 「고시되기 전」이 아니다 — 계획서 Q-2).
+ * ④는 단독·다가구를 **명시 선택**한 주택만 날짜를 싣는다(`lib/calc/house-first-disclosure.ts`) — 엔진·⑫는 실린 날짜를 쓰되
+ * 공동주택 사실이 함께 오면 쓰지 않는다. 주택 구분 없이 구간이 넓어지면 D2-4(Y4d)·D1-H leaf가 「단독·다가구 확인」으로 차단한다.
+ * 날짜는 `YYYY-MM-DD…` 문자열이고 형식이 틀리면 고정 경계다(범위 검증은 ⑧·⑫).
+ */
+export function houseDisclosureBoundary(houseFirstDisclosureDate: string | undefined, houseKind: string | undefined): string {
+  const d = houseFirstDisclosureDate?.slice(0, 10);
+  return houseKind !== "house_apart" && !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && d > SEC_163_9_BUILDING_FIRST_DISCLOSURE
+    ? d
+    : SEC_163_9_BUILDING_FIRST_DISCLOSURE;
+}
+
+export const HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE =
+  "이 주택의 개별주택가격 최초 공시일은 2005.4.30.(개별주택가격 첫 공시)부터 양도일까지의 날짜여야 합니다 — 양도일 뒤에 처음 공시된 주택은 "
+  + "「소득세법 시행령」 제164조 제7항의 「최초로 공시한 주택가격」을 양도 당시 알 수 없어 계산하지 않습니다";
+
+/** 주택별 최초공시일 범위(계획서 Q-3) — 2005-04-30 ≤ 날짜 ≤ 양도일. 생략은 통과(고정 경계). ⑧·⑫가 같은 판정을 쓴다. */
+export function houseFirstDisclosureDateInRange(houseFirstDisclosureDate: string | undefined, transferDate: string | undefined): boolean {
+  const d = houseFirstDisclosureDate?.slice(0, 10);
+  if (!d) return true;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < SEC_163_9_BUILDING_FIRST_DISCLOSURE) return false;
+  const t = transferDate?.slice(0, 10);
+  return !t || d <= t;
+}
+
+/** 구간 끝 표기 — `2006-04-28` → `2006.4.28.` (안내 문구용). */
+export function disclosureDateLabel(isoDate: string): string {
+  const [y, m, d] = isoDate.slice(0, 10).split("-");
+  return `${y}.${Number(m)}.${Number(d)}.`;
+}
+
 export const BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE =
   "건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전에 상속·증여받은 건물의 취득가액은 상속개시일(증여일) 현재 평가액과 "
   + "소득세법 시행령 §164⑤~⑦ 가액 중 많은 금액인데, 토지를 따로 취득한 경우의 이 비교는 지원하지 않습니다 "
@@ -222,9 +259,16 @@ export const LAND_CAUSE_ABSENT_MESSAGE =
   "건물을 상속·증여로 취득하고 토지 취득일이 건물 취득일과 다른데 토지 취득원인이 없습니다 — 비우면 토지가 건물과 같은 "
   + "상속·증여로 읽혀 피상속인 보유기간이 토지에도 통산됩니다. 토지를 매수했다면 토지 취득원인을 「매매」로 지정하세요";
 
-/** 「건물 경계일」 — 건물 취득일(상속개시일·증여일)이 영 §163⑨ 단서 2호 구간인가 (엄격 `<`). 엔진·⑫·⑧이 이 술어 하나를 쓴다. */
-export function isSec163_9BuildingProviso(cause: string | undefined, buildingDate: string | undefined): boolean {
-  return (cause === "inheritance" || cause === "gift") && !!buildingDate && buildingDate.slice(0, 10) < SEC_163_9_BUILDING_FIRST_DISCLOSURE;
+/**
+ * 「건물 경계일」 — 건물 취득일(상속개시일·증여일)이 영 §163⑨ 단서 2호 구간인가 (엄격 `<`). 엔진·⑫·⑧이 이 술어 하나를 쓴다.
+ * `boundary`는 주택의 구간 끝(`houseDisclosureBoundary`) — 비주택은 넘기지 않는다(고정 2005-04-30).
+ */
+export function isSec163_9BuildingProviso(
+  cause: string | undefined,
+  buildingDate: string | undefined,
+  boundary: string = SEC_163_9_BUILDING_FIRST_DISCLOSURE,
+): boolean {
+  return (cause === "inheritance" || cause === "gift") && !!buildingDate && buildingDate.slice(0, 10) < boundary;
 }
 
 // ── D1-H (토지 상속·증여 + 건물 매매 — 주택 부수토지, 영 §163⑨ 단서 2호) ──
@@ -232,13 +276,17 @@ export function isSec163_9BuildingProviso(cause: string | undefined, buildingDat
 // 「건물의 기준시가가 고시되기 전에 증여받은 주택부수토지」로 단서 2호를 적용했다. 1990.8.30. 전은 단서 1호(D1-4)를 그대로 쓴다(Q-4).
 
 /**
- * 주택 부수토지 단서 2호 구간인가 — 토지 상속·증여 ∧ 1990-08-30 ≤ 토지 취득일 < 2005-04-30(엄격 — 최초공시일 당일은 「고시되기 전」이 아니다).
- * 구간의 끝은 다른 단서 2호 경로와 같은 고정 경계다(주택마다의 최초공시일은 세 경로를 함께 바꾸는 별건 — Q-5).
+ * 주택 부수토지 단서 2호 구간인가 — 토지 상속·증여 ∧ 1990-08-30 ≤ 토지 취득일 < 구간 끝(엄격 — 최초공시일 당일은 「고시되기 전」이 아니다).
+ * 구간 끝 `boundary`는 다른 단서 2호 경로와 같은 `houseDisclosureBoundary`(기본 2005-04-30).
  */
-export function isSec163_9HouseLandProviso(cause: string | undefined, landDate: string | undefined): boolean {
+export function isSec163_9HouseLandProviso(
+  cause: string | undefined,
+  landDate: string | undefined,
+  boundary: string = SEC_163_9_BUILDING_FIRST_DISCLOSURE,
+): boolean {
   if (cause !== "inheritance" && cause !== "gift") return false;
   const d = landDate?.slice(0, 10);
-  return !!d && d >= SEC_163_9_LAND_FIRST_DISCLOSURE && d < SEC_163_9_BUILDING_FIRST_DISCLOSURE;
+  return !!d && d >= SEC_163_9_LAND_FIRST_DISCLOSURE && d < boundary;
 }
 
 /**
@@ -251,9 +299,11 @@ export function isSec163_9HouseLandTarget(f: {
   landAcquisitionCause?: string;
   landAcquisitionDate?: string;
   landHouseExisted?: string;
+  /** 구간 끝(`houseDisclosureBoundary`) — 생략 = 2005-04-30 */
+  boundary?: string;
 }): boolean {
   return !!f.isHousing && f.buildingAcquisitionCause === "purchase" && f.landHouseExisted === "yes"
-    && isSec163_9HouseLandProviso(f.landAcquisitionCause, f.landAcquisitionDate);
+    && isSec163_9HouseLandProviso(f.landAcquisitionCause, f.landAcquisitionDate, f.boundary);
 }
 
 export const HOUSE_LAND_APARTMENT_MESSAGE =
@@ -315,7 +365,9 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
         // Y4 — 영 §163⑨ 단서 2호 구간. 단독·다가구주택만 ②(영 §164⑦ 건물 몫)와 max로 열린다(D2-4). 그 밖은 종전 차단:
         //   비주택(일반건물 §164⑤ 체계) → Y4a · 단독·다가구가 아니거나 모름(공동주택 §164⑥ 체계) → Y4d ·
         //   일부 양도(기준 면적 미확정, 자동 안분 금지) → Y4b · ② 없음 → Y4c.
-        if (isSec163_9BuildingProviso(buildingCause, f.buildingAcquisitionDate)) {
+        // 주택은 구간 끝이 주택별 최초공시일일 수 있다(단독·다가구 — `houseDisclosureBoundary`). 비주택은 고정 경계(Y4a).
+        const boundary = f.isHousing ? houseDisclosureBoundary(f.houseFirstDisclosureDate, f.buildingHouseKind) : undefined;
+        if (isSec163_9BuildingProviso(buildingCause, f.buildingAcquisitionDate, boundary)) {
           if (!f.isHousing) issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
           else if (!isSec163_9BuildingSec164Open(f.isHousing, f.buildingHouseKind))
             issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_APARTMENT_MESSAGE });
@@ -360,7 +412,7 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
 
   // D1-H — 영 §163⑨ 단서 2호 주택 부수토지: 받을 당시 주택이 있었다고 한 경우에만 ②가 필수다(D2-4 Y4 미러 — 구분 → 일부 양도 → ②).
   // 모름·없었음은 ① 단독이다(모름 = 불성립 — 엔진이 결과에 확인 필요를 고지한다).
-  if (isSec163_9HouseLandTarget({ ...f, landAcquisitionCause: cause })) {
+  if (isSec163_9HouseLandTarget({ ...f, landAcquisitionCause: cause, boundary: houseDisclosureBoundary(f.houseFirstDisclosureDate, f.buildingHouseKind) })) {
     if (!isSec163_9BuildingSec164Open(true, f.buildingHouseKind))
       issues.push({ field: "buildingHouseKind", message: HOUSE_LAND_APARTMENT_MESSAGE });
     else if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: HOUSE_LAND_SEC164_PARTIAL_MESSAGE });

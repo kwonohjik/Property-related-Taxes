@@ -1,7 +1,7 @@
 # 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간 끝을 주택마다 (Q-5 별건)
 
-> 작성 2026-10-19 · 상태 **Plan — Q-1~Q-4 사용자 결정 대기** · 워크트리 `../Property-related-Taxes-hfd` · 브랜치 `plan/house-first-disclosure-per-house`
-> 선행: `transfer-house-land-163-9-2.plan.md` §6 Q-5(「별건 — 자산 단위·D2-4·D1-H 세 경로를 함께」) · §7. **PR #2255(D1-H) 위에 쌓았다** — #2255 머지 후 master로 리베이스하고 Do에 들어간다.
+> 작성 2026-10-19 · 상태 **Do 진행 — Q-1~Q-4 권고안 확정(2026-10-19 사용자 「권고대로」)** · 워크트리 `../Property-related-Taxes-hfd` · 브랜치 `plan/house-first-disclosure-per-house`
+> 선행: `transfer-house-land-163-9-2.plan.md` §6 Q-5(「별건 — 자산 단위·D2-4·D1-H 세 경로를 함께」) · §7. **PR #2255(D1-H) 위에 쌓았다** — #2255가 열린 채로 Do를 진행한다(머지는 사용자 지시 시에만). #2255 머지 후 master로 리베이스한다.
 
 ## 1. 문제
 
@@ -135,7 +135,7 @@ export function houseDisclosureBoundary(houseFirstDisclosureDate?: string): stri
 §4.1 「문구」 행의 「2005.4.30.」 표기는 주택 경로에서 「개별주택가격 최초 공시일(이 주택은 YYYY.M.D.)」로 바꾼다. 비주택 문구(`transfer-split-part-cause.ts:186`)는 그대로 둔다.
 문구를 바꾸면 테스트·E2E가 그 문자열에 걸려 있는지 역방향으로 grep한다(memory `feedback_display_string_change_needs_reverse_grep`).
 
-## 6. 결정 필요
+## 6. 결정 (2026-10-19 확정 — 전부 A)
 
 | # | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -197,3 +197,35 @@ export function houseDisclosureBoundary(houseFirstDisclosureDate?: string): stri
 - **U-1** 해석례 364는 「2005년 8월 5일 이후에 양도하는 경우」로 한정해 회신했다(영 §163⑨ 2호·§164⑦ 2005.8.5. 개정). 이 계산기의 양도일 범위(2009.3.16. 이후 — memory `project_transfer_pre_2009_3_16_out_of_scope`)에서는 문제가 되지 않는다고 보지만, 연혁 게이트로 따로 확인하지는 않았다.
 - **U-2** 최초공시일이 양도일 뒤인 주택(양도 당시 개별주택가격 없음)에 대한 해석례는 찾지 않았다. Q-3의 상한 차단은 계산 불능에 따른 차단이다.
 - **U-3** 공동주택 2005.4.30.~2006.4.28. 구간이 영 §164⑥(국세청 고시)인지 ⑦인지 정면 해석례는 찾지 않았다. Q-2 A는 그 판단을 하지 않고 기존 경계를 유지한다.
+
+## 11. Do 결과 (2026-10-19)
+
+**계획과 달라진 점**
+- **엔진 경계 규칙** — `houseDisclosureBoundary(date, kind)`는 「공동주택 사실이 함께 오면 쓰지 않는다」로 두었다. 계획서의 「단독·다가구일 때만」과 다르다.
+  - 이유: D1-H는 「받을 당시 주택」이 모름·없었음이면 ④가 주택 구분을 싣지 않는다(기존 확정 동작, `transfer.route.split-house-land.d1h.anchor.test.ts:167`). 그러면 모름 고지가 고정 경계로 판정돼 사라졌다(F-1 실패로 발견).
+  - 「단독·다가구 명시」는 ④ 쪽(`lib/calc/house-first-disclosure.ts` — `houseDisclosureBoundaryOf`·`houseFirstDisclosureSent`)이 지킨다. 날짜는 명시 단독일 때만 실린다.
+  - 주택 구분 없이 날짜만 직접 보내면 구간이 넓어진 뒤 D2-4 Y4d·D1-H 구분 규칙이 ⑫ 400으로 막는다(앵커 D′).
+- **⑧ 주택 구분 요구는 「그 날짜가 구간을 넓힐 때만」** — 기준일이 2005-04-30 이후이고 그 날짜보다 앞일 때만 묻는다. 이미 2005.4.30. 전에 받은 주택은 날짜가 조회 기준일만 바꾸므로 묻지 않는다(공동주택의 2006-04-28 조회 등).
+- **⑫의 주택 구분 차단은 따로 두지 않았다** — ④가 명시 단독일 때만 날짜를 싣기 때문이다. ⑫는 범위(Q-3)만 본다. 「⑧ 통과 ⇒ ⑫ 200」 방향이라 격자 위반은 없다.
+
+**구현 위치**
+- leaf: `transfer-split-part-cause.ts` — `houseDisclosureBoundary`·`houseFirstDisclosureDateInRange`·`disclosureDateLabel`·`HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE`, 두 술어의 셋째 인자, facts `houseFirstDisclosureDate`.
+- 엔진: 자산 단위(`inheritance-acquisition-helpers.ts`) · 해결자 2곳 · D1-H 고지(문구가 그 주택의 날짜를 말한다) · `transfer-tax-split-gain.ts` facts · 입력 타입.
+- ⑫: `base-shape`·`split` 스키마 · `refineHouseFirstDisclosureDate`(주 자산·컴패니언) · required-refines facts.
+- ⑭: `engine-input.ts`·`multi/route.ts`·`bundled-split-helpers.ts`.
+- ④: `buildHouseFirstDisclosurePayload` — 단건·컴패니언·다건 3곳.
+- ⑧: `transfer-tax-validate-acquisition.ts`(범위·구분, 경로 분기보다 앞) · `transfer-tax-validate-split.ts` facts · `sec164HouseStatus`·두 브리지 경계.
+- ⑤:
+  - 공용 `HouseFirstDisclosureFields.tsx`(날짜 칸·진입 카드). 진입 카드는 D1-H·D2-4(분리 섹션), 증여·상속(자산 단위)에 붙였다. D2에서는 자산 단위 쪽에 두지 않는다 — 날짜 칸은 한 곳에만 있다.
+  - 열린 카드 3종은 「최초 공시 시점」 머리에 날짜 칸을 두고, 조회 기준일·안내 문구가 그 날짜를 따른다.
+  - 증여 자산 단위는 날짜로 열린 경우에 주택 구분 선택기를 붙였다.
+- ⑥: 브리지를 따라간다(UI 앵커 사이드바 pending).
+
+**검증**
+- 엔진 앵커 5 · route 앵커 19(격자 포함) · UI 앵커 15.
+- 해석례 사안 네 경로(자산 단위 증여·상속·land_only·D2-4·D1-H)가 2005-04-29 대조군과 같은 양도차익이다(1,026,923,077 · 913,186,813 · 864,000,000 · 734,615,385).
+- ⑧⇔⑫ 격자 135셀 위반 0 — ⑧ 통과 63셀, 그중 날짜를 싣는 셀 18.
+- 뮤테이션 45종 전부 KILLED. 1차에 M07·M12·M17·M33 4종이 살아남아 엔진 직접 테스트와 ⑧·⑫ ② 필수 테스트(D″)를 더했다.
+
+**범위 밖으로 남긴 것**
+- `bundled-split-helpers.ts`(791줄)·`transfer-tax-validate-acquisition.ts`(782줄)는 750 위험구간이다. 이번 변경은 각 1·6줄이라 분리하지 않았다(별건).

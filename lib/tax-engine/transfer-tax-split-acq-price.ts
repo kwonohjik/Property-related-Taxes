@@ -12,7 +12,7 @@ import type {
 } from "./types/transfer.types";
 import type { LandAcquisitionBasis, StdSplitDetail } from "./types/transfer-split-gain.types";
 import {
-  isSec163_9BuildingProviso, isSec163_9BuildingSec164Open, isSec163_9HouseLandTarget, isSec163_9LandProviso,
+  isSec163_9BuildingProviso, isSec163_9BuildingSec164Open, isSec163_9HouseLandTarget, isSec163_9LandProviso, houseDisclosureBoundary,
 } from "./transfer-split-part-cause";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
@@ -322,6 +322,7 @@ export function resolveLandPartAcquisition(
     TransferTaxInput,
     | "landAcquisitionPrice" | "landSec164Value" | "landAcquisitionCause" | "landAcquisitionDate" | "isSeparateAcquisition"
     | "propertyType" | "acquisitionCause" | "landHouseExisted" | "landHouseSec164Value"
+    | "houseFirstDisclosureDate" | "buildingHouseKind"
   >,
 ): { price: number | undefined; basis?: LandAcquisitionBasis } {
   const d = input.landAcquisitionDate as Date | string | undefined;
@@ -335,7 +336,7 @@ export function resolveLandPartAcquisition(
       basis: { rule: "sec163_9_1", reported, sec164, adopted: reported >= sec164 ? "reported" : "sec164" },
     };
   }
-  // D1-H — 주택 부수토지 단서 2호(1990.8.30.~2005.4.29. 상속·증여 토지 + 건물 매매, 받을 당시 주택 있음). 조건은 leaf와 같은 술어다.
+  // D1-H — 주택 부수토지 단서 2호(1990.8.30.~최초공시 전 상속·증여 토지 + 건물 매매, 받을 당시 주택 있음). 조건은 leaf와 같은 술어·같은 구간 끝이다.
   // 단독·다가구 여부는 다시 보지 않는다 — 유일한 호출부 `calcSplitGain`이 먼저 leaf를 돌려 대상인데 단독·다가구가 아니면 이미 던졌다.
   const houseLand = input.landHouseSec164Value ?? 0;
   if (
@@ -346,6 +347,7 @@ export function resolveLandPartAcquisition(
       landAcquisitionCause: input.landAcquisitionCause,
       landAcquisitionDate: dayKey,
       landHouseExisted: input.landHouseExisted,
+      boundary: houseDisclosureBoundary(input.houseFirstDisclosureDate, input.buildingHouseKind),
     })
   ) {
     return {
@@ -372,7 +374,7 @@ export function resolveBuildingPartAcquisition(
   input: Pick<
     TransferTaxInput,
     | "buildingAcquisitionPrice" | "buildingSec164Value" | "buildingHouseKind" | "landAcquisitionCause" | "acquisitionCause"
-    | "acquisitionDate" | "propertyType" | "isSeparateAcquisition"
+    | "acquisitionDate" | "propertyType" | "isSeparateAcquisition" | "houseFirstDisclosureDate"
   >,
 ): { price: number | undefined; basis?: LandAcquisitionBasis } {
   const d = input.acquisitionDate as Date | string | undefined;
@@ -382,7 +384,7 @@ export function resolveBuildingPartAcquisition(
   if (
     input.landAcquisitionCause !== "purchase"
     || !isSec163_9BuildingSec164Open(input.propertyType === "housing", input.buildingHouseKind)
-    || !isSec163_9BuildingProviso(input.acquisitionCause, dayKey)
+    || !isSec163_9BuildingProviso(input.acquisitionCause, dayKey, houseDisclosureBoundary(input.houseFirstDisclosureDate, input.buildingHouseKind))
     || !(sec164 > 0) || reported === undefined || input.isSeparateAcquisition !== true
   ) return { price: reported };
   return {

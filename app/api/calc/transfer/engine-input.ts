@@ -372,6 +372,8 @@ export function buildTransferEngineInput(
     buildingHouseKind: data.buildingHouseKind,
     landHouseExisted: data.landHouseExisted,
     landHouseSec164Value: data.landHouseSec164Value,
+    // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다
+    houseFirstDisclosureDate: data.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
     landSplitMode: data.landSplitMode,
     // ⑭ 파트별 취득 모드 + 양도 분리 모드 — TypeScript 미감지 영역(엔진 명시 입력, §9 M2)

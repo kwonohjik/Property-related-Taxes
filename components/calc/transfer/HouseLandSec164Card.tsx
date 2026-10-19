@@ -41,9 +41,10 @@ import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { HOUSE_LAND_APARTMENT_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { SPLIT_SEC164_HOUSE_LAND_VALUE_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { HouseFirstDisclosureDateField, houseFirstDisclosureRefDate } from "./HouseFirstDisclosureFields";
+import { houseDisclosureBoundaryOf } from "@/lib/calc/house-first-disclosure";
+import { disclosureDateLabel } from "@/lib/tax-engine/transfer-split-part-cause";
 
-/** 개별주택가격 최초 공시일 — 최초공시 시점 칸의 조회 기준일 */
-const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 
 const EXISTED_OPTIONS = [
   { value: "yes", label: "있었음 — 받을 때 지금의 주택이 그 위에 있었다" },
@@ -79,17 +80,24 @@ export function HouseLandSec164Card(props: {
   const landAtAcq = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance), area);
   const landAtFirst = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
   const buildingAtFirst = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst);
+  // 최초공시 시점 칸의 조회 기준일 — 이 주택의 최초 공시일(기본 2005-04-30). 구간 끝은 단독·다가구 명시일 때만 그 날짜다.
+  const firstRef = houseFirstDisclosureRefDate(asset);
+  const boundary = houseDisclosureBoundaryOf(asset);
 
   return (
     <div className="space-y-2" data-testid="house-land-sec164-card" data-field="landHouseSec164Value">
       <ToneCard tone="amber" noDark>
         <p className="text-xs text-amber-900">
-          토지를 {landDate}에 {meta.label}받았는데 그때는 개별주택가격이 공시되기 전(2005.4.30. 이전)입니다. 받을 당시 지금의 주택이 그 위에
+          토지를 {landDate}에 {meta.label}받았는데 그때는 이 주택의 개별주택가격이 공시되기 전({disclosureDateLabel(boundary)} 이전)입니다. 받을 당시 지금의 주택이 그 위에
           있었다면 이 토지는 주택 부수토지라서, 위 {meta.valueLabel}과 최초 공시된 개별주택가격으로 환산한 주택가격의 토지 몫(
           <strong>{SPLIT_SEC164_HOUSE_LAND_VALUE_LABEL}</strong>) 중 <strong>많은 금액</strong>이 토지 취득가액입니다 (소득세법 시행령 §163조
           제9항 단서 2호 · 부동산거래관리과-364).
         </p>
       </ToneCard>
+
+      {/* 이 주택의 최초 공시일 — 카드가 열려 있는 동안 항상 보인다. 이 날짜로 카드가 열린 경우(2005.4.30. 이후 수증) 「없었음」·「모름」을 골라도
+          날짜를 다시 고칠 수 있어야 한다(막다른 화면 방지 — 날짜 칸은 진입 카드와 이 카드 중 한 곳에만 있다). */}
+      <HouseFirstDisclosureDateField asset={asset} onChange={onChange} />
 
       <div className="space-y-1.5" data-field="landHouseExisted">
         <p className="text-caption text-muted-foreground font-medium">토지를 받을 당시 지금의 주택이 그 위에 있었나요?</p>
@@ -135,21 +143,23 @@ export function HouseLandSec164Card(props: {
 
           {kind === "house_individual" && (
             <>
-              <p className="text-caption font-semibold text-muted-foreground">최초 공시 시점 ({HOUSE_FIRST_DISCLOSURE_DATE})</p>
+              <p className="text-caption font-semibold text-muted-foreground">최초 공시 시점 ({firstRef})</p>
               <StandardPriceInput
                 propertyKind="house_individual"
                 totalPrice={asset.inhHouseValHousePriceAtFirst}
                 data-field="inhHouseValHousePriceAtFirst"
                 onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
                 jibun={asset.addressJibun || undefined}
-                referenceDate={HOUSE_FIRST_DISCLOSURE_DATE}
-                label="최초 공시된 개별주택가격"
+                referenceDate={firstRef}
+                // 이 날짜는 그 주택의 최초 공시일 자체다 — 그해 공시된 가격을 조회한다(공용 기본값의 「4.29. 전이면 전년도」 규칙을 쓰지 않는다).
+          forceYear={firstRef.slice(0, 4)}
+          label="최초 공시된 개별주택가격"
                 hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격(부수토지 포함)"
               />
               <LandPriceLookupField
                 label="최초공시 개별공시지가"
                 data-field="inhHouseValLandPricePerSqmAtFirst"
-                referenceDate={HOUSE_FIRST_DISCLOSURE_DATE}
+                referenceDate={firstRef}
                 pricePerSqm={asset.inhHouseValLandPricePerSqmAtFirst}
                 onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtFirst: v })}
                 area={area || undefined}

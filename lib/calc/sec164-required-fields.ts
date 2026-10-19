@@ -17,12 +17,11 @@
 
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { isSec163_9Cause, deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
+import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별공시지가 최초고시 — 이 날 前 상속·증여 토지가 §163⑨1호(§164④) 대상. */
 const LAND_FIRST_DISCLOSURE = "1990-08-30";
-/** 개별주택가격 최초공시 — 이 날 前 상속·증여 주택이 §163⑨2호(§164⑤~⑦) 대상. */
-const HOUSE_FIRST_DISCLOSURE = "2005-04-30";
 /** 상가·오피스텔 기준시가 최초고시 — 이 날 前 상속·증여 상가가 §163⑨2호(§164⑥) 대상. */
 const COMMERCIAL_FIRST_DISCLOSURE = "2005-01-01";
 
@@ -112,7 +111,8 @@ export function sec164HouseStatus(asset: AssetForm): Sec164FieldStatus | null {
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
   if (!isHouse || !isSec163_9Cause(asset.acquisitionCause)) return null;
   const baseDate = deriveSec163_9BaseDate(asset);
-  if (!baseDate || baseDate >= HOUSE_FIRST_DISCLOSURE) return null;
+  // 구간 끝 = 2005-04-30, 단독·다가구로 명시한 주택은 그 주택의 최초공시일(`houseDisclosureBoundaryOf` — 엔진·D2-4·D1-H와 같다).
+  if (!baseDate || baseDate >= houseDisclosureBoundaryOf(asset)) return null;
 
   const base = tally(asset, [
     decimalField("inhHouseValLandArea", "토지 면적"),

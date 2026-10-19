@@ -28,15 +28,22 @@ import type { BuildingHouseKind } from "@/lib/tax-engine/transfer-split-part-cau
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { sec164AreaSqm } from "./transfer-pre1990-housing-land-bridge";
+import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 
 /**
- * 영 §163⑨ 단서 2호 구간의 **주택**인가 — 유효 D2(건물 상속·증여 + 토지 매매) ∧ 주택 ∧ 건물 취득일 < 2005-04-30.
- * 엔진·⑫와 같은 술어(`isSec163_9BuildingProviso`). 단독·다가구 여부는 보지 않는다(`buildingSec164Open`).
+ * 영 §163⑨ 단서 2호 구간의 **주택**인가 — 유효 D2(건물 상속·증여 + 토지 매매) ∧ 주택 ∧ 건물 취득일 < 구간 끝
+ * (2005-04-30, 단독·다가구로 명시한 주택은 그 주택의 최초공시일 — `houseDisclosureBoundaryOf`).
+ * 엔진·⑫와 같은 술어(`isSec163_9BuildingProviso`). 단독·다가구 여부는 ②를 열 때 따로 본다(`buildingSec164Open`).
  */
 export function buildingSec164Applies(
-  asset: Parameters<typeof effectiveBuildingCauseMix>[0] & { acquisitionDate?: string },
+  asset: Parameters<typeof effectiveBuildingCauseMix>[0] & {
+    acquisitionDate?: string;
+    inheritanceAssetKind?: string;
+    inhHouseValFirstDisclosureDate?: string;
+  },
 ): boolean {
-  return asset.assetKind === "housing" && isSec163_9BuildingProviso(effectiveBuildingCauseMix(asset), asset.acquisitionDate);
+  return asset.assetKind === "housing"
+    && isSec163_9BuildingProviso(effectiveBuildingCauseMix(asset), asset.acquisitionDate, houseDisclosureBoundaryOf(asset));
 }
 
 /**

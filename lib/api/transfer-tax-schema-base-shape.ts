@@ -321,6 +321,8 @@ export const propertyBaseShape = {
   landHouseExisted: z.enum(["yes", "no", "unknown"]).optional(),
   /** D1-H — 토지 몫 영 §164⑦ 가액(②, 총액·지분 스케일 후) — 1990.8.30.~2005.4.29. 상속·증여 주택 부수토지(영 §163⑨ 단서 2호, 받을 당시 주택 있음·단독·다가구)에서 필수 */
   landHouseSec164Value: z.number().int().positive().optional(),
+  /** 이 주택의 개별주택가격 최초공시일 — 단독·다가구에서 2005-04-30보다 뒤면 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 범위는 refine */
+  houseFirstDisclosureDate: z.string().date().optional(),
   /** 토지 파트 증여자 취득일 (§104②2호) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /** 분리 입력 방식 (@deprecated — landAcqMode/buildingAcqMode + saleSplitMode로 대체. 하위호환용 유지, 엔진 미소비) */

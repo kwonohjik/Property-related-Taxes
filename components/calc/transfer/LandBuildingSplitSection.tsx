@@ -38,6 +38,9 @@ import { ACQ_MODE_OPTIONS, PartAcqInputs } from "./PartAcqInputs";
 import { LandSec164Card } from "./LandSec164Card";
 import { BuildingSec164Card } from "./BuildingSec164Card";
 import { HouseLandSec164Card } from "./HouseLandSec164Card";
+import { HouseFirstDisclosureEntryCard } from "./HouseFirstDisclosureFields";
+import { houseLandSec164Applies } from "@/lib/calc/transfer-house-land-sec164-bridge";
+import { buildingSec164Applies } from "@/lib/calc/transfer-building-sec164-bridge";
 import { BUILDING_CAUSE_META, LAND_CAUSE_META } from "./land-cause-meta";
 
 export type { PartAcqMode };
@@ -404,6 +407,16 @@ export function LandBuildingSplitSection(props: Props) {
           {props.landCause && props.asset && props.onAssetChange && (
             <HouseLandSec164Card asset={props.asset} onChange={props.onAssetChange} />
           )}
+          {/* 2005.4.30. 이후에 받은 토지 — 이 주택이 더 늦게 처음 공시됐으면 최초 공시일을 받아 위 카드를 연다(주택별 최초공시일, 매매 호스트만 — D1-H Q-2). */}
+          {props.landCause && props.asset && props.onAssetChange && props.asset.acquisitionCause === "purchase" && (
+            <HouseFirstDisclosureEntryCard
+              asset={props.asset}
+              onChange={props.onAssetChange}
+              baseDate={props.asset.landAcquisitionDate}
+              baseDateLabel={`토지 ${LAND_CAUSE_META[props.landCause].dateLabel}`}
+              open={houseLandSec164Applies(props.asset)}
+            />
+          )}
         </div>
       )}
 
@@ -487,6 +500,16 @@ export function LandBuildingSplitSection(props: Props) {
           {/* D2-4b — 2005.4.30. 전 상속·증여 주택 건물: 평가액(①) 바로 아래에서 영 §164⑦ 가액의 건물 몫(②)을 구한다(단서 구간일 때만 렌더). */}
           {props.buildingCause && props.asset && props.onAssetChange && (
             <BuildingSec164Card asset={props.asset} onChange={props.onAssetChange} />
+          )}
+          {/* 2005.4.30. 이후에 받은 건물 — 이 주택이 더 늦게 처음 공시됐으면 최초 공시일을 받아 위 카드를 연다(주택별 최초공시일). */}
+          {props.buildingCause && props.asset && props.onAssetChange && (
+            <HouseFirstDisclosureEntryCard
+              asset={props.asset}
+              onChange={props.onAssetChange}
+              baseDate={props.asset.acquisitionDate}
+              baseDateLabel={LAND_CAUSE_META[props.buildingCause].dateLabel}
+              open={buildingSec164Applies(props.asset)}
+            />
           )}
         </div>
       )}

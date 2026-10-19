@@ -59,6 +59,7 @@ import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payloa
 import { departureOnlyHousePayload } from "@/lib/calc/exemption-proviso-payload";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
+import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 
 /**
  * TransferFormData → API 전송용 건별 payload 변환 (단건 API 로직 재사용)
@@ -305,6 +306,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     ...(primary ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate } }) : {}),
     ...(primary ? buildLandStdAtAcquisitionPayload(primary) : {}),
     ...(primary ? buildLandPartCausePayload(primary) : {}),
+    // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다
+    ...(primary ? buildHouseFirstDisclosurePayload(primary) : {}),
     // 부수토지 배율 한도(영 §168의12) 입력 — 분리 축(별개 취득)에서 엔진이 소비한다.
     ...(primary ? buildNewConstructionPayload(primary) : {}),
     // Q-8 — 명부 정본. 단건(`transfer-tax-api.ts`)과 **같은 leaf**를 쓴다(3중 패턴).

@@ -26,6 +26,11 @@ import {
   isSec163_9House,
   HOUSE_FIRST_DISCLOSURE,
 } from "@/lib/calc/transfer-163-9-base-date";
+import { houseDisclosureBoundaryOf } from "@/lib/calc/house-first-disclosure";
+import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { disclosureDateLabel } from "@/lib/tax-engine/transfer-split-part-cause";
+import { HouseFirstDisclosureEntryCard } from "@/components/calc/transfer/HouseFirstDisclosureFields";
+import { InheritanceHouseKindPicker } from "@/components/calc/transfer/inheritance/InheritanceHouseKindPicker";
 import { sec164HouseStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -41,14 +46,17 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
   const giftDate = deriveSec163_9BaseDate(asset);
   // 필수 항목 개수는 단일 소스에서 받는다 — 문구에 숫자를 하드코딩하면 필드가 늘 때 낡는다.
   const status = sec164HouseStatus(asset);
-  if (
-    asset.acquisitionCause !== "gift" ||
-    !isSec163_9House(asset.assetKind) ||
-    !giftDate ||
-    giftDate >= HOUSE_FIRST_DISCLOSURE
-  ) {
-    return null;
+  if (asset.acquisitionCause !== "gift" || !isSec163_9House(asset.assetKind) || !giftDate) return null;
+  // 구간 끝 = 이 주택의 최초 공시일(단독·다가구 명시일 때만, 아니면 2005-04-30) — ④ payload 빌더와 같은 `sec164HouseStatus` 경계.
+  const boundary = houseDisclosureBoundaryOf(asset);
+  if (giftDate >= boundary) {
+    // 2005.4.30. 이후 증여 — 이 주택이 더 늦게 처음 공시됐으면 최초 공시일을 받아 아래 비교를 연다.
+    // 건물 증여 + 토지 매매(D2)는 분리 섹션(`LandBuildingSplitSection`)의 진입 카드가 같은 칸을 가진다(한 곳에만).
+    if (effectiveBuildingCauseMix(asset)) return null;
+    return <HouseFirstDisclosureEntryCard asset={asset} onChange={onChange} baseDate={giftDate} baseDateLabel="증여일" open={false} />;
   }
+  // 최초 공시일로 열린 구간(증여일이 2005.4.30. 이후)이면 주택 구분을 여기서도 바꿀 수 있어야 한다 — 진입 카드는 열리면 사라진다.
+  const openedByHouseDate = giftDate >= HOUSE_FIRST_DISCLOSURE;
 
   return (
     <ToneCard
@@ -61,7 +69,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑦" label="§164⑦" />
       </div>
       <p className="text-xs text-amber-700">
-        개별주택가격 최초공시(2005.4.30.) 전 증여받은 주택은{" "}
+        이 주택의 개별주택가격 최초공시({disclosureDateLabel(boundary)}) 전 증여받은 주택은{" "}
         <b>증여일 상증법 평가액과 §164⑤~⑦ 취득당시 기준시가 중 큰 금액</b>를 취득가액으로 봅니다. 위
         「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다.{" "}
         <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만
@@ -69,6 +77,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
         <b>일부만 입력하면 계산할 때 오류로 안내</b>합니다.
       </p>
 
+      {openedByHouseDate && <InheritanceHouseKindPicker asset={asset} onChange={onChange} />}
       <HouseValuationSection asset={asset} onChange={onChange} transferDate={transferDate} />
     </ToneCard>
   );
