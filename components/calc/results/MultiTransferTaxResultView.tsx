@@ -36,6 +36,7 @@ import {
   RATE_GROUP_LABELS,
   RATE_GROUP_COLORS,
 } from "./MultiTransferPropertyBreakdown";
+import { lossOffsetGiverText } from "@/lib/tax-engine/transfer-tax-split-display";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
   BuildingStdPriceReportSection,
@@ -329,7 +330,7 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
           {result.lossOffsetTable.map((row, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">
-                [{labelMap.get(row.fromPropertyId) ?? row.fromPropertyId}]
+                [{lossOffsetGiverText(labelMap.get(row.fromPropertyId) ?? row.fromPropertyId, row.fromPart)}]
               </span>
               <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground">

@@ -116,15 +116,16 @@ export interface LossOffsetPart {
 }
 
 /**
- * 다건 차손 통산(영 §167의2①)을 **파트 단위**로 할 비주택 split 자산의 파트들(Q-F3a). 대상이 아니면 `null`.
+ * 다건 차손 통산(영 §167의2①)을 **파트 단위**로 할 split 자산의 파트들(Q-F3a). 대상이 아니면 `null`.
  *
  * 엔진은 비주택 토지·건물을 별개 자산으로 보고 파트별 세율을 적용한다(G-1 · #2224). 그런데 차손 통산만 자산
  * 단위였다 — split 자산은 단건 결과에 호가 없어 「같은 세율 먼저」(1호)에서 늘 빠지고(`solo` 키), 받은 차손도
  * 세율과 무관하게 소득 비율로 파트에 나뉘었다. 토지 자산 + 건물 자산으로 따로 신고한 값과 최대 76,534,002 갈렸다.
  * (조세심판원 국심2007중3718 — 같은 거래의 토지·건물을 §102② 통산의 각각의 자산으로 본다.)
  *
- * 대상 밖: 주택 split(파트를 다건 합산 단위로 남기지 않는다) · 배율 초과 비사업용 토지 파트 · 결손 파트.
- * 세율 사실은 파트 소득금액 그대로 `calcTax`를 돌려 얻는다 — 차손 통산은 기본공제 전 단계다.
+ * 2026-10-19 P2(B): 주택 split · 배율 초과 비사업용 토지 파트 · **차손 파트**도 행으로 낸다 — 건물 차손이 자기 토지보다
+ * 신고 전체의 같은 세율 자산에서 먼저 공제된다(영 §167의2①1호). 감면 자산의 차손 파트는 호출부가 자산 한 행으로 둔다(Q-2).
+ * 세율 사실은 파트 소득금액으로 `calcTax`를 돌려 얻는다(차손 파트는 0 — 다건 차손 자산 규약) — 차손 통산은 기본공제 전 단계다.
  */
 export function splitPartsForLossOffset(
   splitDetail: SplitGainResult | undefined,
@@ -132,11 +133,10 @@ export function splitPartsForLossOffset(
   parsedRates: ParsedRates,
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined,
 ): LossOffsetPart[] | null {
-  if (input.propertyType === "housing" || splitDetail?.nonBusinessLandPart) return null;
   const seeds = buildSplitPartSeeds(splitDetail, input);
-  if (!seeds || seeds.some((s) => s.raw < 0)) return null;
+  if (!seeds) return null;
   return seeds.map((s) => {
-    const t = calcTax(s.raw, parsedRates, s.rateInput, multiHouseSurchargeResult);
+    const t = calcTax(Math.max(0, s.raw), parsedRates, s.rateInput, multiHouseSurchargeResult);
     return { kind: s.kind, income: s.raw, rateClause: t.rateClause, appliedRate: t.appliedRate, propertyType: s.rateInput.propertyType };
   });
 }
@@ -190,13 +190,17 @@ export function prepareSplitParts(
   const seeds = buildSplitPartSeeds(splitDetail, input);
   if (!seeds) return notJudged;
 
-  // 6. 자산 전체가 차손이면 산출세액이 없다 — 파트로 나눌 것이 없다.
-  if (seeds.reduce((s, p) => s + p.raw, 0) <= 0) return notJudged;
+  // 다건이 신고 전체에서 파트 단위로 이미 통산했으면(`partIncomeWeights` — 계획서 P2 B) 그 값이 정본이다 — 자산 안에서 다시 통산하지 않고,
+  //   「자산 전체 차손」 판정도 그 값으로 한다(건물 차손을 다른 자산이 가져가면 자산 합이 음수여도 토지 소득이 남는다).
+  const filingWeights = ctx.partIncomeWeights?.length === seeds.length ? ctx.partIncomeWeights : undefined;
+  if (filingWeights) {
+    if (filingWeights.reduce((s, v) => s + v, 0) <= 0) return notJudged;
+  } else if (seeds.reduce((s, p) => s + p.raw, 0) <= 0) return notJudged;
   //    한 파트만 차손이면 다른 파트의 양도소득금액에서 「소득세법 시행령」 §167의2① 순서로 공제한다 —
   //    1호 같은 세율 파트 먼저, 2호 남은 차손은 다른 세율 파트에 소득 비율로 안분(국심2007중3718: 토지·건물 차손익 통산).
   //    종전에는 자산 단위 세율(건물 기산일)로 후퇴해 토지 기산일이 버려졌다(계획서 `transfer-split-part-loss-offset-167-2.plan.md`).
   //    Σ파트 > 0이면 차손은 전액 흡수되어 통산 후 합 = 통산 전 합이다 — 아래 안분·잔액 흡수가 그대로 성립한다.
-  const lossOffset = seeds.some((s) => s.raw < 0) ? offsetPartLosses(seeds, parsedRates, ctx.multiHouseSurchargeResult) : undefined;
+  const lossOffset = !filingWeights && seeds.some((s) => s.raw < 0) ? offsetPartLosses(seeds, parsedRates, ctx.multiHouseSurchargeResult) : undefined;
   const partRaw = lossOffset ? lossOffset.incomes : seeds.map((s) => s.raw);
   const weights =
     ctx.partIncomeWeights?.length === seeds.length ? ctx.partIncomeWeights : partRaw;

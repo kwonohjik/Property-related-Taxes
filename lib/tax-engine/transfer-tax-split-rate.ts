@@ -42,7 +42,7 @@ import { provisoMergeId } from "./transfer-tax-rate-clause";
 import { resolveLandStatutoryAcquisitionDate } from "./transfer-tax-appurtenant-land";
 import { buildNblPartRateInput } from "./transfer-tax-appurtenant-land";
 import { keepsNonHousingParts, prepareSplitParts } from "./transfer-tax-split-part-seeds";
-import { resolveClause5TaxDetailed, buildRentalPartRateDetail } from "./transfer-tax-rental-housing-nbl-split";
+import { resolveClause5TaxDetailed, rentalLaterLandPartDetail } from "./transfer-tax-rental-housing-nbl-split";
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { RateGroup } from "./types/transfer-aggregate.types";
@@ -573,23 +573,15 @@ function resolveRentalHousingSplitTax(
   const nb = splitDetail.nonBusinessLandPart;
   // G-3 — 비과세에서 떼어낸 나중 취득 부수토지분(`laterLandPart`)이 슬롯에 더해져 있다. 단건 특례 경로와 **같은 함수**(`buildRentalPartRateDetail` →
   // `resolveSplitAwareTax`의 일반 split 판정)로 토지분(나중 취득 기산일) · 건물분(= 슬롯 − 토지분 − 배율 초과분) · 배율 초과분을 파트로 낸다.
-  const later = splitDetail.laterLandPart;
-  if (later) {
-    const housingGross = grossIncome - (later.gain - later.longTermDeduction) - (nb ? nb.gain - nb.longTermDeduction : 0);
-    // 불변식 — 슬롯 = 건물분(≥0) + 토지분 + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(진단 없음 — 현 입력 경로에서는 도달하지 않는 안전망 — 하류 `evaluateSplitPartTax` 결손 게이트도 같은 후퇴를 낸다).
-    // 토지분·배율 초과분 소득은 0 이상이라 `housingGross ≥ 0`이면 슬롯도 0 이상이다 — 슬롯 부호를 따로 보지 않는다.
-    if (housingGross < 0) return plain();
-    return resolveSplitAwareTax({
-      ...ctx,
-      rentalHousingTaxableIncome: undefined,
-      splitDetail: buildRentalPartRateDetail(splitDetail, { housingIncome: housingGross, laterLand: later, nonBusinessLandPart: nb }),
-    });
-  }
+  // 건물분(= 슬롯 − 토지분 − 배율 초과분)은 음수일 수 있다 — 하류 파트 세율 판정이 「소득세법 시행령」 §167의2①로 다른 파트에서 공제하고,
+  // 파트 합이 0 이하이면 그 판정이 자산 단위로 후퇴한다. 다건 차손 통산 파트 행도 같은 헬퍼로 만들어 파트 소득 가중치(`partIncomeWeights`)와 순서가 맞는다.
+  const laterDetail = rentalLaterLandPartDetail(splitDetail, grossIncome);
+  if (laterDetail) return resolveSplitAwareTax({ ...ctx, rentalHousingTaxableIncome: undefined, splitDetail: laterDetail });
   if (!nb) return plain();
   const nbGross = nb.gain - nb.longTermDeduction;
   const housingGross = grossIncome - nbGross;
-  // 불변식 — 특례 슬롯 = 주택분(≥0) + 배율 초과분. 어긋나면 파트를 만들지 않고 자산 단위로 후퇴한다(진단 없음 — 현 입력 경로에서는 도달하지 않는 안전망).
-  if (grossIncome <= 0 || nbGross <= 0 || housingGross < 0) return plain();
+  // 특례 슬롯 = 주택분 + 배율 초과분. 주택분은 음수일 수 있다(A2 건물 차손의 과세분 — 위와 같다). 슬롯·배율 초과분이 0 이하이면 자산 단위로 후퇴한다.
+  if (grossIncome <= 0 || nbGross <= 0) return plain();
 
   const housingIncome =
     ctx.transferIncome === grossIncome

@@ -20,6 +20,7 @@ import { createElement, Fragment, type ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { SplitAcqMode } from "@/lib/tax-engine/transfer-tax-split-display";
+import { LOSS_OFFSET_PART_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
 import {
   aggregateAcqHeading,
   aggregateExpenseHeading,
@@ -115,7 +116,11 @@ export function buildLthFormula(p: PerPropertyBreakdown): string {
  *   392,000,000」이라 적어놓고 옆에는 342,000,000을 찍어 **좌변이 우변을 만들지 못했다**
  *   (결과탭 코드리뷰 #072). 통산 단계를 산식에 드러낸다.
  */
-export function buildIncomeFormula(p: PerPropertyBreakdown, lossGiven = 0): string {
+export function buildIncomeFormula(
+  p: PerPropertyBreakdown,
+  lossGiven = 0,
+  givenParts: (keyof typeof LOSS_OFFSET_PART_LABEL)[] = [],
+): string {
   const tg = p.transferGain;
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
@@ -123,6 +128,13 @@ export function buildIncomeFormula(p: PerPropertyBreakdown, lossGiven = 0): stri
   const base = `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
   if (p.income === p.incomeAfterOffset) return base;
   const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
+  // **이익 자산**이 자기 파트(대개 건물) 차손을 다른 자산에 준 경우 — 토지·건물은 통산에서 각각의 자산이라(국심2007중3718) 그 차손이
+  //   신고 전체의 같은 세율 자산부터 공제된다(영 §167의2①). 자산 양도소득금액(파트 합)에서 이미 뺀 몫이므로 되돌려 더한다(계획서 P2 Q-3).
+  if (lossGiven > 0 && p.income > 0) {
+    const who = givenParts.length > 0 ? givenParts.map((k) => LOSS_OFFSET_PART_LABEL[k]).join("·") : "파트";
+    const recv = received > 0 ? ` − 결손금 통산 ${fmt(received)}` : "";
+    return `${base} + ${fmt(lossGiven)}(${who} 양도차손 중 다른 자산의 양도소득금액에서 공제된 몫)${recv} = ${fmt(p.incomeAfterOffset)}`;
+  }
   // 차손을 **받은** 자산: 통산액이 자기 필드에 실린다.
   if (received > 0) return `${base} − 결손금 통산 ${fmt(received)} = ${fmt(p.incomeAfterOffset)}`;
   // 차손을 **낸** 자산: 나간 몫(`lossGiven` — 엔진 `lossOffsetTable`)과 통산되지 못해 **소멸**한 몫을 가른다.

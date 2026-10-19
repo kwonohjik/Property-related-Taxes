@@ -112,9 +112,10 @@ export function resolveTaxableGain(args: {
    * 안분 여부(`isPartialExempt`)와 분모(부담부증여 > 공유지분 전체 > 양도가액)는 이 STEP의 판정이 정본이다.
    */
   if (splitDetail) {
-    const prorateNonNegative = (g: number) => (g <= 0 ? g : prorate(g));
-    splitDetail.land.taxableGainAfterProration ??= prorateNonNegative(splitDetail.land.gain);
-    splitDetail.building.taxableGainAfterProration ??= prorateNonNegative(splitDetail.building.gain);
+    // 차손 파트도 같은 비율로 안분한다 — 12억 초과분 차손만 12억 초과분 양도차익과 통산한다(계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
+    //   자산 합계(`prorate(transferGain)`)는 이미 차손을 넣고 안분하므로 이제 Σ파트 = 자산이다(종전에는 차손 파트만 전액이라 어긋났다).
+    splitDetail.land.taxableGainAfterProration ??= prorate(splitDetail.land.gain);
+    splitDetail.building.taxableGainAfterProration ??= prorate(splitDetail.building.gain);
   }
   const denom =
     effectiveInput.burdenedGiftDenominator ??

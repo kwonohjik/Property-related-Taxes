@@ -77,20 +77,24 @@ describe("엔진 echo 전제 (표시 전 확인)", () => {
   });
 });
 
-/** SPCO-T9 — 단기 구간에서 두 파트가 서로를 가린다(안정 구성 {BA, AB} 둘): 양도 2023-09-30 · 증여자 토지 2022-07-01(5천만)·건물 2022-09-01(6.6억) · 증여세 0 */
+/**
+ * SPCO-T9b — 두 파트가 서로를 가린다(안정 구성 {BA, AB} 둘): 양도 2024-12-31 · 증여자 토지 2022-07-01(3천만)·건물 2022-09-01(4.5억) · 증여세 0.
+ * 조합 BB 178,500,000 · BA 280,740,000 · AB 304,500,000 · AA 265,410,000 — 순차 고정점 BA.
+ * (종전 시드 SPCO-T9[양도 2023-09-30 · 건물 6.6억]의 순서 의존은 G-3 경로가 건물 차손을 0으로 자른 결함이 만든 값이었다 — 2026-10-19 P2 A1로 사라짐.)
+ */
 const T9 = calculateTransferTax(
   inputC({
-    transferDate: D("2023-09-30"),
+    transferDate: D("2024-12-31"),
     carryoverGiftEvent: { giftRegistryDate: GIFT, giftTaxCalculated: 0, giftTaxBase: 900_000_000 },
-    landCarryoverTaxation: ct("2022-07-01", 50_000_000, 240_000_000, 0),
-    buildingCarryoverTaxation: ct("2022-09-01", 660_000_000, 660_000_000, 0),
+    landCarryoverTaxation: ct("2022-07-01", 30_000_000, 240_000_000, 0),
+    buildingCarryoverTaxation: ct("2022-09-01", 450_000_000, 660_000_000, 0),
   }),
   rates,
 );
 
 describe("「확인 필요」 — 안정 구성이 둘일 때 순서 의존 고지는 표지가 있을 때만", () => {
   it("엔진 echo: T9은 orderDependent, C 시드는 표지 없음", () => {
-    expect(T9.determinedTax).toBe(320_250_000);
+    expect(T9.determinedTax).toBe(280_740_000);
     expect(T9.splitDetail!.carryoverEvent!.orderDependent).toBe(true);
     expect(C.splitDetail!.carryoverEvent!.orderDependent).toBeUndefined();
   });

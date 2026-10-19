@@ -22,6 +22,17 @@ export type SplitAcqMode = NonNullable<SplitPartResult["acqMode"]>;
 
 const PART_LABEL: Record<SplitPartKey, string> = { land: "토지", building: "건물" };
 
+/** 다건 통산 표에서 차손을 준 파트의 이름(`LossOffsetRow.fromPart`) — 4뷰가 같은 어휘를 쓴다. */
+export const LOSS_OFFSET_PART_LABEL = { land: "토지", building: "건물", non_business_land: "배율 초과 토지" } as const;
+
+/**
+ * 다건 통산 표의 주는 쪽 — 토지·건물 분리 자산의 파트이면 「a 건물」(계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-3).
+ * 토지·건물은 §102② 통산에서 각각의 자산이다(조세심판원 국심2007중3718).
+ */
+export function lossOffsetGiverText(label: string, part: keyof typeof LOSS_OFFSET_PART_LABEL | undefined): string {
+  return part ? `${label} ${LOSS_OFFSET_PART_LABEL[part]}` : label;
+}
+
 /**
  * 산정방식 표시명 — 입력 화면 라디오(`PartAcqInputs`)·겸용 결과(`sepAcqModeLabel`)와 **같은 어휘**다
  * (결정 9: 사용자가 입력한 단어가 결과에 그대로 나와야 검증이 된다).

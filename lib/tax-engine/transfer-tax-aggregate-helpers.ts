@@ -251,13 +251,18 @@ export function offsetLosses(
       return x < y ? -1 : x > y ? 1 : a - b;
     });
   const owner: number[] = [];
+  /** 행이 split 자산의 파트이면 그 파트(통산 표 「[a 건물] → [b]」) — 자산 한 행이면 undefined. */
+  const partOf: (string | undefined)[] = [];
   const ownRows = byId.flatMap((i) => {
     const r = records[i];
-    const rows =
-      r.lossParts && !r.result.isExempt
-        ? r.lossParts.map((p) => ({ income: p.income, rateKey: translate(p.rateKey), exempt: false }))
-        : [{ income: r.income, rateKey: translate(r.lossOffsetRateKey), exempt: r.result.isExempt }];
-    for (let n = 0; n < rows.length; n++) owner.push(i);
+    const parts = r.lossParts && !r.result.isExempt ? r.lossParts : undefined;
+    const rows = parts
+      ? parts.map((p) => ({ income: p.income, rateKey: translate(p.rateKey), exempt: false }))
+      : [{ income: r.income, rateKey: translate(r.lossOffsetRateKey), exempt: r.result.isExempt }];
+    rows.forEach((_, n) => {
+      owner.push(i);
+      partOf.push(parts?.[n].kind);
+    });
     return rows;
   });
   const nOwn = ownRows.length;
@@ -275,21 +280,45 @@ export function offsetLosses(
     arr.slice(0, nOwn).forEach((v, k) => (out[owner[k]] += v));
     return out;
   };
-  // 같은 자산 쌍·단계의 파트 행은 한 줄로 합친다 — 통산 표는 자산 단위다.
+  /**
+   * 자산별로 **다른 자산에서** 받은 차손(1호·2호) — 같은 자산 안 파트끼리 주고받은 몫은 뺀다. 그 몫은 자산 양도소득금액(파트 합)에
+   * 이미 들어 있어, 넣으면 받은 차손으로 한 번 더 빠진다(§167의2② 감면소득 안분 등). 코어 행은 받은 쪽(gain 행) 몫을 손실 행에
+   * 빠짐없이 나눠 싣므로 행 합 = 코어 `fromSame`·`fromOther`다.
+   */
+  const receivedFromOtherAssets = (scope: "same_group" | "other_group") => {
+    const out = records.map(() => 0);
+    for (const row of core.rows) {
+      if (row.scope !== scope || row.to >= nOwn) continue;
+      if (assetAt(row.from) === assetAt(row.to)) continue;
+      out[owner[row.to]] += row.amount;
+    }
+    return out;
+  };
+  // 같은 자산 쌍·단계의 행은 한 줄로 합친다 — 받는 쪽은 자산 단위, **주는 쪽은 파트까지**(Q-3 「[a 건물] → [b]」).
+  // 같은 자산 안 파트끼리의 통산은 표에 싣지 않는다 — 자산 양도소득금액(파트 합)에 이미 들어 있다(계획서 P2 §2.2-3).
   const table = new Map<string, LossOffsetRow>();
   for (const row of core.rows) {
+    if (assetAt(row.from) === assetAt(row.to)) continue;
     const fromPropertyId = idAt(assetAt(row.from));
     const toPropertyId = idAt(assetAt(row.to));
-    const k = `${fromPropertyId}\u0000${toPropertyId}\u0000${row.scope}`;
+    const fromPart = row.from < nOwn ? partOf[row.from] : undefined;
+    const k = `${fromPropertyId}\u0000${fromPart ?? ""}\u0000${toPropertyId}\u0000${row.scope}`;
     const prev = table.get(k);
     if (prev) prev.amount += row.amount;
-    else table.set(k, { fromPropertyId, toPropertyId, amount: row.amount, scope: row.scope });
+    else
+      table.set(k, {
+        fromPropertyId,
+        ...(fromPart ? { fromPart: fromPart as NonNullable<LossOffsetRow["fromPart"]> } : {}),
+        toPropertyId,
+        amount: row.amount,
+        scope: row.scope,
+      });
   }
 
   return {
     lossOffsetTable: [...table.values()],
-    lossOffsetFromSame: fold(core.fromSame),
-    lossOffsetFromOther: fold(core.fromOther),
+    lossOffsetFromSame: receivedFromOtherAssets("same_group"),
+    lossOffsetFromOther: receivedFromOtherAssets("other_group"),
     incomeAfterOffset: fold(core.incomeAfterOffset),
     partIncomeAfterOffset: records.map((r, i) =>
       r.lossParts && !r.result.isExempt

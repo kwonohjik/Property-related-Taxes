@@ -23,6 +23,7 @@ import {
   summarizeSplitGain,
   type SplitGainPartSummary,
 } from "@/lib/tax-engine/transfer-tax-split-display";
+import { lossOffsetGiverText } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import {
   splitCarryoverAcquisitionText,
@@ -388,7 +389,7 @@ export function TransferMultiSection({ r, selectedSectionIds }: { r: R; selected
             {lossTable.map((row, i) => (
               <View key={i} style={i === lossTable.length - 1 ? s.rowLast : s.row}>
                 <Text style={s.lbl}>
-                  [{str(row.fromPropertyId) ?? ""}] → [{str(row.toPropertyId) ?? ""}]{" "}
+                  [{lossOffsetGiverText(str(row.fromPropertyId) ?? "", str(row.fromPart) as Parameters<typeof lossOffsetGiverText>[1])}] → [{str(row.toPropertyId) ?? ""}]{" "}
                   ({str(row.scope) === "same_group" ? "동일그룹" : "타군안분"})
                 </Text>
                 <Text style={s.val}>- {fmt(row.amount)}</Text>

@@ -295,7 +295,8 @@ export function buildAggregateRows(
     // 흡수는 음수(소득이 줄었다) · 유출은 양수(차손이 나갔다) — 주식 18-1행과 같은 부호 규약.
     const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
     const given = lossGiven.get(col) ?? 0;
-    const offsetCell = received > 0 ? -received : given > 0 ? given : null;
+    // 한 자산이 받기도 주기도 한다(토지·건물 분리 자산이 건물 차손을 다른 자산에 주고 토지가 차손을 받는 경우 — 계획서 P2 Q-3) — 순액을 싣는다.
+    const offsetCell = received > 0 || given > 0 ? given - received : null;
     setNum("lossOffset", col, offsetCell);
     sumLossOffset += offsetCell ?? 0;
     // 소멸 = 차손 − 통산으로 나간 몫. 이월이 없어 버려진다(§102② 단서).
