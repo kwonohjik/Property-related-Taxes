@@ -65,7 +65,7 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
         <ApartNtsPriceQuestion asset={asset} onChange={onChange} baseDateLabel="증여일" />
         {apartSec164FormOpen(asset) && (
           <>
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-amber-700 dark:text-amber-300">
               <b>증여일 상증법 평가액과 첫 가격으로 환산한 §164⑥·⑦ 취득당시 기준시가 중 큰 금액</b>을 취득가액으로 봅니다. 위
               「증여 신고가액」이 앞의 값이고, 아래 3시점 입력이 뒤의 값을 산정합니다.{" "}
               <b>{status ? `${status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한 경우에만 비교합니다. 전부 비워두면 증여
