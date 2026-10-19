@@ -35,6 +35,7 @@ import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionmen
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
+import { mergePrimaryBasic } from "@/lib/calc/transfer-tax-api-helpers";
 import { computeEstimatedDeduction } from "@/lib/tax-engine/tax-utils";
 import { estimatedDeductionRate } from "@/lib/tax-engine/legal-codes/transfer-nbl";
 import { hasPre1990LandEstimation } from "@/lib/calc/transfer-pre1990-land-gate";
@@ -306,7 +307,9 @@ export function computeTransferPerAssetSummary(
   const axisBBundle = isFullFractionalBundle(formData.assets, formData.assetSplitMode);
   const rows: TransferAssetSummaryRow[] = formData.assets.map((rawAsset, i) => {
     // 함께 양도 자산은 파트 이월과세(C) 토글을 꺼진 것으로 읽는다 — ④·⑧과 같은 사실(`neutralizeCarryoverDonorSplitForCompanion`).
-    const a = neutralizeCarryoverDonorSplitForCompanion(rawAsset, i > 0);
+    // 축 B 둘째 지분부터는 ① 기본정보가 숨겨져 저장값(자산 종류 기본값 «주택» 등)이 아니라 첫 카드 값을 쓴다 — ④(`transfer-tax-api-bundled.ts`)와
+    // 같은 함수·같은 순서(`mergePrimaryBasic` → 중립화). 종전에는 저장값을 읽어 «자산 2 — 주택»·분양권 개산공제율 3% 등 엔진과 다른 값을 보였다.
+    const a = neutralizeCarryoverDonorSplitForCompanion(axisBBundle && i > 0 ? mergePrimaryBasic(rawAsset, primary) : rawAsset, i > 0);
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
     /** 겸용 × 부담부증여(주 자산) — 취득 입력·계약금액이 아니라 BG 블록·엔진 echo가 정본이다. */
