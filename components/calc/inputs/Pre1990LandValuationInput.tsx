@@ -189,7 +189,7 @@ export function Pre1990LandValuationInput({
             </p>
           )}
           {!acquisitionArea && (
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-amber-700 dark:text-amber-300">
               ⚠ 취득 당시 면적을 먼저 입력하면 환산 계산이 자동으로 실행됩니다.
             </p>
           )}
@@ -296,7 +296,7 @@ export function Pre1990LandValuationInput({
   // 5칸이 모두 차 있으면 토글과 무관하게 비교에 쓰인다). 칸을 토글 뒤에 숨기면 안 보이는 값이 취득가액을 바꾼다(별건 B3).
   if (alwaysOpen) {
     return (
-      <ToneCard tone="amber" title="1990.8.30. 이전 취득 토지 기준시가 환산 (§164④)" noDark>
+      <ToneCard tone="amber" title="1990.8.30. 이전 취득 토지 기준시가 환산 (§164④)">
         {body}
       </ToneCard>
     );
