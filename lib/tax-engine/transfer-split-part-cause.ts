@@ -278,6 +278,25 @@ export const BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE =
   + "(같은 법 시행령 §163⑨ 단서 2호). 정확한 고시일은 자산 종류별로 달라 개별주택가격 최초공시일(2005.4.30.) 이전 취득을 "
   + "보수적으로 모두 막습니다 — 건물 상속개시일(증여일)을 확인하거나 「토지는 다른 원인으로 취득」을 끄세요";
 
+/**
+ * C(주택 전체 이월과세 + 증여자 토지·건물 취득일 상이) 전용 — 같은 단서 2호 구간(건물 기준시가 고시 전 증여)이지만 C에는 「토지는 다른 원인으로 취득」 스위치가 없다.
+ * 건물 몫 비교가 아니라 증여 등기접수일(= 건물 수증자 취득일)이 이 구간인 것이 원인이라 고칠 곳은 증여 등기접수일이거나 C 토글이다.
+ */
+export const BUILDING_CAUSE_PRE_DISCLOSURE_CARRYOVER_MESSAGE =
+  "건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전에 증여받은 주택의 건물 몫 취득가액은 증여일 현재 평가액과 "
+  + "소득세법 시행령 §164⑤~⑦ 가액 중 많은 금액인데, 증여자가 토지·건물을 다른 날 취득한 이월과세에서 이 비교는 지원하지 않습니다 "
+  + "(같은 법 시행령 §163⑨ 단서 2호). 정확한 고시일은 자산 종류별로 달라 개별주택가격 최초공시일(2005.4.30.) 이전 증여를 "
+  + "보수적으로 모두 막습니다 — 증여 등기접수일을 확인하거나 「증여자가 토지·건물을 다른 날 취득」을 끄세요";
+
+/**
+ * C 전용 — 같은 구간의 공동주택/미확인 차단. C는 건물 종류(단독·다가구/공동주택)를 묻지 않으므로 「단독·다가구주택으로 확인된 주택」이라는 안내가 고칠 수 있는 입력을
+ * 가리키지 못한다 — 고칠 곳은 증여 등기접수일이거나 C 토글이다.
+ */
+export const BUILDING_CAUSE_APARTMENT_CARRYOVER_MESSAGE =
+  "건물 기준시가가 고시되기 전에 증여받은 주택의 건물 몫 취득가액은 증여일 현재 평가액과 「소득세법 시행령」 제164조 제7항 가액의 건물 몫 중 많은 금액인데"
+  + "(같은 영 제163조 제9항 단서 제2호), 증여자가 토지·건물을 다른 날 취득한 이월과세에서는 건물 종류(단독·다가구/공동주택)를 묻지 않아 이 비교를 지원하지 않습니다 — "
+  + "증여 등기접수일을 확인하거나 「증여자가 토지·건물을 다른 날 취득」을 끄세요";
+
 /** 단서 2호 ② 비교가 열리는 공동의 술어 — 주택 ∧ 단독·다가구. ④(브리지)·엔진 해결자·leaf가 이 한 줄을 쓴다. */
 export function isSec163_9BuildingSec164Open(isHousing: boolean | undefined, kind: string | undefined): boolean {
   return !!isHousing && kind === "house_individual";
@@ -470,9 +489,10 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
     // 주택은 구간 끝이 주택별 최초공시일일 수 있다(`houseDisclosureBoundary` — 공동주택은 고정). 비주택은 고정 경계(Y4a).
     const boundary = f.isHousing ? houseDisclosureBoundary(f.houseFirstDisclosureDate, f.buildingHouseKind) : undefined;
     if (isSec163_9BuildingProviso(asGift(buildingCause), f.buildingAcquisitionDate, boundary)) {
-      if (!f.isHousing) issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
+      if (!f.isHousing)
+        issues.push({ field: "acquisitionDate", message: landPurchase ? BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE : BUILDING_CAUSE_PRE_DISCLOSURE_CARRYOVER_MESSAGE });
       else if (!isSec163_9BuildingSec164Open(f.isHousing, f.buildingHouseKind))
-        issues.push({ field: "acquisitionDate", message: BUILDING_CAUSE_APARTMENT_MESSAGE });
+        issues.push({ field: "acquisitionDate", message: landPurchase ? BUILDING_CAUSE_APARTMENT_MESSAGE : BUILDING_CAUSE_APARTMENT_CARRYOVER_MESSAGE });
       else if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: BUILDING_SEC164_PARTIAL_MESSAGE });
       else if (!((f.buildingSec164Value ?? 0) > 0))
         issues.push({ field: "buildingSec164Value", message: BUILDING_SEC164_REQUIRED_MESSAGE });

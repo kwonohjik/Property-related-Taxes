@@ -43,6 +43,8 @@ type Cell = {
   leafKey?: string;
   /** ⑧ 전용(⑫보다 엄격) */
   strictOnly?: boolean;
+  /** 양방향 — ⑧ 차단 ⇔ ⑫ 400(통과 셀은 ⑧ 통과 ⇔ ⑫ 200). 경계 셀용 */
+  bothWays?: boolean;
 };
 
 const withCarry = (patch: Record<string, unknown>) => cAsset({ carryover: { ...cAsset().carryover, ...patch } });
@@ -58,6 +60,10 @@ const companion = (): AssetForm =>
     fixedAcquisitionPrice: "300,000,000",
     actualSalePrice: "400,000,000",
   }) as unknown as AssetForm;
+
+/** 증여 등기접수일·증여자 취득일을 한꺼번에 옮긴 C 폼 — 건물 기준시가(2005.4.30.)·개별공시지가(1990.8.30.) 고시 전 증여 경계 */
+const giftOn = (gift: string, donor: string, assetKind: "housing" | "building" = "housing", landDonor = "1980-03-01") =>
+  cForm({}, cAsset({ assetKind, carryover: { ...cAsset().carryover, giftRegistryDate: gift, donorAcquisitionDate: donor }, landCarryover: { ...cAsset().landCarryover, donorAcquisitionDate: landDonor } }));
 
 const CELLS: Cell[] = [
   { name: "기준 — 모든 칸 입력", make: () => cForm() },
@@ -78,6 +84,13 @@ const CELLS: Cell[] = [
   { name: "토지 증여 신고가액 비움(S7)", make: () => cForm({}, cAsset({ landAcquisitionPrice: "" })), leafKey: "landAcquisitionPrice" },
   { name: "건물 증여 신고가액 비움(S7)", make: () => cForm({}, cAsset({ buildingAcquisitionPrice: "" })), leafKey: "buildingAcquisitionPrice" },
   { name: "증여 등기접수일 비움", make: () => cForm({}, withCarry({ giftRegistryDate: "" })), leafKey: "carryoverGiftEvent" },
+  // ── 증여일이 고시 전인 구간(영 §163⑨ 단서 1호·2호) — ④가 건물 종류·§164 가액을 싣지 않아 C는 막힌다. ⑧ 차단 ⇔ ⑫ 400 ──
+  { name: "증여일 2005-04-29(주택·건물 몫 단서 2호)", make: () => giftOn("2005-04-29", "1995-06-01"), leafKey: "acquisitionDate", bothWays: true },
+  { name: "증여일 2005-04-30 경계(엄격 미만이라 통과)", make: () => giftOn("2005-04-30", "1995-06-01"), bothWays: true },
+  { name: "증여일 2005-04-29(비주택 건물)", make: () => giftOn("2005-04-29", "1995-06-01", "building"), leafKey: "acquisitionDate", bothWays: true },
+  { name: "증여일 2005-04-30 경계(비주택 건물)", make: () => giftOn("2005-04-30", "1995-06-01", "building"), bothWays: true },
+  { name: "증여일 1990-08-29(토지 단서 1호 + 건물 단서 2호)", make: () => giftOn("1990-08-29", "1980-06-01"), leafKey: "landSec164Value", bothWays: true },
+  { name: "증여일 1990-08-29(비주택 건물)", make: () => giftOn("1990-08-29", "1980-06-01", "building"), leafKey: "landSec164Value", bothWays: true },
   // ── ⑧ 전용(⑫보다 엄격) ──
   { name: "등기접수일 ≥ 양도일", make: () => cForm({}, withCarry({ giftRegistryDate: "2025-06-30" })), strictOnly: true },
   { name: "관계 그 외", make: () => cForm({}, withCarry({ donorRelation: "other" })), strictOnly: true },
@@ -149,6 +162,8 @@ describe("P2 C — ⑧≡⑫ 격자", () => {
         expect(blocked8, `⑧ 차단 기대(${cell.leafKey})`).toBe(true);
         expect(keys.some((k) => k.includes(cell.leafKey!)), `⑫ 칸 ${cell.leafKey} ← ${JSON.stringify(keys)}`).toBe(true);
       }
+      // 양방향 — ⑧ 차단 ⇔ ⑫ 400
+      if (cell.bothWays) expect(blocked8, `⑧ ${JSON.stringify(issues.map((i) => i.field))} ↔ ⑫ ${r.status}`).toBe(r.status === 400);
       // (C) ⑧ 전용
       if (cell.strictOnly) expect(blocked8).toBe(true);
       // (D) 잔재 — 세액 불변
@@ -158,6 +173,18 @@ describe("P2 C — ⑧≡⑫ 격자", () => {
       }
     });
   }
+
+  it("고시 전 증여 차단 문구는 C에 있는 조치만 안내한다 — «토지는 다른 원인으로 취득»(D2 스위치)은 C에 없다", async () => {
+    for (const kind of ["housing", "building"] as const) {
+      const form = giftOn("2005-04-29", "1995-06-01", kind);
+      const r = await routeOf(POST, await bodyOf(form));
+      const msg = (r.fieldErrors.acquisitionDate ?? []).join(" ");
+      expect(msg, kind).toContain("「증여자가 토지·건물을 다른 날 취득」을 끄세요");
+      expect(msg, kind).not.toContain("토지는 다른 원인으로 취득");
+      // ⑧은 같은 leaf 문구를 그대로 낸다
+      expect(issuesOf(form).some((i) => i.message.includes("「증여자가 토지·건물을 다른 날 취득」을 끄세요")), kind).toBe(true);
+    }
+  });
 
   it("S2′ 함께 양도 자산 1건 — ⑧(첫 자산 카드)과 ⑫가 같이 막는다: field 앵커는 토글(carryoverDonorSplit)", async () => {
     const form = cForm({ assets: [cAsset(), companion()], contractTotalPrice: "1600000000", bundledSaleMode: "actual" });

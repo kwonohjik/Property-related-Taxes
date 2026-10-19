@@ -107,13 +107,24 @@ function splitCarryoverAcqNote(sd: SplitGainResult): string {
 }
 
 /**
- * 상세명세서 「취득일자」·「보유기간」 행의 파트 이월과세 문구 — 파트별 보유기간·세율 기산일(적용: 증여자 취득일, 미적용: 증여 등기접수일).
- * 이월과세 echo가 없으면 `undefined`. 예: `토지 증여자 취득일 1995-03-01 / 건물 증여 등기접수일 2023-03-01`
+ * 상세명세서 「취득일자」·「보유기간」 행의 파트 이월과세 문구 — 파트별 **장기보유특별공제** 기산일(적용: 증여자 취득일, 미적용: 증여 등기접수일).
+ * 이월과세 echo가 없으면 `undefined`. 예: `토지 증여자 취득일 1995-03-01 / 건물 증여 등기접수일 2023-03-01 (이월과세 미적용)`
  */
 export function splitCarryoverDateText(sd: SplitGainResult | undefined): string | undefined {
   const v = splitCarryoverView(sd);
   if (!v) return undefined;
   return v.parts.map((p) => `${p.label} ${p.lthdStartLabel} ${p.lthdStartDate}${p.applied ? "" : " (이월과세 미적용)"}`).join(" / ");
+}
+
+/**
+ * 파트별 **세율** 기산일 문구 — 엔진이 파트별 기산일로 세율을 판정했을 때(`partRateBasisApplied`)만. 장기보유특별공제 기산일과 다를 수 있다
+ * (주택 토지 파트: `max(법정 기산일, 건물 취득일)`). 판정하지 않았으면 `undefined`.
+ */
+export function splitCarryoverRateDateText(sd: SplitGainResult | undefined): string | undefined {
+  const v = splitCarryoverView(sd);
+  const parts = v?.parts.filter((p) => p.rateBasisDate) ?? [];
+  if (parts.length === 0) return undefined;
+  return parts.map((p) => `${p.label} ${p.rateBasisDate}${p.rateBasisNote ? ` (${p.rateBasisNote})` : ""}`).join(" / ");
 }
 
 /**

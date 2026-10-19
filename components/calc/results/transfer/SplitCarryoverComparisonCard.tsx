@@ -48,8 +48,15 @@ function PartBlock({ v, p }: { v: SplitCarryoverView; p: SplitCarryoverPartView 
       <div className="space-y-1">
         {/* «장특 기산일» — 위 분리 양도차익 표의 보유연수·장특공제율이 이 날부터 센 값이다(testid는 `split-card-lthd-start-*`). */}
         <div data-testid={`split-card-lthd-start-${p.key}`}>
-          <InfoRow label={`기산일 [${p.lthdStartLabel}]`} value={p.lthdStartDate} />
+          <InfoRow label={`장기보유특별공제 기산일 [${p.lthdStartLabel}]`} value={p.lthdStartDate} />
         </div>
+        {/* «세율 기산일» — 엔진이 파트별 기산일로 세율을 판정했을 때만. 주택 토지 파트는 장특 기산일과 다를 수 있다(주택부수토지로서의 보유기간). */}
+        {p.rateBasisDate && (
+          <div data-testid={`split-card-rate-basis-${p.key}`}>
+            <InfoRow label="세율 기산일 [소득세법 §104②]" value={p.rateBasisDate} />
+            {p.rateBasisNote && <p className="pl-2 text-micro text-muted-foreground">* {p.rateBasisNote}</p>}
+          </div>
+        )}
         <InfoRow label={p.applied ? "취득가액 [증여자 취득가액]" : "취득가액 [증여 신고가액]"} value={fmt(p.acquisitionValue)} />
         {p.applied && p.donorCapexAdded > 0 && <InfoRow label="필요경비 가산 [증여자 자본적지출 — §97의2①2호]" value={`+${fmt(p.donorCapexAdded)}`} sub />}
         {p.applied && p.giftTaxAdded > 0 && (

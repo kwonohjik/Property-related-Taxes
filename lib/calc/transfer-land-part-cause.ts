@@ -254,6 +254,17 @@ export function effectiveCarryoverDonorSplit(asset: CarryoverDonorSplitScope, op
   return (effectiveSelfOwns(asset as Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns">) ?? "both") === "both";
 }
 
+/**
+ * 함께 양도하는 두 번째 이후 자산(`isNonPrimary`)은 C 토글을 «꺼진 것»으로 읽는다 — 값은 지우지 않는다(D0 G-6).
+ *
+ * 토글은 첫 자산에서만 켤 수 있지만 값은 자산에 남는다. 켠 뒤 종류를 토지로 바꾸고 «주택 먼저로 교환»(`reverse-appurtenant-swap`)으로 그 자산이 두 번째로 내려간 다음
+ * 다시 주택으로 바꾸면 컴패니언에 ON 잔재가 선다. 그대로 두면 `isSeparateAcquisition`·⑥이 컴패니언을 C로 읽어 ④ 본문(`companionAssets[].isSeparateAcquisition`)과
+ * ⑥(취득가액 «계산 후 표시»)이 OFF 읽기와 갈린다(실측). 컴패니언을 읽는 두 지점(④ 본문 조립·⑥ 행 합계)이 이 한 함수로 같은 사실을 본다. ⑧은 `isNonPrimaryAsset` 옵션으로 이미 갈려 있어 같은 입력을 OFF와 같게 읽는다(뮤테이션으로 확인 — 별도 중화 불필요).
+ */
+export function neutralizeCarryoverDonorSplitForCompanion<T extends { carryoverDonorSplit?: boolean }>(asset: T, isNonPrimary: boolean): T {
+  return isNonPrimary && asset.carryoverDonorSplit ? { ...asset, carryoverDonorSplit: false } : asset;
+}
+
 /** 파트별 이월과세 여부 — 사건·파트 서브객체를 ④가 싣는지, ⑧이 파트 입력을 요구하는지의 공통 질의. P2는 C(토지·건물 둘 다)뿐이다. */
 export function partCarryover(asset: CarryoverDonorSplitScope, opts?: { isNonPrimary?: boolean }): { land: boolean; building: boolean } {
   const c = effectiveCarryoverDonorSplit(asset, opts);

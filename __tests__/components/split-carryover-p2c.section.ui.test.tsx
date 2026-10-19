@@ -51,6 +51,20 @@ describe("⑤ C 화면", () => {
     expect(off.container.textContent).toContain("증여일 현재 배우자(증여자) 세대가 이 주택 1채만 보유");
   });
 
+  it("저장 토글 ON인데 술어가 거짓(소유자 분리·부담부증여)이면 «지금 조건에서는 적용되지 않음» 한 줄 — 정상 ON·OFF에는 없다", () => {
+    mount(cAsset());
+    expect(screen.queryByTestId("carryover-donor-split-inactive")).toBeNull();
+    cleanup();
+    mount(cAsset({ selfOwns: "building_only" }));
+    expect(screen.getByTestId("carryover-donor-split-inactive").textContent).toContain("토지·건물 소유자가 다른 자산");
+    cleanup();
+    mount(cAsset({ transferType: "burdened_gift" }));
+    expect(screen.getByTestId("carryover-donor-split-inactive").textContent).toContain("부담부증여 양도");
+    cleanup();
+    mount(cAsset({ carryoverDonorSplit: false, selfOwns: "building_only" }));
+    expect(screen.queryByTestId("carryover-donor-split-inactive")).toBeNull();
+  });
+
   it("OFF: 종전 화면 — 환산 토글·증여 당시 평가액이 있고 파트 카드·N4·N5는 없다(회귀 0)", () => {
     mount(cAsset({ carryoverDonorSplit: false }));
     expect(screen.getByText("환산취득가 사용")).toBeTruthy();

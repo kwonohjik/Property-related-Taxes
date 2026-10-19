@@ -600,7 +600,7 @@ export function validateSplitDirectInputs(
     asset.transferType === "burdened_gift" ||
     asset.assetKind === "redevelopment_apt" ||
     getOwnershipRatio(asset) < 1.0 ||
-    // P2 C — 자산 단위 취득가액 총액은 숨은 잔재이고 ④는 0을 싣는다(파트 증여 신고가액이 정본).
+    // P2 C — 자산 단위 취득가액 총액은 숨은 잔재이다. ④는 `acquisitionPrice`를 그대로 싣고(설계 U-4) 엔진은 C에서 그 총액을 읽지 않는다(파트 증여 신고가액이 정본).
     carryoverSplit;
 
   /**

@@ -71,7 +71,7 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
     formula: acquisitionDateOverride
       ? "이월과세 적용 시 증여자 취득일 기산 (소득세법 §97조의2 ①)"
       : splitCarryover
-        ? `수증자 취득일 = 증여 등기접수일 — 파트별 보유기간·세율 기산일: ${splitCarryoverDateText(splitDetail)}`
+        ? `수증자 취득일 = 증여 등기접수일 — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
         : "사용자 입력 (등기접수일 또는 잔금청산일 중 빠른 날)",
     legalBasis: acquisitionDateOverride || splitCarryover ? "소득세법 §97조의2" : "소득세법 §98",
     perAsset: isAggregate
@@ -82,7 +82,7 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
       : undefined,
   });
 
-  // 파트 이월과세 — 보유기간은 파트마다 기산일이 다르다(적용 파트는 증여자 취득일). 엔진이 쓴 기산일 echo에서 센다.
+  // 파트 이월과세 — 장기보유특별공제 보유기간은 파트마다 기산일이 다르다(적용 파트는 증여자 취득일). 엔진 파트 취득일 echo에서 센다.
   const splitHoldingValue = splitCarryover
     ? splitCarryover.parts.map((p) => `${p.label} ${holdingPeriodFromDates(p.lthdStartDate, transferDate)}`).join(" / ")
     : undefined;
@@ -90,7 +90,7 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
     label: "보유기간",
     value: splitHoldingValue ?? holdingPeriodFromDates(displayAcqDate, transferDate),
     formula: splitCarryover
-      ? `양도일 ${fmtDate(transferDate)} − 파트별 기산일 (${splitCarryoverDateText(splitDetail)}) (연·월 차이)`
+      ? `양도일 ${fmtDate(transferDate)} − 파트별 장기보유특별공제 기산일 (${splitCarryoverDateText(splitDetail)}) (연·월 차이) — 장기보유특별공제 보유기간이며 세율 기산일과 다를 수 있습니다`
       : `양도일 ${fmtDate(transferDate)} − 취득일 ${fmtDate(displayAcqDate)} = ${holdingPeriodFromDates(displayAcqDate, transferDate)} (연·월 차이)`,
     legalBasis: splitCarryover ? "소득세법 §95④ 단서·§97조의2" : "소득세법 §95②",
     perAsset: isAggregate

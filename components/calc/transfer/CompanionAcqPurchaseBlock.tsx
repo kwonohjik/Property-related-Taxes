@@ -243,6 +243,13 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       acquisitionDate: props.acquisitionDate,
       isMixedUseHouse: props.asset?.isMixedUseHouse,
       assetKind: props.assetKind,
+      // ④·⑧과 같은 입력 — 일부만 넘기면 stale 분리 입력·파트 이월과세(C) 판정이 꺼져 UI=별개 취득, ④=아님으로 갈린다.
+      acquisitionCause: props.asset?.acquisitionCause,
+      landAcquisitionCause: props.asset?.landAcquisitionCause,
+      landCauseHost: props.asset?.landCauseHost,
+      transferType: props.asset?.transferType,
+      selfOwns: props.asset?.selfOwns,
+      carryoverDonorSplit: props.asset?.carryoverDonorSplit,
     });
   // 토지·건물 파트별 취득 방식 — 사용자가 아직 파트별 라디오를 선택하지 않았으면("") 자산 전체
   // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).

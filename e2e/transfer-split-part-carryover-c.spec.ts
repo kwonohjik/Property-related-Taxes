@@ -154,6 +154,9 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await expect(page.getByTestId("split-carryover-building").first()).toHaveAttribute("data-judgment", "applied");
     await expect(page.getByTestId("split-card-lthd-start-building").first()).toContainText("2015-06-01");
     await expect(page.getByTestId("split-card-lthd-start-land").first()).toContainText("2023-03-01");
+    // 세율 기산일은 장기보유특별공제 기산일과 별도 행 — 엔진이 파트별로 세율을 판정했을 때만
+    await expect(page.getByTestId("split-card-rate-basis-building").first()).toContainText("2015-06-01");
+    await expect(page.getByTestId("split-card-rate-basis-land").first()).toContainText("2023-03-01");
     await expect(page.getByTestId("split-carryover-land-comparison").first()).toContainText("295,566,000");
     await expect(page.getByTestId("split-carryover-land-comparison").first()).toContainText("300,018,000");
     await expect(page.getByTestId("split-carryover-notice-0").first()).toContainText("확인 필요");
@@ -181,7 +184,7 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     // 상세명세서는 renderFormula가 괄호 피연산자를 분수(분자·분모 칸)로 그린다 — 텍스트는 분자 뒤에 분모가 이어 붙는다
     await expect(stmtRow(page, "필요경비")).toContainText("증여세 산출세액 30,000,000 × 건물 증여 신고가액 660,000,000증여세 과세가액 900,000,000 = 22,000,000");
     // 일자 그룹은 렌더하지 않는다 — 파트별 기산일은 세율이 있는 산출세액 행의 ※에 밝힌다
-    await expect(stmtRow(page, "산출세액")).toContainText("이월과세(§97의2①) 보유기간·세율 기산일: 토지 증여 등기접수일 2023-03-01 (이월과세 미적용) / 건물 증여자 취득일 2015-06-01");
+    await expect(stmtRow(page, "산출세액")).toContainText("이월과세(§97의2①) 장기보유특별공제 기산일: 토지 증여 등기접수일 2023-03-01 (이월과세 미적용) / 건물 증여자 취득일 2015-06-01");
   });
 
   test("UI 입력: 자산 전체 이월과세 → 토글 ON → 파트 카드 입력 → 계산 — 같은 결과(300,018,000), 토글 OFF 시 파트 키 소멸", async ({ page }) => {

@@ -8,6 +8,7 @@
  * 구 이력(echo 없음)은 `undefined`를 돌려줘 소비처가 종전 화면을 그대로 낸다.
  */
 import { CARRYOVER_EXCLUSION_REASON_LABELS } from "./transfer-carryover-exclusion-labels";
+import { splitRateBasisNote } from "./transfer-tax-split-display";
 import type { SplitGainResult, SplitPartCarryoverEcho, SplitPartResult } from "./types/transfer-split-gain.types";
 
 type PartKey = "land" | "building";
@@ -22,9 +23,16 @@ export interface SplitCarryoverPartView {
   verdictLabel: string;
   /** 미적용 사유 라벨(적용이면 없음) */
   exclusionLabel?: string;
-  /** 장기보유특별공제·세율 판정의 **기산일** — 적용: 증여자 취득일(§95④ 단서), 미적용: 증여 등기접수일(수증자 취득) */
+  /**
+   * **장기보유특별공제** 기산일 — 엔진 파트 `acquisitionDate` echo 그대로(적용: 증여자 취득일(§95④ 단서), 미적용: 증여 등기접수일(수증자 취득)).
+   * 세율 기산일과 다를 수 있다 — 주택 토지 파트의 세율은 `max(법정 기산일, 건물 취득일)`(주택부수토지로서의 보유기간)로 판정한다.
+   */
   lthdStartDate: string;
   lthdStartLabel: string;
+  /** **세율** 기산일 — 엔진이 파트별 기산일로 세율을 판정했을 때(`partRateBasisApplied`)만, 엔진 `appliedRateBasisDate` echo 그대로 */
+  rateBasisDate?: string;
+  /** 세율 기산 보조 문구(법정 기산일과 다르면 주택 `max` 적용 사실) — `rateBasisDate`가 있을 때만 */
+  rateBasisNote?: string;
   donorAcquisitionDate: string;
   donorAcquisitionPrice: number;
   donorCapexAdded: number;
@@ -54,8 +62,18 @@ export interface SplitCarryoverView {
   parts: SplitCarryoverPartView[];
 }
 
-function partView(key: PartKey, p: SplitPartResult, e: SplitPartCarryoverEcho, giftRegistryDate: string): SplitCarryoverPartView {
+function partView(
+  key: PartKey,
+  p: SplitPartResult,
+  e: SplitPartCarryoverEcho,
+  giftRegistryDate: string,
+  /** 엔진이 파트별 기산일로 세율을 판정했는가(`SplitGainResult.partRateBasisApplied`) — 자산 단위 세율이면 파트 세율 기산일은 계산에 쓰이지 않았다 */
+  rateJudgedByPart: boolean,
+  houseCause: SplitPartResult["acquisitionCause"],
+): SplitCarryoverPartView {
   const applied = e.judgment === "applied";
+  const rateBasisDate = rateJudgedByPart ? p.appliedRateBasisDate : undefined;
+  const rateBasisNote = rateBasisDate ? splitRateBasisNote(p, houseCause) : undefined;
   const exclusionLabel = applied || !e.exclusionReason ? undefined : CARRYOVER_EXCLUSION_REASON_LABELS[e.exclusionReason];
   return {
     key,
@@ -63,8 +81,10 @@ function partView(key: PartKey, p: SplitPartResult, e: SplitPartCarryoverEcho, g
     applied,
     verdictLabel: applied ? "이월과세 적용 (증여자 기준)" : "이월과세 미적용 (수증자 기준)",
     ...(exclusionLabel ? { exclusionLabel } : {}),
-    lthdStartDate: applied ? e.donorAcquisitionDate : giftRegistryDate,
+    lthdStartDate: p.acquisitionDate ?? (applied ? e.donorAcquisitionDate : giftRegistryDate),
     lthdStartLabel: applied ? "증여자 취득일" : "증여 등기접수일",
+    ...(rateBasisDate ? { rateBasisDate } : {}),
+    ...(rateBasisNote ? { rateBasisNote } : {}),
     donorAcquisitionDate: e.donorAcquisitionDate,
     donorAcquisitionPrice: e.donorAcquisitionPrice,
     donorCapexAdded: e.donorCapexAdded,
@@ -89,7 +109,7 @@ export function splitCarryoverView(sd: SplitGainResult | undefined): SplitCarryo
   const parts: SplitCarryoverPartView[] = [];
   for (const key of ["land", "building"] as const) {
     const e = sd[key].carryover;
-    if (e) parts.push(partView(key, sd[key], e, ev.giftRegistryDate));
+    if (e) parts.push(partView(key, sd[key], e, ev.giftRegistryDate, sd.partRateBasisApplied === true, sd.building.acquisitionCause));
   }
   if (parts.length === 0) return undefined;
   return {
@@ -127,9 +147,20 @@ export function splitCarryoverComparisonText(p: SplitCarryoverPartView): string 
   return p.comparison ? `신고 전체 결정세액 적용 ${won(p.comparison.withCarryover)} / 미적용 ${won(p.comparison.without)}` : "";
 }
 
-/** 파트별 판정 요약 한 줄 — 4뷰 공통 헤드. */
+/** 장기보유특별공제 기산 문구 — `장기보유특별공제 기산 증여자 취득일 1995-03-01` */
+export function splitCarryoverLthdBasisText(p: SplitCarryoverPartView): string {
+  return `장기보유특별공제 기산 ${p.lthdStartLabel} ${p.lthdStartDate}`;
+}
+
+/** 세율 기산 문구 — 엔진이 파트별로 세율을 판정했을 때만(없으면 빈 문자열) */
+export function splitCarryoverRateBasisText(p: SplitCarryoverPartView): string {
+  return p.rateBasisDate ? `세율 기산 ${p.rateBasisDate}${p.rateBasisNote ? ` (${p.rateBasisNote})` : ""}` : "";
+}
+
+/** 파트별 판정 요약 한 줄 — 4뷰 공통 헤드. 장기보유특별공제 기산일과 세율 기산일을 가른다(둘은 다를 수 있다). */
 export function splitCarryoverVerdictText(p: SplitCarryoverPartView): string {
-  const head = `${p.label} ${p.verdictLabel} · ${p.lthdStartLabel} ${p.lthdStartDate}부터 보유기간·세율 기산`;
+  const rate = splitCarryoverRateBasisText(p);
+  const head = `${p.label} ${p.verdictLabel} · ${splitCarryoverLthdBasisText(p)}${rate ? ` · ${rate}` : ""}`;
   const cmp = splitCarryoverComparisonText(p);
   return `${head}${cmp ? ` · ${cmp}` : ""}${p.exclusionLabel ? ` — ${p.exclusionLabel}` : ""}`;
 }

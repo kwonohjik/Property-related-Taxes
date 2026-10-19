@@ -158,9 +158,21 @@ describe("② 상세명세서 — 취득가액·필요경비·취득일자·보�
     expect(text(acq.formula)).toContain("건물 증여자 취득일 2015-06-01");
     expect(text(items(C).get("holdingPeriod")!.value)).toMatch(/토지 .*\/ 건물 /);
   });
-  it("산출세액 행 ※: 파트별 보유기간·세율 기산일(일자 그룹은 렌더하지 않는다)", () => {
+  it("산출세액 행 ※: 파트별 장기보유특별공제 기산일 + 세율 기산일(일자 그룹은 렌더하지 않는다)", () => {
     const note = items(C).get("calculatedTax")!.note!;
-    expect(note).toContain("이월과세(§97의2①) 보유기간·세율 기산일: 토지 증여 등기접수일 2023-03-01 (이월과세 미적용) / 건물 증여자 취득일 2015-06-01");
+    expect(note).toContain("이월과세(§97의2①) 장기보유특별공제 기산일: 토지 증여 등기접수일 2023-03-01 (이월과세 미적용) / 건물 증여자 취득일 2015-06-01");
+    expect(note).toContain("세율 기산일: 토지 2023-03-01");
+  });
+  it("「확인 필요」 고지: 비교 단위·동일세대 + 순서 의존은 표지가 있을 때만 (신고서에는 싣지 않는다)", () => {
+    const note = items(C).get("calculatedTax")!.note!;
+    expect(note).toContain("확인 필요 — ②3호 비교(적용·미적용)는 토지·건물을 각각 별개 자산으로 보고 파트별로 했습니다");
+    expect(note).toContain("계속 같은 세대였는지는 묻지 않았고");
+    expect(note).not.toContain("조합이 둘 이상 성립합니다");
+    expect(items(T9).get("calculatedTax")!.note!).toContain("조합이 둘 이상 성립합니다");
+    // 설계서 §6 — 신고서는 채택 주석만 둔다(고지 문구 없음)
+    const filing = buildRows(C, "split-2col", FORM, undefined, 1_200_000_000);
+    const filingText = filing.map((r) => JSON.stringify(r.roseNotes ?? {}) + JSON.stringify(r.values)).join("|");
+    expect(filingText).not.toContain("확인 필요");
   });
   it.each([["일반 split", PLAIN], ["구 이력", legacy(C)]])("%s → 종전 문구(이월과세 문구 없음)", (_, r) => {
     const all = [...items(r).values()].map((x) => text(x.formula) + text(x.note ?? "") + text(x.value)).join("|");

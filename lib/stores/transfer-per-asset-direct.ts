@@ -120,7 +120,7 @@ export function directAcqRaw(a: AssetForm): { value: number; pending: boolean } 
   }
   // ③-0b 파트 이월과세 C(증여자 토지·건물 취득일 상이) — 파트 취득가액은 «이월과세 적용 시 증여자 취득가액 + 증여세 상당액 / 미적용 시 증여 신고가액»이고
   //     어느 쪽이 쓰이는지는 파트별 ②3호 비교(엔진)가 정한다. 입력 단계에서 증여 신고가액(미적용 값)이나 그 합을 취득가액으로 보이면 오독이라 계산 후 확정으로 둔다.
-  //     자산 전체 칸(`fixedAcquisitionPrice`)은 숨은 잔재이고 ④도 0을 싣는다. 결과가 오면 `summarizeSplitGain().acquisitionDeducted`가 푼다.
+  //     자산 전체 칸(`fixedAcquisitionPrice`)은 숨은 잔재이다 — ④는 `acquisitionPrice`를 그대로 싣고(설계 U-4) 엔진은 C에서 그 총액을 읽지 않는다. 결과가 오면 `summarizeSplitGain().acquisitionDeducted`가 푼다.
   if (effectiveCarryoverDonorSplit(a)) return { value: 0, pending: true };
   // ③ 별개 취득(토지·건물 취득시기 상이) — 자산 전체 칸이 숨겨져 파트 합계가 정본.
   if (isSeparateAcquisition(a)) {
