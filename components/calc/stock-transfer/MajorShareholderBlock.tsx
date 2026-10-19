@@ -453,7 +453,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               />
             </FieldCard>
           ) : (
-            <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+            <ToneCard tone="violet" bodyClassName="space-y-3">
               {/* C-7 (2026-09-08) — 발행주식 총수는 「양도·취득 일자 및 주식수」 섹션이
                   **유일한 입력 지점**이다. 여기서 또 받으면 같은 값을 세 곳에서 묻게 된다.
                   산출식의 분모가 무엇인지만 보여준다. */}
@@ -588,7 +588,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                 />
               </FieldCard>
             ) : (
-              <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+              <ToneCard tone="violet" bodyClassName="space-y-3">
                 {/* C-7 — 본인 단독과 동일. 입력 지점은 §「양도·취득 일자 및 주식수」 한 곳이다. */}
                 <IssuedSharesReadout total={form.totalIssuedShares} />
                 <FieldCard label="합산 보유 주식수" hint="본인+특수관계인 — 최대주주그룹 합산 보유 주식수 (주)">

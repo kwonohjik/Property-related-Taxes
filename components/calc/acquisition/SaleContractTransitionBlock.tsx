@@ -49,7 +49,6 @@ export function SaleContractTransitionBlock({
           tone="amber"
           title="2020.7.10. 이전 매매계약 — 종전 세율 (부칙 법률 제17473호 제6조)"
           bodyClassName="space-y-2"
-          noDark
         >
           <p className="text-xs text-muted-foreground">
             법인이나 국내에 주택을 1개 이상 소유한 1세대가 2020.7.10. 이전에 매매계약(공동주택 분양계약 포함)을

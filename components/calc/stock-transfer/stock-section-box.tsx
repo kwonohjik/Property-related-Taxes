@@ -38,10 +38,9 @@ export function SectionBox({
   children: React.ReactNode;
 }) {
   // 톤은 <ToneCard>(tones.ts 정적 소스) — 기존 동적 `${tone}` 제거(JIT purge 위험).
-  // p-4·space-y-3는 기존 레이아웃 보존. noDark: 이 폼은 원래 dark 미대응(light 전용)이라
-  // dark 변형을 새로 입히지 않아 양 모드 모두 회귀 0.
+  // p-4·space-y-3는 기존 레이아웃 보존.
   return (
-    <ToneCard tone={tone} sectionNum={n} title={label} className="p-4" bodyClassName="space-y-3" noDark>
+    <ToneCard tone={tone} sectionNum={n} title={label} className="p-4" bodyClassName="space-y-3">
       {children}
     </ToneCard>
   );

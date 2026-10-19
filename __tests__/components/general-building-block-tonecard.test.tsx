@@ -1,5 +1,5 @@
 /**
- * anchor: GeneralBuildingBlock — 인라인 섹션카드 → <ToneCard noDark> 전환(회귀 0).
+ * anchor: GeneralBuildingBlock — 인라인 섹션카드 → <ToneCard> 전환(회귀 0).
  *   색상 ToneCard 점진 채택 5호(건물 파트 재개).
  *   헤더의 법조문 모달·§ 배지는 titleExtra prop으로 보존. dark:0 → noDark.
  *   /50-60·100/60 서브박스는 인라인 유지.
@@ -96,7 +96,7 @@ describe("AssetAreaGeneralBuilding — 이전된 면적 카드의 sky·noDark �
     const card = renderArea().getByText("면적·규모").parentElement?.parentElement as HTMLElement;
     expect(card.className).toContain("border-sky-200");
     expect(card.className).toContain("bg-sky-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("환산 모드에서 면적 3필드가 모두 렌더된다", () => {

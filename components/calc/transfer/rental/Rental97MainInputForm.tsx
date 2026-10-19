@@ -69,7 +69,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
   return (
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
-      <ToneCard tone="violet" sectionNum={num(0)} title="등록·신분" noDark>
+      <ToneCard tone="violet" sectionNum={num(0)} title="등록·신분">
 
         <RegistrationFields
           fieldType={value.type}
@@ -110,7 +110,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* ② 단서 분기 (rental_97_proviso만) */}
       {isProviso && (
-        <ToneCard tone="amber" sectionNum={num(1)} title="단서 분기 — 100% 감면 요건" noDark>
+        <ToneCard tone="amber" sectionNum={num(1)} title="단서 분기 — 100% 감면 요건">
           <RadioCardGroup
             data-field={`reduction.${value.type}.provisoCase`}
             name="provisoCase_97"
@@ -141,7 +141,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {/* §97①2호 — 1985.12.31 이전 신축 공동주택 (D1-06) */}
       {parseInt(value.constructionYear || "0") > 0 &&
         parseInt(value.constructionYear) <= 1985 && (
-          <ToneCard tone="amber" sectionNum={num(2)} title="§97①2호 요건" bodyClassName="space-y-2" noDark>
+          <ToneCard tone="amber" sectionNum={num(2)} title="§97①2호 요건" bodyClassName="space-y-2">
             <p className="text-micro text-amber-800">
               조특법 §97①2호 — 「<strong>1985년 12월 31일 이전에 신축된 공동주택</strong>으로서
               <strong>1986년 1월 1일 현재 입주된 사실이 없는 주택</strong>」. 두 가지를 모두
@@ -189,7 +189,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
       {/* §97① 단서 나목 — 취득 당시 미입주 (D1-07) */}
       {isProviso && value.provisoCase === "b_purchase" && (
-        <ToneCard tone="rose" sectionNum={num(3)} title="단서 나목 요건" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="rose" sectionNum={num(3)} title="단서 나목 요건" bodyClassName="space-y-2">
           <p className="text-micro text-rose-800">
             조특법 §97① 단서 — 매입임대주택은 「<strong>취득 당시 입주된 사실이 없는 주택만
             해당한다</strong>」.
@@ -224,7 +224,6 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
         sectionNum={num(4)}
         title="임대 호수 요건"
         bodyClassName="space-y-2"
-        noDark
       >
         <div>
           <p className="mb-1.5 text-xs text-muted-foreground">임대주택 5호 이상 임대</p>

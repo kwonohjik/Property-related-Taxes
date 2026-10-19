@@ -68,7 +68,7 @@ export function Step0({
   return (
     <div className="space-y-3">
       {/* 섹션 ① — 피상속인 기본 정보 (sky tone) */}
-      <ToneCard tone="sky" sectionNum={1} title="피상속인 기본 정보" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="sky" sectionNum={1} title="피상속인 기본 정보" bodyClassName="space-y-3">
         {/* 1행 — 항상 3컬럼 고정 (성명·주민등록번호·상속개시일) */}
         <div className="grid grid-cols-3 gap-3">
           <div className="min-w-0 space-y-1.5">
@@ -130,7 +130,7 @@ export function Step0({
       </ToneCard>
 
       {/* 섹션 ② — 상속인·수유자 구성 (violet tone). 헤더(번호·제목·6명·추가버튼)는 HeirComposition이 렌더 */}
-      <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+      <ToneCard tone="violet" bodyClassName="space-y-3">
         {/* B-2 (2026-06-01): deathDate 전달 — legatee 미성년 자동 판정용 */}
         <HeirComposition heirs={form.heirs} onChange={setHeirs} deathDate={form.deathDate} />
         <CollapsibleHintCard tone="sky" summary="협의분할·법정상속분 배분 안내">

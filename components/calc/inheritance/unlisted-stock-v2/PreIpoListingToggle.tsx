@@ -140,7 +140,6 @@ export function PreIpoListingToggle({
         sectionNum={sectionNum}
         bodyClassName="space-y-3"
         title="기업공개·상장신청 준비 중 평가 (선택)"
-        noDark
       >
         <ToggleCard
           lawLinks="상증법"

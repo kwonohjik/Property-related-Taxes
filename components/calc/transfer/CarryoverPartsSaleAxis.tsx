@@ -27,7 +27,7 @@ export function CarryoverPartsSaleAxis(props: {
   const saleStdPlace = saleStdPlacement();
   return (
     <div className="space-y-3" data-testid="carryover-parts-sale-axis">
-      <ToneCard tone="amber" noDark>
+      <ToneCard tone="amber">
         <p className="text-xs text-amber-900">
           토지·건물을 나눠 계산합니다. 수증자가 증여받은 뒤 지출한 자본적 지출은 토지분·건물분 칸에 각각 입력하고,
           양도가액은 계약서의 구분 기재 또는 양도시 기준시가 비율로 나눕니다 (소득세법 시행령 §166⑥).

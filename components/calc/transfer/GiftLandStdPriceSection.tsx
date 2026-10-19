@@ -54,7 +54,6 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
     <ToneCard
       tone="amber"
       title="§164④ 취득당시 기준시가 (선택 — 증여일 평가액과 큰 금액 적용)"
-      noDark
     >
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 1호" label="§163⑨1호" />

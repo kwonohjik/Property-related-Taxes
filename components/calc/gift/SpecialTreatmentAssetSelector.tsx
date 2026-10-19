@@ -119,7 +119,6 @@ export function SpecialTreatmentAssetSelector({
         tone="emerald"
         sectionNum="§"
         bodyClassName="space-y-2"
-        noDark
         title={<>특례 귀속 자산 ({streamLabel}) — 자동 귀속</>}
       >
         <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-100/60 px-3 py-2">
@@ -141,7 +140,6 @@ export function SpecialTreatmentAssetSelector({
       tone="emerald"
       sectionNum="§"
       bodyClassName="space-y-2"
-      noDark
       title={<>특례 귀속 자산 선택 ({streamLabel})</>}
     >
       <p className="text-caption text-emerald-600">

@@ -202,7 +202,7 @@ export function showTransferHousingTotalInAxisA(asset: AssetForm): boolean {
 export function TransferStdPriceCard(props: FieldProps) {
   return (
     <div data-testid="split-sale-std-card">
-      <ToneCard tone="emerald" title="양도시 기준시가 (§99①1호 가목·나목)" noDark>
+      <ToneCard tone="emerald" title="양도시 기준시가 (§99①1호 가목·나목)">
         {showTransferHousingTotalInAxisA(props.asset) && <TransferHousingTotalField {...props} />}
         <TransferLandStdFields {...props} />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start">
@@ -217,7 +217,7 @@ export function TransferStdPriceCard(props: FieldProps) {
 export function TransferLandStdPartCard(props: FieldProps) {
   return (
     <div data-testid="split-land-std-transfer-card">
-      <ToneCard tone="emerald" title="토지 양도시 기준시가 (§99①1호 가목)" noDark>
+      <ToneCard tone="emerald" title="토지 양도시 기준시가 (§99①1호 가목)">
         <TransferLandStdFields {...props} />
       </ToneCard>
     </div>
@@ -228,7 +228,7 @@ export function TransferLandStdPartCard(props: FieldProps) {
 export function TransferBuildingStdPartCard(props: FieldProps) {
   return (
     <div data-testid="split-building-std-transfer-card">
-      <ToneCard tone="emerald" title="건물 양도시 기준시가 (§99①1호 나목)" noDark>
+      <ToneCard tone="emerald" title="건물 양도시 기준시가 (§99①1호 나목)">
         <TransferBuildingStdFields {...props} placement="part" />
       </ToneCard>
     </div>

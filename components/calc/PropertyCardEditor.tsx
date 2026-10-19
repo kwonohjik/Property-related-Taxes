@@ -371,7 +371,7 @@ export function PropertyCardEditor({
                   ]}
                 />
                 {/* 당해연도 시가표준액 */}
-                <ToneCard tone="amber" title="당해연도 시가표준액" bodyClassName="space-y-2" noDark>
+                <ToneCard tone="amber" title="당해연도 시가표준액" bodyClassName="space-y-2">
                   <div className="grid grid-cols-2 gap-3">
                     <CurrencyInput label="토지" value={property.landStdValue} onChange={(v) => onUpdate({ landStdValue: v })} hideUnit />
                     <CurrencyInput label="건물" value={property.buildingStdValue} onChange={(v) => onUpdate({ buildingStdValue: v })} hideUnit />
@@ -381,7 +381,6 @@ export function PropertyCardEditor({
                 <ToneCard
                   tone="amber"
                   bodyClassName="space-y-2"
-                  noDark
                   title={<>직전연도 시가표준액{" "}<span className="font-normal text-muted-foreground">(세부담상한 자동계산 시)</span></>}
                 >
                   <div className="grid grid-cols-2 gap-3">

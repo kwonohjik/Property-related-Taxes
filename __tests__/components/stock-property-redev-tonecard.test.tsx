@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * anchor: stock-transfer 9 + property/Step0 2 + RedevelopmentBlock 7 섹션카드 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 24~26호.
+ * anchor: stock-transfer 9 + property/Step0 2 + RedevelopmentBlock 7 섹션카드 → <ToneCard> 전환(회귀 0). 색상 ToneCard 24~26호.
  *   stock: MarketSample(amber①·emerald②)·PostListingClosing(emerald① fragment title)·TransferDate1Month(amber① fragment)·
  *          CapitalAdjustments(violet "CA" +행추가)·AcquisitionLots(sky 순수박스 text-sky-900)·MajorShareholder(violet×2 순수박스)·ExitTaxHoldings(amber map idx+1 삭제).
  *   property/Step0: 소유자정보·시가표준액(amber title형, 배지 없음).
@@ -18,14 +18,14 @@ describe("stock-transfer·property·redev <ToneCard> 전환 회귀 0 (24~26호)"
   it("문자열 sectionNum 배지 (CA·ⓘ·2a) — badge textContent·tone·dark:0", () => {
     for (const [tone, num] of [["violet", "CA"], ["violet", "ⓘ"], ["rose", "2a"]] as const) {
       const { container } = render(
-        <ToneCard tone={tone} sectionNum={num} title="t" bodyClassName="space-y-2" noDark />,
+        <ToneCard tone={tone} sectionNum={num} title="t" bodyClassName="space-y-2" />,
       );
       const box = container.firstChild as HTMLElement;
       const badge = box.querySelector("span.rounded-full") as HTMLElement;
       expect(badge.textContent).toBe(num);
       expect(badge.className).toContain(`bg-${tone}-200`);
       expect(box.className).toContain(`border-${tone}-200`);
-      expect(box.className).not.toContain("dark:");
+      expect(box.className).toContain("dark:");
       cleanup();
     }
   });
@@ -36,7 +36,6 @@ describe("stock-transfer·property·redev <ToneCard> 전환 회귀 0 (24~26호)"
         tone="emerald"
         sectionNum={1}
         bodyClassName="space-y-3"
-        noDark
         title={<>상장일 이후 1개월 종가 (소령 §165⑤ — {"2024-01-01"} ~ {"2024-01-31"})</>}
       />,
     );
@@ -48,7 +47,7 @@ describe("stock-transfer·property·redev <ToneCard> 전환 회귀 0 (24~26호)"
 
   it("순수박스 className override + bodyClassName='' (AcquisitionLots text-sm text-sky-900, space 없음)", () => {
     const { container } = render(
-      <ToneCard tone="sky" noDark className="text-sm text-sky-900" bodyClassName="">
+      <ToneCard tone="sky" className="text-sm text-sky-900" bodyClassName="">
         <p>총 매수</p>
       </ToneCard>,
     );
@@ -59,19 +58,19 @@ describe("stock-transfer·property·redev <ToneCard> 전환 회귀 0 (24~26호)"
     expect(box.className).toContain("text-sky-900");
     expect(box.className).toContain("p-3");
     expect(box.className).not.toContain("space-y-2"); // bodyClassName="" → 원본과 동일 (space-y 없음)
-    expect(box.className).not.toContain("dark:");
+    expect(box.className).toContain("dark:");
     expect(box.querySelector("span.rounded-full")).toBeNull(); // 헤더 없는 순수박스
   });
 
   it("title형 (배지 없음, sectionNum 無) — property/Step0 amber 소유자·시가표준액 카드", () => {
     const { container } = render(
-      <ToneCard tone="amber" title="시가표준액 (안분 기준, §4)" bodyClassName="space-y-3" noDark />,
+      <ToneCard tone="amber" title="시가표준액 (안분 기준, §4)" bodyClassName="space-y-3" />,
     );
     const box = container.firstChild as HTMLElement;
     expect(box.querySelector("span.rounded-full")).toBeNull(); // 배지 없음
     const titleP = box.querySelector("p.font-semibold") as HTMLElement;
     expect(titleP.className).toContain("text-amber-700");
     expect(titleP.textContent).toBe("시가표준액 (안분 기준, §4)");
-    expect(box.className).not.toContain("dark:");
+    expect(box.className).toContain("dark:");
   });
 });

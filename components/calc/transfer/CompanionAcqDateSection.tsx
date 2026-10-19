@@ -165,7 +165,7 @@ export function CompanionAcqDateSection(props: {
             ⚠️ 사용자가 토글을 **직접** 켠 경우에는 붙이지 않는다 — 그건 "취득일이 다르다"는 의도
                표명이라 둘 다 채울 의사가 있고, 안내는 노이즈가 된다. */}
         {isSplit && isMixedUse && (
-          <ToneCard tone="amber" noDark bodyClassName="space-y-1">
+          <ToneCard tone="amber" bodyClassName="space-y-1">
             <p className="text-xs text-amber-900" data-testid="split-acq-date-mixed-note">
               {/* B1 — 취득일이 다르고 「각각 입력」이 켜져 있으면 파트 모델 문구, 그 밖에는 종전 문구.
                   종전 문구의 「시행령 §166⑥」 인용은 본문 미대조(계획서 M-2·V-9 — 오기 의심)라 싣지 않는다. */}
@@ -231,13 +231,13 @@ export function CompanionAcqDateSection(props: {
         )}
         {/* D1-2 — 같은 날(Q-4)·1990.8.30. 전(Q-7) 안내. ⑧과 같은 술어(차단은 ⑧·⑫). */}
         {landCause && p.asset && landPartCauseDateNotice(p.asset) && (
-          <ToneCard tone="amber" noDark>
+          <ToneCard tone="amber">
             <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{landPartCauseDateNotice(p.asset)}</p>
           </ToneCard>
         )}
         {/* D2-2 — 건물 상속·증여 + 토지 매매: 건물 경계일(< 2005.4.30.)·같은 날 안내. ⑧·⑫와 같은 술어(차단은 거기서). */}
         {buildingCause && p.asset && buildingCauseDateNotices(p.asset).length > 0 && (
-          <ToneCard tone="amber" noDark bodyClassName="space-y-1">
+          <ToneCard tone="amber" bodyClassName="space-y-1">
             {buildingCauseDateNotices(p.asset).map((m) => (
               <p key={m} className="text-xs text-amber-900" data-testid="building-cause-date-notice">{m}</p>
             ))}

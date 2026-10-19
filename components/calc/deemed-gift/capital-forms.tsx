@@ -35,7 +35,7 @@ export function CapitalIncreaseFields({ form, set }: Props) {
   const needsLowDanmok = !isHigh && form.ciSubType === "no_realloc";
   const sharesLabel = CI_SHARES_LABEL[form.ciDirection][form.ciSubType];
   return (
-    <ToneCard tone="sky" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="sky" bodyClassName="space-y-3">
       {/* #95 — 증여일(이익 계산 기준일) 규정은 시점마다 다르다. 아래 「권리락일」 안내는 현행 §29① 기준 */}
       <CiGiftDateEraNotice giftDate={form.giftDate} />
       <RadioCardGroup
@@ -233,7 +233,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
     <div className="space-y-3">
       {/* #95 — 단건과 같은 §39 증자다. 이 날짜로 엔진이 §29③ 시기 게이트·적용 법령 기준일을 판정한다 */}
       <CiGiftDateEraNotice giftDate={form.giftDate} />
-      <ToneCard tone="sky" sectionNum={1} title="증자 개요" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="sky" sectionNum={1} title="증자 개요" bodyClassName="space-y-2">
         <RadioCardGroup
           lawLinks="상증법"
           name="ci-alloc-direction"
@@ -277,7 +277,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
            쓰인다. 평가 산식 단서(§29②1가·3나)는 **여전히 미반영**이다 — 두 축을 혼동하지 말 것.
            종전 주석의 「상장 여부를 입력받지 않으므로」는 이 토글 도입으로 더 이상 사실이 아니다.
       */}
-      <ToneCard tone="amber" title="주권상장법인이라면 이 모드를 쓰지 마세요" noDark>
+      <ToneCard tone="amber" title="주권상장법인이라면 이 모드를 쓰지 마세요">
         <p className="text-xs text-amber-800">
           주권상장법인등은 「상증령」 §29②1가·3나 단서에 따라 <b>증자 후 1주당 평가가액</b>이 산식값이 아닌
           <b> 종가평균</b>(평가기준일 전후 각 2개월, 상증법 §63①1가)으로 바뀔 수 있습니다.
@@ -304,15 +304,14 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
         sectionNum={2}
         title="주주 목록 (증자 전 보유·배정·인수)"
         bodyClassName="space-y-2"
-        noDark
         titleExtra={
-          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="ml-auto rounded-md border border-emerald-300 bg-white/70 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
+          <button type="button" onClick={addRow} data-testid="ci-alloc-add-row" className="ml-auto rounded-md border border-emerald-300 bg-white/70 dark:bg-white/5 px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-100/60">
             + 주주 추가
           </button>
         }
       >
         {rows.map((r, idx) => (
-          <div key={r.id} className="space-y-2 rounded-md border border-emerald-100 bg-white/60 p-2.5" data-testid={`ci-alloc-row-${idx}`}>
+          <div key={r.id} className="space-y-2 rounded-md border border-emerald-100 bg-white/60 dark:bg-white/5 p-2.5" data-testid={`ci-alloc-row-${idx}`}>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -320,7 +319,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                 onChange={(e) => updateRow(r.id, { name: e.target.value })}
                 placeholder="주주 이름"
                 data-testid={`ci-alloc-name-${idx}`}
-                className="flex-1 rounded-md border border-emerald-200 bg-white px-2 py-1 text-sm"
+                className="flex-1 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 px-2 py-1 text-sm"
               />
               {rows.length > 2 && (
                 <button type="button" onClick={() => removeRow(r.id)} data-testid={`ci-alloc-remove-${idx}`} className="shrink-0 rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50">
@@ -361,7 +360,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                 onChange={(e) => updateRow(r.id, { allocationMethod: e.target.value as CapTableRow["allocationMethod"] })}
                 aria-label={`${r.name.trim() || `주주 ${idx + 1}`} 배정 방법`}
                 data-testid={`ci-alloc-method-row-${idx}`}
-                className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-sm"
+                className="w-full rounded border border-gray-200 bg-white dark:bg-gray-900 px-2 py-1 text-sm"
               >
                 {ALLOCATION_METHOD_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -414,7 +413,7 @@ export function CapitalDecreaseFields({ form, set }: Props) {
   const isHigh = form.cdCaseType === "high";
   const isMulti = form.cdMode === "multi";
   return (
-    <ToneCard tone="amber" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="amber" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="cd-mode"
@@ -509,7 +508,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
   const hasClause = ct === "acquisition" || ct === "conversion";
   const isIssuerClause = form.cbClause === "major_excess" || form.cbClause === "major_related_nonshareholder";
   return (
-    <ToneCard tone="rose" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="rose" bodyClassName="space-y-3">
       <RadioCardGroup
         lawLinks="상증법"
         name="cb-case"
@@ -533,7 +532,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
             onChange={(v) => set({ cbClause: v })}
             options={[...CB_CLAUSE_OPTIONS]}
           />
-          <ToneCard tone="violet" title="목 선택은 증여재산가액을 바꾸지 않습니다" noDark>
+          <ToneCard tone="violet" title="목 선택은 증여재산가액을 바꾸지 않습니다">
             <p className="text-xs text-violet-800">
               「상증령」 §30①이 각 목을 <b>한 산식</b>으로 규정합니다. 목이 가르는 것은{" "}
               <b>공모 발행 제외 대상인지</b>(나·다목만)입니다.
@@ -564,7 +563,7 @@ export function ConvertibleBondFields({ form, set }: Props) {
                 onChange={(v) => set({ cbIssuanceMethod: v })}
                 options={[...CB_ISSUANCE_OPTIONS]}
               />
-              <ToneCard tone="sky" noDark>
+              <ToneCard tone="sky">
                 <p className="text-xs text-sky-800">{cbIssuanceHint(form.cbIssuanceMethod, form.cbIsListed)}</p>
               </ToneCard>
             </>

@@ -1,5 +1,5 @@
 /**
- * anchor: gift/·inheritance/ dark:0 단일 섹션카드 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 10호.
+ * anchor: gift/·inheritance/ dark:0 단일 섹션카드 → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 10호.
  *   - DoneeMinorField(수증자 미성년 §57, violet): sectionNum="§57"(문자열 배지) + title
  *   - Section53_8_2Fields(§53⑧2호 전부매각, emerald): title + titleExtra(LawArticleModal §49①1호)
  *   둘 다 dark:0 → noDark. 배지·제목 클래스 집합 ToneCard 헤더와 동일 → 시각 회귀 0.
@@ -28,7 +28,7 @@ describe("gift/inheritance 단일 섹션카드 <ToneCard> 전환 (회귀 0)", ()
     const card = badge.parentElement?.parentElement as HTMLElement; // badge → header → 카드
     expect(card.className).toContain("border-violet-200");
     expect(card.className).toContain("bg-violet-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("Section53_8_2Fields: emerald 카드 + titleExtra(LawArticleModal) + noDark", () => {
@@ -41,7 +41,7 @@ describe("gift/inheritance 단일 섹션카드 <ToneCard> 전환 (회귀 0)", ()
     const card = header.parentElement as HTMLElement; // ToneCard 카드
     expect(card.className).toContain("border-emerald-200");
     expect(card.className).toContain("bg-emerald-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
     // titleExtra(법조문 모달 §49①1호 버튼)가 제목과 같은 헤더에 보존됨 (버튼 텍스트 "§49①1호 ↗")
     expect(header.textContent).toContain("§49①1호");
   });

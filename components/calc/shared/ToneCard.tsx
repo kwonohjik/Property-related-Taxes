@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { TONE, stripDark, type Tone } from "./tones";
+import { TONE, type Tone } from "./tones";
 
 /**
  * ToneCard — 안내·섹션 카드 공용 primitive (톤 단일 소스 소비).
@@ -22,7 +22,6 @@ export function ToneCard({
   sectionNum,
   className = "",
   bodyClassName = "space-y-2",
-  noDark = false,
   titleExtra,
   children,
 }: {
@@ -34,16 +33,14 @@ export function ToneCard({
   className?: string;
   /** 외곽 space-y 등 조정 (기본 space-y-2) */
   bodyClassName?: string;
-  /** dark: 변형 제거 — dark 미대응 레거시 카드를 회귀 0으로 전환할 때(예: 스톡 SectionBox) */
-  noDark?: boolean;
   /** 제목 옆(헤더 flex) 인라인 추가 요소 — 법조문 모달·§ 배지 등 */
   titleExtra?: ReactNode;
   children?: ReactNode;
 }) {
   const t = TONE[tone];
-  const cardCls = noDark ? stripDark(t.card) : t.card;
-  const badgeCls = noDark ? stripDark(t.badge) : t.badge;
-  const titleCls = noDark ? stripDark(t.title) : t.title;
+  const cardCls = t.card;
+  const badgeCls = t.badge;
+  const titleCls = t.title;
   const hasHeader = title !== undefined || sectionNum !== undefined || titleExtra !== undefined;
   return (
     <div className={cn("rounded-lg border p-3", bodyClassName, cardCls, className)}>

@@ -1,6 +1,6 @@
 /**
  * anchor: SpecificCorpFields(특정법인 §45의5) — 인라인 섹션카드 4개(①sky ②amber ③violet ④emerald)
- *   → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 3호. dark:0 → noDark로 양 모드 class-equivalent.
+ *   → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 3호. dark:0 → noDark로 양 모드 class-equivalent.
  *   amber-100/60 echo 박스는 섹션카드 아님 → 인라인 유지.
  */
 import { describe, it, expect, afterEach } from "vitest";
@@ -31,11 +31,11 @@ describe("SpecificCorpFields — 섹션카드 <ToneCard> 전환 (회귀 0)", () 
 
   it("① 섹션카드 sky light 유지 + dark: 미도입 (noDark 회귀 0)", () => {
     const badge = renderBlock().getByText("1");
-    expect(badge.className).not.toContain("dark:");
+    expect(badge.className).toContain("dark:");
     const card = badge.parentElement?.parentElement as HTMLElement; // ToneCard 외곽
     expect(card.className).toContain("border-sky-200");
     expect(card.className).toContain("bg-sky-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("③ 동적 title: single=해당 지배주주등 비율 / roster=발행주식 총수+주주 명단", () => {

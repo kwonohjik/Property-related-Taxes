@@ -127,7 +127,6 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           sectionNum={idx + 1}
           title={holding.stockName || `종목 ${idx + 1}`}
           bodyClassName="space-y-3"
-          noDark
           titleExtra={
             <button
               type="button"

@@ -65,7 +65,6 @@ function OwnedHouseCard({
       sectionNum={index + 1}
       title={`보유 주택 #${index + 1}`}
       bodyClassName="space-y-3"
-      noDark
       titleExtra={
         <button
           type="button"
@@ -452,7 +451,6 @@ export function Step2({
         sectionNum={1}
         title="취득 후 보유 주택 수"
         bodyClassName="space-y-2"
-        noDark
         titleExtra={
           <TaxHelp
             title="보유 주택 수 산정 — 11개 제외 항목"
@@ -663,7 +661,6 @@ export function Step2({
         sectionNum={3}
         title="취득 주택 한시 특례 (주택 수 제외)"
         bodyClassName="space-y-2"
-        noDark
         titleExtra={
           <TaxHelp
             title="한시 특례 — 주택 수 제외 (시행령 §28의4②)"

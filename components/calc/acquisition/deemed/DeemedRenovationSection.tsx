@@ -42,7 +42,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
   const deemedRateLabel = `${(deemedRate * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
   return (
-    <ToneCard tone="violet" bodyClassName="space-y-3" noDark>
+    <ToneCard tone="violet" bodyClassName="space-y-3">
       <div className="flex items-center gap-2">
         <p className="text-xs font-semibold text-violet-700">건물 개수 간주취득 상세</p>
         <TaxHelp

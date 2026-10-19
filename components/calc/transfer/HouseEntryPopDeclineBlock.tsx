@@ -38,7 +38,7 @@ const YNU = [
 export function HouseEntryPopDeclineBlock({ house, onUpdate, sellingAcquisitionDate }: Props) {
   const showPriorRight = popDeclinePriorRightQuestionVisible(house, sellingAcquisitionDate);
   return (
-    <ToneCard tone="rose" sectionNum="§71의2" bodyClassName="space-y-3" title="인구감소지역주택 — 소유주택으로 보지 않는 특례 (조특법 §71의2①)" noDark>
+    <ToneCard tone="rose" sectionNum="§71의2" bodyClassName="space-y-3" title="인구감소지역주택 — 소유주택으로 보지 않는 특례 (조특법 §71의2①)">
       <p className="text-micro text-muted-foreground" data-testid="house-row-pop-decline-intro">
         이 주택은 인구감소지역에 있고 2024.1.4.~2026.12.31.에 취득했습니다. 요건을 갖추면 <b>적용 여부를 고르지 않아도</b> 이 주택을 소유주택으로 보지 않고
         비과세를 판정합니다(보유 주택 목록의 소재지·취득일로 도출). 아래는 목록에 없는 <b>취득 당시의 사실</b>입니다 — 모르면 「모름」을 고르세요.

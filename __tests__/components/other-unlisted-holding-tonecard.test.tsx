@@ -1,5 +1,5 @@
 /**
- * anchor: OtherUnlistedHoldingSection(다른 비상장법인 주식 보유 §54③) 섹션카드 → <ToneCard noDark> 전환(회귀 0).
+ * anchor: OtherUnlistedHoldingSection(다른 비상장법인 주식 보유 §54③) 섹션카드 → <ToneCard> 전환(회귀 0).
  *   색상 ToneCard 점진 채택 12호. inheritance/unlisted-stock-v2 계열(전부 dark:0).
  *
  * related-corp-form sec2/4와 동일 패턴: flex justify-between 헤더(badge+title + 우측 "+ 보유 추가" 버튼)
@@ -22,7 +22,7 @@ describe("OtherUnlistedHoldingSection <ToneCard> 전환 (회귀 0)", () => {
     const card = cardOf(getByText(TITLE));
     expect(card.className).toContain("border-emerald-200");
     expect(card.className).toContain("bg-emerald-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
     expect(getByText("3").className).toContain("bg-emerald-200"); // 번호배지
   });
 

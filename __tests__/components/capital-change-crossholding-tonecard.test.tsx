@@ -1,10 +1,10 @@
 /**
  * @vitest-environment jsdom
  *
- * anchor: unlisted-stock-v2 섹션카드 2종 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 14호.
+ * anchor: unlisted-stock-v2 섹션카드 2종 → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 14호.
  *   - CapitalChangeTable(자본금 변동 §56③·⑤, amber): sectionNum+title+titleExtra("+ 변동 추가" 버튼, ml-auto) — 렌더 anchor
  *   - CrossHoldingResultCard(상호출자 결과, emerald): sectionNum+title(순수 헤더) — 유효 reflection 없으면 null 반환하므로
- *     11호 CandidateCard처럼 class-equivalence anchor(실제 invocation <ToneCard tone="emerald" sectionNum title noDark>)
+ *     11호 CandidateCard처럼 class-equivalence anchor(실제 invocation <ToneCard tone="emerald" sectionNum title>)
  *   둘 다 dark:0 → noDark. 제목 shade는 text-{t}-700(ToneCard 정본과 일치).
  */
 import { describe, it, expect, afterEach } from "vitest";
@@ -23,7 +23,7 @@ describe("CapitalChangeTable / CrossHoldingResultCard <ToneCard> 전환 (회귀 
     const card = title.parentElement?.parentElement as HTMLElement; // p → header → 카드
     expect(card.className).toContain("border-amber-200");
     expect(card.className).toContain("bg-amber-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
     expect(getByText("7").className).toContain("bg-amber-200"); // 번호배지
     const addBtn = getByText("+ 변동 추가");
     expect(addBtn.className).toContain("ml-auto"); // titleExtra(우측)
@@ -36,7 +36,6 @@ describe("CapitalChangeTable / CrossHoldingResultCard <ToneCard> 전환 (회귀 
         tone="emerald"
         sectionNum={4}
         title="다른 비상장법인 주식 평가 (상호출자 연립방정식 — 평가준칙 §60②)"
-        noDark
       >
         <table />
       </ToneCard>,
@@ -45,7 +44,7 @@ describe("CapitalChangeTable / CrossHoldingResultCard <ToneCard> 전환 (회귀 
     expect(card.className).toContain("border-emerald-200");
     expect(card.className).toContain("bg-emerald-50/40");
     expect(card.className).toContain("space-y-2"); // 기본 bodyClassName (원본과 동일)
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
     const badge = getByText("4");
     expect(badge.className).toContain("bg-emerald-200");
     expect(getByText("다른 비상장법인 주식 평가 (상호출자 연립방정식 — 평가준칙 §60②)").className).toContain(

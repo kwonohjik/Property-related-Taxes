@@ -36,7 +36,7 @@ export function Sec164_5ProvisoNotice({
   const year = acquisitionDate?.slice(0, 4);
 
   return (
-    <ToneCard tone="amber" noDark>
+    <ToneCard tone="amber">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥ 단서" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑤" label="§164⑤" />

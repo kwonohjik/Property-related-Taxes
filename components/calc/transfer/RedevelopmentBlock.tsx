@@ -180,7 +180,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           저장된 불일치 조합은 `calc-wizard-asset-migrate.ts`가 자산 종류를 승격시켜 흡수한다. */}
 
       {/* ② emerald: 출자 자산 */}
-      <ToneCard tone="emerald" sectionNum={2} title="출자 자산" bodyClassName="space-y-2" noDark>
+      <ToneCard tone="emerald" sectionNum={2} title="출자 자산" bodyClassName="space-y-2">
         <RadioCardGroup
           name={`redevOriginal-${asset.assetId}`}
           value={asset.redevOriginalAssetType}
@@ -225,7 +225,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
 
       {/* ③ amber: 청산금 방향 (승계조합원 모드 시 숨김 — 본 PR 미지원) */}
       {asset.redevIsSuccessorMember !== "yes" && (
-        <ToneCard tone="amber" sectionNum={3} title="청산금 방향" bodyClassName="space-y-2" noDark>
+        <ToneCard tone="amber" sectionNum={3} title="청산금 방향" bodyClassName="space-y-2">
           <RadioCardGroup
             name={`redevSettlement-${asset.assetId}`}
             value={asset.redevSettlementDirection || "pay"}
@@ -303,7 +303,6 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
         sectionNum={4}
         title={`재개발 일정·금액 (시행령 ${isRightSubject ? "§166①" : "§166②1호"})`}
         bodyClassName="space-y-2"
-        noDark
       >
         <div className="flex flex-wrap items-center gap-1.5">
           {isRightSubject ? (
@@ -484,7 +483,6 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           sectionNum={5}
           title="인가전 분 종전 부동산 취득가액"
           bodyClassName="space-y-2"
-          noDark
         >
           {/* §163⑨ 상속·증여 평가액이 이 섹션의 값보다 우선한다는 표시 (R-10).
               모드 라디오 **위**에 둔다 — 실가·환산 어느 쪽을 골라도 같이 무시되므로

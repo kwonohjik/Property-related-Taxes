@@ -1,5 +1,5 @@
 /**
- * anchor: 단일 violet 순수-박스 섹션카드 → <ToneCard noDark> 전환(회귀 0). 색상 ToneCard 점진 채택 8호.
+ * anchor: 단일 violet 순수-박스 섹션카드 → <ToneCard> 전환(회귀 0). 색상 ToneCard 점진 채택 8호.
  *   - FreeRealEstateFields(부동산 무상사용·담보 §37, violet)
  *   - ContributionFields(현물출자 §39의3, violet)
  *   둘 다 헤더 없는 순수 톤 박스(RadioCardGroup이 첫 자식) → container.firstChild = ToneCard 루트.
@@ -22,7 +22,7 @@ describe("deemed-gift 단일 violet 카드 <ToneCard> 전환 (회귀 0)", () => 
     expect(card.className).toContain("border-violet-200");
     expect(card.className).toContain("bg-violet-50/40");
     expect(card.className).toContain("rounded-lg");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("ContributionFields: violet 순수 박스 + noDark", () => {
@@ -33,6 +33,6 @@ describe("deemed-gift 단일 violet 카드 <ToneCard> 전환 (회귀 0)", () => 
     expect(card.className).toContain("border-violet-200");
     expect(card.className).toContain("bg-violet-50/40");
     expect(card.className).toContain("rounded-lg");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 });

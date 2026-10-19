@@ -56,7 +56,7 @@ export function isGeneralBuildingAreaAsset(asset: AssetForm): boolean {
 export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
   const isPartial = (asset.areaScenario ?? "same") === "partial";
   return (
-    <ToneCard tone="sky" title="면적·규모" noDark>
+    <ToneCard tone="sky" title="면적·규모">
       {/*
         ── 일부 양도 (O-4 · 2026-08-12) ──────────────────────────────────────
         `AssetAreaSection`의 축 A(면적 입력 방식 Select)를 쓰지 않고 여기 둔다 —
@@ -80,7 +80,7 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
       />
 
       {isPartial && (
-        <ToneCard tone="amber" noDark className="mt-2">
+        <ToneCard tone="amber" className="mt-2">
           <p className="text-xs text-amber-800">
             아래 면적과 「양도시·취득시 기준시가」를 <strong>양도한 부분 기준</strong>으로
             입력하세요. 양도하지 않고 남긴 부분은 포함하지 않습니다.

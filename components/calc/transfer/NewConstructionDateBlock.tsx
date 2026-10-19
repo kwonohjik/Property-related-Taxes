@@ -13,7 +13,6 @@
  *   사용승인일(필수) → 사용검사필증 교부일(선택) → 임시사용승인일(선택) → 사실상 사용일(선택) → 자동 판정 안내
  *
  * tone: amber (취득 정보 섹션). 섹션카드는 공용 <ToneCard>(tones.ts canonical) 사용.
- *   noDark: 이 폼은 원래 dark 미대응(light 전용)이라 dark 변형 미도입(회귀 0).
  * 규칙: DateInput 사용, placeholder 숫자 예시 금지, tone 배경 유지
  */
 
@@ -71,7 +70,6 @@ export function NewConstructionDateBlock({
       sectionNum="§"
       title="자가건축 주택 취득일 (소득세법 시행령 §162①4호)"
       bodyClassName="space-y-3"
-      noDark
     >
       <p className="text-caption text-amber-600 leading-relaxed">
         자가건축 주택의 취득일은 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중
@@ -79,7 +77,7 @@ export function NewConstructionDateBlock({
       </p>
 
       {/* ① 사용승인일 — 필수 */}
-      <ToneCard tone="amber" sectionNum="①" title="사용승인일 (필수)" noDark>
+      <ToneCard tone="amber" sectionNum="①" title="사용승인일 (필수)">
         <FieldCard
           label="사용승인일"
           field="occupancyApprovalDate"
@@ -91,7 +89,7 @@ export function NewConstructionDateBlock({
       </ToneCard>
 
       {/* ② 사용검사필증 교부일 — 선택 (G-5) */}
-      <ToneCard tone="amber" sectionNum="②" title="사용검사필증 교부일 (선택)" noDark>
+      <ToneCard tone="amber" sectionNum="②" title="사용검사필증 교부일 (선택)">
         <FieldCard
           label="사용검사필증 교부일"
           hint="사용승인일과 동일하면 미입력. 도시계획법·건축법 용어 차이로 별도 시점인 경우만 입력하세요."
@@ -101,7 +99,7 @@ export function NewConstructionDateBlock({
       </ToneCard>
 
       {/* ③ 임시사용승인일 — 선택 */}
-      <ToneCard tone="amber" sectionNum="③" title="임시사용승인일 (선택)" noDark>
+      <ToneCard tone="amber" sectionNum="③" title="임시사용승인일 (선택)">
         <FieldCard
           label="임시사용승인일"
           hint="임시사용승인일이 사용승인일보다 이른 경우에만 입력하세요. 이 경우 임시사용승인일이 취득일이 됩니다."
@@ -111,7 +109,7 @@ export function NewConstructionDateBlock({
       </ToneCard>
 
       {/* ④ 사실상 사용일 — 선택 */}
-      <ToneCard tone="amber" sectionNum="④" title="사실상 사용일 (선택)" noDark>
+      <ToneCard tone="amber" sectionNum="④" title="사실상 사용일 (선택)">
         <FieldCard
           label="사실상 사용일"
           hint="사용승인일 전 실제로 입주하여 사용한 날입니다. 이 날이 가장 이르면 이 날이 취득일이 됩니다."

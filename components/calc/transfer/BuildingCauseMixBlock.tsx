@@ -88,7 +88,7 @@ export function BuildingCauseMixBlock(props: {
 
       {active && (
         <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
-          <ToneCard tone="amber" noDark>
+          <ToneCard tone="amber">
             <p className="text-xs text-amber-900">
               건물은 <strong>{isInheritance ? "상속" : "증여"}</strong>, 토지는 <strong>매매</strong>로 취득한 자산입니다. 취득가액·보유기간을
               토지·건물 <strong>각각</strong> 산정합니다 (소득세법 §95④·§104②, 같은 법 시행령 §163⑨).
@@ -145,7 +145,7 @@ export function BuildingCauseMixBlock(props: {
 
           {/* 증여 — 배우자·직계존비속 10년 내 증여는 이월과세(§97의2①) 대상이다. 이 화면은 그 계산을 지원하지 않는다는 고지. */}
           {!isInheritance && (
-            <ToneCard tone="amber" noDark>
+            <ToneCard tone="amber">
               <p className="text-xs text-amber-900" data-testid="building-gift-carryover-notice">
                 양도일부터 소급하여 10년 이내에 <strong>배우자·직계존비속</strong>으로부터 증여받은 건물은 취득가액·보유기간을 증여자 기준으로
                 계산하는 이월과세 대상인지 확인하세요(소득세법 §97의2①). 이 화면은 <strong>건물만 이월과세이고 토지는 매수한 경우를 아직 계산하지
@@ -156,7 +156,7 @@ export function BuildingCauseMixBlock(props: {
           )}
 
           {hasFamilyBusiness && (
-            <ToneCard tone="amber" noDark>
+            <ToneCard tone="amber">
               <p className="text-xs text-amber-900" data-testid="building-cause-fb-note">
                 가업상속공제 입력이 남아 있어 계산할 수 없습니다 — 이 토글을 끄고 가업상속공제를 해제하세요.
               </p>

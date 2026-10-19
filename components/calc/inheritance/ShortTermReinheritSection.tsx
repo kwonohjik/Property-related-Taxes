@@ -61,7 +61,6 @@ export function ShortTermReinheritSection({
     <ToneCard
       tone="sky"
       bodyClassName="space-y-3"
-      noDark
       title={<>단기재상속공제 (§30) <LawArticleModal legalBasis="상증법 §30" label="§30" /></>}
     >
       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -115,7 +114,7 @@ export function ShortTermReinheritSection({
           </FieldCard>
 
           {/* 재상속분 재산 목록 (재산별 구분) */}
-          <div className="rounded-md border border-sky-100 bg-white/60 p-2.5 space-y-2">
+          <div className="rounded-md border border-sky-100 bg-white/60 dark:bg-white/5 p-2.5 space-y-2">
             <p className="text-caption font-semibold text-sky-700">
               재상속분 재산 (재산별 구분 — 집행 30-22-1②)
             </p>

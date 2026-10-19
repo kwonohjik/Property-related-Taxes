@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * anchor: NetAssetCalculationTable(순자산가액 별지 2~3쪽, §55·§17의2) 섹션카드 → <ToneCard noDark> 전환(회귀 0).
+ * anchor: NetAssetCalculationTable(순자산가액 별지 2~3쪽, §55·§17의2) 섹션카드 → <ToneCard> 전환(회귀 0).
  *   색상 ToneCard 점진 채택 13호. inheritance/unlisted-stock-v2 계열(dark:0).
  *
  * 제목 <p> 안에 LawArticleModal 2개가 인라인 → title prop을 fragment로 전달(원본 <p> 구조 그대로).
@@ -32,7 +32,7 @@ describe("NetAssetCalculationTable <ToneCard> 전환 (회귀 0)", () => {
     expect(card).toBeTruthy();
     expect(card.className).toContain("border-violet-200");
     expect(card.className).toContain("rounded-lg");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
 
     // 헤더: 번호배지 + 제목 + 인라인 LawArticleModal 2개 보존
     const header = card.firstElementChild as HTMLElement; // flex items-center gap-2

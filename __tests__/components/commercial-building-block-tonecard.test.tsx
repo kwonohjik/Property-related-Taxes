@@ -1,5 +1,5 @@
 /**
- * anchor: CommercialBuildingBlock — 인라인 섹션카드 → <ToneCard noDark> 전환(회귀 0).
+ * anchor: CommercialBuildingBlock — 인라인 섹션카드 → <ToneCard> 전환(회귀 0).
  *   색상 ToneCard 점진 채택 2호. noDark: 원래 light 전용 → dark 미도입, 양 모드 class-equivalent.
  *   /70·100/60 서브박스(불투명도 다름)는 인라인 유지. (#560 prefill 변경과 무충돌)
  *
@@ -48,11 +48,11 @@ describe("CommercialBuildingBlock — 섹션카드 <ToneCard> 전환 (회귀 0)"
 
   it("① 섹션카드 emerald light 클래스 유지 + dark: 미도입 (noDark 회귀 0)", () => {
     const badge = renderBlock().getByText("1");
-    expect(badge.className).not.toContain("dark:");
+    expect(badge.className).toContain("dark:");
     const card = badge.parentElement?.parentElement as HTMLElement; // ToneCard 외곽
     expect(card.className).toContain("border-emerald-200");
     expect(card.className).toContain("bg-emerald-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("③ pre_disclosure = 3시점 라벨 (동적 title)", () => {
@@ -86,11 +86,11 @@ describe("AssetAreaCommercial — 이전된 면적 카드의 sky·noDark 계약 
 
   it("sky light 클래스 유지 + dark: 미도입 (noDark 회귀 0)", () => {
     const title = renderArea().getByText("면적 정보 (㎡)");
-    expect(title.className).not.toContain("dark:");
+    expect(title.className).toContain("dark:");
     const card = title.parentElement?.parentElement as HTMLElement; // ToneCard 외곽
     expect(card.className).toContain("border-sky-200");
     expect(card.className).toContain("bg-sky-50/40");
-    expect(card.className).not.toContain("dark:");
+    expect(card.className).toContain("dark:");
   });
 
   it("면적 3필드가 모두 렌더된다", () => {

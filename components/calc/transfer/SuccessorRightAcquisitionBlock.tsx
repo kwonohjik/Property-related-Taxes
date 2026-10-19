@@ -104,7 +104,6 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         sectionNum={1}
         title="조합원입주권 승계취득 정보"
         bodyClassName="space-y-2"
-        noDark
       >
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호 가목" />
@@ -216,7 +215,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
       {/* 청산금 **수령** — 이 계산의 취득가액을 깎는 사안이 아니라 별개의 양도다.
           종전 hint는 「현재 지원하지 않습니다」로만 적혀 있어 **사용자가 신고 의무 자체를 모를 수** 있었다.
           근거: 국세청 사전-2023-법규재산-0450 (2024-06-27) — 관련 법령이 §88·§98·§105이지 §97이 아니다. */}
-      <ToneCard tone="amber" title="청산금을 수령한 경우" bodyClassName="space-y-1.5" noDark>
+      <ToneCard tone="amber" title="청산금을 수령한 경우" bodyClassName="space-y-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §105" label="§105" />
         </div>
@@ -231,7 +230,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         </p>
       </ToneCard>
 
-      <ToneCard tone="rose" title="장기보유특별공제 미적용" bodyClassName="space-y-1.5" noDark>
+      <ToneCard tone="rose" title="장기보유특별공제 미적용" bodyClassName="space-y-1.5">
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §95 ②" label="§95②" />
         </div>

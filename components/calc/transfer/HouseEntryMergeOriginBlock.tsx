@@ -46,7 +46,6 @@ export function HouseEntryMergeOriginBlock({
         tone="violet"
         bodyClassName="space-y-2"
         title={`${event} 전 이 주택의 보유자`}
-        noDark
       >
         {side === "after_merge" ? (
           <p className="text-sm" data-testid="house-merge-origin-after">

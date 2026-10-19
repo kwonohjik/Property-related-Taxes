@@ -30,7 +30,7 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
   }
 
   return (
-    <ToneCard tone="amber" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 이상 시)" noDark>
+    <ToneCard tone="amber" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 이상 시)">
       <p className="text-caption text-muted-foreground/80">
         양도하는 주택 자체가 아래 사유에 해당하면 2주택 이상이어도 중과 배제됩니다
         (3주택 이상은 소령 §167의3①, 2주택은 소령 §167의10①2호 준용).

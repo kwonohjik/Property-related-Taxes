@@ -186,7 +186,6 @@ export function PostListingClosingPriceTable({ form, onChange }: PostListingClos
     <ToneCard
       tone="emerald"
       bodyClassName="space-y-3"
-      noDark
       title={
         <>
           상장일 이후 1개월 종가 (소령 §165⑤ — {displayDates[0]} ~ {displayDates[total - 1]} · 총 {total}일,
