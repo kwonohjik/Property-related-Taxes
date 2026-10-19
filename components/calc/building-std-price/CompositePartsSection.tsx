@@ -142,7 +142,7 @@ export function CompositePartsSection({
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <FieldCard label="부분 명칭" hint="예: 지상1, 지하1 점포(선택)" className="sm:grid-cols-[76px_1fr]">
+            <FieldCard label="부분 명칭" hint="예: 지상1, 지하1 점포(선택)" className="grid sm:grid-cols-[76px_1fr]">
               <input
                 type="text"
                 value={p.label}
@@ -151,15 +151,15 @@ export function CompositePartsSection({
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </FieldCard>
-            <FieldCard label="면적" hint="해당 부분 연면적" className="sm:grid-cols-[76px_1fr]">
+            <FieldCard label="면적" hint="해당 부분 연면적" className="grid sm:grid-cols-[76px_1fr]">
               <DecimalInput value={p.floorArea} onChange={(v) => update(i, { floorArea: v })} unit="㎡" placeholder="부분 면적" />
             </FieldCard>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <FieldCard label="구조" className="sm:grid-cols-[76px_1fr]">
+            <FieldCard label="구조" className="grid sm:grid-cols-[76px_1fr]">
               <BuildingStructureSelect year={year} value={p.structureKey} onChange={(v) => update(i, { structureKey: v })} />
             </FieldCard>
-            <FieldCard label={forTransfer ? "양도시 용도" : "용도"} className="sm:grid-cols-[76px_1fr]">
+            <FieldCard label={forTransfer ? "양도시 용도" : "용도"} className="grid sm:grid-cols-[76px_1fr]">
               <BuildingUsageSelect year={year} value={p.usageNo} onChange={(v) => update(i, { usageNo: v })} />
             </FieldCard>
           </div>
@@ -260,7 +260,7 @@ export function CompositePartsSection({
           {ANCILLARY_FIELDS.map((a) => {
             const hasArea = parseArea(ancillaryAreas[a.kind]) > 0;
             return (
-              <FieldCard key={a.kind} label={a.label} className="sm:grid-cols-[72px_1fr]">
+              <FieldCard key={a.kind} label={a.label} className="grid sm:grid-cols-[72px_1fr]">
                 <div className="flex items-center gap-1.5">
                   <DecimalInput value={ancillaryAreas[a.kind]} onChange={(v) => setAnc(a.kind, v)} unit="㎡" placeholder={`${a.label} 면적`} />
                   {hasArea && (
