@@ -9,6 +9,8 @@ import { mergePrimaryBasic } from "./transfer-tax-api-helpers";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { neutralizeCarryoverDonorSplitForCompanion } from "./transfer-land-part-cause";
 import type { buildPrimaryContext } from "./transfer-tax-api-primary-context";
+import { buildNonBusinessLandRaw } from "./non-business-land-request";
+import { buildFractionalShareNblRecord } from "./non-business-land-request";
 
 /**
  * ④⑬ 일괄양도(assets 2건 이상) 신고 단위 페이로드 — `transfer-tax-api.ts`에서 800줄 정책으로 분리했다(결정 #38-10 작업 중 776줄).
@@ -70,7 +72,14 @@ export function buildBundledPrimaryPayload(c: {
       // ⑬ 폼-수준 총 양도비를 **자산에 싣지 않는다** — 아래 `commonTransferExpense`로
       //    신고 단위 1회만 보내고 엔진이 §100② 후단(가액 비례)으로 안분한다(Q08).
       //    자산별 직접 입력분(`transferExpense`)은 그대로 `directExpenses`로 더해진다.
-      .map((a, ci) => buildAssetPayload(neutralizeCarryoverDonorSplitForCompanion(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, true), effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form)),
+      .map((a, ci) => {
+        const payload = buildAssetPayload(neutralizeCarryoverDonorSplitForCompanion(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, true), effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form);
+        // ⑬ 축 B 토지 지분 — 첫 카드 정밀판정을 이 지분 취득 사실로 다시 판정하게 싣는다(없으면 첫 카드 표지 `true`만 남아 «사업용» 판정이어도 +10%p).
+        const nblRaw = fractionalBundleMerge
+          ? buildNonBusinessLandRaw(buildFractionalShareNblRecord(a, primary), form.transferDate)
+          : undefined;
+        return nblRaw ? { ...payload, nonBusinessLandRaw: nblRaw } : payload;
+      }),
     // 🔴 신고 단위 선언도 **파생값**이다(H8) — 자산별 계산만 안분하고 여기를 raw로 두면
     //    한 요청 안에서 「자산은 안분 / 신고는 구분기재」로 어긋난다.
     bundledSaleMode: effBundledSaleMode,
