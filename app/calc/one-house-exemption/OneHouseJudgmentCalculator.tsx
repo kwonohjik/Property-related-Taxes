@@ -33,6 +33,12 @@ import {
 } from "@/lib/calc/one-house-exemption-validate";
 import { ValidationWarnings } from "@/components/calc/shared/ValidationWarnings";
 import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrderLine";
+import {
+  OneHouseAiExtractDialog,
+  type OneHouseAiReview,
+} from "@/components/calc/one-house/OneHouseAiExtractDialog";
+import { OneHouseAiReviewCard } from "@/components/calc/one-house/OneHouseAiReviewCard";
+import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 /**
  * 🔑 **파일명 ≠ 화면 순서다** — `Step3`(양도 대상)이 2번째, `Step2`(보유 주택)가 3번째 화면이다.
@@ -50,7 +56,12 @@ import { SameDayOrderLine } from "@/components/calc/results/transfer/SameDayOrde
 const STEPS = ["세대", "양도 대상 주택", "보유 주택·권리", "판정 결과"] as const;
 const RESULT_STEP = 3;
 
-export default function OneHouseJudgmentCalculator() {
+type Props = {
+  /** 「원문으로 채우기 (AI)」 — 로컬 개발 서버이고 API 키가 있을 때만 서버 페이지가 켠다(하이브리드 AI 검토 도구 P4) */
+  aiExtractEnabled?: boolean;
+};
+
+export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }: Props) {
   // atomic selector (무한 루프 방지 — 계산기 store와 같은 규약)
   const currentStep = useOneHouseJudgmentStore((s) => s.currentStep);
   const formData = useOneHouseJudgmentStore((s) => s.formData);
@@ -81,6 +92,18 @@ export default function OneHouseJudgmentCalculator() {
   const [resultAtMount] = useState(() => useOneHouseJudgmentStore.getState().result);
 
   useResetOnNewParam(reset);
+
+  /** AI 추출을 적용한 뒤의 질문·근거 — 화면 상태다(새로고침·초기화로 사라진다). 입력의 정본은 store의 폼이다. */
+  const [aiReview, setAiReview] = useState<OneHouseAiReview | null>(null);
+  const handleAiApply = useCallback(
+    (form: OneHouseJudgmentFormData, review: OneHouseAiReview) => {
+      // 지금 입력을 통째로 바꾼다(사용자 결정 2026-10-19) — 초기화 후 추출 폼을 덮는다. reset이 1단계로 보낸다.
+      reset();
+      updateFormData(form);
+      setAiReview(review);
+    },
+    [reset, updateFormData],
+  );
 
   const validateCurrent = useCallback(
     // 인덱스 → validateStepN 매핑은 validate 모듈이 갖는다(사이드바 배지와 **같은 한 벌**).
@@ -189,7 +212,10 @@ export default function OneHouseJudgmentCalculator() {
    *    `window.confirm`은 데이터 손실 액션에 금지돼 있고(`no-native-confirm.guard.test.ts` ·
    *    `feedback_dialog_data_discard_confirm`), 실제로 그 가드가 이 코드를 잡았다.
    */
-  const handleReset = useCallback(() => reset(), [reset]);
+  const handleReset = useCallback(() => {
+    reset();
+    setAiReview(null);
+  }, [reset]);
 
 
   const isResult = currentStep === RESULT_STEP && result !== null;
@@ -293,9 +319,25 @@ export default function OneHouseJudgmentCalculator() {
           </div>
         </div>
 
+        {/* 머리줄에 두면 375px에서 홈·초기화 버튼이 세로로 깨진다 — 따로 한 줄 */}
+        {aiExtractEnabled && (
+          <div className="mb-4 flex justify-end">
+            <OneHouseAiExtractDialog form={formData} onApply={handleAiApply} />
+          </div>
+        )}
+
         <div className="mb-6">
           <StepIndicator steps={Array.from(STEPS)} current={currentStep} onStepClick={onStepClick} />
         </div>
+
+        {aiReview && (
+          <OneHouseAiReviewCard
+            review={aiReview}
+            stepNames={STEPS}
+            onGoToStep={onStepClick}
+            onDismiss={() => setAiReview(null)}
+          />
+        )}
 
         {/* 결과 단계의 오류는 Step4가 직접 띄운다(재시도 버튼과 함께). */}
         {error && currentStep < RESULT_STEP && (

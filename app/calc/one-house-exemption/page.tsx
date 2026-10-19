@@ -1,5 +1,6 @@
 import OneHouseJudgmentCalculator from "./OneHouseJudgmentCalculator";
 import { ProfessionalClientGate } from "@/components/calc/ProfessionalClientGate";
+import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
 
 export const metadata = {
   title: "1세대1주택 비과세 판정",
@@ -13,9 +14,14 @@ export const metadata = {
 };
 
 export default function OneHouseExemptionPage() {
+  /*
+    「원문으로 채우기 (AI)」는 로컬 개발 서버에서 API 키가 있을 때만 그린다(하이브리드 AI 검토 도구 P4 — 사용자 결정 2026-10-19).
+    서버 경로(`/api/one-house-ai/extract`)도 같은 게이트로 다시 막는다.
+  */
+  const aiExtractEnabled = !!process.env.ANTHROPIC_API_KEY && checkOneHouseAiAccess().ok;
   return (
     <ProfessionalClientGate>
-      <OneHouseJudgmentCalculator />
+      <OneHouseJudgmentCalculator aiExtractEnabled={aiExtractEnabled} />
     </ProfessionalClientGate>
   );
 }

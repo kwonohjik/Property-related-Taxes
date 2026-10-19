@@ -1,21 +1,34 @@
 /**
- * 1세대1주택 AI 사실 추출 API Route (하이브리드 AI 검토 도구 P3) — **관리자 전용**(개발 중).
+ * 1세대1주택 AI 사실 추출 API Route (하이브리드 AI 검토 도구 P3) — **로컬 개발 서버 전용**.
  *
  * POST /api/one-house-ai/extract  { text }
  *
- *   Rate limit → 관리자 게이트 → Zod(원문 1만 자 이하) → API 키 확인 → LLM 추출(`extractOneHouseFacts`)
+ *   Rate limit → 개발 서버 게이트 → Zod(원문 1만 자 이하) → API 키 확인 → LLM 추출(`extractOneHouseFacts`)
  *   → 필드 사전 재검증(`applyExtraction`) → 판정 메뉴 폼에 합쳐 ⑧ 검증·본문 스키마가 막는 칸을 질문으로(`collectValidationQuestions`)
  *
  * 판정은 하지 않는다 — LLM은 사실 추출만 맡고, 사용자가 확인한 폼으로 판정 메뉴(`/api/calc/one-house-exemption`)가 판정한다.
- * 응답의 `form`은 추출한 칸만 담은 조각이다(화면이 사용자 입력과 합칠 방식은 P4에서 정한다).
+ * 응답의 `form`은 추출한 칸만 담은 조각이다 — 화면은 빈 판정 메뉴 폼 위에 덮어 현재 입력을 통째로 바꾼다(`mergeExtractedForm`).
  */
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
-import { checkOneHouseAiAdmin } from "@/lib/one-house-ai/admin-guard";
-import { extractOneHouseFacts, ExtractionFailedError, ONE_HOUSE_AI_TEXT_MAX } from "@/lib/one-house-ai/extract";
+import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
+import {
+  extractOneHouseFacts,
+  ExtractionFailedError,
+  ONE_HOUSE_AI_TEXT_MAX,
+  type ExtractionRun,
+} from "@/lib/one-house-ai/extract";
+import type { ExtractedFact } from "@/lib/one-house-ai/extraction-schema";
+import type { FieldSpec } from "@/lib/one-house-ai/field-catalog.types";
 import { ONE_HOUSE_FIELD_CATALOG } from "@/lib/one-house-ai/field-catalog";
-import { applyExtraction, catalogKeyOf, parsePath } from "@/lib/one-house-ai/apply-extraction";
+import {
+  applyExtraction,
+  catalogKeyOf,
+  parsePath,
+  type ExtractedForm,
+  type ExtractionIssue,
+} from "@/lib/one-house-ai/apply-extraction";
 import { mergeExtractedForm } from "@/lib/one-house-ai/merge-form";
 import { collectValidationQuestions } from "@/lib/one-house-ai/validation-questions";
 
@@ -25,6 +38,20 @@ export const maxDuration = 120;
 const bodySchema = z.object({
   text: z.string().trim().min(1, "원문을 입력하세요.").max(ONE_HOUSE_AI_TEXT_MAX, `원문은 ${ONE_HOUSE_AI_TEXT_MAX.toLocaleString()}자 이하로 입력하세요.`),
 });
+
+type ExtractQuestion = { path: string; label?: string; question: string; why?: string; source: "llm" | "validation" };
+
+/** 화면(`OneHouseAiExtractDialog`)이 읽는 응답 `data` */
+export type OneHouseAiExtractData = {
+  form: ExtractedForm;
+  /** `label` = 칸 이름 · `valueLabel` = 선택지 뜻(선택형 칸일 때) */
+  facts: (ExtractedFact & { label?: string; valueLabel?: string })[];
+  questions: ExtractQuestion[];
+  notes: string[];
+  issues: ExtractionIssue[];
+  model: string;
+  usage: ExtractionRun["usage"];
+};
 
 const fail = (status: number, code: string, message: string) => NextResponse.json({ error: { code, message } }, { status });
 
@@ -37,8 +64,8 @@ export async function POST(request: NextRequest) {
   });
   if (!rl.allowed) return fail(429, "RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도하세요");
 
-  // 단계 1: 관리자 게이트
-  const gate = await checkOneHouseAiAdmin();
+  // 단계 1: 개발 서버 게이트
+  const gate = checkOneHouseAiAccess();
   if (!gate.ok) return fail(gate.status, gate.code, gate.message);
 
   // 단계 2: 본문
@@ -55,7 +82,7 @@ export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) return fail(503, "AI_UNAVAILABLE", "AI 사실 추출이 설정되지 않았습니다(ANTHROPIC_API_KEY).");
 
   // 단계 4: 추출
-  let run: Awaited<ReturnType<typeof extractOneHouseFacts>>;
+  let run: ExtractionRun;
   try {
     run = await extractOneHouseFacts(parsed.data.text);
   } catch (e) {
@@ -67,11 +94,12 @@ export async function POST(request: NextRequest) {
   // 단계 5: 사전 재검증 → 폼 조각 · 질문
   const { form, issues } = applyExtraction(run.extraction, ONE_HOUSE_FIELD_CATALOG);
   // 행 이름 없는 칸(`asset.residencePeriods[].moveInDate`)은 그 자체가 사전 키다
-  const labelOf = (path: string) => {
+  const specOf = (path: string): FieldSpec | undefined => {
     const segs = parsePath(path);
     const key = segs ? catalogKeyOf(segs) : path;
-    return ONE_HOUSE_FIELD_CATALOG.find((s) => s.path === key)?.label;
+    return ONE_HOUSE_FIELD_CATALOG.find((s) => s.path === key);
   };
+  const labelOf = (path: string) => specOf(path)?.label;
   const llmQuestions = run.extraction.missingFacts.map((m) => ({
     path: m.path,
     label: labelOf(m.path),
@@ -89,15 +117,18 @@ export async function POST(request: NextRequest) {
     (q) => !llmQuestions.some((l) => overlaps(l.path, q.path)),
   );
 
-  return NextResponse.json({
-    data: {
-      form,
-      facts: run.extraction.facts,
-      questions: [...llmQuestions, ...validationQuestions],
-      notes: run.extraction.notes,
-      issues,
-      model: run.model,
-      usage: run.usage,
-    },
-  });
+  const data: OneHouseAiExtractData = {
+    form,
+    // 화면은 필드 사전을 싣지 않는다 — 칸 이름과 선택지 뜻을 여기서 붙인다
+    facts: run.extraction.facts.map((f) => {
+      const spec = specOf(f.path);
+      return { ...f, label: spec?.label, valueLabel: spec?.values?.find((v) => v.value === f.value.trim())?.label };
+    }),
+    questions: [...llmQuestions, ...validationQuestions],
+    notes: run.extraction.notes,
+    issues,
+    model: run.model,
+    usage: run.usage,
+  };
+  return NextResponse.json({ data });
 }
