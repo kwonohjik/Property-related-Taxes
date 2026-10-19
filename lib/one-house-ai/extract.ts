@@ -29,17 +29,21 @@ export async function extractOneHouseFacts(
   text: string,
   client: Anthropic = new Anthropic(),
 ): Promise<ExtractionRun> {
-  const response = await client.beta.messages.parse({
-    model: ONE_HOUSE_EXTRACTION_MODEL,
-    max_tokens: 32000,
-    // 정책 거절(refusal) 시 서버가 기본 대체 모델로 다시 돌린다.
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    // 법적 사실(취득 경위·세대·기준일)을 가려 읽어야 해서 high — Opus 5.5 기본값은 medium.
-    output_config: { effort: "high", format: betaZodOutputFormat(oneHouseExtractionSchema) },
-    system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } }],
-    messages: [{ role: "user", content: buildExtractionUserMessage(text) }],
-  });
+  // 스트리밍 — max_tokens가 커서 SDK가 비스트리밍 요청을 「10분 넘게 걸릴 수 있다」며 보내기 전에 막는다.
+  //   `finalMessage()`가 구조화 출력(`parsed_output`)까지 돌려준다.
+  const response = await client.beta.messages
+    .stream({
+      model: ONE_HOUSE_EXTRACTION_MODEL,
+      max_tokens: 32000,
+      // 정책 거절(refusal) 시 서버가 기본 대체 모델로 다시 돌린다.
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      // 법적 사실(취득 경위·세대·기준일)을 가려 읽어야 해서 high — Opus 5.5 기본값은 medium.
+      output_config: { effort: "high", format: betaZodOutputFormat(oneHouseExtractionSchema) },
+      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } }],
+      messages: [{ role: "user", content: buildExtractionUserMessage(text) }],
+    })
+    .finalMessage();
 
   if (response.stop_reason === "refusal") {
     throw new ExtractionFailedError(`추출 거절: ${response.stop_details?.category ?? "unknown"}`);

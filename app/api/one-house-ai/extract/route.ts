@@ -66,9 +66,11 @@ export async function POST(request: NextRequest) {
 
   // 단계 5: 사전 재검증 → 폼 조각 · 질문
   const { form, issues } = applyExtraction(run.extraction, ONE_HOUSE_FIELD_CATALOG);
+  // 행 이름 없는 칸(`asset.residencePeriods[].moveInDate`)은 그 자체가 사전 키다
   const labelOf = (path: string) => {
     const segs = parsePath(path);
-    return segs ? ONE_HOUSE_FIELD_CATALOG.find((s) => s.path === catalogKeyOf(segs))?.label : undefined;
+    const key = segs ? catalogKeyOf(segs) : path;
+    return ONE_HOUSE_FIELD_CATALOG.find((s) => s.path === key)?.label;
   };
   const llmQuestions = run.extraction.missingFacts.map((m) => ({
     path: m.path,
@@ -77,9 +79,14 @@ export async function POST(request: NextRequest) {
     why: m.why,
     source: "llm" as const,
   }));
-  const asked = new Set(llmQuestions.map((q) => q.path));
+  // LLM이 이미 물은 칸(같은 묶음 포함 — `asset.residencePeriods[].moveInDate` ↔ `asset.residencePeriods`)은 다시 묻지 않는다
+  const groupOf = (path: string) => path.replace(/\[[^\]]*\]/g, "[]");
+  const overlaps = (a: string, b: string) => {
+    const [x, y] = [groupOf(a), groupOf(b)];
+    return x === y || x.startsWith(`${y}.`) || x.startsWith(`${y}[`) || y.startsWith(`${x}.`) || y.startsWith(`${x}[`);
+  };
   const validationQuestions = collectValidationQuestions(mergeExtractedForm(form), ONE_HOUSE_FIELD_CATALOG).filter(
-    (q) => !asked.has(q.path),
+    (q) => !llmQuestions.some((l) => overlaps(l.path, q.path)),
   );
 
   return NextResponse.json({
