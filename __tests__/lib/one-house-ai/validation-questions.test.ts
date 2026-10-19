@@ -48,7 +48,8 @@ describe("검증 질문", () => {
       .map((c) => ({ id: c.id, q: questionsOf(c, asAuthored(c.form!)).map((q) => `${q.path}: ${q.question}`) }))
       .filter((x) => x.q.length > 0);
     expect(blocked).toEqual([]);
-  });
+    // 평가셋 전체(약 250건)를 돈다 — 2코어 CI 러너에서 기본 5초를 넘긴다(평가셋 하네스 테스트와 같은 60초)
+  }, 60_000);
 
   it("양도가액을 지우면 그 칸이 화면 검증 문구로 질문이 된다", () => {
     const c = byId("E014-era");
