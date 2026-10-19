@@ -77,7 +77,7 @@ function ResultRow({
       )}
     >
       <span>{label}</span>
-      <span className={value < 0 ? "text-red-600" : ""}>{formatKRW(value)}</span>
+      <span className={value < 0 ? "text-red-600 dark:text-red-400" : ""}>{formatKRW(value)}</span>
     </div>
   );
 }

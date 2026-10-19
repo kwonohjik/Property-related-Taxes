@@ -59,10 +59,10 @@ export function SourceDataSummarySection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-t-lg bg-sky-50 px-4 py-3 text-left hover:bg-sky-100"
+        className="flex w-full items-center justify-between rounded-t-lg bg-sky-50 px-4 py-3 text-left hover:bg-sky-100 dark:bg-sky-950/40"
         aria-expanded={open}
       >
-        <span className="flex items-center gap-2 text-sm font-semibold text-sky-900">
+        <span className="flex items-center gap-2 text-sm font-semibold text-sky-900 dark:text-sky-200">
           <span
             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-200 text-sky-800"
             aria-hidden

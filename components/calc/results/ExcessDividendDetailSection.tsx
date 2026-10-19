@@ -33,11 +33,11 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
     <>
       {/* ── A: 초과배당금액 자동산정 내역 ── */}
       <div
-        className="rounded-lg border border-sky-200 bg-sky-50/40 p-4"
+        className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 dark:bg-sky-950/40"
         data-testid="ed-calc-detail"
       >
         <div className="flex items-center justify-between">
-          <span className="text-sm font-semibold text-sky-800">
+          <span className="text-sm font-semibold text-sky-800 dark:text-sky-200">
             초과배당금액 자동산정 내역 (시행령 §31의2②)
           </span>
           <ExpandToggleButton
@@ -52,7 +52,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
           {detail.donees && detail.donees.length > 1 && (
             <table className="mb-3 w-full text-sm" data-testid="ed-donee-table">
               <thead>
-                <tr className="text-xs text-sky-700">
+                <tr className="text-xs text-sky-700 dark:text-sky-300">
                   <th className="py-1 text-left font-medium">수증자</th>
                   <th className="py-1 text-right font-medium">① 가액</th>
                   <th className="py-1 text-right font-medium">초과배당금액</th>
@@ -62,7 +62,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
               <tbody>
                 {detail.donees.map((d) => (
                   <tr key={d.id} className="border-t border-sky-100">
-                    <td className="py-1.5 pr-2 text-sky-800">{d.name}</td>
+                    <td className="py-1.5 pr-2 text-sky-800 dark:text-sky-200">{d.name}</td>
                     <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(d.excessBeforeRatio)}</td>
                     <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(d.excessDividendAmount)}</td>
                     <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">
@@ -117,11 +117,11 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                     : "—"}
                 </td>
               </tr>
-              <tr className="border-t border-sky-200 bg-sky-50">
-                <td className="py-1.5 pr-2 font-semibold text-sky-900">
+              <tr className="border-t border-sky-200 bg-sky-50 dark:bg-sky-950/40">
+                <td className="py-1.5 pr-2 font-semibold text-sky-900 dark:text-sky-200">
                   초과배당금액 (① × ②)
                 </td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-sky-900">
+                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-sky-900 dark:text-sky-200">
                   {formatKRW(detail.excessDividendAmount)}
                 </td>
               </tr>
@@ -132,10 +132,10 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
 
       {/* ── B: 소득세 상당액 산정 내역 ── */}
       <div
-        className="rounded-lg border border-amber-200 bg-amber-50/40 p-4"
+        className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 dark:bg-amber-950/40"
         data-testid="ed-income-tax-detail"
       >
-        <p className="text-sm font-semibold text-amber-800">소득세 상당액 산정 내역</p>
+        <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">소득세 상당액 산정 내역</p>
         <table className="mt-2 w-full text-sm">
           <tbody>
             <tr className="border-t border-amber-100">
@@ -147,7 +147,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
             {rateTableLabel && (
               <tr className="border-t border-amber-100">
                 <td className="py-1.5 pr-2 text-muted-foreground">적용 율표</td>
-                <td className="py-1.5 text-right text-xs text-amber-700">{rateTableLabel}</td>
+                <td className="py-1.5 text-right text-xs text-amber-700 dark:text-amber-300">{rateTableLabel}</td>
               </tr>
             )}
             {detail.comprehensiveMaxDetail && (
@@ -184,9 +184,9 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                 </tr>
               </>
             )}
-            <tr className="border-t border-amber-200 bg-amber-50">
-              <td className="py-1.5 pr-2 font-semibold text-amber-900">소득세 상당액</td>
-              <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-amber-900">
+            <tr className="border-t border-amber-200 bg-amber-50 dark:bg-amber-950/40">
+              <td className="py-1.5 pr-2 font-semibold text-amber-900 dark:text-amber-200">소득세 상당액</td>
+              <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-amber-900 dark:text-amber-200">
                 {formatKRW(detail.incomeTaxEquivalent)}
               </td>
             </tr>
@@ -197,10 +197,10 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
       {/* ── C: 구법(2018~2020) 산출세액공제 ── */}
       {detail.taxMethod === "legacy_credit_from_tax" && detail.legacyCredit && (
         <div
-          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40"
           data-testid="ed-legacy-credit"
         >
-          <p className="text-sm font-semibold text-violet-800">
+          <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
             구법 적용 — 소득세 상당액 산출세액공제 (2018~2020 배당)
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -222,9 +222,9 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                   {formatKRW(detail.legacyCredit.legacyCreditAmount)}
                 </td>
               </tr>
-              <tr className="border-t border-violet-200 bg-violet-50">
-                <td className="py-1.5 pr-2 font-semibold text-violet-900">공제 후 산출세액</td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-violet-900">
+              <tr className="border-t border-violet-200 bg-violet-50 dark:bg-violet-950/40">
+                <td className="py-1.5 pr-2 font-semibold text-violet-900 dark:text-violet-200">공제 후 산출세액</td>
+                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-violet-900 dark:text-violet-200">
                   {formatKRW(detail.legacyCredit.finalTax)}
                 </td>
               </tr>
@@ -236,10 +236,10 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
       {/* ── D: 정산 추납/환급 ── */}
       {detail.settlement && (
         <div
-          className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4"
+          className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40"
           data-testid="ed-settlement"
         >
-          <p className="text-sm font-semibold text-emerald-800">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
             정산 증여세 (§41의2②③)
           </p>
           <table className="mt-2 w-full text-sm">
@@ -256,8 +256,8 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                   {formatKRW(detail.settlement.settlementGiftTax)}
                 </td>
               </tr>
-              <tr className="border-t border-emerald-200 bg-emerald-50">
-                <td className="py-1.5 pr-2 font-semibold text-emerald-900">
+              <tr className="border-t border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40">
+                <td className="py-1.5 pr-2 font-semibold text-emerald-900 dark:text-emerald-200">
                   정산 {detail.settlement.isRefund ? "환급" : "추납"} 세액
                   <span
                     className={`ml-1.5 rounded px-1.5 py-0.5 text-xs font-medium ${
@@ -271,7 +271,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
                 </td>
                 <td
                   className={`py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold ${
-                    detail.settlement.isRefund ? "text-sky-700" : "text-amber-700"
+                    detail.settlement.isRefund ? "text-sky-700 dark:text-sky-300" : "text-amber-700 dark:text-amber-300"
                   }`}
                 >
                   {formatKRW(Math.abs(detail.settlement.settlementDue))}

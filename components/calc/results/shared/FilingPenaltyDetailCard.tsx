@@ -17,10 +17,10 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 
 export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPenaltyResult }) {
   return (
-    <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm">
-      <p className="font-semibold text-rose-800 mb-1.5">신고불성실가산세</p>
+    <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm dark:bg-rose-950/40">
+      <p className="font-semibold text-rose-800 mb-1.5 dark:text-rose-200">신고불성실가산세</p>
       {detail.exclusionApplied ? (
-        <p className="text-xs text-rose-700">
+        <p className="text-xs text-rose-700 dark:text-rose-300">
           과소신고가산세 적용제외 — {UNDER_REPORT_EXCLUSION_LABELS[detail.exclusionApplied]}{" "}
           (국세기본법 §47의3④1호)
         </p>
@@ -31,7 +31,7 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
             입력이 무시된 것처럼 읽힌다 — 왜 제외가 안 됐는지를 말한다.
           */}
           {detail.exclusionOverriddenByFraud && (
-            <p className="text-caption text-rose-700">
+            <p className="text-caption text-rose-700 dark:text-rose-300">
               {UNDER_REPORT_EXCLUSION_LABELS[detail.exclusionOverriddenByFraud]} — 부정행위에
               해당해 적용제외가 성립하지 않습니다 (국세기본법 §47의3④1호 단서)
             </p>
@@ -44,26 +44,26 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
                 (양도세 G-06이 정확히 그 결함이었다). 두 목으로 분해해 적는다.
               */}
               <div className="flex justify-between">
-                <span className="text-rose-600">
+                <span className="text-rose-600 dark:text-rose-400">
                   가목 — 부정행위분 {formatKRW(detail.fraudSplit.fraudBase)} ×{" "}
                   {Math.round(detail.fraudSplit.fraudRate * 100)}%
-                  <span className="block text-caption text-rose-500">
+                  <span className="block text-caption text-rose-500 dark:text-rose-400">
                     국세기본법 §47의3①1호 가목
                   </span>
                 </span>
-                <span className="font-mono tabular-nums text-rose-900">
+                <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
                   {formatKRW(Math.floor(detail.fraudSplit.fraudBase * detail.fraudSplit.fraudRate))}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-rose-600">
+                <span className="text-rose-600 dark:text-rose-400">
                   나목 — 그 밖의 과소신고분 {formatKRW(detail.fraudSplit.normalBase)} ×{" "}
                   {Math.round(detail.fraudSplit.normalRate * 100)}%
-                  <span className="block text-caption text-rose-500">
+                  <span className="block text-caption text-rose-500 dark:text-rose-400">
                     국세기본법 §47의3①1호 나목
                   </span>
                 </span>
-                <span className="font-mono tabular-nums text-rose-900">
+                <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
                   {formatKRW(
                     Math.floor(detail.fraudSplit.normalBase * detail.fraudSplit.normalRate),
                   )}
@@ -72,29 +72,29 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
             </>
           ) : (
             <div className="flex justify-between">
-              <span className="text-rose-600">
+              <span className="text-rose-600 dark:text-rose-400">
                 기준금액 {formatKRW(detail.penaltyBase)} × {Math.round(detail.penaltyRate * 100)}%
-                <span className="block text-caption text-rose-500">{detail.ruleRef}</span>
+                <span className="block text-caption text-rose-500 dark:text-rose-400">{detail.ruleRef}</span>
               </span>
-              <span className="font-mono tabular-nums text-rose-900">
+              <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
                 {formatKRW(detail.grossPenalty)}
               </span>
             </div>
           )}
           {detail.reductionRate > 0 && (
             <div className="flex justify-between">
-              <span className="text-emerald-600">
+              <span className="text-emerald-600 dark:text-emerald-400">
                 기한후신고 감면 ({Math.round(detail.reductionRate * 100)}%)
-                <span className="block text-caption text-emerald-500">국세기본법 §48②2호</span>
+                <span className="block text-caption text-emerald-500 dark:text-emerald-400">국세기본법 §48②2호</span>
               </span>
-              <span className="font-mono tabular-nums text-emerald-700">
+              <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-300">
                 − {formatKRW(detail.reductionAmount)}
               </span>
             </div>
           )}
           <div className="flex justify-between border-t border-rose-200 pt-1 font-semibold">
-            <span className="text-rose-800">가산세 합계</span>
-            <span className="font-mono tabular-nums text-rose-900">
+            <span className="text-rose-800 dark:text-rose-200">가산세 합계</span>
+            <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
               {formatKRW(detail.filingPenalty)}
             </span>
           </div>

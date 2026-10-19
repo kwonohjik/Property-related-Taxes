@@ -54,7 +54,7 @@ export function ScenarioCol({ label, adopted, children, determinedTax, filingUni
       className={cn(
         "flex-1 rounded-lg border p-3 space-y-2",
         adopted
-          ? "border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-200"
+          ? "border-emerald-300 bg-emerald-50/60 ring-1 ring-emerald-200 dark:bg-emerald-950/40"
           : "border-border bg-background",
       )}
     >
@@ -70,7 +70,7 @@ export function ScenarioCol({ label, adopted, children, determinedTax, filingUni
       <div
         className={cn(
           "rounded-md border p-2 text-center",
-          adopted ? "border-emerald-300 bg-emerald-100/60" : "border-border bg-muted/30",
+          adopted ? "border-emerald-300 bg-emerald-100/60 dark:bg-emerald-900/40" : "border-border bg-muted/30",
         )}
       >
         <p className="text-caption text-muted-foreground mb-0.5">결정세액</p>
@@ -134,7 +134,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
           />
         )}
         {a.donorCapexGuardApplied && (
-          <p className="text-micro text-amber-600 pl-2">
+          <p className="text-micro text-amber-600 pl-2 dark:text-amber-400">
             * 증여자 자본적지출: 2024.1.1. 이전 양도 — 가드 발동, 0 처리
           </p>
         )}
@@ -155,7 +155,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
           </p>
         )}
         {a.giftTaxLimitApplied && (
-          <p className="text-micro text-amber-600 pl-2 leading-relaxed">
+          <p className="text-micro text-amber-600 pl-2 leading-relaxed dark:text-amber-400">
             * 증여세 한도 발동 — {ap ? "안분액이 " : ""}「양도로 보는 부분」의 양도차익{" "}
             {fmt(a.giftTaxLimitCap)}을 넘어 한도까지만 산입 (시행령 §163의2② 후단)
           </p>
@@ -272,25 +272,25 @@ export function CarryoverComparisonCard({ detail }: Props) {
       <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         적용기간 판정: {periodLabel}
         {detail.isEligible ? (
-          <span className="ml-2 text-emerald-700 font-medium">→ 이월과세 요건 충족</span>
+          <span className="ml-2 text-emerald-700 font-medium dark:text-emerald-300">→ 이월과세 요건 충족</span>
         ) : detail.exclusionReason === "period_exceeded" ? (
-          <span className="ml-2 text-rose-600 font-medium">→ 기간 초과 — 이월과세 미적용</span>
+          <span className="ml-2 text-rose-600 font-medium dark:text-rose-400">→ 기간 초과 — 이월과세 미적용</span>
         ) : null}
       </div>
 
       {/* 적용배제 배너 (배제 사유 있을 때) */}
       {!detail.isEligible && detail.exclusionReason && detail.exclusionReason !== "tax_comparison" && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs">
-          <p className="font-semibold text-amber-800 mb-0.5">
+        <div className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs dark:bg-amber-950/40">
+          <p className="font-semibold text-amber-800 mb-0.5 dark:text-amber-200">
             이월과세 적용배제 — {exclusionSourceLabel(detail)}
           </p>
-          <p className="text-amber-700">{CARRYOVER_EXCLUSION_REASON_LABELS[detail.exclusionReason] ?? detail.exclusionReason}</p>
+          <p className="text-amber-700 dark:text-amber-300">{CARRYOVER_EXCLUSION_REASON_LABELS[detail.exclusionReason] ?? detail.exclusionReason}</p>
           {detail.oneHouseExclusionSource === "legacy_declaration" && (
-            <p className="text-amber-700 mt-0.5">
+            <p className="text-amber-700 mt-0.5 dark:text-amber-300">
               저장 당시 선언 기준으로 계산했습니다 — 입력 화면에서 「자동 판정으로 전환」하면 입력한 사실로 다시 판정합니다.
             </p>
           )}
-          <p className="text-amber-600 mt-1">→ 일반 양도소득세 계산 적용</p>
+          <p className="text-amber-600 mt-1 dark:text-amber-400">→ 일반 양도소득세 계산 적용</p>
         </div>
       )}
 
@@ -331,26 +331,26 @@ export function CarryoverComparisonCard({ detail }: Props) {
           )}
         </div>
         {filing !== undefined && (
-          <div className="rounded-md border border-sky-200 bg-sky-50/60 px-3 py-2 space-y-0.5">
-            <p className="font-semibold text-sky-800">
+          <div className="rounded-md border border-sky-200 bg-sky-50/60 px-3 py-2 space-y-0.5 dark:bg-sky-950/40">
+            <p className="font-semibold text-sky-800 dark:text-sky-200">
               판정 근거 — 신고 전체 결정세액 비교 (§92③2호 · 다건 신고)
             </p>
-            <div className="flex justify-between text-sky-900 tabular-nums">
+            <div className="flex justify-between text-sky-900 tabular-nums dark:text-sky-200">
               <span>이월과세 적용 시</span>
               <span>{fmt(filing.determinedTaxWithCarryover)}</span>
             </div>
-            <div className="flex justify-between text-sky-900 tabular-nums">
+            <div className="flex justify-between text-sky-900 tabular-nums dark:text-sky-200">
               <span>적용하지 않을 시</span>
               <span>{fmt(filing.determinedTaxWithout)}</span>
             </div>
-            <p className="text-sky-700">
+            <p className="text-sky-700 dark:text-sky-300">
               위 A·B 금액은 이 자산만 떼어낸 값입니다. §97조의2 ② 3호는 신고 전체의 결정세액을
               비교하므로, 두 판정이 갈릴 수 있습니다.
             </p>
           </div>
         )}
         {detail.comparisonExclusion && (
-          <p className="text-rose-600">
+          <p className="text-rose-600 dark:text-rose-400">
             ※ §97조의2 ② 3호 비교과세 — 시나리오 B 채택 (세액 역전
             {filing !== undefined ? " · 신고 전체 결정세액 기준" : ""})
           </p>

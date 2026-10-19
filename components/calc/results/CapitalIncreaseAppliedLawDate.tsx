@@ -24,7 +24,7 @@ export function CapitalIncreaseAppliedLawDate({
           ({conversion ? "전환주식을 전환한 날 — 상증령 §29①2호" : "증여일 — 상증령 §29①(상증법 §39① 위임)"})
         </span>
       </p>
-      <p className={`mt-1 text-caption ${eraNotice ? "text-amber-700" : "text-muted-foreground"}`}>
+      <p className={`mt-1 text-caption ${eraNotice ? "text-amber-700 dark:text-amber-300" : "text-muted-foreground"}`}>
         {eraNotice ?? "상증법 §39·상증령 §29는 2017.2.7. 이후 개정되지 않아 이 기준일의 조문과 현행이 같습니다."}
       </p>
     </div>

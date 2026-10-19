@@ -33,11 +33,11 @@ import {
 // ── tone → Tailwind 매핑 ─────────────────────────────────────────
 
 const TONE_CLASSES: Record<GroupDef["tone"], { border: string; bg: string; text: string; badge: string }> = {
-  sky:     { border: "border-sky-200",     bg: "bg-sky-50/40",     text: "text-sky-800",     badge: "bg-sky-200 text-sky-800" },
-  emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40", text: "text-emerald-800", badge: "bg-emerald-200 text-emerald-800" },
-  amber:   { border: "border-amber-200",   bg: "bg-amber-50/40",   text: "text-amber-800",   badge: "bg-amber-200 text-amber-800" },
-  violet:  { border: "border-violet-200",  bg: "bg-violet-50/40",  text: "text-violet-800",  badge: "bg-violet-200 text-violet-800" },
-  rose:    { border: "border-rose-200",    bg: "bg-rose-50/40",    text: "text-rose-800",    badge: "bg-rose-200 text-rose-800" },
+  sky:     { border: "border-sky-200",     bg: "bg-sky-50/40 dark:bg-sky-950/40",     text: "text-sky-800 dark:text-sky-200",     badge: "bg-sky-200 text-sky-800" },
+  emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40 dark:bg-emerald-950/40", text: "text-emerald-800 dark:text-emerald-200", badge: "bg-emerald-200 text-emerald-800" },
+  amber:   { border: "border-amber-200",   bg: "bg-amber-50/40 dark:bg-amber-950/40",   text: "text-amber-800 dark:text-amber-200",   badge: "bg-amber-200 text-amber-800" },
+  violet:  { border: "border-violet-200",  bg: "bg-violet-50/40 dark:bg-violet-950/40",  text: "text-violet-800 dark:text-violet-200",  badge: "bg-violet-200 text-violet-800" },
+  rose:    { border: "border-rose-200",    bg: "bg-rose-50/40 dark:bg-rose-950/40",    text: "text-rose-800 dark:text-rose-200",    badge: "bg-rose-200 text-rose-800" },
   slate:   { border: "border-slate-200",   bg: "bg-slate-50/40",   text: "text-slate-800",   badge: "bg-slate-200 text-slate-800" },
 };
 
@@ -154,7 +154,7 @@ export function DetailedCalculationStatementCard({
                   사유: {result.exemptReason}
                 </p>
               )}
-              <p className="text-caption text-emerald-700/70 mt-1">
+              <p className="text-caption text-emerald-700/70 mt-1 dark:text-emerald-300/70">
                 아래 32 항목은 산식·법령 근거 검증용으로 표시됩니다 (대부분 0원).
               </p>
             </div>
@@ -350,7 +350,7 @@ function ItemRow({ item }: { item: StatementItem }) {
             </p>
           )}
           {item.note && (
-            <p className="text-caption text-amber-700 mt-0.5 ml-6 italic break-words">
+            <p className="text-caption text-amber-700 mt-0.5 ml-6 italic break-words dark:text-amber-300">
               ※ {item.note}
             </p>
           )}

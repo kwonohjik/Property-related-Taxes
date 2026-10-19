@@ -124,20 +124,20 @@ export function AggregationExcludedCard({
 }) {
   return (
     <div
-      className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4"
+      className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 dark:bg-emerald-950/40"
       data-testid="aggregation-excluded-card"
     >
       <div className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-emerald-800">
+        <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
           합산배제증여재산 (§41의3·§41의5) — 개별 건별 과세
         </span>
         <LawArticleModal legalBasis="상증법 §47" label="§47①" />
       </div>
-      <p className="mt-1 text-xs text-emerald-700">
+      <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
         §47① 10년 합산 제외 · §55①3호 별도 과세표준(증여이익 − 3천만원, §53 미적용)
       </p>
       <p
-        className="mt-2 text-right font-mono text-2xl font-bold tabular-nums whitespace-nowrap text-emerald-900"
+        className="mt-2 text-right font-mono text-2xl font-bold tabular-nums whitespace-nowrap text-emerald-900 dark:text-emerald-200"
         data-testid="aggregation-excluded-final-tax"
       >
         {formatKRW(detail.finalTax)}
@@ -149,7 +149,7 @@ export function AggregationExcludedCard({
               <td className="py-1.5 pr-2 text-muted-foreground">
                 {step.label}
                 {step.note ? (
-                  <span className="ml-1 text-xs text-emerald-600">({step.note})</span>
+                  <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">({step.note})</span>
                 ) : null}
               </td>
               <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">

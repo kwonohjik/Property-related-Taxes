@@ -68,7 +68,7 @@ function Row({ label, value, sub = false, highlight = false }: {
   if (value === null || value === undefined) return null;
   const fmt = typeof value === "number" ? formatKRW(value) : value;
   return (
-    <tr className={highlight ? "bg-emerald-50/60 font-semibold" : ""}>
+    <tr className={highlight ? "bg-emerald-50/60 font-semibold dark:bg-emerald-950/40" : ""}>
       <td className={`py-1 pr-3 text-xs ${sub ? "pl-4 text-muted-foreground" : "font-medium"}`}>{label}</td>
       <td className="py-1 text-right text-xs tabular-nums">{fmt}</td>
     </tr>
@@ -93,10 +93,10 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
   const lthdRatePct = lthdRate !== undefined ? `${Math.round(lthdRate * 100)}%` : null;
 
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/20 p-4 space-y-4 text-sm">
-      <div className="font-semibold text-amber-900 text-sm">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/20 p-4 space-y-4 text-sm dark:bg-amber-950/40">
+      <div className="font-semibold text-amber-900 text-sm dark:text-amber-200">
         상업용건물·오피스텔 환산취득가 산정 근거
-        <span className="ml-1 text-xs font-normal text-amber-700">
+        <span className="ml-1 text-xs font-normal text-amber-700 dark:text-amber-300">
           (소득세법 시행령 §164⑥, §176조의2②2호)
         </span>
       </div>
@@ -104,24 +104,24 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {/* 기준시가합 3시점 표 (pre_disclosure 시) */}
       {isPreDisclosure && (
         <div>
-          <p className="text-xs font-medium text-amber-800 mb-1">기준시가합 (소득세법 §99①1호 가목·나목)</p>
+          <p className="text-xs font-medium text-amber-800 mb-1 dark:text-amber-200">기준시가합 (소득세법 §99①1호 가목·나목)</p>
           <p className="text-caption text-muted-foreground mb-2">= 가목의 가액(개별공시지가 × 대지면적) + 나목의 가액(건물 기준시가 총액)</p>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b border-amber-200">
-                <th className="py-1 text-left text-amber-700">시점</th>
-                <th className="py-1 text-right text-amber-700">기준시가합</th>
+                <th className="py-1 text-left text-amber-700 dark:text-amber-300">시점</th>
+                <th className="py-1 text-right text-amber-700 dark:text-amber-300">기준시가합</th>
               </tr>
             </thead>
             <tbody>
               {detail.combinedStdAtAcq !== undefined && (
-                <tr><td className="py-1 text-amber-800">취득시</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtAcq)}</td></tr>
+                <tr><td className="py-1 text-amber-800 dark:text-amber-200">취득시</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtAcq)}</td></tr>
               )}
               {detail.combinedStdAtFirst !== undefined && (
-                <tr><td className="py-1 text-amber-800">최초고시시(2005)</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtFirst)}</td></tr>
+                <tr><td className="py-1 text-amber-800 dark:text-amber-200">최초고시시(2005)</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtFirst)}</td></tr>
               )}
               {detail.combinedStdAtTransfer !== undefined && (
-                <tr><td className="py-1 text-emerald-800">양도시</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtTransfer)}</td></tr>
+                <tr><td className="py-1 text-emerald-800 dark:text-emerald-200">양도시</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtTransfer)}</td></tr>
               )}
             </tbody>
           </table>
@@ -130,7 +130,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
 
       {/* 호별총액 + 환산기준시가 + 환산취득가 산식 */}
       <div className="space-y-1">
-        <p className="text-xs font-medium text-amber-800">산식</p>
+        <p className="text-xs font-medium text-amber-800 dark:text-amber-200">산식</p>
         <table className="w-full border-collapse">
           <tbody>
             {detail.unitPriceTotalAtFirst !== undefined && (
@@ -164,14 +164,14 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
           </tbody>
         </table>
         {detail.sec164_8ProvisoApplicable && (
-          <p className="text-caption text-rose-700 mt-1">
+          <p className="text-caption text-rose-700 mt-1 dark:text-rose-300">
             ※ 취득당시 기준시가합과 최초고시당시 기준시가합이 <b>같습니다</b>. 시행령 §164⑥ 산식
             괄호 단서에 따라 <b>§164⑧(기준시가 상승률 참작)을 준용</b>해야 하는 사안이며, 위 취득시
             환산기준시가는 그 준용을 반영하지 않은 값입니다 — 별도 검토가 필요합니다.
           </p>
         )}
         {detail.sec164_5ProvisoApplicable && (
-          <p className="text-caption text-amber-700 mt-1">
+          <p className="text-caption text-amber-700 mt-1 dark:text-amber-300">
             ※ 취득당시 건물 기준시가는 국세청 고시 전(취득연도 2000년 이전)이므로 시행령 §164⑥ 단서에
             따라 §164⑤을 준용해 산정한 금액입니다 — 2001년 지수표 금액 × 취득당시 건물기준시가 산정기준율.
           </p>
@@ -180,7 +180,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
 
       {/* 개산공제 */}
       <div>
-        <p className="text-xs font-medium text-amber-800">기타필요경비 (개산공제)</p>
+        <p className="text-xs font-medium text-amber-800 dark:text-amber-200">기타필요경비 (개산공제)</p>
         {/* ⚠️ base 라벨 정정 — 엔진 base는 **취득시 기준시가**(commercial-building-valuation.ts
             `estimatedBasisAtAcq`/`unitTotalAtAcq`)이지 환산취득가가 아니다. */}
         <p className="text-caption text-muted-foreground mb-1">= 취득시 기준시가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
@@ -196,7 +196,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
           </tbody>
         </table>
         {swapApplied && (
-          <p className="text-caption text-rose-700 mt-1">
+          <p className="text-caption text-rose-700 mt-1 dark:text-rose-300">
             ※ §97②2호 단서 swap 발동 — 위 개산공제(가목) 대신 자본적지출+양도비(나목)가 필요경비로 적용되었습니다(환산취득가 미차감).
           </p>
         )}
@@ -205,14 +205,14 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {/* 토지/건물 분리 양도차익 */}
       {(landGain !== undefined || buildingGain !== undefined) && (
         <div>
-          <p className="text-xs font-medium text-emerald-800">토지·건물 분리 양도차익</p>
+          <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">토지·건물 분리 양도차익</p>
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-emerald-200">
-                <th className="py-1 text-left text-xs text-emerald-700">구분</th>
-                <th className="py-1 text-right text-xs text-emerald-700">토지</th>
-                <th className="py-1 text-right text-xs text-emerald-700">건물</th>
-                <th className="py-1 text-right text-xs text-emerald-700">합계</th>
+                <th className="py-1 text-left text-xs text-emerald-700 dark:text-emerald-300">구분</th>
+                <th className="py-1 text-right text-xs text-emerald-700 dark:text-emerald-300">토지</th>
+                <th className="py-1 text-right text-xs text-emerald-700 dark:text-emerald-300">건물</th>
+                <th className="py-1 text-right text-xs text-emerald-700 dark:text-emerald-300">합계</th>
               </tr>
             </thead>
             <tbody>
@@ -237,7 +237,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
                 </tr>
               )}
               {(landGain !== undefined || buildingGain !== undefined) && (
-                <tr className="bg-emerald-50/60">
+                <tr className="bg-emerald-50/60 dark:bg-emerald-950/40">
                   <td className="py-1 text-xs font-semibold">양도차익</td>
                   <td className="py-1 text-right text-xs tabular-nums font-semibold">{landGain !== undefined ? formatKRW(landGain) : "—"}</td>
                   <td className="py-1 text-right text-xs tabular-nums font-semibold">{buildingGain !== undefined ? formatKRW(buildingGain) : "—"}</td>
@@ -252,7 +252,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
       {/* 장특공·세액 산식 */}
       {acquisitionGain !== undefined && (
         <div className="space-y-1">
-          <p className="text-xs font-medium text-emerald-800">양도차익 → 세액 산식</p>
+          <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">양도차익 → 세액 산식</p>
           <table className="w-full border-collapse">
             <tbody>
               <Row

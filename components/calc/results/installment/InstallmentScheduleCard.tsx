@@ -184,7 +184,7 @@ export function InstallmentScheduleCard({
                 <td className="py-1.5 px-2 text-center tabular-nums">
                   {row.installmentNo}
                   {row.installmentNo === 0 && (
-                    <span className="ml-1 text-micro text-amber-600">즉납</span>
+                    <span className="ml-1 text-micro text-amber-600 dark:text-amber-400">즉납</span>
                   )}
                 </td>
                 <td className="py-1.5 px-2 text-left tabular-nums">

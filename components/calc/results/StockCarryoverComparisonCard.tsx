@@ -53,7 +53,7 @@ export function StockCarryoverComparisonCard({
       }
       bodyClassName="space-y-3"
     >
-      <p className="text-xs text-violet-800">
+      <p className="text-xs text-violet-800 dark:text-violet-200">
         {applied ? (
           <>
             <strong>이월과세를 적용</strong>했습니다. 취득가액을 증여자가 취득할 당시의 금액으로
@@ -72,7 +72,7 @@ export function StockCarryoverComparisonCard({
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-violet-200 text-violet-700">
+              <tr className="border-b border-violet-200 text-violet-700 dark:text-violet-300">
                 <th className="px-3 py-2 text-left font-semibold">구분</th>
                 <th className="px-3 py-2 text-right font-semibold">
                   적용(①){applied && " ← 채택"}
@@ -89,7 +89,7 @@ export function StockCarryoverComparisonCard({
                     <td className="px-3 py-2">
                       1주당 취득가액
                       {detail.donorAcquisitionMethod === "sale_case" && (
-                        <span className="block text-caption text-violet-600">
+                        <span className="block text-caption text-violet-600 dark:text-violet-400">
                           적용: 증여자 취득일 전후 3개월 매매사례가액 (시행령 §176의2③1호)
                         </span>
                       )}
@@ -112,7 +112,7 @@ export function StockCarryoverComparisonCard({
                   <Amount value={0} />
                 </tr>
               )}
-              <tr className="bg-violet-100/60">
+              <tr className="bg-violet-100/60 dark:bg-violet-900/40">
                 <td className="px-3 py-2 font-semibold">
                   전체 결정세액 <span className="font-normal">(비교 기준)</span>
                 </td>
@@ -125,7 +125,7 @@ export function StockCarryoverComparisonCard({
       )}
 
       {hasComparison && (
-        <p className="text-caption text-violet-700">
+        <p className="text-caption text-violet-700 dark:text-violet-300">
           {diff === 0
             ? "두 결정세액이 같습니다 — §97의2②3호는 「적은 경우」에만 배제하므로 적용을 유지합니다."
             : diff > 0

@@ -174,7 +174,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         */}
         {houseCount.notApplied?.map((n, i) => (
           <div key={`na-${i}`} className="space-y-1" data-testid="one-house-count-not-applied">
-            <p className="text-sm font-semibold text-rose-700">
+            <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">
               {houseRef(n, houses)}
               {n.label}
               <span className="ml-2">
@@ -345,12 +345,12 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
             </p>
           )}
           {oneRight.thresholdNotice && (
-            <p className="text-xs text-amber-800" data-testid="one-house-one-right-threshold-notice">
+            <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="one-house-one-right-threshold-notice">
               {oneRight.thresholdNotice}
             </p>
           )}
           {oneRight.requirementNotices?.map((n, i) => (
-            <p key={i} className="text-xs text-amber-800" data-testid="one-house-one-right-requirement-notice">
+            <p key={i} className="text-xs text-amber-800 dark:text-amber-200" data-testid="one-house-one-right-requirement-notice">
               {n}
             </p>
           ))}

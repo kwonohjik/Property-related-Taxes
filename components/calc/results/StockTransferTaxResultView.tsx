@@ -164,18 +164,18 @@ function TransferPriceFormulaCard({
   const own = result.ownTransferPrice;
   const prior = result.priorAggregation?.transferPrice ?? 0;
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 px-4 py-3 text-sm">
-      <p className="font-semibold text-emerald-800 mb-1">양도가액 산식 (§96① 실지거래가액)</p>
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 px-4 py-3 text-sm dark:bg-emerald-950/40">
+      <p className="font-semibold text-emerald-800 mb-1 dark:text-emerald-200">양도가액 산식 (§96① 실지거래가액)</p>
       {transferActualInputMode === "total" ? (
         <>
-          <p className="text-emerald-900">
+          <p className="text-emerald-900 dark:text-emerald-200">
             양도가액 합계 직접 입력 = <strong>{fmt(own)}</strong>
           </p>
           {shareCount > 0 && (() => {
             const exact = own % shareCount === 0;
             const reverse = own / shareCount;
             return (
-              <p className="text-xs text-emerald-700 mt-1">
+              <p className="text-xs text-emerald-700 mt-1 dark:text-emerald-300">
                 참고: 역산 1주당 단가 = {exact ? reverse.toLocaleString() : reverse.toFixed(4)}
                 {!exact && " (정확히 떨어지지 않음 — 계산에 미사용)"}
               </p>
@@ -183,13 +183,13 @@ function TransferPriceFormulaCard({
           })()}
         </>
       ) : (
-        <p className="text-emerald-900">
+        <p className="text-emerald-900 dark:text-emerald-200">
           1주당 양도가액 {perShareTransferPrice.toLocaleString()} × {shareCount.toLocaleString()}주
           = <strong>{fmt(own)}</strong>
         </p>
       )}
       {prior > 0 && (
-        <p className="text-emerald-900 mt-1 border-t border-emerald-200 pt-1">
+        <p className="text-emerald-900 mt-1 border-t border-emerald-200 pt-1 dark:text-emerald-200">
           + 기신고분 합산 <strong>{fmt(prior)}</strong> (소득세법 시행령 §158②) ={" "}
           <strong>{fmt(result.transferPrice)}</strong>
         </p>
@@ -318,17 +318,17 @@ export function StockTransferTaxResultView({
         />
 
         {/* 비과세 안내 카드 */}
-        <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-6 py-5">
-          <p className="text-lg font-semibold text-emerald-800">비과세 (양도소득세 없음)</p>
-          <p className="text-sm text-emerald-700 mt-2">{exemptReasonLabel}</p>
+        <div className="rounded-xl border-2 border-emerald-300 bg-emerald-50 px-6 py-5 dark:bg-emerald-950/40">
+          <p className="text-lg font-semibold text-emerald-800 dark:text-emerald-200">비과세 (양도소득세 없음)</p>
+          <p className="text-sm text-emerald-700 mt-2 dark:text-emerald-300">{exemptReasonLabel}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
-              <span className="text-emerald-600">양도가액</span>
-              <p className="font-semibold text-emerald-900">{fmt(result.transferPrice)}</p>
+              <span className="text-emerald-600 dark:text-emerald-400">양도가액</span>
+              <p className="font-semibold text-emerald-900 dark:text-emerald-200">{fmt(result.transferPrice)}</p>
             </div>
             <div>
-              <span className="text-emerald-600">최종 납부세액</span>
-              <p className="font-semibold text-emerald-900">0</p>
+              <span className="text-emerald-600 dark:text-emerald-400">최종 납부세액</span>
+              <p className="font-semibold text-emerald-900 dark:text-emerald-200">0</p>
             </div>
           </div>
         </div>
@@ -522,10 +522,10 @@ export function StockTransferTaxResultView({
             </p>
           ) : null}
         </div>
-        <div className="bg-sky-50 px-4 py-3 border-t border-sky-200">
+        <div className="bg-sky-50 px-4 py-3 border-t border-sky-200 dark:bg-sky-950/40">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-sky-800">총 납부세액 (양도세 + 지방세)</span>
-            <span className="text-base font-bold text-sky-900">
+            <span className="text-sm font-semibold text-sky-800 dark:text-sky-200">총 납부세액 (양도세 + 지방세)</span>
+            <span className="text-base font-bold text-sky-900 dark:text-sky-200">
               {fmt(result.finalTax + result.localIncomeTax)}
             </span>
           </div>

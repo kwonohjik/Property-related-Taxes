@@ -23,31 +23,31 @@ export function LatePaymentPenaltyDetailCard({
   detail: InheritanceGiftLatePaymentResult;
 }) {
   return (
-    <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm">
-      <p className="font-semibold text-rose-800 mb-1.5">납부지연가산세</p>
+    <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/60 px-4 py-3 text-sm dark:bg-rose-950/40">
+      <p className="font-semibold text-rose-800 mb-1.5 dark:text-rose-200">납부지연가산세</p>
       {detail.exclusionApplied ? (
-        <p className="text-xs text-rose-700">
+        <p className="text-xs text-rose-700 dark:text-rose-300">
           납부지연가산세 적용제외 — {LATE_PAYMENT_EXCLUSION_LABELS[detail.exclusionApplied]}
         </p>
       ) : (
         <div className="space-y-1">
           {detail.breakdown.map((seg, i) => (
             <div key={i} className="flex justify-between">
-              <span className="text-rose-600">
+              <span className="text-rose-600 dark:text-rose-400">
                 {formatKRW(detail.unpaidTax)} × {seg.days}일 ×{" "}
                 {(seg.dailyRate * 100).toFixed(4)}%
-                <span className="block text-caption text-rose-500">
+                <span className="block text-caption text-rose-500 dark:text-rose-400">
                   국세기본법 §47의4①1호 · 이자율 {seg.effectiveFrom}
                 </span>
               </span>
-              <span className="font-mono tabular-nums text-rose-900">
+              <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
                 {formatKRW(seg.amount)}
               </span>
             </div>
           ))}
           <div className="flex justify-between border-t border-rose-200 pt-1 font-semibold">
-            <span className="text-rose-800">가산세 합계 (총 {detail.elapsedDays}일)</span>
-            <span className="font-mono tabular-nums text-rose-900">
+            <span className="text-rose-800 dark:text-rose-200">가산세 합계 (총 {detail.elapsedDays}일)</span>
+            <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
               {formatKRW(detail.penalty)}
             </span>
           </div>

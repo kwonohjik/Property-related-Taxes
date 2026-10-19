@@ -106,7 +106,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
         : "변경·개수 후 시가표준액이 변경·개수 전 이하 — 과세 대상 없음";
 
     return (
-      <div className="rounded-lg border border-emerald-300 bg-emerald-50/50 p-4 space-y-3">
+      <div className="rounded-lg border border-emerald-300 bg-emerald-50/50 p-4 space-y-3 dark:bg-emerald-950/40">
         {/* 헤더 */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-800 font-medium">
@@ -137,7 +137,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
 
   // 과세 — 유형별 산식
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-4 space-y-3">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/30 p-4 space-y-3 dark:bg-violet-950/40">
       {/* 헤더 */}
       <div className="flex items-center gap-2 flex-wrap">
         <span className="inline-flex items-center rounded-full bg-violet-100 px-2.5 py-0.5 text-xs text-violet-800 font-medium">
@@ -202,7 +202,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
             */}
             {buckets.length > 0 && (
               <div className="mt-2 overflow-x-auto" data-testid="deemed-bucket-breakdown">
-                <p className="text-xs font-medium text-violet-800 mb-1">
+                <p className="text-xs font-medium text-violet-800 mb-1 dark:text-violet-200">
                   물건별 내역 (지방세법 §15② 단서)
                 </p>
                 <table className="w-full text-xs">

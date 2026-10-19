@@ -39,7 +39,7 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
       bodyClassName="space-y-3"
     >
       <div data-testid="pre-deemed-result-card" className="space-y-3">
-        <p className="text-xs text-amber-800 leading-relaxed">
+        <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
           의제취득일({deemedLabel}) 전에 취득했으므로 ② 취득 당시 실지거래가액에 생산자물가상승분을 더한 금액과
           ① 의제취득일 현재 {clause1Label} 중 <strong>많은 것</strong>을 취득가액으로 합니다.
         </p>
@@ -47,16 +47,16 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-amber-200 text-amber-700">
+              <tr className="border-b border-amber-200 text-amber-700 dark:text-amber-300">
                 <th className="px-3 py-2 text-left font-semibold">구분</th>
                 <th className="px-3 py-2 text-right font-semibold">금액 (원)</th>
               </tr>
             </thead>
             <tbody className="text-slate-700">
-              <tr className={`border-b border-amber-100 ${picked2 ? "bg-amber-100/60 font-semibold" : ""}`}>
+              <tr className={`border-b border-amber-100 ${picked2 ? "bg-amber-100/60 font-semibold dark:bg-amber-900/40" : ""}`}>
                 <td className="px-3 py-2">
                   ② 취득 당시 실가 + 생산자물가상승분{picked2 && " ← 채택"}
-                  <span className="block text-caption font-normal text-amber-700">
+                  <span className="block text-caption font-normal text-amber-700 dark:text-amber-300">
                     실가 {num(detail.actualBase)} × {detail.ratio !== undefined ? detail.ratio.toFixed(4) : "-"}
                     {detail.ratioSource === "table" &&
                       ` (${detail.deemedPrevMonth} 지수 ${detail.ppiAtDeemedPrev}를 ${detail.acquisitionMonth} 지수 ${detail.ppiAtAcquisition}로 나눈 비율)`}
@@ -67,12 +67,12 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
                   {detail.clause2Amount !== undefined ? num(detail.clause2Amount) : "-"}
                 </td>
               </tr>
-              <tr className={`border-b border-amber-100 ${!picked2 ? "bg-amber-100/60 font-semibold" : ""}`}>
+              <tr className={`border-b border-amber-100 ${!picked2 ? "bg-amber-100/60 font-semibold dark:bg-amber-900/40" : ""}`}>
                 <td className="px-3 py-2">
                   ① 의제취득일 현재 {clause1Label}
                   {!picked2 && " ← 채택"}
                   {detail.clause1Amount === undefined && (
-                    <span className="block text-caption font-normal text-amber-700">
+                    <span className="block text-caption font-normal text-amber-700 dark:text-amber-300">
                       미입력 — 환산취득가·매매사례가액과 취득 당시 실가를 함께 입력하면 견줍니다
                     </span>
                   )}
@@ -85,7 +85,7 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
           </table>
         </div>
 
-        <p className="text-caption text-amber-700">
+        <p className="text-caption text-amber-700 dark:text-amber-300">
           {picked2
             ? "② 채택 — 필요경비는 개산공제 없이 실제 지출액(자본적지출·양도비)입니다 (법 §97②1호 나목)."
             : "① 채택 — 필요경비는 개산공제(환산취득가액이면 §97②2호 단서 비교 포함)입니다."}

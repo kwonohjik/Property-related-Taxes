@@ -176,11 +176,11 @@ export function SurchargeFlowDiagram({ result }: Props) {
   return (
     <div className={`rounded-lg border p-4 ${
       isSurcharged
-        ? "border-rose-200 bg-rose-50/30"
+        ? "border-rose-200 bg-rose-50/30 dark:bg-rose-950/40"
         : "border-gray-200 bg-gray-50/30"
     }`}>
       <div className="flex items-center gap-2 mb-3">
-        <h3 className={`text-sm font-semibold ${isSurcharged ? "text-rose-800" : "text-gray-700"}`}>
+        <h3 className={`text-sm font-semibold ${isSurcharged ? "text-rose-800 dark:text-rose-200" : "text-gray-700"}`}>
           중과세율 결정 흐름
         </h3>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

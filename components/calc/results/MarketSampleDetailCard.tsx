@@ -21,8 +21,8 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
   if (!detail.acquisitionApplied) return null;
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-3">
-      <p className="font-semibold text-amber-800 text-sm">매매사례가액 상세 (영§176의2③1호)</p>
+    <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4 space-y-3 dark:bg-amber-950/40">
+      <p className="font-semibold text-amber-800 text-sm dark:text-amber-200">매매사례가액 상세 (영§176의2③1호)</p>
 
       <div className="rounded-lg border border-amber-100 bg-white dark:bg-gray-900 overflow-hidden">
         <table className="w-full text-sm">
@@ -45,7 +45,7 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
                     : "—"}
                   원
                 </td>
-                <td className={`px-3 py-2 text-center ${detail.acquisitionOverThreeMonths ? "text-amber-700 font-semibold" : ""}`}>
+                <td className={`px-3 py-2 text-center ${detail.acquisitionOverThreeMonths ? "text-amber-700 font-semibold dark:text-amber-300" : ""}`}>
                   {detail.acquisitionDeltaDays !== undefined ? `${detail.acquisitionDeltaDays}일` : "—"}
                   {detail.acquisitionOverThreeMonths && " ⚠"}
                 </td>
@@ -56,14 +56,14 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
       </div>
 
       {detail.warnings.length > 0 && (
-        <div className="rounded border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 space-y-1">
+        <div className="rounded border border-amber-200 bg-amber-100/60 px-3 py-2 text-xs text-amber-800 space-y-1 dark:text-amber-200 dark:bg-amber-900/40">
           {detail.warnings.map((w, i) => (
             <p key={i}>· {w}</p>
           ))}
         </div>
       )}
 
-      <p className="text-xs text-amber-700/80">
+      <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
         매매사례가액으로 취득가액을 산정하면 필요경비는 취득가액 + 취득 당시 기준시가 × 1%(개산공제) — 법 §97②2호 본문·영 §163⑥4.
         실제 경비로 바꾸는 §97②2호 단서(swap)는 환산취득가액에만 적용되어 비대상입니다.
       </p>

@@ -34,7 +34,7 @@ export function ScLimitTable({ limitCalc }: { limitCalc: SpecificCorpLimitCalc |
                   세대생략 할증 (§57) — ㉮·㉠에 포함
                 </td>
                 <td
-                  className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-rose-700"
+                  className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-rose-700 dark:text-rose-300"
                   data-testid="sc-limit-generation-skip"
                 >
                   {formatKRW(limitCalc.generationSkipSurcharge)}
@@ -69,12 +69,12 @@ export function ScLimitTable({ limitCalc }: { limitCalc: SpecificCorpLimitCalc |
                 {formatKRW(limitCalc.corpTaxShare)}
               </td>
             </tr>
-            <tr className="border-t border-violet-200 bg-violet-50">
-              <td className="py-1.5 pr-2 font-semibold text-violet-900">
+            <tr className="border-t border-violet-200 bg-violet-50 dark:bg-violet-950/40">
+              <td className="py-1.5 pr-2 font-semibold text-violet-900 dark:text-violet-200">
                 ㉯ 한도액 = ㉠ − ㉡
               </td>
               <td
-                className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-violet-900"
+                className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-bold text-violet-900 dark:text-violet-200"
                 data-testid="sc-limit-amount"
               >
                 {formatKRW(limitCalc.limitAmount)}
@@ -96,14 +96,14 @@ export function ScLimitTable({ limitCalc }: { limitCalc: SpecificCorpLimitCalc |
                 {/* 엔진 echo — 라벨에 3%를 박으면 거래일이 2019-01-01 이전일 때 stale해진다 */}
                 신고세액공제 ({Math.round(limitCalc.filingCreditRate * 100)}%)
               </td>
-              <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-violet-700">
+              <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-violet-700 dark:text-violet-300">
                 −{formatKRW(limitCalc.filingCredit)}
               </td>
             </tr>
-            <tr className="border-t border-violet-300 bg-violet-100/60">
-              <td className="py-2 pr-2 font-bold text-violet-900">자진납부세액</td>
+            <tr className="border-t border-violet-300 bg-violet-100/60 dark:bg-violet-900/40">
+              <td className="py-2 pr-2 font-bold text-violet-900 dark:text-violet-200">자진납부세액</td>
               <td
-                className="py-2 text-right font-mono tabular-nums whitespace-nowrap text-lg font-bold text-violet-900"
+                className="py-2 text-right font-mono tabular-nums whitespace-nowrap text-lg font-bold text-violet-900 dark:text-violet-200"
                 data-testid="sc-limit-self-pay-tax"
               >
                 {formatKRW(limitCalc.selfPayTax)}

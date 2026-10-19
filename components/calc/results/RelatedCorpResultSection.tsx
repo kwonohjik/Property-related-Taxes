@@ -55,7 +55,7 @@ export function RelatedCorpResultSection({
     <div className="space-y-4">
       {result.eraNotice && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
           data-testid="rc-era-notice"
         >
           {result.eraNotice}
@@ -63,7 +63,7 @@ export function RelatedCorpResultSection({
       )}
       {result.sec18ScopeNotice && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
           data-testid="rc-sec18-scope-notice"
         >
           {result.sec18ScopeNotice}
@@ -71,15 +71,15 @@ export function RelatedCorpResultSection({
       )}
       {result.sec14ScopeNotice && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800"
+          className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
           data-testid="rc-sec14-scope-notice"
         >
           {result.sec14ScopeNotice}
         </div>
       )}
       {/* 과세요건 공통부 카드 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4">
-        <p className="text-sm font-semibold text-sky-800">수혜법인 단위 과세요건</p>
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 dark:bg-sky-950/40">
+        <p className="text-sm font-semibold text-sky-800 dark:text-sky-200">수혜법인 단위 과세요건</p>
         <table className="mt-2 w-full text-sm">
           <tbody>
             <tr>
@@ -137,12 +137,12 @@ export function RelatedCorpResultSection({
           합계 0원 행**만으로 렌더됐다. ⚠️ 상위 게이트(:104)를 좀히면 안 된다 — 그러면 미충족
           케이스에서 **가장 정보량이 큰** 과세요건 공통부 카드까지 함께 사라진다. 표만 감춘다. */}
       {breakdown.length > 0 && (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4" data-testid="rc-recipient-breakdown">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40" data-testid="rc-recipient-breakdown">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-emerald-800">수증자별 증여의제이익 내역</p>
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">수증자별 증여의제이익 내역</p>
           {taxableRecipients.length > 0 && onSelectDonee && (
             <div className="flex items-center gap-2">
-              <label className="text-xs text-emerald-800" htmlFor="rc-donee-selector">
+              <label className="text-xs text-emerald-800 dark:text-emerald-200" htmlFor="rc-donee-selector">
                 증여세로 이관할 수증자
               </label>
               <select
@@ -150,7 +150,7 @@ export function RelatedCorpResultSection({
                 value={selectedDoneeIndex}
                 onChange={(e) => onSelectDonee(Number(e.target.value))}
                 data-testid="rc-donee-selector"
-                className="rounded-md border border-emerald-300 bg-white dark:bg-gray-900 px-2 py-0.5 text-sm text-emerald-900 focus:border-emerald-400 focus:outline-none"
+                className="rounded-md border border-emerald-300 bg-white dark:bg-gray-900 px-2 py-0.5 text-sm text-emerald-900 focus:border-emerald-400 focus:outline-none dark:text-emerald-200"
               >
                 {taxableRecipients.map((r, i) => (
                   <option key={i} value={i}>
@@ -180,7 +180,7 @@ export function RelatedCorpResultSection({
             <tbody>
               {breakdown.map((r, i) => (
                 <tr key={i} className="border-t border-emerald-100" data-testid={`rc-recipient-row-${i}`}>
-                  <td className="py-1.5 pr-2 text-emerald-700">{r.recipientName.trim() || "지배주주등"}</td>
+                  <td className="py-1.5 pr-2 text-emerald-700 dark:text-emerald-300">{r.recipientName.trim() || "지배주주등"}</td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.pretaxProfit)}</td>
                   <td
                     className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap"
@@ -211,7 +211,7 @@ export function RelatedCorpResultSection({
                   </td>
                   {hasDividendDeduction && (
                     <td
-                      className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-rose-700"
+                      className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-rose-700 dark:text-rose-300"
                       data-testid={`rc-dividend-deduction-${i}`}
                     >
                       {r.dividendDeduction > 0 ? `−${formatKRW(r.dividendDeduction)}` : "—"}
@@ -240,8 +240,8 @@ export function RelatedCorpResultSection({
 
       {/* 보유비율 raw — 직접·간접 대칭 echo (RC-INDIRECT-ECHO). 헤더만 남는 빈 표를 막는다 (RC-5-e) */}
       {breakdown.length > 0 && (
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3">
-        <p className="text-xs font-semibold text-amber-800">보유비율 산출 내역 (직접·간접 raw)</p>
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 dark:bg-amber-950/40">
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">보유비율 산출 내역 (직접·간접 raw)</p>
         <table className="mt-1 w-full text-xs">
           <thead>
             <tr className="text-caption text-muted-foreground">
@@ -255,7 +255,7 @@ export function RelatedCorpResultSection({
           <tbody>
             {breakdown.map((r, i) => (
               <tr key={i} className="border-t border-amber-100">
-                <td className="py-1 pr-2 text-amber-700">{r.recipientName.trim() || "지배주주등"}</td>
+                <td className="py-1 pr-2 text-amber-700 dark:text-amber-300">{r.recipientName.trim() || "지배주주등"}</td>
                 <td
                   className="py-1 text-right font-mono tabular-nums whitespace-nowrap text-muted-foreground"
                   title={`정확분수 ${ratioCell(r.directRatioRaw).raw}`}

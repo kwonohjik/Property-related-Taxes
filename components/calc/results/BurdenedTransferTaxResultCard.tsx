@@ -261,16 +261,16 @@ function SingleTransferResultCard({
           return (
             <div
               data-testid="burdened-97-2-proviso"
-              className="border-t border-amber-300 bg-amber-50/60 px-4 py-3 text-sm space-y-1"
+              className="border-t border-amber-300 bg-amber-50/60 px-4 py-3 text-sm space-y-1 dark:bg-amber-950/40"
             >
-              <p className="font-semibold text-amber-900">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">
                 필요경비 택일 적용 — 「소득세법」 제97조 제2항 제2호 단서
               </p>
-              <p className="text-xs text-amber-800">
+              <p className="text-xs text-amber-800 dark:text-amber-200">
                 환산취득가액 + 개산공제 {formatKRW(swap.estimatedSide)}
                 {" < "}자본적지출 + 양도비 {formatKRW(swap.directSide)}
               </p>
-              <p className="text-xs text-amber-800">
+              <p className="text-xs text-amber-800 dark:text-amber-200">
                 → 자본적지출 + 양도비 {formatKRW(swap.directSide)}을 필요경비로 적용합니다.
                 이 경우 환산취득가액은 <span className="font-medium">별도로 차감하지 않습니다</span>
                 (두 금액은 필요경비 전체를 놓고 택일하는 관계).

@@ -143,12 +143,12 @@ export function RateScenarioTable({ result, isRegulatedArea, isCorporation, acqu
                   )}
                 </td>
                 <td className={`px-3 py-2 text-center ${
-                  row.isCurrent && isRegulatedArea ? "text-rose-700 font-bold" : ""
+                  row.isCurrent && isRegulatedArea ? "text-rose-700 font-bold dark:text-rose-300" : ""
                 }`}>
                   {row.regulated}
                 </td>
                 <td className={`px-3 py-2 text-center ${
-                  row.isCurrent && !isRegulatedArea ? "text-rose-700 font-bold" : ""
+                  row.isCurrent && !isRegulatedArea ? "text-rose-700 font-bold dark:text-rose-300" : ""
                 }`}>
                   {row.nonRegulated}
                 </td>

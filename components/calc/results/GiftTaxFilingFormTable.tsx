@@ -49,7 +49,7 @@ export function GiftTaxFilingFormTable({ rows, warnings, testIdPrefix }: Props) 
         <button
           type="button"
           onClick={() => setShowLaw(!showLaw)}
-          className="absolute top-0 right-0 text-xs text-violet-600 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 print:hidden"
+          className="absolute top-0 right-0 text-xs text-violet-600 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 print:hidden dark:text-violet-400"
         >
           {showLaw ? "조문 숨김" : "조문 표시"}
         </button>

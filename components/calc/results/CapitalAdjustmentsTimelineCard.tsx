@@ -29,8 +29,8 @@ function fmtDate(d: Date) {
 
 export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
   return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-5 py-4 space-y-3">
-      <p className="font-semibold text-violet-800 text-sm">
+    <div className="rounded-xl border border-violet-200 bg-violet-50/60 px-5 py-4 space-y-3 dark:bg-violet-950/40">
+      <p className="font-semibold text-violet-800 text-sm dark:text-violet-200">
         자본조정 시계열 (법§17② 단서 + 시행령 §27②)
       </p>
 
@@ -60,7 +60,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
                   {a.skipped ? (
                     <span className="text-slate-500">건너뜀 (배당소득)</span>
                   ) : (
-                    <span className="text-violet-700 font-semibold">적용</span>
+                    <span className="text-violet-700 font-semibold dark:text-violet-300">적용</span>
                   )}
                 </td>
               </tr>
@@ -69,7 +69,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
         </table>
       </div>
 
-      <div className="rounded border border-violet-200 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-violet-800 space-y-1">
+      <div className="rounded border border-violet-200 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-violet-800 space-y-1 dark:text-violet-200">
         <p>
           최종 환산 주식수 (취득가액 분모) ={" "}
           <strong className="font-mono tabular-nums">{fmt(detail.adjustedShareCount)}주</strong>
@@ -86,7 +86,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
       </div>
 
       {detail.warnings.length > 0 && (
-        <div className="rounded border border-violet-200 bg-violet-100/60 px-3 py-2 text-xs text-violet-800 space-y-1">
+        <div className="rounded border border-violet-200 bg-violet-100/60 px-3 py-2 text-xs text-violet-800 space-y-1 dark:text-violet-200 dark:bg-violet-900/40">
           {detail.warnings.map((w, i) => (
             <p key={i}>· {w}</p>
           ))}

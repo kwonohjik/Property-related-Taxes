@@ -42,9 +42,9 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 my-4">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 my-4 dark:bg-violet-950/40">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-semibold text-violet-900 flex items-center gap-2">
+        <h3 className="text-base font-semibold text-violet-900 flex items-center gap-2 dark:text-violet-200">
           🔀 로트별 매칭 상세
           <span className="rounded-full bg-violet-200 px-2 py-0.5 text-xs font-bold text-violet-800">
             {METHOD_LABEL[detail.method]}
@@ -57,12 +57,12 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
         />
       </div>
 
-      <p className="text-xs text-violet-700 mb-3">
+      <p className="text-xs text-violet-700 mb-3 dark:text-violet-300">
         ⓘ 산정방법은 납세자 입증책임 — 세법 명문 부재 (KoreanLaw 검증 2026-05-18 / §104②·§163)
         {detail.method === "moving_avg" && detail.weightedAvgPerShare !== undefined && (
           <span className="ml-1">
             · 이동평균 단가 (마지막 매도 적용) <strong>{detail.weightedAvgPerShare.toLocaleString()}</strong>
-            <span className="ml-1 text-violet-500">— 매도별 단가는 아래 표 매수단가 열 참조</span>
+            <span className="ml-1 text-violet-500 dark:text-violet-400">— 매도별 단가는 아래 표 매수단가 열 참조</span>
           </span>
         )}
       </p>
@@ -86,7 +86,7 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
             </thead>
             <tbody>
               {detail.matched.map((sub, idx) => (
-                <tr key={idx} className={sub.perLotGain < 0 ? "bg-red-50/40" : "bg-white dark:bg-gray-900"}>
+                <tr key={idx} className={sub.perLotGain < 0 ? "bg-red-50/40 dark:bg-red-950/40" : "bg-white dark:bg-gray-900"}>
                   <td className="border border-violet-200 p-1.5">{idx + 1}</td>
                   <td className="border border-violet-200 p-1.5">{formatDate(sub.acquisitionDate)}</td>
                   <td className="border border-violet-200 p-1.5">{formatDate(sub.saleDate)}</td>
@@ -96,12 +96,12 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
                   <td className="border border-violet-200 p-1.5 text-right">{sub.holdingDays}</td>
                   <td className="border border-violet-200 p-1.5 text-center">
                     {sub.isShortTerm ? (
-                      <span className="text-red-600 font-medium">단기</span>
+                      <span className="text-red-600 font-medium dark:text-red-400">단기</span>
                     ) : (
-                      <span className="text-emerald-700 font-medium">장기</span>
+                      <span className="text-emerald-700 font-medium dark:text-emerald-300">장기</span>
                     )}
                   </td>
-                  <td className={`border border-violet-200 p-1.5 text-right ${sub.perLotGain < 0 ? "text-red-700" : ""}`}>
+                  <td className={`border border-violet-200 p-1.5 text-right ${sub.perLotGain < 0 ? "text-red-700 dark:text-red-300" : ""}`}>
                     {sub.perLotGain < 0
                       ? `(${Math.abs(sub.perLotGain).toLocaleString()})`
                       : sub.perLotGain.toLocaleString()}
@@ -110,7 +110,7 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
                 </tr>
               ))}
               {/* 합계 행 */}
-              <tr className="bg-violet-200 font-bold">
+              <tr className="bg-violet-200 font-bold dark:bg-violet-800/50">
                 <td colSpan={3} className="border border-violet-400 p-1.5 text-right">
                   합계
                 </td>
@@ -121,7 +121,7 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
                   {detail.totalTransferPrice.toLocaleString()} − {detail.totalAcquisitionPrice.toLocaleString()}
                 </td>
                 <td colSpan={2} className="border border-violet-400 p-1.5 text-center">단기 {detail.shortTermGain.toLocaleString()} · 장기 {detail.longTermGain.toLocaleString()}</td>
-                <td className={`border border-violet-400 p-1.5 text-right ${detail.totalGain < 0 ? "text-red-700" : ""}`}>
+                <td className={`border border-violet-400 p-1.5 text-right ${detail.totalGain < 0 ? "text-red-700 dark:text-red-300" : ""}`}>
                   {detail.totalGain < 0
                     ? `(${Math.abs(detail.totalGain).toLocaleString()})`
                     : detail.totalGain.toLocaleString()}

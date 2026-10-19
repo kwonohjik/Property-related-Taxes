@@ -94,11 +94,11 @@ export function SpecificCorpMultiResultView({
     <>
       {/* ── 카드1: 특정법인의 이익 + 주주별 증여재산가액 표 ── */}
       <div
-        className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4"
+        className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40"
         data-testid="sc-multi-matrix"
       >
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-emerald-800">
+          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
             주주별 증여재산가액 (§45의5①)
           </p>
           <LawArticleModal legalBasis="상증법 §45의5" />
@@ -110,22 +110,22 @@ export function SpecificCorpMultiResultView({
               거래이익 자체가 roster 결과 어디에도 없었다. `corpProfit`이 0으로 clamp되면
               그 등식은 성립하지 않는다(예: 10억 − 15억 → 표시는 0). 세 항을 전부 드러낸다. */}
           <span>거래이익</span>
-          <span className="font-mono tabular-nums text-emerald-700" data-testid="sc-multi-benefit">
+          <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-300" data-testid="sc-multi-benefit">
             {formatKRW(multi.transactionBenefit)}
           </span>
-          <span className="text-emerald-600">− 법인세 안분</span>
-          <span className="font-mono tabular-nums text-emerald-700" data-testid="sc-multi-corp-tax">
+          <span className="text-emerald-600 dark:text-emerald-400">− 법인세 안분</span>
+          <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-300" data-testid="sc-multi-corp-tax">
             {formatKRW(multi.corpTaxApportioned)}
           </span>
-          <span className="text-emerald-600">→ 특정법인의 이익</span>
-          <span className="font-mono font-semibold tabular-nums text-emerald-800" data-testid="sc-multi-corp-profit">
+          <span className="text-emerald-600 dark:text-emerald-400">→ 특정법인의 이익</span>
+          <span className="font-mono font-semibold tabular-nums text-emerald-800 dark:text-emerald-200" data-testid="sc-multi-corp-profit">
             {formatKRW(multi.corpProfit)}
           </span>
         </div>
 
         <table className="mt-3 w-full text-sm">
           <thead>
-            <tr className="text-xs text-emerald-700 border-b border-emerald-200">
+            <tr className="text-xs text-emerald-700 border-b border-emerald-200 dark:text-emerald-300">
               <th className="py-1 text-left font-medium">성명</th>
               <th className="py-1 text-left font-medium">관계</th>
               <th className="py-1 text-right font-medium">주식수</th>
@@ -145,7 +145,7 @@ export function SpecificCorpMultiResultView({
                   className="border-t border-emerald-100 align-top"
                   data-testid={`sc-multi-donee-${i}`}
                 >
-                  <td className="py-1.5 pr-2 font-medium text-emerald-900">{displayName}</td>
+                  <td className="py-1.5 pr-2 font-medium text-emerald-900 dark:text-emerald-200">{displayName}</td>
                   <td className="py-1.5 pr-2 text-muted-foreground">
                     {RELATION_LABEL[d.relation]}
                   </td>
@@ -156,7 +156,7 @@ export function SpecificCorpMultiResultView({
                     {d.ownershipRatioPct.toFixed(1)}%
                     {d.indirectRatioPct > 0 && (
                       <span
-                        className="block text-caption text-violet-700"
+                        className="block text-caption text-violet-700 dark:text-violet-300"
                         data-testid={`sc-multi-ratio-split-${i}`}
                       >
                         직접 {d.directRatioPct.toFixed(1)} + 간접 {d.indirectRatioPct.toFixed(1)}
@@ -199,12 +199,12 @@ export function SpecificCorpMultiResultView({
       {/* ── 카드2: §45의5② 한도 표 (과세 수증자가 있을 때만) ── */}
       {taxableDonees.length > 0 && (
         <div
-          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4"
+          className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40"
           data-testid="sc-multi-limit"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold text-violet-800">
+              <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
                 증여세 한도 (§45의5②) — 수증자:
               </p>
               {/* 과세 수증자 선택 드롭다운 */}
@@ -212,7 +212,7 @@ export function SpecificCorpMultiResultView({
                 value={selectedDoneeIndex}
                 onChange={(e) => onSelectDonee(Number(e.target.value))}
                 data-testid="sc-multi-donee-selector"
-                className="rounded-md border border-violet-300 bg-white dark:bg-gray-900 px-2 py-0.5 text-sm text-violet-900 focus:outline-none focus:border-violet-400"
+                className="rounded-md border border-violet-300 bg-white dark:bg-gray-900 px-2 py-0.5 text-sm text-violet-900 focus:outline-none focus:border-violet-400 dark:text-violet-200"
               >
                 {taxableDonees.map((d, i) => (
                   <option key={i} value={i}>

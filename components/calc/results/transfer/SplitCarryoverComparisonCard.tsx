@@ -63,7 +63,7 @@ function PartBlock({ v, p }: { v: SplitCarryoverView; p: SplitCarryoverPartView 
           <InfoRow label={`필요경비 가산 [증여세 상당액 — §97의2①3호]${p.giftTaxLimitApplied ? " (한도 적용)" : ""}`} value={`+${fmt(p.giftTaxAdded)}`} sub />
         )}
         {p.donorCapexGuardApplied && (
-          <p className="pl-2 text-micro text-amber-700">* 양도일이 2024.1.1. 전이라 증여자 자본적지출은 0으로 처리했습니다 (§97의2①2호 시행일)</p>
+          <p className="pl-2 text-micro text-amber-700 dark:text-amber-300">* 양도일이 2024.1.1. 전이라 증여자 자본적지출은 0으로 처리했습니다 (§97의2①2호 시행일)</p>
         )}
       </div>
 
@@ -117,9 +117,9 @@ export function SplitCarryoverComparisonCard({ splitDetail }: { splitDetail: Spl
         ))}
       </div>
       <ToneCard tone="amber" bodyClassName="space-y-1">
-        <p className="text-caption font-semibold text-amber-900">확인 필요</p>
+        <p className="text-caption font-semibold text-amber-900 dark:text-amber-200">확인 필요</p>
         {notices.map((n, i) => (
-          <p key={i} className="text-caption text-amber-900" data-testid={`split-carryover-notice-${i}`}>
+          <p key={i} className="text-caption text-amber-900 dark:text-amber-200" data-testid={`split-carryover-notice-${i}`}>
             {n}
           </p>
         ))}

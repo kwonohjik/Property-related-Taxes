@@ -167,7 +167,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
       */}
       {imputedIsFavorable ? (
         /* 의제 결정세액 ≤ 일반 결정세액 → §18의2⑩ 공제 없음 */
-        <div className="rounded-md border border-sky-300 bg-sky-50/60 px-3 py-2 text-xs text-sky-800">
+        <div className="rounded-md border border-sky-300 bg-sky-50/60 px-3 py-2 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40">
           <p className="font-semibold">의제 §97의2④ 산식 적용 — §18의2⑩ 공제액 없음</p>
           <p className="mt-0.5">
             의제 결정세액({formatKRW(cgtUnderSection97_2_4)})이 일반 결정세액({formatKRW(cgtUnderSection97)})
@@ -177,7 +177,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
         </div>
       ) : (
         /* 의제 결정세액 > 일반 결정세액 → 강제 적용 + §18의2⑩ 공제 */
-        <div className="rounded-md border border-rose-300 bg-rose-50/60 px-3 py-2 text-xs text-rose-800 space-y-1">
+        <div className="rounded-md border border-rose-300 bg-rose-50/60 px-3 py-2 text-xs text-rose-800 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
           <p className="font-semibold">소법 §97의2④ 본문 — 의제 산식 강제 적용</p>
           <p>
             의제 결정세액({formatKRW(cgtUnderSection97_2_4)})이 일반 결정세액({formatKRW(cgtUnderSection97)})보다 높습니다.
@@ -191,7 +191,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
 
       {/* 사후관리 추징 연동 (§18의2⑩) — creditAmount를 시뮬레이터에 prefill (PR-5) */}
       {creditAmount > 0 && (
-        <div className="rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-800 space-y-1">
+        <div className="rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-800 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
           <p className="font-semibold">가업상속 사후관리 추징과 연동 (§18의2⑩)</p>
           <p>
             이 양도세 상당액 {formatKRW(creditAmount)}은 가업상속공제 사후관리 추징세액에서
@@ -199,7 +199,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
           </p>
           <Link
             href={`/calc/family-business-postmgmt?cgt=${creditAmount}`}
-            className="inline-block font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900"
+            className="inline-block font-medium text-emerald-700 underline underline-offset-2 hover:text-emerald-900 dark:text-emerald-300"
           >
             가업상속 사후관리 시뮬레이터에서 추징세액 계산 →
           </Link>

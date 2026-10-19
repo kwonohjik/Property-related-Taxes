@@ -118,7 +118,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
       <div className="rounded border border-violet-200 bg-violet-50/80 dark:border-violet-800/30 dark:bg-violet-950/30 p-2.5 space-y-1">
         <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">요건 판정</p>
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium ${detail.eligibility.passed ? "text-emerald-700" : "text-rose-700"}`}>
+          <span className={`text-xs font-medium ${detail.eligibility.passed ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>
             {detail.eligibility.passed ? "✓ 요건 충족" : "✗ 요건 미충족"}
           </span>
         </div>
