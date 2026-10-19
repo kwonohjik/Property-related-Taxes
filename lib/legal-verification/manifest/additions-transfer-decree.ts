@@ -566,7 +566,14 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER_DECREE.NBL_FOREST",
     citation: "소득세법 시행령 §168의9",
-    keywords: ["산림보호구역", "채종림", "산림경영계획인가를 받아 시업", "공원자연보존지구"],
+    keywords: [
+      "산림보호구역",
+      "채종림",
+      "산림경영계획인가를 받아 시업",
+      "공원자연보존지구",
+      // ③7호 — 축 B 지분 상속 3년 판정(KoreanLaw 현행 본문 MST 290841, 2026-10-19 조회)
+      "상속받은 임야로서 상속개시일부터 3년이 경과하지 아니한 임야",
+    ],
     keywordMode: "ALL",
   },
   {
@@ -577,6 +584,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "초지",
       "축산용 토지의 기준면적",
       "녹지지역 및 개발제한구역",
+      // ②1호 — 축 B 지분 상속 3년 판정(KoreanLaw 현행 본문 MST 290841, 2026-10-19 조회)
+      "상속받은 목장용지로서 상속개시일부터 3년이 경과하지 아니한 것",
     ],
     keywordMode: "ALL",
   },

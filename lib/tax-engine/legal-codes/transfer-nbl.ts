@@ -73,8 +73,12 @@ export const NBL = {
   FOREST_PUBLIC:                  "소득세법 시행령 §168조의9 ①",
   FOREST_RESIDENCE:               "소득세법 시행령 §168조의9 ②",
   FOREST_BUSINESS:                "소득세법 시행령 §168조의9 ③",
+  /** ③7호 — 상속받은 임야로서 상속개시일부터 3년이 경과하지 아니한 임야 */
+  FOREST_INHERIT_3Y:              "소득세법 시행령 §168조의9 ③ 7호",
   PASTURE:                        "소득세법 시행령 §168조의10",
   PASTURE_RELATED:                "소득세법 시행령 §168조의10 ②",
+  /** ②1호 — 상속받은 목장용지로서 상속개시일부터 3년이 경과하지 아니한 것 */
+  PASTURE_INHERIT_3Y:             "소득세법 시행령 §168조의10 ② 1호",
   PASTURE_AREA:                   "소득세법 시행령 §168조의10 ③",
   PASTURE_URBAN:                  "소득세법 시행령 §168조의10 ④",
   PASTURE_URBAN_GRACE:            "소득세법 시행령 §168조의10 ⑤",
