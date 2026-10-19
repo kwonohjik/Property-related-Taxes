@@ -41,7 +41,7 @@ import { emitPenaltySteps } from "./transfer-tax-helpers";
 import { resolveLTHDStartDate } from "./transfer-tax-finalize";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
-import { highValueExcessRulingNoticeText, laterLandExemptNotice, expropriationLaterLandNotices, isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
+import { highValueExcessRulingNoticeText, laterLandExemptNotice } from "./transfer-tax-appurtenant-land";
 import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDetail, toNonBusinessLandPart, resolveClause5Tax, buildRentalHighValueExcessRuling } from "./transfer-tax-rental-housing-nbl-split";
 import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
 import { applyRentalHousingReductions } from "./transfer-tax-rental-housing-reductions";
@@ -200,12 +200,9 @@ export function runRentalHousingExceptionStep(
   const nbl = splitAppurtenantExcess(effectiveInput, splitDetail, transferGain);
   // 나중 취득 부수토지가 보유요건에 못 미치는 경우(G-3)도 같다 — §155⑳은 주택 수만 의제하고 비과세 범위는 §154①이 정하므로, 일반 경로
   // (`applyHousingLandExclusions`)와 같은 술어(`isLaterAcquiredLandExemptExcluded`)로 그 토지분을 특례 대상 주택분에서 떼어 전액 과세한다.
-  // A 시나리오(거주주택 양도 — 비과세 범위가 §154① 그대로)에 한한다. B(직전거주주택보유주택)는 §161 기준시가 안분이 비과세 범위를 정하는 별개 산식이라
-  // 나중 취득 토지분을 그 안분에 넣을지 뺄지 정할 근거가 없어 종전 계산을 유지한다(결정 필요 — 보고).
-  const laterLand =
-    effectiveInput.rentalHousingException!.scenario === "A"
-      ? splitLaterAcquiredLand(effectiveInput, splitDetail, nbl?.gain ?? 0)
-      : null;
+  // B(직전거주주택보유주택)도 같다 — 그 토지분을 떼고 나머지에만 §161 기준시가 안분을 적용한다(1주택 코드 리뷰 별건 ⑦ · 사용자 결정 2026-10-19
+  // 「일반 경로와 맞춰 토지분 제외」 · 근거 집행기준 89-154-20 「주택 및 그에 딸린 토지를 각각 2년 이상 보유」). §161과 결합한 정면 해석은 없어 아래에서 확인 필요를 고지한다.
+  const laterLand = splitLaterAcquiredLand(effectiveInput, splitDetail, nbl?.gain ?? 0);
   const housingGain = laterLand ? laterLand.housingGain : transferGain - (nbl?.gain ?? 0);
   // 고가주택(A2) + 배율 초과 — 단일 주택과 같은 재산세제과-915 회신 방식(초과분을 안분 전에 떼어낸 «나머지»를 다시 안분하면 초과분이 이중으로 빠진다).
   // A 시나리오만이다 — B(§161 안분)와의 결합은 근거가 없어 종전 계산을 유지하고 아래에서 고지한다.
@@ -316,20 +313,17 @@ export function runRentalHousingExceptionStep(
         "이 경우 회신 방식과 같은 영 §161 안분을 합치는 순서를 정할 근거를 확인하지 못해, 배율 초과분을 안분 전에 떼어낸 주택분에 §161②를 적용하는 방식으로 계산했습니다 — 확인이 필요합니다"
       : undefined;
   // T-7(나중 상속 토지분 제외)·5A(수용 단서로 나중 취득 토지분 비과세) 고지 — 일반 경로와 같은 함수·문구. 특례가 적용된 결과는 비과세·부분비과세다.
-  // B는 나중 취득 토지분을 제외하지 않으므로 «제외했습니다» 고지(T-7)는 사실과 다르다 — B는 그 토지분이 §161 안분에 들어갔다는 아래 B 고지만 낸다.
-  //   5A(수용 단서로 보유요건 미달 토지분도 비과세로 보았다)는 B가 그 토지분을 주택과 함께 §161 안분에 넣는 처리와 어긋나지 않아 그대로 낸다(T-7·5A는 G-3 성립·불성립으로 갈려 동시에 나지 않는다).
-  const laterLandNotice = isPhrpScenarioId(rhe.scenarioId)
-    ? expropriationLaterLandNotices(effectiveInput)[0]
-    : (laterLandExemptNotice(effectiveInput, splitDetail, true) ?? undefined);
-  // B(직전거주주택보유주택)는 나중 취득 부수토지분을 비과세에서 떼지 않고 §161 기준시가 안분에 그대로 넣는다(종전 계산 유지 — 세액 불변). 일반 경로와 다른 처리라는 사실만 알린다.
+  // B도 나중 취득 토지분을 제외하므로(별건 ⑦) A와 같은 고지를 낸다(T-7·5A는 G-3 성립·불성립으로 갈려 동시에 나지 않는다).
+  const laterLandNotice = laterLandExemptNotice(effectiveInput, splitDetail, true) ?? undefined;
+  // B — 그 토지분을 떼고 나머지에만 §161 안분을 적용한 결합은 정면 해석이 없다(별건 ⑦ 해석례 검색 2026-10-19) — 확인 필요.
   const laterLandPhrpNotice =
-    isPhrpScenarioId(rhe.scenarioId) && splitDetail && isLaterAcquiredLandExemptExcluded(effectiveInput)
+    isPhrpScenarioId(rhe.scenarioId) && laterLand
       ? (() => {
           const held = calculateHoldingPeriod(effectiveInput.landAcquisitionDate!, effectiveInput.transferDate);
           return (
-            `주택보다 나중에 취득한 부수토지(보유 ${held.years}년 ${held.months}개월)는 「소득세법 시행령」 제154조 제1항 보유요건에 못 미치지만, ` +
-            `직전거주주택보유주택(§155⑳ 시나리오 B) 계산은 이 토지분을 비과세에서 제외하지 않고 §161 기준시가 안분 대상에 주택과 함께 넣었습니다 — ` +
-            `일반 경로는 이 토지분을 비과세에서 제외하고 안분 없이 전액 과세하므로 세액이 다를 수 있습니다 — 확인 필요`
+            `직전거주주택보유주택(§155⑳ 시나리오 B) 계산도 일반 경로와 같이, 주택보다 나중에 취득해 「소득세법 시행령」 제154조 제1항 보유요건에 못 미치는 ` +
+            `부수토지분(보유 ${held.years}년 ${held.months}개월)을 비과세에서 제외해 전액 과세하고 나머지 주택분에만 §161 기준시가 안분을 적용했습니다 — ` +
+            `이 토지분과 §161 안분의 결합을 정면으로 다룬 해석은 확인하지 못했습니다 — 확인 필요`
           );
         })()
       : undefined;
