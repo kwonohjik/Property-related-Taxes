@@ -138,15 +138,18 @@ describe("R-2 split 감면 파트 — 그 파트 행이 받은 차손을 그 파
 });
 
 describe("단건은 바뀌지 않는다 — 파트 차손은 단건 엔진이 이미 파트 안에서 통산한 B를 싣는다", () => {
-  it("토지 파트 333,000,000 + 건물 파트 −50,000,000: B 283,000,000 · 감면 11,220,000 = 다건(자산 1건)", () => {
+  // 2026-10-19 — 건물(2021-09-20, 1년 6개월) 차손을 토지에서 공제한 뒤(영 §167의2①) 토지 파트는 기본세율로 판정한다.
+  //   종전에는 자산 전체에 건물 단기세율 40%(산출세액 112,200,000 · 감면 11,220,000)를 적용했다.
+  it("토지 파트 333,000,000 + 건물 파트 −50,000,000: B 283,000,000 · 산출세액 86,650,000 · 감면 8,665,000 = 다건(자산 1건)", () => {
     const P = baseTransferInput({
       ...split(650_000_000), acquisitionPrice: 600_000_000, buildingAcquisitionPrice: 400_000_000,
     } as Partial<TransferTaxInput>);
     const s = calculateTransferTax(P, rates);
     expect(s.publicExpropriationDetail?.partWise?.eligibleIncome).toBe(283_000_000);
-    expect(s.reductionAmount).toBe(11_220_000);
+    expect(s.calculatedTax).toBe(86_650_000);
+    expect(s.reductionAmount).toBe(8_665_000);
     const r = agg([P]);
-    expect(r.reductionAmount).toBe(11_220_000);
+    expect(r.reductionAmount).toBe(8_665_000);
     expect(r.properties[0].eligibleIncomeAfterLoss).toBeUndefined();
   });
 });

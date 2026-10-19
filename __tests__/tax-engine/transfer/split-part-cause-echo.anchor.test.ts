@@ -238,12 +238,13 @@ describe("E-8 — partRateBasisApplied: 파트 기산일로 세율을 실제로 
   it("파트별 세율이 갈린 경우 → true", () => {
     expect(flag(asset({ landAcquisitionCause: "gift" }))).toBe(true);
   });
-  it("건물(2025-03-01)분 결손 → 게이트로 자산 단위 단기세율 → false (토지 echo는 피상속인 기산이지만 계산에 안 쓰였다)", () => {
+  it("건물(2025-03-01)분 결손 → 토지에서 공제(영 §167의2①) 후 파트 판정 → true (주택 부수토지 max 규칙으로 두 파트 세율이 같아 자산 단위로 접혀 세액 178,500,000 불변)", () => {
     const r = calculateTransferTax(
       asset({ ...inherit("2000-01-01"), acquisitionDate: D("2025-03-01"), buildingAcquisitionPrice: 600_000_000 }),
       makeMockRates(),
     );
-    expect(r.splitDetail!.partRateBasisApplied).toBe(false);
+    expect(r.splitDetail!.partRateBasisApplied).toBe(true);
+    expect(r.calculatedTax).toBe(178_500_000);
     expect(r.splitDetail!.land.rateBasisRule).toBe("decedent");
     expect(r.shortTermNote).toContain("2년 미만");
   });

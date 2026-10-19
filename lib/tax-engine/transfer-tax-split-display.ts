@@ -116,7 +116,7 @@ export function splitRateBasisDateTitle(p: Pick<SplitPartResult, "rateHoldingAgg
 /**
  * 구주택 멸실·신축 통산(해석 (5)) **표시 게이트** — 결과 4뷰(카드·상세명세서·신고서·PDF)가 통산 구간 줄과 「환산」 날짜 표기·제목을 낼지 정하는 **유일한 판정**이다.
  *
- * 통산 echo(`rateHoldingAggregation`)가 있어도 엔진이 파트별 세율 판정을 거치지 않았으면(`partRateBasisApplied !== true` — 건물 파트 양도차손·세율 특칙·§155⑳ 특례 등
+ * 통산 echo(`rateHoldingAggregation`)가 있어도 엔진이 파트별 세율 판정을 거치지 않았으면(`partRateBasisApplied !== true` — 세율 특칙·§155⑳ 특례 등
  * 으로 자산 단위 세율) 통산은 세율에 닿지 않았다. 구간을 풀어 보이면 화면이 실제 계산과 어긋난다 — 「세율 기산일」 행(`rateBasisShown`)과 같은 D1-3 규칙이다.
  * 「환산」 날짜 표기·제목(`splitRateBasisDateText`·`splitRateBasisDateTitle`)은 `rateBasisShown`(= 같은 플래그) 안에서만 불리고, 파트 요약(`summarizeSplitGain().parts`)의 통산 echo도 이 플래그로 게이트된다.
  * 다건은 자산 breakdown의 `splitDetail` 플래그가 최종 판정으로 덮이므로(`transfer-tax-aggregate-group-tax.ts`) 이 게이트가 최종 플래그를 읽는다.

@@ -2,7 +2,7 @@
  * anchor: 구주택 멸실·신축 통산 — 파트별 세율 판정을 거치지 않고 자산 단위 세율로 후퇴한 경우(`partRateBasisApplied !== true`)의 고지
  *
  * 결함(2026-10-19 실측): 통산 고지(`landRebuildRateNotice`)가 `partRateBasisApplied`와 무관하게 «세율 보유기간을 통산한 N개월로 판정했습니다»를 냈다.
- * 건물 파트 양도차손이면 `evaluateSplitPartTax`가 자산 단위 세율로 후퇴하고(건물 기산일 하나로 계산) 통산은 세율에 닿지 않는데도 화면·고지가 통산을 말했다.
+ * (종전에는 건물 파트 양도차손도 후퇴 사유였다 — 2026-10-19 「소득세법 시행령」 §167의2① 파트 통산으로 바뀌어 B는 적용 사례가 됐다.)
  * §155⑳ 특례 적용 자산은 파트별 세율 판정을 거치지 않는 모델이라(`resolveRentalHousingSplitTax`) 같은 어긋남이 있었다(이 경로는 고지 자체가 없었다).
  *
  * 수정: 고지·표시가 같은 플래그를 읽는다 — 적용 고지는 `partRateBasisApplied === true`일 때만, 아니면 숫자 구간을 주장하지 않는 대체 고지 1건. 세액은 불변.
@@ -121,35 +121,43 @@ describe("A) 정상 적용(파트별 세율 판정) — 적용 고지 그대로,
   });
 });
 
-describe("B) 건물 파트 결손 후퇴 — 통산이 세율에 닿지 않는다: 대체 고지 1건 · 적용 고지 없음 · 세액 불변", () => {
+describe("B) 건물 파트 결손 — 영 §167의2①로 토지에서 공제한 뒤 파트별 세율 판정: 통산이 세율에 닿는다 · 적용 고지 · 대체 고지 없음", () => {
   const withRb = NORMAL({ ...LOSS, landRebuildPriorHouse: REBUILD });
   const withoutRb = NORMAL(LOSS);
 
-  it("FB-B1 단건: 플래그 false · echo는 남음 · 세액 320,950,000 = 입력 없음 · 대체 고지 정확히 1건 · 적용 고지 없음 · 숫자 구간 주장 없음", () => {
+  it("FB-B1 단건: 플래그 true · 건물 차손 9,000,000을 토지에서 공제 · 토지 기본세율 → 157,460,000 (통산 없으면 두 파트 70%라 접혀 320,950,000)", () => {
     const r = calculateTransferTax(withRb, rates);
     const off = calculateTransferTax(withoutRb, rates);
-    expect(r.splitDetail?.partRateBasisApplied).toBe(false);
+    expect(r.splitDetail?.partRateBasisApplied).toBe(true);
     expect(r.splitDetail?.land.rateHoldingAggregation?.totalMonths).toBe(25);
-    expect(r.calculatedTax).toBe(320_950_000);
-    expect(r.calculatedTax).toBe(off.calculatedTax);
-    expect(r.totalTax).toBe(off.totalTax);
-    expect(applyNotice(r.warnings)).toEqual([]);
-    expect(r.warnings?.filter((w) => w === LAND_REBUILD_NOT_APPLIED_NOTICE)).toHaveLength(1);
-    expect(LAND_REBUILD_NOT_APPLIED_NOTICE).toContain("건물 파트 양도차손 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다");
-    expect(LAND_REBUILD_NOT_APPLIED_NOTICE.endsWith("확인 필요")).toBe(true);
-    expect(LAND_REBUILD_NOT_APPLIED_NOTICE).not.toMatch(/\d+개월/);
+    expect(r.calculatedTax).toBe(157_460_000);
+    expect(off.calculatedTax).toBe(320_950_000);
+    expect(applyNotice(r.warnings)).toHaveLength(1);
+    expect((r.warnings ?? []).some((w) => w === LAND_REBUILD_NOT_APPLIED_NOTICE)).toBe(false);
+    const step = r.steps.find((x) => x.formula.includes("파트별 세율"))?.formula ?? "";
+    expect(step).toContain("건물 양도차손 9,000,000을 토지 양도소득금액에서 공제");
+    // 과세표준이 0인 건물 파트의 70%는 쓰이지 않았다 — 산식 머리 세율은 토지 파트 세율
+    expect(step.startsWith("과세표준 458,500,000 × 세율 70%")).toBe(false);
     expect((off.warnings ?? []).some((w) => w.includes("통산"))).toBe(false);
   });
 
-  it("FB-B2 다건: 최종 플래그 false · 대체 고지 `[a]` 1건 · 적용 고지 없음 · 총세액 불변(자산 1건·2건)", () => {
+  it("대체 고지 문구 — 차손은 후퇴 사유로 적지 않는다 · 숫자 구간 주장 없음 · 확인 필요로 끝난다", () => {
+    expect(LAND_REBUILD_NOT_APPLIED_NOTICE).not.toContain("양도차손");
+    expect(LAND_REBUILD_NOT_APPLIED_NOTICE).toContain("파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다");
+    expect(LAND_REBUILD_NOT_APPLIED_NOTICE.endsWith("확인 필요")).toBe(true);
+    expect(LAND_REBUILD_NOT_APPLIED_NOTICE).not.toMatch(/\d+개월/);
+  });
+
+  it("FB-B2 다건: 최종 플래그 true · 적용 고지 `[a]` 1건 · 대체 고지 없음 · 자산 1건이면 단건과 같은 산출세액", () => {
+    const single = calculateTransferTax(withRb, rates);
     for (const others of [[], [item(second(), "b")]]) {
       const a = multi(2025, [item(withRb, "a"), ...others]);
       const off = multi(2025, [item(withoutRb, "a"), ...others]);
-      expect((a.properties[0] as unknown as { splitDetail: { partRateBasisApplied?: boolean; land: { rateHoldingAggregation?: unknown } } }).splitDetail.partRateBasisApplied).toBe(false);
-      expect(applyNotice(a.warnings)).toEqual([]);
-      expect(a.warnings.filter((w) => w === `[a] ${LAND_REBUILD_NOT_APPLIED_NOTICE}`)).toHaveLength(1);
-      expect(a.totalTax).toBe(off.totalTax);
-      expect(a.calculatedTax).toBe(off.calculatedTax);
+      expect((a.properties[0] as unknown as { splitDetail: { partRateBasisApplied?: boolean } }).splitDetail.partRateBasisApplied).toBe(true);
+      expect(applyNotice(a.warnings)).toHaveLength(1);
+      expect(a.warnings.some((w) => w === `[a] ${LAND_REBUILD_NOT_APPLIED_NOTICE}`)).toBe(false);
+      expect(a.calculatedTax).toBeLessThan(off.calculatedTax);
+      if (others.length === 0) expect(a.calculatedTax).toBe(single.calculatedTax);
     }
   });
 });
