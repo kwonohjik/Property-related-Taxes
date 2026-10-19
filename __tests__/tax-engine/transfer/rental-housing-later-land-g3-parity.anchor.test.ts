@@ -16,7 +16,7 @@
  *   있는 별건이며 이 수정이 다루지 않았다.
  */
 import { describe, it, expect } from "vitest";
-import { calculateTransferTax, parseRatesFromMap, calcTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { calculateTransferTax, parseRatesFromMap, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { resolveSplitAwareTax } from "@/lib/tax-engine/transfer-tax-split-rate";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
@@ -148,17 +148,66 @@ describe("§155⑳ A — 나중 취득 부수토지(G-3): 특례 on = off", () =
     expect(`${reasonOn} ${reasonOff}`).not.toMatch(/유리|불리|절감|절세/);
   });
 
-  it("건물분 양도차손 — 토지 이익과 상쇄하지 않는다(일반 경로와 같다): 건물 양도가 1.6억 · 취득가 2.5억(−90,000,000) → on = off", () => {
+  it("건물분 양도차손 — 12억 초과 과세분만 토지분에서 공제한다(일반 경로와 같다 · 계획서 P2 Q-1): 건물 양도가 − 취득가 = −90,000,000 → on = off", () => {
+    // 8억(A1) 건물 전액 비과세 → 차손도 0 · 15억 −90,000,000 × 3억/15억 = −18,000,000 · 20억 × 8억/20억 = −36,000,000 (차손에는 장기보유특별공제 없음)
+    const expected: Record<number, number> = { 800_000_000: 0, 1_500_000_000: -18_000_000, 2_000_000_000: -36_000_000 };
     for (const S of [800_000_000, 1_500_000_000, 2_000_000_000]) {
       const over = { buildingAcquisitionPrice: 250_000_000 + Math.floor(S * 0.2) - 160_000_000 };
       const on = calculateTransferTax(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA, over }), rates);
       const off = calculateTransferTax(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, over }), rates);
-      expect(on.splitDetail!.building.gain, `${S} 건물 양도차손`).toBeLessThan(0);
+      expect(on.splitDetail!.building.gain, `${S} 건물 양도차손`).toBe(-90_000_000);
       expect(on.splitDetail!.laterLandPart!.gain, `${S} 토지분 = 토지 양도차익 전액`).toBe(on.splitDetail!.land.gain);
-      expect(on.rentalHousingExceptionDetail!.taxableGain, `${S} 특례 대상 주택분(음수 0)`).toBe(0);
+      expect(on.rentalHousingExceptionDetail!.taxableGain, `${S} 특례 대상 주택분 = 차손의 과세분`).toBe(expected[S]);
+      expect(on.taxableGain, `${S} 과세대상 = 토지분 + 건물 차손 과세분`).toBe(on.splitDetail!.laterLandPart!.gain + expected[S]);
       expect(on.totalTax, `${S} 총세액`).toBe(off.totalTax);
       expect(on.taxBase, `${S} 과세표준`).toBe(off.taxBase);
+      // 다건 1건 = 단건 — 슬롯의 건물분이 음수여도 자산 단위로 후퇴하지 않는다
+      const agg = aggOf("2024-06-01", [asItem(house(S, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA, over }), "p")]);
+      expect(agg.totalTax, `${S} 다건`).toBe(on.totalTax);
     }
+    // 15억 독립 도출 — 토지분 10억 − 차손 1,800만(다른 세율 파트로 안분 — 토지분만 이익) − 기본공제 250만, 단기 70%
+    const r = calculateTransferTax(
+      house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA, over: { buildingAcquisitionPrice: 390_000_000 } }),
+      rates,
+    );
+    expect(r.taxBase).toBe(1_000_000_000 - 18_000_000 - 2_500_000);
+    expect(r.calculatedTax).toBe(Math.floor((1_000_000_000 - 18_000_000 - 2_500_000) * 0.7));
+  });
+
+  it("배율 초과 + 고가주택(재산세제과-915 회신 방식) 특례 경로도 건물 차손의 과세분을 남긴다 — on = off (단건 · 다건 1건)", () => {
+    let cells = 0;
+    for (const S of [1_500_000_000, 2_000_000_000, 3_000_000_000]) {
+      for (const bld of [90_000_000, 1_000_000_000]) {
+        const over = { buildingAcquisitionPrice: S - Math.floor(S * 0.8) + bld };
+        const on = calculateTransferTax(house(S, { landAcq: "2008-07-01", T: "2024-06-01", area: 660, rhe: rentalA, over }), rates);
+        const off = calculateTransferTax(house(S, { landAcq: "2008-07-01", T: "2024-06-01", area: 660, over }), rates);
+        const tag = `${S} 건물 차손 ${bld}`;
+        if (on.rentalHousingExceptionDetail?.applied !== true) continue;
+        expect(on.rentalHousingExceptionDetail.formulaTrace.highValueExcessRuling, `${tag} 회신 방식`).toBeDefined();
+        // 건물분 과세 양도차익 = 차손 × (S − 12억)/S (내림)
+        expect(on.rentalHousingExceptionDetail.formulaTrace.highValueExcessRuling!.buildingTaxableGain, tag).toBe(
+          Math.floor((-bld * (S - 1_200_000_000)) / S),
+        );
+        expect(on.totalTax, tag).toBe(off.totalTax);
+        expect(aggOf("2024-06-01", [asItem(house(S, { landAcq: "2008-07-01", T: "2024-06-01", area: 660, rhe: rentalA, over }), "p")]).totalTax, `${tag} 다건`).toBe(on.totalTax);
+        cells++;
+      }
+    }
+    expect(cells).toBeGreaterThanOrEqual(5);
+  });
+
+  it("B(§161 안분)는 건물 차손을 종전대로 0으로 보고 결합 고지에 그 사실을 덧붙인다 — 확인 필요", () => {
+    const over = { buildingAcquisitionPrice: 390_000_000 };
+    const r = calculateTransferTax(house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB, over }), rates);
+    expect(r.rentalHousingExceptionDetail!.scenarioId).toBe("RH-B2");
+    expect(r.rentalHousingExceptionDetail!.taxableGain).toBe(0);
+    const w = (r.warnings ?? []).filter((x) => x.includes("시나리오 B) 계산도 일반 경로와 같이"));
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain("건물분 양도차손 90,000,000도 §161 안분과 결합하는 방법을 정한 근거를 확인하지 못해 0으로 계산했습니다 — 확인 필요");
+    expect(w[0]).not.toMatch(/유리|불리|절감|절세/);
+    // 차손이 없으면 덧붙이지 않는다
+    const plain = calculateTransferTax(house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalB }), rates);
+    expect((plain.warnings ?? []).some((x) => x.includes("건물분 양도차손"))).toBe(false);
   });
 
   it("T-7 — 나중에 상속받은 토지: 일반 경로와 같은 제외 고지가 특례 경로에도 나온다 · 총세액 일치", () => {
@@ -316,28 +365,47 @@ describe("§155⑳ A × G-3 — 다건 = 단건 (격자)", () => {
     expect(parts).toBe(true);
   });
 
-  it("다건 파트 역산 — 슬롯이 어긋나 건물분이 음수가 되면 파트 echo 없이 자산 단위로 후퇴한다(불변식 안전망, 현 입력 경로에서는 도달하지 않는다)", () => {
+  it("다건 파트 역산 — 슬롯의 건물분(= 슬롯 − 토지분 − 배율 초과분)이 음수면 그 차손을 토지분에서 공제한다(계획서 P2 Q-1) · 파트 합이 0이면 자산 단위", () => {
     const input = house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe: rentalA });
     const r = calculateTransferTax(input, rates);
     const later = r.splitDetail!.laterLandPart!;
     const laterGross = later.gain - later.longTermDeduction;
     const parsedRates = parseRatesFromMap(rates);
     const ctx = (slot: number) => ({
-      taxBase: r.taxBase, transferIncome: r.taxableGain, basicDeduction: r.basicDeduction, splitDetail: r.splitDetail,
+      taxBase: Math.max(0, slot - r.basicDeduction), transferIncome: slot, basicDeduction: r.basicDeduction, splitDetail: r.splitDetail,
       parsedRates, taxRateInput: input, rentalHousingTaxableIncome: slot,
     });
     // 정상 슬롯(= 건물분 + 토지분) — 파트 3개가 아니라 토지분·건물분 2파트를 낸다
     const ok = resolveSplitAwareTax(ctx(r.taxableGain));
     expect(ok.splitPartDetail?.parts.map((p) => p.kind).sort()).toEqual(["building", "land"]);
     expect(ok.calculatedTax).toBe(r.calculatedTax);
-    // 슬롯 = 토지분 − 1 → 건물분 −1: 파트를 만들지 않고 자산 단위 세액
-    const bad = resolveSplitAwareTax(ctx(laterGross - 1));
-    expect(bad.splitPartDetail).toBeUndefined();
-    expect(bad.partRateBasisApplied).toBe(false);
-    expect(bad.calculatedTax).toBe(calcTax(r.taxBase, parsedRates, input).calculatedTax);
-    // 슬롯 0
+    // 슬롯 = 토지분 − 1 → 건물분 −1: 파트를 유지하고 그 1원을 토지분에서 공제한다(세율이 달라 영 §167의2①2호)
+    const neg = resolveSplitAwareTax(ctx(laterGross - 1));
+    expect(neg.partRateBasisApplied).toBe(true);
+    expect(neg.splitPartDetail?.lossOffset).toEqual([{ from: "building", to: "land", amount: 1, scope: "other_group" }]);
+    // 슬롯 0 — 파트 합 0이라 자산 단위
     const zero = resolveSplitAwareTax(ctx(0));
     expect(zero.splitPartDetail).toBeUndefined();
     expect(zero.partRateBasisApplied).toBe(false);
+  });
+
+  it("다른 자산과 함께 신고 — 건물 차손의 과세분은 같은 세율 자산에서 먼저 공제(영 §167의2①1호): 특례 on = off · 입력 순서 무관", () => {
+    const other = baseTransferInput({
+      propertyType: "land", transferPrice: 400_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2019-01-10"), transferDate: D("2024-06-01"),
+      isOneHousehold: false, householdHousingCount: 2, expenses: 0, annualBasicDeductionUsed: 0,
+    } as Partial<TransferTaxInput>);
+    const over = { buildingAcquisitionPrice: 390_000_000 };
+    const tax = (rhe?: unknown) => {
+      const h = house(1_500_000_000, { landAcq: "2023-10-01", T: "2024-06-01", area: 300, rhe, over });
+      const a = aggOf("2024-06-01", [asItem(h, "h"), asItem(other, "o")]);
+      const b = aggOf("2024-06-01", [asItem(other, "o"), asItem(h, "h")]);
+      expect(a.totalTax).toBe(b.totalTax);
+      return a;
+    };
+    const on = tax(rentalA);
+    const off = tax(undefined);
+    expect(on.totalTax).toBe(off.totalTax);
+    expect(on.lossOffsetTable).toEqual([{ fromPropertyId: "h", fromPart: "building", toPropertyId: "o", amount: 18_000_000, scope: "same_group" }]);
+    expect(on.lossOffsetTable).toEqual(off.lossOffsetTable);
   });
 });

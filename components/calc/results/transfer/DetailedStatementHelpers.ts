@@ -568,13 +568,14 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => p.incomeAfterOffset,
-          (p) =>
-            buildIncomeFormula(
+          (p) => {
+            const given = (aggregate?.aggregated.lossOffsetTable ?? []).filter((row) => row.fromPropertyId === p.propertyId);
+            return buildIncomeFormula(
               p,
-              (aggregate?.aggregated.lossOffsetTable ?? [])
-                .filter((row) => row.fromPropertyId === p.propertyId)
-                .reduce((sum, row) => sum + row.amount, 0),
-            ),
+              given.reduce((sum, row) => sum + row.amount, 0),
+              [...new Set(given.flatMap((row) => (row.fromPart ? [row.fromPart] : [])))],
+            );
+          },
         )
       : undefined,
   });

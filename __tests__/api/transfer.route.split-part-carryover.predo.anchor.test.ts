@@ -551,7 +551,10 @@ describe("SPCO-T 목표 — C 주택 통째 이월과세 + 증여자 토지·건
 });
 
 describe("SPCO-T 목표 — 순서 의존 사례 (V-8 확인 필요)", () => {
-  it("SPCO-T9 단기 구간에서 두 파트가 서로를 가린다: 양도 2023-09-30, 증여자 토지 2022-07-01(5천만)·건물 2022-09-01(6.6억), 증여 평가 토지 2.4억/건물 6.6억(증여세 0) → T00=208,250,000 · T01=320,250,000 · T10=341,250,000 · T11=292,500,000. 안정 구성이 {01,10} 둘이며 순차 고정점(토지→건물)은 01 = 320,250,000 (건물 우선이면 341,250,000)", async () => {
+  // 2026-10-19 P2 A1 — 종전 T01=320,250,000은 토지 배제·건물 적용 조합에서 토지 수증일이 건물 기산보다 늦어 G-3(나중 취득 부수토지) 경로를 타며
+  //   건물 차손(증여자 6.6억 · 양도 5억 = −1.6억)이 0으로 잘린 값이었다(T00은 같은 차손이 통산됐다). 고친 뒤 T01 = T00 = 208,250,000이고
+  //   안정 구성은 T10 하나다(토지 341,250,000 ≥ 208,250,000 → 적용 · 건물 292,500,000 < 341,250,000 → 배제). 순서 의존 사례는 SPCO-T9b로 옮겼다.
+  it("SPCO-T9 (A1 회귀) 양도 2023-09-30, 증여자 토지 2022-07-01(5천만)·건물 2022-09-01(6.6억), 증여 평가 토지 2.4억/건물 6.6억(증여세 0) → T00=208,250,000 · T01=208,250,000 · T10=341,250,000 · T11=292,500,000. 안정 구성 T10 하나 = 341,250,000 · 순서 의존 아님", async () => {
     const o = await post({
       ...C_NEW,
       transferDate: "2023-09-30",
@@ -560,9 +563,25 @@ describe("SPCO-T 목표 — 순서 의존 사례 (V-8 확인 필요)", () => {
       buildingCarryoverPart: { donorAcquisitionDate: "2022-09-01", donorAcquisitionPrice: 660_000_000 },
     });
     expect(o.status).toBe(200);
-    expect(o.r.determinedTax).toBe(320_250_000);
+    expect(o.r.determinedTax).toBe(341_250_000);
+    expect(o.r.splitDetail.land.carryover.judgment).toBe("applied");
+    expect(o.r.splitDetail.building.carryover.judgment).toBe("excluded");
+    expect(JSON.stringify(o.r).includes('"orderDependent":true')).toBe(false);
+  });
+
+  it("SPCO-T9b 두 파트가 서로를 가린다: 양도 2024-12-31, 증여자 토지 2022-07-01(3천만)·건물 2022-09-01(4.5억), 증여 평가 토지 2.4억/건물 6.6억(증여세 0) → T00=178,500,000 · T01=280,740,000 · T10=304,500,000 · T11=265,410,000. 안정 구성 {01,10} 둘 · 순차 고정점(토지→건물) 01 = 280,740,000 · 순서 의존 표지", async () => {
+    const o = await post({
+      ...C_NEW,
+      transferDate: "2024-12-31",
+      carryoverGiftEvent: EVENT({ giftTaxCalculated: 0, giftTaxBase: 900_000_000 }),
+      landCarryoverPart: LAND_PART({ donorAcquisitionDate: "2022-07-01", donorAcquisitionPrice: 30_000_000 }),
+      buildingCarryoverPart: { donorAcquisitionDate: "2022-09-01", donorAcquisitionPrice: 450_000_000 },
+    });
+    expect(o.status).toBe(200);
+    expect(o.r.determinedTax).toBe(280_740_000);
     expect(o.r.splitDetail.land.carryover.judgment).toBe("excluded");
     expect(o.r.splitDetail.building.carryover.judgment).toBe("applied");
+    expect(JSON.stringify(o.r).includes('"orderDependent":true')).toBe(true);
   });
 });
 

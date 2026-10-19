@@ -107,7 +107,9 @@ export function splitAppurtenantExcess(
  * §155⑳은 거주주택을 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」할 뿐이라 비과세 범위는 §154①이 정한다 — 일반 경로는 같은 술어
  * (`isLaterAcquiredLandExemptExcluded`)로 이 토지분을 12억 안분 없이 전액 과세한다(`applyHousingLandExclusions`). 특례가 주택 수 의제만 하고 이 범위를
  * 바꾸지 않으므로 특례 on/off가 같은 사실에서 같은 세액이 되려면 이 경로도 같은 술어로 토지분을 떼어야 한다.
- * 토지분이 빠진 뒤 특례(A1·A2)가 적용되는 주택분은 **건물분**뿐이다 — 일반 경로와 같이 건물 양도차익의 음수는 0으로 본다(토지 손실로 상쇄하지 않는다).
+ * 토지분이 빠진 뒤 특례(A1·A2)가 적용되는 주택분은 **건물분**뿐이다. 건물 차손은 일반 경로와 같이 그대로 넘긴다 — A1은 전액 비과세라 0, A2는 12억 초과 비율로
+ * 안분한 과세분만 남아 하류 파트 세율 판정이 이 토지분에서 공제한다(계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1 「과세분만 통산」).
+ * B(§161 기준시가 안분)는 차손과 §161 안분의 결합 근거를 확인하지 못해 종전대로 0으로 본다(호출부가 확인 필요를 고지한다).
  *
  * 장기보유특별공제는 토지 본래 보유연수(보유요건 미달 = 3년 미만)의 표1이라 0이다 — 일반 경로(`calcLongTermHoldingDeduction` split 분기)가 같은 값을 낸다.
  * 대상이 아니면 `null`(종전 경로 유지).
@@ -120,7 +122,7 @@ export interface LaterLandExcludedSplit {
   /** 토지분 양도소득금액 = gain − longTermDeduction */
   income: number;
   holdingYears: number;
-  /** 특례(A1·A2)가 적용되는 주택분 양도차익 = 건물분(음수는 0) */
+  /** 특례(A1·A2)가 적용되는 주택분 양도차익 = 건물분(B만 음수 0) */
   housingGain: number;
   step: CalculationStep | null;
 }
@@ -137,7 +139,8 @@ export function splitLaterAcquiredLand(
   const holdingYears = splitDetail.land.holdingYears;
   const longTermRate = calcTable1Rate(holdingYears);
   const longTermDeduction = applyRate(gain, longTermRate);
-  const housingGain = Math.max(0, splitDetail.building.gain);
+  const housingGain =
+    input.rentalHousingException?.scenario === "B" ? Math.max(0, splitDetail.building.gain) : splitDetail.building.gain;
   return {
     gain,
     longTermRate,
@@ -183,6 +186,19 @@ export function buildRentalPartRateDetail(
     building: { ...splitDetail.building, taxableGainAfterProration: housingIncome, longTermDeduction: 0 },
     nonBusinessLandPart,
   };
+}
+
+/**
+ * 다건 — §155⑳ 특례 G-3 자산의 슬롯(엔진이 싣는 과세대상 양도소득금액)을 파트로 되돌린 세율 판정 입력. G-3가 아니면 `undefined`.
+ * 건물분 = 슬롯 − 토지분 − 배율 초과분이고 음수일 수 있다(A2 건물 차손의 12억 초과 과세분 — 계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
+ * 다건 세율 판정(`resolveRentalHousingSplitTax`)과 차손 통산 파트 행(`transfer-tax-aggregate-asset-records.ts` `lossPartsOf`)이 같은 값을 쓴다.
+ */
+export function rentalLaterLandPartDetail(splitDetail: SplitGainResult | undefined, slot: number): SplitGainResult | undefined {
+  const later = splitDetail?.laterLandPart;
+  if (!splitDetail || !later) return undefined;
+  const nb = splitDetail.nonBusinessLandPart;
+  const housingIncome = slot - (later.gain - later.longTermDeduction) - (nb ? nb.gain - nb.longTermDeduction : 0);
+  return buildRentalPartRateDetail(splitDetail, { housingIncome, laterLand: later, nonBusinessLandPart: nb });
 }
 
 /** 배율 초과분 분리 결과 → 결과 echo(`splitDetail.nonBusinessLandPart`) 형태 */
@@ -354,7 +370,8 @@ export function resolveClause5TaxDetailed(args: Clause5Args): Clause5Detail {
  * §155⑳은 거주주택을 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」할 뿐이라 고가주택 안분(영 §160①)은 일반 1세대1주택과 같은 산식이다 —
  * 단일 주택 경로(`applyHousingLandExclusions`)와 **같은 leaf**(`highValueExcessLandTaxableGain`)·같은 안분 함수(`calcOneHouseProration`)를 쓴다.
  * 기준면적 이내 토지분 = max(0, 전체 부수토지 양도차익의 안분값 − 초과분 양도차익), 건물분 = 안분값. 초과분(`nbl.gain`)은 이 특례 밖(비사업용 토지 — 별도 파트)이다.
- * 토지·건물 양도차익은 분리 계산 결과(`splitDetail`)가 정한다 — 음수는 단일 경로와 같이 0으로 본다.
+ * 토지·건물 양도차익은 분리 계산 결과(`splitDetail`)가 정한다 — 단일 경로와 같이 토지 음수는 0(확인 필요)으로 보고, 건물 차손은 같은 비율로 안분해
+ * 과세분만 남긴다(12억 초과분 차손만 12억 초과분 양도차익과 통산 — 계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
  *
  * ⚠️ A 시나리오 전용이다. B 시나리오(§161 안분)와의 결합 순서는 법령·해석례에 근거가 없어 적용하지 않는다(호출부가 고지).
  */
@@ -366,7 +383,7 @@ export function buildRentalHighValueExcessRuling(
   const prorate = (gain: number) =>
     calcOneHouseProration(input.transferDate, gain, input.transferPrice, input.totalPropertyTransferPrice, input.burdenedGiftDenominator);
   const wholeLandGain = Math.max(0, splitDetail.land.gain);
-  const buildingGain = Math.max(0, splitDetail.building.gain);
+  const buildingGain = splitDetail.building.gain;
   const landTaxableGain = highValueExcessLandTaxableGain({ landGain: wholeLandGain, excessGain: nbl.gain, prorate });
   const buildingTaxableGain = prorate(buildingGain);
   return {

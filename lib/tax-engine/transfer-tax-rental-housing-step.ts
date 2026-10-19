@@ -324,7 +324,11 @@ export function runRentalHousingExceptionStep(
           return (
             `직전거주주택보유주택(§155⑳ 시나리오 B) 계산도 일반 경로와 같이, 주택보다 나중에 취득해 「소득세법 시행령」 제154조 제1항 보유요건에 못 미치는 ` +
             `부수토지분(보유 ${held.years}년 ${held.months}개월)을 비과세에서 제외해 전액 과세하고 나머지 주택분에만 §161 기준시가 안분을 적용했습니다 — ` +
-            `이 토지분과 §161 안분의 결합을 정면으로 다룬 해석은 확인하지 못했습니다 — 확인 필요`
+            `이 토지분과 §161 안분의 결합을 정면으로 다룬 해석은 확인하지 못했습니다` +
+            (splitDetail!.building.gain < 0
+              ? ` · 건물분 양도차손 ${(-splitDetail!.building.gain).toLocaleString()}도 §161 안분과 결합하는 방법을 정한 근거를 확인하지 못해 0으로 계산했습니다`
+              : "") +
+            ` — 확인 필요`
           );
         })()
       : undefined;

@@ -516,6 +516,11 @@ export interface GroupTaxResult {
 
 export interface LossOffsetRow {
   fromPropertyId: string;
+  /**
+   * 차손을 준 쪽이 토지·건물 분리 자산의 **파트**이면 그 파트 — 「[a 건물] → [b]」. 자산 한 행이면 없다.
+   * 토지·건물은 §102② 통산에서 각각의 자산이다(조세심판원 국심2007중3718) — 건물 차손이 다른 자산의 같은 세율 소득부터 공제된다(영 §167의2①).
+   */
+  fromPart?: "land" | "building" | "non_business_land";
   toPropertyId: string;
   amount: number;
   scope: "same_group" | "other_group";

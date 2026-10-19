@@ -630,8 +630,13 @@ export function applyHousingLandExclusions(args: {
   const unitShare = input.highValueExcessShare !== undefined && input.highValueExcessShare > 0 ? input.highValueExcessShare : undefined;
   if (!excess && !laterLand && unitShare === undefined) return null;
 
-  const landGain = Math.max(0, splitDetail.land.gain);
-  const buildingGain = Math.max(0, splitDetail.building.gain);
+  // 파트 차손은 **과세분만** 남긴다 — 하류 파트 세율 판정이 「소득세법 시행령」 §167의2①로 다른 파트에서 공제한다(계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
+  //   비과세분 차손은 과세분과 통산하지 않는다(상속증여세과-209) — 12억 초과 고가주택이면 차손도 양도차익과 같은 비율로 안분해 과세분만 남는다.
+  //   · 건물: 아래 `buildingTaxableGain`이 전액 비과세 0 · 일부 비과세 안분 · 과세 그대로를 정한다(종전에는 차손을 먼저 0으로 잘랐다).
+  //   · 토지: 토지 전체가 과세 대상일 때(비과세 미적용 · 나중 취득 토지 G-3)만 그대로. 그 밖에는 재산세제과-915 회신 산식과 얽혀 종전 0(확인 필요).
+  const landKeepsLoss = !(isExempt || isPartialExempt) || laterLand;
+  const landGain = landKeepsLoss ? splitDetail.land.gain : Math.max(0, splitDetail.land.gain);
+  const buildingGain = splitDetail.building.gain;
 
   // ① 배율 초과분을 비사업용 토지로 이전 (12억 안분 대상 아님)
   const nonBusinessGain = excess ? Math.floor(landGain * excess.nonBizRatio) : 0;

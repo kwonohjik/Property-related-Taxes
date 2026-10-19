@@ -26,6 +26,8 @@ import {
 } from "./transfer-tax";
 import { lossOffsetRateKey } from "./loss-offset-rate-key";
 import { splitPartsForLossOffset } from "./transfer-tax-split-part-seeds";
+import { rentalLaterLandPartDetail } from "./transfer-tax-rental-housing-nbl-split";
+import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -307,7 +309,9 @@ export function buildAssetRecords(
     }
     const transferGain = pa.result.transferGain;
     if (transferGain < 0) {
-      return { ...pa, taxableGain: transferGain, lthd: 0, income: transferGain };
+      // 순손실 split 자산도 파트 행으로 낸다(계획서 P2 B) — 건물 차손이 다른 자산으로 가면 토지 소득이 남아 토지 세율로 과세된다.
+      const lossParts = lossPartsOf(pa, transferGain, pa.result.splitDetail);
+      return { ...pa, taxableGain: transferGain, lthd: 0, income: transferGain, ...(lossParts ? { lossParts } : {}) };
     }
     const taxableGain = pa.result.taxableGain;
     const lthd = pa.result.longTermHoldingDeduction;
@@ -320,7 +324,10 @@ export function buildAssetRecords(
      */
     const rentalException = pa.result.rentalHousingExceptionDetail?.applied === true;
     const income = rentalException ? taxableGain : taxableGain - lthd;
-    const lossParts = rentalException ? undefined : lossPartsOf(pa, income);
+    // 특례 자산은 G-3(나중 취득 토지분을 뗀 결과)만 파트 행으로 낸다 — 다건 세율 판정이 슬롯을 같은 헬퍼로 파트로 되돌린다(계획서 P2 §155⑳).
+    //   그 밖의 특례 자산(배율 초과분만 뗀 주택분 등)은 파트 구성이 세율 판정과 달라 자산 한 행이다.
+    const rentalDetail = rentalException ? rentalLaterLandPartDetail(pa.result.splitDetail, income) : undefined;
+    const lossParts = rentalException ? (rentalDetail ? lossPartsOf(pa, income, rentalDetail) : undefined) : lossPartsOf(pa, income, pa.result.splitDetail);
     return { ...pa, taxableGain, lthd, income, ...(lossParts ? { lossParts } : {}) };
   });
   return assetRecords;
@@ -333,14 +340,18 @@ export function buildAssetRecords(
 function lossPartsOf(
   pa: Pick<AssetRecord, "item" | "correctedSingleInput" | "rates" | "result">,
   income: number,
+  splitDetail: SplitGainResult | undefined,
 ): AssetRecord["lossParts"] {
   const parts = splitPartsForLossOffset(
-    pa.result.splitDetail,
+    splitDetail,
     pa.correctedSingleInput,
     parseRatesFromMap(pa.rates),
     pa.result.multiHouseSurchargeEvaluation,
   );
   if (!parts || parts.reduce((s, p) => s + p.income, 0) !== income) return undefined;
+  // 감면 자산에 차손 파트가 있으면 자산 한 행 — 자산 안에서 먼저 통산한다(A · 계획서 P2 Q-2). 단건 감면소득(§90①의 B)은 자산 안 통산 후
+  //   값이라 파트 행으로 펼치면 영 §167의2② 안분 기준(통산 전 파트 소득)과 갈린다(확인 필요).
+  if (parts.some((p) => p.income < 0) && pa.result.reductionTypeApplied !== undefined) return undefined;
   return parts.map((p) => ({
     kind: p.kind,
     income: p.income,
