@@ -423,6 +423,7 @@ export function buildCompanionEngineInputs(
     buildingHouseKind: c.buildingHouseKind,
     landHouseExisted: c.landHouseExisted,
     landHouseSec164Value: c.landHouseSec164Value,
+    houseFirstDisclosureDate: c.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(c.landDonorAcquisitionDate),
     selfOwns: c.selfOwns,
     landAcqMode: c.landAcqMode,

@@ -28,6 +28,7 @@ import {
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
 import { sec164AreaSqm } from "./transfer-pre1990-housing-land-bridge";
+import { houseDisclosureBoundaryOf } from "./house-first-disclosure";
 
 /** 게이트가 읽는 칸 — 사이드바(`separateAcqPartsSum`)는 AssetForm 부분 타입을 넘긴다(D2-4 `buildingSec164Applies`와 같은 구조 타입). */
 type HouseLandScope = Parameters<typeof effectiveLandAcquisitionCause>[0] & {
@@ -36,15 +37,17 @@ type HouseLandScope = Parameters<typeof effectiveLandAcquisitionCause>[0] & {
   landAcquisitionDate?: string;
   landHouseExisted?: string;
   inheritanceAssetKind?: string;
+  inhHouseValFirstDisclosureDate?: string;
 };
 
 /**
- * 카드가 열리는 구간인가 — 주택 ∧ 유효 토지 원인 상속·증여 ∧ 건물 매매 ∧ 토지 취득일 1990-08-30 ~ 2005-04-29.
+ * 카드가 열리는 구간인가 — 주택 ∧ 유효 토지 원인 상속·증여 ∧ 건물 매매 ∧ 1990-08-30 ≤ 토지 취득일 < 구간 끝
+ * (2005-04-30, 단독·다가구로 명시한 주택은 그 주택의 최초공시일 — `houseDisclosureBoundaryOf`).
  * 「받을 당시 주택이 있었는가」를 묻는 자리다(답은 보지 않는다). 신축 호스트는 열지 않는다(Q-2 — 결과 고지만).
  */
 export function houseLandSec164Applies(asset: HouseLandScope): boolean {
   return asset.assetKind === "housing" && asset.acquisitionCause === "purchase"
-    && isSec163_9HouseLandProviso(effectiveLandAcquisitionCause(asset), asset.landAcquisitionDate);
+    && isSec163_9HouseLandProviso(effectiveLandAcquisitionCause(asset), asset.landAcquisitionDate, houseDisclosureBoundaryOf(asset));
 }
 
 /** ④가 싣는 「받을 당시 주택이 있었는가」 — 구간 안에서 고른 값만(미선택은 보내지 않는다 = 엔진은 모름으로 읽는다). */
@@ -62,6 +65,7 @@ function houseLandTarget(asset: HouseLandScope): boolean {
     landAcquisitionCause: effectiveLandAcquisitionCause(asset),
     landAcquisitionDate: asset.landAcquisitionDate,
     landHouseExisted: landHouseExistedSent(asset),
+    boundary: houseDisclosureBoundaryOf(asset),
   });
 }
 

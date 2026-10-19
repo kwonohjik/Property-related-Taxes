@@ -21,7 +21,7 @@ import { TRANSFER } from "./legal-codes";
 import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
-import { isSec163_9HouseLandProviso } from "./transfer-split-part-cause";
+import { disclosureDateLabel, houseDisclosureBoundary, isSec163_9HouseLandProviso } from "./transfer-split-part-cause";
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 export { highValueExcessLandTaxableGain, allocateUnitExcessShares } from "./high-value-excess-land";
 export { housingExcessAcqContractNotice } from "./housing-excess-acq-contract";
@@ -418,7 +418,10 @@ export function buildingSec164ApportionNotice(splitDetail: SplitGainResult | und
  * 어느 쪽이 채택됐는지·방향은 말하지 않는다(echo가 표시한다).
  */
 export function houseLandSec164Notice(
-  input: Pick<TransferTaxInput, "propertyType" | "acquisitionCause" | "landAcquisitionCause" | "landAcquisitionDate" | "landHouseExisted">,
+  input: Pick<
+    TransferTaxInput,
+    "propertyType" | "acquisitionCause" | "landAcquisitionCause" | "landAcquisitionDate" | "landHouseExisted" | "houseFirstDisclosureDate" | "buildingHouseKind"
+  >,
   splitDetail: SplitGainResult | undefined,
 ): string | null {
   if (!splitDetail) return null;
@@ -432,17 +435,20 @@ export function houseLandSec164Notice(
   if (input.propertyType !== "housing") return null;
   const d = input.landAcquisitionDate as Date | string | undefined;
   const dayKey = d instanceof Date ? d.toISOString().slice(0, 10) : d?.slice(0, 10);
-  if (!isSec163_9HouseLandProviso(input.landAcquisitionCause, dayKey)) return null;
+  // 구간 끝은 엔진·leaf와 같은 `houseDisclosureBoundary`(단독·다가구로 확인된 주택의 최초공시일, 아니면 2005-04-30).
+  const boundary = houseDisclosureBoundary(input.houseFirstDisclosureDate, input.buildingHouseKind);
+  if (!isSec163_9HouseLandProviso(input.landAcquisitionCause, dayKey, boundary)) return null;
+  const before = `${disclosureDateLabel(boundary)} 전`;
   if (input.acquisitionCause === "purchase" && input.landHouseExisted !== "yes" && input.landHouseExisted !== "no") {
     return (
-      "토지를 받을 당시 지금의 주택이 그 위에 있었다면, 개별주택가격 공시 전(2005.4.30. 전)에 상속·증여받은 주택 부수토지의 취득가액은 평가액과 " +
+      `토지를 받을 당시 지금의 주택이 그 위에 있었다면, 개별주택가격 공시 전(${before})에 상속·증여받은 주택 부수토지의 취득가액은 평가액과 ` +
       "「소득세법 시행령」 제164조 제7항 가액의 토지 몫 중 많은 금액입니다(같은 영 제163조 제9항 단서 제2호, 부동산거래관리과-364). 그 사실이 확인되지 않아 " +
       "평가액만으로 계산했습니다 — 확인 필요"
     );
   }
   if (input.acquisitionCause === "newConstruction") {
     return (
-      "토지를 받을 당시 다른 주택이 그 위에 있었다면 개별주택가격 공시 전(2005.4.30. 전)에 상속·증여받은 주택 부수토지로서 평가액과 " +
+      `토지를 받을 당시 다른 주택이 그 위에 있었다면 개별주택가격 공시 전(${before})에 상속·증여받은 주택 부수토지로서 평가액과 ` +
       "「소득세법 시행령」 제164조 제7항 가액의 토지 몫을 비교해야 할 수 있습니다(같은 영 제163조 제9항 단서 제2호). 이 계산기는 종전 주택의 가액을 받지 않아 " +
       "평가액만으로 계산했습니다 — 확인 필요"
     );

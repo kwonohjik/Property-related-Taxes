@@ -46,9 +46,10 @@ import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { BUILDING_CAUSE_APARTMENT_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { SPLIT_SEC164_BUILDING_VALUE_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { HouseFirstDisclosureDateField, houseFirstDisclosureRefDate } from "./HouseFirstDisclosureFields";
+import { houseDisclosureBoundaryOf } from "@/lib/calc/house-first-disclosure";
+import { disclosureDateLabel } from "@/lib/tax-engine/transfer-split-part-cause";
 
-/** 개별주택가격 최초 공시일 — 최초공시 시점 칸의 조회 기준일 */
-const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 
 const HOUSE_KIND_OPTIONS = [
   { value: "house_individual", label: "단독·다가구주택 (개별주택가격 공시)" },
@@ -85,6 +86,9 @@ export function BuildingSec164Card(props: {
   const landAtFirst = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
   const buildingAtFirst = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst);
   const buildingAtAcq = parseAmount(asset.inhHouseValBuildingStdPriceAtInheritance);
+  // 최초공시 시점 칸의 조회 기준일 — 이 주택의 최초 공시일(기본 2005-04-30). 구간 끝은 단독·다가구 명시일 때만 그 날짜다.
+  const firstRef = houseFirstDisclosureRefDate(asset);
+  const boundary = houseDisclosureBoundaryOf(asset);
 
   // 2시점(취득·최초공시) 건물 기준시가 일괄 계산 — 양도시 건물 기준시가는 이 비교에 쓰이지 않는다.
   // 국세청 건물 기준시가는 2001.1.1. 최초 고시 — 그 전 취득 시점의 위치지수 공시지가는 모달 안내대로 2001년 값을 넣는다(빈 칸 시드).
@@ -99,8 +103,8 @@ export function BuildingSec164Card(props: {
     {
       key: "firstDisclosure" as const,
       label: "최초공시일",
-      year: yearOf(HOUSE_FIRST_DISCLOSURE_DATE),
-      landPriceYear: landPriceYearOf(HOUSE_FIRST_DISCLOSURE_DATE),
+      year: yearOf(firstRef),
+      landPriceYear: landPriceYearOf(firstRef),
       landPricePerM2: asset.inhHouseValLandPricePerSqmAtFirst,
     },
   ];
@@ -115,7 +119,7 @@ export function BuildingSec164Card(props: {
     <div className="space-y-2" data-testid="building-sec164-card" data-field="buildingSec164Value">
       <ToneCard tone="amber" noDark>
         <p className="text-xs text-amber-900">
-          건물을 {buildingDate}에 {meta.label}받았는데 그때는 개별주택가격이 공시되기 전(2005.4.30. 이전)이라, 위 {meta.valueLabel}과 최초
+          건물을 {buildingDate}에 {meta.label}받았는데 그때는 이 주택의 개별주택가격이 공시되기 전({disclosureDateLabel(boundary)} 이전)이라, 위 {meta.valueLabel}과 최초
           공시된 개별주택가격으로 환산한 주택가격의 건물 몫(<strong>{SPLIT_SEC164_BUILDING_VALUE_LABEL}</strong>) 중{" "}
           <strong>많은 금액</strong>이 건물 취득가액입니다 (소득세법 시행령 §163조 제9항 단서 2호). 토지 면적은 기본 정보의 토지 면적을
           사용합니다.
@@ -164,21 +168,24 @@ export function BuildingSec164Card(props: {
             />
           </div>
 
-          <p className="text-caption font-semibold text-muted-foreground">최초 공시 시점 ({HOUSE_FIRST_DISCLOSURE_DATE})</p>
+          <HouseFirstDisclosureDateField asset={asset} onChange={onChange} />
+              <p className="text-caption font-semibold text-muted-foreground">최초 공시 시점 ({firstRef})</p>
           <StandardPriceInput
             propertyKind="house_individual"
             totalPrice={asset.inhHouseValHousePriceAtFirst}
             data-field="inhHouseValHousePriceAtFirst"
             onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
             jibun={asset.addressJibun || undefined}
-            referenceDate={HOUSE_FIRST_DISCLOSURE_DATE}
-            label="최초 공시된 개별주택가격"
+            referenceDate={firstRef}
+            // 이 날짜는 그 주택의 최초 공시일 자체다 — 그해 공시된 가격을 조회한다(공용 기본값의 「4.29. 전이면 전년도」 규칙을 쓰지 않는다).
+          forceYear={firstRef.slice(0, 4)}
+          label="최초 공시된 개별주택가격"
             hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격(부수토지 포함)"
           />
           <LandPriceLookupField
             label="최초공시 개별공시지가"
             data-field="inhHouseValLandPricePerSqmAtFirst"
-            referenceDate={HOUSE_FIRST_DISCLOSURE_DATE}
+            referenceDate={firstRef}
             pricePerSqm={asset.inhHouseValLandPricePerSqmAtFirst}
             onPricePerSqmChange={(v: string) => onChange({ inhHouseValLandPricePerSqmAtFirst: v })}
             area={area || undefined}

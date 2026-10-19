@@ -23,7 +23,11 @@ import {
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
-import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
+import {
+  collectSplitPartCauseIssues,
+  HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE,
+  houseFirstDisclosureDateInRange,
+} from "@/lib/tax-engine/transfer-split-part-cause";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { refineSplitCarryoverValues } from "./transfer-tax-schema-split-carryover";
 
@@ -78,6 +82,7 @@ export type Required2aLike = {
   buildingHouseKind?: "house_individual" | "house_apart";
   landHouseExisted?: "yes" | "no" | "unknown";
   landHouseSec164Value?: number;
+  houseFirstDisclosureDate?: string;
   selfOwns?: string;
   // 주택 split 파트 이월과세 (splitCarryoverShape · 자산 단위 carryoverTaxation과 상호배제)
   carryoverGiftEvent?: { giftRegistryDate: string; giftTaxCalculated: number; giftTaxBase: number; donorRelation?: "spouse" | "lineal" | "other" };
@@ -405,7 +410,7 @@ export function refineSplitPartCause(
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
     | "buildingSec164Value" | "buildingHouseKind" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
-    | "landHouseExisted" | "landHouseSec164Value"
+    | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation" | "isOneHousehold" | "isUnregistered"
     | "expenses"
   > & {
@@ -453,6 +458,8 @@ export function refineSplitPartCause(
     // D1-H — 주택 부수토지 단서 2호(받을 당시 주택 있음 · 토지 몫 ②)
     landHouseExisted: d.landHouseExisted,
     landHouseSec164Value: d.landHouseSec164Value,
+    // 주택별 최초공시일 — D2-4·D1-H 구간의 끝(엔진과 같은 `houseDisclosureBoundary`)
+    houseFirstDisclosureDate: d.houseFirstDisclosureDate,
     // D2 — 건물 상속·증여 + 토지 매매. 건물 방식은 엔진과 같은 규칙(명시값, 없으면 자산 단위 플래그에서 파생).
     buildingMode: partMode(d.buildingAcqMode, d),
     buildingAcquisitionDate: d.acquisitionDate,
@@ -533,9 +540,24 @@ export function refinePreDeemedAcquisitionSource(
     issue(["inheritedAcquisition", "standardPriceAtTransfer"], "의제취득일 전 상속·증여 자산의 환산취득가액은 양도시 기준시가가 필요합니다 (소득세법 시행령 §176의2④)");
 }
 
+/**
+ * 주택별 개별주택가격 최초공시일 범위(계획서 Q-3) — 2005-04-30 ≤ 날짜 ≤ 양도일. ⑧과 같은 leaf 판정.
+ * 주 자산·컴패니언 공용(컴패니언은 양도일을 상위 본문에서 넘긴다).
+ */
+export function refineHouseFirstDisclosureDate(
+  houseFirstDisclosureDate: string | undefined,
+  transferDate: string | undefined,
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[] = [],
+) {
+  if (!houseFirstDisclosureDateInRange(houseFirstDisclosureDate, transferDate))
+    issuer(ctx)([...prefix, "houseFirstDisclosureDate"], HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE);
+}
+
 /** `refinePropertyRequiredInputs`(단건·다건 공용 진입점)에서 부른다. */
 export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) {
   refineExpropriationInputs(d, ctx);
+  refineHouseFirstDisclosureDate(d.houseFirstDisclosureDate, d.transferDate, ctx);
   refineSplitAcquisitionInputs(d, ctx);
   refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx, [], {
     supported: true,

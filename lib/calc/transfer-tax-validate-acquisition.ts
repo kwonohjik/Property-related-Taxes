@@ -49,6 +49,8 @@ import { effectiveSelfOwns } from "./self-owns-scope";
 import { validateBuildingCauseSplit } from "./transfer-tax-validate-building-cause";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
+import { HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE, houseFirstDisclosureIssue } from "./house-first-disclosure";
+import { HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 다필지 자산 검증 — 다필지 모드일 때(A12: 컴패니언은 호출부에서 먼저 차단된다). */
 function validateParcelMode(primary: AssetForm, formTransferDate?: string): string | null {
@@ -136,6 +138,12 @@ export function validateAssetAcquisition(
   // ── 부담부증여 (소령 §159 + 증여세 통합 §53·§47②) — 별도 모듈로 분리 (800줄 정책, 2026-05-12) ──
   const bgError = validateBurdenedGiftAsset(asset, label, contractAssumedDebtTotal, formTransferDate, isFractionalSplitAxis);
   if (bgError) return bgError;
+
+  // ── 주택별 개별주택가격 최초공시일(영 §163⑨ 단서 2호 구간의 끝) — 세 경로(자산 단위·D2-4·D1-H) 공용이라 경로 분기보다 앞 ──
+  // 범위 밖이면 ⑫도 막는다(같은 leaf 판정). 주택 구분 요구는 ⑧ 전용(④가 명시 단독·다가구일 때만 싣는다 — ⑧이 더 엄격한 방향).
+  const hfdIssue = houseFirstDisclosureIssue(asset, formTransferDate);
+  if (hfdIssue === "range") return fieldError("inhHouseValFirstDisclosureDate", `${label}: ${HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE}`);
+  if (hfdIssue === "kind") return fieldError("inheritanceAssetKind", `${label}: ${HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE}`);
 
   // ── 건물 상속·증여 + 토지 매매(D2) — 자산 단위 상속 요구(아래 §164·E-1·PD-1·post-deemed)보다 **앞**에서 갈라 분리 검증으로 ──
   if (effectiveBuildingCauseMix(asset)) return validateBuildingCauseSplit(asset, label, formTransferDate);

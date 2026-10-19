@@ -220,6 +220,7 @@ export async function POST(request: NextRequest) {
       buildingHouseKind: p.buildingHouseKind,
       landHouseExisted: p.landHouseExisted,
       landHouseSec164Value: p.landHouseSec164Value,
+      houseFirstDisclosureDate: p.houseFirstDisclosureDate,
       landDonorAcquisitionDate: toOptionalDate(p.landDonorAcquisitionDate),
       landAcqMode: p.landAcqMode,
       buildingAcqMode: p.buildingAcqMode,

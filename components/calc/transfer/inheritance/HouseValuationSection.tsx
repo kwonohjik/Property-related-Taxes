@@ -176,6 +176,8 @@ import { sec163_9BaseDateLabel } from "@/lib/calc/transfer-163-9-base-date";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { HouseFirstDisclosureDateField } from "../HouseFirstDisclosureFields";
+import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 
 interface Props {
   asset: AssetForm;
@@ -343,7 +345,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       </div>
 
       <p className="text-caption text-muted-foreground">
-        {baseDateLabel}({inheritanceDate || "미입력"})이 개별주택가격 최초 공시일(2005-04-30) 이전이므로
+        {baseDateLabel}({inheritanceDate || "미입력"})이 이 주택의 개별주택가격 최초 공시일({asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}) 이전이므로
         토지·주택 분리 입력으로 {acqTimeLabel} 합계 기준시가를 환산합니다.
         {isDeemedAcq && (
           <span className="ml-1 font-medium text-rose-700 dark:text-rose-400">
@@ -430,9 +432,11 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
             2
           </span>
           <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
-            최초고시 시점 (기본 {HOUSE_FIRST_DISCLOSURE_DATE})
+            최초고시 시점 ({asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE})
           </p>
         </div>
+        {/* 이 주택의 최초 공시일 — D2(건물 상속·증여 + 토지 매매)에서는 분리 섹션 카드(`BuildingSec164Card`)가 같은 칸을 가진다(한 곳에만). */}
+        {!effectiveBuildingCauseMix(asset) && <HouseFirstDisclosureDateField asset={asset} onChange={onChange} />}
         <LandPriceLookupField
           label="최초고시 토지 개별공시지가"
           data-field="inhHouseValLandPricePerSqmAtFirst"
@@ -449,6 +453,8 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
           onTotalPriceChange={(v) => onChange({ inhHouseValHousePriceAtFirst: v })}
           jibun={asset.addressJibun || undefined}
           referenceDate={asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE}
+          // 이 날짜는 그 주택의 최초 공시일 자체다 — 그해 공시된 가격을 조회한다(공용 기본값의 「4.29. 전이면 전년도」 규칙을 쓰지 않는다).
+          forceYear={(asset.inhHouseValFirstDisclosureDate || HOUSE_FIRST_DISCLOSURE_DATE).slice(0, 4)}
           label="최초 공시된 개별주택가격"
           hint="홈택스/부동산공시가격알리미 — 최초 공시 시점 개별주택가격. §164⑦ 추정 공식의 분자 승수."
         />

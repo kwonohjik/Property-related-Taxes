@@ -54,6 +54,7 @@ import { houseLandSec164Applies } from "./transfer-house-land-sec164-bridge";
 import { landHouseExistedSent } from "./transfer-house-land-sec164-bridge";
 import { houseLandKindSent } from "./transfer-house-land-sec164-bridge";
 import { deriveHouseLandSec164Total } from "./transfer-house-land-sec164-bridge";
+import { houseFirstDisclosureSent } from "./house-first-disclosure";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 function opt(v: string | undefined): number | undefined {
@@ -250,6 +251,8 @@ export function validateLandPartCause(rawAsset: AssetForm, label: string): strin
     // D1-H — 주택 부수토지 단서 2호. 「받을 당시 주택 있음」·②는 ④가 실제로 보내는 값(브리지 `landHouseExistedSent`·`deriveHouseLandSec164Total`).
     landHouseExisted: landHouseExistedSent(asset),
     landHouseSec164Value: deriveHouseLandSec164Total(asset) || undefined,
+    // 주택별 최초공시일 — ④가 실제로 보내는 값(`houseFirstDisclosureSent` — 명시 단독·다가구 ∧ 2005-04-30 뒤일 때만)
+    houseFirstDisclosureDate: houseFirstDisclosureSent(asset),
     // D2 — ④가 실제로 보내는 값. 건물 방식은 D2 유효 시 실가 고정, 자산 단위 평가 payload는 D2 유효 시 미전송(= false).
     buildingMode: effectivePartAcqMode(asset.buildingAcqMode, asset),
     buildingAcquisitionDate: asset.acquisitionDate || undefined,

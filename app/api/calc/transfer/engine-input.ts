@@ -373,6 +373,8 @@ export function buildTransferEngineInput(
     buildingHouseKind: data.buildingHouseKind,
     landHouseExisted: data.landHouseExisted,
     landHouseSec164Value: data.landHouseSec164Value,
+    // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다
+    houseFirstDisclosureDate: data.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
     // ⑭ 주택 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. Date 변환·증여세 안분은 합성기가 한다(TypeScript 미감지 영역).
     // 컴패니언은 매핑하지 않는다(`bundled-split-helpers.ts`) — ⑫(leaf S0)가 컴패니언의 파트 이월과세를 명시 거부한다.

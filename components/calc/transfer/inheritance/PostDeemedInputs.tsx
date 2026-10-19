@@ -31,9 +31,11 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { houseDisclosureBoundaryOf } from "@/lib/calc/house-first-disclosure";
+import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
+import { disclosureDateLabel } from "@/lib/tax-engine/transfer-split-part-cause";
+import { HouseFirstDisclosureEntryCard } from "../HouseFirstDisclosureFields";
 
-/** 개별주택가격 최초 공시일 */
-const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
 /** 개별공시지가 최초 고시일 (소령 §164④) */
 const LAND_FIRST_DISCLOSURE_DATE = "1990-08-30";
 
@@ -79,7 +81,9 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
   // 주택 개별/공동 — 미선택 시 동·호 유무로 기본 표시(세액 무관, 조회·라벨용). 파생은 공용 단일 소스.
   const kind = deriveInheritanceHouseKind(asset);
-  const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE;
+  // 구간 끝 = 이 주택의 개별주택가격 최초 공시일(단독·다가구 명시일 때만, 아니면 2005-04-30 — `houseDisclosureBoundaryOf`).
+  const houseBoundary = houseDisclosureBoundaryOf(asset);
+  const showHouseValuation = isHouse && !!inheritanceDate && inheritanceDate < houseBoundary;
   // §164 필수 항목 개수는 단일 소스에서 받는다 — 문구에 숫자를 하드코딩하면 필드가 늘 때 낡는다.
   const houseSec164 = sec164HouseStatus(asset);
   const landSec164 = sec164LandStatus(asset);
@@ -89,7 +93,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   // 신고가액 직접입력으로 유도(소령 §163⑨1·2호 병렬 대칭). 이중계상이 아니라 공시가격 부존재가 근거.
   const isPreDisclosure =
     (isLand && !!inheritanceDate && inheritanceDate < LAND_FIRST_DISCLOSURE_DATE) ||
-    (isHouse && !!inheritanceDate && inheritanceDate < HOUSE_FIRST_DISCLOSURE_DATE);
+    (isHouse && !!inheritanceDate && inheritanceDate < houseBoundary);
 
   /**
    * 보충적평가 보조계산: 토지 단가 × 면적 = 자동 합산.
@@ -345,7 +349,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
       {showHouseValuation && (
         <ToneCard tone="amber">
           <p className={`text-xs font-medium ${TONE.amber.title}`}>
-            개별주택가격 미공시(2005.4.30. 이전 상속) — 아래 §164⑦ 환산으로 취득당시 기준시가를 산정합니다.
+            개별주택가격 미공시(이 주택의 최초 공시 {disclosureDateLabel(houseBoundary)} 이전 상속) — 아래 §164⑦ 환산으로 취득당시 기준시가를 산정합니다.
             취득가액은 위 상속세 신고가액(상증법 평가액)과 §164⑦ 환산액 중 <strong>큰 금액</strong>으로 자동
             적용됩니다 (소득세법 시행령 §163⑨2호).{" "}
             <strong>{houseSec164 ? `${houseSec164.total}개 항목을 모두` : "항목을 모두"}</strong>{" "}
@@ -358,6 +362,12 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
             transferDate={transferDate}
           />
         </ToneCard>
+      )}
+
+      {/* 2005.4.30. 이후 상속 — 이 주택이 더 늦게 처음 공시됐으면 최초 공시일을 받아 위 §164⑦ 환산을 연다.
+          건물 상속 + 토지 매매(D2)는 분리 섹션(`LandBuildingSplitSection`)의 진입 카드가 같은 칸을 가진다(한 곳에만). */}
+      {isHouse && !showHouseValuation && !effectiveBuildingCauseMix(asset) && (
+        <HouseFirstDisclosureEntryCard asset={asset} onChange={onChange} baseDate={inheritanceDate} baseDateLabel="상속개시일" open={false} />
       )}
 
       {/* 토지 미공시(1990.8.30. 이전 상속·증여): §164④ 등급환산 — §163⑨**1호** max(상증법 평가액, §164④)

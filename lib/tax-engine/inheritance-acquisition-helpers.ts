@@ -7,7 +7,8 @@
 
 import { calculateInheritanceAcquisitionPrice } from "./inheritance-acquisition-price";
 import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
-import { calculateInheritanceHouseValuation, HOUSE_FIRST_DISCLOSURE_DATE } from "./inheritance-house-valuation";
+import { calculateInheritanceHouseValuation } from "./inheritance-house-valuation";
+import { houseDisclosureBoundary } from "./transfer-split-part-cause";
 import { calcStdPriceSum, calcEstimatedStdPriceAtAcq } from "./commercial-building-valuation";
 import type { InheritanceAcquisitionInput, InheritanceAcquisitionResult, CommercialInheritanceValuationInput } from "./types/inheritance-acquisition.types";
 import type { InheritanceHouseValuationResult } from "./types/inheritance-house-valuation.types";
@@ -151,8 +152,10 @@ function resolveInheritedAcquisitionInput(
   const isPreDeemed =
     base.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime();
 
+  // 구간 끝 = 이 주택의 개별주택가격 최초공시일(단독·다가구로 확인되고 2005-04-30보다 뒤일 때만 — D2-4·D1-H와 같은
+  // `houseDisclosureBoundary`, 계획서 transfer-house-first-disclosure-per-house.plan.md). 그 밖은 2005-04-30(공동주택 포함).
   const isHousePreDisclosure =
-    base.inheritanceDate.getTime() < HOUSE_FIRST_DISCLOSURE_DATE.getTime() &&
+    base.inheritanceDate.toISOString().slice(0, 10) < houseDisclosureBoundary(rawInput.houseFirstDisclosureDate, base.assetKind) &&
     (base.assetKind === "house_individual" || base.assetKind === "house_apart");
 
   // case A(pre-deemed) + 주택 미공시: houseValuationResult로 standardPriceAtDeemedDate / standardPriceAtTransfer 주입

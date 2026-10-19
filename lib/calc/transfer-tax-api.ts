@@ -80,6 +80,7 @@ import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
+import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -522,6 +523,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
         : undefined,
     // §104②1·2호를 **토지 파트**에 적용 (G-4) — 다건과 같은 leaf.
     ...buildLandPartCausePayload(primary),
+    // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다
+    ...buildHouseFirstDisclosurePayload(primary),
     // ⑬ 비주택 → 주택 용도변경 §95⑤·⑥ — 미정의 시 침묵 stripping 방지를 위해 명시 선언.
     // `residenceMonthsTrimmed`는 결과 화면 절사 안내 전용이며 계산에는 쓰이지 않는다.
     nonHousingToHousingConversion: usageConversionOn

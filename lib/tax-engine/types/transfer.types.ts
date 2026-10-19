@@ -1414,6 +1414,13 @@ export interface TransferTaxInput {
   /** D1-H — 토지 몫 영 §164⑦ 가액(②, 총액·지분 스케일 후). ④가 `inhHouseVal*` 3필드 + 수증일 공시지가 × 면적을 한 함수로 산출해 보낸다. 그 구간이 아니면 무시한다 */
   landHouseSec164Value?: number;
   /**
+   * 이 주택의 개별주택가격 최초공시일 YYYY-MM-DD — 영 §163⑨ 단서 2호 구간의 끝(영 §164⑦ 「당해 주택에 대하여 … 최초로 공시한 주택가격」).
+   * 단독·다가구로 확인된 주택에서 2005-04-30보다 뒤일 때만 고정 경계 2005-04-30을 대신한다(`houseDisclosureBoundary`) —
+   * 자산 단위(`inheritedAcquisition.assetKind`)·D2-4·D1-H(`buildingHouseKind`) 세 경로가 같은 값을 읽는다. 생략 = 2005-04-30.
+   * 계획서 docs/00-pm/transfer-house-first-disclosure-per-house.plan.md
+   */
+  houseFirstDisclosureDate?: string;
+  /**
    * 토지 파트 증여자 취득일 — §104②2호 통산은 `carryover_gift`(§97의2① 자산)만이다(단순 증여는 통산 없음).
    * 주택·건물 분리 계산에서는 그 원인 자체가 미지원이라 차단된다(D0 G-1 — `transfer-split-part-cause.ts`).
    */
