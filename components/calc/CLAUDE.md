@@ -225,6 +225,8 @@ const perAssetSummary = useMemo(() => computeTransferPerAssetSummary(formData, r
 
 위 색상 가이드의 톤은 **canonical 정적 소스** `components/calc/shared/tones.ts`(`Tone` 6톤 × `TONE[t].card/title/badge/chip/toggle`)에서만 가져온다. **동적 `bg-${tone}` 보간 금지**(production JIT purge silent failure — `feedback_tailwind_static_tone_mapping`) → `scripts/check-tone-classes.sh`가 pre-push 하드블록.
 
+**다크 짝 필수(2026-10-19)**: 유채색 톤 글자 `text-{tone}-{400~950}`·밝은 톤 배경 `bg-{tone}-{50~300}`은 같은 클래스 목록에 `dark:text-`·`dark:bg-` 짝을 둔다(예: `text-amber-700 dark:text-amber-300` · `bg-sky-50/40 dark:bg-sky-950/40`). 짝이 없으면 다크 바탕에서 글자가 배경에 묻힌다. 예외: 불투명 밝은 배경 + 톤 글자(자체 대비 배지), 무채색. → `scripts/check-dark-pairs.mjs`가 pre-push 하드블록. `ToneCard`의 `noDark`는 없앴다(쓰던 247곳 전부 다크 클래스 복원).
+
 신규 안내/섹션 카드는 인라인 `className` 하드코딩 대신 공용 컴포넌트를 쓴다:
 
 | 상황 | 사용 |
