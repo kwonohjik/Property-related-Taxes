@@ -26,6 +26,7 @@ import {
   buildPrhpTable2ReadingNotice,
   buildRentalPeriodPendingNotice,
   prhpSurchargeUnverifiedNotice,
+  rentalResidenceConsolidationText,
 } from "./transfer-tax-rental-housing-judge";
 import type {
   TransferTaxInput,
@@ -45,6 +46,7 @@ import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDeta
 import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
 import { applyRentalHousingReductions } from "./transfer-tax-rental-housing-reductions";
 import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
+import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -187,7 +189,10 @@ export function runRentalHousingExceptionStep(
 
   const holdPeriod = calculateHoldingPeriod(effectiveInput.acquisitionDate, effectiveInput.transferDate);
   const holdYears = holdPeriod.years;
+  // 표2 공제율의 거주분 — 본인 거주(상속개시일·증여일부터). 아래 요건 판정 개월과 섞지 않는다.
   const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
+  // §155⑳1호 「거주기간 2년」 요건 — 증여·상속 전 동일세대로 거주한 기간을 통산한다(별건 ⑥ · `judgeRentalHousingEligibility`와 같은 leaf).
+  const requirementResidenceMonths = resolveExemptionRequirementResidenceMonths(effectiveInput);
   // 배율 초과 부수토지는 §154①(→§154⑦)의 「이에 딸린 토지」가 아니므로 §155⑳ 의제 대상 밖이다.
   // 특례 계산에 넣기 **전에** 떼어내야 12억 안분·표2 장특이 그 부분에 잘못 미치지 않는다
   // (일반 경로 `applyHousingLandExclusions`의 ①→② 순서와 같다). 단 고가주택(A2)이면 «나머지»를 다시 안분하지 않고 재산세제과-915 회신 방식
@@ -219,7 +224,7 @@ export function runRentalHousingExceptionStep(
     holdYears,
     liveYears,
     holdYears,    // 거주주택 보유연수 (B 시나리오 시 PHRP 보유연수와 동일)
-    liveYears,    // 거주주택 거주연수 (B의 1호 거주요건은 context의 등록 이후 거주기간 — OH-15)
+    Math.floor(requirementResidenceMonths / 12),    // 거주주택 거주연수 — 요건 판정용 통산값 (B의 1호 거주요건은 context의 등록 이후 거주기간 — OH-15)
     // OH-13 — 고가주택 기준은 양도일 기준(2021-12-07 이전 9억). 12억 고정 금지.
     resolveHighValueHouseThreshold(effectiveInput.transferDate),
     // §155의3① — 상생임대주택이면 §155⑳1호 거주요건 면제(법문이 이 호를 명시 열거한다).
@@ -250,6 +255,13 @@ export function runRentalHousingExceptionStep(
       });
     }
     return null;
+  }
+
+  // 별건 ⑥ — 통산한 거주 개월을 결과에 남긴다(정면 회신이 있어 확인 필요 고지는 내지 않는다 — 사용자 결정 2026-10-19 Q-1).
+  // 전액 비과세 조기반환(`rentalNoticesForEarlyReturn`)과 같은 문장이다.
+  const consolidationText = rentalResidenceConsolidationText(effectiveInput);
+  if (consolidationText) {
+    steps.push({ label: "거주주택 거주기간 — 동일세대 거주 통산", formula: consolidationText, amount: 0, legalBasis: rheBasis });
   }
 
   // applied=false: 미적용 사유를 steps에 기록하여 결과 화면에서 노출 (침묵 실패 차단)

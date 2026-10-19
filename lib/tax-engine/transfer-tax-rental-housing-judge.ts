@@ -88,8 +88,10 @@ export function judgeRentalHousingEligibility(
     effectiveInput.acquisitionDate,
     effectiveInput.transferDate,
   ).years;
-  const liveYears = Math.floor(effectiveInput.residencePeriodMonths / 12);
-  // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep와 동일 인자 관례)
+  // §155⑳1호 「거주기간 2년」 — 증여·상속 전 동일세대로 거주한 기간을 통산한다(별건 ⑥ · 서면-2022-부동산-2643 · 서면-2016-부동산-3992).
+  // §154① 거주요건·표2 대상 판정과 같은 leaf다. 보유기간은 통산하지 않는다(사용자 결정 2026-10-19 — 거주만).
+  const liveYears = Math.floor(resolveExemptionRequirementResidenceMonths(effectiveInput) / 12);
+  // 거주주택 보유·거주 연수 = holdYears·liveYears (runRentalHousingExceptionStep의 요건 인자와 같은 값)
   return checkEligibility(
     rhe.rentalUnits,
     holdYears,
@@ -167,7 +169,25 @@ export function rentalNoticesForEarlyReturn(effectiveInput: TransferTaxInput): s
   const eligibility = judgeRentalHousingEligibility(effectiveInput);
   if (!eligibility) return [];
   const pending = buildRentalPeriodPendingNotice(eligibility.periodPendingUnitIndexes);
-  return [...(pending ? [pending] : []), ...(eligibility.notices ?? [])];
+  const consolidation = rentalResidenceConsolidationText(effectiveInput);
+  return [...(pending ? [pending] : []), ...(consolidation ? [consolidation] : []), ...(eligibility.notices ?? [])];
+}
+
+/**
+ * 별건 ⑥ — §155⑳1호 「거주기간 2년」에 통산한 증여·상속 전 동일세대 거주 내역(결과 표시용). 통산분이 없거나 A가 아니면 undefined
+ * (B의 거주요건은 등록 이후 거주기간이라 이 통산을 쓰지 않는다). 정면 회신이 있어 확인 필요 고지가 아니다(사용자 결정 2026-10-19 Q-1).
+ * 세액 경로(STEP 2.5 계산 단계)와 전액 비과세 조기반환(안내)이 같은 문장을 쓴다.
+ */
+export function rentalResidenceConsolidationText(effectiveInput: TransferTaxInput): string | undefined {
+  if (effectiveInput.rentalHousingException?.scenario !== "A") return undefined;
+  const own = effectiveInput.residencePeriodMonths;
+  const total = resolveExemptionRequirementResidenceMonths(effectiveInput);
+  if (total <= own) return undefined;
+  const before = effectiveInput.acquisitionCause === "inheritance" ? "상속개시" : "증여";
+  return (
+    `장기임대주택 보유자 거주주택 특례의 거주기간 — 본인 거주 ${own}개월 + ${before} 전 같은 세대 거주 ${total - own}개월 = ${total}개월을 ` +
+    "「거주기간 2년」 요건 판정에 통산했습니다(장기보유특별공제 거주기간 공제율에는 넣지 않습니다 · 서면-2022-부동산-2643 · 서면-2016-부동산-3992)."
+  );
 }
 
 /**
