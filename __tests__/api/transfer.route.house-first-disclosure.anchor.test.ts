@@ -196,8 +196,10 @@ describe("B) 회귀 0 — 날짜를 바꾸지 않으면 payload·결과가 종�
       expect(x.r.transferGain).toBe(g);
     }
   });
-  it("B-2 공동주택 명시 + 2003 상속 + 최초공시 2006-04-28(조회 기준일만) — 싣지 않고 ⑧ 통과(구간을 넓히지 않는다)", async () => {
-    const a = wholeGift({ acquisitionCause: "inheritance", acquisitionDate: "2003-05-01", inheritanceStartDate: "2003-05-01", decedentAcquisitionDate: "1980-01-01", fixedAcquisitionPrice: "", publishedValueAtInheritance: "100,000,000", inheritanceValuationMethod: "supplementary", inheritanceAssetKind: "house_apart", inhHouseValFirstDisclosureDate: FD } as Partial<AssetForm>);
+  it("B-2 공동주택 명시 + 2003 상속 + 최초공시 2006-04-28 — 싣지 않고 ⑧ 통과(자산 단위 공동주택은 이 날짜를 쓰지 않는다)", async () => {
+    // 2026-10-19 공동주택 국세청 고시 가액 질문(transfer-163-9-apart-nts-price-question.plan.md) — 2005.4.30. 전 공동주택은 그 답이 필수다.
+    // 「있었음」으로 답한 상태에서 남은 개별주택 날짜가 싣지 않음·⑧ 통과임을 본다(답 없는 경우는 apart-nts-price route anchor).
+    const a = wholeGift({ acquisitionCause: "inheritance", acquisitionDate: "2003-05-01", inheritanceStartDate: "2003-05-01", decedentAcquisitionDate: "1980-01-01", fixedAcquisitionPrice: "", publishedValueAtInheritance: "100,000,000", inheritanceValuationMethod: "supplementary", inheritanceAssetKind: "house_apart", inhApartNtsPriceExisted: "yes", inhHouseValFirstDisclosureDate: FD } as Partial<AssetForm>);
     expect(v8(a)).toEqual({});
     const x = await single(a);
     expect("houseFirstDisclosureDate" in x.sent).toBe(false);
@@ -236,14 +238,18 @@ describe("D) 차단 — 범위(Q-3)·주택 구분(Q-2)", () => {
       expect(JSON.stringify(await res.json())).toContain("houseFirstDisclosureDate");
     }
   });
-  it("D-3 ⑧ 구간을 넓히는 날짜인데 주택 구분이 비었거나 공동주택 → 주택 구분 칸", () => {
+  it("D-3 ⑧ 구간을 넓히는 날짜인데 주택 구분이 비었거나 공동주택 → 주택 구분 칸 (자산 단위 공동주택 제외)", () => {
     for (const k of ["", "house_apart"]) {
       for (const mk of [wholeGift, d24, d1h]) {
+        // 자산 단위 공동주택은 이 날짜를 쓰지 않는다 — 첫 가격 날짜는 `inhApartFirstPriceDate`(공동주택 질문)다. 남은 값으로 막지 않는다.
+        if (mk === wholeGift && k === "house_apart") continue;
         const e = v8(mk({ inheritanceAssetKind: k as never, inhHouseValFirstDisclosureDate: FD }));
         expect(e.field, `${mk.name} ${k}`).toBe("inheritanceAssetKind");
         expect(e.message).toContain("단독·다가구주택인지 골라야 합니다");
       }
     }
+    // 자산 단위 공동주택 + 남은 개별주택 날짜: ⑧ 통과(공동주택 질문은 2005.4.30. 전 수증·첫 가격 날짜로 열린 구간에서만) · ④ 미송신
+    expect(v8(wholeGift({ inheritanceAssetKind: "house_apart", inhHouseValFirstDisclosureDate: FD }))).toEqual({});
   });
 });
 
@@ -341,7 +347,10 @@ describe("G) ⑧ 통과 ⇒ ⑫ 200 격자 (경로 3 × 기준일 3 × 최초공
       if (x.sent.houseFirstDisclosureDate) widened++;
     }
     expect(violations).toEqual([]);
-    // ⑧ 통과 63셀 — 차단 72 = 범위 밖 54 · 구간을 넓히는데 구분이 단독이 아님 6 · 기존 D2-4·D1-H 2005-04-29 구간의 공동주택·미선택 12 · 그중 날짜를 싣는 셀 18(단독 × 2005-04-30 뒤 범위 안 날짜 2 × 기준일 3 × 경로 3)
-    expect({ passed8, widened }).toEqual({ passed8: 63, widened: 18 });
+    // ⑧ 통과 65셀 — 종전 63에서 자산 단위 증여(gift) × 공동주택 15셀만 바뀌었다(2026-10-19 공동주택 국세청 고시 가액 질문):
+    //   · 2005-04-29 수증 5셀 = 공동주택 질문 미답으로 차단(종전 통과 3 → 0)
+    //   · 2005-05-12·2006-04-28 수증 10셀 = 개별주택 날짜를 쓰지 않아 통과(종전 범위·구분 차단 5 → 0, 통과 5 → 10)
+    // 그중 날짜를 싣는 셀 18(단독 × 2005-04-30 뒤 범위 안 날짜 2 × 기준일 3 × 경로 3)은 그대로다.
+    expect({ passed8, widened }).toEqual({ passed8: 65, widened: 18 });
   }, 180_000);
 });

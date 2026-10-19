@@ -16,11 +16,18 @@ export function buildInheritedAcquisition(
 ): InheritanceAcquisitionInput {
   const inheritanceDate = toDate(ia.inheritanceStartDate, "inheritedAcquisition.inheritanceStartDate");
   const { assetKind } = ia;
+  // 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호) — 두 모드 공통. 일자는 Date로(엔진이 기준일과 비교한다).
+  const apart = {
+    apartNtsPriceExisted: ia.apartNtsPriceExisted,
+    apartFirstPriceAgency: ia.apartFirstPriceAgency,
+    apartFirstPriceDate: toOptionalDate(ia.apartFirstPriceDate),
+  };
 
   if (ia.mode === "pre-deemed") {
     return {
       inheritanceDate,
       assetKind,
+      ...apart,
       reportedValue: ia.reportedValue, // ① 상증법 평가액 (max(①,③) 후보)
       standardPriceAtDeemedDate: ia.standardPriceAtDeemedDate,
       standardPriceAtTransfer: ia.standardPriceAtTransfer,
@@ -33,6 +40,7 @@ export function buildInheritedAcquisition(
   return {
     inheritanceDate,
     assetKind,
+    ...apart,
     reportedValue: ia.reportedValue,
     reportedMethod: ia.reportedMethod,
     ...(ia.useSupplementaryHelper && {

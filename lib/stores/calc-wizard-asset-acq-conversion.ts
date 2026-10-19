@@ -73,6 +73,18 @@ export interface AcqPriceConversionFormSlice {
   // ── 상속 주택 환산취득가 보조 입력 (주택 자산 + 상속개시일 < 2005-04-30) ──
   /** true 시 3-시점 보조 계산 활성화 */
   inhHouseValEnabled: boolean;
+  /**
+   * 공동주택 — 상속개시일·증여일 당시 국세청장이 고시한 공동주택 기준시가가 있었는가(영 §163⑨ 단서 2호). 「모름」 값은 없다
+   * (사용자 지시 2026-10-19) — 미선택("")이면 ⑧이 묻는다. 판정·송신·검증은 `lib/calc/apart-nts-price.ts`.
+   */
+  inhApartNtsPriceExisted: "" | "yes" | "no";
+  /** 「없었음」일 때 첫 가격 기관 — 국세청장 고시(영 §164⑥) / 국토교통부장관 공시(⑦). 미선택 "" */
+  inhApartFirstPriceAgency: "" | "nts" | "molit";
+  /**
+   * 「없었음」일 때 그 공동주택의 첫 가격 고시·공시일(YYYY-MM-DD) — 기본 "" (필수 입력이라 기본값을 두지 않는다).
+   * 단독·다가구의 `inhHouseValFirstDisclosureDate`(기본 2005-04-30)와 별개다 — 공동주택은 2005.4.30. 전일 수 있다.
+   */
+  inhApartFirstPriceDate: string;
   /** 최초 고시일 (기본 "2005-04-30") */
   inhHouseValFirstDisclosureDate: string;
   /** 토지 면적 (㎡) */

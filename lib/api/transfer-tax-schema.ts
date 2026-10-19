@@ -27,6 +27,7 @@ import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-r
 import { refinePropertyRequiredInputs, refineAmendmentInputs } from "./transfer-tax-schema-required-refines";
 import { refineCompanionPreDeemedAcquisitionSource } from "./transfer-tax-schema-required-refines-2a";
 import { refineHouseFirstDisclosureDate, refineSplitPartCause } from "./transfer-tax-schema-required-refines-2a";
+import { refineApartNtsPrice } from "./transfer-tax-schema-required-refines-2a";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 import { refineSplitAcquisitionInputs } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
@@ -156,6 +157,8 @@ export const propertySchema = z
       refineLandRebuild(c, c.assetKind === "housing", ctx, ["companionAssets", i], { supported: false });
       // 주택별 개별주택가격 최초공시일 범위(주 자산과 같은 규칙)
       refineHouseFirstDisclosureDate(c.houseFirstDisclosureDate, data.transferDate, ctx, ["companionAssets", i]);
+      // 공동주택 국세청 고시 가액 유무(영 §163⑨ 단서 2호 — 주 자산과 같은 규칙)
+      refineApartNtsPrice(c.inheritedAcquisition, !!c.inheritedHouseValuation, data.transferDate, ctx, ["companionAssets", i]);
       // 소유자 분리·별개 취득 입력 완결(V1~V8) — 종전엔 주 자산에만 걸려 컴패니언은 3종이 비면 엔진이 분리를 조용히 포기하고
       // **비소유 파트까지 과세**했다(⑧ `validateSplitDirectInputs`는 컴패니언도 차단 — ⑧≡⑫). 양도시 파트 기준시가(V7)도 ⑧이 요구하고,
       // 빠지면 엔진이 칸 없는 400을 내던 것을 정확한 칸으로 짚는다.

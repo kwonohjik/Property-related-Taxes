@@ -161,6 +161,17 @@ export interface InheritanceAcquisitionInput {
    */
   landValuationStdPrice?: number;
 
+  // ── 공동주택 국세청 고시 가액 유무 (영 §163⑨ 단서 2호 — `apart-nts-price.ts`) ──
+  /**
+   * 상속개시일·증여일 당시 국세청장이 고시한 공동주택 기준시가가 있었는가 — `house_apart`에서만 읽는다.
+   * `false`일 때만 ②(§164⑥·⑦)를 연다. 생략·`true` = 닫힘(「모름」 없음 — ⑫가 답을 필수로 받는다).
+   */
+  apartNtsPriceExisted?: boolean;
+  /** 「없었음」일 때 그 공동주택의 첫 가격을 낸 기관 — 국세청 고시(§164⑥) / 국토교통부 공시(§164⑦). 조문 표기용 */
+  apartFirstPriceAgency?: "nts" | "molit";
+  /** 「없었음」일 때 그 공동주택의 첫 가격 고시·공시일 — 기준일 < 이 날 ≤ 양도일(⑫) */
+  apartFirstPriceDate?: Date;
+
   // ── 의제취득일 전 상속·증여 (case A): 가목 max(①,②) 우선, 나목 ③은 확인 불가 시 ──
 
   /** @deprecated 물가상승률 방식 폐지(상속·증여 미적용). Phase 2에서 제거 예정 — 엔진 미사용 */
