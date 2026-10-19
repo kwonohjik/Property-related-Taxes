@@ -55,7 +55,7 @@ import {
   splitCauseLabel,
   splitRateBasisNote,
   splitRateBasisDateText,
-  splitRateHoldingAggregationLines,
+  splitRateHoldingLines,
   summarizeSplitGain,
 } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatLumpRate } from "./split-acq-text";
@@ -104,7 +104,7 @@ export function SplitGainDetailSection({
     // D1-4·D2-4 — 영 §163⑨ 단서 1호(토지)·2호(건물) 비교가 적용된 파트. 엔진 echo를 그대로 읽는다.
     // 두 파트에 동시에 서지 않는다(1호는 건물 매매, 2호는 토지 매매일 때만) — 하나만 렌더한다.
     const acqBasis = splitAcqBasisView(splitDetail.land) ?? splitAcqBasisView(splitDetail.building);
-    const rebuildLines = splitRateHoldingAggregationLines(splitDetail.land);
+    const rebuildLines = splitRateHoldingLines(splitDetail);
   return (
         <div className="rounded-lg border border-border p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">

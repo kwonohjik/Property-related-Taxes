@@ -125,3 +125,24 @@ ToggleCard(card, amber) 「같은 토지 위 구주택을 멸실하고 신축했
 - PDF(`ResultPdfTransferSections`): 날짜 칸 「환산 …」 + 구간 줄.
 - **R-4 실측(매매 호스트, `mixedCause=false`)**: 카드는 `split-card-rate-holding` 블록(세율 기산일 행 없이), 상세명세서·신고서는 `splitRateHoldingNote`가 `mixedCause`가 아닐 때 구간 줄을 낸다(원인이 다르고 기산일 행이 보이는 경우는 `splitCauseDateText`가 이미 내므로 중복 방지), PDF는 `parts.some(rateHoldingAggregation)`. 4뷰 모두 vitest(`land-rebuild-ui.test.tsx`)·E2E가 잠근다.
 - 엔진 고지(`warnings` — 0097은 2년 이상만 직접 판단 · 공백 제외·일수 버림은 해석례가 직접 정하지 않음 · 비과세 보유·거주·장특 미반영)는 결과 화면의 기존 경고 영역이 노출하는지 E2E로 확인한다.
+
+## 7. 자산 단위 세율 후퇴 시 표시·고지 게이트 (2026-10-19 추가 — 실측 결함 정정)
+
+**결함**: 통산 echo(`rateHoldingAggregation`)가 있으면 4뷰가 `partRateBasisApplied`와 무관하게 구간 줄을 냈고, 엔진 고지도 같은 플래그를 보지 않았다. 건물 파트 양도차손이면 `evaluateSplitPartTax`가 자산 단위 세율로 후퇴해(`partRateBasisApplied=false`) 통산이 세율에 닿지 않는데도 화면에는 「구주택 17개월 + 신축 8개월 = 25개월, 환산 기산일」이 나왔다(실측 시료 세액 320,950,000 = 통산 입력 없음). 같은 카드의 「세율 기산일」 행은 D1-3 규칙(`rateBasisShown`)으로 이미 가려져 있었다 — 통산 표시만 그 규칙에서 빠져 있었다.
+
+**게이트(단일 소스)** `transfer-tax-split-display.ts`
+- `splitRebuildShown(sd)` = `partRateBasisApplied === true` ∧ 통산 echo 있음.
+- `splitRateHoldingLines(sd)` = 게이트가 열렸을 때만 구간 줄(카드 `split-card-rate-holding` · 상세명세서 `splitRateHoldingNote` · 신고서(같은 함수) · PDF 모두 이 함수를 읽는다).
+- `summarizeSplitGain().parts[].rateHoldingAggregation`도 같은 플래그로 게이트한다 — PDF 머리 줄·「환산」 날짜·제목(`splitRateBasisDateText`·`splitRateBasisDateTitle`)이 파트 요약을 읽기 때문이다. 이 둘은 `rateBasisShown`(= 같은 플래그) 안에서만 불린다.
+- 다건은 자산 breakdown의 `splitDetail.partRateBasisApplied`가 최종 판정으로 덮이므로(`transfer-tax-aggregate-group-tax.ts` · §155⑳ `laterLand`) 게이트가 최종 플래그를 읽는다.
+
+**엔진 고지** `landRebuildRateNotice(agg, applied)`(`transfer-land-rebuild-rate.ts`) · 호출은 `landRebuildNoticeOf`(`transfer-tax-rebuild-notice.ts`)
+- 적용(`applied`): 종전 고지(구간·합산 개월·확인 필요).
+- 후퇴(`!applied`): **대체 고지 1건** `LAND_REBUILD_NOT_APPLIED_NOTICE` — 「건물 파트 양도차손 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다 — 확인 필요」. 숫자 구간을 주장하지 않는다. 세액 불변.
+- 일반 경로(`transfer-tax.ts`)와 §155⑳ 특례 경로(`transfer-tax-rental-housing-step.ts` — 종전에는 이 경로에 통산 고지가 아예 없었다)가 같은 헬퍼를 부른다.
+- 다건은 자산별 단건 결과의 경고를 `[라벨]`을 붙여 모은다 — 단건의 판정을 따른다. 실측: 정상·결손·§155⑳(배율 초과 포함) 시료에서 다건 최종 플래그와 단건 플래그가 같은 쪽(true / false / !== true)이었다. 차손 통산을 더한 2자산 시료에서도 갈리지 않았다 — 갈리는 입력은 구성하지 못했다(**확인 필요**). 갈려도 4뷰는 최종 플래그를 읽는다.
+
+**§155⑳ 특례 경로 실측**: 특례 적용 자산은 파트별 세율 판정을 거치지 않는 모델(`resolveRentalHousingSplitTax`)이라 통산이 세율에 닿지 않는다(실측 시료: 건물 2년 5개월은 특례 미적용, 5년 이상은 적용 — 건물 보유 2년 이상이 특례 요건이라 이 경로의 세율 기산이 이미 24개월 이상이어서 통산이 세액을 바꿀 입력이 있는지는 구성하지 못했다. 요건 본문은 이번에 대조하지 않았다 — **확인 필요**). 단건 플래그는 `undefined`(나중 취득 토지분 `laterLand`가 있을 때만 값이 쓰인다 — 통산 호스트와는 겹치지 않는다), 다건 최종 플래그는 `false`. 둘 다 게이트가 닫힌다.
+
+**세액은 바꾸지 않는다**: 자산 단위로 후퇴할 때 통산을 반영해야 하는지는 상속 토지 기산 등 다른 파트 기산 규칙도 같이 후퇴하는 기존 설계 차원의 별건이다.
+

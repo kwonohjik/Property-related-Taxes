@@ -59,8 +59,8 @@ import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclu
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
 import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
-import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice, resolveLandRebuildAggregation } from "./transfer-tax-appurtenant-land";
-import { landRebuildRateNotice } from "./transfer-land-rebuild-rate";
+import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
+import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { attachSplitCarryoverEcho } from "./transfer-tax-split-carryover";
 import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
@@ -720,8 +720,8 @@ export function calculateTransferTax(
   if (landBeforeBuildingNotice) warnings.push(landBeforeBuildingNotice);
   // D2-4(계획서 §13 Q-D24-1) — 건물 취득가액 단서 2호 비교(영 §164⑦ 건물 몫 안분)가 돈 경우의 방법·한계 고지(세액 불변).
   // D1-H(계획서 transfer-house-land-163-9-2.plan.md) — 주택 부수토지 단서 2호 비교의 방법·한계 또는 비교하지 않은 사실(세액 불변).
-  // 해석 (5) 구주택 멸실·신축 통산 — 적용했으면 두 구간·합산 개월과 확인 필요(세액 불변).
-  const rebuildNotice = splitDetail ? landRebuildRateNotice(resolveLandRebuildAggregation(effectiveInput)) : null;
+  // 해석 (5) 구주택 멸실·신축 통산 — 파트별 세율 판정을 거쳤으면 두 구간·합산 개월과 확인 필요, 자산 단위 세율로 후퇴했으면 반영되지 않았다는 확인 필요(세액 불변).
+  const rebuildNotice = landRebuildNoticeOf(effectiveInput, splitDetail);
   for (const n of [buildingSec164ApportionNotice(splitDetail), houseLandSec164Notice(effectiveInput, splitDetail), rebuildNotice]) if (n) warnings.push(n);
   steps.push(buildCalculatedTaxStep(taxResult, taxBase));
 

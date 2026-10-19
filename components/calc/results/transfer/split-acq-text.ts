@@ -16,7 +16,7 @@ import {
   splitCauseLabel,
   splitRateBasisNote,
   splitRateBasisDateTitle,
-  splitRateHoldingAggregationLines,
+  splitRateHoldingLines,
   SPLIT_CAUSE_VALUE_LABEL,
   summarizeSplitGain,
   type SplitAcqMode,
@@ -85,7 +85,7 @@ export function splitCauseDateText(sd: SplitGainResult | undefined): string | un
  */
 export function splitRateHoldingNote(sd: SplitGainResult | undefined): string | undefined {
   if (!sd) return undefined;
-  const lines = splitRateHoldingAggregationLines(sd.land);
+  const lines = splitRateHoldingLines(sd);
   if (!lines.length) return undefined;
   const s = summarizeSplitGain(sd);
   if (s.mixedCause && s.rateBasisShown) return undefined;

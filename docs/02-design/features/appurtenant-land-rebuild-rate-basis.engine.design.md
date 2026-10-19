@@ -84,7 +84,7 @@ E    = 양도일 다음날 − M개월 (UTC 달력, 해당일 없으면 말일, 
 ### 2.5 echo·고지·표시
 
 - `SplitPartResult.rateHoldingAggregation`(토지 파트만): `priorHouse{from,to,months}`, `newHouse{…}`, `totalMonths`, `equivalentBasisDate`, `startRule`. 이때 `appliedRateBasisDate`는 **E(환산 기산일)** 이다 → 표시가 실제 취득일로 오독하지 않게 `splitRateBasisNote`가 구간·합산 개월 문구로 대체한다(`transfer-tax-split-display.ts`).
-- 고지(`landRebuildRateNotice`, 세액 불변): 두 구간·합산 개월 / 공백 제외·일수 버림은 해석례가 직접 정한 바 아님 / 합산 24개월 미만이면 「0097은 2년 이상만 직접 판단」 확장 적용 / 비과세 보유·거주(영 §154⑧)·장특 통산 미반영 — 확인 필요.
+- 고지(`landRebuildRateNotice(agg, applied)`, 세액 불변): `applied`(= `partRateBasisApplied === true`)일 때만 두 구간·합산 개월 / 공백 제외·일수 버림은 해석례가 직접 정한 바 아님 / 합산 24개월 미만이면 「0097은 2년 이상만 직접 판단」 확장 적용 / 비과세 보유·거주(영 §154⑧)·장특 통산 미반영 — 확인 필요. **자산 단위 세율로 후퇴한 경우(건물 파트 양도차손·세율 특칙·§155⑳ 특례 등)에는 적용 고지 대신 대체 고지 1건**(숫자 구간 없음, 「확인 필요」) — UI 설계서 §7.
 - 비과세·고가주택 판정·장특·건물 파트는 입력 유무와 같다(anchor RB-B4, F1, F2).
 
 ## 3. API (⑫⑬⑭)

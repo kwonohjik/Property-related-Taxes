@@ -207,6 +207,10 @@ export const LAND_REBUILD_DEMOLITION_REQUIRED_MESSAGE = "구주택 멸실일이 
 export const LAND_REBUILD_ORDER_MESSAGE =
   "날짜 순서가 맞지 않습니다 — 구주택 시작일 ≤ 멸실일 < 신축 취득일(사용승인일) ≤ 양도일이어야 하고 멸실일은 토지 취득일 이후여야 합니다";
 
+/** 통산 입력은 유효하나 파트별 세율 판정을 거치지 않아 세율에 반영되지 않은 경우의 대체 고지 — 숫자 구간을 주장하지 않는다(세액 불변). */
+export const LAND_REBUILD_NOT_APPLIED_NOTICE =
+  "구주택 멸실·신축 통산 입력은 유효하지만, 건물 파트 양도차손 등으로 파트별 세율 판정을 하지 않고 자산 단위 세율을 적용해 통산이 세율에 반영되지 않았습니다 — 확인 필요";
+
 const key = (d: string | undefined) => d?.slice(0, 10);
 
 /**
@@ -296,9 +300,15 @@ export function landRebuildApplies(input: TransferTaxInput): boolean {
   return input.acquisitionCause === "purchase" && !hasLandCauseOverlay(input.landAcquisitionCause);
 }
 
-/** 결과 고지(세액 불변) — 통산을 적용했고 그 한계를 숨기지 않는다. 판정 근거 수준: 0097은 2년 이상만 직접 판단. */
-export function landRebuildRateNotice(agg: LandRebuildAggregation | undefined): string | null {
+/**
+ * 결과 고지(세액 불변). 판정 근거 수준: 0097은 2년 이상만 직접 판단.
+ *
+ * `applied` = 엔진이 **파트별 세율 판정을 거쳤는가**(`splitDetail.partRateBasisApplied === true`). 아니면(건물 파트 양도차손·세율 특칙·§155⑳ 특례 등으로
+ * 자산 단위 세율) 통산은 세율에 닿지 않았다 — 적용 고지를 내면 화면·고지가 실제 계산과 어긋난다. 이때는 숫자 구간을 주장하지 않는 대체 고지만 낸다.
+ */
+export function landRebuildRateNotice(agg: LandRebuildAggregation | undefined, applied: boolean): string | null {
   if (!agg) return null;
+  if (!applied) return LAND_REBUILD_NOT_APPLIED_NOTICE;
   const d = (x: Date) => x.toISOString().slice(0, 10);
   const head =
     `구주택을 멸실하고 신축한 주택의 부수토지는 세율 보유기간을 구주택 부수토지 기간 ${agg.priorHouse.months}개월(${d(agg.priorHouse.from)}~${d(agg.priorHouse.to)})과 ` +

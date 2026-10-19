@@ -19,7 +19,7 @@ import {
   splitCauseLabel,
   splitRateBasisNote,
   splitRateBasisDateText,
-  splitRateHoldingAggregationLines,
+  splitRateHoldingLines,
   summarizeSplitGain,
   type SplitGainPartSummary,
 } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -189,7 +189,7 @@ export function TransferSplitSection({ r }: { r: R }) {
             <View style={s.row}>
               <Text style={{ ...s.lbl, flex: 4 }}>토지 세율 보유기간 — 구주택 멸실·신축 통산 (서면법규과-1222 · 사전-2023-법규재산-0097)</Text>
             </View>
-            {splitRateHoldingAggregationLines(sd.land as unknown as SplitGainResult["land"]).map((line, i) => (
+            {splitRateHoldingLines(sd as unknown as SplitGainResult).map((line, i) => (
               <View key={i} style={s.row}>
                 <Text style={{ ...s.lbl, flex: 4 }}>{line}</Text>
               </View>

@@ -47,6 +47,7 @@ import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-spl
 import { applyRentalHousingReductions } from "./transfer-tax-rental-housing-reductions";
 import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
+import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 
 // 요건 판정·조기반환 게이트는 800줄 정책으로 분리 — 기존 import 경로 호환 재export.
 export {
@@ -512,6 +513,8 @@ export function runRentalHousingExceptionStep(
     for (const s of amendmentDetail.steps) steps.push({ ...s, sub: s.sub ?? true });
   }
 
+  // 해석 (5) 구주택 멸실·신축 통산 — 이 경로는 파트별 세율 판정을 거치지 않으므로(`partRateBasisApplied !== true`) 통산이 세율에 반영되지 않았다는 확인 필요를 낸다(세액 불변).
+  const rebuildNotice = landRebuildNoticeOf(effectiveInput, splitDetail) ?? undefined;
   return {
     amendmentDetail,
     // A19: §163⑨ 근거 2장 — 정상 경로 `transfer-tax-finalize.ts:604-605`와 동형.
@@ -526,7 +529,7 @@ export function runRentalHousingExceptionStep(
     ...(unsold989Detail ? { unsold989Detail } : {}),
     ...(houseCountExclusionDetails ? { houseCountExclusionDetails } : {}),
     // 결과 화면 상단 경고 — steps를 펼치지 않아도 보이게 한다(F08).
-    ...(reductionNotice || lthdNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
+    ...(reductionNotice || lthdNotice || rebuildNotice || appurtenantLthdNotice || periodPendingNotice || table2ReadingNotice || prhpSurchargeNotice || highValueExcessNotice || laterLandNotice || laterLandPhrpNotice || rhe.eligibility.notices?.length
       ? {
           warnings: [
             reductionNotice,
@@ -538,6 +541,7 @@ export function runRentalHousingExceptionStep(
             highValueExcessNotice,
             laterLandNotice,
             laterLandPhrpNotice,
+            rebuildNotice,
             // OH-40·§7-5 판정 보류·확인 필요 고지 — 결론은 바꾸지 않는다.
             ...(rhe.eligibility.notices ?? []),
           ].filter((x): x is string => x !== undefined),
