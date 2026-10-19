@@ -24,11 +24,11 @@ export function SectionCard({
   testId?: string;
 }) {
   const T: Record<string, { border: string; bg: string; badge: string; text: string }> = {
-    sky: { border: "border-sky-200", bg: "bg-sky-50/40", badge: "bg-sky-200 text-sky-800", text: "text-sky-700" },
-    amber: { border: "border-amber-200", bg: "bg-amber-50/40", badge: "bg-amber-200 text-amber-800", text: "text-amber-700" },
-    emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40", badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700" },
-    violet: { border: "border-violet-200", bg: "bg-violet-50/40", badge: "bg-violet-200 text-violet-800", text: "text-violet-700" },
-    rose: { border: "border-rose-200", bg: "bg-rose-50/40", badge: "bg-rose-200 text-rose-800", text: "text-rose-700" },
+    sky: { border: "border-sky-200", bg: "bg-sky-50/40 dark:bg-sky-950/40", badge: "bg-sky-200 text-sky-800", text: "text-sky-700 dark:text-sky-300" },
+    amber: { border: "border-amber-200", bg: "bg-amber-50/40 dark:bg-amber-950/40", badge: "bg-amber-200 text-amber-800", text: "text-amber-700 dark:text-amber-300" },
+    emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40 dark:bg-emerald-950/40", badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700 dark:text-emerald-300" },
+    violet: { border: "border-violet-200", bg: "bg-violet-50/40 dark:bg-violet-950/40", badge: "bg-violet-200 text-violet-800", text: "text-violet-700 dark:text-violet-300" },
+    rose: { border: "border-rose-200", bg: "bg-rose-50/40 dark:bg-rose-950/40", badge: "bg-rose-200 text-rose-800", text: "text-rose-700 dark:text-rose-300" },
   };
   const t = T[tone];
   return (

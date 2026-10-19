@@ -24,11 +24,11 @@ function CompositeTable({
   weightedLandPrice?: number;
 }) {
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3">
-      <h3 className="text-sm font-bold text-violet-800">복합구조 부분별 기준시가</h3>
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 space-y-3 dark:bg-violet-950/40">
+      <h3 className="text-sm font-bold text-violet-800 dark:text-violet-200">복합구조 부분별 기준시가</h3>
 
       {weightedLandPrice !== undefined && (
-        <p className="text-xs text-violet-700">
+        <p className="text-xs text-violet-700 dark:text-violet-300">
           위치지수 적용 ㎡당 공시지가(면적가중평균) ={" "}
           <b className="font-mono tabular-nums">{fmt(weightedLandPrice)}</b> 원/㎡
         </p>
@@ -37,7 +37,7 @@ function CompositeTable({
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-violet-200 text-violet-700">
+            <tr className="border-b border-violet-200 text-violet-700 dark:text-violet-300">
               <th className="py-1.5 pr-2 text-left font-semibold">부분</th>
               <th className="py-1.5 px-2 text-right font-semibold whitespace-nowrap">면적(㎡)</th>
               <th className="py-1.5 px-2 text-right font-semibold whitespace-nowrap">㎡당 금액</th>
@@ -62,17 +62,17 @@ function CompositeTable({
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-violet-300">
-              <td className="py-2 pr-2 text-left font-bold text-violet-800" colSpan={4}>
+              <td className="py-2 pr-2 text-left font-bold text-violet-800 dark:text-violet-200" colSpan={4}>
                 합계
               </td>
-              <td className="py-2 pl-2 text-right font-mono text-base tabular-nums font-bold text-violet-900 whitespace-nowrap">
+              <td className="py-2 pl-2 text-right font-mono text-base tabular-nums font-bold text-violet-900 whitespace-nowrap dark:text-violet-200">
                 {fmt(total)}
               </td>
             </tr>
           </tfoot>
         </table>
       </div>
-      <p className="text-caption text-violet-600">
+      <p className="text-caption text-violet-600 dark:text-violet-400">
         각 부분 = ㎡당 금액 × 면적(1,000원 미만 절사 후). 공용 부속시설은 주용도 면적비율로 안분합니다.
       </p>
     </div>
@@ -84,8 +84,8 @@ function ApartmentConversionCard({ ac }: { ac: ApartmentConversionResult }) {
   const denom = ac.firstNoticeLandValue + ac.firstNoticeBuildingValue;
   const numer = ac.acqLandValue + ac.acqBuildingValue;
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3">
-      <h3 className="text-sm font-bold text-amber-800">취득당시 공동주택 기준시가 (환산)</h3>
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 space-y-3 dark:bg-amber-950/40">
+      <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">취득당시 공동주택 기준시가 (환산)</h3>
       <div className="text-right font-mono text-2xl font-bold tabular-nums">{fmt(ac.convertedAcquisitionPrice)}</div>
 
       <div className="space-y-2 border-t pt-2 text-xs leading-relaxed text-slate-600">
@@ -98,10 +98,10 @@ function ApartmentConversionCard({ ac }: { ac: ApartmentConversionResult }) {
           <span className="text-right font-mono tabular-nums">{fmt(ac.firstNoticeLandValue)}</span>
           <span>③ 최초고시 건물기준시가</span>
           <span className="text-right font-mono tabular-nums">{fmt(ac.firstNoticeBuildingValue)}</span>
-          <span className="text-amber-700">④ 취득당시 토지가액</span>
-          <span className="text-right font-mono tabular-nums text-amber-700">{fmt(ac.acqLandValue)}</span>
-          <span className="text-amber-700">⑤ 취득당시 건물기준시가</span>
-          <span className="text-right font-mono tabular-nums text-amber-700">{fmt(ac.acqBuildingValue)}</span>
+          <span className="text-amber-700 dark:text-amber-300">④ 취득당시 토지가액</span>
+          <span className="text-right font-mono tabular-nums text-amber-700 dark:text-amber-300">{fmt(ac.acqLandValue)}</span>
+          <span className="text-amber-700 dark:text-amber-300">⑤ 취득당시 건물기준시가</span>
+          <span className="text-right font-mono tabular-nums text-amber-700 dark:text-amber-300">{fmt(ac.acqBuildingValue)}</span>
           <span className="border-t pt-1">2001년 건물기준시가</span>
           <span className="border-t pt-1 text-right font-mono tabular-nums">{fmt(ac.base2001BuildingPrice)}</span>
         </div>

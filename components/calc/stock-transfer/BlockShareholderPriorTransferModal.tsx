@@ -148,13 +148,13 @@ export function BlockShareholderPriorTransferModal({
               <strong>기신고분만</strong> 넣으세요(당회차분을 더하지 않습니다).
             </p>
             {excluded.exceed3y > 0 && (
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-amber-700 dark:text-amber-300">
                 같은 법인 이력 {excluded.exceed3y}건은 <strong>양도일이 소급 3년을 넘어</strong>{" "}
                 합산 대상이 아닙니다 (영 §158②).
               </p>
             )}
             {excluded.resultMissing > 0 && (
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-amber-700 dark:text-amber-300">
                 같은 법인 이력 {excluded.resultMissing}건은{" "}
                 <strong>계산 결과(양도가액·주식수)가 저장돼 있지 않아</strong> 합산할 수 없습니다.
                 해당 이력을 다시 계산해 저장하면 후보로 뜹니다.
@@ -204,8 +204,8 @@ export function BlockShareholderPriorTransferModal({
         )}
 
         {preview && (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-xs">
-            <p className="font-semibold text-emerald-800">
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 text-xs dark:bg-emerald-950/40">
+            <p className="font-semibold text-emerald-800 dark:text-emerald-200">
               선택 {selected.length}건 합계 — <strong>기신고분만</strong> (당회차 제외)
             </p>
             <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
@@ -232,7 +232,7 @@ export function BlockShareholderPriorTransferModal({
           ⚠️ 여러 종목을 함께 신고한 건은 <strong>마지막 종목만</strong> 이력에 남습니다. 이 법인이
           그 대표가 아니었다면 후보로 뜨지 않으니 직접 입력하세요.
         </p>
-        <p className="text-caption text-amber-700">
+        <p className="text-caption text-amber-700 dark:text-amber-300">
           ⚠️ 합산기간 중 앞선 회차는 <strong>빠짐없이</strong> 고르세요. 일부만 고르면 고르지 않은
           회차의 <strong>기납부세액(영 §168②)이 차감되지 않아</strong> 그 부분을 두 번 내게 됩니다.
         </p>

@@ -104,9 +104,9 @@ export function CompositePartsSection({
     <div className="space-y-2.5">
       {/* 건물 전체 특성(상증) — I 지붕·II·III, 전 부분 공유 */}
       {!forTransfer && onBuildingFeaturesChange && (
-        <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2">
+        <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2 dark:bg-violet-950/40">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-bold text-violet-800">건물 전체 특성 (전 부분 공통)</p>
+            <p className="text-sm font-bold text-violet-800 dark:text-violet-200">건물 전체 특성 (전 부분 공통)</p>
             <Button
               variant="modalLauncher"
               size="sm"
@@ -116,7 +116,7 @@ export function CompositePartsSection({
               {buildingFeatureCount > 0 ? "다시 계산" : "건물 특성으로 계산"}
             </Button>
           </div>
-          <p className="text-caption text-violet-700/80">
+          <p className="text-caption text-violet-700/80 dark:text-violet-300/80">
             최고층수·연면적·지능형·주택유형·지붕 등 건물 단위 특성. 연면적은 부분 면적 합계 + 부속으로 자동 적용됩니다.
           </p>
           {buildingFeatureCount > 0 && (
@@ -130,12 +130,12 @@ export function CompositePartsSection({
       {parts.map((p, i) => (
         <div key={i} className="rounded-md border border-violet-200 bg-white/60 dark:bg-white/5 p-2.5 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-violet-700">부분 {i + 1}</span>
+            <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">부분 {i + 1}</span>
             {parts.length > 1 && (
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-caption text-rose-600 underline underline-offset-2 hover:no-underline"
+                className="text-caption text-rose-600 underline underline-offset-2 hover:no-underline dark:text-rose-400"
               >
                 삭제
               </button>
@@ -192,7 +192,7 @@ export function CompositePartsSection({
                     <button
                       type="button"
                       onClick={() => setOpenPartIdx(i)}
-                      className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900"
+                      className="text-xs font-medium text-green-700 underline underline-offset-2 hover:text-green-900 dark:text-green-300"
                     >
                       다시 계산
                     </button>
@@ -254,8 +254,8 @@ export function CompositePartsSection({
       </Button>
 
       {/* 부속시설 종류별 면적 — 계산서 Ⅳ·Ⅴ */}
-      <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2">
-        <p className="text-xs font-semibold text-violet-700">부속시설 면적 (주차장·기계실 등 — 선택)</p>
+      <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2 dark:bg-violet-950/40">
+        <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">부속시설 면적 (주차장·기계실 등 — 선택)</p>
         <div className="grid grid-cols-2 gap-2">
           {ANCILLARY_FIELDS.map((a) => {
             const hasArea = parseArea(ancillaryAreas[a.kind]) > 0;

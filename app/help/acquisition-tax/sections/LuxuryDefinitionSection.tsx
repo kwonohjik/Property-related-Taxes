@@ -53,7 +53,7 @@ export function LuxuryDefinitionSection() {
         </tbody>
       </table>
 
-      <div className="rounded-md bg-amber-50/60 border border-amber-200 p-3 text-xs text-amber-800 space-y-1">
+      <div className="rounded-md bg-amber-50/60 border border-amber-200 p-3 text-xs text-amber-800 space-y-1 dark:text-amber-200 dark:bg-amber-950/40">
         <p><strong>별장 폐지 주의 (v4 D1)</strong>: 2023.3.14 이후 별장 중과 폐지는 §13⑤ 한정.</p>
         <p>§13의2 다주택 중과와 별개 — 별장은 주택 아니므로 다주택 카운트에 포함 안 됨.</p>
         <p><strong>사치성 + 다주택 중복</strong>: 다주택 중과세율에 8%p 추가 (최대 20%) — §13의2③</p>

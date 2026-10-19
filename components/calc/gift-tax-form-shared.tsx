@@ -372,7 +372,7 @@ export function Step0({
         </select>
         {/* G-M2b: 세대생략 §57은 donor=grandparent이면 자동 적용됨을 안내 */}
         {form.donor === "grandparent" && (
-          <p className="text-caption text-rose-700 bg-rose-50/70 rounded px-2 py-1">
+          <p className="text-caption text-rose-700 bg-rose-50/70 rounded px-2 py-1 dark:text-rose-300 dark:bg-rose-950/40">
             조부모→손자녀 증여 — 세대생략 §57 할증 30% (또는 미성년+20억 초과 시 40%) 자동 적용됩니다.
           </p>
         )}

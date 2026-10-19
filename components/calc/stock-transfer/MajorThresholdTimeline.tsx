@@ -100,7 +100,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
                 key={fromISO}
                 className={
                   isCurrent
-                    ? "bg-violet-50/70 text-violet-900 font-medium"
+                    ? "bg-violet-50/70 text-violet-900 font-medium dark:text-violet-200 dark:bg-violet-950/40"
                     : "text-slate-700"
                 }
               >
@@ -123,7 +123,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
           <p className="text-xs text-slate-500 mt-2">
             ※ 벤처기업은 시총 기준 40억 (조특법 §16, 시행령 §167의8①2호 나목)
           </p>
-          <p className="text-xs text-amber-700 mt-1">
+          <p className="text-xs text-amber-700 mt-1 dark:text-amber-300">
             ※ 2017.1.1.~2019.12.31. 기준은 법제처 연혁 API 미확인 — 추정값
           </p>
         </>

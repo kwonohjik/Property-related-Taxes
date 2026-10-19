@@ -165,7 +165,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
               }
               if (krw === null) return null;
               return (
-                <div className="rounded bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800">
+                <div className="rounded bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-200 dark:bg-emerald-900/40">
                   양도가액(원화 환산 참고): {krw.toLocaleString()}
                 </div>
               );
@@ -188,7 +188,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
         </FieldCard>
 
         {acquisitionModeFS === "market_price" && (
-          <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+          <div className="rounded-lg border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 leading-relaxed dark:text-amber-300 dark:bg-amber-950/40">
             §178의3②2호 — 양도일·취득일 이전 1개월 거래소 평균가격으로 산정합니다.
             평균가격을 계산하여 아래 「1주당 취득가액 — 시가」 란에 직접 입력하세요.
           </div>
@@ -256,7 +256,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
           if (perShare <= 0 || count <= 0) return null;
           const krw = Math.floor(perShare * count * rate);
           return (
-            <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+            <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               취득가액(원화 환산 참고): {krw.toLocaleString()}
             </div>
           );

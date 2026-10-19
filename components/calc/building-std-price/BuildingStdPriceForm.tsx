@@ -404,14 +404,14 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
 
       {/* 소재지 — 개별공시지가 자동조회용(건물 단위 1회 입력). 기계식주차는 토지가액 미사용 → 숨김 */}
       {!isMech && (
-        <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3">
+        <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3 dark:bg-rose-950/40">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-200 text-micro font-bold text-rose-800">
               ＠
             </span>
-            <span className="text-sm font-semibold text-rose-700">소재지 (공시지가 조회용)</span>
+            <span className="text-sm font-semibold text-rose-700 dark:text-rose-300">소재지 (공시지가 조회용)</span>
           </div>
-          <p className="text-caption text-rose-600/90">
+          <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
             주소를 입력하면 아래 ㎡당 개별공시지가를 연도별로 자동 조회할 수 있습니다. 미입력 시 직접 입력하세요.
           </p>
           <AddressSearch
@@ -439,7 +439,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             onAutoFill={(patch) => setF((prev) => ({ ...prev, ...patch }))}
           />
           {(!!f.unitDong || !!f.unitHo) && (
-            <p className="text-caption text-rose-600/90">
+            <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
               집합건물 세대는 건축물대장 조회 시 전유+공용 연면적이 건물 연면적으로 자동 입력됩니다(국세청 「건물 기준시가
               계산방법 고시」상 건물면적 기준). 조회되지 않으면 전유+공용 연면적을 직접 입력하세요.
             </p>
@@ -475,7 +475,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
           )}
         </div>
         {showFloorAreaSourceNotice && (
-          <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+          <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
             건물 연면적이 비어 있습니다 — ① 기본정보 「면적·규모」에서 입력하면 이 계산기에 자동 반영됩니다.
           </p>
         )}
@@ -504,7 +504,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
                 다만 §164⑧(취득연도 == 양도연도) 판정에 취득연도가 필요해 연도 칸만 남긴다. */}
             {transferOnly && (
               <p
-                className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-xs text-amber-800"
+                className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40"
                 data-testid="bsp-transfer-only-note"
               >
                 양도당시 기준시가는 양도 시점 정보만으로 산정됩니다. 취득연도가 양도연도와 같은 경우에만

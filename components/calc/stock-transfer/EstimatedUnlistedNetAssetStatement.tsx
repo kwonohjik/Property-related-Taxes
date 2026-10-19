@@ -44,22 +44,22 @@ export function EstimatedUnlistedNetAssetStatement({ form, onChange, acquisition
   }, [acquisitionSideOnly, hideAcqColumn, form, onChange]);
 
   return (
-    <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-4 space-y-3">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/30 p-4 space-y-3 dark:bg-emerald-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
           2
         </span>
-        <p className="text-sm font-semibold text-emerald-800">
+        <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
           순자산가액 계산서 (소령 §165④1 나목 — {acquisitionSideOnly ? "취득연도" : hideAcqColumn ? "양도연도" : "양도/취득연도"})
         </p>
       </div>
-      <p className="text-xs text-amber-700 bg-amber-50/70 border border-amber-200 rounded px-2 py-1.5">
+      <p className="text-xs text-amber-700 bg-amber-50/70 border border-amber-200 rounded px-2 py-1.5 dark:text-amber-300 dark:bg-amber-950/40">
         {UNLISTED_MESSAGES.GOODWILL_NOTICE}
       </p>
       {hideAcqColumn && (
         <p
           data-testid="eu-na-acq-hidden-notice"
-          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+          className="rounded border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
         >
           ⓘ {UNLISTED_MESSAGES.ACQ_FACE_VALUE_NOTICE} — 취득연도 NA 입력 비노출
         </p>

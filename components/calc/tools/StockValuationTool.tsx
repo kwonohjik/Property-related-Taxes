@@ -170,7 +170,7 @@ export function StockValuationTool() {
             {hasUnlistedSimple && (
               <p
                 data-testid="stock-valuation-v1-notice"
-                className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 print:hidden"
+                className="rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 print:hidden dark:text-amber-300 dark:bg-amber-950/40"
               >
                 비상장 간편평가 종목은 별지 부표3 평가조서가 생성되지 않습니다. 평가조서가 필요하면
                 종목 편집에서 「정식평가」로 전환하세요.

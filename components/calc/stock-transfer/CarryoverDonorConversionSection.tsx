@@ -46,7 +46,7 @@ export function CarryoverDonorConversionSection({ form, onChange }: Props) {
         title="이월과세 — 증여자 기준 환산의 분모 (§97의2①1호 · 시행령 §176의2②1호)"
         bodyClassName="space-y-3"
       >
-        <p className="text-xs text-amber-800 leading-relaxed">
+        <p className="text-xs text-amber-800 leading-relaxed dark:text-amber-200">
           이월과세를 적용할 때의 취득가액은 양도가액에 「<strong>증여자 취득 당시 기준시가</strong>(1단계)를{" "}
         <strong>양도 당시 기준시가</strong>(아래)로 나눈 비율」을 곱한 금액입니다. 위 취득가액은 증여일
         평가액이며 이월과세가 배제될 때 쓰입니다 (소득세법 시행령 §163⑨).

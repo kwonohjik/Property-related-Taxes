@@ -219,9 +219,9 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <AreaBar businessArea={area.businessArea} nonBusinessArea={area.nonBusinessArea} />
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-2">
             <span className="text-muted-foreground">사업용 면적</span>
-            <span className="font-mono tabular-nums text-right text-emerald-600">{area.businessArea.toFixed(1)} ㎡</span>
+            <span className="font-mono tabular-nums text-right text-emerald-600 dark:text-emerald-400">{area.businessArea.toFixed(1)} ㎡</span>
             <span className="text-muted-foreground">비사업용 면적</span>
-            <span className="font-mono tabular-nums text-right text-red-600">{area.nonBusinessArea.toFixed(1)} ㎡</span>
+            <span className="font-mono tabular-nums text-right text-red-600 dark:text-red-400">{area.nonBusinessArea.toFixed(1)} ㎡</span>
             {area.mixedUseBuildingRatio !== undefined && (
               <>
                 <span className="text-muted-foreground">특정용도분 비율 (§168의11⑥)</span>
@@ -247,7 +247,7 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
                       <td className="px-2 py-1">{i + 1}</td>
                       <td className="px-2 py-1 text-right font-mono tabular-nums">{formatDeemedDate(p.acquisitionDate)}</td>
                       <td className="px-2 py-1 text-right font-mono tabular-nums">{p.landArea.toFixed(1)} ㎡</td>
-                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${p.nonBusinessArea > 0 ? "text-red-600" : "text-muted-foreground"}`}>{p.nonBusinessArea.toFixed(1)} ㎡</td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${p.nonBusinessArea > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>{p.nonBusinessArea.toFixed(1)} ㎡</td>
                     </tr>
                   ))}
                 </tbody>

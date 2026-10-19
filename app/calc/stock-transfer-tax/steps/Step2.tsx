@@ -164,7 +164,7 @@ export function Step2({ form, onChange }: Step2Props) {
   return (
     <div className="space-y-8">
       {isSplitMode && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-4 text-sm text-violet-900">
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-4 text-sm text-violet-900 dark:text-violet-200 dark:bg-violet-950/40">
           <p className="font-semibold mb-1">🔀 분할 양도 모드 활성</p>
           <p className="text-xs">
             양도가액·취득가액은 1단계의 건별 입력에서 자동 산출되며, 산출 값은 아래 ①·② 에서 확인할 수 있습니다.
@@ -238,7 +238,7 @@ export function Step2({ form, onChange }: Step2Props) {
                     onChange={(v) => onChange({ perShareTransferPrice: v })}
                   />
                   {transferTotal && (
-                    <div className="rounded border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700">
+                    <div className="rounded border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300 dark:bg-emerald-950/40">
                       양도가액 합계: {parseAmount(form.perShareTransferPrice).toLocaleString()} ×{" "}
                       {parseInt(form.shareCount || "0", 10).toLocaleString()}주 ={" "}
                       <strong>{transferTotal.toLocaleString()}</strong>
@@ -268,7 +268,7 @@ export function Step2({ form, onChange }: Step2Props) {
           {/* 교환 양도가 (PR-2 실구현) */}
           {transferPriceMode === "exchange" && (
             <div className="space-y-3">
-              <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-700">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-4 py-3 text-sm text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
                 <p className="font-medium">교환 양도가 (비상장·기타자산)</p>
                 <p className="text-xs mt-1">
                   부동산 가액 + 채무면제액 + 현금의 합계가 양도가액입니다 (§96①).
@@ -295,7 +295,7 @@ export function Step2({ form, onChange }: Step2Props) {
                 />
               </div>
               {exchangeTotal > 0 && (
-                <div className="rounded border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-700">
+                <div className="rounded border border-amber-200 bg-amber-50/60 px-3 py-2 text-sm text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
                   교환 양도가액 합계:{" "}
                   <strong>{exchangeTotal.toLocaleString()}</strong>원
                 </div>
@@ -334,7 +334,7 @@ export function Step2({ form, onChange }: Step2Props) {
           {/* 영 §163⑨ — 증여·상속 취득가액은 평가액(실지거래가액 의제) → 매매사례 불가 · 환산은 장부분실일 때만(국심2007중1761).
               ⑧·⑫·복원 마이그레이션과 같은 술어. */}
           {giftLikeCause && (
-            <p className="text-xs text-amber-800" data-testid="gift-valuation-only-notice">
+            <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="gift-valuation-only-notice">
               증여·상속받은 주식의 취득가액은 증여일·상속개시일 현재 「상속세 및 증여세법」 제60조~제66조에 따른
               평가액이며 이를 실지거래가액으로 봅니다 —{" "}
               {bookLostMarket
@@ -347,7 +347,7 @@ export function Step2({ form, onChange }: Step2Props) {
           )}
 
           {bonusTaxedEstimationClosed && !isSplitMode && (
-            <p className="text-xs text-amber-800" data-testid="bonus-taxed-face-value-notice">
+            <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="bonus-taxed-face-value-notice">
               {BONUS_TAXED_ACTUAL_ONLY_MESSAGE}
             </p>
           )}
@@ -432,11 +432,11 @@ export function Step2({ form, onChange }: Step2Props) {
               {acquisitionActualInputMode === "lots" && (
                 <>
                   {transferActualInputMode === "total" && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-700">
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-4 py-3 text-xs text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
                       <p className="font-medium mb-1">⚠️ 양도가액 합계 + 취득 다건 조합 안내</p>
                       <p>
                         양도가액을 합계로 입력하고 취득가액을 다건으로 입력하면, 엔진은 양도 1주당 단가를{" "}
-                        <code className="bg-amber-100 px-1 rounded">round(합계 ÷ 양도 주식수)</code> 로 역산합니다.
+                        <code className="bg-amber-100 px-1 rounded dark:bg-amber-900/40">round(합계 ÷ 양도 주식수)</code> 로 역산합니다.
                         합계가 양도 주식수로 정확히 나누어 떨어지지 않으면 결과 양도가액에 ±(양도주식수−1)원 잔돈 오차가 발생할 수 있습니다.
                       </p>
                     </div>
@@ -489,7 +489,7 @@ export function Step2({ form, onChange }: Step2Props) {
                 「거래정지를 고르세요」라고 안내해 이제는 disabled 인 옵션을 가리켰다.
               */}
               {form.kiwoomTradingHalt && form.acquisitionStdMode !== "halt_transfer" && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50/70 px-4 py-2 text-xs text-amber-800">
+                <div className="rounded-lg border border-amber-300 bg-amber-50/70 px-4 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
                   {isTradingHaltMarketScopeViolation(form.marketType) ? (
                     <>⚠ 키움 조회에서 거래정지·관리종목이 감지되었습니다 — 다만 유가증권시장
                       상장주식은 거래정지 중이어도 「소득세법」 제99조 제1항 제3호에 따라 양도일·취득일
@@ -618,7 +618,7 @@ export function Step2({ form, onChange }: Step2Props) {
                 </ToneCard>
               )}
 
-              <p className="text-xs text-emerald-700">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300">
                 ※ 환산 모드에서는 시행령 §163⑥4에 따라 개산공제(취득기준시가 × 1%)가 자동
                 적용되며 실비 입력값은 무시됩니다.
               </p>
@@ -649,7 +649,7 @@ export function Step2({ form, onChange }: Step2Props) {
               sectionNum={2}
               title="취득 당시 기준시가 — 개산공제 기준 (소령 §163⑥4·§165④)"
             >
-              <p className="text-xs text-emerald-700/80">
+              <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
                 매매사례가액으로 취득가액을 정하면 필요경비는 <strong>취득가액 + 취득 당시 기준시가 × 1%</strong>
                 (개산공제)입니다. 실제 경비로 바꾸는 §97②2호 단서는 환산취득가액에만 있습니다.
               </p>
@@ -694,8 +694,8 @@ function ReversePerShareNote({
 }) {
   const ok =
     tone === "emerald"
-      ? "border-emerald-200 bg-emerald-50/60 text-emerald-700"
-      : "border-amber-200 bg-amber-50/60 text-amber-700";
+      ? "border-emerald-200 bg-emerald-50/60 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-950/40"
+      : "border-amber-200 bg-amber-50/60 text-amber-700 dark:text-amber-300 dark:bg-amber-950/40";
   return info.isExact ? (
     <div className={`rounded border px-3 py-2 text-sm ${ok}`}>
       참고: 1주당 단가 = <strong>{info.perShare.toLocaleString()}</strong>{" "}

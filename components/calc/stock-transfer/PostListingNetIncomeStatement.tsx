@@ -247,7 +247,7 @@ export function NetIncomeStatementTable({
         preview[c.col].netIncomeAmount < 0 ? (
           <p
             key={c.col}
-            className="rounded border border-amber-300 bg-amber-50/70 px-3 py-2 text-xs text-amber-800"
+            className="rounded border border-amber-300 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
           >
             <strong>{COL_LABEL[c.col]} 사업연도</strong> — 결손 입력. 1주당 순손익액이 음수이므로{" "}
             <strong>0으로 보아</strong> 평가합니다. 「상속세 및 증여세법 시행령」 제56조 제1항
@@ -285,7 +285,7 @@ export function PostListingNetIncomeStatement({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-amber-700">
+      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
         순손익 계산서 (PDF 24행 — 소령 §165④1 가목 + 시행규칙 §81② → 상증령 §17)
       </p>
       <NetIncomeStatementTable form={form} onChange={onChange} cols={cols} />

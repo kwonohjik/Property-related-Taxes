@@ -58,7 +58,7 @@ function WarningModal({
             <ul className="space-y-1">
               {rule.exclusions.map((ex, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="text-red-400 mt-0.5 shrink-0">•</span>
+                  <span className="text-red-400 mt-0.5 shrink-0 dark:text-red-300">•</span>
                   {ex}
                 </li>
               ))}

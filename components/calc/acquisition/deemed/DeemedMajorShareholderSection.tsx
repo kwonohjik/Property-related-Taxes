@@ -70,7 +70,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
   return (
     <ToneCard tone="amber" bodyClassName="space-y-3">
       <div className="flex items-center gap-2">
-        <p className="text-xs font-semibold text-amber-700">과점주주 간주취득 상세</p>
+        <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">과점주주 간주취득 상세</p>
         <TaxHelp
           title="과점주주 간주취득 (지방세법 §7⑤)"
           summary="법인 주식·지분을 취득해 과점주주(50% 초과)가 되면, 법인 보유 자산 취득으로 간주 과세"
@@ -230,22 +230,22 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
 
       {/* 과세 미리보기 */}
       {showPreview && (
-        <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
-          <p className="font-medium text-amber-800">과세 미리보기</p>
-          <p className="text-amber-700">
+        <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1 dark:bg-amber-900/40">
+          <p className="font-medium text-amber-800 dark:text-amber-200">과세 미리보기</p>
+          <p className="text-amber-700 dark:text-amber-300">
             {isFirstMajor ? (
               <>과세 지분율 = 취득 후 <span className="font-medium">전체 {newR}%</span> (최초 과점주주 — §7⑤)</>
             ) : (
               <>과세 지분율 = 증가분 {taxableRatioPct.toFixed(2)}%p ({prevR}% → {newR}%)</>
             )}
           </p>
-          <p className="text-amber-700">
+          <p className="text-amber-700 dark:text-amber-300">
             간주취득 과세표준 = {formatKRW(corpVal)} × {taxableRatioPct.toFixed(2)}% = {formatKRW(deemedBase)}
           </p>
-          <p className="font-medium text-amber-800">
+          <p className="font-medium text-amber-800 dark:text-amber-200">
             예상 취득세 = {formatKRW(deemedBase)} × {deemedRateLabel} = {formatKRW(Math.floor(deemedBase * deemedRate))}
           </p>
-          <p className="text-xs text-amber-600">* 농어촌특별세·지방교육세 별도</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
     </ToneCard>

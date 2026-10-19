@@ -102,12 +102,12 @@ function ExemptionRow({
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
             해당 자산 가액
             {rule.limitType === "fixed" && rule.limitAmount && (
-              <span className="ml-1 text-amber-600">
+              <span className="ml-1 text-amber-600 dark:text-amber-400">
                 (최대 {rule.limitAmount.toLocaleString()})
               </span>
             )}
             {rule.limitType === "social_norm" && (
-              <span className="ml-1 text-amber-600">(사회통념상 인정되는 범위)</span>
+              <span className="ml-1 text-amber-600 dark:text-amber-400">(사회통념상 인정되는 범위)</span>
             )}
           </label>
           <CurrencyInput
@@ -440,7 +440,7 @@ export function ExemptionChecklist({
   return (
     <div className="space-y-3">
       {/* 통합 카드: 제목 + 안내 + 칩 패널 (마스터 토글 제거 — 항목 직접 선택) */}
-      <div className="rounded-lg border border-violet-200/70 bg-violet-50/40 p-3 space-y-3">
+      <div className="rounded-lg border border-violet-200/70 bg-violet-50/40 p-3 space-y-3 dark:bg-violet-950/40">
         <div className="space-y-0.5">
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             {masterTitle}
@@ -500,7 +500,7 @@ export function ExemptionChecklist({
 
           {/* 금양임야·묘토 합산 2억원 한도 안내 */}
           {showGraveGroupNotice && (
-            <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-xs text-violet-800 dark:text-violet-300">
+            <div className="rounded-lg border border-violet-200 bg-violet-50/60 p-3 text-xs text-violet-800 dark:text-violet-300 dark:bg-violet-950/40">
               금양임야와 묘토의 비과세 합계는 <strong>2억원 한도</strong>입니다 (상증령 §8③ 단서). 족보·제구는 별도 <strong>1천만원 한도</strong>가 적용됩니다.
             </div>
           )}

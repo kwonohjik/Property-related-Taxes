@@ -22,9 +22,9 @@ interface CardProps {
 }
 
 const TONE: Record<CardProps["tone"], { border: string; bg: string; head: string }> = {
-  amber: { border: "border-amber-200", bg: "bg-amber-50/40", head: "text-amber-800" },
-  emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40", head: "text-emerald-800" },
-  sky: { border: "border-sky-200", bg: "bg-sky-50/40", head: "text-sky-800" },
+  amber: { border: "border-amber-200", bg: "bg-amber-50/40 dark:bg-amber-950/40", head: "text-amber-800 dark:text-amber-200" },
+  emerald: { border: "border-emerald-200", bg: "bg-emerald-50/40 dark:bg-emerald-950/40", head: "text-emerald-800 dark:text-emerald-200" },
+  sky: { border: "border-sky-200", bg: "bg-sky-50/40 dark:bg-sky-950/40", head: "text-sky-800 dark:text-sky-200" },
 };
 
 function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps) {
@@ -129,7 +129,7 @@ export function BuildingStdPriceResultCard({ result, floorArea, transferSectionL
       <BuildingStdPriceAdvancedResult result={result} />
       <p className="text-caption leading-relaxed text-slate-400">{result.legalBasis}</p>
       {result.warnings.map((w, i) => (
-        <p key={i} className="text-xs text-amber-700">
+        <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
           ⚠️ {w}
         </p>
       ))}

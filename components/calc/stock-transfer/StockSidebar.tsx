@@ -341,9 +341,9 @@ export function StockSidebar({
     <div className="space-y-3">
       {/* 종목명 배지 (입력된 경우만) */}
       {(stockName || isMultiFiling) && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 flex items-center gap-2">
+        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 flex items-center gap-2 dark:bg-amber-950/40">
           {stockName && (
-            <span className="text-xs font-semibold text-amber-800 truncate">{stockName}</span>
+            <span className="text-xs font-semibold text-amber-800 truncate dark:text-amber-200">{stockName}</span>
           )}
           {isMultiFiling && (
             <span className="ml-auto shrink-0 rounded bg-sky-100 px-1.5 py-0.5 text-micro font-semibold text-sky-700">

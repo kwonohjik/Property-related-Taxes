@@ -336,7 +336,7 @@ function OwnershipSection({
       <div className="space-y-4 pt-1">
         {/* 소유 형태 선택 */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-sky-700">특수 소유 형태</label>
+          <label className="text-xs font-medium text-sky-700 dark:text-sky-300">특수 소유 형태</label>
           <RadioCardGroup
             name="ownershipType"
             tone="sky"
@@ -427,7 +427,7 @@ function OwnershipSection({
                   />
                   <button
                     type="button"
-                    className="rounded px-2 py-2 text-sm text-rose-600 hover:bg-rose-50"
+                    className="rounded px-2 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400"
                     onClick={() =>
                       onChange({ heirs: form.heirs.filter((_, j) => j !== i) })
                     }
@@ -628,13 +628,13 @@ function CoOwnerList({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-sky-700">
+        <label className="text-xs font-medium text-sky-700 dark:text-sky-300">
           공유자 목록 <span className="text-muted-foreground font-normal">(지분율 합계: {(totalRatio * 100).toFixed(1)}%)</span>
         </label>
         <button
           type="button"
           onClick={addRow}
-          className="text-xs text-sky-700 hover:text-sky-900 font-medium border border-sky-300 rounded px-2 py-0.5"
+          className="text-xs text-sky-700 hover:text-sky-900 font-medium border border-sky-300 rounded px-2 py-0.5 dark:text-sky-300"
         >
           + 공유자 추가
         </button>
@@ -671,7 +671,7 @@ function CoOwnerList({
         </div>
       ))}
       {totalRatio > 1 + 1e-9 && (
-        <p className="text-xs text-red-600">지분율 합계가 100%를 초과합니다.</p>
+        <p className="text-xs text-red-600 dark:text-red-400">지분율 합계가 100%를 초과합니다.</p>
       )}
     </div>
   );

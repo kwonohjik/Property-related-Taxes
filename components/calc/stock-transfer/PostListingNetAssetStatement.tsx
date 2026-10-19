@@ -203,7 +203,7 @@ export function NetAssetStatementTable({ form, onChange, cols }: NetAssetStateme
         preview[c.col].zeroFloorApplied ? (
           <p
             key={c.col}
-            className="rounded border border-sky-300 bg-sky-50/70 px-3 py-2 text-xs text-sky-800"
+            className="rounded border border-sky-300 bg-sky-50/70 px-3 py-2 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40"
           >
             <strong>{COL_LABEL[c.col]} 사업연도</strong> — 자본잠식. 영업권 포함 전 순자산가액이
             0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다. 영업권이 있으면 영업권만
@@ -242,7 +242,7 @@ export function PostListingNetAssetStatement({
 
   return (
     <div className="space-y-3">
-      <p className="text-xs font-semibold text-sky-700">
+      <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
         순자산가액 계산서 (PDF 20행 — 소령 §165④1 나목)
       </p>
       <NetAssetStatementTable form={form} onChange={onChange} cols={cols} />

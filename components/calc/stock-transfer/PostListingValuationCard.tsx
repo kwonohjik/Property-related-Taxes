@@ -132,11 +132,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
        자기 자신은 그 조건을 검사하지 않는다(호출부가 분기한다).
   */
   return (
-    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4">
-      <p className="text-sm font-semibold text-amber-800">
+    <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-4 dark:bg-amber-950/40">
+      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
         취득 후 상장 — 환산취득가 (소령 §165⑤)
       </p>
-      <p className="text-caption text-amber-700 mt-1">
+      <p className="text-caption text-amber-700 mt-1 dark:text-amber-300">
         취득 당시 비상장이었으나 양도 시점에 상장된 주식 — 상장일 이후 1개월 종가평균 기반 환산
       </p>
       <div className="mt-4 space-y-4" onKeyDown={handleEnterNext} data-enter-nav="off">
@@ -148,9 +148,9 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
             ★ 번호 순서 = **계산이 소비하는 순서**다(제보 2026-09-10 재배치). ①②로 1주당
             취득기준시가를 만든 뒤 ③으로 나눈다 — 시간순(상장 → 평가 → 양도)과도 일치하고,
             전역 스위치가 지배하는 ①②가 스위치 바로 아래에 연달아 온다. */}
-        <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm">
-          <p className="font-semibold text-violet-800 mb-2">환산 산식 (소령 §165⑤ + §176의2②1호 합성)</p>
-          <div className="text-violet-700 space-y-1 text-xs font-mono">
+        <div className="rounded-lg border border-violet-200 bg-violet-50/70 px-4 py-3 text-sm dark:bg-violet-950/40">
+          <p className="font-semibold text-violet-800 mb-2 dark:text-violet-200">환산 산식 (소령 §165⑤ + §176의2②1호 합성)</p>
+          <div className="text-violet-700 space-y-1 text-xs font-mono dark:text-violet-300">
             <p>
               [§165⑤] 1주당 취득기준시가 = ①상장일 이후 1개월 종가평균 ×{" "}
               <Frac top="②취득연도 평가" bottom="②상장연도 평가" />
@@ -238,7 +238,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               />
             </FieldCard>
           ) : (
-            <p className="text-caption text-amber-700/90 leading-relaxed">
+            <p className="text-caption text-amber-700/90 leading-relaxed dark:text-amber-300/90">
               재무제표 모드에서는 종가도 일자별로 입력합니다 (위 「환산 입력 방식」 선택에 따름).
             </p>
           )}
@@ -310,8 +310,8 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               </FieldCard>
               {valueMode === "direct" ? (
                 <>
-                  <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                    <p className="text-sm font-medium text-amber-800 mb-3">상장연도 비상장 보충적 평가</p>
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/40">
+                    <p className="text-sm font-medium text-amber-800 mb-3 dark:text-amber-200">상장연도 비상장 보충적 평가</p>
                     <div className="space-y-3">
                       <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
                         value={form.listingYearNetIncomePerShare}
@@ -321,8 +321,8 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                         onChange={(v) => onChange({ listingYearNetAssetPerShare: v })} />
                     </div>
                   </div>
-                  <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                    <p className="text-sm font-medium text-amber-800 mb-3">취득연도 비상장 보충적 평가</p>
+                  <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/40">
+                    <p className="text-sm font-medium text-amber-800 mb-3 dark:text-amber-200">취득연도 비상장 보충적 평가</p>
                     <div className="space-y-3">
                       <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
                         value={form.acquisitionYearNetIncomePerShare}
@@ -372,8 +372,8 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               <PostListingNetAssetStatement form={form} onChange={onChange} mode={mode} />
               {/* listing_only — 취득연도 4 필드 직접 입력 */}
               {mode === "listing_only" && (
-                <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3">
-                  <p className="text-sm font-medium text-amber-800 mb-3">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
+                <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/40">
+                  <p className="text-sm font-medium text-amber-800 mb-3 dark:text-amber-200">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
                   <div className="space-y-3">
                     <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
                       value={form.acquisitionYearNetIncomePerShare}

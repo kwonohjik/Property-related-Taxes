@@ -218,7 +218,7 @@ export function StockFilingFormTable({
                       >
                         {fmtCell(row.values[c.key])}
                         {roseNote && (
-                          <div className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
                             {roseNote}
                           </div>
                         )}

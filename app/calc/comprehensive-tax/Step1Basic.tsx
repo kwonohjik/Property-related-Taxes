@@ -98,7 +98,7 @@ function YearLawHintCard({ year }: { year: number }) {
 
   return (
     <CollapsibleHintCard tone="amber" summary={summary}>
-      <div className="space-y-1 text-amber-900">
+      <div className="space-y-1 text-amber-900 dark:text-amber-200">
         <p>
           기본공제: 일반 {formatKRW(params.basicDeductionGeneral)} / 1세대1주택{" "}
           {formatKRW(params.basicDeductionOneHouse)}
@@ -234,9 +234,9 @@ export function Step1Basic() {
 
       {/* 법인 선택 시: 세부 유형 Select + 조건 요건 + 도출 배지 (시행령 §4의4 자동판정) */}
       {isCorporate && (
-        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3 dark:bg-violet-950/40">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-violet-800">
+            <label className="text-xs font-semibold text-violet-800 dark:text-violet-200">
               법인 세부 유형 <span className="text-destructive">*</span>
             </label>
             <div className="flex flex-wrap gap-1.5">
@@ -265,7 +265,7 @@ export function Step1Basic() {
           {/* 조건부 요건 (충족/미충족) — 해당 유형만 노출, 무기본(미선택 시 계산 차단) */}
           {corpReqKey && (
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-violet-800">
+              <label className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                 {CORP_REQ_LABEL[corpReqKey].question} <span className="text-destructive">*</span>
               </label>
               <RadioCardGroup
@@ -286,11 +286,11 @@ export function Step1Basic() {
 
           {/* 도출 결과 배지 + §4의4② 안내 (조건부 유형 미응답 시 안내 우선) */}
           {corpReqKey && corpReqValue === undefined ? (
-            <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+            <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-900/40">
               요건 충족 여부를 선택하면 적용 세율 특례(§9② 호)가 결정됩니다.
             </div>
           ) : corporateClass ? (
-            <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-1">
+            <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 space-y-1 dark:text-violet-200 dark:bg-violet-900/40">
               <p className="font-semibold">
                 적용: {CORP_CLASS_BADGE[corporateClass].ho} 법인 주택분 특례
               </p>
@@ -304,7 +304,7 @@ export function Step1Basic() {
               )}
               {(corporateClass === "corporate_general" ||
                 corporateClass === "corporate_public") && (
-                <p className="text-violet-700">
+                <p className="text-violet-700 dark:text-violet-300">
                   ⓘ 시행령 §4의4② — 보유현황 신고기간(§8③)에 관할세무서장에게 서류 제출이 필요합니다.
                 </p>
               )}
@@ -325,7 +325,7 @@ export function Step1Basic() {
           disabledReason="부부 공동명의 특례(§10의2)와 동시 적용 불가 — §10의2 특례는 1세대1주택자로 보는 의제입니다"
         >
           {/* 1세대1주택자 추가 정보 (ON 시 펼침) */}
-          <p className="text-xs text-sky-700 font-medium">
+          <p className="text-xs text-sky-700 font-medium dark:text-sky-300">
             1세대1주택자 세액공제 적용을 위한 추가 정보
           </p>
 
@@ -373,7 +373,7 @@ export function Step1Basic() {
           disabledReason="1세대1주택자와 동시 적용 불가 — §10의2 특례는 1세대1주택자로 보는 의제입니다"
         >
           {/* 안내 — 공시가격 입력 주의 · 납세의무자 안내 · 부속토지 제외 */}
-          <div className="rounded-md border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs text-sky-900 space-y-1">
+          <div className="rounded-md border border-sky-200 bg-sky-50/60 px-3 py-2 text-xs text-sky-900 space-y-1 dark:text-sky-200 dark:bg-sky-950/40">
             <p>
               <span className="font-semibold">주택 공시가격 입력:</span>{" "}
               지분 안분 없이{" "}
@@ -424,12 +424,12 @@ export function Step1Basic() {
 
       {/* §8④ 의제 단독 적용 시(1세대1주택·부부특례 미선택) — 세액공제 입력 */}
       {showSection8para4CreditInput && (
-        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3">
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 p-4 space-y-3 dark:bg-violet-950/40">
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-violet-800">
+            <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">
               §8④ 1세대1주택자 의제 적용 — 자동으로 1세대1주택자로 계산
             </p>
-            <p className="text-xs text-violet-900">
+            <p className="text-xs text-violet-900 dark:text-violet-200">
               2단계에서 §8④ 특례주택을 지정하셨습니다(일반주택 1채와 함께 보유 시 의제 성립).
               고령자·장기보유 세액공제를 위해 본인(신청인)의 생년월일·취득일을 입력하세요. 산출세액은 일반주택 공시가격으로 안분됩니다.
             </p>

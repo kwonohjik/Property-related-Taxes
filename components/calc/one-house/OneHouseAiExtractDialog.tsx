@@ -123,7 +123,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
               rows={8}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
-            <p className={`text-right text-xs ${overLimit ? "text-rose-600" : "text-muted-foreground"}`}>
+            <p className={`text-right text-xs ${overLimit ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"}`}>
               {length.toLocaleString()} / {ONE_HOUSE_AI_TEXT_MAX.toLocaleString()}자
             </p>
           </div>
@@ -144,7 +144,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
 
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center">
             {data && replacesInput && (
-              <p className="text-xs text-rose-600 sm:mr-auto">적용하면 지금 입력한 값은 모두 지워집니다.</p>
+              <p className="text-xs text-rose-600 sm:mr-auto dark:text-rose-400">적용하면 지금 입력한 값은 모두 지워집니다.</p>
             )}
             <Button
               type="button"

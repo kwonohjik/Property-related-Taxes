@@ -109,7 +109,7 @@ function Step2Properties() {
 
       {/* 1세대1주택자 설정 ↔ 주택 수 불일치 실시간 안내 (rose — 계산 시 차단됨) */}
       {oneHouseMismatch && (
-        <div className="rounded-md border border-rose-300 bg-rose-50/70 px-4 py-3 text-xs text-rose-800 space-y-1">
+        <div className="rounded-md border border-rose-300 bg-rose-50/70 px-4 py-3 text-xs text-rose-800 space-y-1 dark:text-rose-200 dark:bg-rose-950/40">
           <p className="font-semibold">1세대 1주택자 설정과 주택 수가 맞지 않습니다</p>
           <p>{oneHouseMismatch}</p>
         </div>
@@ -129,7 +129,7 @@ function Step2Properties() {
               checked={formData.isMultiHouseInAdjustedArea}
               onCheckedChange={(v) => updateFormData({ isMultiHouseInAdjustedArea: v })}
             >
-              <p className="text-xs text-rose-700">
+              <p className="text-xs text-rose-700 dark:text-rose-300">
                 {year} 귀속(과세기준일 {year}-06-01)까지 조정대상지역 2주택 이상 보유자에게
                 적용된 규정입니다. 2023년부터 해당 조항이 삭제되어 150%로 단일화됩니다.
               </p>
@@ -179,7 +179,7 @@ function Step2Properties() {
                 checked={formData.previousYearAutoIsOneHouse}
                 onCheckedChange={(v) => updateFormData({ previousYearAutoIsOneHouse: v })}
               />
-              <div className="rounded-md bg-sky-50/40 border border-sky-200 px-3 py-2 text-xs text-sky-700">
+              <div className="rounded-md bg-sky-50/40 border border-sky-200 px-3 py-2 text-xs text-sky-700 dark:text-sky-300 dark:bg-sky-950/40">
                 <p>
                   각 주택의 직전연도 공시가격은 아래 주택 행을 열어 &lsquo;세부담 상한&rsquo; 섹션에
                   입력합니다. 생년월일·취득일은 기본정보(1단계)에서 자동 사용됩니다.
@@ -189,7 +189,7 @@ function Step2Properties() {
           )}
         </div>
       ) : (
-        <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900">
+        <div className="rounded-md border border-violet-200 bg-violet-50/60 px-4 py-3 text-xs text-violet-900 dark:text-violet-200 dark:bg-violet-950/40">
           <p className="font-semibold">
             §9②3호 법인 — 세부담 상한 미적용{" "}
             <LawArticleModal legalBasis="종합부동산세법 §10" label="§10 단서" />
@@ -591,8 +591,8 @@ export default function ComprehensiveTaxPage() {
 
           {/* 오류 메시지 */}
           {error && (
-            <div className="rounded-md bg-red-50 border border-red-200 p-3">
-              <p className="text-sm text-red-700 whitespace-pre-line">{error}</p>
+            <div className="rounded-md bg-red-50 border border-red-200 p-3 dark:bg-red-950/40">
+              <p className="text-sm text-red-700 whitespace-pre-line dark:text-red-300">{error}</p>
             </div>
           )}
 

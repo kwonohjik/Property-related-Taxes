@@ -279,7 +279,7 @@ export function AdjustmentRateModal({
           </FieldCard>
 
           <FieldCard label="II 연면적" hint="연면적은 본 계산 입력값을 자동 적용(주거용 미적용)">
-            <div className="rounded-md bg-violet-50/70 px-2.5 py-2 text-xs text-violet-800">
+            <div className="rounded-md bg-violet-50/70 px-2.5 py-2 text-xs text-violet-800 dark:text-violet-200 dark:bg-violet-950/40">
               {residential
                 ? "주거용 건물 — 연면적 조정 미적용"
                 : floorArea > 0 && grossAreaNo !== undefined
@@ -377,7 +377,7 @@ export function AdjustmentRateModal({
           )}
         </div>
 
-        <p className="rounded-md bg-violet-50/60 px-2.5 py-1.5 text-caption text-violet-700">
+        <p className="rounded-md bg-violet-50/60 px-2.5 py-1.5 text-caption text-violet-700 dark:text-violet-300 dark:bg-violet-950/40">
           {showBuilding && (
             <>II 구분(최고층수·연면적·지능형)은 <b>가장 높은 지수 1개</b>만 적용됩니다(중복 방지).</>
           )}
@@ -399,7 +399,7 @@ export function AdjustmentRateModal({
         </p>
 
         <DialogFooter className="flex-row items-center justify-between sm:justify-between">
-          <span className="text-sm font-semibold text-violet-700">
+          <span className="text-sm font-semibold text-violet-700 dark:text-violet-300">
             {categoryScope === "building" ? "예상 건물 전체 조정률" : categoryScope === "part" ? "예상 부분 조정률" : "예상 조정률"}:{" "}
             {(previewRate * 100).toFixed(1)}%
           </span>

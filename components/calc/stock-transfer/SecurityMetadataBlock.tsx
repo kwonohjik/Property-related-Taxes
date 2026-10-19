@@ -140,7 +140,7 @@ export function SecurityMetadataBlock({
     : "6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인";
 
   return (
-    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-4">
+    <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-4 dark:bg-sky-950/40">
       {/* 성명 / 생년월일 — mode별 IndexedDB 직접 read/write */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FieldCard label={nameLabel}>

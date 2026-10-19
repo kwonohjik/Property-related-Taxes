@@ -117,9 +117,9 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
 
       <div className="space-y-2" data-testid="deemed-bucket-rows">
         {rows.map((row, idx) => (
-          <div key={row.id} className="rounded-md border border-amber-100 bg-amber-50/20 p-3 space-y-2">
+          <div key={row.id} className="rounded-md border border-amber-100 bg-amber-50/20 p-3 space-y-2 dark:bg-amber-950/40">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-amber-800">{idx + 1}번 물건</span>
+              <span className="text-xs font-medium text-amber-800 dark:text-amber-200">{idx + 1}번 물건</span>
               <button
                 type="button"
                 onClick={() => onChange(rows.filter((r) => r.id !== row.id))}
@@ -182,7 +182,7 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
             )}
 
             {taxableRatio > 0 && (parseAmount(row.bookValue) ?? 0) > 0 && (
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-amber-700 dark:text-amber-300">
                 {formatKRW(parseAmount(row.bookValue) ?? 0)} × {(taxableRatio * 100).toFixed(2)}% ={" "}
                 {formatKRW(Math.floor((parseAmount(row.bookValue) ?? 0) * taxableRatio))} ×{" "}
                 {(deemedProvisoRate(row.proviso) * 100).toFixed(0)}% ={" "}
@@ -205,22 +205,22 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
       )}
 
       {rows.length > 0 && (
-        <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
-          <div className="flex justify-between text-amber-700">
+        <div className="rounded-md bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1 dark:bg-amber-900/40">
+          <div className="flex justify-between text-amber-700 dark:text-amber-300">
             <span>장부가액 합계</span>
             <span>{formatKRW(totals.bookTotal)}</span>
           </div>
           {taxableRatio > 0 && (
             <>
-              <div className="flex justify-between text-amber-700">
+              <div className="flex justify-between text-amber-700 dark:text-amber-300">
                 <span>간주취득 과세표준 합계</span>
                 <span>{formatKRW(totals.baseTotal)}</span>
               </div>
-              <div className="flex justify-between font-medium text-amber-800">
+              <div className="flex justify-between font-medium text-amber-800 dark:text-amber-200">
                 <span>예상 취득세 합계</span>
                 <span>{formatKRW(totals.taxTotal)}</span>
               </div>
-              <p className="text-xs text-amber-600">* 농어촌특별세 별도 · 지방교육세는 §151①1 본문 괄호로 비과세</p>
+              <p className="text-xs text-amber-600 dark:text-amber-400">* 농어촌특별세 별도 · 지방교육세는 §151①1 본문 괄호로 비과세</p>
             </>
           )}
         </div>

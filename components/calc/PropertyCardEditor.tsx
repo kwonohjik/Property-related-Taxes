@@ -38,9 +38,9 @@ import { toRegistrationType } from "@/lib/calc/comprehensive-api";
 // ============================================================
 
 const SECTION_TONE = {
-  sky: { badge: "bg-sky-200 text-sky-800", text: "text-sky-700", card: "border-sky-200 bg-sky-50/40" },
-  amber: { badge: "bg-amber-200 text-amber-800", text: "text-amber-700", card: "border-amber-200 bg-amber-50/40" },
-  emerald: { badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700", card: "border-emerald-200 bg-emerald-50/40" },
+  sky: { badge: "bg-sky-200 text-sky-800", text: "text-sky-700 dark:text-sky-300", card: "border-sky-200 bg-sky-50/40 dark:bg-sky-950/40" },
+  amber: { badge: "bg-amber-200 text-amber-800", text: "text-amber-700 dark:text-amber-300", card: "border-amber-200 bg-amber-50/40 dark:bg-amber-950/40" },
+  emerald: { badge: "bg-emerald-200 text-emerald-800", text: "text-emerald-700 dark:text-emerald-300", card: "border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/40" },
 } as const;
 
 function SectionCard({
@@ -399,7 +399,7 @@ export function PropertyCardEditor({
                   const pct = ((num / total) * 100).toFixed(2);
                   return (
                     <p
-                      className="text-xs text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-3 py-2"
+                      className="text-xs text-amber-800 bg-amber-100/60 border border-amber-200 rounded-md px-3 py-2 dark:text-amber-200 dark:bg-amber-900/40"
                       data-testid={`appurtenant-ratio-${property.id}`}
                     >
                       안분비율: {pct}% ({ownLand ? "토지" : "건물"} {formatKRW(num)} / 전체 {formatKRW(total)})
@@ -472,13 +472,13 @@ export function PropertyCardEditor({
                   onClick={() =>
                     onUpdate({ floorUnits: [...property.floorUnits, { label: "", area: "" }] })
                   }
-                  className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/40 py-1.5 text-xs text-violet-700 hover:bg-violet-100/60"
+                  className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/40 py-1.5 text-xs text-violet-700 hover:bg-violet-100/60 dark:text-violet-300 dark:bg-violet-950/40"
                 >
                   + 구별(층별) 추가
                 </button>
                 {/* 라이브 안분 미리보기 */}
                 {multiFamilyPreview.length > 0 && (
-                  <div className="rounded-md border border-violet-200 bg-violet-50/60 px-3 py-2 text-xs text-violet-800">
+                  <div className="rounded-md border border-violet-200 bg-violet-50/60 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 dark:bg-violet-950/40">
                     <span className="font-semibold">안분 공시가격 미리보기: </span>
                     {multiFamilyPreview.map((v, i) => (
                       <span key={i}>
@@ -517,7 +517,7 @@ export function PropertyCardEditor({
                 ))}
               </select>
               {property.exclusionType !== "none" && (
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-amber-600 dark:text-amber-400">
                   ⚠ 합산배제 신청 시 다음 단계에서 요건 정보를 추가 입력해주세요.
                 </p>
               )}

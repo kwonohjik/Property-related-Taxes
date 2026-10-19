@@ -63,7 +63,7 @@ export function SplitAllocationPreviewCard({
         </strong>
       </div>
       {!isTransfer && summary && (
-        <p className="text-xs text-amber-800" data-testid="split-preview-clause1-summary">
+        <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="split-preview-clause1-summary">
           의제취득일 전 매수 ① {summary.method === "estimated" ? "환산취득가액" : "매매사례가액"} 비교 — ① 채택{" "}
           {fmtShares(summary.clause1Shares)}주 / 매도 {fmt(summary.soldShares)}주 (의제취득일 현재 1주당 기준시가{" "}
           {fmt(summary.deemedStdPerShare)}).

@@ -72,17 +72,17 @@ export function PostListingCapitalEventSection({ form, onChange }: Props) {
         </FieldCard>
         {/* 절단 미리보기 */}
         {form.listingPriceIncreaseDate && preview.truncation && (
-          <div className="rounded border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-700">
+          <div className="rounded border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
             기간 조정 후 평균 {preview.avg.toLocaleString()} (포함 {preview.truncation.includedDays}거래일 · 제외{" "}
             {preview.truncation.excludedDays}일)
           </div>
         )}
         {form.listingPriceIncreaseDate && preview.warning && (
-          <div className="rounded border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700">
+          <div className="rounded border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
             {preview.warning}
           </div>
         )}
-        <p className="text-xs text-amber-700">
+        <p className="text-xs text-amber-700 dark:text-amber-300">
           ⓘ §165⑤ 환산의 상장일 종가평균에 §52의2② 기간 조정 적용은 해석에 따른 것으로, 명문·예규로 확정되지
           않았습니다.
         </p>
