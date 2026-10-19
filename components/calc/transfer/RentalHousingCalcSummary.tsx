@@ -25,7 +25,7 @@ export function RentalHousingCalcSummary({
   if (!rh.applyException) {
     return (
       <div
-        className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 text-sm text-violet-900"
+        className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 text-sm text-violet-900 dark:text-violet-200 dark:bg-violet-950/40"
         data-testid="rental-housing-handoff-notice"
       >
         {/*
@@ -79,16 +79,16 @@ export function RentalHousingCalcSummary({
     );
   }
   return (
-    <div className="rounded-lg border border-violet-300 bg-violet-50/70 p-3 space-y-3">
+    <div className="rounded-lg border border-violet-300 bg-violet-50/70 p-3 space-y-3 dark:bg-violet-950/40">
       <div className="flex flex-wrap items-center gap-1.5">
-        <p className="text-sm font-semibold text-violet-900">
+        <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
           장기임대주택 보유자 거주주택 비과세 특례 — 적용
         </p>
         <LawArticleModal legalBasis="소득세법 시행령 §155" label="§155⑳" />
       </div>
       {/* 판정 메뉴에서 넘겨받은 사실 — 여기서는 고칠 수 없다. */}
       <div
-        className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1 text-xs text-violet-900"
+        className="rounded-md border border-violet-200 bg-violet-100/50 p-2.5 space-y-1 text-xs text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
         data-testid="imported-rental-housing-facts"
       >
         <p>

@@ -219,7 +219,7 @@ export function NblSectionContainer({
                   onChange={(c, n) => onAssetChange({ nblLandSigunguCode: c, nblLandSigunguName: n })}
                 />
                 {!asset.nblLandSigunguCode && acqSigunguName && (
-                  <p className="mt-1 text-xs text-amber-700">
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
                     양도 물건 소재지 {acqSigunguName} 자동 입력됨 (직접 수정 가능).
                   </p>
                 )}
@@ -275,7 +275,7 @@ export function NblSectionContainer({
               onChange={(v) => onAssetChange({ nblUrbanIncorporationDate: v })}
             />
             {!nblIncorpDateIsValid && sfIncorporationDate && (
-              <p className="mt-1 text-xs text-amber-700">
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
                 감면의 편입일 {sfIncorporationDate} 자동 적용 (편입 3년 유예 판정). 다르면 직접 입력하세요.
               </p>
             )}

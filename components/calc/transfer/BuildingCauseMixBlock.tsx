@@ -89,11 +89,11 @@ export function BuildingCauseMixBlock(props: {
       {active && (
         <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
           <ToneCard tone="amber">
-            <p className="text-xs text-amber-900">
+            <p className="text-xs text-amber-900 dark:text-amber-200">
               건물은 <strong>{isInheritance ? "상속" : "증여"}</strong>, 토지는 <strong>매매</strong>로 취득한 자산입니다. 취득가액·보유기간을
               토지·건물 <strong>각각</strong> 산정합니다 (소득세법 §95④·§104②, 같은 법 시행령 §163⑨).
             </p>
-            <p className="text-caption text-amber-800" data-testid="building-cause-guide">
+            <p className="text-caption text-amber-800 dark:text-amber-200" data-testid="building-cause-guide">
               건물 {isInheritance ? "상속개시일" : "증여일"}과 토지 취득일은 아래 <strong>날짜 두 칸</strong>에, 건물 평가액은{" "}
               <strong>취득가액 산정 방식</strong>의 건물 칸에, 토지 취득가액은 토지 칸(실거래가·환산·감정·매매사례 선택)에 입력합니다.
               건물은 실거래가(평가액)로 고정되고, 토지·건물을 함께 환산하는 개별주택가격 미공시 3-시점 환산은 적용되지 않습니다. 다만 건물{" "}
@@ -146,7 +146,7 @@ export function BuildingCauseMixBlock(props: {
           {/* 증여 — 배우자·직계존비속 10년 내 증여는 이월과세(§97의2①) 대상이다. 이 화면은 그 계산을 지원하지 않는다는 고지. */}
           {!isInheritance && (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="building-gift-carryover-notice">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="building-gift-carryover-notice">
                 양도일부터 소급하여 10년 이내에 <strong>배우자·직계존비속</strong>으로부터 증여받은 건물은 취득가액·보유기간을 증여자 기준으로
                 계산하는 이월과세 대상인지 확인하세요(소득세법 §97의2①). 이 화면은 <strong>건물만 이월과세이고 토지는 매수한 경우를 아직 계산하지
                 못하며</strong>, 건물은 일반 증여(증여일 평가액·증여일 취득)로 계산됩니다. 토지·건물이 모두 이월과세 대상이면 취득 원인을
@@ -157,7 +157,7 @@ export function BuildingCauseMixBlock(props: {
 
           {hasFamilyBusiness && (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="building-cause-fb-note">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="building-cause-fb-note">
                 가업상속공제 입력이 남아 있어 계산할 수 없습니다 — 이 토글을 끄고 가업상속공제를 해제하세요.
               </p>
             </ToneCard>

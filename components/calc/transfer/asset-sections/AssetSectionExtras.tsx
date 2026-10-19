@@ -85,7 +85,7 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
       {/* 장기임대주택 보유자 거주주택 비과세 특례 — 주택 **주 자산**에만 표시 (소령 §155⑳) */}
       {hasOrphanRentalDeclaration && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs text-amber-900"
+          className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-950/40"
           data-testid="rental-exception-companion-notice"
         >
           <p className="font-semibold">

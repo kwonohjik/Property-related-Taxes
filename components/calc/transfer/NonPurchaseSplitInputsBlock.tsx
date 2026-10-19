@@ -60,7 +60,7 @@ export function NonPurchaseSplitInputsBlock(props: {
   return (
     <div className="space-y-3" data-testid="non-purchase-split-inputs">
       <ToneCard tone="amber">
-        <p className="text-xs text-amber-900">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
           토지·건물 소유자가 달라 <strong>{ownedLabel}분만</strong> 본인 양도소득으로 과세합니다.
           취득가액·양도가액은 아래 기준시가 비율로 토지·건물에 안분합니다 (소득세법 시행령 §166⑥).
         </p>
@@ -118,7 +118,7 @@ export function NonPurchaseSplitInputsBlock(props: {
         */}
         {toPropertyKind(asset.assetKind) !== "land" &&
           toPropertyKind(asset.assetKind) !== "building_non_residential" && (
-            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2">
+            <div className="space-y-2 rounded-md border border-amber-200 bg-amber-50/40 p-2 dark:bg-amber-950/40">
               <LandPriceLookupField
                 label="취득시 토지 공시지가"
                 data-field="standardPricePerSqmAtAcq"

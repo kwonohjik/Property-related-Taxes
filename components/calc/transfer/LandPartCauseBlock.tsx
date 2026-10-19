@@ -56,7 +56,7 @@ function LandCauseFields(props: { asset: AssetForm; onChange: (patch: Partial<As
           법이 자동 적용하는 규정이라 「증여」로 고른 사용자가 고지 없이 일반 증여로 계산받지 않게 한다. */}
       {cause === "gift" && (
         <ToneCard tone="amber">
-          <p className="text-xs text-amber-900" data-testid="land-gift-carryover-notice">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-gift-carryover-notice">
             양도일부터 소급하여 10년 이내에 <strong>배우자·직계존비속</strong>으로부터 증여받은 토지는
             취득가액·보유기간을 증여자 기준으로 계산하는 이월과세 대상입니다(소득세법 §97의2①). 이 화면은 그
             계산을 지원하지 않으며, 토지는 일반 증여(증여일 평가액·증여일 취득)로 계산됩니다.
@@ -65,7 +65,7 @@ function LandCauseFields(props: { asset: AssetForm; onChange: (patch: Partial<As
       )}
 
       <div className="space-y-1.5">
-        <p className="text-xs font-semibold text-amber-800">토지 취득 원인</p>
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">토지 취득 원인</p>
         <div data-testid="land-acq-cause">
           <RadioCardGroup
             name={`landAcquisitionCause-${asset.assetId ?? "primary"}`}
@@ -183,7 +183,7 @@ export function LandPartCauseBlock(props: {
         {active && (
           <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900">
+              <p className="text-xs text-amber-900 dark:text-amber-200">
                 건물은 <strong>매매</strong>, 토지는 <strong>{meta.label}</strong>으로 취득한 자산입니다. 취득가액·보유기간을
                 토지·건물 <strong>각각</strong> 산정합니다 (소득세법 §95④·§104②, 같은 법 시행령 §163⑨).
               </p>
@@ -214,7 +214,7 @@ export function LandPartCauseBlock(props: {
       {active && (
         <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
           <ToneCard tone="amber">
-            <p className="text-xs text-amber-900">
+            <p className="text-xs text-amber-900 dark:text-amber-200">
               건물은 <strong>신축</strong>, 토지는 <strong>{meta.label}</strong>으로
               취득한 자산입니다. 취득가액·보유기간을 토지·건물 <strong>각각</strong> 산정합니다
               (소득세법 §95④·§104②, 같은 법 시행령 §163⑨).
@@ -254,7 +254,7 @@ export function LandPartCauseBlock(props: {
 
           {dateNotice && (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="land-cause-date-notice">{dateNotice}</p>
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-cause-date-notice">{dateNotice}</p>
             </ToneCard>
           )}
 

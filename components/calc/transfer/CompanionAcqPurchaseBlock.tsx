@@ -421,7 +421,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         && (props.useEstimatedAcquisition
             || (isSeparateAcq && (effLandAcqMode === "estimated" || effBuildingAcqMode === "estimated")))
         && props.isNonPrimaryAsset && (
-        <p className="rounded-md border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+        <p className="rounded-md border border-amber-200/70 bg-amber-50/60 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
           이 자산은 <strong>취득 당시 기준시가를 직접 입력</strong>합니다. 개별주택가격 미공시 취득
           3-시점 환산(「소득세법 시행령」 §164⑦)은 <strong>첫 자산에서만</strong> 적용됩니다.
         </p>

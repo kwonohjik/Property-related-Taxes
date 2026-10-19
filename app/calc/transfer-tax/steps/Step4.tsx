@@ -345,7 +345,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
           />
           {isLandContributedRight && (
             <div
-              className="rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 text-caption leading-relaxed text-amber-900"
+              className="rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 text-caption leading-relaxed text-amber-900 dark:text-amber-200 dark:bg-amber-950/40"
               data-testid="land-contributed-right-notice"
             >
               <p className="font-medium">토지만 출자한 조합원입주권</p>
@@ -393,11 +393,11 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               */}
               {isOneHouseholdEffective && derivedHouseholdRightCount === 1 && form.householdHousingCount === "0" && (
                 <div
-                  className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900"
+                  className="rounded-lg border border-violet-200 bg-violet-50/40 px-3 py-2 text-xs text-violet-900 dark:text-violet-200 dark:bg-violet-950/40"
                   data-testid="one-right-requirement-notice"
                 >
                   <p className="font-medium">1세대1입주권 비과세 요건 (양도일 현재)</p>
-                  <p className="mt-0.5 text-caption leading-relaxed text-violet-800">
+                  <p className="mt-0.5 text-caption leading-relaxed text-violet-800 dark:text-violet-200">
                     {form.presaleRights.some((p) => p.type === "presale_right") ? (
                       <>
                         다른 주택 없음(0채) + 1입주권만(1개)이 입력되어 있습니다. 가목·나목은 <b>분양권을 보유하지 않을 것</b>도
@@ -504,9 +504,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
             {/* 1세대1주택 안내 배너 — 1세대 + 1채 선택 시 거주기간 입력 동기 부여 */}
             {form.isOneHousehold && form.householdHousingCount === "1" && (
-              <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900">
+              <div className="rounded-lg border border-violet-200 bg-violet-50/40 px-4 py-3 text-sm text-violet-900 dark:text-violet-200 dark:bg-violet-950/40">
                 <p className="font-medium">1세대 1주택자 적용 효과</p>
-                <p className="mt-1 text-xs leading-relaxed text-violet-800">
+                <p className="mt-1 text-xs leading-relaxed text-violet-800 dark:text-violet-200">
                   보유 2년 이상 시 양도가액 {highValueLabel} 원까지 비과세이며, {highValueLabel} 초과 고가주택 부분에 한해 과세됩니다.
                   {conversionActive ? (
                     <>
@@ -552,9 +552,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
               form.isOneHousehold &&
               primaryKind === "housing" &&
               primary?.residenceInputMode === "direct" && (
-                <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900">
+                <div className="rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-950/40">
                   <p className="font-medium">⚠️ 주거용 사용 개시일 이후의 거주기간만 입력하세요</p>
-                  <p className="mt-0.5 text-caption leading-relaxed text-amber-800">
+                  <p className="mt-0.5 text-caption leading-relaxed text-amber-800 dark:text-amber-200">
                     거주기간을 개월 수로 직접 입력하셨습니다. 「소득세법」 제95조 제5항 제2호는
                     <strong> 주택으로 보유한 기간 중 거주한 기간</strong>만 산입하므로,
                     주거용 사용 개시일({primary.residentialUseStartDate}) 이후의 거주기간만 입력해야 합니다.
@@ -577,9 +577,9 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
 
             {/* 메시지 ② 거주요건 불충족 — 엔진 §154① 판정과 일치 (단서면제·2017.8.3 이전 취득 자동 제외) */}
             {residenceShortfall && (
-              <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900">
+              <div className="rounded-lg border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs text-rose-900 dark:text-rose-200 dark:bg-rose-950/40">
                 <p className="font-medium">⚠️ 조정대상지역 거주요건(2년) 불충족</p>
-                <p className="mt-0.5 text-caption leading-relaxed text-rose-800">
+                <p className="mt-0.5 text-caption leading-relaxed text-rose-800 dark:text-rose-200">
                   {conversionActive ? "용도변경 당시" : "취득 당시"} 조정대상지역 주택은 2년 이상
                   거주해야 1세대1주택 비과세가 적용됩니다.
                   현재 거주기간으로는 비과세가 배제될 수 있습니다.

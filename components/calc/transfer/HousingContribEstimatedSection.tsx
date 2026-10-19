@@ -59,26 +59,26 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
   }, [rights, stdAtAcq, stdAtApproval, ownershipRatio]);
 
   return (
-    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-3 space-y-2">
+    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-3 space-y-2 dark:bg-fuchsia-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
           5a
         </span>
-        <p className="text-xs font-semibold text-fuchsia-700">
+        <p className="text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-300">
           단독주택 출자 환산취득가 (§166③ + §163⑥)
         </p>
       </div>
 
       {/* 안내 카드 */}
-      <div className="rounded-md bg-fuchsia-100/60 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 leading-relaxed">
+      <div className="rounded-md bg-fuchsia-100/60 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 leading-relaxed dark:text-fuchsia-200 dark:bg-fuchsia-900/40">
         <p className="font-semibold mb-0.5">§166③ 환산취득가 산식</p>
         <p>
           환산취득가 = 권리가액 × <Frac top="취득당시 개별주택가격" bottom="인가당시 개별주택가격" />
         </p>
-        <p className="mt-0.5 text-micro text-fuchsia-700">
+        <p className="mt-0.5 text-micro text-fuchsia-700 dark:text-fuchsia-300">
           ※ 분자: 취득일 직전 최근 개별주택가격(공시일 기준) / 분모: 관리처분인가일 직전 최근 개별주택가격
         </p>
-        <p className="mt-0.5 text-micro text-fuchsia-700">
+        <p className="mt-0.5 text-micro text-fuchsia-700 dark:text-fuchsia-300">
           ※ 개산공제(§163⑥) = 취득당시 개별주택가격 × 3% — 자동 산출, 별도 입력 불필요
         </p>
       </div>
@@ -113,8 +113,8 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
 
       {/* 환산취득가 + 개산공제 미리보기 */}
       {preview && (
-        <div className="mt-1 rounded-md bg-fuchsia-100/70 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 space-y-0.5">
-          <p className="font-semibold text-fuchsia-800">미리보기 — §166③ 환산취득가</p>
+        <div className="mt-1 rounded-md bg-fuchsia-100/70 border border-fuchsia-200 p-2 text-caption text-fuchsia-900 space-y-0.5 dark:text-fuchsia-200 dark:bg-fuchsia-900/40">
+          <p className="font-semibold text-fuchsia-800 dark:text-fuchsia-200">미리보기 — §166③ 환산취득가</p>
           <p className="font-mono tabular-nums">
             환산취득가 = {parseAmount(asset.redevRightsValue).toLocaleString("ko-KR")}{" "}
             × <Frac top={stdAtAcq.toLocaleString("ko-KR")} bottom={stdAtApproval.toLocaleString("ko-KR")} />{" "}
@@ -128,12 +128,12 @@ export function HousingContribEstimatedSection({ asset, onChange }: Props) {
             = <span className="font-semibold">{preview.estimatedDeduction.toLocaleString("ko-KR")}</span>
           </p>
           {ownershipRatio < 1 && (
-            <p className="text-micro text-fuchsia-700" data-testid="housing-contrib-ratio-note">
+            <p className="text-micro text-fuchsia-700 dark:text-fuchsia-300" data-testid="housing-contrib-ratio-note">
               ※ 개산공제 기준은 지분 기준시가입니다 (취득당시 개별주택가격 ×{" "}
               {asset.ownershipNumerator}/{asset.ownershipDenominator}).
             </p>
           )}
-          <p className="text-micro text-fuchsia-700 mt-0.5">
+          <p className="text-micro text-fuchsia-700 mt-0.5 dark:text-fuchsia-300">
             ※ 실제 계산은 서버 엔진에서 BigInt 정밀도로 처리됩니다. 위 값은 참고용 미리보기입니다.
           </p>
         </div>

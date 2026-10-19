@@ -79,7 +79,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨ 2호" label="§163⑨2호" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥" />
       </div>
-      <p className="text-xs text-amber-700">
+      <p className="text-xs text-amber-700 dark:text-amber-300">
         상가 기준시가 최초고시(2005.1.1) 전 {causeLabel}받은 상가는 <b>{dateLabel} 상증법 평가액과 §164⑥ 취득당시 기준시가 중 큰 금액</b>를
         취득가액으로 봅니다. 취득당시 기준시가는 최초고시(2005) 역환산으로 산정합니다.{" "}
         <b>{sec164Status ? `${sec164Status.total}개 항목을 모두` : "아래 항목을 모두"}</b> 입력한
@@ -127,7 +127,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       {/* ③ 개별공시지가 (취득시·최초고시) */}
       <ToneCard tone="amber" sectionNum="3" title="개별공시지가 — 취득시·최초고시 (원/㎡)" bodyClassName="space-y-3">
         <div>
-          <p className="mb-1 text-caption font-medium text-amber-700">취득시({acqTimeLabel})</p>
+          <p className="mb-1 text-caption font-medium text-amber-700 dark:text-amber-300">취득시({acqTimeLabel})</p>
           {isCommercialPre1990Acquisition(asset) && (
             <>
               <CommercialPre1990LandNotice acquisitionDate={inheritanceDate} />
@@ -155,7 +155,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
           />
         </div>
         <div>
-          <p className="mb-1 text-caption font-medium text-amber-700">최초고시시(2005)</p>
+          <p className="mb-1 text-caption font-medium text-amber-700 dark:text-amber-300">최초고시시(2005)</p>
           <LandPriceLookupField
             label="최초고시시(2005) 개별공시지가"
             data-field="cbLandPricePerSqmAtFirst"

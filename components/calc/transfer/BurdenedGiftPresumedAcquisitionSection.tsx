@@ -202,11 +202,11 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
         />
       }
     >
-      <p className="text-caption text-amber-700" data-testid="bg-presumed-law-line">
+      <p className="text-caption text-amber-700 dark:text-amber-300" data-testid="bg-presumed-law-line">
         {PRESUMED_LAW_CONST[method]}
       </p>
       <ToneCard tone="sky" bodyClassName="space-y-1">
-        <p className="text-caption text-sky-800" data-testid="bg-presumed-expense-notice">
+        <p className="text-caption text-sky-800 dark:text-sky-200" data-testid="bg-presumed-expense-notice">
           필요경비는 <b>개산공제</b>(취득시 기준시가 × 채무비율 × 개산공제율)만 인정되고 자본적지출·양도비는 공제하지 않습니다
           (소득세법 §97②2호 — 실비와 비교해 고르는 것은 환산 방식 전용).{" "}
           {basisNote
@@ -219,7 +219,7 @@ export function BurdenedGiftPresumedAcquisitionSection({ asset, onChange, method
         </p>
       </ToneCard>
       {fractionalSplit && (
-        <p className="text-caption text-amber-700" data-testid="bg-presumed-fractional-note">
+        <p className="text-caption text-amber-700 dark:text-amber-300" data-testid="bg-presumed-fractional-note">
           지분 분할 취득 — 이 지분의 <b>취득일 전후 각 3개월</b> 기준으로, <b>물건 전체</b>의 {label}을 입력하세요(지분율은 시스템이 곱합니다).
           다른 지분은 해당 지분 카드에서 따로 입력합니다.
         </p>

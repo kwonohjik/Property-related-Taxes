@@ -70,7 +70,7 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
   return (
     <div data-testid="final-house-restart-section">
       <ToneCard tone="violet" title="최종 1주택 보유기간 재기산 (§154⑤ 단서)" bodyClassName="space-y-2.5">
-        <p className="text-caption text-violet-800">
+        <p className="text-caption text-violet-800 dark:text-violet-200">
           2021.1.1.~2022.5.9. 양도분은 2주택 이상을 보유하다 다른 주택을 모두 처분했으면 처분 후 1주택이 된 날부터
           보유기간(거주기간 포함)을 다시 셉니다.
         </p>
@@ -185,7 +185,7 @@ export function FinalHouseRestartSection({ value, acquisitionDate, onChange }: P
 
         {preview && (
           <p
-            className={preview.applied ? "text-sm font-medium text-rose-700" : "text-sm text-violet-900"}
+            className={preview.applied ? "text-sm font-medium text-rose-700 dark:text-rose-300" : "text-sm text-violet-900 dark:text-violet-200"}
             data-testid="final-house-restart-preview"
           >
             {preview.description}

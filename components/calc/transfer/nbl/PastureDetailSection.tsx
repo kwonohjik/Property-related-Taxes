@@ -98,8 +98,8 @@ export function PastureDetailSection({
         </ol>
       </CollapsibleHintCard>
 
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2">
-        <p className="text-xs font-semibold text-sky-700">보유 시설 (해당하는 것을 모두 선택)</p>
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-2 dark:bg-sky-950/40">
+        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">보유 시설 (해당하는 것을 모두 선택)</p>
         {/*
           E2-06 · U1-05 (2026-09-02 코드리뷰) — 종전 마지막 문장은 「위 「기준면적」을 직접
           입력하면 이 선택은 쓰이지 않습니다」였다. **그 입력 필드는 화면에도 AssetForm에도
@@ -108,7 +108,7 @@ export function PastureDetailSection({
           실제 산출 경로를 밝힌다. 직접입력 필드 신설은 `docs/00-pm/nbl-gaps/gap-3c.plan.md`의
           (E-3)로 이미 deferred 기록돼 있다.
         */}
-        <p className="text-caption text-sky-800">
+        <p className="text-caption text-sky-800 dark:text-sky-200">
           별표1의3의 4개 열은 <b>항목별 인정 한도</b>입니다 — 없는 시설의 몫은 기준면적에 더하지
           않습니다. 축사는 축산업의 전제이므로 항상 포함됩니다. 기준면적은 축종·두수·보유시설로
           자동 산출됩니다.

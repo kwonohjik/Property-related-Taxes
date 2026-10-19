@@ -91,7 +91,7 @@ export function AssetAreaCommercial({ asset, onChange }: Props) {
             <label className="text-xs text-muted-foreground">
               연면적 (전용+공유, ㎡)
             </label>
-            <div className="rounded-md border border-sky-200 bg-sky-100/60 px-3 py-2 text-sm font-semibold text-sky-800">
+            <div className="rounded-md border border-sky-200 bg-sky-100/60 px-3 py-2 text-sm font-semibold text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
               {totalFloorArea.toLocaleString()} ㎡
             </div>
           </div>

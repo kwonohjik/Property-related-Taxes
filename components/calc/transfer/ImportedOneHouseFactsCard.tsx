@@ -320,7 +320,7 @@ export function ImportedOneHouseFactsCard({
 
       {hasMortgage && (
         <div className="space-y-1" data-testid="imported-long-term-mortgage">
-          <p className="text-xs font-semibold text-violet-700">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
             장기저당담보주택 특례 <LawArticleModal legalBasis="소득세법 시행령 §155의2" />
           </p>
           <RowList rows={mortgageRows(facts)} />
@@ -329,7 +329,7 @@ export function ImportedOneHouseFactsCard({
 
       {hasWinWin && (
         <div className="space-y-1" data-testid="imported-win-win-rental">
-          <p className="text-xs font-semibold text-violet-700">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
             상생임대주택 특례 <LawArticleModal legalBasis="소득세법 시행령 §155의3" />
           </p>
           <RowList rows={winWinRows(facts)} />
@@ -338,7 +338,7 @@ export function ImportedOneHouseFactsCard({
 
       {sRows.length > 0 && (
         <div className="space-y-1" data-testid="imported-temp-two-house-specials">
-          <p className="text-xs font-semibold text-violet-700">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
             2주택 이상 비과세 특례{" "}
             <LawArticleModal legalBasis="소득세법 시행령 §155" label="영 §155·§156의2" />
           </p>
@@ -348,7 +348,7 @@ export function ImportedOneHouseFactsCard({
 
       {rRows.length > 0 && (
         <div className="space-y-1" data-testid="imported-right-exceptions">
-          <p className="text-xs font-semibold text-violet-700">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
             권리 관련 판정 사실 <LawArticleModal legalBasis="소득세법 §89 ②" label="법 §89②" />
           </p>
           <RowList rows={rRows} />

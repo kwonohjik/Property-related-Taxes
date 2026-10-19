@@ -81,7 +81,7 @@ export function MixedUseSeparateAcqBlock({ asset, onChange }: Props) {
       {!perPart && (
         <div data-testid="mixed-total-model-note">
           <ToneCard tone="amber" bodyClassName="space-y-1">
-            <p className="text-xs text-amber-900">
+            <p className="text-xs text-amber-900 dark:text-amber-200">
               토지·건물 값을 각각 알면 위 『토지·건물 취득가액을 각각 입력』을 켜세요. 총 취득가액 입력은 토지와 건물의 취득일이
               달라도 두 값을 취득시 기준시가 비율로 나눕니다.
             </p>
@@ -96,7 +96,7 @@ export function MixedUseSeparateAcqBlock({ asset, onChange }: Props) {
             <LawArticleModal legalBasis="소득세법 §100②" label="§100② 후문(유추)" />
           </div>
           <ToneCard tone="amber" bodyClassName="space-y-1">
-            <p className="text-xs text-amber-900" data-testid="mixed-sep-acq-intro">
+            <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="mixed-sep-acq-intro">
               토지와 건물을 서로 다른 시점에 취득했으므로 취득가액은 각각 입력합니다. 토지는 주택부수토지·상가부수토지로{" "}
               <strong>토지 기준시가 비율(같은 필지이므로 면적 비율)</strong>, 건물은 주택건물·상가건물로{" "}
               <strong>용도별 계약액이 있으면 그 금액, 없으면 건물 취득시 기준시가 비율</strong>로 나눕니다 (「소득세법」 제100조 제2항
@@ -158,7 +158,7 @@ export function MixedUseSeparateAcqBlock({ asset, onChange }: Props) {
 
           {(modes.land === "appraisal" || modes.land === "salesCase" || modes.building === "appraisal" || modes.building === "salesCase") && (
             <ToneCard tone="sky" bodyClassName="space-y-1">
-              <p className="text-xs text-sky-900" data-testid="mixed-deduction-only-notice">
+              <p className="text-xs text-sky-900 dark:text-sky-200" data-testid="mixed-deduction-only-notice">
                 감정가액·매매사례가액 파트는 추계 취득가액이라 필요경비는 개산공제(취득시 기준시가 × 율 — 소령 §163⑥)만 인정됩니다. 자본적지출·양도비·
                 주택분/상가분 실제 필요경비는 <strong>실거래가 파트에만</strong> 가산됩니다 (「소득세법」 §97②2호 본문).
               </p>
@@ -172,7 +172,7 @@ export function MixedUseSeparateAcqBlock({ asset, onChange }: Props) {
           {asset.hasPartialUsageChange && asset.partialChangeDirection && (
             <div data-testid="mixed-sep-exclusion-note">
               <ToneCard tone="rose" bodyClassName="space-y-1">
-                <p className="text-xs text-rose-900">
+                <p className="text-xs text-rose-900 dark:text-rose-200">
                   보유 중 일부 용도변경과 『토지·건물 취득가액을 각각 입력』은 함께 계산할 수 없습니다 — 각각 입력을 끄거나(총액 입력) 용도변경을 끄세요.
                 </p>
               </ToneCard>
@@ -181,7 +181,7 @@ export function MixedUseSeparateAcqBlock({ asset, onChange }: Props) {
           {asset.transferCause === "public_expropriation" && (
             <div data-testid="mixed-sep-exclusion-note-expropriation">
               <ToneCard tone="rose" bodyClassName="space-y-1">
-                <p className="text-xs text-rose-900">
+                <p className="text-xs text-rose-900 dark:text-rose-200">
                   공익사업 수용 양도 특례와 『토지·건물 취득가액을 각각 입력』은 함께 계산할 수 없습니다 — 각각 입력을 끄거나(총액 입력) 수용 양도를 끄세요.
                 </p>
               </ToneCard>
@@ -219,7 +219,7 @@ function PartSection({
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
           {num}
         </span>
-        <p className="text-xs font-semibold text-amber-800">{title}</p>
+        <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">{title}</p>
       </div>
       <div data-testid={testId}>
         <RadioCardGroup name={radioName} tone="amber" layout="inline" options={modeOptions(part)} value={mode} onChange={onModeChange} />
@@ -274,7 +274,7 @@ function BuildingContractSplit({
               data-testid="mixed-bldg-contract-housing"
             />
           </FieldCard>
-          <p className="text-xs text-amber-900" data-testid="mixed-bldg-contract-commercial-derived">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="mixed-bldg-contract-commercial-derived">
             상가건물 계약액 = 건물 취득가액 − 주택건물 계약액 = {active && derived !== null ? formatKRW(derived) : "—"}
           </p>
         </div>

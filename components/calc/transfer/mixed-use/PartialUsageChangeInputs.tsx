@@ -83,19 +83,19 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
       </FieldCard>
 
       {/* 자동 도출 면적 표시 */}
-      <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
-        <div className="flex justify-between text-xs text-amber-700">
+      <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1 dark:bg-amber-900/40">
+        <div className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
           <span>취득시 주택 연면적 {isCustomized ? "(수정됨)" : "(자동)"}</span>
           <span className="font-mono tabular-nums">{acqResShown.toFixed(2)}㎡</span>
         </div>
-        <div className="flex justify-between text-xs text-amber-700">
+        <div className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
           <span>취득시 상가 연면적 {isCustomized ? "(수정됨)" : "(자동)"}</span>
           <span className="font-mono tabular-nums">{acqCommShown.toFixed(2)}㎡</span>
         </div>
       </div>
 
       {/* 안내 (이슈 4 — 항상 노출) */}
-      <p className="text-caption text-amber-700/80 leading-relaxed">
+      <p className="text-caption text-amber-700/80 leading-relaxed dark:text-amber-300/80">
         ※ 증축·일부 멸실 등으로 취득시 면적이 양도시 합계와 다른 경우 직접 수정하세요.
       </p>
 

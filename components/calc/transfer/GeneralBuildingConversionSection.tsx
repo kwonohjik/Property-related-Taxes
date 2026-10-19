@@ -217,7 +217,7 @@ export function GeneralBuildingConversionSection({ asset, onChange, transferDate
               파트만 환산」에서 이정표만 사라졌다 — gb-first-disclosure.ts가 스스로 경고한 지점이다. */}
           {isGbFirstDisclosureApplicable(asset) && (
             <ToneCard tone="violet" className="p-2.5">
-              <p className="text-caption text-violet-800">
+              <p className="text-caption text-violet-800 dark:text-violet-200">
                 취득 당시 주택으로 개별주택가격이 고시된 뒤 상가로 바꾼 경우의{" "}
                 <b>환산주택가격(§99-164-10)</b> 입력은 <b>③ 취득정보</b>의 일반건물 영역에 있습니다.
               </p>

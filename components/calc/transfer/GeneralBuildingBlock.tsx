@@ -287,19 +287,19 @@ export function GeneralBuildingBlock({
    * 카드가 무엇인지는 바로 아래 「일반건물 — 취득 시나리오 가이드」가 말해 준다.
    */
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3">
+    <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-3 dark:bg-violet-950/40">
       <div className="space-y-3">
 
         {/* 부담부증여 모드 안내 — §159 자동 산정으로 취득가액 산정 방식 라디오/실거래가/증축 토글 모두 숨김 */}
         {isBurdenedGift && (
-          <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 text-xs space-y-1.5">
+          <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 text-xs space-y-1.5 dark:bg-fuchsia-950/40">
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="font-semibold text-fuchsia-900">
+              <p className="font-semibold text-fuchsia-900 dark:text-fuchsia-200">
                 부담부증여 §159 자동 산정 — 일반 취득가액 산정 방식 선택 불필요
               </p>
               <LawArticleModal legalBasis="소득세법 시행령 §159" label="§159 부담부증여" />
             </div>
-            <p className="text-fuchsia-800">
+            <p className="text-fuchsia-800 dark:text-fuchsia-200">
               부담부증여(소득세법 시행령 §159)는 양도가액·취득가액을 <b>채무비율</b>로 엔진이 자동 산정합니다.
               일반 실거래가/환산취득가/증축 모드 선택·일괄 취득가 입력은 쓰이지 않으므로 아래에는
               토지·건물 기준시가만 표시됩니다 — 기준시가가 어디에 쓰이는지는 아래 토지 공시지가 카드에 안내합니다.
@@ -310,20 +310,20 @@ export function GeneralBuildingBlock({
 
         {/* 시나리오 가이드 — 일반 양도에서만 표시 (부담부증여 시 §159 강제로 의미 없음) */}
         {!isBurdenedGift && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1.5">
-            <p className="font-semibold text-blue-800">일반건물 — 취득 시나리오 가이드</p>
-            <ul className="text-blue-700 space-y-0.5">
+          <div className="rounded-lg border border-blue-200 bg-blue-50/40 p-3 text-xs space-y-1.5 dark:bg-blue-950/40">
+            <p className="font-semibold text-blue-800 dark:text-blue-200">일반건물 — 취득 시나리오 가이드</p>
+            <ul className="text-blue-700 space-y-0.5 dark:text-blue-300">
               <li>• <b>실거래가</b>: 토지·건물 취득가액을 계약서로 입증할 수 있는 경우</li>
               <li>• <b>환산취득가</b>: 입증할 수 없어 양도가 × 기준시가 비율로 환산하는 경우</li>
               <li>• <b>감정가액·매매사례가액</b>: 입증할 수 없을 때 환산보다 먼저 적용하는 추계 (소득세법 시행령 §176의2③) — 필요경비는 개산공제만 인정</li>
               {/* ⚠️ 아래 토글 제목(「증축 있음」)을 **그대로 인용하지 않는다** — E2E가
                   `getByText("증축 있음")`로 그 토글을 잡으므로 같은 문자열이 안내문에 있으면
                   셀렉터가 두 곳에 걸린다(2026-08-12 실측: 접힌 안내문에 매칭돼 실패). */}
-              <li className="text-blue-600 mt-1">
+              <li className="text-blue-600 mt-1 dark:text-blue-400">
                 • <b>증축한 부분이 있으면</b> 아래 증축 항목을 켜고 <b>증축분 취득 방식</b>을 따로 고릅니다 —
                 원취득분(토지·원건물)과 증축분은 <b>각각</b> 실거래가·환산취득가를 선택할 수 있고, 네 조합 모두 계산됩니다.
               </li>
-              <li className="text-blue-600">
+              <li className="text-blue-600 dark:text-blue-400">
                 • 원취득분이 <b>실거래가</b>면 위 「취득가액」은 토지·원건물을 한 값으로 산 <b>일괄 취득가액</b>입니다 (취득 당시 기준시가 비율로 자동 안분).
               </li>
             </ul>
@@ -399,10 +399,10 @@ export function GeneralBuildingBlock({
 
             {convertedHousingPreview && (
               <ToneCard tone="violet" className="p-2.5">
-                <p className="text-xs font-semibold text-violet-900">
+                <p className="text-xs font-semibold text-violet-900 dark:text-violet-200">
                   환산주택가격 = {convertedHousingPreview.converted.toLocaleString("ko-KR")} 원
                 </p>
-                <p className="mt-1 text-caption text-violet-800">
+                <p className="mt-1 text-caption text-violet-800 dark:text-violet-200">
                   = {convertedHousingPreview.firstDisc.toLocaleString("ko-KR")}
                   {" × "}
                   <Frac
@@ -410,7 +410,7 @@ export function GeneralBuildingBlock({
                     bottom={convertedHousingPreview.firstDiscTotal.toLocaleString("ko-KR")}
                   />
                 </p>
-                <p className="mt-1 text-caption text-violet-700">
+                <p className="mt-1 text-caption text-violet-700 dark:text-violet-300">
                   근거: 양도소득세 집행기준 99-164-10
                 </p>
               </ToneCard>
@@ -489,7 +489,7 @@ export function GeneralBuildingBlock({
                     계산은 그 총액으로 도는 유령 값이 된다. 지우면 fallback이 끊긴다. */}
                 {fdUsesLegacyLandTotal && (
                   <ToneCard tone="amber" className="p-2.5">
-                    <p className="text-caption text-amber-800">
+                    <p className="text-caption text-amber-800 dark:text-amber-200">
                       이전에 저장된 토지 기준시가 총액{" "}
                       <b>{parseAmount(asset.gbFirstDisclosureLandStdPrice).toLocaleString("ko-KR")}원</b>
                       을 사용하고 있습니다. 위에 ㎡당 공시지가를 입력하면 그 값이 우선합니다.
@@ -543,7 +543,7 @@ export function GeneralBuildingBlock({
               증축분(건물2) 기준시가는 아래 증축 항목이 따로 받는다. */}
           {gbExtOn && (
             <ToneCard tone="violet" className="p-2.5">
-              <p className="text-caption text-violet-800">
+              <p className="text-caption text-violet-800 dark:text-violet-200">
                 이 섹션은 <b>증축 전 원건물(건물1)</b>의 기준시가만 받습니다. 증축분(건물2)
                 기준시가는 아래 <b>증축 항목</b>에서 따로 입력합니다 — 여기에 증축분까지 합치면
                 §166⑥ 안분 분모에서 <b>건물2가 두 번 계산</b>됩니다.
@@ -589,7 +589,7 @@ export function GeneralBuildingBlock({
               </div>
             ) : (
               gbBatchBlockReason && (
-                <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                   {MULTI_POINT_BLOCK_MESSAGE[gbBatchBlockReason]}
                 </p>
               )
@@ -706,7 +706,7 @@ export function GeneralBuildingBlock({
 
           {/* 부담부증여 취득가액 안내 — 평가 모드·산정방식별(bgStdUse)로 실제 엔진 산식을 적는다 */}
           {isBurdenedGift && (
-            <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5">
+            <div className="rounded bg-fuchsia-50/60 border border-fuchsia-200 px-3 py-2 text-xs text-fuchsia-800 space-y-0.5 dark:text-fuchsia-200 dark:bg-fuchsia-950/40">
               <div className="flex flex-wrap items-center gap-1.5">
                 <p className="font-semibold">부담부증여 취득가액 (소득세법 시행령 §159①1호)</p>
                 <LawArticleModal legalBasis="소득세법 시행령 §159①" label="§159① 부담부증여" />

@@ -167,12 +167,12 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
       </div>
 
       {/* 면적 소그룹 (sky) — 용도변경 ON이면 1-A(취득시)와 시점 구분을 위해 "양도시" 명시 */}
-      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3">
-        <p className="text-xs font-semibold text-sky-700">
+      <div className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 space-y-3 dark:bg-sky-950/40">
+        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">
           {asset.hasPartialUsageChange ? "양도시 면적 (건축물대장 기준)" : "면적 (건축물대장 기준)"}
         </p>
         {asset.hasPartialUsageChange && (
-          <p className="text-caption text-sky-700/80 leading-relaxed">
+          <p className="text-caption text-sky-700/80 leading-relaxed dark:text-sky-300/80">
             ※ 이 카드의 면적·부수토지는 <span className="font-semibold">양도시</span> 기준입니다.
             취득시 면적은 <span className="font-semibold">③ 취득정보</span>의 1-A 「취득시점 자산 구성」에서
             자동 도출·수정합니다.
@@ -244,7 +244,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
 
         {/* 계산 결과 6칸 — 전부 수정 가능 (쌍별 2열 × 3행) */}
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-lg bg-sky-100/60 border border-sky-200"
+          className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 rounded-lg bg-sky-100/60 border border-sky-200 dark:bg-sky-900/40"
           data-testid="mixed-derived-floor"
         >
           <FieldCard
@@ -363,9 +363,9 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
       </div>
 
       {/* 지역 소그룹 (rose) */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
+      <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2 dark:bg-rose-950/40">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold text-rose-700">부수토지 배율 지역</p>
+          <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">부수토지 배율 지역</p>
           <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
         </div>
         <ToggleCard
@@ -443,7 +443,7 @@ function LandSumWarning({ sum, totalLand }: { sum: number; totalLand: number }) 
   if (sum === totalLand) return null;
   return (
     <p
-      className="rounded-md border border-amber-200 bg-amber-50/60 px-2 py-1.5 text-xs font-medium text-amber-700"
+      className="rounded-md border border-amber-200 bg-amber-50/60 px-2 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 dark:bg-amber-950/40"
       data-testid="mixed-area-land-sum-warning"
     >
       ⚠ 주택·상가 부수토지 합계 {sum.toFixed(2)}㎡가 전체 토지 면적 {totalLand.toFixed(2)}㎡와 다릅니다.

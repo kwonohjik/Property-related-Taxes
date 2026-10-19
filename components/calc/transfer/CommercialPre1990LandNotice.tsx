@@ -20,12 +20,12 @@ export function CommercialPre1990LandNotice({ acquisitionDate }: { acquisitionDa
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 시행령 §164 ④" label="§164④" />
       </div>
-      <p className="text-xs text-amber-800">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
         취득당시{year ? `(${year}년)` : ""} <b>개별공시지가가 없습니다</b> — 최초 고시일이 1990.8.30.
         입니다. §164⑥ 기준시가합의 토지 성분은 개별공시지가이므로, 아래 <b>토지등급 환산(§164④)</b>으로
         취득시 ㎡당 가액을 산정합니다.
       </p>
-      <p className="text-caption text-amber-700">
+      <p className="text-caption text-amber-700 dark:text-amber-300">
         환산값은 아래 「취득시 개별공시지가」에 자동 반영됩니다. 직접 입력한 값이 있으면 그 값이 우선합니다.
       </p>
     </ToneCard>

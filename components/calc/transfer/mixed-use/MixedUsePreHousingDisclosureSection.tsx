@@ -168,7 +168,7 @@ export function MixedUsePreHousingDisclosureSection({
 
       {/* 최초공시일 < 용도변경일 진입 안내 — Case A 4부분 분리 모드 */}
       {isCaseA && (
-        <div className="rounded-lg bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-900 space-y-1">
+        <div className="rounded-lg bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-900 space-y-1 dark:text-rose-200 dark:bg-rose-900/40">
           <p className="font-semibold">
             ⚠ 최초공시일({asset.phdFirstDisclosureDate || "—"})이 용도변경일보다 이전 — 4부분 안분 모드
           </p>

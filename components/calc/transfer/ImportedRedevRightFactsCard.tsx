@@ -120,10 +120,10 @@ export function ImportedRedevRightFactsCard({
 
       {rows.length > 0 ? (
         <div
-          className="rounded-md border border-violet-200 bg-violet-50/60 p-3 space-y-1.5"
+          className="rounded-md border border-violet-200 bg-violet-50/60 p-3 space-y-1.5 dark:bg-violet-950/40"
           data-testid="imported-redev-right-facts"
         >
-          <p className="text-xs font-semibold text-violet-700">
+          <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
             판정 메뉴에서 넘겨받은 사실 — 1세대1입주권{" "}
             <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="법 §89①4호" />
           </p>
@@ -141,7 +141,7 @@ export function ImportedRedevRightFactsCard({
         </div>
       ) : (
         <div
-          className="rounded-md border border-sky-200 bg-sky-50/60 p-3 text-sm text-sky-900"
+          className="rounded-md border border-sky-200 bg-sky-50/60 p-3 text-sm text-sky-900 dark:text-sky-200 dark:bg-sky-950/40"
           data-testid="redev-right-handoff-notice"
         >
           {judgmentLoaded ? (

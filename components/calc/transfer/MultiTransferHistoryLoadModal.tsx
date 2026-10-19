@@ -146,7 +146,7 @@ export function MultiTransferHistoryLoadModal({
                     <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                       <span>결정세액 {formatKRW(determinedTaxOf(r, kind))}</span>
                       {yearMismatch && (
-                        <span className="text-rose-600">· {ry}년 (과세연도 불일치)</span>
+                        <span className="text-rose-600 dark:text-rose-400">· {ry}년 (과세연도 불일치)</span>
                       )}
                     </div>
                   </div>

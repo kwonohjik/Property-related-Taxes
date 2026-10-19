@@ -76,7 +76,7 @@ export function HouseFirstDisclosureEntryCard(props: {
   return (
     <div className="space-y-2" data-testid="house-first-disclosure-entry">
       <ToneCard tone="amber">
-        <p className="text-xs text-amber-900">
+        <p className="text-xs text-amber-900 dark:text-amber-200">
           {baseDateLabel}({base})에 이 주택의 개별주택가격이 아직 공시되지 않았다면(그 뒤 신축 등으로 처음 공시), 평가액과 최초 공시된
           주택가격으로 환산한 영 §164⑦ 가액 중 <strong>많은 금액</strong>이 취득가액입니다 (소득세법 시행령 §163조 제9항 단서 2호 ·
           부동산거래관리과-364). 그런 주택이면 아래에 최초 공시일을 입력하세요 — 그대로 두면 2005.4.30.에 공시된 것으로 보고 평가액만으로
@@ -99,7 +99,7 @@ export function HouseFirstDisclosureEntryCard(props: {
       )}
       {widens && kind !== "house_individual" && (
         <ToneCard tone="amber">
-          <p className="text-xs text-amber-900" data-testid="house-first-disclosure-kind-note">
+          <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="house-first-disclosure-kind-note">
             {HOUSE_FIRST_DISCLOSURE_KIND_REQUIRED_MESSAGE}
           </p>
         </ToneCard>

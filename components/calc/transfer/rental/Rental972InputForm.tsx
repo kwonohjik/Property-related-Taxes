@@ -83,8 +83,8 @@ export function Rental972InputForm({ value, onChange }: Props) {
           ]}
         />
 
-        <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/80 px-3 py-2">
-          <p className="text-micro text-amber-800">
+        <div className="rounded-md border border-dashed border-amber-300 bg-amber-50/80 px-3 py-2 dark:bg-amber-950/40">
+          <p className="text-micro text-amber-800 dark:text-amber-200">
             ℹ️ 매매계약일(2호)은 <strong>자산 카드의 매매계약일 입력</strong>을 사용합니다.
             (감면 그룹 펼침 영역 상단 「매매계약일」 필드)
           </p>
@@ -103,7 +103,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
       {/* §97의2①1호 나목 — 1999.8.19 이전 신축 공동주택 (D9-01) */}
       {value.rental972Type === "construction" && (
         <ToneCard tone="amber" sectionNum={num(2)} title="1호 나목 요건" bodyClassName="space-y-2">
-          <p className="text-micro text-amber-800">
+          <p className="text-micro text-amber-800 dark:text-amber-200">
             조특법 §97의2①1호 <strong>나목</strong> — 「<strong>1999년 8월 19일 이전에 신축된
             공동주택</strong>으로서 <strong>1999년 8월 20일 현재 입주된 사실이 없는 주택</strong>」.
             가목(1999.8.20~2001.12.31 신축)에 해당하면 아래는 선택하지 않아도 됩니다.
@@ -152,7 +152,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
       {/* §97의2①2호 — 취득 당시 미입주 (D1-07) */}
       {value.rental972Type === "purchase" && (
         <ToneCard tone="rose" sectionNum={num(3)} title="2호 요건 — 취득 당시 미입주">
-          <p className="mb-1.5 text-micro text-rose-800">
+          <p className="mb-1.5 text-micro text-rose-800 dark:text-rose-200">
             조특법 §97의2①2호 — 「<strong>취득 당시 입주된 사실이 없는 주택만 해당한다</strong>」.
           </p>
           <RadioCardGroup
@@ -174,7 +174,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
             ]}
           />
           {value.isUnoccupiedAtAcquisition === null && (
-            <p className="mt-1 text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </ToneCard>
       )}
@@ -208,7 +208,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
             ]}
           />
           {value.hasNewRentalPlus2Units === null && (
-            <p className="mt-1 text-micro text-rose-600">
+            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
               ※ 반드시 선택하세요 (미선택 시 계산 불가)
             </p>
           )}

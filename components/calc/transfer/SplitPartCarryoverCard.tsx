@@ -45,7 +45,7 @@ export function SplitPartCarryoverCard(props: SplitPartCarryoverCardProps) {
     <ToneCard tone="amber" sectionNum={props.sectionNum} title={`${name} — 증여자 취득`} bodyClassName="space-y-3">
       <div data-testid={`${tid}-card`} className="space-y-3">
         {props.inheritedNotice && (
-          <p className="text-caption text-amber-800" data-testid="split-carryover-building-inherited-note">
+          <p className="text-caption text-amber-800 dark:text-amber-200" data-testid="split-carryover-building-inherited-note">
             건물 칸은 자산 전체 이월과세에서 입력하던 증여자 정보와 같은 칸입니다 — 토글을 켜기 전에 입력한 값이 있다면 <strong>건물 기준</strong> 값인지 확인하세요.
           </p>
         )}

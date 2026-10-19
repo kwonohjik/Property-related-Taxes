@@ -141,13 +141,13 @@ export function Unsold989InputForm({ value, onChange, rowFacts }: Props) {
       </ToneCard>
 
       {/* emerald 안내 */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
-        <p className="text-xs font-semibold text-emerald-800">안내 (참고용, 저장 안 됨)</p>
-        <p className="text-micro text-emerald-700">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1 dark:bg-emerald-900/40">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">안내 (참고용, 저장 안 됨)</p>
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 준공후미분양주택의 의무 보유기간·추징 규정은 없습니다. 적격 여부·1세대1주택 판정은
           계산 시 엔진이 수행하며, 다주택 중과 주택 수에는 반영되지 않습니다.
         </p>
-        <p className="text-micro text-emerald-700">
+        <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 종합부동산세 1세대 1주택자 특례(§98의9②)는 본 계산기에 반영되지 않습니다 — 해당 연도
           9월 16일~30일에 관할 세무서장에게 별도 신청 (조특령 §98의8④)
         </p>

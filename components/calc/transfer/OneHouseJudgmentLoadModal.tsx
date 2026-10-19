@@ -47,10 +47,10 @@ import { applyOneHouseFactsToTransferForm } from "@/lib/calc/one-house-judgment-
 
 /** 판정 배지 톤 → 정적 클래스. Tailwind는 동적 조합을 빌드에서 못 본다. */
 const VERDICT_CLASS = {
-  emerald: "border-emerald-300 text-emerald-700",
-  amber: "border-amber-300 text-amber-700",
-  rose: "border-rose-300 text-rose-700",
-  violet: "border-violet-300 text-violet-700",
+  emerald: "border-emerald-300 text-emerald-700 dark:text-emerald-300",
+  amber: "border-amber-300 text-amber-700 dark:text-amber-300",
+  rose: "border-rose-300 text-rose-700 dark:text-rose-300",
+  violet: "border-violet-300 text-violet-700 dark:text-violet-300",
 } as const;
 
 export function OneHouseJudgmentLoadModal({

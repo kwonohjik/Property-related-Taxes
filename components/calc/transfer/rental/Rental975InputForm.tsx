@@ -188,15 +188,15 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
       />
 
       {/* emerald 자동 표시 박스 */}
-      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1">
-        <p className="text-xs font-semibold text-emerald-800">자동 산출 (참고용, 저장 안 됨)</p>
+      <div className="rounded-lg border border-emerald-200 bg-emerald-100/60 p-3 space-y-1 dark:bg-emerald-900/40">
+        <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">자동 산출 (참고용, 저장 안 됨)</p>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">의무임대기간</span>
-          <span className="font-mono font-medium text-emerald-900">10년</span>
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">10년</span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">양도일 기준 임대기간 (임대개시일→양도일)</span>
-          <span className="font-mono font-medium text-emerald-900">{rentalDuration}</span>
+          <span className="font-mono font-medium text-emerald-900 dark:text-emerald-200">{rentalDuration}</span>
         </div>
       </div>
     </div>

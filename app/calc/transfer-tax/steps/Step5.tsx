@@ -228,7 +228,7 @@ function AssetReductionBlock({
                   />
                   {(selfFarming.heirContinuedFarming1Year || selfFarming.meetsDecedentAggregationAlt) &&
                     parseInt(selfFarming.farmingYears) + parseInt(selfFarming.decedentFarmingYears ?? "0") >= 8 && (
-                      <p className="text-xs text-green-700">
+                      <p className="text-xs text-green-700 dark:text-green-300">
                         ✓ 합산 자경기간{" "}
                         {parseInt(selfFarming.farmingYears) + parseInt(selfFarming.decedentFarmingYears ?? "0")}년 — 감면 요건 충족
                       </p>

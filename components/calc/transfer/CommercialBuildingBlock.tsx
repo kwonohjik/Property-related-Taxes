@@ -199,7 +199,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         </div>
         {/* 호별고시 시점 분기 — 취득일에서 자동 선택(수동 변경 가능) */}
         <div>
-          <p className="mb-2 text-xs font-semibold text-amber-700">취득 시점 구분</p>
+          <p className="mb-2 text-xs font-semibold text-amber-700 dark:text-amber-300">취득 시점 구분</p>
           <RadioCardGroup
             name={`cbEra-${asset.assetId}`}
             options={CB_ERA_OPTIONS}
@@ -208,7 +208,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             tone="amber"
             layout="stack"
           />
-          <p className="mt-1 text-caption text-amber-700">
+          <p className="mt-1 text-caption text-amber-700 dark:text-amber-300">
             {eraAutoDerived
               ? "위 취득일 기준으로 자동 선택했습니다 — 국세청 호별 고시 대상이 아닌 물건이면 직접 변경하세요."
               : asset.cbEra
@@ -234,7 +234,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               />
             </div>
             {/* 양도시 — emerald */}
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:bg-emerald-950/40">
               <FieldCard
                 label="양도시 ㎡당 호별고시가"
                 field="cbUnitPriceAtTransfer"
@@ -249,7 +249,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               </FieldCard>
             </div>
             {/* 최초고시(2005) 또는 취득시 — amber */}
-            <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2">
+            <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2 dark:bg-amber-950/40">
               <FieldCard
                 field="cbUnitPriceAtFirstOrAcq"
                 label={isPreDisclosure
@@ -299,7 +299,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
 
             {/* 취득시 — amber (공통 필수) */}
             <div>
-              <p className="mb-1 text-caption font-medium text-amber-700">취득시</p>
+              <p className="mb-1 text-caption font-medium text-amber-700 dark:text-amber-300">취득시</p>
               {needs164_4 && (
                 <>
                   <CommercialPre1990LandNotice acquisitionDate={asset.acquisitionDate} />
@@ -335,7 +335,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             {/* 최초고시시(2005) — amber (pre_disclosure 시만 필수) */}
             {isPreDisclosure && (
               <div>
-                <p className="mb-1 text-caption font-medium text-amber-700">최초고시시(2005)</p>
+                <p className="mb-1 text-caption font-medium text-amber-700 dark:text-amber-300">최초고시시(2005)</p>
                 <LandPriceLookupField
                   label="최초고시시(2005) 개별공시지가"
                   data-field="cbLandPricePerSqmAtFirst"
@@ -349,8 +349,8 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
             )}
 
             {/* 양도시 — emerald (공통 필수) */}
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
-              <p className="mb-1 text-caption font-medium text-emerald-700">양도시</p>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:bg-emerald-950/40">
+              <p className="mb-1 text-caption font-medium text-emerald-700 dark:text-emerald-300">양도시</p>
               <LandPriceLookupField
                 label="양도시 개별공시지가"
                 data-field="cbLandPricePerSqmAtTransfer"
@@ -367,7 +367,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
         {/* ③ 건물 기준시가 3시점 — 총액 (pre_disclosure 시만 표시). 위 ② 공시지가 뒤에 온다. */}
         {isPreDisclosure && (
           <ToneCard tone="amber" sectionNum="3" title="건물 기준시가 — 3시점 (원, 총액)">
-            <div className="text-xs text-amber-700 mb-1">
+            <div className="text-xs text-amber-700 mb-1 dark:text-amber-300">
               건물분 ㎡당 가액 × 연면적(전유+공용 보정계수 반영) = <b>건물 기준시가 총액</b>으로 환산해 입력
             </div>
             {/* 3시점 일괄 계산 — 소재지·신축연도·구조·용도를 1회 입력해 아래 3칸을 함께 채운다.
@@ -387,7 +387,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               </div>
             ) : (
               batchBlockReason && (
-                <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800">
+                <p className="rounded-md bg-amber-100/60 px-2.5 py-1.5 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                   {MULTI_POINT_BLOCK_MESSAGE[batchBlockReason]}
                 </p>
               )
@@ -454,7 +454,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               />
             </div>
             {/* 양도시 — emerald */}
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:bg-emerald-950/40">
               <FieldCard
                 label="양도시 건물 기준시가"
                 field="cbBuildingStdPriceAtTransfer"

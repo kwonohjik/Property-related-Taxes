@@ -71,7 +71,7 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
           tone="rose"
           title="비사업용토지 판정"
           titleExtra={
-            <span className="text-micro text-rose-500">
+            <span className="text-micro text-rose-500 dark:text-rose-400">
               (§104의3①4호나목 · 지방세령 §101)
             </span>
           }
@@ -80,7 +80,7 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
             <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
             <LawArticleModal legalBasis="지방세법 시행령 §101" label="지방세령 §101 배율" />
           </div>
-          <p className="text-caption text-rose-600">
+          <p className="text-caption text-rose-600 dark:text-rose-400">
             부수토지 한도 = <strong>건축물 바닥면적</strong>(각 층 중 최대, 지하 포함) × 용도지역 배율.
             초과분에만 +10%p 중과.
           </p>
@@ -125,15 +125,15 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
 
               {/* 배율·인정한도 자동 표시 */}
               {zoneMultiplier && (
-                <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-800 space-y-0.5">
+                <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-800 space-y-0.5 dark:text-rose-200 dark:bg-rose-900/40">
                   <p>적용 배율: <span className="font-semibold">{zoneMultiplier.detail}</span></p>
                   {footprint > 0 && allowedArea !== null && (
                     <p>인정 한도: 바닥면적 {footprint}㎡ × {multiplierNum}배 = <span className="font-semibold tabular-nums">{allowedArea.toFixed(2)} ㎡</span></p>
                   )}
                   {footprint > 0 && landArea > 0 && allowedArea !== null && (
                     landArea <= allowedArea
-                      ? <p className="text-emerald-700 font-semibold">→ 사업용 (중과 미발동)</p>
-                      : <p className="text-rose-700 font-semibold">→ 초과분 {(landArea - allowedArea).toFixed(2)}㎡ 비사업용 (중과)</p>
+                      ? <p className="text-emerald-700 font-semibold dark:text-emerald-300">→ 사업용 (중과 미발동)</p>
+                      : <p className="text-rose-700 font-semibold dark:text-rose-300">→ 초과분 {(landArea - allowedArea).toFixed(2)}㎡ 비사업용 (중과)</p>
                   )}
                 </div>
               )}
@@ -141,7 +141,7 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
           )}
 
           {asset.gbUnapprovedBuilding && (
-            <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700">
+            <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700 dark:text-rose-300 dark:bg-rose-900/40">
               무허가건축물 — 토지 전체 비사업용 (배율 계산 없음)
             </div>
           )}

@@ -49,7 +49,7 @@ export function BurdenedGiftRightValuationSection({ asset, onChange }: Props) {
         <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61③" />
         <LawArticleModal legalBasis="상속세및증여세법 시행령 §51" label="시행령 §51②" />
       </div>
-      <p className="text-caption text-emerald-800 leading-relaxed">
+      <p className="text-caption text-emerald-800 leading-relaxed dark:text-emerald-200">
         부동산을 취득할 수 있는 권리는 <b>조합원권리가액 + 증여일까지 납입한 계약금·중도금 +
         증여일 현재 프리미엄</b>으로 평가합니다.
       </p>
@@ -67,7 +67,7 @@ export function BurdenedGiftRightValuationSection({ asset, onChange }: Props) {
         />
       </FieldCard>
       {derived && (
-        <p className="text-caption text-emerald-700">
+        <p className="text-caption text-emerald-700 dark:text-emerald-300">
           ※ 재개발 정보의 권리가액 <b>{fmt(memberRights)}</b>에서 파생된 값을 사용 중입니다. 관리처분계획상
           조합원권리가액이 다르면 위 칸에 직접 입력하세요.
         </p>
@@ -95,14 +95,14 @@ export function BurdenedGiftRightValuationSection({ asset, onChange }: Props) {
 
       {total > 0 && (
         <div
-          className="rounded border border-emerald-300 bg-emerald-100/60 p-2 text-caption text-emerald-900 space-y-1"
+          className="rounded border border-emerald-300 bg-emerald-100/60 p-2 text-caption text-emerald-900 space-y-1 dark:text-emerald-200 dark:bg-emerald-900/40"
           data-testid="bg-right-valuation-total"
         >
           <p>
             <b>보충적 평가액 (§61③)</b> = {fmt(memberRights)} + {fmt(paid)} + {fmt(premium)} ={" "}
             <b>{fmt(total)}</b>
           </p>
-          <p className="text-emerald-700">
+          <p className="text-emerald-700 dark:text-emerald-300">
             담보(§66)·임대(§61⑤) 평가가 더 크면 그 값이 증여가액이 됩니다 — 최종 증여가액은 결과
             화면에서 확인하세요.
           </p>

@@ -67,12 +67,12 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
     >
       <div className="space-y-3">
         {items.map((it, idx) => (
-          <div key={idx} className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2">
+          <div key={idx} className="rounded-lg border border-violet-200 bg-violet-50/40 p-3 space-y-2 dark:bg-violet-950/40">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-violet-700">보유 감면주택 {idx + 1}</p>
+              <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">보유 감면주택 {idx + 1}</p>
               <button
                 type="button"
-                className="text-caption text-rose-600 hover:underline"
+                className="text-caption text-rose-600 hover:underline dark:text-rose-400"
                 onClick={() => onChange(items.filter((_, i) => i !== idx))}
               >
                 삭제
@@ -83,7 +83,7 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
         ))}
         <button
           type="button"
-          className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/60 py-2 text-xs font-medium text-violet-700 hover:bg-violet-100"
+          className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/60 py-2 text-xs font-medium text-violet-700 hover:bg-violet-100 dark:text-violet-300 dark:bg-violet-950/40"
           onClick={() =>
             onChange([
               ...items,
@@ -140,26 +140,26 @@ export function SpecialHouseExclusionItemFields({
             </SelectContent>
           </Select>
           {(item.article === "new_99" || item.article === "new_99_3") && (
-            <p className="mt-1 text-micro text-rose-600">
+            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
               {item.article === "new_99" ? "§99②" : "§99의3②"}는 다른 주택을 2007.12.31까지
               양도하는 경우에만 적용됩니다 — 그 이후 양도분은 주택 수 제외가 적용되지 않습니다.
             </p>
           )}
           {item.article === "unsold_98_6" && (
-            <p className="mt-1 text-micro text-emerald-700">
+            <p className="mt-1 text-micro text-emerald-700 dark:text-emerald-300">
               §98의6①의 기한은 <b>임대계약 체결일</b>(1호는 사업주체등이 2011.12.31까지, 2호는
               본인이 2011.12.31 이전)이고 매수자의 취득일·매매계약일에는 기한이 없습니다 — 아래
               일자는 참고용으로만 기록됩니다.
             </p>
           )}
           {usesContractDateOnly(item.article) && (
-            <p className="mt-1 text-micro text-amber-700">
+            <p className="mt-1 text-micro text-amber-700 dark:text-amber-300">
               이 조문은 <b>최초 매매계약일</b>만을 기준으로 취득기간을 판정합니다 — 취득일이
               기간 안이어도 계약일이 밖이면 적용되지 않습니다.
             </p>
           )}
           {item.article === "unsold_98_3" && (
-            <p className="mt-1 text-micro text-amber-700">
+            <p className="mt-1 text-micro text-amber-700 dark:text-amber-300">
               비거주자는 2009.3.16~2010.2.11 취득(계약)분만 해당합니다 — 2009.2.12~3.15 취득분은
               거주자에게만 적용됩니다 (조특법 §98의3①). 아래 요건 확인 토글은 본인 거주 구분에 따른
               취득기간 충족을 포함해 확인한 것으로 간주됩니다.

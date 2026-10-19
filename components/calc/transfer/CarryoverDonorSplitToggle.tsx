@@ -35,7 +35,7 @@ export function CarryoverDonorSplitToggle({
   if (isNonPrimaryAsset) {
     return (
       <ToneCard tone="amber" bodyClassName="space-y-1">
-        <p className="text-caption text-amber-900" data-testid="split-carryover-companion-note">
+        <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="split-carryover-companion-note">
           함께 양도하는 두 번째 이후 자산에는 토지·건물 파트 이월과세를 쓸 수 없습니다 — 이 입력은 첫 번째 자산에서만 계산됩니다.
           자산 전체를 하나의 증여자 취득으로 보는 이월과세는 그대로 입력할 수 있습니다.
         </p>
@@ -74,7 +74,7 @@ export function CarryoverDonorSplitToggle({
         data-field="carryoverDonorSplit"
       />
       {inactiveReason && (
-        <p className="text-caption text-amber-800" data-testid="carryover-donor-split-inactive">
+        <p className="text-caption text-amber-800 dark:text-amber-200" data-testid="carryover-donor-split-inactive">
           지금 조건에서는 적용되지 않습니다 — {inactiveReason}. 자산 전체를 하나의 증여자 취득으로 보는 이월과세로 계산합니다 (입력한 값은 보존되며, 조건이 풀리면 다시 적용됩니다).
         </p>
       )}

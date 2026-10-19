@@ -119,7 +119,7 @@ export function MixedUseExpandedPanel({
       {(isMixedUsePerPartAcq(asset)
         ? mixedUsePhdEffective(asset)
         : useEstimatedAcquisition && asset.usePreHousingDisclosure) && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-900 space-y-1">
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-900 space-y-1 dark:text-amber-200 dark:bg-amber-950/40">
           <p className="font-semibold">겸용주택 + 환산취득가 + 토지/건물 분리 + §164⑦ 미공시 4-way 적용</p>
           <ol className="ml-4 list-decimal space-y-0.5 leading-relaxed">
             <li>양도가액을 면적·기준시가 비율로 주택/상가 안분</li>

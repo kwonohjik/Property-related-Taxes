@@ -95,7 +95,7 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
 
   return (
     <ToneCard tone="emerald" sectionNum="6" title={`거주개월 분리 입력 (1세대1주택 + ${hv} 초과 시)`}>
-      <p className="text-caption text-emerald-800 leading-relaxed">
+      <p className="text-caption text-emerald-800 leading-relaxed dark:text-emerald-200">
         <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
         {" "}—{" "}
         {landContributed
@@ -134,12 +134,12 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
       <div
         className={`rounded-lg border p-3 text-xs leading-relaxed ${
           guidance.tone === "emerald"
-            ? "border-emerald-300 bg-emerald-100/60 text-emerald-900"
+            ? "border-emerald-300 bg-emerald-100/60 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-900/40"
             : guidance.tone === "sky"
-              ? "border-sky-300 bg-sky-100/60 text-sky-900"
+              ? "border-sky-300 bg-sky-100/60 text-sky-900 dark:text-sky-200 dark:bg-sky-900/40"
               : guidance.tone === "violet"
-                ? "border-violet-300 bg-violet-100/60 text-violet-900"
-                : "border-amber-300 bg-amber-100/60 text-amber-900"
+                ? "border-violet-300 bg-violet-100/60 text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
+                : "border-amber-300 bg-amber-100/60 text-amber-900 dark:text-amber-200 dark:bg-amber-900/40"
         }`}
       >
         <p className="font-semibold mb-1">{guidance.title}</p>
@@ -219,8 +219,8 @@ function ResidencePeriodGroup({
   return (
     <div className="rounded-md border border-emerald-200 bg-white/60 dark:bg-white/5 p-3 space-y-2">
       <div className="flex flex-col gap-0.5">
-        <p className="text-xs font-semibold text-emerald-900">{label}</p>
-        <p className="text-caption text-emerald-700">{hint}</p>
+        <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">{label}</p>
+        <p className="text-caption text-emerald-700 dark:text-emerald-300">{hint}</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <FieldCard label="입주일" field={fieldStart}>
@@ -234,7 +234,7 @@ function ResidencePeriodGroup({
         className={`rounded-md border p-2 text-caption ${
           hasError
             ? "border-rose-300 bg-rose-50 text-rose-800"
-            : "border-emerald-200 bg-emerald-100/60 text-emerald-900"
+            : "border-emerald-200 bg-emerald-100/60 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-900/40"
         }`}
       >
         {hasError ? (
@@ -244,7 +244,7 @@ function ResidencePeriodGroup({
             자동 산정 거주개월수: <span className="font-semibold font-mono">{displayMonths}</span> 개월
           </p>
         ) : (
-          <p className="text-emerald-700">입주일과 퇴거일을 모두 입력하면 거주개월수가 자동 산정됩니다.</p>
+          <p className="text-emerald-700 dark:text-emerald-300">입주일과 퇴거일을 모두 입력하면 거주개월수가 자동 산정됩니다.</p>
         )}
       </div>
     </div>

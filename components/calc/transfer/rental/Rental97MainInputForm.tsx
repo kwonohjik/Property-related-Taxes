@@ -142,7 +142,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {parseInt(value.constructionYear || "0") > 0 &&
         parseInt(value.constructionYear) <= 1985 && (
           <ToneCard tone="amber" sectionNum={num(2)} title="§97①2호 요건" bodyClassName="space-y-2">
-            <p className="text-micro text-amber-800">
+            <p className="text-micro text-amber-800 dark:text-amber-200">
               조특법 §97①2호 — 「<strong>1985년 12월 31일 이전에 신축된 공동주택</strong>으로서
               <strong>1986년 1월 1일 현재 입주된 사실이 없는 주택</strong>」. 두 가지를 모두
               충족해야 합니다.
@@ -182,7 +182,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
               />
             </div>
             {(value.isMultiUnitHousing === null || value.isUnoccupiedAt1986 === null) && (
-              <p className="text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+              <p className="text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
             )}
           </ToneCard>
         )}
@@ -190,7 +190,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
       {/* §97① 단서 나목 — 취득 당시 미입주 (D1-07) */}
       {isProviso && value.provisoCase === "b_purchase" && (
         <ToneCard tone="rose" sectionNum={num(3)} title="단서 나목 요건" bodyClassName="space-y-2">
-          <p className="text-micro text-rose-800">
+          <p className="text-micro text-rose-800 dark:text-rose-200">
             조특법 §97① 단서 — 매입임대주택은 「<strong>취득 당시 입주된 사실이 없는 주택만
             해당한다</strong>」.
           </p>
@@ -213,7 +213,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             ]}
           />
           {value.isUnoccupiedAtAcquisition === null && (
-            <p className="text-micro text-rose-600">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </ToneCard>
       )}
@@ -246,7 +246,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             ]}
           />
           {value.hasMin5RentalUnits === null && (
-            <p className="mt-1 text-micro text-rose-600">
+            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
               ※ 반드시 선택하세요 (미선택 시 계산 불가)
             </p>
           )}
@@ -254,7 +254,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
 
         {value.hasMin5RentalUnits === true && (
           <div className="mt-2 space-y-2 border-t border-sky-200 pt-2" data-field={`reduction.${value.type}.belowMin5UnitsPeriods`}>
-            <p className="text-xs font-medium text-sky-800">5호 미만으로 임대한 기간</p>
+            <p className="text-xs font-medium text-sky-800 dark:text-sky-200">5호 미만으로 임대한 기간</p>
             <p className="text-micro text-muted-foreground">
               조특령 §97⑤4호 — 5호 미만의 주택을 임대한 기간은 주택임대기간으로 보지 않는다.
               공실과 달리 유예가 없어 구간 전체가 차감된다. 없으면 비워 두세요.
@@ -273,7 +273,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
                 <button
                   type="button"
                   onClick={() => removeBelow(idx)}
-                  className="text-micro text-rose-600 hover:underline"
+                  className="text-micro text-rose-600 hover:underline dark:text-rose-400"
                 >
                   삭제
                 </button>
@@ -282,7 +282,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             <button
               type="button"
               onClick={addBelow}
-              className="text-xs font-medium text-sky-700 hover:underline"
+              className="text-xs font-medium text-sky-700 hover:underline dark:text-sky-300"
             >
               + 구간 추가
             </button>

@@ -74,16 +74,16 @@ export function AssetSectionTransfer({
 
       {/* 양도가액 — 부담부증여 시 엔진 자동 도출 (소령 §159) 안내 + 기준시가는 별도 유지 */}
       {asset.transferType === "burdened_gift" && (
-        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
+        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5 dark:bg-fuchsia-950/40">
           <div className="flex items-center gap-2">
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-fuchsia-200 text-micro font-bold text-fuchsia-800 select-none">
               §159
             </span>
-            <p className="text-sm font-semibold text-fuchsia-900">
+            <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
               양도가액은 자동 산정됩니다 (직접 입력 불필요)
             </p>
           </div>
-          <p className="text-xs text-fuchsia-800">
+          <p className="text-xs text-fuchsia-800 dark:text-fuchsia-200">
             부담부증여(소득세법 시행령 §159)에서는{" "}
             <b>
               양도가액 = 인수 채무액 × <Frac top="자산별 평가가액" bottom="증여가액" />
@@ -93,16 +93,16 @@ export function AssetSectionTransfer({
           {/* 양도시 기준시가의 입력 위치·쓰임은 자산종류·평가 모드마다 다르다 — 칸이 없는 경우(시가 모드
               실지취득가·입주권)는 안내하지 않는다. 술어는 아래 CompanionSaleModeBlock 렌더 게이트와 같다. */}
           {isMixedBurdenedGift(asset) ? (
-            <p className="text-caption text-fuchsia-700">
+            <p className="text-caption text-fuchsia-700 dark:text-fuchsia-300">
               ※ <b>양도시·취득시 기준시가</b>(주택·상가 4부분)는 ③ 취득정보의 겸용주택 기준시가에서 입력합니다 —
               위 부담부증여 카드의 「증여재산 평가」는 그 합계를 보여 줍니다.
             </p>
           ) : asset.assetKind === "general_building" ? (
-            <p className="text-caption text-fuchsia-700">
+            <p className="text-caption text-fuchsia-700 dark:text-fuchsia-300">
               ※ <b>양도시 기준시가</b>(토지 공시지가·건물기준시가)는 ③ 취득정보의 일반건물 카드에서 입력합니다.
             </p>
           ) : !stdPriceAtTransferComesFromElsewhere(asset) && (
-            <p className="text-caption text-fuchsia-700">
+            <p className="text-caption text-fuchsia-700 dark:text-fuchsia-300">
               {asset.bgValuationMode === "sangjeungbeop_market" ? (
                 <>※ 아래 <b>양도시 기준시가</b> 입력은 환산취득가액(양도가액 × 「취득시 기준시가를 양도시 기준시가로 나눈 비율」)의 분모로 쓰입니다. 증여가액은 시가 평가액입니다.</>
               ) : (
@@ -191,18 +191,18 @@ export function AssetSectionTransfer({
       */}
       {needsBgAcqStdPriceInput(asset) && (
           <div
-            className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2"
+            className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2 dark:bg-amber-950/40"
             data-testid="bg-acq-std-price"
           >
             <div className="flex flex-wrap items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
                 §159
               </span>
-              <p className="text-xs font-semibold text-amber-800">취득시 기준시가</p>
+              <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">취득시 기준시가</p>
               <LawArticleModal legalBasis="소득세법 시행령 §159" label="시행령 §159" />
             </div>
             {/* 시가 + 환산(K-5)에서도 이 칸이 열린다(B2) — 그때는 채무비율이 아니라 환산 분자다 */}
-            <p className="text-caption text-amber-700">
+            <p className="text-caption text-amber-700 dark:text-amber-300">
               {asset.bgValuationMode === "sangjeungbeop_market" ? (
                 <>
                   환산취득가액 = 양도가액 × <Frac top="취득시 기준시가" bottom="양도시 기준시가" />(소령 §176의2②2호).

@@ -148,12 +148,12 @@ function PartAcqStdPrice(props: {
       <div data-testid="split-land-std-acq-card">
       <ToneCard tone="amber" title="토지 취득시 기준시가 (§99①1호 가목)">
         {props.notOwnedReason && (
-          <p className="text-xs text-amber-800" data-testid="split-land-std-not-owned-note">
+          <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="split-land-std-not-owned-note">
             {props.notOwnedReason}
           </p>
         )}
         {props.calcUnusedNote && (
-          <p className="text-xs text-amber-800" data-testid="split-land-std-calc-unused-note">
+          <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="split-land-std-calc-unused-note">
             {props.calcUnusedNote}
           </p>
         )}
@@ -345,11 +345,11 @@ export function LandBuildingSplitSection(props: Props) {
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               1
             </span>
-            <p className="text-xs font-semibold text-amber-800">토지 취득가액 방식</p>
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">토지 취득가액 방식</p>
           </div>
           {props.landCause ? (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="part-acq-mode-land-fixed">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="part-acq-mode-land-fixed">
                 <strong>{LAND_CAUSE_META[props.landCause].fixedMode}</strong> — 상속·증여로 취득한 토지는 평가액이
                 취득당시 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
               </p>
@@ -446,11 +446,11 @@ export function LandBuildingSplitSection(props: Props) {
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               2
             </span>
-            <p className="text-xs font-semibold text-amber-800">건물 취득가액 방식</p>
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">건물 취득가액 방식</p>
           </div>
           {props.buildingCause ? (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900" data-testid="part-acq-mode-building-fixed">
+              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="part-acq-mode-building-fixed">
                 <strong>{BUILDING_CAUSE_META[props.buildingCause].fixedMode}</strong> — 상속·증여로 취득한 건물은 평가액이 취득당시
                 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
               </p>

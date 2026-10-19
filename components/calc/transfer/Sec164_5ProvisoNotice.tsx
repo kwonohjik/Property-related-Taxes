@@ -41,13 +41,13 @@ export function Sec164_5ProvisoNotice({
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥ 단서" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑤" label="§164⑤" />
       </div>
-      <p className="text-xs text-amber-800">
+      <p className="text-xs text-amber-800 dark:text-amber-200">
         {timePointLabel}
         {year ? `(${year}년)` : ""} 건물 기준시가는 <b>국세청 고시 전이라 존재하지 않습니다</b>. §164⑥
         단서에 따라 <b>§164⑤을 준용</b>해 산정해야 합니다 — 2001년 지수표 금액에 「취득당시 건물기준시가
         산정기준율」을 적용합니다.
       </p>
-      <p className="text-caption text-amber-700">
+      <p className="text-caption text-amber-700 dark:text-amber-300">
         아래 <b>[건물 기준시가 계산]</b> 버튼으로 산정하면 준용이 자동 적용됩니다(신축연도·구조·용도
         입력 필요). 모달이 지원하지 않는 구조는 직접 산정한 금액을 입력하세요.
       </p>

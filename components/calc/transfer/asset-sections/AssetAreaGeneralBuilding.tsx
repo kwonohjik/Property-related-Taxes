@@ -81,16 +81,16 @@ export function AssetAreaGeneralBuilding({ asset, onChange }: Props) {
 
       {isPartial && (
         <ToneCard tone="amber" className="mt-2">
-          <p className="text-xs text-amber-800">
+          <p className="text-xs text-amber-800 dark:text-amber-200">
             아래 면적과 「양도시·취득시 기준시가」를 <strong>양도한 부분 기준</strong>으로
             입력하세요. 양도하지 않고 남긴 부분은 포함하지 않습니다.
           </p>
-          <p className="text-caption text-amber-700 mt-1">
+          <p className="text-caption text-amber-700 mt-1 dark:text-amber-300">
             부수토지 한도(「소득세법」 제104조의3 제1항 제4호 나목)도 이 면적으로 판정합니다 —
             토지만 일부 양도했다면 바닥면적은 <strong>건물 전체 값 그대로</strong> 두고,
             건물도 함께 나눠 양도했다면 바닥면적도 양도분으로 넣으세요.
           </p>
-          <p className="text-caption text-amber-700 mt-1">
+          <p className="text-caption text-amber-700 mt-1 dark:text-amber-300">
             취득가액(실거래가)은 전체 금액이므로 <strong>③ 취득정보</strong>의 안분 계산기로
             양도분을 산출해 적용하세요. 환산취득가 모드는 위 면적·기준시가만으로 자동 계산됩니다.
           </p>

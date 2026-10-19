@@ -73,10 +73,10 @@ export function SettlementAnnouncementDateField({
       <div className="space-y-2">
         <DateInput value={announcementDate} onChange={handleAnnouncementChange} />
         {asset.redevSettlementSaleDate && (
-          <div className="rounded-md bg-rose-100/60 border border-rose-200 px-3 py-2 text-caption text-rose-800">
+          <div className="rounded-md bg-rose-100/60 border border-rose-200 px-3 py-2 text-caption text-rose-800 dark:text-rose-200 dark:bg-rose-900/40">
             <span className="font-semibold">자동 산정 양도일</span>:{" "}
             <span className="font-mono font-semibold">{asset.redevSettlementSaleDate}</span>{" "}
-            <span className="text-rose-600">(고시일 + 1일)</span>
+            <span className="text-rose-600 dark:text-rose-400">(고시일 + 1일)</span>
           </div>
         )}
       </div>
@@ -103,7 +103,7 @@ export function ReceiveOnlyToggleCard({
       title="청산금 수령분 단독 신고"
       description="신축APT 양도 없이 청산금 수령분만 신고 — 시행령 §166① 본문 + 제1항 제2호 가목 단독 적용 (NTS 집행기준)"
     >
-      <div className="space-y-2 text-caption text-rose-800 leading-relaxed">
+      <div className="space-y-2 text-caption text-rose-800 leading-relaxed dark:text-rose-200">
         <p>
           본 모드 ON 시 인가전·인가후 양도차익은 신고 대상이 아니며,{" "}
           <span className="font-semibold">청산금 수령액만 양도가액으로 의제</span>됩니다.
@@ -182,22 +182,22 @@ export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
 
   return (
     <div
-      className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1"
+      className="rounded-lg border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 dark:bg-sky-950/40"
       data-testid="redev-sale-price-preview"
     >
       <div className="flex flex-wrap items-center gap-1.5">
-        <p className="font-semibold text-sky-800">{title}</p>
+        <p className="font-semibold text-sky-800 dark:text-sky-200">{title}</p>
         <LawArticleModal
           legalBasis={isRight ? REDEVELOPMENT.RIGHT_RECEIVE : REDEVELOPMENT.APT_RECEIVE}
           label={isRight ? "§166①2호" : "§166②2호"}
         />
       </div>
-      <p className="text-sky-700 font-mono tabular-nums">
+      <p className="text-sky-700 font-mono tabular-nums dark:text-sky-300">
         {term} = {isRight ? "기존건물·부수토지 평가액" : "권리가액"} {preview.rights.toLocaleString()} −{" "}
         {isRight ? "지급받은 청산금" : "청산금 수령액"} {preview.settle.toLocaleString()}
       </p>
-      <p className="text-sky-700 font-mono tabular-nums">= {preview.salePriceTotal.toLocaleString()}</p>
-      <p className="text-caption text-sky-600">
+      <p className="text-sky-700 font-mono tabular-nums dark:text-sky-300">= {preview.salePriceTotal.toLocaleString()}</p>
+      <p className="text-caption text-sky-600 dark:text-sky-400">
         {isRight
           ? "※ 이 값은 양도가액에서 빼는 금액입니다 — 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다."
           : "※ \u201C분양가액\u201D은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다."}
@@ -294,12 +294,12 @@ export function ExemptionAtApprovalCard({
       title="비과세 보유 요건 (관리처분계획인가일 기준 보유 2년)"
       bodyClassName="space-y-2"
     >
-      <p className="text-caption text-violet-800 leading-relaxed">
+      <p className="text-caption text-violet-800 leading-relaxed dark:text-violet-200">
         부동산거래관리과-380 (2012.07.20) — 청산금 수령분의 1세대1주택 비과세는 청산금분
         양도일(소유권이전 고시일 다음날) 현재를 기준으로 적용하되, 종전주택을 조합에 제공한 때까지
         보유기간이 요건에 미달하면 비과세되지 않습니다. 여기서는 그 보유(거주) 요건을 선언합니다.
       </p>
-      <p className="text-caption text-violet-700 leading-relaxed">
+      <p className="text-caption text-violet-700 leading-relaxed dark:text-violet-300">
         ※ 자동 판정은 <span className="font-semibold">관리처분계획인가일 기준</span>(원칙)입니다.
         인가일 이후에도 철거되지 않고 <span className="font-semibold">사실상 주거용으로 사용</span>한
         기간이 있으면 그 기간을 보유·거주기간에 <span className="font-semibold">합산</span>합니다 —
@@ -361,7 +361,7 @@ export function ExemptionAtApprovalCard({
         </FieldCard>
       </ToggleCard>
 
-      <div className="rounded-md border border-violet-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-violet-900">
+      <div className="rounded-md border border-violet-200 bg-white/70 dark:bg-white/5 p-2 text-caption text-violet-900 dark:text-violet-200">
         {labelText}
       </div>
 
@@ -395,7 +395,7 @@ export function ExemptionAtApprovalCard({
 
       {/* 결론 박스는 **선언된 값만** 반영한다 (Q16). 선언이 없으면 무엇이 적용되는지를 그대로 적는다. */}
       {effective === null ? (
-        <div className="rounded-md border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-900">
+        <div className="rounded-md border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-900 dark:text-amber-200 dark:bg-amber-900/40">
           <p>
             <span className="font-semibold">선언하지 않음</span> — 청산금 비과세·§89①4호 특례가{" "}
             <span className="font-semibold">적용되지 않습니다</span>. 장기보유특별공제는 일반
@@ -410,8 +410,8 @@ export function ExemptionAtApprovalCard({
         <div
           className={`rounded-md border p-2 text-caption ${
             effective === "yes"
-              ? "border-emerald-300 bg-emerald-100/60 text-emerald-900"
-              : "border-rose-300 bg-rose-100/60 text-rose-900"
+              ? "border-emerald-300 bg-emerald-100/60 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-900/40"
+              : "border-rose-300 bg-rose-100/60 text-rose-900 dark:text-rose-200 dark:bg-rose-900/40"
           }`}
         >
           {effective === "yes" ? (
@@ -429,10 +429,10 @@ export function ExemptionAtApprovalCard({
       {/* L-12 — 청산금분 양도일 현재 1세대1주택 (동시신고 전용). 세대 입력은 신축주택 양도일 사실이다. */}
       {settlementOneHouseAtSaleInScope(asset) && (
         <div className="space-y-1" data-testid="redev-one-house-at-settlement-sale">
-          <p className="text-caption font-semibold text-violet-900">
+          <p className="text-caption font-semibold text-violet-900 dark:text-violet-200">
             청산금분 양도일(소유권이전 고시일 다음날) 현재 1세대 1주택이었습니까?
           </p>
-          <p className="text-caption text-violet-700 leading-relaxed">
+          <p className="text-caption text-violet-700 leading-relaxed dark:text-violet-300">
             청산금 수령분의 1세대1주택 여부는 신축주택 양도일이 아니라 청산금분 양도일 현재로
             판정합니다(사전-2022-법규재산-1282 — 그 날 입주권으로 받은 다른 신축주택을 함께 소유하면
             비과세 불가). 선택하지 않으면 두 날이 같을 때만 위 세대 주택 수 입력(§155 등으로 1주택으로 보는

@@ -14,7 +14,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 export function GbDeductionOnlyNotice() {
   return (
     <ToneCard tone="amber" bodyClassName="space-y-1">
-      <p className="text-xs text-amber-900" data-testid="gb-deduction-only-notice">
+      <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="gb-deduction-only-notice">
         감정가액·매매사례가액은 추계 취득가액이라 필요경비는 개산공제(취득시 기준시가 × 율 — 3%, 미등기양도자산
         0.3%; 「소득세법 시행령」 §163⑥)만 인정됩니다. 자본적지출·양도비는 필요경비에 산입되지 않으므로 입력해도
         세액이 바뀌지 않습니다 (「소득세법」 §97②2호 본문).

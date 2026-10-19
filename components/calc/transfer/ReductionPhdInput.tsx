@@ -185,7 +185,7 @@ export function ReductionPhdInput({
           */}
           {notEligible && isOn && (
             <div
-              className="rounded-md border border-rose-300 bg-rose-50/70 px-3 py-2 text-xs text-rose-900"
+              className="rounded-md border border-rose-300 bg-rose-50/70 px-3 py-2 text-xs text-rose-900 dark:text-rose-200 dark:bg-rose-950/40"
               data-testid="reduction-phd-not-eligible"
             >
               <p className="font-semibold">§164⑦ 환산 대상이 아닙니다</p>

@@ -19,11 +19,11 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
           폼 상태(useEstimatedAcquisition·fixedAcquisitionPrice 등)는 보존하여
           양도 형태를 "일반 양도"로 되돌리면 입력값 복원 가능. */}
       {asset?.transferType === "burdened_gift" && (
-        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5">
-          <p className="text-sm font-semibold text-fuchsia-900">
+        <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-50/60 p-3 space-y-1.5 dark:bg-fuchsia-950/40">
+          <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
             취득가액 — 부담부증여 §159 자동 산정
           </p>
-          <p className="text-xs text-fuchsia-800">
+          <p className="text-xs text-fuchsia-800 dark:text-fuchsia-200">
             부담부증여(소득세법 시행령 §159)는 취득가액을 <b>증여재산 평가방식</b>에 따라 엔진이 자동 산정합니다
             — 기준시가 평가 시 취득기준시가 × 채무비율, 시가 평가 시 실지취득가액 또는 환산취득가액(위
             &lsquo;부담부증여&rsquo; 카드의 <b>취득가액 산정방식</b>에서 선택). 따라서 일반 취득가액 산정 방식·실거래가
@@ -39,7 +39,7 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
 
             설계: docs/02-design/features/burdened-gift-acq-std-price-input-path.plan.md §5 Q-3
           */}
-          <p className="text-caption text-fuchsia-700">
+          <p className="text-caption text-fuchsia-700 dark:text-fuchsia-300">
             {asset?.assetKind === "general_building" ? (
               <>
                 ※ 산식에 필요한 <b>취득시 기준시가</b>는 아래 일반건물 취득 정보의 토지 공시지가·건물
@@ -69,20 +69,20 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
         //    안내하면 **두 카드가 서로를 가리키는 순환**이 된다. 실제로 그 상태에서 매매 취득의
         //    취득가액 입력 칸이 화면 어디에도 없어 0이 엔진에 도달했다.
         asset?.redevIsSuccessorMember !== "yes" && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
-          <p className="text-sm font-semibold text-violet-900">
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5 dark:bg-violet-950/40">
+          <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
             취득가액 — 재개발 §166②1호 자동 산정
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 시행령 §166 ② 1호" label="시행령 §166②1호" />
             <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
           </div>
-          <p className="text-xs text-violet-800">
+          <p className="text-xs text-violet-800 dark:text-violet-200">
             재개발/재건축 양도에서 인가후 분의 분양가(= 권리가액 + 청산금 납부액 또는 권리가액 − 청산금 수령액)는
             아래 <b>§166②1호 재개발 일정·금액</b> 섹션의 입력값에서 엔진이 자동 산정합니다.
             따라서 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
           </p>
-          <p className="text-caption text-violet-700">
+          <p className="text-caption text-violet-700 dark:text-violet-300">
             ※ 인가전 분의 <b>환산취득가</b>(시행령 §166③ + §164⑦ 본문)는 아래 §166 섹션 내 환산취득가 토글에서 입력합니다.
           </p>
         </div>
@@ -92,40 +92,40 @@ export function CompanionAcqSpecialAssetNotices({ asset }: { asset?: AssetForm }
           그 값은 실거래가 모드에서 **무시**되고(§166 섹션의 전용 필드가 정본) 감정·매매사례를
           고르면 취득가액이 **0**이 되어 오류 없이 과대과세됐다(계획서 §2.1 실측). */}
       {asset?.assetKind === "right_to_move_in" && (
-        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5">
+        <div className="rounded-lg border border-violet-300 bg-violet-50/60 p-3 space-y-1.5 dark:bg-violet-950/40">
           {asset?.isSuccessorRightToMoveIn ? (
             <>
-              <p className="text-sm font-semibold text-violet-900">
+              <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
                 취득가액 — 승계취득 §97①1호 가목
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 <LawArticleModal legalBasis="소득세법 §97 ① 1호" label="§97①1호" />
                 <LawArticleModal legalBasis="소득세법 §95 ②" label="§95②" />
               </div>
-              <p className="text-xs text-violet-800">
+              <p className="text-xs text-violet-800 dark:text-violet-200">
                 시행령 §166①은 <b>조합에 기존건물과 그 부수토지를 제공하고 취득한</b> 조합원에게 적용됩니다.
                 승계조합원은 제공한 사실이 없어 §166① 안분(인가전·인가후) 대상이 아니며, 취득가액은
                 아래 <b>조합원입주권 승계취득 정보</b>에서 실지거래가액으로 입력합니다.
               </p>
-              <p className="text-caption text-violet-700">
+              <p className="text-caption text-violet-700 dark:text-violet-300">
                 ※ 장기보유특별공제는 적용되지 않습니다 (§95② — 조합원으로부터 취득한 것은 제외).
               </p>
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold text-violet-900">
+              <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
                 취득가액 — 재개발 §166①1호 인가전 분에서 차감
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 <LawArticleModal legalBasis="소득세법 시행령 §166 ① 1호" label="시행령 §166①1호" />
                 <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="시행령 §166③" />
               </div>
-              <p className="text-xs text-violet-800">
+              <p className="text-xs text-violet-800 dark:text-violet-200">
                 조합원입주권 양도차익은 인가전 분(권리가액 − 종전 부동산 취득가액)과 인가후 분으로 나누어
                 계산합니다. 종전 부동산의 취득가액은 아래 <b>⑤ 인가전 분 종전 부동산 취득가액</b>에서
                 입력하므로, 상단 일반 &ldquo;취득가액 산정 방식·취득가액&rdquo; 입력은 표시하지 않습니다.
               </p>
-              <p className="text-caption text-violet-700">
+              <p className="text-caption text-violet-700 dark:text-violet-300">
                 ※ 취득가액을 확인할 수 없는 경우의 대체수단은 §166③ <b>환산</b>입니다(감정가액·매매사례가액 아님).
               </p>
             </>

@@ -26,7 +26,7 @@ export function RedevelopmentDeemedAcquisitionNotice({
         title="종전자산 취득가액 — 상속개시일 상증법 평가액"
         titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
       >
-        <p className="text-xs text-amber-800">
+        <p className="text-xs text-amber-800 dark:text-amber-200">
           상속으로 취득한 종전자산은 상속개시일 현재 상증법 §60~66 평가액(상속세 신고가액)을 종전자산
           취득가액으로 봅니다(위 &ldquo;상속개시일 평가액&rdquo; 입력값). 이 값이 확인되면 §166③ 환산취득가·
           §163⑥ 개산공제는 적용하지 않습니다. 상속개시일 평가액을 확인할 수 없는 경우에만 아래 환산 기준시가로
@@ -43,7 +43,7 @@ export function RedevelopmentDeemedAcquisitionNotice({
         title="종전자산 취득가액 — 증여일 상증법 평가액"
         titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
       >
-        <p className="text-xs text-violet-800">
+        <p className="text-xs text-violet-800 dark:text-violet-200">
           증여로 취득한 종전자산은 증여일 현재 상증법 §60~66 평가액(증여세 신고가액)을 종전자산 취득가액으로
           봅니다. 증여 신고가액은 항상 확인 가능하므로 §166③ 환산취득가·§163⑥ 개산공제는 적용하지 않습니다.
           평가액은 <span className="font-semibold">③ 취득정보의 &ldquo;증여 신고가액&rdquo;</span> 입력값을 씁니다.

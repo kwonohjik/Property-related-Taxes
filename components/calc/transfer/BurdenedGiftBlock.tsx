@@ -151,12 +151,12 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   const fmt = (n: number) => n.toLocaleString("ko-KR");
 
   return (
-    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-3 space-y-3">
+    <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-3 space-y-3 dark:bg-fuchsia-950/40">
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-fuchsia-900">
+        <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
           부담부증여 (소득세법 시행령 §159)
         </p>
-        <p className="text-xs text-fuchsia-700">
+        <p className="text-xs text-fuchsia-700 dark:text-fuchsia-300">
           납세의무자: <b>양도인</b>(증여하는 사람) · 양도가액 = 인수 채무액 ·{" "}
           {isCarryover ? (
             <>
@@ -198,10 +198,10 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       </FieldCard>
 
       {/* ② 인수 채무 입력 (3분리: 보증금·차입금·임대료) */}
-      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3 space-y-2">
-        <p className="text-xs font-semibold text-rose-800">인수 채무 + 임대 평가 보조</p>
+      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3 space-y-2 dark:bg-rose-950/40">
+        <p className="text-xs font-semibold text-rose-800 dark:text-rose-200">인수 채무 + 임대 평가 보조</p>
         {isFractional && (
-          <p className="text-caption text-rose-700">
+          <p className="text-caption text-rose-700 dark:text-rose-300">
             공유지분({shareLabel}) 부담부증여 — 아래 채무·보증금·임대료는 <b>이 지분에 대응하는
             인수분</b>을 입력하세요. 기준시가·시가 등 <b>평가액은 물건 전체로 입력</b>하면
             엔진이 지분분으로 환산합니다(소령 §159 — 평가액 A·C만 지분분, 채무 B는 실제 인수액).
@@ -209,7 +209,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         )}
         {/* 컴패니언 — 축 A·축 B와 또 다른 제3의 규약. 상세는 `isCompanionBundle` 주석. */}
         {isCompanionBundle && (
-          <p className="text-caption text-rose-700">
+          <p className="text-caption text-rose-700 dark:text-rose-300">
             여러 물건 함께 부담부증여 — 아래 채무·보증금·임대료는 <b>이 물건에 설정된 금액</b>을
             입력하세요. 채무가 없는 물건은 비워 둡니다. 하나의 증여계약이므로 시스템이 채무
             합계를 <b>자산별 평가액 비율로 재배분</b>합니다(소령 §159 — 채무비율 B/C는 증여계약
@@ -218,7 +218,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         )}
         {/* 축 B — 축 A와 **반대** 규약이라 침묵하면 사용자가 지분분을 넣어 세액이 조용히 틀린다. */}
         {isFractionalSplit && (
-          <p className="text-caption text-rose-700">
+          <p className="text-caption text-rose-700 dark:text-rose-300">
             지분 분할 취득 — 채무·보증금·임대료를 <b>물건 전체(100%) 기준</b>으로 입력하세요.
             하나의 증여계약이므로 시스템이 지분별로 안분합니다(소령 §159 — 채무비율 B/C는
             물건 단위로 하나입니다).
@@ -267,8 +267,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
       {/* ③ 시가 모드 — 양도시 시가 + 취득가액 산정방식 (K-4 실지 / K-5 환산) */}
       {isMarketMode && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3">
-          <p className="text-xs font-semibold text-amber-800">시가 모드 — 상증법 §60②~④</p>
+        <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 space-y-3 dark:bg-amber-950/40">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">시가 모드 — 상증법 §60②~④</p>
           <FieldCard label="양도시 시가 평가액 (총액)">
             <CurrencyInput label=""
               hideUnit
@@ -302,12 +302,12 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
           {asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
             // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
-            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
+            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.
               아래 재개발·재건축 「⑤ 인가전 분 종전 부동산 취득가액」에서 기준시가를 입력하세요. 개산공제(§163⑥ 3%) 자동 적용.
             </div>
           ) : asset.bgAcquisitionMethod === "converted" && (
-            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800">
+            <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               환산취득가액 = 양도가액(채무액) × <Frac top="취득시 기준시가" bottom="양도시 기준시가" /> (시행령 §176의2②2호).
               {asset.assetKind === "general_building"
                 ? " 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 입력하세요."
@@ -331,9 +331,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         입주권 사용자에게 칸이 뜨지 않아 ⑧이 요구하는 값을 넣을 곳이 없어진다.
       */}
       {((isMarketMode && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
-          <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2">
+          <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-semibold text-amber-800">
+              <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">
                 {isCarryoverPresumed ? "양도인이 증여받은 때의 상증법 평가액 입력" : "실지취득가액 입력"}
               </span>
               <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
@@ -417,12 +417,12 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       {isMixed && <BurdenedGiftMixedUsePanel asset={asset} transferDate={transferDate} />}
 
       {!isMixed && !isMarketMode && asset.assetKind !== "land" && !isRightToMoveIn && (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 space-y-2 dark:bg-emerald-950/40">
         <div className="flex flex-wrap items-center gap-2">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
             §61
           </span>
-          <p className="text-xs font-semibold text-emerald-800">
+          <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">
             증여재산 평가 — 증여일 현재 기준시가
           </p>
           <LawArticleModal legalBasis="상속세및증여세법 §61" label="상증법 §61" />
@@ -454,7 +454,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
         </div>
         {stdPriceLauncher?.needsAppurtenantLand && (
-          <p className="text-caption text-emerald-700">
+          <p className="text-caption text-emerald-700 dark:text-emerald-300">
             이 자산의 증여재산 평가액은 <b>건물 + 부수토지</b> 합계입니다. 계산기에서 부수토지
             면적·개별공시지가를 함께 입력하세요(「상속세 및 증여세법」 제61조 제1항 제1호·제2호).
           </p>
@@ -481,9 +481,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
       <BurdenedGiftPriorGiftsBlock asset={asset} onChange={onChange} />
 
       {/* ⑥ 양도가액 = 채무액 미리보기 (소령 §159, disabled) */}
-      <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-100/70 p-3 space-y-1">
-        <p className="text-xs font-semibold text-fuchsia-900">자동 계산 미리보기</p>
-        <div className="text-xs text-fuchsia-800 space-y-0.5">
+      <div className="rounded-lg border border-fuchsia-300 bg-fuchsia-100/70 p-3 space-y-1 dark:bg-fuchsia-900/40">
+        <p className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-200">자동 계산 미리보기</p>
+        <div className="text-xs text-fuchsia-800 space-y-0.5 dark:text-fuchsia-200">
           {/*
             🔴 **축마다 채무의 계산 단위가 다르다** (2026-09-07 대장 재대조).
 
@@ -499,13 +499,13 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               {fmt(isFractionalSplit ? applyRatio(assumedDebtAmount, ownRatio) : assumedDebtAmount)}원
             </span>
             {isFractionalSplit && ownRatio < 1 && (
-              <span className="ml-1 text-fuchsia-600">
+              <span className="ml-1 text-fuchsia-600 dark:text-fuchsia-400">
                 (입력 총액 {fmt(assumedDebtAmount)} × 지분 {(ownRatio * 100).toFixed(2)}%)
               </span>
             )}
           </p>
           {isCompanionBundle && (
-            <p className="text-fuchsia-600">
+            <p className="text-fuchsia-600 dark:text-fuchsia-400">
               * 함께 부담부증여는 신고 단위 채무를 **자산가액 비율**로 재배분합니다 — 이 자산의
               양도가액은 그 배분 결과이며 위 합계와 다릅니다.
             </p>
@@ -518,7 +518,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             임대평가:{" "}
             <span className="font-mono tabular-nums">{fmt(valuationPreview.rental)}원</span>
           </p>
-          <p className="text-fuchsia-600 mt-1">
+          <p className="text-fuchsia-600 mt-1 dark:text-fuchsia-400">
             * {isMarketMode ? "시가" : "보충적"}·담보·임대 평가액 중 가장 큰 금액이 증여가액(분모) — 엔진이 이 분모로 양도가·취득가를 자동 산정.
           </p>
         </div>

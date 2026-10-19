@@ -217,7 +217,7 @@ export function RentalHousingExceptionSection({
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
                 1
               </span>
-              <p className="text-xs font-semibold text-emerald-700">임대주택 정보</p>
+              <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">임대주택 정보</p>
               <LawArticleModal
                 legalBasis="소득세법 시행령 §167조의3"
                 label="§167조의3"
@@ -249,7 +249,7 @@ export function RentalHousingExceptionSection({
             <button
               type="button"
               onClick={addUnit}
-              className="w-full text-xs border border-dashed border-emerald-300 rounded-lg py-2 text-emerald-700 hover:bg-emerald-50 transition-colors"
+              className="w-full text-xs border border-dashed border-emerald-300 rounded-lg py-2 text-emerald-700 hover:bg-emerald-50 transition-colors dark:text-emerald-300"
             >
               + 임대주택 추가
             </button>
@@ -294,7 +294,7 @@ export function RentalHousingExceptionSection({
       */}
       {rh.scenario === "B" && !showAllocationInputs && !isStandalone154_10Path && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50/40 p-2.5 text-xs text-amber-800"
+          className="rounded-lg border border-amber-200 bg-amber-50/40 p-2.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40"
           data-testid="rental-allocation-deferred-notice"
         >
           <p className="font-semibold">§161① 안분 입력은 세액 계산에서 받습니다</p>
@@ -310,14 +310,14 @@ export function RentalHousingExceptionSection({
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               {allocationNum}
             </span>
-            <p className="text-xs font-semibold text-amber-700">직전거주주택 + 3-시점 기준시가</p>
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">직전거주주택 + 3-시점 기준시가</p>
             <LawArticleModal
               legalBasis="소득세법 시행령 §161"
               label="§161①"
             />
           </div>
 
-          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3">
+          <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-3 dark:bg-amber-950/40">
             {/* 직전거주주택 양도일 */}
             <FieldCard
               label="직전거주주택 양도일" field="rentalHousingException.priorResidenceTransferDate"
@@ -411,7 +411,7 @@ export function RentalHousingExceptionSection({
               if (pAcq > 0 && pPrior > 0 && pTransfer > 0 && pTransfer > pAcq) {
                 const ratio161 = ((pPrior - pAcq) / (pTransfer - pAcq) * 100).toFixed(2);
                 return (
-                  <div className="rounded bg-amber-100/60 border border-amber-200 p-2 text-xs text-amber-800">
+                  <div className="rounded bg-amber-100/60 border border-amber-200 p-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
                     <p className="font-semibold mb-1">과세 안분 비율 미리보기 (소득세법 시행령 제161조 제1항)</p>
                     <p className="flex flex-wrap items-center gap-1">
                       <Frac
@@ -433,7 +433,7 @@ export function RentalHousingExceptionSection({
                         <strong>{ratio161}%</strong>
                       </span>
                     </p>
-                    <p className="mt-1 text-amber-700">
+                    <p className="mt-1 text-amber-700 dark:text-amber-300">
                       이 비율만큼이 과세 대상이며, 나머지는 비과세입니다.
                     </p>
                   </div>
@@ -510,15 +510,15 @@ export function RentalHousingExceptionSection({
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">
                 {residenceNum}
               </span>
-              <p className="text-xs font-semibold text-violet-700">거주주택 요건 충족 상태</p>
+              <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">거주주택 요건 충족 상태</p>
             </div>
 
             {/* 거주기간 입력 — 입주·퇴거일 다중 구간 (자산-수준 residence 필드 양방향 동기화).
                 토글 없이 상시 표시는 `251df37b`의 의도된 설계다(최소 1건 필수 입력) — 되돌리지 말 것. */}
             {onChangeResidence && (
               <div className="space-y-1" data-field="residencePeriods">
-                <p className="text-sm font-medium text-violet-800">
-                  거주주택 거주기간 <span className="text-rose-500">*</span>
+                <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
+                  거주주택 거주기간 <span className="text-rose-500 dark:text-rose-400">*</span>
                 </p>
                 {/*
                   🔴 **direct 모드 echo** (R21). 당시 store 기본값이 `residenceInputMode: "direct"`
@@ -533,7 +533,7 @@ export function RentalHousingExceptionSection({
                 {asset.residenceInputMode !== "interval" &&
                   (parseInt(asset.residencePeriodMonthsAsset) || 0) > 0 && (
                     <p
-                      className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-caption text-violet-900"
+                      className="rounded-md border border-violet-200 bg-violet-100/60 px-3 py-2 text-caption text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
                       data-testid="residence-direct-months-echo"
                     >
                       「보유 상황」 단계에서 <strong>{parseInt(asset.residencePeriodMonthsAsset)}개월</strong>로
@@ -594,22 +594,22 @@ export function RentalHousingExceptionSection({
             )}
 
             {isStandalone154_10Path && preRegime154_10 && (
-              <p className="text-caption text-violet-700 px-1">
+              <p className="text-caption text-violet-700 px-1 dark:text-violet-300">
                 2019.2.12 전 취득(또는 사유를 확인한 부칙 경과조치)으로 종전규정이 적용됩니다 — 소령 §154① 원칙에
                 따라 <strong>취득 당시 조정대상지역인 경우에만</strong> 거주기간 2년이 필요합니다(등록일로
                 자르지 않는 일반 거주기간). {wasRegulatedAtAcquisition ? "이 주택은 조정대상지역 취득입니다." : "이 주택은 조정대상지역 취득이 아니므로 거주요건이 없습니다."}
               </p>
             )}
             {isStandalone154_10Path && !preRegime154_10 && rh.residenceTransitionUnderAddendum === true && (
-              <p className="text-caption text-violet-700 px-1" data-testid="rental-transition-not-effective-note">
+              <p className="text-caption text-violet-700 px-1 dark:text-violet-300" data-testid="rental-transition-not-effective-note">
                 경과조치 사유가 종전 규정을 주지 않거나 선택되지 않아 종전규정을 적용하지 않았습니다 — 등록일 이후 거주기간 2년으로 판정합니다.
               </p>
             )}
 
             {/* 실시간 충족 표시 (소령 §155⑳ 거주주택 요건 또는 §154⑩+§154① 원칙) */}
-            <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 space-y-1.5 text-xs">
+            <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 space-y-1.5 text-xs dark:bg-violet-950/40">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-violet-800">
+                <span className="text-violet-800 dark:text-violet-200">
                   {!residenceRequired
                     ? "거주주택 거주기간 (조정대상지역 취득이 아니므로 불필요)"
                     : usesPostRegField
@@ -619,7 +619,7 @@ export function RentalHousingExceptionSection({
                 <span
                   className={cn(
                     "font-semibold",
-                    livePass ? "text-emerald-700" : "text-rose-700",
+                    livePass ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300",
                   )}
                 >
                   {livePass ? "✓ 충족" : "✗ 미충족"} —{" "}
@@ -627,11 +627,11 @@ export function RentalHousingExceptionSection({
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-violet-800">거주주택 보유기간 (2년 이상 필요)</span>
+                <span className="text-violet-800 dark:text-violet-200">거주주택 보유기간 (2년 이상 필요)</span>
                 <span
                   className={cn(
                     "font-semibold",
-                    holdPass ? "text-emerald-700" : "text-rose-700",
+                    holdPass ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300",
                   )}
                 >
                   {holdPass ? "✓ 충족" : "✗ 미충족"} —{" "}
@@ -640,14 +640,14 @@ export function RentalHousingExceptionSection({
               </div>
 
               {(!livePass || !holdPass) && (
-                <div className="mt-1.5 rounded border border-rose-200 bg-rose-50/60 p-1.5 text-caption text-rose-800">
+                <div className="mt-1.5 rounded border border-rose-200 bg-rose-50/60 p-1.5 text-caption text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
                   거주주택 요건이 충족되지 않으면 본 특례가 적용되지 않고 일반 양도소득세로 계산됩니다.
                 </div>
               )}
             </div>
 
             {/* 추가 안내 */}
-            <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 text-xs text-violet-800 space-y-1">
+            <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 text-xs text-violet-800 space-y-1 dark:text-violet-200 dark:bg-violet-950/40">
               <p>• 임대주택: 기준시가 상한 준수 + 의무임대기간 충족(충족 전 양도도 적용 — 미충족 시 사후 추징, 소령 §155㉑·㉒)</p>
               <p>• 아파트는 2020.7.11 이전 등록분만 적용 가능</p>
               <p className="flex items-center gap-1">

@@ -125,14 +125,14 @@ export function MixedUseLegacyStdPrice({
   return (
     <div className="space-y-3">
       {/* ── 취득시 기준시가 ─────────────────────────── */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2">
+      <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2 dark:bg-amber-950/40">
         <div className="flex items-center gap-2">
           {acqSectionNum !== undefined && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-200 text-micro font-bold text-amber-800 select-none">
               {acqSectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-amber-700">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
             {isCaseA ? "주택·상가 기준시가 (취득·최초공시·양도 3시점)" : "취득시 기준시가"}
           </p>
         </div>
@@ -261,7 +261,7 @@ export function MixedUseLegacyStdPrice({
             />
 
             {asset.hasPartialUsageChange && asset.partialChangeDirection === "house_to_commercial" && (
-              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 space-y-1">
+              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 space-y-1 dark:text-amber-200 dark:bg-amber-900/40">
                 <p>
                   ℹ 취득시점에는 전체가 주택이었으므로 상가 부분 기준시가가 직접 존재하지 않습니다.
                   취득 당시 동일 건물의 국세청 고시 기준시가와 개별공시지가를 <strong>직접 조회하여 입력</strong>해야 합니다.
@@ -275,7 +275,7 @@ export function MixedUseLegacyStdPrice({
               </div>
             )}
             {asset.hasPartialUsageChange && asset.partialChangeDirection === "commercial_to_house" && (
-              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900">
+              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-900 dark:text-amber-200 dark:bg-amber-900/40">
                 ℹ 취득시점에 주택이 존재하지 않음 — 개별주택공시가격 입력 불필요. 취득시 상가건물 기준시가 + 개별공시지가를 입력하면 양도시 면적비율로 안분되어 취득시 주택부분 기준시가를 산정하고, 그 토지분·건물분은 양도시 토지 기준시가 : 주택건물 기준시가 비율로 나눕니다(양도시 주택건물 기준시가 입력 필요).
               </div>
             )}
@@ -284,19 +284,19 @@ export function MixedUseLegacyStdPrice({
                 게이트는 면적 OR 자기 값 — 면적 게이트만 두면 상가부수토지 0일 때
                 상가건물 기준시가가 있어도 취득 합계가 사라진다(AssetMajor와 동일 방어). */}
             {(commercialLandArea > 0 || acqCommercialLandStd > 0 || acqCommercialBuilding > 0) && (
-              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1">
+              <div className="rounded-lg bg-amber-100/60 border border-amber-200 px-3 py-2 text-sm space-y-1 dark:bg-amber-900/40">
                 {commercialLandArea > 0 && (
-                  <div className="flex justify-between text-xs text-amber-700">
+                  <div className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
                     <span>상가부수토지 면적</span>
                     <span>{fmtSqm(commercialLandArea)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-xs text-amber-700">
+                <div className="flex justify-between text-xs text-amber-700 dark:text-amber-300">
                   <span>취득시 상가부수토지 기준시가 (자동)</span>
                   <span>{fmtKrw(acqCommercialLandStd)}</span>
                 </div>
                 {acqCommercialBuilding > 0 && (
-                  <div className="flex justify-between text-sm font-semibold text-amber-900">
+                  <div className="flex justify-between text-sm font-semibold text-amber-900 dark:text-amber-200">
                     <span>취득시 상가부분 기준시가 합계 (자동)</span>
                     <span>{fmtKrw(acqCommercialTotal)}</span>
                   </div>
@@ -312,14 +312,14 @@ export function MixedUseLegacyStdPrice({
           가드한다. non-Case-A는 상가 필드가 남아 정상.
           (`isCaseA`가 PHD ON을 이미 포함하므로 종전의 `&& PHD` 병기는 중복이라 지웠다.) */}
       {!isCaseA && (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2 dark:bg-emerald-950/40">
         <div className="flex items-center gap-2">
           {transferSectionNum !== undefined && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-200 text-micro font-bold text-emerald-800 select-none">
               {transferSectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-emerald-700">
+          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
             {isCaseA ? "양도시 개별주택공시가격" : "양도시 기준시가"}
           </p>
         </div>
@@ -396,12 +396,12 @@ export function MixedUseLegacyStdPrice({
               placeholder="양도시 개별공시지가 /㎡"
             />
             {(transferCommercialLandStd > 0 || transferCommercialBuilding > 0) && (
-              <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm space-y-1">
-                <div className="flex justify-between text-xs text-emerald-700">
+              <div className="rounded-lg bg-emerald-100/60 border border-emerald-200 px-3 py-2 text-sm space-y-1 dark:bg-emerald-900/40">
+                <div className="flex justify-between text-xs text-emerald-700 dark:text-emerald-300">
                   <span>상가부수토지 기준시가 (자동)</span>
                   <span>{fmtKrw(transferCommercialLandStd)}</span>
                 </div>
-                <div className="flex justify-between text-sm font-semibold text-emerald-900">
+                <div className="flex justify-between text-sm font-semibold text-emerald-900 dark:text-emerald-200">
                   <span>상가부분 기준시가 합계 (자동)</span>
                   <span>{fmtKrw(transferCommercialTotal)}</span>
                 </div>

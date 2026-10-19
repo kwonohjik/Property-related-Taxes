@@ -142,7 +142,7 @@ export function NewConstructionFootprintSection({
   return (
     <ToneCard tone="sky" sectionNum="§" bodyClassName="space-y-3" title="부수토지 한도 산정 (소득세법 시행령 §154⑦)">
 
-      <p className="text-caption text-sky-600 leading-relaxed">
+      <p className="text-caption text-sky-600 leading-relaxed dark:text-sky-400">
         주택과 함께 양도되는 부수토지의 인정 한도 = 건물 정착면적 × 배율.
         수도권 도시지역(주거·상업·공업)은 3배, 수도권 녹지·수도권 외 도시지역은 5배, 도시지역 외는 10배입니다.
         한도 초과분은 일반 나대지로 분리하여 토지 보유기간 기준 세율을 적용합니다.
@@ -152,7 +152,7 @@ export function NewConstructionFootprintSection({
           여기에 입력 위젯을 다시 넣지 말 것. 특히 소재지 구분에 display fallback
           (`?? "metropolitan_residential"`)을 걸면 store가 미선택인데 선택된 것처럼 보여
           validate 차단과 어긋난다 — 그것이 이 카드가 표시 전용이 된 이유다. */}
-      <div className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 px-3 py-2 text-caption text-sky-900 space-y-1">
+      <div className="rounded-md border border-sky-200 bg-white/60 dark:bg-white/5 px-3 py-2 text-caption text-sky-900 space-y-1 dark:text-sky-200">
         <p>
           <b>건물 정착면적</b>{" "}
           {footprint > 0 ? `${buildingFootprintArea}㎡` : "— 미입력"}
@@ -163,14 +163,14 @@ export function NewConstructionFootprintSection({
             ? `${zoneLabel(appurtenantLandZone)} (×${multiplier}배)`
             : "— 미선택"}
         </p>
-        <p className="text-sky-600">
+        <p className="text-sky-600 dark:text-sky-400">
           두 값 모두 <b>① 기본정보</b>에서 입력합니다.
         </p>
       </div>
 
       {/* 소재지 미선택 안내 — 3배를 가정해 한도를 보여주지 않는다(R-7). */}
       {footprint > 0 && limitArea === null && (
-        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800">
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
           ① 기본정보에서 <b>부수토지 소재지 구분</b>을 선택하면 인정 한도를 계산합니다.
           배율(3·5·10배)이 정해지지 않은 상태에서는 한도를 임의로 가정하지 않습니다.
         </div>
@@ -178,7 +178,7 @@ export function NewConstructionFootprintSection({
 
       {/* 자동 계산 결과 박스 */}
       {footprint > 0 && limitArea !== null && (
-        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800 space-y-1">
+        <div className="rounded-md bg-sky-100/60 border border-sky-200 px-3 py-2 text-caption text-sky-800 space-y-1 dark:text-sky-200 dark:bg-sky-900/40">
           <p className="font-semibold">부수토지 인정 한도 계산:</p>
           <p>
             건물 정착면적 {buildingFootprintArea}㎡ × {multiplier}배({zoneLabel(appurtenantLandZone)}) = <strong>{limitArea.toFixed(2)}㎡</strong>
@@ -187,8 +187,8 @@ export function NewConstructionFootprintSection({
             <p
               className={
                 limitJudgment.type === "excess"
-                  ? "text-rose-700 font-semibold"
-                  : "text-sky-700"
+                  ? "text-rose-700 font-semibold dark:text-rose-300"
+                  : "text-sky-700 dark:text-sky-300"
               }
             >
               {limitJudgment.message}

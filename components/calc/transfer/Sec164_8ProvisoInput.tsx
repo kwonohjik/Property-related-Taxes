@@ -42,13 +42,13 @@ export function Sec164_8ProvisoInput({ asset, onChange }: Props) {
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑥" label="§164⑥ 산식 단서" />
         <LawArticleModal legalBasis="소득세법 시행령 §164 ⑧" label="§164⑧" />
       </div>
-      <p className="text-xs text-rose-800">
+      <p className="text-xs text-rose-800 dark:text-rose-200">
         취득당시와 최초고시당시의 기준시가합이{" "}
         <b className="font-mono tabular-nums">{sum.toLocaleString()}</b>원으로 <b>같습니다</b>. 이대로면
         비율이 1이 되어 취득시 환산기준시가가 최초고시 기준시가와 같아지므로, §164⑥ 산식 괄호 단서에
         따라 <b>§164⑧(기준시가 상승률 참작)을 준용</b>합니다.
       </p>
-      <p className="text-caption text-rose-700">
+      <p className="text-caption text-rose-700 dark:text-rose-300">
         취득당시 기준시가 = 최초고시 기준시가 ×{" "}
         <Frac top="A" bottom={<>A + (A − B) × <Frac top="C" bottom="D" /></>} /> · A·C는 자동 산출
       </p>

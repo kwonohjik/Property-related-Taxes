@@ -69,7 +69,7 @@ export function LandBuildingSaleSplitSection(props: Props) {
   if (props.isBurdenedGift) {
     return (
       <div className="space-y-2 rounded-md border border-dashed border-border bg-muted/20 p-3">
-        <p className="rounded-md bg-fuchsia-50/60 px-2.5 py-1.5 text-xs text-fuchsia-800" data-testid="split-burdened-note">
+        <p className="rounded-md bg-fuchsia-50/60 px-2.5 py-1.5 text-xs text-fuchsia-800 dark:text-fuchsia-200 dark:bg-fuchsia-950/40" data-testid="split-burdened-note">
           부담부증여는 양도가액·취득가액을 <strong>§159 인수 채무액 기준으로 자동 산정</strong>하므로,
           토지·건물 각 가액은 직접 입력하지 않고 <strong>기준시가 비율로 안분</strong>됩니다.
         </p>

@@ -199,7 +199,7 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         {!isActual && <SuccessorRightStdPriceSection asset={asset} onChange={onChange} mode={mode} stdAtAcq={stdAtAcq} stdAtTransfer={stdAtTransfer} />}
 
         {isActual && total > 0 && (
-          <div className="rounded-md border border-sky-200 bg-sky-100/60 p-2.5 text-caption text-sky-900 space-y-1">
+          <div className="rounded-md border border-sky-200 bg-sky-100/60 p-2.5 text-caption text-sky-900 space-y-1 dark:text-sky-200 dark:bg-sky-900/40">
             <div className="font-semibold">미리보기 — 취득가액 합계</div>
             <div className="font-mono tabular-nums">
               승계취득가액 + 추가분담금 = {total.toLocaleString("ko-KR")}
@@ -219,12 +219,12 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §105" label="§105" />
         </div>
-        <p className="text-xs text-amber-800">
+        <p className="text-xs text-amber-800 dark:text-amber-200">
           수령한 청산금은 <b>위 취득가액에 넣지 않습니다</b>. 소유권 이전고시일의 <b>다음날</b>을
           양도일로 하는 <b>별개의 양도</b>에 해당하여, 그 청산금에 대해 <b>따로 양도소득세를 신고</b>해야
           합니다. 이 계산기는 그 별건 계산을 지원하지 않습니다.
         </p>
-        <p className="text-caption text-amber-700">
+        <p className="text-caption text-amber-700 dark:text-amber-300">
           근거: 국세청 사전-2023-법규재산-0450 (2024-06-27) — 승계조합원이 이전고시 후 조합으로부터
           지급받은 청산금 상당액은 양도소득세 과세대상.
         </p>
@@ -234,11 +234,11 @@ export function SuccessorRightAcquisitionBlock({ asset, onChange }: Props) {
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §95 ②" label="§95②" />
         </div>
-        <p className="text-xs text-rose-800">
+        <p className="text-xs text-rose-800 dark:text-rose-200">
           장기보유특별공제 대상은 조합원입주권 중 <b>조합원으로부터 취득한 것은 제외</b>합니다.
           승계취득한 조합원입주권에는 공제가 적용되지 않습니다.
         </p>
-        <p className="text-caption text-rose-700">
+        <p className="text-caption text-rose-700 dark:text-rose-300">
           ※ 1세대1조합원입주권 비과세(§89①4호)도 「관리처분계획 인가일 현재 기존주택을 소유하는
           세대」를 요건으로 하므로 승계조합원에게는 적용되지 않습니다.
         </p>

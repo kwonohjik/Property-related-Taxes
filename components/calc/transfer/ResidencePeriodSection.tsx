@@ -95,7 +95,7 @@ export function ResidencePeriodSection({
         {isInterval && (
           <div className="space-y-2">
             {residencePeriods.length === 0 && (
-              <p className="text-xs text-violet-700">
+              <p className="text-xs text-violet-700 dark:text-violet-300">
                 구간이 없습니다. &ldquo;+ 구간 추가&rdquo; 로 첫 입주일·퇴거일을 입력하세요.
               </p>
             )}
@@ -108,13 +108,13 @@ export function ResidencePeriodSection({
                   className="rounded-md border border-violet-200 bg-card p-3 space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-violet-700">
+                    <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">
                       거주 구간 #{idx + 1}
                     </span>
                     <button
                       type="button"
                       onClick={() => removePeriod(idx)}
-                      className="text-xs text-rose-600 hover:underline inline-flex items-center gap-1"
+                      className="text-xs text-rose-600 hover:underline inline-flex items-center gap-1 dark:text-rose-400"
                     >
                       <Trash2 className="h-3 w-3" />
                       삭제
@@ -140,12 +140,12 @@ export function ResidencePeriodSection({
                     </FieldCard>
                   </div>
                   {isMoveInOnly && (
-                    <p className="text-caption text-rose-600">
+                    <p className="text-caption text-rose-600 dark:text-rose-400">
                       입주일이 입력되었는데 퇴거일이 비어 있습니다. 퇴거일을 입력하세요.
                       (양도일까지 거주한 경우 양도일을 퇴거일로 입력)
                     </p>
                   )}
-                  <p className="text-caption text-violet-700">
+                  <p className="text-caption text-violet-700 dark:text-violet-300">
                     이 구간 거주: {fmtPeriod(m)}
                   </p>
                 </div>
@@ -154,12 +154,12 @@ export function ResidencePeriodSection({
             <button
               type="button"
               onClick={addPeriod}
-              className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/40 px-3 py-2 text-xs font-medium text-violet-800 hover:bg-violet-100/60 inline-flex items-center justify-center gap-1"
+              className="w-full rounded-md border border-dashed border-violet-300 bg-violet-50/40 px-3 py-2 text-xs font-medium text-violet-800 hover:bg-violet-100/60 inline-flex items-center justify-center gap-1 dark:text-violet-200 dark:bg-violet-950/40"
             >
               <Plus className="h-3 w-3" />
               구간 추가
             </button>
-            <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900">
+            <div className="rounded-md bg-violet-100/60 border border-violet-200 px-3 py-2 text-xs text-violet-900 dark:text-violet-200 dark:bg-violet-900/40">
               합계 거주기간: <strong>{fmtPeriod(totalMonths)}</strong> ({totalMonths}개월)
             </div>
           </div>
@@ -191,7 +191,7 @@ export function ResidencePeriodSection({
           </div>
         </FieldCard>
       )}
-      <p className="text-xs text-violet-700">
+      <p className="text-xs text-violet-700 dark:text-violet-300">
         {/* 🔴 상속 전용 문구를 여기 두지 말 것 — 이 섹션은 1세대1주택 주택 **전체**에 뜬다.
             상속 취득의 기산 규칙은 아래 한 문장으로 조건부 서술한다(2026-09-07 UI 리뷰). */}
         거주기간은 표2 장특공제 거주분 공제율 계산에 사용됩니다. 상속으로 취득한 주택은

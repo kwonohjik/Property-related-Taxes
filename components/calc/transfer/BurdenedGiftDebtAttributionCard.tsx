@@ -94,7 +94,7 @@ function DebtAttributionRow({ item, assetId, total, mode, split, onMode, onSplit
           </FieldCard>
           <p
             data-testid={`bg-attr-remainder-${item}`}
-            className={`sm:col-span-3 text-caption ${remainder === 0 ? "text-emerald-700" : "text-rose-700"}`}
+            className={`sm:col-span-3 text-caption ${remainder === 0 ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}
           >
             {remainder === 0
               ? "남은 금액 0원 — 총액과 일치합니다"
@@ -116,15 +116,15 @@ export function BurdenedGiftDebtAttributionCard({ asset, onChange }: Props) {
   return (
     <ToneCard tone="rose" title="채무 귀속 — 주택 / 상가" bodyClassName="space-y-3">
       <div data-testid="bg-attr-card" className="space-y-3">
-        <p className="text-caption text-rose-800">
+        <p className="text-caption text-rose-800 dark:text-rose-200">
           인수 채무가 주택 또는 상가에 속하는 것이 분명하면 <b>그 부분의 양도</b>로 봅니다(국세청 부동산거래관리과-119, 2010.1.22.).
           분명하지 않은 채무는 주택·상가 증여가액 비율로 나눕니다 — 이 안분은 해석례가 직접 답하지 않아 <b>확인이 필요</b>합니다.
         </p>
-        <p className="text-caption text-rose-700">
+        <p className="text-caption text-rose-700 dark:text-rose-300">
           귀속은 임대차계약서의 임차 대상, 근저당 설정 대상 같은 증빙이 필요한 사실 선언입니다.
         </p>
         {deposit <= 0 && mortgage <= 0 ? (
-          <p className="text-caption text-rose-700">인수 채무(임대보증금·담보차입금)를 먼저 입력하세요.</p>
+          <p className="text-caption text-rose-700 dark:text-rose-300">인수 채무(임대보증금·담보차입금)를 먼저 입력하세요.</p>
         ) : null}
         {deposit > 0 && (
           <DebtAttributionRow

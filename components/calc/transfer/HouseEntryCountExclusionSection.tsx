@@ -197,7 +197,7 @@ export function HouseEntryCountExclusionSection({
             />
           )}
         {current?.kind === "special" && (
-          <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3">
+          <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 dark:bg-emerald-950/40">
             <SpecialHouseExclusionItemFields
               item={current.special}
               hideAcquisitionDate

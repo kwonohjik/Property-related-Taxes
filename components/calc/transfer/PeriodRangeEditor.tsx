@@ -58,23 +58,23 @@ export function PeriodRangeEditor({
   const totalMonths = rows.reduce((s, p) => s + diffMonthsClamped(p.start, p.end), 0);
 
   const toneText =
-    tone === "emerald" ? "text-emerald-700" : tone === "violet" ? "text-violet-700" : "text-sky-700";
+    tone === "emerald" ? "text-emerald-700 dark:text-emerald-300" : tone === "violet" ? "text-violet-700 dark:text-violet-300" : "text-sky-700 dark:text-sky-300";
   const toneBorder =
     tone === "emerald" ? "border-emerald-200" : tone === "violet" ? "border-violet-200" : "border-sky-200";
   const toneBg =
-    tone === "emerald" ? "bg-emerald-50/40" : tone === "violet" ? "bg-violet-50/40" : "bg-sky-50/40";
+    tone === "emerald" ? "bg-emerald-50/40 dark:bg-emerald-950/40" : tone === "violet" ? "bg-violet-50/40 dark:bg-violet-950/40" : "bg-sky-50/40 dark:bg-sky-950/40";
   const toneBox =
     tone === "emerald"
-      ? "bg-emerald-100/60 border-emerald-200 text-emerald-900"
+      ? "bg-emerald-100/60 border-emerald-200 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-900/40"
       : tone === "violet"
-        ? "bg-violet-100/60 border-violet-200 text-violet-900"
-        : "bg-sky-100/60 border-sky-200 text-sky-900";
+        ? "bg-violet-100/60 border-violet-200 text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
+        : "bg-sky-100/60 border-sky-200 text-sky-900 dark:text-sky-200 dark:bg-sky-900/40";
   const toneAdd =
     tone === "emerald"
-      ? "border-emerald-300 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-100/60"
+      ? "border-emerald-300 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-100/60 dark:text-emerald-200 dark:bg-emerald-950/40"
       : tone === "violet"
-        ? "border-violet-300 bg-violet-50/40 text-violet-800 hover:bg-violet-100/60"
-        : "border-sky-300 bg-sky-50/40 text-sky-800 hover:bg-sky-100/60";
+        ? "border-violet-300 bg-violet-50/40 text-violet-800 hover:bg-violet-100/60 dark:text-violet-200 dark:bg-violet-950/40"
+        : "border-sky-300 bg-sky-50/40 text-sky-800 hover:bg-sky-100/60 dark:text-sky-200 dark:bg-sky-950/40";
 
   function setPeriod(idx: number, patch: Partial<PeriodRow>) {
     onChange({ periods: rows.map((p, i) => (i === idx ? { ...p, ...patch } : p)) });
@@ -106,7 +106,7 @@ export function PeriodRangeEditor({
                   type="button"
                   onClick={() => removePeriod(idx)}
                   data-testid={`${testidPrefix}-remove-${idx}`}
-                  className="text-xs text-rose-600 hover:underline inline-flex items-center gap-1"
+                  className="text-xs text-rose-600 hover:underline inline-flex items-center gap-1 dark:text-rose-400"
                 >
                   <Trash2 className="h-3 w-3" />
                   삭제
@@ -130,7 +130,7 @@ export function PeriodRangeEditor({
               </FieldCard>
             </div>
             {isStartOnly && (
-              <p className="text-caption text-rose-600">
+              <p className="text-caption text-rose-600 dark:text-rose-400">
                 {startLabel}이 입력되었는데 {endLabel}이 비어 있습니다. {endLabel}을 입력하세요.
               </p>
             )}
