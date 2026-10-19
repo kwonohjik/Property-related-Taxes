@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
 import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
+import { landRebuildShape } from "./transfer-tax-schema-land-rebuild";
 import { oneRightExemptionFactsSchema } from "./transfer-tax-schema-sub";
 import {
   temporaryTwoHouseSchema,
@@ -332,6 +333,8 @@ export const propertyBaseShape = {
    * 설계: transfer-split-part-carryover.engine.design.md §1
    */
   ...splitCarryoverShape,
+  /** 구주택 멸실·신축 통산(해석 (5)) — 주택 split + 건물 신축 호스트 전용. 컴패니언은 `splitAcquisitionShape`가 받아서 명시 거부한다 */
+  ...landRebuildShape,
   /** 분리 입력 방식 (@deprecated — landAcqMode/buildingAcqMode + saleSplitMode로 대체. 하위호환용 유지, 엔진 미소비) */
   landSplitMode: z.enum(["apportioned", "actual"]).optional(),
   /**
