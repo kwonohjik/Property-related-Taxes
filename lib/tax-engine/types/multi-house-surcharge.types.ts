@@ -751,6 +751,7 @@ export interface ExclusionReason {
     | "tax_incentive_rental"        // ③ 조특법 감면 임대주택
     | "small_new_house"            // ⑬ 소형 신축/미분양 (중과배제)
     | "population_decline_second_home" // 양도 주택 자체가 §167의3①12호 다·라목 세컨드홈 (2주택 §167의10①12호 등 준용)
+    | "low_price_local_house"       // 양도 주택 자체가 §167의3①1호 지방 3억 이하 (2주택 §167의10①1호 · 권리 §167의11①3호·§167의4③1호)
     | "unavoidable_reason_two_house" // ③ 2주택 취학·근무·질병 부득이한 사유 (소령 §167-10 ③)
     | "unavoidable_outside_capital" // ④ §155⑧ 수도권 밖 부득이 주택 (소령 §167-10 ① 4호)
     | "rural_house"                 // §155⑦ 농어촌주택 의제 (소령 §167-10 ① 15호)

@@ -130,6 +130,7 @@ import {
   dutyPeriodPendingReason,
   DUTY_PERIOD_PENDING_WARNING,
   determineSurchargeExclusion,
+  resolveLowPriceLocalHouse,
   isLowPriceSmallHouseUndecidable,
   isUnavoidableReasonUndecidable,
   isAptTransferDeadlinePending,
@@ -344,6 +345,44 @@ function computeMultiHouseSurcharge(
     };
   }
 
+  // 산입 권리 수 — `countEffectiveHouses`와 같은 술어(`isPresaleRightCounted`)에서 ⑨ 차감분(Step 1.5)을 뺀다.
+  const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
+  const countedRights = input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStartDate));
+  const countedRightCount = countedRights.length - excludedPresaleRights.length;
+
+  // Step 4.5: 양도 주택 **자체**가 1호(지방 기준시가 3억 이하)면 중과 배제.
+  //   1호는 주택 수 불산입(①본문 괄호)이면서 「다음 각 호의 어느 하나에 해당하지 않는 주택」의 한 호다 —
+  //   2주택 §167의10①1호, 주택+권리 §167의11①3호·§167의4③1호(각 ② 인용)도 같다. 종전에는 주택 수에서만
+  //   빼서, 양도 주택을 뺀 나머지 주택 수로 그 주택을 중과했다(과다). 주택 수 산정과 같은 술어를 쓴다.
+  if (sellingHouse && resolveLowPriceLocalHouse(sellingHouse, houseCountRules)) {
+    const basis =
+      countedRightCount > 0
+        ? effectiveHouseCount >= 3
+          ? MULTI_HOUSE.LOW_PRICE_SELF_HOUSE_RIGHT_3PLUS_BASIS
+          : MULTI_HOUSE.LOW_PRICE_SELF_HOUSE_RIGHT_ONE_EACH_BASIS
+        : effectiveHouseCount >= 3
+          ? MULTI_HOUSE.LOW_PRICE_SELF_THREE_HOUSE_BASIS
+          : MULTI_HOUSE.LOW_PRICE_SELF_TWO_HOUSE_BASIS;
+    const price = sellingHouse.transferOfficialPrice ?? sellingHouse.officialPrice;
+    return {
+      effectiveHouseCount,
+      rawHouseCount,
+      excludedHouses,
+      excludedPresaleRights,
+      isRegulatedAtTransfer,
+      surchargeApplicable: false,
+      surchargeType: "none",
+      isSurchargeSuspended: false,
+      exclusionReasons: [
+        {
+          type: "low_price_local_house",
+          detail: `양도 주택이 지방 저가주택(양도 당시 기준시가 ${price.toLocaleString()}, 3억 이하) — 중과 배제 (${basis})`,
+        },
+      ],
+      warnings,
+    };
+  }
+
   // Step 5: 3주택+ → ⑩번 "배제 후 유일한 1주택" 판정
   if (effectiveHouseCount >= 3) {
     const excludedHouseIds = new Set(excludedHouses.map((e) => e.houseId));
@@ -394,10 +433,6 @@ function computeMultiHouseSurcharge(
   }
 
   // Step 6: 중과 배제 사유 및 유예 판단
-  // 산입 권리 수 — `countEffectiveHouses`와 같은 술어(`isPresaleRightCounted`)에서 ⑨ 차감분(Step 1.5)을 뺀다.
-  const presaleStartDate = new Date(houseCountRules.presaleRightStartDate);
-  const countedRights = input.presaleRights.filter((r) => isPresaleRightCounted(r, presaleStartDate));
-  const countedRightCount = countedRights.length - excludedPresaleRights.length;
   const { isExcluded, exclusionReasons, isSuspended, suspensionBasis, suspensionDeadline, warnings: exclusionWarnings } = determineSurchargeExclusion(
     input,
     effectiveHouseCount,
