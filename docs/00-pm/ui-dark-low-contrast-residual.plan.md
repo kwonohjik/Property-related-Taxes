@@ -1,6 +1,6 @@
 # 다크 모드에 남은 낮은 대비 — 수정 계획
 
-> 작성 2026-10-20 · 상태 **Plan — 결정 대기(Q-1~Q-5)** · 워크트리 `../Property-related-Taxes-dkc` · 브랜치 `docs/dark-low-contrast-residual-plan`
+> 작성 2026-10-20 · 상태 **Do — Q-1~Q-5 모두 권고안으로 결정(2026-10-20)** · 워크트리 `../Property-related-Taxes-dkc` · 브랜치 `docs/dark-low-contrast-residual-plan`
 > 선행: `ui-narrow-width-and-dark-mode-residual.plan.md` ③-2 「남은 낮은 대비(이번 범위 밖, 원인 확인 필요)」 — 표본 상위였던 「-」·「✓」·「○」·「선택 항목 인쇄」·「계산 후 표시」·톤 카드 위 법령 배지의 원인을 확인하고 고칠 방법을 정한다.
 > 묶음(§2의 O·W·G·N)은 서로 독립이다. 따로 결정하고 따로 구현할 수 있다.
 
