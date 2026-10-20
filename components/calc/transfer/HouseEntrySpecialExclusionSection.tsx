@@ -171,7 +171,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           })
         }
         title="인구감소지역 소재 주택"
-        description="소령 §167의3①12 다·라목 — 2026.1.1. 이후 취득·가액 한도 이하·취득 전 보유주택과 다른 시·군·구면 중과 주택 수에서 제외(등록 요건 없음). 조특법 §71의2 비과세는 명부에서 자동 판정합니다."
+        description="소령 §167의3①12 다·라목 — 2026.1.1. 이후 취득·가액 한도 이하·취득 전 보유주택과 다른 시·군·구면 제외(등록 요건 없음). 중과 주택 수 전용 — 조특법 §71의2 인구감소지역주택은 명부에서 자동 판정합니다."
       >
         <div className="space-y-2 pt-1">
           <div className="space-y-1">
