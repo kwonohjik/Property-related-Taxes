@@ -38,8 +38,12 @@ export function highValueExcessLandTaxableGain(args: {
  * 조각 i의 몫 = floor(X × 조각 양도차익 / 조각 합계) — 마지막 양수 조각이 잔액을 흡수해 Σ몫 = X(「합 불변식」). 한 조각이면 몫 = X다.
  * 조각마다 `highValueExcessLandTaxableGain({ landGain: 조각 + 몫, excessGain: 몫 })`을 하면 모든 조각의 부호가 같고(몫/조각이 같은 비율) 합은 단위 전체의
  * max(0, 안분(전체 토지) − X)와 절사 오차 안에서 같다.
+ *
+ * **토지 차손 단위**(조각과 X가 모두 음수)는 부호만 대칭으로 나눈다 — |조각|으로 |X|를 나눈 몫에 음수 부호를 붙인다(Σ몫 = X).
+ * 이익과 차손이 섞인 단위는 호출부(`resolveUnitExcessShares`)가 양수 조각만 넘긴다(계획서 `transfer-split-part-loss-offset-p3.plan.md` §2 B안).
  */
 export function allocateUnitExcessShares(withinGains: readonly number[], excessTotal: number): number[] {
+  if (excessTotal < 0) return allocateUnitExcessShares(withinGains.map((g) => -g), -excessTotal).map((s) => (s === 0 ? 0 : -s));
   const gains = withinGains.map((g) => Math.max(0, g));
   const sum = gains.reduce((a, b) => a + b, 0);
   if (!(excessTotal > 0) || !(sum > 0)) return gains.map(() => 0);

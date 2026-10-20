@@ -84,7 +84,8 @@ export function resolveTaxableGain(args: {
    * 위 `applyHousingLandExclusions`가 같은 함수로 처리한다.
    */
   const unitShare = effectiveInput.highValueExcessShare ?? 0;
-  if (unitShare > 0 && !splitDetail && transferGain > 0) {
+  //   토지 차손 단위(카드와 몫이 모두 음수)도 같은 식을 부호만 대칭으로 쓴다 — `resolveUnitExcessShares`가 이익 · 차손이 섞인 단위에는 음수 몫을 주지 않는다.
+  if (unitShare !== 0 && !splitDetail && transferGain !== 0) {
     const taxable = highValueExcessLandTaxableGain({ landGain: transferGain + unitShare, excessGain: unitShare, prorate });
     const label = formatHighValueThresholdLabel(resolveHighValueHouseThreshold(effectiveInput.transferDate));
     const denom = effectiveInput.burdenedGiftDenominator ?? effectiveInput.totalPropertyTransferPrice ?? effectiveInput.transferPrice;
@@ -94,9 +95,9 @@ export function resolveTaxableGain(args: {
       label: `과세 양도차익 (${label} 초과분 — 재산세제과-915 회신 방식)`,
       formula:
         `고가주택(기준금액 초과) + 배율 초과 부수토지 — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익 ${whole.toLocaleString()}` +
-        `(이 카드 ${transferGain.toLocaleString()} + 같은 단위 배율 초과분 몫 ${unitShare.toLocaleString()})의 안분 후 과세분 ${prorated.toLocaleString()} (분모 ${denom.toLocaleString()}, ${label}) − ` +
+        `(이 카드 ${transferGain.toLocaleString()} + 같은 단위 배율 초과분${unitShare < 0 ? " 양도차손" : ""} 몫 ${unitShare.toLocaleString()})의 안분 후 과세분 ${prorated.toLocaleString()} (분모 ${denom.toLocaleString()}, ${label}) − ` +
         `배율 초과분 ${unitShare.toLocaleString()} = 기준면적 이내 토지분 과세 양도차익 ${taxable.toLocaleString()}` +
-        (prorated - unitShare < 0 ? " (음수여서 0)" : ""),
+        (taxable !== prorated - unitShare ? (whole < 0 ? " (토지 차손인데 양수여서 0)" : " (음수여서 0)") : ""),
       amount: taxable,
       legalBasis: TRANSFER.ONE_HOUSE_EXEMPT,
     });
