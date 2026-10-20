@@ -17,7 +17,8 @@ const perShare = {
   redevSubject: "right",
   acquisitionCause: "purchase",
   acquisitionDate: "2008-01-01",
-  fixedAcquisitionPrice: "400000000",
+  // 원조합원 카드는 상단 「취득가액」 칸이 화면에 없다(취득가액은 아래 redevActualAcquisitionPrice) — 숨은 칸을 비운 화면 모양
+  fixedAcquisitionPrice: "",
   redevApprovalDate: "2022-03-01",
   redevApprovalLawBasis: "urban_renovation_art_74",
   redevOriginalAssetType: "housing",

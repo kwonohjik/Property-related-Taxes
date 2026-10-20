@@ -41,11 +41,12 @@ function assets(companionKind: string) {
       acquisitionCause: "purchase",
       acquisitionDate: "2015-03-01",
       useEstimatedAcquisition: false,
-      fixedAcquisitionPrice: "300000000",
       actualSalePrice: "600000000",
       standardPriceAtTransfer: "400000000",
       standardPriceAtAcq: "200000000",
       ...REDEV_166,
+      // 원조합원 컴패니언은 상단 「취득가액」 칸이 화면에 없다 — 숨은 칸을 비운 화면 모양
+      fixedAcquisitionPrice: "",
     },
   ];
 }

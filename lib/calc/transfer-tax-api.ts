@@ -81,6 +81,7 @@ import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
+import { redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -309,9 +310,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           ? // 재개발 + 실가 모드 — 두 경로 분기:
             //  · 사례 48 승계조합원(완공APT): 자산 카드 fixedAcquisitionPrice 사용
             //  · 그 외(사례 45/46 원조합원): §166 섹션 내부의 redevActualAcquisitionPrice 사용
-            primary.redevIsSuccessorMember === "yes"
-              ? parseAmount(primary.fixedAcquisitionPrice)
-              : parseAmount(primary.redevActualAcquisitionPrice)
+            //  컴패니언 ④(`fixedAcquisitionPriceRaw`)와 같은 leaf — 단일 소스
+            redevActualAcquisitionPriceRaw(primary)
           : parseAmount(primary.fixedAcquisitionPrice),
     ),
     acquisitionDate: parcelModeActive

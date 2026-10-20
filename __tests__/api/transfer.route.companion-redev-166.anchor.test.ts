@@ -94,6 +94,9 @@ const REDEV_166 = {
   redevPreApprovalExpenses: "0",
   redevOriginalAssetType: "housing",
   redevActualAcquisitionPrice: "300000000",
+  // 원조합원은 상단 「취득가액」 칸이 화면에 없다 — 숨은 칸을 비운 화면 모양이어야 안전망이 된다
+  // (종전엔 asset() 기본값 300,000,000이 남아 ⑩ 400을 가렸다. `transfer.route.companion-orig-member-acq-price.anchor`).
+  fixedAcquisitionPrice: "",
 };
 
 function asset(i: number, over: Record<string, unknown> = {}) {
