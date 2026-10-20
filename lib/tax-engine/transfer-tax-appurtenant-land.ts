@@ -633,9 +633,9 @@ export function applyHousingLandExclusions(args: {
   // 파트 차손은 **과세분만** 남긴다 — 하류 파트 세율 판정이 「소득세법 시행령」 §167의2①로 다른 파트에서 공제한다(계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
   //   비과세분 차손은 과세분과 통산하지 않는다(상속증여세과-209) — 12억 초과 고가주택이면 차손도 양도차익과 같은 비율로 안분해 과세분만 남는다.
   //   · 건물: 아래 `buildingTaxableGain`이 전액 비과세 0 · 일부 비과세 안분 · 과세 그대로를 정한다(종전에는 차손을 먼저 0으로 잘랐다).
-  //   · 토지: 토지 전체가 과세 대상일 때(비과세 미적용 · 나중 취득 토지 G-3)만 그대로. 그 밖에는 재산세제과-915 회신 산식과 얽혀 종전 0(확인 필요).
-  const landKeepsLoss = !(isExempt || isPartialExempt) || laterLand;
-  const landGain = landKeepsLoss ? splitDetail.land.gain : Math.max(0, splitDetail.land.gain);
+  //   · 토지: 배율 초과분(비사업용 토지 — 비과세 대상 아님)은 차손도 전액 과세분이다. 기준면적 이내분은 전액 비과세면 0, 고가주택(일부 비과세)이면
+  //     재산세제과-915 회신 산식을 부호만 대칭으로 쓴다(`highValueExcessLandTaxableGain` — 사용자 결정 2026-10-20 A안 · 조심2016부0323).
+  const landGain = splitDetail.land.gain;
   const buildingGain = splitDetail.building.gain;
 
   // ① 배율 초과분을 비사업용 토지로 이전 (12억 안분 대상 아님)
@@ -690,7 +690,7 @@ export function applyHousingLandExclusions(args: {
       `고가주택(기준금액 초과) — 기획재정부 재산세제과-915(2011.10.27.) 회신 방식: 전체 부수토지 양도차익 ${wholeLandGain.toLocaleString()}의 ` +
         `안분 후 과세분 ${wholeLandProrated.toLocaleString()} − 배율 초과분 ${excessForRuling.toLocaleString()} = ` +
         `기준면적 이내 토지분 과세 양도차익 ${landTaxableGain.toLocaleString()}` +
-        (diff < 0 ? " (음수여서 0)" : "") +
+        (landTaxableGain !== diff ? (wholeLandGain < 0 ? " (토지 차손인데 양수여서 0)" : " (음수여서 0)") : "") +
         (unitShare !== undefined && unitShare !== nonBusinessGain ? " (함께 양도하는 부수토지의 배율 초과분을 단위로 합산해 이 카드 몫으로 나눈 값)" : ""),
     );
   }

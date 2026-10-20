@@ -328,12 +328,15 @@ export type HighValueExcessRulingTrace = {
   wholeLandProrated: number;
   /** 배율 초과분 양도차익(안분 전 전액 과세 — 이 특례 밖) */
   excessGain: number;
-  /** 기준면적 이내 토지분 과세 양도차익 = max(0, 안분값 − 초과분) */
+  /** 기준면적 이내 토지분 과세 양도차익 = max(0, 안분값 − 초과분) — 토지 차손이면 min(0, 안분값 − 초과분) */
   landTaxableGain: number;
   /** 건물분 안분값 */
   buildingTaxableGain: number;
   /** 위 둘의 합 — 표2 장기보유특별공제 적용 전 */
   taxableBeforeLthd: number;
+  /** 파트별 표2 장기보유특별공제액(파트 보유연수 산식일 때만) — 합 = taxableBeforeLthd − 특례 과세대상 양도소득금액 */
+  landLthd?: number;
+  buildingLthd?: number;
 };
 
 /**

@@ -66,7 +66,10 @@ describe("#17-2b leaf — highValueExcessLandTaxableGain · allocateUnitExcessSh
     expect(highValueExcessLandTaxableGain({ landGain: 1000, excessGain: 300, prorate: p40 })).toBe(100); // L'>X
     expect(highValueExcessLandTaxableGain({ landGain: 1000, excessGain: 400, prorate: p40 })).toBe(0); // 정확히 경계
     expect(highValueExcessLandTaxableGain({ landGain: 1000, excessGain: 401, prorate: p40 })).toBe(0); // 음수 → 0
-    expect(highValueExcessLandTaxableGain({ landGain: -500, excessGain: 0, prorate: p40 })).toBe(0);
+    // 토지 차손 — 부호 대칭(사용자 결정 2026-10-20 A안 · 조심2016부0323): min(0, 안분값 − 초과분)
+    expect(highValueExcessLandTaxableGain({ landGain: -500, excessGain: 0, prorate: p40 })).toBe(-200);
+    expect(highValueExcessLandTaxableGain({ landGain: -1000, excessGain: -300, prorate: p40 })).toBe(-100); // −400 − (−300)
+    expect(highValueExcessLandTaxableGain({ landGain: -1000, excessGain: -401, prorate: p40 })).toBe(0); // 초과분 차손이 더 크면 이내분 0
     expect(highValueExcessLandTaxableGain({ landGain: 1000, excessGain: -50, prorate: p40 })).toBe(400); // 음수 초과분은 0으로 본다
   });
 

@@ -26,7 +26,7 @@ import {
 } from "./transfer-tax";
 import { lossOffsetRateKey } from "./loss-offset-rate-key";
 import { splitPartsForLossOffset } from "./transfer-tax-split-part-seeds";
-import { rentalLaterLandPartDetail } from "./transfer-tax-rental-housing-nbl-split";
+import { rentalExcessPartDetail, rentalLaterLandPartDetail } from "./transfer-tax-rental-housing-nbl-split";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
 import type { RateClause } from "./transfer-tax-rate-clause";
@@ -324,9 +324,12 @@ export function buildAssetRecords(
      */
     const rentalException = pa.result.rentalHousingExceptionDetail?.applied === true;
     const income = rentalException ? taxableGain : taxableGain - lthd;
-    // 특례 자산은 G-3(나중 취득 토지분을 뗀 결과)만 파트 행으로 낸다 — 다건 세율 판정이 슬롯을 같은 헬퍼로 파트로 되돌린다(계획서 P2 §155⑳).
-    //   그 밖의 특례 자산(배율 초과분만 뗀 주택분 등)은 파트 구성이 세율 판정과 달라 자산 한 행이다.
-    const rentalDetail = rentalException ? rentalLaterLandPartDetail(pa.result.splitDetail, income) : undefined;
+    // 특례 자산은 G-3(나중 취득 토지분을 뗀 결과)와 A의 배율 초과분 분리(이내 토지 · 건물 · 배율 초과분)만 파트 행으로 낸다 — 다건 세율 판정이 같은 파트 소득을 쓴다.
+    //   그 밖의 특례 자산(B의 §161 안분 등)은 파트로 나눌 근거값이 없어 자산 한 행이다.
+    const rentalDetail = rentalException
+      ? (rentalLaterLandPartDetail(pa.result.splitDetail, income) ??
+        rentalExcessPartDetail(pa.result.splitDetail, pa.result.rentalHousingExceptionDetail, income))
+      : undefined;
     const lossParts = rentalException ? (rentalDetail ? lossPartsOf(pa, income, rentalDetail) : undefined) : lossPartsOf(pa, income, pa.result.splitDetail);
     return { ...pa, taxableGain, lthd, income, ...(lossParts ? { lossParts } : {}) };
   });

@@ -21,7 +21,7 @@ import {
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import { calcOneHouseProration, type ParsedRates } from "./transfer-tax-helpers";
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
-import type { HighValueExcessRulingTrace } from "./transfer-tax/rental-housing-exception/types";
+import type { HighValueExcessRulingTrace, RentalHousingExceptionResult } from "./transfer-tax/rental-housing-exception/types";
 
 /**
  * 주택 부수토지 **배율 초과분**(「소득세법」 제104조의3 제1항 제5호 비사업용 토지) 분리 결과.
@@ -59,7 +59,6 @@ export interface AppurtenantExcessSplit {
 export function splitAppurtenantExcess(
   input: TransferTaxInput,
   splitDetail: SplitGainResult | undefined,
-  transferGain: number,
 ): AppurtenantExcessSplit | null {
   if (!splitDetail) return null;
   const excess = resolveAppurtenantLandExcess(input);
@@ -67,15 +66,15 @@ export function splitAppurtenantExcess(
   const basisDate = resolveLandStatutoryAcquisitionDate(input);
   if (!basisDate) return null;
 
-  const landGain = Math.max(0, splitDetail.land.gain);
-  const gain = Math.floor(landGain * excess.nonBizRatio);
-  // 불변식 — 초과분이 자산 양도차익 전부를 삼키면 「주택분」이 사라진다. 조용히 clamp하지 않고
-  // 분리를 포기해 종전 경로로 후퇴한다(`computeSplitPartTax`의 게이트와 같은 규약).
-  if (gain <= 0 || gain >= transferGain) return null;
+  // 토지 차손이면 초과분도 같은 비율의 차손이다 — 비사업용 토지라 비과세 대상이 아니므로 그대로 과세분 차손으로 둔다(일반 경로 `applyHousingLandExclusions`와 같다 ·
+  // 사용자 결정 2026-10-20 A안). 초과분이 자산 양도차익 이상이어도(건물 차손으로 주택분이 음수) 분리한다 — 종전에는 분리를 포기해 비사업용 초과분 양도차익까지
+  // 특례로 비과세했다(1세대1주택 10억 · 토지 이익 + 건물 차손 · 배율 초과: on 0 / off 6,946,500). 주택분 음수는 하류 파트 세율 판정이 §167의2①로 공제한다.
+  const gain = Math.floor(splitDetail.land.gain * excess.nonBizRatio);
+  if (gain === 0) return null;
 
   const holdingYears = splitDetail.land.holdingYears;
   const longTermRate = calcTable1Rate(holdingYears);
-  const longTermDeduction = applyRate(gain, longTermRate);
+  const longTermDeduction = applyRate(Math.max(0, gain), longTermRate);
 
   return {
     gain,
@@ -201,6 +200,36 @@ export function rentalLaterLandPartDetail(splitDetail: SplitGainResult | undefin
   return buildRentalPartRateDetail(splitDetail, { housingIncome, laterLand: later, nonBusinessLandPart: nb });
 }
 
+/**
+ * 다건 — §155⑳ 특례 A 자산에서 배율 초과분만 뗀 경우(G-3 아님)의 차손 통산 파트(기준면적 이내 토지분 · 건물분 · 배율 초과분). 만들 수 없으면 `undefined`(자산 한 행).
+ * A1은 주택분 전액 비과세라 토지·건물 0, A2는 재산세제과-915 회신 trace의 파트별 과세 양도차익 − 파트별 표2 공제액이다. 파트 합이 슬롯과 어긋나면 만들지 않는다.
+ * 세액은 2파트 모델(`resolveClause5Tax` — 주택분 = 토지 + 건물)이 통산 후 파트 소득으로 계산한다. G-3가 아니면 토지분의 §104② 기산일(max(토지, 주택))이
+ * 건물분과 같은 주택 취득일이라 두 파트를 합쳐도 세율이 같다. 일반 경로(off)는 같은 세 파트를 행으로 내므로 다건 통산이 on/off 같은 입력을 받는다.
+ */
+export function rentalExcessPartDetail(
+  splitDetail: SplitGainResult | undefined,
+  rhe: RentalHousingExceptionResult | undefined,
+  slot: number,
+): SplitGainResult | undefined {
+  const nb = splitDetail?.nonBusinessLandPart;
+  if (!splitDetail || !nb || splitDetail.laterLandPart || rhe?.applied !== true) return undefined;
+  const ruling = rhe.formulaTrace.highValueExcessRuling;
+  const housing =
+    rhe.scenarioId === "RH-A1"
+      ? { land: 0, landLthd: 0, building: 0, buildingLthd: 0 }
+      : rhe.scenarioId === "RH-A2" && ruling && ruling.landLthd !== undefined && ruling.buildingLthd !== undefined
+        ? { land: ruling.landTaxableGain, landLthd: ruling.landLthd, building: ruling.buildingTaxableGain, buildingLthd: ruling.buildingLthd }
+        : undefined;
+  if (!housing) return undefined;
+  const nbIncome = (nb.taxableGainAfterProration ?? nb.gain) - nb.longTermDeduction;
+  if (housing.land - housing.landLthd + housing.building - housing.buildingLthd + nbIncome !== slot) return undefined;
+  return {
+    ...splitDetail,
+    land: { ...splitDetail.land, taxableGainAfterProration: housing.land, longTermDeduction: housing.landLthd },
+    building: { ...splitDetail.building, taxableGainAfterProration: housing.building, longTermDeduction: housing.buildingLthd },
+  };
+}
+
 /** 배율 초과분 분리 결과 → 결과 echo(`splitDetail.nonBusinessLandPart`) 형태 */
 export function toNonBusinessLandPart(nbl: AppurtenantExcessSplit): SplitNonBusinessLandPart {
   return {
@@ -271,7 +300,11 @@ export interface Clause5Detail {
 
 /** `resolveClause5Tax`와 같은 계산 — 세액 외에 파트 내역을 함께 돌려준다(단건은 `result`만 쓴다). */
 export function resolveClause5TaxDetailed(args: Clause5Args): Clause5Detail {
-  const { housingIncome, nbl, basicDeduction, taxBase, input, parsedRates, multiHouseSurchargeResult } = args;
+  const { basicDeduction, taxBase, input, parsedRates, multiHouseSurchargeResult } = args;
+  // 한 파트가 차손이면(토지 차손 → 배율 초과분 차손 · 건물 차손 → 주택분 음수) 먼저 다른 파트에서 공제한다 — 두 파트는 세율이 달라
+  // 「소득세법 시행령」 §167의2①2호로 남은 한 파트가 전부 받는다. 종전에는 차손 파트를 0으로 보고 이익 파트에 기본공제만 빼 과세표준이 자산보다 컸다.
+  const housingIncome = args.housingIncome < 0 ? 0 : args.housingIncome + Math.min(0, args.nbl.income);
+  const nbl = { ...args.nbl, income: args.nbl.income < 0 ? 0 : args.nbl.income + Math.min(0, args.housingIncome) };
   // 배율 초과분을 이미 떼어냈으므로 남은 주택분은 §104의3①5호가 규정한 부분이 아니다 → 중과 제외
   // (split 정본 `computeSplitPartTax`의 `land` seed와 같은 처리).
   const housingRateInput: TransferTaxInput = {
@@ -370,7 +403,7 @@ export function resolveClause5TaxDetailed(args: Clause5Args): Clause5Detail {
  * §155⑳은 거주주택을 「1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용」할 뿐이라 고가주택 안분(영 §160①)은 일반 1세대1주택과 같은 산식이다 —
  * 단일 주택 경로(`applyHousingLandExclusions`)와 **같은 leaf**(`highValueExcessLandTaxableGain`)·같은 안분 함수(`calcOneHouseProration`)를 쓴다.
  * 기준면적 이내 토지분 = max(0, 전체 부수토지 양도차익의 안분값 − 초과분 양도차익), 건물분 = 안분값. 초과분(`nbl.gain`)은 이 특례 밖(비사업용 토지 — 별도 파트)이다.
- * 토지·건물 양도차익은 분리 계산 결과(`splitDetail`)가 정한다 — 단일 경로와 같이 토지 음수는 0(확인 필요)으로 보고, 건물 차손은 같은 비율로 안분해
+ * 토지·건물 양도차익은 분리 계산 결과(`splitDetail`)가 정한다 — 단일 경로와 같이 토지 차손은 회신 산식을 부호 대칭으로 쓰고(`highValueExcessLandTaxableGain`), 건물 차손은 같은 비율로 안분해
  * 과세분만 남긴다(12억 초과분 차손만 12억 초과분 양도차익과 통산 — 계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
  *
  * ⚠️ A 시나리오 전용이다. B 시나리오(§161 안분)와의 결합 순서는 법령·해석례에 근거가 없어 적용하지 않는다(호출부가 고지).
@@ -382,7 +415,7 @@ export function buildRentalHighValueExcessRuling(
 ): HighValueExcessRulingTrace {
   const prorate = (gain: number) =>
     calcOneHouseProration(input.transferDate, gain, input.transferPrice, input.totalPropertyTransferPrice, input.burdenedGiftDenominator);
-  const wholeLandGain = Math.max(0, splitDetail.land.gain);
+  const wholeLandGain = splitDetail.land.gain;
   const buildingGain = splitDetail.building.gain;
   const landTaxableGain = highValueExcessLandTaxableGain({ landGain: wholeLandGain, excessGain: nbl.gain, prorate });
   const buildingTaxableGain = prorate(buildingGain);
