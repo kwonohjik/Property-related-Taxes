@@ -50,7 +50,7 @@ export interface ReverseAppurtenantUnit {
 export function resolveReverseAppurtenantUnit(
   primary: Pick<
     TransferTaxItemInput,
-    "propertyType" | "landNature" | "manualHoldingPeriodOverride" | "transferArea" | "acquisitionArea" | "residencePeriodMonths"
+    "propertyType" | "landNature" | "transferArea" | "acquisitionArea" | "residencePeriodMonths"
   >,
   companions: readonly CompanionRawAsset[],
   houseCtx: HouseCtx | undefined,
@@ -75,7 +75,6 @@ export function resolveReverseAppurtenantUnit(
           assetKind: "land",
           landNature: primary.landNature,
           areaM2: primaryLandAreaM2,
-          manualHoldingPeriodOverride: primary.manualHoldingPeriodOverride,
         },
         ...companions,
       ],
@@ -173,7 +172,6 @@ export function splitReversePrimaryLand(
       assetLabel: primaryItem.propertyLabel ?? "",
       assetKind: "land",
       areaM2: unit.primaryLandAreaM2,
-      manualHoldingPeriodOverride: primaryItem.manualHoldingPeriodOverride,
       landNature: primaryItem.landNature,
     },
     {

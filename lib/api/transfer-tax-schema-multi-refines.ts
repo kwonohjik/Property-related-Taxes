@@ -110,6 +110,8 @@ export const MULTI_IGNORED_KEYS: Record<string, string> = {
   // 부수토지 일체과세 세율(T-1.5)은 주 자산 컨텍스트(컴패니언)가 있어야 발동한다 —
   // 단독 자산이면 `resolveCompanionLandRate`가 applied=false(transfer-tax-rate-calc.ts:185-224).
   landNature: "컴패니언 없는 단독 자산에서는 T-1.5가 발동하지 않는다",
+  // 토지 세율 수동 지정 — 단건 ⑭는 함께 양도 자산이 있는 토지에만 싣는다(engine-input.ts). 다건 자산은 컴패니언이 없다(위에서 거부).
+  manualHoldingPeriodOverride: "컴패니언 없는 단독 자산에서는 단건 ⑭가 싣지 않는다(landNature와 같은 범위)",
 };
 
 /** `propertyItemSchema` superRefine — 거부 규칙에 걸린 키마다 issue 1건. */

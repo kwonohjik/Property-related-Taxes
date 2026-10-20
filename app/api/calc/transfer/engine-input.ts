@@ -480,6 +480,10 @@ export function buildTransferEngineInput(
     // primaryContextForCompanionRate가 설정된 bundled 토지-primary에서 resolveCompanionLandRate가
     // landNature !== "appurtenant_to_housing"(undefined 포함)이면 applied=false로 일체과세 미발동.
     landNature: data.landNature,
+    // ⑭ 토지 세율 수동 지정 — 컴패니언 경로(bundled-split-helpers)와 대칭. **함께 양도 자산이 있는 토지**에만 싣는다(⑫ 주석) —
+    //    컴패니언 없는 단독 토지는 종전처럼 지정을 읽지 않는다(`landNature`와 같은 범위 — 다건 ⑫ 무효과 목록 근거).
+    manualHoldingPeriodOverride:
+      data.propertyType === "land" && (data.companionAssets?.length ?? 0) > 0 ? data.manualHoldingPeriodOverride : undefined,
     // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 매핑 필수)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),

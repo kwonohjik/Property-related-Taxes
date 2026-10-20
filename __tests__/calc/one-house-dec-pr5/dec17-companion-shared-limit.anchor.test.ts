@@ -212,14 +212,14 @@ describe("K1 — 판정 leaf", () => {
     expect(resolveCompanionSplit(card(200), { ...primary, ...share }, td)).toMatchObject({ applied: true, limitArea: 100, excessArea: 100, excessRatio: 0.5 });
   });
 
-  it("주택 카드 토지는 «토지·건물 모두 본인 소유» 주택일 때만 센다 · 카드 합계는 분리 진입 조건을 통과한 카드만", () => {
+  it("주택 카드 토지는 «토지·건물 모두 본인 소유» 주택일 때만 센다 · 카드 합계는 분리 진입 조건을 통과한 카드만(토지 세율 수동 지정은 조건이 아니다)", () => {
     const cs = [
       { assetKind: "land", landNature: "appurtenant_to_housing" as const, areaM2: 100 },
       { assetKind: "land", landNature: "appurtenant_to_housing" as const, areaM2: 50, manualHoldingPeriodOverride: "progressive" as const },
       { assetKind: "land", landNature: "non_appurtenant" as const, areaM2: 70 },
       { assetKind: "housing", areaM2: 40 },
     ];
-    expect(appurtenantLimitShareOf({ propertyType: "housing", acquisitionArea: 500 }, cs)).toEqual({ houseLandAreaM2: 500, appurtenantCardsAreaM2: 100 });
+    expect(appurtenantLimitShareOf({ propertyType: "housing", acquisitionArea: 500 }, cs)).toEqual({ houseLandAreaM2: 500, appurtenantCardsAreaM2: 150 });
     expect(appurtenantLimitShareOf({ propertyType: "housing", selfOwns: "building_only", acquisitionArea: 500 }, cs).houseLandAreaM2).toBeUndefined();
     expect(appurtenantLimitShareOf({ propertyType: "land", acquisitionArea: 500 }, cs).houseLandAreaM2).toBeUndefined();
   });
