@@ -896,6 +896,16 @@ export interface MixedUseNonBusinessLandPart {
 export interface MixedUseTotalTax {
   /** 합산 양도소득금액 */
   aggregateIncome: number;
+  /**
+   * 파트 차손 통산(「소득세법 시행령」 §167의2① 1호 → 2호) 행 — 차손 파트가 있을 때만. 「어느 파트 차손을 어느 파트에서 공제했나」.
+   * 파트 소득금액(`housingPart.incomeAmount` 등)은 통산 **전** 값이고, `aggregateIncome`은 통산 후 합이다.
+   */
+  partLossOffset?: {
+    from: "housing" | "commercial_land" | "commercial_building" | "non_business_land";
+    to: "housing" | "commercial_land" | "commercial_building" | "non_business_land";
+    amount: number;
+    scope: "same_group" | "other_group";
+  }[];
   /** 기본공제 250만원 */
   basicDeduction: number;
   /** 과세표준 */

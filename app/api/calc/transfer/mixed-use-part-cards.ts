@@ -164,10 +164,10 @@ export function buildMixedUsePartCards(
   const housingTotal = wholeHouse
     ? (mixedAsset.totalPropertyTransferPrice ?? partTransferPrice)
     : housingTotalSplit;
-  const cnbGain = wholeHouse ? Math.floor(Math.max(cp.landTransferGain, 0) * ratio) : 0;
+  const cnbGain = wholeHouse ? Math.floor(cp.landTransferGain * ratio) : 0; // 토지 차손이면 배율 초과 몫도 차손(엔진 `exemptCommercialPartAsHouse`와 같은 값)
   const cnblA = wholeHouse ? Math.floor(cp.landAcqPrice * ratio) : 0;
   const cnblE = wholeHouse ? Math.floor(cp.landAppraisalDed * ratio) : 0;
-  const cnblT = cnbGain > 0 || cnblA > 0 || cnblE > 0 ? cnbGain + cnblA + cnblE : 0;
+  const cnblT = cnbGain !== 0 || cnblA > 0 || cnblE > 0 ? cnbGain + cnblA + cnblE : 0;
 
   /**
    * 두 축을 **명시적으로 중화**한다 — `companionEngine` 스프레드가 실어 오지만 파트 카드에서는

@@ -196,12 +196,12 @@ describe("(C) 회귀선 — 수정 전후 값이 같아야 한다", () => {
     const actExp = run(P, base({ ...ACTUAL, ...EXP }, ID));
     expect(actExp.acqPrice).toEqual([180_000_000, 420_000_000]);
     expect(actExp.ded).toEqual([22_413_792, 27_471_265]);
-    expect(actExp.tax).toBe(595_270_862);
+    expect(actExp.tax).toBe(580_115_689); // P3 §1 파트 차손 통산(상가 건물 차손 → 주택분 · 상가 토지, 1호) — 파트 카드 합산과 같은 값(종전 595,270,862)
 
     const proviso = run(P, base(PROVISO, ID));
     expect(proviso.proviso).toBe("direct");
     expect(proviso.ded).toEqual([192_413_793, 424_137_931]);
-    expect(proviso.tax).toBe(604_750_862);
+    expect(proviso.tax).toBe(600_095_689); // P3 §1 파트 차손 통산(상가 건물 차손 → 주택분 · 상가 토지, 1호) — 파트 카드 합산과 같은 값(종전 604,750,862)
 
     // 별개 취득: 건물일 나목 = H − 건물일 가목×면적 = 220M, 양도시 나목 = H_T − L_T = 400M
     // 🔁 분할(토지분 = 토지일 가목 원값)은 항등 그대로지만, 환산 분자는 2026-10-07에 H(400M) → 취득당시 주택가격

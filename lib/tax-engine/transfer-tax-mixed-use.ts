@@ -494,7 +494,7 @@ export function calcMixedUseTransferTax(
   const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
   // 고가주택(일부 비과세) + 배율 초과 — 어떤 산식으로 안분했는지 결과에 남긴다(단일 주택 `highValueExcessFormulaNotice`와 같은 문구).
   //   G-3(나중 취득 토지)이 겹치면 회신 방식을 쓰지 않았다고 밝힌다. 12억 이하·비과세 아님은 이 산식이 닿지 않아 고지가 없다.
-  if (housingPart.nonBusinessTransferredGain > 0 && isOneHouseExempt && !housingPart.isExempt) {
+  if (housingPart.nonBusinessTransferredGain !== 0 && isOneHouseExempt && !housingPart.isExempt) {
     warnings.push(highValueExcessRulingNoticeText(transferDate, laterLandExemptExcluded));
   }
   // 기본통칙 95-0…1 — 토지분 공제율이 토지 자신의 보유연수 값과 달라졌을 때만 고지한다(일반 분리취득 경로와 같은 문구·조건). 비과세면 장특이 없다.

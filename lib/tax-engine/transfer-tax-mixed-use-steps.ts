@@ -343,12 +343,26 @@ export function buildNonBusinessStep(
   };
 }
 
+const MIXED_PART_LABEL = {
+  housing: "주택분",
+  commercial_land: "상가 부수토지",
+  commercial_building: "상가 건물",
+  non_business_land: "배율 초과 토지(비사업용)",
+} as const;
+
 export function buildTotalStep(t: ReturnType<typeof buildTotalTax>): MixedUseStep {
   return {
     id: "step-9-total",
     title: "합산 세액",
     legalBasis: "소득세법 §92~§107",
     values: [
+      // 파트 차손 통산(「소득세법 시행령」 §167의2① — 1호 같은 세율 → 2호 다른 세율 안분). 합산 양도소득금액은 통산 후 합이다.
+      ...(t.partLossOffset ?? []).map((r) => ({
+        label:
+          `양도차손 통산 — ${MIXED_PART_LABEL[r.from]} 차손을 ${MIXED_PART_LABEL[r.to]}에서 공제` +
+          ` (영 §167의2① ${r.scope === "same_group" ? "1호 같은 세율" : "2호 다른 세율 안분"})`,
+        value: r.amount,
+      })),
       { label: "합산 양도소득금액", value: t.aggregateIncome },
       { label: "기본공제", value: t.basicDeduction },
       { label: "과세표준", value: t.taxBase },

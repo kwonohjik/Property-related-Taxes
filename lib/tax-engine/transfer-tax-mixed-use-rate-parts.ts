@@ -53,7 +53,7 @@ export function buildMixedRateParts(args: {
         // §104①8호(§55① 세율 + 10%p)를 자기 과세표준에만 적용한다. 2년 미만이면
         // `buildTotalTax`가 §104① 후단으로 토지 단기세율(50%/40%)과 큰 것을 취한다.
         // 보유연수 기산은 **주택 부수토지의 토지 보유연수** — 배율 초과분도 같은 필지다.
-        ...((nonBusinessLandPart?.incomeAmount ?? 0) > 0
+        ...((nonBusinessLandPart?.incomeAmount ?? 0) !== 0
           ? [
               {
                 kind: "non_business_land" as const,

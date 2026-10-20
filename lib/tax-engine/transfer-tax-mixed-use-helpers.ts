@@ -7,6 +7,7 @@
 
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 import { applyFairMarketRatio } from "./tax-utils"; // 장특 공제율 × 차익 — double 공제율(0.68 등)의 1원 과소 방지(일반 경로 `applyLthdRate`와 같은 leaf)
+import { calculateProration } from "./tax-utils";
 import { getHousingMultiplier } from "./non-business-land/urban-area";
 import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "./appurtenant-land-lthd-rate";
 import {
@@ -362,13 +363,25 @@ export function buildHousingPart(
    * 종전에는 초과분을 먼저 떼어낸 «나머지»만 다시 안분해 초과분이 이중으로 빠졌다. 12억 이하(전액 비과세)·비과세 아님(proratio 1)·나중 취득 토지(G-3)는
    * 이 산식이 닿지 않는다 — 값 불변.
    */
-  const proratePart = (gain: number) => Math.floor(Math.max(gain, 0) * proratio);
+  /**
+   * 파트 차손은 **과세분만** 남긴다(계획서 `transfer-split-part-loss-offset-p3.plan.md` §1 A안 — 일반 경로 P2 Q-1과 같은 규칙).
+   * 비과세 아님 → 차손 전액 · 전액 비과세 → 0(비과세분 차손은 통산하지 않는다 — 상속증여세과-209) · 일부 비과세(12억 초과) → 양도차익과 같은
+   * 비율로 안분한 차손(조심2016부0323 — 고가주택 차손은 기준금액 초과분만 통산). 차손 안분은 일반 엔진(`calculateProration`)과 같은 함수라
+   * 함께 양도 파트 카드와 원 단위로 같다. 종전에는 주택 토지·건물 차손을 0으로 잘라, 같은 물건이 함께 양도면 통산되고 단독이면 버려졌다.
+   */
+  const prorateTaxable = (gain: number, ratio: number) => {
+    if (gain >= 0) return Math.floor(gain * ratio);
+    if (ratio === 1) return gain;
+    if (ratio === 0) return 0;
+    return calculateProration(gain, highValueBase - HIGH_VALUE_THRESHOLD, highValueBase) || 0;
+  };
+  const proratePart = (gain: number) => prorateTaxable(gain, proratio);
   const rulingApplies =
-    nonBusinessTransferredGain > 0 && isOneHouseExempt && !isExempt && !laterLandExemptExcluded;
+    nonBusinessTransferredGain !== 0 && isOneHouseExempt && !isExempt && !laterLandExemptExcluded;
   const proratedLandGain = rulingApplies
     ? highValueExcessLandTaxableGain({ landGain: gainSplit.landGain, excessGain: nonBusinessTransferredGain, prorate: proratePart })
-    : Math.floor(Math.max(housingLandGainAfterNB, 0) * landProratio);
-  const proratedBuildingGain = Math.floor(Math.max(gainSplit.buildingGain, 0) * proratio);
+    : prorateTaxable(housingLandGainAfterNB, landProratio);
+  const proratedBuildingGain = prorateTaxable(gainSplit.buildingGain, proratio);
   const proratedTaxableGain = proratedLandGain + proratedBuildingGain;
 
   // ── ③ 장기보유특별공제 (안분 후 과세대상 양도차익에 표율 적용) ──
@@ -449,8 +462,8 @@ export function buildHousingPart(
     residenceYears,
   });
 
-  // ── ④ 양도소득금액 ──
-  const incomeAmount = Math.max(0, proratedTaxableGain - longTermDeductionAmount);
+  // ── ④ 양도소득금액 — 음수(차손)도 그대로 둔다. 합산 단계(`buildTotalTax`)가 §167의2①로 다른 파트에서 공제한다. ──
+  const incomeAmount = proratedTaxableGain - longTermDeductionAmount;
 
   return {
     estimatedAcquisitionPrice: housingAcq,
@@ -476,7 +489,7 @@ export function buildHousingPart(
     ...(rulingApplies
       ? {
           highValueExcessRuling: {
-            wholeLandGain: Math.max(gainSplit.landGain, 0),
+            wholeLandGain: gainSplit.landGain,
             wholeLandProrated: proratePart(gainSplit.landGain),
             landTaxableGain: proratedLandGain,
             buildingTaxableGain: proratedBuildingGain,
@@ -533,8 +546,10 @@ export function buildCommercialPart(
     transferGain: gainSplit.totalGain,
     // 파트별 양도소득금액 — §104①2·3호 단기세율은 토지·건물 각각의 보유기간으로 갈린다.
     // 장특이 이미 파트별(landDedRate·buildingDedRate)이므로 같은 축으로 노출한다(재도출 금지).
-    landIncomeAmount: Math.max(0, gainSplit.landGain - landDeductionAmount),
-    buildingIncomeAmount: Math.max(0, gainSplit.buildingGain - buildingDeductionAmount),
+    // 차손 파트는 음수 그대로 — 합산 단계가 §167의2①로 통산한다(계획서 p3 §1). 종전 0 절사는 상가 합계 차손을 버리고,
+    //   파트 합 ≠ 자산 소득금액이 되어 §104⑤ 2호 비교를 통째로 건너뛰게 했다(a5 과소과세).
+    landIncomeAmount: gainSplit.landGain - landDeductionAmount,
+    buildingIncomeAmount: gainSplit.buildingGain - buildingDeductionAmount,
     // 파트별 장특 echo(표시 전용) — 표1이라 거주분 0. 신고서 상가 토지·건물 열이 그대로 읽는다.
     partLthd: {
       land: mixedPartLthdEcho(gainSplit.landGain, landDedRate, landDedRate, landDeductionAmount, gainSplit.landHoldingYears),
@@ -559,7 +574,7 @@ export function buildCommercialPart(
     longTermDeductionRate,
     longTermDeductionAmount,
     holdingYears,
-    incomeAmount: Math.max(0, gainSplit.totalGain - longTermDeductionAmount),
+    incomeAmount: gainSplit.totalGain - longTermDeductionAmount,
     acqStandardSource: gainSplit.acqStandardSource,
     acqStandardTotal: gainSplit.acqStandardLand + gainSplit.acqStandardBuilding,
     acqStandardLand: gainSplit.acqStandardLand,
@@ -597,10 +612,11 @@ export function exemptCommercialPartAsHouse(
    */
   laterLandExemptExcluded = false,
 ): { part: MixedUseCommercialPart; nonBusinessTransferredGain: number } {
-  const nonBusinessTransferredGain = Math.floor(Math.max(part.landTransferGain, 0) * nonBizRatio);
-  const landIncomeAmount = laterLandExemptExcluded
-    ? Math.max(0, part.landTransferGain - nonBusinessTransferredGain)
-    : 0;
+  // 토지 차손이면 배율 초과 몫도 차손이다 — 주택 부분 ①(`buildHousingPart`)과 같이 부호 그대로 옮긴다(비사업용 토지는 비과세 대상이 아니라
+  //   과세분 차손 — 계획서 p3 §1). 비과세인 나머지 토지분 차손은 통산하지 않는다(0 — 상속증여세과-209). G-3이면 나머지 토지분도 비과세 대상이
+  //   아니라 차손 그대로 둔다.
+  const nonBusinessTransferredGain = Math.floor(part.landTransferGain * nonBizRatio);
+  const landIncomeAmount = laterLandExemptExcluded ? part.landTransferGain - nonBusinessTransferredGain : 0;
   return {
     part: {
       ...part,

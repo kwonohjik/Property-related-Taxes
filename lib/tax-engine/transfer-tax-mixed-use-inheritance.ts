@@ -130,7 +130,8 @@ export function mixedPartLthdEcho(
   holdingYears: number,
 ): MixedPartLthdEcho {
   return {
-    taxableGain: Math.max(taxableGain, 0),
+    // 차손 파트도 그대로 — 장특은 0이고(호출부가 양수에만 곱한다), 신고서 열이 「과세 + 비과세 = 양도차익」으로 비과세 칸을 역산한다(계획서 p3 §1).
+    taxableGain,
     longTermRate,
     longTermDeduction,
     holdingYears,
