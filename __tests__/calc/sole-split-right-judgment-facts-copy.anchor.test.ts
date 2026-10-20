@@ -186,9 +186,9 @@ describe("복사하지 않는 경우 (부정 짝)", () => {
     const body = await captureBody(
       axisB({ price: "1000000000", companionOver: { isSuccessorRightToMoveIn: true } }),
     );
-    const c = companionRedev(body);
-    expect(c.subject).toBe("right");
-    expect(c.exemptionEligibleAtApproval).toBeUndefined();
+    // 승계조합원은 §166① 요건 밖이라 컴패니언도 §166 서브객체를 만들지 않는다(주 자산 ④와 같은 술어) — 판정 선언을 실을 곳 자체가 없다.
+    expect(companionRedev(body)).toBeUndefined();
+    expect((body.companionAssets as Array<Record<string, unknown>>)[0].isSuccessorRightToMoveIn).toBe(true);
   });
 
   it("SC-6b 첫 지분이 승계조합원 취득분 — 둘째 지분에 옮기지 않는다", async () => {
