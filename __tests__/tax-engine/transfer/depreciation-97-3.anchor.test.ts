@@ -8,7 +8,8 @@
  * 실가·감정·매매사례·환산 모두에 적용된다(조심2013서4988 — 「환산가액을 적용하는 경우라 하여
  * 이를 달리 적용한다는 규정이 없다」).
  *
- * §97②2호 단서(swap) 비교는 **차감 후** 취득가액으로 한다(사용자 결정 2026-10-02, 해석례 미확보).
+ * §97②2호 단서(swap) 비교는 감가상각비 **차감 전** 취득가액으로 한다(사용자 결정 2026-10-20 — 2026-10-02
+ * 「차감 후」 결정을 뒤집음, 해석례 미확보). 감가상각비는 본문 채택 후 취득가액에서만 공제한다.
  * swap이 채택되면 환산취득가액을 차감하지 않으므로(양도차익 = 양도가액 − 나목) 감가상각비도
  * 따로 빼지 않는다.
  */
@@ -141,7 +142,7 @@ describe("B0-2 추계 취득가액 — 환산·감정·매매사례 모두 공�
 });
 
 // ── §97②2호 단서(swap) 경계 ─────────────────────────────────────────
-describe("B0-3 §97②2호 단서 — 비교는 차감 후 값으로 한다", () => {
+describe("B0-3 §97②2호 단서 — 비교는 차감 전 값으로 한다", () => {
   const TRANSFER = 400_000_000;
   const SWAP_BASE = {
     transferPrice: TRANSFER,
@@ -159,30 +160,26 @@ describe("B0-3 §97②2호 단서 — 비교는 차감 후 값으로 한다", ()
     expect(r.transferGain).toBe(TRANSFER - 200_000_000 - 4_500_000);
   });
 
-  it("🔴 경계 — 감가상각비 20,000,000이면 가목 184.5 < 나목 190 → swap으로 뒤집힌다", () => {
+  it("🔴 경계 — 감가상각비 20,000,000이 있어도 가목은 차감 전 204.5 ≥ 나목 190 → 본문 유지(차감 후 184.5로 뒤집지 않는다)", () => {
     const r = calc({ ...SWAP_BASE, depreciationAmount: 20_000_000 });
-    expect(r.swapApplied).toBe(true);
-    expect(r.swapComparison).toEqual({
-      estimatedSide: 184_500_000, // (200 − 20) + 4.5
-      directSide: 190_000_000,
-      chosen: "direct",
-      depreciation: 20_000_000,
-    });
-    // swap — 환산취득가액을 차감하지 않으므로 감가상각비도 따로 빼지 않는다: 양도차익 = 양도가액 − 나목
-    expect(r.transferGain).toBe(TRANSFER - 190_000_000);
-    expect(r.depreciationAmount, "swap이면 취득가액에서 공제되지 않는다").toBeUndefined();
-  });
-
-  it("본문 채택 시 비교 근거에 감가상각비가 실린다", () => {
-    const r = calc({ ...SWAP_BASE, capitalExpenditure: 100_000_000, expenses: 100_000_000, depreciationAmount: 20_000_000 });
     expect(r.swapApplied).toBeFalsy();
     expect(r.swapComparison).toEqual({
-      estimatedSide: 184_500_000,
-      directSide: 100_000_000,
+      estimatedSide: 204_500_000, // 200 + 4.5 (감가상각 차감 전)
+      directSide: 190_000_000,
       chosen: "estimated",
-      depreciation: 20_000_000,
     });
+    // 본문 — 감가상각비는 취득가액에서 공제: 400 − (200 − 20) − 4.5
+    expect(r.transferGain).toBe(TRANSFER - (200_000_000 - 20_000_000) - 4_500_000);
     expect(r.depreciationAmount).toBe(20_000_000);
+  });
+
+  it("🔴 나목이 차감 전 가목보다 크면 swap — 감가상각비는 따로 빼지 않는다", () => {
+    const r = calc({ ...SWAP_BASE, capitalExpenditure: 210_000_000, expenses: 210_000_000, depreciationAmount: 20_000_000 });
+    expect(r.swapApplied).toBe(true);
+    expect(r.swapComparison).toEqual({ estimatedSide: 204_500_000, directSide: 210_000_000, chosen: "direct" });
+    // swap — 환산취득가액을 차감하지 않으므로 감가상각비도 따로 빼지 않는다: 양도차익 = 양도가액 − 나목
+    expect(r.transferGain).toBe(TRANSFER - 210_000_000);
+    expect(r.depreciationAmount, "swap이면 취득가액에서 공제되지 않는다").toBeUndefined();
   });
 });
 
@@ -225,23 +222,26 @@ describe("B0-4 상업용건물 환산 — step 재구성에서 한 번만 공제
     expect(cb().transferGain).toBe(594_000_000);
   });
 
-  it("🔴 경계 — 나목 300 : 감가상각비 없으면 본문, 110이면 가목 296 < 300이라 swap", () => {
+  it("🔴 경계 — 나목 300 : 감가상각비 110이 있어도 가목은 차감 전 406 ≥ 300이라 본문(차감 후 296으로 뒤집지 않는다)", () => {
     const direct = { capitalExpenditure: 290_000_000, transferExpense: 10_000_000 };
     const plain = cb(direct);
     expect(plain.swapApplied ?? false).toBe(false);
     expect(plain.transferGain).toBe(594_000_000);
 
-    const flipped = cb({ ...direct, depreciationAmount: 110_000_000 });
-    expect(flipped.swapApplied).toBe(true);
-    expect(flipped.swapComparison).toEqual({
-      estimatedSide: 296_000_000,
-      directSide: 300_000_000,
-      chosen: "direct",
-      depreciation: 110_000_000,
-    });
-    // swap — 환산취득가액을 차감하지 않으니 감가상각비도 따로 빼지 않는다(이중 차감 없음)
-    expect(flipped.transferGain).toBe(1_000_000_000 - 300_000_000);
-    expect(flipped.depreciationAmount).toBeUndefined();
+    const kept = cb({ ...direct, depreciationAmount: 110_000_000 });
+    expect(kept.swapApplied ?? false).toBe(false);
+    expect(kept.swapComparison).toEqual({ estimatedSide: 406_000_000, directSide: 300_000_000, chosen: "estimated" });
+    // 본문 — 1,000 − (400 − 110) − 6
+    expect(kept.transferGain).toBe(704_000_000);
+    expect(kept.depreciationAmount).toBe(110_000_000);
+  });
+
+  it("🔴 나목 410 > 차감 전 가목 406 → swap · 감가상각비는 따로 빼지 않는다(이중 차감 없음)", () => {
+    const swapped = cb({ capitalExpenditure: 400_000_000, transferExpense: 10_000_000, depreciationAmount: 110_000_000 });
+    expect(swapped.swapApplied).toBe(true);
+    expect(swapped.swapComparison).toEqual({ estimatedSide: 406_000_000, directSide: 410_000_000, chosen: "direct" });
+    expect(swapped.transferGain).toBe(1_000_000_000 - 410_000_000);
+    expect(swapped.depreciationAmount).toBeUndefined();
   });
 });
 
@@ -328,7 +328,7 @@ import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-sw
 import { attachBuildingDepreciation, cardDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/types/general-building.types";
 
-describe("B0-7 일반건물 카드 — 감가상각비는 원건물 카드에만, swap 비교는 공제 후", () => {
+describe("B0-7 일반건물 카드 — 감가상각비는 원건물 카드에만, swap 비교는 공제 전", () => {
   const card = (id: string, type: "land" | "general_building_unit", acq: number, exp: number): AssetCardForAggregate =>
     ({
       propertyId: id,
@@ -373,18 +373,18 @@ describe("B0-7 일반건물 카드 — 감가상각비는 원건물 카드에만
     expect(cardDepreciation({ depreciationAmount: undefined, acquisitionPrice: 100 })).toBe(0);
   });
 
-  it("🔴 자산총액 판정 — 가목 (200+6+100+3) = 309 : 나목 305는 본문, 공제 20이면 289 < 305라 swap", () => {
+  it("🔴 자산총액 판정 — 가목 (200+6+100+3) = 309 : 나목 305는 본문, 공제 20이 있어도 가목은 309 그대로라 본문", () => {
     const base = [cards()[0], cards()[1]];
     const plain = resolveGeneralBuildingSwap(base, 305_000_000, 0);
     expect(plain.swapApplied).toBe(false);
     expect(plain.estimatedSideTotal).toBe(309_000_000);
 
     const withDep = resolveGeneralBuildingSwap(attachBuildingDepreciation(base, 20_000_000), 305_000_000, 0);
-    expect(withDep.swapApplied).toBe(true);
-    expect(withDep.estimatedSideTotal).toBe(289_000_000);
+    expect(withDep.swapApplied).toBe(false);
+    expect(withDep.estimatedSideTotal).toBe(309_000_000);
   });
 
-  it("🔴 파트 판정 — 건물 파트 가목 206 : 나목 205는 본문, 공제 5면 201 < 205라 그 파트만 swap", () => {
+  it("🔴 파트 판정 — 건물 파트 가목 206 : 나목 205는 본문, 공제 5가 있어도 가목 206 그대로라 본문", () => {
     const base = [cards()[0], cards()[1]];
     const axis = {
       land: { direct: 0, mode: "estimated" as const },
@@ -395,8 +395,8 @@ describe("B0-7 일반건물 카드 — 감가상각비는 원건물 카드에만
     expect(plain.perPart?.building?.estimatedSide).toBe(206_000_000);
 
     const withDep = resolveGeneralBuildingSwap(attachBuildingDepreciation(base, 5_000_000), undefined, undefined, axis);
-    expect(withDep.perPart?.building?.swapApplied).toBe(true);
-    expect(withDep.perPart?.building?.estimatedSide).toBe(201_000_000);
+    expect(withDep.perPart?.building?.swapApplied).toBe(false);
+    expect(withDep.perPart?.building?.estimatedSide).toBe(206_000_000);
     expect(withDep.perPart?.land?.swapApplied ?? false).toBe(false);
   });
 });

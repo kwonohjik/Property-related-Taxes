@@ -385,7 +385,9 @@ export function applyMixedPartAcq(args: {
   let proviso: MixedPartAcqApplied["proviso"];
   let provisoGroup: MixedUseSeparateAcquisitionEcho["provisoGroup"];
   if (group.length > 0 && provisoDeclared) {
-    const estimatedSide = group.reduce((s, p) => s + p.acq + p.lump, 0);
+    // 가목은 §97③ 감가상각비 **공제 전** 값(사용자 결정 2026-10-20) — 환산 상가건물 파트는 공제분을 되더한다.
+    const depBack = (p: PartWork) => (p.key === "commercialBuilding" ? (est.commercial.buildingDepreciation ?? 0) : 0);
+    const estimatedSide = group.reduce((s, p) => s + p.acq + depBack(p) + p.lump, 0);
     // 직접 경비가 있으면 그것이 이 파트의 나목이다 — 빼면 사용자가 입력한 환산 파트 경비가 어디에도 반영되지 않는다.
     const directSide = group.reduce((s, p) => s + (p.direct ?? p.common), 0);
     // 동률(==)은 본문 — 단서가 「적은 경우」로 명시한다(현행 자산 단위 판정과 같은 규칙).

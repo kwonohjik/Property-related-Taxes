@@ -3,8 +3,8 @@
  *
  * 감가상각비는 건물분에 귀속된다(조심2013서4988). 일반건물은 토지·건물(·증축건물)이 **카드**로 엔진에 들어가므로
  * 원건물 카드에만 싣고, 공제는 카드 → 단건 엔진(`calcTransferGain`)이 한 번만 한다.
- * §97②2호 단서(swap) 비교의 가목은 공제 **후** 값이다(`cardDepreciation`) — 두 판정 지점
- * (`general-building-swap.ts` 자산총액·파트)과 표시 지점(`buildApportionment`)이 이 leaf를 공유한다.
+ * §97②2호 단서(swap) 비교의 가목은 공제 **전** 값이다(사용자 결정 2026-10-20) — `cardDepreciation`은 본문 채택 후
+ * 취득가액 표시 지점(`buildApportionment`·`transfer-estimated-preview`)이 공유한다.
  */
 import type { AssetCardForAggregate } from "./types/general-building.types";
 import { baseCardId } from "./general-building-share-id";

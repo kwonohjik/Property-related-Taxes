@@ -156,28 +156,30 @@ describe("D1-2 단건 환산 본문 — 취득가액 칸은 환산취득가액 �
 });
 
 // ── swap ────────────────────────────────────────────────────────────
-describe("D1-3 단서(swap) — 공제하지 않고 비교 근거에 감가상각비가 보인다", () => {
+describe("D1-3 단서(swap) — 공제하지 않고, 비교 근거의 가목은 감가상각 차감 전 값이다", () => {
+  // 가목 = 환산 200 + 개산공제 4.5 = 204.5 (감가상각 차감 전 — 사용자 결정 2026-10-20) < 나목 210
   const swap = {
     ...ESTIMATED,
-    capitalExpenditure: 190_000_000,
+    capitalExpenditure: 210_000_000,
     transferExpense: 0,
-    expenses: 190_000_000,
+    expenses: 210_000_000,
     depreciationAmount: 20_000_000,
   };
 
   it("🔴 swap — 취득가액 칸은 종전 표시(자본적지출), 공제 고지는 없다", () => {
     const { n, row, result } = single(swap, "400000000");
     expect(result.swapApplied).toBe(true);
-    expect(n("취득가액")).toBe(190_000_000);
+    expect(n("취득가액")).toBe(210_000_000);
     expect(n("필요경비")).toBe(0);
     expect(row("취득가액").roseNotes?.total).toBeUndefined();
     expect(n("양도가액") - n("취득가액") - n("필요경비")).toBe(n("전체 양도차익"));
   });
 
-  it("🔴 명세서 비교 근거 — (환산취득가액 − 감가상각비 + 개산공제) 산술이 자기 값을 만든다", () => {
+  it("🔴 명세서 비교 근거 — (환산취득가액 + 개산공제) 산술이 자기 값을 만든다 · 감가상각비는 비교에 없다", () => {
     const { stmt } = single(swap, "400000000");
-    expect(stmt.acqFormula).toContain("환산취득가액 200,000,000 − 감가상각비 20,000,000 + 개산공제 4,500,000 = 184,500,000");
-    expect(stmt.acqFormula).toContain("< 190,000,000");
+    expect(stmt.acqFormula).toContain("환산취득가액 200,000,000 + 개산공제 4,500,000 = 204,500,000");
+    expect(stmt.acqFormula).toContain("< 210,000,000");
+    expect(stmt.acqFormula).not.toContain("감가상각비");
   });
 });
 

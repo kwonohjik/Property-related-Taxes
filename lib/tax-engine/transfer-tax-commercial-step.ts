@@ -36,7 +36,7 @@ export interface CommercialBuildingStepResult {
    */
   swapApplied?: boolean;
   /** §97②2호 단서 swap 비교 (capitalExpenditure·transferExpense 중 하나라도 입력 시). */
-  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct"; depreciation?: number };
+  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
 }
 
 /**
@@ -148,9 +148,8 @@ export function applyCommercialBuildingStep(input: TransferTaxInput): {
   // 발동하지 못한다 → 여기서 직접 판정하고 acquisitionPrice=0(환산취득가 미차감)·expenses=나목으로 재구성.
   const directSide = (input.capitalExpenditure ?? 0) + (input.transferExpense ?? 0);
   const swapEligible = input.capitalExpenditure !== undefined || input.transferExpense !== undefined;
-  // §97③ 감가상각비 — 가목의 취득가액은 공제 **후** 값(`calcNecessaryExpense`와 같은 비교식·같은 절삭).
-  const depreciation = Math.min(Math.max(0, input.depreciationAmount ?? 0), Math.max(0, cbStep.acquisitionPrice));
-  const estimatedSide = cbStep.acquisitionPrice - depreciation + cbStep.lumpSumDeduction;
+  // §97③ 감가상각비 — 가목은 공제 **전** 값으로 비교한다(`calcNecessaryExpense`와 같은 비교식 · 사용자 결정 2026-10-20).
+  const estimatedSide = cbStep.acquisitionPrice + cbStep.lumpSumDeduction;
   const swapToDirect = swapEligible && directSide > estimatedSide; // 동률은 본문(단서 "적은 경우")
   return {
     effectiveInput: {
@@ -169,7 +168,7 @@ export function applyCommercialBuildingStep(input: TransferTaxInput): {
       ...cbStep,
       swapApplied: swapToDirect,
       swapComparison: swapEligible
-        ? { estimatedSide, directSide, chosen: swapToDirect ? "direct" : "estimated", ...(depreciation > 0 ? { depreciation } : {}) }
+        ? { estimatedSide, directSide, chosen: swapToDirect ? "direct" : "estimated" }
         : undefined,
     },
   };

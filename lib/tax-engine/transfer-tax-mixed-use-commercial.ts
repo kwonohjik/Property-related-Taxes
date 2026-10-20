@@ -42,6 +42,11 @@ export interface CommercialGainSplit {
   buildingAcqPrice: number;
   landAppraisalDed: number;
   buildingAppraisalDed: number;
+  /**
+   * §97③ 상가건물 감가상각비 중 `buildingAcqPrice`에서 실제로 공제한 금액(취득가액 한도) — 있을 때만.
+   * §97②2호 단서 가목은 공제 **전** 값으로 비교하므로 단서 판정 지점이 이 값을 되더한다.
+   */
+  buildingDepreciation?: number;
   /** 취득시 토지/건물 기준시가 — 개산공제 산식 표시용 */
   landStdPriceAtAcq?: number;
   buildingStdPriceAtAcq?: number;
@@ -250,10 +255,10 @@ export function calcCommercialGainSplit(
   // 취득가액 안분 — 취득시 비율.
   // §97②2호 단서(나목) 채택 시에는 **차감하지 않는다**(가목에 이미 포함 — 이중차감 금지).
   const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : Math.floor(estimatedAcqPrice * acqLandRatio);
-  // §97③ 상가건물 감가상각비 차감 — 단서 비교(가목)는 **차감 후** 값으로 한다(일반건물과 같은 결정 · 계획서 V-5).
-  const buildingAcqPrice = swapToDirect
-    ? 0
-    : deductCommercialDepreciation(perPart ? perPart.building : estimatedAcqPrice - landAcqPrice, asset);
+  // §97③ 상가건물 감가상각비 차감 — 단서 비교(가목)는 **차감 전** 값으로 한다(전 경로 같은 결정 · 사용자 결정 2026-10-20).
+  const buildingAcqBeforeDepreciation = swapToDirect ? 0 : perPart ? perPart.building : estimatedAcqPrice - landAcqPrice;
+  const buildingAcqPrice = deductCommercialDepreciation(buildingAcqBeforeDepreciation, asset);
+  const buildingDepreciation = buildingAcqBeforeDepreciation - buildingAcqPrice;
 
   // 개산공제 (§163⑥) — 상속·증여(실지거래가액 의제, 소령 §163⑨)·매매실가는 미적용.
   // 실제 필요경비(자본적지출·양도비)는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
@@ -323,6 +328,7 @@ export function calcCommercialGainSplit(
     buildingAcqPrice,
     landAppraisalDed,
     buildingAppraisalDed,
+    ...(buildingDepreciation > 0 ? { buildingDepreciation } : {}),
     landStdPriceAtAcq: acqLandStd,
     buildingStdPriceAtAcq: acqBuildingStd,
     landHoldingYears,

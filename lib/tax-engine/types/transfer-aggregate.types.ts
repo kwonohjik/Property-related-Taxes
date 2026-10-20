@@ -685,5 +685,5 @@ export interface AggregateTransferResult {
    */
   swapApplied?: boolean;
   /** §97②2호 단서 swap 비교 (자산총액). */
-  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct"; depreciation?: number };
+  swapComparison?: { estimatedSide: number; directSide: number; chosen: "estimated" | "direct" };
 }
