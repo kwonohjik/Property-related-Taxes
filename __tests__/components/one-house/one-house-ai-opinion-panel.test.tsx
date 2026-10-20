@@ -29,7 +29,7 @@ const data: OneHouseAiOpinionData = {
   cards: [{ docNo: "DOC-1", kind: "해석", date: "2020.01.01.", url: "https://example.test/1", title: "제목" }],
   droppedCitations: ["DOC-X"],
   model: "claude-opus-5-5",
-  usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 },
+  usage: { input: 10000, cacheRead: 20000, cacheWrite: 0, output: 5000 },
 };
 
 const fetchMock = vi.fn();
@@ -63,6 +63,8 @@ describe("AI 참고 의견 패널", () => {
     expect(view.textContent).toContain("판정의 정본은 위 엔진 결론입니다");
     expect(screen.getAllByRole("link", { name: "DOC-1" })[0].getAttribute("href")).toBe("https://example.test/1");
     expect(view.textContent).toContain("DOC-X");
+    // 0.04 + 0.004 + 0.1
+    expect(screen.getByTestId("one-house-ai-usage-cost").textContent).toContain("이번 호출 비용 약 $0.144");
 
     rerender(<OneHouseAiOpinionPanel form={form} result={result(1)} sourceText="원문" notes={[]} />);
     expect(screen.queryByTestId("one-house-ai-opinion-view")).toBeNull();

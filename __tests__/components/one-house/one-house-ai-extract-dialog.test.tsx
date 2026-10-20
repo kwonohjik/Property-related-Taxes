@@ -38,7 +38,7 @@ const data: OneHouseAiExtractData = {
   notes: ["취득 원인이 원문에 없습니다."],
   issues: [],
   model: "claude-opus-5-5",
-  usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 },
+  usage: { input: 2000, cacheRead: 30000, cacheWrite: 0, output: 4000 },
 };
 
 const fetchMock = vi.fn();
@@ -79,6 +79,8 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
     expect(preview.textContent).toContain("근거: 「경기 고양시 B아파트」");
     expect(preview.textContent).toContain("A아파트에 입주한 날은 언제입니까?");
     expect(preview.textContent).toContain("참고용");
+    // 0.008 + 0.006 + 0.08
+    expect(screen.getByTestId("one-house-ai-usage-cost").textContent).toContain("이번 호출 비용 약 $0.094");
 
     fireEvent.click(screen.getByTestId("one-house-ai-extract-apply"));
     const f = useOneHouseJudgmentStore.getState().formData;

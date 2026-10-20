@@ -14,6 +14,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import type { OneHouseAiOpinionData } from "@/app/api/one-house-ai/opinion/route";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { OneHouseAiUsageCost } from "./OneHouseAiUsageCost";
 
 type Props = {
   form: OneHouseJudgmentFormData;
@@ -176,6 +177,8 @@ function OpinionView({ data }: { data: OneHouseAiOpinionData }) {
           ))}
         </ul>
       </details>
+
+      <OneHouseAiUsageCost model={data.model} usage={data.usage} />
     </div>
   );
 }
