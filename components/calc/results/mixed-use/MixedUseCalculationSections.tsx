@@ -28,6 +28,11 @@ import { MixedUseNblSection } from "@/components/calc/results/mixed-use/MixedUse
 import { MixedUseTotalTaxSection } from "@/components/calc/results/mixed-use/MixedUseTotalTaxSection";
 import { MixedUseHousingStdSplit } from "@/components/calc/results/mixed-use/MixedUseHousingStdSplit";
 import {
+  MixedUseApportionSection,
+  MixedBuildingExtrasNote,
+  PerPartConversionFormula,
+} from "@/components/calc/results/mixed-use/MixedUseApportionSection";
+import {
   SeparateAcqPartRows,
   SeparateAcqSummary,
   separatePartGainFormula,
@@ -75,7 +80,6 @@ export function MixedUseCalculationSections({
   setAllSections,
 }: Props) {
   const { apportionment: a, housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t, surchargeLthdExclusion } = breakdown;
-  const totalTransfer = a.housingTransferPrice + a.commercialTransferPrice;
   // 겸용 × 부담부증여 — 이 값의 존재로 분기한다. 양도가액이 «양도로 보는 채무액»이라 일반 겸용 문구가 맞지 않는다.
   const bg = breakdown.burdenedGift;
   const bgHousingOn = !bg || mixedBgSideTransferred(bg, "housing");
@@ -100,6 +104,8 @@ export function MixedUseCalculationSections({
   const isDeemedAcq = isInheritedAcq || isGiftAcq || isActualAcq;
   // 비-의제(환산·감정·매매사례) 취득가액 용어 — 감정/매매사례는 직접 안분이라 "환산취득가액" 아닌 "취득가액".
   const nonDeemedAcqTerm = isAppraisalSalesAcq ? "취득가액" : "환산취득가액";
+  // 새 안분(계약서 구분·감정가액) + 환산 — 엔진이 토지·건물 파트별로 환산한다(Q-8). 그 경우만 산식을 바꾼다(M-2).
+  const perPartConversion = breakdown.saleSplit && !isDeemedAcq && !isAppraisalSalesAcq ? breakdown.saleSplit : undefined;
 
   /** 주택 취득가액 산식 — 종전 행과 B1 환산 파트 행이 **같은 산식**을 쓴다(복제 금지). */
   const housingAcqFormula = (): React.ReactNode => {
@@ -116,6 +122,14 @@ export function MixedUseCalculationSections({
             }
             if (isAppraisalSalesAcq) {
               return `감정가액·매매사례가액 총액을 법 §100²에 따라 취득시 기준시가 비율로 주택분에 안분 (§176의2②③ 추계)`;
+            }
+            if (perPartConversion) {
+              return (
+                <PerPartConversionFormula
+                  side="housing" saleSplit={perPartConversion}
+                  landStdAtAcq={h.landStdPriceAtAcq} buildingStdAtAcq={h.buildingStdPriceAtAcq}
+                />
+              );
             }
             if (!h.phdEstimatedAcqHousingPrice) {
               return (
@@ -253,46 +267,7 @@ export function MixedUseCalculationSections({
         <MixedUseBgApportionSection bg={bg} open={openSections.apportion} onToggle={() => toggleSection("apportion")} />
       )}
       {!bg && (
-      <ResultSection
-        title="① 양도가액 안분"
-        basis="소득세법 §99 + 시행령 §164"
-        open={openSections.apportion}
-        onToggle={() => toggleSection("apportion")}
-      >
-        <Row
-          label="양도시 개별주택공시가격"
-          value={fmt(a.housingStandardPrice)}
-          formula="입력값 — 주택건물+주택부수토지 일괄"
-        />
-        <Row
-          label="양도시 상가부분 기준시가 합계"
-          value={fmt(a.commercialStandardPrice)}
-          formula="(공시지가/㎡ × 상가부수토지 면적) + 상가건물 기준시가"
-        />
-        <DivRow />
-        <Row
-          label={`주택비율`}
-          value={fmtPct(a.housingRatio)}
-          formula={
-            <Frac
-              top={`주택부분 기준시가 ${fmtPlain(a.housingStandardPrice)}`}
-              bottom={`주택부분 ${fmtPlain(a.housingStandardPrice)} + 상가부분 ${fmtPlain(a.commercialStandardPrice)}`}
-            />
-          }
-        />
-        <Row
-          label="주택 양도가액"
-          value={fmt(a.housingTransferPrice)}
-          highlight
-          formula={`${fmtPlain(totalTransfer)} × ${fmtPct(a.housingRatio)} → 내림`}
-        />
-        <Row
-          label="상가 양도가액"
-          value={fmt(a.commercialTransferPrice)}
-          highlight
-          formula={`총 양도가액 - 주택 양도가액 = ${fmtPlain(totalTransfer)} - ${fmtPlain(a.housingTransferPrice)}`}
-        />
-      </ResultSection>
+        <MixedUseApportionSection breakdown={breakdown} open={openSections.apportion} onToggle={() => toggleSection("apportion")} />
       )}
 
       {/* 2. 주택부분 */}
@@ -581,13 +556,20 @@ export function MixedUseCalculationSections({
             kind="commercial"
             breakdown={breakdown}
             estimatedFormula={
-              <FLine>
-                §97: 상가 양도가액 {fmtPlain(a.commercialTransferPrice)} ×{" "}
-                <Frac
-                  top={`취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)}`}
-                  bottom={`양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)}`}
+              perPartConversion ? (
+                <PerPartConversionFormula
+                  side="commercial" saleSplit={perPartConversion}
+                  landStdAtAcq={c.landStdPriceAtAcq} buildingStdAtAcq={c.buildingStdPriceAtAcq}
                 />
-              </FLine>
+              ) : (
+                <FLine>
+                  §97: 상가 양도가액 {fmtPlain(a.commercialTransferPrice)} ×{" "}
+                  <Frac
+                    top={`취득시 상가부분 기준시가 ${fmtPlain(c.acqStandardTotal)}`}
+                    bottom={`양도시 상가부분 기준시가 ${fmtPlain(a.commercialStandardPrice)}`}
+                  />
+                </FLine>
+              )
             }
           />
         ) : (
@@ -602,6 +584,14 @@ export function MixedUseCalculationSections({
                     ? `상속개시일 신고가액 ${fmtPlain(d.reportedValue)}`
                     : `상속개시일 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}`;
                 return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
+              }
+              if (perPartConversion) {
+                return (
+                  <PerPartConversionFormula
+                    side="commercial" saleSplit={perPartConversion}
+                    landStdAtAcq={c.landStdPriceAtAcq} buildingStdAtAcq={c.buildingStdPriceAtAcq}
+                  />
+                );
               }
               return (
                 <FLine>
@@ -658,6 +648,7 @@ export function MixedUseCalculationSections({
               : `양도가액 ${fmtPlain(c.buildingTransferPrice)} - ${nonDeemedAcqTerm} ${fmtPlain(c.buildingAcqPrice)} - 개산공제 ${fmtPlain(c.buildingAppraisalDed)} (취득시 건물 기준시가 ${c.buildingStdPriceAtAcq != null ? fmtPlain(c.buildingStdPriceAtAcq) + " " : ""}× 3%)`
           }
         />
+        {breakdown.buildingExtras && <MixedBuildingExtrasNote extras={breakdown.buildingExtras} />}
         <DivRow />
         {!bgCommercialOn ? (
           bg && <MixedBgNotTransferred side="commercial" />

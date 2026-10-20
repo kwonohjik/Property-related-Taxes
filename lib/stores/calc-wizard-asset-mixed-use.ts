@@ -68,6 +68,7 @@ export const MIXED_USE_DEFAULTS: Pick<
   | "mixedCommercialGiftExpense"
   | "mixedHousingActualExpense"
   | "mixedCommercialActualExpense"
+  | "mixedBuildingDirectTransferExpense"
   | "mixedAcqPerPartMode"
   | "mixedAcqBuildingContractSplit"
   | "mixedAcqHousingBuildingContractPrice"
@@ -123,6 +124,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   // ── 매매 취득 실거래가 겸용주택 — 법 §100² 안분 (R1 후속) ──
   mixedHousingActualExpense: "",
   mixedCommercialActualExpense: "",
+  // ── 건물 귀속 양도비 (계획서 mixed-use-sale-split-basis §4.3) ──
+  mixedBuildingDirectTransferExpense: "",
   // ── 겸용 별개 취득 파트 모델 (B1) — 신규 자산은 ON. 부재 기록의 normalize는 `false`(아래 migrate) — 의도된 비대칭.
   mixedAcqPerPartMode: true,
   mixedAcqBuildingContractSplit: false,
@@ -205,6 +208,8 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   // 매매 취득 실거래가 겸용주택 — 법 §100² 안분 실비 (신규 — R1 후속)
   if (!a.mixedHousingActualExpense) a.mixedHousingActualExpense = "";
   if (!a.mixedCommercialActualExpense) a.mixedCommercialActualExpense = "";
+  // 건물 귀속 양도비 (신규 — 2026-10-20)
+  if (!a.mixedBuildingDirectTransferExpense) a.mixedBuildingDirectTransferExpense = "";
 
   // 겸용 별개 취득 파트 모델 (B1) — 🔴 **부재 = `false`** (구 이력은 총액 모델로 해석). factory 기본값 `true`와 다르다.
   // ⚠️ `fillMissingFromFactory`가 이 함수 **뒤에** 돌아 undefined 칸을 factory 값(`true`)으로 채우므로,

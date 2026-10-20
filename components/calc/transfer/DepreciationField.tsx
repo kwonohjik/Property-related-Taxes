@@ -20,10 +20,12 @@ import { isFractionalMode } from "./OwnershipRatioInput";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 신고서 자산이 1건뿐인가 — 겸용주택은 단건일 때만 상가건물분으로 받는다(⑧·④와 같은 술어 `depreciationSupport`). */
+  isSingleAsset?: boolean;
 }
 
-export function DepreciationField({ asset, onChange }: Props) {
-  const support = depreciationSupport(asset);
+export function DepreciationField({ asset, onChange, isSingleAsset }: Props) {
+  const support = depreciationSupport(asset, { isSingleAsset: isSingleAsset === true });
   if (support.status === "not_applicable") return null;
   if (support.status === "unsupported") {
     // 이 구조로 바꾸기 전에 입력한 값이 남아 있으면 지울 수단이 있어야 한다 — ⑧ validate가 그 값을 막고,
@@ -52,9 +54,17 @@ export function DepreciationField({ asset, onChange }: Props) {
   const fractional = isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator);
   // 일반건물(토지+건물 일괄)은 감가상각비가 건물분에 귀속된다 — 같은 칸이지만 라벨·안내가 다르다.
   const isGb = asset.assetKind === "general_building";
+  // 겸용주택은 상가건물분 — 주택분(비과세 부분 포함)에는 공제하지 않는다(계획서 Q-4 범위).
+  const isMixed = asset.assetKind === "housing" && asset.isMixedUseHouse === true;
   return (
     <CurrencyInput
-      label={isGb ? "감가상각비 계상액 — 건물분 (원) — §97③" : "감가상각비 계상액 (원) — §97③"}
+      label={
+        isGb
+          ? "감가상각비 계상액 — 건물분 (원) — §97③"
+          : isMixed
+            ? "감가상각비 계상액 — 상가건물분 (원) — §97③"
+            : "감가상각비 계상액 (원) — §97③"
+      }
       data-field="depreciationAmount"
       data-testid="depreciation-amount"
       value={asset.depreciationAmount}
@@ -64,6 +74,7 @@ export function DepreciationField({ asset, onChange }: Props) {
           ? "보유 중 사업소득금액 계산 시 필요경비에 산입한 감가상각비 합계 — 취득가액에서 공제됩니다. 100% 기준 입력 — 시스템이 지분율 자동 적용."
           : "보유 중 사업소득금액(임대·사업) 계산 시 필요경비에 산입한 감가상각비 합계 — 취득가액에서 공제됩니다.") +
         (isGb ? " 건물(원건물) 취득가액에서만 공제하며 토지분·증축분에는 적용하지 않습니다." : "") +
+        (isMixed ? " 상가건물 취득가액에서만 공제하며 토지분·주택분에는 적용하지 않습니다." : "") +
         " 해당 없으면 비워두세요"
       }
     />

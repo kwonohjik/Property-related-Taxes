@@ -248,10 +248,17 @@ export function mixedPartAcqSum(a: SourceFields): { sum: number; pending: boolea
  * `estimatedAcquisitionPrice`는 단서 판정 **전** 합이라, 그것을 쓰면 단서 나목 채택 시
  * 「양도가액 − 취득가액 − 필요경비 = 양도차익」이 깨지고 사이드바만 다른 값을 말한다.
  * 총액 모델(echo 없음)은 종전 그대로 주택분 + 상가분 `estimatedAcquisitionPrice`.
+ *
+ * 단, 상가건물 감가상각비(§97③)가 있으면 총액 모델도 **4파트 취득가액 합**(차감 후)을 쓴다 — `estimatedAcquisitionPrice`는 차감 **전**
+ * 값이라 「양도가액 − 취득가액 − 필요경비 = 양도차익」이 감가상각분만큼 어긋난다(동기화 점검 M-1). 감가상각이 없으면 종전 값 그대로다.
  */
 export function mixedUseDisplayedAcqPrice(b: MixedUseGainBreakdown): number {
   const sep = b.separateAcquisition;
-  return sep
-    ? Object.values(sep.parts).reduce((sum, x) => sum + x.acquisitionPrice, 0)
-    : b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
+  if (sep) return Object.values(sep.parts).reduce((sum, x) => sum + x.acquisitionPrice, 0);
+  if ((b.buildingExtras?.commercialBuildingDepreciation ?? 0) > 0) {
+    const h = b.housingPart;
+    const c = b.commercialPart;
+    return h.landAcqPrice + h.buildingAcqPrice + c.landAcqPrice + c.buildingAcqPrice;
+  }
+  return b.housingPart.estimatedAcquisitionPrice + b.commercialPart.estimatedAcquisitionPrice;
 }

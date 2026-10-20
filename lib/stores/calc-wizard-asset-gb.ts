@@ -401,6 +401,11 @@ export interface GeneralBuildingFormSlice {
   mixedHousingActualExpense: string;
   /** 매매(실가) 모드 상가분 실제 필요경비 (원, 문자열). 선택 입력. */
   mixedCommercialActualExpense: string;
+  /**
+   * 건물에 직접 귀속되는 양도비(원, 문자열 · 물건 전체 100% 기준) — 예: 매수자 요구 철거비. 엔진 `buildingDirectTransferExpense`.
+   * 토지로 나누지 않고 주택건물:상가건물만 나눈다(「소득세법」 §100② 후단 「공통되는」 반대해석). 범위: `mixedSaleSplitScope`.
+   */
+  mixedBuildingDirectTransferExpense: string;
 
   // ── 겸용 별개 취득 — 토지·건물 파트별 산정방식·취득가액 (B1) ──
   /**

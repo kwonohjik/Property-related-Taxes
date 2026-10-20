@@ -60,6 +60,7 @@ import {
   buildTotalTax,
 } from "./transfer-tax-mixed-use-helpers";
 import { isMixedUseSplitTransfer } from "./data/mixed-use-split-era";
+import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
 
 // ──────────────────────────────────────────
 // 메인 함수
@@ -275,8 +276,14 @@ export function calcMixedUseTransferTax(
   // 보유 중 일부 용도변경 시 취득시 면적 파생값 (시행령 §166⑥)
   const acqDerived = computeAcqDerivedAreas(asset, derived);
 
-  // STEP 2: 양도가액 안분
-  const apportionmentBase = apportionTransferPrice(transferPrice, asset, derived);
+  // STEP 2: 양도가액 안분 — 계약서 구분·감정가액 입력이 있으면 1차 토지:건물 → 2차 주택:상가(`mixed-use-sale-split.ts`).
+  // 입력이 없거나 기준시가로 귀결되면 `base`(현행 기준시가 비율) 그대로다.
+  const saleSplit = prepareMixedSaleSplit({
+    asset, derived, transferPrice, transferDate, base: apportionTransferPrice(transferPrice, asset, derived),
+  });
+  const apportionmentBase = saleSplit.apportionment;
+  const housingSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "housing", asset.transferExpense ?? 0) : undefined;
+  const commercialSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "commercial", asset.transferExpense ?? 0) : undefined;
   // BG — 양도가액은 «채무 귀속으로 정한 부분별 양도가액»(B_h'·B_c')으로 덮어쓴다. 고가주택 안분 분모는 주택분 증여가액 C_h(해석 B).
   const apportionment: MixedUseApportionment = bg
     ? { ...apportionmentBase, housingTransferPrice: bg.debt.housingDebt, commercialTransferPrice: bg.debt.commercialDebt, wholeHousingTransferPrice: bg.value.housing }
@@ -310,7 +317,13 @@ export function calcMixedUseTransferTax(
     derived,
     transferDate,
     acqDerived,
+    undefined,
+    housingSalePart,
   );
+  // 새 안분 + 환산 — 주택분 환산취득가액은 파트별 환산의 합이다(Q-8). 총액 환산값을 그대로 두면 표시·단서 비교가 어긋난다.
+  if (housingSalePart && isConversionAcq(asset)) {
+    housingAcqResult = { ...housingAcqResult, estimatedAcq: housingGainSplit.landAcqPrice + housingGainSplit.buildingAcqPrice };
+  }
 
   // STEP 5·6: 12억 초과 비과세 안분 + 주택부수토지 배율초과 분리
   // 🚨 Critical: isOneHouseExempt 인자 전달 — 다주택자(false) 시 12억 비과세 미적용·표1
@@ -349,6 +362,8 @@ export function calcMixedUseTransferTax(
     acqDerived,
     housingAcqResult,
     acqApportionment?.commercialAcqPrice,
+    undefined,
+    commercialSalePart,
   );
 
   /**
@@ -406,11 +421,11 @@ export function calcMixedUseTransferTax(
      */
     const exp = {
       housing: calcHousingGainSplit(
-        apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate, acqDerived, true,
+        apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate, acqDerived, true, housingSalePart,
       ),
       commercial: calcCommercialGainSplit(
         apportionment.commercialTransferPrice, asset, derived, transferDate, acqDerived,
-        housingAcqResult, undefined, true,
+        housingAcqResult, undefined, true, commercialSalePart,
       ),
     };
     const applied = applyMixedPartAcq({
@@ -418,6 +433,10 @@ export function calcMixedUseTransferTax(
       acqDerived,
       est: { housing: housingGainSplit, commercial: commercialGainSplit },
       exp,
+      buildingDirect: {
+        housing: buildingDirectShare(asset, derived, "housing"),
+        commercial: buildingDirectShare(asset, derived, "commercial"),
+      },
     });
     housingGainSplit = applied.housing;
     commercialGainSplit = applied.commercial;
@@ -427,7 +446,7 @@ export function calcMixedUseTransferTax(
   } else {
     const standard = applyStandardProviso({
       asset, apportionment, housingAcqResult, derived, transferDate, acqDerived,
-      acqApportionment, housingGainSplit, commercialGainSplit,
+      acqApportionment, housingGainSplit, commercialGainSplit, housingSalePart, commercialSalePart,
     });
     housingGainSplit = standard.housing;
     commercialGainSplit = standard.commercial;
@@ -656,6 +675,16 @@ export function calcMixedUseTransferTax(
     partialUsageChange,
     amendmentDetail,
     ...(separateAcquisitionEcho ? { separateAcquisition: separateAcquisitionEcho } : {}),
+    ...(saleSplit.echo ? { saleSplit: saleSplit.echo } : {}),
+    ...(saleSplit.fallback ? { saleSplitFallback: saleSplit.fallback } : {}),
+    ...(hasMixedBuildingExtras(asset)
+      ? {
+          buildingExtras: {
+            commercialBuildingDepreciation: asset.commercialBuildingDepreciation ?? 0,
+            buildingDirectTransferExpense: asset.buildingDirectTransferExpense ?? 0,
+          },
+        }
+      : {}),
     ...(bgApplied ? { burdenedGift: bgApplied.breakdown } : {}),
     // 상속 취득 게이트 echo (소령 §163⑨) — UI 재판정 방지용 단일 소스.
     acquisitionByInheritance: asset.acquisitionByInheritance,

@@ -243,10 +243,20 @@ export function resolvePartNecessaryExpense(args: {
   acqBuildingStd: number;
   transferLandStd: number;
   transferBuildingStd: number;
+  /**
+   * 건물에만 귀속되는 양도비의 **이 파트** 몫(`buildingDirectShare` — 예: 매수자 요구 철거비). 「소득세법」 §100② 후단은
+   * **공통되는** 양도비만 안분하므로 토지로 나누지 않고 건물에 더한다.
+   * ⚠️ 파트 직접 입력이 있어도 **더한다** — X3(「직접 입력이 있으면 공통 경비는 안분하지 않는다」)는 공통 경비에 대한 규칙이고,
+   *    이 값은 별개 입력이다. 종전 초안은 직접 입력 분기에서 이 값을 버렸다(취득가액 리뷰 F-1: 사례 + 상가분 실비 300,000에서
+   *    51,859,800이 아니라 52,517,800 — 철거비 700,000 소실).
+   */
+  buildingOnlyTransferExpense?: number;
 }): { landAppraisalDed: number; buildingAppraisalDed: number } {
   const direct = args.partDirect ?? 0;
+  const buildingOnly = Math.max(0, args.buildingOnlyTransferExpense ?? 0);
   if (direct > 0) {
-    return splitDeemedExpense(direct, args.acqLandStd, args.acqBuildingStd);
+    const d = splitDeemedExpense(direct, args.acqLandStd, args.acqBuildingStd);
+    return { landAppraisalDed: d.landAppraisalDed, buildingAppraisalDed: d.buildingAppraisalDed + buildingOnly };
   }
   const capex = splitDeemedExpense(
     Math.max(0, args.commonCapitalExpenditure),
@@ -260,7 +270,7 @@ export function resolvePartNecessaryExpense(args: {
   );
   return {
     landAppraisalDed: capex.landAppraisalDed + transferExp.landAppraisalDed,
-    buildingAppraisalDed: capex.buildingAppraisalDed + transferExp.buildingAppraisalDed,
+    buildingAppraisalDed: capex.buildingAppraisalDed + transferExp.buildingAppraisalDed + buildingOnly,
   };
 }
 

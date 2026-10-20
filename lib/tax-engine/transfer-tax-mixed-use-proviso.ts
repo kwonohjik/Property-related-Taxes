@@ -4,6 +4,7 @@
  * `transfer-tax-mixed-use.ts` 800줄 정책 분리(2026-10-16) — 로직은 오케스트레이터에서 **그대로** 옮겼다(동작 불변).
  * 근거 주석(비교 단위·환산 경로 전용·감정가액 제외 F19)은 오케스트레이터 STEP 7.5 블록 주석이 정본이다.
  */
+import type { MixedSalePart } from "./mixed-use-sale-split";
 import {
   calcHousingGainSplit,
   calcCommercialGainSplit,
@@ -25,6 +26,9 @@ export function applyStandardProviso(args: {
   acqApportionment: { commercialAcqPrice: number } | undefined;
   housingGainSplit: HousingGainSplit;
   commercialGainSplit: CommercialGainSplit;
+  /** 새 안분 주입값(`prepareMixedSaleSplit`) — 단서 재계산도 같은 양도가액·양도비 몫을 써야 한다. */
+  housingSalePart?: MixedSalePart;
+  commercialSalePart?: MixedSalePart;
 }): {
   housing: HousingGainSplit;
   commercial: CommercialGainSplit;
@@ -39,7 +43,8 @@ export function applyStandardProviso(args: {
     !asset.useActualAcquisition &&
     !asset.useAppraisalSalesAcquisition;
   const provisoDeclared =
-    asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
+    asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined ||
+    asset.buildingDirectTransferExpense !== undefined;
   if (!(provisoEligible && provisoDeclared)) return { housing, commercial, proviso: undefined };
 
   const gamok =
@@ -47,17 +52,17 @@ export function applyStandardProviso(args: {
     housing.landAppraisalDed + housing.buildingAppraisalDed +
     commercial.landAcqPrice + commercial.buildingAcqPrice +
     commercial.landAppraisalDed + commercial.buildingAppraisalDed;
-  const namok = (asset.capitalExpenditure ?? 0) + (asset.transferExpense ?? 0);
+  const namok = (asset.capitalExpenditure ?? 0) + (asset.transferExpense ?? 0) + (asset.buildingDirectTransferExpense ?? 0);
   // 동률(==)은 본문 — 단서가 「적은 경우」로 명시한다(일반건물·상업용·부담부증여와 같은 판정).
   const chosen: "estimated" | "direct" = namok > gamok ? "direct" : "estimated";
   if (chosen === "direct") {
     housing = calcHousingGainSplit(
       apportionment.housingTransferPrice, housingAcqResult, asset, derived, transferDate,
-      acqDerived, true,
+      acqDerived, true, args.housingSalePart,
     );
     commercial = calcCommercialGainSplit(
       apportionment.commercialTransferPrice, asset, derived, transferDate, acqDerived,
-      housingAcqResult, acqApportionment?.commercialAcqPrice, true,
+      housingAcqResult, acqApportionment?.commercialAcqPrice, true, args.commercialSalePart,
     );
   }
   return { housing, commercial, proviso: { estimatedSide: gamok, directSide: namok, chosen } };

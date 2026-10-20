@@ -9,12 +9,15 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { isFractionalMode } from "../OwnershipRatioInput";
 import { GbDeductionOnlyNotice } from "../GbDeductionOnlyNotice";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { mixedSaleSplitScope } from "@/lib/calc/mixed-use-sale-split-scope";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   /** 폼-수준 총 양도비 — 자산별 자동 안분 표시용 */
   totalTransferExpense?: string;
+  /** 신고서 자산이 1건뿐인가 — 겸용주택 건물 귀속 양도비는 단건만 받는다(`mixedSaleSplitScope`). */
+  isSingleAsset?: boolean;
 }
 
 /**
@@ -46,7 +49,9 @@ const PARTIAL_CAPEX_NOTE =
 const PARTIAL_TRANSFER_EXPENSE_NOTE =
   "일부 양도 — 양도비는 이번 양도에서 발생한 금액이므로 안분하지 않습니다. 양도분에 대한 금액만 입력하세요.";
 
-export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: Props) {
+export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isSingleAsset }: Props) {
+  // 겸용주택 건물 귀속 양도비 — ④·⑧과 같은 술어. 범위 밖이면 칸이 없고 ④도 보내지 않는다.
+  const showMixedBuildingDirect = mixedSaleSplitScope(asset, { isSingleAsset: isSingleAsset === true }).status === "ok";
   const isPartial = (asset.areaScenario ?? "same") === "partial";
   // 일반건물 · 분리 OFF · 자산 단위 감정·매매사례 — 자본적지출·양도비가 계산에 쓰이지 않는다(§97②2호 본문, A2 §3.7).
   // 분리 ON은 파트 카드가 같은 안내를 띄우고 ⑧ V-8이 자산 단위 칸을 파트 칸으로 안내한다. 모드는 ④·⑧과 같은 leaf.
@@ -116,6 +121,20 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense }: P
             />
           );
         })()}
+        {showMixedBuildingDirect && (
+          <CurrencyInput
+            label="건물에 직접 귀속되는 양도비 (원) — 겸용주택"
+            data-field="mixedBuildingDirectTransferExpense"
+            data-testid="mixed-building-direct-transfer-expense"
+            value={asset.mixedBuildingDirectTransferExpense}
+            onChange={(v) => onChange({ mixedBuildingDirectTransferExpense: v })}
+            hint={
+              "건물에만 관련된 양도비(예: 매수자 요구로 건물을 철거한 비용). 토지로 나누지 않고 주택건물·상가건물 양도가액 비율로만 나눕니다 " +
+              "(소득세법 §100② 후단은 공통되는 양도비만 안분). 위 양도비 칸에는 넣지 마세요" +
+              (isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator) ? ". 100% 기준 입력 — 시스템이 지분율 자동 적용" : "")
+            }
+          />
+        )}
         <p className="text-caption text-muted-foreground">
           환산취득가 모드에서 (자본+양도비) &gt; (환산+개산공제) 시 §97②2호 단서에 따라 자본+양도비를 필요경비로 적용합니다(감정가액·매매사례가액 모드는 제외).
         </p>

@@ -7,6 +7,7 @@
  * 서브스키마는 ./transfer-tax-schema-sub.ts 로 분리 (800줄 정책).
  */
 
+import { refineMixedSaleSplitSingleOnly } from "./transfer-tax-schema-mixed-use";
 import { z } from "zod";
 import {
   filingPenaltyDetailsSchema,
@@ -141,8 +142,20 @@ export const propertySchema = z
     // 거부는 `refinePropertyRequiredInputs`(M2 — 단건·다건 공용 `transfer-tax-schema-household-refines.ts`).
 
     // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)
+    // 겸용 계약서 구분가액 합 = 양도가액 — 엔진이 던지면 500이 된다(동기화 점검 L-4). 양도가액이 최상위라 서브객체 refine에서는 못 본다.
+    const mu = data.mixedUse;
+    if (mu && mu.landTransferPrice !== undefined && mu.buildingTransferPrice !== undefined && mu.landTransferPrice + mu.buildingTransferPrice !== data.transferPrice) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["mixedUse", "landTransferPrice"],
+        message: `겸용주택 계약서 구분가액 합(${(mu.landTransferPrice + mu.buildingTransferPrice).toLocaleString()})이 양도가액(${data.transferPrice.toLocaleString()})과 같아야 합니다 (소득세법 §100②)`,
+      });
+    }
     const companions = data.companionAssets ?? [];
+    // 겸용 안분 기준·감가상각·건물 귀속 양도비는 단건 겸용 전용(Q-2) — 주 자산 겸용에 컴패니언이 붙으면 막는다.
+    if (companions.length > 0) refineMixedSaleSplitSingleOnly(data.mixedUse ?? undefined, ctx, ["mixedUse"]);
     companions.forEach((c, i) => {
+      refineMixedSaleSplitSingleOnly(c.mixedUse ?? undefined, ctx, ["companionAssets", i, "mixedUse"]);
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
       refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"]);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);

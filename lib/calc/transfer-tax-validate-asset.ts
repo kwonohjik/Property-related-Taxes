@@ -18,6 +18,7 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
+import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { hasStaleSplitInput } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { parseAmount } from "@/lib/calc/number-parse";
@@ -360,8 +361,12 @@ export function validateAssetEntry(
   }
 
   // ⑧ §97③ 감가상각비 — 입력 가능 구조인지 · 취득가액 한도 (⑤ 게이트와 같은 술어 `depreciation-scope.ts`)
-  const depreciationError = validateDepreciation(a, label);
+  const depreciationError = validateDepreciation(a, label, { isSingleAsset: form.assets.length === 1 });
   if (depreciationError) return depreciationError;
+
+  // ⑧ 겸용주택 양도가액 안분 방식(계약서 구분·감정가액) — ⑤ `MixedUseSaleSplitSection`·④와 같은 범위 술어
+  const mixedSaleSplitError = validateMixedSaleSplit(a, label, form);
+  if (mixedSaleSplitError) return mixedSaleSplitError;
 
   // ⑧ 가업상속공제 §97의2④ 의제 취득가액 — 토글 ON 시 4필드 전수 입력 강제
   // 자동 안분 fallback 금지 원칙 준수 (feedback_no_silent_apportion_fallback)

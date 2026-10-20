@@ -25,6 +25,7 @@
  *
  * 순수 함수다(DB·Date 변환 없음). 미입력은 **차단**이고 값을 지어내지 않는다(자동 안분 fallback 금지).
  */
+import { deductCommercialDepreciation } from "./mixed-use-sale-split";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { MIXED_USE } from "./legal-codes/transfer-mixed-use";
 import { areMixedAcqDatesSeparate } from "./mixed-use-acq-date";
@@ -277,8 +278,15 @@ export function applyMixedPartAcq(args: {
   acqDerived: MixedUseDerivedAreas;
   est: { housing: HousingGainSplit; commercial: CommercialGainSplit };
   exp: { housing: HousingGainSplit; commercial: CommercialGainSplit };
+  /**
+   * 건물 귀속 양도비의 주택건물·상가건물 몫(`buildingDirectShare`). 공통 경비 몫(`exp`)에는 이미 들어 있지만, 파트 직접 경비가 있으면
+   * 그 값으로 대체되어 사라지므로 직접 경비에 더해야 한다(취득가액 리뷰 F-1).
+   */
+  buildingDirect?: { housing: number; commercial: number };
 }): MixedPartAcqApplied {
   const { asset, acqDerived, est, exp } = args;
+  const bdHousing = args.buildingDirect?.housing ?? 0;
+  const bdCommercial = args.buildingDirect?.commercial ?? 0;
   const sep = asset.separateAcquisition;
   if (!sep) throw new Error("겸용 별개 취득: separateAcquisition이 없습니다.");
 
@@ -332,6 +340,10 @@ export function applyMixedPartAcq(args: {
     }
   }
 
+  // §97③ 상가건물 감가상각비 — 파트 값(실가·감정·매매사례)으로 정한 상가건물 취득가액에서 차감한다.
+  // 환산 파트(est)는 `calcCommercialGainSplit`이 이미 차감했다(이중 차감 금지).
+  if (sep.buildingMode !== "estimated") cb = deductCommercialDepreciation(cb, asset);
+
   // ── 파트별 개산공제·경비 재료 ─────────────────────────────────
   const housingDirect = asset.housingInheritedExpense ?? 0;
   const commercialDirect = asset.commercialInheritedExpense ?? 0;
@@ -342,9 +354,9 @@ export function applyMixedPartAcq(args: {
 
   const parts: PartWork[] = [
     { key: "housingLand", mode: sep.landMode, acq: hl, lump: est.housing.landAppraisalDed, common: exp.housing.landAppraisalDed, direct: hDirect?.landAppraisalDed, basis: est.housing.landStdPriceAtAcq },
-    { key: "housingBuilding", mode: sep.buildingMode, acq: hb, lump: est.housing.buildingAppraisalDed, common: exp.housing.buildingAppraisalDed, direct: hDirect?.buildingAppraisalDed, basis: est.housing.buildingStdPriceAtAcq },
+    { key: "housingBuilding", mode: sep.buildingMode, acq: hb, lump: est.housing.buildingAppraisalDed, common: exp.housing.buildingAppraisalDed, direct: hDirect ? hDirect.buildingAppraisalDed + bdHousing : undefined, basis: est.housing.buildingStdPriceAtAcq },
     { key: "commercialLand", mode: sep.landMode, acq: cl, lump: est.commercial.landAppraisalDed, common: exp.commercial.landAppraisalDed, direct: cDirect?.landAppraisalDed, basis: est.commercial.landStdPriceAtAcq },
-    { key: "commercialBuilding", mode: sep.buildingMode, acq: cb, lump: est.commercial.buildingAppraisalDed, common: exp.commercial.buildingAppraisalDed, direct: cDirect?.buildingAppraisalDed, basis: est.commercial.buildingStdPriceAtAcq },
+    { key: "commercialBuilding", mode: sep.buildingMode, acq: cb, lump: est.commercial.buildingAppraisalDed, common: exp.commercial.buildingAppraisalDed, direct: cDirect ? cDirect.buildingAppraisalDed + bdCommercial : undefined, basis: est.commercial.buildingStdPriceAtAcq },
   ];
 
   // ── 파트별 필요경비 결정 ─────────────────────────────────────
@@ -368,7 +380,8 @@ export function applyMixedPartAcq(args: {
   const group = parts.filter((p) => p.mode === "estimated");
   // 나목(§97②2호 단서) 후보 = 자본적지출·양도비 — 자산 단위 공통 경비 몫 또는 주택분·상가분 직접 경비(실가 파트와 같은 규칙).
   const provisoDeclared =
-    asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined || group.some((p) => p.direct !== undefined);
+    asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined ||
+    asset.buildingDirectTransferExpense !== undefined || group.some((p) => p.direct !== undefined);
   let proviso: MixedPartAcqApplied["proviso"];
   let provisoGroup: MixedUseSeparateAcquisitionEcho["provisoGroup"];
   if (group.length > 0 && provisoDeclared) {

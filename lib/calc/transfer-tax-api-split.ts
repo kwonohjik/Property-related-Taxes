@@ -174,7 +174,12 @@ export function buildSplitPayload(
   // ⇒ 그래서 이 게이트는 "사용자 의도 보호"가 아니라 **유일한 방어선**이다. "기준시가 비율 안분"
   //    으로 되돌린 뒤 잔존한 직접 입력값이 여기를 통과하면, 엔진은 그것을 구분 기재로 보고
   //    §100③ 30% 판정까지 태운다(`transfer-tax-split-sale-price.ts`).
-  const saleDirectActive = partInputsActive && saleSplitMode === "actual";
+  //
+  // 🔴 겸용주택은 제외한다(계획서 `mixed-use-sale-split-basis.plan.md` R-4). 겸용 화면도 같은 폼 키(`landTransferPrice`·
+  //    `landAppraisalAtTransfer` 등)를 쓰지만 값은 `mixedUse` 서브객체로만 간다(`transfer-tax-api-mixed-use-sale-split.ts`).
+  //    여기서도 실으면 토지·건물 취득일이 다른 겸용(별개 취득 → `partInputsActive`)에서 최상위로 **이중 전송**된다.
+  const saleSideActive = partInputsActive && !(primary.assetKind === "housing" && primary.isMixedUseHouse === true);
+  const saleDirectActive = saleSideActive && saleSplitMode === "actual";
   // 양도시 기준시가 — 분리 축이 활성이면 **항상 전송**한다(2026-07-29 S1 해소).
   //
   // 종전 게이트는 `apportioned || 어느 파트든 환산`이었다. 그러나 validate V4가
@@ -263,7 +268,7 @@ export function buildSplitPayload(
     //
     // ⚠️ `ratioed`(지분 스케일)를 **걸지 않는다** — 위 기준시가(:88)와 같은 이유다. 비율로만
     //    소비되어 스케일해도 결과가 같고, 물건 전체의 평가액이라 지분으로 깎을 대상이 아니다.
-    ...(partInputsActive
+    ...(saleSideActive
       ? {
           landAppraisalAtTransfer: parseAmount(primary.landAppraisalAtTransfer) || undefined,
           buildingAppraisalAtTransfer: parseAmount(primary.buildingAppraisalAtTransfer) || undefined,

@@ -14,6 +14,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
+import { mixedSaleSplitScope, type MixedSaleSplitScopeCtx } from "./mixed-use-sale-split-scope";
 
 export type DepreciationSupport =
   /** 칸을 열고 계산에 반영한다. */
@@ -31,7 +32,11 @@ const BUILDING_KINDS: ReadonlySet<AssetForm["assetKind"]> = new Set([
   "general_building",
 ]);
 
-export function depreciationSupport(a: AssetForm): DepreciationSupport {
+/**
+ * @param ctx 겸용주택 전용 — 신고서 자산 수. 겸용은 **단건일 때만** 상가건물분으로 받는다(`mixedSaleSplitScope`).
+ *   생략하면 단건이 아닌 것으로 본다(안전측) — 컴패니언·다건 빌더는 문맥 없이 부르므로 겸용 값을 보내지 않는다.
+ */
+export function depreciationSupport(a: AssetForm, ctx?: Partial<MixedSaleSplitScopeCtx>): DepreciationSupport {
   if (!BUILDING_KINDS.has(a.assetKind)) return { status: "not_applicable" };
 
   const unsupported = (reason: string): DepreciationSupport => ({ status: "unsupported", reason });
@@ -59,8 +64,19 @@ export function depreciationSupport(a: AssetForm): DepreciationSupport {
   if (a.acquisitionCause === "carryover_gift") {
     return unsupported("배우자·직계존비속 이월과세는 증여자의 취득가액을 승계하므로 증여자의 감가상각 이력이 필요해 아직 입력받지 않습니다.");
   }
+  /**
+   * 겸용주택 — **상가건물분**으로 받는다(엔진 `commercialBuildingDepreciation`, 계획서 `mixed-use-sale-split-basis.plan.md` §4.3).
+   * 값은 최상위 `depreciationAmount`가 아니라 겸용 페이로드로만 실린다(④ `buildMixedUsePayload`) — 최상위 ④는 문맥 없이
+   * 이 함수를 부르므로 겸용에서 항상 unsupported가 되어 이중 전송이 없다.
+   */
   if (a.assetKind === "housing" && a.isMixedUseHouse) {
-    return unsupported("겸용주택은 주택분·상가분으로 나눠 계산하므로 건물 파트별 감가상각비를 아직 입력받지 않습니다.");
+    const scope = mixedSaleSplitScope(a, { isSingleAsset: ctx?.isSingleAsset === true });
+    if (scope.status === "ok") return { status: "ok" };
+    return unsupported(
+      scope.status === "blocked"
+        ? `겸용주택 상가건물 감가상각비: ${scope.reason}`
+        : "겸용주택은 주택분·상가분으로 나눠 계산하므로 건물 파트별 감가상각비를 아직 입력받지 않습니다.",
+    );
   }
   if (a.parcelMode) {
     return unsupported("여러 필지 모드는 필지별로 계산하므로 감가상각비를 아직 입력받지 않습니다.");

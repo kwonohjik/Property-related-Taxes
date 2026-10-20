@@ -10,6 +10,8 @@
  * (memory `feedback_800line_split_export_preservation`).
  */
 
+import { buildingDirectShare, isConversionAcq, perPartEstimatedAcq } from "./mixed-use-sale-split";
+import type { MixedSalePart } from "./mixed-use-sale-split";
 import { estimatedDeductionRate } from "./legal-codes";
 import { calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
@@ -131,6 +133,11 @@ export function calcHousingGainSplit(
    * 판정은 오케스트레이터가 **자산 단위**로 한다(`general-building-swap.ts:144-148` 교리).
    */
   swapToDirect?: boolean,
+  /**
+   * 새 안분(계약서 구분·감정가액) 주입값 — `prepareMixedSaleSplit`이 정한 이 파트의 토지·건물 양도가액과 공통 양도비 몫.
+   * 없으면 종전 기준시가 비율 경로를 한 줄도 바꾸지 않는다(계획서 `mixed-use-sale-split-basis.plan.md` §4.1-2).
+   */
+  salePart?: MixedSalePart,
 ): HousingGainSplit {
   const housingEstimatedAcq = housingAcqResult.estimatedAcq;
   const effectiveAcqDerived = acqDerived ?? derived;
@@ -395,14 +402,18 @@ export function calcHousingGainSplit(
   const acqLandRatio = acqTotal > 0 ? acqLandStd / acqTotal : 0.5;
   const transferLandRatio = transferTotal > 0 ? transferLandStd / transferTotal : acqLandRatio;
 
-  // 양도가액 안분 — 양도시 비율
-  const landTransferPrice = Math.floor(housingTransferPrice * transferLandRatio);
-  const buildingTransferPrice = housingTransferPrice - landTransferPrice;
+  // 양도가액 안분 — 양도시 비율 (새 안분이면 주입값)
+  const landTransferPrice = salePart ? salePart.land : Math.floor(housingTransferPrice * transferLandRatio);
+  const buildingTransferPrice = salePart ? salePart.building : housingTransferPrice - landTransferPrice;
 
   // 취득가액 안분 — 취득시 비율.
   // §97②2호 단서(나목) 채택 시에는 **차감하지 않는다**(가목에 이미 포함 — 이중차감 금지).
-  const landAcqPrice = swapToDirect ? 0 : Math.floor(housingEstimatedAcq * acqLandRatio);
-  const buildingAcqPrice = swapToDirect ? 0 : housingEstimatedAcq - landAcqPrice;
+  // 새 안분 + 환산이면 **파트별 환산**(Q-8): 토지·건물은 별개 자산이라 각 양도가액 × 취득시/양도시 기준시가.
+  const perPart = salePart && isConversionAcq(asset)
+    ? perPartEstimatedAcq(salePart, { acqLandStd, acqBuildingStd, transferLandStd, transferBuildingStd })
+    : undefined;
+  const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : Math.floor(housingEstimatedAcq * acqLandRatio);
+  const buildingAcqPrice = swapToDirect ? 0 : perPart ? perPart.building : housingEstimatedAcq - landAcqPrice;
 
   // 개산공제(§163⑥, 취득시 기준시가 × 3%). 상속·증여(§163⑨)·매매실가는 미적용 —
   // 실제 필요경비(자본적지출·양도비)를 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
@@ -427,15 +438,19 @@ export function calcHousingGainSplit(
   const commonCapexHousing = apportionAcquisitionPrice(
     asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived, inheritedCapexStdOverride(asset, effectiveAcqDerived),
   ).housingAcqPrice;
-  const commonTransferExpHousing = apportionTransferPrice(
-    asset.transferExpense ?? 0, asset, derived,
-  ).housingTransferPrice;
+  // 새 안분이면 공통 양도비는 4파트 양도가액 비율(§100② 후단 · 계획서 R-2) — 토지·건물도 양도가액 비율.
+  const commonTransferExpHousing = salePart
+    ? salePart.transferExpense
+    : apportionTransferPrice(asset.transferExpense ?? 0, asset, derived).housingTransferPrice;
   const necessaryExpensePair = () =>
     resolvePartNecessaryExpense({
       partDirect: swapToDirect ? undefined : asset.housingInheritedExpense,
       commonCapitalExpenditure: commonCapexHousing,
       commonTransferExpense: commonTransferExpHousing,
-      acqLandStd, acqBuildingStd, transferLandStd, transferBuildingStd,
+      acqLandStd, acqBuildingStd,
+      transferLandStd: salePart ? salePart.land : transferLandStd,
+      transferBuildingStd: salePart ? salePart.building : transferBuildingStd,
+      buildingOnlyTransferExpense: buildingDirectShare(asset, derived, "housing"),
     });
   const { landAppraisalDed, buildingAppraisalDed } =
     usesDeemedAcq || swapToDirect ? necessaryExpensePair() : housingLumpPair;
