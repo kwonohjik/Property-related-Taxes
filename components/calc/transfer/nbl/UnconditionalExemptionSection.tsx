@@ -75,11 +75,19 @@ export function UnconditionalExemptionSection({
       */}
       {asset.acquisitionCause === "inheritance" && (
         <ToneCard tone="violet">
-          <p className="text-caption" data-testid="nbl-uncond-inherit-auto-notice">
-            상속받은 토지입니다. 2006.12.31. 이전 상속 후 2009.12.31.까지 양도한 농지·임야·목장용지(소득령 §168의14③1호)와
-            도시지역 농지로서 상속개시일부터 5년 이내에 양도하는 토지(③4호 나목)는 취득일 칸의
-            상속개시일({asset.acquisitionDate || "취득일 칸에 입력"})로 자동 판정하므로 따로 선택하지 않습니다.
-          </p>
+          {asset.nonHeirBequest ? (
+            <p className="text-caption" data-testid="nbl-uncond-inherit-auto-notice">
+              상속인이 아닌 사람이 유증·사인증여로 받은 토지라 상속 특례(소득령 §168의14③1호·1호의2·3호 나목 취득일
+              소급·4호 나목)를 적용하지 않습니다(서면5팀-927 · 사전-2024-법규재산-0820 · 부동산거래관리과-0994 ·
+              기준-2019-법령해석재산-0324).
+            </p>
+          ) : (
+            <p className="text-caption" data-testid="nbl-uncond-inherit-auto-notice">
+              상속받은 토지입니다. 2006.12.31. 이전 상속 후 2009.12.31.까지 양도한 농지·임야·목장용지(소득령 §168의14③1호)와
+              도시지역 농지로서 상속개시일부터 5년 이내에 양도하는 토지(③4호 나목)는 취득일 칸의
+              상속개시일({asset.acquisitionDate || "취득일 칸에 입력"})로 자동 판정하므로 따로 선택하지 않습니다.
+            </p>
+          )}
         </ToneCard>
       )}
 

@@ -7,6 +7,7 @@ import { isBeforeCoInheritedRankingClause } from "../data/co-inherited-ranking-c
 import { isDecedentGiftExclusionApplicable } from "../data/inheritance-general-house-era";
 import { INHERITED_HOUSE } from "../legal-codes";
 import {
+  isHeirInheritedHouse,
   isSecondClausePoolHouse,
   resolveInheritedHouseExclusionForJudgment,
   resolveInheritedSellingHouseId,
@@ -37,11 +38,22 @@ import type { OneHouseJudgeInput, OneHouseUnmetException } from "./types";
  */
 export function collectInheritedUnmet(input: OneHouseJudgeInput): OneHouseUnmetException[] {
   const sellingId = resolveInheritedSellingHouseId(input);
-  const candidates = (input.houses ?? []).filter((h) => h.isInherited && h.id !== sellingId);
-  if (candidates.length === 0) return []; // 선언하지 않은 특례는 말하지 않는다
+  const others = (input.houses ?? []).filter((h) => h.id !== sellingId);
+  const candidates = others.filter(isHeirInheritedHouse);
+  const nonHeirCount = others.filter((h) => h.isInherited === true && !isHeirInheritedHouse(h)).length;
+  if (candidates.length === 0 && nonHeirCount === 0) return []; // 선언하지 않은 특례는 말하지 않는다
 
   const x = resolveInheritedHouseExclusionForJudgment(input);
   const reasons: string[] = [];
+
+  // 계획서 `docs/00-pm/nbl-bequest-non-heir.plan.md` §4-4 — 수유자 행은 정본(`isHeirInheritedHouse`)이 상속주택에서 뺀다.
+  if (nonHeirCount > 0) {
+    reasons.push(
+      `상속인이 아닌 사람이 유증·사인증여로 받은 주택 ${nonHeirCount}채는 상속주택으로 보지 않아 주택 수에서 빼지 않았습니다` +
+        "(부동산거래관리과-307 — 법정상속인이 아닌 자가 유증으로 취득한 주택은 상속받은 주택이 아님). " +
+        "공동상속주택(§155③)과 조합원입주권·분양권 특례(§156의2⑦ · §156의3⑤)에는 직접 해석이 없어 같은 기준으로 판정했습니다 — 확인이 필요합니다.",
+    );
+  }
 
   // OH-12c — 증여 제외 괄호는 2018-02-13 이후 증여분부터(제28637호 부칙 제16조). 정본 leaf로 같은 판정을 한다.
   // L-11 — 괄호는 §155② 풀(단독상속·최대지분 공동상속)에만 걸린다(「이하 이 항에서」). ② 풀 후보가 있을 때만 말한다.

@@ -239,6 +239,8 @@ export const houseSchema = z.object({
   acquisitionDate: z.string().date(),
   officialPrice: z.number().int().nonnegative(),
   isInherited: z.boolean(),
+  /** ⑫ 상속인이 아닌 사람이 유증·사인증여로 받은 행 — 1주택 상속 특례에서 상속주택으로 보지 않는다 */
+  nonHeirBequest: z.boolean().optional(),
   isLongTermRental: z.boolean(),
   isApartment: z.boolean().default(false),
   isOfficetel: z.boolean().default(false),

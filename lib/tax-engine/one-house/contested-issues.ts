@@ -22,7 +22,11 @@
  */
 import { INHERITED_HOUSE, TRANSFER } from "../legal-codes";
 import { isBeforeCoInheritedRankingClause } from "../data/co-inherited-ranking-clause-era";
-import { passesHouseholdGate, resolveInheritedHouseExclusionFromInput } from "../transfer-inheritance-exclusion";
+import {
+  isHeirInheritedHouse,
+  passesHouseholdGate,
+  resolveInheritedHouseExclusionFromInput,
+} from "../transfer-inheritance-exclusion";
 import { deriveHouseholdHousingCount } from "./house-count";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
@@ -172,7 +176,7 @@ export type DetectedContestedIssue = {
 };
 
 function otherInheritedRows(input: TransferTaxInput): HouseInfo[] {
-  return (input.houses ?? []).filter((h) => h.isInherited === true && h.id !== input.sellingHouseId);
+  return (input.houses ?? []).filter((h) => isHeirInheritedHouse(h) && h.id !== input.sellingHouseId);
 }
 
 function withRows(input: TransferTaxInput, ids: string[], patch: (h: HouseInfo) => HouseInfo): TransferTaxInput {

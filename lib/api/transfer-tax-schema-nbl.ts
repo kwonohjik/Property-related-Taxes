@@ -86,6 +86,8 @@ export const nonBusinessLandRawSchema = z.object({
   acquisitionCause: z.string().optional(),
   decedentAcquisitionDate: z.string().optional(),
   donorAcquisitionDate: z.string().optional(),
+  // 상속인이 아닌 수유자(유증·사인증여) — 상속 특례 미적용 (strip 방지)
+  nonHeirBequest: z.boolean().optional(),
   // 공통
   nblDeemedTransferReason: z.string().optional(),
   nblDeemedTransferDate: z.string().optional(),

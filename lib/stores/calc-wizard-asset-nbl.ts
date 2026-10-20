@@ -153,6 +153,11 @@ export interface HouseEntry {
    * 미입력이면 구성 판정을 하지 못해 합가 특례는 불성립 + 확인 필요다. ⑧이 미입력을 막는다(구 저장분 호환).
    */
   mergeOrigin?: "seller_side" | "counterpart_side" | "second_merge_side";
+  /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받은 주택(isInherited=true 시에만 의미). 1세대1주택 상속 특례에서 상속주택으로
+   * 보지 않는다(부동산거래관리과-307). 다주택 중과는 지금처럼 상속주택으로 본다(계획서 `nbl-bequest-non-heir.plan.md` §4-4).
+   */
+  nonHeirBequest?: boolean;
   /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
   inheritedDate?: string;
   /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */

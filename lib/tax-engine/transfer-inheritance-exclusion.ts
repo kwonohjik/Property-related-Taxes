@@ -38,6 +38,17 @@ export function isSecondClausePoolHouse(
   return !h.isCoInherited || h.isLargestCoInheritedShareholder === true;
 }
 
+/**
+ * 1세대1주택 상속 특례가 「상속받은 주택」으로 보는 행 — 상속인이 아닌 사람이 유증·사인증여로 받은 행은 빠진다.
+ * 「법정상속인이 아닌 자가 … 유증으로 취득한 주택은 … 상속받은 주택에 해당하지 아니함」(부동산거래관리과-307 — §155②).
+ * §155③ · §156의2⑤⑦ · §156의3⑤는 직접 해석이 없어 같은 낱말로 읽고 확인 필요로 밝힌다(`collectInheritedUnmet`).
+ * 1주택 쪽 소비 지점 전부가 이 술어를 쓴다. 다주택 중과·조특법 §71의2는 `isInherited`를 그대로 읽는다
+ * (계획서 `docs/00-pm/nbl-bequest-non-heir.plan.md` §4-4).
+ */
+export function isHeirInheritedHouse(h: Pick<HouseInfo, "isInherited" | "nonHeirBequest">): boolean {
+  return h.isInherited === true && h.nonHeirBequest !== true;
+}
+
 /** UTC 달력일 키 — date-coerce 운영 경로(UTC 자정)와 같은 규약. */
 const dayKey = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
@@ -205,7 +216,7 @@ export function resolveInheritedHouseExclusion(
   // D6 — 같은 상속(상속개시일 같은 날)으로 받은 상속주택은 양도 주택이 「일반주택」이 아니어서 제외하지 않는다.
   const fromSameInheritance = (h: HouseInfo) =>
     soldInheritedKey !== undefined && h.inheritedDate !== undefined && dayKey(h.inheritedDate) === soldInheritedKey;
-  const otherInherited = houses.filter((h) => h.isInherited && h.id !== sellingHouseId);
+  const otherInherited = houses.filter((h) => isHeirInheritedHouse(h) && h.id !== sellingHouseId);
   const sameInheritanceAsSoldCount = otherInherited.filter(fromSameInheritance).length;
   const inheritedOthers = otherInherited.filter(
     (h) => !fromSameInheritance(h) && !(generalHouseGiftedFromDecedentWithin2yr && isSecondClausePoolHouse(h)),

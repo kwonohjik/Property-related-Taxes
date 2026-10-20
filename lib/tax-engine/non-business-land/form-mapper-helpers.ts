@@ -105,6 +105,16 @@ type ParseNumber = (s: string) => number | undefined;
 const INHERITED_OR_GIFTED_CAUSES: ReadonlySet<string> = new Set(["inheritance", "gift", "carryover_gift"]);
 
 /**
+ * 상속인이 아닌 사람(수유자)이 유증·사인증여로 받은 토지인가 — 취득원인은 상속이지만 「상속받은」 토지가 아니다.
+ * 상속 특례(③1호 · ③1의2호 · ③3호 나목 소급 · ③4호 나목 · 임야·목장 상속 3년)를 모두 적용하지 않는다:
+ * 서면5팀-927(③1호) · 사전-2024-법규재산-0820(③1의2호) · 부동산거래관리과-0994(③3호) · 기준-2019-법령해석재산-0324(③4호).
+ * 임야·목장 3년은 직접 해석이 없어 엔진이 확인 필요로 밝힌다(계획서 `docs/00-pm/nbl-bequest-non-heir.plan.md` §4-2).
+ */
+export function isNonHeirBequest(a: Record<string, unknown>): boolean {
+  return asString(a.acquisitionCause) === "inheritance" && asBool(a.nonHeirBequest);
+}
+
+/**
  * 선언·양도원인만으로 무조건 의제 판정에 들어가는가 — 취득원인에서 자동으로 정하는 상속 사유(③1호·③4호 나목)는 빼고 본다.
  * 지목 미선택 자산의 진입 게이트(`mapAssetToNblInput`)가 쓴다. 자동 사유는 지목(농·임·목 / 농지)이 있어야만 성립하기 때문이다.
  */
@@ -136,7 +146,7 @@ export function buildUnconditionalExemption(
   // 그 외(직접취득·일반증여)는 undefined → 엔진이 양수인 취득일로 fallback.
   const cause = asString(a.acquisitionCause);
   const expropriationAcquisitionDate =
-    cause === "inheritance"
+    cause === "inheritance" && !isNonHeirBequest(a)
       ? parseDate(asString(a.decedentAcquisitionDate))
       : cause === "carryover_gift"
         ? parseDate(asString(a.donorAcquisitionDate))
@@ -145,7 +155,7 @@ export function buildUnconditionalExemption(
     isInheritedBefore2007:               inheritanceDate !== undefined,
     inheritanceDate,
     ownedOver20YearsBefore2007:          asBool(a.nblExemptLongOwned20y),
-    isAncestor8YearFarming:              asBool(a.nblExemptAncestor8YearFarming) && INHERITED_OR_GIFTED_CAUSES.has(cause),
+    isAncestor8YearFarming:              asBool(a.nblExemptAncestor8YearFarming) && INHERITED_OR_GIFTED_CAUSES.has(cause) && !isNonHeirBequest(a),
     isPublicExpropriation:               isExpropriation,
     // 고시일 fallback: NBL 섹션 미입력 시 Step1 단일 소스(expropriationNoticeDate)
     publicNoticeDate:                    parseDate(asString(a.nblExemptPublicNoticeDate) || asString(a.expropriationNoticeDate)),
@@ -189,10 +199,12 @@ export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemin
  * 상속 자산에서 안 켜거나 날짜를 틀리면 비사업용이 됐다(계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md`).
  * 그 입력은 이제 읽지 않는다 — 옛 저장값이 남아 있어도 판정에 닿지 않는다.
  *
+ * 상속인이 아닌 수유자(`isNonHeirBequest`)는 「상속받은」 토지가 아니어서 undefined다.
+ *
  * @returns 상속이면 취득일(상속개시일), 아니면 undefined
  */
 export function resolveInheritanceStartDate(a: Record<string, unknown>, acquisitionDate: Date): Date | undefined {
-  return asString(a.acquisitionCause) === "inheritance" ? acquisitionDate : undefined;
+  return asString(a.acquisitionCause) === "inheritance" && !isNonHeirBequest(a) ? acquisitionDate : undefined;
 }
 
 export function buildForestDetail(

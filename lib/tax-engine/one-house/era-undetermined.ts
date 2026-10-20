@@ -71,7 +71,7 @@ import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import { resolveRental4hoRegistration } from "./rental-registration-4ho";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
-import { resolveInheritedHouseExclusionForJudgment } from "../transfer-inheritance-exclusion";
+import { isHeirInheritedHouse, resolveInheritedHouseExclusionForJudgment } from "../transfer-inheritance-exclusion";
 import { INHERITANCE_GENERAL_HOUSE_HELD_START } from "../data/inheritance-general-house-era";
 import {
   HWASEONG_WINDOW_NOTICE_ID,
@@ -554,7 +554,7 @@ export function collectEraUndetermined(
   const reInheritedIds = (input.houses ?? [])
     .filter(
       (h) =>
-        h.isInherited &&
+        isHeirInheritedHouse(h) &&
         h.decedentSameHouseholdAtInheritance === true &&
         h.parentalCareMergeInheritedHouse !== true &&
         h.reInheritedFromSeparateHousehold === true,
@@ -583,7 +583,7 @@ export function collectEraUndetermined(
     input.transferDate.getTime() < SAME_HOUSEHOLD_PROVISO_TRANSFER_START.getTime() &&
     (input.houses ?? []).some(
       (h) =>
-        h.isInherited &&
+        isHeirInheritedHouse(h) &&
         h.decedentSameHouseholdAtInheritance === true &&
         h.parentalCareMergeInheritedHouse === true &&
         h.reInheritedFromSeparateHousehold !== true,
