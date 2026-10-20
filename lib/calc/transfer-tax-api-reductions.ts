@@ -8,6 +8,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import { calcReductionAcquisitionStdPrice, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -33,10 +34,15 @@ export function toSelfCultivatedExpropriatedLand(
 
 export function toEngineReductions(
   formReductions: AssetReductionForm[],
-  acquisitionCause: AssetForm["acquisitionCause"],
+  /**
+   * 그 감면을 단 자산 — 취득원인·수유자 여부로 §66⑪·⑫ 피상속인 경작기간을 싣는지 정한다(`selfFarmingDecedentAggregable`).
+   * 화면 경로는 자산을 넘긴다. 취득원인 문자열만 넘기면 수유자가 아닌 것으로 본다(종전 시그니처 호환).
+   */
+  owner: AssetForm["acquisitionCause"] | Pick<AssetForm, "acquisitionCause" | "nonHeirBequest">,
   // 파급C: 매퍼는 asset 컨텍스트 없음 → §77 고시일 fallback 소스를 명시 주입
   expropriationNoticeDate?: string,
 ) {
+  const ownerAsset = typeof owner === "object" ? owner : { acquisitionCause: owner };
   return formReductions.map((r) => {
     if (r.type === "self_farming") {
       const decedentYears = parseInt(r.decedentFarmingYears ?? "0") || 0;
@@ -60,7 +66,8 @@ export function toEngineReductions(
       return {
         type: "self_farming" as const,
         farmingYears: parseInt(r.farmingYears) || 0,
-        ...(acquisitionCause === "inheritance" && decedentYears > 0
+        // 상속인이 아닌 수유자는 합산하지 않는다(조심2021구1132) — 화면도 칸을 숨긴다(⑤·⑧과 같은 술어).
+        ...(selfFarmingDecedentAggregable(ownerAsset) && decedentYears > 0
           ? {
               decedentFarmingYears: decedentYears,
               // §66⑪ 본문 / §66⑫ 대체요건 — 둘 다 미선언이면 엔진이 합산하지 않는다

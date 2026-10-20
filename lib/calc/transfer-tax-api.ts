@@ -106,7 +106,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
   const fractionalBundleMerge = isFullFractionalBundle(form.assets, form.assetSplitMode);
 
   // ── 대표 자산 감면 (자산별 reductions 배열 + 명부 행 ⑥의 §99의4·§98의9 — 게이트는 공용 술어) ──
-  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary.acquisitionCause, primary.expropriationNoticeDate);
+  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary, primary.expropriationNoticeDate);
 
   // ── ④⑬ 비사업용 토지 정밀판정 raw 페이로드 (서버 buildNblEngineInput이 nested+Date 변환) ──
   const nblRaw = buildNonBusinessLandRaw(primary, form.transferDate);

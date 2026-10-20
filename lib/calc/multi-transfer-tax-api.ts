@@ -74,7 +74,7 @@ import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment = false) {
   const primary = form.assets?.[0];
   // 명부 행 ⑥의 §99의4·§98의9도 건별로 싣는다(단건과 같은 leaf). 감면주택 행은 아래 `specialHouseExclusions`(Q4).
-  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary?.acquisitionCause ?? "purchase", primary?.expropriationNoticeDate);
+  const reductions = toEngineReductions(primaryReductionsWithRows(form), primary ?? { acquisitionCause: "purchase" }, primary?.expropriationNoticeDate);
   const primaryKind = primary?.assetKind ?? "";
 
   // ⑬ 1990.8.30. 이전 취득 토지 기준시가 환산 — 단건과 동일 게이트·공용 헬퍼.

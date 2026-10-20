@@ -100,7 +100,7 @@ export function buildAssetPayload(
    */
   form?: TransferFormData,
 ) {
-  const reductions = toEngineReductions(asset.reductions ?? [], asset.acquisitionCause, asset.expropriationNoticeDate);
+  const reductions = toEngineReductions(asset.reductions ?? [], asset, asset.expropriationNoticeDate);
 
   // 증환지 증가분: standardPriceAtTransfer 빈값 시 당초분(primary) ㎡당 × 증가분 면적 파생.
   // ⑤·⑥·⑧과 **같은 leaf** — 규칙을 복제하면 한 곳만 빠뜨려도 조용히 어긋난다.

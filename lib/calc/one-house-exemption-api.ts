@@ -144,7 +144,7 @@ export function buildOneHouseExemptionApiBody(
      */
     reductions: toEngineReductions(
       judgmentHouseCountExclusionReductions(form),
-      primary.acquisitionCause,
+      primary,
     ),
     annualBasicDeductionUsed: 0,
     isNonBusinessLand: false,

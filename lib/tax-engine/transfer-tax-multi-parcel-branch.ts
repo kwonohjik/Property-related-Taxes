@@ -167,6 +167,7 @@ export function handleMultiParcelBranch(
     input.isUnregistered,
     undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
     expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
+    input.nonHeirBequest, // 수유자 — §69 피상속인 경작기간 미합산 · §77 불성립 고지
   );
   /**
    * §133 5년 누적 한도 — 형제 4경로(finalize·redevelopment·rental-housing-step·mixed-use)와

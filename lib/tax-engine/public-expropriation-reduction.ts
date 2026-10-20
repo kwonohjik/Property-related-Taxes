@@ -436,7 +436,7 @@ export function buildPublicExpropriationParts(
     TransferTaxInput,
     | "isSeparateAcquisition" | "landAcquisitionDate" | "acquisitionDate" | "selfOwns"
     | "acquisitionCause" | "decedentAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate"
-    | "transferDate"
+    | "transferDate" | "nonHeirBequest"
   >,
   splitDetail: SplitGainResult | undefined,
   /** 단건 STEP 7의 파트별 세율 판정 — 있으면 각 파트가 속한 호의 산출세액·과세표준을 싣는다(Q-F2c). */
@@ -450,6 +450,7 @@ export function buildPublicExpropriationParts(
     useLandCause ? input.landAcquisitionCause : input.acquisitionCause,
     input.landAcquisitionDate,
     useLandCause ? input.landDecedentAcquisitionDate : input.decedentAcquisitionDate,
+    input.nonHeirBequest,
   )!;
   const landBasis = partClauseBasisOf(partTax, ["land", "non_business_land"], input.transferDate);
   const buildingBasis = partClauseBasisOf(partTax, ["building"], input.transferDate);
@@ -527,21 +528,41 @@ function partClauseBasisOf(
  * 이월과세 시나리오 A가 취득일 자체를 증여자 취득일로 바꿔 다시 계산하고(`transfer-tax-carryover.ts`),
  * 같은 조 제2항으로 배제되면 제1항이 적용되지 않으므로 의제도 없다.
  * §77의2(대토보상)에는 같은 의제 규정이 없어 쓰지 않는다(조특령 §73에도 없음).
+ *
+ * 🔑 **상속인이 아닌 수유자(유증·사인증여)는 소급하지 않는다** — 상속개시일(`own`)로 판정한다(계획서
+ *    `sp69-77-non-heir-bequest.plan.md` Q-1 (b)). 조문은 「상속받은」뿐이고, 조세심판원은 「「조세특례제한법」에는 상속의
+ *    개념에 유증을 포함하고 있지 않는 점」을 들어 자경농지(§69) 피상속인 경작기간 합산을 수유자에게 부인했다
+ *    (조심2021구1132 · 조심2023중10792). §77에 대한 정면 해석은 확인하지 못했다 — 결과에 `NON_HEIR_BEQUEST_77_NOTE`를 싣는다.
  */
 function inheritedAcquisitionDate(
   cause: TransferTaxInput["acquisitionCause"],
   own: Date | undefined,
   decedent: Date | undefined,
+  nonHeirBequest: boolean | undefined,
 ): Date | undefined {
-  return cause === "inheritance" && decedent ? decedent : own;
+  return cause === "inheritance" && decedent && nonHeirBequest !== true ? decedent : own;
 }
 
 /** 자산 단위 §77①·§77의3 취득일 — `calcReductions`의 `expropriationAcquisitionDate` 인자. */
 export function expropriationAcquisitionDate(
-  input: Pick<TransferTaxInput, "acquisitionCause" | "acquisitionDate" | "decedentAcquisitionDate">,
+  input: Pick<TransferTaxInput, "acquisitionCause" | "acquisitionDate" | "decedentAcquisitionDate" | "nonHeirBequest">,
 ): Date | undefined {
-  return inheritedAcquisitionDate(input.acquisitionCause, input.acquisitionDate, input.decedentAcquisitionDate);
+  return inheritedAcquisitionDate(
+    input.acquisitionCause,
+    input.acquisitionDate,
+    input.decedentAcquisitionDate,
+    input.nonHeirBequest,
+  );
 }
+
+/**
+ * 수유자라 피상속인 취득일로 소급하지 않았다는 고지 — §77·§77의3이 **불성립**일 때 사유 뒤에 붙인다
+ * (`calcReductions`). 성립하면 소급 여부가 결과를 바꾸지 않아 싣지 않는다.
+ */
+export const NON_HEIR_BEQUEST_77_NOTE =
+  "상속인이 아닌 수유자(유증·사인증여)는 피상속인이 취득한 날을 취득일로 보지 않고(조특법 §77⑨·§77의3③의 「상속받은」) " +
+  "상속개시일로 판정했습니다 — 조세특례제한법에는 상속에 유증을 포함한다는 규정이 없다는 조세심판원 판단(조심2021구1132 · " +
+  "조심2023중10792, 자경농지 사안)을 따랐습니다. 이 조문에 대한 정면 해석은 확인하지 못했습니다 — 확인 필요";
 
 /** 5B 고지 — 파트별 판정으로 감면대상을 한 파트로 한정했을 때. 결과 조립(`transfer-tax-normal-return.ts`)이 경고에 싣는다. */
 export function publicExpropriationPartWiseNotice(

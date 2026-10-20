@@ -177,7 +177,7 @@ export function eligibleCountExcludedHouseIds(form: FormLike): ReadonlySet<strin
   const ids = new Set<string>();
 
   if (reductions.length > 0) {
-    const engineReductions = toEngineReductions(reductions, primary.acquisitionCause).map((r) => {
+    const engineReductions = toEngineReductions(reductions, primary).map((r) => {
       // `toEngineReductions`의 반환은 stub 분기 때문에 `type: string`으로 넓어져 있다 — 키로 좁힌다.
       if ("unsoldHouseAcquisitionDate" in r) {
         return { ...r, unsoldHouseAcquisitionDate: toOptionalDate(r.unsoldHouseAcquisitionDate) };

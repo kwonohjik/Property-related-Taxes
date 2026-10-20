@@ -433,6 +433,7 @@ export function calculateRedevelopmentTax(
     input.isUnregistered,
     undefined, // 5B 파트별 판정 — 이 경로는 범위 밖
     expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
+    input.nonHeirBequest, // 수유자 — §69 피상속인 경작기간 미합산 · §77 불성립 고지
   );
   steps.push({
     label: "감면세액",

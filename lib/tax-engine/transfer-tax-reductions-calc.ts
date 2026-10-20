@@ -55,6 +55,7 @@ import {
   type PublicExpropriationReductionResult,
   type PublicExpropriationParts,
   calculatePublicExpropriationReduction,
+  NON_HEIR_BEQUEST_77_NOTE,
 } from "./public-expropriation-reduction";
 import {
   type SelfFarmingReductionResult,
@@ -118,6 +119,20 @@ export interface ReductionsResult {
   reductionLegalBasisOverride?: string;
 }
 
+/** §77·§77의3 불성립 사유 뒤에 수유자 고지를 붙인다(`NON_HEIR_BEQUEST_77_NOTE`). 성립이거나 수유자가 아니면 그대로다. */
+function withNonHeirBequest77Note<T extends { isEligible: boolean; notEligibleReason?: string }>(
+  result: T,
+  nonHeirBequest: boolean | undefined,
+): T {
+  if (nonHeirBequest !== true || result.isEligible) return result;
+  return {
+    ...result,
+    notEligibleReason: result.notEligibleReason
+      ? `${result.notEligibleReason} — ${NON_HEIR_BEQUEST_77_NOTE}`
+      : NON_HEIR_BEQUEST_77_NOTE,
+  };
+}
+
 /**
  * 조특법 §129② — 「미등기양도자산에 대해서는 양도소득세의 비과세 및 **감면**에 관한 규정을
  * 적용하지 아니한다」(D15). 비과세 배제(소득세법 §91①)는 `checkExemption`이 맡는다.
@@ -166,6 +181,11 @@ export function calcReductions(
    * 미제공이면 `acquisitionDate`. §77의2(대토보상)·자경농지 등 다른 감면은 계속 `acquisitionDate`를 쓴다.
    */
   expropriationAcquisitionDate?: Date,
+  /**
+   * 상속인이 아닌 수유자(유증·사인증여) — §69 피상속인 경작기간을 합산하지 않는다(조특령 §66⑪·⑫ · 조심2021구1132).
+   * §77·§77의3의 피상속인 취득일 소급은 `expropriationAcquisitionDate`를 만드는 쪽이 이미 뺐다 — 여기서는 불성립 사유에 고지만 붙인다.
+   */
+  nonHeirBequest?: boolean,
 ): ReductionsResult & {
   rentalReductionDetail?: RentalReductionResult;
   newHousingReductionDetail?: NewHousingReductionResult;
@@ -364,7 +384,7 @@ export function calcReductions(
       taxBase,
       parts: publicExpropriationParts,
     });
-    publicExpropriationDetail = result;
+    publicExpropriationDetail = withNonHeirBequest77Note(result, nonHeirBequest);
     if (result.isEligible && result.reductionAmount > 0) {
       candidates.push({
         amount: result.reductionAmount,
@@ -399,7 +419,7 @@ export function calcReductions(
       basicDeduction,
       taxBase,
     });
-    gbDesignatedLandDetail = result;
+    gbDesignatedLandDetail = withNonHeirBequest77Note(result, nonHeirBequest);
     if (result.isEligible && result.reductionAmount > 0) {
       candidates.push({
         amount: result.reductionAmount,
@@ -478,6 +498,7 @@ export function calcReductions(
           decedentFarmingYears: decedent > 0 ? decedent : undefined,
           heirContinuedFarming1Year: reduction.heirContinuedFarming1Year,
           meetsDecedentAggregationAlt: reduction.meetsDecedentAggregationAlt,
+          nonHeirBequest,
           disqualifiedTaxPeriodsSelf: reduction.disqualifiedTaxPeriodsSelf,
           disqualifiedTaxPeriodsDecedent: reduction.disqualifiedTaxPeriodsDecedent,
           minFarmingYears: minYears,
@@ -514,8 +535,9 @@ export function calcReductions(
         // 레거시 경로 — 파라미터 부족 시 기존 단순 계산 유지 (하위 호환).
         // §66⑪·⑫ 합산 요건과 §66⑭ 결격 차감은 신규 엔진과 동일 규약으로 맞춘다 (D7-09·D7-10).
         const canAggregate =
-          reduction.heirContinuedFarming1Year === true ||
-          reduction.meetsDecedentAggregationAlt === true;
+          nonHeirBequest !== true &&
+          (reduction.heirContinuedFarming1Year === true ||
+            reduction.meetsDecedentAggregationAlt === true);
         const ownEff = Math.max(0, own - (reduction.disqualifiedTaxPeriodsSelf ?? 0));
         const decedentEff = canAggregate
           ? Math.max(0, decedent - (reduction.disqualifiedTaxPeriodsDecedent ?? 0))
