@@ -94,7 +94,6 @@ describe("D-2 — 전남 인구감소지역 세컨드홈 (§167의3①12 다목)
               officialPrice: 500_000_000,
               regionCriteria: "REGION",
               region: "non_capital",
-              isSecondHomeRegistered: true,
             }),
           ],
         }),

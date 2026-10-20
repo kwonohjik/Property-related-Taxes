@@ -334,12 +334,10 @@ export interface HouseInfo {
   dayCareOperationYears?: number;
   // ── ⑭ 인구감소지역 세컨드홈 ──
   /**
-   * 인구감소지역 소재 주택 여부 (소령 §167-3 ① 2호의2).
-   * isSecondHomeRegistered === true 와 함께 주택 수 산정 배제.
+   * 인구감소지역·관심지역 소재 주택 여부 (소령 §167의3①12 다·라목). 미제공 시 regionCode로 자동판정.
+   * 등록·신청 요건 없음 — 요건(2026.1.1. 이후 취득·가액·동일 시·군·구 아님)을 갖추면 주택 수 산정 배제.
    */
   isPopulationDeclineArea?: boolean;
-  /** 세컨드홈 특례 등록 여부 (인구감소지역 1주택 특례 신청) */
-  isSecondHomeRegistered?: boolean;
   /**
    * 인구감소지역 유형 (소령 §167의3①12 다·라목, 2026.1.1~).
    * "decline" 다목(인구감소지역, 수도권 밖 9억), "interest" 라목(인구감소관심지역, 4억).

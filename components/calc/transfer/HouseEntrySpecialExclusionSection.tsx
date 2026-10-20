@@ -162,25 +162,18 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
       <ToggleCard
         variant="card"
         tone="rose"
-        checked={house.isPopulationDeclineArea ?? false}
+        // 표시 fallback = 엔진(`house.isPopulationDeclineArea ?? autoKind !== null`)과 같은 술어 — store에 쓰지 않는다.
+        checked={house.isPopulationDeclineArea ?? autoPopulationAreaKind != null}
         onCheckedChange={(v) =>
           onUpdate({
             isPopulationDeclineArea: v,
-            isSecondHomeRegistered: v ? house.isSecondHomeRegistered : undefined,
             populationAreaType: v ? house.populationAreaType : undefined,
           })
         }
         title="인구감소지역 소재 주택"
-        description="소령 §167의3①12 다·라목 — 세컨드홈 특례 시 중과 주택 수에서 제외 (2026.1.1~). 중과 주택 수 전용입니다 — 1세대1주택 비과세 판정의 조특법 §71의2 인구감소지역주택은 이 칸과 무관하게 명부에서 자동 판정합니다."
+        description="소령 §167의3①12 다·라목 — 2026.1.1. 이후 취득·가액 한도 이하·취득 전 보유주택과 다른 시·군·구면 제외(등록 요건 없음). 중과 주택 수 전용 — 조특법 §71의2 인구감소지역주택은 명부에서 자동 판정합니다."
       >
         <div className="space-y-2 pt-1">
-          <ToggleCard
-            variant="chip"
-            tone="rose"
-            checked={house.isSecondHomeRegistered ?? false}
-            onCheckedChange={(v) => onUpdate({ isSecondHomeRegistered: v })}
-            title="세컨드홈 특례 등록"
-          />
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">지역 유형 (가액 한도)</label>
             {/*

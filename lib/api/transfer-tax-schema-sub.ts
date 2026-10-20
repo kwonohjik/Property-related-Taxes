@@ -325,7 +325,6 @@ export const houseSchema = z.object({
   litigationPending: z.boolean().optional(),
   isRedevelopmentZone: z.boolean().optional(),
   isPopulationDeclineArea: z.boolean().optional(),
-  isSecondHomeRegistered: z.boolean().optional(),
   populationAreaType: z.enum(["decline", "interest"]).optional(),
   // ── 조특법 §71의2① 인구감소지역주택 의제(결정 #42) — 명부에 없는 과거 사실 3종. 키가 없으면 「모름」(불성립 + 확인 필요) ──
   popDeclSoleAtAcquisition: z.enum(["yes", "no", "unknown"]).optional(),

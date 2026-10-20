@@ -428,8 +428,6 @@ export interface HouseEntry {
   isRedevelopmentZone?: boolean;
   /** 인구감소지역 소재 주택 — 소령 §167의3①12 다·라목 (세컨드홈 특례) */
   isPopulationDeclineArea?: boolean;
-  /** 세컨드홈 특례 등록 여부 — 인구감소지역 주택 수 제외 신청 */
-  isSecondHomeRegistered?: boolean;
   /** 인구감소지역 유형 (다목 decline 9억 / 라목 interest 4억) — 가액한도 구분 */
   populationAreaType?: "decline" | "interest";
 

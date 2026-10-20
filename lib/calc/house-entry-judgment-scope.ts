@@ -24,7 +24,6 @@ type SpecialExclusionFacts = Pick<
   | "isLitigationHousing"
   | "isRedevelopmentZone"
   | "isPopulationDeclineArea"
-  | "isSecondHomeRegistered"
 >;
 
 /** ④ 특수 배제 사유 카드가 소유한 사실 중 하나라도 켜져 있는가. */
@@ -33,8 +32,7 @@ export function houseEntryHasSpecialExclusionFacts(house: SpecialExclusionFacts)
     house.isUnavoidableReason === true ||
     house.isLitigationHousing === true ||
     house.isRedevelopmentZone === true ||
-    house.isPopulationDeclineArea === true ||
-    house.isSecondHomeRegistered === true
+    house.isPopulationDeclineArea === true
   );
 }
 

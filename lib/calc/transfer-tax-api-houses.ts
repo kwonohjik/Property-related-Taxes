@@ -366,7 +366,6 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       isLitigationHousing: h.isLitigationHousing,
       isRedevelopmentZone: h.isRedevelopmentZone,
       isPopulationDeclineArea: h.isPopulationDeclineArea,
-      isSecondHomeRegistered: h.isPopulationDeclineArea ? h.isSecondHomeRegistered : undefined,
       populationAreaType: h.isPopulationDeclineArea ? h.populationAreaType : undefined,
       // 조특법 §71의2① 인구감소지역주택(결정 #42) — 명부에 없는 과거 사실. 키가 없으면 엔진이 「모름」으로 읽는다(불성립 + 확인 필요).
       popDeclSoleAtAcquisition: h.popDeclSoleAtAcquisition,
