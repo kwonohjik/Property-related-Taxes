@@ -527,6 +527,31 @@ export function isSurchargeExemptInherited(house: HouseInfo, transferDate: Date)
   return passesHouseholdGate(house) && passesRankingGate(house);
 }
 
+/**
+ * §167의3①1호 — 수도권·광역시·특별자치시(소속 군·읍·면 제외) 외 지방 주택으로서 기준시가(양도 당시) 3억 이하.
+ * regionCode/regionCriteria 유무와 무관하게 단일 3억 기준 적용(local 우선, 미제공 시 non_capital). 종전 local
+ * 미배선(dead code)로 regionCode 주택 미배제 + non_capital 1억 오적용(법령 3억) 정정.
+ *
+ * 1호는 주택 수 불산입이면서 중과 배제 각 호의 하나다 — 주택 수 산정과 양도 주택 자체의 배제 backstop
+ * (`computeMultiHouseSurcharge` Step 4.5)이 같은 술어를 쓴다. 해당하지 않으면 null.
+ */
+export function resolveLowPriceLocalHouse(
+  house: HouseInfo,
+  rules: HouseCountExclusionRules,
+): { price: number; threshold: number } | null {
+  const criteria: "REGION" | "VALUE" =
+    house.regionCriteria ??
+    (house.regionCode
+      ? classifyRegionCriteriaByCode(house.regionCode)
+      : house.region === "capital"
+        ? "REGION"
+        : "VALUE");
+  if (criteria !== "VALUE") return null;
+  const threshold = rules.lowPriceThreshold.local ?? rules.lowPriceThreshold.non_capital;
+  const price = house.transferOfficialPrice ?? house.officialPrice;
+  return price <= threshold ? { price, threshold } : null;
+}
+
 export function countEffectiveHouses(
   houses: HouseInfo[],
   transferDate: Date,
@@ -577,29 +602,14 @@ export function countEffectiveHouses(
     }
 
     // 배제 3: 지역기준/가액기준 이분법 (소령 §167-3)
-    const criteria: "REGION" | "VALUE" =
-      house.regionCriteria ??
-      (house.regionCode
-        ? classifyRegionCriteriaByCode(house.regionCode)
-        : house.region === "capital"
-          ? "REGION"
-          : "VALUE");
-
-    if (criteria === "VALUE") {
-      // §167의3①1호: 수도권·광역시·특별자치시(소속 군·읍·면 제외) 외 지방 주택으로서
-      // 기준시가(양도 당시) 3억 이하 → 주택 수 제외. regionCode/regionCriteria 유무와 무관하게
-      // 단일 3억 기준 적용(local 우선, 미제공 시 non_capital). 종전 local 미배선(dead code)로
-      // regionCode 주택 미배제 + non_capital 1억 오적용(법령 3억) 정정.
-      const threshold = rules.lowPriceThreshold.local ?? rules.lowPriceThreshold.non_capital;
-      const priceToCheck = house.transferOfficialPrice ?? house.officialPrice;
-      if (priceToCheck <= threshold) {
-        excluded.push({
-          houseId: house.id,
-          reason: house.regionCriteria || house.regionCode ? "low_price_local_300" : "low_price_non_capital",
-          detail: `지방(VALUE) 기준시가 ${priceToCheck.toLocaleString()} (${threshold.toLocaleString()} 이하)`,
-        });
-        continue;
-      }
+    const lowPrice = resolveLowPriceLocalHouse(house, rules);
+    if (lowPrice) {
+      excluded.push({
+        houseId: house.id,
+        reason: house.regionCriteria || house.regionCode ? "low_price_local_300" : "low_price_non_capital",
+        detail: `지방(VALUE) 기준시가 ${lowPrice.price.toLocaleString()} (${lowPrice.threshold.toLocaleString()} 이하)`,
+      });
+      continue;
     }
 
     /**
