@@ -47,6 +47,7 @@ import {
   isTaxIncentiveRentalHousingExempt,
   isSmallNewHouseSpecial,
   isLongTermRentalDutyPeriodPending,
+  resolvePopulationDeclineSecondHome,
 } from "./multi-house-surcharge-count";
 
 // ============================================================
@@ -581,6 +582,25 @@ export function determineSurchargeExclusion(
       exclusionReasons.push({
         type: "small_new_house",
         detail: `소형 신축/미분양 특례 (전용 ${sellingHouse.exclusiveArea ?? "?"}㎡)`,
+      });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
+
+    // 다·라목(인구감소지역·관심지역 세컨드홈)도 같은 12호다. `countEffectiveHouses`가 양도 주택을 주택 수에서
+    // 빼도 나머지가 2채 이상이면 여기에 닿는다 — 종전에는 가·나목만 봐서 세컨드홈을 팔면 나머지 주택 수로
+    // 중과했다. 주택 수 산정과 같은 술어(`resolvePopulationDeclineSecondHome`)를 쓴다(경고는 산정 단계가 이미 냈다).
+    if (resolvePopulationDeclineSecondHome(sellingHouse, input.houses, input.presaleRights, input.transferDate)?.qualifies) {
+      const basis =
+        countedRightCount > 0
+          ? effectiveHouseCount >= 3
+            ? MULTI_HOUSE.SECOND_HOME_SELF_HOUSE_RIGHT_3PLUS_BASIS
+            : MULTI_HOUSE.SECOND_HOME_SELF_HOUSE_RIGHT_ONE_EACH_BASIS
+          : effectiveHouseCount >= 3
+            ? MULTI_HOUSE.SECOND_HOME_SELF_THREE_HOUSE_BASIS
+            : MULTI_HOUSE.SECOND_HOME_SELF_TWO_HOUSE_BASIS;
+      exclusionReasons.push({
+        type: "population_decline_second_home",
+        detail: `양도 주택이 인구감소지역 세컨드홈(취득 ${sellingHouse.acquisitionDate.toISOString().slice(0, 10)}) — 중과 배제 (${basis})`,
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }

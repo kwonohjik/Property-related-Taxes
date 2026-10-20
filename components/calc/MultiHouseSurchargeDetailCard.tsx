@@ -57,6 +57,7 @@ const EXCLUSION_REASON_LABEL: Record<string, string> = {
   daycare_center_5years: "어린이집 5년 이상",
   tax_incentive_rental: "조특법 감면 임대주택",
   small_new_house: "소형 신축·미분양 중과배제",
+  population_decline_second_home: "인구감소지역 세컨드홈 양도 — 중과배제",
   unavoidable_reason_two_house: "2주택 부득이한 사유 (취학·근무·질병)",
   unavoidable_outside_capital: "수도권 밖 부득이한 사유 주택 (§155⑧)",
   low_price_two_house: "2주택 기준시가 1억 이하 소형",

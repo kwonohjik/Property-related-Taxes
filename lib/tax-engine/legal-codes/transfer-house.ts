@@ -39,6 +39,14 @@ export const MULTI_HOUSE = {
   HOUSE_COUNT_RULE:               "소득세법 시행령 §167의3",
   /** 소득세법 시행령 §167의3①12 다·라목 — 인구감소지역/관심지역 세컨드홈 주택 수 산정 배제 (2026.1.1~) */
   SECOND_HOME_DEPOPULATION:       "소득세법 시행령 §167의3①12 다·라목",
+  /**
+   * 양도 주택 **자체**가 12호 다·라목 세컨드홈일 때의 중과 배제 근거 — 세대 주택·권리 수로 호가 갈린다
+   * (3주택+ §167의3①12호 직접 · 2주택 §167의10①12호 · 주택+권리 각 1 §167의11①11호 · 합 3+ §167의4③6호).
+   */
+  SECOND_HOME_SELF_THREE_HOUSE_BASIS:      "소득세법 시행령 §167의3①12호 다·라목",
+  SECOND_HOME_SELF_TWO_HOUSE_BASIS:        "소득세법 시행령 §167의10①12호",
+  SECOND_HOME_SELF_HOUSE_RIGHT_ONE_EACH_BASIS: "소득세법 시행령 §167의11①11호",
+  SECOND_HOME_SELF_HOUSE_RIGHT_3PLUS_BASIS: "소득세법 시행령 §167의4③6호",
   /** 인구감소관심지역(라목)·기타 세컨드홈 기준시가 한도 4억 */
   POP_DECLINE_PRICE_CAP_DEFAULT:  400_000_000,
   /** 수도권 밖 인구감소지역(다목) 세컨드홈 기준시가 한도 9억 */
