@@ -71,7 +71,7 @@ function FilingDeadlineCounter({ deadline }: { deadline: string }) {
   return (
     <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${
       isPast
-        ? "bg-destructive/20 text-destructive"
+        ? "bg-destructive/10 dark:bg-destructive/20 text-destructive"
         : isUrgent
         ? "bg-red-100 text-red-700 animate-pulse"
         : "bg-green-100 text-green-800"
