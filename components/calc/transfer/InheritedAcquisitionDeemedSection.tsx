@@ -55,7 +55,7 @@ export function InheritedAcquisitionDeemedSection({ asset, onChange, transferDat
   if (!mode) return null;
 
   return (
-    <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/3 p-3">
+    <div className="space-y-3 rounded-lg border border-dashed border-primary/40 bg-primary/3 py-3 px-2 sm:px-3">
       {/* 헤더 — 상속개시일 + 모드 배지 + 법령 링크 */}
       <div className="flex items-center justify-between gap-2" data-testid="deemed-section-header">
         {/* 좁은 화면에서 제목이 줄바꿈되고 배지는 다음 줄로 — 제목이 줄지 않으면 375px에서 배지가 화면 밖으로 밀린다 */}

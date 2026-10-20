@@ -58,7 +58,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
    */
   const isBurdenedGift = asset.transferType === "burdened_gift";
   return (
-    <div className="space-y-3 rounded-md border border-border bg-background p-3">
+    <div className="space-y-3 rounded-md border border-border bg-background py-3 px-2 sm:px-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">상속개시일</label>

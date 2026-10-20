@@ -334,7 +334,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20 p-3">
+    <div className="space-y-3 rounded-md border border-blue-200 bg-blue-50/40 dark:border-blue-800 dark:bg-blue-950/20 py-3 px-2 sm:px-3">
       {/* 헤더 */}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-blue-800 dark:text-blue-300">
@@ -438,7 +438,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       </div>
 
       {/* ③ 최초고시 시점 (기본 2005-04-30) — violet 톤 (중간 시점) */}
-      <div className="space-y-2 rounded-md border-2 border-violet-300 dark:border-violet-700 bg-violet-50/70 dark:bg-violet-950/30 p-3">
+      <div className="space-y-2 rounded-md border-2 border-violet-300 dark:border-violet-700 bg-violet-50/70 dark:bg-violet-950/30 py-3 px-2 sm:px-3">
         <div className="flex items-center gap-2">
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-caption font-bold text-white dark:bg-violet-500">
             2

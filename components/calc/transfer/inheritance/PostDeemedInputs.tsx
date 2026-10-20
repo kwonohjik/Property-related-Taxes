@@ -157,7 +157,7 @@ export function PostDeemedInputs({ asset, onChange, transferDate }: Props) {
   }
 
   return (
-    <div className="space-y-3 rounded-md border border-border bg-background p-3">
+    <div className="space-y-3 rounded-md border border-border bg-background py-3 px-2 sm:px-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold">
           의제취득일 이후 상속 — 상속세 신고가액을 취득가로 인정

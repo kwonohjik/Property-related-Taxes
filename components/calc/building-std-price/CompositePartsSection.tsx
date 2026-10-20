@@ -256,7 +256,8 @@ export function CompositePartsSection({
       {/* 부속시설 종류별 면적 — 계산서 Ⅳ·Ⅴ */}
       <div className="rounded-md border border-violet-200 bg-violet-50/40 p-2.5 space-y-2 dark:bg-violet-950/40">
         <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">부속시설 면적 (주차장·기계실 등 — 선택)</p>
-        <div className="grid grid-cols-2 gap-2">
+        {/* 375에서는 한 열 — 면적을 넣으면 나타나는 층 칸(96px)이 2열 카드(안쪽 85px)를 넘어 페이지 가로 스크롤을 만들었다. */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {ANCILLARY_FIELDS.map((a) => {
             const hasArea = parseArea(ancillaryAreas[a.kind]) > 0;
             return (
