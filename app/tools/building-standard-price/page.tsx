@@ -21,7 +21,7 @@ export default function BuildingStandardPricePage() {
   const [report, setReport] = useState<NtsReportModel | null>(null);
 
   return (
-    <main className="mx-auto max-w-[63rem] px-4 py-6">
+    <main className="mx-auto w-full max-w-[63rem] px-4 py-6">
       <div className="mb-3 flex justify-end print:hidden">
         <HomeButton confirmMessage="홈으로 이동하면 현재 입력 중인 값이 사라집니다.&#10;계속하시겠습니까?" />
       </div>

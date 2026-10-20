@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
 import { clickAndExpectUrl } from "./_helpers/navigation";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /**
  * E2E: 증자에 따른 이익의 증여 §39 — cap-table (다수증자·다증여자).
@@ -111,6 +112,7 @@ test.describe("§39 증자 이익 cap-table", () => {
     await expect(page.getByTestId("ci-alloc-split-value-sh-3-sh-2")).toHaveText("75,000,000");
     await expect(page.getByTestId("ci-alloc-total-sh-4")).toHaveText("100,000,000");
     await expect(page.getByTestId("ci-alloc-split-value-sh-4-sh-2")).toHaveText("25,000,000");
+    await expectNoPageHScroll(page);
   });
 
   test("수증자 선택 → 선택 1명만 이관 + 증여자 미선택 차단 (§4의2①·§68① · §53)", async ({ page }) => {

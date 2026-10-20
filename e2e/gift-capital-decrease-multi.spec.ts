@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /** E2E: 증여로 보는 경우 — 감자 §39의2 다주주(불균등 N:N 안분). 교재 두 계산사례 재현. */
 
@@ -64,5 +65,6 @@ test.describe("§39의2 감자 다주주(N:N 안분)", () => {
     await expect(page.getByTestId("cd-multi-matrix")).toContainText("180,000,000");
     await expect(page.getByTestId("cd-multi-matrix")).toContainText("60,000,000");
     await expect(page.getByTestId("cd-multi-post-value")).toContainText("4,000");
+    await expectNoPageHScroll(page);
   });
 });

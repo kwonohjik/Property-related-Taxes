@@ -13,6 +13,7 @@
 
 import { test, expect, type Locator } from "@playwright/test";
 import { addHeir, fillDateAndVerify, calcAndWaitResult, nextSteps } from "./_helpers/tax-flow";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 async function fillDateField(
   scope: Locator,
@@ -230,6 +231,12 @@ test.describe("전환사채 등의 평가 §58의2", () => {
     await nextSteps(page, 3);
     await calcAndWaitResult(page);
     await expect(page.getByText("400,000,000").first()).toBeVisible({ timeout: 30_000 });
+    await expectNoPageHScroll(page);
+    // 별지 명세 머리 줄(제목 + PDF·펼치기 버튼) — 375에서는 PDF 버튼 로딩 상태에 따라 1px로만 드러나 320에서 본다.
+    // 줄바꿈이 없으면 버튼 묶음이 줄 밖으로 나간다.
+    await page.setViewportSize({ width: 320, height: 900 });
+    const besshiHead = page.getByTestId("besshi-forms-root").locator(":scope > div").first();
+    await expect.poll(() => besshiHead.evaluate((r) => r.scrollWidth - r.clientWidth), { message: "별지 머리 줄 넘침" }).toBeLessThanOrEqual(0);
   });
 
   test("CB-7 거래소 거래 전환사채(실적有) → 512,000,000", async ({ page }) => {

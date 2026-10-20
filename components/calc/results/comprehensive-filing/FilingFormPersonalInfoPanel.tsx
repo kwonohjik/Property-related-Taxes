@@ -135,7 +135,7 @@ export function FilingFormPersonalInfoPanel({ onChange }: Props) {
         />
       </InputRow>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <div className="flex-1">
           <InputRow label="사무실(집) 전화">
             <input
@@ -176,7 +176,7 @@ export function FilingFormPersonalInfoPanel({ onChange }: Props) {
 
       <div className="border-t border-blue-200 dark:border-blue-700 pt-2">
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">세무대리인</p>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex-1">
             <InputRow label="성명">
               <input

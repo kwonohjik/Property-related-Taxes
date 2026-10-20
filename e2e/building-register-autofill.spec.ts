@@ -13,6 +13,7 @@
  * 설계: docs/02-design/features/building-register-autofill.design.md §8.3
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 const URL = "/tools/building-standard-price";
 const ADDR_ROAD = "서울 강남구 삼성로 212";
@@ -140,6 +141,7 @@ test("4. medium confidence → '확인 권장' 배지", async ({ page }) => {
 
   await expect(page.getByText(/자동 입력됨/)).toBeVisible();
   await expect(page.getByText("확인 권장")).toBeVisible();
+  await expectNoPageHScroll(page);
 });
 
 test("5. configMissing → 미설정 안내", async ({ page }) => {

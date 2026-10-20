@@ -9,6 +9,8 @@
  * ③ 그 뒤 375에 남은 44회 — 패딩 상자 8~9겹이 카드 안쪽을 73~117px로 줄인 깊은 중첩(공시지가 연도·최초 공시일),
  *    `w-fit` 그대로 늘어나던 유예 「사유」 Select, 375에도 2열이던 부속시설 면적 격자.
  * 계획서: docs/00-pm/ui-narrow-375-residual-overflow.plan.md
+ * ④ 페이지 전체 가로 스크롤 — 처음 열기만 해도 재현되는 두 화면(나머지는 각 spec 끝에서 expectNoPageHScroll).
+ * 계획서: docs/00-pm/ui-narrow-375-page-hscroll.plan.md
  *
  * 실행: E2E_PORT=3181 npx playwright test e2e/narrow-width-residual.spec.ts
  */
@@ -19,6 +21,7 @@ import { getReductionDefault } from "../components/calc/transfer/UnifiedReductio
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { expandReductionCategory } from "./_helpers/expandReductionCategory";
 import { NBL_FIELD_JUMP_CASES } from "./_helpers/validation-field-jump-cases-nbl";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /** 카드 안쪽 오른쪽 끝을 넘은 보이는 요소 수 — 1.5px까지는 반올림으로 본다 */
 async function overflowCount(card: Locator) {
@@ -236,4 +239,27 @@ test("③ 375px 건물 기준시가 부속시설 — 면적을 넣어 층 칸이
   await expect(page.getByPlaceholder("층(예 지하1)")).toHaveCount(kinds.length);
   for (const k of kinds) expect(await overflowCount(cardByLabel(page, new RegExp(`^${k}`))), `「${k}」 카드 밖으로 넘쳤다`).toBe(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth), "페이지 가로 스크롤").toBeLessThanOrEqual(375);
+});
+
+test("④ 375px 상속세 첫 화면 — 상속개시일 날짜칸이 페이지 밖으로 넘치지 않는다(640px 이상은 3열)", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/calc/inheritance-tax");
+  await page.getByText("상속개시일 (사망일)").waitFor();
+  await expectNoPageHScroll(page);
+  // 1280에서는 성명·주민등록번호·상속개시일이 한 줄 3열 그대로다
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const tops = await page.evaluate(() => {
+    const g = [...document.querySelectorAll(".grid")].find((x) => x.textContent?.includes("상속개시일 (사망일)") && x.textContent.includes("주민등록번호"))!;
+    return [...g.children].map((c) => Math.round(c.getBoundingClientRect().top));
+  });
+  expect(new Set(tops).size, "1280 3열이 아니다").toBe(1);
+});
+
+test("④ 375px 법령 리서치 — 탭 5개가 모두 화면 안에 보이고 페이지가 넘치지 않는다", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await page.goto("/law");
+  const tabs = page.getByRole("tablist").getByRole("tab");
+  await expect(tabs).toHaveCount(5);
+  await expectNoPageHScroll(page);
+  for (let i = 0; i < 5; i++) await expect(tabs.nth(i)).toBeInViewport({ ratio: 1 });
 });

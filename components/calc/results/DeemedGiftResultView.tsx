@@ -602,31 +602,33 @@ export function DeemedGiftResultView({
       {result.mergerMatrix && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 dark:bg-emerald-950/40" data-testid="merger-matrix">
           <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">수증자별 증여이익 (§38 합병 — 주주 매트릭스)</p>
-          <table className="mt-2 w-full text-sm">
-            <thead>
-              <tr className="text-xs text-muted-foreground">
-                <th className="text-left font-medium">수증자</th>
-                <th className="text-right font-medium">차감전</th>
-                <th className="text-right font-medium">자기증여</th>
-                <th className="text-right font-medium">순이익</th>
-                <th className="text-right font-medium">과세</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.mergerMatrix.recipients.map((r, i) => (
-                <tr key={i} className="border-t border-emerald-100">
-                  <td className="py-1.5 pr-2 text-emerald-700 dark:text-emerald-300">{r.name.trim() || "주주"}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.grossGain)}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{r.selfGift > 0 ? formatKRW(r.selfGift) : "-"}</td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.netGain)}</td>
-                  {/* 영리법인 제외는 기준금액 미달과 구별해 사유를 적는다(「상증법」§2 9호·§4의2①·③) */}
-                  <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">
-                    {r.applied ? "과세" : r.excludedReason ? "제외 — 영리법인 수증자" : "제외"}
-                  </td>
+          <div className="mt-2 overflow-x-auto print:overflow-visible">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-muted-foreground">
+                  <th className="text-left font-medium">수증자</th>
+                  <th className="text-right font-medium">차감전</th>
+                  <th className="text-right font-medium">자기증여</th>
+                  <th className="text-right font-medium">순이익</th>
+                  <th className="text-right font-medium">과세</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {result.mergerMatrix.recipients.map((r, i) => (
+                  <tr key={i} className="border-t border-emerald-100">
+                    <td className="py-1.5 pr-2 text-emerald-700 dark:text-emerald-300">{r.name.trim() || "주주"}</td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.grossGain)}</td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{r.selfGift > 0 ? formatKRW(r.selfGift) : "-"}</td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.netGain)}</td>
+                    {/* 영리법인 제외는 기준금액 미달과 구별해 사유를 적는다(「상증법」§2 9호·§4의2①·③) */}
+                    <td className="py-1.5 pl-2 text-right text-xs text-muted-foreground">
+                      {r.applied ? "과세" : r.excludedReason ? "제외 — 영리법인 수증자" : "제외"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-3 text-xs font-semibold text-emerald-700 dark:text-emerald-300">증여자별 안분</p>
           {result.mergerMatrix.recipients.map((rec, i) => {
             const alloc = result.mergerMatrix!.allocation[rec.id] ?? {};

@@ -10,6 +10,7 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { setupAddress } from "./_helpers/fill-address";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 function inputByLabel(scope: Page | Locator, labelText: string): Locator {
   return scope
@@ -237,6 +238,7 @@ test.describe("세무사 모드 — 수정신고/경정청구 진입 시 의뢰�
     // 5. 검증 — 의뢰인 선택 관문 미노출 + 곧바로 수정신고 배너
     await expect(page.getByText(/수정신고 작성 중/)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("heading", { name: "의뢰인 선택" })).toHaveCount(0);
+    await expectNoPageHScroll(page);
   });
 });
 

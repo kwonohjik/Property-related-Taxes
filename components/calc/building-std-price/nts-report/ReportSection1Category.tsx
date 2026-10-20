@@ -24,62 +24,64 @@ export function ReportSection1Category({
   return (
     <section className="mb-3">
       <h4 className="mb-1 text-xs font-bold text-black">Ⅰ. 구분</h4>
-      <table className="w-full border-collapse text-black">
-        <thead>
-          <tr>
-            <th className={TH} rowSpan={2}>
-              세목별
-            </th>
-            <th className={TH} colSpan={3}>
-              양도소득세
-            </th>
-            <th className={TH} rowSpan={2}>
-              상속세
-            </th>
-            <th className={TH} rowSpan={2}>
-              증여세
-            </th>
-          </tr>
-          <tr>
-            <th className={TH}>양도당시</th>
-            <th className={TH}>2001.1.1이후 취득</th>
-            <th className={TH}>2000.12.31이전 취득</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className={TH}>작성구분</td>
-            <td className={TD} data-testid="nts-bsp-1-transfer">
-              {mark("transfer", markCell)}
-              {acqNoteLabel ? acqNoteLabel : ""}
-            </td>
-            <td className={TD} data-testid="nts-bsp-1-acq2001">
-              {mark("acq2001", markCell)}
-            </td>
-            <td className={TD} data-testid="nts-bsp-1-acq2000">
-              {mark("acq2000", markCell)}
-            </td>
-            <td className={TD} data-testid="nts-bsp-1-inh">
-              {mark("inheritance", markCell)}
-            </td>
-            <td className={TD} data-testid="nts-bsp-1-gift">
-              {mark("gift", markCell)}
-            </td>
-          </tr>
-          <tr>
-            <td className={TH}>일 자</td>
-            <td className={TD} data-testid="nts-bsp-1-transfer-date">
-              {markCell === "transfer" ? dateLabel : ""}
-            </td>
-            <td className={TD}>{markCell === "acq2001" ? dateLabel : ""}</td>
-            <td className={TD} data-testid="nts-bsp-1-acq2000-date">
-              {markCell === "acq2000" ? dateLabel : ""}
-            </td>
-            <td className={TD}>{markCell === "inheritance" ? dateLabel : ""}</td>
-            <td className={TD}>{markCell === "gift" ? dateLabel : ""}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="overflow-x-auto print:overflow-visible">
+        <table className="w-full border-collapse text-black">
+          <thead>
+            <tr>
+              <th className={TH} rowSpan={2}>
+                세목별
+              </th>
+              <th className={TH} colSpan={3}>
+                양도소득세
+              </th>
+              <th className={TH} rowSpan={2}>
+                상속세
+              </th>
+              <th className={TH} rowSpan={2}>
+                증여세
+              </th>
+            </tr>
+            <tr>
+              <th className={TH}>양도당시</th>
+              <th className={TH}>2001.1.1이후 취득</th>
+              <th className={TH}>2000.12.31이전 취득</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className={TH}>작성구분</td>
+              <td className={TD} data-testid="nts-bsp-1-transfer">
+                {mark("transfer", markCell)}
+                {acqNoteLabel ? acqNoteLabel : ""}
+              </td>
+              <td className={TD} data-testid="nts-bsp-1-acq2001">
+                {mark("acq2001", markCell)}
+              </td>
+              <td className={TD} data-testid="nts-bsp-1-acq2000">
+                {mark("acq2000", markCell)}
+              </td>
+              <td className={TD} data-testid="nts-bsp-1-inh">
+                {mark("inheritance", markCell)}
+              </td>
+              <td className={TD} data-testid="nts-bsp-1-gift">
+                {mark("gift", markCell)}
+              </td>
+            </tr>
+            <tr>
+              <td className={TH}>일 자</td>
+              <td className={TD} data-testid="nts-bsp-1-transfer-date">
+                {markCell === "transfer" ? dateLabel : ""}
+              </td>
+              <td className={TD}>{markCell === "acq2001" ? dateLabel : ""}</td>
+              <td className={TD} data-testid="nts-bsp-1-acq2000-date">
+                {markCell === "acq2000" ? dateLabel : ""}
+              </td>
+              <td className={TD}>{markCell === "inheritance" ? dateLabel : ""}</td>
+              <td className={TD}>{markCell === "gift" ? dateLabel : ""}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

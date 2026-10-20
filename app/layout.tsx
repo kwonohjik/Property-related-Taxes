@@ -71,7 +71,8 @@ export default function RootLayout({
             <EnterKeyNavigationProvider />
             <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
               <div className="mx-auto flex h-14 max-w-4xl items-center px-4">
-                <span className="font-semibold text-sm shrink-0">한국 부동산 세금 계산기</span>
+                {/* 375에서 의뢰인 배너·프로필이 함께 뜨면 한 줄에 다 안 들어간다 — 제목이 먼저 말줄임된다 */}
+                <span className="font-semibold text-sm min-w-0 truncate">한국 부동산 세금 계산기</span>
                 <div className="flex-1 flex items-center justify-center gap-3">
                   <HeaderHomeLink />
                   <HeaderClientBanner />
