@@ -89,7 +89,7 @@ export function StockCarryoverComparisonCard({
                     <td className="px-3 py-2">
                       1주당 취득가액
                       {detail.donorAcquisitionMethod === "sale_case" && (
-                        <span className="block text-caption text-violet-600 dark:text-violet-400">
+                        <span className="block text-caption text-violet-700 dark:text-violet-400">
                           적용: 증여자 취득일 전후 3개월 매매사례가액 (시행령 §176의2③1호)
                         </span>
                       )}
@@ -133,7 +133,7 @@ export function StockCarryoverComparisonCard({
               : `적용 시 결정세액이 ${won(-diff)} 적어 §97의2②3호로 배제했습니다.`}
         </p>
       )}
-      <p className="text-caption text-slate-500 dark:text-slate-400">
+      <p className="text-caption text-slate-600 dark:text-slate-400">
         ※ 위 두 세액은 이 종목만의 세액이 아니라 <strong>같은 과세기간 전체의 결정세액</strong>
         입니다 — §97의2②3호가 「양도소득 결정세액」을 견주기 때문입니다.
       </p>

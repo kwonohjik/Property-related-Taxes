@@ -117,12 +117,12 @@ export function StatementRow({
       <th
         scope="row"
         colSpan={labelColSpan}
-        className={`${TD} text-left text-xs font-normal ${row.disabled ? "text-gray-500 dark:text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
+        className={`${TD} text-left text-xs font-normal ${row.disabled ? "text-gray-600 dark:text-gray-400" : "text-gray-900 dark:text-gray-100"}`}
       >
         {row.num && <span className="font-mono tabular-nums mr-1">{row.num}</span>}
         {row.label}
         {row.description && (
-          <span className="block text-caption text-gray-500 dark:text-gray-400">{row.description}</span>
+          <span className="block text-caption text-gray-600 dark:text-gray-400">{row.description}</span>
         )}
       </th>
       {cols.map((c) => (
@@ -133,7 +133,7 @@ export function StatementRow({
         >
           {row.disabled ? (
             // 입력 불가 행 — 값도 받지 않는다(서식 행 구성 보존 목적)
-            <span className="block text-center text-caption text-gray-500 dark:text-gray-400">—</span>
+            <span className="block text-center text-caption text-gray-600 dark:text-gray-400">—</span>
           ) : row.decimal ? (
             <DecimalInput
               value={value(c.col)}

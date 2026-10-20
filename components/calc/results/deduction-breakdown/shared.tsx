@@ -32,7 +32,7 @@ export function Row({
     >
       <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
       <span
-        className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}
+        className={`font-mono text-sm ${deduction ? "text-blue-700 dark:text-blue-400" : ""}`}
       >
         {value}
       </span>
@@ -150,7 +150,7 @@ export function DetailRow({
     <div className={`flex items-center justify-between px-3 py-1.5 ${indent ? "pl-6" : ""}`}>
       <span className={muted ? "text-muted-foreground" : ""}>{label}</span>
       <span
-        className={`font-mono ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}
+        className={`font-mono ${deduction ? "text-blue-700 dark:text-blue-400" : ""}`}
       >
         {value}
       </span>

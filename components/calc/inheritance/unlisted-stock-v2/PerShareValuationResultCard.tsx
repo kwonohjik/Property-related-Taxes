@@ -76,7 +76,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
   if (!result) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 p-4 text-center text-xs text-gray-500 dark:text-gray-400">
+      <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 p-4 text-center text-xs text-gray-600 dark:text-gray-400">
         입력값을 채우면 평가 결과가 자동 계산됩니다.
       </div>
     );
@@ -171,7 +171,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                 className={`mt-1 flex items-center gap-1.5 text-micro ${
                   result.estimatedProfitResult.evaluationMethod === "legacy"
                     ? "text-amber-700 dark:text-amber-300"
-                    : "text-violet-600 dark:text-violet-400"
+                    : "text-violet-700 dark:text-violet-400"
                 }`}
                 data-testid="result-evaluation-method-badge"
               >
@@ -220,7 +220,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
                   <span className="font-mono tabular-nums">{fmt(before)}</span>
                   <span>→ ×12/N개월 →</span>
                   <span className="font-mono tabular-nums font-semibold">{fmt(after)}</span>
-                  <span className="text-micro text-amber-600 dark:text-amber-400">(연환산)</span>
+                  <span className="text-micro text-amber-700 dark:text-amber-400">(연환산)</span>
                 </div>
               );
             })}
@@ -559,9 +559,9 @@ function ResultRow({ cellNum, label, value, hint, law, emphasized }: ResultRowPr
       <span className={`font-mono text-caption ${emphasized ? "text-indigo-900 font-bold dark:text-indigo-200" : "text-indigo-700 dark:text-indigo-300"}`}>{cellNum}</span>
       <div>
         <div className={`${emphasized ? "font-bold text-indigo-900 dark:text-indigo-200" : ""}`}>{label}</div>
-        {hint && <div className="text-micro text-gray-500 dark:text-gray-400">{hint}</div>}
+        {hint && <div className="text-micro text-gray-600 dark:text-gray-400">{hint}</div>}
         {law && (
-          <div className="text-micro text-indigo-600 italic flex flex-wrap items-center gap-1 dark:text-indigo-400">
+          <div className="text-micro text-indigo-700 italic flex flex-wrap items-center gap-1 dark:text-indigo-400">
             <span>{law}</span>
             {parseLawRefsForModal(law).map((r, i) => (
               <LawArticleModal

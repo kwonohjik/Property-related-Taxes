@@ -66,7 +66,7 @@ export function InstallmentScheduleCard({
           <h4 className="text-sm font-medium text-amber-800 dark:text-amber-200">
             연부연납 안내 (상증법 §71)
           </h4>
-          <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+          <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
             결정세액 2천만원 초과 — 분할납부 신청 가능 (일반 10년 / 가업상속 20년)
           </p>
         </div>
@@ -166,7 +166,7 @@ export function InstallmentScheduleCard({
       <div className="overflow-x-auto p-3">
         <table className="w-full text-xs" data-testid="installment-schedule-table">
           <thead>
-            <tr className="border-b border-gray-300 text-gray-500 dark:border-gray-600 dark:text-gray-400">
+            <tr className="border-b border-gray-300 text-gray-600 dark:border-gray-600 dark:text-gray-400">
               <th className="py-1.5 px-2 text-center">회차</th>
               <th className="py-1.5 px-2 text-left">납부일자</th>
               {useFb && <th className="py-1.5 px-2 text-center">구분</th>}
@@ -184,14 +184,14 @@ export function InstallmentScheduleCard({
                 <td className="py-1.5 px-2 text-center tabular-nums">
                   {row.installmentNo}
                   {row.installmentNo === 0 && (
-                    <span className="ml-1 text-micro text-amber-600 dark:text-amber-400">즉납</span>
+                    <span className="ml-1 text-micro text-amber-700 dark:text-amber-400">즉납</span>
                   )}
                 </td>
                 <td className="py-1.5 px-2 text-left tabular-nums">
                   {format(row.dueDate, "yyyy-MM-dd")}
                 </td>
                 {useFb && (
-                  <td className="py-1.5 px-2 text-center text-micro text-gray-500 dark:text-gray-400">
+                  <td className="py-1.5 px-2 text-center text-micro text-gray-600 dark:text-gray-400">
                     {segLabel(row.segment)}
                   </td>
                 )}

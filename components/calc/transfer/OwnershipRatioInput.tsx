@@ -157,7 +157,7 @@ export function OwnershipRatioBlock({
           <div className="flex items-start gap-2">
             <span
               aria-hidden
-              className="text-amber-600 font-bold text-base leading-none mt-0.5 dark:text-amber-400"
+              className="text-amber-700 font-bold text-base leading-none mt-0.5 dark:text-amber-400"
             >
               ⚠
             </span>

@@ -34,7 +34,7 @@ export function LotCapitalAdjustmentsCard({
       <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
         자본조정 lot별 환산 (분할·다건 모드)
       </h3>
-      <p className="text-xs text-violet-600 dark:text-violet-400">
+      <p className="text-xs text-violet-700 dark:text-violet-400">
         발생일 이전 보유 lot만 희석 — 총취득원가 불변, 1주당 단가 환산이 양도차익에 반영(소득세법 시행령 §27② · 무상감자는 집행기준 97-163-10).
         {hasDonor && (
           <>

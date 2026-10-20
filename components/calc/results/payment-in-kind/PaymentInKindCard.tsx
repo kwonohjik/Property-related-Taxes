@@ -49,14 +49,14 @@ function ReqRow({
 }) {
   return (
     <div className="flex items-start gap-2 text-xs">
-      <span className={ok ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+      <span className={ok ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"}>
         {ok ? "✓" : "✗"}
       </span>
       <span className="flex-1">
         <span className={ok ? "" : "text-rose-700 dark:text-rose-300"}>
           {label}
         </span>
-        <span className="block text-caption text-gray-500 dark:text-gray-400">{detail}</span>
+        <span className="block text-caption text-gray-600 dark:text-gray-400">{detail}</span>
       </span>
     </div>
   );
@@ -91,7 +91,7 @@ export function PaymentInKindCard({
         <h4 className="text-sm font-medium text-sky-800 dark:text-sky-200">
           물납 안내 (상증법 §73)
         </h4>
-        <p className="mt-0.5 text-xs text-sky-600 dark:text-sky-400">
+        <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">
           부동산·유가증권 물납 — 요건·허용한도·충당순서
         </p>
       </div>
@@ -142,7 +142,7 @@ export function PaymentInKindCard({
                 <span>▶ 허용한도 = ①과 ② 중 작은 금액</span>
                 <span className={amountCell}>{formatKRW(data.allowedLimit)}</span>
               </div>
-              <div className="flex justify-between text-caption text-gray-500 dark:text-gray-400">
+              <div className="flex justify-between text-caption text-gray-600 dark:text-gray-400">
                 <span>· 비상장주식 별도한도(상증령 §73④, 기준=과세가액)</span>
                 <span className={amountCell}>{formatKRW(data.unlistedStockCap)}</span>
               </div>
@@ -166,7 +166,7 @@ export function PaymentInKindCard({
                   <span>
                     {s.order} {s.label}
                     {s.note ? (
-                      <span className="text-micro text-amber-600 dark:text-amber-400"> ※{s.note}</span>
+                      <span className="text-micro text-amber-700 dark:text-amber-400"> ※{s.note}</span>
                     ) : null}
                   </span>
                   <span className={amountCell}>
@@ -179,12 +179,12 @@ export function PaymentInKindCard({
         )}
 
         {/* 경고·안내 */}
-        <div className={`space-y-1 text-caption text-gray-500 dark:text-gray-400 ${divider}`}>
+        <div className={`space-y-1 text-caption text-gray-600 dark:text-gray-400 ${divider}`}>
           <p>
             ※ 물납 신청은 상속세 신고기한까지(상속개시월 말일 + {filingMonths}개월).
           </p>
           {data.warnings.map((w, i) => (
-            <p key={i} className="text-amber-600 dark:text-amber-400">
+            <p key={i} className="text-amber-700 dark:text-amber-400">
               ※ {w}
             </p>
           ))}

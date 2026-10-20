@@ -28,7 +28,7 @@ export function MultiHouseSurchargeSection() {
               <tr key={i} className={i % 2 === 0 ? "" : "bg-muted/20"}>
                 <td className="border border-border px-3 py-2">{count}</td>
                 <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 1 ? "text-rose-700 dark:text-rose-300" : "text-foreground"}`}>{reg}</td>
-                <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 2 ? "text-rose-600 dark:text-rose-400" : "text-foreground"}`}>{nonReg}</td>
+                <td className={`border border-border px-3 py-2 text-right font-medium ${i >= 2 ? "text-rose-700 dark:text-rose-400" : "text-foreground"}`}>{nonReg}</td>
                 <td className="border border-border px-3 py-2 text-xs">{basis}</td>
               </tr>
             ))}

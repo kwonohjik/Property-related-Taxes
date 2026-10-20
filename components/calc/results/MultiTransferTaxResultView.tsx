@@ -336,7 +336,7 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
               <span className="text-muted-foreground">
                 [{labelMap.get(row.toPropertyId) ?? row.toPropertyId}]
               </span>
-              <span className="ml-auto font-medium text-red-600 dark:text-red-400">
+              <span className="ml-auto font-medium text-red-700 dark:text-red-400">
                 -{formatKRW(row.amount)}
               </span>
               <Badge
@@ -438,7 +438,7 @@ function ResultRow({
       )}
     >
       <span>{label}</span>
-      <span className={value < 0 ? "text-red-600 dark:text-red-400" : ""}>{formatKRW(value)}</span>
+      <span className={value < 0 ? "text-red-700 dark:text-red-400" : ""}>{formatKRW(value)}</span>
     </div>
   );
 }

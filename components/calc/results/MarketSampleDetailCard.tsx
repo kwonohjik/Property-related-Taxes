@@ -63,7 +63,7 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
         </div>
       )}
 
-      <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
+      <p className="text-xs text-amber-700 dark:text-amber-300/80">
         매매사례가액으로 취득가액을 산정하면 필요경비는 취득가액 + 취득 당시 기준시가 × 1%(개산공제) — 법 §97②2호 본문·영 §163⑥4.
         실제 경비로 바꾸는 §97②2호 단서(swap)는 환산취득가액에만 적용되어 비대상입니다.
       </p>

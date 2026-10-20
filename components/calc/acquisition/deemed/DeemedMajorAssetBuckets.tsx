@@ -220,7 +220,7 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
                 <span>예상 취득세 합계</span>
                 <span>{formatKRW(totals.taxTotal)}</span>
               </div>
-              <p className="text-xs text-amber-600 dark:text-amber-400">* 농어촌특별세 별도 · 지방교육세는 §151①1 본문 괄호로 비과세</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400">* 농어촌특별세 별도 · 지방교육세는 §151①1 본문 괄호로 비과세</p>
             </>
           )}
         </div>

@@ -96,7 +96,7 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
                   data-testid={`trust-asset-row-${idx}-value`}
                 />
               </div>
-              <button type="button" onClick={() => removeAsset(idx)} className="mb-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400">✕</button>
+              <button type="button" onClick={() => removeAsset(idx)} className="mb-1 rounded px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400">✕</button>
             </div>
           ))}
           <button type="button" onClick={addAsset} data-testid="trust-asset-add" className="rounded-md border border-sky-300 bg-sky-100/60 px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 dark:text-sky-200 dark:bg-sky-900/40">
@@ -201,7 +201,7 @@ export function EstateBodyTrustBenefit({ item, onUpdate }: VariantBodyProps) {
           />
         </FieldCard>
 
-        <p className="text-xs text-sky-600 dark:text-sky-400">
+        <p className="text-xs text-sky-700 dark:text-sky-400">
           동일수익자 = 신탁재산 가액 / 원본권 = 신탁재산 − 수익권 현가합 / 수익권 = 세후수익 현가합 (이자율 3%)
         </p>
       </EstateBodySection>

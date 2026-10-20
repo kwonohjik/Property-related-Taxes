@@ -94,7 +94,7 @@ export function CohabitRequirementBlock({
       </div>
 
       <CollapsibleHintCard tone="violet" summary="§23의2 동거주택공제 요건 안내">
-        <p className="text-violet-600 dark:text-violet-400 leading-relaxed">
+        <p className="text-violet-700 dark:text-violet-400 leading-relaxed">
           동거 시작일을 입력하면 10년 이상 요건 충족 여부를 미리 확인할 수 있습니다.
           상속개시일부터 소급 10년 이상(미성년자 기간 제외, 2016.1.1.~) 동거가 요건입니다.
           미입력 시 동거주택 체크박스 확인 상태를 그대로 신뢰합니다.
@@ -104,7 +104,7 @@ export function CohabitRequirementBlock({
       {/* 동거 시작일 */}
       <div className="space-y-1" data-testid="cohabit-start-date-input">
         <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">
-          동거 시작일 <span className="text-gray-400 font-normal">(선택)</span>
+          동거 시작일 <span className="text-gray-600 dark:text-gray-400 font-normal">(선택)</span>
         </label>
         <DateInput
           value={cohabitStartDate ?? ""}
@@ -149,7 +149,7 @@ export function CohabitRequirementBlock({
         )}
 
         {!hasReasonMode && (cohabitExcludedYears ?? 0) === 0 && (
-          <p className="text-micro text-violet-500 dark:text-violet-400">
+          <p className="text-micro text-violet-700 dark:text-violet-400">
             징집·취학·근무상 형편·질병 요양(상증령 §20의2)으로 동거하지 못한 기간은 계속
             동거로 인정되나 동거기간에는 산입하지 않습니다. 해당 사유가 있으면 위 토글을 켜서
             입력하세요.
@@ -194,7 +194,7 @@ export function CohabitRequirementBlock({
               산입 기간 합계:{" "}
               <strong>{preview.rawYears}년</strong>
               {preview.minorYearsDeducted > 0 && (
-                <span className="text-amber-600 dark:text-amber-400">
+                <span className="text-amber-700 dark:text-amber-400">
                   {" "}(미성년 {preview.minorYearsDeducted}년 제외)
                 </span>
               )}
@@ -202,11 +202,11 @@ export function CohabitRequirementBlock({
             {preview.reasonExcludedYears > 0 && (
               <p>
                 부득이 사유 제외:{" "}
-                <span className="text-amber-600 dark:text-amber-400">
+                <span className="text-amber-700 dark:text-amber-400">
                   {preview.reasonExcludedYears}년 제외
                 </span>
                 {preview.usedLegacyFallback && (
-                  <span className="text-gray-400"> (수동 입력값 사용)</span>
+                  <span className="text-gray-600 dark:text-gray-400"> (수동 입력값 사용)</span>
                 )}
               </p>
             )}
@@ -226,26 +226,26 @@ export function CohabitRequirementBlock({
 
           {/* 경고 3종 */}
           {preview.hasOverseasGradWarning && (
-            <p className="text-amber-600 dark:text-amber-400 text-micro">
+            <p className="text-amber-700 dark:text-amber-400 text-micro">
               ⚠ 국외 대학원 기간은 부득이한 사유에 해당하지 않습니다(재조세-434). 동거
               계속성 단절로 공제 전체가 부인될 수 있습니다.
             </p>
           )}
           {preview.hasMedicalUnder1YWarning && (
-            <p className="text-amber-600 dark:text-amber-400 text-micro">
+            <p className="text-amber-700 dark:text-amber-400 text-micro">
               ⚠ 1년(365일) 미만 질병 요양은 부득이한 사유로 인정되지 않습니다(시행규칙
               §9의2①3호).
             </p>
           )}
           {preview.hasReconstructionLeaseNote && (
-            <p className="text-emerald-600 dark:text-emerald-400 text-micro">
+            <p className="text-emerald-700 dark:text-emerald-400 text-micro">
               재건축 전세 기간은 동거기간에 산입됩니다(국세청 재산-248). 해석례이므로 세무사
               확인을 권장합니다.
             </p>
           )}
 
           {!preview.meetsRequirement && (
-            <p className="text-rose-600 dark:text-rose-400 text-micro">
+            <p className="text-rose-700 dark:text-rose-400 text-micro">
               동거기간이 10년 미만입니다. 요건 충족 여부를 세무사와 확인하시기 바랍니다.
               (자동 배제되지 않으며, 최종 판단은 신고 시 결정됩니다.)
             </p>

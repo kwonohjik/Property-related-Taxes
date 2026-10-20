@@ -61,7 +61,7 @@ export function EvaluationCommitteeFilingGuideCard({
       data-testid="evaluation-committee-filing-guide-card"
     >
       <div className="flex items-center gap-2 pb-2 border-b border-sky-200">
-        <span className="text-sky-600 text-base dark:text-sky-400">📋</span>
+        <span className="text-sky-700 text-base dark:text-sky-400">📋</span>
         <h4 className="text-sm font-bold text-sky-900 dark:text-sky-200">
           §49의2 평가심의위 신청 행정 안내
         </h4>
@@ -88,7 +88,7 @@ export function EvaluationCommitteeFilingGuideCard({
                 </span>
                 <div>
                   <p className="font-semibold text-sky-900 dark:text-sky-200">{item.title}</p>
-                  <p className="text-sky-700/80 text-caption mt-0.5 dark:text-sky-300/80">{item.desc}</p>
+                  <p className="text-sky-700 text-caption mt-0.5 dark:text-sky-300/80">{item.desc}</p>
                 </div>
               </div>
             </li>
@@ -105,7 +105,7 @@ export function EvaluationCommitteeFilingGuideCard({
           ② 신청기한 §49의2⑤ · 통지기한 §49의2⑥ ({taxKind === "inheritance" ? "상속세" : "증여세"})
         </p>
         <p className="text-sky-700 dark:text-sky-300">{deadlineLabel}</p>
-        <p className="text-sky-700/70 text-micro dark:text-sky-300/70">
+        <p className="text-sky-700 text-micro dark:text-sky-300/70">
           ※ 신청기한 미준수 시 평가심의위 부의 불가 — 보충적 평가가액으로 신고 (§54①·②)
         </p>
       </section>

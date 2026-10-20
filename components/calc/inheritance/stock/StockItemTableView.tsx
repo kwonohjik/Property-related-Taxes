@@ -143,7 +143,7 @@ function StockItemTableRow({ item, isSelected, onSelect, mode, heirsCount, valua
         {value > 0 ? (
           value.toLocaleString()
         ) : (
-          <span className="text-gray-400">미입력</span>
+          <span className="text-gray-600 dark:text-gray-400">미입력</span>
         )}
       </td>
       {/* 분류·옵션 배지 (상속세 모드만) */}
@@ -159,12 +159,12 @@ function StockItemTableRow({ item, isSelected, onSelect, mode, heirsCount, valua
       {/* 편집 힌트 + ⚙️ 옵션 카운트 */}
       <td className="pr-3 py-1.5 text-right text-xs select-none whitespace-nowrap">
         {optionCount > 0 && (
-          <span className="inline-flex items-center gap-0.5 text-slate-400 mr-1.5">
+          <span className="inline-flex items-center gap-0.5 text-slate-600 dark:text-slate-400 mr-1.5">
             <Settings className="h-3 w-3" aria-hidden />
             {optionCount}
           </span>
         )}
-        <span className="text-gray-500 dark:text-gray-400">✎</span>
+        <span className="text-gray-600 dark:text-gray-400">✎</span>
       </td>
     </tr>
   );
@@ -204,13 +204,13 @@ export function StockItemTableView({
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">종류</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">자산명</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">평가액</th>
+            <th className="py-2 text-left pl-3 text-gray-600 dark:text-gray-400 font-medium">종류</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">자산명</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">평가액</th>
             {showOptionCol && (
-              <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">분류·옵션</th>
+              <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">분류·옵션</th>
             )}
-            <th className="w-16 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
+            <th className="w-16 py-2 text-right pr-3 text-gray-600 dark:text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
         <tbody>

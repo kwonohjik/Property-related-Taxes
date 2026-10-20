@@ -120,7 +120,7 @@ export function HouseCountVerifier({ result }: Props) {
               <div className="space-y-1">
                 {detail.excludedDetails.map((excl, i) => (
                   <div key={i} className="flex items-start gap-2 rounded bg-sky-50/70 px-2 py-1.5 text-xs dark:bg-sky-950/40">
-                    <span className="text-sky-500 shrink-0 mt-0.5 dark:text-sky-400">✓</span>
+                    <span className="text-sky-700 shrink-0 mt-0.5 dark:text-sky-400">✓</span>
                     <div>
                       <span className="font-medium">
                         {EXCLUSION_TYPE_LABELS[excl.reason] ?? "기타 제외 사유"}

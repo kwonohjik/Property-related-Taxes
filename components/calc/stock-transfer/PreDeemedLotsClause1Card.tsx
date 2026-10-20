@@ -285,7 +285,7 @@ export function PreDeemedLotsClause1Card({ form, onChange }: Props) {
               title="의제취득일 현재 기준시가 — 개산공제 기준 (소령 §163⑥4·§165④)"
               bodyClassName="space-y-3"
             >
-              <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
                 매매사례가액을 채택한 건의 필요경비는 <strong>의제취득일 현재 기준시가 × 1%</strong>(개산공제)입니다. 기준시가는
                 비상장·기타자산 주식등의 보충적 평가(영 §165④)로 산정하므로 의제취득일 직전 사업연도의 1주당 순손익가치와
                 순자산가치를 입력하세요.

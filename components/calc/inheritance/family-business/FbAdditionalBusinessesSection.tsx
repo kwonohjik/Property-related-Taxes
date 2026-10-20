@@ -148,7 +148,7 @@ export function FbAdditionalBusinessesSection({
                 <button
                   type="button"
                   onClick={() => removeItem(idx)}
-                  className="rounded-md px-2 py-1 text-caption font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 dark:text-rose-400"
+                  className="rounded-md px-2 py-1 text-caption font-medium text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 dark:text-rose-400"
                 >
                   삭제
                 </button>
@@ -177,7 +177,7 @@ export function FbAdditionalBusinessesSection({
                 </label>
               </div>
               {b.businessValue > 0 && b.operatingYears > 0 && b.operatingYears < 10 && (
-                <p className="text-micro text-rose-600 dark:text-rose-400">
+                <p className="text-micro text-rose-700 dark:text-rose-400">
                   ⚠️ 영위 10년 미만은 가업이 아닙니다 (상증법 §18의2① 가업 정의).
                 </p>
               )}

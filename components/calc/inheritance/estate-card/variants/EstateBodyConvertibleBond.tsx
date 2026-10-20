@@ -375,7 +375,7 @@ export function EstateBodyConvertibleBond({ item, onUpdate, valuationDate }: Var
           </div>
         )}
 
-        <p className="text-xs text-sky-600 dark:text-sky-400">
+        <p className="text-xs text-sky-700 dark:text-sky-400">
           거래소 거래분은 종가 기준, 비거래소는 만기상환금액 현가할인(PV)과 전환주식가액을 비교하여 평가합니다.
         </p>
       </EstateBodySection>

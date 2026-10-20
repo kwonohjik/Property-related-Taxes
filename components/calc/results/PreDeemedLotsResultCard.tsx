@@ -195,7 +195,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                     계산에서 차감하지 않습니다(결과의 취득가액은 이를 뺀 값입니다).
                   </p>
                 )}
-                <p className="mt-2 text-caption text-slate-500 dark:text-slate-400" data-testid="pre-deemed-lots-no-statute">
+                <p className="mt-2 text-caption text-slate-600 dark:text-slate-400" data-testid="pre-deemed-lots-no-statute">
                   ※ 실제 필요경비를 ① 채택분과 그 외로 나누는 기준에 대한 법령상 명문은 없어 양도 주식수 비례로 귀속했습니다.
                 </p>
               </div>
@@ -203,7 +203,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
           </>
         )}
 
-        <p className="text-caption text-slate-500 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
+        <p className="text-caption text-slate-600 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
       </div>
     </ToneCard>
   );

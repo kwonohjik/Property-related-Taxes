@@ -114,7 +114,7 @@ export function EstateBodyPeriodicPayment({ item, onUpdate }: VariantBodyProps) 
           />
         </FieldCard>
 
-        <p className="text-xs text-sky-600 dark:text-sky-400">
+        <p className="text-xs text-sky-700 dark:text-sky-400">
           유기 = 현가합(1년분×20 한도) / 무기 = 1년분×20 / 종신 = 기대여명 현가합 (이자율 3%, 상증칙 §19의2③)
         </p>
       </EstateBodySection>

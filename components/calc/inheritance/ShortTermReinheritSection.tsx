@@ -63,7 +63,7 @@ export function ShortTermReinheritSection({
       bodyClassName="space-y-3"
       title={<>단기재상속공제 (§30) <LawArticleModal legalBasis="상증법 §30" label="§30" /></>}
     >
-      <p className="text-xs text-gray-500 dark:text-gray-400">
+      <p className="text-xs text-gray-600 dark:text-gray-400">
         피상속인이 10년 이내에 상속받은 재산이 다시 상속되는 경우, 1차 상속개시일과 재상속되는 재산을 종류별로
         입력하면 전의 산출세액 중 재상속분 상당액에 공제율(경과 구간별)을 적용해 공제합니다.
       </p>
@@ -118,7 +118,7 @@ export function ShortTermReinheritSection({
             <p className="text-caption font-semibold text-sky-700 dark:text-sky-300">
               재상속분 재산 (재산별 구분 — 집행 30-22-1②)
             </p>
-            <p className="text-caption text-gray-500 dark:text-gray-400">
+            <p className="text-caption text-gray-600 dark:text-gray-400">
               피상속인이 1차에서 받아 다시 상속되는 재산을 종류별로 입력. 가액은{" "}
               <b>1차 상속 당시 평가액</b>(2차 평가액 아님).
             </p>
@@ -142,7 +142,7 @@ export function ShortTermReinheritSection({
                 <button
                   type="button"
                   onClick={() => removeAsset(i)}
-                  className="shrink-0 rounded-md border border-rose-200 px-2 py-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400"
+                  className="shrink-0 rounded-md border border-rose-200 px-2 py-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400"
                 >
                   삭제
                 </button>

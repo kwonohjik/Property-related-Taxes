@@ -140,7 +140,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
                   type="button"
                   onClick={() => removeRow(idx)}
                   data-testid={`receivable-row-${idx}-remove`}
-                  className="mb-1 rounded px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400"
+                  className="mb-1 rounded px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400"
                 >
                   ✕
                 </button>
@@ -214,7 +214,7 @@ export function EstateBodyReceivable({ item, onUpdate, valuationDate }: VariantB
           </>
         )}
 
-        <p className="text-xs text-sky-600 dark:text-sky-400">
+        <p className="text-xs text-sky-700 dark:text-sky-400">
           기타채권(5년 이내) = 원본 + 미수이자상당액 / 장기·변경채권(5년 초과·회사정리) = 연도별 회수금액 현가할인 합계
         </p>
       </EstateBodySection>

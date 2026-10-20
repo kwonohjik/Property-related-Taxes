@@ -327,7 +327,7 @@ export function GiftTaxResultView({
           {formatKRW(result.totalPayableWithPenalty ?? result.finalTax)}
         </p>
         {result.totalPayableWithPenalty != null && (
-          <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-1">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400/80 mt-1">
             결정세액 {formatKRW(result.finalTax)} + 가산세{" "}
             {formatKRW(result.totalPayableWithPenalty - result.finalTax)}
           </p>
@@ -342,7 +342,7 @@ export function GiftTaxResultView({
           {result.generationSkipSurcharge > 0 && (
             <div>
               <span>세대생략 할증</span>
-              <p className="font-semibold text-amber-600 dark:text-amber-400 text-base mt-0.5">
+              <p className="font-semibold text-amber-700 dark:text-amber-400 text-base mt-0.5">
                 + {formatKRW(result.generationSkipSurcharge)}
               </p>
             </div>
@@ -350,7 +350,7 @@ export function GiftTaxResultView({
           {result.totalTaxCredit > 0 && (
             <div>
               <span>세액공제</span>
-              <p className="font-semibold text-blue-600 dark:text-blue-400 text-base mt-0.5">
+              <p className="font-semibold text-blue-700 dark:text-blue-400 text-base mt-0.5">
                 - {formatKRW(result.totalTaxCredit)}
               </p>
             </div>

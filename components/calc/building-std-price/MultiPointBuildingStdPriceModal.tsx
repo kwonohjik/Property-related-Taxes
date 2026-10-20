@@ -432,7 +432,7 @@ export function MultiPointBuildingStdPriceModal({
           {/* 소재지 + 건축물대장 자동조회 (L-4 이식 — 계획서 §4.5) */}
           <div className="space-y-1.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3 dark:bg-rose-950/40">
             <p className="text-sm font-semibold text-rose-700 dark:text-rose-300">소재지 (공시지가·건축물대장 조회용)</p>
-            <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
+            <p className="text-caption text-rose-700 dark:text-rose-400/90">
               주소를 입력하면 아래 공시지가를 연도별로 자동 조회하고, 건축물대장에서 신축연도·연면적을
               불러올 수 있습니다. 미입력 시 직접 입력하세요.
             </p>
@@ -459,7 +459,7 @@ export function MultiPointBuildingStdPriceModal({
               onAutoFill={applyRegisterPatch}
             />
             {(!!addr.unitDong || !!addr.unitHo) && (
-              <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
+              <p className="text-caption text-rose-700 dark:text-rose-400/90">
                 집합건물 세대는 건축물대장 조회 시 전유+공용 연면적이 첫 부분의 연면적으로 자동
                 입력됩니다(국세청 「건물 기준시가 계산방법 고시」상 건물면적 기준). 조회되지 않으면
                 전유+공용 연면적을 직접 입력하세요.

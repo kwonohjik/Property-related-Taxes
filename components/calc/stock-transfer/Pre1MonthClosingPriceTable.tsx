@@ -182,7 +182,7 @@ export function Pre1MonthClosingPriceTable({
       }
     >
       {anchorShifted && (
-        <p className="text-caption text-amber-700/90 leading-relaxed dark:text-amber-300/90">
+        <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-300/90">
           {dateLabel} <strong>{baseDate}</strong>이(가) 휴장일이므로 직전 거래일{" "}
           <strong>{anchor}</strong>을(를) 기산점으로 1개월 범위를 산정했습니다.
         </p>

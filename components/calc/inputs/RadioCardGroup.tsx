@@ -236,7 +236,7 @@ export function RadioCardGroup<T extends string>({
                   </p>
                 )}
                 {opt.hint && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400 leading-snug">
+                  <p className="text-xs text-amber-800 dark:text-amber-400 leading-snug">
                     {opt.hint}
                   </p>
                 )}

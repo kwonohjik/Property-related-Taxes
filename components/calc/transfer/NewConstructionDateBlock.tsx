@@ -71,7 +71,7 @@ export function NewConstructionDateBlock({
       title="자가건축 주택 취득일 (소득세법 시행령 §162①4호)"
       bodyClassName="space-y-3"
     >
-      <p className="text-caption text-amber-600 leading-relaxed dark:text-amber-400">
+      <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-400">
         자가건축 주택의 취득일은 사용승인일·사용검사필증 교부일·임시사용승인일·사실상 사용일 중
         <strong> 가장 이른 날</strong>을 기준으로 합니다.
       </p>
@@ -129,7 +129,7 @@ export function NewConstructionDateBlock({
         ) : (
           <p>사용승인일을 입력하면 취득일이 자동 판정됩니다.</p>
         )}
-        <p className="text-amber-600 mt-1 dark:text-amber-400">
+        <p className="text-amber-700 mt-1 dark:text-amber-400">
           ※ 별도의 &quot;취득일&quot; 입력은 필요 없습니다. 위 네 날짜 중 가장 이른 날이 자동으로 취득일로 적용됩니다.
         </p>
       </div>

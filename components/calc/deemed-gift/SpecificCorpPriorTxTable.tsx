@@ -89,7 +89,7 @@ export function SpecificCorpPriorTxTable({ rows, onChange, testIdPrefix = "sc", 
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
                 data-testid={tid(`pt-delete-${i}`)}
-                className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
+                className="text-xs font-medium text-rose-700 hover:text-rose-800 dark:text-rose-400"
               >
                 × 삭제
               </button>

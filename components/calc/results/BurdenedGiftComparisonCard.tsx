@@ -76,7 +76,7 @@ export function BurdenedGiftComparisonCard({
             </tr>
             <tr className="border-b border-sky-200 dark:border-sky-800">
               <td className="py-1.5 text-gray-700 dark:text-gray-300">양도소득세</td>
-              <td className="py-1.5 text-right text-gray-400 pr-4">—</td>
+              <td className="py-1.5 text-right text-gray-600 dark:text-gray-400 pr-4">—</td>
               <td className={AMOUNT_CELL}>{formatKRW(cmp.burdenedTransferTax)}</td>
             </tr>
             <tr className="border-b border-sky-200 dark:border-sky-800 bg-sky-100/40 dark:bg-sky-900/30">
@@ -102,11 +102,11 @@ export function BurdenedGiftComparisonCard({
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+      <p className="mt-3 text-xs text-gray-600 dark:text-gray-400">
         두 시나리오의 세부담을 비교한 참고 정보입니다.
       </p>
       {hasUncoveredDebtAsset && (
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
           일부 자산의 양도소득세는 비교에 포함되지 않았습니다.
         </p>
       )}

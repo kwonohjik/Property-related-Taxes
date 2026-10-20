@@ -85,7 +85,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
       </p>
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-200">
+          <tr className="text-slate-600 dark:text-slate-400 border-b border-slate-200">
             <th className="text-left py-1 font-medium">시기</th>
             <th className="text-right py-1 font-medium">지분율</th>
             <th className="text-right py-1 font-medium">시총</th>
@@ -120,7 +120,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
       {/* 비상장 전용 안내 */}
       {market === "unlisted" && (
         <>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
             ※ 벤처기업은 시총 기준 40억 (조특법 §16, 시행령 §167의8①2호 나목)
           </p>
           <p className="text-xs text-amber-700 mt-1 dark:text-amber-300">

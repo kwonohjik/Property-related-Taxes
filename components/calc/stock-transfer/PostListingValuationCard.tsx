@@ -238,7 +238,7 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
               />
             </FieldCard>
           ) : (
-            <p className="text-caption text-amber-700/90 leading-relaxed dark:text-amber-300/90">
+            <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-300/90">
               재무제표 모드에서는 종가도 일자별로 입력합니다 (위 「환산 입력 방식」 선택에 따름).
             </p>
           )}

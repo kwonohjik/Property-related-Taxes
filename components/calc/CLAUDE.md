@@ -227,6 +227,8 @@ const perAssetSummary = useMemo(() => computeTransferPerAssetSummary(formData, r
 
 **다크 짝 필수(2026-10-19)**: 유채색 톤 글자 `text-{tone}-{400~950}`·밝은 톤 배경 `bg-{tone}-{50~300}`은 같은 클래스 목록에 `dark:text-`·`dark:bg-` 짝을 둔다(예: `text-amber-700 dark:text-amber-300` · `bg-sky-50/40 dark:bg-sky-950/40`). 짝이 없으면 다크 바탕에서 글자가 배경에 묻힌다. 예외: 불투명 밝은 배경 + 톤 글자(자체 대비 배지), 무채색. → `scripts/check-dark-pairs.mjs`가 pre-push 하드블록. `ToneCard`의 `noDark`는 없앴다(쓰던 247곳 전부 다크 클래스 복원).
 
+**라이트 옅은 글자 금지(2026-10-20)**: 접두 없는 라이트 글자색으로 `text-{tone}-{400~600}`·`text-{무채색}-{300~500}`·투명도 톤 글자 `text-{tone}-N/NN`을 쓰지 않는다 — 옅은 톤 카드 바탕 위에서 4.5 미만이 된다. 톤은 700, 무채색은 600부터 쓴다(예: ✓ `text-emerald-700 dark:text-emerald-400`). `dark:`·`hover:`·`disabled:` 등 접두 토큰은 상관없다. 회색 안내 글자는 토큰(`--muted-foreground` 라이트 0.52)이 옅은 바탕까지 4.5를 넘기므로 `text-muted-foreground`를 그대로 쓴다. → 같은 `check-dark-pairs.mjs`가 막는다. 근거: `docs/00-pm/ui-light-contrast-and-dark-print.plan.md`.
+
 신규 안내/섹션 카드는 인라인 `className` 하드코딩 대신 공용 컴포넌트를 쓴다:
 
 | 상황 | 사용 |

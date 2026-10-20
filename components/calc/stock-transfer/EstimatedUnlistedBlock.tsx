@@ -312,7 +312,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
             </>
           )}
         </p>
-        <p className="text-xs text-fuchsia-600 mt-1 dark:text-fuchsia-400">
+        <p className="text-xs text-fuchsia-700 mt-1 dark:text-fuchsia-400">
           입력값: 순손익가치 = <Frac top="1주당 순손익액" bottom="10%" /> (이미 반영된 값으로 입력)
         </p>
         {naOnlySideCaption && !eraUnsupported && (

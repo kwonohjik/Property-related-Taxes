@@ -432,11 +432,11 @@ export function MixedUseAssetMajorStdPrice({
         {/* 상가건물 기준시가 — 양도/취득 나란히 + 통합 계산 모달 */}
         <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
           상가건물 기준시가{" "}
-          <span className="text-micro font-normal text-slate-500 dark:text-slate-400">
+          <span className="text-micro font-normal text-slate-600 dark:text-slate-400">
             (토지 제외)
           </span>
           {isPerPart && (
-            <span className="ml-1 text-caption font-normal text-slate-500 dark:text-slate-400" data-testid="mixed-part-commercial-building-day-note">
+            <span className="ml-1 text-caption font-normal text-slate-600 dark:text-slate-400" data-testid="mixed-part-commercial-building-day-note">
               취득시는 건물 취득일 기준
             </span>
           )}
@@ -496,7 +496,7 @@ export function MixedUseAssetMajorStdPrice({
         <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
           상가부수토지 개별공시지가
           {isMixedAcqDatesSeparate(asset) && (
-            <span className="ml-1 text-caption font-normal text-slate-500 dark:text-slate-400">토지 취득일 기준</span>
+            <span className="ml-1 text-caption font-normal text-slate-600 dark:text-slate-400">토지 취득일 기준</span>
           )}
         </p>
         <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1 dark:bg-amber-950/40">

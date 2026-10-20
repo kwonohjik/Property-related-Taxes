@@ -76,7 +76,7 @@ export function SettlementAnnouncementDateField({
           <div className="rounded-md bg-rose-100/60 border border-rose-200 px-3 py-2 text-caption text-rose-800 dark:text-rose-200 dark:bg-rose-900/40">
             <span className="font-semibold">자동 산정 양도일</span>:{" "}
             <span className="font-mono font-semibold">{asset.redevSettlementSaleDate}</span>{" "}
-            <span className="text-rose-600 dark:text-rose-400">(고시일 + 1일)</span>
+            <span className="text-rose-700 dark:text-rose-400">(고시일 + 1일)</span>
           </div>
         )}
       </div>
@@ -197,7 +197,7 @@ export function SalePriceTotalPreviewCard({ asset }: { asset: AssetForm }) {
         {isRight ? "지급받은 청산금" : "청산금 수령액"} {preview.settle.toLocaleString()}
       </p>
       <p className="text-sky-700 font-mono tabular-nums dark:text-sky-300">= {preview.salePriceTotal.toLocaleString()}</p>
-      <p className="text-caption text-sky-600 dark:text-sky-400">
+      <p className="text-caption text-sky-700 dark:text-sky-400">
         {isRight
           ? "※ 이 값은 양도가액에서 빼는 금액입니다 — 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다."
           : "※ \u201C분양가액\u201D은 위와 같이 권리가액·청산금 입력으로 자동 도출되므로 별도로 입력하지 않습니다."}

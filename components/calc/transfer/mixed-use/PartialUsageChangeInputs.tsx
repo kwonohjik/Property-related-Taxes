@@ -95,7 +95,7 @@ export function PartialUsageChangeInputs({ asset, onChange, sectionNum }: Props)
       </div>
 
       {/* 안내 (이슈 4 — 항상 노출) */}
-      <p className="text-caption text-amber-700/80 leading-relaxed dark:text-amber-300/80">
+      <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-300/80">
         ※ 증축·일부 멸실 등으로 취득시 면적이 양도시 합계와 다른 경우 직접 수정하세요.
       </p>
 

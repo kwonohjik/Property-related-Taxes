@@ -26,7 +26,7 @@ const PDFDownloadLink = dynamic(
       <button
         type="button"
         disabled
-        className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-400 font-medium cursor-not-allowed"
+        className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-600 dark:text-gray-400 font-medium cursor-not-allowed"
         data-testid="ls-besshi-pdf-button-loading"
       >
         로딩 중...
@@ -72,7 +72,7 @@ export function ListedStockBesshiPdfDownloadButton({ item, valuationDate }: Prop
         type="button"
         disabled
         title="종목명·평가기준일·종가 평균·주식 수 입력 후 다운로드 가능"
-        className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-400 font-medium cursor-not-allowed"
+        className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-600 dark:text-gray-400 font-medium cursor-not-allowed"
         data-testid="ls-besshi-pdf-button-disabled"
       >
         📄 PDF 다운로드

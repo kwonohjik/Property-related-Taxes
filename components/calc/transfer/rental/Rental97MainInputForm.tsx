@@ -182,7 +182,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
               />
             </div>
             {(value.isMultiUnitHousing === null || value.isUnoccupiedAt1986 === null) && (
-              <p className="text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+              <p className="text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
             )}
           </ToneCard>
         )}
@@ -213,7 +213,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             ]}
           />
           {value.isUnoccupiedAtAcquisition === null && (
-            <p className="text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </ToneCard>
       )}
@@ -246,7 +246,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
             ]}
           />
           {value.hasMin5RentalUnits === null && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
               ※ 반드시 선택하세요 (미선택 시 계산 불가)
             </p>
           )}
@@ -273,7 +273,7 @@ export function Rental97MainInputForm({ value, onChange }: Props) {
                 <button
                   type="button"
                   onClick={() => removeBelow(idx)}
-                  className="text-micro text-rose-600 hover:underline dark:text-rose-400"
+                  className="text-micro text-rose-700 hover:underline dark:text-rose-400"
                 >
                   삭제
                 </button>

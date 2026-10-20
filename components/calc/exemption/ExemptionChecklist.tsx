@@ -87,7 +87,7 @@ function ExemptionRow({
         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
           {rule.name}
         </p>
-        <span className="text-xs text-gray-500 dark:text-gray-400">{rule.lawRef}</span>
+        <span className="text-xs text-gray-600 dark:text-gray-400">{rule.lawRef}</span>
         <p className="text-xs text-gray-600 dark:text-gray-300">{rule.description}</p>
       </div>
 
@@ -102,12 +102,12 @@ function ExemptionRow({
           <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
             해당 자산 가액
             {rule.limitType === "fixed" && rule.limitAmount && (
-              <span className="ml-1 text-amber-600 dark:text-amber-400">
+              <span className="ml-1 text-amber-700 dark:text-amber-400">
                 (최대 {rule.limitAmount.toLocaleString()})
               </span>
             )}
             {rule.limitType === "social_norm" && (
-              <span className="ml-1 text-amber-600 dark:text-amber-400">(사회통념상 인정되는 범위)</span>
+              <span className="ml-1 text-amber-700 dark:text-amber-400">(사회통념상 인정되는 범위)</span>
             )}
           </label>
           <CurrencyInput
@@ -123,7 +123,7 @@ function ExemptionRow({
           <div>
             <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
               기존 신탁 불산입액 (생존 중 합산)
-              <span className="ml-1 text-gray-400">§52의2③ · 5억 한도에서 차감</span>
+              <span className="ml-1 text-gray-600 dark:text-gray-400">§52의2③ · 5억 한도에서 차감</span>
             </label>
             <CurrencyInput
               label=""
@@ -148,7 +148,7 @@ function ExemptionRow({
             <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
               해당 면적 (㎡)
               {rule.limitAreaM2 && (
-                <span className="ml-1 text-gray-400">한도 {rule.limitAreaM2.toLocaleString()}㎡</span>
+                <span className="ml-1 text-gray-600 dark:text-gray-400">한도 {rule.limitAreaM2.toLocaleString()}㎡</span>
               )}
             </label>
             <DecimalInput
@@ -184,7 +184,7 @@ function ExemptionRow({
               onClick={() => setDetailsOpen((o) => !o)}
               aria-expanded={detailsOpen}
               data-testid={`exemption-row-${rule.id}-details-toggle`}
-              className="inline-flex items-center gap-1.5 text-xs text-sky-600 hover:text-sky-800 dark:text-sky-400 font-medium"
+              className="inline-flex items-center gap-1.5 text-xs text-sky-700 hover:text-sky-800 dark:text-sky-400 font-medium"
             >
               <span>적용 요건·제외 사유 자세히</span>
               <span className={expandToggleClass("sky")} aria-hidden>{expandToggleLabel(detailsOpen)}</span>
@@ -200,10 +200,10 @@ function ExemptionRow({
                 )}
                 {rule.exclusions.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+                    <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">
                       적용 제외 사유:
                     </p>
-                    <ul className="text-xs text-red-500 dark:text-red-400 space-y-0.5 list-disc list-inside">
+                    <ul className="text-xs text-red-700 dark:text-red-400 space-y-0.5 list-disc list-inside">
                       {rule.exclusions.map((ex, i) => (
                         <li key={i}>{ex}</li>
                       ))}
@@ -306,7 +306,7 @@ function ExemptionGroupSection({
           <span className={cn("text-xs font-semibold", headerClass)}>
             {title}
           </span>
-          <span className="text-micro font-normal text-gray-500 dark:text-gray-400">
+          <span className="text-micro font-normal text-gray-600 dark:text-gray-400">
             {subtitle}
           </span>
           <span className={cn("rounded-full px-2 py-0.5 text-micro font-medium", badgeClass)}>
@@ -445,7 +445,7 @@ export function ExemptionChecklist({
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             {masterTitle}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">{masterDesc}</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">{masterDesc}</p>
         </div>
         <ExemptionChecklistPanel
           items={value}

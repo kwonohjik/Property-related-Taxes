@@ -114,7 +114,7 @@ export function ResidencePeriodSection({
                     <button
                       type="button"
                       onClick={() => removePeriod(idx)}
-                      className="text-xs text-rose-600 hover:underline inline-flex items-center gap-1 dark:text-rose-400"
+                      className="text-xs text-rose-700 hover:underline inline-flex items-center gap-1 dark:text-rose-400"
                     >
                       <Trash2 className="h-3 w-3" />
                       삭제
@@ -140,7 +140,7 @@ export function ResidencePeriodSection({
                     </FieldCard>
                   </div>
                   {isMoveInOnly && (
-                    <p className="text-caption text-rose-600 dark:text-rose-400">
+                    <p className="text-caption text-rose-700 dark:text-rose-400">
                       입주일이 입력되었는데 퇴거일이 비어 있습니다. 퇴거일을 입력하세요.
                       (양도일까지 거주한 경우 양도일을 퇴거일로 입력)
                     </p>

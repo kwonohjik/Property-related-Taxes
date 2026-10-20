@@ -40,7 +40,7 @@ export function EvaluationCommitteeRangeIndicator({
         className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 p-3"
         data-testid="evaluation-committee-range-inactive"
       >
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           보충적 평가가액 산정 전 — 70~130% 범위 표시 불가
         </p>
       </div>

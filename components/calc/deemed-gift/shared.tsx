@@ -442,10 +442,10 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           {loans.map((item, i) => (
             <div key={item.id} data-testid={`loan-item-${i}`} className="space-y-2 rounded-lg border border-rose-200 bg-white/60 dark:bg-white/5 p-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-rose-600 dark:text-rose-400">대출 {i + 1}</span>
+                <span className="text-xs font-medium text-rose-700 dark:text-rose-400">대출 {i + 1}</span>
                 <button
                   type="button"
-                  className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+                  className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                   data-testid={`loan-item-delete-${i}`}
                   onClick={() => set({ loanLoans: loans.filter((_, idx) => idx !== i) })}
                 >
@@ -462,7 +462,7 @@ function FreeLoanFields({ form, set }: { form: DeemedFormState; set: SetFn }) {
           ))}
           <button
             type="button"
-            className="w-full rounded-lg border border-dashed border-rose-300 py-2 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400"
+            className="w-full rounded-lg border border-dashed border-rose-300 py-2 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400"
             data-testid="loan-item-add"
             onClick={() => set({ loanLoans: [...loans, makeLoanItem(newLoanId())] })}
           >

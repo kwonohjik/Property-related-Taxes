@@ -115,7 +115,7 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
         </div>
         <div className="px-4 py-3 text-center">
           <p className="text-xs text-muted-foreground mb-1">중과 산정 주택 수</p>
-          <p className={cn("text-2xl font-bold", detail.effectiveHouseCount >= 2 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>
+          <p className={cn("text-2xl font-bold", detail.effectiveHouseCount >= 2 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400")}>
             {detail.effectiveHouseCount}<span className="text-base font-normal">채</span>
           </p>
         </div>
@@ -168,7 +168,7 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
           <div className="space-y-1">
             {detail.exclusionReasons.map((r, i) => (
               <div key={i} className="flex items-start gap-2">
-                <span className="mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
+                <span className="mt-0.5 text-emerald-700 dark:text-emerald-400 shrink-0">✓</span>
                 <div>
                   <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
                     {EXCLUSION_REASON_LABEL[r.type] ?? r.type}

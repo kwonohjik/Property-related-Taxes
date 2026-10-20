@@ -68,7 +68,7 @@ function PropertyTableRow({ property, index, isSelected, onSelect }: PropertyTab
       {/* 소재지 */}
       <td className="pl-2 py-1.5 text-xs max-w-[12rem] truncate">
         {locationText === "미입력" ? (
-          <span className="text-gray-400">미입력</span>
+          <span className="text-gray-600 dark:text-gray-400">미입력</span>
         ) : (
           locationText
         )}
@@ -78,7 +78,7 @@ function PropertyTableRow({ property, index, isSelected, onSelect }: PropertyTab
         {assessed > 0 ? (
           assessed.toLocaleString()
         ) : (
-          <span className="text-gray-400">미입력</span>
+          <span className="text-gray-600 dark:text-gray-400">미입력</span>
         )}
       </td>
       {/* 지분율 */}
@@ -92,7 +92,7 @@ function PropertyTableRow({ property, index, isSelected, onSelect }: PropertyTab
             {exclusion}
           </span>
         ) : (
-          <span className="text-gray-500 dark:text-gray-400">—</span>
+          <span className="text-gray-600 dark:text-gray-400">—</span>
         )}
       </td>
       {/* 옵션 배지 */}
@@ -108,13 +108,13 @@ function PropertyTableRow({ property, index, isSelected, onSelect }: PropertyTab
               </span>
             ))
           ) : (
-            <span className="text-gray-500 dark:text-gray-400 text-xs">—</span>
+            <span className="text-gray-600 dark:text-gray-400 text-xs">—</span>
           )}
         </div>
       </td>
       {/* 편집 힌트 */}
       <td className="pr-3 py-1.5 text-right text-xs select-none whitespace-nowrap">
-        <span className="text-gray-500 dark:text-gray-400">✎</span>
+        <span className="text-gray-600 dark:text-gray-400">✎</span>
       </td>
     </tr>
   );
@@ -142,13 +142,13 @@ export function PropertyListTableView({
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700 bg-muted/30">
-            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">주택</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">소재지</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">공시가격</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">지분</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">합산배제</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">옵션</th>
-            <th className="w-12 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
+            <th className="py-2 text-left pl-3 text-gray-600 dark:text-gray-400 font-medium">주택</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">소재지</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">공시가격</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">지분</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">합산배제</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">옵션</th>
+            <th className="w-12 py-2 text-right pr-3 text-gray-600 dark:text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
         <tbody>

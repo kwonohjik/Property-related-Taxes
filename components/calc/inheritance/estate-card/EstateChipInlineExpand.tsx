@@ -108,7 +108,7 @@ export function EstateChipInlineExpand({
           type="button"
           onClick={onClose}
           aria-label="패널 닫기"
-          className="text-xs text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-1.5 py-0.5 rounded hover:bg-white/50"
+          className="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-700 px-1.5 py-0.5 rounded hover:bg-white/50"
         >
           <X className="h-3.5 w-3.5" />
         </button>

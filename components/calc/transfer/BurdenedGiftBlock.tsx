@@ -499,13 +499,13 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               {fmt(isFractionalSplit ? applyRatio(assumedDebtAmount, ownRatio) : assumedDebtAmount)}원
             </span>
             {isFractionalSplit && ownRatio < 1 && (
-              <span className="ml-1 text-fuchsia-600 dark:text-fuchsia-400">
+              <span className="ml-1 text-fuchsia-700 dark:text-fuchsia-400">
                 (입력 총액 {fmt(assumedDebtAmount)} × 지분 {(ownRatio * 100).toFixed(2)}%)
               </span>
             )}
           </p>
           {isCompanionBundle && (
-            <p className="text-fuchsia-600 dark:text-fuchsia-400">
+            <p className="text-fuchsia-700 dark:text-fuchsia-400">
               * 함께 부담부증여는 신고 단위 채무를 **자산가액 비율**로 재배분합니다 — 이 자산의
               양도가액은 그 배분 결과이며 위 합계와 다릅니다.
             </p>
@@ -518,7 +518,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             임대평가:{" "}
             <span className="font-mono tabular-nums">{fmt(valuationPreview.rental)}원</span>
           </p>
-          <p className="text-fuchsia-600 mt-1 dark:text-fuchsia-400">
+          <p className="text-fuchsia-700 mt-1 dark:text-fuchsia-400">
             * {isMarketMode ? "시가" : "보충적"}·담보·임대 평가액 중 가장 큰 금액이 증여가액(분모) — 엔진이 이 분모로 양도가·취득가를 자동 산정.
           </p>
         </div>

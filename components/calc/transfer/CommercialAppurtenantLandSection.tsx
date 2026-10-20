@@ -63,14 +63,14 @@ export function CommercialAppurtenantLandSection({ asset, onChange, transferDate
       tone="rose"
       title="부수토지 비사업용 판정"
       titleExtra={
-        <span className="text-micro text-rose-500 dark:text-rose-400">(§104의3①4호나목 · 지방세령 §101)</span>
+        <span className="text-micro text-rose-700 dark:text-rose-400">(§104의3①4호나목 · 지방세령 §101)</span>
       }
     >
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
         <LawArticleModal legalBasis="지방세법 시행령 §101" label="지방세령 §101 배율" />
       </div>
-      <p className="text-caption text-rose-600 dark:text-rose-400">
+      <p className="text-caption text-rose-700 dark:text-rose-400">
         부수토지 한도 = <strong>건축물 바닥면적</strong> × 용도지역 배율. 초과분에만 +10%p 중과.
         구분소유는 <strong>집합건물 전체</strong> 기준으로 판정하며, 대지권 지분율은 판정식에서
         약분되어 결과에 영향을 주지 않습니다.
@@ -128,7 +128,7 @@ export function CommercialAppurtenantLandSection({ asset, onChange, transferDate
       {asset.cbUnapprovedBuilding ? (
         <div className="rounded bg-rose-100/60 border border-rose-200 px-3 py-2 text-xs text-rose-700 dark:text-rose-300 dark:bg-rose-900/40">
           허가·사용승인 미이행 — 부속토지 전체 비사업용 (배율 계산 없음)
-          <span className="mt-1 block text-caption text-rose-600 dark:text-rose-400">
+          <span className="mt-1 block text-caption text-rose-700 dark:text-rose-400">
             「지방세법 시행령」 §101① 단서 · 법제처 법령해석례 25-0823
           </span>
         </div>

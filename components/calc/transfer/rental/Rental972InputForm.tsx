@@ -174,7 +174,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
             ]}
           />
           {value.isUnoccupiedAtAcquisition === null && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </ToneCard>
       )}
@@ -208,7 +208,7 @@ export function Rental972InputForm({ value, onChange }: Props) {
             ]}
           />
           {value.hasNewRentalPlus2Units === null && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
               ※ 반드시 선택하세요 (미선택 시 계산 불가)
             </p>
           )}

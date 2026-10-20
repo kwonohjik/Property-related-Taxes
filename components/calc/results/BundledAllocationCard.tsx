@@ -299,7 +299,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                 <li key={kind} className="flex items-baseline justify-between gap-3">
                   <span>
                     {kind === "land" ? "토지분" : "건물분"} 취득가액
-                    <span className="ml-1 text-violet-600 dark:text-violet-400">
+                    <span className="ml-1 text-violet-700 dark:text-violet-400">
                       {inherited ? "(상속개시일 평가액)" : "(상속 아님 — 종전 산정)"}
                     </span>
                   </span>
@@ -367,7 +367,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                   </li>
                   <li className="flex items-baseline justify-between gap-3">
                     <span>
-                      토지분<span className="ml-1 text-violet-600 dark:text-violet-400">(취득 당시 기준시가 비율 안분)</span>
+                      토지분<span className="ml-1 text-violet-700 dark:text-violet-400">(취득 당시 기준시가 비율 안분)</span>
                     </span>
                     <span className="font-mono tabular-nums whitespace-nowrap">
                       {formatKRW(c.convertedLand)}

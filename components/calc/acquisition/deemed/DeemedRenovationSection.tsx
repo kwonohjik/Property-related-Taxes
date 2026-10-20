@@ -136,7 +136,7 @@ export function DeemedRenovationSection({ form, set }: Props) {
               개수 후 시가표준액이 개수 전 이하 — 과세 대상 없음
             </p>
           )}
-          <p className="text-xs text-violet-600 dark:text-violet-400">* 농어촌특별세·지방교육세 별도</p>
+          <p className="text-xs text-violet-700 dark:text-violet-400">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
 

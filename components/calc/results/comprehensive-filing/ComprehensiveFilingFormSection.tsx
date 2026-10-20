@@ -68,7 +68,7 @@ export function ComprehensiveFilingFormSection({
         <span className="flex items-center gap-2">
           <FileText className="h-4 w-4" />
           신고서 서식 (2022년판)
-          <span className="text-xs font-normal text-gray-500 dark:text-gray-400">
+          <span className="text-xs font-normal text-gray-600 dark:text-gray-400">
             — 화면에서 펼쳐 확인·인쇄 가능
           </span>
         </span>

@@ -187,7 +187,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             <>종가평균 × 환산비율</>
           )}{" "}
           (절사) = <strong>{post.finalPerShareValue.toLocaleString()}</strong>{" "}
-          <span className="text-violet-600 dark:text-violet-400">(§163⑨ 분자)</span>
+          <span className="text-violet-700 dark:text-violet-400">(§163⑨ 분자)</span>
         </p>
         <p className="font-medium text-violet-900 dark:text-violet-200">
           §163⑨ 환산취득가 = 양도가 × <Frac top="1주당 취득기준" bottom="1주당 양도기준" />

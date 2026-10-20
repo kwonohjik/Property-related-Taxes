@@ -399,7 +399,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             <p className="text-rose-700 font-mono tabular-nums dark:text-rose-300">= {valuationPreview.converted.toLocaleString()}</p>
             <p className="text-rose-700 dark:text-rose-300">
               §164⑦ 본문:{" "}
-              <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900 dark:text-rose-200" : "text-rose-600 dark:text-rose-400"}>
+              <span className={valuationPreview.canApplyMain ? "font-semibold text-rose-900 dark:text-rose-200" : "text-rose-700 dark:text-rose-400"}>
                 {valuationPreview.canApplyMain
                   ? "발동 — 2단계 산식 적용"
                   : valuationPreview.provisionTriggered
@@ -485,7 +485,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
             bottom={<strong>관리처분 직전 토지기준시가</strong>}
           />
         </p>
-        <p className="text-caption text-amber-600 dark:text-amber-400">
+        <p className="text-caption text-amber-700 dark:text-amber-400">
           기준시가 = 개별공시지가 (원/㎡) × 면적 (㎡) — Vworld 자동 조회 가능
         </p>
       </div>

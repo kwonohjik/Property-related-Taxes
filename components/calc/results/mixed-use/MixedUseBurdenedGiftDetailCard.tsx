@@ -67,7 +67,7 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
           {bg.giftTax && <BurdenedGiftGiftTaxRows giftTax={bg.giftTax} />}
         </tbody>
       </table>
-      <p className="text-xs text-fuchsia-600 mt-2 dark:text-fuchsia-400">
+      <p className="text-xs text-fuchsia-700 mt-2 dark:text-fuchsia-400">
         ※ 양도가액은 «양도로 보는 채무액»이고 부분별 채무비율은 위 ①에 있습니다. 증여세는 무상이전분에 대해 수증자가 별도 신고·납부합니다.
       </p>
     </div>

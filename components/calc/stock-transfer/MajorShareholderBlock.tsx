@@ -117,9 +117,9 @@ function IssuedSharesReadout({ total }: { total: string }) {
       {parsed > 0 ? (
         <strong>{parsed.toLocaleString()}주</strong>
       ) : (
-        <strong className="text-violet-500 dark:text-violet-400">미입력</strong>
+        <strong className="text-violet-700 dark:text-violet-400">미입력</strong>
       )}
-      <span className="ml-1 text-violet-600 dark:text-violet-400">
+      <span className="ml-1 text-violet-700 dark:text-violet-400">
         — 「양도·취득 일자 및 주식수」 단계에서 입력합니다.
       </span>
     </p>
@@ -323,7 +323,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               지분율 <strong>{(threshold.shareRatioThreshold * 100).toFixed(1)}%</strong> ·
               시총 <strong>{(threshold.marketCapThreshold / 100_000_000).toFixed(0)}억</strong>
             </p>
-            <p className="text-xs text-violet-600 mt-1 dark:text-violet-400">
+            <p className="text-xs text-violet-700 mt-1 dark:text-violet-400">
               {MARKET_LABEL[form.marketType as keyof typeof MARKET_LABEL]} ·{" "}
               {resolveThresholdFromDate(
                 form.marketType as "kospi" | "kosdaq" | "konex" | "unlisted",
@@ -337,7 +337,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               </p>
             )}
             {form.marketType === "unlisted" && !threshold.isVentureRule && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                 벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
               </p>
             )}
@@ -473,7 +473,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                   </span>
                 </div>
               ) : (
-                <p className="text-xs text-violet-600 dark:text-violet-400">
+                <p className="text-xs text-violet-700 dark:text-violet-400">
                   발행주식 총수와 본인 보유 주식수가 모두 입력되면 지분율이 자동 산출됩니다.
                 </p>
               )}
@@ -521,7 +521,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
             </span>
             {!f15f16Eligible && (
-              <span className="text-micro text-slate-500 dark:text-slate-400">
+              <span className="text-micro text-slate-600 dark:text-slate-400">
                 {effTransferDate ? `양도일 ${effTransferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
               </span>
             )}
@@ -606,7 +606,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
                     </span>
                   </div>
                 ) : (
-                  <p className="text-xs text-violet-600 dark:text-violet-400">
+                  <p className="text-xs text-violet-700 dark:text-violet-400">
                     발행주식 총수와 합산 보유 주식수가 모두 입력되면 지분율이 자동 산출됩니다.
                   </p>
                 )}

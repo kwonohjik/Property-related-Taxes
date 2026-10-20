@@ -75,7 +75,7 @@ const GROUP_DIVIDER: Record<"emerald" | "amber" | "violet", string> = {
 const AUTO_CHIP_DETECTED =
   "inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100/80 px-2.5 py-1 text-caption font-medium text-emerald-800 dark:border-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200 select-none";
 const AUTO_CHIP_UNDETECTED =
-  "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-caption font-medium text-emerald-600 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 select-none";
+  "inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/60 px-2.5 py-1 text-caption font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 select-none";
 
 // ────────────────────────────────────────────────────
 // 서브 컴포넌트 — 자동 항목 칩 (읽기전용 상태 배지)
@@ -92,11 +92,11 @@ const MANUAL_CHIP_ON: Record<"emerald" | "amber" | "violet", string> = {
 };
 const MANUAL_CHIP_OFF: Record<"emerald" | "amber" | "violet", string> = {
   emerald:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/60",
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-emerald-300 hover:bg-emerald-50/60",
   amber:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-amber-300 hover:bg-amber-50/60",
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-amber-300 hover:bg-amber-50/60",
   violet:
-    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
+    "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
 };
 
 // ────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ function AutoChip({
         data-testid="auto-chip-spouse-unavailable"
       >
         <span>{meta.label}</span>
-        <span className="text-emerald-500 dark:text-emerald-500 text-micro">배우자 상속인 없음</span>
+        <span className="text-emerald-700 dark:text-emerald-500 text-micro">배우자 상속인 없음</span>
       </span>
     );
   }
@@ -152,7 +152,7 @@ function AutoChip({
       >
         <span>✓</span>
         <span>{meta.label}</span>
-        <span className="text-emerald-600 dark:text-emerald-400 text-micro">
+        <span className="text-emerald-700 dark:text-emerald-400 text-micro">
           {autoDetected ? "자동 도출" : "입력됨"}
         </span>
       </button>
@@ -168,7 +168,7 @@ function AutoChip({
       title={`${meta.label} — 클릭하여 직접 입력란 열기`}
     >
       <span>{meta.label}</span>
-      <span className="text-emerald-500 dark:text-emerald-500 text-micro">직접 입력 가능</span>
+      <span className="text-emerald-700 dark:text-emerald-500 text-micro">직접 입력 가능</span>
     </button>
   );
 }
@@ -314,7 +314,7 @@ export function Step4DeductionChecklist({
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
           공제 항목 한눈에 보기
         </p>
-        <p className="text-micro text-gray-500 dark:text-gray-400">
+        <p className="text-micro text-gray-600 dark:text-gray-400">
           — 해당 항목을 클릭하면 아래 그룹이 펼쳐집니다
         </p>
         {warningCount > 0 && (
@@ -368,7 +368,7 @@ export function Step4DeductionChecklist({
       </div>
 
       {/* 신고 상태·납부 방법 안내 */}
-      <p className="text-micro text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-2">
+      <p className="text-micro text-gray-600 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-2">
         ※ 신고 상태(§69 신고세액공제)는 C그룹, 납부 방법(연부연납·분납·물납)은 D그룹에 있습니다. 그룹 헤더를 클릭하거나 위 칩을 클릭하면 열립니다.
       </p>
     </div>

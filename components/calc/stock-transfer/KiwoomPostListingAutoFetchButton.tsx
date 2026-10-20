@@ -232,7 +232,7 @@ export function KiwoomPostListingAutoFetchButton({
                         isTrading ? "" : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      <span className="text-gray-500 dark:text-gray-400 tabular-nums">{i + 1}. {iso}</span>
+                      <span className="text-gray-600 dark:text-gray-400 tabular-nums">{i + 1}. {iso}</span>
                       <span className="tabular-nums">{isTrading ? close.toLocaleString() : label || "—"}</span>
                     </div>
                   );

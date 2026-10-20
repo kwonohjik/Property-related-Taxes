@@ -106,7 +106,7 @@ export function PeriodRangeEditor({
                   type="button"
                   onClick={() => removePeriod(idx)}
                   data-testid={`${testidPrefix}-remove-${idx}`}
-                  className="text-xs text-rose-600 hover:underline inline-flex items-center gap-1 dark:text-rose-400"
+                  className="text-xs text-rose-700 hover:underline inline-flex items-center gap-1 dark:text-rose-400"
                 >
                   <Trash2 className="h-3 w-3" />
                   삭제
@@ -130,7 +130,7 @@ export function PeriodRangeEditor({
               </FieldCard>
             </div>
             {isStartOnly && (
-              <p className="text-caption text-rose-600 dark:text-rose-400">
+              <p className="text-caption text-rose-700 dark:text-rose-400">
                 {startLabel}이 입력되었는데 {endLabel}이 비어 있습니다. {endLabel}을 입력하세요.
               </p>
             )}

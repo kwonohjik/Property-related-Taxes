@@ -177,7 +177,7 @@ function SelfCultivationDetailCard({ detail }: { detail: NonNullable<Acquisition
           </>
         )}
         {detail.warnings.map((w, i) => (
-          <p key={i} className="text-amber-600 dark:text-amber-400">• {w}</p>
+          <p key={i} className="text-amber-700 dark:text-amber-400">• {w}</p>
         ))}
       </div>
     </div>
@@ -256,8 +256,8 @@ function TemporaryTwoHouseDeadlineCard({
         isExpired
           ? "text-destructive"
           : isUrgent
-          ? "text-red-600 dark:text-red-400"
-          : "text-sky-600 dark:text-sky-400"
+          ? "text-red-700 dark:text-red-400"
+          : "text-sky-700 dark:text-sky-400"
       }`}>
         {isExpired
           ? `처분기한 경과 (${Math.abs(daysLeft)}일 초과)`

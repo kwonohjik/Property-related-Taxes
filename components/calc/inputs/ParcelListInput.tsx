@@ -214,7 +214,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
                       onChange={(v) => update(i, { replottingConfirmDate: v })}
                     />
                     {p.replottingConfirmDate && (
-                      <p className="text-xs text-blue-600 dark:text-blue-400">
+                      <p className="text-xs text-blue-700 dark:text-blue-400">
                         취득일 = {p.replottingConfirmDate} 다음날 자동 적용
                       </p>
                     )}

@@ -100,7 +100,7 @@ export function GbDesignatedLand77_3DetailCard({
           </div>
           {d.cappedByAnnualLimit && (
             <div className="space-y-0.5">
-              <p className="text-red-600 dark:text-red-400">※ 연간 한도 {formatKRW(d.appliedAnnualLimit)} 초과 → 한도 적용</p>
+              <p className="text-red-700 dark:text-red-400">※ 연간 한도 {formatKRW(d.appliedAnnualLimit)} 초과 → 한도 적용</p>
               <p className="font-medium">→ 적용 감면세액 (한도 후) = {formatKRW(d.reductionAmount)}</p>
             </div>
           )}

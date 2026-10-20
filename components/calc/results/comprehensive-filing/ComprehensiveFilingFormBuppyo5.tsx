@@ -92,7 +92,7 @@ export function ComprehensiveFilingFormBuppyo5({
       {/* 헤더 */}
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
-        <p className="text-micro text-gray-500 dark:text-gray-400">{header.formCode} ({header.revised})</p>
+        <p className="text-micro text-gray-600 dark:text-gray-400">{header.formCode} ({header.revised})</p>
       </div>
 
       <div className="overflow-x-auto">
@@ -169,8 +169,8 @@ export function ComprehensiveFilingFormBuppyo5({
               >
                 {has1HouseExtra ? fmtKRW(extraDeduction) : DASH}
               </td>
-              <td className="border border-gray-300 text-center text-gray-400">{DASH}</td>
-              <td className="border border-gray-300 text-center text-gray-400">{DASH}</td>
+              <td className="border border-gray-300 text-center text-gray-600 dark:text-gray-400">{DASH}</td>
+              <td className="border border-gray-300 text-center text-gray-600 dark:text-gray-400">{DASH}</td>
             </tr>
 
             <tr className={BESSHI_ROW}>
@@ -375,8 +375,8 @@ export function ComprehensiveFilingFormBuppyo5({
                   ? fmtKRW(result.oneHouseDeduction.deductionAmount)
                   : DASH}
               </td>
-              <td className="border border-gray-300 text-center text-gray-400">{DASH}</td>
-              <td className="border border-gray-300 text-center text-gray-400">{DASH}</td>
+              <td className="border border-gray-300 text-center text-gray-600 dark:text-gray-400">{DASH}</td>
+              <td className="border border-gray-300 text-center text-gray-600 dark:text-gray-400">{DASH}</td>
             </tr>
 
             <tr className={BESSHI_ROW_TOTAL}>

@@ -31,7 +31,7 @@ export function Row({
       } ${sub ? "pl-7" : ""}`}
     >
       <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
-      <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
+      <span className={`font-mono text-sm ${deduction ? "text-blue-700 dark:text-blue-400" : ""}`}>
         {value}
       </span>
     </div>
@@ -71,7 +71,7 @@ export function InstallmentGuide({
           <LawArticleModal legalBasis="상증법 §71" label="§71 연부연납" />
           <LawArticleModal legalBasis="상증법 §70" label="§70 분납" />
         </div>
-        <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+        <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
           결정세액 2천만원 초과 시 최대 {maxYearsLabel}년 분할납부 가능
           {specialTreatmentSuccession && " (가업승계 특례 §30의6·§71②2호가)"}
         </p>
@@ -85,7 +85,7 @@ export function InstallmentGuide({
           <span>연간 납부 원금 ({result.appliedYears}회)</span>
           <span className="font-medium">{formatKRW(result.annualPrincipal)}</span>
         </div>
-        <p className="text-amber-600 dark:text-amber-400 mt-1">
+        <p className="text-amber-700 dark:text-amber-400 mt-1">
           {/* 가산율은 고시로 바뀐다 — 정본 테이블 상수를 쓴다(하드코딩 금지, IG-072).
               종전 「연 1.8%」는 2020-03-13~2021-03-15 구간 값이라 현행(3.1%)의 약 절반이었고,
               같은 사안을 안내하는 상속세 결과 화면과 서로 다른 가산율을 말하고 있었다. */}
@@ -101,7 +101,7 @@ export function InstallmentGuide({
             <span>기타 재산 (부동산·유가증권 등)</span>
             <span className="font-medium">세액의 120%</span>
           </div>
-          <p className="text-amber-600 dark:text-amber-400">
+          <p className="text-amber-700 dark:text-amber-400">
             ※ 연부연납 허가 신청 시 납세담보를 함께 제공해야 함
           </p>
         </div>
@@ -149,7 +149,7 @@ export function AggregationExcludedCard({
               <td className="py-1.5 pr-2 text-muted-foreground">
                 {step.label}
                 {step.note ? (
-                  <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">({step.note})</span>
+                  <span className="ml-1 text-xs text-emerald-700 dark:text-emerald-400">({step.note})</span>
                 ) : null}
               </td>
               <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">

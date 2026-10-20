@@ -70,7 +70,7 @@ export function AllocationResultView({
                             ) : (
                               <>증여자 {nameById.get(d.donorId)}</>
                             )}
-                            {d.excludedReason ? <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({d.excludedReason})</span> : null}
+                            {d.excludedReason ? <span className="ml-1 text-xs text-gray-600 dark:text-gray-400">({d.excludedReason})</span> : null}
                           </td>
                           <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap" data-testid={`ci-alloc-split-value-${b.beneficiaryId}-${d.donorId}`}>{formatKRW(d.value)}</td>
                         </tr>

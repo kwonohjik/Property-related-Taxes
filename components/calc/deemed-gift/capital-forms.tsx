@@ -322,7 +322,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                 className="flex-1 rounded-md border border-emerald-200 bg-white dark:bg-gray-900 px-2 py-1 text-sm"
               />
               {rows.length > 2 && (
-                <button type="button" onClick={() => removeRow(r.id)} data-testid={`ci-alloc-remove-${idx}`} className="shrink-0 rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-600 hover:bg-rose-50 dark:text-rose-400">
+                <button type="button" onClick={() => removeRow(r.id)} data-testid={`ci-alloc-remove-${idx}`} className="shrink-0 rounded-md border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 dark:text-rose-400">
                   삭제
                 </button>
               )}
@@ -391,7 +391,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                       aria-pressed={on}
                       onClick={() => toggleRelated(r, o)}
                       data-testid={`ci-alloc-related-${idx}-${o.id}`}
-                      className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-violet-400 bg-violet-100 text-violet-800" : "border-gray-200 bg-white text-gray-500"}`}
+                      className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-violet-400 bg-violet-100 text-violet-800" : "border-gray-200 bg-white text-gray-600 dark:text-gray-500"}`}
                     >
                       {o.name.trim() || "(이름 없음)"}
                     </button>

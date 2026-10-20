@@ -108,7 +108,7 @@ export function TaxIncentiveRentalFields({
           className="space-y-2.5 rounded-md border border-violet-200/70 bg-violet-50/30 p-2.5 dark:bg-violet-950/40"
           data-testid={`tax-incentive-rental-apt-gate-${idPrefix}`}
         >
-          <p className="text-caption text-violet-700/80 dark:text-violet-300/80">
+          <p className="text-caption text-violet-700 dark:text-violet-300/80">
             아파트인 민간매입임대주택(장기일반·단기)은 2027.12.31.(또는 ⑪ 각 호의 날 중 늦은 날)까지
             양도한 경우에만 해당합니다 (소령 §167의3①3호 후단·⑪). 모르는 칸을 「모름」으로 두면 이 기한이
             적용되는 주택으로 보고 계산하고, 그 때문에 결과가 달라지면 확인이 필요하다고 안내합니다.

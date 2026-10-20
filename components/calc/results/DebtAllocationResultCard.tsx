@@ -256,7 +256,7 @@ export function DebtAllocationResultCard({
               </tbody>
             </table>
           </div>
-          <p className="text-micro text-gray-500 dark:text-gray-400 italic">
+          <p className="text-micro text-gray-600 dark:text-gray-400 italic">
             장례비는 한도 적용 전 입력값 기준. 상속인별 산출세액 배부는 아래 상속인별 배부 표 참조.
           </p>
         </div>
@@ -293,7 +293,7 @@ export function DebtAllocationResultCard({
                     </dt>
                     <dd className="font-mono tabular-nums font-semibold">{formatKRW(d.amount)}</dd>
                   </div>
-                  <p className="text-micro text-gray-500 dark:text-gray-400 pl-0">
+                  <p className="text-micro text-gray-600 dark:text-gray-400 pl-0">
                     분배: {allocationText}
                   </p>
                 </div>
@@ -308,7 +308,7 @@ export function DebtAllocationResultCard({
               </dd>
             </div>
           </dl>
-          <p className="text-micro text-gray-500 dark:text-gray-400 italic">
+          <p className="text-micro text-gray-600 dark:text-gray-400 italic">
             재산평가 담보채권액(저당 + 임대보증금)이 §14①3호 「피상속인의 채무」로 과세가액에서 공제됩니다.
           </p>
         </div>
