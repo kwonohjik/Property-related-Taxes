@@ -231,8 +231,8 @@ describe("G1 — 첫 자산 주택부수토지 = 주택 먼저(K1)와 같은 계
       companionAssets: body.companionAssets.map((c) => (c.assetId === "h1" ? { ...c, residencePeriodMonths: 24 } : c)),
     });
     expect(norm(rv, "r")).toEqual(norm(fw, "f"));
-    // 🔁 #17-2b 갱신: 24,711,500 → 18,705,498 (고가주택 + 배율 초과 — 회신 방식). 정/역 순서 동치(`norm`)와 거주 0 대조는 그대로다.
-    expect(rv.totalTax).toBe(18_705_498);
+    // 🔁 #17-2b 갱신: 24,711,500 → 18,705,498 (고가주택 + 배율 초과 — 회신 방식) → `applyRate` 소수 세율 정확화로 18,705,500. 정/역 순서 동치(`norm`)와 거주 0 대조는 그대로다.
+    expect(rv.totalTax).toBe(18_705_500);
     // 거주 0으로 보면 표2 거주분이 빠진다 — 우선순위가 뒤집히면 여기서 갈린다.
     const rv0 = await post({ ...body, residencePeriodMonths: 0 });
     expect(rv0.totalTax).toBeGreaterThan(rv.totalTax);

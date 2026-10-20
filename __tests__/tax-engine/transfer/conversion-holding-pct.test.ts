@@ -66,7 +66,7 @@ describe("ⓑ 분수 정수 연산 — 소수 rate 합산의 1원 과소를 차�
    *   주택   4년 → 표2 16%   ⇒ 보유 22%
    *   거주   3년 → 표2 12%   ⇒ 합계 34%
    *
-   * 소수 경로: 0.22 + 0.12 = 0.33999999999999997 → applyRate(178,540,000) = 60,703,599
+   * 소수 경로: 0.22 + 0.12 = 0.33999999999999997 → 종전 applyRate(178,540,000) = 60,703,599(지금은 백만분율 정수 연산으로 60,703,600)
    * 정수 경로: applyRateFraction(178,540,000, 34, 100)                    = 60,703,600 ← 정확값
    */
   const TAXABLE_GAIN = 178_540_000;
@@ -87,14 +87,13 @@ describe("ⓑ 분수 정수 연산 — 소수 rate 합산의 1원 과소를 차�
     expect(applyRateFraction(TAXABLE_GAIN, 34, 100)).toBe(60_703_600);
   });
 
-  it("★ 소수 경로는 1원 과소다 — 이 반례가 정수 유지의 근거다", () => {
-    // 이 테스트는 **결함을 고정**한다. applyRate가 고쳐지면 실패시키고 헬퍼 주석을 갱신할 것.
+  it("★ 소수 경로도 이제 정확값이다 — applyRate가 소수 6자리 이내 세율을 백만분율 정수로 계산한다(종전 60,703,599 · 헬퍼 주석 갱신)", () => {
     expect(0.22 + 0.12).not.toBe(0.34);
-    expect(applyRate(TAXABLE_GAIN, 0.22 + 0.12)).toBe(60_703_599);
-    expect(applyRate(TAXABLE_GAIN, 0.22 + 0.12)).not.toBe(applyRateFraction(TAXABLE_GAIN, 34, 100));
+    expect(applyRate(TAXABLE_GAIN, 0.22 + 0.12)).toBe(60_703_600);
+    expect(applyRate(TAXABLE_GAIN, 0.22 + 0.12)).toBe(applyRateFraction(TAXABLE_GAIN, 34, 100));
   });
 
-  it("전 조합 스캔 — 정수 경로는 소수 경로와 어긋나거나 같을 뿐 **작지 않다**", () => {
+  it("전 조합 스캔 — 소수 경로(applyRate)가 정수 경로와 전부 같다(종전에는 어긋나는 조합이 있었다)", () => {
     // 표1(0~30, 2 배수) × 표2 보유(0~40, 4 배수) × 표2 거주(0~40, 4 배수)
     let mismatches = 0;
     for (let t1 = 0; t1 <= 30; t1 += 2) {
@@ -103,12 +102,10 @@ describe("ⓑ 분수 정수 연산 — 소수 rate 합산의 1원 과소를 차�
           const pct = Math.min(t1 + t2h, 40) + t2r;
           const exact = applyRateFraction(TAXABLE_GAIN, pct, 100);
           const floaty = applyRate(TAXABLE_GAIN, Math.min(t1 + t2h, 40) / 100 + t2r / 100);
-          expect(floaty).toBeLessThanOrEqual(exact); // 소수는 같거나 과소일 뿐 과대가 아니다
           if (floaty !== exact) mismatches++;
         }
       }
     }
-    // 어긋나는 조합이 실제로 존재한다 — 0이면 이 방어가 무의미하다는 뜻이므로 회귀로 잡는다.
-    expect(mismatches).toBeGreaterThan(0);
+    expect(mismatches).toBe(0);
   });
 });

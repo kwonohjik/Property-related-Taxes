@@ -105,10 +105,10 @@ const second = (): TransferTaxInput =>
   } as Partial<TransferTaxInput>);
 
 describe("A) 정상 적용(파트별 세율 판정) — 적용 고지 그대로, 대체 고지 없음 (회귀 가드)", () => {
-  it("FB-A1 단건: partRateBasisApplied=true · 적용 고지 1건 · 대체 고지 없음 · 세액 195,309,999", () => {
+  it("FB-A1 단건: partRateBasisApplied=true · 적용 고지 1건 · 대체 고지 없음 · 세액 195,310,000", () => {
     const r = calculateTransferTax(NORMAL({ landRebuildPriorHouse: REBUILD }), rates);
     expect(r.splitDetail?.partRateBasisApplied).toBe(true);
-    expect(r.calculatedTax).toBe(195_309_999);
+    expect(r.calculatedTax).toBe(195_310_000);
     expect(applyNotice(r.warnings)).toHaveLength(1);
     expect(rebuildWarnings(r.warnings).filter((w) => w.includes("반영되지 않았습니다"))).toEqual([]);
   });

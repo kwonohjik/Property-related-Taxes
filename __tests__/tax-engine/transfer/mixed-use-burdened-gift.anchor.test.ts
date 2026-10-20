@@ -96,10 +96,10 @@ describe("겸용 × 부담부증여 — 세액 anchor (설계서 §4 프로토�
     expect(r.total.taxBase).toBe(115_900_002);
   });
 
-  it("[M-3] 고가 겸용(시가18억 · 채무9억) 해석 B(증여가액 C) → 15,447,499, 주택분 안분 1/9", () => {
+  it("[M-3] 고가 겸용(시가18억 · 채무9억) 해석 B(증여가액 C) → 15,447,500, 주택분 안분 1/9", () => {
     const info = bg(F2, { marketValueAtTransfer: 1.8e9, mortgageDebtAmount: 900e6, actualAcquisitionTotal: 900e6, debtAttribution: { housing: 0, commercial: 0, unallocated: 900e6 } });
     const r = run(asset(F2, { isOneHouseExempt: true, residencePeriodYears: 10 }), info);
-    expect(det(r)).toBe(15_447_499);
+    expect(det(r)).toBe(15_447_500);
     expect(r.housingPart.isExempt).toBe(false);
     expect(r.housingPart.longTermDeductionTable).toBe(2);
     expect(r.burdenedGift?.highValue.judgmentBase).toBe(1_800_000_000);

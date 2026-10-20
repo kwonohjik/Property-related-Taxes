@@ -53,7 +53,7 @@ lib/tax-engine/
 ## 정수 연산 디테일
 
 `tax-utils.ts` 제공:
-- `applyRate(amount, rate)` — `Math.floor(amount * rate)`. 세율×금액은 이거로만.
+- `applyRate(amount, rate)` — 원 미만 절사. 세율×금액은 이거로만. 세율이 소수 6자리 이내면 백만분율 정수 연산(double 곱 `Math.floor(amount * rate)`는 70% 등에서 1원 과소 — 90 × 0.7 → 62), 그 밖의 비율은 double 곱.
 - `safeMultiply(a, b)` — overflow 시 BigInt fallback (환산취득가 2조×1조 케이스).
 - `truncateToThousand(n)` — 천원 미만 절사 순수 산술 헬퍼. 호출은 건물 기준시가 ㎡당 단가(`stdPriceFromPerM2`)뿐이다. **양도소득 과세표준·지방소득세에는 쓰지 않는다**(절사 규정이 없다 — 지방소득세는 원 미만 절사).
 - `truncateToTenThousand(n)` — 만원 미만 절사 (종합부동산세 과세표준).

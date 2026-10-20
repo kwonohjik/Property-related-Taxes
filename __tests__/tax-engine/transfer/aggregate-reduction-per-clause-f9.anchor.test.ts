@@ -87,7 +87,7 @@ describe("F-9 다건 감면 호별 산정", () => {
     expect(b.clauseBasis).toBe("per_clause");
     expect(allocated(r, "B")).toBe(7_487_000);
     // 결정세액 = 319,869,999 − 7,487,000
-    expect(r.calculatedTax - r.reductionAmount).toBe(312_382_999);
+    expect(r.calculatedTax - r.reductionAmount).toBe(312_383_000);
     expect((r.warnings ?? []).some((w) => OLD_WARNING.test(w))).toBe(false);
   });
 

@@ -215,7 +215,7 @@ describe("#18 12억 판정·안분 분모 — 배율 초과 부수토지 가액�
     expect(byId(a, "primary").isExempt).toBe(false);
     expect(byId(a, "c1__appurtenant").isExempt).toBe(false);
     expect(byId(a, "c1__excess").rateGroup).toBe("non_business_land");
-    expect(a.totalTax).toBe(29_307_927); // 🔁 #17-2b 갱신: 31,005,069 → 29,307,927 (회신 방식 — F13-3과 같은 사유)
+    expect(a.totalTax).toBe(29_307_928); // 🔁 #17-2b 갱신: 31,005,069 → 29,307,927 (회신 방식 — F13-3과 같은 사유) · `applyRate` 소수 세율 정확화로 +1원
   });
 
   it("F13-9 긍정 짝 — 초과분을 넣어도 합계가 12억 이하면(주택 6억 + 토지 4억 500㎡) 주택·한도 내 토지는 비과세 그대로", async () => {

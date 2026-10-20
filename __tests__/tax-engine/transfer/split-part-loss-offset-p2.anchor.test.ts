@@ -107,7 +107,7 @@ describe("B 다건 — 건물 차손은 신고 전체의 같은 세율 자산부
     expect(a.lossOffsetFromSameGroup + a.lossOffsetFromOtherGroup).toBe(0);
   });
   it("산출세액 = 토지 prog(과세표준) + b 70% — 자산 안에서 먼저 통산(A) 226,710,000보다 작다", () => {
-    expect(r.calculatedTax).toBe(224_009_999);
+    expect(r.calculatedTax).toBe(224_010_000);
   });
   it("자산 1건이면 단건과 같다(통산할 다른 자산 없음 → 자기 토지)", () => {
     expect(multi(2025, [item(rebuild, "a")]).calculatedTax).toBe(calculateTransferTax(rebuild, rates).calculatedTax);
@@ -126,7 +126,7 @@ describe("B 경계 — 같은 세율 자산이 다 못 받는 차손 · 순손�
   it("S2 a가 자산 전체로는 400,000뿐이어도 건물 차손 9,000,000이 b로 가면 토지 9,400,000이 남아 토지 세율로 과세", () => {
     const r = multi(2025, [item(baseTransferInput({ ...rebuild, landAcquisitionPrice: 690_000_000 } as Partial<TransferTaxInput>), "a"), item(shortHouse, "b")]);
     expect(r.properties.map((p) => [p.income, p.incomeAfterOffset])).toEqual([[400_000, 9_400_000], [100_000_000, 91_000_000]]);
-    expect(r.calculatedTax).toBe(62_513_999);
+    expect(r.calculatedTax).toBe(62_514_000);
   });
   it("S2b a가 자산 전체로 순손실(토지 +5,000,000 · 건물 −9,000,000 = −4,000,000)이어도 건물 차손이 b로 가면 토지 5,000,000이 남아 토지 세율로 과세 — 자산 단위(건물 70%)로 후퇴하지 않는다", () => {
     const r = multi(2025, [item(baseTransferInput({ ...rebuild, landAcquisitionPrice: 695_000_000 } as Partial<TransferTaxInput>), "a"), item(shortHouse, "b")]);
@@ -134,8 +134,8 @@ describe("B 경계 — 같은 세율 자산이 다 못 받는 차손 · 순손�
     const a = r.properties[0] as unknown as { splitDetail?: { partRateBasisApplied?: boolean } };
     expect(a.splitDetail?.partRateBasisApplied).toBe(true);
     // 독립 산식: b (100,000,000 − 9,000,000 − 기본공제 2,500,000) × 70% = 61,950,000 + a 토지 5,000,000 × 6% = 300,000 → 62,250,000.
-    //   1원 차이는 `applyRate`의 소수 세율 부동소수 절사(memory `feedback_applyrate_fractional_rate_one_won_error`) — 자산 단위(건물 70%)였다면 5,000,000에도 70%가 붙는다.
-    expect(r.calculatedTax).toBe(62_249_999);
+    //   자산 단위(건물 70%)였다면 5,000,000에도 70%가 붙는다.
+    expect(r.calculatedTax).toBe(62_250_000);
   });
   it("S3 a가 c의 차손 20,000,000을 받고(토지 — 같은 누진 세율) 자기 건물 차손 9,000,000을 b에 준다 — 461 − 20 + 9 = 450(백만)", () => {
     const lossLong = baseTransferInput({
@@ -148,7 +148,7 @@ describe("B 경계 — 같은 세율 자산이 다 못 받는 차손 · 순손�
       { fromPropertyId: "a", fromPart: "building", toPropertyId: "b", amount: 9_000_000, scope: "same_group" },
     ]);
     expect(r.properties[0].incomeAfterOffset).toBe(450_000_000);
-    expect(r.calculatedTax).toBe(216_009_999);
+    expect(r.calculatedTax).toBe(216_010_000);
   });
 });
 

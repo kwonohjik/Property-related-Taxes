@@ -177,7 +177,7 @@ describe("S06-8 RH-A2 결과 echo — 실제 적용한 표2(52%)·§161① 라�
     expect(x.rentalHousingExceptionDetail.scenarioId).toBe("RH-A2");
     expect(x.rentalHousingExceptionDetail.appliedTable).toBe("table-2");
     // 세액 불변 — 표시 결함이다
-    expect(x.totalTax).toBe(19_013_498);
+    expect(x.totalTax).toBe(19_013_500);
     expect(x.totalTax).toBe(ctl.result.totalTax);
     expect(x.taxBase).toBe(ctl.result.taxBase);
     expect(x.calculatedTax).toBe(ctl.result.calculatedTax);
