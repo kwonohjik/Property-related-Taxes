@@ -210,3 +210,5 @@
 **검증**
 - anchor `high-value-whole-asset-loss.anchor.test.ts` 5건. §155⑳ on/off 격자(`high-value-excess-land-loss-915`) 포함 통과.
 - 뮤테이션 6건 중 5건 KILLED. 생존 1건(특례 자산 조건)은 중복 조건이라 삭제했다.
+
+**후속**: §9 · §10의 「🟠 남은 확인 필요」 3건(겸용주택 차손 절사 · 단위 몫 차손 · 감면 파트 자체 차손)은 `transfer-split-part-loss-offset-p3.plan.md`에서 다룬다.
