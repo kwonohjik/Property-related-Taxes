@@ -112,7 +112,7 @@ describe("SB-1 — 경고만 있는 단계", () => {
     const r = rows(formWarningOnly());
     const mark = r[0].querySelector('[aria-label="확인 필요"]');
     expect(mark).toBeTruthy();
-    expect(mark!.className).toContain("text-amber-500");
+    expect(mark!.className).toContain("text-amber-700");
     // 오류가 아니므로 «입력 필요»는 아니다.
     expect(r[0].querySelector('[aria-label="입력 필요"]')).toBeNull();
   });
@@ -123,7 +123,7 @@ describe("SB-2 — 오류가 있는 단계", () => {
   it("rose «입력 필요» 표식이 붙는다", () => {
     const mark = rows(formErrorOnly())[1].querySelector('[aria-label="입력 필요"]');
     expect(mark).toBeTruthy();
-    expect(mark!.className).toContain("text-rose-600");
+    expect(mark!.className).toContain("text-rose-700");
     expect(mark!.className).not.toContain("amber");
   });
 });

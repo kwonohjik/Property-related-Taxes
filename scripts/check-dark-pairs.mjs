@@ -22,6 +22,11 @@
 //   · 낮은 대비 조합 금지(양 테마 공통 — docs/00-pm/ui-dark-low-contrast-residual.plan.md §5):
 //     ① `text-muted-foreground/NN` — 회색을 다시 반투명하게 깔면 흰 바탕에서도 1.7~3.9다
 //     ② `text-white` + 흰 글자 대비 4.5 미만 톤 배경(`sky-600` 4.02 · `emerald-500` 2.46 등) — 같은 톤 700을 쓸 것
+//   · 라이트 옅은 글자 금지(접두 없는 라이트 기본색 — docs/00-pm/ui-light-contrast-and-dark-print.plan.md §2-3):
+//     ③ `text-{톤}-400~600` — 옅은 톤 바탕 위에서 4.5 미만(✓ `emerald-600` 3.77 등) → 같은 톤 700
+//     ④ `text-{무채색}-300~500` — 3 미만 글자의 대부분 → 같은 계열 600
+//     ⑤ `text-{톤}-N/NN` — 톤 글자를 반투명하게 깔면 바탕과 섞인다 → 불투명(400~600이면 700)
+//     `dark:`·`hover:`·`disabled:`·`placeholder:` 등 접두 토큰은 보지 않는다.
 //
 // 사용법: node scripts/check-dark-pairs.mjs [경로...]   # 기본 범위: app components lib
 // 하드블록: .husky/pre-push (폰트·톤 게이트와 같은 층위)
@@ -54,6 +59,7 @@ export const WHITE_FORM = [
 ];
 
 const MUTED_ALPHA = /^(?:[a-z-]+:)*text-muted-foreground\/\d+$/;
+const LIGHT_LOW = new RegExp(`^text-((${TONES})-(400|500|600)(/\\d+)?|(${NEU})-(300|400|500)(/\\d+)?|(${TONES})-\\d+/\\d+)$`);
 // 흰 글자 대비 4.5 미만인 톤 배경(Tailwind v4 색값으로 계산): 400 전부 · 500(indigo 제외) · 600 일부
 const WHITE_OK_600 = new Set(["rose", "violet", "blue", "red", "purple", "fuchsia", "pink", "indigo"]);
 const WHITE_BG = new RegExp(`^(?:dark:)?bg-(${TONES})-(400|500|600)$`);
@@ -71,7 +77,7 @@ export function unpaired(classList, { neutral = true } = {}) {
   const useNeutral = neutral && !fixedWhite;
   const texts = toks.filter((t) => TEXT.test(t) || (useNeutral && NTEXT.test(t)));
   const bgs = toks.filter((t) => BG.test(t) || (useNeutral && NBG.test(t)));
-  const low = [...toks.filter((t) => MUTED_ALPHA.test(t)), ...(toks.includes("text-white") ? toks.filter(whiteFails) : [])];
+  const low = [...toks.filter((t) => MUTED_ALPHA.test(t) || LIGHT_LOW.test(t)), ...(toks.includes("text-white") ? toks.filter(whiteFails) : [])];
   if (texts.length && bgs.some((t) => !t.includes("/")) && isPill(toks)) return low;
   const out = [...low];
   if (!toks.some((t) => t.startsWith("dark:text-"))) out.push(...texts);
@@ -79,7 +85,7 @@ export function unpaired(classList, { neutral = true } = {}) {
   return out;
 }
 
-const hasTone = (s) => s.split(/\s+/).some((t) => TEXT.test(t) || BG.test(t) || NTEXT.test(t) || NBG.test(t) || MUTED_ALPHA.test(t) || WHITE_BG.test(t));
+const hasTone = (s) => s.split(/\s+/).some((t) => TEXT.test(t) || BG.test(t) || NTEXT.test(t) || NBG.test(t) || MUTED_ALPHA.test(t) || LIGHT_LOW.test(t) || WHITE_BG.test(t));
 
 /** 소스 하나의 위반 — 문자열 리터럴마다, 템플릿은 `${}` 바깥 조각과 안쪽 리터럴을 따로 본다 */
 export function scan(src, opts) {
@@ -114,7 +120,7 @@ const SELF = [
   ['"bg-slate-50/50 p-3"', 1],
   ['"bg-white p-3 text-black text-slate-700"', 0], // 흰 바탕 고정 상자
   ['"rounded bg-gray-100 px-1.5 py-0.5 text-gray-600"', 0], // 무채색 알약
-  ["`p-2 ${on ? \"text-violet-600\" : \"\"}`", 1],
+  ["`p-2 ${on ? \"text-violet-700\" : \"\"}`", 1],
   ['"참고 text-amber-700"', 0],
   ['"text-xs text-muted-foreground/50"', 1], // 투명도 준 회색 글자
   ['"text-xs text-muted-foreground"', 0],
@@ -122,6 +128,13 @@ const SELF = [
   ['"rounded-full bg-sky-700 text-white"', 0],
   ['"rounded-full bg-rose-600 text-white"', 0], // 4.51 — 통과
   ['"bg-emerald-700 text-white dark:bg-emerald-500"', 1], // 다크 변형도 본다
+  ['"text-emerald-600 dark:text-emerald-400"', 1], // 라이트 옅은 톤 글자
+  ['"text-emerald-700 dark:text-emerald-400"', 0],
+  ['"rounded bg-emerald-100 px-1.5 py-0.5 text-emerald-600"', 1], // 알약이어도 라이트 규칙은 본다
+  ['"text-gray-500 dark:text-gray-400"', 1], // 연한 무채색 글자
+  ['"text-gray-600 dark:text-gray-400"', 0],
+  ['"text-amber-800/80 dark:text-amber-200"', 1], // 톤 글자 투명도
+  ['"text-sky-700 hover:text-sky-600 disabled:text-gray-400 dark:text-sky-300"', 0], // 접두 토큰은 보지 않는다
 ];
 for (const [src, n] of SELF) {
   if (scan(src).length !== n) {

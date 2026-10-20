@@ -11,7 +11,7 @@
 import { test, expect, type Locator } from "@playwright/test";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { fillDateAndVerify } from "./_helpers/tax-flow";
-import { expectDarkContrast } from "./_helpers/dark-contrast";
+import { expectDarkContrast, expectLightContrast } from "./_helpers/dark-contrast";
 
 async function fillDateExact(
   scope: Locator,
@@ -81,6 +81,8 @@ test.describe("겸용주택 Case A — 자산-우선 전치", () => {
     ).toHaveCount(0);
     await expect(mixedPhd.getByTestId("phd-housing-stdprice-calc")).toHaveCount(1);
     await expect(mixedPhd.getByTestId("phd-commercial-stdprice-calc")).toHaveCount(1);
+    // 라이트 대비 — 겸용 자산 카드(옅은 톤 바탕 위 회색 안내 글자·톤 글자)
+    await expectLightContrast(page, page.locator('[data-asset-card-index="0"]'));
     // 다크 대비 — 면적 라벨(text-slate-700 다크 짝 없음 1.35였다)
     await expectDarkContrast(page, page.getByText("주택 전용면적 (㎡)"));
     // 주택 런처 클릭 → 결합 모달 열림
