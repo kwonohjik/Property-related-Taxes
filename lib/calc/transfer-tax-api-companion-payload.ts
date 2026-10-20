@@ -53,6 +53,21 @@ import {
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 
 /**
+ * 자산 단위 실지 취득가액(100% 기준 · 지분 스케일 전) — 취득원인별로 그 칸이 취득가액인 경우만.
+ *
+ * 컴패니언 `fixedAcquisitionPrice`와 축 B 일반건물 지분의 `acquisitionPrice`(`transfer-tax-api-gb-shares.ts`)가
+ * **같은 leaf**를 쓴다 — 같은 자산이 동반이냐 지분이냐에 따라 다른 취득가액이 되지 않게.
+ */
+export function fixedAcquisitionPriceRaw(asset: AssetForm): number | undefined {
+  return (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
+    (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
+    // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
+    (asset.acquisitionCause === "newConstruction" && asset.fixedAcquisitionPrice)
+    ? parseAmount(asset.fixedAcquisitionPrice)
+    : undefined;
+}
+
+/**
  * 자산 1건 → 번들 companionAssets 배열 항목 변환.
  *
  * 지분 모드(ownershipRatio < 1.0): 사용자 입력값은 100% 기준이므로 × ratio 자동 적용.
@@ -147,13 +162,7 @@ export function buildAssetPayload(
         }
       : undefined;
 
-  const fixedAcqRaw =
-    (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
-    (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
-    // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
-    (asset.acquisitionCause === "newConstruction" && asset.fixedAcquisitionPrice)
-      ? parseAmount(asset.fixedAcquisitionPrice)
-      : undefined;
+  const fixedAcqRaw = fixedAcquisitionPriceRaw(asset);
 
   // 사례 28 — 신축(자가건축): 4시점 중 가장 빠른 날을 acquisitionDate로 자동 도출 (영 §162①4호).
   // UI 측 onChange 자동 동기화의 fallback (페이지 reload 후 마운트 시 이미 입력된 데이터에 대비).
