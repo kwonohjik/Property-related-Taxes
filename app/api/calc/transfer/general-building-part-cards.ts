@@ -21,9 +21,13 @@ import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-va
 import type { GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
 import { SHARE_ID_SEPARATOR } from "@/lib/tax-engine/general-building-share-id";
 import { buildEstimatedGeneralBuildingCards } from "./general-building-route-helper";
+import { extensionBundledInjection } from "./general-building-route-helper";
 import type { GeneralBuildingValuationPayload } from "./general-building-route-helper";
 import { buildActualGeneralBuildingCards } from "./general-building-route-actual";
 import type { GeneralBuildingActualPricePayload } from "./general-building-route-actual";
+import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
+import { buildProperties } from "./general-building-route-cards";
+import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 
 export interface GbPartCards {
   cards: AssetCardForAggregate[];
@@ -63,6 +67,15 @@ export function buildGbPartCards(
   landAcquisitionDate: Date,
   /** 개산공제(영 §163⑥) base 축소 전용. 컴패니언(단독 소유)은 1 또는 미전달. */
   ownershipRatio: number | undefined,
+  /**
+   * 자산(또는 지분) 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 자리다.
+   *
+   * 🔴 종전에는 이 두 값이 없었다. 실가 분기는 필요경비가 `undefined × 비율` = NaN으로 500이 나고,
+   *    자본적지출이 있으면 분리 OFF 자산 단위 취득가액이 0이 됐다(2026-10-20 실측 —
+   *    계획서 `docs/00-pm/gb-parts-actual-acq-exp.plan.md` §1). 환산 분기는 증축 원건물 주입을 같이 한다.
+   */
+  actualAcquisitionPrice: number,
+  actualExpenses: number,
 ): GbPartCards {
   const landArea = (gbv.landArea as number) ?? 0;
   const landStdAtTransfer = ((gbv.transferLandPricePerSqm as number) ?? 0) * landArea;
@@ -82,6 +95,8 @@ export function buildGbPartCards(
       acquisitionDate,
       landAcquisitionDate,
       buildingAcquisitionDate: acquisitionDate,
+      actualAcquisitionPrice,
+      actualExpenses,
     });
     return {
       cards: built.cards,
@@ -108,6 +123,8 @@ export function buildGbPartCards(
     landAcquisitionDate,
     // 개산공제(영 §163⑥) base 축소 전용 — 기준시가·면적은 100% 유지가 정확성의 근거다.
     ownershipRatio,
+    // 증축 원건물 일괄 실가 — 단건과 같은 주입(엔진이 키의 존재로 원건물 모드를 고른다).
+    ...extensionBundledInjection(gbv, actualAcquisitionPrice, actualExpenses),
   };
   const { gbOut, swap } = buildEstimatedGeneralBuildingCards(payload);
   const acqLandPerSqm = (gbv.acquisitionLandPricePerSqm as number) ?? 0;
@@ -172,3 +189,60 @@ export function tagGbCards(
   }));
 }
 
+/**
+ * ⑭ **일반건물 컴패니언 — 1건이 토지·건물(+증축) 파트 카드로 펼쳐진다** (`bundled-split-helpers.ts`에서 옮김 · 800줄 정책).
+ *
+ * 🔑 **2단 안분이다.** 자산 간 안분(§166⑥ 키)은 5-a가 이미 끝냈고(`engine.transferPrice` = 그 자산의 몫),
+ *    **자산 안에서 토지·건물로 나누는 분모**(양도시 토지 기준시가 + 건물 기준시가 + 증축분)는
+ *    GB 엔진이 정한다. 축 B(지분 분할)가 `총계약가 × 지분율`을 같은 자리에 넣는 것과
+ *    **완전히 같은 형태**이며, 두 축이 `buildGbPartCards` **한 leaf를 공유**한다.
+ *
+ * ⚠️ 종전에는 route 5-a-3(`:471`)이 이 계산을 했는데, 5-a가 `return`해 버려 **도달조차
+ *    하지 않았다**(설계문서 `transfer-bundled-subengine-hosting.design.md` §1). 그래서
+ *    ⑧이 함께양도를 막고 있었다 — 「전용 경로가 없다」가 아니라 「경로가 실행되지 않는다」였다.
+ *
+ * 🔴 카드 태깅과 swap Map 재맵핑은 **같은 시점에** 해야 한다 — 한쪽만 접미사가 붙으면
+ *    `buildProperties`가 `swap.allocation.get(card.propertyId)`에서 조용히 미스한다.
+ */
+export function buildGbCompanionItems(
+  generalBuildingValuation: Record<string, unknown>,
+  /** 컴패니언 엔진 입력 — 5-a 안분 결과·Date 변환·감면 매핑이 끝난 값. */
+  engine: Pick<
+    TransferTaxItemInput,
+    "transferPrice" | "transferDate" | "acquisitionDate" | "acquisitionPrice" | "expenses" | "reductions"
+  >,
+  src: { ownershipRatio?: number; assetId: string; assetLabel: string },
+): TransferTaxItemInput[] {
+  const gbv = coerceGeneralBuildingPayload(generalBuildingValuation);
+  const bldAcqDate = (gbv.buildingAcquisitionDate as Date | undefined) ?? engine.acquisitionDate;
+  const landAcqDate = (gbv.landAcquisitionDate as Date | undefined) ?? engine.acquisitionDate;
+  const built = buildGbPartCards(
+    gbv,
+    engine.transferPrice,
+    engine.transferDate,
+    bldAcqDate,
+    landAcqDate,
+    src.ownershipRatio,
+    /*
+     * 자산 단위 실지 취득가액·필요경비 — 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축이다:
+     * 증축 일괄값(`bundledAcquisitionPrice`·`bundledExpenses`)이 있으면 그것, 없으면 그 자산의 엔진 입력값
+     * (5-a가 정한 취득가액 · 직접 경비 + 공통 양도비 몫 — 다른 컴패니언과 같은 소스).
+     */
+    (gbv.bundledAcquisitionPrice as number | undefined) ?? engine.acquisitionPrice ?? 0,
+    (gbv.bundledExpenses as number | undefined) ?? engine.expenses ?? 0,
+  );
+  const tagged = tagGbCards(built.cards, src.assetId, src.assetLabel);
+  const swap = built.swap ? remapGbSwap(built.swap, src.assetId) : undefined;
+  return buildProperties(
+    tagged,
+    built.nonBusinessRatio,
+    swap,
+    // §104③ 미등기 — 축 B와 **같은 축**을 싣는다. 빠뜨리면 컴패니언에서만 조용히 무시된다.
+    {
+      land: gbv.unregisteredLand as boolean | undefined,
+      building: gbv.unregisteredBuilding as boolean | undefined,
+    },
+    engine.reductions,
+    gbv.nonHeirBequest as boolean | undefined,
+  );
+}

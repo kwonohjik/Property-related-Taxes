@@ -105,10 +105,9 @@ export function dispatchGeneralBuilding(
   const landAcqDateCoerced = coercedGbRaw.landAcquisitionDate as Date | undefined;
   const buildingAcqCause = coercedGbRaw.buildingAcquisitionCause as
     | "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
-  const coercedExtInfo = coercedGbRaw.extensionInfo as Record<string, unknown> | undefined;
 
   return dispatchCoercedGeneralBuilding(
-    coercedGbRaw, buildingAcqDate, landAcqDateCoerced, buildingAcqCause, coercedExtInfo,
+    coercedGbRaw, buildingAcqDate, landAcqDateCoerced, buildingAcqCause,
     totalTransferPrice, transferDate, acquisitionDate,
     actualAcquisitionPrice, actualExpenses,
     taxYear, annualBasicDeductionUsed, priorReductionUsage, rates,
@@ -123,7 +122,6 @@ function dispatchCoercedGeneralBuilding(
   landAcqDateCoerced: Date | undefined,
   buildingAcqCause:
     | "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction",
-  coercedExtInfo: Record<string, unknown> | undefined,
   totalTransferPrice: number,
   transferDate: Date,
   acquisitionDate: Date,
@@ -177,11 +175,10 @@ function dispatchCoercedGeneralBuilding(
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
     );
   }
-  // ⑭ 사례 33: 증축 경로에서 actualBundledAcquisitionPrice/Expenses 주입
+  // ⑭ 사례 33: 증축 경로에서 actualBundledAcquisitionPrice/Expenses 주입 (`extensionBundledInjection`)
   // extensionInfo.actualBundledAcquisitionPrice: 토지+건물1 일괄 취득가 (route handler actualAcquisitionPrice)
   // extensionInfo.actualBundledExpenses: 토지+건물1 일괄 필요경비 (route handler actualExpenses)
   // GeneralBuildingInput.extensionInfo 타입에 필수 필드 — 미주입 시 landAcq/landExp가 NaN.
-  // unknown 경유 캐스팅: coercedExtInfo 합성 타입이 GeneralBuildingInput["extensionInfo"] 서브타입과 충돌.
   const gbPayload: GeneralBuildingValuationPayload = {
     ...(coercedGbRaw as unknown as GeneralBuildingValuationPayload),
     totalTransferPrice,
@@ -197,23 +194,40 @@ function dispatchCoercedGeneralBuilding(
     ...(expropriation?.compensationBasisStdPrice !== undefined
       ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
       : {}),
-    ...(coercedExtInfo ? {
-      extensionInfo: {
-        ...(coercedExtInfo as unknown as NonNullable<GeneralBuildingInput["extensionInfo"]>),
-        actualBundledAcquisitionPrice: actualAcquisitionPrice,
-        actualBundledExpenses: actualExpenses,
-        // W-1a — 그 값이 어느 성질에서 왔는지. 엔진이 안분 **시점**을 이것으로 고른다.
-        ...(coercedGbRaw.bundledExpenseNature !== undefined
-          ? { bundledExpenseNature: coercedGbRaw.bundledExpenseNature as "capital" | "transfer" | "mixed" }
-          : {}),
-      },
-    } : {}),
+    ...extensionBundledInjection(coercedGbRaw, actualAcquisitionPrice, actualExpenses),
   };
 
   return calculateGeneralBuildingTransfer(
     gbPayload,
     taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
   );
+}
+
+/**
+ * 증축 원건물(토지+건물1) 일괄 취득가·필요경비를 `extensionInfo`에 싣는다 — 증축이 없으면 `{}`.
+ *
+ * 엔진은 `actualBundledAcquisitionPrice`의 **존재**로 원건물 모드를 고르므로(0이어도 실가 —
+ * `general-building-extension.ts` `isOriginActual`) 단건·동반·축 B가 **같은 주입**을 해야 한다.
+ * 파트 카드 leaf(`buildGbPartCards`)도 이 함수를 쓴다.
+ */
+export function extensionBundledInjection(
+  coercedGbRaw: Record<string, unknown>,
+  actualAcquisitionPrice: number,
+  actualExpenses: number,
+): { extensionInfo?: NonNullable<GeneralBuildingInput["extensionInfo"]> } {
+  const coercedExtInfo = coercedGbRaw.extensionInfo as Record<string, unknown> | undefined;
+  if (!coercedExtInfo) return {};
+  return {
+    extensionInfo: {
+      ...(coercedExtInfo as unknown as NonNullable<GeneralBuildingInput["extensionInfo"]>),
+      actualBundledAcquisitionPrice: actualAcquisitionPrice,
+      actualBundledExpenses: actualExpenses,
+      // W-1a — 그 값이 어느 성질에서 왔는지. 엔진이 안분 **시점**을 이것으로 고른다.
+      ...(coercedGbRaw.bundledExpenseNature !== undefined
+        ? { bundledExpenseNature: coercedGbRaw.bundledExpenseNature as "capital" | "transfer" | "mixed" }
+        : {}),
+    },
+  };
 }
 
 // ── 경로 A: 환산취득가 모드 ────────────────────────────────────────────

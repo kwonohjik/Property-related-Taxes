@@ -11,6 +11,8 @@ import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildGeneralBuildingValuation } from "./transfer-tax-api-gb";
 import { applyGbCarryoverShareScale } from "./transfer-tax-api-gb-carryover";
 import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { fixedAcquisitionPriceRaw } from "./transfer-tax-api-companion-payload";
+import { parseAmount } from "@/lib/calc/number-parse";
 
 /**
  * 물건-수준 GB 폼 필드 — primary에서 복사한다.
@@ -170,6 +172,9 @@ export interface GeneralBuildingSharePayloadOut {
   shareLabel: string;
   ownershipRatio: number;
   acquisitionDate: string;
+  /** 자산 단위 실지 취득가액·필요경비(× 지분율) — 단건 top-level `acquisitionPrice`·`expenses`의 지분판. */
+  acquisitionPrice: number;
+  expenses: number;
   valuation: Record<string, unknown>;
 }
 
@@ -207,6 +212,13 @@ export function buildGeneralBuildingShares(
       ownershipRatio: ratio,
       // 토지 취득일 (M-1a). 분리 OFF면 건물 취득일과 같다.
       acquisitionDate: asset.landAcquisitionDate || asset.acquisitionDate,
+      /**
+       * 🔴 자산 단위 실지 취득가액·예전 필요경비 칸 — **동반 ④와 같은 소스**(100% 기준 입력 × r).
+       * 종전에는 지분 페이로드에 이 칸이 없어 실가 분기가 필요경비 NaN(500)·분리 OFF 취득가액 0이 됐다
+       * (계획서 `docs/00-pm/gb-parts-actual-acq-exp.plan.md` §1).
+       */
+      acquisitionPrice: applyRatio(fixedAcquisitionPriceRaw(asset) ?? 0, ratio),
+      expenses: applyRatio(parseAmount(asset.directExpenses), ratio),
       // 자본적지출·양도비는 `valuation` 안에 있고 `applyShareScale`이 이미 × r 했다.
       valuation: scaled,
     });

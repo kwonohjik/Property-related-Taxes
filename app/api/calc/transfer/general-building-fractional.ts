@@ -52,6 +52,12 @@ export interface GeneralBuildingSharePayload {
   /** 그 지분의 토지 취득일 (M-1a). 미지정 시 건물 취득일과 동일. */
   acquisitionDate: string | Date;
   /**
+   * 그 지분의 자산 단위 실지 취득가액·필요경비(× 지분율 완료) — 단건 top-level `acquisitionPrice`·`expenses`의 지분판.
+   * 실가 분기가 분리 OFF 일괄 취득가액·예전 필요경비 칸으로 쓴다(`buildGbPartCards`).
+   */
+  acquisitionPrice?: number;
+  expenses?: number;
+  /**
    * 그 지분의 완결 payload. **자본적지출·양도비(§97②2호 나목)도 이 안에** 있고
    * 이미 × 지분율이 적용돼 있다 — share 레벨에 중복 필드를 두지 않는다.
    */
@@ -161,6 +167,9 @@ export function calculateGeneralBuildingFractional(
       buildingAcqDate,
       landAcqDate,
       share.ownershipRatio,
+      // 단건 `route.ts`의 `bundledAcq`·`bundledExp`와 같은 축 — 증축 일괄값이 있으면 그것, 없으면 지분 값.
+      (gated.bundledAcquisitionPrice as number | undefined) ?? share.acquisitionPrice ?? 0,
+      (gated.bundledExpenses as number | undefined) ?? share.expenses ?? 0,
     );
 
     // (4) 접미사 — 카드와 swap Map을 **같은 시점에** 태깅한다

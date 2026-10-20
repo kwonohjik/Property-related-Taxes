@@ -597,6 +597,12 @@ export const generalBuildingShareSchema = z.object({
   /** 그 지분의 **토지** 취득일 (M-1a). 건물 취득일은 `valuation.buildingAcquisitionDate`. */
   acquisitionDate: z.string().date(),
   /**
+   * ⑫ 그 지분의 자산 단위 실지 취득가액·필요경비(× 지분율 완료) — 단건 top-level `acquisitionPrice`·`expenses`의 지분판.
+   * `valuation`에 없는 값이라 중복이 아니다. 빠지면 실가 분기가 NaN(500)·취득가액 0이 된다(⑭ `buildGbPartCards`).
+   */
+  acquisitionPrice: z.number().int().nonnegative().optional(),
+  expenses: z.number().int().nonnegative().optional(),
+  /**
    * 그 지분의 **완결된** GB payload.
    *
    * 🔑 자본적지출·양도비(§97②2호 나목)도 **이 안에** 있다 —

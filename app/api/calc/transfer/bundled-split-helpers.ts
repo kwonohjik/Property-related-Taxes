@@ -30,13 +30,9 @@ import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineRedevelopment } from "./engine-input";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
-import { buildGbPartCards } from "./general-building-part-cards";
+import { buildGbCompanionItems } from "./general-building-part-cards";
 import type { MixedUseAssetInputSources } from "./mixed-use-asset-input";
 import { buildMixedUseCompanionItems } from "./mixed-use-part-cards";
-import { tagGbCards } from "./general-building-part-cards";
-import { remapGbSwap } from "./general-building-part-cards";
-import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
-import { buildProperties } from "./general-building-route-cards";
 import type { companionAssetSchema } from "@/lib/api/transfer-tax-schema-sub";
 import { mapReductionsToEngine } from "./route-reductions-mapper";
 import { resolveCompanionSplit, splitCompanionIntoTwo } from "./bundled-companion-split";
@@ -689,21 +685,6 @@ export function buildCompanionEngineInputs(
   void _companionKeyCoverageGuards;
 
   /**
-   * ⑭ **일반건물 컴패니언 — 1건이 토지·건물(+증축) 파트 카드로 펼쳐진다.**
-   *
-   * 🔑 **2단 안분이다.** 자산 간 안분(§166⑥ 키)은 5-a가 이미 끝냈고(`a.allocatedSalePrice`),
-   *    **자산 안에서 토지·건물로 나누는 분모**(양도시 토지 기준시가 + 건물 기준시가 + 증축분)는
-   *    GB 엔진이 정한다. 축 B(지분 분할)가 `총계약가 × 지분율`을 같은 자리에 넣는 것과
-   *    **완전히 같은 형태**이며, 두 축이 `buildGbPartCards` **한 leaf를 공유**한다.
-   *
-   * ⚠️ 종전에는 route 5-a-3(`:471`)이 이 계산을 했는데, 5-a가 `return`해 버려 **도달조차
-   *    하지 않았다**(설계문서 `transfer-bundled-subengine-hosting.design.md` §1). 그래서
-   *    ⑧이 함께양도를 막고 있었다 — 「전용 경로가 없다」가 아니라 「경로가 실행되지 않는다」였다.
-   *
-   * 🔴 카드 태깅과 swap Map 재맵핑은 **같은 시점에** 해야 한다 — 한쪽만 접미사가 붙으면
-   *    `buildProperties`가 `swap.allocation.get(card.propertyId)`에서 조용히 미스한다.
-   */
-  /**
    * ⑭ **겸용주택 컴패니언 — 1건이 파트 카드 4~5장으로 펼쳐진다.**
    *
    * 조립과 확장은 `mixed-use-part-cards.ts`가 한다(응집도 · 800줄 정책). 여기서는 진입만 판정한다.
@@ -721,33 +702,15 @@ export function buildCompanionEngineInputs(
     });
   }
 
+  /**
+   * ⑭ **일반건물 컴패니언 — 1건이 토지·건물(+증축) 파트 카드로 펼쳐진다.**
+   * 조립은 `general-building-part-cards.ts`가 한다(축 B와 같은 leaf · 800줄 정책).
+   */
   if (c.assetKind === "general_building" && c.generalBuildingValuation) {
-    const gbv = coerceGeneralBuildingPayload(
+    return buildGbCompanionItems(
       c.generalBuildingValuation as unknown as Record<string, unknown>,
-    );
-    const bldAcqDate = (gbv.buildingAcquisitionDate as Date | undefined) ?? acqDate;
-    const landAcqDate = (gbv.landAcquisitionDate as Date | undefined) ?? acqDate;
-    const built = buildGbPartCards(
-      gbv,
-      a.allocatedSalePrice,
-      ctx.transferDate,
-      bldAcqDate,
-      landAcqDate,
-      c.ownershipRatio,
-    );
-    const tagged = tagGbCards(built.cards, c.assetId, c.assetLabel ?? "");
-    const swap = built.swap ? remapGbSwap(built.swap, c.assetId) : undefined;
-    return buildProperties(
-      tagged,
-      built.nonBusinessRatio,
-      swap,
-      // §104③ 미등기 — 축 B와 **같은 축**을 싣는다. 빠뜨리면 컴패니언에서만 조용히 무시된다.
-      {
-        land: gbv.unregisteredLand as boolean | undefined,
-        building: gbv.unregisteredBuilding as boolean | undefined,
-      },
-      companionEngine.reductions,
-      gbv.nonHeirBequest as boolean | undefined,
+      companionEngine,
+      { ownershipRatio: c.ownershipRatio, assetId: c.assetId, assetLabel: c.assetLabel ?? "" },
     );
   }
 
