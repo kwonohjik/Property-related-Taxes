@@ -185,19 +185,22 @@ export function UnconditionalExemptionSection({
 
       <ToggleCard
         tone="violet"
-        title="2006.12.31. 이전 이농 농지 (2009.12.31.까지 양도)"
-        description="농지 한정 — 이농 당시 소유한 농지를 2009.12.31.까지 양도한 경우"
+        title="이농 농지 — 8년 이상 농업경영 후 이농, 이농 당시부터 소유"
+        description="농지 한정. 2006.12.31. 이전 이농 + 2009.12.31.까지 양도면 무조건 사업용(소득령 §168의14③5호), 그 밖에는 이농일부터 3년을 사업용 기간으로 셉니다(소득령 §168의8③3호)."
         trailing={
-          <LawArticleModal
-            legalBasis="소득세법시행규칙 §83조의5"
-            label="소득령 §168의14③5호 (소득칙 §83의5④2호)"
-            className={LAW_BADGE_CLASS}
-          />
+          <span className="flex flex-wrap gap-1">
+            <LawArticleModal
+              legalBasis="소득세법시행규칙 §83조의5"
+              label="소득령 §168의14③5호 (소득칙 §83의5④2호)"
+              className={LAW_BADGE_CLASS}
+            />
+            <LawArticleModal legalBasis="소득세법 시행령 §168의8" label="소득령 §168의8③3호" className={LAW_BADGE_CLASS} />
+          </span>
         }
         checked={asset.nblExemptInong}
         onCheckedChange={(v) => onAssetChange({ nblExemptInong: v })}
       >
-        <div>
+        <div data-field="nblExemptInongDate">
           <label className="block text-xs text-muted-foreground mb-1">이농일</label>
           <DateInput
             value={asset.nblExemptInongDate}

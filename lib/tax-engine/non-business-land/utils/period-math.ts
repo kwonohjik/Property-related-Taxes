@@ -5,8 +5,20 @@
  * 모든 기간 계산에 사용.
  */
 
-import { differenceInDays } from "date-fns";
+import { addYears, differenceInDays } from "date-fns";
 import type { DateInterval } from "../types";
+
+/**
+ * 「… 날부터 3년이 경과하지 아니한」 토지가 사업용으로 보는 구간 — [기산일, 기산일 + 3년(달력)).
+ *
+ * 「소득세법 시행령」 §168의8③2호(상속 농지)·3호(이농 농지) · §168의9③7호(상속 임야) · §168의10②1호(상속 목장용지).
+ * 양도일이 3년 안일 때만 켜지는 스위치가 아니라 **기간**이다 — 3년이 지난 뒤 양도해도 이 구간은 §168의6
+ * 기간기준의 사업용 기간으로 센다(부동산거래관리과-504 · 서면-2019-부동산-4513 — 계획서
+ * `docs/00-pm/nbl-farmland-inherit-inong-3y.plan.md`). 보유기간 밖은 기간기준의 창이 잘라낸다.
+ */
+export function threeYearsFrom(start: Date): DateInterval {
+  return { start, end: addYears(start, 3) };
+}
 
 /**
  * 겹치는 구간을 합산·중복 제거 (interval merge).

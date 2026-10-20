@@ -5,6 +5,8 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
+import { InheritanceWithin3YearsNotice } from "./shared/InheritanceWithin3YearsNotice";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 export interface FarmlandDetailSectionProps {
@@ -94,6 +96,8 @@ export function FarmlandDetailSection({
         title="의제자경 사유 (소득령 §168의8③)"
         description="해당 시 자경 기간 입력 없이도 사업용으로 간주합니다."
       />
+
+      <InheritanceWithin3YearsNotice asset={asset} landLabel="농지" legalBasis={NBL.FARMLAND_INHERIT_3Y} />
 
       <ToggleCard
         tone="sky"

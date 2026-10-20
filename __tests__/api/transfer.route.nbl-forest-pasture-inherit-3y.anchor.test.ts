@@ -102,12 +102,17 @@ describe("임야·목장 상속 3년 이내 — 취득원인·상속개시일로
     expect(r.total).toBe(total);
   });
 
-  /** 「상속개시일부터 3년이 경과하지 아니한」 — 상속 2021-06-03 → 3년이 되는 날 2024-06-03 = 양도일이므로 경과 */
+  /**
+   * 「상속개시일부터 3년이 경과하지 아니한」은 기간이다(계획서 `nbl-farmland-inherit-inong-3y.plan.md` Q-5 b) —
+   * 상속 2021-06-03 → 양도 2024-06-03(3년이 되는 날)이어도 그 3년이 보유기간 전부라 사업용이다.
+   * 종전에는 양도일만 보아 2021-06-03을 비사업용으로 판정했다. 기간기준에 미달하는 7.4년 보유는
+   * `transfer.route.nbl-farmland-inherit-inong-3y.anchor.test.ts` H4·J4가 지킨다.
+   */
   it.each([
     ["임야", FOREST],
     ["목장", PASTURE],
-  ] as const)("%s 3년 경계: 상속 2021-06-04 사업용 · 2021-06-03 비사업용", async (_k, land) => {
+  ] as const)("%s 3년 경계: 상속 2021-06-04 · 2021-06-03 모두 사업용", async (_k, land) => {
     expect((await run(form(land, INHERIT("2021-06-04")))).nbl).toBe(false);
-    expect((await run(form(land, INHERIT("2021-06-03")))).nbl).toBe(true);
+    expect((await run(form(land, INHERIT("2021-06-03")))).nbl).toBe(false);
   });
 });

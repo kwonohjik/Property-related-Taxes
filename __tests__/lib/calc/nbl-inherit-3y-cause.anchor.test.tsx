@@ -13,6 +13,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { mapAssetToNblInput } from "@/lib/tax-engine/non-business-land/form-mapper";
 import { ForestDetailSection } from "@/components/calc/transfer/nbl/ForestDetailSection";
 import { PastureDetailSection } from "@/components/calc/transfer/nbl/PastureDetailSection";
+import { FarmlandDetailSection } from "@/components/calc/transfer/nbl/FarmlandDetailSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -45,12 +46,16 @@ describe("화면 — 입력칸 없음 · 상속 자산에만 자동 판정 안�
   const sections = [
     ["임야", (a: AssetForm) => <ForestDetailSection asset={a} onAssetChange={() => {}} />, "§168조의9 ③ 7호"],
     ["목장용지", (a: AssetForm) => <PastureDetailSection asset={a} onAssetChange={() => {}} />, "§168조의10 ② 1호"],
+    // 농지 §168의8③2호 — 계획서 nbl-farmland-inherit-inong-3y.plan.md Q-2 (a)
+    ["농지", (a: AssetForm) => <FarmlandDetailSection asset={a} onAssetChange={() => {}} />, "§168조의8 ③ 2호"],
   ] as const;
 
   it.each(sections)("%s · 상속: 상속개시일과 조문을 밝힌다", (label, el, cite) => {
     render(el(asset({ acquisitionCause: "inheritance", acquisitionDate: "2022-01-01" })));
     const n = screen.getByTestId("nbl-inherit-3y-notice").textContent!;
-    expect(n).toContain(`상속받은 ${label}입니다. 상속개시일(2022-01-01)부터 3년이 지나지 않은 날`);
+    // 3년은 기간이다(계획서 nbl-farmland-inherit-inong-3y.plan.md Q-1·Q-5) — 3년이 지난 뒤 양도해도 센다고 밝힌다
+    expect(n).toContain(`상속받은 ${label}입니다. 상속개시일(2022-01-01)부터 3년이 되는 날 전까지는 사업용 기간으로 봅니다`);
+    expect(n).toContain("3년이 지난 뒤 양도해도 그 3년을 사업용 기간에 넣어");
     expect(n).toContain(cite);
   });
 

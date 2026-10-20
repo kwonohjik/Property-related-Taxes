@@ -3,7 +3,7 @@
  *
  * 판정 순서:
  *   Step 3-1   재촌·자경 기간기준
- *   Step 3-1-1 재촌·자경 간주 (사용의제, §168-8 ③)
+ *   Step 3-1-1 재촌·자경 간주 (사용의제, §168-8 ③) — ③2호 상속·3호 이농은 3년 구간만 사업용 기간에 더한다
  *   Step 3-2   도시지역 밖 농지? → 사업용
  *   Step 3-2-1 도시지역 內 편입유예 (편입일 소급 1년 재촌자경 or 사용의제 → 3년)
  */
@@ -31,6 +31,7 @@ import {
   getOverlappingPeriods,
   mergeOverlappingPeriods,
   sumDaysInWindow,
+  threeYearsFrom,
 } from "./utils/period-math";
 import { addDays, differenceInDays } from "date-fns";
 
@@ -70,6 +71,54 @@ export function checkFarmlandDeeming(input: NonBusinessLandInput): {
   if (d.isSickElderlyRental) reasons.push("5년 자경 후 질병·고령 임대 농지");
 
   return { applies: reasons.length > 0, reasons, legalBasis: NBL.FARMLAND_DEEM };
+}
+
+interface ThreeYearDeeming {
+  interval: DateInterval;
+  label: string;
+  legalBasis: string;
+}
+
+/**
+ * 「소득세법 시행령」 §168의8③2호(상속)·3호(이농) — 「… 날부터 3년이 경과하지 아니한 토지」의 3년 구간.
+ *
+ * 다른 ③ 사유(`checkFarmlandDeeming`)와 달리 기간이 붙어 있어 보유 전 기간을 의제하지 않는다.
+ * - 2호: 상속개시일은 매퍼가 취득원인·취득일에서 정한다(`farmlandDeeming.inheritanceStartDate` — 수유자는 비어 있다).
+ * - 3호: 이농 사실은 §168의14③5호(2006.12.31. 이전 이농)와 같은 입력(`unconditionalExemption.isInong`·`inongDate`)이다.
+ *   그 무조건 의제가 성립하면 Step 2에서 끝나므로 여기까지 오지 않는다. 「이농당시 소유하고 있던 농지」이므로
+ *   이농일이 취득일보다 앞서면 적용하지 않는다.
+ * 계획서 `docs/00-pm/nbl-farmland-inherit-inong-3y.plan.md`.
+ */
+function farmlandThreeYearDeemings(input: NonBusinessLandInput): ThreeYearDeeming[] {
+  const out: ThreeYearDeeming[] = [];
+  const inherited = input.farmlandDeeming?.inheritanceStartDate;
+  if (inherited) {
+    out.push({ interval: threeYearsFrom(inherited), label: `상속개시일 ${ymd(inherited)}부터 3년`, legalBasis: NBL.FARMLAND_INHERIT_3Y });
+  }
+  const u = input.unconditionalExemption;
+  if (u?.isInong && u.inongDate && u.inongDate >= input.acquisitionDate) {
+    out.push({ interval: threeYearsFrom(u.inongDate), label: `이농일 ${ymd(u.inongDate)}부터 3년`, legalBasis: NBL.FARMLAND_INONG_3Y });
+  }
+  return out;
+}
+
+const FARMLAND_OWNERSHIP_CAP_M2 = 10_000;
+
+/**
+ * 「농지법」 §7①(상속받고 농업경영을 하지 아니하는 사람)·②(8년 이상 농업경영 후 이농한 사람)의 소유 상한 1만㎡.
+ * 상한 초과분에도 §168의8③2호·3호가 적용되는지는 직접 해석이 없다(계획서 §1-1 · Q-4 (a)) — 판정은 면적 전체에 적용하고 알린다.
+ */
+function farmlandOwnershipCapNotice(input: NonBusinessLandInput, applied: ThreeYearDeeming[]): string | undefined {
+  if (input.landArea <= FARMLAND_OWNERSHIP_CAP_M2) return undefined;
+  return (
+    `${applied.map((l) => l.legalBasis).join("·")}을 이 농지 ${input.landArea.toLocaleString("ko-KR")}㎡ 전체에 적용했습니다. ` +
+    "「농지법」 §7①·②는 상속받고 농업경영을 하지 않는 사람과 8년 이상 농업경영 후 이농한 사람이 그 농지를 총 1만㎡까지만 " +
+    "소유할 수 있게 합니다. 상한을 넘는 부분에도 이 특례가 적용되는지는 직접 해석이 없어 확인이 필요합니다."
+  );
+}
+
+function ymd(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 /**
@@ -218,7 +267,31 @@ export function judgeFarmland(
   // ── Step 3-1-1: 사용의제 (재촌·자경 간주) ─────────────────────────
   if (!usageOk) {
     const deeming = checkFarmlandDeeming(input);
-    if (deeming.applies) {
+    const limited = deeming.applies ? [] : farmlandThreeYearDeemings(input);
+    if (limited.length > 0) {
+      // ③2호·3호는 3년 **기간**만 의제한다 — 재촌·자경 구간과 합쳐 기간기준을 다시 잰다(3년이 지난 뒤 양도해도 센다).
+      const periods = [...realFarming, ...limited.map((l) => l.interval)];
+      const r3 = meetsPeriodCriteria(periods, input.acquisitionDate, pjDate, "farmland", rules, input.gracePeriods);
+      const what = limited.map((l) => `${l.label}(${l.legalBasis})`).join(" · ");
+      steps.push({
+        id: "farmland_deeming",
+        label: "Step 3-1-1 재촌·자경 간주 농지 (사용의제)",
+        status: r3.meets ? "PASS" : "FAIL",
+        detail: r3.meets
+          ? `${what}을 사업용 기간으로 셈 + 기간기준 충족 — ${r3.detail}`
+          : `${what}을 사업용 기간으로 셌으나 기간기준 미충족 — ${r3.detail}`,
+        legalBasis: limited[0].legalBasis,
+      });
+      if (r3.meets) {
+        usageOk = true;
+        mode = "deemed";
+        effectivePeriodsForLastStep = periods;
+        r = r3;
+        appliedLaws.push(...limited.map((l) => l.legalBasis));
+        const capNotice = farmlandOwnershipCapNotice(input, limited);
+        if (capNotice) warnings.push(capNotice);
+      }
+    } else if (deeming.applies) {
       // 사용의제는 "사용 종류"만 의제 — 기간기준은 재확인 (보유 전체를 사업용으로 간주)
       const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
       const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "farmland", rules, input.gracePeriods);

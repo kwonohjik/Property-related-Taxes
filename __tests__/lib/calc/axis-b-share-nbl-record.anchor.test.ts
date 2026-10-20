@@ -90,13 +90,33 @@ describe("nblShareExemptionWithheldNotice — 임야·목장 상속 3년", () =>
     });
     expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: own }, first)).toBeUndefined();
   });
-  it("첫 지분도 상속개시일부터 3년이 지났으면 그 사유가 적용되지 않았으므로 알리지 않는다(3년이 되는 날 = 양도일 포함)", () => {
+  /**
+   * 상속 3년은 기간이다 — 첫 지분이 3년이 지난 뒤 양도돼도 그 3년을 기간기준에 셌으므로 알린다
+   * (계획서 `nbl-farmland-inherit-inong-3y.plan.md` Q-5 b. 종전에는 「3년이 지났으면 알리지 않는다」였다).
+   */
+  it("첫 지분이 상속개시일부터 3년이 지난 뒤 양도돼도 알린다(3년 구간을 기간기준에 셌다)", () => {
     const bare = det({ unconditionalExemption: { isAncestor8YearFarming: true } });
-    for (const start of ["2021-06-03", "2020-01-01"]) {
+    for (const start of ["2021-06-04", "2021-06-03", "2020-01-01"]) {
       expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: bare }, { nonBusinessLandDetails: firstDet(start) }))
-        .toBeUndefined();
+        .toContain("상속 3년 이내 임야");
     }
-    expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: bare }, { nonBusinessLandDetails: firstDet("2021-06-04") }))
-      .toContain("상속 3년 이내 임야");
+  });
+
+  it("첫 지분이 무조건 사업용 의제로 끝났으면 상속 3년은 쓰이지 않았으므로 알리지 않는다", () => {
+    const bare = det({});
+    const exempt = det({
+      landType: "forest",
+      transferDate: new Date("2009-06-01"),
+      unconditionalExemption: { isInheritedBefore2007: true, inheritanceDate: new Date("2006-06-01") },
+      forestDetail: { inheritedForestWithin3Years: true, forestInheritanceDate: new Date("2006-06-01") },
+    });
+    expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: bare }, { nonBusinessLandDetails: exempt }) ?? "")
+      .not.toContain("상속 3년 이내");
+  });
+
+  it("농지 — 첫 지분 상속 3년(③2호)이 이 지분에 빠지면 알린다", () => {
+    const farm = det({ landType: "farmland", transferDate: new Date("2024-06-03"), farmlandDeeming: { inheritanceStartDate: new Date("2020-01-01") } });
+    expect(nblShareExemptionWithheldNotice({ soleSplitAcquisition: true, nonBusinessLandDetails: det({}) }, { nonBusinessLandDetails: farm }))
+      .toContain("상속 3년 이내 농지(소득세법 시행령 §168조의8 ③ 2호)");
   });
 });

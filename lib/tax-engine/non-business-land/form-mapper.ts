@@ -18,6 +18,7 @@ import type {
   LandDivision,
 } from "./types";
 import { resolveGraceIntervals } from "./grace-reason-period";
+import { isFarmlandType } from "./types";
 import { parseTaxPeriodYears } from "./disqualified-tax-periods";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import { resolveAdjacentUnitCodes } from "@/lib/geo/sigungu-unit";
@@ -97,7 +98,7 @@ export function mapAssetToNblInput(
       )
     : undefined;
 
-  // §168의9③7호·§168의10②1호 상속개시일 — 취득원인·취득일 단일 소스
+  // §168의8③2호·§168의9③7호·§168의10②1호 상속개시일 — 취득원인·취득일 단일 소스
   const inheritanceStartDate = resolveInheritanceStartDate(asset, acquisitionDate);
 
   // 사업용 사용기간
@@ -172,7 +173,8 @@ export function mapAssetToNblInput(
     // 형식 오류 토큰은 ⑧ validate가 이미 차단했으므로 여기서는 유효 연도만 실어 보낸다.
     disqualifiedTaxPeriods:  parseTaxPeriodYears(asString(asset.nblDisqualifiedTaxPeriods)).years,
     farmerResidenceDistance: parseNumber(asString(asset.nblFarmerResidenceDistance)),
-    farmlandDeeming:         buildFarmlandDeeming(asset),
+    // ③2호 상속 3년은 농지에만 싣는다(임야·목장 상속 3년은 각 빌더가 지목으로 거른다)
+    farmlandDeeming:         buildFarmlandDeeming(asset, isFarmlandType(landType) ? inheritanceStartDate : undefined),
     forestDetail:            buildForestDetail(asset, landType, inheritanceStartDate),
     pasture:                 buildPasture(asset, landType, parseDate, parseNumber, inheritanceStartDate),
     villa:                   buildVilla(asset, landType, parseDate, parseNumber),

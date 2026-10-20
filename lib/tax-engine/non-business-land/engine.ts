@@ -55,11 +55,12 @@ export function judgeNonBusinessLand(
   });
   appliedLawArticles.push(NBL.CATEGORY);
 
-  // 수유자(상속인 아닌 유증·사인증여) — 매퍼가 상속 특례 입력을 비웠다. 임야·목장 3년만 직접 해석이 없다.
+  // 수유자(상속인 아닌 유증·사인증여) — 매퍼가 상속 특례 입력을 비웠다. 임야·목장 3년만 직접 해석이 없다
+  // (농지 상속 3년 §168의8③2호는 기준-2019-법령해석재산-0324가 직접 답했다).
   if (input.nonHeirBequest) {
     warnings.push(
       `상속인이 아닌 사람이 유증·사인증여로 받은 토지라 상속 특례(${NBL.UNCONDITIONAL} 1호·1호의2·3호 나목 취득일 소급·4호 나목, ` +
-        "임야·목장용지 상속 3년)를 적용하지 않았습니다(서면인터넷방문상담5팀-927 · 사전-2024-법규재산-0820 · " +
+        `농지 상속 3년(${NBL.FARMLAND_INHERIT_3Y}), 임야·목장용지 상속 3년)를 적용하지 않았습니다(서면인터넷방문상담5팀-927 · 사전-2024-법규재산-0820 · ` +
         "부동산거래관리과-0994 · 기준-2019-법령해석재산-0324)." +
         (category.categoryGroup === "forest" || category.categoryGroup === "pasture"
           ? ` ${category.categoryGroup === "forest" ? NBL.FOREST_INHERIT_3Y : NBL.PASTURE_INHERIT_3Y}(상속 3년)은 직접 해석이 없어 같은 기준으로 판정했습니다 — 확인이 필요합니다.`

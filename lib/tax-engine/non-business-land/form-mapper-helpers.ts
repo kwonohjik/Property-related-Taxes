@@ -174,13 +174,17 @@ export function buildUnconditionalExemption(
   };
 }
 
-export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemingInput | undefined {
+export function buildFarmlandDeeming(
+  a: Record<string, unknown>,
+  inheritanceStartDate: Date | undefined,
+): FarmlandDeemingInput | undefined {
   const has =
     asBool(a.nblFarmlandIsWeekendFarm) || asBool(a.nblFarmlandIsConversionApproved) ||
     asBool(a.nblFarmlandIsFarmDevZone) || asBool(a.nblFarmlandIsMarginalFarm) || asBool(a.nblFarmlandIsReclaimedLand) ||
-    asBool(a.nblFarmlandIsPublicProjectUse) || asBool(a.nblFarmlandIsSickElderlyRental);
+    asBool(a.nblFarmlandIsPublicProjectUse) || asBool(a.nblFarmlandIsSickElderlyRental) || inheritanceStartDate !== undefined;
   if (!has) return undefined;
   return {
+    inheritanceStartDate,
     isWeekendFarm:            asBool(a.nblFarmlandIsWeekendFarm),
     isFarmConversionApproved: asBool(a.nblFarmlandIsConversionApproved),
     isFarmDevZone:            asBool(a.nblFarmlandIsFarmDevZone),
@@ -192,7 +196,7 @@ export function buildFarmlandDeeming(a: Record<string, unknown>): FarmlandDeemin
 }
 
 /**
- * 「소득세법 시행령」 §168의9③7호·§168의10②1호 「상속받은 … 상속개시일부터 3년이 경과하지 아니한」 — 상속개시일.
+ * 「소득세법 시행령」 §168의8③2호·§168의9③7호·§168의10②1호 「상속(받은) … 상속개시일부터 3년이 경과하지 아니한」 — 상속개시일.
  *
  * 두 요건(상속받았는가 · 상속개시일)은 자산의 취득원인·취득일이 이미 받는다(상속 자산의 취득일 칸이 상속개시일이다).
  * 종전에는 비사업용 섹션의 별도 입력(임야 토글·상속일, 목장 상속일)만 읽어, 매매 자산에서 켜면 사업용이 되고

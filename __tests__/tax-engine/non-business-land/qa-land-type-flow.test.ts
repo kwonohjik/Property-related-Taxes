@@ -266,7 +266,7 @@ describe("목장 흐름도 (§168-10, PDF p.1702)", () => {
       landType: "pasture",
       landArea: 5000,
       zoneType: "commercial", // 도시지역이어도
-      acquisitionDate: d("2010-01-01"),
+      acquisitionDate: d("2020-06-01"), // 상속개시일 = 취득일(매퍼 불변식) — 상속 3년은 상속개시일부터의 기간이다(nbl-farmland-inherit-inong-3y.plan.md Q-5)
       transferDate: d("2022-01-01"),
       businessUsePeriods: [],
       gracePeriods: [],

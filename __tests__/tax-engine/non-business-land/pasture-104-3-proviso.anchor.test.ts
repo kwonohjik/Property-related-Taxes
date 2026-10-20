@@ -53,6 +53,7 @@ describe("[V7-b] §104의3①3호 단서는 축산업 영위 여부와 무관하
           hasFacility: true,
           inheritanceDate: d("2022-06-01"), // 양도일까지 3년 미경과
         },
+        acquisitionDate: d("2022-06-01"), // 상속개시일 = 취득일(매퍼 불변식) — 상속 3년은 상속개시일부터의 기간이다(nbl-farmland-inherit-inong-3y.plan.md Q-5)
       } as Partial<NonBusinessLandInput>),
       DEFAULT_NON_BUSINESS_LAND_RULES,
     );
@@ -89,6 +90,7 @@ describe("[V7-b] §104의3①3호 단서는 축산업 영위 여부와 무관하
     const r = judgePasture(
       operatingPasture({
         pasture: { isLivestockOperator: false, inheritanceDate: d("2022-06-01") },
+        acquisitionDate: d("2022-06-01"), // 상속개시일 = 취득일(매퍼 불변식) — 상속 3년은 상속개시일부터의 기간이다(nbl-farmland-inherit-inong-3y.plan.md Q-5)
       } as Partial<NonBusinessLandInput>),
       DEFAULT_NON_BUSINESS_LAND_RULES,
     );
