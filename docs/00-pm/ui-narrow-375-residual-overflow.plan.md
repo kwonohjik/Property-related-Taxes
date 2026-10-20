@@ -1,6 +1,6 @@
 # 375 화면에 남은 가로 넘침 44회 — 수정 계획
 
-> 작성 2026-10-20 · 상태 **Plan — 결정 대기(Q-1~Q-3)** · 워크트리 `../Property-related-Taxes-ovp` · 브랜치 `docs/narrow-375-residual-overflow-plan`
+> 작성 2026-10-20 · 상태 **Do — Q-1~Q-3 모두 권고안으로 결정(2026-10-20), 결과는 문서 끝 「Do 결과」** · 워크트리 `../Property-related-Taxes-ovp` · 브랜치 `docs/narrow-375-residual-overflow-plan`
 > 선행: `ui-narrow-width-and-dark-mode-residual.plan.md` 「Do 결과」 §①② — #2283 뒤 375에 남은 44회를 「이번 범위 밖」으로 둔 것을 이어받는다.
 > 네 묶음(§1~§4)은 서로 독립이다. 따로 결정하고 따로 구현할 수 있다.
 
@@ -63,12 +63,14 @@
 「공시지가 연도」 — 두 경로:
 - **겸용주택 3시점 기준시가**(`mixed-use-case-a-asset-major` 등 24회): CompanionAssetCard → AssetSection → MixedUseLegacyStdPrice → ToggleCard 2층 → MixedUsePreHousingDisclosureSection(`p-4`) → ThreePointAssetMajorRender → PointBlock → FieldCard. 안쪽 93px.
 - **감면 PHD**(`red-phd-two-article-snapshot-keys` 등 6회): Step5 AssetReductionBlock(`app/calc/transfer-tax/steps/Step5.tsx:103` `p-4`) → GroupCategorySection(`components/calc/transfer/UnifiedReductionGroupSection.tsx:205` `px-4`) → ToggleCard 2층 → New993InputForm(`components/calc/transfer/New993InputForm.tsx:212` **`ml-7`** + `p-3`, 한 층이 54px) → ToneCard → ToggleCard 2층 → FieldCard. 안쪽 73px.
-- 칸 자체는 `components/calc/transfer/ThreePointPointBlock.tsx:246-283`이다. 연도 Select와 「공시지가 조회」 버튼(`shrink-0`, 91px)을 **줄바꿈 없는 한 줄**(`:248` `flex items-center gap-2`)에 둔다.
-- 같은 모양의 `LandPriceLookupField.tsx:181-182`는 #2283에서 `flex-wrap` + 선택칸 `min-w-[min(8rem,100%)]`로 고쳤다. `ThreePointPointBlock`은 그 복사본인데 함께 고치지 않았다.
+- 두 경로의 칸은 **다른 컴포넌트**다(Do에서 fiber 이름으로 확인 — 아래 정정 참고).
+  - 겸용주택 24회: `components/calc/transfer/ThreePointPointBlock.tsx:246-283`. 연도 Select와 「공시지가 조회」 버튼(`shrink-0`, 91px)을 **줄바꿈 없는 한 줄**(`:248` `flex items-center gap-2`)에 둔다. 같은 모양의 `LandPriceLookupField.tsx:181-182`는 #2283에서 `flex-wrap` + 선택칸 `min-w-[min(8rem,100%)]`로 고쳤는데, 이 복사본은 함께 고치지 않았다.
+  - 감면 PHD 6회: `LandPriceLookupField`(`ReductionPhdInput` 안). 이미 줄바꿈되지만 **버튼 하나(91px)가 카드 안쪽(73px)보다 넓다**.
+- ⚠️ **정정(2026-10-20 Do)**: 처음에는 30회 모두 `ThreePointPointBlock`이라고 적었다. 감면 PHD 6회는 `LandPriceLookupField`였다. 그래서 W 단독으로 남던 12회(아래 표)가 바로 이 경로이고, 이 경로는 S로만 풀린다.
 
 ### 1-3. 수정안 — 실측(모사)
 
-수정 수단(모두 **640px 미만에서만** 적용 — `max-sm:` 접두. 640px 이상은 바뀌지 않는다):
+수정 수단(여백은 모두 **640px 미만에서만** 바뀐다 — 640px 이상은 그대로):
 
 | 기호 | 내용 | 바꾸는 곳 |
 |---|---|---|
@@ -98,14 +100,15 @@
 | 모든 중첩 상자 8px | 0 | 0 | 전부 |
 
 - **S+L**이 공용 컴포넌트를 건드리지 않고 41회를 모두 없애는 가장 작은 조합이다.
-- **W**는 S+L만으로도 필요 없지만 함께 넣기를 권한다. 같은 모양의 `LandPriceLookupField`와 처리를 맞추고, 앞으로 중첩이 더 깊어져도 버튼이 아래 줄로 내려간다. W 단독으로 18회가 없어진다.
+- **W**는 넘침만 보면 S+L로 충분하지만 함께 넣기를 권한다. 같은 모양의 `LandPriceLookupField`와 처리를 맞춘다. W 단독으로 겸용주택 18회가 없어진다.
+  - Do에서 확인: W 없이 S만 적용하면 겸용주택 카드는 넘치지 않지만 연도 칸이 버튼 몫(99px)을 빼고 짓눌린다. 회귀 테스트가 이것으로 W를 지킨다(§5).
 - 「모든 중첩 상자 8px」은 넘침을 없애지만 공용 `ToggleCard`·`ToneCard`까지 바꿔 앱 전체 모바일 화면이 달라진다.
 
 ### 1-4. 부수 변경(예상 — 미측정)
 
 - **S**: 양도세 자산 카드 전체의 375 좌우 여백이 16·12px → 8px이 된다. 그 안 모든 카드가 24px(자산 카드 경로)·32px(감면 경로) 넓어진다. 넓어지기만 하므로 새 넘침은 생기지 않을 것으로 보이나, 배치가 바뀌는 카드 수는 **미측정**이다(Do 1단계).
 - **W**: 연도 행 폭이 227px(선택칸 128 + 간격 8 + 버튼 91) 미만이면, 지금은 넘치지 않고 선택칸만 좁아지던 카드도 버튼이 아래 줄로 내려간다. #2283의 `LandPriceLookupField`도 같은 동작을 받아들였다. 해당 카드 수는 미측정이다.
-- 640px 이상은 `max-sm:` 접두라 바뀌지 않는다. Do 1단계 전체 대조로 확인한다.
+- 640px 이상은 여백이 그대로라 바뀌지 않는다. Do 1단계 전체 대조로 확인한다.
 
 ---
 
@@ -161,7 +164,7 @@
 
 서로 독립이라 한 PR로 묶어도 되고 나눠도 된다. 권고는 **한 PR**이다. 모두 375 전용 배치 수정이고, 검증(전체 E2E 대조)을 한 번으로 끝낼 수 있다.
 
-1. §1 W(`ThreePointPointBlock`) + S(외곽 4곳) + L(상속 주택 경로 6곳) — `max-sm:px-2` 추가 방식.
+1. §1 W(`ThreePointPointBlock`) + S(외곽 4곳) + L(상속 주택 경로 6곳) — 좌우 여백을 `px-2 sm:px-N`으로(저장소에 `max-sm:` 선례가 없어 모바일 우선 관례를 따랐다).
 2. §2 G1(`GracePeriodSection`).
 3. §3 P1(`CompositePartsSection`).
 
@@ -179,7 +182,7 @@
 
 1. **Do 1단계 — 전체 E2E 대조**: 선행 계획서와 같은 훅으로 전체 E2E 종료 화면을 375·768·1024·1280에서 잰다.
    - 375 넘침 44 → 0을 확인한다.
-   - 768·1024·1280 넘침 0 유지, **배치가 바뀐 카드 0**을 확인한다(`max-sm:` 범위 확인).
+   - 768·1024·1280 넘침 0 유지, **배치가 바뀐 카드 0**을 확인한다(640px 미만 한정 확인).
    - 375에서 배치가 바뀐 카드 수와 표본 스크린샷으로 §1-4의 부수 변경을 확인한다.
 2. pre-push(typecheck·lint·범위 테스트) + CI 전체.
 
@@ -197,3 +200,36 @@
 - **Q-3 「기타」(§3)**
   - **P1(권고)**: 375에서 한 열.
   - P2: 11px가 남는다.
+
+---
+
+## Do 결과 (2026-10-20) — PR #2295
+
+**구현**: 권고안 그대로(S+L+W · G1 · P1). 계획과 다른 점은 둘이다.
+- 여백은 `max-sm:px-2` 대신 **`px-2 sm:px-N`**(저장소에 `max-sm:` 선례가 없다). 세로 여백은 그대로 둔다.
+- 「사유」 값 말줄임은 `SelectValue`에 `min-w-0`을 주고 글자를 안쪽 `<span className="truncate">`로 감쌌다(§2-2의 「구현 시 확인 필요」 — 공용 `*:data-[slot=select-value]:flex`가 남아 있어 `block`을 넘기는 방식은 쓰지 않았다).
+
+**⚠️ 계획서 정정**: 감면 PHD 경로 「공시지가 연도」 6회는 `ThreePointPointBlock`이 아니라 `LandPriceLookupField`였다(§1-2에 반영). 넘침은 S로 풀리고, W가 지키는 것은 겸용주택 경로뿐이다.
+
+**실측 — 전체 E2E 종료 화면 2,513건(master `9c7d5bcdb` vs 수정본), 카드 밖으로 나간 FieldCard(회)**
+
+| 폭 | 전 | 후 | 새 넘침 |
+|---|---|---|---|
+| 375 | 44 | **0** | 없음 |
+| 768 | 0 | 0 | 없음 |
+| 1024 | 0 | 0 | 없음 |
+| 1280 | 0 | 0 | 없음 |
+
+- **Select 값 잘림**: 768 136→16, 1024·1280 130→10, 375 279→245.
+- **640px 이상에서 모양이 바뀐 카드**(768·1024·1280): 290·288·368곳. 원인별로 모두 갈랐다.
+  - 연도 행 줄바꿈(W) 282~360 — `ThreePointPointBlock`의 3열 배치(비-split)에서 연도 칸이 버튼 옆에 **44px로 짓눌려 값이 「:」만 보이던 것**이 버튼을 아래 줄로 내리고 값이 보이게 됐다(768 스크린샷 대조 — 연도 칸 44→143px). 같은 행의 「공시지가」·「토지기준시가」·「주택부수토지 …」 카드는 행 높이를 따라 같이 늘었다.
+  - 「사유」 4 — 값 span이 한 겹 늘어난 구조 변화다. 1280 스크린샷은 전후가 같다.
+  - 주식 계산기 「종목명」·「종목코드」 2~4 — 바뀐 파일을 쓰지 않는 화면이라 측정 간 변동이다.
+- **375 배치 변화** 11,728곳(921테스트): 양도세 화면 여백이 8px로 줄어 카드가 넓어진 것이다. 표본 스크린샷(최초 공시일·사유·부속시설)으로 확인했다.
+
+**측정 실행**: 훅 오류로 1회 무효(넘침 판정이 카드 자신을 포함해 전 카드를 넘침으로 셌다 — 배치 서명은 유효해 위 분류에 썼다), 수정 훅으로 다시 쟀다. 네 번의 전체 실행에서 실패 1건(수정본 2회차 `transfer-nbl-revenue-deemed-common`)과 재시도 통과 flaky 2건(`transfer-split-part-carryover-c`·`transfer-amendment`)이 나왔다. 실패 1건은 훅 없이 무부하로 master·수정본 각 2회 돌려 모두 통과했다(선행 계획서에서도 측정 훅 부하로 실패하던 spec이다).
+
+**회귀 테스트**: `e2e/narrow-width-residual.spec.ts`에 375 사례 6건(의제 이전·이후 최초 공시일 · 감면 PHD 연도 · 겸용주택 연도 칸 폭 · 사유 375/1280 · 부속시설 문서 폭). 뮤테이션 M1(W)·M2(S)·M3(L)·M4(G1)·M5(P1) 모두 kill.
+- M1은 처음에 살아남았다. 감면 PHD 카드가 `LandPriceLookupField`라 W와 무관했고, 연도 칸 폭 단언은 줄바꿈이 없으면 행 폭을 0으로 잡아 무력했다. 겸용주택 사례를 더하고 단언을 카드 안쪽 폭 기준으로 고쳐 kill.
+
+**남은 것(별건 — 원인 미분석)**: 375에서 **페이지 전체 가로 스크롤**이 있는 종료 화면이 124→118곳이다. FieldCard 밖의 요소다 — 상위 원인 요소는 카드 밖 날짜칸(`input.border-0 … text-center`) 33, `table.min-w-full …` 25, `button.shrink-0 inline-flex …` 23, `div.text-right ml-4 shrink-0` 20 등. 확인 필요.
