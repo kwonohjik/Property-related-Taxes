@@ -47,10 +47,11 @@ export function applyStandardProviso(args: {
     asset.buildingDirectTransferExpense !== undefined;
   if (!(provisoEligible && provisoDeclared)) return { housing, commercial, proviso: undefined };
 
+  // 가목은 §97③ 상가건물 감가상각비 **공제 전** 값(사용자 결정 2026-10-20) — 공제분을 되더한다.
   const gamok =
     housing.landAcqPrice + housing.buildingAcqPrice +
     housing.landAppraisalDed + housing.buildingAppraisalDed +
-    commercial.landAcqPrice + commercial.buildingAcqPrice +
+    commercial.landAcqPrice + commercial.buildingAcqPrice + (commercial.buildingDepreciation ?? 0) +
     commercial.landAppraisalDed + commercial.buildingAppraisalDed;
   const namok = (asset.capitalExpenditure ?? 0) + (asset.transferExpense ?? 0) + (asset.buildingDirectTransferExpense ?? 0);
   // 동률(==)은 본문 — 단서가 「적은 경우」로 명시한다(일반건물·상업용·부담부증여와 같은 판정).

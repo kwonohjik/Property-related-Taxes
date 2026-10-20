@@ -541,7 +541,7 @@ export function buildAcquisitionPriceFormula(
     // 없는 수를 지어내지 않는다.
     const basis =
       cmp != null
-        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()}${cmp.depreciation ? ` − 감가상각비 ${cmp.depreciation.toLocaleString()}` : ""} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
+        ? ` (환산취득가액 ${(result.estimatedBase ?? 0).toLocaleString()} + 개산공제 ${(result.estimatedDeduction ?? 0).toLocaleString()} = ${cmp.estimatedSide.toLocaleString()} < ${cmp.directSide.toLocaleString()}이므로 자본적지출·양도비 합계를 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)`
         : " (가목보다 커 나목을 필요경비로 적용 — 환산취득가액은 차감하지 않습니다)";
     return head + basis;
   }
