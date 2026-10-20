@@ -29,7 +29,7 @@ function ItemRow({ item }: { item: ExemptionItemResult }) {
       </div>
       {hasOverflow && (
         <div className="flex items-center justify-between mt-0.5">
-          <span className="text-xs text-gray-400 dark:text-gray-500">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
             한도 초과 (일반 과세)
           </span>
           <span className="text-xs text-amber-600 dark:text-amber-400">

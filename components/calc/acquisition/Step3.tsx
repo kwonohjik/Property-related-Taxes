@@ -96,7 +96,7 @@ export function Step3({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="text-xs rounded border border-rose-300 bg-rose-50 px-2 py-1 text-rose-700 hover:bg-rose-100 disabled:opacity-50"
+            className="text-xs rounded border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-2 py-1 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 disabled:opacity-50"
             onClick={handleAutoCheck}
             disabled={autoCheckLoading}
           >

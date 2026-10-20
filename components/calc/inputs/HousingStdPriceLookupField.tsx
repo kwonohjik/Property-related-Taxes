@@ -132,7 +132,7 @@ export function HousingStdPriceLookupField({
       </button>
     </span>
   ) : effectiveYear ? (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">자동</span>
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-800">자동</span>
   ) : null;
 
   return (

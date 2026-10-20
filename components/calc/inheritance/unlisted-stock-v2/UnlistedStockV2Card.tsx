@@ -260,7 +260,7 @@ export function UnlistedStockV2Card({
       {/* PR-H: 이력 출처 배지 — sourceCalculationId 부착 시만 표시 */}
       {sourceCalculationId && (
         <p
-          className="text-micro text-sky-700 bg-sky-50 border border-sky-200 rounded px-2 py-1 inline-block"
+          className="text-micro text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded px-2 py-1 inline-block"
           data-testid="source-calculation-id-badge"
         >
           📂 이력에서 자동 채움 · 평가기준일·보유주식수·할증은 사용자 입력 보존

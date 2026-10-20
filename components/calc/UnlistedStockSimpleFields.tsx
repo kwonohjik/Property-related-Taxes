@@ -188,7 +188,7 @@ export function UnlistedStockPreview({
       <p className="font-semibold text-gray-600 dark:text-gray-300 mb-2">계산 내역</p>
 
       {companyWeightedNetIncome != null && (
-        <div className="flex justify-between text-gray-400 dark:text-gray-500 text-caption">
+        <div className="flex justify-between text-gray-500 dark:text-gray-400 text-caption">
           <span>
             <Frac top="3년 가중평균 순손익 (회사 전체, §56①)" bottom="발행주식수 × 환원율" />
           </span>
@@ -236,7 +236,7 @@ export function UnlistedStockPreview({
             </div>
           </>
         ) : (
-          <div className="flex justify-between text-gray-400 dark:text-gray-500 text-caption">
+          <div className="flex justify-between text-gray-500 dark:text-gray-400 text-caption">
             <span>㉯ 영업권 (§59②)</span>
             <span>
               0 — 미가산

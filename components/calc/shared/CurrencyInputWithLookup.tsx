@@ -84,7 +84,7 @@ export function CurrencyInputWithLookup({
               "text-xs px-2 py-1 rounded border transition-colors",
               isAutoLookupPhase2
                 ? "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 cursor-pointer"
-                : "border-muted-foreground/20 bg-muted/30 text-muted-foreground/50 cursor-not-allowed",
+                : "border-muted-foreground/20 bg-muted/30 text-muted-foreground cursor-not-allowed",
             )}
             onClick={() => {
               // Phase 2: API 호출 후 값 채우기 + setInputMode("auto")

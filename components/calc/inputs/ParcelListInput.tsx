@@ -355,7 +355,7 @@ export function ParcelListInput({ parcels, totalTransferPrice, onChange, showExp
 
                     {/* 계산 결과 뱃지 */}
                     {effArea !== null ? (
-                      <div className="rounded bg-amber-100 px-3 py-2 text-xs text-amber-800 space-y-0.5">
+                      <div className="rounded bg-amber-100 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
                         <div>
                           의제 취득면적:{" "}
                           <strong>

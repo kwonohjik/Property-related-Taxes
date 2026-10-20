@@ -72,7 +72,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
     <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid dark:bg-fuchsia-950/40">
       {/* Phase 2: warnings[] 상단 amber/rose 배너 — 8개 동기화 지점 ⑦ */}
       {warnings && warnings.length > 0 && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+        <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
           <p className="font-semibold">⚠️ 안내</p>
           {warnings.map((w, idx) => (
             <p key={idx}>{w}</p>

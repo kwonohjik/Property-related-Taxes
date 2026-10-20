@@ -103,7 +103,7 @@ export function ImportedRedevRightFactsCard({
   return (
     <div className="space-y-3" data-testid="redev-right-calc-card">
       {/* §0-A — 입주권 양도 LTHD 구조. **세액 맥락**이라 계산기가 갖는다. */}
-      <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 leading-relaxed">
+      <div className="rounded-md bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 p-3 text-caption text-sky-900 dark:text-sky-200 leading-relaxed">
         <p className="font-semibold mb-0.5">관리처분 인가 후 조합원입주권 양도 — 과세 구조 안내</p>
         <p>
           인가전 양도차익만 장기보유특별공제 대상입니다 (§95② 본문 괄호 + §94①2호). 인가후 분 및 청산금 분 양도차익에는 장기보유특별공제가 적용되지 않습니다.

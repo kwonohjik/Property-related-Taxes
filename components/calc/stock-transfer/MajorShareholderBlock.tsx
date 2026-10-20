@@ -377,7 +377,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               · 「키움 자동조회가 직전거래일 종가를 자동 적용」 — 도구가 당연히 해줄 일이라
                 안내할 가치가 없다. 안내가 길어지면 정작 읽어야 할 한 줄이 묻힌다. */}
         {priorYearEndTradingStatus && !priorYearEndTradingStatus.isTrading && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
             <p className="font-semibold">
               ⚠️ {form.priorYearEndDate}은 {priorYearEndTradingStatus.reason}입니다
               (<LawArticleModal legalBasis="소득세법 시행령 §157 ①" label="§157①" />)
@@ -709,7 +709,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     </span>
   ) : (
     // 기준일이 없으면 판정값을 지어내지 않는다 — 무엇이 필요한지만 알린다
-    <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-amber-100 text-amber-800">
+    <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-amber-100 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
       판정 기준일 입력 필요
     </span>
   );

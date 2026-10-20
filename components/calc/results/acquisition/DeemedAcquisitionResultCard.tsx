@@ -118,14 +118,14 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
           </span>
         </div>
 
-        <div className="rounded-md bg-emerald-100 border border-emerald-200 px-3 py-2 text-sm text-emerald-800">
+        <div className="rounded-md bg-emerald-100 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
           <p className="font-medium mb-0.5">비과세 사유</p>
           <p>{nonTaxReason}</p>
         </div>
 
         {/* 경고 */}
         {detail.warnings.length > 0 && (
-          <div className="rounded-md bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800 space-y-1">
+          <div className="rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs text-orange-800 dark:text-orange-200 space-y-1">
             {detail.warnings.map((w, i) => (
               <p key={i}>• {w}</p>
             ))}
@@ -348,7 +348,7 @@ export function DeemedAcquisitionResultCard({ result }: Props) {
 
       {/* 경고·안내 */}
       {detail.warnings.length > 0 && (
-        <div className="rounded-md bg-orange-50 border border-orange-200 px-3 py-2 text-xs text-orange-800 space-y-1">
+        <div className="rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs text-orange-800 dark:text-orange-200 space-y-1">
           {detail.warnings.map((w, i) => (
             <p key={i}>• {w}</p>
           ))}

@@ -37,7 +37,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
 
   return (
     <ToneCard tone="rose" bodyClassName="space-y-2.5" title="양도 주택 중과배제 특례 (2주택 시)">
-      <p className="text-caption text-muted-foreground/80">
+      <p className="text-caption text-muted-foreground">
         양도하는 주택 자체가 아래 사유에 해당하면 2주택이어도 중과 배제됩니다 (소령 §167의10①3호·7호).
         유효 주택 수(§167의10① 괄호의 불산입 주택 제외)가 2채일 때만 적용됩니다.
       </p>
@@ -67,7 +67,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
               value={v.acquisitionOfficialPrice ?? ""}
               onChange={(s) => patch({ acquisitionOfficialPrice: s || undefined })}
             />
-            <p className="text-caption text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground">
               3억원을 초과하지 않아야 배제 적용 — 양도 당시가 아니라 취득 당시 값입니다
             </p>
           </div>
@@ -78,7 +78,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
               onChange={(s) => patch({ unavoidableResidenceYears: s || undefined })}
               placeholder="거주기간 입력"
             />
-            <p className="text-caption text-muted-foreground/70">1년 이상이어야 배제 적용</p>
+            <p className="text-caption text-muted-foreground">1년 이상이어야 배제 적용</p>
           </div>
           {/* 3호 괄호 「해당 사유가 해소된 날부터 3년」 — 해소일 또는 「미해소」 택일(빈 값 = 모름은 ⑧이 막는다) */}
           <ToggleCard
@@ -99,7 +99,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
             <div className="space-y-1" data-field="sellingHouseExclusion.unavoidableReasonResolvedDate">
               <label className="block text-caption text-muted-foreground font-medium">
                 사유 해소일{" "}
-                <span className="text-muted-foreground/60 font-normal">(해소된 날부터 3년 이내 양도)</span>
+                <span className="text-muted-foreground font-normal">(해소된 날부터 3년 이내 양도)</span>
               </label>
               <DateInput
                 value={v.unavoidableReasonResolvedDate ?? ""}
@@ -107,7 +107,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
               />
             </div>
           )}
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             해소일 또는 「양도일 현재 사유가 해소되지 않음」 중 하나가 필요합니다
           </p>
         </div>
@@ -144,7 +144,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
             <div className="space-y-1" data-field="sellingHouseExclusion.litigationAcquisitionDate">
               <label className="block text-caption text-muted-foreground font-medium">
                 소송 확정판결일{" "}
-                <span className="text-muted-foreground/60 font-normal">(판결 확정 시 — 그날부터 3년 이내 배제)</span>
+                <span className="text-muted-foreground font-normal">(판결 확정 시 — 그날부터 3년 이내 배제)</span>
               </label>
               <DateInput
                 value={v.litigationAcquisitionDate ?? ""}
@@ -152,7 +152,7 @@ export function SellingHouseTwoHouseExclusionSection({ value, onChange }: Props)
               />
             </div>
           )}
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             확정판결일 또는 「양도일 현재 소송 진행 중」 중 하나가 필요합니다
           </p>
         </div>

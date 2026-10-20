@@ -118,7 +118,7 @@ export function Page5GoodwillTable({
       {/* §55③ 자동배제 사유 badge */}
       {goodwill.excludedByLaw && (
         <p
-          className="text-micro bg-rose-50 border border-rose-200 p-2 text-rose-800 print:bg-rose-50"
+          className="text-micro bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 p-2 text-rose-800 dark:text-rose-200 print:bg-rose-50"
           data-testid="p5-excluded-badge"
           data-besshi-cell="p5-excluded-badge"
         >
@@ -129,7 +129,7 @@ export function Page5GoodwillTable({
       {/* PR-G2: §59③ 추정이익 준용 — 가.(weightedAvg3y)가 추정이익×주식수 환산임을 안내 */}
       {estimatedProfitApplied && goodwill.goodwillFinal > 0 && (
         <p
-          className="text-micro text-violet-800 bg-violet-50 p-2 border border-violet-200 mt-2 print:bg-violet-50"
+          className="text-micro text-violet-800 dark:text-violet-200 bg-violet-50 dark:bg-violet-950/30 p-2 border border-violet-200 dark:border-violet-800 mt-2 print:bg-violet-50"
           data-testid="p5-section59-3"
         >
           ※ 가.(최근 3년 순손익액 가중평균)은 §59③ 준용 §56②에 따라 추정이익 평균가액
@@ -140,7 +140,7 @@ export function Page5GoodwillTable({
       {/* OQ-1: 나-마 양수인데 자=0 시 footer 안내 (사례 6 대응) */}
       {showZeroAnomalyFooter && (
         <p
-          className="text-micro text-amber-700 bg-amber-50 p-2 border border-amber-200 mt-2 print:bg-amber-50"
+          className="text-micro text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 p-2 border border-amber-200 dark:border-amber-800 mt-2 print:bg-amber-50"
           data-testid="p5-zero-anomaly-footer"
         >
           ※ 나(가 × 50%) − 마(다 × 라) = {fmt(naMinusMa)} 양수이나 5년 PV 산식 적용 후 영업권 평가액이 0으로

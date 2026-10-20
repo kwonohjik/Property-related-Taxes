@@ -285,7 +285,7 @@ export function ExcessDividendDetailSection({ detail }: { detail: ExcessDividend
       {/* ── E: §47② 합산배제 안내 ── */}
       {detail.isAggregationExcluded && (
         <div
-          className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-700"
+          className="rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 p-3 text-sm text-sky-700 dark:text-sky-300"
           data-testid="ed-aggregation-excluded"
         >
           <p className="font-semibold">§47② 동일인 재차증여 합산 적용 배제</p>

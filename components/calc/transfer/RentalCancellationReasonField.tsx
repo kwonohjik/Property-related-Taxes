@@ -35,7 +35,7 @@ export function RentalCancellationReasonField({
         value={value ?? ""}
         onChange={onChange}
       />
-      <p className="text-caption text-muted-foreground/70">
+      <p className="text-caption text-muted-foreground">
         자동말소면 가·다·라·마목은 임대기간요건을 갖춘 것으로 봅니다(소령 §167의3①2호 단서). 자진말소이거나 고르지 않으면
         장기임대주택으로 보지 않습니다 — 자진말소 후 1년 이내에 이 주택을 양도하면 유형에서 사목을 고르세요.
       </p>

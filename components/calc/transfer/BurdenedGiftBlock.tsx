@@ -339,17 +339,17 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
               <LawArticleModal legalBasis="소득세법 §97" label="§97①1호가목" />
             </div>
             {isCarryoverPresumed ? (
-              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800" data-testid="bg-carryover-presumed-transferor-notice">
+              <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200" data-testid="bg-carryover-presumed-transferor-notice">
                 이월과세를 적용하지 않는 경우(시나리오 B)의 <b>양도인</b> 취득가액입니다. 양도인은 이 자산을 증여받았으므로 증여일 현재 상증법 평가액이
                 취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액은 <b>당초 증여자</b> 값만 아래 이월과세 박스에 입력합니다.
               </div>
             ) : (
-              <div className="rounded border border-violet-200 bg-violet-50 p-2 text-caption text-violet-800">
+              <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200">
                 개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
               </div>
             )}
             {isRightToMoveIn && (
-              <div className="rounded border border-fuchsia-200 bg-fuchsia-50 p-2 text-caption text-fuchsia-800">
+              <div className="rounded border border-fuchsia-200 dark:border-fuchsia-800 bg-fuchsia-50 dark:bg-fuchsia-950/30 p-2 text-caption text-fuchsia-800 dark:text-fuchsia-200">
                 조합원입주권의 취득가액은 <b>종전 부동산의 실지취득가액</b>입니다 (소득세법 시행령
                 §166①1호 「기존건물과 그 부수토지의 취득가액」 · §97①1호가목). 인수 채무 비율만큼
                 안분됩니다. 종전 부동산의 매매사례가액·감정가액은 취득가액으로 쓰지 않습니다 — 시행령 §166③은 취득가액을 확인할 수 없는 경우를

@@ -300,10 +300,10 @@ export function StockTransferTaxResultView({
             <LawArticleModal
               legalBasis={categoryLegalBasis}
               label={categoryLabel}
-              className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium"
+              className="px-3 py-1 rounded-full border text-sm bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 font-medium"
             />
           ) : (
-            <span className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
+            <span className="px-3 py-1 rounded-full border text-sm bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 font-medium">
               {categoryLabel}
             </span>
           )}
@@ -335,7 +335,7 @@ export function StockTransferTaxResultView({
 
         {/* 정보용 전체 계산 결과 표 — 사용자가 입력한 데이터로 산출세액까지 모두 산정 */}
         <div className="rounded-xl border border-emerald-200 overflow-hidden">
-          <div className="bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
             정보용 계산 결과 (비과세 적용 전 산식) — 입력 데이터 기반
           </div>
           <div className="divide-y divide-emerald-100">
@@ -351,7 +351,7 @@ export function StockTransferTaxResultView({
             <ResultRow label="산출세액 (가상)" value={result.calculatedTax} highlight />
             <ResultRow label="지방소득세 (10%) — 비과세 미적용" value={result.localIncomeTax} />
           </div>
-          <div className="bg-emerald-100 px-4 py-3 text-xs text-emerald-800">
+          <div className="bg-emerald-100 dark:bg-emerald-950/30 px-4 py-3 text-xs text-emerald-800 dark:text-emerald-200">
             ※ §94①3 가목 1) 단서에 따라 위 산출세액은 면제 — 최종 납부세액 <strong>0</strong>.
             {" "}장외 거래·대주주 양도분이라면 산출세액 <strong>{fmt(result.calculatedTax)}</strong>이 그대로 부과됩니다.
           </div>
@@ -423,10 +423,10 @@ export function StockTransferTaxResultView({
           <LawArticleModal
             legalBasis={categoryLegalBasis}
             label={categoryLabel}
-            className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium"
+            className="px-3 py-1 rounded-full border text-sm bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 font-medium"
           />
         ) : (
-          <span className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium">
+          <span className="px-3 py-1 rounded-full border text-sm bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 font-medium">
             {categoryLabel}
           </span>
         )}
@@ -435,7 +435,7 @@ export function StockTransferTaxResultView({
         </span>
         {/* [GAP-2] 비상장 §165④ full 모드 — 행-수준 계산 적용 배지 */}
         {unlistedValuationMode === "full" && (
-          <span className="px-3 py-1 rounded-full border text-sm bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">
+          <span className="px-3 py-1 rounded-full border text-sm bg-fuchsia-50 dark:bg-fuchsia-950/30 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800">
             행-수준 계산 적용 (소득세법 시행령 §165④1호)
           </span>
         )}
@@ -443,7 +443,7 @@ export function StockTransferTaxResultView({
         {acqFaceValueOnly && (
           <span
             data-testid="acq-face-value-badge"
-            className="px-3 py-1 rounded-full border text-sm bg-amber-50 text-amber-700 border-amber-200"
+            className="px-3 py-1 rounded-full border text-sm bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
           >
             취득 액면가 적용 (§99①4 후단)
           </span>

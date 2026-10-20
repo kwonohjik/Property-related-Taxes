@@ -150,7 +150,7 @@ export function EvaluationCommitteeResultCard({
 
       {result.warnings.length > 0 && (
         <div
-          className="rounded border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800"
+          className="rounded border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-2 text-xs text-rose-800 dark:text-rose-200"
           data-testid="evaluation-committee-result-warnings"
         >
           {result.warnings.map((w, i) => (

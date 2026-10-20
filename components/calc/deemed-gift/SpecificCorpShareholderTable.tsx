@@ -64,7 +64,7 @@ export function SpecificCorpShareholderTable({ rows, onChange }: Props) {
           type="button"
           onClick={add}
           data-testid="sc-sh-add"
-          className="rounded-md border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-medium text-sky-800 hover:bg-sky-100/60"
+          className="rounded-md border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 px-3 py-1 text-xs font-medium text-sky-800 dark:text-sky-200 hover:bg-sky-100/60"
         >
           + 행 추가
         </button>

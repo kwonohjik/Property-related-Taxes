@@ -278,7 +278,7 @@ export function DeemedGiftResultView({
       {/* ── §45의5① 거래상대방 판정 보류 고지 ── */}
       {result.specificCorpTransaction?.counterpartyMet === "unknown" && (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+          className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-200"
           data-testid="sc-counterparty-notice"
         >
           <b>§45의5① 거래상대방 요건은 판정하지 않았습니다.</b> 이 조문은 특정법인이 «지배주주 및 그
@@ -292,8 +292,8 @@ export function DeemedGiftResultView({
         <div
           className={
             result.specificCorpEligibility.met === "no"
-              ? "rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
-              : "rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+              ? "rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-3 text-sm text-rose-700 dark:text-rose-300"
+              : "rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-200"
           }
           data-testid="sc-eligibility-notice"
         >
@@ -392,7 +392,7 @@ export function DeemedGiftResultView({
           {/* roster 無 — 비율 입력 경로 안내 (저가: 자기지분 미제외 gross 주의) */}
           {!result.contributionBreakdown && (
             <p
-              className="mt-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1"
+              className="mt-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 rounded px-2 py-1"
               data-testid="deemed-contribution-roster-warning"
             >
               {result.caseType === "high"
@@ -682,7 +682,7 @@ export function DeemedGiftResultView({
 
       {!result.applied && result.exclusionReason && (
         <div
-          className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+          className="rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-3 text-sm text-rose-700 dark:text-rose-300"
           data-testid="deemed-exclusion"
         >
           증여세 미적용: {result.exclusionReason}
@@ -734,7 +734,7 @@ export function DeemedGiftResultView({
             </p>
           )}
           {result.valueIncreaseDetail.isExchangeListingNotice && (
-            <div className="mt-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700" data-testid="deemed-vi-exchange-notice">
+            <div className="mt-1 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-300" data-testid="deemed-vi-exchange-notice">
               ⚠ 현행 §42의3은 K-OTC 등록·코넥스 상장만 해당. 유가증권·코스닥시장 상장 이익은 §41의3 상장이익으로 과세됩니다.
               <span className="ml-1 inline-block align-middle">
                 <LawArticleModal legalBasis={GIFT.LISTING_GAIN} />

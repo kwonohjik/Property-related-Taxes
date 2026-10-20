@@ -132,7 +132,7 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
                   <span className="inline-block text-caption bg-muted/60 rounded px-1.5 py-0.5 font-medium">
                     {EXCLUDED_REASON_LABEL[h.reason] ?? h.reason}
                   </span>
-                  <p className="text-xs text-muted-foreground/80 mt-0.5">{h.detail}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{h.detail}</p>
                 </div>
               </div>
             ))}
@@ -171,7 +171,7 @@ export function MultiHouseSurchargeDetailCard({ detail }: Props) {
                   <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
                     {EXCLUSION_REASON_LABEL[r.type] ?? r.type}
                   </span>
-                  <p className="text-xs text-muted-foreground/80 mt-0.5">{r.detail}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{r.detail}</p>
                 </div>
               </div>
             ))}

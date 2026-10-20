@@ -62,7 +62,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
               value={house.acquisitionOfficialPrice ?? ""}
               onChange={(v) => onUpdate({ acquisitionOfficialPrice: v || undefined })}
             />
-            <p className="text-caption text-muted-foreground/70">3억원 이하여야 배제 적용</p>
+            <p className="text-caption text-muted-foreground">3억원 이하여야 배제 적용</p>
           </div>
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">거주기간 (년)</label>
@@ -71,7 +71,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
               onChange={(v) => onUpdate({ unavoidableResidenceYears: v || undefined })}
               placeholder="거주기간 입력"
             />
-            <p className="text-caption text-muted-foreground/70">1년 이상이어야 배제 적용</p>
+            <p className="text-caption text-muted-foreground">1년 이상이어야 배제 적용</p>
           </div>
           {/* 3호 괄호 「해당 사유가 해소된 날부터 3년」 — 해소일 또는 「미해소」 택일(빈 값 = 모름은 ⑧이 막는다) */}
           <ToggleCard
@@ -91,7 +91,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           {house.unavoidableReasonUnresolved !== true && (
             <div className="space-y-1">
               <label className="block text-caption text-muted-foreground font-medium">
-                사유 해소일 <span className="text-muted-foreground/60 font-normal">(해소된 날부터 3년 이내 양도)</span>
+                사유 해소일 <span className="text-muted-foreground font-normal">(해소된 날부터 3년 이내 양도)</span>
               </label>
               <DateInput
                 value={house.unavoidableReasonResolvedDate ?? ""}
@@ -99,7 +99,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
               />
             </div>
           )}
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             해소일 또는 「양도일 현재 사유가 해소되지 않음」 중 하나가 필요합니다
           </p>
         </div>
@@ -135,7 +135,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           {house.litigationPending !== true && (
             <div className="space-y-1">
               <label className="block text-caption text-muted-foreground font-medium">
-                소송 확정판결일 <span className="text-muted-foreground/60 font-normal">(판결 확정 시 — 그날부터 3년 이내 배제)</span>
+                소송 확정판결일 <span className="text-muted-foreground font-normal">(판결 확정 시 — 그날부터 3년 이내 배제)</span>
               </label>
               <DateInput
                 value={house.litigationAcquisitionDate ?? ""}
@@ -143,7 +143,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
               />
             </div>
           )}
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             확정판결일 또는 「양도일 현재 소송 진행 중」 중 하나가 필요합니다
           </p>
         </div>

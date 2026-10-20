@@ -269,7 +269,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               </FieldCard>
               {unitPriceInversion && (
                 <p
-                  className="mt-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700"
+                  className="mt-1.5 rounded-md border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-2.5 py-1.5 text-xs text-rose-700 dark:text-rose-300"
                   data-testid="cb-unit-price-inversion-warning"
                 >
                   {isPreDisclosure ? "최초고시(2005)" : "취득시"} ㎡당 고시가(

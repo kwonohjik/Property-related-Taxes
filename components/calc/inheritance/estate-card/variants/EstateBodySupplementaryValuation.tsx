@@ -115,7 +115,7 @@ function VacancyPortionFields({
           />
         </FieldCard>
         {noLandBase ? (
-          <p className="text-caption text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+          <p className="text-caption text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
             ⚠️ 부수토지 개별공시지가 미입력 — 미임대분 토지 안분 불가(건물분만 반영)
           </p>
         ) : (
@@ -175,7 +175,7 @@ export function EstateBodySupplementaryValuation({
     >
       <div className="space-y-2">
         {!addrValue.jibun && (
-          <p className="text-caption text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+          <p className="text-caption text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
             ⚠️ 공시가격 자동 조회는 상단 <strong>자산 명칭(소재지 검색)</strong>에서
             지번 주소를 선택해야 활성화됩니다.
           </p>

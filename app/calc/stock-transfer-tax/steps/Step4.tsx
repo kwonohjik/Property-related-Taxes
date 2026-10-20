@@ -129,12 +129,12 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
 
       {/* 에러 */}
       {error && !isLoading && (
-        <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-rose-700">
+        <div className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-rose-700 dark:text-rose-300">
           <p className="font-medium">계산 오류</p>
           <p className="text-sm mt-1">{error}</p>
           <button
             onClick={onCalculate}
-            className="mt-3 px-4 py-1.5 rounded bg-rose-100 text-rose-700 text-sm hover:bg-rose-200 transition-colors"
+            className="mt-3 px-4 py-1.5 rounded bg-rose-100 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 text-sm hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors"
           >
             다시 계산
           </button>

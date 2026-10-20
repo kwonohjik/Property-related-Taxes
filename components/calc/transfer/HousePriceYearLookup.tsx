@@ -94,7 +94,7 @@ export function HousePriceYearLookup({ house, transferDate, onUpdate }: Props) {
       <div className="flex items-center gap-2">
         <label className="text-caption text-muted-foreground font-medium">공시가격</label>
         {house.addressLookupFilled && (
-          <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+          <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-800 dark:bg-green-900/40 dark:text-green-300">
             조회값{house.officialPriceYear ? ` ${house.officialPriceYear}년` : ""}
           </span>
         )}

@@ -157,7 +157,7 @@ export function PresumedInheritanceTable({
         </table>
       </div>
 
-      <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+      <div className="rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 px-4 py-3 text-xs text-blue-900 dark:text-blue-200">
         <p className="mb-1 font-medium">산식 (상증법 §15)</p>
         <p>㉠ 미소명액 = 처분액 − 사용처확인액</p>
         <p>㉡ 추정상속재산 = 미소명액 − (처분액의 20%와 2억원 중 적은 금액), 음수면 0</p>

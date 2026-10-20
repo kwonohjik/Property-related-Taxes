@@ -661,7 +661,7 @@ export function RtmsSimilarSalesModal({
                 </span>
               </span>
             ) : (
-              <span className="text-gray-400 dark:text-gray-500 text-xs">
+              <span className="text-gray-500 dark:text-gray-400 text-xs">
                 행을 선택하면 평균 금액이 표시됩니다
               </span>
             )}

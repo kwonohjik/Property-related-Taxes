@@ -500,7 +500,7 @@ export function HousesListSection({
         </div>
 
         {houses.length === 0 ? (
-          <p className="text-xs text-muted-foreground/70">
+          <p className="text-xs text-muted-foreground">
             {judgmentMenu
               ? "없음 — 세대의 다른 주택을 모두 입력하세요. 비워 두면 다른 주택이 없는 것으로 판정합니다."
               : "없음 — 주택 추가 시 정밀 주택 수 산정이 적용됩니다."}

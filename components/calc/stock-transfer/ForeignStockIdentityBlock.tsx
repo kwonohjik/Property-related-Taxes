@@ -46,7 +46,7 @@ export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectio
         {form.yearsResidentInKorea &&
           parseDecimal(form.yearsResidentInKorea) >= 0 &&
           parseDecimal(form.yearsResidentInKorea) < 5 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             거주 기간이 5년 미만입니다. §118의2에 따라 납세의무가 없어 세액은 0으로 산출됩니다.
           </div>
         )}

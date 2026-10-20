@@ -3,6 +3,7 @@
 > 브랜치: `feat/modal-btn-green` (워크트리 `.claude/worktrees/ui-label`)
 > 작성일: 2026-07-10 · 기준: origin/master (PR#551 반영)
 > 결정(사용자 확정): ① 범위 = **계산·조회 헬퍼 + 이력 런처** (항목 추가/편집 제외) · ② 구현 = **신규 Button variant + native→Button 변환**
+> **갱신 2026-10-20**: 글자색 `text-green-700` → `text-green-800`(hover `-900`). `green-700`은 `bg-green-100` 위 대비 4.497로 WCAG 4.5에 못 미친다 — `docs/00-pm/ui-dark-low-contrast-residual.plan.md` Q-3. 전 테마 동일 알약(F3)은 유지. 아래 본문의 `text-green-700` 표기는 작성 당시 값이다.
 
 ---
 

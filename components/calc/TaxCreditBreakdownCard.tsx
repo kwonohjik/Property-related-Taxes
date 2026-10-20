@@ -94,7 +94,7 @@ function buildSection28Formula(
           합산 후 과세표준이 0이므로 공제한도 산식 무효
         </div>
       )}
-      <div className="text-micro text-gray-400 dark:text-gray-500 mt-1">
+      <div className="text-micro text-gray-500 dark:text-gray-400 mt-1">
         ※ 산출세액은 세대생략 할증 전 금액
       </div>
     </>
@@ -146,7 +146,7 @@ function buildSection29Formula(
           ※ 선행 공제(증여세액공제 §28) 차감 후 잔액 한도로 축소됨
         </div>
       )}
-      <div className="text-micro text-gray-400 dark:text-gray-500 mt-1">
+      <div className="text-micro text-gray-500 dark:text-gray-400 mt-1">
         ※ 상증령 §21① — 산출세액은 세액공제 차감 전 금액 기준
       </div>
     </>
@@ -212,11 +212,11 @@ function buildSection30Formula(
             </tr>
           </tbody>
         </table>
-        <div className="text-micro text-gray-400 dark:text-gray-500 mt-1">
+        <div className="text-micro text-gray-500 dark:text-gray-400 mt-1">
           §30③ 한도(산출세액 − §28 − §29) <Amt val={limit} />{" "}
           {creditAmount <= limit ? "≥ 공제액 → 전액 공제" : "→ 한도까지 공제"}
         </div>
-        <div className="text-micro text-gray-400 dark:text-gray-500">
+        <div className="text-micro text-gray-500 dark:text-gray-400">
           ※ 상증법 §30②1호·집행 30-22-1② — 재산별 구분 계산 (원 단위 floor)
         </div>
       </>
@@ -311,11 +311,11 @@ function buildSection69Formula(
         {farmlandReduction > 0 && <> − <Amt val={farmlandReduction} /></>}
         {" "}= <Amt val={base} />
       </div>
-      <div className="text-micro text-gray-400 dark:text-gray-500">
+      <div className="text-micro text-gray-500 dark:text-gray-400">
         ※ 상속인별 신고분 세액에 각각 {filingRatePct}% 적용 후 합산 (원 미만 반올림)
       </div>
       {allOthersZero && corp === 0 && (
-        <div className="text-micro text-gray-400 dark:text-gray-500">
+        <div className="text-micro text-gray-500 dark:text-gray-400">
           (외국납부·조특 특례 미적용)
         </div>
       )}
@@ -365,7 +365,7 @@ function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps
             {label}
           </span>
           {lawRef && (
-            <span className="text-xs text-gray-400 dark:text-gray-500">{lawRef}</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{lawRef}</span>
           )}
           {formula && (
             <button

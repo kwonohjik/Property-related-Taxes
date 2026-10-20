@@ -166,7 +166,7 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="pr-3 py-1.5 text-right text-gray-300 dark:text-gray-600 text-xs select-none">
+                <td className="pr-3 py-1.5 text-right text-gray-500 dark:text-gray-400 text-xs select-none">
                   ✎
                 </td>
               </tr>

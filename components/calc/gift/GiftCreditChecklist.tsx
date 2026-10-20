@@ -62,8 +62,8 @@ const CHIP_OFF: Record<ChipTone, string> = {
   violet: "border-gray-200 bg-gray-50/80 text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 hover:border-violet-300 hover:bg-violet-50/60",
 };
 const CHECK_ON: Record<ChipTone, string> = {
-  sky: "border-sky-500 bg-sky-500 text-white",
-  violet: "border-violet-500 bg-violet-500 text-white",
+  sky: "border-sky-700 bg-sky-700 text-white",
+  violet: "border-violet-700 bg-violet-700 text-white",
 };
 
 function CreditChip({

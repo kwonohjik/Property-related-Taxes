@@ -94,7 +94,7 @@ function ListedStockAutoFetchIntegration({
       type="button"
       disabled={!fetchState.canFetch}
       onClick={fetchState.fetch}
-      className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed whitespace-nowrap"
+      className="rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-800 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed whitespace-nowrap"
       title={fetchState.disabledReason ?? "전후 2개월 평균 자동 계산"}
       data-testid="ls-inline-auto-fetch-button"
     >

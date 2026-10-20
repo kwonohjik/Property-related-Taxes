@@ -56,7 +56,7 @@ function LandParcelTableRow({ parcel, index, kind, isSelected, onSelect }: LandP
       </td>
       {/* 필지명 */}
       <td className="pl-2 py-1.5 text-xs max-w-[8rem] truncate">
-        {parcel.name?.trim() || <span className="text-gray-300 dark:text-gray-600">—</span>}
+        {parcel.name?.trim() || <span className="text-gray-500 dark:text-gray-400">—</span>}
       </td>
       {/* 면적 (우정렬) */}
       <td className="pr-2 py-1.5 text-xs text-right font-mono tabular-nums whitespace-nowrap">
@@ -72,7 +72,7 @@ function LandParcelTableRow({ parcel, index, kind, isSelected, onSelect }: LandP
       </td>
       {/* 편집 힌트 */}
       <td className="pr-3 py-1.5 text-right text-xs select-none whitespace-nowrap">
-        <span className="text-gray-300 dark:text-gray-600">✎</span>
+        <span className="text-gray-500 dark:text-gray-400">✎</span>
       </td>
     </tr>
   );

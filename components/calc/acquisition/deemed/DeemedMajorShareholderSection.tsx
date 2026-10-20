@@ -100,7 +100,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         checked={isListed}
         onCheckedChange={(v) => set("deemedMajorIsListed", v)}
       >
-        <div className="rounded-md bg-rose-100 px-3 py-2 text-sm text-rose-800">
+        <div className="rounded-md bg-rose-100 dark:bg-rose-950/30 px-3 py-2 text-sm text-rose-800 dark:text-rose-200">
           유가증권시장·코스닥시장 상장법인의 과점주주는 취득세 과세 대상이 아닙니다 (계산 없이 비과세).
           <br />
           <span className="font-medium">코넥스(KONEX) 상장법인은 제외 대상이 아니므로 과세됩니다 — 이 토글을 OFF로 두고 지분율을 입력하세요.</span>
@@ -115,7 +115,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
         checked={isFounding}
         onCheckedChange={(v) => set("deemedMajorIsFoundingShare", v)}
       >
-        <div className="rounded-md bg-rose-100 px-3 py-2 text-sm text-rose-800">
+        <div className="rounded-md bg-rose-100 dark:bg-rose-950/30 px-3 py-2 text-sm text-rose-800 dark:text-rose-200">
           설립 시 취득은 과점주주 간주취득에서 제외됩니다 (지방세법 §7⑤ 괄호).
           설립 이후 증자·양수로 지분율이 증가하는 경우에만 과세 대상입니다.
         </div>

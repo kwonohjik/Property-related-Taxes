@@ -151,7 +151,7 @@ function LandPriceLookup({
           <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
             {landStdPrice !== null
               ? landStdPrice.toLocaleString()
-              : <span className="text-muted-foreground/50">자동 계산</span>}
+              : <span className="text-muted-foreground">자동 계산</span>}
           </div>
         </FieldCard>
       </div>
@@ -408,7 +408,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       {/* ② 양도시 — emerald 톤 (최신 시점) */}
       <div className="space-y-2 rounded-md border-2 border-emerald-300 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-950/30 p-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-caption font-bold text-white dark:bg-emerald-500">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-700 text-caption font-bold text-white dark:bg-emerald-700">
             1
           </span>
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
@@ -440,7 +440,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       {/* ③ 최초고시 시점 (기본 2005-04-30) — violet 톤 (중간 시점) */}
       <div className="space-y-2 rounded-md border-2 border-violet-300 dark:border-violet-700 bg-violet-50/70 dark:bg-violet-950/30 py-3 px-2 sm:px-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-caption font-bold text-white dark:bg-violet-500">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-violet-600 text-caption font-bold text-white dark:bg-violet-700">
             2
           </span>
           <p className="text-xs font-semibold text-violet-800 dark:text-violet-300">
@@ -505,7 +505,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
       {/* ④ 기준일(상속개시일·증여일) 시점 토지단가 — rose 톤 (가장 오래된 시점) */}
       <div className="space-y-2 rounded-md border-2 border-rose-300 dark:border-rose-700 bg-rose-50/70 dark:bg-rose-950/30 p-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-caption font-bold text-white dark:bg-rose-500">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-caption font-bold text-white dark:bg-rose-700">
             3
           </span>
           <p className="text-xs font-semibold text-rose-800 dark:text-rose-300">
@@ -605,7 +605,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
                       bottom="최초고시 토지기준시가 + 최초고시 건물기준시가"
                     />
                   </span>
-                  <span className="text-caption text-muted-foreground/60 tabular-nums block">
+                  <span className="text-caption text-muted-foreground tabular-nums block">
                     {P_F.toLocaleString()} ×{" "}
                     <Frac
                       top={`${landStdA.toLocaleString()} + ${buildingA.toLocaleString()}`}
@@ -613,7 +613,7 @@ export function HouseValuationSection({ asset, onChange, transferDate }: Props) 
                     />
                   </span>
                   {landStdA > 0 && (
-                    <span className="text-caption text-muted-foreground/50 block">
+                    <span className="text-caption text-muted-foreground block">
                       {landStdAFormula}
                     </span>
                   )}

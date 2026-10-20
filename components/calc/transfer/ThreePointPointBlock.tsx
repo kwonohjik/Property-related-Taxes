@@ -232,7 +232,7 @@ export function PointBlock({
       </button>
     </span>
   ) : (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700 dark:bg-green-900/40 dark:text-green-400">
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-800 dark:bg-green-900/40 dark:text-green-400">
       자동
     </span>
   );
@@ -317,7 +317,7 @@ export function PointBlock({
       <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
         {landStdPrice !== null
           ? landStdPrice.toLocaleString()
-          : <span className="text-muted-foreground/50">자동 계산</span>}
+          : <span className="text-muted-foreground">자동 계산</span>}
       </div>
     </FieldCard>
   );
@@ -361,7 +361,7 @@ export function PointBlock({
               <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
                 {housingLandStd !== null
                   ? housingLandStd.toLocaleString()
-                  : <span className="text-muted-foreground/50">자동 계산</span>}
+                  : <span className="text-muted-foreground">자동 계산</span>}
               </div>
             </FieldCard>
             <FieldCard
@@ -372,7 +372,7 @@ export function PointBlock({
               <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
                 {commercialLandStd !== null
                   ? commercialLandStd.toLocaleString()
-                  : <span className="text-muted-foreground/50">자동 계산</span>}
+                  : <span className="text-muted-foreground">자동 계산</span>}
               </div>
             </FieldCard>
           </div>

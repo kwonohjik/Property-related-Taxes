@@ -104,7 +104,7 @@ export function MixedUseExpandedPanel({
     <div className="mt-4 border-t pt-4 space-y-3">
       {/* 2022.1.1 이전 경고 */}
       {!isAfter2022 && (
-        <div className="px-3 py-2 rounded-lg bg-red-50 text-red-800 text-sm">
+        <div className="px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-200 text-sm">
           {isMixedBurdenedGift(asset)
             ? "겸용주택 부담부증여는 증여(양도)일이 2022.1.1. 이후여야 분리계산 대상입니다 — 소득세법 시행령 제160조 제1항 괄호(주택 외의 부분은 주택으로 보지 않는다)가 2022.1.1. 이후 양도분부터 적용됩니다."
             : <>

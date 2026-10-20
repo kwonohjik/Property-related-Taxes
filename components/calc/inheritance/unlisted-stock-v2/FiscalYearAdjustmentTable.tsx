@@ -230,7 +230,7 @@ export function FiscalYearAdjustmentTable({
               </div>
               {/* §17의3② 연환산 amber 안내 */}
               {isShortYear && (
-                <div className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-micro text-amber-800 font-normal">
+                <div className="rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-micro text-amber-800 dark:text-amber-200 font-normal">
                   사업연도 {months}개월 → 1주당 순손익액 ×12/{months} 연환산 (§17의3②)
                 </div>
               )}

@@ -43,7 +43,7 @@ interface Props {
 }
 
 const LABEL = "block text-caption text-muted-foreground font-medium";
-const HINT = "text-caption text-muted-foreground/70";
+const HINT = "text-caption text-muted-foreground";
 
 type Tri = "unknown" | "no" | "yes";
 const toTri = (b: boolean | undefined): Tri => (b === undefined ? "unknown" : b ? "yes" : "no");

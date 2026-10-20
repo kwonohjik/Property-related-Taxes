@@ -225,7 +225,7 @@ export function ValuationAccordionFields({
               <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-micro font-semibold text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">
                 RTMS 자동조회
               </span>
-              <span className="text-micro text-gray-400 dark:text-gray-500">
+              <span className="text-micro text-gray-500 dark:text-gray-400">
                 국토교통부 실거래가 공개시스템 · 직접 금액 수정 시 배지 제거
               </span>
             </div>

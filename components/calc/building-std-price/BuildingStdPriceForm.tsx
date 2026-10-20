@@ -528,7 +528,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               )}
             </div>
             {!transferOnly && acqYearIsPre2001 && !apartmentConv && (
-              <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-xs text-violet-700">
+              <p className="rounded-md bg-violet-50 dark:bg-violet-950/30 px-2.5 py-1.5 text-xs text-violet-700 dark:text-violet-300">
                 2000년 이전 취득 — 2001.1.1 ㎡당 금액 × 산정기준율로 환산됩니다. 구조·용도는 2001년 지수표 기준입니다.
               </p>
             )}
@@ -648,7 +648,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
               </FieldCard>
             </div>
             {sec1648Active && (
-              <p className="rounded-md bg-rose-50 px-2.5 py-1.5 text-xs text-rose-700">
+              <p className="rounded-md bg-rose-50 dark:bg-rose-950/30 px-2.5 py-1.5 text-xs text-rose-700 dark:text-rose-300">
                 {sameYear
                   ? "취득연도와 같은 해 양도 — "
                   : "동일조정기간 환산(§164⑧)을 적용하는 연도교차 양도 — "}

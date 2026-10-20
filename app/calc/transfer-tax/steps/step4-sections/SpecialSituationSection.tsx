@@ -155,7 +155,7 @@ export function SpecialSituationSection({
                 <li>• 토지 소재지와 <strong>연접한 시·군·구</strong>에 거주</li>
                 <li>• 토지 소재지와 거주지 사이 <strong>직선거리 30km 이내</strong></li>
               </ul>
-              <p className="text-muted-foreground/70 text-micro mt-1">
+              <p className="text-muted-foreground text-micro mt-1">
                 소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장
               </p>
             </div>

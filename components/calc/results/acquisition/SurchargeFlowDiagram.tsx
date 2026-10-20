@@ -144,7 +144,7 @@ function getStepStyle(status: StepStatus) {
       container: "bg-rose-100 border border-rose-300 text-rose-900",
       badge: "bg-rose-200 text-rose-800",
       badgeLabel: "적용",
-      numberBg: "bg-rose-500 text-white",
+      numberBg: "bg-rose-700 text-white",
     };
   }
   if (status === "excluded") {
@@ -152,7 +152,7 @@ function getStepStyle(status: StepStatus) {
       container: "bg-sky-50 border border-sky-300 text-sky-900",
       badge: "bg-sky-200 text-sky-800",
       badgeLabel: "배제",
-      numberBg: "bg-sky-500 text-white",
+      numberBg: "bg-sky-700 text-white",
     };
   }
   return {

@@ -190,7 +190,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                   value={gp.permitApplicationDate ?? ""}
                   onChange={(v) => patchGp({ permitApplicationDate: v || undefined })}
                 />
-                <p className="text-caption text-muted-foreground/70">
+                <p className="text-caption text-muted-foreground">
                   나목1) — {SURCHARGE_TRANSITION.DEADLINE}까지 신청해야 합니다.
                 </p>
               </div>
@@ -216,7 +216,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                   value={gp.contractDate}
                   onChange={(v) => patchGp({ contractDate: v })}
                 />
-                <p className="text-caption text-muted-foreground/70">
+                <p className="text-caption text-muted-foreground">
                   {gp.isLandPermitTarget
                     ? "나목4) — 계약일부터 4/6개월(2026.5.10 이후 계약 시 절대기한 한정) 이내 양도해야 합니다."
                     : `다목1) — ${SURCHARGE_TRANSITION.DEADLINE}까지 체결해야 합니다.`}

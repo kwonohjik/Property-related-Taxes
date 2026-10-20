@@ -236,7 +236,7 @@ function HeirTableRow({ heir, isSelected, onSelect, deathDate }: HeirTableRowPro
         <div className="flex flex-wrap gap-1">{badges}</div>
       </td>
       {/* 편집 아이콘 힌트 */}
-      <td className="pr-3 py-1.5 text-right text-gray-300 dark:text-gray-600 text-xs select-none">
+      <td className="pr-3 py-1.5 text-right text-gray-500 dark:text-gray-400 text-xs select-none">
         ✎
       </td>
     </tr>

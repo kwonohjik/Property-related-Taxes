@@ -101,7 +101,7 @@ export function PrintSelectionPanel({
     >
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-xs font-bold text-white">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-700 text-xs font-bold text-white">
             ✓
           </span>
           <h3 className="text-sm font-semibold text-sky-900 dark:text-sky-100">
@@ -172,7 +172,7 @@ export function PrintSelectionPanel({
             data-testid="print-selected-button"
             onClick={() => window.print()}
             disabled={selectedCount === 0}
-            className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 rounded-md bg-sky-700 px-4 py-2 text-sm font-medium text-white hover:bg-sky-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Printer className="h-4 w-4" />
             선택 항목 인쇄

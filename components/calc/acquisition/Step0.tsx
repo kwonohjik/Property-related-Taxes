@@ -213,7 +213,7 @@ export function Step0({
 
         {/* 간주취득 안내 배너 */}
         {isDeemed && (
-          <div className="rounded-md bg-violet-100 border border-violet-200 px-3 py-2 text-xs text-violet-800 space-y-1">
+          <div className="rounded-md bg-violet-100 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 space-y-1">
             <p className="font-semibold">간주취득 — 실제 소유권 이전 없이 과세 (§7④⑤·§10의6)</p>
             <p>중과세 없음. 다음 단계에서 유형별 세부 정보를 입력합니다.</p>
           </div>

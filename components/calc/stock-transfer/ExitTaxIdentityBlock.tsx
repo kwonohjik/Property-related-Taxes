@@ -46,7 +46,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
         </FieldCard>
 
         {isResidencyShort && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             거주 기간이 5년 미만입니다. §118의9①에 따라 납세의무가 없어 세액은 0으로 산출됩니다.
           </div>
         )}
@@ -87,7 +87,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
         />
 
         {!form.etIsMajorShareholder && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             대주주에 해당하지 않는 경우 §118의9①2호 요건 미충족으로 납세의무가 없습니다.
           </div>
         )}

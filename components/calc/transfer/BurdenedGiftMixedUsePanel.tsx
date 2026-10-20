@@ -95,7 +95,7 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
           <Row label="취득시 기준시가 합계" value={a.missing.length === 0 ? a.total : null} testId="bg-mixed-std-total-acq" />
         </dl>
         {missing.length > 0 && (
-          <p data-testid="bg-mixed-valuation-missing" className="rounded border border-amber-300 bg-amber-50 p-2 text-caption text-amber-900">
+          <p data-testid="bg-mixed-valuation-missing" className="rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-2 text-caption text-amber-900 dark:text-amber-200">
             아직 입력하지 않은 칸: <b>{missing.map((m) => MISSING_LABEL[m] ?? m).join(" · ")}</b> — 「③ 취득정보 &gt; 겸용주택」에서 입력하세요.
           </p>
         )}

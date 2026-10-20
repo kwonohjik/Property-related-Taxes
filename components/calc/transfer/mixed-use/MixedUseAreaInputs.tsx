@@ -413,7 +413,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
 function AreaBadge({ manual, onReset }: { manual: boolean; onReset?: () => void }) {
   if (!manual) {
     return (
-      <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">
+      <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-800">
         자동
       </span>
     );

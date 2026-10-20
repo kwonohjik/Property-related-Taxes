@@ -164,7 +164,7 @@ function StockItemTableRow({ item, isSelected, onSelect, mode, heirsCount, valua
             {optionCount}
           </span>
         )}
-        <span className="text-gray-300 dark:text-gray-600">✎</span>
+        <span className="text-gray-500 dark:text-gray-400">✎</span>
       </td>
     </tr>
   );

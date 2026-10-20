@@ -152,7 +152,7 @@ export function ClientSelectStep({ onNext }: Props) {
                   <p className="text-xs font-medium text-muted-foreground">
                     전체 {allClients.length}명
                     {totalPages > 1 && (
-                      <span className="ml-1 text-muted-foreground/70">
+                      <span className="ml-1 text-muted-foreground">
                         ({page + 1}/{totalPages} 페이지)
                       </span>
                     )}

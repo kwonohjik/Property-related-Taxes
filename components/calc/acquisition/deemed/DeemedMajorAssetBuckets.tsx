@@ -99,7 +99,7 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
           <button
             type="button"
             onClick={() => onChange([...rows, newRow()])}
-            className="ml-auto rounded-md border border-amber-300 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors"
+            className="ml-auto rounded-md border border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200 transition-colors"
             data-testid="deemed-bucket-add"
           >
             + 물건 추가
@@ -107,7 +107,7 @@ export function DeemedMajorAssetBuckets({ rows, taxableRatio, onChange }: Props)
         </>
       }
     >
-      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
         법인이 보유한 부동산등을{" "}
         <span className="font-medium">§15② 단서 해당 여부(§13① 본점·공장 / §13⑤ 사치성)로 나누어</span>{" "}
         전부 입력하세요. 금액은 <span className="font-medium">결산서·장부상 가액</span>입니다 (§10의6④ — 시가표준액 아님).

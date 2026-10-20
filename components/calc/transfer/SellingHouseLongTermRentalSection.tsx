@@ -45,7 +45,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
 
   return (
     <ToneCard tone="violet" bodyClassName="space-y-2.5" title="양도 주택이 장기임대주택인 경우">
-      <p className="text-caption text-muted-foreground/80">
+      <p className="text-caption text-muted-foreground">
         양도하는 주택 자체가 등록 장기임대주택이면 중과 대상에서 제외됩니다 (소령 §167의3①2호 ·
         2주택은 §167의10①2호 준용).
       </p>
@@ -115,7 +115,7 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
               onChange={(s) => patch({ rentalPeriodYears: s || undefined })}
               placeholder="임대기간 입력"
             />
-            <p className="text-caption text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground">
               가목·다목은 5년, 마목·바목은 10년, 아목·자목은 6년이 의무임대기간입니다.
             </p>
           </div>
@@ -123,13 +123,13 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">
               임대사업자 말소일{" "}
-              <span className="text-muted-foreground/60 font-normal">(양도 전 말소 시 입력)</span>
+              <span className="text-muted-foreground font-normal">(양도 전 말소 시 입력)</span>
             </label>
             <DateInput
               value={ltr.rentalCancelledDate ?? ""}
               onChange={(s) => patch({ rentalCancelledDate: s || undefined })}
             />
-            <p className="text-caption text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground">
               자진말소 후 1년 이내 양도(사목)를 주장하려면 이 칸이 아니라 아래 유형에서 사목을 고르고
               「자진·자동 말소일」에 적으세요.
             </p>

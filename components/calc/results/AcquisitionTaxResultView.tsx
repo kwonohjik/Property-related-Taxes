@@ -74,7 +74,7 @@ function FilingDeadlineCounter({ deadline }: { deadline: string }) {
         ? "bg-destructive/20 text-destructive"
         : isUrgent
         ? "bg-red-100 text-red-700 animate-pulse"
-        : "bg-green-100 text-green-700"
+        : "bg-green-100 text-green-800"
     }`}>
       {isPast ? `D+${Math.abs(dday)} 기한 초과` : dday === 0 ? "D-day" : `D-${dday}`}
     </span>

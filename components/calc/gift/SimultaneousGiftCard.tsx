@@ -127,7 +127,7 @@ export function SimultaneousGiftCard({
       {/* 헤더 — 번호 배지 + 제목 + 삭제 */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500 text-caption font-bold text-white">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-700 text-caption font-bold text-white">
             {index + 1}
           </span>
           <span className="text-sm font-semibold text-sky-900 dark:text-sky-100">

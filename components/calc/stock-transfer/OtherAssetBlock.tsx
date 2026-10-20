@@ -237,7 +237,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
     >
       {/* §94② 우선순위 안내 */}
       {isBothActive && (
-        <div className="mb-3 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="mb-3 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-800 dark:text-rose-200">
           <p className="font-medium">§94② 우선순위 적용</p>
           <p className="text-xs mt-1">
             <LawArticleModal legalBasis="소득세법 §94 ① 3호" label="§94①3" />(상장·비상장)과{" "}

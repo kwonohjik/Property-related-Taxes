@@ -439,7 +439,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
       {/* 경고 */}
       {result.warnings.length > 0 && (
-        <div className="rounded border border-rose-200 bg-rose-50 p-2 text-caption text-rose-700 space-y-1">
+        <div className="rounded border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-2 text-caption text-rose-700 dark:text-rose-300 space-y-1">
           {result.warnings.map((w, i) => (
             <div key={i}>⚠️ {w}</div>
           ))}

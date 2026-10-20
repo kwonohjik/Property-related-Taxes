@@ -201,7 +201,7 @@ export function StockTransferPenaltySection({
         </div>
 
         {/* 신고기한 안내 */}
-        <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs text-sky-800 space-y-1">
+        <div className="rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 px-3 py-2.5 text-xs text-sky-800 dark:text-sky-200 space-y-1">
           <p className="font-semibold">주식 양도세 신고기한 (§105①2호)</p>
           <p className="text-sky-700 leading-relaxed dark:text-sky-300">
             예정신고: <strong>양도일이 속한 반기 말일 + 2개월</strong> (상반기 양도→8.31 / 하반기 양도→다음해 2월 말)
@@ -213,7 +213,7 @@ export function StockTransferPenaltySection({
         </div>
 
         {/* 비발동 조건 안내 — 중립 표현 (memory feedback_tax_calculation_principle 준수) */}
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs text-emerald-800">
+        <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 text-xs text-emerald-800 dark:text-emerald-200">
           <p>
             <strong>가산세 비발동 조건</strong>: 법정 신고기한 내 신고서 제출 + 산출세액 정확 + 납부기한 내 완납.
             전자신고 시 {STOCK.ELECTRONIC_FILING_CREDIT}에 따라 △20,000원 세액공제.

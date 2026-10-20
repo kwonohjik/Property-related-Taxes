@@ -113,7 +113,7 @@ export function Page4ValuationDeltaTable({ raw }: Page4ValuationDeltaTableProps)
       </table>
 
       {isTotalMode && resolved.evaluationDelta !== 0 && (
-        <p className="text-micro text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mb-3">
+        <p className="text-micro text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1 mb-3">
           {C5.totalModeNote}
         </p>
       )}

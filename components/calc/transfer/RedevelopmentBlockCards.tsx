@@ -561,12 +561,12 @@ export function SuccessorMemberSection({
 
       {/* 자동 추정 안내 — silent 적용 금지 */}
       {autoSuggestionState === "recommend" && (
-        <div className="rounded-md border border-violet-200 bg-violet-50 p-2.5 text-caption text-violet-900">
+        <div className="rounded-md border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2.5 text-caption text-violet-900 dark:text-violet-200">
           ⓘ 관리처분 인가일이 취득일보다 이전입니다. 승계조합원 모드 사용을 권장합니다.
         </div>
       )}
       {autoSuggestionState === "ambiguous" && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-2.5 text-caption text-amber-900">
+        <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-caption text-amber-900 dark:text-amber-200">
           ⚠️ 취득일과 관리처분 인가일이 <span className="font-semibold">동일 날짜</span>입니다.
           원조합원·승계조합원 해석이 갈리는 회색지대로, 사전답변례·NTS 해석을 확인 후 적절한 모드를 선택하세요.
         </div>
@@ -671,7 +671,7 @@ export function SuccessorMemberSection({
             />
           </FieldCard>
 
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-caption text-sky-900 space-y-1 leading-relaxed">
+          <div className="rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 p-2.5 text-caption text-sky-900 dark:text-sky-200 space-y-1 leading-relaxed">
             <div className="font-semibold">승계조합원 신축APT 양도 분기</div>
             <ul className="list-disc pl-4 space-y-0.5">
               <li>보유기간 = 양도일 − 준공일 (사전-2019-법령해석재산-0649)</li>
@@ -694,7 +694,7 @@ export function SuccessorMemberSection({
             </div>
           </div>
 
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-caption text-amber-900">
+          <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-2.5 text-caption text-amber-900 dark:text-amber-200">
             <div className="font-semibold">현재 지원하지 않는 분기 (자동 차단)</div>
             <ul className="list-disc pl-4 space-y-0.5 mt-1">
               <li>승계조합원 + 청산금 분기 (납부·수령)</li>

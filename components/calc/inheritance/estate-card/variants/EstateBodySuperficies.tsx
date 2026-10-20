@@ -142,7 +142,7 @@ export function EstateBodySuperficies({ item, onUpdate, valuationDate }: Variant
           />
         </FieldCard>
         {isAuto && autoYears != null && (
-          <p className="text-xs text-sky-700 bg-sky-50 dark:bg-sky-900/20 rounded px-3 py-2">
+          <p className="text-xs text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20 rounded px-3 py-2">
             🔵 자동 산정 {autoYears}년 (민법 §280·§281, 1년 미만 절상)
           </p>
         )}

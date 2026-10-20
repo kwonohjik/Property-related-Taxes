@@ -205,7 +205,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           = <strong>{(result.ownAcquisitionPrice ?? result.acquisitionPrice).toLocaleString()}</strong>
         </p>
         {result.valuationDetail?.transferDailyModeUsed && (
-          <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+          <p className="text-caption text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1 mt-1">
             ✓ 양도일 이전 1개월 종가 일자별 입력 모드 — 자동 산정 평균{" "}
             <strong>{(result.valuationDetail?.transferDailyAverage ?? 0).toLocaleString()}</strong>
             {" "}을 §163⑨ 환산 분모로 사용
@@ -216,7 +216,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
             ⚠️ 평균값은 `post.listingClosingAvg1Month`를 쓴다 — 엔진이 실제로 §165⑤ 첫 항으로
                삼은 값 그 자체다. 배너용 사본을 따로 두면 갈릴 자리가 생긴다. */}
         {result.valuationDetail?.listingDailyModeUsed && (
-          <p className="text-caption text-amber-800 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
+          <p className="text-caption text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1 mt-1">
             ✓ 상장일 이후 1개월 종가 일자별 입력 모드 — 자동 산정 평균{" "}
             <strong>{(post.listingClosingAvg1Month ?? 0).toLocaleString()}</strong>
             {" "}을 §165⑤ 계산식 첫 항으로 사용

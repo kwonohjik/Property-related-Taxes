@@ -152,7 +152,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* §95② 장기보유특별공제 배제 — 세 분기가 모두 0이 된 **이유**를 알린다 */}
       {lthdExclusionReason && (
-        <div className="rounded-md bg-amber-50 border border-amber-300 p-3 text-caption text-amber-900 space-y-1">
+        <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 p-3 text-caption text-amber-900 dark:text-amber-200 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§95② 본문 괄호</span>
             <span className="font-semibold">장기보유특별공제 배제</span>
@@ -184,7 +184,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* 사례 36 — 고가 기준금액 초과 안분 배지 (oneRightHighValueApplied) — 기준금액은 엔진이 양도일로 쓴 값(E-3) */}
       {isRightSubject && oneRightHighValueApplied && highValueAllocation && (
-        <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1">
+        <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-caption text-amber-900 dark:text-amber-200 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§89①4호 각 목 외의 부분 단서 + §95③</span>
             <span className="font-semibold">1세대1입주권 {formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)} 초과 안분 적용</span>
@@ -217,7 +217,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* subject="right" + settlementDirection="pay" — §95② 본문 괄호 안내 카드 */}
       {isRightSubject && !successorMemberApplied && settlementDirection === "pay" && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-caption text-rose-900 space-y-1">
+        <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 p-3 text-caption text-rose-900 dark:text-rose-200 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-rose-200 px-2 py-0.5 text-micro font-bold text-rose-800">소득세법 §95② 본문 괄호</span>
             <span className="font-semibold">인가후 양도차익 — 장기보유특별공제 적용 제외</span>
@@ -236,7 +236,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* subject="right" + settlementDirection="receive" — §166①2호 가목·나목 안내 카드 (R-5) */}
       {isRightSubject && !successorMemberApplied && settlementDirection === "receive" && (
-        <div className="rounded-md bg-violet-50 border border-violet-200 p-3 text-caption text-violet-900 space-y-1">
+        <div className="rounded-md bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 p-3 text-caption text-violet-900 dark:text-violet-200 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-violet-200 px-2 py-0.5 text-micro font-bold text-violet-800">시행령 §166①2호</span>
             <span className="font-semibold">입주권 양도 + 청산금 수령 — 가목·나목 분기</span>
@@ -258,7 +258,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* 사례 48 — 승계조합원 단순 차감 산식 (§166 안분 우회) */}
       {successorMemberApplied && successorMemberDetail && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 p-3 text-xs text-rose-900 space-y-2 leading-relaxed">
+        <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 p-3 text-xs text-rose-900 dark:text-rose-200 space-y-2 leading-relaxed">
           <div className="space-y-0.5">
             <div className="font-semibold">보유기간 기산일 = 준공일 (사용검사필증 교부일)</div>
             <div>
@@ -288,7 +288,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* 환산취득가 메타 (§164⑦ 단서 배지) — 승계조합원 분기는 환산 미적용이라 자동 숨김 */}
       {valuationMeta && valuationMeta.method !== "actual" && valuationMeta.method !== "successor_member_decree_162_1_4" && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 p-2 text-caption text-rose-800">
+        <div className="rounded-md bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 p-2 text-caption text-rose-800 dark:text-rose-200">
           <span className="font-semibold">환산취득가 적용</span> · {valuationMeta.rationale}
         </div>
       )}
@@ -307,7 +307,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       {!isRightSubject && highValueAllocation && (() => {
         const thresholdLabel = formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold);
         return (
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1">
+          <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-caption text-amber-900 dark:text-amber-200 space-y-1">
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">1세대1주택 §95③·시행령 §160</span>
               <span className="font-semibold">고가주택 {thresholdLabel} 초과 안분 적용</span>
@@ -331,7 +331,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         return (
           <div
             data-testid="redev-settlement-high-value"
-            className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 space-y-1"
+            className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-caption text-amber-900 dark:text-amber-200 space-y-1"
           >
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-amber-200 px-2 py-0.5 text-micro font-bold text-amber-800">§95③·시행령 §160①</span>
@@ -356,7 +356,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       {!isRightSubject && aptOneHouseExemptionApplied && (
         <div
           data-testid="redev-apt-one-house-exempt"
-          className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-caption text-emerald-900 space-y-1"
+          className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3 text-caption text-emerald-900 dark:text-emerald-200 space-y-1"
         >
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-micro font-bold text-emerald-800">§89①3호 가목</span>
@@ -370,7 +370,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         </div>
       )}
       {!isRightSubject && !highValueAllocation && !successorMemberApplied && !aptOneHouseExemptionApplied && !detail.settlementExemptionApplied && !detail.settlementHighValueAllocation && (
-        <div className="rounded-md bg-sky-50 border border-sky-200 p-3 text-caption text-sky-900 space-y-1">
+        <div className="rounded-md bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 p-3 text-caption text-sky-900 dark:text-sky-200 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-sky-200 px-2 py-0.5 text-micro font-bold text-sky-800">일반 과세</span>
             <span className="font-semibold">고가주택 안분 미적용 — 전체 과세</span>
@@ -386,7 +386,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
 
       {/* LTHD 거주월수 귀속 박스 (§154⑧ + 해석례 2020-386 — 사례 45) */}
       {lthdResidenceAttribution && (
-        <div className="rounded-md bg-emerald-50 border border-emerald-200 p-3 text-caption text-emerald-900 space-y-1">
+        <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-3 text-caption text-emerald-900 dark:text-emerald-200 space-y-1">
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-emerald-200 px-2 py-0.5 text-micro font-bold text-emerald-800">해석례 2020-386</span>
             <LawArticleModal legalBasis="소득세법 시행령 §154⑧" label="시행령 §154⑧" />
