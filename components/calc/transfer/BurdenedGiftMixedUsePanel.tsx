@@ -104,30 +104,32 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
         {d && v ? (
           <div data-testid="bg-attr-parts" className="space-y-1">
             <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-200">부분별 채무비율 (채무 귀속 반영)</p>
-            <table className="w-full text-xs border-collapse">
-              <thead>
-                <tr className="text-emerald-800 dark:text-emerald-200">
-                  <th className="text-left font-medium py-1" />
-                  <th className="text-right font-medium py-1">주택분</th>
-                  <th className="text-right font-medium py-1">상가분</th>
-                </tr>
-              </thead>
-              <tbody className="[&>tr>td]:py-0.5 [&>tr>td+td]:text-right [&>tr>td+td]:font-mono [&>tr>td+td]:tabular-nums [&>tr>td+td]:whitespace-nowrap">
-                <tr><td>증여가액</td><td>{fmt(v.housing)}</td><td>{fmt(v.commercial)}</td></tr>
-                <tr><td>귀속 채무</td><td>{fmt(d.housing)}</td><td>{fmt(d.commercial)}</td></tr>
-                <tr><td>구분 불분명 안분</td><td>{fmt(d.unallocatedToHousing)}</td><td>{fmt(d.unallocatedToCommercial)}</td></tr>
-                <tr className="font-semibold"><td>양도로 보는 채무액</td><td data-testid="bg-attr-debt-housing">{fmt(d.housingDebt)}</td><td data-testid="bg-attr-debt-commercial">{fmt(d.commercialDebt)}</td></tr>
-                <tr>
-                  <td>채무비율</td>
-                  <td>
-                    {d.housingDebt > 0 ? <><Frac top={fmt(d.housingDebt)} bottom={fmt(v.housing)} /> = {pct(d.housingDebt, v.housing)}</> : "—"}
-                  </td>
-                  <td>
-                    {d.commercialDebt > 0 ? <><Frac top={fmt(d.commercialDebt)} bottom={fmt(v.commercial)} /> = {pct(d.commercialDebt, v.commercial)}</> : "—"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="text-emerald-800 dark:text-emerald-200">
+                    <th className="text-left font-medium py-1" />
+                    <th className="text-right font-medium py-1">주택분</th>
+                    <th className="text-right font-medium py-1">상가분</th>
+                  </tr>
+                </thead>
+                <tbody className="[&>tr>td]:py-0.5 [&>tr>td+td]:text-right [&>tr>td+td]:font-mono [&>tr>td+td]:tabular-nums [&>tr>td+td]:whitespace-nowrap">
+                  <tr><td>증여가액</td><td>{fmt(v.housing)}</td><td>{fmt(v.commercial)}</td></tr>
+                  <tr><td>귀속 채무</td><td>{fmt(d.housing)}</td><td>{fmt(d.commercial)}</td></tr>
+                  <tr><td>구분 불분명 안분</td><td>{fmt(d.unallocatedToHousing)}</td><td>{fmt(d.unallocatedToCommercial)}</td></tr>
+                  <tr className="font-semibold"><td>양도로 보는 채무액</td><td data-testid="bg-attr-debt-housing">{fmt(d.housingDebt)}</td><td data-testid="bg-attr-debt-commercial">{fmt(d.commercialDebt)}</td></tr>
+                  <tr>
+                    <td>채무비율</td>
+                    <td>
+                      {d.housingDebt > 0 ? <><Frac top={fmt(d.housingDebt)} bottom={fmt(v.housing)} /> = {pct(d.housingDebt, v.housing)}</> : "—"}
+                    </td>
+                    <td>
+                      {d.commercialDebt > 0 ? <><Frac top={fmt(d.commercialDebt)} bottom={fmt(v.commercial)} /> = {pct(d.commercialDebt, v.commercial)}</> : "—"}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             {(d.housingDebt === 0 || d.commercialDebt === 0) && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {d.housingDebt === 0 && (

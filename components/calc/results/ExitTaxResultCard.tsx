@@ -51,7 +51,7 @@ function Row({
       ].join(" ")}
     >
       <span className="text-sm leading-relaxed">{label}</span>
-      <div className="text-right ml-4 shrink-0">
+      <div className="text-right ml-4 min-w-0">
         <span className="text-sm tabular-nums">
           {typeof value === "number" ? fmt(value) : value}
         </span>

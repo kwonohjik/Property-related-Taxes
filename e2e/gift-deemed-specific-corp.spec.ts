@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { captureSessionHandoff, readSessionHandoff } from "./_helpers/session-handoff";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /**
  * E2E: §45의5 특정법인과의 거래 이익 증여의제 — 사례2 roster+auto 모드.
@@ -92,6 +93,7 @@ test.describe("§45의5 특정법인과의 거래 (roster+auto — 사례2)", ()
     //    `Min(㈚, ㈛)` 선택도, §69 신고세액공제 3%도, 자진납부세액도 화면에서는 검증되지 않았다.
     await expect(page.getByTestId("sc-limit-final-tax")).toContainText("189,000,000"); // Min(㈚, ㈛)
     await expect(page.getByTestId("sc-limit-self-pay-tax")).toContainText("183,330,000"); // − §69 3%
+    await expectNoPageHScroll(page);
   });
 
   test("사례1 roster+direct → 장남 과세·직원 비특수관계 제외", async ({ page }) => {

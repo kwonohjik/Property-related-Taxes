@@ -28,36 +28,38 @@ export function CapitalDecreaseMultiResultView({
           </p>
           <LawArticleModal legalBasis="상증법 §39의2" />
         </div>
-        <table className="mt-2 w-full text-sm">
-          <thead>
-            <tr className="text-xs text-amber-700 dark:text-amber-300">
-              <th className="py-1 text-left font-medium">수증자</th>
-              <th className="py-1 text-left font-medium">증여자별 내역</th>
-              <th className="py-1 text-right font-medium">합계</th>
-              <th className="py-1 text-right font-medium">과세</th>
-            </tr>
-          </thead>
-          <tbody>
-            {multi.donees.map((d) => (
-              <tr key={d.name} className="border-t border-amber-100 align-top">
-                <td className="py-1.5 pr-2 font-medium">{d.name}</td>
-                <td className="py-1.5 pr-2 text-xs text-muted-foreground">
-                  {d.isTaxable
-                    ? d.fromDonors.map((fd) => `${fd.donorName} ${formatKRW(fd.amount)}`).join(" · ")
-                    : d.potentialAmount
-                      ? `참고 ${formatKRW(d.potentialAmount)}`
-                      : "—"}
-                </td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                  {d.isTaxable ? formatKRW(d.total) : d.potentialAmount ? `(${formatKRW(d.potentialAmount)})` : "—"}
-                </td>
-                <td className="py-1.5 pl-2 text-right text-xs whitespace-nowrap">
-                  {d.isTaxable ? "○ 과세" : `— ${d.nonTaxableReason ?? "비과세"}`}
-                </td>
+        <div className="mt-2 overflow-x-auto print:overflow-visible">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-amber-700 dark:text-amber-300">
+                <th className="py-1 text-left font-medium">수증자</th>
+                <th className="py-1 text-left font-medium">증여자별 내역</th>
+                <th className="py-1 text-right font-medium">합계</th>
+                <th className="py-1 text-right font-medium">과세</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {multi.donees.map((d) => (
+                <tr key={d.name} className="border-t border-amber-100 align-top">
+                  <td className="py-1.5 pr-2 font-medium">{d.name}</td>
+                  <td className="py-1.5 pr-2 text-xs text-muted-foreground">
+                    {d.isTaxable
+                      ? d.fromDonors.map((fd) => `${fd.donorName} ${formatKRW(fd.amount)}`).join(" · ")
+                      : d.potentialAmount
+                        ? `참고 ${formatKRW(d.potentialAmount)}`
+                        : "—"}
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                    {d.isTaxable ? formatKRW(d.total) : d.potentialAmount ? `(${formatKRW(d.potentialAmount)})` : "—"}
+                  </td>
+                  <td className="py-1.5 pl-2 text-right text-xs whitespace-nowrap">
+                    {d.isTaxable ? "○ 과세" : `— ${d.nonTaxableReason ?? "비과세"}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* 카드② 감자 후 1주당 평가액 */}
@@ -77,30 +79,32 @@ export function CapitalDecreaseMultiResultView({
       {/* 카드③ 감자 전·후 검증표 */}
       <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 dark:bg-violet-950/40" data-testid="cd-multi-verification">
         <p className="text-sm font-semibold text-violet-800 dark:text-violet-200">감자 전·후 검증</p>
-        <table className="mt-2 w-full text-sm">
-          <thead>
-            <tr className="text-xs text-violet-700 dark:text-violet-300">
-              <th className="py-1 text-left font-medium">주주</th>
-              <th className="py-1 text-right font-medium">감자전 주식가액</th>
-              <th className="py-1 text-right font-medium">감자대가</th>
-              <th className="py-1 text-right font-medium">감자후 주식가액</th>
-              <th className="py-1 text-right font-medium">증감</th>
-            </tr>
-          </thead>
-          <tbody>
-            {multi.verification.map((v) => (
-              <tr key={v.name} className="border-t border-violet-100">
-                <td className="py-1.5 pr-2 font-medium">{v.name}</td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(v.preValue)}</td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                  {v.redemptionPaid ? formatKRW(v.redemptionPaid) : "—"}
-                </td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(v.postValue)}</td>
-                <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(v.delta)}</td>
+        <div className="mt-2 overflow-x-auto print:overflow-visible">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-violet-700 dark:text-violet-300">
+                <th className="py-1 text-left font-medium">주주</th>
+                <th className="py-1 text-right font-medium">감자전 주식가액</th>
+                <th className="py-1 text-right font-medium">감자대가</th>
+                <th className="py-1 text-right font-medium">감자후 주식가액</th>
+                <th className="py-1 text-right font-medium">증감</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {multi.verification.map((v) => (
+                <tr key={v.name} className="border-t border-violet-100">
+                  <td className="py-1.5 pr-2 font-medium">{v.name}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(v.preValue)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                    {v.redemptionPaid ? formatKRW(v.redemptionPaid) : "—"}
+                  </td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(v.postValue)}</td>
+                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(v.delta)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p className="mt-2 text-xs text-muted-foreground">
           증감 = 감자후 주식가액 + 감자대가 − 감자전 주식가액. 잔존주주 증감 합계 = 과세 증여이익 합계(자기일관).
         </p>

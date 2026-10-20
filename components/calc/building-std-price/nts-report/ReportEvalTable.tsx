@@ -40,79 +40,81 @@ export function ReportEvalTable({
       <p className="mb-1 text-micro text-neutral-600">
         ＊ ⑧ = ⓐ × ① × ② × ⑥ × ⑦ × ⓧ·ⓨ·ⓩ(천원미만 절사) ⑩ = ⑧ × ⑨
       </p>
-      <table className="w-full border-collapse text-black">
-        <thead>
-          <tr className="bg-neutral-200">
-            <th className={TH}>층별</th>
-            <th className={TH}>기준금액ⓐ</th>
-            <th className={TH}>구조①</th>
-            <th className={TH}>용도</th>
-            <th className={TH}>용도②</th>
-            <th className={TH}>위치⑥</th>
-            <th className={TH}>잔가⑦</th>
-            <th className={TH} colSpan={3}>
-              조정률(번호)
-            </th>
-            <th className={TH}>㎡당⑧</th>
-            <th className={TH}>면적⑨</th>
-            <th className={TH}>기준시가⑩</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i} data-testid={`${section}-row${i}`}>
-              <td className={TD}>{r.floorLabel}</td>
-              <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.basePrice)}</td>
-              <td className={TD}>{idx2(r.structureIndex)}</td>
-              <td className={TD}>{r.usageLabel ?? ""}</td>
-              <td className={TD}>{idx2(r.usageIndex)}</td>
-              <td className={TD}>{idx2(r.locationIndex)}</td>
-              <td className={TD}>{ratio(r.residualRate)}</td>
-              {/* 3칸을 넘는 조정률 항목은 마지막 칸에 병합한다 — 표만 보고 ⑧ 을 재현할 수 있어야 한다(F-28) */}
-              {(() => {
-                const cells = packAdjustmentCells(r.adjustmentItems);
-                return [0, 1, 2].map((n) => (
-                  <td key={`adj${n}`} className={TD}>
-                    {adjCell(cells[n])}
-                  </td>
-                ));
-              })()}
-              <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.pricePerM2)}</td>
-              <td className={`${TD} ${AMOUNT_CELL}`}>{r.floorArea ? `${r.floorArea}㎡` : ""}</td>
-              <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.standardPrice)}</td>
+      <div className="overflow-x-auto print:overflow-visible">
+        <table className="w-full border-collapse text-black">
+          <thead>
+            <tr className="bg-neutral-200">
+              <th className={TH}>층별</th>
+              <th className={TH}>기준금액ⓐ</th>
+              <th className={TH}>구조①</th>
+              <th className={TH}>용도</th>
+              <th className={TH}>용도②</th>
+              <th className={TH}>위치⑥</th>
+              <th className={TH}>잔가⑦</th>
+              <th className={TH} colSpan={3}>
+                조정률(번호)
+              </th>
+              <th className={TH}>㎡당⑧</th>
+              <th className={TH}>면적⑨</th>
+              <th className={TH}>기준시가⑩</th>
             </tr>
-          ))}
-          {padRows(rowSlots, rows.length).map((i) => (
-            <tr key={`pad-${i}`}>
-              <td className={TD}>&nbsp;</td>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} data-testid={`${section}-row${i}`}>
+                <td className={TD}>{r.floorLabel}</td>
+                <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.basePrice)}</td>
+                <td className={TD}>{idx2(r.structureIndex)}</td>
+                <td className={TD}>{r.usageLabel ?? ""}</td>
+                <td className={TD}>{idx2(r.usageIndex)}</td>
+                <td className={TD}>{idx2(r.locationIndex)}</td>
+                <td className={TD}>{ratio(r.residualRate)}</td>
+                {/* 3칸을 넘는 조정률 항목은 마지막 칸에 병합한다 — 표만 보고 ⑧ 을 재현할 수 있어야 한다(F-28) */}
+                {(() => {
+                  const cells = packAdjustmentCells(r.adjustmentItems);
+                  return [0, 1, 2].map((n) => (
+                    <td key={`adj${n}`} className={TD}>
+                      {adjCell(cells[n])}
+                    </td>
+                  ));
+                })()}
+                <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.pricePerM2)}</td>
+                <td className={`${TD} ${AMOUNT_CELL}`}>{r.floorArea ? `${r.floorArea}㎡` : ""}</td>
+                <td className={`${TD} ${AMOUNT_CELL}`}>{fmt(r.standardPrice)}</td>
+              </tr>
+            ))}
+            {padRows(rowSlots, rows.length).map((i) => (
+              <tr key={`pad-${i}`}>
+                <td className={TD}>&nbsp;</td>
+                <td className={TD} />
+                <td className={TD} />
+                <td className={TD} />
+                <td className={TD} />
+                <td className={TD} />
+                <td className={TD} />
+                <td className={TD}>( )</td>
+                <td className={TD}>( )</td>
+                <td className={TD}>( )</td>
+                <td className={TD} />
+                <td className={TD} />
+                <td className={TD} />
+              </tr>
+            ))}
+            <tr className="bg-neutral-100 font-bold">
+              <td className={TD} colSpan={10}>
+                합계
+              </td>
               <td className={TD} />
-              <td className={TD} />
-              <td className={TD} />
-              <td className={TD} />
-              <td className={TD} />
-              <td className={TD} />
-              <td className={TD}>( )</td>
-              <td className={TD}>( )</td>
-              <td className={TD}>( )</td>
-              <td className={TD} />
-              <td className={TD} />
-              <td className={TD} />
+              <td className={`${TD} ${AMOUNT_CELL}`} data-testid={`${section}-sum-area`}>
+                {totalArea ? `${totalArea}㎡` : ""}
+              </td>
+              <td className={`${TD} ${AMOUNT_CELL}`} data-testid={`${section}-sum`}>
+                {fmt(total)}
+              </td>
             </tr>
-          ))}
-          <tr className="bg-neutral-100 font-bold">
-            <td className={TD} colSpan={10}>
-              합계
-            </td>
-            <td className={TD} />
-            <td className={`${TD} ${AMOUNT_CELL}`} data-testid={`${section}-sum-area`}>
-              {totalArea ? `${totalArea}㎡` : ""}
-            </td>
-            <td className={`${TD} ${AMOUNT_CELL}`} data-testid={`${section}-sum`}>
-              {fmt(total)}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

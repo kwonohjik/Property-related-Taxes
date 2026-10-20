@@ -21,6 +21,7 @@ import { test, expect } from "@playwright/test";
 
 import { waitForCalculationSaved } from "./_helpers/history-seed";
 import { gotoStockTransferTax, fillItemThroughStep3 } from "./_helpers/stock-item-fill";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /** 2종목을 확정·계산하고 결과 화면의 **합계 결정세액** 텍스트를 돌려준다. */
 async function calcTwoItems(page: import("@playwright/test").Page): Promise<string> {
@@ -65,6 +66,7 @@ test.describe("주식 다종목 — 이력 저장·복원", () => {
     await expect(page.getByText(/첫째종목 외 1건/).first()).toBeVisible();
     // ③ 🔴 납부세액이 **합산 총액**이다 — 종전에는 마지막 종목 per-item 세액이 저장됐다
     await expect(page.getByText(`납부세액: ${totalOnResult}`).first()).toBeVisible();
+    await expectNoPageHScroll(page);
   });
 
   test("SH-2: 그 이력을 편집하면 **종목 2건이 모두** 복원된다", async ({ page }) => {

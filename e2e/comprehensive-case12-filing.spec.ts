@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { openHouseModal, closeHouseModal } from "./_helpers/tax-flow";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /**
  * 종합부동산세 사례12 — 신고서 서식 4종 재현 E2E (전수 셀 검증)
@@ -141,6 +142,7 @@ test.describe("종합부동산세 사례12 신고서 서식 재현 (전수)", ()
     await expect(page.getByText(/302,400/).first()).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: /신고서 서식/ }).click();
     await expectCell(page, "comp-main-⑩-housing", "302,400");
+    await expectNoPageHScroll(page);
   });
 
   test("F-3: 세부담상한 적용 안 함(none) → 별지 5호부표(직전연도) 미가용", async ({ page }) => {

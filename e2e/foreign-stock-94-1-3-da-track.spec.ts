@@ -23,6 +23,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -134,6 +135,7 @@ test.describe("국외주식 §94①3호다목 — 세율 20% · 2020 이전 차�
     // 부정 단언 — 위 두 줄이 양성 대조군이다
     await expect(page.getByText("§118의5")).toHaveCount(0);
     await expect(page.getByText("기본공제 (§118의7)")).toHaveCount(0);
+    await expectNoPageHScroll(page);
   });
 
   test("F-2: 2019-12-31 양도는 차단되어 계산으로 넘어가지 못한다", async ({ page }) => {

@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { clickAndExpectUrl } from "./_helpers/navigation";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 /** E2E: 합병 §38 보완 — 단순평균액 자동(§28⑤) + 주주 매트릭스 자기증여 차감(재산세과-799). */
 
@@ -64,6 +65,7 @@ test.describe("합병 §38 — 평가 보조·주주 매트릭스", () => {
     await expect(matrix).toContainText("600,000,000"); // 병 순이익
     await expect(matrix).toContainText("240,000,000"); // 갑 ← 을
     await expect(matrix).toContainText("300,000,000"); // 병 ← 갑
+    await expectNoPageHScroll(page);
   });
 
   test("Phase B + 갑이 영리법인(§4의2①·③) → 갑만 제외 · 과세 600,000,000 · 표에 사유", async ({ page }) => {

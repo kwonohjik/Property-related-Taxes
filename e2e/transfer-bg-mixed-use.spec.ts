@@ -15,6 +15,7 @@ import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 function bgMixedAsset(over: Record<string, unknown> = {}) {
   return withMixedHousingStd({
@@ -154,5 +155,6 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.getByTestId("bg-mixed-std-total-acq")).toHaveText("600,000,000");
     await expect(page.getByTestId("bg-gift-building-std")).toHaveCount(0);
     await expect(page.getByTestId("bg-acq-std-price")).toHaveCount(0);
+    await expectNoPageHScroll(page);
   });
 });

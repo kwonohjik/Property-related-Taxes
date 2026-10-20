@@ -61,7 +61,8 @@ export function LawResearchClient() {
       <UnifiedSearchBar onRoute={handleRoute} />
 
       <SimpleTabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        {/* 375에서 탭 5개(412px)가 한 줄이면 페이지가 가로로 넘친다 — 좁으면 두 줄로 */}
+        <TabsList className="h-auto flex-wrap">
           <TabsTrigger value="law">법령·조문</TabsTrigger>
           <TabsTrigger value="decision">판례·결정례</TabsTrigger>
           <TabsTrigger value="annex">별표·서식</TabsTrigger>

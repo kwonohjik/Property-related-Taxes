@@ -123,69 +123,71 @@ export function SpecificCorpMultiResultView({
           </span>
         </div>
 
-        <table className="mt-3 w-full text-sm">
-          <thead>
-            <tr className="text-xs text-emerald-700 border-b border-emerald-200 dark:text-emerald-300">
-              <th className="py-1 text-left font-medium">성명</th>
-              <th className="py-1 text-left font-medium">관계</th>
-              <th className="py-1 text-right font-medium">주식수</th>
-              <th className="py-1 text-right font-medium">지분율</th>
-              <th className="py-1 text-right font-medium">계산식</th>
-              <th className="py-1 text-right font-medium">증여재산가액</th>
-              <th className="py-1 text-right font-medium">과세여부</th>
-            </tr>
-          </thead>
-          <tbody>
-            {multi.donees.map((d, i) => {
-              const badge = taxabilityBadge(d);
-              const displayName = d.name.trim() || RELATION_LABEL[d.relation];
-              return (
-                <tr
-                  key={i}
-                  className="border-t border-emerald-100 align-top"
-                  data-testid={`sc-multi-donee-${i}`}
-                >
-                  <td className="py-1.5 pr-2 font-medium text-emerald-900 dark:text-emerald-200">{displayName}</td>
-                  <td className="py-1.5 pr-2 text-muted-foreground">
-                    {RELATION_LABEL[d.relation]}
-                  </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-                    {d.shares.toLocaleString()}
-                  </td>
-                  <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs">
-                    {d.ownershipRatioPct.toFixed(1)}%
-                    {d.indirectRatioPct > 0 && (
-                      <span
-                        className="block text-caption text-violet-700 dark:text-violet-300"
-                        data-testid={`sc-multi-ratio-split-${i}`}
-                      >
-                        직접 {d.directRatioPct.toFixed(1)} + 간접 {d.indirectRatioPct.toFixed(1)}
+        <div className="mt-3 overflow-x-auto print:overflow-visible">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-emerald-700 border-b border-emerald-200 dark:text-emerald-300">
+                <th className="py-1 text-left font-medium">성명</th>
+                <th className="py-1 text-left font-medium">관계</th>
+                <th className="py-1 text-right font-medium">주식수</th>
+                <th className="py-1 text-right font-medium">지분율</th>
+                <th className="py-1 text-right font-medium">계산식</th>
+                <th className="py-1 text-right font-medium">증여재산가액</th>
+                <th className="py-1 text-right font-medium">과세여부</th>
+              </tr>
+            </thead>
+            <tbody>
+              {multi.donees.map((d, i) => {
+                const badge = taxabilityBadge(d);
+                const displayName = d.name.trim() || RELATION_LABEL[d.relation];
+                return (
+                  <tr
+                    key={i}
+                    className="border-t border-emerald-100 align-top"
+                    data-testid={`sc-multi-donee-${i}`}
+                  >
+                    <td className="py-1.5 pr-2 font-medium text-emerald-900 dark:text-emerald-200">{displayName}</td>
+                    <td className="py-1.5 pr-2 text-muted-foreground">
+                      {RELATION_LABEL[d.relation]}
+                    </td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
+                      {d.shares.toLocaleString()}
+                    </td>
+                    <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs">
+                      {d.ownershipRatioPct.toFixed(1)}%
+                      {d.indirectRatioPct > 0 && (
+                        <span
+                          className="block text-caption text-violet-700 dark:text-violet-300"
+                          data-testid={`sc-multi-ratio-split-${i}`}
+                        >
+                          직접 {d.directRatioPct.toFixed(1)} + 간접 {d.indirectRatioPct.toFixed(1)}
+                        </span>
+                      )}
+                    </td>
+                    <td
+                      className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground"
+                      data-testid={`sc-multi-formula-${i}`}
+                      title={d.ratioFrac ? `총 주식보유비율 ${d.ownershipRatioPct.toFixed(4)}% (직접 ${d.directRatioPct.toFixed(4)}% + 간접 ${d.indirectRatioPct.toFixed(4)}%)` : undefined}
+                    >
+                      {formulaText(multi.corpProfit, d)}
+                    </td>
+                    <td
+                      className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold"
+                      data-testid={`sc-multi-gain-${i}`}
+                    >
+                      {formatKRW(d.gain)}
+                    </td>
+                    <td className="py-1.5 pl-2 text-right whitespace-nowrap">
+                      <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${badge.cls}`}>
+                        {badge.label}
                       </span>
-                    )}
-                  </td>
-                  <td
-                    className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground"
-                    data-testid={`sc-multi-formula-${i}`}
-                    title={d.ratioFrac ? `총 주식보유비율 ${d.ownershipRatioPct.toFixed(4)}% (직접 ${d.directRatioPct.toFixed(4)}% + 간접 ${d.indirectRatioPct.toFixed(4)}%)` : undefined}
-                  >
-                    {formulaText(multi.corpProfit, d)}
-                  </td>
-                  <td
-                    className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap font-semibold"
-                    data-testid={`sc-multi-gain-${i}`}
-                  >
-                    {formatKRW(d.gain)}
-                  </td>
-                  <td className="py-1.5 pl-2 text-right whitespace-nowrap">
-                    <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${badge.cls}`}>
-                      {badge.label}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         {taxableDonees.length > 0 && (
           <p className="mt-2 text-caption text-muted-foreground" data-testid="sc-per-donee-notice">
             지배주주등은 이익을 «각각» 증여받은 것으로 보므로(상증령 §34의5⑨) 수증자별로

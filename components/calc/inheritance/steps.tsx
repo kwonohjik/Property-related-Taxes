@@ -69,8 +69,9 @@ export function Step0({
     <div className="space-y-3">
       {/* 섹션 ① — 피상속인 기본 정보 (sky tone) */}
       <ToneCard tone="sky" sectionNum={1} title="피상속인 기본 정보" bodyClassName="space-y-3">
-        {/* 1행 — 항상 3컬럼 고정 (성명·주민등록번호·상속개시일) */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* 1행 — 3컬럼(성명·주민등록번호·상속개시일). 640px 미만은 성명·주민등록번호 2열 + 상속개시일 한 줄 —
+            3열이면 칸이 98px라 날짜칸(최소 약 108px)이 페이지 밖으로 넘친다. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           <div className="min-w-0 space-y-1.5">
             <label className="block text-sm font-medium">피상속인 성명</label>
             <input
@@ -92,7 +93,7 @@ export function Step0({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>
-          <div className="min-w-0 space-y-1.5">
+          <div className="col-span-2 sm:col-span-1 min-w-0 space-y-1.5">
             <label className="block text-sm font-medium">
               상속개시일 (사망일) <span className="text-destructive">*</span>
             </label>

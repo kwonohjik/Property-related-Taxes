@@ -85,7 +85,7 @@ export function DeductionBesshiFormsSection({
       data-testid="besshi-forms-root"
       className="rounded-2xl border border-slate-300 bg-white dark:border-slate-700 dark:bg-slate-950/40 print:border-black print:bg-white"
     >
-      <div className="flex items-center justify-between gap-2 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
         <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">
           채무·공과금·장례비·상속공제 명세 (부표3·별지5호·별지1호·별지6호의2)
         </h3>

@@ -10,6 +10,7 @@
  * 설계: docs/02-design/features/building-standard-price.ui.design.md §11 DoD
  */
 import { test, expect, type Page } from "@playwright/test";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 
 const URL = "/tools/building-standard-price";
 
@@ -265,6 +266,7 @@ test("계산서 서식 — 양도 양도당시·취득당시 2벌 + ⑪ (BSP-06)
   // 인쇄 미디어에서도 서식 렌더(자동 펼침)
   await page.emulateMedia({ media: "print" });
   await expect(page.getByTestId("nts-bsp-report")).toBeVisible();
+  await expectNoPageHScroll(page);
 });
 
 test("계산서 서식 — 상속 복합 작성례(3) ⑪ 200,540,000", async ({ page }) => {

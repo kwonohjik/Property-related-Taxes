@@ -52,7 +52,7 @@ function Row({
       } ${highlight ? "font-semibold text-sky-800 dark:text-sky-200" : "text-slate-700"}`}
     >
       <span className="text-sm leading-relaxed">{label}</span>
-      <div className="text-right ml-4 shrink-0">
+      <div className="text-right ml-4 min-w-0">
         <span className="text-sm tabular-nums">{typeof value === "number" ? fmt(value) : value}</span>
         {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
       </div>

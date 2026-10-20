@@ -30,49 +30,51 @@ export function ReportSection5Apportion({ apportionment }: { apportionment: Anci
       <p className="mb-1 text-micro text-neutral-600">
         ＊ At = ΣAi, Bi = Ai ÷ At, Ci = Ct × Bi … Hi = Ht × Bi
       </p>
-      <table className="w-full border-collapse text-black">
-        <thead>
-          <tr>
-            <th className={TH}>구분</th>
-            <th className={TH}>주용도지수</th>
-            <th className={TH}>해당면적(Ai)</th>
-            <th className={TH}>면적비율(Bi)</th>
-            {KINDS.map((k) => (
-              <th key={k.kind} className={TH}>
-                {k.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="bg-neutral-100 font-semibold">
-            <td className={TD}>계(t)</td>
-            <td className={TD} />
-            <td className={`${TD} ${AMOUNT_CELL}`} data-testid="nts-bsp-5-total-area">
-              {area(apportionment.totalArea)}
-            </td>
-            <td className={TD}>1.0</td>
-            {KINDS.map((k) => (
-              <td key={k.kind} className={`${TD} ${AMOUNT_CELL}`}>
-                {area(apportionment.totalByKind[k.kind])}
+      <div className="overflow-x-auto print:overflow-visible">
+        <table className="w-full border-collapse text-black">
+          <thead>
+            <tr>
+              <th className={TH}>구분</th>
+              <th className={TH}>주용도지수</th>
+              <th className={TH}>해당면적(Ai)</th>
+              <th className={TH}>면적비율(Bi)</th>
+              {KINDS.map((k) => (
+                <th key={k.kind} className={TH}>
+                  {k.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="bg-neutral-100 font-semibold">
+              <td className={TD}>계(t)</td>
+              <td className={TD} />
+              <td className={`${TD} ${AMOUNT_CELL}`} data-testid="nts-bsp-5-total-area">
+                {area(apportionment.totalArea)}
               </td>
-            ))}
-          </tr>
-          {apportionment.rows.map((row, i) => (
-            <tr key={i} data-testid={`nts-bsp-5-row${i}`}>
-              <td className={TD}>{row.label ?? `부분 ${i + 1}`}</td>
-              <td className={TD}>{(row.usageIndex / 100).toFixed(2)}</td>
-              <td className={`${TD} ${AMOUNT_CELL}`}>{area(row.areaSum)}</td>
-              <td className={TD}>{row.ratio.toFixed(2)}</td>
+              <td className={TD}>1.0</td>
               {KINDS.map((k) => (
                 <td key={k.kind} className={`${TD} ${AMOUNT_CELL}`}>
-                  {rowCell(row, k.kind)}
+                  {area(apportionment.totalByKind[k.kind])}
                 </td>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+            {apportionment.rows.map((row, i) => (
+              <tr key={i} data-testid={`nts-bsp-5-row${i}`}>
+                <td className={TD}>{row.label ?? `부분 ${i + 1}`}</td>
+                <td className={TD}>{(row.usageIndex / 100).toFixed(2)}</td>
+                <td className={`${TD} ${AMOUNT_CELL}`}>{area(row.areaSum)}</td>
+                <td className={TD}>{row.ratio.toFixed(2)}</td>
+                {KINDS.map((k) => (
+                  <td key={k.kind} className={`${TD} ${AMOUNT_CELL}`}>
+                    {rowCell(row, k.kind)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
