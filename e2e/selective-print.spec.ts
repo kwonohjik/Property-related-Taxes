@@ -5,6 +5,7 @@
  *   1. 결과 화면에 "출력 항목 선택" 패널 노출 + 기본 전체 미선택 → 인쇄 버튼 disabled
  *   2. 항목 1개 선택 → 인쇄 버튼 활성
  *   3. print 미디어 에뮬레이션 → 선택 섹션은 보이고, 미선택 섹션은 숨김(print:hidden)
+ *   4. 다크 모드로 둔 채 인쇄 → 라이트로 인쇄한 것과 색이 같다
  *
  * 정책: [[feedback_browser_verify_with_playwright]] — claude-in-chrome·수동안내 금지, spec 통과로 충족.
  * 상세 단위는 vitest __tests__/print/inheritance-print-sections.test.ts 에 위임.
@@ -34,7 +35,7 @@ async function proceedToResult(page: Page) {
 }
 
 test.describe("계산 결과 선택 출력 — 화면 인쇄", () => {
-  test("SP-1·2·3: 패널 노출 → 0건 가드 → 선택 시 print 가시성 토글", async ({ page }) => {
+  test("SP-1~4: 패널 노출 → 0건 가드 → 선택 시 print 가시성 토글 → 다크 상태 인쇄 = 라이트", async ({ page }) => {
     test.setTimeout(90_000);
 
     await fillStep0WithChild(page);
@@ -59,5 +60,26 @@ test.describe("계산 결과 선택 출력 — 화면 인쇄", () => {
 
     // 화면(screen)에서는 미선택 섹션도 그대로 보임 (화면 표시 불변 원칙)
     await expect(page.locator('[data-print-id="valuation-detail"]')).toBeVisible();
+
+    // SP-4: 다크 모드로 둔 채 인쇄해도 라이트와 똑같이 인쇄된다
+    // (계획서 docs/00-pm/ui-light-contrast-and-dark-print.plan.md §3 — 다크 스타일은 화면 매체에만)
+    await page.addStyleTag({ content: "*,*::before,*::after{transition:none!important;animation:none!important}" });
+    const colors = () =>
+      page.evaluate(() => {
+        const els = [document.body, ...document.querySelectorAll('[data-print-id="tax-summary"], [data-print-id="tax-summary"] *')];
+        return els.map((e) => {
+          const cs = getComputedStyle(e);
+          return `${cs.color}|${cs.backgroundColor}|${cs.borderTopColor}`;
+        });
+      });
+    await page.emulateMedia({ media: "print", colorScheme: "light" });
+    const printLight = await colors();
+    await page.emulateMedia({ media: "screen", colorScheme: "dark" });
+    await expect(page.locator("html")).toHaveClass(/\bdark\b/);
+    // 화면에서는 다크가 실제로 적용돼 있다(아래 비교가 헛통과하지 않도록)
+    expect(await colors()).not.toEqual(printLight);
+    await page.emulateMedia({ media: "print", colorScheme: "dark" });
+    expect(await colors()).toEqual(printLight);
+    await page.emulateMedia({ media: "screen", colorScheme: "light" });
   });
 });
