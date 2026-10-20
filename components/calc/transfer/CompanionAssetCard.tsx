@@ -244,7 +244,7 @@ export function CompanionAssetCard({
       ref={cardRef}
       data-asset-card-index={index}
       className={cn(
-        "border rounded-lg p-4 space-y-3 scroll-mt-24",
+        "border rounded-lg py-4 px-2 sm:px-4 space-y-3 scroll-mt-24",
         errorMessage
           ? "border-destructive ring-1 ring-destructive/30 bg-destructive/[0.03]"
           : isPrimary ? "bg-background border-primary/30" : "bg-muted/30",

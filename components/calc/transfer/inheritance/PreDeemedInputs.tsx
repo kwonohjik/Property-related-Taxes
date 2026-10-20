@@ -207,7 +207,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const stdPriceAtTransferAutoActive = autoStdPriceAtTransfer !== null && !asset.useStandardPriceAtTransferOverride;
 
   return (
-    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 p-3">
+    <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 py-3 px-2 sm:px-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
           의제취득일 이전 상속·증여 — ① 상증법 평가액과 ② 취득당시 기준시가 중 많은 금액

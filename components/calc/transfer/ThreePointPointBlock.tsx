@@ -245,8 +245,10 @@ export function PointBlock({
   // ── 공시지가 기준 연도 (조회 버튼을 연도 select 오른쪽에 인라인 배치) ──
   const yearField = (
     <FieldCard label="공시지가 연도" badge={yearBadge} stacked={rowMode}>
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
+      {/* LandPriceLookupField와 같은 처리 — 연도 칸이 8rem보다 좁아지면 조회 버튼이 아래 줄로 내려간다.
+          한 줄로 묶으면 중첩이 깊은 겸용주택 3시점 화면(375에서 카드 안쪽 93px)에서 버튼이 카드 밖으로 밀리거나 연도 칸이 짓눌린다. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex-1 min-w-[min(8rem,100%)]">
           <Select
             value={effectiveYear}
             onValueChange={handleYearSelect}

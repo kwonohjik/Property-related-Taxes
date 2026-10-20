@@ -100,7 +100,7 @@ function AssetReductionBlock({
     `자산 ${assetIndex + 1} (${asset.assetKind === "housing" ? "주택" : asset.assetKind === "land" ? "토지" : asset.assetKind === "building" ? "건물" : asset.assetKind})`;
 
   return (
-    <div className="rounded-lg border border-border bg-muted/10 p-4 space-y-3" data-asset-card-index={assetIndex}>
+    <div className="rounded-lg border border-border bg-muted/10 py-4 px-2 sm:px-4 space-y-3" data-asset-card-index={assetIndex}>
       <p className="text-sm font-semibold">{label}</p>
 
       {/* Round 8 (2026-05-06): 5개 카테고리 통합 패널 (5개 평면 체크박스 → 카테고리 라디오/체크박스) */}

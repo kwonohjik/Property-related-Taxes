@@ -127,7 +127,7 @@ export function AssetSection({
           {expandToggleLabel(expanded)}
         </span>
       </button>
-      <div className={cn("space-y-4 px-3 pb-3 pt-1", expanded ? "" : "hidden print:block")}>
+      <div className={cn("space-y-4 px-2 sm:px-3 pb-3 pt-1", expanded ? "" : "hidden print:block")}>
         {children}
       </div>
     </div>

@@ -202,7 +202,7 @@ export function GroupCategorySection({
         </div>
       </button>
       {isOpen && (
-        <div className="border-t border-border px-4 py-3 space-y-2">
+        <div className="border-t border-border px-2 sm:px-4 py-3 space-y-2">
           {CATEGORY_LAW_BADGES[category].length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               {CATEGORY_LAW_BADGES[category].map((b) => (

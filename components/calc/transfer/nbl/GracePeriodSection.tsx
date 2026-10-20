@@ -128,8 +128,12 @@ export function GracePeriodSection({
 
             <FieldCard label="사유" trailing={spec && <LawArticleModal legalBasis={spec.legalBasis} label={spec.legalBasis.replace("소득세법 ", "")} />}>
               <Select value={p.reasonCode} onValueChange={(v) => v && updatePeriod(idx, { reasonCode: v as ReasonCode })}>
-                <SelectTrigger>
-                  <SelectValue>{GRACE_REASON_OPTIONS.find((o) => o.value === p.reasonCode)?.label ?? p.reasonCode}</SelectValue>
+                {/* 긴 사유(「법령상 사용 금지·제한 (영 §168의14①1호)」 278px)가 375에서 카드 밖으로 넘치지 않게 트리거를 카드 폭으로 막고 말줄임한다.
+                    조문은 오른쪽 법령 배지에, 전체 글자는 선택 목록에 그대로 보인다. */}
+                <SelectTrigger className="max-w-full">
+                  <SelectValue className="min-w-0">
+                    <span className="truncate">{GRACE_REASON_OPTIONS.find((o) => o.value === p.reasonCode)?.label ?? p.reasonCode}</span>
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {GRACE_REASON_OPTIONS.map((o) => (
