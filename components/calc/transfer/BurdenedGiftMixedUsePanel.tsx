@@ -198,7 +198,7 @@ export function BurdenedGiftHousingAppraisalField({
           required
           label="주택분 감정평가가액"
           field="bgHousingAppraisalValue"
-          hint="상가분은 위 양도시 시가 평가액에서 이 금액을 뺀 값으로 봅니다."
+          hint="상가분은 위 양도시 시가 평가액에서 이 금액을 뺀 값으로 봅니다. 공급시기 직전 과세기간 개시일부터 공급시기가 속하는 과세기간 종료일까지 평가한 가액이어야 하며(부가가치세법 시행령 제64조 제1항 제1호 단서), 공급시기를 증여일로 보는 것은 확인이 필요합니다."
         >
           <CurrencyInput label="" hideUnit value={asset.bgHousingAppraisalValue} onChange={(v) => onChange({ bgHousingAppraisalValue: v })} />
         </FieldCard>
