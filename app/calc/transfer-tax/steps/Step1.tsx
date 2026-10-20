@@ -36,6 +36,38 @@ import {
 import { assetRemovalPatch } from "@/lib/calc/asset-removal";
 import { firstAssetChangeNoteOnRemoval } from "@/lib/calc/first-asset-facts";
 
+/**
+ * 자산 목록 + 저장된 사용자 선택 → Step1 화면 모드. 마운트(세션 복원) 때와 「판정 불러오기」 인계 직후에만 쓴다 —
+ * 렌더마다 재계산하지 않는다(위 주석: 토글 ON 직후 자기소멸).
+ */
+function deriveSplitMode(assets: AssetForm[], assetSplitMode: AssetSplitMode | undefined): AssetSplitMode {
+  /**
+   * 🔑 **지분 분할(축 B)은 정의상 다자산**이다 — `assets.length > 1` 조건 필수 (R4, 2026-09-03).
+   *
+   * 종전에는 length 조건 없이 `some(fractional)`만 봐서 **단건 공유지분(축 A)까지** 축 B로
+   * 분류했다. 그러면 같은 데이터가 두 상태로 갈린다:
+   *  - 사용자가 방금 60%를 입력한 순간: state는 "none" → ① 기본정보에 「공유 지분율」
+   *  - 세션 복원 후 재진입: derive가 "fractional" → ③ 취득정보에 「취득 지분율」
+   * 라벨이 바뀔 뿐 아니라 ①에만 있는 「나머지 지분은 타인 소유」 선언이 **사라져**
+   * 게이트를 통과할 방법이 없어진다(dead-end 부활).
+   *
+   * 축 B의 단일 진실 공급원인 `isFullFractionalBundle`도 `assets.length > 1`을 요구한다 —
+   * 여기만 빠져 있었다. (`every`가 아니라 `some`인 것은 유지한다: 토글 B 진입 직후
+   * 지분율이 빈칸이라 `every`는 거짓이 된다.)
+   */
+  // ⚠️ 명시 100%(단독 소유) 자산이 하나라도 있으면 축 B가 아니다 — 함께양도(다른 물건) 묶음에 지분 자산이 섞인 경우다.
+  //    종전에는 `some`만 봐서 복원 시 그 묶음을 축 B로 바꿔 ① 기본정보를 숨기고 「총양도가 × 지분율」 자동가를 보였다
+  //    (2026-10-10). 빈칸은 축 B 진입 직후의 미입력이라 허용한다(위 `some` 유지 이유).
+  //    판정은 `isFractionalSplitRestorable`(⑧·역방향 leaf가 쓰는 `isFractionalSplitEntryBundle`과 같은 파일의 술어군).
+  // 🔑 저장된 사용자 선택(`assetSplitMode`)이 있으면 그것이 우선이다 — 전 자산이 지분인 함께 양도 묶음은 지분율로 추론하면
+  //    축 B가 된다(2026-10-18). 추론은 선택이 저장되지 않은 종전 세션·이력에만 쓴다.
+  if (assets.length > 1 && assetSplitMode) return assetSplitMode;
+  if (isFractionalSplitRestorable(assets))
+    return "fractional";
+  if (assets.length > 1) return "companion";
+  return "none";
+}
+
 // ============================================================
 // Step 1: 자산 목록
 // ============================================================
@@ -57,33 +89,7 @@ export function Step1({
 }) {
   // 자산 분할 모드 — 단일 소스(명시 state). length·ratio derive는 초기화(세션 복원) 1회만 —
   // 렌더마다 재계산하면 토글 ON 직후 자기소멸. (memory feedback_three_state_optional_mode_toggle)
-  const [splitMode, setSplitMode] = useState<AssetSplitMode>(() => {
-    /**
-     * 🔑 **지분 분할(축 B)은 정의상 다자산**이다 — `form.assets.length > 1` 조건 필수 (R4, 2026-09-03).
-     *
-     * 종전에는 length 조건 없이 `some(fractional)`만 봐서 **단건 공유지분(축 A)까지** 축 B로
-     * 분류했다. 그러면 같은 데이터가 두 상태로 갈린다:
-     *  - 사용자가 방금 60%를 입력한 순간: state는 "none" → ① 기본정보에 「공유 지분율」
-     *  - 세션 복원 후 재진입: derive가 "fractional" → ③ 취득정보에 「취득 지분율」
-     * 라벨이 바뀔 뿐 아니라 ①에만 있는 「나머지 지분은 타인 소유」 선언이 **사라져**
-     * 게이트를 통과할 방법이 없어진다(dead-end 부활).
-     *
-     * 축 B의 단일 진실 공급원인 `isFullFractionalBundle`도 `assets.length > 1`을 요구한다 —
-     * 여기만 빠져 있었다. (`every`가 아니라 `some`인 것은 유지한다: 토글 B 진입 직후
-     * 지분율이 빈칸이라 `every`는 거짓이 된다.)
-     */
-    // ⚠️ 명시 100%(단독 소유) 자산이 하나라도 있으면 축 B가 아니다 — 함께양도(다른 물건) 묶음에 지분 자산이 섞인 경우다.
-    //    종전에는 `some`만 봐서 복원 시 그 묶음을 축 B로 바꿔 ① 기본정보를 숨기고 「총양도가 × 지분율」 자동가를 보였다
-    //    (2026-10-10). 빈칸은 축 B 진입 직후의 미입력이라 허용한다(위 `some` 유지 이유).
-    //    판정은 `isFractionalSplitRestorable`(⑧·역방향 leaf가 쓰는 `isFractionalSplitEntryBundle`과 같은 파일의 술어군).
-    // 🔑 저장된 사용자 선택(`assetSplitMode`)이 있으면 그것이 우선이다 — 전 자산이 지분인 함께 양도 묶음은 지분율로 추론하면
-    //    축 B가 된다(2026-10-18). 추론은 선택이 저장되지 않은 종전 세션·이력에만 쓴다.
-    if (form.assets.length > 1 && form.assetSplitMode) return form.assetSplitMode;
-    if (isFractionalSplitRestorable(form.assets))
-      return "fractional";
-    if (form.assets.length > 1) return "companion";
-    return "none";
-  });
+  const [splitMode, setSplitMode] = useState<AssetSplitMode>(() => deriveSplitMode(form.assets, form.assetSplitMode));
   const [pendingCompanionOff, setPendingCompanionOff] = useState(false);
   /** 「판정 불러오기」 모달 (P5-b-2) */
   const [judgmentLoadOpen, setJudgmentLoadOpen] = useState(false);
@@ -242,6 +248,10 @@ export function Step1({
         <OneHouseJudgmentLoadModal
           open={judgmentLoadOpen}
           onOpenChange={setJudgmentLoadOpen}
+          onApplied={(patch) => {
+            // 모달은 Step1을 재마운트하지 않는다 — 화면 모드를 인계된 새 폼에서 다시 정한다(마운트 때와 같은 함수·클릭 핸들러 경로, effect 미러링 아님).
+            if (patch.assets) setSplitMode(deriveSplitMode(patch.assets, patch.assetSplitMode));
+          }}
         />
 
         {/* 토글 A — 함께 양도한 다른 자산 (목록 레벨). 지분 분할은 자산 카드 ③ 토글 B. */}
