@@ -391,7 +391,7 @@ export function CapitalIncreaseAllocationFields({ form, set }: Props) {
                       aria-pressed={on}
                       onClick={() => toggleRelated(r, o)}
                       data-testid={`ci-alloc-related-${idx}-${o.id}`}
-                      className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-violet-400 bg-violet-100 text-violet-800" : "border-gray-200 bg-white text-gray-600 dark:text-gray-500"}`}
+                      className={`rounded-full border px-2 py-0.5 text-xs ${on ? "border-violet-400 bg-violet-100 text-violet-800" : "border-gray-200 bg-white text-gray-600"}`}
                     >
                       {o.name.trim() || "(이름 없음)"}
                     </button>
