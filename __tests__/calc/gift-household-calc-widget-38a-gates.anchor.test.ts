@@ -84,7 +84,7 @@ describe("GC-5 겸용주택 증여 — 묻는다(겸용 엔진이 세대 사실�
     expect(issues(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "no" }))).toEqual([]);
   });
 
-  it("[GC-5c] ④⑫⑭ — 「예」를 실어 겸용 엔진까지 닿는다: 「예」 140,178,570(§154③ 본문 전부 주택 비과세 · 배율 초과 토지만 과세) · 「아니오」 305,678,570(종전값)", async () => {
+  it("[GC-5c] ④⑫⑭ — 「예」를 실어 겸용 엔진까지 닿는다: 「예」 140,178,570(§154③ 본문 전부 주택 비과세 · 배율 초과 토지만 과세) · 「아니오」 305,678,571(종전 305,678,570 — 상가 40% 합산 1회 절사 +1)", async () => {
     const yes = await runSingleMixed(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2000-01-01" }));
     expect(yes.status, JSON.stringify(yes.json).slice(0, 300)).toBe(200);
     expect(yes.body.giftSameHouseholdContinuous).toBe(true);
@@ -95,7 +95,7 @@ describe("GC-5 겸용주택 증여 — 묻는다(겸용 엔진이 세대 사실�
     expect(yw).toContain("건물 전부를 주택으로 봅니다(소득세법 시행령 §154③ 본문)");
     const no = await runSingleMixed(mixedForm({ ...MIXED_GIFT, giftSameHousehold: "no" }));
     expect(no.body.giftSameHouseholdContinuous).toBe(false);
-    expect(no.json.data.result.total.determinedTax).toBe(305_678_570);
+    expect(no.json.data.result.total.determinedTax).toBe(305_678_571); // 계획서 p3 §9.1 — 같은 단기세율(40%) 상가 토지 · 건물을 합산해 1회 절사(일반 합산 엔진 호 버킷과 같은 단위, 종전 파트별 절사보다 +1)
     expect(JSON.stringify(no.json.data.result.warnings)).not.toContain("증여자와 계속 같은 세대였다는 입력에 따라");
   }, 60_000);
 });

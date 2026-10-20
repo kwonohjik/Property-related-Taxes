@@ -152,7 +152,7 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
     landAcquisitionDate: D("2025-06-01"),
     buildingAcquisitionDate: D("2025-06-01"),
   };
-  const SHORT_HOLD_TAXED_TAX = 1_166_530_838;
+  const SHORT_HOLD_TAXED_TAX = 1_166_530_839; // 계획서 p3 §9.1 — 같은 단기세율(40%) 상가 토지 · 건물을 합산해 1회 절사(일반 합산 엔진 호 버킷과 같은 단위, 종전 파트별 절사보다 +1)
 
   it("B-A4: 단서 2호가(수용) → 조정지역 취득·거주 0년이어도 **거주요건 면제**", () => {
     const r = run({ wasRegulatedAtAcquisition: true, ...EXPROPRIATION });
@@ -189,7 +189,7 @@ describe("Phase A — 영 §154① 단서 각호 면제 (E-3)", () => {
     // P3a(PR #937)는 단서를 무시해 이 케이스를 과세했다(과다과세).
     const r = run({ ...SHORT_HOLD, ...EXPROPRIATION });
     expect(r.housingPart.incomeAmount).toBe(283_119_834); // 12억 초과분 안분 — 비과세 살아 있음
-    expect(r.total.transferTax).toBe(519_217_106);
+    expect(r.total.transferTax).toBe(519_217_107); // 계획서 p3 §9.1 — 같은 단기세율(40%) 상가 토지 · 건물을 합산해 1회 절사(일반 합산 엔진 호 버킷과 같은 단위, 종전 파트별 절사보다 +1)
     // 단서가 없으면 여전히 전액 과세여야 한다(게이트가 과도하게 열리지 않았음).
     expect(run({ ...SHORT_HOLD }).housingPart.incomeAmount).toBe(1_361_976_054);
   });

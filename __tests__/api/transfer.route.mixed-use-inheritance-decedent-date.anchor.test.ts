@@ -79,7 +79,7 @@ describe("상속 겸용주택 — 피상속인 취득일 (상속 2023-09-01 · �
   // 계획서 docs/00-pm/non-heir-bequest-followups.plan.md §1 B — 수유자는 「상속받은 자산」이 아니다(서면4팀-3304).
   it("수유자 — 피상속인 2000 취득이어도 통산하지 않는다 → 주택 단기 70%", async () => {
     const t = await calc({ ...INH, decedentAcquisitionDate: "2000-01-01", nonHeirBequest: true });
-    expect([t.appliedRate, t.determinedTax]).toEqual([0.7, 317_678_570]); // 피상속인 취득일이 닿지 않던 종전 값과 같다
+    expect([t.appliedRate, t.determinedTax]).toEqual([0.7, 317_678_571]); // 피상속인 취득일이 닿지 않던 종전 값(317,678,570)과 같고, 상가 40% 파트 합산 1회 절사로 +1(계획서 p3 §9.1)
   }, 60_000);
 
   it("긍정 짝 — 피상속인 2023-06-01 취득(1년 이상 2년 미만) → 60%", async () => {

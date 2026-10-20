@@ -94,19 +94,36 @@ export interface MixedUseRatePart {
 }
 
 /**
- * 겸용 파트 차손 통산 — 세목 공용 코어(`offsetLossesCore`)에 파트를 넘긴다. 「같은 세율」 축은 §104① 호(단기세율 · 누진)와
- * 가산율(§104⑦ 중과 · §104①8호 비사업용 토지)이다. 차손 파트의 통산 후 소득은 0이다.
+ * 파트의 「같은 세율」 판정 키(영 §167의2①1호) — 일반 합산 엔진(`loss-offset-rate-key.ts` `lossOffsetRateKey`)과 같은 규약:
+ * 파트 **단독** 통산 전 소득에 §104①·⑦ 후단 비교를 해 **실제 적용되는** 세율로 묶는다(누진 표는 `prog:가산율`, 단일세율은 `rate:세율`).
+ * 종전(PR-2)에는 보유기간의 단기세율 구간으로 정적 키를 만들어, 누진이 이긴 1~2년 파트를 40% 그룹에 남겼다(계획서 p3 §9.2).
+ * 동률 처리도 `calcTax`와 같다 — 일반 단기는 누진이 더 클 때만, 비사업용 토지는 단기세율이 더 클 때만, 주택 중과는 중과가 더 클 때만 바뀐다
+ * (차손 파트는 소득 0으로 판정 — 일반 엔진의 `calcTax(0)`).
  */
-function offsetMixedPartLosses(parts: MixedUseRatePart[]): {
+function mixedPartRateKey(p: MixedUseRatePart, brackets: TaxBracket[]): string {
+  const base = Math.max(0, p.income);
+  const st = shortTermRate(p.holdingYears, p.kind === "housing");
+  const addon = p.surchargeAddon ?? 0;
+  const progressive = calculateProgressiveTax(base, brackets);
+  if (addon > 0) {
+    const surcharged = progressive + applyRate(base, addon);
+    if (st === null) return `prog:${addon}`;
+    const shortTax = applyRate(base, st);
+    const shortWins = p.kind === "non_business_land" ? shortTax > surcharged : !(surcharged > shortTax);
+    return shortWins ? `rate:${st}` : `prog:${addon}`;
+  }
+  if (st === null) return "prog:0";
+  return progressive > applyRate(base, st) ? "prog:0" : `rate:${st}`;
+}
+
+/**
+ * 겸용 파트 차손 통산 — 세목 공용 코어(`offsetLossesCore`)에 파트를 넘긴다(키는 `mixedPartRateKey`). 차손 파트의 통산 후 소득은 0이다.
+ */
+function offsetMixedPartLosses(parts: MixedUseRatePart[], brackets: TaxBracket[]): {
   parts: MixedUseRatePart[];
   rows: { from: MixedUseRatePart["kind"]; to: MixedUseRatePart["kind"]; amount: number; scope: "same_group" | "other_group" }[];
 } {
-  const out = offsetLossesCore(
-    parts.map((p) => ({
-      income: p.income,
-      rateKey: `${shortTermRate(p.holdingYears, p.kind === "housing") ?? "progressive"}|${p.surchargeAddon ?? 0}`,
-    })),
-  );
+  const out = offsetLossesCore(parts.map((p) => ({ income: p.income, rateKey: mixedPartRateKey(p, brackets) })));
   return {
     parts: parts.map((p, i) => ({ ...p, income: out.incomeAfterOffset[i] })),
     rows: out.rows.map((r) => ({ from: parts[r.from].kind, to: parts[r.to].kind, amount: r.amount, scope: r.scope })),
@@ -145,7 +162,7 @@ export function buildTotalTax(
   // §167의2① — 파트(주택분 · 상가 토지 · 상가 건물 · 배율 초과분)의 차손을 1호(같은 세율) → 2호(다른 세율 안분) 순으로 다른 파트에서 공제한다
   //   (계획서 `transfer-split-part-loss-offset-p3.plan.md` §1 A안 — 함께 양도 파트 카드가 일반 합산 엔진에서 받는 통산과 같은 규칙).
   //   이후 세율 판정 · 기본공제 배정은 통산 후 소득으로 한다. 차손이 없으면 종전 값 그대로다.
-  const offset = rateParts?.some((p) => p.income < 0) ? offsetMixedPartLosses(rateParts) : undefined;
+  const offset = rateParts?.some((p) => p.income < 0) ? offsetMixedPartLosses(rateParts, brackets) : undefined;
   if (offset) {
     rateParts = offset.parts;
     const sumOf = (kinds: MixedUseRatePart["kind"][]) =>
@@ -192,24 +209,20 @@ export function buildTotalTax(
       remaining -= used;
     }
 
-    // 2호 — 누진 호(§104①1호)만 과세표준을 합산해 1회 계산하고, 단기 호는 **자산별**로 계산한다.
-    //   중과 파트(§104⑦1·3호)는 §104①1호와 **다른 호**라 누진 그룹에 합류하지 않는다.
-    //   겸용의 주택 파트는 하나뿐이라 중과 그룹은 항상 단독이다.
+    // 2호 — 「자산별」의 「자산」은 **§104 각 호별로 합산한 자산**이다(기획재정부 재산세제과-536 2018.6.19. · 국세청
+    //   기준-2018-법령해석재산-0098 — 같은 호 합산은 본문이고 조건이 없다). 일반 합산 엔진의 호 버킷(`clauseBucketKey`)과 같은 단위로 묶는다:
+    //   · 누진 호(§104①1호)만 해당하는 파트 → 과세표준 합산 1회.
+    //   · 같은 단기세율 호(1호 + 2·3호 같은 세율 — 예: 1~2년 상가 토지 · 건물 40%) → 과세표준을 **합산한 뒤** §104① 후단(누진과 큰 것).
+    //     합산된 자산이 둘 이상의 호에 해당하면 합산액에 호별 세율을 적용해 큰 것을 취하는 것이 §104⑤2호 단서다
+    //     (2019.1.1. 이후 양도분 — 겸용 경로는 2022.1.1. 이후 양도만 계산한다. 교재 사례2 · D-11/P9 — 「별도로 비교하는 것이 아니라 합산한 금액에 대해」).
+    //   · 중과(§104⑦) · 비사업용(§104①8호) 파트는 호가 달라 단독이다(겸용에 각 하나뿐).
     //
-    // 🔴 **§104① 후단은 파트(=자산)마다 건다** — 2026-08-13 F20.
-    //   후단은 "하나의 자산이 … 둘 이상에 **해당**할 때에는 … 산출세액 중 **큰 것**"이고,
-    //   보유 1~2년 상가토지·상가건물은 §94①1호 자산이라 §104①1호(§55① 누진)와 2호(40%)에
-    //   **동시에 해당**한다. §104⑤2호 본문도 "제1항부터 제4항까지 및 제7항의 **규정에 따라**
-    //   계산한 자산별 양도소득 산출세액 합계액"이라 파트 세액에 후단이 **내장**되어야 한다.
-    //
-    //   ⚠️ 종전에는 같은 세율 파트를 한 버킷으로 묶어 `applyRate(합계, r)` 한 줄로 끝내
-    //      비교 자체를 하지 않았다(실측 34,060,000 과소).
-    //   ⚠️ **버킷 합계에 MAX를 씌우면 안 된다** — 후단의 단위는 「하나의 자산」이고 누진세액은
-    //      볼록(P(Σbᵢ) ≥ ΣP(bᵢ))이라, 합계 기준 비교는 조문이 허용하지 않는 합산 효과를 만들어
-    //      **과다과세**가 된다. 비교는 반드시 파트 단위다.
-    //   ⚠️ 규칙을 손으로 다시 쓰지 않는다 — 단건 정본 `compareWithClause1`에 위임한다.
+    //   🔁 2026-08-13 F20 구현은 단기 파트를 파트마다 후단 비교했다(「버킷 합계에 MAX를 씌우면 과다과세」) — 위 예규와 어긋나
+    //      리뷰 F20이 지적한 과소(주택 10억 · 상가 토지 12억 · 상가 건물 8억 · 1.5년: 34,060,000)가 그대로 남았다. 계획서 p3 §9.1 Q-R1(2026-10-20 사용자 결정).
+    //   ⚠️ 규칙을 손으로 다시 쓰지 않는다 — 후단 비교는 단건 정본 `compareWithClause1`에 위임한다.
     let progressiveBase = 0;
     let sum = 0;
+    const shortTermBuckets = new Map<number, { base: number; kind: MixedUseRatePart["kind"] }>();
     rateParts.forEach((part, i) => {
       const addon = addonOf(i);
       if (addon > 0) {
@@ -226,16 +239,15 @@ export function buildTotalTax(
         progressiveBase += bases[i]; // 누진 호(§104①1호)는 과세표준 합산 후 1회
         return;
       }
-      const shortTermTax = applyRate(bases[i], r);
-      const clause1 = compareWithClause1(
-        bases[i],
-        brackets,
-        shortTermTax,
-        undefined,
-        `${part.kind} 단기세율 ${(r * 100).toFixed(0)}%`,
-      );
-      sum += clause1 ? clause1.calculatedTax : shortTermTax;
+      const bucket = shortTermBuckets.get(r);
+      if (bucket) bucket.base += bases[i];
+      else shortTermBuckets.set(r, { base: bases[i], kind: part.kind });
     });
+    for (const [r, { base, kind }] of shortTermBuckets) {
+      const shortTermTax = applyRate(base, r);
+      const clause1 = compareWithClause1(base, brackets, shortTermTax, undefined, `${kind} 단기세율 ${(r * 100).toFixed(0)}%`);
+      sum += clause1 ? clause1.calculatedTax : shortTermTax;
+    }
     if (progressiveBase > 0) sum += calculateProgressiveTax(progressiveBase, brackets);
     return { tax: sum, maxRate: Math.max(...rateParts.map((_, i) => effRate(i))) };
   })();

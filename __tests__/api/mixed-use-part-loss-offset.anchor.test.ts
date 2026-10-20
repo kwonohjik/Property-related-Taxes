@@ -16,6 +16,7 @@ import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { buildMixedUsePartCards } from "@/app/api/calc/transfer/mixed-use-part-cards";
 import { makeMockRatesWithHouseEngine } from "../tax-engine/_helpers/mock-rates";
+import { buildTotalTax } from "@/lib/tax-engine/transfer-tax-mixed-use-totals";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
@@ -220,3 +221,48 @@ describe("확인 필요 ① — 파트 값 · 통산 표 · 산출근거", () =>
     expect(single.warnings.some((w) => w.includes("재산세제과-915"))).toBe(true);
   });
 });
+
+describe("계획서 p3 §9 — §104⑤2호 같은 호 합산 · 통산 세율 키를 정본(일반 합산 엔진)과 맞춘다", () => {
+  const BIG = 20_000_000_000;
+
+  it("Q-R1 F20 리뷰 시나리오 — 1~2년 상가 토지 12억 · 건물 8억은 같은 호(40%)라 합산 20억에 후단(누진 834,060,000)", () => {
+    const brackets = [
+      { min: 0, max: 14_000_000, rate: 0.06, deduction: 0 }, { min: 14_000_000, max: 50_000_000, rate: 0.15, deduction: 1_260_000 },
+      { min: 50_000_000, max: 88_000_000, rate: 0.24, deduction: 5_760_000 }, { min: 88_000_000, max: 150_000_000, rate: 0.35, deduction: 15_440_000 },
+      { min: 150_000_000, max: 300_000_000, rate: 0.38, deduction: 19_940_000 }, { min: 300_000_000, max: 500_000_000, rate: 0.4, deduction: 25_940_000 },
+      { min: 500_000_000, max: 1_000_000_000, rate: 0.42, deduction: 35_940_000 }, { min: 1_000_000_000, max: null, rate: 0.45, deduction: 65_940_000 },
+    ] as never;
+    const t = buildTotalTax(1_000_000_000, 2_000_000_000, 0, brackets, 2_500_000, [
+      { kind: "housing", income: 1_000_000_000, holdingYears: 1 },
+      { kind: "commercial_land", income: 1_200_000_000, holdingYears: 1 },
+      { kind: "commercial_building", income: 800_000_000, holdingYears: 1 },
+    ]);
+    // 주택분 60% 598,500,000 + 상가 합산 누진 834,060,000 (종전 파트별 40% 480,000,000 + 320,000,000 → 1,398,500,000)
+    expect(t.transferTax).toBe(1_432_560_000);
+    expect(t.rateBasis).toBe("clause2");
+  });
+
+  it("k1 200억 · 1년 5개월 · 차손 없음 — 상가 토지 · 건물 합산 후단(종전 8,890,749,654)", () => {
+    const r = compare(asset({ ...SHORT, ...sep(500_000_000, 2_500_000_000) }), BIG);
+    expect(r.single.total.transferTax).toBe(8_900_232_412);
+    expectSameAsCards(r);
+  });
+
+  it.each([
+    // 이름, 건물 취득가, 산출세액
+    ["k4", 10_000_000_000],
+    ["k5", 8_000_000_000],
+    ["k6", 6_000_000_000],
+  ] as const)("Q-R2 %s — 누진이 이긴 1~2년 상가 토지는 40% 그룹이 아니다: 상가 건물 차손을 주택분 · 상가 토지에 2호 안분", (_n, bld) => {
+    const r = compare(asset({ ...SHORT, ...sep(500_000_000, bld) }), BIG);
+    expect(r.single.commercialPart.buildingIncomeAmount).toBeLessThan(0);
+    expect(r.single.total.partLossOffset?.every((row) => row.scope === "other_group")).toBe(true);
+    expectSameAsCards(r);
+  });
+
+  it("k7 120억 — 같은 구조", () => {
+    const r = compare(asset({ ...SHORT, ...sep(500_000_000, 5_000_000_000) }), 12_000_000_000);
+    expectSameAsCards(r);
+  });
+});
+
