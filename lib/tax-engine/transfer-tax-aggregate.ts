@@ -68,7 +68,7 @@ import {
   computeGroupsAndComparison,
 } from "./transfer-tax-aggregate-pickers";
 import { reducibleIncomeOf, bucketsOfRecord, reducibleIncomeOfRecord } from "./transfer-tax-aggregate-reduction-step";
-import { lossShareOnReducible, reducibleAfterLossOf } from "./transfer-tax-aggregate-reducible-loss-share";
+import { netLossOnReducibleUnit, reducibleAfterLossOf, reducibleShiftOf } from "./transfer-tax-aggregate-reducible-loss-share";
 
 export { classifyRateGroup };
 
@@ -178,7 +178,7 @@ function computeAggregateOnce(
     if (w) assetRecords[i].lossPartIncomeAfterOffset = w;
   });
   // 영 §167의2② — 세액감면형(§90①)의 B도 받은 차손 중 감면소득 몫만큼 줄인다. 이하 단계는 전부 이 B′를 읽는다.
-  reducibleAfterLossOf(assetRecords, { lossOffsetFromSame, lossOffsetFromOther, partIncomeAfterOffset }).forEach((v, i) => {
+  reducibleAfterLossOf(assetRecords, { incomeAfterOffset, partIncomeAfterOffset }).forEach((v, i) => {
     assetRecords[i].reducibleAfterLoss = v;
   });
 
@@ -191,7 +191,8 @@ function computeAggregateOnce(
     const reducible = incomeDeductionReducibleOf(r.result);
     if (reducible <= 0) return 0;
     // 분모는 통산 前 양도소득금액(감면소득금액 포함). 감면분 흡수 차손은 절사(순분이 잔여 흡수) — 세액감면형과 같은 leaf.
-    return reducible - lossShareOnReducible(lossOffsetFromSame[i] + lossOffsetFromOther[i], reducible, r.income);
+    //   차손은 다건 순차손(받은 차손 − 다른 자산에 넘긴 파트 차손)이다 — 세액감면형 B′와 같은 단위(`netLossOnReducibleUnit`).
+    return reducible - reducibleShiftOf(netLossOnReducibleUnit(r, incomeAfterOffset[i], partIncomeAfterOffset[i]), reducible);
   });
   const taxableAfterReduction = incomeAfterOffset.map((v, i) =>
     Math.max(0, v - incomeDeductionReducible[i]),

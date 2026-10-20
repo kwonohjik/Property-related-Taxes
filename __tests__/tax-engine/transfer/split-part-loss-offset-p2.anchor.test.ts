@@ -169,11 +169,87 @@ describe("B 비주택 — 1년 6개월 건물 차손이 다른 1년 6개월 건�
     expect(r.properties.map((p) => p.incomeAfterOffset)).toEqual([333_000_000, 0]);
     expect(r.calculatedTax).toBe(106_260_000);
   });
-  it("Q-2 감면 자산(§77)의 차손 파트는 자산 안에서 먼저 통산 — 표에 파트 행이 없고 단건 감면소득과 같다", () => {
-    const E77 = { type: "public_expropriation", cashCompensation: 1_000_000_000, bondCompensation: 0, businessApprovalDate: D("2022-06-01") };
-    const reduced = baseTransferInput({ ...nonHouse, reductions: [E77] } as Partial<TransferTaxInput>);
+  // 🔁 Q-2 해소(2026-10-20 사용자 「순서대로 진행」 · 계획서 §10): 감면 자산도 파트 행으로 신고 전체에서 통산한다(국심2007전0147 — 함께 양도한 자산에서
+  //   먼저 공제하라는 주장 기각). 감면소득(§167의2②)은 단건 B(자기 건물 차손을 자기 토지가 다 받은 뒤)에서 다건 순차손만큼 조정한다.
+  const E77 = { type: "public_expropriation", cashCompensation: 1_000_000_000, bondCompensation: 0, businessApprovalDate: D("2022-06-01") };
+  const reduced = baseTransferInput({ ...nonHouse, reductions: [E77] } as Partial<TransferTaxInput>);
+  it("Q-2 감면 자산(§77 · 토지만 2년 요건 충족) — 건물 차손 1억은 같은 40% b로(1호), 토지 333,000,000이 남아 감면소득도 233,000,000 → 333,000,000 · 결정세액 95,634,000", () => {
     const r = multi(2023, [item(reduced, "a"), item(other, "b")]);
-    expect(r.lossOffsetTable.some((row) => row.fromPart !== undefined)).toBe(false);
-    expect(r.properties[0].income).toBe(233_000_000);
+    expect(r.lossOffsetTable).toEqual([{ fromPropertyId: "a", fromPart: "building", toPropertyId: "b", amount: 100_000_000, scope: "same_group" }]);
+    expect(r.properties.map((p) => [p.income, p.incomeAfterOffset])).toEqual([[233_000_000, 333_000_000], [100_000_000, 0]]);
+    // 독립 산식: 과세표준 333,000,000 − 2,500,000 = 330,500,000 × 40% − 25,940,000 = 106,260,000
+    //   감면대상(B − C) × E = (333,000,000 − 2,500,000) × 10% = 33,050,000 → 감면 106,260,000 × 33,050,000 / 330,500,000 = 10,626,000
+    expect(r.calculatedTax).toBe(106_260_000);
+    expect(r.reductionAmount).toBe(10_626_000);
+    expect(r.determinedTax).toBe(95_634_000);
+  });
+  it("Q-2 감면 자산(§77 · 토지·건물 모두 2년 요건 충족) — 건물 차손이 같은 누진 세율의 자기 토지와 b에 1호 안분, b로 간 몫만큼 감면소득이 늘어난다", () => {
+    // 건물 2019-09-20 취득(사업인정고시 2022-06-01 소급 2년 이전) → 두 파트 모두 감면대상 · 건물 보유 3년 이상이라 누진(토지 · b와 같은 세율)
+    const both = baseTransferInput({ ...nonHouse, acquisitionDate: D("2019-09-20"), reductions: [E77] } as Partial<TransferTaxInput>);
+    const longB = baseTransferInput({ ...other, acquisitionDate: D("2019-09-20") } as Partial<TransferTaxInput>);
+    const single = calculateTransferTax(both, makeMockRates());
+    const r = multi(2023, [item(both, "a"), item(longB, "b")]);
+    const [a] = r.properties;
+    expect(r.lossOffsetTable).toHaveLength(1);
+    const toB = r.lossOffsetTable[0];
+    expect(toB).toMatchObject({ fromPropertyId: "a", fromPart: "building", toPropertyId: "b", scope: "same_group" });
+    expect(toB.amount).toBeGreaterThan(0);
+    expect(a.incomeAfterOffset).toBe(a.income + toB.amount);
+    // 감면대상(현금 10%가 박힌 값) = (단건 감면소득 233,000,000 + b로 넘긴 몫) × 10% — 기본공제는 §103②로 감면 없는 b가 먼저 흡수한다
+    //   (단건은 자기 건물 차손을 자기 토지가 다 받아 233,000,000 · 기본공제를 빼 23,050,000)
+    expect(single.reducibleIncome).toBe(23_050_000);
+    expect((a as unknown as { reducibleIncome: number }).reducibleIncome).toBe(Math.floor(((233_000_000 + toB.amount) * 10) / 100));
+  });
+  it("Q-2 감면 자산 — 같은 세율 자산이 없으면 건물 차손이 다른 세율 양도차익에 안분(2호): 자기 토지가 받은 몫만큼만 감면소득이 준다", () => {
+    const landB = baseTransferInput({
+      propertyType: "land", transferPrice: 400_000_000, acquisitionPrice: 300_000_000, acquisitionDate: D("2010-03-20"), transferDate: D("2023-03-20"),
+      isOneHousehold: false, householdHousingCount: 1, expenses: 0,
+    } as Partial<TransferTaxInput>);
+    const r = multi(2023, [item(reduced, "a"), item(landB, "b")]);
+    const [a, b] = r.properties;
+    // 건물 차손 1억(40%) → 누진 양도차익 a 토지 333,000,000 · b 토지(장특 반영 후 소득)에 소득 비율로 안분
+    //   통산 표는 다른 자산으로 간 행만 싣는다(같은 자산 안 행 제외) — a 토지가 받은 몫 = 1억 − b가 받은 몫
+    expect(r.lossOffsetTable).toHaveLength(1);
+    const toB = r.lossOffsetTable[0];
+    expect(toB).toMatchObject({ fromPropertyId: "a", fromPart: "building", toPropertyId: "b", scope: "other_group" });
+    const toA = 100_000_000 - toB.amount;
+    expect(Math.abs(toA - (100_000_000 * 333_000_000) / (333_000_000 + b.income))).toBeLessThan(1);
+    expect(a.incomeAfterOffset).toBe(333_000_000 - toA);
+    // 감면소득 = 단건 233,000,000 + (넘긴 1억 − 자기 토지가 받은 몫) — 토지 전체가 감면대상이라 비율 1
+    expect((a as unknown as { reducibleIncome: number }).reducibleIncome).toBe(Math.floor(((233_000_000 + (100_000_000 - toA)) * 10) / 100));
+    // 순서 무관
+    expect(multi(2023, [item(landB, "b"), item(reduced, "a")]).determinedTax).toBe(r.determinedTax);
+  });
+});
+
+describe("Q-2 소득공제형 감면(§98의8 미분양주택) — 건물 차손을 다른 자산에 넘기면 감면소득도 같은 비율로 늘어난다", () => {
+  const r988 = {
+    type: "unsold_98_8", acquisitionPrice988: 500_000_000, exclusiveAreaSqm988: 84, contractDate988: D("2015-06-01"),
+    rentalContractDate988: D("2015-06-10"), rentalStartDate988: D("2015-07-01"), rentalEndDate988: D("2021-01-01"),
+    isResident988: true, isUnsoldAfterCompletion988: true, isFirstContract988: true, isNotRecontract988: true,
+    standardPriceAtAcquisition988: 400_000_000, standardPriceAt5Years988: 600_000_000, standardPriceAtTransfer988: 700_000_000,
+  };
+  const h = baseTransferInput({
+    propertyType: "housing", transferPrice: 900_000_000, transferDate: D("2021-03-01"), acquisitionPrice: 500_000_000, acquisitionDate: D("2015-06-01"),
+    landAcquisitionDate: D("2015-06-01"), isSeparateAcquisition: true, landAcqMode: "actual", buildingAcqMode: "actual",
+    landTransferPrice: 700_000_000, buildingTransferPrice: 200_000_000, landStandardPriceAtTransfer: 700_000_000, buildingStandardPriceAtTransfer: 200_000_000,
+    landAcquisitionPrice: 200_000_000, buildingAcquisitionPrice: 300_000_000, isOneHousehold: false, householdHousingCount: 3, expenses: 0, reductions: [r988],
+  } as Partial<TransferTaxInput>);
+  const o = baseTransferInput({
+    propertyType: "housing", transferPrice: 600_000_000, acquisitionPrice: 400_000_000, acquisitionDate: D("2015-06-01"), transferDate: D("2021-03-01"),
+    isOneHousehold: false, householdHousingCount: 3, expenses: 0,
+  } as Partial<TransferTaxInput>);
+  it("단건 감면소득 116,666,666 · 건물 차손 28,571,429가 o로(1호) → 116,666,666 + floor(28,571,429 × 116,666,666 / 350,000,000) = 126,190,475", () => {
+    const single = calculateTransferTax(h, makeMockRates());
+    expect(single.unsold988Detail?.reducibleTransferIncome).toBe(116_666_666);
+    const r = multi(2021, [item(h, "h"), item(o, "o")]);
+    expect(r.lossOffsetTable).toEqual([{ fromPropertyId: "h", fromPart: "building", toPropertyId: "o", amount: 28_571_429, scope: "same_group" }]);
+    const hp = r.properties[0] as unknown as { income: number; incomeAfterOffset: number; incomeDeductionReducible: number };
+    expect([hp.income, hp.incomeAfterOffset]).toEqual([350_000_000, 378_571_429]);
+    expect(hp.incomeDeductionReducible).toBe(116_666_666 + Math.floor((28_571_429 * 116_666_666) / 350_000_000));
+    expect(hp.incomeDeductionReducible).toBe(126_190_475);
+    // 자산 1건이면 단건과 같다
+    const one = multi(2021, [item(h, "h")]).properties[0] as unknown as { incomeDeductionReducible: number };
+    expect(one.incomeDeductionReducible).toBe(116_666_666);
   });
 });

@@ -352,9 +352,6 @@ function lossPartsOf(
     pa.result.multiHouseSurchargeEvaluation,
   );
   if (!parts || parts.reduce((s, p) => s + p.income, 0) !== income) return undefined;
-  // 감면 자산에 차손 파트가 있으면 자산 한 행 — 자산 안에서 먼저 통산한다(A · 계획서 P2 Q-2). 단건 감면소득(§90①의 B)은 자산 안 통산 후
-  //   값이라 파트 행으로 펼치면 영 §167의2② 안분 기준(통산 전 파트 소득)과 갈린다(확인 필요).
-  if (parts.some((p) => p.income < 0) && pa.result.reductionTypeApplied !== undefined) return undefined;
   return parts.map((p) => ({
     kind: p.kind,
     income: p.income,
