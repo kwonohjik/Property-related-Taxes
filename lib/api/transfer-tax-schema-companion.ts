@@ -129,6 +129,15 @@ export const companionAssetSchema = z.object({
    */
   redevelopment: redevelopmentSchema,
   /**
+   * ⑫ 승계조합원 입주권 표지 — `right_to_move_in` 컴패니언 전용. 단건 body(`transfer-tax-schema-base-shape.ts`
+   * `isSuccessorRightToMoveIn`)와 같은 키·같은 타입이다.
+   *
+   * 🔑 이 칸이 없으면 ④가 실은 표지가 **침묵 strip**되어 엔진이 승계 입주권을 원조합원 일반 입주권으로 읽는다 —
+   *    §95② 장기보유특별공제 배제(`transfer-tax-lthd.ts` L-0a)가 빠져 세액이 조용히 과소해진다.
+   *    (`redevelopment` 서브객체는 승계에서 아예 만들지 않는다 — §166① 요건 밖.)
+   */
+  isSuccessorRightToMoveIn: z.boolean().optional(),
+  /**
    * ⑫ 일반건물(토지+건물 일괄) — `general_building` 컴패니언 전용. **primary와 같은 스키마**.
    *
    * 🔑 이 서브객체가 있어야 ⑭가 파트 카드로 펼칠 수 있다. 등록하지 않으면 침묵 strip이라

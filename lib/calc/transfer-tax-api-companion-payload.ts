@@ -51,6 +51,13 @@ import {
   isFullFractionalBundle,
 } from "./transfer-tax-api-asset-basics";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
+import {
+  isSuccessorRightTransfer,
+  successorRightAcquisitionTotal,
+  successorRightEstimationMode,
+  successorRightStdPriceAtAcq,
+  successorRightStdPriceAtTransfer,
+} from "./transfer-successor-right";
 
 /**
  * 자산 단위 실지 취득가액(100% 기준 · 지분 스케일 전) — 취득원인별로 그 칸이 취득가액인 경우만.
@@ -59,6 +66,14 @@ import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
  * **같은 leaf**를 쓴다 — 같은 자산이 동반이냐 지분이냐에 따라 다른 취득가액이 되지 않게.
  */
 export function fixedAcquisitionPriceRaw(asset: AssetForm): number | undefined {
+  /**
+   * 승계조합원 입주권 + 실거래가 — 취득가액은 숨은 `fixedAcquisitionPrice`가 아니라 **승계 전용 2칸의 합**(§97①1호 가목,
+   * 기준-2025-법규재산-0057)이다. 주 자산 ④(`transfer-tax-api.ts`)와 **같은 leaf**(`successorRightAcquisitionTotal`).
+   * 추계 모드(감정·환산)는 아래 일반 갈래가 그대로 처리한다 — 감정가액은 `fixedAcquisitionPrice`, 환산은 취득가액 없음.
+   */
+  if (isSuccessorRightTransfer(asset) && successorRightEstimationMode(asset) === "actual") {
+    return successorRightAcquisitionTotal(asset) || undefined;
+  }
   return (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
     // 사례 28 — 신축(자가건축): fixedAcquisitionPrice = 신축비용(취득가액)
@@ -163,6 +178,14 @@ export function buildAssetPayload(
       : undefined;
 
   const fixedAcqRaw = fixedAcquisitionPriceRaw(asset);
+
+  /**
+   * 승계조합원 입주권(§166① 요건 밖 → §97①1호 가목) — 주 자산 ④(`transfer-tax-api-primary-context.ts` `isSuccessorRight`)와
+   * **같은 술어**(`isSuccessorRightTransfer`)·같은 모드 판정(`successorRightEstimationMode`)을 쓴다.
+   * §166 서브객체를 만들지 않고, 추계 모드의 §165① 기준시가는 승계 전용 칸에서 읽는다(아래 두 키).
+   */
+  const isSuccessor = isSuccessorRightTransfer(asset);
+  const successorMode = isSuccessor ? successorRightEstimationMode(asset) : undefined;
 
   // 사례 28 — 신축(자가건축): 4시점 중 가장 빠른 날을 acquisitionDate로 자동 도출 (영 §162①4호).
   // UI 측 onChange 자동 동기화의 fallback (페이지 reload 후 마운트 시 이미 입력된 데이터에 대비).
@@ -329,7 +352,11 @@ export function buildAssetPayload(
       : {}),
     // §97①1호나목 **환산 분모**. 이월과세 general 환산에서만 아래 `cp.topLevelOverrides`가
     // 증여자 양도시 기준시가로 덮어쓴다 — 그 override는 의도된 것이다.
-    standardPriceAtTransfer: stdAtTransferForApportion,
+    // 승계 입주권 환산 분모 — 영 §165①(양도일까지 납입액 + 양도일 프리미엄). 주 자산 ④와 같은 leaf·같은 게이트(환산만).
+    standardPriceAtTransfer:
+      isSuccessor && successorMode === "estimated"
+        ? successorRightStdPriceAtTransfer(asset) || undefined
+        : stdAtTransferForApportion,
     /**
      * §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). 함께양도 묶음의 지분 자산은 양도하는 것이 지분이라
      * 물건 전체(100%) 기준시가 × 지분율이 그 자산의 기준시가다(축 B는 자동가를 쓰므로 키를 쓰지 않는다 — 종전 그대로).
@@ -348,11 +375,15 @@ export function buildAssetPayload(
     // 🔴 **소유자 분리(동시 취득)도 싣는다**(2026-10-07) — §166⑥ 기준시가 비율의 분모(결합 총액)다. 단건은
     //    `isSplitActive`에서 이미 싣는다(`transfer-tax-api.ts` standardPriceAtAcquisition). 별개 취득은 싣지 않는다 —
     //    파트별 독립이라 결합 총액을 참조하지 않고(`buildSplitPayload`의 「결합 총액 전송 차단」), 화면에서도 읽기 전용 파생값이다.
-    standardPriceAtAcquisition:
-      ((asset.acquisitionCause === "purchase" &&
-        (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition)) ||
-        (splitActive && !isSeparateAcquisition(asset))) &&
-      asset.standardPriceAtAcq
+    standardPriceAtAcquisition: isSuccessor
+      ? // 승계 입주권은 §99①2호 가목 → 영 §165①(납입액 + 프리미엄) — 일반 `standardPriceAtAcq`와 **다른 칸**이다. 추계(환산·감정)에서만 싣는다.
+        successorMode === "estimated" || successorMode === "appraisal"
+        ? successorRightStdPriceAtAcq(asset) || undefined
+        : undefined
+      : ((asset.acquisitionCause === "purchase" &&
+          (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition)) ||
+          (splitActive && !isSeparateAcquisition(asset))) &&
+        asset.standardPriceAtAcq
         ? parseAmount(asset.standardPriceAtAcq) || undefined
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
@@ -411,9 +442,16 @@ export function buildAssetPayload(
      *
      * 누락 시 침묵 strip이라 그 자산만 §166을 잃고 일반 주택 산식으로 계산된다.
      */
-    ...(asset.assetKind === "right_to_move_in" || asset.assetKind === "redevelopment_apt"
+    ...((asset.assetKind === "right_to_move_in" && !isSuccessor) || asset.assetKind === "redevelopment_apt"
       ? { redevelopment: buildRedevPayloadForCompanion(asset, getOwnershipRatio(asset)) }
       : {}),
+    /**
+     * ⑬ 승계조합원 입주권 표지 — 엔진이 §166 분기(`isRedevelopmentActive`)·장기보유특별공제 배제(§95②, `transfer-tax-lthd.ts` L-0a)를
+     * 가르는 값. 주 자산 ④(`transfer-tax-api.ts` `isSuccessorRightToMoveIn`)와 같은 게이트(입주권만)·같은 값.
+     * 이것 없이 `redevelopment`만 빼면 일반 주택 산식이 되어 장특이 붙는다(과소).
+     */
+    isSuccessorRightToMoveIn:
+      asset.assetKind === "right_to_move_in" ? asset.isSuccessorRightToMoveIn : undefined,
     /**
      * ⑬ 일반건물 서브객체 — 컴패니언 함께양도. **primary와 같은 빌더**를 쓴다.
      *
