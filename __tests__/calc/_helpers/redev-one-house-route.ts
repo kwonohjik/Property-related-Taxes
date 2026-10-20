@@ -105,7 +105,8 @@ export function redevAptForm(opts: {
           assetKind: "redevelopment_apt",
           acquisitionCause: "purchase",
           acquisitionDate: "2008-01-01",
-          fixedAcquisitionPrice: "400000000",
+          // 원조합원 취득가액은 아래 `redevActualAcquisitionPrice`(§166 칸)다 — 상단 칸은 화면에 없어 비운다
+          fixedAcquisitionPrice: "",
           actualSalePrice: price,
           redevSubject: "apt",
           redevApprovalDate: "2016-06-01",
