@@ -2,7 +2,7 @@
  * anchor — 장기보유특별공제율 합산의 부동소수 오차 (D10-06)
  *
  * ## 결함
- * 공제율을 double로 더한 뒤 `applyRate`(= `Math.floor(amount × rate)`)에 넘기면,
+ * 공제율을 double로 더한 뒤 종전 `applyRate`(= `Math.floor(amount × rate)`)에 넘기면,
  * 합이 의도 공제율보다 **1 ulp 작아지는 조합**에서 공제액이 **1원 과소**산정된다(납세자 불리).
  *
  * ## 단방향이다
@@ -42,15 +42,15 @@ describe("문제 재현 — double 합산이 1 ulp 아래로 민다", () => {
   });
 });
 
-describe("🔴 applyRate는 그 오차를 1원 과소로 전파한다", () => {
-  it("양도차익 10억 × 40% = 4억인데 399,999,999가 된다", () => {
+describe("applyRate도 이제 그 오차를 전파하지 않는다 — 소수 6자리 이내 세율은 백만분율 정수 연산(종전 399,999,999 · 199,999,999)", () => {
+  it("양도차익 10억 × 40% = 4억", () => {
     const rate = Math.min(9 * 0.04, 0.4) + Math.min(1 * 0.04, 0.4);
-    expect(applyRate(1_000_000_000, rate)).toBe(399_999_999);
+    expect(applyRate(1_000_000_000, rate)).toBe(400_000_000);
   });
 
-  it("양도차익 10억 × 20% = 2억인데 199,999,999가 된다", () => {
+  it("양도차익 10억 × 20% = 2억", () => {
     const rate = Math.min(9 * 0.02, 0.3) + 0.02;
-    expect(applyRate(1_000_000_000, rate)).toBe(199_999_999);
+    expect(applyRate(1_000_000_000, rate)).toBe(200_000_000);
   });
 });
 

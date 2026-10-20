@@ -580,13 +580,18 @@ function resolveRentalHousingSplitTax(
   if (!nb) return plain();
   const nbGross = nb.gain - nb.longTermDeduction;
   const housingGross = grossIncome - nbGross;
-  // 특례 슬롯 = 주택분 + 배율 초과분. 주택분은 음수일 수 있다(A2 건물 차손의 과세분 — 위와 같다). 슬롯·배율 초과분이 0 이하이면 자산 단위로 후퇴한다.
+  // 특례 슬롯 = 주택분 + 배율 초과분. 주택분은 음수일 수 있다(A2 건물 차손의 과세분 — 위와 같다). 슬롯·배율 초과분이 0 이하이면 자산 단위로 후퇴한다
+  // (초과분 차손은 주택분에서 공제돼 주택분 세율만 남으므로 자산 단위 세액과 같다).
   if (grossIncome <= 0 || nbGross <= 0) return plain();
 
+  // 다건 차손 통산 파트 행(`rentalExcessPartDetail` — 이내 토지 · 건물 · 배율 초과분)이 있으면 그 통산 후 파트 소득이 정본이다(주택분 = 토지 + 건물).
+  const w = ctx.partIncomeWeights;
   const housingIncome =
-    ctx.transferIncome === grossIncome
-      ? housingGross
-      : Number((BigInt(ctx.transferIncome) * BigInt(housingGross)) / BigInt(grossIncome));
+    w?.length === 3
+      ? w[0] + w[1]
+      : ctx.transferIncome === grossIncome
+        ? housingGross
+        : Number((BigInt(ctx.transferIncome) * BigInt(housingGross)) / BigInt(grossIncome));
   const nbBasisDate = resolveLandStatutoryAcquisitionDate(ctx.taxRateInput);
   if (!nbBasisDate) return plain();
 

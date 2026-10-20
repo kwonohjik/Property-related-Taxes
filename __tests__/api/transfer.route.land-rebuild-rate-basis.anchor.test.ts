@@ -1,7 +1,7 @@
 /**
  * anchor(route ⑫⑭) — 구주택 멸실·신축 통산(`landRebuildPriorHouse`, 해석 (5)).
  * 엔진 anchor(`appurtenant-land-rebuild-rate-basis.anchor.test.ts`)가 못 보는 Zod(⑫)·Route 매핑(⑭, 단건·다건)·컴패니언 명시 거부를 고정한다.
- * 엔진 anchor와 같은 시드이므로 세액이 같아야 한다(S1 195,309,999 / 입력 없음 362,250,000 — mock 세율 실측).
+ * 엔진 anchor와 같은 시드이므로 세액이 같아야 한다(S1 195,310,000 / 입력 없음 362,250,000 — mock 세율 실측).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -84,18 +84,18 @@ describe("⑫⑭ 단건 — 와이어가 엔진에 도달한다 (침묵 strip �
     expect(x.r.splitDetail.land.rateHoldingAggregation).toBeUndefined();
   });
 
-  it("RR-2 since_land: 195,309,999 · echo 구간 2개 · Date 변환(⑭)이 엔진에서 문자열 비교로 새지 않는다", async () => {
+  it("RR-2 since_land: 195,310,000 · echo 구간 2개 · Date 변환(⑭)이 엔진에서 문자열 비교로 새지 않는다", async () => {
     const x = await single({ landRebuildPriorHouse: REBUILD });
     expect(x.status, x.text).toBe(200);
-    expect(x.r.calculatedTax).toBe(195_309_999);
+    expect(x.r.calculatedTax).toBe(195_310_000);
     expect(x.r.splitDetail.land.rateHoldingAggregation).toMatchObject({ totalMonths: 25, equivalentBasisDate: "2023-08-02" });
     expect((x.r.warnings as string[]).some((w) => w.includes("통산한 25개월"))).toBe(true);
   });
 
-  it("RR-3 later: 구주택 취득일이 와이어를 통해 엔진에 간다 (315,249,999)", async () => {
+  it("RR-3 later: 구주택 취득일이 와이어를 통해 엔진에 간다 (315,250,000)", async () => {
     const x = await single({ landRebuildPriorHouse: { startMode: "later", priorHouseStartDate: "2023-01-01", demolitionDate: "2023-07-31", footprintUnchanged: true } });
     expect(x.status, x.text).toBe(200);
-    expect(x.r.calculatedTax).toBe(315_249_999);
+    expect(x.r.calculatedTax).toBe(315_250_000);
     expect(x.r.splitDetail.land.rateHoldingAggregation.startRule).toBe("input_date");
   });
 });
@@ -176,14 +176,14 @@ describe("⑫ 거부 — 엔진 진입·⑧과 같은 leaf 문구", () => {
 });
 
 describe("⑭ 다건 합산 — 옮긴다 (단건과 같은 세액)", () => {
-  it("RR-7 다건 1건: 입력 없음과 입력 있음의 결정세액 차이가 단건 산출세액 차이(362,250,000 → 195,309,999)와 같다", async () => {
+  it("RR-7 다건 1건: 입력 없음과 입력 있음의 결정세액 차이가 단건 산출세액 차이(362,250,000 → 195,310,000)와 같다", async () => {
     const a = await multi({});
     const b = await multi({ landRebuildPriorHouse: REBUILD });
     expect(a.status, a.text).toBe(200);
     expect(b.status, b.text).toBe(200);
     const taxOf = (x: J) => x.body.data.determinedTax ?? x.body.data.result?.determinedTax ?? x.body.data.aggregate?.determinedTax;
     expect(taxOf(a)).toBeDefined();
-    expect(taxOf(a) - taxOf(b)).toBe(362_250_000 - 195_309_999);
+    expect(taxOf(a) - taxOf(b)).toBe(362_250_000 - 195_310_000);
   });
 
   it("RR-8 다건에서도 같은 거부 — 정착면적 false → 400", async () => {

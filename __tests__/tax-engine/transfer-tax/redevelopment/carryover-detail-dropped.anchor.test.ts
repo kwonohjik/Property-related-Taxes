@@ -246,7 +246,7 @@ describe("E3-06 / F2 — 1세대1주택 고가주택 재개발APT (B 채택 · �
     expect(d?.adoptedScenario).toBe("B");
     expect(d?.comparisonExclusion).toBe(true);
     expect(d?.exclusionReason).toBe("tax_comparison");
-    expect(d?.scenarioA.determinedTax).toBe(16_584_999);
+    expect(d?.scenarioA.determinedTax).toBe(16_585_000);
     expect(d?.scenarioB.determinedTax).toBe(25_685_000);
   });
 

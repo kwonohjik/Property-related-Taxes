@@ -85,6 +85,36 @@ describe("applyRate", () => {
     // 33,333 * 0.1 = 3333.3 → 3333
     expect(applyRate(33_333, 0.1)).toBe(3_333);
   });
+
+  it("double 곱이 정수 경계 바로 아래로 떨어지는 세율도 정확히 계산한다 — 종전 Math.floor(amount × rate)는 1원 과소", () => {
+    // 90 × 0.7 = 62.99999999999999 · 88,500,000 × 0.7 = 61,949,999.99999999
+    expect(applyRate(90, 0.7)).toBe(63);
+    expect(applyRate(88_500_000, 0.7)).toBe(61_950_000);
+    // 공제율을 double로 더해 1 ulp 밑으로 밀린 값(0.39999999999999997)
+    expect(applyRate(1_000_000_000, 0.36 + 0.04)).toBe(400_000_000);
+  });
+
+  it("정수 백분율 1~99% × 금액(표본) — 정수 분수 연산과 같다", () => {
+    let mismatches = 0;
+    for (let pct = 1; pct <= 99; pct++) {
+      for (let x = 1; x <= 300_000; x += 13) {
+        if (applyRate(x, pct / 100) !== Math.floor((x * pct) / 100)) mismatches++;
+      }
+    }
+    expect(mismatches).toBe(0);
+  });
+
+  it("음수는 내림(−∞ 방향) · 안전 정수를 넘는 곱은 BigInt · 소수 6자리를 넘는 비율·소수 금액은 종전 식", () => {
+    expect(applyRate(-90, 0.7)).toBe(-63);
+    expect(applyRate(-91, 0.7)).toBe(-64); // −63.7 → −64
+    expect(applyRate(9_000_000_000_000, 0.7)).toBe(6_300_000_000_000);
+    expect(applyRate(9_000_000_000_001, 0.35)).toBe(3_150_000_000_000);
+    expect(applyRate(3_000_000, 1 / 3)).toBe(1_000_000); // 백만분율로 반올림하면 999,999
+    expect(applyRate(3_000_000_000, 2 / 3)).toBe(2_000_000_000); // 〃 2,000,001,000
+    expect(applyRate(9_000_000_000_012, 0.7)).toBe(6_300_000_000_008); // double 곱이면 6,300,000,000,007.999
+    expect(applyRate(10.5, 0.7)).toBe(7);
+    expect(applyRate(1.0000001, 0.7)).toBe(0); // 소수 금액은 BigInt로 보내지 않는다
+  });
 });
 
 // ============================================================

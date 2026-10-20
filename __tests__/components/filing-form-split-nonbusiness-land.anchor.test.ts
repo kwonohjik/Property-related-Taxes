@@ -122,15 +122,18 @@ describe("③ 12억 이하(전액 비과세 + 초과분) · 고가(L'>X) · 경�
     expectColumnsMatchEcho(r, 2_000_000_000);
   });
 
-  it("양도차손 파트(토지 −291,223,404) — 초과분 0원 파트가 서도 열이 엔진 echo(이내 토지 0 · 건물 과세 258,244,680)를 읽는다", () => {
+  it("양도차손 파트(토지 −291,223,404) — 초과분 차손 파트(−116,489,362)가 서도 열이 엔진 echo(이내 토지 0 · 건물 과세 258,244,680)를 읽는다", () => {
     const r = calc(sameDayInput("2026-02-16", 1_500_000_000, 500, {
       standardPriceAtAcquisition: 470_000_000, standardPricePerSqmAtAcquisition: 900_000, buildingStandardPriceAtAcquisition: 20_000_000,
       landStandardPriceAtTransfer: 100_000_000, buildingStandardPriceAtTransfer: 700_000_000,
     }));
     expect(r.splitDetail!.land.gain).toBe(-291_223_404);
-    expect(r.splitDetail!.nonBusinessLandPart!.gain).toBe(0);
+    // 🔁 토지 차손도 배율 초과분(200/500㎡)을 비사업용 토지 차손으로 떼어 전액 과세분으로 둔다(사용자 결정 2026-10-20 A안 — 종전 토지 차손을 0으로 잘라 초과분 0).
+    //   초과분 floor(−291,223,404 × 0.4) = −116,489,362 · 이내분 min(0, 안분 floor(−291,223,404 × 3/15) = −58,244,681 − 초과분) = 0(초과분 차손이 더 커 0 — 이익의 「없는 것으로 본다」와 대칭)
+    expect(r.splitDetail!.nonBusinessLandPart!.gain).toBe(-116_489_362);
+    expect(r.splitDetail!.land.taxableGainAfterProration).toBe(0);
     const rows = filingRows(r, 1_500_000_000);
-    expect(rows.get(LABEL.taxable)).toMatchObject({ land: 0, building: 258_244_680, total: 258_244_680 }); // 종전 토지 −75,206,895 · 건물 333,451,574
+    expect(rows.get(LABEL.taxable)).toMatchObject({ land: -116_489_362, building: 258_244_680, total: 141_755_318 }); // 종전 토지 0 · 합계 258,244,680
     // 비과세 양도차익은 열 안 항등식(과세 + 비과세 = 전체)이 우선 — 손실 열은 음수로 남고 열 합 = 합계
     expect(N(rows.get(LABEL.exempt)!.land) + N(rows.get(LABEL.exempt)!.building)).toBe(N(rows.get(LABEL.exempt)!.total));
     expectColumnsMatchEcho(r, 1_500_000_000);

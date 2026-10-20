@@ -87,10 +87,10 @@ describe("A) 회귀 가드 — 입력이 없으면 현행 `max` 그대로 (나�
 });
 
 describe("B) 합산 ≥2년 / 1~2년 / <1년 — 계획서 §3 프로토타입 실측과 같은 수치", () => {
-  it("RB-B1 S1 구주택 17개월(토지 취득 때부터) + 신축 8개월 = 25 → 토지 기본세율 · 195,309,999 (현행 362,250,000 대비)", () => {
+  it("RB-B1 S1 구주택 17개월(토지 취득 때부터) + 신축 8개월 = 25 → 토지 기본세율 · 195,310,000 (현행 362,250,000 대비)", () => {
     const o = { landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) };
     const r = run(o);
-    expect(r.calculatedTax).toBe(195_309_999);
+    expect(r.calculatedTax).toBe(195_310_000);
     expect(landRate(o).appliedRate).not.toBe(0.7);
     expect(landRate(o).appliedRate).not.toBe(0.6);
     expect(landRate(o).clause).toBe("104-1-1");
@@ -104,10 +104,10 @@ describe("B) 합산 ≥2년 / 1~2년 / <1년 — 계획서 §3 프로토타입 �
     expect(r.splitDetail?.land.appliedRateBasisDate).toBe("2023-08-02");
   });
 
-  it("RB-B2 S2 구주택 7개월(later) + 신축 8개월 = 15 → 토지 60% · 315,249,999", () => {
+  it("RB-B2 S2 구주택 7개월(later) + 신축 8개월 = 15 → 토지 60% · 315,250,000", () => {
     const o = { landRebuildPriorHouse: rb({ startMode: "later", priorHouseStartDate: D("2023-01-01"), demolitionDate: D("2023-07-31") }) };
     const r = run(o);
-    expect(r.calculatedTax).toBe(315_249_999);
+    expect(r.calculatedTax).toBe(315_250_000);
     expect(landRate(o).appliedRate).toBe(0.6);
     expect(r.splitDetail?.land.rateHoldingAggregation?.totalMonths).toBe(15);
     expect(r.splitDetail?.land.rateHoldingAggregation?.startRule).toBe("input_date");
@@ -344,10 +344,10 @@ describe("H) 매매 호스트 — 매수한 토지 + 그 위에 신축한 주택
   // 시드: 토지 매수 2022-01-01 · 구주택 멸실 · 신축 취득(사용승인) 2025-01-01 = 건물 취득일 · 양도 2025-09-01. 건물 취득원인 purchase.
   const purchase = (o: Partial<TransferTaxInput> = {}) => ({ acquisitionCause: "purchase" as const, ...o });
 
-  it("RB-H1 서면법규과-1222형: 구주택 17개월(2022-01-01~2023-05-31) + 신축 8개월 = 25 → 토지 기본세율(104-1-1) · 195,309,999 — 신축 호스트(RB-B1)와 같은 값", () => {
+  it("RB-H1 서면법규과-1222형: 구주택 17개월(2022-01-01~2023-05-31) + 신축 8개월 = 25 → 토지 기본세율(104-1-1) · 195,310,000 — 신축 호스트(RB-B1)와 같은 값", () => {
     const o = purchase({ landRebuildPriorHouse: rb({ demolitionDate: D("2023-05-31") }) });
     const r = run(o);
-    expect(r.calculatedTax).toBe(195_309_999);
+    expect(r.calculatedTax).toBe(195_310_000);
     expect(landRate(o).clause).toBe("104-1-1");
     expect([0.7, 0.6]).not.toContain(landRate(o).appliedRate);
     expect(r.splitDetail?.land.rateHoldingAggregation).toEqual({

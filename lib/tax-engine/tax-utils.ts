@@ -48,8 +48,23 @@ export function calculateProgressiveTax(
  * [P0-2] 세율 적용 후 즉시 절사 (원 미만)
  * 모든 "세율 × 금액" 연산에 이 함수를 사용하여 부동소수점 오차 방지.
  * 직접 Math.floor(amount * rate) 사용 금지.
+ *
+ * 세율이 소수 6자리 이내(70% · 0.4% · 공제율 합 등)이면 백만분율 정수로 바꿔 정확히 계산한다 — double 곱은 0.7 같은 세율이
+ * 정수 경계 바로 아래로 떨어져 1원 과소가 났다(1~3,000,000 전수: 29·35·41·47·57·58·69·70·82·94% · 70%는 90원 → 62).
+ * 공제율을 double로 더해 1 ulp 밑으로 밀린 값(0.39999999999999997)도 같은 백만분율로 모인다. 6자리를 넘는 비율(무한소수 안분비 등)은 종전 식.
  */
 export function applyRate(amount: number, rate: number): number {
+  const micro = Math.round(rate * 1_000_000);
+  if (Number.isSafeInteger(amount) && Math.abs(rate * 1_000_000 - micro) < 1e-6) {
+    const product = amount * micro;
+    if (Number.isSafeInteger(product)) {
+      const rem = product % 1_000_000;
+      return (product - rem) / 1_000_000 - (rem < 0 ? 1 : 0);
+    }
+    const big = BigInt(amount) * BigInt(micro);
+    const q = big / 1_000_000n;
+    return Number(big < 0n && q * 1_000_000n !== big ? q - 1n : q);
+  }
   return Math.floor(amount * rate);
 }
 

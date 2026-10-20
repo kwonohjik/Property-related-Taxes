@@ -198,7 +198,7 @@ export function runRentalHousingExceptionStep(
   // 특례 계산에 넣기 **전에** 떼어내야 12억 안분·표2 장특이 그 부분에 잘못 미치지 않는다
   // (일반 경로 `applyHousingLandExclusions`의 ①→② 순서와 같다). 단 고가주택(A2)이면 «나머지»를 다시 안분하지 않고 재산세제과-915 회신 방식
   // (아래 `rulingFacts` — 전체 부수토지 안분값에서 초과분을 한 번만 뺀다)으로 과세 양도차익을 만든다.
-  const nbl = splitAppurtenantExcess(effectiveInput, splitDetail, transferGain);
+  const nbl = splitAppurtenantExcess(effectiveInput, splitDetail);
   // 나중 취득 부수토지가 보유요건에 못 미치는 경우(G-3)도 같다 — §155⑳은 주택 수만 의제하고 비과세 범위는 §154①이 정하므로, 일반 경로
   // (`applyHousingLandExclusions`)와 같은 술어(`isLaterAcquiredLandExemptExcluded`)로 그 토지분을 특례 대상 주택분에서 떼어 전액 과세한다.
   // B(직전거주주택보유주택)도 같다 — 그 토지분을 떼고 나머지에만 §161 기준시가 안분을 적용한다(1주택 코드 리뷰 별건 ⑦ · 사용자 결정 2026-10-19

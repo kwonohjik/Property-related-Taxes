@@ -14,8 +14,12 @@ import { safeMultiplyThenDivide } from "./tax-utils";
  * (초과분은 안분 전 전액)»으로 보며, 초과분이 더 크면 그 초과금액은 없는 것으로 본다. 이 함수가 그 식 하나다 — 단일 주택(`applyHousingLandExclusions`) ·
  * 겸용주택(`buildHousingPart`) · 함께 양도 부수토지 카드(`resolveTaxableGain`)가 같은 함수를 쓴다.
  *
- * @param landGain  **전체 부수토지** 양도차익 — 기준면적 이내분 + 배율 초과분(안분 전). 음수는 0으로 본다.
- * @param excessGain 배율 초과분 양도차익(안분 전 전액 과세되는 값). 음수는 0으로 본다.
+ * **토지 차손**(전체 부수토지 양도차익 < 0 · 초과분도 같은 비율이라 ≤ 0)이면 같은 식을 부호만 대칭으로 쓴다 — 이내분 = min(0, 안분(전체) − 초과분).
+ * 회신은 이익만 전제했고(차손 언급 없음), 영 §160①의 「양도차익」에는 음수인 양도차손도 포함된다(조심2016부0323 — 고가주택 차손은 기준금액 초과분만 통산).
+ * 그래서 토지 과세분 합계(이내분 + 초과분)가 이익과 같이 안분(전체)이 되고, 배율 초과 면적 유무로 과세분이 뛰지 않는다(사용자 결정 2026-10-20 A안).
+ *
+ * @param landGain  **전체 부수토지** 양도차익 — 기준면적 이내분 + 배율 초과분(안분 전). 이익 경로에서 음수는 0으로 본다.
+ * @param excessGain 배율 초과분 양도차익(안분 전 전액 과세되는 값). 이익 경로에서 음수는 0으로 본다.
  * @param prorate   고가주택 안분(영 §160①) — 호출부 경로의 안분 함수를 그대로 넘긴다(경로마다 분모·절사 규약이 다르다).
  */
 export function highValueExcessLandTaxableGain(args: {
@@ -23,6 +27,7 @@ export function highValueExcessLandTaxableGain(args: {
   excessGain: number;
   prorate: (gain: number) => number;
 }): number {
+  if (args.landGain < 0 && args.excessGain <= 0) return Math.min(0, args.prorate(args.landGain) - args.excessGain);
   const land = Math.max(0, args.landGain);
   const excess = Math.max(0, args.excessGain);
   return Math.max(0, args.prorate(land) - excess);

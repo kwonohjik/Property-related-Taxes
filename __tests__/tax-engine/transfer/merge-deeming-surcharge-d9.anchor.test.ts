@@ -113,8 +113,8 @@ describe("D9 합가 중과배제 — §167의10①15호·§167의3①13호", () 
   it("D9-A4 합가일부터 정확히 10년 되는 날 양도 → 10년 이내(경계 포함) 배제 · 기한(토요일 → 월요일 08-03) 다음 날은 배제 없음 (15억)", () => {
     const hv = { transferPrice: 1_500_000_000, residencePeriodMonths: 60 };
     const at = households(2, "2026-08-01", "2010-01-01", hv);
-    expect(calc({ ...at, ...PC("2016-08-01") }).totalTax).toBe(19_013_498);
-    expect(calc({ ...at, ...MM("2016-08-01") }).totalTax).toBe(19_013_498);
+    expect(calc({ ...at, ...PC("2016-08-01") }).totalTax).toBe(19_013_500);
+    expect(calc({ ...at, ...MM("2016-08-01") }).totalTax).toBe(19_013_500);
     const after = households(2, "2026-08-04", "2010-01-01", hv);
     expect(calc({ ...after, ...PC("2016-08-01") }).totalTax).toBe(520_228_500);
     expect(calc({ ...after, ...MM("2016-08-01") }).totalTax).toBe(520_228_500);

@@ -355,7 +355,7 @@ export function calcLongTermHoldingDeduction(
     const totalPct = holdingPct + residencePct;
     return {
       // 정수 % + 분수 연산 — 표1(2% 배수) + 표2(4% 배수) 합이 소수로는 부정확해진다
-      // (0.22 + 0.12 = 0.33999999999999997 → 1원 과소). conversion-holding-pct.ts 참조.
+      // (0.22 + 0.12 = 0.33999999999999997 → 종전 `applyRate`는 1원 과소). conversion-holding-pct.ts 참조.
       deduction: applyRateFraction(taxableGain, totalPct, 100),
       rate: totalPct / 100, // 표시용
       holdingPeriod: { years: totalHolding.years, months: totalHolding.months },

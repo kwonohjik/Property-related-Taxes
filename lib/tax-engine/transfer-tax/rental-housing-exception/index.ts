@@ -165,10 +165,9 @@ export function calculateRentalHousingException(
       calculateScenarioA(
         eligibility, gain95Table1, gain95Table2, S, highValueThreshold,
         highValueExcessRuling
-          ? {
-              trace: highValueExcessRuling,
+          ? (() => {
               // 회신 방식 과세 양도차익은 파트별로(토지 기준면적 이내분·건물 안분값) 장기보유특별공제를 적용한다.
-              gain95Table2OfTaxable: bothTables(
+              const ofTaxable = bothTables(
                 highValueExcessRuling.taxableBeforeLthd,
                 lthdParts
                   ? {
@@ -176,8 +175,15 @@ export function calculateRentalHousingException(
                       building: { ...lthdParts.building, gain: highValueExcessRuling.buildingTaxableGain },
                     }
                   : undefined,
-              ).gain95Table2,
-            }
+              );
+              return {
+                // 파트별 표2 공제액 echo — 다건 차손 통산 파트 행(`rentalExcessPartDetail`)이 재계산 없이 읽는다
+                trace: isByParts(ofTaxable)
+                  ? { ...highValueExcessRuling, landLthd: ofTaxable.land.ltcTable2, buildingLthd: ofTaxable.building.ltcTable2 }
+                  : highValueExcessRuling,
+                gain95Table2OfTaxable: ofTaxable.gain95Table2,
+              };
+            })()
           : undefined,
       ),
       tables,
