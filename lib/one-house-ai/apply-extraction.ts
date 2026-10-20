@@ -18,10 +18,10 @@ export type ExtractedForm = Partial<Omit<OneHouseJudgmentFormData, "assets" | "h
 
 export type ExtractionIssue = { path: string; message: string };
 
-type Segment = { name: string; row?: string };
+export type Segment = { name: string; row?: string };
 
 /** 배열 행의 식별자 칸 — 행 이름(rowId)을 이 칸에 넣는다. 없으면 식별자를 두지 않는다. */
-const ROW_ID_FIELD: Record<string, string> = {
+export const ROW_ID_FIELD: Record<string, string> = {
   houses: "id",
   presaleRights: "id",
   finalHouseRestartDisposals: "id",

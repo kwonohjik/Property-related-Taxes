@@ -9,6 +9,8 @@ import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/re
 import OneHouseJudgmentCalculator from "@/app/calc/one-house-exemption/OneHouseJudgmentCalculator";
 import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
+import { ONE_HOUSE_FIELD_CATALOG } from "@/lib/one-house-ai/field-catalog";
+import type { FieldSpec } from "@/lib/one-house-ai/field-catalog.types";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -126,5 +128,58 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
     fireEvent.click(screen.getByRole("button", { name: "입력값 초기화" }));
     fireEvent.click(await screen.findByTestId("confirm-dialog-confirm"));
     await waitFor(() => expect(screen.queryByTestId("one-house-ai-review")).toBeNull());
+  });
+
+  // 질문에 그 자리에서 답하기(사용자 결정 2026-10-20 — 미리보기 창과 검토 카드 둘 다 · 행이 특정되는 질문만)
+  describe("질문에 바로 답하기", () => {
+    // 추출 API가 질문에 붙이는 칸 정보(사전 한 줄)
+    const field = (path: string) => {
+      const s: FieldSpec = ONE_HOUSE_FIELD_CATALOG.find((x) => x.path === path)!;
+      return { path: s.path, kind: s.kind, label: s.label, values: s.values };
+    };
+    const withAnswerable: OneHouseAiExtractData = {
+      ...data,
+      questions: [
+        { path: "isOneHousehold", label: "1세대", field: field("isOneHousehold"), question: "1세대입니까?", source: "validation" },
+        { path: "houses[B].region", label: "지역", field: field("houses[].region"), question: "B주택은 어디에 있습니까?", source: "llm" },
+        ...data.questions,
+      ],
+    };
+    const radio = (container: HTMLElement, path: string, value: string) =>
+      container.querySelector<HTMLInputElement>(`input[type="radio"][name="one-house-ai-answer-${path}"][value="${value}"]`)!;
+    const otherRegion = field("houses[].region").values!.find((v) => v.value !== "capital")!.value;
+
+    it("미리보기 창에서 답한 값이 추출값과 함께 적용된다", async () => {
+      respond(200, { data: withAnswerable });
+      render(<OneHouseJudgmentCalculator aiExtractEnabled />);
+      await extract();
+      const preview = await screen.findByTestId("one-house-ai-extract-preview"); // 창은 portal로 body에 붙는다
+
+      fireEvent.click(radio(preview, "isOneHousehold", "false"));
+      fireEvent.click(radio(preview, "houses[B].region", otherRegion));
+      // 행을 새로 만들어야 하는 묶음 질문은 이 창에서 받지 않는다
+      expect(screen.getByText("적용한 뒤 판정 화면의 검토 카드에서 해당 단계로 이동해 입력합니다.")).toBeTruthy();
+
+      fireEvent.click(screen.getByTestId("one-house-ai-extract-apply"));
+      const f = useOneHouseJudgmentStore.getState().formData;
+      expect(f.isOneHousehold).toBe(false);
+      expect(f.houses.map((h) => [h.id, h.region])).toEqual([["B", otherRegion]]);
+      expect(f.transferDate).toBe("2024-04-30");
+    });
+
+    it("적용 뒤 검토 카드에서 답하면 판정 메뉴 폼에 곧바로 들어간다", async () => {
+      respond(200, { data: withAnswerable });
+      const { container } = render(<OneHouseJudgmentCalculator aiExtractEnabled />);
+      await extract();
+      fireEvent.click(await screen.findByTestId("one-house-ai-extract-apply"));
+
+      const card = screen.getByTestId("one-house-ai-review");
+      expect(radio(card, "isOneHousehold", "true").checked).toBe(true); // 추출값을 보여 준다
+      fireEvent.click(radio(card, "houses[B].region", otherRegion));
+      expect(useOneHouseJudgmentStore.getState().formData.houses[0].region).toBe(otherRegion);
+      // 묶음 질문은 여전히 단계 이동 버튼
+      expect(screen.getByRole("button", { name: "「양도 대상 주택」 단계에서 입력" })).toBeTruthy();
+      expect(container.querySelectorAll('[data-testid^="one-house-ai-answer-"][data-testid$="-field"]')).toHaveLength(2);
+    });
   });
 });

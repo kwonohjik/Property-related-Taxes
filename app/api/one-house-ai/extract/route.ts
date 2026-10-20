@@ -31,6 +31,7 @@ import {
 } from "@/lib/one-house-ai/apply-extraction";
 import { mergeExtractedForm } from "@/lib/one-house-ai/merge-form";
 import { collectValidationQuestions } from "@/lib/one-house-ai/validation-questions";
+import type { AnswerField } from "@/lib/one-house-ai/question-answer";
 
 // LLM 추출은 문서 하나에 20~45초(오프라인 평가 실측) — 여유를 둔다.
 export const maxDuration = 120;
@@ -39,7 +40,15 @@ const bodySchema = z.object({
   text: z.string().trim().min(1, "원문을 입력하세요.").max(ONE_HOUSE_AI_TEXT_MAX, `원문은 ${ONE_HOUSE_AI_TEXT_MAX.toLocaleString()}자 이하로 입력하세요.`),
 });
 
-type ExtractQuestion = { path: string; label?: string; question: string; why?: string; source: "llm" | "validation" };
+/** `field` = 질문이 가리키는 칸(사전에 있을 때) — 화면이 그 자리에서 답을 받는다(`answerTargetOf`) */
+type ExtractQuestion = {
+  path: string;
+  label?: string;
+  field?: AnswerField;
+  question: string;
+  why?: string;
+  source: "llm" | "validation";
+};
 
 /** 화면(`OneHouseAiExtractDialog`)이 읽는 응답 `data` */
 export type OneHouseAiExtractData = {
@@ -100,9 +109,14 @@ export async function POST(request: NextRequest) {
     return ONE_HOUSE_FIELD_CATALOG.find((s) => s.path === key);
   };
   const labelOf = (path: string) => specOf(path)?.label;
+  const fieldOf = (path: string): AnswerField | undefined => {
+    const spec = specOf(path);
+    return spec && { path: spec.path, kind: spec.kind, label: spec.label, values: spec.values };
+  };
   const llmQuestions = run.extraction.missingFacts.map((m) => ({
     path: m.path,
     label: labelOf(m.path),
+    field: fieldOf(m.path),
     question: m.question,
     why: m.why,
     source: "llm" as const,
@@ -124,7 +138,7 @@ export async function POST(request: NextRequest) {
       const spec = specOf(f.path);
       return { ...f, label: spec?.label, valueLabel: spec?.values?.find((v) => v.value === f.value.trim())?.label };
     }),
-    questions: [...llmQuestions, ...validationQuestions],
+    questions: [...llmQuestions, ...validationQuestions.map((q) => ({ ...q, field: fieldOf(q.path) }))],
     notes: run.extraction.notes,
     issues,
     model: run.model,
