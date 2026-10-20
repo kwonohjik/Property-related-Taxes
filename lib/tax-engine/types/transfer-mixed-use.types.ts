@@ -12,6 +12,7 @@ import type {
   MixedSeparateAcquisition,
   MixedUseSeparateAcquisitionEcho,
 } from "./transfer-mixed-use-part-acq.types";
+import type { MixedSaleSplitResult, MixedUseSaleSplitEcho, MixedUseSaleSplitFields } from "./transfer-mixed-use-sale-split.types";
 
 /** §164⑨1호 겸용주택 공익수용 특례 산출근거 (계획 P7/D8) — 주택분·상가분 각 목별. */
 export interface MixedUseExpropriationDetail {
@@ -92,7 +93,7 @@ export interface MixedUseHousingStdSplitDetail {
  * 겸용주택 자산-수준 입력.
  * AssetForm.assetType === "mixed-use-house" 일 때 활성화.
  */
-export interface MixedUseAssetInput {
+export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
   /** 겸용주택 분리계산 플래그 */
   isMixedUseHouse: true;
 
@@ -1168,6 +1169,12 @@ export interface MixedUseGainBreakdown {
    * 총액 모델·구 이력은 undefined.
    */
   separateAcquisition?: MixedUseSeparateAcquisitionEcho;
+  /** 양도가액 안분 — 계약서 구분·감정가액 경로 echo(그 경로를 탔을 때만). 표시 계층은 재계산하지 않는다. */
+  saleSplit?: MixedUseSaleSplitEcho;
+  /** 안분 입력이 있었으나 현행 기준시가 경로로 넘긴 사유(§100③ 의제·감정 한쪽만). */
+  saleSplitFallback?: Extract<MixedSaleSplitResult, { applies: false }>;
+  /** 상가건물 감가상각비(§97③)·건물 귀속 양도비 입력 echo(입력이 있을 때만) — 결과 화면 안내용. 세액은 각 파트 값이 정본. */
+  buildingExtras?: { commercialBuildingDepreciation: number; buildingDirectTransferExpense: number };
 
   /** 부담부증여(소령 §159) 명세 — `MixedUseAssetInput.burdenedGift`가 있을 때만. 결과뷰는 이 값의 존재로 분기한다. */
   burdenedGift?: import("./mixed-use-burdened-gift.types").MixedUseBurdenedGiftBreakdown;

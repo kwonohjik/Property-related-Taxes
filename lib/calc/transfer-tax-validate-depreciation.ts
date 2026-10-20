@@ -15,11 +15,16 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { depreciationSupport } from "./depreciation-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 
-export function validateDepreciation(a: AssetForm, label: string): string | null {
+export function validateDepreciation(
+  a: AssetForm,
+  label: string,
+  /** 겸용주택 전용 — ⑤ `DepreciationField`와 같은 문맥(신고서 자산 1건 여부). */
+  ctx?: { isSingleAsset?: boolean },
+): string | null {
   const dep = parseAmount(a.depreciationAmount ?? "");
   if (!(dep > 0)) return null;
 
-  const support = depreciationSupport(a);
+  const support = depreciationSupport(a, ctx);
   if (support.status === "not_applicable") return null;
   if (support.status === "unsupported") {
     return fieldError(
@@ -35,7 +40,9 @@ export function validateDepreciation(a: AssetForm, label: string): string | null
     !a.isSalesCaseAcquisition;
   const acquisition = parseAmount(a.fixedAcquisitionPrice ?? "");
   // 일반건물은 취득가액이 토지+건물 일괄(또는 파트별)이라 건물분을 여기서 알 수 없다 — 엔진이 원건물 카드 취득가액까지로 절삭한다.
-  if (a.assetKind !== "general_building" && isActualPurchase && acquisition > 0 && dep > acquisition) {
+  // 겸용주택도 같다 — 취득가액이 토지+건물(주택·상가) 일괄이라 상가건물분을 여기서 알 수 없다(엔진이 상가건물 취득가액까지로 절삭).
+  const isMixed = a.assetKind === "housing" && a.isMixedUseHouse === true;
+  if (a.assetKind !== "general_building" && !isMixed && isActualPurchase && acquisition > 0 && dep > acquisition) {
     return fieldError(
       "depreciationAmount",
       `${label}: 감가상각비(${dep.toLocaleString()})가 취득가액(${acquisition.toLocaleString()})보다 클 수 없습니다. 취득가액에서 공제할 수 있는 한도는 취득가액까지입니다 (소득세법 §97③).`,

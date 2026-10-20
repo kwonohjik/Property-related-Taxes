@@ -240,4 +240,15 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "mixed: mixedCommercialGiftValueOverride (증여 상가분)", field: "mixedCommercialGiftValueOverride", step: 0, assetIndex: A, message: /^자산: 증여일 상가분 평가액/,
     form: mixed({ acquisitionCause: "gift", mixedAcqCommercialBuildingPrice: "" }),
   },
+  // 양도가액 토지·건물 안분 방식(계획서 mixed-use-sale-split-basis §4.4) — `transfer-tax-validate-mixed-use-sale-split.ts`
+  {
+    name: "mixed: 겸용 안분 — 계약서 구분 기재 건물 양도가액 미입력", field: "buildingTransferPrice", step: 0, assetIndex: A,
+    message: /^자산: 계약서에 구분 기재된 토지·건물 양도가액을 둘 다 입력하세요/,
+    form: mixed({ saleSplitMode: "actual", landTransferPrice: "900000000", buildingTransferPrice: "" }),
+  },
+  {
+    name: "mixed: 겸용 안분 — 감정평가가액 한쪽만", field: "buildingAppraisalAtTransfer", step: 0, assetIndex: A,
+    message: /^자산: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다/,
+    form: mixed({ saleSplitMode: "appraisal", landAppraisalAtTransfer: "900000000", buildingAppraisalAtTransfer: "" }),
+  },
 ];

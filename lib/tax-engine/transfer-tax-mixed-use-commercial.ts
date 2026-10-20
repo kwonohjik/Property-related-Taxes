@@ -6,6 +6,8 @@
  * 동일한 명명 관례. helpers.ts는 이 파일의 함수를 재export하여 기존 import 경로를 그대로 유지한다.
  */
 
+import { buildingDirectShare, deductCommercialDepreciation, isConversionAcq, perPartEstimatedAcq } from "./mixed-use-sale-split";
+import type { MixedSalePart } from "./mixed-use-sale-split";
 import { estimatedDeductionRate } from "./legal-codes";
 import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate, computeEstimatedDeduction } from "./tax-utils";
 import {
@@ -115,6 +117,11 @@ export function calcCommercialGainSplit(
   actualCommercialAcqPrice?: number,
   /** §97②2호 **단서** 적용 신호 (2026-08-07 W-8) — 주택분과 같은 의미. */
   swapToDirect?: boolean,
+  /**
+   * 새 안분(계약서 구분·감정가액) 주입값 — `prepareMixedSaleSplit`이 정한 이 파트의 토지·건물 양도가액과 공통 양도비 몫.
+   * 없으면 종전 기준시가 비율 경로를 한 줄도 바꾸지 않는다(계획서 `mixed-use-sale-split-basis.plan.md` §4.1-2).
+   */
+  salePart?: MixedSalePart,
 ): CommercialGainSplit {
   // Case A 4부분 안분 — 별도 어댑터 호출
   const fp = housingAcqResult?.phdResult?.fourPartApportionment;
@@ -227,14 +234,26 @@ export function calcCommercialGainSplit(
   const acqLandRatio = acqTotalStd > 0 ? acqLandStd / acqTotalStd : 0.5;
   const transferLandRatio = transferTotalStd > 0 ? transferLandStd / transferTotalStd : acqLandRatio;
 
-  // 양도가액 안분 — 양도시 비율
-  const landTransferPrice = Math.floor(commercialTransferPrice * transferLandRatio);
-  const buildingTransferPrice = commercialTransferPrice - landTransferPrice;
+  // 양도가액 안분 — 양도시 비율 (새 안분이면 주입값)
+  const landTransferPrice = salePart ? salePart.land : Math.floor(commercialTransferPrice * transferLandRatio);
+  const buildingTransferPrice = salePart ? salePart.building : commercialTransferPrice - landTransferPrice;
+
+  // 새 안분 + 환산이면 **파트별 환산**(Q-8). 공익수용은 새 안분 범위 밖이라(Q-9) 수용 분모와 겹치지 않는다.
+  const perPart = salePart && isConversionAcq(asset)
+    ? perPartEstimatedAcq(salePart, {
+        acqLandStd, acqBuildingStd, transferLandStd,
+        transferBuildingStd: asset.transferStandardPrice.commercialBuildingPrice,
+      })
+    : undefined;
+  if (perPart) estimatedAcqPrice = perPart.land + perPart.building;
 
   // 취득가액 안분 — 취득시 비율.
   // §97②2호 단서(나목) 채택 시에는 **차감하지 않는다**(가목에 이미 포함 — 이중차감 금지).
-  const landAcqPrice = swapToDirect ? 0 : Math.floor(estimatedAcqPrice * acqLandRatio);
-  const buildingAcqPrice = swapToDirect ? 0 : estimatedAcqPrice - landAcqPrice;
+  const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : Math.floor(estimatedAcqPrice * acqLandRatio);
+  // §97③ 상가건물 감가상각비 차감 — 단서 비교(가목)는 **차감 후** 값으로 한다(일반건물과 같은 결정 · 계획서 V-5).
+  const buildingAcqPrice = swapToDirect
+    ? 0
+    : deductCommercialDepreciation(perPart ? perPart.building : estimatedAcqPrice - landAcqPrice, asset);
 
   // 개산공제 (§163⑥) — 상속·증여(실지거래가액 의제, 소령 §163⑨)·매매실가는 미적용.
   // 실제 필요경비(자본적지출·양도비)는 취득시 토지/건물 기준시가 비율로 안분(splitDeemedExpense).
@@ -257,17 +276,19 @@ export function calcCommercialGainSplit(
     asset.capitalExpenditure ?? 0, asset, effectiveAcqDerived,
     phdAcqStdOverride ?? inheritedCapexStdOverride(asset, effectiveAcqDerived),
   ).commercialAcqPrice;
-  const commonTransferExpCommercial = apportionTransferPrice(
-    asset.transferExpense ?? 0, asset, derived,
-  ).commercialTransferPrice;
+  // 새 안분이면 공통 양도비는 4파트 양도가액 비율(§100② 후단 · 계획서 R-2).
+  const commonTransferExpCommercial = salePart
+    ? salePart.transferExpense
+    : apportionTransferPrice(asset.transferExpense ?? 0, asset, derived).commercialTransferPrice;
   const necessaryExpensePair = () =>
     resolvePartNecessaryExpense({
       partDirect: swapToDirect ? undefined : asset.commercialInheritedExpense,
       commonCapitalExpenditure: commonCapexCommercial,
       commonTransferExpense: commonTransferExpCommercial,
       acqLandStd, acqBuildingStd,
-      transferLandStd,
-      transferBuildingStd: asset.transferStandardPrice.commercialBuildingPrice,
+      transferLandStd: salePart ? salePart.land : transferLandStd,
+      transferBuildingStd: salePart ? salePart.building : asset.transferStandardPrice.commercialBuildingPrice,
+      buildingOnlyTransferExpense: buildingDirectShare(asset, derived, "commercial"),
     });
   const { landAppraisalDed, buildingAppraisalDed } = usesDeemedAcq || swapToDirect
     ? necessaryExpensePair()

@@ -9,6 +9,7 @@ import { TransferModeBlock } from "../TransferModeBlock";
 import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
 import { CompanionSaleModeBlock, toPropertyKind, type BundledSaleMode } from "../CompanionSaleModeBlock";
 import { GeneralBuildingSaleSplitSection } from "../GeneralBuildingSaleSplitSection";
+import { MixedUseSaleSplitSection } from "../mixed-use/MixedUseSaleSplitSection";
 import { SameAdjustmentPeriodSection } from "../SameAdjustmentPeriodSection";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { replotIncrementStdPriceAtTransfer } from "@/lib/calc/replot-increment-std-price";
@@ -36,6 +37,8 @@ interface Props {
   /** 지분 분할 모드(splitMode==="fractional") — 양도가액 자동계산·기준시가 안분 입력 숨김 게이트 */
   isFractionalSplit?: boolean;
   isCompanionBundle?: boolean;
+  /** 신고서 자산이 1건뿐인가 — 겸용주택 양도가액 안분 방식은 단건만 받는다(`mixedSaleSplitScope`). */
+  isSingleAsset?: boolean;
 }
 
 export function AssetSectionTransfer({
@@ -48,6 +51,7 @@ export function AssetSectionTransfer({
   primaryAsset,
   isFractionalSplit,
   isCompanionBundle,
+  isSingleAsset,
 }: Props) {
   // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
   // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
@@ -302,6 +306,14 @@ export function AssetSectionTransfer({
           transferDate={transferDate}
         />
       )}
+
+      {/* 겸용주택 — 양도가액(위)을 정한 다음 나누는 방식. 범위 밖이면 이유만 표시한다. */}
+      <MixedUseSaleSplitSection
+        asset={asset}
+        onChange={onChange}
+        isSingleAsset={isSingleAsset === true}
+        transferDate={transferDate}
+      />
     </>
   );
 }

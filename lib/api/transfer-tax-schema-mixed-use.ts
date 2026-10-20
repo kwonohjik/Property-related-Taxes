@@ -3,6 +3,8 @@
  * transfer-tax-schema-sub.ts 800줄 정책에 따라 분리 (2026-05-08).
  */
 
+import type { MixedUseSaleSplitFields } from "@/lib/tax-engine/types/transfer-mixed-use-sale-split.types";
+import { hasMixedBuildingExtras, hasMixedSaleSplitInput, mixedSaleSplitBlockedReason } from "@/lib/tax-engine/mixed-use-sale-split";
 import { z } from "zod";
 import { isBuildingDayLandPriceRequired } from "@/lib/tax-engine/mixed-use-acq-date";
 import {
@@ -123,9 +125,23 @@ export const mixedUseAssetSchema = z.object({
    * 필수 조건은 아래 superRefine이 `mixedPartAcqNeedsOf`(엔진 leaf)를 기존 술어에 AND로 건다.
    */
   separateAcquisition: mixedSeparateAcquisitionSchema.optional(),
+  /**
+   * ⑫ 양도가액 토지·건물 안분 기준(계약서 구분·감정가액) · 상가건물 감가상각비 · 건물 귀속 양도비 — 계획서
+   * `docs/00-pm/mixed-use-sale-split-basis.plan.md`. 비엄격 z.object라 여기 없으면 침묵 strip된다(⑭ 키 가드가 잡는다).
+   * 값의 유무가 엔진 스위치다 — 전부 없으면 종전 기준시가 안분 그대로.
+   */
+  landTransferPrice: z.number().int().nonnegative().optional(),
+  buildingTransferPrice: z.number().int().nonnegative().optional(),
+  landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
+  buildingAppraisalAtTransfer: z.number().int().nonnegative().optional(),
+  saleSplitExemption: z.enum(["other_law", "demolished_land_only"]).optional(),
+  commercialBuildingDepreciation: z.number().int().nonnegative().optional(),
+  buildingDirectTransferExpense: z.number().int().nonnegative().optional(),
 }).superRefine((v, ctx) => {
   // B1 — 결합 제외 7종·값 누락(엔진 leaf 규칙). 파트 모델이 아니면 아무 일도 하지 않는다.
   refineMixedSeparateAcquisition(v, ctx);
+  // 양도가액 안분 기준·감가상각비·건물 귀속 양도비 — 짝 입력·범위(엔진 `prepareMixedSaleSplit`과 같은 leaf).
+  refineMixedSaleSplit(v, ctx);
   // 파트 모델이면 무엇이 쓰이는가 — 아래 필수 규칙들이 AND로 받는다(총액 모델은 undefined = 기존 규칙 불변).
   const partNeeds = mixedPartAcqNeedsOf(v);
   const total = v.residentialFloorArea + v.nonResidentialFloorArea;
@@ -249,3 +265,45 @@ export function refineMixedUsePresence(
     });
   }
 }
+
+/**
+ * ⑫ 겸용 양도가액 안분 기준 — 엔진이 던지는 조건을 400으로 먼저 돌려준다.
+ * 구분가액 합 = 양도가액 검사는 양도가액이 최상위 필드라 여기서 하지 않는다(⑧과 엔진이 막는다).
+ * 부담부증여는 최상위 `burdenedGift`라 이 서브객체에서 보이지 않는다 — 엔진 가드가 막는다.
+ */
+function refineMixedSaleSplit(
+  v: MixedUseSaleSplitFields & { partialUsageChange?: unknown; usePreHousingDisclosure?: boolean; transferCause?: string },
+  ctx: z.RefinementCtx,
+): void {
+  const declaredOne = (v.landTransferPrice !== undefined) !== (v.buildingTransferPrice !== undefined);
+  if (declaredOne) {
+    ctx.addIssue({ code: "custom", message: "계약서 구분가액은 토지·건물을 모두 입력해야 합니다 (소득세법 §100②)", path: ["landTransferPrice"] });
+  }
+  const appraisalOne = (v.landAppraisalAtTransfer !== undefined) !== (v.buildingAppraisalAtTransfer !== undefined);
+  if (appraisalOne) {
+    ctx.addIssue({ code: "custom", message: "양도시 감정평가가액은 토지·건물을 모두 입력해야 합니다 (부가가치세법 시행령 §64①1호)", path: ["landAppraisalAtTransfer"] });
+  }
+  if (hasMixedSaleSplitInput(v) || hasMixedBuildingExtras(v)) {
+    const blocked = mixedSaleSplitBlockedReason(v);
+    if (blocked) ctx.addIssue({ code: "custom", message: blocked, path: ["landTransferPrice"] });
+  }
+}
+
+/**
+ * ⑫ 단건 겸용 전용(Q-2) — 컴패니언 겸용 자산이나 「겸용 주 자산 + 컴패니언」 조합에서 안분 기준·감가상각비·건물 귀속 양도비가 오면 400.
+ * 클라이언트 ④는 같은 범위 술어(`mixedSaleSplitScope` — 자산 1건)로 보내지 않지만, API 직접 호출은 서버가 막아야 한다
+ * (동기화 점검 M-3: 종전에는 200 + 파트 양도가액·세액 변동).
+ */
+export function refineMixedSaleSplitSingleOnly(
+  mu: MixedUseSaleSplitFields | undefined,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+): void {
+  if (!mu || !(hasMixedSaleSplitInput(mu) || hasMixedBuildingExtras(mu))) return;
+  ctx.addIssue({
+    code: "custom",
+    path,
+    message: "겸용주택 양도가액 안분 기준(계약서 구분·감정가액)·상가건물 감가상각비·건물 귀속 양도비는 겸용주택 1건만 양도할 때 받습니다 — 함께 양도하는 자산이 있으면 아직 지원하지 않습니다.",
+  });
+}
+

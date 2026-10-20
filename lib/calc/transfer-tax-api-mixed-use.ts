@@ -37,6 +37,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount } from "./household-house-count";
 import { isMixedBurdenedGift, resolveMixedBgAcquisition } from "./burdened-gift-mixed-use-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { buildMixedSaleSplitFields } from "./transfer-tax-api-mixed-use-sale-split";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 
 /**
@@ -403,5 +404,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
             usageChangeDate: primary.partialChangeDate || undefined,
           }
         : undefined,
+    // 양도가액 안분 기준(계약서 구분·감정가액) · 상가건물 감가상각비 · 건물 귀속 양도비 — 범위 밖이면 키 없음.
+    ...buildMixedSaleSplitFields(primary, form),
   };
 }

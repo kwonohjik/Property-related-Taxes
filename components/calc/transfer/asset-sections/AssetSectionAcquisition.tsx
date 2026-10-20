@@ -342,7 +342,7 @@ export function AssetSectionAcquisition({
 
       {/* §97③ 감가상각비 — 취득가액 산정 방식(실가·감정·매매사례·환산)과 무관하게 취득가액에서 공제하므로
           취득 섹션 맨 끝에 둔다. 받을 수 없는 구조는 칸 대신 이유를 알린다(`depreciation-scope.ts`). */}
-      <DepreciationField asset={asset} onChange={onChange} />
+      <DepreciationField asset={asset} onChange={onChange} isSingleAsset={!hasSiblings} />
     </>
   );
 }
