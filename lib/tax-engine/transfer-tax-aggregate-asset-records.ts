@@ -40,7 +40,7 @@ import {
   type CarryoverScenarioOverrides,
 } from "./transfer-tax-aggregate-carryover-scope";
 import { TaxCalculationError } from "./tax-errors";
-import { soleSplitRightShareDateNotice } from "./transfer-tax-redevelopment-shared-ownership";
+import { soleSplitRightShareDateNotice, soleSplitRightFactsWithheldNotice } from "./transfer-tax-redevelopment-shared-ownership";
 import { nblShareExemptionWithheldNotice } from "./non-business-land/sole-split-share-notice";
 import {
   applyOneHouseUnitPrice,
@@ -167,9 +167,11 @@ export function buildAssetRecords(
       input.properties[0],
       result.redevelopmentDetail,
     );
+    // 축 B 입주권 — 첫 지분이 승계라 원조합원인 이 지분에 §89①4호 판정 선언이 없는 경우의 고지(옮길 선언이 없고 입력 경로도 없다).
+    const factsWithheldNotice = soleSplitRightFactsWithheldNotice(singleInput, input.properties[0]);
     // 축 B 토지 — 첫 지분의 취득 경위 의존 의제 선언을 이 지분 판정에 끈 경우의 고지(④ `buildFractionalShareNblRecord`).
     const nblShareNotice = nblShareExemptionWithheldNotice(item, input.properties[0]);
-    for (const w of [...(result.warnings ?? []), ...(shareDateNotice ? [shareDateNotice] : []), ...(nblShareNotice ? [nblShareNotice] : [])]) {
+    for (const w of [...(result.warnings ?? []), ...(shareDateNotice ? [shareDateNotice] : []), ...(factsWithheldNotice ? [factsWithheldNotice] : []), ...(nblShareNotice ? [nblShareNotice] : [])]) {
       const label = item.propertyLabel ? `[${item.propertyLabel}] ` : "";
       const line = `${label}${w}`;
       if (!warnings.includes(line)) warnings.push(line);
