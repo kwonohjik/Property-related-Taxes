@@ -338,6 +338,12 @@ export interface NonBusinessLandInput {
   deemedTransferReason?: DeemedTransferReason;
   deemedTransferDate?: Date;
 
+  /**
+   * 상속인이 아닌 사람(수유자)이 유증·사인증여로 받은 토지 — 매퍼가 상속 특례 입력을 이미 비웠다(`isNonHeirBequest`).
+   * 엔진은 그 사실을 결과 안내(`warnings`)로만 밝힌다(계획서 `docs/00-pm/nbl-bequest-non-heir.plan.md` §4-2).
+   */
+  nonHeirBequest?: boolean;
+
   // 농지
   farmingSelf?: boolean;
   /**

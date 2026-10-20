@@ -131,6 +131,8 @@ export function buildNonBusinessLandRaw(
     expropriationNoticeDate: asset.expropriationNoticeDate,
     acquisitionCause: asset.acquisitionCause,
     decedentAcquisitionDate: asset.decedentAcquisitionDate,
+    // 상속인이 아닌 수유자 — 상속일 때만 싣는다(취득원인을 바꾼 뒤 남은 값은 닿지 않는다)
+    nonHeirBequest: asset.acquisitionCause === "inheritance" && asset.nonHeirBequest ? true : undefined,
     donorAcquisitionDate: buildUncondSourceRecord(asset).donorAcquisitionDate,
     acquisitionArea: asset.acquisitionArea,
     acquisitionDate: asset.acquisitionDate,
@@ -159,7 +161,7 @@ export const NBL_ACQUISITION_DEPENDENT_EXEMPT_FLAGS = [
  *
  * 「소득세법」 §104의3①은 「해당 토지를 소유하는 기간」으로, 「소득세법 시행령」 §168의14③3호는 「취득일」로 판정한다.
  * 그래서 **땅에 관한 사실**(지목·용도지역·사용기간·재촌·면적·소재지·양도원인·고시일 — 지분 카드에는 입력이 없다)은
- * 첫 카드 값을, **지분에 관한 사실**(취득일·취득원인·피상속인·증여자 취득일·지분율)은 그 지분 카드 값을 쓴다.
+ * 첫 카드 값을, **지분에 관한 사실**(취득일·취득원인·피상속인·증여자 취득일·수유자 여부·지분율)은 그 지분 카드 값을 쓴다.
  *
  * 취득원인·취득일이 첫 카드와 다르면 취득 경위에 달린 의제 선언 4종을 끈다 — 첫 카드에서 한 선언이 이 지분의
  * 취득 경위에도 맞는지 확인되지 않았기 때문이다(결과 안내는 다건 엔진 `nblShareExemptionWithheldNotice`).
@@ -174,6 +176,7 @@ export function buildFractionalShareNblRecord(share: AssetForm, primary: AssetFo
     acquisitionDate: share.acquisitionDate,
     acquisitionCause: share.acquisitionCause,
     decedentAcquisitionDate: share.decedentAcquisitionDate,
+    nonHeirBequest: share.nonHeirBequest,
     donorAcquisitionDate: share.donorAcquisitionDate,
     carryover: share.carryover,
     ownershipNumerator: share.ownershipNumerator,

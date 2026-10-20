@@ -315,6 +315,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
         h.mergeOrigin === "seller_side" || h.mergeOrigin === "counterpart_side" || h.mergeOrigin === "second_merge_side"
           ? h.mergeOrigin
           : undefined,
+      // 수유자(상속인 아닌 유증·사인증여) — isInherited=true 일 때만 전달(1주택 상속 특례만 읽는다)
+      nonHeirBequest: h.isInherited && h.nonHeirBequest ? true : undefined,
       // 상속 5년 배제 — isInherited=true 일 때만 기산일 전달
       inheritedDate: h.isInherited ? h.inheritedDate || undefined : undefined,
       // §155③ 공동상속 (2-A2) — isInherited=true 일 때만 전달

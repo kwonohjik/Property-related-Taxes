@@ -341,6 +341,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
               ? house.isRankingDisqualifiedInheritedHouse
               : undefined,
             inheritedGiftedToHouseholdMember: v ? house.inheritedGiftedToHouseholdMember : undefined,
+            nonHeirBequest: v ? house.nonHeirBequest : undefined,
           });
         }}
         title="상속주택"
@@ -459,6 +460,23 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
               </p>
             </div>
           )}
+        </div>
+
+        {/* 수유자 — 1주택 상속 특례에서 상속주택으로 보지 않는다(부동산거래관리과-307 · 계획서 nbl-bequest-non-heir.plan.md §4-4) */}
+        <div className="pt-2">
+          <ToggleCard
+            variant="card"
+            tone="amber"
+            data-testid="house-row-non-heir-bequest"
+            checked={house.nonHeirBequest ?? false}
+            onCheckedChange={(v) => onUpdate({ nonHeirBequest: v || undefined })}
+            title="상속인이 아닌 사람이 유증·사인증여로 받음"
+            description="민법상 상속인(선순위·대습상속인 포함)이 아닌 사람이 유언이나 사인증여로 받은 주택이면 켜세요. 1세대1주택 비과세 판정에서 상속주택으로 보지 않습니다(부동산거래관리과-307). 상속인이 유증·사인증여로 받은 주택은 상속주택이므로 켜지 않습니다."
+          >
+            <p className="text-caption text-muted-foreground/70 pt-1">
+              다주택 중과 판정에는 반영하지 않습니다.
+            </p>
+          </ToggleCard>
         </div>
 
         {/* §155②1~4호 순위 — 피상속인 2주택↑ 중 순위 부적격 */}

@@ -92,6 +92,13 @@ export interface HouseInfo {
   /** 상속개시일 (isInherited === true 시 필수) */
   inheritedDate?: Date;
   /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받은 주택인가 — isInherited === true 인 행에서만 의미.
+   * 1세대1주택 상속 특례(§155②③ · §156의2⑤⑦ · §156의3⑤)는 이 행을 상속주택으로 보지 않는다
+   * (부동산거래관리과-307 — `isHeirInheritedHouse`). 다주택 중과·조특법 §71의2는 읽지 않는다
+   * (계획서 `docs/00-pm/nbl-bequest-non-heir.plan.md` §4-4 · §6).
+   */
+  nonHeirBequest?: boolean;
+  /**
    * 공동상속주택(여럿이 지분으로 공동소유하는 1주택) 여부 — 소득세법 시행령 §155③ (2-A2).
    * isInherited === true 인 주택에서만 의미(UI가 isInherited ON 시에만 노출).
    */

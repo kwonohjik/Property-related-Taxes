@@ -63,6 +63,8 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     predecessorHouseAcquisitionDate: toOptionalDate(h.predecessorHouseAcquisitionDate),
     officialPrice: h.officialPrice,
     isInherited: h.isInherited,
+    // ⑭ 수유자 행 — 1주택 상속 특례만 읽는다(`isHeirInheritedHouse`)
+    nonHeirBequest: h.nonHeirBequest,
     isLongTermRental: h.isLongTermRental,
     isApartment: h.isApartment,
     isOfficetel: h.isOfficetel,

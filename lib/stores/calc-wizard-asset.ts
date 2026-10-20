@@ -553,6 +553,13 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
    *    명부 행과 같은 기본값·같은 이름이다.
    */
   isRankingDisqualifiedInheritedHouse?: boolean;
+  /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받았는가 — 취득원인 = 상속일 때만 의미. 취득일·취득가액은 상속 그대로다
+   * (취득시기 = 상속개시일 — 사전-2015-법령해석재산-0095). 비사업용 토지의 상속 특례(소득령 §168의14③1호·1의2호·
+   * 3호 나목·4호 나목 · §168의9③7호 · §168의10②1호)를 적용하지 않는다(서면5팀-927 · 부동산거래관리과-0994 ·
+   * 기준-2019-법령해석재산-0324 · 사전-2024-법규재산-0820). 계획서 `docs/00-pm/nbl-bequest-non-heir.plan.md`.
+   */
+  nonHeirBequest?: boolean;
   /** 증여자 취득일 (YYYY-MM-DD) */
   donorAcquisitionDate: string;
   /** 매매 환산취득가 사용 여부 */

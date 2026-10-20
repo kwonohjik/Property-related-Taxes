@@ -30,6 +30,7 @@
  */
 import { isWithinDeadline } from "../civil-period";
 import { resolve1562DeadlineYears } from "../data/article-156-2-completion-era";
+import { isHeirInheritedHouse } from "../transfer-inheritance-exclusion";
 import type { TransferTaxInput } from "../types/transfer.types";
 
 export type ReplacementHouseInput = Pick<
@@ -51,7 +52,7 @@ const acquiredOn = (h: RosterHouse): Date => h.predecessorHouseAcquisitionDate ?
 export function replacementHouseHeldUnits(input: ReplacementHouseInput): number {
   const acq = input.acquisitionDate.getTime();
   const houses = (input.houses ?? []).filter(
-    (h) => h.id !== input.sellingHouseId && !h.isInherited && acquiredOn(h).getTime() < acq,
+    (h) => h.id !== input.sellingHouseId && !isHeirInheritedHouse(h) && acquiredOn(h).getTime() < acq,
   ).length;
   const rights = (input.presaleRights ?? []).filter(
     (r) => r.type === "redevelopment_right" && r.acquisitionDate.getTime() < acq,

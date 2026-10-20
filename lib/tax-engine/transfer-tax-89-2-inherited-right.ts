@@ -11,6 +11,7 @@ import {
   isDecedentGiftExclusionApplicable,
   qualifiesAsInheritanceGeneralHouse,
 } from "./data/inheritance-general-house-era";
+import { isHeirInheritedHouse } from "./transfer-inheritance-exclusion";
 
 /**
  * 「상속개시 당시 보유한 주택」(§156의2⑥·⑦ · §156의3④·⑤ 후단) 요건이 날짜로 깨졌거나(`after`) 날짜를 몰라(`unknown`)
@@ -108,7 +109,7 @@ const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 export function hasInheritedHouseOtherThanSelling(input: Article89Clause2Input): boolean {
   const houses = input.houses ?? [];
   const sellingId = input.sellingHouseId ?? houses[0]?.id;
-  return houses.some((h) => h.isInherited === true && h.id !== sellingId);
+  return houses.some((h) => isHeirInheritedHouse(h) && h.id !== sellingId);
 }
 
 /**
@@ -126,7 +127,7 @@ export function inheritedHousesHeldVerdict(input: Article89Clause2Input): "yes" 
   const houses = input.houses ?? [];
   const sellingId = input.sellingHouseId ?? houses[0]?.id;
   const verdicts = houses
-    .filter((h) => h.isInherited === true && h.id !== sellingId)
+    .filter((h) => isHeirInheritedHouse(h) && h.id !== sellingId)
     .map((h) =>
       qualifiesAsInheritanceGeneralHouse({
         generalHouseAcquisitionDate: input.acquisitionDate,

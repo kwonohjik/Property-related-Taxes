@@ -30,6 +30,7 @@ import {
   buildForestDetail,
   buildPasture,
   resolveInheritanceStartDate,
+  isNonHeirBequest,
   buildVilla,
   buildOtherLand,
   buildRevenueTest,
@@ -165,6 +166,7 @@ export function mapAssetToNblInput(
     // §168조의14② 양도일 의제 (기간기준 전용)
     deemedTransferReason: (asString(asset.nblDeemedTransferReason) || "none") as DeemedTransferReason,
     deemedTransferDate:   parseDate(asString(asset.nblDeemedTransferDate)),
+    nonHeirBequest:       isNonHeirBequest(asset) || undefined,
     farmingSelf:             asBool(asset.nblFarmingSelf),
     // 조특령 §66⑭ 결격 과세기간 — 「소득세법 시행령」 §168의8② 후단 준용 (E2-09).
     // 형식 오류 토큰은 ⑧ validate가 이미 차단했으므로 여기서는 유효 연도만 실어 보낸다.
