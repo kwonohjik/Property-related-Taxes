@@ -31,6 +31,7 @@ import { CommercialAppurtenantLandSection } from "../CommercialAppurtenantLandSe
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
 import { RedevelopmentBlock } from "../RedevelopmentBlock";
 import { SuccessorRightAcquisitionBlock } from "../SuccessorRightAcquisitionBlock";
+import { SuccessorRightTypeToggle } from "../SuccessorRightTypeToggle";
 import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { NonHousingConversionExpandedPanel } from "../NonHousingConversionSection";
 import { DepreciationField } from "../DepreciationField";
@@ -169,6 +170,18 @@ export function AssetSectionAcquisition({
       {/* 지분 모드: 지분율을 최상단(토글 B 직후·취득원인 앞)에 배치 — 취득시기·원인이
           지분마다 다른 최상위 분기이므로 지분율이 그 자산을 규정하는 첫 입력값. */}
       {splitMode === "fractional" && ratioBlock}
+
+      {/* 입주권 지분 카드(둘째 이후) — 조합원 유형. ① 기본정보가 숨겨져 이 자리가 유일한 입력 경로다.
+          지분마다 취득 경위가 다를 수 있다(원래 지분 = 원조합원, 추가 지분 = 승계). 첫 카드 값 복사가 아니다.
+          취득원인 섹션 안의 취득가액 안내 카드·아래 승계/§166 블록이 이 값으로 갈리므로 그 앞에 둔다(UI 순서 = 로직 순서).
+          ⑧ 문구 위치는 `successorTypeToggleSectionLabel`(③ 취득정보)과 같은 술어(`shareAcquisitionOnly`). */}
+      {splitMode === "fractional" && !isFirst && asset.assetKind === "right_to_move_in" && (
+        <SuccessorRightTypeToggle
+          asset={asset}
+          onChange={onChange}
+          shareNote="※ 이 지분 카드만의 유형입니다. 지분마다 취득 경위가 다르면 카드별로 고르세요."
+        />
+      )}
 
       {/* 취득 원인 + 원인별 세부 입력 (별도 파일로 분리 — 800줄 정책) */}
       <CompanionAcquisitionCauseSection

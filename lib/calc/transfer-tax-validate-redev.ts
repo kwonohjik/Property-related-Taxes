@@ -24,11 +24,14 @@ import type { IssueField } from "./transfer-tax-validate-field";
 
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { successorTypeToggleSectionLabel } from "@/lib/calc/transfer-successor-right";
 export function validateRedevelopmentAsset(
   asset: AssetForm,
   label: string,
   /** 폼-전역 1세대 여부 — 토지 출자 완공APT 준공일 필수 조건(G3-4). 미전달(직접 호출)이면 요구하지 않는다. */
   isOneHousehold?: boolean,
+  /** 입주권 「조합원 유형」 질문이 있는 섹션 — 축 B 둘째 이후 지분 카드는 ③ 취득정보(`successorTypeToggleSectionLabel`). */
+  typeToggleSection: string = successorTypeToggleSectionLabel(false),
 ): string | null {
   // ── 분기 결정 필드 ──
   // UI display fallback과 동일(RedevelopmentBlock.tsx) + API 변환(buildRedevelopmentPayload).
@@ -276,7 +279,7 @@ export function validateRedevelopmentAsset(
      */
     const remedy =
       asset.assetKind === "right_to_move_in"
-        ? `① 기본정보의 「조합원 유형」을 "승계조합원"으로 바꾸세요.`
+        ? `${typeToggleSection}의 「조합원 유형」을 "승계조합원"으로 바꾸세요.`
         : `②-a "승계조합원 모드"를 ON 하세요.`;
     return fieldError("redevApprovalDate", `${label}: 인가일은 취득일 이후여야 합니다. 관리처분 인가 후 입주권을 승계 취득한 경우 ${remedy} (사전-2019-법령해석재산-0649)`);
   }

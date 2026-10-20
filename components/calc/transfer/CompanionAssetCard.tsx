@@ -135,6 +135,7 @@ export function CompanionAssetCard({
   const isPrimary = index === 0;
   // 지분 모드 companion(자산2+): ① 기본정보·② 양도정보는 같은 물건·같은 양도 사건이라 자산1과
   // 동일 → 숨김(자산1에서 1회 입력·엔진 mergePrimaryBasic 병합). 자산1(index 0)은 항상 노출.
+  // ⚠️ 입주권의 「조합원 유형」은 ①에 있지만 지분마다 다를 수 있어 ③ 취득정보에 같은 컴포넌트가 뜬다(`AssetSectionAcquisition` — `SuccessorRightTypeToggle`).
   const hideInheritedSections = splitMode === "fractional" && index > 0;
 
   /**
