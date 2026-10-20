@@ -24,6 +24,7 @@ import { RebuiltHouseLandBlock } from "./RebuiltHouseLandBlock";
 import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { LAND_CAUSE_META } from "./land-cause-meta";
+import { LandCarryoverDateNote } from "./LandCarryoverDateNote";
 import { buildingCauseDateNotices, landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 import { separateLandDateRequired } from "@/lib/calc/separate-land-date-required";
 
@@ -55,7 +56,7 @@ export function CompanionAcqDateSection(props: {
    * 1985-01-01로 바꾸지 않는다(원값 저장·사용처 파생). 지금은 1990.8.30. 전이면 어느 쪽이든 차단되지만(영 §163⑨
    * 단서 1호 — 후속 D1-4), 그 max 비교에서는 원 날짜가 의제취득일(영 §176의2④) 전인지가 산식을 가른다.
    */
-  landCause?: "" | "inheritance" | "gift";
+  landCause?: "" | "inheritance" | "gift" | "carryover_gift";
   /**
    * 건물을 상속·증여로 취득하고 토지는 매수한 자산(D2-2) — 호출부가 `effectiveBuildingCauseMix`로 1회 계산해 주입. 있으면 「취득일 다름」은
    * 강제 ON·잠금이고, **건물 칸**의 의제취득(§98) 클램프·배지는 끈다 — 건물 상속개시일·증여일은 사실값이다(D1 T-6의 건물판).
@@ -192,12 +193,15 @@ export function CompanionAcqDateSection(props: {
               required={!!landCause || !!buildingCause || (!!p.asset && separateLandDateRequired(p.asset))}
               trailing={isLandDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
+              {/* P3 A — 이월과세 토지의 취득일은 증여 등기접수일 한 곳이다(Q-8). 위 이월과세 정보에서 입력하고 여기는 읽기 전용(④·⑧은 같은 값을 정규화 사본으로 읽는다). */}
               <DateInput
-                value={p.landAcquisitionDate ?? ""}
+                value={landCause === "carryover_gift" ? (p.asset?.landCarryover?.giftRegistryDate ?? "") : (p.landAcquisitionDate ?? "")}
                 onChange={handleLandAcquisitionDateChange}
                 onBlur={handleLandAcquisitionDateBlur}
+                disabled={landCause === "carryover_gift"}
                 data-testid="acq-date-land"
               />
+              {landCause === "carryover_gift" && <LandCarryoverDateNote />}
               {landDateClampMsg && (
                 <p className="text-xs text-amber-700 dark:text-amber-400">
                   1985.1.1. 의제 취득일로 취득일 변경했습니다.

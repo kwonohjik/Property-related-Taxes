@@ -196,11 +196,12 @@ export function buildRows(
 
   const primary = asset ?? formData?.assets[0];
   // 파트 이월과세(P2 C) — 수증자 취득일 = 증여 등기접수일(자산 카드에 취득일 칸이 없다). 파트 열은 아래에서 파트별 기산일로 덮는다.
+  //   토지만 이월과세(P3 A)는 건물을 매수·신축했으므로 자산 취득일은 건물 취득일 그대로다(`buildingGifted`).
   const splitCarryover = mode === "split-2col" ? splitCarryoverView(result.splitDetail) : undefined;
   const acquisitionDate =
     acquisitionDateOverride && acquisitionDateOverride !== ""
       ? acquisitionDateOverride
-      : (splitCarryover?.giftRegistryDate || primary?.acquisitionDate) ?? "";
+      : ((splitCarryover?.buildingGifted ? splitCarryover.giftRegistryDate : undefined) || primary?.acquisitionDate) ?? "";
 
   // 양도가액 표시 — 지분 모드(자산 1건 + ratio < 1.0) 방어적 처리:
   //   form.contractTotalPrice는 100% 기준값이므로, 자산이 지분이라면 × ratio 적용해서 본 자산의 지분분 표시.

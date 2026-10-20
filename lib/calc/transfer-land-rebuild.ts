@@ -9,7 +9,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
-import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { effectiveLandAcquisitionCause, effectiveLandCarryover } from "./transfer-land-part-cause";
 import type { LandRebuildFacts, LandRebuildStartMode } from "@/lib/tax-engine/transfer-land-rebuild-rate";
 
 export interface LandRebuildScopeOpts {
@@ -41,6 +41,8 @@ export function landRebuildHost(asset: AssetForm, opts?: LandRebuildScopeOpts): 
   if (asset.assetKind !== "housing" || asset.isMixedUseHouse) return null;
   if (asset.hasSeperateLandAcquisitionDate !== true) return null;
   if ((effectiveSelfOwns(asset) ?? "both") !== "both" || asset.transferType === "burdened_gift") return null;
+  // P3 A(토지 이월과세)는 열지 않는다 — 토지 세율 기산은 이월과세 해결자가 증여자 취득일로 정하고, 이 통산과의 결합은 범위 밖이다(⑫·엔진 미설계).
+  if (effectiveLandCarryover(asset)) return null;
   const landOverlay = !!effectiveLandAcquisitionCause(asset);
   if (asset.acquisitionCause === "newConstruction") return landOverlay ? "newConstruction" : null;
   if (asset.acquisitionCause === "purchase") return landOverlay ? null : "purchase";

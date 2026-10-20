@@ -132,6 +132,8 @@ export function validateAssetAcquisition(
   // ── 비주택 → 주택 용도변경 (§95⑤·⑥ · 시행령 §154⑤ 단서) ──
   // ⚠️ **모든 조기 return보다 앞**이다 — 부담부증여(C-24)·겸용주택(C-14)·이월과세(C-21)는
   //    각자 전용 검증으로 빠져나가므로, 뒤에 두면 차단이 필요한 바로 그 조합에서 dead code가 된다.
+  // P3 A(토지 이월과세) — 함께 양도 자산이 있으면 leaf S2′(④ `companionAssets` 생성 조건과 같다).
+  const hasCompanions = (form?.assets?.length ?? 0) > 1;
   const conversionError = validateUsageConversion(asset, label, formTransferDate);
   if (conversionError) return conversionError;
 
@@ -324,13 +326,13 @@ export function validateAssetAcquisition(
     // 토지·건물 분리(「토지는 다른 원인으로 취득」·소유자 분리) — 매매와 같은 분리 검증 전체(D1 G-11). 종전엔
     // 원인 규칙만 불러 양도시 기준시가·구분양도 합계·토지 평가액·파트 자본적지출이 ⑧을 통과하고 ⑫에서 400이
     // 되거나(막다른 길) 200 오답이 났다. 첫 줄이 `validateLandPartCause`(엔진·⑫와 같은 leaf)다.
-    return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
+    return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset, hasCompanions });
   }
 
   if (!asset.acquisitionDate) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
   // D1-2 「토지는 다른 원인으로 취득」(매매 호스트) — 총액·산정 방식 규칙보다 먼저. 늦으면 같은 날·토지일 비움이
   //   「취득가액 합 초과」 같은 엉뚱한 메시지로 뜬다(UI 설계 §4). 원인이 없으면 null(회귀 0).
-  const landCauseErr = validateLandPartCause(asset, label, { isNonPrimary: isNonPrimaryAsset });
+  const landCauseErr = validateLandPartCause(asset, label, { isNonPrimary: isNonPrimaryAsset, formTransferDate, hasCompanions });
   if (landCauseErr) return landCauseErr;
 
   const isSalesCase = asset.isSalesCaseAcquisition === true;
@@ -691,7 +693,7 @@ export function validateAssetAcquisition(
 
   // 토지/건물 분리 직접 입력(§166⑥) — 입력 합이 총액을 초과하면 잔액이 음수가 된다.
   // 판정식은 엔진 splitPair와 단일 소스(isSplitPairOverflow) — ⑧ 규칙(UI 통과 ↔ validate 차단 모순) 방지.
-  const splitErr = validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset });
+  const splitErr = validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: isNonPrimaryAsset, hasCompanions });
   if (splitErr) return splitErr;
 
   return null;

@@ -41,10 +41,8 @@ export function SplitCarryoverParts({ asset, onChange, isAfter2024, giftTaxShare
         sectionNum={2}
         value={land}
         onPatch={patchLand}
-        valuation={asset.landAcquisitionPrice ?? ""}
-        onValuationChange={(v) => onChange({ landAcquisitionPrice: v })}
+        valuation={{ value: asset.landAcquisitionPrice ?? "", onChange: (v) => onChange({ landAcquisitionPrice: v }), field: "landAcquisitionPrice" }}
         anchorPrefix="landCarryover"
-        valuationField="landAcquisitionPrice"
         isAfter2024={isAfter2024}
       />
       <SplitPartCarryoverCard
@@ -52,45 +50,70 @@ export function SplitCarryoverParts({ asset, onChange, isAfter2024, giftTaxShare
         sectionNum={3}
         value={building}
         onPatch={patchBuilding}
-        valuation={asset.buildingAcquisitionPrice ?? ""}
-        onValuationChange={(v) => onChange({ buildingAcquisitionPrice: v })}
+        valuation={{ value: asset.buildingAcquisitionPrice ?? "", onChange: (v) => onChange({ buildingAcquisitionPrice: v }), field: "buildingAcquisitionPrice" }}
         anchorPrefix="carryover"
-        valuationField="buildingAcquisitionPrice"
         isAfter2024={isAfter2024}
         inheritedNotice
       />
 
-      <ToneCard tone="amber" sectionNum={4} title="증여세 상당액 (필요경비 가산)" bodyClassName="space-y-3">
-        <FieldCard
-          label="증여세 산출세액"
-          field="carryover.giftTaxCalculated"
-          hint={
-            "「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. 토지·건물 몫은 아래 과세가액과 위 증여 신고가액으로 자동 안분됩니다." +
-            giftTaxShareHint
-          }
-          trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
-        >
-          <CurrencyInput
-            label=""
-            value={building.giftTaxCalculated}
-            onChange={(v) => patchBuilding({ giftTaxCalculated: v })}
-            placeholder="없으면 0"
-            data-testid="split-carryover-gift-tax-calculated"
-          />
-        </FieldCard>
-        <FieldCard
-          label="증여세 과세가액"
-          field="carryover.giftTaxBase"
-          hint={"「상속세 및 증여세법」 제47조 과세가액 — 안분 분모입니다. 증여받은 재산 전체 기준이며, 토지·건물 증여 신고가액의 합은 이 금액을 넘을 수 없습니다." + giftTaxShareHint}
-        >
-          <CurrencyInput
-            label=""
-            value={building.giftTaxBase}
-            onChange={(v) => patchBuilding({ giftTaxBase: v })}
-            data-testid="split-carryover-gift-tax-base"
-          />
-        </FieldCard>
-      </ToneCard>
+      <SplitCarryoverGiftTaxCard
+        sectionNum={4}
+        value={building}
+        onPatch={patchBuilding}
+        anchorPrefix="carryover"
+        partsLabel="토지·건물"
+        giftTaxShareHint={giftTaxShareHint}
+      />
     </>
+  );
+}
+
+/**
+ * 증여세 상당액(필요경비 가산) 카드 — 증여 사건 1벌의 산출세액·과세가액(영 §163의2②). C(`carryover`)·A(`landCarryover`) 공용.
+ * 파트 몫은 엔진이 «산출세액 × 파트 증여 신고가액 ÷ 과세가액»으로 안분한다(자동 안분 금지 원칙의 예외 — 명문 안분).
+ */
+export function SplitCarryoverGiftTaxCard(props: {
+  sectionNum: number;
+  value: CarryoverTaxationForm;
+  onPatch: (patch: Partial<CarryoverTaxationForm>) => void;
+  anchorPrefix: "carryover" | "landCarryover";
+  /** 안분 대상 파트 이름 — C 「토지·건물」, A 「토지」 */
+  partsLabel: "토지·건물" | "토지";
+  giftTaxShareHint: string;
+}) {
+  const { value: c, onPatch, anchorPrefix, partsLabel, giftTaxShareHint } = props;
+  const sumNote = partsLabel === "토지" ? "토지 증여 신고가액은 이 금액을 넘을 수 없습니다." : "토지·건물 증여 신고가액의 합은 이 금액을 넘을 수 없습니다.";
+  return (
+    <ToneCard tone="amber" sectionNum={props.sectionNum} title="증여세 상당액 (필요경비 가산)" bodyClassName="space-y-3">
+      <FieldCard
+        label="증여세 산출세액"
+        field={anchorPrefix === "landCarryover" ? "landCarryover.giftTaxCalculated" : "carryover.giftTaxCalculated"}
+        hint={
+          `「소득세법 시행령」 제163조의2 제2항 제1호 — 증여받은 자산 전체에 대한 증여세 산출세액. ${partsLabel} 몫은 아래 과세가액과 ${partsLabel} 증여 신고가액으로 자동 안분됩니다.` +
+          giftTaxShareHint
+        }
+        trailing={<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="시행령 §163의2" />}
+      >
+        <CurrencyInput
+          label=""
+          value={c.giftTaxCalculated}
+          onChange={(v) => onPatch({ giftTaxCalculated: v })}
+          placeholder="없으면 0"
+          data-testid="split-carryover-gift-tax-calculated"
+        />
+      </FieldCard>
+      <FieldCard
+        label="증여세 과세가액"
+        field={anchorPrefix === "landCarryover" ? "landCarryover.giftTaxBase" : "carryover.giftTaxBase"}
+        hint={`「상속세 및 증여세법」 제47조 과세가액 — 안분 분모입니다. 증여받은 재산 전체 기준이며, ${sumNote}` + giftTaxShareHint}
+      >
+        <CurrencyInput
+          label=""
+          value={c.giftTaxBase}
+          onChange={(v) => onPatch({ giftTaxBase: v })}
+          data-testid="split-carryover-gift-tax-base"
+        />
+      </FieldCard>
+    </ToneCard>
   );
 }

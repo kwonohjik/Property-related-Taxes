@@ -35,7 +35,7 @@ test.describe("D0 — 신축 + 토지 상속·증여 화면", () => {
     await expect(page.locator('[data-field="landDecedentAcquisitionDate"]')).toHaveCount(1);
 
     await expect(page.getByTestId("land-gift-carryover-notice")).toHaveCount(0);
-    await page.getByTestId("land-acq-cause").getByRole("radio", { name: "증여" }).check();
+    await page.getByTestId("land-acq-cause").getByRole("radio", { name: "증여", exact: true }).check();
     await expect(statutory).toHaveCount(0);
     await expect(page.getByText("증여자 취득일")).toHaveCount(0);
     // R-1 — 이월과세(§97의2①) 미지원 고지

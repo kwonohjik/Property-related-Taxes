@@ -63,15 +63,15 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
   const displayAcqDate =
     acquisitionDateOverride && acquisitionDateOverride !== ""
       ? acquisitionDateOverride
-      : // 파트 이월과세(P2 C)는 수증자 취득일 = 증여 등기접수일이다(자산 카드에 취득일 칸이 없다).
-        (splitCarryover?.giftRegistryDate || primary?.acquisitionDate) ?? "";
+      : // 파트 이월과세(P2 C)는 수증자 취득일 = 증여 등기접수일이다(자산 카드에 취득일 칸이 없다). 토지만 이월과세(P3 A)는 건물 취득일 그대로.
+        ((splitCarryover?.buildingGifted ? splitCarryover.giftRegistryDate : undefined) || primary?.acquisitionDate) ?? "";
   items.set("acquisitionDate", {
     label: acquisitionDateLabel ? `취득일자 ${acquisitionDateLabel}` : "취득일자",
     value: fmtDate(displayAcqDate),
     formula: acquisitionDateOverride
       ? "이월과세 적용 시 증여자 취득일 기산 (소득세법 §97조의2 ①)"
       : splitCarryover
-        ? `수증자 취득일 = 증여 등기접수일 — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
+        ? `${splitCarryover.buildingGifted ? "수증자 취득일 = 증여 등기접수일" : "건물 취득일 — 토지는 이월과세(증여)"} — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
         : "사용자 입력 (등기접수일 또는 잔금청산일 중 빠른 날)",
     legalBasis: acquisitionDateOverride || splitCarryover ? "소득세법 §97조의2" : "소득세법 §98",
     perAsset: isAggregate

@@ -736,7 +736,7 @@ test.describe("P8 — 신축 + 토지 상속·증여", () => {
     test.setTimeout(90_000);
     await setupNewConstruction(page);
     await landAcqToggle(page).getByRole("switch").click();
-    await page.getByTestId("land-acq-cause").getByRole("radio", { name: "증여" }).check();
+    await page.getByTestId("land-acq-cause").getByRole("radio", { name: "증여", exact: true }).check();
 
     await expect(page.getByText("토지 증여 신고가액")).toBeVisible();
     await expect(page.getByText("토지 상속개시일 평가액")).toHaveCount(0);

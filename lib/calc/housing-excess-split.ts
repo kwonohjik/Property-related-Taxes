@@ -32,6 +32,7 @@ import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { deriveLegacyPartAcqMode, isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
+import { effectiveLandCarryover } from "./transfer-land-part-cause";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { usesPhdGate } from "./transfer-lump-sum-base-gate";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
@@ -155,7 +156,8 @@ export function housingExcessUsesPhdSplit(asset: AssetForm, transferDate: string
 export function housingExcessPartModeMismatch(asset: AssetForm): "landAcquisitionDate" | "landAcqMode" | "buildingAcqMode" | null {
   if (!sameDayPartRadiosShown(asset)) return null;
   const mode = deriveLegacyPartAcqMode(asset);
-  const land = !effectiveLandAcquisitionCause(asset) && effectivePartAcqMode(asset.landAcqMode, asset) !== mode;
+  // 토지 원인 고정 안내(D1·P3 A)가 뜨면 토지 라디오가 없다.
+  const land = !effectiveLandAcquisitionCause(asset) && !effectiveLandCarryover(asset) && effectivePartAcqMode(asset.landAcqMode, asset) !== mode;
   const building = effectivePartAcqMode(asset.buildingAcqMode, asset) !== mode;
   if ((land || building) && !asset.landAcquisitionDate) return "landAcquisitionDate";
   if (land) return "landAcqMode";

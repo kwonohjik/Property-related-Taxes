@@ -1,5 +1,5 @@
 /**
- * ④ 주택 split **파트 이월과세**(소득세법 §97의2①) — 폼 → payload 변환 (P2 C).
+ * ④ 주택 split **파트 이월과세**(소득세법 §97의2①) — 폼 → payload 변환 (P2 C · P3 A).
  *
  * 설계: docs/02-design/features/transfer-split-part-carryover.engine.design.md §1 (와이어 정본) · ui.design.md §2.4·§3.1
  *
@@ -13,7 +13,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { parseAmount } from "@/lib/calc/number-parse";
-import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { effectiveCarryoverDonorSplit, effectiveLandCarryover } from "./transfer-land-part-cause";
 
 /** ⑫ `carryoverGiftEvent` — 증여 그 자체의 사실. */
 export interface SplitCarryoverEventPayload {
@@ -40,16 +40,20 @@ export interface SplitCarryoverPayload {
   landAcquisitionCause: "carryover_gift";
   carryoverGiftEvent: SplitCarryoverEventPayload;
   landCarryoverPart: SplitCarryoverPartPayload;
-  buildingCarryoverPart: SplitCarryoverPartPayload;
+  /** C만 — A(토지만 이월과세)는 싣지 않는다(엔진 T15 stray 400). */
+  buildingCarryoverPart?: SplitCarryoverPartPayload;
 }
 
 /**
- * C의 증여 **사건** 출처 서브폼 — 등기접수일·산출세액·과세가액·관계·사망·적용배제가 이 한 벌이다.
- * 건물 파트의 증여자 입력도 같은 `carryover`가 받는다(토글 전 입력이 건물 값으로 재해석된다 — UI 설계 §3.3). 토지 파트는 `landCarryover`.
+ * 증여 **사건** 출처 서브폼 — 등기접수일·산출세액·과세가액·관계·사망·적용배제가 이 한 벌이다(UI 설계 §2.1 Q-2).
+ *   · 호스트 「이월과세(증여)」(C) — `carryover`. 건물 파트의 증여자 입력도 같은 서브폼이 받는다(토글 전 입력이 건물 값으로 재해석된다 — §3.3).
+ *   · 그 밖(P3 A — 건물 매매·신축 + 토지 이월과세) — `landCarryover`. 토지 파트 입력도 같은 서브폼이다.
  * ⑤(카드 바인딩)·④·⑧이 이 함수 하나로 같은 서브폼을 읽는다.
  */
-export function splitCarryoverEventSource(asset: Pick<AssetForm, "carryover">): CarryoverTaxationForm | undefined {
-  return asset.carryover;
+export function splitCarryoverEventSource(
+  asset: Pick<AssetForm, "carryover" | "landCarryover" | "acquisitionCause">,
+): CarryoverTaxationForm | undefined {
+  return asset.acquisitionCause === "carryover_gift" ? asset.carryover : asset.landCarryover;
 }
 
 /** 파트 서브폼 → 파트 payload. 금액 칸은 비었거나 0이면 `undefined`(빈 값을 「입력했다」로 오인하지 않는다 — ⑫ 필수 위반이 필드 오류로 드러난다). */
@@ -86,7 +90,7 @@ function buildEvent(c: CarryoverTaxationForm | undefined): SplitCarryoverEventPa
 }
 
 /**
- * C payload — `effectiveCarryoverDonorSplit`가 거짓이면 `undefined`(키를 하나도 내지 않는다: 엔진 T15 stray 400 방지).
+ * C·A payload — 둘 다 아니면 `undefined`(키를 하나도 내지 않는다: 엔진 T15 stray 400 방지). A는 사건 + 토지 파트만, 함께 양도 자산이면 싣지 않는다(엔진 S0 — ⑧이 막는다).
  *
  * `landAcquisitionDate`·`acquisitionDate`·`isSeparateAcquisition: false`·파트 방식 `actual`·`landAcquisitionPrice`·`buildingAcquisitionPrice`·양도가액 구분은
  * `buildSplitPayload`/`transfer-tax-api.ts`가 같은 술어로 싣는다. 최상위 `carryoverTaxation`은 싣지 않는다(상호배제 R-1).
@@ -97,11 +101,18 @@ export function buildSplitCarryoverPayload(
   ratioed: (v: string | undefined) => number | undefined,
   opts?: { isNonPrimary?: boolean },
 ): SplitCarryoverPayload | undefined {
-  if (!effectiveCarryoverDonorSplit(asset, opts)) return undefined;
-  return {
-    landAcquisitionCause: "carryover_gift",
-    carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
-    landCarryoverPart: buildPart(asset.landCarryover, ratioed),
-    buildingCarryoverPart: buildPart(asset.carryover, ratioed),
-  };
+  if (effectiveCarryoverDonorSplit(asset, opts))
+    return {
+      landAcquisitionCause: "carryover_gift",
+      carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
+      landCarryoverPart: buildPart(asset.landCarryover, ratioed),
+      buildingCarryoverPart: buildPart(asset.carryover, ratioed),
+    };
+  if (!opts?.isNonPrimary && effectiveLandCarryover(asset))
+    return {
+      landAcquisitionCause: "carryover_gift",
+      carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
+      landCarryoverPart: buildPart(asset.landCarryover, ratioed),
+    };
+  return undefined;
 }

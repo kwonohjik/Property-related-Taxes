@@ -31,7 +31,7 @@ export interface SplitAcquisitionFormSlice {
    * D2(건물 상속·증여 + 토지 매매): 상속·증여 호스트에서는 `"purchase"`만 유효하다 — 읽는 쪽은 `effectiveBuildingCauseMix`
    * (D1 술어 `effectiveLandAcquisitionCause`는 `"purchase"`를 돌려주지 않는다 — D1 소비처가 매매 토지를 상속 토지로 읽는 것을 막는다).
    */
-  landAcquisitionCause: "" | "inheritance" | "gift" | "purchase";
+  landAcquisitionCause: "" | "inheritance" | "gift" | "purchase" | "carryover_gift";
   /**
    * 「토지는 다른 원인으로 취득」 토글을 **어느 건물 취득원인에서 켰는가**(D1-2 — 클라이언트 전용, ④가 보내지 않는다).
    * 유효 원인은 이 값이 현재 `acquisitionCause`와 같을 때만 성립한다(`effectiveLandAcquisitionCause`). 신축에서 켠 뒤

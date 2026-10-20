@@ -32,7 +32,8 @@ import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
-import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
+import { landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
+import { partCarryover } from "@/lib/calc/transfer-land-part-cause";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { generalExtensionAppraisalApplies } from "@/lib/calc/extension-appraisal-penalty";
@@ -250,6 +251,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       transferType: props.asset?.transferType,
       selfOwns: props.asset?.selfOwns,
       carryoverDonorSplit: props.asset?.carryoverDonorSplit,
+      // P3 A — 정규화가 토지 취득일을 증여 등기접수일로 덮는다. 빠지면 빈 날짜로 덮여 UI만 «별개 취득 아님»이 된다.
+      landCarryover: props.asset?.landCarryover,
     });
   // 토지·건물 파트별 취득 방식 — 사용자가 아직 파트별 라디오를 선택하지 않았으면("") 자산 전체
   // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).
@@ -281,7 +284,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     // `input.expenses = parseAmount(primary.directExpenses)`(transfer-tax-api.ts:238-243)를 받아
     // live하므로, 넘기지 않으면 legacy 자산에서 UI 숨김 ↔ 엔진 throw로 갈린다.
     // 같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — **인자까지 같아야** 한다.
-    expenses: parseAmount(props.asset?.directExpenses ?? ""),
+    // P2 C·P3 A — ④는 파트 이월과세 토지에서 이 총액을 싣지 않는다(엔진 S8) — 인자도 같게 0.
+    expenses: props.asset && partCarryover(props.asset).land ? 0 : parseAmount(props.asset?.directExpenses ?? ""),
   };
   const acqStdNeedCtx = {
     landMode: effLandAcqMode,
@@ -327,8 +331,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
   const isMixedPerPart = !!props.asset && isMixedUsePerPartAcq(props.asset);
 
   const isGeneralBuilding = props.assetKind === "general_building";
-  // 「토지는 다른 원인으로 취득」(D1-2 매매 호스트) — 날짜 영역·파트 블록·PHD 게이트가 같은 값을 쓴다(1회 계산 주입).
-  const landCause = props.asset ? effectiveLandAcquisitionCause(props.asset) : "";
+  // 「토지는 다른 원인으로 취득」(D1-2 매매 호스트 · P3 A 이월과세) — 날짜 영역·파트 블록·PHD 게이트가 같은 값을 쓴다(1회 계산 주입).
+  const landCause = props.asset ? landCauseDisplay(props.asset) : "";
 
   return (
     <div className="space-y-3 rounded-md border border-border bg-background p-3">

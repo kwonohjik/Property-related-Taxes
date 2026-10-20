@@ -49,8 +49,10 @@ interface Props {
   /**
    * 토지를 상속·증여로 취득한 매매 건물(D1-2) — 호출부가 `effectiveLandAcquisitionCause`로 **1회 계산해 주입**한다.
    * 있으면 토지 방식은 실거래가(평가액) 고정 안내, 토지 가액 칸 라벨은 평가액 문구가 된다(추계 불가 — 영 §163⑨).
+   * P3 A `"carryover_gift"`(토지 이월과세)도 같은 고정·라벨이고, 영 §163⑨ 단서 카드(1990.8.30.·2005.4.30. 전 상속·증여)는 열지 않는다 —
+   * 이월과세 증여는 양도일 전 10년 안이라 단서 구간에 닿지 않는다(`landCauseDisplay`).
    */
-  landCause?: "" | "inheritance" | "gift";
+  landCause?: "" | "inheritance" | "gift" | "carryover_gift";
   /**
    * 건물을 상속·증여로 취득하고 토지는 매수한 자산(D2-2) — 호출부가 `effectiveBuildingCauseMix`로 1회 계산해 주입. 있으면 건물 방식은
    * 실거래가(평가액) **고정 칩**이고 건물 가액 칸 라벨은 「건물 상속개시일 평가액」·「건물 증여 신고가액」이다(영 §163⑨ — 추계 불가).
@@ -269,6 +271,8 @@ function PartAcqStdPrice(props: {
 
 
 export function LandBuildingSplitSection(props: Props) {
+  // 영 §163⑨ 단서 카드는 상속·증여 토지(D1)만 — 이월과세 토지(P3 A)는 단서 구간에 닿지 않는다.
+  const d1Cause = props.landCause === "inheritance" || props.landCause === "gift" ? props.landCause : undefined;
   // 축 B 취득시 기준시가 입력 — 별개 취득 전용.
   //
   // **토지분은 자산 종류와 무관하게 필요하다** — `㎡당 개별공시지가 × 면적`(§99①1호 가목)이
@@ -400,20 +404,20 @@ export function LandBuildingSplitSection(props: Props) {
             actualHint={props.landCause ? LAND_CAUSE_META[props.landCause].hint : undefined}
           />
           {/* D1-4b — 1990.8.30. 전 상속·증여 토지: 평가액(①) 바로 아래에서 영 §164④ 가액(②)을 구한다(단서 구간일 때만 렌더). */}
-          {props.landCause && props.asset && props.onAssetChange && (
+          {d1Cause && props.asset && props.onAssetChange && (
             <LandSec164Card asset={props.asset} onChange={props.onAssetChange} transferDate={props.transferDate} />
           )}
           {/* D1-H — 1990.8.30.~2005.4.29. 상속·증여 주택 부수토지(건물 매매): 평가액 아래에서 영 §164⑦ 가액의 토지 몫(②)을 구한다(구간일 때만 렌더). */}
-          {props.landCause && props.asset && props.onAssetChange && (
+          {d1Cause && props.asset && props.onAssetChange && (
             <HouseLandSec164Card asset={props.asset} onChange={props.onAssetChange} />
           )}
           {/* 2005.4.30. 이후에 받은 토지 — 이 주택이 더 늦게 처음 공시됐으면 최초 공시일을 받아 위 카드를 연다(주택별 최초공시일, 매매 호스트만 — D1-H Q-2). */}
-          {props.landCause && props.asset && props.onAssetChange && props.asset.acquisitionCause === "purchase" && (
+          {d1Cause && props.asset && props.onAssetChange && props.asset.acquisitionCause === "purchase" && (
             <HouseFirstDisclosureEntryCard
               asset={props.asset}
               onChange={props.onAssetChange}
               baseDate={props.asset.landAcquisitionDate}
-              baseDateLabel={`토지 ${LAND_CAUSE_META[props.landCause].dateLabel}`}
+              baseDateLabel={`토지 ${LAND_CAUSE_META[d1Cause].dateLabel}`}
               open={houseLandSec164Applies(props.asset)}
             />
           )}

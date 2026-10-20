@@ -52,6 +52,7 @@ import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildLandRebuildPayload } from "./transfer-land-rebuild";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
@@ -322,8 +323,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary.assetContractDate || undefined,
     expenses:
-      // P2 C — 자산 단위 필요경비 총액(이전 입력 형식)은 파트에 안분되지 않는다(엔진 S8). 파트 자본적지출 칸이 정본이라 숨은 잔재는 싣지 않는다.
-      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive || effectiveCarryoverDonorSplit(primary)
+      // P2 C·P3 A — 자산 단위 필요경비 총액(이전 입력 형식)은 파트에 안분되지 않는다(엔진 S8). 파트 자본적지출 칸이 정본이라 숨은 잔재는 싣지 않는다.
+      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive || partCarryover(primary).land
         ? 0
         : primaryFractional
           ? applyRatio(parseAmount(primary.directExpenses), primaryRatio)

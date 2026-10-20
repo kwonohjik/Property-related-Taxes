@@ -429,3 +429,31 @@ PC1~PC7의 B판 + **D2 회귀**(상속·증여 호스트 D2 격자 `transfer-lan
 - 격자 `__tests__/calc/transfer-split-part-carryover.c.parity-grid.test.ts` — 폼 → ④ body → ⑫ route와 ⑧(단계 0·1)을 같은 폼에서 나란히. 기준 셀 결정세액 300,018,000(엔진 C_NEW와 일치).
 - E2E `e2e/transfer-split-part-carryover-c.spec.ts`(요청 body 새 키·결과 4뷰·컴패니언·다건·1세대1주택·이력 복원·구 이력·handoff 상태·⑧ 순서·모바일) + `transfer-validation-field-jump.spec.ts` «c: » 18건.
 - 개발 서버: 워크트리 `node_modules`가 심볼릭 링크라 Turbopack이 root 밖으로 보고 panic한다 — E2E를 돌릴 때만 `next.config.ts`에 `turbopack.root`를 임시로 줬다(커밋하지 않는다).
+
+---
+
+## 13. P3(A) 구현 환류 (2026-10-20, Do 단계 — 설계와 달라진 점 · 설계가 말하지 않은 것)
+
+| # | 설계 | 구현 | 근거 |
+|---|---|---|---|
+| U-19 | §2.2 H-4 | `effectiveLandAcquisitionCause`가 `inheritance`·`gift`만 돌려준다(캐스트 삭제). ⑤ `LandPartCauseBlock`도 저장값을 캐스트하지 않고 `landCauseDisplay`에서 읽는다 | 실측: P2 머지 후에도 저장값 `carryover_gift`가 매매·신축 두 호스트에서 `TypeError … reading 'label'`로 렌더를 깼다. 캐스트만 바꾸고 A를 열지 않으면 P1 테스트 2건(`body-spread` · D1-Z3 `carry` 칸)이 캐스트 통과에 기대고 있어 빨개진다 — 그래서 단독 PR이 아니라 P3 첫 단계로 함께 했다. 두 테스트는 A 폼 경로로 옮겼다(D1-Z3 `carry` 칸은 이제 ⑧이 A로 읽어 증여 등기접수일을 요구 ⇔ ⑫ 400) |
+| U-20 | §2.2 `effectiveLandCarryover` = … ∧ 소유자 분리 아님 ∧ 부담부증여 아님 ∧ 첫 자산 | **세 조건을 술어에 넣지 않았다.** 호스트·분리·호스트 태그·원인만 본다. 소유자 분리·부담부증여는 leaf S4가, 함께 양도 자산은 ⑧ 맨 앞(leaf S0 문구)이 막고, ④는 함께 양도 자산이면 키를 싣지 않는다(`partCarryover`·`buildSplitCarryoverPayload`의 `isNonPrimary`) | 술어에서 조용히 끄면 토지가 «매매 토지 + 증여 신고가액»으로 계산된다(D1과 같은 이유 — D1 술어도 이 셋을 거르지 않고 leaf가 막는다). 격자 `구조:` 셀 2개가 ⑧ 차단 ⇔ ⑫ 400 |
+| U-21 | §2.3 `CarryoverGiftBlock partMode` | **partMode를 두지 않았다.** 새 `LandCarryoverCard`가 `SplitPartCarryoverCard`(증여 신고가액 칸 선택화) + `SplitCarryoverParts`에서 추출한 `SplitCarryoverGiftTaxCard` + `CarryoverGiftExclusionSection`(`anchorPrefix` 추가)를 조립한다 | `CarryoverGiftBlock`은 418줄이고 모든 칸이 `carryover`에 묶여 있다 — partMode를 얹으면 자산 전체 이월과세 경로를 건드린다(Surgical). A의 토지 증여 신고가액은 기존 토지 가액 칸이 받으므로 카드에서 뺐다(같은 `data-field` 두 개 금지 — RTL·E2E가 앵커 각 1개를 단언) |
+| U-22 | §2.5 `validateSplitCarryoverInputs` | 이름을 `validateSplitCarryoverParts`로 바꾸고 C·A 공용으로 일반화했다. 끝의 `validateSplitDirectInputs` 호출은 호출부로 옮겼다(C: `validateCarryoverAsset` · A: `validateSplitDirectInputs` 자신이 `validateLandPartCause` 다음에 잇는다) | A 위임(`validateLandPartCause` → 이 모듈)과 이 모듈의 `validateSplitDirectInputs` import가 순환을 만든다 |
+| U-23 | §4.4 ⑧ 순서 | 함께 양도 2번째 이후 자산의 A는 **맨 앞**에서 막는다(입력을 다 채운 뒤 알게 하지 않는다). 앵커는 토지 취득 원인 | 엔진 S0 |
+| U-24 | §4.3 「같은 날(Q-4): A에서는 차단하지 않는다 → leaf 확정 필요(E-5)」 | **⑧이 막는다**(D1과 같은 ⑤·⑧ 정책, ⑫는 통과). 앵커 `landCarryover.giftRegistryDate` | 같은 날이면 `isSeparateAcquisition`이 false가 되어 파트 완결 규칙이 서지 않는다 — D1·D2가 같은 이유로 막는다. leaf를 바꾸지 않는 보수적 선택(격자 strictOnly 셀) |
+| U-25 | — (설계 없음) | 신축 호스트 건물 취득가액 후퇴(`splitBuildingAcqPriceInput` — 「신축비용」 칸)가 A에서도 서게 했다 | 빠지면 신축 + A에서 건물 취득가액이 비어 ⑧이 화면에 없는 건물 칸을 요구했다(probe에서 발견) |
+| U-26 | — | 구주택 멸실·신축 통산(`landRebuildHost`)은 A에서 열지 않는다. 매매 호스트 축 B의 영 §163⑨ 단서 카드 3종(`LandSec164Card`·`HouseLandSec164Card`·`HouseFirstDisclosureEntryCard`)도 D1 원인에서만 연다 | 매매 호스트 판정이 «토지 overlay 없음»이라 A가 D1 술어에서 빠진 뒤 통산 블록이 열렸다. 이월과세 증여는 양도일 전 10년 안이라 단서 구간에 닿지 않는다(격자 `잔재:` 셀) |
+| U-27 | §6 ⑦ | **결과 결함 수정**: 신고서 합계·건물 열과 상세명세서 취득일이 «파트 이월과세면 수증자 취득일 = 증여 등기접수일»(C 전제)로 고정돼 있어 A의 건물 매수일(2021-03-01)이 등기접수일(2023-03-01)로 나왔다. view에 `buildingGifted`(건물 파트도 증여)를 두고 두 뷰가 그것을 읽는다. 상세명세서 산식 문구도 「건물 취득일 — 토지는 이월과세(증여)」로 갈린다 | `split-carryover-p3a.views.ui.anchor.test.tsx` · E2E 신고서 취득일자 행 |
+| U-28 | §4.3 Q-8 | 읽는 쪽 사본은 별 함수 `normalizeSplitCarryoverInputs`가 아니라 기존 `normalizeBuildingCauseInputs`에 A 분기로 넣었다(토지 취득일 ← 증여 등기접수일, 토지 방식 `actual`) | ④·⑥·⑧이 이미 그 한 함수를 통과시킨다 — 새 통과 지점을 만들면 빠뜨리는 소비처가 생긴다 |
+| U-29 | — | 다건 ⑧(`validateMultiSupportedMode`)이 A도 「단건 전용」으로 막는다. ④ `expenses`는 `partCarryover(primary).land`이면 0(C·A 공통, 엔진 S8) | 설계 §2.6 «A만 신규 구멍» |
+| U-30 | — | ⑤·⑧이 취득시 기준시가 필요 판정에 넘기는 `expenses`도 ④와 같게 `partCarryover(asset).land`이면 0(`withExpenses` · `CompanionAcqPurchaseBlock` `acqStdNeedFlags`) | 숨은 이전 형식 필요경비 잔재가 남으면 ⑧이 계산에 쓰이지 않는 건물 기준시가를 요구했다(격자 「숨은 이전 형식 필요경비」 셀이 잡음) |
+| U-31 | — | `CompanionAcqPurchaseBlock`의 `isSeparateAcquisition` 부분 객체 호출에 `landCarryover`를 넘긴다 | 빠지면 A 정규화가 토지 취득일을 빈 등기접수일로 덮어 ⑤만 «별개 취득 아님» — ④가 읽지 않는 자산 전체 「취득가액 산정 방식·취득가액 *」 칸이 떴다(P2 Check ②와 같은 부류) |
+
+### 13.1 검증 요약
+
+- 격자 `__tests__/calc/transfer-split-part-carryover.a.parity-grid.test.ts` — 매매·신축 두 호스트 × 셀(leaf 소관·⑧ 전용·잔재·구조) + 앵커·S9·S2′·컴패니언·다건·부정형 짝·H-4. 기준 셀 결정세액 172,260,000(엔진 SPCO-T1과 일치).
+- ⑤ `__tests__/components/split-carryover-p3a.section.ui.test.tsx`(라디오 3옵션·앵커 각 1개·읽기 전용 날짜·Q-8 한 patch·컴패니언 옵션 숨김·H-4 회귀) · ⑥ `__tests__/lib/transfer-per-asset-summary.split-carryover-a.test.ts` · ⑦ `__tests__/components/split-carryover-p3a.views.ui.anchor.test.tsx`.
+- 뮤테이션 15건 전부 KILLED(H-4 화이트리스트·정규화 A 분기·`partCarryover` A·신축 건물가 후퇴·④ A payload·⑥ pending·⑥ 비실가·다건 차단·재건축 호스트 제외·⑧ 비주 자산·⑧ 같은 날·⑧ A 진입·결과 `buildingGifted`·⑧/④ expenses 0). E2E는 ④ A payload 변형으로 실패 확인.
+- 🔴 별건(P3 범위 밖, 미수정): **신축 호스트 + 토지 상속·증여(D1) + 숨은 이전 형식 필요경비** → ⑧이 `buildingStandardPriceAtAcq`를 요구하지만 신축 호스트에는 그 칸이 없다(매매 블록 미마운트). probe 실측 — 매매 호스트는 카드가 열려 정합.
+- E2E `e2e/transfer-split-part-carryover-a.spec.ts`. 기존 spec 3곳(`d0`·`d1-2`·`split-mode-gating`)의 토지 원인 «증여» 라디오 셀렉터에 `exact: true`(§9.1).

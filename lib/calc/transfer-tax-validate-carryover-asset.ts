@@ -2,7 +2,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 import { isPhdEligible } from "./phd-eligibility";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
-import { validateSplitCarryoverInputs } from "./transfer-tax-validate-split-carryover";
+import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -22,7 +22,11 @@ export function validateCarryoverAsset(
   ctx: { isNonPrimaryAsset: boolean; form?: TransferFormData },
 ): string | null {
   if (effectiveCarryoverDonorSplit(asset, { isNonPrimary: ctx.isNonPrimaryAsset })) {
-    return validateSplitCarryoverInputs(asset, label, formTransferDate, { hasCompanions: (ctx.form?.assets?.length ?? 0) > 1 });
+    // 파트 입력(화면 위→아래) → 양도가액 구분·양도시 기준시가·파트 자본적지출(축 A).
+    return (
+      validateSplitCarryoverParts(asset, label, formTransferDate, { hasCompanions: (ctx.form?.assets?.length ?? 0) > 1 }) ??
+      validateSplitDirectInputs(asset, label, formTransferDate)
+    );
   }
   const c = asset.carryover;
 

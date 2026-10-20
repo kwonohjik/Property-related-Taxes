@@ -33,33 +33,50 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { landPartCauseApplicable } from "@/lib/calc/transfer-land-part-cause";
-import { effectiveLandAcquisitionCause } from "@/lib/calc/transfer-land-part-cause";
+import { landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
 import { landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
 import { LandSec164Card } from "./LandSec164Card";
 import { RebuiltHouseLandBlock } from "./RebuiltHouseLandBlock";
 import { LAND_CAUSE_META, type LandCause } from "./land-cause-meta";
+import { LandCarryoverCard } from "./LandCarryoverCard";
+import { LandCarryoverDateNote } from "./LandCarryoverDateNote";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 const CAUSE_OPTIONS: RadioCardOption<LandCause>[] = [
   { value: "inheritance", label: "상속" },
   { value: "gift", label: "증여" },
+  // P3 A — 토지만 이월과세(소득세법 §97의2①). 함께 양도하는 두 번째 이후 자산에는 두지 않는다(엔진 S0 — 첫 자산에서만 계산).
+  { value: "carryover_gift", label: "이월과세(증여)" },
 ];
 
 /** 호스트 공용 — 증여 이월과세 고지 · 원인 라디오. */
-function LandCauseFields(props: { asset: AssetForm; onChange: (patch: Partial<AssetForm>) => void; cause: LandCause }) {
+function LandCauseFields(props: {
+  asset: AssetForm;
+  onChange: (patch: Partial<AssetForm>) => void;
+  cause: LandCause;
+  isNonPrimaryAsset?: boolean;
+}) {
   const { asset, onChange, cause } = props;
+  const options = props.isNonPrimaryAsset ? CAUSE_OPTIONS.filter((o) => o.value !== "carryover_gift") : CAUSE_OPTIONS;
   return (
     <>
-      {/* 증여 — 배우자·직계존비속 이월과세(§97의2①)는 이 화면이 계산하지 않는다는 고지(D0 R-1).
+      {/* 증여 — 배우자·직계존비속 이월과세(§97의2①) 대상이면 「이월과세(증여)」를 고르라는 고지(N1 · D0 R-1).
           법이 자동 적용하는 규정이라 「증여」로 고른 사용자가 고지 없이 일반 증여로 계산받지 않게 한다. */}
       {cause === "gift" && (
         <ToneCard tone="amber">
           <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="land-gift-carryover-notice">
-            양도일부터 소급하여 10년 이내에 <strong>배우자·직계존비속</strong>으로부터 증여받은 토지는
-            취득가액·보유기간을 증여자 기준으로 계산하는 이월과세 대상입니다(소득세법 §97의2①). 이 화면은 그
-            계산을 지원하지 않으며, 토지는 일반 증여(증여일 평가액·증여일 취득)로 계산됩니다.
+            양도일부터 소급하여 10년(2023.1.1. 전 증여는 5년) 이내에 <strong>배우자·직계존비속</strong>으로부터 증여받은 토지는
+            취득가액·보유기간을 증여자 기준으로 계산하는 이월과세 대상입니다(소득세법 §97의2①).{" "}
+            {props.isNonPrimaryAsset ? (
+              <>함께 양도하는 두 번째 이후 자산에서는 이 계산을 지원하지 않으며, 토지는 일반 증여(증여일 평가액·증여일 취득)로 계산됩니다.</>
+            ) : (
+              <>
+                이월과세 대상이면 위 토지 취득 원인에서 <strong>「이월과세(증여)」</strong>를 선택하세요. 「증여」는 그 밖의 사람에게서
+                증여받았거나 위 기간이 지난 경우에 고르며, 증여일 평가액·증여일 취득의 일반 증여로 계산됩니다.
+              </>
+            )}
           </p>
         </ToneCard>
       )}
@@ -71,9 +88,16 @@ function LandCauseFields(props: { asset: AssetForm; onChange: (patch: Partial<As
             name={`landAcquisitionCause-${asset.assetId ?? "primary"}`}
             tone="amber"
             layout="inline"
-            options={CAUSE_OPTIONS}
+            options={options}
             value={cause}
-            onChange={(v) => onChange({ landAcquisitionCause: v })}
+            // Q-8 — 이월과세로 바꾸면 토지 취득일을 증여 등기접수일(입력돼 있으면)로 같은 patch에서 맞춘다. 되돌릴 때는 날짜를 그대로 둔다(일반 증여에서도 증여일이다).
+            onChange={(v) =>
+              onChange(
+                v === "carryover_gift" && asset.landCarryover?.giftRegistryDate
+                  ? { landAcquisitionCause: v, landAcquisitionDate: asset.landCarryover.giftRegistryDate }
+                  : { landAcquisitionCause: v },
+              )
+            }
           />
         </div>
       </div>
@@ -104,6 +128,8 @@ export function LandPartCauseBlock(props: {
   transferDate?: string;
   /** 함께 양도하는 두 번째 이후 자산 — 구주택 멸실·신축 통산 블록을 열지 않는다(⑫가 400). */
   isNonPrimaryAsset?: boolean;
+  /** 함께 양도하는 다른 자산이 있다(assets.length>1) — 토지 이월과세(P3 A) 카드가 N8을 띄운다. */
+  hasCompanions?: boolean;
 }) {
   const { asset, onChange } = props;
 
@@ -112,9 +138,12 @@ export function LandPartCauseBlock(props: {
   const isPurchase = asset.acquisitionCause === "purchase";
 
   // 토글 상태 = ④가 실제로 보내는 유효 원인 — 분리가 꺼졌거나 다른 호스트에서 켠 잔재를 「켜짐」으로 그리지 않는다.
-  const active = !!effectiveLandAcquisitionCause(asset);
-  const cause = (asset.landAcquisitionCause || "inheritance") as LandCause;
+  //   저장값을 그대로 캐스트하지 않는다(H-4 — 손상·잔재 값이 META에 없는 키면 렌더가 크래시했다).
+  const display = landCauseDisplay(asset);
+  const active = !!display;
+  const cause: LandCause = display || "inheritance";
   const meta = LAND_CAUSE_META[cause];
+  const isCarryover = cause === "carryover_gift";
   // Q-5(D1 U-3) — 소유자 분리와 상호 잠금. 엔진은 소유자 분리에서 토지 원인을 읽지 않는다(⑫·엔진 R-X4).
   //    켜진 쪽은 언제든 끌 수 있게 「끄는 방향」은 막지 않는다(둘 다 켜진 구 입력이 갇히지 않게).
   const ownerSplit = (effectiveSelfOwns(asset) ?? "both") !== "both";
@@ -184,18 +213,28 @@ export function LandPartCauseBlock(props: {
           <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
             <ToneCard tone="amber">
               <p className="text-xs text-amber-900 dark:text-amber-200">
-                건물은 <strong>매매</strong>, 토지는 <strong>{meta.label}</strong>으로 취득한 자산입니다. 취득가액·보유기간을
-                토지·건물 <strong>각각</strong> 산정합니다 (소득세법 §95④·§104②, 같은 법 시행령 §163⑨).
+                건물은 <strong>매매</strong>, 토지는 <strong>{meta.label}</strong>{isCarryover ? "로" : "으로"} 취득한 자산입니다. 취득가액·보유기간을
+                토지·건물 <strong>각각</strong> 산정합니다 (소득세법 §95④·§104②, 같은 법 시행령 §163⑨{isCarryover ? " · §97의2①" : ""}).
               </p>
             </ToneCard>
-            <LandCauseFields asset={asset} onChange={onChange} cause={cause} />
+            <LandCauseFields asset={asset} onChange={onChange} cause={cause} isNonPrimaryAsset={props.isNonPrimaryAsset} />
             {cause === "inheritance" && <DecedentDateField asset={asset} onChange={onChange} />}
-            <p className="text-caption text-muted-foreground">
-              토지 {meta.dateLabel}은 아래 <strong>토지 {meta.dateLabel}</strong> 칸에, 평가액은{" "}
-              <strong>취득가액 산정 방식</strong>의 토지 칸에 입력합니다. 토지는 실거래가(평가액)로 고정되고 개별주택가격
-              미공시 3-시점 환산(소득세법 시행령 §164⑦)은 적용되지 않습니다 — 다만 1990.8.30.~2005.4.29.에 받은 주택 부수토지로
-              받을 당시 이 주택이 있었다면 평가액과 영 §164⑦ 가액의 토지 몫 중 많은 금액입니다(입력은 평가액 아래).
-            </p>
+            {isCarryover ? (
+              <>
+                <LandCarryoverCard asset={asset} onChange={onChange} transferDate={props.transferDate} hasCompanions={props.hasCompanions} />
+                <p className="text-caption text-muted-foreground">
+                  토지 취득일 칸에는 위 <strong>증여 등기접수일</strong>이 들어가고, 토지 증여 신고가액은 <strong>취득가액 산정 방식</strong>의 토지 칸에
+                  입력합니다. 토지는 실거래가(증여 신고가액)로 고정되고 개별주택가격 미공시 3-시점 환산(소득세법 시행령 §164⑦)은 적용되지 않습니다.
+                </p>
+              </>
+            ) : (
+              <p className="text-caption text-muted-foreground">
+                토지 {meta.dateLabel}은 아래 <strong>토지 {meta.dateLabel}</strong> 칸에, 평가액은{" "}
+                <strong>취득가액 산정 방식</strong>의 토지 칸에 입력합니다. 토지는 실거래가(평가액)로 고정되고 개별주택가격
+                미공시 3-시점 환산(소득세법 시행령 §164⑦)은 적용되지 않습니다 — 다만 1990.8.30.~2005.4.29.에 받은 주택 부수토지로
+                받을 당시 이 주택이 있었다면 평가액과 영 §164⑦ 가액의 토지 몫 중 많은 금액입니다(입력은 평가액 아래).
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -215,26 +254,32 @@ export function LandPartCauseBlock(props: {
         <div className="space-y-3 rounded-md border border-dashed border-border bg-muted/20 p-3">
           <ToneCard tone="amber">
             <p className="text-xs text-amber-900 dark:text-amber-200">
-              건물은 <strong>신축</strong>, 토지는 <strong>{meta.label}</strong>으로
+              건물은 <strong>신축</strong>, 토지는 <strong>{meta.label}</strong>{isCarryover ? "로" : "으로"}
               취득한 자산입니다. 취득가액·보유기간을 토지·건물 <strong>각각</strong> 산정합니다
-              (소득세법 §95④·§104②, 같은 법 시행령 §163⑨).
+              (소득세법 §95④·§104②, 같은 법 시행령 §163⑨{isCarryover ? " · §97의2①" : ""}).
             </p>
           </ToneCard>
 
-          <LandCauseFields asset={asset} onChange={onChange} cause={cause} />
+          <LandCauseFields asset={asset} onChange={onChange} cause={cause} isNonPrimaryAsset={props.isNonPrimaryAsset} />
+          {isCarryover && (
+            <LandCarryoverCard asset={asset} onChange={onChange} transferDate={props.transferDate} hasCompanions={props.hasCompanions} />
+          )}
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 items-start">
             <FieldCard
               label={meta.dateLabel}
               field="landAcquisitionDate"
               required
-              hint="토지 취득일 — 장기보유특별공제 기산일 (소득세법 §95④)"
+              hint={isCarryover ? undefined : "토지 취득일 — 장기보유특별공제 기산일 (소득세법 §95④)"}
             >
+              {/* P3 A — 증여 등기접수일 한 곳이 정본이라(Q-8) 읽기 전용. */}
               <DateInput
-                value={asset.landAcquisitionDate}
+                value={isCarryover ? (asset.landCarryover?.giftRegistryDate ?? "") : asset.landAcquisitionDate}
                 onChange={(v) => onChange({ landAcquisitionDate: v })}
+                disabled={isCarryover}
                 data-testid="acq-date-land"
               />
+              {isCarryover && <LandCarryoverDateNote />}
             </FieldCard>
             <FieldCard label={meta.priceLabel} field="landAcquisitionPrice" unit="원" hint={meta.hint}>
               <CurrencyInput

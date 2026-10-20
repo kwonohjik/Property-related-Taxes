@@ -180,7 +180,7 @@ export function CompanionAcquisitionCauseSection({
 
       {/* 토지를 상속·증여로 취득하고 그 위에 건물을 신축한 경우 — 토지 파트 입력.
           취득원인이 자산 단위 단일값이라 종전엔 토지 취득일·취득가액 칸이 아예 없었다. */}
-      <LandPartCauseBlock asset={asset} onChange={onChange} transferDate={transferDate} isNonPrimaryAsset={isNonPrimaryAsset} />
+      <LandPartCauseBlock asset={asset} onChange={onChange} transferDate={transferDate} isNonPrimaryAsset={isNonPrimaryAsset} hasCompanions={hasCompanions} />
 
       {/* 건물을 상속·증여로 취득하고 토지는 매수한 경우(D2) — 토글. 켜면 아래 상속·증여 블록 대신 매매 블록이 건물 원인 모드로 마운트된다. */}
       <BuildingCauseMixBlock asset={asset} onChange={onChange} />
