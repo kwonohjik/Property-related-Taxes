@@ -8,6 +8,7 @@
  * 기존 명부 행과 섞으면 「A주택 = 몇 번째 행」 규칙이 따로 필요하고, 섞인 폼은 원문과 다른 사실로 판정된다.
  *
  * 판정은 하지 않는다. 적용한 폼으로 판정 메뉴가 같은 엔진으로 판정한다. 원문에 없는 사실은 비워 두고 질문으로 남긴다.
+ * 질문이 가리키는 칸이 특정되면 이 창에서 바로 답할 수 있고, 답은 추출값과 함께 적용된다(`draft`).
  * 로컬 개발 서버 전용 — 버튼 노출 여부는 서버 페이지가 정한다(`page.tsx`).
  */
 import { useState } from "react";
@@ -24,6 +25,8 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { mergeExtractedForm } from "@/lib/one-house-ai/merge-form";
 import { hasJudgmentInput } from "@/lib/one-house-ai/judgment-ui";
 import { ONE_HOUSE_AI_TEXT_MAX } from "@/lib/one-house-ai/text-limit";
+import { answerTargetOf, readAnswer, writeAnswer } from "@/lib/one-house-ai/question-answer";
+import { OneHouseAiAnswerField } from "./OneHouseAiAnswerField";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
@@ -50,6 +53,8 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<OneHouseAiExtractData | null>(null);
+  /** 적용할 폼 — 추출값 위에 질문에 바로 답한 값을 더한다 */
+  const [draft, setDraft] = useState<OneHouseJudgmentFormData | null>(null);
 
   // 서버와 같은 기준(앞뒤 공백 제외)으로 센다
   const length = text.trim().length;
@@ -60,6 +65,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
     setLoading(true);
     setError(null);
     setData(null);
+    setDraft(null);
     try {
       const res = await fetch("/api/one-house-ai/extract", {
         method: "POST",
@@ -71,7 +77,9 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
         setError(body?.error?.message ?? `AI 사실 추출에 실패했습니다(${res.status}).`);
         return;
       }
-      setData(body.data as OneHouseAiExtractData);
+      const extracted = body.data as OneHouseAiExtractData;
+      setData(extracted);
+      setDraft(mergeExtractedForm(extracted.form));
     } catch {
       setError("AI 사실 추출 요청을 보내지 못했습니다. 네트워크를 확인하세요.");
     } finally {
@@ -80,8 +88,8 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
   };
 
   const apply = () => {
-    if (!data) return;
-    onApply(mergeExtractedForm(data.form), {
+    if (!data || !draft) return;
+    onApply(draft, {
       facts: data.facts,
       questions: data.questions,
       notes: data.notes,
@@ -90,6 +98,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
     });
     setOpen(false);
     setData(null);
+    setDraft(null);
   };
 
   return (
@@ -140,7 +149,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
             </p>
           )}
 
-          {data && <ExtractionPreview data={data} />}
+          {data && draft && <ExtractionPreview data={data} draft={draft} onDraftChange={setDraft} />}
 
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center">
             {data && replacesInput && (
@@ -167,7 +176,15 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
   );
 }
 
-function ExtractionPreview({ data }: { data: OneHouseAiExtractData }) {
+function ExtractionPreview({
+  data,
+  draft,
+  onDraftChange,
+}: {
+  data: OneHouseAiExtractData;
+  draft: OneHouseJudgmentFormData;
+  onDraftChange: (form: OneHouseJudgmentFormData) => void;
+}) {
   return (
     <div className="space-y-3" data-testid="one-house-ai-extract-preview">
       <ToneCard tone="sky" title={`추출한 사실 ${data.facts.length}칸`}>
@@ -188,7 +205,23 @@ function ExtractionPreview({ data }: { data: OneHouseAiExtractData }) {
         )}
       </ToneCard>
 
-      {data.questions.length > 0 && <QuestionList questions={data.questions} />}
+      {data.questions.length > 0 && (
+        <QuestionList
+          questions={data.questions}
+          renderAction={(q) => {
+            const target = answerTargetOf(q.path, q.field, draft);
+            return target ? (
+              <OneHouseAiAnswerField
+                target={target}
+                value={readAnswer(draft, target)}
+                onChange={(v) => onDraftChange(writeAnswer(draft, target, v))}
+              />
+            ) : (
+              <p className="text-caption text-muted-foreground">적용한 뒤 판정 화면의 검토 카드에서 해당 단계로 이동해 입력합니다.</p>
+            );
+          }}
+        />
+      )}
 
       {data.issues.length > 0 && (
         <ToneCard tone="amber" title={`넣지 않은 값 ${data.issues.length}건`}>
@@ -220,8 +253,8 @@ export function QuestionList({
         {questions.map((q, n) => (
           <li key={`${q.path}-${n}`}>
             <span>{q.question}</span>
-            {q.label && <span className="text-caption text-muted-foreground"> — {q.label}</span>}
             {q.why && <p className="text-caption text-muted-foreground">{q.why}</p>}
+            {q.label && <p className="text-caption text-muted-foreground">입력 칸: 「{q.label}」</p>}
             {renderAction && <div>{renderAction(q)}</div>}
           </li>
         ))}

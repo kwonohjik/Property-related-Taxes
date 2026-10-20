@@ -3,23 +3,30 @@
 /**
  * 1세대1주택 AI 사실 추출 — 적용 뒤 판정 메뉴 위에 남기는 검토 카드 (하이브리드 AI 검토 도구 P4).
  *
- * 원문에 없어 비워 둔 칸의 질문을 보여 주고, 답은 **기존 입력 칸에 직접** 넣게 한다(사용자 결정 2026-10-19) —
- * 질문마다 그 칸이 있는 단계로 데려간다. 추출 근거(원문 인용)는 접어 둔다.
+ * 원문에 없어 비워 둔 칸의 질문을 보여 준다. 질문이 가리키는 칸이 특정되면 이 카드에서 바로 답하고(사용자 결정
+ * 2026-10-20 — 판정 메뉴 폼에 곧바로 들어간다), 행을 새로 만들어야 하는 묶음 질문 등은 그 칸이 있는 단계로 데려간다.
+ * 추출 근거(원문 인용)는 접어 둔다.
  */
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { judgmentStepOfPath, type JudgmentInputStep } from "@/lib/one-house-ai/judgment-ui";
+import { answerTargetOf, readAnswer, writeAnswer } from "@/lib/one-house-ai/question-answer";
+import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { OneHouseAiAnswerField } from "./OneHouseAiAnswerField";
 import { factValueText, NoteList, QuestionList, type OneHouseAiReview } from "./OneHouseAiExtractDialog";
 
 type Props = {
   review: OneHouseAiReview;
+  /** 판정 메뉴의 지금 폼 — 바로 답한 값은 `onAnswer`로 통째로 돌려준다 */
+  form: OneHouseJudgmentFormData;
+  onAnswer: (form: OneHouseJudgmentFormData) => void;
   stepNames: readonly string[];
   onGoToStep: (step: JudgmentInputStep) => void;
   onDismiss: () => void;
 };
 
-export function OneHouseAiReviewCard({ review, stepNames, onGoToStep, onDismiss }: Props) {
+export function OneHouseAiReviewCard({ review, form, onAnswer, stepNames, onGoToStep, onDismiss }: Props) {
   const [showFacts, setShowFacts] = useState(false);
   return (
     <div className="mb-6 space-y-3" data-testid="one-house-ai-review">
@@ -65,6 +72,16 @@ export function OneHouseAiReviewCard({ review, stepNames, onGoToStep, onDismiss 
         <QuestionList
           questions={review.questions}
           renderAction={(q) => {
+            const target = answerTargetOf(q.path, q.field, form);
+            if (target) {
+              return (
+                <OneHouseAiAnswerField
+                  target={target}
+                  value={readAnswer(form, target)}
+                  onChange={(v) => onAnswer(writeAnswer(form, target, v))}
+                />
+              );
+            }
             const step = judgmentStepOfPath(q.path);
             return (
               <Button

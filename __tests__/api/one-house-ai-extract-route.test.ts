@@ -102,6 +102,11 @@ describe("POST /api/one-house-ai/extract", () => {
     ]);
     // 원문에 없는 양도가액 — LLM이 묻지 않았어도 ⑧이 막으므로 질문이 된다
     expect(q).toContainEqual(expect.objectContaining({ path: "contractTotalPrice", source: "validation", question: "예상 양도가액을 입력하세요." }));
+    // 화면이 그 자리에서 답을 받도록 칸 정보(사전 키·형식)를 LLM 질문·검증 질문 모두에 붙인다
+    expect(q.find((x) => x.path === "houses[B].acquisitionOrigin")).toMatchObject({
+      field: { path: "houses[].acquisitionOrigin", kind: "enum", values: expect.any(Array) },
+    });
+    expect(q.find((x) => x.path === "contractTotalPrice")).toMatchObject({ field: { path: "contractTotalPrice", kind: "amount" } });
   });
 
   it("LLM이 거주를 행 이름 없이 물었으면 검증의 거주 질문은 덧붙이지 않고, 라벨은 사전에서 찾는다", async () => {

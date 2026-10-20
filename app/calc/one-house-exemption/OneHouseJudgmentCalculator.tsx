@@ -334,6 +334,8 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
         {aiReview && (
           <OneHouseAiReviewCard
             review={aiReview}
+            form={formData}
+            onAnswer={updateFormData}
             stepNames={STEPS}
             onGoToStep={onStepClick}
             onDismiss={() => setAiReview(null)}
