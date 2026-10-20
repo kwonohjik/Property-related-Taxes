@@ -25,7 +25,6 @@ export interface CompanionSplitContext {
   assetLabel: string;
   assetKind: "housing" | "land" | "building";
   areaM2?: number;
-  manualHoldingPeriodOverride?: "shortTermHousing70" | "shortTerm60" | "progressive";
   /** 토지 성질 명시 입력 — "appurtenant_to_housing"일 때만 split 진입 */
   landNature?: "appurtenant_to_housing" | "non_appurtenant";
 }
@@ -58,7 +57,7 @@ export interface PrimarySplitContext {
  */
 export function appurtenantLimitShareOf(
   primary: Pick<TransferTaxItemInput, "propertyType" | "selfOwns" | "acquisitionArea">,
-  companions: ReadonlyArray<Pick<CompanionSplitContext, "areaM2" | "landNature" | "manualHoldingPeriodOverride"> & { assetKind: string }>,
+  companions: ReadonlyArray<Pick<CompanionSplitContext, "areaM2" | "landNature"> & { assetKind: string }>,
 ): Pick<PrimarySplitContext, "houseLandAreaM2" | "appurtenantCardsAreaM2"> {
   return {
     houseLandAreaM2:
@@ -67,7 +66,6 @@ export function appurtenantLimitShareOf(
       (sum, c) =>
         c.assetKind === "land" &&
         c.landNature === "appurtenant_to_housing" &&
-        c.manualHoldingPeriodOverride === undefined &&
         (c.areaM2 ?? 0) > 0
           ? sum + c.areaM2!
           : sum,
@@ -111,14 +109,14 @@ export function resolveCompanionSplit(
   // split 진입 조건:
   //   1. companion이 토지이고 landNature === "appurtenant_to_housing" (명시적 부수토지 선언)
   //   2. 면적 확인 가능 (areaM2 > 0)
-  //   3. 수동 오버라이드 없음 (manualHoldingPeriodOverride === undefined)
+  // ※ 토지 세율 수동 지정(manualHoldingPeriodOverride)은 진입 조건이 아니다 — 지정은 §104① 세율 축만 정하고(분리된 한도 내 몫에만
+  //   실린다), 배율 분리·한도 공유·1세대1주택 비과세 단위(영 §154⑦, §89①3호)는 지정과 무관하다.
   // 이전 조건 "acquisitionCause === newConstruction"은 landNature 명시 입력으로 대체됨.
   if (
     companion.assetKind !== "land" ||
     companion.landNature !== "appurtenant_to_housing" ||
     !companion.areaM2 ||
-    companion.areaM2 <= 0 ||
-    companion.manualHoldingPeriodOverride !== undefined
+    companion.areaM2 <= 0
   ) {
     return { applied: false };
   }

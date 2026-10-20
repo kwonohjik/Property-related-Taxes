@@ -10,7 +10,7 @@
  *   2. companion.assetKind === "land"
  *   3. companion.areaM2 > 0 (면적 확인 가능)
  *   4. excessArea > 0  (resolveCompanionLandRate 결과)
- *   5. companion.manualHoldingPeriodOverride === undefined (수동 지정 없음)
+ *   ※ companion.manualHoldingPeriodOverride(토지 세율 수동 지정)는 진입 조건이 아니다 — 세율 축만 정한다.
  *
  * 금액 안분 원칙 (정수 보존):
  *   - 각 금액을 Math.floor(금액 × 비율)로 excess 몫 계산
@@ -724,7 +724,6 @@ export function buildCompanionEngineInputs(
         // 아니다. 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
         assetKind: toApportionKind(c.assetKind),
         areaM2: c.areaM2,
-        manualHoldingPeriodOverride: effectiveOverride,
         landNature: c.landNature,
       },
       {
