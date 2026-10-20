@@ -3,7 +3,7 @@
 /**
  * SuccessorRightAcquisitionBlock — 승계조합원 조합원입주권 취득 정보 입력
  *
- * `assetKind === "right_to_move_in"` + ① 기본정보 「조합원 유형」 = **승계조합원**일 때
+ * `assetKind === "right_to_move_in"` + 「조합원 유형」(① 기본정보 · 축 B 둘째 이후 지분 카드는 ③ 취득정보) = **승계조합원**일 때
  * `RedevelopmentBlock`(§166 입력) **대신** 렌더된다.
  *
  * ## 왜 §166 블록이 아닌가

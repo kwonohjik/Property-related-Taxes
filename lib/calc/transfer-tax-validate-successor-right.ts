@@ -26,7 +26,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 // 술어·합산은 `transfer-successor-right.ts` 단일 소스 — ④ 변환·⑤ UI와 같은 함수를 쓴다.
-import { successorRightEstimationMode } from "./transfer-successor-right";
+import { successorRightEstimationMode, successorTypeToggleSectionLabel } from "./transfer-successor-right";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
 import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 
@@ -38,7 +38,12 @@ import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
  *
  * @returns 차단 사유 문자열, 통과 시 null
  */
-export function validateSuccessorRightAsset(asset: AssetForm, label: string): string | null {
+export function validateSuccessorRightAsset(
+  asset: AssetForm,
+  label: string,
+  /** 「조합원 유형」 질문이 있는 섹션 — 축 B 둘째 이후 지분 카드는 ③ 취득정보(`successorTypeToggleSectionLabel`). */
+  typeToggleSection: string = successorTypeToggleSectionLabel(false),
+): string | null {
   // ── 취득일 ──
   if (!asset.acquisitionDate) {
     return fieldError("acquisitionDate", `${label}: 조합원입주권 승계취득일을 입력하세요.`);
@@ -53,7 +58,7 @@ export function validateSuccessorRightAsset(asset: AssetForm, label: string): st
     asset.redevApprovalDate &&
     new Date(asset.redevApprovalDate) > new Date(asset.acquisitionDate)
   ) {
-    return fieldError("isSuccessorRightToMoveIn", `${label}: 관리처분계획 인가일이 취득일보다 나중입니다. 인가 전에 종전 부동산을 보유하셨다면 ① 기본정보의 「조합원 유형」을 "원조합원"으로 바꾸세요. (시행령 §166①)`);
+    return fieldError("isSuccessorRightToMoveIn", `${label}: 관리처분계획 인가일이 취득일보다 나중입니다. 인가 전에 종전 부동산을 보유하셨다면 ${typeToggleSection}의 「조합원 유형」을 "원조합원"으로 바꾸세요. (시행령 §166①)`);
   }
 
   /**

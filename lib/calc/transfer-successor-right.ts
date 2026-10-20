@@ -97,6 +97,20 @@ export function successorRightEstimationMode(
 }
 
 /**
+ * 「조합원 유형」 질문이 **어느 섹션에 있는가** — ⑧ 안내 문구와 화면 위치의 단일 소스.
+ *
+ * 단건·첫 카드·함께 양도 카드는 ① 기본정보에 있다. 같은 물건 지분 분할(축 B)의 **둘째 이후 지분 카드**는
+ * ① 기본정보를 숨기므로(`CompanionAssetCard` `hideInheritedSections`) ③ 취득정보에 같은 컴포넌트가 뜬다
+ * (`SuccessorRightTypeToggle`). 문구가 그 카드에 없는 칸을 가리키면 사용자는 막다른 길을 만난다.
+ *
+ * @param isFractionalShareCard 축 B 묶음의 첫 카드가 아닌 지분 카드인가 (UI: `splitMode === "fractional" && !isFirst` ·
+ *   ⑧: `isFractionalSplitAxis && isNonPrimaryAsset`)
+ */
+export function successorTypeToggleSectionLabel(isFractionalShareCard: boolean): "① 기본정보" | "③ 취득정보" {
+  return isFractionalShareCard ? "③ 취득정보" : "① 기본정보";
+}
+
+/**
  * ① 기본정보 「조합원 유형」 토글 patch — **반대편 전용 필드를 함께 비운다**.
  *
  * 두 유형은 취득가액 입력 카드가 서로 다르다(승계 = 전용 2칸 · 원조합원 = §166 ④⑤ 섹션).
