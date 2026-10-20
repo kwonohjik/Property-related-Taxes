@@ -65,6 +65,12 @@ export interface SplitPartCauseFacts {
   buildingHouseKind?: BuildingHouseKind;
   /** 건물 몫 영 §164⑦ 가액(②) 총액(지분 스케일 후) — 양수면 「있음」. 생략·0 = ② 없음 */
   buildingSec164Value?: number;
+  /**
+   * 비주택 건물이 국세청장이 토지·건물을 일괄 고시하는 오피스텔·상업용 건물(소득세법 §99①1호 다목 — 상속세 및 증여세법 §61①3호)인가.
+   * D2(토지 매매)에서 건물 취득일이 2001-01-01 ~ 2005-04-29일 때만 읽는다(`isGeneralBuildingBundledWindow` — C는 읽지 않는다). `"no"` = 일반 건물(2001.1.1.부터 건물 기준시가 고시 —
+   * 단서 2호 아님) · `"yes"` = 첫 고시일이 지역마다 달라 차단 · 생략 = 확인 요구(모름 = 불성립)
+   */
+  buildingBundledStdPrice?: "yes" | "no";
   // ── D1-H (토지 상속·증여 + 건물 매매, 주택 부수토지 영 §163⑨ 단서 2호 — 단독·다가구주택만) ──
   /** 토지를 받을 당시 지금의 주택이 그 위에 있었는가 — `"yes"`만 비교를 연다. 생략·`"unknown"`·`"no"` = 비교하지 않는다(모름 = 불성립) */
   landHouseExisted?: LandHouseExisted;
@@ -105,6 +111,8 @@ export type SplitPartCauseField =
   | "landAcquisitionDate"
   | "landSec164Value"
   | "buildingSec164Value"
+  // 비주택 건물 2001.1.1.~2005.4.29. — 일괄 고시 오피스텔·상업용 건물인가(Y4e)
+  | "buildingBundledStdPrice"
   // D1-H — 주택 부수토지 단서 2호(주택 구분 · ②)
   | "buildingHouseKind"
   | "landHouseSec164Value"
@@ -272,21 +280,48 @@ export function disclosureDateLabel(isoDate: string): string {
   return `${y}.${Number(m)}.${Number(d)}.`;
 }
 
+/**
+ * 「소득세법 시행령」 §163⑨ 단서 2호의 일반 건물 경계 — 이 날 전 상속·증여는 막고(Y4a), 이 날부터는 일괄 고시 여부를 묻는다(Y4e).
+ * 국세청 고시 「건물에 대한 취득당시 기준시가 산정 기준율」(2000.12.28. 공포·2001.1.1. 시행)이 「소득세법 제99조 제1항 제1호 나목의 규정에 의한
+ * 기준시가가 고시되어 시행되기 전(2000.12.31 이전)」으로 적은 날이다(제도46011-11881, 2001.7.3. 같은 취지).
+ * ⚠️ 「상속세 및 증여세법」 §61①2호의 「국세청장이 산정ㆍ고시하는 가액」 문언은 **2000.7.1.** 시행이다(법률 제6048호 부칙 제1조 단서 — 그 전은
+ * 「대통령령이 정하는 시가표준액」). 2000.7.1.~2000.12.31.에 상속·증여용 건물 기준시가 고시가 실제로 있었는지는 확인하지 못해(확인 필요) 그 구간도 막는다
+ * (안전측). 계획서 transfer-acq-cause-mixed.plan.md §13.5.
+ */
+export const SEC_163_9_GENERAL_BUILDING_FIRST_NOTICE = "2001-01-01";
+
+/**
+ * 비주택 건물의 일괄 고시 여부를 물어야 하는 구간인가 — 상속·증여 ∧ 2001-01-01 ≤ 건물 취득일 < 2005-04-30 (D2만 — C는 leaf가 고정 경계로 막는다).
+ * 그 전은 일반 건물이어도 단서 2호 구간(차단), 그 뒤는 어느 쪽이든 종전처럼 구간 밖이다. ④ 브리지·⑤·⑧·leaf가 이 술어 하나를 쓴다.
+ */
+export function isGeneralBuildingBundledWindow(cause: string | undefined, buildingDate: string | undefined): boolean {
+  return isSec163_9BuildingProviso(cause, buildingDate) && !isSec163_9BuildingProviso(cause, buildingDate, SEC_163_9_GENERAL_BUILDING_FIRST_NOTICE);
+}
+
 export const BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE =
-  "건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전에 상속·증여받은 건물의 취득가액은 상속개시일(증여일) 현재 평가액과 "
-  + "소득세법 시행령 §164⑤~⑦ 가액 중 많은 금액인데, 토지를 따로 취득한 경우의 이 비교는 지원하지 않습니다 "
-  + "(같은 법 시행령 §163⑨ 단서 2호). 정확한 고시일은 자산 종류별로 달라 개별주택가격 최초공시일(2005.4.30.) 이전 취득을 "
-  + "보수적으로 모두 막습니다 — 건물 상속개시일(증여일)을 확인하거나 「토지는 다른 원인으로 취득」을 끄세요";
+  "건물 기준시가가 고시되기 전에 상속·증여받은 건물의 취득가액은 상속개시일(증여일) 현재 평가액과 소득세법 시행령 §164⑤ 가액 중 많은 금액인데, "
+  + "토지를 따로 취득한 경우의 이 비교는 지원하지 않아 일반 건물은 2001.1.1. 전 상속·증여분을 계산하지 않습니다 "
+  + "(같은 법 시행령 §163⑨ 단서 2호 · 상속세 및 증여세법 §61①2호) — 건물 상속개시일(증여일)을 확인하거나 「토지는 다른 원인으로 취득」을 끄세요";
+
+export const BUILDING_BUNDLED_STD_PRICE_REQUIRED_MESSAGE =
+  "2001.1.1.~2005.4.29.에 상속·증여받은 건물은 국세청장이 토지·건물을 일괄 고시하는 오피스텔·상업용 건물인지 확인이 필요합니다 — "
+  + "일반 건물은 그때 국세청장이 고시한 건물 기준시가가 시행 중이어서 평가액이 취득가액이지만, 일괄 고시 대상은 첫 고시일이 지역마다 다릅니다 "
+  + "(소득세법 시행령 §163⑨ 단서 2호 · 소득세법 §99①1호 나목·다목)";
+
+export const BUILDING_BUNDLED_STD_PRICE_UNSUPPORTED_MESSAGE =
+  "국세청장이 토지·건물을 일괄 고시하는 오피스텔·상업용 건물은 첫 고시일이 지역마다 달라, 2005.4.30. 전에 상속·증여받은 경우의 "
+  + "평가액과 소득세법 시행령 §164⑥ 가액 비교(같은 영 §163⑨ 단서 2호)는 지원하지 않습니다 — 건물 상속개시일(증여일)을 확인하거나 "
+  + "「토지는 다른 원인으로 취득」을 끄세요";
 
 /**
  * C(주택 전체 이월과세 + 증여자 토지·건물 취득일 상이) 전용 — 같은 단서 2호 구간(건물 기준시가 고시 전 증여)이지만 C에는 「토지는 다른 원인으로 취득」 스위치가 없다.
  * 건물 몫 비교가 아니라 증여 등기접수일(= 건물 수증자 취득일)이 이 구간인 것이 원인이라 고칠 곳은 증여 등기접수일이거나 C 토글이다.
  */
 export const BUILDING_CAUSE_PRE_DISCLOSURE_CARRYOVER_MESSAGE =
-  "건물 기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전에 증여받은 주택의 건물 몫 취득가액은 증여일 현재 평가액과 "
-  + "소득세법 시행령 §164⑤~⑦ 가액 중 많은 금액인데, 증여자가 토지·건물을 다른 날 취득한 이월과세에서 이 비교는 지원하지 않습니다 "
-  + "(같은 법 시행령 §163⑨ 단서 2호). 정확한 고시일은 자산 종류별로 달라 개별주택가격 최초공시일(2005.4.30.) 이전 증여를 "
-  + "보수적으로 모두 막습니다 — 증여 등기접수일을 확인하거나 「증여자가 토지·건물을 다른 날 취득」을 끄세요";
+  "건물 기준시가가 고시되기 전에 증여받은 건물의 건물 몫 취득가액은 증여일 현재 평가액과 "
+  + "소득세법 시행령 §164⑤·⑥ 가액 중 많은 금액인데, 증여자가 토지·건물을 다른 날 취득한 이월과세에서 이 비교는 지원하지 않습니다 "
+  + "(같은 법 시행령 §163⑨ 단서 2호). 이 계산에서는 고시일을 건물 종류별로 확인하지 않아 2005.4.30. 전 증여를 모두 막습니다 — "
+  + "증여 등기접수일을 확인하거나 「증여자가 토지·건물을 다른 날 취득」을 끄세요";
 
 /**
  * C 전용 — 같은 구간의 공동주택/미확인 차단. C는 건물 종류(단독·다가구/공동주택)를 묻지 않으므로 「단독·다가구주택으로 확인된 주택」이라는 안내가 고칠 수 있는 입력을
@@ -484,14 +519,22 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   /** 날짜가 있을 때의 건물 몫 규칙 — D2(토지 매매)와 C(토지도 이월과세)가 함께 쓴다. */
   const buildingRules = (landPurchase: boolean) => {
     // Y4 — 영 §163⑨ 단서 2호 구간. 단독·다가구주택만 ②(영 §164⑦ 건물 몫)와 max로 열린다(D2-4). 그 밖은 종전 차단:
-    //   비주택(일반건물 §164⑤ 체계) → Y4a · 단독·다가구가 아니거나 모름(공동주택 §164⑥ 체계) → Y4d ·
+    //   비주택(일반건물 §164⑤ 체계) → 2001.1.1. 전 Y4a · 2001.1.1.~2005.4.29.는 일괄 고시 여부(Y4e — 「아니오」면 구간 밖) ·
+    //   단독·다가구가 아니거나 모름(공동주택 §164⑥ 체계) → Y4d ·
     //   일부 양도(기준 면적 미확정, 자동 안분 금지) → Y4b · ② 없음 → Y4c.
     // 주택은 구간 끝이 주택별 최초공시일일 수 있다(`houseDisclosureBoundary` — 공동주택은 고정). 비주택은 고정 경계(Y4a).
     const boundary = f.isHousing ? houseDisclosureBoundary(f.houseFirstDisclosureDate, f.buildingHouseKind) : undefined;
     if (isSec163_9BuildingProviso(asGift(buildingCause), f.buildingAcquisitionDate, boundary)) {
-      if (!f.isHousing)
-        issues.push({ field: "acquisitionDate", message: landPurchase ? BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE : BUILDING_CAUSE_PRE_DISCLOSURE_CARRYOVER_MESSAGE });
-      else if (!isSec163_9BuildingSec164Open(f.isHousing, f.buildingHouseKind))
+      if (!f.isHousing) {
+        // Y4e(D2만) — 일반 건물은 2001.1.1.부터 고시돼 그 뒤 취득은 단서 2호가 아니다. 일괄 고시 오피스텔·상업용 건물은 첫 고시일이 지역마다 달라 막는다.
+        // C(이월과세 + 증여자 취득일 상이)는 질문 칸이 없어(건물 날짜 = 증여 등기접수일) 종전 고정 경계(2005-04-30)로 막는다.
+        if (!landPurchase || !isGeneralBuildingBundledWindow(asGift(buildingCause), f.buildingAcquisitionDate))
+          issues.push({ field: "acquisitionDate", message: landPurchase ? BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE : BUILDING_CAUSE_PRE_DISCLOSURE_CARRYOVER_MESSAGE });
+        else if (f.buildingBundledStdPrice === "yes")
+          issues.push({ field: "buildingBundledStdPrice", message: BUILDING_BUNDLED_STD_PRICE_UNSUPPORTED_MESSAGE });
+        else if (f.buildingBundledStdPrice !== "no")
+          issues.push({ field: "buildingBundledStdPrice", message: BUILDING_BUNDLED_STD_PRICE_REQUIRED_MESSAGE });
+      } else if (!isSec163_9BuildingSec164Open(f.isHousing, f.buildingHouseKind))
         issues.push({ field: "acquisitionDate", message: landPurchase ? BUILDING_CAUSE_APARTMENT_MESSAGE : BUILDING_CAUSE_APARTMENT_CARRYOVER_MESSAGE });
       else if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: BUILDING_SEC164_PARTIAL_MESSAGE });
       else if (!((f.buildingSec164Value ?? 0) > 0))

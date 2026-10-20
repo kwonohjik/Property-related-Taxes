@@ -10,7 +10,7 @@
  *   2. companion.assetKind === "land"
  *   3. companion.areaM2 > 0 (면적 확인 가능)
  *   4. excessArea > 0  (resolveCompanionLandRate 결과)
- *   5. companion.manualHoldingPeriodOverride === undefined (수동 지정 없음)
+ *   ※ companion.manualHoldingPeriodOverride(토지 세율 수동 지정)는 진입 조건이 아니다 — 세율 축만 정한다.
  *
  * 금액 안분 원칙 (정수 보존):
  *   - 각 금액을 Math.floor(금액 × 비율)로 excess 몫 계산
@@ -424,6 +424,7 @@ export function buildCompanionEngineInputs(
     isPartialAreaTransfer: c.isPartialAreaTransfer,
     buildingSec164Value: c.buildingSec164Value,
     buildingHouseKind: c.buildingHouseKind,
+    buildingBundledStdPrice: c.buildingBundledStdPrice,
     landHouseExisted: c.landHouseExisted,
     landHouseSec164Value: c.landHouseSec164Value,
     houseFirstDisclosureDate: c.houseFirstDisclosureDate,
@@ -536,6 +537,8 @@ export function buildCompanionEngineInputs(
     //    Date 변환은 단건과 **같은 leaf**를 쓴다(`toEngineRedevelopment`) — 복제하면 한쪽만
     //    필드가 늘어 그 경로에서 `Date < string` silent false가 난다.
     ...(c.redevelopment ? { redevelopment: toEngineRedevelopment(c.redevelopment) } : {}),
+    // ⑭ 승계조합원 입주권 표지 — 단건 `engine-input.ts`와 같은 키. 없으면 엔진이 원조합원 입주권으로 읽어 §95② 장특 배제가 빠진다(침묵 strip).
+    isSuccessorRightToMoveIn: c.isSuccessorRightToMoveIn,
     // ⑭ 상가 서브객체 — 열거 누락 시 침묵 strip이라 그 자산만 §101①·환산을 잃는다.
     commercialAppurtenantLand: c.commercialAppurtenantLand,
     commercialBuildingValuation: c.commercialBuildingValuation,
@@ -724,7 +727,6 @@ export function buildCompanionEngineInputs(
         // 아니다. 접어 넘겨도 `assetKind === "land"` 게이트에서 그대로 빠진다.
         assetKind: toApportionKind(c.assetKind),
         areaM2: c.areaM2,
-        manualHoldingPeriodOverride: effectiveOverride,
         landNature: c.landNature,
       },
       {

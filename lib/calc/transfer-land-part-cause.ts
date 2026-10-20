@@ -11,7 +11,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { effectiveSelfOwns } from "./self-owns-scope";
-import { isSec163_9BuildingProviso } from "@/lib/tax-engine/transfer-split-part-cause";
+import { isGeneralBuildingBundledWindow, isSec163_9BuildingProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /** 구조적 입력 — 사이드바 합계처럼 자산 일부만 들고 오는 호출부도 받는다(없으면 「범위 밖」). */
 interface LandPartCauseScope {
@@ -213,13 +213,14 @@ export function buildingDatePatch(
 }
 
 /**
- * D2 ⑤ 날짜 안내 문구 — 주택이 **아닌** 건물의 상속개시일·증여일이 영 §163⑨ 단서 2호 구간(< 2005-04-30)일 때(차단은 ⑧·⑫·엔진 Y4a — 같은 술어).
+ * D2 ⑤ 날짜 안내 문구 — 주택이 **아닌** 건물의 상속개시일·증여일이 2001-01-01 전(일반 건물 경계 `SEC_163_9_GENERAL_BUILDING_FIRST_NOTICE` — 영 §163⑨ 단서 2호)일 때
+ * (차단은 ⑧·⑫·엔진 Y4a — 같은 술어). 2001.1.1.~2005.4.29.는 이 안내 대신 일괄 고시 여부 질문(`BuildingBundledStdPriceQuestion`)이 열린다.
  * 주택은 이 안내 대신 건물 평가액 아래 입력 카드(`BuildingSec164Card`)가 비교를 연다(D2-4b).
  */
 export const BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE =
-  "건물 기준시가가 고시되기 전에 상속·증여받은 건물은 평가액과 영 §164⑤~⑦ 가액 중 많은 금액이 취득가액인데, 토지를 따로 매수한 계산에서 "
-  + "이 비교는 단독·다가구주택만 지원합니다(소득세법 시행령 §163조 제9항 단서 2호) — 주택이 아닌 건물은 개별주택가격 최초공시일(2005.4.30.) 이전 취득을 "
-  + "보수적으로 모두 계산하지 않습니다. 건물 상속개시일(증여일)을 확인하세요";
+  "건물 기준시가가 고시되기 전에 상속·증여받은 건물은 평가액과 영 §164⑤ 가액 중 많은 금액이 취득가액인데, 토지를 따로 매수한 계산에서 "
+  + "이 비교는 지원하지 않아 일반 건물은 2001.1.1. 전 상속·증여분을 계산하지 않습니다(소득세법 시행령 §163조 제9항 단서 2호 · "
+  + "상속세 및 증여세법 §61①2호). 건물 상속개시일(증여일)을 확인하세요";
 
 /** D2 유효일 때 입력 중 안내 목록(비주택 경계일 전 · 같은 날) — D2가 아니면 빈 배열. ⑧과 같은 술어. */
 export function buildingCauseDateNotices(
@@ -229,7 +230,8 @@ export function buildingCauseDateNotices(
   if (!mix) return [];
   const out: string[] = [];
   // 주택은 입력 카드가 안내한다(카드 게이트 `buildingSec164Applies`와 짝 — 주택 ∧ 같은 술어).
-  if (asset.assetKind !== "housing" && isSec163_9BuildingProviso(mix, asset.acquisitionDate)) out.push(BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE);
+  if (asset.assetKind !== "housing" && isSec163_9BuildingProviso(mix, asset.acquisitionDate) && !isGeneralBuildingBundledWindow(mix, asset.acquisitionDate))
+    out.push(BUILDING_CAUSE_PRE_DISCLOSURE_NOTICE);
   if (landPartCauseSameDay(asset)) out.push(LAND_CAUSE_SAME_DAY_MESSAGE);
   return out;
 }
@@ -318,4 +320,26 @@ export function partCarryover(
   // P3 A — 토지만. 함께 양도 자산은 싣지 않는다(엔진 S0) — ⑧은 leaf S0가 막는다.
   const a = !opts?.isNonPrimary && effectiveLandCarryover(asset);
   return { land: c || a, building: c };
+}
+
+// ─── 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가 (계획서 §13.5) ───────────────
+
+/**
+ * 질문이 열리는가 — 「건물(토지 제외)」 ∧ D2 유효(건물 상속·증여 + 토지 매매) ∧ 건물 취득일(상속개시일·증여일)이 2001-01-01 ~ 2005-04-29.
+ * leaf Y4e(`isGeneralBuildingBundledWindow`)와 같은 술어 — ⑤ 질문·④ 전송·⑧ 검증이 이 함수를 같이 읽는다. 답은 보지 않는다.
+ * C(이월과세 + 증여자 취득일 상이)는 열지 않는다 — 건물 날짜가 증여 등기접수일이고 leaf가 종전 고정 경계로 막는다.
+ */
+export function buildingBundledQuestionApplies(asset: BuildingCauseMixScope & { acquisitionDate?: string }): boolean {
+  if (asset.assetKind !== "building") return false;
+  const mix = effectiveBuildingCauseMix(asset);
+  return !!mix && isGeneralBuildingBundledWindow(mix, asset.acquisitionDate);
+}
+
+/** ④가 싣는 답 — 질문이 열린 자리에서 고른 값만(미선택은 보내지 않는다 = leaf가 확인을 요구한다). */
+export function buildingBundledStdPriceSent(
+  asset: Parameters<typeof buildingBundledQuestionApplies>[0] & { buildingBundledStdPrice?: string },
+): "yes" | "no" | undefined {
+  if (!buildingBundledQuestionApplies(asset)) return undefined;
+  const v = asset.buildingBundledStdPrice;
+  return v === "yes" || v === "no" ? v : undefined;
 }

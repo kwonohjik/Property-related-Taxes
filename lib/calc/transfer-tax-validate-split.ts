@@ -43,6 +43,7 @@ import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE } from "./transfer-land-part-cause";
 import { buildingHouseKindSent } from "./transfer-building-sec164-bridge";
+import { buildingBundledStdPriceSent } from "./transfer-land-part-cause";
 import { deriveBuildingSec164Total } from "./transfer-building-sec164-bridge";
 import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
 import { phdPayloadActive } from "./phd-toggle-scope";
@@ -265,6 +266,8 @@ export function validateLandPartCause(
     // D2-4·D1-H는 overlay 방향이 반대라 한 자산에서 동시에 켜지지 않는다 — 주택 구분 사실은 켜진 쪽 브리지가 보낸 값.
     buildingHouseKind: buildingHouseKindSent(asset) ?? houseLandKindSent(asset),
     buildingSec164Value: deriveBuildingSec164Total(asset) || undefined,
+    // 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 여부. ④가 실제로 보내는 값(`buildingBundledStdPriceSent`)
+    buildingBundledStdPrice: buildingBundledStdPriceSent(asset),
     // D1-H — 주택 부수토지 단서 2호. 「받을 당시 주택 있음」·②는 ④가 실제로 보내는 값(브리지 `landHouseExistedSent`·`deriveHouseLandSec164Total`).
     landHouseExisted: landHouseExistedSent(asset),
     landHouseSec164Value: deriveHouseLandSec164Total(asset) || undefined,

@@ -37,7 +37,7 @@ import { validateMixedUseAsset } from "./transfer-tax-validate-mixed-use-asset";
 import { validateMixedUseBurdenedGift } from "./transfer-tax-validate-mixed-use-bg";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
-import { isSuccessorRightTransfer } from "./transfer-successor-right";
+import { isSuccessorRightTransfer, successorTypeToggleSectionLabel } from "./transfer-successor-right";
 import { classifySameAdjustmentPeriod } from "@/lib/tax-engine/same-adjustment-period-std-price";
 import { validateUsageConversion } from "./transfer-tax-validate-usage-conversion";
 import { validateSuccessorRightAsset } from "./transfer-tax-validate-successor-right";
@@ -224,6 +224,9 @@ export function validateAssetAcquisition(
     return validateGeneralBuildingAsset(asset, label, formTransferDate);
   }
 
+  // 입주권 「조합원 유형」 질문의 위치 — 축 B 둘째 이후 지분 카드는 ① 기본정보를 숨겨 ③ 취득정보에 있다(UI와 같은 leaf).
+  const typeToggleSection = successorTypeToggleSectionLabel(isNonPrimaryAsset && isFractionalSplitAxis === true);
+
   /**
    * ── 승계조합원 입주권 (§97①1호 가목) — §166 검증 **이전**에 가른다 (2026-08-23) ──
    *
@@ -234,7 +237,7 @@ export function validateAssetAcquisition(
    * 술어는 `transfer-successor-right.ts` 단일 소스(UI·API·사이드바 공용).
    */
   if (isSuccessorRightTransfer(asset)) {
-    const successorError = validateSuccessorRightAsset(asset, label);
+    const successorError = validateSuccessorRightAsset(asset, label, typeToggleSection);
     if (successorError) return successorError;
     return null;
   }
@@ -243,7 +246,7 @@ export function validateAssetAcquisition(
   // redevSubject="" 미입력 시에도 redev 검증 진입 (3중 패턴 — API/validate 동기화):
   // buildRedevelopmentPayload와 동일 fallback (right_to_move_in → "right", 그 외 → "apt")
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
-    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold);
+    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection);
     if (redevError) return redevError;
     // I-8 — 승계조합원 신축주택 거주 개월 수는 준공일~양도일 개월 수를 넘을 수 없다(⑫ 같은 leaf).
     const newMonthsRaw = (asset.redevNewHouseResidenceMonths || "").trim();

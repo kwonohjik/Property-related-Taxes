@@ -11,6 +11,7 @@ import {
   isSec163_9BuildingSec164Open,
   BUILDING_CAUSE_APARTMENT_MESSAGE,
   BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE,
+  BUILDING_BUNDLED_STD_PRICE_REQUIRED_MESSAGE,
   BUILDING_SEC164_PARTIAL_MESSAGE,
   BUILDING_SEC164_REQUIRED_MESSAGE,
   type SplitPartCauseFacts,
@@ -68,11 +69,17 @@ describe("leaf — Y4a~d 분기 (단독·다가구만 연다)", () => {
     expect(msgs({ buildingHouseKind: "house_apart", isPartialAreaTransfer: true, buildingSec164Value: undefined })).toEqual([BUILDING_CAUSE_APARTMENT_MESSAGE]);
   });
 
-  it("Y4a 비주택(isHousing false·생략) → 종전 문구 acquisitionDate — 사실 생략 호출(기존 테스트 헬퍼)도 종전 값 그대로", () => {
-    expect(first({ isHousing: false })).toEqual({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
-    expect(first({ isHousing: undefined })).toEqual({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
+  it("Y4a 비주택(isHousing false·생략) 2001.1.1. 전 → 종전 문구 acquisitionDate — 사실 생략 호출(기존 테스트 헬퍼)도 같은 값", () => {
+    const pre = { buildingAcquisitionDate: "2000-12-31" };
+    expect(first({ ...pre, isHousing: false })).toEqual({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
+    expect(first({ ...pre, isHousing: undefined })).toEqual({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
     // 비주택은 단독·다가구 사실이 와도 열리지 않는다
-    expect(msgs({ isHousing: false, buildingHouseKind: "house_individual" })).toEqual([BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE]);
+    expect(msgs({ ...pre, isHousing: false, buildingHouseKind: "house_individual" })).toEqual([BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE]);
+  });
+
+  it("Y4e 비주택 2001.1.1.~2005.4.29.(기준 사실 2003-05-01) → 일괄 고시 확인 요구 · 「아니오」면 ②·주택 구분 없이 통과", () => {
+    expect(first({ isHousing: false })).toEqual({ field: "buildingBundledStdPrice", message: BUILDING_BUNDLED_STD_PRICE_REQUIRED_MESSAGE });
+    expect(msgs({ isHousing: false, buildingBundledStdPrice: "no", buildingSec164Value: undefined, buildingHouseKind: undefined })).toEqual([]);
   });
 
   it("경계: 2005-04-29 → 구간(② 필요) · 2005-04-30 → 구간 밖(② 불요, 구분도 불요) · 시각 꼬리 · 증여도 동일", () => {
@@ -203,7 +210,9 @@ describe("엔진 직접 — calcSplitGain이 같은 leaf로 던지고, 해결자
     expect(() => run({ buildingSec164Value: undefined })).toThrow("그 건물 몫(buildingSec164Value)이 필요합니다");
     expect(() => run({ buildingHouseKind: undefined })).toThrow("단독·다가구주택으로 확인된 주택만 지원합니다");
     expect(() => run({ buildingHouseKind: "house_apart" })).toThrow("단독·다가구주택으로 확인된 주택만 지원합니다");
-    expect(() => run({ propertyType: "building" })).toThrow("기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
+    expect(() => run({ propertyType: "building" })).toThrow("오피스텔·상업용 건물인지 확인이 필요합니다");
+    expect(() => run({ propertyType: "building", buildingBundledStdPrice: "yes" })).toThrow("지원하지 않습니다");
+    expect(() => run({ propertyType: "building", acquisitionDate: D("2000-12-31"), landAcquisitionDate: D("2000-01-10") })).toThrow("일반 건물은 2001.1.1. 전");
     expect(() => run({ isPartialAreaTransfer: true })).toThrow("일부 양도");
   });
   it("경계 당일 2005-04-30 → 비교 없음 · echo 없음 · 고지 없음 (부정형 짝)", () => {
@@ -256,7 +265,9 @@ describe("⑫ 주 자산·컴패니언 — 두 스키마가 필드를 strip하�
     ["Y4c ② 없음", { buildingSec164Value: undefined }, "buildingSec164Value"],
     ["Y4d 공동주택", { buildingHouseKind: "house_apart" }, "acquisitionDate"],
     ["Y4d 구분 없음", { buildingHouseKind: undefined }, "acquisitionDate"],
-    ["Y4a 비주택 building", { propertyType: "building" }, "acquisitionDate"],
+    ["Y4e 비주택 building 2003(일괄 고시 미답)", { propertyType: "building" }, "buildingBundledStdPrice"],
+    ["Y4e 비주택 building 2003 「예」", { propertyType: "building", buildingBundledStdPrice: "yes" }, "buildingBundledStdPrice"],
+    ["Y4a 비주택 building 2000", { propertyType: "building", acquisitionDate: "2000-12-31", landAcquisitionDate: "2000-01-10" }, "acquisitionDate"],
     ["Y4b 일부 양도", { isPartialAreaTransfer: true }, "isPartialAreaTransfer"],
     ["Y9 ① 없음", { buildingAcquisitionPrice: undefined }, "buildingAcquisitionPrice"],
   ] as const)("%s → 주 자산 %s", (_n, over, path) => {
@@ -309,7 +320,7 @@ describe("⑫ 주 자산·컴패니언 — 두 스키마가 필드를 strip하�
     ["Y4c ② 없음", { buildingSec164Value: undefined }, "companionAssets.0.buildingSec164Value"],
     ["Y4d 공동주택", { buildingHouseKind: "house_apart" }, "companionAssets.0.acquisitionDate"],
     ["Y4d 구분 없음", { buildingHouseKind: undefined }, "companionAssets.0.acquisitionDate"],
-    ["Y4a 비주택 assetKind building", { assetKind: "building" }, "companionAssets.0.acquisitionDate"],
+    ["Y4e 비주택 assetKind building 2003(일괄 고시 미답)", { assetKind: "building" }, "companionAssets.0.buildingBundledStdPrice"],
     ["Y4b 일부 양도", { isPartialAreaTransfer: true }, "companionAssets.0.isPartialAreaTransfer"],
   ] as const)("%s → 컴패니언 %s", (_n, over, path) => {
     expect(cpaths({ ...companion(), ...over })).toContain(path);

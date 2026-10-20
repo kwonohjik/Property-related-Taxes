@@ -46,6 +46,12 @@ export interface SplitAcquisitionFormSlice {
    */
   landHouseExisted: "" | "yes" | "no" | "unknown";
   /**
+   * 「건물(토지 제외)」을 2001.1.1.~2005.4.29.에 상속·증여받고 토지를 따로 매수한 계산(D2)에서 — 국세청장이 토지·건물을 일괄 고시하는
+   * 오피스텔·상업용 건물인가. `"no"`만 영 §163⑨ 단서 2호 구간 밖(평가액 그대로)으로 계산한다 — 미선택·`"yes"`는 ⑧·⑫가 막는다(모름 선택지 없음).
+   * 읽는 쪽은 저장값이 아니라 `buildingBundledStdPriceSent`(질문이 닫힌 자리의 잔재는 「없음」).
+   */
+  buildingBundledStdPrice: "" | "yes" | "no";
+  /**
    * 구주택 멸실·신축 통산(해석 (5) — 서면법규과-1222 · 사전-2023-법규재산-0097) 입력 5필드 — 토지 파트 §104② 세율 보유기간을
    * 「구주택 부수토지 기간 + 신축주택 부수토지 기간」으로 통산한다. 건물 신축 + 「토지는 다른 원인으로 취득」 호스트 전용(UI 설계 §1 R-1).
    * 읽는 쪽은 저장값이 아니라 `effectiveLandRebuild`(lib/calc/transfer-land-rebuild.ts)를 쓴다 — 호스트가 닫힌 자산의 잔재는 「없음」.

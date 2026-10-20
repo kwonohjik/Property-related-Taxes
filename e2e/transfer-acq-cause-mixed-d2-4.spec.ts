@@ -6,7 +6,7 @@
  * - 카드 노출 → 주택 구분(단독·다가구) → 4칸 입력 → 계산 → 요청 body `buildingSec164Value`·`buildingHouseKind` →
  *   결과 카드·상세명세서가 「평가액 vs 영 §164⑦ 가액의 건물 몫 → 채택」을 엔진 echo 그대로 보인다.
  * - ⑧: 주택 구분 미선택 → 구분 칸, 고른 뒤 빈 칸 → 첫 미완 칸으로 이동(포커스 + 뷰포트). 공동주택은 지원하지 않음.
- * - 부정형 짝: 2005-04-30 이후로 고치면 카드가 사라진다 · 비주택 건물은 종전 안내.
+ * - 부정형 짝: 2005-04-30 이후로 고치면 카드가 사라진다 · 비주택 건물 2001.1.1. 전은 종전 안내, 그 뒤 2005.4.29.까지는 일괄 고시 질문(Y4e).
  *
  * ⚠️ 수치의 정본은 vitest anchor(`building-sec164-card.d2-4b.ui.anchor.test.tsx`)다. 워크트리 실행은 E2E_PORT 필수.
  */
@@ -126,10 +126,42 @@ test.describe("D2-4b 2005.4.30. 전 상속 주택 건물 — ② 입력 카드 �
     await fillDateAndVerify(page, { year: "2005", month: "04", day: "30" }, { scope: page.getByTestId("acq-date-building") });
     await expect(sec164Card(page)).toHaveCount(0);
 
-    await seedWizard(page, singleSeed([d24({ assetKind: "building" })]));
+    // 비주택 건물 2001.1.1. 전 — 종전 안내(2001.1.1. 기준) · 일괄 고시 질문 없음
+    await seedWizard(page, singleSeed([d24({ assetKind: "building", acquisitionDate: "2000-12-31", inheritanceStartDate: "2000-12-31", inheritanceDate: "2000-12-31" })]));
     await expandAssetSection(page, 3);
     await expect(sec164Card(page)).toHaveCount(0);
-    await expect(page.getByTestId("building-cause-date-notice")).toContainText("단독·다가구주택만");
+    await expect(page.getByTestId("building-cause-date-notice")).toContainText("2001.1.1.");
+    await expect(page.getByTestId("building-bundled-std-price")).toHaveCount(0);
+  });
+});
+
+test.describe("Y4e 비주택 건물 2001.1.1.~2005.4.29. 상속 — 국세청 일괄 고시 질문 (계획서 §13.5)", () => {
+  const bundledQ = (p: Page) => p.getByTestId("building-bundled-std-price");
+
+  test("미선택 → 「다음」 → 질문 칸으로 이동 · 「아니오」 → 계산 → body buildingBundledStdPrice · 건물 취득가액 = 평가액", async ({ page }) => {
+    test.setTimeout(180_000);
+    await seedWizard(page, singleSeed([d24({ assetKind: "building" })]));
+    await ready(page);
+    await expandAssetSection(page, 3);
+    await expect(bundledQ(page)).toBeVisible();
+    await expect(page.getByTestId("building-cause-date-notice")).toHaveCount(0);
+    await expect(sec164Card(page)).toHaveCount(0);
+
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByTestId("validation-issues").getByRole("button", { name: /오피스텔·상업용 건물인지 확인이 필요합니다/ })).toBeVisible();
+    const no = bundledQ(page).getByRole("radio", { name: /아니오/ });
+    await expect(no).toBeInViewport();
+
+    await bundledQ(page).getByRole("radio", { name: /예 —/ }).check();
+    await expect(page.getByTestId("building-bundled-std-price-unsupported")).toContainText("지원하지 않습니다");
+    await no.check();
+    await expect(page.getByTestId("building-bundled-std-price-unsupported")).toHaveCount(0);
+
+    const body = await calculate(page);
+    expect(body).toMatchObject({ acquisitionCause: "inheritance", landAcquisitionCause: "purchase", buildingAcquisitionPrice: 30_000_000, buildingBundledStdPrice: "no" });
+    expect(body.buildingSec164Value).toBeUndefined();
+    await expect(card(page, "split-card-acq-building")).toHaveText("30,000,000");
+    await expect(card(page, "split-card-acq-basis")).toHaveCount(0);
   });
 });
 

@@ -265,6 +265,9 @@ export function applyMixedBurdenedGift(args: {
   if (bg.value.isMarket && !bg.value.separateAppraisal) {
     notices.push(`주택·상가로 구분된 감정평가가액이 없다고 보아 시가를 양도시 기준시가 비율로 주택·상가에 나누었습니다(${MIXED_USE_BURDENED_GIFT.VAT_DECREE_APPORTION_64_1} 본문).`);
   }
+  if (bg.value.separateAppraisal) {
+    notices.push(`입력하신 주택분 감정평가가액 비율로 시가를 주택·상가에 나누었습니다(${MIXED_USE_BURDENED_GIFT.VAT_DECREE_APPORTION_64_1} 단서). 단서의 감정평가가액은 공급시기가 속하는 과세기간의 직전 과세기간 개시일부터 공급시기가 속하는 과세기간 종료일까지 감정평가법인등이 평가한 것으로 한정됩니다 — 양도소득세에서 이 공급시기를 증여일로 읽는 것은 법령(소득세법 시행령 §166⑥)이 명시하지 않아 확인이 필요합니다.`);
+  }
   if (mainText) {
     notices.push("주택 연면적이 주택 외 부분보다 커 건물 전부를 주택으로 보는 경우(소령 §154③ 본문)에도 채무 귀속에 따라 양도로 보는 부분을 나누어 계산했습니다 — 이 경우를 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다.");
   }

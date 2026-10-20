@@ -21,6 +21,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { RebuiltHouseLandBlock } from "./RebuiltHouseLandBlock";
+import { BuildingBundledStdPriceQuestion } from "./BuildingBundledStdPriceQuestion";
 import { isMixedUsePerPartAcq } from "@/lib/calc/mixed-use-part-acq-split";
 import type { BlockProps } from "./CompanionAcqPurchaseBlock.types";
 import { LAND_CAUSE_META } from "./land-cause-meta";
@@ -247,6 +248,8 @@ export function CompanionAcqDateSection(props: {
             ))}
           </ToneCard>
         )}
+        {/* D2 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가. 노출 술어는 ④·⑧과 같다(차단은 ⑧·⑫). */}
+        {buildingCause && p.asset && p.onAssetChange && <BuildingBundledStdPriceQuestion asset={p.asset} onChange={p.onAssetChange} />}
         {/* 8-B-5: 의제취득 + 분리 토글 ON 시 안내 (토지·건물 동일일 권장) */}
         {isDeemedAcquisitionDate && p.hasSeperateLandAcquisitionDate && !isMixedUse && (
           <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-300">

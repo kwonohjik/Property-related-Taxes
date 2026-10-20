@@ -427,4 +427,15 @@ describe("겸용 × 부담부증여 — 구분 감정평가(G-13) · 12억 문�
     expect(r.burdenedGift?.highValue.prorationBase).toBe(1_150_000_000);
     expect(r.housingPart.proratedTaxableGain).toBe(0);
   });
+
+  it("구분 감정평가 «있음»이면 부가세령 §64①1호 단서의 평가 기간 요건(공급시기 → 증여일 대응)을 확인 필요로 고지한다 · «없음»이면 내지 않는다", () => {
+    const period = "직전 과세기간 개시일부터";
+    const withAppraisal = run(asset(F1), bg(F1, { housingAppraisal: { exists: true, housingValue: 750e6 } }));
+    const notice = withAppraisal.warnings.find((w) => w.includes(period));
+    expect(notice).toContain("단서");
+    expect(notice).toContain("증여일");
+    expect(notice).toContain("확인이 필요합니다");
+    const without = run(asset(F1), bg(F1));
+    expect(without.warnings.some((w) => w.includes(period))).toBe(false);
+  });
 });

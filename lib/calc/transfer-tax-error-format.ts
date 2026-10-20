@@ -54,6 +54,7 @@ const FIELD_LABEL: Record<string, string> = {
   isPartialAreaTransfer: "일부 양도 여부",
   buildingSec164Value: "건물 영 §164⑦ 가액(건물 몫)",
   buildingHouseKind: "주택 구분(단독·다가구/공동주택)",
+  buildingBundledStdPrice: "국세청 일괄 고시 오피스텔·상업용 건물인지",
   landHouseExisted: "토지를 받을 당시 주택이 있었는지",
   landHouseSec164Value: "토지 영 §164⑦ 가액(토지 몫)",
   houseFirstDisclosureDate: "개별주택가격 최초 공시일",

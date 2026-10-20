@@ -50,7 +50,8 @@ const BASE = {
   acquisitionCause: "purchase",
   acquisitionDate: "2010-03-01",
   useEstimatedAcquisition: false,
-  fixedAcquisitionPrice: "400000000",
+  // 원조합원 카드는 상단 「취득가액」 칸이 화면에 없다 — 숨은 칸을 비운 화면 모양(채우면 컴패니언 ⑩ 400을 가린다)
+  fixedAcquisitionPrice: "",
   redevActualAcquisitionPrice: "400000000",
   redevApprovalDate: "2018-05-01",
   redevRightsValue: "600000000",

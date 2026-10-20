@@ -373,6 +373,7 @@ export function buildTransferEngineInput(
     // D2-4 영 §163⑨ 단서 2호 — 건물 몫 ②(영 §164⑦ 가액)와 주택 구분. 엔진 split 파트가 max/차단
     buildingSec164Value: data.buildingSec164Value,
     buildingHouseKind: data.buildingHouseKind,
+    buildingBundledStdPrice: data.buildingBundledStdPrice,
     landHouseExisted: data.landHouseExisted,
     landHouseSec164Value: data.landHouseSec164Value,
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다
@@ -480,6 +481,10 @@ export function buildTransferEngineInput(
     // primaryContextForCompanionRate가 설정된 bundled 토지-primary에서 resolveCompanionLandRate가
     // landNature !== "appurtenant_to_housing"(undefined 포함)이면 applied=false로 일체과세 미발동.
     landNature: data.landNature,
+    // ⑭ 토지 세율 수동 지정 — 컴패니언 경로(bundled-split-helpers)와 대칭. **함께 양도 자산이 있는 토지**에만 싣는다(⑫ 주석) —
+    //    컴패니언 없는 단독 토지는 종전처럼 지정을 읽지 않는다(`landNature`와 같은 범위 — 다건 ⑫ 무효과 목록 근거).
+    manualHoldingPeriodOverride:
+      data.propertyType === "land" && (data.companionAssets?.length ?? 0) > 0 ? data.manualHoldingPeriodOverride : undefined,
     // ⑭ 상업용건물·오피스텔 환산취득가 서브객체 (TypeScript 미감지 — 명시 매핑 필수)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...(data.commercialBuildingValuation ? { commercialBuildingValuation: data.commercialBuildingValuation as any } : {}),

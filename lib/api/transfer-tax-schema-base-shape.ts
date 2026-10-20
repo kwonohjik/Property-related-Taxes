@@ -321,6 +321,8 @@ export const propertyBaseShape = {
   buildingSec164Value: z.number().int().positive().optional(),
   /** 주택 구분 — 단독·다가구(house_individual)만 단서 2호 ②가 열린다(D2-4). 생략 = 단독이 아님 */
   buildingHouseKind: z.enum(["house_individual", "house_apart"]).optional(),
+  /** 비주택 건물 2001.1.1.~2005.4.29. 상속·증여(D2) — 국세청 일괄 고시 오피스텔·상업용 건물인가. "no"만 단서 2호 구간 밖으로 계산한다 */
+  buildingBundledStdPrice: z.enum(["yes", "no"]).optional(),
   /** D1-H — 토지를 받을 당시 지금의 주택이 그 위에 있었는가(토지 상속·증여 + 건물 매매). "yes"만 주택 부수토지 단서 2호 비교를 연다 */
   landHouseExisted: z.enum(["yes", "no", "unknown"]).optional(),
   /** D1-H — 토지 몫 영 §164⑦ 가액(②, 총액·지분 스케일 후) — 1990.8.30.~2005.4.29. 상속·증여 주택 부수토지(영 §163⑨ 단서 2호, 받을 당시 주택 있음·단독·다가구)에서 필수 */
@@ -459,6 +461,16 @@ export const propertyBaseShape = {
    */
   landNature: z
     .enum(["appurtenant_to_housing", "non_appurtenant"])
+    .optional(),
+  /**
+   * ⑨⑫ 토지 세율 수동 지정 — 컴패니언 스키마(`transfer-tax-schema-companion.ts`)와 같은 enum.
+   * 「토지 먼저」(주 자산=주택부수토지) 순서에서도 「주택 먼저」의 토지 카드와 같게 동작하도록 연다(없으면 조용히 strip).
+   * **세율 축(소득세법 §104①2·3호 괄호·영 §167의5)만 정한다** — 배율 분리·한도 공유·1세대1주택 비과세 단위(§89①3호·영 §154⑦)와 무관.
+   * ⑭는 **함께 양도 자산이 있는 토지**(`propertyType === "land"` + `companionAssets`)에만 싣는다 — 엔진 세율 소비가 토지 한정이고,
+   * 주택 주 자산에 실리면 route의 분리 컨텍스트 조건이 달라지며, 단독 토지에 실리면 컴패니언 없는 자산에서 새 세율 경로가 열린다.
+   */
+  manualHoldingPeriodOverride: z
+    .enum(["shortTermHousing70", "shortTerm60", "progressive"])
     .optional(),
 
   // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
