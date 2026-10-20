@@ -146,6 +146,6 @@ describe("F19 — 게이트가 과잉 차단하지 않는다(대조군)", () => 
     // 실가는 §97②**1호** 가산이라 실비가 필요경비에 그대로 더해진다(취득가액도 유지).
     expect(r.acqTotal).toBe(APPRAISAL_TOTAL);
     expect(r.dedTotal).toBe(HUGE_NAMOK);
-    expect(r.totalPayable).toBe(14_273_999);
+    expect(r.totalPayable).toBe(9_773_999); // P3 §1 파트 차손 통산(주택분 · 상가 토지 차손 → 상가 건물, 1호) — 파트 카드 합산과 같은 값(종전 14,273,999)
   });
 });

@@ -20,6 +20,7 @@ import type { TransferReduction, TransferTaxInput } from "./types/transfer.types
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { TransferReductionDetailSource } from "./types/transfer-result.types";
 import { compareWithClause1 } from "./transfer-tax-rate-calc";
+import { offsetLossesCore } from "./loss-offset-core";
 import { calcLongTermRate, type ExcessLandResult } from "./transfer-tax-mixed-use-helpers";
 import type {
   MixedUseHousingPart,
@@ -53,7 +54,7 @@ export function buildNonBusinessPart(
     transferGain: transferredGain,
     longTermDeductionRate: deductionRate,
     longTermDeductionAmount,
-    incomeAmount: Math.max(0, transferredGain - longTermDeductionAmount),
+    incomeAmount: transferredGain - longTermDeductionAmount,
     additionalRate: 0.10,
   };
 }
@@ -92,6 +93,26 @@ export interface MixedUseRatePart {
   surchargeAddon?: number;
 }
 
+/**
+ * 겸용 파트 차손 통산 — 세목 공용 코어(`offsetLossesCore`)에 파트를 넘긴다. 「같은 세율」 축은 §104① 호(단기세율 · 누진)와
+ * 가산율(§104⑦ 중과 · §104①8호 비사업용 토지)이다. 차손 파트의 통산 후 소득은 0이다.
+ */
+function offsetMixedPartLosses(parts: MixedUseRatePart[]): {
+  parts: MixedUseRatePart[];
+  rows: { from: MixedUseRatePart["kind"]; to: MixedUseRatePart["kind"]; amount: number; scope: "same_group" | "other_group" }[];
+} {
+  const out = offsetLossesCore(
+    parts.map((p) => ({
+      income: p.income,
+      rateKey: `${shortTermRate(p.holdingYears, p.kind === "housing") ?? "progressive"}|${p.surchargeAddon ?? 0}`,
+    })),
+  );
+  return {
+    parts: parts.map((p, i) => ({ ...p, income: out.incomeAfterOffset[i] })),
+    rows: out.rows.map((r) => ({ from: parts[r.from].kind, to: parts[r.to].kind, amount: r.amount, scope: r.scope })),
+  };
+}
+
 /** 합산 세액 조립 */
 export function buildTotalTax(
   housingIncome: number,
@@ -121,7 +142,19 @@ export function buildTotalTax(
 ): MixedUseTotalTax {
   const BASIC_DEDUCTION = isUnregistered ? 0 : basicDeductionLimit;
 
-  const aggregateIncome = housingIncome + commercialIncome + nonBizIncome;
+  // §167의2① — 파트(주택분 · 상가 토지 · 상가 건물 · 배율 초과분)의 차손을 1호(같은 세율) → 2호(다른 세율 안분) 순으로 다른 파트에서 공제한다
+  //   (계획서 `transfer-split-part-loss-offset-p3.plan.md` §1 A안 — 함께 양도 파트 카드가 일반 합산 엔진에서 받는 통산과 같은 규칙).
+  //   이후 세율 판정 · 기본공제 배정은 통산 후 소득으로 한다. 차손이 없으면 종전 값 그대로다.
+  const offset = rateParts?.some((p) => p.income < 0) ? offsetMixedPartLosses(rateParts) : undefined;
+  if (offset) {
+    rateParts = offset.parts;
+    const sumOf = (kinds: MixedUseRatePart["kind"][]) =>
+      rateParts!.filter((p) => kinds.includes(p.kind)).reduce((a, p) => a + p.income, 0);
+    housingIncome = sumOf(["housing"]);
+    commercialIncome = sumOf(["commercial_land", "commercial_building"]);
+    nonBizIncome = sumOf(["non_business_land"]);
+  }
+  const aggregateIncome = Math.max(0, housingIncome + commercialIncome + nonBizIncome);
   const taxBase = Math.max(0, aggregateIncome - BASIC_DEDUCTION);
   const taxByBasicRate = calculateProgressiveTax(taxBase, brackets);
 
@@ -247,6 +280,7 @@ export function buildTotalTax(
 
   return {
     aggregateIncome,
+    ...(offset ? { partLossOffset: offset.rows } : {}),
     basicDeduction: BASIC_DEDUCTION,
     taxBase,
     taxByBasicRate,

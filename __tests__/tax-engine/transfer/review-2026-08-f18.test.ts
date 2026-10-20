@@ -225,6 +225,6 @@ describe("F18 — PHD Case A 4부분 × §97②2호 단서", () => {
     expect(r.cDed).toBe(610_109_853); // 수정 전 1,087,084
     expect(r.hDed + r.cDed).toBe(NAMOK);
     // 수정 전 352,211,435 — 실비를 넣으나 마나 세액이 같았다(단서 완전 무효).
-    expect(r.totalPayable).toBe(94_009_689);
+    expect(r.totalPayable).toBe(87_177_134); // P3 §1 파트 차손 통산(상가 건물 차손 → 주택분 · 상가 토지, 1호) — 파트 카드 합산과 같은 값(종전 94,009,689)
   }, 20000);
 });

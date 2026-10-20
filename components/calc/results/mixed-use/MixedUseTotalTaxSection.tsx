@@ -31,6 +31,13 @@ interface Props {
   onToggle: () => void;
 }
 
+const PART_LABEL = {
+  housing: "주택부분",
+  commercial_land: "상가 부수토지",
+  commercial_building: "상가 건물",
+  non_business_land: "비사업용토지(배율 초과)",
+} as const;
+
 export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }: Props) {
   const { housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
 
@@ -43,12 +50,23 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         open={open}
         onToggle={onToggle}
       >
+        {/* 파트 양도차손 통산(소득세법 시행령 §167의2①) — 파트 소득금액은 통산 전 값이라, 합산 양도소득금액이 그 단순 합과 다른 이유를 밝힌다. */}
+        {(t.partLossOffset ?? []).map((r, i) => (
+          <Row
+            key={`loss-offset-${i}`}
+            label={`양도차손 통산 — ${PART_LABEL[r.from]} → ${PART_LABEL[r.to]}`}
+            value={`△ ${fmt(r.amount)}`}
+            formula={`${PART_LABEL[r.from]} 양도차손을 ${PART_LABEL[r.to]} 양도소득금액에서 공제 (소득세법 시행령 §167의2① ${
+              r.scope === "same_group" ? "1호 — 같은 세율" : "2호 — 다른 세율, 세율별 소득금액 비율로 안분"
+            })`}
+          />
+        ))}
         <Row
           label="합산 양도소득금액"
           value={fmt(t.aggregateIncome)}
           formula={`주택부분 ${fmtPlain(h.incomeAmount)} + 상가부분 ${fmtPlain(c.incomeAmount)}${
             nb ? ` + 비사업용토지 ${fmtPlain(nb.incomeAmount)}` : ""
-          }`}
+          }${t.partLossOffset ? " — 부분별 양도차손을 위와 같이 통산한 뒤의 합계(통산하지 못한 차손은 소멸)" : ""}`}
         />
         <Row
           label="기본공제"

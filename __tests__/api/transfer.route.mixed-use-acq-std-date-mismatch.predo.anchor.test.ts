@@ -192,10 +192,10 @@ describe("B0 — 건물일 공시지가 = 토지일 값(L1)으로 입력하면 �
     expect(h.landAcqPrice).toBe(180_000_000);
     expect(h.buildingAcqPrice).toBe(420_000_000);
     expect(h.landAppraisalDed + h.buildingAppraisalDed).toBe(0);
-    expect(h.incomeAmount).toBe(742_965_517);
-    expect(r.total.determinedTax).toBe(594_155_689);
-    expect(r.total.localTax).toBe(59_415_568);
-    expect(r.total.totalPayable).toBe(653_571_257);
+    expect(h.incomeAmount).toBe(736_758_621); // P3 §1 파트 차손 통산(주택 건물 차손 해제 · 상가 건물 차손 통산, 1호) — 파트 카드 합산과 같은 값(종전 742,965,517)
+    expect(r.total.determinedTax).toBe(591_362_586); // 종전 594,155,689
+    expect(r.total.localTax).toBe(59_136_258);
+    expect(r.total.totalPayable).toBe(650_498_844);
   });
 
   it("C-3 감정·매매사례 — 실가와 같은 분할 + 개산공제 3%(280M 기준)", async () => {
@@ -206,10 +206,10 @@ describe("B0 — 건물일 공시지가 = 토지일 값(L1)으로 입력하면 �
     expect(h.buildingAcqPrice).toBe(420_000_000);
     expect(h.landAppraisalDed).toBe(3_600_000);
     expect(h.buildingAppraisalDed).toBe(8_400_000);
-    expect(h.incomeAmount).toBe(740_445_517);
-    expect(r.total.determinedTax).toBe(590_807_689);
-    expect(r.total.localTax).toBe(59_080_768);
-    expect(r.total.totalPayable).toBe(649_888_457);
+    expect(h.incomeAmount).toBe(725_838_621); // P3 §1 파트 차손 통산(주택 건물 차손 해제 · 상가 건물 차손 통산, 1호) — 파트 카드 합산과 같은 값(종전 740,445,517)
+    expect(r.total.determinedTax).toBe(584_234_586); // 종전 590,807,689
+    expect(r.total.localTax).toBe(58_423_458);
+    expect(r.total.totalPayable).toBe(642_658_044);
   });
 
   it("C-4 반전 — 건물분 기준시가는 건물일 공시지가(신규 칸)에만 종속되고 토지일 공시지가(기존 칸)는 토지분만 움직인다", async () => {
