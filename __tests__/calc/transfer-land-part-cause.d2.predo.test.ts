@@ -406,7 +406,11 @@ describe("C. D2-1 활성", () => {
     expect(f({ decedentSameHouseholdBeforeInheritance: true, decedentCohabitationHoldingStartDate: "1995-01-01" }).msg).toBeNull();
     // 경계일 전(2003) — D2-4b: 주택은 입력 카드의 주택 구분 칸으로(미선택 = 단독으로 보지 않음), 비주택 건물은 종전 건물 취득일 칸.
     expect(f({ acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "inheritanceAssetKind" });
-    expect(f({ assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "acquisitionDate" });
+    // 비주택 건물 — 2001.1.1. 전은 건물 취득일 칸(Y4a), 2001.1.1.~2005.4.29.는 일괄 고시 질문 칸(Y4e, 「아니오」면 통과).
+    expect(f({ assetKind: "building", acquisitionDate: "2000-12-31", landAcquisitionDate: "2000-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "acquisitionDate" });
+    expect(f({ assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01" })).toMatchObject({ field: "buildingBundledStdPrice" });
+    expect(f({ assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01", buildingBundledStdPrice: "yes" })).toMatchObject({ field: "buildingBundledStdPrice" });
+    expect(f({ assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2003-01-10", decedentAcquisitionDate: "1990-01-01", buildingBundledStdPrice: "no" }).msg).toBeNull();
     expect(f({ acquisitionDate: "2005-04-30", landAcquisitionDate: "2005-01-10", decedentAcquisitionDate: "1990-01-01" }).msg).toBeNull();
     expect(f({ landAcquisitionDate: "2025-05-01" })).toMatchObject({ field: "landAcquisitionDate" }); // Q-4 같은 날 — ⑧ 전용
     expect(landPartCauseSameDay(d2({ landAcquisitionDate: "2025-05-01" }))).toBe(true);
