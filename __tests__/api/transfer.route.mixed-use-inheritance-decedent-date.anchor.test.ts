@@ -102,6 +102,14 @@ describe("상속 겸용주택 — 피상속인 취득일 (상속 2023-09-01 · �
     expect(t.determinedTax).toBe(193_509_000);
   }, 60_000);
 
+  // 계획서 docs/00-pm/sp69-77-non-heir-bequest.plan.md Q-1 (b) — 수유자는 §77⑨ 소급도 하지 않는다(겸용은 엔진이 취득일을 직접 만든다).
+  it("§77⑨ × 수유자 — 피상속인 2000 취득이어도 상속개시일(2023-09-01)로 판정 → 불성립 + 확인 필요 고지", async () => {
+    const t = await calc({ ...INH, decedentAcquisitionDate: "2000-01-01", nonHeirBequest: true }, PE);
+    expect(t.reductionDetails.publicExpropriationDetail.isEligible).toBe(false);
+    expect(t.reductionDetails.publicExpropriationDetail.notEligibleReason).toContain("상속인이 아닌 수유자");
+    expect(t.reductionAmount).toBe(0);
+  }, 60_000);
+
   it("§77 긍정 짝 — 피상속인도 소급 2년 안(2023-06-01) 취득 → 불성립", async () => {
     const t = await calc({ ...INH, decedentAcquisitionDate: "2023-06-01" }, PE);
     expect(t.reductionDetails.publicExpropriationDetail.isEligible).toBe(false);

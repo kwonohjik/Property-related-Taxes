@@ -582,7 +582,10 @@ export function calcMixedUseTransferTax(
       transferDate,
       acquisitionDate: asset.landAcquisitionDate,
       // 조특법 §77⑨·§77의3③ — 상속받은 토지는 피상속인 취득일로 「취득 시기」 요건을 판정한다.
-      expropriationAcquisitionDate: landInherited ? asset.decedentAcquisitionDate : undefined,
+      // 수유자(상속인 아닌 유증·사인증여)는 소급하지 않는다 — 단건 `expropriationAcquisitionDate`와 같은 선(계획서 `sp69-77-non-heir-bequest.plan.md`).
+      expropriationAcquisitionDate:
+        landInherited && asset.nonHeirBequest !== true ? asset.decedentAcquisitionDate : undefined,
+      nonHeirBequest: asset.nonHeirBequest,
       // CB-05 — §97의2①2호·§97의5①1호처럼 **계약일이 기준**인 조문의 시한 판정용.
       assetContractDate: asset.assetContractDate,
       priorReductionUsage: asset.priorReductionUsage,

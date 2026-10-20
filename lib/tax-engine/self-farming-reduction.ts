@@ -144,6 +144,13 @@ export interface SelfFarmingReductionInput {
   disqualifiedTaxPeriodsSelf?: number;
   /** 조특령 §66⑭ — **피상속인(그 배우자 포함)**의 결격 과세기간 수(년). 본인분과 «각각» 차감한다. */
   disqualifiedTaxPeriodsDecedent?: number;
+  /**
+   * 상속인이 아닌 수유자(유증·사인증여)로 받은 농지 — 피상속인 경작기간을 **합산하지 않는다**.
+   * 조특령 §66⑪·⑫는 「**상속인이** 상속받은 농지」이고, 조세심판원은 수유자에게 합산을 부인했다
+   * (조심2021구1132 — 며느리 · 조심2023중10792 — 손자). 상속인이 유증·사인증여로 받은 농지는 합산한다
+   * (부동산거래관리과-370 — 이때는 이 값이 없다).
+   */
+  nonHeirBequest?: boolean;
   /** 요건 충족 최소 자경기간 (보통 8년) — rate-table의 selfFarmingRules.conditions.minFarmingYears */
   minFarmingYears: number;
   /** 취득일 */
@@ -229,7 +236,8 @@ export function calculateSelfFarmingReduction(
   const ownYears = Math.max(0, input.farmingYears - (input.disqualifiedTaxPeriodsSelf ?? 0));
   // 조특령 §66⑪ 본문(1년 이상 계속 경작) 또는 §66⑫ 대체요건이 성립해야 합산한다 (D7-09).
   const canAggregateDecedent =
-    input.heirContinuedFarming1Year === true || input.meetsDecedentAggregationAlt === true;
+    input.nonHeirBequest !== true &&
+    (input.heirContinuedFarming1Year === true || input.meetsDecedentAggregationAlt === true);
   const decedentYears = canAggregateDecedent
     ? Math.max(0, (input.decedentFarmingYears ?? 0) - (input.disqualifiedTaxPeriodsDecedent ?? 0))
     : 0;
@@ -253,7 +261,9 @@ export function calculateSelfFarmingReduction(
           (input.decedentFarmingYears
             ? canAggregateDecedent
               ? ` + 피상속인 ${decedentYears}년 = 합계 ${effectiveFarmingYears}년`
-              : ` (피상속인 ${input.decedentFarmingYears}년은 §66⑪ 1년 이상 계속 경작 요건도 §66⑫ 대체요건도 확인되지 않아 합산 제외)`
+              : input.nonHeirBequest === true
+                ? ` (피상속인 ${input.decedentFarmingYears}년은 상속인이 아닌 수유자(유증·사인증여)라 합산 제외 — 조특령 §66⑪·⑫는 「상속인이」 상속받은 농지에 한정 · 조심2021구1132 · 조심2023중10792)`
+                : ` (피상속인 ${input.decedentFarmingYears}년은 §66⑪ 1년 이상 계속 경작 요건도 §66⑫ 대체요건도 확인되지 않아 합산 제외)`
             : "") +
           ` < 요건 ${input.minFarmingYears}년 → 감면 불가`,
       ],

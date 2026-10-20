@@ -20,6 +20,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import { isRowReduction } from "./house-count-exclusion-rows";
 import { selfFarmingOwnYearsSufficient } from "./self-farming-own-years";
+import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /**
@@ -176,7 +177,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // ⑫ 대체요건 중 하나가 성립해야 한다. 둘 다 미선언이면 엔진이 합산하지 않으므로
           // 여기서 먼저 막는다(⑧↔엔진 대칭 · D7-09).
           if (
-            asset.acquisitionCause === "inheritance" &&
+            // 수유자는 합산 칸이 숨겨져 있다 — 숨긴 칸으로 막지 않는다(⑤·④와 같은 술어).
+            selfFarmingDecedentAggregable(asset) &&
             !selfFarmingOwnYearsSufficient(r.farmingYears, r.disqualifiedTaxPeriodsSelf) &&
             parseInt(r.decedentFarmingYears ?? "0") > 0 &&
             r.heirContinuedFarming1Year !== true &&

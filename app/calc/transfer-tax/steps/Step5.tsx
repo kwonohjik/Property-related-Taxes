@@ -13,6 +13,7 @@ import { ALL_LIMIT_GROUP_TYPES } from "@/lib/tax-engine/aggregate-reduction-limi
 import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import { selfFarmingOwnYearsSufficient } from "@/lib/calc/self-farming-own-years";
+import { selfFarmingDecedentAggregable } from "@/lib/calc/self-farming-own-years";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -165,8 +166,14 @@ function AssetReductionBlock({
             양쪽에 입력하세요.
           </p>
 
-          {/* 피상속인 자경기간 합산 */}
-          {asset.acquisitionCause === "inheritance" && (
+          {/* 피상속인 자경기간 합산 — 상속인이 아닌 수유자는 합산하지 않는다(④·⑧과 같은 술어) */}
+          {asset.acquisitionCause === "inheritance" && asset.nonHeirBequest === true && (
+            <p className="text-xs text-muted-foreground pt-1 border-t border-primary/20" data-testid="self-farming-non-heir-notice">
+              상속인이 아닌 수유자(유증·사인증여)는 피상속인 자경기간을 합산하지 않습니다 — 조특령 §66⑪·⑫는
+              「상속인이」 상속받은 농지에 한정합니다(조심2021구1132 · 조심2023중10792). 본인 자경기간만으로 8년 요건을 판단합니다.
+            </p>
+          )}
+          {selfFarmingDecedentAggregable(asset) && (
             <div className="space-y-2 pt-1 border-t border-primary/20">
               {selfFarmingOwnYearsSufficient(selfFarming.farmingYears, selfFarming.disqualifiedTaxPeriodsSelf) ? (
                 <p className="text-xs text-muted-foreground">

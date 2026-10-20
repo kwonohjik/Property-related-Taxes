@@ -156,7 +156,7 @@ export interface MixedUseAssetInput {
   decedentAcquisitionDate?: Date;
   /**
    * 상속인이 아닌 수유자(유증·사인증여) — §104②1호 세율 보유기간을 피상속인 취득일로 통산하지 않는다(서면4팀-3304).
-   * 조특법 §77⑨ 취득 시기(`expropriationAcquisitionDate`)는 이번 범위가 아니라 그대로 둔다(계획서 `non-heir-bequest-followups.plan.md` §6).
+   * 조특법 §77⑨·§77의3③ 취득 시기 소급과 §69 피상속인 경작기간 합산도 하지 않는다(계획서 `sp69-77-non-heir-bequest.plan.md`).
    */
   nonHeirBequest?: boolean;
 

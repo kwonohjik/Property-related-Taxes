@@ -300,6 +300,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
     input.isUnregistered,
     buildPublicExpropriationParts(input, splitDetailForRate, taxResult.splitPartDetail), // 5B — §77 「소급 2년 이전 취득」 파트별 판정 · Q-F2c 감면 파트의 호
     expropriationAcquisitionDate(input), // §77⑨·§77의3③ — 상속 = 피상속인 취득일
+    input.nonHeirBequest, // 수유자 — §69 피상속인 경작기간 미합산 · §77 불성립 고지
   );
   steps.push({
     label: "감면세액",
