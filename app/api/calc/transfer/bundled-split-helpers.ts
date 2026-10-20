@@ -596,6 +596,7 @@ export function buildCompanionEngineInputs(
     isOneHousehold: c.isOneHousehold ?? false,
     acquisitionCause: c.acquisitionCause,
     decedentAcquisitionDate: decedent,
+    nonHeirBequest: c.acquisitionCause === "inheritance" ? c.nonHeirBequest : undefined,
     // ⑭ §154⑧3호 통산 3필드 — 없으면 컴패니언 상속주택의 비과세·표2 대상판정이 열리지 않는다(F13).
     //    ⚠️ 일자는 `toOptionalDate` 필수: JSON 경유 string이 그대로 도달하면
     //       `decedentCohabitationHoldingStartDate < acquisitionDate` 비교가 침묵 false가 된다.
@@ -746,6 +747,7 @@ export function buildCompanionEngineInputs(
         building: gbv.unregisteredBuilding as boolean | undefined,
       },
       companionEngine.reductions,
+      gbv.nonHeirBequest as boolean | undefined,
     );
   }
 

@@ -94,6 +94,7 @@ export function buildTransferEngineInput(
     isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
     acquisitionCause: data.acquisitionCause,
     decedentAcquisitionDate: toOptionalDate(data.decedentAcquisitionDate),
+    nonHeirBequest: data.nonHeirBequest,
     decedentSameHouseholdBeforeInheritance: data.decedentSameHouseholdBeforeInheritance,
     decedentCohabitationHoldingStartDate: toOptionalDate(data.decedentCohabitationHoldingStartDate),
     decedentCohabitationResidenceMonths: data.decedentCohabitationResidenceMonths,

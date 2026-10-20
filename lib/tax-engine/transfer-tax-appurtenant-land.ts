@@ -111,6 +111,8 @@ export function resolveLandRateBasis(
     donorAcquisitionDate: useLandCause
       ? input.landDonorAcquisitionDate
       : input.donorAcquisitionDate,
+    // 수유자 여부는 자산 단위 선언 하나다 — 토지 파트가 따로 상속이어도 같은 사람의 같은 사실로 본다.
+    nonHeirBequest: input.nonHeirBequest,
   });
 }
 

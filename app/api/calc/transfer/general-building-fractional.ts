@@ -174,7 +174,7 @@ export function calculateGeneralBuildingFractional(
       ...buildProperties(tagged, built.nonBusinessRatio, swap, {
         land: gated.unregisteredLand as boolean | undefined,
         building: gated.unregisteredBuilding as boolean | undefined,
-      }),
+      }, undefined, gated.nonHeirBequest as boolean | undefined),
     );
     const ap = buildApportionment(
       tagged,

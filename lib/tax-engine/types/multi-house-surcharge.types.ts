@@ -490,6 +490,11 @@ export interface PresaleRight {
   originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받은 권리 — isInherited === true 인 행에서만 의미. §156의2⑥⑦ · §156의3④⑤의
+   * 「상속받은」 권리로 보지 않는다(`isHeirInheritedRight` — 직접 해석이 없어 확인 필요 · 계획서 `non-heir-bequest-followups.plan.md` §1 C).
+   */
+  nonHeirBequest?: boolean;
+  /**
    * §156의2⑥1~3호 · §156의3④1~2호 **순위 부적격** 자기선언 — 피상속인이 2 이상의 권리를
    * 소유했을 때 순위상 「상속받은 1권리」가 아니면 true.
    *

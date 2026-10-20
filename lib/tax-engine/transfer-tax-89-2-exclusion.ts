@@ -95,6 +95,7 @@ import {
 } from "./transfer-tax-89-2-inherited-right";
 import { resolve1562Clause3Years } from "./data/article-156-2-completion-era";
 import { presaleRightDefinitionAcquisitionDate } from "./presale-right-definition-date";
+import { isHeirInheritedRight } from "./transfer-inheritance-exclusion";
 
 /* §156의2③·§156의3②의 처분기한(현행 3년)은 양도일 연혁 — `resolve1562Clause3Years`(M7). */
 
@@ -358,8 +359,10 @@ function resolveArticle89Clause2Core(
    * ⑦·⑤ = 「상속 권리 + 일반주택 + **상속 외** 권리」 각 1개 ⇒ 상속받은 것을 **없는 셈 치고**
    *        ③~⑤(②·③)를 준용한다.
    */
-  const inheritedRights = rights.filter((r) => r.isInherited === true);
-  const otherRights = rights.filter((r) => r.isInherited !== true);
+  const inheritedRights = rights.filter(isHeirInheritedRight);
+  const otherRights = rights.filter((r) => !isHeirInheritedRight(r));
+  const nonHeirRights = rights.filter((r) => r.isInherited === true && !isHeirInheritedRight(r));
+  if (nonHeirRights.length > 0) trace.nonHeirRights = nonHeirRights.map((r) => r.type);
   // 신축주택 갈래(상속개시 당시 보유한 권리로 완공된 신축주택)는 ⑥·④ 모양(상속 권리 + 일반주택)에서만 인정한다 —
   // ⑦·⑤ 후단(상속 외 권리 동반)에는 그 문구가 없다(결정 #8 조건).
   const newBuildAllowed = otherRights.length === 0;

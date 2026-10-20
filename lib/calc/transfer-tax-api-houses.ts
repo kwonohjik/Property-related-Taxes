@@ -149,6 +149,8 @@ export function buildHousesPayload(
      *    (7호는 §167의3① 본문 괄호의 불산입 대상이 아니다 — D16).
      */
     isInherited: primary.acquisitionCause === "inheritance" && !d2,
+    // 수유자 — §167의3①7호의 「제155조제2항에 해당하는 상속받은 주택」이 아니다(부동산거래관리과-307 · 조심2013중2654)
+    nonHeirBequest: primary.acquisitionCause === "inheritance" && !d2 && primary.nonHeirBequest ? true : undefined,
     /**
      * 기산일 fallback — **상속 자산의 취득시기가 곧 상속개시일**이다.
      *

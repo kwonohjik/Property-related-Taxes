@@ -154,6 +154,11 @@ export interface MixedUseAssetInput {
    * 상속개시일(`buildingAcquisitionDate`)과 같은 날 취득한 파트에만 쓴다 — 토지를 다른 날 취득했으면 그 원인을 알 수 없다.
    */
   decedentAcquisitionDate?: Date;
+  /**
+   * 상속인이 아닌 수유자(유증·사인증여) — §104②1호 세율 보유기간을 피상속인 취득일로 통산하지 않는다(서면4팀-3304).
+   * 조특법 §77⑨ 취득 시기(`expropriationAcquisitionDate`)는 이번 범위가 아니라 그대로 둔다(계획서 `non-heir-bequest-followups.plan.md` §6).
+   */
+  nonHeirBequest?: boolean;
 
   /** 양도시 기준시가 */
   transferStandardPrice: MixedUseStandardPrice;

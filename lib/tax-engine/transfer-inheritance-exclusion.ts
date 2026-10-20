@@ -19,7 +19,7 @@
  * 각 풀 적격 2채↑는 선순위 특정 불가 → 보수적으로 제외 0(§155②·③ 원문상 인정 상속주택은 1채이나
  * 피상속인이 다르면 엔진이 우열을 못 정함). 순위 게이트로 하위순위를 배제하면 적격 1채만 남아 제외 1채.
  */
-import type { HouseInfo } from "./types/multi-house-surcharge.types";
+import type { HouseInfo, PresaleRight } from "./types/multi-house-surcharge.types";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import { INHERITED_HOUSE } from "./legal-codes";
 import {
@@ -47,6 +47,14 @@ export function isSecondClausePoolHouse(
  */
 export function isHeirInheritedHouse(h: Pick<HouseInfo, "isInherited" | "nonHeirBequest">): boolean {
   return h.isInherited === true && h.nonHeirBequest !== true;
+}
+
+/**
+ * §156의2⑥⑦ · §156의3④⑤ 「상속받은 조합원입주권·분양권」으로 보는 권리 행 — 수유자 행은 빠진다(주택 행 `isHeirInheritedHouse`와 같은 선).
+ * 직접 해석이 없어 §89② 판정 사유에 확인 필요로 밝힌다(`withClause2TraceNotes`). 계획서 `docs/00-pm/non-heir-bequest-followups.plan.md` §1 C.
+ */
+export function isHeirInheritedRight(r: Pick<PresaleRight, "isInherited" | "nonHeirBequest">): boolean {
+  return r.isInherited === true && r.nonHeirBequest !== true;
 }
 
 /** UTC 달력일 키 — date-coerce 운영 경로(UTC 자정)와 같은 규약. */

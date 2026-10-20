@@ -298,6 +298,8 @@ export const companionAssetSchema = z.object({
   assetContractDate: z.string().date().optional(),
   /** 상속 시 피상속인 취득일 (자산별 단기보유 통산용) */
   decedentAcquisitionDate: z.string().date().optional(),
+  /** 상속인이 아닌 수유자(유증·사인증여) — §104②1호 통산·§167의3①7호 미적용 */
+  nonHeirBequest: z.boolean().optional(),
   /** §154⑧3호 상속주택 자체 양도 보유기간 통산 (동일세대 게이트 + 거주·보유 개시일) */
   decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
   decedentCohabitationHoldingStartDate: z.string().date().optional(),

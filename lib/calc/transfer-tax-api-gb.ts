@@ -21,6 +21,14 @@ import { gbBuildingOwnDecedentDate } from "./transfer-tax-validate-gb-required";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 
 /**
+ * 수유자(상속인 아닌 유증·사인증여) — 상속 취득 블록의 토글(취득원인 = 상속일 때 뜬다)을 환산·실가 두 경로에 같은 키로 싣는다.
+ * route는 상속 카드(토지·건물)에만 붙인다(`buildProperties`). 계획서 `docs/00-pm/non-heir-bequest-followups.plan.md`.
+ */
+function gbNonHeirBequestField(asset: AssetForm): { nonHeirBequest?: true } {
+  return asset.acquisitionCause === "inheritance" && asset.nonHeirBequest ? { nonHeirBequest: true } : {};
+}
+
+/**
  * ④ D3(2026-09-30) — 건물 파트 피상속인 취득일. ⑧·⑤와 **같은 술어**(`gbBuildingOwnDecedentDate`)라
  * 분리 OFF·비상속에서 남은 값은 싣지 않는다. 비면 엔진이 토지의 피상속인 취득일로 fallback한다.
  */
@@ -505,6 +513,7 @@ export function buildGeneralBuildingValuation(
       ...(asset.decedentAcquisitionDate
         ? { decedentAcquisitionDate: asset.decedentAcquisitionDate }
         : {}),
+      ...gbNonHeirBequestField(asset),
       ...buildingDecedentField(asset),
       ...(asset.donorAcquisitionDate
         ? { donorAcquisitionDate: asset.donorAcquisitionDate }
@@ -710,6 +719,7 @@ export function buildGeneralBuildingValuation(
     // ⑫ 이월과세 — 🔴 **실가 경로에도 반드시** (설계 D1-1). 한쪽만 고치면 모드에 따라 켜졌다 꺼졌다 한다.
     ...buildGbCarryoverPayload(asset),
     ...(asset.decedentAcquisitionDate ? { decedentAcquisitionDate: asset.decedentAcquisitionDate } : {}),
+    ...gbNonHeirBequestField(asset),
     ...buildingDecedentField(asset),
     ...(asset.donorAcquisitionDate ? { donorAcquisitionDate: asset.donorAcquisitionDate } : {}),
     // §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1)

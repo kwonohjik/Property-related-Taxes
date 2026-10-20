@@ -24,6 +24,7 @@ import {
 } from "./rental-article/rules";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { passesRankingGate } from "./transfer-inheritance-exclusion";
+import { isHeirInheritedHouse } from "./transfer-inheritance-exclusion";
 import { presaleRightDefinitionAcquisitionDate } from "./presale-right-definition-date";
 import type { SharedRentalArticle } from "./rental-article/types";
 import type {
@@ -575,9 +576,11 @@ export function isSurchargeExemptRental(house: HouseInfo, transferDate: Date): b
  * (서면4팀-2898 · 서면4팀-2403 · 조심-2022-부-5548 · 서울행정법원 2025구단9898 — 동일세대 상속은 7호
  * 불해당 / 서면4팀-4227 — 선순위 1채). 다른 주택 수는 요건이 아니다(부동산거래관리과-362).
  * 일반주택 쪽 요건(상속개시 당시 보유)은 해석을 확보하지 못해 **붙이지 않는다**(세액이 오르는 방향).
+ * 상속인이 아닌 사람이 유증·사인증여로 받은 주택은 §155②의 상속받은 주택이 아니다(부동산거래관리과-307 · 조심2013중2654 ·
+ * 수원지방법원 2013구단4853) — `isHeirInheritedHouse`(계획서 `docs/00-pm/non-heir-bequest-followups.plan.md` §1 A).
  */
 export function isSurchargeExemptInherited(house: HouseInfo, transferDate: Date): boolean {
-  if (!house.isInherited || !house.inheritedDate) return false;
+  if (!isHeirInheritedHouse(house) || !house.inheritedDate) return false;
   // 「상속받은 날부터 5년이 경과하지 아니한」 — 초일불산입 기간의 말일(민법 §157·§160·§161)까지. 응당일 당일은 기간 안(E-11 ·
   //   `isMortgageExecutionWithin3Years`와 같은 독법 — §161 직접 선례 미확보).
   if (!isWithinDeadline(house.inheritedDate, INHERITED_HOUSE_SURCHARGE_YEARS, transferDate)) return false;
@@ -616,7 +619,15 @@ export function countEffectiveHouses(
     //   에서만 반영되고 그 단계가 중과 판정보다 뒤라, 상속 5년이 지나면 소수지분도 산입됐다.
     //   `isLargestCoInheritedShareholder`는 자기선언 boolean — 미제공은 소수지분으로 본다
     //   (엔진은 다른 공동상속인의 지분을 알 수 없다. 타입 주석과 동일 규약).
-    if (house.isInherited && house.isCoInherited && house.isLargestCoInheritedShareholder !== true) {
+    //   수유자(상속인 아닌 유증·사인증여) 행은 「상속인」의 공동상속주택이 아니다 — 직접 해석이 없어 확인 필요(아래 warnings).
+    if (house.isInherited && house.nonHeirBequest === true && house.isCoInherited && house.isLargestCoInheritedShareholder !== true) {
+      warnings.push(
+        "상속인이 아닌 사람이 유증·사인증여로 받은 공동소유 주택은 공동상속주택 소수지분(" +
+          MULTI_HOUSE.CO_INHERITED_COUNT_BASIS +
+          ")으로 보지 않고 주택 수에 넣었습니다 — 직접 해석이 없어 확인이 필요합니다.",
+      );
+    }
+    if (isHeirInheritedHouse(house) && house.isCoInherited && house.isLargestCoInheritedShareholder !== true) {
       excluded.push({
         houseId: house.id,
         reason: "co_inherited_minor_share",

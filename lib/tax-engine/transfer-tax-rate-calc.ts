@@ -513,21 +513,37 @@ export function calcTax(
       : isHousingLikeProp
         ? "housing_or_right"
         : "other";
+  const shortTermOpts = {
+    isRegulatedArea: input.isRegulatedArea,
+    // §104①4호 단서(영 §167의6) — 무주택 + 1호(다른 분양권 미보유) + 2호(연령·배우자)가
+    // 모두 명시적으로 확인될 때만 단서가 성립한다(모름 = 혜택 불성립, Q-18 계획서 §4-4 별건 5).
+    householdHasNoHouse: input.householdHousingCount === 0,
+    presaleRightNoOtherRight: input.presaleRightNoOtherRight,
+    presaleRightAgeOrSpouseMet: input.presaleRightAgeOrSpouseMet,
+  };
   const shortTermResolution = input.suppressShortTermRate
     ? null
-    : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, {
-        isRegulatedArea: input.isRegulatedArea,
-        // §104①4호 단서(영 §167의6) — 무주택 + 1호(다른 분양권 미보유) + 2호(연령·배우자)가
-        // 모두 명시적으로 확인될 때만 단서가 성립한다(모름 = 혜택 불성립, Q-18 계획서 §4-4 별건 5).
-        householdHasNoHouse: input.householdHousingCount === 0,
-        presaleRightNoOtherRight: input.presaleRightNoOtherRight,
-        presaleRightAgeOrSpouseMet: input.presaleRightAgeOrSpouseMet,
-      });
+    : resolveShortTermRate(input.transferDate, holdingMonthsTotal, shortTermAssetClass, shortTermOpts);
   const shortTermFlatRate = shortTermResolution?.rate ?? null;
+  /**
+   * 수유자(상속인 아닌 유증·사인증여) — §104②1호 통산을 하지 않아 단기세율이 갈렸을 때만 밝힌다
+   * (계획서 `docs/00-pm/non-heir-bequest-followups.plan.md` §4-3 B). 사인증여는 서면4팀-3304가 직접 근거, 유증은 확인 필요.
+   */
+  const nonHeirRateNote = (() => {
+    if (shortTermFlatRate === null || isSuccessorRedev) return "";
+    if (input.acquisitionCause !== "inheritance" || input.nonHeirBequest !== true || !input.decedentAcquisitionDate) return "";
+    const heir = calculateHoldingPeriod(input.decedentAcquisitionDate, input.transferDate);
+    const heirRate = resolveShortTermRate(input.transferDate, heir.years * 12 + heir.months, shortTermAssetClass, shortTermOpts)?.rate ?? null;
+    if (heirRate === shortTermFlatRate) return "";
+    return (
+      " — 상속인이 아닌 사람이 유증·사인증여로 받은 자산이라 피상속인 취득일부터 통산하지 않았습니다" +
+      "(소득세법 §104②1호 · 사인증여는 서면인터넷방문상담4팀-3304, 유증은 직접 해석이 없어 확인 필요)"
+    );
+  })();
   const shortTermNote =
     shortTermFlatRate === null
       ? undefined
-      : shortTermResolution?.clause === "104-1-4"
+      : (shortTermResolution?.clause === "104-1-4"
         ? `조정대상지역 주택분양권 50% 세율(소득세법 §104①4호 — 2018.1.1~2021.5.31 양도분)${presaleRightClause4UnmetNote(input)}`
         : shortTermResolution?.clause4Excluded
           ? "단서(소득세법 시행령 §167의6) 요건 충족으로 §104①4호(조정대상지역 주택분양권 50%)가 배제되어 보유기간별 특례세율만 적용"
@@ -535,7 +551,7 @@ export function calcTax(
             ? "분양권 60% 세율(소득세법 §104①1호)"
             : holdingMonthsTotal < 12
               ? "보유기간 1년 미만 특례세율 적용"
-              : "보유기간 2년 미만 특례세율 적용";
+              : "보유기간 2년 미만 특례세율 적용") + nonHeirRateNote;
 
   if (shortTermFlatRate !== null) {
     const shortTermTax = applyRate(taxBase, shortTermFlatRate);

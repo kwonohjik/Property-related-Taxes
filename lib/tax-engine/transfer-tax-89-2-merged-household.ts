@@ -17,6 +17,7 @@ import {
   parentalCareAgeVerdict,
 } from "./one-house/parental-care-age";
 import { resolveAcquiredRightTiming } from "./transfer-tax-89-2-acquired-right-timing";
+import { isHeirInheritedRight } from "./transfer-inheritance-exclusion";
 
 /**
  * 혼인으로 2주택이 된 뒤 **분양권을 취득**하고 혼인 전 보유하던 주택을 양도하는 경우 — 서면-2021-부동산-7572(부동산납세과-1014, 2022.4.21.)
@@ -38,7 +39,7 @@ export function resolveMarriageThenPresaleRight(
 ): Article89Clause2Result | undefined {
   const marriageDate = input.marriageMerge?.marriageDate;
   if (!marriageDate || input.parentalCareMerge?.mergeDate) return undefined;
-  if (rights.length !== 1 || rights[0].type !== "presale_right" || rights[0].isInherited === true) return undefined;
+  if (rights.length !== 1 || rights[0].type !== "presale_right" || isHeirInheritedRight(rights[0])) return undefined;
   const right = rights[0];
   if (right.acquisitionDate.getTime() <= marriageDate.getTime()) return undefined;
   if (input.isFirstTransferredInMerge !== true || input.transferDate < marriageDate) return undefined;

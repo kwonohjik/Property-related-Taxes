@@ -456,6 +456,7 @@ export function buildMixedUseCompanionItems(
     // 단건 겸용 route와 같은 입력을 만들기 위해서만 싣는다.
     decedentAcquisitionDate:
       companionEngine.acquisitionCause === "inheritance" ? companionEngine.decedentAcquisitionDate : undefined,
+    nonHeirBequest: companionEngine.acquisitionCause === "inheritance" ? companionEngine.nonHeirBequest : undefined,
     // ── 폼-전역(세대 단위) — primary와 같은 값을 상속한다 ──
     wasRegulatedAtAcquisition: ctx.primaryEngineInput.wasRegulatedAtAcquisition,
     regionCode: g.regionCode,

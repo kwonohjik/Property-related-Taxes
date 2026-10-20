@@ -81,6 +81,8 @@ export const propertyBaseShape = {
    */
   transferType: z.enum(["regular", "burdened_gift"]).optional(),
   decedentAcquisitionDate: z.string().date().optional(),
+  /** ⑫ 상속인이 아닌 수유자(유증·사인증여) — §104②1호 통산·§167의3①7호 미적용 */
+  nonHeirBequest: z.boolean().optional(),
   decedentSameHouseholdBeforeInheritance: z.boolean().optional(),
   decedentCohabitationHoldingStartDate: z.string().date().optional(),
   decedentCohabitationResidenceMonths: z.number().int().nonnegative().optional(),

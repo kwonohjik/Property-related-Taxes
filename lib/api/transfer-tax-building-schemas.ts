@@ -285,6 +285,8 @@ export const generalBuildingValuationSchema = z.object({
     .optional(),
   /** #4-a: 토지 상속 시 피상속인 취득일 (법 §104②1호). */
   decedentAcquisitionDate: z.string().date().optional(),
+  /** 상속인이 아닌 수유자(유증·사인증여) — 상속 카드의 §104②1호 통산 미적용 */
+  nonHeirBequest: z.boolean().optional(),
   /** #4-a: 토지 증여 시 증여자 취득일 (법 §104②2호 — 이월과세 자산). */
   donorAcquisitionDate: z.string().date().optional(),
   /**
