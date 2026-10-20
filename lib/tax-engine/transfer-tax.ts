@@ -452,13 +452,32 @@ export function calculateTransferTax(
   // 양도 손실(또는 0): 가산세는 §114조의2 ②에 따라 산출세액 없어도 부과.
   // 차손(음수)도 이 분기가 흡수한다 — 단건·집계 동일.
   // 결과 조립은 `transfer-tax-loss-return.ts` (파일 크기 정책 분리 — 동작 무변경).
-  if (transferGain <= 0) {
+  // 고가주택 차손 — 영 §160①의 「양도차익」에는 음수인 양도차손도 포함된다(조심2016부0323 — 기준금액 초과분만 다른 자산에서 공제).
+  //   1세대1주택 비과세·고가 판정이 난 차손 자산은 차익 경로와 같은 과세 양도차익(기준금액 초과분 안분 · 배율 초과분·나중 취득 토지분 전액)만
+  //   다건 통산에 넘긴다(사용자 결정 Q-1 「과세분만 통산」). 종전에는 차손 전액이었다(15억 · 차손 1억 → 다른 자산에서 1억 공제).
+  //   자산 전체는 차손이어도 과세분이 양수일 수 있다(비과세 건물 차손 + 비사업용 배율 초과분 이익 — 비과세분 차손은 통산하지 않는다, 상속증여세과-209).
+  //   그때는 조기 반환하지 않고 정상 경로가 같은 값으로 과세한다(아래 STEP 3이 다시 계산해 산출근거를 싣는다).
+  const lossSteps: CalculationStep[] = [];
+  const lossTaxableGain =
+    transferGain < 0 && (exemptionResult.isExempt || exemptionResult.isPartialExempt)
+      ? resolveTaxableGain({
+          effectiveInput,
+          splitDetail,
+          transferGain,
+          isExempt: exemptionResult.isExempt,
+          isPartialExempt: exemptionResult.isPartialExempt,
+          steps: lossSteps,
+        })
+      : transferGain;
+  if (transferGain <= 0 && lossTaxableGain <= 0) {
+    steps.push(...lossSteps);
     return buildLossTransferTaxResult({
       input,
       effectiveInput,
       estimatedBase,
       steps,
       warnings,
+      taxableGain: lossTaxableGain,
       // D4-08 — 비과세 조기반환(`buildExemptEarlyResult`)은 처음부터 넘기고 있었는데
       //   차손 경로만 빠져 있었다. 산출세액이 0이어도 §99의4⑥ 추징 경고는 남아야 한다.
       new994Detail,

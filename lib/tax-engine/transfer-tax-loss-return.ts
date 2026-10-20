@@ -41,6 +41,11 @@ export interface LossReturnArgs {
   steps: CalculationStep[];
   warnings: string[];
   transferGain: number;
+  /**
+   * 과세 양도차익(차손) — 다른 자산과 통산하는 몫. 1세대1주택 비과세·고가주택이면 차익 경로와 같은 `resolveTaxableGain`이 정한 값이다
+   * (영 §160①의 「양도차익」에는 음수인 양도차손도 포함 — 조심2016부0323: 고가주택 차손은 기준금액 초과분만 통산). 없으면 `transferGain`.
+   */
+  taxableGain?: number;
   usedEstimated: boolean;
   /** [echo] §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비 — 표시 전용(세액 불변). 비워 두면 집계 역산 필요경비가 `E − D`로 오염된다. */
   depreciationAmount?: number;
@@ -68,6 +73,7 @@ export function buildLossTransferTaxResult({
   steps,
   warnings,
   transferGain,
+  taxableGain = transferGain,
   usedEstimated,
   depreciationAmount,
   exemptionResult,
@@ -165,7 +171,7 @@ export function buildLossTransferTaxResult({
     exemptReason: exemptionResult.exemptReason,
     warnings: warnings.length > 0 ? warnings : undefined,
     transferGain: transferGain,
-    taxableGain: transferGain,
+    taxableGain,
     usedEstimatedAcquisition: usedEstimated,
     ...(depreciationAmount ? { depreciationAmount } : {}),
     longTermHoldingDeduction: 0,

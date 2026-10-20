@@ -308,10 +308,14 @@ export function buildAssetRecords(
       return { ...pa, taxableGain: 0, lthd: 0, income: 0 };
     }
     const transferGain = pa.result.transferGain;
-    if (transferGain < 0) {
+    // 자산 전체가 차손이어도 과세분이 양수일 수 있다(비과세 건물 차손 + 비사업용 배율 초과분 이익 — 단건이 정상 경로로 장특까지 계산하고,
+    //   §155⑳ 특례도 그때만 돈다). 그 자산은 아래 분기로 간다(장특 차감 · 특례 슬롯 규약).
+    if (transferGain < 0 && pa.result.taxableGain < 0) {
+      // 통산하는 차손은 과세 양도차익(차손)이다 — 1세대1주택 고가주택이면 기준금액 초과분만(조심2016부0323 · 단건 `taxableGain`). 그 밖에는 양도차익 그대로.
+      const lossIncome = pa.result.taxableGain;
       // 순손실 split 자산도 파트 행으로 낸다(계획서 P2 B) — 건물 차손이 다른 자산으로 가면 토지 소득이 남아 토지 세율로 과세된다.
-      const lossParts = lossPartsOf(pa, transferGain, pa.result.splitDetail);
-      return { ...pa, taxableGain: transferGain, lthd: 0, income: transferGain, ...(lossParts ? { lossParts } : {}) };
+      const lossParts = lossPartsOf(pa, lossIncome, pa.result.splitDetail);
+      return { ...pa, taxableGain: lossIncome, lthd: 0, income: lossIncome, ...(lossParts ? { lossParts } : {}) };
     }
     const taxableGain = pa.result.taxableGain;
     const lthd = pa.result.longTermHoldingDeduction;
