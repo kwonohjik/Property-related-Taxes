@@ -29,7 +29,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
           hint="출국일 전 10년 중 국내에 주소 또는 거소를 둔 기간의 합계 (만 년). 5년 이상이어야 과세됩니다."
           required
           trailing={
-            <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">
               §118의9①1호
             </span>
           }
@@ -59,7 +59,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
           hint="비거주자가 된 날 (YYYY-MM-DD). 보유 주식의 간주양도 시점이 됩니다."
           required
           trailing={
-            <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
               §118의9①
             </span>
           }
@@ -80,7 +80,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
           onCheckedChange={(v) => onChange({ etIsMajorShareholder: v })}
           tone="violet"
           trailing={
-            <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">
               §178의8
             </span>
           }

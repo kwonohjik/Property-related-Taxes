@@ -26,7 +26,7 @@ export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectio
           hint="국내에 주소 또는 183일 이상 거소를 둔 기간(만 년). 5년 이상이면 납세의무가 있습니다."
           required
           trailing={
-            <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">
               §118의2
             </span>
           }

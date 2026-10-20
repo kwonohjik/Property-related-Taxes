@@ -141,7 +141,7 @@ function buildFlowSteps(result: AcquisitionTaxResult): FlowStep[] {
 function getStepStyle(status: StepStatus) {
   if (status === "applied") {
     return {
-      container: "bg-rose-100 border border-rose-300 text-rose-900",
+      container: "bg-rose-100 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200",
       badge: "bg-rose-200 text-rose-800",
       badgeLabel: "적용",
       numberBg: "bg-rose-700 text-white",
@@ -149,7 +149,7 @@ function getStepStyle(status: StepStatus) {
   }
   if (status === "excluded") {
     return {
-      container: "bg-sky-50 border border-sky-300 text-sky-900",
+      container: "bg-sky-50 dark:bg-sky-950/30 border border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200",
       badge: "bg-sky-200 text-sky-800",
       badgeLabel: "배제",
       numberBg: "bg-sky-700 text-white",
@@ -157,9 +157,9 @@ function getStepStyle(status: StepStatus) {
   }
   return {
     container: "bg-white/60 dark:bg-white/5 border border-gray-200 text-muted-foreground",
-    badge: "bg-gray-100 text-gray-500",
+    badge: "bg-gray-100 text-gray-600",
     badgeLabel: "미해당",
-    numberBg: "bg-gray-200 text-gray-500",
+    numberBg: "bg-gray-200 text-gray-600",
   };
 }
 

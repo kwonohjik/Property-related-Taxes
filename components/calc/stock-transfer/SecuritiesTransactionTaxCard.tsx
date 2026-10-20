@@ -141,7 +141,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
           <h3 className="text-sm font-bold text-sky-800 dark:text-sky-200">
             증권거래세 (정보용)
           </h3>
-          <span className="text-micro bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full">
+          <span className="text-micro bg-sky-100 text-sky-700 px-2 py-0.5 rounded-full">
             양도소득세와 별도 납부
           </span>
           <LawArticleModal legalBasis="증권거래세법 시행령 §5" label="증거세령§5" />

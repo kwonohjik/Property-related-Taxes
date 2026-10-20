@@ -111,7 +111,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         }
         tone="sky"
         trailing={
-          <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
             §118의16
           </span>
         }
@@ -160,7 +160,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         onCheckedChange={(v) => onChange({ etReenteredWithin5Years: v })}
         tone="emerald"
         trailing={
-          <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded">
             §118의17
           </span>
         }
@@ -176,7 +176,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         }}
         tone="violet"
         trailing={
-          <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">
             §118의13
           </span>
         }
@@ -264,7 +264,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
           onCheckedChange={(v) => onChange({ etHasFiledHoldingsReport: v })}
           tone="rose"
           trailing={
-            <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">
               §118의15
             </span>
           }

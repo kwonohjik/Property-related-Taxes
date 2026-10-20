@@ -38,13 +38,13 @@ export function ListedStockBesshiResultView({ item, besshi, valuatedAmount }: Pr
           <h3 className="text-base font-semibold">
             {item.name} {item.listedStockCode ? `(${item.listedStockCode})` : ""}
           </h3>
-          <p className="text-xs text-slate-600 dark:text-slate-400">
+          <p className="text-xs text-slate-600">
             보유 주식수: {(item.listedStockShares ?? 0).toLocaleString()}주 ·
             평균 종가: {besshi.page1Values.closingAvg.toLocaleString()}원/주
           </p>
         </div>
         <div className="text-right">
-          <div className="text-xs text-slate-600 dark:text-slate-400">평가액</div>
+          <div className="text-xs text-slate-600">평가액</div>
           <div className="text-xl font-bold text-rose-700 tabular-nums dark:text-rose-300">
             {valuatedAmount.toLocaleString()}원
           </div>

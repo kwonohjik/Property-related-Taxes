@@ -91,7 +91,7 @@ export function MixedUseHousingStdSplit({ split }: { split: Split }) {
   return (
     <div
       data-testid="mixed-housing-std-split"
-      className="rounded-md bg-muted/30 px-3 py-2 text-caption text-muted-foreground/90 leading-snug space-y-1.5"
+      className="rounded-md bg-muted/30 px-3 py-2 text-caption text-muted-foreground leading-snug space-y-1.5"
     >
       <span className="block font-medium text-foreground/80">주택분 기준시가 분할 (개별주택가격 → 토지분·건물분)</span>
       {split.acq && <SplitLines time="취득시" d={split.acq} tid="mixed-housing-std-split-acq" />}

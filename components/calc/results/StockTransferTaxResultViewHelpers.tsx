@@ -252,7 +252,7 @@ const RULE_BADGE: Record<string, string> = {
   "다목요건미충족폴백": "bg-amber-100 text-amber-700 border-amber-200",
   "§168②대주주기납부차감": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "80%하한": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
-  "80%하한미적용": "bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200",
+  "80%하한미적용": "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
   "단기30%": "bg-rose-100 text-rose-700 border-rose-200",
   "거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
   "취득일거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",

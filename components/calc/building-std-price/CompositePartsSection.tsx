@@ -248,7 +248,7 @@ export function CompositePartsSection({
         variant="outline"
         size="sm"
         onClick={add}
-        className="w-full border-violet-300 bg-violet-100 font-semibold text-violet-800 hover:bg-violet-200 hover:text-violet-900"
+        className="w-full border-violet-300 bg-violet-100 font-semibold text-violet-800 hover:bg-violet-200 hover:text-violet-900 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200 dark:hover:bg-violet-900/50 dark:hover:text-violet-100"
       >
         + 부분 추가
       </Button>

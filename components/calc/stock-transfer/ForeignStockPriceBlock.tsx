@@ -54,7 +54,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
           hint="장기할부조건(§162①3호)으로 양도 시 각 수령일의 기준환율 적용 (§178의5②)"
           required
           trailing={
-            <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded">
               §178의5②
             </span>
           }
@@ -99,7 +99,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
               required
               unit={`KRW/${form.transferCurrencyCode || "USD"}`}
               trailing={
-                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded">
                   §178의5①
                 </span>
               }
@@ -212,7 +212,7 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
           required
           unit={`KRW/${form.acquisitionCurrencyCode || "USD"}`}
           trailing={
-            <span className="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-amber-700 font-medium bg-amber-50 px-2 py-0.5 rounded">
               §178의5
             </span>
           }

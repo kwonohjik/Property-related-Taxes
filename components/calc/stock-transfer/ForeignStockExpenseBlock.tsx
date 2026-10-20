@@ -62,7 +62,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
             // ⚠️ `unit` 은 주지 않는다 — FieldCard 는 `trailing ? trailing : unit` 이라
             //   조문 배지가 있으면 단위가 렌더되지 않는다. 단위는 hint 가 말한다.
             trailing={
-              <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+              <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
                 §178의5①
               </span>
             }
@@ -92,7 +92,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
             label="양도비 지출일 기준환율"
             hint={rateHint("양도비")}
             trailing={
-              <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+              <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
                 §178의5①
               </span>
             }
@@ -114,7 +114,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
         onCheckedChange={(v) => onChange({ hasForeignTax: v })}
         tone="violet"
         trailing={
-          <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">
             §118의6
           </span>
         }

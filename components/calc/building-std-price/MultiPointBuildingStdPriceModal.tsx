@@ -496,7 +496,7 @@ export function MultiPointBuildingStdPriceModal({
                             key={cat}
                             type="button"
                             onClick={() => updateRow(idx, { category: cat })}
-                            className={`px-3 py-1 ${row.category === cat ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800"}`}
+                            className={`px-3 py-1 ${row.category === cat ? "bg-amber-700 text-white" : "bg-amber-50 text-amber-800"}`}
                           >
                             {cat === "housing" ? "주택" : "상가"}
                           </button>

@@ -249,7 +249,7 @@ export function RentalHousingExceptionSection({
             <button
               type="button"
               onClick={addUnit}
-              className="w-full text-xs border border-dashed border-emerald-300 rounded-lg py-2 text-emerald-700 hover:bg-emerald-50 transition-colors dark:text-emerald-300"
+              className="w-full text-xs border border-dashed border-emerald-300 rounded-lg py-2 text-emerald-700 hover:bg-emerald-50 transition-colors dark:text-emerald-300 dark:border-emerald-800 dark:hover:bg-emerald-950/30"
             >
               + 임대주택 추가
             </button>

@@ -60,7 +60,7 @@ export function MarketTypeBlock({ marketType, onChange }: MarketTypeBlockProps) 
   return (
     <div className="rounded-lg border bg-card px-4 py-3 space-y-2">
       <div className="flex items-start justify-end">
-        <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+        <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
           §94①3·4
         </span>
       </div>

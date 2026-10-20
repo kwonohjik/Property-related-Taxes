@@ -657,7 +657,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               <div className={`rounded-lg border px-4 py-3 text-sm ${
                 judgment.isMajor
                   ? "border-violet-300 bg-violet-100/60 text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
-                  : "border-slate-200 bg-slate-50 text-slate-600"
+                  : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 text-slate-600 dark:text-slate-400"
               }`}>
                 <p className="font-medium mb-1">
                   대주주 자동 판정:{" "}

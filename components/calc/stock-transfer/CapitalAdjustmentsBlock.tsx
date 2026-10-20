@@ -69,7 +69,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
       }
     >
       {/* 도움말 카드 */}
-      <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
+      <div className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-slate-600 dark:text-slate-400 space-y-1">
         <p>
           <strong>의제배당 분기 (배당소득 — 이 계산기에서 계산하지 않음)</strong>:
           이익잉여금 자본전입 무상증자 (§17②2호 본문) /

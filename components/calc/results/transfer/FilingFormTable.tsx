@@ -104,7 +104,7 @@ export function FilingFormTable({
                   </span>
                 )}
                 {adopted === false && (
-                  <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-500">
+                  <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-600">
                     참고
                   </span>
                 )}

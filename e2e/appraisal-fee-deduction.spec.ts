@@ -11,6 +11,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { expectDarkContrast } from "./_helpers/dark-contrast";
 import {
   fillDateAndVerify,
   addLandAsset,
@@ -49,6 +50,8 @@ test.describe("감정평가수수료 공제 — UI", () => {
     await expect(page.getByText("3호 · 서화·골동품 등 유형재산")).toBeVisible();
     // CurrencyInput label은 <label> 텍스트 (htmlFor 미연결) → getByText로 확인
     await expect(page.getByText("유형재산 감정수수료")).toBeVisible();
+    // 다크 대비 — 완료 단계 원 「✓」(흰 글자 + emerald-500/600 이었다)
+    await expectDarkContrast(page, page.locator('[data-testid^="step-circle-"]'));
   });
 
   test("AF-E2E-2: 유형재산(3호) 700만 입력 → 결과 과세표준 '감정평가수수료 공제' 차감", async ({
@@ -72,6 +75,8 @@ test.describe("감정평가수수료 공제 — UI", () => {
     await expect(
       page.getByText("감정평가수수료 공제", { exact: true }),
     ).toBeVisible();
+    // 다크 대비 — 인쇄 패널 「✓」·「선택 항목 인쇄」(흰 글자 + sky-600 4.02였다)
+    await expectDarkContrast(page, page.getByTestId("print-selection-panel"));
   });
 
   test("AF-E2E-3: 증여 Step3 감정평가수수료 섹션(§55①·§46의2) 노출", async ({
