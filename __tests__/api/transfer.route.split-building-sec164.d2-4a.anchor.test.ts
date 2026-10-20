@@ -194,10 +194,28 @@ describe("C) 차단 규칙 (A-4·A-5·A-10·A-11 · 주택 구분)", () => {
     expect(field(x, "buildingAcquisitionPrice")).toContain("건물 취득가액");
   });
 
-  it("A-10 비주택 일반건물(`building`) → 400 field acquisitionDate (종전 Y4 문구) · ②가 와도 열리지 않는다", async () => {
-    const x = await post({ propertyType: "building" });
+  it("A-10 비주택 일반건물(`building`) 2001.1.1. 전 → 400 field acquisitionDate (Y4a) · ②·일괄 고시 답이 와도 열리지 않는다", async () => {
+    const x = await post({ propertyType: "building", acquisitionDate: "2000-12-31", buildingBundledStdPrice: "no" });
     expect(x.status).toBe(400);
-    expect(field(x, "acquisitionDate")).toContain("기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
+    expect(field(x, "acquisitionDate")).toContain("일반 건물은 2001.1.1. 전");
+  });
+
+  it("A-10e 비주택 2003(2001.1.1.~2005.4.29.) — 일괄 고시 미답·「예」 → 400 buildingBundledStdPrice · 「아니오」 → 200 (평가액 그대로, ② 무시)", async () => {
+    const miss = await post({ propertyType: "building" });
+    expect(miss.status).toBe(400);
+    expect(field(miss, "buildingBundledStdPrice")).toContain("오피스텔·상업용 건물인지 확인이 필요합니다");
+    const yes = await post({ propertyType: "building", buildingBundledStdPrice: "yes" });
+    expect(yes.status).toBe(400);
+    expect(field(yes, "buildingBundledStdPrice")).toContain("지원하지 않습니다");
+    const no = await post({ propertyType: "building", buildingBundledStdPrice: "no" });
+    expect(no.status, JSON.stringify(no.body)).toBe(200);
+    const r = no.r;
+    expect(r.splitDetail.building.acquisitionPrice).toBe(30_000_000);
+    expect(r.splitDetail.building.acquisitionBasis).toBeUndefined();
+    // 같은 값을 2005-04-30(구간 밖) 상속으로 보낸 것과 건물 취득가액이 같다 — 「아니오」는 단서 2호 밖과 같은 계산이다
+    const out = await post({ propertyType: "building", acquisitionDate: "2005-04-30" });
+    expect(out.status, JSON.stringify(out.body)).toBe(200);
+    expect(out.r.splitDetail.building.acquisitionPrice).toBe(30_000_000);
   });
 
   it("A-11 일부 양도 → 400 (⑫ 경로 field isPartialAreaTransfer) · 일부 양도 아님(false)은 200", async () => {

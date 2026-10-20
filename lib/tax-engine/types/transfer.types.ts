@@ -1413,6 +1413,11 @@ export interface TransferTaxInput {
    */
   buildingHouseKind?: "house_individual" | "house_apart";
   /**
+   * 비주택 건물(`building`)을 2001-01-01 ~ 2005-04-29에 상속·증여받은 D2(토지 매매) — 국세청장이 토지·건물을 일괄 고시하는 오피스텔·상업용 건물인가.
+   * `"no"`면 일반 건물이라 영 §163⑨ 단서 2호 구간 밖(평가액 그대로) · `"yes"`·생략은 leaf가 막는다. 그 밖의 자산·날짜에서는 읽지 않는다.
+   */
+  buildingBundledStdPrice?: "yes" | "no";
+  /**
    * D1-H — 토지 상속·증여 + 건물 매매에서 토지를 받을 당시 지금의 주택이 그 위에 있었는가. `"yes"`일 때만 토지 취득일이
    * 1990-08-30 이후·2005-04-30 전이면(영 §163⑨ 단서 2호 — 주택 부수토지) `landAcquisitionPrice`와 `landHouseSec164Value` 중
    * **많은 금액**을 토지 취득가액으로 한다(주택 구분은 `buildingHouseKind` — 단독·다가구만). 생략·`"unknown"`은 비교하지 않고 결과에 확인 필요를 고지한다.
