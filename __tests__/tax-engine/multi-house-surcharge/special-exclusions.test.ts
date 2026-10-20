@@ -735,12 +735,12 @@ describe("MH-21: 유예 경과조치 판정 (가·나·다목)", () => {
 // ============================================================
 
 describe("MH-22: ⑭ 인구감소지역 세컨드홈 → 주택 수 산정 배제", () => {
-  it("인구감소지역 + 세컨드홈 등록 → 산정 배제 (effectiveCount -1)", () => {
+  it("인구감소지역 → 등록·신청 없이 산정 배제 (effectiveCount -1)", () => {
     const h1 = makeHouse("h1", { region: "capital" }); // 일반 주택
     const h2 = makeHouse("h2", {
       region: "non_capital",
       isPopulationDeclineArea: true,
-      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
+      acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
     });
 
     const { count, excluded } = countEffectiveHouses(
@@ -756,29 +756,11 @@ describe("MH-22: ⑭ 인구감소지역 세컨드홈 → 주택 수 산정 배�
     expect(excluded[0].detail).toContain("§167의3①12 다·라목");
   });
 
-  it("인구감소지역이지만 세컨드홈 미등록 → 산정 포함", () => {
-    const h1 = makeHouse("h1");
-    const h2 = makeHouse("h2", {
-      isPopulationDeclineArea: true,
-      isSecondHomeRegistered: false, // 미등록
-      acquisitionDate: new Date("2026-01-15"), // F-11 — 날짜 게이트가 아니라 등록 축으로 판정되게
-    });
-
-    const { count } = countEffectiveHouses(
-      [h1, h2],
-      new Date("2026-03-10"),
-      [],
-      defaultRules,
-    );
-
-    expect(count).toBe(2); // 포함됨
-  });
-
-  it("세컨드홈 등록이지만 인구감소지역 아님 → 산정 포함", () => {
+  it("인구감소지역 아님 → 산정 포함", () => {
     const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isPopulationDeclineArea: false, // 인구감소지역 아님
-      isSecondHomeRegistered: true, acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
+      acquisitionDate: new Date("2026-01-15"), // F-11 — 12호 다·라목은 2026.1.1 이후 취득분
     });
 
     const { count } = countEffectiveHouses(

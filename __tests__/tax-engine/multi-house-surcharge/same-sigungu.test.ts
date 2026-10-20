@@ -27,7 +27,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
       officialPrice: 300_000_000, // 9억 한도 이하
     });
@@ -50,7 +49,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const prior = makeHouse("h1", {
@@ -72,7 +70,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const later = makeHouse("h1", {
@@ -92,7 +89,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
   it("C4: boolean override(regionCode 無) → 특례 유지(배제) + 미검증 경고", () => {
     const second = makeHouse("h2", {
       isPopulationDeclineArea: true, // regionCode 없이 boolean 직접 지정
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {
@@ -109,7 +105,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const prior = makeHouse("h1", { regionCode: undefined, acquisitionDate: new Date("2024-01-01") });
@@ -126,7 +121,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
       officialPrice: 1_000_000_000, // 9억 초과
     });
@@ -144,7 +138,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "interest", // 라목 → 4억 한도
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
       officialPrice: 300_000_000, // 4억 이하
     });
@@ -174,7 +167,6 @@ describe("§167의3①12 다·라목 2호 — 취득 전 보유주택 동일 시
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const input = makeInput([selling, rental, second], {
@@ -196,7 +188,6 @@ describe("§167의3①12 다·라목 2호 괄호 — 취득 전 보유 입주권
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {
@@ -221,7 +212,6 @@ describe("§167의3①12 다·라목 2호 괄호 — 취득 전 보유 입주권
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {
@@ -246,7 +236,6 @@ describe("§167의3①12 다·라목 2호 괄호 — 취득 전 보유 입주권
       regionCode: DECLINE_SGG,
       region: "non_capital",
       populationAreaType: "decline",
-      isSecondHomeRegistered: true,
       acquisitionDate: new Date("2026-03-01"),
     });
     const input = makeInput([makeHouse("h1", { regionCode: CAPITAL_OTHER }), second], {

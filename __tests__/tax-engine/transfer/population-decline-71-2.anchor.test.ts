@@ -398,10 +398,10 @@ describe("R 판정 메뉴 route", () => {
     expect(o.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
   });
 
-  it("R-2 D2 — ④ 인구감소 토글·세컨드홈 등록을 켜든 끄든 같은 비과세다 (④는 중과 주택 수 전용)", async () => {
+  it("R-2 D2 — ④ 인구감소 토글을 켜든 비워 두든(자동판정) 같은 비과세다 (④는 중과 주택 수 전용)", async () => {
     for (const patch of [
-      { isPopulationDeclineArea: true, isSecondHomeRegistered: true, populationAreaType: "decline" },
-      { isPopulationDeclineArea: true, isSecondHomeRegistered: false, populationAreaType: "decline" },
+      { isPopulationDeclineArea: true, populationAreaType: "decline" },
+      {},
     ]) {
       const o = await observeCase(menu(patch));
       expect(o.isExempt).toBe(true);

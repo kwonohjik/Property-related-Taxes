@@ -689,7 +689,9 @@ export function countEffectiveHouses(
     // 12호 다·라목은 2026.2.27 시행본에서 신설됐고, 호 본문이 「2026년 1월 1일 이후 취득하는 주택」이다(F-11).
     const secondHomeInForce =
       transferDate >= SECOND_HOME_TRANSFER_FROM && house.acquisitionDate >= SECOND_HOME_ACQ_FROM;
-    if (isPopDecline && house.isSecondHomeRegistered && secondHomeInForce) {
+    // 등록·신청 요건은 없다 — 다·라목 문언은 취득시기·소재·동일 시·군·구·가액만 요구하고, ⑩이 위임한
+    // 시행규칙 §82(현행·2027.1.1. 시행예정본)에도 다·라목 확인 절차가 없다. 요건을 갖추면 당연 적용.
+    if (isPopDecline && secondHomeInForce) {
       // 가액 한도: 다목(수도권 밖 인구감소지역) 9억 / 라목(관심지역)·수도권 접경·그 외 4억.
       // populationAreaType 미입력 시 regionCode 자동판정(autoKind)으로 다·라목 구분 도출 (N-6).
       const effectiveAreaType = house.populationAreaType ?? autoKind ?? undefined;

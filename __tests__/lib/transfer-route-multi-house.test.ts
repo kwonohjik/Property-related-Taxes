@@ -109,7 +109,6 @@ describe("mapHousesToEngine", () => {
         litigationAcquisitionDate: "2022-06-01",
         isRedevelopmentZone: false,
         isPopulationDeclineArea: true,
-        isSecondHomeRegistered: true,
         // selling-house P2
         isEmployeeHousing: true,
         freeProvisionYears: 10,
@@ -124,7 +123,6 @@ describe("mapHousesToEngine", () => {
     expect(h.unavoidableReasonResolvedDate).toBeInstanceOf(Date);
     expect(h.litigationAcquisitionDate!.toISOString().slice(0, 10)).toBe("2022-06-01");
     expect(h.isPopulationDeclineArea).toBe(true);
-    expect(h.isSecondHomeRegistered).toBe(true);
     expect(h.isEmployeeHousing).toBe(true);
     expect(h.freeProvisionYears).toBe(10);
     expect(h.dayCareOperationYears).toBe(5);

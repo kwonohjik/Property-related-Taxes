@@ -56,7 +56,6 @@ const UNSOLD_NEW = (acq: string) => ({
 const SECOND_HOME = (acq: string) => ({
   acquisitionDate: new Date(acq),
   isPopulationDeclineArea: true,
-  isSecondHomeRegistered: true,
 });
 
 describe("F-11 A — 12호 가·나목은 2024-02-29 이후 양도분부터", () => {
