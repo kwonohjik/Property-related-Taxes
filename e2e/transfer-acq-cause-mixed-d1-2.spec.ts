@@ -43,7 +43,7 @@ test.describe("D1-2 — 건물 매매 + 토지 상속·증여 화면", () => {
     await expect(purchaseBlock(page).getByTestId("land-statutory-acq-date")).toBeVisible();
 
     // 증여 — 이월과세 미지원 고지, 피상속인 취득일 칸 없음
-    await purchaseBlock(page).getByTestId("land-acq-cause").getByRole("radio", { name: "증여" }).check();
+    await purchaseBlock(page).getByTestId("land-acq-cause").getByRole("radio", { name: "증여", exact: true }).check();
     await expect(purchaseBlock(page).getByTestId("land-gift-carryover-notice")).toBeVisible();
     await expect(purchaseBlock(page).getByTestId("land-statutory-acq-date")).toHaveCount(0);
     await expect(page.locator('[data-field="landAcquisitionDate"]')).toContainText("토지 증여일");

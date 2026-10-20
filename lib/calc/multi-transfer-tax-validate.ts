@@ -7,6 +7,7 @@ import type { MultiTransferFormData, PropertyItem } from "@/lib/stores/multi-tra
 import { ALL_INCOME_DEDUCTION_IDS } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { validateStep } from "./transfer-tax-validate";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { effectiveLandCarryover } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_BURDENED_GIFT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -142,7 +143,8 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
   if (a.assetKind === "general_building" || a.assetKind === "commercial_building") {
     return MULTI_BUILDING_VALUATION_UNSUPPORTED_MESSAGE;
   }
-  if (a.acquisitionCause === "carryover_gift") {
+  // P3 A — 토지만 이월과세도 같다(⑫ `MULTI_REJECT_RULES`가 파트 키를 거부한다 — ⑧이 먼저 막는다).
+  if (a.acquisitionCause === "carryover_gift" || effectiveLandCarryover(a)) {
     return MULTI_CARRYOVER_UNSUPPORTED_MESSAGE;
   }
   if (

@@ -60,6 +60,11 @@ export interface SplitCarryoverView {
   orderDependent: boolean;
   /** 이월과세 입력이 있던 파트만(토지 → 건물) */
   parts: SplitCarryoverPartView[];
+  /**
+   * 건물 파트도 증여받았는가 — 그렇다면(C) 자산의 수증자 취득일 = 증여 등기접수일이다. 토지만 이월과세(P3 A)는 건물을 따로 매수·신축했으므로
+   * 자산 취득일(합계·건물 열)은 건물 취득일 그대로다. 신고서·상세명세서의 취득일 칸이 이 한 값으로 갈린다.
+   */
+  buildingGifted: boolean;
 }
 
 function partView(
@@ -120,6 +125,7 @@ export function splitCarryoverView(sd: SplitGainResult | undefined): SplitCarryo
     periodYears: ev.applicablePeriodYears,
     orderDependent: ev.orderDependent === true,
     parts,
+    buildingGifted: parts.some((p) => p.key === "building"),
   };
 }
 

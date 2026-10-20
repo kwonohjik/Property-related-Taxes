@@ -49,9 +49,36 @@ export function effectiveLandAcquisitionCause(
   // D1-2 — 토글을 켠 호스트가 지금 취득원인과 같아야 한다. 신축에서 켠 뒤 매매로 바꾸면 매매에서도 「취득일 다름」이
   // 켜진 채라(`CompanionAcquisitionCauseSection`은 비-매매 전환에서만 끈다) 잔재가 되살아났다(UI 설계 §3 S1·S2').
   if (asset.landCauseHost !== asset.acquisitionCause) return "";
-  // D2의 `"purchase"`(상속·증여 호스트 전용)가 D1 호스트에 남아도 D1 의미로 읽지 않는다 — 반환형이 곧 안전장치다.
-  // (런타임 값은 종전 그대로 — 타입에 없는 `carryover_gift`가 저장 이력·테스트 시드로 흘러와도 D1 격자(⑧≡⑫)가 같은 값을 읽는다.)
-  return asset.landAcquisitionCause === "purchase" ? "" : ((asset.landAcquisitionCause ?? "") as "" | "inheritance" | "gift");
+  // 상속·증여만 D1이다 — 캐스트로 통과시키지 않는다(H-4). D2의 `"purchase"`(상속·증여 호스트 전용)·P3 A의 `"carryover_gift"`(별 술어
+  // `effectiveLandCarryover`)·손상 저장값이 D1 소비처(라벨 META·§163⑨ 단서·피상속인 취득일)에 닿으면 화면이 크래시하거나 상속 토지로 읽힌다.
+  const c = asset.landAcquisitionCause;
+  return c === "inheritance" || c === "gift" ? c : "";
+}
+
+/**
+ * P3 A — **토지만 이월과세**(소득세법 §97의2①) + 건물 매매·신축. 토지 파트를 배우자·직계존비속에게서 증여받았다.
+ *
+ * 설계: docs/02-design/features/transfer-split-part-carryover.ui.design.md §2.2·§4. D1 토글(「토지는 다른 원인으로 취득」)의 세 번째 원인이라
+ * 호스트·분리 조건은 D1과 같다. 소유자 분리·부담부증여·함께 양도 자산은 여기서 거르지 않는다 — leaf(S0·S4)가 ⑧·⑫에서 막는다(조용히 끄면
+ * 토지가 «매매 토지 + 증여 신고가액»으로 계산된다). ④는 함께 양도 자산이면 키를 싣지 않는다(엔진 S0 자리).
+ */
+export function effectiveLandCarryover(
+  asset: LandPartCauseScope & {
+    landAcquisitionCause?: string;
+    hasSeperateLandAcquisitionDate?: boolean;
+    landCauseHost?: string;
+  },
+): boolean {
+  if (!landPartCauseApplicable(asset) || !asset.hasSeperateLandAcquisitionDate) return false;
+  if (asset.landCauseHost !== asset.acquisitionCause) return false;
+  return asset.landAcquisitionCause === "carryover_gift";
+}
+
+/** ⑤ 토지 파트 라벨 원인 — D1 유효 원인, 아니면 A의 `"carryover_gift"`. 호출부가 1회 계산해 하위 칸에 주입한다(재파생 금지). */
+export function landCauseDisplay(
+  asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & Parameters<typeof effectiveLandCarryover>[0],
+): "" | "inheritance" | "gift" | "carryover_gift" {
+  return effectiveLandAcquisitionCause(asset) || (effectiveLandCarryover(asset) ? "carryover_gift" : "");
 }
 
 // ─── D2 — 건물 상속·증여 + 토지 매매 (계획서 §12 · D2 UI 설계 §3.1) ───────────────────────────────
@@ -83,9 +110,9 @@ export function effectiveBuildingCauseMix(asset: BuildingCauseMixScope): "" | "i
   return asset.acquisitionCause === "gift" ? "gift" : "inheritance";
 }
 
-/** 합성 술어 — D1(토지 상속·증여) 또는 D2(건물 상속·증여 + 토지 매매) 중 하나라도 유효. PHD 무시·소유자 분리 상호 잠금·같은 날의 기준. */
+/** 합성 술어 — D1(토지 상속·증여)·P3 A(토지 이월과세)·D2(건물 상속·증여 + 토지 매매) 중 하나라도 유효. PHD 무시·소유자 분리 상호 잠금·같은 날의 기준. */
 export function landCauseMixActive(asset: Parameters<typeof effectiveLandAcquisitionCause>[0] & BuildingCauseMixScope): boolean {
-  return !!effectiveLandAcquisitionCause(asset) || !!effectiveBuildingCauseMix(asset);
+  return !!effectiveLandAcquisitionCause(asset) || effectiveLandCarryover(asset) || !!effectiveBuildingCauseMix(asset);
 }
 
 /**
@@ -117,11 +144,27 @@ export function hasStaleSplitInput(
  * ④·⑧·⑥이 자산을 읽기 전에 통과시키는 **D2 정규화 사본** — (1) stale 분리 입력을 「분리 없음」으로, (2) D2 유효 시 건물 방식을
  * `actual`로. 둘 다 해당 없으면 같은 객체를 돌려준다.
  */
-export function normalizeBuildingCauseInputs<T extends BuildingCauseMixScope & { selfOwns?: "both" | "building_only" | "land_only"; buildingAcqMode?: string; landAcqMode?: string; carryoverDonorSplit?: boolean }>(asset: T): T {
+export function normalizeBuildingCauseInputs<
+  T extends BuildingCauseMixScope & {
+    selfOwns?: "both" | "building_only" | "land_only";
+    buildingAcqMode?: string;
+    landAcqMode?: string;
+    carryoverDonorSplit?: boolean;
+    landAcquisitionDate?: string;
+    landCarryover?: { giftRegistryDate?: string };
+  },
+>(asset: T): T {
   if (hasStaleSplitInput(asset)) return { ...asset, hasSeperateLandAcquisitionDate: false };
   // P2 C — 파트 이월과세는 두 파트 모두 실가(증여자 취득가액·증여 당시 평가액)다. 숨은 환산·감정 플래그(stale)가 ⑧ 요구·⑥ 합계·④ 전송 모드를 바꾸지 않게 한다.
   if (effectiveCarryoverDonorSplit(asset) && (asset.landAcqMode !== "actual" || asset.buildingAcqMode !== "actual"))
     return { ...asset, landAcqMode: "actual", buildingAcqMode: "actual" };
+  // P3 A — 이월과세 토지의 취득일은 증여 등기접수일 한 곳이다(엔진 S5 — 어긋나면 400, UI 설계 §4.3 Q-8). 입력은 등기접수일 칸이 write-through하지만
+  //   수동 편집 잔재가 남아도 ④·⑥·⑧이 같은 날짜를 읽게 덮는다. 토지 방식은 실가(증여 신고가액) 고정 — D1 토글 ON과 같은 규칙.
+  if (effectiveLandCarryover(asset)) {
+    const gift = asset.landCarryover?.giftRegistryDate ?? "";
+    const fixed = asset.landAcqMode === "actual" && asset.landAcquisitionDate === gift ? asset : { ...asset, landAcqMode: "actual", landAcquisitionDate: gift };
+    return withBuildingActualWhenMix(fixed);
+  }
   return withBuildingActualWhenMix(asset);
 }
 
@@ -226,7 +269,8 @@ export function splitBuildingAcqPriceInput(
   },
 ): string | undefined {
   if (raw(asset.buildingAcquisitionPrice) > 0) return asset.buildingAcquisitionPrice;
-  return asset.acquisitionCause === "newConstruction" && effectiveLandAcquisitionCause(asset)
+  // P3 A(토지 이월과세)도 같은 블록이라 같은 후퇴다 — 빠지면 신축 건물 취득가액이 비어 ⑧이 화면에 없는 건물 칸을 요구한다.
+  return asset.acquisitionCause === "newConstruction" && landCauseDisplay(asset)
     ? asset.fixedAcquisitionPrice
     : asset.buildingAcquisitionPrice;
 }
@@ -268,9 +312,14 @@ export function neutralizeCarryoverDonorSplitForCompanion<T extends { carryoverD
 }
 
 /** 파트별 이월과세 여부 — 사건·파트 서브객체를 ④가 싣는지, ⑧이 파트 입력을 요구하는지의 공통 질의. P2는 C(토지·건물 둘 다)뿐이다. */
-export function partCarryover(asset: CarryoverDonorSplitScope, opts?: { isNonPrimary?: boolean }): { land: boolean; building: boolean } {
+export function partCarryover(
+  asset: CarryoverDonorSplitScope & Parameters<typeof effectiveLandCarryover>[0],
+  opts?: { isNonPrimary?: boolean },
+): { land: boolean; building: boolean } {
   const c = effectiveCarryoverDonorSplit(asset, opts);
-  return { land: c, building: c };
+  // P3 A — 토지만. 함께 양도 자산은 싣지 않는다(엔진 S0) — ⑧은 leaf S0가 막는다.
+  const a = !opts?.isNonPrimary && effectiveLandCarryover(asset);
+  return { land: c || a, building: c };
 }
 
 // ─── 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가 (계획서 §13.5) ───────────────

@@ -6,7 +6,10 @@
  */
 import { SPLIT_CAUSE_VALUE_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
 
-export type LandCause = "inheritance" | "gift";
+/** 토지 파트 원인 — 상속·증여(D1) · 이월과세(증여, P3 A — 소득세법 §97의2①). `Record` 키 커버리지가 META 누락을 컴파일에서 잡는다(H-4). */
+export type LandCause = "inheritance" | "gift" | "carryover_gift";
+/** 건물 파트 원인(D2) — 상속·증여. */
+export type BuildingCause = "inheritance" | "gift";
 
 export const LAND_CAUSE_META: Record<
   LandCause,
@@ -36,6 +39,15 @@ export const LAND_CAUSE_META: Record<
     hint: "증여세 신고서상 토지 평가액 (증여일 현재 시가 또는 보충적 평가액)",
     fixedMode: "실거래가 · 증여 신고가액",
   },
+  // P3 A — 이월과세 토지의 수증자 취득일은 증여 등기접수일이고(§97의2③ 기산일), 가액 칸은 증여 신고가액이다(②3호 미적용 시 취득가액 · 증여세 상당액 안분 분자).
+  carryover_gift: {
+    label: "이월과세(증여)",
+    dateLabel: "증여 등기접수일",
+    valueLabel: SPLIT_CAUSE_VALUE_LABEL.gift,
+    priceLabel: "토지 증여 신고가액",
+    hint: "증여세 신고서상 토지 평가액 — 증여세 상당액 안분의 분자이자, 이월과세를 적용하지 않을 때의 토지 취득가액입니다 (소득세법 시행령 §163의2②·§163⑨)",
+    fixedMode: "실거래가 · 증여 신고가액",
+  },
 };
 
 /**
@@ -44,7 +56,7 @@ export const LAND_CAUSE_META: Record<
  * 입력 라벨 「건물 상속개시일 평가액」과 같은 어휘다.
  */
 export const BUILDING_CAUSE_META: Record<
-  LandCause,
+  BuildingCause,
   { priceLabel: string; hint: string; fixedMode: string }
 > = {
   inheritance: {

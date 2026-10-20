@@ -35,6 +35,9 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { effectiveLandCarryover } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
+import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { landPartCauseSameDay } from "./transfer-land-part-cause";
@@ -72,7 +75,8 @@ function opt(v: string | undefined): number | undefined {
  * 판정이 갈린다. **같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — 인자까지 같아야 한다.**
  */
 function withExpenses(asset: AssetForm) {
-  return { ...asset, expenses: parseAmount(asset.directExpenses ?? "") };
+  // P2 C·P3 A — ④는 파트 이월과세 토지에서 자산 단위 총액을 싣지 않는다(엔진 S8). 인자도 같게 0.
+  return { ...asset, expenses: partCarryover(asset).land ? 0 : parseAmount(asset.directExpenses ?? "") };
 }
 
 /**
@@ -213,9 +217,15 @@ function validateHouseLandSec164Inputs(asset: AssetForm, label: string): string 
 export function validateLandPartCause(
   rawAsset: AssetForm,
   label: string,
-  /** 함께 양도 자산(첫 자산이 아님) — 파트 이월과세를 받지 않는 자리라 leaf에 `partCarryoverSupported: false`(S0)를 넘긴다. ⑫가 컴패니언에 넘기는 값과 같다. */
-  opts?: { isNonPrimary?: boolean },
+  /**
+   * isNonPrimary — 함께 양도 자산(첫 자산이 아님): 파트 이월과세를 받지 않는 자리라 leaf에 `partCarryoverSupported: false`(S0)를 넘긴다. ⑫가 컴패니언에 넘기는 값과 같다.
+   * formTransferDate·hasCompanions — P3 A(토지 이월과세) 위임이 쓴다(등기접수일 < 양도일 · leaf S2′).
+   */
+  opts?: { isNonPrimary?: boolean; formTransferDate?: string; hasCompanions?: boolean },
 ): string | null {
+  // P3 A — 토지만 이월과세: 이월과세 입력 칸(화면 위→아래)과 같은 leaf를 A 사실로 건다(`transfer-tax-validate-split-carryover.ts`).
+  if (effectiveLandCarryover(rawAsset))
+    return validateSplitCarryoverParts(rawAsset, label, opts?.formTransferDate, { hasCompanions: opts?.hasCompanions, isNonPrimary: opts?.isNonPrimary });
   const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";
   const selfOwnsSplit = selfOwnsEff !== "both";
@@ -320,7 +330,7 @@ export function validateSplitDirectInputs(
   rawAsset: AssetForm,
   label: string,
   formTransferDate?: string,
-  opts?: { isNonPrimary?: boolean },
+  opts?: { isNonPrimary?: boolean; hasCompanions?: boolean },
 ): string | null {
   const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   // ⚠️ 게이트는 **API 전송 조건(`isSplitPayloadActive`)과 같아야** 한다(2026-07-30).
@@ -335,7 +345,7 @@ export function validateSplitDirectInputs(
   const carryoverSplit = effectiveCarryoverDonorSplit(asset);
   if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit && !carryoverSplit) return null;
 
-  const causeErr = carryoverSplit ? null : validateLandPartCause(asset, label, opts);
+  const causeErr = carryoverSplit ? null : validateLandPartCause(asset, label, { ...opts, formTransferDate });
   if (causeErr) return causeErr;
 
   // ── V9. 주택 부수토지 배율 판정 필수 입력 (「소득세법 시행령」 제168조의12) ──────────

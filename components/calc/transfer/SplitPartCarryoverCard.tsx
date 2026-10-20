@@ -25,12 +25,13 @@ export interface SplitPartCarryoverCardProps {
   /** 이 파트의 증여자 서브폼 — 토지 `landCarryover`, 건물 `carryover` */
   value: CarryoverTaxationForm;
   onPatch: (patch: Partial<CarryoverTaxationForm>) => void;
-  /** 증여 신고가액(파트 취득가액 칸) */
-  valuation: string;
-  onValuationChange: (v: string) => void;
+  /**
+   * 증여 신고가액(파트 취득가액 칸) — C만 이 카드에 둔다. P3 A는 토지 가액 칸이 이미 화면에 있어(매매: 취득가액 산정 방식의 토지 칸 · 신축: 블록의 토지 칸)
+   * 생략한다 — 같은 `data-field`가 두 번 생기지 않게.
+   */
+  valuation?: { value: string; onChange: (v: string) => void; field: "landAcquisitionPrice" | "buildingAcquisitionPrice" };
   /** ⑧ 이동 앵커 접두 — 토지 `landCarryover`, 건물 `carryover` */
   anchorPrefix: "landCarryover" | "carryover";
-  valuationField: "landAcquisitionPrice" | "buildingAcquisitionPrice";
   /** 양도일 ≥ 2024.1.1. — 증여자 자본적지출은 그 이후 양도분부터 반영된다 */
   isAfter2024: boolean;
   /** 건물 카드: 토글을 켜기 전 자산 전체 입력을 이어받는 칸임을 알린다 */
@@ -93,18 +94,20 @@ export function SplitPartCarryoverCard(props: SplitPartCarryoverCardProps) {
           />
         </FieldCard>
 
-        <FieldCard
-          label="증여 신고가액"
-          field={props.valuationField}
-          hint={`증여세 신고서에 적은 ${name}의 평가액 — 증여세 상당액 안분의 분자이자, 이월과세를 적용하지 않을 때 수증자의 ${name} 취득가액입니다 (시행령 §163의2②·§163⑨)`}
-        >
-          <CurrencyInput
-            label=""
-            value={props.valuation}
-            onChange={props.onValuationChange}
-            data-testid={`${tid}-gift-valuation`}
-          />
-        </FieldCard>
+        {props.valuation && (
+          <FieldCard
+            label="증여 신고가액"
+            field={props.valuation.field}
+            hint={`증여세 신고서에 적은 ${name}의 평가액 — 증여세 상당액 안분의 분자이자, 이월과세를 적용하지 않을 때 수증자의 ${name} 취득가액입니다 (시행령 §163의2②·§163⑨)`}
+          >
+            <CurrencyInput
+              label=""
+              value={props.valuation.value}
+              onChange={props.valuation.onChange}
+              data-testid={`${tid}-gift-valuation`}
+            />
+          </FieldCard>
+        )}
       </div>
     </ToneCard>
   );

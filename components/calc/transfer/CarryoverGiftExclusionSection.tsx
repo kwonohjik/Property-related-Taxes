@@ -48,6 +48,8 @@ interface Props {
   /** 자산 id — 라디오 name 고유화(자산이 여럿이면 name이 겹쳐 하나만 선택된다) */
   assetId: string;
   onRelationChange: (patch: Partial<CarryoverTaxationForm>) => void;
+  /** ⑧ 이동 앵커 접두 — 토지 파트 이월과세(P3 A)의 사건은 `landCarryover`에 있다. 기본 `carryover`. */
+  anchorPrefix?: "carryover" | "landCarryover";
 }
 
 export function CarryoverGiftExclusionSection({
@@ -65,6 +67,7 @@ export function CarryoverGiftExclusionSection({
   giftRegistryDate,
   assetId,
   onRelationChange,
+  anchorPrefix = "carryover",
 }: Props) {
   /**
    * 관계별로 **묻는 사실이 다르다** — 문언을 그대로 물어야 두 함정을 피한다.
@@ -98,8 +101,8 @@ export function CarryoverGiftExclusionSection({
         )}
 
         <RadioCardGroup
-          name={`carryover-donor-relation-${assetId}`}
-          data-field="carryover.donorRelation"
+          name={`${anchorPrefix === "carryover" ? "carryover" : "land-carryover"}-donor-relation-${assetId}`}
+          data-field={anchorPrefix === "landCarryover" ? "landCarryover.donorRelation" : "carryover.donorRelation"}
           layout="inline"
           options={[
             { value: "spouse", label: "배우자" },
