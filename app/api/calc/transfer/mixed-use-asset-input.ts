@@ -54,6 +54,8 @@ export interface MixedUseAssetInputSources {
   assetContractDate: TransferTaxInput["assetContractDate"];
   /** 상속이면 피상속인 취득일(Date 변환본), 아니면 undefined — 「소득세법」 §104②1호 · 「조세특례제한법」 §77⑨. */
   decedentAcquisitionDate: TransferTaxInput["decedentAcquisitionDate"];
+  /** 상속인이 아닌 수유자 — 겸용 엔진 §104②1호 통산 미적용 */
+  nonHeirBequest?: TransferTaxInput["nonHeirBequest"];
 
   // ── 폼-전역 ────────────────────────────────────────────────
   /** 영 §154① 요건 판정. */
@@ -242,6 +244,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     buildingAcquisitionDate: new Date(s.mixedUse.buildingAcquisitionDate),
     // ⑭ 상속 겸용 — 피상속인 취득일(단기세율 §104②1호 · 감면 §77⑨). 종전에는 최상위 본문에만 있고 겸용 엔진에 닿지 않았다.
     decedentAcquisitionDate: s.decedentAcquisitionDate,
+    nonHeirBequest: s.nonHeirBequest,
     /**
      * ⑭ 조특법 감면·가산세 (F17-B) — 종전에는 이 축이 통째로 없어 폼에서 §77을 골라도 세액이
      * 1원도 안 움직였다(실측 `totalPayable` 60,853,408 → 60,853,408).

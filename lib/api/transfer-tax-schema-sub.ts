@@ -380,6 +380,8 @@ export const presaleRightSchema = z.object({
   /** ⑫ 위 사유의 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
   originalMemberDisposalDelayDisposedByThatMethod: z.boolean().optional(),
   isInherited: z.boolean().optional(),
+  /** ⑫ 상속인이 아닌 사람이 유증·사인증여로 받은 권리 — §156의2⑥⑦·§156의3④⑤의 상속 권리로 보지 않는다 */
+  nonHeirBequest: z.boolean().optional(),
   isRankingDisqualifiedInheritedRight: z.boolean().optional(),
   isCoInherited: z.boolean().optional(),
   isLargestCoInheritedShareholder: z.boolean().optional(),

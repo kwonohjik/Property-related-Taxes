@@ -193,6 +193,35 @@ describe("D3 ⑧·⑫ — 비우면 막는다 (종전 ⑧ 통과 · 200 + 단기
   });
 });
 
+/**
+ * 수유자(상속인 아닌 유증·사인증여) — 토지·건물 모두 상속(피상속인 2000)인 일반건물. 토글을 켜면 상속 카드(토지·건물)에서
+ * §104②1호 통산을 하지 않는다(계획서 docs/00-pm/non-heir-bequest-followups.plan.md §1 B · route `buildProperties`).
+ */
+describe("수유자 — 일반건물 상속 카드의 §104②1호 통산 미적용 (실가 · 환산)", () => {
+  const both = (over: Record<string, unknown> = {}) =>
+    buildingOnly({
+      acquisitionCause: "inheritance",
+      decedentAcquisitionDate: DECEDENT,
+      publishedValueAtInheritance: "200000000",
+      landAcquisitionPrice: "",
+      ...over,
+    });
+  it.each([
+    // 수유자 값 = 피상속인 취득일이 닿지 않던 base 값(위 D3 머리 표)과 같다
+    ["실가", {}, 94_061_000, 126_269_000],
+    ["환산", { landAcqMode: "estimated" }, 108_042_000, 136_757_500],
+  ] as const)("%s 경로 — 상속인 %i / 수유자 %i", async (_n, mode, heirTotal, nonHeirTotal) => {
+    const heirBody = await uiBody(both(mode));
+    const nonHeirBody = await uiBody(both({ ...mode, nonHeirBequest: true }));
+    expect(gbv(heirBody).nonHeirBequest).toBeUndefined();
+    expect(gbv(nonHeirBody).nonHeirBequest).toBe(true);
+    const heir = await post(heirBody);
+    const nonHeir = await post(nonHeirBody);
+    expect([heir.status, nonHeir.status]).toEqual([200, 200]);
+    expect([heir.json.data?.aggregated?.totalTax, nonHeir.json.data?.aggregated?.totalTax]).toEqual([heirTotal, nonHeirTotal]);
+  });
+});
+
 describe("D3 stale — 화면에 칸이 없는 상태의 남은 값은 싣지 않는다", () => {
   it("분리 OFF로 되돌리면(칸이 사라짐) 남은 건물 값을 싣지 않는다", () => {
     const p = buildGeneralBuildingValuation(

@@ -673,6 +673,12 @@ export interface TransferTaxInput {
    */
   decedentAcquisitionDate?: Date;
   /**
+   * 상속인이 아닌 사람(수유자)이 유증·사인증여로 받은 자산 — `acquisitionCause === "inheritance"`일 때만 의미.
+   * §104②1호 통산(`resolveRateBasis`)을 적용하지 않는다(서면인터넷방문상담4팀-3304). 양도 주택 명부 행에도 실려
+   * §167의3①7호를 막는다(부동산거래관리과-307). 계획서 `docs/00-pm/non-heir-bequest-followups.plan.md`.
+   */
+  nonHeirBequest?: boolean;
+  /**
    * [엔진 내부] 「소득세법」 §104①2·3호 세율 보유기간 기산일 — **겸용주택 컴패니언 주택 카드 전용**.
    *
    * §104①2호 괄호("주택(이에 딸린 토지로서 대통령령으로 정하는 토지를 포함한다. 이하 이 항에서 같다)")에 따라

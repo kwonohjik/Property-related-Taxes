@@ -529,6 +529,8 @@ export function buildAssetPayload(
       asset.acquisitionCause === "inheritance" && asset.decedentAcquisitionDate
         ? asset.decedentAcquisitionDate
         : undefined,
+    // 수유자 — 단건(`transfer-tax-api.ts`)과 같은 게이트
+    nonHeirBequest: asset.acquisitionCause === "inheritance" && asset.nonHeirBequest ? true : undefined,
     // §154⑧3호 상속주택 자체 양도 보유기간 통산
     decedentSameHouseholdBeforeInheritance:
       asset.acquisitionCause === "inheritance"

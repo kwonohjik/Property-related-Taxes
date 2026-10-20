@@ -215,6 +215,7 @@ function toEnginePresaleRight(r: PresaleRightInput): PresaleRight {
     originalMemberDisposalDelayReason: r.originalMemberDisposalDelayReason,
     originalMemberDisposalDelayDisposedByThatMethod: r.originalMemberDisposalDelayDisposedByThatMethod,
     isInherited: r.isInherited,
+    nonHeirBequest: r.nonHeirBequest,
     isRankingDisqualifiedInheritedRight: r.isRankingDisqualifiedInheritedRight,
     isCoInherited: r.isCoInherited,
     isLargestCoInheritedShareholder: r.isLargestCoInheritedShareholder,

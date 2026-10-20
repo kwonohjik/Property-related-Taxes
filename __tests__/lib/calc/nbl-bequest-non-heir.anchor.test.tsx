@@ -106,7 +106,8 @@ describe("화면 — 토글 노출·리셋·안내", () => {
   const inhAsset = (o: Partial<AssetForm>) =>
     ({ ...makeDefaultAsset(1), acquisitionCause: "inheritance", acquisitionDate: "2022-06-01", ...o }) as AssetForm;
 
-  it("상속 취득 블록: 토지에만 토글 · 켜면 nonHeirBequest = true · 끄면 undefined", () => {
+  // 후속 묶음(`non-heir-bequest-followups.plan.md` §4-2)부터 §104②1호·§167의3①7호도 읽어 모든 자산 종류에 띄운다.
+  it("상속 취득 블록: 자산 종류와 관계없이 토글 · 켜면 nonHeirBequest = true · 끄면 undefined", () => {
     const onChange = vi.fn();
     render(<CompanionAcqInheritanceBlock asset={inhAsset({ assetKind: "land" })} onChange={onChange} />);
     fireEvent.click(screen.getByRole("switch", { name: NON_HEIR_TOGGLE }));
@@ -117,7 +118,7 @@ describe("화면 — 토글 노출·리셋·안내", () => {
     expect(onChange).toHaveBeenLastCalledWith({ nonHeirBequest: undefined });
     cleanup();
     render(<CompanionAcqInheritanceBlock asset={inhAsset({ assetKind: "housing" })} onChange={() => {}} />);
-    expect(screen.queryByRole("switch", { name: NON_HEIR_TOGGLE })).toBeNull();
+    expect(screen.queryByRole("switch", { name: NON_HEIR_TOGGLE })).not.toBeNull();
   });
 
   const house = (o: Partial<HouseEntry>) =>

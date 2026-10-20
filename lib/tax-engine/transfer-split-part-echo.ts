@@ -60,6 +60,7 @@ export function buildSplitPartCauseEcho(raw: TransferTaxInput): { land: CauseEch
     acquisitionDate: input.acquisitionDate,
     decedentAcquisitionDate: input.decedentAcquisitionDate,
     donorAcquisitionDate: input.donorAcquisitionDate,
+    nonHeirBequest: input.nonHeirBequest,
   });
   const land = resolveLandRateBasis(input);
   const applied = resolveAppurtenantLandRateBasisDate(input);

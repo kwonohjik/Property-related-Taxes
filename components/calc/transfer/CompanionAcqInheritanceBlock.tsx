@@ -87,25 +87,23 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
       </div>
 
       {/*
-        수유자 — 취득일·취득가액은 상속 그대로이고 비사업용 토지의 상속 특례만 갈린다. 이 자산에서 토글이 바꾸는 판정이
-        비사업용 토지뿐이라 토지에만 띄운다(계획서 docs/00-pm/nbl-bequest-non-heir.plan.md §4-1).
+        수유자 — 취득일·취득가액은 상속 그대로이고 상속 특례만 갈린다. 세율 보유기간 통산(§104②1호)은 모든 자산이 읽으므로
+        자산 종류와 관계없이 띄운다(계획서 docs/00-pm/non-heir-bequest-followups.plan.md §4-2).
       */}
-      {asset.assetKind === "land" && (
-        <ToggleCard
-          variant="card"
-          tone="violet"
-          data-testid="acq-non-heir-bequest"
-          checked={asset.nonHeirBequest ?? false}
-          onCheckedChange={(v) => onChange({ nonHeirBequest: v || undefined })}
-          title="상속인이 아닌 사람이 유증·사인증여로 받음"
-          description="민법상 상속인(선순위·대습상속인 포함)이 아닌 사람이 유언이나 사인증여로 받은 토지면 켜세요. 상속인이 유증·사인증여로 받은 토지는 상속이므로 켜지 않습니다."
-        >
-          <p className="text-caption text-muted-foreground/70 pt-1">
-            취득일(상속개시일)과 취득가액은 상속과 같습니다. 비사업용 토지 판정에서 상속 특례(소득령 §168의14③1호·1호의2·3호
-            나목·4호 나목, 임야·목장용지 상속 3년)를 적용하지 않습니다(서면5팀-927 · 기준-2019-법령해석재산-0324 등).
-          </p>
-        </ToggleCard>
-      )}
+      <ToggleCard
+        variant="card"
+        tone="violet"
+        data-testid="acq-non-heir-bequest"
+        checked={asset.nonHeirBequest ?? false}
+        onCheckedChange={(v) => onChange({ nonHeirBequest: v || undefined })}
+        title="상속인이 아닌 사람이 유증·사인증여로 받음"
+        description="민법상 상속인(선순위·대습상속인 포함)이 아닌 사람이 유언이나 사인증여로 받았으면 켜세요. 상속인이 유증·사인증여로 받은 것은 상속이므로 켜지 않습니다."
+      >
+        <p className="text-caption text-muted-foreground/70 pt-1">
+          취득일(상속개시일)과 취득가액은 상속과 같습니다. 다음 상속 특례를 적용하지 않습니다: 세율 보유기간을 피상속인 취득일부터
+          세는 것(소득세법 §104②1호), 상속주택 다주택 중과 배제(소득령 §167의3①7호), 비사업용 토지의 상속 특례(소득령 §168의14③ 등).
+        </p>
+      </ToggleCard>
 
       {/* §154⑧3호 상속주택 자체 양도 — 동일세대 보유기간 통산 (주택 전용) */}
       {asset.assetKind === "housing" && (

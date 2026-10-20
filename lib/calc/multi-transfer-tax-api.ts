@@ -349,6 +349,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
       acquisitionCause === "inheritance" && primary?.decedentAcquisitionDate
         ? primary.decedentAcquisitionDate
         : undefined,
+    nonHeirBequest: acquisitionCause === "inheritance" && primary?.nonHeirBequest ? true : undefined,
     // §154⑧3호 상속주택 자체 양도 보유기간 통산
     decedentSameHouseholdBeforeInheritance:
       acquisitionCause === "inheritance"

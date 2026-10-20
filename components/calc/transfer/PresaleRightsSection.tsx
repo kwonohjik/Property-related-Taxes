@@ -380,6 +380,16 @@ export function PresaleRightsSection({
                   <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">
                     상속 권리 인정 요건 (시행령 §156의2⑥ · §156의3④)
                   </p>
+                  {/* 수유자 — 「상속받은」 권리로 보지 않는다(직접 해석 없음 · 계획서 non-heir-bequest-followups.plan.md §1 C). ④가 상속 행일 때만 싣는다. */}
+                  <ToggleCard
+                    variant="chip"
+                    tone="violet"
+                    data-testid={`presale-non-heir-bequest-${idx}`}
+                    checked={r.nonHeirBequest ?? false}
+                    onCheckedChange={(v) => update(r.id, { nonHeirBequest: v || undefined })}
+                    title="상속인이 아닌 사람이 유증·사인증여로 받음"
+                    description="민법상 상속인이 아닌 사람이 유언이나 사인증여로 받은 권리면 켜세요. 상속받은 권리 특례(§156의2⑥·⑦ · §156의3④·⑤)를 적용하지 않습니다(직접 해석이 없어 확인 필요)."
+                  />
                   {/*
                     상속 입주권의 상속개시일 — §156의2⑥·⑦ 후단 「상속개시 당시 보유한 주택」을 날짜로 판정하는 데만 쓴다(결정 #8).
                     입주권 행의 위 날짜 칸은 취득 경위에 따라 기존주택 취득일·인가일·승계일이라 상속개시일이 보장되지 않아 따로 둔다.

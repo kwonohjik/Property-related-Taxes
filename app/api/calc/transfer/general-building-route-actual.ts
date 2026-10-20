@@ -138,6 +138,8 @@ export interface GeneralBuildingActualPricePayload {
   buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
   /** 상속 시 피상속인 취득일 (법 §104②1호). */
   decedentAcquisitionDate?: Date;
+  /** 상속인이 아닌 수유자(유증·사인증여) — 상속 카드의 §104②1호 통산 미적용(`buildProperties`). */
+  nonHeirBequest?: boolean;
   /** 건물 전용 피상속인 취득일 — 비면 `decedentAcquisitionDate` (환산 경로와 같은 fallback · D3 2026-09-30) */
   buildingDecedentAcquisitionDate?: Date;
   /** 증여 시 증여자 취득일 (법 §104②2호 — 이월과세 자산). */
@@ -674,7 +676,7 @@ export function runActualGeneralBuildingOnce(
   const properties = buildProperties(cards, nonBusinessRatio, undefined, {
     land: payload.unregisteredLand,
     building: payload.unregisteredBuilding,
-  }, assetLevel?.reductions);
+  }, assetLevel?.reductions, payload.nonHeirBequest);
   const aggregated = calculateTransferTaxAggregate(
     {
       taxYear,

@@ -17,6 +17,7 @@ import {
   meetsSurchargeSuspensionHolding,
 } from "./tax-utils";
 import { deadlineEnd, isWithinDeadline } from "./civil-period";
+import { isHeirInheritedHouse } from "./transfer-inheritance-exclusion";
 import {
   MULTI_HOUSE,
   LONG_HOLDING_TEMPORARY_EXCLUSION,
@@ -603,7 +604,7 @@ export function determineSurchargeExclusion(
     const uocRow = input.houses.find((h) => h.isUnavoidableOutsideCapital === true);
     const uocInTwoHouses =
       uocRow === undefined
-        ? !otherEffectiveHouses.some((h) => h.isInherited === true)
+        ? !otherEffectiveHouses.some(isHeirInheritedHouse)
         : uocRow === sellingHouse || otherEffectiveHouses.includes(uocRow);
     if (input.unavoidableOutsideCapitalHouse && uocInTwoHouses) {
       exclusionReasons.push({

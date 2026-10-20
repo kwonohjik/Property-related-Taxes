@@ -162,6 +162,8 @@ export function buildProperties(
   unregistered?: GbUnregisteredAxes,
   /** 자산-수준 조특법 감면 (⑭ Date 변환 완료본 — `mapReductionsToEngine` 출력). */
   reductions?: TransferReduction[],
+  /** 상속인이 아닌 수유자(유증·사인증여) — 상속 카드에만 싣는다(§104②1호 통산 미적용 · `resolveRateBasis`). */
+  nonHeirBequest?: boolean,
 ): TransferTaxItemInput[] {
   return cards.map((card) => {
     const isBuilding = card.propertyType === "general_building_unit";
@@ -234,6 +236,10 @@ export function buildProperties(
       // 토지 카드: landAcquisitionCause + decedent/donorAcquisitionDate (#4-a)
       // 단건/aggregate 엔진의 단기보유 기산점 분기(「소득세법」 제104조 제2항 — 상속은
       // 피상속인 취득일, §97의2① 이월과세는 증여자 취득일)에 사용.
+      ...(nonHeirBequest &&
+      (isBuilding ? card.buildingAcquisitionCause : card.landAcquisitionCause) === "inheritance"
+        ? { nonHeirBequest: true }
+        : {}),
       ...(isBuilding && card.buildingAcquisitionCause
         ? {
             acquisitionCause: card.buildingAcquisitionCause,

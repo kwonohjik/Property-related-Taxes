@@ -45,6 +45,11 @@ export interface RateBasisFacts {
   acquisitionDate: Date;
   /** §104②1호 — 피상속인이 그 자산을 취득한 날 */
   decedentAcquisitionDate?: Date;
+  /**
+   * 상속인이 아닌 사람(수유자)이 유증·사인증여로 받은 자산 — §104②1호의 「상속받은 자산」이 아니다
+   * (서면인터넷방문상담4팀-3304 — 사인증여 · 유증은 같은 낱말로 읽는다). 계획서 `docs/00-pm/non-heir-bequest-followups.plan.md` §1 B.
+   */
+  nonHeirBequest?: boolean;
   /** §104②2호 — 증여자가 그 자산을 취득한 날 */
   donorAcquisitionDate?: Date;
   /** 겸용주택 컴패니언 주택 카드의 주택분 단일 기산일(§104② 단서 반영 후) — `TransferTaxInput.housingRateBasisDate` */
@@ -59,8 +64,8 @@ export type RateBasisRule = "own" | "decedent" | "donor";
  * 어느 호에도 해당하지 않으면 본문 원칙대로 `acquisitionDate`를 그대로 돌려준다.
  */
 export function resolveRateBasis(facts: RateBasisFacts): { date: Date; rule: RateBasisRule } {
-  // 1호 — 상속받은 자산
-  if (facts.acquisitionCause === "inheritance" && facts.decedentAcquisitionDate) {
+  // 1호 — 상속받은 자산 (상속인이 아닌 수유자는 제외)
+  if (facts.acquisitionCause === "inheritance" && facts.decedentAcquisitionDate && facts.nonHeirBequest !== true) {
     return { date: facts.decedentAcquisitionDate, rule: "decedent" };
   }
   // 2호 — §97의2①에 해당하는 자산 (이월과세). 단순 증여(`gift`)는 대상이 아니다.
@@ -95,5 +100,6 @@ export function pickRateBasisFacts(facts: RateBasisFacts): RateBasisFacts {
     acquisitionDate: facts.acquisitionDate,
     decedentAcquisitionDate: facts.decedentAcquisitionDate,
     donorAcquisitionDate: facts.donorAcquisitionDate,
+    nonHeirBequest: facts.nonHeirBequest,
   };
 }

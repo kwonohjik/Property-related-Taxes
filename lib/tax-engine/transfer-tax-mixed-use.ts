@@ -538,11 +538,11 @@ export function calcMixedUseTransferTax(
   // 그 시점부터가 「주택과 그 부수토지」의 보유기간이다(선행 계획서 G-3 `max(취득일)` 규칙과 동일).
   // 「소득세법」 §104②1호 — 상속받은 파트의 세율 보유기간은 피상속인 취득일부터(장특 보유연수는 상속개시일 기산 그대로 — §95④).
   const landInherited = isInheritedPart(asset, asset.landAcquisitionDate);
-  const decedentYears = asset.decedentAcquisitionDate
-    ? calculateHoldingPeriod(asset.decedentAcquisitionDate, transferDate).years
-    : 0;
-  const landRateYears = (lthdYears: number) => (landInherited ? decedentYears : lthdYears);
-  const buildingRateYears = (lthdYears: number) => (asset.decedentAcquisitionDate ? decedentYears : lthdYears);
+  // 수유자(상속인 아닌 유증·사인증여)는 §104②1호의 「상속받은 자산」이 아니다 — 통산하지 않는다(`resolveRateBasis`와 같은 선).
+  const rateDecedent = asset.nonHeirBequest === true ? undefined : asset.decedentAcquisitionDate;
+  const decedentYears = rateDecedent ? calculateHoldingPeriod(rateDecedent, transferDate).years : 0;
+  const landRateYears = (lthdYears: number) => (landInherited && rateDecedent ? decedentYears : lthdYears);
+  const buildingRateYears = (lthdYears: number) => (rateDecedent ? decedentYears : lthdYears);
 
   // 「소득세법」 제104조 제7항 가산율 — **주택분 전용**.
   //

@@ -238,7 +238,7 @@ export function calculateGeneralBuildingTransfer(
   const properties = buildProperties(gbOut.assetCards, gbOut.nonBusinessRatio, swap, {
     land: gbv.unregisteredLand,
     building: gbv.unregisteredBuilding,
-  }, assetLevel?.reductions);
+  }, assetLevel?.reductions, gbv.nonHeirBequest);
 
   const aggregated = calculateTransferTaxAggregate(
     {

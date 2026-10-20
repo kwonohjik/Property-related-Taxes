@@ -268,6 +268,7 @@ export async function POST(request: NextRequest) {
       isSuccessorRightToMoveIn: p.isSuccessorRightToMoveIn,
       acquisitionCause: p.acquisitionCause,
       decedentAcquisitionDate: toOptionalDate(p.decedentAcquisitionDate),
+      nonHeirBequest: p.nonHeirBequest,
       decedentSameHouseholdBeforeInheritance: p.decedentSameHouseholdBeforeInheritance,
       decedentCohabitationHoldingStartDate: toOptionalDate(p.decedentCohabitationHoldingStartDate),
       decedentCohabitationResidenceMonths: p.decedentCohabitationResidenceMonths,

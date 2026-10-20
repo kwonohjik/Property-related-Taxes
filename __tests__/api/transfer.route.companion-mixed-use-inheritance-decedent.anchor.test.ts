@@ -161,6 +161,12 @@ describe("컴패니언 겸용주택 — 상속 피상속인 취득일", () => {
     expect(a.totalTax).toBe(79_849_000);
   }, 60_000);
 
+  // 계획서 docs/00-pm/non-heir-bequest-followups.plan.md §1 B — 수유자는 통산하지 않는다(동반 자산 ④ → bundled → 파트 카드).
+  it("수유자 — 피상속인 2000 취득이어도 통산하지 않는다 → 주택 카드 70% · 상가 카드 50%", async () => {
+    const { a, card } = await calc({ ...INH, decedentAcquisitionDate: "2000-01-01", nonHeirBequest: true });
+    expect([card("mu-house-land").appliedRate, card("mu-comm-bld").appliedRate, a.totalTax]).toEqual([0.7, 0.5, 93_199_581]); // 상속인 79,849,000
+  });
+
   it("긍정 짝 — 피상속인 2023-06-01 취득 → 주택 60% · 상가 40%", async () => {
     const { a, card } = await calc({ ...INH, decedentAcquisitionDate: "2023-06-01" });
     expect(card("mu-house-bld").appliedRate).toBe(0.6);

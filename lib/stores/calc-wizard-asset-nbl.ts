@@ -542,6 +542,11 @@ export interface PresaleRightEntry {
   originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
   /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받은 권리(isInherited=true 시에만 의미) — §156의2⑥⑦ · §156의3④⑤의 「상속받은」
+   * 권리로 보지 않는다(직접 해석 없음 — 확인 필요 · 계획서 `non-heir-bequest-followups.plan.md` §1 C).
+   */
+  nonHeirBequest?: boolean;
+  /**
    * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.
    * 순위는 **계산하지 않고 자기선언**으로 받는다(주택 축 §155②③과 같은 규약).
    */

@@ -49,6 +49,7 @@ export interface PresaleRightPayloadItem {
   originalMemberDisposalDelayReason?: string;
   originalMemberDisposalDelayDisposedByThatMethod?: boolean;
   isInherited?: boolean;
+  nonHeirBequest?: boolean;
   isRankingDisqualifiedInheritedRight?: boolean;
   isCoInherited?: boolean;
   isLargestCoInheritedShareholder?: boolean;
@@ -113,6 +114,8 @@ export function buildPresaleRightsPayload(
       // 기존주택 원조합원 §155① 사실 — 그 경위일 때만(다른 경위·분양권 행에 남은 값은 싣지 않는다).
       ...originalMemberFacts(p),
       isInherited: p.isInherited,
+      // 수유자 권리 — 상속 행일 때만(상속을 해제한 행에 남은 값은 싣지 않는다)
+      nonHeirBequest: p.isInherited && p.nonHeirBequest ? true : undefined,
       isRankingDisqualifiedInheritedRight: p.isRankingDisqualifiedInheritedRight,
       isCoInherited: p.isCoInherited,
       isLargestCoInheritedShareholder: p.isLargestCoInheritedShareholder,
