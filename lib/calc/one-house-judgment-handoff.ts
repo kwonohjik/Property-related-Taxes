@@ -150,6 +150,12 @@ export function toTransferFormPatch(
     regionCode: undefined,
     sellingHouseExclusion: undefined,
     gracePeriod: undefined,
+    /**
+     * 🔴 **자산 분할 모드도 비운다**(S11-7 형제) — 판정 메뉴는 이 키를 모르고(축 B 지분 분할·함께 양도는 계산기 Step1 전용 선택)
+     *    `assets`가 통째로 바뀌므로 이전 물건 묶음의 선택이다. 남기면 2건 판정 폼이 들어올 때 `assets.length > 1 && assetSplitMode`
+     *    가 직전 «fractional»을 우선해 토지 성격 오류(`transfer-tax-validate-asset.ts`)가 빠진다. 화면 상태는 모달 `onApplied`가 맞춘다.
+     */
+    assetSplitMode: undefined,
   };
 }
 
@@ -188,10 +194,13 @@ function withMirroredSalePrice(form: OneHouseJudgmentFormData): TransferFormData
 export async function applyOneHouseFactsToTransferForm(
   form: OneHouseJudgmentFormData,
   judgmentId?: string,
-): Promise<void> {
+): Promise<Partial<TransferFormData>> {
   const { useCalcWizardStore } = await import("@/lib/stores/calc-wizard-store");
   const hash = judgmentId ? await readJudgmentInputHash(judgmentId) : undefined;
-  useCalcWizardStore.getState().updateFormData(toTransferFormPatch(form, judgmentId, hash));
+  const patch = toTransferFormPatch(form, judgmentId, hash);
+  useCalcWizardStore.getState().updateFormData(patch);
+  // 쓴 patch를 돌려준다 — 이동 없이 마운트된 채 남는 Step1이 화면 모드(`splitMode`)를 새 폼에서 다시 정한다.
+  return patch;
 }
 
 /**

@@ -44,6 +44,7 @@ import {
   type OneHouseJudgmentCandidate,
 } from "@/lib/calc/one-house-judgment-lookup";
 import { applyOneHouseFactsToTransferForm } from "@/lib/calc/one-house-judgment-handoff";
+import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 
 /** 판정 배지 톤 → 정적 클래스. Tailwind는 동적 조합을 빌드에서 못 본다. */
 const VERDICT_CLASS = {
@@ -56,9 +57,12 @@ const VERDICT_CLASS = {
 export function OneHouseJudgmentLoadModal({
   open,
   onOpenChange,
+  onApplied,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** 폼에 쓴 patch를 알린다 — 모달은 이동·재마운트가 없어, 호스트(Step1)가 자기 화면 상태를 새 폼에 맞출 기회다. */
+  onApplied?: (patch: Partial<TransferFormData>) => void;
 }) {
   /**
    * 🔑 `null` = 아직 안 읽음 / `[]` = 0건. 한 상태로 합치면 열자마자 「판정 이력이 없습니다」가
@@ -129,9 +133,10 @@ export function OneHouseJudgmentLoadModal({
                    *    「폼이 채워졌다」를 뜻하지 않게 되어, E2E가 기댈 신호가 사라진다
                    *    (기준선 해시를 읽느라 이 헬퍼는 저장소 왕복을 한 번 한다).
                    */
-                  void applyOneHouseFactsToTransferForm(c.form, c.calculationId).then(() =>
-                    onOpenChange(false),
-                  );
+                  void applyOneHouseFactsToTransferForm(c.form, c.calculationId).then((patch) => {
+                    if (patch) onApplied?.(patch);
+                    onOpenChange(false);
+                  });
                 }}
                 className="flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors hover:border-primary/50"
               >

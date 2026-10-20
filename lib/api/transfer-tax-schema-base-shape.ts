@@ -460,6 +460,16 @@ export const propertyBaseShape = {
   landNature: z
     .enum(["appurtenant_to_housing", "non_appurtenant"])
     .optional(),
+  /**
+   * ⑨⑫ 토지 세율 수동 지정 — 컴패니언 스키마(`transfer-tax-schema-companion.ts`)와 같은 enum.
+   * 「토지 먼저」(주 자산=주택부수토지) 순서에서도 「주택 먼저」의 토지 카드와 같게 동작하도록 연다(없으면 조용히 strip).
+   * **세율 축(소득세법 §104①2·3호 괄호·영 §167의5)만 정한다** — 배율 분리·한도 공유·1세대1주택 비과세 단위(§89①3호·영 §154⑦)와 무관.
+   * ⑭는 **함께 양도 자산이 있는 토지**(`propertyType === "land"` + `companionAssets`)에만 싣는다 — 엔진 세율 소비가 토지 한정이고,
+   * 주택 주 자산에 실리면 route의 분리 컨텍스트 조건이 달라지며, 단독 토지에 실리면 컴패니언 없는 자산에서 새 세율 경로가 열린다.
+   */
+  manualHoldingPeriodOverride: z
+    .enum(["shortTermHousing70", "shortTerm60", "progressive"])
+    .optional(),
 
   // ─── 일괄양도 안분 (소득세법 시행령 §166 ⑥) ────────────────
   /** 함께 양도된 자산들 (2개 이상 일괄 양도 시). 없거나 빈 배열이면 단건으로 처리. */
