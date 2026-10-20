@@ -373,6 +373,7 @@ export function buildTransferEngineInput(
     // D2-4 영 §163⑨ 단서 2호 — 건물 몫 ②(영 §164⑦ 가액)와 주택 구분. 엔진 split 파트가 max/차단
     buildingSec164Value: data.buildingSec164Value,
     buildingHouseKind: data.buildingHouseKind,
+    buildingBundledStdPrice: data.buildingBundledStdPrice,
     landHouseExisted: data.landHouseExisted,
     landHouseSec164Value: data.landHouseSec164Value,
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다

@@ -249,13 +249,16 @@ describe("⑧ — D2-4b ② 입력 완결 요구 · 같은 leaf 사용", () => {
     expect(apart.result).toContain(BUILDING_CAUSE_APARTMENT_MESSAGE);
     expect(apart.result).not.toContain(BUILDING_HOUSE_KIND_REQUIRED_MESSAGE);
   });
-  it("일부 양도 → areaScenario · 비주택 building → 종전 Y4 문구(건물 취득일 칸) · 구간 밖(2005-04-30)은 통과", () => {
+  it("일부 양도 → areaScenario · 비주택 building → 2001.1.1. 전은 Y4 문구(건물 취득일 칸)·그 뒤는 일괄 고시 질문 칸 · 구간 밖(2005-04-30)은 통과", () => {
     const partial = v8(asset({ areaScenario: "partial", transferArea: "100" }));
     expect(partial.field).toBe("areaScenario");
     expect(partial.result).toContain("일부 양도");
     const b = v8(asset({ assetKind: "building" }));
-    expect(b.field).toBe("acquisitionDate");
-    expect(b.result).toContain("기준시가(주택은 개별주택가격·공동주택가격)가 고시되기 전");
+    expect(b.field).toBe("buildingBundledStdPrice");
+    expect(b.result).toContain("오피스텔·상업용 건물인지 확인이 필요합니다");
+    const pre = v8(asset({ assetKind: "building", ...setDate("2000-12-31") }));
+    expect(pre.field).toBe("acquisitionDate");
+    expect(pre.result).toContain("일반 건물은 2001.1.1. 전");
     expect(v8(asset({ ...setDate("2005-04-30"), landAcquisitionDate: "2005-01-10" })).result).toBeNull();
   });
 });

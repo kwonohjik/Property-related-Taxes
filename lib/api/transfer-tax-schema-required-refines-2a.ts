@@ -87,6 +87,7 @@ export type Required2aLike = {
   isPartialAreaTransfer?: boolean;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
+  buildingBundledStdPrice?: "yes" | "no";
   landHouseExisted?: "yes" | "no" | "unknown";
   landHouseSec164Value?: number;
   houseFirstDisclosureDate?: string;
@@ -418,7 +419,7 @@ export function refineSplitPartCause(
     Required2aLike,
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
-    | "buildingSec164Value" | "buildingHouseKind" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
+    | "buildingSec164Value" | "buildingHouseKind" | "buildingBundledStdPrice" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
     | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation" | "isOneHousehold" | "isUnregistered"
     | "expenses"
@@ -464,6 +465,7 @@ export function refineSplitPartCause(
     isHousing,
     buildingHouseKind: d.buildingHouseKind,
     buildingSec164Value: d.buildingSec164Value,
+    buildingBundledStdPrice: d.buildingBundledStdPrice,
     // D1-H — 주택 부수토지 단서 2호(받을 당시 주택 있음 · 토지 몫 ②)
     landHouseExisted: d.landHouseExisted,
     landHouseSec164Value: d.landHouseSec164Value,

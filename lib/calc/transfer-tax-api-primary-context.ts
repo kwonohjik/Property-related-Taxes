@@ -26,6 +26,7 @@ import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-gift";
 import { phdFlagEffective } from "./phd-toggle-scope";
+import { isRedevelopmentSec166Asset } from "./redev-acquisition-price-source";
 
 /** 주 자산에서 파생되는 값 묶음. 호출부는 구조분해로 받는다. */
 export function buildPrimaryContext(
@@ -168,9 +169,8 @@ export function buildPrimaryContext(
   // ⚠️ **승계조합원 입주권은 제외한다** (2026-08-23). §166①은 「조합에 기존건물과 그 부수토지를
   //    **제공하고 취득한**」 조합원으로 요건을 한정하므로 승계자는 대상이 아니다 — 재개발 페이로드
   //    자체를 만들지 않아 엔진이 일반 분기(§97①1호 가목)를 타게 한다(`isSuccessorRight` 위에서 정의).
-  const isRedevelopment =
-    !isSuccessorRight &&
-    (primary.assetKind === "redevelopment_apt" || isRightToMoveIn);
+  // 컴패니언 ④와 같은 leaf(`isRedevelopmentSec166Asset`) — 두 곳이 술어를 따로 쓰지 않는다.
+  const isRedevelopment = isRedevelopmentSec166Asset(primary);
   // ⚠️ `primaryRatio`(:253)보다 **앞**이라 여기서 직접 구한다 — 빌더가 `0<r<1`을 자체 가드하므로
   //    단독 소유(1.0)에서는 완전 무변경이다. 필드별 스케일 규율은 빌더 주석 참조(§166④1호 vs ①1호).
   const redevPayload = isRedevelopment

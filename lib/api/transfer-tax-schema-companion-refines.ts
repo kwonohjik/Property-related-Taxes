@@ -77,14 +77,17 @@ export function addCompanionAcquisitionCauseRefines(
       c.mixedUse === undefined
     ) {
       if (c.useEstimatedAcquisition) {
-        if (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0) {
+        // 재개발 §166 서브객체가 있으면 환산 기준시가는 `redevelopment`(취득시·관리처분일)가 정한다 — 주 자산 refine
+        // (`transfer-tax-schema-refines.ts` `isRedevelopmentEstimated`)과 같은 면제. ⑧도 이 칸을 요구하지 않아
+        // 면제하지 않으면 「⑧ 통과 ↔ ⑩ 400」 모순이다.
+        if (c.redevelopment === undefined && (!c.standardPriceAtAcquisition || c.standardPriceAtAcquisition <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["companionAssets", i, "standardPriceAtAcquisition"],
             message: "매매(환산) 시 취득시 기준시가 필수",
           });
         }
-        if (!c.standardPriceAtTransfer || c.standardPriceAtTransfer <= 0) {
+        if (c.redevelopment === undefined && (!c.standardPriceAtTransfer || c.standardPriceAtTransfer <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["companionAssets", i, "standardPriceAtTransfer"],

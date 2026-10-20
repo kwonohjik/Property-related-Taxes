@@ -26,6 +26,7 @@ import { buildSplitCarryoverPayload } from "./transfer-tax-api-split-carryover";
 import type { SplitCarryoverPayload } from "./transfer-tax-api-split-carryover";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
+import { buildingBundledStdPriceSent } from "./transfer-land-part-cause";
 import {
   buildingHouseKindSent,
   buildingSec164Applies,
@@ -363,6 +364,7 @@ export function buildLandPartCausePayload(
   isPartialAreaTransfer?: true;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
+  buildingBundledStdPrice?: "yes" | "no";
   landHouseExisted?: "yes" | "no" | "unknown";
   landHouseSec164Value?: number;
 } {
@@ -379,9 +381,12 @@ export function buildLandPartCausePayload(
     // 일부 양도는 구간에서 차단(기준 면적 미확정, 자동 안분 금지) — 그 사실을 엔진·⑫에 알린다.
     const kind = buildingHouseKindSent(primary);
     const sec164 = deriveBuildingSec164Total(primary);
+    const bundled = buildingBundledStdPriceSent(primary);
     return {
       landAcquisitionCause: "purchase",
       ...(kind ? { buildingHouseKind: kind } : {}),
+      // 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가. 질문이 열린 자리에서 고른 값만(leaf Y4e).
+      ...(bundled ? { buildingBundledStdPrice: bundled } : {}),
       ...(sec164 > 0 ? { buildingSec164Value: sec164 } : {}),
       ...(buildingSec164Applies(primary) && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),
     };

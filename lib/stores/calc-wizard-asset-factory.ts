@@ -208,6 +208,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     landAcquisitionCause: "",
     landCauseHost: "",
     landHouseExisted: "",
+    buildingBundledStdPrice: "",
     landRebuildEnabled: false,
     landRebuildStartMode: "",
     landRebuildPriorHouseStartDate: "",

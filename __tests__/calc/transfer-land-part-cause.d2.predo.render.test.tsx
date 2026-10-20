@@ -224,9 +224,16 @@ describe("C. D2-2 — 토글 ON 화면 (상속 블록 대체 · 건물 원인 �
     expect(screen.queryByTestId("building-cause-date-notice")).toBeNull();
     expect(screen.getByTestId("building-sec164-card")).toBeTruthy();
     cleanup();
+    // 비주택 건물 2001.1.1. 전 — 종전 안내(범위 밖, 2001.1.1. 기준) · 일괄 고시 질문 없음
+    mount(d2("inheritance", { assetKind: "building", acquisitionDate: "2000-12-31", landAcquisitionDate: "2002-01-10" }));
+    expect(screen.getByTestId("building-cause-date-notice").textContent).toContain("2001.1.1.");
+    expect(screen.queryByTestId("building-bundled-std-price")).toBeNull();
+    expect(screen.queryByTestId("building-sec164-card")).toBeNull();
+    cleanup();
+    // 비주택 건물 2003 — 안내 대신 일괄 고시 질문(Y4e)
     mount(d2("inheritance", { assetKind: "building", acquisitionDate: "2003-05-01", landAcquisitionDate: "2002-01-10" }));
-    expect(screen.getByTestId("building-cause-date-notice").textContent).toContain("2005.4.30.");
-    expect(screen.getByTestId("building-cause-date-notice").textContent).toContain("단독·다가구주택만");
+    expect(screen.queryByTestId("building-cause-date-notice")).toBeNull();
+    expect(screen.getByTestId("building-bundled-std-price")).toBeTruthy();
     expect(screen.queryByTestId("building-sec164-card")).toBeNull();
     cleanup();
     mount(d2("inheritance", { landAcquisitionDate: "2025-05-01" }));

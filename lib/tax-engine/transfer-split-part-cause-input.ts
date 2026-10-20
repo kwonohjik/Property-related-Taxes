@@ -39,6 +39,8 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     isHousing: input.propertyType === "housing",
     buildingHouseKind: input.buildingHouseKind,
     buildingSec164Value: input.buildingSec164Value,
+    // 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가(아니면 단서 2호 구간 밖)
+    buildingBundledStdPrice: input.buildingBundledStdPrice,
     // D1-H — 주택 부수토지 단서 2호(받을 당시 주택 있음 · 토지 몫 ②). 주택 구분은 위 `buildingHouseKind`를 같이 쓴다.
     landHouseExisted: input.landHouseExisted,
     landHouseSec164Value: input.landHouseSec164Value,

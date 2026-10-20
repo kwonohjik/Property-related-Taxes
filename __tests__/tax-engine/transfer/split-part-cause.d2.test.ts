@@ -25,6 +25,9 @@ import {
   LAND_CAUSE_BUILDING_CAUSE_MESSAGE,
   LAND_CAUSE_OWNER_SPLIT_MESSAGE,
   isSec163_9BuildingProviso,
+  isGeneralBuildingBundledWindow,
+  BUILDING_BUNDLED_STD_PRICE_REQUIRED_MESSAGE,
+  BUILDING_BUNDLED_STD_PRICE_UNSUPPORTED_MESSAGE,
   type SplitPartCauseFacts,
 } from "@/lib/tax-engine/transfer-split-part-cause";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -72,11 +75,34 @@ describe("leaf — D2 규칙별 발동·긍정 짝", () => {
     expect(issues).toEqual([{ field: "landAcquisitionDate", message: BUILDING_CAUSE_DATE_REQUIRED_MESSAGE }]);
   });
 
-  it("Y4 경계: 개시 2005-04-29 차단 · 2005-04-30 통과 · 시각 꼬리(ISO) · 증여도 동일", () => {
-    expect(first({ buildingAcquisitionDate: "2005-04-29" })).toEqual({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
-    expect(msgs({ buildingAcquisitionDate: "2005-04-30" })).toEqual([]);
+  it("Y4a 경계(비주택): 개시 2000-12-31 차단 · 시각 꼬리(ISO) · 증여도 동일 — 일괄 고시 답이 와도 2001.1.1. 전은 차단", () => {
+    expect(first({ buildingAcquisitionDate: "2000-12-31" })).toEqual({ field: "acquisitionDate", message: BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE });
+    expect(first({ buildingAcquisitionDate: "2000-12-31", buildingBundledStdPrice: "no" })?.message).toBe(BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE);
     expect(first({ buildingAcquisitionDate: "1984-05-01T00:00:00.000Z" })?.message).toBe(BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE);
-    expect(first({ buildingAcquisitionCause: "gift", buildingAcquisitionDate: "2003-01-01" })?.message).toBe(BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE);
+    expect(first({ buildingAcquisitionCause: "gift", buildingAcquisitionDate: "2000-01-01" })?.message).toBe(BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE);
+  });
+
+  it("Y4e 일괄 고시 질문(비주택 2001-01-01 ~ 2005-04-29): 미답 → 확인 요구 · 예 → 차단 · 아니오 → 통과 · 2005-04-30은 묻지 않는다", () => {
+    for (const d of ["2001-01-01", "2003-01-01", "2005-04-29", "2003-05-01T00:00:00.000Z"]) {
+      expect(first({ buildingAcquisitionDate: d }), d).toEqual({ field: "buildingBundledStdPrice", message: BUILDING_BUNDLED_STD_PRICE_REQUIRED_MESSAGE });
+      expect(first({ buildingAcquisitionDate: d, buildingBundledStdPrice: "yes" }), d).toEqual({ field: "buildingBundledStdPrice", message: BUILDING_BUNDLED_STD_PRICE_UNSUPPORTED_MESSAGE });
+      expect(msgs({ buildingAcquisitionDate: d, buildingBundledStdPrice: "no" }), d).toEqual([]);
+    }
+    expect(first({ buildingAcquisitionCause: "gift", buildingAcquisitionDate: "2003-01-01" })?.field).toBe("buildingBundledStdPrice");
+    expect(msgs({ buildingAcquisitionDate: "2005-04-30" })).toEqual([]);
+    expect(msgs({ buildingAcquisitionDate: "2005-04-30", buildingBundledStdPrice: "yes" })).toEqual([]);
+    // 주택은 이 질문을 쓰지 않는다(D2-4 단독·다가구 분기) — 답이 와도 무영향
+    expect(collectSplitPartCauseIssues({ ...OK, isHousing: true, buildingAcquisitionDate: "2003-01-01", buildingBundledStdPrice: "no" })[0]?.field).toBe("acquisitionDate");
+    // 술어 경계: 2001-01-01 포함 · 2005-04-30 제외 · 2000-12-31 제외 · 상속·증여만
+    expect(isGeneralBuildingBundledWindow("inheritance", "2001-01-01")).toBe(true);
+    expect(isGeneralBuildingBundledWindow("inheritance", "2000-12-31")).toBe(false);
+    expect(isGeneralBuildingBundledWindow("gift", "2005-04-29")).toBe(true);
+    expect(isGeneralBuildingBundledWindow("gift", "2005-04-30")).toBe(false);
+    expect(isGeneralBuildingBundledWindow("purchase", "2003-01-01")).toBe(false);
+    expect(isGeneralBuildingBundledWindow(undefined, "2003-01-01")).toBe(false);
+  });
+
+  it("Y4 술어 경계(주택 공용): 2005-04-29 구간 · 2005-04-30 밖", () => {
     expect(isSec163_9BuildingProviso("inheritance", "2005-04-29")).toBe(true);
     expect(isSec163_9BuildingProviso("inheritance", "2005-04-30")).toBe(false);
     expect(isSec163_9BuildingProviso("purchase", "2003-01-01")).toBe(false);
@@ -108,7 +134,7 @@ describe("leaf — D2 규칙별 발동·긍정 짝", () => {
   });
 
   it("순서: 구조(Y1) → Y2 → Y4 → Y3 → Y7", () => {
-    const f = { isBurdenedGift: true, buildingAcquisitionDate: "2003-01-01", buildingMode: "estimated" as const, hasAssetLevelAcquisitionValuation: true };
+    const f = { isBurdenedGift: true, buildingAcquisitionDate: "2000-01-01", buildingMode: "estimated" as const, hasAssetLevelAcquisitionValuation: true };
     expect(msgs(f)).toEqual([
       BUILDING_CAUSE_BURDENED_GIFT_MESSAGE,
       BUILDING_CAUSE_PRE_DISCLOSURE_MESSAGE,

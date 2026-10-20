@@ -51,6 +51,7 @@ import {
   isFullFractionalBundle,
 } from "./transfer-tax-api-asset-basics";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
+import { isRedevelopmentSec166Asset, redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
 import {
   isSuccessorRightTransfer,
   successorRightAcquisitionTotal,
@@ -73,6 +74,15 @@ export function fixedAcquisitionPriceRaw(asset: AssetForm): number | undefined {
    */
   if (isSuccessorRightTransfer(asset) && successorRightEstimationMode(asset) === "actual") {
     return successorRightAcquisitionTotal(asset) || undefined;
+  }
+  /**
+   * 재개발 §166 자산(원조합원 입주권·완공APT) + 매매·실가 — 상단 「취득가액」 칸이 화면에 없다(`CompanionAcqPurchaseBlock` 게이트).
+   * 취득가액은 §166 섹션의 `redevActualAcquisitionPrice`다. 숨은 `fixedAcquisitionPrice`를 읽으면 비었을 때 ⑩이 400,
+   * 옛 값이 남았으면 엔진(`bundled-apportionment.ts`)이 그 값을 취득가액으로 쓴다. 주 자산 ④와 **같은 leaf**
+   * (승계 완공APT는 leaf 안에서 `fixedAcquisitionPrice` — 종전과 같다).
+   */
+  if (isRedevelopmentSec166Asset(asset) && asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition) {
+    return redevActualAcquisitionPriceRaw(asset) || undefined;
   }
   return (asset.acquisitionCause === "purchase" && !asset.useEstimatedAcquisition && asset.fixedAcquisitionPrice) ||
     (asset.acquisitionCause === "gift" && asset.fixedAcquisitionPrice) ||
@@ -442,7 +452,7 @@ export function buildAssetPayload(
      *
      * 누락 시 침묵 strip이라 그 자산만 §166을 잃고 일반 주택 산식으로 계산된다.
      */
-    ...((asset.assetKind === "right_to_move_in" && !isSuccessor) || asset.assetKind === "redevelopment_apt"
+    ...(isRedevelopmentSec166Asset(asset)
       ? { redevelopment: buildRedevPayloadForCompanion(asset, getOwnershipRatio(asset)) }
       : {}),
     /**
