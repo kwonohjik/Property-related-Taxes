@@ -27,6 +27,7 @@ import { hasJudgmentInput } from "@/lib/one-house-ai/judgment-ui";
 import { ONE_HOUSE_AI_TEXT_MAX } from "@/lib/one-house-ai/text-limit";
 import { answerTargetOf, readAnswer, writeAnswer } from "@/lib/one-house-ai/question-answer";
 import { OneHouseAiAnswerField } from "./OneHouseAiAnswerField";
+import { OneHouseAiUsageCost } from "./OneHouseAiUsageCost";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
@@ -236,6 +237,8 @@ function ExtractionPreview({
       )}
 
       {data.notes.length > 0 && <NoteList notes={data.notes} />}
+
+      <OneHouseAiUsageCost model={data.model} usage={data.usage} />
     </div>
   );
 }
