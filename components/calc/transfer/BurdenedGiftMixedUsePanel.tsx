@@ -177,7 +177,7 @@ export function BurdenedGiftHousingAppraisalField({
         stacked
         required
         label="주택·상가로 구분된 감정평가가액"
-        hint="감정평가서에 주택분과 상가분 가액이 구분되어 있으면 「있음」을 선택합니다. 없으면 시가를 양도시 기준시가 비율로 주택·상가에 나눕니다(부가가치세법 시행령 제64조 제1항 제1호). 같은 호 단서의 감정평가가액은 공급시기가 속하는 과세기간의 직전 과세기간 개시일부터 공급시기가 속하는 과세기간 종료일까지 평가한 것으로 한정되며, 이 기간을 증여일 기준으로 보는 것은 확인이 필요합니다."
+        hint="감정평가서에 주택분과 상가분 가액이 구분되어 있으면 「있음」을 선택합니다. 없으면 시가를 양도시 기준시가 비율로 주택·상가에 나눕니다(부가가치세법 시행령 제64조 제1항 제1호)."
       >
         <RadioCardGroup
           name={`bgHousingAppraisalDeclared-${asset.assetId ?? "primary"}`}
@@ -198,7 +198,7 @@ export function BurdenedGiftHousingAppraisalField({
           required
           label="주택분 감정평가가액"
           field="bgHousingAppraisalValue"
-          hint="상가분은 위 양도시 시가 평가액에서 이 금액을 뺀 값으로 봅니다."
+          hint="상가분은 위 양도시 시가 평가액에서 이 금액을 뺀 값으로 봅니다. 공급시기 직전 과세기간 개시일부터 공급시기가 속하는 과세기간 종료일까지 평가한 가액이어야 하며(부가가치세법 시행령 제64조 제1항 제1호 단서), 공급시기를 증여일로 보는 것은 확인이 필요합니다."
         >
           <CurrencyInput label="" hideUnit value={asset.bgHousingAppraisalValue} onChange={(v) => onChange({ bgHousingAppraisalValue: v })} />
         </FieldCard>
