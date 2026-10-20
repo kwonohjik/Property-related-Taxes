@@ -144,6 +144,11 @@ export function toHouseVerdict(
  * 몫을 줄 대상이 없으면(주택이 부분과세가 아님 · 초과분 없음 · 조각 없음) 빈 맵이다 — 종전 계산 그대로.
  * 주택 카드는 자기 초과분 외에 **다른 카드의 초과분**이나 **다른 한도 내 토지 카드**가 있을 때만 다시 계산한다(그 밖에는 몫 = 자기 초과분이라 값이 같다).
  *
+ * **토지 차손** — 한도 내 조각과 초과분이 **모두 차손**이면 차손 조각에도 음수 몫을 준다(915 식을 부호만 대칭으로 — 단일 주택 입력과 같은 값, 사용자 결정 2026-10-20).
+ * 종전에는 차손 조각 · 차손 초과분을 0으로 버려, 한도 내 카드가 자기 차손만 안분해 같은 차손이 초과분(전액)과 이내분(안분)에 이중으로 반영됐다.
+ * 이익과 차손이 **섞이면** 종전대로 양수 조각 · 양수 초과분만 나눈다 — 섞인 경우의 계산 방법은 해석례를 확인하지 못했다
+ * (계획서 `transfer-split-part-loss-offset-p3.plan.md` §2 B안 · 고지 `isUnitExcessSignMixed`).
+ *
  * @returns 카드 인덱스 → 그 카드가 다시 계산돼야 할 때의 몫(`highValueExcessShare`)
  */
 export function resolveUnitExcessShares(
@@ -152,34 +157,67 @@ export function resolveUnitExcessShares(
   results: readonly TransferTaxResult[],
 ): Map<number, number> {
   const out = new Map<number, number>();
-  const house = results[unit.houseIdx];
-  if (!house || house.isPartialExempt !== true || house.isExempt === true) return out;
+  const facts = unitExcessFacts(items, unit, results);
+  if (!facts) return out;
 
-  const gainOf = (i: number) => Math.max(0, results[i]?.transferGain ?? 0);
-  const externalExcess = unit.excessIdxs.reduce((sum, i) => sum + gainOf(i), 0);
-  const ownExcess = Math.max(0, house.splitDetail?.nonBusinessLandPart?.gain ?? 0);
-  const excessTotal = ownExcess + externalExcess;
-  if (excessTotal <= 0) return out;
-
-  // 한도 내 토지 조각 — 주택 카드의 토지분(분리 파트가 있고 나중 취득 토지로 제외되지 않은 경우) + 부분과세로 판정된 한도 내 부수토지 카드.
-  const pieces: { idx: number; gain: number }[] = [];
-  const houseLand = house.splitDetail?.land;
-  if (houseLand && !isLaterAcquiredLandExemptExcluded(items[unit.houseIdx] as unknown as TransferTaxInput)) {
-    const w = Math.max(0, houseLand.gain) - ownExcess;
-    if (w > 0) pieces.push({ idx: unit.houseIdx, gain: w });
-  }
-  for (const i of unit.landIdxs) {
-    const r = results[i];
-    if (r && r.isPartialExempt === true && r.isExempt !== true && gainOf(i) > 0) pieces.push({ idx: i, gain: gainOf(i) });
-  }
-  if (pieces.length === 0) return out;
+  const allLoss = facts.pieces.every((p) => p.gain < 0) && facts.excesses.every((e) => e <= 0);
+  const pieces = allLoss ? facts.pieces : facts.pieces.filter((p) => p.gain > 0);
+  const kept = facts.excesses.map((e) => (allLoss ? e : Math.max(0, e)));
+  const externalExcess = kept.slice(1).reduce((a, b) => a + b, 0);
+  const excessTotal = kept[0] + externalExcess;
+  if (excessTotal === 0 || pieces.length === 0) return out;
 
   const shares = allocateUnitExcessShares(pieces.map((p) => p.gain), excessTotal);
   pieces.forEach((p, k) => {
-    if (shares[k] <= 0) return;
+    if (shares[k] === 0) return;
     // 주택 카드는 자기 초과분만으로 계산한 값과 같으면(외부 초과분·다른 조각 없음) 다시 계산하지 않는다.
     if (p.idx === unit.houseIdx && externalExcess === 0 && pieces.length === 1) return;
     out.set(p.idx, shares[k]);
   });
   return out;
+}
+
+/**
+ * 단위 몫의 재료 — 부호를 그대로 둔 한도 내 토지 조각과 초과분(주택 카드 자기 초과분이 첫 원소, 이어서 배율 초과 카드들).
+ * 주택이 부분과세가 아니면 null(몫 없음).
+ */
+function unitExcessFacts(
+  items: readonly TransferTaxItemInput[],
+  unit: OneHouseUnit,
+  results: readonly TransferTaxResult[],
+): { pieces: { idx: number; gain: number }[]; excesses: number[] } | null {
+  const house = results[unit.houseIdx];
+  if (!house || house.isPartialExempt !== true || house.isExempt === true) return null;
+
+  const gainOf = (i: number) => results[i]?.transferGain ?? 0;
+  const ownExcess = house.splitDetail?.nonBusinessLandPart?.gain ?? 0;
+  const excesses = [ownExcess, ...unit.excessIdxs.map(gainOf)];
+
+  // 한도 내 토지 조각 — 주택 카드의 토지분(분리 파트가 있고 나중 취득 토지로 제외되지 않은 경우) + 부분과세로 판정된 한도 내 부수토지 카드.
+  const pieces: { idx: number; gain: number }[] = [];
+  const houseLand = house.splitDetail?.land;
+  if (houseLand && !isLaterAcquiredLandExemptExcluded(items[unit.houseIdx] as unknown as TransferTaxInput)) {
+    const w = houseLand.gain - ownExcess;
+    if (w !== 0) pieces.push({ idx: unit.houseIdx, gain: w });
+  }
+  for (const i of unit.landIdxs) {
+    const r = results[i];
+    if (r && r.isPartialExempt === true && r.isExempt !== true && gainOf(i) !== 0) pieces.push({ idx: i, gain: gainOf(i) });
+  }
+  return { pieces, excesses };
+}
+
+/**
+ * 고가주택 단위에 배율 초과분이 있고, 한도 내 토지 조각 · 초과분 사이에 **양도차익과 양도차손이 섞여** 있는가 — 고지용.
+ * 이때 `resolveUnitExcessShares`는 종전대로 양수만 나누고, 섞인 경우의 계산 방법은 확인 필요로 남긴다(계획서 p3 §2 B안).
+ */
+export function isUnitExcessSignMixed(
+  items: readonly TransferTaxItemInput[],
+  unit: OneHouseUnit,
+  results: readonly TransferTaxResult[],
+): boolean {
+  const facts = unitExcessFacts(items, unit, results);
+  if (!facts || facts.excesses.every((e) => e === 0)) return false;
+  const values = [...facts.pieces.map((p) => p.gain), ...facts.excesses.filter((e) => e !== 0)];
+  return values.some((v) => v > 0) && values.some((v) => v < 0);
 }

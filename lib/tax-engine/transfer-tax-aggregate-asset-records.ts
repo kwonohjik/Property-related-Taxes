@@ -47,6 +47,7 @@ import {
   oneHouseUnitOrder,
   resolveOneHouseUnit,
   resolveUnitExcessShares,
+  isUnitExcessSignMixed,
   toHouseVerdict,
 } from "./transfer-tax-one-house-unit";
 import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land";
@@ -283,6 +284,20 @@ export function buildAssetRecords(
           "한도 내 부수토지 카드와 배율 초과 카드만으로 계산했습니다(확인 필요).";
         if (!warnings.includes(lumped)) warnings.push(lumped);
       }
+      // 토지 차손 단위 — 같은 식을 부호만 대칭으로 썼다는 사실(음수 몫)을 밝힌다.
+      if ([...shares.values()].some((s) => s < 0)) {
+        const loss =
+          "부수토지가 모두 양도차손이라 같은 식을 부호만 바꿔 적용했습니다 — 기준면적 이내 토지분은 전체 부수토지 양도차손의 안분값에서 " +
+          "배율 초과분 양도차손을 뺀 금액(양수면 0)입니다. 이 회신은 양도차익만 다뤘고, 고가주택 양도차손을 기준금액 초과분만 통산한 조세심판원 결정" +
+          "(조심2016부0323)에 맞춰 같은 틀을 썼습니다.";
+        if (!warnings.includes(loss)) warnings.push(loss);
+      }
+    }
+    if (isUnitExcessSignMixed(unitItems, unit, perAsset.map((pa) => pa.result))) {
+      const mixed =
+        "고가주택 단위의 부수토지에 양도차익과 양도차손이 섞여 있어, 기획재정부 재산세제과-915(2011.10.27.) 회신 방식의 «전체 부수토지»에는 " +
+        "양도차익이 난 토지만 합산하고 양도차손이 난 토지는 카드마다 따로 계산했습니다 — 이익과 차손이 섞인 경우의 계산 방법을 다룬 해석례는 확인하지 못했습니다(확인 필요).";
+      if (!warnings.includes(mixed)) warnings.push(mixed);
     }
   }
 

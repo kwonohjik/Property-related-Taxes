@@ -177,6 +177,22 @@ describe("5B — §77 「소급 2년 이전 취득」 요건 파트별 판정", 
     // 150,000 × ((5,000,000 − 2,500,000) × 15%) / 2,500,000 = 22,500
     expect(r.reductionAmount).toBe(22_500);
   }, 60_000);
+
+  it("감면대상 파트(건물) 자체가 차손 → 감면소득금액 없음, 차손은 통산하고 고지에 그 이유를 밝힌다(계획서 p3 §3 (a))", async () => {
+    const r = await run(form(house({ buildingAcquisitionPrice: "400,000,000" })));
+    const d = r.publicExpropriationDetail;
+    // 건물 300,000,000 − 400,000,000 = −100,000,000 → 감면 파트 소득 0 · 토지 200,000,000이 그 차손을 받는다(자산 100,000,000)
+    expect(d.isEligible).toBe(true);
+    expect(d.partWise).toMatchObject({ eligiblePart: "building", eligibleIncome: 0 });
+    expect(r.reductionAmount).toBe(0);
+    expect(hasNotice(r)).toBe(true);
+    expect((r.warnings as string[]).some((w) => w.includes("감면대상인 건물분의 양도소득금액이 0 이하(양도차손)여서 감면소득금액이 없습니다"))).toBe(true);
+  }, 60_000);
+
+  it("대조: 감면대상 파트 소득이 양수면 차손 문구는 없다", async () => {
+    const r = await run(form(house()));
+    expect((r.warnings as string[]).some((w) => w.includes("감면소득금액이 없습니다"))).toBe(false);
+  }, 60_000);
 });
 
 describe("5B — 파트 입력 게이트 (`buildPublicExpropriationParts`)", () => {

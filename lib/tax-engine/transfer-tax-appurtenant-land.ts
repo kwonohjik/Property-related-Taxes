@@ -627,7 +627,7 @@ export function applyHousingLandExclusions(args: {
   const excess = resolveAppurtenantLandExcess(input);
   const laterLand = isLaterAcquiredLandExemptExcluded(input);
   // 함께 양도 1세대1주택 단위의 다른 카드(배율 초과분 · 다른 부수토지 카드)가 있어 합산 엔진이 이 주택 카드 토지분의 몫을 실은 경우 — 자기 초과가 없어도 처리한다.
-  const unitShare = input.highValueExcessShare !== undefined && input.highValueExcessShare > 0 ? input.highValueExcessShare : undefined;
+  const unitShare = input.highValueExcessShare !== undefined && input.highValueExcessShare !== 0 ? input.highValueExcessShare : undefined;
   if (!excess && !laterLand && unitShare === undefined) return null;
 
   // 파트 차손은 **과세분만** 남긴다 — 하류 파트 세율 판정이 「소득세법 시행령」 §167의2①로 다른 파트에서 공제한다(계획서 `transfer-split-part-loss-offset-p2.plan.md` Q-1).
@@ -691,7 +691,9 @@ export function applyHousingLandExclusions(args: {
         `안분 후 과세분 ${wholeLandProrated.toLocaleString()} − 배율 초과분 ${excessForRuling.toLocaleString()} = ` +
         `기준면적 이내 토지분 과세 양도차익 ${landTaxableGain.toLocaleString()}` +
         (landTaxableGain !== diff ? (wholeLandGain < 0 ? " (토지 차손인데 양수여서 0)" : " (음수여서 0)") : "") +
-        (unitShare !== undefined && unitShare !== nonBusinessGain ? " (함께 양도하는 부수토지의 배율 초과분을 단위로 합산해 이 카드 몫으로 나눈 값)" : ""),
+        (unitShare !== undefined && unitShare !== nonBusinessGain
+          ? ` (함께 양도하는 부수토지의 배율 초과분${unitShare < 0 ? " 양도차손" : ""}을 단위로 합산해 이 카드 몫으로 나눈 값)`
+          : ""),
     );
   }
   if (laterLand) reasons.push(laterLandExclusionReason(input, housingLandGain));
