@@ -237,7 +237,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
     >
       {/* §94② 우선순위 안내 */}
       {isBothActive && (
-        <div className="mb-3 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="mb-3 rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-800 dark:text-rose-200">
           <p className="font-medium">§94② 우선순위 적용</p>
           <p className="text-xs mt-1">
             <LawArticleModal legalBasis="소득세법 §94 ① 3호" label="§94①3" />(상장·비상장)과{" "}
@@ -318,7 +318,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
 
           {/* Phase C — 기신고 이력에서 합산 (영 §158②) */}
           <ToneCard tone="sky" title="기신고분 합산 (영 §158②)">
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               같은 법인 주식을 여러 번에 걸쳐 양도했다면, 소급 3년 내 기신고분을 아래 칸에
               넣습니다. <strong>당회차 양도가액·취득가액·필요경비는 다음 단계에서 평소대로</strong>{" "}
               입력하세요 — 여기에 더해 넣지 않습니다. 합계는 계산할 때 자동으로 더해집니다.

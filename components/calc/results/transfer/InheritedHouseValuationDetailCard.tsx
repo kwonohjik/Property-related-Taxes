@@ -178,7 +178,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
             </span>
           )}
         </div>
-        <p className={convertedApplied ? "text-muted-foreground" : "text-muted-foreground/70"}>
+        <p className={convertedApplied ? "text-muted-foreground" : "text-muted-foreground"}>
           환산취득가액 = 양도가액 ×{" "}
           <Frac
             top={

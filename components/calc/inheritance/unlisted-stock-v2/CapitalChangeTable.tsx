@@ -92,7 +92,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
         <button
           type="button"
           onClick={addRow}
-          className="ml-auto px-3 py-1 text-caption border border-amber-300 rounded-md bg-amber-100 hover:bg-amber-200 text-amber-800"
+          className="ml-auto px-3 py-1 text-caption border border-amber-300 dark:border-amber-800 rounded-md bg-amber-100 dark:bg-amber-950/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-200"
         >
           + 변동 추가
         </button>

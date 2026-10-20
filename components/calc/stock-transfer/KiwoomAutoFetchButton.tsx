@@ -218,24 +218,24 @@ export function KiwoomAutoFetchButton({
           type="button"
           disabled={!canFetch}
           onClick={handleClick}
-          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
+          className="rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-800 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
           title={disabledReason ?? "키움 자동조회 실행"}
         >
           {loading ? "🔄 조회 중..." : `🔍 ${dateLabel} 키움 자동조회`}
         </button>
       </div>
       {disabledReason && !loading && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
           ⚠️ {disabledReason}
         </p>
       )}
       {error && (
-        <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+        <p className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1">
           ❌ {error}
         </p>
       )}
       {info && !error && (
-        <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-2">
+        <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
           <div className="space-y-1">
             <p>
               ✓ 기간{" "}
@@ -258,7 +258,7 @@ export function KiwoomAutoFetchButton({
 
             {/* V-1 — 「거래일 0」은 에러가 아니라 200 응답이다. 원인을 그대로 알린다. */}
             {info.tradingDays === 0 && (
-              <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">
+              <p className="rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-amber-800 dark:text-amber-200">
                 ⚠️ 해당 기간에 거래일이 없습니다 — {dateLabel}이 상장일 이전이거나 조회 범위
                 밖입니다. 값을 채우지 않았습니다. 수동으로 입력하세요.
               </p>
@@ -266,14 +266,14 @@ export function KiwoomAutoFetchButton({
 
             {/* B′ — anchor 보정이 일어났으면 숨기지 않고 보여준다 */}
             {info.anchorShifted && (
-              <p className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-sky-800">
+              <p className="rounded border border-sky-300 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 px-2 py-1 text-sky-800 dark:text-sky-200">
                 ℹ️ {dateLabel}이 매매 없는 날이라 직전 거래일 <strong>{info.anchorDate}</strong>{" "}
                 기준으로 계산했습니다 (상증법 §63①1가목 단서 · 소득세법 §99①3 준용).
               </p>
             )}
 
             {info.marketCalendarUnavailable && (
-              <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">
+              <p className="rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-amber-800 dark:text-amber-200">
                 ⚠️ 시장 거래일 달력을 확인하지 못해 기준일을 <strong>보정하지 않았습니다</strong>.
                 {dateLabel}이 휴장일이라면 직전 거래일로 다시 조회하세요.
               </p>
@@ -281,7 +281,7 @@ export function KiwoomAutoFetchButton({
 
             {/* V-3 — 시장은 열렸는데 이 종목만 종가가 없다 (§52의2③ 영역) */}
             {info.stockSpecificGapAtAnchor && (
-              <p className="rounded border border-rose-300 bg-rose-50 px-2 py-1 text-rose-800">
+              <p className="rounded border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-2 py-1 text-rose-800 dark:text-rose-200">
                 ⚠️ {info.anchorDate}에 시장은 열렸으나 이 종목의 종가가 없습니다 — 거래정지·관리종목
                 또는 상장 이전일 수 있습니다. 해당하면 §165③ 보충 평가 토글을 사용하세요
                 (상증령 §52의2③).
@@ -290,7 +290,7 @@ export function KiwoomAutoFetchButton({
 
             {/* A-6 — 취득일 축은 «현재» 정지로 막지 않고 안내만 한다 */}
             {isAcquisition && info.currentTradingHalt && (
-              <p className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-amber-800">
+              <p className="rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 text-amber-800 dark:text-amber-200">
                 ⚠️ 이 종목은 <strong>현재</strong> 거래정지·관리종목입니다. 위 평균은 취득일
                 기준이라 그대로 쓸 수 있으나, <strong>취득일 이전 1개월 구간</strong>에 정지가
                 있었다면 §165③ 보충 평가로 가야 합니다 (상증령 §52의2③).
@@ -298,7 +298,7 @@ export function KiwoomAutoFetchButton({
             )}
 
             {/* A-8 — 키움은 수정주가가 아닌 «당시 실제 종가»를 준다 */}
-            <p className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700">
+            <p className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-2 py-1 text-slate-700 dark:text-slate-300">
               ℹ️ 조회값은 <strong>당시 실제 종가</strong>입니다(수정주가 아님). 이후 액면분할·병합이
               있었다면 분자·분모의 1주 단위가 달라지므로 <strong>자본조정</strong> 입력으로
               반영하세요 — 자동 보정하지 않습니다.
@@ -342,7 +342,7 @@ export function KiwoomAutoFetchButton({
                         isTrading ? "" : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      <span className="text-gray-500 tabular-nums">{pos + 1}. {iso}</span>
+                      <span className="text-gray-500 dark:text-gray-400 tabular-nums">{pos + 1}. {iso}</span>
                       <span className="tabular-nums">{isTrading ? close.toLocaleString() : label || "—"}</span>
                     </div>
                   );

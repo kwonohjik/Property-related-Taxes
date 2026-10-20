@@ -69,7 +69,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                 <th className="px-3 py-2 text-right font-semibold">② 1주당 (원)</th>
               </tr>
             </thead>
-            <tbody className="text-slate-700">
+            <tbody className="text-slate-700 dark:text-slate-300">
               {detail.lots.map((l) => (
                 <tr key={l.lotIndex} className="border-b border-amber-100">
                   <td className="px-3 py-2">매수 #{l.lotIndex + 1}</td>
@@ -120,7 +120,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                         <th className="px-3 py-2 text-left font-semibold">채택</th>
                       </tr>
                     </thead>
-                    <tbody className="text-slate-700">
+                    <tbody className="text-slate-700 dark:text-slate-300">
                       {subLots.map((m, i) => {
                         const p1 = m.preDeemedSelected === "clause1";
                         return (
@@ -161,7 +161,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                       <th className="px-3 py-2 text-right font-semibold">금액 (원)</th>
                     </tr>
                   </thead>
-                  <tbody className="text-slate-700">
+                  <tbody className="text-slate-700 dark:text-slate-300">
                     <tr className="border-b border-amber-100">
                       <td className="px-3 py-2">입력한 실제 필요경비 (자본적지출·양도비)</td>
                       <td className={AMT}>{num(st.totalActualExpenses)}</td>
@@ -195,7 +195,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
                     계산에서 차감하지 않습니다(결과의 취득가액은 이를 뺀 값입니다).
                   </p>
                 )}
-                <p className="mt-2 text-caption text-slate-500" data-testid="pre-deemed-lots-no-statute">
+                <p className="mt-2 text-caption text-slate-500 dark:text-slate-400" data-testid="pre-deemed-lots-no-statute">
                   ※ 실제 필요경비를 ① 채택분과 그 외로 나누는 기준에 대한 법령상 명문은 없어 양도 주식수 비례로 귀속했습니다.
                 </p>
               </div>
@@ -203,7 +203,7 @@ export function PreDeemedLotsResultCard({ detail, matched }: { detail: Detail; m
           </>
         )}
 
-        <p className="text-caption text-slate-500">{PRE_DEEMED_PPI_FOOTNOTE}</p>
+        <p className="text-caption text-slate-500 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
       </div>
     </ToneCard>
   );

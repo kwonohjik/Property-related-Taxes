@@ -178,7 +178,7 @@ export function BuildingStdValuationSections({
           {f.adjustmentMode === "features" ? (
             f.adjustmentFeatures && Object.keys(f.adjustmentFeatures).length > 0 ? (
               <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                <span className="rounded-full bg-violet-100 dark:bg-violet-950/30 px-2.5 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
                   특성 {Object.keys(f.adjustmentFeatures).length}개 적용 · 조정률{" "}
                   {(
                     calcSpecialAdjustmentRate(

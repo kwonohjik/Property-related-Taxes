@@ -92,7 +92,7 @@ export function RedevelopmentSec163_9PriorityNotice({ asset }: { asset: AssetFor
   const sourceLabel = isGift ? "증여 신고가액" : "상속개시일 평가액";
 
   return (
-    <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 leading-relaxed space-y-1">
+    <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-caption text-amber-900 dark:text-amber-200 leading-relaxed space-y-1">
       <p className="font-semibold">
         ③ 취득정보의 &ldquo;{sourceLabel}&rdquo;이 이 섹션보다 우선 적용됩니다
       </p>

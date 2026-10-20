@@ -66,12 +66,12 @@ export function EstateAllocationTable({
 
   return (
     <div className="overflow-x-auto rounded-md border border-slate-200">
-      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-2">
-        <h4 className="text-sm font-semibold text-slate-800">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-4 py-2">
+        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           (1) 상속재산의 협의분할 내역
         </h4>
         {deathDate && (
-          <span className="text-xs text-slate-600">
+          <span className="text-xs text-slate-600 dark:text-slate-400">
             (상속개시일 : {formatDeathDate(deathDate)})
           </span>
         )}
@@ -136,7 +136,7 @@ export function EstateAllocationTable({
                 </td>
                 <td
                   colSpan={heirs.length}
-                  className="border border-slate-200 px-2 py-1.5 text-center text-slate-500"
+                  className="border border-slate-200 px-2 py-1.5 text-center text-slate-500 dark:text-slate-400"
                 >
                   Table B 참조
                 </td>
@@ -176,7 +176,7 @@ function GroupRows({
     <>
       {group.items.map((item) => (
         <tr key={item.id} className="hover:bg-slate-50">
-          <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600">
+          <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400">
             {ESTATE_GROUP_LABEL[group.group]}
           </td>
           <td className="border border-slate-200 px-2 py-1.5">{item.name}</td>
@@ -194,13 +194,13 @@ function GroupRows({
               {formatCellOrDash(findAllocationAmount(item.heirAllocations, h.id))}
             </td>
           ))}
-          <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600">
+          <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400">
             {resolveValuationLabel(item)}
           </td>
         </tr>
       ))}
       {/* 그룹 소계 */}
-      <tr className="bg-slate-100 font-medium">
+      <tr className="bg-slate-100 dark:bg-slate-800 font-medium">
         <td
           colSpan={3}
           className="border border-slate-200 px-2 py-1.5 text-center"

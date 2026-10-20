@@ -99,7 +99,7 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDead
       {/* 유형 선택 (가~자목) */}
       <div className="space-y-1">
         <label className="block text-caption text-muted-foreground font-medium">
-          장기임대주택 유형 <span className="text-muted-foreground/60 font-normal">(미선택 시 등록임대 5년 단순 판정)</span>
+          장기임대주택 유형 <span className="text-muted-foreground font-normal">(미선택 시 등록임대 5년 단순 판정)</span>
         </label>
         <RadioCardGroup
           name={`rental-type-${idPrefix}`}
@@ -145,7 +145,7 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDead
                     onChange={(v) => setStr(key, v)}
                     placeholder={meta.label}
                   />
-                  {meta.hint && <p className="text-caption text-muted-foreground/70">{meta.hint}</p>}
+                  {meta.hint && <p className="text-caption text-muted-foreground">{meta.hint}</p>}
                 </div>
               );
             }
@@ -174,7 +174,7 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDead
                       { value: "마", label: "마목(장기일반)" },
                     ]}
                   />
-                  {meta.hint && <p className="text-caption text-muted-foreground/70">{meta.hint}</p>}
+                  {meta.hint && <p className="text-caption text-muted-foreground">{meta.hint}</p>}
                 </div>
               );
             }
@@ -196,13 +196,13 @@ export function HouseEntryRentalTypeSection({ house, idPrefix, onUpdate, aptDead
                 {chip}
                 <div className="space-y-1" data-testid={`rent-increase-contract-date-${idPrefix}`}>
                   <label className="block text-caption text-muted-foreground font-medium">
-                    5% 넘게 올린 계약의 체결·갱신일 <span className="text-muted-foreground/60 font-normal">(선택)</span>
+                    5% 넘게 올린 계약의 체결·갱신일 <span className="text-muted-foreground font-normal">(선택)</span>
                   </label>
                   <DateInput
                     value={house.rentIncreaseContractDate ?? ""}
                     onChange={(v) => setStr("rentIncreaseContractDate", v)}
                   />
-                  <p className="text-caption text-muted-foreground/70">
+                  <p className="text-caption text-muted-foreground">
                     여러 번이면 가장 늦은 날. 2019년 2월 12일 전에 체결·갱신한 계약뿐이면 5% 요건을 보지 않습니다
                     (대통령령 제29523호 부칙 제6조). 2019년 2월 12일 이후 처음 체결·갱신한 표준임대차계약은 비교
                     기준이므로, 그 계약에서만 올렸다면 위 「5% 이하 충족」을 켜세요(서면-2021-법규재산-3399). 비워 두면

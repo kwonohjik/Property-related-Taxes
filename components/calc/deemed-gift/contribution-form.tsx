@@ -280,7 +280,7 @@ export function ContributionFields({ form, set }: Props) {
       {hasRoster && (
         <div className="space-y-2 mt-1">
           {parties.length === 0 && (
-            <p className="text-xs text-amber-600 bg-amber-50 rounded px-2 py-1">
+            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded px-2 py-1">
               {isHigh ? "수증자" : "증여자"}를 1명 이상 추가하세요.
             </p>
           )}

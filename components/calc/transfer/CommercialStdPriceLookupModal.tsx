@@ -365,7 +365,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
                   })}
                 </div>
                 {areaConflict && (
-                  <div className="space-y-1 rounded border border-amber-300 bg-amber-50 p-2 text-caption text-amber-900">
+                  <div className="space-y-1 rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-2 text-caption text-amber-900 dark:text-amber-200">
                     이미 입력된 면적(전용 {asset.cbExclusiveArea} · 공유 {asset.cbSharedArea})이 조회값과
                     다릅니다. 기본적으로 덮어쓰지 않습니다.
                     <div>

@@ -252,7 +252,7 @@ export function PropertyTaxForm() {
       )}
 
       {error && (
-        <p className="text-sm text-red-500 rounded-md bg-red-50 border border-red-200 px-3 py-2">
+        <p className="text-sm text-red-500 dark:text-red-400 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2">
           {error}
         </p>
       )}

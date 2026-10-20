@@ -176,7 +176,7 @@ export function ValuationDeltaTable({
                 type="button"
                 onClick={() => addRow("asset")}
                 disabled={assetRows.length >= MAX_ASSET_ROWS}
-                className="text-micro rounded bg-sky-600 text-white px-2 py-0.5 hover:bg-sky-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                className="text-micro rounded bg-sky-700 text-white px-2 py-0.5 hover:bg-sky-800 disabled:bg-slate-300 disabled:cursor-not-allowed"
               >
                 + 자산 행 추가
               </button>

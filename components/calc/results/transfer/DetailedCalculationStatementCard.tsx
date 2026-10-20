@@ -38,7 +38,7 @@ const TONE_CLASSES: Record<GroupDef["tone"], { border: string; bg: string; text:
   amber:   { border: "border-amber-200",   bg: "bg-amber-50/40 dark:bg-amber-950/40",   text: "text-amber-800 dark:text-amber-200",   badge: "bg-amber-200 text-amber-800" },
   violet:  { border: "border-violet-200",  bg: "bg-violet-50/40 dark:bg-violet-950/40",  text: "text-violet-800 dark:text-violet-200",  badge: "bg-violet-200 text-violet-800" },
   rose:    { border: "border-rose-200",    bg: "bg-rose-50/40 dark:bg-rose-950/40",    text: "text-rose-800 dark:text-rose-200",    badge: "bg-rose-200 text-rose-800" },
-  slate:   { border: "border-slate-200",   bg: "bg-slate-50/40",   text: "text-slate-800",   badge: "bg-slate-200 text-slate-800" },
+  slate:   { border: "border-slate-200",   bg: "bg-slate-50/40 dark:bg-slate-800/20",   text: "text-slate-800 dark:text-slate-200",   badge: "bg-slate-200 text-slate-800" },
 };
 
 // ── Props ──────────────────────────────────────────────────────────
@@ -112,7 +112,7 @@ export function DetailedCalculationStatementCard({
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
               📋 계산결과 상세명세서
             </h3>
-            <p className="text-caption text-slate-500 mt-0.5">
+            <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">
               신고서 양식 32 항목별 산식·변수값·법령 근거. 다건 모드는 자산별 펼침으로 검증.
             </p>
           </div>
@@ -206,7 +206,7 @@ function EngineStepsSubToggle({ steps }: { steps: import("@/lib/tax-engine/trans
         <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(open)}</span>
       </button>
       {/* PDF 인쇄: 항상 표시 (헤더 텍스트도 화면 전용 → 인쇄용 별도 헤더 노출) */}
-      <div className="hidden print:block px-3 py-2 text-sm font-semibold text-slate-700 border-b border-slate-200">
+      <div className="hidden print:block px-3 py-2 text-sm font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200">
         전체 엔진 계산 과정 ({steps.length}개 step)
       </div>
       <div

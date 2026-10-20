@@ -90,7 +90,7 @@ export function OtherUnlistedHoldingSection({
             type="button"
             onClick={addRow}
             disabled={rows.length >= MAX_ROWS}
-            className="ml-auto rounded-md bg-emerald-600 px-2 py-1 text-caption font-semibold text-white disabled:opacity-40"
+            className="ml-auto rounded-md bg-emerald-700 px-2 py-1 text-caption font-semibold text-white disabled:opacity-40"
           >
             + 보유 추가
           </button>

@@ -426,7 +426,7 @@ export function GeneralBuildingBlock({
           title="토지 공시지가 (토지기준시가)"
           titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §166⑥" label="§166⑥ 안분" />}
         >
-          <p className="text-caption text-slate-600">
+          <p className="text-caption text-slate-600 dark:text-slate-400">
             {bgStdUse === "standard"
               ? "부담부증여(기준시가 모드) — 양도시 ① 토지 · ② 건물 기준시가 합계가 증여가액의 보충적 평가액이 되고, 양도시 비율로 양도가액을 토지·건물로 나눕니다. 취득가액은 취득시 기준시가 × 채무비율입니다."
               : bgStdUse === "market_actual"

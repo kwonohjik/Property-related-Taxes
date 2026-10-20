@@ -39,7 +39,7 @@ export function KiwoomValuationResultCard({
 }: Props) {
   if (error && showError) {
     return (
-      <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+      <p className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1">
         ❌ {error}
       </p>
     );
@@ -48,12 +48,12 @@ export function KiwoomValuationResultCard({
 
   return (
     <div
-      className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-2"
+      className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-200 space-y-2"
       data-testid="ls-valuation-result-card"
     >
       {info.anchorShifted && info.resolvedAnchor && (
         <div
-          className="rounded bg-amber-50 border border-amber-200 px-2 py-1.5 text-amber-900"
+          className="rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-1.5 text-amber-900 dark:text-amber-200"
           data-testid="ls-anchor-shift-notice"
         >
           ℹ️ 평가기준일 <strong>{valuationDate}</strong>

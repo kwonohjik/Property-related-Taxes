@@ -166,7 +166,7 @@ export function SeparateAcqPartRows({
         <Row label={`  ▸ 환산 파트 산식 (${name} 전체 환산취득가액)`} value="" small formula={estimatedFormula} />
       )}
       {echo.provisoGroup && (
-        <p className="text-caption text-muted-foreground/90 leading-snug" data-testid={`mixed-sep-acq-${kind}-proviso`}>
+        <p className="text-caption text-muted-foreground leading-snug" data-testid={`mixed-sep-acq-${kind}-proviso`}>
           「소득세법」 §97②2호 단서 판정(환산 파트{" "}
           {echo.provisoGroup.parts.map((x) => (x === "land" ? "토지" : "건물")).join("·")} 묶음): 환산취득가액 + 개산공제{" "}
           {fmtPlain(echo.provisoGroup.estimatedSide)} / 자본적지출·양도비 {fmtPlain(echo.provisoGroup.directSide)} →{" "}
@@ -183,7 +183,7 @@ export function SeparateAcqSummary({ breakdown }: { breakdown: MixedUseGainBreak
   if (!echo) return null;
   return (
     <p
-      className="rounded-md bg-muted/30 px-3 py-2 text-caption text-muted-foreground/90 leading-snug"
+      className="rounded-md bg-muted/30 px-3 py-2 text-caption text-muted-foreground leading-snug"
       data-testid="mixed-sep-acq-parts-card"
     >
       <span className="font-medium text-foreground/80">취득가액 산정방식(별개 취득 — 토지·건물 각각)</span>

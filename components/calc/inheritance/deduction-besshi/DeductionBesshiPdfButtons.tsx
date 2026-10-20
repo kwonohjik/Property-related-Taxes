@@ -21,7 +21,7 @@ const PDFDownloadLink = dynamic(
       <button
         type="button"
         disabled
-        className="cursor-not-allowed rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-400 print:hidden"
+        className="cursor-not-allowed rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-2.5 py-1 text-xs font-medium text-slate-400 print:hidden"
         data-testid="deduction-besshi-pdf-loading"
       >
         로딩 중...

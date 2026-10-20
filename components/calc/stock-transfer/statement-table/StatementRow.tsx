@@ -52,7 +52,7 @@ function CandidateChips({
           key={`${it.label}:${it.value}`}
           type="button"
           onClick={() => onPick(it.value)}
-          className="rounded border border-green-300 bg-green-100 px-1.5 py-0.5 text-micro text-green-700 hover:bg-green-200"
+          className="rounded border border-green-300 bg-green-100 px-1.5 py-0.5 text-micro text-green-800 hover:bg-green-200"
           title={`${it.label} 값을 이 칸에 넣습니다`}
         >
           {it.label} {Number(it.value).toLocaleString()}
@@ -133,7 +133,7 @@ export function StatementRow({
         >
           {row.disabled ? (
             // 입력 불가 행 — 값도 받지 않는다(서식 행 구성 보존 목적)
-            <span className="block text-center text-caption text-gray-400 dark:text-gray-500">—</span>
+            <span className="block text-center text-caption text-gray-500 dark:text-gray-400">—</span>
           ) : row.decimal ? (
             <DecimalInput
               value={value(c.col)}

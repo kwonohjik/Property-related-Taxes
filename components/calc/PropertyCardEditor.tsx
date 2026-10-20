@@ -321,10 +321,10 @@ export function PropertyCardEditor({
       </SectionCard>
 
       {/* ▸ 고급 옵션 (접이식) */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-xs font-semibold text-slate-700">고급 옵션</p>
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">고급 옵션</p>
             {!showAdvanced &&
               advancedBadges.map((b) => (
                 <span
@@ -342,7 +342,7 @@ export function PropertyCardEditor({
           />
         </div>
         {!showAdvanced && (
-          <p className="mt-1.5 text-caption text-slate-500">
+          <p className="mt-1.5 text-caption text-slate-500 dark:text-slate-400">
             소유자 분리 · 다가구주택 · 합산배제 신청 · §8④ 의제 특례
           </p>
         )}

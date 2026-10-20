@@ -139,7 +139,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
         >
           {/* 종목명 */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">종목명 *</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">종목명 *</label>
             <input
               type="text"
               value={holding.stockName}
@@ -156,7 +156,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           */}
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">종목코드·사업자등록번호</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">종목코드·사업자등록번호</label>
               <input
                 type="text"
                 value={holding.stockCodeOrBizNumber ?? ""}
@@ -169,7 +169,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">1주당 액면가 (원)</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">1주당 액면가 (원)</label>
               <CurrencyInput
                 label=""
                 value={holding.faceValuePerShare ?? ""}
@@ -179,7 +179,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">보유 지분율 (%)</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">보유 지분율 (%)</label>
               <input
                 type="text"
                 value={holding.ownershipRatio ?? ""}
@@ -193,7 +193,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
 
           {/* 시장 선택 */}
           <div className="space-y-1">
-            <label className="text-xs font-medium text-gray-700">시장</label>
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
             <div className="grid grid-cols-4 gap-1">
               {MARKET_OPTIONS.map((opt) => (
                 <button
@@ -216,7 +216,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           {/* 주식수 + 취득일 + 취득단가 */}
           <div className="grid grid-cols-3 gap-2">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">주식수 *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
               <CurrencyInput
                 label=""
                 value={holding.shareCount}
@@ -226,14 +226,14 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">취득일 *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
               <DateInput
                 value={holding.acquisitionDate}
                 onChange={(v) => updateHolding(holding.id, { acquisitionDate: v })}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">취득단가 (원) *</label>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
               <CurrencyInput
                 label=""
                 value={holding.perShareAcquisitionPrice}
@@ -246,7 +246,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
 
           {/* 출국일 시가 산정 모드 */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">
+            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
               출국일 시가 산정 방법 (§178의9)
             </label>
             <RadioCardGroup
@@ -266,7 +266,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           {/* 모드별 시가 입력 */}
           {holding.departureDayValuationMode === "market_price" && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 출국일 거래가액 (1주당, 원) *
               </label>
               <CurrencyInput
@@ -276,7 +276,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="출국일 실제 거래가액 (주당)"
               />
-              <p className="text-caption text-gray-500">
+              <p className="text-caption text-gray-500 dark:text-gray-400">
                 §178의9① — 출국일에 실제 거래된 가액. 자동 조회 없음, 직접 입력 필수.
               </p>
             </div>
@@ -284,7 +284,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
 
           {holding.departureDayValuationMode === "prior_year_std" && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 §99①3 기준시가 — 1개월 종가평균 (1주당, 원) *
               </label>
               <CurrencyInput
@@ -294,7 +294,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="출국일 이전 1개월 종가 평균"
               />
-              <p className="text-caption text-gray-500">
+              <p className="text-caption text-gray-500 dark:text-gray-400">
                 출국일 이전 1개월간 종가 산술 평균. 상장주식에 적용.
               </p>
             </div>
@@ -302,7 +302,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
 
           {holding.departureDayValuationMode === "unlisted_sample" && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 매매사례가액 (1주당, 원) *
               </label>
               <CurrencyInput
@@ -312,7 +312,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="전후 각 3개월 매매사례가액"
               />
-              <p className="text-caption text-gray-500">
+              <p className="text-caption text-gray-500 dark:text-gray-400">
                 §178의9②2호 가목 — 출국일 전후 각 3개월 이내 동일 주식 매매사례가액.
               </p>
             </div>
@@ -320,7 +320,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
 
           {holding.departureDayValuationMode === "unlisted_std" && (
             <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 §99①4 비상장 기준시가 (1주당, 원) *
               </label>
               <CurrencyInput
@@ -330,7 +330,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="비상장 기준시가 (매매사례 없는 경우)"
               />
-              <p className="text-caption text-gray-500">
+              <p className="text-caption text-gray-500 dark:text-gray-400">
                 §99①4 — 매매사례가액이 없는 비상장주식의 보충적 평가액.
               </p>
             </div>

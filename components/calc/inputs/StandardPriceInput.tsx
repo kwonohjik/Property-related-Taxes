@@ -319,7 +319,7 @@ export function StandardPriceInput({
 
       {/* 평가기준일 경계 경고 — 선택 공시연도가 평가기준일 시점에 미고시 */}
       {noticeAfterReference && (
-        <p className="text-xs text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
           ⚠️ 평가기준일 시점에 이 공시가격은 아직 고시 전이었습니다. 직전 연도를 선택해 다시 조회하세요.
         </p>
       )}

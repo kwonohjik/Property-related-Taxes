@@ -162,7 +162,7 @@ export function DebtAllocationInput({
                       금융채무 {formatKRW(d.financialDebtAmount)}
                     </span>
                   )}
-                  <span className="text-gray-400 dark:text-gray-500">
+                  <span className="text-gray-500 dark:text-gray-400">
                     분배: {allocationText}
                   </span>
                 </div>

@@ -29,7 +29,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
           hint="출국일 전 10년 중 국내에 주소 또는 거소를 둔 기간의 합계 (만 년). 5년 이상이어야 과세됩니다."
           required
           trailing={
-            <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">
               §118의9①1호
             </span>
           }
@@ -41,12 +41,12 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
               placeholder="국내 거주 연수 (만 년)"
               className="w-40"
             />
-            <span className="text-sm text-slate-500">년</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">년</span>
           </div>
         </FieldCard>
 
         {isResidencyShort && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             거주 기간이 5년 미만입니다. §118의9①에 따라 납세의무가 없어 세액은 0으로 산출됩니다.
           </div>
         )}
@@ -59,7 +59,7 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
           hint="비거주자가 된 날 (YYYY-MM-DD). 보유 주식의 간주양도 시점이 됩니다."
           required
           trailing={
-            <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
               §118의9①
             </span>
           }
@@ -80,14 +80,14 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
           onCheckedChange={(v) => onChange({ etIsMajorShareholder: v })}
           tone="violet"
           trailing={
-            <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">
               §178의8
             </span>
           }
         />
 
         {!form.etIsMajorShareholder && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 leading-relaxed">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
             대주주에 해당하지 않는 경우 §118의9①2호 요건 미충족으로 납세의무가 없습니다.
           </div>
         )}

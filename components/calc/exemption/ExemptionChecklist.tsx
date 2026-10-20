@@ -87,7 +87,7 @@ function ExemptionRow({
         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
           {rule.name}
         </p>
-        <span className="text-xs text-gray-400 dark:text-gray-500">{rule.lawRef}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{rule.lawRef}</span>
         <p className="text-xs text-gray-600 dark:text-gray-300">{rule.description}</p>
       </div>
 
@@ -306,7 +306,7 @@ function ExemptionGroupSection({
           <span className={cn("text-xs font-semibold", headerClass)}>
             {title}
           </span>
-          <span className="text-micro font-normal text-gray-400 dark:text-gray-500">
+          <span className="text-micro font-normal text-gray-500 dark:text-gray-400">
             {subtitle}
           </span>
           <span className={cn("rounded-full px-2 py-0.5 text-micro font-medium", badgeClass)}>

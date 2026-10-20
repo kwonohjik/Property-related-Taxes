@@ -564,10 +564,10 @@ function DetailRow({
           {label}
         </p>
         {formula && (
-          <p className="text-xs text-muted-foreground/70 mt-0.5 break-words"><FormulaText value={formula} /></p>
+          <p className="text-xs text-muted-foreground mt-0.5 break-words"><FormulaText value={formula} /></p>
         )}
         {legalBasis && (
-          <p className="text-micro text-muted-foreground/50 mt-0.5">{legalBasis}</p>
+          <p className="text-micro text-muted-foreground mt-0.5">{legalBasis}</p>
         )}
       </div>
       <span

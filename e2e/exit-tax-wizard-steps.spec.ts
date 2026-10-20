@@ -12,6 +12,7 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
+import { expectDarkContrast } from "./_helpers/dark-contrast";
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");
@@ -78,6 +79,8 @@ test.describe("국외전출세 마법사 단계 배치", () => {
     await expect(page.getByText("주식 등 그룹 기본공제 250만원 (§103①2호)")).toHaveCount(0);
     // 국내 필요경비 칸이 없다
     await expect(page.getByText("필요경비 합계", { exact: true })).toHaveCount(0);
+    // 다크 대비 — 정산 화면 무채색 글자(slate-500~800 다크 짝 없음 1.14~1.4였다)·조문 알약(600 on 50)
+    await expectDarkContrast(page, page.locator("body"));
   });
 
   test("ET-E2: 🔴 종목 0건은 **2단계에서** 막힌다 (추가 버튼이 있는 화면)", async ({ page }) => {

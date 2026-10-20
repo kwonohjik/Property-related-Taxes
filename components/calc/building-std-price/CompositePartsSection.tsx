@@ -120,7 +120,7 @@ export function CompositePartsSection({
             최고층수·연면적·지능형·주택유형·지붕 등 건물 단위 특성. 연면적은 부분 면적 합계 + 부속으로 자동 적용됩니다.
           </p>
           {buildingFeatureCount > 0 && (
-            <span className="inline-block rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+            <span className="inline-block rounded-full bg-violet-100 dark:bg-violet-950/30 px-2.5 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
               건물 특성 {buildingFeatureCount}개 적용
             </span>
           )}
@@ -186,7 +186,7 @@ export function CompositePartsSection({
               {p.adjustmentMode === "features" ? (
                 (p.specialFeatures && Object.keys(p.specialFeatures).length > 0) ? (
                   <div className="flex flex-wrap items-center gap-3 pl-1">
-                    <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-medium text-violet-700">
+                    <span className="rounded-full bg-violet-100 dark:bg-violet-950/30 px-2.5 py-1 text-xs font-medium text-violet-700 dark:text-violet-300">
                       부분 특성 {Object.keys(p.specialFeatures).length}개 적용
                     </span>
                     <button
@@ -248,7 +248,7 @@ export function CompositePartsSection({
         variant="outline"
         size="sm"
         onClick={add}
-        className="w-full border-violet-300 bg-violet-100 font-semibold text-violet-800 hover:bg-violet-200 hover:text-violet-900"
+        className="w-full border-violet-300 bg-violet-100 font-semibold text-violet-800 hover:bg-violet-200 hover:text-violet-900 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200 dark:hover:bg-violet-900/50 dark:hover:text-violet-100"
       >
         + 부분 추가
       </Button>
@@ -279,12 +279,12 @@ export function CompositePartsSection({
           })}
         </div>
         {hasShared && !forTransfer && (
-          <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-caption text-violet-700">
+          <p className="rounded-md bg-violet-50 dark:bg-violet-950/30 px-2.5 py-1.5 text-caption text-violet-700 dark:text-violet-300">
             부속시설은 각 부분 주용도 면적비율로 안분됩니다. 안분받을 부분에 위 「공용 조정률」을 입력하세요.
           </p>
         )}
         {hasShared && forTransfer && (
-          <p className="rounded-md bg-violet-50 px-2.5 py-1.5 text-caption text-violet-700">
+          <p className="rounded-md bg-violet-50 dark:bg-violet-950/30 px-2.5 py-1.5 text-caption text-violet-700 dark:text-violet-300">
             부속시설은 전 부분 주용도 면적비율로 안분됩니다(양도 조정률 미적용).
           </p>
         )}

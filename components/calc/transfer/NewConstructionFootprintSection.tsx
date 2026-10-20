@@ -199,7 +199,7 @@ export function NewConstructionFootprintSection({
 
       {/* 한도 초과 경고 배지 */}
       {isExcess && (
-        <div className="rounded px-2 py-1.5 text-xs bg-rose-100 border border-rose-300 text-rose-800">
+        <div className="rounded px-2 py-1.5 text-xs bg-rose-100 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200">
           <strong>부수토지 한도 초과 {excessArea.toFixed(2)}㎡</strong> —
           초과분은 일반 토지로 분리과세됩니다 (§154⑦).
           결과 표에서 &quot;토지(부수)&quot;와 &quot;토지(한도초과)&quot; 행이 분리 표시됩니다.

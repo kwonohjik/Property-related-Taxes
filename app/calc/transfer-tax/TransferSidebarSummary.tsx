@@ -25,14 +25,14 @@ export function TransferSidebarSummary({ summary }: { summary: TransferPerAssetS
       <div className="text-sm">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-muted-foreground">{label}</span>
-          {note && <span className="text-xs text-muted-foreground/70">{note}</span>}
+          {note && <span className="text-xs text-muted-foreground">{note}</span>}
         </div>
         {value > 0 ? (
           <p className="text-right font-mono tabular-nums">{value.toLocaleString()}</p>
         ) : pending ? (
-          <p className="text-right text-xs text-muted-foreground/50">계산 후 표시</p>
+          <p className="text-right text-xs text-muted-foreground">계산 후 표시</p>
         ) : (
-          <p className="text-right text-xs text-muted-foreground/50">-</p>
+          <p className="text-right text-xs text-muted-foreground">-</p>
         )}
       </div>
     );
@@ -72,7 +72,7 @@ export function TransferSidebarSummary({ summary }: { summary: TransferPerAssetS
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground/50">-</p>
+                <p className="text-sm text-muted-foreground">-</p>
               )}
             </div>
           </div>

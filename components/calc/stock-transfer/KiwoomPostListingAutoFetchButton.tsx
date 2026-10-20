@@ -171,24 +171,24 @@ export function KiwoomPostListingAutoFetchButton({
           type="button"
           disabled={!canFetch}
           onClick={handleClick}
-          className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
+          className="rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-800 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
           title={disabledReason ?? "키움 자동조회 실행"}
         >
           {loading ? "🔄 조회 중..." : "🔍 키움 자동조회"}
         </button>
       </div>
       {disabledReason && !loading && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
           ⚠️ {disabledReason}
         </p>
       )}
       {error && (
-        <p className="text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1">
+        <p className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1">
           ❌ {error}
         </p>
       )}
       {info && !error && (
-        <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-900 space-y-2">
+        <div className="rounded-md bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-200 space-y-2">
           <div className="space-y-1">
             <p>
               ✓ 기간{" "}
@@ -232,7 +232,7 @@ export function KiwoomPostListingAutoFetchButton({
                         isTrading ? "" : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      <span className="text-gray-500 tabular-nums">{i + 1}. {iso}</span>
+                      <span className="text-gray-500 dark:text-gray-400 tabular-nums">{i + 1}. {iso}</span>
                       <span className="tabular-nums">{isTrading ? close.toLocaleString() : label || "—"}</span>
                     </div>
                   );

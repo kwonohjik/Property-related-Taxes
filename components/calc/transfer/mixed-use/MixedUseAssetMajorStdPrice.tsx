@@ -173,14 +173,14 @@ export function MixedUseAssetMajorStdPrice({
   return (
     <div className="space-y-3">
       {/* ── ② 주택 기준시가 ─────────────────────────── */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {housingSectionNum !== undefined && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-micro font-bold text-slate-700 select-none">
               {housingSectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-slate-700">주택 기준시가</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">주택 기준시가</p>
         </div>
 
         {/* 취득 sub-block — PHD 토글(amber)이 시점 인디케이터 역할.
@@ -353,14 +353,14 @@ export function MixedUseAssetMajorStdPrice({
       </div>
 
       {/* ── ③ 상가 기준시가 ─────────────────────────── */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-2">
         <div className="flex items-center gap-2">
           {commercialSectionNum !== undefined && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-micro font-bold text-slate-700 select-none">
               {commercialSectionNum}
             </span>
           )}
-          <p className="text-xs font-semibold text-slate-700">상가 기준시가</p>
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">상가 기준시가</p>
         </div>
 
         {isInheritance && (
@@ -430,13 +430,13 @@ export function MixedUseAssetMajorStdPrice({
         )}
 
         {/* 상가건물 기준시가 — 양도/취득 나란히 + 통합 계산 모달 */}
-        <p className="text-xs font-medium text-slate-600">
+        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
           상가건물 기준시가{" "}
-          <span className="text-micro font-normal text-slate-500">
+          <span className="text-micro font-normal text-slate-500 dark:text-slate-400">
             (토지 제외)
           </span>
           {isPerPart && (
-            <span className="ml-1 text-caption font-normal text-slate-500" data-testid="mixed-part-commercial-building-day-note">
+            <span className="ml-1 text-caption font-normal text-slate-500 dark:text-slate-400" data-testid="mixed-part-commercial-building-day-note">
               취득시는 건물 취득일 기준
             </span>
           )}
@@ -493,10 +493,10 @@ export function MixedUseAssetMajorStdPrice({
         </div>
 
         {/* 상가부수토지 개별공시지가 — 양도/취득 (세로 스택: 기준연도 드롭다운 폭 확보) */}
-        <p className="text-xs font-medium text-slate-600">
+        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
           상가부수토지 개별공시지가
           {isMixedAcqDatesSeparate(asset) && (
-            <span className="ml-1 text-caption font-normal text-slate-500">토지 취득일 기준</span>
+            <span className="ml-1 text-caption font-normal text-slate-500 dark:text-slate-400">토지 취득일 기준</span>
           )}
         </p>
         <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1 dark:bg-amber-950/40">

@@ -37,10 +37,10 @@ export function SaveToast({ message, onClose, autoCloseMs = 3000 }: Props) {
 
   const palette =
     message.kind === "success"
-      ? "bg-emerald-600 text-white border-emerald-700"
+      ? "bg-emerald-700 text-white border-emerald-700"
       : message.kind === "error"
-      ? "bg-destructive text-white border-destructive"
-      : "bg-sky-600 text-white border-sky-700";
+      ? "bg-destructive text-white border-destructive dark:bg-red-700 dark:border-red-700"
+      : "bg-sky-700 text-white border-sky-700";
 
   return (
     <div

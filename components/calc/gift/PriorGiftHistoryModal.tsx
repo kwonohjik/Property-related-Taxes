@@ -144,7 +144,7 @@ function CandidateCard({
       </div>
 
       {candidate.hasInnerPriorGifts && expandInnerInfo && (
-        <div className="text-caption bg-sky-50 border border-sky-200 rounded p-2 text-sky-700">
+        <div className="text-caption bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 rounded p-2 text-sky-700 dark:text-sky-300">
           이 회차의 합산과세표준 ⑤·산출세액 ⑦은 이미 그 시점 이전의 사전증여를 합산한 결과입니다.
           추가로 같은 §47 그룹의 더 과거 회차를 별도로 더하면 이중 합산이 발생할 수 있습니다.
           가장 최근 합산 회차 1건만 선택하는 것을 권장합니다.
@@ -153,25 +153,25 @@ function CandidateCard({
 
       {/* 금액 그리드 */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <span className="text-gray-600">증여재산가액 ②③</span>
+        <span className="text-gray-600 dark:text-gray-400">증여재산가액 ②③</span>
         <span className="text-right font-medium">{formatKRW(candidate.grossGiftValue)}</span>
 
-        <span className="text-gray-600">합산과세표준 ⑤</span>
+        <span className="text-gray-600 dark:text-gray-400">합산과세표준 ⑤</span>
         <span className="text-right font-medium">{formatKRW(candidate.taxBase)}</span>
 
-        <span className="text-gray-600">산출세액 ⑦</span>
+        <span className="text-gray-600 dark:text-gray-400">산출세액 ⑦</span>
         <span className="text-right font-medium">{formatKRW(candidate.computedTax)}</span>
 
         {candidate.additionalGenerationSkipSurcharge > 0 && (
           <>
-            <span className="text-gray-600">세대생략 ⑫</span>
+            <span className="text-gray-600 dark:text-gray-400">세대생략 ⑫</span>
             <span className="text-right font-medium">
               {formatKRW(candidate.additionalGenerationSkipSurcharge)}
             </span>
           </>
         )}
 
-        <span className="text-gray-600 border-t border-gray-200 pt-1 mt-1">납부세액</span>
+        <span className="text-gray-600 dark:text-gray-400 border-t border-gray-200 pt-1 mt-1">납부세액</span>
         <span className="text-right font-semibold border-t border-gray-200 pt-1 mt-1">
           {formatKRW(candidate.finalTax)}
         </span>
@@ -197,7 +197,7 @@ function CandidateCard({
           <button
             type="button"
             onClick={() => onSelectAsCorporate(candidate)}
-            className="rounded-md py-2 px-3 text-xs font-medium bg-violet-100 text-violet-800 hover:bg-violet-200 border border-violet-300 transition-colors"
+            className="rounded-md py-2 px-3 text-xs font-medium bg-violet-100 dark:bg-violet-950/30 text-violet-800 dark:text-violet-200 hover:bg-violet-200 dark:hover:bg-violet-900/50 border border-violet-300 dark:border-violet-800 transition-colors"
             title="영리법인 사전증여로 가져오기 (§13①2호 + §3의2②). 자연인 정보는 제거되고 산출세액 상당액 입력 필드가 활성화됩니다."
           >
             🏢 영리법인
@@ -354,14 +354,14 @@ export function PriorGiftHistoryModal({
         <div className="space-y-3">
           {loading && (
             <div className="space-y-3">
-              <div className="animate-pulse h-24 bg-gray-100 rounded-md" />
-              <div className="animate-pulse h-24 bg-gray-100 rounded-md" />
-              <p className="text-xs text-gray-500 text-center">이력을 불러오는 중...</p>
+              <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-md" />
+              <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-md" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">이력을 불러오는 중...</p>
             </div>
           )}
 
           {!loading && error && (
-            <div className="rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+            <div className="rounded-md border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-4 text-sm text-rose-700 dark:text-rose-300">
               ⚠️ {error}
             </div>
           )}
@@ -387,7 +387,7 @@ export function PriorGiftHistoryModal({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md bg-gray-100 p-6 text-center text-sm text-gray-500">
+                <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   현재 수증자(=의뢰인)의 증여세 이력이 없습니다.
                   {warnings.length > 0 && (
                     <div className="mt-2 text-xs text-gray-400">
@@ -434,7 +434,7 @@ export function PriorGiftHistoryModal({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
+            className="rounded-md bg-gray-100 dark:bg-gray-800 px-4 py-2 text-sm hover:bg-gray-200 dark:hover:bg-gray-800"
           >
             닫기
           </button>

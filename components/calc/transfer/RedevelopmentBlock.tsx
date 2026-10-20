@@ -156,7 +156,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
       {/* 0️⃣ 1세대1주택 + 고가주택 안분 적용 가이드 — subject="apt" 시만 노출.
           기준금액은 양도일 연혁(6억·9억·12억 — 엔진 `resolveHighValueHouseThreshold`와 같은 leaf). */}
       {!isRightSubject && (
-      <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-caption text-amber-900 leading-relaxed">
+      <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-caption text-amber-900 dark:text-amber-200 leading-relaxed">
         <p className="font-semibold mb-0.5">⚠️ 1세대1주택 + {highValueLabel} 초과 비과세 안분 적용 여부</p>
         <p>
           본 자산이 1세대1주택 + {highValueLabel} 초과인 경우 §95③·시행령 §160 안분이 적용됩니다. 적용 여부는
@@ -354,7 +354,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
         {/* 사례 48 — 승계조합원: 권리가액 필드 숨김 + 자산 카드 취득가액 read-only 미리보기 (P5).
             취득가액 출처는 상단 자산 카드 (상속·증여·매매 등 취득원인별 통합 처리). */}
         {asset.redevIsSuccessorMember === "yes" && (
-          <div className="rounded-md border border-sky-200 bg-sky-50 p-3 text-caption text-sky-900 space-y-1 leading-relaxed">
+          <div className="rounded-md border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-950/30 p-3 text-caption text-sky-900 dark:text-sky-200 space-y-1 leading-relaxed">
             <div className="font-semibold">취득가액 — 자산 카드에서 입력</div>
             <div>
               승계조합원의 취득가액은 <span className="font-semibold">상단 자산 카드 &ldquo;취득가액&rdquo;</span> 입력값을 사용합니다.

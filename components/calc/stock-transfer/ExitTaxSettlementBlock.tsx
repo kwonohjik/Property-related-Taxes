@@ -111,7 +111,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         }
         tone="sky"
         trailing={
-          <span className="text-xs text-sky-600 font-medium bg-sky-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
             §118의16
           </span>
         }
@@ -160,7 +160,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         onCheckedChange={(v) => onChange({ etReenteredWithin5Years: v })}
         tone="emerald"
         trailing={
-          <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded">
             §118의17
           </span>
         }
@@ -176,7 +176,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         }}
         tone="violet"
         trailing={
-          <span className="text-xs text-violet-600 font-medium bg-violet-50 px-2 py-0.5 rounded">
+          <span className="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">
             §118의13
           </span>
         }
@@ -264,7 +264,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
           onCheckedChange={(v) => onChange({ etHasFiledHoldingsReport: v })}
           tone="rose"
           trailing={
-            <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">
               §118의15
             </span>
           }
@@ -293,11 +293,11 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
       </SectionBox>
 
       {/* ── 국내원천 원천징수 (§118의14, 선택) ── */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-4 space-y-3">
-        <p className="text-xs font-semibold text-slate-600">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/20 p-4 space-y-3">
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
           비거주자 세액공제 (§118의14, 선택)
         </p>
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
           납부유예 후 국내에서 비거주자로 실양도 시 §156①7에 따라 원천징수된 세액이 있는 경우 입력하세요.
         </p>
         <FieldCard

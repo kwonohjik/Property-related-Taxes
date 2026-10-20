@@ -459,7 +459,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
       {/* simple 모드 — 양도일 직전 사업연도 입력 (현행 UI 유지) · [C-1] acquisitionSideOnly 시 양도측 숨김 */}
       {mode === "simple" && !acquisitionSideOnly && (
       <div>
-        <p className="text-sm font-medium text-slate-700 mb-3">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
           양도일 직전 사업연도 평가 (양도기준시가 산출용)
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -517,7 +517,7 @@ export function EstimatedUnlistedBlock({ form, onChange, simpleOnly = false, acq
           [C-1] acquisitionSideOnly는 acqFaceValueOnly 잔존값 무시·무조건 렌더 (validate 필수와 모순 차단) */}
       {mode === "simple" && !transferSideOnly && (acquisitionSideOnly || !acqFaceValueOnly) && (
       <div>
-        <p className="text-sm font-medium text-slate-700 mb-3">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
           취득일 직전 사업연도 평가 (취득기준시가 산출용)
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

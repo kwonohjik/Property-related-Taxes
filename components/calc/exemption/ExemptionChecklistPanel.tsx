@@ -55,8 +55,8 @@ const CHIP_OFF: Record<"sky" | "violet", string> = {
 };
 
 const CHECK_BOX_ON: Record<"sky" | "violet", string> = {
-  sky: "border-sky-500 bg-sky-500 text-white",
-  violet: "border-violet-500 bg-violet-500 text-white",
+  sky: "border-sky-700 bg-sky-700 text-white",
+  violet: "border-violet-700 bg-violet-700 text-white",
 };
 
 // ────────────────────────────────────────────────────

@@ -29,7 +29,7 @@ const PDFDownloadLink = dynamic(
       <button
         type="button"
         disabled
-        className="rounded-md border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-400 cursor-not-allowed print:hidden"
+        className="rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-2.5 py-1 text-xs font-medium text-slate-400 cursor-not-allowed print:hidden"
         data-testid="ff9-pdf-button-loading"
       >
         로딩 중...

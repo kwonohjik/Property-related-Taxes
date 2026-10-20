@@ -526,7 +526,7 @@ export function ValueIncreaseFields({ form, set }: Props) {
           ]}
         />
         {form.viReason === "similar" && (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-700" data-testid="deemed-vi-exchange-hint">
+          <p className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2 py-1.5 text-xs text-amber-700 dark:text-amber-300" data-testid="deemed-vi-exchange-hint">
             ⚠ 유가증권·코스닥시장 상장 이익은 §42의3에서 제외되어 §41의3 상장이익으로 과세됩니다.
           </p>
         )}

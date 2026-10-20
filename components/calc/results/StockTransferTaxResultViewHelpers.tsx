@@ -38,12 +38,12 @@ export function ResultRow({
         highlight ? "bg-white dark:bg-gray-900" : ""
       }`}
     >
-      <span className={`text-sm ${highlight ? "font-medium text-slate-700" : "text-slate-500"}`}>
+      <span className={`text-sm ${highlight ? "font-medium text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
         {label}
       </span>
       <span
         className={`text-sm tabular-nums ${
-          highlight ? "font-semibold text-slate-900" : "text-slate-700"
+          highlight ? "font-semibold text-slate-900 dark:text-slate-100" : "text-slate-700 dark:text-slate-300"
         }`}
       >
         {value.toLocaleString()}
@@ -162,7 +162,7 @@ export function SwapComparisonBlock({ result }: { result: StockTransferResult })
       className={`mt-2 rounded-lg border px-4 py-3 space-y-1 text-xs ${
         applied
           ? "border-fuchsia-300 bg-fuchsia-50/70 text-fuchsia-800 dark:text-fuchsia-200 dark:bg-fuchsia-950/40"
-          : "border-slate-200 bg-slate-50/60 text-slate-600"
+          : "border-slate-200 bg-slate-50/60 dark:bg-slate-800/20 text-slate-600 dark:text-slate-400"
       }`}
     >
       <p className="font-semibold">
@@ -252,7 +252,7 @@ const RULE_BADGE: Record<string, string> = {
   "다목요건미충족폴백": "bg-amber-100 text-amber-700 border-amber-200",
   "§168②대주주기납부차감": "bg-emerald-100 text-emerald-700 border-emerald-200",
   "80%하한": "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
-  "80%하한미적용": "bg-fuchsia-50 text-fuchsia-600 border-fuchsia-200",
+  "80%하한미적용": "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
   "단기30%": "bg-rose-100 text-rose-700 border-rose-200",
   "거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
   "취득일거래정지우회": "bg-amber-100 text-amber-700 border-amber-200",
@@ -390,13 +390,13 @@ export function UnsupportedItemsCard() {
   ];
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-5 py-4">
-      <p className="mb-2 text-sm font-semibold text-slate-800">현재 지원하지 않는 항목</p>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 px-5 py-4">
+      <p className="mb-2 text-sm font-semibold text-slate-800 dark:text-slate-200">현재 지원하지 않는 항목</p>
       <ul className="space-y-2">
         {items.map((it) => (
           <li key={it.title} className="text-xs leading-relaxed">
-            <span className="font-semibold text-slate-700">{it.title}</span>
-            <span className="block text-slate-600">{it.detail}</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">{it.title}</span>
+            <span className="block text-slate-600 dark:text-slate-400">{it.detail}</span>
           </li>
         ))}
       </ul>

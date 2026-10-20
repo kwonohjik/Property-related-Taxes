@@ -85,9 +85,10 @@ for (const dir of SCAN_DIRS) {
 /**
  * 🔒 래칫 — **줄이기만 한다.**
  *   2026-09-08 foreground 15 · noDark 25 = 40 → 2026-10-19 noDark 제거 후 foreground 15
+ *   → 2026-10-20 14 (CapitalAdjustmentsBlock 도움말 카드 — 서식이 아니라 안내 상자라 다크 배경으로 뒤집음)
  * 늘리려면 그 예외가 왜 필요한지 이 파일에 근거를 먼저 적을 것.
  */
-const EXEMPT_MAX = 15;
+const EXEMPT_MAX = 14;
 
 describe("다크모드 배경 정책 — bg-white에는 dark: 짝이 있다", () => {
   it("🔴 짝 없는 bg-white가 0건이다", () => {

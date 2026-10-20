@@ -37,10 +37,10 @@ export function EvaluationCommitteeRangeIndicator({
   if (isInactive) {
     return (
       <div
-        className="rounded-md border border-slate-200 bg-slate-50 p-3"
+        className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 p-3"
         data-testid="evaluation-committee-range-inactive"
       >
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           보충적 평가가액 산정 전 — 70~130% 범위 표시 불가
         </p>
       </div>
@@ -71,7 +71,7 @@ export function EvaluationCommitteeRangeIndicator({
         </span>
       </div>
 
-      <div className="relative h-6 bg-slate-100 rounded">
+      <div className="relative h-6 bg-slate-100 dark:bg-slate-800 rounded">
         {/* 범위 영역 (70~130%) */}
         <div
           className={`absolute top-0 h-full rounded ${rangeColor} opacity-30`}
@@ -94,7 +94,7 @@ export function EvaluationCommitteeRangeIndicator({
         />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-caption text-slate-700">
+      <div className="grid grid-cols-3 gap-2 text-caption text-slate-700 dark:text-slate-300">
         <div>
           <span className="font-semibold">70% 하한</span>
           <br />

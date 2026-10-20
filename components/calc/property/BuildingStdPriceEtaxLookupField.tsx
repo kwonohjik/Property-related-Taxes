@@ -114,7 +114,7 @@ export function BuildingStdPriceEtaxLookupField({
 
   const badge =
     source === "lookup" ? (
-      <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">
+      <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-800">
         ETAX 자동
       </span>
     ) : source === "lookup-edited" ? (

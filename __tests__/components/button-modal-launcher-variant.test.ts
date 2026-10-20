@@ -3,14 +3,16 @@ import { buttonVariants } from "@/components/ui/button";
 
 /**
  * P0 앵커 — 모달 런처 버튼 통일 variant.
- * "자동" 배지(LandPriceLookupField: bg-green-100/text-green-700)와 동일 톤으로 통일.
+ * "자동" 배지(LandPriceLookupField: bg-green-100/text-green-800)와 동일 톤으로 통일.
+ * 글자는 green-800 — green-700은 green-100 위 대비 4.497로 WCAG 4.5 미달(2026-10-20).
  * 설계: docs/02-design/features/modal-launcher-button-style.plan.md
  */
 describe("Button modalLauncher variant (모달 런처 통일)", () => {
   it("연녹색 배지 톤을 렌더한다 ('자동' 배지와 동일)", () => {
     const cls = buttonVariants({ variant: "modalLauncher" });
     expect(cls).toContain("bg-green-100");
-    expect(cls).toContain("text-green-700");
+    expect(cls).toContain("text-green-800");
+    expect(cls).not.toMatch(/(^|\s)text-green-700(\s|$)/);
     expect(cls).toContain("border-green-200");
     expect(cls).toContain("hover:bg-green-200");
   });

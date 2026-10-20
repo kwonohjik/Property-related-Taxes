@@ -34,11 +34,11 @@ const CHIP_OFF_HOVER: Record<ChipTone, string> = {
 };
 
 const CHECK_ON: Record<ChipTone, string> = {
-  sky: "border-sky-500 bg-sky-500 text-white",
-  violet: "border-violet-500 bg-violet-500 text-white",
-  amber: "border-amber-500 bg-amber-500 text-white",
-  rose: "border-rose-500 bg-rose-500 text-white",
-  emerald: "border-emerald-500 bg-emerald-500 text-white",
+  sky: "border-sky-700 bg-sky-700 text-white",
+  violet: "border-violet-700 bg-violet-700 text-white",
+  amber: "border-amber-700 bg-amber-700 text-white",
+  rose: "border-rose-700 bg-rose-700 text-white",
+  emerald: "border-emerald-700 bg-emerald-700 text-white",
 };
 
 const CHIP_BASE =

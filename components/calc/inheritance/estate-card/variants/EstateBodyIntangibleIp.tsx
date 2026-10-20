@@ -200,7 +200,7 @@ export function EstateBodyIntangibleIp({ item, onUpdate, valuationDate }: Varian
               />
             </FieldCard>
             {isAuto && autoYears != null && (
-              <p className="text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 rounded px-3 py-2">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 rounded px-3 py-2">
                 🟢 자동 산정 {autoYears}년 (존속만료일 − 평가기준일, 20년 한도 §19③)
               </p>
             )}

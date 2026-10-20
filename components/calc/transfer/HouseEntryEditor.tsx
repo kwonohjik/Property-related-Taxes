@@ -191,7 +191,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
             {house.addressLookupFilled && (
-              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+              <span className="text-micro rounded-full bg-green-100 px-1.5 py-0.5 text-green-800 dark:bg-green-900/40 dark:text-green-300">
                 조회값
               </span>
             )}
@@ -354,14 +354,14 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             value={house.inheritedDate ?? ""}
             onChange={(v) => onUpdate({ inheritedDate: v || undefined })}
           />
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             상속 후 5년 이내이면 중과 대상에서만 제외되고 주택 수에는 산입됩니다. 비과세 판정의 상속주택 특례(소득세법
             시행령 §155②)에는 이 5년 기간 제한이 없습니다.
           </p>
         </div>
 
         {/* §155⑲ — 협의분할 등기 전 법정상속분 의제 + 등기 후 추가 신고·납부(G5-9). 선언 칸(③) 앞에서 보이도록 카드 밖에 둔다 */}
-        <p className="pt-2 text-caption text-muted-foreground/70" data-testid="house-entry-155-19-notice">
+        <p className="pt-2 text-caption text-muted-foreground" data-testid="house-entry-155-19-notice">
           공동상속 여부와 최대지분 판정은, 양도일까지 협의분할(「민법」 제1013조)하여 등기하지 않았으면 법정상속분(「민법」
           제1009조·제1010조)에 따라 상속주택을 소유하는 것으로 봅니다(소득세법 시행령 §155⑲). 미등기 상속주택은
           법정상속분 기준으로 입력하세요. 양도 후 국세 부과 제척기간 내에 협의분할 등기를 하여 소득세법 시행령
@@ -395,7 +395,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
                 title="본인이 최대지분 상속인"
                 description="지분이 가장 큰 상속인만 해당 주택 소유로 봅니다. 지분이 같으면 그 주택 거주자, 그다음 최연장자. (§155③ 단서)"
               />
-              <p className="text-caption text-muted-foreground/70">
+              <p className="text-caption text-muted-foreground">
                 일반주택을 양도할 때 최대지분 상속인은 그 주택을 소유한 것으로 보아 주택 수에 산입하되, 상속주택 특례
                 요건(소령 §155② — 동일세대 단서·상속개시 당시 보유·2년 내 증여·순위)을 갖추면 단독상속주택과 같이 주택
                 수에서 제외됩니다. 소수지분이면 §155③으로 주택 수에서 제외됩니다. 최대지분 판정 기준일은
@@ -424,7 +424,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             value={decedentHouseholdAnswer(house) ?? ""}
             onChange={(v) => onUpdate(decedentHouseholdPatch(v as DecedentHousehold, house))}
           />
-          <p className="text-caption text-muted-foreground/70" data-testid="house-row-decedent-household-hint">
+          <p className="text-caption text-muted-foreground" data-testid="house-row-decedent-household-hint">
             이 답은 상속주택 특례(소득세법 시행령 §155② 단서 — 동일세대에서 상속받으면 주택 수 제외가 원칙적으로 배제됩니다)와,
             인구감소지역주택이면 조세특례제한법 §71의2①(별도세대로부터 상속받은 경우만 적용)에 함께 쓰입니다.
             모르거나 답하지 않으면 두 규정 모두 적용하지 않고 확인 필요로 알립니다.
@@ -454,7 +454,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
                 title="별도세대에서 받은 상속주택을 다시 상속"
                 description="피상속인이 별도세대로부터 상속받은 주택을, 피상속인이 사망해 동일세대원인 본인이 다시 상속받은 경우입니다. 상속주택 지위를 이어받습니다."
               />
-              <p className="text-caption text-muted-foreground/70">
+              <p className="text-caption text-muted-foreground">
                 동거봉양 합가 전 보유분이면 주택 수에서 제외되고, 그 외 동일세대 상속은 제외되지
                 않습니다.
               </p>
@@ -473,7 +473,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             title="상속인이 아닌 사람이 유증·사인증여로 받음"
             description="민법상 상속인(선순위·대습상속인 포함)이 아닌 사람이 유언이나 사인증여로 받은 주택이면 켜세요. 1세대1주택 비과세 판정에서 상속주택으로 보지 않습니다(부동산거래관리과-307). 상속인이 유증·사인증여로 받은 주택은 상속주택이므로 켜지 않습니다."
           >
-            <p className="text-caption text-muted-foreground/70 pt-1">
+            <p className="text-caption text-muted-foreground pt-1">
               다주택 중과 판정에는 반영하지 않습니다.
             </p>
           </ToggleCard>
@@ -489,7 +489,7 @@ function InheritanceSection({ house, onUpdate, householdGiftEnabled }: Props) {
             title="피상속인 2주택 이상 — 순위상 상속주택 아님"
             description="피상속인이 상속개시 당시 2채 이상 보유했고, 이 주택이 순위(소유기간→거주기간→상속개시 당시 거주→기준시가)상 상속주택(1주택)이 아니면 특례에서 제외됩니다. (소령 §155②1~4호)"
           >
-            <p className="text-caption text-muted-foreground/70 pt-1">
+            <p className="text-caption text-muted-foreground pt-1">
               순위상 상속주택이 아니면 일반주택 양도 시 주택 수에서 제외되지 않습니다.
             </p>
           </ToggleCard>
@@ -590,20 +590,20 @@ function LongTermRentalSection({
               onChange={(v) => onUpdate({ rentalPeriodYears: v || undefined })}
               placeholder="임대기간 입력"
             />
-            <p className="text-caption text-muted-foreground/70">5년 이상 시 중과 대상에서 제외 (주택 수에는 산입)</p>
+            <p className="text-caption text-muted-foreground">5년 이상 시 중과 대상에서 제외 (주택 수에는 산입)</p>
           </div>
 
           {/* 임대사업자 말소일 (optional) */}
           <div className="space-y-1">
             <label className="block text-caption text-muted-foreground font-medium">
               임대사업자 말소일{" "}
-              <span className="text-muted-foreground/60 font-normal">(양도 전 말소 시 입력)</span>
+              <span className="text-muted-foreground font-normal">(양도 전 말소 시 입력)</span>
             </label>
             <DateInput
               value={house.rentalCancelledDate ?? ""}
               onChange={(v) => onUpdate({ rentalCancelledDate: v || undefined })}
             />
-            <p className="text-caption text-muted-foreground/70">
+            <p className="text-caption text-muted-foreground">
               양도일 이전 말소된 경우 임대 배제 특례가 해제될 수 있습니다.
             </p>
           </div>

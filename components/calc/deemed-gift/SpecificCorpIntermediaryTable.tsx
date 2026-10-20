@@ -51,7 +51,7 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
           onClick={() => onChange([...rows, newRow()])}
           disabled={corps.length === 0}
           data-testid="sc-im-add"
-          className="rounded-md border border-violet-300 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-800 hover:bg-violet-100/60 disabled:opacity-40"
+          className="rounded-md border border-violet-300 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 px-3 py-1 text-xs font-medium text-violet-800 dark:text-violet-200 hover:bg-violet-100/60 disabled:opacity-40"
         >
           + 행 추가
         </button>
@@ -157,7 +157,7 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
                 type="button"
                 onClick={() => update(i, { owners: [...row.owners, { individualId: "", ratioPctStr: "" }] })}
                 data-testid={`sc-im-owner-add-${i}`}
-                className="rounded-md border border-violet-300 bg-violet-50 px-2 py-1 text-xs font-medium text-violet-800 hover:bg-violet-100/60"
+                className="rounded-md border border-violet-300 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 px-2 py-1 text-xs font-medium text-violet-800 dark:text-violet-200 hover:bg-violet-100/60"
               >
                 + 개인 소유주
               </button>

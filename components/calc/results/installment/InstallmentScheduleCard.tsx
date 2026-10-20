@@ -191,7 +191,7 @@ export function InstallmentScheduleCard({
                   {format(row.dueDate, "yyyy-MM-dd")}
                 </td>
                 {useFb && (
-                  <td className="py-1.5 px-2 text-center text-micro text-gray-500">
+                  <td className="py-1.5 px-2 text-center text-micro text-gray-500 dark:text-gray-400">
                     {segLabel(row.segment)}
                   </td>
                 )}

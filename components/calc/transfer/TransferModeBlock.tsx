@@ -193,7 +193,7 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
 
       {/* 부담부증여 미지원 propertyType 안내 */}
       {isBurdenedGift && !isSupported && (
-        <div className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800">
+        <div className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-3 text-xs text-rose-800 dark:text-rose-200">
           <p className="font-semibold">부담부증여 미지원 자산 종류</p>
           <p className="mt-1">
             현재 부담부증여는 <b>{SUPPORTED_LABELS}</b>에서만 지원됩니다.

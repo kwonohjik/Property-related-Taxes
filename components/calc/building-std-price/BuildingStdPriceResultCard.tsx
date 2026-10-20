@@ -44,7 +44,7 @@ function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps)
 
       <div className="text-right font-mono text-2xl font-bold tabular-nums">{fmt(bd.standardPrice)}</div>
 
-      <div className="space-y-1 border-t pt-2 text-xs leading-relaxed text-slate-600">
+      <div className="space-y-1 border-t pt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
         {bd.sameAdjustmentPeriodDerived ? (
           /* §164⑧ 파생값 — 취득당시 기준시가에서 산식으로 나온 값이라 고유 ㎡당 금액이 없다.
              종전에는 취득 breakdown 을 그대로 물려받아 「㎡당 × 연면적 = 양도액」이라는

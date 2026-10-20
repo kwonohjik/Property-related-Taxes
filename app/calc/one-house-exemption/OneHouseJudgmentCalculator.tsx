@@ -344,7 +344,7 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
 
         {/* 결과 단계의 오류는 Step4가 직접 띄운다(재시도 버튼과 함께). */}
         {error && currentStep < RESULT_STEP && (
-          <div className="mb-4 whitespace-pre-line rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          <div className="mb-4 whitespace-pre-line rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
             {error}
           </div>
         )}

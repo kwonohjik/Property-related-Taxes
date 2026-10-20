@@ -254,10 +254,10 @@ function ManualChip({
           "flex h-3.5 w-3.5 items-center justify-center rounded border text-micro font-bold shrink-0",
           active
             ? group === "emerald"
-              ? "border-emerald-500 bg-emerald-500 text-white"
+              ? "border-emerald-700 bg-emerald-700 text-white"
               : group === "amber"
-                ? "border-amber-500 bg-amber-500 text-white"
-                : "border-violet-500 bg-violet-500 text-white"
+                ? "border-amber-700 bg-amber-700 text-white"
+                : "border-violet-700 bg-violet-700 text-white"
             : "border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800",
         )}
       >
@@ -368,7 +368,7 @@ export function Step4DeductionChecklist({
       </div>
 
       {/* 신고 상태·납부 방법 안내 */}
-      <p className="text-micro text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800 pt-2">
+      <p className="text-micro text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-800 pt-2">
         ※ 신고 상태(§69 신고세액공제)는 C그룹, 납부 방법(연부연납·분납·물납)은 D그룹에 있습니다. 그룹 헤더를 클릭하거나 위 칩을 클릭하면 열립니다.
       </p>
     </div>

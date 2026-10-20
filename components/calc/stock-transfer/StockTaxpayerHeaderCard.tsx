@@ -79,7 +79,7 @@ export function StockTaxpayerHeaderCard({
   return (
     <div
       data-print-section="taxpayer-header"
-      className="rounded-xl border border-slate-200 bg-slate-50/60 p-4"
+      className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 p-4"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
@@ -88,28 +88,28 @@ export function StockTaxpayerHeaderCard({
             {mode === "professional" ? (
               <>
                 <div className="flex gap-2">
-                  <span className="text-slate-500 w-20 shrink-0">의뢰인</span>
-                  <span className="font-medium text-slate-800">
+                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">의뢰인</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
                     {clientName ? `${clientName} 님` : (
                       <span className="text-amber-700 dark:text-amber-300">의뢰인 미선택 — 계정 없이 저장됩니다</span>
                     )}
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="text-slate-500 w-20 shrink-0">담당자</span>
-                  <span className="text-slate-700">{displayName || "—"}</span>
+                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">담당자</span>
+                  <span className="text-slate-700 dark:text-slate-300">{displayName || "—"}</span>
                 </div>
               </>
             ) : (
               <>
                 <div className="flex gap-2">
-                  <span className="text-slate-500 w-20 shrink-0">양도인</span>
-                  <span className="font-medium text-slate-800">{displayName || "—"}</span>
+                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">양도인</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-200">{displayName || "—"}</span>
                 </div>
                 {birthDate && (
                   <div className="flex gap-2">
-                    <span className="text-slate-500 w-20 shrink-0">생년월일</span>
-                    <span className="text-slate-700">{birthDate}</span>
+                    <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">생년월일</span>
+                    <span className="text-slate-700 dark:text-slate-300">{birthDate}</span>
                   </div>
                 )}
               </>
@@ -119,24 +119,24 @@ export function StockTaxpayerHeaderCard({
           {/* 종목 정보 */}
           <div className="space-y-1">
             <div className="flex gap-2">
-              <span className="text-slate-500 w-20 shrink-0">종목명</span>
-              <span className="font-medium text-slate-800">
+              <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">종목명</span>
+              <span className="font-medium text-slate-800 dark:text-slate-200">
                 {securityName || "—"}
                 {securityCode && (
-                  <span className="ml-1 text-slate-500 font-normal">({securityCode})</span>
+                  <span className="ml-1 text-slate-500 dark:text-slate-400 font-normal">({securityCode})</span>
                 )}
               </span>
             </div>
             {brokerage && (
               <div className="flex gap-2">
-                <span className="text-slate-500 w-20 shrink-0">증권사</span>
-                <span className="text-slate-700">{brokerage}</span>
+                <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">증권사</span>
+                <span className="text-slate-700 dark:text-slate-300">{brokerage}</span>
               </div>
             )}
             {formattedTransferDate && (
               <div className="flex gap-2">
-                <span className="text-slate-500 w-20 shrink-0">양도일</span>
-                <span className="text-slate-700">{formattedTransferDate}</span>
+                <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">양도일</span>
+                <span className="text-slate-700 dark:text-slate-300">{formattedTransferDate}</span>
               </div>
             )}
           </div>

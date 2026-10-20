@@ -368,7 +368,7 @@ function FarmingPostMgmtPageInner() {
                 <li key={i} className="flex justify-between gap-2">
                   <span className="text-muted-foreground">
                     {step.label}
-                    {step.note && <span className="block text-micro text-gray-500">{step.note}</span>}
+                    {step.note && <span className="block text-micro text-gray-500 dark:text-gray-400">{step.note}</span>}
                   </span>
                   {step.amount !== 0 && (
                     <span className="font-mono tabular-nums">{formatKRW(step.amount)}</span>

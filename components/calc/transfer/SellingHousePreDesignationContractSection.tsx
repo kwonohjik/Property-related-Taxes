@@ -53,7 +53,7 @@ export function SellingHousePreDesignationContractSection({
 
   return (
     <ToneCard tone="rose" bodyClassName="space-y-2.5" title="조정대상지역 공고 전 매매계약">
-      <p className="text-caption text-muted-foreground/80">
+      <p className="text-caption text-muted-foreground">
         조정대상지역 공고가 있은 날 이전에 이 주택을 양도하기 위한 매매계약을 체결하고 계약금을 받은 사실이
         증빙서류로 확인되면 중과가 배제됩니다 (소령 §167의10①11호 · §167의3①11호).
       </p>

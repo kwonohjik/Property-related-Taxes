@@ -108,7 +108,7 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
           <button
             type="button"
             onClick={() => onChange(addRow(installments))}
-            className="ml-auto rounded-md border border-amber-300 bg-amber-100 hover:bg-amber-200 px-2.5 py-1 text-xs font-medium text-amber-800 transition-colors"
+            className="ml-auto rounded-md border border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200 transition-colors"
           >
             + 회차 추가
           </button>
@@ -117,13 +117,13 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
     >
       {/* 2년 미만 경고 배너 */}
       {isUnder2Years && (
-        <div className="rounded-md border border-amber-300 bg-amber-100 px-3 py-2 text-xs text-amber-800">
+        <div className="rounded-md border border-amber-300 dark:border-amber-800 bg-amber-100 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
           첫 회차 ~ 마지막 회차 간격이 2년 미만입니다. 연부취득 요건(§6 17호)을 확인하세요.
           2년 미만 시 엔진에서 일반 매매로 처리됩니다.
         </div>
       )}
       {!isUnder2Years && firstDate && lastDate && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+        <div className="rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
           2년 이상 — 연부취득 요건 충족 ({firstDate} ~ {lastDate})
         </div>
       )}

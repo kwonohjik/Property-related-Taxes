@@ -43,7 +43,7 @@ export function InheritedCohabitationCard(props: {
             value={asset.decedentCohabitationHoldingStartDate}
             onChange={(v) => onChange({ decedentCohabitationHoldingStartDate: v })}
           />
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             상속개시 전 피상속인과 동일세대로서 이 주택에 거주·보유하기 시작한 날 (비과세 보유기간 기산).
           </p>
         </div>
@@ -57,7 +57,7 @@ export function InheritedCohabitationCard(props: {
               onChange={(v) => onChange({ decedentCohabitationResidenceMonths: v })}
             />
           </div>
-          <p className="text-caption text-muted-foreground/70">
+          <p className="text-caption text-muted-foreground">
             상속개시 전 피상속인과 동일세대로서 이 주택에 실제 거주한 기간(개월). 비과세 거주요건·표2
             장특공제 대상 판정에 통산됩니다. 상속개시일 이후 상속인 본인 실거주는 &lsquo;거주기간&rsquo;에 별도 입력.
           </p>

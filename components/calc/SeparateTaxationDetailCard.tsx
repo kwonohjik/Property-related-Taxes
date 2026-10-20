@@ -79,14 +79,14 @@ interface Props {
 export default function SeparateTaxationDetailCard({ result }: Props) {
   if (!result.isApplicable) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
-        <p className="text-sm text-gray-500">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 p-4 space-y-3">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           분리과세 대상이 아닙니다. 종합합산 또는 별도합산 과세가 적용됩니다.
         </p>
         {result.warnings.length > 0 && (
           <ul className="space-y-1.5">
             {result.warnings.map((w, i) => (
-              <li key={i} className="flex gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              <li key={i} className="flex gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
                 <span className="shrink-0 mt-0.5">⚠</span>
                 <span>{w}</span>
               </li>
@@ -102,27 +102,27 @@ export default function SeparateTaxationDetailCard({ result }: Props) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white dark:bg-gray-900 shadow-sm overflow-hidden" data-testid="separate-taxation-detail-card">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-700">분리과세 판정 결과</h3>
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/20 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">분리과세 판정 결과</h3>
         {category && <CategoryBadge category={category} />}
       </div>
 
       <div className="px-4 py-4 space-y-4">
         {/* 판정 근거 */}
         <div className="space-y-1">
-          <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">적용 법령</dt>
-          <dd className="text-sm text-gray-800 font-mono">{reasoning.legalBasis}</dd>
+          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">적용 법령</dt>
+          <dd className="text-sm text-gray-800 dark:text-gray-200 font-mono">{reasoning.legalBasis}</dd>
         </div>
 
         <div className="space-y-1">
-          <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">판정 조건</dt>
-          <dd className="text-sm text-gray-800">{reasoning.matchedCondition}</dd>
+          <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">판정 조건</dt>
+          <dd className="text-sm text-gray-800 dark:text-gray-200">{reasoning.matchedCondition}</dd>
         </div>
 
         {/* 배제 합산 유형 */}
         {reasoning.excludedFrom.length > 0 && (
           <div className="space-y-1.5">
-            <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide">배제 합산 유형</dt>
+            <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">배제 합산 유형</dt>
             <dd className="flex flex-wrap gap-1.5">
               {reasoning.excludedFrom.map((type) => (
                 <ExcludedBadge key={type} type={type} />
@@ -136,18 +136,18 @@ export default function SeparateTaxationDetailCard({ result }: Props) {
 
         {/* 세율 및 과세표준 */}
         {appliedRate !== undefined && (
-          <div className="rounded-md bg-gray-50 border border-gray-100 divide-y divide-gray-100">
+          <div className="rounded-md bg-gray-50 dark:bg-gray-800/20 border border-gray-100 dark:border-gray-700 divide-y divide-gray-100">
             {fairMarketRatio !== undefined && taxBase !== undefined && (
               <div className="flex justify-between items-center px-3 py-2">
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
                   과세표준 (시가표준액 × {formatRate(fairMarketRatio)}, 천원 절사)
                 </span>
-                <span className="text-sm font-medium text-gray-800">{formatKRW(taxBase)}</span>
+                <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{formatKRW(taxBase)}</span>
               </div>
             )}
             <div className="flex justify-between items-center px-3 py-2">
-              <span className="text-xs text-gray-500">적용 세율</span>
-              <span className="text-sm font-semibold text-gray-800">{formatRate(appliedRate)}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">적용 세율</span>
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">{formatRate(appliedRate)}</span>
             </div>
             {calculatedTax !== undefined && (
               <div className="flex justify-between items-center px-3 py-2 bg-blue-50 dark:bg-blue-950/40">
@@ -162,7 +162,7 @@ export default function SeparateTaxationDetailCard({ result }: Props) {
         {warnings.length > 0 && (
           <ul className="space-y-1.5">
             {warnings.map((w, i) => (
-              <li key={i} className="flex gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+              <li key={i} className="flex gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-2">
                 <span className="shrink-0 mt-0.5">⚠</span>
                 <span>{w}</span>
               </li>

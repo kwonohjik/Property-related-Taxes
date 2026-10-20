@@ -41,7 +41,7 @@ export function SellingHouseTaxIncentiveRentalSection({ value, onChange }: Props
 
   return (
     <ToneCard tone="violet" bodyClassName="space-y-2.5" title="양도 주택이 조특법 감면 임대주택인 경우">
-      <p className="text-caption text-muted-foreground/80">
+      <p className="text-caption text-muted-foreground">
         양도하는 주택 자체가 「조세특례제한법」 제97조ㆍ제97조의2 및 제98조에 따라 양도소득세가 감면되는
         임대주택으로서 5년 이상 임대한 국민주택이면 중과 대상에서 제외됩니다 (소령 §167의3①3호 · 2주택은
         §167의10①2호 준용). 조특법 §98 감면은 감면 단계에서 입력해 요건을 충족하면 자동으로 반영됩니다.

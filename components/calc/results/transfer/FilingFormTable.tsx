@@ -83,7 +83,7 @@ export function FilingFormTable({
             adopted === true
               ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40"
               : adopted === false
-                ? "bg-zinc-50 border-zinc-200"
+                ? "bg-zinc-50 dark:bg-zinc-800/20 border-zinc-200 dark:border-zinc-700"
                 : "bg-slate-100 dark:bg-slate-800 border-slate-300",
           )}>
             <div className="flex items-start justify-between gap-2">
@@ -93,7 +93,7 @@ export function FilingFormTable({
                   adopted === true
                     ? "text-emerald-800 dark:text-emerald-200"
                     : adopted === false
-                      ? "text-zinc-600"
+                      ? "text-zinc-600 dark:text-zinc-400"
                       : "text-slate-800 dark:text-slate-100",
                 )}>
                   {title}
@@ -104,7 +104,7 @@ export function FilingFormTable({
                   </span>
                 )}
                 {adopted === false && (
-                  <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-500">
+                  <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-600">
                     참고
                   </span>
                 )}
@@ -127,7 +127,7 @@ export function FilingFormTable({
                 </button>
               )}
             </div>
-            <p className="text-caption text-slate-500 mt-0.5">{subtitle}</p>
+            <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
           </div>
 
           {/* 열 수에 따라 테이블 폭 자동 조정 */}
@@ -169,7 +169,7 @@ export function FilingFormTable({
                   <td
                     className={cn(
                       "px-3 py-1.5 border-r border-slate-200 sticky left-0 bg-white dark:bg-slate-900 print:static",
-                      row.indent && "pl-7 text-slate-500",
+                      row.indent && "pl-7 text-slate-500 dark:text-slate-400",
                       row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
                     )}
                   >
@@ -194,7 +194,7 @@ export function FilingFormTable({
                           </div>
                         )}
                         {note && (
-                          <div className="text-micro font-sans font-normal text-slate-500 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-slate-500 dark:text-slate-400 leading-tight mt-0.5 whitespace-normal text-right">
                             {note}
                           </div>
                         )}

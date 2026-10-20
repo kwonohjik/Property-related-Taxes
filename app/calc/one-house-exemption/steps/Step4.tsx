@@ -41,7 +41,7 @@ export function Step4({ result, error, isLoading, onJudge, onCalculateTax, trans
   if (error) {
     return (
       <div className="space-y-3">
-        <div className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-lg border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-300">
           {error}
         </div>
         <button

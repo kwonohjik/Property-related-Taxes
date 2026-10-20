@@ -156,14 +156,14 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
   };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 space-y-3">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/20 p-3 space-y-3">
       <div className="flex items-center gap-2">
         {sectionNum !== undefined && (
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-micro font-bold text-slate-800 select-none">
             {sectionNum}
           </span>
         )}
-        <p className="text-xs font-semibold text-slate-700">면적·부수토지·지역 정보</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">면적·부수토지·지역 정보</p>
       </div>
 
       {/* 면적 소그룹 (sky) — 용도변경 ON이면 1-A(취득시)와 시점 구분을 위해 "양도시" 명시 */}
@@ -182,7 +182,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         {/* 전용/공통 3열 한 행 — 연면적 자동 산출용 보조 입력 */}
         <div className="grid grid-cols-3 gap-2">
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">주택 전용면적 (㎡)</label>
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">주택 전용면적 (㎡)</label>
             <DecimalInput
               value={asset.residentialExclusiveArea}
               onChange={(v) => onExclusiveChange({ residentialExclusiveArea: v })}
@@ -191,7 +191,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">상가 전용면적 (㎡)</label>
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">상가 전용면적 (㎡)</label>
             <DecimalInput
               value={asset.commercialExclusiveArea}
               onChange={(v) => onExclusiveChange({ commercialExclusiveArea: v })}
@@ -200,7 +200,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-700">공통면적 (㎡)</label>
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">공통면적 (㎡)</label>
             <DecimalInput
               value={asset.commonArea}
               onChange={(v) => onExclusiveChange({ commonArea: v })}
@@ -213,7 +213,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
         {/* 정착·전체토지 2열 한 행 */}
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1" data-field="buildingFootprintArea">
-            <label className="text-xs font-medium text-slate-700">건물 정착면적 (수평 투영, ㎡)</label>
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">건물 정착면적 (수평 투영, ㎡)</label>
             <DecimalInput
               value={asset.buildingFootprintArea}
               onChange={(v) =>
@@ -225,7 +225,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             />
           </div>
           <div className="space-y-1" data-field="mixedUseTotalLandArea">
-            <label className="text-xs font-medium text-slate-700">전체 토지 면적 (㎡)</label>
+            <label className="text-xs font-medium text-slate-700 dark:text-slate-300">전체 토지 면적 (㎡)</label>
             <DecimalInput
               value={asset.mixedUseTotalLandArea}
               onChange={(v) =>
@@ -413,7 +413,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
 function AreaBadge({ manual, onReset }: { manual: boolean; onReset?: () => void }) {
   if (!manual) {
     return (
-      <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">
+      <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-800">
         자동
       </span>
     );

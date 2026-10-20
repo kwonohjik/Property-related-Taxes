@@ -162,7 +162,7 @@ function ShareholderRow({
 
           {/* 자연인 상속인 0명 hint */}
           {naturalHeirs.length === 0 && (
-            <p className="text-micro text-gray-400 dark:text-gray-500">
+            <p className="text-micro text-gray-500 dark:text-gray-400">
               상속인을 먼저 추가하면 자동채움됩니다
             </p>
           )}
@@ -393,7 +393,7 @@ export function CorporateHeirFields({
           <span
             className={
               "text-micro font-mono " +
-              (sumOver ? "text-red-600 font-bold dark:text-red-400" : "text-gray-500")
+              (sumOver ? "text-red-600 font-bold dark:text-red-400" : "text-gray-500 dark:text-gray-400")
             }
           >
             합 {(sumRatio * 100).toFixed(2)}%

@@ -118,8 +118,8 @@ function Step2Properties() {
       {/* ⑤ 주택 세부담상한 (직전 공시가격 단일 입력원) — 모드가 각 주택 카드 직전공시 표시·전송 제어.
           "모드 토글은 영향 필드 직전" 원칙: 모드가 주택 목록 위. */}
       {!isCorporateSpecial ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4 space-y-3">
-          <p className="text-xs font-semibold text-slate-600">공통 설정 · 모든 주택에 적용</p>
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-4 space-y-3">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">공통 설정 · 모든 주택에 적용</p>
           {/* 당해 조정대상지역 2주택 (구법 < 2023) — 당해연도 세율·상한 분기 */}
           {showMultiHouseCap && !isCorporateGeneral && (
             <ToggleCard

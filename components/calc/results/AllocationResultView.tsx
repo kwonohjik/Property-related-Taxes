@@ -70,7 +70,7 @@ export function AllocationResultView({
                             ) : (
                               <>증여자 {nameById.get(d.donorId)}</>
                             )}
-                            {d.excludedReason ? <span className="ml-1 text-xs text-gray-500">({d.excludedReason})</span> : null}
+                            {d.excludedReason ? <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">({d.excludedReason})</span> : null}
                           </td>
                           <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap" data-testid={`ci-alloc-split-value-${b.beneficiaryId}-${d.donorId}`}>{formatKRW(d.value)}</td>
                         </tr>
@@ -85,8 +85,8 @@ export function AllocationResultView({
       </div>
 
       <div className={open ? "block" : "hidden print:block"}>
-        <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-4" data-testid="ci-alloc-reconciliation">
-          <p className="text-sm font-semibold text-slate-700">검증내역 (증감 합계 = {formatKRW(result.reconciliation.totalGain - result.reconciliation.totalLoss)})</p>
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 p-4" data-testid="ci-alloc-reconciliation">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">검증내역 (증감 합계 = {formatKRW(result.reconciliation.totalGain - result.reconciliation.totalLoss)})</p>
           <div className="mt-2 overflow-x-auto print:overflow-visible">
             <table className="w-full text-sm">
               <thead>

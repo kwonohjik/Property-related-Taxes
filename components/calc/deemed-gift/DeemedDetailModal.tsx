@@ -95,8 +95,8 @@ export function DeemedDetailModal({
                  §45의3③은 「사업연도 종료일」, §45의5①은 「거래한 날」이다. 종전에는 두 유형 모두
                  「증여일」로만 물어 사용자가 거래일·신고일을 넣어도 막히지 않았다. */}
           {form.type !== "trust_benefit" && (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/40 p-3 mb-4">
-              <label className="mb-1 block text-sm font-semibold text-slate-700">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/20 p-3 mb-4">
+              <label className="mb-1 block text-sm font-semibold text-slate-700 dark:text-slate-300">
                 {GIFT_DATE_LABEL[form.type as keyof typeof GIFT_DATE_LABEL]?.label ?? "증여일"}
               </label>
               <DateInput

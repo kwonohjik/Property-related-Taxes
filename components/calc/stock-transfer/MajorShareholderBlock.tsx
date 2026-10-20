@@ -337,7 +337,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               </p>
             )}
             {form.marketType === "unlisted" && !threshold.isVentureRule && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
               </p>
             )}
@@ -377,7 +377,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               · 「키움 자동조회가 직전거래일 종가를 자동 적용」 — 도구가 당연히 해줄 일이라
                 안내할 가치가 없다. 안내가 길어지면 정작 읽어야 할 한 줄이 묻힌다. */}
         {priorYearEndTradingStatus && !priorYearEndTradingStatus.isTrading && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
             <p className="font-semibold">
               ⚠️ {form.priorYearEndDate}은 {priorYearEndTradingStatus.reason}입니다
               (<LawArticleModal legalBasis="소득세법 시행령 §157 ①" label="§157①" />)
@@ -514,14 +514,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             두면 「본인 단독 판정 + 대여 주식 보유」에 입력 경로가 아예 없다
             (ToggleCard는 `{checked && children}`이라 OFF면 렌더조차 안 된다). */}
         <div className={`rounded-lg border p-3 space-y-3 ${
-          f15f16Eligible ? "border-amber-300 bg-amber-50/60 dark:bg-amber-950/40" : "border-slate-200 bg-slate-50/40"
+          f15f16Eligible ? "border-amber-300 bg-amber-50/60 dark:bg-amber-950/40" : "border-slate-200 bg-slate-50/40 dark:bg-slate-800/20"
         }`}>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
               대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
             </span>
             {!f15f16Eligible && (
-              <span className="text-micro text-slate-500">
+              <span className="text-micro text-slate-500 dark:text-slate-400">
                 {effTransferDate ? `양도일 ${effTransferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
               </span>
             )}
@@ -657,7 +657,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               <div className={`rounded-lg border px-4 py-3 text-sm ${
                 judgment.isMajor
                   ? "border-violet-300 bg-violet-100/60 text-violet-900 dark:text-violet-200 dark:bg-violet-900/40"
-                  : "border-slate-200 bg-slate-50 text-slate-600"
+                  : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 text-slate-600 dark:text-slate-400"
               }`}>
                 <p className="font-medium mb-1">
                   대주주 자동 판정:{" "}
@@ -677,7 +677,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             );
           })()
         ) : form.marketType === "other_asset" ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium mb-1">자동 판정 미적용 (기타자산은 §94①4 별도 트랙)</p>
             <p className="text-xs">상단의 &quot;대주주 여부&quot; 토글로 직접 선택하세요.</p>
           </div>
@@ -709,7 +709,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
     </span>
   ) : (
     // 기준일이 없으면 판정값을 지어내지 않는다 — 무엇이 필요한지만 알린다
-    <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-amber-100 text-amber-800">
+    <span className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold bg-amber-100 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200">
       판정 기준일 입력 필요
     </span>
   );

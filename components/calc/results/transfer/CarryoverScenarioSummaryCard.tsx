@@ -41,13 +41,13 @@ export function CarryoverScenarioSummaryCard({
       {/* 헤더 */}
       <div className={cn(
         "px-4 py-3 border-b print:bg-white",
-        adopted ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40" : "bg-zinc-50 border-zinc-200",
+        adopted ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/40" : "bg-zinc-50 dark:bg-zinc-800/20 border-zinc-200 dark:border-zinc-700",
       )}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className={cn(
               "text-sm font-bold",
-              adopted ? "text-emerald-800 dark:text-emerald-200" : "text-zinc-600",
+              adopted ? "text-emerald-800 dark:text-emerald-200" : "text-zinc-600 dark:text-zinc-400",
             )}>
               {title}
             </h3>
@@ -56,7 +56,7 @@ export function CarryoverScenarioSummaryCard({
                 ✓ 신고 채택
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-500">
+              <span className="inline-flex items-center rounded-full bg-zinc-200 px-2 py-0.5 text-caption font-medium text-zinc-600">
                 참고
               </span>
             )}
@@ -71,7 +71,7 @@ export function CarryoverScenarioSummaryCard({
             </button>
           )}
         </div>
-        <p className="text-caption text-slate-500 mt-0.5">{subtitle}</p>
+        <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
       </div>
 
       {/* 요약 테이블 */}
@@ -97,7 +97,7 @@ export function CarryoverScenarioSummaryCard({
             >
               <td className={cn(
                 "px-3 py-1.5 border-r border-slate-200",
-                row.indent && "pl-7 text-slate-500",
+                row.indent && "pl-7 text-slate-500 dark:text-slate-400",
                 row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
               )}>
                 {row.label}

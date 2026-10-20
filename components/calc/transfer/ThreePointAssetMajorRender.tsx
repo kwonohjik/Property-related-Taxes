@@ -66,9 +66,9 @@ function AssetSection({
   calcButton?: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold text-slate-700">{label} 기준시가</p>
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{label} 기준시가</p>
         {calcButton}
       </div>
       {points.map((p) => {
@@ -89,7 +89,7 @@ function AssetSection({
                 hideUnit
               />
             </FieldCard>
-            <div className="flex justify-between text-caption text-slate-600 px-1">
+            <div className="flex justify-between text-caption text-slate-600 dark:text-slate-400 px-1">
               <span>{label}분 토지기준시가 (자동)</span>
               <span className="font-mono tabular-nums">{fmt(landStd)}</span>
             </div>
@@ -189,8 +189,8 @@ export function ThreePointAssetMajorRender(
   return (
     <div className="space-y-3">
       {/* 토지 개별공시지가 3시점 (주택·상가 공유) — PointBlock landOnly 재사용 */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
-        <p className="text-xs font-semibold text-slate-700">토지 개별공시지가 (3시점 · 주택·상가 공유)</p>
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">토지 개별공시지가 (3시점 · 주택·상가 공유)</p>
         {points.map((p) => (
           <PointBlock
             key={p.key}

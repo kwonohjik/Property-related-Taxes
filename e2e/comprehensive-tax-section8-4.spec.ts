@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { expectDarkContrast } from "./_helpers/dark-contrast";
 import {
   openHouseModal,
   addHouse,
@@ -83,6 +84,8 @@ test.describe("종합부동산세 §8④ 1세대1주택자 의제", () => {
       await expect(
         page.getByText("§8④4호 지방 저가주택").first(),
       ).toBeVisible({ timeout: 10_000 });
+      // 다크 대비 — 회색 법령 배지(text-muted-foreground/70이었다)
+      await expectDarkContrast(page, page.getByRole("button", { name: /시행령 §4의3/ }));
     },
   );
 

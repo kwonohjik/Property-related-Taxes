@@ -83,7 +83,7 @@ export function EvaluationCommitteeFilingGuideCard({
               data-testid={`evaluation-committee-attachment-${item.no}`}
             >
               <div className="flex gap-1.5">
-                <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-600 text-micro font-bold text-white shrink-0">
+                <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-700 text-micro font-bold text-white shrink-0">
                   ({item.no})
                 </span>
                 <div>

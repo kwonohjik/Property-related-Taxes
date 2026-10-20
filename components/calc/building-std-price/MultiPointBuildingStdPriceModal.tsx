@@ -496,7 +496,7 @@ export function MultiPointBuildingStdPriceModal({
                             key={cat}
                             type="button"
                             onClick={() => updateRow(idx, { category: cat })}
-                            className={`px-3 py-1 ${row.category === cat ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-800"}`}
+                            className={`px-3 py-1 ${row.category === cat ? "bg-amber-700 text-white" : "bg-amber-50 text-amber-800"}`}
                           >
                             {cat === "housing" ? "주택" : "상가"}
                           </button>
@@ -652,7 +652,7 @@ export function MultiPointBuildingStdPriceModal({
             {pointCount}시점 계산하기
           </Button>
 
-          {error && <p className="rounded-md bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+          {error && <p className="rounded-md bg-rose-50 dark:bg-rose-950/30 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">{error}</p>}
 
           {result && (
             <div className="space-y-2 border-t pt-3">
@@ -678,7 +678,7 @@ export function MultiPointBuildingStdPriceModal({
                 );
               })}
               {result.unsupported.map((u, i) => (
-                <p key={i} className="rounded bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs text-amber-800">
+                <p key={i} className="rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200">
                   {labelOf(u.point)} {u.category === "commercial" ? "상가건물" : housingNoun} 미산출 — {u.reason}
                 </p>
               ))}

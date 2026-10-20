@@ -82,7 +82,7 @@ export function StockCarryoverComparisonCard({
                 </th>
               </tr>
             </thead>
-            <tbody className="text-slate-700">
+            <tbody className="text-slate-700 dark:text-slate-300">
               {detail.donorAcquisitionPricePerShare !== undefined &&
                 detail.giftDateValuationPerShare !== undefined && (
                   <tr className="border-b border-violet-100">
@@ -133,7 +133,7 @@ export function StockCarryoverComparisonCard({
               : `적용 시 결정세액이 ${won(-diff)} 적어 §97의2②3호로 배제했습니다.`}
         </p>
       )}
-      <p className="text-caption text-slate-500">
+      <p className="text-caption text-slate-500 dark:text-slate-400">
         ※ 위 두 세액은 이 종목만의 세액이 아니라 <strong>같은 과세기간 전체의 결정세액</strong>
         입니다 — §97의2②3호가 「양도소득 결정세액」을 견주기 때문입니다.
       </p>

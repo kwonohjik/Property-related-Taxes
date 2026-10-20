@@ -165,7 +165,7 @@ export function LandPriceLookupField({
       </button>
     </span>
   ) : effectiveYear ? (
-    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-700">
+    <span className="rounded bg-green-100 px-1.5 py-0.5 text-micro font-medium text-green-800">
       자동
     </span>
   ) : null;
@@ -244,7 +244,7 @@ export function LandPriceLookupField({
           >
             {landStdPrice !== null
               ? landStdPrice.toLocaleString()
-              : <span className="text-muted-foreground/40 text-xs">면적 입력 후 자동 계산</span>}
+              : <span className="text-muted-foreground text-xs">면적 입력 후 자동 계산</span>}
           </div>
         </FieldCard>
       )}

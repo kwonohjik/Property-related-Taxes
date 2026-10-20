@@ -143,17 +143,17 @@ export function UnlistedStockHistoryModal({
         </DialogHeader>
 
         {!data.loaded && (
-          <p className="text-sm text-gray-500 py-8 text-center">이력을 불러오는 중...</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 py-8 text-center">이력을 불러오는 중...</p>
         )}
 
         {data.loaded && totalCount === 0 && (
           <p
-            className="text-sm text-gray-600 py-8 text-center border border-gray-200 rounded bg-gray-50"
+            className="text-sm text-gray-600 dark:text-gray-400 py-8 text-center border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-800/20"
             data-testid="empty-history-notice"
           >
             저장된 비상장주식 평가 이력이 없습니다.
             <br />
-            <span className="text-xs text-gray-500 mt-1 block">사례 6 등을 먼저 계산·저장해 보세요.</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">사례 6 등을 먼저 계산·저장해 보세요.</span>
           </p>
         )}
 
@@ -221,7 +221,7 @@ function CandidateCard({ candidate, onSelect, variant = "same" }: CandidateCardP
   const tone =
     variant === "same"
       ? "border-indigo-200 bg-indigo-50/40 hover:bg-indigo-50 dark:bg-indigo-950/40"
-      : "border-gray-200 bg-gray-50/40 hover:bg-gray-50";
+      : "border-gray-200 dark:border-gray-700 bg-gray-50/40 dark:bg-gray-800/20 hover:bg-gray-50 dark:hover:bg-gray-800";
   const badgeTone =
     candidate.sourceTaxType === "inheritance"
       ? "bg-emerald-100 text-emerald-800"
@@ -239,9 +239,9 @@ function CandidateCard({ candidate, onSelect, variant = "same" }: CandidateCardP
           [{taxTypeLabel}]
         </span>
         <span className="text-sm font-semibold">{candidate.corpName}</span>
-        <span className="text-xs text-gray-500">· {candidate.evaluationDate} 평가</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">· {candidate.evaluationDate} 평가</span>
       </div>
-      <div className="text-xs text-gray-700 space-y-0.5">
+      <div className="text-xs text-gray-700 dark:text-gray-300 space-y-0.5">
         <p>
           발행 {fmt(candidate.totalShares)}주 / 액면 {fmt(candidate.faceValuePerShare)}원
         </p>

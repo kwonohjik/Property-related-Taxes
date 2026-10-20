@@ -145,7 +145,7 @@ function CohabitantTableRow({ dep, isSelected, onSelect, deathDate }: RowProps) 
       {/* 생년월일·성별 */}
       <td
         className={`pl-2 py-1.5 text-xs font-mono ${
-          birthMissing ? "" : "text-gray-500"
+          birthMissing ? "" : "text-gray-500 dark:text-gray-400"
         }`}
       >
         {birthGenderDisplay}
@@ -155,7 +155,7 @@ function CohabitantTableRow({ dep, isSelected, onSelect, deathDate }: RowProps) 
         <div className="flex flex-wrap gap-1">{badges}</div>
       </td>
       {/* 편집 아이콘 힌트 */}
-      <td className="pr-3 py-1.5 text-right text-gray-300 dark:text-gray-600 text-xs select-none">
+      <td className="pr-3 py-1.5 text-right text-gray-500 dark:text-gray-400 text-xs select-none">
         ✎
       </td>
     </tr>
@@ -186,16 +186,16 @@ export function CohabitantTableView({
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="py-2 text-left pl-3 text-gray-500 font-medium">
+            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">
               관계
             </th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">
+            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">
               이름
             </th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">
+            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">
               생년월일·성별
             </th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">
+            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">
               특이사항
             </th>
             <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-micro">

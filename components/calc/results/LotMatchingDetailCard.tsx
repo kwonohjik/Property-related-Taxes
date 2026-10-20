@@ -134,21 +134,21 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
       )}
 
       {swapRemovedAcquisition !== undefined && swapRemovedAcquisition > 0 && (
-        <p className="mt-3 rounded bg-amber-50 border border-amber-200 p-2 text-xs text-amber-900" data-testid="lot-swap-removed-note">
+        <p className="mt-3 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2 text-xs text-amber-900 dark:text-amber-200" data-testid="lot-swap-removed-note">
           §97②2호 단서 적용 — 위 표의 매수단가·취득가액 합계는 ① 환산 채택분 {swapRemovedAcquisition.toLocaleString()}을 포함한 총액입니다.
           결과의 취득가액은 이 금액을 차감하지 않은 값이며, 실제 필요경비가 대신 반영됩니다.
         </p>
       )}
 
       {detail.warnings.length > 0 && (
-        <div className="mt-3 rounded bg-amber-50 border border-amber-200 p-2 text-xs text-amber-900">
+        <div className="mt-3 rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2 text-xs text-amber-900 dark:text-amber-200">
           {detail.warnings.map((w, i) => (
             <div key={i}>⚠️ {w}</div>
           ))}
         </div>
       )}
 
-      <p className="text-xs text-slate-500 mt-2">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
         ※ 결과 화면의 보유기간(holdingPeriodDays)·산출세액 합계는 위 sub-lot 기준으로 산정됨.
         대주주+비SME 케이스에서 단기/장기 sub-lot이 혼재된 경우 sub-lot별 세율 적용 후 합산.
       </p>

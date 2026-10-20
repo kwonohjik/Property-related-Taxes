@@ -34,7 +34,7 @@ export function MarketSampleDetailCard({ detail, shareCount }: Props) {
               <th className="text-center px-3 py-2 font-semibold">기준일 ±일수</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-amber-50 text-slate-700">
+          <tbody className="divide-y divide-amber-50 text-slate-700 dark:text-slate-300">
             {detail.acquisitionApplied && (
               <tr>
                 <td className="px-3 py-2">취득 매매사례</td>

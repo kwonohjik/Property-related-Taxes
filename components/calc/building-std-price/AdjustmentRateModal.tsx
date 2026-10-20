@@ -228,7 +228,7 @@ export function AdjustmentRateModal({
         )}
 
         {showBuilding && !residential && floorArea <= 0 && (
-          <p className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700">
+          <p className="rounded-md bg-amber-50 dark:bg-amber-950/30 px-2.5 py-1.5 text-xs text-amber-700 dark:text-amber-300">
             연면적이 아직 입력되지 않아 II구분 연면적 구간은 예상 조정률에 반영되지 않습니다. 실제 계산은
             입력된 연면적 기준으로 적용됩니다.
           </p>

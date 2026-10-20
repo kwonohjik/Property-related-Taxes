@@ -339,7 +339,7 @@ function StepItem({ step }: { step: JudgmentStep }) {
         </div>
         <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{step.detail}</p>
         {step.legalBasis && (
-          <span className="inline-block mt-1 text-micro text-muted-foreground/70 border border-border/60 rounded px-1.5 py-0.5">{step.legalBasis}</span>
+          <span className="inline-block mt-1 text-micro text-muted-foreground border border-border/60 rounded px-1.5 py-0.5">{step.legalBasis}</span>
         )}
       </div>
     </li>
@@ -348,8 +348,8 @@ function StepItem({ step }: { step: JudgmentStep }) {
 
 function getStepStyle(status: StepStatus) {
   switch (status) {
-    case "PASS":         return { icon: "✓", iconBg: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600", textColor: "text-foreground" };
-    case "FAIL":         return { icon: "✗", iconBg: "bg-red-100 dark:bg-red-900/50 text-red-600",             textColor: "text-foreground" };
+    case "PASS":         return { icon: "✓", iconBg: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400", textColor: "text-foreground" };
+    case "FAIL":         return { icon: "✗", iconBg: "bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400",             textColor: "text-foreground" };
     case "SKIP":         return { icon: "→", iconBg: "bg-muted text-muted-foreground",                         textColor: "text-muted-foreground" };
     case "NOT_APPLICABLE": return { icon: "–", iconBg: "bg-muted text-muted-foreground",                       textColor: "text-muted-foreground" };
   }

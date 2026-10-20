@@ -89,7 +89,7 @@ export function PresaleRightsSection({
         </button>
       }
     >
-      <p className="text-caption text-muted-foreground/80">
+      <p className="text-caption text-muted-foreground">
         세대가 보유한 분양권·조합원입주권을 취득일과 무관하게 모두 입력하세요. 주택 수 산정
         포함 여부는 입력한 취득일로 자동 판단됩니다. 분양권은 2021.1.1 이후 취득분만 산입하고
         (「소득세법」 법률 제17477호 부칙 제4조, 「소득세법 시행령」 대통령령 제31442호 부칙
@@ -109,7 +109,7 @@ export function PresaleRightsSection({
             />
           </div>
         ) : (
-          <p className="text-caption text-muted-foreground/70">없음</p>
+          <p className="text-caption text-muted-foreground">없음</p>
         )
       ) : (
         <div className="space-y-2.5">
@@ -314,7 +314,7 @@ export function PresaleRightsSection({
               />
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">
-                  소재지 (주소) <span className="text-muted-foreground/60">— 선택</span>
+                  소재지 (주소) <span className="text-muted-foreground">— 선택</span>
                 </span>
                 <AddressSearch
                   value={{ road: "", jibun: r.regionName ?? "", building: "", detail: "", lng: "", lat: "" }}
@@ -345,7 +345,7 @@ export function PresaleRightsSection({
                     idSuffix={`right-${idx}`}
                   />
                 )}
-                <p className="text-caption text-muted-foreground/70">
+                <p className="text-caption text-muted-foreground">
                   인구감소지역 세컨드홈 특례의 &ldquo;취득 전 보유주택과 동일 시·군·구&rdquo; 비교에 사용 (소령 §167의3①12 다·라목 2호). 분양권은 공급주택, 입주권은 종전주택 소재지의 주소를 검색하세요.
                 </p>
               </div>
@@ -479,7 +479,7 @@ export function PresaleRightsSection({
                       value={decedentHouseholdAnswer(r) ?? ""}
                       onChange={(v) => update(r.id, decedentHouseholdRightPatch(v as DecedentHousehold, r))}
                     />
-                    <p className="text-caption text-muted-foreground/70" data-testid={`presale-decedent-household-hint-${idx}`}>
+                    <p className="text-caption text-muted-foreground" data-testid={`presale-decedent-household-hint-${idx}`}>
                       동일세대에서 상속받으면 상속받은 권리의 특례가 원칙적으로 배제되고(동거봉양 합가 예외 제외), 분양권은 피상속인이
                       취득한 날로 정의 적용례를 봅니다. 모르거나 답하지 않으면 특례를 적용하지 않고 확인 필요로 알립니다.
                     </p>

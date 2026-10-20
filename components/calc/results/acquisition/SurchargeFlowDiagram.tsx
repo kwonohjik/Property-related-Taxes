@@ -141,25 +141,25 @@ function buildFlowSteps(result: AcquisitionTaxResult): FlowStep[] {
 function getStepStyle(status: StepStatus) {
   if (status === "applied") {
     return {
-      container: "bg-rose-100 border border-rose-300 text-rose-900",
+      container: "bg-rose-100 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-800 text-rose-900 dark:text-rose-200",
       badge: "bg-rose-200 text-rose-800",
       badgeLabel: "적용",
-      numberBg: "bg-rose-500 text-white",
+      numberBg: "bg-rose-700 text-white",
     };
   }
   if (status === "excluded") {
     return {
-      container: "bg-sky-50 border border-sky-300 text-sky-900",
+      container: "bg-sky-50 dark:bg-sky-950/30 border border-sky-300 dark:border-sky-800 text-sky-900 dark:text-sky-200",
       badge: "bg-sky-200 text-sky-800",
       badgeLabel: "배제",
-      numberBg: "bg-sky-500 text-white",
+      numberBg: "bg-sky-700 text-white",
     };
   }
   return {
     container: "bg-white/60 dark:bg-white/5 border border-gray-200 text-muted-foreground",
-    badge: "bg-gray-100 text-gray-500",
+    badge: "bg-gray-100 text-gray-600",
     badgeLabel: "미해당",
-    numberBg: "bg-gray-200 text-gray-500",
+    numberBg: "bg-gray-200 text-gray-600",
   };
 }
 
@@ -177,10 +177,10 @@ export function SurchargeFlowDiagram({ result }: Props) {
     <div className={`rounded-lg border p-4 ${
       isSurcharged
         ? "border-rose-200 bg-rose-50/30 dark:bg-rose-950/40"
-        : "border-gray-200 bg-gray-50/30"
+        : "border-gray-200 bg-gray-50/30 dark:bg-gray-800/20"
     }`}>
       <div className="flex items-center gap-2 mb-3">
-        <h3 className={`text-sm font-semibold ${isSurcharged ? "text-rose-800 dark:text-rose-200" : "text-gray-700"}`}>
+        <h3 className={`text-sm font-semibold ${isSurcharged ? "text-rose-800 dark:text-rose-200" : "text-gray-700 dark:text-gray-300"}`}>
           중과세율 결정 흐름
         </h3>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

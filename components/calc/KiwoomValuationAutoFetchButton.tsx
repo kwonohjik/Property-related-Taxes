@@ -80,7 +80,7 @@ export function KiwoomValuationAutoFetchButton({
       type="button"
       disabled={!canFetch}
       onClick={fetch}
-      className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-700 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
+      className="rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-800 disabled:bg-sky-200 disabled:text-sky-500 disabled:cursor-not-allowed"
       title={disabledReason ?? "전후 2개월 평균 자동 계산"}
     >
       {loading ? "🔄 조회 중..." : "🔍 키움 자동조회"}
@@ -105,7 +105,7 @@ export function KiwoomValuationAutoFetchButton({
         {button}
       </div>
       {disabledReason && !loading && (
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded px-2 py-1">
           ⚠️ {disabledReason}
         </p>
       )}

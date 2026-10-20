@@ -67,7 +67,7 @@ function autoFillValue(raw: string, s: DeductionSuggestion): string {
 
 function EmptyGroupNotice() {
   return (
-    <p className="text-caption text-gray-400 dark:text-gray-500 py-1">
+    <p className="text-caption text-gray-500 dark:text-gray-400 py-1">
       위 체크리스트에서 항목을 선택하면 입력 섹션이 열립니다.
     </p>
   );
@@ -736,7 +736,7 @@ export function Step4({
 
         {/* 수동 항목 모두 미체크 시 안내 */}
         {groupCManualVisibleCount === 0 && (
-          <p className="text-caption text-gray-400 dark:text-gray-500">
+          <p className="text-caption text-gray-500 dark:text-gray-400">
             외국납부세액공제·단기재상속공제가 해당하면 위 체크리스트에서 선택하세요.
           </p>
         )}

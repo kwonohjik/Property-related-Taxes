@@ -355,7 +355,7 @@ ToggleCard로 표현하기 어려운 특수 케이스에도 동일 원칙 준수
 
 ## 모달 런처 버튼 규칙 (전 세목 공통 — 2026-07-10)
 
-하위 모달(Dialog)을 여는 **런처 버튼**(계산·조회 헬퍼·이력 불러오기)은 `<Button variant="modalLauncher">`(연녹색, "자동" 배지 톤 `bg-green-100/text-green-700`) 사용. `components/ui/button.tsx` 단일 소스(dark override 없음 — 배지와 전 테마 동일).
+하위 모달(Dialog)을 여는 **런처 버튼**(계산·조회 헬퍼·이력 불러오기)은 `<Button variant="modalLauncher">`(연녹색, "자동" 배지 톤 `bg-green-100/text-green-800` — `green-700`은 대비 4.497로 기준 4.5 미달이라 2026-10-20 한 단계 올림) 사용. `components/ui/button.tsx` 단일 소스(dark override 없음 — 배지와 전 테마 동일).
 
 - **native `<button>`로 런처 신규 작성 금지** → `<Button variant="modalLauncher" size={...}>`.
 - **size**: 라벨 12px면 `xs`/`sm`, **14px면 `default`**(Button `sm`·`xs`는 둘 다 12px, `default`만 14px).

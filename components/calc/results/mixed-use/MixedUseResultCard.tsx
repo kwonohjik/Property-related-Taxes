@@ -69,7 +69,7 @@ export function MixedUseResultCard({ breakdown, formData }: Props) {
 
   if (breakdown.splitMode === "pre-2022-rejected") {
     return (
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+      <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:text-red-200">
         <p className="font-semibold mb-1">겸용주택 분리계산 불가</p>
         {breakdown.warnings.map((w, i) => (
           <p key={i}>{w}</p>

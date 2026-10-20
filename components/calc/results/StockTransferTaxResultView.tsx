@@ -300,10 +300,10 @@ export function StockTransferTaxResultView({
             <LawArticleModal
               legalBasis={categoryLegalBasis}
               label={categoryLabel}
-              className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium"
+              className="px-3 py-1 rounded-full border text-sm bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 font-medium"
             />
           ) : (
-            <span className="px-3 py-1 rounded-full border text-sm bg-emerald-100 text-emerald-700 border-emerald-200 font-medium">
+            <span className="px-3 py-1 rounded-full border text-sm bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 font-medium">
               {categoryLabel}
             </span>
           )}
@@ -335,7 +335,7 @@ export function StockTransferTaxResultView({
 
         {/* 정보용 전체 계산 결과 표 — 사용자가 입력한 데이터로 산출세액까지 모두 산정 */}
         <div className="rounded-xl border border-emerald-200 overflow-hidden">
-          <div className="bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+          <div className="bg-emerald-50 dark:bg-emerald-950/30 px-4 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
             정보용 계산 결과 (비과세 적용 전 산식) — 입력 데이터 기반
           </div>
           <div className="divide-y divide-emerald-100">
@@ -351,7 +351,7 @@ export function StockTransferTaxResultView({
             <ResultRow label="산출세액 (가상)" value={result.calculatedTax} highlight />
             <ResultRow label="지방소득세 (10%) — 비과세 미적용" value={result.localIncomeTax} />
           </div>
-          <div className="bg-emerald-100 px-4 py-3 text-xs text-emerald-800">
+          <div className="bg-emerald-100 dark:bg-emerald-950/30 px-4 py-3 text-xs text-emerald-800 dark:text-emerald-200">
             ※ §94①3 가목 1) 단서에 따라 위 산출세액은 면제 — 최종 납부세액 <strong>0</strong>.
             {" "}장외 거래·대주주 양도분이라면 산출세액 <strong>{fmt(result.calculatedTax)}</strong>이 그대로 부과됩니다.
           </div>
@@ -423,19 +423,19 @@ export function StockTransferTaxResultView({
           <LawArticleModal
             legalBasis={categoryLegalBasis}
             label={categoryLabel}
-            className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium"
+            className="px-3 py-1 rounded-full border text-sm bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 font-medium"
           />
         ) : (
-          <span className="px-3 py-1 rounded-full border text-sm bg-sky-100 text-sky-700 border-sky-200 font-medium">
+          <span className="px-3 py-1 rounded-full border text-sm bg-sky-100 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 font-medium">
             {categoryLabel}
           </span>
         )}
-        <span className="px-3 py-1 rounded-full border text-sm bg-slate-100 text-slate-600 border-slate-200">
+        <span className="px-3 py-1 rounded-full border text-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700">
           적용 조문: {result.appliedSection94}
         </span>
         {/* [GAP-2] 비상장 §165④ full 모드 — 행-수준 계산 적용 배지 */}
         {unlistedValuationMode === "full" && (
-          <span className="px-3 py-1 rounded-full border text-sm bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">
+          <span className="px-3 py-1 rounded-full border text-sm bg-fuchsia-50 dark:bg-fuchsia-950/30 text-fuchsia-700 dark:text-fuchsia-300 border-fuchsia-200 dark:border-fuchsia-800">
             행-수준 계산 적용 (소득세법 시행령 §165④1호)
           </span>
         )}
@@ -443,7 +443,7 @@ export function StockTransferTaxResultView({
         {acqFaceValueOnly && (
           <span
             data-testid="acq-face-value-badge"
-            className="px-3 py-1 rounded-full border text-sm bg-amber-50 text-amber-700 border-amber-200"
+            className="px-3 py-1 rounded-full border text-sm bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
           >
             취득 액면가 적용 (§99①4 후단)
           </span>
@@ -452,7 +452,7 @@ export function StockTransferTaxResultView({
 
       {/* 8항목 결과 표 */}
       <div className="rounded-xl border border-slate-200 overflow-hidden">
-        <div className="bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">계산 결과</div>
+        <div className="bg-slate-50 dark:bg-slate-800/20 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-400">계산 결과</div>
         <div className="divide-y divide-slate-100">
           <ResultRow label="양도가액" value={result.transferPrice} />
           {/*
@@ -515,7 +515,7 @@ export function StockTransferTaxResultView({
           <ResultRow label="산출세액" value={result.calculatedTax} highlight />
           <ResultRow label="지방소득세 (10%)" value={result.localIncomeTax} />
           {result.clause168_2Credit ? (
-            <p className="px-4 pb-2 text-caption text-slate-500">
+            <p className="px-4 pb-2 text-caption text-slate-500 dark:text-slate-400">
               지방소득세는 차감 후 산출세액 기준입니다 — 개인지방소득세 신고서
               「기신고·결정·경정세액」 {fmt(result.clause168_2Credit.localDeducted)} 정산과 같은
               금액입니다(「지방세법」 §92① 표가 소득세법 §55①의 1/10).
@@ -575,7 +575,7 @@ export function StockTransferTaxResultView({
       <RuleBadges appliedRules={result.appliedRules} />
 
       {/* 보유기간 */}
-      <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm text-slate-600">
+      <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
         <span>보유기간: </span>
         <strong>
           {Math.floor(result.holdingPeriodMonths / 12)}년{" "}
@@ -585,7 +585,7 @@ export function StockTransferTaxResultView({
           <span className="ml-2 px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-xs">단기보유</span>
         )}
         {result.lotMatchingDetail && (
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             ※ 분할 매수 시 sub-lot별 보유기간 상세는 아래 로트별 매칭 카드 참조
           </p>
         )}

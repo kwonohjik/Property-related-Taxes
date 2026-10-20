@@ -103,7 +103,7 @@ export function ReplotReductionFields({
           ⚠ 증환지(권리 {ent}㎡ &lt; 교부 {alloc}㎡) — 증환지는 아래 옵션을 선택하세요.
         </p>
       ) : effArea ? (
-        <div className="rounded bg-amber-100 px-3 py-2 text-xs text-amber-800 space-y-0.5">
+        <div className="rounded bg-amber-100 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-0.5">
           <div>
             의제 취득면적:{" "}
             <strong>
@@ -249,7 +249,7 @@ export function ReplotIncreaseFields({
 
       {increaseM2 !== null && (
         increaseAdded ? (
-          <div className="rounded bg-green-100 px-3 py-2 text-xs text-green-800 flex items-center gap-1.5">
+          <div className="rounded bg-green-100 dark:bg-green-950/30 px-3 py-2 text-xs text-green-800 dark:text-green-200 flex items-center gap-1.5">
             <span>✓</span>
             <span>
               증가분 자산 <strong>{increaseM2.toFixed(2)}㎡</strong>가 추가됨 — 양도가액은 <strong>맨 위 “총 양도가액”</strong>에, 취득가액(청산금)은 <strong>아래 “증환지 증가분” 카드</strong>에 입력하세요.
@@ -257,7 +257,7 @@ export function ReplotIncreaseFields({
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="rounded bg-orange-100 px-3 py-2 text-xs text-orange-800">
+            <div className="rounded bg-orange-100 dark:bg-orange-950/30 px-3 py-2 text-xs text-orange-800 dark:text-orange-200">
               증가분 <strong>{increaseM2.toFixed(2)}㎡</strong> (= 교부 {alloc}㎡ − 권리 {ent}㎡) 별도 취득
             </div>
             {onAddAsset && (

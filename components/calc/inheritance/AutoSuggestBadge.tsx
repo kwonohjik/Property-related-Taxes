@@ -88,7 +88,7 @@ export function AutoSuggestBadge({
           </p>
           <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
             {formatKrw(suggestedNum)}원
-            <span className="ml-2 text-micro font-normal text-gray-500">
+            <span className="ml-2 text-micro font-normal text-gray-500 dark:text-gray-400">
               {suggestion.reason}
             </span>
           </p>
@@ -119,7 +119,7 @@ export function AutoSuggestBadge({
             <button
               type="button"
               onClick={() => onApply(emptyValue)}
-              className="text-micro text-gray-500 underline print:hidden"
+              className="text-micro text-gray-500 dark:text-gray-400 underline print:hidden"
             >
               되돌리기
             </button>

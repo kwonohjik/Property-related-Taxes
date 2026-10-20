@@ -17,7 +17,7 @@ function AcqCell({ owned, part, testId }: { owned: boolean; part: SplitPart; tes
   // 표의 다른 금액 칸과 같은 클래스를 쓴다 — 비소유 파트는 종전대로 취소선·연회색이다.
   const cls = owned
     ? "font-mono tabular-nums text-right"
-    : "font-mono tabular-nums text-right text-muted-foreground/50 line-through";
+    : "font-mono tabular-nums text-right text-muted-foreground line-through";
   if (!part.swapApplied) {
     return <span className={cls} data-testid={testId}>{part.acquisitionPrice.toLocaleString()}</span>;
   }
@@ -93,9 +93,9 @@ export function SplitGainDetailSection({
     const buildingIsOwned = selfOwns !== "land_only";
     const ownerLabel = selfOwns === "building_only" ? "건물" : selfOwns === "land_only" ? "토지" : null;
     const colCls = (owned: boolean) =>
-      owned ? "font-mono tabular-nums text-right" : "font-mono text-right text-muted-foreground/50 line-through";
+      owned ? "font-mono tabular-nums text-right" : "font-mono text-right text-muted-foreground line-through";
     const headerCls = (owned: boolean) =>
-      owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground/50";
+      owned ? "font-medium text-center" : "font-medium text-center text-muted-foreground";
     // 모드 라벨은 입력 화면 라디오·상세명세서·신고서와 **같은 어휘**다(엔진 leaf) — 구 이력(모드 echo 없음)은 실거래가.
     const acqModeLabel = (m?: "actual" | "estimated" | "appraisal" | "salesCase") => splitAcqModeLabel(m ?? "actual");
     // 개산공제율은 엔진이 적용한 율 echo를 읽는다(미등기 0.3% · 분양권 등 1%). echo가 없는 구 이력은 종전 3%.
@@ -144,7 +144,7 @@ export function SplitGainDetailSection({
                       <span key={k} className="font-mono tabular-nums text-right" data-testid={`split-card-rate-basis-${k}`}>
                         {splitRateBasisDateText(splitDetail[k])}
                         {splitRateBasisNote(splitDetail[k], splitDetail.building.acquisitionCause) && (
-                          <span className="block text-caption font-sans font-normal text-muted-foreground/80 text-left leading-snug">
+                          <span className="block text-caption font-sans font-normal text-muted-foreground text-left leading-snug">
                             {splitRateBasisNote(splitDetail[k], splitDetail.building.acquisitionCause)}
                           </span>
                         )}
@@ -186,7 +186,7 @@ export function SplitGainDetailSection({
               동점은 평가액(엔진 규약). 구 이력·비교 미적용(echo 없음)은 렌더하지 않는다.
             */}
             {acqBasis && (
-              <div className="col-span-3 space-y-0.5 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-acq-basis" data-part={acqBasis.partLabel}>
+              <div className="col-span-3 space-y-0.5 text-caption text-muted-foreground leading-snug" data-testid="split-card-acq-basis" data-part={acqBasis.partLabel}>
                 <span className="block font-medium text-foreground/80">
                   {acqBasis.partLabel} 취득가액 비교 ({acqBasis.legalBasis} — 많은 금액)
                 </span>
@@ -207,13 +207,13 @@ export function SplitGainDetailSection({
               {/* base는 엔진이 실제로 쓴 값(지분 기준시가)을 노출한다 — 100% 값을 쓰면
                   지분 자산에서 산식이 표시된 개산공제를 못 만든다. */}
               {splitDetail.land.stdPriceAtAcq != null && (
-                <span className="block text-muted-foreground/70 font-normal" data-testid="split-card-lump-base-land">취득시 기준시가 {(splitDetail.land.lumpDeductionBase ?? splitDetail.land.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.land.lumpDeductionRate)}</span>
+                <span className="block text-muted-foreground font-normal" data-testid="split-card-lump-base-land">취득시 기준시가 {(splitDetail.land.lumpDeductionBase ?? splitDetail.land.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.land.lumpDeductionRate)}</span>
               )}
             </span>
             <span className={colCls(buildingIsOwned)}>
               {splitDetail.building.appraisalDeduction.toLocaleString()}
               {splitDetail.building.stdPriceAtAcq != null && (
-                <span className="block text-muted-foreground/70 font-normal" data-testid="split-card-lump-base-building">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.building.lumpDeductionRate)}</span>
+                <span className="block text-muted-foreground font-normal" data-testid="split-card-lump-base-building">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.building.lumpDeductionRate)}</span>
               )}
             </span>
             {/*
@@ -223,7 +223,7 @@ export function SplitGainDetailSection({
               `stdSplit`이 없는 결과(별개 취득·일반건물·종전 저장 이력의 뺄셈 결과)는 아래 종전 안내를 유지한다.
             */}
             {splitDetail.stdSplit && (
-              <div className="col-span-3 space-y-0.5 text-caption text-muted-foreground/80 leading-snug" data-testid="split-std-split-detail">
+              <div className="col-span-3 space-y-0.5 text-caption text-muted-foreground leading-snug" data-testid="split-std-split-detail">
                 <span className="block font-medium text-foreground/80">
                   개별주택가격 분할 (취득시 — 소득세법 §99①1호 라목·시행령 §166⑥)
                 </span>
@@ -243,7 +243,7 @@ export function SplitGainDetailSection({
               </div>
             )}
             {!splitDetail.stdSplit && splitDetail.building.stdPriceDerivedFromTotal && (
-              <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug">
+              <span className="col-span-3 text-caption text-muted-foreground leading-snug">
                 {/* 결함 표식이 아니다 — 의미가 propertyType별로 정반대다.
                     일반 건물은 가목·나목이 각각 공시되므로 총액에서 안분한 값이 한시 후퇴다.
                     주택(라목)은 이제 `stdSplit`(비례 안분)이 위에서 표시된다 — 이 갈래의 주택 문구는
@@ -304,13 +304,13 @@ export function SplitGainDetailSection({
             <span className={colCls(landIsOwned)}>{splitDetail.land.longTermDeduction.toLocaleString()}</span>
             <span className={colCls(buildingIsOwned)}>{splitDetail.building.longTermDeduction.toLocaleString()}</span>
             {isExempt && (
-              <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-exempt-lthd-note">
+              <span className="col-span-3 text-caption text-muted-foreground leading-snug" data-testid="split-card-exempt-lthd-note">
                 비과세 — 장기보유특별공제 없음
               </span>
             )}
             {/* 기본통칙 95-0…1 — 토지가 주택보다 먼저 취득돼 토지분 공제율이 「표1·표2 중 큰 공제율」로 정해졌다(엔진 echo를 그대로 읽는다). */}
             {splitDetail.land.appurtenantLthd?.changedFromOwnYears && landIsOwned && !isExempt && (
-              <span className="col-span-3 text-caption text-muted-foreground/80 leading-snug" data-testid="split-card-appurtenant-lthd-note">
+              <span className="col-span-3 text-caption text-muted-foreground leading-snug" data-testid="split-card-appurtenant-lthd-note">
                 {appurtenantLandLthdNoticeText({
                   landHoldingYears: splitDetail.land.holdingYears,
                   houseHoldingYears: splitDetail.land.appurtenantLthd.houseHoldingYears,
