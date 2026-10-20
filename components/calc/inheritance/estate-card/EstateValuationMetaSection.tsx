@@ -46,7 +46,7 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
 
       {showArea && (
         <div>
-          <p className="mb-1 text-xs font-medium text-slate-600">
+          <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">
             면적 (㎡) — 미입력 시 상속인별 분배 면적 합계 자동 사용
           </p>
           <DecimalInput
@@ -59,7 +59,7 @@ export function EstateValuationMetaSection({ item, onUpdate }: Props) {
 
       {showQuantity && (
         <div>
-          <p className="mb-1 text-xs font-medium text-slate-600">수량 (점)</p>
+          <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">수량 (점)</p>
           <DecimalInput
             value={item.quantityCount !== undefined ? String(item.quantityCount) : ""}
             onChange={(v) => set({ quantityCount: parseDecimal(v) || undefined })}

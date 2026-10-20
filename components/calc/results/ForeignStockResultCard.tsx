@@ -49,7 +49,7 @@ function Row({
     <div
       className={`flex items-start justify-between py-1.5 ${
         indent ? "pl-4" : ""
-      } ${highlight ? "font-semibold text-sky-800 dark:text-sky-200" : "text-slate-700"}`}
+      } ${highlight ? "font-semibold text-sky-800 dark:text-sky-200" : "text-slate-700 dark:text-slate-300"}`}
     >
       <span className="text-sm leading-relaxed">{label}</span>
       <div className="text-right ml-4 min-w-0">
@@ -107,7 +107,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 환율 환산 표 (§178의5) */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 mb-2">환율 환산 (§178의5)</p>
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">환율 환산 (§178의5)</p>
 
         {result.transferReceiptDetail ? (
           /* FS-09 §178의5② 분할 수령 — 시점별 환율 표 */
@@ -164,7 +164,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 양도차익 계산 */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 mb-2">양도차익 계산 (§118② → §118의3·§118의4 준용)</p>
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">양도차익 계산 (§118② → §118의3·§118의4 준용)</p>
 
         <Row label="양도가액 (원화 환산)" value={result.transferPriceKrw} />
         <Row label="취득가액 (원화 환산)" value={result.acquisitionPriceKrw} indent />
@@ -215,7 +215,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 세율 적용 (§104①12호나목) */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 mb-2">세율 적용 (§104①12호나목)</p>
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">세율 적용 (§104①12호나목)</p>
 
         <Row
           label={`적용 세율: ${pct(result.appliedRate)}`}

@@ -52,7 +52,7 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
                 <th className="px-3 py-2 text-right font-semibold">금액 (원)</th>
               </tr>
             </thead>
-            <tbody className="text-slate-700">
+            <tbody className="text-slate-700 dark:text-slate-300">
               <tr className={`border-b border-amber-100 ${picked2 ? "bg-amber-100/60 font-semibold dark:bg-amber-900/40" : ""}`}>
                 <td className="px-3 py-2">
                   ② 취득 당시 실가 + 생산자물가상승분{picked2 && " ← 채택"}
@@ -90,7 +90,7 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
             ? "② 채택 — 필요경비는 개산공제 없이 실제 지출액(자본적지출·양도비)입니다 (법 §97②1호 나목)."
             : "① 채택 — 필요경비는 개산공제(환산취득가액이면 §97②2호 단서 비교 포함)입니다."}
         </p>
-        <p className="text-caption text-slate-500">{PRE_DEEMED_PPI_FOOTNOTE}</p>
+        <p className="text-caption text-slate-500 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
       </div>
     </ToneCard>
   );

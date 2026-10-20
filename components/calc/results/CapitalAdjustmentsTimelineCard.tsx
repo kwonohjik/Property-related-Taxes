@@ -46,9 +46,9 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
               <th className="text-center px-2 py-2 font-semibold">처리</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-violet-50 text-slate-700">
+          <tbody className="divide-y divide-violet-50 text-slate-700 dark:text-slate-300">
             {detail.applied.map((a, i) => (
-              <tr key={i} className={a.skipped ? "bg-slate-50/50" : ""}>
+              <tr key={i} className={a.skipped ? "bg-slate-50/50 dark:bg-slate-800/20" : ""}>
                 <td className="px-2 py-2">{i + 1}</td>
                 <td className="px-2 py-2 font-mono">{fmtDate(a.eventDate)}</td>
                 <td className="px-2 py-2">{TYPE_LABEL[a.type] || a.type}</td>
@@ -58,7 +58,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
                 </td>
                 <td className="px-2 py-2 text-center">
                   {a.skipped ? (
-                    <span className="text-slate-500">건너뜀 (배당소득)</span>
+                    <span className="text-slate-500 dark:text-slate-400">건너뜀 (배당소득)</span>
                   ) : (
                     <span className="text-violet-700 font-semibold dark:text-violet-300">적용</span>
                   )}

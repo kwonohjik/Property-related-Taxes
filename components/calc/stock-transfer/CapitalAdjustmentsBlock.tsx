@@ -80,7 +80,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
           자본준비금·재평가적립금 무상증자 (§17②2호 단서 가목·나목) /
           비례감자·결손보전 (형식감자)
         </p>
-        <p className="text-slate-500">
+        <p className="text-slate-500 dark:text-slate-400">
           {isLotMode
             ? "각 매수 건의 총취득원가는 불변. 1주당 단가 환산이 매칭·양도차익에 반영됩니다."
             : "총 취득원가는 불변. 1주당 표시 단가만 환산."}
@@ -95,7 +95,7 @@ export function CapitalAdjustmentsBlock({ form, onChange }: CapitalAdjustmentsBl
       )}
 
       {rows.length === 0 && (
-        <p className="text-xs text-slate-500">자본조정 없음. 필요 시 &quot;+ 행 추가&quot;를 누르세요.</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">자본조정 없음. 필요 시 &quot;+ 행 추가&quot;를 누르세요.</p>
       )}
 
       {sorted.length > 0 && (

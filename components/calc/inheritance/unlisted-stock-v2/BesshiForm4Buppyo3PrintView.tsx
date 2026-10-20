@@ -124,7 +124,7 @@ export function BesshiForm4Buppyo3PrintView({ input, taxKind }: BesshiForm4Buppy
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           data-testid="besshi-form-toggle"
-          className="flex-1 text-left text-xs font-semibold text-gray-700 hover:text-gray-900"
+          className="flex-1 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900"
         >
           📄 별지 제4호 부표3 비상장주식 평가서 (인쇄 미리보기){" "}
           <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
@@ -213,7 +213,7 @@ export function BesshiForm4Buppyo3PrintView({ input, taxKind }: BesshiForm4Buppy
           {result && <Page6NetIncomeBreakdown result={result} />}
 
           {/* 푸터 */}
-          <p className="text-center text-micro text-gray-600 mt-6 print:mt-12">
+          <p className="text-center text-micro text-gray-600 dark:text-gray-400 mt-6 print:mt-12">
             ※ 본 양식은 평가심의위원회 운영규정 별지 제4호 서식 부표3을 기준으로 작성되었습니다.
             <br />
             KoreanLaw MCP 검증: 상증법 §63·시행령 §54·§55·§56·§59 + 시행규칙 §17·§17의2·§17의3·§19 (2026-05-22)

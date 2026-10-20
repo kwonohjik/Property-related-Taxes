@@ -148,7 +148,7 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
         </div>
       )}
 
-      <p className="text-xs text-slate-500 mt-2">
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
         ※ 결과 화면의 보유기간(holdingPeriodDays)·산출세액 합계는 위 sub-lot 기준으로 산정됨.
         대주주+비SME 케이스에서 단기/장기 sub-lot이 혼재된 경우 sub-lot별 세율 적용 후 합산.
       </p>

@@ -89,23 +89,23 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
         <p className="font-semibold text-sky-700 dark:text-sky-300">증권거래세 참고 (정보용)</p>
         {stx.totalTax > 0 && isZeroRate && (
           <>
-            <p className="text-slate-600">
+            <p className="text-slate-600 dark:text-slate-400">
               증권거래세 영세율 적용 — 농어촌특별세만 부과
             </p>
-            <p className="text-slate-600">
+            <p className="text-slate-600 dark:text-slate-400">
               양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedAgriRateNum, stx.appliedRateDen)} (농특세)
-              = <span className="font-medium text-slate-800">{fmt(stx.agriculturalTax)}</span>
+              = <span className="font-medium text-slate-800 dark:text-slate-200">{fmt(stx.agriculturalTax)}</span>
             </p>
             <p className="text-sky-600 font-medium dark:text-sky-400">합계 {fmt(stx.totalTax)}</p>
           </>
         )}
         {stx.totalTax > 0 && !isZeroRate && (
           <>
-            <p className="text-slate-600">
+            <p className="text-slate-600 dark:text-slate-400">
               양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedRateNum, stx.appliedRateDen)}
-              = <span className="font-medium text-slate-800">{fmt(stx.securitiesTransactionTax)}</span>
+              = <span className="font-medium text-slate-800 dark:text-slate-200">{fmt(stx.securitiesTransactionTax)}</span>
               {stx.agriculturalTax > 0 && (
-                <span className="text-slate-500">
+                <span className="text-slate-500 dark:text-slate-400">
                   {" "}+ 농특세 {fmt(stx.agriculturalTax)}
                 </span>
               )}
@@ -154,13 +154,13 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
       <div className="px-4 py-3 space-y-2 text-sm">
         {/* 산식 행 — 양도가액 × 세율 (영세율 구간은 안내 행으로 대체) */}
         {stx.totalTax > 0 && !isZeroRate && transferPrice !== undefined && transferPrice > 0 && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             양도가액 {fmt(transferPrice)} × {fmtRate(stx.appliedRateNum, stx.appliedRateDen)}
           </p>
         )}
         {stx.totalTax > 0 && isZeroRate && (
           <div className="flex justify-between items-center">
-            <span className="text-slate-600">증권거래세 — 영세율 적용</span>
+            <span className="text-slate-600 dark:text-slate-400">증권거래세 — 영세율 적용</span>
             <span className="font-medium text-right font-mono tabular-nums whitespace-nowrap">0</span>
           </div>
         )}
@@ -168,7 +168,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
           <>
             {!isZeroRate && (
               <div className="flex justify-between items-center">
-                <span className="text-slate-600">
+                <span className="text-slate-600 dark:text-slate-400">
                   증권거래세 ({fmtRate(stx.appliedRateNum, stx.appliedRateDen)})
                 </span>
                 <span className="font-medium text-right font-mono tabular-nums whitespace-nowrap">
@@ -178,7 +178,7 @@ export function SecuritiesTransactionTaxCard(props: SecuritiesTransactionTaxCard
             )}
             {stx.agriculturalTax > 0 && (
               <div className="flex justify-between items-center">
-                <span className="text-slate-600">
+                <span className="text-slate-600 dark:text-slate-400">
                   농어촌특별세 ({fmtRate(stx.appliedAgriRateNum, 10000)})
                 </span>
                 <span className="font-medium text-right font-mono tabular-nums whitespace-nowrap">

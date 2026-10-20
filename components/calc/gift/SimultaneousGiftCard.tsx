@@ -179,7 +179,7 @@ export function SimultaneousGiftCard({
         <div className="text-xs font-semibold text-sky-800 dark:text-sky-200">
           ② 증여재산
           {giftTotal > 0 && (
-            <span className="ml-2 font-normal text-gray-500">
+            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
               합계 {giftTotal.toLocaleString("ko-KR")}원
             </span>
           )}
@@ -209,7 +209,7 @@ export function SimultaneousGiftCard({
         <div className="text-xs font-semibold text-sky-800 dark:text-sky-200">
           주식·지분
           {stockTotal > 0 && (
-            <span className="ml-2 font-normal text-gray-500">
+            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
               합계 {stockTotal.toLocaleString("ko-KR")}원
             </span>
           )}

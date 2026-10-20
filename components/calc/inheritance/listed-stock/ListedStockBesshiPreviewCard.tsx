@@ -48,7 +48,7 @@ export function ListedStockBesshiPreviewCard({ item, valuationDate }: Props) {
   if (!canPreview || !besshi) {
     return (
       <div
-        className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-xs text-slate-600"
+        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 p-3 text-xs text-slate-600 dark:text-slate-400"
         data-testid="ls-besshi-preview-disabled"
       >
         📋 상장주식 평가조서 미리보기 — 평가기준일·종가 평균·주식 수 입력 후 활성화됩니다.

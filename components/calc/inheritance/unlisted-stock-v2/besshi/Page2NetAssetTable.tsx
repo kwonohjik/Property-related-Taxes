@@ -46,7 +46,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
 
   return (
     <section aria-label="제2쪽 4. 순자산가액">
-      <div className="flex items-center justify-between text-micro text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600 dark:text-gray-400">
         <span>{BESSHI_P2_SECTION4.unitNote}</span>
         <span>{BESSHI_P2_SECTION4.pageNote}</span>
       </div>
@@ -54,7 +54,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
       <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           {/* 가. 자산총액 */}
-          <tr className="bg-gray-50 font-bold print:bg-gray-50">
+          <tr className="bg-gray-50 dark:bg-gray-800/20 font-bold print:bg-gray-50">
             <td colSpan={4} className="border border-black p-1">
               {BESSHI_P2_SECTION4.assetGroup}
             </td>
@@ -65,7 +65,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
           <NetAssetTr cellNum="⑧" label={BESSHI_P2_SECTION4.assetSubtotalFormula} amount={assetSubtotal} testid="⑧" emphasis />
 
           {/* 나. 부채총액 */}
-          <tr className="bg-gray-50 font-bold print:bg-gray-50">
+          <tr className="bg-gray-50 dark:bg-gray-800/20 font-bold print:bg-gray-50">
             <td colSpan={4} className="border border-black p-1">
               {BESSHI_P2_SECTION4.liabilityGroup}
             </td>

@@ -80,12 +80,12 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white dark:bg-gray-900 p-3">
-      <p className="text-sm font-semibold mb-2 text-slate-800">
+      <p className="text-sm font-semibold mb-2 text-slate-800 dark:text-slate-200">
         {label} ({legal}) — 시기별 기준 이력
       </p>
       <table className="w-full text-xs">
         <thead>
-          <tr className="text-slate-500 border-b border-slate-200">
+          <tr className="text-slate-500 dark:text-slate-400 border-b border-slate-200">
             <th className="text-left py-1 font-medium">시기</th>
             <th className="text-right py-1 font-medium">지분율</th>
             <th className="text-right py-1 font-medium">시총</th>
@@ -101,7 +101,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
                 className={
                   isCurrent
                     ? "bg-violet-50/70 text-violet-900 font-medium dark:text-violet-200 dark:bg-violet-950/40"
-                    : "text-slate-700"
+                    : "text-slate-700 dark:text-slate-300"
                 }
               >
                 <td className="py-1 pr-2">{formatPeriodLabel(sorted, idx)}</td>
@@ -120,7 +120,7 @@ function ThresholdTable({ market }: { market: SupportedMarket }) {
       {/* 비상장 전용 안내 */}
       {market === "unlisted" && (
         <>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
             ※ 벤처기업은 시총 기준 40억 (조특법 §16, 시행령 §167의8①2호 나목)
           </p>
           <p className="text-xs text-amber-700 mt-1 dark:text-amber-300">

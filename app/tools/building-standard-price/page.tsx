@@ -27,7 +27,7 @@ export default function BuildingStandardPricePage() {
       </div>
       <header className="mb-5 print:hidden">
         <h1 className="text-xl font-bold">건물 기준시가 계산기</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           국세청 「건물 기준시가 계산방법」 고시 기준. 토지를 제외한 건물분 기준시가를 산정합니다.
         </p>
       </header>

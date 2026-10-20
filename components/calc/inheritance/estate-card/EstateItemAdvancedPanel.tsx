@@ -86,7 +86,7 @@ export function EstateItemAdvancedPanel({
       data-testid={`estate-advanced-panel-${itemId}`}
       className={[
         "mt-3 rounded-md p-4 space-y-3",
-        "border border-slate-200 bg-slate-50/40",
+        "border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/20",
         "dark:border-slate-700 dark:bg-slate-900/40",
         "animate-in fade-in slide-in-from-top-2 duration-200",
         "print:block",

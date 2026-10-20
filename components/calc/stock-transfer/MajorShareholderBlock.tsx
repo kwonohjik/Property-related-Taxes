@@ -337,7 +337,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
               </p>
             )}
             {form.marketType === "unlisted" && !threshold.isVentureRule && (
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 벤처기업 해당 시 회사 분류 토글에서 &quot;벤처기업&quot; 선택 → 시총 기준 40억 적용 (현재: 10억)
               </p>
             )}
@@ -514,14 +514,14 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             두면 「본인 단독 판정 + 대여 주식 보유」에 입력 경로가 아예 없다
             (ToggleCard는 `{checked && children}`이라 OFF면 렌더조차 안 된다). */}
         <div className={`rounded-lg border p-3 space-y-3 ${
-          f15f16Eligible ? "border-amber-300 bg-amber-50/60 dark:bg-amber-950/40" : "border-slate-200 bg-slate-50/40"
+          f15f16Eligible ? "border-amber-300 bg-amber-50/60 dark:bg-amber-950/40" : "border-slate-200 bg-slate-50/40 dark:bg-slate-800/20"
         }`}>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-amber-900 dark:text-amber-200">
               대차·사모펀드 자동 가산 (시행령 §157 2013.2.15.~)
             </span>
             {!f15f16Eligible && (
-              <span className="text-micro text-slate-500">
+              <span className="text-micro text-slate-500 dark:text-slate-400">
                 {effTransferDate ? `양도일 ${effTransferDate}은 2013.2.15. 이전 → 미적용` : "양도일 입력 시 활성화"}
               </span>
             )}
@@ -677,7 +677,7 @@ export function MajorShareholderBlock({ form, onChange }: MajorShareholderBlockP
             );
           })()
         ) : form.marketType === "other_asset" ? (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium mb-1">자동 판정 미적용 (기타자산은 §94①4 별도 트랙)</p>
             <p className="text-xs">상단의 &quot;대주주 여부&quot; 토글로 직접 선택하세요.</p>
           </div>

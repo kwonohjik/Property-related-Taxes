@@ -153,25 +153,25 @@ function CandidateCard({
 
       {/* 금액 그리드 */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <span className="text-gray-600">증여재산가액 ②③</span>
+        <span className="text-gray-600 dark:text-gray-400">증여재산가액 ②③</span>
         <span className="text-right font-medium">{formatKRW(candidate.grossGiftValue)}</span>
 
-        <span className="text-gray-600">합산과세표준 ⑤</span>
+        <span className="text-gray-600 dark:text-gray-400">합산과세표준 ⑤</span>
         <span className="text-right font-medium">{formatKRW(candidate.taxBase)}</span>
 
-        <span className="text-gray-600">산출세액 ⑦</span>
+        <span className="text-gray-600 dark:text-gray-400">산출세액 ⑦</span>
         <span className="text-right font-medium">{formatKRW(candidate.computedTax)}</span>
 
         {candidate.additionalGenerationSkipSurcharge > 0 && (
           <>
-            <span className="text-gray-600">세대생략 ⑫</span>
+            <span className="text-gray-600 dark:text-gray-400">세대생략 ⑫</span>
             <span className="text-right font-medium">
               {formatKRW(candidate.additionalGenerationSkipSurcharge)}
             </span>
           </>
         )}
 
-        <span className="text-gray-600 border-t border-gray-200 pt-1 mt-1">납부세액</span>
+        <span className="text-gray-600 dark:text-gray-400 border-t border-gray-200 pt-1 mt-1">납부세액</span>
         <span className="text-right font-semibold border-t border-gray-200 pt-1 mt-1">
           {formatKRW(candidate.finalTax)}
         </span>
@@ -354,9 +354,9 @@ export function PriorGiftHistoryModal({
         <div className="space-y-3">
           {loading && (
             <div className="space-y-3">
-              <div className="animate-pulse h-24 bg-gray-100 rounded-md" />
-              <div className="animate-pulse h-24 bg-gray-100 rounded-md" />
-              <p className="text-xs text-gray-500 text-center">이력을 불러오는 중...</p>
+              <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-md" />
+              <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-md" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">이력을 불러오는 중...</p>
             </div>
           )}
 
@@ -387,7 +387,7 @@ export function PriorGiftHistoryModal({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md bg-gray-100 p-6 text-center text-sm text-gray-500">
+                <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
                   현재 수증자(=의뢰인)의 증여세 이력이 없습니다.
                   {warnings.length > 0 && (
                     <div className="mt-2 text-xs text-gray-400">
@@ -434,7 +434,7 @@ export function PriorGiftHistoryModal({
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="rounded-md bg-gray-100 px-4 py-2 text-sm hover:bg-gray-200"
+            className="rounded-md bg-gray-100 dark:bg-gray-800 px-4 py-2 text-sm hover:bg-gray-200 dark:hover:bg-gray-800"
           >
             닫기
           </button>

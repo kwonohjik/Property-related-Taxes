@@ -62,7 +62,7 @@ function P5Tr({
           i === 0 ? (
             <span key={i}>{ln}</span>
           ) : (
-            <span key={i} className="text-micro text-gray-500 ml-1">
+            <span key={i} className="text-micro text-gray-500 dark:text-gray-400 ml-1">
               {ln}
             </span>
           ),
@@ -70,7 +70,7 @@ function P5Tr({
       </td>
       <td className={`${TD} text-right font-mono w-36`}>{amount === undefined ? "" : renderDelta(amount)}</td>
       <td
-        className={`${TD} text-center text-micro w-44 ${col3 ? "text-gray-700" : "bg-gray-100 print:bg-gray-100"}`}
+        className={`${TD} text-center text-micro w-44 ${col3 ? "text-gray-700 dark:text-gray-300" : "bg-gray-100 dark:bg-gray-800 print:bg-gray-100"}`}
       >
         {col3 ?? ""}
       </td>
@@ -92,7 +92,7 @@ export function Page5GoodwillTable({
 
   return (
     <section aria-label="제5쪽 6. 영업권">
-      <div className="flex items-center justify-between text-micro text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600 dark:text-gray-400">
         <span>{P5.unitNote}</span>
         <span>{P5.pageNote}</span>
       </div>

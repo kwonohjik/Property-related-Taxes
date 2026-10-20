@@ -47,7 +47,7 @@ function Row({
       className={[
         "flex items-start justify-between py-1.5",
         indent ? "pl-4" : "",
-        highlight ? "font-semibold text-sky-800 dark:text-sky-200" : warn ? "text-rose-700 dark:text-rose-300" : "text-slate-700",
+        highlight ? "font-semibold text-sky-800 dark:text-sky-200" : warn ? "text-rose-700 dark:text-rose-300" : "text-slate-700 dark:text-slate-300",
       ].join(" ")}
     >
       <span className="text-sm leading-relaxed">{label}</span>
@@ -87,7 +87,7 @@ function HoldingDetailRow({ h }: { h: ExitTaxHoldingResult }) {
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50/40 p-3 space-y-1 text-xs dark:bg-amber-950/40">
       <p className="font-semibold text-amber-800 dark:text-amber-200">{h.stockName}</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-600">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-600 dark:text-slate-400">
         <span>간주양도가액</span>
         <span className="text-right tabular-nums">{fmt(h.departureDayValue)}</span>
         <span className="pl-2 text-slate-400">
@@ -104,13 +104,13 @@ function HoldingDetailRow({ h }: { h: ExitTaxHoldingResult }) {
         </span>
         <span>취득가액</span>
         <span className="text-right tabular-nums">{fmt(h.acquisitionCost)}</span>
-        <span className={h.transferGain >= 0 ? "font-medium text-slate-700" : "font-medium text-rose-600 dark:text-rose-400"}>
+        <span className={h.transferGain >= 0 ? "font-medium text-slate-700 dark:text-slate-300" : "font-medium text-rose-600 dark:text-rose-400"}>
           양도차익
         </span>
         <span
           className={[
             "text-right tabular-nums font-medium",
-            h.transferGain >= 0 ? "text-slate-700" : "text-rose-600 dark:text-rose-400",
+            h.transferGain >= 0 ? "text-slate-700 dark:text-slate-300" : "text-rose-600 dark:text-rose-400",
           ].join(" ")}
         >
           {h.transferGain < 0 ? "▼ " : ""}{fmt(Math.abs(h.transferGain))}
@@ -159,7 +159,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
       {/* ── 종목별 결과 ── */}
       {result.holdingDetails.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs font-semibold text-slate-600">종목별 계산 결과 (§178의9)</p>
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">종목별 계산 결과 (§178의9)</p>
           {result.holdingDetails.map((h) => (
             <HoldingDetailRow key={h.id} h={h} />
           ))}
@@ -168,7 +168,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
 
       {/* ── 메인 산식 카드 ── */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-5 space-y-1">
-        <p className="text-sm font-semibold text-slate-700 mb-2">산출세액 계산 (§118의10~§118의11)</p>
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">산출세액 계산 (§118의10~§118의11)</p>
 
         <Row
           label="합산 양도차익 (전 종목 양도차익 합계)"
@@ -186,7 +186,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
           highlight
         />
 
-        <div className="mt-2 text-xs text-slate-500 leading-relaxed px-1">
+        <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed px-1">
           세율: §118의11 → §104①11가목2) — 과세표준 3억 이하 20%, 초과분 25%
           (누진공제: 3억 초과 시 15,000,000)
         </div>
@@ -206,7 +206,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
         {result.deferredTaxAmount > 0 && (
           <>
             <Divider />
-            <p className="text-xs font-semibold text-slate-500 pt-1">납부유예 (§118의16)</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 pt-1">납부유예 (§118의16)</p>
             <Row
               label={`납부유예 세액 (${result.deferralYears}년 유예)`}
               value={result.deferredTaxAmount}
@@ -244,7 +244,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
         {(hasAdjDeduction || hasForeignCredit || hasDomesticCredit) && (
           <>
             <Divider />
-            <p className="text-xs font-semibold text-slate-500 pt-1">경정청구 공제 (실양도 완료 시)</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 pt-1">경정청구 공제 (실양도 완료 시)</p>
             {hasAdjDeduction && (
               <Row
                 label="조정공제 (§118의12) = 출국일 시가 - 실양도가액 차이분"
@@ -323,8 +323,8 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
       )}
 
       {result.appliedRules.length > 0 && (
-        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 space-y-1">
-          <p className="text-xs font-semibold text-slate-500">적용 규칙</p>
+        <div className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 p-3 space-y-1">
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">적용 규칙</p>
           {result.appliedRules.map((r, i) => (
             <p key={i} className="text-xs text-slate-400 leading-relaxed">
               • {r}
@@ -334,7 +334,7 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
       )}
 
       {/* ── 면책 고지 ── */}
-      <div className="rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-caption text-slate-400 leading-relaxed">
+      <div className="rounded-lg border border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 px-3 py-2 text-caption text-slate-400 leading-relaxed">
         국외전출세는 2016.1.1. 도입 후 개정이 잦아 출국일 당시 시행 법령 확인이 필요합니다.
         본 계산 결과는 참고용이며 세무전문가 확인을 권장합니다.
       </div>

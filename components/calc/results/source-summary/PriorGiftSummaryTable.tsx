@@ -85,8 +85,8 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
 
   return (
     <div className="overflow-x-auto rounded-md border border-slate-200">
-      <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
-        <h4 className="text-sm font-semibold text-slate-800">
+      <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-4 py-2">
+        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
           (4) 사전증여의 요약
         </h4>
       </div>
@@ -143,7 +143,7 @@ export function PriorGiftSummaryTable({ priorGifts }: Props) {
                 <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatCellOrDash(computedTaxOf(gift))}
                 </td>
-                <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600">
+                <td className="border border-slate-200 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400">
                   {gift.beneficiaryType === "corporate" ? "§3의2②" : ""}
                 </td>
               </tr>

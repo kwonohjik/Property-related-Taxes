@@ -51,7 +51,7 @@ interface Step2Props {
 
 function SectionTitle({ n, title }: { n: number; title: string }) {
   return (
-    <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800 mb-4">
+    <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-700 text-white text-xs font-bold">
         {n}
       </span>
@@ -702,7 +702,7 @@ function ReversePerShareNote({
       ({info.total.toLocaleString()} ÷ {info.count.toLocaleString()}주)
     </div>
   ) : (
-    <div className="rounded border border-slate-200 bg-slate-50/60 px-3 py-2 text-sm text-slate-600">
+    <div className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 px-3 py-2 text-sm text-slate-600 dark:text-slate-400">
       참고: 1주당 단가 = <strong>{info.perShare.toFixed(4)}</strong>{" "}
       ({info.total.toLocaleString()} ÷ {info.count.toLocaleString()}주) — 정확히 떨어지지 않음.
       총액 그대로 사용합니다.

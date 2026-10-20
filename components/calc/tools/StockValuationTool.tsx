@@ -77,7 +77,7 @@ export function StockValuationTool() {
 
       <header className="mb-5 print:hidden">
         <h1 className="text-xl font-bold">주식 평가</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           상장주식(전후 2개월 종가평균)·비상장주식(보충적 평가)을 상속세및증여세법 §63·시행령
           §54 기준으로 평가합니다. 세액은 계산하지 않습니다.
         </p>

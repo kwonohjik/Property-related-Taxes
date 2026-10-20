@@ -269,7 +269,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
             <button
               type="button"
               onClick={() => setExpanded((p) => !p)}
-              className="text-micro text-gray-500 hover:text-rose-700 dark:hover:text-rose-300 transition-colors print:hidden"
+              className="text-micro text-gray-500 dark:text-gray-400 hover:text-rose-700 dark:hover:text-rose-300 transition-colors print:hidden"
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >

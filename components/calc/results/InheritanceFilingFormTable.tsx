@@ -264,7 +264,7 @@ function renderGiftRow(
               직접 입력 과세표준
             </span>
           ) : (
-            <span className="ml-1 inline-block bg-gray-100 dark:bg-gray-800 text-gray-500 rounded px-1">
+            <span className="ml-1 inline-block bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded px-1">
               자동 도출(§53)
             </span>
           )

@@ -177,10 +177,10 @@ export function DeemedGiftResultView({
       {/* ── 적용 법령 기준일 — 법률이 증여시기를 명문으로 정하는 두 유형 ── */}
       {result.appliedLawDate && (result.type === "related_corp" || result.type === "specific_corp") && (
         <div
-          className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm"
+          className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 p-3 text-sm"
           data-testid="deemed-applied-law-date"
         >
-          <p className="text-slate-800">
+          <p className="text-slate-800 dark:text-slate-200">
             <b>적용 법령 기준일</b>{" "}
             <span className="font-mono tabular-nums">{result.appliedLawDate}</span>{" "}
             <span className="text-muted-foreground">

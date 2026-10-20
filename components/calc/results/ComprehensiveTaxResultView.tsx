@@ -766,11 +766,11 @@ export function ComprehensiveTaxResultView({ result }: Props) {
       </div>
 
       {/* 안내 배너 */}
-      <div className="rounded-md bg-slate-50 border border-slate-200 p-4 space-y-2">
-        <h4 className="text-sm font-semibold text-slate-700">
+      <div className="rounded-md bg-slate-50 dark:bg-slate-800/20 border border-slate-200 dark:border-slate-700 p-4 space-y-2">
+        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300">
           ⚠ 세무사 상담 권장
         </h4>
-        <ul className="text-xs text-slate-600 space-y-1 list-disc pl-4">
+        <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1 list-disc pl-4">
           <li>
             본 결과는 입력 정보를 기반으로 계산한 추정값입니다.
             실제 고지세액과 차이가 있을 수 있습니다.

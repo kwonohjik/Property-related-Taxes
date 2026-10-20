@@ -76,7 +76,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
   if (!result) {
     return (
-      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-center text-xs text-gray-500">
+      <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 p-4 text-center text-xs text-gray-500 dark:text-gray-400">
         입력값을 채우면 평가 결과가 자동 계산됩니다.
       </div>
     );
@@ -411,7 +411,7 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
 
       {/* 적용 규칙 */}
       {result.appliedRules.length > 0 && (
-        <div className="text-micro text-gray-600">
+        <div className="text-micro text-gray-600 dark:text-gray-400">
           <button
             type="button"
             onClick={() => setRulesOpen((o) => !o)}
@@ -527,13 +527,13 @@ function MergerBreakdownCard({ mergerResult }: { mergerResult: MergerNetIncomeRe
             <span className="col-span-2 font-semibold text-amber-800 not-font-mono text-caption dark:text-amber-200">
               {YEAR_LABELS[i]}
             </span>
-            <span className="text-gray-600">합병법인 순손익액</span>
+            <span className="text-gray-600 dark:text-gray-400">합병법인 순손익액</span>
             <span className="text-right">{fmt(row.acquirerNetIncome)}원</span>
-            <span className="text-gray-600">피합병 안분 합산액</span>
+            <span className="text-gray-600 dark:text-gray-400">피합병 안분 합산액</span>
             <span className="text-right">{fmt(row.targetApportioned)}원</span>
-            <span className="text-gray-600">합산 순손익액</span>
+            <span className="text-gray-600 dark:text-gray-400">합산 순손익액</span>
             <span className="text-right">{fmt(row.combinedNetIncome)}원</span>
-            <span className="text-gray-600">적용 주식수</span>
+            <span className="text-gray-600 dark:text-gray-400">적용 주식수</span>
             <span className="text-right">{fmt(row.sharesUsed)}주</span>
             <span className="font-semibold text-amber-900 dark:text-amber-200">1주당 순손익액</span>
             <span className="text-right font-semibold text-amber-900 dark:text-amber-200">{fmt(row.perShare)}원</span>
@@ -559,7 +559,7 @@ function ResultRow({ cellNum, label, value, hint, law, emphasized }: ResultRowPr
       <span className={`font-mono text-caption ${emphasized ? "text-indigo-900 font-bold dark:text-indigo-200" : "text-indigo-700 dark:text-indigo-300"}`}>{cellNum}</span>
       <div>
         <div className={`${emphasized ? "font-bold text-indigo-900 dark:text-indigo-200" : ""}`}>{label}</div>
-        {hint && <div className="text-micro text-gray-500">{hint}</div>}
+        {hint && <div className="text-micro text-gray-500 dark:text-gray-400">{hint}</div>}
         {law && (
           <div className="text-micro text-indigo-600 italic flex flex-wrap items-center gap-1 dark:text-indigo-400">
             <span>{law}</span>

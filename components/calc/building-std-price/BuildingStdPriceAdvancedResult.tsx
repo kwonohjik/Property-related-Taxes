@@ -88,7 +88,7 @@ function ApartmentConversionCard({ ac }: { ac: ApartmentConversionResult }) {
       <h3 className="text-sm font-bold text-amber-800 dark:text-amber-200">취득당시 공동주택 기준시가 (환산)</h3>
       <div className="text-right font-mono text-2xl font-bold tabular-nums">{fmt(ac.convertedAcquisitionPrice)}</div>
 
-      <div className="space-y-2 border-t pt-2 text-xs leading-relaxed text-slate-600">
+      <div className="space-y-2 border-t pt-2 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
         <p>
           취득당시 기준시가 = 최초고시 공동주택기준시가 ×{" "}
           <Frac top="취득당시 토지 + 건물" bottom="최초고시 토지 + 건물" />
@@ -105,7 +105,7 @@ function ApartmentConversionCard({ ac }: { ac: ApartmentConversionResult }) {
           <span className="border-t pt-1">2001년 건물기준시가</span>
           <span className="border-t pt-1 text-right font-mono tabular-nums">{fmt(ac.base2001BuildingPrice)}</span>
         </div>
-        <p className="text-slate-500">
+        <p className="text-slate-500 dark:text-slate-400">
           ③ = 2001 건물기준시가 × 산정기준율 <b>{ac.firstNoticeAcqBaseRate}</b> / ⑤ = 2001 건물기준시가 × 산정기준율{" "}
           <b>{ac.acquisitionAcqBaseRate}</b>
         </p>

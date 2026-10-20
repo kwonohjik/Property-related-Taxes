@@ -118,7 +118,7 @@ export function FilingFormPersonalInfoPanel({ onChange }: Props) {
           <button
             type="button"
             onClick={() => setShowId((v) => !v)}
-            className="p-1 text-gray-500 hover:text-gray-700 print:hidden"
+            className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 print:hidden"
             title={showId ? "숨기기" : "표시"}
           >
             {showId ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -211,7 +211,7 @@ export function FilingFormPersonalInfoPanel({ onChange }: Props) {
       </div>
 
       {/* 인쇄 전용: 실제 인적사항 표시 (화면에서는 숨김) */}
-      <div className="hidden print:block text-micro text-gray-700 space-y-0.5">
+      <div className="hidden print:block text-micro text-gray-700 dark:text-gray-300 space-y-0.5">
         <p>성명: {info.name} | 주민등록번호: {info.residentId}</p>
         <p>주소: {info.address}</p>
         <p>전화: {info.officeTel} | 휴대폰: {info.mobileTel} | 이메일: {info.email}</p>

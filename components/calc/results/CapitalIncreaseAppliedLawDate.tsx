@@ -17,8 +17,8 @@ export function CapitalIncreaseAppliedLawDate({
   conversion?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm" data-testid="deemed-applied-law-date">
-      <p className="text-slate-800">
+    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/20 p-3 text-sm" data-testid="deemed-applied-law-date">
+      <p className="text-slate-800 dark:text-slate-200">
         <b>적용 법령 기준일</b> <span className="font-mono tabular-nums">{appliedLawDate}</span>{" "}
         <span className="text-muted-foreground">
           ({conversion ? "전환주식을 전환한 날 — 상증령 §29①2호" : "증여일 — 상증령 §29①(상증법 §39① 위임)"})

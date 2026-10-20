@@ -36,7 +36,7 @@ export function SplitAllocationPreviewCard({
   if (!detail) {
     return (
       <ToneCard tone="slate" title={isTransfer ? "양도가액 (자동 산출)" : "취득가액 (자동 산출)"}>
-        <p className="text-xs text-slate-600" data-testid={`split-preview-${side}-pending`}>
+        <p className="text-xs text-slate-600 dark:text-slate-400" data-testid={`split-preview-${side}-pending`}>
           1단계 매수·매도 건의 일자·주식수·1주당 단가를 모두 입력하면 여기에 산출됩니다
           {form.costAllocationMethod === "specific" ? " (개별법은 매도 주식수만큼 배정이 끝나야 합니다)" : ""}.
         </p>
@@ -54,7 +54,7 @@ export function SplitAllocationPreviewCard({
       }
     >
       <div className="flex items-baseline justify-between text-sm">
-        <span className="text-slate-700">{isTransfer ? "양도가액 합계" : "취득가액 합계"}</span>
+        <span className="text-slate-700 dark:text-slate-300">{isTransfer ? "양도가액 합계" : "취득가액 합계"}</span>
         <strong
           className="font-mono tabular-nums"
           data-testid={isTransfer ? "split-preview-transfer-total" : "split-preview-acquisition-total"}
@@ -73,7 +73,7 @@ export function SplitAllocationPreviewCard({
       )}
       {!isTransfer && (
         <table className="w-full text-xs">
-          <thead className="text-slate-500">
+          <thead className="text-slate-500 dark:text-slate-400">
             <tr>
               <th className="text-left font-normal">양도일</th>
               <th className="text-left font-normal">취득 기산일</th>
@@ -107,7 +107,7 @@ export function SplitAllocationPreviewCard({
           </tbody>
         </table>
       )}
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-500 dark:text-slate-400">
         {isTransfer
           ? "매도 건별 주식수 × 1주당 단가의 합계입니다. 수정은 1단계에서 하세요."
           : "양도한 주식수만큼 매칭된 매수 건의 원가입니다(남은 보유분은 포함하지 않습니다). 수정은 1단계에서 하세요." +

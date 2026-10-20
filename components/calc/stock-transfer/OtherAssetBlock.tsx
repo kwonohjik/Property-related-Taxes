@@ -318,7 +318,7 @@ export function OtherAssetBlock({ form, onChange, activeClientId }: OtherAssetBl
 
           {/* Phase C — 기신고 이력에서 합산 (영 §158②) */}
           <ToneCard tone="sky" title="기신고분 합산 (영 §158②)">
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               같은 법인 주식을 여러 번에 걸쳐 양도했다면, 소급 3년 내 기신고분을 아래 칸에
               넣습니다. <strong>당회차 양도가액·취득가액·필요경비는 다음 단계에서 평소대로</strong>{" "}
               입력하세요 — 여기에 더해 넣지 않습니다. 합계는 계산할 때 자동으로 더해집니다.

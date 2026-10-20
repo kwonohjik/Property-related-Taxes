@@ -138,9 +138,9 @@ export function BlockShareholderPriorTransferModal({
         </DialogHeader>
 
         {loading ? (
-          <p className="py-8 text-center text-sm text-slate-500">불러오는 중…</p>
+          <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">불러오는 중…</p>
         ) : (candidates?.length ?? 0) === 0 ? (
-          <div className="space-y-2 py-6 text-sm text-slate-600">
+          <div className="space-y-2 py-6 text-sm text-slate-600 dark:text-slate-400">
             <p className="font-medium">합산할 수 있는 기신고 이력이 없습니다.</p>
             <p className="text-xs">
               1차 신고를 다른 프로그램으로 했거나 이 기기에 이력이 없으면 후보가 나오지 않습니다.
@@ -178,22 +178,22 @@ export function BlockShareholderPriorTransferModal({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-medium">{c.transferDate}</span>
-                    <span className="text-xs text-slate-500">{c.title}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400">{c.title}</span>
                     {c.wasAlreadyBlockShareholder && (
                       // 정보 배지다 — 합산에서 빼지 않는다. 뺄지는 사용자가 선택 해제로 정한다.
-                      <Badge variant="outline" className="border-slate-300 text-slate-600">
+                      <Badge variant="outline" className="border-slate-300 text-slate-600 dark:text-slate-400">
                         기타자산(§94①4다)으로 신고된 건
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-caption text-slate-600 sm:grid-cols-4">
+                  <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-caption text-slate-600 dark:text-slate-400 sm:grid-cols-4">
                     <span>주식수 {c.shareCount.toLocaleString()}주</span>
                     <span className="font-mono tabular-nums">양도 {formatKRW(c.transferPrice)}</span>
                     <span className="font-mono tabular-nums">취득 {formatKRW(c.acquisitionPrice)}</span>
                     <span className="font-mono tabular-nums">산출 {formatKRW(c.calculatedTax)}</span>
                   </div>
                   {c.acquisitionExcludedBySwap && (
-                    <p className="mt-0.5 text-caption text-slate-500" data-testid={`prior-transfer-swap-note-${c.calculationId}`}>
+                    <p className="mt-0.5 text-caption text-slate-500 dark:text-slate-400" data-testid={`prior-transfer-swap-note-${c.calculationId}`}>
                       그 회차는 §97②2호 단서로 환산취득가액을 차감하지 않아 취득가액을 0으로 합산합니다(필요경비는 그 회차 실제 경비).
                     </p>
                   )}
@@ -219,7 +219,7 @@ export function BlockShareholderPriorTransferModal({
               <span>최초 양도일 {preview.aggregationFirstTransferDate}</span>
             </div>
             {preview.alreadyBlockShareholderIds.length > 0 && (
-              <p className="mt-1 text-slate-600">
+              <p className="mt-1 text-slate-600 dark:text-slate-400">
                 이 중 {preview.alreadyBlockShareholderIds.length}건은 기타자산(§94①4 다목)으로
                 신고된 건입니다 — 기납부세액에 <strong>그대로 합산</strong>했습니다. 빼려면 위에서
                 선택을 해제하세요.
@@ -228,7 +228,7 @@ export function BlockShareholderPriorTransferModal({
           </div>
         )}
 
-        <p className="text-caption text-slate-500">
+        <p className="text-caption text-slate-500 dark:text-slate-400">
           ⚠️ 여러 종목을 함께 신고한 건은 <strong>마지막 종목만</strong> 이력에 남습니다. 이 법인이
           그 대표가 아니었다면 후보로 뜨지 않으니 직접 입력하세요.
         </p>

@@ -85,7 +85,7 @@ export function InstallmentReceiptsMatrix({
       </div>
 
       {/* 행 헤더 */}
-      <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 px-1 text-xs font-semibold text-slate-500">
+      <div className="grid grid-cols-[auto_1fr_1fr_1fr_auto] gap-2 px-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
         <span className="w-6 text-center">#</span>
         <span>수령일 (<LawArticleModal legalBasis="소득세법 시행령 §178의5 ②" label="§178의5②" />)</span>
         <span>수령액 ({currency})</span>

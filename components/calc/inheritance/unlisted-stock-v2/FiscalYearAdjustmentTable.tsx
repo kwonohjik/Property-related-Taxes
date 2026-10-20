@@ -178,7 +178,7 @@ export function FiscalYearAdjustmentTable({
       </div>
 
       {/* 사업연도 라벨 + 개시일·종료일 헤더 (하단 입력표와 동일 grid 트랙으로 정렬) */}
-      <div className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 border-l-2 border-transparent pl-1.5 text-caption font-semibold text-gray-700">
+      <div className="grid grid-cols-[13rem_repeat(3,minmax(0,1fr))] gap-2 border-l-2 border-transparent pl-1.5 text-caption font-semibold text-gray-700 dark:text-gray-300">
         <div></div>
         {fiscalYears.map((fy, idx) => {
           const months = fiscalYearMonths(fy.fiscalYearStartDate, fy.fiscalYearEndDate);
@@ -197,7 +197,7 @@ export function FiscalYearAdjustmentTable({
               />
               {/* 개시일 (§17의3② 연환산용 — 선택 입력) */}
               <div className="space-y-0.5">
-                <p className="text-micro text-gray-500 font-normal">
+                <p className="text-micro text-gray-500 dark:text-gray-400 font-normal">
                   개시일
                   <span className="ml-1 text-gray-400">(1년 미만 시 입력)</span>
                 </p>
@@ -211,7 +211,7 @@ export function FiscalYearAdjustmentTable({
               </div>
               {/* 종료일 */}
               <div className="space-y-0.5">
-                <p className="text-micro text-gray-500 font-normal">
+                <p className="text-micro text-gray-500 dark:text-gray-400 font-normal">
                   종료일
                   <span className="ml-1 text-rose-600 font-semibold dark:text-rose-400">*</span>
                 </p>
@@ -289,7 +289,7 @@ export function FiscalYearAdjustmentTable({
                     }`}>{row.cellNum}</span>
                     <span className="ml-1">{row.label}</span>
                     {row.description && (
-                      <span className="text-micro text-gray-500 ml-1">({row.description})</span>
+                      <span className="text-micro text-gray-500 dark:text-gray-400 ml-1">({row.description})</span>
                     )}
                   </div>
                   {fiscalYears.map((fy, idx) => (

@@ -199,7 +199,7 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
           <strong>특수관계인</strong> — 초과배당을 수령한 수증자 (증여세 납세의무자)
         </p>
         <p>
-          <span className="inline-block w-2 h-2 rounded-full bg-slate-300 mr-1" />
+          <span className="inline-block w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600 mr-1" />
           <strong>기타</strong> — 그 외 주주 (과소배당 총액 분모 계산에 포함)
         </p>
       </div>

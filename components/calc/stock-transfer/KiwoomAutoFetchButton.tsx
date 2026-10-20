@@ -298,7 +298,7 @@ export function KiwoomAutoFetchButton({
             )}
 
             {/* A-8 — 키움은 수정주가가 아닌 «당시 실제 종가»를 준다 */}
-            <p className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-slate-700">
+            <p className="rounded border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-2 py-1 text-slate-700 dark:text-slate-300">
               ℹ️ 조회값은 <strong>당시 실제 종가</strong>입니다(수정주가 아님). 이후 액면분할·병합이
               있었다면 분자·분모의 1주 단위가 달라지므로 <strong>자본조정</strong> 입력으로
               반영하세요 — 자동 보정하지 않습니다.
@@ -342,7 +342,7 @@ export function KiwoomAutoFetchButton({
                         isTrading ? "" : "bg-amber-50 text-amber-700"
                       }`}
                     >
-                      <span className="text-gray-500 tabular-nums">{pos + 1}. {iso}</span>
+                      <span className="text-gray-500 dark:text-gray-400 tabular-nums">{pos + 1}. {iso}</span>
                       <span className="tabular-nums">{isTrading ? close.toLocaleString() : label || "—"}</span>
                     </div>
                   );

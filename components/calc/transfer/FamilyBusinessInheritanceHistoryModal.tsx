@@ -108,13 +108,13 @@ function CandidateCard({
 
       {/* 메타 그리드 */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-        <span className="text-gray-600">영위 연수</span>
+        <span className="text-gray-600 dark:text-gray-400">영위 연수</span>
         <span className="text-right font-medium">{candidate.operatingYears}년</span>
 
-        <span className="text-gray-600">가업상속공제 적용액</span>
+        <span className="text-gray-600 dark:text-gray-400">가업상속공제 적용액</span>
         <span className="text-right font-medium">{formatKRW(candidate.deduction)}</span>
 
-        <span className="text-gray-600">가업상속공제적용률</span>
+        <span className="text-gray-600 dark:text-gray-400">가업상속공제적용률</span>
         <span className="text-right font-semibold text-emerald-700 dark:text-emerald-300">
           {(candidate.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%
         </span>
@@ -134,8 +134,8 @@ function CandidateCard({
           >
             <div className="flex items-center justify-between">
               <div>
-                <span className="font-medium text-gray-900">{a.name}</span>
-                <span className="ml-2 text-micro text-gray-500">
+                <span className="font-medium text-gray-900 dark:text-gray-100">{a.name}</span>
+                <span className="ml-2 text-micro text-gray-500 dark:text-gray-400">
                   · {CATEGORY_LABEL[a.category] ?? a.category}
                 </span>
               </div>
@@ -242,7 +242,7 @@ export function FamilyBusinessInheritanceHistoryModal({
 
         {/* 본문 */}
         {loading && (
-          <div className="py-8 text-center text-sm text-gray-500">이력을 불러오는 중...</div>
+          <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">이력을 불러오는 중...</div>
         )}
 
         {error && (
@@ -252,9 +252,9 @@ export function FamilyBusinessInheritanceHistoryModal({
         )}
 
         {!loading && !error && candidates.length === 0 && (
-          <div className="rounded-md border border-gray-200 bg-gray-50 p-6 text-center text-sm text-gray-600 space-y-1">
+          <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 p-6 text-center text-sm text-gray-600 dark:text-gray-400 space-y-1">
             <p className="font-medium">가업상속공제 적용 사례가 없습니다</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               상속세 마법사에서 가업상속공제를 적용한 계산 이력이 필요합니다.
               직접 입력 모드로 진행하세요.
             </p>
@@ -275,7 +275,7 @@ export function FamilyBusinessInheritanceHistoryModal({
 
         {/* 경고 영역 — 손상/미적용 사례 */}
         {!loading && warnings.length > 0 && (
-          <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+          <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 px-3 py-2 text-xs text-gray-700 dark:text-gray-300">
             <button
               type="button"
               onClick={() => setWarningsOpen((o) => !o)}
@@ -288,8 +288,8 @@ export function FamilyBusinessInheritanceHistoryModal({
               <ul className="mt-2 space-y-1">
                 {Object.entries(warningsByReason).map(([reason, ws]) => (
                   <li key={reason}>
-                    <span className="text-gray-500">[{FB_WARNING_REASON_LABELS[reason as FbLookupWarningReason] ?? reason}]</span> {ws.length}건
-                    <ul className="ml-4 text-caption text-gray-600">
+                    <span className="text-gray-500 dark:text-gray-400">[{FB_WARNING_REASON_LABELS[reason as FbLookupWarningReason] ?? reason}]</span> {ws.length}건
+                    <ul className="ml-4 text-caption text-gray-600 dark:text-gray-400">
                       {ws.slice(0, 3).map((w, i) => (
                         <li key={i}>· {w.message}</li>
                       ))}

@@ -55,8 +55,8 @@ export function PresumedInheritanceTable({
   return (
     <div className="space-y-2">
       <div className="overflow-x-auto rounded-md border border-slate-200">
-        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2">
-          <h4 className="text-sm font-semibold text-slate-800">
+        <div className="border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-4 py-2">
+          <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
             (2) 과세가액에 가산하는 추정상속재산 요약
           </h4>
         </div>
@@ -163,7 +163,7 @@ export function PresumedInheritanceTable({
         <p>㉡ 추정상속재산 = 미소명액 − (처분액의 20%와 2억원 중 적은 금액), 음수면 0</p>
       </div>
 
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-700">
+      <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/20 px-4 py-3 text-xs text-slate-700 dark:text-slate-300">
         <p className="font-medium">상속추정의 배제 (상증법 집행기준 15-11-6)</p>
         <p className="mt-1">
           용도불분명한 금액 &lt; 「처분재산가액·인출금액·채무부담액의 20%와 2억원 중 적은 금액」 → 상속추정 배제

@@ -393,7 +393,7 @@ export function CorporateHeirFields({
           <span
             className={
               "text-micro font-mono " +
-              (sumOver ? "text-red-600 font-bold dark:text-red-400" : "text-gray-500")
+              (sumOver ? "text-red-600 font-bold dark:text-red-400" : "text-gray-500 dark:text-gray-400")
             }
           >
             합 {(sumRatio * 100).toFixed(2)}%

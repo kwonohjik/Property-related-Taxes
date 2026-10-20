@@ -115,14 +115,14 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
     <div className="space-y-6">
       {/* 결과 없음 + 비로딩 + 에러 없음: 자동 계산 트리거 직전 짧은 안내 */}
       {!result && !isLoading && !error && (
-        <div className="text-center py-8 text-slate-500">
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
           <p>계산을 시작합니다…</p>
         </div>
       )}
 
       {/* 로딩 */}
       {isLoading && (
-        <div className="text-center py-8 text-slate-500">
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
           <p>계산 중...</p>
         </div>
       )}

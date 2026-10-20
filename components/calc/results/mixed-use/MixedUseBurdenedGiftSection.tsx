@@ -71,7 +71,7 @@ export function MixedBgNoTransferBanner({ bg }: { bg: MixedUseBurdenedGiftBreakd
   const sides = (["housing", "commercial"] as const).filter((s) => !mixedBgSideTransferred(bg, s));
   if (sides.length === 0) return null;
   return (
-    <div className="space-y-2 rounded-md border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs" data-testid="bg-result-no-transfer-banner">
+    <div className="space-y-2 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/20 px-3 py-2 text-xs" data-testid="bg-result-no-transfer-banner">
       {sides.map((s) => (
         <MixedBgNotTransferred key={s} side={s} />
       ))}

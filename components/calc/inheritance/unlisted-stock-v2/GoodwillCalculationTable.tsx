@@ -126,7 +126,7 @@ function RowDisplay({ cellNum, label, value, unit = "원", hint, emphasized }: R
       <td className={`py-1 pr-2 font-mono ${emphasized ? "text-amber-900 font-bold dark:text-amber-200" : "text-amber-700 dark:text-amber-300"}`}>{cellNum}.</td>
       <td className="py-1 px-1">
         <div className={emphasized ? "font-semibold text-amber-900 dark:text-amber-200" : ""}>{label}</div>
-        {hint && <div className="text-micro text-gray-500">{hint}</div>}
+        {hint && <div className="text-micro text-gray-500 dark:text-gray-400">{hint}</div>}
       </td>
       <td className={`py-1 pl-1 text-right font-mono tabular-nums ${emphasized ? "text-amber-900 font-bold dark:text-amber-200" : ""}`}>
         {fmt(value)}{unit}

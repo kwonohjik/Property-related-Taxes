@@ -52,7 +52,7 @@ export function Page6NetIncomeBreakdown({
 
   return (
     <section aria-label="제6쪽 순손익액 명세">
-      <div className="flex items-center justify-between text-micro text-gray-600">
+      <div className="flex items-center justify-between text-micro text-gray-600 dark:text-gray-400">
         <span>{P6.unitNote}</span>
         <span>{P6.pageNote}</span>
       </div>
@@ -60,8 +60,8 @@ export function Page6NetIncomeBreakdown({
       <table className="w-full border-collapse border border-black mb-3 text-micro">
         <tbody>
           {/* 사업연도 헤더 */}
-          <tr className="bg-gray-100 print:bg-gray-100 font-semibold">
-            <td className={`${TD} bg-gray-100`} aria-hidden />
+          <tr className="bg-gray-100 dark:bg-gray-800 print:bg-gray-100 font-semibold">
+            <td className={`${TD} bg-gray-100 dark:bg-gray-800`} aria-hidden />
             <td className={TD}>{P6.fyHeaderLabel}</td>
             {fyb.map((fy, i) => (
               <td key={i} className={`${TD} text-center`}>
@@ -74,7 +74,7 @@ export function Page6NetIncomeBreakdown({
 
           {/* ① 각 사업연도 소득금액 */}
           <tr data-besshi-cell="p6-①" data-testid="p6-①">
-            <td className={`${TD} bg-gray-50`} aria-hidden />
+            <td className={`${TD} bg-gray-50 dark:bg-gray-800/20`} aria-hidden />
             <td className={TD}>{P6.incomeLabel}</td>
             {valCells(fyb.map((fy) => fy.taxableIncome))}
           </tr>
@@ -83,7 +83,7 @@ export function Page6NetIncomeBreakdown({
           {P6_ADD_ROWS.map((r, idx) => (
             <tr key={r.num} data-besshi-cell={`p6-${r.num}`} data-testid={`p6-${r.num}`}>
               {idx === 0 && (
-                <td rowSpan={P6_ADD_ROWS.length} className={`${TD} bg-gray-50 text-center align-middle font-semibold`}>
+                <td rowSpan={P6_ADD_ROWS.length} className={`${TD} bg-gray-50 dark:bg-gray-800/20 text-center align-middle font-semibold`}>
                   {P6.addGroupLabel}
                 </td>
               )}
@@ -102,7 +102,7 @@ export function Page6NetIncomeBreakdown({
           {P6_SUB_ROWS.map((r, idx) => (
             <tr key={r.num} data-besshi-cell={`p6-${r.num}`} data-testid={`p6-${r.num}`}>
               {idx === 0 && (
-                <td rowSpan={P6_SUB_ROWS.length} className={`${TD} bg-gray-50 text-center align-middle font-semibold`}>
+                <td rowSpan={P6_SUB_ROWS.length} className={`${TD} bg-gray-50 dark:bg-gray-800/20 text-center align-middle font-semibold`}>
                   {P6.subGroupLabel}
                 </td>
               )}
@@ -124,7 +124,7 @@ export function Page6NetIncomeBreakdown({
             {valCells(fyb.map((fy) => fy.adjustedNetIncome))}
           </tr>
           <tr data-besshi-cell="p6-라" data-testid="p6-라">
-            <td className={`${TD} bg-gray-50`} aria-hidden />
+            <td className={`${TD} bg-gray-50 dark:bg-gray-800/20`} aria-hidden />
             <td className={TD}>{P6.capAdjLabel}</td>
             {valCells(fyb.map((fy) => fy.capitalIncreaseAdjustment))}
           </tr>
@@ -134,12 +134,12 @@ export function Page6NetIncomeBreakdown({
             {valCells(fyb.map((fy) => fy.finalNetIncome))}
           </tr>
           <tr data-besshi-cell="p6-바" data-testid="p6-바">
-            <td className={`${TD} bg-gray-50`} aria-hidden />
+            <td className={`${TD} bg-gray-50 dark:bg-gray-800/20`} aria-hidden />
             <td className={TD}>{P6.sharesLabel}</td>
             {valCells(fyb.map((fy) => fy.convertedShares), "주")}
           </tr>
           <tr data-besshi-cell="p6-사" data-testid="p6-사">
-            <td className={`${TD} bg-gray-50`} aria-hidden />
+            <td className={`${TD} bg-gray-50 dark:bg-gray-800/20`} aria-hidden />
             <td className={TD}>
               {P6.perShareLabel} <span className="font-mono tabular-nums">{P6.perShareMarkers.join("")}</span>
             </td>

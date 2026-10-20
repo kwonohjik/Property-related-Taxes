@@ -174,7 +174,7 @@ export function MergerNetIncomeBlock({
                   <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">{YEAR_LABELS[idx]}</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <p className="text-micro text-gray-600">사업연도 개시일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
+                      <p className="text-micro text-gray-600 dark:text-gray-400">사업연도 개시일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                       <div data-testid={`merger-acquirer-${idx}-start`}>
                         <DateInput
                           value={dateToStr(yr.startDate)}
@@ -186,7 +186,7 @@ export function MergerNetIncomeBlock({
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-micro text-gray-600">사업연도 종료일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
+                      <p className="text-micro text-gray-600 dark:text-gray-400">사업연도 종료일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                       <div data-testid={`merger-acquirer-${idx}-end`}>
                         <DateInput
                           value={dateToStr(yr.endDate)}
@@ -279,7 +279,7 @@ export function MergerNetIncomeBlock({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <p className="text-micro text-gray-600">사업연도 개시일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
+                    <p className="text-micro text-gray-600 dark:text-gray-400">사업연도 개시일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                     <div data-testid={`merger-target-${idx}-start`}>
                       <DateInput
                         value={dateToStr(tyr.startDate)}
@@ -291,7 +291,7 @@ export function MergerNetIncomeBlock({
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-micro text-gray-600">사업연도 종료일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
+                    <p className="text-micro text-gray-600 dark:text-gray-400">사업연도 종료일 <span className="text-rose-600 dark:text-rose-400">*</span></p>
                     <div data-testid={`merger-target-${idx}-end`}>
                       <DateInput
                         value={dateToStr(tyr.endDate)}

@@ -142,12 +142,12 @@ export function PropertyListTableView({
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700 bg-muted/30">
-            <th className="py-2 text-left pl-3 text-gray-500 font-medium">주택</th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">소재지</th>
-            <th className="py-2 text-right pr-2 text-gray-500 font-medium">공시가격</th>
-            <th className="py-2 text-right pr-2 text-gray-500 font-medium">지분</th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">합산배제</th>
-            <th className="py-2 text-left pl-2 text-gray-500 font-medium">옵션</th>
+            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">주택</th>
+            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">소재지</th>
+            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">공시가격</th>
+            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">지분</th>
+            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">합산배제</th>
+            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">옵션</th>
             <th className="w-12 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
