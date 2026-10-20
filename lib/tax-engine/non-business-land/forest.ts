@@ -26,7 +26,7 @@ import {
 } from "./period-criteria";
 import { computeResidencePeriods } from "./residence";
 import { isUrbanForForest } from "./urban-area";
-import { getOwnershipStart } from "./utils/period-math";
+import { getOwnershipStart, threeYearsFrom } from "./utils/period-math";
 
 /**
  * 공익·산림보호 임야 (§168-9 ①) 여부.
@@ -45,21 +45,7 @@ function isBusinessRelatedForest(input: NonBusinessLandInput): {
   const f = input.forestDetail;
   if (f?.isForestSuccessor) return { applies: true, reason: "임업후계자 임산물 생산" };
 
-  // §168-9 ③7호: 상속개시일부터 3년 경과하지 아니한 임야
-  // (신 플래그 `inheritedForestWithin3Years` 우선, 레거시 오기 플래그 `inheritedForestWithin5Years`도 수용)
-  const inheritedFlag = f?.inheritedForestWithin3Years ?? f?.inheritedForestWithin5Years;
-  if (inheritedFlag && f?.forestInheritanceDate) {
-    // 2026-07-29 정정(#591 감사 R7 — **세액 변경**): `differenceInDays / 365`는 윤년에서
-    //   off-by-one을 낸다. 상속 2019-03-01 → 양도 2022-02-28은 1,095일이라 1095/365 = 3.0이
-    //   되어 `< 3`이 false → **3년 경과로 오판**했지만, 3년 도래일은 2022-03-01이므로
-    //   2022-02-28은 아직 3년 미경과다(§168의9③7호 "상속개시일부터 3년이 **지나지 아니한**").
-    //   달력 기준 `addYears`로 판정한다 — 윤년·월말 경계를 date-fns가 처리한다.
-    const threeYearMark = addYears(f.forestInheritanceDate, 3);
-    if (input.transferDate < threeYearMark) {
-      const years = differenceInDays(input.transferDate, f.forestInheritanceDate) / 365;
-      return { applies: true, reason: `상속 3년 이내 임야 (${years.toFixed(1)}년 경과)` };
-    }
-  }
+  // §168-9 ③7호(상속 3년)는 기간 의제라 여기서 보지 않는다 — `forestInheritanceStart` · `judgeForest` Step 3-1-1.
 
   /**
    * §168의9③8호 「종중이 소유한 임야(2005년 12월 31일 이전에 취득한 것에 한한다)」.
@@ -78,6 +64,20 @@ function isBusinessRelatedForest(input: NonBusinessLandInput): {
   }
 
   return { applies: false, reason: "거주·사업관련 임야 사유 없음" };
+}
+
+/**
+ * §168-9 ③7호 「상속받은 임야로서 상속개시일부터 3년이 경과하지 아니한 임야」 — 상속개시일.
+ * (신 플래그 `inheritedForestWithin3Years` 우선, 레거시 오기 플래그 `inheritedForestWithin5Years`도 수용)
+ *
+ * 3년은 **기간**이다 — 상속개시일부터 3년(`threeYearsFrom`, 달력 기준)을 재촌 기간과 합쳐 기간기준을 잰다.
+ * 종전에는 «양도일 < 상속개시일 + 3년이면 보유 전 기간, 아니면 미적용»이라 3년이 지난 뒤 양도하면 그 3년을 세지 않았다
+ * (계획서 `docs/00-pm/nbl-farmland-inherit-inong-3y.plan.md` Q-5 — 농지 ③2호의 부동산거래관리과-504와 같은 구조).
+ */
+function forestInheritanceStart(input: NonBusinessLandInput): Date | undefined {
+  const f = input.forestDetail;
+  const inheritedFlag = f?.inheritedForestWithin3Years ?? f?.inheritedForestWithin5Years;
+  return inheritedFlag ? f?.forestInheritanceDate : undefined;
 }
 
 export function judgeForest(
@@ -149,25 +149,38 @@ export function judgeForest(
   // ── Step 3-1-1: 공익·산림보호·사업관련·시업중/특수지구 임야 기간기준 ──
   const publicProtected = isPublicOrProtected(input);
   const related = isBusinessRelatedForest(input);
+  const inheritedStart = forestInheritanceStart(input);
   // §168조의9①2호가목(산림경영계획 시업중)·나목(특수산림사업지구)은 그 자체가 공익·산림보호 임야로
   // 재촌 여부와 무관하게 기간기준 판정 대상이다(이후 Step 3-2에서 지역기준 적용). 게이트에서 누락하면
   // '산림경영계획 인가'만 체크한 시업중 임야가 비사업용으로 오판되므로 반드시 포함한다.
   const inSiupOrSpecialZone =
     input.forestDetail?.hasForestPlan === true ||
     input.forestDetail?.isSpecialForestZone === true;
-  const applies = publicProtected || related.applies || inSiupOrSpecialZone;
+  const wholePeriod = publicProtected || related.applies || inSiupOrSpecialZone;
+  const applies = wholePeriod || inheritedStart !== undefined;
   const entryReason = publicProtected
     ? "공익·산림보호 임야"
     : related.applies
       ? related.reason
-      : "산림경영계획 시업중·특수산림사업지구";
-  // 시업중/특수지구는 §168조의9①(FOREST_PUBLIC) 소속. 거주·사업관련(③)만 FOREST_BUSINESS.
-  const entryLegal = !publicProtected && related.applies ? NBL.FOREST_BUSINESS : NBL.FOREST_PUBLIC;
+      : inSiupOrSpecialZone
+        ? "산림경영계획 시업중·특수산림사업지구"
+        : `상속개시일 ${inheritedStart?.toISOString().slice(0, 10)}부터 3년을 사업용 기간으로 셈(재촌 기간과 합산)`;
+  // 시업중/특수지구는 §168조의9①(FOREST_PUBLIC) 소속. 거주·사업관련(③)만 FOREST_BUSINESS — 그중 상속 3년만이면 ③7호.
+  const entryLegal = publicProtected
+    ? NBL.FOREST_PUBLIC
+    : related.applies
+      ? NBL.FOREST_BUSINESS
+      : inSiupOrSpecialZone
+        ? NBL.FOREST_PUBLIC
+        : NBL.FOREST_INHERIT_3Y;
 
   let r2: PeriodCriteriaResult | null = null;
   if (applies) {
-    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
-    r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "forest", rules, input.gracePeriods);
+    // 상속 3년만 해당하면 그 3년과 재촌 기간을 합친다. 다른 사유는 보유 전 기간이다(3년 구간은 그 안에 든다).
+    const periods: DateInterval[] = wholePeriod
+      ? [{ start: ownershipStart, end: pjDate }]
+      : [...residencePeriods, threeYearsFrom(inheritedStart!)];
+    r2 = meetsPeriodCriteria(periods, input.acquisitionDate, pjDate, "forest", rules, input.gracePeriods);
     if (!r2.meets) {
       steps.push({
         id: "forest_public_business",
@@ -214,7 +227,9 @@ export function judgeForest(
    *
    *    종전 게이트는 `inSiupOrSpecialZone`만 보아 공익림·거주관련 임야까지 지역기준에 태웠다.
    */
-  const onlySiup = inSiupOrSpecialZone && !publicProtected && !related.applies;
+  // 양도일이 상속 3년 안이면 ③7호가 보유 전 기간을 덮으므로 ①2호 단서를 적용하지 않는다(종전 동작 그대로).
+  const inheritCoversTransfer = inheritedStart !== undefined && input.transferDate < addYears(inheritedStart, 3);
+  const onlySiup = inSiupOrSpecialZone && !publicProtected && !related.applies && !inheritCoversTransfer;
   if (!onlySiup) {
     steps.push({
       id: "forest_siup_zone",

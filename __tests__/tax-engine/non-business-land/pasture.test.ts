@@ -56,6 +56,7 @@ describe("C-3 목장용지 PDF p.1702 흐름도", () => {
           standardArea: 10000,
           inheritanceDate: d("2023-06-01"),
         },
+        acquisitionDate: d("2023-06-01"), // 상속개시일 = 취득일(매퍼 불변식) — 상속 3년은 상속개시일부터의 기간이다(nbl-farmland-inherit-inong-3y.plan.md Q-5)
         transferDate: d("2024-06-01"),
       }),
       DEFAULT_NON_BUSINESS_LAND_RULES,

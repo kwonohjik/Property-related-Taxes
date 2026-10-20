@@ -114,7 +114,8 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
     flagField: "nblExemptInong",
     uncondField: "isInong",
     requirementHint:
-      "이농일이 2006.12.31. 이전이고 2009.12.31.까지 양도, 지목이 농지여야 확정됩니다.",
+      "이농일이 2006.12.31. 이전이고 2009.12.31.까지 양도, 지목이 농지여야 확정됩니다. " +
+      "그 밖의 농지는 무조건 사업용이 아니라 이농일부터 3년을 사업용 기간으로 셉니다(소득령 §168의8③3호).",
   },
 ];
 

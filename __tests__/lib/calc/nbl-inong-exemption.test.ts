@@ -30,6 +30,13 @@ function inongRaw(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * 2026-10-20 — 이농 사실은 §168의8③3호(이농일부터 3년을 사업용 기간으로)에도 쓰인다(계획서 `nbl-farmland-inherit-inong-3y.plan.md` Q-3).
+ * 그래서 아래 「무조건 의제 미적용」 경계는 판정 결과가 아니라 무조건 의제 단계의 성립 여부로 본다.
+ */
+const uncondStatus = (r: ReturnType<typeof judgeNonBusinessLand>) =>
+  r.judgmentSteps.find((x) => x.id === "unconditional_exemption")?.status;
+
 describe("[NBL-INONG] 갭2 이농 의제 (§83의5④2호)", () => {
   it("form-mapper: nblExemptInong → unconditionalExemption.isInong/inongDate 매핑", () => {
     const input = buildNblEngineInput(inongRaw() as never);
@@ -46,10 +53,18 @@ describe("[NBL-INONG] 갭2 이농 의제 (§83의5④2호)", () => {
     expect(r.isNonBusinessLand).toBe(false);
   });
 
-  it("대조: 양도 2010-06-01 (2009.12.31 초과) → 의제 미적용·비사업용(true)", () => {
+  it("대조: 양도 2010-06-01 (2009.12.31 초과) → 무조건 의제 미적용 · §168의8③3호(이농일부터 3년)로 사업용", () => {
     const input = buildNblEngineInput(inongRaw({ transferDate: "2010-06-01" }) as never);
     const r = judgeNonBusinessLand(input!);
-    expect(r.isNonBusinessLand).toBe(true);
+    expect(uncondStatus(r)).not.toBe("PASS");
+    // 이농 2005-06-01부터 3년을 사업용 기간으로 센다 — 직전 5년 중 비사업용 2년이 「2년 초과」가 아니다
+    expect(r.isNonBusinessLand).toBe(false);
+    expect(r.appliedLawArticles).toContain("소득세법 시행령 §168조의8 ③ 3호");
+  });
+
+  it("대조: 같은 시료에서 이농 토글을 끄면 비사업용(③3호 부정 짝)", () => {
+    const input = buildNblEngineInput(inongRaw({ transferDate: "2010-06-01", nblExemptInong: false }) as never);
+    expect(judgeNonBusinessLand(input!).isNonBusinessLand).toBe(true);
   });
 
   it("경계: 이농일 2006-12-31·양도 2009-12-31 정확 (cutoff 당일 포함, ≤) → 의제 적용(false)", () => {
@@ -60,19 +75,21 @@ describe("[NBL-INONG] 갭2 이농 의제 (§83의5④2호)", () => {
     expect(r.isNonBusinessLand).toBe(false);
   });
 
-  it("경계: 양도 2010-01-01 (2009.12.31 하루 초과) → 의제 미적용(true)", () => {
+  it("경계: 양도 2010-01-01 (2009.12.31 하루 초과) → 무조건 의제 미적용(③3호로는 사업용)", () => {
     const input = buildNblEngineInput(
       inongRaw({ nblExemptInongDate: "2006-12-31", transferDate: "2010-01-01" }) as never,
     );
     const r = judgeNonBusinessLand(input!);
-    expect(r.isNonBusinessLand).toBe(true);
+    expect(uncondStatus(r)).not.toBe("PASS");
+    expect(r.isNonBusinessLand).toBe(false);
   });
 
-  it("경계: 이농일 2007-01-01 (2006.12.31 하루 초과) → 의제 미적용(true)", () => {
+  it("경계: 이농일 2007-01-01 (2006.12.31 하루 초과) → 무조건 의제 미적용(③3호로는 사업용)", () => {
     const input = buildNblEngineInput(
       inongRaw({ nblExemptInongDate: "2007-01-01", transferDate: "2009-06-01" }) as never,
     );
     const r = judgeNonBusinessLand(input!);
-    expect(r.isNonBusinessLand).toBe(true);
+    expect(uncondStatus(r)).not.toBe("PASS");
+    expect(r.isNonBusinessLand).toBe(false);
   });
 });

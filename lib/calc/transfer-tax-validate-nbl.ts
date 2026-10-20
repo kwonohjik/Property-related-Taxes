@@ -114,6 +114,22 @@ export function validateNblDetailedJudgment(
    * 「토지가액 50배 → §168의11② 수입금액비율 붕괴」 경로 자체가 사라졌다.
    */
 
+  /**
+   * 이농 농지 — 「소득세법 시행령」 §168의14③5호(2006.12.31. 이전 이농)와 §168의8③3호(이농일부터 3년)가 같은 이농일을 쓴다.
+   * 종전에는 토글을 켜고 이농일을 비워도 막지 않아 두 특례 모두 조용히 빠졌다. 「이농당시 소유하고 있던 농지」이므로
+   * 이농일은 취득일 이후, 양도일 이전이어야 한다(계획서 `docs/00-pm/nbl-farmland-inherit-inong-3y.plan.md` Q-3).
+   * 입력칸(무조건 의제 섹션)은 의제가 성립해도 비활성되지 않으므로 아래 `nblExempt` 스킵보다 앞에 둔다.
+   */
+  if (asset.nblExemptInong) {
+    const inong = asset.nblExemptInongDate;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(inong ?? ""))
+      return fieldError("nblExemptInongDate", `${label}: 이농 농지를 선택했습니다. 이농일을 입력하세요.`);
+    if (formTransferDate && inong > formTransferDate)
+      return fieldError("nblExemptInongDate", `${label}: 이농일(${inong})이 양도일(${formTransferDate})보다 늦습니다.`);
+    if (asset.acquisitionDate && inong < asset.acquisitionDate)
+      return fieldError("nblExemptInongDate", `${label}: 이농일(${inong})이 취득일(${asset.acquisitionDate})보다 빠릅니다 — 이농 당시 소유하고 있던 농지여야 합니다.`);
+  }
+
   // 무조건 의제 성립 시 아래 기간기준 상세 입력은 엔진이 무시 + UI 비활성 → 검증 스킵
   if (nblExempt) return null;
 

@@ -183,6 +183,7 @@ describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시�
   const forest = (d: string) => ({ ...RURAL, ...inherit(d), nblLandType: "forest", nblForestInheritedWithin3Years: true, nblForestInheritanceDate: d }) as Partial<AssetForm>;
   const pasture = (d: string) => ({ ...RURAL, ...inherit(d), nblLandType: "pasture", nblPastureInheritanceDate: d }) as Partial<AssetForm>;
   const BOUGHT = { acquisitionCause: "purchase", acquisitionDate: "2022-06-01" } as Partial<AssetForm>;
+  const F2_TOTAL = 225_423_000;
   const NOT_INHERITED = (item: string) =>
     "[자산 2] 같은 토지를 지분별로 나눠 취득했고 이 지분의 취득원인·취득일이 첫 지분과 다릅니다 — 이 지분은 상속받은 지분이 아니어서 " +
     `첫 지분에 적용된 ${item} 사유를 이 지분의 판정에는 적용하지 않았습니다.`;
@@ -199,12 +200,16 @@ describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시�
       expect(r.total).toBe(238_612_000);
       expect(r.shareWarnings).toEqual([NOT_INHERITED(item)]);
     });
-    it(`${kind} F2 둘째 지분 2022 상속(3년 미경과) · 첫 지분 2020 상속: 둘째 지분은 자기 상속개시일로 사업용 · 고지 없음`, async () => {
+    /**
+     * 첫 지분(2020 상속 · 양도 2024 — 4.4년)도 상속개시일부터 3년을 사업용 기간으로 세어 사업용이다(계획서
+     * `nbl-farmland-inherit-inong-3y.plan.md` Q-5 b — 종전 [true, false] · 225,940,000은 3년이 지나면 그 3년을 세지 않던 값).
+     */
+    it(`${kind} F2 둘째 지분 2022 상속(3년 미경과) · 첫 지분 2020 상속: 지분마다 자기 상속개시일 — 둘 다 사업용 · 고지 없음`, async () => {
       const f = form([share("50", first("2020-01-01")), share("50", inherit("2022-01-01"))], {});
       expect(v8(f)).toEqual([]);
       const r = await run(f);
-      expect(r.nbl).toEqual([true, false]);
-      expect(r.total).toBe(225_940_000);
+      expect(r.nbl).toEqual([false, false]);
+      expect(r.total).toBe(F2_TOTAL);
       expect(r.shareWarnings).toEqual([]);
     });
     it(`${kind} F3 같은 날 상속: 첫 카드 값 그대로(부정 짝)`, async () => {
@@ -220,8 +225,8 @@ describe("축 B 임야·목장 — 상속 3년 이내는 지분의 상속개시�
     for (const land of ["forest", "pasture"] as const) {
       const plain = { ...RURAL, ...inherit("2020-01-01"), nblLandType: land } as Partial<AssetForm>;
       const r = await run(form([share("50", plain), share("50", inherit("2022-01-01"))], {}));
-      expect(r.nbl).toEqual([true, false]);
-      expect(r.total).toBe(225_940_000);
+      expect(r.nbl).toEqual([false, false]);
+      expect(r.total).toBe(F2_TOTAL);
       expect(r.shareWarnings).toEqual([]);
     }
   });

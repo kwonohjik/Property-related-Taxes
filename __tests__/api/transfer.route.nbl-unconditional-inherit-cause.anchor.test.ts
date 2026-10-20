@@ -75,15 +75,24 @@ async function run(f: TransferFormData) {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cap.body),
   }));
   const json = (await res.json()) as {
-    data?: { result?: { totalTax?: number; nonBusinessLandJudgmentDetail?: { isNonBusinessLand: boolean } } };
+    data?: {
+      result?: {
+        totalTax?: number;
+        nonBusinessLandJudgmentDetail?: { isNonBusinessLand: boolean; judgmentSteps?: Array<{ id: string; status: string }> };
+      };
+    };
   };
+  const detail = json.data?.result?.nonBusinessLandJudgmentDetail;
   return {
     status: res.status,
     issues: [0, 1, 2, 3].flatMap((s) => collectStepIssues(s, f)),
     total: json.data?.result?.totalTax,
-    nbl: json.data?.result?.nonBusinessLandJudgmentDetail?.isNonBusinessLand,
+    nbl: detail?.isNonBusinessLand,
+    uncond: detail?.judgmentSteps?.find((x) => x.id === "unconditional_exemption")?.status,
   };
 }
+
+const C4_TOTAL = 234_960_000;
 
 describe("무조건 사업용 의제 상속 3종 — 취득원인·상속개시일 (§168의14③1호·1의2호·4호 나목)", () => {
   it.each([
@@ -105,7 +114,9 @@ describe("무조건 사업용 의제 상속 3종 — 취득원인·상속개시�
     ["C1 1호 · 매매 2000 + 옛 선언·상속일", form(T09, RURAL, BUY("2000-01-01"), OLD_1HO("2000-01-01")), true, 300_685_000],
     ["C6 1호 · 증여 2000 + 옛 선언·상속일", form(T09, RURAL, GIFT("2000-01-01"), OLD_1HO("2000-01-01")), true, 300_685_000],
     ["C2 1호 · 상속 2000 + 옛 선언 · 상속일 빈칸", form(T09, RURAL, INH("2000-01-01"), OLD_1HO("")), false, 187_440_000],
-    ["C4 1호 · 상속 2008 + 옛 상속일 2005(오입력)", form(T09, RURAL, INH("2008-01-01"), OLD_1HO("2005-01-01")), true, 300_685_000],
+    // 1호는 불성립(상속 2008)이지만 양도 2009는 상속개시일부터 3년 안이라 §168의8③2호로 사업용이다(2008.1.1. 시행본에도
+    // 같은 2호가 있다 — 계획서 nbl-farmland-inherit-inong-3y.plan.md). 종전 값은 비사업용 300,685,000.
+    ["C4 1호 · 상속 2008 + 옛 상속일 2005(오입력) → 1호 불성립 · ③2호 사업용", form(T09, RURAL, INH("2008-01-01"), OLD_1HO("2005-01-01")), false, C4_TOTAL],
     ["C5 1호 · 상속 2000 · 선언 없이 자동 성립", form(T09, RURAL, INH("2000-01-01")), false, 187_440_000],
   ] as const)("%s", async (_name, f, nbl, total) => {
     const r = await run(f);
@@ -122,8 +133,14 @@ describe("무조건 사업용 의제 상속 3종 — 취득원인·상속개시�
   });
 
   /** 1호 「2006년 12월 31일 이전에 상속받은」 경계 */
-  it("1호 상속개시일 경계: 2006-12-31 사업용 · 2007-01-01 비사업용 (양도 2009-06-01)", async () => {
-    expect((await run(form(T09, RURAL, INH("2006-12-31")))).nbl).toBe(false);
-    expect((await run(form(T09, RURAL, INH("2007-01-01")))).nbl).toBe(true);
+  /**
+   * 1호 경계는 무조건 의제 단계로 본다 — 2007-01-01 상속은 1호가 불성립하지만 양도 2009-06-01이 상속개시일부터 3년 안이라
+   * §168의8③2호로 결국 사업용이다(종전 단언 「2007-01-01 비사업용」은 ③2호가 엔진에 없던 때의 값).
+   */
+  it("1호 상속개시일 경계: 2006-12-31 1호 성립 · 2007-01-01 1호 불성립(③2호로 사업용) (양도 2009-06-01)", async () => {
+    const on = await run(form(T09, RURAL, INH("2006-12-31")));
+    expect([on.uncond, on.nbl]).toEqual(["PASS", false]);
+    const off = await run(form(T09, RURAL, INH("2007-01-01")));
+    expect([off.uncond, off.nbl]).toEqual(["NOT_APPLICABLE", false]);
   });
 });

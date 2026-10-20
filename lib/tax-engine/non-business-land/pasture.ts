@@ -9,7 +9,7 @@
  *   Step 3-3-1 도시지역 內 편입유예 → 사업용/비사업용
  */
 
-import { addYears, differenceInDays } from "date-fns";
+import { differenceInDays } from "date-fns";
 import { NBL } from "../legal-codes";
 import type {
   AreaProportioning,
@@ -27,7 +27,7 @@ import {
 } from "./period-criteria";
 import { isUrbanForPasture } from "./urban-area";
 import { isUrbanCriteriaRegion } from "./urban-region-scope";
-import { getOwnershipStart } from "./utils/period-math";
+import { getOwnershipStart, threeYearsFrom } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { getLivestockStandardArea } from "./data/livestock-standards";
 import { includedFacilityLabels } from "../livestock-standard-area";
@@ -51,16 +51,7 @@ function isRelatedPasture(input: NonBusinessLandInput): { applies: boolean; reas
   const p = input.pasture;
   if (!p) return { applies: false, reason: "" };
 
-  if (p.inheritanceDate) {
-    // 「소득세법 시행령」 §168의10②1호 「상속개시일부터 3년이 **지나지 아니한**」 — 달력 기준으로 판정한다.
-    // `differenceInDays / 365`는 윤일이 낀 창에서 하루 일찍 3년으로 올라가 요건이 끊긴다
-    // (E2-04. forest.ts:57이 같은 이유로 이미 addYears를 쓴다 — 그 sibling과 맞춘다).
-    const threeYearMark = addYears(p.inheritanceDate, 3);
-    if (input.transferDate < threeYearMark) {
-      const years = differenceInDays(input.transferDate, p.inheritanceDate) / 365;
-      return { applies: true, reason: `상속 3년 이내 목장 (${years.toFixed(1)}년 경과)` };
-    }
-  }
+  // §168의10②1호(상속 3년)는 기간 의제라 여기서 보지 않는다 — `judgePasture` Step 3-1-1이 상속개시일부터 3년 구간으로 잰다.
   if (p.isSpecialOrgUse) {
     return { applies: true, reason: "사회복지/학교/종교/정당 직접 사용" };
   }
@@ -121,17 +112,31 @@ export function judgePasture(
    *    도시지역 시업중·특수산림사업지구 임야에서 결론이 갈리고, 그 corner에서는 선점하는
    *    무조건 의제 쪽이 법령상 옳다(§168의9③8호는 다목 사유라 ①2호 단서의 적용을 받지 않는다).
    */
+  /**
+   * §168의10②1호 「상속받은 목장용지로서 상속개시일부터 3년이 경과하지 아니한 것」은 3년 **기간**이다 —
+   * 상속개시일부터 3년(`threeYearsFrom`)만 사업용 기간으로 센다(3년이 지난 뒤 양도해도 센다. 계획서
+   * `docs/00-pm/nbl-farmland-inherit-inong-3y.plan.md` Q-5). 축산업 영위 기간은 기준면적·지역 판정을 거쳐야 하는
+   * 가목 기간이라 합치지 않는다 — 단서(지역·면적 면제)는 그 3년에만 미친다.
+   */
   const related = isRelatedPasture(input);
-  if (related.applies) {
-    const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
-    const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "pasture", rules, input.gracePeriods);
+  const inheritedStart = input.pasture?.inheritanceDate;
+  const relatedPeriods: DateInterval[] | undefined = related.applies
+    ? [{ start: ownershipStart, end: pjDate }]
+    : inheritedStart
+      ? [threeYearsFrom(inheritedStart)]
+      : undefined;
+  const relatedReason = related.applies
+    ? related.reason
+    : `상속개시일 ${inheritedStart?.toISOString().slice(0, 10)}부터 3년을 사업용 기간으로 셈(${NBL.PASTURE_INHERIT_3Y})`;
+  if (relatedPeriods) {
+    const r2 = meetsPeriodCriteria(relatedPeriods, input.acquisitionDate, pjDate, "pasture", rules, input.gracePeriods);
     if (r2.meets) {
       appliedLaws.push(NBL.PASTURE_RELATED);
       steps.push({
         id: "pasture_related",
         label: "Step 3-1-1 거주·사업관련 목장용지",
         status: "PASS",
-        detail: `${related.reason} + 기간기준 충족 (지역·면적 면제)`,
+        detail: `${relatedReason} + 기간기준 충족 (지역·면적 면제)`,
         legalBasis: NBL.PASTURE_RELATED,
       });
       return buildPass("거주·사업관련 목장용지 (지역·면적 면제)", steps, appliedLaws, warnings, {
@@ -142,7 +147,7 @@ export function judgePasture(
       id: "pasture_related",
       label: "Step 3-1-1 거주·사업관련 목장용지",
       status: "FAIL",
-      detail: `${related.reason}이나 기간기준 미충족`,
+      detail: `${relatedReason}이나 기간기준 미충족`,
       legalBasis: NBL.PASTURE_RELATED,
     });
     // 단서 사유는 있으나 전 보유기간 기간기준조차 미충족 — 축산 영위도 미충족이면 여기서 종료.

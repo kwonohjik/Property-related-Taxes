@@ -5,10 +5,9 @@
  * 정밀판정 입력을 싣는다(계획서 `docs/00-pm/axis-b-land-share-nbl-detailed-judgment.plan.md` §4-2). 세액은 그 입력대로이고
  * 여기서는 바꾸지 않는다 — 꺼진 선언을 말로 밝힐 뿐이다. 지분 전부를 함께 보는 다건 엔진(`transfer-tax-aggregate-asset-records.ts`)이 부른다.
  *
- * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 4종이나, 첫 지분에 적용된 상속 사유(임야·목장 「상속 3년 이내」,
+ * 조건(AND): 축 B · 이 지분에 정밀판정 입력이 있음 · 첫 지분에서 켜진 4종이나, 첫 지분에 적용된 상속 사유(농지·임야·목장 「상속 3년」,
  * 무조건 의제 ③1호·③4호 나목) 중 이 지분이 상속이 아니어서 빠진 것이 있음.
  */
-import { addYears } from "date-fns";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { UnconditionalExemptionInput } from "./types";
 import { NBL } from "../legal-codes";
@@ -42,15 +41,21 @@ export function nblShareExemptionWithheldNotice(
   const shareU = s.unconditionalExemption;
   const withheld = ACQUISITION_DEPENDENT.filter(([k]) => firstU?.[k] === true && shareU?.[k] !== true).map(([, l]) => l);
   /**
-   * 임야·목장 「상속 3년 이내」 — 서버 매퍼가 지분마다 취득원인·취득일(상속개시일)에서 정한다. 첫 지분에는 그 사유가
-   * 적용됐는데(상속 · 양도일이 상속개시일부터 3년 전) 이 지분은 상속이 아니면, 사실로 정해진 결론이라 「확인 필요」 없이
-   * 알린다(계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md` §3-3 E5).
+   * 농지·임야·목장 「상속 3년」 — 서버 매퍼가 지분마다 취득원인·취득일(상속개시일)에서 정한다. 첫 지분에는 그 사유가
+   * 적용됐는데 이 지분은 상속이 아니면, 사실로 정해진 결론이라 「확인 필요」 없이 알린다
+   * (계획서 `docs/00-pm/nbl-forest-pasture-inherit-3y-cause.plan.md` §3-3 E5).
+   * 상속 3년은 기간이라 3년이 지난 뒤 양도해도 첫 지분의 기간기준에 들어간다 — 상속이면 적용된 것으로 본다
+   * (계획서 `docs/00-pm/nbl-farmland-inherit-inong-3y.plan.md` Q-1·Q-5. 종전에는 「양도일이 3년 전」일 때만이었다).
+   * 첫 지분이 무조건 사업용 의제(Step 2)로 끝났으면 지목별 판정까지 가지 않아 상속 3년은 쓰이지 않았다.
    */
-  const appliedToFirst = (start: Date | undefined) => start !== undefined && f !== undefined && f.transferDate < addYears(start, 3);
   const firstUncond = f ? checkUnconditionalExemption(f, getLandCategoryGroup(f.landType)) : undefined;
+  const appliedToFirst = (start: Date | undefined) => start !== undefined && firstUncond?.isExempt !== true;
   const notInherited = [
     ...AUTO_INHERITANCE_BASIS.filter(([basis]) => firstUncond?.legalBasis === basis && s.unconditionalExemption?.inheritanceDate === undefined)
       .map(([basis, label]) => `${label}(${basis})`),
+    ...(appliedToFirst(f?.farmlandDeeming?.inheritanceStartDate) && s.farmlandDeeming?.inheritanceStartDate === undefined
+      ? [`상속 3년 이내 농지(${NBL.FARMLAND_INHERIT_3Y})`]
+      : []),
     ...(appliedToFirst(f?.forestDetail?.forestInheritanceDate) && s.forestDetail?.forestInheritanceDate === undefined
       ? [`상속 3년 이내 임야(${NBL.FOREST_INHERIT_3Y})`]
       : []),

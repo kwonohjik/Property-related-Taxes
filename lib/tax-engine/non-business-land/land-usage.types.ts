@@ -267,4 +267,9 @@ export interface FarmlandDeemingInput {
   isReclaimed?: boolean;
   isPublicProjectUse?: boolean;
   isSickElderlyRental?: boolean;
+  /**
+   * §168의8③2호 — 상속받은 농지의 상속개시일. 매퍼가 취득원인·취득일에서 정한다(상속인이 아닌 수유자는 비운다 —
+   * 기준-2019-법령해석재산-0324). 상속개시일부터 3년을 사업용 기간으로 센다(`threeYearsFrom`).
+   */
+  inheritanceStartDate?: Date;
 }
