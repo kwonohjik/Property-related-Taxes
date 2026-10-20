@@ -10,6 +10,7 @@ import OneHouseJudgmentCalculator from "@/app/calc/one-house-exemption/OneHouseJ
 import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
 import { ONE_HOUSE_FIELD_CATALOG } from "@/lib/one-house-ai/field-catalog";
+import type { FieldSpec } from "@/lib/one-house-ai/field-catalog.types";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -133,7 +134,7 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
   describe("질문에 바로 답하기", () => {
     // 추출 API가 질문에 붙이는 칸 정보(사전 한 줄)
     const field = (path: string) => {
-      const s = ONE_HOUSE_FIELD_CATALOG.find((x) => x.path === path)!;
+      const s: FieldSpec = ONE_HOUSE_FIELD_CATALOG.find((x) => x.path === path)!;
       return { path: s.path, kind: s.kind, label: s.label, values: s.values };
     };
     const withAnswerable: OneHouseAiExtractData = {
