@@ -34,8 +34,10 @@ export function effectiveGrossGain(r: {
   transferGain: number;
   redevelopmentDetail?: RedevDetailLike;
 }): number {
-  if (r.isExempt) return r.exemptGrossGain ?? 0;
+  // §166은 비과세보다 먼저 본다 — §166 결과는 `exemptGrossGain`을 싣지 않고, 전액 비과세면 분기 차익이 0으로 마스킹된다.
+  //   마스킹 전 값은 leaf(`redevBranchGrossGain`)가 읽는다. 종전 순서는 전액 비과세 §166 자산의 전체 양도차익을 0으로 보였다.
   if (r.redevelopmentDetail) return redevBranchTotals(r.redevelopmentDetail).gain;
+  if (r.isExempt) return r.exemptGrossGain ?? 0;
   return r.transferGain;
 }
 
@@ -107,6 +109,7 @@ export function effectiveGrossGainOfProperty(p: {
   isExempt?: boolean;
   exemptGrossGain?: number;
   transferGain: number;
+  redevelopmentDetail?: RedevDetailLike;
 }): number {
   return effectiveGrossGain(p);
 }
@@ -126,6 +129,7 @@ export function assetTaxableGain(p: {
   isExempt?: boolean;
   exemptGrossGain?: number;
   transferGain: number;
+  redevelopmentDetail?: RedevDetailLike;
   income: number;
   longTermHoldingDeduction: number;
 }): number {
