@@ -195,12 +195,18 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
 
 /** 건별 편집이 최소 조건을 충족하는지 (다음 단계 이동 가능 여부) */
 export function isPropertyReady(item: PropertyItem): boolean {
+  return firstBlockingMessage(item) === null;
+}
+
+/** 건별 첫 차단 사유 — 없으면 null */
+function firstBlockingMessage(item: PropertyItem): string | null {
   // Step1↔Step3 통합 후 4단계 구조: Step 0(자산·취득) ~ Step 2(감면) 검증.
   // Step 3(가산세)은 선택이므로 제외.
   for (let step = 0; step <= 2; step++) {
-    if (validateStep(step, item.form) !== null) return false;
+    const message = validateStep(step, item.form);
+    if (message !== null) return message;
   }
-  return true;
+  return null;
 }
 
 /** 전체 다건 공통 설정 검증 */
@@ -262,4 +268,21 @@ export function validateMultiSettings(form: MultiTransferFormData): string | nul
 /** 모든 건의 최소 조건 충족 여부 */
 export function areAllPropertiesReady(properties: PropertyItem[]): boolean {
   return properties.every(isPropertyReady);
+}
+
+/**
+ * 필수 정보가 남은 건이 있으면 그 이름을 담은 차단 문구, 없으면 null — 「세액 계산」의 최종 관문.
+ *
+ * 목록의 「공통 설정으로」만 `areAllPropertiesReady`로 막고 있어서, 단계 표시 「공통 설정」 탭과
+ * 편집 화면의 「공통 설정으로 →」로 들어오면 소재지·동·호 같은 클라이언트 필수 입력 없이 계산됐다(실측 200).
+ * 단건 `handleSubmit`의 「최종 제출 가드」와 같은 자리다.
+ * 계획서 `docs/00-pm/address-dongho-other-calcs-and-multi-gate.plan.md` M1
+ */
+export function notReadyPropertiesMessage(properties: PropertyItem[]): string | null {
+  const lines = properties.flatMap((p) => {
+    const message = firstBlockingMessage(p);
+    return message === null ? [] : [`• 「${p.propertyLabel}」 ${message}`];
+  });
+  if (lines.length === 0) return null;
+  return `필수 정보가 입력되지 않은 양도 건이 있습니다. 자산 목록에서 편집해 완성하세요.\n${lines.join("\n")}`;
 }

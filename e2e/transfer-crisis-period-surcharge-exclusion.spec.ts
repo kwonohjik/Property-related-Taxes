@@ -16,6 +16,8 @@ import { openHistoryModal } from "./_helpers/navigation";
 /** 비사업용 토지 자산 — 자경하지 않는 농지(비사업용 판정). #508 asset 구조 준용. */
 function nblLandAsset(acquisitionDate: string) {
   return {
+    // 소재지 — 다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts). 건마다 다른 물건이다.
+    addressJibun: `경기도 양평군 테스트리 ${acquisitionDate}`,
     assetKind: "land",
     acquisitionDate,
     acquisitionArea: "1000",

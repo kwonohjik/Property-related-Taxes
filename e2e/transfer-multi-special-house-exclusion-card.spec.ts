@@ -31,6 +31,9 @@ const ROW: HouseEntry = {
   isApartment: true,
   isOfficetel: false,
   isUnsoldHousing: false,
+  // 결정 #43 — 신규 주택으로 도출될 수 있는 행은 취득 경위가 필수다(`_helpers/transfer-seed.ts`와 같은 값).
+  //   다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts).
+  acquisitionOrigin: "general",
 };
 const SPECIAL_ROW: HouseEntry = {
   ...ROW,
@@ -85,6 +88,8 @@ function propertyForm(houses: HouseEntry[]) {
     isRegulatedArea: true,
     wasRegulatedAtAcquisition: false,
     houses,
+    // 분양권·입주권 목록을 만들지 않으므로 「없음」 확정 — 다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts)
+    householdNoPresaleRightsConfirmed: true,
   });
 }
 

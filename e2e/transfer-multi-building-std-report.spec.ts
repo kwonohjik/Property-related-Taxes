@@ -27,6 +27,8 @@ const ASSET_ID = "multi-bsp-asset-1";
 function landAsset(assetId: string) {
   return {
     assetId,
+    // 소재지 — 다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts). 건마다 다른 물건이다.
+    addressJibun: `서울 강남구 테스트동 ${assetId}`,
     assetKind: "land",
     acquisitionDate: "2015-01-01",
     acquisitionArea: "1000",

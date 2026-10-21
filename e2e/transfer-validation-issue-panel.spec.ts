@@ -115,16 +115,15 @@ test.describe("양도세 검증 오류 패널 — 화면 이동 없이 보인다
     await page.evaluate(() => {
       const k = "multi-transfer-tax-wizard";
       const parsed = JSON.parse(sessionStorage.getItem(k)!);
+      // 빈 「양도 1번」을 둔 채 설정 단계로 — 「세액 계산」의 최종 관문(자산별 필수 검증)이 확실히 실패하는 최단 입력
       parsed.state.form.activeStep = "settings";
-      // 설정 단계 검증을 확실히 실패시키는 최단 입력 — multi-transfer-tax-validate.ts
-      parsed.state.form.annualBasicDeductionUsed = "3000000";
       sessionStorage.setItem(k, JSON.stringify(parsed));
     });
     await page.reload();
 
     const calc = page.getByRole("button", { name: "세액 계산" });
     await calc.click();
-    await expect(page.getByText("연간 기사용 기본공제는 250만원을 초과할 수 없습니다.")).toBeInViewport();
+    await expect(page.getByText(/필수 정보가 입력되지 않은 양도 건이 있습니다/)).toBeInViewport();
     await expect(calc).toBeInViewport();
   });
 });

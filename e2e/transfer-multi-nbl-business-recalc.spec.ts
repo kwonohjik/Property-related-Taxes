@@ -17,6 +17,8 @@ import { openHistoryModal } from "./_helpers/navigation";
 /** 자경 농지(사업용 판정) 토지 자산 폼 — 원시 isNonBusinessLand=true. */
 function businessLandAsset(price: string, area: string, transferDate: string) {
   return {
+    // 소재지 — 다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts). 건마다 다른 물건이다.
+    addressJibun: `경기도 양평군 테스트리 ${price}`,
     assetKind: "land",
     acquisitionDate: "2015-01-01",
     acquisitionArea: area,

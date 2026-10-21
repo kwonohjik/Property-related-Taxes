@@ -261,18 +261,25 @@ export default function TransferTaxCalculator({
     scrollToTop();
   }
 
-  async function handleSubmit() {
-    clearError();
-    // 최종 제출 가드 — 모든 step을 재검증 (사용자가 자유 이동·필드 비우기 후 마지막 step에서 "계산하기" 시 우회 차단).
-    // step 0 (자산·취득 정보)이 가장 critical — redev settlementSaleDate, useEstimated PHD 등 entry 검증.
+  // 모든 step을 재검증 — 단계 탭은 검증 없이 이동하므로(자유 이동), 이 화면을 떠나는 마지막 버튼이 관문이다.
+  // 실패하면 첫 실패 step으로 옮겨 오류를 띄우고 false.
+  function passesAllSteps(): boolean {
     for (let s = 0; s < totalSteps; s++) {
       const list = collectStepIssues(s, formData);
       if (list.length > 0) {
         setStep(s); // 검증 실패 step으로 자동 이동 (사용자가 어디서 누락됐는지 즉시 인지)
         failWithIssues(s, list); // 오류 목록 + 자동 스크롤
-        return;
+        return false;
       }
     }
+    return true;
+  }
+
+  async function handleSubmit() {
+    clearError();
+    // 최종 제출 가드 — 사용자가 자유 이동·필드 비우기 후 마지막 step에서 "계산하기" 시 우회 차단.
+    // step 0 (자산·취득 정보)이 가장 critical — redev settlementSaleDate, useEstimated PHD 등 entry 검증.
+    if (!passesAllSteps()) return;
     setIsLoading(true);
     try {
       const res = await callTransferTaxAPI(formData);
@@ -641,8 +648,9 @@ export default function TransferTaxCalculator({
                     <CtaButton
                       tone="outline"
                       onClick={() => {
-                        const list = collectStepIssues(currentStep, formData);
-                        if (list.length > 0) { failWithIssues(currentStep, list); return; }
+                        // 다건 편집도 단건 「세금 계산하기」처럼 전 단계를 본다 — 종전엔 현재 단계(가산세)만 봐서
+                        // 단계 탭으로 건너뛴 1단계 누락(소재지·동·호)이 계산까지 갔다(계획서 M2)
+                        if (!passesAllSteps()) return;
                         clearError();
                         onSaveAndAddNext?.();
                       }}
@@ -651,8 +659,9 @@ export default function TransferTaxCalculator({
                     </CtaButton>
                     <CtaButton
                       onClick={() => {
-                        const list = collectStepIssues(currentStep, formData);
-                        if (list.length > 0) { failWithIssues(currentStep, list); return; }
+                        // 다건 편집도 단건 「세금 계산하기」처럼 전 단계를 본다 — 종전엔 현재 단계(가산세)만 봐서
+                        // 단계 탭으로 건너뛴 1단계 누락(소재지·동·호)이 계산까지 갔다(계획서 M2)
+                        if (!passesAllSteps()) return;
                         clearError();
                         onSaveAndGoToSettings?.();
                       }}
