@@ -25,6 +25,7 @@ import { mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
 import { isMixedBurdenedGift, mixedBgNoTransferNote, mixedBgNoTransferNoteOfForm } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
 import { burdenedGiftTransferPrice, isBlockedMixedBurdenedGiftBundle, usesSelfComputedTransferPrice } from "@/lib/calc/burdened-gift-transfer-price-scope";
+import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
 import { parseRaw, isParcelMode, isRedevelopmentPath, parcelAcqSum, directAcqRaw, directExpenseRaw } from "./transfer-per-asset-direct";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -468,6 +469,11 @@ export function computeTransferPerAssetSummary(
         acqPrice = bundledProperty.acquisitionPrice;
         depAlreadyDeducted = true;
       }
+      // 부담부증여 — 안분 입력(`allocatedAcquisitionPrice`)은 화면에 없는 자산 일반 칸이다. 엔진 표시 echo가 §159 취득가액이다(#2386).
+      if (bundledProperty && usesSelfComputedTransferPrice(a)) {
+        acqPrice = bundledProperty.acquisitionPrice;
+        depAlreadyDeducted = true;
+      }
     } else if (bundledCards) {
       // 자산카드 분해(일반건물) — 카드별 취득가액 합. 엔진이 실제 쓴 값이라 환산·실가 모두 정확.
       // §97③ 감가상각비는 `buildApportionment`가 이미 공제한 **후** 값이다 — 아래에서 또 빼지 않는다.
@@ -481,6 +487,22 @@ export function computeTransferPerAssetSummary(
     } else if (redevResultTotals) {
       acqPrice = redevResultTotals.acquisition;
       acqPending = false;
+    } else if (usesSelfComputedTransferPrice(a)) {
+      /**
+       * 부담부증여 — 취득가액은 엔진이 §159로 정한다(취득시 기준시가 × 채무비율 등 — 소득세법 시행령 §159①). 화면에 자산 일반
+       * 취득가액 칸이 없어(Playwright 0개) 그 칸에 남은 값을 보이면 엔진이 쓰지 않는 금액이다(실측 300,000,000 vs 200,000,000).
+       * 계산 전 「계산 후 표시」, 단건 계산 후 §159 명세. §166 자산(입주권)은 위 역산 분기, 묶음은 위 echo, 일반건물은 카드 합이 먼저다.
+       * 계획서 `docs/00-pm/burdened-gift-display-acquisition.plan.md` D2.
+       */
+      const brkd = singleResult?.transferBurdenedGiftBreakdown;
+      if (isSingle && brkd) {
+        acqPrice = burdenedGiftPerAssetTotals(brkd).acquisitionPrice;
+        acqPending = false;
+        depAlreadyDeducted = true;
+      } else {
+        acqPrice = 0;
+        acqPending = true;
+      }
     } else if (dedicatedPreview) {
       /**
        * 일반건물·상가 전용 환산 프리뷰 — 계산 후 값과 **같은 엔진 함수**에서 나온다.
@@ -614,6 +636,11 @@ export function computeTransferPerAssetSummary(
       // 발동한 경우에만 실제 경비가 채택되며, 그 판정도 프리뷰 함수 안에서 끝난다.
       expense = dedicatedPreview.expense;
       expensePending = false;
+    } else if (!result && usesSelfComputedTransferPrice(a)) {
+      // 부담부증여 계산 전 — 필요경비는 §159 취득가액의 개산공제(§163⑥)이거나 §97②2호 단서 비교 결과라 엔진만 안다.
+      // 화면의 자본적지출을 그대로 보이면 엔진 값과 다르다(실측 50,000,000 vs 6,000,000). 계산 후는 아래 엔진 `expenses`·echo.
+      expense = 0;
+      expensePending = true;
     } else if (!result && isGbNonActualPart(a)) {
       // 일반건물 파트 모드가 비-actual(환산·감정·매매사례) — 필요경비는 개산공제(§163⑥)뿐이라 파트 자본적지출은 계산에 쓰이지 않는다.
       // 입력분(`landDirectExpenses`+`buildingDirectExpenses`)을 부분합으로 보이면 쓰이지 않는 금액을 보여 준다(A2 §8.2).
