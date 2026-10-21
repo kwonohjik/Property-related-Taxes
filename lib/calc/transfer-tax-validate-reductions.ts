@@ -23,6 +23,9 @@ import { selfFarmingOwnYearsSufficient } from "./self-farming-own-years";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
+import { isSuccessorRightTransfer } from "./transfer-successor-right";
+import { successorRightEstimationMode } from "./transfer-successor-right";
+import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -278,9 +281,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (r.isRedevelopedNewHouse993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
             return fail(fieldError("reduction.new_99_3.previousHouseStdPrice993", "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
             ));
+          // 승계조합원 입주권 환산은 ④가 일반 칸이 아니라 §165① 양도시 합계를 싣고 엔진이 그 값으로 폴백한다 — 같은 leaf·같은 게이트로 인정한다
+          // (계획서 `successor-right-stdprice-reduction.plan.md` Q-2 a). 그 밖의 승계 입주권은 일반 칸이 화면에 없어 `redevHiddenStd`가 막는다.
+          const assetStdAtTransfer993 =
+            isSuccessorRightTransfer(asset) && successorRightEstimationMode(asset) === "estimated"
+              ? successorRightStdPriceAtTransfer(asset)
+              : redevHiddenStd.transfer
+                ? 0
+                : parseAmount(asset.standardPriceAtTransfer || "0");
           const hasStdPriceAtTransfer993 =
-            parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
-            (!redevHiddenStd.transfer && parseAmount(asset.standardPriceAtTransfer || "0") > 0);
+            parseAmount(r.standardPriceAtTransfer993 || "0") > 0 || assetStdAtTransfer993 > 0;
           /**
            * 🔴 **재개발 변형이면 5년 이내에도 필수다** (2026-09-07 UI 리뷰).
            *
