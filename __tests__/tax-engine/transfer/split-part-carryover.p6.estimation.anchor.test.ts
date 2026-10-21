@@ -403,6 +403,15 @@ describe("합성기(⑭) — 와이어의 환산 키가 엔진 input에 도달�
     expect(wire.landCarryoverTaxation).toMatchObject({ useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 20_000_000 });
     expect(wire.landCarryoverTaxation!.donorAcquisitionPrice).toBeUndefined();
   });
+  it("환산이 이긴다 — 가액과 분자가 함께 들어와도(직접 호출) 가액은 엔진에 닿지 않는다 (⑫ refine이 상호배타를 이미 강제)", () => {
+    const wire = composeSplitCarryover({
+      carryoverGiftEvent: { giftRegistryDate: "2024-06-15", giftTaxCalculated: 20_000_000, giftTaxBase: 300_000_000, donorRelation: "lineal" },
+      landCarryoverPart: { donorAcquisitionDate: "2005-01-01", donorAcquisitionPrice: 99_000_000, useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 20_000_000 },
+      landAcquisitionPrice: 300_000_000,
+    });
+    expect(wire.landCarryoverTaxation!.donorAcquisitionPrice).toBeUndefined();
+    expect(wire.landCarryoverTaxation!.donorStandardPriceAtAcquisition).toBe(20_000_000);
+  });
   it("실가 파트: useEstimatedAcquisition=false · 분자 키 없음 (P1~P5 payload 그대로)", () => {
     const wire = composeSplitCarryover({
       carryoverGiftEvent: { giftRegistryDate: "2024-06-15", giftTaxCalculated: 20_000_000, giftTaxBase: 300_000_000, donorRelation: "lineal" },

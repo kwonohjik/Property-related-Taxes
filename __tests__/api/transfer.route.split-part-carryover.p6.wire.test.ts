@@ -216,6 +216,8 @@ describe("⑫ refine — 가액 ⇔ 환산 분자 (상호배타 + 하나 필수)
     for (const bad of [0, -1, 1.5]) {
       const o = await post(A1(EST(bad)));
       expect(o.status).toBe(400);
+      // 엔진 throw(해결자 가드)가 아니라 ⑫ shape가 그 칸을 짚어야 한다 — 화면이 칸 앵커로 보여줄 수 있다
+      expect(o.errors["landCarryoverPart.donorStandardPriceAtAcquisition"]).toBeDefined();
     }
   });
 
