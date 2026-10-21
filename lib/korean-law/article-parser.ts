@@ -2,7 +2,7 @@
  * 법제처 Open API 조문·항·호·목 파서
  *
  * chrisryugj/korean-law-mcp src/lib/article-parser.ts 의 핵심 로직을 이식:
- *  - parseHangNumber: ①②③…⑳ 원숫자를 1~20 숫자로 매핑 (법제처 API가 항번호를
+ *  - parseHangNumber: ①②③…㉟ 원숫자를 1~35 숫자로 매핑 (법제처 API가 항번호를
  *    원숫자 문자로 반환하는 경우가 많아 일반 parseInt는 NaN)
  *  - flattenContent: 조문내용 필드의 중첩 배열/문자열 구조를 재귀 평탄화
  *  - formatArticleUnit: 조문 헤더 정규식으로 중복 제목 라인 제거
@@ -25,7 +25,7 @@ const CIRCLED_DIGIT_MAP: Record<string, number> = {
 
 /**
  * 항번호를 숫자로 파싱. 법제처 API는 다음 형태 중 하나로 반환:
- *   - "①" / "②" / … / "⑳"  (유니코드 원숫자, 2487~2498)
+ *   - "①" / "②" / … / "⑳"  (유니코드 원숫자, U+2460~2473 — ㉑~㉟ U+3251~325F는 `circledHangNumber`)
  *   - "1" / "2" / …          (일반 숫자 문자열)
  *   - "제1항" / "1항"          (접미사 포함)
  *
@@ -36,9 +36,11 @@ export function parseHangNumber(raw: string | undefined): number {
   const trimmed = raw.trim();
   if (!trimmed) return NaN;
 
-  // 1) 단일 원숫자 문자 직접 매칭
+  // 1) 단일 원숫자 문자 직접 매칭 — ㉑~㉟는 표 밖이라 `circledHangNumber`로 본다(종전 NaN)
   const first = trimmed[0];
   if (CIRCLED_DIGIT_MAP[first]) return CIRCLED_DIGIT_MAP[first];
+  const beyond = circledHangNumber(first);
+  if (beyond) return beyond;
 
   // 2) 문자열 어디든 원숫자가 포함된 경우 (드문 케이스)
   for (const ch of trimmed) {
