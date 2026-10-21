@@ -32,6 +32,8 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
+import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 /**
  * 이 자산의 양도가액을 **엔진이 스스로 산정**하는가(= 입력칸이 없고, 넣어도 쓰이지 않는다).
@@ -56,6 +58,25 @@ export function usesSelfComputedTransferPrice(asset: AssetForm): boolean {
 export function burdenedGiftBundleKind(isBurdenedGift: readonly boolean[]): "none" | "all" | "mixed" {
   if (!isBurdenedGift.some(Boolean)) return "none";
   return isBurdenedGift.every(Boolean) ? "all" : "mixed";
+}
+
+/**
+ * ⑧이 막는 혼합 묶음인가 — 함께 양도(축 B 아님)에서 일반 양도와 부담부증여가 섞였다. ⑧ 차단과 ⑥ 사이드바 표시가 같은 술어를 쓴다
+ * (사이드바가 이 묶음에 §166⑥ 안분값을 보여 주던 결함 — 계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` §1.1).
+ */
+export function isBlockedMixedBurdenedGiftBundle(
+  assets: readonly AssetForm[],
+  assetSplitMode: "companion" | "fractional" | undefined,
+): boolean {
+  return (
+    !isFullFractionalBundle(assets as AssetForm[], assetSplitMode) &&
+    burdenedGiftBundleKind(assets.map((a) => a.transferType === "burdened_gift")) === "mixed"
+  );
+}
+
+/** 단건 부담부증여의 §159 양도가액 — 엔진 명세의 토지·건물 양도가액 합(소득세법 시행령 §159①). 결과 카드·사이드바가 같이 쓴다. */
+export function burdenedGiftTransferPrice(brkd: Pick<TransferBurdenedGiftBreakdown, "perAsset">): number {
+  return (brkd.perAsset.land?.transferPrice ?? 0) + (brkd.perAsset.building?.transferPrice ?? 0);
 }
 
 export const MIXED_BURDENED_GIFT_BUNDLE_MESSAGE =

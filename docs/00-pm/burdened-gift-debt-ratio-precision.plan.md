@@ -263,3 +263,136 @@
 3. `.test.tsx`(jsdom) 부담부증여 테스트는 §6.6 계측에서 제외했다 — 표시 테스트라 값 영향은 낮을 것으로 보나 미관찰.
 4. §166③·§163⑥ 조문 본문은 이번에 재조회하지 않았다(산식 변경이 아니므로 범위 밖) — 인용을 새로 쓰게 되면 KoreanLaw MCP로 확인.
 5. `safeMultiplyThenDivide`의 BigInt 경로는 **음수 금액에서 0 방향 절사**(floor 아님)다 — β 4항은 음수가 아니라(`preApprovalExpenses` 등 Zod 음수 불허 여부는 Do에서 grep 확인) 영향 없다고 보지만 단정하지 않는다.
+
+## 12. Do 결과 — PR-1 (부동산 F1·F2, 2026-10-22)
+
+브랜치 `fix/redev-debt-ratio-precision` · 변경은 엔진 내부 4파일뿐이다. 와이어·Zod·UI·validate·결과 타입은 **무변경**(`lib/api`·`lib/calc`·`app/api`에서 `debtRatio` 코드 사용 0건 — `lib/calc/gift-burdened-transfer-api.ts`는 주식 ④라 PR-2 범위).
+
+### 12.1 변경
+
+| 파일 | 변경 |
+|---|---|
+| `lib/tax-engine/redevelopment-burdened-gift.ts` | `scaleRedevelopmentForBurdenedGift(info, debtFraction)` — 시그니처 `debtRatio: number` → `BurdenedGiftDebtFraction {debt, valuation}`(신규 export). 4항을 `safeMultiplyThenDivide(항, debt, valuation)`. 가드 재현(Q4 a): `undefined`·`debt === valuation` → 원본 동일 참조, `debt ≤ 0` · `valuation ≤ 0` · `debt > valuation` → 기존과 같은 `[redev-burdened-gift]` Error(메시지에 `B/C = debt/valuation` 표기로 바뀜 — 종전엔 소수값) |
+| `lib/tax-engine/redevelopment-split.ts` | `RedevelopmentSplitInput.debtRatio` → `debtFraction`(Q3 a). Step B: `ownedBase = computeLumpSumDeductionBase(numerator, 지분 ?? 1)` → `debt < valuation`이면 `safeMultiplyThenDivide(ownedBase, debt, valuation)`(Q2 a 순차 floor) → `computeEstimatedDeduction(lumpBase, 율)`. `lumpBaseRatio`(곱비율) 제거. `valuationMeta.lumpDeductionBase = lumpBase` |
+| `lib/tax-engine/redevelopment.ts` | `rawInput.debtRatio` → `rawInput.debtFraction`(β 호출 + 입주권 환산 차단 조건 `debt !== valuation`) |
+| `lib/tax-engine/transfer-tax-redevelopment-steps.ts` | 호출자 1곳: `debtFraction: { debt: burdenedGift.assumedDebtAmount, valuation: burdenedGift.giftValuation.max }` — `computeDebtRatio(info, giftValuation.max)`의 분자·분모와 같다(`burdened-gift-apportionment.ts:141` 확인) |
+
+`TransferBurdenedGiftBreakdown.debtRatio` echo·`computeDebtRatio`는 그대로다(표시 호환).
+
+### 12.2 §11 확인 필요 중 닫은 것
+
+- **5번(음수 금액)**: 4항의 원천 `rightsValue`·`settlementAmount`·`preApprovalExpenses`·`postApprovalExpenses`는 Zod(`lib/api/transfer-tax-redevelopment-schema.ts:13-20`)가 전부 `z.number().int().nonnegative()`라 음수가 들어오지 않는다 → floor 보정 불필요. 분모 `valuation`·`debt`는 위 가드가 양수로 못박는다.
+- **1번(F2 기존 테스트 존재)**: 계측에서 `fraction`이 있는 split 호출은 기존 테스트에 7건(`burdened-gift-redevelopment-apt.anchor` K5 계열 — 지분 미전달 6건 · 지분 0.5 × 0.8 1건; 신규 테스트 호출은 비율·기준시가로 분리), 전부 짧은 소수 비율이라 값 불변이다. 순환 소수 × 지분 조합의 기존 테스트는 없었다(신규 BD-5/6이 처음 덮는다).
+
+### 12.3 수정 전 실패 (anchor · 가드를 먼저 추가해 기록)
+
+수정 전 코드에 대해 신규 anchor를 옛 시그니처 어댑터(`debtRatio = debt/valuation`)로 실행: **33건 중 16건 실패**(BD-2 4 · BD-9 격자 1 · BD-5 5 · BD-1 3 · BD-6 3). 통과한 17건은 가드·짧은 소수·`undefined`/`r=1` 등 보존 케이스다. 정적 가드 `debt-ratio-apply-policy.test.ts`는 6건 중 **3건 실패**(곱셈 패턴 · 식별자 · 호출 존재).
+
+### 12.4 결정세액이 바뀌는 사례 (BD-1)
+
+재개발 APT · 청산금 납부 · 부담부증여(§6.2와 같은 사실관계: C 11억 · B 1.4억 · 권리가액 6.6억, mock 세율표):
+
+| | 수정 전 | 수정 후 |
+|---|---|---|
+| 인가전 의제 양도가(권리가액 × B/C) | 83,999,999 | **84,000,000** |
+| 분양가 합 | 109,454,544 | 109,454,545 |
+| **산출세액** | 6,482,232 | **6,482,233** |
+| **총납부세액** | 7,130,455 | **7,130,456** |
+
+mock 세율표 실측이며 정본 세액이 아니다. 영향은 **1원**이다. F2는 `lumpDeductionBase`가 예컨대 지분 70% · P_A 3.08억 · B/C = 1.4억/11억에서 27,439,999 → 27,440,000(개산공제 823,199 → 823,200).
+
+### 12.5 기존 기대값 변화 — 0건
+
+동작 불변 계측: 임시로 신·구 식을 같이 계산해 로그하는 계측을 넣고(원복·sha 확인) `__tests__`의 `.test.ts` 중 `burdened_gift|burdenedGiftInfo|scaleRedevelopment|redevelopment|debtFraction`를 포함한 **398파일**(5,925 통과)을 실행.
+β 18,426회 · split 412회 호출 중 신·구가 달라진 것은 **모두 신규 BD 테스트의 호출**(β 140,000,000/1,100,000,000 계열 · split 순환 비율 × 지분 18건)이다. 기존 테스트가 부른 β 비율은 0.4 · 0.25 · 0.8뿐(6억/15억 · 6억/24억 · 2억/5억 · 2.5억/10억 · 8억/10억 등)이고 **전부 짧은 소수 — 신·구 일치**. 기존 `.test.ts` 기대값 수정 0건.
+(`.test.tsx`(jsdom)는 계측하지 않았다 — 표시 테스트라 값 영향이 없다고 본다. 확인 필요 3번 유지.)
+
+### 12.6 뮤테이션 (cp 백업 → 변형 → 대상 테스트 → 원복 sha 확인)
+
+대상: 신규 anchor + 정적 가드 + `burdened-gift-redevelopment-apt.anchor`(68건). 원복 sha 전건 일치.
+
+| # | 변형 | 결과 | 죽인 테스트 |
+|---|---|---|---|
+| M1a~d | 4항 각각 `Math.floor(x * (debt / valuation))` | KILLED ×4 | BD-2 해당 항 + BD-9 격자(a는 BD-1도) |
+| M2 | 분자·분모 뒤집기 | KILLED(28건) | BD-2·4·9 · BD-1 |
+| M3 | r=1 no-op 가드 제거 | KILLED | BD-3 동일 참조 |
+| M4 | `debt > valuation` throw 제거 | KILLED | BD-3 |
+| M4b | `debt ≤ 0` throw 제거 | KILLED | BD-3 (B=0 · B<0) |
+| M5 | F2 «채무 먼저 → 지분» (순차 순서 뒤집기) | KILLED(15건) | BD-5 격자·70%·57% |
+| M6 | F2 채무 안분 제거 | KILLED(13건) | BD-5 · BD-6 |
+| M6b | F2 지분 기준시가 확정 단계 제거 | KILLED(10건) | BD-5 |
+| M7b | `const debtRatio = debt/valuation` + `Math.floor(× debtRatio)` 복원 | KILLED(11건) | 정적 가드 3건 + BD |
+| M8 | steps에서 B↔C swap | KILLED(6건) | BD-1 (B>C → 가드 Error) |
+| M9 | `postApprovalExpenses` 안분 제거 | KILLED(12건) | BD-2 post · BD-4 |
+| M10 | F2 `<` → `<=` | **SURVIVED — 동치 변이** | `safeMultiplyThenDivide(x, C, C) = x`라 값이 같다 |
+| M11 | F2 `debt < valuation` 가드 제거 | **SURVIVED — 동치 변이** | 같은 이유(`B > C`는 β가 먼저 throw) |
+
+M10/M11은 값이 달라지지 않는 중복 가드다. Q4 (a)(기존 가드 동일 재현)에 맞춰 가독성용으로 남겼다.
+
+### 12.7 검증
+
+- `npx tsc --noEmit` 0건 · `npm run lint` 오류 0(경고는 기존분 — 이 변경분 경고는 정리) · 폰트·톤·다크·워크플로 게이트 통과.
+- `__tests__/tax-engine/ __tests__/calc/ __tests__/api/`(`--maxWorkers=2`): 2,285 파일 통과 / 1 실패 — `redev-phd-deemed-acquisition.test.ts`가 **5000ms 타임아웃**(load average 80~100 환경). 단독 재실행 5/5 통과 → 부하성이다.
+- 브라우저 수동 확인: UI 변경 0이라 해당 없음(미수행).
+- 14지점: ①~⑭ 무변경(엔진 내부 시그니처만). ⑧ validate 동기화 대상 없음. 자동 안분 fallback·useEffect 미러링 추가 없음.
+
+## 13. Do 결과 — PR-2 (주식 S-1: F3·F4, 2026-10-22)
+
+브랜치 `fix/stock-burdened-debt-ratio-precision`(PR-1 커밋 `cf263715c` 위, 같은 워크트리). **와이어 불변** — `burdenedGiftDebtRatio`(⑫ `stock-transfer-tax-schema.ts` · ⑬ `gift-burdened-transfer-api.ts` body · ⑭ `stock-transfer-engine-input.ts`)와 `perShareAcquisitionPrice` 필드 모두 그대로, Zod·UI·validate 무변경.
+
+### 13.1 변경
+
+| 파일 | 변경 |
+|---|---|
+| `lib/calc/gift-burdened-transfer-api.ts`(F3) | actual 모드 안분 취득가 `Math.floor(실지취득가 × debtRatio)` → `safeMultiplyThenDivide(실지취득가, assumedDebtForGift, valuationAmount)`. ④ 안에 B(`assumedDebtForGift`)·C(`valuationAmount`) 원값이 이미 있어(`:529-530`) 와이어 변경 없이 소수 비율을 건너뛴다. `debtRatio` 상수는 estimated 모드의 `body.burdenedGiftDebtRatio` 전송용으로 남는다 |
+| `lib/tax-engine/stock-transfer/stock-acquisition-basis.ts`(F4) | 개산공제 base `Math.floor(estimatedBase × burdenedGiftDebtRatio)` → `applyRatio(estimatedBase, burdenedGiftDebtRatio)`(`tax-utils` import 추가) |
+
+### 13.2 확인한 것
+
+- **④ 안에 원값 존재**: `assumedDebtForGift = item.assumedDebtForGift ?? 0`, `valuationAmount = computeEffectiveValuation(item, form.giftDate)` — `valuationAmount ≤ 0`이면 함수 초입에서 throw라 분모 0 없음. 파일 781줄 → 783줄(800줄 트리거 미만).
+- `perShareAcquisitionPrice = floor(안분취득가 / 주식수)` 증폭(§6.4, 범위 밖 §10)은 그대로 — 안분취득가 1원이 경계를 넘으면 취득가액 총액이 주식수만큼 달라진다. 이 PR이 그 1원을 없애므로 증폭도 같이 사라진다(BD-7: 22,799,000 → 22,800,000).
+
+### 13.3 수정 전 실패
+
+신규 `__tests__/calc/gift-burdened-stock-debt-ratio-precision.anchor.test.ts` **11건 중 5건 실패**(BD-7 3 · BD-8 2). 통과 6건은 짧은 소수(10%)·r=1·7주 경계 중 우연히 맞는 값·KNOWN-LIMIT 등이다. 가드 `debt-ratio-apply-policy.test.ts`를 주식 두 파일로 확장한 상태에서 **7건 중 3건 실패**(곱셈 패턴 · safeMultiplyThenDivide 호출 · applyRatio 호출).
+격자(정수 % 1~99 × 취득가·기준시가): ④ 1,188건(99비율 × 4가격 × 3주식수) 중 **22건**, 엔진 297건(99비율 × 3기준시가) 중 **10건**이 옛 식에서 참값과 달랐다.
+
+### 13.4 값이 바뀌는 사례
+
+| 사례 | 수정 전 | 수정 후 |
+|---|---|---|
+| F3: 평가액 1억 · 채무 5,700만 · 실지취득가 4,000만 · 1,000주 → 1주당 취득가 | 22,799 | **22,800** |
+| 같은 사례 엔진 취득가액 총액 | 22,799,000 | **22,800,000** (주식수만큼 증폭) |
+| F4: B/C 57% · 취득기준시가 총액 5,000만 → estimatedBase | 28,499,999 | **28,500,000** |
+| 같은 사례 개산공제(1%) | 284,999 | **285,000** |
+
+주식 엔진의 **결정세액 쌍대 실행은 하지 않았다**(§11 2번 유지). 값 수준(취득가액·개산공제)까지만 확인했다.
+
+### 13.5 한계 (Q5 a 확정) — 순환 소수 비율
+
+F4는 와이어에 소수 비율 하나뿐이라 순환 소수(B/C = 14/110 등)에서 `applyRatio`가 옛 식으로 넘어가 **참값이 정수인 곱에서 1원 과소가 남는다**. 사례: B 1,400만 · C 1.1억 · 취득기준시가 총액 5,500만 → 참값 7,000,000 / 실제 6,999,999. `KNOWN-LIMIT` 테스트가 현재 값(6,999,999)을 고정해 두었다 — S-2(와이어에 증여가액 C 추가: ⑫·⑬·⑭·타입·⑧ stock validate)를 하면 이 단언을 참값으로 뒤집고 이 절을 갱신할 것. 빈도는 §6.4 실측 기준 0.002% 수준이다.
+
+### 13.6 기존 기대값 변화 — 0건
+
+임시 계측(신·구 식 병행 로그, 원복·sha 일치)으로 `buildGiftStockBurdenedTransferBody|burdenedGiftDebtRatio|burdenedGiftStockTransferTax|assumedDebtForGift`를 포함한 **49파일**(`.test.ts` + `.test.tsx`, 596건)을 실행: 신규 BD 테스트를 뺀 기존 호출 F3 22회 · F4 14회(비율 0.1 · 0.2)에서 신·구가 달라진 것 0건, 실패는 계측으로 옛 식을 되살려 정적 가드가 정상적으로 울린 1건뿐(원복 후 통과).
+
+### 13.7 뮤테이션
+
+대상: 신규 주식 anchor + 가드 + `gift-burdened-stock-major-and-conversion.anchor`(39건). 원복 sha 전건 일치.
+
+| # | 변형 | 결과 |
+|---|---|---|
+| P7a | F3 `Math.floor(× debtRatio)` 복원 | KILLED(5건: 가드 2 · BD-7 3) |
+| P7b | F4 `Math.floor(× 비율)` 복원 | KILLED(4건: 가드 2 · BD-8) |
+| P12 | F3 B↔C 뒤집기 | KILLED(7건) |
+| P13 | F3 안분 제거(취득가 전액) | KILLED(7건) |
+| P14 | F4 `applyRatio(base, 1 − 비율)` | KILLED(7건, 기존 10% 회귀 포함) |
+| P16 | `Math.floor(÷ 주식수)` → `Math.round` | KILLED(2건: 7주 경계 · 격자) |
+| P15 | F4 가드 `< 1` → `<= 1` | **SURVIVED — 동치 변이**(`applyRatio(base, 1) = base`) |
+
+### 13.8 검증
+
+- `npx tsc --noEmit` 0건 · `npm run lint` 오류 0 · 폰트·톤·다크·워크플로 게이트 통과.
+- **전체 vitest(`--maxWorkers=2`, PR-1+PR-2 합친 코드)**: 3,227 파일 통과 / 1 skipped, 38,512 테스트 통과 · 실패 0 (604초). PR-1 시점의 `__tests__/tax-engine/ __tests__/calc/ __tests__/api/` 1회 실패(타임아웃)는 부하 해소 후 재발하지 않았다.
+- 브라우저 수동 확인: UI·와이어 변경 0이라 해당 없음(미수행).
+- 14지점: ①~⑭ 무변경. ⑧ validate 동기화 대상 없음(UI/API fallback 신설 없음). 자동 안분 fallback·useEffect 미러링 추가 없음.

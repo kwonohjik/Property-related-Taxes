@@ -28,6 +28,7 @@ import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { makeRatioed } from "@/lib/calc/transfer-tax-api-split";
 import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
+import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
 import { buildLandPartCausePayload } from "@/lib/calc/transfer-tax-api-split";
 import { buildLandRebuildPayload } from "@/lib/calc/transfer-land-rebuild";
 import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
@@ -235,7 +236,8 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     acquisitionDate: primary?.acquisitionDate ?? "",
     // 자산-수준 매매계약일 — §99의3 등 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary?.assetContractDate || undefined,
-    expenses: (isEstimated || isAppraisal || isSalesCase)
+    // 분리 계산 자산은 이전 형식 총액을 파트 칸으로 옮긴다(⑧이 막는다 — 단건 ④와 같은 술어).
+    expenses: (isEstimated || isAppraisal || isSalesCase || (primary !== undefined && legacyExpenseMovesToParts(primary)))
       ? 0
       : primaryFractional
         ? applyRatio(parseAmount(primary?.directExpenses ?? "0"), primaryRatio)

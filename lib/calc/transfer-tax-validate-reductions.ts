@@ -13,6 +13,7 @@ import {
   isIncomeDeductionTrack,
   isTaxAmountTrack,
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -83,7 +84,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
   if (step === 2) {
     const assets = form.assets ?? [];
     for (let ai = 0; ai < assets.length; ai++) {
-      const asset = assets[ai];
+      // 축 B 지분 카드는 첫 카드의 물건 값으로 본다 — ④·⑤ 감면 패널과 같은 leaf(저장 `assetKind`는 기본값 «주택»이다).
+      const asset = axisBEffectiveAsset(form, ai);
       const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
       // 원조합원 §166 자산의 화면에 없는 기준시가 칸 — 감면 기준시가 폴백으로 인정하지 않는다(④는 싣지 않는다, ⑤⑧과 같은 leaf).
       const redevHiddenStd = redevHiddenGeneralStdPrice(asset, form);
@@ -298,7 +300,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
             return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", r.isRedevelopedNewHouse993
                 ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
-                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
+                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
             ));
           }
         }

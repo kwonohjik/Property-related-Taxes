@@ -46,8 +46,19 @@
  *   비율항은 분자·분모가 함께 `r`배라 자동으로 no-op이다.
  */
 
-import { applyRatio } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
+
+/**
+ * 부담부증여 채무비율 `B/C`의 원값 — 소령 §159①의 B(인수 채무액)와 C(증여가액).
+ * 비율을 소수로 만들지 않고 분자·분모 정수를 그대로 실어 나른다(`scaleRedevelopmentForBurdenedGift` · `computeRedevelopmentSplit`).
+ */
+export interface BurdenedGiftDebtFraction {
+  /** B — 인수 채무액 (`TransferBurdenedGiftBreakdown.assumedDebtAmount`) */
+  debt: number;
+  /** C — 증여가액 (`TransferBurdenedGiftBreakdown.giftValuation.max`) */
+  valuation: number;
+}
 
 /**
  * β — §166 산식의 **물건 전체 스케일 절대항**을 채무비율 `r`로 줄인다.
@@ -70,32 +81,42 @@ import type { RedevelopmentInfo } from "./types/transfer-redevelopment.types";
  *
  * **취득가액에는 `r`을 곱하지 않는다** — §159 STEP 4가 이미 안분했다. 여기서 또 곱하면 `r²`가 된다.
  *
+ * ## 채무비율은 소수가 아니라 분수 `B/C`로 곱한다 (2026-10-21)
+ *
+ * 소령 §159①은 `A × B/C`를 분수로 정한다. 정본 경로(`apportionTransferPrice` 등)는 정수 `safeMultiplyThenDivide(A, B, C)`인데,
+ * 여기서 `r = B/C`를 소수로 먼저 만들어 곱하면 순환 소수(14/110 등)에서 참값이 정수인 곱이 **1원 과소**가 된다
+ * (`applyRatio`도 11자리 이상 비율은 `Math.floor(amount × ratio)`로 넘긴다). 그래서 B·C 원값을 그대로 받아
+ * 4항 모두 `safeMultiplyThenDivide(항, B, C)`로 계산한다. 계획: `docs/00-pm/burdened-gift-debt-ratio-precision.plan.md`.
+ *
  * @param info  물건 전체 스케일의 §166 입력
- * @param debtRatio 채무비율 `r = B/C`. `undefined`·1이면 **원본을 그대로 반환**(일반 양도).
+ * @param debtFraction 채무비율 `B/C`의 원값(`{ debt: B, valuation: C }`). `undefined`이거나 `B === C`(r = 1)면 **원본을 그대로 반환**(일반 양도).
  */
 export function scaleRedevelopmentForBurdenedGift(
   info: RedevelopmentInfo,
-  debtRatio: number | undefined,
+  debtFraction: BurdenedGiftDebtFraction | undefined,
 ): RedevelopmentInfo {
-  if (debtRatio === undefined || debtRatio === 1) return info;
-  if (!(debtRatio > 0) || debtRatio > 1) {
+  if (debtFraction === undefined) return info;
+  const { debt, valuation } = debtFraction;
+  if (debt === valuation) return info;
+  if (!(debt > 0) || !(valuation > 0) || debt > valuation) {
     /**
      * `r`은 `B/C`이고 `assertBurdenedGiftEligible`이 `B > C`(초과부담부)를 이미 fail-fast
      * 시킨다. 여기에 도달했다면 상류 계약이 깨진 것이므로 조용히 통과시키지 않는다 —
      * 통과시키면 모든 금액항이 0이 되거나 부풀어 **세액만 조용히 틀린다**.
      */
     throw new Error(
-      `[redev-burdened-gift] debtRatio ${debtRatio}는 (0, 1] 범위를 벗어났다 — ` +
+      `[redev-burdened-gift] 채무비율 B/C = ${debt}/${valuation}는 (0, 1] 범위를 벗어났다 — ` +
         "소령 §159①의 B/C는 1을 넘을 수 없다(넘으면 증여가액 초과분까지 양도로 보게 된다 — 소득세법 §88 1호 후단).",
     );
   }
+  const scale = (amount: number) => safeMultiplyThenDivide(amount, debt, valuation);
   return {
     ...info,
-    rightsValue: applyRatio(info.rightsValue, debtRatio),
-    settlementAmount: applyRatio(info.settlementAmount, debtRatio),
-    preApprovalExpenses: applyRatio(info.preApprovalExpenses, debtRatio),
+    rightsValue: scale(info.rightsValue),
+    settlementAmount: scale(info.settlementAmount),
+    preApprovalExpenses: scale(info.preApprovalExpenses),
     ...(info.postApprovalExpenses !== undefined
-      ? { postApprovalExpenses: applyRatio(info.postApprovalExpenses, debtRatio) }
+      ? { postApprovalExpenses: scale(info.postApprovalExpenses) }
       : {}),
   };
 }

@@ -88,6 +88,74 @@ describe("verify-citations: extractCitations", () => {
   it("빈 텍스트 → 빈 배열", () => {
     expect(extractCitations("")).toEqual([]);
   });
+
+  // 종전엔 공백 띄운 공식 이름 「소득세법 시행령」을 회복하지 못해 **0건**이었다 — 시행령 인용이 검증 없이 통과했다.
+  it("「소득세법 시행령 제155조 제20항」 — 공백 띄운 시행령 이름", () => {
+    const citations = extractCitations("소득세법 시행령 제155조 제20항에 따라 비과세한다.");
+    expect(citations).toHaveLength(1);
+    expect(citations[0]).toMatchObject({ lawName: "소득세법 시행령", articleNo: "제155조", hang: 20 });
+  });
+
+  it("「소득세법 시행규칙 제71조 제2항」 — 시행규칙도 같다", () => {
+    expect(extractCitations("소득세법 시행규칙 제71조 제2항")[0]).toMatchObject({ lawName: "소득세법 시행규칙", articleNo: "제71조", hang: 2 });
+  });
+
+  it("법령명 없는 「시행령 제155조」는 여전히 추출하지 않는다", () => {
+    expect(extractCitations("시행령 제155조 제1항에 따라")).toHaveLength(0);
+  });
+
+  // 종전엔 법령명이 「시행령」으로 잡히고 ⑪ 이상 항이 빠졌다
+  it("§ 표기 — 「소득세법 시행령 §155⑳」·「§155㉑」의 법령명과 항", () => {
+    expect(extractCitations("소득세법 시행령 §155⑳ 장기임대주택")[0]).toMatchObject({ lawName: "소득세법 시행령", articleNo: "제155조", hang: 20 });
+    expect(extractCitations("소득세법 시행령 §155㉑")[0]).toMatchObject({ lawName: "소득세법 시행령", articleNo: "제155조", hang: 21 });
+    expect(extractCitations("소득세법 §89①3호")[0]).toMatchObject({ lawName: "소득세법", articleNo: "제89조", hang: 1, ho: 3 });
+  });
+
+  it("「상속세 및 증여세법 시행령」 — 「및」으로 이은 공식 이름을 자르지 않는다", () => {
+    expect(extractCitations("상속세 및 증여세법 시행령 제15조 제1항")[0]).toMatchObject({ lawName: "상속세 및 증여세법 시행령", articleNo: "제15조", hang: 1 });
+    expect(extractCitations("상속세 및 증여세법 시행령 §15①")[0]).toMatchObject({ lawName: "상속세 및 증여세법 시행령", articleNo: "제15조", hang: 1 });
+  });
+
+  it("법령명과 「시행령」 사이 공백이 두 칸이어도 회복한다", () => {
+    expect(extractCitations("소득세법  시행령 제155조")[0]).toMatchObject({ lawName: "소득세법 시행령", articleNo: "제155조" });
+  });
+
+  // `[^\s,.)]*`가 「·§155①」까지 한 덩어리로 잡으면 parseCitation은 뒤 세그먼트의 ①을 항으로 읽는다 — ⑳이 검증되지 않았다
+  it("「§155⑳·§155①」 — 「§N」 바로 뒤 원숫자가 우선한다", () => {
+    expect(extractCitations("소득세법 시행령 §155⑳·§155①")[0]).toMatchObject({ articleNo: "제155조", hang: 20 });
+  });
+
+  it("같은 조문의 「제N조」·「§N」 표기는 한 건으로 합친다", () => {
+    expect(extractCitations("소득세법 시행령 제155조 제20항과 소득세법 시행령 §155⑳")).toHaveLength(1);
+  });
+});
+
+describe("verify-citations: 16항 이상 항 확인", () => {
+  const decree155 = (body: string) => ({
+    title: "1세대1주택의 특례",
+    fullText: `제155조(1세대1주택의 특례) ① 국내에 1개의 주택을 소유한 1세대가\n${body}`,
+    lawName: "소득세법 시행령",
+    articleNo: "제155조",
+    sourceUrl: "",
+  });
+
+  it("현행 경로의 꺾쇠 표기 `<21>`도 21항으로 본다", async () => {
+    mockGetLawText.mockResolvedValue(decree155("<21> 1세대가 장기임대주택의 임대기간요건"));
+    const result = await verifyCitations("소득세법 시행령 제155조 제21항");
+    expect(result.citations[0].status).toBe("verified");
+  });
+
+  it("원숫자 ㉑도 21항으로 본다", async () => {
+    mockGetLawText.mockResolvedValue(decree155("㉑ 1세대가 장기임대주택의 임대기간요건"));
+    const result = await verifyCitations("소득세법 시행령 §155㉑");
+    expect(result.citations[0].status).toBe("verified");
+  });
+
+  it("없는 항(26)은 환각 — 꺾쇠·원숫자 어느 쪽에도 없다", async () => {
+    mockGetLawText.mockResolvedValue(decree155("<25> 제1항을 적용할 때 ㉕"));
+    const result = await verifyCitations("소득세법 시행령 제155조 제26항");
+    expect(result.citations[0].status).toBe("not_found");
+  });
 });
 
 describe("verify-citations: verifyCitations (mocked)", () => {
