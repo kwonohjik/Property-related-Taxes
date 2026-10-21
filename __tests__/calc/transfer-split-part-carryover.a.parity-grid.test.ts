@@ -36,6 +36,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { bodyOf, routeOf, issuesOf } from "./_helpers/split-carryover-c-form";
 import { aAsset, aForm, withLandCarry, A_LAND_CARRYOVER, type AHost } from "./_helpers/split-carryover-a-form";
+import { registerP6Cells } from "./_helpers/split-carryover-p6-grid";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -238,3 +239,24 @@ describe("재건축 통산(구주택 멸실·신축) 호스트 — A는 열지 �
     expect(landRebuildHost(aAsset("purchase", { landAcquisitionCause: "", landCauseHost: "" }))).toBe("purchase");
   });
 });
+
+// P6 — 증여자 취득가액을 모를 때 토지 파트 환산. 셀 정의는 A·B·C가 공유한다(`split-carryover-p6-grid.ts`). 매매·신축 두 호스트 모두.
+for (const host of ["purchase", "newConstruction"] as const) {
+  registerP6Cells(
+    {
+      kind: "A",
+      parts: ["land"],
+      make: (p = {}, a = {}, f = {}) => aForm(host, f, aAsset(host, { landCarryover: { ...A_LAND_CARRYOVER, ...p.land }, ...a })),
+      // 증여자 토지 취득일 = 수증자 건물 취득일(호스트 acquisitionDate 2021-03-01)
+      sameDay: () => ({ land: { donorAcquisitionDate: "2021-03-01" } }),
+      early: {
+        patches: { land: { giftRegistryDate: "2012-03-01", donorAcquisitionDate: "2000-01-01" } },
+        assetOver: host === "purchase"
+          ? { acquisitionDate: "2010-03-01", landAcquisitionDate: "2012-03-01" }
+          : { acquisitionDate: "2010-03-01", occupancyApprovalDate: "2010-03-01", landAcquisitionDate: "2012-03-01" },
+        formOver: { transferDate: "2015-09-30", filingDate: "2015-11-30" },
+      },
+    },
+    POST,
+  );
+}

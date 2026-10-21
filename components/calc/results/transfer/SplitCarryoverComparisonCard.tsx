@@ -13,6 +13,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import { InfoRow, ScenarioCol } from "./CarryoverComparisonCard";
 import {
+  splitCarryoverEstimatedExpenseLines,
   splitCarryoverNotices,
   splitCarryoverView,
   type SplitCarryoverPartView,
@@ -24,6 +25,9 @@ const fmt = (n: number) => n.toLocaleString();
 
 function PartBlock({ v, p }: { v: SplitCarryoverView; p: SplitCarryoverPartView }) {
   const tid = `split-carryover-${p.key}`;
+  // P6 — 증여자 취득가액을 몰라 환산한 이월과세 적용 파트(분자·분모·환산취득가액이 모두 echo에 있다)
+  const estLines = splitCarryoverEstimatedExpenseLines(p);
+  const est = p.applied && p.estimated?.stdPriceAtTransfer !== undefined ? p.estimated : undefined;
   return (
     <div className="space-y-2 rounded-md border border-border p-3" data-testid={tid} data-judgment={p.applied ? "applied" : "excluded"}>
       <div className="flex flex-wrap items-center gap-2">
@@ -57,15 +61,34 @@ function PartBlock({ v, p }: { v: SplitCarryoverView; p: SplitCarryoverPartView 
             {p.rateBasisNote && <p className="pl-2 text-micro text-muted-foreground">* {p.rateBasisNote}</p>}
           </div>
         )}
-        <InfoRow label={p.applied ? "취득가액 [증여자 취득가액]" : "취득가액 [증여 신고가액]"} value={fmt(p.acquisitionValue)} />
-        {p.applied && p.donorCapexAdded > 0 && <InfoRow label="필요경비 가산 [증여자 자본적지출 — §97의2①2호]" value={`+${fmt(p.donorCapexAdded)}`} sub />}
-        {p.applied && p.giftTaxAdded > 0 && (
+        <InfoRow
+          label={p.applied ? (est ? "취득가액 [환산취득가액]" : "취득가액 [증여자 취득가액]") : "취득가액 [증여 신고가액]"}
+          value={fmt(p.acquisitionValue)}
+        />
+        {est && p.swapApplied && <p className="pl-2 text-micro text-rose-700 dark:text-rose-400">* 차감 안 됨 (§97②2호 단서 — 자본적지출·양도비 택일)</p>}
+        {!est && p.applied && p.donorCapexAdded > 0 && <InfoRow label="필요경비 가산 [증여자 자본적지출 — §97의2①2호]" value={`+${fmt(p.donorCapexAdded)}`} sub />}
+        {!est && p.applied && p.giftTaxAdded > 0 && (
           <InfoRow label={`필요경비 가산 [증여세 상당액 — §97의2①3호]${p.giftTaxLimitApplied ? " (한도 적용)" : ""}`} value={`+${fmt(p.giftTaxAdded)}`} sub />
         )}
         {p.donorCapexGuardApplied && (
           <p className="pl-2 text-micro text-amber-700 dark:text-amber-300">* 양도일이 2024.1.1. 전이라 증여자 자본적지출은 0으로 처리했습니다 (§97의2①2호 시행일)</p>
         )}
       </div>
+
+      {/* 환산 파트(P6) — 환산취득가액 산식 + 필요경비 풀이. 증여자 취득 당시 기준시가가 분자, 양도시 기준시가가 분모다. */}
+      {est && (
+        <div className="space-y-0.5 text-caption text-muted-foreground" data-testid={`${tid}-estimated`}>
+          <span className="block font-medium text-foreground/80">환산취득가액 — 증여자 취득 당시 기준시가로 환산 (소득세법 §97①1호 나목)</span>
+          <FLine>
+            {p.label} 환산취득가액 = {p.label} 양도가액 {fmt(p.transferPrice)} ×{" "}
+            <Frac top={`증여자 취득 당시 기준시가 ${fmt(est.donorStdPriceAtAcquisition)}`} bottom={`양도 당시 기준시가 ${fmt(est.stdPriceAtTransfer!)}`} /> ={" "}
+            <span className="font-mono tabular-nums" data-testid={`${tid}-estimated-acq`}>{fmt(p.acquisitionValue)}</span>
+          </FLine>
+          {estLines.map((line, i) => (
+            <FLine key={i}>{line}</FLine>
+          ))}
+        </div>
+      )}
 
       {/* 증여세 상당액 안분(영 §163의2②) — 산출세액 × 해당 자산가액 ÷ 증여세 과세가액. 숫자 옆에 변수명. */}
       <div className="space-y-0.5 text-caption text-muted-foreground" data-testid={`${tid}-apportion`}>

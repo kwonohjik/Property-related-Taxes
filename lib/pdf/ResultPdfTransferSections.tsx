@@ -28,6 +28,7 @@ import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain
 import {
   splitCarryoverAcquisitionText,
   splitCarryoverApportionText,
+  splitCarryoverEstimatedExpenseText,
   splitCarryoverNotices,
   splitCarryoverVerdictText,
   splitCarryoverView,
@@ -244,7 +245,7 @@ export function TransferSplitSection({ r }: { r: R }) {
             {carryover?.parts.map((p) => (
               <View key={`co-${p.key}`} style={s.row}>
                 <Text style={{ ...s.lblSub, flex: 1 }}>
-                  {`${splitCarryoverVerdictText(p)} — ${splitCarryoverAcquisitionText(p)} — ${splitCarryoverApportionText(carryover, p)}`}
+                  {`${splitCarryoverVerdictText(p)} — ${splitCarryoverAcquisitionText(p)}${splitCarryoverEstimatedExpenseText(p) ? ` — ${splitCarryoverEstimatedExpenseText(p)}` : ""} — ${splitCarryoverApportionText(carryover, p)}`}
                 </Text>
               </View>
             ))}

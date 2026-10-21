@@ -91,6 +91,7 @@ export function LandCarryoverCard(props: {
         onPatch={patch}
         anchorPrefix={isBuilding ? "carryover" : "landCarryover"}
         isAfter2024={isAfter2024}
+        asset={asset}
       />
 
       <SplitCarryoverGiftTaxCard

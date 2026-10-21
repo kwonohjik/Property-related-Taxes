@@ -14,7 +14,7 @@ import { calcAcqStdPair, calcApportionRatio } from "@/lib/tax-engine/transfer-ta
 import { collectSplitPartCauseIssues, PART_CARRYOVER_ESTIMATED_SAME_DAY_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
-import { splitCarryoverAcquisitionText, splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
+import { splitCarryoverAcquisitionText, splitCarryoverEstimatedExpenseText, splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 
 const D = (s: string) => new Date(s);
 const rates = makeMockRates();
@@ -461,17 +461,19 @@ describe("calcAcqStdPair — 분자 override (E-C: 비례 안분·㎡당 공시�
   });
 });
 
-describe("표시 view — 환산 파트에 «증여자 취득가액 0» 거짓 표시가 없다 (표시 문구 개편은 UI 단계)", () => {
+describe("표시 view — 환산 파트에 «증여자 취득가액 0» 거짓 표시가 없다 (문구는 UI 단계에서 개편 — 환산취득가액 산식 + 필요경비 풀이)", () => {
   it("M1 적용 파트: donorAcquisitionPrice 없음 · estimated 전달 · 환산취득가액 문구", () => {
     const v = splitCarryoverView(run(A1(L_EST)).splitDetail)!;
     const land = v.parts.find((p) => p.key === "land")!;
     expect(land.donorAcquisitionPrice).toBeUndefined();
     expect(land.estimated!.donorStdPriceAtAcquisition).toBe(20_000_000);
     const text = splitCarryoverAcquisitionText(land);
-    expect(text).toContain("환산취득가액 20,000,000");
+    expect(text).toContain("토지 환산취득가액 = 토지 양도가액");
     expect(text).toContain("증여자 취득 당시 기준시가 20,000,000");
-    expect(text).toContain("증여세 상당액 20,000,000");
+    expect(text).toContain("= 20,000,000");
     expect(text).not.toContain("증여자 취득가액 0");
+    // 증여세 상당액은 필요경비 풀이에서 단서 비교 밖의 별도 산입으로 말한다(취득가액 한 줄에 섞지 않는다)
+    expect(splitCarryoverEstimatedExpenseText(land)).toContain("필요경비에 증여세 상당액 20,000,000 가산");
   });
   it("실가 파트 문구는 종전 그대로", () => {
     const land = splitCarryoverView(run(A1(L_ACT)).splitDetail)!.parts.find((p) => p.key === "land")!;

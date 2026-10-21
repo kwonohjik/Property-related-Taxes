@@ -174,6 +174,43 @@ test.describe("P3 A — 토지만 이월과세 + 건물 매매·신축", () => {
     expect(body2.landAcquisitionCause).toBe("gift");
   });
 
+  test("P6 환산: 토글 ON → 증여자 취득 당시 기준시가 입력 → 계산 → 요청 body에 useEstimatedAcquisition·분자(가액 없음) → 결과에 환산 산식", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seedWizard(page, aSeed([aAsset("purchase", { landCarryover: { ...LAND_CARRYOVER, donorAcquisitionPrice: "" } })]));
+    await expandAssetSection(page, 3);
+    // 앵커 — 토글 1개, 가액 칸 1개, 분자 칸 없음 → 토글 ON → 분자 칸 1개, 가액 칸 없음
+    await expect(page.locator('[data-field="landCarryover.partEstimated"]')).toHaveCount(1);
+    await expect(page.locator('[data-field="landCarryover.donorStandardPriceAtAcquisition"]')).toHaveCount(0);
+    // ⑧ — 가액을 모르는데 토글을 안 켜면 «환산취득가액을 켜서» 안내로 막고 가액 칸으로 이동한다
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect
+      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="landCarryover.donorAcquisitionPrice"]')))
+      .toBe(true);
+    await page.getByTestId("split-carryover-land-estimated").getByRole("switch").click();
+    await expect(page.locator('[data-field="landCarryover.donorStandardPriceAtAcquisition"]')).toHaveCount(1);
+    await expect(page.locator('[data-field="landCarryover.donorAcquisitionPrice"]')).toHaveCount(0);
+    await expect(page.getByText("아직 지원하지 않")).toHaveCount(0);
+    await page.getByTestId("split-carryover-land-donor-std-price").fill("30000000");
+    const body = await calculate(page);
+    expect(body.landCarryoverPart).toEqual({ donorAcquisitionDate: "2000-01-01", useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 30_000_000 });
+    // 결과 — 카드: 환산취득가액 산식(토지 양도가액 × 분자 ÷ 분모) · 개산공제 · 건물 §114조의2 고지 없음(토지 환산)
+    const est = page.getByTestId("split-carryover-land-estimated").first();
+    await expect(est).toContainText("토지 양도가액 700,000,000");
+    await expect(est).toContainText("증여자 취득 당시 기준시가 30,000,000");
+    await expect(est).toContainText("양도 당시 기준시가 700,000,000");
+    await expect(est).toContainText("개산공제 = 증여자 취득 당시 기준시가 30,000,000 × 3% = 900,000");
+    await expect(page.getByTestId("split-carryover-card").first()).not.toContainText("§114조의2");
+    // 신고서·상세명세서 — 취득가액 = 토지 환산 3천만 + 건물 4억 · 필요경비 = 증여세 상당액 2천만 + 개산공제 90만
+    const acqRow = await formRow(page, "취득가액");
+    const expRow = await formRow(page, "필요경비");
+    const gainRow = await formRow(page, "전체 양도차익");
+    expect([num(acqRow[1]), num(acqRow[2]), num(acqRow[3])]).toEqual([430_000_000, 30_000_000, 400_000_000]);
+    expect([num(expRow[1]), num(expRow[2]), num(expRow[3])]).toEqual([20_900_000, 20_900_000, 0]);
+    expect(1_200_000_000 - num(acqRow[1]) - num(expRow[1])).toBe(num(gainRow[1]));
+    expect(await stmtText(page, "취득가액")).toContain("토지(이월과세 — 증여자 취득 당시 기준시가 환산)");
+    expect(await stmtText(page, "취득가액")).toContain("토지 환산취득가액 = 토지 양도가액 700,000,000");
+  });
+
   test("P5 1세대1주택 — 토지 증여 1년(증여자 2000 취득) · 건물 매매 2021: 이월과세를 적용해야 토지분이 비과세 → §97의2②2호로 토지 미적용 · 세대 키 없음", async ({ page }) => {
     test.setTimeout(180_000);
     // 강남구 주소 = 취득 당시 조정대상지역 — 거주 36개월(직접 입력)로 건물 쪽 거주요건을 채운다. 토지(나중 취득 · 1년)는 미적용 세계에서만 보유요건 미달(G-3)이다.

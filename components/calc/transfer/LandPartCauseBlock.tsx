@@ -33,6 +33,7 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { deriveLegacyPartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { landPartCauseApplicable } from "@/lib/calc/transfer-land-part-cause";
+import { partDonorEstimated } from "@/lib/calc/transfer-land-part-cause";
 import { landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
 import { landPartCauseDateNotice } from "@/lib/calc/transfer-land-part-cause";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
@@ -136,6 +137,7 @@ export function LandPartCauseBlock(props: {
   // 건물 신축·매매 + 주택·건물(겸용은 자체 4부분 안분이 축을 지배한다) — ④·⑥·⑧과 같은 술어.
   if (!landPartCauseApplicable(asset)) return null;
   const isPurchase = asset.acquisitionCause === "purchase";
+  const donorEst = partDonorEstimated(asset); // P6 — 증여자 취득가액을 모르는 토지 이월과세 파트의 자본적지출 안내
 
   // 토글 상태 = ④가 실제로 보내는 유효 원인 — 분리가 꺼졌거나 다른 호스트에서 켠 잔재를 「켜짐」으로 그리지 않는다.
   //   저장값을 그대로 캐스트하지 않는다(H-4 — 손상·잔재 값이 META에 없는 키면 렌더가 크래시했다).
@@ -309,7 +311,7 @@ export function LandPartCauseBlock(props: {
 
           {/* 파트 자본적지출(D1 G-11) — 분리 계산은 파트 칸만 읽는다(자산 전체 칸은 계산에 닿지 않아 ⑧이 이 칸으로
               안내한다). 두 파트 모두 실거래가 고정(토지 = 평가액, 건물 = 신축비용)이라 hint도 실거래가 문구다. */}
-          <SplitPartCapexFields asset={asset} onChange={onChange} landOwned buildingOwned landMode="actual" buildingMode="actual" />
+          <SplitPartCapexFields asset={asset} onChange={onChange} landOwned buildingOwned landMode={donorEst.land ? "estimated" : "actual"} buildingMode="actual" />
 
           <p className="text-caption text-muted-foreground">
             건물 취득가액은 아래 <strong>신축비용</strong> 칸을, 건물 취득일은 위{" "}

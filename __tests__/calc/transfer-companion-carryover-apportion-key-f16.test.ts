@@ -44,6 +44,7 @@ const CARRYOVER_FULL: CarryoverTaxationForm = {
   donorStandardPriceAtAcquisition: "",
   donorStandardPriceAtTransfer: "",
   donorAcquisitionPrice: "100,000,000",
+  partEstimated: false,
   giftTaxAmount: "30,000,000",
   giftTaxCalculated: "",
   giftTaxBase: "",

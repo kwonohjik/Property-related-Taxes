@@ -132,3 +132,54 @@ describe("V-11 ⑬ body spread — ④가 내는 최상위 새 키는 fetch body
     expect(json.data.result.splitDetail.land.acquisitionDate).toBe("2000-01-01");
   });
 });
+
+describe("P6 ⑬ body spread — 파트 환산 키(useEstimatedAcquisition·donorStandardPriceAtAcquisition)도 fetch body → route까지 통과한다", () => {
+  const estForm = (): TransferFormData => {
+    const f = form();
+    const a = (f.assets as unknown as AssetForm[])[0];
+    return {
+      ...f,
+      assets: [{ ...a, landCarryover: { ...a.landCarryover, partEstimated: true, donorAcquisitionPrice: "", donorStandardPriceAtAcquisition: "30,000,000" } }],
+    } as unknown as TransferFormData;
+  };
+  async function capture(f: TransferFormData) {
+    const cap: { body?: Record<string, unknown> } = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_u: string, init?: RequestInit) => {
+        cap.body = JSON.parse(String(init?.body));
+        return { ok: true, json: async () => ({ mode: "single", result: {} }) } as unknown as Response;
+      }),
+    );
+    await callTransferTaxAPI(f);
+    vi.unstubAllGlobals();
+    return cap.body!;
+  }
+
+  it("body 토지 파트: 환산 플래그 + 분자만(가액 키 없음) → route 200 · echo 분자·분모", async () => {
+    const body = await capture(estForm());
+    expect(body.landCarryoverPart).toEqual({ donorAcquisitionDate: "2000-01-01", useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 30_000_000 });
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false, isNonBusinessLand: false, annualBasicDeductionUsed: 0,
+          ...body, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
+        }),
+      }),
+    );
+    const json = await res.json();
+    expect(res.status, JSON.stringify(json.error ?? {})).toBe(200);
+    expect(json.data.result.splitDetail.land.carryover.estimated).toMatchObject({ donorStdPriceAtAcquisition: 30_000_000, stdPriceAtTransfer: 700_000_000 });
+  });
+
+  it("지분 0.5: 분자는 스케일하지 않는다(30,000,000 그대로) — 가액 모드의 증여자 취득가액은 지분 몫(50,000,000)", async () => {
+    const f = estForm();
+    const a = (f.assets as unknown as AssetForm[])[0];
+    const half = { ...a, ownershipNumerator: "1", ownershipDenominator: "2" };
+    expect(((await capture({ ...f, assets: [half] } as unknown as TransferFormData)).landCarryoverPart as Record<string, unknown>).donorStandardPriceAtAcquisition).toBe(30_000_000);
+    const real = { ...half, landCarryover: { ...(form().assets as unknown as AssetForm[])[0].landCarryover } };
+    expect(((await capture({ ...f, assets: [real] } as unknown as TransferFormData)).landCarryoverPart as Record<string, unknown>).donorAcquisitionPrice).toBe(50_000_000);
+  });
+});

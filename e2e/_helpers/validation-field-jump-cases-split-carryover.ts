@@ -54,6 +54,10 @@ export const SPLIT_CARRYOVER_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "c: carryover.donorAcquisitionDate (건물 비움)", field: "carryover.donorAcquisitionDate", step: 0, assetIndex: A, message: /^자산: 건물 증여자 취득일을 입력하세요/, form: c({}, { donorAcquisitionDate: "" }) },
   { name: "c: carryover.donorAcquisitionPrice (건물)", field: "carryover.donorAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 건물 증여자 취득가액을 입력하세요/, form: c({}, { donorAcquisitionPrice: "" }) },
   { name: "c: buildingAcquisitionPrice (건물 증여 신고가액)", field: "buildingAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 건물 증여 신고가액/, form: c({ buildingAcquisitionPrice: "" }) },
+  // ── P6 파트 환산(증여자 취득가액을 모를 때) — 분자·같은 날 ──
+  { name: "c: landCarryover.donorStandardPriceAtAcquisition (토지 환산 분자 비움)", field: "landCarryover.donorStandardPriceAtAcquisition", step: 0, assetIndex: A, message: /^자산: 토지 증여자 취득 당시 기준시가를 입력하세요/, form: c({}, {}, { partEstimated: true, donorAcquisitionPrice: "", donorStandardPriceAtAcquisition: "" }) },
+  { name: "c: carryover.donorStandardPriceAtAcquisition (건물 환산 분자 비움)", field: "carryover.donorStandardPriceAtAcquisition", step: 0, assetIndex: A, message: /^자산: 건물 증여자 취득 당시 기준시가를 입력하세요/, form: c({}, { partEstimated: true, donorAcquisitionPrice: "", donorStandardPriceAtAcquisition: "" }) },
+  { name: "c: landCarryover.partEstimated (환산인데 증여자가 토지·건물을 같은 날 취득)", field: "landCarryover.partEstimated", step: 0, assetIndex: A, message: /^자산: 증여자가 토지·건물을 같은 날 취득한 주택은 파트 환산을 쓸 수 없습니다/, form: c({}, {}, { partEstimated: true, donorAcquisitionPrice: "", donorStandardPriceAtAcquisition: "20000000", donorAcquisitionDate: "2012-06-01" }) },
   // ── 증여세 ──
   { name: "c: carryover.giftTaxBase (비움)", field: "carryover.giftTaxBase", step: 0, assetIndex: A, message: /^자산: 증여세 과세가액을 입력하세요/, form: c({}, { giftTaxBase: "" }) },
   { name: "c: carryover.giftTaxBase (파트 평가액 합 초과)", field: "carryover.giftTaxBase", step: 0, assetIndex: A, message: /^자산: 토지·건물 증여 신고가액의 합이 증여세 과세가액을 초과/, form: c({}, { giftTaxBase: "250000000" }) },

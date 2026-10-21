@@ -374,6 +374,25 @@ export function anyPartCarryover(asset: Parameters<typeof partCarryover>[0], opt
   return pc.land || pc.building;
 }
 
+/**
+ * 파트 이월과세의 **증여자 취득가액 환산** 여부(P6) — 그 파트가 파트 이월과세이고 파트 서브폼의 `partEstimated`가 켜져 있다.
+ * 토지는 `landCarryover`, 건물은 `carryover` 서브폼이다(C·A·B 공통). ⑤(토글·분자 칸 표시)·④(`useEstimatedAcquisition`·분자 전송)·⑧(분자·분모·같은 날 검증)이
+ * 이 한 함수를 읽는다(3중 패턴) — 자산 전체 이월과세의 `useEstimatedAcquisition`·`estimationMode`는 읽지 않는다(옛 이력 잔재가 파트로 새지 않게).
+ */
+export function partDonorEstimated(
+  asset: Parameters<typeof partCarryover>[0] & {
+    landCarryover?: { partEstimated?: boolean };
+    carryover?: { partEstimated?: boolean };
+  },
+  opts?: { isNonPrimary?: boolean },
+): { land: boolean; building: boolean } {
+  const pc = partCarryover(asset, opts);
+  return {
+    land: pc.land && asset.landCarryover?.partEstimated === true,
+    building: pc.building && asset.carryover?.partEstimated === true,
+  };
+}
+
 // ─── 비주택 건물 2001.1.1.~2005.4.29. 상속·증여 — 일괄 고시 오피스텔·상업용 건물인가 (계획서 §13.5) ───────────────
 
 /**

@@ -10,6 +10,7 @@ import {
   splitCarryoverAcquisitionText,
   splitCarryoverApportionText,
   splitCarryoverComparisonText,
+  splitCarryoverEstimatedExpenseText,
   splitCarryoverLthdBasisText,
   splitCarryoverRateBasisText,
   type SplitCarryoverView,
@@ -37,6 +38,8 @@ export function fillSplitCarryoverCells(
     }
     const cmp = splitCarryoverComparisonText(p);
     setRoseNote("acquisitionPrice", p.key, `${splitCarryoverAcquisitionText(p)}${cmp ? ` · ${cmp}` : ""}`);
-    setRoseNote("expenses", p.key, splitCarryoverApportionText(view, p));
+    // 환산 파트(P6)는 필요경비에 실제 들어간 것(개산공제·단서 합계·증여세 상당액)을 먼저 밝힌다 — 증여자 자본적지출이 들어갔다고 거짓으로 말하지 않는다.
+    const estimatedExpense = splitCarryoverEstimatedExpenseText(p);
+    setRoseNote("expenses", p.key, `${estimatedExpense ? `${estimatedExpense} ※ ` : ""}${splitCarryoverApportionText(view, p)}`);
   }
 }

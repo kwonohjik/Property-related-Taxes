@@ -106,3 +106,7 @@
 - 뮤테이션: 후가산 위치·override·합성기 전달·Zod 키·지분 스케일·⑧ 분모 필수.
 - E2E: a·b·c spec에 환산 1건씩.
 - 회귀: 전 디렉터리 묶음 + 정적 게이트.
+
+## 9. 구현 결과 (클라이언트, 2026-10-21)
+
+엔진·API 커밋(f030f68bd·fce2a2da6)에 이어 화면(①~⑧·⑬)을 구현했다. 변경 지점·결과 문구는 `docs/02-design/features/transfer-split-part-carryover.ui.design.md` 「P6 화면」에 있다. 폼 필드는 파트 전용 `partEstimated`(자산 전체 `useEstimatedAcquisition`·`estimationMode` 재사용 안 함 — 잔재 비누출). 확인 필요(미해결): 증여자가 상속·증여로 취득했거나 기준시가 고시 전(토지 1990.8.30. 전 등) 취득이면 분자 1칸으로 정확히 환산되는지는 안내(hint)만 한다 — 차단하지 않는다.

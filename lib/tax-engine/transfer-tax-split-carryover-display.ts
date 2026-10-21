@@ -7,6 +7,7 @@
  * (`feedback_engine_result_display_drift`). 순수 함수(JSX 없음)라 문구는 엔진 계층이 아니라 표시 계층 규약(한국어 풀어쓰기·변수명 라벨·약어 금지)을 따른다.
  * 구 이력(echo 없음)은 `undefined`를 돌려줘 소비처가 종전 화면을 그대로 낸다.
  */
+import { TRANSFER } from "./legal-codes";
 import { CARRYOVER_EXCLUSION_REASON_LABELS } from "./transfer-carryover-exclusion-labels";
 import { splitRateBasisDateText, splitRateBasisNote } from "./transfer-tax-split-display";
 import type { SplitGainResult, SplitPartCarryoverEcho, SplitPartResult } from "./types/transfer-split-gain.types";
@@ -38,6 +39,13 @@ export interface SplitCarryoverPartView {
   donorAcquisitionPrice?: number;
   /** 파트 환산(P6) — 환산 입력일 때만. 분모·환산취득가액·개산공제는 적용(A) 파트만 채워진다(엔진 echo 그대로) */
   estimated?: SplitPartCarryoverEcho["estimated"];
+  /** 이 파트의 양도가액(지분 반영 — 환산취득가액의 곱하는 수). 엔진 파트 결과 그대로 */
+  transferPrice: number;
+  /** §97②2호 단서 발동 — 환산 파트는 환산취득가액·개산공제 대신 자본적지출·양도비 합계를 필요경비로 쓴다(엔진 파트 `swapApplied`) */
+  swapApplied: boolean;
+  /** 개산공제 base·율(엔진 파트 echo) — 환산 파트에서만 읽는다. base는 지분 반영 값이라 분자와 다를 수 있다 */
+  lumpDeductionBase?: number;
+  lumpDeductionRate?: number;
   donorCapexAdded: number;
   donorCapexGuardApplied: boolean;
   /** 증여 당시 평가액(증여 신고가액) = 안분 분자 = 미적용 시 취득가액 */
@@ -103,6 +111,10 @@ function partView(
     donorAcquisitionDate: e.donorAcquisitionDate,
     ...(e.donorAcquisitionPrice !== undefined ? { donorAcquisitionPrice: e.donorAcquisitionPrice } : {}),
     ...(e.estimated ? { estimated: e.estimated } : {}),
+    transferPrice: p.transferPrice,
+    swapApplied: p.swapApplied === true,
+    ...(p.lumpDeductionBase !== undefined ? { lumpDeductionBase: p.lumpDeductionBase } : {}),
+    ...(p.lumpDeductionRate !== undefined ? { lumpDeductionRate: p.lumpDeductionRate } : {}),
     donorCapexAdded: e.donorCapexAdded,
     donorCapexGuardApplied: e.donorCapexGuardApplied,
     giftDateValuation: e.giftDateValuation,
@@ -153,15 +165,71 @@ export function splitCarryoverApportionText(v: SplitCarryoverView, p: SplitCarry
     : `${base} → 필요경비 가산 ${won(p.giftTaxAdded)}`;
 }
 
-/** 취득가액 분해 한 줄 — 적용: 증여자 취득가액(취득가액 칸) + 필요경비에 가산한 증여자 자본적지출·증여세 상당액, 미적용: 증여 신고가액. */
+/** 개산공제율 표기 — `0.03 → "3%"`. 율을 문자열로 박지 않는다(미등기 0.3% 등에서 거짓이 된다). 율이 없으면 「개산공제율」. */
+function lumpRateText(rate: number | undefined): string {
+  return rate === undefined || !Number.isFinite(rate) || rate <= 0 ? "개산공제율" : `${Number((rate * 100).toFixed(4))}%`;
+}
+
+/** 이 파트가 «이월과세 적용 + 환산취득가액»인가 — 분자·분모·환산취득가액이 모두 echo에 있다(엔진 `attachSplitCarryoverEcho`). */
+function appliedEstimated(p: SplitCarryoverPartView): NonNullable<SplitCarryoverPartView["estimated"]> | undefined {
+  const e = p.estimated;
+  return p.applied && e && e.stdPriceAtTransfer !== undefined ? e : undefined;
+}
+
+/**
+ * 환산 파트(P6, 이월과세 적용) 환산취득가액 산식 — `환산취득가액 = 토지 양도가액 X × (증여자 취득 당시 기준시가 N) ÷ (양도 당시 기준시가 D) = Y`.
+ * 숫자 옆에 변수명, 약어·`floor()` 금지. 나눗셈 피연산자는 괄호로 감싼다(`renderFormula`가 분수로 바꾸는 규약). 환산 파트가 아니면 `undefined`.
+ */
+export function splitCarryoverEstimatedAcqFormula(p: SplitCarryoverPartView): string | undefined {
+  const e = appliedEstimated(p);
+  if (!e) return undefined;
+  return `${p.label} 환산취득가액 = ${p.label} 양도가액 ${won(p.transferPrice)} × (증여자 취득 당시 기준시가 ${won(e.donorStdPriceAtAcquisition)}) ÷ (양도 당시 기준시가 ${won(e.stdPriceAtTransfer!)}) = ${won(p.acquisitionValue)}`;
+}
+
+/**
+ * 환산 파트(P6, 이월과세 적용) 필요경비 풀이 — 개산공제 산식 · 증여세 상당액 가산 · 자본적지출 처리를 «실제로 필요경비에 들어간 것»만 거짓 없이 말한다.
+ *   · 본문(swap 아님): 필요경비 = 개산공제. 증여자 자본적지출·수증자 자본적지출·양도비는 환산취득가액에 포함돼 필요경비에 넣지 않는다(단서 비교에만 쓴다).
+ *   · 단서(swap): 환산취득가액·개산공제 대신 자본적지출·양도비 합계(수증자 + 증여자)를 필요경비로 쓴다.
+ *   · 증여세 상당액은 어느 쪽이든 §97의2①3호의 별도 산입이라 단서 비교 밖에서 더한다.
+ * 환산 파트가 아니면 빈 배열(카드는 줄 단위로 그린다).
+ */
+export function splitCarryoverEstimatedExpenseLines(p: SplitCarryoverPartView): string[] {
+  const e = appliedEstimated(p);
+  if (!e) return [];
+  const parts: string[] = [];
+  if (p.swapApplied) {
+    parts.push(
+      `${p.label} 환산취득가액·개산공제 대신 자본적지출·양도비 합계 ${won(p.recipientExpense + p.donorCapexAdded)}(수증자 자본적지출·양도비 ${won(p.recipientExpense)} + 증여자 자본적지출 ${won(p.donorCapexAdded)})를 필요경비로 적용 (소득세법 §97②2호 단서)`,
+    );
+  } else {
+    const base = p.lumpDeductionBase ?? e.donorStdPriceAtAcquisition;
+    const share = base !== e.donorStdPriceAtAcquisition ? "(지분 반영) " : "";
+    if (e.lumpDeduction !== undefined)
+      parts.push(`${p.label} 개산공제 = 증여자 취득 당시 기준시가 ${share}${won(base)} × ${lumpRateText(p.lumpDeductionRate)} = ${won(e.lumpDeduction)} (시행령 §163⑥)`);
+    if (p.donorCapexAdded > 0)
+      parts.push(`증여자 자본적지출 ${won(p.donorCapexAdded)}은(는) 환산취득가액을 쓰므로 필요경비에 넣지 않았습니다 — 자본적지출·양도비 합계가 (환산취득가액 + 개산공제)보다 클 때만 단서로 대신 적용합니다 (소득세법 §97②2호)`);
+  }
+  if (p.giftTaxAdded > 0) parts.push(`필요경비에 증여세 상당액 ${won(p.giftTaxAdded)} 가산 (소득세법 §97의2①3호 — 단서 비교 밖의 별도 산입)`);
+  return parts;
+}
+
+/** `splitCarryoverEstimatedExpenseLines`를 한 줄로 이은 문구 — 상세명세서·신고서·PDF. 환산 파트가 아니면 `undefined`. */
+export function splitCarryoverEstimatedExpenseText(p: SplitCarryoverPartView): string | undefined {
+  const lines = splitCarryoverEstimatedExpenseLines(p);
+  return lines.length ? lines.join(" · ") : undefined;
+}
+
+/**
+ * 취득가액 분해 한 줄 — 적용: 증여자 취득가액(취득가액 칸) + 필요경비에 가산한 증여자 자본적지출·증여세 상당액, 미적용: 증여 신고가액.
+ * 환산 파트(P6, 적용)는 환산취득가액 산식 한 줄(필요경비 풀이는 `splitCarryoverEstimatedExpenseText`).
+ */
 export function splitCarryoverAcquisitionText(p: SplitCarryoverPartView): string {
   if (!p.applied) return `${p.label} 증여 신고가액 ${won(p.giftDateValuation)} (이월과세 미적용 — 수증자의 취득가액)`;
+  const estFormula = splitCarryoverEstimatedAcqFormula(p);
+  if (estFormula) return `${estFormula}${p.swapApplied ? " (단서 적용으로 차감하지 않음)" : ""}`;
   const addOns: string[] = [];
   if (p.donorCapexAdded > 0) addOns.push(`증여자 자본적지출 ${won(p.donorCapexAdded)}`);
   if (p.giftTaxAdded > 0) addOns.push(`증여세 상당액 ${won(p.giftTaxAdded)}`);
-  // 파트 환산 — 가액이 아니라 환산취득가액이다(표시 문구 개편은 UI 단계 — 여기서는 «취득가액 0» 거짓 표시만 막는다).
-  if (p.estimated)
-    return `${p.label} 환산취득가액 ${won(p.acquisitionValue)} (증여자 취득 당시 기준시가 ${won(p.estimated.donorStdPriceAtAcquisition)}${addOns.length ? `, 필요경비에 ${addOns.join(" + ")} 가산` : ""})`;
   return `${p.label} 증여자 취득가액 ${won(p.donorAcquisitionPrice ?? 0)}${addOns.length ? ` (필요경비에 ${addOns.join(" + ")} 가산)` : ""}`;
 }
 
@@ -202,6 +270,11 @@ export function splitCarryoverNotices(v: SplitCarryoverView): string[] {
   if (v.oneHouseExclusion || v.spouseOneHouseExceptionApplied)
     out.push(
       "②2호(이월과세를 적용해야 비로소 1세대1주택 비과세 양도가 되는 경우)는 토지·건물을 주택 하나(딸린 토지 포함)로 보고, 이월과세 파트를 모두 적용한 경우와 모두 적용하지 않은 경우의 비과세 해당 여부를 건물·토지 각각 비교해 판정했습니다. 토지·건물 중 일부만 증여받은 경우를 정면으로 다룬 해석례는 확인하지 못했습니다 — 확인 필요.",
+    );
+  // P6 §114조의2 — 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했다. 가산세는 거주자 본인이 신축·증축한 건물만 붙인다(조문 주어) — 증여자 신축분은 해석례를 확인하지 못했다.
+  if (v.parts.some((p) => p.key === "building" && appliedEstimated(p)))
+    out.push(
+      `증여자가 신축·증축한 건물을 그 취득일부터 5년 이내에 양도하는 경우의 ${TRANSFER.BUILDING_PENALTY} 환산가액적용가산세 적용 여부는 확인이 필요합니다 — 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했으나, 이 계산은 양도자 본인이 신축·증축한 건물만 가산세를 붙입니다.`,
     );
   if (v.spouseOneHouseExceptionApplied)
     out.push("증여일 현재 1세대1주택이던 주택을 배우자로부터 증여받아 ②2호를 적용하지 않았습니다(이월과세 판정은 ②3호 비교로 했습니다).");

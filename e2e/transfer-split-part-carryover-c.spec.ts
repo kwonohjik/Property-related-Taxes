@@ -188,6 +188,43 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await expect(stmtRow(page, "산출세액")).toContainText("이월과세(§97의2①) 장기보유특별공제 기산일: 토지 증여 등기접수일 2023-03-01 (이월과세 미적용) / 건물 증여자 취득일 2015-06-01");
   });
 
+  test("P6 환산: 토지·건물 카드 각자 토글 ON → 증여자 취득 당시 기준시가 입력 → 계산 → body 환산 키 → 결과 환산 산식(파트별)", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seedWizard(
+      page,
+      cSeed([
+        cAsset({
+          carryover: { ...(cAsset().carryover as Over), donorAcquisitionPrice: "" },
+          landCarryover: { ...(cAsset().landCarryover as Over), donorAcquisitionPrice: "" },
+        }),
+      ]),
+    );
+    await expandAssetSection(page, 3);
+    for (const k of ["landCarryover.partEstimated", "carryover.partEstimated"]) await expect(page.locator(`[data-field="${k}"]`), k).toHaveCount(1);
+    await page.getByTestId("split-carryover-land-estimated").getByRole("switch").click();
+    await page.getByTestId("split-carryover-building-estimated").getByRole("switch").click();
+    for (const k of ["landCarryover.donorStandardPriceAtAcquisition", "carryover.donorStandardPriceAtAcquisition"]) await expect(page.locator(`[data-field="${k}"]`), k).toHaveCount(1);
+    for (const k of ["landCarryover.donorAcquisitionPrice", "carryover.donorAcquisitionPrice"]) await expect(page.locator(`[data-field="${k}"]`), k).toHaveCount(0);
+    await expect(page.getByText("아직 지원하지 않")).toHaveCount(0);
+    await page.getByTestId("split-carryover-land-donor-std-price").fill("30000000");
+    await page.getByTestId("split-carryover-building-donor-std-price").fill("40000000");
+    const body = await calculate(page);
+    expect(body.landCarryoverPart).toEqual({ donorAcquisitionDate: "1995-03-01", useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 30_000_000 });
+    expect(body.buildingCarryoverPart).toEqual({ donorAcquisitionDate: "2015-06-01", useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 40_000_000 });
+    // 결과 — 파트별 환산 산식(토지·건물 각자 분자 ÷ 분모) + 건물 §114조의2 확인 필요
+    const land = page.getByTestId("split-carryover-land-estimated").first();
+    await expect(land).toContainText("토지 양도가액 700,000,000");
+    await expect(land).toContainText("증여자 취득 당시 기준시가 30,000,000");
+    const bldg = page.getByTestId("split-carryover-building-estimated").first();
+    await expect(bldg).toContainText("건물 양도가액 500,000,000");
+    await expect(bldg).toContainText("증여자 취득 당시 기준시가 40,000,000");
+    await expect(page.getByTestId("split-carryover-card").first()).toContainText("소득세법 §114조의2");
+    const acqRow = await formRow(page, "취득가액");
+    const expRow = await formRow(page, "필요경비");
+    expect([num(acqRow[1]), num(acqRow[2]), num(acqRow[3])]).toEqual([70_000_000, 30_000_000, 40_000_000]);
+    expect([num(expRow[1]), num(expRow[2]), num(expRow[3])]).toEqual([32_100_000, 8_900_000, 23_200_000]);
+  });
+
   test("UI 입력: 자산 전체 이월과세 → 토글 ON → 파트 카드 입력 → 계산 — 같은 결과(300,018,000), 토글 OFF 시 파트 키 소멸", async ({ page }) => {
     test.setTimeout(180_000);
     // 토글 OFF 상태의 종전 화면(자산 전체 1벌 입력) — 파트 입력은 비어 있다. 양도 정보(축 A)는 시드로 둔다(토글 ON 때 노출).
