@@ -34,6 +34,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { burdenedGiftPerAssetTotals } from "@/lib/tax-engine/burdened-gift-totals";
 
 /**
  * 이 자산의 양도가액을 **엔진이 스스로 산정**하는가(= 입력칸이 없고, 넣어도 쓰이지 않는다).
@@ -76,7 +77,7 @@ export function isBlockedMixedBurdenedGiftBundle(
 
 /** 단건 부담부증여의 §159 양도가액 — 엔진 명세의 토지·건물 양도가액 합(소득세법 시행령 §159①). 결과 카드·사이드바가 같이 쓴다. */
 export function burdenedGiftTransferPrice(brkd: Pick<TransferBurdenedGiftBreakdown, "perAsset">): number {
-  return (brkd.perAsset.land?.transferPrice ?? 0) + (brkd.perAsset.building?.transferPrice ?? 0);
+  return burdenedGiftPerAssetTotals(brkd).transferPrice;
 }
 
 export const MIXED_BURDENED_GIFT_BUNDLE_MESSAGE =

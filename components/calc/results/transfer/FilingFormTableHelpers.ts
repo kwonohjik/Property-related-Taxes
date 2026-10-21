@@ -178,6 +178,7 @@ import { resolveReceiveOnlyDisplay } from "./receive-only-display";
 import { resolveBgSingleDisplay, bgSwapAcquisitionNote } from "./DetailedStatementBgFormulas";
 import { mixedBgFilingNotes } from "./DetailedStatementBgMixedFormulas";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
+import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -423,7 +424,9 @@ export function buildRows(
     //   사례 37 검산: 520M − 103M − 217M = 200M (환산취득가 = §166③ 결과).
     //   조립까지 계산명세서·사이드바와 **공용 leaf**를 쓴다 — 종전엔 세 곳이 각각 조립해
     //   양도가액 인자가 갈릴 수 있었다(`redev-acquisition-inverse.ts` 주석 참조).
-    const t = redevFilingTotals(r, totalTransferPrice || 0);
+    // 부담부증여 §166 자산(원조합원 입주권 등)은 §159 양도가액이 역산 인자다 — 폼 계약금액(부담부증여 화면에 칸 없음 = 0)이면
+    // 합계 취득가액이 −400,000,000이 됐다(계획서 `docs/00-pm/burdened-gift-display-acquisition.plan.md` D3).
+    const t = redevFilingTotals(r, redevInverseTransferPrice(result, totalTransferPrice || 0));
     // 청산금 수령 동시신고는 신고 단위가 **두 개의 양도**라 합계 양도가액이 폼값 + 청산금이다.
     setNum("transferPrice", "total", t.transferPrice || null);
     setNum("acquisitionPrice", "total", t.acquisition);

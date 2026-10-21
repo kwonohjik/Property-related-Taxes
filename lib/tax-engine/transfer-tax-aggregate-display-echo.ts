@@ -8,6 +8,7 @@ import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types
 import { summarizeSplitGain, sumSplitLthdAmounts } from "./transfer-tax-split-display";
 import { LTHD_HOLDING_STEP_LABEL, LTHD_RESIDENCE_STEP_LABEL } from "./transfer-tax-lthd-steps";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
+import { burdenedGiftPerAssetTotals } from "./burdened-gift-totals";
 import { safeMultiplyThenDivide } from "./tax-utils";
 
 /**
@@ -135,12 +136,28 @@ export function resolveDisplayAcquisitionAndExpense(r: {
   // split 정본 합 — 이월과세 채택이 없을 때만(위 위계). 소비처는 이 값을 취득가액 칸으로 읽는다.
   const splitSummary =
     adoptedCarryover === undefined && r.result.splitDetail ? summarizeSplitGain(r.result.splitDetail) : undefined;
+  /**
+   * 🔴 **부담부증여(§159)** — 단건 엔진은 STEP 0.48에서 `workingInput`의 취득가액을 §159 값(취득시 기준시가 × 채무비율 등)으로
+   *    덮어쓴다(`transfer-tax-burdened-gift-step.ts`). 그런데 여기서 읽는 `singleInput.acquisitionPrice`는 덮어쓰기 **전** route 입력
+   *    (화면에 없는 자산 일반 칸)이라, 아래 필요경비 역산이 **음수**가 됐다. 실측(전 자산 부담부증여 주택 2건 · 안분 16억):
+   *      echo 취득가액 300,000,000 · 300,000,000 / 필요경비 −42,500,000 · −145,500,000 → 합산 신고서 「취득가액 600,000,000 ·
+   *      필요경비 0(clamp) · 차익 388,000,000」. 정본은 §159 명세 250,000,000 · 150,000,000(필요경비는 역산 = 엔진 `expenses`
+   *      7,500,000 · 4,500,000). 계획서 `docs/00-pm/burdened-gift-display-acquisition.plan.md` D1.
+   *    §166 자산(입주권)은 위 §166 역산이 먼저다 — §159 명세의 `perAsset`은 인가 전 분만 담는다(120,000,000 vs §166 합계 200,000,000).
+   *    일반건물은 route가 카드마다 §159 값을 입력으로 넣고 카드 결과에 명세가 없어 여기 오지 않는다.
+   */
+  // 위계는 아래 삼항의 순서가 정한다(이월과세 → §166 → 분리 → §159) — 여기서 같은 조건을 또 걸면 두 층이 서로를 가린다.
+  const bgTotals = r.result.transferBurdenedGiftBreakdown
+    ? burdenedGiftPerAssetTotals(r.result.transferBurdenedGiftBreakdown)
+    : undefined;
   const effectiveAcquisitionPrice =
     adoptedCarryover ??
     (redevTotals
       ? redevTotals.acquisition
       : splitSummary
       ? splitSummary.acquisitionDeducted
+      : bgTotals
+      ? bgTotals.acquisitionPrice
       : r.result.swapApplied
       ? 0
       : // §97③ 감가상각비는 취득가액에서 공제된 뒤의 값이 「엔진이 차감한 취득가액」이다 — swap(위)·이월과세(위)는

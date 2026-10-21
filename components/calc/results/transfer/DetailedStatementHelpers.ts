@@ -9,6 +9,7 @@
  *  - 800줄 정책 — Helpers / Groups / Card 3파일 분할
  */
 
+import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
 import type { ReactNode } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
@@ -158,7 +159,13 @@ export function buildStatementItems(
   // 겸용 × 부담부증여 — 4부분 슬롯 합(단건 빌더는 겸용을 제외한다). 폼 `contractTotalPrice`는 빈 칸이라 역산하면 음수다.
   const bgMixed = isAggregate ? undefined : resolveBgMixedDisplay(result);
   // 양도가액 우선순위: 부담부증여 슬롯 > receiveOnly 보정 > override > result.steps의 amount > 0
-  const totalTransferPrice = bgSingle ? bgSingle.transferPrice : bgMixed ? bgMixed.transferPrice : receiveOnly.transferPrice;
+  // 부담부증여 §166 자산(원조합원 입주권 등)은 `bgSingle`이 빠지므로(§166 분기가 따로 그린다) §159 양도가액을 여기서 준다 —
+  // 폼 계약금액은 빈 칸이라 §166 역산 합계 취득가액이 −400,000,000이 됐다(신고서 표와 같은 leaf · 계획서 D3).
+  const totalTransferPrice = bgSingle
+    ? bgSingle.transferPrice
+    : bgMixed
+    ? bgMixed.transferPrice
+    : redevInverseTransferPrice(result, receiveOnly.transferPrice);
 
   const residenceMs = residenceMonthsOfAsset(primary, transferDate);
   // ── 1단계: 일자·기간 (DetailedStatementDateItems.ts) ─────────────
