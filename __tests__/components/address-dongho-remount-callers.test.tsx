@@ -12,7 +12,7 @@
  * |---|---|
  * | H-1 | 보유주택 명부: 세대 목록을 못 불러와 상세주소 칸에 입력해도 `addressDong`·`addressHo`가 남는다(R1) |
  * | H-2 | 보유주택 명부: 동·호가 저장된 행을 열면 세대 목록을 다시 불러와 고른 호가 보인다(R2) |
- * | R-1 | 임대주택 카드: 상세주소 입력에도 `rentalDong`·`rentalHo`가 남는다(R1) |
+ * | R-1 | 임대주택 카드: 목록을 다시 못 불러와도 상세주소 칸이 없고 `rentalDong`·`rentalHo`를 건드리지 않는다(`address-detail-dead-input.plan.md` R2) |
  * | B-1 | 건물 기준시가 모달: 첫 오픈에 자산의 동·호를 옮겨 집합건물로 판정하고, 건축물대장 조회에 동·호를 싣는다(R3) |
  * | B-2 | 건물 기준시가 모달: 상세주소 입력에도 집합건물 판정이 남는다(R1) |
  * | M-1 | 다시점 건물 기준시가 모달: 상세주소 입력에도 집합건물 판정이 남는다(R1) |
@@ -92,7 +92,9 @@ describe("다시 마운트된 주소 검색 — 상세주소 입력이 동·호�
     expect(screen.queryByPlaceholderText(/상세주소/)).toBeNull();
   });
 
-  it("R-1: 임대주택 카드 — 상세주소 입력에도 rentalDong·rentalHo가 남는다(R1)", async () => {
+  it("R-1: 임대주택 카드 — 목록을 다시 못 불러와도 상세주소 칸이 없고 rentalDong·rentalHo를 건드리지 않는다", async () => {
+    // 상세주소는 저장할 필드가 없어 칸을 그리지 않는다(계획서 address-detail-dead-input.plan.md R2). 종전에는 칸이 보였지만
+    // 입력이 남지 않았고, 한 글자마다 같은 값을 다시 써 판정 결과를 지웠다.
     const onChange = vi.fn();
     render(
       <RentalUnitCard
@@ -104,8 +106,11 @@ describe("다시 마운트된 주소 검색 — 상세주소 입력이 동·호�
         transferDate="2026-06-01"
       />,
     );
-    fireEvent.change(await detailField(), { target: { value: "1" } });
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ rentalDong: "101동", rentalHo: "501" }));
+    // 재조회가 실패로 끝난 뒤를 본다 — 조회 중에는 원래 칸이 없어 단언이 비게 된다
+    await waitFor(() => expect(requested.some((u) => u.includes("/api/address/standard-price"))).toBe(true));
+    await waitFor(() => expect(screen.queryByText("동/호수 조회 중...")).toBeNull());
+    expect(screen.queryByPlaceholderText(/상세주소/)).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("B-1: 건물 기준시가 모달 — 첫 오픈에 자산의 동·호를 옮겨 집합건물로 판정한다(R3)", async () => {

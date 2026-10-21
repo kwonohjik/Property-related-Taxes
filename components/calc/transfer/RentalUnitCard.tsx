@@ -304,6 +304,9 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       >
         <div data-testid={`rental-address-${index}`}>
         <AddressSearch
+          // 상세주소는 저장할 필드가 없어 칸을 그리지 않는다 — 입력이 남지 않고, 한 글자마다 같은 값을 다시 써
+          //   판정 결과를 지웠다(계획서 address-detail-dead-input.plan.md R2)
+          hideDetailInput
           value={
             {
               road: "",

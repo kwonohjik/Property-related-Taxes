@@ -5,6 +5,7 @@
  * 동·호 목록이 사라지고 상세주소 칸만 남는데, 그 칸에 입력하면 저장된 동·호가 `""`로 지워져
  * 「공시가격 조회」가 **다른 세대 가격**을 「조회 성공」으로 채웠다(공시가격 API는 동·호가 없으면 임의 세대를 고른다).
  * 계획서 `docs/00-pm/address-dongho-other-calcs-and-multi-gate.plan.md` A(R1·R2, Q-1 a)
+ * 그 뒤 상세주소 칸은 저장할 필드가 없어 그리지 않는다 — `docs/00-pm/address-detail-dead-input.plan.md` R2(D-2·D-3 갱신)
  *
  * 공시가격 API는 `mode`로 응답을 바꾼다. 동·호가 없는 조회는 일부러 다른 세대(502호·7억)를 돌려준다.
  *
@@ -111,16 +112,17 @@ for (const c of CALCS) {
       expect(r.text).toContain("900,000,000");
     });
 
-    test(`${c.name} D-2: 목록을 다시 불러오지 못해 상세주소 칸에 입력해도 동·호가 지워지지 않는다(R1)`, async ({ page }) => {
+    test(`${c.name} D-2: 목록을 다시 불러오지 못해도 상세주소 칸이 없고 동·호가 지워지지 않는다(R1)`, async ({ page }) => {
       const st = await mock(page, "units");
       await page.goto(c.url);
       await pickAddress(page);
       await pickUnit(page);
       st.mode = "fail";
       await c.leaveAndReturn(page);
-      const detail = page.getByPlaceholder(/상세주소/).first();
-      await expect(detail).toBeVisible();
-      await detail.pressSequentially("101동 501호");
+      // 상세주소는 저장할 필드가 없어 칸을 그리지 않는다(address-detail-dead-input.plan.md R2). 종전에는 칸이 보였지만
+      // 무엇을 쳐도 남지 않았다. 재조회가 끝난 뒤에 본다 — 조회 중에는 원래 칸이 없다.
+      await expect(page.getByText("동/호수 조회 중...")).toHaveCount(0);
+      await expect(page.getByPlaceholder(/상세주소/)).toHaveCount(0);
       st.mode = "units";
       await c.gotoLookup(page);
       const r = await lookup(page, st);
@@ -129,16 +131,20 @@ for (const c of CALCS) {
       expect(r.text).toContain("900,000,000");
     });
 
-    test(`${c.name} D-3 반례: 세대가 없는 주소(단독주택)는 돌아와도 세대 조회를 다시 부르지 않는다`, async ({ page }) => {
+    test(`${c.name} D-3 반례: 세대가 없는 주소(단독주택)는 돌아와도 세대 조회를 다시 부르지 않고, 상세주소 칸도 없다`, async ({ page }) => {
       const st = await mock(page, "detached");
       await page.goto(c.url);
       await pickAddress(page);
-      await expect(page.getByPlaceholder(/상세주소/).first()).toBeVisible();
+      await expect.poll(() => st.calls.length).toBeGreaterThan(0);
+      await expect(page.getByText("동/호수 조회 중...")).toHaveCount(0);
+      // 저장하지 않는 칸이라 그리지 않는다(address-detail-dead-input.plan.md R2)
+      await expect(page.getByPlaceholder(/상세주소/)).toHaveCount(0);
       const before = st.calls.length;
       await c.leaveAndReturn(page);
-      await expect(page.getByPlaceholder(/상세주소/).first()).toBeVisible();
+      await expect(page.getByText("지번", { exact: true }).first()).toBeVisible();
       await page.waitForTimeout(500);
       expect(st.calls.length).toBe(before);
+      await expect(page.getByPlaceholder(/상세주소/)).toHaveCount(0);
     });
   });
 }
