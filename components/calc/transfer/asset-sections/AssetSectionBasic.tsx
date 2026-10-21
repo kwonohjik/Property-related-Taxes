@@ -293,6 +293,7 @@ export function AssetSectionBasic({
         </label>
         <AddressSearch
           onUnitsResolved={(hasUnits) => onChange({ hasAddressUnits: hasUnits })}
+          knownHasUnits={asset.hasAddressUnits ?? false}
           value={
             {
               road: asset.addressRoad,
@@ -301,6 +302,10 @@ export function AssetSectionBasic({
               detail: asset.addressDetail ?? "",
               lng: asset.longitude ?? null,
               lat: asset.latitude ?? null,
+              // 🔑 동·호를 함께 넘긴다 — 빠지면 상세주소 입력(`{ ...value, detail }`)이 아래 `v.dong ?? ""`로 고른 동·호를 지웠고,
+              //    다시 불러온 목록이 고른 값을 보여주지 못했다(계획서 transfer-address-units-remount.plan.md R2)
+              dong: asset.addressDong || undefined,
+              ho: asset.addressHo || undefined,
             } satisfies AddressValue
           }
           onChange={async (v) => {
