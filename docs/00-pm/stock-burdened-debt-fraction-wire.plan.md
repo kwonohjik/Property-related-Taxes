@@ -1,7 +1,7 @@
 # 주식 부담부증여 채무비율 — 와이어에 증여가액 C를 싣는 S-2 계획서
 
 **작성**: 2026-10-22 · **base**: master `2c9120fbb` · **선행**: `docs/00-pm/burdened-gift-debt-ratio-precision.plan.md` §6·§7(S-2 행)·§13.5 (PR-2 S-1 = `cf9089b32`/`ec404f79f`, master 포함 확인)
-**상태**: 📝 Plan 초안 — 사용자 결정 대기
+**상태**: ✅ Plan 확정 (2026-10-22 사용자 결정 — Q1 고침 · Q2 a-1 증여가액 C 1필드 `burdenedGiftValuationAmount` · Q2′ 구필드 폐지 + 수신 시 400 거절 · Q3 B>C 400 유지 · Q4 `positive()`만 · Q5 Playwright body 단언 포함 · Q6 선행 계획서 §13.5 후속 표기만) → Do
 **실측 원자료**: 세션 scratchpad `sdf/`(p1~p8 · stock-acquisition-basis.ts.orig · sha.orig) — 세션이 끝나면 지워진다. 제품 파일은 probe 중 `stock-acquisition-basis.ts` 1개를 임시 변경(cp 백업 → 실행 → 원복)했고 **원복 sha 일치(`3084b73d…`)·`git status` clean을 확인**했다.
 
 ---
