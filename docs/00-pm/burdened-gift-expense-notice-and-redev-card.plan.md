@@ -1,6 +1,6 @@
 # 부담부증여 — 쓰이지 않는 필요경비 칸 안내 · §166 자산 결과 카드 취득가액 안내 계획서
 
-> 상태: **v0.1 (2026-10-22) 사용자 결정 반영(§5)** — Q-1 = 칸 숨김 + 한 줄 안내 · Q-2 = 담보 승 제외(§1.4 — 화면에서 도달 불가) · Q-3 = (a) · Q-4 = 한 PR.
+> 상태: **v0.2 (2026-10-22) Do 완료(§7)** · v0.1 사용자 결정 반영(§5) — Q-1 = 칸 숨김 + 한 줄 안내 · Q-2 = 담보 승 제외(§1.4 — 화면에서 도달 불가) · Q-3 = (a) · Q-4 = 한 PR.
 > 계기: `burdened-gift-display-acquisition.plan.md` §6 범위 밖 2건.
 > 검증 방식: throwaway probe(워크트리 `-bgoos`, `__tests__/zz-probe/` — 커밋 안 함) — vitest(폼 → ⑧ → ④ → route → 결정세액) + RTL(결과 화면 `TransferTaxResultView`·`BurdenedGiftDetailCard` 텍스트). 법령 본문은 KoreanLaw MCP(소득세법 MST 280405 · 시행령 MST 290841). 인용 file:line은 base `faf96378f`(master) 기준. **세액은 어느 쪽도 바뀌지 않는다**(칸 노출·안내·라벨 전용 — 숨기는 칸은 엔진이 이미 읽지 않는다).
 
@@ -155,3 +155,33 @@ leaf 하나 — `lib/calc/burdened-gift-expense-scope.ts`의 `bgExpenseInputsUnu
 - **O-3** K-4 박스와 ④가 같은 자본적지출·양도비 상태를 두 칸으로 보인다(`BurdenedGiftBlock.tsx:387-398` · `AssetSectionExpense.tsx:71-120`). 한 칸으로 줄일지는 별건.
 - **O-4** 법령 근거: 「소득세법 시행령」 제159조 제1항 제1호 괄호(기준시가 산정 시 취득가액도 기준시가) · 「소득세법」 제97조 제2항 제2호(본문 개산공제 · 단서는 「제1항제1호나목에 따라 취득가액을 환산취득가액으로 하는 경우」) · 「소득세법 시행령」 제163조 제6항 — 본문은 MCP로 확인했다. 「기준시가 취득가액 → 개산공제만」을 직접 다룬 해석례는 MCP 검색(국세청·조세심판원)에서 **찾지 못했다**. 안내는 엔진의 기존 설계(`burdened-gift-acquisition-cost.plan.md` §3 K-1~K-3)를 화면에 드러내는 것이고 세액을 바꾸지 않는다.
 - **O-5** ⑧ 시가 모드 「채무액이 증여가액을 초과」 판정의 분모가 시가 입력값이다(`transfer-tax-validate-bg.ts:338-353`). 엔진의 증여가액은 시가·담보평가 중 큰 값(`burdened-gift-valuation.ts:250-253`)이라, 채권최고액 ≥ 담보채무인 담보 승(증여가액 = 인수 채무 → 채무비율 정확히 1)까지 ⑧이 막는다. 증여세 화면은 담보 승을 다룬다(`gift-burdened-valuation-basis.ts:65`). 정당한 차단인지·결함인지 **확인 필요** — 결함이면 담보 승 화면(K-4 박스·산정방식 선택·취득시 기준시가 칸 `needsBgAcqStdPriceInput`)과 묶어 별건으로 다룬다.
+
+---
+
+## 7. Do 결과 (v0.2)
+
+### 7.1 1단계 추가 실측 (코드 변경 전)
+
+| 항목 | 결과 |
+|---|---|
+| 겸용 부담부증여 | 기준시가·감정가액 = 안 쓰임(60,939,200 · 67,069,361 불변) · 환산 = 단서 비교만(5천만 불변, 9억+1억이면 35,485,001) · 실지 = 쓰임 → 주택과 같은 갈래 |
+| 토지 부담부증여 기준시가 | 안 쓰임(36,647,000 불변) |
+| ⑧ 막다른 길 | **있음** — 부담부증여 기준시가 + 토지·건물 분리(`hasSeperateLandAcquisitionDate`) + 자본적지출 5천만이면 ⑧이 「토지분·건물분 칸에 각각 입력하세요」(`transfer-tax-validate-split.ts` 파트 자본적지출 규칙)로 막는다. 분리 방식은 부담부증여에서도 의도적으로 열려 있다(`CompanionAcqPurchaseBlock.tsx:502` 주석) → 분리 경로는 칸을 남긴다(leaf `false`). 판정은 ⑧ 진입 게이트를 `isSplitValidationActive`로 뽑아 공유 |
+| 이월과세 부담부증여 | 양도인 평가액 박스(K-4 박스)가 자본적지출을 받는 경로가 있어 칸을 남긴다 |
+| ④ 섹션 요약 칩 | 숨긴 값을 「입력됨」으로 셌다(`asset-section-summary.ts`) → 「개산공제만」(○ — 입력할 것이 없어 ✓로 표시하지 않는다. 기존 anchor `transfer-asset-section-summary.anchor.test.ts`의 「부담부증여 주택 ④ filled=false」와 맞춘다) |
+| 묶음 결과 카드 | 명세는 주 자산의 것(`data.transferBurdenedGiftBreakdown`). 주 자산이 입주권이면 같은 120,000,000이 뜬다 → 합산 신고서가 읽는 엔진 표시 echo(`aggregated.properties[primary].acquisitionPrice` 200,000,000)를 넘긴다 |
+
+### 7.2 구현
+
+- **신규** `lib/calc/burdened-gift-expense-scope.ts` — `bgExpenseUnusedBasis(asset)`(「기준시가」·「감정가액」·「매매사례가액」·null) · `bgExpenseInputsUnused`.
+- `lib/calc/transfer-tax-validate-split.ts` — `isSplitValidationActive` 추출(분리 검증 진입 게이트, 식 동일).
+- ④ `AssetSectionExpense.tsx` — 쓰이지 않으면 자본적지출·양도비 칸·단서 각주·일부양도 안분 각주를 숨기고 안내 한 줄(`data-testid="bg-expense-unused-notice"`). 겸용 건물 직접 귀속 양도비·이전 입력 형식 칸은 그대로.
+- `asset-section-summary.ts` — ④ 칩 「개산공제만」.
+- B: `lib/tax-engine/burdened-gift-totals.ts` `bgRedevFilingAcquisition(result)`(신고서 표와 같은 `redevFilingTotals` 역산) · `BurdenedGiftDetailCard` prop `redevFilingAcquisition` — 행 라벨 「종전 부동산 취득가(인가 전 분)」 + 한 줄(`data-testid="bg-redev-filing-acquisition"`) · 호출처 단건 `TransferTaxResultView` · 묶음 `BundledAllocationCard`.
+
+### 7.3 테스트 · 뮤테이션 · 회귀
+
+- **anchor** `__tests__/calc/burdened-gift-expense-notice-redev-card.anchor.test.tsx` 32건 — leaf 18칸은 엔진 세액과 짝(쓰이지 않음 ⇔ 자본적지출 9억·양도비 1억을 넣어도 세액 동일). 수정 전(leaf `false`): 15건 실패 · 17건 통과(대조·엔진 짝).
+- **뮤테이션 14종 전부 잡힘**: 환산→숨김 · 입주권 예외 · 완공 아파트 예외 · 감정·매매사례 분기 · 분리 예외 · 이월과세 예외 · ④ 게이트 반전 · 칸 숨김 제거 · 요약 칩 · 단건 prop · 묶음 prop · 합계 leaf→명세 합 · 라벨 원복 · 묶음 echo→명세 합.
+- **회귀**: 타입 오류 0 · 전체 vitest 1건 실패(위 요약 칩 `filled` — 기존 단언에 맞춰 `false`로 정정 후 통과) · 부담부증여·재개발·사이드바 E2E 130건 통과.
+- **브라우저**(Playwright · 화면 경유, throwaway): 기준시가 모드 주택 ④ — 칸 0개 · 안내 · 칩 「개산공제만」 / 시가·실지 — 칸 있음 / 단건 입주권 결과 카드 — 「종전 부동산 취득가(인가 전 분) 120,000,000」 · 「신고서 취득가액 합계 200,000,000」.

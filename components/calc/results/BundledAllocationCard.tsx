@@ -205,6 +205,14 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
            * 같은 슬롯을 쓰면서 **주택·토지도 도달**하므로 자산 종류에서 파생한다.
            */
           propertyType={formData.assets[0]?.assetKind}
+          /**
+           * 이 명세는 주 자산의 것이다. 주 자산이 §166 자산(원조합원 입주권 등)이면 인가 전 분과 합산 신고서의 취득가액
+           * (엔진 표시 echo — §166 역산 정본)을 잇는다.
+           */
+          redevFilingAcquisition={(() => {
+            const primary = aggregated.properties.find((p) => p.propertyId === "primary");
+            return primary?.redevelopmentDetail ? primary.acquisitionPrice : undefined;
+          })()}
         />
       )}
 

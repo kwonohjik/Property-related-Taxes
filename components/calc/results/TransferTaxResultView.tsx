@@ -7,6 +7,7 @@
 
 import { useState, useMemo } from "react";
 import { redevSec166DisplayOf } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { bgRedevFilingAcquisition } from "@/lib/tax-engine/burdened-gift-totals";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
 // LawArticleModal은 EngineStepsSubToggle로 이전되었으나, 감면 상세 카드 인용 링크화를 위해 재도입 (2026-06-15)
@@ -694,6 +695,8 @@ export function TransferTaxResultView({
           warnings={result.warnings}
           // 재개발 완공 아파트 × K-5 — 엔진이 §166③으로 계산한 값(명세의 일반 환산값 대신 표시)
           redevSec166={redevSec166DisplayOf(result)}
+          // 원조합원 입주권·완공 아파트 — 인가 전 분과 신고서 합계(§166①1호)를 잇는다
+          redevFilingAcquisition={bgRedevFilingAcquisition(result)}
         />
       )}
 
