@@ -27,12 +27,14 @@ import { hasJudgmentInput } from "@/lib/one-house-ai/judgment-ui";
 import { ONE_HOUSE_AI_TEXT_MAX } from "@/lib/one-house-ai/text-limit";
 import { answerTargetOf, readAnswer, writeAnswer } from "@/lib/one-house-ai/question-answer";
 import { OneHouseAiAnswerField } from "./OneHouseAiAnswerField";
+import { OneHouseAiLawLookups } from "./OneHouseAiLawLookups";
+import { OneHouseAiSourceCitations } from "./OneHouseAiSourceCitations";
 import { OneHouseAiUsageCost } from "./OneHouseAiUsageCost";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 
 /** 적용 뒤 화면에 남기는 검토 정보 — 원문은 참고 의견(`OneHouseAiOpinionPanel`)이 맥락으로 쓴다 */
-export type OneHouseAiReview = Pick<OneHouseAiExtractData, "facts" | "questions" | "notes" | "issues"> & {
+export type OneHouseAiReview = Pick<OneHouseAiExtractData, "facts" | "questions" | "notes" | "issues" | "lawLookups" | "sourceCitations"> & {
   sourceText: string;
 };
 
@@ -95,6 +97,8 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
       questions: data.questions,
       notes: data.notes,
       issues: data.issues,
+      lawLookups: data.lawLookups,
+      sourceCitations: data.sourceCitations,
       sourceText: text.trim(),
     });
     setOpen(false);
@@ -237,6 +241,8 @@ function ExtractionPreview({
       )}
 
       {data.notes.length > 0 && <NoteList notes={data.notes} />}
+      <OneHouseAiSourceCitations items={data.sourceCitations} />
+      <OneHouseAiLawLookups lookups={data.lawLookups} />
 
       <OneHouseAiUsageCost model={data.model} usage={data.usage} />
     </div>

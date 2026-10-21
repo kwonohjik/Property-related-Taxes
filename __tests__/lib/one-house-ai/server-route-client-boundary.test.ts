@@ -47,7 +47,7 @@ function clientModulesReachedFrom(entry: string): string[] {
 }
 
 describe("서버 경로 ↛ 클라이언트 모듈", () => {
-  it.each(["app/api/one-house-ai/extract/route.ts", "app/api/one-house-ai/opinion/route.ts"])("%s", (entry) => {
+  it.each(["app/api/one-house-ai/extract/route.ts", "app/api/one-house-ai/opinion/route.ts", "app/api/one-house-ai/verify/route.ts"])("%s", (entry) => {
     expect(clientModulesReachedFrom(entry)).toEqual([]);
   });
 });

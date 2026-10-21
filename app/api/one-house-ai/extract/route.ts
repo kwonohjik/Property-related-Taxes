@@ -32,6 +32,8 @@ import {
 import { mergeExtractedForm } from "@/lib/one-house-ai/merge-form";
 import { collectValidationQuestions } from "@/lib/one-house-ai/validation-questions";
 import type { AnswerField } from "@/lib/one-house-ai/question-answer";
+import type { LawLookup } from "@/lib/one-house-ai/law-tools";
+import { checkSourceCitations, type SourceCitation } from "@/lib/one-house-ai/source-citations";
 
 // LLM 추출은 문서 하나에 20~45초(오프라인 평가 실측) — 여유를 둔다.
 export const maxDuration = 120;
@@ -58,6 +60,10 @@ export type OneHouseAiExtractData = {
   questions: ExtractQuestion[];
   notes: string[];
   issues: ExtractionIssue[];
+  /** AI가 칸의 뜻을 확인하려고 조회한 조문(성공·실패) */
+  lawLookups: LawLookup[];
+  /** 원문 속 조문·해석례 번호 대조(결정론) */
+  sourceCitations: SourceCitation[];
   model: string;
   usage: ExtractionRun["usage"];
 };
@@ -131,6 +137,9 @@ export async function POST(request: NextRequest) {
     (q) => !llmQuestions.some((l) => overlaps(l.path, q.path)),
   );
 
+  // 단계 6: 원문 속 인용 대조 — 추출된 양도일이 있으면 그 날 시행본으로(조회 실패는 각 항목에 「확인 불가」로 남는다)
+  const sourceCitations = await checkSourceCitations(parsed.data.text, typeof form.transferDate === "string" ? form.transferDate : null);
+
   const data: OneHouseAiExtractData = {
     form,
     // 화면은 필드 사전을 싣지 않는다 — 칸 이름과 선택지 뜻을 여기서 붙인다
@@ -141,6 +150,8 @@ export async function POST(request: NextRequest) {
     questions: [...llmQuestions, ...validationQuestions.map((q) => ({ ...q, field: fieldOf(q.path) }))],
     notes: run.extraction.notes,
     issues,
+    lawLookups: run.lookups ?? [],
+    sourceCitations,
     model: run.model,
     usage: run.usage,
   };

@@ -1,46 +1,42 @@
 /**
- * 1세대1주택 AI 참고 의견 — Anthropic API 호출(서버 전용). 호출 방식은 사실 추출(`../extract.ts`)과 같다.
+ * 1세대1주택 AI 참고 의견 — Anthropic API 호출(서버 전용).
+ *
+ * 카드가 먼저다(route가 고른 카드를 사용자 메시지에 싣는다). 카드가 답하지 못하는 쟁점만 도구로 실시간 보충한다
+ * (계획 §3.4 — 국세청·기재부 해석, 조세심판, 조문). 읽은 문서(`readDocs`)만 인용 가능 집합에 더해진다(route가 거른다).
  */
-import Anthropic from "@anthropic-ai/sdk";
-import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { ExtractionFailedError, ONE_HOUSE_EXTRACTION_MODEL, type ExtractionRun } from "../extract";
+import type Anthropic from "@anthropic-ai/sdk";
+import type { ExtractionRun } from "../extract";
+import { createLawTools, type LawLookup, type ReadDoc } from "../law-tools";
+import { runWithTools } from "../tool-run";
 import { oneHouseOpinionSchema, type OneHouseOpinion } from "./opinion-schema";
 import { OPINION_SYSTEM_PROMPT, buildOpinionUserMessage } from "./opinion-prompt";
 
-export type OpinionRun = { opinion: OneHouseOpinion; model: string; usage: ExtractionRun["usage"] };
+/** 의견 단계 도구 반복 상한 — 실호출(V-7)로 조정 */
+export const OPINION_MAX_ITERATIONS = 8;
+
+export type OpinionRun = {
+  opinion: OneHouseOpinion;
+  model: string;
+  usage: ExtractionRun["usage"];
+  /** 이번 호출에서 본문을 읽은 문서 */
+  readDocs: ReadDoc[];
+  /** 도구 조회 기록(성공·실패) */
+  lookups: LawLookup[];
+};
 
 export async function generateOneHouseOpinion(
   input: Parameters<typeof buildOpinionUserMessage>[0],
-  client: Anthropic = new Anthropic(),
+  client?: Anthropic,
 ): Promise<OpinionRun> {
-  // 스트리밍 — max_tokens가 크면 SDK가 비스트리밍 요청을 보내기 전에 막는다(추출과 같은 이유)
-  const response = await client.beta.messages
-    .stream({
-      model: ONE_HOUSE_EXTRACTION_MODEL,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      // 해석례와 사실의 차이를 가려 읽어야 해서 high
-      output_config: { effort: "high", format: betaZodOutputFormat(oneHouseOpinionSchema) },
-      system: [{ type: "text", text: OPINION_SYSTEM_PROMPT, cache_control: { type: "ephemeral", ttl: "1h" } }],
-      messages: [{ role: "user", content: buildOpinionUserMessage(input) }],
-    })
-    .finalMessage();
-
-  if (response.stop_reason === "refusal") {
-    throw new ExtractionFailedError(`의견 거절: ${response.stop_details?.category ?? "unknown"}`);
-  }
-  if (response.stop_reason === "max_tokens") throw new ExtractionFailedError("출력 한도에 걸려 의견이 잘렸습니다");
-  if (!response.parsed_output) throw new ExtractionFailedError("구조화 출력 파싱 실패");
-  const u = response.usage;
-  return {
-    opinion: response.parsed_output,
-    model: response.model,
-    usage: {
-      input: u.input_tokens,
-      cacheRead: u.cache_read_input_tokens ?? 0,
-      cacheWrite: u.cache_creation_input_tokens ?? 0,
-      output: u.output_tokens,
-    },
-  };
+  const law = createLawTools({ allow: ["lookup_statute", "search_interpretations", "read_interpretation"] });
+  const run = await runWithTools({
+    system: OPINION_SYSTEM_PROMPT,
+    user: buildOpinionUserMessage(input),
+    schema: oneHouseOpinionSchema,
+    tools: law.tools,
+    maxIterations: OPINION_MAX_ITERATIONS,
+    maxTokens: 16000,
+    client,
+  });
+  return { opinion: run.parsed, model: run.model, usage: run.usage, readDocs: [...law.readDocs.values()], lookups: law.lookups };
 }
