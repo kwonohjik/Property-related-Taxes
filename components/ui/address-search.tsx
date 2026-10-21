@@ -90,13 +90,28 @@ interface AddressSearchProps {
    *
    * 「세대」는 동 또는 호가 있는 행이다(`hasSelectableUnits`) — 개별주택처럼 동·호가 빈 행뿐이면 `false`.
    *
-   * ⚠️ **API 실패와 「세대 없음」은 구분되지 않는다**(`catch`가 빈 배열로 흡수) — 실패 시
+   * ⚠️ **주소를 고를 때는 API 실패와 「세대 없음」을 구분하지 않는다** — 실패 시
    *    `false`가 간다. 안전측(동·호 미요구)이며 그것이 확정된 한계다(계획서 §8-2).
+   *    `knownHasUnits`로 목록을 **다시 불러올 때**는 구분한다(아래).
    */
   onUnitsResolved?: (hasUnits: boolean) => void;
+  /**
+   * 이 주소는 「세대 있음」으로 이미 판정됐다(호출부가 저장한 `onUnitsResolved` 값).
+   *
+   * 세대 목록은 이 컴포넌트의 로컬 상태라 다시 마운트되면(새로고침·단계 이동) 사라진다. 그대로 두면
+   * 판정은 「세대 있음」인데 고를 목록이 없어 동·호 게이트에 막혔다. `true`면 마운트 때 목록을 다시 불러온다.
+   * - 같은 판정이면 `onUnitsResolved`를 부르지 않는다 — 같은 값 저장도 계산 결과를 지운다.
+   * - 응답이 「세대 없음」으로 확정될 때만 `false`를 알린다. 조회 실패는 판정을 유지하고 안내를 띄운다
+   *   (실패를 「없음」으로 읽으면 공동주택이 동·호 없이 통과한다).
+   * 계획서 `docs/00-pm/transfer-address-units-remount.plan.md` (Q-1·Q-2·Q-3)
+   */
+  knownHasUnits?: boolean;
 }
 
-export function AddressSearch({ value, onChange, className, disabled, disableUnits, onUnitsResolved }: AddressSearchProps) {
+/** 세대 목록 조회 결과 — 「없음」은 응답으로 확정된 경우뿐이다. */
+type UnitsOutcome = "found" | "none" | "failed";
+
+export function AddressSearch({ value, onChange, className, disabled, disableUnits, onUnitsResolved, knownHasUnits }: AddressSearchProps) {
   const [query, setQuery] = useState(value.road || value.jibun || "");
   const [results, setResults] = useState<AddressResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -104,10 +119,12 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
+  // 「세대 있음」으로 판정된 주소가 다시 마운트되면 목록을 다시 불러온다(아래 effect) — 첫 렌더부터 조회 중으로 둬 안내가 깜빡이지 않게 한다
+  const restoreUnitsOnMount = !disableUnits && knownHasUnits === true && Boolean(value.jibun);
   const [units, setUnits] = useState<UnitItem[]>([]);
-  const [unitsLoading, setUnitsLoading] = useState(false);
-  const [selectedDong, setSelectedDong] = useState<string>("");
-  const [selectedHo, setSelectedHo] = useState<string>("");
+  const [unitsLoading, setUnitsLoading] = useState(restoreUnitsOnMount);
+  const [selectedDong, setSelectedDong] = useState<string>(value.dong ?? "");
+  const [selectedHo, setSelectedHo] = useState<string>(value.ho ?? "");
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -176,10 +193,9 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
     applyQuery(e.target.value);
   }
 
-  async function fetchUnits(pnu: string, jibun: string) {
+  async function loadUnits(pnu: string, jibun: string): Promise<UnitsOutcome> {
     setUnitsLoading(true);
     setUnits([]);
-    let found = false;
     try {
       const base = new URLSearchParams({ propertyType: "housing" });
       // jibun 기반 PNU 구성이 Vworld 검색 item.id보다 정확
@@ -188,30 +204,51 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
       } else if (pnu && pnu.length === 19) {
         base.set("pnu", pnu);
       } else {
-        return;
+        return "failed";
       }
 
       // 현재 연도부터 최대 3년 전까지 순차 시도 (NED 데이터 공표 시차 대응)
+      // 「없음」 확정은 모든 연도가 PRICE_NOT_FOUND일 때뿐이다 — 그 밖의 4xx·5xx는 조회 실패다(route.ts `nedFetchFailed` 502 등)
+      let allNotFound = true;
       const currentYear = new Date().getFullYear();
       for (let y = currentYear; y >= currentYear - 3; y--) {
         const params = new URLSearchParams(base);
         params.set("year", String(y));
         const res = await fetch(`/api/address/standard-price?${params.toString()}`);
-        if (!res.ok) continue;
+        if (!res.ok) {
+          const code = await res.json().then((d) => d?.error?.code, () => undefined);
+          if (code !== "PRICE_NOT_FOUND") allNotFound = false;
+          continue;
+        }
         const data = await res.json();
         if ((data.units ?? []).length > 0) {
           setUnits(data.units);
-          found = hasSelectableUnits(data.units);
-          return;
+          return hasSelectableUnits(data.units) ? "found" : "none";
         }
       }
+      return allNotFound ? "none" : "failed";
     } catch {
       // API 실패 시 텍스트 input fallback (units 빈 배열 유지)
+      return "failed";
     } finally {
       setUnitsLoading(false);
-      onUnitsResolved?.(found);
     }
   }
+
+  async function fetchUnits(pnu: string, jibun: string) {
+    const outcome = await loadUnits(pnu, jibun);
+    onUnitsResolved?.(outcome === "found");
+  }
+
+  // 「세대 있음」으로 판정된 주소가 다시 마운트됐다 — 목록만 되살린다(knownHasUnits 주석)
+  useEffect(() => {
+    if (!restoreUnitsOnMount) return;
+    void loadUnits(value.pnu ?? "", value.jibun).then((outcome) => {
+      if (outcome === "none") onUnitsResolved?.(false);
+    });
+    // 마운트 때 1회 — 이후 주소를 바꾸면 handleSelect가 새로 조회한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSelect(r: AddressResult) {
     setQuery(r.road || r.jibun);
@@ -439,6 +476,12 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
               disabled={disabled}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             />
+          )}
+          {/* 「세대 있음」 판정인데 목록을 다시 불러오지 못했다 — 동·호 게이트의 유일한 탈출 경로를 알린다(Q-3) */}
+          {knownHasUnits && !unitsLoading && !hasSelectableUnits(units) && (
+            <p className="text-caption text-amber-700 dark:text-amber-300">
+              동·호 목록을 불러오지 못했습니다 — 주소를 다시 선택하면 목록이 나옵니다.
+            </p>
           )}
         </div>
       )}
