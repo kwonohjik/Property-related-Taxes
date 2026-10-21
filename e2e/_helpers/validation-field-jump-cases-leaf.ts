@@ -351,7 +351,9 @@ const SPLIT_CASES: FieldJumpCase[] = [
     name: "leaf: split 토지 취득가액 > 총액", field: "landAcquisitionPrice", step: 0, assetIndex: A, message: /^자산: 토지 취득가액이 취득가액\(100,000,000원\)을 초과합니다/,
     form: splSale({ landAcquisitionDate: "2015-03-01", fixedAcquisitionPrice: "100000000", buildingAcquisitionPrice: "" }),
   },
-  { name: "leaf: split 자본적지출 불일치", field: "landDirectExpenses", step: 0, assetIndex: A, message: /^자산: 토지·건물 자본적지출이 총 자본적지출\(100원\)과 맞지 않습니다/, form: splSale({ directExpenses: "100", landDirectExpenses: "200" }) },
+  // 2026-10-21 — 분리 계산 자산의 이전 형식 총액은 파트 칸으로 옮긴다(`legacyExpenseMovesToParts`). 종전 「총 자본적지출과 맞지 않음」보다 먼저 걸리고,
+  // 양도비가 있어도 이전 형식 칸이 보여야 이동할 수 있다(⑤ — 이 케이스가 그 칸 노출을 E2E로 확인한다).
+  { name: "leaf: split 이전 형식 필요경비 → 파트 칸", field: "directExpenses", step: 0, assetIndex: A, message: /^자산: 이전 입력 형식으로 저장된 필요경비 100원이 있습니다/, form: splSale({ directExpenses: "100", landDirectExpenses: "200", transferExpense: "50" }) },
   { name: "leaf: split 자본적지출 파트별 입력", field: "landDirectExpenses", step: 0, assetIndex: A, message: /^자산: 토지·건물을 나눠 계산하는 자산은 자본적지출도 토지분·건물분 칸에/, form: splSale({ capitalExpenditure: "1000000" }) },
 ];
 

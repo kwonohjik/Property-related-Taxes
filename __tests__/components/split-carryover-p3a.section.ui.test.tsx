@@ -148,15 +148,19 @@ describe("H-4 회귀 — 저장값이 화면을 깨지 않는다", () => {
 });
 
 describe("숨은 이전 형식 필요경비 — ⑤ 기준시가 카드 게이팅이 ④(expenses 0)와 같은 인자를 읽는다", () => {
-  // 매매 호스트만 — 신축 호스트는 매매 블록이 마운트되지 않아 이 카드가 원래 없다(D1 신축 + 숨은 잔재의 ⑧ 요구는 별건 결함).
+  // 매매 호스트만 — 신축 호스트는 매매 블록이 마운트되지 않아 이 카드가 원래 없다.
+  // 2026-10-21(계획서 split-v7-era-and-legacy-expense §3.2 Q-2 a): 토지 증여(D1)도 ④가 이전 형식 총액을 싣지 않으므로(`legacyExpenseMovesToParts`)
+  // 종전 긍정 짝(「D1이면 연다」)은 이제 열지 않는다 — 이전 형식은 ⑧이 파트 칸으로 옮기게 막는다. 긍정 짝은 건물 환산(카드가 실제로 쓰이는 경우)이다.
   for (const host of ["purchase"] as const) {
-    it(`${host}: A면 건물 취득시 기준시가 카드를 열지 않는다 — 긍정 짝: 같은 잔재로 토지 증여(D1)면 연다`, () => {
+    it(`${host}: A·D1 모두 이전 형식 잔재로는 건물 취득시 기준시가 카드를 열지 않는다 — 긍정 짝: 건물 환산이면 연다`, () => {
       const legacy = { directExpenses: "5,000,000", transferExpense: "1,000,000" };
       // ⑧이 이동시키는 앵커(`data-field`)로 센다 — 카드 testid는 양도시 칸 동거 여부에 따라 갈린다.
       const stdField = (c: HTMLElement) => c.querySelectorAll('[data-field="buildingStandardPriceAtAcq"]').length;
       expect(stdField(mount(aAsset(host, legacy)).container)).toBe(0);
       cleanup();
-      expect(stdField(mount(aAsset(host, { ...legacy, landAcquisitionCause: "gift" })).container)).toBe(1);
+      expect(stdField(mount(aAsset(host, { ...legacy, landAcquisitionCause: "gift" })).container)).toBe(0);
+      cleanup();
+      expect(stdField(mount(aAsset(host, { ...legacy, landAcquisitionCause: "gift", buildingAcqMode: "estimated" })).container)).toBe(1);
     });
   }
 });
