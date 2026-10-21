@@ -53,6 +53,22 @@ split 건물(토지·건물 별개 취득, 두 파트 환산): 토지 양도가 
 - `tsc --noEmit` 0건 · vitest **32,333건 중 실패 0**(통과 32,011, 나머지 skip·todo).
 - 해석: 기존 픽스처가 「이진으로 정확한」 조합(기준시가 백만 원 단위·비율 1/2 등)만 쓴다. 메모리 「전건 통과는 커버리지의 증거가 아니다」와 같은 상황 — **각 경로에 참값 정수 + 1원 과소가 나는 입력으로 새 anchor**를 세워야 한다(§5-3).
 
+### 4.1 P6 머지 후 재측정 (master `95f1ed086`, 2026-10-21) — 1단계 18곳 + 인접 축 10곳 동시
+
+1단계·인접 축 28곳을 한꺼번에 정확화하고, 옛 식과 새 식의 값이 갈리면 호출 위치를 기록하도록 계측한 뒤 `__tests__/` 전체를 돌렸다(원복 sha 확인).
+- P6로 밀린 줄은 #1 하나뿐이다(`transfer-tax-split-acq-price.ts:213` → `:224`). 나머지 위치는 그대로다.
+- `tsc` 0건 · vitest **38,594건 중 실패 0**(P6 anchor 포함 — P6 시드는 이 수정으로 값이 바뀌지 않는다).
+- **값이 실제로 갈린 호출 16건** — 기존 테스트가 1원 과소 입력을 지나가지만 그 값을 단언하지 않는다:
+
+| 지점 | 옛 값 → 정확 값 | 횟수 | 지나간 테스트 | 왜 안 잡혔나 |
+|---|---|---|---|---|
+| #8 PHD `transfer-tax-pre-housing-disclosure.ts:144`(토지 몫 안분) | 231,884,056 → 231,884,057 | 12 | `__tests__/api/transfer.route.split-part-carryover.regression-grid.test.ts`(P1 회귀 격자) | 격자는 결정세액만 비교한다 — 12셀 모두 **결정세액 불변**(1원이 세율 곱 절사에 흡수) |
+| A5 겸용 취득 `transfer-tax-mixed-use-helpers.ts:183` | 473,249,999 → 473,250,000 | 2 | 겸용 헬퍼 `__tests__/tax-engine/_helpers/mixed-use-identity-std.ts`를 거치는 겸용 테스트 | 그 값을 단언하지 않는다 |
+| A3 겸용주택 취득 `transfer-tax-mixed-use-housing.ts:415` | 132,413,792 → 132,413,793 | 1 | `__tests__/api/transfer.route.mixed-use-housing-std-proportional.s3-2.predo.anchor.test.ts` | 총액(환산취득가액)만 BigInt로 단언, 토지 몫은 단언 안 함 |
+| #1 split 파트 환산 `transfer-tax-split-acq-price.ts:224` | 128,571,428 → 128,571,429 | 1 | (호출 스택에 테스트 파일이 안 잡힘 — route 비동기 경유) | — |
+
+- 결론: 고치면 **취득가액·양도차익 표시값이 1원 달라지는 실제 사례가 기존 시드에도 있다.** 결정세액이 바뀐 셀은 없었다. Do에서는 위 네 경로에 1원 단위 단언을 더하는 것부터 한다.
+
 ## 5. 설계안 (권장)
 
 1. **치환**: 18곳을 `safeMultiplyThenDivide(a, b, c)`로 바꾼다. 환산 의미인 곳(#1·#2)은 `calculateEstimatedAcquisitionPrice`로 — 저장소의 환산 정본 이름과 맞춘다(`lib/tax-engine/CLAUDE.md:61`). 비-정수 입력(지분 스케일 기준시가 등)은 헬퍼가 `floor(p / c)` 경로로 받으므로 동작이 같다.
