@@ -16,6 +16,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { useState } from "react";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 
 export type BundledSaleMode = "actual" | "apportioned";
 
@@ -179,7 +180,7 @@ function ApportionedPriceBlock({
 
 /**
  * 자동 계산 양도가액 표시 카드 (지분 모드 전용 read-only)
- * 양도가액 = contractTotalPrice × (numerator / denominator), Math.floor.
+ * 양도가액 = contractTotalPrice × (numerator / denominator) — `applyRatio`(지분 규약, ④와 같은 값).
  */
 function FractionalAutoSalePriceCard({
   numerator,
@@ -194,7 +195,7 @@ function FractionalAutoSalePriceCard({
   const num = parseFloat(numerator);
   const den = parseFloat(denominator);
   const ratio = isFinite(num) && isFinite(den) && den > 0 ? num / den : 0;
-  const allocated = total > 0 && ratio > 0 ? Math.floor(total * ratio) : 0;
+  const allocated = total > 0 && ratio > 0 ? applyRatio(total, ratio) : 0;
   const ratioPct = ratio > 0 ? (ratio * 100).toFixed(2).replace(/\.?0+$/, "") : "—";
   return (
     <div className="rounded-lg border border-amber-300 bg-amber-50/50 px-3 py-2 dark:bg-amber-950/40">
