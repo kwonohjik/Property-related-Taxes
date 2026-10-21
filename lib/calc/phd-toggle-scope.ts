@@ -25,6 +25,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverEstimationMode } from "@/lib/stores/calc-wizard-asset-carryover";
 import { landCauseMixActive } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
 
 /**
  * 이 자산에서 §164⑦ PHD 토글에 **도달할 수 있는가**.
@@ -85,11 +86,15 @@ export function carryoverPhdMode(
     isMixedUseHouse?: boolean;
     selfOwns?: AssetForm["selfOwns"];
     transferType?: string;
+    // P4 B 판정 키 — 일부만 넘기면 B가 꺼진 것으로 읽는다
+    landAcquisitionCause?: AssetForm["landAcquisitionCause"];
+    hasSeperateLandAcquisitionDate?: boolean;
+    landCauseHost?: string;
   },
 ): boolean {
   if (asset.acquisitionCause !== "carryover_gift") return false;
-  // P2 C — 파트 이월과세는 환산을 지원하지 않는다(I-4). 건물 파트가 읽는 `carryover.estimationMode`의 phd/apd 잔재로 PHD payload를 싣지 않는다.
-  if (effectiveCarryoverDonorSplit(asset)) return false;
+  // P2 C·P4 B — 파트 이월과세는 환산을 지원하지 않는다(I-4). 건물 파트가 읽는 `carryover.estimationMode`의 phd/apd 잔재로 PHD payload를 싣지 않는다.
+  if (partCarryover(asset).building) return false;
   const c = asset.carryover;
   if (!c?.useEstimatedAcquisition) return false;
   // 일반건물은 PHD·APD 환산을 계산에 쓰지 않는다 — 아래 `carryoverEstimationModeSupported`. ⑤가 옵션을 숨기고 ⑧이 막으므로

@@ -71,7 +71,7 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
     formula: acquisitionDateOverride
       ? "이월과세 적용 시 증여자 취득일 기산 (소득세법 §97조의2 ①)"
       : splitCarryover
-        ? `${splitCarryover.buildingGifted ? "수증자 취득일 = 증여 등기접수일" : "건물 취득일 — 토지는 이월과세(증여)"} — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
+        ? `${!splitCarryover.buildingGifted ? "건물 취득일 — 토지는 이월과세(증여)" : splitCarryover.landGifted ? "수증자 취득일 = 증여 등기접수일" : "건물 취득일 = 증여 등기접수일 — 토지는 매매"} — 파트별 장기보유특별공제 기산일: ${splitCarryoverDateText(splitDetail)}`
         : "사용자 입력 (등기접수일 또는 잔금청산일 중 빠른 날)",
     legalBasis: acquisitionDateOverride || splitCarryover ? "소득세법 §97조의2" : "소득세법 §98",
     perAsset: isAggregate

@@ -51,8 +51,8 @@ import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildLandRebuildPayload } from "./transfer-land-rebuild";
-import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { partCarryover } from "./transfer-land-part-cause";
+import { anyPartCarryover } from "./transfer-land-part-cause";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
@@ -323,8 +323,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // Round 9 (2026-05-06): 자산-수준 매매계약일 — §99의3 등 13개 매매계약일 기준 조문 시한 판정용
     assetContractDate: primary.assetContractDate || undefined,
     expenses:
-      // P2 C·P3 A — 자산 단위 필요경비 총액(이전 입력 형식)은 파트에 안분되지 않는다(엔진 S8). 파트 자본적지출 칸이 정본이라 숨은 잔재는 싣지 않는다.
-      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive || partCarryover(primary).land
+      // P2 C·P3 A·P4 B — 자산 단위 필요경비 총액(이전 입력 형식)은 파트에 안분되지 않는다(엔진 S8). 파트 자본적지출 칸이 정본이라 숨은 잔재는 싣지 않는다.
+      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive || anyPartCarryover(primary)
         ? 0
         : primaryFractional
           ? applyRatio(parseAmount(primary.directExpenses), primaryRatio)
@@ -706,8 +706,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     // 겸용주택 분리계산 입력
     ...(mixedUsePayload ? { mixedUse: mixedUsePayload } : {}),
     // 배우자등 이월과세 (§97조의2)
-    // P2 C(파트 이월과세)는 자산 단위 서브객체와 상호배제다(R-1) — 사건 1벌 + 파트 2벌(`buildLandPartCausePayload`)이 대신한다.
-    ...(primary.acquisitionCause === "carryover_gift" && primary.carryover && !effectiveCarryoverDonorSplit(primary)
+    // P2 C·P4 B(파트 이월과세)는 자산 단위 서브객체와 상호배제다(R-1) — 사건 1벌 + 파트(`buildLandPartCausePayload`)가 대신한다.
+    ...(primary.acquisitionCause === "carryover_gift" && primary.carryover && !partCarryover(primary).building
       ? (() => {
           const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
           return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};

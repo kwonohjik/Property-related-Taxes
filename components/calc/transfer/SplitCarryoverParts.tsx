@@ -69,7 +69,7 @@ export function SplitCarryoverParts({ asset, onChange, isAfter2024, giftTaxShare
 }
 
 /**
- * 증여세 상당액(필요경비 가산) 카드 — 증여 사건 1벌의 산출세액·과세가액(영 §163의2②). C(`carryover`)·A(`landCarryover`) 공용.
+ * 증여세 상당액(필요경비 가산) 카드 — 증여 사건 1벌의 산출세액·과세가액(영 §163의2②). C·B(`carryover`)·A(`landCarryover`) 공용.
  * 파트 몫은 엔진이 «산출세액 × 파트 증여 신고가액 ÷ 과세가액»으로 안분한다(자동 안분 금지 원칙의 예외 — 명문 안분).
  */
 export function SplitCarryoverGiftTaxCard(props: {
@@ -77,12 +77,12 @@ export function SplitCarryoverGiftTaxCard(props: {
   value: CarryoverTaxationForm;
   onPatch: (patch: Partial<CarryoverTaxationForm>) => void;
   anchorPrefix: "carryover" | "landCarryover";
-  /** 안분 대상 파트 이름 — C 「토지·건물」, A 「토지」 */
-  partsLabel: "토지·건물" | "토지";
+  /** 안분 대상 파트 이름 — C 「토지·건물」, A 「토지」, B 「건물」 */
+  partsLabel: "토지·건물" | "토지" | "건물";
   giftTaxShareHint: string;
 }) {
   const { value: c, onPatch, anchorPrefix, partsLabel, giftTaxShareHint } = props;
-  const sumNote = partsLabel === "토지" ? "토지 증여 신고가액은 이 금액을 넘을 수 없습니다." : "토지·건물 증여 신고가액의 합은 이 금액을 넘을 수 없습니다.";
+  const sumNote = partsLabel === "토지·건물" ? "토지·건물 증여 신고가액의 합은 이 금액을 넘을 수 없습니다." : `${partsLabel} 증여 신고가액은 이 금액을 넘을 수 없습니다.`;
   return (
     <ToneCard tone="amber" sectionNum={props.sectionNum} title="증여세 상당액 (필요경비 가산)" bodyClassName="space-y-3">
       <FieldCard

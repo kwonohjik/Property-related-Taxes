@@ -65,6 +65,8 @@ export interface SplitCarryoverView {
    * 자산 취득일(합계·건물 열)은 건물 취득일 그대로다. 신고서·상세명세서의 취득일 칸이 이 한 값으로 갈린다.
    */
   buildingGifted: boolean;
+  /** 토지 파트도 증여받았는가 — 건물만 이월과세(P4 B)는 토지를 따로 매수했다. 상세명세서 취득일 문구가 갈린다. */
+  landGifted: boolean;
 }
 
 function partView(
@@ -126,6 +128,7 @@ export function splitCarryoverView(sd: SplitGainResult | undefined): SplitCarryo
     orderDependent: ev.orderDependent === true,
     parts,
     buildingGifted: parts.some((p) => p.key === "building"),
+    landGifted: parts.some((p) => p.key === "land"),
   };
 }
 

@@ -211,10 +211,12 @@ test.describe("D2-2 — 건물 상속 + 토지 매매 화면", () => {
     await expect(page.getByTestId("split-land-acq-price")).toHaveValue(/300,000,000/);
   });
 
-  test("노출하지 않는 호스트: 이월과세(증여)·부담부증여에는 토글이 없다", async ({ page }) => {
+  test("이월과세(증여)에는 이월과세판 토글(P4 B)이 있고 부담부증여에는 토글이 없다", async ({ page }) => {
     test.setTimeout(120_000);
+    // P4 B — 같은 자리(testid)의 이월과세판: 건물만 이월과세 + 토지 매수. D2 상속·증여 문구가 아니다.
     await open(page, inherited({ acquisitionCause: "carryover_gift" }));
-    await expect(toggleBlock(page)).toHaveCount(0);
+    await expect(toggleBlock(page)).toHaveCount(1);
+    await expect(toggleBlock(page)).toContainText("건물은 이월과세(증여), 토지는 매수");
     await seedWizard(page, singleSeed([gifted({ transferType: "burdened_gift" })]));
     await expandAssetSection(page, 3);
     await expect(toggleBlock(page)).toHaveCount(0);

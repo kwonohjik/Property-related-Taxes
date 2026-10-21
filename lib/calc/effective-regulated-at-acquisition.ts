@@ -21,7 +21,7 @@ import {
 } from "@/lib/calc/gift-household-payload";
 import { redevAptHoldingStartDate } from "@/lib/calc/redev-field-scope";
 import { carryoverHouseholdPayload, carryoverResidenceJudgmentDate } from "@/lib/calc/transfer-tax-api-carryover";
-import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
+import { partCarryover } from "@/lib/calc/transfer-land-part-cause";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import {
@@ -92,7 +92,8 @@ export function calcGiftHouseholdBasis(asset: AssetForm, scope: GiftHouseholdSco
   if (isUsageConversionActive(asset)) return undefined;
   if (asset.acquisitionCause === "carryover_gift") {
     // P2 C — 파트 이월과세는 자산 단위 이월과세 서브객체(`carryoverTaxation`)를 싣지 않아 엔진이 세대 사실 basis를 만들지 않는다(수증자 본인 취득일 = 증여일 기준).
-    if (effectiveCarryoverDonorSplit(asset)) return undefined;
+    // P4 B(건물만 이월과세)도 같다.
+    if (partCarryover(asset).building) return undefined;
     const c = asset.carryover;
     const giftRegistryDate = toOptionalDate(c?.giftRegistryDate);
     const donorAcquisitionDate = toOptionalDate(c?.donorAcquisitionDate);

@@ -36,9 +36,9 @@ export interface SplitAcquisitionFormSlice {
    * 「토지는 다른 원인으로 취득」 토글을 **어느 건물 취득원인에서 켰는가**(D1-2 — 클라이언트 전용, ④가 보내지 않는다).
    * 유효 원인은 이 값이 현재 `acquisitionCause`와 같을 때만 성립한다(`effectiveLandAcquisitionCause`). 신축에서 켠 뒤
    * 매매로 바꾼 잔재가 매매 화면에서 「켜짐」으로 되살아나 토지 원인·신축비용 후퇴가 계산에 쓰이는 것을 막는다
-   * (계획서 transfer-acq-cause-mixed.plan.md §10.2 T-8 · UI 설계 §3). 쓰는 곳은 토글 ON/OFF 한 곳뿐.
+   * (계획서 transfer-acq-cause-mixed.plan.md §10.2 T-8 · UI 설계 §3). 쓰는 곳은 토글 ON/OFF 한 곳뿐(D1·D2·P4 B — `"carryover_gift"`는 B 토글).
    */
-  landCauseHost: "" | "newConstruction" | "purchase" | "inheritance" | "gift";
+  landCauseHost: "" | "newConstruction" | "purchase" | "inheritance" | "gift" | "carryover_gift";
   /**
    * D1-H — 「토지는 다른 원인으로 취득」(건물 매매 + 토지 상속·증여)에서 토지를 받을 당시 지금의 주택이 그 위에 있었는가.
    * 토지 취득일이 1990.8.30.~2005.4.29.인 주택에서만 묻는다(`houseLandSec164Applies`). `"yes"`만 영 §163⑨ 단서 2호 비교를 연다 —

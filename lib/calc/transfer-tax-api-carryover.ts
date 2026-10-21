@@ -11,7 +11,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
 import { parsePriorResidenceMonths } from "@/lib/calc/gift-household-payload";
-import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
 
 /**
  * buildCarryoverPayload 반환 타입.
@@ -143,7 +143,8 @@ export function buildCarryoverPayload(
  */
 export function carryoverAcquisitionDateFallback(asset: AssetForm): string {
   // P2 C — 두 파트의 취득일은 증여 등기접수일 한 곳이다(엔진 S5 — 어긋나면 400). 화면에 취득일 칸이 없어 남은 `acquisitionDate` 잔재가 이기면 안 된다.
-  if (effectiveCarryoverDonorSplit(asset)) return asset.carryover?.giftRegistryDate || "";
+  // P4 B(건물만 이월과세 + 토지 매매)도 건물 취득일은 증여 등기접수일이다 — 매매 블록의 건물 날짜 칸은 읽기 전용(`normalizeBuildingCauseInputs`와 같은 값).
+  if (partCarryover(asset).building) return asset.carryover?.giftRegistryDate || "";
   return asset.acquisitionDate || asset.carryover?.giftRegistryDate || "";
 }
 
@@ -181,12 +182,17 @@ export function carryoverHouseholdFactVisible(
     isMixedUseHouse?: boolean;
     selfOwns?: AssetForm["selfOwns"];
     transferType?: string;
+    // P4 B 판정 키(「토지는 다른 원인으로 취득」) — 일부만 넘기면 B가 꺼진 것으로 읽는다
+    landAcquisitionCause?: AssetForm["landAcquisitionCause"];
+    hasSeperateLandAcquisitionDate?: boolean;
+    landCauseHost?: string;
   },
 ): boolean {
   const c = asset.carryover;
   // P2 C — 파트 이월과세는 이 질문을 묻지 않는다(Q-9): 세대 사실은 1세대1주택 비과세 판정에 쓰이는데 파트 이월과세는 그 판정과 함께 계산하지 않는다(N5).
   //   ⑤ 위젯·⑧ 필수·④ 전송이 이 술어 하나를 읽으므로 셋이 함께 묻지 않는다. 첫 자산 여부는 보지 않는다 — 어느 쪽이든 셋이 같은 값을 읽는다.
-  if (effectiveCarryoverDonorSplit(asset)) return false;
+  // P4 B(건물만 이월과세)도 같다 — 자산 단위 이월과세 서브객체를 싣지 않는다.
+  if (partCarryover(asset).building) return false;
   return !!c && isOneHouseExemptionAsset(asset.assetKind) && !c.donorDeceased;
 }
 

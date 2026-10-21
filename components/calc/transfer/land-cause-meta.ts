@@ -8,8 +8,8 @@ import { SPLIT_CAUSE_VALUE_LABEL } from "@/lib/tax-engine/transfer-tax-split-dis
 
 /** 토지 파트 원인 — 상속·증여(D1) · 이월과세(증여, P3 A — 소득세법 §97의2①). `Record` 키 커버리지가 META 누락을 컴파일에서 잡는다(H-4). */
 export type LandCause = "inheritance" | "gift" | "carryover_gift";
-/** 건물 파트 원인(D2) — 상속·증여. */
-export type BuildingCause = "inheritance" | "gift";
+/** 건물 파트 원인 — 상속·증여(D2) · 이월과세(증여, P4 B — 소득세법 §97의2①). */
+export type BuildingCause = "inheritance" | "gift" | "carryover_gift";
 
 export const LAND_CAUSE_META: Record<
   LandCause,
@@ -67,6 +67,12 @@ export const BUILDING_CAUSE_META: Record<
   gift: {
     priceLabel: "건물 증여 신고가액",
     hint: "증여세 신고서상 건물 평가액 (증여일 현재 시가 또는 보충적 평가액, 건물분만)",
+    fixedMode: "실거래가 · 증여 신고가액",
+  },
+  // P4 B — 이월과세 건물의 가액 칸은 증여 신고가액이다(②3호 미적용 시 취득가액 · 증여세 상당액 안분 분자). 증여자 취득가액은 위 이월과세 정보에서 받는다.
+  carryover_gift: {
+    priceLabel: "건물 증여 신고가액",
+    hint: "증여세 신고서상 건물 평가액 — 증여세 상당액 안분의 분자이자, 이월과세를 적용하지 않을 때의 건물 취득가액입니다 (소득세법 시행령 §163의2②·§163⑨)",
     fixedMode: "실거래가 · 증여 신고가액",
   },
 };
