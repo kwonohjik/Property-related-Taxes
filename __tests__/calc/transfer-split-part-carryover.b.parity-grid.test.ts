@@ -36,6 +36,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { bodyOf, routeOf, issuesOf } from "./_helpers/split-carryover-c-form";
 import { bAsset, bForm, withBuildingCarry, B_CARRYOVER } from "./_helpers/split-carryover-b-form";
+import { registerP6Cells } from "./_helpers/split-carryover-p6-grid";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -271,3 +272,20 @@ describe("Step4 «취득 당시» 기준일 — P5부터 B도 세대 사실을 �
   });
 });
 
+
+// P6 — 증여자 취득가액을 모를 때 건물 파트 환산. 셀 정의는 A·B·C가 공유한다(`split-carryover-p6-grid.ts`).
+registerP6Cells(
+  {
+    kind: "B",
+    parts: ["building"],
+    make: (p = {}, a = {}, f = {}) => bForm(f, bAsset({ carryover: { ...B_CARRYOVER, ...p.building }, ...a })),
+    // 증여자 건물 취득일 = 수증자 토지 취득일(2008-01-01)
+    sameDay: () => ({ building: { donorAcquisitionDate: "2008-01-01" } }),
+    early: {
+      patches: { building: { giftRegistryDate: "2012-03-01", donorAcquisitionDate: "2009-01-01" } },
+      assetOver: {},
+      formOver: { transferDate: "2015-09-30", filingDate: "2015-11-30" },
+    },
+  },
+  POST,
+);

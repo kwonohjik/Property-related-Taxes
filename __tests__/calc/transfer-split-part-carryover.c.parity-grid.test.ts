@@ -30,6 +30,7 @@ import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { cAsset, cForm, bodyOf, routeOf, issuesOf } from "./_helpers/split-carryover-c-form";
+import { registerP6Cells } from "./_helpers/split-carryover-p6-grid";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -316,3 +317,19 @@ describe("P2 C — leaf 소관 조합 격자 (⑧ 차단 ⇔ ⑫ 400)", () => {
               });
             }
 });
+
+// P6 — 증여자 취득가액을 모를 때 파트 환산(토지·건물 각각): 분자·분모·같은 날·지분·잔재 비누출. 셀 정의는 A·B·C가 공유한다(`split-carryover-p6-grid.ts`).
+registerP6Cells(
+  {
+    kind: "C",
+    parts: ["land", "building"],
+    make: (p = {}, a = {}, f = {}) => cForm(f, cAsset({ landCarryover: { ...cAsset().landCarryover, ...p.land }, carryover: { ...cAsset().carryover, ...p.building }, ...a })),
+    sameDay: (part) => (part === "land" ? { land: { donorAcquisitionDate: "2015-06-01" } } : { building: { donorAcquisitionDate: "1995-03-01" } }),
+    early: {
+      patches: { land: { donorAcquisitionDate: "1995-03-01" }, building: { giftRegistryDate: "2012-03-01", donorAcquisitionDate: "2008-06-01" } },
+      assetOver: {},
+      formOver: { transferDate: "2015-09-30", filingDate: "2015-11-30" },
+    },
+  },
+  POST,
+);

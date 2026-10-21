@@ -242,6 +242,14 @@ export type { FamilyBusinessInheritanceTransferInput, FamilyBusinessCgtDetail } 
 import type { AmendmentInput } from "./transfer-amendment.types";
 export type { AmendmentInput, AmendmentDetail, AmendmentUnderReductionMode } from "./transfer-amendment.types";
 
+/** `TransferTaxInput.splitCarryoverBasis`의 파트 한 칸 — 해결자 전용(와이어 아님). */
+export interface SplitCarryoverPartBasis {
+  /** 증여자 취득 당시 그 파트 기준시가 총액(양수) — 환산 파트에서만 세운다 */
+  stdAtAcq?: number;
+  /** §97의2①3호 증여세 상당액(한도 적용 후) — 환산 파트에서만 세운다. 실가 파트는 종전대로 `*DirectExpenses`에 합산된다 */
+  giftTaxExpense?: number;
+}
+
 export interface TransferTaxInput {
   /** 물건 종류 */
   propertyType: "housing" | "land" | "building" | "right_to_move_in" | "presale_right" | "mixed-use-house" | "commercial_building" | "general_building_unit" | "general_building" | "redevelopment_apt";
@@ -765,6 +773,18 @@ export interface TransferTaxInput {
    * 장기보유특별공제·§104② 세율 보유기간에는 쓰지 않는다.
    */
   giftHouseholdBasis?: GiftHouseholdBasis;
+  /**
+   * 주택 split 파트 이월과세 **환산 파트**(P6)의 해결자 전용 내부 입력 — 와이어(Zod·④)가 아니다. 해결자(`calcSplitCarryoverScenarios`)의 시나리오 입력에서만 세운다.
+   * 와이어에 실리면 `buildScenarioInput`이 비우고 재구성하므로 외부에서 보낸 값은 쓰이지 않는다(R-4 재귀 방지 규약과 같은 층위).
+   *  · `stdAtAcq` — 증여자 취득 당시 그 파트 기준시가 총액(환산취득가액·개산공제(영 §163⑥)의 분자). 있으면 `calcAcqStdPair`가 이 값을 쓰고
+   *    비례 안분(`stdSplit`)·㎡당 공시지가 × 면적을 건너뛴다. **지분 스케일을 하지 않는다**(물건 전체 값 — 지분은 개산공제 `computeEstimatedDeduction`에서만 곱한다).
+   *  · `giftTaxExpense` — 소득세법 §97의2①3호 증여세 상당액. §97②2호 단서 비교(`applyAssetSwap`) **밖**에서 `calcSplitGain`이 필요경비에 더한다.
+   *    (`*DirectExpenses`에 섞으면 환산 파트에서 증발하거나(본문 갈래) 단서 나목에 섞여 거짓 swap이 발동한다 — 계획서 p6 E-A·E-B)
+   */
+  splitCarryoverBasis?: {
+    land?: SplitCarryoverPartBasis;
+    building?: SplitCarryoverPartBasis;
+  };
   /** 조세특례 감면 목록 */
   reductions: TransferReduction[];
   /**

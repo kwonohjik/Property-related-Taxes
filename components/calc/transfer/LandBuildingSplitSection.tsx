@@ -34,6 +34,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-address";
 import type { PartAcqMode } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { capexHint } from "./capexHint";
+import { partDonorEstimated } from "@/lib/calc/transfer-land-part-cause";
 import { ACQ_MODE_OPTIONS, PartAcqInputs } from "./PartAcqInputs";
 import { LandSec164Card } from "./LandSec164Card";
 import { BuildingSec164Card } from "./BuildingSec164Card";
@@ -326,6 +327,8 @@ export function LandBuildingSplitSection(props: Props) {
     !props.acqStdRequiredLand && props.buildingAcqMode === "estimated";
   const showLandStdPrice =
     stdCardBase && (props.acqStdRequiredLand || landStdForBuildingPrefillOnly);
+  // P6 — 증여자 취득가액을 몰라 환산하는 이월과세 파트의 자본적지출은 «환산 ↔ 자본적지출 택일» 안내를 쓴다(수증자 쪽 방식은 실가 고정이지만 그 파트 필요경비는 환산 규칙이다).
+  const donorEst = props.asset ? partDonorEstimated(props.asset) : { land: false, building: false };
   const landOwned = props.selfOwns !== "building_only";
   const buildingOwned = props.selfOwns !== "land_only";
 
@@ -457,7 +460,7 @@ export function LandBuildingSplitSection(props: Props) {
               <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="part-acq-mode-building-fixed">
                 <strong>{BUILDING_CAUSE_META[props.buildingCause].fixedMode}</strong> —{" "}
                 {props.buildingCause === "carryover_gift"
-                  ? "이월과세 건물은 위 이월과세 정보의 증여자 취득가액과 아래 증여 신고가액으로 계산해 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97의2①·같은 법 시행령 §163⑨)."
+                  ? "이월과세 건물은 위 이월과세 정보의 증여자 취득가액(모르면 «환산취득가액»으로 증여자 취득 당시 기준시가 환산)과 아래 증여 신고가액으로 계산하며, 수증자 쪽 환산·감정·매매사례로는 산정하지 않습니다 (소득세법 §97의2①·같은 법 시행령 §163⑨)."
                   : "상속·증여로 취득한 건물은 평가액이 취득당시 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨)."}
               </p>
             </ToneCard>
@@ -536,12 +539,12 @@ export function LandBuildingSplitSection(props: Props) {
                 필요하다(그래서 위 ①'가 남는다). */}
       <div className="grid grid-cols-2 gap-2">
         {landOwned && (
-          <FieldCard field="landDirectExpenses" label="토지 자본적지출" hint={capexHint("토지", props.landAcqMode)}>
+          <FieldCard field="landDirectExpenses" label="토지 자본적지출" hint={capexHint("토지", donorEst.land ? "estimated" : props.landAcqMode)}>
             <CurrencyInput label="" value={props.landDirectExpenses} onChange={props.onLandDirectExpensesChange} placeholder="없으면 비워두세요" />
           </FieldCard>
         )}
         {buildingOwned && (
-          <FieldCard field="buildingDirectExpenses" label="건물 자본적지출" hint={capexHint("건물", props.buildingAcqMode)}>
+          <FieldCard field="buildingDirectExpenses" label="건물 자본적지출" hint={capexHint("건물", donorEst.building ? "estimated" : props.buildingAcqMode)}>
             <CurrencyInput label="" value={props.buildingDirectExpenses} onChange={props.onBuildingDirectExpensesChange} placeholder="없으면 비워두세요" />
           </FieldCard>
         )}

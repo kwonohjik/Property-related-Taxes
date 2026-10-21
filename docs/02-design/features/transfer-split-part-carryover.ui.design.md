@@ -8,7 +8,7 @@
 - 용어: **A** 토지만 이월과세 + 건물 매매·신축 · **B** 건물만 이월과세 + 토지 매매 · **C** 통째 이월과세 + 증여자 토지·건물 취득일 상이.
 
 
-> ⚠️ **통합 정정(계획서 §11)**: 와이어는 엔진 설계서 §1이 정본(I-2). 파트 카드의 「환산취득가 사용」 토글은 P1~P4에서 **두지 않는다** — 증여자 취득가액 필수 + 안내, 파트 환산은 후속 P6(I-4). 지분 사건 금액 미스케일(I-3)은 이 문서 안대로.
+> ⚠️ **통합 정정(계획서 §11)**: 와이어는 엔진 설계서 §1이 정본(I-2). 파트 카드의 「환산취득가 사용」 토글은 P1~P4에서 **두지 않는다** — 증여자 취득가액 필수 + 안내, 파트 환산은 후속 P6(I-4) → **P6에서 구현됨**(아래 「P6 화면」). 지분 사건 금액 미스케일(I-3)은 이 문서 안대로.
 
 ---
 
@@ -484,3 +484,19 @@ PC1~PC7의 B판 + **D2 회귀**(상속·증여 호스트 D2 격자 `transfer-lan
 - ⑤ `__tests__/components/split-carryover-p4b.section.ui.test.tsx`(OFF/ON 화면·앵커 각 1개·읽기 전용 건물 날짜·한 patch ON/OFF·상호 잠금·컴패니언·부담부증여·고시 전 안내·D2 카드 비노출) · ⑥ `__tests__/lib/transfer-per-asset-summary.split-carryover-b.test.ts` · ⑦ `__tests__/components/split-carryover-p4b.views.ui.anchor.test.tsx`.
 - 반전(§9.1): `transfer-land-part-cause.d2.predo.render.test.tsx` A3(B 토글 가시) · `e2e/transfer-acq-cause-mixed-d2-2.spec.ts`(이월과세 호스트 토글 1개). N2′·N3 최종본 문구를 `BuildingCauseMixBlock`에 반영.
 - E2E `e2e/transfer-split-part-carryover-b.spec.ts`.
+
+---
+
+## P6 화면 — 증여자 취득가액을 모를 때 파트 환산 (2026-10-21, 구현 완료)
+
+계획서 `docs/00-pm/transfer-split-part-carryover-p6.plan.md` §5.2 · §6 확정(Q1~Q4 권장안)을 구현했다. 위 E-6 「환산 범위·분모」는 **지원**으로 확정: 일반 기준시가 원값만, 분모 = 파트 양도시 기준시가(축 A), PHD/APD 없음.
+
+| 지점 | 변경 |
+|---|---|
+| ①②③ | `CarryoverTaxationForm.partEstimated: boolean`(기본 false, normalize `=== true`) — 자산 전체 이월과세의 `useEstimatedAcquisition`·`estimationMode`와 **별개**(옛 이력 잔재가 건물 파트로 새지 않게). 분자 값 칸 `donorStandardPriceAtAcquisition`만 재사용 |
+| 술어 | `partDonorEstimated(asset, opts)`(`transfer-land-part-cause.ts`) — 파트 이월과세 ∧ 그 서브폼 `partEstimated`. ⑤·④·⑧이 같은 함수를 읽는다 |
+| ④ | 환산 파트는 `useEstimatedAcquisition:true` + `donorStandardPriceAtAcquisition`(지분 스케일 없음), 가액 미전송 |
+| ⑤ | `SplitPartCarryoverCard`: 토글(`{prefix}.partEstimated`) → 증여자 취득가액 칸 대신 분자 칸(`{prefix}.donorStandardPriceAtAcquisition`), 자본적지출 칸 유지. 파트 자본적지출 hint는 환산 파트에서 «환산 ↔ 자본적지출 택일» |
+| ⑥ | 변경 없음(이월과세 파트는 이미 «계산 후 표시») — `transfer-split-part-carryover.p6.sidebar.test.ts`로 고정 |
+| ⑦ | 4뷰 공통 view(`transfer-tax-split-carryover-display.ts`): 환산취득가액 산식 · 개산공제 · 단서(swap) 문구 · 증여세 상당액 별도 산입 · «증여자 자본적지출은 환산이면 필요경비에 넣지 않음». 건물 파트 환산이면 §114조의2 확인 필요 고지 |
+| ⑧ | 분자 필수·양수, 환산 파트 분모(양도시 기준시가) 연혁 면제 제외(`transfer-tax-validate-split-sale-std.ts` — `validate-split.ts` 800줄 정책으로 V7~V8-b 분리), leaf S10(증여자 같은 날 취득) facts 4필드 |

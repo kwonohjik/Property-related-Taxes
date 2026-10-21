@@ -81,9 +81,20 @@ export interface SplitPartCarryoverEcho {
   exclusionReason?: CarryoverExclusionReason | "tax_comparison";
   /** 증여자의 취득일(YYYY-MM-DD) — 적용 시 장특·세율 기산일(§95④ 단서·§104②2호) */
   donorAcquisitionDate: string;
-  /** 증여자의 취득 당시 금액(§97의2①1호) — 입력 그대로 */
-  donorAcquisitionPrice: number;
-  /** 증여자 자본적지출(§97의2①2호)로 필요경비에 더한 금액 — 미적용 파트·2024.1.1. 전 양도분은 0 */
+  /**
+   * 증여자의 취득 당시 금액(§97의2①1호) — 입력 그대로. **환산 입력(`estimated`)이면 없다**(가액을 받지 않는다 — 0으로 채우면 «취득가액 0»으로 읽힌다).
+   */
+  donorAcquisitionPrice?: number;
+  /**
+   * 증여자 취득가액을 환산취득가액(§97①1호 나목, 증여자 취득 당시 그 파트 기준시가)으로 계산한 파트(P6) — 환산 입력일 때만 존재한다.
+   * 분자(`donorStdPriceAtAcquisition`)는 입력 그대로(물건 전체 값 — 지분 스케일 없음)이고, 나머지 셋은 **이월과세를 적용(A)한 파트**에서만 싣는다
+   * (미적용(B) 파트는 수증자 취득가액(증여 신고가액)으로 계산해 환산을 쓰지 않았다). 채움은 `attachSplitCarryoverEcho`가 파트 결과에서 읽는다.
+   */
+  estimated?: SplitPartCarryoverEstimatedEcho;
+  /**
+   * 증여자 자본적지출(§97의2①2호)로 필요경비에 더한 금액 — 미적용 파트·2024.1.1. 전 양도분은 0.
+   * 환산 파트는 이 금액이 §97②2호 단서 나목(자본적지출 + 양도비) 비교에 들어간 값이다 — 실제 필요경비에 들어갔는지는 파트 결과의 `swapApplied`로 갈린다.
+   */
   donorCapexAdded: number;
   /** 양도일이 2024.1.1. 전이라 증여자 자본적지출을 0으로 처리했는가 */
   donorCapexGuardApplied: boolean;
@@ -98,6 +109,18 @@ export interface SplitPartCarryoverEcho {
   giftTaxLimitApplied: boolean;
   /** §97의2②3호 비교 — 신고 전체 결정세액. 적격 판정에서 이미 배제된 파트는 없다 */
   comparison?: FilingUnitCarryoverComparison;
+}
+
+/** `SplitPartCarryoverEcho.estimated` — 파트 환산(P6). 환산취득가액 = 파트 양도가액 × 분자 ÷ 분모, 개산공제 = 분자 × 3%(영 §163⑥, 지분 반영). */
+export interface SplitPartCarryoverEstimatedEcho {
+  /** 환산취득가액의 분자 — 증여자 취득 당시 이 파트 기준시가(물건 전체 값, 입력 그대로) */
+  donorStdPriceAtAcquisition: number;
+  /** 분모 — 양도 당시 이 파트 기준시가(엔진이 실제 쓴 값). 적용(A) 파트만 */
+  stdPriceAtTransfer?: number;
+  /** 환산취득가액 — 적용(A) 파트만(= 파트 `acquisitionPrice`. §97②2호 단서 swap이면 필요경비로 차감되지 않는다 — `swapApplied`) */
+  estimatedAcquisitionPrice?: number;
+  /** 개산공제(분자 × 3%, 지분 반영) 산출액 — 적용(A) 파트만. swap이면 파트 `appraisalDeduction`은 0이지만 이 값은 비교에 쓰인 산출액이다 */
+  lumpDeduction?: number;
 }
 
 /** 파트 이월과세의 증여 사건 echo (`SplitGainResult.carryoverEvent`) */
@@ -133,8 +156,8 @@ export interface SplitPartResult {
   /** 취득시 기준시가 — 물건 전체(100%) 값 */
   stdPriceAtAcq?: number;
   /**
-   * 양도시 기준시가(환산 분모로 **실제 쓴 값** — 결합 공시 비례 안분 후). 건물 파트가 환산일 때만 싣는다.
-   * §114조의2① 증축부분 환산취득가(`resolveSplitBuildingPenaltyAxis`)의 분모다.
+   * 양도시 기준시가(환산 분모로 **실제 쓴 값** — 결합 공시 비례 안분·§164⑨1호 공익수용 min[] 적용 후). 그 파트가 환산(estimated)일 때만 싣는다.
+   * 건물은 §114조의2① 증축부분 환산취득가(`resolveSplitBuildingPenaltyAxis`)의 분모이기도 하다. 토지는 P6(파트 이월과세 환산 echo)부터 싣는다.
    */
   stdPriceAtTransfer?: number;
   /**

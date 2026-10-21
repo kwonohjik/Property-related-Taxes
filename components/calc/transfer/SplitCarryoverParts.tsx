@@ -44,6 +44,7 @@ export function SplitCarryoverParts({ asset, onChange, isAfter2024, giftTaxShare
         valuation={{ value: asset.landAcquisitionPrice ?? "", onChange: (v) => onChange({ landAcquisitionPrice: v }), field: "landAcquisitionPrice" }}
         anchorPrefix="landCarryover"
         isAfter2024={isAfter2024}
+        asset={asset}
       />
       <SplitPartCarryoverCard
         part="building"
@@ -54,6 +55,7 @@ export function SplitCarryoverParts({ asset, onChange, isAfter2024, giftTaxShare
         anchorPrefix="carryover"
         isAfter2024={isAfter2024}
         inheritedNotice
+        asset={asset}
       />
 
       <SplitCarryoverGiftTaxCard

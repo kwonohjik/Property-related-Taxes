@@ -57,7 +57,7 @@ export interface CarryoverTaxationForm {
   estimationMode: CarryoverEstimationMode | null;
   /**
    * 일반 기준시가 환산 — 취득시 기준시가 (원).
-   * estimationMode === "general" 시 필수.
+   * 자산 전체: estimationMode === "general" 시 필수 · 주택 split 파트: `partEstimated` 시 필수(증여자 취득 당시 그 파트 기준시가 총액).
    */
   donorStandardPriceAtAcquisition: string;
   /**
@@ -67,6 +67,14 @@ export interface CarryoverTaxationForm {
   donorStandardPriceAtTransfer: string;
   /** 증여자 취득가액 (원, 문자열) — 환산 미사용 시 직접 입력 */
   donorAcquisitionPrice: string;
+  /**
+   * **주택 split 파트 이월과세 전용**(P6) — 증여자가 이 파트(토지/건물)를 취득할 당시의 실지거래가액을 모를 때 환산취득가액으로 계산한다.
+   * 켜면 증여자 취득가액 칸 대신 `donorStandardPriceAtAcquisition`(증여자 취득 당시 이 파트 기준시가 총액)을 받는다.
+   *
+   * ⚠️ 자산 전체 이월과세의 `useEstimatedAcquisition`·`estimationMode`와 **별개**다. 건물 파트 서브폼(`carryover`)은 자산 전체 이월과세와 같은 한 벌이라,
+   * 그 옛 값을 재사용하면 보이지 않던 환산 잔재가 건물 파트로 새어 세액이 바뀐다. 이 값은 `partCarryover` 술어가 참인 파트에서만 읽는다(`partDonorEstimated`).
+   */
+  partEstimated: boolean;
   /**
    * 증여세 상당액 (§163의2 산식 기반, **사용자가 이미 안분한 값**).
    *
@@ -132,6 +140,7 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   donorStandardPriceAtAcquisition: "",
   donorStandardPriceAtTransfer: "",
   donorAcquisitionPrice: "",
+  partEstimated: false,
   giftTaxAmount: "",
   giftTaxCalculated: "",
   giftTaxBase: "",
@@ -179,6 +188,8 @@ export function normalizeCarryoverForm(rawInput: unknown): CarryoverTaxationForm
       typeof raw.donorStandardPriceAtTransfer === "string" ? raw.donorStandardPriceAtTransfer : "",
     donorAcquisitionPrice:
       typeof raw.donorAcquisitionPrice === "string" ? raw.donorAcquisitionPrice : "",
+    // ③ normalize — P6 파트 환산 플래그. 구 세션·이력에는 없다 → OFF(환산 아님).
+    partEstimated: raw.partEstimated === true,
     giftTaxAmount: typeof raw.giftTaxAmount === "string" ? raw.giftTaxAmount : "",
     // ③ normalize — 신규 2필드(영 §163의2②1호·3호). 기존 sessionStorage에는 없으므로 빈 문자열.
     giftTaxCalculated: typeof raw.giftTaxCalculated === "string" ? raw.giftTaxCalculated : "",

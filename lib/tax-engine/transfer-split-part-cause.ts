@@ -22,6 +22,7 @@
  * 서브객체가 있는 입력의 계산은 해결자(`transfer-tax-split-carryover.ts`)가 한다. 상호배제·호스트 게이트는 S0~S8(S9 1세대1주택 게이트는 P5에서 §97의2②2호 판정으로 대체 — 해결자).
  */
 import type { PartAcqMode } from "./transfer-tax-split-acq-price";
+import { TRANSFER } from "./legal-codes";
 
 export interface SplitPartCauseFacts {
   /** 주택·건물(토지 포함) 자산인가 — 분리 계산 대상(`calcSplitGain`과 같은 범위) */
@@ -93,6 +94,13 @@ export interface SplitPartCauseFacts {
   carryoverGiftDate?: string;
   /** `input.expenses`(deprecated 총액) > 0 — 파트 이월과세와 함께 쓸 수 없다(S8) */
   hasLegacyExpenses?: boolean;
+  // ── P6 파트 환산 (전부 선택 — 생략 = 환산 파트 없음, 아래 S10은 걸리지 않는다) ──
+  /** 그 이월과세 파트가 증여자 취득가액 대신 환산취득가액(증여자 취득 당시 기준시가)을 쓴다 — 와이어 `*CarryoverPart.useEstimatedAcquisition` */
+  landCarryoverEstimated?: boolean;
+  buildingCarryoverEstimated?: boolean;
+  /** 이월과세 파트의 증여자 취득일 YYYY-MM-DD — S10(증여자 같은 날 취득) 판정용. 파트 서브객체가 있을 때만 */
+  landDonorAcquisitionDate?: string;
+  buildingDonorAcquisitionDate?: string;
 }
 
 /** D1-H — 토지를 받을 당시 지금의 주택이 그 위에 있었는가(계획서 transfer-house-land-163-9-2.plan.md Q-1). */
@@ -159,6 +167,13 @@ export const PART_CARRYOVER_DATE_MISMATCH_MESSAGE =
 export const PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE =
   "파트 이월과세 계산에서는 자산 단위 필요경비 총액(expenses)을 쓸 수 없습니다 — 토지·건물 파트별 자본적지출 칸으로 입력하세요 "
   + "(총액이 있으면 파트에 다시 나뉘어 증여세 상당액 산입이 반대 파트 경비를 밀어냅니다)";
+
+/**
+ * S10 — 파트 환산(P6) × 증여자가 토지·건물을 같은 날 취득한 주택. 같은 날 취득한 주택은 개별주택가격(결합 공시)이 법정 척도라(집행기준 99-164-9, 시행령 §166⑥) 파트별 기준시가
+ * 원값으로 나누는 환산은 척도가 어긋난다(예시 시드 1,768,000원) — 막고 자산 전체 이월과세(개별주택가격 환산 지원)로 안내한다. 환산 파트가 없으면 걸리지 않는다.
+ */
+export const PART_CARRYOVER_ESTIMATED_SAME_DAY_MESSAGE =
+  `증여자가 토지·건물을 같은 날 취득한 주택은 파트 환산을 쓸 수 없습니다 — 자산 전체 이월과세(개별주택가격 환산 지원)로 입력하세요 (${TRANSFER.CARRYOVER_DONOR_BASIS}, ${TRANSFER.CARRYOVER_TAXATION})`;
 
 export const LAND_INHERITED_ESTIMATION_MESSAGE =
   "상속·증여로 취득한 토지는 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다 — "
@@ -588,6 +603,25 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
       issues.push({ field: "landAcquisitionDate", message: PART_CARRYOVER_DATE_MISMATCH_MESSAGE });
     if (hasBuilding && f.buildingAcquisitionDate && f.buildingAcquisitionDate.slice(0, 10) !== gift)
       issues.push({ field: "acquisitionDate", message: PART_CARRYOVER_DATE_MISMATCH_MESSAGE });
+  }
+
+  // S10 — 파트 환산 × 증여자 같은 날 취득. 환산 파트의 증여자 취득일이 «상대 파트의 증여자 취득일» 또는 «상대 파트가 수증자 본인 취득이면 그 취득일»과 같으면 막는다.
+  //   A(토지만): 증여자 토지 취득일 = 수증자 건물 취득일(호스트 `acquisitionDate`) · B(건물만): 증여자 건물 취득일 = 토지 취득일 · C(둘 다): 증여자 토지 = 증여자 건물 취득일.
+  //   환산 입력이 없으면 걸리지 않는다(실가 파트는 현행 그대로).
+  {
+    const landEst = hasLand && f.landCarryoverEstimated === true;
+    const buildingEst = hasBuilding && f.buildingCarryoverEstimated === true;
+    if (landEst || buildingEst) {
+      const donorLand = f.landDonorAcquisitionDate?.slice(0, 10);
+      const donorBuilding = f.buildingDonorAcquisitionDate?.slice(0, 10);
+      const counterpart = hasLand && hasBuilding
+        ? [donorLand, donorBuilding]
+        : hasLand
+          ? [donorLand, f.buildingAcquisitionDate?.slice(0, 10)]
+          : [donorBuilding, f.landAcquisitionDate?.slice(0, 10)];
+      if (counterpart[0] && counterpart[0] === counterpart[1])
+        issues.push({ field: landEst ? "landCarryoverPart" : "buildingCarryoverPart", message: PART_CARRYOVER_ESTIMATED_SAME_DAY_MESSAGE });
+    }
   }
 
   // Q-7(D1-4) — §163⑨ 단서 1호: 평가액(①)과 영 §164④ 가액(②) 중 많은 금액. ②가 없으면 비교할 수 없어 차단한다.

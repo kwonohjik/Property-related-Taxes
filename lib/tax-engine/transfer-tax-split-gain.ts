@@ -197,6 +197,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     landAcquisitionBasis,
     buildingAcquisitionBasis,
     buildingStdAtTransfer,
+    landStdAtTransfer,
   } = calcSplitAcquisitionPrice(
     acqContract.input,
     landTransferPrice,
@@ -295,9 +296,14 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     buildingMode === "estimated",
   );
 
+  // P6 §97의2①3호 증여세 상당액 — 환산 파트(해결자 전용 `splitCarryoverBasis`)는 §97②2호 단서 비교(`applyAssetSwap`) **밖**에서 swap 결정 뒤에 필요경비에 더한다.
+  //   증여세 상당액은 §97② 필요경비가 아니라 §97의2①3호의 별도 산입이다 — `*DirectExpenses`에 섞으면 본문 갈래(swap 불발)에서 증발하고
+  //   단서 나목(자본적지출 + 양도비)에 섞여 거짓 swap이 발동한다. 결과 항등식(양도가액 − 취득가액 − 필요경비 − 개산공제 = 양도차익)은 `directExpenses`에 더해 유지한다.
+  const landDirectFinal = landSwap.effectiveDirect + (input.splitCarryoverBasis?.land?.giftTaxExpense ?? 0);
+  const buildingDirectFinal = buildingSwap.effectiveDirect + (input.splitCarryoverBasis?.building?.giftTaxExpense ?? 0);
   // §97② 2호 단서 swap 시 필요경비 = directExp 단독 → 환산취득가액(acqPrice) 미차감.
-  const landGain = landTransferPrice - (landSwap.swapApplied ? 0 : landAcqPrice) - landSwap.effectiveDirect - landSwap.effectiveAppraisalDed;
-  const buildingGain = buildingTransferPrice - (buildingSwap.swapApplied ? 0 : buildingAcqPrice) - buildingSwap.effectiveDirect - buildingSwap.effectiveAppraisalDed;
+  const landGain = landTransferPrice - (landSwap.swapApplied ? 0 : landAcqPrice) - landDirectFinal - landSwap.effectiveAppraisalDed;
+  const buildingGain = buildingTransferPrice - (buildingSwap.swapApplied ? 0 : buildingAcqPrice) - buildingDirectFinal - buildingSwap.effectiveAppraisalDed;
 
   // ⑥ 보유연수 (§95④ 초일 산입 — calculateHoldingPeriod)
   const { years: landHoldingYears } = calculateHoldingPeriod(
@@ -312,9 +318,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const landPart: SplitPartResult = {
     transferPrice: landTransferPrice,
     acquisitionPrice: landAcqPrice,
-    directExpenses: landSwap.effectiveDirect,
+    directExpenses: landDirectFinal,
     appraisalDeduction: landSwap.effectiveAppraisalDed,
     stdPriceAtAcq: landNonActual ? landStdAtAcq : undefined,
+    stdPriceAtTransfer: landMode === "estimated" ? landStdAtTransfer : undefined,
     lumpDeductionBase: landNonActual
       ? computeLumpSumDeductionBase(landStdAtAcq, ownRatio)
       : undefined,
@@ -332,7 +339,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const buildingPart: SplitPartResult = {
     transferPrice: buildingTransferPrice,
     acquisitionPrice: buildingAcqPrice,
-    directExpenses: buildingSwap.effectiveDirect,
+    directExpenses: buildingDirectFinal,
     appraisalDeduction: buildingSwap.effectiveAppraisalDed,
     stdPriceAtAcq: buildingNonActual ? buildingStdAtAcq : undefined,
     stdPriceAtTransfer: buildingMode === "estimated" ? buildingStdAtTransfer : undefined,

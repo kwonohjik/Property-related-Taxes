@@ -106,7 +106,7 @@ export function buildPrimaryContext(
   const usesPhd = phdFlagEffective(primary);
   // 이월과세 "general" 환산 모드: donorStandardPrice*를 최상위 standardPrice*로 override.
   // PHD/APD 모드와 달리 preHousingDisclosure 없이 기준시가를 직접 입력하므로 usesPhd=false 필요.
-  // P2 C(증여자 토지·건물 취득일 상이)는 환산을 지원하지 않는다(I-4) — 건물 파트가 읽는 `carryover`에 남은 환산 잔재를 쓰지 않는다.
+  // P2 C(증여자 토지·건물 취득일 상이)의 파트 환산(P6)은 `partEstimated`가 정본이다 — 건물 파트가 읽는 `carryover`에 남은 자산 전체 환산 잔재(`useEstimatedAcquisition`·`estimationMode`)를 쓰지 않는다.
   const isCarryoverGeneral =
     primary.acquisitionCause === "carryover_gift" &&
     primary.carryover?.useEstimatedAcquisition === true &&

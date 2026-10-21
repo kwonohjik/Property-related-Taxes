@@ -60,6 +60,15 @@ export function calcAcqStdPair(
 
   const buildingStd = input.buildingStandardPriceAtAcquisition;
   const isHousing = input.propertyType === "housing";
+  // P6 — 파트 이월과세 환산 파트의 분자(증여자 취득 당시 그 파트 기준시가 총액, 해결자 전용 `splitCarryoverBasis`). 있으면 그 파트는 이 값이 취득시 기준시가다.
+  //   · ㎡당 공시지가 × 면적(`acquisitionArea`는 배율 초과분 분리도 읽는다)·개별주택가격 비례 안분(`stdSplit`)을 모두 건너뛴다 — 증여자 취득일이 상대 파트와 같으면
+  //     쌍이 null이 되어 `calcSplitGain`이 분리 계산을 통째로 놓치던 길(계획서 p6 E-C)이다. 같은 날 취득은 leaf(S10)가 막으므로 «결합 공시 척도» 문제는 여기까지 오지 않는다.
+  //   · 덮이지 않은 파트는 입력 그대로다(수증자 본인 환산이면 자기 기준시가).
+  const landOverride = input.splitCarryoverBasis?.land?.stdAtAcq;
+  const buildingOverride = input.splitCarryoverBasis?.building?.stdAtAcq;
+  if (landOverride != null || buildingOverride != null) {
+    return { land: landOverride ?? landStd, building: buildingOverride ?? buildingStd ?? null, buildingDerived: false };
+  }
   // **주택도 포함**한다(2026-07-30). §163⑥2호가목은 "라목의 주택 **취득당시**의 라목 가액 × 3/100"
   // 이라 **취득 당시 라목 주택으로서의 가액이 존재**해야 적용된다. 토지를 먼저 취득하고 건물을
   // 나중에 신축·취득했다면 토지 취득 당시엔 주택이 없어 라목 결합 공시 자체가 없고,
@@ -124,6 +133,8 @@ export function calcAcqStdPair(
  * 파트별 독립 경로에서는 합계가 유일하게 옳은 분모다(결합 총액이 애초에 공시되지 않음).
  */
 export function calcApportionRatio(input: TransferTaxInput): { land: number; building: number } | null {
+  // P6 — 환산 파트 분자는 증여자 취득 시점 값이라 상대 파트(수증자 시점)와 섞은 비율은 의미가 없다. 비율을 만들지 않는다.
+  if (input.splitCarryoverBasis?.land?.stdAtAcq != null || input.splitCarryoverBasis?.building?.stdAtAcq != null) return null;
   const pair = calcAcqStdPair(input);
   // 비율은 **양쪽이 모두 있을 때만** 정의된다 — 한쪽만 아는 상태에서 비율을 만들면
   // "토지 0% : 건물 100%" 같은 침묵 오산출이 된다. 소비부는 술어가 이미 차단한다.
@@ -415,6 +426,8 @@ export function calcSplitAcquisitionPrice(
   buildingAcquisitionBasis?: LandAcquisitionBasis;
   /** 건물 파트 환산 분모로 쓴 양도시 기준시가(결합 공시 비례 안분 후) — §114조의2 증축부분 환산의 분모 */
   buildingStdAtTransfer: number;
+  /** 토지 파트 환산 분모로 쓴 양도시 기준시가(§164⑨1호 공익수용 특례 min[] 적용 후) — 토지 파트가 환산(estimated)일 때만 의미가 있다 */
+  landStdAtTransfer: number;
 } {
   const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
@@ -543,6 +556,7 @@ export function calcSplitAcquisitionPrice(
     landMode,
     buildingMode,
     buildingStdAtTransfer,
+    landStdAtTransfer,
     splitLandExpropriationValuationDetail,
     ...(landPartAcq.basis ? { landAcquisitionBasis: landPartAcq.basis } : {}),
     ...(buildingPartAcq.basis ? { buildingAcquisitionBasis: buildingPartAcq.basis } : {}),

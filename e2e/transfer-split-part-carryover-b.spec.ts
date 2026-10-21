@@ -189,6 +189,32 @@ test.describe("P4 B — 건물만 이월과세 + 토지 매매", () => {
     expect(body2.carryoverTaxation).toMatchObject({ giftRegistryDate: "2023-03-01", donorAcquisitionDate: "2015-06-01" });
   });
 
+  test("P6 환산: 건물 토글 ON → 증여자 취득 당시 기준시가 입력 → 계산 → body 환산 키 → 결과 환산 산식 + §114조의2 확인 필요", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seedWizard(page, seed([bAsset({ carryover: { ...CARRYOVER, donorAcquisitionPrice: "" } })]));
+    await expandAssetSection(page, 3);
+    await expect(page.locator('[data-field="carryover.partEstimated"]')).toHaveCount(1);
+    await expect(page.locator('[data-field="carryover.donorStandardPriceAtAcquisition"]')).toHaveCount(0);
+    await page.getByTestId("split-carryover-building-estimated").getByRole("switch").click();
+    await expect(page.locator('[data-field="carryover.donorStandardPriceAtAcquisition"]')).toHaveCount(1);
+    await expect(page.locator('[data-field="carryover.donorAcquisitionPrice"]')).toHaveCount(0);
+    await expect(page.getByText("아직 지원하지 않")).toHaveCount(0);
+    await page.getByTestId("split-carryover-building-donor-std-price").fill("40000000");
+    const body = await calculate(page);
+    expect(body.buildingCarryoverPart).toEqual({ donorAcquisitionDate: "2015-06-01", useEstimatedAcquisition: true, donorStandardPriceAtAcquisition: 40_000_000 });
+    const est = page.getByTestId("split-carryover-building-estimated").first();
+    await expect(est).toContainText("건물 양도가액 500,000,000");
+    await expect(est).toContainText("증여자 취득 당시 기준시가 40,000,000");
+    await expect(est).toContainText("양도 당시 기준시가 500,000,000");
+    await expect(page.getByTestId("split-carryover-card").first()).toContainText("소득세법 §114조의2");
+    // 신고서 — 취득가액 = 토지 실가 1.2억 + 건물 환산 4천만 · 필요경비 = 증여세 상당액 2천만 + 개산공제 120만
+    const acqRow = await formRow(page, "취득가액");
+    const expRow = await formRow(page, "필요경비");
+    expect([num(acqRow[1]), num(acqRow[2]), num(acqRow[3])]).toEqual([160_000_000, 120_000_000, 40_000_000]);
+    expect(num(expRow[1])).toBe(21_200_000);
+    expect(await stmtText(page, "취득가액")).toContain("건물(이월과세 — 증여자 취득 당시 기준시가 환산)");
+  });
+
   test("P5 1세대1주택 — 건물 증여 1년(증여자 2015 취득): 이월과세를 적용해야 비로소 비과세 → §97의2②2호로 건물 미적용 · 결과 카드 사유", async ({ page }) => {
     test.setTimeout(180_000);
     const gift = { ...CARRYOVER, giftRegistryDate: "2024-06-15" };

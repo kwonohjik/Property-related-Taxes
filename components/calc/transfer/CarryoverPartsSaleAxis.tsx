@@ -7,7 +7,8 @@
  *
  * 토지·건물을 나눠 계산하므로 파트 칸만 계산에 닿는다 — 자산 전체 자본적지출은 반영되지 않고(⑧ `validateSplitDirectInputs`가 이 칸으로 안내),
  * 양도가액은 구분 기재 또는 양도시 기준시가 비율로 나눈다(소득세법 시행령 §166⑥). `NonPurchaseSplitInputsBlock`(소유자 분리)의 하단과 **같은 컴포넌트**를 쓰되
- * 취득시 기준시가 안분 칸은 없다 — 두 파트 모두 실가(증여자 취득가액·증여 신고가액)라 취득가액을 기준시가로 나누지 않는다.
+ * 취득시 기준시가 안분 칸은 없다 — 두 파트 모두 증여자 취득가액·증여 신고가액으로 계산해 취득가액을 기준시가로 나누지 않는다. 단 증여자 취득가액을 모르는 파트(P6 환산)는
+ * 이 카드의 «양도시 기준시가»가 환산취득가액의 분모다.
  *
  * 노출 술어는 `effectiveCarryoverDonorSplit` 하나(호출부가 1회 계산해 마운트) — ④ 전송·⑧ 필수와 같다.
  */
@@ -15,6 +16,7 @@ import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { SplitPartCapexFields } from "./SplitPartCapexFields";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { partDonorEstimated } from "@/lib/calc/transfer-land-part-cause";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 export function CarryoverPartsSaleAxis(props: {
@@ -25,6 +27,8 @@ export function CarryoverPartsSaleAxis(props: {
   const { asset, onChange } = props;
   // 양도시 기준시가 배치 — 축 A와 같은 1회 계산을 공유한다(하위 재파생 금지).
   const saleStdPlace = saleStdPlacement();
+  // P6 — 증여자 취득가액을 몰라 환산하는 파트는 자본적지출 안내가 «환산 ↔ 자본적지출 택일»이다(표시·전송·검증이 같은 술어).
+  const donorEst = partDonorEstimated(asset);
   return (
     <div className="space-y-3" data-testid="carryover-parts-sale-axis">
       <ToneCard tone="amber">
@@ -38,9 +42,9 @@ export function CarryoverPartsSaleAxis(props: {
         onChange={onChange}
         landOwned
         buildingOwned
-        // 파트 방식은 «실가»로 고정이다(`normalizeBuildingCauseInputs`) — 남은 환산·감정 플래그의 설명 문구를 보이지 않는다.
-        landMode="actual"
-        buildingMode="actual"
+        // 파트 방식은 «실가»로 고정이다(`normalizeBuildingCauseInputs`) — 남은 환산·감정 플래그의 설명 문구를 보이지 않는다. 단 증여자 환산 파트(P6)는 환산 규칙을 말한다.
+        landMode={donorEst.land ? "estimated" : "actual"}
+        buildingMode={donorEst.building ? "estimated" : "actual"}
       />
       <LandBuildingSaleSplitSection
         isBurdenedGift={false}

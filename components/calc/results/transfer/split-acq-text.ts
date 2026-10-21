@@ -25,6 +25,7 @@ import {
 import {
   splitCarryoverAcquisitionText,
   splitCarryoverApportionText,
+  splitCarryoverEstimatedExpenseText,
   splitCarryoverVerdictText,
   splitCarryoverView,
 } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
@@ -48,9 +49,10 @@ export function formatLumpRate(rate: number | undefined): string {
  * 원인이 다르고(`mixedCause`) 그 파트가 상속·증여면 입력 화면 라벨과 같은 어휘로 「토지(상속개시일 평가액)」(D1-3) ·
  * 건물이 상속·증여면 「건물(상속개시일 평가액)」(D2 — 같은 파트 중립 상수).
  */
-function partTag(p: SplitGainPartSummary, mixedCause: boolean, carryover?: "applied" | "excluded"): string {
-  // 파트 이월과세(§97의2①) — 적용 파트의 취득가액은 증여자 취득가액, 미적용 파트는 증여 신고가액이다(엔진 echo `carryover.judgment`).
-  if (carryover) return `${p.label}(${carryover === "applied" ? "이월과세 — 증여자 취득가액" : SPLIT_CAUSE_VALUE_LABEL.gift})`;
+function partTag(p: SplitGainPartSummary, mixedCause: boolean, carryover?: { judgment: "applied" | "excluded"; estimated?: unknown }): string {
+  // 파트 이월과세(§97의2①) — 적용 파트의 취득가액은 증여자 취득가액(증여자 취득가액을 몰라 환산했으면 증여자 취득 당시 기준시가 환산), 미적용 파트는 증여 신고가액이다(엔진 echo `carryover.judgment`·`estimated`).
+  if (carryover)
+    return `${p.label}(${carryover.judgment === "applied" ? (carryover.estimated ? "이월과세 — 증여자 취득 당시 기준시가 환산" : "이월과세 — 증여자 취득가액") : SPLIT_CAUSE_VALUE_LABEL.gift})`;
   // D1-4·D2-4 — 영 §163⑨ 단서 1호·2호 비교가 적용된 파트는 **채택된 쪽** 이름을 쓴다(② 채택인데 「평가액」이라 적으면 거짓 라벨).
   const basis = splitAcqBasisView(p);
   if (basis) return `${p.label}(${basis.adoptedLabel})`;
@@ -102,7 +104,7 @@ export function splitAcqFormulaText(sd: SplitGainResult | undefined): string | u
   if (!sd) return undefined;
   const s = summarizeSplitGain(sd);
   if (s.parts.length === 0) return undefined;
-  const body = s.parts.map((p) => `${partTag(p, s.mixedCause, sd[p.key].carryover?.judgment)} ${fmt(p.acquisitionDeducted)}`).join(" + ");
+  const body = s.parts.map((p) => `${partTag(p, s.mixedCause, sd[p.key].carryover)} ${fmt(p.acquisitionDeducted)}`).join(" + ");
   const swapped = s.parts.filter((p) => p.swapApplied);
   const swapNote =
     swapped.length > 0
@@ -158,17 +160,21 @@ export function splitExpenseText(sd: SplitGainResult | undefined, fallbackRate?:
   const items: string[] = [];
   for (const p of s.parts) {
     const raw = sd[p.key];
-    if (p.directExpenses > 0) {
+    // P6 — 증여자 취득가액을 몰라 환산한 이월과세 적용 파트: 직접경비 안의 증여세 상당액(§97의2①3호 별도 산입)은 자본적지출·양도비가 아니다.
+    const donorEst = carryover?.parts.find((c) => c.key === p.key && c.applied && c.estimated);
+    const gift = donorEst?.giftTaxAdded ?? 0;
+    if (p.directExpenses - gift > 0) {
       items.push(
-        `${p.label} 자본적지출·양도비 ${fmt(p.directExpenses)}${p.swapApplied ? " (§97②2호 단서 — 취득가액·개산공제 대신 적용)" : ""}`,
+        `${p.label} 자본적지출·양도비 ${fmt(p.directExpenses - gift)}${p.swapApplied ? " (§97②2호 단서 — 취득가액·개산공제 대신 적용)" : ""}`,
       );
     }
+    if (gift > 0) items.push(`${p.label} 증여세 상당액 ${fmt(gift)} (§97의2①3호)`);
     if (p.appraisalDeduction > 0) {
       const base = raw.lumpDeductionBase ?? raw.stdPriceAtAcq;
       const rate = raw.lumpDeductionRate ?? fallbackRate;
       items.push(
         base != null
-          ? `${p.label} 개산공제 ${fmt(p.appraisalDeduction)} (취득시 기준시가 ${fmt(base)} × ${formatLumpRate(rate)})`
+          ? `${p.label} 개산공제 ${fmt(p.appraisalDeduction)} (${donorEst ? "증여자 취득 당시" : "취득시"} 기준시가 ${fmt(base)} × ${formatLumpRate(rate)})`
           : `${p.label} 개산공제 ${fmt(p.appraisalDeduction)}`,
       );
     }
@@ -177,6 +183,9 @@ export function splitExpenseText(sd: SplitGainResult | undefined, fallbackRate?:
   // 파트 이월과세 — 직접경비 안에 증여자 자본적지출·증여세 상당액이 섞여 있다. 수증자 입력분과 가산분을 풀어 쓰고 안분 산식을 밝힌다(영 §163의2②).
   const carryoverNote = (carryover?.parts ?? [])
     .map((p) => {
+      // P6 — 환산 파트는 필요경비에 실제 들어간 것만 풀어 쓴다(증여자 자본적지출은 단서가 아니면 들어가지 않는다).
+      const estimatedNote = splitCarryoverEstimatedExpenseText(p);
+      if (estimatedNote) return ` ※ ${estimatedNote} ※ ${splitCarryoverApportionText(carryover!, p)}`;
       const adds = [
         p.donorCapexAdded > 0 ? ` + 증여자 자본적지출 ${fmt(p.donorCapexAdded)}` : "",
         p.giftTaxAdded > 0 ? ` + 증여세 상당액 ${fmt(p.giftTaxAdded)}` : "",

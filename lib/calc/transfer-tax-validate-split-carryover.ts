@@ -24,11 +24,13 @@ import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-par
 import { effectiveSelfOwns, isLandBuildingSplitable } from "./self-owns-scope";
 import { effectivePartAcqMode } from "./transfer-tax-split-acq-mode";
 import { effectiveCarryoverDonorSplit, normalizeBuildingCauseInputs, splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
+import { partDonorEstimated } from "./transfer-land-part-cause";
 import { effectiveLandCarryover } from "./transfer-land-part-cause";
 import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
 import { BUILDING_CARRYOVER_PRE_DISCLOSURE_MESSAGE, buildingCarryoverPreDisclosure } from "./transfer-land-part-cause";
 import { LAND_CAUSE_SAME_DAY_MESSAGE, landPartCauseSameDay } from "./transfer-land-part-cause";
-import { PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { PART_CARRYOVER_ESTIMATED_SAME_DAY_MESSAGE, PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { splitCarryoverEventSource } from "./transfer-tax-api-split-carryover";
@@ -56,7 +58,8 @@ function splitCarryoverKind(asset: AssetForm): Kind | null {
  *   · C — 토지·건물 취득일 = 증여 등기접수일(`carryoverAcquisitionDateFallback`) · 원인 `carryover_gift` · 두 서브객체·사건 동봉 · 최상위 `carryoverTaxation` 없음
  *   · A — 토지 취득일 = 증여 등기접수일(정규화 사본) · 건물은 매매·신축 그대로(취득일·소유 축·부담부증여는 ④가 싣는 값) · 토지 서브객체·사건만
  *   · B — 토지 overlay `purchase`·토지 취득일 = 토지 칸 그대로 · 건물 취득일 = 증여 등기접수일(정규화 사본) · 건물 서브객체·사건만
- *   · 공통: 파트 방식 `actual`(정규화 사본) · `expenses` 0(자산 단위 필요경비 총액을 싣지 않는다 — S8) · 환산·PHD·§164 비교 입력 없음(I-4)
+ *   · 공통: 파트 방식 `actual`(정규화 사본) · `expenses` 0(자산 단위 필요경비 총액을 싣지 않는다 — S8) · PHD·§164 비교 입력 없음.
+ *     파트 환산(P6, 증여자 취득가액을 모를 때)은 `partDonorEstimated` 술어가 참인 파트만 — 그 플래그와 증여자 취득일을 leaf S10(증여자 같은 날 취득)에 넣는다.
  */
 export function splitCarryoverLeafFacts(rawAsset: AssetForm, ctx: SplitCarryoverCtx = {}): SplitPartCauseFacts {
   const asset = normalizeBuildingCauseInputs(rawAsset);
@@ -67,6 +70,10 @@ export function splitCarryoverLeafFacts(rawAsset: AssetForm, ctx: SplitCarryover
   const landDate = isB ? asset.landAcquisitionDate || undefined : gift;
   // A는 소유 축·부담부증여를 술어가 거르지 않는다 — ④가 싣는 값 그대로 leaf(S4)에 넣는다(C는 술어가 이미 둘을 «아님»으로 거른다).
   const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";
+  // P6 — ④가 파트에 싣는 환산 플래그·증여자 취득일 그대로(엔진 `splitPartCauseFactsOfInput`이 서브객체에서 읽는 값과 1:1). 서브객체가 없는 파트(A의 건물·B의 토지)는 비운다.
+  const est = partDonorEstimated(asset, ctx);
+  const hasLandPart = !isB;
+  const hasBuildingPart = isC || isB;
   return {
     isSplitable: isLandBuildingSplitable(asset.assetKind),
     hasLandAcquisitionDate: !!landDate,
@@ -92,6 +99,10 @@ export function splitCarryoverLeafFacts(rawAsset: AssetForm, ctx: SplitCarryover
     hasCompanions: ctx.hasCompanions,
     carryoverGiftDate: gift,
     hasLegacyExpenses: false,
+    landCarryoverEstimated: est.land,
+    buildingCarryoverEstimated: est.building,
+    landDonorAcquisitionDate: hasLandPart ? asset.landCarryover?.donorAcquisitionDate || undefined : undefined,
+    buildingDonorAcquisitionDate: hasBuildingPart ? asset.carryover?.donorAcquisitionDate || undefined : undefined,
   };
 }
 
@@ -103,6 +114,9 @@ export function splitCarryoverLeafFacts(rawAsset: AssetForm, ctx: SplitCarryover
  */
 function anchorOfLeafIssue(issue: SplitPartCauseIssue, kind: Kind): string {
   const event = kind === "A" ? "landCarryover" : "carryover";
+  // P6 S10 — 환산 파트인데 증여자가 토지·건물을 같은 날 취득했다: 고칠 칸은 그 파트의 «환산취득가액» 토글(끄고 자산 전체 이월과세로 입력)이다.
+  if (issue.message === PART_CARRYOVER_ESTIMATED_SAME_DAY_MESSAGE)
+    return issue.field === "landCarryoverPart" ? "landCarryover.partEstimated" : "carryover.partEstimated";
   switch (issue.field) {
     case "landAcquisitionPrice":
     case "buildingAcquisitionPrice":
@@ -175,13 +189,15 @@ export function validateSplitCarryoverParts(
   if (c.donorDeceased && !c.donorRelation)
     return fieldError(hostEvent ? "carryover.donorRelation" : "landCarryover.donorRelation", `${label}: 증여자와의 관계를 선택하세요 (소득세법 §97조의2 ①).`);
 
-  // 4)·5) 파트 — 증여자 취득일(≤ 증여일: 엔진 F-6) → 취득가액(필수: I-4 파트 환산 없음) → 자본적지출 → 증여 신고가액(= 파트 평가액)
+  // 4)·5) 파트 — 증여자 취득일(≤ 증여일: 엔진 F-6) → 취득가액(필수) 또는 환산 분자(P6) → 자본적지출 → 증여 신고가액(= 파트 평가액)
   //    A의 토지·B의 건물 증여 신고가액은 이 카드가 아니라 매매 블록의 파트 가액 칸(`landAcquisitionPrice`·`buildingAcquisitionPrice`)이 받는다 — 같은 앵커다.
+  const donorEst = partDonorEstimated(asset, ctx);
   const parts = [
     ...(kind !== "B"
       ? [
           {
             name: "토지",
+            estimated: donorEst.land,
             form: land,
             keyPrefix: "landCarryover",
             valuation: asset.landAcquisitionPrice,
@@ -193,6 +209,7 @@ export function validateSplitCarryoverParts(
       ? [
           {
             name: "건물",
+            estimated: donorEst.building,
             form: c,
             keyPrefix: "carryover",
             valuation: asset.buildingAcquisitionPrice,
@@ -207,10 +224,17 @@ export function validateSplitCarryoverParts(
       return fieldError(`${p.keyPrefix}.donorAcquisitionDate`, `${label}: ${p.name} 증여자 취득일을 입력하세요 ${MSG_TAIL_DONOR}.`);
     if (f.donorAcquisitionDate > c.giftRegistryDate)
       return fieldError(`${p.keyPrefix}.donorAcquisitionDate`, `${label}: ${p.name} 증여자 취득일은 증여 등기접수일보다 늦을 수 없습니다 ${MSG_TAIL_DONOR}.`);
-    if (!(parseAmount(f.donorAcquisitionPrice) > 0))
+    // P6 — 증여자 취득가액을 아는 경우(가액 필수)와 모르는 경우(환산: 증여자 취득 당시 이 파트 기준시가가 분자로 필수). 표시·전송·검증이 같은 술어(`partDonorEstimated`)를 읽는다.
+    if (p.estimated) {
+      if (!(parseAmount(f.donorStandardPriceAtAcquisition) > 0))
+        return fieldError(
+          `${p.keyPrefix}.donorStandardPriceAtAcquisition`,
+          `${label}: ${p.name} 증여자 취득 당시 기준시가를 입력하세요 — 환산취득가액의 분자입니다 (${TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ}, ${TRANSFER.CARRYOVER_DONOR_BASIS}).`,
+        );
+    } else if (!(parseAmount(f.donorAcquisitionPrice) > 0))
       return fieldError(
         `${p.keyPrefix}.donorAcquisitionPrice`,
-        `${label}: ${p.name} 증여자 취득가액을 입력하세요 — 증여자의 취득 당시 금액을 모르면 이 입력은 아직 지원하지 않습니다 ${MSG_TAIL_DONOR}.`,
+        `${label}: ${p.name} 증여자 취득가액을 입력하세요 — 증여자의 취득 당시 실지거래가액을 알 수 없으면 «환산취득가액»을 켜서 증여자 취득 당시 기준시가로 환산하세요 ${MSG_TAIL_DONOR}.`,
       );
     if (parseAmount(f.donorCapitalExpenditure) < 0)
       return fieldError(`${p.keyPrefix}.donorCapitalExpenditure`, `${label}: ${p.name} 증여자 자본적지출은 음수일 수 없습니다.`);
