@@ -21,6 +21,7 @@ import {
   isExprMixedUseRequired,
 } from "@/lib/calc/expropriation-required-gate";
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { saleStdPriceWaivedByEra } from "@/lib/calc/sale-split-100-3-era";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import {
@@ -408,6 +409,17 @@ export function refineSplitAcquisitionInputs(
   refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue, true);
 
   // V7 — 양도시 기준시가 파트별 (일괄양도 안분 · §100③ 30% 판정의 비교 대상).
+  // 양도일 2016.1.1. 전 + 구분 기재 + 환산 파트 없음이면 엔진이 이 값을 쓰지 않아 풀어 준다 — ⑧ `validateSaleStdAndAppraisal`과 **같은 술어**
+  // (`saleStdPriceWaivedByEra`). 파트 이월과세의 증여자 환산도 «환산 파트»로 센다(⑧ `partDonorEstimated` 보정과 같은 사실 — 분모가 계산에 쓰인다).
+  // 소유 파트로 좁히지 않고 ⑧처럼 두 파트 모드를 그대로 넘긴다(좁히면 ⑧이 더 엄격한 쪽의 부분 불일치가 새로 생긴다).
+  // `saleSplitMode` 생략(직접 API)은 면제 안 됨 → 현행대로 요구(fail-closed).
+  const stdWaived = saleStdPriceWaivedByEra({
+    transferDate: d.transferDate,
+    saleSplitMode: d.saleSplitMode,
+    landMode: d.landCarryoverPart?.useEstimatedAcquisition === true ? "estimated" : landMode,
+    buildingMode: d.buildingCarryoverPart?.useEstimatedAcquisition === true ? "estimated" : buildingMode,
+  });
+  if (stdWaived) return;
   if (!positive(d.landStandardPriceAtTransfer))
     issue(["landStandardPriceAtTransfer"], "토지·건물 분리 계산에는 양도시 기준시가 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목)");
   if (!positive(d.buildingStandardPriceAtTransfer))
