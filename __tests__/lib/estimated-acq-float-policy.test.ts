@@ -15,7 +15,8 @@
  * 계획서 §7(범위 밖)이라 별건이다.
  *
  * ## ⛔ 허용 목록 (사유 필수)
- * 지분 규약 `applyRatio`(69곳)·사이드바 지분은 엔진과 같은 규약이라 따로 고치면 1원씩 어긋난다(계획서 §6.1).
+ * 지분 규약 `applyRatio`(69곳)·사이드바 지분은 별도 계획(`share-ratio-apply-float-precision.plan.md`)에서 `applyRatio` 내부를 정확화하고
+ * 사이드바 거울을 `applyRatio`로 통일했다 — 가드는 `share-ratio-apply-policy.test.ts`.
  * 이 가드는 `Math.floor(… * <비율 변수>)`가 이번 파일들에서 비율을 **분자·분모 쌍**으로 바꾼 곳에 남지 않게 한다.
  */
 import { describe, it, expect } from "vitest";
@@ -46,8 +47,6 @@ export const GUARDED_FILES = [
  * 키는 `Math.floor(` 인자를 공백 정규화한 문자열이다(줄 번호는 흔들리므로 쓰지 않는다).
  */
 export const ALLOWED: Record<string, string> = {
-  // 사이드바 지분 합계 — 엔진 지분 규약 applyRatio(= Math.floor(금액 × 지분비율))와 같은 규약이라 따로 고치면 엔진과 1원씩 어긋난다. 계획서 §6.1 «지분 규약은 별건».
-  "lib/stores/calc-wizard-store.ts::raw * (n / d)": "지분 규약(applyRatio) — 별건",
   // 비사업용토지 비율 nonBizRatio — 환산·기준시가 안분이 아니라 비사업용 기간 비율이다. 계획서 §7 «범위 밖(관찰만)».
   "lib/tax-engine/transfer-tax-mixed-use-helpers.ts::gainSplit.landGain * nonBizRatio": "NBL nonBizRatio — 범위 밖(§7)",
   "lib/tax-engine/transfer-tax-mixed-use-helpers.ts::part.landTransferGain * nonBizRatio": "NBL nonBizRatio — 범위 밖(§7)",

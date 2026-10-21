@@ -68,14 +68,68 @@ export function applyRate(amount: number, rate: number): number {
   return Math.floor(amount * rate);
 }
 
+/** `applyRatio`가 십진 정확 계산으로 다루는 비율의 최대 소수 자릿수 (Q4 — 계획서 §6) */
+const RATIO_MAX_DECIMALS = 10;
+/**
+ * 「`ratio`가 십진수의 가장 가까운 double이다」로 볼 상대 허용 오차 = 약 2ulp.
+ * 화면 지분은 `parseFloat(P) / parseFloat("100")`이라 `P`의 이진 오차(≤ 0.5ulp)와 나눗셈 반올림(≤ 0.5ulp)이 겹쳐
+ * 참값의 가장 가까운 double에서 최대 1ulp(2.2e-16) 떨어질 수 있다. 4.5e-16은 그 두 배 여유다.
+ * 10자리 이하 십진수끼리의 간격(상대 ≥ 1e-10 × …)에 비해 6자리 이상 작아 다른 십진수를 잘못 집지 않는다.
+ */
+const RATIO_ULP_TOLERANCE = 4.5e-16;
+const POW10_BIGINT = Array.from({ length: RATIO_MAX_DECIMALS + 1 }, (_, k) => 10n ** BigInt(k));
+
+/**
+ * `ratio`가 소수 10자리 이하 십진수(정수 N ÷ 10^k)의 가장 가까운 double이면 `{n: N, k}`, 아니면 null.
+ *
+ * `String(ratio)`의 자릿수로 판정하지 않는다 — `parseFloat("90.6") / 100`은 `0.9059999999999999`(16자리),
+ * `parseFloat("1.1") / 100`은 `0.011000000000000001`(18자리)처럼 **화면 입력에서 온 짧은 소수가 긴 문자열로** 나온다
+ * (소수 1~2자리 %의 약 27%). 문자열 자릿수로 거르면 그 비율이 전부 옛 식으로 떨어져 1원 과소가 남는다.
+ * 대신 k = 0..10에서 `round(ratio × 10^k) / 10^k`가 ratio와 2ulp 이내인 **가장 짧은** 표현을 찾는다.
+ * 1/3·6/11 같은 순환 소수는 어느 k에서도 맞지 않는다(최소 간격 ≈ 3e-11 ≫ 허용 오차).
+ */
+function decimalizeRatio(ratio: number): { n: bigint; k: number } | null {
+  const tol = Math.abs(ratio) * RATIO_ULP_TOLERANCE;
+  for (let k = 0; k <= RATIO_MAX_DECIMALS; k++) {
+    const scale = 10 ** k;
+    const n = Math.round(ratio * scale);
+    if (Math.abs(ratio - n / scale) <= tol) return { n: BigInt(n), k };
+  }
+  return null;
+}
+
 /**
  * 공유지분율 적용 — 100% 기준 금액에 지분 비율을 곱해 원 단위로 절사.
  *
  * 이 저장소의 **지분 적용 단일 규약**이다. API 변환(`transfer-tax-api-helpers.ts`)이 재수출해
  * 엔진·클라이언트가 같은 절사 규칙을 쓴다 — 순서·절사가 갈리면 사이드바 미리보기와 엔진 결과가
- * 어긋난다(실측 0.49% 1원 차).
+ * 어긋난다(실측 0.49% 1원 차). 사이드바·신고서 표시도 `Math.floor(금액 × 지분)`을 따로 쓰지 말고 이 함수를 쓴다
+ * (`__tests__/lib/share-ratio-apply-policy.test.ts`가 거울 9곳을 가드한다).
+ *
+ * ## 정확도 (계획서 `share-ratio-apply-float-precision.plan.md` §2·§3)
+ * 지분 입력은 백분율 한 칸이라 비율이 항상 유한 소수 `P/100`인데, double `0.7`은 0.6999…라서
+ * 옛 식 `Math.floor(amount × ratio)`는 참값이 정수일 때 **1원 과소**가 난다(과대는 0건).
+ * 예: 1,518,341,200 × 70% → 1,062,838,839(참값 …840). 정수 % 1~99 전체로는 0.04%지만
+ * 70%는 1.51% · 35%는 0.73% · 57%는 0.48%다.
+ *
+ * ⇒ `ratio`가 소수 10자리 이하 십진수이고 `amount`가 안전정수이면 `BigInt(amount) × N / 10^k`의 floor(정확).
+ * 그 밖은 **옛 식 그대로**다:
+ *  - 11자리 이상(1/3·6/11 같은 순환 소수, 레거시 분자/분모 이력, 채무비율 B/C) — 15자리까지 십진화하면
+ *    오히려 틀린다: 1/3은 `String`이 16자리(0.3333333333333333)라 15자리로 잘려
+ *    300,000,000 × 0.333333333333333 = 99,999,999.9999999 → **1 과소**가 된다. 옛 식은 1/3·2/3·1/7에서 참값과 같다.
+ *  - 정수가 아닌 금액·안전정수 밖 금액·NaN/∞ — 십진 정확 계산 대상이 아니다.
+ * 음수 금액은 BigInt 나눗셈이 0 방향 절사라 floor로 보정한다.
  */
 export function applyRatio(amount: number, ratio: number): number {
+  if (Number.isSafeInteger(amount)) {
+    const dec = decimalizeRatio(ratio);
+    if (dec) {
+      const num = BigInt(amount) * dec.n;
+      const den = POW10_BIGINT[dec.k];
+      const q = num / den;
+      return Number(num < 0n && q * den !== num ? q - 1n : q);
+    }
+  }
   return Math.floor(amount * ratio);
 }
 

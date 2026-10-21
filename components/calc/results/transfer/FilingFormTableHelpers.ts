@@ -10,6 +10,7 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { separateAcqFilingNotes } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { capExInAcquisitionColumnOfResult } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { summarizeSplitGain } from "@/lib/tax-engine/transfer-tax-split-display";
 import { splitCauseLabel } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -221,7 +222,7 @@ export function buildRows(
   const receiveOnly = resolveReceiveOnlyDisplay(
     result,
     transferPriceOverride === undefined && ownRatio < 1.0
-      ? Math.floor(rawTotalPrice * ownRatio)
+      ? applyRatio(rawTotalPrice, ownRatio)
       : rawTotalPrice,
     formData?.transferDate ?? "",
   );
@@ -230,7 +231,7 @@ export function buildRows(
   const rawExpenses = Number(primary?.directExpenses || 0);
   const totalExpenses =
     transferPriceOverride === undefined && ownRatio < 1.0
-      ? Math.floor(rawExpenses * ownRatio)
+      ? applyRatio(rawExpenses, ownRatio)
       : rawExpenses;
 
   const mu = result.mixedUseDetail;
@@ -495,7 +496,7 @@ export function buildRows(
       Number(primary?.capitalExpenditure || 0) + Number(primary?.transferExpense || 0);
     const enteredExpenses =
       transferPriceOverride === undefined && ownRatio < 1.0
-        ? Math.floor(rawEntered * ownRatio)
+        ? applyRatio(rawEntered, ownRatio)
         : rawEntered;
     const notDeducted = Math.max(capExp, totalExpenses, enteredExpenses);
     if (notDeducted > 0) {

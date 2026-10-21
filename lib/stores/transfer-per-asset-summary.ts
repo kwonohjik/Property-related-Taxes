@@ -199,7 +199,7 @@ function computeApportionedSaleMap(formData: TransferFormData): Map<string, numb
       assetLabel: a.assetLabel,
       assetKind: toBundledKind(a.assetKind),
       standardPriceAtTransfer: ratio < 1 && !axisB ? applyRatio(std, ratio) : std,
-      fixedSalePrice: ratio < 1 && axisB ? Math.floor(total * ratio) : undefined,
+      fixedSalePrice: ratio < 1 && axisB ? applyRatio(total, ratio) : undefined,
     };
   });
   try {
@@ -397,7 +397,7 @@ export function computeTransferPerAssetSummary(
       salePrice = applyRatio(parseRaw(a.actualSalePrice), ratio);
     } else if (fractional && (axisBBundle || isSingle)) {
       // 지분 단계취득 (안분 프리뷰 불가 시) — 총액 × 지분 (API :493-495와 일치)
-      salePrice = Math.floor(parseRaw(formData.contractTotalPrice) * ratio);
+      salePrice = applyRatio(parseRaw(formData.contractTotalPrice), ratio);
     } else if (formData.bundledSaleMode === "apportioned" && !isSingle) {
       salePending = true; // 기준시가 미입력 등 — «계산 후 표시»
     } else {
@@ -426,7 +426,7 @@ export function computeTransferPerAssetSummary(
 
     // ── 취득가액 ──
     const acqSource = directAcqRaw(a);
-    let acqPrice = fractional ? Math.floor(acqSource.value * ratio) : acqSource.value;
+    let acqPrice = fractional ? applyRatio(acqSource.value, ratio) : acqSource.value;
     // 미확정 파트·필지가 있으면 계산 후 확정 — 부분합을 총액으로 표시하지 않는다.
     let acqPending = acqSource.pending;
     /** 아래 분기가 이미 감가상각비를 공제한 값을 내는가(일반건물 카드 합) — 이중 공제 방지. */
@@ -555,13 +555,13 @@ export function computeTransferPerAssetSummary(
     // — ⑤·⑧과 같은 술어). swap(§97②2호 단서)은 취득가액이 0이라 뺄 것이 없다.
     if (acqPrice > 0 && !depAlreadyDeducted && !singleResult?.swapApplied && depreciationSupport(a).status === "ok") {
       const depRaw = parseRaw(a.depreciationAmount);
-      const dep = fractional ? Math.floor(depRaw * ratio) : depRaw;
+      const dep = fractional ? applyRatio(depRaw, ratio) : depRaw;
       if (dep > 0) acqPrice = Math.max(0, acqPrice - dep);
     }
 
     // ── 필요경비 ──
     const expBase = directExpenseRaw(a);
-    let expense = fractional ? Math.floor(expBase * ratio) : expBase;
+    let expense = fractional ? applyRatio(expBase, ratio) : expBase;
     // 다필지에 환산 필지가 섞이면 그 필지의 개산공제(§163⑥)가 계산 후에야 확정된다 —
     // 입력분만 더한 부분합을 총액으로 보이지 않게 pending으로 시작한다.
     let expensePending = isParcelMode(a) && parcelAcqSum(a).pending;
