@@ -1,6 +1,6 @@
 # 토지·건물 구분 기재(split) 양도시 기준시가 V7 — 2016.1.1. 전 양도 ⑧↔⑫ 불일치 수정 계획서
 
-> 작성 2026-10-21 · master `f204df8f2` 기준 · 상태: **Plan 완료(재현·엔진 결정·모의 수정 검증까지) — Do 미착수**
+> 작성 2026-10-21 · master `f204df8f2` 기준 · 상태: **✅ Plan 확정 (2026-10-21 사용자 결정 — Q-1 ⑫를 좁힘 · Q-2 ⑧ 엄격 47셀은 별건) → Do**
 > 관련: `docs/00-pm/sale-split-100-3-era-gate.plan.md`(Q-2 결정·#2241/#2244) · memory `project_sale_split_100_3_era_gate` · `feedback_fe8_vs_12_parity_grid`
 
 ## 0. 한 줄 요약

@@ -1,7 +1,7 @@
 # 입력 카드 지분 안내 금액 `Math.floor(금액 × 지분)` 1원 과소 — 수정 계획서
 
 **작성**: 2026-10-21 · **base**: master `f204df8f2` · **선행**: 지분 규약 `applyRatio` 십진 정확화 #2368(`docs/00-pm/share-ratio-apply-float-precision.plan.md` §9.4 「확인 필요」 2건을 이 계획서가 받는다)
-**상태**: 📝 Plan 초안 — 결정 사항 없음(§6) → Do 대기
+**상태**: ✅ Plan 확정 (2026-10-21 사용자 승인 — 결정 사항 없음) → Do
 **실측 원자료**: 세션 scratchpad `plan3-a/`(probe1·3·4.ts · probe2.mjs · render/body/den.probe.test.tsx · scan.mjs · scan.out) — 세션이 끝나면 지워진다. 제품 코드·테스트는 아직 한 줄도 바꾸지 않았다(`git status` clean).
 
 ---

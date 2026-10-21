@@ -1,7 +1,7 @@
 # 부담부증여 채무비율(B/C) 부동소수 1원 과소 — 수정 계획서
 
 **작성**: 2026-10-21 · **base**: master `f204df8f2` · **선행**: 지분 규약 `applyRatio` #2368(`docs/00-pm/share-ratio-apply-float-precision.plan.md` §4 축 D·§6 Q2·§9.3에서 「채무비율은 별건」으로 분리)
-**상태**: 📝 Plan 초안 (사용자 결정 대기 — §8) · 제품 코드 무변경(조사·probe만)
+**상태**: ✅ Plan 확정 (2026-10-21 사용자 결정 — Q1 (b) 부동산 PR-1 + 주식 S-1 PR-2 · Q2 (a) 순차 floor · Q3 (a) `debtFraction` 교체 · Q4 (a) 기존 가드 재현 · Q5 (a) 한계 문서화) → Do
 **실측 원자료**: 세션 scratchpad `plan3-b/`(p1~p6.mts · redev.pair.test.ts · observe.setup.ts · out.log · observe.log) — 세션이 끝나면 지워진다. 제품 파일은 한 줄도 바꾸지 않았다(probe는 전부 scratch의 복사·mock).
 
 ---
