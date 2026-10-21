@@ -1,6 +1,6 @@
 # 종부세 주택 카드 — 상세주소 칸 숨김(한 글자씩 입력 결함 · #2343 회귀) — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1)** · 워크트리 `../Property-related-Taxes-pcin` · 브랜치 `docs/property-card-detail-hide-plan`
+> 작성 2026-10-21 · 상태 **Do 진행 — Q-1 권고안 a(2026-10-21 사용자 결정)** · 워크트리 `../Property-related-Taxes-pcin` · 브랜치 `docs/property-card-detail-hide-plan`
 > 기준 master `50c759cfd`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `comprehensive-property-card-dongho.plan.md`(#2342·#2343) 뒤 「확인 필요」로 남긴 항목. 그 계획의 Q-1 b(상세주소 칸 숨김)를 **새 실측으로 다시 권고**한다.
 > 실측 spec은 커밋하지 않았다. 주소 검색·공시가격은 `page.route`로 고정했다.
@@ -75,7 +75,7 @@
 - **기존 E2E**: `comprehensive-*` 전 spec · 주소 검색을 쓰는 spec
 - **pre-push 게이트**: 워크트리라 husky가 돌지 않는다. 폰트·톤·다크 짝·러너, typecheck, lint, 범위 선택 테스트를 수동으로 돌린다
 
-## 결정 필요
+## 결정 — 2026-10-21 사용자 결정: Q-1 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
