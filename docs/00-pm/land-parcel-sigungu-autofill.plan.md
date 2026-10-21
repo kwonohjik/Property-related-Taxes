@@ -1,6 +1,6 @@
 # 종부세 토지 필지 — 지번 검색 시 시군구 미채움 · 주소를 바꿔도 옛 시군구 잔존 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1)** · 워크트리 `../Property-related-Taxes-meas` · 브랜치 `docs/land-parcel-sigungu-plan`
+> 작성 2026-10-21 · 상태 **Do — Q-1 권고안 a 결정(2026-10-21)** · 워크트리 `../Property-related-Taxes-meas` · 브랜치 `docs/land-parcel-sigungu-plan`
 > 기준 master `ce77e3201`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `address-detail-dead-input.plan.md` §0.4(범위 밖 「확인 필요」).
 > 실측 probe는 커밋하지 않았다.
@@ -119,7 +119,7 @@
 - **기존 테스트**: 종부세 토지 관련 렌더·E2E(`comprehensive-land-*`·`comprehensive-tax*`)
 - **pre-push 게이트**: 워크트리라 husky가 돌지 않는다. 폰트·톤·다크 짝·러너, typecheck, lint, 범위 선택 테스트를 수동으로 돌린다
 
-## 결정 대기
+## 결정 — 2026-10-21 사용자 결정: Q-1 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
