@@ -1,6 +1,6 @@
 # 함께 양도 두 번째 자산 — 매매 분리취득이면 ⑫가 화면에 없는 자산 전체 취득가액을 요구해 400 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 사용자 결정 Q-1 대기** · 워크트리 `../Property-related-Taxes-cfap` · 브랜치 `docs/companion-split-fixed-acq-plan`
+> 작성 2026-10-21 · 상태 **Do — Q-1 권고안 a 결정(2026-10-21)** · 워크트리 `../Property-related-Taxes-cfap` · 브랜치 `docs/companion-split-fixed-acq-plan`
 > 기준 master `f204df8f2`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `split-v7-era-and-legacy-expense.plan.md` §6.4(범위 밖 발견, PR #2370 작업 중).
 > 실측 probe(`__tests__/calc/_probe-cfap*.test.ts*`)는 커밋하지 않았다.
