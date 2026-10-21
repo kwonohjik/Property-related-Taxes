@@ -17,6 +17,8 @@
 import { describe, it, expect } from "vitest";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
+import { validateRedevelopmentAsset } from "@/lib/calc/transfer-tax-validate-redev";
+import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 
 const trig = (acquisitionDate: string, redevFirstDisclosureDate: string) =>
   isRedevPhdTriggered({ useEstimatedAcquisition: true, acquisitionDate, redevFirstDisclosureDate });
@@ -71,9 +73,7 @@ describe("의제취득일(1985-01-01) 보정", () => {
  * 그 필드를 요구한다」 같은 dead-end가 생긴다.
  */
 describe("⑧ validate 동기화", () => {
-  it("의제취득일 보정 케이스에서 validate가 §164⑦ 필수입력을 요구하지 않는다", async () => {
-    const { validateRedevelopmentAsset } = await import("@/lib/calc/transfer-tax-validate-redev");
-    const { makeDefaultAsset } = await import("@/lib/stores/calc-wizard-asset-factory");
+  it("의제취득일 보정 케이스에서 validate가 §164⑦ 필수입력을 요구하지 않는다", () => {
     const asset = {
       ...makeDefaultAsset(1),
       assetKind: "redevelopment_apt" as const,
