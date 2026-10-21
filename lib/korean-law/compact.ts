@@ -146,11 +146,12 @@ export function stripRepeatedSummary(
 
 /**
  * 전각 공백 등 제거, HTML 엔티티 디코딩 (&amp; 순서 주의 — 마지막).
+ * 마크업 태그만 지운다 — 결정례 본문의 「<별지 1>」「<제337호, 2024. 1. 30.>」은 글로 남긴다(`article-parser.ts` `cleanHtml`과 같은 규칙).
  */
 export function cleanHtml(text: string): string {
   if (!text) return text;
   return text
-    .replace(/<[^>]+>/g, "")
+    .replace(/<(?:\/?[A-Za-z]|!)[^<>]*>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")

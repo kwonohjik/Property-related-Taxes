@@ -87,6 +87,10 @@ export function circledHangNumber(mark: string): number | null {
 /**
  * HTML 태그 제거 + 엔티티 디코딩.
  *
+ * 지우는 것은 **마크업 태그**(`<` 바로 뒤가 영문자·`/`·`!`)뿐이다. 법제처 본문의 꺾쇠 주석 — 조문의 「<개정 2023.2.28>」
+ * 「삭제<2008.2.22>」 — 은 글로 남긴다(결정례 본문은 `compact.ts` `cleanHtml`이 같은 규칙으로 「<별지 1>」을 남긴다). 종전 `/<[^>]+>/g`는 이것들과
+ * 「양도가액 < 취득가액 … > 」 사이 글자까지 지웠다. 현행 조문 경로(`getLawText`)는 원래 주석을 남긴다.
+ *
  * 주의: &amp; 는 반드시 **마지막**에 처리해야 한다. 그렇지 않으면
  *   "&amp;lt;" (→ "&lt;" 원본 의도) 가
  *   "&lt;" (&amp; 먼저 → &lt; 바뀜 → 다시 < 로 이중 디코딩)
@@ -99,7 +103,7 @@ export function cleanHtml(text: string): string {
   if (!text) return text;
   return text
     .replace(/<img[^>]*>/gi, "") // 이미지 태그는 조문 파싱에서 제외
-    .replace(/<[^>]+>/g, "")
+    .replace(/<(?:\/?[A-Za-z]|!)[^<>]*>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")

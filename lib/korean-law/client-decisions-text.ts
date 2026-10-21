@@ -86,7 +86,8 @@ export async function getDecisionText(
   const full = options.full ?? false;
   // v2: 구조화 필드 추가로 캐시 포맷 변경
   // v3: expc·admrul 본문 파서 수정 — 종전 파서가 남긴 빈약한 결과(제목 없음·부분 본문)를 재사용하지 않는다.
-  const cacheKey = `decision_text_${domain}_${id}_${full ? "full" : "comp"}_v3`;
+  // v4: 꺾쇠 주석(「<별지 1>」 등) 보존(`cleanHtml`) — 종전 캐시는 주석이 지워진 본문이다
+  const cacheKey = `decision_text_${domain}_${id}_${full ? "full" : "comp"}_v4`;
   const cached = await readCache<DecisionText>(cacheKey);
   if (cached) return cached;
 
