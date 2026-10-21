@@ -13,6 +13,7 @@ import { applyGbCarryoverShareScale } from "./transfer-tax-api-gb-carryover";
 import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { fixedAcquisitionPriceRaw } from "./transfer-tax-api-companion-payload";
 import { parseAmount } from "@/lib/calc/number-parse";
+import { toEngineReductions } from "./transfer-tax-api-reductions";
 
 /**
  * 물건-수준 GB 폼 필드 — primary에서 복사한다.
@@ -176,6 +177,12 @@ export interface GeneralBuildingSharePayloadOut {
   acquisitionPrice: number;
   expenses: number;
   valuation: Record<string, unknown>;
+  /**
+   * 그 지분의 조특법 감면 — **둘째 지분부터**. 첫 지분은 단건과 같은 최상위 `reductions`가 정본이다.
+   * 지분마다 받는 이유: §77처럼 취득 시점이 요건인 감면은 지분 취득일마다 판정이 갈린다(계획서
+   * `docs/00-pm/burdened-gift-bundle-residuals.plan.md` Q-2 a). 종전에는 실을 칸이 없어 감면이 엔진에 닿지 않았다.
+   */
+  reductions?: ReturnType<typeof toEngineReductions>;
 }
 
 /**
@@ -221,6 +228,7 @@ export function buildGeneralBuildingShares(
       expenses: applyRatio(parseAmount(asset.directExpenses), ratio),
       // 자본적지출·양도비는 `valuation` 안에 있고 `applyShareScale`이 이미 × r 했다.
       valuation: scaled,
+      ...(i > 0 ? { reductions: toEngineReductions(asset.reductions ?? [], merged, asset.expropriationNoticeDate) } : {}),
     });
   }
   return out;

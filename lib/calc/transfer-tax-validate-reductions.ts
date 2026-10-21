@@ -13,6 +13,7 @@ import {
   isIncomeDeductionTrack,
   isTaxAmountTrack,
 } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
+import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { isReductionAllowedForAssetKind, REDUCTION_METADATA, canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -83,7 +84,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
   if (step === 2) {
     const assets = form.assets ?? [];
     for (let ai = 0; ai < assets.length; ai++) {
-      const asset = assets[ai];
+      // 축 B 지분 카드는 첫 카드의 물건 값으로 본다 — ④·⑤ 감면 패널과 같은 leaf(저장 `assetKind`는 기본값 «주택»이다).
+      const asset = axisBEffectiveAsset(form, ai);
       const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
       // 원조합원 §166 자산의 화면에 없는 기준시가 칸 — 감면 기준시가 폴백으로 인정하지 않는다(④는 싣지 않는다, ⑤⑧과 같은 leaf).
       const redevHiddenStd = redevHiddenGeneralStdPrice(asset, form);
