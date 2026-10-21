@@ -29,7 +29,7 @@
 import { judgeDeemedUnclearSplit, type SaleSplitPair } from "./sale-split-deemed-unclear";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import { housingExcessSplitAppliesToInput } from "./housing-excess-split";
-import { splitPair, type PartAcqMode } from "./transfer-tax-split-acq-price";
+import { splitPair, type LandApportion, type PartAcqMode } from "./transfer-tax-split-acq-price";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { AcqSplitJudgmentDetail, SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput } from "./types/transfer.types";
@@ -57,7 +57,7 @@ export function resolveHousingExcessAcqContract(
   input: TransferTaxInput,
   landMode: PartAcqMode,
   buildingMode: PartAcqMode,
-  landRatio: number | null,
+  landApportion: LandApportion | null,
 ): { input: TransferTaxInput; judgment?: AcqSplitJudgmentDetail } {
   const land = input.acqContractLandPrice;
   const building = input.acqContractBuildingPrice;
@@ -82,7 +82,7 @@ export function resolveHousingExcessAcqContract(
 
   const declared: SaleSplitPair = { land, building };
   // 안분 가액 = 종전 경로가 총액을 나누던 값 그대로(취득시 기준시가 비율 — 영 §166⑥). 한 곳(`splitPair`)만 쓴다.
-  const apportioned = splitPair(total, undefined, undefined, landRatio, "취득가액");
+  const apportioned = splitPair(total, undefined, undefined, landApportion, "취득가액");
   const era = sec100_3Era(input.transferDate);
   const judged = judgeDeemedUnclearSplit({
     declared,

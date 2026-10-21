@@ -32,6 +32,7 @@
  */
 
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 
 /**
  * PHD 환산 입력 (감면 조문용 단순화 7개 필드)
@@ -123,7 +124,7 @@ export function calcReductionAcquisitionStdPrice(
   // P_A_est 산출 (§164⑦ 본문)
   const ratio = sumAtFirstDisclosure > 0 ? sumAtAcquisition / sumAtFirstDisclosure : 0;
   const estimatedAcquisitionStdPrice = sumAtFirstDisclosure > 0
-    ? Math.floor(firstDisclosurePrice * sumAtAcquisition / sumAtFirstDisclosure)
+    ? safeMultiplyThenDivide(firstDisclosurePrice, sumAtAcquisition, sumAtFirstDisclosure)
     : 0;
 
   const formulaSteps: ReductionPhdResult["formulaSteps"] = [

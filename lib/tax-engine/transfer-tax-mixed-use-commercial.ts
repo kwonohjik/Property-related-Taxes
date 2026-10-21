@@ -10,6 +10,7 @@ import { buildingDirectShare, deductCommercialDepreciation, isConversionAcq, per
 import type { MixedSalePart } from "./mixed-use-sale-split";
 import { estimatedDeductionRate } from "./legal-codes";
 import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate, computeEstimatedDeduction } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyExprTotalDenominator,
   type ExprTotalValuationDetail,
@@ -236,11 +237,13 @@ export function calcCommercialGainSplit(
   }
 
   // 시행령 §166⑥: 양도가액은 양도시 비율, 취득가액은 취득시 비율로 안분 — **원값**(특례 미적용).
-  const acqLandRatio = acqTotalStd > 0 ? acqLandStd / acqTotalStd : 0.5;
-  const transferLandRatio = transferTotalStd > 0 ? transferLandStd / transferTotalStd : acqLandRatio;
+  // 비율은 분자·분모 쌍으로 둔다 — `금액 × (분자 ÷ 분모)`는 참값이 정수일 때 1원 과소가 난다(계획서 estimated-acquisition-float-precision §6.1).
+  // 취득시 합계가 없으면 균등 1/2(도달 불가 방어선), 양도시 합계가 없으면 취득시 쌍으로 후퇴한다 — 종전 값과 같다.
+  const acqBasis = acqTotalStd > 0 ? { n: acqLandStd, d: acqTotalStd } : { n: 1, d: 2 };
+  const transferBasis = transferTotalStd > 0 ? { n: transferLandStd, d: transferTotalStd } : acqBasis;
 
   // 양도가액 안분 — 양도시 비율 (새 안분이면 주입값)
-  const landTransferPrice = salePart ? salePart.land : Math.floor(commercialTransferPrice * transferLandRatio);
+  const landTransferPrice = salePart ? salePart.land : safeMultiplyThenDivide(commercialTransferPrice, transferBasis.n, transferBasis.d);
   const buildingTransferPrice = salePart ? salePart.building : commercialTransferPrice - landTransferPrice;
 
   // 새 안분 + 환산이면 **파트별 환산**(Q-8). 공익수용은 새 안분 범위 밖이라(Q-9) 수용 분모와 겹치지 않는다.
@@ -254,7 +257,7 @@ export function calcCommercialGainSplit(
 
   // 취득가액 안분 — 취득시 비율.
   // §97②2호 단서(나목) 채택 시에는 **차감하지 않는다**(가목에 이미 포함 — 이중차감 금지).
-  const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : Math.floor(estimatedAcqPrice * acqLandRatio);
+  const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : safeMultiplyThenDivide(estimatedAcqPrice, acqBasis.n, acqBasis.d);
   // §97③ 상가건물 감가상각비 차감 — 단서 비교(가목)는 **차감 전** 값으로 한다(전 경로 같은 결정 · 사용자 결정 2026-10-20).
   const buildingAcqBeforeDepreciation = swapToDirect ? 0 : perPart ? perPart.building : estimatedAcqPrice - landAcqPrice;
   const buildingAcqPrice = deductCommercialDepreciation(buildingAcqBeforeDepreciation, asset);

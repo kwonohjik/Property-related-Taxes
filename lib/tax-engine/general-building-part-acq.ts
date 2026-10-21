@@ -174,12 +174,12 @@ export function applyPartAcqModes(
 
   /**
    * 비-환산 파트는 **파트별 완결**이다 — 총액을 참조하지 않는다.
-   * `isSeparate: true`가 그 규약이고, `landRatio: null`은 안분 경로가 쓰이지 않음을 뜻한다
+   * `isSeparate: true`가 그 규약이고, `landApportion: null`은 안분 경로가 쓰이지 않음을 뜻한다
    * (총액 안분이 필요한 조합은 애초에 이 경로로 오지 않는다).
    */
   const ctx = {
     isSeparate: true,
-    landRatio: null,
+    landApportion: null,
     landAcquisitionPrice: input.landAcquisitionPrice,
     buildingAcquisitionPrice: input.buildingAcquisitionPrice,
     landSalesCaseValue: input.landSalesCaseValue,

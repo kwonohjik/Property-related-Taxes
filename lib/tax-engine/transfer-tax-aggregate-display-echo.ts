@@ -8,6 +8,7 @@ import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types
 import { summarizeSplitGain, sumSplitLthdAmounts } from "./transfer-tax-split-display";
 import { LTHD_HOLDING_STEP_LABEL, LTHD_RESIDENCE_STEP_LABEL } from "./transfer-tax-lthd-steps";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 /**
  * **[표시 전용]** 배우자등 이월과세(§97의2) 자산의 「취득가액 열」 정본 —
@@ -148,7 +149,7 @@ export function resolveDisplayAcquisitionAndExpense(r: {
         (r.result.usedEstimatedAcquisition
           ? (r.result.estimatedBase ??
               (tsfStd > 0
-                ? Math.floor((r.singleInput.transferPrice * (r.singleInput.standardPriceAtAcquisition ?? 0)) / tsfStd)
+                ? safeMultiplyThenDivide(r.singleInput.transferPrice, r.singleInput.standardPriceAtAcquisition ?? 0, tsfStd)
                 : 0))
           : r.singleInput.acquisitionPrice) - (r.result.depreciationAmount ?? 0));
   // 비과세 자산: gross(exemptGrossGain)와 취득가액으로 필요경비 역산(환산 시 개산공제분).

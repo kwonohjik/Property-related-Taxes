@@ -1,7 +1,7 @@
 # 환산취득가액 산식 부동소수 1원 과소 — 수정 계획서
 
 **작성**: 2026-10-21 · **base**: master `4340b7985` · **출처**: P6(주택 split 파트 이월과세 환산) 엔진 Do 중 발견한 별건 후보
-**상태**: ✅ Plan 확정 (2026-10-21 사용자 결정 — Q1 인접 축 포함(단 지분 규약 `applyRatio`는 제외, §6.1) · Q2·Q3 권장안) → P6 머지 후 Do
+**상태**: ✅ Do 완료(§9) · Plan 확정 (2026-10-21 사용자 결정 — Q1 인접 축 포함(단 지분 규약 `applyRatio`는 제외, §6.1) · Q2·Q3 권장안) → P6 머지 후 Do
 **실측 원자료**: 세션 scratchpad `estfl/`(probe.mjs~probe5.mjs · e2e.probe.test.ts · measure.py · res.json) — 세션이 끝나면 지워진다.
 
 ---
@@ -116,3 +116,33 @@ Q1을 (b)로 정한 뒤 인접 축을 다시 전수했다. **지분 규약은 �
 
 - 다른 세목의 비슷한 식: `transfer-tax-aggregate-reduction-step.ts:730`(감면 한도 안분, R) · `lib/calc/inheritance-deduction-suggest.ts:453`(R) · 주식 `stock-valuation-post-listing.ts:577`·`lot-allocation-tax.ts:154`(P) — 환산이 아니라 이 계획서에서 실측하지 않았다.
 - `Math.floor(p / c)`가 곱 ≤ 2^53에서 과대로 반올림되는 경우는 18표본 경계 탐색에서 0이었다(곱 상한이 몫의 ulp를 1/c 이하로 묶는다) — 정본 헬퍼는 안전하다고 판단했다.
+
+
+## 9. Do 결과 (2026-10-21, 브랜치 `fix/estimated-acq-float-precision`)
+
+### 9.1 변경 지점 — 29곳 전부 반영 (계획서 28곳 + A1 `splitPair`)
+
+| 구분 | 지점 | 바꾼 식 |
+|---|---|---|
+| 1단계 | `transfer-tax-split-acq-price.ts` 파트 환산(#1) · `transfer-tax-carryover.ts`(#2) | `calculateEstimatedAcquisitionPrice` |
+| 1단계 | `transfer-tax-pre-housing-disclosure.ts` 14곳 · `transfer-reductions/phd-helper.ts` · `transfer-tax-aggregate-display-echo.ts` | `safeMultiplyThenDivide` |
+| A1 | `splitPair` — 비율 대신 **기준시가 쌍**(`LandApportion {landStd, totalStd}`)을 받는다. `calcApportionRatio`는 소수 비율(표시·분기용, 그대로)에 `landStd`·`totalStd`를 덧붙여 반환. 소비자: `calcPartAcquisitionPrice` ctx(`landRatio` → `landApportion`) · `calcSplitAcquisitionPrice` · `resolveHousingExcessAcqContract` · `transfer-tax-split-gain.ts` 자본적지출 안분 · `general-building-part-acq.ts`(`null`) | `safeMultiplyThenDivide`(잔액 흡수 유지) |
+| A2~A5 | 겸용 상가·주택·상속·헬퍼. 비율 변수를 **분자·분모 쌍**으로 바꿈. 합계 0 fallback(`0.5` → `1/2`, 양도시 합계 없으면 취득시 쌍)은 종전 값과 같다 | `safeMultiplyThenDivide` |
+| A6 | `calc-wizard-store.ts` 사이드바 겸용 양도가액 — 엔진 A5와 같은 값 | 〃 |
+| B1 | `-housing.ts`·`-housing-acq.ts` 용도변경 면적 비율 — 면적을 `Math.round(면적×100)`(0.01㎡ 정수)로 | 〃 |
+제외 유지: `applyRatio`(69곳) · 사이드바 지분 `:405` · `nonBizRatio`(정적 가드 허용 목록에 사유 기재).
+입력·결과 **타입 불변** → 14개 동기화 지점(⑧ validate 포함) 대상 아님. UI/API fallback은 추가하지 않았다.
+
+### 9.2 anchor — 4파일 48건 + 정적 가드 8건, 수정 전 실패 36건(anchor)
+`__tests__/tax-engine/transfer/estimated-acq-float-precision.{split,carryover-display,phd,mixed-use}.anchor.test.ts`(48건) + `__tests__/lib/estimated-acq-float-policy.test.ts`(8건). 수정 전 소스로 되돌려 anchor 4파일을 돌리면(결정세액 사례 2건을 더하기 전 46건 실측 34건 실패 · 12건 통과, 더한 2건도 수정 전 실패) **36건 실패 · 12건 통과**(통과 12건은 전제 고정·회귀 가드·분모 0 방어선). 그중 2건은 새 시그니처(`landApportion`·`splitPair` 객체 인자)를 쓰는 직접 호출이라 값이 아니라 API로 실패한다.
+- 일반건물 estimated 경로는 `general-building-converted-acquisition.ts`가 이미 정본 헬퍼를 쓴다 — `calcPartAcquisitionPrice` 환산 분기에는 split 경로만 닿는다(일반건물 테스트 124건에 임시 throw를 넣어 확인). 계획서 §3 #1의 「일반건물 파트」는 split 경로의 비주택 건물(`propertyType: building`)이다.
+- PHD 14곳은 「개별주택가격 = 시점 기준시가 합」 항등 가족에서 참값이 모두 정수라 한 입력이 여러 지점을 동시에 건드린다(기본 3시점 표본 1건이 6곳, 4부분 표본 5건이 8곳). 무작위 실무형 입력은 참값이 정수가 아니라 0건이므로 가족 구조가 필요했다.
+
+### 9.3 결정세액이 바뀌는 사례
+토지·건물 별개 취득 환산(S1) 8,000건 쌍대 탐색(옛/새 엔진 같은 입력): 취득가액이 달라진 288건 중 **69건에서 결정세액이 1원 낮아졌다**(mock 세율). 예: 양도가 243,199,424/165,217,000 · 양도시 453,355,448/404,451,216 · 취득시 14,993,216(1㎡)/23,675,832 → 토지 환산 8,043,007→**8,043,008**, 결정세액 89,218,893→**89,218,892**. anchor `결정세액 변화 사례`로 고정.
+
+### 9.4 정적 가드 · 뮤테이션 · 회귀
+- 가드 `__tests__/lib/estimated-acq-float-policy.test.ts` — 고친 11파일에서 R(`a*(b/c)`)·P(`a*b/c`, `(a*b)/c`)·RV(`금액*비율변수`/`…Ratio`) 0건. 허용 목록 3건(사이드바 지분 `:405`, `nonBizRatio` 2곳 — 사유 기재, 낡은 항목 검출 테스트 포함). 수정 전 소스에 돌리면 28건을 잡는다(A1은 `…Ratio` 이름 규칙 추가 후 29건).
+- 뮤테이션 29곳(각 지점을 옛 식으로 되돌림): **anchor 29/29 KILLED, 가드 29/29 KILLED**, 생존 0. 원복은 cp 백업 + sha 확인.
+- 회귀: `tsc --noEmit` 0건 · `npm run lint` 오류 0(경고 361, 사전 존재) · `vitest run __tests__/` **3,216파일 통과 + 1 skipped / 38,328건 통과 · 13 skip · 309 todo, 실패 0** · 정적 게이트 4종(폰트·톤·다크 짝·워크플로 러너) 통과. **기존 테스트의 기대값은 하나도 바뀌지 않았다**(계획서 §4.1 예측대로 — 기존 픽스처는 이 조합을 쓰지 않는다).
+- 브라우저 수동 확인은 하지 않았다(입력·결과 타입 불변 · UI 표시 코드 변경 없음, 사이드바 A6은 anchor로 엔진 일치 확인).

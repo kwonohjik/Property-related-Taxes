@@ -8,6 +8,7 @@
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 import { applyFairMarketRatio } from "./tax-utils"; // 장특 공제율 × 차익 — double 공제율(0.68 등)의 1원 과소 방지(일반 경로 `applyLthdRate`와 같은 leaf)
 import { calculateProration } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { getHousingMultiplier } from "./non-business-land/urban-area";
 import { resolveAppurtenantLandLthdRate, resolveAppurtenantLthdNoticeBasis } from "./appurtenant-land-lthd-rate";
 import {
@@ -124,7 +125,7 @@ export function apportionTransferPrice(
   }
 
   const housingRatio = housingStdPrice / totalStd;
-  const housingTransferPrice = Math.floor(totalTransferPrice * housingRatio);
+  const housingTransferPrice = safeMultiplyThenDivide(totalTransferPrice, housingStdPrice, totalStd);
   const commercialTransferPrice = totalTransferPrice - housingTransferPrice;
 
   return {
@@ -180,7 +181,9 @@ export function apportionAcquisitionPrice(
   // totalStd<=0은 validation(취득시 기준시가 3필드 필수)에서 선차단되어 실경로 도달 불가 — 방어적 균등 0.5.
   // (양도가액 apportionTransferPrice는 미러이나 이 극단 fallback만 0 반환으로 다름 — 도달 불가라 영향 없음.)
   const housingRatio = totalStd > 0 ? housingStd / totalStd : 0.5;
-  const housingAcqPrice = Math.floor(totalAcqPrice * housingRatio);
+  const housingAcqPrice = totalStd > 0
+    ? safeMultiplyThenDivide(totalAcqPrice, housingStd, totalStd)
+    : safeMultiplyThenDivide(totalAcqPrice, 1, 2); // 균등 1/2 — 도달 불가 방어선(종전 0.5와 같은 값)
   return {
     housingRatio,
     housingAcqPrice,
