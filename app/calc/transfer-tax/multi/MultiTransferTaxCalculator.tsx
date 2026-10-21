@@ -30,7 +30,9 @@ import {
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import {
+  areAllPropertiesReady,
   calcPropertyCompletion,
+  notReadyPropertiesMessage,
   validateMultiSettings,
 } from "@/lib/calc/multi-transfer-tax-validate";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
@@ -244,7 +246,9 @@ export default function MultiTransferTaxCalculator() {
       completionPercent: completion,
     });
     resetWizard();
-    setStep("settings");
+    // 다른 건에 필수 정보가 남았으면 그 안내가 있는 목록으로 보낸다 — 목록 「공통 설정으로」와 같은 조건(계획서 M2).
+    // 방금 `updateProperty`로 저장한 이 건을 포함해 판정해야 하므로 closure `form`(저장 전)이 아니라 live 상태를 읽는다.
+    setStep(areAllPropertiesReady(useMultiTransferStore.getState().form.properties) ? "settings" : "list");
   }, [form.activePropertyIndex, updateProperty, resetWizard, setStep]);
 
   // 진입 시 자산이 0개면 자동으로 첫 자산 추가 → 즉시 마법사 step 0으로 이동
@@ -331,7 +335,8 @@ export default function MultiTransferTaxCalculator() {
   // 계산 실행
   const handleCalculate = async () => {
     setError(null);
-    const validationError = validateMultiSettings(form);
+    // 최종 관문 — 어느 입구로 들어왔든 필수 정보가 남은 건이 있으면 계산하지 않는다(계획서 M1)
+    const validationError = notReadyPropertiesMessage(form.properties) ?? validateMultiSettings(form);
     if (validationError) {
       setError(validationError);
       return;
@@ -399,6 +404,8 @@ export default function MultiTransferTaxCalculator() {
             //    아무것도 렌더하지 않아 **빈 화면**이 된다. 마운트 시 리다이렉트(`:418`)는
             //    deps가 `[]`라 이 클릭에는 도달하지 않는다 — 여기서 막는다.
             if (target === "result" && !result) return;
+            // 목록의 「공통 설정으로」(`MultiTransferSteps.tsx` `disabled`)와 같은 조건 — 종전엔 이 탭이 그 차단을 건너뛰었다(계획서 M2)
+            if (target === "settings" && (form.properties.length === 0 || !areAllPropertiesReady(form.properties))) return;
             setStep(target);
           }}
         />

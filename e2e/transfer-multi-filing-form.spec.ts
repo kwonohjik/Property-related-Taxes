@@ -19,6 +19,8 @@ import { openHistoryModal } from "./_helpers/navigation";
 /** 단순 토지 자산 폼 (NBL·감면 없음) — API 필수 필드 충족. */
 function landAsset(price: string, area: string) {
   return {
+    // 소재지 — 다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts). 건마다 다른 물건이다.
+    addressJibun: `서울 강남구 테스트동 ${price}`,
     assetKind: "land",
     acquisitionDate: "2015-01-01",
     acquisitionArea: area,

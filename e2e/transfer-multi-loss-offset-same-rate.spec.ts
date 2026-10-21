@@ -66,6 +66,9 @@ function propertyForm(o: {
     wasRegulatedAtAcquisition: false,
     isUnregistered: o.unregistered ?? false,
     isOneHousehold: false,
+    // 명부 0행 = 「없음」 확정 — 다건 「세액 계산」도 자산별 필수 검증을 거친다(transfer-multi-step-gate.spec.ts)
+    householdNoOtherHousesConfirmed: true,
+    householdNoPresaleRightsConfirmed: true,
   };
 }
 
