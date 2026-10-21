@@ -26,13 +26,13 @@ import { buildFractionalShareNblRecord } from "./non-business-land-request";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { collectStep1Issues } from "./transfer-tax-validate-step1";
 import { collectWithFields, type IssueField } from "./transfer-tax-validate-field";
-import { isMultiHouseSurchargeSuppressed, isFullFractionalBundle, mergePrimaryBasic } from "./transfer-tax-api-helpers";
-import { mergeGbPropertyLevel } from "./transfer-tax-api-gb-shares";
+import { isMultiHouseSurchargeSuppressed, isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
-import { burdenedGiftBundleKind } from "./burdened-gift-transfer-price-scope";
+import { isBlockedMixedBurdenedGiftBundle } from "./burdened-gift-transfer-price-scope";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-price-scope";
 import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
 
@@ -359,7 +359,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
         });
       }
       // 일반 양도 + 부담부증여 혼합 묶음 — 안분·채무 재배분이 설계되지 않아 세액이 틀린다(⑩과 같은 술어 · `burdenedGiftBundleKind` JSDoc).
-      if (!fullFractional && burdenedGiftBundleKind(form.assets.map((a) => a.transferType === "burdened_gift")) === "mixed") {
+      if (isBlockedMixedBurdenedGiftBundle(form.assets, form.assetSplitMode)) {
         issues.push({ step, message: MIXED_BURDENED_GIFT_BUNDLE_MESSAGE });
       }
 
@@ -404,14 +404,9 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     //    지분 카드는 면적·양도시 기준시가·용도지역을 **UI에서 숨기므로**(`shareAcquisitionOnly`)
     //    `mergePrimaryBasic`의 7키만으로는 「자산 2: 토지면적을 입력하세요」가 뜬다 —
     //    화면에 칸이 없는데 입력하라는 **UI 통과 ↔ validate 차단 모순**이다(CLAUDE.md ⑧).
-    //    ④ API 변환과 **같은 함수**를 쓴다(단일 소스 — 목록이 갈리면 한쪽만 통과한다).
+    //    ④ API 변환과 **같은 함수**를 쓴다(단일 소스 — 목록이 갈리면 한쪽만 통과한다). 감면 검증·⑤ 감면 패널도 같은 leaf다.
     for (let i = 0; i < form.assets.length; i++) {
-      const entry =
-        fullFractional && i > 0 && primaryAsset
-          ? isGbFractional
-            ? mergeGbPropertyLevel(form.assets[i], primaryAsset)
-            : mergePrimaryBasic(form.assets[i], primaryAsset)
-          : form.assets[i];
+      const entry = axisBEffectiveAsset(form, i);
       const message = validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
     }

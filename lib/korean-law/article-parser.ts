@@ -61,6 +61,23 @@ export function toCircledDigit(n: number): string {
   return "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"[n - 1];
 }
 
+const CIRCLED_HANG_MARKS = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟";
+
+/**
+ * 항 머리 표지(1~35 → ①~㉟). 범위 밖은 null.
+ * `toCircledDigit`(1~20, 범위 밖은 숫자 문자열)과 달리 21~35(㉑~㉟)까지 다룬다 — 소득세법 시행령 §155는 항이 25개다.
+ */
+export function circledHangMark(n: number): string | null {
+  if (!Number.isInteger(n) || n < 1 || n > CIRCLED_HANG_MARKS.length) return null;
+  return CIRCLED_HANG_MARKS[n - 1];
+}
+
+/** `circledHangMark`의 역 — ①~㉟ 한 글자 → 1~35. 그 밖은 null */
+export function circledHangNumber(mark: string): number | null {
+  const i = mark.length === 1 ? CIRCLED_HANG_MARKS.indexOf(mark) : -1;
+  return i < 0 ? null : i + 1;
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // 2. HTML cleanup (엔티티 디코딩 순서)
 // ────────────────────────────────────────────────────────────────────────────
@@ -193,7 +210,7 @@ export function formatArticleUnit(
   const hangArr = toArray(unit?.항);
   for (const hang of hangArr) {
     const no = parseHangNumber(hang?.항번호);
-    const text = flattenContent(hang?.항내용);
+    const text = flattenContent(hangContentWithMark(hang));
     if (text) hangs.push({ no: Number.isFinite(no) ? no : 0, text });
 
     // 호 · 목까지 본문에 합치려면 extractFullText 에서 처리
@@ -216,6 +233,24 @@ function toArray<T>(val: T | T[] | undefined | null): T[] {
 }
 
 /**
+ * 항내용 머리의 꺾쇠 항번호를 원숫자로 바꾼다.
+ *
+ * 법제처는 16항부터 항번호를 `<16>`처럼 꺾쇠로 주고 항내용도 `<16>제1항을 …`으로 시작한다. 그대로 `cleanHtml`을
+ * 거치면 태그로 지워져 ⑮ 다음부터 항 번호가 사라졌다(소득세법 시행령 §155 실응답).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hangContentWithMark(hang: any): unknown {
+  const m = typeof hang?.항번호 === "string" ? hang.항번호.trim().match(/^<(\d+)>$/) : null;
+  const mark = m ? circledHangMark(Number(m[1])) : null;
+  const content = hang?.항내용;
+  if (!mark) return content;
+  const withMark = (s: string) => s.replace(/^(\s*)<\d+>/, `$1${mark}`);
+  if (typeof content === "string") return withMark(content);
+  if (Array.isArray(content) && typeof content[0] === "string") return [withMark(content[0]), ...content.slice(1)];
+  return content;
+}
+
+/**
  * 조문단위에서 항·호·목까지 포함한 전체 본문을 재구성.
  * legacy client 의 extractUnitText 와 동등하나 cleanHtml 보강.
  */
@@ -225,7 +260,7 @@ function buildFullText(content: string, unit: any): string {
   if (content) parts.push(content);
 
   for (const hang of toArray(unit?.항)) {
-    const hangText = flattenContent(hang?.항내용);
+    const hangText = flattenContent(hangContentWithMark(hang));
     if (hangText) parts.push(hangText);
     for (const ho of toArray(hang?.호)) {
       if (ho?.호내용) parts.push(cleanHtml(String(ho.호내용)));

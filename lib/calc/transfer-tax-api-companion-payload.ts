@@ -37,6 +37,7 @@ import { isSeparateAcquisition } from "./transfer-tax-split-acq-mode";
 import { selfBuiltActive } from "./self-built-scope";
 import { generalExtensionAppraisalApplies } from "./extension-appraisal-penalty";
 import { buildSameAdjustmentPeriodInput } from "./transfer-same-adjustment-period-input";
+import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 import { buildCommercialAppurtenantLand, buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import { buildGeneralBuildingValuation as buildGeneralBuildingValuationForCompanion } from "./transfer-tax-api-gb";
@@ -485,9 +486,12 @@ export function buildAssetPayload(
           },
         }
       : {}),
-    directExpenses: fractional
-      ? applyRatio(parseAmount(asset.directExpenses), ratio)
-      : parseAmount(asset.directExpenses),
+    // 분리 계산 자산은 이전 형식 총액을 파트 칸으로 옮긴다(⑧이 막는다 — 단건 ④와 같은 술어 `legacyExpenseMovesToParts`).
+    directExpenses: legacyExpenseMovesToParts(asset, { isNonPrimary: true })
+      ? 0
+      : fractional
+        ? applyRatio(parseAmount(asset.directExpenses), ratio)
+        : parseAmount(asset.directExpenses),
     // §97② 단서 swap 분리 입력 — 자산-수준 자본적 지출·양도비.
     // 지분 모드: 100% 기준 입력값에 × ratio 자동 적용.
     // 양도비는 자산-수준 직접 입력 우선, 0이면 폼-수준 totalTransferExpense × ratio fallback (B3).

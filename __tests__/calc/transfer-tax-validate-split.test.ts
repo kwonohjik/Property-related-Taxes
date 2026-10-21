@@ -188,13 +188,14 @@ describe("validateSplitDirectInputs — 자본적지출 (총액 = directExpenses
     ).toBeNull();
   });
 
-  it("legacy directExpenses 1억 + 건물만 3천만 → 통과(잔액 7천만)", () => {
-    expect(
-      validateSplitDirectInputs(
-        splitAsset({ directExpenses: "100,000,000", buildingDirectExpenses: "30,000,000", landTransferPrice: "600,000,000" }),
-        "자산 1",
-      ),
-    ).toBeNull();
+  // 2026-10-21(계획서 split-v7-era-and-legacy-expense §3.2 Q-2 a) — 종전 「통과(잔액 7천만)」. 분리 계산 자산은 ④가 이전 형식 총액을
+  // 싣지 않으므로 파트 칸이 있어도 남은 이전 형식은 막는다 — 남겨 두면 화면에 숨은 총액이 잔액 규칙으로 다른 파트에 붙었다(§2.4).
+  it("legacy directExpenses 1억 + 건물만 3천만 → 이전 형식 칸에서 파트 칸으로 옮기게 차단", () => {
+    const err = validateSplitDirectInputs(
+      splitAsset({ directExpenses: "100,000,000", buildingDirectExpenses: "30,000,000", landTransferPrice: "600,000,000" }),
+      "자산 1",
+    );
+    expect(err).toContain("이전 입력 형식으로 저장된 필요경비 100,000,000원");
   });
 
   it("legacy directExpenses 1억 + 토지 7천만 + 건물 5천만 = 1.2억 → 차단", () => {

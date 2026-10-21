@@ -11,6 +11,7 @@
 import { z } from "zod";
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
+import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { carryoverExclusionShape, carryoverGiftEventShape, carryoverHouseholdStartIssues } from "./transfer-tax-schema-split-carryover";
 
@@ -569,6 +570,11 @@ export const generalBuildingShareSchema = z.object({
    *    share 레벨에 같은 필드를 다시 두지 않는다(단일 진실).
    */
   valuation: generalBuildingValuationSchema,
+  /**
+   * ⑫ 그 지분의 조특법 감면 — **둘째 지분부터**(첫 지분은 최상위 `reductions`). 정의가 없으면 침묵 stripping으로
+   * 감면이 엔진에 닿지 않는다(계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` §1.2).
+   */
+  reductions: z.array(reductionSchema).optional(),
 });
 
 /** 점 표기 경로로 중첩 값을 꺼낸다. */

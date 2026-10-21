@@ -83,11 +83,11 @@ export function runRedevelopment(
    * `computeRedevelopmentSplit`보다 **앞에서 조기 반환**하므로, 스케일을 split 안에 두면
    * 그 세 경로에 도달하지 않는다.
    *
-   * `debtRatio`가 없으면 `rawInput`을 그대로 돌려받는다 — 일반 양도 경로는 무변경이다.
+   * `debtFraction`이 없으면 `rawInput`을 그대로 돌려받는다 — 일반 양도 경로는 무변경이다.
    */
   const scaledRedevelopment = scaleRedevelopmentForBurdenedGift(
     rawInput.redevelopment,
-    rawInput.debtRatio,
+    rawInput.debtFraction,
   );
   /**
    * §166③ 환산 분기는 부담부증여에서 **완공 아파트(subject="apt")만** 점화된다 —
@@ -97,8 +97,8 @@ export function runRedevelopment(
    * 조합원입주권은 K-4(실지취득가액) 전용이라(설계 D-2) 여전히 여기서 멈춘다.
    */
   if (
-    rawInput.debtRatio !== undefined &&
-    rawInput.debtRatio !== 1 &&
+    rawInput.debtFraction !== undefined &&
+    rawInput.debtFraction.debt !== rawInput.debtFraction.valuation &&
     rawInput.useEstimatedAcquisition &&
     rawInput.redevelopment.subject !== "apt"
   ) {

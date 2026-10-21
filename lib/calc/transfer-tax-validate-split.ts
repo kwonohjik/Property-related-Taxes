@@ -34,6 +34,7 @@ import { isLandBuildingSplitable } from "./self-owns-scope";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { anyPartCarryover } from "./transfer-land-part-cause";
+import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
@@ -68,7 +69,9 @@ import { opt, validateSaleStdAndAppraisal } from "./transfer-tax-validate-split-
  */
 function withExpenses(asset: AssetForm) {
   // P2 C·P3 A·P4 B — ④는 파트 이월과세에서 자산 단위 총액을 싣지 않는다(엔진 S8). 인자도 같게 0.
-  return { ...asset, expenses: anyPartCarryover(asset) ? 0 : parseAmount(asset.directExpenses ?? "") };
+  // 이전 형식을 파트 칸으로 옮기는 자산도 ④가 싣지 않는다(`legacyExpenseMovesToParts`) — 취득시 기준시가 비율을 요구하지 않는다.
+  const notSent = anyPartCarryover(asset) || legacyExpenseMovesToParts(asset);
+  return { ...asset, expenses: notSent ? 0 : parseAmount(asset.directExpenses ?? "") };
 }
 
 /**
@@ -636,6 +639,14 @@ export function validateSplitDirectInputs(
   //    `directExpenses`는 deprecated(legacy 마이그레이션 전용)라 신규 입력에선 0 → 엔진도
   //    총액 0일 때 잔액 규칙을 쓰지 않고 독립 입력으로 처리하므로 모순 자체가 발생하지 않는다.
   const totalExp = parseAmount(asset.directExpenses ?? "");
+  // 이전 형식 총액은 분리 계산에 싣지 않는다(④ `legacyExpenseMovesToParts`) — 아래 ④절 자산 단위 자본적지출과 같은 규칙으로 파트 칸에 옮기게 한다.
+  //   ⑤는 이 경우 양도비가 있어도 칸을 보인다(`AssetSectionExpense`) — 숨은 값으로 막지 않는다.
+  if (totalExp > 0 && legacyExpenseMovesToParts(rawAsset)) {
+    return fieldError(
+      "directExpenses",
+      `${label}: 이전 입력 형식으로 저장된 필요경비 ${totalExp.toLocaleString()}원이 있습니다. 토지·건물을 나눠 계산하는 자산은 자본적지출을 토지분·건물분 칸에 각각, 양도비는 양도비 칸에 옮겨 입력하고 이 칸은 비우세요 (소득세법 §97②2호는 실가 파트는 가산, 환산 파트는 가목·나목 택일이라 귀속 파트를 알아야 하고, §100② 후문은 자본적지출을 안분 대상으로 열거하지 않습니다).`,
+    );
+  }
   // P2 C — ④가 `expenses: 0`을 싣는다(자산 단위 총액은 파트에 안분하지 않는다). 보이는 잔재는 `validateSplitCarryoverInputs`가 먼저 막는다.
   if (totalExp > 0 && !carryoverSplit) {
     const land = opt(asset.landDirectExpenses);

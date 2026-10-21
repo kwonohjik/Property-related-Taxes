@@ -23,6 +23,7 @@ import { CalculationWarningsCard } from "@/components/calc/results/shared/Calcul
 import { PartialExemptBasisCard } from "@/components/calc/results/shared/PartialExemptBasisCard";
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
+import { burdenedGiftTransferPrice } from "@/lib/calc/burdened-gift-transfer-price-scope";
 
 // ─── 행 컴포넌트 ─────────────────────────────────────────────────────────────
 
@@ -151,8 +152,7 @@ function SingleTransferResultCard({
           if (!brkd) return null;
           const land = brkd.perAsset.land;
           const bldg = brkd.perAsset.building;
-          const transferPrice =
-            (land?.transferPrice ?? 0) + (bldg?.transferPrice ?? 0);
+          const transferPrice = burdenedGiftTransferPrice(brkd);
           const acquisitionPrice =
             (land?.acquisitionPrice ?? 0) + (bldg?.acquisitionPrice ?? 0);
           const necessaryExpense =

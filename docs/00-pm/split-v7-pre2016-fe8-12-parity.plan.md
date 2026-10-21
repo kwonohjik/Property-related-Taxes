@@ -171,6 +171,8 @@ probe(scratch `plan3-c/grid.probe.ts`, 제품 파일 무변경) — 폼 → ④ 
 
 ## 10. Do 결과 (2026-10-22)
 
+> **2026-10-22 머지 경위**: 같은 술어의 ⑫ 수정이 다른 작업(`46b5bc87e`, 테스트 `__tests__/calc/split-sale-std-era-parity.test.ts`)으로 먼저 master에 들어갔다. 이 PR은 충돌 해소 시 `transfer-tax-schema-required-refines-2a.ts`를 master 판 그대로 두고(코드 동일), **테스트·문서만** 남긴다 — 256셀 격자 정합·`saleSplitMode` 생략 fail-closed·파트 이월과세 C 실가 면제·구분 근거 전무 차단 단언과 `sale-split-100-3-era-gate.plan.md:171` 문구 정정(사용자 결정).
+
 **변경**: `lib/api/transfer-tax-schema-required-refines-2a.ts` — ⑫ V7 두 issue 앞에 `saleStdPriceWaivedByEra`(⑧과 같은 함수, `lib/calc/sale-split-100-3-era.ts`) 면제를 걸었다(+12줄, 648→660). landMode/buildingMode는 ⑧과 같은 값, 파트 이월과세의 `useEstimatedAcquisition`도 환산으로 센다. `saleSplitMode` 생략은 면제 안 됨(fail-closed). ④⑬⑭·호출부(`transfer-tax-schema.ts:180` 컴패니언 포함) 무변경. 신규 anchor `__tests__/calc/split-sale-std-era-fe8-12-parity.test.ts`(20건) · `sale-split-100-3-era-gate.plan.md` §9 ④ 「⑫⑬⑭ 변경 없음」 정정 1건.
 
 | 항목 | 결과 |

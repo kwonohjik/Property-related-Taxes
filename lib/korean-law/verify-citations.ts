@@ -19,7 +19,7 @@
 
 import { getLawText, searchLaw } from "./client";
 import { resolveLawAlias } from "./aliases";
-import { parseHangNumber } from "./article-parser";
+import { circledHangMark, circledHangNumber, parseHangNumber } from "./article-parser";
 import { parseCitation } from "@/lib/legal-verification/citation-parser";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -122,14 +122,22 @@ export function extractCitations(text: string): Array<{
 
   // 3차: parseCitation (기존 파서) — "§" 표기·"상증법 §18의2" 등 변형 커버
   //       위 ARTICLE_RE 는 "제N조" 만 잡으므로 §·약칭형은 보완 필요
-  const SHORTHAND_RE = /[\uAC00-\uD7A3]+(?:법|령|규칙)\s*§\d+(?:의\d+)?[^\s,.)]*/g;
+  //       첫 갈래는 공백 띄운 공식 이름 「소득세법 시행령 §155」 — 없으면 「시행령 §155」만 잡혀 법령명이 「시행령」이 됐다.
+  const SHORTHAND_RE =
+    /(?:[\uAC00-\uD7A3]+ 및 )?[\uAC00-\uD7A3]+법\s+(?:시행령|시행규칙)\s*§\d+(?:의\d+)?[^\s,.)]*|[\uAC00-\uD7A3]+(?:법|령|규칙)\s*§\d+(?:의\d+)?[^\s,.)]*/g;
   const shorthandMatches = Array.from(text.match(SHORTHAND_RE) ?? []);
   for (const raw of shorthandMatches) {
     const parsed = parseCitation(raw);
     if (!parsed) continue;
-    const hangNum = parsed.paragraph
-      ? parseHangNumber(parsed.paragraph)
-      : undefined;
+    // `parseCitation`의 항 패턴은 ①~⑩까지다(`verify:legal`·커버리지 게이트가 공유해 여기서 고치지 않는다) —
+    // §155⑳·㉑처럼 ⑪ 이상은 「§N」 바로 뒤 원숫자를 직접 읽는다.
+    const markAfterArticle = raw.match(/§\d+(?:의\d+)?\s*([①-⑳㉑-㉟])/)?.[1];
+    //   「§N」 바로 뒤 원숫자가 우선이다 — raw가 「§155⑳·§155①」처럼 다음 인용까지 붙으면 parseCitation은 뒤의 ①을 잡는다.
+    const hangNum = markAfterArticle
+      ? (circledHangNumber(markAfterArticle) ?? undefined)
+      : parsed.paragraph
+        ? parseHangNumber(parsed.paragraph)
+        : undefined;
     const hoNum = parsed.item ? parseInt(parsed.item, 10) : undefined;
     const key = `${parsed.lawFullName}::${parsed.articleNo}::${
       hangNum ?? ""
@@ -156,6 +164,13 @@ export function extractCitations(text: string): Array<{
 function recoverLawName(lookback: string): string | null {
   // "또한 소득세법" → "소득세법"
   // "민법"(2자) 포함 — 전체 2~30자 허용 (접두사 1자 이상 + 접미사)
+  // 「소득세법 시행령」처럼 공백 띄운 공식 이름 — 아래 정규식은 공백을 넘지 못해 「시행령」 앞에서 멈추고 회복에 실패했다
+  //   (실측: 「소득세법 시행령 제155조 제20항」 → 0건 — 시행령 인용이 검증 없이 통과했다)
+  //   「상속세 및 증여세법 시행령」처럼 「및」으로 이은 공식 이름은 통째로 — 없으면 「증여세법 시행령」으로 잘린다
+  const DECREE_RE = /((?:[\uAC00-\uD7A3]+ 및 )?[\uAC00-\uD7A3]{1,29}?법)\s+(시행령|시행규칙)\s*$/;
+  const decree = lookback.match(DECREE_RE);
+  if (decree) return `${decree[1]} ${decree[2]}`;
+
   const LAW_NAME_RE = /([\uAC00-\uD7A3]{1,29}?(?:법률|법|시행령|시행규칙|규칙|규정|조례))\s*$/;
   const m = lookback.match(LAW_NAME_RE);
   if (!m) return null;
@@ -275,9 +290,11 @@ async function verifyOne(citation: {
  */
 function verifyHangInBody(body: string, hang: number): boolean {
   if (!body || !Number.isFinite(hang)) return false;
-  // 원숫자 매칭
-  const circled = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"[hang - 1];
+  // 원숫자 매칭(①~㉟)
+  const circled = circledHangMark(hang);
   if (circled && body.includes(circled)) return true;
+  // 현행 경로(`getLawText`)는 16항부터 법제처 표기 그대로 `<16>`을 남긴다(그 아래 항은 원숫자로 온다)
+  if (hang >= 16 && body.includes(`<${hang}>`)) return true;
   // "제N항" 매칭 — 단 **다른 조문의 상호참조**는 제외한다.
   //   조문 본문에는 "제94조제1항" 같은 인용이 흔한데, 그것까지 인정하면
   //   존재하지 않는 항이 verified 로 통과한다(환각을 «놓치는» 방향).

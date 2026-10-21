@@ -53,6 +53,7 @@ import { buildLandPartCausePayload } from "./transfer-tax-api-split";
 import { buildLandRebuildPayload } from "./transfer-land-rebuild";
 import { partCarryover } from "./transfer-land-part-cause";
 import { anyPartCarryover } from "./transfer-land-part-cause";
+import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
@@ -326,7 +327,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     assetContractDate: primary.assetContractDate || undefined,
     expenses:
       // P2 C·P3 A·P4 B — 자산 단위 필요경비 총액(이전 입력 형식)은 파트에 안분되지 않는다(엔진 S8). 파트 자본적지출 칸이 정본이라 숨은 잔재는 싣지 않는다.
-      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive || anyPartCarryover(primary)
+      // 그 밖의 분리 계산 자산도 이전 형식 총액은 파트 칸으로 옮긴다(⑧이 막는다 — `legacyExpenseMovesToParts`).
+      hasPre1990 || isEstimated || isAppraisal || isSalesCase || parcelModeActive || anyPartCarryover(primary) || legacyExpenseMovesToParts(primary)
         ? 0
         : primaryFractional
           ? applyRatio(parseAmount(primary.directExpenses), primaryRatio)

@@ -14,6 +14,7 @@ import { REDUCTION_TYPE_LABELS } from "@/lib/tax-engine/transfer-reduction-type-
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import { selfFarmingOwnYearsSufficient } from "@/lib/calc/self-farming-own-years";
 import { selfFarmingDecedentAggregable } from "@/lib/calc/self-farming-own-years";
+import { axisBEffectiveAsset } from "@/lib/calc/axis-b-effective-asset";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -645,7 +646,8 @@ export function Step5({
       {form.assets.map((asset, i) => (
         <AssetReductionBlock
           key={asset.assetId || i}
-          asset={asset}
+          // 축 B 지분 카드는 첫 카드의 물건 값으로 그린다 — ⑧ 감면 검증·④와 같은 leaf. patch는 감면 칸만 바꾸므로 저장 카드에 그대로 합친다.
+          asset={axisBEffectiveAsset(form, i)}
           assetIndex={i}
           transferDate={form.transferDate ?? ""}
           onChange={(patch) => updateAsset(i, patch)}

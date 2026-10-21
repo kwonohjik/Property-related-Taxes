@@ -95,7 +95,11 @@ export function addCompanionAcquisitionCauseRefines(
           });
         }
       } else {
-        if (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0) {
+        // 별개 취득(토지·건물 취득일 상이)은 취득가액이 파트별로 완결된다 — 파트 가액은 `refineSplitAcquisitionInputs` V1·V2가 요구하고
+        // 엔진도 파트 가액으로 계산한다(자산 전체 값은 세액에 쓰이지 않는다). 그 화면에는 자산 전체 취득가액 칸이 없어 요구하면
+        // 「⑧ 통과 ↔ ⑫ 400」 막다른 길이었다. 아래 증여 갈래의 D2 면제(`isBuildingCauseMixCompanion`)와 같은 형태 — 주 자산 ⑫도 요구하지 않는다.
+        // 계획서: docs/00-pm/companion-split-fixed-acq-price.plan.md
+        if (c.isSeparateAcquisition !== true && (!c.fixedAcquisitionPrice || c.fixedAcquisitionPrice <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["companionAssets", i, "fixedAcquisitionPrice"],

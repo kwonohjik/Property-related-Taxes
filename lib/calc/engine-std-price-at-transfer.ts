@@ -50,6 +50,18 @@ export function primaryEngineStdPriceAtTransfer(
   // 승계 입주권 환산 분모 — §165①(양도일까지 납입액 + 양도일 프리미엄) (R-12). 감정·매매사례는 분모가 필요 없다.
   if (isSuccessorRight && isEstimated) return successorRightStdPriceAtTransfer(primary) || undefined;
   if (isEstimated && !redevHiddenGeneralStdPrice(primary, form).transfer) return parseAmount(primary.standardPriceAtTransfer) || undefined;
+  /**
+   * 함께 양도 안분 모드의 안분 키 — 화면에 있다(`CompanionSaleModeBlock`). 컴패니언과 같은 규칙으로 감면 기준시가로도 싣는다
+   * (계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` Q-3 a · #2346 Q-2 a). 감면이 없으면 세액이 같다(PA-3 11종).
+   * 축 B는 안분 키가 없고(총액 × 지분), 부담부증여는 §159가 양도가액을 정해 범위 밖이다.
+   */
+  if (
+    form.assets.length >= 2 &&
+    !isFullFractionalBundle(form.assets, form.assetSplitMode) &&
+    effectiveBundledSaleMode(form) === "apportioned" &&
+    primary.transferType !== "burdened_gift"
+  )
+    return parseAmount(primary.standardPriceAtTransfer) || undefined;
   return undefined;
 }
 
@@ -59,7 +71,9 @@ export function primaryEngineStdPriceAtTransfer(
  * - 안분 모드: 안분 키 칸(`CompanionSaleModeBlock`) — #2346 Q-2 a 「안분 키는 감면 기준시가로 계속 인정」.
  * - 환산·분리 축: `CompanionAcqStdPriceSection.tsx:93`(`useEstimatedAcquisition || isSplit`). 1990 전 토지 환산도 그 안이다.
  * - 부담부증여: ⑤가 자산별로 안분 블록을 띄운다 — 다른 칸으로 받는 자산(입주권·일반건물·겸용·시가 모드)만 없다.
- * - 축 B(같은 물건 지분 분할)는 범위 밖이라 종전대로 둔다.
+ * - 축 B(같은 물건 지분 분할): 안분 키가 없다(양도가액 = 총액 × 지분). 칸은 환산·분리 축·1990 전 토지에서만 있다
+ *   (Playwright 실측 — 실가 0개 · 환산 카드마다 1개, 계획서 `burdened-gift-bundle-residuals.plan.md` §5 PR-1 1단계).
+ *   부담부증여 지분은 ② 양도정보가 첫 카드 값이라 종전대로 싣는다(범위 밖).
  */
 function companionGeneralStdAtTransferShown(
   asset: AssetForm,
@@ -67,10 +81,10 @@ function companionGeneralStdAtTransferShown(
   bundledSaleMode: "actual" | "apportioned",
   transferDate: string,
 ): boolean {
-  if (isFullFractionalBundle(form.assets, form.assetSplitMode)) return true;
-  if (asset.transferType === "burdened_gift") return !stdPriceAtTransferComesFromElsewhere(asset);
+  const axisB = isFullFractionalBundle(form.assets, form.assetSplitMode);
+  if (asset.transferType === "burdened_gift") return axisB || !stdPriceAtTransferComesFromElsewhere(asset);
   return (
-    bundledSaleMode === "apportioned" ||
+    (!axisB && bundledSaleMode === "apportioned") ||
     asset.useEstimatedAcquisition ||
     isSplitPayloadActive(asset, false, { transferDate, isNonPrimary: true }) ||
     hasPre1990LandEstimation(asset)
@@ -104,6 +118,8 @@ export function engineStdPriceAtTransfer(form: TransferFormData, assetIndex: num
   if (!asset) return 0;
   if (assetIndex === 0) return primaryEngineStdPriceAtTransfer(asset, form) ?? 0;
   const primary = form.assets[0];
+  // 일반건물 지분 묶음은 ④가 `companionAssets`를 만들지 않는다(`generalBuildingShares[]` — 양도시 기준시가는 첫 카드의 GB 물건 값).
+  if (primary.assetKind === "general_building" && isFullFractionalBundle(form.assets, form.assetSplitMode)) return 0;
   const merged = neutralizeCarryoverDonorSplitForCompanion(
     isFullFractionalBundle(form.assets, form.assetSplitMode) ? mergePrimaryBasic(asset, primary) : asset,
     true,

@@ -34,6 +34,7 @@ import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
 import { anyPartCarryover } from "@/lib/calc/transfer-land-part-cause";
+import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { generalExtensionAppraisalApplies } from "@/lib/calc/extension-appraisal-penalty";
@@ -288,7 +289,11 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     // live하므로, 넘기지 않으면 legacy 자산에서 UI 숨김 ↔ 엔진 throw로 갈린다.
     // 같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — **인자까지 같아야** 한다.
     // P2 C·P3 A·P4 B — ④는 파트 이월과세에서 이 총액을 싣지 않는다(엔진 S8) — 인자도 같게 0.
-    expenses: props.asset && anyPartCarryover(props.asset) ? 0 : parseAmount(props.asset?.directExpenses ?? ""),
+    // 그 밖의 분리 계산 자산도 이전 형식 총액은 싣지 않는다(파트 칸으로 옮긴다 — `legacyExpenseMovesToParts`).
+    expenses:
+      props.asset && (anyPartCarryover(props.asset) || legacyExpenseMovesToParts(props.asset))
+        ? 0
+        : parseAmount(props.asset?.directExpenses ?? ""),
   };
   const acqStdNeedCtx = {
     landMode: effLandAcqMode,

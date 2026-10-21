@@ -1,0 +1,202 @@
+# 토지·건물 분리 계산 — ① 2016년 전 양도의 양도시 기준시가 ⑧ 통과 ↔ ⑫ 400 · ② 신축 + 토지 상속·증여 + 이전 형식 필요경비 막다른 길 — 수정 계획
+
+> 작성 2026-10-21 · 상태 **Do 완료 — 구현 PR #2370 · Q-1·Q-2·Q-3 권고안 a(2026-10-21)** · 워크트리 `../Property-related-Taxes-v7d1` · 브랜치 `docs/split-carryover-v7-d1-plan`
+> 기준 master `8636ae67a`. 줄 번호는 모두 이 커밋 기준이다.
+> 출처: `transfer-split-part-carryover-p6.plan.md:60`(① — P6 범위 밖 별건) · `docs/02-design/features/transfer-split-part-carryover.ui.design.md:458`(② — P3 §13.1 별건).
+> 실측 probe(`__tests__/calc/_probe-v7d1*.test.ts*`)는 커밋하지 않았다.
+
+---
+
+## 0. 실측 요약
+
+| | 결함 | 범위(실측) | 세액 |
+|---|---|---|---|
+| ① | 양도일 2016.1.1. 전 · 구분 기재 · 환산 파트 없음이면 ⑧은 양도시 기준시가 없이 통과시키는데 ⑫가 400 | 이월과세 C뿐 아니라 **일반 분리취득·신축+토지 상속까지 전부**(§1.1) | ⑫만 풀면 엔진은 기준시가를 넣은 값과 **같은 세액**(§1.2) |
+| ② | 신축 + 토지 상속·증여(D1) + 이전 형식 필요경비(`directExpenses`)가 있으면 ⑧이 **화면에 없는** 취득시 기준시가 3칸을 요구 | 신축 호스트만 막다른 길. 이전 형식 값이 **숨겨진 채 세액에 들어가는** 문제는 매매·D2 호스트에도 있다(§2.3) | 숨은 500만 원이 결정세액을 1,900,000원 바꾼다(§2.4) |
+
+---
+
+## 1. ① 양도시 기준시가 연혁 면제 — ⑧ 통과 ↔ ⑫ 400
+
+### 1.1 재현 — 폼 → ④ body → 실제 route(⑫ Zod + ⑭ + 엔진)
+
+양도일 2015-06-30, 구분 기재(`saleSplitMode: "actual"`), 토지·건물 실가, 양도시 기준시가 두 칸 비움.
+
+| 셀 | ⑧(단계 0·1) | ⑫ |
+|---|---|---|
+| A1 일반 분리취득(토지 2003 · 건물 2005 매매) | 통과 | **400** `landStandardPriceAtTransfer`·`buildingStandardPriceAtTransfer` |
+| A5 이월과세 C(증여 2012) | 통과 | **400** 같은 두 칸 |
+| A7 신축 + 토지 상속 | 통과 | **400** 같은 두 칸 |
+| A2 대조 — 양도일 2016-01-01 | 차단(`standardPricePerSqmAtTransfer`) | 400 |
+
+- ⑧ 면제: `lib/calc/transfer-tax-validate-split-sale-std.ts:35~51` — `saleStdPriceWaivedByEra`(`lib/calc/sale-split-100-3-era.ts:33~45`, 세 조건: 양도일 `none` ∧ 구분 기재 ∧ 어느 파트도 환산 아님). P6 이월과세 증여자 환산 파트는 `partDonorEstimated`로 「환산」으로 센다(`:36~43`).
+- ⑫ V7: `lib/api/transfer-tax-schema-required-refines-2a.ts:410~414` — 양도일을 보지 않고 항상 요구.
+- P6 계획서 `:60`의 「비-이월과세 split은 … 같을 가능성이 높으나 미확인」은 **A1·A7로 확인됐다**(같다).
+
+### 1.2 ⑫만 면제하면 — 임시 적용 실측(원복 `cmp` 확인)
+
+V7 직전에 `if (saleStdPriceWaivedByEra({ transferDate: d.transferDate, saleSplitMode: d.saleSplitMode, landMode, buildingMode })) return;`을 넣고 같은 셀을 돌렸다.
+
+| 셀 | ⑫ | 결정세액 |
+|---|---|---|
+| A1 기준시가 없음 | 200 | 263,200,000 |
+| A3 기준시가 9억/6억 | 200 | 263,200,000 |
+| A4 기준시가 1억/14억 | 200 | 263,200,000 |
+| A5 C 기준시가 없음 | 200 | 307,440,000 |
+| A6 C 기준시가 7억/5억 | 200 | 307,440,000 |
+| A7 신축+토지 상속 기준시가 없음 | 200 | 263,200,000 |
+| A2 2016-01-01 | 400(그대로) | — |
+
+- 이 조건에서 양도시 기준시가는 세액에 쓰이지 않는다 — 값을 1억/14억으로 극단적으로 바꿔도 결정세액이 같다. 엔진은 값이 없어도 던지지 않는다.
+- 응답 JSON에 `NaN` 없음(A1·A3). 응답에 양도시 기준시가 필드 echo도 없다.
+- 결과 화면(⑦)이 빈 기준시가로 그리는 모습은 **확인 필요** — Do 단계에서 렌더로 본다.
+
+### 1.3 고칠 곳
+
+- ⑫ `refineSplitAcquisitionInputs` V7(`:410~414`) 앞에 ⑧과 **같은 leaf**(`saleStdPriceWaivedByEra`)로 면제 조건을 건다. `lib/api`는 이미 `lib/calc` 술어를 import한다(`:23~24`).
+- 증여자 환산 파트는 「환산」으로 센다 — ⑫ 쪽 신호는 `landCarryoverPart.useEstimatedAcquisition`·`buildingCarryoverPart.useEstimatedAcquisition`(`lib/api/transfer-tax-schema-split-carryover.ts:68`). ⑧의 `partDonorEstimated`와 같은 뜻인지는 Do의 격자에서 셀로 확인한다.
+- 진입점은 한 함수다 — 단건·다건(`:618~624` `refineRequiredInputs2a`)과 컴패니언(`lib/api/transfer-tax-schema.ts:180`). 셋 다 `transferDate`를 넘긴다.
+- ⑧ 쪽 다건·컴패니언 경로가 양도일을 끝까지 넘기는지는 **확인 필요**(단건은 `__tests__/calc/sale-split-100-3-era-validate.test.ts:117~` 체인 테스트가 있다). Do 격자에 다건·컴패니언 셀을 넣는다.
+
+---
+
+## 2. ② 신축 + 토지 상속·증여 + 이전 형식 필요경비
+
+### 2.1 이전 형식 필요경비란
+
+- `directExpenses`는 옛 저장 형식의 단일 필요경비다. 마이그레이션(`lib/stores/calc-wizard-migration.ts:64`)으로만 채워지고, 새 입력 경로는 없다.
+- 화면 칸은 값 > 0 **이고** 자본적지출·양도비가 모두 0일 때만 보인다(`components/calc/transfer/asset-sections/AssetSectionExpense.tsx:148~158`). 양도비를 하나라도 넣으면 칸이 사라지지만 값은 남는다(= 「숨은」 이전 형식).
+- ④는 값을 그대로 보낸다(`lib/calc/transfer-tax-api.ts:327~333` — 파트 이월과세·환산·감정 등일 때만 0). 컴패니언도 보낸다(`lib/calc/transfer-tax-api-companion-payload.ts:498~500`).
+- 엔진 분리 계산은 이 총액을 파트에 나눈다(`lib/tax-engine/transfer-tax-split-gain.ts:211~224` `splitPair`). 파트 칸이 둘 다 비면 **취득시 기준시가 비율**로, 한쪽이 있으면 총액에서 잔액으로.
+- 그래서 ⑧은 파트 칸이 비면 취득시 기준시가를 요구한다 — `needsApportionRatio` ⑥(`lib/calc/transfer-tax-split-acq-mode.ts:605~606`) → V6 `buildingStandardPriceAtAcq`(`lib/calc/transfer-tax-validate-split.ts:445~461`). ⑫도 같은 술어로 단가·면적·건물분 3칸을 요구한다(`refines-2a.ts:375~391`).
+
+### 2.2 재현 — 렌더(실제 `CompanionAcquisitionCauseSection` + `AssetSectionExpense`)
+
+양도일 2025-06-30, 건물 2020-06-01, 토지 2015-03-10, 토지·건물 실가, 구분 기재.
+
+| 호스트 | 토지 원인 | 취득시 건물 기준시가 칸 | ㎡당 공시지가 칸 | 면적 칸 | 이전 형식 칸(양도비 있음) | 파트 자본적지출 칸 |
+|---|---|---|---|---|---|---|
+| **신축** | 상속 | **없음** | **없음** | **없음** | 없음 | 있음 |
+| **신축** | 증여 | **없음** | **없음** | **없음** | 없음 | 있음 |
+| 매매 | 상속·증여 | 있음 | 있음 | 있음 | 없음 | 있음 |
+| 매매 일반 분리취득 | — | 있음 | 있음 | 있음 | 없음 | 있음 |
+| D2 건물 상속·증여 + 토지 매매 | 매매 | 있음 | 있음 | 있음 | 없음 | 있음 |
+
+### 2.3 재현 — ⑧ · ④ · ⑫ (이전 형식 500만 원 + 양도비 100만 원)
+
+| 셀 | ⑧ | ④ `expenses` | ⑫ | 결정세액 |
+|---|---|---|---|---|
+| 신축 + 토지 상속 · 대조(양도비만) | 통과 | 0 | 200 | 69,975,600 |
+| **신축 + 토지 상속 · 숨은 이전 형식** | **차단 `buildingStandardPriceAtAcq`** | 5,000,000 | 400(3칸) | — |
+| 신축 + 토지 상속 · 보이는 이전 형식(양도비 없음) | **차단 `buildingStandardPriceAtAcq`** | 5,000,000 | 400(3칸) | — |
+| 신축 + 토지 증여 | 위와 같음(3셀) | | | |
+| 매매 + 토지 상속·증여 · 숨은 이전 형식 | 차단(칸 있음) | 5,000,000 | 400 | — |
+| 매매 일반 분리취득 · 숨은 이전 형식 | 차단(칸 있음) | 5,000,000 | 400 | — |
+| D2 건물 상속 + 토지 매매 · 숨은 이전 형식 | 차단(칸 있음) | 5,000,000 | 400 | — |
+
+- **신축 호스트는 채울 칸이 없는데 막힌다**(막다른 길). 보이는 이전 형식이어도 같다 — 메모리의 「숨은 필요경비」보다 범위가 넓다.
+- 매매·D2 호스트는 칸이 있어 막다른 길은 아니다. 다만 숨은 이전 형식이면 **보이지 않는 값 때문에** 기준시가를 요구받는다.
+
+### 2.4 숨은 값이 세액을 바꾼다 (신축 + 토지 상속)
+
+| 셀 | ⑧ | ④ `expenses` | 결정세액 |
+|---|---|---|---|
+| 대조 — 양도비 100만 원만 | 통과 | 0 | 69,975,600 |
+| 숨은 이전 형식 500만 원 + 취득시 기준시가 채움 | 통과 | 5,000,000 | 68,075,600 |
+| 토지 파트 자본적지출 200만 원 | 통과 | 0 | 69,367,600 |
+| 토지 파트 200만 원 + **숨은** 이전 형식 500만 원 | **통과** | 5,000,000 | 68,227,600 |
+| 토지 파트 500만 원(이전 형식을 옮긴 상태) | 통과 | 0 | 68,455,600 |
+
+- 넷째 줄: 파트 칸을 채우면 기준시가 요구가 사라지고 ⑧이 통과한다. 그런데 숨은 500만 원이 총액이 되어 건물 파트에 잔액 300만 원이 붙는다(`splitPair`). 사용자 화면에는 토지 200만 원만 보인다.
+
+### 2.5 저장소의 기존 규칙 — 현행 형식 자본적지출은 이미 파트 칸으로 보낸다
+
+`lib/calc/transfer-tax-validate-split.ts:648~696`: 분리 계산 자산에 자산 단위 `capitalExpenditure`가 있고 파트 칸이 비면 ⑧이 막고 파트 칸으로 안내한다. 근거는 그 주석에 원문 대조 기록이 있다.
+- 「소득세법」 §100② 후문은 「공통되는 취득가액과 양도비용」만 안분 대상으로 열거한다. 자본적지출은 열거하지 않는다.
+- §97②2호는 파트마다 갈린다(실가 파트는 가산, 환산 파트는 가목·나목 택일).
+- 예규 법인46012-2439: 「귀속되는 것이 분명한 경우에는 해당필지에 가산」.
+
+이전 형식 `directExpenses`만 이 규칙 밖에 있어 취득시 기준시가 비율로 안분된다. 파트 이월과세는 이미 이전 형식을 싣지 않는다(`transfer-tax-api.ts:328` 주석 「엔진 S8」 · `validate-split.ts:69~72` `withExpenses`).
+
+---
+
+## 3. 수정안
+
+### 3.1 ① — ⑫ V7에 같은 leaf로 연혁 면제 (Q-1)
+
+| | 내용 | 비고 |
+|---|---|---|
+| **a (권고)** | ⑫ V7 앞에 `saleStdPriceWaivedByEra` + 증여자 환산 파트 보정 | ⑧과 같은 술어. 세액 불변(§1.2) |
+| b | ⑧ 면제를 없애고 2016년 전에도 기준시가를 요구 | 2026-10-18 사용자 결정(`sale-split-100-3-era-gate.plan.md` Q-2)을 뒤집는다. 세액에 쓰이지 않는 값을 요구한다 |
+
+### 3.2 ② — 이전 형식 필요경비 처리 (Q-2)
+
+| | 내용 | 막다른 길 | 숨은 값 세액 영향 |
+|---|---|---|---|
+| **a (권고)** | 분리 계산 자산에서는 이전 형식을 **현행 자본적지출과 같은 규칙**으로: ⑤ 값 > 0이면 숨김 조건 없이 칸을 보이고 ⑧이 막아 파트 칸으로 옮기게 안내, ④(단건·컴패니언)는 분리 계산이면 `expenses`를 싣지 않음, ⑧ `withExpenses`도 0 | 해소(기준시가 요구 자체가 사라짐) | 해소 |
+| b | 신축 호스트에도 취득시 기준시가 3칸을 매매 호스트와 같은 조건으로 띄운다 | 해소 | **남음**(§2.4) — 이전 형식만 비율 안분이 계속된다 |
+
+- a 동작 변화: 이전 형식이 남은 분리 계산 기록은 다시 열면 막히고, 금액을 파트 칸으로 옮겨야 계산된다(메시지에 금액을 적는다). 이미 기준시가를 채워 통과하던 매매 호스트 기록도 같다 — 옮기는 방식에 따라 세액이 달라질 수 있다(§2.4 둘째 줄 68,075,600 ↔ 다섯째 줄 68,455,600은 같은 500만 원을 다르게 나눈 결과). 영향받는 저장 기록 수는 로컬 IndexedDB라 **측정할 수 없다**.
+- a에서 ⑫는 그대로 둔다(API 직접 호출의 `expenses` + 기준시가 경로 유지). ⑧ 차단 ↔ ⑫ 통과는 「⑧ 전용 사유」 셀로 격자에 고정한다(기존 격자 형식 `strictOnly`).
+- 범위: `validateSplitDirectInputs`가 다루는 주택·건물 분리 계산. 일반건물(`general_building`)은 자체 경로(`transfer-tax-validate-gb.ts` V-8 · `transfer-tax-api-gb.ts:529~533`)라 제외한다 — 같은 문제가 있는지는 **확인 필요**(이번 범위 밖).
+
+### 3.3 PR 단위 (Q-3)
+
+| | 내용 |
+|---|---|
+| **a (권고)** | 구현 PR 1개(커밋 2개: ①, ②). 둘 다 분리 계산 검증이고 파일이 거의 겹치지 않는다. CI·머지 1회 |
+| b | ①·② 각각 PR |
+
+---
+
+## 4. Do (Q 결정 후)
+
+1. **①**
+   - ⑫ `refines-2a.ts:410` 앞 면제 + 증여자 환산 보정.
+   - 격자 `__tests__/calc/split-sale-std-era-parity.test.ts`(신규): 단건·다건·컴패니언 × {일반 분리취득, C, 신축+토지 상속} × {2015-12-31 면제, 2016-01-01, 토지 환산, 일괄양도, C 증여자 환산}. 불변식 ⑧ 통과 ⇒ ⑫ 200, ⑧ 차단 ⇔ ⑫ 400.
+   - 결과 화면 렌더(기준시가 빈 상태) 확인.
+2. **②(a)**
+   - ⑤ `AssetSectionExpense.tsx:148~158` 표시 조건에 「분리 계산이면 값 > 0만으로」.
+   - ⑧ `validate-split.ts` ④절(`:688~696`) 옆에 이전 형식 차단(앵커 `directExpenses`), `withExpenses`(`:69~72`)·③절(`:638~646`) 정리.
+   - ④ `transfer-tax-api.ts:327~333` · `companion-payload.ts:498~500` 분리 계산이면 0. 판정은 ④·⑤·⑧이 같은 leaf 하나를 쓴다.
+   - `CompanionAcqPurchaseBlock.tsx:291` `acqStdNeedFlags`도 같은 0.
+   - 격자: 호스트 4종(신축·매매·D2·매매 일반) × {숨은, 보이는, 파트 칸 있음+숨은, 옮긴 상태}.
+3. 기존 테스트 중 이전 형식 안분을 단언하는 것 전수 grep(`directExpenses` + split) — 바뀌는 단언은 계획서에 목록으로 남긴다.
+4. 뮤테이션: 면제 조건 각 항 · 증여자 환산 보정 · ⑤ 표시 조건 · ⑧ 차단 · ④ 0 · 컴패니언 0.
+5. E2E: 신축 + 토지 상속 + 이전 형식 시드 → 차단 메시지 → 파트 칸 입력 → 계산.
+6. 게이트(워크트리라 수동): `check-font-sizes.sh` · `check-tone-classes.sh` · `node scripts/check-dark-pairs.mjs` · `check-workflow-runner.sh` · typecheck · lint · `select-test-scope.sh --stdin` 범위.
+
+---
+
+## 5. 확인 필요 (남은 것)
+
+- ⑫ `useEstimatedAcquisition` ↔ ⑧ `partDonorEstimated` 의미 일치 — Do 격자로.
+- ⑧ 다건·컴패니언 경로의 양도일 전달 — Do 격자로.
+- 결과 화면(⑦)의 빈 양도시 기준시가 표시 — Do 렌더로.
+- 일반건물 분리 경로의 이전 형식 처리 — 범위 밖.
+
+---
+
+## 6. Do 결과 (2026-10-21 · 구현 PR #2370 · 워크트리 `-v7fx`)
+
+### 6.1 ① ⑫ V7 연혁 면제 — 커밋 46b5bc87e
+- `lib/api/transfer-tax-schema-required-refines-2a.ts` V7 앞에 `saleStdPriceWaivedByEra` + 증여자 환산 보정(`landCarryoverPart`·`buildingCarryoverPart`의 `useEstimatedAcquisition`).
+- 격자 `__tests__/calc/split-sale-std-era-parity.test.ts` 15건 — 단건·다건·함께 양도 × {일반 분리취득, 신축+토지 상속, C} × {2015-12-31 면제(세액 = 기준시가 1억/14억 입력과 같음), 2016-01-01, 일괄양도, 토지 환산, C 증여자 환산(상대 파트 칸)}.
+- 뮤테이션 3/3 KILLED. 처음엔 증여자 환산 보정 2건이 살아남았다 — P6 격자의 연혁 셀은 환산 파트 **자신의** 기준시가만 비우고 그 칸은 이월과세 refine(`transfer-tax-schema-split-carryover.ts:153~164`)이 따로 요구해서다. **상대 파트** 칸 셀을 추가해 잡았다.
+- §5 확인 필요 해소: ⑧ 다건은 단건과 같은 `validateStep`을 거친다(`multi-transfer-tax-validate.ts:206`) · 결과 화면은 양도일 2016년 전이면 안분 가액·안분 기준을 그리지 않는다(`SaleSplitJudgmentBlock.tsx:66·93~107`) — 기준시가 유무 두 응답의 차이는 §100③ echo의 `apportioned`·`basisKind`뿐이고 둘 다 그 구간에서 표시되지 않는다.
+
+### 6.2 ② 이전 형식 필요경비 — 커밋 e2e176102
+- 술어 `lib/calc/split-legacy-expense.ts` `legacyExpenseMovesToParts` — ⑤ `AssetSectionExpense`(표시) · ⑤ `CompanionAcqPurchaseBlock`(기준시가 카드 인자) · ⑧ `transfer-tax-validate-split.ts`(차단 + `withExpenses`) · ④ `transfer-tax-api.ts`·`transfer-tax-api-companion-payload.ts`·`multi-transfer-tax-api.ts`.
+- 범위: ⑧ `validateSplitDirectInputs` 진입 게이트(별개 취득 ∨ 소유자 분리)와 같다. 제외 — 일반건물 · 부담부증여(④ `isSplitPayloadActive`가 분리 축을 싣지 않아 옮긴 파트 칸이 전송되지 않는다) · 파트 이월과세(P2~P6 결정 유지).
+- 종전 동작을 단언하던 테스트 4건 갱신: `split-acq-std-predicate.test.ts` G11-b · `transfer-tax-validate-split.test.ts` 「legacy 1억 + 건물 3천만 → 통과」 · field-jump 케이스 「split 자본적지출 불일치」 → 「split 이전 형식 필요경비 → 파트 칸」(E2E가 칸 노출까지 확인) · `split-carryover-p3a.section.ui.test.tsx` 긍정 짝(D1 → 건물 환산).
+- 격자 `__tests__/calc/split-legacy-expense-parity.test.tsx` 30건 — 호스트 5종 × {숨은, 보이는, 파트 칸 공존, 옮긴 상태, 다건} + 소유자 분리 + 함께 양도 + 제외 3종.
+- 뮤테이션 12/12 KILLED(술어 각 항·⑧ 차단·⑧ 인자·④ 3경로·⑤ 2곳). 소유자 분리 항은 처음 살아남아 셀을 추가했다.
+- E2E `e2e/split-legacy-expense.spec.ts` — 신축+토지 상속 시드 → 「다음」 → 이전 형식 칸 포커스 → 비우고 토지 자본적지출 입력 → 계산(요청 `expenses` 0 · `landDirectExpenses` 5,000,000). ⑧·⑤ 변형 KILLED, ④ 단건 변형은 화면 경로에서 SURVIVED(⑧이 먼저 막아 ④의 0은 방어선 — vitest 격자가 잡는다).
+
+### 6.3 검증
+- 전체 vitest 38,828건 실패 0(origin/master `f204df8f2` 병합 후) · typecheck · lint 0 오류 · 폰트·톤·다크 짝·워크플로 러너.
+- E2E 새 스펙 + `transfer-validation-field-jump.spec.ts` 전수 + `transfer-split-part-carryover-a.spec.ts` 675 passed.
+
+### 6.4 범위 밖 발견 (수정 안 함)
+- 함께 양도 두 번째 자산의 **매매 분리취득**(토지·건물 실가): 연혁과 무관하게 ⑧ 통과 ↔ ⑫ 400 `companionAssets.0.fixedAcquisitionPrice` 「매매(실가) 시 취득가액 필수」(`transfer-tax-schema-companion-refines.ts:98~104`). 함께 양도 카드에는 그 칸이 없다(렌더 실측 — 토지·건물 칸만). 2025년 양도·기준시가 입력 상태에서도 같다. 신축 호스트는 200.
+- 일반건물 분리 경로의 이전 형식 처리 — 미조사.
