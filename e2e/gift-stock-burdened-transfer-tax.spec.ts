@@ -20,6 +20,12 @@ import {
 
 type PageT = Parameters<typeof fillDateAndVerify>[0];
 
+/** 합산 호출(`{ items: [...] }`)이든 단건이든 첫 종목 body */
+function firstStockBody(raw: unknown): Record<string, unknown> {
+  const b = raw as { items?: Array<Record<string, unknown>> } & Record<string, unknown>;
+  return b.items?.[0] ?? b;
+}
+
 async function addListedStockWithDebt(
   page: PageT,
   opts: { name: string; shares: string; avgPrice: string; debt: string },
@@ -159,7 +165,18 @@ test.describe("주식 부담부증여 양도소득세 함께 계산", () => {
 
     await closeStockModal(page);
     await nextSteps(page, 2);
+
+    // 🔑 브라우저 → fetch body — vitest 가 못 보는 계층(⑬ body spread). 폐지된 소수 비율 `burdenedGiftDebtRatio`는 실리지 않고,
+    //    실지(actual) 모드는 ④가 취득가를 이미 안분하므로 증여가액 C(`burdenedGiftValuationAmount`)도 싣지 않는다.
+    const stockReq = page.waitForRequest(
+      (req) => req.url().includes("/api/calc/stock-transfer") && req.method() === "POST",
+      { timeout: 30_000 },
+    );
     await calcAndWaitResult(page, { taxType: "gift" });
+    const actualBody = firstStockBody((await stockReq).postDataJSON());
+    expect(actualBody.transferTotalPrice).toBe(200_000_000);
+    expect(actualBody).not.toHaveProperty("burdenedGiftDebtRatio");
+    expect(actualBody).not.toHaveProperty("burdenedGiftValuationAmount");
 
     // 🔑 카드 자체가 렌더되는가 — 종전에는 절대 뜨지 않았다
     await expect(
@@ -170,5 +187,65 @@ test.describe("주식 부담부증여 양도소득세 함께 계산", () => {
     await expect(
       page.getByText("양도소득 기본공제 (§103①2호)"),
     ).toBeVisible({ timeout: 10_000 });
+  });
+
+  /**
+   * [SBTT-E2E-3] 환산(estimated) 모드 → request body 에 증여가액 C 가 실리고 폐지된 비율은 실리지 않는다
+   *
+   * S-2(`docs/00-pm/stock-burdened-debt-fraction-wire.plan.md`) — 엔진이 개산공제 base 를
+   * `safeMultiplyThenDivide(base, B, C)`로 곱하려면 C(`burdenedGiftValuationAmount`)가 브라우저 fetch body 에서
+   * Zod(⑫)·매핑(⑭)을 거쳐 도달해야 한다. 분자 B 는 같은 body 의 `transferTotalPrice` 다.
+   */
+  test("[SBTT-E2E-3] 환산 모드 → body 에 burdenedGiftValuationAmount(C) 존재 · burdenedGiftDebtRatio 부재", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await page.goto("/calc/gift-tax");
+
+    await fillDateAndVerify(page, { year: "2025", month: "4", day: "10" });
+    await page.locator("select").first().selectOption({ index: 1 });
+    await page.getByRole("button", { name: /^다음/ }).click();
+
+    await addListedStockWithDebt(page, {
+      name: "삼성전자",
+      shares: "10000",
+      avgPrice: "50000",
+      debt: "200000000",
+    });
+
+    const txToggle = page.getByRole("switch", { name: /양도소득세 함께 계산/ });
+    await expect(txToggle).toBeVisible({ timeout: 5_000 });
+    if ((await txToggle.getAttribute("aria-checked")) !== "true") {
+      await txToggle.click();
+    }
+    await page.getByRole("radio", { name: /KOSPI/ }).first().click();
+
+    const bgtDate = page.locator('[data-testid^="stock-bg-acq-date-"]');
+    await fillDateAndVerify(page, { year: "2020", month: "3", day: "2" }, { scope: bgtDate });
+
+    // 취득가액 산정 방식 = 환산취득가액 + 1개월 종가평균 두 칸
+    await page.getByRole("radio", { name: /환산취득가액/ }).first().click();
+    await page.locator('[data-testid^="stock-bg-transfer-avg-"]').fill("50000");
+    await page.locator('[data-testid^="stock-bg-acq-avg-"]').fill("30000");
+
+    await closeStockModal(page);
+    await nextSteps(page, 2);
+
+    const stockReq = page.waitForRequest(
+      (req) => req.url().includes("/api/calc/stock-transfer") && req.method() === "POST",
+      { timeout: 30_000 },
+    );
+    await calcAndWaitResult(page, { taxType: "gift" });
+    const body = firstStockBody((await stockReq).postDataJSON());
+
+    expect(body.acquisitionMode).toBe("estimated");
+    expect(body.transferTotalPrice).toBe(200_000_000); // 분자 B
+    expect(typeof body.burdenedGiftValuationAmount).toBe("number"); // 분모 C
+    expect(body.burdenedGiftValuationAmount as number).toBeGreaterThanOrEqual(200_000_000);
+    expect(body).not.toHaveProperty("burdenedGiftDebtRatio");
+
+    await expect(
+      page.getByText("부담부증여 주식 양도소득세 (채무인수분)"),
+    ).toBeVisible({ timeout: 20_000 });
   });
 });

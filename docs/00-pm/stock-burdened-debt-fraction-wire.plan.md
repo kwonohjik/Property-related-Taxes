@@ -267,3 +267,67 @@ estimated 모드에서 B=1.2억 > C=1억: 현행 Zod가 `burdenedGiftDebtRatio: 
 - `perShareAcquisitionPrice = floor(안분취득가 / 주식수)` × 주식수 증폭(선행 §10) — 별건.
 - 증여세 폼 ⑧의 B>C 경고→차단 승격(Q3 c) — 별건.
 - 주식 개산공제 `Math.floor(estimatedBase * STOCK_ESTIMATED_EXPENSE_RATE)`(`stock-acquisition-basis.ts:420-428`) — 세율 곱(`applyRate` 계열 소관), 이번 실측 대상 아님.
+
+---
+
+## 12. Do 결과 (2026-10-22)
+
+사용자 결정(Q1 고침 · Q2 a-1 · Q2′ 폐지+400 거절 · Q3 B>C 400 유지 · Q4 `positive()`만 · Q5 Playwright body 단언 · Q6 §13.5 후속 표기)대로 구현했다.
+
+### 12.1 변경
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ④ | `lib/calc/gift-burdened-transfer-api.ts`(783→781) | `debtRatio` 계산·전송 제거, estimated 모드 body에 `burdenedGiftValuationAmount = valuationAmount`(C) 전송. actual 모드는 종전대로 C를 싣지 않는다 |
+| ⑫ | `lib/api/stock-transfer-tax-schema.ts` | `burdenedGiftValuationAmount: z.number().positive().optional()` 추가 · 구필드 `burdenedGiftDebtRatio: z.never({error}).optional()` — 수신 시 400(메시지에 새 필드명 안내) |
+| ⑩ | `lib/api/stock-transfer-tax-refines.ts` | C 존재 시 refine 1블록: ① 실가·총액(`transferPriceMode=actual`·`transferActualInputMode=total`) ② lots 없음 ③ `0 < B(transferTotalPrice) ≤ C`. 위반은 전부 `burdenedGiftValuationAmount` 경로의 400 |
+| ⑭ | `lib/api/stock-transfer-engine-input.ts` | `burdenedGiftValuationAmount: coerced.… as number \| undefined` 1줄 (구필드 매핑 삭제) |
+| 엔진 타입 | `types/stock-transfer.types.ts` | 필드·JSDoc 교체(1,635→1,637, 기존 초과분) |
+| 엔진 | `stock-acquisition-basis.ts:410-418` | `safeMultiplyThenDivide(estimatedBase, transferPrice, C)` (가드 `C>0 && transferPrice>0 && transferPrice<C`) · `applyRatio` import 제거 · 한계 주석 제거 |
+| 주석 | `inheritance-gift-estate.types.ts:995` | 필드명 정정 |
+| ⑬·합산 스키마·합산 재실행 | 무변경 | body 통째 `JSON.stringify`·`aggregateStockItemSchema`가 같은 스키마 재사용·`...input` spread — **BD-16이 실제 POST로 보존을 확인** |
+| ①②③⑤⑥⑦⑧ | 무변경 | 사용자 입력·UI fallback이 아님(§4.2). `lib/calc/stock-transfer-tax-validate.ts` 동기화 대상 없음 |
+
+5단 파이프라인 grep: `burdenedGiftValuationAmount` = ④(생산 1) · ⑫(1) · refine(1블록) · ⑭(1) · 엔진 타입(1) · 엔진 소비(1). `burdenedGiftDebtRatio` 코드 줄은 스키마 구필드 거절 **1곳**뿐(정적 가드가 강제).
+
+### 12.2 테스트·가드
+
+- 신규 `__tests__/calc/gift-burdened-stock-debt-fraction-wire.anchor.test.ts`(BD-10~16, 25건) · `…debt-ratio-precision…`(BD-8 KNOWN-LIMIT → 참값 7,000,000 반전) · `…major-and-conversion…`(BG-DR-1 → C 단언) · 정적 가드 `__tests__/lib/debt-ratio-apply-policy.test.ts` 개정(주식 엔진을 `GUARDED_FILES`에 편입해 `applyRatio(…, 비율)` 금지 · 구필드 코드 줄 0건+스키마 1곳 · `safeMultiplyThenDivide(estimatedBase, transferPrice, input.burdenedGiftValuationAmount)` 존재 가드 · ④ 식별자 가드).
+- 수정 전 실패: 대상 4파일 66건 중 **21건 실패**(wire 14 · precision 1 · major 1 · 정적 가드 5). BD-10 격자는 960건 중 **18건 불일치**.
+- 수정 후: 대상 4파일 66/66, `__tests__/calc/ tax-engine/stock-transfer/ api/` 1028파일 13,448건 통과, **전체 vitest 3,247파일 38,796건 통과**(1 skipped 파일·13 skipped·309 todo 기존).
+- 결정세액 사례(BD-11): 개산공제 base 177,788,100 · 개산공제 1,777,881 · 과세표준 535,859,299 · **산출세액 107,171,850**(옛 107,171,860) · 지방소득세 10,717,180 — §6.2 예측과 일치.
+- **동작 불변 계측**(§9.4): `buildGiftStockBurdenedTransferBody|burdenedGift…|assumedDebtForGift`를 포함한 기존 `.test.ts(x)` 47파일(587건, jsdom `.test.tsx` 15파일 포함)에서 신·구 식 병행 로그 — 엔진 호출 19건, **신·구 불일치 0건**. 불일치는 이번에 새로 쓴 BD-8 반전·BD-10·BD-11·14/110 사례에서만(28건) 나왔고 전부 신식이 참값이다.
+
+### 12.3 뮤테이션 (cp 백업 → 변형 → 대상 4파일 → 원복 sha 일치 · 최종 `git diff` 해시 일치)
+
+| # | 결과 | KILLED한 테스트 |
+|---|---|---|
+| S1 `applyRatio(base, B/C)` 복귀 | KILLED 7 | BD-8 반전 · BD-10 · BD-11 · 단건/합산 POST · 정적 가드 2 |
+| S2 B↔C 뒤집기 | KILLED 13 | BD-8(57%·10%·격자·14/110) · BD-10 · BD-11 · BD-12 · BD-16 · 정적 가드 |
+| S3 ④ C 미전달 | KILLED 19 | BD-8 · BD-10~13 · BD-15 · BD-16 · BG-DR-1·2 |
+| S4 ⑫ 새 필드 삭제(침묵 strip) | KILLED 19 | BD-8 · BD-10~13 · BD-15 · BD-16 |
+| S5 ⑭ 매핑 삭제 | KILLED 12 | BD-8 · BD-10 · BD-11 · BD-12 · BD-16 |
+| S6 refine B>C 제거 | KILLED 2 | BD-13 (Zod·라우트) |
+| S7 구필드 거절 제거 | KILLED 4 | BD-14 3건 + 정적 가드 |
+| S8 `<` → `<=` | **SURVIVED**(예상 — 동치 `x×C/C=x`) | 가독성 가드로 유지 |
+| S9 `transferPrice` → `input.transferTotalPrice ?? 0` | 행동 테스트 SURVIVED(예상 — actual/total에서 동치) · **정적 가드 패턴만 KILLED**(계획보다 엄격) | 정적 가드 1 |
+| S10 refine의 total 모드 요구 제거 | KILLED 1 | BD-15 per_share |
+
+### 12.4 E2E·검증
+
+- `e2e/gift-stock-burdened-transfer-tax.spec.ts` — `E2E_PORT=3197`: **3/3 통과**. SBTT-E2E-2에 `page.waitForRequest`로 `/api/calc/stock-transfer` body 단언 추가(`transferTotalPrice===200,000,000` · 구필드 부재 · 실지 모드라 C도 부재). 신규 **SBTT-E2E-3**(환산 모드): C 존재(number, ≥ 채무) · `transferTotalPrice` 분자 · 구필드 부재 · 결과 카드 렌더.
+- 워크트리 `node_modules` 심볼릭 링크로 Turbopack이 기동을 거부해 `next.config.ts`에 `turbopack.root`를 **임시** 추가했고 실행 후 원복(sha 일치, 커밋 제외).
+- `npx tsc --noEmit` 0 · `npm run lint` 오류 0(경고만, 기존) · 폰트·톤·다크·워크플로 스크립트 전부 통과 · 법령 신규 인용 없음(`manifest/additions-*` 불필요).
+
+### 12.5 계획과 다르게 한 점
+
+1. **SBTT-E2E-3 신설** — 계획 Q5는 «기존 `SBTT-E2E-2`에 단언»이었으나 E2E-2는 취득가액 **실지(actual) 모드**라 ④가 C를 싣지 않는다(아래 BD-12 actual 가드). 신필드 «존재» 단언은 환산 모드가 필요해 E2E-3으로 분리했고, E2E-2에는 «구필드 부재·C 부재(actual)»를 넣었다.
+2. **BD-15 «transferActualInputMode 미지정»**: 계획은 «미지정 → 400»이었으나 Zod 스키마 default가 `"total"`이라(`schema.ts:305`) 파싱 후에는 `total`이 채워진다 — refine은 파싱 후 값을 보므로 **미지정은 통과**하고(엔진이 읽는 값과 같다) `per_share`만 400이다. 계획서 §5.3 (i)의 「엔진 default가 per_share」 서술은 스키마 default와 다르다는 점을 정정한다.
+3. 구필드 거절은 refine이 아니라 **필드 정의(`z.never`)** 로 구현했다 — 다른 오류와 무관하게 항상 400이 되고, 정적 가드가 «키 정의 1개+`z.never`»를 직접 검사한다.
+4. S9는 계획이 SURVIVED 예상이었으나 정적 가드의 호출 패턴 정규식이 `transferPrice` 인자를 고정해 KILLED (행동 테스트로는 SURVIVED).
+
+### 12.6 확인 필요 (§10 갱신)
+
+1. C 정수성: `computeStockValuation` 상장(평균가에 .5 포함)·비상장 간이 무작위 5,000건 probe → 비정수 0건. 그러나 `marketValue` 사용자 입력(§60 시가)은 정수가 보장되지 않으므로 `.int()`는 계속 걸지 않는다(Q4). 비정수 C 허용은 BD-15가 고정.
+2. 구필드 거절 제거 시점(§10-7)은 배포 주기에 따라 사용자 결정 — 스키마의 `burdenedGiftDebtRatio` 정의 1줄과 정적 가드의 `LEGACY_*` 상수를 함께 지울 것.
+3. §10-2·3·4(개산공제 base B/C 곱의 법 명문 근거 · B>C UI 경고↔API 400 모순 · 단건 호출 함수 죽은 코드)는 정책 불변이라 그대로 남는다.

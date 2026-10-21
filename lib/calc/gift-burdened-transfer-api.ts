@@ -458,14 +458,14 @@ export async function callGiftBurdenedTransferAPI(
  *
  * §159①1호 안분:
  *   양도가액 = assumedDebtForGift (채무인수액)
- *   debtRatio = assumedDebtForGift / valuationAmount
+ *   B = assumedDebtForGift(채무인수액), C = valuationAmount(증여재산 평가액)
  *
  * actual 모드:
  *   안분취득가 = safeMultiplyThenDivide(bgt.actualAcquisitionPrice, assumedDebtForGift, valuationAmount) — A × B/C 분수 그대로
  *   perShareAcquisitionPrice = Math.floor(안분취득가 / shareCount)
  *
  * estimated (상장·비상장 공통):
- *   burdenedGiftDebtRatio = debtRatio 전달 → 엔진이 §163⑥4 개산공제 base에만 적용.
+ *   burdenedGiftValuationAmount = C 전달 → 엔진이 §163⑥4 개산공제 base에 safeMultiplyThenDivide(base, B, C)로 적용(B=transferTotalPrice).
  *   환산취득가는 transferPrice(=채무액) 기반이라 이미 안분돼 있다(이중안분 아님).
  *
  * estimated + 상장:
@@ -532,8 +532,6 @@ export function buildGiftStockBurdenedTransferBody(
   if (valuationAmount <= 0) {
     throw new Error("주식 평가액이 0 — 증여재산가액을 입력하세요");
   }
-
-  const debtRatio = assumedDebtForGift / valuationAmount;
 
   // shareCount 결정: 상장 → listedStockShares, 비상장 → unlistedStockData.ownedShares
   const isListed = bgt.marketType !== "unlisted";
@@ -669,7 +667,7 @@ export function buildGiftStockBurdenedTransferBody(
      * (`stock-valuation-listed.ts`의 `stdPriceTotalForEstimatedDeduction`에는
      *  `transferPrice`가 등장하지 않는다).
      */
-    body.burdenedGiftDebtRatio = debtRatio; // ⑬
+    body.burdenedGiftValuationAmount = valuationAmount; // ⑬
 
     if (isListed) {
       /**

@@ -372,6 +372,8 @@ M10/M11은 값이 달라지지 않는 중복 가드다. Q4 (a)(기존 가드 동
 
 F4는 와이어에 소수 비율 하나뿐이라 순환 소수(B/C = 14/110 등)에서 `applyRatio`가 옛 식으로 넘어가 **참값이 정수인 곱에서 1원 과소가 남는다**. 사례: B 1,400만 · C 1.1억 · 취득기준시가 총액 5,500만 → 참값 7,000,000 / 실제 6,999,999. `KNOWN-LIMIT` 테스트가 현재 값(6,999,999)을 고정해 두었다 — S-2(와이어에 증여가액 C 추가: ⑫·⑬·⑭·타입·⑧ stock validate)를 하면 이 단언을 참값으로 뒤집고 이 절을 갱신할 것. 빈도는 §6.4 실측 기준 0.002% 수준이다.
 
+> **후속 (2026-10-22) — S-2로 해소**: 본 절의 한계는 `docs/00-pm/stock-burdened-debt-fraction-wire.plan.md`(S-2)에서 닫혔다. 와이어에 증여가액 C(`burdenedGiftValuationAmount`)를 싣고 엔진이 `safeMultiplyThenDivide(estimatedBase, transferPrice(=B), C)`로 곱한다. KNOWN-LIMIT 단언은 참값 7,000,000으로 뒤집었고, `burdenedGiftDebtRatio`는 폐지(수신 시 400 거절)했다. 위 «빈도 0.002%»는 무작위 둥근 금액 분포 값이며 상장 현실 분포의 실측은 S-2 계획서 §6.1(0.09~0.54%)을 볼 것.
+
 ### 13.6 기존 기대값 변화 — 0건
 
 임시 계측(신·구 식 병행 로그, 원복·sha 일치)으로 `buildGiftStockBurdenedTransferBody|burdenedGiftDebtRatio|burdenedGiftStockTransferTax|assumedDebtForGift`를 포함한 **49파일**(`.test.ts` + `.test.tsx`, 596건)을 실행: 신규 BD 테스트를 뺀 기존 호출 F3 22회 · F4 14회(비율 0.1 · 0.2)에서 신·구가 달라진 것 0건, 실패는 계측으로 옛 식을 되살려 정적 가드가 정상적으로 울린 1건뿐(원복 후 통과).

@@ -74,6 +74,48 @@ export function addStockRefines(
       });
     }
 
+    /**
+     * [부담부증여 §159①] 증여재산 평가액 C(`burdenedGiftValuationAmount`) — 분자 B는 엔진 `transferPrice`다.
+     *
+     * 엔진은 B를 별도 필드로 받지 않고 `transferPrice`를 B로 읽는다(§159①2호 «양도가액 = 증여가액 × B/C = B»).
+     * 그 등식이 성립하는 형태는 «실가 · 총액 입력 · 단건(lots 없음)»뿐이다 — 1주당 단가·교환 양도·split 모드의
+     * `transferPrice`는 B가 아니다. 그 밖의 조합에 C가 실리면 안분 분자가 어긋나므로 400으로 막는다.
+     * `transferActualInputMode` 미지정은 위 스키마 default `"total"`이 채워진 뒤의 값을 본다(엔진 읽기와 같은 값).
+     * B > C 는 종전 `burdenedGiftDebtRatio.max(1)` 위반과 같은 400이다(UI ⑧은 경고뿐인 기존 불일치 — 정책 불변).
+     */
+    if (data.burdenedGiftValuationAmount !== undefined) {
+      const c = data.burdenedGiftValuationAmount;
+      const b = data.transferTotalPrice ?? 0;
+      const burdenedPath = ["burdenedGiftValuationAmount"];
+      if (data.transferPriceMode !== "actual" || data.transferActualInputMode !== "total") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: burdenedPath,
+          message: "증여재산 평가액(부담부증여 안분 분모)은 실가·총액 입력 양도(transferPriceMode=actual, transferActualInputMode=total)에서만 쓸 수 있습니다",
+        });
+      }
+      if ((data.acquisitionLots?.length ?? 0) > 0 || (data.transferLots?.length ?? 0) > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: burdenedPath,
+          message: "증여재산 평가액(부담부증여 안분 분모)은 분할 매수·분할 양도(lots) 입력과 함께 쓸 수 없습니다",
+        });
+      }
+      if (b <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: burdenedPath,
+          message: "증여재산 평가액이 있으면 채무인수액(양도가액 transferTotalPrice)이 0보다 커야 합니다",
+        });
+      } else if (b > c) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: burdenedPath,
+          message: "채무인수액(양도가액)이 증여재산 평가액을 초과할 수 없습니다 (소득세법 시행령 §159①)",
+        });
+      }
+    }
+
     // 국제거래 부정 60% → 반드시 isFraudulent=true (단서 조건)
     if (data.isInternationalTransaction && !data.isFraudulent) {
       ctx.addIssue({

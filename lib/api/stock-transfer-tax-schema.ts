@@ -415,10 +415,17 @@ export const stockTransferInputSchema = z.object({
   costAllocationMethod: costAllocationMethodSchema.optional(),
   specificMatchings: z.array(specificMatchingSchema).max(2000).optional(),
 
-  // [부담부증여 전용] §159 개산공제 base 안분 비율 B/C (비상장 estimated 경로 전용)
-  // acquisitionMode === "estimated" && 비상장·기타자산(usesUnlistedSupplementaryValuation) 시에만 유효.
-  // 범위 0~1 (exclusive 0, inclusive 1). undefined = 일반 주식 양도(기존 동작 보존).
-  burdenedGiftDebtRatio: z.number().min(0).max(1).optional(),
+  // [부담부증여 전용] 증여재산 평가액 C — 시행령 §159①1호·2호 `A × B/C`의 분모. 분자 B는 `transferTotalPrice`(=엔진 transferPrice).
+  // acquisitionMode === "estimated" 의 개산공제 base(§163⑥4호)에만 safeMultiplyThenDivide(base, B, C)로 곱한다.
+  // undefined = 일반 주식 양도(안분하지 않는다 — 자동 채움 없음). `.int()`는 걸지 않는다(증여 평가액의 정수성이 확인되지 않았다).
+  // 형태 제약(실가·총액 양도·lots 없음)과 0 < B ≤ C 는 `addStockRefines`(⑩)가 본다.
+  burdenedGiftValuationAmount: z.number().positive().optional(),
+
+  // [폐지] 소수 비율 `burdenedGiftDebtRatio`(S-2에서 C로 교체). 필드만 지우면 구버전 번들 탭이 보낸 값이 Zod 기본 동작으로
+  // **조용히 strip**되어 개산공제 base가 안분 없이 전액(실측 7.9배)이 되므로, 수신 시 명시적으로 400 거절한다. 1릴리스 후 제거.
+  burdenedGiftDebtRatio: z
+    .never({ error: "burdenedGiftDebtRatio는 폐지되었습니다. 증여재산 평가액 burdenedGiftValuationAmount를 사용하세요(페이지를 새로고침해 주세요)." })
+    .optional(),
 });
 
 export type StockTransferInputSchema = z.infer<typeof stockTransferInputSchema>;
