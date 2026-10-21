@@ -22,6 +22,7 @@ import { isRowReduction } from "./house-count-exclusion-rows";
 import { selfFarmingOwnYearsSufficient } from "./self-farming-own-years";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
+import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -83,6 +84,8 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
     for (let ai = 0; ai < assets.length; ai++) {
       const asset = assets[ai];
       const fail = (message: string): ValidationIssue => ({ step, assetIndex: ai, message });
+      // 원조합원 §166 자산의 화면에 없는 기준시가 칸 — 감면 기준시가 폴백으로 인정하지 않는다(④는 싣지 않는다, ⑤⑧과 같은 leaf).
+      const redevHiddenStd = redevHiddenGeneralStdPrice(asset, form);
 
       /**
        * §127⑦ **트랙 교차** 차단 (코드리뷰 D10-01).
@@ -277,7 +280,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             ));
           const hasStdPriceAtTransfer993 =
             parseAmount(r.standardPriceAtTransfer993 || "0") > 0 ||
-            parseAmount(asset.standardPriceAtTransfer || "0") > 0;
+            (!redevHiddenStd.transfer && parseAmount(asset.standardPriceAtTransfer || "0") > 0);
           /**
            * 🔴 **재개발 변형이면 5년 이내에도 필수다** (2026-09-07 UI 리뷰).
            *
@@ -294,7 +297,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
             return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", r.isRedevelopedNewHouse993
                 ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
-                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니면 자산값이 전달되지 않습니다).",
+                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
             ));
           }
         }
@@ -417,14 +420,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             if (prorationNeeded) {
               const hasAcqStd =
                 parseAmount(r.stdPriceAtAcquisition || "") > 0 ||
-                parseAmount(asset.standardPriceAtAcq || "") > 0;
+                (!redevHiddenStd.acq && parseAmount(asset.standardPriceAtAcq || "") > 0);
               const hasTransferStd =
                 parseAmount(r.stdPriceAtTransfer || "") > 0 ||
-                parseAmount(asset.standardPriceAtTransfer || "") > 0;
+                (!redevHiddenStd.transfer && parseAmount(asset.standardPriceAtTransfer || "") > 0);
               if (!hasAcqStd || !hasTransferStd) {
                 const prorationMsg =
                   `${label} 적용: 안분 산식의 취득 당시·양도 당시 기준시가를 입력하세요 ` +
-                  `(감면 카드의 두 칸, 또는 자산 카드의 환산 입력). 자동 안분은 수행하지 않습니다.`;
+                  (redevHiddenStd.acq
+                    ? `(이 자산은 자산 카드에 기준시가 칸이 없어 감면 카드에 입력합니다). `
+                    : `(감면 카드의 두 칸, 또는 자산 카드의 환산 입력). `) +
+                  `자동 안분은 수행하지 않습니다.`;
                 // 두 칸을 한꺼번에 묻는 메시지 — 비어 있는 칸(취득 당시 먼저)으로 보낸다
                 return fail(
                   !hasAcqStd

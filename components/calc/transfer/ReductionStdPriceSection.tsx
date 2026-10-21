@@ -248,7 +248,7 @@ export function ReductionStdPriceSection({
             dong={dong}
             ho={ho}
             referenceDate={transferDate}
-            hint="5년 후 양도 시 안분 계산에 필수 — 환산취득가액 모드가 아니면 자산값이 전달되지 않으므로 직접 입력하세요"
+            hint="5년 후 양도 시 안분 계산에 필수 — 환산취득가액 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않으므로 직접 입력하세요"
             onExclusiveArea={onExclusiveAreaChange ? (area) => onExclusiveAreaChange(String(area)) : undefined}
             testidPrefix={`${testidPrefix}-stdprice-transfer`}
           />

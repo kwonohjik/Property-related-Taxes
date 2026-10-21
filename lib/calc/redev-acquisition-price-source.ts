@@ -11,8 +11,10 @@
  */
 
 import { parseAmount } from "@/lib/calc/number-parse";
-import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { isSuccessorRightTransfer } from "./transfer-successor-right";
+import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
+import { effectiveBundledSaleMode } from "./bundled-sale-mode";
 
 /**
  * §166 서브객체(`redevelopment`)를 만드는 자산인가 — 완공APT 또는 **원조합원** 입주권.
@@ -38,4 +40,41 @@ export function redevActualAcquisitionPriceRaw(
   return asset.redevIsSuccessorMember === "yes"
     ? parseAmount(asset.fixedAcquisitionPrice)
     : parseAmount(asset.redevActualAcquisitionPrice);
+}
+
+/**
+ * 원조합원 §166 자산(입주권 · 비승계 완공APT)은 일반 「취득가액 산정 방식」·「취득시/양도시 기준시가」 영역이
+ * 화면에 없다 — ⑤ `CompanionAcqPurchaseBlock` 렌더 게이트가 이 술어를 쓴다. 부담부증여는 「② 양도정보」에
+ * 기준시가 두 칸이 있어 제외한다(Playwright 실측).
+ */
+export function redevHidesGeneralAcqSection(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "transferType">,
+): boolean {
+  return (
+    asset.transferType !== "burdened_gift" &&
+    isRedevelopmentSec166Asset(asset) &&
+    asset.redevIsSuccessorMember !== "yes"
+  );
+}
+
+/**
+ * 그 자산의 일반 기준시가 두 칸 중 **화면에 없는 칸** — ④는 싣지 않고 ⑧은 감면 기준시가 폴백으로 인정하지 않는다.
+ *
+ * 감면 카드의 기준시가 칸이 비면 엔진은 자산 기준시가로 대신 계산한다(§97의3⑤·§97의5② 안분 —
+ * `rental-97-router.ts`, §99·§99의3·§98의x 5년 안분 — `income-deduction-router.ts`·`unsold-hybrid*.ts`).
+ * 숨은 칸에 자산 종류를 바꾸기 전 값이 남아 있으면 그 값이 세액에 들어갔다(330,990,000 대 181,170,000 —
+ * 계획서 `docs/00-pm/redev-hidden-stdprice-reduction.plan.md` §1.3).
+ *
+ * 함께 양도 **안분 모드**의 양도시 기준시가는 안분 키로 화면에 있다(`CompanionSaleModeBlock`) — 계속 인정한다(Q-2 a).
+ */
+export function redevHiddenGeneralStdPrice(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "transferType">,
+  form: Pick<TransferFormData, "assets" | "assetSplitMode" | "bundledSaleMode">,
+): { acq: boolean; transfer: boolean } {
+  if (!redevHidesGeneralAcqSection(asset)) return { acq: false, transfer: false };
+  const apportionKeyShown =
+    form.assets.length > 1 &&
+    !isFullFractionalBundle(form.assets, form.assetSplitMode) &&
+    effectiveBundledSaleMode(form) === "apportioned";
+  return { acq: true, transfer: !apportionKeyShown };
 }

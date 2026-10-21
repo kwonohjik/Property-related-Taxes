@@ -83,6 +83,7 @@ import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
+import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
@@ -172,7 +173,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
     companionBgDebtOverrides,
     bgInfo,
   } = buildPrimaryContext(form, primary, fractionalBundleMerge);
-
+  // 원조합원 §166 자산의 화면에 없는 일반 기준시가 칸 — 감면 기준시가 폴백으로 새지 않게 싣지 않는다(⑤⑧과 같은 leaf).
+  const redevHiddenStd = redevHiddenGeneralStdPrice(primary, form);
 
   // 겸용주택 분리계산 payload 빌드
   const isMixed = primary.assetKind === "housing" && primary.isMixedUseHouse;
@@ -390,7 +392,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           //    실측). 엔진(`transfer-tax-helpers.ts:364·375`)은 이미 셋 다 개산공제를 적용한다.
           //    바로 윗줄 승계입주권 갈래가 이미 세 방식을 모두 보내고 있었다 — 일반 자산 갈래만
           //    규칙 밖이었다. 분리 축도 `requiresAcqStdPricePart`가 `mode !== "actual"`로 이미 같다.
-          ? parseAmount(primary.standardPriceAtAcq) || undefined
+          ? (redevHiddenStd.acq ? undefined : parseAmount(primary.standardPriceAtAcq) || undefined)
           : undefined,
     // pre1990 모드: 취득시 기준시가는 서브엔진(pre1990Land)이 산출하므로 undefined.
     // 양도시 기준시가는 form 입력값(standardPriceAtTransfer)을 그대로 전달 — 서브엔진은 산출하지 않음.
@@ -404,7 +406,7 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           // 감정·매매사례는 분모가 필요 없어 보내지 않는다.
           : isSuccessorRight && isEstimated
             ? successorRightStdPriceAtTransfer(primary) || undefined
-          : isEstimated
+          : isEstimated && !redevHiddenStd.transfer
             ? parseAmount(primary.standardPriceAtTransfer) || undefined
             : undefined,
     // ⑬ §164⑧ 동일조정기간 양도당시 기준시가 환산 (소령 §164⑧·소칙 §80①~⑤)
