@@ -105,6 +105,12 @@ export function PropertyCardEditor({
     detail: [property.dong, property.ho].filter(Boolean).join(" "),
     lng: "",
     lat: "",
+    // 동·호를 함께 넘긴다 — 빠지면 다시 열었을 때 목록이 돌아오지 않고, 상세주소 입력이 아래 파싱으로
+    //   동·호를 모두 비워(칸 비움·단동 숫자만) 공시가격 조회가 다른 세대 가격을 채웠다.
+    //   이제 목록을 다시 불러오고, 못 불러와도 동·호는 지워지지 않는다(고칠 때는 아래 동·호 칸).
+    //   계획서 docs/00-pm/comprehensive-property-card-dongho.plan.md R1
+    dong: property.dong || undefined,
+    ho: property.ho || undefined,
   };
 
   // ⑤ 다가구주택 라이브 안분 미리보기 (useMemo — useEffect→store 미러링 금지 정책)
