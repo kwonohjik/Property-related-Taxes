@@ -100,11 +100,11 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">종류</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">임계</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">가산액</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">분할</th>
-            <th className="w-8 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
+            <th className="py-2 text-left pl-3 text-gray-600 dark:text-gray-400 font-medium">종류</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">임계</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">가산액</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">분할</th>
+            <th className="w-8 py-2 text-right pr-3 text-gray-600 dark:text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
         <tbody>
@@ -154,7 +154,7 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
                   {result.addedAmount > 0 ? (
                     result.addedAmount.toLocaleString()
                   ) : (
-                    <span className="text-gray-400">0</span>
+                    <span className="text-gray-600 dark:text-gray-400">0</span>
                   )}
                 </td>
                 <td className="pl-2 py-1.5 text-xs">
@@ -163,10 +163,10 @@ function PresumedTable({ items, selectedId, onSelect }: PresumedTableProps) {
                       협의
                     </span>
                   ) : (
-                    <span className="text-gray-400">—</span>
+                    <span className="text-gray-600 dark:text-gray-400">—</span>
                   )}
                 </td>
-                <td className="pr-3 py-1.5 text-right text-gray-500 dark:text-gray-400 text-xs select-none">
+                <td className="pr-3 py-1.5 text-right text-gray-600 dark:text-gray-400 text-xs select-none">
                   ✎
                 </td>
               </tr>
@@ -355,7 +355,7 @@ export function PresumedInheritanceInput({
             <button
               type="button"
               onClick={() => remove(selectedIndex)}
-              className="px-3 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors dark:text-rose-400"
+              className="px-3 py-2 rounded-md text-sm text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors dark:text-rose-400"
             >
               삭제
             </button>

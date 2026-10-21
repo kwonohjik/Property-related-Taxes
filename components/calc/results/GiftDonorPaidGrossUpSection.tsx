@@ -29,7 +29,7 @@ export function GiftDonorPaidGrossUpSection({ grossUp }: Props) {
       <h3 className="text-sm font-semibold text-violet-800 dark:text-violet-200">
         대납(代納) gross-up 상세 (§36 채무면제이익)
       </h3>
-      <p className="text-xs text-violet-600 dark:text-violet-400">
+      <p className="text-xs text-violet-700 dark:text-violet-400">
         증여자가 수증자의 증여세를 대납하면 그 세액 자체도 채무면제이익 증여로 보아 과세표준에 합산합니다.
         수렴할 때까지 반복 계산(최대 100회)한 결과입니다.
       </p>
@@ -84,9 +84,9 @@ export function GiftDonorPaidGrossUpSection({ grossUp }: Props) {
       {/* 흐름 표시 — A + D = V* (P 미포함) */}
       <div className="flex items-center gap-1.5 flex-wrap text-xs text-violet-700 dark:text-violet-300 bg-violet-100/60 dark:bg-violet-900/20 rounded-lg px-3 py-2">
         <span>{formatKRW(grossUp.originalNetGift)}</span>
-        <span className="text-violet-400 dark:text-violet-300">+</span>
+        <span className="text-violet-700 dark:text-violet-300">+</span>
         <span>{formatKRW(grossUp.donorPaidTax)} (증여자 대납분)</span>
-        <span className="text-violet-400 dark:text-violet-300">=</span>
+        <span className="text-violet-700 dark:text-violet-300">=</span>
         <span className="font-semibold">{formatKRW(grossUp.grossedUpNetGift)} (과세가액)</span>
       </div>
 

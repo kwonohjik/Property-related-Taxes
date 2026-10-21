@@ -82,7 +82,7 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
                 type="button"
                 onClick={() => onChange(rows.filter((_, idx) => idx !== i))}
                 data-testid={`sc-im-delete-${i}`}
-                className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
+                className="text-xs font-medium text-rose-700 hover:text-rose-800 dark:text-rose-400"
               >
                 × 삭제
               </button>
@@ -147,7 +147,7 @@ export function SpecificCorpIntermediaryTable({ rows, shareholders, onChange }: 
                     type="button"
                     onClick={() => update(i, { owners: row.owners.filter((_, idx) => idx !== j) })}
                     data-testid={`sc-im-owner-delete-${i}-${j}`}
-                    className="text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
+                    className="text-xs font-medium text-rose-700 hover:text-rose-800 dark:text-rose-400"
                   >
                     ×
                   </button>

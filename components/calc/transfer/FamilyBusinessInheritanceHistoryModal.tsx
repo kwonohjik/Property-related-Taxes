@@ -135,7 +135,7 @@ function CandidateCard({
             <div className="flex items-center justify-between">
               <div>
                 <span className="font-medium text-gray-900 dark:text-gray-100">{a.name}</span>
-                <span className="ml-2 text-micro text-gray-500 dark:text-gray-400">
+                <span className="ml-2 text-micro text-gray-600 dark:text-gray-400">
                   · {CATEGORY_LABEL[a.category] ?? a.category}
                 </span>
               </div>
@@ -233,16 +233,16 @@ export function FamilyBusinessInheritanceHistoryModal({
         {/* 필터 요약 */}
         <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800 dark:text-sky-200 dark:bg-sky-950/40">
           <div>
-            <span className="text-sky-600 dark:text-sky-400">현재 양도일:</span> {currentTransferDate}
+            <span className="text-sky-700 dark:text-sky-400">현재 양도일:</span> {currentTransferDate}
           </div>
-          <div className="text-sky-600 dark:text-sky-400">
+          <div className="text-sky-700 dark:text-sky-400">
             필터: 상속세 이력 + 가업상속공제 적용액 &gt; 0 + 적용률 &gt; 0 + 상속개시일 ≤ 양도일
           </div>
         </div>
 
         {/* 본문 */}
         {loading && (
-          <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">이력을 불러오는 중...</div>
+          <div className="py-8 text-center text-sm text-gray-600 dark:text-gray-400">이력을 불러오는 중...</div>
         )}
 
         {error && (
@@ -254,7 +254,7 @@ export function FamilyBusinessInheritanceHistoryModal({
         {!loading && !error && candidates.length === 0 && (
           <div className="rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 p-6 text-center text-sm text-gray-600 dark:text-gray-400 space-y-1">
             <p className="font-medium">가업상속공제 적용 사례가 없습니다</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               상속세 마법사에서 가업상속공제를 적용한 계산 이력이 필요합니다.
               직접 입력 모드로 진행하세요.
             </p>
@@ -288,7 +288,7 @@ export function FamilyBusinessInheritanceHistoryModal({
               <ul className="mt-2 space-y-1">
                 {Object.entries(warningsByReason).map(([reason, ws]) => (
                   <li key={reason}>
-                    <span className="text-gray-500 dark:text-gray-400">[{FB_WARNING_REASON_LABELS[reason as FbLookupWarningReason] ?? reason}]</span> {ws.length}건
+                    <span className="text-gray-600 dark:text-gray-400">[{FB_WARNING_REASON_LABELS[reason as FbLookupWarningReason] ?? reason}]</span> {ws.length}건
                     <ul className="ml-4 text-caption text-gray-600 dark:text-gray-400">
                       {ws.slice(0, 3).map((w, i) => (
                         <li key={i}>· {w.message}</li>

@@ -186,7 +186,7 @@ function ListedStockEditor({
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+            className="text-xs text-red-700 hover:text-red-800 dark:hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
           >
             삭제
           </button>
@@ -194,7 +194,7 @@ function ListedStockEditor({
       )}
 
       {/* 법적 근거 안내 */}
-      <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
+      <p className="text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
         ℹ️ 평가기준일 전후 2개월 최종 시세 단순평균 × 주식 수 (상증법 §63①1호 가목)
       </p>
 
@@ -431,7 +431,7 @@ function UnlistedStockCard({
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+            className="text-xs text-red-700 hover:text-red-800 dark:hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
           >
             삭제
           </button>

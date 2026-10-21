@@ -190,12 +190,12 @@ export function StockValuationForm({
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
               주식·지분 목록
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
               상장주식과 비상장주식을 구분하여 입력하세요
             </p>
           </div>
           {items.length > 0 && (
-            <span className="text-xs text-gray-400">{items.length}개 입력됨</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{items.length}개 입력됨</span>
           )}
         </div>
       )}
@@ -247,7 +247,7 @@ export function StockValuationForm({
             <button
               type="button"
               onClick={() => handleRemove(selectedIndex)}
-              className="px-4 py-2 rounded-md text-sm border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+              className="px-4 py-2 rounded-md text-sm border border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
             >
               🗑 삭제
             </button>
@@ -278,7 +278,7 @@ export function StockValuationForm({
               <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
                 상장주식
               </span>
-              <span className="text-xs text-gray-400 text-center">
+              <span className="text-xs text-gray-600 dark:text-gray-400 text-center">
                 코스피·코스닥 등 거래소 상장
               </span>
             </button>
@@ -291,7 +291,7 @@ export function StockValuationForm({
               <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
                 비상장주식
               </span>
-              <span className="text-xs text-gray-400 text-center">
+              <span className="text-xs text-gray-600 dark:text-gray-400 text-center">
                 장외 거래 법인 주식·지분
               </span>
             </button>
@@ -299,7 +299,7 @@ export function StockValuationForm({
           <button
             type="button"
             onClick={() => setShowAddPanel(false)}
-            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
           >
             취소
           </button>
@@ -317,7 +317,7 @@ export function StockValuationForm({
             type="button"
             onClick={() => setShowAddPanel(true)}
             data-testid="stock-add-bottom"
-            className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-full border border-indigo-200 dark:border-indigo-700 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-300 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+            className="shrink-0 ml-auto inline-flex items-center gap-1 rounded-full border border-indigo-200 dark:border-indigo-700 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
           >
             <span className="text-sm">+</span>
             주식·지분 추가

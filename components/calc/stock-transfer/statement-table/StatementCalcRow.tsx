@@ -49,7 +49,7 @@ export function StatementCalcRow({
         {row.num && <span className="font-mono tabular-nums mr-1">{row.num}</span>}
         {row.label}
         {row.description && (
-          <span className="block text-caption font-normal text-gray-500 dark:text-gray-400">{row.description}</span>
+          <span className="block text-caption font-normal text-gray-600 dark:text-gray-400">{row.description}</span>
         )}
       </th>
       {cols.map((c) => {

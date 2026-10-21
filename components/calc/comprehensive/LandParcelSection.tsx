@@ -157,7 +157,7 @@ export function LandParcelSection({ kind }: { kind: Kind }) {
                   type="button"
                   onClick={handleRemove}
                   data-testid={`land-${kind}-parcel-remove-${selectedParcelId}`}
-                  className="px-4 py-2 rounded-md text-sm border border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 transition-colors"
+                  className="px-4 py-2 rounded-md text-sm border border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-700 dark:text-rose-400 dark:hover:bg-rose-950/30 transition-colors"
                 >
                   삭제
                 </button>

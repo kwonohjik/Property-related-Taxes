@@ -135,7 +135,7 @@ export function GiftRowBesshiSection({ gift, set, index }: GiftRowBesshiSectionP
           placeholder="부동산 소재지·법인명 입력"
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-        <p className="text-caption text-sky-600 dark:text-sky-400">
+        <p className="text-caption text-sky-700 dark:text-sky-400">
           미입력 시 결과 화면 ③ 컬럼에 &quot;사전증여 (YYYY-MM-DD)&quot;로 표시됩니다.
         </p>
       </div>

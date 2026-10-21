@@ -71,7 +71,7 @@ export function CarryoverScenarioSummaryCard({
             </button>
           )}
         </div>
-        <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
+        <p className="text-caption text-slate-600 dark:text-slate-400 mt-0.5">{subtitle}</p>
       </div>
 
       {/* 요약 테이블 */}
@@ -97,7 +97,7 @@ export function CarryoverScenarioSummaryCard({
             >
               <td className={cn(
                 "px-3 py-1.5 border-r border-slate-200",
-                row.indent && "pl-7 text-slate-500 dark:text-slate-400",
+                row.indent && "pl-7 text-slate-600 dark:text-slate-400",
                 row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
               )}>
                 {row.label}

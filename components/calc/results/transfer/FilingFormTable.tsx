@@ -127,7 +127,7 @@ export function FilingFormTable({
                 </button>
               )}
             </div>
-            <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
+            <p className="text-caption text-slate-600 dark:text-slate-400 mt-0.5">{subtitle}</p>
           </div>
 
           {/* 열 수에 따라 테이블 폭 자동 조정 */}
@@ -169,7 +169,7 @@ export function FilingFormTable({
                   <td
                     className={cn(
                       "px-3 py-1.5 border-r border-slate-200 sticky left-0 bg-white dark:bg-slate-900 print:static",
-                      row.indent && "pl-7 text-slate-500 dark:text-slate-400",
+                      row.indent && "pl-7 text-slate-600 dark:text-slate-400",
                       row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
                     )}
                   >
@@ -189,12 +189,12 @@ export function FilingFormTable({
                       >
                         {fmtCell(row.values[c.key])}
                         {roseNote && (
-                          <div data-testid="filing-rose-note" className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
+                          <div data-testid="filing-rose-note" className="text-micro font-sans font-normal text-rose-700 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
                             {roseNote}
                           </div>
                         )}
                         {note && (
-                          <div className="text-micro font-sans font-normal text-slate-500 dark:text-slate-400 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-slate-600 dark:text-slate-400 leading-tight mt-0.5 whitespace-normal text-right">
                             {note}
                           </div>
                         )}

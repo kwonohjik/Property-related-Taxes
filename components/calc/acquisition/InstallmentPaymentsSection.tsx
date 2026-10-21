@@ -202,7 +202,7 @@ export function InstallmentPaymentsSection({ installments, contractDate, onChang
             </span>
           </div>
           {lastDate && (
-            <p className="text-xs text-emerald-600 mt-0.5 dark:text-emerald-400">
+            <p className="text-xs text-emerald-700 mt-0.5 dark:text-emerald-400">
               마지막 회차 지급일: {lastDate}
             </p>
           )}

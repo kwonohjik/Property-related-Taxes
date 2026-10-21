@@ -448,7 +448,7 @@ export function ExclusionInfoInput({ index, property, onUpdate }: Props) {
         <p className="text-sm text-blue-800 dark:text-blue-200">
           <span className="font-medium">주택 {index + 1}</span> — {labels[exclusionType] ?? exclusionType}
         </p>
-        <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">
+        <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
           해당 유형은 별도 요건 정보 입력 없이 합산배제가 신청됩니다.
         </p>
       </div>

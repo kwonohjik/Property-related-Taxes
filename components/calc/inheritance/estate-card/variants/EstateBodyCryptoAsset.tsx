@@ -150,7 +150,7 @@ export function EstateBodyCryptoAsset({ item, onUpdate, valuationDate }: Variant
                     <button
                       type="button"
                       onClick={() => removeRow(i)}
-                      className="text-xs text-rose-600 hover:underline shrink-0 dark:text-rose-400"
+                      className="text-xs text-rose-700 hover:underline shrink-0 dark:text-rose-400"
                       data-testid={`crypto-daily-remove-${item.id}-${i}`}
                     >
                       삭제

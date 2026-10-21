@@ -27,7 +27,7 @@ export function GenerationSkipFormulaRows({
   return (
     <div data-testid="generation-skip-formula-rows">
       {/* §27 공통 산식 설명 — prorationActive 분기 */}
-      <div className="px-3 py-2 text-caption text-rose-700/80 dark:text-rose-300/80 bg-rose-50/60 dark:bg-rose-950/20 border-b border-border">
+      <div className="px-3 py-2 text-caption text-rose-700 dark:text-rose-300/80 bg-rose-50/60 dark:bg-rose-950/20 border-b border-border">
         <span className="font-semibold">§27 산식 </span>
         {detail.prorationActive ? (
           <>

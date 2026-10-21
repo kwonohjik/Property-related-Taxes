@@ -73,7 +73,7 @@ export function SplitAllocationPreviewCard({
       )}
       {!isTransfer && (
         <table className="w-full text-xs">
-          <thead className="text-slate-500 dark:text-slate-400">
+          <thead className="text-slate-600 dark:text-slate-400">
             <tr>
               <th className="text-left font-normal">양도일</th>
               <th className="text-left font-normal">취득 기산일</th>
@@ -107,7 +107,7 @@ export function SplitAllocationPreviewCard({
           </tbody>
         </table>
       )}
-      <p className="text-xs text-slate-500 dark:text-slate-400">
+      <p className="text-xs text-slate-600 dark:text-slate-400">
         {isTransfer
           ? "매도 건별 주식수 × 1주당 단가의 합계입니다. 수정은 1단계에서 하세요."
           : "양도한 주식수만큼 매칭된 매수 건의 원가입니다(남은 보유분은 포함하지 않습니다). 수정은 1단계에서 하세요." +

@@ -183,7 +183,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
             {gp.isLandPermitTarget === true && (
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">
-                  토지거래허가 신청일 <span className="text-rose-500 dark:text-rose-400">*</span>
+                  토지거래허가 신청일 <span className="text-rose-700 dark:text-rose-400">*</span>
                 </label>
                 <DateInput
                   data-field="gracePeriod.permitApplicationDate"
@@ -209,7 +209,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
             {gp.isLandPermitTarget !== undefined && (
               <div className="space-y-1">
                 <label className="block text-caption text-muted-foreground font-medium">
-                  매매계약일 <span className="text-rose-500 dark:text-rose-400">*</span>
+                  매매계약일 <span className="text-rose-700 dark:text-rose-400">*</span>
                 </label>
                 <DateInput
                   data-field="gracePeriod.contractDate"
@@ -241,7 +241,7 @@ export function GracePeriodSection({ form, onChange }: GracePeriodSectionProps) 
                   소재지 강남·서초·송파·용산 → 4개월 / 그 외 조정대상지역(2025.10.16 지정) → 6개월
                 </p>
                 {months === null && !sellingRegionCode && (
-                  <p className="text-caption text-amber-700 dark:text-amber-300">
+                  <p className="text-caption text-amber-800 dark:text-amber-300">
                     양도 주택 소재지(법정동코드) 미확보 — 나·다목 경과조치는 소재지가 강남·서초·송파·용산
                     또는 2025.10.16 지정 조정대상지역일 때만 적용됩니다. ① 자산 정보에서 주소를 확인하세요.
                   </p>

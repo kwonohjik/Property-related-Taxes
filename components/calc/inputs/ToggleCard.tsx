@@ -59,7 +59,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     chipOn:
       "border-amber-300 bg-amber-100/70 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200",
     chipOff:
-      "border-amber-200/70 bg-amber-50/70 text-amber-800/80 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 dark:text-amber-300/80",
+      "border-amber-200/70 bg-amber-50/70 text-amber-800 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 dark:text-amber-300/80",
     titleOn: "text-amber-900 dark:text-amber-200",
     descOn: "text-amber-700 dark:text-amber-400",
     expandBorder: "border-amber-200 dark:border-amber-800/60",
@@ -72,7 +72,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     chipOn:
       "border-rose-300 bg-rose-100/70 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-200",
     chipOff:
-      "border-rose-200/70 bg-rose-50/70 text-rose-800/80 hover:border-rose-300 dark:border-rose-800/40 dark:bg-rose-950/20 dark:text-rose-300/80",
+      "border-rose-200/70 bg-rose-50/70 text-rose-800 hover:border-rose-300 dark:border-rose-800/40 dark:bg-rose-950/20 dark:text-rose-300/80",
     titleOn: "text-rose-900 dark:text-rose-200",
     descOn: "text-rose-700 dark:text-rose-400",
     expandBorder: "border-rose-200 dark:border-rose-800/60",
@@ -85,7 +85,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     chipOn:
       "border-violet-300 bg-violet-100/70 text-violet-900 dark:border-violet-700/60 dark:bg-violet-950/40 dark:text-violet-200",
     chipOff:
-      "border-violet-200/70 bg-violet-50/70 text-violet-800/80 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 dark:text-violet-300/80",
+      "border-violet-200/70 bg-violet-50/70 text-violet-800 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 dark:text-violet-300/80",
     titleOn: "text-violet-900 dark:text-violet-200",
     descOn: "text-violet-700 dark:text-violet-400",
     expandBorder: "border-violet-200 dark:border-violet-800/60",
@@ -98,7 +98,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     chipOn:
       "border-emerald-300 bg-emerald-100/70 text-emerald-900 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-200",
     chipOff:
-      "border-emerald-200/70 bg-emerald-50/70 text-emerald-800/80 hover:border-emerald-300 dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:text-emerald-300/80",
+      "border-emerald-200/70 bg-emerald-50/70 text-emerald-800 hover:border-emerald-300 dark:border-emerald-800/40 dark:bg-emerald-950/20 dark:text-emerald-300/80",
     titleOn: "text-emerald-900 dark:text-emerald-200",
     descOn: "text-emerald-700 dark:text-emerald-400",
     expandBorder: "border-emerald-200 dark:border-emerald-800/60",
@@ -111,7 +111,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     chipOn:
       "border-sky-300 bg-sky-100/70 text-sky-900 dark:border-sky-700/60 dark:bg-sky-950/40 dark:text-sky-200",
     chipOff:
-      "border-sky-200/70 bg-sky-50/70 text-sky-800/80 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 dark:text-sky-300/80",
+      "border-sky-200/70 bg-sky-50/70 text-sky-800 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 dark:text-sky-300/80",
     titleOn: "text-sky-900 dark:text-sky-200",
     descOn: "text-sky-700 dark:text-sky-400",
     expandBorder: "border-sky-200 dark:border-sky-800/60",
@@ -124,7 +124,7 @@ const TONES: Record<ToggleCardTone, ToneClasses> = {
     chipOn:
       "border-fuchsia-300 bg-fuchsia-100/70 text-fuchsia-900 dark:border-fuchsia-700/60 dark:bg-fuchsia-950/40 dark:text-fuchsia-200",
     chipOff:
-      "border-fuchsia-200/70 bg-fuchsia-50/70 text-fuchsia-800/80 hover:border-fuchsia-300 dark:border-fuchsia-800/40 dark:bg-fuchsia-950/20 dark:text-fuchsia-300/80",
+      "border-fuchsia-200/70 bg-fuchsia-50/70 text-fuchsia-800 hover:border-fuchsia-300 dark:border-fuchsia-800/40 dark:bg-fuchsia-950/20 dark:text-fuchsia-300/80",
     titleOn: "text-fuchsia-900 dark:text-fuchsia-200",
     descOn: "text-fuchsia-700 dark:text-fuchsia-400",
     expandBorder: "border-fuchsia-200 dark:border-fuchsia-800/60",

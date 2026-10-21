@@ -59,7 +59,7 @@ function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps)
               건물 기준시가 = 단가 <b>{fmt(bd.basePrice)}</b> × 잔가율 <b>{bd.residualRate}</b> × 주차대수{" "}
               <b>{bd.parkingLotCount}</b> = <b className="font-mono tabular-nums">{fmt(bd.standardPrice)}</b>
             </p>
-            <p className="text-slate-400">
+            <p className="text-slate-600 dark:text-slate-400">
               내용연수 {bd.mechDurableYears}년 기준 잔가율 · 조정률 미적용(주차전용빌딩)
             </p>
           </>
@@ -90,7 +90,7 @@ function BreakdownCard({ title, tone, bd, floorArea, sameYearBadge }: CardProps)
               </p>
             )}
             {bd.appliedLandPriceYear !== undefined && (
-              <p className="text-slate-400">위치지수 적용 공시지가 기준연도: {bd.appliedLandPriceYear}년</p>
+              <p className="text-slate-600 dark:text-slate-400">위치지수 적용 공시지가 기준연도: {bd.appliedLandPriceYear}년</p>
             )}
           </>
         )}
@@ -127,7 +127,7 @@ export function BuildingStdPriceResultCard({ result, floorArea, transferSectionL
         />
       )}
       <BuildingStdPriceAdvancedResult result={result} />
-      <p className="text-caption leading-relaxed text-slate-400">{result.legalBasis}</p>
+      <p className="text-caption leading-relaxed text-slate-600 dark:text-slate-400">{result.legalBasis}</p>
       {result.warnings.map((w, i) => (
         <p key={i} className="text-xs text-amber-700 dark:text-amber-300">
           ⚠️ {w}

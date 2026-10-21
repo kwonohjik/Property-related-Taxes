@@ -38,7 +38,7 @@ export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectio
               placeholder="거주 연수 (만 년)"
               className="w-40"
             />
-            <span className="text-sm text-slate-500 dark:text-slate-400">년</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400">년</span>
           </div>
         </FieldCard>
 

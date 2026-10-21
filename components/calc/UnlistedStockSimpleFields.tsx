@@ -188,31 +188,31 @@ export function UnlistedStockPreview({
       <p className="font-semibold text-gray-600 dark:text-gray-300 mb-2">계산 내역</p>
 
       {companyWeightedNetIncome != null && (
-        <div className="flex justify-between text-gray-500 dark:text-gray-400 text-caption">
+        <div className="flex justify-between text-gray-600 dark:text-gray-400 text-caption">
           <span>
             <Frac top="3년 가중평균 순손익 (회사 전체, §56①)" bottom="발행주식수 × 환원율" />
           </span>
           <span>{Math.round(companyWeightedNetIncome).toLocaleString()}</span>
         </div>
       )}
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>1주당 순손익가치</span>
         <span>{preview.perShareIncomeValue.toLocaleString()}</span>
       </div>
 
       {/* 영업권(§59②) 가산 — 이미지25 ㉮㉯㉰㉱ */}
       <div className="border-t border-gray-200 dark:border-gray-700 pt-1.5 mt-1.5 space-y-1">
-        <div className="flex justify-between text-gray-500 dark:text-gray-400">
-          <span>㉮ 영업권 포함 전 순자산가액 <span className="text-micro text-gray-400">(회사 전체)</span></span>
+        <div className="flex justify-between text-gray-600 dark:text-gray-400">
+          <span>㉮ 영업권 포함 전 순자산가액 <span className="text-micro text-gray-600 dark:text-gray-400">(회사 전체)</span></span>
           <span>{goodwill.selfCapital.toLocaleString()}</span>
         </div>
         {hasGoodwill ? (
           <>
-            <div className="flex justify-between items-start text-gray-500 dark:text-gray-400">
+            <div className="flex justify-between items-start text-gray-600 dark:text-gray-400">
               <button
                 type="button"
                 onClick={() => setGoodwillOpen((o) => !o)}
-                className="inline-flex items-center gap-1.5 text-left text-indigo-600 dark:text-indigo-400 print:hidden"
+                className="inline-flex items-center gap-1.5 text-left text-indigo-700 dark:text-indigo-400 print:hidden"
               >
                 <span className="hover:underline">㉯ 영업권 평가액 (§59②) 산출근거</span>
                 <span className={expandToggleClass("slate")} aria-hidden>{expandToggleLabel(goodwillOpen)}</span>
@@ -221,22 +221,22 @@ export function UnlistedStockPreview({
               <span>{goodwill.goodwillFinal.toLocaleString()}</span>
             </div>
             {/* 산출근거 6줄 — 인쇄 시 자동 펼침 (print-only-css-toggle) */}
-            <div className={`${goodwillOpen ? "block" : "hidden print:block"} rounded bg-indigo-50/60 dark:bg-indigo-900/20 px-2 py-1.5 space-y-0.5 text-caption text-gray-500 dark:text-gray-400`}>
+            <div className={`${goodwillOpen ? "block" : "hidden print:block"} rounded bg-indigo-50/60 dark:bg-indigo-900/20 px-2 py-1.5 space-y-0.5 text-caption text-gray-600 dark:text-gray-400`}>
               <div className="flex justify-between"><span>가. 최근 3년 가중평균 순손익액</span><span>{goodwill.weightedAvg3y.toLocaleString()}</span></div>
               <div className="flex justify-between"><span>나. 가 × 50%</span><span>{goodwill.weightedAvgHalf.toLocaleString()}</span></div>
               <div className="flex justify-between"><span>다. 자기자본 (영업권 포함 전 순자산)</span><span>{goodwill.selfCapital.toLocaleString()}</span></div>
               <div className="flex justify-between"><span>마. 다 × 이자율(10%)</span><span>{goodwill.selfCapitalRate.toLocaleString()}</span></div>
               <div className="flex justify-between"><span>초과이익 (나 − 마, 음수 시 0)</span><span>{goodwill.annualExcessProfit.toLocaleString()}</span></div>
               <div className="flex justify-between font-medium text-gray-600 dark:text-gray-300"><span>자. 영업권 = 초과이익 × 5년 연금현가</span><span>{goodwill.goodwillFinal.toLocaleString()}</span></div>
-              <p className="text-micro text-gray-400 pt-0.5">5년 연금현가계수 3.7908 적용 (상증령 §59② · 상증규 §19① 10%)</p>
+              <p className="text-micro text-gray-600 dark:text-gray-400 pt-0.5">5년 연금현가계수 3.7908 적용 (상증령 §59② · 상증규 §19① 10%)</p>
             </div>
-            <div className="flex justify-between text-gray-500 dark:text-gray-400">
-              <span>㉰ 영업권 포함 순자산가액 <span className="text-micro text-gray-400">(회사 전체)</span></span>
+            <div className="flex justify-between text-gray-600 dark:text-gray-400">
+              <span>㉰ 영업권 포함 순자산가액 <span className="text-micro text-gray-600 dark:text-gray-400">(회사 전체)</span></span>
               <span>{preview.netAssetWithGoodwill.toLocaleString()}</span>
             </div>
           </>
         ) : (
-          <div className="flex justify-between text-gray-500 dark:text-gray-400 text-caption">
+          <div className="flex justify-between text-gray-600 dark:text-gray-400 text-caption">
             <span>㉯ 영업권 (§59②)</span>
             <span>
               0 — 미가산
@@ -246,23 +246,23 @@ export function UnlistedStockPreview({
         )}
       </div>
 
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>{hasGoodwill ? "㉱ 1주당 순자산가치 (영업권 포함)" : "1주당 순자산가치"}</span>
         <span>{preview.perShareAssetValue.toLocaleString()}</span>
       </div>
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>
           가중평균 <Frac top={`순손익×${iw} + 순자산×${aw}`} bottom="5" />
         </span>
         <span>{preview.perShareWeightedValue.toLocaleString()}</span>
       </div>
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>최소값 (순자산가치 × 80%)</span>
         <span>{preview.perShareMinValue.toLocaleString()}</span>
       </div>
       <div className="flex justify-between font-semibold text-gray-700 dark:text-gray-200 border-t border-gray-200 dark:border-gray-700 pt-1">
         <span>1주당 최종 평가액</span>
-        <span className={isMinValueApplied ? "text-amber-600 dark:text-amber-400" : ""}>
+        <span className={isMinValueApplied ? "text-amber-700 dark:text-amber-400" : ""}>
           {preview.perShareFinalValue.toLocaleString()}
           {isMinValueApplied && " (최소값 적용)"}
         </span>
@@ -275,19 +275,19 @@ export function UnlistedStockPreview({
 
       {/* 경고 메시지 */}
       {isDeficit && (
-        <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
+        <p className="text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
           ⚠️ 적자법인 — 순손익가치 0 적용, 최소값(순자산 80%) 기준
           {goodwill.excludedByLaw === "continuous_loss_3y" && " · 영업권 미가산 (§55③ 3호)"}
         </p>
       )}
       {/* §55③ 배제 (적자 외 사유 — 청산·부동산80%·3년미만) */}
       {!isDeficit && goodwill.excludedByLaw && goodwill.excludedByLaw !== "continuous_loss_3y" && (
-        <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
+        <p className="text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
           ⚠️ 영업권 미가산 — {GOODWILL_EXCLUSION_LABEL[goodwill.excludedByLaw]}
         </p>
       )}
       {isMinValueApplied && !isDeficit && (
-        <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
+        <p className="text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1 mt-1">
           ⚠️ 가중평균 &lt; 최소값 — 순자산가치 80% 최소값 적용
         </p>
       )}
@@ -378,7 +378,7 @@ export function UnlistedStockSimpleFields({
   return (
     <div className="space-y-3 border-2 border-indigo-300 dark:border-indigo-700 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-lg p-4">
       {/* 법적 근거 안내 */}
-      <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
+      <p className="text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
         ℹ️ 1주당 가치 = <Frac top="순손익가치×3 + 순자산가치×2" bottom="5" /> (상증법 §63①1호 다목, 시행령 §54)
       </p>
 
@@ -521,18 +521,18 @@ export function UnlistedStockSimpleFields({
             <p className="font-semibold text-indigo-700 dark:text-indigo-300">
               자동 계산: 3년 가중평균 순손익 (§56①)
             </p>
-            <p className="text-indigo-600 dark:text-indigo-400">
+            <p className="text-indigo-700 dark:text-indigo-400">
               = <Frac top="직전1년×3 + 직전2년×2 + 직전3년×1" bottom="6" />
               {" = "}
               <span className="font-medium">{weightedNetIncomePreview.toLocaleString()}</span>
               {weightedNetIncomePreview <= 0 && (
-                <span className="ml-1 text-amber-600 dark:text-amber-400">
+                <span className="ml-1 text-amber-700 dark:text-amber-400">
                   → 0 적용 (음수 시 0, §56① 단서)
                 </span>
               )}
             </p>
             {weightedNetIncomePreview <= 0 && (
-              <p className="text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+              <p className="text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
                 ⚠️ 적자법인 — 순손익가치 0 적용, 최소값(순자산 80%) 기준
               </p>
             )}
@@ -572,7 +572,7 @@ export function UnlistedStockSimpleFields({
           />
         </FieldCard>
         {data?.netAssetValue != null && data.netAssetValue < 0 && (
-          <p className="text-caption text-amber-600 dark:text-amber-400 pl-1">
+          <p className="text-caption text-amber-700 dark:text-amber-400 pl-1">
             음수 순자산 → 자기자본 0으로 처리 (상증법 §55① 후단). 영업권이 있으면 영업권만 가산됩니다.
           </p>
         )}

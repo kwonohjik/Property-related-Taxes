@@ -118,7 +118,7 @@ export function FilingFormPersonalInfoPanel({ onChange }: Props) {
           <button
             type="button"
             onClick={() => setShowId((v) => !v)}
-            className="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 print:hidden"
+            className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-700 print:hidden"
             title={showId ? "숨기기" : "표시"}
           >
             {showId ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}

@@ -186,7 +186,7 @@ export function DeemedLandCategorySection({ form, set }: Props) {
                 : "변경 후 시가표준액이 변경 전 이하 — 과세 대상 없음"}
             </p>
           )}
-          <p className="text-xs text-sky-600 dark:text-sky-400">* 농어촌특별세·지방교육세 별도</p>
+          <p className="text-xs text-sky-700 dark:text-sky-400">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
 

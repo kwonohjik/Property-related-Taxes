@@ -61,7 +61,7 @@ export function SpecialHouseExclusionDetailCard({ detail, houses }: Props) {
         </span>
       </div>
 
-      <p className="text-xs text-violet-900/90 dark:text-violet-200/90">
+      <p className="text-xs text-violet-900 dark:text-violet-200/90">
         보유 중인 {subject}을 1세대 1주택 비과세 판정 주택 수에서 제외합니다 (소득세법
         제89조제1항제3호 의제). 아래 적격 {detail.excludedCount}채가 양도 주택의 비과세 판정에서
         소유주택으로 보지 않습니다.
@@ -101,7 +101,7 @@ export function SpecialHouseExclusionDetailCard({ detail, houses }: Props) {
               </span>
             </div>
             {!e.eligible && e.reason && (
-              <p className="text-rose-900/90 dark:text-rose-200/90">{e.reason}</p>
+              <p className="text-rose-900 dark:text-rose-200/90">{e.reason}</p>
             )}
             <p className="text-micro text-muted-foreground">근거 조문: {e.legalBasis}</p>
           </div>

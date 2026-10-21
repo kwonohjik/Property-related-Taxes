@@ -416,7 +416,7 @@ export function FamilyBusinessEligibilitySection({
                 onChange={update}
               />
             ) : (
-              <p className="text-caption text-sky-600 dark:text-sky-400">
+              <p className="text-caption text-sky-700 dark:text-sky-400">
                 상속인을 먼저 등록하면 가업상속인을 선택할 수 있습니다.
               </p>
             )}

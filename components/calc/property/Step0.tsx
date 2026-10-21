@@ -427,7 +427,7 @@ function OwnershipSection({
                   />
                   <button
                     type="button"
-                    className="rounded px-2 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:text-rose-400"
+                    className="rounded px-2 py-2 text-sm text-rose-700 hover:bg-rose-50 dark:text-rose-400"
                     onClick={() =>
                       onChange({ heirs: form.heirs.filter((_, j) => j !== i) })
                     }
@@ -671,7 +671,7 @@ function CoOwnerList({
         </div>
       ))}
       {totalRatio > 1 + 1e-9 && (
-        <p className="text-xs text-red-600 dark:text-red-400">지분율 합계가 100%를 초과합니다.</p>
+        <p className="text-xs text-red-700 dark:text-red-400">지분율 합계가 100%를 초과합니다.</p>
       )}
     </div>
   );

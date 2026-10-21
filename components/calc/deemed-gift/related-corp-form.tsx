@@ -141,7 +141,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         title="주주현황"
         titleExtra={
           <span
-            className={`ml-auto text-xs font-mono ${Math.abs(summary.totalDirectPct - 100) > 0.01 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-300"}`}
+            className={`ml-auto text-xs font-mono ${Math.abs(summary.totalDirectPct - 100) > 0.01 ? "text-rose-700 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-300"}`}
             data-testid="rc-shareholder-sum"
           >
             지분합계 {summary.totalDirectPct.toFixed(2)}%
@@ -155,7 +155,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               <button
                 type="button"
                 onClick={() => setShareholders(form.rcShareholders.filter((_, i) => i !== idx))}
-                className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+                className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                 aria-label={`주주 ${idx + 1} 삭제`}
               >
                 삭제
@@ -219,7 +219,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                 <button
                   type="button"
                   onClick={() => set({ rcIntermediaryCorps: form.rcIntermediaryCorps.filter((_, i) => i !== idx) })}
-                  className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+                  className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                   aria-label={`간접출자법인 ${idx + 1} 삭제`}
                 >
                   삭제
@@ -279,7 +279,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                   <button
                     type="button"
                     onClick={() => updIntermediary(idx, { ...row, owners: row.owners.filter((_, i) => i !== oIdx) })}
-                    className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+                    className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                     aria-label={`소유주 ${oIdx + 1} 삭제`}
                   >
                     삭제
@@ -313,7 +313,7 @@ export function RelatedCorpFields({ form, set }: Props) {
         title="매출처"
         titleExtra={
           <span
-            className={`ml-auto text-xs font-mono ${summary.totalSales > 0 && summary.salesSum !== summary.totalSales ? "text-rose-600 dark:text-rose-400" : "text-violet-700 dark:text-violet-300"}`}
+            className={`ml-auto text-xs font-mono ${summary.totalSales > 0 && summary.salesSum !== summary.totalSales ? "text-rose-700 dark:text-rose-400" : "text-violet-700 dark:text-violet-300"}`}
             data-testid="rc-sales-sum"
           >
             매출합계 {summary.salesSum.toLocaleString()}
@@ -327,7 +327,7 @@ export function RelatedCorpFields({ form, set }: Props) {
               <button
                 type="button"
                 onClick={() => set({ rcSalesPartners: form.rcSalesPartners.filter((_, i) => i !== idx) })}
-                className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+                className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                 aria-label={`매출처 ${idx + 1} 삭제`}
               >
                 삭제
@@ -459,7 +459,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                     );
                   })}
                 </select>
-                <p className="mt-1 text-caption text-violet-600 dark:text-violet-400">
+                <p className="mt-1 text-caption text-violet-700 dark:text-violet-400">
                   간접출자법인이면 이 매출처 매출액 전액이 과세제외됩니다 (§⑱ 지배주주등 합산 30% 이상일 때만 성립).
                 </p>
                 <p className="mt-2 text-caption font-medium text-violet-700 dark:text-violet-300">§⑭3호 지배주주등 보유비율 (이 법인에 출자한 수증자)</p>
@@ -498,7 +498,7 @@ export function RelatedCorpFields({ form, set }: Props) {
                     <button
                       type="button"
                       onClick={() => updSales(idx, { ...row, rulingStakes: row.rulingStakes.filter((_, i) => i !== sIdx) })}
-                      className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+                      className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                       aria-label={`§⑭ ${sIdx + 1} 삭제`}
                     >
                       삭제

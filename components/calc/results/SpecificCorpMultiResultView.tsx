@@ -113,11 +113,11 @@ export function SpecificCorpMultiResultView({
           <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-300" data-testid="sc-multi-benefit">
             {formatKRW(multi.transactionBenefit)}
           </span>
-          <span className="text-emerald-600 dark:text-emerald-400">− 법인세 안분</span>
+          <span className="text-emerald-700 dark:text-emerald-400">− 법인세 안분</span>
           <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-300" data-testid="sc-multi-corp-tax">
             {formatKRW(multi.corpTaxApportioned)}
           </span>
-          <span className="text-emerald-600 dark:text-emerald-400">→ 특정법인의 이익</span>
+          <span className="text-emerald-700 dark:text-emerald-400">→ 특정법인의 이익</span>
           <span className="font-mono font-semibold tabular-nums text-emerald-800 dark:text-emerald-200" data-testid="sc-multi-corp-profit">
             {formatKRW(multi.corpProfit)}
           </span>

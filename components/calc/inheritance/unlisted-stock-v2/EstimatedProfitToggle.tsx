@@ -240,7 +240,7 @@ export function EstimatedProfitToggle({
                           <button
                             type="button"
                             onClick={() => handleRemoveAgency(idx)}
-                            className="text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400"
+                            className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
                             data-testid={`estimated-profit-remove-${idx}`}
                           >
                             삭제
@@ -251,7 +251,7 @@ export function EstimatedProfitToggle({
                       <div data-testid={`estimated-profit-agency-type-${idx}`}>
                         <p className="text-micro text-violet-700 mb-1 dark:text-violet-300">
                           유형{" "}
-                          <span className="text-violet-500 dark:text-violet-400">
+                          <span className="text-violet-700 dark:text-violet-400">
                             (<LawArticleModal
                               legalBasis={VALUATION.UNLISTED_ESTIMATED_AGENCY_TYPE}
                               label={VALUATION.UNLISTED_ESTIMATED_AGENCY_TYPE}
@@ -358,7 +358,7 @@ export function EstimatedProfitToggle({
                       <b>{fmt(preview.perShareIncomeValue)}</b>
                     </p>
                   ) : (
-                    <p className="text-amber-700 dark:text-amber-300">
+                    <p className="text-amber-800 dark:text-amber-300">
                       요건 미충족으로 갈음 미적용 — {preview.warnings.filter((w) => !w.startsWith("[시점 안내]")).join(" / ")}
                     </p>
                   )}

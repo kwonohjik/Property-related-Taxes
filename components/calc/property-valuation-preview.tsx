@@ -63,20 +63,20 @@ export function EstimatedValuePreview({ item }: { item: EstateItem }) {
 
   return (
     <div className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1">
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>적용 방법</span>
-        <span className="font-medium text-indigo-600 dark:text-indigo-400">
+        <span className="font-medium text-indigo-700 dark:text-indigo-400">
           {methodLabel[method]}
         </span>
       </div>
       {collateralRaised && (
-        <div className="flex justify-between text-gray-500 dark:text-gray-400">
+        <div className="flex justify-between text-gray-600 dark:text-gray-400">
           <span>§66 담보채권액 하한</span>
           <span>{formatKRW(securedClaim)}</span>
         </div>
       )}
       {isReal && securedClaim > 0 && !collateralRaised && (
-        <div className="flex justify-between text-amber-600 dark:text-amber-400">
+        <div className="flex justify-between text-amber-700 dark:text-amber-400">
           <span>담보채무 {formatKRW(securedClaim)}</span>
           <span>부채 명세 별도 공제</span>
         </div>

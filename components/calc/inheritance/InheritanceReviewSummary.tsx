@@ -41,7 +41,7 @@ function Chip({ children }: { children: React.ReactNode }) {
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-0.5">
-      <span className="shrink-0 text-caption text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="shrink-0 text-caption text-gray-600 dark:text-gray-400">{label}</span>
       <span className="text-right text-xs font-medium text-gray-800 dark:text-gray-200">
         {value}
       </span>
@@ -207,7 +207,7 @@ export function InheritanceReviewSummary({
         </div>
       )}
 
-      <p className="text-micro text-gray-500 dark:text-gray-400">
+      <p className="text-micro text-gray-600 dark:text-gray-400">
         ⓘ 입력 내용을 확인한 뒤 아래 ‘계산하기’를 누르세요. 금액 합계는 좌측 요약에서 확인할 수 있습니다.
       </p>
     </div>

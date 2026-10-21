@@ -134,7 +134,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
           />
         )}
         {a.donorCapexGuardApplied && (
-          <p className="text-micro text-amber-600 pl-2 dark:text-amber-400">
+          <p className="text-micro text-amber-700 pl-2 dark:text-amber-400">
             * 증여자 자본적지출: 2024.1.1. 이전 양도 — 가드 발동, 0 처리
           </p>
         )}
@@ -155,7 +155,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
           </p>
         )}
         {a.giftTaxLimitApplied && (
-          <p className="text-micro text-amber-600 pl-2 leading-relaxed dark:text-amber-400">
+          <p className="text-micro text-amber-700 pl-2 leading-relaxed dark:text-amber-400">
             * 증여세 한도 발동 — {ap ? "안분액이 " : ""}「양도로 보는 부분」의 양도차익{" "}
             {fmt(a.giftTaxLimitCap)}을 넘어 한도까지만 산입 (시행령 §163의2② 후단)
           </p>
@@ -274,7 +274,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
         {detail.isEligible ? (
           <span className="ml-2 text-emerald-700 font-medium dark:text-emerald-300">→ 이월과세 요건 충족</span>
         ) : detail.exclusionReason === "period_exceeded" ? (
-          <span className="ml-2 text-rose-600 font-medium dark:text-rose-400">→ 기간 초과 — 이월과세 미적용</span>
+          <span className="ml-2 text-rose-700 font-medium dark:text-rose-400">→ 기간 초과 — 이월과세 미적용</span>
         ) : null}
       </div>
 
@@ -290,7 +290,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
               저장 당시 선언 기준으로 계산했습니다 — 입력 화면에서 「자동 판정으로 전환」하면 입력한 사실로 다시 판정합니다.
             </p>
           )}
-          <p className="text-amber-600 mt-1 dark:text-amber-400">→ 일반 양도소득세 계산 적용</p>
+          <p className="text-amber-700 mt-1 dark:text-amber-400">→ 일반 양도소득세 계산 적용</p>
         </div>
       )}
 
@@ -350,7 +350,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
           </div>
         )}
         {detail.comparisonExclusion && (
-          <p className="text-rose-600 dark:text-rose-400">
+          <p className="text-rose-700 dark:text-rose-400">
             ※ §97조의2 ② 3호 비교과세 — 시나리오 B 채택 (세액 역전
             {filing !== undefined ? " · 신고 전체 결정세액 기준" : ""})
           </p>

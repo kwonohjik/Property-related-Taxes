@@ -141,7 +141,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             ]}
           />
           {value.rentIncreaseViolationMode === "" && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
@@ -157,7 +157,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
                   <button
                     type="button"
                     onClick={() => removeRentHistory(idx)}
-                    className="text-micro text-rose-600 hover:underline dark:text-rose-400"
+                    className="text-micro text-rose-700 hover:underline dark:text-rose-400"
                   >
                     삭제
                   </button>
@@ -243,7 +243,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             ]}
           />
           {value.hasVacancyOverGrace === null && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
           )}
         </div>
 
@@ -264,7 +264,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
                 <button
                   type="button"
                   onClick={() => removeVacancy(idx)}
-                  className="text-micro text-rose-600 hover:underline dark:text-rose-400"
+                  className="text-micro text-rose-700 hover:underline dark:text-rose-400"
                 >
                   삭제
                 </button>
@@ -318,7 +318,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               ]}
             />
             {value.rentalContinuesToTransfer === null && (
-              <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
+              <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
                 ※ 반드시 선택하세요 (미선택 시 계산 불가)
               </p>
             )}

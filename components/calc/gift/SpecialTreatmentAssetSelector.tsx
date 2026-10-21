@@ -127,7 +127,7 @@ export function SpecialTreatmentAssetSelector({
             {val > 0 ? formatKRW(val) : "—"}
           </span>
         </div>
-        <p className="text-caption text-emerald-600 dark:text-emerald-400">
+        <p className="text-caption text-emerald-700 dark:text-emerald-400">
           자산이 1개이므로 전체가 {streamLabel} 특례 스트림으로 자동 귀속됩니다.
         </p>
       </ToneCard>
@@ -142,7 +142,7 @@ export function SpecialTreatmentAssetSelector({
       bodyClassName="space-y-2"
       title={<>특례 귀속 자산 선택 ({streamLabel})</>}
     >
-      <p className="text-caption text-emerald-600 dark:text-emerald-400">
+      <p className="text-caption text-emerald-700 dark:text-emerald-400">
         {streamLabel} 과세특례를 적용할 자산을 선택하세요. 미선택 자산은 일반 스트림(§47·§53·§56)으로 계산됩니다.
       </p>
       <div className="space-y-1.5">
@@ -178,7 +178,7 @@ export function SpecialTreatmentAssetSelector({
                   // 부적격은 신규 체크 차단. 단 이미 체크된 상태(이력 복원 등)는 해제 가능해야 함
                   disabled={!eligible && !isChecked}
                   onChange={(e) => onItemChange(i, e.target.checked)}
-                  className="h-4 w-4 rounded border-emerald-400 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed dark:text-emerald-400"
+                  className="h-4 w-4 rounded border-emerald-400 text-emerald-700 focus:ring-emerald-500 disabled:cursor-not-allowed dark:text-emerald-400"
                 />
                 <span className="text-sm">{label}</span>
                 {isChecked && (

@@ -151,7 +151,7 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
                     <button
                       type="button"
                       onClick={() => removeRow(row.id)}
-                      className="rounded p-1 text-rose-500 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400"
+                      className="rounded p-1 text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-400"
                       aria-label="주주 삭제"
                     >
                       ×

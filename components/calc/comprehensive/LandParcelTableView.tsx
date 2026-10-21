@@ -52,15 +52,15 @@ function LandParcelTableRow({ parcel, index, kind, isSelected, onSelect }: LandP
       <td className="pl-3 py-1.5 whitespace-nowrap text-xs font-medium">필지 {index + 1}</td>
       {/* 시군구 */}
       <td className="pl-2 py-1.5 text-xs max-w-[8rem] truncate">
-        {parcel.jurisdiction?.trim() || <span className="text-gray-400">미입력</span>}
+        {parcel.jurisdiction?.trim() || <span className="text-gray-600 dark:text-gray-400">미입력</span>}
       </td>
       {/* 필지명 */}
       <td className="pl-2 py-1.5 text-xs max-w-[8rem] truncate">
-        {parcel.name?.trim() || <span className="text-gray-500 dark:text-gray-400">—</span>}
+        {parcel.name?.trim() || <span className="text-gray-600 dark:text-gray-400">—</span>}
       </td>
       {/* 면적 (우정렬) */}
       <td className="pr-2 py-1.5 text-xs text-right font-mono tabular-nums whitespace-nowrap">
-        {area > 0 ? `${area.toLocaleString()}㎡` : <span className="text-gray-400">미입력</span>}
+        {area > 0 ? `${area.toLocaleString()}㎡` : <span className="text-gray-600 dark:text-gray-400">미입력</span>}
       </td>
       {/* 지분 */}
       <td className="pr-2 py-1.5 text-xs text-right font-mono tabular-nums whitespace-nowrap">
@@ -68,11 +68,11 @@ function LandParcelTableRow({ parcel, index, kind, isSelected, onSelect }: LandP
       </td>
       {/* 당해 공시지가 (원/㎡, 우정렬) */}
       <td className="pr-2 py-1.5 text-xs text-right font-mono tabular-nums whitespace-nowrap">
-        {price > 0 ? price.toLocaleString() : <span className="text-gray-400">미입력</span>}
+        {price > 0 ? price.toLocaleString() : <span className="text-gray-600 dark:text-gray-400">미입력</span>}
       </td>
       {/* 편집 힌트 */}
       <td className="pr-3 py-1.5 text-right text-xs select-none whitespace-nowrap">
-        <span className="text-gray-500 dark:text-gray-400">✎</span>
+        <span className="text-gray-600 dark:text-gray-400">✎</span>
       </td>
     </tr>
   );
@@ -98,13 +98,13 @@ export function LandParcelTableView({
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700 bg-muted/30">
-            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">필지</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">시군구</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">필지명</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">면적</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">지분</th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">공시지가</th>
-            <th className="w-12 py-2 text-right pr-3 text-gray-400 font-medium text-micro">편집</th>
+            <th className="py-2 text-left pl-3 text-gray-600 dark:text-gray-400 font-medium">필지</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">시군구</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">필지명</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">면적</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">지분</th>
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">공시지가</th>
+            <th className="w-12 py-2 text-right pr-3 text-gray-600 dark:text-gray-400 font-medium text-micro">편집</th>
           </tr>
         </thead>
         <tbody>

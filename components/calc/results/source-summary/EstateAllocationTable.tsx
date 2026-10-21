@@ -136,7 +136,7 @@ export function EstateAllocationTable({
                 </td>
                 <td
                   colSpan={heirs.length}
-                  className="border border-slate-200 px-2 py-1.5 text-center text-slate-500 dark:text-slate-400"
+                  className="border border-slate-200 px-2 py-1.5 text-center text-slate-600 dark:text-slate-400"
                 >
                   Table B 참조
                 </td>

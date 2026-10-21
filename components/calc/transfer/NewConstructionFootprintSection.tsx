@@ -142,7 +142,7 @@ export function NewConstructionFootprintSection({
   return (
     <ToneCard tone="sky" sectionNum="§" bodyClassName="space-y-3" title="부수토지 한도 산정 (소득세법 시행령 §154⑦)">
 
-      <p className="text-caption text-sky-600 leading-relaxed dark:text-sky-400">
+      <p className="text-caption text-sky-700 leading-relaxed dark:text-sky-400">
         주택과 함께 양도되는 부수토지의 인정 한도 = 건물 정착면적 × 배율.
         수도권 도시지역(주거·상업·공업)은 3배, 수도권 녹지·수도권 외 도시지역은 5배, 도시지역 외는 10배입니다.
         한도 초과분은 일반 나대지로 분리하여 토지 보유기간 기준 세율을 적용합니다.
@@ -163,7 +163,7 @@ export function NewConstructionFootprintSection({
             ? `${zoneLabel(appurtenantLandZone)} (×${multiplier}배)`
             : "— 미선택"}
         </p>
-        <p className="text-sky-600 dark:text-sky-400">
+        <p className="text-sky-700 dark:text-sky-400">
           두 값 모두 <b>① 기본정보</b>에서 입력합니다.
         </p>
       </div>

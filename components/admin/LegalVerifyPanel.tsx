@@ -178,7 +178,7 @@ export function LegalVerifyPanel() {
       )}
 
       {covData?.error && (
-        <p className="mt-3 text-xs text-red-600 dark:text-red-400">{covData.error}</p>
+        <p className="mt-3 text-xs text-red-700 dark:text-red-400">{covData.error}</p>
       )}
 
       {/* 로딩 */}
@@ -238,17 +238,17 @@ export function LegalVerifyPanel() {
                           <span className="truncate block max-w-xs">{r.articleTitle}</span>
                         )}
                         {r.failedKeywords && (
-                          <span className="text-red-600 dark:text-red-400">
+                          <span className="text-red-700 dark:text-red-400">
                             누락 키워드: {r.failedKeywords.join(", ")}
                           </span>
                         )}
                         {r.foundForbiddenKeywords && (
-                          <span className="text-red-600 dark:text-red-400">
+                          <span className="text-red-700 dark:text-red-400">
                             금지 키워드: {r.foundForbiddenKeywords.join(", ")}
                           </span>
                         )}
                         {r.error && (
-                          <span className="text-yellow-600 dark:text-yellow-400">{r.error}</span>
+                          <span className="text-yellow-700 dark:text-yellow-400">{r.error}</span>
                         )}
                       </td>
                     </tr>
@@ -262,7 +262,7 @@ export function LegalVerifyPanel() {
 
       {/* API 오류 */}
       {data?.error && (
-        <p className="mt-3 text-xs text-red-600 dark:text-red-400">{data.error}</p>
+        <p className="mt-3 text-xs text-red-700 dark:text-red-400">{data.error}</p>
       )}
     </div>
   );

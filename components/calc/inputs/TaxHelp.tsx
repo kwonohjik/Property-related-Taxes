@@ -51,7 +51,7 @@ function renderDetails(text: string) {
       const content = trimmed.slice(2);
       return (
         <div key={i} className="flex gap-1.5 text-xs leading-relaxed text-muted-foreground">
-          <span className="mt-0.5 shrink-0 text-foreground/50">•</span>
+          <span className="mt-0.5 shrink-0 text-muted-foreground">•</span>
           <span dangerouslySetInnerHTML={{ __html: applyBold(content) }} />
         </div>
       );

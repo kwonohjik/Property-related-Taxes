@@ -33,7 +33,7 @@ export function EstateItemActionsMenu({
       <DropdownMenuTrigger
         aria-label="자산 카드 더보기 메뉴"
         data-testid={`estate-card-actions-menu-${itemId}`}
-        className="text-xs text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 print:hidden inline-flex items-center"
+        className="text-xs text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300 px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 print:hidden inline-flex items-center"
       >
         <MoreVertical className="h-3.5 w-3.5" aria-hidden />
       </DropdownMenuTrigger>

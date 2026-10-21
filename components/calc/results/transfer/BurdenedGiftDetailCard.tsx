@@ -250,7 +250,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 </tr>
               )}
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600 dark:text-fuchsia-400">
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
                   ※ 실지취득가 모드 — 개산공제(§163⑥) 미적용, 자본적지출·양도비를 채무비율 안분하여 필요경비 반영
                 </td>
               </tr>
@@ -295,7 +295,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 </tr>
               )}
               <tr>
-                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-600 dark:text-fuchsia-400">
+                <td colSpan={2} className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
                   ※ {PRESUMED_LABEL[bg.acquisitionMethodUsed]} 경로 — 필요경비는 개산공제(소령 §163⑥)만 인정하며 자본적지출·양도비는 공제하지 않습니다
                 </td>
               </tr>
@@ -329,7 +329,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           {bg.giftTax && <BurdenedGiftGiftTaxRows giftTax={bg.giftTax} />}
         </tbody>
       </table>
-      <p className="text-xs text-fuchsia-600 mt-2 dark:text-fuchsia-400">
+      <p className="text-xs text-fuchsia-700 mt-2 dark:text-fuchsia-400">
         ※ 자산별 양도가액·취득가액은 위 Max 평가액을 분모로 채무비율 안분 (소령 §159 ① 1호·2호).
         증여세는 무상이전분에 대해 수증자가 별도 신고.
       </p>

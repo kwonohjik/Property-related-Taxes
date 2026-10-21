@@ -69,7 +69,7 @@ export function EstateBodySimple({ item, onUpdate }: VariantBodyProps) {
         </FieldCard>
 
         {/* 평가 우선순위 안내 */}
-        <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
+        <p className="text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
           ℹ️ {PRIORITY_HINT[cat]}
         </p>
 

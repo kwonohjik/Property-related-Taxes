@@ -79,7 +79,7 @@ export function BurdenedGiftPriorGiftsBlock({ asset, onChange }: Props) {
       </p>
 
       {rows.length === 0 ? (
-        <p className="text-xs text-violet-600 italic dark:text-violet-400">
+        <p className="text-xs text-violet-700 italic dark:text-violet-400">
           사전증여 없음 (해당 없을 시 비워두세요)
         </p>
       ) : (

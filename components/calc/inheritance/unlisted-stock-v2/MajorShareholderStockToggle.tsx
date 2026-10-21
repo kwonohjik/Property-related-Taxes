@@ -34,7 +34,7 @@ export function MajorShareholderStockToggle({
       bodyClassName="space-y-3"
       title="§22② 최대주주 보유주식 금융재산공제 배제"
     >
-      <p className="text-caption text-violet-700/80 dark:text-violet-300/80">
+      <p className="text-caption text-violet-700 dark:text-violet-300/80">
         ⓘ 상증법 <strong>§22②</strong> — 최대주주가 보유한 주식은 금융재산 상속공제 대상에서{" "}
         <strong>제외</strong>됩니다. (§63③ 할증평가 ×120%는 별도 개념)
       </p>

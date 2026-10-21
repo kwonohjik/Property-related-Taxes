@@ -109,7 +109,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
         <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
           생년월일{" "}
           {age !== null && (
-            <span className="text-sky-600 dark:text-sky-400 font-normal">
+            <span className="text-sky-700 dark:text-sky-400 font-normal">
               (상속개시일 현재 만 {age}세)
             </span>
           )}
@@ -119,7 +119,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
           onChange={(v) => onUpdate({ birthDate: v || undefined })}
         />
         {!dep.birthDate && (
-          <p className="text-caption text-amber-600 dark:text-amber-400">
+          <p className="text-caption text-amber-700 dark:text-amber-400">
             생년월일을 입력해야 미성년·연로자·장애인공제를 계산합니다.
           </p>
         )}
@@ -155,7 +155,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
             ]}
           />
           {!dep.gender && (
-            <p className="text-caption text-violet-600 dark:text-violet-400">
+            <p className="text-caption text-violet-700 dark:text-violet-400">
               성별을 선택해야 장애인공제 기대여명을 계산합니다.
             </p>
           )}
@@ -167,7 +167,7 @@ function DepEditor({ dep, deathDate, onUpdate, onRemove }: DepEditorProps) {
         <button
           type="button"
           onClick={onRemove}
-          className="text-caption font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400"
+          className="text-caption font-medium text-rose-700 hover:text-rose-800 dark:text-rose-400"
         >
           이 동거가족 삭제
         </button>
@@ -271,7 +271,7 @@ export function CohabitantDependentSection({
 
       {/* 빈 상태 안내 */}
       {deps.length === 0 && (
-        <p className="text-caption text-sky-600 dark:text-sky-400">
+        <p className="text-caption text-sky-700 dark:text-sky-400">
           동거가족이 있으면 &quot;+ 동거가족 추가&quot;를 눌러 입력하세요.
         </p>
       )}

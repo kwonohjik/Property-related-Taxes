@@ -114,7 +114,7 @@ export function KiwoomValuationResultCard({
                   key={iso}
                   className={
                     "flex justify-between gap-2 px-1 " +
-                    (isTrading ? "text-emerald-900 dark:text-emerald-200" : "text-gray-400")
+                    (isTrading ? "text-emerald-900 dark:text-emerald-200" : "text-gray-600 dark:text-gray-400")
                   }
                 >
                   <span>{iso}</span>

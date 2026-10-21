@@ -50,7 +50,7 @@ export function FreeRealEstateFields({ form, set }: { form: DeemedFormState; set
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">기간 {i + 1}</span>
                 {periods.length > 1 && (
-                  <button type="button" className="text-xs text-rose-600 dark:text-rose-400" data-testid={`free-period-remove-${i}`} onClick={() => set({ freePeriods: periods.filter((_, idx) => idx !== i) })}>
+                  <button type="button" className="text-xs text-rose-700 dark:text-rose-400" data-testid={`free-period-remove-${i}`} onClick={() => set({ freePeriods: periods.filter((_, idx) => idx !== i) })}>
                     삭제
                   </button>
                 )}

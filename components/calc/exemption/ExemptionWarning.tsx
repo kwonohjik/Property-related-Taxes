@@ -25,7 +25,7 @@ function WarningModal({
       <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-xl shadow-xl p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <p className="text-xs text-red-500 dark:text-red-400 font-medium mb-1">
+            <p className="text-xs text-red-700 dark:text-red-400 font-medium mb-1">
               사후관리 추징 주의
             </p>
             <h3 className="text-base font-bold text-gray-900 dark:text-white">
@@ -34,7 +34,7 @@ function WarningModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 ml-4 mt-0.5"
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 ml-4 mt-0.5"
             aria-label="닫기"
           >
             ✕
@@ -46,7 +46,7 @@ function WarningModal({
             <p className="text-sm text-red-700 dark:text-red-300 font-medium mb-1">
               ⚠️ 추징 리스크
             </p>
-            <p className="text-sm text-red-600 dark:text-red-400">{rule.riskNote}</p>
+            <p className="text-sm text-red-700 dark:text-red-400">{rule.riskNote}</p>
           </div>
         )}
 
@@ -58,7 +58,7 @@ function WarningModal({
             <ul className="space-y-1">
               {rule.exclusions.map((ex, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="text-red-400 mt-0.5 shrink-0 dark:text-red-300">•</span>
+                  <span className="text-red-700 mt-0.5 shrink-0 dark:text-red-300">•</span>
                   {ex}
                 </li>
               ))}
@@ -116,14 +116,14 @@ export function ExemptionWarning({ selectedRuleIds }: ExemptionWarningProps) {
                   {rule.name}
                 </p>
                 {rule.riskNote && (
-                  <p className="text-xs text-red-500 dark:text-red-400 mt-0.5 line-clamp-1">
+                  <p className="text-xs text-red-700 dark:text-red-400 mt-0.5 line-clamp-1">
                     {rule.riskNote}
                   </p>
                 )}
               </div>
               <button
                 onClick={() => setActiveRule(rule)}
-                className="shrink-0 text-xs px-2 py-1 rounded border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                className="shrink-0 text-xs px-2 py-1 rounded border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
               >
                 상세 보기
               </button>

@@ -52,7 +52,7 @@ function ConPartyRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-xs text-rose-500 hover:text-rose-700 dark:text-rose-400"
+          className="text-xs text-rose-700 hover:text-rose-800 dark:text-rose-400"
           aria-label={`${idx + 1}번 행 삭제`}
         >
           삭제
@@ -280,7 +280,7 @@ export function ContributionFields({ form, set }: Props) {
       {hasRoster && (
         <div className="space-y-2 mt-1">
           {parties.length === 0 && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded px-2 py-1">
+            <p className="text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded px-2 py-1">
               {isHigh ? "수증자" : "증여자"}를 1명 이상 추가하세요.
             </p>
           )}
@@ -297,7 +297,7 @@ export function ContributionFields({ form, set }: Props) {
           <button
             type="button"
             onClick={addParty}
-            className="w-full rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs text-violet-600 hover:bg-violet-50 dark:text-violet-400"
+            className="w-full rounded-md border border-dashed border-violet-300 px-3 py-1.5 text-xs text-violet-700 hover:bg-violet-50 dark:text-violet-400"
           >
             + {isHigh ? "수증자" : "증여자"} 추가
           </button>
@@ -305,7 +305,7 @@ export function ContributionFields({ form, set }: Props) {
             <p className="text-xs text-muted-foreground text-right">
               합계 주식수: {sumShares.toLocaleString()}주
               {sumExceedsBase && (
-                <span className="ml-1 text-rose-500 dark:text-rose-400">(기준 주식수 초과)</span>
+                <span className="ml-1 text-rose-700 dark:text-rose-400">(기준 주식수 초과)</span>
               )}
             </p>
           )}

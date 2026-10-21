@@ -66,7 +66,7 @@ const SECTION_TONE: Record<AssetSectionTone, ToneClasses> = {
 };
 
 const STATUS_DOT: Record<"filled" | "empty", { glyph: string; cls: string }> = {
-  filled: { glyph: "✓", cls: "text-emerald-600 dark:text-emerald-400" },
+  filled: { glyph: "✓", cls: "text-emerald-700 dark:text-emerald-400" },
   empty: { glyph: "○", cls: "text-muted-foreground" },
 };
 

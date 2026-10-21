@@ -106,27 +106,27 @@ export function StockFilingFormTable({
                 </button>
               )}
             </div>
-            <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>
+            <p className="text-caption text-slate-600 dark:text-slate-400 mt-0.5">{subtitle}</p>
             {/* 신고서 헤더 메타 정보 (§4.2 디자인) */}
             {(taxpayerName || stockName || stockCode || brokerName || accountNumber || filingYear) && (
               <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-0.5 text-caption text-slate-600 dark:text-slate-400 border-t border-slate-200 pt-2">
                 {taxpayerName && (
-                  <div className="flex gap-1"><span className="text-slate-400">양도인:</span><span>{taxpayerName}</span></div>
+                  <div className="flex gap-1"><span className="text-slate-600 dark:text-slate-400">양도인:</span><span>{taxpayerName}</span></div>
                 )}
                 {(stockName || stockCode) && (
                   <div className="flex gap-1">
-                    <span className="text-slate-400">종목:</span>
+                    <span className="text-slate-600 dark:text-slate-400">종목:</span>
                     <span>{stockName}{stockCode ? ` (${stockCode})` : ""}</span>
                   </div>
                 )}
                 {filingYear && (
-                  <div className="flex gap-1"><span className="text-slate-400">과세연도:</span><span>{filingYear}년</span></div>
+                  <div className="flex gap-1"><span className="text-slate-600 dark:text-slate-400">과세연도:</span><span>{filingYear}년</span></div>
                 )}
                 {brokerName && (
-                  <div className="flex gap-1"><span className="text-slate-400">증권사:</span><span>{brokerName}</span></div>
+                  <div className="flex gap-1"><span className="text-slate-600 dark:text-slate-400">증권사:</span><span>{brokerName}</span></div>
                 )}
                 {accountNumber && (
-                  <div className="flex gap-1"><span className="text-slate-400">계좌번호:</span><span>{accountNumber}</span></div>
+                  <div className="flex gap-1"><span className="text-slate-600 dark:text-slate-400">계좌번호:</span><span>{accountNumber}</span></div>
                 )}
               </div>
             )}
@@ -185,7 +185,7 @@ export function StockFilingFormTable({
                   <td
                     className={cn(
                       "px-3 py-1.5 border-r border-slate-200 sticky left-0 bg-white dark:bg-slate-900 print:static",
-                      row.indent && "pl-7 text-slate-500 dark:text-slate-400",
+                      row.indent && "pl-7 text-slate-600 dark:text-slate-400",
                       row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
                     )}
                   >
@@ -218,12 +218,12 @@ export function StockFilingFormTable({
                       >
                         {fmtCell(row.values[c.key])}
                         {roseNote && (
-                          <div className="text-micro font-sans font-normal text-rose-600 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
+                          <div className="text-micro font-sans font-normal text-rose-700 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
                             {roseNote}
                           </div>
                         )}
                         {note && (
-                          <div className="text-micro font-sans font-normal text-slate-500 dark:text-slate-400 leading-tight mt-0.5 whitespace-normal text-right">
+                          <div className="text-micro font-sans font-normal text-slate-600 dark:text-slate-400 leading-tight mt-0.5 whitespace-normal text-right">
                             {note}
                           </div>
                         )}
@@ -236,7 +236,7 @@ export function StockFilingFormTable({
           </table>
 
           {/* 주석 */}
-          <div className="px-4 py-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-400 space-y-0.5">
+          <div className="px-4 py-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 space-y-0.5">
             <p>* 금액 단위: 원. 본세·가산세 10원 미만 절사 (국고금 관리법 §47①).</p>
             <p>* 지방소득세: 산출세액 × 10%, 10원 미만 절사 (지방세법 §103의3).</p>
             <p>* 본 표는 참고용입니다. 실제 신고는 양도소득세 과세표준 신고서 (별지 제84호 서식)를 사용하세요.</p>

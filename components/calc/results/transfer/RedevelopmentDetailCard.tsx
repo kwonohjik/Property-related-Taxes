@@ -452,7 +452,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">
               {BRANCH_LABEL_RIGHT_RECEIVE_PREAPPROVAL}
             </p>
-            <p className="text-micro text-violet-600 dark:text-violet-400">
+            <p className="text-micro text-violet-700 dark:text-violet-400">
               §166①2호 나목 · §166⑤1호 (취득일 → 인가일 기산)
               {detail.housingContribDetail ? " + §166③ 환산취득가" : ""}
             </p>
@@ -486,7 +486,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               <Row label="− 취득가액(실가) × 안분비율" value={preApproval.apportionedAcquisition} />
             )}
             <Row label="인가전 양도차익" value={preApproval.gain} highlight />
-            <p className="pt-1 border-t border-violet-100 text-micro text-violet-600 dark:text-violet-400">
+            <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
               장기보유공제 ({(preApproval.lthdResidencePart ?? 0) > 0 ? "표2" : "표1"} {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
             </p>
             <Row label="장기보유특별공제 (인가전 분)" value={preApproval.lthd} />
@@ -500,7 +500,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">
               {BRANCH_LABEL_RIGHT_RECEIVE_POSTAPPROVAL}
             </p>
-            <p className="text-micro text-violet-600 dark:text-violet-400">
+            <p className="text-micro text-violet-700 dark:text-violet-400">
               §166①2호 가목 · §94①2호 (장기보유특별공제 대상 외)
             </p>
             <Row label="양도가액 (실제 양도가)" value={settlement.apportionedTransfer} />
@@ -531,7 +531,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         {/* 인가전 분 */}
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">① 인가전 분</p>
-          <p className="text-micro text-violet-600 dark:text-violet-400">
+          <p className="text-micro text-violet-700 dark:text-violet-400">
             {isRightSubject
               ? "§166①1호 · §166⑤1호 (취득일 → 관리처분 인가일 기산)"
               : isAptReceive
@@ -546,10 +546,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <Row label={`개산공제 (${lumpDeductionBaseLabel} × ${estimatedDeductionRateLabel}, §163⑥)`} value={estimatedLumpDeduction} />
           )}
           <Row label="양도차익" value={preApproval.gain} highlight />
-          <p className="pt-1 border-t border-violet-100 text-micro text-violet-600 dark:text-violet-400">
+          <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
             장기보유공제 ({Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월, {fmtPct(preApproval.lthdRate)})
           </p>
-          {preApproval.lthdRateBasis && <p className="text-micro text-violet-600 dark:text-violet-400">{preApproval.lthdRateBasis}</p>}
+          {preApproval.lthdRateBasis && <p className="text-micro text-violet-700 dark:text-violet-400">{preApproval.lthdRateBasis}</p>}
           <Row label="장기보유특별공제" value={preApproval.lthd} />
         </div>
 
@@ -557,7 +557,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
         {!isRightSubject && (
         <div className="rounded-md bg-white dark:bg-gray-900 border border-violet-200 p-3 space-y-1.5">
           <p className="text-caption font-semibold text-violet-700 dark:text-violet-300">② 인가후 기존건물분</p>
-          <p className="text-micro text-violet-600 dark:text-violet-400">
+          <p className="text-micro text-violet-700 dark:text-violet-400">
             {isAptReceive
               ? "§166②2호 · §166①2호 가목 (양도가액 − (평가액 − 지급받은 청산금))"
               : "§166②1호 안분 (권리가액/분양가) · §166⑤2호나목"}
@@ -568,10 +568,10 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             value={postApprovalExistingHouse.apportionedAcquisition}
           />
           <Row label="양도차익" value={postApprovalExistingHouse.gain} highlight />
-          <p className="pt-1 border-t border-violet-100 text-micro text-violet-600 dark:text-violet-400">
+          <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
             장기보유공제 ({Math.floor(postApprovalExistingHouse.holdingMonths / 12)}년 {postApprovalExistingHouse.holdingMonths % 12}개월, {fmtPct(postApprovalExistingHouse.lthdRate)})
           </p>
-          {postApprovalExistingHouse.lthdRateBasis && <p className="text-micro text-violet-600 dark:text-violet-400">{postApprovalExistingHouse.lthdRateBasis}</p>}
+          {postApprovalExistingHouse.lthdRateBasis && <p className="text-micro text-violet-700 dark:text-violet-400">{postApprovalExistingHouse.lthdRateBasis}</p>}
           <Row label="장기보유특별공제" value={postApprovalExistingHouse.lthd} />
         </div>
         )}
@@ -587,7 +587,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
               ? `③ 청산금 수령분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`
               : `③ 청산금 분${detail.settlementExemptionApplied ? " (1세대1주택 비과세)" : ""}`}
           </p>
-          <p className="text-micro text-violet-600 dark:text-violet-400">
+          <p className="text-micro text-violet-700 dark:text-violet-400">
             {isRightSubject && settlementDirection === "receive"
               ? "§166①2호 가목 · §94①2호 (청산금 분 — 장기보유특별공제 대상 외)"
               : isRightSubject
@@ -624,7 +624,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             // 사례 47·46 — 4행 분해 (양도차익 → LTHD → 비과세 차감 → 결과 0). L-12: 신축주택 안분 미적용
             <>
               <Row label="양도차익" value={settlement.gainAfterAllocation ?? 0} />
-              <p className="pt-1 border-t border-violet-100 text-micro text-violet-600 dark:text-violet-400">
+              <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
                 장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
               </p>
               <Row label="장기보유특별공제" value={settlement.lthdAfterAllocation ?? 0} />
@@ -643,7 +643,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             // 사례 44/45/46 기존 패턴
             <>
               <Row label="양도차익" value={settlement.gain} highlight />
-              <p className="pt-1 border-t border-violet-100 text-micro text-violet-600 dark:text-violet-400">
+              <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
                 장기보유공제 ({Math.floor(settlement.holdingMonths / 12)}년 {settlement.holdingMonths % 12}개월, {fmtPct(settlement.lthdRate)})
               </p>
               <Row label="장기보유특별공제" value={settlement.lthd} />

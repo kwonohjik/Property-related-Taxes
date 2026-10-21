@@ -172,7 +172,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           {asset.hasPartialUsageChange ? "양도시 면적 (건축물대장 기준)" : "면적 (건축물대장 기준)"}
         </p>
         {asset.hasPartialUsageChange && (
-          <p className="text-caption text-sky-700/80 leading-relaxed dark:text-sky-300/80">
+          <p className="text-caption text-sky-700 leading-relaxed dark:text-sky-300/80">
             ※ 이 카드의 면적·부수토지는 <span className="font-semibold">양도시</span> 기준입니다.
             취득시 면적은 <span className="font-semibold">③ 취득정보</span>의 1-A 「취득시점 자산 구성」에서
             자동 도출·수정합니다.

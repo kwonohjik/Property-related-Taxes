@@ -40,7 +40,7 @@ function ApiKeyMissingNotice() {
       <h2 className="text-base font-semibold text-yellow-900 dark:text-yellow-200">
         법제처 Open API 키가 설정되지 않았습니다.
       </h2>
-      <ol className="mt-3 ml-4 list-decimal space-y-1 text-sm text-yellow-900/80 dark:text-yellow-100/80">
+      <ol className="mt-3 ml-4 list-decimal space-y-1 text-sm text-yellow-900 dark:text-yellow-100/80">
         <li>
           <a
             href="https://open.law.go.kr"

@@ -147,7 +147,7 @@ export function ValuationDeltaTable({
       bodyClassName="space-y-3"
       title="평가차액 (별지 3쪽 — 자산·부채 계정과목별)"
     >
-      <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80">
+      <p className="text-caption text-emerald-700 dark:text-emerald-300/80">
         상증법 §60·§66 평가액 vs 재무상태표 차액. ① 자산 합 − ② 부채 합 = 평가차액 →{" "}
         <strong>2쪽 4.가.② 기재</strong> (상증령 §55② + §17의2)
       </p>
@@ -183,7 +183,7 @@ export function ValuationDeltaTable({
             </div>
 
             {assetRows.length === 0 && (
-              <p className="text-micro text-sky-700/70 py-2 text-center dark:text-sky-300/70">
+              <p className="text-micro text-sky-700 py-2 text-center dark:text-sky-300/70">
                 &quot;+ 자산 행 추가&quot; 버튼으로 계정과목을 입력하세요
               </p>
             )}
@@ -230,7 +230,7 @@ export function ValuationDeltaTable({
                   <button
                     type="button"
                     onClick={() => removeRow(row.rowId)}
-                    className="text-rose-600 hover:text-rose-800 px-1 text-xs dark:text-rose-400"
+                    className="text-rose-700 hover:text-rose-800 px-1 text-xs dark:text-rose-400"
                     aria-label="행 삭제"
                   >
                     ×
@@ -262,7 +262,7 @@ export function ValuationDeltaTable({
             </div>
 
             {liabilityRows.length === 0 && (
-              <p className="text-micro text-rose-700/70 py-2 text-center dark:text-rose-300/70">
+              <p className="text-micro text-rose-700 py-2 text-center dark:text-rose-300/70">
                 &quot;+ 부채 행 추가&quot; 버튼으로 계정과목을 입력하세요
               </p>
             )}
@@ -309,7 +309,7 @@ export function ValuationDeltaTable({
                   <button
                     type="button"
                     onClick={() => removeRow(row.rowId)}
-                    className="text-rose-600 hover:text-rose-800 px-1 text-xs dark:text-rose-400"
+                    className="text-rose-700 hover:text-rose-800 px-1 text-xs dark:text-rose-400"
                     aria-label="행 삭제"
                   >
                     ×
@@ -352,7 +352,7 @@ export function ValuationDeltaTable({
           <p className="text-caption font-semibold text-emerald-800 dark:text-emerald-200">
             총액 직접 입력 (자산 평가차액 단일 값)
           </p>
-          <p className="text-micro text-emerald-700/80 dark:text-emerald-300/80">
+          <p className="text-micro text-emerald-700 dark:text-emerald-300/80">
             ※ 행 단위 입력하려면 위 토글을 ON. 본 입력은 NetAssetCalculation의 ②(평가차액)에
             직접 반영됩니다.
           </p>

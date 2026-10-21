@@ -135,7 +135,7 @@ export function PriorGiftInput({
               ? "사전증여재산 (§13)"
               : "동일인 사전증여 합산 (§47)"}
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
             최근 {windowYears} 이내 증여 내역을 입력하세요
           </p>
         </div>
@@ -161,12 +161,12 @@ export function PriorGiftInput({
             </Button>
           )}
           {gifts.length > 0 && (
-            <span className="text-xs text-gray-400">{gifts.length}건</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{gifts.length}건</span>
           )}
         </div>
       </div>
       {mode === "gift" && !canLookup && (
-        <p className="text-caption text-gray-500 dark:text-gray-400 -mt-2">
+        <p className="text-caption text-gray-600 dark:text-gray-400 -mt-2">
           ※ 이력 조회는 1단계 증여일·증여자 관계가 입력된 후 활성화됩니다.
         </p>
       )}
@@ -248,7 +248,7 @@ export function PriorGiftInput({
               onClick={() =>
                 selectedIndex !== null && handleRemove(selectedIndex)
               }
-              className="px-4 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors dark:text-rose-400"
+              className="px-4 py-2 rounded-md text-sm text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors dark:text-rose-400"
             >
               삭제
             </button>
@@ -266,7 +266,7 @@ export function PriorGiftInput({
       <button
         type="button"
         onClick={handleAdd}
-        className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-600 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
       >
         <span className="text-lg">+</span>
         사전증여 추가

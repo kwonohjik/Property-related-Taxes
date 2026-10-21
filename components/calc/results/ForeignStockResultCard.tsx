@@ -54,7 +54,7 @@ function Row({
       <span className="text-sm leading-relaxed">{label}</span>
       <div className="text-right ml-4 min-w-0">
         <span className="text-sm tabular-nums">{typeof value === "number" ? fmt(value) : value}</span>
-        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -75,7 +75,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
         <p className="text-sm text-amber-700 leading-relaxed dark:text-amber-300">
           {result.ineligibleReason ?? "국내 거주 기간이 5년 미만이어서 §118의2에 따라 납세의무가 없습니다."}
         </p>
-        <p className="text-xs text-amber-600 mt-2 dark:text-amber-400">세액: 0</p>
+        <p className="text-xs text-amber-700 mt-2 dark:text-amber-400">세액: 0</p>
       </div>
     );
   }
@@ -101,13 +101,13 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold text-sky-700 dark:text-sky-300">{fmt(result.totalTax)}</span>
-          <span className="text-sm text-sky-600 dark:text-sky-400">총 납부세액 (소득세 + 지방소득세)</span>
+          <span className="text-sm text-sky-700 dark:text-sky-400">총 납부세액 (소득세 + 지방소득세)</span>
         </div>
       </div>
 
       {/* 환율 환산 표 (§178의5) */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">환율 환산 (§178의5)</p>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">환율 환산 (§178의5)</p>
 
         {result.transferReceiptDetail ? (
           /* FS-09 §178의5② 분할 수령 — 시점별 환율 표 */
@@ -164,7 +164,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 양도차익 계산 */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">양도차익 계산 (§118② → §118의3·§118의4 준용)</p>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">양도차익 계산 (§118② → §118의3·§118의4 준용)</p>
 
         <Row label="양도가액 (원화 환산)" value={result.transferPriceKrw} />
         <Row label="취득가액 (원화 환산)" value={result.acquisitionPriceKrw} indent />
@@ -215,7 +215,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
 
       {/* 세율 적용 (§104①12호나목) */}
       <div className="rounded-xl border border-slate-200 bg-white dark:bg-gray-900 p-4 space-y-1">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">세율 적용 (§104①12호나목)</p>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">세율 적용 (§104①12호나목)</p>
 
         <Row
           label={`적용 세율: ${pct(result.appliedRate)}`}

@@ -125,7 +125,7 @@ export function SpecialSituationSection({
               <li>• <strong>6호</strong> 「도시개발법」상 도시개발사업이 끝나지 않아 토지 취득등기를 하지 못하고 양도하는 토지</li>
               <li>• <strong>7호</strong> 건설사업자가 「도시개발법」에 따라 공사용역 대가로 취득한 체비지를 <strong>토지구획환지처분공고 전</strong>에 양도하는 토지</li>
             </ul>
-            <p className="text-micro text-amber-600 dark:text-amber-400">
+            <p className="text-micro text-amber-700 dark:text-amber-400">
               ※ 5호는 삭제된 조항이라 표시하지 않았습니다.
             </p>
           </ToneCard>

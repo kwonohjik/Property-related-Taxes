@@ -101,7 +101,7 @@ export function GiftSimultaneousResultSections({
               </tr>
             </tbody>
           </table>
-          <p className="text-micro text-sky-600 dark:text-sky-400">
+          <p className="text-micro text-sky-700 dark:text-sky-400">
             수증자 총 납부세액 합계 = 건 0 결정세액 + 건 1 결정세액 + … + 건 N 결정세액
           </p>
         </div>

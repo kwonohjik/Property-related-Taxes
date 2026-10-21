@@ -323,11 +323,11 @@ export function StockTransferTaxResultView({
           <p className="text-sm text-emerald-700 mt-2 dark:text-emerald-300">{exemptReasonLabel}</p>
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
-              <span className="text-emerald-600 dark:text-emerald-400">양도가액</span>
+              <span className="text-emerald-700 dark:text-emerald-400">양도가액</span>
               <p className="font-semibold text-emerald-900 dark:text-emerald-200">{fmt(result.transferPrice)}</p>
             </div>
             <div>
-              <span className="text-emerald-600 dark:text-emerald-400">최종 납부세액</span>
+              <span className="text-emerald-700 dark:text-emerald-400">최종 납부세액</span>
               <p className="font-semibold text-emerald-900 dark:text-emerald-200">0</p>
             </div>
           </div>
@@ -515,7 +515,7 @@ export function StockTransferTaxResultView({
           <ResultRow label="산출세액" value={result.calculatedTax} highlight />
           <ResultRow label="지방소득세 (10%)" value={result.localIncomeTax} />
           {result.clause168_2Credit ? (
-            <p className="px-4 pb-2 text-caption text-slate-500 dark:text-slate-400">
+            <p className="px-4 pb-2 text-caption text-slate-600 dark:text-slate-400">
               지방소득세는 차감 후 산출세액 기준입니다 — 개인지방소득세 신고서
               「기신고·결정·경정세액」 {fmt(result.clause168_2Credit.localDeducted)} 정산과 같은
               금액입니다(「지방세법」 §92① 표가 소득세법 §55①의 1/10).
@@ -582,10 +582,10 @@ export function StockTransferTaxResultView({
           {result.holdingPeriodMonths % 12}개월 ({result.holdingPeriodDays}일)
         </strong>
         {result.isShortTermHolding && (
-          <span className="ml-2 px-1.5 py-0.5 rounded bg-rose-100 text-rose-600 text-xs">단기보유</span>
+          <span className="ml-2 px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 dark:text-rose-600 text-xs">단기보유</span>
         )}
         {result.lotMatchingDetail && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
             ※ 분할 매수 시 sub-lot별 보유기간 상세는 아래 로트별 매칭 카드 참조
           </p>
         )}

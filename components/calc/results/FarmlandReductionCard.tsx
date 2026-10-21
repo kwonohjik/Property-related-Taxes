@@ -35,7 +35,7 @@ export function FarmlandReductionCard({ detail, computedTax, priorTaxCredit }: P
       <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
         영농자녀 농지 증여세 감면 (조특법 §71)
       </h3>
-      <p className="text-xs text-emerald-600 dark:text-emerald-400">
+      <p className="text-xs text-emerald-700 dark:text-emerald-400">
         합산 산출세액에서 직전 회차 농지 산출세액을 뺀 농지분 산출세액을 기준으로, 5년 합계 1억원
         한도(§71②) 내에서 감면합니다. 한도 초과분 농지가액은 일반 증여재산과 합산과세됩니다.
       </p>
@@ -86,7 +86,7 @@ export function FarmlandReductionCard({ detail, computedTax, priorTaxCredit }: P
         </div>
         <div className="flex items-center gap-1.5 flex-wrap px-3 text-xs text-emerald-700 dark:text-emerald-300">
           <span>= 농지가액 {formatKRW(detail.farmlandValue)}</span>
-          <span className="text-emerald-400 dark:text-emerald-300">×</span>
+          <span className="text-emerald-700 dark:text-emerald-300">×</span>
           <Frac
             top={`감면세액 ${formatKRW(detail.reductionAmount)}`}
             bottom={`농지분 산출세액 ${formatKRW(detail.farmlandComputedTax)}`}

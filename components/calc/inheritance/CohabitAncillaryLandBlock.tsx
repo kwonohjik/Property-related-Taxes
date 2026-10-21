@@ -104,7 +104,7 @@ export function CohabitAncillaryLandBlock({
       </div>
 
       {/* 아파트·공동주택 안내 */}
-      <div className="rounded-md border border-sky-100 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/10 p-2 text-micro text-sky-600 dark:text-sky-400 leading-relaxed">
+      <div className="rounded-md border border-sky-100 bg-sky-50 dark:border-sky-800 dark:bg-sky-900/10 p-2 text-micro text-sky-700 dark:text-sky-400 leading-relaxed">
         <strong>아파트·공동주택가격</strong>에는 부수토지가 포함되어 있어 이 항목을 입력하지
         않아도 됩니다. 단독주택 대형토지를 별도 자산 항목으로 분리 입력한 경우에만 아래 네 항목을
         모두 입력하세요. 개별주택가격은 건물+토지 일체이므로, 초과분은 토지분 공시가격에서만
@@ -178,7 +178,7 @@ export function CohabitAncillaryLandBlock({
           {ANCILLARY_LAND_RATIO[ancillaryLandRegion as AncillaryLandRegion] ?? "?"}
           배)
           {parseDecimal(ancillaryLandArea) > limitAreaPreview && (
-            <span className="ml-1 text-rose-600 dark:text-rose-400 font-semibold">
+            <span className="ml-1 text-rose-700 dark:text-rose-400 font-semibold">
               — 초과 {(parseDecimal(ancillaryLandArea) - limitAreaPreview).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}㎡ 차감 적용
             </span>
           )}
@@ -188,7 +188,7 @@ export function CohabitAncillaryLandBlock({
       {/* 부분 입력 경고 */}
       {partial && (
         <div
-          className="rounded-md border border-rose-200 bg-rose-50/60 dark:border-rose-700 dark:bg-rose-900/20 p-2 text-micro text-rose-600 dark:text-rose-400"
+          className="rounded-md border border-rose-200 bg-rose-50/60 dark:border-rose-700 dark:bg-rose-900/20 p-2 text-micro text-rose-700 dark:text-rose-400"
           data-testid="ancillary-land-partial-warning"
         >
           ⚠ 부수토지 면적·건물 정착 면적·지역 구분·부수토지 공시가격 네 항목을 모두 입력하거나

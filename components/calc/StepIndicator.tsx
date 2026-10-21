@@ -37,7 +37,7 @@ const STATUS_CIRCLE_CLASS: Record<StepStatus, string> = {
   complete:
     "bg-emerald-700 border-emerald-700 text-white dark:bg-emerald-700 dark:border-emerald-700",
   attention:
-    "bg-rose-50 border-rose-400 text-rose-600 dark:bg-rose-950/40 dark:border-rose-500 dark:text-rose-300",
+    "bg-rose-50 border-rose-400 text-rose-700 dark:bg-rose-950/40 dark:border-rose-500 dark:text-rose-300",
   neutral: "", // 아래에서 current 여부로 결정
 };
 

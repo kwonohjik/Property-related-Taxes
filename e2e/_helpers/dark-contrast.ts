@@ -1,6 +1,14 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
+ * 라이트 모드에서 대상 요소 안 글자의 대비가 기준(WCAG 일반 글자 4.5) 이상이다.
+ * 계획서: docs/00-pm/ui-light-contrast-and-dark-print.plan.md — 옅은 톤 카드 위 회색·톤·무채색 글자.
+ */
+export async function expectLightContrast(page: Page, target: Locator, min = 4.5) {
+  await expectContrast(page, target, "light", min);
+}
+
+/**
  * 다크 모드에서 대상 요소 안 글자의 대비가 기준(WCAG 일반 글자 4.5) 이상이다.
  * 글자색과, 조상 배경을 투명도까지 겹친 실제 바탕색으로 계산한다.
  * 계획서: docs/00-pm/ui-dark-low-contrast-residual.plan.md — 테스트 끝 상태를 그대로 다크로 바꿔 확인한다.
@@ -8,7 +16,13 @@ import { expect, type Locator, type Page } from "@playwright/test";
  * 색 전환 효과(transition-colors)가 있으면 테마를 바꾼 직후 중간값이 잡힌다 → 잴 동안 끈다.
  */
 export async function expectDarkContrast(page: Page, target: Locator, min = 4.5) {
-  await page.emulateMedia({ media: "screen", colorScheme: "dark" });
+  await expectContrast(page, target, "dark", min);
+}
+
+async function expectContrast(page: Page, target: Locator, scheme: "light" | "dark", min: number) {
+  await page.emulateMedia({ media: "screen", colorScheme: scheme });
+  // 테마 클래스가 실제로 바뀐 뒤에 잰다(next-themes가 <html>에 붙이는 .dark)
+  await expect(page.locator("html")).toHaveClass(scheme === "dark" ? /\bdark\b/ : /^(?!.*\bdark\b)/);
   await page.addStyleTag({ content: "*,*::before,*::after{transition:none!important;animation:none!important}" });
   await expect(target.first()).toBeVisible();
   await expect
@@ -49,7 +63,7 @@ export async function expectDarkContrast(page: Page, target: Locator, min = 4.5)
           }
           return worst; // 반올림 금지 — green-700 on green-100은 4.497이라 반올림하면 4.50으로 통과한다
         }),
-      { message: "다크 모드 글자 대비(최저)" },
+      { message: `${scheme === "dark" ? "다크" : "라이트"} 모드 글자 대비(최저)` },
     )
     .toBeGreaterThanOrEqual(min);
 }

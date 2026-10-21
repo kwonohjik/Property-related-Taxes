@@ -23,22 +23,22 @@ function ItemRow({ item }: { item: ExemptionItemResult }) {
     <div className="py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
       <div className="flex items-center justify-between">
         <span className="text-sm text-gray-700 dark:text-gray-300">{item.ruleName}</span>
-        <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+        <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
           -{formatKRW(item.exemptAmount)}
         </span>
       </div>
       {hasOverflow && (
         <div className="flex items-center justify-between mt-0.5">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-gray-600 dark:text-gray-400">
             한도 초과 (일반 과세)
           </span>
-          <span className="text-xs text-amber-600 dark:text-amber-400">
+          <span className="text-xs text-amber-700 dark:text-amber-400">
             +{formatKRW(item.taxableOverflow)}
           </span>
         </div>
       )}
       {item.warnings.map((w, i) => (
-        <p key={i} className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+        <p key={i} className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
           ⚠️ {w}
         </p>
       ))}
@@ -59,7 +59,7 @@ function GroupHeading({ title, lawRef }: { title: string; lawRef: string }) {
   return (
     <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
       {title}
-      <span className="ml-1 font-normal text-emerald-600/70 dark:text-emerald-500">
+      <span className="ml-1 font-normal text-emerald-700 dark:text-emerald-500">
         {lawRef}
       </span>
     </p>
@@ -87,7 +87,7 @@ export function ExemptionSummaryCard({
           {hasNotIncluded ? "과세제외 내역" : "비과세 적용 내역"}
         </h3>
         <div className="text-right">
-          <p className="text-xs text-emerald-600 dark:text-emerald-400">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400">
             {hasNotIncluded ? "총 차감" : "총 비과세 차감"}
           </p>
           <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
@@ -132,7 +132,7 @@ export function ExemptionSummaryCard({
       {/* 적용 법령 */}
       {result.appliedLaws.length > 0 && (
         <div className="mt-3 pt-3 border-t border-emerald-200 dark:border-emerald-800">
-          <p className="text-xs text-emerald-600 dark:text-emerald-500">
+          <p className="text-xs text-emerald-700 dark:text-emerald-500">
             적용 조문: {result.appliedLaws.join(" · ")}
           </p>
         </div>

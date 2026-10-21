@@ -112,7 +112,7 @@ export function DetailedCalculationStatementCard({
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
               📋 계산결과 상세명세서
             </h3>
-            <p className="text-caption text-slate-500 dark:text-slate-400 mt-0.5">
+            <p className="text-caption text-slate-600 dark:text-slate-400 mt-0.5">
               신고서 양식 32 항목별 산식·변수값·법령 근거. 다건 모드는 자산별 펼침으로 검증.
             </p>
           </div>
@@ -150,11 +150,11 @@ export function DetailedCalculationStatementCard({
                 전액 비과세 — 납부세액 0
               </p>
               {result.exemptReason && (
-                <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400/80 mt-0.5">
                   사유: {result.exemptReason}
                 </p>
               )}
-              <p className="text-caption text-emerald-700/70 mt-1 dark:text-emerald-300/70">
+              <p className="text-caption text-emerald-700 mt-1 dark:text-emerald-300/70">
                 아래 32 항목은 산식·법령 근거 검증용으로 표시됩니다 (대부분 0원).
               </p>
             </div>

@@ -50,7 +50,7 @@ export function ReplotReductionFields({
           onChange={(v) => onChange({ replottingConfirmDate: v })}
         />
         {asset.replottingConfirmDate && (
-          <p className="text-xs text-blue-600 dark:text-blue-400">
+          <p className="text-xs text-blue-700 dark:text-blue-400">
             취득일은 ③ 취득정보에 환지 이전 원취득일을 입력하세요
           </p>
         )}
@@ -200,7 +200,7 @@ export function ReplotIncreaseFields({
             data-field="replottingConfirmDate"
           />
           {asset.replottingConfirmDate && (
-            <p className="text-xs text-blue-600 dark:text-blue-400">
+            <p className="text-xs text-blue-700 dark:text-blue-400">
               증가분 취득일 = {asset.replottingConfirmDate} 다음날 · 당초분 취득일은 ③ 취득정보에 원취득일을 입력하세요
             </p>
           )}

@@ -196,7 +196,7 @@ export function HistoryAggregateSelectShell({
                         )}
                       </span>
                       {c.disabledReason && (
-                        <span className="mt-1 block text-xs text-rose-600 dark:text-rose-400">· {c.disabledReason}</span>
+                        <span className="mt-1 block text-xs text-rose-700 dark:text-rose-400">· {c.disabledReason}</span>
                       )}
                     </span>
                     <span className="shrink-0 text-right font-mono text-sm tabular-nums">

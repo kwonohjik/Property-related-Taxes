@@ -216,7 +216,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => deleteTransferLot(idx)}
-                  className="text-red-500 hover:text-red-700 dark:text-red-400"
+                  className="text-red-700 hover:text-red-800 dark:text-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -283,7 +283,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
         <p className="text-xs text-violet-700 bg-violet-50/40 rounded p-2 dark:text-violet-300 dark:bg-violet-950/40">
           {COST_METHOD_HINT[form.costAllocationMethod]}
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400">
           ⓘ 산정방법은 납세자 입증책임 — 세법 명문 부재 (KoreanLaw 사전 검증 2026-05-18)
         </p>
       </div>
@@ -343,7 +343,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => deleteMatching(idx)}
-                  className="text-red-500 dark:text-red-400"
+                  className="text-red-700 dark:text-red-400"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

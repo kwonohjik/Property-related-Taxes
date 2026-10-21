@@ -114,7 +114,7 @@ export function FilingForm9CoverSection({
         <div className="print:bg-white print:text-black">
           {/* 제목 */}
           <header className="mb-2 text-center">
-            <p className="text-micro text-slate-500 dark:text-slate-400">{FF9_FORM_SUBTITLE}</p>
+            <p className="text-micro text-slate-600 dark:text-slate-400">{FF9_FORM_SUBTITLE}</p>
             <p className="text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
               {FF9_FORM_TITLE}
             </p>
@@ -243,7 +243,7 @@ export function FilingForm9CoverSection({
             <p className="mt-1 text-right">신청인 (서명 또는 인)</p>
           </div>
 
-          <p className="mt-2 text-micro text-slate-500 dark:text-slate-400">
+          <p className="mt-2 text-micro text-slate-600 dark:text-slate-400">
             ※ 식별정보(성명·주민등록번호·주소 등)·납부방법 금액은 자동 산출되지 않습니다 — 인쇄 후 수기 작성.
           </p>
         </div>

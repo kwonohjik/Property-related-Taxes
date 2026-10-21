@@ -104,7 +104,7 @@ export function ListedStockValuationPreviewCard({ item, valuationDate }: Props) 
       className="rounded-md bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs space-y-1"
       data-testid="ls-valuation-preview-card"
     >
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>{perShareLabel}</span>
         <span data-testid="ls-preview-per-share-formula">{perShareFormula}</span>
       </div>
@@ -116,7 +116,7 @@ export function ListedStockValuationPreviewCard({ item, valuationDate }: Props) 
           ※ 할증 배제 사유: {premiumExclusionLabel} (할증율 {premiumPctLabel})
         </div>
       )}
-      <div className="flex justify-between text-gray-500 dark:text-gray-400">
+      <div className="flex justify-between text-gray-600 dark:text-gray-400">
         <span>평가 산식</span>
         <span data-testid="ls-preview-total-formula">{totalFormula}</span>
       </div>

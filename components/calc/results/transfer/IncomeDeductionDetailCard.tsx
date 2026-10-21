@@ -175,7 +175,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax }: Props
           <div key={i} className="text-xs">
             <span className="font-medium text-emerald-900 dark:text-emerald-200">{s.label}</span>
             {s.formula && (
-              <p className="text-caption text-emerald-800/80 dark:text-emerald-300/80 mt-0.5">{<FormulaText value={s.formula} />}</p>
+              <p className="text-caption text-emerald-800 dark:text-emerald-300/80 mt-0.5">{<FormulaText value={s.formula} />}</p>
             )}
           </div>
         ))}

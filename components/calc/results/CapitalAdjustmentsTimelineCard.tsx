@@ -58,7 +58,7 @@ export function CapitalAdjustmentsTimelineCard({ detail }: Props) {
                 </td>
                 <td className="px-2 py-2 text-center">
                   {a.skipped ? (
-                    <span className="text-slate-500 dark:text-slate-400">건너뜀 (배당소득)</span>
+                    <span className="text-slate-600 dark:text-slate-400">건너뜀 (배당소득)</span>
                   ) : (
                     <span className="text-violet-700 font-semibold dark:text-violet-300">적용</span>
                   )}

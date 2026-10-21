@@ -61,7 +61,7 @@ function Row({
       </span>
       <span
         className={`font-mono tabular-nums text-sm text-right ${
-          deduction ? "text-blue-600 dark:text-blue-400" : ""
+          deduction ? "text-blue-700 dark:text-blue-400" : ""
         }`}
       >
         {value}
@@ -177,7 +177,7 @@ function SingleStockTransferResultCard({
               산출세액: 과세표준 × {rateDisplay} (§104①11)
             </p>
           )}
-          <p className="text-amber-600 dark:text-amber-400">
+          <p className="text-amber-700 dark:text-amber-400">
             ※ 부담부증여(장외양도) — isOnMarketTransaction=false 고정 (§94①3가목2)
           </p>
         </div>

@@ -23,7 +23,7 @@ export function SummaryRow({
       } ${sub ? "pl-7" : ""}`}
     >
       <span className={sub ? "text-xs text-muted-foreground" : "text-sm"}>{label}</span>
-      <span className={`font-mono text-sm ${deduction ? "text-blue-600 dark:text-blue-400" : ""}`}>
+      <span className={`font-mono text-sm ${deduction ? "text-blue-700 dark:text-blue-400" : ""}`}>
         {value}
       </span>
     </div>

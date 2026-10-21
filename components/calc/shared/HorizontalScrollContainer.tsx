@@ -156,7 +156,7 @@ export function HorizontalScrollContainer({
   return (
     <div className={`relative ${className}`} data-testid="hsc-root">
       {hint && (
-        <p className="px-4 pt-2 text-micro text-gray-500 dark:text-gray-400 text-right print:hidden">
+        <p className="px-4 pt-2 text-micro text-gray-600 dark:text-gray-400 text-right print:hidden">
           {hint}
         </p>
       )}

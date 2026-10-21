@@ -245,7 +245,7 @@ export function DeemedMajorShareholderSection({ form, set }: Props) {
           <p className="font-medium text-amber-800 dark:text-amber-200">
             예상 취득세 = {formatKRW(deemedBase)} × {deemedRateLabel} = {formatKRW(Math.floor(deemedBase * deemedRate))}
           </p>
-          <p className="text-xs text-amber-600 dark:text-amber-400">* 농어촌특별세·지방교육세 별도</p>
+          <p className="text-xs text-amber-700 dark:text-amber-400">* 농어촌특별세·지방교육세 별도</p>
         </div>
       )}
     </ToneCard>

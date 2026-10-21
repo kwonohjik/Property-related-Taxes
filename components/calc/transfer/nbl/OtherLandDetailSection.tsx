@@ -634,7 +634,7 @@ export function OtherLandDetailSection({
                     <p className="font-semibold">연간환산 수입금액 = {revenuePreview.annualized.toLocaleString()}원</p>
                   </div>
                 ) : (
-                  <p className="text-caption text-amber-700/80 dark:text-amber-300/80">영위 {revenuePreview.days}일 = {revenuePreview.taxYear}년 총일수 → 환산 없음(raw 그대로)</p>
+                  <p className="text-caption text-amber-700 dark:text-amber-300/80">영위 {revenuePreview.days}일 = {revenuePreview.taxYear}년 총일수 → 환산 없음(raw 그대로)</p>
                 )
               ) : (
                 <p className="text-caption text-muted-foreground">당해 수입금액·양도일·취득일 입력 시 연환산 금액이 표시됩니다.</p>

@@ -88,7 +88,7 @@ export function MajorShareholderResultCard({
         )}
         {/* Phase B (2026-05-19) — 적용 규칙 출처 명시 */}
         {t.ruleSource && (
-          <div className="text-xs text-violet-600 dark:text-violet-400">
+          <div className="text-xs text-violet-700 dark:text-violet-400">
             · 적용 규칙: {RULE_SOURCE_LABEL[t.ruleSource]}
           </div>
         )}
@@ -110,13 +110,13 @@ export function MajorShareholderResultCard({
         </div>
         {/* 비상장 벤처 미적용 시 안내 */}
         {isUnlisted && !t.isVentureRule && (
-          <div className="text-xs text-violet-600 mt-1 dark:text-violet-400">
+          <div className="text-xs text-violet-700 mt-1 dark:text-violet-400">
             ※ 벤처기업 주식의 시총 기준은 40억원 (§167의8①2호 나목 단서). 회사 분류에서 &quot;벤처기업&quot; 선택 시 자동 적용
           </div>
         )}
         {/* 상장 비과세 사유 표시 */}
         {result.isExempt && !isUnlisted && (
-          <div className="text-xs text-violet-600 mt-1 dark:text-violet-400">→ 비과세 (§94①3 가목 단서)</div>
+          <div className="text-xs text-violet-700 mt-1 dark:text-violet-400">→ 비과세 (§94①3 가목 단서)</div>
         )}
       </dl>
     </div>

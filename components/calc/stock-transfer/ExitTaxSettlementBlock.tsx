@@ -297,7 +297,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
         <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
           비거주자 세액공제 (§118의14, 선택)
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
           납부유예 후 국내에서 비거주자로 실양도 시 §156①7에 따라 원천징수된 세액이 있는 경우 입력하세요.
         </p>
         <FieldCard

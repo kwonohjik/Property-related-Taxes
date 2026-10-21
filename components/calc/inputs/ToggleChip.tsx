@@ -45,7 +45,7 @@ const CHIP_BASE =
   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption font-medium transition-colors select-none cursor-pointer";
 
 const CHIP_OFF_BASE =
-  "border-gray-200 bg-gray-50/80 text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400";
+  "border-gray-200 bg-gray-50/80 text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400";
 
 export interface ToggleChipProps {
   checked: boolean;

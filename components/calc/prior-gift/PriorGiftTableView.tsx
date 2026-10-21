@@ -147,19 +147,19 @@ function PriorGiftTableRow({
         {gift.giftDate ? (
           gift.giftDate
         ) : (
-          <span className="text-amber-600 dark:text-amber-400">미입력</span>
+          <span className="text-amber-700 dark:text-amber-400">미입력</span>
         )}
       </td>
       {/* 수증자 */}
       <td className="pl-2 py-1.5 text-xs">
-        <div className={`font-medium ${donee.warn ? "text-amber-600 dark:text-amber-400" : ""}`}>
+        <div className={`font-medium ${donee.warn ? "text-amber-700 dark:text-amber-400" : ""}`}>
           {donee.label}
         </div>
         {donee.sub && (
-          <div className="text-micro text-gray-400">{donee.sub}</div>
+          <div className="text-micro text-gray-600 dark:text-gray-400">{donee.sub}</div>
         )}
         {gift.propertyName && (
-          <div className="text-micro text-gray-400">{gift.propertyName}</div>
+          <div className="text-micro text-gray-600 dark:text-gray-400">{gift.propertyName}</div>
         )}
       </td>
       {/* 증여재산가액 (우정렬 — amount-column-align) */}
@@ -167,7 +167,7 @@ function PriorGiftTableRow({
         {gift.giftAmount > 0 ? (
           gift.giftAmount.toLocaleString()
         ) : (
-          <span className="text-gray-400">미입력</span>
+          <span className="text-gray-600 dark:text-gray-400">미입력</span>
         )}
       </td>
       {/* 분류·옵션 배지 */}
@@ -181,12 +181,12 @@ function PriorGiftTableRow({
       {/* 편집 힌트 */}
       <td className="pr-3 py-1.5 text-right text-xs select-none whitespace-nowrap">
         {optionCount > 0 && (
-          <span className="inline-flex items-center gap-0.5 text-slate-400 mr-1.5">
+          <span className="inline-flex items-center gap-0.5 text-slate-600 dark:text-slate-400 mr-1.5">
             <Settings className="h-3 w-3" aria-hidden />
             {optionCount}
           </span>
         )}
-        <span className="text-gray-500 dark:text-gray-400">✎</span>
+        <span className="text-gray-600 dark:text-gray-400">✎</span>
       </td>
     </tr>
   );
@@ -223,15 +223,15 @@ export function PriorGiftTableView({
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="border-b border-gray-200 dark:border-gray-700">
-            <th className="py-2 text-left pl-3 text-gray-500 dark:text-gray-400 font-medium">증여일</th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">
+            <th className="py-2 text-left pl-3 text-gray-600 dark:text-gray-400 font-medium">증여일</th>
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">
               {mode === "inheritance" ? "수증자" : "증여자"}
             </th>
-            <th className="py-2 text-right pr-2 text-gray-500 dark:text-gray-400 font-medium">
+            <th className="py-2 text-right pr-2 text-gray-600 dark:text-gray-400 font-medium">
               증여재산가액
             </th>
-            <th className="py-2 text-left pl-2 text-gray-500 dark:text-gray-400 font-medium">분류·옵션</th>
-            <th className="w-16 py-2 text-right pr-3 text-gray-400 font-medium text-micro">
+            <th className="py-2 text-left pl-2 text-gray-600 dark:text-gray-400 font-medium">분류·옵션</th>
+            <th className="w-16 py-2 text-right pr-3 text-gray-600 dark:text-gray-400 font-medium text-micro">
               편집
             </th>
           </tr>

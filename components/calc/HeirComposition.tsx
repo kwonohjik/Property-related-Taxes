@@ -232,7 +232,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {heirs.length > 0 && (
-            <span className="text-xs text-gray-400">{heirs.length}명</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{heirs.length}명</span>
           )}
           {/* picker 열림 시 숨김 — 추가 버튼과 picker는 상호배타 (KindButton "상속인" 텍스트 충돌 방지) */}
           {!showAddPanel && (
@@ -272,7 +272,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
                   setAddStep(null);
                   setPendingKind(null);
                 }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
               >
                 취소
               </button>
@@ -291,7 +291,7 @@ export function HeirComposition({ heirs, onChange, deathDate }: HeirCompositionP
                   setAddStep("kind");
                   setPendingKind(null);
                 }}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
               >
                 ← 종류 선택으로
               </button>

@@ -37,7 +37,7 @@ export function AppraisalFeeSection({
       <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
         감정평가수수료 공제 ({lawLabel})
       </p>
-      <p className="text-caption text-violet-600/80 dark:text-violet-400/80">
+      <p className="text-caption text-violet-700 dark:text-violet-400/80">
         재산 평가에 든 감정평가 수수료를 과세표준에서 공제합니다. 해당 항목만 입력하세요(미입력 시 0).
       </p>
 

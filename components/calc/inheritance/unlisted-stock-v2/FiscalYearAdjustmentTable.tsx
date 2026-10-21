@@ -164,10 +164,10 @@ export function FiscalYearAdjustmentTable({
 
   return (
     <ToneCard tone="emerald" sectionNum={sectionNum} title="사업연도별 순손익액 (별지 6쪽 ①~㉒)" bodyClassName="space-y-3">
-      <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80">
+      <p className="text-caption text-emerald-700 dark:text-emerald-300/80">
         평가기준일 이전 1·2·3년차 사업연도. 가중치 ×3·×2·×1로 가중평균한 뒤 환원율(10%)로 나누면 1주당 순손익가치 ⑤
       </p>
-      <p className="text-micro text-emerald-600/80 dark:text-emerald-400/80">
+      <p className="text-micro text-emerald-700 dark:text-emerald-400/80">
         사업연도 변경 시: 평가기준일 이전 1·2·3년이 되는 날이 속하는 사업연도를 입력.
         1년 미만이면 자동 1년 환산(§17의3②).
         합병 후 3년 미경과 법인은 아래 &ldquo;합병 후 3년 미경과 순손익 보정&rdquo; 토글로 합병법인·피합병법인을 합산 입력하세요.
@@ -197,9 +197,9 @@ export function FiscalYearAdjustmentTable({
               />
               {/* 개시일 (§17의3② 연환산용 — 선택 입력) */}
               <div className="space-y-0.5">
-                <p className="text-micro text-gray-500 dark:text-gray-400 font-normal">
+                <p className="text-micro text-gray-600 dark:text-gray-400 font-normal">
                   개시일
-                  <span className="ml-1 text-gray-400">(1년 미만 시 입력)</span>
+                  <span className="ml-1 text-gray-600 dark:text-gray-400">(1년 미만 시 입력)</span>
                 </p>
                 <DateInput
                   value={fy.fiscalYearStartDate ? dateToStr(fy.fiscalYearStartDate) : ""}
@@ -211,9 +211,9 @@ export function FiscalYearAdjustmentTable({
               </div>
               {/* 종료일 */}
               <div className="space-y-0.5">
-                <p className="text-micro text-gray-500 dark:text-gray-400 font-normal">
+                <p className="text-micro text-gray-600 dark:text-gray-400 font-normal">
                   종료일
-                  <span className="ml-1 text-rose-600 font-semibold dark:text-rose-400">*</span>
+                  <span className="ml-1 text-rose-700 font-semibold dark:text-rose-400">*</span>
                 </p>
                 <DateInput
                   value={isValidDate(fy.fiscalYearEndDate) ? dateToStr(fy.fiscalYearEndDate) : ""}
@@ -223,7 +223,7 @@ export function FiscalYearAdjustmentTable({
                   }}
                 />
                 {!isValidDate(fy.fiscalYearEndDate) && (
-                  <p className="text-micro text-rose-600 font-semibold leading-snug dark:text-rose-400">
+                  <p className="text-micro text-rose-700 font-semibold leading-snug dark:text-rose-400">
                     종료일 필수 — §56⑤·환산주식수 계산에 필요
                   </p>
                 )}
@@ -236,7 +236,7 @@ export function FiscalYearAdjustmentTable({
               )}
               {/* hint: 미입력 안내 */}
               {!fy.fiscalYearStartDate && (
-                <p className="text-micro text-gray-400 font-normal leading-snug">
+                <p className="text-micro text-gray-600 dark:text-gray-400 font-normal leading-snug">
                   신설법인·결산기변경으로 1년 미만이면 개시일 입력. 미입력 시 12개월(연환산 없음).
                 </p>
               )}
@@ -268,14 +268,14 @@ export function FiscalYearAdjustmentTable({
                 {isFirstAdd && (
                   <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-sky-200 bg-sky-100/70 px-2 py-1 dark:bg-sky-900/40">
                     <span className="text-xs font-bold text-sky-800 dark:text-sky-200">＋ 가산항목</span>
-                    <span className="text-micro text-sky-700/80 dark:text-sky-300/80">§56④ 1호 · ②~⑦</span>
+                    <span className="text-micro text-sky-700 dark:text-sky-300/80">§56④ 1호 · ②~⑦</span>
                   </div>
                 )}
                 {/* 차감항목 그룹 헤더 (⑧~㉒) */}
                 {isFirstSub && (
                   <div className="mt-2 mb-1 flex items-center gap-1.5 rounded border border-rose-200 bg-rose-100/70 px-2 py-1 dark:bg-rose-900/40">
                     <span className="text-xs font-bold text-rose-800 dark:text-rose-200">－ 차감항목</span>
-                    <span className="text-micro text-rose-700/80 dark:text-rose-300/80">§56④ 2호 · ⑧~㉒</span>
+                    <span className="text-micro text-rose-700 dark:text-rose-300/80">§56④ 2호 · ⑧~㉒</span>
                   </div>
                 )}
                 <div
@@ -289,7 +289,7 @@ export function FiscalYearAdjustmentTable({
                     }`}>{row.cellNum}</span>
                     <span className="ml-1">{row.label}</span>
                     {row.description && (
-                      <span className="text-micro text-gray-500 dark:text-gray-400 ml-1">({row.description})</span>
+                      <span className="text-micro text-gray-600 dark:text-gray-400 ml-1">({row.description})</span>
                     )}
                   </div>
                   {fiscalYears.map((fy, idx) => (
