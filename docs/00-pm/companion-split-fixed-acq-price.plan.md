@@ -1,6 +1,6 @@
 # 함께 양도 두 번째 자산 — 매매 분리취득이면 ⑫가 화면에 없는 자산 전체 취득가액을 요구해 400 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Do — Q-1 권고안 a 결정(2026-10-21)** · 워크트리 `../Property-related-Taxes-cfap` · 브랜치 `docs/companion-split-fixed-acq-plan`
+> 작성 2026-10-21 · 상태 **Do 완료 — 구현 PR #2373 · Q-1 권고안 a(2026-10-21)** · 워크트리 `../Property-related-Taxes-cfap` · 브랜치 `docs/companion-split-fixed-acq-plan`
 > 기준 master `f204df8f2`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `split-v7-era-and-legacy-expense.plan.md` §6.4(범위 밖 발견, PR #2370 작업 중).
 > 실측 probe(`__tests__/calc/_probe-cfap*.test.ts*`)는 커밋하지 않았다.
@@ -108,3 +108,22 @@
 
 - 결과 화면(주택 분리 컴패니언)에 `allocatedAcquisitionPrice`가 0으로 그려지는 곳이 있는지 — §1.2의 grep 범위(`components/`·`lib/stores/`) 밖은 미확인. Do에서 결과 화면 렌더로 확인한다.
 - H2의 ⑧ `landHouseExisted`는 토지 증여 D1의 정상 질문(1990.8.30.~2005.4.29. 증여 부수토지)이며 이 결함과 무관하다 — 픽스처에 답을 채워 격자에 넣는다.
+
+---
+
+## 5. Do 결과 (2026-10-21 · 구현 PR #2373 · 워크트리 `-cfx` · 커밋 60720679e)
+
+- ⑫ `transfer-tax-schema-companion-refines.ts` 매매 실가 갈래: `c.isSeparateAcquisition !== true &&` 조건 + 근거 주석.
+- 격자 `__tests__/calc/companion-split-fixed-acq-parity.test.ts` 12건:
+  - 별개 취득 4형태(일반·D1·토지 환산·건물 감정) × {⑧ 통과 ⇒ ⑫ 200 · ④ 자산 전체 값 없음, 숨은 총액 9억 잔재 = 같은 결정세액}.
+  - 파트 비움 ⇔ 같은 칸 400(오류는 `buildingAcquisitionPrice` 하나).
+  - 분리 아님 매매·같은 날 소유자 분리는 종전대로 총액 요구(짝).
+  - ⑥ 사이드바 계산 후 두 번째 자산 `acqPrice` = 550,000,000(토지 3억 + 건물 2.5억).
+- 뮤테이션 2/2 KILLED — 면제 제거 · 조건을 `!landAcquisitionDate`로 넓힘(소유자 분리 셀이 잡음).
+- E2E `e2e/companion-split-fixed-acq.spec.ts` 1건 — 시드 → 계산 → 요청 `companionAssets[0]`에 `isSeparateAcquisition: true`·파트 가액만. 면제를 빼면 실패(KILLED).
+- §4 확인 필요 해소:
+  - `allocatedAcquisitionPrice` 사용처를 소스 전체에서 다시 찾았다(`app`·`components`·`lib` — 8파일). 화면 표시는 일반건물 결과 카드뿐이다.
+  - 사이드바는 분리 자산이면 엔진 echo로 덮는다 — 컴패니언에서도 덮어 파트 합이 보인다(격자 셀).
+  - H2 `landHouseExisted`는 `"no"`로 채워 격자에 넣었다.
+- 검증: 전체 vitest 38,795건 실패 0 · typecheck · lint 0 오류 · 폰트·톤·다크 짝·워크플로 러너.
+- 남은 것: PR #2370 `split-sale-std-era-parity.test.ts`의 「일반 분리취득」 함께 양도 셀(`companion: false`)은 두 PR이 모두 머지된 뒤 켠다(§3-5).
