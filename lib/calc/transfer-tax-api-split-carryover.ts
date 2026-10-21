@@ -15,6 +15,7 @@ import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carry
 import { parseAmount } from "@/lib/calc/number-parse";
 import { effectiveCarryoverDonorSplit, effectiveLandCarryover } from "./transfer-land-part-cause";
 import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
+import { carryoverHouseholdPayload } from "./transfer-tax-api-carryover";
 
 /** ⑫ `carryoverGiftEvent` — 증여 그 자체의 사실. */
 export interface SplitCarryoverEventPayload {
@@ -28,6 +29,14 @@ export interface SplitCarryoverEventPayload {
     legacyOneHouseExemptionDeclared?: true;
     isFamilyBusinessInheritedAsset?: true;
   };
+  // P5 §97의2②2호 — 1세대1주택 판정 사실(엔진 설계: 계획서 `transfer-split-part-carryover-p5.plan.md` Q3·Q4)
+  /** 세대 사실 — 건물(주택)이 이월과세일 때만(B·C). 화면이 묻는 술어(`carryoverHouseholdFactVisible`)와 같은 조각(`carryoverHouseholdPayload`) */
+  donorSameHouseholdContinuous?: boolean;
+  donorHouseholdHoldingStartDate?: string;
+  donorPriorHouseholdResidenceMonths?: number;
+  donorRejoinedAfterDivorce?: boolean;
+  /** 배우자 예외 — 통째 증여(C) + 배우자일 때만 */
+  spouseGiftOneHouseAtGiftDate?: true;
 }
 
 /** ⑫ `landCarryoverPart`·`buildingCarryoverPart`. */
@@ -106,13 +115,20 @@ export function buildSplitCarryoverPayload(
   ratioed: (v: string | undefined) => number | undefined,
   opts?: { isNonPrimary?: boolean },
 ): SplitCarryoverPayload | undefined {
-  if (effectiveCarryoverDonorSplit(asset, opts))
+  if (effectiveCarryoverDonorSplit(asset, opts)) {
+    const c = asset.carryover;
     return {
       landAcquisitionCause: "carryover_gift",
-      carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
+      carryoverGiftEvent: {
+        ...buildEvent(splitCarryoverEventSource(asset)),
+        ...carryoverHouseholdPayload(asset),
+        // 배우자 예외(P5-Q4) — 통째 증여만. 관계가 바뀐 stale 값은 싣지 않는다(자산 단위 `buildCarryoverPayload`와 같은 규칙).
+        ...(c?.donorRelation === "spouse" && c.spouseGiftOneHouseAtGiftDate ? { spouseGiftOneHouseAtGiftDate: true as const } : {}),
+      },
       landCarryoverPart: buildPart(asset.landCarryover, ratioed),
       buildingCarryoverPart: buildPart(asset.carryover, ratioed),
     };
+  }
   if (!opts?.isNonPrimary && effectiveLandCarryover(asset))
     return {
       landAcquisitionCause: "carryover_gift",
@@ -122,7 +138,8 @@ export function buildSplitCarryoverPayload(
   if (!opts?.isNonPrimary && effectiveBuildingCarryoverMix(asset))
     return {
       landAcquisitionCause: "purchase",
-      carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
+      // 세대 사실(P5-Q3) — 건물이 증여받은 주택이다. 배우자 예외는 싣지 않는다(P5-Q4 — 건물만 증여는 해석례 없음).
+      carryoverGiftEvent: { ...buildEvent(splitCarryoverEventSource(asset)), ...carryoverHouseholdPayload(asset) },
       buildingCarryoverPart: buildPart(asset.carryover, ratioed),
     };
   return undefined;

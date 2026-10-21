@@ -112,6 +112,14 @@ export interface SplitCarryoverEventEcho {
    * 참일 때만 싣는다(생략 = 해당 없음). 세액은 바꾸지 않는다(순서는 N-1과 같은 순차 고정점으로 고정이다 — 설계서 §4.2).
    */
   orderDependent?: true;
+  /**
+   * §97의2②2호(P5) — 적격 파트를 전부 적용하면 1세대1주택(딸린 토지 포함) 양도에 해당하게 되고 전부 미적용이면 해당하지 않아
+   * 모든 적격 파트에 ①을 적용하지 않았다. 파트 echo의 `exclusionReason`은 `one_house_exemption`이고 ②3호 비교는 하지 않았다(`comparison` 없음).
+   * 참일 때만 싣는다.
+   */
+  oneHouseExclusion?: true;
+  /** 위 조합이지만 배우자 예외(증여일 현재 1세대1주택을 배우자로부터 통째로 증여받음 — C만)로 ②2호를 적용하지 않았다. 참일 때만 싣는다. */
+  spouseOneHouseExceptionApplied?: true;
 }
 
 /** 토지/건물 분리 계산 결과 */

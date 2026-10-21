@@ -12,7 +12,6 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
-import { partCarryover } from "./transfer-land-part-cause";
 
 type GiftFactFields = Pick<
   AssetForm,
@@ -42,23 +41,14 @@ export function parsePriorResidenceMonths(raw: string | undefined): number | und
  */
 export function giftPriorResidenceAsked(
   asset:
-    | (Pick<AssetForm, "acquisitionCause" | "assetKind" | "giftSameHousehold" | "giftDonorDeceased" | "carryover"> & {
-        carryoverDonorSplit?: boolean;
-        isMixedUseHouse?: boolean;
-        selfOwns?: AssetForm["selfOwns"];
-        transferType?: string;
-        // P4 B 판정 키 — 일부만 넘기면 B가 꺼진 것으로 읽는다
-        landAcquisitionCause?: AssetForm["landAcquisitionCause"];
-        hasSeperateLandAcquisitionDate?: boolean;
-        landCauseHost?: string;
-      })
+    | Pick<AssetForm, "acquisitionCause" | "assetKind" | "giftSameHousehold" | "giftDonorDeceased" | "carryover">
     | undefined,
 ): boolean {
   if (!asset || asset.assetKind !== "housing") return false;
   if (asset.acquisitionCause === "gift") return asset.giftSameHousehold === "yes" && !asset.giftDonorDeceased;
-  // 파트 이월과세(C·B)는 세대 사실을 묻지 않는다(Q-9) — 칸이 없는데 거주 구간 오류가 그 칸으로 안내하면 막다른 길이다. ⑤·⑧·④와 같은 술어.
+  // 파트 이월과세(C·B)도 P5부터 세대 사실을 묻는다(건물 파트 사건 서브폼 = `carryover`) — ⑤·⑧·④와 같은 술어.
   if (asset.acquisitionCause === "carryover_gift")
-    return !partCarryover(asset).building && asset.carryover?.donorSameHousehold === "yes" && !asset.carryover.donorDeceased;
+    return asset.carryover?.donorSameHousehold === "yes" && !asset.carryover.donorDeceased;
   return false;
 }
 

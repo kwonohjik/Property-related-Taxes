@@ -14,7 +14,6 @@ import {
   PART_CARRYOVER_STRAY_MESSAGE,
   PART_CARRYOVER_DATE_MISMATCH_MESSAGE,
   PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE,
-  PART_CARRYOVER_ONE_HOUSE_MESSAGE,
   PART_CARRYOVER_LAND_VALUATION_REQUIRED_MESSAGE,
   PART_CARRYOVER_BUILDING_VALUATION_REQUIRED_MESSAGE,
   BUILDING_CAUSE_ESTIMATION_MESSAGE,
@@ -259,33 +258,16 @@ describe("S8 — 자산 단위 필요경비 총액 병용 금지", () => {
   });
 });
 
-describe("S9 — 1세대1주택 게이트 (isHousing ∧ isOneHousehold===true ∧ ¬미등기)", () => {
-  it("겹치면 isOneHousehold 칸을 짚는다 — A·B·C", () => {
-    for (const f of [A, B, C])
-      expect(collectSplitPartCauseIssues({ ...f, isOneHousehold: true })).toEqual([{ field: "isOneHousehold", message: PART_CARRYOVER_ONE_HOUSE_MESSAGE }]);
-  });
-  it("비주택(building)·미등기·모름(생략)·1세대 아님은 닫지 않는다 — `checkExemptionCore`가 비과세 평가를 시작하는 조건과 같다", () => {
-    expect(msgs({ ...A, isOneHousehold: true, isHousing: false })).toEqual([]);
-    expect(msgs({ ...A, isOneHousehold: true, isUnregistered: true })).toEqual([]);
-    expect(msgs({ ...A, isOneHousehold: undefined })).toEqual([]);
-    expect(msgs({ ...A, isOneHousehold: false })).toEqual([]);
-  });
-  it("파트 이월과세가 없는 일반 split + 1세대1주택은 무영향(회귀 0)", () => {
-    expect(msgs({ ...A, landAcquisitionCause: "purchase", hasLandCarryover: false, carryoverGiftDate: undefined, isOneHousehold: true })).toEqual([]);
-  });
-});
-
-describe("순서 — 호스트 → 상호배제 → 입력 짝 → 구조 → … → 경비·1세대1주택 → 취득일 일치", () => {
-  it("S0 → S2′ → S1 → S9 → S5", () => {
+describe("순서 — 호스트 → 상호배제 → 입력 짝 → 구조 → … → 경비 → 취득일 일치", () => {
+  it("S0 → S2′ → S1 → S5 (S9 1세대1주택 게이트는 P5에서 해결자 ②2호 판정으로 대체)", () => {
     const f: SplitPartCauseFacts = {
-      ...A, partCarryoverSupported: false, hasCompanions: true, hasBuildingCarryover: true, isOneHousehold: true, landAcquisitionDate: "2023-04-01",
+      ...A, partCarryoverSupported: false, hasCompanions: true, hasBuildingCarryover: true, landAcquisitionDate: "2023-04-01",
     };
     const order = collectSplitPartCauseIssues(f).map((i) => i.message);
     const idx = (m: string) => order.indexOf(m);
     expect(idx(PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE)).toBe(0);
     expect(idx(PART_CARRYOVER_COMPANION_MESSAGE)).toBeGreaterThan(idx(PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE));
     expect(idx(PART_CARRYOVER_STRAY_MESSAGE)).toBeGreaterThan(idx(PART_CARRYOVER_COMPANION_MESSAGE));
-    expect(idx(PART_CARRYOVER_ONE_HOUSE_MESSAGE)).toBeGreaterThan(idx(PART_CARRYOVER_STRAY_MESSAGE));
-    expect(idx(PART_CARRYOVER_DATE_MISMATCH_MESSAGE)).toBeGreaterThan(idx(PART_CARRYOVER_ONE_HOUSE_MESSAGE));
+    expect(idx(PART_CARRYOVER_DATE_MISMATCH_MESSAGE)).toBeGreaterThan(idx(PART_CARRYOVER_STRAY_MESSAGE));
   });
 });

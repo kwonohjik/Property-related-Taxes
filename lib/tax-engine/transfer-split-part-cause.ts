@@ -19,7 +19,7 @@
  *
  * P1(`docs/02-design/features/transfer-split-part-carryover.engine.design.md` §6)은 **파트 이월과세**(`carryover_gift`)를 연다.
  * 종전 G-1(토지 이월과세 전면 차단)·`:249`(건물 이월과세 + 토지 매매)는 「파트 서브객체 필수」(S1)로 바뀌었고,
- * 서브객체가 있는 입력의 계산은 해결자(`transfer-tax-split-carryover.ts`)가 한다. 상호배제·호스트·1세대1주택 게이트는 S0~S9.
+ * 서브객체가 있는 입력의 계산은 해결자(`transfer-tax-split-carryover.ts`)가 한다. 상호배제·호스트 게이트는 S0~S8(S9 1세대1주택 게이트는 P5에서 §97의2②2호 판정으로 대체 — 해결자).
  */
 import type { PartAcqMode } from "./transfer-tax-split-acq-price";
 
@@ -91,9 +91,6 @@ export interface SplitPartCauseFacts {
   hasCompanions?: boolean;
   /** 증여 사건 `giftRegistryDate` YYYY-MM-DD — 있으면 「증여 사건 있음」이다 */
   carryoverGiftDate?: string;
-  /** 1세대1주택 비과세 게이트 입력 (`checkExemptionCore`가 비과세 평가를 시작하는 조건과 같다) */
-  isOneHousehold?: boolean;
-  isUnregistered?: boolean;
   /** `input.expenses`(deprecated 총액) > 0 — 파트 이월과세와 함께 쓸 수 없다(S8) */
   hasLegacyExpenses?: boolean;
 }
@@ -128,7 +125,6 @@ export type SplitPartCauseField =
   | "buildingCarryoverPart"
   | "carryoverGiftEvent"
   | "carryoverTaxation"
-  | "isOneHousehold"
   | "expenses";
 
 export interface SplitPartCauseIssue {
@@ -163,10 +159,6 @@ export const PART_CARRYOVER_DATE_MISMATCH_MESSAGE =
 export const PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE =
   "파트 이월과세 계산에서는 자산 단위 필요경비 총액(expenses)을 쓸 수 없습니다 — 토지·건물 파트별 자본적지출 칸으로 입력하세요 "
   + "(총액이 있으면 파트에 다시 나뉘어 증여세 상당액 산입이 반대 파트 경비를 밀어냅니다)";
-
-export const PART_CARRYOVER_ONE_HOUSE_MESSAGE =
-  "1세대1주택 비과세(소득세법 §89①3호)와 겹치는 토지·건물 파트 이월과세는 아직 지원하지 않습니다 — "
-  + "§97의2②2호(제1항을 적용할 경우 1세대1주택 양도에 해당하게 되는 경우) 판정이 필요합니다";
 
 export const LAND_INHERITED_ESTIMATION_MESSAGE =
   "상속·증여로 취득한 토지는 취득가액을 환산취득가·감정가액·매매사례가액으로 산정할 수 없습니다 — "
@@ -586,10 +578,6 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   // S8 — 자산 단위 필요경비 총액이 있으면 반대 파트 경비가 증여세 산입에 밀린다(`splitPair`가 한쪽만 입력된 파트의 반대편을 총액 − 입력값으로 도출).
   if (f.hasLegacyExpenses && hasPart)
     issues.push({ field: "expenses", message: PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE });
-  // S9 — 1세대1주택 비과세와 겹치면 §97의2②2호 판정이 필요하다(P5 전까지 막는다). 게이트는 `checkExemptionCore`가 비과세 평가를 시작하는 조건과 같다
-  // (비주택 `building`은 비과세 평가가 없다 · 모름 = 불성립). `isOneHousehold`는 ④가 폼에서 실제로 싣는 값이어야 한다(3중 패턴).
-  if (hasPart && f.isHousing && f.isOneHousehold === true && !f.isUnregistered)
-    issues.push({ field: "isOneHousehold", message: PART_CARRYOVER_ONE_HOUSE_MESSAGE });
 
   if (!f.hasLandAcquisitionDate) return issues;
 

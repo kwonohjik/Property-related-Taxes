@@ -64,8 +64,9 @@ for (const host of ["purchase", "newConstruction"] as const satisfies readonly A
       expect(radios.map((r) => r.getAttribute("value") ?? r.closest("label")?.textContent)).toHaveLength(3);
       expect(within(screen.getByTestId("land-acq-cause")).getByText("이월과세(증여)")).toBeTruthy();
       expect(screen.getByTestId("land-carryover-card")).toBeTruthy();
-      expect(screen.getByTestId("split-carryover-onehouse-notice")).toBeTruthy();
-      expect(screen.getByTestId("split-carryover-household-note")).toBeTruthy();
+      // P5 — 1세대1주택 겹침 차단 안내(N4)는 없고, 토지만 증여의 세대 사실·배우자 예외 미질문 고지가 남는다
+      expect(screen.queryByTestId("split-carryover-onehouse-notice")).toBeNull();
+      expect(screen.getByTestId("split-carryover-household-note").textContent).toContain("토지만 증여받은 경우에는");
       expect(container.querySelector('[data-testid="split-carryover-companion-exists-note"]')).toBeNull();
     });
 

@@ -13,6 +13,7 @@ export const B_CARRYOVER = {
   ...CARRYOVER_DEFAULTS,
   giftRegistryDate: "2023-03-01",
   donorRelation: "lineal" as const,
+  donorSameHousehold: "no" as const, // P5 — 건물(주택)을 증여받은 B·C는 세대 사실이 필수 질문이다
   donorAcquisitionDate: "2015-06-01",
   donorAcquisitionPrice: "100,000,000",
   giftTaxCalculated: "20,000,000",

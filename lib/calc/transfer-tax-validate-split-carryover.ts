@@ -32,15 +32,12 @@ import { PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE } from "@/lib/tax-engine/transf
 import { phdPayloadActive } from "./phd-toggle-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { splitCarryoverEventSource } from "./transfer-tax-api-split-carryover";
+import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
 
 /** 호출 맥락 — 폼 전역 사실. 생략 = 그 결합이 아니다(단위 테스트·자산 단독 호출). */
 export interface SplitCarryoverCtx {
   /** 함께 양도하는 자산이 있는가(`form.assets.length > 1`) — ④가 `companionAssets`를 만드는 조건과 같다(leaf S2′). */
   hasCompanions?: boolean;
-  /** 폼 전역 1세대 여부(④ `isOneHousehold: form.isOneHousehold`) — 보유 상황 단계(UI 인덱스 1)에서만 넘긴다(leaf S9). */
-  isOneHousehold?: boolean;
-  /** ④ `isUnregistered: form.isUnregistered`. */
-  isUnregistered?: boolean;
   /** 함께 양도하는 두 번째 이후 자산(A·B만 — C는 술어가 이미 거짓). ④는 키를 싣지 않고 ⑧이 leaf S0로 막는다. */
   isNonPrimary?: boolean;
 }
@@ -94,8 +91,6 @@ export function splitCarryoverLeafFacts(rawAsset: AssetForm, ctx: SplitCarryover
     partCarryoverSupported: !ctx.isNonPrimary,
     hasCompanions: ctx.hasCompanions,
     carryoverGiftDate: gift,
-    isOneHousehold: ctx.isOneHousehold,
-    isUnregistered: ctx.isUnregistered,
     hasLegacyExpenses: false,
   };
 }
@@ -109,8 +104,6 @@ export function splitCarryoverLeafFacts(rawAsset: AssetForm, ctx: SplitCarryover
 function anchorOfLeafIssue(issue: SplitPartCauseIssue, kind: Kind): string {
   const event = kind === "A" ? "landCarryover" : "carryover";
   switch (issue.field) {
-    case "isOneHousehold":
-      return "isOneHousehold";
     case "landAcquisitionPrice":
     case "buildingAcquisitionPrice":
       return issue.field;
@@ -131,28 +124,13 @@ function anchorOfLeafIssue(issue: SplitPartCauseIssue, kind: Kind): string {
   }
 }
 
-/** 1세대1주택 비과세 겹침(leaf S9)만 — 보유 상황 단계(UI 인덱스 1)가 부른다. 첫 자산이 파트 이월과세(C·A)가 아니면 `null`. */
-export function splitCarryoverOneHouseIssue(primary: AssetForm | undefined, ctx: SplitCarryoverCtx): string | null {
-  const kind = primary ? splitCarryoverKind(primary) : null;
-  if (!primary || !kind) return null;
-  const issue = collectSplitPartCauseIssues(splitCarryoverLeafFacts(primary, ctx)).find((i) => i.field === "isOneHousehold");
-  if (!issue) return null;
-  const off =
-    kind === "C"
-      ? "자산의 «증여자가 토지·건물을 다른 날 취득» 선택을 끄세요"
-      : kind === "A"
-        ? "자산의 토지 취득 원인을 «이월과세(증여)»가 아닌 것으로 바꾸세요"
-        : "자산의 «토지는 다른 원인으로 취득»을 끄세요";
-  return fieldError("isOneHousehold", `${issue.message} — 이 양도가 1세대1주택에 해당하지 않으면 «1세대 해당»을 해제하고, 해당하면 ${off}`);
-}
-
 const MSG_TAIL_DONOR = "(소득세법 §97의2①·시행령 §163의2②)";
 
 /**
  * 파트 이월과세(C·A·B)의 ⑧ — 화면 위→아래 순서. 첫 미완 칸의 앵커로 이동한다. 파트 이월과세가 아니면 `null`.
  *
  * 1) (A·B: 함께 양도 자산 — leaf S0) → 가업상속 선언 → 2) 증여 등기접수일(B: 고시 전 증여 차단) → 3) 관계(그 외·사망) → 4) 토지 파트(C·A) → 5) 건물 파트(C·B) → 6) 증여세
- * → 7) leaf(구조·함께 양도 자산) → (A: 같은 날) → 8) 이전 입력 형식 필요경비. 그 뒤 양도가액 구분·양도시 기준시가·파트 자본적지출은 호출부가 잇는다(파일 머리 주석).
+ * → 6a) 증여자와 계속 같은 세대(C·B — P5) → 7) leaf(구조·함께 양도 자산) → (A: 같은 날) → 8) 이전 입력 형식 필요경비. 그 뒤 양도가액 구분·양도시 기준시가·파트 자본적지출은 호출부가 잇는다(파일 머리 주석).
  */
 export function validateSplitCarryoverParts(
   rawAsset: AssetForm,
@@ -252,6 +230,13 @@ export function validateSplitCarryoverParts(
       hostEvent ? "carryover.giftTaxBase" : "landCarryover.giftTaxBase",
       `${label}: ${kind === "C" ? "토지·건물 증여 신고가액의 합이" : kind === "A" ? "토지 증여 신고가액이" : "건물 증여 신고가액이"} 증여세 과세가액을 초과합니다 ${MSG_TAIL_DONOR}.`,
     );
+
+  // 6a) P5 §97의2②2호 — 증여자와 계속 같은 세대(필수 사실 질문). C·B는 건물(주택)을 증여받아 1세대1주택 보유 통산·「취득 당시」 기준일이 이 사실을 읽는다.
+  //     자산 단위와 같은 검증·같은 앵커(`carryover.*` — 사건 서브폼이 건물 파트다)·같은 노출 술어. A(토지만)는 묻지 않는다(P5-Q3).
+  if (kind !== "A") {
+    const householdErr = validateCarryoverHouseholdFact(asset, c, label);
+    if (householdErr) return householdErr;
+  }
 
   // 7) leaf — 함께 양도 자산·구조·날짜·건물 경계일 (엔진·⑫와 같은 판정)
   const [issue] = collectSplitPartCauseIssues(splitCarryoverLeafFacts(asset, ctx));

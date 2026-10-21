@@ -68,11 +68,12 @@ describe("P4 B ⑤", () => {
   it("토글 ON — 건물 이월과세 카드 · N4·N5 · 자산 전체 블록 대신(증여 당시 평가액·C 토글·세대 사실 없음)", () => {
     const { container } = mount(bAsset());
     expect(screen.getByTestId("building-carryover-card")).toBeTruthy();
-    expect(screen.getByTestId("split-carryover-onehouse-notice")).toBeTruthy();
-    expect(screen.getByTestId("split-carryover-household-note")).toBeTruthy();
+    // P5 — 1세대1주택 겹침 차단 안내(N4)는 없고, 건물만 증여의 배우자 예외 미적용 고지가 남는다
+    expect(screen.queryByTestId("split-carryover-onehouse-notice")).toBeNull();
+    expect(screen.getByTestId("split-carryover-household-note").textContent).toContain("건물만 증여받은 경우에는 배우자 예외");
     expect(container.querySelector('[data-field="carryover.giftDateValuation"]')).toBeNull();
     expect(container.querySelector('[data-testid="carryover-donor-split-toggle"]')).toBeNull();
-    expect(container.querySelector('[data-field="carryover.donorSameHousehold"]')).toBeNull();
+    expect(container.querySelectorAll('[data-field="carryover.donorSameHousehold"]').length).toBe(1); // P5 — 세대 사실을 묻는다(건물 카드 안 한 곳)
     expect(container.querySelector('[data-testid="split-carryover-companion-exists-note"]')).toBeNull();
   });
 

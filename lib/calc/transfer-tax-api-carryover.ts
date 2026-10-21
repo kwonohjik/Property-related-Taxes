@@ -176,23 +176,12 @@ export function primaryAcquisitionDateOf(asset: AssetForm | undefined): string |
  *    이 필수 질문의 ⑧ 오류는 그 차단이 풀린 뒤(취득 원인 변경 후 일반 증여 칸의 같은 질문) 또는 직접 호출에서 닿는다.
  */
 export function carryoverHouseholdFactVisible(
-  asset: Pick<AssetForm, "assetKind" | "carryover"> & {
-    acquisitionCause?: AssetForm["acquisitionCause"];
-    carryoverDonorSplit?: boolean;
-    isMixedUseHouse?: boolean;
-    selfOwns?: AssetForm["selfOwns"];
-    transferType?: string;
-    // P4 B 판정 키(「토지는 다른 원인으로 취득」) — 일부만 넘기면 B가 꺼진 것으로 읽는다
-    landAcquisitionCause?: AssetForm["landAcquisitionCause"];
-    hasSeperateLandAcquisitionDate?: boolean;
-    landCauseHost?: string;
-  },
+  asset: Pick<AssetForm, "assetKind" | "carryover">,
 ): boolean {
   const c = asset.carryover;
-  // P2 C — 파트 이월과세는 이 질문을 묻지 않는다(Q-9): 세대 사실은 1세대1주택 비과세 판정에 쓰이는데 파트 이월과세는 그 판정과 함께 계산하지 않는다(N5).
-  //   ⑤ 위젯·⑧ 필수·④ 전송이 이 술어 하나를 읽으므로 셋이 함께 묻지 않는다. 첫 자산 여부는 보지 않는다 — 어느 쪽이든 셋이 같은 값을 읽는다.
-  // P4 B(건물만 이월과세)도 같다 — 자산 단위 이월과세 서브객체를 싣지 않는다.
-  if (partCarryover(asset).building) return false;
+  // P5 — 파트 이월과세 C(통째)·B(건물만)도 묻는다: 건물(주택)을 증여받아 §97의2②2호 판정(1세대1주택 보유 통산·「취득 당시」 기준일)이 이 사실을 읽는다
+  //   (엔진은 건물 파트 사건 사실로 `giftHouseholdBasis`를 만든다). 사건 서브폼이 `carryover`라 앵커·값이 자산 단위와 같다.
+  //   A(토지만 — 호스트가 매매·신축)는 이 술어의 호출 맥락이 아니다(건물은 본인 취득 — P5-Q3). ⑤ 위젯·⑧ 필수·④ 전송이 이 술어 하나를 읽는다.
   return !!c && isOneHouseExemptionAsset(asset.assetKind) && !c.donorDeceased;
 }
 

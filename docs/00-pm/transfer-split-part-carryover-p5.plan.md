@@ -84,8 +84,12 @@ split 주택의 비과세 판정은 다음 날짜와 경로를 쓴다.
   - 보유 상황 단계의 거주요건 경고(`Step4.tsx:97,129-149`)
   - 거주 구간(`transfer-tax-api-residence.ts:86`)
   - ⑧ 거주 검증(`transfer-tax-validate-step1.ts:445,467`)
-- **조치**: 세 곳이 ④와 같은 정규화 값을 읽게 한다(3중 패턴).
+- **조치(계획)**: 세 곳이 ④와 같은 정규화 값을 읽게 한다(3중 패턴).
 - **파일 크기**: `Step4.tsx`는 750줄로 위험구간이다. 손대면 그 김에 분리한다.
+- **Do 실측 결과(2026-10-21) — P5에서 고치지 않고 별건으로 분리**:
+  - 세 곳 모두 세액에 영향이 없다. ④가 보내는 거주 개월 수(`clampResidenceToHousingPeriod`)는 취득일을 읽지 않고, 원시 취득일은 Step4 경고(`residenceShortfall` — 빈 값이면 꺼짐)·⑧ 거주 구간 하한(빈 값이면 건너뜀)·중과 한시배제 표시에만 쓰인다.
+  - 같은 구조가 **자산 전체 이월과세에도 원래부터** 있다(자산 카드에 취득일 칸이 없어 원시값이 빈 값 — `carryoverResidenceJudgmentDate` 주석). P5가 새로 만든 결함이 아니다.
+  - 고치면 자산 전체 이월과세의 ⑧ 거주 구간 검증이 새로 막기 시작해(증여 등기접수일 전 거주) 기존 사용자 입력이 바뀐다. 결정이 필요한 별건으로 남긴다 — 🔴 별건 「이월과세 호스트의 보유 상황 단계가 원시 취득일을 읽는다(경고 꺼짐·거주 구간 하한 미검사)」.
 
 ---
 
@@ -160,3 +164,51 @@ split 주택의 비과세 판정은 다음 날짜와 경로를 쓴다.
 4. **뮤테이션**: ②2호 발동 조건, 상태 정의, 배우자 예외, basis, S9 잔재를 변형해 검증한다.
 5. **E2E**: c.spec `:325-372`를 반전하고(막힘 → 계산됨), A·B 1세대1주택 신규 spec을 추가한다. 모바일 375px도 확인한다.
 6. **브라우저**: 폼 → 계산 → 결과 4뷰를 확인하고, request body의 사건 세대 사실을 본다.
+
+---
+
+## 9. Do 결과 (2026-10-21)
+
+### 9.1 엔진·와이어 (⑫⑬⑭)
+
+- **입구**: leaf S9와 `PART_CARRYOVER_ONE_HOUSE_MESSAGE`를 삭제했다. facts의 `isOneHousehold`·`isUnregistered`도 함께 지웠다. ⑧·⑫·엔진 입구가 한 leaf를 쓰므로 셋이 함께 풀린다.
+- **해결자**(`transfer-tax-split-carryover.ts`): 안전망 throw를 ②2호 판정(5a)으로 바꿨다.
+  - AA·BB 두 세계의 상태는 `{house, land}`다. `house`는 `isExempt‖isPartialExempt‖isExemptCore`이고, `land`는 `house ∧ ¬isLaterAcquiredLandExemptExcluded`(G-3)다.
+  - 발동 조건은 `(AA.house ∧ ¬BB.house) ∨ (AA.land ∧ ¬BB.land)`다. 발동하면 적격 파트를 전부 B로 두고 ②3호(5b)를 건너뛴다.
+  - echo는 파트 `exclusionReason: one_house_exemption`(비교 없음)과 사건 `oneHouseExclusion`이다.
+  - 배우자 예외는 두 파트가 모두 있고 건물 사건이 배우자 + `spouseGiftOneHouseAtGiftDate`일 때 적용한다. 사건 echo는 `spouseOneHouseExceptionApplied`다.
+- **세대 기준일**: 시나리오 입력에 `giftHouseholdBasis = carryoverGiftHouseholdBasis(건물 ct, 건물 A)`를 싣는다(건물 파트가 있을 때만). §4-1을 해소했다.
+- **결과 플래그**: 결과에 `isExemptCore`를 추가했다(`transfer-tax-normal-return.ts`). 전액 비과세 대상인데 G-2·G-3·PHD로 정상 경로를 탄 경우다. 이 경우 `isExempt`·`isPartialExempt`가 둘 다 false라 따로 실어야 G-3 토지분 뒤집힘을 볼 수 있다.
+- **조기 반환 echo**: 전액 비과세 조기반환(`buildExemptEarlyResult`)에도 파트 판정 echo를 붙인다. 종전에는 비과세면 카드에서 파트 판정이 사라졌다.
+  - 이 때문에 `transfer-tax.ts`에 인자 하나를 같은 줄에 추가했다. 이 파일은 master에서 이미 804줄(트리거 초과)이었다 — 🔴 별건 분리 필요.
+- **와이어**: 주택 split 사건 shape(`splitCarryoverGiftEventShape`)를 일반건물 사건 shape를 확장해 만들었다. 일반건물은 이 키를 받지 않는다.
+  - 추가 키는 세대 사실 4키와 `spouseGiftOneHouseAtGiftDate`다.
+  - ⑫ 규칙은 세 가지다. 세대 사실은 건물 파트가 있을 때만 받는다(A면 400). 배우자 예외는 두 파트가 모두 있을 때만 받는다. 세대 보유 시작일 범위는 건물 증여자 취득일 기준이다(자산 단위와 같은 함수 `carryoverHouseholdStartIssues`로 옮겼다).
+  - ⑭는 이 사실을 건물 ct에만 싣는다.
+
+### 9.2 화면·클라이언트 (①~⑧)
+
+- ④: C는 사건에 세대 사실과 배우자 예외(관계가 배우자일 때만)를 싣는다. B는 세대 사실만 싣는다.
+- `carryoverHouseholdFactVisible`에서 파트 분기를 삭제했다. C·B가 묻는다. A는 호스트가 매매·신축이라 이 술어의 맥락이 아니다.
+- `calcGiftHouseholdBasis`·`giftPriorResidenceAsked`도 C·B에 연다. 엔진 basis와 같은 날을 쓴다.
+- ⑤ 변경:
+  - N4는 C·A·B 모두 삭제했다.
+  - C는 N5를 삭제하고 배우자 예외 질문을 연다.
+  - B는 세대 사실 질문을 열고, 배우자 예외 미적용을 고지한다.
+  - A는 세대 사실·배우자 예외를 묻지 않는다고 고지한다.
+- ⑧ 변경:
+  - 보유 상황 단계의 S9 호출을 삭제했다.
+  - `validateSplitCarryoverParts` 6a)에서 C·B의 세대 사실을 자산 단위와 같은 함수·앵커(`carryover.*`)로 검증한다.
+  - 미답(`""`)은 ⑧만 막는다. ⑫는 미확인으로 계산한다(자산 단위와 같은 비대칭).
+- ⑦: `splitCarryoverNotices`를 바꿨다.
+  - ②3호 비교 고지는 비교를 했을 때만 낸다.
+  - ②2호 판정 방식 고지(확인 필요)와 배우자 예외 적용 고지를 추가했다.
+  - 「세대 사실을 묻지 않았다」 문장은 삭제했다.
+
+### 9.3 검증
+
+- 엔진 anchor(`split-part-carryover.p5.one-house.anchor.test.ts`) 20건: §3 격자의 발동 7셀·미발동 6셀, 배우자 예외 3건, 판정일 3건, 회귀 1건이다.
+- route 와이어(`transfer.route.split-part-carryover.p5.wire.test.ts`) 10건: 버려지지 않음(strip 아님)과 ⑫ 거부를 본다.
+- 해결자 stub 7건: AA·BB만 계산하는지, 세 플래그, 혼합 구성만 해당하는 경우, 배우자 예외, basis를 본다.
+- ⑤ P5 화면 11건과 a·b·c 격자의 S9 셀 반전, 세대 사실 셀을 추가했다.
+- 회귀: `__tests__/tax-engine/` 1,372파일 통과, `__tests__/api/`·`__tests__/lib/` 495파일 통과. 둘 다 엔진 변경 후에 돌렸다.

@@ -253,10 +253,10 @@ hasLegacyExpenses?: boolean;          // input.expenses > 0
 | S6 | 파트 모드 ≠ actual (G-2 확장) | 기존 `LAND_INHERITED_ESTIMATION_MESSAGE`·`BUILDING_CAUSE_ESTIMATION_MESSAGE` | `landAcqMode`/`buildingAcqMode` |
 | S7 | 파트 평가액 ≤ 0 (D2 Y9 확장 — 같은 날은 파트 완결 규칙이 꺼져 있어 0으로 계산됨) | 기존 `BUILDING_CAUSE_*_PRICE_REQUIRED_MESSAGE` 일반화 | `landAcquisitionPrice`/`buildingAcquisitionPrice` |
 | S8 | `hasLegacyExpenses ∧ 파트 이월과세` | `PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE` — 파트 칸으로 입력 | `expenses` |
-| S9 | **1세대1주택 게이트** `isHousing ∧ isOneHousehold===true ∧ ¬isUnregistered ∧ (hasLand ∨ hasBuilding)` | `PART_CARRYOVER_ONE_HOUSE_MESSAGE` — 「1세대1주택 비과세(소득세법 §89①3호)와 겹치는 토지·건물 파트 이월과세는 아직 지원하지 않습니다 — §97의2②2호 판정이 필요합니다」 | `isOneHousehold` |
+| ~~S9~~ (**P5 삭제** — 해결자 §97의2②2호 판정, `docs/00-pm/transfer-split-part-carryover-p5.plan.md` §9) | **1세대1주택 게이트** `isHousing ∧ isOneHousehold===true ∧ ¬isUnregistered ∧ (hasLand ∨ hasBuilding)` | `PART_CARRYOVER_ONE_HOUSE_MESSAGE` — 「1세대1주택 비과세(소득세법 §89①3호)와 겹치는 토지·건물 파트 이월과세는 아직 지원하지 않습니다 — §97의2②2호 판정이 필요합니다」 | `isOneHousehold` |
 
 - **게이트 식별 입력**: 판정 엔진 `checkExemptionCore`가 비과세 평가를 시작하는 조건과 같다 — `propertyType==="housing" ∧ isOneHousehold ∧ ¬isUnregistered`(`one-house/pending.ts:168`, `transfer-tax-exemption.ts:244,339`). 비주택(`building`)은 비과세 평가가 없어 닫지 않는다. 모름(`isOneHousehold` 생략) = 불성립이라 닫지 않는다. ⑧은 ④가 `isOneHousehold`에 실제로 싣는 값을 넣어야 한다(3중 패턴).
-- **엔진 안전망**: S9가 입력 술어라서, 해결자는 어느 시나리오 결과든 `isExempt ∨ isPartialExempt`이면 같은 메시지로 던진다(술어와 판정 엔진이 갈릴 때의 침묵 방지).
+- ~~**엔진 안전망**~~ (P5에서 ②2호 판정으로 대체): S9가 입력 술어라서, 해결자는 어느 시나리오 결과든 `isExempt ∨ isPartialExempt`이면 같은 메시지로 던진다(술어와 판정 엔진이 갈릴 때의 침묵 방지).
 - 이월과세 단서 연동: 영 §163⑨ 단서 1호(1990.8.30.)·2호(2005.4.30.) 술어(`isSec163_9LandProviso`·`isSec163_9BuildingProviso`)는 `carryover_gift`도 `gift`로 보고 기존 Y4/D1-4 차단을 유지한다(증여일 5·10년 창으로는 사실상 도달하지 않으나 비용이 한 줄이다).
 
 ### 6.3 G-1(`:296`)·`:249` 처리

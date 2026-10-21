@@ -102,6 +102,14 @@ export interface TransferTaxResult {
    * 소비자: `calcCarryoverScenarios`의 §97의2②2호 자동 판정.
    */
   isPartialExempt?: boolean;
+  /**
+   * §89①3호 각 목의 **전액 비과세 대상**인데 조기반환하지 않고 정상 경로로 계산했다 — 부수토지 비과세 제외(배율 초과 G-2 ·
+   * 나중 취득 토지 보유요건 미달 G-3)나 PHD 때문이다. 이때 `isExempt`·`isPartialExempt`는 둘 다 false라, 「§89①3호 해당」은
+   * **`isExempt || isPartialExempt || isExemptCore`**다. 참일 때만 싣는다.
+   *
+   * 소비자: 주택 split 파트 이월과세의 §97의2②2호 판정(`transfer-tax-split-carryover.ts` — G-3 토지만 과세여도 건물은 비과세 해당이다).
+   */
+  isExemptCore?: true;
   /** 비과세 사유 */
   exemptReason?: string;
   /**

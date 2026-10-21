@@ -363,7 +363,7 @@ export function calculateTransferTax(
       multiHouseSurchargeResult,
       nonBusinessLandJudgment,
       pre1990LandResult,
-      carryoverDetail,
+      carryoverDetail, splitCarryover: pre.splitCarryover,
       inheritedAcquisitionStep,
     });
   }

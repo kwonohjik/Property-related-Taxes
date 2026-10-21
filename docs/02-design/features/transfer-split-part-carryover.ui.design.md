@@ -111,7 +111,7 @@
 |---|---|---|---|---|
 | **컴패니언**(두 번째 이후 자산, Q-6) | 라디오 옵션·C 토글·B 토글을 **숨기고** 한 줄 안내(N6). 기존 whole-asset 이월과세는 종전 그대로(`companion-payload.ts:551`) | `validateAssetAcquisition(isNonPrimaryAsset)`에서 `partCarryoverRequested(asset)`(저장 플래그·원인값 기준, 첫 자산 조건 **제외**)이면 메시지 + 앵커 `landAcquisitionCause`/`carryoverDonorSplit`. **주 자산이 파트 이월과세이고 함께 양도 자산이 1건 이상이면**(`form.assets.length>1`) 주 자산도 차단 + N8(엔진 T13 400: 파트 비교가 신고 전체 결정세액을 못 봄) | `companionAssetSchema` superRefine이 새 키 거부(E-9) | — |
 | **다건 합산**(Q-7) | 다건 임베드 화면은 단건 마법사 그대로라 ⑤는 동일 | `multi-transfer-tax-validate.ts:145` 옆에 `partCarryoverRequested`면 `MULTI_CARRYOVER_UNSUPPORTED_MESSAGE` (B·C는 호스트 `carryover_gift`로 이미 막힘 — **A만 신규 구멍**) | `MULTI_REJECT_RULES`(`schema-multi-refines.ts:40-48`)에 `landAcquisitionCause`(`carryover_gift`)·`carryoverGiftEvent`·`landCarryoverPart`·`buildingCarryoverPart` 추가(엔진 T11). `transfer.route.multi-key-coverage-f12.test.ts`가 누락 시 실패해야 정상 | 위 |
-| **1세대1주택 겹침**(Q-5) | 파트 블록 상단 amber `ToneCard`(N4) | 보유 상황 단계(UI 인덱스 1)에서 엔진 leaf 호출 → 같은 문구, 앵커는 `isOneHousehold`. 엔진 draft 술어 = `isOneHousehold ∧ 주택 ∧ 미등기 아님`(T10, **E-4**) | 엔진 400 + 안내 | 위 |
+| ~~**1세대1주택 겹침**(Q-5)~~ — **P5에서 해제**(2026-10-21, `docs/00-pm/transfer-split-part-carryover-p5.plan.md` §9). N4·⑧ 보유 상황 단계 호출·leaf S9를 삭제하고 해결자가 §97의2②2호를 판정한다 | (종전) N4 | (종전) 보유 상황 단계 S9 | (종전) 400 | 위 |
 | 부담부증여·소유자 분리 | 세 토글 모두 `disabled`(끄는 방향은 허용) + `disabledReason` | 술어가 무효로 읽음 → 요구 없음 | 기존 R-X1·R-X4 | — |
 
 ### 2.7 고지 문구 (정확한 초안)
@@ -122,8 +122,8 @@
 | N2 | `building-gift-carryover-notice`(`BuildingCauseMixBlock.tsx:149`) **중간본** | …이월과세 대상인지 확인하세요(소득세법 §97의2①). 이 화면은 **건물만 이월과세이고 토지는 매수한 경우를 아직 계산하지 못하며**, 건물은 일반 증여(증여일 평가액·증여일 취득)로 계산됩니다. 토지·건물이 모두 이월과세 대상이면 취득 원인을 「이월과세(증여)」로 선택하세요 — 증여자가 토지와 건물을 다른 날 취득했다면 그 화면에서 따로 입력합니다. | **P2** |
 | N2′ | 같은 자리 **최종본** | …이월과세 대상이면 취득 원인을 「이월과세(증여)」로 바꾸고 그 화면에서 **「토지는 다른 원인으로 취득」**(토지 매수)을 켜세요. 취득 원인을 바꾸면 이 토글은 꺼집니다. 「증여」로 계산하면 건물은 일반 증여(증여일 평가액·증여일 취득)입니다. | P4 |
 | N3 | 증여자 취득일 hint(`BuildingCauseMixBlock.tsx` 증여 분기 FieldCard) | 중간본(P2): 선택 입력 — 단순 증여의 세율 보유기간은 증여받은 날부터입니다(소득세법 §104② 본문). 건물만 이월과세이고 토지는 매수한 조합은 아직 계산하지 못합니다. / 최종본(P4): 선택 입력 — …증여자 기준 통산이 필요하면 위 안내대로 취득 원인을 「이월과세(증여)」로 선택하세요. | P2 / P4 |
-| N4 | 파트 모드 블록 상단 amber `ToneCard`(`split-carryover-onehouse-notice`) | 토지·건물 중 한 부분이라도 이월과세(소득세법 §97의2) 대상으로 입력하면 **1세대1주택 비과세(§89①3호) 판정 대상인 양도는 아직 계산하지 못합니다** — 이월과세 적용 여부(§97의2②2호)가 비과세 판정에 따라 달라지기 때문입니다. 비과세 판정 대상이 아닌 양도에서만 이 입력을 쓸 수 있습니다. | P2·P3·P4 |
-| N5 | 파트 블록 하단 caption(`split-carryover-household-note`, Q-9) | 증여자와 증여일부터 양도일까지 계속 같은 세대였는지는 묻지 않습니다. 이 사실은 1세대1주택 비과세 판정의 보유기간 통산·거주요건에 쓰이는데 이 입력은 그 판정과 함께 계산하지 않으므로 세액에 반영되지 않습니다 — 해당하는 양도라면 <b>확인 필요</b>입니다. | P2·P3·P4 |
+| N4 (**P5 삭제**) | 파트 모드 블록 상단 amber `ToneCard`(`split-carryover-onehouse-notice`) | 토지·건물 중 한 부분이라도 이월과세(소득세법 §97의2) 대상으로 입력하면 **1세대1주택 비과세(§89①3호) 판정 대상인 양도는 아직 계산하지 못합니다** — 이월과세 적용 여부(§97의2②2호)가 비과세 판정에 따라 달라지기 때문입니다. 비과세 판정 대상이 아닌 양도에서만 이 입력을 쓸 수 있습니다. | P2·P3·P4 |
+| N5 (**P5 교체** — C 삭제 · B는 배우자 예외 미적용 고지 · A는 세대 사실·배우자 예외 미질문 고지) | 파트 블록 하단 caption(`split-carryover-household-note`, Q-9) | 증여자와 증여일부터 양도일까지 계속 같은 세대였는지는 묻지 않습니다. 이 사실은 1세대1주택 비과세 판정의 보유기간 통산·거주요건에 쓰이는데 이 입력은 그 판정과 함께 계산하지 않으므로 세액에 반영되지 않습니다 — 해당하는 양도라면 <b>확인 필요</b>입니다. | P2·P3·P4 |
 | N6 | 컴패니언 자산 카드(`split-carryover-companion-note`) | 함께 양도하는 두 번째 이후 자산에는 토지·건물 파트 이월과세를 쓸 수 없습니다 — 이 입력은 첫 번째 자산에서만 계산됩니다. 자산 전체를 하나의 증여자 취득으로 보는 이월과세는 그대로 입력할 수 있습니다. | P2 |
 | N8 | 주 자산 파트 이월과세 블록 상단(함께 양도 자산이 있을 때, `split-carryover-companion-exists-note`) | 함께 양도하는 다른 자산이 있으면 토지·건물 파트 이월과세를 아직 계산하지 못합니다 — 파트별 비교과세(②3호)가 신고 전체의 결정세액을 보지 못하기 때문입니다. 이 입력은 이 자산 한 건만 양도할 때 쓸 수 있습니다. | P2 |
 | N7 | A 토지 취득일 읽기 전용 힌트(`land-carryover-date-note`) | 토지 취득일은 아래 이월과세 정보의 증여 등기접수일입니다(이월과세 토지는 증여받은 날 취득, 보유기간·장기보유특별공제는 증여자 취득일부터). | P3 |
@@ -170,7 +170,7 @@
 - 토글 근거 **모드 토글은 영향받는 필드 직전**(①의 등기접수일 바로 아래, 증여자 취득일 직전).
 - 토글 `disabled`: 소유자 분리 ON · 부담부증여 · B 활성(상호 잠금, 끄는 방향 허용) · 컴패니언(숨김).
 - 파트 카드의 환산: `ToggleCard 「환산취득가 사용」` ON이면 「증여자 취득 당시 기준시가」 1칸(`donorStandardPriceAtAcquisition`)만. 환산 방식 라디오(`CarryoverEstimationSection`)는 파트 모드에서 렌더하지 않는다(일반 기준시가 고정, PHD/APD 숨김 — 확정 결정). 분모는 축 A의 파트 양도시 기준시가(E-6).
-- **세대 사실 질문 숨김**: `carryoverHouseholdFactVisible(asset)`에 `&& !partCarryoverActive(asset)`를 더해 ⑤(`CarryoverGiftBlock.tsx:360`)·⑧(`validate-carryover-household`)·④(`carryoverHouseholdPayload`)가 **같은 술어**로 묻지 않는다(3중).
+- **세대 사실 질문 숨김** (**P5에서 해제** — C·B는 묻는다, A는 호스트가 매매·신축이라 술어 맥락 밖): `carryoverHouseholdFactVisible(asset)`에 `&& !partCarryoverActive(asset)`를 더해 ⑤(`CarryoverGiftBlock.tsx:360`)·⑧(`validate-carryover-household`)·④(`carryoverHouseholdPayload`)가 **같은 술어**로 묻지 않는다(3중).
 - 증여 신고가액은 C에서 파트 카드가 `landAcquisitionPrice`/`buildingAcquisitionPrice`를 바인딩해 받고(앵커 동일), 두 파트 합이 증여세 과세가액을 넘으면 ⑧이 막는다(GB Σ 검증과 같은 규칙).
 
 ### 3.3 전환·stale (읽는 쪽 파생이 정본)
@@ -309,7 +309,7 @@ PC1~PC7의 B판 + **D2 회귀**(상속·증여 호스트 D2 격자 `transfer-lan
 | 환산(해당 시) | `양도가액 × 증여자 취득 당시 기준시가 ÷ 양도시 기준시가` | 동 | — | — |
 | 장기보유 보유기간 | 파트별 기산일 = **증여자 취득일**(`split-card-lthd-start-land/building`), 기존 세율 기산 echo(`rule:"donor"`)와 구분 표기 | 동 | 보유기간 칸 | 동 |
 | 비교과세(②3호) | 파트별 A(적용)/B(미적용) 결정세액 두 값 + 채택 배지(`ScenarioCol` 재사용 — export). 배제 시 사유 라벨(`CARRYOVER_EXCLUSION_REASON_LABELS`). **「토지·건물을 각각 비교」 + 해석례 미확보 한 줄(확인 필요)** | 동 | 채택 시나리오 주석 | 동 |
-| 안내 | 1세대1주택 비과세 판정과 함께 계산하지 않음(N4)·동일세대 사실 미반영(N5) | — | — | — |
+| 안내 | ~~1세대1주택 비과세 판정과 함께 계산하지 않음(N4)·동일세대 사실 미반영(N5)~~ (P5 삭제·교체) | — | — | — |
 
 - 새 파일: `lib/tax-engine/transfer-tax-split-carryover-display.ts`(`splitCarryoverView(part)` — 4뷰가 같은 view를 읽는다, 502줄인 `transfer-tax-split-display.ts`는 건드리지 않음) · `FilingFormTableSplitCarryover.ts`(신고서 행; `FilingFormTableHelpers.ts` 700줄 증가 없음). PDF leaf는 `ALL_LEAVES` 동기화 테스트 갱신(`feedback_print_leaf_add_unit_test_sync`).
 - echo가 없는 구 이력은 종전 화면(모든 신규 표시는 optional 가드). 산식 규약: 변수 약어·`floor()` 금지, 중간 산술 미표시, 「원」 접미사 금지.

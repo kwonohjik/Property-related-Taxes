@@ -21,12 +21,13 @@ describe("⑤ C 화면", () => {
     const { container } = mount(cAsset());
     expect(screen.getByTestId("split-carryover-land-card")).toBeTruthy();
     expect(screen.getByTestId("split-carryover-building-card")).toBeTruthy();
-    expect(screen.getByTestId("split-carryover-onehouse-notice").textContent).toContain("1세대1주택 비과세");
-    expect(screen.getByTestId("split-carryover-household-note").textContent).toContain("확인 필요");
+    // P5 — 1세대1주택 겹침 차단 안내(N4)·세대 사실 미반영 고지(N5)는 없다(②2호를 엔진이 판정 · 세대 사실을 묻는다)
+    expect(screen.queryByTestId("split-carryover-onehouse-notice")).toBeNull();
+    expect(screen.queryByTestId("split-carryover-household-note")).toBeNull();
     expect(screen.queryByText("환산취득가 사용")).toBeNull();
     expect(screen.queryByText("증여 당시 평가액")).toBeNull();
     expect(container.textContent).not.toContain("취득 당시 개별주택가격 미공시");
-    expect(container.textContent).not.toContain("증여자와 같은 세대 여부"); // 세대 사실 질문은 묻지 않는다(Q-9)
+    expect(container.textContent).toContain("증여자와 같은 세대 여부"); // P5 — 세대 사실 질문을 묻는다(건물이 증여받은 주택)
     for (const key of [
       "carryoverDonorSplit", "carryover.giftRegistryDate", "landCarryover.donorAcquisitionDate", "landCarryover.donorAcquisitionPrice", "landCarryover.donorCapitalExpenditure",
       "landAcquisitionPrice", "carryover.donorAcquisitionDate", "carryover.donorAcquisitionPrice", "carryover.donorCapitalExpenditure", "buildingAcquisitionPrice",
@@ -41,12 +42,12 @@ describe("⑤ C 화면", () => {
     expect([...order].sort((a, b) => a - b)).toEqual(order);
   });
 
-  it("ON: 배우자 예외 사실(§97의2②2호 · 증여일 현재 1세대1주택) 질문을 묻지 않는다 — ④가 싣지 않는 사실이라 묻으면 입력이 조용히 버려진다(P5 전까지)", () => {
+  it("ON: 배우자 예외 사실(§97의2②2호 · 증여일 현재 1세대1주택) 질문을 묻는다 — P5부터 ④가 사건에 싣는다(통째 증여 C만)", () => {
     const spouse = { carryover: { ...cAsset().carryover, donorRelation: "spouse" } };
     const { container } = mount(cAsset(spouse));
-    expect(container.textContent).not.toContain("증여일 현재 배우자(증여자) 세대가 이 주택 1채만 보유");
+    expect(container.textContent).toContain("증여일 현재 배우자(증여자) 세대가 이 주택 1채만 보유");
     cleanup();
-    // 부정형 짝 — OFF(자산 전체)는 종전대로 묻는다
+    // 짝 — OFF(자산 전체)도 종전대로 묻는다
     const off = mount(cAsset({ ...spouse, carryoverDonorSplit: false }));
     expect(off.container.textContent).toContain("증여일 현재 배우자(증여자) 세대가 이 주택 1채만 보유");
   });

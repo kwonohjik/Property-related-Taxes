@@ -98,14 +98,14 @@ describe("「확인 필요」 — 안정 구성이 둘일 때 순서 의존 고�
     expect(T9.splitDetail!.carryoverEvent!.orderDependent).toBe(true);
     expect(C.splitDetail!.carryoverEvent!.orderDependent).toBeUndefined();
   });
-  it("카드: T9에만 순서 고지(3건), C 시드는 2건", () => {
+  it("카드: T9에만 순서 고지(2건), C 시드는 1건 — P5부터 세대 사실 미질문 고지는 없다(C·B는 묻는다)", () => {
     render(<SplitGainDetailSection splitDetail={T9.splitDetail!} assetKind="housing" />);
     expect(screen.getByTestId("split-carryover-notice-1").textContent).toContain("조합이 둘 이상 성립합니다");
-    expect(screen.getByTestId("split-carryover-notice-2").textContent).toContain("계속 같은 세대");
+    expect(screen.queryByTestId("split-carryover-notice-2")).toBeNull();
     cleanup();
     render(<SplitGainDetailSection splitDetail={C.splitDetail!} assetKind="housing" />);
-    expect(screen.queryByTestId("split-carryover-notice-2")).toBeNull();
-    expect(screen.getByTestId("split-carryover-notice-1").textContent).toContain("계속 같은 세대");
+    expect(screen.queryByTestId("split-carryover-notice-1")).toBeNull();
+    expect(screen.getByTestId("split-carryover-notice-0").textContent).toContain("②3호 비교");
   });
 });
 
@@ -170,7 +170,7 @@ describe("② 상세명세서 — 취득가액·필요경비·취득일자·보�
   it("「확인 필요」 고지: 비교 단위·동일세대 + 순서 의존은 표지가 있을 때만 (신고서에는 싣지 않는다)", () => {
     const note = items(C).get("calculatedTax")!.note!;
     expect(note).toContain("확인 필요 — ②3호 비교(적용·미적용)는 토지·건물을 각각 별개 자산으로 보고 파트별로 했습니다");
-    expect(note).toContain("계속 같은 세대였는지는 묻지 않았고");
+    expect(note).not.toContain("계속 같은 세대였는지는 묻지 않았고"); // P5 — 세대 사실을 묻는다
     expect(note).not.toContain("조합이 둘 이상 성립합니다");
     expect(items(T9).get("calculatedTax")!.note!).toContain("조합이 둘 이상 성립합니다");
     // 설계서 §6 — 신고서는 채택 주석만 둔다(고지 문구 없음)

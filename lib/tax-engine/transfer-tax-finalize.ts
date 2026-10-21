@@ -19,6 +19,8 @@ import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPena
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";
 import { summarizeSplitGain } from "./transfer-tax-split-display";
+import { attachSplitCarryoverEcho } from "./transfer-tax-split-carryover";
+import type { SplitCarryoverDetail } from "./transfer-tax-split-carryover";
 import { buildPublicExpropriationParts } from "./public-expropriation-reduction";
 import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import {
@@ -627,6 +629,8 @@ export function buildExemptEarlyResult(p: {
   nonBusinessLandJudgment?: NonBusinessLandJudgment;
   pre1990LandResult?: Pre1990LandValuationResult;
   carryoverDetail?: CarryoverTaxationDetail;
+  /** 주택 split 파트 이월과세(STEP 0.476) 판정 — 비과세여도 파트별 적용·배제(§97의2②2호·②3호)를 결과에 싣는다 */
+  splitCarryover?: SplitCarryoverDetail;
   inheritedAcquisitionStep?: InheritedAcquisitionStepResult;
 }): TransferTaxResult {
   // [echo] 표시 전용 gross 양도차익 + 환산 내역 — 세액 로직·transferGain(0) 불변. 순수함수 calcTransferGain 1회 호출.
@@ -718,7 +722,7 @@ export function buildExemptEarlyResult(p: {
       // [echo] 토지·건물 별개 취득(split) 파트 정본 — 없으면 신고서·명세서·다건 집계가 `양도가 − gross차익 − expenses` 역산으로 떨어져
       // 개산공제가 취득가액에 섞이고(다건은 취득 0 · 필요경비 = 취득합 + 개산공제) 결과 카드가 사라진다(표시 전용 — 세액 불변).
       // ⚠️ `buildTransferResultDetails`가 `splitDetail: undefined`를 펼치므로 이 인자로 넘겨야 한다(직접 필드는 덮어써진다).
-      splitDetail: grossForEcho.splitDetail,
+      splitDetail: attachSplitCarryoverEcho(grossForEcho.splitDetail, p.splitCarryover),
     }),
   };
 }

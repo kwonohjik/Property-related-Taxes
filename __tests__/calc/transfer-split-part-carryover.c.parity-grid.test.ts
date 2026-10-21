@@ -68,9 +68,10 @@ const giftOn = (gift: string, donor: string, assetKind: "housing" | "building" =
 const CELLS: Cell[] = [
   { name: "기준 — 모든 칸 입력", make: () => cForm() },
   // ── leaf 소관 ──
-  { name: "S9 1세대1주택 해당(주택)", make: () => cForm({ isOneHousehold: true }), leafKey: "isOneHousehold" },
-  { name: "S9 아님: 1세대 + 미등기", make: () => cForm({ isOneHousehold: true, isUnregistered: true }) },
-  { name: "S9 아님: 비주택 건물 + 1세대", make: () => cForm({ isOneHousehold: true }, cAsset({ assetKind: "building" })) },
+  // P5 — 1세대1주택 겹침은 막지 않는다(S9 삭제 → 해결자의 §97의2②2호 판정)
+  { name: "1세대1주택 해당(주택) — 계산한다", make: () => cForm({ isOneHousehold: true }) },
+  { name: "1세대 + 미등기", make: () => cForm({ isOneHousehold: true, isUnregistered: true }) },
+  { name: "비주택 건물 + 1세대", make: () => cForm({ isOneHousehold: true }, cAsset({ assetKind: "building" })) },
   { name: "S5/F-6 토지 증여자 취득일 > 증여일", make: () => cForm({}, withLand({ donorAcquisitionDate: "2023-03-02" })), leafKey: "landCarryoverPart.donorAcquisitionDate" },
   { name: "F-6 건물 증여자 취득일 > 증여일", make: () => cForm({}, withCarry({ donorAcquisitionDate: "2023-03-02" })), leafKey: "buildingCarryoverPart.donorAcquisitionDate" },
   { name: "증여자 취득일 = 증여일(허용)", make: () => cForm({}, withLand({ donorAcquisitionDate: "2023-03-01" })) },
@@ -195,11 +196,31 @@ describe("P2 C — ⑧≡⑫ 격자", () => {
     expect(Object.keys(r.fieldErrors).some((k) => k.includes("landCarryoverPart"))).toBe(true);
   });
 
-  it("S9 보유 상황 단계(1)에서 막고 자산 단계(0)는 통과 — 앵커 isOneHousehold", async () => {
+  it("P5 ④ 사건 — 통째 증여(C)는 배우자 예외(관계 배우자일 때만)와 세대 사실을 싣는다 · ⑫ 200 · 엔진 echo", async () => {
+    const spouse = cAsset({ carryover: { ...cAsset().carryover, donorRelation: "spouse", spouseGiftOneHouseAtGiftDate: true } });
+    const body = await bodyOf(cForm({}, spouse));
+    expect(body.carryoverGiftEvent).toMatchObject({ spouseGiftOneHouseAtGiftDate: true, donorSameHouseholdContinuous: false });
+    expect(issuesOf(cForm({}, spouse))).toEqual([]);
+    const r = await routeOf(POST, body);
+    expect(r.status, JSON.stringify(r.fieldErrors)).toBe(200);
+    // 관계가 배우자가 아니면 남은 답은 싣지 않는다(자산 단위와 같은 규칙)
+    const lineal = cAsset({ carryover: { ...cAsset().carryover, spouseGiftOneHouseAtGiftDate: true } });
+    expect("spouseGiftOneHouseAtGiftDate" in ((await bodyOf(cForm({}, lineal))).carryoverGiftEvent as object)).toBe(false);
+  });
+
+  it("P5 ⑧≡⑫ — C의 세대 보유 시작일은 건물 증여자 취득일 기준(시작일 < 건물 증여자 취득일이면 둘 다 막는다)", async () => {
+    const bad = cAsset({ carryover: { ...cAsset().carryover, donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2010-01-01" } });
+    const form = cForm({}, bad);
+    expect(issuesOf(form).some((i) => i.field === "carryover.donorHouseholdHoldingStartDate")).toBe(true);
+    const r = await routeOf(POST, await bodyOf(form));
+    expect(r.status).toBe(400);
+    expect(Object.keys(r.fieldErrors).some((k) => k.includes("donorHouseholdHoldingStartDate"))).toBe(true);
+  });
+
+  it("P5 — 1세대1주택이어도 자산 단계(0)·보유 상황 단계(1) 모두 막지 않는다(S9 삭제 · ②2호는 엔진이 판정)", async () => {
     const form = cForm({ isOneHousehold: true });
     expect(collectStepIssuesStep(0, form)).toEqual([]);
-    const s1 = collectStepIssuesStep(1, form);
-    expect(s1.some((i) => i.field === "isOneHousehold")).toBe(true);
+    expect(collectStepIssuesStep(1, form).some((i) => i.field === "isOneHousehold")).toBe(false);
   });
 
   it("숨은 legacy 필요경비(양도비 입력으로 칸이 숨음) — ⑧ 통과 · ④는 expenses 0 · 양도비만 입력한 것과 세액 동일", async () => {
@@ -263,6 +284,7 @@ function collectStepIssuesStep(step: number, form: TransferFormData) {
  * 기대값을 손으로 적지 않는다 — ⑫(엔진 leaf)가 정본이다(`feedback_fe8_vs_12_parity_grid`).
  */
 describe("P2 C — leaf 소관 조합 격자 (⑧ 차단 ⇔ ⑫ 400)", () => {
+  // P5 — 1세대 축은 남겨 둔다: S9 삭제 후에는 어느 조합에서도 1세대 여부가 차단을 만들지 않아야 한다.
   const LEAF8 = new Set(["isOneHousehold", "carryoverDonorSplit", "landCarryover.donorAcquisitionDate", "carryover.giftTaxBase"]);
   const LEAF12 = ["isOneHousehold", "landCarryoverPart", "carryoverGiftEvent.giftTaxBase"];
   const kinds = ["housing", "building"] as const;
@@ -289,9 +311,8 @@ describe("P2 C — leaf 소관 조합 격자 (⑧ 차단 ⇔ ⑫ 400)", () => {
                 const r = await routeOf(POST, await bodyOf(form));
                 const blocked12 = Object.keys(r.fieldErrors).some((k) => LEAF12.some((l) => k.includes(l)));
                 expect(blocked8, `⑧ ${JSON.stringify(issues.map((i) => i.field))} ↔ ⑫ ${JSON.stringify(Object.keys(r.fieldErrors))}`).toBe(blocked12);
-                // 기대 도출(엔진 leaf 규칙을 사람이 읽는 형태로 한 번 더) — S9 · S2′ · F-6 · Σ 중 하나라도 걸리면 막힌다
-                const s9 = kind === "housing" && oneHouse && !unreg;
-                expect(blocked12).toBe(s9 || companionCount === 1 || landDateAfter || sumOver);
+                // 기대 도출(엔진 leaf 규칙을 사람이 읽는 형태로 한 번 더) — S2′ · F-6 · Σ 중 하나라도 걸리면 막힌다(P5: 1세대 여부는 무관)
+                expect(blocked12).toBe(companionCount === 1 || landDateAfter || sumOver);
               });
             }
 });

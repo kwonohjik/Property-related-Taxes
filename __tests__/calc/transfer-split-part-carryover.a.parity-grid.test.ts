@@ -56,8 +56,9 @@ const companion = (): AssetForm =>
 
 const CELLS: Cell[] = [
   // ── leaf 소관 ──
-  { name: "S9 1세대1주택 해당(주택)", make: (h) => aForm(h, { isOneHousehold: true }), leafKey: "isOneHousehold" },
-  { name: "S9 아님: 1세대 + 미등기", make: (h) => aForm(h, { isOneHousehold: true, isUnregistered: true }) },
+  // P5 — 1세대1주택 겹침은 막지 않는다(S9 삭제 → 해결자의 §97의2②2호 판정)
+  { name: "1세대1주택 해당(주택) — 계산한다", make: (h) => aForm(h, { isOneHousehold: true }) },
+  { name: "1세대 + 미등기", make: (h) => aForm(h, { isOneHousehold: true, isUnregistered: true }) },
   { name: "F-6 토지 증여자 취득일 > 증여일", make: (h) => aForm(h, {}, withLandCarry(h, { donorAcquisitionDate: "2023-03-02" })), leafKey: "landCarryoverPart.donorAcquisitionDate" },
   { name: "증여자 취득일 = 증여일(허용)", make: (h) => aForm(h, {}, withLandCarry(h, { donorAcquisitionDate: "2023-03-01" })) },
   { name: "평가액 > 과세가액", make: (h) => aForm(h, {}, withLandCarry(h, { giftTaxBase: "290,000,000" })), leafKey: "carryoverGiftEvent.giftTaxBase" },
@@ -146,11 +147,10 @@ for (const host of ["purchase", "newConstruction"] as const) {
       expect(field(aForm(host, {}, aAsset(host, { selfOwns: "building_only" })))).toBe("landAcquisitionCause");
     });
 
-    it("S9 — 보유 상황 단계(1)에서 막고 자산 단계(0)는 통과: 앵커 isOneHousehold · 끄는 방법은 토지 취득 원인", () => {
+    it("P5 — 1세대1주택이어도 자산 단계(0)·보유 상황 단계(1) 모두 막지 않는다(S9 삭제 · ②2호는 엔진이 판정)", () => {
       const form = aForm(host, { isOneHousehold: true });
       expect(collectStepIssues(0, form)).toEqual([]);
-      const s1 = collectStepIssues(1, form).find((i) => i.field === "isOneHousehold");
-      expect(s1?.message).toContain("토지 취득 원인");
+      expect(collectStepIssues(1, form).find((i) => i.field === "isOneHousehold")).toBeUndefined();
     });
 
     it("S2′ 함께 양도 자산 1건 — 첫 자산 A를 ⑧·⑫가 같이 막는다(앵커 토지 취득 원인)", async () => {

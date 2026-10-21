@@ -287,15 +287,16 @@ describe("P1-3 ⑫ 값 검사·B·C 호스트 required 좁히기", () => {
   });
 });
 
-describe("P1-4 S9 1세대1주택 게이트의 범위 — 비주택(building)·미등기는 닫지 않는다", () => {
+describe("P1-4 1세대1주택과 겹쳐도 400이 아니다 (P5 — S9 게이트 삭제, 해결자의 §97의2②2호 판정)", () => {
   const ONE_HOUSE = {
     isOneHousehold: true, householdHousingCount: 1, transferPrice: 800_000_000, landTransferPrice: 500_000_000, buildingTransferPrice: 300_000_000,
     landStandardPriceAtTransfer: 500_000_000, buildingStandardPriceAtTransfer: 300_000_000, landAcquisitionPrice: 300_000_000, buildingAcquisitionPrice: 200_000_000,
   };
-  it("주택 + 1세대1주택 → S9 400 (T10과 같은 입력의 B·C 변형)", async () => {
+  it("주택 + 1세대1주택(B 건물 증여 2년 3개월) → 200 · 이미 비과세라 ②2호 미발동 · 이월과세 적용 (T10과 같은 입력의 B 변형)", async () => {
     const b = await post({ ...B_NEW, ...ONE_HOUSE, buildingAcquisitionPrice: 400_000_000, landAcquisitionPrice: 120_000_000 });
-    expect(b.status).toBe(400);
-    expect(Object.keys(fieldErrors(b))).toContain("isOneHousehold");
+    expect(b.status).toBe(200);
+    expect(b.r.determinedTax).toBe(0);
+    expect(b.r.splitDetail.building.carryover.judgment).toBe("applied");
   });
   it("비주택 건물(building) + isOneHousehold → 닫지 않는다(비과세 평가가 없다)", async () => {
     const o = await post({ ...A_NEW, propertyType: "building", ...ONE_HOUSE, landAcquisitionPrice: 300_000_000, buildingAcquisitionPrice: 400_000_000 });
