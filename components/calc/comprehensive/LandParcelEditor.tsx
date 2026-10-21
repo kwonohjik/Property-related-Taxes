@@ -48,10 +48,13 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
           disableUnits
           value={{ road: "", jibun: parcel.jibun, building: "", detail: "", lng: "", lat: "" }}
           onChange={(v) => {
-            // 시군구는 도로명(시도·시군구 포함) 우선 — Vworld 지번(parcel)은 "석촌동 276-1"로 시군구 없음.
-            // jibun은 조회용으로만 저장.
-            const sigungu = deriveSigunguFromAddress(v.road || v.jibun);
-            onUpdate({ jibun: v.jibun, ...(sigungu ? { jurisdiction: sigungu } : {}) });
+            // 시군구는 도로명·지번을 각각 파생해 먼저 나오는 값 — 검색 방식에 따라 한쪽만 전체 주소로 온다(실측:
+            //   지번 검색 road="가락로 100"·jibun="서울특별시 송파구 석촌동 276-1", 도로명 검색은 반대). jibun은 조회용으로만 저장.
+            // 이 onChange는 주소 선택·「입력한 주소 그대로」·「지우기」에서만 온다(`disableUnits`) — 모두 주소가 바뀐 경우라,
+            //   새 주소에서 시군구를 못 뽑으면 칸을 비운다. 옛 주소의 시군구가 남으면 다른 관할로 재산세가 합산된다
+            //   (계획서 land-parcel-sigungu-autofill.plan.md R1·R2)
+            const sigungu = deriveSigunguFromAddress(v.road) ?? deriveSigunguFromAddress(v.jibun);
+            onUpdate({ jibun: v.jibun, jurisdiction: sigungu ?? "" });
           }}
         />
       </div>
