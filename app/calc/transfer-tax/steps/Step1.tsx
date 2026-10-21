@@ -77,6 +77,7 @@ export function Step1({
   assetErrors,
   onInvalidateResult,
   embeddedInMulti = false,
+  getLatestAssets,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -86,6 +87,8 @@ export function Step1({
   onInvalidateResult?: () => void;
   /** 다건 편집에 임베드된 마운트 — 다건은 함께 양도 자산을 지원하지 않으므로(`MULTI_COMPANION_UNSUPPORTED_MESSAGE`) 순서 바꾸기 카드를 숨긴다. */
   embeddedInMulti?: boolean;
+  /** 스토어의 최신 자산 배열 — 이 단계를 떠난 뒤 늦게 끝난 자산 카드 비동기가 옛 스냅샷으로 덮어쓰지 않게 한다(`CompanionAssetsSection.updateAsset`). */
+  getLatestAssets?: () => AssetForm[];
 }) {
   // 자산 분할 모드 — 단일 소스(명시 state). length·ratio derive는 초기화(세션 복원) 1회만 —
   // 렌더마다 재계산하면 토글 ON 직후 자기소멸. (memory feedback_three_state_optional_mode_toggle)
@@ -357,6 +360,7 @@ export function Step1({
           bundledSaleMode={effBundledSaleMode}
           onChange={updateAssets}
           onRemoveAsset={handleRemoveAsset}
+          getLatestAssets={getLatestAssets}
           singleMode={splitMode === "none"}
           transferDate={form.transferDate}
           filingDate={form.filingDate}

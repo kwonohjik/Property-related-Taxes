@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { type AssetForm, type TransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import { Button } from "@/components/ui/button";
 import { CompanionAssetCard } from "./CompanionAssetCard";
@@ -62,9 +62,11 @@ interface Props {
    * 함께 맞춰야 해서(`lib/calc/asset-removal.ts`) 폼 전역 키를 쓸 수 있는 Step1이 처리한다.
    */
   onRemoveAsset?: (currentAssets: AssetForm[], idx: number) => void;
+  /** 스토어의 최신 자산 배열 — 언마운트 뒤 늦게 도착한 카드 패치가 단계를 떠날 때의 스냅샷을 덮어쓰지 않게 한다(아래 updateAsset). */
+  getLatestAssets?: () => AssetForm[];
 }
 
-export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset }: Props) {
+export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, singleMode, transferDate, filingDate, filingOverdue, filingDeadline, onFormChange, contractTotalPrice, totalTransferExpense, isOneHouseSingle, judgmentLoaded, wasRegulatedAtAcquisition, formRegionCode, assetErrors, splitMode, onFractionalToggle, remountEpoch = 0, onRemoveAsset, getLatestAssets }: Props) {
   // 연속된 onChange 호출에서 stale closure를 피하기 위해
   // 최신 assets를 ref로 동기 추적 (렌더링 중 동기화)
   /* eslint-disable react-hooks/refs -- props→ref 동기 sync. useEffect로 옮기면 stale closure 발생 */
@@ -76,6 +78,15 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
 
   // #17 후속(K1) — 배율 한도를 주 자산 주택 카드 토지와 부수토지 카드들이 함께 쓴다(일체과세 배지가 route와 같은 몫을 잰다).
   const appurtenantLimitShare = assets.length > 1 ? appurtenantLimitShareOfAssets(assets[0], assets.slice(1)) : undefined;
+
+  // 언마운트 뒤 늦게 도착한 카드 패치를 가르기 위한 표지(아래 updateAsset)
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   function commitAssets(next: AssetForm[]) {
     assetsRef.current = next;
@@ -96,6 +107,18 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
   }
 
   function updateAsset(idx: number, patch: Partial<AssetForm>) {
+    // 🔴 늦게 끝난 비동기(주소 세대 조회 `onUnitsResolved`)는 이 섹션이 언마운트된 뒤에도 부른다. 그때 assetsRef는
+    //    단계를 떠날 때의 스냅샷이라 ① 다음 단계에서 바꾼 자산 값(비사업용 토지 스위치 등)을 통째로 덮어썼고,
+    //    ② 값이 같아도 저장 경로가 계산 결과를 지웠다. 언마운트 뒤에는 최신 배열에 assetId로 패치하고, 바뀌는 값이
+    //    없으면 저장하지 않는다(e2e/transfer-address-units-late-resolve.spec.ts).
+    if (!mountedRef.current && getLatestAssets) {
+      const id = assetsRef.current[idx]?.assetId;
+      const latest = getLatestAssets();
+      const cur = latest.find((a) => a.assetId === id);
+      if (!cur || (Object.keys(patch) as (keyof AssetForm)[]).every((k) => Object.is(cur[k], patch[k]))) return;
+      commitAssets(latest.map((a) => (a.assetId === id ? { ...a, ...patch } : a)));
+      return;
+    }
     commitAssets(
       assetsRef.current.map((a, i) => (i === idx ? { ...a, ...patch } : a)),
     );

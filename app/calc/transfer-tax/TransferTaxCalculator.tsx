@@ -354,6 +354,7 @@ export default function TransferTaxCalculator({
       assetErrors={currentStep === 0 ? assetErrors : undefined}
       onInvalidateResult={clearResult}
       embeddedInMulti={isEmbeddedInMulti}
+      getLatestAssets={() => useCalcWizardStore.getState().formData.assets}
     />,
     <Step4 key={1} form={formData} onChange={updateFormAndInvalidate} />,
     <Step5 key={2} form={formData} onChange={updateFormAndInvalidate} />,
