@@ -201,6 +201,8 @@ export async function POST(request: NextRequest) {
         // 🔴 G-13 ⑭ 신고서 단위 가산세 — 형제 두 GB 경로와 같은 값을 넘긴다.
         engineInput.filingPenaltyDetails,
         engineInput.delayedPaymentDetails,
+        // 첫 지분 감면 — 형제 두 GB 경로와 같은 값(둘째 지분부터는 지분 payload의 `reductions`).
+        engineInput.reductions,
       );
       return okJson(
         { data: { mode: "bundled" as const, apportionment, aggregated } },

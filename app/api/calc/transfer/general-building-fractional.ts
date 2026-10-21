@@ -40,6 +40,8 @@ import {
   type GeneralBuildingRouteResult,
 } from "./general-building-route-cards";
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
+import { mapReductionsToEngine } from "./route-reductions-mapper";
+import type { TransferReduction } from "@/lib/tax-engine/transfer-tax";
 import { buildGbPartCards, tagGbCards, remapGbSwap } from "./general-building-part-cards";
 import type { GbPartCards } from "./general-building-part-cards";
 
@@ -62,6 +64,8 @@ export interface GeneralBuildingSharePayload {
    * 이미 × 지분율이 적용돼 있다 — share 레벨에 중복 필드를 두지 않는다.
    */
   valuation: Record<string, unknown>;
+  /** 그 지분의 조특법 감면(Zod 통과본) — 둘째 지분부터. 첫 지분은 `primaryReductions`(최상위)가 정본이다. */
+  reductions?: Parameters<typeof mapReductionsToEngine>[0];
 }
 
 /** 그 지분의 **건물** 취득일 — 물건 사건 前/後 판정의 기준일. */
@@ -105,6 +109,13 @@ export function calculateGeneralBuildingFractional(
    */
   filingPenaltyDetails?: TransferTaxItemInput["filingPenaltyDetails"],
   delayedPaymentDetails?: TransferTaxItemInput["delayedPaymentDetails"],
+  /**
+   * 🔴 첫 지분의 조특법 감면(⑭ Date 변환 완료본 — 단건과 같은 최상위 `reductions`). 둘째 지분부터는 `share.reductions`.
+   * 종전에는 이 경로만 감면 인자에 `undefined`를 넘겨, 지분을 2개로 늘린 것만으로 §77 감면이 0원이 됐다 —
+   * 형제 두 경로는 F17-A(`91096fa51`)부터 `GbAssetLevelInputs.reductions`를 넘긴다
+   * (계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` §1.2).
+   */
+  primaryReductions?: TransferReduction[],
 ): GeneralBuildingRouteResult {
   const allProperties: TransferTaxItemInput[] = [];
   const allApportioned: BundledLikeApportionmentResult["apportioned"] = [];
@@ -181,7 +192,7 @@ export function calculateGeneralBuildingFractional(
       ...buildProperties(tagged, built.nonBusinessRatio, swap, {
         land: gated.unregisteredLand as boolean | undefined,
         building: gated.unregisteredBuilding as boolean | undefined,
-      }, undefined, gated.nonHeirBequest as boolean | undefined),
+      }, idx === 0 ? primaryReductions : mapReductionsToEngine(share.reductions ?? []), gated.nonHeirBequest as boolean | undefined),
     );
     const ap = buildApportionment(
       tagged,
