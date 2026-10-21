@@ -41,6 +41,7 @@ export const cAsset = (over: Over = {}): Over => ({
     giftTaxCalculated: "30000000",
     giftTaxBase: "900000000",
     donorRelation: "lineal",
+    donorSameHousehold: "no", // P5 — 통째 증여(C)는 세대 사실이 필수 질문이다
   },
   landCarryover: { ...CARRYOVER_DEFAULTS, donorAcquisitionDate: "1995-03-01", donorAcquisitionPrice: "50000000" },
   landAcquisitionPrice: "240000000",
@@ -130,10 +131,10 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     ]) {
       await expect(page.locator(`[data-field="${key}"]`), key).toHaveCount(1);
     }
-    // N4·N5 고지 + 취득 가정 문구 부재
-    await expect(page.getByTestId("split-carryover-onehouse-notice")).toContainText("1세대1주택 비과세");
-    await expect(page.getByTestId("split-carryover-household-note")).toContainText("확인 필요");
-    await expect(page.getByText("증여자와 같은 세대 여부")).toHaveCount(0); // ON은 세대 사실 질문을 하지 않는다(⑤⑧④ 같은 술어)
+    // P5 — 1세대1주택 차단 안내(N4)·세대 사실 미반영 고지(N5)는 없고 세대 사실 질문을 묻는다(⑤⑧④ 같은 술어) + 취득 가정 문구 부재
+    await expect(page.getByTestId("split-carryover-onehouse-notice")).toHaveCount(0);
+    await expect(page.getByTestId("split-carryover-household-note")).toHaveCount(0);
+    await expect(page.locator('[data-field="carryover.donorSameHousehold"]')).toHaveCount(1);
     await expect(page.getByText("취득 당시 개별주택가격 미공시")).toHaveCount(0);
 
     const body = await calculate(page);
@@ -235,6 +236,8 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await page.getByTestId("split-carryover-building-gift-valuation").fill("660000000");
     await page.getByTestId("split-carryover-gift-tax-calculated").fill("30000000");
     await page.getByTestId("split-carryover-gift-tax-base").fill("900000000");
+    // P5 — ON도 «증여자와 계속 같은 세대» 질문을 묻고 필수다(건물이 증여받은 주택)
+    await page.getByRole("radio", { name: /아니오 — 세대가 달랐거나/ }).click();
 
     const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
     const body = await calculate(page);
@@ -252,8 +255,8 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await expect(page.getByTestId("split-carryover-land-card")).toHaveCount(0);
     // OFF 화면(자산 전체 1벌)의 필수 칸(증여 당시 평가액)을 채워 계산 — 새 키 3종은 없고 최상위 carryoverTaxation이 대신 간다(종전 경로 그대로)
     await page.locator('[data-field="carryover.giftDateValuation"] input').fill("900000000");
-    // OFF에서는 «증여자와 계속 같은 세대» 질문이 다시 보이고 필수다(ON은 묻지 않는다 — Q-9) — 부정형 짝
-    await page.getByRole("radio", { name: /아니오 — 세대가 달랐거나/ }).click();
+    // OFF에서도 «증여자와 계속 같은 세대» 질문은 같은 칸이다(ON에서 답한 값이 그대로 남는다)
+    await expect(page.getByRole("radio", { name: /아니오 — 세대가 달랐거나/ })).toBeChecked();
     const offBody = await calculate(page);
     for (const k of ["carryoverGiftEvent", "landCarryoverPart", "buildingCarryoverPart", "landAcquisitionCause"]) expect(k in offBody && offBody[k] !== undefined, k).toBe(false);
     expect(offBody.carryoverTaxation).toBeTruthy();
@@ -322,23 +325,22 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     expect("companionAssets" in body && Array.isArray(body.companionAssets) && (body.companionAssets as unknown[]).length > 0).toBe(false);
   });
 
-  test("1세대1주택 겹침: 보유 상황 단계에서 막고(앵커 = «1세대 해당»), 해제하면 계산된다 · 자산 단계는 통과", async ({ page }) => {
+  test("1세대1주택 겹침(P5): 보유 상황 단계에서 막지 않고 계산한다 — §97의2②2호는 엔진이 판정 · body에 세대 사실", async ({ page }) => {
     test.setTimeout(180_000);
     await seedWizard(page, cSeed([cAsset()], { isOneHousehold: true, householdHousingCount: "1" }));
     await page.getByRole("button", { name: "보유 상황", exact: true }).first().click();
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByTestId("validation-issues")).toContainText("1세대1주택 비과세(소득세법 §89①3호)와 겹치는 토지·건물 파트 이월과세는 아직 지원하지 않습니다");
-    await expect
-      .poll(() => page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('[data-field="isOneHousehold"]')))
-      .toBe(true);
-    // 해제 → 통과·계산
-    await page.locator('[data-field="isOneHousehold"]').getByRole("switch").click();
+    await expect(page.getByTestId("validation-issues")).toHaveCount(0);
+    const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
     const body = await calculate(page);
-    expect(body.isOneHousehold).toBe(false);
-    expect(body.carryoverGiftEvent).toBeTruthy();
+    expect(body.isOneHousehold).toBe(true);
+    expect(body.carryoverGiftEvent).toMatchObject({ donorSameHouseholdContinuous: false });
+    const json = await (await respP).json();
+    expect(json.data?.result, JSON.stringify(json.error ?? {})).toBeTruthy();
+    // 이월과세 없이도(증여 2년 3개월) 이미 비과세라 ②2호는 발동하지 않는다(사전-2016-법령해석재산-0374)
+    expect(json.data.result.splitDetail.carryoverEvent.oneHouseExclusion).toBeUndefined();
   });
 
-  test("판정 메뉴 handoff 상태(증여 주택이 이월과세로 넘어옴 · 1세대 해당): C를 켜면 세대 질문이 사라지고 보유 상황 단계에서 막힌다", async ({ page }) => {
+  test("판정 메뉴 handoff 상태(증여 주택이 이월과세로 넘어옴 · 1세대 해당): C를 켜도 세대 질문·답이 그대로 남고 계산된다(P5)", async ({ page }) => {
     test.setTimeout(180_000);
     // 판정 메뉴가 넘기는 자산 모양을 **실제 handoff 함수**로 만든다(`giftHandoffAsset`) — 일반 증여 주택 → 이월과세(증여) + 증여자 사실
     const giftAsset = {
@@ -363,12 +365,10 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
     await expect(page.getByTestId("carryover-donor-split-toggle")).not.toHaveAttribute("data-checked", "true");
     await expect(page.getByText("증여자와 같은 세대 여부")).toBeVisible();
     await page.getByTestId("carryover-donor-split-toggle").getByRole("switch").click();
-    // ON: 세대 질문 사라짐 + N4·N5, 1세대 해당이라 보유 상황에서 막힌다
-    await expect(page.getByText("증여자와 같은 세대 여부")).toHaveCount(0);
-    await expect(page.getByTestId("split-carryover-onehouse-notice")).toBeVisible();
-    await page.getByRole("button", { name: "보유 상황", exact: true }).first().click();
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByTestId("validation-issues")).toContainText("1세대1주택 비과세(소득세법 §89①3호)와 겹치는 토지·건물 파트 이월과세");
+    // ON: 세대 질문·답이 그대로 · 차단 안내(N4) 없음
+    await expect(page.getByText("증여자와 같은 세대 여부")).toBeVisible();
+    await expect(page.getByTestId("split-carryover-onehouse-notice")).toHaveCount(0);
+    await expect(page.locator('[data-field="carryover.donorHouseholdHoldingStartDate"]')).toHaveCount(1);
   });
 
   test("다건 합산: C를 켠 자산은 ⑧이 막는다(요청 자체가 나가지 않는다) — 이월과세 호스트는 다건 미지원", async ({ page }) => {
@@ -506,6 +506,8 @@ test.describe("P2 C — 통째 이월과세 + 증여자 토지·건물 취득일
       ["carryover.donorAcquisitionPrice", () => page.getByTestId("split-carryover-building-donor-price").fill("50000000")],
       ["buildingAcquisitionPrice", () => page.getByTestId("split-carryover-building-gift-valuation").fill("660000000")],
       ["carryover.giftTaxBase", () => page.getByTestId("split-carryover-gift-tax-base").fill("900000000")],
+      // P5 — 증여세 카드 아래 «증여자와 계속 같은 세대» 질문(필수)
+      ["carryover.donorSameHousehold", () => page.getByRole("radio", { name: /아니오 — 세대가 달랐거나/ }).click()],
     ];
     for (const [key, fill] of steps) {
       await page.getByRole("button", { name: "다음", exact: true }).click();

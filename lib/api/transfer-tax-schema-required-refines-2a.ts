@@ -99,8 +99,6 @@ export type Required2aLike = {
   landCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
   buildingCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
   carryoverTaxation?: unknown;
-  isOneHousehold?: boolean;
-  isUnregistered?: boolean;
   companionAssets?: ReadonlyArray<unknown>;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
@@ -421,7 +419,7 @@ export function refineSplitPartCause(
     | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
     | "buildingSec164Value" | "buildingHouseKind" | "buildingBundledStdPrice" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
     | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
-    | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation" | "isOneHousehold" | "isUnregistered"
+    | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation"
     | "expenses"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
@@ -487,8 +485,6 @@ export function refineSplitPartCause(
     partCarryoverSupported: host.supported,
     hasCompanions: host.hasCompanions,
     carryoverGiftDate: d.carryoverGiftEvent?.giftRegistryDate,
-    isOneHousehold: d.isOneHousehold,
-    isUnregistered: d.isUnregistered,
     hasLegacyExpenses: (d.expenses ?? 0) > 0,
   });
   const issue = issuer(ctx);

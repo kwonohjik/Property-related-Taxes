@@ -6,13 +6,13 @@
  *   · ②3호 순차 고정점의 **순서(토지 → 건물)**와 동률 A
  *   · 부적격이면 본 엔진을 부르지 않고 두 파트 B 고정
  *   · 메모이즈(같은 assignment를 두 번 계산하지 않는다)
- *   · 1세대1주택 안전망(어느 시나리오가 비과세로 읽히면 같은 메시지로 던진다)
+ *   · §97의2②2호(P5) — 전부 적용(AA)이면 1세대1주택 해당 · 전부 미적용(BB)이면 아님 → 모든 적격 파트 미적용, ②3호 비교 생략
  *   · 입구 leaf 검사(직접 호출 엔진도 ⑫와 같은 거부)
  * 를 확인한다.
  */
 import { describe, it, expect } from "vitest";
 import { calcSplitCarryoverScenarios } from "@/lib/tax-engine/transfer-tax-split-carryover";
-import { PART_CARRYOVER_ONE_HOUSE_MESSAGE, PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
+import { PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE } from "@/lib/tax-engine/transfer-split-part-cause";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
@@ -48,12 +48,17 @@ const sideOf = (i: TransferTaxInput) => ({
   land: i.landAcquisitionDate!.getTime() === LAND_DONOR.getTime() ? "A" : "B",
   building: i.acquisitionDate.getTime() === BUILDING_DONOR.getTime() ? "A" : "B",
 });
-function stub(table: Record<string, number>, calls: string[] = [], exempt: (k: string) => boolean = () => false) {
+function stub(
+  table: Record<string, number>,
+  calls: string[] = [],
+  exempt: (k: string) => boolean = () => false,
+  flag: "isExempt" | "isPartialExempt" | "isExemptCore" = "isExempt",
+) {
   return (i: TransferTaxInput) => {
     const s = sideOf(i);
     const key = `${s.land}${s.building}`;
     calls.push(key);
-    return { determinedTax: table[key], isExempt: exempt(key) };
+    return { determinedTax: table[key], ...(exempt(key) ? { [flag]: true } : {}) };
   };
 }
 
@@ -156,15 +161,52 @@ describe("적격 판정(①·③) — 부적격이면 본 엔진을 부르지 �
   });
 });
 
-describe("1세대1주택 안전망 (S9의 엔진측 — 입력 술어가 놓친 비과세를 시나리오 결과에서 잡는다)", () => {
-  it("어느 시나리오든 isExempt면 같은 메시지로 던진다", () => {
-    expect(() => calcSplitCarryoverScenarios(inputC(), rates, stub({ AA: 1, AB: 1, BA: 1, BB: 1 }, [], (k) => k === "BA"))).toThrow(PART_CARRYOVER_ONE_HOUSE_MESSAGE);
-    expect(() => calcSplitCarryoverScenarios(inputC(), rates, stub({ AA: 1, AB: 1, BA: 1, BB: 1 }, [], (k) => k === "AA"))).toThrow(PART_CARRYOVER_ONE_HOUSE_MESSAGE);
+describe("§97의2②2호 (P5) — 주택 일체 상태 변화: 전부 적용(AA)이면 해당 · 전부 미적용(BB)이면 아님", () => {
+  const T = { AA: 0, AB: 300, BA: 200, BB: 100 };
+
+  it.each(["isExempt", "isPartialExempt", "isExemptCore"] as const)("AA만 %s → 모든 적격 파트 미적용 · 사유 one_house_exemption · ②3호 비교 없음(AA·BB만 계산)", (flag) => {
+    const calls: string[] = [];
+    const out = calcSplitCarryoverScenarios(inputC(), rates, stub(T, calls, (k) => k === "AA", flag));
+    for (const e of [out!.detail.land!, out!.detail.building!]) {
+      expect(e.judgment).toBe("excluded");
+      expect(e.exclusionReason).toBe("one_house_exemption");
+      expect(e.comparison).toBeUndefined();
+    }
+    expect(out!.detail.event.oneHouseExclusion).toBe(true);
+    expect(out!.detail.event.orderDependent).toBeUndefined();
+    expect(calls.sort()).toEqual(["AA", "BB"]);
+    expect(out!.adoptedInput.acquisitionDate.getTime()).toBe(GIFT.getTime());
+    expect(out!.adoptedInput.landAcquisitionDate!.getTime()).toBe(GIFT.getTime());
   });
-  it("isPartialExempt(12억 초과 고가주택)도 같다", () => {
-    expect(() =>
-      calcSplitCarryoverScenarios(inputC(), rates, () => ({ determinedTax: 1, isPartialExempt: true })),
-    ).toThrow(PART_CARRYOVER_ONE_HOUSE_MESSAGE);
+
+  it("BB도 해당하면(이미 1세대1주택 — 0374) 미발동 → ②3호 순차 고정점", () => {
+    const out = calcSplitCarryoverScenarios(inputC(), rates, stub(T, [], (k) => k === "AA" || k === "BB"));
+    expect(out!.detail.event.oneHouseExclusion).toBeUndefined();
+    expect(out!.detail.land!.exclusionReason).toBe("tax_comparison"); // AA 0 < BA 200 — 적용이 더 싸서 ②3호가 배제한다(사유가 ②2호가 아니다)
+  });
+
+  it("혼합 구성(BA)만 해당하면 상태 변화가 아니다 — AA·BB 비교만 본다", () => {
+    const out = calcSplitCarryoverScenarios(inputC(), rates, stub(T, [], (k) => k === "BA"));
+    expect(out!.detail.event.oneHouseExclusion).toBeUndefined();
+  });
+
+  it("배우자 예외 — 통째(두 파트) + 배우자 + 증여일 현재 1세대1주택이면 ②2호 취소 → ②3호 · echo", () => {
+    const spouseCt = { ...ct(BUILDING_DONOR, 50_000_000), donorRelation: "spouse" as const, spouseGiftOneHouseAtGiftDate: true };
+    const out = calcSplitCarryoverScenarios(inputC({ buildingCarryoverTaxation: spouseCt }), rates, stub(T, [], (k) => k === "AA"));
+    expect(out!.detail.event.oneHouseExclusion).toBeUndefined();
+    expect(out!.detail.event.spouseOneHouseExceptionApplied).toBe(true);
+    expect(out!.detail.land!.exclusionReason).toBe("tax_comparison");
+  });
+
+  it("세대 기준일 — 건물 파트가 있으면 시나리오마다 giftHouseholdBasis(A = 증여자 보유 통산)", () => {
+    const seen: (boolean | undefined)[] = [];
+    calcSplitCarryoverScenarios(inputC(), rates, (i) => {
+      seen.push(i.giftHouseholdBasis?.holdingAlreadyAtDonor);
+      expect(i.giftHouseholdBasis?.giftDate.getTime()).toBe(GIFT.getTime());
+      return { determinedTax: 1 };
+    });
+    expect(seen).toContain(true);
+    expect(seen).toContain(undefined);
   });
 });
 

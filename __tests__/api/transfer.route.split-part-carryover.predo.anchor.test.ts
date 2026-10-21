@@ -37,7 +37,6 @@ import {
   PART_CARRYOVER_STRAY_MESSAGE,
   PART_CARRYOVER_HOST_UNSUPPORTED_MESSAGE,
   PART_CARRYOVER_TOP_LEVEL_CONFLICT_MESSAGE,
-  PART_CARRYOVER_ONE_HOUSE_MESSAGE,
   LAND_CAUSE_ABSENT_MESSAGE,
 } from "@/lib/tax-engine/transfer-split-part-cause";
 import { MULTI_CARRYOVER_UNSUPPORTED_MESSAGE } from "@/lib/calc/multi-transfer-support-messages";
@@ -284,7 +283,7 @@ describe("SPCO-0 전환 — A 토지만 이월과세 (서브객체 없는 입력
     expect(fieldErrors(o).landCarryoverPart).toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
   });
 
-  it("SPCO-0e 1세대1주택(8억) × 서브객체 없는 토지 이월과세 → S1 필수 누락이 먼저(비과세 0원으로 새지 않는다). 서브객체가 있는 겹침은 T10 = S9", async () => {
+  it("SPCO-0e 1세대1주택(8억) × 서브객체 없는 토지 이월과세 → S1 필수 누락이 먼저(비과세 0원으로 새지 않는다). 서브객체가 있는 겹침은 T10(P5 — ②2호 판정으로 계산)", async () => {
     const o = await post({
       ...A_FIELDS,
       isOneHousehold: true,
@@ -586,7 +585,7 @@ describe("SPCO-T 목표 — 순서 의존 사례 (V-8 확인 필요)", () => {
 });
 
 describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)", () => {
-  it("SPCO-T10 1세대1주택 비과세와 겹치면(isOneHousehold ∧ 주택 ∧ 미등기 아님) P5 전까지 400 + 안내 — 비과세 0원으로 새지 않는다 (SPCO-0e 전환)", async () => {
+  it("SPCO-T10 1세대1주택 비과세와 겹쳐도 계산한다(P5 — S9 차단 → §97의2②2호 판정): 이월과세 없이도 이미 비과세(토지 2년 3개월)라 ②2호 미발동 · 이월과세 적용 · 비과세 0 + 파트 판정 echo", async () => {
     const o = await post({
       ...A_NEW,
       isOneHousehold: true,
@@ -599,12 +598,11 @@ describe("SPCO-T 목표 — 차단 게이트 (Q-5·Q-6·Q-7, 설계서 §6·§8)
       landAcquisitionPrice: 300_000_000,
       buildingAcquisitionPrice: 200_000_000,
     });
-    expect(o.status).toBe(400);
-    const msgs = Object.values(fieldErrors(o)).flat().join(" | ");
-    expect(msgs).toMatch(/1세대1주택/);
-    expect(msgs).toMatch(/§97의2/);
-    expect(msgs).toContain(PART_CARRYOVER_ONE_HOUSE_MESSAGE);
-    expect(msgs).not.toContain(PART_CARRYOVER_INPUT_REQUIRED_MESSAGE);
+    expect(o.status).toBe(200);
+    expect(o.r.isExempt).toBe(true);
+    expect(o.r.determinedTax).toBe(0);
+    expect(o.r.splitDetail.land.carryover.judgment).toBe("applied");
+    expect(o.r.splitDetail.carryoverEvent.oneHouseExclusion).toBeUndefined();
   });
 
   it("SPCO-T11 다건(합산): 새 키·`landAcquisitionCause: carryover_gift` 모두 MULTI_REJECT_RULES로 명시 거부 — strip(200)이 아니다 (SPCO-0m 전환)", async () => {

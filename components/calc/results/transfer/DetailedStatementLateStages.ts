@@ -293,8 +293,8 @@ function describeAggregateCalculatedTax(
 }
 
 /**
- * 산출세액 행 각주용 — 파트 이월과세 「확인 필요」 고지(카드·PDF와 같은 `splitCarryoverNotices`: 파트별 비교 단위 해석례 미확인 · 동일세대 사실 미반영 ·
- * 판정 순서 의존). 신고서는 설계서 §6대로 채택 주석만 둔다 — 고지는 설명 매체(카드·상세명세서·PDF)에만 싣는다.
+ * 산출세액 행 각주용 — 파트 이월과세 「확인 필요」 고지(카드·PDF와 같은 `splitCarryoverNotices`: 파트별 비교 단위 해석례 미확인 · §97의2②2호 판정 방식(P5) ·
+ * 배우자 예외 · 판정 순서 의존). 신고서는 설계서 §6대로 채택 주석만 둔다 — 고지는 설명 매체(카드·상세명세서·PDF)에만 싣는다.
  */
 function splitCarryoverNoticeNote(sd: SplitGainResult | undefined): string | undefined {
   const v = splitCarryoverView(sd);

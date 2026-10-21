@@ -174,6 +174,26 @@ test.describe("P3 A — 토지만 이월과세 + 건물 매매·신축", () => {
     expect(body2.landAcquisitionCause).toBe("gift");
   });
 
+  test("P5 1세대1주택 — 토지 증여 1년(증여자 2000 취득) · 건물 매매 2021: 이월과세를 적용해야 토지분이 비과세 → §97의2②2호로 토지 미적용 · 세대 키 없음", async ({ page }) => {
+    test.setTimeout(180_000);
+    // 강남구 주소 = 취득 당시 조정대상지역 — 거주 36개월(직접 입력)로 건물 쪽 거주요건을 채운다. 토지(나중 취득 · 1년)는 미적용 세계에서만 보유요건 미달(G-3)이다.
+    const asset = aAsset("purchase", {
+      landAcquisitionDate: "2024-06-15",
+      landCarryover: { ...LAND_CARRYOVER, giftRegistryDate: "2024-06-15" },
+      residencePeriodMonthsAsset: "36",
+    });
+    await seedWizard(page, aSeed([asset], { isOneHousehold: true, householdHousingCount: "1" }));
+    const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
+    const body = await calculate(page);
+    expect(body.isOneHousehold).toBe(true);
+    for (const k of ["donorSameHouseholdContinuous", "spouseGiftOneHouseAtGiftDate"]) expect(k in (body.carryoverGiftEvent as object), k).toBe(false);
+    const json = await (await respP).json();
+    expect(json.data?.result, JSON.stringify(json.error ?? {})).toBeTruthy();
+    expect(json.data.result.splitDetail.carryoverEvent.oneHouseExclusion).toBe(true);
+    expect(json.data.result.splitDetail.land.carryover.exclusionReason).toBe("one_house_exemption");
+    await expect(page.getByTestId("split-carryover-land").first()).toHaveAttribute("data-judgment", "excluded");
+  });
+
   test("모바일 375px: 토지 이월과세 카드가 가로 스크롤 없이 렌더된다", async ({ page }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 375, height: 800 });

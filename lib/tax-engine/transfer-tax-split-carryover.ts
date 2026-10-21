@@ -18,6 +18,12 @@
  * 정한다. 2ⁿ 전수 탐색은 조문에 없는 최적화라 쓰지 않는다. 비교 대상은 파트 세액을 쪼갠 값(`refCalculatedTax` 역안분 — 금지)이 아니라
  * **자산 전체 결정세액**(§92③2호)을 두 번 돌린 값이다.
  *
+ * ## ②2호 — 1세대1주택과 겹칠 때 (P5, 계획서 `transfer-split-part-carryover-p5.plan.md` Q1·Q2)
+ * ②3호 비교 **앞에서** 판정한다(자산 단위 `transfer-tax-carryover.ts` Step 5.5와 같은 순서). 판정 객체는 「주택(이에 딸린 토지를 포함)」 일체다 —
+ * 적격 파트를 **전부 적용(AA)** 한 세계에서 §89①3호에 해당하고 **전부 미적용(BB)** 세계에서는 해당하지 않으면(상태 변화 — 사전-2016-법령해석재산-0374 ·
+ * 조심-2022-서-7583) 모든 적격 파트에 ①을 적용하지 않는다. 「해당」은 **건물·토지 각각**의 비과세 해당이다(기본통칙 89-154…2 「각각 2년」 ·
+ * ②2호 괄호 「이에 딸린 토지를 포함」) — 나중에 취득한 토지만 보유요건에 미달해 토지분만 과세되는 G-3도 상태로 센다. 정면 해석례는 없다(확인 필요).
+ *
  * ## 증여세 상당액 (영 §163의2②)
  * 안분은 ⑭ 합성기(`composeSplitCarryover`)가 이미 했다(`ct.giftTaxAmount`, 한도 前). 한도는 「양도가액에서 §97①·②의 금액을 공제한 잔액」이고,
  * 사전-2025-법규재산-0366의 「해당 자산」에 따라 **그 파트의 양도차익**이다(자산 단위가 아니다 — 실측으로 echo가 갈린다, anchor SPCO-T4).
@@ -25,18 +31,18 @@
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { TRANSFER } from "./legal-codes";
 import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
-import {
-  collectSplitPartCauseIssues,
-  PART_CARRYOVER_ONE_HOUSE_MESSAGE,
-} from "./transfer-split-part-cause";
+import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
 import { dayKey, splitPartCauseFactsOfInput } from "./transfer-split-part-cause-input";
 import { calcSplitGain } from "./transfer-tax-split-gain";
 import { judgeCarryoverEligibility, type CarryoverEligibility } from "./transfer-tax-carryover-eligibility";
 import {
   resolveFilingUnitCarryoverScope,
   type CarryoverScenarioOverrides,
+  type FilingUnitCarryoverComparison,
 } from "./transfer-tax-aggregate-carryover-scope";
 import { DONOR_CAPEX_EFFECTIVE_DATE } from "./transfer-tax-carryover";
+import { isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
+import { carryoverGiftHouseholdBasis } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
@@ -63,7 +69,13 @@ export interface SplitCarryoverDetail {
 type CalculateFn = (
   input: TransferTaxInput,
   rates: TaxRatesMap,
-) => { determinedTax: number; isExempt?: boolean; isPartialExempt?: boolean };
+) => { determinedTax: number; isExempt?: boolean; isPartialExempt?: boolean; isExemptCore?: true };
+
+/** 한 시나리오 세계의 §89①3호 해당 상태 — 건물(주택)과 딸린 토지를 **각각** 본다(P5-Q2). */
+interface OneHouseState {
+  house: boolean;
+  land: boolean;
+}
 
 interface PartPlan {
   key: PartKey;
@@ -136,6 +148,10 @@ function buildScenarioInput(
     next.buildingAcquisitionPrice = building.ct.donorAcquisitionPrice ?? 0;
     next.buildingDirectExpenses = (raw.buildingDirectExpenses ?? 0) + building.donorCapex + addedOf.building;
   }
+  // 「취득 당시」 조정대상지역·2017.8.3. 경과규정·세대 보유 통산의 기준일 — 자산 단위 시나리오와 같은 leaf(P5-Q5). 「주택」은 건물이다.
+  //   A면 보유는 이미 증여자 취득일(§95④ 단서)이고 판정일은 증여일(사전-2023-법규재산-0444) · B면 증여일 기산 + 계속 같은 세대면 세대 통산(조심-2022-서-7583).
+  //   없으면 건물 A가 「취득 당시」를 증여자 취득일로 읽어 거주요건을 건너뛴다(실측 191,490,000 → 0). 토지만(A)은 건물이 본인 취득이라 원 입력 그대로다.
+  if (building) next.giftHouseholdBasis = carryoverGiftHouseholdBasis(building.ct, sideOf.building === "A");
   // 엔진은 별개 취득을 재판정하지 않는다(`transfer-tax-split-gain.ts` 주석) — 치환 날짜로 매 시나리오 다시 파생한다.
   // 안 하면 둘 다 증여일(비-별개)에서 한쪽만 A가 됐을 때 §166⑥ 기준시가 안분 경로를 탄다.
   next.isSeparateAcquisition = dayKey(next.landAcquisitionDate) !== dayKey(next.acquisitionDate);
@@ -199,22 +215,41 @@ export function calcSplitCarryoverScenarios(
     building: plans.building?.eligibility.isEligible ? ov[INDEX.building] ?? "A" : "B",
   });
   const inputOf = (ov: CarryoverScenarioOverrides) => buildScenarioInput(rawInput, plans, sideOfAssignment(ov), addedOf);
-  const memo = new Map<string, number>();
-  const determinedTaxOf = (ov: CarryoverScenarioOverrides): number => {
+  const memo = new Map<string, { determinedTax: number; state: OneHouseState }>();
+  const scenarioOf = (ov: CarryoverScenarioOverrides) => {
     const key = JSON.stringify(ov);
     const hit = memo.get(key);
-    if (hit !== undefined) return hit;
-    const result = calculate(inputOf(ov), rates);
-    // 안전망 — 입구의 1세대1주택 게이트(S9)는 입력 술어다. 판정 엔진이 어느 시나리오에서든 비과세로 읽으면(술어가 갈릴 때) 같은 이유로 막는다.
-    if (result.isExempt === true || result.isPartialExempt === true)
-      throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, PART_CARRYOVER_ONE_HOUSE_MESSAGE, { field: "isOneHousehold" });
-    memo.set(key, result.determinedTax);
-    return result.determinedTax;
+    if (hit) return hit;
+    const input = inputOf(ov);
+    const result = calculate(input, rates);
+    // §89①3호 해당 — 전액(조기반환)·고가(부분)·부수토지 제외로 정상 경로를 탄 전액 대상(`isExemptCore`). 토지는 G-3(나중 취득 토지 보유요건 미달)이면 해당하지 않는다.
+    const house = result.isExempt === true || result.isPartialExempt === true || result.isExemptCore === true;
+    const entry = { determinedTax: result.determinedTax, state: { house, land: house && !isLaterAcquiredLandExemptExcluded(input) } };
+    memo.set(key, entry);
+    return entry;
   };
+  const determinedTaxOf = (ov: CarryoverScenarioOverrides): number => scenarioOf(ov).determinedTax;
   const eligibleIndices = (["land", "building"] as const)
     .filter((k) => plans[k]?.eligibility.isEligible)
     .map((k) => INDEX[k]);
-  const { overrides, comparisons } = resolveFilingUnitCarryoverScope(eligibleIndices, determinedTaxOf);
+
+  // ── 5a. ②2호 — 적격 파트 전부 적용(AA)이면 해당하고 전부 미적용(BB)이면 해당하지 않는 상태 변화. 배우자 예외는 통째 증여(C)만(P5-Q4).
+  const allSide = (side: Side): CarryoverScenarioOverrides => Object.fromEntries(eligibleIndices.map((i) => [i, side]));
+  const becomesOneHouse = (() => {
+    if (eligibleIndices.length === 0) return false;
+    const a = scenarioOf(allSide("A")).state;
+    const b = scenarioOf(allSide("B")).state;
+    return (a.house && !b.house) || (a.land && !b.land);
+  })();
+  const bct = plans.building?.ct;
+  const spouseException =
+    becomesOneHouse && !!plans.land && !!bct && bct.donorRelation === "spouse" && bct.spouseGiftOneHouseAtGiftDate === true;
+  const oneHouseExclusion = becomesOneHouse && !spouseException;
+
+  // ── 5b. ②3호 — ②2호가 걸리지 않았을 때만.
+  const { overrides, comparisons } = oneHouseExclusion
+    ? { overrides: allSide("B"), comparisons: new Map<number, FilingUnitCarryoverComparison>() }
+    : resolveFilingUnitCarryoverScope(eligibleIndices, determinedTaxOf);
 
   // ── 6. 채택 입력 + echo
   const finalSide = sideOfAssignment(overrides);
@@ -228,7 +263,13 @@ export function calcSplitCarryoverScenarios(
       judgment: applied ? "applied" : "excluded",
       ...(applied
         ? {}
-        : { exclusionReason: plan.eligibility.isEligible ? ("tax_comparison" as const) : plan.eligibility.exclusionReason }),
+        : {
+            exclusionReason: !plan.eligibility.isEligible
+              ? plan.eligibility.exclusionReason
+              : oneHouseExclusion
+                ? ("one_house_exemption" as const)
+                : ("tax_comparison" as const),
+          }),
       donorAcquisitionDate: dayKey(plan.ct.donorAcquisitionDate)!,
       donorAcquisitionPrice: plan.ct.donorAcquisitionPrice ?? 0,
       donorCapexAdded: applied ? plan.donorCapex : 0,
@@ -242,7 +283,7 @@ export function calcSplitCarryoverScenarios(
     };
   };
   const period = (plans.land ?? plans.building)!.eligibility.applicablePeriodYears;
-  const orderDependent = hasTwoStableConfigurations(plans, determinedTaxOf);
+  const orderDependent = !oneHouseExclusion && hasTwoStableConfigurations(plans, determinedTaxOf);
   const detail: SplitCarryoverDetail = {
     ...(plans.land ? { land: echoOf("land") } : {}),
     ...(plans.building ? { building: echoOf("building") } : {}),
@@ -252,6 +293,8 @@ export function calcSplitCarryoverScenarios(
       giftTaxBase: event.giftTaxBase,
       applicablePeriodYears: period,
       ...(orderDependent ? { orderDependent: true as const } : {}),
+      ...(oneHouseExclusion ? { oneHouseExclusion: true as const } : {}),
+      ...(spouseException ? { spouseOneHouseExceptionApplied: true as const } : {}),
     },
   };
   return { adoptedInput, detail };

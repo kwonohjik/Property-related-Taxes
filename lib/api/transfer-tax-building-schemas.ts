@@ -9,12 +9,10 @@
  */
 
 import { z } from "zod";
-import { toDate } from "@/lib/api/date-coerce";
-import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
-import { carryoverExclusionShape, carryoverGiftEventShape } from "./transfer-tax-schema-split-carryover";
+import { carryoverExclusionShape, carryoverGiftEventShape, carryoverHouseholdStartIssues } from "./transfer-tax-schema-split-carryover";
 
 // 이월과세 적용배제 선언 shape(`carryoverExclusionShape`)과 증여 사건 shape(`carryoverGiftEventShape`)는
 // 주택 split 파트 이월과세(P1)와 공유하는 leaf(`transfer-tax-schema-split-carryover.ts`)가 정본이다.
@@ -26,49 +24,10 @@ import { carryoverExclusionShape, carryoverGiftEventShape } from "./transfer-tax
  * 아래 엔진 shape(컴패니언·GB 파트)이 함께 쓴다.
  */
 export function refineCarryoverHouseholdStart(
-  ct: {
-    giftRegistryDate: string;
-    donorAcquisitionDate: string;
-    donorSameHouseholdContinuous?: boolean;
-    donorHouseholdHoldingStartDate?: string;
-    donorPriorHouseholdResidenceMonths?: number;
-  },
+  ct: Parameters<typeof carryoverHouseholdStartIssues>[0],
   ctx: z.RefinementCtx,
 ): void {
-  // 결정 #38-7 — 증여 전 동일세대 거주 개월은 「계속 같은 세대」일 때만 의미가 있다. 아니면 조용히 무시되는 입력이 되므로 막는다(⑧·④와 같은 조건).
-  if (ct.donorSameHouseholdContinuous !== true) {
-    if (ct.donorPriorHouseholdResidenceMonths !== undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["donorPriorHouseholdResidenceMonths"],
-        message: "증여 전 동일세대 거주 개월은 증여자와 계속 같은 세대일 때만 입력할 수 있습니다",
-      });
-    }
-    return;
-  }
-  const start = ct.donorHouseholdHoldingStartDate;
-  if (!start) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["donorHouseholdHoldingStartDate"],
-      message: "증여자와 계속 같은 세대이면 세대 보유 시작일이 필요합니다 (소득세법 시행령 §154①)",
-    });
-  } else if (start >= ct.giftRegistryDate || start < ct.donorAcquisitionDate) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["donorHouseholdHoldingStartDate"],
-      message: "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다",
-    });
-  } else if (ct.donorPriorHouseholdResidenceMonths !== undefined) {
-    const max = maxPriorResidenceMonthsBetween(toDate(start, "donorHouseholdHoldingStartDate"), toDate(ct.giftRegistryDate, "giftRegistryDate"));
-    if (ct.donorPriorHouseholdResidenceMonths > max) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["donorPriorHouseholdResidenceMonths"],
-        message: `증여 전 동일세대 거주 개월은 세대 보유 시작일부터 증여 등기접수일까지(${max}개월)를 넘을 수 없습니다`,
-      });
-    }
-  }
+  carryoverHouseholdStartIssues(ct, (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message }));
 }
 
 /**

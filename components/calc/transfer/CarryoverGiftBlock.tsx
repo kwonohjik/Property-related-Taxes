@@ -150,23 +150,15 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
         그 밖의 관계로부터 증여받았다면 취득 원인을 <strong>「증여」</strong>로 선택하세요.
       </p>
 
-      {/* 파트 이월과세(C) 안내 — 1세대1주택 비과세 판정 대상은 아직 계산하지 못하고(N4), 함께 양도 자산이 있으면 계산하지 못한다(N8). */}
-      {splitMode && (
+      {/* 파트 이월과세(C) 안내 — 함께 양도 자산이 있으면 계산하지 못한다(N8). 1세대1주택 겹침(N4)은 P5에서 §97의2②2호 판정으로 계산한다. */}
+      {splitMode && hasCompanions && (
         <div className="space-y-2" data-testid="split-carryover-notices">
-          <ToneCard tone="amber" bodyClassName="space-y-1">
-            <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="split-carryover-onehouse-notice">
-              토지·건물 중 한 부분이라도 이월과세(소득세법 §97의2) 대상으로 입력하면 <strong>1세대1주택 비과세(§89①3호) 판정 대상인 양도는 아직 계산하지 못합니다</strong> —
-              이월과세 적용 여부(§97의2②2호)가 비과세 판정에 따라 달라지기 때문입니다. 비과세 판정 대상이 아닌 양도에서만 이 입력을 쓸 수 있습니다.
+          <ToneCard tone="rose" bodyClassName="space-y-1">
+            <p className="text-caption text-rose-800 dark:text-rose-200" data-testid="split-carryover-companion-exists-note">
+              함께 양도하는 다른 자산이 있으면 토지·건물 파트 이월과세를 아직 계산하지 못합니다 — 파트별 비교과세(§97의2②3호)가 신고 전체의 결정세액을 보지 못하기 때문입니다.
+              이 입력은 이 자산 한 건만 양도할 때 쓸 수 있습니다.
             </p>
           </ToneCard>
-          {hasCompanions && (
-            <ToneCard tone="rose" bodyClassName="space-y-1">
-              <p className="text-caption text-rose-800 dark:text-rose-200" data-testid="split-carryover-companion-exists-note">
-                함께 양도하는 다른 자산이 있으면 토지·건물 파트 이월과세를 아직 계산하지 못합니다 — 파트별 비교과세(§97의2②3호)가 신고 전체의 결정세액을 보지 못하기 때문입니다.
-                이 입력은 이 자산 한 건만 양도할 때 쓸 수 있습니다.
-              </p>
-            </ToneCard>
-          )}
         </div>
       )}
 
@@ -399,20 +391,14 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           donorPriorHouseholdResidenceMonths={c.donorPriorHouseholdResidenceMonths}
           donorAcquisitionDate={c.donorAcquisitionDate}
           showHouseholdFact={carryoverHouseholdFactVisible(asset)}
-          // C는 §97의2②2호(배우자 증여 1세대1주택) 판정을 하지 않는다(P5) — ④가 이 사실을 싣지 않으므로 묻지 않는다.
-          showSpouseOneHouseFact={asset.assetKind !== "general_building" && !splitMode}
+          // C(통째 증여)도 P5부터 배우자 예외를 묻는다 — ④가 사건에 싣는다(P5-Q4).
+          showSpouseOneHouseFact={asset.assetKind !== "general_building"}
           giftRegistryDate={c.giftRegistryDate}
           assetId={asset.assetId}
           onRelationChange={updateCarryover}
         />
       </div>
 
-      {splitMode && (
-        <p className="text-caption text-muted-foreground" data-testid="split-carryover-household-note">
-          증여자와 증여일부터 양도일까지 계속 같은 세대였는지는 묻지 않습니다. 이 사실은 1세대1주택 비과세 판정의 보유기간 통산·거주요건에 쓰이는데 이 입력은 그 판정과 함께
-          계산하지 않으므로 세액에 반영되지 않습니다 — 해당하는 양도라면 <strong>확인 필요</strong>입니다.
-        </p>
-      )}
     </div>
   );
 }

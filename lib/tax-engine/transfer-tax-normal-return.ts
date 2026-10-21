@@ -19,7 +19,7 @@ type ResultDetailArgs = Parameters<typeof buildTransferResultDetails>[0];
 export interface NormalReturnArgs extends FinalizeArgs {
   /** 표시 전용 자본적지출 — 파생 전 **원본** 입력을 쓴다 */
   rawInput: TransferTaxInput;
-  exemptionResult: { isPartialExempt: boolean; exemptReason?: string };
+  exemptionResult: { isExempt?: boolean; isPartialExempt: boolean; exemptReason?: string };
   warnings: string[];
   transferGain: number;
   usedEstimated: boolean;
@@ -138,6 +138,8 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     isExempt: false,
     // §89①3호 각 목에는 해당하나 12억 초과분만 과세되는 상태(고가주택). D-8 ②2호 판정이 읽는다.
     isPartialExempt: exemptionResult.isPartialExempt,
+    // 전액 비과세 대상인데 부수토지 제외(G-2·G-3)·PHD로 조기반환하지 않은 경우 — §97의2②2호 판정(split 파트 이월과세)이 읽는다.
+    ...(exemptionResult.isExempt ? { isExemptCore: true as const } : {}),
     exemptReason: exemptionResult.exemptReason,
     warnings: warnings.length > 0 ? warnings : undefined,
     transferGain,

@@ -61,8 +61,6 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     hasTopLevelCarryover: !!input.carryoverTaxation,
     // 엔진은 호스트를 가리지 않는다 — 컴패니언·다건은 ⑫가 입구에서 막아 파트 서브객체가 엔진에 닿지 않는다(생략 = 받는다).
     carryoverGiftDate: dayKey(input.carryoverGiftEvent?.giftRegistryDate),
-    isOneHousehold: input.isOneHousehold,
-    isUnregistered: input.isUnregistered,
     hasLegacyExpenses: (input.expenses ?? 0) > 0,
   };
 }

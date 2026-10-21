@@ -72,8 +72,8 @@ describe("정규화 사본 · 별개취득 · 세대 사실 · 취득일 (3중 �
     expect(isSeparateAcquisition({ ...stale, carryoverDonorSplit: false })).toBe(true);
   });
 
-  it("carryoverHouseholdFactVisible: C는 묻지 않는다(Q-9) — ⑤⑧④가 같은 술어, 부정형 짝은 종전대로 묻는다", () => {
-    expect(carryoverHouseholdFactVisible(cAsset())).toBe(false);
+  it("carryoverHouseholdFactVisible: P5부터 C도 묻는다(건물이 증여받은 주택) — ⑤⑧④가 같은 술어 · 증여자 사망이면 묻지 않는다", () => {
+    expect(carryoverHouseholdFactVisible(cAsset())).toBe(true);
     expect(carryoverHouseholdFactVisible(cAsset({ carryoverDonorSplit: false }))).toBe(true);
     expect(carryoverHouseholdFactVisible(cAsset({ carryoverDonorSplit: false, carryover: { ...CARRYOVER_DEFAULTS, donorDeceased: true } }))).toBe(false);
   });

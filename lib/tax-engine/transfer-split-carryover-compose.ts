@@ -24,6 +24,13 @@ interface SplitCarryoverWireEvent {
   donorRelation?: "spouse" | "lineal" | "other";
   donorDeceased?: boolean;
   exclusionDeclared?: CarryoverTaxationInput["exclusionDeclared"];
+  // P5 §97의2②2호 — 1세대1주택 판정 사실. 건물(주택)이 이월과세일 때만(B·C) 건물 파트에 싣는다(⑫가 A의 stray를 막는다).
+  donorSameHouseholdContinuous?: boolean;
+  donorHouseholdHoldingStartDate?: string;
+  donorPriorHouseholdResidenceMonths?: number;
+  donorRejoinedAfterDivorce?: boolean;
+  /** 배우자 예외 — 주택 통째 증여(C)만(⑫가 한 파트만이면 막는다) */
+  spouseGiftOneHouseAtGiftDate?: boolean;
 }
 
 interface SplitCarryoverWirePart {
@@ -75,7 +82,18 @@ export function composeSplitCarryover(d: SplitCarryoverWire): ComposedSplitCarry
   };
 
   const land = compose(d.landCarryoverPart, d.landAcquisitionPrice, "landCarryoverPart");
-  const building = compose(d.buildingCarryoverPart, d.buildingAcquisitionPrice, "buildingCarryoverPart");
+  const composed = compose(d.buildingCarryoverPart, d.buildingAcquisitionPrice, "buildingCarryoverPart");
+  // 세대 사실·배우자 예외는 주택(건물) 보유의 사실이다 — 1세대1주택 판정(`giftHouseholdBasis`)이 건물 파트에서만 읽는다(P5-Q3·Q4).
+  const building = composed && {
+    ...composed,
+    donorSameHouseholdContinuous: ev.donorSameHouseholdContinuous,
+    donorHouseholdHoldingStartDate: ev.donorHouseholdHoldingStartDate
+      ? toDate(ev.donorHouseholdHoldingStartDate, "carryoverGiftEvent.donorHouseholdHoldingStartDate")
+      : undefined,
+    donorPriorHouseholdResidenceMonths: ev.donorPriorHouseholdResidenceMonths,
+    donorRejoinedAfterDivorce: ev.donorRejoinedAfterDivorce,
+    spouseGiftOneHouseAtGiftDate: ev.spouseGiftOneHouseAtGiftDate,
+  };
   if (!land && !building) return {};
   return {
     // 증여 사건 echo — 계산에는 쓰이지 않는다(파트 서브객체가 사건 사실을 이미 싣는다)

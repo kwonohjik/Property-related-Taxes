@@ -56,8 +56,9 @@ const companion = (): AssetForm =>
 
 const CELLS: Cell[] = [
   // ── leaf 소관 ──
-  { name: "S9 1세대1주택 해당(주택)", make: () => bForm({ isOneHousehold: true }), leafKey: "isOneHousehold" },
-  { name: "S9 아님: 1세대 + 미등기", make: () => bForm({ isOneHousehold: true, isUnregistered: true }) },
+  // P5 — 1세대1주택 겹침은 막지 않는다(S9 삭제 → 해결자의 §97의2②2호 판정)
+  { name: "1세대1주택 해당(주택) — 계산한다", make: () => bForm({ isOneHousehold: true }) },
+  { name: "1세대 + 미등기", make: () => bForm({ isOneHousehold: true, isUnregistered: true }) },
   { name: "F-6 건물 증여자 취득일 > 증여일", make: () => bForm({}, withBuildingCarry({ donorAcquisitionDate: "2023-03-02" })), leafKey: "buildingCarryoverPart.donorAcquisitionDate" },
   { name: "증여자 취득일 = 증여일(허용)", make: () => bForm({}, withBuildingCarry({ donorAcquisitionDate: "2023-03-01" })) },
   { name: "평가액 > 과세가액", make: () => bForm({}, withBuildingCarry({ giftTaxBase: "390,000,000" })), leafKey: "carryoverGiftEvent.giftTaxBase" },
@@ -70,7 +71,14 @@ const CELLS: Cell[] = [
   { name: "토지 취득일 비움", make: () => bForm({}, bAsset({ landAcquisitionDate: "" })), bothWays: true },
   { name: "증여 등기접수일 비움", make: () => bForm({}, withBuildingCarry({ giftRegistryDate: "" })), bothWays: true },
   { name: "구조: 소유자 분리(건물만 소유)", make: () => bForm({}, bAsset({ selfOwns: "building_only" })), bothWays: true },
+  // ── P5 세대 사실(건물이 증여받은 주택 — 자산 단위와 같은 규칙) ──
+  { name: "P5 같은 세대 «예»인데 세대 보유 시작일 없음", make: () => bForm({}, withBuildingCarry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "" })), leafKey: "carryoverGiftEvent.donorHouseholdHoldingStartDate" },
+  { name: "P5 세대 보유 시작일 < 건물 증여자 취득일", make: () => bForm({}, withBuildingCarry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2010-01-01" })), leafKey: "carryoverGiftEvent.donorHouseholdHoldingStartDate" },
+  { name: "P5 세대 보유 시작일 ≥ 증여 등기접수일", make: () => bForm({}, withBuildingCarry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2023-03-01" })), leafKey: "carryoverGiftEvent.donorHouseholdHoldingStartDate" },
+  { name: "P5 재결합(배우자) — 1세대 아님 · 세액 무영향", make: () => bForm({}, withBuildingCarry({ donorRelation: "spouse", donorSameHousehold: "rejoined" })) },
+  { name: "P5 1세대1주택 + 같은 세대 «예»", make: () => bForm({ isOneHousehold: true, householdHousingCount: "1" }, withBuildingCarry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2015-06-01" })) },
   // ── ⑧ 전용(⑫보다 엄격) ──
+  { name: "P5 세대 사실 미답(⑫는 미확인으로 계산)", make: () => bForm({}, withBuildingCarry({ donorSameHousehold: "" })), strictOnly: true },
   { name: "토지 취득일 = 건물 증여일(Q-4 같은 날)", make: () => bForm({}, bAsset({ landAcquisitionDate: "2023-03-01" })), strictOnly: true },
   { name: "고시 전 증여(2005.4.30. 전 — 비교 입력 없음)", make: () => bForm({ transferDate: "2010-03-31" }, withBuildingCarry({ giftRegistryDate: "2005-04-29", donorAcquisitionDate: "2000-01-01" }, { landAcquisitionDate: "1999-01-01" })), strictOnly: true },
   { name: "등기접수일 ≥ 양도일", make: () => bForm({}, withBuildingCarry({ giftRegistryDate: "2025-06-30" })), strictOnly: true },
@@ -85,7 +93,8 @@ const CELLS: Cell[] = [
   { name: "잔재: PHD 자동 ON", make: () => bForm({}, bAsset({ usePreHousingDisclosure: true })) },
   { name: "잔재: C 토글 저장값 ON", make: () => bForm({}, bAsset({ carryoverDonorSplit: true })) },
   { name: "잔재: 자산 단위 환산·평가액(전체 이월과세 칸)", make: () => bForm({}, withBuildingCarry({ useEstimatedAcquisition: true, estimationMode: "general", giftDateValuation: "900,000,000" })) },
-  { name: "잔재: 세대 사실 답(전체 이월과세 칸)", make: () => bForm({}, withBuildingCarry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2015-06-01" })) },
+  // P5 — 세대 사실은 이제 B가 묻는 칸이다(잔재 아님). 1세대1주택이 아닌 기준 폼에서는 세액을 바꾸지 않는다.
+  { name: "세대 사실 «예» + 세대 보유 시작일(1세대 아님 — 세액 무영향)", make: () => bForm({}, withBuildingCarry({ donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2015-06-01" })) },
 ];
 
 describe("P4 B — ⑧≡⑫ 격자", () => {
@@ -155,11 +164,10 @@ describe("P4 B — ⑧≡⑫ 격자", () => {
     expect(issuesOf(bForm({ transferDate: "2010-03-31" }, withBuildingCarry({ giftRegistryDate: "2005-04-30", donorAcquisitionDate: "2000-01-01" }, { landAcquisitionDate: "1999-01-01" }))).map((i) => i.message).join()).not.toContain("2005.4.30. 전이면");
   });
 
-  it("S9 — 보유 상황 단계(1)에서 막고 자산 단계(0)는 통과: 앵커 isOneHousehold · 끄는 방법은 «토지는 다른 원인으로 취득»", () => {
+  it("P5 — 1세대1주택이어도 자산 단계(0)·보유 상황 단계(1) 모두 막지 않는다(S9 삭제 · ②2호는 엔진이 판정)", () => {
     const form = bForm({ isOneHousehold: true });
     expect(collectStepIssues(0, form)).toEqual([]);
-    const s1 = collectStepIssues(1, form).find((i) => i.field === "isOneHousehold");
-    expect(s1?.message).toContain("토지는 다른 원인으로 취득");
+    expect(collectStepIssues(1, form).find((i) => i.field === "isOneHousehold")).toBeUndefined();
   });
 
   it("S2′ 함께 양도 자산 1건 — 첫 자산 B를 ⑧·⑫가 같이 막는다", async () => {
@@ -241,11 +249,25 @@ describe("P4 B — ⑧≡⑫ 격자", () => {
   });
 });
 
-describe("Step4 «취득 당시» 기준일 — B는 세대 사실을 묻지 않는다", () => {
-  it("남은 «계속 같은 세대» 답·세대 보유 시작일이 있어도 기준일 = 증여 등기접수일 · 긍정 짝: 자산 전체 이월과세면 세대 보유 시작일", () => {
-    const residue = { donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2016-01-01" };
-    expect(carryoverResidenceJudgmentDate(withBuildingCarry(residue))).toBe("2023-03-01");
-    expect(carryoverResidenceJudgmentDate(withBuildingCarry(residue, { landCauseHost: "", hasSeperateLandAcquisitionDate: false }))).toBe("2016-01-01");
+describe("P5 ④ 사건 — 세대 사실은 싣고 배우자 예외는 싣지 않는다(건물만 증여 — Q3·Q4)", () => {
+  it("«예» + 세대 보유 시작일 → 사건에 donorSameHouseholdContinuous·시작일 · 배우자 예외는 관계·답이 있어도 없다", async () => {
+    const body = await bodyOf(bForm({}, withBuildingCarry({ donorRelation: "spouse", donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2015-06-01", spouseGiftOneHouseAtGiftDate: true })));
+    expect(body.carryoverGiftEvent).toMatchObject({ donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: "2015-06-01" });
+    expect("spouseGiftOneHouseAtGiftDate" in (body.carryoverGiftEvent as object)).toBe(false);
+  });
+  it("«아니오» → donorSameHouseholdContinuous false · 미답(\"\") → 키 없음(⑧이 먼저 막는다)", async () => {
+    expect((await bodyOf(bForm())).carryoverGiftEvent).toMatchObject({ donorSameHouseholdContinuous: false });
+    const unanswered = (await bodyOf(bForm({}, withBuildingCarry({ donorSameHousehold: "" })))).carryoverGiftEvent as object;
+    expect("donorSameHouseholdContinuous" in unanswered).toBe(false);
+  });
+});
+
+describe("Step4 «취득 당시» 기준일 — P5부터 B도 세대 사실을 묻는다(엔진 `giftHouseholdBasis`와 같은 날)", () => {
+  it("«계속 같은 세대» + 세대 보유 시작일이면 기준일 = 세대 보유 시작일(자산 전체 이월과세와 같다) · 「아니오」면 증여 등기접수일", () => {
+    const yes = { donorSameHousehold: "yes", donorHouseholdHoldingStartDate: "2016-01-01" };
+    expect(carryoverResidenceJudgmentDate(withBuildingCarry(yes))).toBe("2016-01-01");
+    expect(carryoverResidenceJudgmentDate(withBuildingCarry(yes, { landCauseHost: "", hasSeperateLandAcquisitionDate: false }))).toBe("2016-01-01");
+    expect(carryoverResidenceJudgmentDate(withBuildingCarry({ donorSameHousehold: "no" }))).toBe("2023-03-01");
   });
 });
 

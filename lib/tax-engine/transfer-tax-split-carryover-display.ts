@@ -67,6 +67,10 @@ export interface SplitCarryoverView {
   buildingGifted: boolean;
   /** 토지 파트도 증여받았는가 — 건물만 이월과세(P4 B)는 토지를 따로 매수했다. 상세명세서 취득일 문구가 갈린다. */
   landGifted: boolean;
+  /** §97의2②2호(P5) — 적용하면 비로소 1세대1주택이 되어 모든 이월과세 파트를 적용하지 않았다(②3호 비교 없음) */
+  oneHouseExclusion: boolean;
+  /** 위 조합이지만 배우자 예외(증여일 현재 1세대1주택을 배우자로부터 통째로 증여)로 ②2호를 적용하지 않았다 */
+  spouseOneHouseExceptionApplied: boolean;
 }
 
 function partView(
@@ -129,6 +133,8 @@ export function splitCarryoverView(sd: SplitGainResult | undefined): SplitCarryo
     parts,
     buildingGifted: parts.some((p) => p.key === "building"),
     landGifted: parts.some((p) => p.key === "land"),
+    oneHouseExclusion: ev.oneHouseExclusion === true,
+    spouseOneHouseExceptionApplied: ev.spouseOneHouseExceptionApplied === true,
   };
 }
 
@@ -175,12 +181,23 @@ export function splitCarryoverVerdictText(p: SplitCarryoverPartView): string {
   return `${head}${cmp ? ` · ${cmp}` : ""}${p.exclusionLabel ? ` — ${p.exclusionLabel}` : ""}`;
 }
 
-/** 「확인 필요」 고지 — 비교 단위(파트별)는 정면 해석례를 확인하지 못했고, 안정 구성이 둘이면 판정 순서가 결과를 가른다. 동일세대 사실은 묻지 않는다(Q-9). */
+/**
+ * 「확인 필요」 고지 — 비교 단위(파트별)는 정면 해석례를 확인하지 못했고, 안정 구성이 둘이면 판정 순서가 결과를 가른다.
+ * P5 §97의2②2호 — 판정 단위(주택 일체)·상태(건물·토지 각각)·배우자 예외 범위(통째 증여만)도 파트 이월과세를 정면으로 다룬 해석례가 없다.
+ */
 export function splitCarryoverNotices(v: SplitCarryoverView): string[] {
-  const out = [
-    "②3호 비교(적용·미적용)는 토지·건물을 각각 별개 자산으로 보고 파트별로 했습니다(소득세법 §94①1호). 토지·건물을 주택 하나로 묶어 비교하는 독법과 결과가 다를 수 있으며 이를 정면으로 다룬 해석례는 확인하지 못했습니다 — 확인 필요.",
-    "증여자와 증여일부터 양도일까지 계속 같은 세대였는지는 묻지 않았고 1세대1주택 비과세 판정과 함께 계산하지 않았습니다 — 해당하는 양도라면 확인 필요.",
-  ];
+  const out: string[] = [];
+  // ②2호가 걸리면 ②3호 비교는 하지 않았다 — 비교 단위 고지는 비교를 했을 때만
+  if (!v.oneHouseExclusion)
+    out.push(
+      "②3호 비교(적용·미적용)는 토지·건물을 각각 별개 자산으로 보고 파트별로 했습니다(소득세법 §94①1호). 토지·건물을 주택 하나로 묶어 비교하는 독법과 결과가 다를 수 있으며 이를 정면으로 다룬 해석례는 확인하지 못했습니다 — 확인 필요.",
+    );
+  if (v.oneHouseExclusion || v.spouseOneHouseExceptionApplied)
+    out.push(
+      "②2호(이월과세를 적용해야 비로소 1세대1주택 비과세 양도가 되는 경우)는 토지·건물을 주택 하나(딸린 토지 포함)로 보고, 이월과세 파트를 모두 적용한 경우와 모두 적용하지 않은 경우의 비과세 해당 여부를 건물·토지 각각 비교해 판정했습니다. 토지·건물 중 일부만 증여받은 경우를 정면으로 다룬 해석례는 확인하지 못했습니다 — 확인 필요.",
+    );
+  if (v.spouseOneHouseExceptionApplied)
+    out.push("증여일 현재 1세대1주택이던 주택을 배우자로부터 증여받아 ②2호를 적용하지 않았습니다(이월과세 판정은 ②3호 비교로 했습니다).");
   if (v.orderDependent)
     out.splice(
       1,

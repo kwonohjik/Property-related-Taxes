@@ -10,7 +10,8 @@
  *   ① 증여 등기접수일(= 토지 취득일, write-through) → ② 토지 — 증여자 취득 → ③ 증여세 상당액 → ④ 관계·적용배제
  * 토지 증여 신고가액은 기존 토지 가액 칸(매매: 취득가액 산정 방식의 토지 칸 · 신축: 블록의 토지 칸)이 받는다 — 같은 `data-field`를 두 번 두지 않는다.
  *
- * · 세대 사실·배우자 1세대1주택 예외 사실은 묻지 않는다(Q-9 · P5) — N5 caption.
+ * · P5 §97의2②2호 — B(건물)는 증여자와의 세대 사실을 묻는다(건물이 증여받은 주택 — 자산 단위와 같은 술어·앵커 `carryover.*`). A(토지)는 묻지 않는다(건물은 본인 취득).
+ *   배우자 1세대1주택 예외는 A·B 모두 묻지 않는다(해석례의 대상이 주택·주택 지분 — 통째 증여 C만). 고지는 caption(`split-carryover-household-note`).
  * · 증여 등기접수일 한 patch로 `landCarryover.giftRegistryDate`와 `landAcquisitionDate`를 함께 쓴다(Q-8, 다중 키 단일 배치). 읽는 쪽 사본
  *   (`normalizeBuildingCauseInputs`)이 어긋남을 등기접수일로 덮는다.
  */
@@ -26,6 +27,7 @@ import { SplitCarryoverGiftTaxCard } from "./SplitCarryoverParts";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
+import { carryoverHouseholdFactVisible } from "@/lib/calc/transfer-tax-api-carryover";
 
 export function LandCarryoverCard(props: {
   asset: AssetForm;
@@ -55,22 +57,16 @@ export function LandCarryoverCard(props: {
         그 밖의 관계로부터 증여받았다면 {isBuilding ? "취득 원인" : "토지 취득 원인"}을 <strong>「증여」</strong>로 선택하세요.
       </p>
 
-      <div className="space-y-2" data-testid="split-carryover-notices">
-        <ToneCard tone="amber" bodyClassName="space-y-1">
-          <p className="text-caption text-amber-900 dark:text-amber-200" data-testid="split-carryover-onehouse-notice">
-            토지·건물 중 한 부분이라도 이월과세(소득세법 §97의2) 대상으로 입력하면 <strong>1세대1주택 비과세(§89①3호) 판정 대상인 양도는 아직 계산하지 못합니다</strong> —
-            이월과세 적용 여부(§97의2②2호)가 비과세 판정에 따라 달라지기 때문입니다. 비과세 판정 대상이 아닌 양도에서만 이 입력을 쓸 수 있습니다.
-          </p>
-        </ToneCard>
-        {props.hasCompanions && (
+      {props.hasCompanions && (
+        <div className="space-y-2" data-testid="split-carryover-notices">
           <ToneCard tone="rose" bodyClassName="space-y-1">
             <p className="text-caption text-rose-800 dark:text-rose-200" data-testid="split-carryover-companion-exists-note">
               함께 양도하는 다른 자산이 있으면 토지·건물 파트 이월과세를 아직 계산하지 못합니다 — 파트별 비교과세(§97의2②3호)가 신고 전체의 결정세액을 보지 못하기 때문입니다.
               이 입력은 이 자산 한 건만 양도할 때 쓸 수 있습니다.
             </p>
           </ToneCard>
-        )}
-      </div>
+        </div>
+      )}
 
       <ToneCard tone="amber" sectionNum={1} title="증여 기본 정보" bodyClassName="space-y-3">
         <FieldCard
@@ -117,8 +113,8 @@ export function LandCarryoverCard(props: {
           donorHouseholdHoldingStartDate={c.donorHouseholdHoldingStartDate}
           donorPriorHouseholdResidenceMonths={c.donorPriorHouseholdResidenceMonths}
           donorAcquisitionDate={c.donorAcquisitionDate}
-          // 파트 이월과세는 세대 사실(Q-9)·배우자 1세대1주택 예외(§97의2②2호, P5)를 묻지 않는다 — ④가 싣지 않는다.
-          showHouseholdFact={false}
+          // P5 — B(건물)는 세대 사실을 묻는다(④가 사건에 싣는다 · 같은 술어). A(토지)는 묻지 않는다. 배우자 예외는 A·B 모두 묻지 않는다(P5-Q3·Q4).
+          showHouseholdFact={isBuilding && carryoverHouseholdFactVisible(asset)}
           showSpouseOneHouseFact={false}
           giftRegistryDate={c.giftRegistryDate}
           assetId={asset.assetId}
@@ -128,8 +124,17 @@ export function LandCarryoverCard(props: {
       </div>
 
       <p className="text-caption text-muted-foreground" data-testid="split-carryover-household-note">
-        증여자와 증여일부터 양도일까지 계속 같은 세대였는지는 묻지 않습니다. 이 사실은 1세대1주택 비과세 판정의 보유기간 통산·거주요건에 쓰이는데 이 입력은 그 판정과 함께
-        계산하지 않으므로 세액에 반영되지 않습니다 — 해당하는 양도라면 <strong>확인 필요</strong>입니다.
+        {isBuilding ? (
+          <>
+            건물만 증여받은 경우에는 배우자 예외(증여일 현재 1세대1주택을 배우자로부터 증여받으면 소득세법 §97의2②2호를 적용하지 않음)를 묻지 않고 적용하지 않습니다 —
+            해석례가 주택(또는 주택 지분)을 증여받은 경우만 다룹니다. 해당하는 양도라면 <strong>확인 필요</strong>입니다.
+          </>
+        ) : (
+          <>
+            토지만 증여받은 경우에는 증여자와의 세대 사실과 배우자 예외(소득세법 §97의2②2호)를 묻지 않습니다 — 건물은 본인이 취득했고, 1세대1주택 판정에서 토지는 증여일부터
+            보유한 것으로 봅니다(이월과세를 적용하면 증여자 취득일부터). 토지만 증여받은 경우를 정면으로 다룬 해석례가 없어 해당하는 양도라면 <strong>확인 필요</strong>입니다.
+          </>
+        )}
       </p>
     </div>
   );

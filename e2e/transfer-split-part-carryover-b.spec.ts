@@ -23,6 +23,7 @@ const CARRYOVER = {
   ...CARRYOVER_DEFAULTS,
   giftRegistryDate: "2023-03-01",
   donorRelation: "lineal",
+  donorSameHousehold: "no", // P5 — 건물(주택)을 증여받은 B·C는 세대 사실이 필수 질문이다
   donorAcquisitionDate: "2015-06-01",
   donorAcquisitionPrice: "100000000",
   giftTaxCalculated: "20000000",
@@ -154,7 +155,8 @@ test.describe("P4 B — 건물만 이월과세 + 토지 매매", () => {
     await expect(page.getByTestId("acq-date-land").locator('input[aria-label="연도"]')).toBeEnabled();
     await expect(page.getByTestId("building-carryover-date-note")).toHaveCount(1);
     await expect(page.getByTestId("part-acq-mode-building-fixed")).toContainText("이월과세 건물");
-    await expect(page.getByText("증여자와 같은 세대 여부")).toHaveCount(0);
+    // P5 — 건물이 증여받은 주택이라 «증여자와 같은 세대 여부»를 묻는다(건물 이월과세 카드 안 한 곳)
+    await expect(page.locator('[data-field="carryover.donorSameHousehold"]')).toHaveCount(1);
     const body = await calculate(page);
     await expectResult(page, body);
   });
@@ -185,6 +187,24 @@ test.describe("P4 B — 건물만 이월과세 + 토지 매매", () => {
     const body2 = await calculate(page);
     for (const k of ["carryoverGiftEvent", "buildingCarryoverPart", "landAcquisitionCause", "landAcquisitionDate"]) expect(k in body2, k).toBe(false);
     expect(body2.carryoverTaxation).toMatchObject({ giftRegistryDate: "2023-03-01", donorAcquisitionDate: "2015-06-01" });
+  });
+
+  test("P5 1세대1주택 — 건물 증여 1년(증여자 2015 취득): 이월과세를 적용해야 비로소 비과세 → §97의2②2호로 건물 미적용 · 결과 카드 사유", async ({ page }) => {
+    test.setTimeout(180_000);
+    const gift = { ...CARRYOVER, giftRegistryDate: "2024-06-15" };
+    // 주소(강남구)가 취득 당시 조정대상지역이라 거주 2년이 필요하다 — 거주 36개월(직접 입력). 「취득 당시」는 증여일(2024)로 판정한다(P5-Q5).
+    await seedWizard(page, seed([bAsset({ carryover: gift, residencePeriodMonthsAsset: "36" })], { isOneHousehold: true, householdHousingCount: "1" }));
+    const respP = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST");
+    const body = await calculate(page);
+    expect(body.isOneHousehold).toBe(true);
+    expect(body.carryoverGiftEvent).toMatchObject({ giftRegistryDate: "2024-06-15", donorSameHouseholdContinuous: false });
+    expect("spouseGiftOneHouseAtGiftDate" in (body.carryoverGiftEvent as object)).toBe(false);
+    const json = await (await respP).json();
+    expect(json.data?.result, JSON.stringify(json.error ?? {})).toBeTruthy();
+    expect(json.data.result.splitDetail.carryoverEvent.oneHouseExclusion).toBe(true);
+    expect(json.data.result.splitDetail.building.carryover.exclusionReason).toBe("one_house_exemption");
+    await expect(page.getByTestId("split-carryover-building").first()).toHaveAttribute("data-judgment", "excluded");
+    await expect(page.getByTestId("split-carryover-card").first()).toContainText("§97조의2 ② 2호");
   });
 
   test("모바일 375px: 건물 이월과세 카드가 가로 스크롤 없이 렌더된다", async ({ page }) => {

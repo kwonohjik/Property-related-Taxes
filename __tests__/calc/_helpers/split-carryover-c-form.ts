@@ -28,6 +28,7 @@ export function cAsset(over: Record<string, unknown> = {}): AssetForm {
       giftTaxCalculated: "30,000,000",
       giftTaxBase: "900,000,000",
       donorRelation: "lineal",
+      donorSameHousehold: "no", // P5 — 건물(주택)을 증여받은 B·C는 세대 사실이 필수 질문이다
     },
     landCarryover: {
       ...CARRYOVER_DEFAULTS,

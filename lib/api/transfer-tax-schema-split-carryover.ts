@@ -9,10 +9,12 @@
  *   · 증여세 상당액 칸이 없다 — ⑭ 합성기(`composeSplitCarryover`)가 영 §163의2②로 안분한다.
  *   · 파트 환산(`useEstimatedAcquisition`)이 없다 — 증여자 취득가액 필수(I-4).
  *
- * ⚠️ **leaf 규약** — 이 파일은 `zod`만 import한다. `transfer-tax-schema-base-shape.ts`·`transfer-tax-schema-split.ts`(둘 다 leaf)가
- *    spread하므로 다른 스키마 파일을 import하면 TDZ 위험이 생긴다. 일반건물 스키마가 여기 shape를 import한다(방향이 한쪽).
+ * ⚠️ **leaf 규약** — 이 파일은 **다른 스키마 파일을 import하지 않는다**(`zod`와 스키마가 아닌 순수 모듈만). `transfer-tax-schema-base-shape.ts`·
+ *    `transfer-tax-schema-split.ts`(둘 다 leaf)가 spread하므로 스키마 파일을 import하면 TDZ 위험이 생긴다. 일반건물 스키마가 여기 shape를 import한다(방향이 한쪽).
  */
 import { z } from "zod";
+import { toDate } from "@/lib/api/date-coerce";
+import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물·일반건물 공통. */
 export const carryoverExclusionShape = z.object({
@@ -38,6 +40,20 @@ export const carryoverGiftEventShape = z.object({
 });
 
 /**
+ * ⑫ 주택 split의 증여 사건 — 일반건물 사건 shape에 **§97의2②2호 판정 사실**(P5)을 더한다. 일반건물은 1세대1주택 판정이 없어 이 키를 받지 않는다
+ * (받으면 조용히 무시되는 입력이 된다).
+ *   · 세대 사실(결정 #33·#34·#38) — 건물(주택)이 이월과세일 때만(B·C). 토지만(A)이면 건물은 수증자 본인 취득이라 묻지 않는다(P5-Q3).
+ *   · 배우자 예외(D45) — 주택 통째 증여(C)만. 해석례의 대상이 주택·주택 지분이다(P5-Q4).
+ */
+export const splitCarryoverGiftEventShape = carryoverGiftEventShape.extend({
+  donorSameHouseholdContinuous: z.boolean().optional(),
+  donorHouseholdHoldingStartDate: z.string().date().optional(),
+  donorPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
+  donorRejoinedAfterDivorce: z.boolean().optional(),
+  spouseGiftOneHouseAtGiftDate: z.boolean().optional(),
+});
+
+/**
  * ⑫ **파트별** 이월과세 입력 — 증여자가 그 파트(토지/건물)를 취득한 날·금액.
  * `donorAcquisitionPrice`는 양수 필수다(I-4: 파트 환산 없음 — 모르면 이 화면은 아직 지원하지 않는다).
  */
@@ -51,12 +67,54 @@ export const splitCarryoverPartShape = z.object({
 
 /** 단건 `propertyBaseShape`·컴패니언 `splitAcquisitionShape`가 spread하는 최상위 키 3종 */
 export const splitCarryoverShape = {
-  carryoverGiftEvent: carryoverGiftEventShape.optional(),
+  carryoverGiftEvent: splitCarryoverGiftEventShape.optional(),
   landCarryoverPart: splitCarryoverPartShape.optional(),
   buildingCarryoverPart: splitCarryoverPartShape.optional(),
 } as const;
 
 type Issue = (path: (string | number)[], message: string) => void;
+
+/**
+ * 결정 #38 — 이월과세 「증여자와 계속 같은 세대」가 「예」면 세대 보유 시작일(증여자 취득일 ≤ 시작일 < 증여 등기접수일)이 필수다.
+ * 비우면 엔진이 미확인으로 읽어 「같다고 답했는데 효과가 없는」 상태가 된다. 일반 증여 refine(`transfer-tax-schema-refines.ts`)·
+ * ⑧(`transfer-tax-validate-acquisition.ts`)과 같은 조건이다. 자산 단위 이월과세(`refineCarryoverHouseholdStart`)와 주택 split 파트 이월과세(P5)가 함께 쓴다.
+ */
+export function carryoverHouseholdStartIssues(
+  ct: {
+    giftRegistryDate: string;
+    donorAcquisitionDate: string;
+    donorSameHouseholdContinuous?: boolean;
+    donorHouseholdHoldingStartDate?: string;
+    donorPriorHouseholdResidenceMonths?: number;
+  },
+  issue: Issue,
+  prefix: (string | number)[] = [],
+): void {
+  // 결정 #38-7 — 증여 전 동일세대 거주 개월은 「계속 같은 세대」일 때만 의미가 있다. 아니면 조용히 무시되는 입력이 되므로 막는다(⑧·④와 같은 조건).
+  if (ct.donorSameHouseholdContinuous !== true) {
+    if (ct.donorPriorHouseholdResidenceMonths !== undefined)
+      issue([...prefix, "donorPriorHouseholdResidenceMonths"], "증여 전 동일세대 거주 개월은 증여자와 계속 같은 세대일 때만 입력할 수 있습니다");
+    return;
+  }
+  const start = ct.donorHouseholdHoldingStartDate;
+  if (!start) {
+    issue([...prefix, "donorHouseholdHoldingStartDate"], "증여자와 계속 같은 세대이면 세대 보유 시작일이 필요합니다 (소득세법 시행령 §154①)");
+  } else if (start >= ct.giftRegistryDate || start < ct.donorAcquisitionDate) {
+    issue([...prefix, "donorHouseholdHoldingStartDate"], "세대 보유 시작일은 증여자 취득일 이후, 증여일 이전이어야 합니다");
+  } else if (ct.donorPriorHouseholdResidenceMonths !== undefined) {
+    const max = maxPriorResidenceMonthsBetween(toDate(start, "donorHouseholdHoldingStartDate"), toDate(ct.giftRegistryDate, "giftRegistryDate"));
+    if (ct.donorPriorHouseholdResidenceMonths > max)
+      issue(
+        [...prefix, "donorPriorHouseholdResidenceMonths"],
+        `증여 전 동일세대 거주 개월은 세대 보유 시작일부터 증여 등기접수일까지(${max}개월)를 넘을 수 없습니다`,
+      );
+  }
+}
+
+export const SPLIT_CARRYOVER_HOUSEHOLD_LAND_ONLY_MESSAGE =
+  "증여자와의 세대 사실은 건물(주택)이 이월과세일 때만 입력합니다 — 토지만 이월과세이면 건물은 본인이 취득해 1세대1주택 판정에 쓰지 않습니다 (소득세법 시행령 §154①)";
+export const SPLIT_CARRYOVER_SPOUSE_EXCEPTION_PART_MESSAGE =
+  "배우자 예외(증여일 현재 1세대1주택을 배우자로부터 증여)는 토지·건물을 통째로 증여받은 경우에만 입력합니다 — 토지만·건물만 증여받은 경우는 해석례가 없어 적용하지 않습니다 (소득세법 §97의2②2호)";
 
 /**
  * 파트 이월과세 입력의 값 검사 (⑫) — 일반건물 `refineGbCarryover`의 거울.
@@ -68,7 +126,7 @@ type Issue = (path: (string | number)[], message: string) => void;
  */
 export function refineSplitCarryoverValues(
   d: {
-    carryoverGiftEvent?: z.infer<typeof carryoverGiftEventShape>;
+    carryoverGiftEvent?: z.infer<typeof splitCarryoverGiftEventShape>;
     landCarryoverPart?: z.infer<typeof splitCarryoverPartShape>;
     buildingCarryoverPart?: z.infer<typeof splitCarryoverPartShape>;
     landAcquisitionPrice?: number;
@@ -84,6 +142,20 @@ export function refineSplitCarryoverValues(
     if (part && part.donorAcquisitionDate > ev.giftRegistryDate)
       issue([...at(key), "donorAcquisitionDate"], "증여자의 취득일이 증여 등기접수일보다 늦을 수 없습니다 (소득세법 §97의2①)");
   }
+  // P5 §97의2②2호 — 세대 사실은 건물(주택) 파트의 사실이다(⑭가 건물 파트에만 싣는다). 토지만이면 받지 않는다(조용히 버려지는 입력 방지).
+  const hasHousehold =
+    ev.donorSameHouseholdContinuous !== undefined || ev.donorHouseholdHoldingStartDate !== undefined
+    || ev.donorPriorHouseholdResidenceMonths !== undefined || ev.donorRejoinedAfterDivorce !== undefined;
+  if (hasHousehold && !d.buildingCarryoverPart)
+    issue(at("carryoverGiftEvent").concat("donorSameHouseholdContinuous"), SPLIT_CARRYOVER_HOUSEHOLD_LAND_ONLY_MESSAGE);
+  if (d.buildingCarryoverPart)
+    carryoverHouseholdStartIssues(
+      { ...ev, donorAcquisitionDate: d.buildingCarryoverPart.donorAcquisitionDate },
+      issue,
+      at("carryoverGiftEvent"),
+    );
+  if (ev.spouseGiftOneHouseAtGiftDate !== undefined && !(d.landCarryoverPart && d.buildingCarryoverPart))
+    issue(at("carryoverGiftEvent").concat("spouseGiftOneHouseAtGiftDate"), SPLIT_CARRYOVER_SPOUSE_EXCEPTION_PART_MESSAGE);
   if (ev.donorRelation === "other") return;
   const sum =
     (d.landCarryoverPart ? (d.landAcquisitionPrice ?? 0) : 0) + (d.buildingCarryoverPart ? (d.buildingAcquisitionPrice ?? 0) : 0);

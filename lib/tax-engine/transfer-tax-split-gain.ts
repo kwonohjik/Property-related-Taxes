@@ -69,7 +69,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const earlyLandMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const earlyBuildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
 
-  // 토지 파트 취득원인 규칙(D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호 · P1 파트 이월과세 S0~S9) — ⑫·⑧과 같은 leaf.
+  // 토지 파트 취득원인 규칙(D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호 · P1 파트 이월과세 S0~S8 — S9는 P5에서 해결자 ②2호로 대체) — ⑫·⑧과 같은 leaf.
   // 토지 취득일 조기 반환보다 **앞**이다: 토지 상속·증여가 지정됐는데 토지 취득일이 없으면 토지 파트가
   // 통째로 빠진 채 계산됐다(D1 G-12). 사실 조립은 해결자(`calcSplitCarryoverScenarios`)와 같은 어댑터다.
   const [causeIssue] = collectSplitPartCauseIssues(splitPartCauseFactsOfInput(input));
