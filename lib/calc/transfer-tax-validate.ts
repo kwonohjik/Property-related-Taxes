@@ -32,7 +32,7 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
-import { burdenedGiftBundleKind } from "./burdened-gift-transfer-price-scope";
+import { isBlockedMixedBurdenedGiftBundle } from "./burdened-gift-transfer-price-scope";
 import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-price-scope";
 import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
 
@@ -359,7 +359,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
         });
       }
       // 일반 양도 + 부담부증여 혼합 묶음 — 안분·채무 재배분이 설계되지 않아 세액이 틀린다(⑩과 같은 술어 · `burdenedGiftBundleKind` JSDoc).
-      if (!fullFractional && burdenedGiftBundleKind(form.assets.map((a) => a.transferType === "burdened_gift")) === "mixed") {
+      if (isBlockedMixedBurdenedGiftBundle(form.assets, form.assetSplitMode)) {
         issues.push({ step, message: MIXED_BURDENED_GIFT_BUNDLE_MESSAGE });
       }
 
