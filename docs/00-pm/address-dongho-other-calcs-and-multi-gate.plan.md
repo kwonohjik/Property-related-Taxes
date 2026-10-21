@@ -1,6 +1,6 @@
 # 「확인 필요」 2건 재점검 — 다른 계산기 동·호 소실 · 다건 단계 이동 검증 우회 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Do 진행 — Q-1~Q-4 모두 권고안 a(2026-10-21 사용자 결정)** · 워크트리 `../Property-related-Taxes-oos` · 브랜치 `docs/address-units-oos-plan`
+> 작성 2026-10-21 · 상태 **Do 완료 — Q-1~Q-4 모두 권고안 a(2026-10-21). 구현 PR-A #2339 · PR-B #2338(머지 대기) · 결과는 「Do 결과」** · 워크트리 `../Property-related-Taxes-oos` · 브랜치 `docs/address-units-oos-plan`
 > 기준 master `6a7482912`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `transfer-address-units-remount.plan.md` 「범위 밖(확인 필요로 남김)」 1·2번째 항목(#2332·#2334 머지 뒤).
 > 실측 spec·렌더 probe는 커밋하지 않았다(E2E는 공시가격·주소 검색을 `page.route`로 고정, 렌더 probe는 vitest jsdom).
@@ -186,3 +186,20 @@
 - 취득·재산세 1단계의 상세주소 칸이 입력을 저장하지 않는 것(`detail: ""` 고정)
 - 다건 자산 준비 판정에 3단계를 넣을지(Q-4 b)
 - 앞 계획서의 남은 항목: 이력 불러오기·첫 자산 교체·다건 편집에서 다시 마운트되는 경로의 실측
+
+---
+
+## Do 결과 (2026-10-21)
+
+### PR-B #2338 (`fix/multi-step-gate`)
+- M1 `handleCalculate` 최종 관문(`notReadyPropertiesMessage` — 건 이름 + 첫 사유) · M2 단계 표시 탭 가드 · 편집 화면 「공통 설정으로 →」·「+ 양도 건 추가」 전 단계 검증(`passesAllSteps`, 단건 `handleSubmit`과 공용) · 다른 건이 남았으면 목록으로
+- 회귀 `e2e/transfer-multi-step-gate.spec.ts` G-1~G-6. 뮤테이션 4건 → G-2·G-1·G-3·G-4가 각각 실패(1:1)
+- **우회 경로로만 계산되던 E2E 픽스처 7 spec**이 드러났다(소재지·명부 없음 확정·취득 경위 누락). 필수 입력을 채웠고 계산값 단언은 바꾸지 않았다
+- 다건·검증 E2E 20 spec 717건 + 다건 사용 9 spec 통과, `test:transfer` 1,351파일 통과
+
+### PR-A #2339 (`fix/address-dongho-other-calcs`)
+- R1 6곳 · R2(동·호가 있으면 재조회, 「없음」 알림은 `knownHasUnits === true`일 때만) · R3 시드
+- R2가 양도세 소재지에도 닿는 경로를 Do에서 찾았다: 「세대 없음」 확정 뒤에도 동·호가 남아 다음 마운트에서 재조회되고, 같은 「없음」을 또 저장하면 결과가 지워진다 → 가드 + U-10(가드 제거 시 쓰기 0 → 4회로 실패)
+- A6(다시점 모달)은 렌더 테스트 M-1로 실측했다
+- `BuildingStdPriceForm.tsx` 809줄(master 801) → 양도 분기 분리(539·377줄, 옮긴 258줄 글자 단위 동일)
+- 뮤테이션 9건 전부 검출. 주소 관련 E2E 57 spec·건물 기준시가 29 spec 통과, 전체 vitest 통과
