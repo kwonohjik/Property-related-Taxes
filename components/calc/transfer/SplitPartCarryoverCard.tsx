@@ -18,6 +18,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
@@ -79,7 +80,7 @@ export function SplitPartCarryoverCard(props: SplitPartCarryoverCardProps) {
           tone="amber"
           size="sm"
           title="증여자 취득가액을 모름 — 환산취득가액"
-          description={`증여자가 이 ${name}을(를) 취득할 당시의 실지거래가액을 알 수 없을 때 — 증여자 취득 당시 기준시가로 이 ${name}만 환산합니다 (소득세법 §97①1호 나목)`}
+          description={`증여자가 이 ${name}을(를) 취득할 당시의 실지거래가액을 알 수 없을 때 — 증여자 취득 당시 기준시가로 이 ${name}만 환산합니다 (${TRANSFER.CARRYOVER_ESTIMATED_ACQ})`}
           checked={estimated}
           onCheckedChange={(v) => onPatch({ partEstimated: v })}
         />
@@ -110,7 +111,7 @@ export function SplitPartCarryoverCard(props: SplitPartCarryoverCardProps) {
                 환산취득가액 = 이 {name}의 양도가액 × <Frac top="증여자 취득 당시 기준시가" bottom="양도시 기준시가" />
               </p>
               <p className="text-caption text-amber-900 dark:text-amber-200">
-                필요경비 = 개산공제(증여자 취득 당시 기준시가 × 개산공제율, 시행령 §163⑥) — 자본적지출과 양도비 합계가 (환산취득가액 + 개산공제)보다 크면 그 합계로 대신합니다 (소득세법 §97②2호 단서).
+                필요경비 = 개산공제(증여자 취득 당시 기준시가 × 개산공제율, {TRANSFER.CARRYOVER_ESTIMATED_LUMP_DED}) — 자본적지출과 양도비 합계가 (환산취득가액 + 개산공제)보다 크면 그 합계로 대신합니다 ({TRANSFER.CARRYOVER_ESTIMATED_EXPENSE_PROVISO}).
               </p>
             </ToneCard>
           </>
@@ -118,7 +119,7 @@ export function SplitPartCarryoverCard(props: SplitPartCarryoverCardProps) {
           <FieldCard
             label="증여자 취득가액"
             field={`${anchorPrefix}.donorAcquisitionPrice`}
-            hint={`증여자가 ${name}을(를) 취득할 당시의 금액 (소득세법 §97①1호) — 증여자가 상속·증여로 취득했다면 상속개시일·증여일 현재 상속세 및 증여세법상 평가액입니다 (시행령 §163⑨). 실지거래가액을 알 수 없으면 위 «환산취득가액»을 켜세요.`}
+            hint={`증여자가 ${name}을(를) 취득할 당시의 금액 (${TRANSFER.CARRYOVER_DONOR_BASIS}) — 증여자가 상속·증여로 취득했다면 상속개시일·증여일 현재 상속세 및 증여세법상 평가액입니다 (${TRANSFER.INHERITED_AFTER_DEEMED}). 실지거래가액을 알 수 없으면 위 «환산취득가액»을 켜세요.`}
           >
             <CurrencyInput
               label=""

@@ -16,6 +16,7 @@
 import { z } from "zod";
 import { toDate } from "@/lib/api/date-coerce";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물·일반건물 공통. */
 export const carryoverExclusionShape = z.object({
@@ -155,18 +156,18 @@ export function refineSplitCarryoverValues(
     if (!part) continue;
     if (part.useEstimatedAcquisition === true) {
       if (part.donorAcquisitionPrice !== undefined)
-        issue([...at(key), "donorAcquisitionPrice"], `${noun} 파트 환산취득가액을 쓰면 증여자 취득가액은 보내지 않습니다 — 둘 중 하나만 입력합니다 (소득세법 §97의2①1호)`);
+        issue([...at(key), "donorAcquisitionPrice"], `${noun} 파트 환산취득가액을 쓰면 증여자 취득가액은 보내지 않습니다 — 둘 중 하나만 입력합니다 (${TRANSFER.CARRYOVER_DONOR_BASIS})`);
       if (part.donorStandardPriceAtAcquisition === undefined)
-        issue([...at(key), "donorStandardPriceAtAcquisition"], `${noun} 파트 환산취득가액에는 증여자 취득 당시 그 파트 기준시가가 필요합니다 (소득세법 §97①1호 나목·§97의2①1호)`);
+        issue([...at(key), "donorStandardPriceAtAcquisition"], `${noun} 파트 환산취득가액에는 증여자 취득 당시 그 파트 기준시가가 필요합니다 (${TRANSFER.CARRYOVER_ESTIMATED_ACQ}·${TRANSFER.CARRYOVER_DONOR_BASIS})`);
       // 분모 — 엔진이 환산 파트에 한해 던지는 조건과 같다. 양도시 기준시가 연혁 면제(2016.1.1. 전 구분 기재)는 환산 파트가 있으면 적용하지 않는다(분모가 계산에 쓰인다).
       if (!((transferStd ?? 0) > 0))
         issue([...prefix, key === "landCarryoverPart" ? "landStandardPriceAtTransfer" : "buildingStandardPriceAtTransfer"],
           `${noun} 파트 환산취득가액의 분모인 양도 당시 ${noun} 기준시가가 필요합니다 — 취득시 비율로 대신 나누지 않습니다 (소득세법 §99①1호, 시행령 §164③)`);
     } else {
       if (part.donorStandardPriceAtAcquisition !== undefined)
-        issue([...at(key), "donorStandardPriceAtAcquisition"], `${noun} 파트 환산 분자는 환산취득가액을 쓸 때만 보낼 수 있습니다 — 조용히 버려지지 않도록 막습니다 (소득세법 §97의2①1호)`);
+        issue([...at(key), "donorStandardPriceAtAcquisition"], `${noun} 파트 환산 분자는 환산취득가액을 쓸 때만 보낼 수 있습니다 — 조용히 버려지지 않도록 막습니다 (${TRANSFER.CARRYOVER_DONOR_BASIS})`);
       if (part.donorAcquisitionPrice === undefined)
-        issue([...at(key), "donorAcquisitionPrice"], `${noun} 파트 증여자 취득가액이 필요합니다 — 모르면 환산취득가액(증여자 취득 당시 기준시가)으로 입력하세요 (소득세법 §97의2①1호)`);
+        issue([...at(key), "donorAcquisitionPrice"], `${noun} 파트 증여자 취득가액이 필요합니다 — 모르면 환산취득가액(증여자 취득 당시 기준시가)으로 입력하세요 (${TRANSFER.CARRYOVER_DONOR_BASIS})`);
     }
   }
   const ev = d.carryoverGiftEvent;

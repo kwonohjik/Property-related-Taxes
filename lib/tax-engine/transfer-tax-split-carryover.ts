@@ -208,7 +208,7 @@ export function calcSplitCarryoverScenarios(
     if (ct.useEstimatedAcquisition === true && !((ct.donorStandardPriceAtAcquisition ?? 0) > 0))
       throw new TaxCalculationError(
         TaxErrorCode.INVALID_INPUT,
-        `${key === "land" ? "토지" : "건물"} 파트 환산취득가액에는 증여자 취득 당시 그 파트 기준시가(양수)가 필요합니다 (${TRANSFER.CARRYOVER_DONOR_BASIS}, 시행령 §176조의2②)`,
+        `${key === "land" ? "토지" : "건물"} 파트 환산취득가액에는 증여자 취득 당시 그 파트 기준시가(양수)가 필요합니다 (${TRANSFER.CARRYOVER_DONOR_BASIS}, ${TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ})`,
         { field: key === "land" ? "landCarryoverPart" : "buildingCarryoverPart" },
       );
     const eligibility = judgeCarryoverEligibility(ct, rawInput.transferDate);

@@ -199,17 +199,17 @@ export function splitCarryoverEstimatedExpenseLines(p: SplitCarryoverPartView): 
   const parts: string[] = [];
   if (p.swapApplied) {
     parts.push(
-      `${p.label} 환산취득가액·개산공제 대신 자본적지출·양도비 합계 ${won(p.recipientExpense + p.donorCapexAdded)}(수증자 자본적지출·양도비 ${won(p.recipientExpense)} + 증여자 자본적지출 ${won(p.donorCapexAdded)})를 필요경비로 적용 (소득세법 §97②2호 단서)`,
+      `${p.label} 환산취득가액·개산공제 대신 자본적지출·양도비 합계 ${won(p.recipientExpense + p.donorCapexAdded)}(수증자 자본적지출·양도비 ${won(p.recipientExpense)} + 증여자 자본적지출 ${won(p.donorCapexAdded)})를 필요경비로 적용 (${TRANSFER.CARRYOVER_ESTIMATED_EXPENSE_PROVISO})`,
     );
   } else {
     const base = p.lumpDeductionBase ?? e.donorStdPriceAtAcquisition;
     const share = base !== e.donorStdPriceAtAcquisition ? "(지분 반영) " : "";
     if (e.lumpDeduction !== undefined)
-      parts.push(`${p.label} 개산공제 = 증여자 취득 당시 기준시가 ${share}${won(base)} × ${lumpRateText(p.lumpDeductionRate)} = ${won(e.lumpDeduction)} (시행령 §163⑥)`);
+      parts.push(`${p.label} 개산공제 = 증여자 취득 당시 기준시가 ${share}${won(base)} × ${lumpRateText(p.lumpDeductionRate)} = ${won(e.lumpDeduction)} (${TRANSFER.CARRYOVER_ESTIMATED_LUMP_DED})`);
     if (p.donorCapexAdded > 0)
-      parts.push(`증여자 자본적지출 ${won(p.donorCapexAdded)}은(는) 환산취득가액을 쓰므로 필요경비에 넣지 않았습니다 — 자본적지출·양도비 합계가 (환산취득가액 + 개산공제)보다 클 때만 단서로 대신 적용합니다 (소득세법 §97②2호)`);
+      parts.push(`증여자 자본적지출 ${won(p.donorCapexAdded)}은(는) 환산취득가액을 쓰므로 필요경비에 넣지 않았습니다 — 자본적지출·양도비 합계가 (환산취득가액 + 개산공제)보다 클 때만 단서로 대신 적용합니다 (${TRANSFER.CARRYOVER_ESTIMATED_EXPENSE_PROVISO})`);
   }
-  if (p.giftTaxAdded > 0) parts.push(`필요경비에 증여세 상당액 ${won(p.giftTaxAdded)} 가산 (소득세법 §97의2①3호 — 단서 비교 밖의 별도 산입)`);
+  if (p.giftTaxAdded > 0) parts.push(`필요경비에 증여세 상당액 ${won(p.giftTaxAdded)} 가산 (${TRANSFER.CARRYOVER_GIFT_TAX_EXPENSE} — 단서 비교 밖의 별도 산입)`);
   return parts;
 }
 
