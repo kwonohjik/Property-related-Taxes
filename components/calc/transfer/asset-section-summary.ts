@@ -8,6 +8,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ASSET_KIND_LABELS, ACQUISITION_CAUSE_LABELS, TRANSFER_TYPE_LABELS } from "./asset-labels";
+import { bgExpenseInputsUnused } from "@/lib/calc/burdened-gift-expense-scope";
 
 export type AssetSectionKey = "basic" | "transfer" | "acquisition" | "expense" | "extras";
 
@@ -124,10 +125,14 @@ export function summarizeAssetSections(
     amount(asset.capitalExpenditure) > 0 ||
     amount(asset.transferExpense) > 0 ||
     amount(asset.directExpenses) > 0;
-  const expense: SectionSummary = {
-    label: expenseFilled ? "입력됨" : "미입력",
-    filled: expenseFilled,
-  };
+  // 부담부증여 · 기준시가(감정가액·매매사례가액) 산정 — 칸이 숨겨지고 개산공제만 쓰인다. 숨은 값을 「입력됨」으로 세지 않는다.
+  //   사용자가 입력할 것이 없으므로 완료(✓)로 표시하지 않는다.
+  const expense: SectionSummary = bgExpenseInputsUnused(asset)
+    ? { label: "개산공제만", filled: false }
+    : {
+        label: expenseFilled ? "입력됨" : "미입력",
+        filled: expenseFilled,
+      };
 
   // ⑤ 기타 특례 — NBL 정밀판정(land) / 장기임대 거주주택(housing·입주권). 둘 다 아니면 null
   let extras: SectionSummary | null = null;

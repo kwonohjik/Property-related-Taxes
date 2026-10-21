@@ -12,6 +12,8 @@ import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { mixedSaleSplitScope } from "@/lib/calc/mixed-use-sale-split-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
+import { bgExpenseUnusedBasis } from "@/lib/calc/burdened-gift-expense-scope";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 interface Props {
   asset: AssetForm;
@@ -59,6 +61,9 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
   // 분리 ON은 파트 카드가 같은 안내를 띄우고 ⑧ V-8이 자산 단위 칸을 파트 칸으로 안내한다. 모드는 ④·⑧과 같은 leaf.
   const gbModes = asset.assetKind === "general_building" && !asset.hasSeperateLandAcquisitionDate ? gbPartModes(asset) : null;
   const showGbDeductionOnly = gbModes?.land === "appraisal" || gbModes?.land === "salesCase";
+  // 부담부증여 · 취득가액이 기준시가(감정가액·매매사례가액) — 두 칸이 세액에 쓰이지 않아 숨기고 이유를 한 줄로 알린다.
+  // 값은 지우지 않는다(산정방식을 되돌리면 다시 쓰인다). 판정은 요약 칩과 같은 leaf.
+  const bgUnusedBasis = bgExpenseUnusedBasis(asset);
   return (
     <>
       {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97① 가목·나목)
@@ -67,6 +72,17 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
         <p className="text-xs font-semibold text-foreground">
           필요경비 <span className="text-muted-foreground font-normal">(소득세법 §97①·②)</span>
         </p>
+        {bgUnusedBasis ? (
+          <ToneCard tone="amber">
+            <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="bg-expense-unused-notice">
+              부담부증여의 취득가액을 {bgUnusedBasis}
+              {bgUnusedBasis === "기준시가" ? "로" : "으로"} 산정하므로 필요경비는 개산공제(취득시 기준시가 × 채무비율 × 율 —
+              「소득세법 시행령」 제163조 제6항)만 적용됩니다. 자본적지출·양도비는 계산에 쓰이지 않습니다(「소득세법」 제97조
+              제2항 제2호 — 자본적지출·양도비와 비교하는 단서는 환산취득가액에만 적용).
+            </p>
+          </ToneCard>
+        ) : (
+        <>
         {showGbDeductionOnly && <GbDeductionOnlyNotice />}
         <CurrencyInput
           label="자본적 지출액 (원) — §97① 가목"
@@ -123,6 +139,8 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
             />
           );
         })()}
+        </>
+        )}
         {showMixedBuildingDirect && (
           <CurrencyInput
             label="건물에 직접 귀속되는 양도비 (원) — 겸용주택"
@@ -137,10 +155,12 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
             }
           />
         )}
+        {!bgUnusedBasis && (
         <p className="text-caption text-muted-foreground">
           환산취득가 모드에서 (자본+양도비) &gt; (환산+개산공제) 시 §97②2호 단서에 따라 자본+양도비를 필요경비로 적용합니다(감정가액·매매사례가액 모드는 제외).
         </p>
-        {isPartial && (
+        )}
+        {isPartial && !bgUnusedBasis && (
           <p className="text-caption text-muted-foreground" data-testid="partial-expense-basis">
             일부 양도 시 <strong>공통되는</strong> 필요경비는 자산 가액에 비례하여 안분합니다 (「소득세법」 제100조 제2항 후문 유추 · 국심2005구1458).
           </p>

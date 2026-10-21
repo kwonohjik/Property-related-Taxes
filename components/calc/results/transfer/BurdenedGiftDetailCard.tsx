@@ -46,6 +46,12 @@ interface Props {
    * 있으면 환산 행을 이것으로 바꾼다 — 명세의 일반 환산값은 계산에 쓰이지 않는다(`transfer-tax-burdened-gift-step.ts` `redevSec166Conversion`).
    */
   redevSec166?: { acquisition: number; lumpDeduction: number };
+  /**
+   * 원조합원 입주권·재개발 완공 아파트(§166 자산) — 신고서 취득가액 합계(단건 `redevFilingTotals` · 묶음 엔진 표시 echo).
+   * 명세의 자산별 취득가액은 인가 전 분(종전 부동산)뿐이라, 있으면 그 행을 「종전 부동산 취득가(인가 전 분)」로 부르고
+   * 인가 후 분·청산금 납부분과의 관계를 한 줄로 잇는다(「소득세법 시행령」 제166조 제1항 제1호). 카드가 다시 계산하지 않는다.
+   */
+  redevFilingAcquisition?: number;
 }
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
@@ -60,8 +66,9 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166 }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
+  const buildingAcqLabel = redevFilingAcquisition !== undefined ? "종전 부동산 취득가(인가 전 분)" : "건물 취득가";
   const rowSelected = (mode: string) =>
     bg.sangjeungbeopValuation.selectedMode === mode
       ? "font-semibold bg-fuchsia-100/70 dark:bg-fuchsia-900/40"
@@ -243,7 +250,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               {bg.perAsset.building.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    건물 취득가 = 실지취득가 {fmt(bg.perAsset.building.actualAcquisition ?? 0)} × 채무비율{" "}
+                    {buildingAcqLabel} = 실지취득가 {fmt(bg.perAsset.building.actualAcquisition ?? 0)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
                   <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
@@ -269,7 +276,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               {bg.perAsset.building.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    건물 취득가 = {PRESUMED_LABEL[bg.acquisitionMethodUsed]} {fmt(bg.perAsset.building.presumedAcquisition ?? 0)} × 채무비율{" "}
+                    {buildingAcqLabel} = {PRESUMED_LABEL[bg.acquisitionMethodUsed]} {fmt(bg.perAsset.building.presumedAcquisition ?? 0)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
                   <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
@@ -314,13 +321,22 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               {bg.perAsset.building.acquisitionPrice > 0 && (
                 <tr>
                   <td className="py-1 pr-2 pl-3">
-                    건물 취득가 = 취득기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
+                    {buildingAcqLabel} = 취득기준시가 {fmt(bg.perAsset.building.stdPriceAtAcquisition)} × 채무비율{" "}
                     {(bg.debtRatio * 100).toFixed(4)}%
                   </td>
                   <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.perAsset.building.acquisitionPrice)}</td>
                 </tr>
               )}
             </>
+          )}
+          {redevFilingAcquisition !== undefined && (
+            <tr data-testid="bg-redev-filing-acquisition">
+              <td className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">
+                ※ 인가 후 분·청산금 납부분의 취득가액은 「소득세법 시행령」 제166조 제1항 제1호에 따라 재개발·재건축 상세에서 따로
+                계산합니다. 신고서 취득가액 합계
+              </td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevFilingAcquisition)}</td>
+            </tr>
           )}
           <tr>
             <td className="py-1 pr-2 text-fuchsia-700 dark:text-fuchsia-300">무상이전분 (증여세 과세 가액)</td>

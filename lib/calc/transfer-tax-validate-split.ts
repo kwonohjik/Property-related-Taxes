@@ -316,6 +316,20 @@ export function validateLandPartCause(
 }
 
 /**
+ * 분리 검증(`validateSplitDirectInputs`)이 도는가 — 토지·건물 취득일 분리 · 소유자 분리 · 파트 이월과세.
+ * 이 검증은 자산 단위 자본적지출을 파트 칸으로 보내므로(아래 파트 자본적지출 규칙), 그 칸을 숨기는 화면 게이트
+ * (`bgExpenseInputsUnused`)가 같은 판정을 써야 숨긴 값으로 막히지 않는다.
+ */
+export function isSplitValidationActive(rawAsset: AssetForm): boolean {
+  const asset = normalizeBuildingCauseInputs(rawAsset);
+  return (
+    !!asset.hasSeperateLandAcquisitionDate ||
+    (effectiveSelfOwns(asset) ?? "both") !== "both" ||
+    effectiveCarryoverDonorSplit(asset)
+  );
+}
+
+/**
  * 분리 직접 입력 초과 검증. 오류 메시지 또는 null.
  *
  * 검증 대상 게이트 — UI가 양도가액 직접입력 칸을 노출하는 조건과 동일:
@@ -338,7 +352,7 @@ export function validateSplitDirectInputs(
   // P2 C — 파트 이월과세(증여자 토지·건물 취득일 상이)도 ④가 분리 축을 싣는다(`isSplitPayloadActive`). 구조 규칙(leaf)은 호출부
   //   (`validateSplitCarryoverInputs`)가 C 사실로 이미 걸었으므로 여기서는 양도가액 구분·양도시 기준시가·파트 자본적지출만 본다.
   const carryoverSplit = effectiveCarryoverDonorSplit(asset);
-  if (!asset.hasSeperateLandAcquisitionDate && !selfOwnsSplit && !carryoverSplit) return null;
+  if (!isSplitValidationActive(rawAsset)) return null;
 
   const causeErr = carryoverSplit ? null : validateLandPartCause(asset, label, { ...opts, formTransferDate });
   if (causeErr) return causeErr;

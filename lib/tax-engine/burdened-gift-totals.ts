@@ -7,6 +7,7 @@
  */
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxResult } from "./types/transfer.types";
+import { redevFilingTotals } from "./redev-acquisition-inverse";
 
 export function burdenedGiftPerAssetTotals(brkd: Pick<TransferBurdenedGiftBreakdown, "perAsset">): {
   transferPrice: number;
@@ -31,4 +32,15 @@ export function redevInverseTransferPrice(
 ): number {
   const bg = result.redevelopmentDetail ? result.transferBurdenedGiftBreakdown : undefined;
   return bg ? burdenedGiftPerAssetTotals(bg).transferPrice : fallback;
+}
+
+/**
+ * 부담부증여 §166 자산(원조합원 입주권·재개발 완공 아파트)의 신고서 취득가액 합계 — 신고서 표(`FilingFormTableHelpers`)와 같은 역산.
+ * 명세 카드가 인가 전 분(`perAsset`)과 이 합계를 잇는 데 쓴다. §166 자산이 아니거나 부담부증여가 아니면 undefined.
+ */
+export function bgRedevFilingAcquisition(
+  result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
+): number | undefined {
+  if (!result.redevelopmentDetail || !result.transferBurdenedGiftBreakdown) return undefined;
+  return redevFilingTotals(result.redevelopmentDetail, redevInverseTransferPrice(result, 0)).acquisition;
 }
