@@ -152,7 +152,7 @@ describe("원조합원 입주권 컴패니언 — 취득가액은 §166 칸 (숨
   // S3 — 순서를 바꾼 기준: 원조합원 입주권이 주 자산이면 주 자산 ④가 §166 칸을 읽는다
   const S3 = () => calc(mkForm([ORIG_RIGHT, HOUSE], COMPANION_FORM));
 
-  it("OC-1 주택 주 + 원조합원 입주권 컴패니언: ⑧ 통과 · route 200 · 취득가액 4억 · 순서를 바꾼 값과 같다", async () => {
+  it("OC-1 주택 주 + 원조합원 입주권 컴패니언: ⑧ 통과 · route 200 · ④ 취득가액 4억 · 표시 취득가액 5억(§166 역산) · 순서를 바꾼 값과 같다", async () => {
     const ref = await S3();
     expect(ref.status).toBe(200);
     expect(ref.totalTax).toBe(267_003_000);
@@ -161,7 +161,9 @@ describe("원조합원 입주권 컴패니언 — 취득가액은 §166 칸 (숨
     expect(r.issues.map((i) => i.message)).toEqual([]);
     expect(r.body.companionAssets?.[0]?.fixedAcquisitionPrice).toBe(400_000_000);
     expect(r.status).toBe(200);
-    expect(redevProp(r.props)?.acquisitionPrice).toBe(400_000_000);
+    // 표시 취득가액은 단건 신고서와 같은 §166 역산(종전 취득가 400,000,000 + 납부 청산금 100,000,000) —
+    // `transfer.route.redev-aggregate-display-acquisition.anchor` RA-4. 입력이 §166 칸에서 오는지는 위 ④ 단언이 지킨다.
+    expect(redevProp(r.props)?.acquisitionPrice).toBe(500_000_000);
     expect(r.totalTax).toBe(ref.totalTax);
   });
 
@@ -172,7 +174,7 @@ describe("원조합원 입주권 컴패니언 — 취득가액은 §166 칸 (숨
     expect(r.totalTax).toBe(267_003_000);
   });
 
-  it("OC-3 원조합원 완공APT 컴패니언: 취득가액 4억 · 순서를 바꾼 값과 같다 · 옛 값 무시", async () => {
+  it("OC-3 원조합원 완공APT 컴패니언: 표시 취득가액 5억(§166 역산 — 종전 4억 + 청산금 1억) · 순서를 바꾼 값과 같다 · 옛 값 무시", async () => {
     const ref = await calc(mkForm([ORIG_APT, HOUSE], { ...COMPANION_FORM, householdHousingCount: "2" }));
     expect(ref.status).toBe(200);
 
@@ -181,13 +183,13 @@ describe("원조합원 입주권 컴패니언 — 취득가액은 §166 칸 (숨
     const r = await calc(form(""));
     expect(r.issues.map((i) => i.message)).toEqual([]);
     expect(r.status).toBe(200);
-    expect(redevProp(r.props)?.acquisitionPrice).toBe(400_000_000);
+    expect(redevProp(r.props)?.acquisitionPrice).toBe(500_000_000);
     expect(r.totalTax).toBe(ref.totalTax);
     expect((await calc(form("1"))).totalTax).toBe(ref.totalTax);
     expect((await calc(form("999999999"))).totalTax).toBe(ref.totalTax);
   });
 
-  it("OC-4 축 B 원조합원 50/50 화면 모양: 둘째 카드도 200 · 카드마다 취득가액 2억 · 단건 100%와 세액이 같다", async () => {
+  it("OC-4 축 B 원조합원 50/50 화면 모양: 둘째 카드도 200 · 카드마다 표시 취득가액 2.5억(§166 역산 — 종전 2억 + 청산금 5천만) · 단건 100%와 세액이 같다", async () => {
     const single = await calc(mkForm([ORIG_RIGHT], { contractTotalPrice: "1000000000" } as never));
     expect(single.status).toBe(200);
     expect(single.totalTax).toBe(0);
@@ -200,7 +202,7 @@ describe("원조합원 입주권 컴패니언 — 취득가액은 §166 칸 (숨
     const r = await calc(axisB(""));
     expect(r.issues.map((i) => i.message)).toEqual([]);
     expect(r.status).toBe(200);
-    expect(r.props.map((p) => p.acquisitionPrice)).toEqual([200_000_000, 200_000_000]);
+    expect(r.props.map((p) => p.acquisitionPrice)).toEqual([250_000_000, 250_000_000]);
     expect(r.totalTax).toBe(single.totalTax);
     const stale = await calc(axisB("1"));
     expect(stale.status).toBe(200);

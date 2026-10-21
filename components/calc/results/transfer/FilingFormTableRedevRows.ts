@@ -16,6 +16,8 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { RedevelopmentBranchDetail } from "@/lib/tax-engine/types/transfer.types";
 import { fmtDate, holdingPeriodFromDates } from "./FilingFormTableHelpers";
+// 전체 양도차익·마스킹 비과세분 — 역산 취득가액(`redevFilingTotals`)과 같은 leaf.
+import { redevBranchGrossGain, redevMaskedExemptGain } from "@/lib/tax-engine/redev-acquisition-inverse";
 
 // ── 내부 타입 ────────────────────────────────────────────────────
 
@@ -115,8 +117,8 @@ export function fillRedev4SplitBranchData(
   const settlementExempted = r.settlementExemptionApplied === true ? (r.exemptedGain ?? 0) : 0;
   let tg = 0, eg = 0, xg = 0;
   for (const [key, b] of branches) {
-    const tA = b.gainBeforeAllocation ?? b.gain;
-    const eA = (b.nontaxableGain ?? 0) + (key === "settlement" ? settlementExempted : 0);
+    const tA = redevBranchGrossGain(b);
+    const eA = (b.nontaxableGain ?? 0) + (key === "settlement" ? settlementExempted : 0) + redevMaskedExemptGain(b);
     setNum("transferGain", key, tA);
     setNum("exemptGain", key, eA);
     setNum("taxableGain", key, b.gain);
@@ -224,10 +226,10 @@ export function fillRedevRightReceiveBranchData(
   setNum("expenses", "total", nakkokExp + gamokExp);
 
   // 양도차익(안분 전)·비과세·과세대상
-  const nakkokTg = nakkok.gainBeforeAllocation ?? nakkok.gain;
-  const gamokTg = gamok.gainBeforeAllocation ?? gamok.gain;
-  const nakkokEg = nakkok.nontaxableGain ?? 0;
-  const gamokEg = gamok.nontaxableGain ?? 0;
+  const nakkokTg = redevBranchGrossGain(nakkok);
+  const gamokTg = redevBranchGrossGain(gamok);
+  const nakkokEg = (nakkok.nontaxableGain ?? 0) + redevMaskedExemptGain(nakkok);
+  const gamokEg = (gamok.nontaxableGain ?? 0) + redevMaskedExemptGain(gamok);
 
   setNum("transferGain", "preApproval", nakkokTg);
   setNum("exemptGain", "preApproval", nakkokEg);
@@ -336,10 +338,10 @@ export function fillRedevRightLandPayBranchData(
   setNum("expenses", "total", preExp + postExp);
 
   // 양도차익(안분 전)·비과세·과세대상
-  const preTg = pre.gainBeforeAllocation ?? pre.gain;
-  const postTg = post.gainBeforeAllocation ?? post.gain;
-  const preEg = pre.nontaxableGain ?? 0;
-  const postEg = post.nontaxableGain ?? 0;
+  const preTg = redevBranchGrossGain(pre);
+  const postTg = redevBranchGrossGain(post);
+  const preEg = (pre.nontaxableGain ?? 0) + redevMaskedExemptGain(pre);
+  const postEg = (post.nontaxableGain ?? 0) + redevMaskedExemptGain(post);
 
   setNum("transferGain", "preApproval", preTg);
   setNum("exemptGain", "preApproval", preEg);
@@ -442,10 +444,10 @@ export function fillRedevRightPayBranchData(
   setNum("expenses", "total", preExp + postExp);
 
   // 양도차익(안분 전)·비과세·과세대상
-  const preTg = pre.gainBeforeAllocation ?? pre.gain;
-  const postTg = post.gainBeforeAllocation ?? post.gain;
-  const preEg = pre.nontaxableGain ?? 0;
-  const postEg = post.nontaxableGain ?? 0;
+  const preTg = redevBranchGrossGain(pre);
+  const postTg = redevBranchGrossGain(post);
+  const preEg = (pre.nontaxableGain ?? 0) + redevMaskedExemptGain(pre);
+  const postEg = (post.nontaxableGain ?? 0) + redevMaskedExemptGain(post);
 
   setNum("transferGain", "preApproval", preTg);
   setNum("exemptGain", "preApproval", preEg);
