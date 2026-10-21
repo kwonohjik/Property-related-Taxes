@@ -34,7 +34,7 @@ import { isSection165_4_1ReversalCorp } from "./section165-4-reversal-corp";
 import { getValuationWeights } from "./valuation-165-4-basis";
 import { apply163_9Conversion, resolveTransferStd } from "./apply-163-9-conversion";
 import { STOCK, STOCK_ESTIMATED_EXPENSE_RATE } from "@/lib/tax-engine/legal-codes/stock";
-import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 
 export interface AcquisitionBasisResult {
   acquisitionPrice: number;
@@ -402,18 +402,19 @@ export function resolveAcquisitionBasis(
    * (부담부증여 상장 경로가 종가평균을 못 보내 취득가액이 0인 동안 가려져 있었다).
    * 분기별로 두면 새 환산 분기가 생길 때마다 같은 누락이 재발하므로 **합류 지점 1곳**에 둔다.
    *
-   * 곱셈은 `applyRatio`다 — 정수 %(57% 등) 같은 짧은 소수 비율은 십진 정확으로 계산해 `Math.floor(× 0.57)`의 1원 과소를 없앤다.
-   * ⚠️ **한계(계획서 `burdened-gift-debt-ratio-precision.plan.md` Q5)**: 와이어에는 소수 비율 하나뿐이라(C를 모른다) 순환 소수 비율
-   * (14/110 등)은 `applyRatio`가 옛 식으로 넘겨 참값이 정수인 곱에서 여전히 1원 과소일 수 있다. 완전 정확화는 와이어에
-   * 증여가액 C를 싣는 별도 변경(S-2)이다.
+   * 곱셈은 `safeMultiplyThenDivide(base, B, C)` — 소령 §159①의 분수 `A × B/C`를 소수 비율로 바꾸지 않고
+   * 정수 분자·분모로 곱한 뒤 나눈다. B는 `transferPrice`(실가·총액 양도에서 =`transferTotalPrice`, ⑫ refine이 형태를 강제),
+   * C는 와이어 필드 `burdenedGiftValuationAmount`다. 순환 소수 비율(14/110 등)에서도 참값이 정수인 곱이 1원 모자라지 않는다.
+   * C 미지정 = 안분하지 않는다(일반 양도 — 빈 값을 자동으로 채우지 않는다). `B === C`는 곱해도 같은 값이라 건너뛴다.
    */
   if (
     estimatedBase !== undefined &&
-    input.burdenedGiftDebtRatio !== undefined &&
-    input.burdenedGiftDebtRatio > 0 &&
-    input.burdenedGiftDebtRatio < 1
+    input.burdenedGiftValuationAmount !== undefined &&
+    input.burdenedGiftValuationAmount > 0 &&
+    transferPrice > 0 &&
+    transferPrice < input.burdenedGiftValuationAmount
   ) {
-    estimatedBase = applyRatio(estimatedBase, input.burdenedGiftDebtRatio);
+    estimatedBase = safeMultiplyThenDivide(estimatedBase, transferPrice, input.burdenedGiftValuationAmount);
   }
 
   // 개산공제 계산 (취득기준시가 총액 × 1%) — §163⑥4

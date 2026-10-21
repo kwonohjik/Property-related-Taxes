@@ -634,21 +634,23 @@ export type StockTransferInput = {
   postListingDetail?: PostListingDetailInput;
 
   /**
-   * [부담부증여 전용] §159 개산공제 base 안분 비율 — B(채무인수액) / C(증여가액).
+   * [부담부증여 전용] 증여재산 평가액 C — 소득세법 시행령 §159①1호·2호 `A × B/C`의 분모.
+   * 분자 B(채무인수액)는 별도 필드 없이 엔진 `transferPrice`(=`transferTotalPrice`)다 — §159①2호 «양도가액 = 증여가액 × B/C = B».
    *
-   * 적용 대상: acquisitionMode === "estimated" && usesUnlistedSupplementaryValuation(marketType)(비상장·기타자산) 경로.
-   * 비상장 §165④ 보충평가로 산출된 estimatedBase(acquisitionStdPriceTotal, 개산공제 §163⑥4 base)에만 곱함.
+   * 적용 대상: acquisitionMode === "estimated" 의 개산공제 base(`estimatedBase`, 취득 당시 기준시가 총액 — 시행령 §163⑥4호)에만
+   * `safeMultiplyThenDivide(estimatedBase, transferPrice, C)`로 곱한다. 비율(소수)로 바꿔 곱하지 않는다 — 순환 소수 비율에서
+   * 참값이 정수인 곱이 1원 과소가 된다(계획서 `docs/00-pm/stock-burdened-debt-fraction-wire.plan.md`).
    *
    * 이중 안분 금지 — acquisitionPrice(totalAcquisitionPrice)는 양도가(transferPrice=채무B) 기반
-   * 환산이라 transferPrice=B 주입 시 자동으로 B/C 안분됨. 여기에 또 비율을 곱하면 이중 안분.
+   * 환산이라 transferPrice=B 주입 시 자동으로 B/C 안분됨. 여기에 또 곱하면 이중 안분.
    *
-   * actual 모드: 클라이언트가 취득가를 B/C 안분 후 perShareAcquisitionPrice로 직접 주입 → 미사용.
-   * 상장 estimated 모드: transferPrice=B 기반 환산 자동 → 미사용.
+   * actual 모드: 클라이언트가 취득가를 B/C 안분 후 perShareAcquisitionPrice로 직접 주입 → 미사용(C를 싣지 않는다).
    *
-   * 범위: 0 < burdenedGiftDebtRatio <= 1.
-   * @default undefined — 일반 주식 양도(기존 동작 100% 보존)
+   * 범위: 0 < transferPrice(B) <= C. 실가·총액 단건 양도(`transferActualInputMode: "total"`)에서만 B=transferPrice가 성립해
+   * ⑫ refine이 그 외 형태(per_share·교환·lots)를 400으로 막는다. 폐지된 구필드 `burdenedGiftDebtRatio`(소수 비율)는 수신 시 400.
+   * @default undefined — 일반 주식 양도(기존 동작 100% 보존, 안분하지 않는다)
    */
-  burdenedGiftDebtRatio?: number;
+  burdenedGiftValuationAmount?: number;
 };
 
 // ============================================================

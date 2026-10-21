@@ -6,8 +6,9 @@
  * - F3(④ `buildGiftStockBurdenedTransferBody`, actual 모드): `Math.floor(실지취득가 × (B/C))` — `applyRatio`조차 거치지 않아
  *   B/C가 정수 %(57% 등)여도 참값이 정수인 곱이 1원 모자랐다. ④ 안에 B(`assumedDebtForGift`)·C(`valuationAmount`) 원값이 있어
  *   `safeMultiplyThenDivide(취득가, B, C)`로 와이어 변경 없이 정확화한다.
- * - F4(엔진 `resolveAcquisitionBasis`, estimated 모드): 와이어 필드 `burdenedGiftDebtRatio`(소수 하나)만 받는다 — C를 모른다.
- *   `applyRatio`로 바꿔 **짧은 소수(정수 %류)**를 정확화한다. 순환 소수 비율은 한계(계획서 Q5 (a)) — 아래 KNOWN-LIMIT.
+ * - F4(엔진 `resolveAcquisitionBasis`, estimated 모드): S-1은 `applyRatio`로 짧은 소수(정수 %류)만 정확화했고 순환 소수 비율은 한계였다.
+ *   S-2(`docs/00-pm/stock-burdened-debt-fraction-wire.plan.md`)가 와이어에 증여가액 C(`burdenedGiftValuationAmount`)를 싣고
+ *   엔진이 `safeMultiplyThenDivide(estimatedBase, transferPrice(=B), C)`로 곱해 순환 소수까지 참값으로 닫았다.
  *
  * 참값은 BigInt `취득가 × B / C`의 floor로 독립 계산한다.
  */
@@ -111,7 +112,7 @@ describe("BD-7 · ④ actual 모드 — 실지취득가 × B/C (정수 %)", () =
 // ─────────────────────────────────────────────────────────────────────────────
 // BD-8 · F4 — 엔진 estimated 모드 개산공제 base 안분
 // ─────────────────────────────────────────────────────────────────────────────
-describe("BD-8 · 엔진 estimated 모드 — 개산공제 base(취득기준시가 총액) × burdenedGiftDebtRatio", () => {
+describe("BD-8 · 엔진 estimated 모드 — 개산공제 base(취득기준시가 총액) × B/C (증여가액 C 와이어)", () => {
   const estimated = (marketValue: number, debt: number, acqAvg: number) =>
     item({
       marketValue,
@@ -151,12 +152,13 @@ describe("BD-8 · 엔진 estimated 모드 — 개산공제 base(취득기준시�
     expect(bad.slice(0, 5), `${bad.length}건 불일치`).toEqual([]);
   });
 
-  it("KNOWN-LIMIT(계획서 Q5 a) — 순환 소수 비율(14/110)은 와이어에 소수 하나뿐이라 1원 과소가 남는다 (S-2로 와이어에 C를 싣기 전까지)", () => {
+  it("🔴 순환 소수 비율(14/110) — 와이어에 증여가액 C를 싣고 safeMultiplyThenDivide로 곱한다 (S-2: 옛 KNOWN-LIMIT 6,999,999 → 참값 7,000,000)", () => {
     // B = 14,000,000 · C = 110,000,000 · 취득기준시가 총액 55,000,000 → 참값 7,000,000.
     const { body, result } = runFullStack(estimated(110_000_000, 14_000_000, 55_000));
     expect(truth(55_000_000, 14_000_000, 110_000_000)).toBe(7_000_000);
-    expect(body.burdenedGiftDebtRatio).toBe(14_000_000 / 110_000_000);
-    // 이 값이 7,000,000이 되면 한계가 풀린 것이다(S-2) — 이 단언을 참값으로 뒤집고 계획서 §13을 갱신할 것.
-    expect(result.estimatedBase).toBe(6_999_999);
+    expect(body.burdenedGiftValuationAmount).toBe(110_000_000);
+    expect(body.burdenedGiftDebtRatio).toBeUndefined();
+    expect(result.estimatedBase).toBe(7_000_000);
+    expect(result.estimatedDeduction).toBe(70_000);
   });
 });

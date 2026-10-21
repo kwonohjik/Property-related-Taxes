@@ -21,19 +21,29 @@ export const GUARDED_FILES = [
   "lib/tax-engine/redevelopment-split.ts",
   // 주식 부담부증여 ④ (PR-2 · 계획서 F3) — B·C 원값을 safeMultiplyThenDivide로
   "lib/calc/gift-burdened-transfer-api.ts",
+  // 주식 엔진 (S-2 · `stock-burdened-debt-fraction-wire.plan.md`) — 와이어에 증여가액 C를 싣고 safeMultiplyThenDivide(base, B, C).
+  // S-1 때는 와이어에 소수 비율뿐이라 `applyRatio`를 허용했으나(FLOOR_ONLY), 이제 `applyRatio(…, 비율)`도 금지다.
+  "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts",
 ];
 
-/**
- * 주식 엔진(계획서 F4) — 와이어에 소수 비율 하나(`burdenedGiftDebtRatio`)뿐이라 `applyRatio`(짧은 소수는 십진 정확)로 곱하는 것이 정본이다.
- * 금지는 옛 식 `Math.floor(… * 비율)`뿐이다(`applyRatio(…, 비율)`은 허용 — 순환 소수는 한계, 계획서 Q5).
- */
-export const FLOOR_ONLY_GUARDED_FILES = ["lib/tax-engine/stock-transfer/stock-acquisition-basis.ts"];
+/** 폐지된 와이어 필드 — 코드 줄에는 «구필드 수신 거절» 1곳(스키마)만 남는다. 주석은 제외. */
+export const LEGACY_RATIO_FIELD = "burdenedGiftDebtRatio";
+export const LEGACY_FIELD_REJECT_FILE = "lib/api/stock-transfer-tax-schema.ts";
+/** 구필드가 코드에 나오면 안 되는 파일 — 생산(④)·소비(엔진)·매핑(⑭)·타입·refine */
+export const LEGACY_FIELD_FORBIDDEN_FILES = [
+  "lib/calc/gift-burdened-transfer-api.ts",
+  "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts",
+  "lib/tax-engine/stock-transfer/types/stock-transfer.types.ts",
+  "lib/api/stock-transfer-engine-input.ts",
+  "lib/api/stock-transfer-tax-refines.ts",
+];
 
 /**
  * 재개발 β/개산공제 경로 — 소수 비율 식별자 자체를 쓰지 않는다 (Q3 (a): `debtRatio` → `debtFraction {debt, valuation}`).
  * 곱셈 패턴 가드(`scan`)로는 `computeEstimatedDeduction(…, lumpBaseRatio)`처럼 함수 인자로 넘기는 형태를 못 잡는다.
  */
 export const IDENTIFIER_GUARDED_FILES = [
+  "lib/calc/gift-burdened-transfer-api.ts",
   "lib/tax-engine/redevelopment-burdened-gift.ts",
   "lib/tax-engine/redevelopment-split.ts",
   "lib/tax-engine/redevelopment.ts",
@@ -83,8 +93,7 @@ function isCommentLine(lineText: string): boolean {
 }
 
 /** `Math.floor(… * debtRatio)` · `applyRatio(…, debtRatio)` 위치 */
-export function scan(src: string, opts: { applyRatioCall?: boolean } = {}): Hit[] {
-  const checkApplyRatio = opts.applyRatioCall ?? true;
+export function scan(src: string): Hit[] {
   const hits: Hit[] = [];
   const lines = src.split("\n");
 
@@ -108,12 +117,10 @@ export function scan(src: string, opts: { applyRatioCall?: boolean } = {}): Hit[
     const ops = splitTopLevel(inner, "*");
     return ops.length > 1 && ops.some((op) => DEBT_RATIO_NAME.test(op));
   });
-  if (checkApplyRatio) {
-    visit("applyRatio", (inner) => {
-      const args = splitTopLevel(inner, ",");
-      return args.length >= 2 && DEBT_RATIO_NAME.test(args[1]);
-    });
-  }
+  visit("applyRatio", (inner) => {
+    const args = splitTopLevel(inner, ",");
+    return args.length >= 2 && DEBT_RATIO_NAME.test(args[1]);
+  });
   return hits.sort((a, b) => a.line - b.line);
 }
 
@@ -129,14 +136,23 @@ export function scanIdentifier(src: string): Hit[] {
   return hits;
 }
 
+/** 주석을 뺀 코드 줄에서 폐지된 와이어 필드 `burdenedGiftDebtRatio` 위치 */
+export function scanLegacyField(src: string): Hit[] {
+  const hits: Hit[] = [];
+  src.split("\n").forEach((raw, i) => {
+    const trimmed = raw.trim();
+    if (isCommentLine(trimmed)) return;
+    const code = raw.replace(/\/\/.*$/, "");
+    if (code.includes(LEGACY_RATIO_FIELD)) hits.push({ line: i + 1, text: trimmed.slice(0, 110) });
+  });
+  return hits;
+}
+
 describe("부담부증여 채무비율 — 소수 비율을 곱하지 않는다", () => {
-  it("🔴 가드 대상 파일에 `Math.floor(… * 채무비율)`(주식 엔진 외에는 `applyRatio(…, 채무비율)`도)이 0건이다", () => {
+  it("🔴 가드 대상 파일(주식 엔진 포함)에 `Math.floor(… * 채무비율)`·`applyRatio(…, 채무비율)`이 0건이다", () => {
     const found: string[] = [];
     for (const file of GUARDED_FILES) {
       for (const h of scan(readFileSync(join(ROOT, file), "utf8"))) found.push(`  ${file}:${h.line}\n    ${h.text}`);
-    }
-    for (const file of FLOOR_ONLY_GUARDED_FILES) {
-      for (const h of scan(readFileSync(join(ROOT, file), "utf8"), { applyRatioCall: false })) found.push(`  ${file}:${h.line}\n    ${h.text}`);
     }
     expect(
       found,
@@ -152,6 +168,20 @@ describe("부담부증여 채무비율 — 소수 비율을 곱하지 않는다"
     expect(found, `소수 비율 식별자 ${found.length}건 — debtFraction {debt, valuation}으로 바꿀 것:\n${found.join("\n")}`).toHaveLength(0);
   });
 
+  it("🔴 폐지된 와이어 필드 `burdenedGiftDebtRatio`는 코드에 «구필드 수신 거절» 1곳(스키마)만 남는다 (S-2 · 침묵 strip 방지)", () => {
+    const found: string[] = [];
+    for (const file of LEGACY_FIELD_FORBIDDEN_FILES) {
+      for (const h of scanLegacyField(readFileSync(join(ROOT, file), "utf8"))) found.push(`  ${file}:${h.line}\n    ${h.text}`);
+    }
+    expect(found, `폐지 필드 ${found.length}건 — 증여가액 C(burdenedGiftValuationAmount)로 바꿀 것:\n${found.join("\n")}`).toHaveLength(0);
+    // 스키마에는 구필드 «키 정의»가 정확히 1개 있고 z.never 로 거절한다 — 없으면 구버전 payload 가 조용히 strip 된다.
+    const rejectSrc = readFileSync(join(ROOT, LEGACY_FIELD_REJECT_FILE), "utf8");
+    const defs = scanLegacyField(rejectSrc).filter((h) => h.text.startsWith(`${LEGACY_RATIO_FIELD}:`));
+    expect(defs, "구필드 키 정의 1개").toHaveLength(1);
+    const defStart = rejectSrc.indexOf(`  ${LEGACY_RATIO_FIELD}:`);
+    expect(rejectSrc.slice(defStart, defStart + 400), "z.never 로 수신 거절").toMatch(/z\s*\.never\(/);
+  });
+
   it("대상 파일이 코드(주석 제외)에서 safeMultiplyThenDivide를 실제로 호출한다 (가드가 «아무것도 안 보는» 상태로 통과하지 않는다)", () => {
     const count = (file: string) =>
       readFileSync(join(ROOT, file), "utf8")
@@ -162,14 +192,15 @@ describe("부담부증여 채무비율 — 소수 비율을 곱하지 않는다"
     expect(count("lib/tax-engine/redevelopment-burdened-gift.ts")).toBeGreaterThanOrEqual(1); // β 4항 공용 scale()
     expect(count("lib/tax-engine/redevelopment-split.ts")).toBeGreaterThanOrEqual(1); // 개산공제 base 외 기존 안분 호출도 포함
     expect(count("lib/calc/gift-burdened-transfer-api.ts")).toBeGreaterThanOrEqual(1); // ④ actual 모드 안분 취득가
+    expect(count("lib/tax-engine/stock-transfer/stock-acquisition-basis.ts")).toBeGreaterThanOrEqual(1); // 주식 엔진 개산공제 base 안분
   });
 
-  it("주식 엔진은 와이어 소수 비율을 applyRatio로 곱한다 (코드 줄에서 호출 존재)", () => {
+  it("주식 엔진은 개산공제 base를 증여가액 C 와이어로 분수 곱한다 (코드 줄에서 호출 존재)", () => {
     const code = readFileSync(join(ROOT, "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts"), "utf8")
       .split("\n")
       .filter((l) => !isCommentLine(l.trim()))
       .join("\n");
-    expect(code).toMatch(/\bapplyRatio\(\s*estimatedBase\s*,\s*input\.burdenedGiftDebtRatio\s*\)/);
+    expect(code).toMatch(/\bsafeMultiplyThenDivide\(\s*estimatedBase\s*,\s*transferPrice\s*,\s*input\.burdenedGiftValuationAmount\s*\)/);
   });
 });
 
@@ -189,12 +220,17 @@ describe("가드 자체의 구별력", () => {
     expect(scanIdentifier("   * `debtRatio`를 곱하지 않는다")).toHaveLength(0);
     expect(scanIdentifier("const x = debtFraction.debt;")).toHaveLength(0);
   });
+  it("🔑 구필드 가드: 코드 줄은 잡고 주석·새 필드는 안 잡는다", () => {
+    expect(scanLegacyField("  burdenedGiftDebtRatio: z.never().optional(),")).toHaveLength(1);
+    expect(scanLegacyField("body.burdenedGiftDebtRatio = debtRatio;")).toHaveLength(1);
+    expect(scanLegacyField("   * `burdenedGiftDebtRatio` 는 폐지")).toHaveLength(0);
+    expect(scanLegacyField("const x = 1; // burdenedGiftDebtRatio 설명")).toHaveLength(0);
+    expect(scanLegacyField("body.burdenedGiftValuationAmount = valuationAmount;")).toHaveLength(0);
+  });
   it("🔑 안 잡는 모양: safeMultiplyThenDivide · 지분 비율 applyRatio · 주석 · 표시용 비율 필드 읽기", () => {
     expect(scan("const a = safeMultiplyThenDivide(x, debt, valuation);")).toHaveLength(0);
     expect(scan("const a = applyRatio(x, ownershipRatio);")).toHaveLength(0);
-    // 주식 엔진 모드: applyRatio는 허용, Math.floor 옛 식은 여전히 잡는다
-    expect(scan("const a = applyRatio(estimatedBase, input.burdenedGiftDebtRatio);", { applyRatioCall: false })).toHaveLength(0);
-    expect(scan("const a = Math.floor(estimatedBase * input.burdenedGiftDebtRatio);", { applyRatioCall: false })).toHaveLength(1);
+    expect(scan("const a = safeMultiplyThenDivide(estimatedBase, transferPrice, input.burdenedGiftValuationAmount);")).toHaveLength(0);
     expect(scan("// Math.floor(x * debtRatio)\nconst b = 1;")).toHaveLength(0);
     expect(scan(" * applyRatio(x, debtRatio) 로 곱하면 1원 과소\nconst b = 1;")).toHaveLength(0);
     expect(scan("const echo = breakdown.debtRatio.toFixed(4);")).toHaveLength(0);

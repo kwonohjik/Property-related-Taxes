@@ -248,7 +248,7 @@ describe("BG-MJ — §157 대주주 판정 실입력 축", () => {
 });
 
 describe("BG-DR — §159 채무비율이 개산공제 base에 적용된다 (상장·비상장 대칭)", () => {
-  it("BG-DR-1: ④가 상장 환산에도 burdenedGiftDebtRatio를 싣는다", () => {
+  it("BG-DR-1: ④가 상장 환산에도 증여가액 C(burdenedGiftValuationAmount)를 싣는다", () => {
     const out = runFullStack(
       listedItem({
         transferDatePriceAvg1Month: 100_000,
@@ -256,7 +256,8 @@ describe("BG-DR — §159 채무비율이 개산공제 base에 적용된다 (상
       }),
       "2025-06-02",
     );
-    expect(out.body.burdenedGiftDebtRatio).toBeCloseTo(0.1, 10);
+    expect(out.body.burdenedGiftValuationAmount).toBe(100_000_000);
+    expect(out.body.burdenedGiftDebtRatio).toBeUndefined();
   });
 
   it("BG-DR-2: 채무비율이 개산공제를 실제로 움직인다 (엔진 상장 분기 도달)", () => {

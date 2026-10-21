@@ -992,7 +992,7 @@ export interface DebtItem {
  * → actual: 클라이언트가 취득가 × B/C 안분 → perShareAcquisitionPrice 주입.
  * → estimated: 환산취득가는 transferPrice(=채무 B) 기반이라 **자동 안분**되지만,
  *   §163⑥4 개산공제 base(취득 당시 기준시가 총액)에는 전체 주식수가 들어가므로
- *   `burdenedGiftDebtRatio`를 별도로 넘겨 B/C를 적용한다 — **상장·비상장 공통**이다.
+ *   증여재산 평가액 C(`burdenedGiftValuationAmount`)를 별도로 넘겨 B/C를 적용한다 — **상장·비상장 공통**이다.
  *   (종전에는 비상장에만 넘겨 상장 개산공제가 C/B배 과대였다.)
  *
  * - undefined: 토글 OFF (§47① 채무 차감만, 기존 동작)
