@@ -24,6 +24,7 @@ import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { mixedUseDisplayedAcqPrice } from "@/lib/calc/mixed-use-part-acq-split";
 import { isMixedBurdenedGift, mixedBgNoTransferNote, mixedBgNoTransferNoteOfForm } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
+import { burdenedGiftTransferPrice, isBlockedMixedBurdenedGiftBundle, usesSelfComputedTransferPrice } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { parseRaw, isParcelMode, isRedevelopmentPath, parcelAcqSum, directAcqRaw, directExpenseRaw } from "./transfer-per-asset-direct";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -267,6 +268,11 @@ export function computeTransferPerAssetSummary(
   // (transfer-tax-api.ts:129 primary만 판정)라 primary 행(i===0)에만 적용.
   const mixedResult = result?.mode === "mixed-use" ? result.result : null;
 
+  /**
+   * ⑧이 막는 혼합 묶음(일반 양도 + 부담부증여) — 계산이 오지 않으므로 안분 프리뷰 대신 양도가액을 「-」 + 「함께 양도 불가」로 둔다
+   * (계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` Q-1 a). 종전에는 일반 주택 600,000,000을 171,428,571로 보였다.
+   */
+  const blockedMixedBg = isBlockedMixedBurdenedGiftBundle(formData.assets, formData.assetSplitMode);
   // 계산 전 안분 프리뷰 맵 (bundled 결과가 없을 때만 사용)
   const apportionedMap =
     !bundledResult && canApportion(formData) ? computeApportionedSaleMap(formData) : null;
@@ -374,11 +380,23 @@ export function computeTransferPerAssetSummary(
     const receiveOnlySalePrice = isReceiveOnlyFiling(a) ? parseRaw(a.redevSettlementAmount) : 0;
     if (receiveOnlySalePrice > 0) {
       salePrice = receiveOnlySalePrice;
+    } else if (blockedMixedBg) {
+      // 계산 불가 묶음 — 「계산 후 표시」도 쓰지 않는다(계산이 오지 않는다). 메모는 아래 `saleTransferNote`.
     } else if (bgMixed) {
       // 겸용 × 부담부증여 — 양도가액은 채무액을 부분별로 안분한 **엔진 값**이다(A×B/C를 클라이언트에서 다시 계산하지 않는다).
       // 계산 전에는 «계산 후 표시», 계산 후에는 엔진 echo(4부분 양도가액 합)를 쓴다.
       const bg = mixedResult?.burdenedGift;
       if (bg) salePrice = Object.values(bg.perPart).reduce((n, p) => n + p.transferPrice, 0);
+      else salePending = true;
+    } else if (usesSelfComputedTransferPrice(a)) {
+      /**
+       * 부담부증여 — 양도가액은 엔진이 §159로 정한다(소득세법 시행령 §159①). 계약서 가액 칸이 화면에 없고(⑤ `AssetSectionTransfer`),
+       * 안분 키도 세액에 쓰이지 않는다. 계산 전에는 「계산 후 표시」, 계산 후에는 엔진 값이다 — 묶음은 route 확정 가액 Bᵢ
+       * (= §159 양도가액, #2365), 단건은 결과 명세. 종전에는 안분 프리뷰(10억/6억)·숨은 계약서 가액·「-」를 보였다(계획서 §1.1).
+       */
+      const brkd = singleResult?.transferBurdenedGiftBreakdown;
+      if (bundledMatch) salePrice = bundledMatch.allocatedSalePrice;
+      else if (isSingle && brkd) salePrice = burdenedGiftTransferPrice(brkd);
       else salePending = true;
     } else if (bundledMatch) {
       salePrice = bundledMatch.allocatedSalePrice;
@@ -630,7 +648,9 @@ export function computeTransferPerAssetSummary(
     if (expense === 0 && !result && (isLumpSumMode(a) || isGbNonActualPart(a) || splitHasNonActualOwnedPart(a))) expensePending = true;
 
     // 한쪽에 양도가 없으면(채무가 한 부분에만 귀속) 사이드바가 그 사실을 한 줄로 말한다 — 「비과세」로 읽히지 않게 «양도 없음»이다.
-    const saleTransferNote = bgMixed
+    const saleTransferNote = blockedMixedBg
+      ? "함께 양도 불가"
+      : bgMixed
       ? mixedResult?.burdenedGift
         ? mixedBgNoTransferNote(mixedResult.burdenedGift.debtAttribution.housingDebt, mixedResult.burdenedGift.debtAttribution.commercialDebt)
         : mixedBgNoTransferNoteOfForm(a)
