@@ -1,7 +1,7 @@
 # 환산취득가액 산식 부동소수 1원 과소 — 수정 계획서
 
 **작성**: 2026-10-21 · **base**: master `4340b7985` · **출처**: P6(주택 split 파트 이월과세 환산) 엔진 Do 중 발견한 별건 후보
-**상태**: 🟡 Plan — 사용자 결정 대기(§6)
+**상태**: ✅ Plan 확정 (2026-10-21 사용자 결정 — Q1 인접 축 포함(단 지분 규약 `applyRatio`는 제외, §6.1) · Q2·Q3 권장안) → P6 머지 후 Do
 **실측 원자료**: 세션 scratchpad `estfl/`(probe.mjs~probe5.mjs · e2e.probe.test.ts · measure.py · res.json) — 세션이 끝나면 지워진다.
 
 ---
@@ -69,7 +69,34 @@ split 건물(토지·건물 별개 취득, 두 파트 환산): 토지 양도가 
 | Q2 | 정적 가드 범위 | (a) 이번 18곳이 있는 5개 파일만 (b) `lib/tax-engine/**` 전체 | (a) — (b)는 Q1 인접 축·다른 세목(주식 `securities-transaction-tax.ts`·감면 등)의 기존 식을 한꺼번에 막아 이 PR이 커진다. 인접 축 별건에서 넓힌다 |
 | Q3 | P6 PR과의 순서 | (a) P6 머지 후 착수 (b) 지금 병행 | (a) — #1 파일을 P6도 고친다(다른 줄이라 충돌 가능성은 낮다). P6 anchor 값이 이 수정으로 바뀌는지는 P6 머지 후 재측정(확인 필요 — §4 측정은 P6 없는 master 기준) |
 
+## 6.1 확정 범위 — 인접 축 (2026-10-21 추가 실측)
+
+Q1을 (b)로 정한 뒤 인접 축을 다시 전수했다. **지분 규약은 빼고** 기준시가·면적 비율 안분만 넣는다(사용자 확인).
+
+- 🔴 **사이드바 지분 `calc-wizard-store.ts:405`는 범위에서 뺐다** — Q1 목록에 넣었으나 이것은 API·엔진의 지분 단일 규약 `applyRatio`(`tax-utils.ts:78-80` = `Math.floor(금액 × 지분비율)`, 호출 69곳)를 그대로 따라 한 것이다. 사이드바만 정확하게 바꾸면 엔진과 1원씩 어긋난다(`applyRatio` JSDoc 「실측 0.49% 1원 차」가 바로 그 사고). 지분 규약을 고치려면 분자·분모를 넘기도록 69곳을 함께 바꿔야 해서 **별건**(실측 필요)으로 둔다.
+- 정본 헬퍼가 이미 있다: `apportionByStdPrice(total, land, building)`(`lib/tax-engine/std-price-apportion.ts:20-24` — `safeMultiplyThenDivide` + 잔액 흡수). 양도가액 안분 정본 `resolveSaleApportionBasis`도 이것을 쓴다.
+
+| # | 파일:줄 | 무엇 | 바꿀 식 |
+|---|---|---|---|
+| A1 | `transfer-tax-split-acq-price.ts:166` `splitPair` | 취득가액(실가·감정·매매사례 총액)을 취득시 기준시가 비율로 토지·건물 안분 | `calcApportionRatio`가 비율 대신 기준시가 쌍을 넘기게 바꾸고 `apportionByStdPrice` — 서명 변경이라 측정 하네스에는 넣지 못했다(Do에서 anchor로 확인) |
+| A2 | `transfer-tax-mixed-use-commercial.ts:243` · `:257` | 겸용 상가분 양도가액(양도시 비율)·환산취득가액(취득시 비율) 토지·건물 안분 | `apportionByStdPrice` |
+| A3 | `transfer-tax-mixed-use-housing.ts:406` · `:415` | 겸용 주택분 같은 안분 | 〃 |
+| A4 | `transfer-tax-mixed-use-inheritance.ts:320` | 겸용 상속 PHD 환산취득가액 토지·건물 안분 | 〃 |
+| A5 | `transfer-tax-mixed-use-helpers.ts:127` · `:183` | 겸용 주택·상가 양도가액·취득가액 안분 | 〃 |
+| A6 | `lib/stores/calc-wizard-store.ts:469` | A5 `:127`의 사이드바 거울 | 〃(엔진과 같이 바꿔야 사이드바가 엔진과 같다) |
+| B1 | `transfer-tax-mixed-use-housing.ts:308` · `transfer-tax-mixed-use-housing-acq.ts:221` | 용도변경(상가→주택) 취득시 상가 기준시가를 **면적 비율**로 안분 | 면적을 0.01㎡ 정수로 올려 `safeMultiplyThenDivide`(면적 정책 `area-utils.ts`의 `round2` 규약과 같은 단위) |
+
+실측:
+- 기준시가 비율 안분(R 모양): 참값 정수 표본 274,894건 중 10,978건(**4.0%**) 1원 과소.
+- 면적 비율 안분: 무작위 100만 표본 0건이지만 참값 정수 표본 50만 건 중 83,735건(**16.7%**) 1원 과소 — 소수 면적을 두 번 나누어 오차가 쌓인다. 예: 1,905,052,470 × 183.98 ÷ 547.98 → 639,606,469(참값 …470).
+- 회귀: A2~A6·B1(10곳)을 임시 정확화하고 `tax-engine·api·lib·calc·stores·components`를 돌렸다 — `tsc` 0건 · **37,503건 중 실패 0**(원복 sha 확인). 1단계와 같이 기존 픽스처는 이 조합을 쓰지 않는다 → 경로마다 새 anchor.
+- B1 경로는 살아 있다: `partialUsageChange`는 ④ `transfer-tax-api-mixed-use.ts:396`·⑫ `transfer-tax-schema-mixed-use.ts:97`로 전달된다(메모리 「`partialUsageChange` 삭제 금지」).
+
+정적 가드(Q2 (a))는 이 PR에서 고치는 파일(1단계 5개 + 인접 축 7개)에 건다.
+
 ## 7. 범위 밖 (관찰만)
+
+- **지분 규약 `applyRatio`(69곳)** — 위 §6.1. 별건.
 
 - 다른 세목의 비슷한 식: `transfer-tax-aggregate-reduction-step.ts:730`(감면 한도 안분, R) · `lib/calc/inheritance-deduction-suggest.ts:453`(R) · 주식 `stock-valuation-post-listing.ts:577`·`lot-allocation-tax.ts:154`(P) — 환산이 아니라 이 계획서에서 실측하지 않았다.
 - `Math.floor(p / c)`가 곱 ≤ 2^53에서 과대로 반올림되는 경우는 18표본 경계 탐색에서 0이었다(곱 상한이 몫의 ulp를 1/c 이하로 묶는다) — 정본 헬퍼는 안전하다고 판단했다.
