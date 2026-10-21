@@ -1,6 +1,6 @@
 # 저장하지 않는 상세주소 칸 7곳 — §155⑯ 시·군 코드 소실로 판정이 바뀜 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1~Q-3)** · 워크트리 `../Property-related-Taxes-adet` · 브랜치 `docs/address-detail-store`
+> 작성 2026-10-21 · 상태 **Do — Q-1~Q-3 권고안 a 결정(2026-10-21)** · 워크트리 `../Property-related-Taxes-adet` · 브랜치 `docs/address-detail-store`
 > 기준 master `805e3bf76`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `address-dongho-other-calcs-and-multi-gate.plan.md`·`comprehensive-property-card-detail-hide.plan.md`의 범위 밖 항목(「취득·재산세 1단계·임대주택 카드의 상세주소 칸이 입력을 저장하지 않는다」). 같은 원인을 가진 호출부를 전수로 쟀다.
 > 실측 spec은 커밋하지 않았다. 주소 검색·공시가격은 `page.route`로 고정했다.
@@ -116,7 +116,7 @@
 - **기존 E2E**: 판정 메뉴 §155⑯·⑱(`transfer-155-16-18-deadline-specials`)·증여세 부담부증여(`gift-burdened-transfer-*`)·취득·재산·종부세 주소 관련 spec
 - **pre-push 게이트**: 워크트리라 husky가 돌지 않는다. 폰트·톤·다크 짝·러너, typecheck, lint, 범위 선택 테스트를 수동으로 돌린다
 
-## 결정 대기
+## 결정 — 2026-10-21 사용자 결정: Q-1~Q-3 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
