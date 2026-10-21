@@ -1,6 +1,6 @@
 # 종부세 주택 카드 — 상세주소 파싱이 동·호를 비워 다른 세대 공시가격이 채워짐 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1)** · 워크트리 `../Property-related-Taxes-pce` · 브랜치 `docs/property-card-dongho-plan`
+> 작성 2026-10-21 · 상태 **Do 진행 — Q-1 권고안 a(2026-10-21 사용자 결정)** · 워크트리 `../Property-related-Taxes-pce` · 브랜치 `docs/property-card-dongho-plan`
 > 기준 master `1c63b079e`. 줄 번호는 모두 이 커밋 기준이다. 실측은 `b6837b87f`에서 했고, 그 사이 대상 파일 변경은 없다.
 > 출처: `address-dongho-other-calcs-and-multi-gate.plan.md` §A-4(「확인 필요」로 남긴 종부세 주택 카드). 같은 결함의 다른 6곳은 #2339에서 고쳤다.
 > 실측 spec은 커밋하지 않았다. 주소 검색·공시가격은 `page.route`로 고정했고, 공시가격 mock은 `route.ts` `pickUnit` 규칙을 따른다(동·호가 없으면 임의 세대, 지정했는데 없으면 「없음」, 끝의 「동」·「호」는 떼고 비교).
@@ -76,7 +76,7 @@
 - **기존 E2E**: `comprehensive-*` 전 spec
 - **pre-push 게이트**: 워크트리라 husky가 돌지 않는다. 폰트·톤·다크 짝·러너, typecheck, lint, 범위 선택 테스트를 수동으로 돌린다
 
-## 결정 필요
+## 결정 — 2026-10-21 사용자 결정: Q-1 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
