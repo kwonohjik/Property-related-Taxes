@@ -58,6 +58,19 @@ export function redevHidesGeneralAcqSection(
 }
 
 /**
+ * 일반 「취득가액 산정 방식」·「취득시/양도시 기준시가」 영역이 **화면에 없는 자산**인가 — ⑤ 렌더 게이트와 ④⑧ 숨김 판정의 단일 소스.
+ *
+ * 원조합원 §166 자산(위 술어)에 더해 **승계조합원 입주권**도 숨긴다 — 취득가액은 승계 블록(`SuccessorRightAcquisitionBlock`)이,
+ * 환산 기준시가는 §165① 네 칸이 받는다. 양도·부담부증여 모두 일반 칸이 0개다(Playwright 실측 — 계획서
+ * `docs/00-pm/successor-right-stdprice-reduction.plan.md`). 종전에는 ⑤만 이 OR을 따로 써서 ④·⑧이 승계 입주권의 숨은 칸을 썼다.
+ */
+export function hidesGeneralAcqSection(
+  asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "transferType">,
+): boolean {
+  return redevHidesGeneralAcqSection(asset) || isSuccessorRightTransfer(asset);
+}
+
+/**
  * 그 자산의 일반 기준시가 두 칸 중 **화면에 없는 칸** — ④는 싣지 않고 ⑧은 감면 기준시가 폴백으로 인정하지 않는다.
  *
  * 감면 카드의 기준시가 칸이 비면 엔진은 자산 기준시가로 대신 계산한다(§97의3⑤·§97의5② 안분 —
@@ -66,12 +79,16 @@ export function redevHidesGeneralAcqSection(
  * 계획서 `docs/00-pm/redev-hidden-stdprice-reduction.plan.md` §1.3).
  *
  * 함께 양도 **안분 모드**의 양도시 기준시가는 안분 키로 화면에 있다(`CompanionSaleModeBlock`) — 계속 인정한다(Q-2 a).
+ *
+ * 승계조합원 입주권도 같다(`hidesGeneralAcqSection`) — 함께 양도 실가 거래 모드에서 숨은 양도시 칸의 옛 값이 실려 §98의3 결정세액이
+ * 296,490,000에서 237,690,000으로 바뀌었다(계획서 `successor-right-stdprice-reduction.plan.md` §1.3). 환산 모드의 §165① 합계는 ④가
+ * 따로 싣는다(`successorRightStdPriceAtTransfer`).
  */
 export function redevHiddenGeneralStdPrice(
   asset: Pick<AssetForm, "assetKind" | "isSuccessorRightToMoveIn" | "redevIsSuccessorMember" | "transferType">,
   form: Pick<TransferFormData, "assets" | "assetSplitMode" | "bundledSaleMode">,
 ): { acq: boolean; transfer: boolean } {
-  if (!redevHidesGeneralAcqSection(asset)) return { acq: false, transfer: false };
+  if (!hidesGeneralAcqSection(asset)) return { acq: false, transfer: false };
   const apportionKeyShown =
     form.assets.length > 1 &&
     !isFullFractionalBundle(form.assets, form.assetSplitMode) &&

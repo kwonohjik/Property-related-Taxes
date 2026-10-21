@@ -37,8 +37,7 @@ import { anyPartCarryover } from "@/lib/calc/transfer-land-part-cause";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { generalExtensionAppraisalApplies } from "@/lib/calc/extension-appraisal-penalty";
-import { redevHidesGeneralAcqSection } from "@/lib/calc/redev-acquisition-price-source";
-import { isSuccessorRightTransfer } from "@/lib/calc/transfer-successor-right";
+import { hidesGeneralAcqSection } from "@/lib/calc/redev-acquisition-price-source";
 
 /**
  * 취득가액 산정 방식 — 화면상 **단일 축**. 폼 모델(boolean 3개)의 조합을 하나의 union으로
@@ -365,9 +364,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
         //    §166 안분을 우회하는 단순 차감 산식(`runSuccessorMember`)이 이 값을 그대로 쓰는데,
         //    §166 ⑤ 「인가전 분 종전 부동산 취득가액」 섹션은 승계 모드에서 숨겨진다.
         //    여기서까지 막으면 화면 어디에도 취득가액 칸이 없어 0이 엔진에 도달한다.
-        //    원조합원 술어는 ④·⑧과 같은 leaf다 — 이 영역의 기준시가 칸이 없으면 ④가 싣지 않고 ⑧이 인정하지 않는다.
+        //    원조합원 §166 자산·승계조합원 입주권 술어는 ④·⑧과 같은 leaf다 — 이 영역의 기준시가 칸이 없으면 ④가 싣지 않고 ⑧이 인정하지 않는다.
         //    승계조합원 입주권은 승계 블록(`SuccessorRightAcquisitionBlock`)이 따로 받는다.
-        !(props.asset && (redevHidesGeneralAcqSection(props.asset) || isSuccessorRightTransfer(props.asset))) && (
+        !(props.asset && hidesGeneralAcqSection(props.asset)) && (
       <>
       {/* 겸용 별개 취득 — 모델 토글(날짜 2열 바로 아래) + 파트 블록. 후보가 아니면 null(현행 화면). 아래 축 A는 파트 모델에서만 숨는다. */}
       {props.asset && props.onAssetChange && (

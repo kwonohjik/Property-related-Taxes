@@ -259,7 +259,8 @@ describe("RH-5 leaf — 숨김 대상과 보이는 예외", () => {
     ["원조합원 완공APT", orig, { acq: true, transfer: true }],
     ["원조합원 입주권", { assetKind: "right_to_move_in", isSuccessorRightToMoveIn: false }, { acq: true, transfer: true }],
     ["승계조합원 완공APT — 상단 칸이 보인다", { assetKind: "redevelopment_apt", redevIsSuccessorMember: "yes" }, { acq: false, transfer: false }],
-    ["승계 입주권 — §165① 칸(다른 칸)", { assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }, { acq: false, transfer: false }],
+    // 2026-10-21 반전: 일반 칸은 승계 입주권에도 화면에 없다(§165① 네 칸은 따로) — `successor-right-stdprice-reduction.plan.md`
+    ["승계 입주권 — 일반 칸이 화면에 없다(§165① 칸은 따로)", { assetKind: "right_to_move_in", isSuccessorRightToMoveIn: true }, { acq: true, transfer: true }],
     ["부담부증여 §166 — 「② 양도정보」에 두 칸이 있다", { ...orig, transferType: "burdened_gift" }, { acq: false, transfer: false }],
     ["일반 주택", h, { acq: false, transfer: false }],
   ] as const)("%s", (_l, a, want) => {
