@@ -12,6 +12,12 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { SellingHouseTaxIncentiveRentalSection } from "@/components/calc/transfer/SellingHouseTaxIncentiveRentalSection";
 import { HouseEntryEditor } from "@/components/calc/transfer/HouseEntryEditor";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
+// TU-10이 쓰는 모듈도 상단 정적 import — 테스트 본문 import(Step2 무부하 1.6~1.9초)가 5초 타임아웃에 들어갔다
+//   (계획서 vitest-load-sensitive-tests.plan.md R2)
+import { Step2 } from "@/app/calc/one-house-exemption/steps/Step2";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
+import { HousesListSection } from "@/app/calc/transfer-tax/steps/step4-sections/HousesListSection";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 
 afterEach(cleanup); // RTL 수동 cleanup (feedback_rtl_manual_cleanup_required)
 
@@ -194,8 +200,6 @@ describe("⑤ 명부 행 「특례 구분」 3호 칩", () => {
  */
 describe("TU-10 판정 메뉴 Step2 — 명부 편집 창에 3호 칩이 없다 (계산기 명부에는 있다)", () => {
   it("판정 메뉴: 편집 창을 열어도 3호 칩 없음", async () => {
-    const { Step2 } = await import("@/app/calc/one-house-exemption/steps/Step2");
-    const { createInitialOneHouseJudgmentForm } = await import("@/lib/stores/one-house-judgment-form.types");
     const f = createInitialOneHouseJudgmentForm();
     const form = {
       ...f,
@@ -208,11 +212,9 @@ describe("TU-10 판정 메뉴 Step2 — 명부 편집 창에 3호 칩이 없다 
     fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
     expect(sw("장기임대 등록주택")).not.toBeNull(); // 편집 창이 실제로 열렸다(짝 단언)
     expect(sw(ROW_CHIP)).toBeNull();
-  });
+  }, 20_000); // 판정 메뉴 Step2 첫 렌더 — 정적 import만으로는 부하 중 최대 4.3초라 5초에 가깝다(계획서 R2)
 
   it("계산기: 같은 명부 섹션(숨김 prop 없음)에서는 3호 칩이 있다", async () => {
-    const { HousesListSection } = await import("@/app/calc/transfer-tax/steps/step4-sections/HousesListSection");
-    const { createDefaultTransferFormData } = await import("@/lib/stores/calc-wizard-store");
     render(<HousesListSection form={{ ...createDefaultTransferFormData(), houses: [makeHouse()] }} onChange={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "주택 1 편집" }));
     expect(sw(ROW_CHIP)).not.toBeNull();

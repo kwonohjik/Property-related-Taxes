@@ -104,7 +104,7 @@ describe("UI-G2 §155의3 상생임대주택", () => {
     // 다른 입력은 보존
     expect(bgtOf().standardPriceAtAcquisition).toBe(150_000_000);
     expect(bgtOf().residencePeriodMonths).toBe(0);
-  });
+  }, 20_000); // 이 파일 첫 렌더 비용 — 부하 중 5초를 넘겼다(계획서 vitest-load-sensitive-tests.plan.md R3)
   it("부정 짝 — 1세대 1주택 OFF면 위젯 없음", () => {
     render(<Harness start={item({ isOneHousehold: false })} giftDate="2024-06-01" />);
     expect(screen.queryByRole("switch", { name: /상생임대주택 특례/ })).toBeNull();

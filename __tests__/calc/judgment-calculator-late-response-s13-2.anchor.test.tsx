@@ -10,6 +10,9 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup, act, fireEvent } from "@testing-library/react";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/calc/one-house-exemption/route";
+// 상단 정적 import — 테스트 본문에서 import하면 그 시간(무부하 1.9~2.2초)이 5초 타임아웃에 들어가 부하 중 첫 테스트가
+//   타임아웃되고, 멈추지 않은 그 테스트가 뒤 3건까지 오염시켰다(계획서 vitest-load-sensitive-tests.plan.md R1)
+import Calc from "@/app/calc/one-house-exemption/OneHouseJudgmentCalculator";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store";
 import {
@@ -79,7 +82,6 @@ const flush = () => act(async () => { for (let i = 0; i < 20; i++) await new Pro
 
 describe("S13-2 anchor — 판정 응답의 귀속", () => {
   it("판정 대기 중 명부를 고치면 늦게 온 옛 응답(0채 폼)은 버려지고, 재진입하면 새 폼(1채)으로 다시 판정한다", async () => {
-    const { default: Calc } = await import("@/app/calc/one-house-exemption/OneHouseJudgmentCalculator");
     stubFetch(true);
     useOneHouseJudgmentStore.setState({ formData: form0(), currentStep: 3, result: null, error: null, isLoading: false });
     render(<Calc />);
@@ -103,7 +105,6 @@ describe("S13-2 anchor — 판정 응답의 귀속", () => {
   });
 
   it("대기 중 입력을 바꾼 뒤 늦게 도착한 옛 오류 응답도 버려진다(새 입력 화면에 옛 오류가 붙지 않는다)", async () => {
-    const { default: Calc } = await import("@/app/calc/one-house-exemption/OneHouseJudgmentCalculator");
     stubFetch(true, true);
     useOneHouseJudgmentStore.setState({ formData: form0(), currentStep: 3, result: null, error: null, isLoading: false });
     render(<Calc />);
@@ -119,7 +120,6 @@ describe("S13-2 anchor — 판정 응답의 귀속", () => {
 
   // 긍정 짝 — 편집이 없으면 응답이 그대로 결과가 된다.
   it("긍정 짝: 대기 중 편집이 없으면 응답이 결과가 되고 자동저장된다", async () => {
-    const { default: Calc } = await import("@/app/calc/one-house-exemption/OneHouseJudgmentCalculator");
     stubFetch(true);
     useOneHouseJudgmentStore.setState({ formData: form0(), currentStep: 3, result: null, error: null, isLoading: false });
     render(<Calc />);
@@ -132,7 +132,6 @@ describe("S13-2 anchor — 판정 응답의 귀속", () => {
   });
 
   it("긍정 짝: 편집이 없으면 오류 응답은 그대로 오류가 된다", async () => {
-    const { default: Calc } = await import("@/app/calc/one-house-exemption/OneHouseJudgmentCalculator");
     stubFetch(true, true);
     useOneHouseJudgmentStore.setState({ formData: form0(), currentStep: 3, result: null, error: null, isLoading: false });
     render(<Calc />);
