@@ -33,7 +33,7 @@ import { requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode"
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { landCauseDisplay } from "@/lib/calc/transfer-land-part-cause";
-import { partCarryover } from "@/lib/calc/transfer-land-part-cause";
+import { anyPartCarryover } from "@/lib/calc/transfer-land-part-cause";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { generalExtensionAppraisalApplies } from "@/lib/calc/extension-appraisal-penalty";
@@ -253,6 +253,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
       carryoverDonorSplit: props.asset?.carryoverDonorSplit,
       // P3 A — 정규화가 토지 취득일을 증여 등기접수일로 덮는다. 빠지면 빈 날짜로 덮여 UI만 «별개 취득 아님»이 된다.
       landCarryover: props.asset?.landCarryover,
+      // P4 B — 정규화가 건물 취득일을 증여 등기접수일로 덮는다(같은 이유).
+      carryover: props.asset?.carryover,
     });
   // 토지·건물 파트별 취득 방식 — 사용자가 아직 파트별 라디오를 선택하지 않았으면("") 자산 전체
   // 레거시 플래그(취득가액 산정 방식 라디오)에서 파생(단일 소스, dual-truth 방지).
@@ -284,8 +286,8 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     // `input.expenses = parseAmount(primary.directExpenses)`(transfer-tax-api.ts:238-243)를 받아
     // live하므로, 넘기지 않으면 legacy 자산에서 UI 숨김 ↔ 엔진 throw로 갈린다.
     // 같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — **인자까지 같아야** 한다.
-    // P2 C·P3 A — ④는 파트 이월과세 토지에서 이 총액을 싣지 않는다(엔진 S8) — 인자도 같게 0.
-    expenses: props.asset && partCarryover(props.asset).land ? 0 : parseAmount(props.asset?.directExpenses ?? ""),
+    // P2 C·P3 A·P4 B — ④는 파트 이월과세에서 이 총액을 싣지 않는다(엔진 S8) — 인자도 같게 0.
+    expenses: props.asset && anyPartCarryover(props.asset) ? 0 : parseAmount(props.asset?.directExpenses ?? ""),
   };
   const acqStdNeedCtx = {
     landMode: effLandAcqMode,
@@ -318,7 +320,7 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
 
   // 2열 배치(2026-07-29)에서 괄호 설명이 두 줄로 접혀 라벨만 남긴다.
   const acqDateLabel = buildingCause
-    ? (buildingCause === "inheritance" ? "건물 상속개시일" : "건물 증여일")
+    ? (buildingCause === "inheritance" ? "건물 상속개시일" : buildingCause === "gift" ? "건물 증여일" : "건물 증여 등기접수일")
     : isSplit ? "건물 취득일" : "취득일";
 
   // 겸용주택 모드: 기준시가 입력은 MixedUseStandardPriceInputs에서 받으므로

@@ -58,7 +58,7 @@ interface Props {
    * 실거래가(평가액) **고정 칩**이고 건물 가액 칸 라벨은 「건물 상속개시일 평가액」·「건물 증여 신고가액」이다(영 §163⑨ — 추계 불가).
    * 토지는 매매라 4방식 그대로다. `landCause`(토지가 상속·증여인 D1)와 동시에 서지 않는다.
    */
-  buildingCause?: "" | "inheritance" | "gift";
+  buildingCause?: "" | "inheritance" | "gift" | "carryover_gift";
   /** 토지·건물 소유자 분리 — 본인 소유하지 않는 파트는 모드 선택 비노출 */
   selfOwns: "both" | "building_only" | "land_only";
   /** 부담부증여(§159 자동 산정) — 파트별 모드·양도 분리 선택 자체를 숨긴다(안내만 표시) */
@@ -455,8 +455,10 @@ export function LandBuildingSplitSection(props: Props) {
           {props.buildingCause ? (
             <ToneCard tone="amber">
               <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="part-acq-mode-building-fixed">
-                <strong>{BUILDING_CAUSE_META[props.buildingCause].fixedMode}</strong> — 상속·증여로 취득한 건물은 평가액이 취득당시
-                실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
+                <strong>{BUILDING_CAUSE_META[props.buildingCause].fixedMode}</strong> —{" "}
+                {props.buildingCause === "carryover_gift"
+                  ? "이월과세 건물은 위 이월과세 정보의 증여자 취득가액과 아래 증여 신고가액으로 계산해 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97의2①·같은 법 시행령 §163⑨)."
+                  : "상속·증여로 취득한 건물은 평가액이 취득당시 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨)."}
               </p>
             </ToneCard>
           ) : (
@@ -501,12 +503,13 @@ export function LandBuildingSplitSection(props: Props) {
             actualLabel={props.buildingCause ? BUILDING_CAUSE_META[props.buildingCause].priceLabel : undefined}
             actualHint={props.buildingCause ? BUILDING_CAUSE_META[props.buildingCause].hint : undefined}
           />
-          {/* D2-4b — 2005.4.30. 전 상속·증여 주택 건물: 평가액(①) 바로 아래에서 영 §164⑦ 가액의 건물 몫(②)을 구한다(단서 구간일 때만 렌더). */}
-          {props.buildingCause && props.asset && props.onAssetChange && (
+          {/* D2-4b — 2005.4.30. 전 상속·증여 주택 건물: 평가액(①) 바로 아래에서 영 §164⑦ 가액의 건물 몫(②)을 구한다(단서 구간일 때만 렌더).
+              P4 B(이월과세 건물)는 이 비교를 받지 않는다 — 고시 전 증여는 ⑤ 안내·⑧ 차단(`buildingCarryoverPreDisclosure`), 주택별 최초공시일도 열지 않는다(C와 같다). */}
+          {props.buildingCause && props.buildingCause !== "carryover_gift" && props.asset && props.onAssetChange && (
             <BuildingSec164Card asset={props.asset} onChange={props.onAssetChange} />
           )}
           {/* 2005.4.30. 이후에 받은 건물 — 이 주택이 더 늦게 처음 공시됐으면 최초 공시일을 받아 위 카드를 연다(주택별 최초공시일). */}
-          {props.buildingCause && props.asset && props.onAssetChange && (
+          {props.buildingCause && props.buildingCause !== "carryover_gift" && props.asset && props.onAssetChange && (
             <HouseFirstDisclosureEntryCard
               asset={props.asset}
               onChange={props.onAssetChange}

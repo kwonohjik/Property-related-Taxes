@@ -169,7 +169,7 @@ export interface BlockProps {
    * 상속개시일·증여일(의제취득 클램프·배지 없음 — 사실값), 건물 파트는 평가액 고정 칩, 상단 자산 단위 취득가액 축·PHD 토글·
    * 신축/증축 특례는 숨긴다. 토지 매매 4방식·기준시가·자본적지출·축 A는 매매 split 그대로다.
    */
-  buildingCause?: "" | "inheritance" | "gift";
+  buildingCause?: "" | "inheritance" | "gift" | "carryover_gift";
 }
 
 /** assetKind → StandardPriceInput propertyKind 변환 */

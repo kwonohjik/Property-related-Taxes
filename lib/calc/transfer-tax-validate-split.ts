@@ -35,8 +35,7 @@ import { fieldError } from "./transfer-tax-validate-field";
 import { isLandBuildingSplitable } from "./self-owns-scope";
 import { engineLandOverlay } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
-import { effectiveLandCarryover } from "./transfer-land-part-cause";
-import { partCarryover } from "./transfer-land-part-cause";
+import { anyPartCarryover } from "./transfer-land-part-cause";
 import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
@@ -75,8 +74,8 @@ function opt(v: string | undefined): number | undefined {
  * 판정이 갈린다. **같은 함수를 공유하는 것만으로는 단일 소스가 아니다 — 인자까지 같아야 한다.**
  */
 function withExpenses(asset: AssetForm) {
-  // P2 C·P3 A — ④는 파트 이월과세 토지에서 자산 단위 총액을 싣지 않는다(엔진 S8). 인자도 같게 0.
-  return { ...asset, expenses: partCarryover(asset).land ? 0 : parseAmount(asset.directExpenses ?? "") };
+  // P2 C·P3 A·P4 B — ④는 파트 이월과세에서 자산 단위 총액을 싣지 않는다(엔진 S8). 인자도 같게 0.
+  return { ...asset, expenses: anyPartCarryover(asset) ? 0 : parseAmount(asset.directExpenses ?? "") };
 }
 
 /**
@@ -223,8 +222,8 @@ export function validateLandPartCause(
    */
   opts?: { isNonPrimary?: boolean; formTransferDate?: string; hasCompanions?: boolean },
 ): string | null {
-  // P3 A — 토지만 이월과세: 이월과세 입력 칸(화면 위→아래)과 같은 leaf를 A 사실로 건다(`transfer-tax-validate-split-carryover.ts`).
-  if (effectiveLandCarryover(rawAsset))
+  // P3 A·P4 B — 토지만·건물만 이월과세: 이월과세 입력 칸(화면 위→아래)과 같은 leaf를 그 사실로 건다(`transfer-tax-validate-split-carryover.ts`). 함께 양도 자산도 그 파일이 S0로 막는다.
+  if (anyPartCarryover(rawAsset))
     return validateSplitCarryoverParts(rawAsset, label, opts?.formTransferDate, { hasCompanions: opts?.hasCompanions, isNonPrimary: opts?.isNonPrimary });
   const asset = normalizeBuildingCauseInputs(rawAsset); // D2: ④와 같은 사본(stale 분리 입력 무시 · 건물 방식 실가 고정)
   const selfOwnsEff = effectiveSelfOwns(asset) ?? "both";

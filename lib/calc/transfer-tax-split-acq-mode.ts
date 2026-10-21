@@ -19,7 +19,7 @@ import { splitBuildingAcqPriceInput } from "./transfer-land-part-cause";
 import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { effectiveLandAcquisitionCause } from "./transfer-land-part-cause";
-import { effectiveLandCarryover } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { isSec163_9LandProviso } from "@/lib/tax-engine/transfer-split-part-cause";
 import { buildingSec164Applies } from "./transfer-building-sec164-bridge";
@@ -187,7 +187,7 @@ interface SeparateAcquisitionFlags {
   assetKind?: string;
   /** P2 C(파트 이월과세) 유효 판정용 — 일부만 넘기면 C가 꺼진 것으로 읽는다(종전 동작) */
   carryoverDonorSplit?: boolean;
-  landCarryover?: { giftRegistryDate?: string }; // P3 A — 정규화가 토지 취득일을 증여 등기접수일로 덮는다(빠지면 빈 날짜 → 별개 취득 꺼짐)
+  landCarryover?: { giftRegistryDate?: string }; carryover?: { giftRegistryDate?: string }; // P3 A·P4 B — 정규화가 이월과세 파트 취득일을 증여 등기접수일로 덮는다(빠지면 빈 날짜 → 별개 취득 꺼짐)
 }
 
 /**
@@ -280,8 +280,8 @@ export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: numbe
   if (parts[1].owned && buildingSec164Applies(asset)) pending = true;
   // D1-H — 주택 부수토지 단서 2호(받을 당시 주택 있음 · 단독·다가구): 토지 취득가액 = max(평가액, 영 §164⑦ 가액의 토지 몫). 비교가 도는 경우만 미확정.
   if (parts[0].owned && houseLandSec164Open(asset)) pending = true;
-  // P3 A — 이월과세 토지 취득가액은 ②3호 비교(엔진)가 증여자 취득가액·증여 신고가액 중 정한다 — 결과 도착 전까지 미확정(C ③-0b와 같은 이유).
-  if (parts[0].owned && effectiveLandCarryover(asset)) pending = true;
+  // P3 A·P4 B — 이월과세 파트 취득가액은 ②3호 비교(엔진)가 증여자 취득가액·증여 신고가액 중 정한다 — 결과 도착 전까지 미확정(C ③-0b와 같은 이유).
+  if ((parts[0].owned && partCarryover(asset).land) || (parts[1].owned && partCarryover(asset).building)) pending = true;
   for (const p of parts) {
     if (!p.owned) continue;
     if (p.mode === "estimated") {
@@ -304,7 +304,7 @@ export function separateAcqPartsSum(rawAsset: SeparatePartAmounts): { sum: numbe
  */
 export function splitHasNonActualOwnedPart(rawAsset: SeparatePartAmounts & SeparateAcquisitionFlags): boolean {
   // P2 C — 파트 이월과세의 필요경비에는 증여세 상당액(영 §163의2②, 파트 양도차익 한도)·증여자 자본적지출이 들어가고 둘 다 엔진이 확정한다. 입력 부분합을 총액으로 보이지 않는다.
-  if (effectiveCarryoverDonorSplit(rawAsset) || effectiveLandCarryover(rawAsset)) return true; // P3 A(토지)도 같다
+  if (partCarryover(rawAsset).land || partCarryover(rawAsset).building) return true; // P3 A(토지)·P4 B(건물)도 같다
   if (!isSeparateAcquisition(rawAsset)) return false;
   const asset = normalizeBuildingCauseInputs(rawAsset);
   const selfOwns = asset.selfOwns ?? "both";

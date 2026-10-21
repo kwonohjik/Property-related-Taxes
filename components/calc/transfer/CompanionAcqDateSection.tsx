@@ -63,7 +63,7 @@ export function CompanionAcqDateSection(props: {
    * 강제 ON·잠금이고, **건물 칸**의 의제취득(§98) 클램프·배지는 끈다 — 건물 상속개시일·증여일은 사실값이다(D1 T-6의 건물판).
    * 토지 칸은 그대로다(매매 토지는 의제취득 대상). 건물 칸 라벨은 `acqDateLabel`이 이미 상속개시일·증여일로 파생한다.
    */
-  buildingCause?: "" | "inheritance" | "gift";
+  buildingCause?: "" | "inheritance" | "gift" | "carryover_gift";
 }) {
   const { block: p, isSplitable, isSplit, isMixedUse, acqDateLabel } = props;
   const landCause = props.landCause || undefined;
@@ -215,12 +215,19 @@ export function CompanionAcqDateSection(props: {
               required={!!buildingCause}
               trailing={isDeemedAcquisitionDate ? <DeemedBadge /> : undefined}
             >
+              {/* P4 B — 이월과세 건물의 취득일은 증여 등기접수일 한 곳이다(엔진 S5). 위 이월과세 정보에서 입력하고 여기는 읽기 전용(④·⑥·⑧은 정규화 사본으로 같은 값을 읽는다). */}
               <DateInput
-                value={p.acquisitionDate}
+                value={buildingCause === "carryover_gift" ? (p.asset?.carryover?.giftRegistryDate ?? "") : p.acquisitionDate}
                 onChange={handleAcquisitionDateChange}
                 onBlur={handleAcquisitionDateBlur}
+                disabled={buildingCause === "carryover_gift"}
                 data-testid="acq-date-building"
               />
+              {buildingCause === "carryover_gift" && (
+                <p className="text-caption text-muted-foreground" data-testid="building-carryover-date-note">
+                  건물 취득일은 위 이월과세 정보의 증여 등기접수일입니다(이월과세 건물은 증여받은 날 취득, 보유기간·장기보유특별공제는 증여자 취득일부터).
+                </p>
+              )}
               {dateClampMsg && (
                 <p className="text-xs text-amber-700 dark:text-amber-400">
                   1985.1.1. 의제 취득일로 취득일 변경했습니다.

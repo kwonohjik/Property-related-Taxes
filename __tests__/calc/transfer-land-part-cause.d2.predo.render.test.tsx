@@ -58,9 +58,11 @@ describe("A. 불변식 — D2 후에도 유지", () => {
     expect(container.querySelector('[data-testid="newconstruction-land-acq"]')).not.toBeNull();
   });
 
-  it("A3 이월과세(증여) 호스트: 토지 원인 토글이 없다 — D2는 이월과세 건물을 열지 않는다(계획서 §5)", () => {
+  it("A3 이월과세(증여) 호스트: D1 토지 원인 토글이 없다 · P4 B 토글(건물만 이월과세 + 토지 매매)은 있다 — D2 블록이 아니라 이월과세판", () => {
     const { container } = mount(asset({ acquisitionCause: "carryover_gift" }));
     for (const id of TOGGLE_IDS) expect(container.querySelector(`[data-testid="${id}"]`)).toBeNull();
+    const b = container.querySelector('[data-testid="land-part-cause-building-cause"]');
+    expect(b?.textContent).toContain("건물은 이월과세(증여), 토지는 매수");
   });
 
   it("A4 비주택·토지 자산(assetKind land)은 어느 호스트에서도 토글이 없다", () => {

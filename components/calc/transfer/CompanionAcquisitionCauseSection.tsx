@@ -34,6 +34,7 @@ import { giftEstimationGenericScope } from "@/lib/calc/transfer-tax-validate-gif
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { allowsFamilyBusinessInheritance } from "@/lib/calc/transfer-fb-gate";
 import { buildingDatePatch, effectiveBuildingCauseMix, effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
+import { effectiveBuildingCarryoverMix } from "@/lib/calc/transfer-land-part-cause";
 import { isMixedBurdenedGift, mixedBgBlockedCause } from "@/lib/calc/burdened-gift-mixed-use-scope";
 
 const ACQUISITION_CAUSE_OPTIONS = [
@@ -84,6 +85,8 @@ export function CompanionAcquisitionCauseSection({
   // D2(건물 상속·증여 + 토지 매매) 유효 여부 — **1회 계산해 아래 마운트 조건·매매 블록에 주입**한다(재파생 금지, `landCause` 주입과 같은 규약).
   const buildingCauseMix = effectiveBuildingCauseMix(asset);
   const d2On = !!buildingCauseMix;
+  // P4 B(건물만 이월과세 + 토지 매매) — 매매 블록을 건물 원인 「이월과세(증여)」 모드로 열고 자산 전체 이월과세 블록을 대신한다(같은 1회 계산 주입 규약).
+  const buildingCarryoverOn = effectiveBuildingCarryoverMix(asset);
   // 결정 #38-1·#38-3 — 첫 자산의 증여 주택(D2 제외 · 겸용 포함)에서 세대 사실을 묻는다(단건·다건 모두 — 다건 ④도 같은 빌더로 싣는다).
   //    ⑧ `validateAssetEntry`와 같은 게이트(`calcGiftHouseholdFactAsked`), ④ `buildCalcGiftHouseholdPayload`와 같은 술어.
   const giftHouseholdAsked = calcGiftHouseholdFactAsked(asset, { isPrimary: !isNonPrimaryAsset });
@@ -183,7 +186,13 @@ export function CompanionAcquisitionCauseSection({
       <LandPartCauseBlock asset={asset} onChange={onChange} transferDate={transferDate} isNonPrimaryAsset={isNonPrimaryAsset} hasCompanions={hasCompanions} />
 
       {/* 건물을 상속·증여로 취득하고 토지는 매수한 경우(D2) — 토글. 켜면 아래 상속·증여 블록 대신 매매 블록이 건물 원인 모드로 마운트된다. */}
-      <BuildingCauseMixBlock asset={asset} onChange={onChange} />
+      <BuildingCauseMixBlock
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate}
+        isNonPrimaryAsset={isNonPrimaryAsset}
+        hasCompanions={hasCompanions}
+      />
 
       {/* 신축(자가건축) — 신축비용(취득가액) 입력 블록 */}
       {isNewConstruction && (
@@ -193,10 +202,10 @@ export function CompanionAcquisitionCauseSection({
         />
       )}
 
-      {(asset.acquisitionCause === "purchase" || d2On) && (
+      {(asset.acquisitionCause === "purchase" || d2On || buildingCarryoverOn) && (
         <CompanionAcqPurchaseBlock
           isNonPrimaryAsset={isNonPrimaryAsset}
-          buildingCause={buildingCauseMix}
+          buildingCause={buildingCauseMix || (buildingCarryoverOn ? "carryover_gift" : "")}
           acquisitionDate={asset.acquisitionDate}
           // D2 상속 호스트는 상속개시일 3키를 한 patch로 쓴다(상속 블록과 같은 leaf) — 한쪽만 쓰면 다른 키가 stale로 남는다.
           onAcquisitionDateChange={(v) => onChange(d2On ? buildingDatePatch(asset.acquisitionCause, v) : { acquisitionDate: v })}
@@ -371,7 +380,7 @@ export function CompanionAcquisitionCauseSection({
         />
       )}
 
-      {asset.acquisitionCause === "carryover_gift" && (
+      {asset.acquisitionCause === "carryover_gift" && !buildingCarryoverOn && (
         <CarryoverGiftBlock
           asset={asset}
           transferDate={transferDate ?? ""}

@@ -9,7 +9,7 @@
  *    의존하는 파생은 옮기지 말 것(파라미터가 늘면 이 파일의 존재 이유가 사라진다).
  */
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
-import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { partCarryover } from "./transfer-land-part-cause";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
@@ -63,7 +63,8 @@ export function buildPrimaryContext(
   // D2(건물 상속·증여 + 토지 매매) — 자산 단위 추계 플래그(stale 포함)는 무시한다: 건물은 평가액(실가) 고정, 토지 방식은 파트 모드가 정한다.
   // ⑧ D2 분기·다건 ④와 같은 술어 — 남은 환산 플래그가 ⑫에 「환산 기준시가 필수」를 일으키는 칸 없는 400을 막는다.
   //   P2 C(파트 이월과세)도 같다: 두 파트가 실가(증여자 취득가액·증여 신고가액) 고정이라 자산 단위 추계 플래그 잔재를 읽지 않는다(`normalizeBuildingCauseInputs`의 파트 방식 고정과 짝).
-  const d2Mix = !!effectiveBuildingCauseMix(primary) || effectiveCarryoverDonorSplit(primary);
+  //   P4 B(건물만 이월과세 + 토지 매매)도 같다 — 건물은 증여 신고가액 고정, 토지 방식은 파트 모드가 정한다.
+  const d2Mix = !!effectiveBuildingCauseMix(primary) || partCarryover(primary).building;
   const isSalesCase = !d2Mix && !blocksAppraisalSalesCase && primary.isSalesCaseAcquisition === true;
   const isAppraisal =
     !d2Mix && !blocksAppraisalSalesCase && !isSalesCase && primary.isAppraisalAcquisition === true;
@@ -110,7 +111,7 @@ export function buildPrimaryContext(
     primary.acquisitionCause === "carryover_gift" &&
     primary.carryover?.useEstimatedAcquisition === true &&
     primary.carryover?.estimationMode === "general" &&
-    !effectiveCarryoverDonorSplit(primary);
+    !partCarryover(primary).building; // P4 B도 같다
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
   // A15(2026-09-02): 환지 의제 필지는 `acquisitionDate`가 빈 문자열이라 종전 `|| form.transferDate`

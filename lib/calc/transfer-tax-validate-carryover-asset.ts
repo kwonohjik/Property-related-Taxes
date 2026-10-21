@@ -5,6 +5,7 @@ import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { validateSplitCarryoverParts } from "./transfer-tax-validate-split-carryover";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
+import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -14,6 +15,8 @@ import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store
  *
  * P2 C(증여자 토지·건물 취득일 상이)는 맨 앞에서 `validateSplitCarryoverInputs`로 가른다 — 자산 전체 1벌 입력 규칙(증여자 취득가액 1칸·환산)과
  * 요구 칸이 달라서 같은 분기에 섞으면 «화면에 없는 칸을 요구»하게 된다.
+ * P4 B(건물만 이월과세 + 토지 매매)도 같은 이유로 맨 앞에서 분리 검증(`validateSplitDirectInputs` — 첫 줄 `validateLandPartCause`가 B 이월과세 칸을 건다)으로 보낸다.
+ * 함께 양도 자산이어도 보낸다 — 그 자리는 leaf S0가 «토지는 다른 원인으로 취득» 토글로 막는다(④는 키를 싣지 않는다).
  */
 export function validateCarryoverAsset(
   asset: AssetForm,
@@ -28,6 +31,8 @@ export function validateCarryoverAsset(
       validateSplitDirectInputs(asset, label, formTransferDate)
     );
   }
+  if (effectiveBuildingCarryoverMix(asset))
+    return validateSplitDirectInputs(asset, label, formTransferDate, { isNonPrimary: ctx.isNonPrimaryAsset, hasCompanions: (ctx.form?.assets?.length ?? 0) > 1 });
   const c = asset.carryover;
 
   // (a) 가업상속공제 최우선 차단 (§97조의2 ④)

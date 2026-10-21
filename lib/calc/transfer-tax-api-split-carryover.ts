@@ -1,5 +1,5 @@
 /**
- * ④ 주택 split **파트 이월과세**(소득세법 §97의2①) — 폼 → payload 변환 (P2 C · P3 A).
+ * ④ 주택 split **파트 이월과세**(소득세법 §97의2①) — 폼 → payload 변환 (P2 C · P3 A · P4 B).
  *
  * 설계: docs/02-design/features/transfer-split-part-carryover.engine.design.md §1 (와이어 정본) · ui.design.md §2.4·§3.1
  *
@@ -14,6 +14,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { effectiveCarryoverDonorSplit, effectiveLandCarryover } from "./transfer-land-part-cause";
+import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
 
 /** ⑫ `carryoverGiftEvent` — 증여 그 자체의 사실. */
 export interface SplitCarryoverEventPayload {
@@ -37,16 +38,19 @@ export interface SplitCarryoverPartPayload {
 }
 
 export interface SplitCarryoverPayload {
-  landAcquisitionCause: "carryover_gift";
+  /** C·A `carryover_gift` · B(건물만 이월과세) `purchase` — 토지 overlay(엔진 설계서 §1.2) */
+  landAcquisitionCause: "carryover_gift" | "purchase";
   carryoverGiftEvent: SplitCarryoverEventPayload;
-  landCarryoverPart: SplitCarryoverPartPayload;
-  /** C만 — A(토지만 이월과세)는 싣지 않는다(엔진 T15 stray 400). */
+  /** C·A만 — B는 싣지 않는다(엔진 T15 stray 400). */
+  landCarryoverPart?: SplitCarryoverPartPayload;
+  /** C·B만 — A(토지만 이월과세)는 싣지 않는다(엔진 T15 stray 400). */
   buildingCarryoverPart?: SplitCarryoverPartPayload;
 }
 
 /**
  * 증여 **사건** 출처 서브폼 — 등기접수일·산출세액·과세가액·관계·사망·적용배제가 이 한 벌이다(UI 설계 §2.1 Q-2).
  *   · 호스트 「이월과세(증여)」(C) — `carryover`. 건물 파트의 증여자 입력도 같은 서브폼이 받는다(토글 전 입력이 건물 값으로 재해석된다 — §3.3).
+ *     P4 B(건물만 이월과세 + 토지 매매)도 호스트가 「이월과세(증여)」라 `carryover`다 — 건물 파트 입력과 같은 서브폼.
  *   · 그 밖(P3 A — 건물 매매·신축 + 토지 이월과세) — `landCarryover`. 토지 파트 입력도 같은 서브폼이다.
  * ⑤(카드 바인딩)·④·⑧이 이 함수 하나로 같은 서브폼을 읽는다.
  */
@@ -90,7 +94,8 @@ function buildEvent(c: CarryoverTaxationForm | undefined): SplitCarryoverEventPa
 }
 
 /**
- * C·A payload — 둘 다 아니면 `undefined`(키를 하나도 내지 않는다: 엔진 T15 stray 400 방지). A는 사건 + 토지 파트만, 함께 양도 자산이면 싣지 않는다(엔진 S0 — ⑧이 막는다).
+ * C·A·B payload — 셋 다 아니면 `undefined`(키를 하나도 내지 않는다: 엔진 T15 stray 400 방지). A는 사건 + 토지 파트만, B는 사건 + 건물 파트만(토지 overlay `purchase`) —
+ * 둘 다 함께 양도 자산이면 싣지 않는다(엔진 S0 — ⑧이 막는다).
  *
  * `landAcquisitionDate`·`acquisitionDate`·`isSeparateAcquisition: false`·파트 방식 `actual`·`landAcquisitionPrice`·`buildingAcquisitionPrice`·양도가액 구분은
  * `buildSplitPayload`/`transfer-tax-api.ts`가 같은 술어로 싣는다. 최상위 `carryoverTaxation`은 싣지 않는다(상호배제 R-1).
@@ -113,6 +118,12 @@ export function buildSplitCarryoverPayload(
       landAcquisitionCause: "carryover_gift",
       carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
       landCarryoverPart: buildPart(asset.landCarryover, ratioed),
+    };
+  if (!opts?.isNonPrimary && effectiveBuildingCarryoverMix(asset))
+    return {
+      landAcquisitionCause: "purchase",
+      carryoverGiftEvent: buildEvent(splitCarryoverEventSource(asset)),
+      buildingCarryoverPart: buildPart(asset.carryover, ratioed),
     };
   return undefined;
 }

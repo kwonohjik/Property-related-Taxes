@@ -457,3 +457,30 @@ PC1~PC7의 B판 + **D2 회귀**(상속·증여 호스트 D2 격자 `transfer-lan
 - 뮤테이션 15건 전부 KILLED(H-4 화이트리스트·정규화 A 분기·`partCarryover` A·신축 건물가 후퇴·④ A payload·⑥ pending·⑥ 비실가·다건 차단·재건축 호스트 제외·⑧ 비주 자산·⑧ 같은 날·⑧ A 진입·결과 `buildingGifted`·⑧/④ expenses 0). E2E는 ④ A payload 변형으로 실패 확인.
 - 🔴 별건(P3 범위 밖, 미수정): **신축 호스트 + 토지 상속·증여(D1) + 숨은 이전 형식 필요경비** → ⑧이 `buildingStandardPriceAtAcq`를 요구하지만 신축 호스트에는 그 칸이 없다(매매 블록 미마운트). probe 실측 — 매매 호스트는 카드가 열려 정합.
 - E2E `e2e/transfer-split-part-carryover-a.spec.ts`. 기존 spec 3곳(`d0`·`d1-2`·`split-mode-gating`)의 토지 원인 «증여» 라디오 셀렉터에 `exact: true`(§9.1).
+
+---
+
+## 14. P4(B) 구현 환류 (2026-10-21, Do 단계 — 설계와 달라진 점 · 설계가 말하지 않은 것)
+
+| # | 설계 | 구현 | 근거 |
+|---|---|---|---|
+| U-32 | §2.2 `effectiveBuildingCarryoverMix` = … ∧ 소유자 분리·부담부증여 아님 ∧ 첫 자산 | **부담부증여만 거른다**(D2 `effectiveBuildingCauseMix`와 같은 성립 조건 — ④가 부담부증여에서 분리 입력을 보내지 않는다). 소유자 분리·함께 양도 자산은 leaf(S4·S0)가 ⑧·⑫에서 막는다 | U-20과 같은 이유 — 조용히 끄면 건물이 자산 전체 이월과세 1벌로 읽힌다. 격자 `구조: 소유자 분리` ⑧ 차단 ⇔ ⑫ 400 |
+| U-33 | §2.3 `CarryoverGiftBlock partMode=["building"]` + 신규 `BuildingCarryoverMixPanel` | **partMode를 두지 않았다**(U-21과 같다). `LandCarryoverCard`에 `part="building"`을 더해 `carryover` 서브폼에 묶고, `BuildingCarryoverMixPanel`(토글 + 안내 + 그 카드)이 `BuildingCauseMixBlock`에서 이월과세 호스트일 때 열린다. 토글 testid·`data-field`는 D2와 같다(`land-part-cause-building-cause` · `landAcquisitionCause`) | 한 화면에 한 토글만 선다(호스트가 다르다). 자산 전체 이월과세 블록(`CarryoverGiftBlock`)은 B에서 숨긴다 — 증여 당시 평가액 칸·C 토글·세대 사실 질문이 함께 사라진다 |
+| U-34 | §5.2 건물 취득일 표시값 = `acquisitionDate \|\| carryover.giftRegistryDate` | **항상 증여 등기접수일**(읽기 전용). `normalizeBuildingCauseInputs`에 B 분기(건물 취득일 ← 등기접수일, 건물 방식 실가) · ④ `carryoverAcquisitionDateFallback`도 B면 등기접수일만 | 호스트를 바꾸기 전 입력한 `acquisitionDate`가 남으면 엔진 S5(파트 취득일 ≠ 등기접수일) 400 — 격자 `잔재: 건물 취득일 칸 옛 값`이 통과·세액 동일 |
+| U-35 | — | C 술어를 «자산 전체 이월과세 1벌을 쓰지 않는다»는 뜻으로 읽던 소비처 8곳을 `partCarryover(asset).building`(C ∨ B)으로 넓혔다: ④ 최상위 `carryoverTaxation`(R-1) · 건물 취득일 후퇴 · 세대 사실 질문(⑤⑧④ 공용 `carryoverHouseholdFactVisible`) · 세대 basis(`calcGiftHouseholdBasis`) · 증여 전 거주 개월(`giftPriorResidenceAsked`) · 이월과세 PHD 모드(`carryoverPhdMode`) · 자산 단위 추계 플래그 무시(`d2Mix`) · 일반 기준시가 환산 잔재(`isCarryoverGeneral`) | B에서 하나라도 빠지면 엔진 S3(자산 단위 + 파트 상호배제) 400이거나 화면에 없는 칸 요구다. 뮤테이션 M5·M6·M17 |
+| U-36 | §5.1 | 건물 증여 등기접수일 < 2005-04-30(영 §163⑨ 단서 2호)이면 B는 ⑤ 안내·⑧ 차단(`BUILDING_CARRYOVER_PRE_DISCLOSURE_MESSAGE` — `buildingCarryoverPreDisclosure` 한 술어). 매매 블록의 D2-4 카드(`BuildingSec164Card`)·주택별 최초공시일 진입 카드는 B에서 열지 않는다 | C(U-11)와 같은 범위 결정 — B는 주택 구분·②·일괄 고시 질문을 받지 않는다. 증여일이 그 구간이면 양도일 ≤ 2010-04-30이라 도달이 매우 좁다. 🟡 **확인 필요**: 2005-04-30 뒤에 증여받았는데 그 주택이 더 늦게 처음 공시된 경우(주택별 최초공시일)는 B·C 모두 평가액만으로 계산한다 |
+| U-37 | — | `anyPartCarryover`(C·A·B) — ④ `expenses`·⑤ `acqStdNeedFlags`·⑧ `withExpenses`가 같은 값(U-29·U-30의 B판) | 엔진 S8 — B도 자산 단위 필요경비 총액이 있으면 400 |
+| U-38 | — | 합성 술어 `landCauseMixActive`에 B를 넣었다 — 소유자 분리 토글 상호 잠금·PHD 무시·같은 날(Q-4) 판정이 B에도 선다. 같은 날은 ⑧이 토지 취득일 칸으로 보낸다(B의 건물 날짜는 읽기 전용) | D1·D2와 같은 ⑤·⑧ 정책(⑫는 막지 않는다) |
+| U-39 | §5.2 「토글 disabled: C 활성」 | 양방향 잠금: B 토글은 C가 유효하면 켤 수 없고, `effectiveCarryoverDonorSplit`은 B가 유효하면 거짓이다(B 패널이 C 토글이 있는 자산 전체 블록을 대신하므로 저장값 C는 잔재로 읽힌다 — 값 보존) | 둘 다 저장된 손상값에서 화면에 끌 수 있는 쪽(B 토글)이 이긴다 |
+| U-40 | §6 | view에 `landGifted`를 더했다 — 상세명세서 취득일 문구가 «건물 취득일 = 증여 등기접수일 — 토지는 매매»(B)로 갈린다. 신고서 합계 취득일 = 등기접수일(`buildingGifted`) · 토지 열 = 매매일 · 건물 열 = 증여자 취득일 | `split-carryover-p4b.views.ui.anchor.test.tsx` |
+| U-41 | — | `CompanionAcqPurchaseBlock`의 `isSeparateAcquisition` 부분 객체에 `carryover`를 넘긴다(U-31의 B판) — 정규화가 건물 취득일을 등기접수일로 덮는다 | 빠지면 ⑤만 «별개 취득 아님»(뮤테이션 M14) |
+| U-42 | §2.6 컴패니언 | 두 번째 이후 자산은 OFF면 B 토글을 열지 않는다(안내는 C 토글 자리의 N6). ON 잔재면 끌 수 있게 토글을 남기고 ⑧이 맨 앞에서 S0 문구로 막는다(앵커 = 토글) · ④는 키를 싣지 않는다 | A U-23과 같은 순서 |
+
+- 🟡 범위 밖(기존 그대로): 이월과세 호스트의 화면에 없는 분리 입력 잔재(B가 아닌데 `hasSeperateLandAcquisitionDate`만 켜진 상태)는 `hasStaleSplitInput`이 다루지 않는다 — 그 술어를 넓히면 C 정규화(파트 방식 실가 고정)보다 먼저 반환해 C를 바꾼다. 도달 경로는 원인 라디오가 분리를 끄므로 구 저장분뿐이다(확인 필요).
+
+### 14.1 검증 요약
+
+- 격자 `__tests__/calc/transfer-split-part-carryover.b.parity-grid.test.ts` — leaf 소관·⑧ 전용·잔재(D) 셀 + 앵커·S9·S2′·컴패니언·다건·숨은 필요경비·토지 환산·부정형 짝·술어 분리. 기준 셀 결정세액 261,210,000(엔진 SPCO-T5와 일치).
+- ⑤ `__tests__/components/split-carryover-p4b.section.ui.test.tsx`(OFF/ON 화면·앵커 각 1개·읽기 전용 건물 날짜·한 patch ON/OFF·상호 잠금·컴패니언·부담부증여·고시 전 안내·D2 카드 비노출) · ⑥ `__tests__/lib/transfer-per-asset-summary.split-carryover-b.test.ts` · ⑦ `__tests__/components/split-carryover-p4b.views.ui.anchor.test.tsx`.
+- 반전(§9.1): `transfer-land-part-cause.d2.predo.render.test.tsx` A3(B 토글 가시) · `e2e/transfer-acq-cause-mixed-d2-2.spec.ts`(이월과세 호스트 토글 1개). N2′·N3 최종본 문구를 `BuildingCauseMixBlock`에 반영.
+- E2E `e2e/transfer-split-part-carryover-b.spec.ts`.
