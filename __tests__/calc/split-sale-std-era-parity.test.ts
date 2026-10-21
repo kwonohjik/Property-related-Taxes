@@ -84,9 +84,9 @@ const carryoverC = (over: Record<string, unknown> = {}) => {
 
 type Shape = { name: string; make: (over?: Record<string, unknown>) => AssetForm; sale: string; multi: boolean; companion: boolean };
 const SHAPES: Shape[] = [
-  // 함께 양도 두 번째 자산의 매매 분리취득은 연혁과 무관하게 ⑫가 화면에 없는 `fixedAcquisitionPrice`를 요구해 400이다(별건 — 계획서 §6).
-  // 그 결함이 이 격자의 연혁 셀을 가리지 않도록 함께 양도 셀은 신축 + 토지 상속 형태로만 본다.
-  { name: "일반 분리취득", make: general, sale: "1500000000", multi: true, companion: false },
+  // 함께 양도 셀은 종전에 꺼 두었다 — 매매 분리취득 두 번째 자산은 연혁과 무관하게 ⑫가 화면에 없는 `fixedAcquisitionPrice`를 요구해 400이었다.
+  // #2373(`companion-split-fixed-acq-price.plan.md`)이 고쳐 켠다.
+  { name: "일반 분리취득", make: general, sale: "1500000000", multi: true, companion: true },
   { name: "신축 + 토지 상속", make: newConstruction, sale: "1500000000", multi: true, companion: true },
   // 파트 이월과세는 첫 자산 전용·다건 미지원(P1~P6 설계) — 단건만
   { name: "이월과세 C", make: carryoverC, sale: "1200000000", multi: false, companion: false },
