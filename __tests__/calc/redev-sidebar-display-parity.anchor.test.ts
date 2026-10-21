@@ -129,6 +129,37 @@ describe("U2-04 · 승계 입주권 — 산정 방식이 바뀌면 사이드바�
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// §166 실가 취득가액 소스 — ⑥ 사이드바가 ④와 같은 leaf(`redevActualAcquisitionPriceRaw`)를 읽는다
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ORIGINAL_APT: Partial<AssetForm> = {
+  assetKind: "redevelopment_apt",
+  redevSubject: "apt",
+  acquisitionDate: "2005-03-10",
+  actualSalePrice: "1200000000",
+  redevApprovalDate: "2018-10-23",
+  redevRightsValue: "800000000",
+  redevActualAcquisitionPrice: "200000000",
+};
+
+describe("RA-SRC · §166 실가 취득가액 — 사이드바와 ④가 같은 칸을 읽는다", () => {
+  it("RA-SRC-01: 원조합원 — 숨은 상단 칸에 옛 값이 있어도 §166 칸 값을 표시한다", async () => {
+    setAsset({ ...ORIGINAL_APT, fixedAcquisitionPrice: "999000000" }, { contractTotalPrice: "1200000000" });
+    expect(summary().rows[0].acqPrice).toBe(200_000_000);
+    expect((await buildBody()).acquisitionPrice).toBe(200_000_000);
+  });
+
+  it("RA-SRC-02: 승계조합원 완공APT — 상단 칸(`fixedAcquisitionPrice`)이 정본이다", async () => {
+    setAsset(
+      { ...ORIGINAL_APT, redevIsSuccessorMember: "yes", fixedAcquisitionPrice: "650000000" },
+      { contractTotalPrice: "1200000000" },
+    );
+    expect(summary().rows[0].acqPrice).toBe(650_000_000);
+    expect((await buildBody()).acquisitionPrice).toBe(650_000_000);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // C1-05 — 청산금 수령분 단독 신고
 // ─────────────────────────────────────────────────────────────────────────────
 
