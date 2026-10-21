@@ -19,7 +19,7 @@
  * | 기능 | 메커니즘 | 결과 |
  * |---|---|---|
  * | 겸용·일반건물 | route 분기 **미실행** | 다른 계산이 나옴 |
- * | 부담부증여 | STEP 0.48은 **실행**되나 안분 transferPrice와 **스케일 충돌** | 필요경비 **음수** |
+ * | 부담부증여(+ 일반 컴패니언) | 혼합 묶음 — **⑩이 명시 차단**(2026-10-21) | 400 |
  * | 상가·**재개발** | 전용 분기 없음 — 엔진 내부 처리 | **계산 정상**, 표시 상세만 누락 |
  *
  * → marker 부재만으로 결함이라 판정하면 **상가에서 오진**한다. 반드시 산출값까지 본다.
@@ -418,22 +418,16 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     expect(bp.transferGain).toBeGreaterThan(0);
   });
 
-  it("🔴 부담부증여 — §159 gain과 안분 양도가액이 충돌해 **필요경비가 음수**가 된다", async () => {
-    // ⚠️ 부담부증여만 메커니즘이 다르다. 겸용·재개발·일반건물은 route 분기가 **미실행**이지만,
-    //    부담부증여의 STEP 0.48은 엔진 내부라 **실행된다**. 문제는 route가 transferPrice를
-    //    안분값(5억)으로 덮어쓰는데 gain은 §159 기준(채무 6억)으로 산출된다는 **스케일 충돌**이다.
-    //    → 표시 필요경비 = 양도가 − 취득가 − 양도차익 = 500,000,000 − 300,000,000 − 291,000,000
-    //      = **−91,000,000** (음수). 명백한 내부 모순이며 사용자에게 그대로 노출된다.
+  it("부담부증여 주 자산 + 일반 컴패니언(혼합 묶음) — ⑩이 명시 차단한다", async () => {
+    // 종전에는 계산됐다: route가 transferPrice를 안분값(5억)으로 덮어쓰는데 gain은 §159 기준(채무 6억)이라
+    // 표시 필요경비가 −91,000,000(음수)이었다. 일반 양도 + 부담부증여 혼합은 안분·채무 재배분이 설계되지 않아
+    // (계획서 `docs/00-pm/burdened-gift-bundle-hidden-stdprice.plan.md` §1.4) 이제 ⑧·⑩이 막는다.
     const r = await compare(BURDENED, "debtRatio");
     expect(r.singleMode).toBe("single");
     expect(r.inSingle).toBe(true);
-    expect(r.inBundled, "§159 breakdown이 일괄 결과에 실리지 않는다").toBe(false);
+    expect(r.bundledStatus).toBe(400);
 
     const bb = await (await POST(req({ ...BURDENED, ...COMPANION }))).json();
-    const bp = bb.data.aggregated.properties.find(
-      (x: { propertyId: string }) => x.propertyId === "primary",
-    );
-    expect(bp.transferPrice, "안분 양도가액").toBe(500_000_000);
-    expect(bp.necessaryExpense, "🔴 필요경비 음수 — 스케일 충돌의 직접 증거").toBeLessThan(0);
+    expect(JSON.stringify(bb.error ?? {})).toContain("일반 양도 자산과 부담부증여 자산은 함께 양도로 계산할 수 없습니다");
   });
 });
