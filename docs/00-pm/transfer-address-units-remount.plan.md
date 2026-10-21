@@ -1,6 +1,6 @@
 # 양도세 소재지 동·호 목록이 사라져 「동·호를 선택하세요」에 막힘 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1~Q-3)** · 워크트리 `../Property-related-Taxes-dongho` · 브랜치 `docs/address-units-remount-plan`
+> 작성 2026-10-21 · 상태 **Do 완료 — Q-1~Q-3 모두 권고안 a(2026-10-21). 구현 PR #2334(머지 대기) · 결과는 「Do 결과」** · 워크트리 `../Property-related-Taxes-dongho` · 브랜치 `docs/address-units-remount-plan`
 > 기준 master `603b4ddfe`. 줄 번호는 모두 이 커밋 기준이다.
 > 선행: #2331(주소 세대 조회가 단계를 떠난 뒤 끝나면 다음 단계 입력이 지워지던 결함). 그 PR의 「별건」으로 남긴 것이다.
 > 관련 계획서: `transfer-address-unit-gate-detached-house.plan.md`(단독주택 필지에서 동·호를 요구하지 않게 한 게이트), `business-key-property-identity.plan.md`(소재지·동·호 필수의 근거).
@@ -125,7 +125,7 @@
 
 ---
 
-## 결정 필요
+## 결정 — 2026-10-21 사용자 결정: Q-1~Q-3 전부 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
@@ -138,3 +138,21 @@
 - 다른 계산기 10곳에서 다시 마운트되면 동·호 드롭다운이 사라지는 것. 막히지는 않으며, 동·호를 쓰는 곳이 있는지 확인이 필요하다.
 - 단계 탭이 1단계 검증 없이 넘어가는 것. 의도된 설계인지 확인이 필요하다. 이 계획은 그 동작을 바꾸지 않고, 돌아왔을 때 복구되게 한다.
 - 이력 불러오기·첫 자산 교체·다건 편집에서 다시 마운트되는 경로의 실측.
+
+## Do 결과 (2026-10-21) — PR #2334(`fix/address-units-remount`)
+
+- 바꾼 파일은 2개다.
+  - `components/ui/address-search.tsx`: R1·R3. `loadUnits`가 `found`/`none`/`failed`를 돌려준다. 주소 선택 경로(`fetchUnits`)는 종전대로 `found`일 때만 `true`다.
+  - `components/calc/transfer/asset-sections/AssetSectionBasic.tsx`: R2와 `knownHasUnits` 전달
+- 「없음」 확정은 모든 연도가 `404 PRICE_NOT_FOUND`이거나, 받은 행에 고를 세대가 없을 때뿐이다(`route.ts` 실패 응답은 `502 NED_FETCH_FAILED` 등).
+- 회귀 `e2e/transfer-address-units-remount.spec.ts` U-1~U-9: 수정 전 8건 실패(U-8 반례는 원래 통과) → 수정 후 9건 통과
+- 뮤테이션 6건은 모두 실패했다.
+  - 재조회 제거 → U-1~7·9
+  - 동·호 전달 제거 → U-4·6
+  - 같은 판정도 저장 → U-5·6·9
+  - 실패를 「없음」으로 → U-5·6
+  - `knownHasUnits` 조건 제거 → U-8
+  - 안내 제거 → U-5·6
+- 주소 검색을 쓰는 기존 E2E 16 spec과 `transfer-address-units-late-resolve`, 합계 87건이 통과했다.
+- 게이트 4종, typecheck, lint(오류 0), 전체 vitest 3,192파일이 통과했다.
+- §5의 「반례 2」는 sessionStorage 쓰기 횟수로 관측했다(U-9).
