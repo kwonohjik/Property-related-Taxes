@@ -312,6 +312,10 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
               detail: "",
               lng: "",
               lat: "",
+              // 동·호를 함께 넘긴다 — 빠지면 상세주소 입력이 아래 `v.dong ?? ""`로 고른 동·호를 지워
+              //   기준시가 조회가 다른 세대 가격을 채웠다(계획서 address-dongho-other-calcs-and-multi-gate.plan.md R1)
+              dong: unit.rentalDong || undefined,
+              ho: unit.rentalHo || undefined,
             } satisfies AddressValue
           }
           onChange={(v) => {

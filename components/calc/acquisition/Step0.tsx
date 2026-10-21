@@ -226,7 +226,9 @@ export function Step0({
           물건 소재지 <span className="text-muted-foreground font-normal">(선택)</span>
         </label>
         <AddressSearch
-          value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "" } satisfies AddressValue}
+          // 동·호를 함께 넘긴다 — 빠지면 상세주소 입력(`{ ...value, detail }`)이 아래 `v.dong ?? ""`로 고른 동·호를 지워
+          //   다음 단계 공시가격 조회가 다른 세대 가격을 채웠다(계획서 address-dongho-other-calcs-and-multi-gate.plan.md R1)
+          value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "", dong: form.dong || undefined, ho: form.ho || undefined } satisfies AddressValue}
           onChange={(v) => setForm((f) => ({ ...f, jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" }))}
         />
         <p className="text-xs text-muted-foreground">

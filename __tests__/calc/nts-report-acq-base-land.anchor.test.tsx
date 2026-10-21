@@ -142,10 +142,14 @@ describe("F-29 — §3 폼 → 계산서 컨텍스트 배선 (④ 지점)", () =
 
   it("입력 위젯이 취득 ≤2000 분기에만 있다 — 소스 규칙", async () => {
     const fs = await import("node:fs/promises");
-    const src = await fs.readFile(
-      "components/calc/building-std-price/BuildingStdPriceForm.tsx",
-      "utf8",
-    );
+    // 양도 분기는 800줄 정책으로 BuildingStdTransferSections.tsx에 분리됐다 — 폼 소스 = 두 파일
+    const src = (
+      await Promise.all(
+        ["BuildingStdPriceForm.tsx", "BuildingStdTransferSections.tsx"].map((n) =>
+          fs.readFile(`components/calc/building-std-price/${n}`, "utf8"),
+        ),
+      )
+    ).join("\n");
     expect(src).toContain("acqAtTimeLandPrice");
     expect(src).toMatch(/acqIndexYear === 2001 && \(\s*<LandPriceLookupField/);
   });

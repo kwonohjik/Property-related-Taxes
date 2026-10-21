@@ -124,6 +124,10 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
               detail: house.addressDetail ?? "",
               lng: house.longitude ?? "",
               lat: house.latitude ?? "",
+              // 동·호를 함께 넘긴다 — 빠지면 상세주소 입력이 `buildHouseAddressPatch`의 `v.dong ?? ""`로 고른 동·호를 지워
+              //   연도별 공시가격 조회가 다른 세대 가격을 채웠다(계획서 address-dongho-other-calcs-and-multi-gate.plan.md R1)
+              dong: house.addressDong || undefined,
+              ho: house.addressHo || undefined,
             } satisfies AddressValue
           }
           onChange={(v) => onUpdate(buildHouseAddressPatch(v, house.regionCode))}
