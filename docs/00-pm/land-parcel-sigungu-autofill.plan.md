@@ -128,3 +128,16 @@
 ## 범위 밖
 
 - 세종 필지의 시군구 자동 채움 — 단층제라 함수가 일부러 `null`을 낸다(`derive-sigungu.ts:12`). 손으로 넣는 현행을 유지한다
+
+## Do 결과 (2026-10-21) — PR `fix/land-parcel-sigungu`
+
+- R1·R2: `LandParcelEditor.tsx` `onChange` 한 곳 — `deriveSigunguFromAddress(v.road) ?? deriveSigunguFromAddress(v.jibun)`, 못 뽑으면 `jurisdiction: ""`
+- 근거 주석 정정: `LandParcelEditor.tsx` · `lib/utils/derive-sigungu.ts` · 기존 렌더 테스트 mock 주석
+- 회귀 테스트
+  - 신규 렌더 `__tests__/components/land-parcel-sigungu-autofill.test.tsx` J-1~J-8(실제 `AddressSearch`, §0.1 실측 응답)
+  - J-8은 계획의 「손으로 넣은 값 유지」를 강화했다 — 주소를 고른 뒤 손으로 고친 값이 같은 모달의 다른 입력에도 바뀌지 않는다
+  - 신규 E2E `e2e/comprehensive-land-parcel-sigungu.spec.ts` LS-1: 지번 검색 → 송파구, 세종으로 바꾸면 빈 칸, 「계산하기」에서 「모든 필지에 시군구를 입력하세요」
+- 뮤테이션(파일 복사·`cmp` 복원)
+  - R1 되돌림 → J-1·J-3·J-4 · LS-1 실패
+  - R2 되돌림 → J-5·J-6·J-7 · LS-1 실패
+- 종부세 E2E 26 spec 62건 · 기존 렌더(`comprehensive-land-parcel-address`) · 게이트 4종 · typecheck · lint(오류 0) 통과
