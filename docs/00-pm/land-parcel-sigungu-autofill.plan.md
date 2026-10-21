@@ -141,3 +141,4 @@
   - R1 되돌림 → J-1·J-3·J-4 · LS-1 실패
   - R2 되돌림 → J-5·J-6·J-7 · LS-1 실패
 - 종부세 E2E 26 spec 62건 · 기존 렌더(`comprehensive-land-parcel-address`) · 게이트 4종 · typecheck · lint(오류 0) 통과
+- 전체 vitest: E2E와 동시에 돌린 1차는 2파일 4건 실패(dot 리포터라 이름 미기록 — 어떤 테스트인지 **확인 필요**). 단독 2차는 3,212파일 전부 통과
