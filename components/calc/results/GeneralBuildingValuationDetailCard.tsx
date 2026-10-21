@@ -195,7 +195,7 @@ export function GeneralBuildingValuationDetailCard({
     <div className="rounded-xl border border-violet-200 bg-violet-50/20 p-4 space-y-4 dark:bg-violet-950/40">
       <h3 className="text-sm font-bold text-violet-900 dark:text-violet-200">
         일반건물(토지+건물 일괄) 환산취득가 산정 근거
-        <span className="ml-2 text-micro font-normal text-violet-500 dark:text-violet-400">
+        <span className="ml-2 text-micro font-normal text-violet-700 dark:text-violet-400">
           (소득세법 시행령 §176의2② · §163⑥ · §102②)
         </span>
       </h3>
@@ -292,7 +292,7 @@ export function GeneralBuildingValuationDetailCard({
               <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.land)}</span></p>
               <p>건물 취득가액 = 상속개시일 건물 신고가액(상증법 §60~66)</p>
               <p className="pl-2">= <span className="font-semibold tabular-nums">{formatKRW(acquisition.building)}</span></p>
-              <p className="text-amber-600 dark:text-amber-400">취득당시 실지거래가액으로 의제(소득세법 시행령 §163⑨) — 환산·개산공제 미적용</p>
+              <p className="text-amber-700 dark:text-amber-400">취득당시 실지거래가액으로 의제(소득세법 시행령 §163⑨) — 환산·개산공제 미적용</p>
             </>
           ) : (
             <>
@@ -475,7 +475,7 @@ export function GeneralBuildingValuationDetailCard({
                 </span>
                 {' '}({Math.round(('nonBusinessRatio' in detail ? (detail as { nonBusinessRatio?: number }).nonBusinessRatio ?? 0 : 0) * 100)}%) 비사업용 — +10%p 중과
               </p>
-              <p className="text-micro text-rose-600 dark:text-rose-400">토지 카드 사업용·비사업용 분리 계산</p>
+              <p className="text-micro text-rose-700 dark:text-rose-400">토지 카드 사업용·비사업용 분리 계산</p>
             </>
         }
       </div>

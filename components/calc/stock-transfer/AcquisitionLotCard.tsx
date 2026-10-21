@@ -83,7 +83,7 @@ export function AcquisitionLotCard({
           variant="ghost"
           size="sm"
           onClick={onDelete}
-          className="text-red-500 hover:text-red-700 dark:text-red-400"
+          className="text-red-700 hover:text-red-800 dark:text-red-400"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

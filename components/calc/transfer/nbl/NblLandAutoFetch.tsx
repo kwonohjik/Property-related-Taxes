@@ -93,7 +93,7 @@ export function NblLandValueAutoFetchButton({
       {disabledReason && (
         <p className="text-caption text-muted-foreground">{disabledReason}</p>
       )}
-      {info && <p className="text-caption text-emerald-600 dark:text-emerald-400">{info}</p>}
+      {info && <p className="text-caption text-emerald-700 dark:text-emerald-400">{info}</p>}
       {error && <p className="text-caption text-destructive">{error}</p>}
     </div>
   );
@@ -158,11 +158,11 @@ export function NblUrbanZoneCheckButton({ jibun, transferDate }: ZoneButtonProps
           현재 용도지역: <span className="font-medium text-foreground">{result.zone}</span>
           {" — "}
           {result.urban ? (
-            <span className="text-amber-600 dark:text-amber-400">
+            <span className="text-amber-700 dark:text-amber-400">
               도시지역 ✓ 편입일을 확인해 직접 입력하세요 (편입일은 자동조회 불가)
             </span>
           ) : (
-            <span className="text-emerald-600 dark:text-emerald-400">
+            <span className="text-emerald-700 dark:text-emerald-400">
               비도시지역 — 도시편입 유예 대상 아님
             </span>
           )}

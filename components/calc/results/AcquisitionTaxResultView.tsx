@@ -71,7 +71,7 @@ function FilingDeadlineCounter({ deadline }: { deadline: string }) {
   return (
     <span className={`ml-2 text-xs font-bold px-1.5 py-0.5 rounded ${
       isPast
-        ? "bg-destructive/20 text-destructive"
+        ? "bg-destructive/10 dark:bg-destructive/20 text-destructive"
         : isUrgent
         ? "bg-red-100 text-red-700 animate-pulse"
         : "bg-green-100 text-green-800"
@@ -177,7 +177,7 @@ function SelfCultivationDetailCard({ detail }: { detail: NonNullable<Acquisition
           </>
         )}
         {detail.warnings.map((w, i) => (
-          <p key={i} className="text-amber-600 dark:text-amber-400">• {w}</p>
+          <p key={i} className="text-amber-700 dark:text-amber-400">• {w}</p>
         ))}
       </div>
     </div>
@@ -256,8 +256,8 @@ function TemporaryTwoHouseDeadlineCard({
         isExpired
           ? "text-destructive"
           : isUrgent
-          ? "text-red-600 dark:text-red-400"
-          : "text-sky-600 dark:text-sky-400"
+          ? "text-red-700 dark:text-red-400"
+          : "text-sky-700 dark:text-sky-400"
       }`}>
         {isExpired
           ? `처분기한 경과 (${Math.abs(daysLeft)}일 초과)`

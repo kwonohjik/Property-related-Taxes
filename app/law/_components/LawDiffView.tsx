@@ -49,7 +49,7 @@ function DiffLineRow({ kind, text }: { kind: "add" | "remove" | "keep"; text: st
   if (kind === "add") {
     return (
       <div className="bg-emerald-50 text-emerald-900 dark:bg-emerald-900/20 dark:text-emerald-200">
-        <span className="select-none text-emerald-600 dark:text-emerald-400">＋ </span>
+        <span className="select-none text-emerald-700 dark:text-emerald-400">＋ </span>
         {text}
       </div>
     );
@@ -57,7 +57,7 @@ function DiffLineRow({ kind, text }: { kind: "add" | "remove" | "keep"; text: st
   if (kind === "remove") {
     return (
       <div className="bg-rose-50 text-rose-900 line-through decoration-rose-400/60 dark:bg-rose-900/20 dark:text-rose-200">
-        <span className="select-none text-rose-600 no-underline dark:text-rose-400">－ </span>
+        <span className="select-none text-rose-700 no-underline dark:text-rose-400">－ </span>
         {text}
       </div>
     );

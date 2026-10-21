@@ -57,11 +57,11 @@ export function AggregationSummary({
       </p>
       {mode === "inheritance" && heirTotal !== null && nonHeirTotal !== null && (
         <>
-          <div className="flex justify-between text-xs text-indigo-600 dark:text-indigo-400">
+          <div className="flex justify-between text-xs text-indigo-700 dark:text-indigo-400">
             <span>상속인 증여 합계 (10년 합산)</span>
             <span>{formatKRW(heirTotal)}</span>
           </div>
-          <div className="flex justify-between text-xs text-indigo-600 dark:text-indigo-400">
+          <div className="flex justify-between text-xs text-indigo-700 dark:text-indigo-400">
             <span>비상속인 증여 합계 (5년 합산)</span>
             <span>{formatKRW(nonHeirTotal)}</span>
           </div>
@@ -86,7 +86,7 @@ export function AggregationSummary({
         <span>{formatKRW(total)}</span>
       </div>
       {totalTaxPaid > 0 && (
-        <div className="flex justify-between text-xs text-indigo-600 dark:text-indigo-400">
+        <div className="flex justify-between text-xs text-indigo-700 dark:text-indigo-400">
           <span>기납부 증여세 합계 (§28 공제 대상)</span>
           <span>{formatKRW(totalTaxPaid)}</span>
         </div>

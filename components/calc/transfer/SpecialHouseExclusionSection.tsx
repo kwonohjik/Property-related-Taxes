@@ -72,7 +72,7 @@ export function SpecialHouseExclusionSection({ items, onChange }: Props) {
               <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">보유 감면주택 {idx + 1}</p>
               <button
                 type="button"
-                className="text-caption text-rose-600 hover:underline dark:text-rose-400"
+                className="text-caption text-rose-700 hover:underline dark:text-rose-400"
                 onClick={() => onChange(items.filter((_, i) => i !== idx))}
               >
                 삭제
@@ -140,7 +140,7 @@ export function SpecialHouseExclusionItemFields({
             </SelectContent>
           </Select>
           {(item.article === "new_99" || item.article === "new_99_3") && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
               {item.article === "new_99" ? "§99②" : "§99의3②"}는 다른 주택을 2007.12.31까지
               양도하는 경우에만 적용됩니다 — 그 이후 양도분은 주택 수 제외가 적용되지 않습니다.
             </p>

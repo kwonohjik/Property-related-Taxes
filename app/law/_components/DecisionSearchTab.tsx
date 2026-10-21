@@ -417,7 +417,7 @@ export function DecisionSearchTab({
               <p className="font-medium text-yellow-900 dark:text-yellow-200">
                 본문을 API에서 받을 수 없는 판례입니다.
               </p>
-              <p className="mt-2 text-yellow-900/80 dark:text-yellow-100/80">{detail.reasoning}</p>
+              <p className="mt-2 text-yellow-900 dark:text-yellow-100/80">{detail.reasoning}</p>
               {detail.sourceUrl && (
                 <a
                   href={detail.sourceUrl}

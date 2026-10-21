@@ -236,7 +236,7 @@ export function UnlistedStockV2Card({
     <div className="space-y-4 border-2 border-indigo-300 bg-indigo-50/30 rounded-lg p-4 dark:bg-indigo-950/40">
       <div className="flex items-center justify-between pb-2 border-b border-indigo-200">
         <div className="flex items-center gap-2">
-          <span className="text-indigo-600 text-lg dark:text-indigo-400">📊</span>
+          <span className="text-indigo-700 text-lg dark:text-indigo-400">📊</span>
           <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-200">
             비상장주식 V2 평가 (별지 제4호 부표3 완전 재현)
           </h3>
@@ -253,7 +253,7 @@ export function UnlistedStockV2Card({
           📂 이력 조회
         </Button>
       </div>
-      <p className="text-caption text-indigo-700/80 dark:text-indigo-300/80">
+      <p className="text-caption text-indigo-700 dark:text-indigo-300/80">
         상증법 §63 ① 나목 + 상증령 §54·§55·§56·§59 + 상증규 §17·§17의2·§17의3·§19 (KoreanLaw 1차+2차 검증 완료)
       </p>
 

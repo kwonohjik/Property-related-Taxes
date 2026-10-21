@@ -187,7 +187,7 @@ describe("SJ-2 — 사이드바가 어느 단계가 빠졌는지 알려 준다",
 
     const mark = rows()[1].querySelector('[aria-label="입력 필요"]');
     expect(mark, "② «양도·취득가액»에 오류 표식이 있어야 함").toBeTruthy();
-    expect(mark!.className).toContain("text-rose-600");
+    expect(mark!.className).toContain("text-rose-700");
   });
 
   /**

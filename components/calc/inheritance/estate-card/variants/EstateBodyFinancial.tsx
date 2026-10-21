@@ -271,7 +271,7 @@ export function EstateBodyFinancial({ item, onUpdate, valuationDate }: VariantBo
 
                 {/* 평가기준일 echo */}
                 {valuationDate && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 px-1">
                     평가기준일: {valuationDate} (상속개시일·증여일)
                   </p>
                 )}
@@ -356,7 +356,7 @@ export function EstateBodyFinancial({ item, onUpdate, valuationDate }: VariantBo
                   />
                 </FieldCard>
 
-                <p className="text-xs text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 rounded px-3 py-2">
+                <p className="text-xs text-sky-700 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 rounded px-3 py-2">
                   평가액 미리보기: {item.savingsPrincipal != null
                     ? fmtKRW(
                         (item.savingsPrincipal ?? 0) +

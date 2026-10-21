@@ -323,27 +323,27 @@ export function PriorGiftHistoryModal({
             필터인 양 출력했다 — 다른 의뢰인의 이력이 섞여 나오는데 걸렀다고 단언한 것이다. */}
         <div className="rounded-md border border-sky-200 bg-sky-50/40 p-3 text-xs space-y-1 text-sky-800 dark:text-sky-200 dark:bg-sky-950/40" data-testid="prior-gift-filter-summary">
           <div>
-            <span className="text-sky-600 dark:text-sky-400">{isInheritanceMode ? "상속개시일:" : "현재 증여일:"}</span>{" "}
+            <span className="text-sky-700 dark:text-sky-400">{isInheritanceMode ? "상속개시일:" : "현재 증여일:"}</span>{" "}
             {currentGiftDate}
           </div>
           {isInheritanceMode ? (
-            <div className="text-sky-600 dark:text-sky-400">
+            <div className="text-sky-700 dark:text-sky-400">
               필터: 상속개시일 기준 10년 이내 ({tenYearsAgo} 이후) 전수 조회 — 수증자·증여자
               필터는 적용되지 않습니다. 목록에서 피상속인의 증여분인지 직접 확인하세요.
             </div>
           ) : (
             <>
               <div>
-                <span className="text-sky-600 dark:text-sky-400">수증자:</span>{" "}
+                <span className="text-sky-700 dark:text-sky-400">수증자:</span>{" "}
                 {currentClientId
                   ? "현재 의뢰인의 사전증여 이력"
                   : "본인(일반 납세자)의 사전증여 이력"}
               </div>
               <div>
-                <span className="text-sky-600 dark:text-sky-400">증여자 관계:</span>{" "}
+                <span className="text-sky-700 dark:text-sky-400">증여자 관계:</span>{" "}
                 {DONOR_LABEL[currentDonor]}
               </div>
-              <div className="text-sky-600 dark:text-sky-400">
+              <div className="text-sky-700 dark:text-sky-400">
                 필터: 10년 이내 ({tenYearsAgo} 이후) + 동일 수증자(=의뢰인)
               </div>
             </>
@@ -356,7 +356,7 @@ export function PriorGiftHistoryModal({
             <div className="space-y-3">
               <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-md" />
               <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-md" />
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">이력을 불러오는 중...</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 text-center">이력을 불러오는 중...</p>
             </div>
           )}
 
@@ -387,10 +387,10 @@ export function PriorGiftHistoryModal({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="rounded-md bg-gray-100 dark:bg-gray-800 p-6 text-center text-sm text-gray-600 dark:text-gray-400">
                   현재 수증자(=의뢰인)의 증여세 이력이 없습니다.
                   {warnings.length > 0 && (
-                    <div className="mt-2 text-xs text-gray-400">
+                    <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
                       {warnings.length}건의 이력이 필터·검증 조건에 의해 제외되었습니다.
                     </div>
                   )}
@@ -413,7 +413,7 @@ export function PriorGiftHistoryModal({
                         <li key={`${w.calculationId}-${i}`}>• {w.message}</li>
                       ))}
                       {warnings.length > 20 && (
-                        <li className="text-amber-600 dark:text-amber-400">(외 {warnings.length - 20}건)</li>
+                        <li className="text-amber-700 dark:text-amber-400">(외 {warnings.length - 20}건)</li>
                       )}
                     </ul>
                   )}

@@ -253,7 +253,7 @@ export function GiftRowEditor({
           <button
             type="button"
             onClick={onRemove}
-            className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+            className="text-xs text-red-700 hover:text-red-800 dark:hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
           >
             삭제
           </button>
@@ -308,7 +308,7 @@ export function GiftRowEditor({
               </option>
             ))}
           </select>
-          <p className="text-caption text-gray-500 dark:text-gray-400">
+          <p className="text-caption text-gray-600 dark:text-gray-400">
             현재 증여자와 동일인 그룹(부·모 또는 조부모)만 §47 합산 대상. §53 증여재산공제 관계도 이 값에서 자동 도출됩니다.
           </p>
         </div>
@@ -388,7 +388,7 @@ export function GiftRowEditor({
             {gift.doneeId && !matchedHeir && (
               <p
                 data-testid="gift-donee-orphan"
-                className="text-caption text-amber-600 dark:text-amber-400"
+                className="text-caption text-amber-700 dark:text-amber-400"
               >
                 ⚠️ 지정한 수증자가 상속인 목록에서 삭제되었습니다 — 수증자를 다시 선택하세요.
               </p>
@@ -396,7 +396,7 @@ export function GiftRowEditor({
 
             {/* 미선택 안내 */}
             {!gift.doneeId && (
-              <p className="text-caption text-sky-600 dark:text-sky-400">
+              <p className="text-caption text-sky-700 dark:text-sky-400">
                 ⓘ 수증자를 지정하면 상속인별 배부표 ② 사전증여 열에 반영됩니다. (미지정 시 합산만)
               </p>
             )}
@@ -542,7 +542,7 @@ export function GiftRowEditor({
         isInheritancePriorGiftMarriageBirthEligible(gift.doneeRelation) && (
           <ToneCard tone="sky" sectionNum="§53의2" title="혼인·출산 증여재산공제 (직계존속 한정)" bodyClassName="space-y-2">
             {gift.giftTaxBase != null ? (
-              <p className="text-caption text-sky-600 dark:text-sky-400">
+              <p className="text-caption text-sky-700 dark:text-sky-400">
                 ⓘ 과세표준을 직접 입력한 경우 §53의2는 이미 반영된 것으로 간주합니다.
               </p>
             ) : (
@@ -563,7 +563,7 @@ export function GiftRowEditor({
             {!gift.doneeId &&
               gift.marriageBirthDeduction != null &&
               gift.marriageBirthDeduction > 0 && (
-                <p className="text-caption text-sky-600 dark:text-sky-400">
+                <p className="text-caption text-sky-700 dark:text-sky-400">
                   ⓘ 동일 수증자에게 혼인·출산을 여러 건 입력할 때는 위 <strong>수증자 선택</strong>으로
                   지정하세요. 수증자를 지정하지 않으면 합산 1억 한도가 건별로 적용됩니다(§53의2③).
                 </p>
@@ -608,7 +608,7 @@ export function GiftRowEditor({
               }
             />
             {showAutoBadge && (
-              <p className="text-caption text-emerald-600 dark:text-emerald-400">
+              <p className="text-caption text-emerald-700 dark:text-emerald-400">
                 🧮 자동계산 (증여재산가액 − §53 공제 → §56 세율). 직접 입력 시 자동 갱신 중지.
               </p>
             )}
@@ -669,7 +669,7 @@ export function GiftRowEditor({
           )}
           {/* 상속세 모드 — 특례 prior의 §28/§30의5⑩ 공제액 입력 (증여 당시 납부한 증여세액) */}
           {showSpecialType && !showGiftPhaseA && gift.specialTreatmentType && (
-            <p className="text-caption text-emerald-600 dark:text-emerald-400">
+            <p className="text-caption text-emerald-700 dark:text-emerald-400">
               ⓘ §30의5⑩ — 창업자금·가업승계 특례 증여세액은 상속세 산출세액에서 전액 직접 공제됩니다 (§28 안분 한도 미적용). 증여 당시 납부한 증여세를 아래 &quot;기납부 증여세&quot; 란에 입력하세요.
             </p>
           )}

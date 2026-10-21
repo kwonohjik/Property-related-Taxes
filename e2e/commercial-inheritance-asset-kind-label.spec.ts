@@ -6,7 +6,7 @@
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
-import { expectDarkContrast } from "./_helpers/dark-contrast";
+import { expectDarkContrast, expectLightContrast } from "./_helpers/dark-contrast";
 
 function seedForm() {
   return {
@@ -60,6 +60,9 @@ test.describe("상가 상속 자산구분 라벨 (cosmetic)", () => {
     // 자산구분(토지/개별주택/공동주택) 라디오 라벨은 나타나지 않는다.
     await expect(page.getByText("자산 구분 (상속개시일 기준)", { exact: false })).toHaveCount(0);
 
+    // 라이트 대비 — 옅은 톤 카드 위 회색 안내 글자(--muted-foreground 0.556 → 4.0~4.49였다)·섹션 「✓」(emerald-600 3.77이었다)
+    await expectLightContrast(page, page.locator("aside"));
+    await expectLightContrast(page, page.locator('[data-asset-card-index="0"]'));
     // 다크 대비 — 사이드바 「-」·섹션 「○」(투명도 회색이었다)·런처 버튼(green-700 4.497이었다)
     await expectDarkContrast(page, page.locator("aside"));
     await expectDarkContrast(page, page.getByText("○", { exact: true }));

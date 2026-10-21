@@ -573,7 +573,7 @@ function DetailRow({
       <span
         className={cn(
           "text-sm tabular-nums shrink-0",
-          value < 0 ? "text-red-600 dark:text-red-400" : highlight ? "" : "text-foreground",
+          value < 0 ? "text-red-700 dark:text-red-400" : highlight ? "" : "text-foreground",
         )}
       >
         {formatKRW(value)}

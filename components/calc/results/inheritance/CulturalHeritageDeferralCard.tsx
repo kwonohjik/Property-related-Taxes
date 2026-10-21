@@ -98,7 +98,7 @@ export function CulturalHeritageDeferralCard({ result }: { result: InheritanceTa
                   <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">
                     {formatKRW(it.valuatedAmount)}
                   </td>
-                  <td className="py-1 text-right text-emerald-600 dark:text-emerald-400">
+                  <td className="py-1 text-right text-emerald-700 dark:text-emerald-400">
                     {it.collateralExemptible ? "담보면제" : "담보필요"}
                   </td>
                 </tr>

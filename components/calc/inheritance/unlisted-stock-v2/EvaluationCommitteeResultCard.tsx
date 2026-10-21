@@ -72,20 +72,20 @@ export function EvaluationCommitteeResultCard({
       data-testid="evaluation-committee-result-card"
     >
       <div className="flex items-center gap-2 pb-2 border-b border-emerald-200">
-        <span className="text-emerald-600 text-base dark:text-emerald-400">⚖️</span>
+        <span className="text-emerald-700 text-base dark:text-emerald-400">⚖️</span>
         <h4 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
           §54⑥ 평가심의위원회 신청 결과 (참고용)
         </h4>
       </div>
 
-      <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80">
+      <p className="text-caption text-emerald-700 dark:text-emerald-300/80">
         본 결과는 보충적 평가가액(⑥)을 대체하지 않습니다. 평가심의위 신청 후 인가 시
         납세자가 별도로 신고서에 반영해야 합니다.
       </p>
 
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="rounded border border-emerald-200 bg-white dark:bg-gray-900 p-2">
-          <p className="text-emerald-700/70 text-micro dark:text-emerald-300/70">적용 평가방법</p>
+          <p className="text-emerald-700 text-micro dark:text-emerald-300/70">적용 평가방법</p>
           <p
             className="font-semibold text-emerald-900 mt-1 dark:text-emerald-200"
             data-testid="evaluation-committee-result-method"
@@ -94,7 +94,7 @@ export function EvaluationCommitteeResultCard({
           </p>
         </div>
         <div className="rounded border border-emerald-200 bg-white dark:bg-gray-900 p-2">
-          <p className="text-emerald-700/70 text-micro dark:text-emerald-300/70">보충적 대비 편차</p>
+          <p className="text-emerald-700 text-micro dark:text-emerald-300/70">보충적 대비 편차</p>
           <p
             className={`font-semibold mt-1 ${
               result.isWithinRange ? "text-emerald-900 dark:text-emerald-200" : "text-rose-700 dark:text-rose-300"

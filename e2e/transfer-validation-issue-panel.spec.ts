@@ -13,6 +13,7 @@
  * worktree 실행: E2E_PORT=3101 npx playwright test e2e/transfer-validation-issue-panel.spec.ts
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
+import { expectLightContrast } from "./_helpers/dark-contrast";
 
 async function openEmptyWizard(page: Page) {
   await page.goto("/calc/transfer-tax?new=1");
@@ -57,6 +58,10 @@ test.describe("양도세 검증 오류 패널 — 화면 이동 없이 보인다
     // 자동 스크롤(자산 카드) 이후에도 카드 머리 배너가 잘리지 않는다
     const card = page.locator('[data-asset-card-index="0"]');
     await expect(card.getByText("양도일을 선택하세요.").first()).toBeInViewport();
+
+    // 라이트 대비 — 오류색 글자 on 옅은 오류 바탕(--destructive 0.577 → 3.24~였다)·그 위 회색 글자
+    await expectLightContrast(page, panel);
+    await expectLightContrast(page, card);
   });
 
   test("A 마지막 단계 「세금 계산하기」 → 앞 단계로 돌아가도 목록이 화면 안", async ({ page }) => {

@@ -131,7 +131,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             <button
               type="button"
               onClick={() => removeHolding(holding.id)}
-              className="ml-auto text-xs text-rose-500 hover:text-rose-700 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400"
+              className="ml-auto text-xs text-rose-700 hover:text-rose-800 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400"
             >
               삭제
             </button>
@@ -204,7 +204,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                     "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                     holding.marketType === opt.value
                       ? "border-amber-400 bg-amber-100 text-amber-800"
-                      : "border-amber-200 bg-amber-50/40 text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40",
+                      : "border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40",
                   ].join(" ")}
                 >
                   {opt.label}
@@ -276,7 +276,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="출국일 실제 거래가액 (주당)"
               />
-              <p className="text-caption text-gray-500 dark:text-gray-400">
+              <p className="text-caption text-gray-600 dark:text-gray-400">
                 §178의9① — 출국일에 실제 거래된 가액. 자동 조회 없음, 직접 입력 필수.
               </p>
             </div>
@@ -294,7 +294,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="출국일 이전 1개월 종가 평균"
               />
-              <p className="text-caption text-gray-500 dark:text-gray-400">
+              <p className="text-caption text-gray-600 dark:text-gray-400">
                 출국일 이전 1개월간 종가 산술 평균. 상장주식에 적용.
               </p>
             </div>
@@ -312,7 +312,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="전후 각 3개월 매매사례가액"
               />
-              <p className="text-caption text-gray-500 dark:text-gray-400">
+              <p className="text-caption text-gray-600 dark:text-gray-400">
                 §178의9②2호 가목 — 출국일 전후 각 3개월 이내 동일 주식 매매사례가액.
               </p>
             </div>
@@ -330,7 +330,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
                 hideUnit
                 placeholder="비상장 기준시가 (매매사례 없는 경우)"
               />
-              <p className="text-caption text-gray-500 dark:text-gray-400">
+              <p className="text-caption text-gray-600 dark:text-gray-400">
                 §99①4 — 매매사례가액이 없는 비상장주식의 보충적 평가액.
               </p>
             </div>
@@ -376,7 +376,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
       )}
 
       {holdings.length === 0 && (
-        <p className="text-center text-xs text-gray-400 py-2">
+        <p className="text-center text-xs text-gray-600 dark:text-gray-400 py-2">
           &ldquo;종목 추가&rdquo; 버튼을 눌러 보유 종목을 입력하세요
         </p>
       )}

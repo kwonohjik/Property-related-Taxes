@@ -122,7 +122,7 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
   return (
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 space-y-2 dark:bg-amber-950/40">
       <div className="flex items-center gap-2">
-        <span className="text-amber-600 text-sm font-bold dark:text-amber-400">!</span>
+        <span className="text-amber-700 text-sm font-bold dark:text-amber-400">!</span>
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
           추가 감면·배제 가능성 확인
         </p>
@@ -151,7 +151,7 @@ export function ReductionPossibilityPanel({ result, onGoToStep }: Props) {
                   <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
                 </div>
                 {onGoToStep && (
-                  <span className="shrink-0 text-xs text-amber-600 group-hover:text-amber-800 dark:text-amber-400">
+                  <span className="shrink-0 text-xs text-amber-700 group-hover:text-amber-800 dark:text-amber-400">
                     Step {item.step + 1} →
                   </span>
                 )}

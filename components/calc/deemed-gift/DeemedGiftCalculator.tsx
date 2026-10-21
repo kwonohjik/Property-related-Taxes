@@ -172,7 +172,7 @@ export function DeemedGiftCalculator() {
       />
 
       {error && (
-        <p className="text-sm font-medium text-rose-600 dark:text-rose-400" data-testid="deemed-error">
+        <p className="text-sm font-medium text-rose-700 dark:text-rose-400" data-testid="deemed-error">
           {error}
         </p>
       )}

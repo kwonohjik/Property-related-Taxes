@@ -342,7 +342,7 @@ export function PropertyCardEditor({
           />
         </div>
         {!showAdvanced && (
-          <p className="mt-1.5 text-caption text-slate-500 dark:text-slate-400">
+          <p className="mt-1.5 text-caption text-slate-600 dark:text-slate-400">
             소유자 분리 · 다가구주택 · 합산배제 신청 · §8④ 의제 특례
           </p>
         )}
@@ -517,7 +517,7 @@ export function PropertyCardEditor({
                 ))}
               </select>
               {property.exclusionType !== "none" && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
+                <p className="text-xs text-amber-700 dark:text-amber-400">
                   ⚠ 합산배제 신청 시 다음 단계에서 요건 정보를 추가 입력해주세요.
                 </p>
               )}

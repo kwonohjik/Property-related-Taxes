@@ -141,9 +141,9 @@ function Row({ label, value, sub, highlight, tone }: RowProps) {
     tone === "primary"
       ? "text-indigo-700 dark:text-indigo-300 font-bold"
       : tone === "add"
-        ? "text-emerald-600 dark:text-emerald-400"
+        ? "text-emerald-700 dark:text-emerald-400"
         : tone === "sub"
-          ? "text-rose-600 dark:text-rose-400"
+          ? "text-rose-700 dark:text-rose-400"
           : "";
   return (
     <div

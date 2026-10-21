@@ -38,7 +38,7 @@ export function ResultRow({
         highlight ? "bg-white dark:bg-gray-900" : ""
       }`}
     >
-      <span className={`text-sm ${highlight ? "font-medium text-slate-700 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"}`}>
+      <span className={`text-sm ${highlight ? "font-medium text-slate-700 dark:text-slate-300" : "text-slate-600 dark:text-slate-400"}`}>
         {label}
       </span>
       <span
@@ -122,7 +122,7 @@ export function EstimatedValuationBreakdown({ result }: { result: StockTransferR
           </p>
         )}
         {detail.netAssetFloorApplied && detail.netAssetFloorValue !== undefined && (
-          <p className="text-fuchsia-600 font-semibold dark:text-fuchsia-400">
+          <p className="text-fuchsia-700 font-semibold dark:text-fuchsia-400">
             80% 하한 발동: 가중평균 &lt; 순자산 × 80% → max(가중평균, {fmt(detail.netAssetFloorValue)})
           </p>
         )}

@@ -192,14 +192,14 @@ function CandidateRow({ candidate, isSelected, onToggle }: CandidateRowProps) {
             <span>{trade.floor > 0 ? `${trade.floor}층` : "층미상"}</span>
             <span>{trade.exclusiveAreaM2.toFixed(2)}㎡</span>
             <span>{trade.dealDate}</span>
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-gray-600 dark:text-gray-400">
               면적차 {formatAreaPct(areaDiffRatePct)}
             </span>
-            <span className="text-gray-500 dark:text-gray-400">
+            <span className="text-gray-600 dark:text-gray-400">
               평가기준일 {daysFromValuationDate}일
             </span>
             {trade.dealingType && (
-              <span className="text-gray-500 dark:text-gray-400">
+              <span className="text-gray-600 dark:text-gray-400">
                 {trade.dealingType}
               </span>
             )}
@@ -408,28 +408,28 @@ export function RtmsSimilarSalesModal({
             </p>
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-700 dark:text-gray-300">
               <div>
-                <span className="text-gray-500 dark:text-gray-400">단지명</span>
+                <span className="text-gray-600 dark:text-gray-400">단지명</span>
                 <span className="ml-1.5 font-medium">{aptName || "(미입력)"}</span>
               </div>
               {targetExclusiveAreaM2 != null && (
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">전용면적</span>
+                  <span className="text-gray-600 dark:text-gray-400">전용면적</span>
                   <span className="ml-1.5 font-medium">{targetExclusiveAreaM2.toFixed(2)}㎡</span>
                 </div>
               )}
               {targetStandardPrice != null && (
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">공동주택가격</span>
+                  <span className="text-gray-600 dark:text-gray-400">공동주택가격</span>
                   <span className="ml-1.5 font-mono tabular-nums">{formatWon(targetStandardPrice)}</span>
                 </div>
               )}
               <div>
-                <span className="text-gray-500 dark:text-gray-400">기준일</span>
+                <span className="text-gray-600 dark:text-gray-400">기준일</span>
                 <span className="ml-1.5 font-medium">{valuationDate}</span>
-                <span className="ml-1 text-gray-400">{dateLabel}</span>
+                <span className="ml-1 text-gray-600 dark:text-gray-400">{dateLabel}</span>
               </div>
               <div>
-                <span className="text-gray-500 dark:text-gray-400">조회범위</span>
+                <span className="text-gray-600 dark:text-gray-400">조회범위</span>
                 <span className="ml-1.5 text-sky-700 dark:text-sky-300">
                   {taxLabel}: {periodLabel}
                 </span>
@@ -457,7 +457,7 @@ export function RtmsSimilarSalesModal({
               <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                 신고일 (선택 — §49④)
               </p>
-              <p className="text-caption text-gray-500 dark:text-gray-400">
+              <p className="text-caption text-gray-600 dark:text-gray-400">
                 신고일 입력 시 그 이후 거래는 유사매매사례에서 제외됩니다 (상증령 §49④ 괄호).
                 통상 신고 전 시뮬레이션이므로 미입력이 기본입니다.
               </p>
@@ -505,7 +505,7 @@ export function RtmsSimilarSalesModal({
                 실거래가를 불러오지 못했습니다
               </p>
               {error && (
-                <p className="mt-1 text-xs text-rose-600 dark:text-rose-400">{error}</p>
+                <p className="mt-1 text-xs text-rose-700 dark:text-rose-400">{error}</p>
               )}
               <Button
                 variant="outline"
@@ -542,7 +542,7 @@ export function RtmsSimilarSalesModal({
                 기간 {appliedCriteria.periodStart} ~ {appliedCriteria.periodEnd}
               </span>
               {targetStandardPrice == null && (
-                <span className="rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-500 dark:text-gray-400">
+                <span className="rounded-full border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400">
                   공시가격 필터 미적용
                 </span>
               )}
@@ -555,11 +555,11 @@ export function RtmsSimilarSalesModal({
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 조건을 만족하는 유사 매매사례가 없습니다
               </p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                 직접 금액을 입력하거나 조회 조건을 확인해주세요.
               </p>
               {outOfPeriod.length > 0 && (
-                <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
                   평가기간 외 거래 {outOfPeriod.length}건이 있습니다 — 아래 목록에서 펼쳐 볼 수 있습니다.
                 </p>
               )}
@@ -576,7 +576,7 @@ export function RtmsSimilarSalesModal({
                 <button
                   type="button"
                   onClick={handleSelectAll}
-                  className="text-caption text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 underline underline-offset-2"
+                  className="text-caption text-indigo-700 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-800 underline underline-offset-2"
                 >
                   {allSelected ? "전체 해제" : "전체 선택"}
                 </button>
@@ -661,7 +661,7 @@ export function RtmsSimilarSalesModal({
                 </span>
               </span>
             ) : (
-              <span className="text-gray-500 dark:text-gray-400 text-xs">
+              <span className="text-gray-600 dark:text-gray-400 text-xs">
                 행을 선택하면 평균 금액이 표시됩니다
               </span>
             )}

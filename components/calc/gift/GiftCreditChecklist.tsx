@@ -58,8 +58,8 @@ const CHIP_ON: Record<ChipTone, string> = {
   violet: "border-violet-300 bg-violet-100/80 text-violet-800 dark:border-violet-700 dark:bg-violet-900/40 dark:text-violet-200",
 };
 const CHIP_OFF: Record<ChipTone, string> = {
-  sky: "border-gray-200 bg-gray-50/80 text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 hover:border-sky-300 hover:bg-sky-50/60",
-  violet: "border-gray-200 bg-gray-50/80 text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 hover:border-violet-300 hover:bg-violet-50/60",
+  sky: "border-gray-200 bg-gray-50/80 text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 hover:border-sky-300 hover:bg-sky-50/60",
+  violet: "border-gray-200 bg-gray-50/80 text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 hover:border-violet-300 hover:bg-violet-50/60",
 };
 const CHECK_ON: Record<ChipTone, string> = {
   sky: "border-sky-700 bg-sky-700 text-white",
@@ -148,7 +148,7 @@ export function GiftCreditChecklist({
           <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
             공제·세액공제 항목 선택
           </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             해당되는 공제·세액공제 항목을 체크하면 아래에 입력란이 열립니다. (없으면 건너뛰기)
           </p>
         </div>
@@ -156,7 +156,7 @@ export function GiftCreditChecklist({
         {/* 공제 그룹 (sky) */}
         <div className="space-y-1.5">
           <p className={GROUP_HEADER.sky}>
-            공제 <span className="font-normal normal-case tracking-normal text-sky-600 dark:text-sky-400">상증법 §53의2·§55</span>
+            공제 <span className="font-normal normal-case tracking-normal text-sky-700 dark:text-sky-400">상증법 §53의2·§55</span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             {deductionChips.map((meta) => (
@@ -168,7 +168,7 @@ export function GiftCreditChecklist({
         {/* 세액공제·특례·납부 그룹 (violet) */}
         <div className="space-y-1.5 border-t border-violet-100 dark:border-violet-900 pt-2">
           <p className={GROUP_HEADER.violet}>
-            세액공제·특례·납부 <span className="font-normal normal-case tracking-normal text-violet-600 dark:text-violet-400">§59·§30의5·6·§70</span>
+            세액공제·특례·납부 <span className="font-normal normal-case tracking-normal text-violet-700 dark:text-violet-400">§59·§30의5·6·§70</span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             {creditChips.map((meta) => (
@@ -400,7 +400,7 @@ export function GiftCreditChecklist({
             <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
               수증자 본인 납부액 (§36)
             </p>
-            <p className="text-xs text-violet-600 dark:text-violet-400">
+            <p className="text-xs text-violet-700 dark:text-violet-400">
               수증자가 직접 납부하는 증여세액을 입력하세요. 증여자는 총세액에서 이 금액을 차감한
               나머지(부족분)만 대납합니다. 미입력 또는 0원 시 증여자가 전액 대납합니다.
             </p>
@@ -428,7 +428,7 @@ export function GiftCreditChecklist({
           <h4 className="text-sm font-semibold text-sky-700 dark:text-sky-300">
             혼인·출산 공제 (§53의2, 최대 1억원)
           </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             직계존속으로부터 증여 시 적용. 혼인신고일 전후 2년 이내 / 자녀 출생일로부터 2년 이내 증여분. 합산 1억 한도.
           </p>
           <CurrencyInput

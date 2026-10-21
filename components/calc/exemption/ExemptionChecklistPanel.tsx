@@ -50,8 +50,8 @@ const CHIP_ON: Record<"sky" | "violet", string> = {
 };
 
 const CHIP_OFF: Record<"sky" | "violet", string> = {
-  sky: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-sky-300 hover:bg-sky-50/60",
-  violet: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-500 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
+  sky: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-sky-300 hover:bg-sky-50/60",
+  violet: "inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-gray-50/80 px-2.5 py-1 text-caption font-medium text-gray-600 dark:border-gray-700 dark:bg-gray-800/30 dark:text-gray-400 cursor-pointer hover:border-violet-300 hover:bg-violet-50/60",
 };
 
 const CHECK_BOX_ON: Record<"sky" | "violet", string> = {
@@ -175,7 +175,7 @@ export function ExemptionChecklistPanel({
       {nonTaxableRules.length > 0 && (
         <div className="space-y-1.5">
           <p className={GROUP_HEADER.sky}>
-            비과세 <span className="font-normal normal-case tracking-normal text-sky-600 dark:text-sky-400">{nonTaxableLaw}</span>
+            비과세 <span className="font-normal normal-case tracking-normal text-sky-700 dark:text-sky-400">{nonTaxableLaw}</span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             {nonTaxableRules.map((rule) => (
@@ -196,7 +196,7 @@ export function ExemptionChecklistPanel({
       {notIncludedRules.length > 0 && (
         <div className={cn("space-y-1.5", GROUP_DIVIDER.violet)}>
           <p className={GROUP_HEADER.violet}>
-            과세가액 불산입 <span className="font-normal normal-case tracking-normal text-violet-600 dark:text-violet-400">{notIncludedLaw}</span>
+            과세가액 불산입 <span className="font-normal normal-case tracking-normal text-violet-700 dark:text-violet-400">{notIncludedLaw}</span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             {notIncludedRules.map((rule) => (

@@ -472,7 +472,7 @@ export function Step1({
         description={
           <>
             주식·지분은 아래{" "}
-            <span className="text-indigo-600 dark:text-indigo-400">주식평가</span>{" "}
+            <span className="text-indigo-700 dark:text-indigo-400">주식평가</span>{" "}
             섹션에 별도 입력
           </>
         }

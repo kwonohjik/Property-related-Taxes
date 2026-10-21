@@ -98,7 +98,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
         </button>
       }
     >
-      <p className="text-caption text-amber-700/80 dark:text-amber-300/80">
+      <p className="text-caption text-amber-700 dark:text-amber-300/80">
         평가기준일 이전 3년 이내 유상증자·무상증자·감자. 유상증자는 §56⑤로 이전 사업연도 순손익액에 가산. 환산주식수는 §17의3⑤로 자동 산정.
       </p>
 
@@ -124,7 +124,7 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
                 <button
                   type="button"
                   onClick={() => setDeleteIdx(idx)}
-                  className="text-caption text-rose-600 hover:text-rose-800 underline dark:text-rose-400"
+                  className="text-caption text-rose-700 hover:text-rose-800 underline dark:text-rose-400"
                 >
                   삭제
                 </button>
@@ -180,13 +180,13 @@ export function CapitalChangeTable({ capitalChanges, onChange, sectionNum }: Cap
               )}
 
               {c.changeType === "free_issue" && (
-                <p className="text-micro text-emerald-700/80 italic dark:text-emerald-300/80">
+                <p className="text-micro text-emerald-700 italic dark:text-emerald-300/80">
                   ※ 무상증자는 §56⑤ 미적용 — 순손익액 조정 없음. 환산주식수만 영향 (§17의3⑤)
                 </p>
               )}
 
               {c.changeType === "free_reduction" && (
-                <p className="text-micro text-rose-700/80 italic dark:text-rose-300/80">
+                <p className="text-micro text-rose-700 italic dark:text-rose-300/80">
                   ※ 무상감자는 §56⑤ 미적용 — 순손익액 조정 없음. 환산주식수만 영향 (§17의3⑤ 2호, 유·무상 공통)
                 </p>
               )}

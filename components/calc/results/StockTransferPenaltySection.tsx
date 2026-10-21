@@ -80,7 +80,7 @@ export function StockTransferPenaltySection({
         <div className="divide-y divide-rose-100 text-sm">
           {result.underReportPenalty > 0 && (
             <div className="flex justify-between py-2">
-              <span className="text-rose-600 dark:text-rose-400">
+              <span className="text-rose-700 dark:text-rose-400">
                 {isNonReport ? "무신고" : "과소신고"} 가산세{split ? " (가목·나목 혼합)" : ` (${underRate}%)`}
                 {/*
                   base 를 함께 보인다 — 「산출세액 × 세율」로 오해하지 않도록.
@@ -94,13 +94,13 @@ export function StockTransferPenaltySection({
                   분해값(`fraudSplit`)이 있으면 그것을 단일 소스로 삼는다.
                 */}
                 {split ? (
-                  <span className="block text-xs text-rose-500 mt-0.5 dark:text-rose-400">
+                  <span className="block text-xs text-rose-700 mt-0.5 dark:text-rose-400">
                     가목 {fmt(split.fraudBase)} × {Math.round(split.fraudRate * 100)}% + 나목{" "}
                     {fmt(split.normalBase)} × {Math.round(split.normalRate * 100)}%
                   </span>
                 ) : (
                   result.penaltyBase !== undefined && (
-                    <span className="block text-xs text-rose-500 mt-0.5 dark:text-rose-400">
+                    <span className="block text-xs text-rose-700 mt-0.5 dark:text-rose-400">
                       기준금액 {fmt(result.penaltyBase)} × {underRate}%
                     </span>
                   )
@@ -111,7 +111,7 @@ export function StockTransferPenaltySection({
           )}
           {result.latePaymentPenalty > 0 && (
             <div className="flex justify-between py-2">
-              <span className="text-rose-600 dark:text-rose-400">납부지연 가산세 (국세기본법 §47조의4)</span>
+              <span className="text-rose-700 dark:text-rose-400">납부지연 가산세 (국세기본법 §47조의4)</span>
               <span className="font-medium text-rose-900 dark:text-rose-200">{fmt(result.latePaymentPenalty)}</span>
             </div>
           )}
@@ -120,7 +120,7 @@ export function StockTransferPenaltySection({
               {/* 🔴 G-26: 전자신고 세액공제는 조특법 §104의8①이다. 「§52의2」는 이 저장소 안에서
                   상증법 §52의2(장애인신탁 불산입)·상증령 §52의2(증자·합병 기간조정)로 이미
                   쓰이고 있어 법령명 없이는 판별이 불가능하다. 상수를 단일 소스로 참조한다. */}
-              <span className="text-emerald-600 dark:text-emerald-400">
+              <span className="text-emerald-700 dark:text-emerald-400">
                 전자신고 세액공제 ({STOCK.ELECTRONIC_FILING_CREDIT})
               </span>
               <span className="font-medium text-emerald-700 dark:text-emerald-300">−{fmt(result.electronicFilingCredit)}</span>
@@ -157,43 +157,43 @@ export function StockTransferPenaltySection({
               <tr className={isUnderReport && !isFraud ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">일반 과소신고</td>
                 <td className="px-3 py-2 text-center font-mono">10%</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의3 ①2호</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의3 ①2호</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">신고한 세액이 신고하여야 할 세액보다 적은 경우</td>
               </tr>
               <tr className={isNonReport && !isFraud ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">일반 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">20%</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의2 ①2호</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의2 ①2호</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">법정 신고기한까지 신고서 미제출</td>
               </tr>
               <tr className={isFraud && !isIntl && isUnderReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">부정행위 과소</td>
                 <td className="px-3 py-2 text-center font-mono">40%</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의3 ①1호 가목</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의3 ①1호 가목</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">부정행위(허위 증빙 등) 동반 과소신고</td>
               </tr>
               <tr className={isFraud && !isIntl && isNonReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">부정행위 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">40%</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의2 ①1호</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의2 ①1호</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">부정행위 동반 무신고</td>
               </tr>
               <tr className={isFraud && isIntl && isUnderReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">역외 + 부정 과소</td>
                 <td className="px-3 py-2 text-center font-mono">60%</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의3 ①1호 가목 (괄호)</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의3 ①1호 가목 (괄호)</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">역외거래에서 발생한 부정행위로 인한 과소신고</td>
               </tr>
               <tr className={isFraud && isIntl && isNonReport ? "bg-rose-100/40 font-semibold dark:bg-rose-900/40" : ""}>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">역외 + 부정 무신고</td>
                 <td className="px-3 py-2 text-center font-mono">60%</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의2 ①1호 (괄호)</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의2 ①1호 (괄호)</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">역외거래에서 발생한 부정행위로 인한 무신고</td>
               </tr>
               <tr>
                 <td className="px-3 py-2 text-slate-700 dark:text-slate-300">납부지연</td>
                 <td className="px-3 py-2 text-center font-mono">1일 22/100,000</td>
-                <td className="px-3 py-2 text-slate-500 dark:text-slate-400">국세기본법 §47조의4</td>
+                <td className="px-3 py-2 text-slate-600 dark:text-slate-400">국세기본법 §47조의4</td>
                 <td className="px-3 py-2 text-slate-600 dark:text-slate-400">납부기한 다음날부터 1일당 약 0.022%</td>
               </tr>
             </tbody>

@@ -518,7 +518,7 @@ export function RentalHousingExceptionSection({
             {onChangeResidence && (
               <div className="space-y-1" data-field="residencePeriods">
                 <p className="text-sm font-medium text-violet-800 dark:text-violet-200">
-                  거주주택 거주기간 <span className="text-rose-500 dark:text-rose-400">*</span>
+                  거주주택 거주기간 <span className="text-rose-700 dark:text-rose-400">*</span>
                 </p>
                 {/*
                   🔴 **direct 모드 echo** (R21). 당시 store 기본값이 `residenceInputMode: "direct"`

@@ -87,7 +87,7 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">
             무조건 사업용 — 소득세법 시행령 §168의14③
           </p>
-          <p className="text-xs text-blue-600 dark:text-blue-500 mt-0.5">{exemption.detail}</p>
+          <p className="text-xs text-blue-700 dark:text-blue-500 mt-0.5">{exemption.detail}</p>
         </div>
       )}
 
@@ -170,7 +170,7 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
             </div>
           )}
           {judgment.revenueTestDetail.deemedRateUnavailable && (
-            <p className="mt-1.5 text-caption text-rose-600 dark:text-rose-400">
+            <p className="mt-1.5 text-caption text-rose-700 dark:text-rose-400">
               ⚠️ 전세금·보증금이 입력되었으나 해당 과세연도의 정기예금이자율(부가세칙 §47)이 미등재되어 간주임대료를 적용하지 못했습니다. 해당 연도 율 확인이 필요합니다.
             </p>
           )}
@@ -219,9 +219,9 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <AreaBar businessArea={area.businessArea} nonBusinessArea={area.nonBusinessArea} />
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs mt-2">
             <span className="text-muted-foreground">사업용 면적</span>
-            <span className="font-mono tabular-nums text-right text-emerald-600 dark:text-emerald-400">{area.businessArea.toFixed(1)} ㎡</span>
+            <span className="font-mono tabular-nums text-right text-emerald-700 dark:text-emerald-400">{area.businessArea.toFixed(1)} ㎡</span>
             <span className="text-muted-foreground">비사업용 면적</span>
-            <span className="font-mono tabular-nums text-right text-red-600 dark:text-red-400">{area.nonBusinessArea.toFixed(1)} ㎡</span>
+            <span className="font-mono tabular-nums text-right text-red-700 dark:text-red-400">{area.nonBusinessArea.toFixed(1)} ㎡</span>
             {area.mixedUseBuildingRatio !== undefined && (
               <>
                 <span className="text-muted-foreground">특정용도분 비율 (§168의11⑥)</span>
@@ -247,7 +247,7 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
                       <td className="px-2 py-1">{i + 1}</td>
                       <td className="px-2 py-1 text-right font-mono tabular-nums">{formatDeemedDate(p.acquisitionDate)}</td>
                       <td className="px-2 py-1 text-right font-mono tabular-nums">{p.landArea.toFixed(1)} ㎡</td>
-                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${p.nonBusinessArea > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"}`}>{p.nonBusinessArea.toFixed(1)} ㎡</td>
+                      <td className={`px-2 py-1 text-right font-mono tabular-nums ${p.nonBusinessArea > 0 ? "text-red-700 dark:text-red-400" : "text-muted-foreground"}`}>{p.nonBusinessArea.toFixed(1)} ㎡</td>
                     </tr>
                   ))}
                 </tbody>
@@ -348,8 +348,8 @@ function StepItem({ step }: { step: JudgmentStep }) {
 
 function getStepStyle(status: StepStatus) {
   switch (status) {
-    case "PASS":         return { icon: "✓", iconBg: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400", textColor: "text-foreground" };
-    case "FAIL":         return { icon: "✗", iconBg: "bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400",             textColor: "text-foreground" };
+    case "PASS":         return { icon: "✓", iconBg: "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400", textColor: "text-foreground" };
+    case "FAIL":         return { icon: "✗", iconBg: "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-400",             textColor: "text-foreground" };
     case "SKIP":         return { icon: "→", iconBg: "bg-muted text-muted-foreground",                         textColor: "text-muted-foreground" };
     case "NOT_APPLICABLE": return { icon: "–", iconBg: "bg-muted text-muted-foreground",                       textColor: "text-muted-foreground" };
   }
@@ -357,8 +357,8 @@ function getStepStyle(status: StepStatus) {
 
 function getStatusLabel(status: StepStatus): { text: string; color: string } {
   switch (status) {
-    case "PASS":            return { text: "충족",   color: "text-emerald-600 dark:text-emerald-400" };
-    case "FAIL":            return { text: "미충족", color: "text-red-600 dark:text-red-400" };
+    case "PASS":            return { text: "충족",   color: "text-emerald-700 dark:text-emerald-400" };
+    case "FAIL":            return { text: "미충족", color: "text-red-700 dark:text-red-400" };
     case "SKIP":            return { text: "건너뜀", color: "text-muted-foreground" };
     case "NOT_APPLICABLE":  return { text: "해당없음", color: "text-muted-foreground" };
   }

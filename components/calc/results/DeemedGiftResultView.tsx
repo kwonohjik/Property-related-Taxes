@@ -67,7 +67,7 @@ export function DeemedGiftResultView({
   const titleCls = isRefund ? "text-blue-800 dark:text-blue-200" : "text-rose-800 dark:text-rose-200";
   const valueCls = isRefund ? "text-blue-900 dark:text-blue-200" : "text-rose-900 dark:text-rose-200";
   const rowBorderCls = isRefund ? "border-blue-100" : "border-rose-100";
-  const noteCls = isRefund ? "text-blue-600 dark:text-blue-400" : "text-rose-600 dark:text-rose-400";
+  const noteCls = isRefund ? "text-blue-700 dark:text-blue-400" : "text-rose-700 dark:text-rose-400";
 
   return (
     <div className="space-y-4" data-testid="deemed-result">
@@ -409,7 +409,7 @@ export function DeemedGiftResultView({
               </p>
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-violet-600 dark:text-violet-400">
+                  <tr className="text-xs text-violet-700 dark:text-violet-400">
                     <th className="py-1 text-left font-medium">
                       {result.caseType === "high" ? "수증자" : "증여자"}
                     </th>
@@ -522,7 +522,7 @@ export function DeemedGiftResultView({
             각 기간은 별개 증여 — 해당 증여일 도래 시 별도 신고 대상입니다. 위 증여재산가액은 첫 기간(현재 증여) 기준입니다.
           </p>
           {result.type === "free_loan" && (
-            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
               ※ §41의4② 의제 도출 — 일수/365 명문 조항 없음, 분모 365 고정(교재 기준)
             </p>
           )}
@@ -579,7 +579,7 @@ export function DeemedGiftResultView({
                 <tr key={i} className="border-t border-emerald-100">
                   <td className="py-1.5 pr-2 text-muted-foreground">
                     {step.label}
-                    {step.note ? <span className="ml-1 text-xs text-emerald-600 dark:text-emerald-400">({step.note})</span> : null}
+                    {step.note ? <span className="ml-1 text-xs text-emerald-700 dark:text-emerald-400">({step.note})</span> : null}
                   </td>
                   <td className="py-1.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(step.amount)}</td>
                   <td className="py-1.5 pl-2">{step.lawRef ? <LawArticleModal legalBasis={step.lawRef} /> : null}</td>

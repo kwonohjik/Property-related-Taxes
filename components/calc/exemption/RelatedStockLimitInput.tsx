@@ -58,7 +58,7 @@ function ShareField({
   return (
     <div data-testid={testid}>
       <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-        {label} <span className="text-gray-400">({unit})</span>
+        {label} <span className="text-gray-600 dark:text-gray-400">({unit})</span>
       </label>
       <CurrencyInput
         label=""

@@ -128,7 +128,7 @@ export function OtherUnlistedHoldingSection({
               <button
                 type="button"
                 onClick={() => removeRow(idx)}
-                className="rounded px-1.5 py-1 text-caption text-rose-600 hover:bg-rose-50 dark:text-rose-400"
+                className="rounded px-1.5 py-1 text-caption text-rose-700 hover:bg-rose-50 dark:text-rose-400"
               >
                 삭제
               </button>

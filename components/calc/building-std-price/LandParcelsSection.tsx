@@ -49,7 +49,7 @@ export function LandParcelsSection({ parcels, onChange, jibun, referenceDate }: 
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-caption text-rose-600 underline underline-offset-2 hover:no-underline dark:text-rose-400"
+                className="text-caption text-rose-700 underline underline-offset-2 hover:no-underline dark:text-rose-400"
               >
                 삭제
               </button>
@@ -77,7 +77,7 @@ export function LandParcelsSection({ parcels, onChange, jibun, referenceDate }: 
         <div className="rounded-md border border-sky-200 bg-sky-100/60 px-3 py-2 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-900/40">
           면적가중평균 ㎡당 공시지가 ={" "}
           <b className="font-mono tabular-nums">{fmt(weightedAvg)}</b> 원/㎡
-          <span className="ml-1 text-sky-600 dark:text-sky-400">
+          <span className="ml-1 text-sky-700 dark:text-sky-400">
             (총 {totalArea.toLocaleString("ko-KR")}㎡ · 위치지수 산정 기준)
           </span>
         </div>

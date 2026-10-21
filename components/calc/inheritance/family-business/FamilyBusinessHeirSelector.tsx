@@ -133,7 +133,7 @@ export function FamilyBusinessHeirSelector({
             onChange={(v) => onChange({ heirBirthDate: v || undefined })}
           />
           {ageLabel && (
-            <p className="text-caption text-sky-600 dark:text-sky-400">{ageLabel}</p>
+            <p className="text-caption text-sky-700 dark:text-sky-400">{ageLabel}</p>
           )}
         </div>
       )}

@@ -55,7 +55,7 @@ function ShareholderRows({
             </div>
             <button
               type="button"
-              className="text-xs text-rose-600 hover:underline dark:text-rose-400"
+              className="text-xs text-rose-700 hover:underline dark:text-rose-400"
               onClick={() => onChange(rows.filter((_, j) => j !== i))}
             >
               삭제

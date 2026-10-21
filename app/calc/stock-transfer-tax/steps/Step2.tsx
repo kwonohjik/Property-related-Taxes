@@ -649,7 +649,7 @@ export function Step2({ form, onChange }: Step2Props) {
               sectionNum={2}
               title="취득 당시 기준시가 — 개산공제 기준 (소령 §163⑥4·§165④)"
             >
-              <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80">
+              <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
                 매매사례가액으로 취득가액을 정하면 필요경비는 <strong>취득가액 + 취득 당시 기준시가 × 1%</strong>
                 (개산공제)입니다. 실제 경비로 바꾸는 §97②2호 단서는 환산취득가액에만 있습니다.
               </p>

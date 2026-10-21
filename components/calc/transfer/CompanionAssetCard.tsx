@@ -314,7 +314,7 @@ export function CompanionAssetCard({
             >
               <span className="font-bold text-foreground">{chip.num}</span>
               {chip.name}
-              <span className={filled ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"} aria-hidden>
+              <span className={filled ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"} aria-hidden>
                 {filled ? "✓" : "○"}
               </span>
             </button>

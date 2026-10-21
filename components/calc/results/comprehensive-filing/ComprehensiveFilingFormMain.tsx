@@ -137,11 +137,11 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
       {/* 서식 헤더 */}
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
-        <p className="text-micro text-gray-500 dark:text-gray-400">
+        <p className="text-micro text-gray-600 dark:text-gray-400">
           {header.formCode} ({header.revised})
-          <span className="ml-2 text-amber-600 dark:text-amber-400">※ {header.hint}</span>
+          <span className="ml-2 text-amber-700 dark:text-amber-400">※ {header.hint}</span>
         </p>
-        <p className="text-micro text-gray-500 dark:text-gray-400 mt-0.5">
+        <p className="text-micro text-gray-600 dark:text-gray-400 mt-0.5">
           정기신고 ☑ (정기신고란에 체크)
         </p>
       </div>
@@ -677,7 +677,7 @@ export function ComprehensiveFilingFormMain({ result }: Props) {
       </div>
 
       {/* 용지규격 */}
-      <p className="text-micro text-gray-400 text-right mt-1">{PAPER_SPEC}</p>
+      <p className="text-micro text-gray-600 dark:text-gray-400 text-right mt-1">{PAPER_SPEC}</p>
     </div>
   );
 }

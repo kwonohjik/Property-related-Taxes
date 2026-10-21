@@ -137,7 +137,7 @@ export function SimultaneousGiftCard({
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-md border border-rose-200 px-3 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/30"
+          className="rounded-md border border-rose-200 px-3 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 dark:hover:bg-rose-900/30"
         >
           삭제
         </button>
@@ -179,7 +179,7 @@ export function SimultaneousGiftCard({
         <div className="text-xs font-semibold text-sky-800 dark:text-sky-200">
           ② 증여재산
           {giftTotal > 0 && (
-            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
+            <span className="ml-2 font-normal text-gray-600 dark:text-gray-400">
               합계 {giftTotal.toLocaleString("ko-KR")}원
             </span>
           )}
@@ -209,7 +209,7 @@ export function SimultaneousGiftCard({
         <div className="text-xs font-semibold text-sky-800 dark:text-sky-200">
           주식·지분
           {stockTotal > 0 && (
-            <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">
+            <span className="ml-2 font-normal text-gray-600 dark:text-gray-400">
               합계 {stockTotal.toLocaleString("ko-KR")}원
             </span>
           )}

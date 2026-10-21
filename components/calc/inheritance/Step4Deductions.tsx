@@ -67,7 +67,7 @@ function autoFillValue(raw: string, s: DeductionSuggestion): string {
 
 function EmptyGroupNotice() {
   return (
-    <p className="text-caption text-gray-500 dark:text-gray-400 py-1">
+    <p className="text-caption text-gray-600 dark:text-gray-400 py-1">
       위 체크리스트에서 항목을 선택하면 입력 섹션이 열립니다.
     </p>
   );
@@ -205,7 +205,7 @@ export function Step4({
         <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
           공제·세액공제 입력 (선택)
         </h3>
-        <p className="mt-1 text-caption text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-caption text-gray-600 dark:text-gray-400">
           ⓘ 자산 카드·상속인 구성에서 도출 가능한 값은 자동으로 적용됩니다.
           수동 항목은 아래 체크리스트에서 선택하면 입력 섹션이 열립니다.
         </p>
@@ -699,7 +699,7 @@ export function Step4({
               <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">외국납부세액공제 (§29)</p>
               <LawArticleModal legalBasis="상속세및증여세법 §29" label="§29" />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               해외 소재 상속재산에 외국 법령에 따라 부과된 상속세를 공제합니다. 한도는 산출세액 ×{" "}
               <Frac top="국외 상속재산 과세표준" bottom="상속세 과세표준" />
               으로 계산됩니다 (상증령 §21①).
@@ -736,7 +736,7 @@ export function Step4({
 
         {/* 수동 항목 모두 미체크 시 안내 */}
         {groupCManualVisibleCount === 0 && (
-          <p className="text-caption text-gray-500 dark:text-gray-400">
+          <p className="text-caption text-gray-600 dark:text-gray-400">
             외국납부세액공제·단기재상속공제가 해당하면 위 체크리스트에서 선택하세요.
           </p>
         )}

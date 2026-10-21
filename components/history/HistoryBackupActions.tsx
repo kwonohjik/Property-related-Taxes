@@ -257,7 +257,7 @@ export function HistoryBackupActions({ mode, onImported, currentFilter }: Props)
                   className={PW_INPUT_CLASS}
                   data-testid="history-export-password"
                 />
-                <p className="text-xs text-rose-600 dark:text-rose-400">
+                <p className="text-xs text-rose-700 dark:text-rose-400">
                   비밀번호를 잊으면 백업을 복구할 수 없습니다. 안전하게 보관하세요.
                 </p>
               </div>
@@ -314,7 +314,7 @@ export function HistoryBackupActions({ mode, onImported, currentFilter }: Props)
               }}
             />
             {importDecryptError && (
-              <p className="text-xs text-rose-600 dark:text-rose-400" data-testid="history-decrypt-error">
+              <p className="text-xs text-rose-700 dark:text-rose-400" data-testid="history-decrypt-error">
                 {importDecryptError}
               </p>
             )}

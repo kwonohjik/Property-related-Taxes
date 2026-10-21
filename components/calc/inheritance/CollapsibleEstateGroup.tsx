@@ -113,7 +113,7 @@ export function CollapsibleEstateGroup({
             {/* 접힘 시에만 요약 배지 — 펼치면 본문에 다 보이므로 숨김 */}
             {!open && (
               <span
-                className="text-xs text-gray-500 dark:text-gray-400"
+                className="text-xs text-gray-600 dark:text-gray-400"
                 data-testid={`estate-group-summary-${groupKey}`}
               >
                 {count}건{amountText ? ` · ${amountText}` : ""}

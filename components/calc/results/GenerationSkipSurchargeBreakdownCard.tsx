@@ -60,7 +60,7 @@ export function GenerationSkipSurchargeBreakdownCard({
           <h4 className="text-sm font-semibold text-rose-800 dark:text-rose-200">
             세대생략 할증과세 산출근거
           </h4>
-          <span className="text-xs text-rose-500 dark:text-rose-400">
+          <span className="text-xs text-rose-700 dark:text-rose-400">
             상증법 §57·§57②
           </span>
           {isHigherRate && (
@@ -95,7 +95,7 @@ export function GenerationSkipSurchargeBreakdownCard({
                   <Frac top="부모 제외 직계존속 재산가액" bottom="총증여재산가액" /> × {ratePct}%
                 </div>
                 {nonParentLinealAmount !== undefined && totalGiftAmount !== undefined ? (
-                  <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400">
                     = <Amt val={computedTax} /> ×{" "}
                     <Frac top={<Amt val={nonParentLinealAmount} />} bottom={<Amt val={totalGiftAmount} />} /> ×{" "}
                     {ratePct}% ={" "}
@@ -104,7 +104,7 @@ export function GenerationSkipSurchargeBreakdownCard({
                     </span>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400">
                     = <Amt val={computedTax} /> × {ratioPct}% × {ratePct}% ={" "}
                     <span className="font-semibold">
                       <Amt val={detail.surchargeBase} />
@@ -141,7 +141,7 @@ export function GenerationSkipSurchargeBreakdownCard({
                   <Frac top="가산 증여재산 과세표준" bottom="합산 후 과세표준" /> × {ratePct}%
                 </div>
                 {priorAddedTaxBase !== undefined && aggregatedTaxBase !== undefined && aggregatedTaxBase > 0 ? (
-                  <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400">
                     = <Amt val={computedTax} /> ×{" "}
                     <Frac top={<Amt val={priorAddedTaxBase} />} bottom={<Amt val={aggregatedTaxBase} />} /> ×{" "}
                     {ratePct}% ={" "}
@@ -205,7 +205,7 @@ export function GenerationSkipSurchargeBreakdownCard({
           />
 
           {/* PDF 박스 산식 (참고) */}
-          <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-800/40 text-caption text-rose-700/80 dark:text-rose-300/80">
+          <div className="mt-3 pt-3 border-t border-rose-200/60 dark:border-rose-800/40 text-caption text-rose-700 dark:text-rose-300/80">
             <div className="font-semibold mb-1">참고 — 상증법 §57 산식</div>
             <div>
               할증과세액 = 증여세 산출세액 ×{" "}
@@ -249,7 +249,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
             className={`text-xs font-bold ${
               highlight
                 ? "text-rose-800 dark:text-rose-200"
-                : "text-rose-600/80 dark:text-rose-400/80"
+                : "text-rose-700 dark:text-rose-400/80"
             }`}
           >
             {number}
@@ -259,7 +259,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
               highlight
                 ? "text-rose-900 dark:text-rose-100"
                 : muted
-                  ? "text-gray-500 dark:text-gray-400"
+                  ? "text-gray-600 dark:text-gray-400"
                   : "text-gray-700 dark:text-gray-300"
             }`}
           >
@@ -269,7 +269,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
             <button
               type="button"
               onClick={() => setExpanded((p) => !p)}
-              className="text-micro text-gray-500 dark:text-gray-400 hover:text-rose-700 dark:hover:text-rose-300 transition-colors print:hidden"
+              className="text-micro text-gray-600 dark:text-gray-400 hover:text-rose-700 dark:hover:text-rose-300 transition-colors print:hidden"
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >
@@ -282,7 +282,7 @@ function Row({ number, label, amount, highlight, muted, formula }: RowProps) {
             highlight
               ? "text-rose-700 dark:text-rose-300"
               : muted
-                ? "text-gray-500 dark:text-gray-400"
+                ? "text-gray-600 dark:text-gray-400"
                 : "text-gray-800 dark:text-gray-200"
           }`}
         >

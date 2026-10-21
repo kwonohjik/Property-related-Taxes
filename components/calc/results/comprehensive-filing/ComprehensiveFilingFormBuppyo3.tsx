@@ -74,7 +74,7 @@ export function ComprehensiveFilingFormBuppyo3({ result, landArea, buildingArea 
       {/* 헤더 */}
       <div className="text-center mb-2">
         <p className="text-sm font-bold">{header.titleTemplate(year)}</p>
-        <p className="text-micro text-gray-500 dark:text-gray-400">
+        <p className="text-micro text-gray-600 dark:text-gray-400">
           {header.formCode} ({header.revised})
         </p>
       </div>
@@ -202,8 +202,8 @@ export function ComprehensiveFilingFormBuppyo3({ result, landArea, buildingArea 
               >
                 {has1HouseExtra ? fmtKRW(extraDeduction) : DASH}
               </td>
-              <td className="border border-gray-300 text-center text-gray-400">{DASH}</td>
-              <td className="border border-gray-300 text-center text-gray-400">{DASH}</td>
+              <td className="border border-gray-300 text-center text-gray-600 dark:text-gray-400">{DASH}</td>
+              <td className="border border-gray-300 text-center text-gray-600 dark:text-gray-400">{DASH}</td>
             </tr>
 
             {/* ⑥ 공정시장가액비율 */}

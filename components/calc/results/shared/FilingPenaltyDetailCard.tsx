@@ -44,10 +44,10 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
                 (양도세 G-06이 정확히 그 결함이었다). 두 목으로 분해해 적는다.
               */}
               <div className="flex justify-between">
-                <span className="text-rose-600 dark:text-rose-400">
+                <span className="text-rose-700 dark:text-rose-400">
                   가목 — 부정행위분 {formatKRW(detail.fraudSplit.fraudBase)} ×{" "}
                   {Math.round(detail.fraudSplit.fraudRate * 100)}%
-                  <span className="block text-caption text-rose-500 dark:text-rose-400">
+                  <span className="block text-caption text-rose-700 dark:text-rose-400">
                     국세기본법 §47의3①1호 가목
                   </span>
                 </span>
@@ -56,10 +56,10 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-rose-600 dark:text-rose-400">
+                <span className="text-rose-700 dark:text-rose-400">
                   나목 — 그 밖의 과소신고분 {formatKRW(detail.fraudSplit.normalBase)} ×{" "}
                   {Math.round(detail.fraudSplit.normalRate * 100)}%
-                  <span className="block text-caption text-rose-500 dark:text-rose-400">
+                  <span className="block text-caption text-rose-700 dark:text-rose-400">
                     국세기본법 §47의3①1호 나목
                   </span>
                 </span>
@@ -72,9 +72,9 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
             </>
           ) : (
             <div className="flex justify-between">
-              <span className="text-rose-600 dark:text-rose-400">
+              <span className="text-rose-700 dark:text-rose-400">
                 기준금액 {formatKRW(detail.penaltyBase)} × {Math.round(detail.penaltyRate * 100)}%
-                <span className="block text-caption text-rose-500 dark:text-rose-400">{detail.ruleRef}</span>
+                <span className="block text-caption text-rose-700 dark:text-rose-400">{detail.ruleRef}</span>
               </span>
               <span className="font-mono tabular-nums text-rose-900 dark:text-rose-200">
                 {formatKRW(detail.grossPenalty)}
@@ -83,9 +83,9 @@ export function FilingPenaltyDetailCard({ detail }: { detail: InheritanceGiftPen
           )}
           {detail.reductionRate > 0 && (
             <div className="flex justify-between">
-              <span className="text-emerald-600 dark:text-emerald-400">
+              <span className="text-emerald-700 dark:text-emerald-400">
                 기한후신고 감면 ({Math.round(detail.reductionRate * 100)}%)
-                <span className="block text-caption text-emerald-500 dark:text-emerald-400">국세기본법 §48②2호</span>
+                <span className="block text-caption text-emerald-700 dark:text-emerald-400">국세기본법 §48②2호</span>
               </span>
               <span className="font-mono tabular-nums text-emerald-700 dark:text-emerald-300">
                 − {formatKRW(detail.reductionAmount)}

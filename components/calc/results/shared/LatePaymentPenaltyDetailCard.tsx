@@ -33,10 +33,10 @@ export function LatePaymentPenaltyDetailCard({
         <div className="space-y-1">
           {detail.breakdown.map((seg, i) => (
             <div key={i} className="flex justify-between">
-              <span className="text-rose-600 dark:text-rose-400">
+              <span className="text-rose-700 dark:text-rose-400">
                 {formatKRW(detail.unpaidTax)} × {seg.days}일 ×{" "}
                 {(seg.dailyRate * 100).toFixed(4)}%
-                <span className="block text-caption text-rose-500 dark:text-rose-400">
+                <span className="block text-caption text-rose-700 dark:text-rose-400">
                   국세기본법 §47의4①1호 · 이자율 {seg.effectiveFrom}
                 </span>
               </span>

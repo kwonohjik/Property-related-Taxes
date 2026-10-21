@@ -188,7 +188,7 @@ export function NetAssetCalculationTable({
         </>
       }
     >
-      <p className="text-caption text-violet-700/80 dark:text-violet-300/80">
+      <p className="text-caption text-violet-700 dark:text-violet-300/80">
         자산총액 ⑧ − 부채총액 ⑲ = 다.영업권 포함 전 순자산가액 (§55① 후단 — 0 이하 시 0)
       </p>
 
@@ -209,7 +209,7 @@ export function NetAssetCalculationTable({
                 </span>{" "}
                 {row.label}
                 {row.description && (
-                  <span className="block text-micro text-gray-500 dark:text-gray-400">({row.description})</span>
+                  <span className="block text-micro text-gray-600 dark:text-gray-400">({row.description})</span>
                 )}
                 {isDeltaRowLocked && (
                   <span className="block text-micro text-emerald-700 dark:text-emerald-300">
@@ -247,7 +247,7 @@ export function NetAssetCalculationTable({
               </span>{" "}
               {row.label}
               {row.description && (
-                <span className="block text-micro text-gray-500 dark:text-gray-400">({row.description})</span>
+                <span className="block text-micro text-gray-600 dark:text-gray-400">({row.description})</span>
               )}
             </div>
             <CurrencyInput
@@ -278,13 +278,13 @@ export function NetAssetCalculationTable({
         variant="card"
       >
         <div className="space-y-1.5">
-          <p className="text-caption text-violet-700/80 dark:text-violet-300/80">
+          <p className="text-caption text-violet-700 dark:text-violet-300/80">
             ※ 일반 충당금 ⑮ (§17의2 4호 단서 가)는 모든 법인 적용. 본 토글은 보험사업법인·보험회사에 한정 적용.
           </p>
           <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
             <div className="text-caption">
               <span className="font-mono text-violet-700 dark:text-violet-300">+ 책임준비금</span>
-              <span className="block text-micro text-gray-500 dark:text-gray-400">(법인세법 §30① / 보험업법 §120 — §17의2 4호 단서 나·다)</span>
+              <span className="block text-micro text-gray-600 dark:text-gray-400">(법인세법 §30① / 보험업법 §120 — §17의2 4호 단서 나·다)</span>
             </div>
             <CurrencyInput
               label="책임준비금"
@@ -298,7 +298,7 @@ export function NetAssetCalculationTable({
           <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
             <div className="text-caption">
               <span className="font-mono text-violet-700 dark:text-violet-300">+ 비상위험준비금</span>
-              <span className="block text-micro text-gray-500 dark:text-gray-400">(법인세법 §31① — §17의2 4호 단서 나·다)</span>
+              <span className="block text-micro text-gray-600 dark:text-gray-400">(법인세법 §31① — §17의2 4호 단서 나·다)</span>
             </div>
             <CurrencyInput
               label="비상위험준비금"
@@ -312,7 +312,7 @@ export function NetAssetCalculationTable({
           <div className="grid grid-cols-[24rem_1fr] items-center gap-2 py-0.5">
             <div className="text-caption">
               <span className="font-mono text-violet-700 dark:text-violet-300">+ 해약환급금준비금</span>
-              <span className="block text-micro text-gray-500 dark:text-gray-400">(법인세법 §32① — §17의2 4호 단서 다, 보험회사 한정)</span>
+              <span className="block text-micro text-gray-600 dark:text-gray-400">(법인세법 §32① — §17의2 4호 단서 다, 보험회사 한정)</span>
             </div>
             <CurrencyInput
               label="해약환급금준비금"

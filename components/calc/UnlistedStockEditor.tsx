@@ -57,7 +57,7 @@ export function UnlistedStockEditor({
         <button
           type="button"
           onClick={onRemove}
-          className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+          className="text-xs text-red-700 hover:text-red-800 dark:hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
         >
           삭제
         </button>

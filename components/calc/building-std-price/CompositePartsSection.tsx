@@ -116,7 +116,7 @@ export function CompositePartsSection({
               {buildingFeatureCount > 0 ? "다시 계산" : "건물 특성으로 계산"}
             </Button>
           </div>
-          <p className="text-caption text-violet-700/80 dark:text-violet-300/80">
+          <p className="text-caption text-violet-700 dark:text-violet-300/80">
             최고층수·연면적·지능형·주택유형·지붕 등 건물 단위 특성. 연면적은 부분 면적 합계 + 부속으로 자동 적용됩니다.
           </p>
           {buildingFeatureCount > 0 && (
@@ -135,7 +135,7 @@ export function CompositePartsSection({
               <button
                 type="button"
                 onClick={() => remove(i)}
-                className="text-caption text-rose-600 underline underline-offset-2 hover:no-underline dark:text-rose-400"
+                className="text-caption text-rose-700 underline underline-offset-2 hover:no-underline dark:text-rose-400"
               >
                 삭제
               </button>

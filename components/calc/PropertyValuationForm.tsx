@@ -173,12 +173,12 @@ export function PropertyValuationForm({
             <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
               {modeLabel}재산 목록
             </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              주식·지분은 아래 <span className="text-indigo-600 dark:text-indigo-400">주식평가</span> 섹션에 별도 입력
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+              주식·지분은 아래 <span className="text-indigo-700 dark:text-indigo-400">주식평가</span> 섹션에 별도 입력
             </p>
           </div>
           {items.length > 0 && (
-            <span className="text-xs text-gray-400">{items.length}개 입력됨</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{items.length}개 입력됨</span>
           )}
         </div>
       )}
@@ -305,7 +305,7 @@ export function PropertyValuationForm({
               setShowAddPanel(false);
               setPendingDeemed("none");
             }}
-            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+            className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700"
           >
             취소
           </button>
@@ -316,7 +316,7 @@ export function PropertyValuationForm({
           <button
             type="button"
             onClick={() => setShowAddPanel(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-500 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 py-3 text-sm text-gray-600 dark:text-gray-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors"
           >
             <span className="text-lg">+</span>
             {modeLabel}재산 추가

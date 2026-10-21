@@ -63,7 +63,7 @@ export function SplitPaymentCard({
           <h4 className="text-sm font-medium text-sky-800 dark:text-sky-200">
             분납 안내 (상증법 §70②)
           </h4>
-          <p className="mt-0.5 text-xs text-sky-600 dark:text-sky-400">
+          <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">
             결정세액 1천만원 초과 — 분납 신청 가능
           </p>
         </div>
@@ -96,7 +96,7 @@ export function SplitPaymentCard({
         <h4 className="text-sm font-medium text-sky-800 dark:text-sky-200">
           분납 일정 (상증법 §70②)
         </h4>
-        <p className="mt-0.5 text-xs text-sky-600 dark:text-sky-400">
+        <p className="mt-0.5 text-xs text-sky-700 dark:text-sky-400">
           신고기한 내 납부 + 2개월 이내 분납
         </p>
       </div>
@@ -113,7 +113,7 @@ export function SplitPaymentCard({
               {formatKRW(split.firstPayment)}
             </span>
           </div>
-          <div className="mt-0.5 flex items-center justify-between text-caption text-gray-500 dark:text-gray-400">
+          <div className="mt-0.5 flex items-center justify-between text-caption text-gray-600 dark:text-gray-400">
             <span>= 납부할 세액 − 분납액</span>
             {filingDeadline && <span>기한 {filingDeadline}</span>}
           </div>
@@ -126,7 +126,7 @@ export function SplitPaymentCard({
               {formatKRW(split.secondPayment)}
             </span>
           </div>
-          <div className="mt-0.5 flex items-center justify-between text-caption text-gray-500 dark:text-gray-400">
+          <div className="mt-0.5 flex items-center justify-between text-caption text-gray-600 dark:text-gray-400">
             <span>= 분납 신청액 (최대 50%)</span>
             {installmentDueDate && (
               <span data-testid="split-payment-due-date">
@@ -146,7 +146,7 @@ export function SplitPaymentCard({
           </div>
         )}
 
-        <p className="border-t border-sky-100 dark:border-sky-800 pt-2 text-caption text-gray-500 dark:text-gray-400">
+        <p className="border-t border-sky-100 dark:border-sky-800 pt-2 text-caption text-gray-600 dark:text-gray-400">
           ※ 분납 시 납세담보 제공이 필요하지 않습니다. 분납 금액은 §70② 한도
           이내에서 납세자가 선택합니다.
         </p>

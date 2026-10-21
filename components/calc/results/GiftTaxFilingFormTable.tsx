@@ -49,7 +49,7 @@ export function GiftTaxFilingFormTable({ rows, warnings, testIdPrefix }: Props) 
         <button
           type="button"
           onClick={() => setShowLaw(!showLaw)}
-          className="absolute top-0 right-0 text-xs text-violet-600 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 print:hidden dark:text-violet-400"
+          className="absolute top-0 right-0 text-xs text-violet-700 hover:text-violet-800 px-2 py-1 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 print:hidden dark:text-violet-400"
         >
           {showLaw ? "조문 숨김" : "조문 표시"}
         </button>
@@ -65,7 +65,7 @@ export function GiftTaxFilingFormTable({ rows, warnings, testIdPrefix }: Props) 
           <p className="text-xs font-semibold text-rose-700 dark:text-rose-300 mb-1">
             안내 사항
           </p>
-          <ul className="text-xs text-rose-600 dark:text-rose-400 space-y-1 list-disc list-inside">
+          <ul className="text-xs text-rose-700 dark:text-rose-400 space-y-1 list-disc list-inside">
             {warnings.map((w, i) => (
               <li key={i}>{w}</li>
             ))}

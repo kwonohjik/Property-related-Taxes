@@ -52,7 +52,7 @@ export function EstateBodyDeposit({
         </FieldCard>
 
         {/* 평가 우선순위 안내 */}
-        <p className="text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
+        <p className="text-xs text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 rounded px-3 py-2">
           ℹ️ 임차인이 임대인에게 맡긴 전세보증금 — 반환받을 채권 액면가 (상속세 전용)
         </p>
 

@@ -67,10 +67,10 @@ export function GiftValuationBasisCard({
         <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
           증여재산 평가 산출근거
         </h4>
-        <span className="text-xs text-emerald-500 dark:text-emerald-400">
+        <span className="text-xs text-emerald-700 dark:text-emerald-400">
           상증법 §60~§66
         </span>
-        <span className="text-xs text-emerald-600/70 dark:text-emerald-400/70">
+        <span className="text-xs text-emerald-700 dark:text-emerald-400/70">
           — {valuationResults.length}건
         </span>
       </div>
@@ -87,7 +87,7 @@ export function GiftValuationBasisCard({
         ))}
 
         {hasStock && (
-          <p className="text-caption text-emerald-700/80 dark:text-emerald-300/80 pt-1">
+          <p className="text-caption text-emerald-700 dark:text-emerald-300/80 pt-1">
             ※ 상장·비상장주식의 상세 평가는 아래 주식 평가조서를 참조하세요.
           </p>
         )}
@@ -182,13 +182,13 @@ function BasisRow({ step }: { step: CalculationStep }) {
             {step.label}
           </span>
           {step.lawRef && (
-            <span className="text-micro text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 rounded px-1 leading-tight">
+            <span className="text-micro text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700 rounded px-1 leading-tight">
               {step.lawRef}
             </span>
           )}
         </div>
         {step.note && (
-          <span className="text-micro text-gray-500 dark:text-gray-400">
+          <span className="text-micro text-gray-600 dark:text-gray-400">
             {step.note}
           </span>
         )}
@@ -196,7 +196,7 @@ function BasisRow({ step }: { step: CalculationStep }) {
       <span
         className={`font-mono tabular-nums whitespace-nowrap text-xs ${
           isNegative
-            ? "text-rose-600 dark:text-rose-400"
+            ? "text-rose-700 dark:text-rose-400"
             : isFinal
               ? "text-emerald-800 dark:text-emerald-200"
               : "text-gray-700 dark:text-gray-300"

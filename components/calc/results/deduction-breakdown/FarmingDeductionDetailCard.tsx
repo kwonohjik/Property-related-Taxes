@@ -59,7 +59,7 @@ function FarmingDetailContent({ detail }: { detail: FarmingDeductionDetail }) {
 
   if (detail.cappedDeduction === 0) {
     return (
-      <div className="mx-4 my-2 text-caption text-gray-500 dark:text-gray-400">
+      <div className="mx-4 my-2 text-caption text-gray-600 dark:text-gray-400">
         ⓘ {detail.eligible ? "영농 자산 미입력" : "자격 미충족 + 자산 미입력"}
       </div>
     );

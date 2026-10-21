@@ -71,7 +71,7 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
           tone="rose"
           title="비사업용토지 판정"
           titleExtra={
-            <span className="text-micro text-rose-500 dark:text-rose-400">
+            <span className="text-micro text-rose-700 dark:text-rose-400">
               (§104의3①4호나목 · 지방세령 §101)
             </span>
           }
@@ -80,7 +80,7 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
             <LawArticleModal legalBasis="소득세법 §104의3" label="§104의3 비사업용" />
             <LawArticleModal legalBasis="지방세법 시행령 §101" label="지방세령 §101 배율" />
           </div>
-          <p className="text-caption text-rose-600 dark:text-rose-400">
+          <p className="text-caption text-rose-700 dark:text-rose-400">
             부수토지 한도 = <strong>건축물 바닥면적</strong>(각 층 중 최대, 지하 포함) × 용도지역 배율.
             초과분에만 +10%p 중과.
           </p>

@@ -155,7 +155,7 @@ export function CategoryChangeDialog({
                     key={key}
                     className="text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2"
                   >
-                    <span aria-hidden className="text-rose-600 dark:text-rose-300">
+                    <span aria-hidden className="text-rose-700 dark:text-rose-300">
                       ✗
                     </span>
                     {LOSS_FIELD_LABELS[key]}

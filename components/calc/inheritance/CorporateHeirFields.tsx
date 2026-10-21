@@ -162,14 +162,14 @@ function ShareholderRow({
 
           {/* 자연인 상속인 0명 hint */}
           {naturalHeirs.length === 0 && (
-            <p className="text-micro text-gray-500 dark:text-gray-400">
+            <p className="text-micro text-gray-600 dark:text-gray-400">
               상속인을 먼저 추가하면 자동채움됩니다
             </p>
           )}
 
           {/* dangling 경고 배지 */}
           {isDangling && (
-            <p className="text-micro text-amber-600 dark:text-amber-400">
+            <p className="text-micro text-amber-700 dark:text-amber-400">
               ⚠ 상속인 (미연결) — ⑦을 다시 선택해주세요
             </p>
           )}
@@ -191,7 +191,7 @@ function ShareholderRow({
           <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑧ 성명
             {shareholder.heirRef && (
-              <span className="ml-1 text-violet-600 dark:text-violet-400">
+              <span className="ml-1 text-violet-700 dark:text-violet-400">
                 (자동채움)
               </span>
             )}
@@ -220,7 +220,7 @@ function ShareholderRow({
           <label className="block text-micro font-medium text-gray-600 dark:text-gray-400">
             ⑨ 주민등록번호 (선택)
             {shareholder.heirRef && (
-              <span className="ml-1 text-violet-600 dark:text-violet-400">
+              <span className="ml-1 text-violet-700 dark:text-violet-400">
                 (자동채움)
               </span>
             )}
@@ -248,7 +248,7 @@ function ShareholderRow({
         <button
           type="button"
           onClick={onRemove}
-          className="text-micro text-red-500 hover:text-red-700 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
+          className="text-micro text-red-700 hover:text-red-800 px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-red-400"
         >
           삭제
         </button>
@@ -393,14 +393,14 @@ export function CorporateHeirFields({
           <span
             className={
               "text-micro font-mono " +
-              (sumOver ? "text-red-600 font-bold dark:text-red-400" : "text-gray-500 dark:text-gray-400")
+              (sumOver ? "text-red-700 font-bold dark:text-red-400" : "text-gray-600 dark:text-gray-400")
             }
           >
             합 {(sumRatio * 100).toFixed(2)}%
           </span>
         </div>
         {sumOver && (
-          <p className="text-micro text-red-600 dark:text-red-400">
+          <p className="text-micro text-red-700 dark:text-red-400">
             ⚠ 지분율 합이 100%를 초과합니다 (외부 주주분 제외).
           </p>
         )}

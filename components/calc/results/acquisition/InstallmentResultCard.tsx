@@ -55,7 +55,7 @@ function DdayBadge({ deadline }: { deadline: string }) {
 
   let cls = "text-xs font-bold px-1.5 py-0.5 rounded ";
   if (isPast) {
-    cls += "bg-destructive/20 text-destructive";
+    cls += "bg-destructive/10 dark:bg-destructive/20 text-destructive";
   } else if (isUrgent5) {
     cls += "bg-red-100 text-red-700 animate-pulse";
   } else if (isUrgent30) {

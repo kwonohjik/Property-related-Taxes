@@ -242,7 +242,7 @@ export function MixedUseLegacyStdPrice({
             </div>
 
             {isMixedAcqDatesSeparate(asset) && (
-              <p className="text-caption text-slate-500 dark:text-slate-400">토지 취득일 기준</p>
+              <p className="text-caption text-slate-600 dark:text-slate-400">토지 취득일 기준</p>
             )}
             <LandPriceLookupField
               pricePerSqm={asset.mixedAcqLandPricePerSqm || asset.phdLandPricePerSqmAtAcq}

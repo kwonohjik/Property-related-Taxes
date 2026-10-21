@@ -91,7 +91,7 @@ export function InheritanceFilingFormTable({
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
             사전증여재산 명세 (상증법 §13)
           </p>
-          <p className="text-caption text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-caption text-gray-600 dark:text-gray-400 mt-0.5">
             상속세 및 증여세법 시행규칙 별지 제9호서식 부표 1 (가산하는 증여재산가액) 보조 명세 · 영리법인은 부표 5 별도 양식
           </p>
         </div>
@@ -148,7 +148,7 @@ export function InheritanceFilingFormTable({
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
-              <thead className="bg-gray-50/60 dark:bg-gray-800/60 text-gray-500 dark:text-gray-500">
+              <thead className="bg-gray-50/60 dark:bg-gray-800/60 text-gray-600 dark:text-gray-500">
                 <tr className="border-b border-gray-200 dark:border-gray-700">
                   <th className="px-3 py-2 text-left font-medium">증여일</th>
                   <th className="px-3 py-2 text-left font-medium">수증자</th>
@@ -203,7 +203,7 @@ function renderGiftRow(
     : gift.computedTax ?? 0;
 
   const baseClass = dimmed
-    ? "border-b border-gray-100 dark:border-gray-800 text-gray-500 dark:text-gray-500"
+    ? "border-b border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-500"
     : "border-b border-gray-100 dark:border-gray-800";
   const corporateBg =
     isCorporate && !dimmed
@@ -264,7 +264,7 @@ function renderGiftRow(
               직접 입력 과세표준
             </span>
           ) : (
-            <span className="ml-1 inline-block bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded px-1">
+            <span className="ml-1 inline-block bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded px-1">
               자동 도출(§53)
             </span>
           )

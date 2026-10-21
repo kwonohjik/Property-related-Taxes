@@ -319,11 +319,11 @@ export function GeneralBuildingBlock({
               {/* ⚠️ 아래 토글 제목(「증축 있음」)을 **그대로 인용하지 않는다** — E2E가
                   `getByText("증축 있음")`로 그 토글을 잡으므로 같은 문자열이 안내문에 있으면
                   셀렉터가 두 곳에 걸린다(2026-08-12 실측: 접힌 안내문에 매칭돼 실패). */}
-              <li className="text-blue-600 mt-1 dark:text-blue-400">
+              <li className="text-blue-700 mt-1 dark:text-blue-400">
                 • <b>증축한 부분이 있으면</b> 아래 증축 항목을 켜고 <b>증축분 취득 방식</b>을 따로 고릅니다 —
                 원취득분(토지·원건물)과 증축분은 <b>각각</b> 실거래가·환산취득가를 선택할 수 있고, 네 조합 모두 계산됩니다.
               </li>
-              <li className="text-blue-600 dark:text-blue-400">
+              <li className="text-blue-700 dark:text-blue-400">
                 • 원취득분이 <b>실거래가</b>면 위 「취득가액」은 토지·원건물을 한 값으로 산 <b>일괄 취득가액</b>입니다 (취득 당시 기준시가 비율로 자동 안분).
               </li>
             </ul>

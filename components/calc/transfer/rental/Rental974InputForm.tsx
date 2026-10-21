@@ -136,7 +136,7 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
             ]}
           />
           {value.rental974Category === "" && (
-            <p className="mt-1 text-micro text-rose-600 dark:text-rose-400">
+            <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">
               ※ 반드시 선택하세요 (미선택 시 계산 불가)
             </p>
           )}

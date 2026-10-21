@@ -88,7 +88,7 @@ export function StockTaxpayerHeaderCard({
             {mode === "professional" ? (
               <>
                 <div className="flex gap-2">
-                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">의뢰인</span>
+                  <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">의뢰인</span>
                   <span className="font-medium text-slate-800 dark:text-slate-200">
                     {clientName ? `${clientName} 님` : (
                       <span className="text-amber-700 dark:text-amber-300">의뢰인 미선택 — 계정 없이 저장됩니다</span>
@@ -96,19 +96,19 @@ export function StockTaxpayerHeaderCard({
                   </span>
                 </div>
                 <div className="flex gap-2">
-                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">담당자</span>
+                  <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">담당자</span>
                   <span className="text-slate-700 dark:text-slate-300">{displayName || "—"}</span>
                 </div>
               </>
             ) : (
               <>
                 <div className="flex gap-2">
-                  <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">양도인</span>
+                  <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">양도인</span>
                   <span className="font-medium text-slate-800 dark:text-slate-200">{displayName || "—"}</span>
                 </div>
                 {birthDate && (
                   <div className="flex gap-2">
-                    <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">생년월일</span>
+                    <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">생년월일</span>
                     <span className="text-slate-700 dark:text-slate-300">{birthDate}</span>
                   </div>
                 )}
@@ -119,23 +119,23 @@ export function StockTaxpayerHeaderCard({
           {/* 종목 정보 */}
           <div className="space-y-1">
             <div className="flex gap-2">
-              <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">종목명</span>
+              <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">종목명</span>
               <span className="font-medium text-slate-800 dark:text-slate-200">
                 {securityName || "—"}
                 {securityCode && (
-                  <span className="ml-1 text-slate-500 dark:text-slate-400 font-normal">({securityCode})</span>
+                  <span className="ml-1 text-slate-600 dark:text-slate-400 font-normal">({securityCode})</span>
                 )}
               </span>
             </div>
             {brokerage && (
               <div className="flex gap-2">
-                <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">증권사</span>
+                <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">증권사</span>
                 <span className="text-slate-700 dark:text-slate-300">{brokerage}</span>
               </div>
             )}
             {formattedTransferDate && (
               <div className="flex gap-2">
-                <span className="text-slate-500 dark:text-slate-400 w-20 shrink-0">양도일</span>
+                <span className="text-slate-600 dark:text-slate-400 w-20 shrink-0">양도일</span>
                 <span className="text-slate-700 dark:text-slate-300">{formattedTransferDate}</span>
               </div>
             )}
@@ -145,7 +145,7 @@ export function StockTaxpayerHeaderCard({
         {/* 정보 수정 링크 */}
         <Link
           href={editLink}
-          className="shrink-0 text-xs text-sky-600 hover:text-sky-700 hover:underline print:hidden dark:text-sky-400"
+          className="shrink-0 text-xs text-sky-700 hover:text-sky-800 hover:underline print:hidden dark:text-sky-400"
         >
           {editLabel} →
         </Link>

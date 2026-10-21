@@ -332,7 +332,7 @@ export function CorporateInfoSection({
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-200 text-micro font-bold text-violet-800 select-none">2</span>
             <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">평가 분기·할증 선택</p>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
             해당되는 항목을 체크하면 아래에 옵션·입력란이 열립니다. (없으면 건너뛰기)
           </p>
         </div>

@@ -90,7 +90,7 @@ export function PreDeemedAcquisitionResultCard({ detail }: { detail: Detail }) {
             ? "② 채택 — 필요경비는 개산공제 없이 실제 지출액(자본적지출·양도비)입니다 (법 §97②1호 나목)."
             : "① 채택 — 필요경비는 개산공제(환산취득가액이면 §97②2호 단서 비교 포함)입니다."}
         </p>
-        <p className="text-caption text-slate-500 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
+        <p className="text-caption text-slate-600 dark:text-slate-400">{PRE_DEEMED_PPI_FOOTNOTE}</p>
       </div>
     </ToneCard>
   );

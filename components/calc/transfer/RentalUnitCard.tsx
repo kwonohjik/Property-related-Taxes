@@ -626,7 +626,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       {/* 실제 임대 기간 (시작~종료일 다중 구간) — 임대개시일 기준시가 조회연도의 소스라 먼저 배치 */}
       <div className="space-y-1">
         <p className="text-sm font-medium">
-          실제 임대 기간 <span className="text-rose-500 dark:text-rose-400">*</span>
+          실제 임대 기간 <span className="text-rose-700 dark:text-rose-400">*</span>
         </p>
         <PeriodRangeEditor
           tone="emerald"

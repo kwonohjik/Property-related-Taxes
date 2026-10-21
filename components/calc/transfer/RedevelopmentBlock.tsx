@@ -456,7 +456,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             <p className="text-violet-700 dark:text-violet-300">
               분양가 = 권리가액 {preview.sign} 청산금 = <span className="font-mono tabular-nums font-semibold">{preview.salePriceTotal.toLocaleString()}</span>
             </p>
-            <p className="text-caption text-violet-600 dark:text-violet-400">
+            <p className="text-caption text-violet-700 dark:text-violet-400">
               ※ §166②1호 인가후 분 양도차익 산정 시 양도가액에서 차감되는 분양가. 상단 일반 &ldquo;취득가액&rdquo; 입력 대신 본 값이 자동 사용됩니다.
             </p>
             <p className="text-violet-700 dark:text-violet-300">

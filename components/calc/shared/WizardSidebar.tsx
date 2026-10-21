@@ -57,7 +57,7 @@ function StepRow({ step }: { step: WizardSidebarStep }) {
       )}
       {step.status === "attention" && (
         <span
-          className="text-rose-600 font-bold dark:text-rose-400"
+          className="text-rose-700 font-bold dark:text-rose-400"
           aria-label="입력 필요"
         >
           !
@@ -70,7 +70,7 @@ function StepRow({ step }: { step: WizardSidebarStep }) {
       */}
       {step.status === "warning" && (
         <span
-          className="text-amber-500 font-bold dark:text-amber-400"
+          className="text-amber-700 font-bold dark:text-amber-400"
           aria-label="확인 필요"
         >
           !

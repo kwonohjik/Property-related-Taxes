@@ -216,7 +216,7 @@ export function CorporateExemptionSection({
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               나. 상속세 납부 대상자
             </p>
-            <p className="text-micro text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-micro text-gray-600 dark:text-gray-400 mt-0.5">
               ⑪ 면제분 납부세액 = (⑤ 면제세액 − ⑥ ④×10%) × ⑩ 지분율
             </p>
           </div>
@@ -271,7 +271,7 @@ function renderShareholderRows(
       rows.push(
         <tr
           key={`${detail.corporateId}-empty`}
-          className="border-b border-gray-100 dark:border-gray-800 text-gray-400"
+          className="border-b border-gray-100 dark:border-gray-800 text-gray-600 dark:text-gray-400"
         >
           <td className="px-3 py-2">{corporateName}</td>
           <td className="px-3 py-2 text-micro" colSpan={5}>

@@ -24,7 +24,7 @@ const PDFDownloadLink = dynamic(
       <button
         type="button"
         disabled
-        className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-400 font-medium cursor-not-allowed"
+        className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-600 dark:text-gray-400 font-medium cursor-not-allowed"
         data-testid="unlisted-stock-pdf-download-button-loading"
       >
         로딩 중...
@@ -85,7 +85,7 @@ function DisabledButton({ label, title }: { label: string; title?: string }) {
       type="button"
       disabled
       title={title}
-      className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-400 font-medium cursor-not-allowed"
+      className="text-xs px-2.5 py-1 rounded border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/20 text-gray-600 dark:text-gray-400 font-medium cursor-not-allowed"
       data-testid="unlisted-stock-pdf-download-button-disabled"
     >
       {label}

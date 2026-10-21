@@ -390,7 +390,7 @@ function HousingTaxSection({
                 <span>
                   합산 공제율
                   {oneHouseDeduction.isMaxCapApplied && (
-                    <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">(80% 상한 적용)</span>
+                    <span className="ml-1 text-xs text-amber-700 dark:text-amber-400">(80% 상한 적용)</span>
                   )}
                 </span>
                 <span>{formatRate(oneHouseDeduction.combinedRate)}</span>

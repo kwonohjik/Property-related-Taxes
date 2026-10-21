@@ -411,7 +411,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             </span>
             <span className="text-sm font-semibold text-rose-700 dark:text-rose-300">소재지 (공시지가 조회용)</span>
           </div>
-          <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
+          <p className="text-caption text-rose-700 dark:text-rose-400/90">
             주소를 입력하면 아래 ㎡당 개별공시지가를 연도별로 자동 조회할 수 있습니다. 미입력 시 직접 입력하세요.
           </p>
           <AddressSearch
@@ -439,7 +439,7 @@ export function BuildingStdPriceForm({ onResult, lockedTaxType, initialAddress, 
             onAutoFill={(patch) => setF((prev) => ({ ...prev, ...patch }))}
           />
           {(!!f.unitDong || !!f.unitHo) && (
-            <p className="text-caption text-rose-600/90 dark:text-rose-400/90">
+            <p className="text-caption text-rose-700 dark:text-rose-400/90">
               집합건물 세대는 건축물대장 조회 시 전유+공용 연면적이 건물 연면적으로 자동 입력됩니다(국세청 「건물 기준시가
               계산방법 고시」상 건물면적 기준). 조회되지 않으면 전유+공용 연면적을 직접 입력하세요.
             </p>

@@ -51,8 +51,8 @@ export function Buppyo2HeirSheet({
             모두 PAPER_FOOTER를, Besshi6_2는 「(앞쪽)」을 렌더한다. */}
         <header className="mb-3">
           <div className="flex items-baseline justify-between">
-            <p className="text-micro text-slate-500 dark:text-slate-400">{BP2_FORM_SUBTITLE}</p>
-            <p className="text-micro text-gray-500 dark:text-gray-400">{BP2_FORM_SIDE}</p>
+            <p className="text-micro text-slate-600 dark:text-slate-400">{BP2_FORM_SUBTITLE}</p>
+            <p className="text-micro text-gray-600 dark:text-gray-400">{BP2_FORM_SIDE}</p>
           </div>
           <p className="text-center text-lg font-bold tracking-wide text-slate-900 dark:text-slate-50">
             {BP2_FORM_TITLE}
@@ -76,7 +76,7 @@ export function Buppyo2HeirSheet({
           <Buppyo2KyeSection total={heirData.sectionTotal} idx={idx} />
         </div>
 
-        <p className="mt-2 text-right text-micro text-gray-500 dark:text-gray-400">{BP2_FOOTER}</p>
+        <p className="mt-2 text-right text-micro text-gray-600 dark:text-gray-400">{BP2_FOOTER}</p>
       </div>
 
       {/* ── 2쪽: 「상속인별 상속재산명세」 — 오버플로분(중복 없음) + 계. N>5일 때만 ── */}
@@ -102,7 +102,7 @@ export function Buppyo2HeirSheet({
             />
           </HorizontalScrollContainer>
 
-          <p className="mt-2 text-right text-micro text-gray-500 dark:text-gray-400">{BP2_FOOTER}</p>
+          <p className="mt-2 text-right text-micro text-gray-600 dark:text-gray-400">{BP2_FOOTER}</p>
         </div>
       )}
     </div>

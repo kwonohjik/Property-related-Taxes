@@ -50,7 +50,7 @@ function Row({
       </span>
       <span
         className={`font-mono tabular-nums text-sm text-right ${
-          deduction ? "text-blue-600 dark:text-blue-400" : ""
+          deduction ? "text-blue-700 dark:text-blue-400" : ""
         }`}
       >
         {value}
@@ -89,7 +89,7 @@ function SingleTransferResultCard({
           <h4 className="text-sm font-semibold text-sky-800 dark:text-sky-200">
             {title}
           </h4>
-          <span className="text-xs text-sky-600 dark:text-sky-300">
+          <span className="text-xs text-sky-700 dark:text-sky-300">
             비과세
           </span>
         </div>

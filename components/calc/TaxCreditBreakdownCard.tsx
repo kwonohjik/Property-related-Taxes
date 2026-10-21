@@ -73,28 +73,28 @@ function buildSection28Formula(
                 bottom={<>합산 <Amt val={deceasedMarginalDenominator} /></>}
               />
             </div>
-            <div className="mt-0.5 text-micro text-rose-500 dark:text-rose-400">
+            <div className="mt-0.5 text-micro text-rose-700 dark:text-rose-400">
               ※ 증여자가 금번 증여 전 사망 — 생전 증여재산은 §47② 합산 제외 (재산-58·서일46014-11750)
             </div>
           </div>
         )}
       {aggregatedTaxBase > 0 ? (
         <>
-          <div className="text-gray-500 dark:text-gray-400 mt-1">
+          <div className="text-gray-600 dark:text-gray-400 mt-1">
             공제한도 = 산출세액 × <Frac top="가산한 증여재산 과세표준" bottom="합산 후 과세표준" />
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400">
             = <Amt val={computedTax} /> ×{" "}
             <Frac top={<Amt val={priorAddedTaxBase} />} bottom={<Amt val={aggregatedTaxBase} />} /> ={" "}
             <Amt val={creditLimit} />
           </div>
         </>
       ) : (
-        <div className="text-rose-600 dark:text-rose-400">
+        <div className="text-rose-700 dark:text-rose-400">
           합산 후 과세표준이 0이므로 공제한도 산식 무효
         </div>
       )}
-      <div className="text-micro text-gray-500 dark:text-gray-400 mt-1">
+      <div className="text-micro text-gray-600 dark:text-gray-400 mt-1">
         ※ 산출세액은 세대생략 할증 전 금액
       </div>
     </>
@@ -127,26 +127,26 @@ function buildSection29Formula(
       </div>
       {overallTaxBase > 0 ? (
         <>
-          <div className="text-gray-500 dark:text-gray-400 mt-1">
+          <div className="text-gray-600 dark:text-gray-400 mt-1">
             한도 = 상속세 산출세액 × <Frac top="국외 상속재산 과세표준" bottom="상속세 과세표준" />
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+          <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400">
             = <Amt val={computedTax} /> ×{" "}
             <Frac top={<Amt val={foreignInheritanceTaxBase} />} bottom={<Amt val={overallTaxBase} />} /> ={" "}
             <Amt val={creditLimit} />
           </div>
         </>
       ) : (
-        <div className="text-rose-600 dark:text-rose-400">
+        <div className="text-rose-700 dark:text-rose-400">
           상속세 과세표준이 0이므로 한도 0
         </div>
       )}
       {creditAmount < Math.min(creditLimit, foreignTaxPaid) && (
-        <div className="text-micro text-amber-600 dark:text-amber-400 mt-1">
+        <div className="text-micro text-amber-700 dark:text-amber-400 mt-1">
           ※ 선행 공제(증여세액공제 §28) 차감 후 잔액 한도로 축소됨
         </div>
       )}
-      <div className="text-micro text-gray-500 dark:text-gray-400 mt-1">
+      <div className="text-micro text-gray-600 dark:text-gray-400 mt-1">
         ※ 상증령 §21① — 산출세액은 세액공제 차감 전 금액 기준
       </div>
     </>
@@ -182,13 +182,13 @@ function buildSection30Formula(
         <div>
           단기재상속공제 = 전의 산출세액 × <Frac top="재상속분 재산가액" bottom="전의 상속재산가액" /> × 공제율
         </div>
-        <div className="text-gray-500 dark:text-gray-400 mt-1">
+        <div className="text-gray-600 dark:text-gray-400 mt-1">
           경과 구간 {band}년 이내 → 공제율 {(creditRate * 100).toFixed(0)}% · 전의 산출세액{" "}
           <Amt val={priorComputedTax} />, 전의 상속재산가액 <Amt val={priorEstateValue} />
         </div>
         <table className="mt-1 w-full text-caption">
           <thead>
-            <tr className="text-gray-400">
+            <tr className="text-gray-600 dark:text-gray-400">
               <th className="text-left font-normal">재산</th>
               <th className="text-right font-normal">재상속분(1차가)</th>
               <th className="text-right font-normal">기준액</th>
@@ -212,11 +212,11 @@ function buildSection30Formula(
             </tr>
           </tbody>
         </table>
-        <div className="text-micro text-gray-500 dark:text-gray-400 mt-1">
+        <div className="text-micro text-gray-600 dark:text-gray-400 mt-1">
           §30③ 한도(산출세액 − §28 − §29) <Amt val={limit} />{" "}
           {creditAmount <= limit ? "≥ 공제액 → 전액 공제" : "→ 한도까지 공제"}
         </div>
-        <div className="text-micro text-gray-500 dark:text-gray-400">
+        <div className="text-micro text-gray-600 dark:text-gray-400">
           ※ 상증법 §30②1호·집행 30-22-1② — 재산별 구분 계산 (원 단위 floor)
         </div>
       </>
@@ -235,7 +235,7 @@ function buildSection30Formula(
     <>
       <div>단기재상속공제 = 전의 상속세 산출세액 × 공제율</div>
       {priorTaxStep && (
-        <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
+        <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400 mt-1">
           전의 산출세액 = <Amt val={priorTaxStep.amount} />
         </div>
       )}
@@ -245,7 +245,7 @@ function buildSection30Formula(
         </div>
       )}
       {limitStep && (
-        <div className="flex flex-wrap items-baseline gap-x-1 text-rose-600 dark:text-rose-400 mt-1">
+        <div className="flex flex-wrap items-baseline gap-x-1 text-rose-700 dark:text-rose-400 mt-1">
           당해 산출세액 한도 적용: <Amt val={limitStep.amount} />
         </div>
       )}
@@ -294,7 +294,7 @@ function buildSection69Formula(
         = <Amt val={base} /> × {filingRatePct}% ={" "}
         <span className="font-semibold"><Amt val={credit.filingCredit} /></span>
       </div>
-      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400 mt-1">
+      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400 mt-1">
         신고분 세액 = (산출세액 + 세대생략 할증) − 증여세액공제
         {corp > 0 && <> − 영리법인 면제</>}
         {foreign > 0 && <> − 외국납부세액공제</>}
@@ -302,7 +302,7 @@ function buildSection69Formula(
         {special > 0 && <> − 조특 특례공제</>}
         {farmlandReduction > 0 && <> − 농지 감면세액</>}
       </div>
-      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-500 dark:text-gray-400">
+      <div className="flex flex-wrap items-baseline gap-x-1 text-gray-600 dark:text-gray-400">
         = <Amt val={totalWithSurcharge} /> − <Amt val={giftCredit} />
         {corp > 0 && <> − <Amt val={corp} /></>}
         {foreign > 0 && <> − <Amt val={foreign} /></>}
@@ -311,16 +311,16 @@ function buildSection69Formula(
         {farmlandReduction > 0 && <> − <Amt val={farmlandReduction} /></>}
         {" "}= <Amt val={base} />
       </div>
-      <div className="text-micro text-gray-500 dark:text-gray-400">
+      <div className="text-micro text-gray-600 dark:text-gray-400">
         ※ 상속인별 신고분 세액에 각각 {filingRatePct}% 적용 후 합산 (원 미만 반올림)
       </div>
       {allOthersZero && corp === 0 && (
-        <div className="text-micro text-gray-500 dark:text-gray-400">
+        <div className="text-micro text-gray-600 dark:text-gray-400">
           (외국납부·조특 특례 미적용)
         </div>
       )}
       {special > 0 && (
-        <div className="text-micro text-amber-600 dark:text-amber-400">
+        <div className="text-micro text-amber-700 dark:text-amber-400">
           ※ 조특 특례 절감 분 차감 후 {filingRatePct}% 적용
         </div>
       )}
@@ -365,13 +365,13 @@ function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps
             {label}
           </span>
           {lawRef && (
-            <span className="text-xs text-gray-500 dark:text-gray-400">{lawRef}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400">{lawRef}</span>
           )}
           {formula && (
             <button
               type="button"
               onClick={() => setExpanded((p) => !p)}
-              className="text-micro text-gray-500 dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors print:hidden"
+              className="text-micro text-gray-600 dark:text-gray-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors print:hidden"
               aria-expanded={expanded}
               aria-label={`${label} 산출근거 ${expanded ? "닫기" : "펼치기"}`}
             >
@@ -383,7 +383,7 @@ function CreditRow({ label, amount, lawRef, highlight, formula }: CreditRowProps
           className={`font-mono text-sm ${
             highlight
               ? "text-emerald-700 dark:text-emerald-300"
-              : "text-blue-600 dark:text-blue-400"
+              : "text-blue-700 dark:text-blue-400"
           }`}
         >
           - {amount.toLocaleString()}
@@ -474,7 +474,7 @@ export function TaxCreditBreakdownCard({
           <p className="text-base font-bold text-blue-700 dark:text-blue-300">
             - {formatKRW(credit.totalCredit)}
           </p>
-          <p className="text-xs text-blue-500 dark:text-blue-400">
+          <p className="text-xs text-blue-700 dark:text-blue-400">
             세액 대비 {creditRate}% 절감
           </p>
         </div>

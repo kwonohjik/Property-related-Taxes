@@ -123,7 +123,7 @@ describe("AQ-3 — 사이드바가 어느 단계가 빠졌는지 알려 준다",
     );
     const mark = rows()[0].querySelector('[aria-label="입력 필요"]');
     expect(mark, "① «취득 정보»에 오류 표식이 있어야 함").toBeTruthy();
-    expect(mark!.className).toContain("text-rose-600");
+    expect(mark!.className).toContain("text-rose-700");
   });
 
   /**
@@ -168,7 +168,7 @@ describe("AQ-3 — 사이드바가 어느 단계가 빠졌는지 알려 준다",
     );
     const mark = rows()[1].querySelector('[aria-label="입력 필요"]');
     expect(mark, "② «물건 상세»에 오류 표식이 있어야 함").toBeTruthy();
-    expect(mark!.className).toContain("text-rose-600");
+    expect(mark!.className).toContain("text-rose-700");
   });
 
   it("오류가 없는 단계에는 표식이 붙지 않는다", () => {
@@ -218,6 +218,6 @@ describe("AQ-4 — 되돌아와도 «가 본» 단계는 표식을 유지한다"
 
     const mark = rows()[1].querySelector('[aria-label="입력 필요"]');
     expect(mark, "가 본 적 있는 ②에는 표식이 붙어야 함").toBeTruthy();
-    expect(mark!.className).toContain("text-rose-600");
+    expect(mark!.className).toContain("text-rose-700");
   });
 });

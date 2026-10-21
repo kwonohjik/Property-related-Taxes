@@ -162,7 +162,7 @@ export function DebtAllocationInput({
                       금융채무 {formatKRW(d.financialDebtAmount)}
                     </span>
                   )}
-                  <span className="text-gray-500 dark:text-gray-400">
+                  <span className="text-gray-600 dark:text-gray-400">
                     분배: {allocationText}
                   </span>
                 </div>
@@ -230,7 +230,7 @@ export function DebtAllocationInput({
             <button
               type="button"
               onClick={() => remove(selectedIndex)}
-              className="px-4 py-2 rounded-md text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors dark:text-rose-400"
+              className="px-4 py-2 rounded-md text-sm text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors dark:text-rose-400"
             >
               삭제
             </button>
