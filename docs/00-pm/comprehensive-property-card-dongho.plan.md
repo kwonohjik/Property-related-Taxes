@@ -1,6 +1,6 @@
 # 종부세 주택 카드 — 상세주소 파싱이 동·호를 비워 다른 세대 공시가격이 채워짐 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Do 진행 — Q-1 권고안 a(2026-10-21 사용자 결정)** · 워크트리 `../Property-related-Taxes-pce` · 브랜치 `docs/property-card-dongho-plan`
+> 작성 2026-10-21 · 상태 **Do 완료 — Q-1 권고안 a(2026-10-21). 구현 PR #2343(머지 대기) · 결과는 「Do 결과」** · 워크트리 `../Property-related-Taxes-pce` · 브랜치 `docs/property-card-dongho-plan`
 > 기준 master `1c63b079e`. 줄 번호는 모두 이 커밋 기준이다. 실측은 `b6837b87f`에서 했고, 그 사이 대상 파일 변경은 없다.
 > 출처: `address-dongho-other-calcs-and-multi-gate.plan.md` §A-4(「확인 필요」로 남긴 종부세 주택 카드). 같은 결함의 다른 6곳은 #2339에서 고쳤다.
 > 실측 spec은 커밋하지 않았다. 주소 검색·공시가격은 `page.route`로 고정했고, 공시가격 mock은 `route.ts` `pickUnit` 규칙을 따른다(동·호가 없으면 임의 세대, 지정했는데 없으면 「없음」, 끝의 「동」·「호」는 떼고 비교).
@@ -85,3 +85,9 @@
 ## 범위 밖(확인 필요로 남김)
 
 - 저장된 동·호가 없을 때 상세주소 칸을 빈 칸에서 한 글자씩 치면 「동」 전까지 숫자가 사라지는 것(e와 같은 원인 — 칸 값이 합성이라 빈 값으로 파싱되는 중간 상태에서 비워진다). R1과 무관하게 남는다. 실측은 저장 동·호가 있는 상태에서만 했다
+
+## Do 결과 (2026-10-21) — PR #2343(`fix/property-card-dongho`)
+
+- `PropertyCardEditor.tsx` `addressValue`에 동·호 전달(R1) — 한 곳
+- 회귀 `e2e/comprehensive-property-card-dongho.spec.ts` K-1~K-5(§5 계획 그대로). 뮤테이션(동·호 전달 제거) → K-1·K-2·K-3×2 실패, K-4·K-5(원래 정상 경로) 통과
+- 종부세 E2E 25 spec 61건 · 전체 vitest 3,201파일 · 게이트 4종·typecheck·lint(오류 0) 통과
