@@ -22,6 +22,7 @@ import {
 } from "@/lib/calc/expropriation-required-gate";
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
+import { saleStdPriceWaivedByEra } from "@/lib/calc/sale-split-100-3-era";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import {
   collectSplitPartCauseIssues,
@@ -408,6 +409,17 @@ export function refineSplitAcquisitionInputs(
   refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue, true);
 
   // V7 — 양도시 기준시가 파트별 (일괄양도 안분 · §100③ 30% 판정의 비교 대상).
+  // 양도일 2016.1.1. 전 + 구분 기재 + 환산 파트 없음이면 ⑧이 풀어 주는 값이라(계산에 쓰이지 않는다) 같은 leaf로 푼다.
+  // 증여자 취득가액을 모르는 파트 이월과세 파트는 ⑧ `partDonorEstimated`처럼 환산 파트로 센다(분모로 쓰인다).
+  if (
+    saleStdPriceWaivedByEra({
+      transferDate: d.transferDate,
+      saleSplitMode: d.saleSplitMode,
+      landMode: d.landCarryoverPart?.useEstimatedAcquisition === true ? "estimated" : landMode,
+      buildingMode: d.buildingCarryoverPart?.useEstimatedAcquisition === true ? "estimated" : buildingMode,
+    })
+  )
+    return;
   if (!positive(d.landStandardPriceAtTransfer))
     issue(["landStandardPriceAtTransfer"], "토지·건물 분리 계산에는 양도시 기준시가 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목)");
   if (!positive(d.buildingStandardPriceAtTransfer))
