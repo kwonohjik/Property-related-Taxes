@@ -128,3 +128,17 @@
 
 - §0.4 종부세 토지 필지의 시군구 자동 채움(실제 응답 형식에서 `road`에 시·군·구가 없음)
 - 증여세 부담부증여 경로에서 코드가 빠졌을 때의 세액 변화(§0.3) — R1 뒤에는 그 입력 경로가 사라지므로 Do 회귀(A-3)는 코드가 실리는지만 본다
+
+## Do 결과 (2026-10-21) — PR `fix/address-detail-dead-input`
+
+- R1 `disableUnits` 4곳: §155⑯ 두 칸(`TempTwoHouseDeadlineExceptionInputs.tsx`) · `LandParcelEditor.tsx` · `PresaleRightsSection.tsx`
+- R2 `hideDetailInput` 3곳: 취득 `Step0.tsx` · 재산 `Step0.tsx` · `RentalUnitCard.tsx`. `address-search.tsx`의 `hideDetailInput` 설명에 사용처를 더했다
+- 회귀 테스트
+  - 신규 E2E `e2e/address-detail-dead-input.spec.ts`: A-1(판정 메뉴 신규 주택 아파트 → 세대 조회 0회·코드 유지·비연접·「과세」), A-2(이전한 기관 칸), A-3(증여세 부담부증여 요청 본문에 세 코드)
+  - 신규 렌더 `__tests__/components/address-detail-dead-input-callers.test.tsx`: T-1·T-2(§155⑯ 두 칸) · L-1(토지 — 선택 1회 말고 `onUpdate` 없음) · P-1(분양권)
+  - 갱신: `address-dongho-remount-other-calcs.spec.ts` D-2·D-3(상세주소 칸 없음), `address-dongho-remount-callers.test.tsx` R-1(칸 없음·`onChange` 없음 — 재조회가 끝난 뒤에 본다)
+- 뮤테이션(파일 복사·`cmp` 복원) 9건 전부 대상 테스트가 실패했다
+  - §155⑯ 이전한 기관 칸 제거 → T-1 · A-2 · A-3 / 신규 주택 칸 제거 → T-2 · A-1 · A-3
+  - 토지 → L-1 / 분양권 → P-1 / 임대 → R-1
+  - 취득 → 취득세 D-2·D-3 / 재산 → 재산세 D-2·D-3
+- 관련 E2E 62 spec 200건 통과(주소·§155⑯·⑱·증여세 부담부증여·종부세·판정 메뉴 임대·분양권·취득·재산). 게이트 4종·typecheck·lint(오류 0) 통과
