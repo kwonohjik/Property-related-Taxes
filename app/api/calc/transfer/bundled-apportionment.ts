@@ -17,6 +17,8 @@ import {
   type BundledApportionmentResult,
 } from "@/lib/tax-engine/bundled-sale-apportionment";
 import { toApportionKind } from "./bundled-split-helpers";
+import { computeDebtRatio } from "@/lib/tax-engine/burdened-gift-valuation";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 interface BundledInheritanceValuation {
   inheritanceDate: string;
@@ -42,6 +44,8 @@ interface BundledPrimaryInput {
    * **더해지지 대체되지 않는다**(`allocatedExpenses = direct + commonShare`).
    */
   commonTransferExpense?: number;
+  /** 주 자산 부담부증여 info(④가 채무 재배분 `assumedDebtOverride`를 싣는다) — 전 자산 부담부증여 묶음의 확정 가액 Bᵢ. */
+  burdenedGiftInfo?: BurdenedGiftInfo;
 }
 
 interface BundledCompanionForApportion {
@@ -72,6 +76,7 @@ interface BundledCompanionForApportion {
   fixedAcquisitionPrice?: number;
   fixedSalePrice?: number;
   inheritanceValuation?: BundledInheritanceValuation;
+  burdenedGiftInfo?: BurdenedGiftInfo;
 }
 
 /**
@@ -82,7 +87,7 @@ interface BundledCompanionForApportion {
 export function prepareBundledApportionment(
   primary: BundledPrimaryInput,
   companions: BundledCompanionForApportion[],
-  opts: { isActualMode: boolean; isFullFractionalBundle: boolean },
+  opts: { isActualMode: boolean; isFullFractionalBundle: boolean; isAllBurdenedGift?: boolean },
 ): {
   apportionment: BundledApportionmentResult;
   adjustedAcq: Map<string, { price: number; used: boolean }>;
@@ -186,9 +191,29 @@ export function prepareBundledApportionment(
     bundleAssets[last].fixedSalePrice = primary.totalSalePrice! - sumExceptLast;
   }
 
+  /**
+   * 전 자산 부담부증여 묶음 — §166⑥ 안분이 성립하지 않는다(양도가액을 §159가 정하고 엔진 STEP 0.48이 덮어쓴다).
+   * 각 자산을 확정 가액 Bᵢ(그 자산에 배분된 인수 채무 = §159① 2호 A × Bᵢ/Cᵢ에서 Aᵢ = Cᵢ)로 지나가게 해, 화면에 칸이 없는
+   * 안분 키·계약서 가액 없이 안분 단계를 통과시킨다. 총액은 ΣBᵢ(= 신고 단위 B). 세액은 이 값과 무관하다(계획서
+   * `docs/00-pm/burdened-gift-bundle-hidden-stdprice.plan.md` §1.2 — 총액 1원도 같은 세액). B = 0이면 종전 경로(⑩·⑧이 막는다).
+   */
+  let totalSalePrice = primary.totalSalePrice!;
+  if (opts.isAllBurdenedGift && primary.burdenedGiftInfo && companions.every((c) => c.burdenedGiftInfo)) {
+    const debts = [primary.burdenedGiftInfo, ...companions.map((c) => c.burdenedGiftInfo!)].map(
+      (info) => computeDebtRatio(info, 0).assumedDebtAmount,
+    );
+    const sumDebt = debts.reduce((s, d) => s + d, 0);
+    if (sumDebt > 0) {
+      bundleAssets.forEach((a, i) => {
+        a.fixedSalePrice = debts[i];
+      });
+      totalSalePrice = sumDebt;
+    }
+  }
+
   // (4) 안분 실행
   const apportionment = apportionBundledSale({
-    totalSalePrice: primary.totalSalePrice!,
+    totalSalePrice,
     assets: bundleAssets,
     // §100② 후단 — 공통 양도비를 결정된 양도가액 비율로 안분(마지막 자산 잔액 흡수).
     // 🔴 종전에는 이 인자가 **한 번도 전달되지 않아** 엔진 Step 5가 죽은 코드였다(Q08).

@@ -32,6 +32,8 @@ import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { companionBurdenedGiftValuations } from "./transfer-tax-api-burdened-gift";
+import { burdenedGiftBundleKind } from "./burdened-gift-transfer-price-scope";
+import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "./burdened-gift-transfer-price-scope";
 import { sameDayHousingBundleIssue } from "./same-day-housing-bundle";
 
 /**
@@ -356,6 +358,10 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
           });
         });
       }
+      // 일반 양도 + 부담부증여 혼합 묶음 — 안분·채무 재배분이 설계되지 않아 세액이 틀린다(⑩과 같은 술어 · `burdenedGiftBundleKind` JSDoc).
+      if (!fullFractional && burdenedGiftBundleKind(form.assets.map((a) => a.transferType === "burdened_gift")) === "mixed") {
+        issues.push({ step, message: MIXED_BURDENED_GIFT_BUNDLE_MESSAGE });
+      }
 
       /**
        * 컴패니언 **매매사례가액 추계**(소득세법 시행령 제176조의2 제3항 제1호) 차단 —
@@ -465,7 +471,8 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     // 함께양도 묶음의 지분 자산은 물건 전체(100%) 입력이라 ④와 같이 지분율을 곱한 값으로 더한다
     // (`buildAssetPayload`·`primaryActualSalePrice`와 같은 `applyRatio` — 종전엔 지분 자산이 하나라도 있으면 생략해
     // 합이 어긋난 채 route 500, 2026-10-10 실측).
-    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !fullFractional) {
+    // 전 자산 부담부증여는 계약서 가액 칸이 없고 총 양도가액도 받지 않는다(위 `allBurdenedGift` — 양도가액은 §159가 정한다).
+    if (form.assets.length > 1 && form.bundledSaleMode === "actual" && !fullFractional && !allBurdenedGift) {
       const sumActual = form.assets.reduce((s, a) => {
         const v = parseAmount(a.actualSalePrice);
         const r = getOwnershipRatio(a);

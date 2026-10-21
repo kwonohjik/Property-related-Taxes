@@ -32,6 +32,8 @@ import { refineApartNtsPrice } from "./transfer-tax-schema-required-refines-2a";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 import { refineSplitAcquisitionInputs } from "./transfer-tax-schema-required-refines-2a";
 import { refineMultiUnsupported } from "./transfer-tax-schema-multi-refines";
+import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-scope";
+import { MIXED_BURDENED_GIFT_BUNDLE_MESSAGE } from "@/lib/calc/burdened-gift-transfer-price-scope";
 
 // ─── ⑫ 상업용건물·일반건물 환산취득가 Zod 스키마 → sibling 파일 분리 ──────
 // 정의는 `./transfer-tax-building-schemas.ts` 참조.
@@ -202,10 +204,20 @@ export const propertySchema = z
       const fullFractionalBundle =
         data.fractionalSplitBundle ??
         (primaryIsFractional && companions.every((c) => c.totalPropertyTransferPrice !== undefined));
+      /**
+       * 부담부증여 자산은 양도가액을 §159가 정한다 — 계약서 가액·안분 키를 요구하지 않는다(⑧과 같은 술어 · `burdenedGiftBundleKind` JSDoc).
+       * 컴패니언은 `burdenedGiftInfo` 존재로 판정한다(`transfer-tax-schema-companion-refines.ts`와 같은 규율).
+       */
+      const primaryBg = data.transferType === "burdened_gift";
+      const companionBg = companions.map((c) => c.burdenedGiftInfo !== undefined);
+      const bgKind = burdenedGiftBundleKind([primaryBg, ...companionBg]);
+      if (!fullFractionalBundle && bgKind === "mixed") {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets"], message: MIXED_BURDENED_GIFT_BUNDLE_MESSAGE });
+      }
 
       if (data.bundledSaleMode === "actual") {
         // 주 자산 actual 가액 필수 (단, 축 B면 자동 계산되므로 면제)
-        if (!fullFractionalBundle && (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0)) {
+        if (!fullFractionalBundle && !primaryBg && (!data.primaryActualSalePrice || data.primaryActualSalePrice <= 0)) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ["primaryActualSalePrice"],
@@ -215,7 +227,7 @@ export const propertySchema = z
         // 컴패니언도 축 B면 면제
         for (let i = 0; i < companions.length; i++) {
           const c = companions[i];
-          if (!fullFractionalBundle && (!c.fixedSalePrice || c.fixedSalePrice! <= 0)) {
+          if (!fullFractionalBundle && !companionBg[i] && (!c.fixedSalePrice || c.fixedSalePrice! <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["companionAssets", i, "fixedSalePrice"],
@@ -224,7 +236,7 @@ export const propertySchema = z
           }
         }
         // 합계 = totalSalePrice 검증 — 축 B는 ratio 합산 검증(⑧)으로 대체되므로 생략. 혼합 묶음의 지분 자산은 지분 반영 가액으로 더한다.
-        if (!fullFractionalBundle && data.totalSalePrice && data.primaryActualSalePrice) {
+        if (!fullFractionalBundle && bgKind !== "all" && data.totalSalePrice && data.primaryActualSalePrice) {
           const sumFixed =
             data.primaryActualSalePrice +
             companions.reduce((s, c) => s + (c.fixedSalePrice ?? 0), 0);
@@ -241,6 +253,7 @@ export const propertySchema = z
         // 단, 축 B이면 ratio×total로 자동 결정 → 면제
         if (
           !fullFractionalBundle &&
+          !primaryBg &&
           (data.standardPriceAtTransferForApportion === undefined ||
             data.standardPriceAtTransferForApportion <= 0)
         ) {
@@ -264,7 +277,7 @@ export const propertySchema = z
            */
           const apportionKey =
             c.standardPriceAtTransferForApportion ?? c.standardPriceAtTransfer;
-          if (!fullFractionalBundle && (!apportionKey || apportionKey <= 0)) {
+          if (!fullFractionalBundle && !companionBg[i] && (!apportionKey || apportionKey <= 0)) {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["companionAssets", i, "standardPriceAtTransferForApportion"],

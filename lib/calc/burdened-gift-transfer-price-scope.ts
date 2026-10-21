@@ -41,6 +41,27 @@ export function usesSelfComputedTransferPrice(asset: AssetForm): boolean {
 }
 
 /**
+ * 함께 양도(다른 물건) 묶음의 부담부증여 구성 — ⑧(폼 `transferType`)·⑩·route(본문: 주 자산 `transferType`,
+ * 컴패니언 `burdenedGiftInfo`)가 각자 자산별 플래그를 만들어 이 함수 하나로 판정한다.
+ *
+ * - `"all"`: 전 자산 부담부증여 — 양도가액을 §159가 정하고 엔진 STEP 0.48이 route 안분값을 덮어쓴다
+ *   (`transfer-tax-burdened-gift-step.ts:161-164`). 안분 키·계약서 가액은 세액에 쓰이지 않는다(총액 1원도 같은 세액 —
+ *   계획서 `docs/00-pm/burdened-gift-bundle-hidden-stdprice.plan.md` §1.2). 양도시 기준시가를 다른 칸으로 받는 자산은 키 칸이
+ *   화면에 없으므로 요구하면 막다른 길이다.
+ * - `"mixed"`: 일반 양도와 섞임 — 설계된 적이 없다. 부담부증여 자산이 §166⑥ 안분에 끼어 일반 자산 양도가액이 깎이고
+ *   (600,000,000 → 171,428,571), 채무 재배분이 주 자산 기준으로 어긋난다(같은 계획서 §1.4). 명시 차단한다.
+ *
+ * 축 B(같은 물건 지분 분할)는 대상이 아니다 — ④가 컴패니언의 양도 형태를 주 자산에서 복사한다(`mergePrimaryBasic`).
+ */
+export function burdenedGiftBundleKind(isBurdenedGift: readonly boolean[]): "none" | "all" | "mixed" {
+  if (!isBurdenedGift.some(Boolean)) return "none";
+  return isBurdenedGift.every(Boolean) ? "all" : "mixed";
+}
+
+export const MIXED_BURDENED_GIFT_BUNDLE_MESSAGE =
+  "일반 양도 자산과 부담부증여 자산은 함께 양도로 계산할 수 없습니다. 부담부증여 자산만 묶거나, 각각 따로 계산하세요.";
+
+/**
  * 「양도시 기준시가」를 이 자산이 **다른 필드로** 받는가(= 공용 칸이 화면에 없다).
  *
  * ⑤의 `CompanionSaleModeBlock` 렌더 조건과 같은 술어다.

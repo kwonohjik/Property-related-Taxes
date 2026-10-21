@@ -40,6 +40,7 @@ import {
   propertySchema as inputSchema,
 } from "@/lib/api/transfer-tax-schema";
 import { prepareBundledApportionment } from "./bundled-apportionment";
+import { burdenedGiftBundleKind } from "@/lib/calc/burdened-gift-transfer-price-scope";
 import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
@@ -227,12 +228,15 @@ export async function POST(request: NextRequest) {
     // ⑭ 명시 플래그(⑬ — 화면의 사용자 선택)가 앞선다. 함께 양도 묶음의 전 자산이 지분이면 모양(전 자산 `totalPropertyTransferPrice`)만으로는
     //    축 B와 구분되지 않아, 종전에는 자산별 양도가액을 「총양도가 × 지분율」로 바꿨다(2026-10-18 실측 T1 229,812,000 vs 218,724,000).
     const isFullFractionalBundle = data.fractionalSplitBundle ?? (primaryIsFractional && allCompanionsFractional);
+    // 전 자산 부담부증여: 양도가액을 §159가 정한다 → 안분 키·계약서 가액 불필요(⑩과 같은 술어 · 확정 가액 Bᵢ는 안분 준비가 넣는다)
+    const isAllBurdenedGift = burdenedGiftBundleKind([data.transferType === "burdened_gift", ...companions.map((c) => c.burdenedGiftInfo !== undefined)]) === "all";
     const bundledOk =
       companions.length > 0 &&
       data.totalSalePrice !== undefined &&
       (
         // 축 B: ratio×total 자동 안분 → 안분 키 불필요
         isFullFractionalBundle ||
+        isAllBurdenedGift ||
         // actual 모드: primary 명시 가액 필요
         (isActualMode && data.primaryActualSalePrice !== undefined) ||
         // apportioned 모드: 안분 키 (양도시 기준시가) 필요
@@ -252,9 +256,10 @@ export async function POST(request: NextRequest) {
           primaryInheritanceValuation: data.primaryInheritanceValuation,
           // ⑭ 신고 단위 공통 양도비 (§100② 후단) — 안분은 엔진 Step 5가 수행한다.
           commonTransferExpense: data.commonTransferExpense,
+          burdenedGiftInfo: data.transferType === "burdened_gift" ? data.burdenedGiftInfo : undefined,
         },
         companions,
-        { isActualMode, isFullFractionalBundle },
+        { isActualMode, isFullFractionalBundle, isAllBurdenedGift },
       );
 
       // (5) TransferTaxItemInput[] 조립 — 주 자산은 engineInput 파생, 컴패니언은 기본값 + override
