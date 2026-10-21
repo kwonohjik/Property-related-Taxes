@@ -9,6 +9,7 @@ import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { deriveRightValuationTotal } from "@/lib/calc/burdened-gift-right-valuation";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
 import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { computeTransferPerAssetSummary } from "./transfer-per-asset-summary";
 import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
@@ -403,7 +404,7 @@ export function computeTransferSummary(
     const n = parseFloat(a.ownershipNumerator || "100");
     const d = parseFloat(a.ownershipDenominator || "100");
     const fractional = isFinite(n) && isFinite(d) && d > 0 && n > 0 && n < d;
-    return acc + (fractional ? Math.floor(raw * (n / d)) : raw);
+    return acc + (fractional ? applyRatio(raw, n / d) : raw);
   }, 0);
   /**
    * 필요경비 합계 = **사이드바 자산별 행의 합**(F-14). 화면이 렌더하는 값은 자산별 행
