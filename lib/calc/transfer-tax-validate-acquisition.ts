@@ -167,9 +167,9 @@ export function validateAssetAcquisition(
   const sapError = sameAdjustmentPeriodError(asset, label, formTransferDate);
   if (sapError) return sapError;
 
-  // ── E-1: 「가목 확인 불가」 명시 선언 (법 §97①1호 단서 · U2-E) ──
-  // pre-deemed에서 ①·② 모두 미충족이면 엔진이 **조용히** ③(나목)으로 간다. 법문상 나목은
-  // 「가목을 확인할 수 없는 경우에 한정」이므로, 그 예외에 해당함을 선언하게 한다.
+  // ── E-1: 「가목 확인 불가」 명시 선언 (U2-E · 2026-10-22 Q-6 a 유지) ──
+  // pre-deemed에서 ①·② 모두 미충족이면 그 값이 3자 max 후보에서 **조용히** 빠지고 ③만 남는다.
+  // 비워둔 것을 「확인 불가」로 취급하지 않도록 선언하게 한다.
   // ⚠️ **§164 부분입력 차단 뒤**여야 한다 — 앞에 두면 「②를 절반 채운」 사용자가 선언 요구를
   //    먼저 받아 정작 채우다 만 칸을 못 찾는다. 술어는 ⑤ UI와 공유(`needsClauseADeclaration`).
   const clauseAError = clauseADeclarationError(asset, label);
@@ -659,10 +659,9 @@ export function validateAssetAcquisition(
       )
         return fieldError("decedentCohabitationHoldingStartDate", `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`);
       // ~~P2c: 별도 취득가액 필수 검증 불요(엔진이 미입력 시 0 처리)~~
-      // 🔴 **2026-08-07 정정** — 「엔진이 0 처리」는 **3자 max 시절의 판단**이다. #1089가 가목
-      //   우선으로 재편한 뒤로 ①·② 미입력은 **「가목 확인 불가」를 선언한 것과 같은 효과**를 내어
-      //   법문상 나목이 금지된 구간에서 나목이 적용된다. ⇒ 진입부 **E-1**(`clauseADeclarationError`)이
-      //   담당한다. 「UI/API 통과 ↔ validate 차단 모순」 우려는 E-1이 **선언 토글이라는 통과 경로를
+      // 🔴 **2026-08-07 정정** — 「엔진이 0 처리」로 두면 ①·② 미입력이 **「확인 불가」를 선언한 것과
+      //   같은 효과**를 낸다(2026-10-22 3자 max로 돌아온 뒤에도 그 값이 max 후보에서 조용히 빠진다).
+      //   ⇒ 진입부 **E-1**(`clauseADeclarationError`)이 담당한다(Q-6 a). 「UI/API 통과 ↔ validate 차단 모순」 우려는 E-1이 **선언 토글이라는 통과 경로를
       //   함께** 주므로 발생하지 않는다(dead-end 회피 — memory `feedback_ui_gate_removes_sole_input_path`).
     }
   }

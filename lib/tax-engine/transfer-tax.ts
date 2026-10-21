@@ -172,9 +172,9 @@ export function calculateTransferTax(
     //   `resolveInheritedRedevelopmentAcqPrice`가 반환하는 값은 STEP 0.45가 이미
     //   `input.acquisitionPrice`에 넣은 값과 항상 같다:
     //     · post-deemed → `r.acquisitionPrice` 그대로
-    //     · pre-deemed  → `max(reported, sec164)` = `clauseA`이고,
-    //       `calcPreDeemed`의 `acquisitionPrice`도 `clauseA > 0 ? clauseA : converted`다.
-    //       `selectedMethod === "converted"`는 `clauseA === 0`일 때뿐이라 그때는 여기서 null을 반환한다.
+    //     · pre-deemed  → `max(reported, sec164)` = `clauseA` — 3자 max(2026-10-22)에서 ③이 이겨도 이 값이라
+    //       재개발 경로만 ①②로 계산된다(종전 동작 유지 · ③ 산식 결정 전 별건 — 계획서
+    //       inheritance-pre-deemed-clause-b-revisit.plan.md §11). 그 경우엔 아래 블록이 no-op이 아니다.
     //   그래서 뮤테이션으로 이 블록을 통째로 무력화해도 회귀가 0건이었다(R-10 M-4).
     //   ⛔ 그렇다고 **지우지는 말 것** — 위 override 가드가 이 블록의 유일한 실효 동작이고,
     //      `resolveInheritedRedevelopmentAcqPrice`의 「채택 여부가 아니라 확인 가능 여부」 계약을
@@ -370,7 +370,7 @@ export function calculateTransferTax(
 
   // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑥ + §176조의2②2호 + §164⑨ 수용 특례).
   // 성공 시 effectiveInput을 실가 경로로 교체 (helpers로 추출 — 800줄 정책).
-  const cbApplied = applyCommercialBuildingStep(effectiveInput);
+  const cbApplied = applyCommercialBuildingStep(effectiveInput, inheritedAcquisitionStep?.result.preDeemedBreakdown?.selectedMethod === "converted");
   effectiveInput = cbApplied.effectiveInput;
   const cbStep = cbApplied.cbStep;
 

@@ -159,8 +159,15 @@ describe("E-1 경계 — 선언의 효력은 ③(나목)이 있는 구간에 한
 // ── X-12 ~ X-13: 상가 (D-5 — Y-5 결정) ────────────────────────────
 
 describe("D-5 — 상가 게이트 완화 (§163⑨2호 「많은 금액」 = ② 단독도 가목)", () => {
-  it("X-12: 상속 상가 · pre-deemed · ① 비움 · ② 미충족 · **선언** → 통과", () => {
-    expect(V(inhCommercial({ preDeemedClauseAUnconfirmed: true }))).toBeNull();
+  it("X-12: 상속 상가 · pre-deemed · ① 비움 · ② 미충족 · **선언** + ③ 기준시가 2칸 → 통과", () => {
+    expect(
+      V(inhCommercial({ preDeemedClauseAUnconfirmed: true, standardPriceAtAcq: "200000000", standardPriceAtTransfer: "400000000" })),
+    ).toBeNull();
+  });
+
+  it("★ X-12d: 상속 상가 · pre-deemed · **선언**만 하고 ③ 칸 비움 → 의제취득일 기준시가로 차단 (⑫ `refinePreDeemedAcquisitionSource` 거울 — 종전 ⑧ 통과 ↔ ⑫ 400)", () => {
+    const err = V(inhCommercial({ preDeemedClauseAUnconfirmed: true }));
+    expect(err).toMatch(/의제취득일 현재 기준시가를 입력하세요/);
   });
 
   it("★ X-12b: 상속 상가 · pre-deemed · ① 비움 · **② 충족** → 통과 (현행은 차단 — Y-5 정정)", () => {

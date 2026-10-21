@@ -44,7 +44,7 @@ function acq(over: Partial<InheritanceAcquisitionResult>): InheritanceAcquisitio
 }
 
 describe("상속주택 환산 카드 — (B) 환산취득가액 적용 상태", () => {
-  it("가목(①②)이 확인된 경우 — 「미적용」을 밝힌다", () => {
+  it("①②가 ③보다 커서 채택된 경우 — 「미적용」을 밝힌다(3자 max)", () => {
     render(
       <InheritedHouseValuationDetailCard
         detail={DETAIL}
@@ -60,7 +60,7 @@ describe("상속주택 환산 카드 — (B) 환산취득가액 적용 상태", 
     );
     const box = screen.getByTestId("inh-house-converted-box");
     expect(box.textContent).toMatch(/미적용/);
-    expect(box.textContent).toMatch(/실지거래가액 의제/);
+    expect(box.textContent).toMatch(/상증법 평가액·§164 기준시가가 더 큼/);
   });
 
   it("실제로 환산이 쓰인 경우 — 「적용」으로 표시한다", () => {

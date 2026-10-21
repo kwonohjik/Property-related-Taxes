@@ -83,10 +83,12 @@ export function runInheritedAcquisitionStep(
  *
  * - post-deemed: result.acquisitionPrice(§163⑨ 본문/2호 평가액, 항상 확인됨).
  * - pre-deemed: **①(§163⑨ 본문 상증법 평가액)과 ②(§163⑨1호·2호 §164④~⑦ 기준시가) 중 큰 값**.
- *   ①②는 **둘 다 법 §97①1호 가목** = 취득당시 실지거래가액 의제라 법적 성격이 같다.
- *   ③ 환산(§163⑫ → §176조의2)만 추계라 §166③ "확인 불가" 영역 → 제외.
- *   ⚠️ ③이 채택(selectedMethod==="converted")됐더라도 ①② 중 확인된 값이 있으면 그것을 반환한다
- *      — §166③의 판단 기준은 "채택 여부"가 아니라 "**확인 가능 여부**"다.
+ *   ⚠️ ③이 채택(selectedMethod==="converted")됐더라도 ①② 중 확인된 값이 있으면 그것을 반환한다.
+ *   🔴 **재개발 경로는 아직 3자 max가 아니다**(2026-10-22). `calcPreDeemed`는 3자 max로 바뀌었지만
+ *      여기서 null을 반환하면 재개발 분기가 STEP 0.45의 ③(§176조의2④)이 아니라 **§166③ 자체 환산**으로
+ *      다시 계산해, ①보다 작은 값이 취득가액이 되는 회귀가 난다(probe R4 — ① 200,000,000 · ③ 262,500,000
+ *      → §166③ 141,221,534). 재개발의 ③을 §166③으로 볼지 §176조의2④로 볼지 결정한 뒤 별건 PR에서
+ *      바꾼다 — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §11.
  * - 확인된 값이 없으면(신고가액 미입력 등) null → 호출측이 현행 §166③ 환산 경로를 유지한다.
  */
 export function resolveInheritedRedevelopmentAcqPrice(
@@ -221,9 +223,9 @@ function resolveInheritedAcquisitionInput(
   // ⚠️ **pre/post 구분이 없다** — §163⑨은 「의제취득일」이 아니라 「기준시가 고시 전 상속·증여」만
   //    조건으로 하므로 pre-deemed(1985 이전)도 당연히 해당한다. 2026-08-05 확장.
   //    · post-deemed: max(①,②) — 나목이 §163⑨ 의제로 대체돼 ③이 **없다**
-  //    · pre-deemed : **가목 우선** — `clauseA = max(①,②)`이고 그것이 0일 때만 ③이다.
-  //      ⚠️ 종전 주석은 「max(①,②,③)」이었으나 **#1089(`af74d907`)에서 재편됐다**.
-  //      ③은 아래 standardPriceAtDeemedDate(환산 분자)로 별도 계산되며, 가목이 확인되면 도달하지 않는다.
+  //    · pre-deemed : **3자 max** — max(①,②,③)(2026-10-22, #1089 「가목 우선」에서 되돌림 —
+  //      근거 상속증여세과-223, 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md).
+  //      ③은 아래 standardPriceAtDeemedDate(환산 분자)로 별도 계산되어 ①②와 비교된다.
   //    같은 `housePriceAtInheritanceUsed` 값이 ②(비교값)와 ③의 분자로 **둘 다** 쓰이므로
   //    필드를 분리해 주입한다(역할이 둘 — 계획서 D-2).
   const shouldInjectHouseMax = !!houseValuationResult && isHousePreDisclosure;
@@ -269,10 +271,9 @@ function resolveInheritedAcquisitionInput(
     //    · 토지 경로(`pre1990LandResult.standardPriceAtAcquisition`)도 같은 이유로 정합.
     //    · **B-2도 함께 해소**: 같은 값이 ②(houseValuationStdPrice)로도 주입돼 「얽힌다」던 것이,
     //      ②(§164⑦ 취득당시=1985)와 ③ 분자(의제취득일=1985)가 **같아야 옳은** 관계가 됐다.
-    //    ⚠️ 그래도 ③은 여전히 **도달하지 않는다** — 가목이 확인되면(②가 함께 주입되므로)
-    //       법 §97①1호 단서상 나목에 가지 않는다. `V2-G` 가드가 그 성질을 고정하고,
-    //       B-1의 라벨 anchor(T-1~T-3)가 입력 시점을 고정한다 — **이중으로 닫혀 있다**.
-    //    ⇒ 둘 중 하나라도 되돌리면 여기부터 재검토할 것.
+    //    ⚠️ 2026-10-22부터 3자 max라 ③(= 양도가액 × 이 값 ÷ 양도시 기준시가)이 ②보다 크면 ③이
+    //       채택된다(종전 「가목 우선」에서는 ②가 함께 주입되면 ③에 도달하지 않았다).
+    //       B-1의 라벨 anchor(T-1~T-3)가 입력 시점을 고정한다.
     //    계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
     //           docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md
     standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;

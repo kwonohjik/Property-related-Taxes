@@ -14,8 +14,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
-describe("상속 취득가액 배지 — 가목 우선·나목 한정 (#10)", () => {
-  it("🔑 F-1: 「①·②·③ 중 큰 금액」이라 말하지 않는다", () => {
+describe("상속 취득가액 배지 — 3자 max (#10 → 2026-10-22 Q-1 C)", () => {
+  it("🔑 F-1: 「상증법 평가액·§164 기준시가·환산취득가액 중 큰 금액」이라 말한다", () => {
     render(
       <InheritedAcquisitionDetailCard
         detail={
@@ -29,10 +29,9 @@ describe("상속 취득가액 배지 — 가목 우선·나목 한정 (#10)", ()
       />,
     );
     const badge = screen.getByText(/의제취득일 전 상속·증여/);
-    // 엔진은 `clauseA = max(①,②)` 후 `clauseA > 0 ? clauseA : ③`이다 — ③은 가목 확인불가 시만.
-    expect(badge.textContent).toContain("가목");
-    expect(badge.textContent).toContain("가목 확인불가 시");
-    expect(badge.textContent).not.toContain("§164·환산 중 큰 금액");
+    // 엔진은 3자 max다(`calcPreDeemed` — 2026-10-22 「가목 우선」에서 변경).
+    expect(badge.textContent).toContain("상증법 평가액·§164 기준시가·환산취득가액 중 큰 금액");
+    expect(badge.textContent).not.toContain("가목 확인불가 시");
   });
 });
 
