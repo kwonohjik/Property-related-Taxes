@@ -40,6 +40,12 @@ describe("article-parser: parseHangNumber", () => {
     }
   });
 
+  // 종전엔 표가 ⑳까지라 ㉑ 이상은 NaN이었다(소득세법 시행령 §155는 항이 25개)
+  it("원숫자 ㉑ → 21 · ㉟ → 35", () => {
+    expect(parseHangNumber("㉑")).toBe(21);
+    expect(parseHangNumber("㉟")).toBe(35);
+  });
+
   it("일반 숫자 문자열 \"3\" → 3", () => {
     expect(parseHangNumber("3")).toBe(3);
   });
