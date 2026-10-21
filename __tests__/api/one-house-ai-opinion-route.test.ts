@@ -51,6 +51,8 @@ beforeEach(() => {
     },
     model: "claude-opus-5-5",
     usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 },
+    readDocs: [],
+    lookups: [],
   });
   process.env.ANTHROPIC_API_KEY = "test-key";
 });
@@ -72,6 +74,45 @@ describe("AI 참고 의견 route", () => {
     expect(data.droppedCitations).toEqual(["DOC-NOPE"]);
     expect(data.cards).toEqual([{ docNo: "DOC-E1", kind: "해석", date: "2020.01.01.", url: "https://example.test/E1", title: "제목 E1" }]);
     expect(JSON.stringify(data)).not.toContain("비공개");
+  });
+
+  // 인용 가능 집합 = 보낸 카드 ∪ 이번에 본문을 읽은 문서(계획 §3.2 · 안전망 P-3·P-4)
+  it("본문을 읽은 문서는 인용을 남기고(live), 검색 목록에서 제목만 본 문서는 지운다 · 카드와 같은 문서면 card", async () => {
+    const live = { source: "nts", id: "200000000000021918", docNo: "서면-2026-법규재산-0109", title: "실시간 제목", date: "2026.06.08.", url: "https://taxlaw.nts.go.kr/qt/x" };
+    generate.mockResolvedValue({
+      opinion: {
+        engineAgreement: "possible_difference",
+        summary: "요약",
+        points: [
+          {
+            topic: "쟁점",
+            opinion: "의견",
+            // 읽은 문서 · 검색만 한 문서 · 카드(표기 다름 — 꼬리 붙음)
+            citedDocNos: ["서면-2026-법규재산-0109", "서면-2025-부동산-3612", "DOC-E1 [과-1]"],
+            statutes: [{ law: "소득세법 시행령", article: 155, paragraph: 20 }],
+          },
+        ],
+        factsToConfirm: [],
+        caveats: [],
+      },
+      model: "claude-opus-5-5",
+      usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 },
+      readDocs: [live],
+      lookups: [
+        { tool: "search_interpretations", input: { query: "q", source: "nts" }, ok: true, summary: "국세청 해석 「q」 2건" },
+        { tool: "read_interpretation", input: { source: "nts", id: live.id }, ok: true, summary: live.docNo, url: live.url },
+      ],
+    });
+    const { data } = await (await call(body)).json();
+    expect(data.opinion.points[0].citedDocNos).toEqual(["서면-2026-법규재산-0109", "DOC-E1 [과-1]"]);
+    expect(data.droppedCitations).toEqual(["서면-2025-부동산-3612"]);
+    expect(data.citations).toEqual([
+      { docNo: "서면-2026-법규재산-0109", origin: "live", title: "실시간 제목", date: "2026.06.08.", url: live.url, source: "nts", id: live.id },
+      { docNo: "DOC-E1 [과-1]", origin: "card", title: "제목 E1", date: "2020.01.01.", url: "https://example.test/E1" },
+    ]);
+    expect(data.liveDocs).toEqual([live]);
+    expect(data.lawLookups).toHaveLength(2);
+    expect(data.opinion.points[0].statutes).toEqual([{ law: "소득세법 시행령", article: 155, paragraph: 20 }]);
   });
 
   it("개발 서버가 아니면 막고 의견을 부르지 않는다", async () => {

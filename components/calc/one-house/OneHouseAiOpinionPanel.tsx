@@ -7,14 +7,15 @@
  * 의견이 가장 쓸모 있는 경우다. 의견은 판정이 아니다: 판정의 정본은 위 엔진 결론이다.
  *
  * 의견은 **그 의견을 만든 판정 결과**에만 붙는다 — 입력을 바꿔 결과가 새로 나오면 옛 의견을 보이지 않는다(렌더에서 파생).
+ * 의견을 받으면 곧바로 원문 검증(`/api/one-house-ai/verify`)을 부른다 — 검증 결과도 그 검증을 낳은 의견에만 붙는다.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import type { OneHouseAiOpinionData } from "@/app/api/one-house-ai/opinion/route";
+import type { OneHouseAiVerifyData } from "@/lib/one-house-ai/verify/verify-schema";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
-import { OneHouseAiUsageCost } from "./OneHouseAiUsageCost";
+import { OneHouseAiOpinionView } from "./OneHouseAiOpinionView";
 
 type Props = {
   form: OneHouseJudgmentFormData;
@@ -24,17 +25,16 @@ type Props = {
   notes?: readonly string[];
 };
 
-const AGREEMENT: Record<OneHouseAiOpinionData["opinion"]["engineAgreement"], { label: string; tone: "emerald" | "amber" | "slate" }> = {
-  consistent: { label: "엔진 결론과 같은 방향", tone: "emerald" },
-  possible_difference: { label: "결론이 달라질 수 있는 쟁점이 있음", tone: "amber" },
-  insufficient_basis: { label: "근거가 부족해 의견을 내기 어려움", tone: "slate" },
-};
-
 export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Props) {
   const [state, setState] = useState<{ for: OneHouseExemptionResponse; data: OneHouseAiOpinionData } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const data = state?.for === result ? state.data : null;
+  const [verify, setVerify] = useState<{ for: OneHouseAiOpinionData; data: OneHouseAiVerifyData | null; error: string | null } | null>(null);
+  // 검증 중인 의견 — 의견을 다시 받으면 옛 검증의 응답·종료가 새 의견의 표시를 덮지 않게 의견 단위로 묶는다
+  const [verifyingFor, setVerifyingFor] = useState<OneHouseAiOpinionData | null>(null);
+  const latestOpinion = useRef<OneHouseAiOpinionData | null>(null);
+  const verifyOf = data && verify?.for === data ? verify : null;
 
   const j = result.judgment;
   const signals = [
@@ -42,6 +42,32 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
     j.unmetExceptions.length > 0 && `적용되지 않은 특례 ${j.unmetExceptions.length}건`,
     notes && notes.length > 0 && `폼으로 표현하지 못한 메모 ${notes.length}건`,
   ].filter(Boolean) as string[];
+
+  const runVerify = async (d: OneHouseAiOpinionData) => {
+    setVerifyingFor(d);
+    try {
+      const res = await fetch("/api/one-house-ai/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transferDate: /^\d{4}-\d{2}-\d{2}$/.test(form.transferDate ?? "") ? form.transferDate : undefined,
+          opinion: d.opinion,
+          citations: d.citations.map(({ docNo, origin, source, id }) => ({ docNo, origin, source, id })),
+        }),
+      });
+      const body = await res.json().catch(() => null);
+      if (latestOpinion.current !== d) return; // 그사이 의견을 다시 받았다 — 옛 검증은 버린다
+      setVerify(
+        res.ok
+          ? { for: d, data: body.data as OneHouseAiVerifyData, error: null }
+          : { for: d, data: null, error: body?.error?.message ?? `원문 검증을 받지 못했습니다(${res.status}).` },
+      );
+    } catch {
+      if (latestOpinion.current === d) setVerify({ for: d, data: null, error: "원문 검증 요청을 보내지 못했습니다. 네트워크를 확인하세요." });
+    } finally {
+      setVerifyingFor((cur) => (cur === d ? null : cur));
+    }
+  };
 
   const run = async () => {
     setLoading(true);
@@ -57,7 +83,10 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
         setError(body?.error?.message ?? `AI 참고 의견을 받지 못했습니다(${res.status}).`);
         return;
       }
-      setState({ for: result, data: body.data as OneHouseAiOpinionData });
+      const d = body.data as OneHouseAiOpinionData;
+      latestOpinion.current = d;
+      setState({ for: result, data: d });
+      void runVerify(d);
     } catch {
       setError("AI 참고 의견 요청을 보내지 못했습니다. 네트워크를 확인하세요.");
     } finally {
@@ -91,94 +120,12 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
           {error}
         </p>
       )}
-      {data && <OpinionView data={data} />}
-    </div>
-  );
-}
-
-function OpinionView({ data }: { data: OneHouseAiOpinionData }) {
-  const { opinion, cards } = data;
-  const agreement = AGREEMENT[opinion.engineAgreement];
-  const cardOf = new Map(cards.map((c) => [c.docNo, c]));
-  return (
-    <div className="space-y-3" data-testid="one-house-ai-opinion-view">
-      <ToneCard tone={agreement.tone} title={`AI 참고 의견 — ${agreement.label}`}>
-        <p className="text-caption text-muted-foreground">판정의 정본은 위 엔진 결론입니다. 이 의견은 참고용입니다.</p>
-        <p className="text-sm">{opinion.summary}</p>
-      </ToneCard>
-
-      {opinion.points.length > 0 && (
-        <ToneCard tone="violet" title={`쟁점별 의견 ${opinion.points.length}건`}>
-          <ol className="list-decimal space-y-2 pl-4 text-sm">
-            {opinion.points.map((p, i) => (
-              <li key={i}>
-                <p className="font-medium">{p.topic}</p>
-                <p>{p.opinion}</p>
-                {(p.statutes.length > 0 || p.citedDocNos.length > 0) && (
-                  <p className="text-caption text-muted-foreground">
-                    {p.statutes.join(" · ")}
-                    {p.statutes.length > 0 && p.citedDocNos.length > 0 && " · "}
-                    {p.citedDocNos.map((d, n) => {
-                      const c = cardOf.get(d);
-                      return (
-                        <span key={d}>
-                          {n > 0 && " · "}
-                          {c?.url ? (
-                            <a href={c.url} target="_blank" rel="noreferrer" title={c.title} className="underline underline-offset-2">
-                              {d}
-                            </a>
-                          ) : (
-                            d
-                          )}
-                        </span>
-                      );
-                    })}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ol>
-        </ToneCard>
+      {data && (
+        <OneHouseAiOpinionView
+          data={data}
+          verify={{ loading: verifyingFor === data && !verifyOf, data: verifyOf?.data ?? null, error: verifyOf?.error ?? null, onRetry: () => void runVerify(data) }}
+        />
       )}
-
-      {opinion.factsToConfirm.length > 0 && (
-        <ToneCard tone="amber" title={`확인할 사실 ${opinion.factsToConfirm.length}건`}>
-          <ul className="list-disc space-y-1 pl-4 text-sm">
-            {opinion.factsToConfirm.map((q, i) => (
-              <li key={i}>{q}</li>
-            ))}
-          </ul>
-        </ToneCard>
-      )}
-
-      {(opinion.caveats.length > 0 || data.droppedCitations.length > 0) && (
-        <ToneCard tone="slate" title="주의">
-          <ul className="list-disc space-y-1 pl-4 text-sm">
-            {opinion.caveats.map((c, i) => (
-              <li key={i}>{c}</li>
-            ))}
-            {data.droppedCitations.length > 0 && (
-              <li>참고 자료에 없는 문서번호 인용 {data.droppedCitations.length}건을 지웠습니다({data.droppedCitations.join(", ")}).</li>
-            )}
-          </ul>
-        </ToneCard>
-      )}
-
-      <details className="text-sm">
-        <summary className="cursor-pointer text-xs text-muted-foreground">대조한 해석례 {cards.length}건</summary>
-        <ul className="mt-2 space-y-1">
-          {cards.map((c) => (
-            <li key={c.docNo} className="text-caption">
-              <a href={c.url} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-                {c.docNo}
-              </a>{" "}
-              ({c.kind} · {c.date}) {c.title}
-            </li>
-          ))}
-        </ul>
-      </details>
-
-      <OneHouseAiUsageCost model={data.model} usage={data.usage} />
     </div>
   );
 }

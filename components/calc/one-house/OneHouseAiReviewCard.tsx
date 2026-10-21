@@ -15,6 +15,8 @@ import { answerTargetOf, readAnswer, writeAnswer } from "@/lib/one-house-ai/ques
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { OneHouseAiAnswerField } from "./OneHouseAiAnswerField";
 import { factValueText, NoteList, QuestionList, type OneHouseAiReview } from "./OneHouseAiExtractDialog";
+import { OneHouseAiLawLookups } from "./OneHouseAiLawLookups";
+import { OneHouseAiSourceCitations } from "./OneHouseAiSourceCitations";
 
 type Props = {
   review: OneHouseAiReview;
@@ -99,6 +101,8 @@ export function OneHouseAiReviewCard({ review, form, onAnswer, stepNames, onGoTo
       )}
 
       {review.notes.length > 0 && <NoteList notes={review.notes} />}
+      <OneHouseAiSourceCitations items={review.sourceCitations} />
+      <OneHouseAiLawLookups lookups={review.lawLookups} />
     </div>
   );
 }

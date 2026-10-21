@@ -15,6 +15,9 @@ vi.mock("@/lib/one-house-ai/extract", async (orig) => ({
   extractOneHouseFacts: (text: string) => extract(text),
 }));
 
+const sourceCheck = vi.fn();
+vi.mock("@/lib/one-house-ai/source-citations", () => ({ checkSourceCitations: (...a: unknown[]) => sourceCheck(...a) }));
+
 const { POST } = await import("@/app/api/one-house-ai/extract/route");
 const { ExtractionFailedError } = await import("@/lib/one-house-ai/extract");
 
@@ -46,7 +49,13 @@ const extraction = (over: Partial<OneHouseExtraction> = {}): OneHouseExtraction 
 const OLD_KEY = process.env.ANTHROPIC_API_KEY;
 beforeEach(() => {
   gate.mockReturnValue({ ok: true });
-  extract.mockResolvedValue({ extraction: extraction(), model: "claude-opus-5-5", usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 } });
+  extract.mockResolvedValue({
+    extraction: extraction(),
+    model: "claude-opus-5-5",
+    usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 },
+    lookups: [{ tool: "lookup_statute", input: { lawName: "소득세법 시행령", article: "제154조" }, ok: true, summary: "소득세법 시행령 제154조 (현행)" }],
+  });
+  sourceCheck.mockResolvedValue([{ kind: "doc", raw: "서면-2016-부동산-2944", status: "found" }]);
   process.env.ANTHROPIC_API_KEY = "test-key";
 });
 afterEach(() => {
@@ -89,6 +98,10 @@ describe("POST /api/one-house-ai/extract", () => {
     const { data } = await res.json();
     expect(data.form).toMatchObject({ transferDate: "2024-06-15", houses: [{ id: "B", acquisitionDate: "2023-05-01" }] });
     expect(data.facts).toHaveLength(7);
+    // 원문 속 인용 대조는 원문과 **추출된 양도일**로 · 조문 조회 기록을 그대로 싣는다
+    expect(sourceCheck).toHaveBeenCalledWith("사실관계", "2024-06-15");
+    expect(data.sourceCitations).toEqual([{ kind: "doc", raw: "서면-2016-부동산-2944", status: "found" }]);
+    expect(data.lawLookups).toHaveLength(1);
     // 화면은 필드 사전을 싣지 않으므로 칸 이름·선택지 뜻을 응답에 붙인다
     expect(data.facts).toContainEqual(
       expect.objectContaining({ path: "houses[B].region", value: "capital", label: expect.any(String), valueLabel: expect.any(String) }),
