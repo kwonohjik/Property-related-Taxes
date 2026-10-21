@@ -1,6 +1,6 @@
 # 토지·건물 분리 계산 — ① 2016년 전 양도의 양도시 기준시가 ⑧ 통과 ↔ ⑫ 400 · ② 신축 + 토지 상속·증여 + 이전 형식 필요경비 막다른 길 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 사용자 결정 Q-1~Q-3 대기** · 워크트리 `../Property-related-Taxes-v7d1` · 브랜치 `docs/split-carryover-v7-d1-plan`
+> 작성 2026-10-21 · 상태 **Do — Q-1·Q-2·Q-3 권고안 a 결정(2026-10-21)** · 워크트리 `../Property-related-Taxes-v7d1` · 브랜치 `docs/split-carryover-v7-d1-plan`
 > 기준 master `8636ae67a`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `transfer-split-part-carryover-p6.plan.md:60`(① — P6 범위 밖 별건) · `docs/02-design/features/transfer-split-part-carryover.ui.design.md:458`(② — P3 §13.1 별건).
 > 실측 probe(`__tests__/calc/_probe-v7d1*.test.ts*`)는 커밋하지 않았다.
