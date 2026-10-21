@@ -1,0 +1,34 @@
+/**
+ * 부담부증여 §159 명세의 자산 합계 — 토지·건물 두 부분의 양도가액·취득가액·개산공제 합(소득세법 시행령 §159①).
+ *
+ * 표시 층(엔진 표시 echo · 신고서 · 계산명세서 · 사이드바 · 결과 카드)이 같은 합을 쓴다. 종전에는 결과 카드만 이 합을 읽고,
+ * 다른 곳은 route 입력(화면에 없는 자산 일반 칸)이나 폼 계약금액을 읽어 취득가액 300,000,000(정본 250,000,000)·필요경비 음수·
+ * 입주권 합계 취득가액 −400,000,000이 나왔다(계획서 `docs/00-pm/burdened-gift-display-acquisition.plan.md` §1).
+ */
+import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
+import type { TransferTaxResult } from "./types/transfer.types";
+
+export function burdenedGiftPerAssetTotals(brkd: Pick<TransferBurdenedGiftBreakdown, "perAsset">): {
+  transferPrice: number;
+  acquisitionPrice: number;
+  estimatedDeduction: number;
+} {
+  const { land, building } = brkd.perAsset;
+  return {
+    transferPrice: (land?.transferPrice ?? 0) + (building?.transferPrice ?? 0),
+    acquisitionPrice: (land?.acquisitionPrice ?? 0) + (building?.acquisitionPrice ?? 0),
+    estimatedDeduction: (land?.estimatedDeduction ?? 0) + (building?.estimatedDeduction ?? 0),
+  };
+}
+
+/**
+ * §166 신고서 역산(`redevFilingTotals`)에 넣을 양도가액 — 부담부증여 §166 자산(원조합원 입주권 등)은 §159 양도가액이다.
+ * 폼 계약금액은 부담부증여 화면에 칸이 없어 0이라, 그대로 넣으면 합계 취득가액이 `0 − 필요경비 − 차익`(음수)이 된다.
+ */
+export function redevInverseTransferPrice(
+  result: Pick<TransferTaxResult, "redevelopmentDetail" | "transferBurdenedGiftBreakdown">,
+  fallback: number,
+): number {
+  const bg = result.redevelopmentDetail ? result.transferBurdenedGiftBreakdown : undefined;
+  return bg ? burdenedGiftPerAssetTotals(bg).transferPrice : fallback;
+}
