@@ -95,14 +95,11 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
     ).toBe(true);
   });
 
-  it("G11-b validate가 UI와 같은 판정을 낸다 (directExpenses → expenses 전달)", () => {
-    // validate는 asset을 통째로 넘기지만 AssetForm에는 `expenses`가 없다(`directExpenses`가 실제 필드).
-    // 인자를 보정하지 않으면 여기서 술어가 false가 되어 엔진과 어긋난다.
-    //
-    // ⚠️ 2026-07-30부터 주택도 V6(건물분 필수) 대상이라 V6가 V5보다 먼저 걸린다.
-    //    **V6도 같은 술어(`requiresAcqStdPrice`)를 거치므로** 이 메시지가 나온다는 것 자체가
-    //    ⑥절 인자(directExpenses → expenses)가 전달됐다는 증거다 — 전달되지 않았다면 술어가
-    //    false가 되어 V6·V5 어느 것도 걸리지 않고 null이 반환된다.
+  it("G11-b validate가 ④와 같은 인자를 읽는다 — 분리 계산 자산의 이전 형식은 ④가 싣지 않아 기준시가 대신 파트 칸 이동을 요구한다", () => {
+    // validate는 asset을 통째로 넘기지만 AssetForm에는 `expenses`가 없다(`directExpenses`가 실제 필드) — `withExpenses`가 보정한다.
+    // 2026-10-21(계획서 split-v7-era-and-legacy-expense §3.2 Q-2 a): 분리 계산 자산은 ④가 이전 형식 총액을 싣지 않으므로
+    // (`legacyExpenseMovesToParts`) 인자도 0이다 — 종전처럼 ⑥절로 취득시 기준시가를 요구하면 엔진이 쓰지 않는 값을 요구하는 것이고,
+    // 신축 + 토지 상속·증여 화면에는 그 칸이 없어 막다른 길이었다. 대신 이전 형식 칸에서 파트 칸으로 옮기게 막는다.
     const a = asset({
       ...ACTUAL_BOTH,
       assetKind: "housing",
@@ -111,9 +108,8 @@ describe("G11 — 술어 인자 동일성 (expenses)", () => {
       buildingDirectExpenses: "",
     });
     const err = validateSplitDirectInputs(a, "자산 1");
-    expect(err, "엔진이 취득시 기준시가를 요구하는 입력이면 validate도 같이 요구해야 한다").toMatch(
-      /건물분 취득시 기준시가|㎡당 개별공시지가/,
-    );
+    expect(err).toMatch(/이전 입력 형식으로 저장된 필요경비 30,000,000원/);
+    expect(err).not.toMatch(/건물분 취득시 기준시가|㎡당 개별공시지가/);
   });
 
   it("G11-c 파트 자본적지출이 채워져 있으면 ⑥절은 false (안분 불요)", () => {
