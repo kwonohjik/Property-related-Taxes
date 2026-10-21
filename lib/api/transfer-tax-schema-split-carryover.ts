@@ -7,7 +7,8 @@
  * 일반건물(`transfer-tax-building-schemas.ts`의 `carryoverGiftEvent` + `*CarryoverPart`)과 같은 사건 shape를 쓰되,
  *   · 파트에 **평가액 칸이 없다** — 파트 평가액은 기존 `landAcquisitionPrice`·`buildingAcquisitionPrice`가 정본이다(이중 진실 회피).
  *   · 증여세 상당액 칸이 없다 — ⑭ 합성기(`composeSplitCarryover`)가 영 §163의2②로 안분한다.
- *   · 파트 환산(`useEstimatedAcquisition`)이 없다 — 증여자 취득가액 필수(I-4).
+ *   · 파트 환산(P6): 증여자 취득가액을 모르면 `useEstimatedAcquisition` + `donorStandardPriceAtAcquisition`(증여자 취득 당시 그 파트 기준시가 총액)으로 보낸다 —
+ *     가액과 분자는 상호배타다(`refineSplitCarryoverValues`). 분모(양도 당시 그 파트 기준시가)는 새로 받지 않고 기존 `*StandardPriceAtTransfer`를 쓴다.
  *
  * ⚠️ **leaf 규약** — 이 파일은 **다른 스키마 파일을 import하지 않는다**(`zod`와 스키마가 아닌 순수 모듈만). `transfer-tax-schema-base-shape.ts`·
  *    `transfer-tax-schema-split.ts`(둘 다 leaf)가 spread하므로 스키마 파일을 import하면 TDZ 위험이 생긴다. 일반건물 스키마가 여기 shape를 import한다(방향이 한쪽).
@@ -55,12 +56,20 @@ export const splitCarryoverGiftEventShape = carryoverGiftEventShape.extend({
 
 /**
  * ⑫ **파트별** 이월과세 입력 — 증여자가 그 파트(토지/건물)를 취득한 날·금액.
- * `donorAcquisitionPrice`는 양수 필수다(I-4: 파트 환산 없음 — 모르면 이 화면은 아직 지원하지 않는다).
+ * 실가면 `donorAcquisitionPrice`(양수), 모르면 환산(`useEstimatedAcquisition` + `donorStandardPriceAtAcquisition` 양수) — 둘은 상호배타이고
+ * 어느 쪽이든 하나는 필수다(`refineSplitCarryoverValues` — 키별 optional이라 shape만으로는 막지 못한다).
  */
 export const splitCarryoverPartShape = z.object({
   donorAcquisitionDate: z.string().date(),
-  /** 증여자의 취득 당시 금액 (§97의2①1호) */
-  donorAcquisitionPrice: z.number().int().positive(),
+  /** 증여자의 취득 당시 금액 (§97의2①1호) — 환산이면 보내지 않는다 */
+  donorAcquisitionPrice: z.number().int().positive().optional(),
+  /** P6 — 증여자 취득가액을 모를 때 환산취득가액(§97①1호 나목)으로 계산한다. 미지정 = false(P1~P5 payload 그대로) */
+  useEstimatedAcquisition: z.boolean().optional(),
+  /**
+   * P6 — 환산취득가액의 분자: 증여자 취득 당시 그 파트 기준시가 **총액**(물건 전체 값 — 지분 스케일 금지).
+   * 0이면 환산취득가 0·개산공제 0이라 `nonnegative`를 쓰지 않는다(일반건물 shape의 침묵 오산출 전례).
+   */
+  donorStandardPriceAtAcquisition: z.number().int().positive().optional(),
   /** 증여자가 보유 중 지출한 자본적지출 (§97의2①2호 — 양도일 2024.1.1. 전은 엔진이 0 처리) */
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
 });
@@ -131,13 +140,37 @@ export function refineSplitCarryoverValues(
     buildingCarryoverPart?: z.infer<typeof splitCarryoverPartShape>;
     landAcquisitionPrice?: number;
     buildingAcquisitionPrice?: number;
+    landStandardPriceAtTransfer?: number;
+    buildingStandardPriceAtTransfer?: number;
   },
   issue: Issue,
   prefix: (string | number)[] = [],
 ): void {
+  const at = (k: string) => [...prefix, k];
+  // P6 — 파트 가액 ⇔ 환산 분자 (상호배타 + 하나 필수). 사건 유무와 무관한 파트 자체의 완결이다(가액이 optional이 되어 shape가 더는 필수를 강제하지 않는다).
+  for (const [key, part, transferStd, noun] of [
+    ["landCarryoverPart", d.landCarryoverPart, d.landStandardPriceAtTransfer, "토지"],
+    ["buildingCarryoverPart", d.buildingCarryoverPart, d.buildingStandardPriceAtTransfer, "건물"],
+  ] as const) {
+    if (!part) continue;
+    if (part.useEstimatedAcquisition === true) {
+      if (part.donorAcquisitionPrice !== undefined)
+        issue([...at(key), "donorAcquisitionPrice"], `${noun} 파트 환산취득가액을 쓰면 증여자 취득가액은 보내지 않습니다 — 둘 중 하나만 입력합니다 (소득세법 §97의2①1호)`);
+      if (part.donorStandardPriceAtAcquisition === undefined)
+        issue([...at(key), "donorStandardPriceAtAcquisition"], `${noun} 파트 환산취득가액에는 증여자 취득 당시 그 파트 기준시가가 필요합니다 (소득세법 §97①1호 나목·§97의2①1호)`);
+      // 분모 — 엔진이 환산 파트에 한해 던지는 조건과 같다. 양도시 기준시가 연혁 면제(2016.1.1. 전 구분 기재)는 환산 파트가 있으면 적용하지 않는다(분모가 계산에 쓰인다).
+      if (!((transferStd ?? 0) > 0))
+        issue([...prefix, key === "landCarryoverPart" ? "landStandardPriceAtTransfer" : "buildingStandardPriceAtTransfer"],
+          `${noun} 파트 환산취득가액의 분모인 양도 당시 ${noun} 기준시가가 필요합니다 — 취득시 비율로 대신 나누지 않습니다 (소득세법 §99①1호, 시행령 §164③)`);
+    } else {
+      if (part.donorStandardPriceAtAcquisition !== undefined)
+        issue([...at(key), "donorStandardPriceAtAcquisition"], `${noun} 파트 환산 분자는 환산취득가액을 쓸 때만 보낼 수 있습니다 — 조용히 버려지지 않도록 막습니다 (소득세법 §97의2①1호)`);
+      if (part.donorAcquisitionPrice === undefined)
+        issue([...at(key), "donorAcquisitionPrice"], `${noun} 파트 증여자 취득가액이 필요합니다 — 모르면 환산취득가액(증여자 취득 당시 기준시가)으로 입력하세요 (소득세법 §97의2①1호)`);
+    }
+  }
   const ev = d.carryoverGiftEvent;
   if (!ev || (!d.landCarryoverPart && !d.buildingCarryoverPart)) return; // 짝 누락·stray는 leaf(S1)가 짚는다
-  const at = (k: string) => [...prefix, k];
   for (const [key, part] of [["landCarryoverPart", d.landCarryoverPart], ["buildingCarryoverPart", d.buildingCarryoverPart]] as const) {
     if (part && part.donorAcquisitionDate > ev.giftRegistryDate)
       issue([...at(key), "donorAcquisitionDate"], "증여자의 취득일이 증여 등기접수일보다 늦을 수 없습니다 (소득세법 §97의2①)");

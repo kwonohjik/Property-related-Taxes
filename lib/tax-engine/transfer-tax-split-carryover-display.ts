@@ -34,7 +34,10 @@ export interface SplitCarryoverPartView {
   /** 세율 기산 보조 문구(법정 기산일과 다르면 주택 `max` 적용 사실) — `rateBasisDate`가 있을 때만 */
   rateBasisNote?: string;
   donorAcquisitionDate: string;
-  donorAcquisitionPrice: number;
+  /** 증여자 취득가액 — 실가 입력일 때만(환산 입력은 `estimated`) */
+  donorAcquisitionPrice?: number;
+  /** 파트 환산(P6) — 환산 입력일 때만. 분모·환산취득가액·개산공제는 적용(A) 파트만 채워진다(엔진 echo 그대로) */
+  estimated?: SplitPartCarryoverEcho["estimated"];
   donorCapexAdded: number;
   donorCapexGuardApplied: boolean;
   /** 증여 당시 평가액(증여 신고가액) = 안분 분자 = 미적용 시 취득가액 */
@@ -98,7 +101,8 @@ function partView(
     ...(rateBasisDate ? { rateBasisDate } : {}),
     ...(rateBasisNote ? { rateBasisNote } : {}),
     donorAcquisitionDate: e.donorAcquisitionDate,
-    donorAcquisitionPrice: e.donorAcquisitionPrice,
+    ...(e.donorAcquisitionPrice !== undefined ? { donorAcquisitionPrice: e.donorAcquisitionPrice } : {}),
+    ...(e.estimated ? { estimated: e.estimated } : {}),
     donorCapexAdded: e.donorCapexAdded,
     donorCapexGuardApplied: e.donorCapexGuardApplied,
     giftDateValuation: e.giftDateValuation,
@@ -155,7 +159,10 @@ export function splitCarryoverAcquisitionText(p: SplitCarryoverPartView): string
   const addOns: string[] = [];
   if (p.donorCapexAdded > 0) addOns.push(`증여자 자본적지출 ${won(p.donorCapexAdded)}`);
   if (p.giftTaxAdded > 0) addOns.push(`증여세 상당액 ${won(p.giftTaxAdded)}`);
-  return `${p.label} 증여자 취득가액 ${won(p.donorAcquisitionPrice)}${addOns.length ? ` (필요경비에 ${addOns.join(" + ")} 가산)` : ""}`;
+  // 파트 환산 — 가액이 아니라 환산취득가액이다(표시 문구 개편은 UI 단계 — 여기서는 «취득가액 0» 거짓 표시만 막는다).
+  if (p.estimated)
+    return `${p.label} 환산취득가액 ${won(p.acquisitionValue)} (증여자 취득 당시 기준시가 ${won(p.estimated.donorStdPriceAtAcquisition)}${addOns.length ? `, 필요경비에 ${addOns.join(" + ")} 가산` : ""})`;
+  return `${p.label} 증여자 취득가액 ${won(p.donorAcquisitionPrice ?? 0)}${addOns.length ? ` (필요경비에 ${addOns.join(" + ")} 가산)` : ""}`;
 }
 
 /** ②3호 비교 한 줄 — 신고 전체 결정세액(이 파트만 적용 / 이 파트만 미적용). 비교가 없으면(적격 판정에서 이미 배제) 빈 문자열. */

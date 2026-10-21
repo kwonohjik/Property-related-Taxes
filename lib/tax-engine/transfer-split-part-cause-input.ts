@@ -62,5 +62,10 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     // 엔진은 호스트를 가리지 않는다 — 컴패니언·다건은 ⑫가 입구에서 막아 파트 서브객체가 엔진에 닿지 않는다(생략 = 받는다).
     carryoverGiftDate: dayKey(input.carryoverGiftEvent?.giftRegistryDate),
     hasLegacyExpenses: (input.expenses ?? 0) > 0,
+    // P6 파트 환산 × 증여자 같은 날 취득(S10) — 서브객체가 곧 와이어 파트다. 해결자의 시나리오 입력은 서브객체를 비우므로 재귀에서는 걸리지 않는다.
+    landCarryoverEstimated: input.landCarryoverTaxation?.useEstimatedAcquisition === true,
+    buildingCarryoverEstimated: input.buildingCarryoverTaxation?.useEstimatedAcquisition === true,
+    landDonorAcquisitionDate: dayKey(input.landCarryoverTaxation?.donorAcquisitionDate),
+    buildingDonorAcquisitionDate: dayKey(input.buildingCarryoverTaxation?.donorAcquisitionDate),
   };
 }

@@ -55,6 +55,15 @@ type InheritedAcquisitionLike =
   | { mode: "pre-deemed"; reportedValue?: number; standardPriceAtDeemedDate?: number; standardPriceAtTransfer?: number }
   | { mode: "post-deemed" };
 
+/** 주택 split 파트 이월과세 와이어 파트 — 실가(`donorAcquisitionPrice`) 또는 환산(`useEstimatedAcquisition` + 분자, P6). `splitCarryoverPartShape`의 추론형과 같다. */
+type SplitCarryoverPartLike = {
+  donorAcquisitionDate: string;
+  donorAcquisitionPrice?: number;
+  useEstimatedAcquisition?: boolean;
+  donorStandardPriceAtAcquisition?: number;
+  donorCapitalExpenditure?: number;
+};
+
 export type Required2aLike = {
   propertyType?: string;
   transferType?: string;
@@ -96,8 +105,8 @@ export type Required2aLike = {
   landRebuildPriorHouse?: { startMode: "since_land" | "later"; priorHouseStartDate?: string; demolitionDate: string; footprintUnchanged: boolean };
   // 주택 split 파트 이월과세 (splitCarryoverShape · 자산 단위 carryoverTaxation과 상호배제)
   carryoverGiftEvent?: { giftRegistryDate: string; giftTaxCalculated: number; giftTaxBase: number; donorRelation?: "spouse" | "lineal" | "other" };
-  landCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
-  buildingCarryoverPart?: { donorAcquisitionDate: string; donorAcquisitionPrice: number; donorCapitalExpenditure?: number };
+  landCarryoverPart?: SplitCarryoverPartLike;
+  buildingCarryoverPart?: SplitCarryoverPartLike;
   carryoverTaxation?: unknown;
   companionAssets?: ReadonlyArray<unknown>;
   isSeparateAcquisition?: boolean;
@@ -420,7 +429,7 @@ export function refineSplitPartCause(
     | "buildingSec164Value" | "buildingHouseKind" | "buildingBundledStdPrice" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
     | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation"
-    | "expenses"
+    | "expenses" | "landStandardPriceAtTransfer" | "buildingStandardPriceAtTransfer"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
@@ -486,6 +495,11 @@ export function refineSplitPartCause(
     hasCompanions: host.hasCompanions,
     carryoverGiftDate: d.carryoverGiftEvent?.giftRegistryDate,
     hasLegacyExpenses: (d.expenses ?? 0) > 0,
+    // P6 파트 환산 × 증여자 같은 날 취득(S10)
+    landCarryoverEstimated: d.landCarryoverPart?.useEstimatedAcquisition === true,
+    buildingCarryoverEstimated: d.buildingCarryoverPart?.useEstimatedAcquisition === true,
+    landDonorAcquisitionDate: d.landCarryoverPart?.donorAcquisitionDate,
+    buildingDonorAcquisitionDate: d.buildingCarryoverPart?.donorAcquisitionDate,
   });
   const issue = issuer(ctx);
   // ⑫ 경로는 실제 입력 필드다 — `areaScenario`는 ⑧(폼 칸) 전용 앵커이고 API에는 사실 `isPartialAreaTransfer`로 온다.

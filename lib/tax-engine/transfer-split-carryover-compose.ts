@@ -35,7 +35,12 @@ interface SplitCarryoverWireEvent {
 
 interface SplitCarryoverWirePart {
   donorAcquisitionDate: string;
-  donorAcquisitionPrice: number;
+  /** 실가 입력 — 환산(`useEstimatedAcquisition`)이면 없다(⑫ refine이 상호배타를 강제) */
+  donorAcquisitionPrice?: number;
+  /** P6 — 증여자 취득가액을 모를 때 환산취득가액(분자 = `donorStandardPriceAtAcquisition`) */
+  useEstimatedAcquisition?: boolean;
+  /** 환산 분자 — 증여자 취득 당시 그 파트 기준시가 총액(지분 스케일 없음) */
+  donorStandardPriceAtAcquisition?: number;
   donorCapitalExpenditure?: number;
 }
 
@@ -65,11 +70,14 @@ export function composeSplitCarryover(d: SplitCarryoverWire): ComposedSplitCarry
   ): CarryoverTaxationInput | undefined => {
     if (!part) return undefined;
     const valuation = giftDateValuation ?? 0;
+    // P6 — 파트 환산: 가액 대신 분자를 싣는다(상호배타는 ⑫ refine이 이미 강제했다 — 직접 호출이면 환산이 이긴다).
+    const estimated = part.useEstimatedAcquisition === true;
     return {
       giftRegistryDate,
       donorAcquisitionDate: toDate(part.donorAcquisitionDate, `${path}.donorAcquisitionDate`),
-      donorAcquisitionPrice: part.donorAcquisitionPrice,
-      useEstimatedAcquisition: false, // 파트 환산은 없다(I-4) — 증여자 취득가액이 필수다
+      donorAcquisitionPrice: estimated ? undefined : part.donorAcquisitionPrice,
+      useEstimatedAcquisition: estimated,
+      ...(estimated ? { donorStandardPriceAtAcquisition: part.donorStandardPriceAtAcquisition } : {}),
       // 영 §163의2② 전단 — 한도 前 값. 한도는 해결자가 그 파트 양도차익으로 건다.
       giftTaxAmount: apportionGiftTax({ giftTaxCalculated: ev.giftTaxCalculated, giftTaxBase: ev.giftTaxBase }, valuation),
       donorCapitalExpenditure: part.donorCapitalExpenditure,

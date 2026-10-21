@@ -29,6 +29,7 @@
  * 사전-2025-법규재산-0366의 「해당 자산」에 따라 **그 파트의 양도차익**이다(자산 단위가 아니다 — 실측으로 echo가 갈린다, anchor SPCO-T4).
  */
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { applyRate } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
@@ -101,6 +102,11 @@ type Plans = Partial<Record<PartKey, PartPlan>>;
  * | 취득일 | 증여자 취득일 | 증여 등기접수일(원 입력) |
  * | 취득가액 | 증여자 취득가액 | 증여 당시 평가액(원 입력) |
  * | 파트 필요경비 | 원값 + 증여자 자본적지출 + 증여세 상당액 | 원값 |
+ *
+ * **환산 파트(P6)** — 증여자 취득가액을 모르는 A 파트(`ct.useEstimatedAcquisition`)는 취득가액 칸 대신 그 파트 모드를 `estimated`로 두고, 분자(증여자 취득 당시
+ * 기준시가)·증여세 상당액을 해결자 전용 `splitCarryoverBasis`에 싣는다. 증여세 상당액은 `*DirectExpenses`에 더하지 않는다 — 환산 파트의 §97②2호 단서 비교
+ * (`applyAssetSwap`) 안에서 증발하거나 단서 나목에 섞이기 때문이다(`calcSplitGain`이 비교 뒤에 더한다). 증여자 자본적지출은 종전대로 `*DirectExpenses`에 더한다
+ * (단서 나목 = 자본적지출 + 양도비). 실가 A 파트는 종전과 한 줄도 다르지 않다.
  */
 function buildScenarioInput(
   raw: TransferTaxInput,
@@ -133,6 +139,8 @@ function buildScenarioInput(
     landCarryoverTaxation: undefined,
     buildingCarryoverTaxation: undefined,
     carryoverGiftEvent: undefined,
+    // P6 — 해결자 전용 내부 입력도 비운다(외부에서 들어온 값이 B 시나리오로 새지 않게). A 환산 파트일 때만 아래에서 다시 세운다.
+    splitCarryoverBasis: undefined,
     // §99의4·§98의9 「그 주택 취득 전에 보유하던」 판정은 수증자 본인 취득일이다 — 건물 A 치환이 취득순서를 앞당기지 않게 원 취득일을 고정한다.
     houseCountExclusionAcquisitionDate: raw.houseCountExclusionAcquisitionDate ?? raw.acquisitionDate,
   };
@@ -140,13 +148,31 @@ function buildScenarioInput(
   if (land && sideOf.land === "A") {
     next.landAcquisitionDate = land.ct.donorAcquisitionDate;
     next.landAcquisitionPrice = land.ct.donorAcquisitionPrice ?? 0;
-    next.landDirectExpenses = (raw.landDirectExpenses ?? 0) + land.donorCapex + addedOf.land;
+    if (land.ct.useEstimatedAcquisition === true) {
+      next.landAcqMode = "estimated";
+      next.landDirectExpenses = (raw.landDirectExpenses ?? 0) + land.donorCapex;
+      next.splitCarryoverBasis = {
+        ...next.splitCarryoverBasis,
+        land: { stdAtAcq: land.ct.donorStandardPriceAtAcquisition, giftTaxExpense: addedOf.land },
+      };
+    } else {
+      next.landDirectExpenses = (raw.landDirectExpenses ?? 0) + land.donorCapex + addedOf.land;
+    }
   }
   const building = plans.building;
   if (building && sideOf.building === "A") {
     next.acquisitionDate = building.ct.donorAcquisitionDate;
     next.buildingAcquisitionPrice = building.ct.donorAcquisitionPrice ?? 0;
-    next.buildingDirectExpenses = (raw.buildingDirectExpenses ?? 0) + building.donorCapex + addedOf.building;
+    if (building.ct.useEstimatedAcquisition === true) {
+      next.buildingAcqMode = "estimated";
+      next.buildingDirectExpenses = (raw.buildingDirectExpenses ?? 0) + building.donorCapex;
+      next.splitCarryoverBasis = {
+        ...next.splitCarryoverBasis,
+        building: { stdAtAcq: building.ct.donorStandardPriceAtAcquisition, giftTaxExpense: addedOf.building },
+      };
+    } else {
+      next.buildingDirectExpenses = (raw.buildingDirectExpenses ?? 0) + building.donorCapex + addedOf.building;
+    }
   }
   // 「취득 당시」 조정대상지역·2017.8.3. 경과규정·세대 보유 통산의 기준일 — 자산 단위 시나리오와 같은 leaf(P5-Q5). 「주택」은 건물이다.
   //   A면 보유는 이미 증여자 취득일(§95④ 단서)이고 판정일은 증여일(사전-2023-법규재산-0444) · B면 증여일 기산 + 계속 같은 세대면 세대 통산(조심-2022-서-7583).
@@ -178,6 +204,13 @@ export function calcSplitCarryoverScenarios(
   const plans: Plans = {};
   for (const [key, ct] of [["land", landCt], ["building", buildingCt]] as const) {
     if (!ct) continue;
+    // P6 — 환산 입력의 분자는 양수여야 한다. 비면 환산취득가액·개산공제가 0이 되어 «취득가액 0» 양도차익이 조용히 나온다(⑫·⑧이 먼저 막는다 — 직접 호출 방어선).
+    if (ct.useEstimatedAcquisition === true && !((ct.donorStandardPriceAtAcquisition ?? 0) > 0))
+      throw new TaxCalculationError(
+        TaxErrorCode.INVALID_INPUT,
+        `${key === "land" ? "토지" : "건물"} 파트 환산취득가액에는 증여자 취득 당시 그 파트 기준시가(양수)가 필요합니다 (${TRANSFER.CARRYOVER_DONOR_BASIS}, 시행령 §176조의2②)`,
+        { field: key === "land" ? "landCarryoverPart" : "buildingCarryoverPart" },
+      );
     const eligibility = judgeCarryoverEligibility(ct, rawInput.transferDate);
     // 3. 증여자 자본적지출(§97의2①2호) — 양도일 2024.1.1. 전은 0
     const guard = rawInput.transferDate < DONOR_CAPEX_EFFECTIVE_DATE;
@@ -271,7 +304,10 @@ export function calcSplitCarryoverScenarios(
                 : ("tax_comparison" as const),
           }),
       donorAcquisitionDate: dayKey(plan.ct.donorAcquisitionDate)!,
-      donorAcquisitionPrice: plan.ct.donorAcquisitionPrice ?? 0,
+      // P6 — 환산 입력은 가액을 받지 않는다(0으로 채우면 «취득가액 0»으로 읽힌다). 분자만 싣고, 분모·환산취득가액·개산공제는 `attachSplitCarryoverEcho`가 파트 결과에서 채운다.
+      ...(plan.ct.useEstimatedAcquisition === true
+        ? { estimated: { donorStdPriceAtAcquisition: plan.ct.donorStandardPriceAtAcquisition! } }
+        : { donorAcquisitionPrice: plan.ct.donorAcquisitionPrice ?? 0 }),
       donorCapexAdded: applied ? plan.donorCapex : 0,
       donorCapexGuardApplied: plan.donorCapexGuardApplied,
       giftDateValuation: plan.ct.giftDateValuation,
@@ -333,14 +369,29 @@ export function attachSplitCarryoverEcho(
   detail: SplitCarryoverDetail | undefined,
 ): SplitGainResult | undefined {
   if (!splitDetail || !detail) return splitDetail;
-  const withEcho = (part: SplitPartResult, echo: SplitPartCarryoverEcho | undefined): SplitPartResult =>
-    !echo
-      ? part
-      : {
-          ...part,
-          carryover: echo,
-          ...(echo.judgment === "applied" ? { acquisitionCause: "carryover_gift" as const, rateBasisRule: "donor" as const } : {}),
-        };
+  const withEcho = (part: SplitPartResult, rawEcho: SplitPartCarryoverEcho | undefined): SplitPartResult => {
+    if (!rawEcho) return part;
+    // P6 — 적용(A) 환산 파트의 분모·환산취득가액·개산공제는 엔진이 실제 쓴 파트 결과에서 읽는다(재계산 금지 — 표시 드리프트 방지).
+    const echo: SplitPartCarryoverEcho =
+      rawEcho.estimated && rawEcho.judgment === "applied"
+        ? {
+            ...rawEcho,
+            estimated: {
+              ...rawEcho.estimated,
+              ...(part.stdPriceAtTransfer !== undefined ? { stdPriceAtTransfer: part.stdPriceAtTransfer } : {}),
+              estimatedAcquisitionPrice: part.acquisitionPrice,
+              ...(part.lumpDeductionBase !== undefined && part.lumpDeductionRate !== undefined
+                ? { lumpDeduction: applyRate(part.lumpDeductionBase, part.lumpDeductionRate) }
+                : {}),
+            },
+          }
+        : rawEcho;
+    return {
+      ...part,
+      carryover: echo,
+      ...(echo.judgment === "applied" ? { acquisitionCause: "carryover_gift" as const, rateBasisRule: "donor" as const } : {}),
+    };
+  };
   return {
     ...splitDetail,
     land: withEcho(splitDetail.land, detail.land),
