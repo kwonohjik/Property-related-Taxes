@@ -1,6 +1,6 @@
 # 「확인 필요」 2건 재점검 — 다른 계산기 동·호 소실 · 다건 단계 이동 검증 우회 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1~Q-4)** · 워크트리 `../Property-related-Taxes-oos` · 브랜치 `docs/address-units-oos-plan`
+> 작성 2026-10-21 · 상태 **Do 진행 — Q-1~Q-4 모두 권고안 a(2026-10-21 사용자 결정)** · 워크트리 `../Property-related-Taxes-oos` · 브랜치 `docs/address-units-oos-plan`
 > 기준 master `6a7482912`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `transfer-address-units-remount.plan.md` 「범위 밖(확인 필요로 남김)」 1·2번째 항목(#2332·#2334 머지 뒤).
 > 실측 spec·렌더 probe는 커밋하지 않았다(E2E는 공시가격·주소 검색을 `page.route`로 고정, 렌더 probe는 vitest jsdom).
@@ -168,7 +168,7 @@
 
 ---
 
-## 결정 필요
+## 결정 — 2026-10-21 사용자 결정: Q-1~Q-4 전부 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
