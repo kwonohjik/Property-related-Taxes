@@ -1,6 +1,6 @@
 # 함께 양도·다건 결과에서 재개발·입주권(§166) 자산의 취득가액·필요경비 표시 수정 계획서
 
-> 상태: **v0.1 (2026-10-21) 초안 · 사용자 결정 대기(§4 Q-1·Q-2)** — 코드 변경 없음.
+> 상태: **v0.2 (2026-10-21) 결정 확정** — 사용자 결정 Q-1 = **(a) §166 역산 함수로 통일**, Q-2 = **(b) 전액 비과세도 함께 고침**(설계 §4.1 — 엔진 변경 없이 역산 leaf에서 해결). 코드 변경 없음(Do 전).
 > 계기: V5 PR #2325 보고의 남은 확인 필요 «환산 컴패니언에 숨은 `standardPriceAtAcq`·`standardPriceAtTransfer`가 옛 값으로 남으면 표시용 `acquisitionPrice`가 0이 아니다(세액 동일)».
 > 검증 방식: throwaway probe(워크트리 `-rcsp`, 커밋 안 함)로 route → `BundledAllocationCard`·`MultiTransferTaxResultView` 렌더까지 실측했다. 인용 file:line은 base `603b4ddfe`(master) 기준.
 
@@ -115,23 +115,41 @@ V5처럼 «화면에 없는 칸은 보내지 않는다»로 막는 방식이다.
 | 단건 · 환산 | true | 0 · 0 · 0 (경비 3,000,000) | 997,000,000 |
 | 축 B 50/50 · 실가 · 카드마다 | true | 0 | 500,000,000 (현재 echo: 200,000,000 · 경비 300,000,000) |
 
+### 4.1 결정 (2026-10-21) — Q-1 = (a), Q-2 = (b)
+
+**Q-2 (b)는 엔진을 바꾸지 않아도 된다.** 비과세 마스킹은 분기 차익을 0으로 만들기 **전에** 원래 값을 `gainAfterAllocation`에 보존한다 — `applyOneRightExemption`(`transfer-tax-redevelopment-transforms.ts:329~`, 마스킹 `:394-398`) · `applyAptOneHouseExemption`(`:504~`, `:515-519`). 실측(단건 · 원조합원 입주권 · 양도 1,000,000,000):
+
+| 경우 | `isExempt` | 인가전 분기 `gain` · `gainAfterAllocation` · 경비 | 과세 시(다주택) 같은 분기 `gain` |
+|---|---|---|---|
+| 실가 | true | 0 · **500,000,000** · 0 | 500,000,000 |
+| 환산 | true | 0 · **597,000,000** · 3,000,000 | 597,000,000 |
+
+보존값이 과세 시 차익과 정확히 같다. ⇒ 역산 leaf `redevBranchTotals`의 전체 차익 소스(`grossOf`, `redev-acquisition-inverse.ts:63`)를 `gainBeforeAllocation ?? gain`에서 **`gainBeforeAllocation ?? gainAfterAllocation ?? gain`**으로 바꾸면, 비과세 자산의 역산 취득가액이 실가 **500,000,000**(종전 1,000,000,000) · 환산 **400,000,000**(종전 997,000,000)으로 과세 시와 같아진다.
+
+- 같은 우선순위의 선례가 이미 있다 — 계산명세서 `DetailedStatementRedevelopmentBuilders.ts:401` `detail.gainBeforeAllocation ?? detail.gainAfterAllocation`.
+- 12억 초과 안분 + 청산금 비과세(사례 47)는 `gainBeforeAllocation`이 있어 그것이 먼저 잡힌다 — 기존 값 불변(Do 1단계에서 실측 확인).
+- **leaf 하나를 바꾸므로 단건 화면도 함께 바뀐다** — 소비처: 단건 신고서 합계 열(`FilingFormTableHelpers.ts:425`) · 계산명세서(`DetailedStatementRedevOverrides.ts`) · 사이드바(`transfer-per-asset-summary.ts`) · 「전체 양도차익」 표시(`exempt-gross-gain.ts:38` `effectiveGrossGain`). 비과세 §166 자산의 «전체 양도차익»이 0에서 실제 차익(500,000,000 등)으로 바뀐다 — 이것이 Q-2 (b)의 의도다.
+- ⚠️ 단건 신고서에서 「전체 양도차익」 행을 채우는 `fillRedev*BranchData`(`FilingFormTableRedevRows.ts`)가 같은 소스를 읽는지 Do 1단계에서 확인한다. 다르면 같은 표 안에서 «양도가액 − 취득가액 − 필요경비 = 전체 양도차익»이 깨진다.
+
 ---
 
-## 5. Do 계획 (Q-1 = a, Q-2 = a 가정)
+## 5. Do 계획 (Q-1 = a, Q-2 = b)
 
 1. **사전 실측** → verify: §1.2 표 외에 «다건 합산 계산» route · 청산금 수령 동시신고(사례 46) · 승계조합원 완공APT(사례 48) · 토지 출자(사례 37) · 축 B 과세 지분 · §166 + split/이월과세 동시 여부를 probe로 재고 표에 추가한다.
 2. **leaf 이동** `components/.../redev-acquisition-inverse.ts` → `lib/tax-engine/redev-acquisition-inverse.ts`(기존 경로 re-export) → verify: tsc 0 · 기존 import 5곳 무수정 · 관련 테스트 통과.
-3. **echo §166 분기** `transfer-tax-aggregate-display-echo.ts` — 비과세 제외, 청산금 수령이면 표시 양도가액도 같은 leaf 값 → verify: 아래 anchor.
-4. **anchor** `__tests__/tax-engine/...` 또는 `__tests__/api/` 신규:
+3. **leaf 전체 차익 소스**(Q-2 b) `redevBranchTotals`의 `grossOf` = `gainBeforeAllocation ?? gainAfterAllocation ?? gain` → verify: §4.1 단건 비과세 2건이 500,000,000 · 400,000,000, 과세 단건·사례 47 값 불변, 단건 신고서 표 항등식 유지.
+4. **echo §166 분기** `transfer-tax-aggregate-display-echo.ts` — 비과세 포함(현행 비과세 분기 `:144-145`보다 앞), 청산금 수령이면 표시 양도가액도 같은 leaf 값 → verify: 아래 anchor.
+5. **anchor** `__tests__/tax-engine/...` 또는 `__tests__/api/` 신규:
    - RA-1 C0·C1·C2·C3·C4 — 표시 취득가액·필요경비가 «400,000,000 · 3,000,000»(완공APT는 실측값)이고 **옛 값과 무관**, 세액 304,646,760 · 266,032,800 불변.
    - RA-2 주 자산(R0·R1)도 같다.
    - RA-3 안분 모드(A1·A3) 같다.
    - RA-4 실가 OC-1 «500,000,000 · 0» = 단건 신고서 합계 열과 같다(같은 자산을 단건으로 계산해 `buildRows` 합계 열과 대조).
-   - RA-5 비과세 자산은 현행 값 유지(Q-2 a의 고정).
+   - RA-5 비과세(Q-2 b): 단건 실가·환산의 역산 취득가액·전체 양도차익이 같은 자산을 다주택(과세)으로 계산한 값과 같다(500,000,000 · 500,000,000 / 400,000,000 · 597,000,000) — 단건 신고서 합계 열과 함께 양도 echo 양쪽.
    - RA-6 렌더: `BundledAllocationCard`의 `form-table`·`detailed-statement`에 옛 값 유래 숫자(200,000,000)가 없다.
-   - 뮤테이션: §166 분기를 지우면 RA-1·RA-4 실패, 비과세 제외 조건을 지우면 RA-5 실패.
-5. **기존 단언 갱신** — `transfer.route.companion-orig-member-acq-price.anchor.test.ts` OC-1(`acquisitionPrice` 400,000,000 → 500,000,000 예상) · OC-3. OC-4는 비과세라 Q-2 a면 불변. 갱신 전 그 단언이 지키던 다른 축(§166 칸에서 읽는다 · 옛 `fixedAcquisitionPrice` 무시)은 `body.companionAssets[0].fixedAcquisitionPrice` 단언으로 남아 있는지 확인한다(memory `feedback_shared_assertion_reversal_erases_sibling_net`). 그 밖에 echo 값을 고정한 테스트는 전체 실행으로 찾는다.
-6. pre-push 전체 테스트(엔진 변경) → PR → CI 전건 SUCCESS + head 일치 → 머지.
+   - RA-7 사례 47(12억 초과 안분 + 청산금 비과세)·과세 단건의 단건 신고서 값 불변.
+   - 뮤테이션: echo §166 분기를 지우면 RA-1·RA-4 실패, `grossOf`의 `gainAfterAllocation`을 지우면 RA-5 실패, 순서를 `gainAfterAllocation ?? gainBeforeAllocation`으로 바꾸면 RA-7 실패.
+6. **기존 단언 갱신** — `transfer.route.companion-orig-member-acq-price.anchor.test.ts` OC-1(`acquisitionPrice` 400,000,000 → 500,000,000 예상) · OC-3 · OC-4(축 B 비과세 — 카드마다 200,000,000에서 역산값으로, 실측 후 확정). 갱신 전 그 단언이 지키던 다른 축(§166 칸에서 읽는다 · 옛 `fixedAcquisitionPrice` 무시)은 `body.companionAssets[0].fixedAcquisitionPrice` 단언으로 남아 있는지 확인한다(memory `feedback_shared_assertion_reversal_erases_sibling_net`). 단건 비과세 §166의 신고서·사이드바·전체 양도차익을 고정한 테스트도 바뀐다 — 전체 실행으로 찾아 각 단언이 무엇을 지키던 것인지 확인한 뒤 갱신한다.
+7. pre-push 전체 테스트(엔진 파일 변경) → PR → CI 전건 SUCCESS + head 일치 → 머지.
 
 14지점: 엔진 input·Zod·④ 변경 없음(표시 echo만). ⑥ 사이드바는 이미 같은 leaf를 쓴다(C1-04). ⑦ 결과 카드가 이 echo의 소비처다.
 
@@ -141,4 +159,4 @@ V5처럼 «화면에 없는 칸은 보내지 않는다»로 막는 방식이다.
 
 - **§166 엔진이 감면 판정에 일반 기준시가 칸을 쓴다**(`transfer-tax-redevelopment.ts:430-431` · `-steps.ts:365-366`) — 원조합원 §166 자산에서 그 칸이 화면 어디에서 입력되는지, 숨은 옛 값이 감면 세액을 바꾸는지 **확인 필요**(이번 실측 시료는 감면 없음).
 - **컴패니언 사후 환산이 §166 자산에도 켜진다**(`bundled-apportionment.ts:199-215`) — 엔진 입력 `acquisitionPrice`에 옛 값 유래 값이 들어간다. 세액 영향은 이번 시료에서 0이었다. 안 (a) 이후 표시에는 닿지 않는다.
-- **전액 비과세 §166의 단건 신고서 취득가액**(Q-2 표) — 별건.
+- ~~전액 비과세 §166의 단건 신고서 취득가액~~ — Q-2 (b)로 이번 범위에 포함(§4.1).
