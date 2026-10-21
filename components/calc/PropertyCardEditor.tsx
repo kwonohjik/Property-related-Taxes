@@ -105,6 +105,12 @@ export function PropertyCardEditor({
     detail: [property.dong, property.ho].filter(Boolean).join(" "),
     lng: "",
     lat: "",
+    // 동·호를 함께 넘긴다 — 빠지면 다시 열었을 때 목록이 돌아오지 않고, 상세주소 입력이 아래 파싱으로
+    //   동·호를 모두 비워(칸 비움·단동 숫자만) 공시가격 조회가 다른 세대 가격을 채웠다.
+    //   이제 목록을 다시 불러오고, 못 불러와도 동·호는 지워지지 않는다(고칠 때는 아래 동·호 칸).
+    //   계획서 docs/00-pm/comprehensive-property-card-dongho.plan.md R1
+    dong: property.dong || undefined,
+    ho: property.ho || undefined,
   };
 
   // ⑤ 다가구주택 라이브 안분 미리보기 (useMemo — useEffect→store 미러링 금지 정책)
@@ -135,13 +141,13 @@ export function PropertyCardEditor({
           </label>
           <AddressSearch
             value={addressValue}
+            // 상세주소 칸을 그리지 않는다 — 저장 필드가 없어 칸 값이 동·호 합성이라 한 글자씩 입력이 깨졌다.
+            //   동·호는 세대 드롭다운과 아래 동·호 칸으로만 입력한다(계획서 comprehensive-property-card-detail-hide.plan.md R1)
+            hideDetailInput
             onChange={(v) => {
-              // 동/호 드롭다운 선택 시 v.dong/v.ho 직접 사용. 미지원(텍스트) 시 detail 파싱 fallback.
-              const parts = v.detail.trim().split(/\s+/);
-              const dong = v.dong ?? (parts.length >= 2 ? parts[0] : v.detail.includes("동") ? v.detail : "");
-              const ho =
-                v.ho ?? (parts.length >= 2 ? parts.slice(1).join(" ") : v.detail.includes("호") ? v.detail : "");
-              onUpdate({ jibun: v.jibun, road: v.road, building: v.building, dong, ho });
+              // 동·호는 세대 드롭다운이 싣는 값만 쓴다 — 상세주소 칸이 없어 파싱할 입력이 없다.
+              //   남는 경로(주소 선택·지우기·동 선택·호 선택)에서 종전 파싱과 결과가 같음을 실측했다(계획서 R2)
+              onUpdate({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "" });
             }}
           />
         </div>

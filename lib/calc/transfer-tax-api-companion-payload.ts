@@ -52,6 +52,7 @@ import {
 } from "./transfer-tax-api-asset-basics";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { isRedevelopmentSec166Asset, redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
+import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
 import {
   isSuccessorRightTransfer,
   successorRightAcquisitionTotal,
@@ -145,6 +146,8 @@ export function buildAssetPayload(
     parseAmount(asset.standardPriceAtTransfer) > 0
       ? parseAmount(asset.standardPriceAtTransfer)
       : replotIncStdAtTransfer;
+  // 원조합원 §166 자산의 화면에 없는 일반 기준시가 칸(주 자산 ④·⑤⑧과 같은 leaf). `form`이 없는 직접 호출은 단건으로 본다.
+  const redevHiddenStd = redevHiddenGeneralStdPrice(asset, form ?? { assets: [asset], bundledSaleMode });
 
   /**
    * ⑬ 상가 자산-수준 서브객체 — 컴패니언(다른 물건)·축 B 공통.
@@ -363,10 +366,14 @@ export function buildAssetPayload(
     // §97①1호나목 **환산 분모**. 이월과세 general 환산에서만 아래 `cp.topLevelOverrides`가
     // 증여자 양도시 기준시가로 덮어쓴다 — 그 override는 의도된 것이다.
     // 승계 입주권 환산 분모 — 영 §165①(양도일까지 납입액 + 양도일 프리미엄). 주 자산 ④와 같은 leaf·같은 게이트(환산만).
+    // 원조합원 §166 자산은 이 칸이 화면에 없다(안분 모드의 안분 키만 보인다) — 감면 기준시가 폴백으로 새지 않게 싣지 않는다.
+    //   안분 키는 아래 `standardPriceAtTransferForApportion`이 따로 싣는다(주 자산 ④·⑤⑧과 같은 leaf).
     standardPriceAtTransfer:
       isSuccessor && successorMode === "estimated"
         ? successorRightStdPriceAtTransfer(asset) || undefined
-        : stdAtTransferForApportion,
+        : redevHiddenStd.transfer
+          ? undefined
+          : stdAtTransferForApportion,
     /**
      * §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). 함께양도 묶음의 지분 자산은 양도하는 것이 지분이라
      * 물건 전체(100%) 기준시가 × 지분율이 그 자산의 기준시가다(축 B는 자동가를 쓰므로 키를 쓰지 않는다 — 종전 그대로).
@@ -393,7 +400,8 @@ export function buildAssetPayload(
       : ((asset.acquisitionCause === "purchase" &&
           (asset.useEstimatedAcquisition || asset.isAppraisalAcquisition)) ||
           (splitActive && !isSeparateAcquisition(asset))) &&
-        asset.standardPriceAtAcq
+        asset.standardPriceAtAcq &&
+        !redevHiddenStd.acq
         ? parseAmount(asset.standardPriceAtAcq) || undefined
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.

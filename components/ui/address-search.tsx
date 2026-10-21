@@ -106,12 +106,20 @@ interface AddressSearchProps {
    * 계획서 `docs/00-pm/transfer-address-units-remount.plan.md` (Q-1·Q-2·Q-3)
    */
   knownHasUnits?: boolean;
+  /**
+   * true이면 세대 목록이 없을 때의 상세주소 칸을 그리지 않는다(세대 드롭다운·조회 중 표시는 그대로).
+   *
+   * 상세주소를 저장할 필드가 없고 동·호를 별도 칸으로 받는 호출부용이다(종부세 주택 카드). 그 카드는 칸 값을
+   * 저장된 동·호로 합성해, 한 글자씩 치면 「동」·「호」 앞 숫자가 사라지고 동이 저장된 뒤엔 칸이 「동」에서 멈췄다.
+   * 계획서 `docs/00-pm/comprehensive-property-card-detail-hide.plan.md` R1
+   */
+  hideDetailInput?: boolean;
 }
 
 /** 세대 목록 조회 결과 — 「없음」은 응답으로 확정된 경우뿐이다. */
 type UnitsOutcome = "found" | "none" | "failed";
 
-export function AddressSearch({ value, onChange, className, disabled, disableUnits, onUnitsResolved, knownHasUnits }: AddressSearchProps) {
+export function AddressSearch({ value, onChange, className, disabled, disableUnits, onUnitsResolved, knownHasUnits, hideDetailInput }: AddressSearchProps) {
   const [query, setQuery] = useState(value.road || value.jibun || "");
   const [results, setResults] = useState<AddressResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -471,7 +479,7 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
                 });
               }}
             />
-          ) : (
+          ) : hideDetailInput ? null : (
             <input
               type="text"
               value={value.detail}

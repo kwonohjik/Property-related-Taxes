@@ -346,7 +346,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
             <p className="text-micro text-muted-foreground">
               안분 산식의 분모 — <strong>양도 당시 기준시가 D − 취득 당시 기준시가 E</strong>.
               자산 카드의 환산 입력이 있으면 비워 두어도 그 값을 씁니다 — <strong>두 곳에 서로
-              다른 값을 넣지 마세요</strong>(이 칸이 우선합니다).
+              다른 값을 넣지 마세요</strong>(이 칸이 우선합니다). 재개발·재건축 원조합원 자산은 자산 카드에
+              기준시가 칸이 없으므로 여기에 입력하세요.
             </p>
             <CurrencyInput
               label="취득 당시 기준시가 (주택+부속토지 합계)"
