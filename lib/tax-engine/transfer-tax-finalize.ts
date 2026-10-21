@@ -14,6 +14,10 @@
 import { applyRate, truncateToWon } from "./tax-utils";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
+import { selectActiveIncomeDeduction } from "./transfer-tax-income-deduction-details";
+import { applyIncomeDeductionSurtax } from "./transfer-tax-income-deduction-details";
+import { mergeHybridTaxDetail } from "./transfer-tax-income-deduction-details";
+import type { IncomeDeductionDetails } from "./transfer-tax-income-deduction-details";
 import { TRANSFER } from "./legal-codes";
 import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
@@ -50,36 +54,6 @@ import type { TransferTaxPenaltyResult } from "./transfer-tax-penalty";
 import { computeAmendment } from "./transfer-tax-amendment";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start"; // 로컬 사용(buildExemptEarlyResult) — 421행 re-export와 별개
 import type { AmendmentDetail } from "./types/transfer-amendment.types";
-
-/**
- * §99의3 2-pass 후 formulaSteps의 농특세 관련 두 step(preliminary 세액 0)을 확정값으로 교체.
- * computeNew993는 preliminary 호출 시 calculatedTaxBefore/After=0으로 push → finalize에서 실값 반영.
- */
-function patchNew993SurtaxSteps(
-  steps: New993Result["formulaSteps"],
-  taxBefore: number,
-  taxAfter: number,
-  reduction: number,
-  ruralSurtax: number,
-): New993Result["formulaSteps"] {
-  return steps.map((s) => {
-    if (s.label === "양도세 감면세액 (농특세 기준)") {
-      return {
-        ...s,
-        value: reduction,
-        formula: `감면 전 산출세액 ${taxBefore.toLocaleString()} − 감면 후 산출세액 ${taxAfter.toLocaleString()} = ${reduction.toLocaleString()}`,
-      };
-    }
-    if (s.label === "농어촌특별세 (20%)") {
-      return {
-        ...s,
-        value: ruralSurtax,
-        formula: `감면세액 ${reduction.toLocaleString()} × 20% = ${ruralSurtax.toLocaleString()}`,
-      };
-    }
-    return s;
-  });
-}
 
 // `resolveSplitBuildingPenaltyAxis`는 `transfer-tax-building-penalty.ts`로 옮겼다(손실 경로와 공유) — 종전 import 경로 보존용 재수출.
 export { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
@@ -183,42 +157,24 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
 
   // ── STEP 7.5: 차감형 감면(§99의3·§99·§98의8 + 하이브리드 5년 후) 농어촌특별세 — 2-pass 공통 ──
   // 농특세법 §2①1호 "소득공제" 해당 — 감면 전후 산출세액 차 × 20% (§99의3 선례 일반화, P1·P2)
-  let new993FinalResult: New993Result | undefined = new993PreliminaryResult;
-  let new99FinalResult: New99Result | undefined = new99PreliminaryResult;
-  let unsold988FinalResult: Unsold988Result | undefined = unsold988PreliminaryResult;
-  let unsold987FinalResult: UnsoldHybridResult | undefined = unsold987PreliminaryResult;
-  let unsold992FinalResult: UnsoldHybridResult | undefined = unsold992PreliminaryResult;
-  let unsold983FinalResult: UnsoldHybridResult | undefined = unsold983PreliminaryResult;
-  let unsold985FinalResult: UnsoldHybridResult | undefined = unsold985PreliminaryResult;
-  let unsold986FinalResult: UnsoldHybridResult | undefined = unsold986PreliminaryResult;
-  // P4: §98의2(특칙 전용)·§98의4(단일 세액감면) — 2-pass 비대상, 그대로 echo (§98의4는 STEP 8.7)
-  const unsold982FinalResult: UnsoldHybridResult | undefined = unsold982PreliminaryResult;
-  let unsold984FinalResult: UnsoldHybridResult | undefined = unsold984PreliminaryResult;
-  // P5: §98 (세율 20% 특례) — 2-pass·STEP 8.7 비대상, 그대로 echo
-  const unsold98FinalResult: UnsoldHybridResult | undefined = unsold98PreliminaryResult;
+  // 상세 확정은 §166 경로(`transfer-tax-redevelopment.ts`)와 같은 leaf다(`transfer-tax-income-deduction-details.ts`).
+  // §98의2(특칙 전용)·§98 (세율 20% 특례)은 2-pass·STEP 8.7 비대상 — 그대로 echo, §98의4는 STEP 8.7
+  let incomeDeductionDetails: IncomeDeductionDetails = {
+    new993Detail: new993PreliminaryResult,
+    new99Detail: new99PreliminaryResult,
+    unsold988Detail: unsold988PreliminaryResult,
+    unsold987Detail: unsold987PreliminaryResult,
+    unsold992Detail: unsold992PreliminaryResult,
+    unsold983Detail: unsold983PreliminaryResult,
+    unsold985Detail: unsold985PreliminaryResult,
+    unsold986Detail: unsold986PreliminaryResult,
+    unsold982Detail: unsold982PreliminaryResult,
+    unsold984Detail: unsold984PreliminaryResult,
+    unsold98Detail: unsold98PreliminaryResult,
+  };
   let ruralSurtax993 = 0;
-  // 하이브리드는 5년 후(income_deduction)만 2-pass — 5년 내(tax_amount)는 STEP 8.7
-  const hybridIncomePrelims = [
-    unsold987PreliminaryResult, unsold992PreliminaryResult,
-    unsold983PreliminaryResult, unsold985PreliminaryResult, unsold986PreliminaryResult,
-  ].filter((d) => d?.isEligible && d.effectCategory === "income_deduction");
-  const activePrelim = [
-    new993PreliminaryResult, new99PreliminaryResult, unsold988PreliminaryResult,
-    ...hybridIncomePrelims,
-  ].find((d) => d?.isEligible);
-  if (activePrelim) {
-    const articleLabel =
-      activePrelim === unsold988PreliminaryResult ? "§98의8"
-      : activePrelim === new99PreliminaryResult ? "§99"
-      : activePrelim === unsold987PreliminaryResult ? "§98의7"
-      : activePrelim === unsold992PreliminaryResult ? "§99의2"
-      : activePrelim === unsold983PreliminaryResult ? "§98의3"
-      : activePrelim === unsold985PreliminaryResult ? "§98의5"
-      : activePrelim === unsold986PreliminaryResult ? "§98의6"
-      : "§99의3";
-    // 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5): 차감 효과는 유지, 농특세만 0
-    const isExempt =
-      "ruralSurtaxExempt" in activePrelim! && (activePrelim as UnsoldHybridResult).ruralSurtaxExempt;
+  const activeIncomeDeduction = selectActiveIncomeDeduction(incomeDeductionDetails);
+  if (activeIncomeDeduction) {
     const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
     // 감면 전 산출세액도 STEP 7과 같은 경로로 구한다 — split 자산에서 여기만 자산 단위
     // 단일세율로 남으면 농특세 기초(감면액)가 과대·과소가 된다(이중 진실).
@@ -231,32 +187,15 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
       taxRateInput,
       multiHouseSurchargeResult,
     });
-    const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
-    ruralSurtax993 = isExempt ? 0 : applyRate(taxReduction993, 0.2);
-    const surtaxFields = { taxReductionForRuralSurtax: taxReduction993, ruralSurtax: ruralSurtax993 };
-    if (activePrelim === new993PreliminaryResult)
-      new993FinalResult = {
-        ...new993PreliminaryResult!,
-        ...surtaxFields,
-        // preliminary formulaSteps의 농특세 관련 두 step은 세액 0(2-pass 前) → 확정값으로 교체.
-        formulaSteps: patchNew993SurtaxSteps(
-          new993PreliminaryResult!.formulaSteps,
-          taxResultBefore993.calculatedTax,
-          taxResult.calculatedTax,
-          taxReduction993,
-          ruralSurtax993,
-        ),
-      };
-    else if (activePrelim === new99PreliminaryResult) new99FinalResult = { ...new99PreliminaryResult!, ...surtaxFields };
-    else if (activePrelim === unsold987PreliminaryResult) unsold987FinalResult = { ...unsold987PreliminaryResult!, ...surtaxFields };
-    else if (activePrelim === unsold992PreliminaryResult) unsold992FinalResult = { ...unsold992PreliminaryResult!, ...surtaxFields };
-    else if (activePrelim === unsold983PreliminaryResult) unsold983FinalResult = { ...unsold983PreliminaryResult!, ...surtaxFields };
-    else if (activePrelim === unsold985PreliminaryResult) unsold985FinalResult = { ...unsold985PreliminaryResult!, ...surtaxFields };
-    else if (activePrelim === unsold986PreliminaryResult) unsold986FinalResult = { ...unsold986PreliminaryResult!, ...surtaxFields };
-    else unsold988FinalResult = { ...unsold988PreliminaryResult!, ...surtaxFields };
-    if (taxReduction993 > 0 && !isExempt) {
+    const surtax = applyIncomeDeductionSurtax(incomeDeductionDetails, activeIncomeDeduction, {
+      before: taxResultBefore993.calculatedTax,
+      after: taxResult.calculatedTax,
+    });
+    incomeDeductionDetails = surtax.details;
+    ruralSurtax993 = surtax.ruralSurtax;
+    if (surtax.taxReduction > 0 && !activeIncomeDeduction.isExempt) {
       steps.push({
-        label: `${articleLabel} 농어촌특별세 (감면세액 × 20%)`,
+        label: `${activeIncomeDeduction.articleLabel} 농어촌특별세 (감면세액 × 20%)`,
         formula: `(감면 전 산출세액 ${taxResultBefore993.calculatedTax.toLocaleString()} − 감면 후 산출세액 ${taxResult.calculatedTax.toLocaleString()}) × 20% = ${ruralSurtax993.toLocaleString()}`,
         amount: ruralSurtax993,
         legalBasis: TRANSFER.RURAL_SURTAX_993,
@@ -331,39 +270,21 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
 
   // ── STEP 8.7: 하이브리드(§98의7·§99의2) 5년 내 세액감면 농어촌특별세 — 감면세액 × 20% ──
   // 농특세법 §2①1호 "조특법에 따라 감면받는 세액". §98의3·§98의5(P3)는 농특세령 §4⑦1호 비과세 —
-  // 본 2조문은 비과세 열거 없음 (plan §2-1).
-  let ruralSurtaxHybrid = 0;
-  if (
-    reductionTypeApplied !== undefined &&
-    HYBRID_ARTICLE[reductionTypeApplied] !== undefined &&
-    cappedReductionAmount > 0
-  ) {
-    // 농특세 비과세 (농특세령 §4⑦1호): §98의3·§98의5 — evaluator의 exempt 플래그 단일 진실
-    const isExemptTax = hybridTaxDetail?.ruralSurtaxExempt === true;
-    ruralSurtaxHybrid = isExemptTax ? 0 : applyRate(cappedReductionAmount, 0.2);
-    if (!isExemptTax) {
-      steps.push({
-        label: `${HYBRID_ARTICLE[reductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
-        formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtaxHybrid.toLocaleString()}`,
-        amount: ruralSurtaxHybrid,
-        legalBasis: "농어촌특별세법 §5①1호",
-      });
-    }
-    // 최종 detail에 감면액·농특세 echo (calcReductions 평가본 우선 — reductionAmount 보유)
-    if (hybridTaxDetail && hybridTaxDetail.id === reductionTypeApplied) {
-      const merged: UnsoldHybridResult = {
-        ...hybridTaxDetail,
-        reductionAmount: cappedReductionAmount,
-        taxReductionForRuralSurtax: isExemptTax ? 0 : cappedReductionAmount,
-        ruralSurtax: ruralSurtaxHybrid,
-      };
-      if (merged.id === "unsold_98_7") unsold987FinalResult = merged;
-      else if (merged.id === "unsold_99_2") unsold992FinalResult = merged;
-      else if (merged.id === "unsold_98_3") unsold983FinalResult = merged;
-      else if (merged.id === "unsold_98_5") unsold985FinalResult = merged;
-      else if (merged.id === "unsold_98_4") unsold984FinalResult = merged;
-      else unsold986FinalResult = merged;
-    }
+  // 본 2조문은 비과세 열거 없음 (plan §2-1). 판정·상세 합치기는 §166 경로와 같은 leaf다.
+  const hybridSurtax = mergeHybridTaxDetail(incomeDeductionDetails, {
+    reductionTypeApplied,
+    cappedReductionAmount,
+    hybridTaxDetail,
+  });
+  incomeDeductionDetails = hybridSurtax.details;
+  const ruralSurtaxHybrid = hybridSurtax.ruralSurtax;
+  if (hybridSurtax.applies && !hybridSurtax.isExempt) {
+    steps.push({
+      label: `${hybridSurtax.articleLabel} 농어촌특별세 (감면세액 × 20%)`,
+      formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtaxHybrid.toLocaleString()}`,
+      amount: ruralSurtaxHybrid,
+      legalBasis: "농어촌특별세법 §5①1호",
+    });
   }
 
   // ── STEP 9: 결정세액 = 산출세액 - 감면 (원 미만 절사) ──
@@ -517,17 +438,17 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   }
 
   return {
-    new993FinalResult,
-    new99FinalResult,
-    unsold988FinalResult,
-    unsold987FinalResult,
-    unsold992FinalResult,
-    unsold983FinalResult,
-    unsold985FinalResult,
-    unsold986FinalResult,
-    unsold982FinalResult,
-    unsold984FinalResult,
-    unsold98FinalResult,
+    new993FinalResult: incomeDeductionDetails.new993Detail,
+    new99FinalResult: incomeDeductionDetails.new99Detail,
+    unsold988FinalResult: incomeDeductionDetails.unsold988Detail,
+    unsold987FinalResult: incomeDeductionDetails.unsold987Detail,
+    unsold992FinalResult: incomeDeductionDetails.unsold992Detail,
+    unsold983FinalResult: incomeDeductionDetails.unsold983Detail,
+    unsold985FinalResult: incomeDeductionDetails.unsold985Detail,
+    unsold986FinalResult: incomeDeductionDetails.unsold986Detail,
+    unsold982FinalResult: incomeDeductionDetails.unsold982Detail,
+    unsold984FinalResult: incomeDeductionDetails.unsold984Detail,
+    unsold98FinalResult: incomeDeductionDetails.unsold98Detail,
     ruralSurtax993,
     // [echo] 농특세 **총액**(993 + 하이브리드 + 세액감면형). 종전에는 세액감면형이
     // 어느 detail에도 실리지 않아 표시부가 재구성할 수 없었다 — `totalTax`에는 이미 들어 있다.

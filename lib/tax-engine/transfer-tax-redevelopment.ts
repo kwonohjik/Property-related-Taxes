@@ -31,7 +31,11 @@ import { resolveRightTable2Clause, rightTable2Notices } from "./redevelopment-ri
 import { calcTax, calcReductions } from "./transfer-tax-rate-calc";
 import { expropriationAcquisitionDate } from "./public-expropriation-reduction";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
-import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
+import { resolveTaxCreditRuralSurtax } from "./transfer-tax-rural-surtax";
+import { pickIncomeDeductionDetails } from "./transfer-tax-income-deduction-details";
+import { selectActiveIncomeDeduction } from "./transfer-tax-income-deduction-details";
+import { applyIncomeDeductionSurtax } from "./transfer-tax-income-deduction-details";
+import { mergeHybridTaxDetail } from "./transfer-tax-income-deduction-details";
 import {
   resolveIncomeDeduction,
   buildIncomeDeductionStep,
@@ -357,22 +361,12 @@ export function calculateRedevelopmentTax(
    * ⚠️ Step C.5만 배선하고 이 블록을 빠뜨리면 **차감은 되는데 농특세만 0**이 된다 —
    *    감면 소실을 고치면서 새 과소과세를 만드는 셈이다.
    */
+  // 상세 확정은 정상 경로와 같은 leaf다(`transfer-tax-income-deduction-details.ts`) — 종전에는 금액만 구하고 상세를 싣지 않아
+  // 함께 양도 합산이 §166 자산의 차감형 감면을 0으로 봤다(계획서 `redev-income-deduction-detail-echo.plan.md`).
+  let incomeDeductionDetails = pickIncomeDeductionDetails(incomeDeduction);
   let ruralSurtax993 = 0;
-  if (incomeDeduction.appliedId) {
-    const activePrelim =
-      incomeDeduction.new993Detail ??
-      incomeDeduction.new99Detail ??
-      incomeDeduction.unsold988Detail ??
-      incomeDeduction.unsold987Detail ??
-      incomeDeduction.unsold992Detail ??
-      incomeDeduction.unsold983Detail ??
-      incomeDeduction.unsold985Detail ??
-      incomeDeduction.unsold986Detail;
-    // 농특세 비과세 (농특세령 §4⑦1호 — §98의3·§98의5): 차감 효과는 유지하고 농특세만 0.
-    const isSurtaxExempt =
-      activePrelim !== undefined &&
-      "ruralSurtaxExempt" in activePrelim &&
-      activePrelim.ruralSurtaxExempt === true;
+  const activeIncomeDeduction = selectActiveIncomeDeduction(incomeDeductionDetails);
+  if (activeIncomeDeduction) {
     const taxBaseBefore993 = Math.max(0, transferIncomeBefore993 - basicDeduction);
     const taxResultBefore993 = calcTax(
       taxBaseBefore993,
@@ -380,8 +374,12 @@ export function calculateRedevelopmentTax(
       taxRateInput,
       multiHouseSurchargeResult,
     );
-    const taxReduction993 = Math.max(0, taxResultBefore993.calculatedTax - taxResult.calculatedTax);
-    ruralSurtax993 = isSurtaxExempt ? 0 : applyRate(taxReduction993, 0.2);
+    const surtax = applyIncomeDeductionSurtax(incomeDeductionDetails, activeIncomeDeduction, {
+      before: taxResultBefore993.calculatedTax,
+      after: taxResult.calculatedTax,
+    });
+    incomeDeductionDetails = surtax.details;
+    ruralSurtax993 = surtax.ruralSurtax;
     if (ruralSurtax993 > 0) {
       steps.push({
         label: "차감형 감면 농어촌특별세 (감면세액 × 20%)",
@@ -413,6 +411,7 @@ export function calculateRedevelopmentTax(
     replacementLandDetail,
     selfFarmingReductionDetail,
     rental97TaxDetail,
+    hybridTaxDetail,
   } = calcReductions(
     taxResult.calculatedTax,
     input.reductions,
@@ -466,16 +465,24 @@ export function calculateRedevelopmentTax(
    * (법 근거 없는 불리 적용 금지).
    */
   let ruralSurtax = 0;
+  // 하이브리드 판정·§98의3·§98의5 비과세(농특세령 §4⑦1호)·상세 합치기는 정상 경로와 같은 leaf다 — 종전에는 비과세 판정 없이 20%를 부과했다.
+  const hybridSurtax = mergeHybridTaxDetail(incomeDeductionDetails, {
+    reductionTypeApplied,
+    cappedReductionAmount,
+    hybridTaxDetail,
+  });
+  incomeDeductionDetails = hybridSurtax.details;
   if (reductionTypeApplied !== undefined && cappedReductionAmount > 0) {
-    const isHybrid = HYBRID_ARTICLE[reductionTypeApplied] !== undefined;
-    if (isHybrid) {
-      ruralSurtax = applyRate(cappedReductionAmount, 0.2);
-      steps.push({
-        label: `${HYBRID_ARTICLE[reductionTypeApplied]} 농어촌특별세 (감면세액 × 20%)`,
-        formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtax.toLocaleString()}`,
-        amount: ruralSurtax,
-        legalBasis: "농어촌특별세법 §5①1호",
-      });
+    if (hybridSurtax.applies) {
+      ruralSurtax = hybridSurtax.ruralSurtax;
+      if (!hybridSurtax.isExempt) {
+        steps.push({
+          label: `${hybridSurtax.articleLabel} 농어촌특별세 (감면세액 × 20%)`,
+          formula: `감면세액 ${cappedReductionAmount.toLocaleString()} × 20% = ${ruralSurtax.toLocaleString()}`,
+          amount: ruralSurtax,
+          legalBasis: "농어촌특별세법 §5①1호",
+        });
+      }
     } else {
       const verdict = resolveTaxCreditRuralSurtax({
         reductionTypeApplied,
@@ -709,6 +716,9 @@ export function calculateRedevelopmentTax(
     steps,
     // 재개발 상세 부착
     redevelopmentDetail: redevAfterRight,
+    // 감면 상세 11종 — 정상 경로(`transfer-tax-normal-return.ts`)와 같은 키. 함께 양도 합산의 차감액(`incomeDeductionReducibleOf`)과
+    // 결과 화면 신고서·상세명세서의 감면대상 소득금액(`reduction-eligible-income.ts`)이 여기서 읽는다.
+    ...incomeDeductionDetails,
   };
 }
 
