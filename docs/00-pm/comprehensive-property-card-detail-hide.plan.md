@@ -1,6 +1,6 @@
 # 종부세 주택 카드 — 상세주소 칸 숨김(한 글자씩 입력 결함 · #2343 회귀) — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Do 진행 — Q-1 권고안 a(2026-10-21 사용자 결정)** · 워크트리 `../Property-related-Taxes-pcin` · 브랜치 `docs/property-card-detail-hide-plan`
+> 작성 2026-10-21 · 상태 **Do 완료 — Q-1 권고안 a(2026-10-21). 구현 PR #2347(머지 대기) · 결과는 「Do 결과」** · 워크트리 `../Property-related-Taxes-pcin` · 브랜치 `docs/property-card-detail-hide-plan`
 > 기준 master `50c759cfd`. 줄 번호는 모두 이 커밋 기준이다.
 > 출처: `comprehensive-property-card-dongho.plan.md`(#2342·#2343) 뒤 「확인 필요」로 남긴 항목. 그 계획의 Q-1 b(상세주소 칸 숨김)를 **새 실측으로 다시 권고**한다.
 > 실측 spec은 커밋하지 않았다. 주소 검색·공시가격은 `page.route`로 고정했다.
@@ -85,3 +85,11 @@
 
 - 취득·재산세 1단계·임대주택 카드의 상세주소 칸이 입력을 저장하지 않는 것(`detail: ""` 고정 — `address-dongho-other-calcs-and-multi-gate.plan.md` 범위 밖 항목과 같다)
 - §0의 「공시가격 없음」 실패는 `route.ts` 코드 기준이다. 실제 API로는 재지 않았다
+
+## Do 결과 (2026-10-21) — PR #2347(`fix/property-card-detail-hide`)
+
+- R1: `AddressSearch` `hideDetailInput`(기본 `false`) · `PropertyCardEditor`만 켬
+- R2: 남는 `onChange` 경로 9호출(주소 선택·세대 없는 주소 선택·「입력한 주소 그대로」·동 선택·호 선택·동 바꾸기·지우기·단동 호 선택)에서 종전 파싱과 `v.dong ?? ""`·`v.ho ?? ""`가 모두 같음을 실측 → 파싱 제거
+- 회귀 spec: H-1·H-2 신규, K-5 파싱 단언 제거(K-3은 H-2로 대체). 뮤테이션 2건(숨김 조건 제거·카드 전달 제거) → 각각 H-1·H-2·K-5 실패
+  - H-2는 처음에 뮤테이션을 통과했다 — 「칸 없음」을 목록 재조회가 끝나기 전(조회 중 표시)에 봐서 단언이 비어 있었다. 조회 중 표시가 사라진 뒤 보도록 고쳤다
+- 종부세·주소 관련 E2E 29 spec 84건 · 다른 호출부 렌더 테스트 6건 · 전체 vitest 3,201파일 · 게이트 4종·typecheck·lint(오류 0) 통과
