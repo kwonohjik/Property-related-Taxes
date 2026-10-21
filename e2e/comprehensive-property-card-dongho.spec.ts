@@ -5,6 +5,7 @@
  * (다시 마운트) 동·호 목록이 사라지고, 상세주소를 고치면 띄어쓰기 파싱이 동·호를 **모두** 비우는 경우가 있었다
  * (칸 비움·단동에서 숫자만·단동 끝 글자 지움). 그 뒤 「공시가격 조회」가 임의 세대 가격을 「조회 성공」으로 채웠다.
  * 계획서 `docs/00-pm/comprehensive-property-card-dongho.plan.md` R1(Q-1 a)
+ * 상세주소 칸 숨김: `docs/00-pm/comprehensive-property-card-detail-hide.plan.md` R1·R2(Q-1 a) — H-1·H-2
  *
  * 공시가격 mock은 `route.ts` `pickUnit` 규칙을 따른다 — 동·호가 없으면 임의 세대, 지정했는데 없으면 「없음」,
  * 끝의 「동」·「호」는 떼고 비교. 임의 세대는 고른 세대와 겹치지 않게 골랐다.
@@ -20,6 +21,8 @@ const MULTI: Unit[] = [
   { dong: "101동", ho: "502", floor: "5", price: 800000000, year: "2024" },
   { dong: "102동", ho: "501", floor: "5", price: 700000000, year: "2024" },
 ];
+/** 고를 세대가 없는 주소(개별주택처럼 동·호가 빈 행) */
+const DETACHED: Unit[] = [{ dong: "", ho: "", floor: "", price: 300000000, year: "2024" }];
 const SINGLE: Unit[] = [
   { dong: "", ho: "1203", floor: "12", price: 600000000, year: "2024" },
   { dong: "", ho: "1204", floor: "12", price: 500000000, year: "2024" },
@@ -84,7 +87,8 @@ async function selectAddress(page: Page, pick?: { dong?: string; ho: string }) {
   await input.press("Enter");
   await page.getByRole("button", { name: new RegExp(`「${JIBUN}」`) }).first().click();
   if (!pick) {
-    await expect(dialog(page).getByText("동 선택").first()).toBeVisible();
+    await expect(dongField(page)).toBeVisible(); // 소재지가 저장돼 별도 동·호 칸이 열렸다
+    await page.waitForTimeout(300); // 세대 목록 조회가 끝나기를 기다린다
     return;
   }
   if (pick.dong) {
@@ -126,25 +130,20 @@ test.describe("종부세 주택 카드 — 다시 열어도 고른 동·호가 �
     expect(r.text).toContain("600,000,000");
   });
 
-  const WIPES = [
-    { name: "단동 · 숫자만 「1204」", units: SINGLE, pick: { ho: "1203" }, input: "1204", keep: ["", "1203"], req: "dong=null ho=1203", price: "600,000,000" },
-    { name: "다동 · 칸 비움", units: MULTI, pick: { dong: "101동", ho: "501" }, input: "", keep: ["101동", "501"], req: "dong=101동 ho=501", price: "900,000,000" },
-  ];
-  for (const w of WIPES) {
-    test(`K-3: 목록을 다시 못 불러와도 상세주소(${w.name})가 동·호를 지우지 않고, 조회가 고른 세대다`, async ({ page }) => {
-      const st = await mock(page, w.units);
-      await selectAddress(page, w.pick);
-      st.listFails = true;
-      await reopenCard(page);
-      await expect(detailField(page)).toBeVisible();
-      await detailField(page).fill(w.input);
-      await expect(dongField(page)).toHaveValue(w.keep[0]);
-      await expect(hoField(page)).toHaveValue(w.keep[1]);
-      const r = await lookup(page, st);
-      expect(r.requests).toEqual([w.req]);
-      expect(r.text).toContain(w.price);
-    });
-  }
+  test("H-2: 목록을 다시 못 불러와도 상세주소 칸이 없고, 저장된 동·호가 그대로이며 조회가 고른 세대다", async ({ page }) => {
+    const st = await mock(page, MULTI);
+    await selectAddress(page, { dong: "101동", ho: "501" });
+    st.listFails = true;
+    await reopenCard(page);
+    await expect.poll(() => st.listCalls).toBeGreaterThan(1); // 다시 불러오려다 실패했다
+    await expect(dialog(page).getByText("동/호수 조회 중...")).toHaveCount(0); // 실패가 반영된 뒤에 본다(조회 중엔 칸이 원래 없다)
+    await expect(detailField(page)).toHaveCount(0);
+    await expect(dongField(page)).toHaveValue("101동");
+    await expect(hoField(page)).toHaveValue("501");
+    const r = await lookup(page, st);
+    expect(r.requests).toEqual(["dong=101동 ho=501"]);
+    expect(r.text).toContain("900,000,000");
+  });
 
   test("K-4: 목록을 다시 못 불러오면 별도 「호수」 칸에서 고친다", async ({ page }) => {
     const st = await mock(page, SINGLE);
@@ -157,16 +156,28 @@ test.describe("종부세 주택 카드 — 다시 열어도 고른 동·호가 �
     expect(r.text).toContain("500,000,000");
   });
 
-  test("K-5 반례: 세대를 고르지 않은 주소는 다시 열어도 목록을 다시 부르지 않고, 상세주소가 종전처럼 동·호로 파싱된다", async ({ page }) => {
+  test("K-5 반례: 세대를 고르지 않은 주소는 다시 열어도 목록을 다시 부르지 않는다", async ({ page }) => {
     const st = await mock(page, MULTI);
     await selectAddress(page);
     const before = st.listCalls;
     await reopenCard(page);
-    await expect(detailField(page)).toBeVisible();
+    await expect(dongField(page)).toBeVisible();
     await page.waitForTimeout(500);
     expect(st.listCalls).toBe(before);
-    await detailField(page).fill("101동 501");
+    await expect(detailField(page)).toHaveCount(0);
+  });
+
+  test("H-1: 세대가 없는 주소는 상세주소 칸이 없고, 별도 「동」·「호수」 칸에 한 글자씩 친 값이 그대로 남는다", async ({ page }) => {
+    // 종전엔 상세주소 칸이 저장된 동·호의 합성이라, 한 글자씩 치면 「동」·「호」 앞 숫자가 사라지고
+    // 동이 저장된 뒤엔 칸이 「동」에서 멈췄다(계획서 comprehensive-property-card-detail-hide.plan.md §0)
+    const st = await mock(page, DETACHED);
+    await selectAddress(page);
+    await expect(detailField(page)).toHaveCount(0);
+    await dongField(page).pressSequentially("101동");
+    await hoField(page).pressSequentially("501");
     await expect(dongField(page)).toHaveValue("101동");
     await expect(hoField(page)).toHaveValue("501");
+    const r = await lookup(page, st);
+    expect(r.requests).toEqual(["dong=101동 ho=501"]);
   });
 });
