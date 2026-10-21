@@ -187,7 +187,7 @@ jobs:
       - name: Test 샤드 ${{ matrix.shard }}/4 (전체 중)
         run: npx vitest run --shard=${{ matrix.shard }}/4
 
-  # ── job 2: E2E (4샤드 병렬) ─────────────────────────────────────────────
+  # ── job 2: E2E (12샤드 병렬) ────────────────────────────────────────────
   #
   # **E2E는 종전에 어느 자동 게이트에도 없었다.** pre-push도 CI도 vitest만 돌렸다.
   # 그래서 PR#1008이 `gift-deemed-capital-increase.spec.ts`를 조용히 무력화시킨 것을
@@ -198,7 +198,7 @@ jobs:
   # `check`를 기다리지 않는다(`needs` 없음) — 병렬이라야 벽시계가 줄고, public 저장소는
   # Actions 분이 무료라 "typecheck가 깨졌을 때 낭비되는 E2E 분"이 비용이 아니다.
   e2e:
-    name: E2E (${{ matrix.shard }}/6)
+    name: E2E (${{ matrix.shard }}/12)
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     # 실측 역산: 894건을 2 worker로 전건 ~29분 → 4샤드면 샤드당 ~7분 + 준비 2분 ≈ 9분.
@@ -211,15 +211,25 @@ jobs:
     #    같은 샤드를 로컬에서 fresh 서버 + `CI=1` + 2 worker로 돌리면 전건 통과한다(17.5초).
     #    ⇒ 샤드당 부하를 낮춰 완주시키고, 그래도 실패하면 **실제 오류와 trace**를 얻는다.
     #    public 저장소라 Actions 분은 무료이므로 비용은 벽시계뿐이고, 샤드가 늘면 오히려 준다.
+    #
+    # 🔴 **6→12 샤드 (2026-10-21).** 테스트가 894건 → 2574건(2.9배)으로 늘면서 샤드당
+    #    580~982초가 되어 CI 전체 시간(17~18분)을 이 job이 결정했다(run 39551558331 ·
+    #    39544119499 · 39538225650 · 39560233930 2회). 느린 테스트가 있어서가 아니다 — 샤드 1의
+    #    429건이 평균 약 4초로 고르고 10초 넘는 건은 3건뿐이었다. 그러니 나누는 수밖에 없다.
+    #    샤드마다 준비(checkout·npm ci·브라우저 설치·dev 서버)에 약 75초가 고정으로 들어,
+    #    샤드를 늘려도 그 아래로는 줄지 않는다.
+    #    ⚠️ 무료 플랜 동시 job 상한은 20이다. PR 1건이 check 1 + test 4 + e2e 12 = 17 job이라
+    #       PR 두 건이 동시에 돌면 일부가 대기한다.
+    #    ✅ 12샤드 합집합 2574건 = `CI=1 --list` 전건, 중복 0·누락 0(샤드당 214~215건).
     timeout-minutes: 25
     strategy:
       # 한 샤드가 깨져도 나머지를 끝까지 돌린다 — 실패가 한 샤드에 몰렸는지 전반적인지가
       # 원인 판단을 가른다. fail-fast면 그 구분이 사라진다.
       fail-fast: false
       matrix:
-        # ⚠️ 샤드 수를 바꾸면 아래 `--shard=N/6`의 분모도 함께 바꿔야 한다.
+        # ⚠️ 샤드 수를 바꾸면 아래 `--shard=N/12`의 분모도 함께 바꿔야 한다.
         #    어긋나면 일부 테스트가 어느 샤드에도 안 들어가 **조용히 실행되지 않는다**.
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - uses: actions/checkout@v4
 
@@ -245,8 +255,8 @@ jobs:
       #
       # `blob` 리포터는 샤드별 부분 결과를 낸다 — 아래 `e2e-report` job이 HTML 하나로 합친다.
       # (config의 html 리포터를 CLI로 덮어쓴다. 샤드마다 별도 HTML을 내면 합칠 수 없다.)
-      - name: E2E 샤드 ${{ matrix.shard }}/6 (알려진 사전존재 실패 제외)
-        run: npx playwright test --shard=${{ matrix.shard }}/6 --reporter=list,blob
+      - name: E2E 샤드 ${{ matrix.shard }}/12 (알려진 사전존재 실패 제외)
+        run: npx playwright test --shard=${{ matrix.shard }}/12 --reporter=list,blob
         env:
           # 🔑 `e2e/law-*.spec.ts` 16 spec 중 **조문 본문을 단언하는 5건**
           # (POPUP-1·HTML-1·TBL-1·CITE-1·IMP-1)은 2026-08-06부터 **fixture mock**이라
