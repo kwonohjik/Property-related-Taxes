@@ -19,6 +19,7 @@ import {
   table2HoldingOnlyRate,
 } from "./data/lthd-table2-era";
 import { multiplyByArea } from "./area-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import type {
   MixedPartLthd,
   MixedPartLthdEcho,
@@ -316,8 +317,9 @@ export function resolveHousingInheritedAcqPhd(
 
   // 토지/건물 분리 — PHD 내부 취득시 미스케일 비율(landHousingAtAcquisition/P_A_est) 재사용.
   // phd.landHousingAtAcquisition + phd.buildingHousingAtAcquisition === P_A_est 항상 성립(Step5).
-  const landRatio = stdCandidate > 0 ? phd.landHousingAtAcquisition / stdCandidate : 0.5;
-  const landAcqPrice = Math.floor(estimatedAcq * landRatio);
+  // 비율은 분자·분모 쌍으로 둔다(`금액 × (분자 ÷ 분모)`는 참값이 정수일 때 1원 과소). 분모가 없으면 균등 1/2(도달 불가 방어선).
+  const landBasis = stdCandidate > 0 ? { n: phd.landHousingAtAcquisition, d: stdCandidate } : { n: 1, d: 2 };
+  const landAcqPrice = safeMultiplyThenDivide(estimatedAcq, landBasis.n, landBasis.d);
   const buildingAcqPrice = estimatedAcq - landAcqPrice;
 
   return {

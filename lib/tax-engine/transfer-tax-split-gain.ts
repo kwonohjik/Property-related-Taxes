@@ -185,7 +185,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   } = resolveTransferPriceSplit(input);
 
   // ②-0 취득 당시 계약서 토지·건물 구분금액(#17-6) — 있으면 §100③ 판정 후 계약서 구분금액 또는 안분 가액. 없으면 입력 그대로(미입력 불변).
-  const acqContract = resolveHousingExcessAcqContract(input, earlyLandMode, earlyBuildingMode, landRatio);
+  const acqContract = resolveHousingExcessAcqContract(input, earlyLandMode, earlyBuildingMode, ratio);
 
   // ② 취득가액 분리 (파트별 독립 4-way — 환산 모드 시 토지분 §164⑨1호 특례 산출근거 동반)
   const {
@@ -204,7 +204,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     buildingTransferPrice,
     landStdAtAcq,
     buildingStdAtAcq,
-    landRatio,
+    ratio,
     acqStd?.stdSplit,
   );
 
@@ -220,7 +220,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   //    (input.*DirectExpenses !== undefined)을 직접 보므로 여기 결과에서 파생시키면 안 된다.
   const { land: landCapex, building: buildingCapex } =
     totalExpenses > 0
-      ? splitPair(totalExpenses, input.landDirectExpenses, input.buildingDirectExpenses, landRatio, "자본적지출")
+      ? splitPair(totalExpenses, input.landDirectExpenses, input.buildingDirectExpenses, ratio, "자본적지출")
       : { land: input.landDirectExpenses ?? 0, building: input.buildingDirectExpenses ?? 0 };
 
   /**

@@ -27,6 +27,7 @@
 import { estimatedDeductionRate } from "./legal-codes";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult } from "./types/transfer.types";
 import { computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 
 /**
  * 개별주택가격 미공시 취득 환산취득가 계산
@@ -106,26 +107,26 @@ export function calcPreHousingDisclosureGain(
 
   // ── Step 2: P_A_est — 취득시 개별주택가격 추정 (§164⑦ 본문) ──
   const P_A_est = sumAtFirstDisclosure > 0
-    ? Math.floor(firstDisclosureHousingPrice * sumAtAcquisition / sumAtFirstDisclosure)
+    ? safeMultiplyThenDivide(firstDisclosureHousingPrice, sumAtAcquisition, sumAtFirstDisclosure)
     : 0;
 
   const P_T = transferHousingPrice;
 
   // ── Step 3: 주택 공시가액 안분 — 양도시 (§166⑥) ──
   const landHousingAtTransfer = sumAtTransfer > 0
-    ? Math.floor(P_T * landStdAtTransfer / sumAtTransfer)
+    ? safeMultiplyThenDivide(P_T, landStdAtTransfer, sumAtTransfer)
     : 0;
   const buildingHousingAtTransfer = P_T - landHousingAtTransfer;
 
   // ── Step 4: 양도가액 분리 ──
   const landTransferPrice = P_T > 0
-    ? Math.floor(totalTransferPrice * landHousingAtTransfer / P_T)
+    ? safeMultiplyThenDivide(totalTransferPrice, landHousingAtTransfer, P_T)
     : 0;
   const buildingTransferPrice = totalTransferPrice - landTransferPrice;
 
   // ── Step 5: 주택 공시가액 안분 — 취득시 ──
   const landHousingAtAcquisition = P_A_est > 0 && sumAtAcquisition > 0
-    ? Math.floor(P_A_est * landStdAtAcquisition / sumAtAcquisition)
+    ? safeMultiplyThenDivide(P_A_est, landStdAtAcquisition, sumAtAcquisition)
     : 0;
   const buildingHousingAtAcquisition = P_A_est - landHousingAtAcquisition;
 
@@ -137,11 +138,11 @@ export function calcPreHousingDisclosureGain(
       ? conversionDenominatorOverride
       : P_T;
   const totalEstimatedAcquisitionPrice = P_T_conv > 0
-    ? Math.floor(totalTransferPrice * P_A_est / P_T_conv)
+    ? safeMultiplyThenDivide(totalTransferPrice, P_A_est, P_T_conv)
     : 0;
 
   const landAcquisitionPrice = P_A_est > 0
-    ? Math.floor(totalEstimatedAcquisitionPrice * landHousingAtAcquisition / P_A_est)
+    ? safeMultiplyThenDivide(totalEstimatedAcquisitionPrice, landHousingAtAcquisition, P_A_est)
     : 0;
   const buildingAcquisitionPrice = totalEstimatedAcquisitionPrice - landAcquisitionPrice;
 
@@ -220,7 +221,7 @@ export function calcPreHousingDisclosureGain(
     // 양도시 주택공시가 안분 (D34/E34) — 주택건물·주택분토지 비율로 P_T 분리
     const sumHousingAtTransfer = housingLandStdAtTransfer + housingBuildingStdAtTransfer;
     const housingLandStdShare = sumHousingAtTransfer > 0
-      ? Math.floor(transferHousingPrice * housingLandStdAtTransfer / sumHousingAtTransfer)
+      ? safeMultiplyThenDivide(transferHousingPrice, housingLandStdAtTransfer, sumHousingAtTransfer)
       : 0;
     const housingBuildingStdShare = transferHousingPrice - housingLandStdShare;
     // 양도시 안분 후 4부분 합계 (H34) = D34 + E34 + F40 + G40
@@ -229,25 +230,25 @@ export function calcPreHousingDisclosureGain(
     // 양도가액 4부분 안분 (Row 10) — 총 양도가액 × (각 부분 / H34)
     const totalTransfer4 = totalTransferPriceForFourPart!;
     const housingLandTransferPrice = sumAtTransferShare > 0
-      ? Math.floor(totalTransfer4 * housingLandStdShare / sumAtTransferShare) : 0;
+      ? safeMultiplyThenDivide(totalTransfer4, housingLandStdShare, sumAtTransferShare) : 0;
     const housingBuildingTransferPrice = sumAtTransferShare > 0
-      ? Math.floor(totalTransfer4 * housingBuildingStdShare / sumAtTransferShare) : 0;
+      ? safeMultiplyThenDivide(totalTransfer4, housingBuildingStdShare, sumAtTransferShare) : 0;
     const commercialLandTransferPrice = sumAtTransferShare > 0
-      ? Math.floor(totalTransfer4 * commercialLandStdAtTransfer / sumAtTransferShare) : 0;
+      ? safeMultiplyThenDivide(totalTransfer4, commercialLandStdAtTransfer, sumAtTransferShare) : 0;
     const commercialBuildingTransferPrice = totalTransfer4 - housingLandTransferPrice - housingBuildingTransferPrice - commercialLandTransferPrice;
 
     // 환산취득가액 (C11) = INT(C10 × C35 / H34) — C35 = P_A_est, H34 = sumAtTransferShare
     const totalEstAcq = sumAtTransferShare > 0
-      ? Math.floor(totalTransfer4 * P_A_est / sumAtTransferShare)
+      ? safeMultiplyThenDivide(totalTransfer4, P_A_est, sumAtTransferShare)
       : 0;
 
     // 취득시 4부분 P_A_est 안분 (Row 35, D35~G35) — 개산공제 base
     const housingLandAcqShare = sumAtAcq4 > 0
-      ? Math.floor(P_A_est * housingLandStdAtAcq / sumAtAcq4) : 0;
+      ? safeMultiplyThenDivide(P_A_est, housingLandStdAtAcq, sumAtAcq4) : 0;
     const housingBuildingAcqShare = sumAtAcq4 > 0
-      ? Math.floor(P_A_est * housingBuildingStdAtAcq / sumAtAcq4) : 0;
+      ? safeMultiplyThenDivide(P_A_est, housingBuildingStdAtAcq, sumAtAcq4) : 0;
     const commercialLandAcqShare = sumAtAcq4 > 0
-      ? Math.floor(P_A_est * commercialLandStdAtAcq / sumAtAcq4) : 0;
+      ? safeMultiplyThenDivide(P_A_est, commercialLandStdAtAcq, sumAtAcq4) : 0;
     const commercialBuildingAcqShare = P_A_est - housingLandAcqShare - housingBuildingAcqShare - commercialLandAcqShare;
 
     // 환산취득가액 4부분 안분 (Row 11, D11~G11) — Excel: 소수 보존 후 마지막 G11에서 잔여 처리

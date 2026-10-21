@@ -10,6 +10,7 @@
  */
 
 import { calculateHoldingPeriod, computeLumpSumDeductionBase } from "./tax-utils";
+import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
   assertCarryoverDonorBasis,
@@ -186,7 +187,7 @@ export function calcCarryoverScenarios(
       const stdAtAcq = rawInput.standardPriceAtAcquisition ?? 0;
       const stdAtTransfer = rawInput.standardPriceAtTransfer ?? 1;
       donorAcqPrice = stdAtTransfer > 0
-        ? Math.floor(rawInput.transferPrice * stdAtAcq / stdAtTransfer)
+        ? calculateEstimatedAcquisitionPrice(rawInput.transferPrice, stdAtAcq, stdAtTransfer)
         : 0;
       echoStdAtAcq = rawInput.standardPriceAtAcquisition;
       echoStdAtTransfer = rawInput.standardPriceAtTransfer;

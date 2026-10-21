@@ -8,6 +8,7 @@ import type { TransferAPIResult } from "@/lib/calc/transfer-tax-api";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { deriveRightValuationTotal } from "@/lib/calc/burdened-gift-right-valuation";
 import { calculateEstimatedAcquisitionPrice } from "@/lib/tax-engine/tax-utils";
+import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { computeTransferPerAssetSummary } from "./transfer-per-asset-summary";
 import { migrateLegacyForm, migrateGracePeriod } from "./calc-wizard-migration";
 import {
@@ -465,8 +466,7 @@ export function computeTransferSummary(
     let housingTransferPrice: number | null = null;
     let commercialTransferPrice: number | null = null;
     if (totalStd > 0 && transferPrice > 0) {
-      const ratio = housingStdPrice / totalStd;
-      housingTransferPrice = Math.floor(transferPrice * ratio);
+      housingTransferPrice = safeMultiplyThenDivide(transferPrice, housingStdPrice, totalStd);
       commercialTransferPrice = transferPrice - housingTransferPrice;
     }
 

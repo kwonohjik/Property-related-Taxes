@@ -4,6 +4,7 @@
  * (memory `feedback_800line_split_export_preservation`).
  */
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcPreHousingDisclosureGain } from "./transfer-tax-pre-housing-disclosure";
 import {
   applyExprTotalDenominator,
@@ -217,8 +218,10 @@ export function calcHousingEstimatedAcq(
     const acqLandPerSqm = asset.acquisitionStandardPrice.landPricePerSqm;
     const acqCommTotal = acqCommBuilding + multiplyByArea(acqLandPerSqm, asset.totalLandArea);
     const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
-    const housRatio = totalFloor > 0 ? asset.residentialFloorArea / totalFloor : 0;
-    stdAtAcq = Math.floor(acqCommTotal * housRatio);
+    // 면적 비율은 0.01㎡ 정수(`round2` 규약과 같은 단위)로 올려 분자·분모로 나눈다 — 소수 면적을 두 번 나누면 오차가 쌓여 참값이 정수일 때 1원 과소가 난다.
+    stdAtAcq = totalFloor > 0
+      ? safeMultiplyThenDivide(acqCommTotal, Math.round(asset.residentialFloorArea * 100), Math.round(totalFloor * 100))
+      : 0;
     if (stdAtAcq === 0) {
       throw new Error(
         "용도변경(상가→주택): 취득시 상가 기준시가(건물+토지)가 0이거나 미입력. " +

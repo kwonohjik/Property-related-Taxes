@@ -14,6 +14,7 @@ import { buildingDirectShare, isConversionAcq, perPartEstimatedAcq } from "./mix
 import type { MixedSalePart } from "./mixed-use-sale-split";
 import { estimatedDeductionRate } from "./legal-codes";
 import { calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { buildHousingGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
 import { splitDeemedExpense, resolvePartNecessaryExpense } from "./transfer-tax-mixed-use-inheritance";
 import { inheritedCapexStdOverride } from "./transfer-tax-mixed-use-inheritance";
@@ -304,8 +305,10 @@ export function calcHousingGainSplit(
     // 분필·합필·도로편입 시에는 사용자가 partialChangeAcqResidentialArea로 보정 가능
     const acqCommTotal = acqCommBuilding + multiplyByArea(acqLandPerSqm, asset.totalLandArea);
     const totalFloor = asset.residentialFloorArea + asset.nonResidentialFloorArea;
-    const housRatio = totalFloor > 0 ? asset.residentialFloorArea / totalFloor : 0;
-    const acqHousingTotal = Math.floor(acqCommTotal * housRatio);
+    // 면적 비율은 0.01㎡ 정수(`round2` 규약과 같은 단위)로 올려 분자·분모로 나눈다 — 소수 면적을 두 번 나누면 오차가 쌓여 참값이 정수일 때 1원 과소가 난다.
+    const acqHousingTotal = totalFloor > 0
+      ? safeMultiplyThenDivide(acqCommTotal, Math.round(asset.residentialFloorArea * 100), Math.round(totalFloor * 100))
+      : 0;
 
     if (acqHousingTotal === 0) {
       throw new Error(
@@ -399,11 +402,13 @@ export function calcHousingGainSplit(
   }
 
   const acqTotal = acqLandStd + acqBuildingStd;
-  const acqLandRatio = acqTotal > 0 ? acqLandStd / acqTotal : 0.5;
-  const transferLandRatio = transferTotal > 0 ? transferLandStd / transferTotal : acqLandRatio;
+  // 비율은 분자·분모 쌍으로 둔다 — `금액 × (분자 ÷ 분모)`는 참값이 정수일 때 1원 과소가 난다(계획서 estimated-acquisition-float-precision §6.1).
+  // 취득시 합계가 없으면 균등 1/2(도달 불가 방어선), 양도시 합계가 없으면 취득시 쌍으로 후퇴한다 — 종전 값과 같다.
+  const acqBasis = acqTotal > 0 ? { n: acqLandStd, d: acqTotal } : { n: 1, d: 2 };
+  const transferBasis = transferTotal > 0 ? { n: transferLandStd, d: transferTotal } : acqBasis;
 
   // 양도가액 안분 — 양도시 비율 (새 안분이면 주입값)
-  const landTransferPrice = salePart ? salePart.land : Math.floor(housingTransferPrice * transferLandRatio);
+  const landTransferPrice = salePart ? salePart.land : safeMultiplyThenDivide(housingTransferPrice, transferBasis.n, transferBasis.d);
   const buildingTransferPrice = salePart ? salePart.building : housingTransferPrice - landTransferPrice;
 
   // 취득가액 안분 — 취득시 비율.
@@ -412,7 +417,7 @@ export function calcHousingGainSplit(
   const perPart = salePart && isConversionAcq(asset)
     ? perPartEstimatedAcq(salePart, { acqLandStd, acqBuildingStd, transferLandStd, transferBuildingStd })
     : undefined;
-  const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : Math.floor(housingEstimatedAcq * acqLandRatio);
+  const landAcqPrice = swapToDirect ? 0 : perPart ? perPart.land : safeMultiplyThenDivide(housingEstimatedAcq, acqBasis.n, acqBasis.d);
   const buildingAcqPrice = swapToDirect ? 0 : perPart ? perPart.building : housingEstimatedAcq - landAcqPrice;
 
   // 개산공제(§163⑥, 취득시 기준시가 × 3%). 상속·증여(§163⑨)·매매실가는 미적용 —
