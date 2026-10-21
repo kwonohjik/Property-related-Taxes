@@ -7,6 +7,7 @@
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import { summarizeSplitGain, sumSplitLthdAmounts } from "./transfer-tax-split-display";
 import { LTHD_HOLDING_STEP_LABEL, LTHD_RESIDENCE_STEP_LABEL } from "./transfer-tax-lthd-steps";
+import { redevFilingTotals } from "./redev-acquisition-inverse";
 
 /**
  * **[표시 전용]** 배우자등 이월과세(§97의2) 자산의 「취득가액 열」 정본 —
@@ -115,12 +116,29 @@ export function resolveDisplayAcquisitionAndExpense(r: {
    *    ⚠️ **표시 전용 echo다** — 세액은 `r.result`·`taxBaseShare` 축이 낸다(불변).
    */
   const adoptedCarryover = adoptedCarryoverAcquisitionPrice(r.result.carryoverTaxationDetail);
+  /**
+   * 🔴 **재개발·재건축(§166) 자산은 단건 신고서와 같은 역산 leaf**(`redevFilingTotals`)를 쓴다 (2026-10-21).
+   *
+   *    아래 일반 축은 §166을 모른다 — 환산이면 §166 결과에 `estimatedBase`가 없어 **화면에 없는 일반 기준시가 칸**으로
+   *    재환산하고(빈 값 0 · 옛 값이면 그 비율), 실가면 `singleInput.acquisitionPrice`(종전 취득가액만 — 납부 청산금 제외)를 읽는다.
+   *    필요경비는 그 값에서 역산되므로 함께 틀렸다. 실측(원조합원 입주권 양도 1,000,000,000 · 함께 양도 · 세액 불변):
+   *      환산 취득 0 · 경비 403,000,000(옛 값이면 200,000,000 · 203,000,000) / 실가 400,000,000 · 100,000,000
+   *      ⇒ 단건 신고서 400,000,000 · 3,000,000 / 500,000,000 · 0.
+   *    전액 비과세도 같은 leaf다 — 마스킹 전 분기 차익을 leaf가 읽는다(`redevBranchGrossGain`).
+   *    청산금 수령 동시신고면 신고 단위 양도가액(폼값 + 청산금)도 leaf 값이다 — 같은 줄의 항등식을 위해.
+   */
+  const redevTotals =
+    adoptedCarryover === undefined && r.result.redevelopmentDetail
+      ? redevFilingTotals(r.result.redevelopmentDetail, r.singleInput.transferPrice)
+      : undefined;
   // split 정본 합 — 이월과세 채택이 없을 때만(위 위계). 소비처는 이 값을 취득가액 칸으로 읽는다.
   const splitSummary =
     adoptedCarryover === undefined && r.result.splitDetail ? summarizeSplitGain(r.result.splitDetail) : undefined;
   const effectiveAcquisitionPrice =
     adoptedCarryover ??
-    (splitSummary
+    (redevTotals
+      ? redevTotals.acquisition
+      : splitSummary
       ? splitSummary.acquisitionDeducted
       : r.result.swapApplied
       ? 0
@@ -139,7 +157,9 @@ export function resolveDisplayAcquisitionAndExpense(r: {
   //
   // split: 역산하지 않고 파트 정의 그대로(직접경비 + 개산공제 합)를 쓴다 — 소유자 분리에서 역산은 일괄 총액 양도가액의
   // 비소유 파트분을 필요경비로 섞는다. 소유 파트 둘 다면 역산값과 같다(`양도가 − 취득가 − 필요경비 = 양도차익` 항등식).
-  const effectiveNecessaryExpense = splitSummary
+  const effectiveNecessaryExpense = redevTotals
+    ? redevTotals.expenses
+    : splitSummary
     ? splitSummary.necessaryExpense
     : r.result.isExempt
     ? Math.max(0, r.singleInput.transferPrice - effectiveAcquisitionPrice - (r.result.exemptGrossGain ?? 0))
@@ -155,7 +175,11 @@ export function resolveDisplayAcquisitionAndExpense(r: {
    * 이 값을 읽는 곳은 전부 표시다 — 합산 요약 카드·합산 신고서·명세서·건별 신고서·PDF. 세액 경로
    * (`taxableAfterReduction`·`groupTaxes`·12억 판정)는 `r.singleInput`·`r.result`를 직접 읽고 이 필드를 읽지 않는다.
    */
-  const effectiveTransferPrice = splitSummary ? splitSummary.transferPrice : r.singleInput.transferPrice;
+  const effectiveTransferPrice = redevTotals
+    ? redevTotals.transferPrice
+    : splitSummary
+    ? splitSummary.transferPrice
+    : r.singleInput.transferPrice;
   return {
     transferPrice: effectiveTransferPrice,
     acquisitionPrice: effectiveAcquisitionPrice,
