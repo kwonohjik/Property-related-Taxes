@@ -200,31 +200,7 @@ describe("BD-13 · B>C — ⑫ refine 400 유지 (종전 max(1) 위반과 같은
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-describe("BD-14 · 구필드 burdenedGiftDebtRatio — 폐지, 수신 시 400 명시 거절 (침묵 strip 금지)", () => {
-  const legacy = () => {
-    const body = { ...bodyOf(listedEstimated(110_000_000, 14_000_000, 1000, 55_000, 100_000)) };
-    delete body.burdenedGiftValuationAmount;
-    body.burdenedGiftDebtRatio = 14_000_000 / 110_000_000;
-    return body;
-  };
-
-  it("🔴 Zod 실패 + 사유가 구필드 키에 달린다", () => {
-    const out = runBody(legacy());
-    expect(out.ok).toBe(false);
-    if (out.ok) return;
-    const issue = out.issues.find((i) => i.path.join(".") === "burdenedGiftDebtRatio");
-    expect(issue).toBeDefined();
-    expect(issue?.message).toContain("burdenedGiftValuationAmount");
-  });
-  it("🔴 라우트 단건 POST 400", async () => {
-    const { status, json } = await postRoute(legacy());
-    expect(status).toBe(400);
-    expect(json.error).toBe("Validation failed");
-  });
-  it("🔴 라우트 합산 POST 400 (items 안의 구필드도 거절)", async () => {
-    const { status } = await postRoute({ items: [legacy()], deductionMode: "aggregate" });
-    expect(status).toBe(400);
-  });
+describe("BD-14 · C 미지정 — 안분하지 않는다 (자동 채움 없음)", () => {
   it("대조: C·비율 모두 없는 estimated payload(일반 양도)는 안분 없이 통과한다 (자동 채움 없음)", () => {
     const body = { ...bodyOf(listedEstimated(110_000_000, 14_000_000, 1000, 55_000, 100_000)) };
     delete body.burdenedGiftValuationAmount;

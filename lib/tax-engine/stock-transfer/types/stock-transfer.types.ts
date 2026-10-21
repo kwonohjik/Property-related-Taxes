@@ -647,7 +647,7 @@ export type StockTransferInput = {
    * actual 모드: 클라이언트가 취득가를 B/C 안분 후 perShareAcquisitionPrice로 직접 주입 → 미사용(C를 싣지 않는다).
    *
    * 범위: 0 < transferPrice(B) <= C. 실가·총액 단건 양도(`transferActualInputMode: "total"`)에서만 B=transferPrice가 성립해
-   * ⑫ refine이 그 외 형태(per_share·교환·lots)를 400으로 막는다. 폐지된 구필드 `burdenedGiftDebtRatio`(소수 비율)는 수신 시 400.
+   * ⑫ refine이 그 외 형태(per_share·교환·lots)를 400으로 막는다.
    * @default undefined — 일반 주식 양도(기존 동작 100% 보존, 안분하지 않는다)
    */
   burdenedGiftValuationAmount?: number;
