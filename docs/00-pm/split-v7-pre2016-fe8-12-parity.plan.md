@@ -1,6 +1,6 @@
 # 토지·건물 구분 기재(split) 양도시 기준시가 V7 — 2016.1.1. 전 양도 ⑧↔⑫ 불일치 수정 계획서
 
-> 작성 2026-10-21 · master `f204df8f2` 기준 · 상태: **✅ Plan 확정 (2026-10-21 사용자 결정 — Q-1 ⑫를 좁힘 · Q-2 ⑧ 엄격 47셀은 별건) → Do**
+> 작성 2026-10-21 · master `f204df8f2` 기준 · 상태: **✅ Do 완료 (2026-10-22) — Q-1 ⑫를 좁힘 · Q-2 ⑧ 엄격 47셀은 별건** (§10 Do 결과)
 > 관련: `docs/00-pm/sale-split-100-3-era-gate.plan.md`(Q-2 결정·#2241/#2244) · memory `project_sale_split_100_3_era_gate` · `feedback_fe8_vs_12_parity_grid`
 
 ## 0. 한 줄 요약
@@ -168,3 +168,40 @@ probe(scratch `plan3-c/grid.probe.ts`, 제품 파일 무변경) — 폼 → ④ 
 - 일반건물(`assetKind: building` 단독, `GeneralBuildingInput`) 경로의 기준시가 필수는 별도 경로이며 이번 범위 밖(기존 계획서 §9-②).
 - 모의 수정은 `vi.mock`으로 `refineRequiredInputs2a`·`refineSplitAcquisitionInputs`를 감싼 것이다. 실제 수정 후 T-4 격자를 다시 돌려 숫자(통과 70 · 모순 0)를 재확인할 것.
 - probe 스크래치: `/private/tmp/claude-501/-Users-mynote-workspace-Property-related-Taxes/037975ee-7a66-4673-bbc6-201a0bdbac7c/scratchpad/plan3-c/` (`grid.probe.ts`·`gridfix.probe.ts`·`p2*.probe.ts`·`p3fix.probe.ts`, 결과 `grid.out.jsonl`·`gridfix.out.jsonl`) — 제품 파일 무변경.
+
+## 10. Do 결과 (2026-10-22)
+
+> **2026-10-22 머지 경위**: 같은 술어의 ⑫ 수정이 다른 작업(`46b5bc87e`, 테스트 `__tests__/calc/split-sale-std-era-parity.test.ts`)으로 먼저 master에 들어갔다. 이 PR은 충돌 해소 시 `transfer-tax-schema-required-refines-2a.ts`를 master 판 그대로 두고(코드 동일), **테스트·문서만** 남긴다 — 256셀 격자 정합·`saleSplitMode` 생략 fail-closed·파트 이월과세 C 실가 면제·구분 근거 전무 차단 단언과 `sale-split-100-3-era-gate.plan.md:171` 문구 정정(사용자 결정).
+
+**변경**: `lib/api/transfer-tax-schema-required-refines-2a.ts` — ⑫ V7 두 issue 앞에 `saleStdPriceWaivedByEra`(⑧과 같은 함수, `lib/calc/sale-split-100-3-era.ts`) 면제를 걸었다(+12줄, 648→660). landMode/buildingMode는 ⑧과 같은 값, 파트 이월과세의 `useEstimatedAcquisition`도 환산으로 센다. `saleSplitMode` 생략은 면제 안 됨(fail-closed). ④⑬⑭·호출부(`transfer-tax-schema.ts:180` 컴패니언 포함) 무변경. 신규 anchor `__tests__/calc/split-sale-std-era-fe8-12-parity.test.ts`(20건) · `sale-split-100-3-era-gate.plan.md` §9 ④ 「⑫⑬⑭ 변경 없음」 정정 1건.
+
+| 항목 | 결과 |
+|---|---|
+| 수정 전 anchor | 20건 중 **9 실패**(T-1 3 · T-3 3 · T-6 1 · T-4 2) · 11 통과(T-2·T-5·T-7·T-9·T-8 짝/반례 = 현행 유지 단언) |
+| 수정 후 anchor | 20/20 통과 |
+| 격자 재측정(256셀, 실제 코드) | ⑧통과·⑫200 **70** · ⑧통과·⑫400 **0** · ⑧차단·⑫400 **139** · ⑧차단·⑫200 **47** — §3 모의 수치와 일치, 모의 후 격자(`gridfix.out.jsonl`)와 256셀 전수 동일(차이 0). 감정평가 없음 96셀 정합 96/96(차단 69·통과 27) |
+| 뮤테이션 | M-1~M-9 전부 KILLED(§10.1) |
+| 정적 검사 | `tsc --noEmit` 0 · `npm run lint` 오류 0(경고 361은 사전 존재, 변경 2파일 경고 0) · 폰트·톤·다크짝·워크플로 러너 스크립트 통과 |
+| 전체 vitest(`--maxWorkers=2`) | 3226파일 38803테스트 — 통과 38481 · **실패 0** · 보류 13 |
+| 브라우저(Playwright, 임시 spec은 삭제) | 양도일 2015-12-31 · 구분 기재 · 기준시가 비움 → `/api/calc/transfer` **200** · 결과(신고서 양식) 도달. 같은 입력 2016-01-01 → ⑧ 차단(요청 0건, 화면에 「양도시 기준시가」 안내) |
+
+### 10.1 뮤테이션 (cp 백업 → 변이 → 대상 테스트 → 원복 sha 일치)
+
+| # | 변이 | 결과 |
+|---|---|---|
+| M-1 | ⑫ 면제 제거 | KILLED 9 (T-1·T-3·T-6·T-4) |
+| M-2 | `landMode` `"actual"` 고정 | KILLED 4 (T-5 토지 환산 · 증여자 토지 · T-4 · T-8) |
+| M-3 | `buildingMode` `"actual"` 고정 | KILLED 4 (T-5 건물 환산 · 증여자 건물 · T-4 · T-8) |
+| M-4 | 증여자 환산 줄 제거(토지 / 건물 각각) | KILLED 1+1 (T-5 증여자 토지 / 건물 — 건물 케이스는 Do에서 추가) |
+| M-5 | `saleSplitMode` `"actual"` 고정 | KILLED 1 (**T-9**) — ⚠ 계획은 T-4를 예상했으나 T-4는 못 잡는다: apportioned 셀은 면제돼도 엔진이 안분 근거 부재로 400을 내 ⑫ 400이 유지된다. 이 변이는 T-9가 유일한 안전망 |
+| M-6 | `sec100_3Era` 경계 `<`→`<=` | KILLED 14 (신규 T-2 + 엔진 anchor E-1·E-4 + `sale-split-100-3-era-validate.test.ts`) |
+| M-7 | 컴패니언 `transferDate` 제거 | KILLED 1 (T-3 컴패니언) |
+| M-8 | 면제 시 V4도 건너뜀 | KILLED 1 (T-7) |
+| M-9 | ⑧ 면제 제거(토지 / 건물 각각) | KILLED 7+7 (T-1·T-3·T-4·T-8) |
+
+### 10.2 계획과 다르게 한 점
+
+- T-4 비공허 단언의 「면제 통과 셀 ≥ 11」은 근거가 불명확해 **실측 3셀**(2015-12-31 · actual · 실가/실가 · 기준시가 {없음·토지만·건물만} · 구분 기재)로 「≥ 3」으로 정했다. 차단 ≥ 60(실 69) · 통과 ≥ 20(실 27)은 그대로.
+- T-5 증여자 환산에 **건물 파트** 케이스를 추가했다(M-4 건물 줄을 죽이기 위해).
+- 수정은 V7 두 issue를 `if (...) { }`로 감싸는 대신 V7이 함수의 마지막 문장이라 `if (stdWaived) return;`로 앞세웠다(동치).
+- dev 서버는 worktree의 `node_modules` 심볼릭 링크를 Turbopack이 거부해(`points out of the filesystem root`) `next.config.ts`에 `turbopack.root`를 **임시로** 넣어 띄우고 sha 일치로 원복했다(커밋 무관).
