@@ -50,6 +50,18 @@ export function primaryEngineStdPriceAtTransfer(
   // 승계 입주권 환산 분모 — §165①(양도일까지 납입액 + 양도일 프리미엄) (R-12). 감정·매매사례는 분모가 필요 없다.
   if (isSuccessorRight && isEstimated) return successorRightStdPriceAtTransfer(primary) || undefined;
   if (isEstimated && !redevHiddenGeneralStdPrice(primary, form).transfer) return parseAmount(primary.standardPriceAtTransfer) || undefined;
+  /**
+   * 함께 양도 안분 모드의 안분 키 — 화면에 있다(`CompanionSaleModeBlock`). 컴패니언과 같은 규칙으로 감면 기준시가로도 싣는다
+   * (계획서 `docs/00-pm/burdened-gift-bundle-residuals.plan.md` Q-3 a · #2346 Q-2 a). 감면이 없으면 세액이 같다(PA-3 11종).
+   * 축 B는 안분 키가 없고(총액 × 지분), 부담부증여는 §159가 양도가액을 정해 범위 밖이다.
+   */
+  if (
+    form.assets.length >= 2 &&
+    !isFullFractionalBundle(form.assets, form.assetSplitMode) &&
+    effectiveBundledSaleMode(form) === "apportioned" &&
+    primary.transferType !== "burdened_gift"
+  )
+    return parseAmount(primary.standardPriceAtTransfer) || undefined;
   return undefined;
 }
 

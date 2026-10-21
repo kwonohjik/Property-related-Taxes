@@ -300,7 +300,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           if (needsStdPriceAtTransfer && !hasStdPriceAtTransfer993) {
             return fail(fieldError("reduction.new_99_3.standardPriceAtTransfer993", r.isRedevelopedNewHouse993
                 ? "§99의3 적용: 재개발·재건축 신축주택 변형은 5년 이내 양도에도 양도시 기준시가가 필요합니다 (조특령 §99의3②2호 안분의 분자)."
-                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
+                : "§99의3 적용: 취득 후 5년 경과 양도는 양도시 기준시가를 입력하세요 (5년 발생분 안분의 분모 — 환산취득가액·기준시가 안분 모드가 아니거나 재개발·재건축 원조합원 자산이면 자산값이 전달되지 않습니다).",
             ));
           }
         }
