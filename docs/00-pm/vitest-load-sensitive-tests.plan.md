@@ -1,6 +1,6 @@
 # 부하에 약한 vitest 5개 파일 — 첫 무거운 테스트의 5초 타임아웃과 연쇄 실패 — 수정 계획
 
-> 작성 2026-10-21 · 상태 **Plan — 결정 대기(Q-1~Q-3)** · 워크트리 `../Property-related-Taxes-meas` · 브랜치 `docs/vitest-load-flaky-plan`
+> 작성 2026-10-21 · 상태 **Do — Q-1~Q-3 권고안 a 결정(2026-10-21)** · 워크트리 `../Property-related-Taxes-meas` · 브랜치 `docs/vitest-load-flaky-plan`
 > 기준 master `ab07ff252`. 줄 번호는 모두 이 커밋 기준이다. 실측은 `bafdddeb8`에서 했고, 그 사이 대상 5개 파일 변경은 없다.
 > 출처: `land-parcel-sigungu-autofill.plan.md` Do 결과의 「확인 필요」(E2E와 동시에 돌린 전체 vitest 2파일 4건 실패). 그 4건의 이름은 복구할 수 없었다.
 > - 1차 출력은 dot 요약만 남겼다.
@@ -115,7 +115,7 @@ JSON 리포터는 타임아웃을 `Error: STACK_TRACE_ERROR`(스택이 `it(` 정
   - R3 되돌림 → 해당 파일 실패
 - **전체 vitest**(JSON 리포터로 실패 이름을 남긴다) · 게이트 4종 · typecheck · lint
 
-## 결정 대기
+## 결정 — 2026-10-21 사용자 결정: Q-1~Q-3 권고안 a
 
 | Q | 질문 | 선택지 | 권고 |
 |---|---|---|---|
