@@ -109,9 +109,10 @@ interface AddressSearchProps {
   /**
    * true이면 세대 목록이 없을 때의 상세주소 칸을 그리지 않는다(세대 드롭다운·조회 중 표시는 그대로).
    *
-   * 상세주소를 저장할 필드가 없고 동·호를 별도 칸으로 받는 호출부용이다(종부세 주택 카드). 그 카드는 칸 값을
-   * 저장된 동·호로 합성해, 한 글자씩 치면 「동」·「호」 앞 숫자가 사라지고 동이 저장된 뒤엔 칸이 「동」에서 멈췄다.
-   * 계획서 `docs/00-pm/comprehensive-property-card-detail-hide.plan.md` R1
+   * 상세주소를 저장할 필드가 없고 동·호는 쓰는 호출부용이다 — 동·호도 쓰지 않으면 `disableUnits`를 넘긴다.
+   * - 종부세 주택 카드: 칸 값을 저장된 동·호로 합성해, 한 글자씩 치면 「동」·「호」 앞 숫자가 사라지고 동이 저장된 뒤엔
+   *   칸이 「동」에서 멈췄다. 계획서 `docs/00-pm/comprehensive-property-card-detail-hide.plan.md` R1
+   * - 취득·재산 1단계 · 임대주택 카드: 무엇을 쳐도 칸이 비워졌다. 계획서 `docs/00-pm/address-detail-dead-input.plan.md` R2
    */
   hideDetailInput?: boolean;
 }

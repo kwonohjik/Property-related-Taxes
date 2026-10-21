@@ -107,6 +107,8 @@ export function Step0({
         <AddressSearch
           // 동·호를 함께 넘긴다 — 빠지면 상세주소 입력(`{ ...value, detail }`)이 아래 `v.dong ?? ""`로 고른 동·호를 지워
           //   공시가격 조회가 다른 세대 가격을 채웠다(계획서 address-dongho-other-calcs-and-multi-gate.plan.md R1)
+          // 상세주소는 저장할 필드가 없어 칸을 그리지 않는다 — 입력이 남지 않았다(계획서 address-detail-dead-input.plan.md R2)
+          hideDetailInput
           value={{ road: form.road, jibun: form.jibun, building: form.building, detail: "", lng: "", lat: "", pnu: form.pnu, dong: form.dong || undefined, ho: form.ho || undefined } satisfies AddressValue}
           onChange={(v) => onChange({ jibun: v.jibun, road: v.road, building: v.building, dong: v.dong ?? "", ho: v.ho ?? "", pnu: v.pnu ?? "" })}
         />

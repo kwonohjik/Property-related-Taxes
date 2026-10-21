@@ -317,6 +317,8 @@ export function PresaleRightsSection({
                   소재지 (주소) <span className="text-muted-foreground">— 선택</span>
                 </span>
                 <AddressSearch
+                  // 법정동 코드만 쓴다 — 동·호 목록·상세주소 칸(저장하지 않는 칸)을 그리지 않는다(계획서 address-detail-dead-input.plan.md R1)
+                  disableUnits
                   value={{ road: "", jibun: r.regionName ?? "", building: "", detail: "", lng: "", lat: "" }}
                   onChange={(v) => {
                     /**

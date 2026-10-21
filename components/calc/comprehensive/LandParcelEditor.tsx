@@ -43,6 +43,9 @@ export function LandParcelEditor({ parcel, kind, refDate, priorYear, priorMode, 
           소재지 <span className="text-muted-foreground font-normal text-xs">(주소 검색 — 공시지가 조회·시군구 자동)</span>
         </label>
         <AddressSearch
+          // 토지라 동·호 목록·상세주소 칸을 그리지 않는다 — 상세주소 입력이 아래 onChange를 다시 불러 손으로 고친
+          //   시군구를 지번에서 뽑은 값으로 덮었다(계획서 address-detail-dead-input.plan.md R1)
+          disableUnits
           value={{ road: "", jibun: parcel.jibun, building: "", detail: "", lng: "", lat: "" }}
           onChange={(v) => {
             // 시군구는 도로명(시도·시군구 포함) 우선 — Vworld 지번(parcel)은 "석촌동 276-1"로 시군구 없음.

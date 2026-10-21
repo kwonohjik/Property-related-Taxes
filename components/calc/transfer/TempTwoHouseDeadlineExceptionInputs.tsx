@@ -83,6 +83,10 @@ export function TempTwoHouseRelocationInputs({
         <div className="space-y-1.5">
           <label className="text-sm font-medium">이전한 기관·법인 소재지</label>
           <AddressSearch
+            // 동·호 목록·상세주소 칸을 그리지 않는다 — 이 칸은 시·군 코드만 쓴다. 동 선택·상세주소 입력은 `pnu` 없이
+            //   발화해 아래 코드가 `""`가 됐고, 엔진은 코드가 없으면 자기선언을 그대로 써 비연접인데도 5년이 적용됐다
+            //   (계획서 address-detail-dead-input.plan.md R1)
+            disableUnits
             value={
               {
                 road: "",
@@ -104,6 +108,8 @@ export function TempTwoHouseRelocationInputs({
         <div className="space-y-1.5">
           <label className="text-sm font-medium">신규 주택 소재지</label>
           <AddressSearch
+            // 위 칸과 같다 — 동·호를 쓰지 않는다(계획서 address-detail-dead-input.plan.md R1)
+            disableUnits
             value={
               {
                 road: "",
