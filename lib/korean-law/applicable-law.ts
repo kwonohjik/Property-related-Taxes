@@ -278,7 +278,8 @@ export async function fetchEflawArticle(
   if (!jo) {
     throw new LawApiError(`조문번호를 해석할 수 없습니다: ${articleNo}`, "BAD_REQUEST");
   }
-  const cacheKey = `eflaw_article_${mst}_${efYd}_${jo}`;
+  // v2: 16항 이상 항번호(`<16>`)를 원숫자로 보존 — 종전 캐시는 항 번호가 지워진 본문이다
+  const cacheKey = `eflaw_article_v2_${mst}_${efYd}_${jo}`;
   const cached = await readCache<{ title: string; fullText: string } | { notFound: true }>(
     cacheKey
   );
