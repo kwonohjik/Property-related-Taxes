@@ -22,7 +22,7 @@ function makeSF(overrides: Partial<Extract<AssetReductionForm, { type: "self_far
   };
 }
 
-function makeForm(reduction: AssetReductionForm, opts: { transferDate?: string; assetStdAcq?: string; assetStdTransfer?: string } = {}) {
+function makeForm(reduction: AssetReductionForm, opts: { transferDate?: string; assetStdAcq?: string; assetStdTransfer?: string; estimated?: boolean } = {}) {
   const form = createDefaultTransferFormData();
   form.transferDate = opts.transferDate ?? "2022-06-01"; // 편입 2020-02-14 + 3년 이내
   form.assets[0] = {
@@ -31,6 +31,7 @@ function makeForm(reduction: AssetReductionForm, opts: { transferDate?: string; 
     acquisitionDate: "2010-01-01",
     standardPriceAtAcq: opts.assetStdAcq ?? "",
     standardPriceAtTransfer: opts.assetStdTransfer ?? "",
+    useEstimatedAcquisition: opts.estimated ?? false,
     reductions: [reduction],
   };
   return form;
@@ -95,8 +96,16 @@ describe("[#20] 자경 편입 부분감면 기준시가 3점 validate", () => {
   it("SF-V6: 환산 자산 기준시가 존재(reduction 공란) → 통과(자산 fallback)", () => {
     const issue = validateStep(2, makeForm(
       makeSF({ selfFarmingStandardPriceAtIncorporation: "3,000" }),
-      { assetStdAcq: "1,000", assetStdTransfer: "4,000" },
+      { assetStdAcq: "1,000", assetStdTransfer: "4,000", estimated: true },
     ));
     expect(issue).toBeNull();
+  });
+
+  it("SF-V7: 실가 자산의 양도시 기준시가는 ④가 싣지 않는다 → 차단(엔진 폴백 대상 아님 · `engineStdPriceAtTransfer`)", () => {
+    const issue = validateStep(2, makeForm(
+      makeSF({ selfFarmingStandardPriceAtIncorporation: "3,000" }),
+      { assetStdAcq: "1,000", assetStdTransfer: "4,000" },
+    ));
+    expect(issue).toContain(msg);
   });
 });

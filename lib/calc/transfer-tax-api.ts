@@ -18,6 +18,7 @@ import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-co
 import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
+import { primaryEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import { effectiveBundledSaleMode } from "@/lib/calc/bundled-sale-mode";
 import {
   calcEffectiveIsRegulatedAtTransfer,
@@ -43,7 +44,6 @@ import { successorRightAcquisitionTotal } from "./transfer-successor-right";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { isReceiveOnlyFiling } from "./redev-field-scope";
 import { successorRightStdPriceAtAcq } from "./transfer-successor-right";
-import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
 import { buildParcelsPayload } from "./transfer-tax-api-parcels";
 import { buildBundledPrimaryPayload } from "./transfer-tax-api-bundled";
 import { postTransferCalc } from "./transfer-tax-api-post";
@@ -396,19 +396,8 @@ export async function callTransferTaxAPI(form: TransferFormData): Promise<Transf
           : undefined,
     // pre1990 모드: 취득시 기준시가는 서브엔진(pre1990Land)이 산출하므로 undefined.
     // 양도시 기준시가는 form 입력값(standardPriceAtTransfer)을 그대로 전달 — 서브엔진은 산출하지 않음.
-    standardPriceAtTransfer: usesPhd
-      ? undefined
-      : hasPre1990
-        ? parseAmount(primary.standardPriceAtTransfer) || undefined
-        : isCarryoverGeneral
-          ? (parseAmount(primary.carryover?.donorStandardPriceAtTransfer ?? "") || undefined)
-          // 승계 입주권 환산 분모 — §165①(양도일까지 납입액 + 양도일 프리미엄) (R-12).
-          // 감정·매매사례는 분모가 필요 없어 보내지 않는다.
-          : isSuccessorRight && isEstimated
-            ? successorRightStdPriceAtTransfer(primary) || undefined
-          : isEstimated && !redevHiddenStd.transfer
-            ? parseAmount(primary.standardPriceAtTransfer) || undefined
-            : undefined,
+    // ⑧(감면 기준시가 폴백)이 같은 leaf를 본다 — PHD 제외 · 1990 전 토지 · 이월과세 증여자 값 · 승계 §165① · 환산(숨김 아님)
+    standardPriceAtTransfer: primaryEngineStdPriceAtTransfer(primary, form),
     // ⑬ §164⑧ 동일조정기간 양도당시 기준시가 환산 (소령 §164⑧·소칙 §80①~⑤)
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     // ⑬ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호)

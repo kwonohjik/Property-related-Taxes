@@ -23,9 +23,7 @@ import { selfFarmingOwnYearsSufficient } from "./self-farming-own-years";
 import { selfFarmingDecedentAggregable } from "./self-farming-own-years";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
-import { isSuccessorRightTransfer } from "./transfer-successor-right";
-import { successorRightEstimationMode } from "./transfer-successor-right";
-import { successorRightStdPriceAtTransfer } from "./transfer-successor-right";
+import { engineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 
 /**
  * 「PHD 환산 모드」 메시지가 가리킬 입력칸 — 메시지는 5칸을 한꺼번에 묻지만(`canCalcReductionPhd`)
@@ -212,14 +210,14 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
             const incorpDate = new Date(r.selfFarmingIncorporationDate);
             const transferDate = new Date(form.transferDate);
             if (incorpDate >= new Date("2002-01-01") && transferDate <= addYears(incorpDate, 3)) {
-              // 3점: 취득·양도시는 reduction 전용 입력 OR 자산-수준(환산 모드) fallback — API·엔진 동일 소스
+              // 3점: 취득·양도시는 reduction 전용 입력 OR 자산-수준 fallback. 양도시는 ④가 엔진에 싣는 값과 같은 leaf다(`engineStdPriceAtTransfer`).
               const hasAcq =
                 parseAmount(r.selfFarmingStandardPriceAtAcquisition || "") > 0 ||
                 parseAmount(asset.standardPriceAtAcq || "") > 0;
               const hasIncorp = parseAmount(r.selfFarmingStandardPriceAtIncorporation || "") > 0;
               const hasTransfer =
                 parseAmount(r.selfFarmingStandardPriceAtTransfer || "") > 0 ||
-                parseAmount(asset.standardPriceAtTransfer || "") > 0;
+                engineStdPriceAtTransfer(form, ai) > 0;
               if (!hasAcq || !hasIncorp || !hasTransfer)
                 return fail(fieldError(!hasAcq ? "reduction.self_farming.selfFarmingStandardPriceAtAcquisition" : !hasIncorp ? "reduction.self_farming.selfFarmingStandardPriceAtIncorporation" : "reduction.self_farming.selfFarmingStandardPriceAtTransfer", "편입일 부분감면(조특령 §66⑦): 취득·편입·양도 시점 기준시가를 모두 입력하세요.",
                 ));
@@ -272,23 +270,16 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           //    엔진이 `pos_neg`(부동산-525 해석)로 오분류해 **양도소득금액 전액 감면**이 됐다.
           //    엔진 가드(`new-99-3.ts` MISSING_STD_PRICE)와 **같은 조건**으로 앞단에서 막는다.
           //    (5년 이내 양도는 기준시가를 보지 않으므로 차단하지 않는다 — UI↔validate 모순 방지)
-          //    자산-수준 fallback은 `self_farming`(:107-109)과 **같은 방식**으로 인정한다 —
-          //    엔진이 `?? ctx.standardPriceAtTransfer`로 폴백하므로(income-deduction-router.ts:204)
-          //    여기서 무시하면 환산 모드 사용자를 부당하게 차단한다(UI↔validate 모순).
-          //    비-환산 모드에서 자산값이 채워져 있으면 여기서는 통과하고 엔진 가드가
-          //    `MISSING_STD_PRICE`로 명시 차단한다 — 조용한 오계산이 아니라 분명한 오류다.
+          //    자산-수준 fallback은 엔진이 `?? ctx.standardPriceAtTransfer`로 폴백하므로(income-deduction-router.ts:249-250)
+          //    인정한다 — 다만 **④가 엔진에 싣는 값**만이다(`engineStdPriceAtTransfer` — ④와 같은 leaf). 종전에는 자산의 일반 칸
+          //    값을 그대로 인정해, 실가 모드처럼 ④가 싣지 않는 경우 여기서는 통과하고 엔진이 `MISSING_STD_PRICE`로 감면을 뺐다
+          //    (2026-08-31 의도 설계를 2026-10-21 사용자 결정 Q-1 a로 바꿨다 — 계획서 `burdened-gift-bundle-hidden-stdprice.plan.md`).
           // 재개발·재건축 변형 ON 시 종전주택 기준시가 필수 (§99 선례 — 자동 안분 fallback 금지)
           if (r.isRedevelopedNewHouse993 && parseAmount(r.previousHouseStdPrice993 || "0") <= 0)
             return fail(fieldError("reduction.new_99_3.previousHouseStdPrice993", "§99의3 적용: 재개발·재건축 신축주택은 종전주택 취득 당시 기준시가를 입력하세요 (조특령 §99의3② 1호 단서·2호 괄호).",
             ));
-          // 승계조합원 입주권 환산은 ④가 일반 칸이 아니라 §165① 양도시 합계를 싣고 엔진이 그 값으로 폴백한다 — 같은 leaf·같은 게이트로 인정한다
-          // (계획서 `successor-right-stdprice-reduction.plan.md` Q-2 a). 그 밖의 승계 입주권은 일반 칸이 화면에 없어 `redevHiddenStd`가 막는다.
-          const assetStdAtTransfer993 =
-            isSuccessorRightTransfer(asset) && successorRightEstimationMode(asset) === "estimated"
-              ? successorRightStdPriceAtTransfer(asset)
-              : redevHiddenStd.transfer
-                ? 0
-                : parseAmount(asset.standardPriceAtTransfer || "0");
+          // 승계조합원 입주권 환산의 §165① 합계(#2351 Q-2 a)·원조합원 §166 숨은 칸(#2346)도 그 leaf 안에 있다.
+          const assetStdAtTransfer993 = engineStdPriceAtTransfer(form, ai);
           const hasStdPriceAtTransfer993 =
             parseAmount(r.standardPriceAtTransfer993 || "0") > 0 || assetStdAtTransfer993 > 0;
           /**
@@ -433,7 +424,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
                 (!redevHiddenStd.acq && parseAmount(asset.standardPriceAtAcq || "") > 0);
               const hasTransferStd =
                 parseAmount(r.stdPriceAtTransfer || "") > 0 ||
-                (!redevHiddenStd.transfer && parseAmount(asset.standardPriceAtTransfer || "") > 0);
+                engineStdPriceAtTransfer(form, ai) > 0;
               if (!hasAcqStd || !hasTransferStd) {
                 const prorationMsg =
                   `${label} 적용: 안분 산식의 취득 당시·양도 당시 기준시가를 입력하세요 ` +

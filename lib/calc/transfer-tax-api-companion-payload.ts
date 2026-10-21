@@ -29,7 +29,6 @@ import { buildPre1990LandPayload } from "./transfer-tax-api-helpers";
 import { resolveAcqAreaForStdPrice } from "./transfer-tax-api-helpers";
 import { appurtenantCardAreaM2 } from "./transfer-tax-api-helpers";
 import { isSec163_9Cause } from "./transfer-163-9-base-date";
-import { replotIncrementStdPriceAtTransfer } from "./replot-increment-std-price";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { isSplitPayloadActive } from "./transfer-tax-api-split";
@@ -53,12 +52,13 @@ import {
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { isRedevelopmentSec166Asset, redevActualAcquisitionPriceRaw } from "./redev-acquisition-price-source";
 import { redevHiddenGeneralStdPrice } from "./redev-acquisition-price-source";
+import { assetStdPriceAtTransferInput } from "./engine-std-price-at-transfer";
+import { companionEngineStdPriceAtTransfer } from "./engine-std-price-at-transfer";
 import {
   isSuccessorRightTransfer,
   successorRightAcquisitionTotal,
   successorRightEstimationMode,
   successorRightStdPriceAtAcq,
-  successorRightStdPriceAtTransfer,
 } from "./transfer-successor-right";
 
 /**
@@ -128,10 +128,6 @@ export function buildAssetPayload(
 ) {
   const reductions = toEngineReductions(asset.reductions ?? [], asset, asset.expropriationNoticeDate);
 
-  // 증환지 증가분: standardPriceAtTransfer 빈값 시 당초분(primary) ㎡당 × 증가분 면적 파생.
-  // ⑤·⑥·⑧과 **같은 leaf** — 규칙을 복제하면 한 곳만 빠뜨려도 조용히 어긋난다.
-  const replotIncStdAtTransfer = replotIncrementStdPriceAtTransfer(asset, primary);
-
   /**
    * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」(증환지 증가분은 파생값).
    *
@@ -142,10 +138,8 @@ export function buildAssetPayload(
    *    primary가 이미 `standardPriceAtTransferForApportion`(폼-전역)으로 두 역할을 분리해
    *    보내는 것과 **같은 방식**이다.
    */
-  const stdAtTransferForApportion =
-    parseAmount(asset.standardPriceAtTransfer) > 0
-      ? parseAmount(asset.standardPriceAtTransfer)
-      : replotIncStdAtTransfer;
+  // 증환지 증가분은 당초분(primary) ㎡당 × 증가분 면적 파생 — ⑤·⑥·⑧과 같은 leaf(`assetStdPriceAtTransferInput`).
+  const stdAtTransferForApportion = assetStdPriceAtTransferInput(asset, primary);
   // 원조합원 §166 자산의 화면에 없는 일반 기준시가 칸(주 자산 ④·⑤⑧과 같은 leaf). `form`이 없는 직접 호출은 단건으로 본다.
   const redevHiddenStd = redevHiddenGeneralStdPrice(asset, form ?? { assets: [asset], bundledSaleMode });
 
@@ -368,12 +362,8 @@ export function buildAssetPayload(
     // 승계 입주권 환산 분모 — 영 §165①(양도일까지 납입액 + 양도일 프리미엄). 주 자산 ④와 같은 leaf·같은 게이트(환산만).
     // 원조합원 §166 자산은 이 칸이 화면에 없다(안분 모드의 안분 키만 보인다) — 감면 기준시가 폴백으로 새지 않게 싣지 않는다.
     //   안분 키는 아래 `standardPriceAtTransferForApportion`이 따로 싣는다(주 자산 ④·⑤⑧과 같은 leaf).
-    standardPriceAtTransfer:
-      isSuccessor && successorMode === "estimated"
-        ? successorRightStdPriceAtTransfer(asset) || undefined
-        : redevHiddenStd.transfer
-          ? undefined
-          : stdAtTransferForApportion,
+    // 화면에 그 칸이 있는 경우만 싣는다(D3 — 실가 거래 모드의 숨은 값이 감면 기준시가로 새던 C1). ⑧이 같은 leaf를 본다.
+    standardPriceAtTransfer: companionEngineStdPriceAtTransfer(asset, { bundledSaleMode, transferDate, primary, form }),
     /**
      * §166⑥ 안분 키 — override 대상이 아니다(위 const JSDoc 참조). 함께양도 묶음의 지분 자산은 양도하는 것이 지분이라
      * 물건 전체(100%) 기준시가 × 지분율이 그 자산의 기준시가다(축 B는 자동가를 쓰므로 키를 쓰지 않는다 — 종전 그대로).

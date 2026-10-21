@@ -28,12 +28,13 @@ import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { isRedevelopmentSec166Asset } from "./redev-acquisition-price-source";
 
-/** 주 자산에서 파생되는 값 묶음. 호출부는 구조분해로 받는다. */
-export function buildPrimaryContext(
-  form: TransferFormData,
-  primary: AssetForm,
-  fractionalBundleMerge: boolean,
-) {
+/**
+ * 주 자산 **취득 모드 플래그** — `form`을 보지 않고 `primary`만으로 정해진다.
+ *
+ * ④(`buildPrimaryContext` → 본문)와 ⑧(`engine-std-price-at-transfer.ts` — 감면 기준시가 폴백)이 **같은 함수**를 부른다.
+ * 그 밖의 페이로드 빌더를 부르지 않으므로 ⑧이 매 렌더에 불러도 된다.
+ */
+export function primaryAcquisitionModeFlags(primary: AssetForm) {
   const isRightToMoveIn = primary.assetKind === "right_to_move_in";
   /** 승계조합원 입주권 — §166 미적용(§97①1호 가목). 술어는 `transfer-successor-right.ts` 단일 소스. */
   const isSuccessorRight = isSuccessorRightTransfer(primary);
@@ -112,6 +113,17 @@ export function buildPrimaryContext(
     primary.carryover?.useEstimatedAcquisition === true &&
     primary.carryover?.estimationMode === "general" &&
     !partCarryover(primary).building; // P4 B도 같다
+  return { isSuccessorRight, isSalesCase, isAppraisal, isEstimated, hasPre1990, hasPre1990ForSec164, usesPhd, isCarryoverGeneral };
+}
+
+/** 주 자산에서 파생되는 값 묶음. 호출부는 구조분해로 받는다. */
+export function buildPrimaryContext(
+  form: TransferFormData,
+  primary: AssetForm,
+  fractionalBundleMerge: boolean,
+) {
+  const { isSuccessorRight, isSalesCase, isAppraisal, isEstimated, hasPre1990, hasPre1990ForSec164, usesPhd, isCarryoverGeneral } =
+    primaryAcquisitionModeFlags(primary);
   const parcelModeActive =
     primary.parcelMode && primary.assetKind === "land" && (primary.parcels?.length ?? 0) > 0;
   // A15(2026-09-02): 환지 의제 필지는 `acquisitionDate`가 빈 문자열이라 종전 `|| form.transferDate`

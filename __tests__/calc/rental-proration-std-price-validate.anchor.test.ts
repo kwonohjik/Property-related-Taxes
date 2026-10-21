@@ -66,9 +66,14 @@ describe("§97의3⑤ 안분 기준시가 — ⑧ 검증", () => {
   it("자산 카드(환산 모드) 값만 있어도 통과한다 — ④의 폴백과 같은 기준", () => {
     const issue = check(
       {},
-      { standardPriceAtAcq: "400,000,000", standardPriceAtTransfer: "800,000,000" },
+      { useEstimatedAcquisition: true, standardPriceAtAcq: "400,000,000", standardPriceAtTransfer: "800,000,000" },
     );
     expect(issue?.message ?? "").not.toMatch(MSG);
+  });
+
+  it("실가 모드의 자산 카드 양도시 값은 ④가 싣지 않으므로 인정하지 않는다 (`engineStdPriceAtTransfer`)", () => {
+    const issue = check({}, { standardPriceAtAcq: "400,000,000", standardPriceAtTransfer: "800,000,000" });
+    expect(issue?.message).toMatch(MSG);
   });
 
   it("한쪽만 채우면 여전히 차단한다 (분모가 반쪽)", () => {
