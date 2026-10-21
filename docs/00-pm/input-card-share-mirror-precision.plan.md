@@ -175,3 +175,47 @@ B: 양도비 칸 value=237,999,999 disabled=true / 힌트 「자동 안분 237,9
 3. 레거시 sessionStorage에 분모가 빈 문자열인 자산이 실제로 남을 수 있는가(§7 첫째).
 4. 브라우저·Playwright 확인은 Plan 단계에서 하지 않았다(jsdom 렌더 + ④ body 가로채기 probe까지).
 5. 100만 원 단위 격자 불일치율(§3.2)은 «둥근 금액» 대리 지표일 뿐 실제 사용자 입력 분포가 아니다.
+
+---
+
+## 9. Do 결과 (2026-10-21)
+
+**구현**: 계획 §5대로 — `CompanionSaleModeBlock.tsx`(`:198`)·`AssetSectionExpense.tsx`(`:90`)의 `Math.floor(금액 × 비율)`을 `applyRatio(금액, 비율)`로 교체(각 `applyRatio` import 한 줄, A의 JSDoc «Math.floor» 표기만 정정). 클램프·가드·문구·힌트는 그대로. 가드 `GUARDED_FILES`에 두 파일 추가 + 호출 수 단언 추가 + 헤더 「범위 밖」 문단 삭제. 신규 `__tests__/components/input-card-share-mirror-precision.anchor.test.tsx`(27건).
+
+### 9.1 수정 전 실패 건수 (anchor·가드를 제품 코드보다 먼저 추가)
+
+| 파일 | 수정 전 | 수정 후 |
+|---|---|---|
+| anchor 27건 | **18 실패** / 9 통과 | 27 통과 |
+| 가드 4건 | **2 실패**(Math.floor 2건 검출 · applyRatio 호출 수) / 2 통과 | 4 통과 |
+| 합계 | **20 실패** / 11 통과 | 31 통과 |
+
+수정 전 18 = A 표 7(단건 6쌍 + 축 B 1) + B 표 6 + 카드=④ body 연결 5. 통과 9 = PREMISE 6(옛 식이 기대 − 1임을 쌍마다 고정) + 대조군 3(50%·100%·1/3). PREMISE가 통과한 것이 premise 성립의 증거다.
+
+### 9.2 뮤테이션 (cp 백업 → 변형 → 대상 테스트 → 원복, 매회 sha 일치 확인)
+
+| ID | 결과 |
+|---|---|
+| M1 A `applyRatio` → `Math.floor` | **KILLED** — anchor 12 실패(A 7 + 연결 5), 가드 2 실패 |
+| M2 B 같은 되돌리기 | **KILLED** — anchor 11 실패(B 6 + 연결 5), 가드 2 실패 |
+| M3 가드 단독 | **KILLED** — 가드만으로 2 실패(M1·M2 각각, 동시 적용 모두) |
+| M4 B `fractional ?` 게이트 제거 | **KILLED** — 대조군 「100% → 빈 값」 1건 |
+| M5 A `ratio > 0` 제거 | **생존(동치, 예상대로)** — 31/31 통과. `applyRatio(total, 0)` = 0 |
+| M6 B `Math.min(…, 1.0)` 제거 | **생존(동치, 예상대로)** — 31/31 통과. 표시 경로에서 클램프가 안 걸림(§4.3) |
+| M7a A `ratio`를 `num/(den+1)`로 | **KILLED** — 14 실패 |
+| M7b B 같은 변형 | **KILLED** — 13 실패 |
+
+KILLED 6건(M1·M2·M3·M4·M7a·M7b) / 생존 2건은 계획이 예고한 동치 변형이다.
+
+### 9.3 회귀
+
+- `npx tsc --noEmit` 0 · `npm run lint` 오류 0(경고 361건은 사전 존재 — 변경 4파일은 eslint 경고 0).
+- pre-push 스크립트: `check-font-sizes.sh`·`check-tone-classes.sh`·`check-dark-pairs.mjs`·`check-workflow-runner.sh` 모두 exit 0.
+- 전체 `npx vitest run --maxWorkers=2`: **3225 파일 통과 · 1 skipped / 38488 테스트 통과 · 13 skipped · 309 todo, 실패 0**. 다른 워크트리 2곳의 동시 실행으로 load average 35~68 상태였으나 부하성 타임아웃 실패도 없었다.
+- 기존 기대값 수정 없음(§5.5 예상대로).
+
+### 9.4 계획과 다르게 한 점 · 남은 것
+
+- 계획과 다르게 한 점 없음. 테스트 작성 중 `CurrencyInput`이 값을 콤마 포맷(`85,000,000`)으로 렌더함을 확인해 B의 기대 문자열을 콤마 포함으로 둔 것이 전부(테스트 쪽 보정).
+- **브라우저(Playwright) 수동 확인은 수행하지 않았다** — jsdom 렌더 + ④ body 가로채기 anchor까지만(§5.5-6, §8-4 그대로).
+- §8의 확인 필요 1~3·5는 그대로 열려 있다(소수점 금액 문자열 경로 · 폼/자산 양도비 동시 상태 · 레거시 분모 빈 문자열). §7 별건 관찰도 손대지 않았다.

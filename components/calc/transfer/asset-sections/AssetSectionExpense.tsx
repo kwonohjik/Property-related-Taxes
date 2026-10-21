@@ -10,6 +10,7 @@ import { isFractionalMode } from "../OwnershipRatioInput";
 import { GbDeductionOnlyNotice } from "../GbDeductionOnlyNotice";
 import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { mixedSaleSplitScope } from "@/lib/calc/mixed-use-sale-split-scope";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 
 interface Props {
   asset: AssetForm;
@@ -86,7 +87,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           const den = parseFloat(asset.ownershipDenominator || "100");
           const fractional = isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator);
           const ratio = isFinite(num) && isFinite(den) && den > 0 ? Math.min(num / den, 1.0) : 1.0;
-          const allocated = formTotal > 0 ? Math.floor(formTotal * ratio) : 0;
+          const allocated = formTotal > 0 ? applyRatio(formTotal, ratio) : 0;
           const useFormLevel = formTotal > 0;
           return (
             <CurrencyInput

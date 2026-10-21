@@ -4,16 +4,14 @@
  * 계획: docs/00-pm/share-ratio-apply-float-precision.plan.md §4(S′)·§5-4
  *
  * `applyRatio`는 소수 10자리 이하 비율을 십진 정확(BigInt)으로 계산해 `Math.floor(금액 × 0.7)`의 1원 과소를 없앤다.
- * 사이드바(⑥)·신고서(⑦)가 `Math.floor(금액 × 지분)`을 따로 쓰면 **엔진(④)과 1원씩 어긋난다** — 거울 9곳을 통일한 뒤
- * 같은 곳에 옛 식이 되돌아오지 않게 한다. 형제 가드: `estimated-acq-float-policy.test.ts`(환산·비율 안분).
+ * 사이드바(⑥)·신고서(⑦)·입력 카드 안내가 `Math.floor(금액 × 지분)`을 따로 쓰면 **엔진(④)과 1원씩 어긋난다** — 거울 9곳 + 입력 카드 2곳을
+ * 통일한 뒤 같은 곳에 옛 식이 되돌아오지 않게 한다. 형제 가드: `estimated-acq-float-policy.test.ts`(환산·비율 안분).
+ * 입력 카드 2곳 계획: docs/00-pm/input-card-share-mirror-precision.plan.md §5.2
  *
  * ## 대상
- * 거울 9곳이 있던 3개 파일. 이 파일들의 모든 `Math.floor(… * <지분 비율>)`을 금지한다
+ * 거울 9곳이 있던 3개 파일 + 입력 카드 2개 파일(화면 안내 표시 — 표시 전용이지만 ④와 같은 숫자여야 한다).
+ * 이 파일들의 모든 `Math.floor(… * <지분 비율>)`을 금지한다
  * (지분 비율 = 이름이 `ratio`·`ownRatio`·`ownershipRatio`로 끝나거나 `(분자 / 분모)` 괄호 식).
- *
- * ## 범위 밖 (알려진 별건)
- * 같은 모양이 `components/calc/transfer/CompanionSaleModeBlock.tsx`·`asset-sections/AssetSectionExpense.tsx`(화면 안내용 표시)에 남아 있다 —
- * 계획서 Q3의 9곳에 없어 이 PR이 건드리지 않았다. 고치면 이 목록에 파일을 더한다.
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -25,6 +23,8 @@ export const GUARDED_FILES = [
   "lib/stores/transfer-per-asset-summary.ts",
   "lib/stores/calc-wizard-store.ts",
   "components/calc/results/transfer/FilingFormTableHelpers.ts",
+  "components/calc/transfer/CompanionSaleModeBlock.tsx",
+  "components/calc/transfer/asset-sections/AssetSectionExpense.tsx",
 ];
 
 function matchParen(src: string, openIdx: number): number {
@@ -90,8 +90,8 @@ export function scan(src: string): Hit[] {
   return hits;
 }
 
-describe("지분 비율 적용 — 거울 9곳은 applyRatio를 쓴다", () => {
-  it("🔴 거울이 있던 3개 파일에 `Math.floor(… * 지분 비율)`이 0건이다", () => {
+describe("지분 비율 적용 — 거울 9곳 + 입력 카드 2곳은 applyRatio를 쓴다", () => {
+  it("🔴 거울이 있던 3개 파일 + 입력 카드 2개 파일에 `Math.floor(… * 지분 비율)`이 0건이다", () => {
     const found: string[] = [];
     for (const file of GUARDED_FILES) {
       for (const h of scan(readFileSync(join(ROOT, file), "utf8"))) found.push(`  ${file}:${h.line}\n    Math.floor(${h.text})`);
@@ -99,11 +99,13 @@ describe("지분 비율 적용 — 거울 9곳은 applyRatio를 쓴다", () => {
     expect(found, `지분 적용 ${found.length}건 — applyRatio(금액, 비율)로 바꿀 것:\n${found.join("\n")}`).toHaveLength(0);
   });
 
-  it("거울 9곳이 applyRatio를 실제로 호출한다 (가드가 «아무것도 안 보는» 상태로 통과하지 않는다)", () => {
+  it("거울 9곳 + 입력 카드 2곳이 applyRatio를 실제로 호출한다 (가드가 «아무것도 안 보는» 상태로 통과하지 않는다)", () => {
     const count = (file: string) => (readFileSync(join(ROOT, file), "utf8").match(/\bapplyRatio\(/g) ?? []).length;
     expect(count("lib/stores/transfer-per-asset-summary.ts")).toBeGreaterThanOrEqual(7); // 기존 2 + 거울 5
     expect(count("lib/stores/calc-wizard-store.ts")).toBeGreaterThanOrEqual(1);
     expect(count("components/calc/results/transfer/FilingFormTableHelpers.ts")).toBeGreaterThanOrEqual(3);
+    expect(count("components/calc/transfer/CompanionSaleModeBlock.tsx")).toBeGreaterThanOrEqual(1);
+    expect(count("components/calc/transfer/asset-sections/AssetSectionExpense.tsx")).toBeGreaterThanOrEqual(1);
   });
 });
 
