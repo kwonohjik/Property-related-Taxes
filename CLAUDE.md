@@ -116,6 +116,8 @@ E2E를 6샤드로 나눈 뒤 **임계 경로가 `check` job으로 옮겨갔다**
 > ⚠️ **부수 효과가 CI보다 클 수 있다** — 환경 분리는 로컬 `npm test`도 223→160초로 줄인다. 매 푸시 pre-push에서 체감된다.
 >
 > ⚠️ 컴포넌트를 렌더하는 `.test.ts`를 새로 만들면 `document is not defined`로 실패한다. 파일을 `.test.tsx`로 만들거나 `vitest.config.ts`의 `DOM_TS`에 추가할 것.
+>
+> 🔴 **`node` 프로젝트는 모듈 격리를 끈다**(2026-10-21 — import가 테스트 실행의 7배였다). mock·stub·가짜 타이머·store·Storage·전역 대입을 쓰는 파일(보조 파일 경유 포함)은 `vitest.config.ts`가 자동으로 `node-isolated`로 보낸다. 패턴으로 못 잡는 모듈 수준 상태가 새면 앞 파일 덕에 통과하는 거짓 초록이 될 수 있어, `vitest-isolated.yml`(주간)이 같은 파일을 `--isolate`로 다시 돌린다. 공유 쪽에서만 깨지면 `FORCE_ISOLATED`에 넣을 것.
 
 ##### ✅ 법제처 API 의존 spec은 **fixture mock** (2026-08-06 — 원인 규명 후 해소)
 

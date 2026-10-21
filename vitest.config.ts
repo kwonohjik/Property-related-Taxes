@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import fs from "fs";
 
 /**
  * 🔴 **환경은 파일 종류로 가른다 — 전역 jsdom은 CPU의 30%를 환경 구축에 썼다** (2026-08-25 실측)
@@ -43,6 +44,68 @@ const DOM_TS = [
   "__tests__/lib/stores/multi-basic-deduction-legacy-rehydrate.test.ts",
 ];
 
+/**
+ * 🔴 **node 테스트는 기본으로 모듈 격리를 끈다 — 실행 시간의 대부분이 import였다** (2026-10-21 실측)
+ *
+ * vitest는 기본으로 파일마다 모듈 그래프를 새로 올린다. CI 샤드(run 39551558331 test 3/4)는
+ * 749초 중 **import 1664초 · tests 238초**(CPU 합)로, 같은 엔진 모듈을 파일마다 다시 올리는
+ * 비용이 실행의 7배였다. 순수 함수 엔진 테스트는 격리가 필요 없다. 로컬 node 프로젝트 2484파일:
+ *
+ *   | 구성                      | 벽시계 | 결과                                  |
+ *   |---------------------------|--------|---------------------------------------|
+ *   | 전부 격리(종전)           | 371s   | 전건 통과                             |
+ *   | 전부 격리 해제            | 41s    | **16파일 실패**(mock 11 · IndexedDB 5) |
+ *   | mock·stub·IndexedDB만 격리 | 126s  | 전건 통과(31875 passed — 종전과 동일)  |
+ *
+ *   위 셋은 같은 시점에 잰 값이다. 현행 기준(아래 패턴 — store 등 추가, 격리 543파일)은 머신
+ *   부하가 높은 상태에서 종전 731초 대 218초였다(같은 31875 passed). 부하가 달라 비율은 참고치다.
+ *
+ * ⇒ **전역 상태를 바꾸는 파일만 `node-isolated`로 보낸다.** 판정은 파일 본문 + 그 파일이
+ *    import하는 `__tests__/` 안 보조 파일(재귀)에서 아래 패턴을 찾는다 — 보조 파일 14개가
+ *    `vi.mock`·`vi.stubGlobal`·가짜 타이머를 품고 있어 테스트 파일만 보면 놓친다.
+ *    목록을 손으로 관리하지 않으므로 새 테스트가 mock을 쓰면 자동으로 격리된다.
+ *    zustand store(`use…Store`)도 격리한다 — 공유 모드에서 앞 파일이 남긴 `formData`가
+ *    `...st.formData` 시드에 섞여 셔플 실행에서 실패했다(transfer-replot-increment-std-price).
+ *
+ * ⚠️ 격리를 끄면 **앞 파일이 남긴 상태 덕에 통과하는** 거짓 초록이 생길 수 있다(모듈 수준
+ *    카운터·캐시 등 패턴으로 못 잡는 상태). 안전망은 `.github/workflows/vitest-isolated.yml`
+ *    (주간 · `--isolate`로 전건 격리 실행)이다. 공유 쪽에서만 깨지는 테스트를 발견하면 그 파일을
+ *    `FORCE_ISOLATED`에 넣는다.
+ */
+const FORCE_ISOLATED: string[] = [];
+
+const ISOLATION_PATTERN =
+  /vi\.(mock|doMock|stubGlobal|stubEnv|resetModules|spyOn|useFakeTimers|setSystemTime)\b|\buse[A-Z]\w*Store\b|indexeddb|indexedDB|Dexie|sessionStorage|localStorage|process\.env(\.\w+|\[[^\]]+\])\s*=[^=]|delete process\.env|(globalThis|global)\.[A-Za-z_$]+\s*=[^=]/;
+
+const LOCAL_IMPORT = /(?:from|import)\s*\(?\s*["']((?:\.{1,2}\/|@\/__tests__\/)[^"']+)["']/g;
+
+function resolveLocal(from: string, spec: string): string | null {
+  const base = spec.startsWith("@/")
+    ? path.join(__dirname, spec.slice(2))
+    : path.resolve(path.dirname(from), spec);
+  for (const c of [base, `${base}.ts`, `${base}.tsx`, path.join(base, "index.ts")]) {
+    if (c.startsWith(path.join(__dirname, "__tests__")) && fs.existsSync(c) && fs.statSync(c).isFile()) return c;
+  }
+  return null;
+}
+
+function needsIsolation(file: string, seen = new Set<string>()): boolean {
+  if (seen.has(file)) return false;
+  seen.add(file);
+  const src = fs.readFileSync(file, "utf8");
+  if (ISOLATION_PATTERN.test(src)) return true;
+  for (const m of src.matchAll(LOCAL_IMPORT)) {
+    const dep = resolveLocal(file, m[1]);
+    if (dep && needsIsolation(dep, seen)) return true;
+  }
+  return false;
+}
+
+const NODE_ISOLATED = (fs.readdirSync(path.join(__dirname, "__tests__"), { recursive: true }) as string[])
+  .map((f) => `__tests__/${f.split(path.sep).join("/")}`)
+  .filter((f) => f.endsWith(".test.ts") && !DOM_TS.includes(f))
+  .filter((f) => FORCE_ISOLATED.includes(f) || needsIsolation(path.join(__dirname, f)));
+
 const shared = {
   plugins: [react()],
   resolve: { alias: { "@": path.resolve(__dirname, ".") } },
@@ -57,8 +120,17 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
+          isolate: false,
           include: ["__tests__/**/*.test.ts"],
-          exclude: DOM_TS,
+          exclude: [...DOM_TS, ...NODE_ISOLATED],
+        },
+      },
+      {
+        ...shared,
+        test: {
+          name: "node-isolated",
+          environment: "node",
+          include: NODE_ISOLATED,
         },
       },
       {
