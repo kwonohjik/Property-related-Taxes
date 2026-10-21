@@ -101,7 +101,7 @@ describe("UI-D 상속받은 주택 (§104②1호 · §154⑧3호)", () => {
     // 다른 입력은 보존
     expect(bgtOf().standardPriceAtAcquisition).toBe(150_000_000);
     expect(bgtOf().acquisitionDate).toBeInstanceOf(Date);
-  });
+  }, 20_000); // 이 파일 첫 렌더 비용 — 부하 중 5초를 넘겼다(계획서 vitest-load-sensitive-tests.plan.md R3)
   it("부정 짝 — 토글 OFF → 원인 매매 · 통산 값 비움", () => {
     render(
       <Harness

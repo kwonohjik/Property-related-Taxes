@@ -58,7 +58,7 @@ describe(ID, () => {
     release();
     await flush();
     expect([row().isApartment, row().officialPrice]).toEqual([true, "500000000"]);
-  });
+  }, 20_000); // 이 파일 첫 렌더 비용 — 부하 중 5초를 넘겼다(계획서 vitest-load-sensitive-tests.plan.md R3)
   it("대조: 응답 먼저 → 편집", async () => {
     const release = controllableFetch();
     render(<Wrap init={init()} />);
