@@ -24,6 +24,7 @@
  */
 
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
+import { safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
@@ -460,7 +461,7 @@ export async function callGiftBurdenedTransferAPI(
  *   debtRatio = assumedDebtForGift / valuationAmount
  *
  * actual 모드:
- *   안분취득가 = Math.floor(bgt.actualAcquisitionPrice × debtRatio)
+ *   안분취득가 = safeMultiplyThenDivide(bgt.actualAcquisitionPrice, assumedDebtForGift, valuationAmount) — A × B/C 분수 그대로
  *   perShareAcquisitionPrice = Math.floor(안분취득가 / shareCount)
  *
  * estimated (상장·비상장 공통):
@@ -648,9 +649,10 @@ export function buildGiftStockBurdenedTransferBody(
 
   // ─── 취득가액 모드별 안분 ───
   if (bgt.acquisitionMode === "actual") {
-    // K-4: 실지취득가 × debtRatio ÷ shareCount (클라이언트 안분)
+    // K-4: 실지취득가 × B/C ÷ shareCount (클라이언트 안분) — 소령 §159①1호 `A × B/C`를 소수 비율이 아니라
+    // 분수 그대로(B·C 원값) 계산한다. 소수 곱은 정수 %(57% 등)에서도 참값이 정수인 곱이 1원 모자랐다(계획서 F3).
     const actualAcquisitionPrice = bgt.actualAcquisitionPrice ?? 0;
-    const proratedAcquisitionPrice = Math.floor(actualAcquisitionPrice * debtRatio);
+    const proratedAcquisitionPrice = safeMultiplyThenDivide(actualAcquisitionPrice, assumedDebtForGift, valuationAmount);
     const perShareAcquisitionPrice = shareCount > 0
       ? Math.floor(proratedAcquisitionPrice / shareCount)
       : 0;

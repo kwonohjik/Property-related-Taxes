@@ -335,3 +335,64 @@ M10/M11은 값이 달라지지 않는 중복 가드다. Q4 (a)(기존 가드 동
 - `__tests__/tax-engine/ __tests__/calc/ __tests__/api/`(`--maxWorkers=2`): 2,285 파일 통과 / 1 실패 — `redev-phd-deemed-acquisition.test.ts`가 **5000ms 타임아웃**(load average 80~100 환경). 단독 재실행 5/5 통과 → 부하성이다.
 - 브라우저 수동 확인: UI 변경 0이라 해당 없음(미수행).
 - 14지점: ①~⑭ 무변경(엔진 내부 시그니처만). ⑧ validate 동기화 대상 없음. 자동 안분 fallback·useEffect 미러링 추가 없음.
+
+## 13. Do 결과 — PR-2 (주식 S-1: F3·F4, 2026-10-22)
+
+브랜치 `fix/stock-burdened-debt-ratio-precision`(PR-1 커밋 `cf263715c` 위, 같은 워크트리). **와이어 불변** — `burdenedGiftDebtRatio`(⑫ `stock-transfer-tax-schema.ts` · ⑬ `gift-burdened-transfer-api.ts` body · ⑭ `stock-transfer-engine-input.ts`)와 `perShareAcquisitionPrice` 필드 모두 그대로, Zod·UI·validate 무변경.
+
+### 13.1 변경
+
+| 파일 | 변경 |
+|---|---|
+| `lib/calc/gift-burdened-transfer-api.ts`(F3) | actual 모드 안분 취득가 `Math.floor(실지취득가 × debtRatio)` → `safeMultiplyThenDivide(실지취득가, assumedDebtForGift, valuationAmount)`. ④ 안에 B(`assumedDebtForGift`)·C(`valuationAmount`) 원값이 이미 있어(`:529-530`) 와이어 변경 없이 소수 비율을 건너뛴다. `debtRatio` 상수는 estimated 모드의 `body.burdenedGiftDebtRatio` 전송용으로 남는다 |
+| `lib/tax-engine/stock-transfer/stock-acquisition-basis.ts`(F4) | 개산공제 base `Math.floor(estimatedBase × burdenedGiftDebtRatio)` → `applyRatio(estimatedBase, burdenedGiftDebtRatio)`(`tax-utils` import 추가) |
+
+### 13.2 확인한 것
+
+- **④ 안에 원값 존재**: `assumedDebtForGift = item.assumedDebtForGift ?? 0`, `valuationAmount = computeEffectiveValuation(item, form.giftDate)` — `valuationAmount ≤ 0`이면 함수 초입에서 throw라 분모 0 없음. 파일 781줄 → 783줄(800줄 트리거 미만).
+- `perShareAcquisitionPrice = floor(안분취득가 / 주식수)` 증폭(§6.4, 범위 밖 §10)은 그대로 — 안분취득가 1원이 경계를 넘으면 취득가액 총액이 주식수만큼 달라진다. 이 PR이 그 1원을 없애므로 증폭도 같이 사라진다(BD-7: 22,799,000 → 22,800,000).
+
+### 13.3 수정 전 실패
+
+신규 `__tests__/calc/gift-burdened-stock-debt-ratio-precision.anchor.test.ts` **11건 중 5건 실패**(BD-7 3 · BD-8 2). 통과 6건은 짧은 소수(10%)·r=1·7주 경계 중 우연히 맞는 값·KNOWN-LIMIT 등이다. 가드 `debt-ratio-apply-policy.test.ts`를 주식 두 파일로 확장한 상태에서 **7건 중 3건 실패**(곱셈 패턴 · safeMultiplyThenDivide 호출 · applyRatio 호출).
+격자(정수 % 1~99 × 취득가·기준시가): ④ 1,188건(99비율 × 4가격 × 3주식수) 중 **22건**, 엔진 297건(99비율 × 3기준시가) 중 **10건**이 옛 식에서 참값과 달랐다.
+
+### 13.4 값이 바뀌는 사례
+
+| 사례 | 수정 전 | 수정 후 |
+|---|---|---|
+| F3: 평가액 1억 · 채무 5,700만 · 실지취득가 4,000만 · 1,000주 → 1주당 취득가 | 22,799 | **22,800** |
+| 같은 사례 엔진 취득가액 총액 | 22,799,000 | **22,800,000** (주식수만큼 증폭) |
+| F4: B/C 57% · 취득기준시가 총액 5,000만 → estimatedBase | 28,499,999 | **28,500,000** |
+| 같은 사례 개산공제(1%) | 284,999 | **285,000** |
+
+주식 엔진의 **결정세액 쌍대 실행은 하지 않았다**(§11 2번 유지). 값 수준(취득가액·개산공제)까지만 확인했다.
+
+### 13.5 한계 (Q5 a 확정) — 순환 소수 비율
+
+F4는 와이어에 소수 비율 하나뿐이라 순환 소수(B/C = 14/110 등)에서 `applyRatio`가 옛 식으로 넘어가 **참값이 정수인 곱에서 1원 과소가 남는다**. 사례: B 1,400만 · C 1.1억 · 취득기준시가 총액 5,500만 → 참값 7,000,000 / 실제 6,999,999. `KNOWN-LIMIT` 테스트가 현재 값(6,999,999)을 고정해 두었다 — S-2(와이어에 증여가액 C 추가: ⑫·⑬·⑭·타입·⑧ stock validate)를 하면 이 단언을 참값으로 뒤집고 이 절을 갱신할 것. 빈도는 §6.4 실측 기준 0.002% 수준이다.
+
+### 13.6 기존 기대값 변화 — 0건
+
+임시 계측(신·구 식 병행 로그, 원복·sha 일치)으로 `buildGiftStockBurdenedTransferBody|burdenedGiftDebtRatio|burdenedGiftStockTransferTax|assumedDebtForGift`를 포함한 **49파일**(`.test.ts` + `.test.tsx`, 596건)을 실행: 신규 BD 테스트를 뺀 기존 호출 F3 22회 · F4 14회(비율 0.1 · 0.2)에서 신·구가 달라진 것 0건, 실패는 계측으로 옛 식을 되살려 정적 가드가 정상적으로 울린 1건뿐(원복 후 통과).
+
+### 13.7 뮤테이션
+
+대상: 신규 주식 anchor + 가드 + `gift-burdened-stock-major-and-conversion.anchor`(39건). 원복 sha 전건 일치.
+
+| # | 변형 | 결과 |
+|---|---|---|
+| P7a | F3 `Math.floor(× debtRatio)` 복원 | KILLED(5건: 가드 2 · BD-7 3) |
+| P7b | F4 `Math.floor(× 비율)` 복원 | KILLED(4건: 가드 2 · BD-8) |
+| P12 | F3 B↔C 뒤집기 | KILLED(7건) |
+| P13 | F3 안분 제거(취득가 전액) | KILLED(7건) |
+| P14 | F4 `applyRatio(base, 1 − 비율)` | KILLED(7건, 기존 10% 회귀 포함) |
+| P16 | `Math.floor(÷ 주식수)` → `Math.round` | KILLED(2건: 7주 경계 · 격자) |
+| P15 | F4 가드 `< 1` → `<= 1` | **SURVIVED — 동치 변이**(`applyRatio(base, 1) = base`) |
+
+### 13.8 검증
+
+- `npx tsc --noEmit` 0건 · `npm run lint` 오류 0 · 폰트·톤·다크·워크플로 게이트 통과.
+- **전체 vitest(`--maxWorkers=2`, PR-1+PR-2 합친 코드)**: 3,227 파일 통과 / 1 skipped, 38,512 테스트 통과 · 실패 0 (604초). PR-1 시점의 `__tests__/tax-engine/ __tests__/calc/ __tests__/api/` 1회 실패(타임아웃)는 부하 해소 후 재발하지 않았다.
+- 브라우저 수동 확인: UI·와이어 변경 0이라 해당 없음(미수행).
+- 14지점: ①~⑭ 무변경. ⑧ validate 동기화 대상 없음(UI/API fallback 신설 없음). 자동 안분 fallback·useEffect 미러링 추가 없음.
