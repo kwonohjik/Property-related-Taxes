@@ -185,10 +185,14 @@ describe("F-18 — §3 술어 단일화(엔진 ↔ validate ↔ UI)", () => {
 
   it("UI 가 같은 술어를 쓴다 — 소스 규칙", async () => {
     const fs = await import("node:fs/promises");
-    const src = await fs.readFile(
-      "components/calc/building-std-price/BuildingStdPriceForm.tsx",
-      "utf8",
-    );
+    // 양도 분기는 800줄 정책으로 BuildingStdTransferSections.tsx에 분리됐다 — 폼 소스 = 두 파일
+    const src = (
+      await Promise.all(
+        ["BuildingStdPriceForm.tsx", "BuildingStdTransferSections.tsx"].map((n) =>
+          fs.readFile(`components/calc/building-std-price/${n}`, "utf8"),
+        ),
+      )
+    ).join("\n");
     expect(src).toContain("usesPriorStdPriceSubstitute(Number(f.acquisitionYear) || undefined)");
   });
 });

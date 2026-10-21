@@ -445,6 +445,10 @@ export function MultiPointBuildingStdPriceModal({
                 lng: addr.longitude ?? "",
                 lat: addr.latitude ?? "",
                 pnu: addr.pnu ?? "",
+                // 동·호를 함께 넘긴다 — 빠지면 상세주소 입력이 `buildAddressPatch`의 `v.dong ?? ""`로 동·호를 지워
+                //   건축물대장 조회가 동 전체 연면적을 채웠다(계획서 address-dongho-other-calcs-and-multi-gate.plan.md R1)
+                dong: addr.unitDong || undefined,
+                ho: addr.unitHo || undefined,
               }}
               onChange={(v) => setAddr((prev) => ({ ...prev, ...buildAddressPatch(v) }))}
             />

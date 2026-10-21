@@ -119,8 +119,12 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
   const [error, setError] = useState<string | null>(null);
   const [searched, setSearched] = useState(false);
 
-  // 「세대 있음」으로 판정된 주소가 다시 마운트되면 목록을 다시 불러온다(아래 effect) — 첫 렌더부터 조회 중으로 둬 안내가 깜빡이지 않게 한다
-  const restoreUnitsOnMount = !disableUnits && knownHasUnits === true && Boolean(value.jibun);
+  // 세대가 있는 주소가 다시 마운트되면 목록을 다시 불러온다(아래 effect) — 첫 렌더부터 조회 중으로 둬 안내가 깜빡이지 않게 한다.
+  // 「세대가 있다」의 근거는 둘이다: 호출부가 저장한 판정(`knownHasUnits`) 또는 이미 고른 동·호(`value.dong`·`value.ho`).
+  // 후자는 판정을 저장하지 않는 다른 계산기용이다 — 목록이 없으면 고른 세대가 보이지 않고, 바꾸려면 주소를 다시 검색해야 했다
+  // (계획서 address-dongho-other-calcs-and-multi-gate.plan.md R2)
+  const restoreUnitsOnMount =
+    !disableUnits && Boolean(value.jibun) && (knownHasUnits === true || Boolean(value.dong || value.ho));
   const [units, setUnits] = useState<UnitItem[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(restoreUnitsOnMount);
   const [selectedDong, setSelectedDong] = useState<string>(value.dong ?? "");
@@ -240,11 +244,12 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
     onUnitsResolved?.(outcome === "found");
   }
 
-  // 「세대 있음」으로 판정된 주소가 다시 마운트됐다 — 목록만 되살린다(knownHasUnits 주석)
+  // 세대가 있는 주소가 다시 마운트됐다 — 목록만 되살린다(knownHasUnits 주석)
   useEffect(() => {
     if (!restoreUnitsOnMount) return;
     void loadUnits(value.pnu ?? "", value.jibun).then((outcome) => {
-      if (outcome === "none") onUnitsResolved?.(false);
+      // 판정을 「없음」으로 바꾸는 것은 저장된 판정이 「있음」일 때뿐이다 — 같은 값 저장도 계산 결과를 지운다
+      if (outcome === "none" && knownHasUnits === true) onUnitsResolved?.(false);
     });
     // 마운트 때 1회 — 이후 주소를 바꾸면 handleSelect가 새로 조회한다
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -222,4 +222,42 @@ test.describe("소재지 동·호 목록 — 다시 마운트돼도 되살린다
     await page.waitForTimeout(500);
     expect(await writes()).toBe(before);
   });
+
+  test("U-10 반례: 「세대 없음」으로 확정된 뒤 남은 동·호로 다시 불러와도 같은 판정을 또 저장하지 않는다", async ({ page }) => {
+    // 동·호가 남아 있으면 판정과 무관하게 목록을 다시 불러온다(계획서 address-dongho-other-calcs-and-multi-gate.plan.md R2).
+    // 그 결과가 또 「없음」이어도 저장된 판정이 이미 false이므로 저장하지 않는다 — 같은 값 저장도 결과를 지운다.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __wizardWrites: number };
+      w.__wizardWrites = 0;
+      const orig = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k: string, v: string) {
+        if (k === "transfer-tax-wizard") w.__wizardWrites++;
+        return orig.call(this, k, v);
+      };
+    });
+    const st = await mock(page, "units");
+    await open(page);
+    await pickAddress(page);
+    await pickUnit(page);
+
+    st.mode = "none";
+    await reload(page);
+    await expect.poll(() => primary(page).then((p) => p.hasAddressUnits)).toBe(false);
+    expect(await primary(page)).toMatchObject({ dong: "101동", ho: "501" });
+
+    // 재조회 응답을 붙잡아 두고 저장 횟수를 잰 뒤 「없음」으로 풀어 준다(U-9와 같은 방식)
+    st.mode = "hold";
+    const callsBefore = st.calls;
+    await reload(page);
+    await expect.poll(() => st.calls).toBeGreaterThan(callsBefore); // 남은 동·호로 다시 불러왔다
+    await page.waitForTimeout(800); // 마운트 직후의 다른 저장이 끝나기를 기다린다
+    const writes = () => page.evaluate(() => (window as unknown as { __wizardWrites: number }).__wizardWrites);
+    const before = await writes();
+    st.mode = "none";
+    st.release();
+    await expect(page.getByPlaceholder(/상세주소/).first()).toBeVisible(); // 응답이 반영됐다(「동/호수 조회 중...」 → 상세주소 칸)
+    await page.waitForTimeout(500);
+    expect(await writes()).toBe(before);
+    expect((await primary(page)).hasAddressUnits).toBe(false);
+  });
 });

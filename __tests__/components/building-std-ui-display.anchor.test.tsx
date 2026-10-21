@@ -54,10 +54,10 @@ function renderWith(over: Partial<BuildingStdPriceFormState>) {
   );
 }
 
-const FORM_SRC = fs.readFileSync(
-  "components/calc/building-std-price/BuildingStdPriceForm.tsx",
-  "utf8",
-);
+// 양도 분기는 800줄 정책으로 BuildingStdTransferSections.tsx에 분리됐다 — 폼 소스 = 두 파일
+const FORM_SRC = ["BuildingStdPriceForm.tsx", "BuildingStdTransferSections.tsx"]
+  .map((n) => fs.readFileSync(`components/calc/building-std-price/${n}`, "utf8"))
+  .join("\n");
 
 describe("F-15 취득연도 옵션 — §1 (수정 전 실패)", () => {
   it("산정기준율표에 1985(=1985년 이전) 열이 실재한다 — 사실 고정", () => {
