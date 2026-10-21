@@ -256,7 +256,7 @@ jobs:
       # `blob` 리포터는 샤드별 부분 결과를 낸다 — 아래 `e2e-report` job이 HTML 하나로 합친다.
       # (config의 html 리포터를 CLI로 덮어쓴다. 샤드마다 별도 HTML을 내면 합칠 수 없다.)
       - name: E2E 샤드 ${{ matrix.shard }}/12 (알려진 사전존재 실패 제외)
-        run: npx playwright test --shard=${{ matrix.shard }}/12 --reporter=list,blob
+        run: nproc && npx playwright test --shard=${{ matrix.shard }}/12 --workers=3 --reporter=list,blob
         env:
           # 🔑 `e2e/law-*.spec.ts` 16 spec 중 **조문 본문을 단언하는 5건**
           # (POPUP-1·HTML-1·TBL-1·CITE-1·IMP-1)은 2026-08-06부터 **fixture mock**이라
