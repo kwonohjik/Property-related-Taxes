@@ -68,7 +68,7 @@ export function runRedevelopmentGainSteps(
   /**
    * 부담부증여 §159 명세 — 이 분기가 메인 파이프라인을 조기 이탈하므로 상류에서 받아야 한다.
    *
-   *   · `debtRatio` → §166 β 스케일 (`redevelopment-burdened-gift.ts`)
+   *   · 채무비율 B/C 원값(`debtFraction`) → §166 β 스케일 (`redevelopment-burdened-gift.ts`)
    *   · 12억 비교·안분 분모 → `input.burdenedGiftDenominator`(= 증여가액 C)
    *
    * 미제공이면 종전과 동일하게 동작한다(일반 양도 · additive).
@@ -90,7 +90,9 @@ export function runRedevelopmentGainSteps(
     isSuccessorRightToMoveIn: input.isSuccessorRightToMoveIn,
     ownershipRatio: input.ownershipRatio,
     isUnregistered: input.isUnregistered,
-    debtRatio: burdenedGift?.debtRatio,
+    debtFraction: burdenedGift
+      ? { debt: burdenedGift.assumedDebtAmount, valuation: burdenedGift.giftValuation.max }
+      : undefined,
   });
 
   /**
