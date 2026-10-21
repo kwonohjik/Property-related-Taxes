@@ -14,7 +14,8 @@ vi.mock("@/components/ui/address-search", () => ({
       type="button"
       data-testid="mock-address-pick"
       onClick={() =>
-        // Vworld 실제 포맷: road=전체 도로명(시도·시군구), jibun=짧은 지번(시군구 없음)
+        // 도로명 검색 결과 형식: road=전체 도로명(시도·시군구), jibun=짧은 지번. 지번 검색은 반대로 온다 —
+        //   그 형식은 land-parcel-sigungu-autofill.test.tsx가 실제 AddressSearch로 본다
         onChange({ road: "서울특별시 송파구 가락로 100", jibun: "석촌동 276-1", building: "", detail: "", lng: "", lat: "" })
       }
     >
