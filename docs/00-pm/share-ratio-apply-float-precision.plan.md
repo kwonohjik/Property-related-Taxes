@@ -1,7 +1,7 @@
 # 지분 규약 `applyRatio` 부동소수 1원 과소 — 수정 계획서
 
 **작성**: 2026-10-21 · **base**: master `bafdddeb8` · **선행**: 환산취득가액·비율 안분 1원 과소 #2360(`docs/00-pm/estimated-acquisition-float-precision.plan.md` §6.1·§7에서 별건으로 분리)
-**상태**: 🟡 Plan — 사용자 결정 대기(§6)
+**상태**: ✅ Plan 확정 (2026-10-21 사용자 결정 — Q1 (a) `applyRatio` 내부 정확화 · Q2 (a) 채무비율 별건 · Q3 (a) 거울 9곳 통일 · Q4 (a) 10자리 경계) → Do
 **실측 원자료**: 세션 scratchpad `shr/`(probe1~4.mjs · measure*.py · hits*.log) — 세션이 끝나면 지워진다.
 
 ---
