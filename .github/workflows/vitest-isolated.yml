@@ -1,0 +1,48 @@
+name: vitest 전건 격리 실행
+
+# ══════════════════════════════════════════════════════════════════
+# `vitest.config.ts`의 `node` 프로젝트는 **모듈 격리를 끈다**(2026-10-21 — import 비용이 실행의
+# 7배였다). 격리를 끄면 앞 파일이 남긴 상태 덕에 통과하는 **거짓 초록**이 생길 수 있고, CI·pre-push
+# 모두 그 공유 모드로 돈다. 이 워크플로가 그 갭을 메운다 — 같은 파일을 `--isolate`로 파일마다
+# 새 모듈 그래프에서 돌려, 공유 모드에서만 통과하는 테스트를 드러낸다.
+#
+# 실패하면: 그 파일이 다른 파일의 상태에 기대고 있다는 뜻이다. 테스트를 고치거나, 당장은
+# `vitest.config.ts`의 `FORCE_ISOLATED`에 넣는다.
+#
+# `node-isolated`·`dom` 프로젝트는 원래 격리라 CI와 같은 실행이다 — 여기선 `node`만 돈다.
+# ══════════════════════════════════════════════════════════════════
+
+on:
+  schedule:
+    - cron: "0 1 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: vitest-isolated
+  cancel-in-progress: false
+
+jobs:
+  isolated:
+    name: node 전건 격리 (${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    # 추정: CI의 격리 실행은 4샤드 기준 샤드당 555~751초였다(run 39551558331 — node 외 포함).
+    # node만 2샤드라 비슷한 규모. 첫 실행 실측으로 교체할 것.
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        # ⚠️ 샤드 수를 바꾸면 아래 `--shard=N/2`의 분모도 함께 바꿀 것(조용한 미실행).
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install deps (fresh)
+        run: npm ci
+
+      - name: node 프로젝트 격리 실행 ${{ matrix.shard }}/2
+        run: npx vitest run --project node --isolate --shard=${{ matrix.shard }}/2
