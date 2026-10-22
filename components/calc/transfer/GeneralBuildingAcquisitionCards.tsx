@@ -45,6 +45,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { gbLandPreDeemed, GB_PRE_DEEMED_LAND_NOTE } from "@/lib/calc/gb-pre-deemed";
 import {
   isGbLandPre1990Sec163_9,
   gbLandAcquisitionDate,
@@ -475,6 +476,11 @@ export function GeneralBuildingAcquisitionCards({
               토지등급으로 환산합니다. 아래 환산값과 {asset.acquisitionCause === "gift" ? "증여 신고가액" : "상속개시일 평가액"} 중{" "}
               <span className="font-semibold">많은 금액</span>이 토지 취득가액이 됩니다.
             </p>
+            {gbLandPreDeemed(asset) && (
+              <p data-testid="gb-pre-deemed-land-note" className="text-xs text-amber-800 dark:text-amber-200">
+                {GB_PRE_DEEMED_LAND_NOTE}
+              </p>
+            )}
             <Pre1990LandValuationInput
               form={asset}
               onChange={onChange}

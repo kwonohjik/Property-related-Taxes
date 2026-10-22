@@ -109,15 +109,25 @@ function run(a: AssetForm) {
 }
 const v = (a: AssetForm) => validateGeneralBuildingAsset(a, "자산1", "2026-02-16");
 
-describe("P85-1 — pre-1985 상속도 §163⑨이 정본이다", () => {
-  it("🔴 취득가액이 0이 아니다 — max(평가액, §164)", () => {
+/**
+ * 🔄 **3자 max (PR-4 · 2026-10-22)** — 의제취득일 전 상속·증여 파트는 max(① 평가액, ② §164 가액, ③ 환산취득가액)이다
+ * (계획서 `inheritance-pre-deemed-clause-b-revisit.plan.md` §15 · 사용자 결정 Q-1 C). 이 시료는 두 파트 모두 ③이 가장 크다:
+ *   ③ 토지 = 16.2억 × 205,000,000 ÷ 1,389,442,400(양도시 기준시가 합) = 239,016,745 (> ② 205,000,000)
+ *   ③ 건물 = 16.2억 × 150,000,000 ÷ 1,389,442,400 = 174,890,301 (> ② 150,000,000)
+ * ③이 채택된 파트는 추계라 개산공제(영 §163⑥ — 취득시 기준시가 × 3%)가 붙는다. 종전 단언은 max(①,②) 205,000,000·150,000,000 · 334,920,000.
+ */
+const CONVERTED_LAND = 239_016_745;
+const CONVERTED_BUILDING = 174_890_301;
+
+describe("P85-1 — pre-1985 상속도 §163⑨이 정본이다 (①②③ 중 큰 금액)", () => {
+  it("🔴 취득가액이 0이 아니다 — max(평가액, §164, 환산취득가액) = ③", () => {
     const r = run(inherited());
-    expect(r.landAcq).toBe(SEC164_LAND);
-    expect(r.buildingAcq).toBe(SEC164_BUILDING);
+    expect(r.landAcq).toBe(CONVERTED_LAND);
+    expect(r.buildingAcq).toBe(CONVERTED_BUILDING);
   });
 
-  it("🔴 세액 443,235,000 → 334,920,000", () => {
-    expect(run(inherited()).calculatedTax).toBe(334_920_000);
+  it("🔴 세액 443,235,000 → 334,920,000(①② max) → 314,470,228(③ · 개산공제 6,150,000·4,500,000)", () => {
+    expect(run(inherited()).calculatedTax).toBe(314_470_228);
   });
 
   it("평가액이 §164보다 크면 평가액을 쓴다 (max이지 대체가 아니다)", () => {
@@ -127,14 +137,14 @@ describe("P85-1 — pre-1985 상속도 §163⑨이 정본이다", () => {
 });
 
 describe("P85-2 — pre-1985 증여도 같다", () => {
-  it("🔴 취득가액이 신고가액이 아니라 §164 가액", () => {
+  it("🔴 취득가액이 신고가액이 아니라 ①②③ 중 큰 금액(③)", () => {
     const r = run(gifted());
-    expect(r.landAcq).toBe(SEC164_LAND);
-    expect(r.buildingAcq).toBe(SEC164_BUILDING);
+    expect(r.landAcq).toBe(CONVERTED_LAND);
+    expect(r.buildingAcq).toBe(CONVERTED_BUILDING);
   });
 
-  it("🔴 세액 334,920,000", () => {
-    expect(run(gifted()).calculatedTax).toBe(334_920_000);
+  it("🔴 세액 314,470,228 (상속과 같다)", () => {
+    expect(run(gifted()).calculatedTax).toBe(314_470_228);
   });
 });
 

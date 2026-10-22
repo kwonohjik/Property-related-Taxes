@@ -88,8 +88,10 @@ function inherited(acqDate: string): AssetForm {
     decedentAcquisitionDate: "1970-01-01",
     landAcqMode: "actual",
     buildingAcqMode: "actual",
-    publishedValueAtInheritance: "50000000",
-    gbBuildingInheritedValue: "20000000",
+    // 🔄 PR-4(2026-10-22) — 1980 상속은 의제취득일 전이라 ③(환산취득가액)과도 비교한다. 기산일만 비교하려면 두 취득일의
+    //    취득가액이 같아야 하므로 ①을 ③(토지 239,016,745 · 건물 174,890,301)보다 크게 둔다 — 두 날짜 모두 ①이 채택된다.
+    publishedValueAtInheritance: "300000000",
+    gbBuildingInheritedValue: "200000000",
     gbAcqLandPricePerSqm: "1000000",
     gbAcqBuildingValue: "150000000",
     gbLandArea: "205",
@@ -131,7 +133,8 @@ const pair = (transferDate: string) => ({
 describe("D-1 — 부과제척기간 안의 양도에서는 의제취득일 해석이 세액을 가르지 않는다", () => {
   it("2026-02-16 양도 — 두 기산일의 세액이 같다", () => {
     const { 현행, 의제 } = pair("2026-02-16");
-    expect(현행).toBe(334_920_000);
+    // PR-4 픽스처(① 3억·2억) 기준 — 머리 주석 표의 334,920,000은 종전 픽스처(① 5천만·2천만, ② 채택) 실측이다.
+    expect(현행).toBe(292_290_000);
     expect(의제).toBe(현행);
   });
 

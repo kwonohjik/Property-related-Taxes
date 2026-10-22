@@ -42,6 +42,14 @@ import { downloadSelectedPdf } from "@/components/calc/results/transfer/Transfer
 import { extractRelevantBuildingStdSnapshots } from "@/lib/storage/use-auto-save-calculation";
 import { useMemo, useState } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { GbPreDeemedAcquisitionBlock } from "@/components/calc/results/transfer/GbPreDeemedAcquisitionBlock";
+
+/** §163⑨ 상속 블록의 파트 라벨 — 의제취득일 전 상속 파트는 엔진이 채택한 후보를 따른다(PR-4). */
+const PRE_DEEMED_ADOPTED_LABEL = {
+  reported: "(상속개시일 평가액)",
+  sec164: "(영 §164 가액)",
+  converted: "(환산취득가액)",
+} as const;
 
 interface Props {
   apportionment: BundledApportionmentResult;
@@ -124,6 +132,19 @@ import { PropertyCard, AggregatedTaxSummary } from "./BundledAllocationSubCards"
 // ─── 메인 컴포넌트 ────────────────────────────────────────────
 
 export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, formData, transferBurdenedGiftBreakdown, onBack, onReset }: Props) {
+  const preDeemed = aggregated.generalBuildingValuationDetail?.preDeemedAcquisition;
+  /**
+   * 그 파트 카드가 ③(추계)으로 계산됐는가 — 지분 분할은 비교 echo를 싣지 않으므로(지분마다 다름) 카드가 유일한 소스다.
+   * 증축분(건물2)은 상속 대상이 아니라 뺀다.
+   */
+  const partConverted = (kind: "land" | "building") =>
+    (aggregated.generalBuildingValuationDetail?.assetCards ?? []).some((c) =>
+      c.usedEstimatedAcquisition &&
+      (kind === "land" ? c.propertyType === "land" : c.propertyType === "general_building_unit" && !c.propertyId.includes("building2")));
+  const inheritedConverted = (kind: "land" | "building") =>
+    !!(kind === "land"
+      ? aggregated.generalBuildingValuationDetail?.acquisitionByInheritance
+      : aggregated.generalBuildingValuationDetail?.buildingAcquisitionByInheritance) && partConverted(kind);
   /**
    * 출력 항목 선택 — 단건(`TransferTaxResultView`)과 동일한 패널.
    * 일반건물·일괄양도는 이 카드가 결과뷰 종착지인데 종전에는 패널 자체가 없어
@@ -304,6 +325,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           <p className="text-xs text-violet-800 dark:text-violet-200">
             상속개시일 현재 「상속세 및 증여세법」 §60~§66 평가액을 취득당시의 실지거래가액으로
             봅니다. 그 파트는 환산취득가·개산공제(§163⑥)를 적용하지 않습니다.
+            {(preDeemed || inheritedConverted("land") || inheritedConverted("building")) &&
+              " 다만 1985.1.1. 전 상속 파트는 환산취득가액이 더 크면 환산취득가액과 개산공제를 적용합니다."}
           </p>
           <ul className="text-xs text-violet-900 space-y-0.5 pt-1 dark:text-violet-200">
             {(["land", "building"] as const).map((kind) => {
@@ -318,7 +341,9 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
                   <span>
                     {kind === "land" ? "토지분" : "건물분"} 취득가액
                     <span className="ml-1 text-violet-700 dark:text-violet-400">
-                      {inherited ? "(상속개시일 평가액)" : "(상속 아님 — 종전 산정)"}
+                      {inherited
+                        ? PRE_DEEMED_ADOPTED_LABEL[preDeemed?.[kind]?.adopted ?? (partConverted(kind) ? "converted" : "reported")]
+                        : "(상속 아님 — 종전 산정)"}
                     </span>
                   </span>
                   <span className="font-mono tabular-nums font-semibold whitespace-nowrap">
@@ -330,6 +355,9 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
           </ul>
         </div>
       )}
+
+      {/* 의제취득일 전 상속·증여 파트 — ①②③ 비교(PR-4). 증여 파트는 위 상속 블록이 없으므로 따로 그린다. */}
+      {preDeemed && <GbPreDeemedAcquisitionBlock echo={preDeemed} />}
 
       {/*
         §99-164-10 환산주택가격 — 취득당시 기준시가를 **덮어쓴 근거**.

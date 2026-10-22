@@ -103,6 +103,11 @@ const carryoverPartShape = z.object({
  *
  * propertyType === "general_building" 시 필수.
  */
+const gbPreDeemedClauseASchema = z.object({
+  reported: z.number().int().nonnegative(),
+  sec164: z.number().int().nonnegative(),
+});
+
 export const generalBuildingValuationSchema = z.object({
   /** 토지 부수면적 (㎡). 양도시 기준시가와 함께 안분 분모 계산. */
   landArea: z.number().positive(),
@@ -404,6 +409,9 @@ export const generalBuildingValuationSchema = z.object({
   inheritedLandValue: z.number().int().positive().optional(),
   /** 상속개시일 건물 평가액 (원). */
   inheritedBuildingValue: z.number().int().positive().optional(),
+  /** 의제취득일(1985.1.1.) 전 상속·증여 파트의 ① 평가액·② 영 §164 가액 — 엔진이 ③과 비교한다(PR-4). 침묵 strip 방지. */
+  landPreDeemedClauseA: gbPreDeemedClauseASchema.optional(),
+  buildingPreDeemedClauseA: gbPreDeemedClauseASchema.optional(),
   /**
    * ⑫ 사례 35: 주택→상가 용도변경 토글.
    * true 시 conversionDate·wasMultiHouseAtConversion 의미 있음. superRefine에서 필수 강제.

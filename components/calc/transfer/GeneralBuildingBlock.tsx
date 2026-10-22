@@ -64,6 +64,7 @@ import { gbFirstDisclosureLandStdPriceOf } from "@/lib/calc/gb-first-disclosure"
 import { gbFirstDisclosureUsesLegacyLandTotal } from "@/lib/calc/gb-first-disclosure";
 import { gbShowsAcqStdPrice } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { needsGbSec1639BuildingStdPrice } from "@/lib/calc/transfer-tax-validate-gb-required";
+import { gbBuildingPreDeemed, GB_PRE_DEEMED_BUILDING_HINT } from "@/lib/calc/gb-pre-deemed";
 import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -621,6 +622,8 @@ export function GeneralBuildingBlock({
                           ? "취득일 기준 건물기준시가 총액. 취득가액에는 쓰이지 않고(입력한 매매사례가액·감정가액 × 채무비율), 이 금액 × 채무비율이 개산공제(§163⑥) 기준액입니다."
                           : bgStdUse === "market_unset"
                             ? "취득일 기준 건물기준시가 총액."
+                            : gbBuildingPreDeemed(asset)
+                              ? GB_PRE_DEEMED_BUILDING_HINT
                             : gbExtOn
                               ? "취득일 기준 원건물(건물1) 기준시가 총액 — 증축분 제외. 이 금액의 3%가 건물 개산공제액 (§163⑥)"
                               : "취득일 기준 건물기준시가 총액. 이 금액의 3%가 건물 개산공제액 (§163⑥)"
