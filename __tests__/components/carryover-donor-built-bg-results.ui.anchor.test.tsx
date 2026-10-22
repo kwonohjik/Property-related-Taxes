@@ -26,7 +26,7 @@ import { CarryoverComparisonCard } from "@/components/calc/results/transfer/Carr
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { buildRows, deriveColumns } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { TransferSection } from "@/lib/pdf/ResultPdfTransferSections";
-import { DONOR_BUILT_ZERO_BASE_NOTICE, DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { DONOR_BUILT_APPLIED_NOTICE, DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE, DONOR_BUILT_OUTSIDE_WINDOW_NOTICE, DONOR_BUILT_ZERO_BASE_NOTICE, donorBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { bgAsset, bgForm, bodyOf } from "../calc/_helpers/carryover-donor-built-bg-form";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -142,5 +142,49 @@ describe("④ PDF", () => {
     expect(a).toContain("정면 해석례는 확인하지 못했습니다 — 확인 필요");
     expect(pdfText(NB)).toContain(DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE);
     expect(pdfText(OFF)).not.toContain("증여자 신축");
+  });
+});
+
+describe("⑦ 산정방식 문구 정본 — K-7(감정)은 «감정가액», 환산 경로는 «환산취득가액» (조문 제목: 감정가액 또는 환산취득가액 적용 가산세)", () => {
+  const FORBID = "환산취득가액";
+  it("K-7: 카드 제목·적용 고지·경고·상세명세서·신고서 각주·PDF 가 «감정가액»이고 «환산취득가액»이 없다", () => {
+    const view = donorBuiltPenaltyView(A7.carryoverTaxationDetail!.donorBuiltPenalty)!;
+    expect(view.title).toContain("감정가액");
+    expect(view.title).not.toContain(FORBID);
+    expect(view.notice).toContain("감정가액 가산세를 적용했습니다");
+    expect(view.notice).not.toContain(FORBID);
+    const warn = (A7.warnings ?? []).filter((w) => w.includes("정면 해석례"));
+    expect(warn.length).toBe(1);
+    expect(warn[0]).not.toContain(FORBID);
+    render(<CarryoverComparisonCard detail={A7.carryoverTaxationDetail!} />);
+    const card = screen.getByTestId("donor-built-penalty-card");
+    expect(card.parentElement!.textContent).toContain("감정가액 가산세");
+    expect(card.parentElement!.textContent).not.toContain(FORBID);
+    const stmt = text(buildStatementItems(A7, FORM, undefined, undefined, 800_000_000).get("penaltyTax")!.formula);
+    expect(stmt).toContain("증여자 신축·증축 감정가액 가산세");
+    expect(stmt).not.toContain(FORBID);
+    const row = buildRows(A7, deriveColumns(A7).mode, FORM, undefined, 800_000_000).find((x) => x.label.includes("가산세"))!;
+    expect(row.roseNotes!.total).not.toContain(FORBID);
+    const pdf = pdfText(A7);
+    expect(pdf).toContain("감정가액 가산세를 적용했습니다");
+    expect(pdf).not.toContain(FORBID.concat(" 가산세"));
+  });
+  it("K-7 증축: 「증축 부분의 감정가액」 · 5년 경과 고지도 감정가액 시행일(2020.1.1.)", () => {
+    const base = { applied: true, buildingType: "extension" as const, constructionDate: "2022-01-10", fifthAnniversary: "2027-01-10", base: 50_000_000, penalty: 2_500_000, burdenedGift: { method: "appraisal" as const } };
+    const v = donorBuiltPenaltyView(base)!;
+    expect(v.title).toBe("증여자 증축 건물 감정가액 가산세 (소득세법 §114조의2)");
+    expect(v.formulaLines[0]).toContain("증축한 부분의 감정가액");
+    const out = donorBuiltPenaltyView({ applied: false, notAppliedReason: "outside_penalty_window", buildingType: "new", constructionDate: "2020-01-01", burdenedGift: { method: "appraisal" } })!;
+    expect(out.notice).toContain("감정가액 적용 시행일(2020.1.1.)");
+    expect(out.notice).not.toContain("환산취득가액");
+  });
+  it("회귀 0 — K-5 · 자산 전체 · 분리 이월과세 문구는 종전 그대로 «환산취득가액»", () => {
+    const k5 = donorBuiltPenaltyView(A5.carryoverTaxationDetail!.donorBuiltPenalty)!;
+    expect(k5.title).toBe("증여자 신축 건물 환산취득가액 가산세 (소득세법 §114조의2)");
+    expect(k5.notice).toBe(DONOR_BUILT_APPLIED_NOTICE);
+    const whole = donorBuiltPenaltyView({ applied: true, buildingType: "new", constructionDate: "2022-01-10", fifthAnniversary: "2027-01-10", base: 500_000_000, penalty: 25_000_000 })!;
+    expect(whole.title).toBe("증여자 신축 건물 환산취득가액 가산세 (소득세법 §114조의2)");
+    expect(whole.notice).toBe(DONOR_BUILT_APPLIED_NOTICE);
+    expect(donorBuiltPenaltyView({ applied: false, notAppliedReason: "outside_penalty_window", buildingType: "new", constructionDate: "2020-01-01" })!.notice).toBe(DONOR_BUILT_OUTSIDE_WINDOW_NOTICE);
   });
 });

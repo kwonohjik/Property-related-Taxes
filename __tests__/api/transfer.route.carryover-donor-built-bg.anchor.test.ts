@@ -24,6 +24,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { companionAssetSchema } from "@/lib/api/transfer-tax-schema-companion";
+import { validateBurdenedGiftAsset } from "@/lib/calc/transfer-tax-validate-bg";
 import { validateDonorBuiltBg } from "@/lib/calc/transfer-tax-validate-donor-built-bg";
 import { bgAsset, bgForm, bodyOf } from "../calc/_helpers/carryover-donor-built-bg-form";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset";
@@ -136,7 +137,13 @@ describe("DBG-R4 컴패니언(지분 분할 취득 묶음)은 범위 밖 — ⑫
   });
   it("⑧ 지분 분할 취득 묶음이면 토글을 끄라고 알린다(⑧이 ⑫보다 엄격 — UI 통과 ⇒ ⑫ 통과 방향 유지)", () => {
     const msg = validateDonorBuiltBg(bgAsset("converted"), "자산", "2026-02-16", true);
-    expect(msg).toContain("지분 분할 취득");
+    expect(msg).toContain("묶음");
     expect(validateDonorBuiltBg(bgAsset("converted"), "자산", "2026-02-16", false)).toBeNull();
+  });
+  it("⑧ 호출부가 지분 분할 묶음(isFractionalSplitAxis)·함께 부담부증여 묶음(contractAssumedDebtTotal) 둘 다를 묶음으로 넘긴다", () => {
+    const a = bgAsset("converted");
+    expect(validateBurdenedGiftAsset(a, "자산", undefined, "2026-02-16", true)).toContain("묶음");
+    expect(validateBurdenedGiftAsset(a, "자산", 500_000_000, "2026-02-16", false)).toContain("묶음");
+    expect(validateBurdenedGiftAsset(a, "자산", undefined, "2026-02-16", false)).toBeNull();
   });
 });

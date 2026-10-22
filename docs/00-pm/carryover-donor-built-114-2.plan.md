@@ -503,3 +503,7 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 ### 확인 필요 (사용자 결정 필요 — Q-7)
 일반건물 부담부증여(M9)에 당초 증여자 신축 가산세를 신설할지. 선택지: (a) 하지 않는다(현행 — 일반건물 부담부증여는 본인 신축 포함 가산세 자체가 없음) (b) 본인 신축·증여자 신축을 **함께** 일반건물 카드 조립에 신설(별도 계획서 — 본인 신축 거동 변경 포함). 이 PR 은 (a)로 둔다.
 
+### 17.1 후속 수정 (2026-10-22, PR-4 검증 중 발견)
+- **표시 문구**: 카드 제목·적용 고지가 부담부증여 K-7(감정가액)에서도 «환산취득가액»이라 말하던 결함 — 조문 제목은 «감정가액 또는 환산취득가액 적용에 따른 가산세». `donorBuiltPenaltyView`(정본 한 곳)가 `burdenedGift.method === "appraisal"`일 때 제목·적용 고지(`DONOR_BUILT_APPLIED_APPRAISAL_NOTICE`)·5년 경과 고지(`DONOR_BUILT_OUTSIDE_WINDOW_APPRAISAL_NOTICE`, 감정가액 시행일 2020.1.1.)를 «감정가액»으로 낸다. 경고·카드·상세명세서·신고서·PDF 가 같은 정본을 읽는다. K-5·자산 전체·분리 이월과세 문구는 종전 그대로(anchor 로 고정). `환산취득가액 가산세` 전수 grep: 이 파일 외 일반건물 카드·번들 라벨·주석은 증여자 신축과 무관(본인 환산 가산세 문구).
+- **묶음 토글**: `BurdenedGiftBlock`이 이미 받는 `isFractionalSplit`·`isCompanionBundle`(TransferModeBlock·AssetSectionTransfer 경유 모든 카드에 전달)로 `CarryoverDonorBuiltSection mode="bg"`가 묶음에서 **토글을 새로 보이지 않는다**. 묶음으로 바꾸기 전에 켜 둔 값만 «끄기 전용»으로 남긴다(숨기면 ⑧ 차단을 풀 유일한 입력 경로가 사라진다 — `feedback_ui_gate_removes_sole_input_path`). ⑧은 `isFractionalSplitAxis || contractAssumedDebtTotal !== undefined`(두 묶음 모두)를 방어선으로 유지한다. 주 자산이 묶음에 속하는 경우도 같은 prop 이라 함께 닫힌다(⑫는 컴패니언만 거부하므로 ⑧·⑤가 더 엄격 — 방향 유지).
+

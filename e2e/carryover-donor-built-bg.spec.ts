@@ -99,6 +99,9 @@ test.describe("부담부증여 × 이월과세 × 당초 증여자 신축·증�
     expect(body.isSelfBuilt).not.toBe(true); // 양도인 본인 신축 축은 이월과세에서 보내지 않는다
     const card = page.getByTestId("donor-built-penalty-card").first();
     await expect(card).toHaveAttribute("data-applied", "true");
+    // 산정방식 문구 — K-7 은 «감정가액»(조문 제목: 감정가액 또는 환산취득가액 적용 가산세)
+    await expect(card.locator("xpath=..")).toContainText("감정가액 가산세");
+    await expect(card.locator("xpath=..")).not.toContainText("환산취득가액");
     await expect(page.getByTestId("donor-built-window").first()).toHaveText("증여자 신축 취득일 2022-01-10부터 5년이 되는 날(2027-01-10)까지 양도하는 경우입니다.");
     await expect(card).toContainText("가산세 기준액 = 당초 증여자 건물 감정가액 중 채무비율 안분 후 금액 125,000,000");
     await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 6,250,000 = 125,000,000 × 5%");
@@ -111,6 +114,7 @@ test.describe("부담부증여 × 이월과세 × 당초 증여자 신축·증�
     test.setTimeout(180_000);
     await seedWizard(page, seed([asset("converted")]));
     await calculate(page);
+    await expect(page.getByTestId("donor-built-penalty-card").first().locator("xpath=..")).toContainText("건물 환산취득가액 가산세");
     await expect(page.getByTestId("donor-built-penalty-card").first()).toContainText("가산세 기준액 = 당초 증여자 건물 환산취득가액 중 채무비율 안분 후 금액 93,750,000");
     await expect(page.getByTestId("donor-built-penalty-line").first()).toHaveText("가산세 4,687,500 = 93,750,000 × 5%");
     expect(num((await formRow(page, "가산세액"))[1])).toBe(4_687_500);

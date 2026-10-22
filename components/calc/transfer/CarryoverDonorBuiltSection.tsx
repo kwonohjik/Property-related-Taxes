@@ -41,6 +41,11 @@ interface Props {
    * `bg` = 부담부증여 × 이월과세의 «당초 증여자» 신축·증축(PR-4 — `donorBuiltBgApplicable`, K-5 환산·K-7 감정만). 세 술어는 상호배타라 한 화면에 둘 이상이 동시에 뜨지 않는다.
    */
   mode?: "whole" | "part" | "bg";
+  /**
+   * (`bg`) 지분 분할 취득·함께 부담부증여 묶음 — ⑫(컴패니언)·⑧이 받지 않는 범위라 **토글을 새로 보이지 않는다**.
+   * 이미 켜져 있던 값(묶음으로 바꾸기 전 입력)만 끌 수 있게 «끄기 전용»으로 남긴다 — 숨기면 ⑧ 차단을 풀 유일한 입력 경로가 사라진다.
+   */
+  bgBundled?: boolean;
   asset: AssetForm;
   /** 양도일(YYYY-MM-DD) */
   transferDate: string;
@@ -51,7 +56,7 @@ interface Props {
   onCarryoverChange: (patch: Partial<CarryoverTaxationForm>) => void;
 }
 
-export function CarryoverDonorBuiltSection({ mode = "whole", asset, transferDate, isNonPrimaryAsset, onChange, onCarryoverChange }: Props) {
+export function CarryoverDonorBuiltSection({ mode = "whole", bgBundled = false, asset, transferDate, isNonPrimaryAsset, onChange, onCarryoverChange }: Props) {
   const part = mode === "part";
   const bg = mode === "bg";
   const shown = bg
@@ -61,6 +66,20 @@ export function CarryoverDonorBuiltSection({ mode = "whole", asset, transferDate
       : donorBuiltApplicable(asset, { transferDate, isNonPrimary: isNonPrimaryAsset });
   if (!shown) return null;
   const c = asset.carryover!;
+  if (bg && bgBundled) {
+    if (c.donorBuilt !== true) return null;
+    return (
+      <ToggleCard
+        tone="amber"
+        data-testid="donor-built-toggle"
+        data-field="carryover.donorBuilt"
+        title="증여자가 신축·증축한 건물입니까?"
+        description="지분 분할 취득·함께 부담부증여 묶음에서는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 지원하지 않습니다 — 이전에 켜 둔 값이므로 끄세요."
+        checked
+        onCheckedChange={(v) => onCarryoverChange({ donorBuilt: v })}
+      />
+    );
+  }
   // 건물 파트는 파트별 기준시가가 이미 토지·건물로 나뉘어 있고, 부담부증여는 §159 가 토지·건물을 자산별로 따로 구해 일체 주택 안분 입력이 없다.
   const housing = !part && !bg && donorBuiltNeedsHousingSplit(asset);
   const isExtension = c.donorBuiltType === "extension";

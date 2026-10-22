@@ -18,6 +18,10 @@ const dateLabel = (e: DonorBuiltPenaltyEcho): string => (e.buildingType === "ext
 export const DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE =
   `이월과세를 적용하지 않아 수증자 취득가액을 증여 당시 평가액(실지거래가액)으로 계산했고, 증여자 신축분 ${TRANSFER.BUILDING_PENALTY} 가산세는 붙지 않았습니다.`;
 
+/** 부담부증여 K-7(감정가액) — base 가 감정가액이다. §114조의2 조문 제목은 «감정가액 또는 환산취득가액 적용에 따른 가산세». 환산·자산 전체·분리 이월과세는 위 기존 문구. */
+export const DONOR_BUILT_OUTSIDE_WINDOW_APPRAISAL_NOTICE =
+  `증여자가 신축·증축한 건물로 입력했지만 ${TRANSFER.BUILDING_PENALTY} 요건(신축·증축일부터 5년 이내 양도 · 감정가액 적용 시행일(2020.1.1.) 이후 양도 · 증축은 바닥면적 85㎡ 초과)을 충족하지 않아 가산세는 붙지 않았습니다.`;
+
 /** A 채택인데 §114조의2 요건(5년 이내·환산 시행일 이후·증축은 85㎡ 초과)을 채우지 못한 경우 */
 export const DONOR_BUILT_OUTSIDE_WINDOW_NOTICE =
   `증여자가 신축·증축한 건물로 입력했지만 ${TRANSFER.BUILDING_PENALTY} 요건(신축·증축일부터 5년 이내 양도 · 환산취득가액 적용 시행일 이후 양도 · 증축은 바닥면적 85㎡ 초과)을 충족하지 않아 가산세는 붙지 않았습니다.`;
@@ -25,6 +29,10 @@ export const DONOR_BUILT_OUTSIDE_WINDOW_NOTICE =
 /** 가산세를 적용한 경우의 고지 — 「적용했다 + 정면 해석례 미확보」(사용자 확정 Q-5). */
 export const DONOR_BUILT_APPLIED_NOTICE =
   `증여자가 신축·증축한 건물에 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세를 적용했습니다(증여자 신축·증축일 기산, 증여자 기준 환산취득가액의 건물분 5%, 증축은 증축 부분). 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
+
+/** 부담부증여 K-7(감정가액) 적용 고지 — 「적용했다 + 정면 해석례 미확보」(Q-5)의 감정가액판. */
+export const DONOR_BUILT_APPLIED_APPRAISAL_NOTICE =
+  `증여자가 신축·증축한 건물에 ${TRANSFER.BUILDING_PENALTY} 감정가액 가산세를 적용했습니다(증여자 신축·증축일 기산, 당초 증여자 기준 감정가액의 건물분 5%, 증축은 증축한 부분의 감정가액). 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
 
 /**
  * 토지·건물 분리 이월과세(P6)에서 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했는데 «증여자 신축·증축» 정보가 없는 경우 —
@@ -52,7 +60,9 @@ export interface DonorBuiltPenaltyView {
 /** echo → 표시. `undefined`(donorBuilt 미입력)면 undefined. */
 export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): DonorBuiltPenaltyView | undefined {
   if (!e) return undefined;
-  const title = `증여자 ${typeLabel(e)} 건물 환산취득가액 가산세 (${TRANSFER.BUILDING_PENALTY})`;
+  // 산정방식 — 부담부증여 K-7 만 감정가액이다(그 밖은 환산취득가액). 제목·고지·경고·4뷰가 이 한 곳을 읽는다.
+  const appraisal = e.burdenedGift?.method === "appraisal";
+  const title = `증여자 ${typeLabel(e)} 건물 ${appraisal ? "감정가액" : "환산취득가액"} 가산세 (${TRANSFER.BUILDING_PENALTY})`;
   if (!e.applied) {
     return {
       applied: false,
@@ -60,7 +70,9 @@ export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): Don
       formulaLines: [],
       notice:
         e.notAppliedReason === "outside_penalty_window"
-          ? DONOR_BUILT_OUTSIDE_WINDOW_NOTICE
+          ? appraisal
+            ? DONOR_BUILT_OUTSIDE_WINDOW_APPRAISAL_NOTICE
+            : DONOR_BUILT_OUTSIDE_WINDOW_NOTICE
           : e.notAppliedReason === "zero_base"
             ? DONOR_BUILT_ZERO_BASE_NOTICE
             : DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE,
@@ -94,7 +106,7 @@ export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): Don
     title,
     windowLine: `증여자 ${dateLabel(e)} ${e.constructionDate}부터 5년이 되는 날(${e.fifthAnniversary})까지 양도하는 경우입니다.`,
     formulaLines: lines,
-    notice: DONOR_BUILT_APPLIED_NOTICE,
+    notice: appraisal ? DONOR_BUILT_APPLIED_APPRAISAL_NOTICE : DONOR_BUILT_APPLIED_NOTICE,
   };
 }
 

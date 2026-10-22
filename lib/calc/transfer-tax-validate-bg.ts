@@ -477,7 +477,7 @@ export function validateBurdenedGiftAsset(
   }
 
   // (5-d) 이월과세 × 당초 증여자 신축·증축 §114조의2 (PR-4) — 환산(K-5)·감정(K-7) 입력 다음 순서. 범위 밖 stale 은 요구하지 않는다.
-  const donorBuiltErr = validateDonorBuiltBg(asset, label, formTransferDate, isFractionalSplitAxis === true);
+  const donorBuiltErr = validateDonorBuiltBg(asset, label, formTransferDate, isFractionalSplitAxis === true || contractAssumedDebtTotal !== undefined);
   if (donorBuiltErr) return donorBuiltErr;
 
   // (6) Phase 3 — 사전증여 행별 부분 입력 검증

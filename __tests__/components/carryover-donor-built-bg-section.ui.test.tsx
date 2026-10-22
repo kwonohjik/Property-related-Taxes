@@ -9,6 +9,7 @@
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, within } from "@testing-library/react";
+import { BurdenedGiftBlock } from "@/components/calc/transfer/BurdenedGiftBlock";
 import { BurdenedGiftCarryoverBlock } from "@/components/calc/transfer/BurdenedGiftCarryoverBlock";
 import { bgAsset } from "../calc/_helpers/carryover-donor-built-bg-form";
 import { radioValues } from "./_helpers/radio-values";
@@ -16,9 +17,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
-function mount(a: AssetForm) {
+function mount(a: AssetForm, bundled = false) {
   const onChange = vi.fn();
-  const view = render(<BurdenedGiftCarryoverBlock asset={a} onChange={onChange} coDonorNeedsStdPrice />);
+  const view = render(<BurdenedGiftCarryoverBlock asset={a} onChange={onChange} coDonorNeedsStdPrice bundled={bundled} />);
   return { ...view, onChange };
 }
 
@@ -66,5 +67,37 @@ describe("토글·구분·일자·증축", () => {
     const { onChange } = mount(bgAsset("appraisal", { donorBuiltType: "extension" }));
     fireEvent.change(screen.getByTestId("donor-built-ext-appraisal"), { target: { value: "80000000" } });
     expect(onChange).toHaveBeenCalledWith({ bgPresumedExtensionAppraisal: "80000000" });
+  });
+});
+
+describe("지분 분할 취득·함께 부담부증여 묶음 — 토글을 새로 보이지 않는다 (⑫·⑧ 범위 밖)", () => {
+  it("묶음 + 토글 OFF → 토글 자체가 없다 (보여 주고 다시 막지 않는다)", () => {
+    mount(bgAsset("converted", { donorBuilt: false }), true);
+    expect(screen.queryByTestId("donor-built-toggle")).toBeNull();
+  });
+  it("묶음 + 이미 ON(묶음으로 바꾸기 전 입력) → 끄기 전용 토글만 남는다 — 입력 칸 없음, 끄면 donorBuilt:false (⑧ 차단을 풀 입력 경로 유지)", () => {
+    const { onChange } = mount(bgAsset("converted"), true);
+    const toggle = screen.getByTestId("donor-built-toggle");
+    expect(toggle.textContent).toContain("묶음에서는");
+    expect(screen.queryByTestId("donor-built-fields")).toBeNull();
+    fireEvent.click(within(toggle).getByRole("switch"));
+    expect((onChange.mock.calls[0][0] as { carryover: Record<string, unknown> }).carryover).toMatchObject({ donorBuilt: false });
+  });
+  it("묶음이 아니면 종전 그대로 (회귀 0)", () => {
+    mount(bgAsset("converted", { donorBuilt: false }), false);
+    expect(screen.getByTestId("donor-built-toggle")).toBeTruthy();
+  });
+  it("BurdenedGiftBlock 가 isFractionalSplit·isCompanionBundle 을 묶음으로 넘긴다 — OFF 면 토글 없음 / 평소(둘 다 아님)에는 있다", () => {
+    const off = bgAsset("converted", { donorBuilt: false });
+    const blk = (extra: { isFractionalSplit?: boolean; isCompanionBundle?: boolean }) =>
+      render(<BurdenedGiftBlock asset={off} onChange={vi.fn()} transferDate="2026-02-16" {...extra} />);
+    blk({});
+    expect(screen.getByTestId("donor-built-toggle")).toBeTruthy();
+    cleanup();
+    blk({ isFractionalSplit: true });
+    expect(screen.queryByTestId("donor-built-toggle")).toBeNull();
+    cleanup();
+    blk({ isCompanionBundle: true });
+    expect(screen.queryByTestId("donor-built-toggle")).toBeNull();
   });
 });

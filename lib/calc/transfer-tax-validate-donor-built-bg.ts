@@ -18,15 +18,15 @@ export function validateDonorBuiltBg(
   asset: AssetForm,
   label: string,
   formTransferDate: string | undefined,
-  /** 지분 분할 취득(축 B) 묶음 — 컴패니언 부담부증여는 ⑫가 증여자 신축·증축을 받지 않는다(범위 밖) */
-  isFractionalSplitAxis = false,
+  /** 지분 분할 취득(축 B)·함께 부담부증여 묶음 — 컴패니언 부담부증여는 ⑫가 증여자 신축·증축을 받지 않는다(범위 밖). ⑤는 이 묶음에서 토글을 새로 보이지 않고 켜 둔 값만 끄게 한다 */
+  bundled = false,
 ): string | null {
   if (!donorBuiltBgActive(asset)) return null;
   const c = asset.carryover!;
-  if (isFractionalSplitAxis)
+  if (bundled)
     return fieldError(
       "carryover.donorBuilt",
-      `${label}: 지분 분할 취득(같은 물건을 서로 다른 날 나눠 취득) 묶음의 부담부증여에서는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다 — 토글을 끄세요.`,
+      `${label}: 지분 분할 취득·함께 부담부증여 묶음에서는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다 — 토글을 끄세요.`,
     );
 
   if (c.donorBuiltType === "")
