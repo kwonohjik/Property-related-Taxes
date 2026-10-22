@@ -152,8 +152,12 @@ export function calcCommercialGainSplit(
 
   // 상속·증여·매매실가 취득 + §164⑨1호 공익수용 특례 조합 — 미지원(가드).
   // 상속·증여는 §163⑨ 실지거래가액 의제, 매매실가는 §100② 안분 — 둘 다 환산 분모 개념이 없다.
+  // §163⑨ 단서 자산 합계 비교(PR-6 · Q-17)가 ①② 후보로 다시 계산할 때는 푼다 — ①②는 환산이 아니라 특례 분모가 닿을 곳이 없고,
+  // ③ 후보는 이 가드 밖(환산 경로)에서 특례 분모로 이미 계산된다.
   if (
-    (asset.acquisitionByInheritance || asset.acquisitionByGift || asset.useActualAcquisition || asset.useAppraisalSalesAcquisition) &&
+    (((asset.acquisitionByInheritance || asset.acquisitionByGift) && asset.inheritedValuesAsIs !== true) ||
+      asset.useActualAcquisition ||
+      asset.useAppraisalSalesAcquisition) &&
     asset.transferCause === "public_expropriation"
   ) {
     throw new Error(

@@ -60,6 +60,7 @@ import {
   buildTotalTax,
 } from "./transfer-tax-mixed-use-helpers";
 import { isMixedUseSplitTransfer } from "./data/mixed-use-split-era";
+import { calcMixedSec163_9Compare } from "./mixed-use-sec163-9-compare";
 import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
 
 // ──────────────────────────────────────────
@@ -77,6 +78,21 @@ import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMi
  *                        미전달 시 기존 경로 불변. 2022.1.1 이전 양도(거부) 경로에는 부착하지 않음.
  */
 export function calcMixedUseTransferTax(
+  transferPriceInput: number,
+  transferDate: Date,
+  assetInput: MixedUseAssetInput,
+  rates: TaxRatesMap,
+  amendment?: AmendmentInput,
+): MixedUseGainBreakdown {
+  const core = (a: MixedUseAssetInput) => calcMixedUseCore(transferPriceInput, transferDate, a, rates, amendment);
+  // §163⑨ 단서 자산 합계 비교(PR-6) — 후보마다 아래 본문을 다시 부른다. 부담부증여(§159)·2022 전 양도(거부)는 비교하지 않는다.
+  if (assetInput.sec163_9Compare && !assetInput.burdenedGift && isMixedUseSplitTransfer(transferDate)) {
+    return calcMixedSec163_9Compare(assetInput, core);
+  }
+  return core(assetInput);
+}
+
+function calcMixedUseCore(
   transferPriceInput: number,
   transferDate: Date,
   assetInput: MixedUseAssetInput,

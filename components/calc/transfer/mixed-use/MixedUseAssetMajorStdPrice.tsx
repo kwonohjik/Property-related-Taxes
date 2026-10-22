@@ -1,5 +1,8 @@
 "use client";
 
+import { mixedAcqTimeLabel } from "@/lib/calc/mixed-use-sec163-9";
+import { mixedSec163_9ExpenseHint } from "@/lib/calc/mixed-use-sec163-9";
+import { mixedSec163_9ReportedHint } from "@/lib/calc/mixed-use-sec163-9";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
@@ -97,9 +100,12 @@ export function MixedUseAssetMajorStdPrice({
         : undefined;
   /** 파트 모델의 PHD 토글 노출 — 환산 파트가 있을 때만(엔진 X-7). 총액 모델은 항상(불변). */
   const showPhdToggle = !isPerPart || mixedAnyPartEstimated(asset);
-  const acqLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시";
+  const acqLabel = mixedAcqTimeLabel(asset, isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시");
   // 자동합계 박스 라벨 전용 — 원문이 "취득"(시 없음)이라 별도 변수로 분리 (E2E 문구 회귀 방지).
-  const acqSummaryLabel = isInheritance ? "상속개시일" : isGift ? "증여일" : "취득";
+  const acqSummaryLabel = mixedAcqTimeLabel(asset, isInheritance ? "상속개시일" : isGift ? "증여일" : "취득");
+  // §163⑨ 단서 자산 합계 비교 구간(PR-6) — ①·경비 칸 안내(없으면 종전 문구)
+  const reportedHint = mixedSec163_9ReportedHint(asset);
+  const expenseHint = mixedSec163_9ExpenseHint(asset);
 
   // 부수토지 안분 — leaf 헬퍼 단일 소스 + override 반영 (three-state: 빈값→자동, "0"→적법한 0).
   // 면적 입력·수정은 섹션 ①(MixedUseAreaInputs) 단일 소스 — 여기서는 **조회만** 한다.
@@ -198,14 +204,14 @@ export function MixedUseAssetMajorStdPrice({
                 value={asset.mixedHousingInheritedValueOverride}
                 data-field="mixedHousingInheritedValueOverride"
                 onChange={(v) => onChange({ mixedHousingInheritedValueOverride: v })}
-                hint="시가·감정·매매사례로 상속세 신고한 경우만 입력. 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"
+                hint={reportedHint ?? "시가·감정·매매사례로 상속세 신고한 경우만 입력. 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"}
               />
               <div className="pt-2">
                 <CurrencyInput
                   label="실제 필요경비 — 자본적지출·양도비 (선택)"
                   value={asset.mixedHousingInheritedExpense}
                   onChange={(v) => onChange({ mixedHousingInheritedExpense: v })}
-                  hint="상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+                  hint={expenseHint ?? "상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
                 />
               </div>
             </ToneCard>
@@ -221,14 +227,14 @@ export function MixedUseAssetMajorStdPrice({
                 value={asset.mixedHousingGiftValueOverride}
                 data-field="mixedHousingGiftValueOverride"
                 onChange={(v) => onChange({ mixedHousingGiftValueOverride: v })}
-                hint="증여세 신고서·결정통지서상 주택 평가액(상증법 §60~66). 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"
+                hint={reportedHint ?? "증여세 신고서·결정통지서상 주택 평가액(상증법 §60~66). 미입력 시 아래 개별주택공시가격(보충적평가)을 자동 사용"}
               />
               <div className="pt-2">
                 <CurrencyInput
                   label="실제 필요경비 — 자본적지출·양도비 (선택)"
                   value={asset.mixedHousingGiftExpense}
                   onChange={(v) => onChange({ mixedHousingGiftExpense: v })}
-                  hint="증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+                  hint={expenseHint ?? "증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
                 />
               </div>
             </ToneCard>
@@ -374,14 +380,14 @@ export function MixedUseAssetMajorStdPrice({
               value={asset.mixedCommercialInheritedValueOverride}
               data-field="mixedCommercialInheritedValueOverride"
               onChange={(v) => onChange({ mixedCommercialInheritedValueOverride: v })}
-              hint="미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"
+              hint={reportedHint ?? "미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"}
             />
             <div className="pt-2">
               <CurrencyInput
                 label="실제 필요경비 — 자본적지출·양도비 (선택)"
                 value={asset.mixedCommercialInheritedExpense}
                 onChange={(v) => onChange({ mixedCommercialInheritedExpense: v })}
-                hint="상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+                hint={expenseHint ?? "상속(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
               />
             </div>
           </ToneCard>
@@ -398,14 +404,14 @@ export function MixedUseAssetMajorStdPrice({
               value={asset.mixedCommercialGiftValueOverride}
               data-field="mixedCommercialGiftValueOverride"
               onChange={(v) => onChange({ mixedCommercialGiftValueOverride: v })}
-              hint="증여세 신고서·결정통지서상 상가 평가액(상증법 §60~66). 미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"
+              hint={reportedHint ?? "증여세 신고서·결정통지서상 상가 평가액(상증법 §60~66). 미입력 시 아래 상가건물 기준시가 + 개별공시지가 합계를 자동 사용"}
             />
             <div className="pt-2">
               <CurrencyInput
                 label="실제 필요경비 — 자본적지출·양도비 (선택)"
                 value={asset.mixedCommercialGiftExpense}
                 onChange={(v) => onChange({ mixedCommercialGiftExpense: v })}
-                hint="증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"
+                hint={expenseHint ?? "증여(실가 의제) 취득은 개산공제(§163⑥, 취득시 기준시가×3%)를 적용하지 않습니다. 자본적지출·양도비가 있으면 입력하세요"}
               />
             </div>
           </ToneCard>

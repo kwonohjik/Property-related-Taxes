@@ -36,6 +36,7 @@ import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bri
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount } from "./household-house-count";
 import { isMixedBurdenedGift, resolveMixedBgAcquisition } from "./burdened-gift-mixed-use-scope";
+import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildMixedSaleSplitFields } from "./transfer-tax-api-mixed-use-sale-split";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
@@ -118,6 +119,7 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
    * PHD·보유 중 용도변경은 토글이 보이므로(ON 전이만 비활성) 그대로 보내 엔진 MB-2·MB-4가 알린다.
    */
   const bgMixed = isMixedBurdenedGift(primary);
+  const sec163_9Compare = mixedSec163_9CompareOf(primary);
   const bgAcq = resolveMixedBgAcquisition(primary);
   const isPerPart = !bgMixed && isMixedUsePerPartAcq(primary);
   const partNeeds = isPerPart ? mixedPartAcqNeedsOfForm(primary) : undefined;
@@ -331,6 +333,8 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     acquisitionByGift:
       primary.acquisitionCause === "gift" &&
       (primary.acquisitionDate ?? "") >= "1985-01-01",
+    // §163⑨ 단서 자산 합계 비교 구간(PR-6) — 의제취득일 전이면 위 두 플래그는 꺼진 채(③ 경로) 엔진이 ①②③을 합계로 비교한다.
+    ...(sec163_9Compare ? { sec163_9Compare } : {}),
     // reported 값(B1) — 엔진은 동일 필드 소비. ⚠️ blind || 금지: 취득원인 전환 시 반대편 override 폼필드가
     // 클리어되지 않으므로(stale), **현재 acquisitionCause에 종속**해 선택(상속→상속필드·증여→증여필드).
     housingInheritedValue: bgMixed ? undefined : share(
