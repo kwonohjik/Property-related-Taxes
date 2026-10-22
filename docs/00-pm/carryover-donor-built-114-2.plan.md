@@ -1,6 +1,6 @@
 # 이월과세 × 증여자 신축·증축 건물 — 「소득세법」 §114조의2 환산·감정가액 5% 가산세 수정 계획서
 
-**상태**: Plan 확정 (2026-10-22 사용자 최종 결정 반영 — §1 이력) — 구현 전. §11 Q-1~Q-5는 모두 확정, 남은 사용자 결정은 §11 Q-6 하나.
+**상태**: Plan 확정 (2026-10-22 사용자 최종 결정 반영 — §1 이력). §11 Q-1~Q-6 전부 확정, 남은 사용자 결정 없음. PR-1(엔진 + ⑫⑭) Do 진행.
 **브랜치**: `fix/carryover-donor-built-114-2` (origin/master 1238c1b11 기준)
 **선행 계획과의 관계**: `transfer-split-part-carryover-p6.plan.md` §6 Q3(a) 「증여자 신축 현행 유지(가산세 안 붙임)」는 **이 계획의 사용자 확정 결정(2026-10-22)으로 대체**된다. 그 계획의 「해석 확보 후 자산 전체 이월과세와 함께 바꾸는 별건」이 바로 이 문서다.
 
@@ -25,7 +25,7 @@
 
 **D3 이력**: 최초 확정 문구(2026-10-22 오전)는 「②3호 비교에서 가산세는 양쪽(A·B) 모두에 적용」이었고, 메인 세션은 이를 R1(같은 가산세를 A·B 결정세액에 똑같이 더해 비교 중립, 어느 쪽이 채택돼도 최종에 가산)로 읽었다. 이 계획서 초판은 R1로 작성하고 R2(A 채택에만)·R3(가산세 포함 총결정세액으로 비교)와 갈리는 셀을 실측해 Q-1로 올렸다. **사용자가 R2로 재확정했다**(같은 날 최종 결정). 초판의 R1 전제(B 입력에 `penaltyAxis` 주입, B 채택 시 「같은 금액을 더했다」 고지, 부담부증여 K-5 B base 고정 설계)는 이 문서에서 모두 제거했다. R1·R3 비교 표는 근거 이력으로 §5.1에 남긴다.
 
-> 이 문서는 「적용할지」를 묻지 않는다. §11의 Q-1~Q-5는 사용자 최종 결정으로 모두 확정이고, 남은 것은 구현 중 확인이 필요한 Q-6뿐이다.
+> 이 문서는 「적용할지」를 묻지 않는다. §11의 Q-1~Q-6은 사용자 최종 결정으로 모두 확정이다.
 
 ---
 
@@ -87,7 +87,16 @@
 | 〃 | `landPricePerSqmAtAcquisition` · `landArea` | 토지 기준시가 L = ㎡당 개별공시지가 × 면적 | `calcLandStdPriceAtAcq`(`transfer-tax-split-acq-mode.ts:324`) |
 | 〃 | `buildingStdPriceAtAcquisition` | 건물 기준시가 N(국세청 고시 산식 — 조심2016중0801) | |
 | 양도 당시 | 주택공시가격 H_T | 기존 `donorStandardPriceAtTransfer` **재사용** | |
-| 〃 | `landStdPriceAtTransfer` · `buildingStdPriceAtTransfer` | 양도 당시 토지 L_T·건물 N_T 기준시가 | 양도 당시 값은 증여자·수증자 구분이 없다 — 자산 공통 양도시 칸이 있으면 재사용(V-9) |
+| 〃 | `landStdPriceAtTransfer` · `buildingStdPriceAtTransfer` | 양도 당시 토지 L_T·건물 N_T 기준시가 — B_tr 안분과 S_b의 기준시가 basis에 **둘 다** 쓰인다 | 항상 필수(양쪽 > 0) |
+| 〃 (Q-6 b) | `sale.landTransferPrice` · `sale.buildingTransferPrice` | 계약서 토지·건물 **구분 기재**(`saleSplitMode: "actual"`) | 구분 기재 → §100③ 30% 판정 |
+| 〃 | `sale.landAppraisalAtTransfer` · `sale.buildingAppraisalAtTransfer` | 양도 당시 **감정평가가액**(`"appraisal"`) — 양쪽이 모두 있어야 채택 | 기준시가보다 우선 |
+| 〃 | `sale.saleSplitExemption` | 영 §166⑧ 예외(`other_law`·`demolished_land_only`) | 선택 |
+
+**Q-6 (b) 입력 경로 확정 (V-9 해소 — file:line)**
+- **폼 칸은 기존 자산 수준 칸을 재사용한다(신규 폼 칸 없음)**: `saleSplitMode`(`lib/stores/calc-wizard-asset-split-acq.ts:107`) · `landAppraisalAtTransfer`/`buildingAppraisalAtTransfer`(`:115,117`) · `saleSplitExemption`(`:127`) · `landTransferPrice`/`buildingTransferPrice`(`:135,137`) · `landStandardPriceAtTransfer`/`buildingStandardPriceAtTransfer`(`:147,149`). 일체 주택 자산 전체 이월과세는 split 경로가 아니라서 이 칸들이 지금은 **화면에도 body에도 없다**(`isSplitPayloadActive` 거짓 — `lib/calc/transfer-tax-api-split.ts:79-100`).
+- **UI는 기존 컴포넌트를 재사용한다**: 축 A 양도가액 섹션 `LandBuildingSaleSplitSection`(`components/calc/transfer/LandBuildingSaleSplitSection.tsx`, 144줄 — 이미 `CarryoverPartsSaleAxis.tsx:49`·`CompanionAcqDateSection.tsx:282`·`LandPartCauseBlock.tsx:32`가 같은 방식으로 마운트). `saleStdPlacement()`(`transfer-tax-split-acq-mode.ts:420`)는 항상 「축 A」라 양도시 기준시가 카드가 같이 열린다.
+- **전송(④)은 최상위가 아니라 `donorBuilt.housing`의 중첩 객체로 한다**: 최상위에 `landTransferPrice` 등을 실으면 split 경로(`calcSplitGain`)·다른 소비자와 섞인다. 기존 ④ 빌더(`transfer-tax-api-split.ts:142-288`의 `saleDirectActive`·감정·예외 게이트)의 sale 부분집합을 함수로 뽑아 `donorBuilt.housing.sale`에 채운다(PR-2). 엔진 leaf는 이 중첩 값으로 합성 입력을 만들어 `resolveTransferPriceSplit`을 호출한다(PR-1).
+- ⑧은 기존 규칙을 같은 술어로 재사용한다: `validateSaleStdAndAppraisal`(`transfer-tax-validate-split-sale-std.ts:30`) · `saleAppraisalIsBasis`(`:26`) · `needsSaleStdPart`(`transfer-tax-split-acq-mode.ts:438`).
 
 **기존 필드를 재사용하지 않는 이유(분리 판단)**
 1. 최상위 `isSelfBuilt/buildingType/constructionDate`를 재사용하면 **수증자(양도자)의 신축**과 의미가 섞인다. 수증자는 증여받았으므로 신축할 수 없다(영 §162①5호 — 취득시기는 증여일). A·B 두 시나리오가 `{...rawInput}`을 공유해서 B(수증자 기준)까지 증여자 신축일을 읽는 오류 경로가 생긴다. 게다가 `selfBuiltActive`·`housing-flag-reset`·부담부증여 가드가 이 필드를 「매매 취득 + 본인」 전제로 읽는다(`self-built-scope.ts:36-45`, `housing-flag-reset.ts:69`).
@@ -99,7 +108,7 @@
 | 경로 | 게이트(§114조의2) | base | 근거 |
 |---|---|---|---|
 | 비주택 건물 단독(`propertyType: building`) 환산(general) | 증여자 환산 | 증여자 환산취득가액 전체(`donorAcqPrice`) = 양도가 × 증여자 취득시 기준시가 ÷ 양도시 기준시가 | `transfer-tax-carryover.ts:164-174`. 건물 단독이라 토지 없음. 증축은 `양도가 × donorBuilt.extensionStdPriceAtAcquisition ÷ 양도시 기준시가`(`resolveExtensionPenaltyBase` `building-penalty.ts:83-103`와 같은 식) |
-| **일체 주택**(토지+건물 일체 기준시가) 환산 | 〃 | **Q-2 확정**: ① 취득 당시 건물분 `B_acq = H − floor(H × L ÷ (L+N))` ② 양도 당시 건물분 `B_tr = H_T − floor(H_T × L_T ÷ (L_T+N_T))` ③ 건물 양도가액 `S_b = 양도가 − floor(양도가 × L_T ÷ (L_T+N_T))` ④ **base = `calculateEstimatedAcquisitionPrice(S_b, B_acq, B_tr)`** (= S_b × B_acq ÷ B_tr). 증축은 분자 `B_acq` 자리에 증축 부분 취득(완공) 시 기준시가를 넣는다 | **재사용 헬퍼(전부 기존)**: ①`calcAcqStdPair` 주택 비-별개 분기(`transfer-tax-split-acq-price.ts:93-119`) 또는 `apportionByStdPrice`(`std-price-apportion.ts:20`) 직접 · ②`calcSplitAcquisitionPrice`의 양도시 안분과 같은 호출(`:507-512`) · ③`resolveTransferPriceSplit`(`transfer-tax-split-sale-price.ts:71`, 구분 기재 없음→`resolveBasis` 기준시가 안분) · ④`calculateEstimatedAcquisitionPrice`(`tax-utils.ts:385`, `calcPartAcquisitionPrice` `:234-239`가 쓰는 같은 식). 절사 규약(토지 floor·건물 잔액 흡수)이 기존 split 경로와 한 함수라 갈라지지 않는다 |
+| **일체 주택**(토지+건물 일체 기준시가) 환산 | 〃 | **Q-2 확정**: ① 취득 당시 건물분 `B_acq = H − floor(H × L ÷ (L+N))` ② 양도 당시 건물분 `B_tr = H_T − floor(H_T × L_T ÷ (L_T+N_T))` ③ 건물 양도가액 `S_b` = `resolveTransferPriceSplit`의 법정 서열(구분 기재 → §100③ 30% 판정 → 감정평가 → 양도 당시 기준시가 비율 `양도가 − floor(양도가 × L_T ÷ (L_T+N_T))`, **Q-6 b**) ④ **base = `calculateEstimatedAcquisitionPrice(S_b, B_acq, B_tr)`** (= S_b × B_acq ÷ B_tr). 증축은 분자 `B_acq` 자리에 증축 부분 취득(완공) 시 기준시가를 넣는다 | **재사용 헬퍼(전부 기존)**: ①`calcAcqStdPair` 주택 비-별개 분기(`transfer-tax-split-acq-price.ts:93-119`) 또는 `apportionByStdPrice`(`std-price-apportion.ts:20`) 직접 · ②`calcSplitAcquisitionPrice`의 양도시 안분과 같은 호출(`:507-512`) · ③`resolveTransferPriceSplit`(`transfer-tax-split-sale-price.ts:71`, 서열 전체를 그대로 연결: 구분 기재 있음→§100③ `judgeDeemedUnclearSplit`, 없음→`resolveBasis` 감정>기준시가) · ④`calculateEstimatedAcquisitionPrice`(`tax-utils.ts:385`, `calcPartAcquisitionPrice` `:234-239`가 쓰는 같은 식). 절사 규약(토지 floor·건물 잔액 흡수)이 기존 split 경로와 한 함수라 갈라지지 않는다 |
 | 일체 주택, PHD/APD 환산 | — | **도달 불가로 보고 차단**: 신축·증축 후 5년 이내 양도 + 양도일 ≥ 2018 ⇒ 신축일 ≥ 2013, 개별주택가격 최초공시(2005~)·공동주택(2005~) 이후다. ⑧이 phd/apd 모드면 토글 비노출·엔진 거부 | 추정이 아니라 날짜 산술이지만 최초공시일은 사용자 입력이라 완전 보증은 아님 → ⑧에서 모드 상호배타로 차단 |
 | split 파트(P6) 건물 파트 환산 | 파트 `partEstimated` | 건물 파트 환산취득가(`SplitPartResult.acquisitionPrice`) — 증축은 `splitExtensionPenaltyBase`와 같은 식으로 증축 부분 | `building-penalty.ts:161-203`. 이미 「건물 파트가 판정 축」 |
 | 일반건물 건물 카드 환산 | 카드가 환산 이월과세 | 건물 카드의 증여자 환산취득가(카드 자체가 건물 파트) | `general-building-valuation.ts:316-331`(분자=증여자 취득시 기준시가, 분모=그 파트 양도시 기준시가), 카드 매핑 `general-building-route-cards.ts:208-227` |
@@ -149,7 +158,7 @@ adoptedInput += { isSelfBuilt: true, buildingType, constructionDate(=donorBuilt.
 | ID | 경로 | carryover_gift 열림 | 현행 | 변경 | PR |
 |---|---|---|---|---|---|
 | M1 | 단건 비주택 건물(`building`) 자산 전체 환산 | 열림 `CompanionAcquisitionCauseSection.tsx:44`, ④ `transfer-tax-api.ts:706` | 가산세 없음 | 신축·증축 모두. base = 증여자 환산취득가 | 1·2 |
-| M2 | 단건 일체 주택(`housing`) 자산 전체 환산 general | 열림 | 가산세 없음 | Q-2: `donorBuilt.housing` 입력(L·N·L_T·N_T)으로 건물분 base — 기존 `calcAcqStdPair`·`resolveTransferPriceSplit` 재사용 | 1·2 |
+| M2 | 단건 일체 주택(`housing`) 자산 전체 환산 general | 열림 | 가산세 없음 | Q-2·Q-6(b): `donorBuilt.housing` 입력(L·N·L_T·N_T + 구분 기재·감정·예외 `sale`)으로 건물분 base — 기존 `apportionByStdPrice`·`resolveTransferPriceSplit` 재사용. 폼 칸·`LandBuildingSaleSplitSection` UI는 기존 것을 재사용(§3.2) | 1·2 |
 | M3 | 일체 주택 PHD/APD 환산 | 열림 | — | 토글 비노출·⑧/엔진 차단 | 1·2 |
 | M4 | 주택 split 파트 이월과세 B(건물만)·C(통째) 환산 | `LandPartCauseBlock.tsx:52,63`, `transfer-land-part-cause.ts:119` | 고지만 | 건물 파트 환산취득가 base. 증축은 `effectiveInput` 판독 | 3 |
 | M5 | split 토지만(A) · 건물은 본인 취득 | 열림 | 변화 없음 | **대상 아님**(토지는 §114조의2 제외, 건물은 본인 신축 경로 그대로) | — |
@@ -222,11 +231,11 @@ mock 세율(상대 비교만 의미). **probe는 구현이 없으므로 A 채택
 
 | # | 지점 | 변경 | 파일 | 비고 |
 |---|---|---|---|---|
-| ① 폼 상태 | O | `CarryoverTaxationForm`에 `donorBuilt`(boolean)·`donorBuildingType`·`donorConstructionDate`·`donorExtensionFloorArea`·`donorExtensionStdPriceAtAcquisition` + 일체 주택 묶음 `donorHousingLandPricePerSqm`·`donorHousingLandArea`·`donorHousingBuildingStdAtAcq`·`donorHousingLandStdAtTransfer`·`donorHousingBuildingStdAtTransfer` | `lib/stores/calc-wizard-asset-carryover.ts:33-` | 파트 서브폼(`landCarryover`/건물 파트)이 같은 타입을 공유(`normalizeCarryoverForm`) |
+| ① 폼 상태 | O | `CarryoverTaxationForm`에 `donorBuilt`(boolean)·`donorBuildingType`·`donorConstructionDate`·`donorExtensionFloorArea`·`donorExtensionStdPriceAtAcquisition` + 일체 주택 취득 당시 묶음 `donorHousingLandPricePerSqm`·`donorHousingLandArea`·`donorHousingBuildingStdAtAcq`(신규 3칸). **양도 당시 L_T·N_T와 구분 기재·감정·예외(Q-6 b)는 신규 칸 없이 기존 자산 수준 칸을 재사용**(§3.2 file:line) | `lib/stores/calc-wizard-asset-carryover.ts:33-` | 파트 서브폼(`landCarryover`/건물 파트)이 같은 타입을 공유(`normalizeCarryoverForm`) |
 | ② initial | O | `CARRYOVER_DEFAULTS` — `donorBuilt:false`, 나머지 `""` | 같은 파일 `:134-` | 기본 OFF = 회귀 0 |
 | ③ normalize | O | `normalizeCarryoverForm`에 타입 검사(boolean/enum/문자열) | 같은 파일 `:166-` | 구 세션 호환: 없으면 OFF |
 | ④ API 변환 | O | `buildCarryoverPayload`가 `donorBuilt` 객체를 만들되 **토글 ON + 환산 ON + 건물성 자산일 때만** 전송(stale 방지: 환산 OFF·자산 종류 변경 시 미전송). 파트: `transfer-tax-api-split-carryover.ts`, GB: `transfer-tax-api-gb-carryover.ts`, 컴패니언: `transfer-tax-api-companion-payload.ts:618-624` | `lib/calc/transfer-tax-api-carryover.ts:72-` | 게이트 술어는 ⑤·⑧과 같은 leaf 1개(`donorBuiltApplicable`) — `self-built-scope.ts` 교훈 |
-| ⑤ UI 위젯 | O | `CarryoverGiftBlock` ② 증여자 취득가액 블록의 환산 패널 **직후**(계산 순서=표시 순서)에 `ToggleCard` 「증여자가 신축·증축한 건물입니까?」 — 일체 주택이면 토글 안에 H·L(㎡당×면적)·N·L_T·N_T 입력 카드(`LandPriceLookupField` 필수 — 공시지가 조회 규약). 기존 `SelfBuiltSection`은 제목·설명이 「본인」 고정이라 title/description prop을 열거나 얇은 래퍼 | `components/calc/transfer/CarryoverGiftBlock.tsx`, `SelfBuiltSection.tsx` | `useEffect` 미러링 없음 — 전부 `onChange` |
+| ⑤ UI 위젯 | O | `CarryoverGiftBlock` ② 증여자 취득가액 블록의 환산 패널 **직후**(계산 순서=표시 순서)에 `ToggleCard` 「증여자가 신축·증축한 건물입니까?」 — 일체 주택이면 토글 안에 H·L(㎡당×면적)·N 취득 당시 입력 카드(`LandPriceLookupField` 필수 — 공시지가 조회 규약) + **기존 `LandBuildingSaleSplitSection`**(양도 당시 L_T·N_T·구분 기재·감정·예외). 기존 `SelfBuiltSection`은 제목·설명이 「본인」 고정이라 title/description prop을 열거나 얇은 래퍼 | `components/calc/transfer/CarryoverGiftBlock.tsx`, `SelfBuiltSection.tsx` | `useEffect` 미러링 없음 — 전부 `onChange` |
 | ⑥ 사이드바 | **N/A** | 현행 사이드바는 가산세를 합산하지 않는다(`transfer-per-asset-summary.ts`에 `가산세` grep 0건). 본인 신축 가산세도 마찬가지 | — | 일관성 유지 |
 | ⑦ 결과 | O | 가산세 step note·`CarryoverTaxationDetail.donorBuiltPenalty` echo(§7) | `transfer-tax-building-penalty.ts` note, `types/transfer-carryover.types.ts` | 합산·4뷰 표시는 `result.penaltyTax/penaltyBase`를 이미 읽는다 |
 | ⑧ validate | O | 아래 ⑧↔⑫ 격자 | `lib/calc/transfer-tax-validate-carryover-asset.ts:78-` (e) 환산 블록 뒤, 파트 `transfer-tax-validate-split-carryover.ts`, GB `transfer-tax-validate-gb-carryover.ts`, BG `transfer-tax-validate-bg.ts:159` | |
@@ -246,6 +255,7 @@ mock 세율(상대 비교만 의미). **probe는 구현이 없으므로 A 채택
 | 신축일 < 증여자 취득일 또는 > 증여 등기접수일 | — | 차단 | `superRefine` | throw |
 | 증축인데 바닥면적 ≤ 0 | — | 차단 | 차단 | 85㎡ 게이트 |
 | 증축인데 증축 부분 기준시가 ≤ 0 | — | 차단 | 차단 | throw |
+| 일체 주택 · 구분 기재(`actual`)인데 토지·건물 양도가액 미입력 / 감정(`appraisal`)인데 한쪽 감정가액 미입력(구분 기재가 §100③으로 안분값에 되돌려지는 경우는 차단이 아니라 의제·고지) | 기존 `LandBuildingSaleSplitSection` 필드 | 차단 — `validateSaleStdAndAppraisal`(`transfer-tax-validate-split-sale-std.ts:30`) 규칙 재사용 | `donorBuilt.housing.sale` 조건부 필수 refine | `resolveTransferPriceSplit` throw |
 | 일체 주택인데 L·N·L_T·N_T(또는 H·H_T) 중 하나라도 ≤ 0 | — | 차단 — 기존 split 경로와 같은 메시지 규약(`transfer-tax-split-gain.ts:112-125`, `split-acq-price.ts:513-520`). **0·합계 역산 fallback 금지** | 차단 | throw |
 | 환산 OFF(실가 승계)인데 `donorBuilt` 전송 | 토글 비노출 | 토글 상태 stale이면 무시(미전송) | 환산 OFF + `donorBuilt` → 거부 | throw |
 | phd/apd 환산 | 토글 비노출 | 차단 | 거부 | throw |
@@ -264,7 +274,7 @@ mock 세율(상대 비교만 의미). **probe는 구현이 없으므로 A 채택
   - 종전(`split-carryover-display.ts:277`): 「…가산세 적용 여부는 확인이 필요합니다 — … 이 계산은 양도자 본인이 신축·증축한 건물만 가산세를 붙입니다.」
   - 변경: 「증여자가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하는 경우의 소득세법 §114조의2 가산세를 **적용했습니다**(증여자 신축일 기산, 증여자 기준 환산취득가액의 5%, 증축은 증축 부분). 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.」
   - ~~B 채택 시 「같은 금액을 더했다」 한 줄~~ — **삭제**(R2: B 채택에는 가산세가 없다).
-  - B 채택/적용배제인데 `donorBuilt`가 입력된 경우의 **중립 안내 한 줄**(초판에 없던 추가, 침묵 방지 목적): 「이월과세를 적용하지 않아 수증자 취득가액을 증여 당시 평가액(실지거래가액)으로 계산했고, 증여자 신축분 §114조의2 가산세는 붙지 않았습니다.」 필요 없다고 판단되면 삭제해도 계산에는 무관 — 구현 시 확인.
+  - B 채택/적용배제인데 `donorBuilt`가 입력된 경우의 **중립 안내 한 줄 — 사용자 확정(2026-10-22)**: 「이월과세를 적용하지 않아 수증자 취득가액을 증여 당시 평가액(실지거래가액)으로 계산했고, 증여자 신축분 §114조의2 가산세는 붙지 않았습니다.」 `donorBuiltPenalty.applied=false`(+`notAppliedReason`) echo가 소스다.
   - **자산 전체 이월과세에는 현재 이 고지가 없다** → 같은 문구를 `CarryoverComparisonCard`/경고 경로에 신설(M1·M2·M6).
 
 ---
@@ -318,8 +328,8 @@ mock 세율(상대 비교만 의미). **probe는 구현이 없으므로 A 채택
 
 | PR | 범위 | 핵심 anchor |
 |---|---|---|
-| **PR-1 엔진 + ⑫⑭** | `donorBuilt` 타입·Zod(전 스키마 parity)·Date 변환·leaf·`finishScenarios` 후크·손실 경로 확인. **M1·M13~M16**(자산 전체 비주택 건물, API 직접 호출로 검증). 일체 주택(M2)은 Q-2 결과에 따라 같은 PR | 5.1 격자(R2: 채택 불변·A 셀만 +p) · 일체 주택 base 187,500,000 · 경계 5.3 · 5년 당일/익일 · 증축 85㎡ · 손실 경로 · `donorBuilt` 부재 회귀 0 · 환산 OFF 거부 · 직접 호출 raw `isSelfBuilt` 무영향 |
-| **PR-2 입력·UI·결과(자산 전체)** | ①②③④⑤⑧ · 컴패니언(M10) · 결과 echo·고지(§7) · E2E(폼→계산→결과, Network body 확인) | ⑧↔⑫ 격자 전수 · 토글 stale 미전송 · 자산 종류 변경 시 비노출 |
+| **PR-1 엔진 + ⑫⑭** | `donorBuilt` 타입(`housing.sale` 포함)·Zod(메인·컴패니언 shape 수용, GB 파트·split 파트 wire는 **명시 거부**로 침묵 strip 차단)·Date 변환(⑭)·leaf·`calcCarryoverScenarios` A 채택 후크(래퍼 방식 — `finishScenarios` 본문 무변경)·손실 경로 확인. **M1·M13~M16**(자산 전체 비주택 건물, API 직접 호출로 검증). 일체 주택(M2)은 Q-2 결과에 따라 같은 PR | 5.1 격자(R2: 채택 불변·A 셀만 +p) · 일체 주택 base 187,500,000 · 경계 5.3 · 5년 당일/익일 · 증축 85㎡ · 손실 경로 · `donorBuilt` 부재 회귀 0 · 환산 OFF 거부 · 직접 호출 raw `isSelfBuilt` 무영향 |
+| **PR-2 입력·UI·결과(자산 전체)** | ①②③④⑤⑧ · 일체 주택은 `LandBuildingSaleSplitSection` 재마운트 + ④의 sale 부분집합 함수 추출(`transfer-tax-api-split.ts:142-288`) · 컴패니언(M10) · 결과 echo·고지(§7 중립 안내 포함) · E2E(폼→계산→결과, Network body 확인) | ⑧↔⑫ 격자 전수 · 토글 stale 미전송 · 자산 종류 변경 시 비노출 |
 | **PR-3 split 파트(P6)** | 해결자 후크(A 적용 파트만)·`resolveSplitBuildingPenaltyAxis`가 `effectiveInput` 판독(증축) · `SplitPartCarryoverCard` 토글 · P6 고지 문구 교체 · `p6.plan.md` Q3 정정 주석 | §5.2 P6 두 셀(A +5,500,000 · B 차이 0) · 증축×파트 환산 · 토지 base 미혼입 |
 | **PR-4 부담부증여 × 이월과세** | `assertCarryoverDonorBasis` throw 완화 · A 입력에만 증여자 신축 정보 전달(K-5/K-7) · 일반건물 F27(M9) A 호출 한정. **B는 가산세 없음(R2)이라 K-5 B base 설계가 불필요해졌다** | G-4·G-4b 반전 · B 채택 시 가산세 0 · K-7 증축 안분 · 겸용 차단 유지 |
 | **PR-5 일반건물 카드(M6)** | 카드 ⑤ UI(`GeneralBuildingAcquisitionCards.tsx:520,545,655`)·`transfer-tax-api-gb-carryover.ts:299` ⑧ GB | GB 건물 카드 환산 이월과세 가산세 · V-1 확인 |
@@ -338,11 +348,12 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 | **Q-4** | **확정** — 자산 전체 이월과세에 증여자 감정가액 입력 신설 안 함(감정 경로는 부담부증여 K-7에서만) | §3.3 |
 | **Q-5** | **확정** — 고지를 「적용했다 + 정면 해석례 미확보 — 확인 필요」로 교체(B 채택 문구는 Q-1에 따라 삭제) | §7 |
 
-### 남은 사용자 결정
+### Q-6 (확정 2026-10-22: **(b)**)
 
-| Q | 질문 | 선택지 | 권장 |
-|---|---|---|---|
-| **Q-6** | Q-2 산식의 **양도가액 건물분 S_b**를 구하는 기준(③ 단계). 계약서상 토지·건물 구분 기재나 감정평가 안분 입력이 있는 일체 주택 이월과세에서도 `resolveTransferPriceSplit`의 서열(구분 기재 → §100③ 30% 판정 → 감정/기준시가)을 그대로 따르는가, 아니면 자산 전체 이월과세 입력에 구분 기재 칸이 없으므로 **양도 당시 기준시가 비율 안분만** 쓰는가 | (a) 기준시가 비율 안분만(자산 전체 이월과세 폼의 현재 입력 범위) / (b) 구분 기재·감정 서열까지 연결 | **(a)** — 현재 자산 전체 이월과세 입력에 구분 기재 칸이 없고(확인 필요, V-9), 이 기능의 범위를 키우지 않는다. 구분 기재 입력을 받는 경로는 split 해결자(P6)가 이미 그 서열을 쓴다 |
+| Q | 결정 | 반영 위치 |
+|---|---|---|
+| **Q-6** | **(b) 확정** — 일체 주택 이월과세의 양도가액 건물분 `S_b`는 `resolveTransferPriceSplit` 법정 서열(구분 기재 → §100③ 30% 판정 → 감정평가 → 기준시가)을 그대로 연결한다. 입력은 기존 자산 수준 칸·`LandBuildingSaleSplitSection`을 재사용하고 ④는 `donorBuilt.housing.sale` 중첩 객체로 전송 | §3.2·§3.3·§6·§10 |
+| 중립 안내 | **확정** — B 채택·적용배제 + `donorBuilt` 입력 시 「이월과세를 적용하지 않아 … 가산세는 붙지 않았습니다」 | §7 |
 
 ---
 
@@ -357,7 +368,7 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 | V-5 | ~~부담부증여 K-5 × 이월과세 B 시나리오 base~~ | **해소** — R2로 B 채택은 가산세 없음이라 단순화(초판 R1 전제 삭제) |
 | V-6 | 다필지 분기(`multi-parcel-branch.ts:263-301`; 환산 base 0·감정만)가 이월과세와 공존하는지 | 인벤토리: 환산 base 0 고정 — 공존 여부 확인 필요 |
 | V-7 | PDF에서 자산 전체 이월과세 비교(`carryoverTaxationDetail`)가 출력되는지 | 인벤토리: lib/pdf·lib/print grep 0건 — 숫자는 합계로 반영되나 원인 표기는 PDF에 없음 |
-| V-9 | (a) 일체 주택 이월과세 폼에 양도 당시 토지·건물 기준시가(L_T·N_T)·계약서 구분 기재 칸이 이미 있는지, 자산 공통 칸을 재사용할 수 있는지(`landStandardPriceAtTransfer`·`buildingStandardPriceAtTransfer`; 현재 확인한 것은 분리 취득 경로 `saleStdPlacement` 규약 `transfer-tax-split-acq-mode.ts:420-440`) (b) 증축 부분 기준시가(나목 척도)와 H 비례 건물분 분모의 척도 차이 — 기존 분리 취득 증축 경로(`splitExtensionPenaltyBase`)와 같은 관행을 승계 | 확인 필요 — PR-2 착수 전 앵커·폼 대조 |
+| V-9 | ~~(a) 일체 주택 이월과세 폼의 양도 당시 칸 재사용 가능 여부~~ **해소**(§3.2 Q-6 (b) 입력 경로: 기존 자산 수준 칸 재사용, 전송은 중첩 객체) · (b) 증축 부분 기준시가(나목 척도)와 H 비례 건물분 분모의 척도 차이 — 기존 분리 취득 증축 경로(`splitExtensionPenaltyBase`)와 같은 관행을 승계 | 확인 필요 — PR-2 착수 전 앵커·폼 대조 |
 | V-8 | 법령 MST는 소득세법 280405(시행 2026-01-01/07-01 본), 시행령 290841(시행 2026-10-01: §162·§164·§166 원문 확인). 조심2016중0801은 재결례 967652 요지 확인 | 확인 완료 |
 
 ---
