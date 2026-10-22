@@ -227,7 +227,13 @@ export const companionAssetSchema = z.object({
    * 축 A(공유 소유)와 **반대** 규약이다. 평가액·기준시가는 물건 전체 raw이고
    * 엔진이 `ownershipRatio`로 줄인다.
    */
-  burdenedGiftInfo: burdenedGiftInfoSchema.optional(),
+  burdenedGiftInfo: burdenedGiftInfoSchema
+    .superRefine((info, ctx) => {
+      // 당초 증여자 신축·증축 §114조의2(PR-4)는 주 자산만 받는다 — 컴패니언은 §159 안분·신고 단위 비교가 달라 범위 밖이라 침묵 무시 대신 거부
+      if (info.carryoverDonorBasis?.donorBuilt !== undefined)
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["carryoverDonorBasis", "donorBuilt"], message: "함께 양도하는 자산(컴패니언)의 부담부증여는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 아직 지원하지 않습니다" });
+    })
+    .optional(),
   /**
    * ⑫ 양도 형태 — 엔진의 §159 게이트(`transfer-tax-burdened-gift-step.ts`
    * `isBurdenedGiftEngine`)가 **이 값**을 본다. `burdenedGiftInfo`만 실어도

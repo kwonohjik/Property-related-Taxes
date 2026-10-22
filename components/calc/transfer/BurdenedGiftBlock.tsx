@@ -421,7 +421,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
 
       {/* ③-b 이월과세 §97의2 — 「당초 증여자」 취득 당시 값 한 벌 (D-7b) */}
       {isCarryover && (
-        <BurdenedGiftCarryoverBlock asset={asset} onChange={onChange} coDonorNeedsStdPrice={coDonorNeedsStdPrice} />
+        <BurdenedGiftCarryoverBlock asset={asset} onChange={onChange} coDonorNeedsStdPrice={coDonorNeedsStdPrice} bundled={isFractionalSplit || isCompanionBundle} />
       )}
 
       {/* ④ 증여재산 평가액 — 증여일 현재 기준시가(상증법 §61). 담는 범위는 자산마다 다르다

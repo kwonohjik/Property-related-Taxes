@@ -10,15 +10,18 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import { BurdenedGiftPresumedAcquisitionSection } from "./BurdenedGiftPresumedAcquisitionSection";
+import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   /** K-1~K-3(기준시가) · K-5(환산) · K-6/K-7 — 당초 증여자 취득 당시 기준시가가 필요한가(부모 `coDonorNeedsStdPrice`). */
   coDonorNeedsStdPrice: boolean;
+  /** 지분 분할 취득·함께 부담부증여 묶음 — 당초 증여자 신축·증축 토글을 새로 보이지 않는다(⑫·⑧ 범위 밖) */
+  bundled?: boolean;
 }
 
-export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPrice }: Props) {
+export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPrice, bundled }: Props) {
   return (
     <div
       className="rounded-lg border border-sky-300 bg-sky-50/70 p-3 space-y-2 dark:bg-sky-950/40"
@@ -140,6 +143,16 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
           />
         </FieldCard>
       )}
+
+      {/* 당초 증여자 취득 입력 다음 — 그 건물이 당초 증여자 신축·증축인가 (§114조의2, K-5 환산·K-7 감정만). 노출 술어는 ④ 전송·⑧ 필수와 같다(`donor-built-bg-scope.ts`). */}
+      <CarryoverDonorBuiltSection
+        mode="bg"
+        bgBundled={bundled}
+        asset={asset}
+        transferDate=""
+        onChange={onChange}
+        onCarryoverChange={(patch) => onChange({ carryover: { ...asset.carryover!, ...patch } })}
+      />
     </div>
   );
 }

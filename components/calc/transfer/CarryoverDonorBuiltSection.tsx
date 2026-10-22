@@ -24,6 +24,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { donorBuiltApplicable, donorBuiltNeedsHousingSplit } from "@/lib/calc/donor-built-scope";
 import { donorBuiltPartApplicable } from "@/lib/calc/donor-built-part-scope";
+import { donorBuiltBgApplicable } from "@/lib/calc/donor-built-bg-scope";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -37,9 +38,14 @@ const TYPE_OPTIONS = [
 interface Props {
   /**
    * `whole` = 자산 전체 이월과세(기본) · `part` = 토지·건물 분리 이월과세의 건물 파트(PR-3 — 노출 술어 `donorBuiltPartApplicable`, 일체 주택 안분 입력 없음).
-   * 두 술어는 상호배타라 한 화면에 둘이 동시에 뜨지 않는다.
+   * `bg` = 부담부증여 × 이월과세의 «당초 증여자» 신축·증축(PR-4 — `donorBuiltBgApplicable`, K-5 환산·K-7 감정만). 세 술어는 상호배타라 한 화면에 둘 이상이 동시에 뜨지 않는다.
    */
-  mode?: "whole" | "part";
+  mode?: "whole" | "part" | "bg";
+  /**
+   * (`bg`) 지분 분할 취득·함께 부담부증여 묶음 — ⑫(컴패니언)·⑧이 받지 않는 범위라 **토글을 새로 보이지 않는다**.
+   * 이미 켜져 있던 값(묶음으로 바꾸기 전 입력)만 끌 수 있게 «끄기 전용»으로 남긴다 — 숨기면 ⑧ 차단을 풀 유일한 입력 경로가 사라진다.
+   */
+  bgBundled?: boolean;
   asset: AssetForm;
   /** 양도일(YYYY-MM-DD) */
   transferDate: string;
@@ -50,12 +56,32 @@ interface Props {
   onCarryoverChange: (patch: Partial<CarryoverTaxationForm>) => void;
 }
 
-export function CarryoverDonorBuiltSection({ mode = "whole", asset, transferDate, isNonPrimaryAsset, onChange, onCarryoverChange }: Props) {
+export function CarryoverDonorBuiltSection({ mode = "whole", bgBundled = false, asset, transferDate, isNonPrimaryAsset, onChange, onCarryoverChange }: Props) {
   const part = mode === "part";
-  if (part ? !donorBuiltPartApplicable(asset, { isNonPrimary: isNonPrimaryAsset }) : !donorBuiltApplicable(asset, { transferDate, isNonPrimary: isNonPrimaryAsset })) return null;
+  const bg = mode === "bg";
+  const shown = bg
+    ? donorBuiltBgApplicable(asset)
+    : part
+      ? donorBuiltPartApplicable(asset, { isNonPrimary: isNonPrimaryAsset })
+      : donorBuiltApplicable(asset, { transferDate, isNonPrimary: isNonPrimaryAsset });
+  if (!shown) return null;
   const c = asset.carryover!;
-  // 건물 파트는 파트별 기준시가가 이미 토지·건물로 나뉘어 있어 일체 주택 안분 입력이 없다.
-  const housing = !part && donorBuiltNeedsHousingSplit(asset);
+  if (bg && bgBundled) {
+    if (c.donorBuilt !== true) return null;
+    return (
+      <ToggleCard
+        tone="amber"
+        data-testid="donor-built-toggle"
+        data-field="carryover.donorBuilt"
+        title="증여자가 신축·증축한 건물입니까?"
+        description="지분 분할 취득·함께 부담부증여 묶음에서는 당초 증여자 신축·증축 가산세(소득세법 §114조의2)를 지원하지 않습니다 — 이전에 켜 둔 값이므로 끄세요."
+        checked
+        onCheckedChange={(v) => onCarryoverChange({ donorBuilt: v })}
+      />
+    );
+  }
+  // 건물 파트는 파트별 기준시가가 이미 토지·건물로 나뉘어 있고, 부담부증여는 §159 가 토지·건물을 자산별로 따로 구해 일체 주택 안분 입력이 없다.
+  const housing = !part && !bg && donorBuiltNeedsHousingSplit(asset);
   const isExtension = c.donorBuiltType === "extension";
 
   return (
@@ -65,7 +91,9 @@ export function CarryoverDonorBuiltSection({ mode = "whole", asset, transferDate
       data-field="carryover.donorBuilt"
       title="증여자가 신축·증축한 건물입니까?"
       description={
-        part
+        bg
+          ? "당초 증여자(지금 부담부증여를 하는 양도인에게 이 자산을 증여한 사람)가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하면서 당초 증여자 취득가액을 환산취득가액·감정가액으로 계산하면, 채무비율 안분 후 건물분의 5%가 가산세로 더해집니다 (소득세법 §114조의2). 이월과세가 적용되는 경우에만 붙습니다. 양도인 본인이 신축한 건물과는 다른 질문입니다."
+          : part
           ? "증여자가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하면서 증여자 취득가액을 환산취득가액으로 계산하면, 건물 파트 환산취득가액의 5%가 가산세로 더해집니다 (소득세법 §114조의2). 건물 파트에 이월과세가 적용되는 경우에만 붙고, 토지 파트는 대상이 아닙니다."
           : "증여자가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하면서 증여자 취득가액을 환산취득가액으로 계산하면, 건물분 환산취득가액의 5%가 가산세로 더해집니다 (소득세법 §114조의2). 이월과세가 적용되는 경우에만 붙습니다."
       }
@@ -107,14 +135,25 @@ export function CarryoverDonorBuiltSection({ mode = "whole", asset, transferDate
             <FieldCard label="증축 바닥면적 합계" field="carryover.donorBuiltExtensionArea" unit="㎡" hint="85㎡를 초과하는 증축만 가산세 대상입니다.">
               <DecimalInput value={c.donorBuiltExtensionArea} onChange={(v) => onCarryoverChange({ donorBuiltExtensionArea: v })} data-testid="donor-built-ext-area" />
             </FieldCard>
-            <FieldCard
-              label="증축 부분의 증여자 취득(완공) 당시 기준시가"
-              field="carryover.donorBuiltExtensionStdPrice"
-              unit="원"
-              hint="가산세 기준은 증축한 부분에 한정한 환산취득가액입니다 — 증축 부분 기준시가 총액을 입력합니다."
-            >
-              <CurrencyInput label="" hideUnit value={c.donorBuiltExtensionStdPrice} onChange={(v) => onCarryoverChange({ donorBuiltExtensionStdPrice: v })} data-testid="donor-built-ext-std" />
-            </FieldCard>
+            {bg && asset.bgAcquisitionMethod === "appraisal" ? (
+              <FieldCard
+                label="증축한 부분의 감정가액 (당초 증여자 취득 당시)"
+                field="bgPresumedExtensionAppraisal"
+                unit="원"
+                hint="가산세 기준은 증축한 부분에 한정한 감정가액입니다 — 위 당초 증여자 감정가액과 같은 기준(물건 전체)으로 입력하세요. 채무비율 안분은 시스템이 합니다. 건물 전체 감정가액으로 대신할 수 없습니다."
+              >
+                <CurrencyInput label="" hideUnit value={asset.bgPresumedExtensionAppraisal} onChange={(v) => onChange({ bgPresumedExtensionAppraisal: v })} data-testid="donor-built-ext-appraisal" />
+              </FieldCard>
+            ) : (
+              <FieldCard
+                label="증축 부분의 증여자 취득(완공) 당시 기준시가"
+                field="carryover.donorBuiltExtensionStdPrice"
+                unit="원"
+                hint="가산세 기준은 증축한 부분에 한정한 환산취득가액입니다 — 증축 부분 기준시가 총액을 입력합니다."
+              >
+                <CurrencyInput label="" hideUnit value={c.donorBuiltExtensionStdPrice} onChange={(v) => onCarryoverChange({ donorBuiltExtensionStdPrice: v })} data-testid="donor-built-ext-std" />
+              </FieldCard>
+            )}
           </>
         )}
 
