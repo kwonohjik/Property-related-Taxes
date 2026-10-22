@@ -138,6 +138,58 @@ export const MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE =
   "취득가액을 취득시 기준시가로 산정했습니다. 이 경우를 다룬 해석례는 확인되지 않아 확인이 필요합니다.";
 
 /**
+ * §159①1호 괄호에 그 평가 조문이 열거된 개정의 시행일 — 이 날 전 양도에는 괄호에 그 조문이 없었다.
+ *
+ * | 개정 | 괄호 열거 | 적용 |
+ * |---|---|---|
+ * | 2015.2.3.(대통령령 제26067호) | 상증법 §61①② | 부칙 제2조② 시행 이후 최초로 양도하는 분부터 |
+ * | 2020.2.11.(대통령령 제30395호) | + §61⑤ | 부칙 제2조② 시행 이후 양도하는 분부터 |
+ * | 2023.2.28.(대통령령 제33267호) | + §66 | 부칙에 이 조문의 적용례·경과조치 없음 → 시행일 |
+ *
+ * 2015.2.3. 전(2015.1.1. 시행본)의 괄호는 조문 열거 없이 「양도가액을 기준시가에 따라 산정한 경우」였다 — 담보·임대 평가가 그에 드는지는
+ * 문언만으로 정해지지 않아 그 구간은 「열거되지 않았다」고 단정하지 않는다.
+ *
+ * 엔진은 현행 문언대로 계산하고 알리기만 한다(사용자 결정 2026-10-22 — 계획서 `burdened-gift-residuals-o9-o11.plan.md` §4).
+ */
+export const BG_PAREN_ENUMERATED_FROM = new Date("2015-02-03");
+export const BG_PAREN_RENTAL_61_5_FROM = new Date("2020-02-11");
+export const BG_PAREN_MORTGAGE_66_FROM = new Date("2023-02-28");
+
+/**
+ * 취득가액을 기준시가로 강제했는데 양도일(증여일) 당시 괄호에 그 평가 조문이 없었던 경우의 확인 필요 안내. 해당 없으면 `undefined`.
+ * 판정 축은 괄호가 말하는 「양도가액을 무엇으로 산정했는가」 — 양도세 축 `sangjeungbeopValuation.selectedMode`다.
+ * 증여세 축(`giftValuation` — 건물 층별 가감율)은 승자가 갈릴 수 있으므로 문구도 「양도가액」으로 쓴다.
+ */
+export function bgParenthesisEraNotice(
+  acquisitionMethodUsed: string,
+  selectedMode: "supplementary" | "mortgage" | "rental",
+  transferDate: Date,
+): string | undefined {
+  if (acquisitionMethodUsed !== "standard_price") return undefined;
+  const era =
+    selectedMode === "mortgage" && transferDate < BG_PAREN_MORTGAGE_66_FROM
+      ? { valuation: "담보채권액 평가(「상속세 및 증여세법」 제66조)", amended: "2023.2.28." }
+      : selectedMode === "rental" && transferDate < BG_PAREN_RENTAL_61_5_FROM
+        ? { valuation: "임대료 환산 평가(「상속세 및 증여세법」 제61조 제5항)", amended: "2020.2.11." }
+        : undefined;
+  if (!era) return undefined;
+  const head = `양도가액(「소득세법 시행령」 제159조 제1항 제2호)을 ${era.valuation}로 산정했습니다. `;
+  const tail = "이 계산은 현행 문언대로 취득가액을 취득시 기준시가로 산정했으므로 확인이 필요합니다";
+  if (transferDate < BG_PAREN_ENUMERATED_FROM) {
+    return (
+      head +
+      "양도일(증여일) 당시 같은 조 제1항 제1호 괄호는 조문을 열거하지 않고 「양도가액을 기준시가에 따라 산정한 경우」라고만 규정해(2015.2.3. 개정으로 조문 열거), " +
+      `이 평가가 그에 드는지 문언만으로는 정해지지 않습니다. ${tail}.`
+    );
+  }
+  return (
+    head +
+    `양도일(증여일) 당시 같은 조 제1항 제1호 괄호에는 이 평가가 열거되어 있지 않았습니다(${era.amended} 개정으로 추가). ${tail} — ` +
+    "그 당시 문언대로라면 취득가액은 「소득세법」 제97조 제1항 제1호에 따른 가액입니다."
+  );
+}
+
+/**
  * 지분 부담부증여의 12억 고가주택 판정 가액 = **지분 증여가액 ÷ 지분율** (1h-G1-14 · 결정 #28 A).
  *
  * 「소득세법 시행령」 §156①은 1주택의 일부가 타인 소유인 경우 「실지거래가액 합계액에 양도하는 부분(타인 소유부분을

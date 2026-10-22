@@ -8,6 +8,7 @@
 import { buildBurdenedGiftBreakdown, assertBurdenedGiftEligible } from "./burdened-gift-apportionment";
 import {
   MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE,
+  bgParenthesisEraNotice,
   apportionAcquisitionPrice,
   scaleBurdenedGiftInfo,
 } from "./burdened-gift-valuation";
@@ -229,7 +230,14 @@ export function runBurdenedGiftStep(
       legalBasis: BURDENED_GIFT_TRANSFER.VALUATION_159,
     });
     // 다주택 중과 한시 배제 적용 고지는 중과 판정이 끝난 뒤 `transfer-tax.ts`가 붙인다(1h-G1-11 — 유예가 실제 적용된 결과에서만).
-    if (transferBurdenedGiftBreakdown.acquisitionStdForcedByCollateral) notices.push(MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE);
+    // 양도일 당시 괄호에 그 평가 조문이 없었으면 시기 안내가 시가 모드 담보 승 안내를 대신한다 — 그 안내의 「괄호에 따라」가 그 시기엔 맞지 않는다.
+    const eraNotice = bgParenthesisEraNotice(
+      transferBurdenedGiftBreakdown.acquisitionMethodUsed,
+      transferBurdenedGiftBreakdown.sangjeungbeopValuation.selectedMode,
+      rawInput.transferDate,
+    );
+    if (eraNotice) notices.push(eraNotice);
+    else if (transferBurdenedGiftBreakdown.acquisitionStdForcedByCollateral) notices.push(MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE);
   }
   return { breakdown: transferBurdenedGiftBreakdown, workingInput, notices };
 }
