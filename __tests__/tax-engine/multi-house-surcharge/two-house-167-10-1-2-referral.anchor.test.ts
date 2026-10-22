@@ -74,7 +74,7 @@ const CASES: Array<{ label: string; ho: string; over: Record<string, unknown>; t
   {
     label: "8호의2 어린이집 5년",
     ho: "§167의3①8호의2",
-    over: { isDayCareCenter: true, dayCareOperationYears: 7 },
+    over: { isDayCareCenter: true, dayCareOperationYears: 7, dayCareInUse: true },
     type: "daycare_center_5years",
   },
 ];

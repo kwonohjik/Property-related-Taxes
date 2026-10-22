@@ -183,6 +183,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     land: landTransferPrice,
     building: buildingTransferPrice,
     judgment: saleSplitJudgment,
+    apportionBasisKind: saleApportionBasisKind,
   } = resolveTransferPriceSplit(input);
 
   // ②-0 취득 당시 계약서 토지·건물 구분금액(#17-6) — 있으면 §100③ 판정 후 계약서 구분금액 또는 안분 가액. 없으면 입력 그대로(미입력 불변).
@@ -371,6 +372,8 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     ...(acqStd?.stdSplit ? { stdSplit: acqStd.stdSplit } : {}),
     // §100③ 판정 — 구분 기재가 있고 안분값도 산출된 경우에만 존재한다(위 resolveTransferPriceSplit).
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
+    // 구분 기재 없이 안분한 경우 엔진이 쓴 basis 종류(표시 전용 echo — 판정과 배타).
+    ...(saleApportionBasisKind ? { saleApportionBasisKind } : {}),
     // 취득 당시 계약서 구분금액 §100③ 판정 — 계약서 구분금액이 있는 같은 날 취득 주택(배율 초과분 분리)에서만 존재한다(#17-6).
     ...(acqContract.judgment ? { acqSplitJudgment: acqContract.judgment } : {}),
     // 비율 미산출 시 사유 문구는 **파트 모드로 갈린다**(2026-07-30). 종전에는 무조건

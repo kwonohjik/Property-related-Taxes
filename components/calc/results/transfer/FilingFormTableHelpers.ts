@@ -179,6 +179,7 @@ import { resolveBgSingleDisplay, bgSwapAcquisitionNote } from "./DetailedStateme
 import { mixedBgFilingNotes } from "./DetailedStatementBgMixedFormulas";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
+import { appliedFormTotalTransferExpense } from "@/lib/calc/transfer-expense-in-scope";
 export { fmtCell } from "./FilingFormTableRowDefs";
 
 export function buildRows(
@@ -495,8 +496,9 @@ export function buildRows(
      *
      * 지분 스케일은 `totalExpenses`와 **같은 규칙**을 쓴다(지분 모드에서 폼값은 물건 전체다).
      */
-    const rawEntered =
-      Number(primary?.capitalExpenditure || 0) + Number(primary?.transferExpense || 0);
+    // 총 양도비가 쓰이면 자산 양도비 칸은 꺼져 계산에 들어가지 않는다 — 「입력했는데 공제되지 않음」으로 세지 않는다(O-9).
+    const assetTransferExpense = formData && appliedFormTotalTransferExpense(formData) > 0 ? 0 : Number(primary?.transferExpense || 0);
+    const rawEntered = Number(primary?.capitalExpenditure || 0) + assetTransferExpense;
     const enteredExpenses =
       transferPriceOverride === undefined && ownRatio < 1.0
         ? applyRatio(rawEntered, ownRatio)

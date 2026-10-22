@@ -39,7 +39,7 @@ test.describe("§155⑥1호 — 명부 행 선언", () => {
     await expect(card).toContainText("§155⑥1호");
 
     // 🔑 중과 축(④)과 **다른 카드**다 — 한 카드에 섞이면 요건이 뭉개진다.
-    await expect(page.getByText("특수 배제 사유 (2주택·인구감소)")).toBeVisible();
+    await expect(page.getByText("특수 배제 사유 (중과 배제·인구감소)")).toBeVisible();
     await expect(page.getByText("1세대1주택 비과세 특례 사실 (§155)")).toBeVisible();
   });
 
@@ -107,7 +107,7 @@ test.describe("§155⑧ — 명부 행 선언 + 3호와의 구별", () => {
      *    합쳐져(e2e/CLAUDE.md §2) ⑤ 카드까지 잡으므로 `aria-label` 정확 매칭을 쓴다.
      */
     const modal = page.getByRole("dialog");
-    await expect(modal.getByText("특수 배제 사유 (2주택·인구감소)")).toBeVisible();
+    await expect(modal.getByText("특수 배제 사유 (중과 배제·인구감소)")).toBeVisible();
     await expect(modal.getByTestId("house-row-unavoidable-outside-capital")).toBeVisible();
     await expect(
       modal.locator('[role="switch"][aria-label="부득이한 사유 취득 주택"]'),

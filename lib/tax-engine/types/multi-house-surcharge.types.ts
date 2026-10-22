@@ -330,8 +330,15 @@ export interface HouseInfo {
   isUnavoidableOutsideCapital?: boolean;
   /** 어린이집으로 운영 중인 주택 여부 (⑨ 5년 이상 운영 → 3주택+ 중과배제) */
   isDayCareCenter?: boolean;
-  /** 어린이집 운영 기간(년) */
+  /** 어린이집 운영 기간(년) — 가목(인가)↔나목(위탁) 전환 시 각 사용기간 합산(영 §167의3①8호의2 후단, 2022.2.15. 이후 양도) */
   dayCareOperationYears?: number;
+  /**
+   * 어린이집으로 사용하지 않게 된 날 — 영 §167의3①8호의2 「어린이집으로 사용하지 않게 된 날부터 6개월이 경과하지 않은」.
+   * `dayCareInUse`와 택일이다. 둘 다 없으면 「모름」 — 8호의2 불성립(`isDayCareCenterExempt`).
+   */
+  dayCareEndDate?: Date;
+  /** 「양도일 현재 어린이집으로 사용 중」 — `dayCareEndDate`와 택일 */
+  dayCareInUse?: boolean;
   // ── ⑭ 인구감소지역 세컨드홈 ──
   /**
    * 인구감소지역·관심지역 소재 주택 여부 (소령 §167의3①12 다·라목). 미제공 시 regionCode로 자동판정.

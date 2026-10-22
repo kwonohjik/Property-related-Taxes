@@ -403,6 +403,10 @@ export interface TransferFormData {
     /** 어린이집 운영 주택 (5년 이상) */
     isDayCareCenter?: boolean;
     dayCareOperationYears?: string;
+    /** 어린이집으로 사용하지 않게 된 날 — 「사용 중」과 택일(`daycare-usage-status.ts`, 소령 §167의3①8호의2) */
+    dayCareEndDate?: string;
+    /** 「양도일 현재 어린이집으로 사용 중」 */
+    dayCareInUse?: boolean;
     // ── 2주택 전용 (§167의10①3호·7호) — 양도 주택 자신이 그 호에 해당하는 경우 (F-16) ──
     /** 취학·근무상 형편·질병 요양 등 부득이한 사유로 취득한 주택 (§167의10①3호) */
     isUnavoidableReason?: boolean;

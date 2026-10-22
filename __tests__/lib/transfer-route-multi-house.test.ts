@@ -114,6 +114,7 @@ describe("mapHousesToEngine", () => {
         freeProvisionYears: 10,
         isDayCareCenter: true,
         dayCareOperationYears: 5,
+        dayCareEndDate: "2023-05-01",
         isCulturalHeritage: true,
       },
     ]);
@@ -126,6 +127,9 @@ describe("mapHousesToEngine", () => {
     expect(h.isEmployeeHousing).toBe(true);
     expect(h.freeProvisionYears).toBe(10);
     expect(h.dayCareOperationYears).toBe(5);
+    // ⑭ 8호의2 사용 종료일 — Date 변환(P1)
+    expect(h.dayCareEndDate).toBeInstanceOf(Date);
+    expect(h.dayCareEndDate!.toISOString().slice(0, 10)).toBe("2023-05-01");
     expect(h.isCulturalHeritage).toBe(true);
   });
 

@@ -24,6 +24,9 @@ type SpecialExclusionFacts = Pick<
   | "isLitigationHousing"
   | "isRedevelopmentZone"
   | "isPopulationDeclineArea"
+  | "isMortgageExecution"
+  | "isEmployeeHousing"
+  | "isDayCareCenter"
 >;
 
 /** ④ 특수 배제 사유 카드가 소유한 사실 중 하나라도 켜져 있는가. */
@@ -32,11 +35,15 @@ export function houseEntryHasSpecialExclusionFacts(house: SpecialExclusionFacts)
     house.isUnavoidableReason === true ||
     house.isLitigationHousing === true ||
     house.isRedevelopmentZone === true ||
-    house.isPopulationDeclineArea === true
+    house.isPopulationDeclineArea === true ||
+    // D7 4호·8호·8호의2 — 사원용·어린이집은 ⑧·⑫가 기간·사용 상태를 요구한다(막다른 길 방지 — 위 주석)
+    house.isMortgageExecution === true ||
+    house.isEmployeeHousing === true ||
+    house.isDayCareCenter === true
   );
 }
 
-/** 행 편집 창에 ④ 특수 배제 사유 카드를 그릴지 — 계산기는 항상, 판정 메뉴는 담긴 값이 있을 때만. */
-export function houseEntrySpecialExclusionVisible(house: SpecialExclusionFacts, judgmentMenu: boolean): boolean {
-  return !judgmentMenu || houseEntryHasSpecialExclusionFacts(house);
+/** 행 편집 창에 ④ 특수 배제 사유 카드를 그릴지 — 중과 입력을 연 화면은 항상, 닫은 화면(1주택 판정 메뉴)은 담긴 값이 있을 때만. */
+export function houseEntrySpecialExclusionVisible(house: SpecialExclusionFacts, hideSurchargeInputs: boolean): boolean {
+  return !hideSurchargeInputs || houseEntryHasSpecialExclusionFacts(house);
 }

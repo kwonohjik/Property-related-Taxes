@@ -347,6 +347,10 @@ export const houseSchema = z.object({
   isUnavoidableOutsideCapital: z.boolean().optional(),
   isDayCareCenter: z.boolean().optional(),
   dayCareOperationYears: z.number().nonnegative().optional(),
+  /** §167의3①8호의2 「어린이집으로 사용하지 않게 된 날」 — `dayCareInUse`와 택일(⑫ `refineHouseExclusionInputs`) */
+  dayCareEndDate: z.string().date().optional(),
+  /** 「양도일 현재 어린이집으로 사용 중」 — 사용 종료일과 택일 */
+  dayCareInUse: z.boolean().optional(),
   // ── 공고 전 매매계약(영 §167의10①11호 등) — selling 전용 · **양도** 계약일 + 계약금 수령(장기임대 `hasContractDepositProof`와 별개) ──
   contractDate: z.string().date().optional(),
   saleDepositReceived: z.boolean().optional(),

@@ -38,6 +38,7 @@ import { AuctionValuationCard } from "@/components/calc/results/transfer/Auction
 import { HousingExpropriationValuationCard } from "@/components/calc/results/transfer/HousingExpropriationValuationCard";
 import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
 import { SplitGainDetailSection } from "@/components/calc/results/transfer/SplitGainDetailSection";
+import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { ReductionDetailCards, hasReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
@@ -614,6 +615,8 @@ export function TransferTaxResultView({
             {...(formData?.assets?.[0]?.saleSplitExemptionNote
               ? { exemptionNote: formData.assets[0].saleSplitExemptionNote }
               : {})}
+            // «구분 기재»를 골랐는가도 엔진 미전송이라 폼에서 읽는다(엔진 echo와 둘 다 참일 때만 안내).
+            {...(isSaleSplitActual(formData?.assets?.[0]) ? { saleSplitActual: true } : {})}
           />
         </PrintSection>
       )}

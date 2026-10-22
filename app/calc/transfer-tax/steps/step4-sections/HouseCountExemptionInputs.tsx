@@ -52,6 +52,9 @@ export function HouseCountExemptionInputs({
   countExclusionEnabled = false,
   countExclusionApplies,
   judgmentMenu = false,
+  hideSurchargeInputs = false,
+  taxIncentiveRentalEnabled = true,
+  householdGiftEnabled = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -74,6 +77,10 @@ export function HouseCountExemptionInputs({
   countExclusionApplies?: (house: HouseEntry) => boolean;
   /** 판정 메뉴 전용 — `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다(명시 prop · 계산기는 넘기지 않는다). */
   judgmentMenu?: boolean;
+  /** 아래 셋은 `HousesListSection`의 같은 이름 prop으로 그대로 넘긴다 — 판정 메뉴는 `judgmentMenuFlags` 값을 넘긴다. */
+  hideSurchargeInputs?: boolean;
+  taxIncentiveRentalEnabled?: boolean;
+  householdGiftEnabled?: boolean;
 }) {
   return (
     <>
@@ -88,6 +95,9 @@ export function HouseCountExemptionInputs({
         countExclusionEnabled={countExclusionEnabled}
         countExclusionApplies={countExclusionApplies}
         judgmentMenu={judgmentMenu}
+        hideSurchargeInputs={hideSurchargeInputs}
+        taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
+        householdGiftEnabled={householdGiftEnabled}
       />
 
       {/*

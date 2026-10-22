@@ -20,6 +20,8 @@ import {
   hasBurdenedGiftFilingForm,
 } from "@/components/calc/results/transfer/BurdenedGiftFilingFormSection";
 import { SaleSplitJudgmentBlock } from "@/components/calc/results/transfer/SaleSplitJudgmentBlock";
+import { SaleSplitUnenteredNotice } from "@/components/calc/results/transfer/SaleSplitUnenteredNotice";
+import { isSaleSplitActual, saleSplitUnenteredNotice } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 // 800줄 정책 — 일반건물 3-way 요약 표(사례 33)를 별도 파일로 분리(2026-08-11).
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import {
@@ -289,6 +291,14 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
            (`TransferTaxResultView`의 GB 상세 카드는 이 경로에서 렌더되지 않는다).
            표시를 붙일 곳을 여기로 잡지 않으면 **판정이 계산에만 반영되고 화면에는 안 보인다**.
       */}
+      {(() => {
+        // «구분 기재 + 두 칸 비움» — 판정이 비는 자리(구분 기재 없이 안분)에서만 뜬다. 폼 선택 ∧ 엔진 echo(판정과 배타).
+        const text = saleSplitUnenteredNotice(
+          isSaleSplitActual(formData.assets.find((a) => a.assetKind === "general_building") ?? formData.assets[0]),
+          aggregated.generalBuildingValuationDetail?.saleApportionBasisKind,
+        );
+        return text ? <SaleSplitUnenteredNotice text={text} /> : null;
+      })()}
       {aggregated.generalBuildingValuationDetail?.saleSplitJudgment && (
         <SaleSplitJudgmentBlock
           j={aggregated.generalBuildingValuationDetail.saleSplitJudgment}
@@ -541,6 +551,12 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
               const note = formData.assets.find((a) => a.assetId === p.propertyId)?.saleSplitExemptionNote;
               return note ? { exemptionNote: note } : {};
             })()}
+            // «구분 기재»를 골랐는가도 엔진 미전송이라 같은 경로로 읽는다 — 첫 자산은 propertyId가 "primary"다.
+            {...(isSaleSplitActual(
+              p.propertyId === "primary" ? formData.assets[0] : formData.assets.find((a) => a.assetId === p.propertyId),
+            )
+              ? { saleSplitActual: true }
+              : {})}
             // 일괄은 단건과 같은 폼 — 엔진 detail의 행 id(`houseId`)는 이 명부를 가리킨다(route 5-a 주 자산 = `...engineInput`).
             houses={formData.houses}
           />

@@ -11,6 +11,7 @@
  */
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { unavoidableOutsideCapitalStatusIssue } from "./two-house-exclusion-status";
+import { dayCareUsageStatusIssue } from "./daycare-usage-status";
 import { housesOwnedAtTransfer, isOwnedAtTransfer } from "./household-house-count";
 
 export interface HouseRowIssue {
@@ -79,6 +80,23 @@ export function houseUnavoidableIssue(
   if (!h.acquisitionOfficialPrice)
     return { field: "acquisitionOfficialPrice", message: "부득이한 사유 주택의 취득 당시 기준시가를 입력하세요." };
   return null;
+}
+
+/**
+ * D7 §167의3①4호 사원용 주택·8호의2 어린이집 — 무상 제공 기간·사용 기간(년)과 어린이집 사용 상태(종료일 또는 「사용 중」).
+ * ⑫ `refineHouseExclusionInputs`의 거울이다 — 비우면 엔진이 0년·「모름」으로 읽어 배제가 조용히 빠진다.
+ */
+export function houseSpecialUseIssue(
+  h: Pick<
+    HouseEntry,
+    "isEmployeeHousing" | "freeProvisionYears" | "isDayCareCenter" | "dayCareOperationYears" | "dayCareEndDate" | "dayCareInUse"
+  >,
+): HouseRowIssue | null {
+  if (h.isEmployeeHousing && (!h.freeProvisionYears || parseFloat(h.freeProvisionYears) <= 0))
+    return { field: "freeProvisionYears", message: "사원용 주택의 무상 제공 기간(년)을 입력하세요." };
+  if (h.isDayCareCenter && (!h.dayCareOperationYears || parseFloat(h.dayCareOperationYears) <= 0))
+    return { field: "dayCareOperationYears", message: "어린이집 사용 기간(년)을 입력하세요." };
+  return dayCareUsageStatusIssue(h);
 }
 
 /**

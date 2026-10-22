@@ -101,6 +101,10 @@ const SELLING_CASES: FieldJumpCase[] = [
   { name: "step1: 양도 주택 사원용 주택 무상 제공 기간", field: `${SE}.freeProvisionYears`, step: 1, message: /^양도 주택 사원용 주택: 무상 제공 기간/, form: holding([row()], { householdHousingCount: "3", [SE]: { isEmployeeHousing: true } }) },
   { name: "step1: 양도 주택 어린이집 운영 기간", field: `${SE}.dayCareOperationYears`, step: 1, message: /^양도 주택 어린이집: 운영 기간/, form: holding([row()], { householdHousingCount: "3", [SE]: { isDayCareCenter: true } }) },
   {
+    name: "step1: 양도 주택 어린이집 사용 상태", field: `${SE}.dayCareEndDate`, step: 1, message: /^양도 주택 어린이집: 사용하지 않게 된 날을 입력하거나/,
+    form: holding([row()], { householdHousingCount: "3", [SE]: { isDayCareCenter: true, dayCareOperationYears: "6" } }),
+  },
+  {
     name: "step1: 양도 주택 부득이한 사유 거주기간", field: `${SE}.unavoidableResidenceYears`, step: 1, message: /^양도 주택 부득이한 사유: 거주기간/,
     form: holding([row()], { [SE]: { isUnavoidableReason: true, acquisitionOfficialPrice: "300000000" } }),
   },

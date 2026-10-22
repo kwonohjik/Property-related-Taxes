@@ -35,6 +35,7 @@ import {
 } from "@/lib/calc/reverse-appurtenant-swap";
 import { assetRemovalPatch } from "@/lib/calc/asset-removal";
 import { firstAssetChangeNoteOnRemoval } from "@/lib/calc/first-asset-facts";
+import { formTotalTransferExpenseInScope } from "@/lib/calc/transfer-expense-in-scope";
 
 /**
  * 자산 목록 + 저장된 사용자 선택 → Step1 화면 모드. 마운트(세션 복원) 때와 「판정 불러오기」 인계 직후에만 쓴다 —
@@ -126,9 +127,10 @@ export function Step1({
           ...form.assets[0],
           actualSalePrice: form.contractTotalPrice || form.assets[0].actualSalePrice,
         };
-        onChange({ assetSplitMode: undefined, assets: [firstAsset] });
+        // 총 양도비 칸은 자산 2건 이상에서만 있다 — 끄면서 비워 둔다(숨은 값이 남지 않게, O-9).
+        onChange({ assetSplitMode: undefined, assets: [firstAsset], totalTransferExpense: "" });
       } else {
-        onChange({ assetSplitMode: undefined });
+        onChange({ assetSplitMode: undefined, totalTransferExpense: "" });
       }
     }
   }
@@ -160,7 +162,7 @@ export function Step1({
         ownershipNumerator: "100",
         ownershipDenominator: "100",
       };
-      onChange({ assetSplitMode: undefined, assets: [firstAsset] });
+      onChange({ assetSplitMode: undefined, assets: [firstAsset], totalTransferExpense: "" });
     }
   }
 
@@ -311,6 +313,8 @@ export function Step1({
                 placeholder="실제 매매계약서상 거래금액"
               />
             </FieldCard>
+            {/* 자산이 1건이면 총 양도비를 쓰지 않는다 — ④·⑥과 같은 술어(`transfer-expense-in-scope.ts`, O-9). */}
+            {formTotalTransferExpenseInScope(form) && (
             <FieldCard
               label={hasReplotIncrement ? "총 양도비" : "총 양도비 (선택)"}
               unit="원"
@@ -320,8 +324,8 @@ export function Step1({
                     양도 시 1회 발생해 <strong>자산에 공통</strong>되는 부대비용
                     (중개수수료·인지대 등). 「소득세법」 §100② 후단에 따라 자산별{" "}
                     <strong>양도가액에 비례하여 안분</strong>되며, 입력하면 자산 카드의
-                    &quot;양도비&quot; 칸은 비활성화됩니다. 자산마다 귀속이 명확한 비용이면 이 칸을
-                    비우고 자산 카드에서 직접 입력하세요.
+                    &quot;양도비&quot; 칸은 비활성화되고 그 칸에 넣어 둔 금액은 계산에 쓰지 않습니다. 자산마다
+                    귀속이 명확한 비용이면 이 칸을 비우고 자산 카드에서 직접 입력하세요.
                   </>
                 )
               }
@@ -334,6 +338,7 @@ export function Step1({
                 placeholder="중개수수료 등 양도 부대비용 (전체 1건)"
               />
             </FieldCard>
+            )}
             {splitMode === "companion" && !hasReplotIncrement && (
               <BundledSaleModeToggle
                 value={form.bundledSaleMode}
@@ -368,7 +373,7 @@ export function Step1({
           filingDeadline={filingDeadline}
           onFormChange={onChange}
           contractTotalPrice={form.contractTotalPrice}
-          totalTransferExpense={form.totalTransferExpense}
+          totalTransferExpense={formTotalTransferExpenseInScope(form) ? form.totalTransferExpense : ""}
           isOneHouseSingle={redevOneHouseAxisCandidate(form)}
           judgmentLoaded={hasJudgmentProvenance(form)}
           wasRegulatedAtAcquisition={form.wasRegulatedAtAcquisition}
@@ -398,7 +403,7 @@ export function Step1({
             <DialogHeader>
               <DialogTitle>‘함께 양도’ 모드를 끄시겠습니까?</DialogTitle>
               <DialogDescription>
-                추가한 동반 자산이 모두 삭제됩니다. 되돌릴 수 없습니다.
+                추가한 동반 자산이 모두 삭제되고 총 양도비도 비워집니다. 되돌릴 수 없습니다.
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>

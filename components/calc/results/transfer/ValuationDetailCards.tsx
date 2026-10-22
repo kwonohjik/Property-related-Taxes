@@ -55,6 +55,8 @@ interface Props {
    * 다자산 모드에서는 자산별로 다르므로 `assetKind`와 같은 층위에서 자산별로 넘긴다.
    */
   exemptionNote?: string;
+  /** 사용자가 양도가액 구분 방식을 «구분 기재»로 골랐는가 — 엔진 미전송이라 폼에서 읽어 내려온다(`SplitGainDetailSection`). */
+  saleSplitActual?: boolean;
   /** 전액 비과세 자산 — 분리 카드의 장특 행 설명용(`SplitGainDetailSection`). */
   isExempt?: boolean;
 }
@@ -67,6 +69,7 @@ export function ValuationDetailCards({
   taxableIncome,
   assetKind,
   exemptionNote,
+  saleSplitActual,
   isExempt,
 }: Props) {
   const hasAny =
@@ -154,6 +157,7 @@ export function ValuationDetailCards({
           splitDetail={result.splitDetail}
           assetKind={assetKind}
           {...(exemptionNote ? { exemptionNote } : {})}
+          {...(saleSplitActual ? { saleSplitActual } : {})}
           {...(isExempt ? { isExempt } : {})}
         />
       )}

@@ -72,6 +72,7 @@ import { houseRowFactIssues } from "./house-row-fact-issues";
 import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
+import { houseSpecialUseIssue } from "./house-row-required-issues";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
@@ -250,6 +251,11 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     const unavoidableIssue = houseUnavoidableIssue(h);
     if (unavoidableIssue) {
       errors.push(err(`houses.${i}.${unavoidableIssue.field}`, `보유 주택 ${i + 1}: ${unavoidableIssue.message}`));
+    }
+    // D7 §167의3①4호·8호의2 — ④ 카드는 담긴 값이 있으면 이 화면에도 열리고 ⑫가 같은 조건으로 400을 낸다(계산기 ⑧과 같은 leaf).
+    const specialUseIssue = houseSpecialUseIssue(h);
+    if (specialUseIssue) {
+      errors.push(err(`houses.${i}.${specialUseIssue.field}`, `보유 주택 ${i + 1}: ${specialUseIssue.message}`));
     }
     // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 계산기 ⑧과 같은 leaf. 빈 값은 「모름」이라 ⑫가 400을 낸다.
     const uocIssue = houseUnavoidableOutsideCapitalIssue(h, form.transferDate);
