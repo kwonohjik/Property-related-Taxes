@@ -12,7 +12,9 @@ import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import type { RegionType } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 
 /**
- * regionCode → "capital"(REGION: 수도권·광역시(군 제외)·세종) | "non_capital"(VALUE: 지방·군 지역).
+ * regionCode → "capital"(REGION: 수도권·광역시·세종의 동 지역) | "non_capital"(VALUE: 군·읍·면·그 밖의 지방).
+ * 이름과 달리 **수도권 여부가 아니다** — 수도권의 군·읍·면은 non_capital이고 광역시는 capital이다.
+ * 수도권 한도가 필요한 판정은 엔진 `isCapitalAreaHouse`가 법정동코드 시도로 따로 본다.
  * regionCode 미입력(주소 미검색) 시 REGION(capital) 기본값 — 종전 기본값 유지·과소산정 회피.
  */
 export function deriveHouseRegionFromCode(regionCode?: string): "capital" | "non_capital" {
@@ -20,14 +22,24 @@ export function deriveHouseRegionFromCode(regionCode?: string): "capital" | "non
   return classifyRegionCriteriaByCode(regionCode) === "REGION" ? "capital" : "non_capital";
 }
 
+/** 지역 구분 표시 문구 — 영 §167의3①1호 기준이다(주택 목록·편집 모달·양도 주택 소재지가 같이 쓴다). */
+export const HOUSE_REGION_LABEL = {
+  capital: "지역기준(가액 무관 산입)",
+  non_capital: "가액기준(3억 이하 불산입)",
+} as const;
+
+/** 주소가 없을 때 직접 고르는 라디오의 안내 — 어느 쪽을 골라야 하는지 법문 범위로 적는다. */
+export const HOUSE_REGION_MANUAL_HINT =
+  "지역기준: 수도권·광역시·세종의 동 지역 / 가액기준: 군·읍·면과 그 밖의 지방 (소득세법 시행령 제167조의3제1항제1호)";
+
 /**
  * 임대주택 소재지역(수도권/비수도권) — 수도권정비계획법 §2 기준.
  * 법정동코드 앞 2자리(시도코드) 11(서울)·28(인천)·41(경기) 전역 = 수도권(seoul-metro, 군 포함).
  * 그 외(광역시·세종·지방 도) = 비수도권(non-metro).
  * regionCode 미입력 시 seoul-metro 기본값(factory·migrate 기본값과 일치).
  *
- * ⚠️ §167의3① classifyRegionCriteriaByCode(REGION에 광역시·세종 포함, 강화·옹진·가평·연천·양평
- * 군을 carve-out)와 **의도적으로 다름** — 임대 cap의 수도권은 군 carve-out 없는 순수 시도 기준.
+ * ⚠️ §167의3① classifyRegionCriteriaByCode(REGION에 광역시·세종 포함, 군·읍·면을
+ * carve-out)와 **의도적으로 다름** — 임대 cap의 수도권은 군·읍·면 carve-out 없는 순수 시도 기준.
  * (부산·세종 = 임대 비수도권 / 인천 강화군·경기 양평군 = 임대 수도권)
  */
 export function deriveRentalRegionFromCode(regionCode?: string): RegionType {

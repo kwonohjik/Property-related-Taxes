@@ -48,6 +48,7 @@ import { SellingHousePreDesignationContractSection } from "@/components/calc/tra
 import { preDesignationContractInScopeOf } from "@/lib/calc/pre-designation-contract-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
+import { HOUSE_REGION_LABEL } from "@/lib/calc/house-region";
 import { otherUocRowNumberOf } from "@/lib/calc/house-row-required-issues";
 import { computeHouseCountDivergence } from "@/lib/calc/house-count-divergence";
 import { housesPatchWithDerivedCount, presaleRightsPatchWithConfirmClear } from "@/lib/calc/household-house-count";
@@ -157,7 +158,7 @@ function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclus
     <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
       <td className="px-3 py-2 text-xs text-muted-foreground tabular-nums">{idx + 1}</td>
       <td className="px-3 py-2 text-xs">
-        {house.region === "capital" ? "수도권·광역시 등" : "지방"}
+        {HOUSE_REGION_LABEL[house.region]}
       </td>
       <td className="px-3 py-2 text-xs tabular-nums whitespace-nowrap">
         {shortDate(house.acquisitionDate)}
@@ -336,8 +337,7 @@ export function HousesListSection({
 
   // 양도 주택 소재지 — 양도 물건(assets[0]) 주소에서 자동 판정 (사용자 수동 선택 폐지)
   const sellingRegionCode = form.assets?.[0]?.regionCode;
-  const sellingRegionLabel =
-    deriveHouseRegionFromCode(sellingRegionCode) === "capital" ? "수도권·광역시 등" : "지방";
+  const sellingRegionLabel = HOUSE_REGION_LABEL[deriveHouseRegionFromCode(sellingRegionCode)];
 
   // 편집 중인 주택 (모달 오픈용)
   const editingHouse = editingId ? houses.find((h) => h.id === editingId) ?? null : null;
@@ -470,7 +470,7 @@ export function HousesListSection({
                    문구로 둔다(prop을 하나 더 꿰는 것보다 얕다).
               */}
               <p className="text-xs">
-                양도 물건의 소재지 주소가 없어 <b>수도권·광역시 등</b> 기본값이 적용됩니다. 정확한
+                양도 물건의 소재지 주소가 없어 <b>{HOUSE_REGION_LABEL.capital}</b> 기본값이 적용됩니다. 정확한
                 판정을 위해 <b>양도 대상 주택</b>의 소재지 주소를 입력하세요.
               </p>
             </ToneCard>

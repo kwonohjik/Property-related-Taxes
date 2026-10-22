@@ -23,6 +23,8 @@ import { rightRowDistrictAnswerUsed } from "@/lib/tax-engine/one-house/designate
 import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";
 import type { PresaleRightEntry } from "@/lib/stores/calc-wizard-store";
 import { isAddressReplaced } from "@/lib/calc/house-region";
+import { deriveHouseRegionFromCode } from "@/lib/calc/house-region";
+import { HOUSE_REGION_LABEL } from "@/lib/calc/house-region";
 import { requiresPresaleRightsConfirmation } from "@/lib/calc/housing-like-asset";
 import { isOwnedAtTransfer } from "@/lib/calc/household-house-count";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
@@ -278,39 +280,53 @@ export function PresaleRightsSection({
               )}
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">지역 구분</span>
-                <RadioCardGroup
-                  name={`presale-region-${r.id}`}
-                  layout="inline"
-                  tone="rose"
-                  value={
-                    r.region === "capital"
-                      ? "capital"
-                      : r.regionCriteria === "REGION"
-                        ? "metro"
-                        : "local"
-                  }
-                  onChange={(v) =>
-                    update(
-                      r.id,
-                      v === "capital"
-                        ? { region: "capital", regionCriteria: "REGION" }
-                        : v === "metro"
-                          ? { region: "non_capital", regionCriteria: "REGION" }
-                          : { region: "non_capital", regionCriteria: "VALUE" },
-                    )
-                  }
-                  options={[
-                    { value: "capital", label: "수도권" },
-                    { value: "metro", label: "광역시·세종" },
-                    { value: "local", label: "그 외 지방" },
-                  ]}
-                />
+                {/* 소재지 법정동코드가 있으면 엔진(`isPresaleRightCounted`)이 코드로 분류한다 — 같은 함수로 보여 준다(3중 패턴). */}
+                {r.regionCode && r.regionCode.length >= 10 ? (
+                  <ToneCard tone="rose" bodyClassName="" className="px-3 py-2">
+                    <span className="text-sm font-medium">{HOUSE_REGION_LABEL[deriveHouseRegionFromCode(r.regionCode)]}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">소재지 주소에서 자동 판정</span>
+                  </ToneCard>
+                ) : (
+                  <>
+                    <RadioCardGroup
+                      name={`presale-region-${r.id}`}
+                      layout="inline"
+                      tone="rose"
+                      value={
+                        r.region === "capital"
+                          ? "capital"
+                          : r.regionCriteria === "REGION"
+                            ? "metro"
+                            : "local"
+                      }
+                      onChange={(v) =>
+                        update(
+                          r.id,
+                          v === "capital"
+                            ? { region: "capital", regionCriteria: "REGION" }
+                            : v === "metro"
+                              ? { region: "non_capital", regionCriteria: "REGION" }
+                              : { region: "non_capital", regionCriteria: "VALUE" },
+                        )
+                      }
+                      options={[
+                        { value: "capital", label: "수도권" },
+                        { value: "metro", label: "광역시·세종" },
+                        { value: "local", label: "그 외 지방" },
+                      ]}
+                    />
+                    <p className="text-caption text-muted-foreground">
+                      수도권·광역시·세종의 군·읍·면은 「그 외 지방」입니다(소득세법 시행령 제167조의4제2항제1호). 아래 소재지 주소를
+                      검색하면 자동으로 판정합니다.
+                    </p>
+                  </>
+                )}
               </div>
               <CurrencyInput
                 label="가액(공급가격)"
                 value={r.rightValue ?? ""}
                 onChange={(v) => update(r.id, { rightValue: v })}
-                hint="분양권 공급가격/입주권 종전주택가격 — 그 외 지방 3억 이하 시 주택 수 제외 (원)"
+                hint="분양권 공급가격/입주권 종전주택가격 — 가액기준 지역(군·읍·면과 그 밖의 지방) 3억 이하 시 주택 수 제외 (원)"
               />
               <div className="space-y-1">
                 <span className="block text-caption text-muted-foreground font-medium">

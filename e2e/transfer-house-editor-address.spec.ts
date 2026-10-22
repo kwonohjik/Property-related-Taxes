@@ -75,7 +75,7 @@ test.describe("주택 편집 모달 — 소재지 주소검색 + 지역 자동�
     expect(box!.width).toBeGreaterThan(700);
     await expect(dialog.getByText("소재지", { exact: true })).toBeVisible();
     await expect(dialog.getByText("소재지 주소에서 자동 판정")).toBeVisible();
-    await expect(dialog.getByText("수도권·광역시 등")).toBeVisible();
+    await expect(dialog.getByText("지역기준(가액 무관 산입)")).toBeVisible();
     // 공시가격 기준연도 선택 조회 위젯 렌더
     await expect(dialog.getByRole("button", { name: "조회" })).toBeVisible();
   });

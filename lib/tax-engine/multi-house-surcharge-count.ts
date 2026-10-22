@@ -15,6 +15,7 @@ import { differenceInYears } from "date-fns";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isWithinDeadline } from "./civil-period";
 import { isSmallNewHouseSpecial, resolvePopulationDeclineSecondHome } from "./multi-house-surcharge-12ho";
+import { isCapitalAreaHouse } from "./multi-house-surcharge-12ho";
 import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
 import {
   RA_CUT,
@@ -60,8 +61,25 @@ const INTEGRATED_GWANGJU_DISTRICT_CODES = new Set([
   "12330", // 광산구
 ]);
 
+/**
+ * 법정동코드 10자리가 **읍·면**(또는 그 아래 리)인가. 10자리 미만은 판정할 수 없다(null).
+ *
+ * 읍·면·동 3자리(6~8번째)가 250 이상이면 읍·면이다 — 행안부 「법정동코드 전체자료」(공공데이터포털 15063424,
+ * 2026-10-22 내려받음) 읍·면·동 5,067건 전수 대조에서 예외 0건(동 3,656 < 250 · 읍 237·면 1,174 ≥ 250).
+ * 면에서 승격한 읍은 면 코드(3xx)를 그대로 쓴다. 리가 있는 코드도 전부 읍·면 아래다.
+ */
+export function isEupMyeonByRegionCode(regionCode: string | undefined): boolean | null {
+  if (!regionCode || regionCode.length < 10) return null;
+  return Number(regionCode.slice(5, 8)) >= 250;
+}
+
 export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VALUE" {
   if (!regionCode || regionCode.length < 2) return "VALUE";
+
+  // §167의3①1호 괄호 — 「지방자치법」 제3조제3항·제4항의 읍·면(군·도농복합시)과 세종시법 제6조제3항의 읍·면은
+  //   지역기준에서 빠진다. 아래 시도·군 분기는 5자리만 보므로 경기 시의 읍·면·세종 읍·면을 놓쳤다(2026-10-22 정정 —
+  //   docs/00-pm/multi-house-surcharge-eupmyeon-region.plan.md). 광역시 자치구에는 읍·면이 없다(같은 전체자료 실측).
+  if (isEupMyeonByRegionCode(regionCode)) return "VALUE";
 
   const sidoCode = regionCode.substring(0, 2);
   const sggCode = regionCode.substring(0, 5);
@@ -195,7 +213,7 @@ function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): Normalized
   return {
     businessRegistrationDate: house.businessRegistrationDate ?? null,
     rentalRegistrationDate: house.rentalRegistrationDate ?? null,
-    isCapitalArea: house.isCapitalArea ?? house.region === "capital",
+    isCapitalArea: isCapitalAreaHouse(house),
     isApartment: house.isApartment,
     rentalStartOfficialPrice: house.rentalStartOfficialPrice ?? house.officialPrice,
     acquisitionOfficialPrice: house.acquisitionOfficialPrice ?? house.officialPrice,
@@ -466,7 +484,11 @@ export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Dat
   // 분양권 전용 — §88 10호 정의 신설 적용례. 조합원입주권은 그 이전부터 산입 요소였다(위 주석).
   // 상속 분양권은 동일세대면 피상속인 취득일 — §89②와 같은 leaf(`presale-right-definition-date.ts`).
   if (right.type === "presale_right" && presaleRightDefinitionAcquisitionDate(right) < presaleStartDate) return false;
-  const rc = right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE");
+  // 소재지 법정동코드(10자리)가 있으면 그것으로 분류한다 — 선택값(수도권/광역시·세종/그 외 지방)으로는 읍·면을 고를 수 없다.
+  const rc =
+    right.regionCode && right.regionCode.length >= 10
+      ? classifyRegionCriteriaByCode(right.regionCode)
+      : (right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE"));
   if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) return false;
   return true;
 }

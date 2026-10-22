@@ -83,8 +83,8 @@ test.describe("다주택 중과세 세대 보유 주택 상세 입력 UI", () =>
     await expect(dialog.getByText("상속 정보", { exact: false })).toBeVisible();
     await expect(dialog.getByText("장기임대 정보", { exact: false })).toBeVisible();
 
-    // 지역: 지방 선택 (RadioCardGroup label 텍스트 클릭)
-    await dialog.getByText("지방", { exact: true }).click();
+    // 지역: 가액기준 선택 (RadioCardGroup label 텍스트 클릭)
+    await dialog.getByText("가액기준(3억 이하 불산입)", { exact: true }).click();
 
     // 조특법 감면주택 chip 토글 → ON (F-11 — 종전 「미분양주택」)
     await toggleCardByTitle(dialog, "조특법 감면주택");
