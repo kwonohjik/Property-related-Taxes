@@ -32,6 +32,7 @@ import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { splitHasNonActualOwnedPart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { withInScopeTransferExpenses } from "@/lib/calc/transfer-expense-in-scope";
 import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
@@ -259,9 +260,11 @@ function previewStdPriceAtTransfer(a: AssetForm, transferDate: string | undefine
 }
 
 export function computeTransferPerAssetSummary(
-  formData: TransferFormData,
+  formDataInput: TransferFormData,
   result: TransferAPIResult | null,
 ): TransferPerAssetSummary {
+  // ④와 같은 입력 — 화면에 없는 총 양도비·꺼진 자산 양도비는 합계에도 넣지 않는다(O-9).
+  const formData = withInScopeTransferExpenses(formDataInput);
   const isSingle = formData.assets.length === 1;
   const bundledResult = result?.mode === "bundled" ? result : null;
   const singleResult = result?.mode === "single" ? result.result : null;

@@ -124,7 +124,8 @@ describe("BDX-2 세액 — 칸을 옮겨도 같은 상태값이라 세액이 같
   it.each([
     ["양도비 없음", k4(), {}, 16_445_000],
     ["자산 양도비 3천만", k4({ transferExpense: "30000000" }), {}, 13_857_600],
-    ["총 양도비 1천만", k4(), { totalTransferExpense: "10000000" }, 15_355_200],
+    // 단건에는 총 양도비 칸이 없다 — 남은 값은 쓰지 않는다(O-9, 종전 15,355,200).
+    ["숨은 총 양도비 1천만(단건)", k4(), { totalTransferExpense: "10000000" }, 16_445_000],
   ] as const)("%s → %d", async (_l, a, f, tax) => {
     expect(await taxOf(single(a, f))).toBe(tax);
   });
