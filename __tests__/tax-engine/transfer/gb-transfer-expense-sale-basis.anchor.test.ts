@@ -411,12 +411,18 @@ describe("D-1·D-2 — 상세명세서 «자산별 양도비» 산식이 자기 
     const fOld = buildGbExpenseFormula({ propertyId: "land", necessaryExpense: r.land, capitalExpenditureForDisplay: 0 } as never, old);
     expect(fOld).toBe(land);
   });
-  it("D-3 파트 직접 귀속 입력(안분이 아닌 값)이면 신규 산식을 적지 않는다 — 카드 값을 못 만드는 산식 금지", async () => {
-    const { r, land } = await formulas("A_declared_70_30", {
+  it("D-3 파트 자본적지출 칸(직접 입력) + 양도비 → 자본적지출은 입력값, 양도비 몫은 안분해 더하고 산식이 그 합을 만든다", async () => {
+    const { r, land, building } = await formulas("A_declared_70_30", {
       transferExpense: "5,000,000", landDirectExpenses: "1,000,000", buildingDirectExpenses: "2,000,000",
     });
-    expect([r.land, r.building]).toEqual([1_000_000, 2_000_000]); // 직접 귀속이 이긴다(기존 계약)
-    expect(land).not.toContain("5,000,000 × 1,400,000,000"); // 안분 산식이 직접 귀속 값 옆에 붙으면 거짓 등식이다
+    // 파트 칸은 자본적지출만 대체한다 — 종전엔 양도비 5,000,000이 통째로 사라졌다(1,000,000 / 2,000,000).
+    expect([r.land, r.building]).toEqual([1_000_000 + 3_500_000, 2_000_000 + 1_500_000]);
+    expect(land).toBe(
+      "양도비 5,000,000 × 1,400,000,000 / (1,400,000,000+600,000,000) = 3,500,000\n        자본적지출 1,000,000 (토지 칸 직접 입력)\n        합계 = 4,500,000",
+    );
+    expect(building).toBe(
+      "양도비 5,000,000 - 토지 3,500,000 = 1,500,000 (잔액 보정)\n        자본적지출 2,000,000 (건물 칸 직접 입력)\n        합계 = 3,500,000",
+    );
   });
   it("D-2b 신규 입력 결과에서 echo를 걷어내면 종전 산식으로 후퇴한다 (옛 이력 모양)", async () => {
     const { r } = await formulas("A_declared_70_30", { transferExpense: "5,000,000" });

@@ -162,9 +162,11 @@ export function directExpenseRaw(a: AssetForm): number {
     );
   }
   if (isParcelMode(a)) return parcelExpenseSum(a);
+  const partSplit = parseRaw(a.landDirectExpenses) + parseRaw(a.buildingDirectExpenses);
+  // 토지·건물 분리 — 파트 칸은 자본적지출, 양도비는 자산 칸이라 엔진이 둘을 더한다(일반건물 실가 `resolvePartExpenses`·주택 분리 F23).
+  if (a.hasSeperateLandAcquisitionDate && partSplit > 0) return partSplit + parseRaw(a.transferExpense);
   const split = parseRaw(a.capitalExpenditure) + parseRaw(a.transferExpense);
   if (split > 0) return split;
-  const partSplit = parseRaw(a.landDirectExpenses) + parseRaw(a.buildingDirectExpenses);
   if (partSplit > 0) return partSplit;
   return parseRaw(a.directExpenses);
 }

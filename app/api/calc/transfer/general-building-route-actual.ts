@@ -199,6 +199,37 @@ export function buildActualGeneralBuildingCards(
     return { land, building: actualExpenses - land };
   }
 
+  /**
+   * 파트 직접 귀속(P5)까지 반영한 필요경비 — 매매 분기와 둘 다 상속(C1) 분기가 함께 쓴다.
+   *
+   * 파트 칸(`landDirectExpenses`·`buildingDirectExpenses`)은 화면 라벨대로 **자본적지출**만 대체한다. 양도비는 파트 칸이
+   * 없으므로 위 규칙대로 안분해 **더한다**(§100② 후문 「공통되는 … 양도비용」 — 주택 분리 경로 F23과 같은 규칙).
+   * 종전에는 파트 칸이 그 파트의 필요경비 전체를 대체해 양도비 몫이 사라졌고, C1 분기는 파트 칸을 아예 읽지 않았다.
+   * legacy(`declaredExpenses` 0 — 두 성질이 섞인 한 덩어리)는 종전 그대로 파트 칸이 안분분을 대체한다.
+   */
+  const hasPartCapex = landDirectExpenses !== undefined || buildingDirectExpenses !== undefined;
+  function resolvePartExpenses(saleBasis: { land: number; building: number }): { land: number; building: number } {
+    if (!hasPartCapex) return apportionExpenses(saleBasis);
+    const bothDirect = landDirectExpenses !== undefined && buildingDirectExpenses !== undefined;
+    if (declaredExpenses > 0) {
+      // 두 파트 모두 직접 귀속이면 자본적지출 안분이 없다 — 쓰이지 않을 취득시 기준시가를 요구하지 않는다(거짓 차단 금지).
+      let capex = { land: 0, building: 0 };
+      if (!bothDirect && capitalExpenditure) {
+        requireAcqStd("자본적지출");
+        const land = apportionByStdPrice(capitalExpenditure, acqLandStdTotal, acqBuildingStd).land;
+        capex = { land, building: capitalExpenditure - land };
+      }
+      const txLand = transferExpense ? apportionByStdPrice(transferExpense, saleBasis.land, saleBasis.building).land : 0;
+      return {
+        land: (landDirectExpenses ?? capex.land) + txLand,
+        building: (buildingDirectExpenses ?? capex.building) + ((transferExpense ?? 0) - txLand),
+      };
+    }
+    if (bothDirect) return { land: landDirectExpenses, building: buildingDirectExpenses };
+    const apportioned = apportionExpenses(saleBasis);
+    return { land: landDirectExpenses ?? apportioned.land, building: buildingDirectExpenses ?? apportioned.building };
+  }
+
   // 부담부증여 §159①1호 분기 — 사용자 입력 actualAcquisitionPrice 무시,
   // 자산별 양도가/취득가/개산공제를 채무비율로 환산.
   // §159①1호 단서: "양도가액을 §99 기준시가로 산정한 경우 취득가액도 §99 기준시가로 산정".
@@ -274,9 +305,9 @@ export function buildActualGeneralBuildingCards(
     transferExpenseBasis = saleAlloc.proportionBasis;
     landAcq = inheritedLandValue ?? 0;
     buildingAcq = inheritedBuildingValue ?? 0;
-    // 필요경비는 성질별 기준으로 안분한다(P-2). 개산공제 아님 —
+    // 필요경비는 성질별 기준으로 안분하고 파트 자본적지출 칸을 직접 귀속한다(P-2·P5 — 매매 분기와 같은 규칙). 개산공제 아님 —
     // actual 모드는 이미 전 카드 estimatedDeduction:0(§163⑥ 미적용, §163⑨ 정합).
-    ({ land: landExp, building: buildingExp } = apportionExpenses(saleAlloc.proportionBasis));
+    ({ land: landExp, building: buildingExp } = resolvePartExpenses(saleAlloc.proportionBasis));
   } else {
     const saleAlloc = resolveSaleAllocation();
     landTransfer = saleAlloc.allocation.land;
@@ -329,16 +360,7 @@ export function buildActualGeneralBuildingCards(
      * 한쪽만 입력되면 그 파트만 직접 귀속하고 나머지는 총액 안분분을 그대로 둔다
      * (잔액 도출로 상대 파트를 깎지 않는다 — 총액은 두 파트의 합이 아니라 자산 전체 입력값이다).
      */
-    // ⚠️ 두 파트 모두 직접 귀속이면 안분 자체가 없다 — `apportionExpenses()`를 부르지 않는다.
-    //    부르면 `requireAcqStd`가 **쓰이지도 않을 값** 때문에 차단한다(거짓 차단 금지).
-    if (landDirectExpenses !== undefined && buildingDirectExpenses !== undefined) {
-      landExp = landDirectExpenses;
-      buildingExp = buildingDirectExpenses;
-    } else {
-      const apportionedExp = apportionExpenses(saleAlloc.proportionBasis);
-      landExp = landDirectExpenses ?? apportionedExp.land;
-      buildingExp = buildingDirectExpenses ?? apportionedExp.building;
-    }
+    ({ land: landExp, building: buildingExp } = resolvePartExpenses(saleAlloc.proportionBasis));
   }
 
   // NBL 판정 — 본체는 공용 헬퍼(`appurtenant-land-excess.ts`). 환산·증축 경로와 공유.
@@ -490,11 +512,20 @@ export function buildActualGeneralBuildingCards(
     bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
     bundledActualExpenses: actualExpenses ?? undefined,
     // 신규 두 칸 입력일 때만 — legacy 후퇴(`declaredExpenses === 0`)에서는 안분 echo가 없다(표시 계층이 종전 산식을 쓴다).
-    ...(declaredExpenses > 0 && transferExpenseBasis
+    // 파트 자본적지출 칸만 있고 legacy 총액이 없으면 그 값도 싣는다 — 산식이 「직접 입력」 항목으로 적는다(`resolvePartExpenses`와 같은 축).
+    ...((declaredExpenses > 0 || (hasPartCapex && !(actualExpenses > 0))) && transferExpenseBasis
       ? {
           bundledActualCapitalExpenditure: capitalExpenditure ?? 0,
           bundledActualTransferExpense: transferExpense ?? 0,
           bundledActualTransferBasis: transferExpenseBasis,
+          ...(hasPartCapex
+            ? {
+                bundledActualPartCapitalExpenditure: {
+                  ...(landDirectExpenses !== undefined ? { land: landDirectExpenses } : {}),
+                  ...(buildingDirectExpenses !== undefined ? { building: buildingDirectExpenses } : {}),
+                },
+              }
+            : {}),
         }
       : {}),
     saleSplitJudgment,
@@ -568,6 +599,9 @@ export function runActualGeneralBuildingOnce(
           bundledActualCapitalExpenditure: built.bundledActualCapitalExpenditure,
           bundledActualTransferExpense: built.bundledActualTransferExpense,
           bundledActualTransferBasis: built.bundledActualTransferBasis,
+          ...(built.bundledActualPartCapitalExpenditure
+            ? { bundledActualPartCapitalExpenditure: built.bundledActualPartCapitalExpenditure }
+            : {}),
         }
       : {}),
     /**

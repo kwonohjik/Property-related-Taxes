@@ -696,6 +696,11 @@ export type GeneralBuildingOutput = {
    * 기준시가 안분이면 양도시 기준시가. `assetCards[].transferPrice`(안분 결과)와 다를 수 있다(floor·잔액 흡수).
    */
   bundledActualTransferBasis?: { land: number; building: number };
+  /**
+   * 파트 자본적지출 칸(`landDirectExpenses`·`buildingDirectExpenses`) 입력값 — 있으면 그 파트의 자본적지출은 안분이 아니라 이 값이다
+   * (양도비 몫은 따로 더한다). 표시 계층이 「직접 입력」 항목으로 적는다 — 엔진 산식 변경 없음(echo-field-pattern).
+   */
+  bundledActualPartCapitalExpenditure?: { land?: number; building?: number };
 
   /**
    * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).
