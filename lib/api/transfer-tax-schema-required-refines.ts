@@ -8,6 +8,8 @@
  */
 import { householdBuildingResidenceOverflow, redevCompletionDateRequiredForHolding } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
 import { z } from "zod";
+import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-valuation";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { toDate } from "./date-coerce";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
@@ -83,6 +85,11 @@ export function refineHouseExclusionInputs(
 type BurdenedGiftLike = {
   valuationMode: string;
   marketValueAtTransfer?: number;
+  lendingDepositTotal?: number;
+  mortgageDebtAmount?: number;
+  mortgageSetAmount?: number;
+  /** 조합원입주권 평가 3항 — 있으면 §159①1호 괄호가 발동하지 않는다(엔진 `resolveBgAcquisitionBasis`). */
+  rightValuation?: unknown;
   acquisitionMethod?: string;
   actualAcquisitionTotal?: number;
   actualLandAcquisitionPrice?: number;
@@ -98,6 +105,27 @@ type BurdenedGiftLike = {
   };
   donorRelation?: string;
 };
+
+/**
+ * 시가 모드 · 담보 승(「상속세 및 증여세법」 제66조) — 엔진이 산정방식과 무관하게 취득가액을 취득시 기준시가 × 채무비율로 강제하고
+ * (「소득세법 시행령」 제159조 제1항 제1호 괄호 · `resolveBgAcquisitionBasis`) 실지취득가액·매매사례가액·감정가액을 읽지 않는다.
+ * 엔진과 같은 함수로 판정하되 **지분 축소 전** 시가로 본다 — 축소는 시가만 줄이므로 여기서 담보가 이기면 엔진에서도 이긴다
+ * (요구를 잘못 빼는 방향으로는 틀리지 않는다). 조합원입주권(괄호 미발동)·이월과세(당초 증여자 값)는 제외 — ⑧이 담보 승을 막는다.
+ * 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
+ */
+function collateralForcesStdAcquisition(bg: BurdenedGiftLike): boolean {
+  if (bg.valuationMode !== "sangjeungbeop_market" || bg.rightValuation !== undefined || bg.carryoverDonorBasis !== undefined) return false;
+  return (
+    computeSangjeungbeopValuation(0, 0, {
+      valuationMode: "sangjeungbeop_market",
+      marketValueAtTransfer: bg.marketValueAtTransfer ?? 0,
+      lendingDepositTotal: bg.lendingDepositTotal ?? 0,
+      mortgageDebtAmount: bg.mortgageDebtAmount ?? 0,
+      mortgageSetAmount: bg.mortgageSetAmount,
+      annualRentTotal: 0,
+    } as BurdenedGiftInfo).selectedMode === "mortgage"
+  );
+}
 
 /**
  * 부담부증여 (⑧ `transfer-tax-validate-bg.ts`). 비우면:
@@ -120,6 +148,8 @@ export function refineBurdenedGiftInputs(
       issue(["burdenedGiftInfo", "marketValueAtTransfer"], "부담부증여 시가 모드는 양도시 시가 평가액이 필요합니다");
     if (!bg.acquisitionMethod) {
       issue(["burdenedGiftInfo", "acquisitionMethod"], "부담부증여 시가 모드는 취득가액 산정방식(actual·salesCase·appraisal·converted)이 필요합니다 (소득세법 §100①)");
+    } else if (collateralForcesStdAcquisition(bg)) {
+      // 담보 승 — 엔진이 방식별 금액을 읽지 않는다(아래 함수 주석). ⑤가 그 칸을 숨기고 ⑧도 요구하지 않는다(O-5).
     } else if (
       bg.acquisitionMethod === "actual" &&
       !positive(bg.actualAcquisitionTotal) &&
@@ -128,7 +158,7 @@ export function refineBurdenedGiftInputs(
     ) {
       issue(["burdenedGiftInfo", "actualAcquisitionTotal"], "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다");
     }
-    if (bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") {
+    if ((bg.acquisitionMethod === "appraisal" || bg.acquisitionMethod === "salesCase") && !collateralForcesStdAcquisition(bg)) {
       const label = bg.acquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
       const donor = bg.carryoverDonorBasis;
       if (donor) {
