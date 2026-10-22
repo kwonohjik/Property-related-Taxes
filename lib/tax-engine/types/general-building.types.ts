@@ -17,6 +17,7 @@ import type { ExpropriationValuationDetail } from "../transfer-tax-expropriation
 import type { PartAcqMode } from "../transfer-tax-split-gain";
 import type { SaleSplitExemption } from "../sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "./transfer-split-gain.types";
+import type { ApportionBasisKind } from "../sale-split-apportion-basis";
 
 // ============================================================
 // ============================================================
@@ -628,6 +629,12 @@ export type GeneralBuildingOutput = {
    * 침묵 오표시된다. split 경로(`SplitGainResult.saleSplitJudgment`)와 같은 계약이다.
    */
   saleSplitJudgment?: SaleSplitJudgmentDetail;
+  /**
+   * 양도가액을 **구분 기재 없이 안분**했을 때 엔진이 실제로 쓴 basis 종류 — 표시 전용 echo(`saleSplitJudgment`와 배타).
+   * 토지·건물 양도가액이 둘 다 비면 비교 대상이 없어 판정이 비므로, 폼에서 「구분 기재」를 골랐는데 두 칸을 비운 경우의 안내 한 줄이 읽는다.
+   * split 경로(`SplitGainResult.saleApportionBasisKind`)와 같은 계약이다. 세액·양도가액에는 영향이 없다.
+   */
+  saleApportionBasisKind?: ApportionBasisKind;
   /** 환산취득가 결과 */
   acquisition: GeneralBuildingAcquisition;
   /** 개산공제 결과 */

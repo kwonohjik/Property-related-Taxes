@@ -101,7 +101,12 @@ export function buildGbPartCards(
     return {
       cards: built.cards,
       nonBusinessRatio: built.nonBusinessRatio,
-      detailBase: { ...built.nblDetail, nonBusinessRatio: built.nonBusinessRatio },
+      detailBase: {
+        ...built.nblDetail,
+        nonBusinessRatio: built.nonBusinessRatio,
+        // 구분 기재 없이 안분했을 때 basis 종류 — 지분(축 B) 실가 분기도 단건과 같이 싣는다(표시 전용 echo).
+        ...(built.saleApportionBasisKind ? { saleApportionBasisKind: built.saleApportionBasisKind } : {}),
+      },
       totalStd: built.totalStd + extensionStdAtTransfer,
       landStdAtTransfer: built.landStdAtTransfer,
       landStdAtAcq: null,

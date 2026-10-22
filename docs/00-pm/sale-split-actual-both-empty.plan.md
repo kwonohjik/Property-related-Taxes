@@ -1,6 +1,6 @@
 # 양도가액 «구분 기재» 선택 후 토지·건물 양도가액 두 칸 비움 — 일반건물·split ⑧ 처리 계획서
 
-> 작성 2026-10-22 · master `eee6c480f` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — Q-1 B: 현행 계산 유지 + 결과·신고서에 «구분 기재 없어 안분» 흔적 표시. Q-2·Q-3 해당 없음) → Do**
+> 작성 2026-10-22 · master `eee6c480f` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — Q-1 B: 현행 계산 유지 + 결과·신고서에 «구분 기재 없어 안분» 흔적 표시. Q-2·Q-3 해당 없음) → ✅ Do 완료 (§11)**
 > 관련: `docs/00-pm/gb-v8b-appraisal-mode-empty.plan.md` §7 Q-2(이 건의 출처) · `docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md`(#2402 §6) · `docs/00-pm/split-v7-pre2016-fe8-12-parity.plan.md`(T-7) · `docs/02-design/features/transfer-split-acq-std-gate-relaxation.plan.md` §4.8(규칙 ① 확정 경위)
 
 ## 0. 한 줄 요약
@@ -128,3 +128,79 @@
 3. 137파일 선택 실행이며 전체 vitest는 아니다(머신 부하 50+로 전체 실행이 25분 이상 걸려 중단했다). 선택 기준은 `saleSplitMode|SaleSplit|sale-split` 문자열이다 — 이 문자열 없이 `landTransferPrice`만 쓰는 테스트가 있으면 누락될 수 있다.
 4. 결과 화면이 «구분 기재가 안 쓰였다»를 표시하는지는 코드 판독으로만 확인했다(`components/calc`에서 `saleMode` 참조 0건 · `saleSplitJudgment` null). 브라우저·E2E 미수행.
 5. 사용 빈도 불명(telemetry 없음). 기본값이 `apportioned`라 사용자가 «구분 기재»를 직접 골라야 발생한다.
+
+## 10. B안 설계 (Do 착수 전 확정 · 2026-10-22)
+
+사용자 결정 Q-1 **B**. 계산·⑧·⑫·엔진 basis는 **그대로** 둔다. «구분 기재(actual)»를 골랐는데 토지·건물 양도가액이 둘 다 비어 엔진이 안분한 경우에만 그 사실을 **한 줄**로 표시한다.
+
+### 10.1 판정 조건 — 폼 한 칸 + 엔진 echo 한 칸 (둘 다 참일 때만)
+
+| 출처 | 값 | 왜 이 출처인가 |
+|---|---|---|
+| 폼 `AssetForm.saleSplitMode` | `"actual"` | 일반건물은 와이어에 모드를 싣지 않는다(§4 · Q-7 — 읽지 않는 플래그를 나르면 죽은 모드가 다시 생긴다). 모드는 **사용자가 고른 것**이라 폼만 안다. `exemptionNote`(§166⑧ 근거 문구)와 같은 구조 — 엔진을 거치지 않는 사실은 호출부가 폼에서 읽어 넘긴다 |
+| 엔진 결과 `saleApportionBasisKind` (신규 echo) | `"appraisal"` \| `"std_price"` | **엔진이 실제로 쓴 basis**다. 폼으로 재구성(감정평가 양쪽이면 감정…)하면 부가령 §64①1호 서열·`incomplete` 배제를 표시 계층이 다시 구현하게 된다(메모리 `feedback_engine_result_display_drift`). 값이 있다는 것 자체가 «구분 기재 없이 안분했다»(= `saleSplitJudgment` 부재 ∧ 안분)이다 |
+
+- **echo 필드는 결과 타입에만 추가한다**(입력 와이어 무변경 · `echo-field-pattern`). 구분 기재가 있으면(한쪽만·양쪽) `saleSplitJudgment`가 채워지고 echo는 **없다** — 두 필드는 배타다.
+- 모드가 `apportioned`(일괄)·`appraisal`(감정 직접 입력)이면 안분은 사용자가 고른 대로이므로 표시하지 않는다. «0 / 0»은 ④ `|| undefined`로 빈칸과 같이 취급돼 엔진이 안분하므로 **표시된다**.
+- 겸용은 ⑧이 두 칸을 필수로 막아 이 상황에 도달하지 않는다(해당 없음 — 격자 6셀 전부 차단을 §2.2에서 확인).
+
+### 10.2 엔진 echo (결과 타입만)
+
+| 경로 | 위치 | 값 |
+|---|---|---|
+| split | `resolveTransferPriceSplit`(`transfer-tax-split-sale-price.ts`) 구분 기재 없음 분기 → `SplitGainResult.saleApportionBasisKind` | `basis.kind`(감정 양쪽이면 `appraisal`, 아니면 `std_price`) |
+| 일반건물 환산·실가 | `allocateBundledTransferPrice`(`general-building-valuation.ts`) 구분 기재 없음 return → `GeneralBuildingOutput.saleApportionBasisKind` · 실가 경로는 `built` → `aggregated.generalBuildingValuationDetail` (`general-building-route-actual.ts`) | `basis.kind` |
+| 일반건물 증축 | `general-building-extension.ts` `!hasDeclared` | `"std_price"`(증축 경로는 감정 basis를 쓰지 않는다 — 기존 증축 감정 ⑧ 차단) |
+| 일반건물 지분(축 B) | 환산은 `detailBase = gbOut` 로 자동 전달 · 실가는 `buildGbPartCards` 실가 분기 `detailBase`에 한 줄 | 위와 같음 |
+
+### 10.3 표시 — 3개 면 · 같은 한 문장
+
+문장(정본, 한 곳에서 생성): **«구분 기재를 선택했으나 토지·건물 양도가액이 입력되지 않아 {양도시 기준시가|양도시 감정평가가액} 비율로 안분했습니다 (소득세법 시행령 §166 ⑥)»**. 법령 인용은 기존 상수 `TRANSFER.BUNDLED_APPORTIONMENT`를 쓴다 — 이 안분은 시행령 §166⑥(→ 부가령 §64①)의 적용이고, 새 조문을 인용하지 않으므로 **legal-codes 신설·manifest 등록은 없다**(§1 «§100② 상수 없음»은 신설할 필요가 없다 — 이 문장은 §100② 자체가 아니라 그 안분 결과를 말한다). 납세자 유리·불리 표현 없음.
+
+| 면 | 위치 | 형태 |
+|---|---|---|
+| ① 결과 카드(split) | `SplitGainDetailSection` — «구분 기재 30% 판정» 블록(`SaleSplitJudgmentBlock`)이 서는 바로 그 자리. 판정과 배타라 한 자리에 하나만 뜬다 | `ToneCard tone="amber"` + 문장 한 줄 |
+| ① 결과 카드(일반건물) | `BundledAllocationCard` — `generalBuildingValuationDetail?.saleSplitJudgment` 블록 바로 옆 | 동일 컴포넌트 |
+| ② 신고서 양식 표 | `FilingFormTable` 표 아래 각주 1행(단건 split · 다건/컴패니언 자산별 · 일반건물) | `※` + 문장 |
+| ③ 상세명세서 | `buildStatementItems` «양도가액» 항목 `note` | 문장 |
+
+호출부가 폼에서 읽어 넘기는 값은 **`saleSplitMode === "actual"` 한 불리언**이다(자산별: `exemptionNote`와 같은 경로 — 단건 `assets[0]` · 일괄 `assets.find(assetId)` · 다건 `property.form.assets[0]`). 판정·문장 생성은 순수 함수 한 곳(`components/calc/results/transfer/sale-split-unentered-notice.ts`)에 두고 세 면이 같은 함수를 부른다(문구가 갈라지지 않게).
+
+### 10.4 14지점
+
+①②③④⑤⑥⑧⑨⑩⑪⑫⑬⑭ 무변경(입력 필드 신규 없음 · 와이어 무변경 · 사이드바 합계 불변). **⑦ 결과 카드·신고서·명세서만 변경.** 사이드바의 «기준시가 안분» 라벨(`transfer-per-asset-summary.ts`)은 이번 범위 밖 — 확인 필요로 남긴다.
+
+### 10.5 anchor 격자 (수정 전 실패 기록 대상)
+
+- 표시 O: split 단건 {기준시가 안분, 감정 안분} × 빈칸/«0»·«0» · 일반건물 환산/실가/증축/지분 · 컴패니언(split) · 다건 route · 파트 이월과세 C.
+- 표시 X: 두 칸 채움 · 한쪽만 · 일괄양도 선택(`apportioned`) · 감정 직접 입력 모드(`appraisal`) · 겸용(⑧ 차단) · echo 없는 구 이력.
+- 세액 불변: 구현 전 격자 257셀(⑧ 결과·⑫ 상태·응답 `data` 전문)을 저장해 두고 구현 후 같은 격자와 **echo 키만 제거하고 바이트 일치** 대조.
+
+## 11. Do 결과 (2026-10-22)
+
+### 11.1 변경
+
+| 면 | 파일 | 내용 |
+|---|---|---|
+| 엔진 echo(결과 타입만) | `lib/tax-engine/types/transfer-split-gain.types.ts` · `types/general-building.types.ts` · `transfer-tax-split-sale-price.ts` · `transfer-tax-split-gain.ts` · `general-building-valuation.ts` · `general-building-extension.ts` · `app/api/calc/transfer/general-building-route-actual(.types).ts` · `general-building-part-cards.ts` | `saleApportionBasisKind?: "appraisal" \| "std_price"` — 구분 기재 없이 안분했을 때만, 엔진이 실제 쓴 basis. 판정과 배타. **와이어 입력 무변경** |
+| 판정·문장 단일 소스 | `components/calc/results/transfer/sale-split-unentered-notice.ts` (신규) | 폼 `saleSplitMode==="actual"` ∧ echo → 문장 1개. 자산별 라벨·카드 id→자산 규약 |
+| ① 결과 카드 | `SaleSplitUnenteredNotice.tsx`(신규 · `ToneCard amber`) → `SplitGainDetailSection`(판정 블록 자리) · `BundledAllocationCard`(일반건물) · prop `saleSplitActual`을 `ValuationDetailCards`/`PropertyCard`/단건·다건 호출부에 `exemptionNote`와 같은 경로로 | |
+| ② 신고서 | `FilingFormTable` 표 아래 `※` 각주(`data-testid="filing-sale-split-unentered-note"`) | |
+| ③ 상세명세서 | `DetailedStatementHelpers` «양도가액» 항목 `note` | |
+
+문장: «구분 기재를 선택했으나 토지·건물 양도가액이 입력되지 않아 {양도시 기준시가|양도시 감정평가가액} 비율로 안분했습니다 (소득세법 시행령 §166 ⑥)» — 법령은 기존 `TRANSFER.BUNDLED_APPORTIONMENT`. **legal-codes 신설·manifest 등록 없음.**
+
+### 11.2 검증
+
+- anchor 4파일 50건(엔진 echo 10 · 흐름 격자 26 · 렌더 8 · 일괄 카드 6). **수정 전 실패 24건**(엔진 5 · 흐름 15 · 렌더 4; 나머지는 «안 뜨는 셀» 음성 대조라 수정 전에도 통과).
+- **세액 불변**: 구현 전 격자 258셀(⑧ 결과·⑫ 상태·응답 `data` 전문, ⑧ 통과 200셀 137)을 저장 → 구현 후 같은 격자와 `saleApportionBasisKind` 키·휘발성 assetId만 제거하고 **전문 일치(차이 0)**. echo는 105셀에 실림(`apportioned` 모드 셀 포함 — 모드 판정은 표시 계층).
+- 뮤테이션 16종 **전부 KILLED**(M12는 «첫 자산 primary 카드» 테스트 추가 후, M16은 중복 코드 제거 후). 원복 sha 매번 일치.
+- E2E 신규 `e2e/sale-split-unentered-notice.spec.ts` 5건(split·일반건물 + 대조군) 통과, 기존 관련 spec 15건 회귀 통과. 스크린샷: `test-results/sale-split-unentered-{split,gb}.png`(ignore 경로).
+- tsc 0 · lint 오류 0 · pre-push 4종 통과 · 전체 vitest 39,215 passed — 1건 실패(`general-building-valuation.ts` ≤700줄 가드, 내가 +9줄)를 코멘트 압축으로 699줄로 되돌려 해소.
+
+### 11.3 계획과 다르게 한 점 · 확인 필요
+
+- 일반건물 «다건(multi) route»는 GB 엔진을 거치지 않아(응답 properties가 일반 자산) echo·안내 모두 없다 — 안분 자체가 일어나지 않는 경로다.
+- `GeneralBuildingValuationDetailCard`는 현재 어디서도 렌더되지 않아(dead) 손대지 않았다(기존 판정 블록도 거기 있음).
+- 사이드바의 «기준시가 안분» 라벨(`transfer-per-asset-summary.ts`)은 이번 범위 밖 — actual+빈칸에서도 그 라벨이 뜨는지는 미확인.
+- `MultiTransferPropertyBreakdown` 호출부의 prop 배선은 컴포넌트 단위 테스트가 없다(수집기 C-2만) — 확인 필요.

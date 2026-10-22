@@ -15,6 +15,7 @@ import {
 } from "@/lib/tax-engine/general-building-valuation";
 import { splitLandCarryover } from "@/lib/tax-engine/carryover-land-split";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
+import type { ApportionBasisKind } from "@/lib/tax-engine/sale-split-apportion-basis";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -215,6 +216,8 @@ export function buildActualGeneralBuildingCards(
     | undefined;
   /** §100③ 판정 명세 — 구분 기재가 있을 때만 채워진다(표시 계층이 소비). */
   let saleSplitJudgment: SaleSplitJudgmentDetail | undefined;
+  /** 구분 기재 없이 안분했을 때 엔진이 쓴 basis 종류 — 표시 전용 echo(판정과 배타). */
+  let saleApportionBasisKind: ApportionBasisKind | undefined;
   /** 양도비를 토지·건물로 나눌 때 비례시킨 자산가액 — 표시 계층 산식용 echo(상속·일반 분기에서만 채운다). */
   let transferExpenseBasis: { land: number; building: number } | undefined;
 
@@ -267,6 +270,7 @@ export function buildActualGeneralBuildingCards(
     landTransfer = saleAlloc.allocation.land;
     buildingTransfer = saleAlloc.allocation.building;
     saleSplitJudgment = saleAlloc.judgment;
+    saleApportionBasisKind = saleAlloc.saleApportionBasisKind;
     transferExpenseBasis = saleAlloc.proportionBasis;
     landAcq = inheritedLandValue ?? 0;
     buildingAcq = inheritedBuildingValue ?? 0;
@@ -278,6 +282,7 @@ export function buildActualGeneralBuildingCards(
     landTransfer = saleAlloc.allocation.land;
     buildingTransfer = saleAlloc.allocation.building;
     saleSplitJudgment = saleAlloc.judgment;
+    saleApportionBasisKind = saleAlloc.saleApportionBasisKind;
     transferExpenseBasis = saleAlloc.proportionBasis;
     /**
      * 🔴 파트별 실지거래가액이 **둘 다** 있으면 안분하지 않고 그대로 쓴다(2026-08-06).
@@ -493,6 +498,7 @@ export function buildActualGeneralBuildingCards(
         }
       : {}),
     saleSplitJudgment,
+    ...(saleApportionBasisKind ? { saleApportionBasisKind } : {}),
     transferBurdenedGiftBreakdown,
     acquisitionByInheritance,
     buildingAcquisitionByInheritance,
@@ -569,6 +575,8 @@ export function runActualGeneralBuildingOnce(
      * 🔴 종전에는 이 객체를 만들면서 이 키만 빠져 있었다 ⇒ 판정해도 화면에 안 떴다(P-1).
      */
     ...(built.saleSplitJudgment ? { saleSplitJudgment: built.saleSplitJudgment } : {}),
+    // 구분 기재 없이 안분한 경우 엔진이 쓴 basis 종류(표시 전용 echo — 판정과 배타).
+    ...(built.saleApportionBasisKind ? { saleApportionBasisKind: built.saleApportionBasisKind } : {}),
     // §163⑨ 상속 취득가액 직접 산정 echo (결과 카드 라벨 분기용).
     ...(built.acquisitionByInheritance ? { acquisitionByInheritance: true } : {}),
     ...(built.buildingAcquisitionByInheritance

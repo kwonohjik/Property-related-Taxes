@@ -45,6 +45,8 @@ function AcqCell({ owned, part, testId }: { owned: boolean; part: SplitPart; tes
 
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { SaleSplitJudgmentBlock } from "./SaleSplitJudgmentBlock";
+import { SaleSplitUnenteredNotice } from "./SaleSplitUnenteredNotice";
+import { saleSplitUnenteredNotice } from "./sale-split-unentered-notice";
 import { AcqSplitJudgmentBlock } from "./AcqSplitJudgmentBlock";
 import { SplitNonBusinessLandBlock } from "./SplitNonBusinessLandBlock";
 import { SplitCarryoverComparisonCard } from "./SplitCarryoverComparisonCard";
@@ -68,6 +70,7 @@ export function SplitGainDetailSection({
   splitDetail,
   assetKind,
   exemptionNote,
+  saleSplitActual,
   isExempt,
 }: {
   splitDetail: SplitDetail;
@@ -82,6 +85,11 @@ export function SplitGainDetailSection({
    * 판정 결과(`splitDetail.saleSplitJudgment`)에는 사유(호)만 있고 사용자가 적은 문구는 없다.
    */
   exemptionNote?: string;
+  /**
+   * 사용자가 양도가액 구분 방식을 «구분 기재(actual)»로 골랐는가 — **엔진을 거치지 않는 사실**이라(일반건물은 와이어에 모드를 싣지 않는다)
+   * `exemptionNote`와 같이 호출부가 폼에서 읽어 넘긴다. 엔진 echo(`splitDetail.saleApportionBasisKind`)와 **둘 다** 참일 때만 안내가 뜬다.
+   */
+  saleSplitActual?: boolean;
   /**
    * 전액 비과세 결과인가 — 장특공제는 과세 양도차익에 곱하는 공제라 비과세 결과에는 적용 대상이 없다.
    * 엔진 파트 echo는 보유연수·공제율을 그대로 싣기 때문에(예: 보유 15년 · 30%·0원) 설명 없이 두면 「공제율은 있는데 공제액이 없다」로 읽힌다.
@@ -105,6 +113,8 @@ export function SplitGainDetailSection({
     // 두 파트에 동시에 서지 않는다(1호는 건물 매매, 2호는 토지 매매일 때만) — 하나만 렌더한다.
     const acqBasis = splitAcqBasisView(splitDetail.land) ?? splitAcqBasisView(splitDetail.building);
     const rebuildLines = splitRateHoldingLines(splitDetail);
+    // «구분 기재 + 두 칸 비움» 안분 흔적 — 폼 선택(호출부) ∧ 엔진 echo가 모두 참일 때만 문장이 나온다.
+    const unenteredText = saleSplitUnenteredNotice(saleSplitActual, splitDetail.saleApportionBasisKind);
   return (
         <div className="rounded-lg border border-border p-4 space-y-2">
           <div className="flex items-center justify-between gap-2">
@@ -340,6 +350,8 @@ export function SplitGainDetailSection({
           */}
           {/* 취득 당시 계약서 구분금액의 §100③ 판정(#17-6) — 계약서 구분금액을 입력한 같은 날 취득 주택에서만 존재한다. */}
           {splitDetail.acqSplitJudgment && <AcqSplitJudgmentBlock j={splitDetail.acqSplitJudgment} />}
+          {/* «구분 기재 + 두 칸 비움» — 판정이 비는 자리(구분 기재 없이 안분)에서만 뜬다. 판정과 배타. */}
+          {unenteredText && <SaleSplitUnenteredNotice text={unenteredText} />}
           {splitDetail.saleSplitJudgment && (
             <SaleSplitJudgmentBlock
               j={splitDetail.saleSplitJudgment}

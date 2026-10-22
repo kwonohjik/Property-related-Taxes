@@ -69,6 +69,7 @@ import {
   buildBgMixedExpenseFormula,
 } from "./DetailedStatementBgMixedFormulas";
 import { aggregateAcqModes } from "./split-acq-text";
+import { collectSaleSplitUnenteredNotices } from "./sale-split-unentered-notice";
 
 // ── 헬퍼 ─────────────────────────────────────────────────────────
 
@@ -219,8 +220,11 @@ export function buildStatementItems(
     ? properties.reduce((s, p) => s + p.transferPrice, 0)
     : 0;
 
+  // «구분 기재를 골랐으나 양도가액 두 칸이 비어 안분했다» — 신고서 각주·결과 카드와 같은 문장(양도가액 칸이 안분값이라는 사실).
+  const unenteredNote = collectSaleSplitUnenteredNotices({ result, formData, asset, aggregate }).join(" / ");
   items.set("transferPrice", {
     label: "양도가액",
+    ...(unenteredNote ? { note: unenteredNote } : {}),
     value: isAggregate ? sumPropTransfer : ownerSplitTransfer ? ownerSplitTransfer.transferPrice : totalTransferPrice,
     formula: bgMixed
       ? buildBgMixedTransferFormula(bgMixed)

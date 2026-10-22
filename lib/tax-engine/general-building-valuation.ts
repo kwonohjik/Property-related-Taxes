@@ -28,7 +28,7 @@ import { applyConvertedHousingPriceOverride } from "./general-building-converted
 import { buildConvertedHousingDetail } from "./general-building-converted-housing";
 import { calculateConvertedAcquisition } from "./general-building-converted-acquisition";
 import { applyPartAcqModes } from "./general-building-part-acq";
-import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
+import { resolveSaleApportionBasis, type ApportionBasisKind } from "./sale-split-apportion-basis";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import type { SaleSplitExemption } from "./sale-split-deemed-unclear";
@@ -131,6 +131,7 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
   allocation: GeneralBuildingAllocation;
   /** 구분 기재가 있을 때만 채워진다 — 일괄양도는 비교 대상이 없어 판정하지 않는다 */
   judgment?: SaleSplitJudgmentDetail;
+  saleApportionBasisKind?: ApportionBasisKind; // 구분 기재 없이 안분했을 때만 — 실제 쓴 basis(표시 전용 echo, `judgment`와 배타)
   /**
    * 양도비처럼 **공통되는 비용**을 토지·건물로 나눌 때 비례시킬 「자산가액」 — 「소득세법」 §100② 후문
    * 「해당 자산의 가액에 비례」(계획서 `gb-transfer-expense-apportion-basis.plan.md`).
@@ -191,7 +192,7 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
   const landIn = input.landTransferPrice;
   const buildingIn = input.buildingTransferPrice;
   if (landIn == null && buildingIn == null) {
-    return { allocation: apportioned, proportionBasis: apportionBasisValue };
+    return { allocation: apportioned, proportionBasis: apportionBasisValue, ...(basis.kind ? { saleApportionBasisKind: basis.kind } : {}) };
   }
 
   /**
@@ -369,9 +370,8 @@ export function buildGeneralBuildingAssetCards(
   const landRate = estimatedDeductionRate(input.unregisteredLand);
   const buildingRate = estimatedDeductionRate(input.unregisteredBuilding);
 
-  // Step 1: 양도가 안분 (§166⑥) + 구분 기재 시 §100③ 30% 의제 판정 (Phase 2)
-  // 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
-  const { allocation, judgment: saleSplitJudgment } = allocateBundledTransferPrice(input);
+  // Step 1: 양도가 안분 (§166⑥) + 구분 기재 시 §100③ 30% 의제 판정 (Phase 2) — 법령 참조: TRANSFER.GENERAL_BUILDING_APPORTIONMENT
+  const { allocation, judgment: saleSplitJudgment, saleApportionBasisKind } = allocateBundledTransferPrice(input);
 
   // Step 2: 환산취득가 (§176의2②) — 토지 분모만 §164⑨ 공익수용 특례 override(토지 전용, D16-GB).
   // 법령 참조: TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ
@@ -635,9 +635,9 @@ export function buildGeneralBuildingAssetCards(
 
   return {
     allocation,
-    // 구분 기재가 있을 때만 채워진다 — 일괄양도에 `{deemedUnclear:false}`를 넣으면
-    // 「판정했고 통과했다」로 침묵 오표시된다(split 경로와 같은 계약).
+    // 구분 기재가 있을 때만 — 일괄양도에 `{deemedUnclear:false}`를 넣으면 「판정했고 통과했다」로 침묵 오표시된다(split과 같은 계약).
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
+    ...(saleApportionBasisKind ? { saleApportionBasisKind } : {}), // 표시 전용 echo(판정과 배타)
     acquisition,
     estimatedDeduction,
     // §99-164-10 산정 근거 — 증축 분기(위)와 **같이** 실어야 한다.
