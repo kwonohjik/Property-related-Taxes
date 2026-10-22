@@ -4,7 +4,7 @@
  * 판정 결과 아래 「AI 참고 의견」 — 신호 표시 · 호출 본문 · 의견 표시 · 결과가 바뀌면 옛 의견을 숨김. 서버 경로는 모의한다.
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import { OneHouseAiOpinionPanel } from "@/components/calc/one-house/OneHouseAiOpinionPanel";
 import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import type { OneHouseAiOpinionData } from "@/app/api/one-house-ai/opinion/route";
@@ -173,5 +173,25 @@ describe("AI 참고 의견 패널", () => {
     render(<OneHouseAiOpinionPanel form={createInitialOneHouseJudgmentForm()} result={result(0)} />);
     fireEvent.click(screen.getByTestId("one-house-ai-opinion-run"));
     expect((await screen.findByRole("alert")).textContent).toBe("해석례 카드를 찾지 못했습니다");
+  });
+});
+
+// 계획서 docs/00-pm/one-house-ai-recorded-leftovers.plan.md §3.3-2 (F-10) — 200인데 본문을 읽지 못하면 네트워크 탓이 아니다
+describe("응답 본문을 읽지 못함", () => {
+  const unreadable = { ok: true, status: 200, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); } };
+
+  it("의견 — 「응답을 읽지 못했습니다」", async () => {
+    fetchMock.mockResolvedValueOnce(unreadable);
+    render(<OneHouseAiOpinionPanel form={createInitialOneHouseJudgmentForm()} result={result(0)} />);
+    fireEvent.click(screen.getByTestId("one-house-ai-opinion-run"));
+    expect((await screen.findByRole("alert")).textContent).toBe("AI 참고 의견 응답을 읽지 못했습니다. 다시 시도하세요.");
+  });
+
+  it("원문 검증 — 의견은 보이고 검증 상태만 「응답을 읽지 못했습니다」", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data }) }).mockResolvedValueOnce(unreadable);
+    render(<OneHouseAiOpinionPanel form={createInitialOneHouseJudgmentForm()} result={result(0)} />);
+    fireEvent.click(screen.getByTestId("one-house-ai-opinion-run"));
+    await screen.findByTestId("one-house-ai-opinion-view");
+    await waitFor(() => expect(screen.getByTestId("one-house-ai-verify-status").textContent).toContain("원문 검증 응답을 읽지 못했습니다. 다시 시도하세요."));
   });
 });

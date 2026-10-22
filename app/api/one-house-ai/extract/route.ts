@@ -30,6 +30,7 @@ import {
   type ExtractionIssue,
 } from "@/lib/one-house-ai/apply-extraction";
 import { mergeExtractedForm } from "@/lib/one-house-ai/merge-form";
+import { withoutAddressCodes } from "@/lib/one-house-ai/address-codes";
 import { collectValidationQuestions } from "@/lib/one-house-ai/validation-questions";
 import type { AnswerField } from "@/lib/one-house-ai/question-answer";
 import type { LawLookup } from "@/lib/one-house-ai/law-tools";
@@ -106,8 +107,9 @@ export async function POST(request: NextRequest) {
     return fail(502, "AI_UPSTREAM_ERROR", "AI 사실 추출 호출에 실패했습니다. 잠시 후 다시 시도하세요");
   }
 
-  // 단계 5: 사전 재검증 → 폼 조각 · 질문
-  const { form, issues } = applyExtraction(run.extraction, ONE_HOUSE_FIELD_CATALOG);
+  // 단계 5: 소재지 코드 칸 제거(주소 검색으로만 — 질문으로 바꾼다) → 사전 재검증 → 폼 조각 · 질문
+  const extraction = withoutAddressCodes(run.extraction);
+  const { form, issues } = applyExtraction(extraction, ONE_HOUSE_FIELD_CATALOG);
   // 행 이름 없는 칸(`asset.residencePeriods[].moveInDate`)은 그 자체가 사전 키다
   const specOf = (path: string): FieldSpec | undefined => {
     const segs = parsePath(path);
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
     const spec = specOf(path);
     return spec && { path: spec.path, kind: spec.kind, label: spec.label, values: spec.values };
   };
-  const llmQuestions = run.extraction.missingFacts.map((m) => ({
+  const llmQuestions = extraction.missingFacts.map((m) => ({
     path: m.path,
     label: labelOf(m.path),
     field: fieldOf(m.path),
@@ -143,12 +145,12 @@ export async function POST(request: NextRequest) {
   const data: OneHouseAiExtractData = {
     form,
     // 화면은 필드 사전을 싣지 않는다 — 칸 이름과 선택지 뜻을 여기서 붙인다
-    facts: run.extraction.facts.map((f) => {
+    facts: extraction.facts.map((f) => {
       const spec = specOf(f.path);
       return { ...f, label: spec?.label, valueLabel: spec?.values?.find((v) => v.value === f.value.trim())?.label };
     }),
     questions: [...llmQuestions, ...validationQuestions.map((q) => ({ ...q, field: fieldOf(q.path) }))],
-    notes: run.extraction.notes,
+    notes: extraction.notes,
     issues,
     lawLookups: run.lookups ?? [],
     sourceCitations,

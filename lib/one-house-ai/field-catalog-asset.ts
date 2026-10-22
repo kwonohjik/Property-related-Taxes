@@ -34,7 +34,7 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     path: "asset.regionCode",
     kind: "string",
     label: "소재지",
-    hint: "양도 대상 소재지 법정동코드 10자리(PNU 앞 10자리). 선택 입력 — 있으면 조정대상지역을 자동 판정하고 wasRegulatedAtAcquisition·isRegulatedArea 토글은 쓰이지 않는다. 화면에서는 주소 검색으로 채워지므로 코드를 확실히 알 때만 넣는다.",
+    hint: "양도 대상 소재지 법정동코드 10자리(PNU 앞 10자리). 선택 입력 — 있으면 조정대상지역을 자동 판정하고 wasRegulatedAtAcquisition·isRegulatedArea 토글은 쓰이지 않는다. 넣지 않는다 — 화면의 주소 검색으로만 채운다(서버가 추출 값을 지우고 질문으로 바꾼다).",
   },
   {
     path: "asset.acquisitionDate",

@@ -29,7 +29,7 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
     path: "houses[].regionCode",
     kind: "string",
     label: "소재지",
-    hint: "이 주택 소재지 법정동코드 10자리(PNU 앞 10자리). 조정대상지역·수도권·읍면 판정에 쓰인다. 화면에서는 주소 검색으로 채워지므로 코드를 확실히 알 때만 넣는다.",
+    hint: "이 주택 소재지 법정동코드 10자리(PNU 앞 10자리). 조정대상지역·수도권·읍면 판정에 쓰인다. 넣지 않는다 — 화면의 주소 검색으로만 채운다(서버가 추출 값을 지우고 질문으로 바꾼다).",
   },
   {
     path: "houses[].isApartment",

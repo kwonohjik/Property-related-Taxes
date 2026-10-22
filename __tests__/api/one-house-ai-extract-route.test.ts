@@ -149,4 +149,19 @@ describe("POST /api/one-house-ai/extract", () => {
     expect(data.issues).toContainEqual(expect.objectContaining({ path: "transferDate2" }));
     expect(data.form.transferDate2).toBeUndefined();
   });
+
+  // 계획서 one-house-ai-recorded-leftovers §3.3-1 (Q-3 a) — 모델 지식으로 만든 코드는 체계가 다를 수 있다
+  it("소재지 코드는 폼·근거 목록에 넣지 않고 「주소 검색으로 입력」 질문으로 돌린다", async () => {
+    extract.mockResolvedValueOnce({
+      extraction: extraction({ facts: [...extraction().facts, { path: "houses[B].regionCode", value: "4617000000", evidence: "나주 B아파트" }] }),
+      model: "m",
+      usage: { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 },
+    });
+    const { data } = await (await call({ text: "사실관계" })).json();
+    expect(data.form.houses[0].regionCode).toBeUndefined();
+    expect(data.facts.map((f: { path: string }) => f.path)).not.toContain("houses[B].regionCode");
+    expect(data.questions).toContainEqual(
+      expect.objectContaining({ path: "houses[B].regionCode", label: "소재지", source: "llm", question: expect.stringContaining("주소 검색으로 입력") }),
+    );
+  });
 });
