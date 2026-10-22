@@ -266,6 +266,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "채무액",
       "증여가액",
       "양도소득세 과세대상에 해당하는 자산과 해당하지 아니하는 자산을 함께 부담부증여",
+      // 제1항 제1호 괄호 열거 — 다시 개정되면 엔진의 시기 고지 상수(`BG_PAREN_*_FROM`, burdened-gift-valuation.ts)를 함께 고친다.
+      "제61조제1항ㆍ제2항ㆍ제5항 및 제66조",
     ],
     keywordMode: "ALL",
   },
