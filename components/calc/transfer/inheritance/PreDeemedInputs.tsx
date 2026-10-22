@@ -26,6 +26,7 @@ import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
+import { isRedev166_3PreDeemedAsset } from "@/lib/calc/transfer-tax-validate-clause-a";
 import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -49,6 +50,9 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
   const isLand = asset.assetKind === "land";
   // 토지/주택 판정은 상단 assetKind로 파생(상속 자산구분 라디오 폐지 대응).
   const isHouse = asset.assetKind === "housing" || asset.assetKind === "redevelopment_apt";
+  // 재개발·재건축 종전자산(승계조합원 제외) — ③은 §176조의2④가 아니라 §166③이고 아래 재개발 입력 ⑤ 「환산취득가액」의 칸으로 계산한다
+  // (엔진 `resolvePreDeemedRedevelopment166_3Price` — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12). 여기 기준시가 2칸은 쓰이지 않는다.
+  const isRedev = isRedev166_3PreDeemedAsset(asset);
   // 일반건물은 이 칸이 토지분이다(건물분 전용 칸이 따로 있다) — 판정·문구는 공용 단일 소스.
   const partSuffix = inheritanceReportedValuePartSuffix(asset.assetKind);
 
@@ -210,20 +214,23 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
     <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 py-3 px-2 sm:px-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
-          의제취득일 이전 상속·증여 — ① 상증법 평가액과 ② 취득당시 기준시가 중 많은 금액
+          의제취득일 이전 상속·증여 — ① 상증법 평가액·② 취득당시 기준시가·③ 환산취득가액 중 많은 금액
         </p>
         <div className="flex shrink-0 items-center gap-1">
-          {/* 가목이 먼저다 — §176조의2④(나목)은 가목을 확인할 수 없을 때만 온다(법 §97①1호 단서). */}
           <LawArticleModal
             legalBasis="소득세법 시행령 §163 ⑨"
             label="소령 §163 ⑨"
             className={LAW_BADGE_CLASS}
           />
-          <LawArticleModal
-            legalBasis="소득세법시행령 §176조의2"
-            label="소령 §176조의2 ④"
-            className={LAW_BADGE_CLASS}
-          />
+          {isRedev ? (
+            <LawArticleModal legalBasis="소득세법 시행령 §166" label="소령 §166 ③" className={LAW_BADGE_CLASS} />
+          ) : (
+            <LawArticleModal
+              legalBasis="소득세법시행령 §176조의2"
+              label="소령 §176조의2 ④"
+              className={LAW_BADGE_CLASS}
+            />
+          )}
         </div>
       </div>
 
@@ -244,7 +251,8 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         </>
       )}
 
-      {/* ① 의제취득일(1985.1.1.) 시점 기준시가 */}
+      {/* ① 의제취득일(1985.1.1.) 시점 기준시가 — 재개발은 ③이 §166③이라 숨긴다 */}
+      {!isRedev && (
       <div className="space-y-1">
         <FieldCard
           field="standardPriceAtAcq"
@@ -292,6 +300,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           />
         )}
       </div>
+      )}
 
       {/* 토지 전용: 1990.8.30. 이전 취득 토지 등급가액 환산 */}
       {showPre1990 && (
@@ -325,7 +334,8 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         />
       )}
 
-      {/* ② 양도시 기준시가 */}
+      {/* ② 양도시 기준시가 — 재개발은 숨긴다(위와 같은 이유) */}
+      {!isRedev && (
       <div className="space-y-1">
         <FieldCard
           field="standardPriceAtTransfer"
@@ -365,6 +375,7 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
           />
         )}
       </div>
+      )}
 
       {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②·③과 함께 3자 max(엔진 `calcPreDeemed`) */}
       <FieldCard
@@ -389,10 +400,18 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         />
       </FieldCard>
 
-      <p className="text-caption text-muted-foreground">
-        취득가액 = <b>① 상속세 신고가액</b>, <b>② 취득당시 기준시가(§164④~⑦)</b>, <b>③ 환산취득가</b> 중
-        많은 금액입니다. 환산취득가 = 양도가액 × <Frac top="의제취득일 기준시가" bottom="양도시 기준시가" />
-      </p>
+      {isRedev ? (
+        <p className="text-caption text-muted-foreground" data-testid="pre-deemed-redev-166-3-note">
+          취득가액 = <b>① 상속세 신고가액</b>, <b>② 취득당시 기준시가(§164④~⑦)</b>, <b>③ §166③ 환산취득가액</b> 중
+          많은 금액입니다. 재개발·재건축 종전자산의 ③은 아래 재개발 입력 ⑤ 「인가전 분 종전 부동산 취득가액」에서
+          「환산취득가액」을 고르고 §166③ 칸을 채우면 계산됩니다(소득세법 시행령 §166③). 「실지거래가액」을 고르면 ③ 없이 ①·② 중 큰 금액입니다.
+        </p>
+      ) : (
+        <p className="text-caption text-muted-foreground">
+          취득가액 = <b>① 상속세 신고가액</b>, <b>② 취득당시 기준시가(§164④~⑦)</b>, <b>③ 환산취득가</b> 중
+          많은 금액입니다. 환산취득가 = 양도가액 × <Frac top="의제취득일 기준시가" bottom="양도시 기준시가" />
+        </p>
+      )}
     </div>
   );
 }

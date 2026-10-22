@@ -19,10 +19,10 @@ import type { InheritanceAcquisitionInput } from "@/lib/tax-engine/types/inherit
 import type { TransferTaxInput, CalculationStep } from "@/lib/tax-engine/types/transfer.types";
 
 /** 함수는 `result`만 읽는다 — 나머지 필드는 형식 충족용. */
-function makeStep(input: InheritanceAcquisitionInput): InheritedAcquisitionStepResult {
+function makeStep(input: InheritanceAcquisitionInput, redevelopment166_3Price?: number | null): InheritedAcquisitionStepResult {
   return {
     updatedInput: {} as TransferTaxInput,
-    result: calculateInheritanceAcquisitionPrice(input),
+    result: calculateInheritanceAcquisitionPrice(input, redevelopment166_3Price),
     step: {} as CalculationStep,
   };
 }
@@ -33,19 +33,64 @@ const PRE_DEEMED = {
   assetKind: "house_individual" as const,
 };
 
-describe("§166③ — 3자 max에서 ③이 채택돼도 재개발 경로는 ①②(별건 전 종전 동작)", () => {
-  it("Q3-1: ③이 더 커서 converted여도 ①② 중 큰 값을 반환 — null이면 §166③ 자체 환산으로 ①보다 작아진다(probe R4)", () => {
-    const step = makeStep({
-      ...PRE_DEEMED,
-      reportedValue: 100_000_000, // ①
-      houseValuationStdPrice: 150_000_000, // ②
-      transferPrice: 500_000_000,
-      standardPriceAtDeemedDate: 100_000_000,
-      standardPriceAtTransfer: 250_000_000, // ③ = 500M × 100M/250M = 200M > ①②
-    });
+/**
+ * 재개발 종전자산의 ③ = §166③(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12 · Q-8 a).
+ * STEP 0.45가 §166③ 금액을 주입하므로 비교와 적용이 같은 산식이다 — ③ 채택이면 null(재개발 분기가 §166③ 계산).
+ * PR-1에서는 ③을 §176조의2④로 비교해 놓고 여기서 ①②를 반환했다(카드와 계산 불일치 · 증여 회귀 G-R4).
+ */
+describe("§166③ — 재개발 3자 max: ③(§166③) 채택이면 null, ①② 채택이면 그 값", () => {
+  it("Q3-1: §166③이 ①②보다 크면 converted → null(§166③ 경로) — §176조의2④ 입력은 쓰지 않는다", () => {
+    const step = makeStep(
+      {
+        ...PRE_DEEMED,
+        reportedValue: 100_000_000, // ①
+        houseValuationStdPrice: 150_000_000, // ②
+        transferPrice: 500_000_000,
+        standardPriceAtDeemedDate: 10_000_000,
+        standardPriceAtTransfer: 250_000_000, // §176조의2④라면 20M — 재개발에서는 무시
+      },
+      200_000_000, // ③ §166③
+    );
 
     expect(step.result.preDeemedBreakdown?.selectedMethod).toBe("converted");
+    expect(step.result.preDeemedBreakdown?.convertedAmount).toBe(200_000_000);
+    expect(step.result.preDeemedBreakdown?.convertedBasis).toBe("redevelopment_166_3");
+    expect(step.result.acquisitionPrice).toBe(200_000_000);
+    expect(resolveInheritedRedevelopmentAcqPrice(step)).toBeNull();
+  });
+
+  it("Q3-2: ①②가 §166③보다 크면 ①② 중 큰 값 — §176조의2④가 더 커도 비교에 들어가지 않는다", () => {
+    const step = makeStep(
+      {
+        ...PRE_DEEMED,
+        reportedValue: 100_000_000, // ①
+        houseValuationStdPrice: 150_000_000, // ②
+        transferPrice: 500_000_000,
+        standardPriceAtDeemedDate: 100_000_000,
+        standardPriceAtTransfer: 250_000_000, // §176조의2④라면 200M > ①② — 재개발에서는 무시
+      },
+      141_221_534, // ③ §166③
+    );
+
+    expect(step.result.preDeemedBreakdown?.selectedMethod).toBe("sec164");
     expect(resolveInheritedRedevelopmentAcqPrice(step)).toBe(150_000_000);
+  });
+
+  it("Q3-3: 재개발인데 §166③을 쓸 수 없으면(null — ⑤ 실가 또는 칸 비움) ③ = 0", () => {
+    const step = makeStep(
+      { ...PRE_DEEMED, reportedValue: 100_000_000, transferPrice: 500_000_000, standardPriceAtDeemedDate: 100_000_000, standardPriceAtTransfer: 250_000_000 },
+      null,
+    );
+
+    expect(step.result.preDeemedBreakdown?.convertedAmount).toBe(0);
+    expect(step.result.preDeemedBreakdown?.selectedMethod).toBe("reported");
+    expect(resolveInheritedRedevelopmentAcqPrice(step)).toBe(100_000_000);
+  });
+
+  it("Q3-4: 동점이면 ①② 우선(Q-5) — 실가로 계산", () => {
+    const step = makeStep({ ...PRE_DEEMED, reportedValue: 141_221_534 }, 141_221_534);
+    expect(step.result.preDeemedBreakdown?.selectedMethod).toBe("reported");
+    expect(resolveInheritedRedevelopmentAcqPrice(step)).toBe(141_221_534);
   });
 });
 

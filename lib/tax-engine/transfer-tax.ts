@@ -172,13 +172,11 @@ export function calculateTransferTax(
     //   `resolveInheritedRedevelopmentAcqPrice`가 반환하는 값은 STEP 0.45가 이미
     //   `input.acquisitionPrice`에 넣은 값과 항상 같다:
     //     · post-deemed → `r.acquisitionPrice` 그대로
-    //     · pre-deemed  → `max(reported, sec164)` = `clauseA` — 3자 max(2026-10-22)에서 ③이 이겨도 이 값이라
-    //       재개발 경로만 ①②로 계산된다(종전 동작 유지 · ③ 산식 결정 전 별건 — 계획서
-    //       inheritance-pre-deemed-clause-b-revisit.plan.md §11). 그 경우엔 아래 블록이 no-op이 아니다.
+    //     · pre-deemed  → ①②가 이기면 `clauseA`(STEP 0.45가 실가로 이미 넣음), ③(§166③ — STEP 0.45가 같은 산식으로
+    //       비교)이 이기면 null이라 재개발 분기가 §166③을 계산한다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12).
     //   그래서 뮤테이션으로 이 블록을 통째로 무력화해도 회귀가 0건이었다(R-10 M-4).
     //   ⛔ 그렇다고 **지우지는 말 것** — 위 override 가드가 이 블록의 유일한 실효 동작이고,
-    //      `resolveInheritedRedevelopmentAcqPrice`의 「채택 여부가 아니라 확인 가능 여부」 계약을
-    //      명시적으로 표현하는 지점이기도 하다.
+    //      post-deemed의 「채택 여부가 아니라 확인 가능 여부」 계약을 명시적으로 표현하는 지점이기도 하다.
     let redevInput = effectiveInput;
     if (
       effectiveInput.acquisitionCause === "inheritance" &&
