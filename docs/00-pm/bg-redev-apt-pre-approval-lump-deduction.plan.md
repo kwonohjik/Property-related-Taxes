@@ -1,6 +1,6 @@
 # 부담부증여 × 재개발 완공 아파트 · 기준시가 모드 — 인가 전 분 필요경비(개산공제) 계획서
 
-> 상태: **v0.1 (2026-10-22) 사용자 결정 반영(§5)** — Q-1 = 개산공제 · Q-2 = 칸 숨김 + 한 줄 안내 · Q-3 = 라벨 함께 · Q-4 = 한 PR.
+> 상태: **v0.2 (2026-10-22) Do 완료(§7)** · v0.1 사용자 결정 반영(§5) — Q-1 = 개산공제 · Q-2 = 칸 숨김 + 한 줄 안내 · Q-3 = 라벨 함께 · Q-4 = 한 PR.
 > 계기: `burdened-gift-expense-notice-and-redev-card.plan.md` §6 관찰 O-1·O-2 조사 중 발견(O-2′).
 > 검증 방식: throwaway probe(워크트리 `-bgapt`, `__tests__/zz-probe/` — 커밋 안 함) — vitest(폼 → ⑧ → ④ → route → `redevelopmentDetail`·결정세액). 법령 본문은 KoreanLaw MCP(「소득세법」 MST 280405 · 「소득세법 시행령」 MST 290841). 인용 file:line은 base `f2715379c`(master) 기준. **세액이 바뀌는 수정이다.**
 
@@ -107,3 +107,32 @@ fixture = `__tests__/calc/bg-redevelopment-sec166-conversion.anchor.test.tsx`의
 - **O-7** = D3 — 기준시가 모드 §166 산정 근거 라벨이 「실가 모드」다.
 - **O-8** ④ 자본적지출·양도비는 전부 인가 후 분으로 간다. 인가 전에 쓴 자본적지출은 재개발 블록 「인가전 분 필요경비」에 넣어야 하는데 ④에 안내가 없다.
 - 원 계획서 §6의 O-3(K-4 박스와 ④ 같은 칸 두 벌) · O-5(⑧ 채무 초과 판정 분모)는 그대로 남는다.
+
+---
+
+## 7. Do 결과 (v0.2)
+
+### 7.1 1단계 추가 실측
+
+| 항목 | 결과 |
+|---|---|
+| 청산금 수령 | 인가 전 실비가 §166①2호 나목 비율로 인가 전·청산금 분에 나뉜다(2,400,000 · 1,600,000). 개산공제도 같은 슬롯(`estimatedLumpDeduction`)이라 같이 나뉜다 — 수정 후 두 분 합 = 1,200,000 |
+| 표시 경로 | 신고서 역산(`redevFilingTotals`) · 계산명세서 · 사이드바(`redevResultTotals`)는 §166 분기 `expenses`를 읽어 자동으로 따라온다. 재개발 상세 산정 근거만 「실가 모드」 문구 → D3 |
+| 화면 칸(Playwright) | 기준시가 모드 완공 아파트 — 자산 공통 「취득시 기준시가」(`standardPriceAtAcq`) 1개 · 재개발 블록 `redevAcquisitionHousingPrice` 0개 ⇒ **O-6은 이 모드에서 두 칸이 동시에 뜨지 않는다**(같은 사실을 모드마다 다른 칸이 받는 구조는 남는다) |
+| K-5 「인가전 분 필요경비」 | 개산공제와 택일이라 이미 쓰이지 않는다(입력 1천만 → 필요경비 3,600,000) → Q-2 숨김 범위에 포함 |
+
+### 7.2 구현
+
+- **D1 엔진**: `RedevelopmentSplitInput.burdenedGiftStdLumpBase`(§159 안분 취득가액 = 취득시 기준시가 × 채무비율 · 지분 반영 완료) — `transfer-tax-redevelopment-steps.ts`가 §159 명세 `acquisitionMethodUsed === "standard_price"`일 때만 넘긴다. `redevelopment-split.ts` Step B가 그 base × §163⑥ 율(미등기 3/1000)로 개산공제를 내고 Step C 택일이 실비 대신 고른다. 계획 §3의 「§159 개산공제 금액을 넘긴다」를 「base를 넘기고 같은 함수로 계산」으로 바꿨다 — 재개발 상세 산식(base × 율 = 값)이 자기 값을 만들도록.
+- **D2 화면**: `redevPreApprovalExpensesUnused`(`lib/calc/redev-pre-approval-acq-mode.ts`) — 부담부증여 · 완공 아파트 · 원조합원 · (기준시가 모드 또는 K-5)면 `RedevelopmentBlock`의 「인가전 분 필요경비」를 숨기고 한 줄 안내(`data-testid="redev-pre-expense-lump-notice"`). ⑧은 음수만 막아 숨긴 값으로 막히지 않는다.
+- **D3 표시**: `RedevelopmentValuationMeta.burdenedGiftStdLumpRate`(율 echo) — 있으면 취득가 산식 「취득시 기준시가 × 채무비율 = … (시행령 제159조 제1항 제1호 괄호)」 · 개산공제 산식 「취득시 기준시가 × 채무비율 {base} × {율}% = {값}」. 산정 근거 문구도 바꿨다.
+
+### 7.3 테스트 · 뮤테이션 · 회귀 · 리뷰
+
+- **anchor** `__tests__/calc/bg-redev-apt-pre-approval-lump.anchor.test.tsx` 14건 — 수정 전 7건 실패(대조·화면 K-4/일반은 통과).
+- **기존 anchor 값 변경 2파일** (기준시가 모드 사실관계):
+  - `burdened-gift-redevelopment-apt.anchor.test.ts` — 인가전 양도차익 76,000,000 → 76,400,000 · 총 394,000,000 → 394,400,000 · 산출 90,819,143 → 90,925,543(손 검산) · β 항등식의 인가전 항을 개산공제로. β 요지(인가후 두 분기 부호·비율 불변)는 그대로.
+  - `burdened-gift-debt-ratio-precision.anchor.test.ts` BD-1 — 세액 정밀도 감시(실비 × B/C 1원)는 실비가 쓰이는 **K-4 변형**으로 옮겼다(실지 3억 = 취득시 기준시가 3억이라 기대값 6,482,233 · 7,130,456 그대로). 기준시가 모드는 개산공제 1,145,454 · 6,503,615 단언을 새로 둔다. 단위 수준 실비 × B/C 단언(BD-2·BD-4·BD-9)은 무변경.
+- **뮤테이션 10종 전부 잡힘** — base 미전달 · 게이트를 converted/actual로 넓힘 · base 이중 축소 · 미등기 율 무시 · 율 echo 제거 · UI 기준시가·K-5 절 · 취득가 라벨 · 개산공제 산식(처음엔 살아남아 단언 보강).
+- **회귀**: 타입 오류 0 · 전체 vitest — 위 2파일 4건 외 통과(정정 후 통과) · 재개발·부담부증여·사이드바·신고서 E2E 167건 통과.
+- **acquisition-cost-review**(읽기 전용 게이트): C-1 법령 체인 · C-2 적용 조건 · C-3 택일 PASS. D 지적 — 시가 모드 담보평가 승(엔진이 `standard_price`로 강제)에서 화면이 실비 칸을 보인다: ⑧ 「채무액 > 증여가액(시가)」이 먼저 막아 도달 불가(직전 계획서 §1.4·O-5)라 수용. 레거시(시가 · 산정방식 미지정)도 ⑧·⑫가 막아 도달 불가. 토지·건물 두 부분 floor 1원 차는 §166 분기 값이 정본이고 표시가 그 값을 쓴다.

@@ -301,10 +301,37 @@ describe("BD-1 · 재개발 APT × 부담부증여 풀 파이프라인 — C 11�
     expect(d.salePriceTotal).toBe(truth(660_000_000, 140_000_000, 1_100_000_000) + truth(200_000_000, 140_000_000, 1_100_000_000));
   });
 
-  it("🔴 결정세액이 바뀐다 — 산출세액 6,482,233 · 총납부세액 7,130,456 (mock 세율표 실측 · 옛 6,482,232 / 7,130,455)", () => {
-    const r = run();
+  /**
+   * 시가 · 실지(K-4) — 인가전 실비 1천만 × B/C(1,272,727)가 쓰이는 경로. 기준시가 모드는 인가전 필요경비가 개산공제라
+   * 실비 β 스케일이 세액에 닿지 않는다(계획서 bg-redev-apt-pre-approval-lump-deduction.plan.md) — 그래서 이 세액 감시는 K-4로 둔다.
+   * 실지 3억 = 취득시 기준시가 3억이라 취득가액·나머지 항은 기준시가 모드와 같고, 종전(기준시가 모드 · 실비) 기대값과 같은 수치다.
+   */
+  const k4 = () =>
+    run({
+      burdenedGiftInfo: {
+        ...(makeInput().burdenedGiftInfo as unknown as Record<string, unknown>),
+        valuationMode: "sangjeungbeop_market",
+        marketValueAtTransfer: 1_100_000_000,
+        acquisitionMethod: "actual",
+        actualAcquisitionTotal: 300_000_000,
+      },
+    });
+
+  it("🔴 결정세액이 바뀐다(K-4) — 산출세액 6,482,233 · 총납부세액 7,130,456 (mock 세율표 실측 · 옛 6,482,232 / 7,130,455)", () => {
+    const r = k4();
+    expect(r.redevelopmentDetail!.preApproval.expenses).toBe(truth(10_000_000, 140_000_000, 1_100_000_000));
     expect(r.calculatedTax).toBe(6_482_233);
     expect(r.totalTax).toBe(7_130_456);
+  });
+
+  it("기준시가 모드 — 인가전 필요경비 = 개산공제 floor(취득가 × B/C 참값 × 3%) = 1,145,454 · 산출세액 6,503,615", () => {
+    const r = run();
+    const d = r.redevelopmentDetail!;
+    const base = truth(300_000_000, 140_000_000, 1_100_000_000);
+    expect(d.valuationMeta?.lumpDeductionBase).toBe(base);
+    expect(d.preApproval.expenses).toBe(Math.floor((base * 3) / 100));
+    expect(r.calculatedTax).toBe(6_503_615);
+    expect(r.totalTax).toBe(7_153_976);
   });
 });
 

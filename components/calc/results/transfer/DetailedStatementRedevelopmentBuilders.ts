@@ -314,6 +314,9 @@ export function buildRedevAcquisitionFormula(
       const rights = redev.preApproval.apportionedTransfer;
       return `환산취득가 = ${fmt(rights)} × (${fmt(meta.numerator)} ÷ ${fmt(meta.denominator)}) = ${fmt(redev.preApproval.apportionedAcquisition)} (§166③ — 권리가액 × 취득 당시 기준시가 ÷ 관리처분계획 인가일 직전 기준시가, 1원 미만 절사)`;
     }
+    if (meta?.burdenedGiftStdLumpRate !== undefined) {
+      return `취득시 기준시가 × 채무비율 = ${fmt(redev.preApproval.apportionedAcquisition)} (소득세법 시행령 제159조 제1항 제1호 괄호 — 부담부증여 기준시가 평가)`;
+    }
     return `실제 취득가액 = ${fmt(redev.preApproval.apportionedAcquisition)} (실가 모드)`;
   }
   if (branch === "postApprovalExistingHouse") {
@@ -349,6 +352,16 @@ export function buildRedevExpenseFormula(
 
   if (branch === "preApproval") {
     const lump = redev.estimatedLumpDeduction ?? 0;
+    const bgStdRate = redev.valuationMeta?.burdenedGiftStdLumpRate;
+    if (lump > 0 && bgStdRate !== undefined) {
+      // 부담부증여 기준시가 모드 — base·율은 엔진 echo라 적힌 산식이 적힌 값을 만든다.
+      const base = redev.valuationMeta?.lumpDeductionBase ?? 0;
+      const ratePct = String(Math.round(bgStdRate * 10000) / 100);
+      const lumpFormula = `개산공제 = 취득시 기준시가 × 채무비율 ${fmt(base)} × ${ratePct}% = ${fmt(lump)} (소득세법 시행령 제163조 제6항 — 부담부증여 기준시가 평가라 인가 전 실비 대신 개산공제)`;
+      return amount === lump
+        ? lumpFormula
+        : `${lumpFormula} → 인가전 분 필요경비 합계 ${fmt(amount)} (청산금 수령 분기는 §166①2호 나목 비율로 안분된 값)`;
+    }
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
       const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;

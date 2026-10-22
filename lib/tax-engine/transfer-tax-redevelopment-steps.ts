@@ -48,6 +48,7 @@ import type {
   CalculationStep,
 } from "./types/transfer.types";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
+import { burdenedGiftPerAssetTotals } from "./burdened-gift-totals";
 import type { ParsedRates } from "./transfer-tax-helpers";
 
 export function runRedevelopmentGainSteps(
@@ -93,6 +94,10 @@ export function runRedevelopmentGainSteps(
     debtFraction: burdenedGift
       ? { debt: burdenedGift.assumedDebtAmount, valuation: burdenedGift.giftValuation.max }
       : undefined,
+    // 기준시가 모드(§159①1호 괄호) — 인가 전 분 필요경비는 개산공제다. base = §159 안분 취득가액(= 취득시 기준시가 × 채무비율).
+    ...(burdenedGift?.acquisitionMethodUsed === "standard_price"
+      ? { burdenedGiftStdLumpBase: burdenedGiftPerAssetTotals(burdenedGift).acquisitionPrice }
+      : {}),
   });
 
   /**

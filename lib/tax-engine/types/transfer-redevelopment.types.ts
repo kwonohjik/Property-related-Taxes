@@ -450,6 +450,12 @@ export interface RedevelopmentValuationMeta {
    */
   lumpDeductionBase?: number;
   /**
+   * 부담부증여 × 기준시가 모드에서만 — 인가 전 분 개산공제에 쓴 율(3/100 · 미등기 3/1000 — 「소득세법 시행령」 §163⑥).
+   * 있으면 `method: "actual"` 슬롯에 실지가 아니라 §159①1호 괄호의 «취득시 기준시가 × 채무비율»이 들어 있다는 뜻이다.
+   * 표시 산식이 「실가 모드」로 적지 않고, 적힌 율이 적힌 값을 만들도록 echo한다(`DetailedStatementRedevelopmentBuilders.ts`).
+   */
+  burdenedGiftStdLumpRate?: number;
+  /**
    * 관리처분 인가일 기준시가 — §166③ 분모.
    * "successor_member_decree_162_1_4" 분기에서는 undefined (안분 미적용).
    */
