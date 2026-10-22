@@ -17,6 +17,8 @@
 
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
+import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { buildGeneralBuildingAssetCards } from "@/lib/tax-engine/general-building-valuation";
 import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
@@ -258,10 +260,31 @@ export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuation
    */
   const landMode = gbv.landAcqMode ?? "estimated";
   const buildingMode = gbv.buildingAcqMode ?? "estimated";
+  /**
+   * 🔴 **증축 × 원건물 두 파트 실가 계열이면 항상 파트 축**(2026-10-22 E-1 · `docs/00-pm/gb-extension-actual-expenses.plan.md`).
+   *
+   * 증축은 실가여도 이 3-way 경로로 온다. 같은 모드라 자산총액 판정으로 빠지면 그 판정은 **환산 카드에만** 나목을 배분해
+   * 실가 카드의 자본적지출·양도비가 사라졌다(⑧ 통과 — 상속 C1 분리 OFF 자본적지출 + 양도비 3천만 → 필요경비 0).
+   * 실가 파트는 「소득세법」 §97②1호 **가산**이라 파트 축 갈래 3(`addition`)이 정본이다 — 2-way 실가 경로
+   * (`general-building-route-actual.ts` `resolvePartExpenses`)와 같은 규칙.
+   * 위 ⚠️(같은 모드에서 파트 축으로 넓히면 자산 단위 자본적지출이 사라진다)는 아래 `assetCapexShare`로 해소한다 —
+   * 파트 칸이 없는 파트는 자산 단위 자본적지출을 **취득시** 기준시가(토지 : 원건물)로 나눈 몫을 그 파트의 직접분으로 싣는다.
+   */
+  const extensionActual = gbv.extensionInfo !== undefined && landMode === "actual" && buildingMode === "actual";
   const usePartAxis =
+    extensionActual ||
     landMode !== buildingMode ||
     gbv.landDirectExpenses !== undefined ||
     gbv.buildingDirectExpenses !== undefined;
+  const assetCapex = extensionActual ? (gbv.capitalExpenditure ?? 0) : 0;
+  const assetCapexShare =
+    assetCapex > 0
+      ? apportionByStdPrice(
+          assetCapex,
+          multiplyByArea(gbv.acquisitionLandPricePerSqm ?? 0, gbv.landArea ?? 0),
+          gbv.acquisitionBuildingStdPrice ?? 0,
+        )
+      : { land: 0, building: 0 };
   const swap = resolveGeneralBuildingSwap(
     gbOut.assetCards,
     gbv.capitalExpenditure,
@@ -269,8 +292,8 @@ export function buildEstimatedGeneralBuildingCards(gbv: GeneralBuildingValuation
     {
       ...(usePartAxis
         ? {
-            land: { direct: gbv.landDirectExpenses ?? 0, mode: landMode },
-            building: { direct: gbv.buildingDirectExpenses ?? 0, mode: buildingMode },
+            land: { direct: gbv.landDirectExpenses ?? assetCapexShare.land, mode: landMode },
+            building: { direct: gbv.buildingDirectExpenses ?? assetCapexShare.building, mode: buildingMode },
           }
         : {}),
       // 양도비는 파트로 나누지 않고 넘긴다 — 엔진이 §100② 후문(가액 비례)으로 안분한다.

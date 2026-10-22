@@ -194,25 +194,31 @@ describe("E-10 — 증축 경로(G2): 원건물 실가 · 양도비 50,000,000",
       (gbv.bundledAcquisitionPrice as number | undefined) ?? 0, (gbv.bundledExpenses as number) ?? 0,
       2024, 0, [], rates, undefined, {}, undefined,
     );
-    const cards = r.aggregated.generalBuildingValuationDetail.assetCards as Array<{ propertyId: string; expenses: number }>;
-    const e = (id: string) => cards.find((c) => c.propertyId === id)!.expenses;
+    // 최종 엔진 입력 필요경비 — 양도비는 2026-10-22 E-1부터 swap 파트 축 가산(§97②1호)으로 실린다(카드 명세가 아니라 properties).
+    const props = r.aggregated.properties as Array<{ propertyId: string; necessaryExpense: number }>;
+    const e = (id: string) => props.find((c) => c.propertyId === id)!.necessaryExpense;
     return { nature: gbv.bundledExpenseNature, land: e("land"), b1: e("building1"), b2: e("building2"), tax: r.aggregated.determinedTax as number };
   }
 
-  it("기준시가 안분 → 현행 불변 37,710,458 / 12,289,542 (건물2 별도 입력 180,000)", () => {
+  /*
+   * 2026-10-22 E-1 — 양도비는 일괄 슬롯(성질 `transfer`)이 아니라 swap 파트 축 가산(§97②1호)으로 간다.
+   * 토지 몫 = 양도비 × 토지 양도가액 ÷ **총** 양도가액(증축분 포함 — §100② 후문 「해당 자산의 가액」). 증축분이 환산이라
+   * 그 몫은 원건물이 받는다(Q-8 a — 환산 카드에 1호 가산을 섞지 않는다). 종전 배분은 토지 : 원건물만 분모였다. 세액은 같다.
+   */
+  it("기준시가 안분 → 토지 37,102,494 · 원건물 12,897,506 (건물2는 개산공제 180,000만) · 세액 불변", () => {
     const r = ext({});
-    expect(r.nature).toBe("transfer");
-    expect([r.land, r.b1, r.b2]).toEqual([37_710_458, 12_289_542, 180_000]);
+    expect(r.nature).toBe("mixed");
+    expect([r.land, r.b1, r.b2]).toEqual([37_102_494, 12_897_506, 180_000]);
     expect(r.tax).toBe(450_991_875);
   });
-  it("구분 기재 14억/6억 → 35,668,789 / 14,331,211", () => {
+  it("구분 기재 14억/6억 → 토지 35,000,000(= 5천만 × 14/20) · 원건물 15,000,000", () => {
     const r = ext({ saleSplitMode: "actual", landTransferPrice: "1,400,000,000", buildingTransferPrice: "600,000,000" });
-    expect([r.land, r.b1]).toEqual([35_668_789, 14_331_211]);
+    expect([r.land, r.b1]).toEqual([35_000_000, 15_000_000]);
     expect(r.tax).toBe(450_726_960);
   });
-  it("구분 기재 16억/4억 → 40,506,329 / 9,493,671", () => {
+  it("구분 기재 16억/4억 → 토지 40,000,000 · 원건물 10,000,000", () => {
     const r = ext({ saleSplitMode: "actual", landTransferPrice: "1,600,000,000", buildingTransferPrice: "400,000,000" });
-    expect([r.land, r.b1]).toEqual([40_506_329, 9_493_671]);
+    expect([r.land, r.b1]).toEqual([40_000_000, 10_000_000]);
     expect(r.tax).toBe(451_356_960);
   });
 });

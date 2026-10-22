@@ -84,10 +84,12 @@ describe("N4 — 두 축이 실제로 다르다", () => {
 });
 
 describe("N1·N2·N3 — 채택된 후보가 축을 정한다", () => {
-  it("🔴 ②(양도비) 채택 → nature=transfer → **양도시** 축", () => {
+  it("🔴 ②(양도비)는 일괄 슬롯에 들어가지 않는다 — 나목 단일 경로(양도시 축)로 간다 (2026-10-22 E-1)", () => {
     const r = calc(abAsset({ transferExpense: String(BUNDLED) }));
-    expect(r.nature).toBe("transfer");
-    expect(r.bundled).toBe(BUNDLED);
+    // 종전: nature=transfer · bundled=3억. 사슬에서 양도비를 빼서 슬롯은 비고 성질은 기본값(mixed)이다 —
+    // 양도비는 엔진 진입(`general-building-entry.ts`)이 실가 카드에 §97②1호로 가산한다(양도가액 비례 = 양도시 축).
+    expect(r.nature).toBe("mixed");
+    expect(r.bundled).toBe(0);
   });
 
   it("①(전용 필드) 채택 → nature=capital → **취득시** 축", () => {
@@ -102,11 +104,9 @@ describe("N1·N2·N3 — 채택된 후보가 축을 정한다", () => {
     expect(r.bundled).toBe(BUNDLED);
   });
 
-  it("🔴 **세액으로 잰다** — 같은 3억이라도 성질이 다르면 세액이 다르다", () => {
+  it("🔴 **세액으로 잰다** — 같은 3억이라도 성질이 다르면 세액이 다르다(양도비 = 양도시 축 · 일괄 취득 필요경비 = 취득시 축)", () => {
     const asTransfer = calc(abAsset({ transferExpense: String(BUNDLED) }));
     const asCapital = calc(abAsset({ gbBundledAcquisitionExpenses: String(BUNDLED) }));
-    // 슬롯에 담긴 금액은 같다 — 다른 것은 **안분 축**뿐이다.
-    expect(asTransfer.bundled).toBe(asCapital.bundled);
     expect(asTransfer.tax).not.toBe(asCapital.tax);
   });
 

@@ -381,12 +381,14 @@ export function buildGeneralBuildingValuation(
       ...(asset.gbHasExtension
         ? {
             bundledAcquisitionPrice: parseAmount(asset.fixedAcquisitionPrice),
-            // 일괄 취득 시 필요경비 — 전용 필드(gbBundledAcquisitionExpenses) 우선.
-            // legacy fallback: 미입력 시 transferExpense·directExpenses (이전 임시 매핑 호환).
+            // 일괄 취득 시 필요경비 — 전용 필드(gbBundledAcquisitionExpenses) 우선, 없으면 이전 입력 형식(directExpenses).
+            // 🔴 양도비(transferExpense)는 이 사슬에 **넣지 않는다**(2026-10-22 E-1 · `docs/00-pm/gb-extension-actual-expenses.plan.md`).
+            //    종전엔 ②로 들어와 파트 가격으로 대체된 파트(분리 ON·상속·증여)에서 엔진이 덮어써 사라졌다. 양도비는 아래 나목
+            //    단일 경로로만 가고, 엔진 진입(`general-building-entry.ts`)이 실가 파트에 §97②1호로 가산한다 — 이중계상이 구조적으로 없다.
+            //    이전 형식은 종전처럼 양도비가 있으면 쓰지 않는다(종전 사슬이 ②에서 멈추던 것과 같은 조건 — 회귀 0).
             bundledExpenses:
               parseAmount(asset.gbBundledAcquisitionExpenses) ||
-              parseAmount(asset.transferExpense) ||
-              parseAmount(asset.directExpenses),
+              (parseAmount(asset.transferExpense) ? 0 : parseAmount(asset.directExpenses)),
             /**
              * 🔴 **채택된 값의 「성질」**을 함께 보낸다 (2026-08-07 W-1a).
              *
@@ -400,15 +402,13 @@ export function buildGeneralBuildingValuation(
              *    §97②1호 가산을 적용하지 않기 때문이다(`general-building-swap.ts` 자산 분기).
              *
              * · `capital`  ① 전용 필드 — 취득에 부수 ⇒ **취득시** 축(현행 유지)
-             * · `transfer` ② 양도비    — 양도에 부수 ⇒ **양도시** 축(정정 대상)
+             * · `transfer` ② 양도비    — 2026-10-22 E-1부터 ④가 보내지 않는다(위 사슬에서 뺐다). 엔진 분기는 옛 결과 재계산용으로 남는다(계획서 Q-3).
              * · `mixed`    ③ legacy    — 두 성질이 섞인 덩어리 ⇒ **취득시** 유지
              *              (근거 없이 바꾸면 기존 이력의 배분이 움직인다 — W-5 교리)
              */
             bundledExpenseNature: parseAmount(asset.gbBundledAcquisitionExpenses)
               ? ("capital" as const)
-              : parseAmount(asset.transferExpense)
-                ? ("transfer" as const)
-                : ("mixed" as const),
+              : ("mixed" as const),
           }
         : {}),
       // §97②2호 단서 swap(자산총액) — G2(전체환산)·G4(NBL)·G3(증축) 공통.
@@ -474,12 +474,14 @@ export function buildGeneralBuildingValuation(
        *
        * ⚠️ 분리 **OFF**는 종전 그대로다. 그쪽은 파트 취득가액 칸이 화면에 없어 일괄 안분값이
        *    실가 파트의 정본으로 남고, 그때는 이중계상이 **실재한다**(위 대조군 수치).
+       *
+       * ── ✅ **게이트 폐지** (2026-10-22 E-1) ──────────────────────────────────────────
+       *
+       * 위 게이트들은 전부 「양도비가 `bundledExpenses` 사슬에도 들어갈 수 있다」에서 나왔다. 사슬에서 양도비를 뺐으므로
+       * (위 `bundledExpenses`) 이중계상의 전제가 사라졌다 ⇒ **항상 싣는다**. 원건물이 실가면 엔진 진입이 파트 축으로
+       * 실가 카드에 가산하고(`general-building-entry.ts`), 환산이면 종전 단서 비교 그대로다.
        */
-      ...((!asset.gbHasExtension ||
-        bothEstimated ||
-        !!asset.hasSeperateLandAcquisitionDate ||
-        !!parseAmount(asset.gbBundledAcquisitionExpenses)) &&
-      parseAmount(asset.transferExpense)
+      ...(parseAmount(asset.transferExpense)
         ? { transferExpense: parseAmount(asset.transferExpense) }
         : {}),
       ...nblFields,
