@@ -432,8 +432,8 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | PR | 내용 | verify |
 |---|---|---|
 | P0 ✅ | 숨김 플래그 프록시 해체 + `judgment-menu-flags.ts`(동작 불변). 편집 창 `judgmentMenu` → `hideSurchargeInputs`(뜻대로 개명), `HouseCountExemptionInputs`·`HousesListSection`에 명시 prop 3개(`hideSurchargeInputs`·`taxIncentiveRentalEnabled`·`householdGiftEnabled`) | 관련 72파일 740건 통과 · 구현 후 mutation 6/6이 정확한 테스트에 잡힘(1주택 값 3 · 계산기 기본값 2 · 중간 전달 1). ⚠️ `HousesListSection.tsx` 761줄(위험구간) — P6에서 이 파일을 다시 열 때 분리 |
-| P1 🔄 | D7 행 4호·8호·8호의2(①②③④⑤⑧) + **8호의2 사용 종료일 신규 필드(①~⑭) · 엔진 6개월 요건 정정**(Q-A) — 계산기·판정 공용 | 행 판정 anchor · 8호의2 경계(종료 후 6개월 전날·당일·다음 날, 민법 기간 계산) · 양도 주택 경로 세액 변경 anchor · transfer 범위 회귀 |
-| P2 | 계산기 ⑧ 중과 축 leaf 추출(동작 불변) | 계산기 validate 회귀 |
+| P1 ✅ #2425 | D7 행 4호·8호·8호의2(①②③④⑤⑧) + **8호의2 사용 종료일 신규 필드(①~⑭) · 엔진 6개월 요건 정정**(Q-A) — 계산기·판정 공용 | 행 판정 anchor · 8호의2 경계(종료 후 6개월 전날·당일·다음 날, 민법 기간 계산) · 양도 주택 경로 세액 변경 anchor · transfer 범위 회귀 |
+| P2 ✅ | 계산기 ⑧ 중과 축 leaf 추출(동작 불변) — `transfer-tax-validate-surcharge-axis.ts`(행·양도 주택·유예 3 leaf). 동작 불변 실측: 변경 전·후 `collectStep1Issues` 표적 9,792폼 + e2e 케이스 380폼 출력 동일(메시지 56종) | 계산기 validate 회귀 · `surcharge-axis-validate-leaf.anchor.test.ts`(호출 3곳 mutation 포착) |
 | P3 | 엔진: `forceNoMultiHouseSurcharge`(술어 최상단 게이트 + 호출부 4곳 전달) · 행 판정 주택 집합 조립부 export(결과 불변) · `hceGeneralHouseAcquisitionDate` 추출 · `classifyRegionCriteriaDetail` · 권리 사유 helper · `multi-house-surcharge-narrative.ts`(`decisionStageOf`·행 판정·민감도·설명문) | MH-P3·P5·P6·P7 · 동치 anchor |
 | P4 | route + 공용 전처리 추출 + body 빌더 | MH-1~5 · MH-B1~B5 · MH-P1·P2·P4 |
 | P5 | store 슬롯 · handoff 수정 | store·handoff anchor |
