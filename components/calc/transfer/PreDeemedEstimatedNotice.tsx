@@ -1,5 +1,5 @@
 /**
- * PreDeemedEstimatedNotice — 의제취득일 前 상속·증여인데 **①(가목)을 비운 채 나목으로 가는** 조합.
+ * PreDeemedEstimatedNotice — 의제취득일 前 상속·증여인데 **①②를 비워 ③(환산)만 남는** 조합.
  *
  * 「소득세법 시행령」 §163⑨은 상속·증여받은 자산의 취득가액을 「상속개시일·증여일 현재 상증법
  * §60~66에 따라 평가한 가액」으로 **본다**(가목). 같은 조 1호·2호는 기준시가 고시 前 취득에 대해
@@ -10,9 +10,9 @@
  *
  * ## 안내에서 **선언**으로 (E-1 · U2-E · 2026-08-07)
  *
- * 종전에는 **차단하지 않고 안내만** 했다. 그러나 법 §97①1호 **단서**는 나목을 「가목의 실지거래가액을
- * 확인할 수 없는 경우에 **한정**」하므로, 비워둔 것을 자동으로 「확인 불가」로 취급할 수 없다.
- * ⇒ **명시 선언 토글**을 함께 제공하고, 선언이 없으면 `clauseADeclarationError`가 계산을 차단한다.
+ * 종전에는 **차단하지 않고 안내만** 했다. 엔진은 ①②③ 3자 max(2026-10-22 — 종전 「가목 우선」)라
+ * ①②를 비우면 그 값이 max 후보에서 조용히 빠진다 ⇒ 비워둔 것을 자동으로 「확인 불가」로 취급하지 않고
+ * **명시 선언 토글**을 함께 제공하며, 선언이 없으면 `clauseADeclarationError`가 계산을 차단한다.
  *
  * ⚠️ **노출 조건은 ⑧ validate와 같은 술어**(`needsClauseADeclaration`)를 쓴다. 각자 파생하면
  *    「토글은 보이는데 차단은 안 되는」 침묵 실패가 된다(memory `feedback_shared_predicate_argument_parity`).
@@ -55,12 +55,12 @@ export function PreDeemedEstimatedNotice({
       </div>
       <p className="text-xs text-amber-700 dark:text-amber-300">
         의제취득일(1985.1.1.) 이전에 {causeLabel}받은 자산입니다. 「{dateLabel} 상증법 평가액」이나
-        §164④~⑦ 취득당시 기준시가를 입력하면 <b>그 중 많은 금액</b>이 취득가액이 됩니다.{" "}
+        §164④~⑦ 취득당시 기준시가를 입력하면 환산취득가액과 비교해 <b>셋 중 많은 금액</b>이 취득가액이 됩니다.{" "}
         <b>지금은 그 두 값이 계산에 등장하지 않습니다.</b>
       </p>
       <p className="text-xs text-amber-700 dark:text-amber-300">
-        환산 등 추계(나목)는 <b>가목을 확인할 수 없는 경우에 한정</b>해 적용합니다(§97①1호 단서).
-        해당한다면 아래에서 선택하세요.
+        두 값을 모두 확인할 수 없다면 아래에서 선택하세요. 환산취득가액 등 추계(§176조의2④)만으로
+        계산합니다.
       </p>
       <div data-field="preDeemedClauseAUnconfirmed">
         <ToggleCard
@@ -69,7 +69,7 @@ export function PreDeemedEstimatedNotice({
           checked={asset.preDeemedClauseAUnconfirmed === true}
           onCheckedChange={(v) => onChange({ preDeemedClauseAUnconfirmed: v })}
           title={`「${dateLabel} 상증법 평가액」을 확인할 수 없음`}
-          description="선택하면 나목(환산취득가액 등)으로 계산합니다. 이후 평가액이나 §164④~⑦ 기준시가를 입력하면 그 값이 가목이 되어 이 선택과 무관하게 우선합니다."
+          description="선택하면 환산취득가액 등 추계만으로 계산합니다. 이후 평가액이나 §164④~⑦ 기준시가를 입력하면 이 선택과 무관하게 환산취득가액과 비교해 큰 금액이 적용됩니다."
         />
       </div>
     </ToneCard>

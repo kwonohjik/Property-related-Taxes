@@ -469,16 +469,15 @@ describe("pre-deemed §163⑨ — ②(§164④~⑦ 취득당시 기준시가) ma
 });
 
 /**
- * V-3 — 가목(§163⑨) 우선, 나목(③ 환산)은 가목 확인 불가 시에만.
+ * pre-deemed 3자 max — max(① 상증법 평가액, ② §164④~⑦, ③ 환산). 동점은 ① > ② > ③.
  *
- * 근거: 「소득세법」법 §97①1호 **단서** — "가목의 실지거래가액을 확인할 수 없는 경우에
- *       **한정하여** 나목의 금액을 적용한다".
- *       시행령 §163⑫가 나목 = §176조의2②~④로 정하므로 ③(환산)은 **나목**이고,
- *       §163⑨이 상속·증여 자산의 상증법 평가액을 실지거래가액으로 보므로 ①②는 **가목**이다.
- * 판례·심판례: 대법원 2006두1326 · 국심2003부0627(pre-deemed 정면 — 처분청의 §176조의2④
- *       환산 경정을 취소) · 조심2018서0513("체계상 환산가액 규정보다 실지거래가액 규정을 먼저 적용").
+ * 2026-10-22 사용자 결정 Q-1 = C(종전 「가목 우선」 #1089에서 변경). 근거: 상속증여세과-223
+ * 「의제취득일 이전 상속받은 토지의 실지취득가액은 … 제163조 제9항 및 … 제176조의2 제3항에 따라
+ * 평가한 가액 중 가장 큰 가액」. 반대 자료(심사양도2012-0006·조심2023서0676 = 나목 전용,
+ * 조심2010서1195 = 가목 우선)는 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §3.
+ * ⚠️ 종전 W-1~W-3·W-5는 「③이 더 커도 ①②」를 고정했다 — 이 describe가 그 반전이다.
  */
-describe("pre-deemed 가목 우선 — ③ 환산은 가목 확인 불가 시에만", () => {
+describe("pre-deemed 3자 max — ①②③ 중 큰 금액", () => {
   const BASE = {
     inheritanceDate: new Date("1984-12-31"),
     assetKind: "house_individual" as const,
@@ -488,52 +487,97 @@ describe("pre-deemed 가목 우선 — ③ 환산은 가목 확인 불가 시에
     standardPriceAtTransfer: 250_000_000,
   };
 
-  it("W-1: ②만 확인되면 ③이 더 커도 ②가 취득가액이다", () => {
+  it("W-1: ②만 있고 ③이 더 크면 ③", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BASE,
       houseValuationStdPrice: 300_000_000, // ② < ③(736M)
     });
 
-    expect(r.acquisitionPrice).toBe(300_000_000);
-    expect(r.preDeemedBreakdown?.selectedMethod).toBe("sec164");
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
+    expect(r.preDeemedBreakdown?.sec164Amount).toBe(300_000_000);
   });
 
-  it("W-2: ①만 확인되면 ③이 더 커도 ①이 취득가액이다", () => {
+  it("W-2: ①만 있고 ③이 더 크면 ③", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BASE,
       reportedValue: 400_000_000, // ① < ③(736M)
     });
 
-    expect(r.acquisitionPrice).toBe(400_000_000);
-    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
   });
 
-  it("W-3: ①② 모두 있으면 그중 큰 값 — ③은 비교 대상이 아니다", () => {
+  it("W-3: ①②가 ③보다 크면 ①② 중 큰 값", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...BASE,
-      reportedValue: 400_000_000, // ①
-      houseValuationStdPrice: 500_000_000, // ② — 가목 안에서 최대
+      reportedValue: 800_000_000, // ①
+      houseValuationStdPrice: 900_000_000, // ② — 셋 중 최대
     });
 
-    expect(r.acquisitionPrice).toBe(500_000_000);
+    expect(r.acquisitionPrice).toBe(900_000_000);
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("sec164");
   });
 
-  it("W-4(회귀): ①② 모두 부존재면 ③ 환산 — 가목 확인 불가", () => {
+  it("W-4(회귀): ①② 모두 부존재면 ③ 환산", () => {
     const r = calculateInheritanceAcquisitionPrice(BASE);
 
     expect(r.acquisitionPrice).toBe(736_000_000);
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
   });
 
-  it("W-5: 가목이 채택되면 selectedMethod가 converted가 아니다 — 개산공제 게이트 자동 배제", () => {
-    // §163⑥ 개산공제는 추계(나목)에만 적용된다. 가목은 실제 필요경비 공제.
+  it("W-5: ①이 ③보다 크면 ① — selectedMethod가 converted가 아니라 개산공제 게이트 배제", () => {
+    // §163⑥ 개산공제는 추계(③)에만 적용된다. ①② 채택은 실제 필요경비 공제.
     const r = calculateInheritanceAcquisitionPrice({
       ...BASE,
-      reportedValue: 400_000_000,
+      reportedValue: 800_000_000,
     });
 
-    expect(r.preDeemedBreakdown?.selectedMethod).not.toBe("converted");
+    expect(r.acquisitionPrice).toBe(800_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+  });
+
+  it("W-6: ①②와 ③ 동점이면 ①② 쪽(Q-5) — 실제 필요경비 경로", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      reportedValue: 736_000_000, // ① = ③
+    });
+
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+  });
+
+  it("W-7: ③보다 1원 작은 ①은 채택되지 않는다 — 경계", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      reportedValue: 735_999_999,
+    });
+
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
+  });
+
+  it("W-9: ①=② > ③이면 ① — ①②끼리 동점은 ① 우선", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      ...BASE,
+      reportedValue: 800_000_000,
+      houseValuationStdPrice: 800_000_000,
+    });
+
+    expect(r.acquisitionPrice).toBe(800_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
+  });
+
+  it("W-8: ③ 입력이 없으면(환산 0) ①② 중 큰 값", () => {
+    const r = calculateInheritanceAcquisitionPrice({
+      inheritanceDate: BASE.inheritanceDate,
+      assetKind: BASE.assetKind,
+      reportedValue: 100_000_000,
+    });
+
+    expect(r.preDeemedBreakdown?.convertedAmount).toBe(0);
+    expect(r.acquisitionPrice).toBe(100_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
   });
 });
 
@@ -557,25 +601,25 @@ describe("pre-deemed 토지 — ② §164④ (§163⑨1호)", () => {
     standardPriceAtTransfer: 250_000_000,
   };
 
-  it("L-1: 토지 ②가 주입되면 ③이 더 커도 ②가 취득가액이다", () => {
+  it("L-1: 토지 ②가 주입돼도 ③이 더 크면 ③(3자 max)", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...LAND_BASE,
       landValuationStdPrice: 300_000_000, // ② §164④ < ③(736M)
     });
 
     expect(r.preDeemedBreakdown?.sec164Amount).toBe(300_000_000);
-    expect(r.acquisitionPrice).toBe(300_000_000);
-    expect(r.preDeemedBreakdown?.selectedMethod).toBe("sec164");
+    expect(r.acquisitionPrice).toBe(736_000_000);
+    expect(r.preDeemedBreakdown?.selectedMethod).toBe("converted");
   });
 
-  it("L-2: ①이 ②보다 크면 ① — 가목 안에서 max(①,②)", () => {
+  it("L-2: ①이 ②·③보다 크면 ①", () => {
     const r = calculateInheritanceAcquisitionPrice({
       ...LAND_BASE,
-      reportedValue: 400_000_000, // ①
+      reportedValue: 800_000_000, // ①
       landValuationStdPrice: 300_000_000, // ②
     });
 
-    expect(r.acquisitionPrice).toBe(400_000_000);
+    expect(r.acquisitionPrice).toBe(800_000_000);
     expect(r.preDeemedBreakdown?.selectedMethod).toBe("reported");
   });
 

@@ -36,7 +36,7 @@ const apartNtsPriceShape = {
 };
 
 export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
-  // case A: 의제취득일(1985.1.1.) 전 상속·증여 — max(① 상증법 평가액, ③ 환산취득가)
+  // case A: 의제취득일(1985.1.1.) 전 상속·증여 — max(① 상증법 평가액, ② §164④~⑦, ③ 환산취득가)
   z
     .object({
       mode: z.literal("pre-deemed"),
@@ -44,7 +44,7 @@ export const inheritedAcquisitionSchema = z.discriminatedUnion("mode", [
       inheritanceStartDate: z.string().date(),
       /** 자산 종류 */
       assetKind: z.enum(["land", "house_individual", "house_apart"]),
-      /** ① 상증법 §60~66 평가액 (상속세 신고가액) — max(①,③) 후보 */
+      /** ① 상증법 §60~66 평가액 (상속세 신고가액) — 3자 max 후보 */
       reportedValue: z.number().int().nonnegative().optional(),
       /** 의제취득일(1985.1.1.) 시점 기준시가 (원) */
       standardPriceAtDeemedDate: z.number().int().nonnegative().optional(),

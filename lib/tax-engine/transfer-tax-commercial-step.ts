@@ -124,7 +124,11 @@ export function runCommercialBuildingStep(
  * `runCommercialBuildingStep`이 §164⑥·§176의2②2호·§164⑨ 환산을 수행하면, 그 결과
  * (환산취득가·개산공제)를 실가처럼 주입하고 `useEstimatedAcquisition: false`로 내린다.
  */
-export function applyCommercialBuildingStep(input: TransferTaxInput): {
+export function applyCommercialBuildingStep(
+  input: TransferTaxInput,
+  /** 의제취득일 전 상속에서 3자 max가 ③(환산·추계)을 채택했는가 — STEP 0.45 결과 */
+  preDeemedConvertedSelected = false,
+): {
   effectiveInput: TransferTaxInput;
   cbStep: CommercialBuildingStepResult | undefined;
 } {
@@ -137,7 +141,13 @@ export function applyCommercialBuildingStep(input: TransferTaxInput): {
   // ⚠️ useEstimatedAcquisition=false 명시 해제 필수 — calcTransferGain 실가 경로(transfer-tax-helpers.ts:351)가
   //    input.acquisitionPrice(상속평가액)를 직접 차감한다. true로 두면 환산식(:318, standardPriceAtAcquisition
   //    기반)으로 빠져 상속평가액이 무시된다. 개산공제(§163⑥)는 환산 전용 → 상속 미적용.
+  // ⚠️ 단, 의제취득일 전 상속에서 3자 max가 **③(§176조의2④ 환산)을 채택**했으면 그 결과는 추계다 —
+  //    STEP 0.45(`applyResultToInput`)가 이미 추계 플래그·의제취득일 기준시가를 실었으므로 그대로 둔다.
+  //    여기서 실가로 내리면 ③ 금액을 실가로 차감해 개산공제(§163⑥)와 §97②2호 단서 swap이 빠지고,
+  //    자본적지출까지 함께 차감된다(probe C4: ③ 460M + 자본적지출 5억 → 양도차익 −40,000,000).
+  //    상가 자체 환산(runCommercialBuildingStep)도 타지 않는다 — 비교에 쓴 ③과 같은 산식이어야 한다.
   if (input.acquisitionCause === "inheritance") {
+    if (preDeemedConvertedSelected) return { effectiveInput: input, cbStep: undefined };
     return { effectiveInput: { ...input, useEstimatedAcquisition: false }, cbStep: undefined };
   }
   const cbStep = runCommercialBuildingStep(input);

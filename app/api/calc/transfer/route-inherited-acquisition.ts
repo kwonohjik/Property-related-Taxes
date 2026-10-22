@@ -28,7 +28,7 @@ export function buildInheritedAcquisition(
       inheritanceDate,
       assetKind,
       ...apart,
-      reportedValue: ia.reportedValue, // ① 상증법 평가액 (max(①,③) 후보)
+      reportedValue: ia.reportedValue, // ① 상증법 평가액 (3자 max 후보)
       standardPriceAtDeemedDate: ia.standardPriceAtDeemedDate,
       standardPriceAtTransfer: ia.standardPriceAtTransfer,
       transferDate,

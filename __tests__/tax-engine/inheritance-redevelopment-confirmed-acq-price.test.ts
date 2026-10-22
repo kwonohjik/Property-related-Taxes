@@ -33,6 +33,22 @@ const PRE_DEEMED = {
   assetKind: "house_individual" as const,
 };
 
+describe("§166③ — 3자 max에서 ③이 채택돼도 재개발 경로는 ①②(별건 전 종전 동작)", () => {
+  it("Q3-1: ③이 더 커서 converted여도 ①② 중 큰 값을 반환 — null이면 §166③ 자체 환산으로 ①보다 작아진다(probe R4)", () => {
+    const step = makeStep({
+      ...PRE_DEEMED,
+      reportedValue: 100_000_000, // ①
+      houseValuationStdPrice: 150_000_000, // ②
+      transferPrice: 500_000_000,
+      standardPriceAtDeemedDate: 100_000_000,
+      standardPriceAtTransfer: 250_000_000, // ③ = 500M × 100M/250M = 200M > ①②
+    });
+
+    expect(step.result.preDeemedBreakdown?.selectedMethod).toBe("converted");
+    expect(resolveInheritedRedevelopmentAcqPrice(step)).toBe(150_000_000);
+  });
+});
+
 describe("§166③ 확인된 취득가액 — ②(§164④~⑦)도 가목이다", () => {
   it("B-1: ① 없고 ②만 있으면 → ②가 확인된 취득가액 (현행은 null을 반환해 §166③ 환산으로 빠진다)", () => {
     const step = makeStep({

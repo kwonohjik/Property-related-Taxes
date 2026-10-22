@@ -44,21 +44,20 @@ describe("D-3: PreDeemedInputs 표시가 「가목 우선」을 말한다", () =
     expect(screen.queryAllByText(/§164④~⑦/).length).toBeGreaterThan(0);
   });
 
-  it("★ V-2(회귀): 「max(① …, ③ 환산취득가)」로 읽히는 종전 문구가 남아 있지 않다", () => {
+  it("★ V-2(회귀): 「가목 우선」 시절 문구(「둘 다 확인할 수 없을 때에 한정」)가 남아 있지 않다", () => {
     const { container } = render(
       <PreDeemedInputs asset={preDeemedInheritance()} onChange={NOOP} transferDate="2024-06-01" />,
     );
-    // ③이 ①과 **같은 max 안**에 있는 것처럼 적힌 형태를 금지한다.
-    expect(container.textContent ?? "").not.toMatch(/max\([^)]*환산취득가/);
+    expect(container.textContent ?? "").not.toMatch(/둘 다 확인할 수 없을 때에.*한정/);
   });
 
-  it("V-3: ③은 「둘 다 확인할 수 없을 때에 한정」으로 서술된다 (법 §97①1호 단서)", () => {
+  it("V-3: ①②③ 중 많은 금액으로 서술된다 (3자 max — 2026-10-22)", () => {
     // ⚠️ 캡션은 `<b>`로 강조돼 텍스트 노드가 쪼개진다 — `queryAllByText`는 단일 노드만 보므로
     //    문장 단위 검사는 `textContent`로 한다.
     const { container } = render(
       <PreDeemedInputs asset={preDeemedInheritance()} onChange={NOOP} transferDate="2024-06-01" />,
     );
-    expect(container.textContent ?? "").toMatch(/둘 다 확인할 수 없을 때에.*한정/);
+    expect(container.textContent ?? "").toMatch(/① 상속세 신고가액.*② 취득당시 기준시가.*③ 환산취득가.*중\s*많은 금액/);
   });
 });
 

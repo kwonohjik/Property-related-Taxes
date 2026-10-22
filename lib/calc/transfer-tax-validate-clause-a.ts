@@ -1,16 +1,15 @@
 /**
  * E-1 — 「가목(§163⑨ 평가액)을 확인할 수 없음」 **명시 선언** 요구 (U2-E).
  *
- * 「소득세법」 §97①1호 **단서**: "가목의 실지거래가액을 확인할 수 없는 경우에 **한정**하여
- * 나목의 금액을 적용한다". 시행령 §163⑨은 상속·증여 자산의 취득가액을 「기준일 현재 상증법
- * §60~66 평가액」으로 **보고**(가목), 같은 조 1호·2호는 기준시가 고시 前 취득에 「그 평가액과
- * §164④~⑦ 가액 **중 많은 금액**」을 쓰게 한다 ⇒ **② 단독도 가목**이다.
+ * 시행령 §163⑨은 상속·증여 자산의 취득가액을 「기준일 현재 상증법 §60~66 평가액」으로 **보고**(①),
+ * 같은 조 1호·2호는 기준시가 고시 前 취득에 「그 평가액과 §164④~⑦ 가액 **중 많은 금액**」을 쓰게 한다(②).
  *
- * 현행 엔진은 `clauseA = max(①,②)`가 **0이면** ③(환산·나목)으로 간다
- * (`inheritance-acquisition-price.ts`). 즉 **비워두면 자동으로 나목**이다 —
- * 「확인할 수 없다」를 사용자가 선언한 적이 없는데도 법문상 예외 경로가 열린다.
- *
- * ⇒ ①·② 모두 미충족이면 **차단**하고, 선언(`preDeemedClauseAUnconfirmed`)이 있을 때만 통과시킨다.
+ * 엔진은 **3자 max**다 — `max(①, ②, ③ 환산취득가액)`(`inheritance-acquisition-price.ts` `calcPreDeemed`,
+ * 2026-10-22 「가목 우선」에서 변경 — 계획서 `inheritance-pre-deemed-clause-b-revisit.plan.md`).
+ * ①②를 비우면 그 값들이 max 후보에서 **빠진다** — payload에 실리지 않아 ③만 남는다.
+ * 「확인할 수 없다」를 사용자가 선언한 적이 없는데 후보가 조용히 줄면 안 되므로
+ * ⇒ ①·② 모두 미충족이면 **차단**하고, 선언(`preDeemedClauseAUnconfirmed`)이 있을 때만 통과시킨다
+ *   (사용자 결정 Q-6 a — 게이트 유지·문구 정정).
  *
  * ## 경계 — 선언은 ③(나목)이 **있는** 구간에서만 효력이 있다
  *
@@ -100,8 +99,8 @@ export function clauseADeclarationError(asset: AssetForm, label: string): string
   return fieldError(
     "preDeemedClauseAUnconfirmed",
     (
-      `${label}: 「소득세법」 §97①1호 단서상 환산 등 추계는 **가목(§163⑨ 평가액)을 확인할 수 없는 경우에 한정**됩니다. ` +
-      `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 「가목을 확인할 수 없음」을 선택하세요.`
+      `${label}: 의제취득일 전 상속·증여 자산의 취득가액은 상증법 평가액(§163⑨)·§164④~⑦ 기준시가·환산취득가액 중 큰 금액입니다. ` +
+      `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 둘 다 확인할 수 없으면 「상증법 평가액을 확인할 수 없음」을 선택하세요.`
     ),
   );
 }
@@ -193,10 +192,11 @@ export function preDeemedConversionInputError(
     (asset.assetKind === "housing" && asset.isMixedUseHouse === true) ||
     asset.assetKind === "general_building" ||
     asset.assetKind === "right_to_move_in" ||
-    asset.assetKind === "redevelopment_apt" ||
-    asset.assetKind === "commercial_building"
+    asset.assetKind === "redevelopment_apt"
   )
     return null;
+  // 상가·오피스텔 상속은 ⑫(`refinePreDeemedAcquisitionSource`)가 검사한다 — 상속이면 `commercialBuildingValuation`을
+  // 만들지 않아 ⑫의 제외 조건에 안 걸린다. 종전에는 여기서 제외해 「선언 + ③ 칸 비움」이 ⑧ 통과 ↔ ⑫ 400이었다(2026-10-22).
   if (!isNonPrimaryAsset && (asset.isAppraisalAcquisition === true || asset.isSalesCaseAcquisition === true)) return null;
   const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as
     | { mode?: string; reportedValue?: number }

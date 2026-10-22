@@ -156,7 +156,7 @@ const MISC_CASES: FieldJumpCase[] = [
   },
 ];
 
-/** 의제취득일(1985.1.1.) 전 상속 — 가목(§163⑨ 평가액) 확인 불가를 선언해 나목(환산)으로 가는 바탕 */
+/** 의제취득일(1985.1.1.) 전 상속 — ①② 확인 불가를 선언해 ③(환산)만으로 가는 바탕 */
 const preDeemed = (patch: Record<string, unknown>) => () =>
   withPrimary({
     acquisitionCause: "inheritance",
@@ -170,7 +170,7 @@ const preDeemed = (patch: Record<string, unknown>) => () =>
 const CLAUSE_A_CASES: FieldJumpCase[] = [
   {
     name: "leaf: 가목 확인 불가 선언", field: "preDeemedClauseAUnconfirmed", step: 0, assetIndex: A,
-    message: /^자산: 「소득세법」 §97①1호 단서상 환산 등 추계는/,
+    message: /^자산: 의제취득일 전 상속·증여 자산의 취득가액은/,
     form: preDeemed({ preDeemedClauseAUnconfirmed: false, standardPriceAtAcq: "" }),
   },
   {

@@ -30,16 +30,11 @@ const METHOD_LABELS: Record<InheritanceAcquisitionResult["method"], string> = {
   similar_sale: "유사매매사례가액",
   supplementary: "보충적평가액 (공시가격)",
   /**
-   * 🔴 「①·②·③ 중 큰 금액」이 아니다 (2026-09-07 UI 리뷰).
-   *
-   * 엔진은 `clauseA = Math.max(①, ②)` 후 `acquisitionPrice = clauseA > 0 ? clauseA : ③`이다
-   * (`inheritance-acquisition-price.ts:163~167`) — ③(환산)은 **가목(①②)이 둘 다 없을 때만**
-   * 쓴다. 근거는 법 §97①1호 **단서**의 「가목의 실지거래가액을 확인할 수 없는 경우에
-   * **한정하여** 나목의 금액을 적용한다」이다.
-   * 같은 카드 하단이 이미 「환산취득가액은 「가목을 확인할 수 없는 경우에 한정」되어 적용하지
-   * 않습니다」라고 적고 있어, 헤더 배지와 **정면으로 모순**됐다.
+   * 엔진은 3자 max다 — `max(① 상증법 평가액, ② §164 기준시가, ③ 환산취득가액)`, 동점은 ① > ② > ③
+   * (`inheritance-acquisition-price.ts` `calcPreDeemed`, 2026-10-22 「가목 우선」에서 변경 — 근거 상속증여세과-223).
+   * 종전 라벨 「나목(환산)은 가목 확인불가 시」는 가목 우선 시절 문구다.
    */
-  pre_deemed_max: "의제취득일 전 상속·증여 — 가목(상증법 평가액·§164) 중 큰 금액 · 나목(환산)은 가목 확인불가 시",
+  pre_deemed_max: "의제취득일 전 상속·증여 — 상증법 평가액·§164 기준시가·환산취득가액 중 큰 금액",
 };
 
 /** 후보 선택 배지 */
@@ -48,6 +43,27 @@ function SelectedBadge() {
     <span className="ml-1 text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-1.5 py-0.5">
       선택
     </span>
+  );
+}
+
+/** 의제취득일 전 후보 한 줄 — 채택이면 「선택」, 아니면 「(미적용)」 + 취소선 */
+function PreDeemedCandidateRow({ label, amount, selected }: { label: string; amount: number; selected: boolean }) {
+  return (
+    <>
+      <span className="text-muted-foreground">
+        {label}
+        {selected ? <SelectedBadge /> : <span className="ml-1 text-micro text-muted-foreground">(미적용)</span>}
+      </span>
+      <span
+        className={
+          selected
+            ? "font-mono tabular-nums text-right text-foreground"
+            : "font-mono tabular-nums text-right text-muted-foreground line-through"
+        }
+      >
+        {formatN(amount)}
+      </span>
+    </>
   );
 }
 
@@ -93,9 +109,8 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
         </div>
       )}
 
-      {/* Case A — 의제취득일 전 상속·증여.
-          ①② = 법 §97①1호 **가목**(실지거래가액 의제, 소령 §163⑨) → 그중 큰 금액.
-          ③  = **나목**(소령 §163⑫ → §176조의2) → 가목을 확인할 수 없을 때만 적용(법 §97①1호 단서). */}
+      {/* Case A — 의제취득일 전 상속·증여: ①②③ 중 큰 금액(엔진 `calcPreDeemed` 3자 max).
+          ①② = 소령 §163⑨(법 §97①1호 가목 의제) · ③ = 소령 §163⑫ → §176조의2(나목). */}
       {preDeemedBreakdown && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
@@ -104,49 +119,29 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
           <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
               {preDeemedBreakdown.reportedAmount !== null && (
-                <>
-                  <span className="text-muted-foreground">
-                    ① 상증법 평가액 (상속세 신고가액)
-                    {preDeemedBreakdown.selectedMethod === "reported" && <SelectedBadge />}
-                  </span>
-                  <span className="font-mono tabular-nums text-right text-foreground">
-                    {formatN(preDeemedBreakdown.reportedAmount)}
-                  </span>
-                </>
+                <PreDeemedCandidateRow
+                  label="① 상증법 평가액 (상속세 신고가액)"
+                  amount={preDeemedBreakdown.reportedAmount}
+                  selected={preDeemedBreakdown.selectedMethod === "reported"}
+                />
               )}
               {preDeemedBreakdown.sec164Amount !== null && (
-                <>
-                  <span className="text-muted-foreground">
-                    ② 취득당시 기준시가 (소령 §164④~⑦)
-                    {preDeemedBreakdown.selectedMethod === "sec164" && <SelectedBadge />}
-                  </span>
-                  <span className="font-mono tabular-nums text-right text-foreground">
-                    {formatN(preDeemedBreakdown.sec164Amount)}
-                  </span>
-                </>
+                <PreDeemedCandidateRow
+                  label="② 취득당시 기준시가 (소령 §164④~⑦)"
+                  amount={preDeemedBreakdown.sec164Amount}
+                  selected={preDeemedBreakdown.selectedMethod === "sec164"}
+                />
               )}
-              <span className="text-muted-foreground">
-                ③ 환산취득가액
-                {preDeemedBreakdown.selectedMethod === "converted" ? (
-                  <SelectedBadge />
-                ) : (
-                  <span className="ml-1 text-micro text-muted-foreground">(미적용)</span>
-                )}
-              </span>
-              <span
-                className={
-                  preDeemedBreakdown.selectedMethod === "converted"
-                    ? "font-mono tabular-nums text-right text-foreground"
-                    : "font-mono tabular-nums text-right text-muted-foreground line-through"
-                }
-              >
-                {formatN(preDeemedBreakdown.convertedAmount)}
-              </span>
+              <PreDeemedCandidateRow
+                label="③ 환산취득가액"
+                amount={preDeemedBreakdown.convertedAmount}
+                selected={preDeemedBreakdown.selectedMethod === "converted"}
+              />
             </div>
             <p className="text-muted-foreground pt-1">
               {preDeemedBreakdown.selectedMethod === "converted"
-                ? "①② 확인 불가 → 환산취득가액 적용 (소령 §163⑫ → §176조의2)"
-                : "실지거래가액 의제(①②) 중 큰 금액을 적용. 환산취득가액은 「가목을 확인할 수 없는 경우에 한정」되어 적용하지 않습니다 (소득세법 §97①1호 단서 · 소령 §163⑨)"}
+                ? "①②③ 중 큰 금액 — 환산취득가액 적용 (소령 §163⑫ → §176조의2④)"
+                : "①②③ 중 큰 금액 — 실지거래가액 의제 적용 (소령 §163⑨)"}
             </p>
           </div>
         </div>
