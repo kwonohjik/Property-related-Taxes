@@ -409,6 +409,15 @@ export interface SplitGainResult {
    * 없어 안분값을 만들 수 없음(⏳ 1-C 한시 — 계획서 §12.7이 1-D에서 필수화를 확정했다).
    */
   saleSplitJudgment?: SaleSplitJudgmentDetail;
+  /**
+   * 양도가액을 **구분 기재 없이 안분**했을 때 엔진이 실제로 쓴 basis 종류 — 표시 전용 echo.
+   *
+   * `saleSplitJudgment`와 **배타**다(구분 기재가 있으면 판정이 차고 이 값은 없다). 토지·건물 양도가액이 둘 다 비어 안분한 경우에는
+   * 비교 대상이 없어 판정이 비므로, 화면이 «감정평가가액으로 나눴는가 기준시가로 나눴는가»를 알려면 이 값이 필요하다.
+   * 폼에서 「구분 기재(actual)」를 골랐는데 두 칸을 비운 경우의 안내 한 줄이 읽는다(계획서 `sale-split-actual-both-empty.plan.md` §10).
+   * 세액·양도가액에는 영향이 없다.
+   */
+  saleApportionBasisKind?: ApportionBasisKind;
   /** 취득 당시 계약서 구분금액 §100③ 판정 — 계약서 구분금액을 입력한 같은 날 취득 주택(배율 초과분 분리)에서만 (#17-6) */
   acqSplitJudgment?: AcqSplitJudgmentDetail;
   /** 파트 이월과세의 증여 사건 echo — 파트 이월과세 입력이 있을 때만 */

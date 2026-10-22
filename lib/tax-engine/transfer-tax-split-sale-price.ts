@@ -32,7 +32,7 @@ import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types"
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import { resolveSaleApportionBasis } from "./sale-split-apportion-basis";
-import type { SaleApportionBasisResult } from "./sale-split-apportion-basis";
+import type { ApportionBasisKind, SaleApportionBasisResult } from "./sale-split-apportion-basis";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 /**
@@ -72,6 +72,8 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
   land: number;
   building: number;
   judgment?: SaleSplitJudgmentDetail;
+  /** 구분 기재 없이 안분했을 때만 — 엔진이 실제로 쓴 basis 종류(표시 전용 echo, `judgment`와 배타) */
+  apportionBasisKind?: ApportionBasisKind;
 } {
   const total = input.transferPrice;
   const landIn = input.landTransferPrice;
@@ -90,7 +92,7 @@ export function resolveTransferPriceSplit(input: TransferTaxInput): {
         { what: "양도가액" },
       );
     }
-    return { ...basis.apportioned };
+    return { ...basis.apportioned, ...(basis.kind ? { apportionBasisKind: basis.kind } : {}) };
   }
 
   // ── 구분 기재 있음 — 한쪽만 입력됐으면 반대쪽은 `총액 − 입력값`으로 **유일하게 확정**된다

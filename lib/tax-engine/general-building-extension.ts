@@ -624,6 +624,8 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     allocation: { land: landTransferPrice, building: building1TransferPrice },
     // §100③ 판정 — 구분 기재가 있을 때만 채워진다(Q-4 · 2-way 토지↔건물 합계 비교).
     ...(saleSplitJudgment ? { saleSplitJudgment } : {}),
+    // 구분 기재가 없어 3-way 기준시가 비율로 안분한 경우 — 증축 경로는 감정평가 basis를 쓰지 않는다(표시 전용 echo, 판정과 배타).
+    ...(!hasDeclared ? { saleApportionBasisKind: "std_price" as const } : {}),
     acquisition: { land: landAcq, building: building1Acq },
     // 율 echo — 표시 층이 「× 3%」를 다시 적으면 미등기에서 산식이 값을 못 만든다(§163⑥1호 단서).
     // 증축분(건물2)은 건물1과 같은 축이므로 `buildingRate` 하나로 족하다.

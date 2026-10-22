@@ -14,6 +14,7 @@ import {
   buildRows,
   fmtCell,
 } from "./FilingFormTableHelpers";
+import { collectSaleSplitUnenteredNotices } from "./sale-split-unentered-notice";
 
 export type { FilingFormTableProps as FilingFormTableProps };
 
@@ -62,6 +63,8 @@ export function FilingFormTable({
     acquisitionDateOverride,
     aggregate,
   );
+  // «구분 기재를 골랐으나 양도가액 두 칸이 비어 안분했다» — 양도가액 칸이 계약서 구분 기재가 아니라 안분값이라는 사실을 표 아래에 한 줄로 알린다.
+  const unenteredNotices = collectSaleSplitUnenteredNotices({ result, formData, asset, aggregate });
 
   return (
     <div
@@ -205,6 +208,16 @@ export function FilingFormTable({
               ))}
             </tbody>
           </table>
+          {unenteredNotices.length > 0 && (
+            <div
+              data-testid="filing-sale-split-unentered-note"
+              className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 leading-snug whitespace-normal"
+            >
+              {unenteredNotices.map((n) => (
+                <p key={n}>※ {n}</p>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

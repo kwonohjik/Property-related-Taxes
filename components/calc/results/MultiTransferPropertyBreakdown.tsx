@@ -32,6 +32,7 @@ import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTa
 import { ReductionDetailCards } from "@/components/calc/results/transfer/ReductionDetailCards";
 import { getRefDeterminedTax } from "@/components/calc/results/MultiTransferTaxSummaryCard";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
+import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 
 
@@ -501,6 +502,7 @@ export function PropertyBreakdownAccordion({
             {...(property?.form?.assets?.[0]?.saleSplitExemptionNote
               ? { exemptionNote: property.form.assets[0].saleSplitExemptionNote }
               : {})}
+            {...(isSaleSplitActual(property?.form?.assets?.[0]) ? { saleSplitActual: true } : {})}
           />
 
           {/* 신고서 양식 표 — 자산별 (PR-F2: printScoped 버튼 제거, 패널 per-property로 통일) */}
