@@ -144,6 +144,9 @@ export function applyShareScale(
     "buildingSalesCaseValue",
     "landDirectExpenses",
     "buildingDirectExpenses",
+    // 자본적지출 중 증축 전 지출액 — 위 두 칸과 같은 100% 기준 입력(빠지면 지분 100%로 새어 증축 전 몫이 총액을 넘는다).
+    "buildingDirectExpensesBeforeExtension",
+    "capitalExpenditureBeforeExtension",
     // 자산 단위 나목(§97②2호) — swap 비교 대상
     "capitalExpenditure",
     "transferExpense",

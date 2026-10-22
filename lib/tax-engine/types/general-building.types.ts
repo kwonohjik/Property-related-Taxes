@@ -378,6 +378,17 @@ export type GeneralBuildingInput = {
   landDirectExpenses?: number;
   buildingDirectExpenses?: number;
   /**
+   * 자본적지출 중 **증축 전**에 지출한 금액 (원) — 증축(`extensionInfo`)이 있을 때만 읽는다
+   * (`docs/00-pm/gb-extension-capex-timing.plan.md` Q-1 a · 2026-10-23).
+   *
+   * 증축 전에는 증축분이 없었으므로 그 지출은 증축분(`building2`)에 배분하지 않는다(「소득세법 시행령」 §163③ — 지출이 가해진
+   * 양도자산의 필요경비). 증축 후 지출은 원건물·증축분에 양도가액 비율로 나눈다(Q-2 a).
+   * `capitalExpenditureBeforeExtension` ≤ `capitalExpenditure`(자산 단위 · 토지분 포함) · `buildingDirectExpensesBeforeExtension`
+   * ≤ `buildingDirectExpenses`(건물 파트 칸).
+   */
+  capitalExpenditureBeforeExtension?: number;
+  buildingDirectExpensesBeforeExtension?: number;
+  /**
    * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
    *
    * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
@@ -706,6 +717,11 @@ export type GeneralBuildingOutput = {
    * 최종 필요경비 = 카드 `expenses` + 이 값이다. 표시 계층이 「자기 경비 + 안분 가산」 산식을 적을 때 쓴다(E-1 · 엔진 산식 변경 없음).
    */
   partDirectAddition?: Record<string, number>;
+  /**
+   * 위 가산분 중 **증축 전 자본적지출**(원건물에만 귀속 — 안분이 아니다)의 카드별 몫 — 표시 계층이 「증축 전 자본적지출 + 안분」으로
+   * 나눠 적는다(`gb-extension-capex-timing.plan.md` · echo-field-pattern). 증축 전 지출이 없으면 없다.
+   */
+  partBeforeExtensionCapex?: Record<string, number>;
 
   /**
    * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).

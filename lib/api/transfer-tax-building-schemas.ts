@@ -238,6 +238,8 @@ export const generalBuildingValuationSchema = z.object({
   /** 파트별 자본적지출(§97①2호) — 직접 귀속분. 「소득세법」 §100② 후문상 안분 대상이 아니다. */
   landDirectExpenses: z.number().int().nonnegative().optional(),
   buildingDirectExpenses: z.number().int().nonnegative().optional(),
+  /** 건물 파트 자본적지출 중 증축 전 지출액 — 증축분에 배분하지 않는다(`gb-extension-capex-timing.plan.md`). */
+  buildingDirectExpensesBeforeExtension: z.number().int().nonnegative().optional(),
   /**
    * ⑫ 건물 취득원인 (required — .optional() 없음).
    * "newConstruction"일 때 라우트 헬퍼에서 isSelfBuilt=true 도출 → §114조의2 ① 가산세 판정.
@@ -406,6 +408,8 @@ export const generalBuildingValuationSchema = z.object({
   // ── ⑫ §97②2호 단서 swap (자산총액) — 비-증축 전체환산(G2). 침묵 strip 방지 명시. ──
   /** 자본적지출 (원, 자산총액 — §97① 가목). */
   capitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 자본적지출 중 증축 전 지출액 (원, 자산총액 · 토지분 포함) — 증축분에 배분하지 않는다. 침묵 strip 방지 명시. */
+  capitalExpenditureBeforeExtension: z.number().int().nonnegative().optional(),
   /** 양도비 (원, 자산총액 — §97① 나목). */
   transferExpense: z.number().int().nonnegative().optional(),
   /** 감가상각비 (원, §97③) — **건물분**에 귀속, 원건물 카드의 취득가액에서 공제. 침묵 strip 방지 명시. */
@@ -451,6 +455,20 @@ export const generalBuildingValuationSchema = z.object({
       path: ["zoneType"],
       message: "용도지역(zoneType)이 필요합니다 — 비사업용토지 판정 배율 결정 (무허가 건물은 제외)",
     });
+  }
+  // 자본적지출 중 증축 전 지출액은 그 총액을 넘을 수 없다(⑧ `transfer-tax-validate-gb.ts`와 같은 규칙). 비움은 ⑧만 막는다 —
+  // API 직접 호출의 종전 payload는 「전부 증축 후」(종전 배분)로 계산된다.
+  for (const [pre, total, label] of [
+    ["capitalExpenditureBeforeExtension", "capitalExpenditure", "자본적지출"],
+    ["buildingDirectExpensesBeforeExtension", "buildingDirectExpenses", "건물 자본적지출"],
+  ] as const) {
+    if ((val[pre] ?? 0) > (val[total] ?? 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [pre],
+        message: `증축 전에 지출한 금액이 ${label}보다 큽니다.`,
+      });
+    }
   }
   if (val.houseToCommercialConversion === true) {
     if (!val.conversionDate) {

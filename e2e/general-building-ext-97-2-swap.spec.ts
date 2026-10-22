@@ -3,6 +3,8 @@
  *
  * 증축(gbHasExtension) 케이스: 원건물(토지+건물1) 실가 + 증축분(건물2) 환산.
  *
+ * 🔄 2026-10-23 지출 시점별 배분(`docs/00-pm/gb-extension-capex-timing.plan.md`) — 증축 전 지출은 원건물(실가)에 가산하고,
+ *    증축 후 지출의 증축분 몫은 증축분(환산)의 단서 비교로 간다(Q-3 a). 아래 E-1 Q-7 문단은 「증축 전 지출」에 그대로 남는다.
  * 🔄 2026-10-22 E-1 Q-7 a(`docs/00-pm/gb-extension-actual-expenses.plan.md` §5.1) — 자산 단위 자본적지출은 증축분(환산)의
  *    §97②2호 단서 비교로 가지 않고 **실가 파트(토지·원건물)에 §97②1호로 가산**된다. 단서는 「자산별」 비교라 원건물 지출을
  *    증축분 나목으로 볼 근거가 없다. 종전 이 스펙은 「자본적지출 5억 > 증축분 가목 → swap 발동」을 고정했다.
@@ -14,7 +16,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
-function seedForm(capitalExpenditure: string) {
+function seedForm(capitalExpenditure: string, capexBeforeExtension: string) {
   return {
     state: {
       formData: {
@@ -45,6 +47,8 @@ function seedForm(capitalExpenditure: string) {
           gbTransferExtensionBuildingStdPrice: "8000000",
           gbAcquisitionExtensionBuildingStdPrice: "6000000",
           capitalExpenditure,
+          // 그중 증축 전 지출액(2026-10-23 · `gb-extension-capex-timing.plan.md`) — 증축 전 몫은 원건물에만, 나머지는 증축분과 나눈다.
+          gbCapexBeforeExtension: capexBeforeExtension,
         }],
         transferDate: "2023-02-19",
         filingDate: "2023-04-30",
@@ -60,12 +64,12 @@ function seedForm(capitalExpenditure: string) {
   };
 }
 
-async function seedAndCalc(page: Page, capitalExpenditure: string) {
+async function seedAndCalc(page: Page, capitalExpenditure: string, capexBeforeExtension: string) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.evaluate(
     (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
-    seedForm(capitalExpenditure),
+    seedForm(capitalExpenditure, capexBeforeExtension),
   );
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
@@ -77,16 +81,22 @@ async function seedAndCalc(page: Page, capitalExpenditure: string) {
 const SWAP_HEADING = "필요경비 swap 적용 — 소득세법 §97② 2호 단서";
 
 test.describe("일반건물 증축(G3) 환산 §97②2호 단서 swap", () => {
-  test("자본적지출 5억(증축분 가목보다 큼) → swap 아님 · 실가 파트에 §97②1호 가산 (E-1 Q-7)", async ({ page }) => {
+  test("자본적지출 5억 · 전부 증축 전 → 증축분 몫 없음 · swap 아님 · 원건물 실가 파트에 §97②1호 가산", async ({ page }) => {
     test.setTimeout(60_000);
-    await seedAndCalc(page, "500000000");
+    await seedAndCalc(page, "500000000", "500000000");
     await expect(page.getByText(SWAP_HEADING, { exact: false })).toHaveCount(0);
-    await expect(page.getByText("자본적지출·양도비 안분", { exact: false }).first()).toBeAttached();
+    await expect(page.getByText("증축 전 자본적지출", { exact: false }).first()).toBeAttached();
+  });
+
+  test("자본적지출 5억 · 전부 증축 후 → 증축분 몫이 증축분 가목보다 커 swap 발동 (Q-3 a)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seedAndCalc(page, "500000000", "0");
+    await expect(page.getByText(SWAP_HEADING, { exact: false }).first()).toBeAttached();
   });
 
   test("자본적지출 작음 → 본문 유지, swap 미표시", async ({ page }) => {
     test.setTimeout(60_000);
-    await seedAndCalc(page, "1000000");
+    await seedAndCalc(page, "1000000", "0");
     await expect(page.getByText(SWAP_HEADING, { exact: false })).toHaveCount(0);
   });
 });

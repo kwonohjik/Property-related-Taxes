@@ -97,6 +97,8 @@ function gbExtAssetSeparate(over: Partial<AssetForm> = {}): AssetForm {
     capitalExpenditure: "",
     landDirectExpenses: String(PART_CAPEX),
     buildingDirectExpenses: String(PART_CAPEX),
+    // 그중 증축 전 지출액(2026-10-23 · `gb-extension-capex-timing.plan.md`) — ⑧ 필수. 0 = 전부 증축 후(종전 배분과 같다).
+    gbBuildingCapexBeforeExtension: "0",
     ...over,
   } as Partial<AssetForm>);
 }
@@ -188,6 +190,10 @@ describe("W-1b — 전용 필드 입력(① 채택) 시 양도비가 나목에 �
  * (엔진 진입 파트 축 · 자산 단위 자본적지출은 취득시 기준시가 안분). 증축분(환산)은 개산공제만이다 — §97②2호 단서는 「자산별」
  * 비교라 원건물 지출을 증축분 나목에 넣을 근거가 없다. 종전에는 자산 전체 나목을 증축분 카드의 단서 비교에 넣어
  * 증축분에서 큰 차손이 나고 그 차손이 장특 뒤 통산됐다(결정세액 131,082,800 · 49,431,660).
+ *
+ * 🔄 **2026-10-23 지출 시점별 배분**(`docs/00-pm/gb-extension-capex-timing.plan.md` Q-3 a) — 위 규칙은 **증축 전** 자본적지출에
+ *    그대로 남는다(픽스처를 「전부 증축 전」으로 둔다). 증축 **후** 자본적지출은 원건물 : 증축분 = 양도가액 비율로 나누고, 증축분
+ *    몫만 증축분의 단서 비교로 간다(자산 전체 나목이 아니다) — 마지막 it이 그 대조군이다.
  */
 describe("E-1 — 원건물 실가 + 증축분 환산: 자본적지출·양도비는 실가 파트에 가산 (단서 비교 없음)", () => {
   const props = (asset: AssetForm) => {
@@ -201,8 +207,9 @@ describe("E-1 — 원건물 실가 + 증축분 환산: 자본적지출·양도�
     return { tax: r.aggregated.determinedTax, swap: r.aggregated.swapComparison, land: e("land"), b1: e("building1"), b2: e("building2"), bundled: gbv.bundledExpenses };
   };
 
-  it("🔴 자본적지출 8억 + 양도비 3억 → 토지·원건물 합 11억 가산 · 증축분은 개산공제 180,000 · swap 없음", () => {
-    const r = props(gbExtAssetOriginActual());
+  const allBefore = { gbCapexBeforeExtension: String(CAPEX) } as Partial<AssetForm>;
+  it("🔴 자본적지출 8억(전부 증축 전) + 양도비 3억 → 토지·원건물 합 11억 가산 · 증축분은 개산공제 180,000 · swap 없음", () => {
+    const r = props(gbExtAssetOriginActual(allBefore));
     expect(r.bundled).toBe(0); // 일괄 슬롯에 양도비가 없다 — 이중계상 불가
     expect(r.swap).toBeUndefined();
     expect(r.b2).toBe(180_000);
@@ -211,11 +218,21 @@ describe("E-1 — 원건물 실가 + 증축분 환산: 자본적지출·양도�
   });
 
   it("전용 필드 5백만을 더하면 그만큼만 늘어난다 — 양도비가 두 번 들어가지 않는다", () => {
-    const base = props(gbExtAssetOriginActual());
-    const r = props(gbExtAssetOriginActual({ gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED) }));
+    const base = props(gbExtAssetOriginActual(allBefore));
+    const r = props(gbExtAssetOriginActual({ ...allBefore, gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED) }));
     expect(r.bundled).toBe(DEDICATED_BUNDLED);
     expect(r.land + r.b1).toBe(CAPEX + TRANSFER_EXP + DEDICATED_BUNDLED);
     expect(r.land + r.b1 - (base.land + base.b1)).toBe(DEDICATED_BUNDLED);
+  });
+
+  it("대조군 — 전부 증축 후면 증축분 몫(양도가액 비율)만 증축분 단서 비교로 간다 · 원건물 실가 카드는 그 몫을 뺀 금액", () => {
+    const after = props(gbExtAssetOriginActual({ gbCapexBeforeExtension: "0" }));
+    const before = props(gbExtAssetOriginActual(allBefore));
+    // 증축분 몫이 가목보다 커 단서 적용 — 필요경비가 개산공제가 아니라 나목(증축분 몫)이다.
+    expect(after.swap).toBeDefined();
+    expect(after.b2).toBeGreaterThan(180_000);
+    // 원건물 실가 카드가 덜 받은 만큼을 증축분이 받는다 — 합계 보존(양도비는 실가 카드에 그대로).
+    expect(before.land + before.b1 - (after.land + after.b1)).toBe(after.b2);
   });
 });
 
