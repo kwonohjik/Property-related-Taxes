@@ -79,12 +79,12 @@ interface Props {
    */
   householdGiftEnabled?: boolean;
   /**
-   * 1세대1주택 비과세 **판정 메뉴**에서 연 편집 창이다 — 명시 prop이다(다른 숨김 prop에서 추론하지 않는다).
-   * 판정 route는 중과 엔진을 부르지 않으므로 **중과 축 전용 입력**(조특법 감면주택 5호 칩·준공후미분양 칩·준공일 칸·
-   * 신축 특례 경고·④ 특수 배제 사유)을 열지 않는다 — 입력해도 판정에 닿지 않는데 같은 조문을 나열한 ⑥ 주택 수 제외와
-   * 혼동되고(S14a-9), 「조특법 감면」 배지까지 달린다. 계산기는 넘기지 않아 동작 불변이다. 사유·근거는 `house-entry-judgment-scope.ts`.
+   * **중과 전용 입력**(조특법 감면주택 5호 칩·준공후미분양 칩·준공일 칸·신축 특례 경고·④ 특수 배제 사유)을 닫는다 —
+   * 1세대1주택 비과세 판정 메뉴(`judgmentMenuFlags("one_house")`). 그 route는 중과 엔진을 부르지 않으므로 입력해도 판정에 닿지 않는데
+   * 같은 조문을 나열한 ⑥ 주택 수 제외와 혼동된다(S14a-9). 다주택 중과 판정 메뉴는 판정 메뉴이지만 이 칸을 연다 — 그래서
+   * 「판정 메뉴인가」가 아니라 이 축만 말하는 prop이다(P0 · 종전 이름 `judgmentMenu`). 계산기는 넘기지 않아 동작 불변이다.
    */
-  judgmentMenu?: boolean;
+  hideSurchargeInputs?: boolean;
   /**
    * 「같은 날 양도 · 양도 순서」(소득세법 시행령 §154⑨) 칸을 연다 — 양도 대상이 §89①3호 주택(`isOneHouseExemptionAsset`)일 때 호출부가 넘긴다.
    * 입주권 양도(§89①4호)에는 이 순서 규정이 닿지 않아 열지 않는다.
@@ -110,7 +110,7 @@ interface Props {
 // 섹션 ① 기본정보 (sky)
 // ============================================================
 
-function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEnabled, judgmentMenu }: Props) {
+function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEnabled, hideSurchargeInputs }: Props) {
   return (
     <ToneCard tone="sky" sectionNum="①" bodyClassName="space-y-2.5" title="기본 정보">
 
@@ -175,7 +175,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-6">
         {/* 취득일 (행1: 취득일·준공일·전용면적 3열 — 판정 메뉴는 준공일이 없어 2열) */}
-        <div className={`space-y-1 ${judgmentMenu ? "sm:col-span-3" : "sm:col-span-2"}`}>
+        <div className={`space-y-1 ${hideSurchargeInputs ? "sm:col-span-3" : "sm:col-span-2"}`}>
           <label className="block text-caption text-muted-foreground font-medium">취득일</label>
           <DateInput
             value={house.acquisitionDate}
@@ -184,7 +184,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
         </div>
 
         {/* 준공일 (가목 소형신축 3호) — 중과 축이라 판정 메뉴에는 없다 */}
-        {!judgmentMenu && (
+        {!hideSurchargeInputs && (
           <div className="space-y-1 sm:col-span-2">
             <label className="block text-caption text-muted-foreground font-medium">준공일</label>
             <DateInput
@@ -196,7 +196,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
         )}
 
         {/* 전용면적 */}
-        <div className={`space-y-1 ${judgmentMenu ? "sm:col-span-3" : "sm:col-span-2"}`}>
+        <div className={`space-y-1 ${hideSurchargeInputs ? "sm:col-span-3" : "sm:col-span-2"}`}>
           <div className="flex items-center gap-2">
             <label className="text-caption text-muted-foreground font-medium">전용면적 (㎡)</label>
             {house.addressLookupFilled && (
@@ -247,7 +247,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
             title="오피스텔"
           />
           {/* 5호는 중과 대상에서만 뺀다 — 판정 메뉴는 ⑥ 주택 수 제외가 이 사실의 입력 경로다(S14a-9) */}
-          {!judgmentMenu && (
+          {!hideSurchargeInputs && (
             <ToggleCard
               variant="chip"
               tone="sky"
@@ -283,7 +283,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
               description="조특법 §97·§97의2·§98에 따라 양도소득세가 감면되는 임대주택으로서 5년 이상 임대한 국민주택 (소령 §167의3①3호)"
             />
           )}
-          {!judgmentMenu && (
+          {!hideSurchargeInputs && (
             <ToggleCard
               variant="chip"
               tone="sky"
@@ -307,7 +307,7 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
 
       {/* #3-B1 신축·준공후미분양 특례 비차단 경고 — 특례 의도(준공후미분양 토글·준공일 입력)인데
           판정 필수필드(취득가액·전용면적) 미입력 시 침묵 미적용 안내 (소령 §167의3①12 가·나목) */}
-      {!judgmentMenu &&
+      {!hideSurchargeInputs &&
         (house.isUnsoldNewHouse || !!house.completionDate) &&
         (!house.acquisitionPrice || !house.exclusiveArea) && (
           <p className="rounded border border-amber-200 bg-amber-50/70 px-2 py-1 text-caption text-amber-700 dark:text-amber-300 dark:bg-amber-950/40">
@@ -672,7 +672,7 @@ export function HouseEntryEditor({
   countExclusionEnabled = false,
   taxIncentiveRentalEnabled = false,
   householdGiftEnabled = false,
-  judgmentMenu = false,
+  hideSurchargeInputs = false,
   sameDayEnabled = false,
   newHouseOriginEnabled = false,
   popDeclineEnabled = false,
@@ -686,7 +686,7 @@ export function HouseEntryEditor({
         onUpdate={onUpdate}
         transferDate={transferDate}
         taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
-        judgmentMenu={judgmentMenu}
+        hideSurchargeInputs={hideSurchargeInputs}
       />
       {/* ①과 같은 양도 시점 축 — 이 주택이 현재 양도 주택과 같은 날 양도되는가(§154⑨). 켜지 않으면 일반 보유 주택이다. */}
       {sameDayEnabled && <HouseEntrySameDaySection house={house} onUpdate={onUpdate} />}
@@ -709,7 +709,7 @@ export function HouseEntryEditor({
       {/* ⑪ 연장 사실은 3호 칩과 같은 축(중과) — 계산기만 연다 */}
       <LongTermRentalSection house={house} onUpdate={onUpdate} aptDeadlineExtensionEnabled={taxIncentiveRentalEnabled} />
       {/* ④ 중과 배제 사유 — 판정 메뉴는 담긴 값이 있는 행에서만 연다(꺼서 비울 길을 남긴다 · house-entry-judgment-scope.ts) */}
-      {houseEntrySpecialExclusionVisible(house, judgmentMenu) && (
+      {houseEntrySpecialExclusionVisible(house, hideSurchargeInputs) && (
         <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
       )}
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}

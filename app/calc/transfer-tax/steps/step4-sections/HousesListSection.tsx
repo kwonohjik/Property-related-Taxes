@@ -85,14 +85,14 @@ interface HouseBadge {
   cls: string;
 }
 
-function resolveHouseBadges(h: HouseEntry, judgmentMenu: boolean): HouseBadge[] {
+function resolveHouseBadges(h: HouseEntry, hideSurchargeInputs: boolean): HouseBadge[] {
   const badges: HouseBadge[] = [];
   if (h.isInherited) badges.push({ key: "inherited", label: "상속", cls: CHIP_AMBER });
   if (h.isLongTermRental) badges.push({ key: "rental", label: "장기임대", cls: CHIP_VIOLET });
   if (h.isApartment) badges.push({ key: "apt", label: "아파트", cls: CHIP_SKY });
   if (h.isOfficetel) badges.push({ key: "ofc", label: "오피스텔", cls: CHIP_SKY });
   // 5호(중과 제외) 사실의 배지 — 판정 route는 읽지 않는다. 판정 메뉴에 달면 반영된 것처럼 보인다(S14a-9).
-  if (h.isUnsoldHousing && !judgmentMenu) badges.push({ key: "unsold", label: "조특법 감면", cls: CHIP_SKY });
+  if (h.isUnsoldHousing && !hideSurchargeInputs) badges.push({ key: "unsold", label: "조특법 감면", cls: CHIP_SKY });
   return badges;
 }
 
@@ -136,8 +136,8 @@ interface RowProps {
   transferDate: string | undefined;
   /** §154⑨ 같은 날 양도 순서가 닿는 양도 대상인가(`sameDayOrderApplies`) — 아니면 남은 선택값의 배지를 달지 않는다(주택 수에서도 빼지 않는다). */
   sameDayApplies: boolean;
-  /** 판정 메뉴 — 중과 전용 배지를 달지 않는다. */
-  judgmentMenu: boolean;
+  /** 중과 전용 입력을 닫은 화면 — 중과 전용 배지를 달지 않는다. */
+  hideSurchargeInputs: boolean;
 }
 
 /** 조특법 주택 수 제외 사유 — 「특례」 열 배지 문구. 어느 주택이 무슨 사유로 빠지는지 표에서 보인다. */
@@ -149,8 +149,8 @@ function countExclusionBadgeLabel(h: HouseEntry): string | undefined {
   return x.reduction.type === "new_99_4_hometown" ? "주택 수 제외: 고향주택" : "주택 수 제외: 농어촌주택";
 }
 
-function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, sameDayApplies, judgmentMenu }: RowProps) {
-  const badges = resolveHouseBadges(house, judgmentMenu);
+function HouseTableRow({ house, idx, onEdit, onRemove, mergeContext, countExclusionEnabled, countExclusionApplies, transferDate, sameDayApplies, hideSurchargeInputs }: RowProps) {
+  const badges = resolveHouseBadges(house, hideSurchargeInputs);
   const exclusionLabel =
     countExclusionEnabled && (countExclusionApplies?.(house) ?? true) ? countExclusionBadgeLabel(house) : undefined;
   const mergeSide = mergeContext ? mergeHouseSideOf(house, mergeContext) : undefined;
@@ -248,6 +248,9 @@ export function HousesListSection({
   countExclusionEnabled = false,
   countExclusionApplies,
   judgmentMenu = false,
+  hideSurchargeInputs = false,
+  taxIncentiveRentalEnabled = true,
+  householdGiftEnabled = false,
 }: {
   form: TransferFormData;
   onChange: (d: Partial<TransferFormData>) => void;
@@ -299,10 +302,15 @@ export function HousesListSection({
    *  - 머리말·빈 상태·C-1 안내가 계산기 문맥(중과 판정용·선택·① 칸)을 말하지 않는다(S14a-12).
    *  - 「분양권·조합원입주권이 없습니다」 확인 토글을 그리지 않는다(S10-9) — 판정 메뉴는 「입력 안 함」과 「없음」을
    *    구별하는 확인을 두지 않는다(2026-10-06 사용자 결정 · route가 `householdNoPresaleRightsConfirmed: true`로 고정).
-   *  - 행 편집 창이 중과 전용 입력을 열지 않고 명부 배지에 「조특법 감면」을 달지 않는다(S14a-9).
-   * 계산기는 넘기지 않아 동작 불변이다.
+   * 계산기는 넘기지 않아 동작 불변이다. 중과 전용 입력의 개폐는 이 prop이 아니라 아래 `hideSurchargeInputs`다(P0).
    */
   judgmentMenu?: boolean;
+  /** 행 편집 창의 중과 전용 입력과 「조특법 감면」 배지를 닫는다(S14a-9) — 1주택 판정 메뉴. 값은 `judgmentMenuFlags`. */
+  hideSurchargeInputs?: boolean;
+  /** 행 편집 창의 §167의3①3호 칸 — 계산기 기본 열림. */
+  taxIncentiveRentalEnabled?: boolean;
+  /** 행 편집 창의 P4 양론 C1 「동일세대원에게 증여」 질문 — 계산기 기본 닫힘. */
+  householdGiftEnabled?: boolean;
 }) {
   const houses = form.houses;
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -532,7 +540,7 @@ export function HousesListSection({
                     countExclusionApplies={countExclusionApplies}
                     transferDate={form.transferDate}
                     sameDayApplies={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
-                    judgmentMenu={judgmentMenu}
+                    hideSurchargeInputs={hideSurchargeInputs}
                   />
                 ))}
               </tbody>
@@ -714,11 +722,9 @@ export function HousesListSection({
               transferDate={form.transferDate}
               mergeContext={mergeContext}
               countExclusionEnabled={countExclusionEnabled}
-              // §167의3①3호는 중과 축 — 판정 메뉴(양도 주택 중과 섹션을 숨기는 화면)에서는 묻지 않는다.
-              taxIncentiveRentalEnabled={!hideSellingHouseExclusion}
-              // P4 양론 C1 「동일세대원에게 증여」는 판정 메뉴(쟁점 카드가 있는 화면)에서만 묻는다.
-              householdGiftEnabled={hideSellingHouseExclusion}
-              judgmentMenu={judgmentMenu}
+              taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
+              householdGiftEnabled={householdGiftEnabled}
+              hideSurchargeInputs={hideSurchargeInputs}
               // §154⑨ 같은 날 양도 순서는 §89①3호 주택 양도의 규정이다 — 입주권(§89①4호) 양도에는 열지 않는다.
               sameDayEnabled={sameDayOrderApplies(form.assets?.[0]?.assetKind)}
               // §155① 신규 주택 후보(양도 주택보다 나중에 취득한 행)에 취득 경위를 묻는다 — 판정 메뉴·계산기 같은 술어(결정 #43).

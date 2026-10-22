@@ -36,7 +36,7 @@ export function houseEntryHasSpecialExclusionFacts(house: SpecialExclusionFacts)
   );
 }
 
-/** 행 편집 창에 ④ 특수 배제 사유 카드를 그릴지 — 계산기는 항상, 판정 메뉴는 담긴 값이 있을 때만. */
-export function houseEntrySpecialExclusionVisible(house: SpecialExclusionFacts, judgmentMenu: boolean): boolean {
-  return !judgmentMenu || houseEntryHasSpecialExclusionFacts(house);
+/** 행 편집 창에 ④ 특수 배제 사유 카드를 그릴지 — 중과 입력을 연 화면은 항상, 닫은 화면(1주택 판정 메뉴)은 담긴 값이 있을 때만. */
+export function houseEntrySpecialExclusionVisible(house: SpecialExclusionFacts, hideSurchargeInputs: boolean): boolean {
+  return !hideSurchargeInputs || houseEntryHasSpecialExclusionFacts(house);
 }

@@ -27,6 +27,7 @@ import { useMemo } from "react";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseCountExemptionInputs } from "@/app/calc/transfer-tax/steps/step4-sections/HouseCountExemptionInputs";
+import { judgmentMenuFlags } from "@/lib/calc/judgment-menu-flags";
 import { TemporaryTwoHouseSection } from "@/app/calc/transfer-tax/steps/step4-sections/TemporaryTwoHouseSection";
 import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
@@ -69,6 +70,8 @@ type Props = {
   form: OneHouseJudgmentFormData;
   onChange: (patch: Partial<OneHouseJudgmentFormData>) => void;
 };
+
+const ONE_HOUSE_FLAGS = judgmentMenuFlags("one_house");
 
 export function Step2({ form, onChange }: Props) {
   /**
@@ -174,10 +177,14 @@ export function Step2({ form, onChange }: Props) {
       <HouseCountExemptionInputs
         form={viewForm}
         onChange={onChange}
-        hideGracePeriod
-        hideSellingHouseExclusion
-        // 「배우자 단독 보유」(중과 축)는 판정에 쓰이지 않는다 — 같은 사실을 합가 전 보유 쪽이 묻는다.
-        hideSpouseOwned
+        // 열고 닫는 칸은 메뉴별 표 한 곳(`judgmentMenuFlags`)에 있다 — 중과 축 입력은 이 메뉴에서 닫는다.
+        //   「배우자 단독 보유」(중과 축)는 판정에 쓰이지 않는다 — 같은 사실을 합가 전 보유 쪽이 묻는다.
+        hideGracePeriod={ONE_HOUSE_FLAGS.hideGracePeriod}
+        hideSellingHouseExclusion={ONE_HOUSE_FLAGS.hideSellingHouseExclusion}
+        hideSpouseOwned={ONE_HOUSE_FLAGS.hideSpouseOwned}
+        hideSurchargeInputs={ONE_HOUSE_FLAGS.hideSurchargeInputs}
+        taxIncentiveRentalEnabled={ONE_HOUSE_FLAGS.taxIncentiveRentalEnabled}
+        householdGiftEnabled={ONE_HOUSE_FLAGS.householdGiftEnabled}
         // 합가 칸과 같은 게이트 — 칸이 없거나 합가일이 비면 행에 묻지 않는다.
         mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
         /*
@@ -188,8 +195,8 @@ export function Step2({ form, onChange }: Props) {
         */
         countExclusionEnabled
         countExclusionApplies={(h) => judgmentCountExclusionRowApplies(form, h)}
-        // 명시 prop — 머리말·확인 토글·중과 전용 입력이 이 화면에서 달라진다(S14a-9·S14a-12·S10-9).
-        judgmentMenu
+        // 명시 prop — 머리말·확인 토글이 이 화면에서 달라진다(S14a-12·S10-9).
+        judgmentMenu={ONE_HOUSE_FLAGS.judgmentMenu}
       />
 
       {/* 행을 지정하지 않은 옛 세대 단위 선언 — ⑧이 막으므로 해소 경로를 함께 둔다(Q-2). */}
