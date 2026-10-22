@@ -70,6 +70,8 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
+import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collateral-win";
+import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
 
 
 // 배율은 엔진 getBuildingSiteMultiplier가 단일 진실 — UI에서 재구현 금지.
@@ -434,7 +436,7 @@ export function GeneralBuildingBlock({
             {bgStdUse === "standard"
               ? "부담부증여(기준시가 모드) — 양도시 ① 토지 · ② 건물 기준시가 합계가 증여가액의 보충적 평가액이 되고, 양도시 비율로 양도가액을 토지·건물로 나눕니다. 취득가액은 취득시 기준시가 × 채무비율입니다."
               : bgStdUse === "market_collateral"
-                ? "부담부증여(시가 모드 · 담보평가 승) — 담보평가액이 시가보다 커서 증여가액이 담보평가액입니다(상증법 §66). 양도시 비율로 양도가액을 토지·건물로 나누고, 취득가액은 산정방식과 관계없이 취득시 기준시가 × 채무비율입니다(소령 §159①1호 괄호)."
+                ? "부담부증여(시가 모드 · 담보평가 승) — 담보평가액이 시가보다 커서 증여가액이 담보평가액입니다(상증법 §66). 양도시 비율로 양도가액을 토지·건물로 나누고, 취득가액은 산정방식과 관계없이 취득시 기준시가 × 채무비율입니다(소령 §159①1호 괄호" + (bgCollateralParenEraUncertain(transferDate) ? BG_COLLATERAL_PAREN_ERA_SUFFIX : "") + ")."
               : bgStdUse === "market_actual"
                 ? "부담부증여(시가 모드 · 실지취득가액) — 기준시가는 금액이 아니라 토지·건물 배분 비율로만 쓰입니다. 양도시 비율로 시가(양도가액)와 양도비를, 취득시 비율로 자본적지출을 나눕니다. 취득가액은 실지취득가액 × 채무비율입니다."
                 : bgStdUse === "market_converted"
@@ -726,7 +728,7 @@ export function GeneralBuildingBlock({
               {bgStdUse === "market_collateral" && (
                 <p data-testid="gb-bg-collateral-acq-notice">
                   담보평가액이 시가보다 커서 증여가액이 담보평가액(상증법 §66)이므로 취득가액은 <b>취득시 기준시가 × 채무비율</b>로
-                  산정합니다(소령 §159①1호 괄호). 선택한 산정방식의 금액은 쓰이지 않고, 필요경비는 개산공제입니다.
+                  산정합니다(소령 §159①1호 괄호{bgCollateralParenEraUncertain(transferDate) && BG_COLLATERAL_PAREN_ERA_SUFFIX}). 선택한 산정방식의 금액은 쓰이지 않고, 필요경비는 개산공제입니다.
                 </p>
               )}
               {bgStdUse === "market_actual" && (

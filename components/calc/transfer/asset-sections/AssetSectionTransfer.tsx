@@ -19,6 +19,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
+import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collateral-win";
+import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import {
   stdPriceAtTransferComesFromElsewhere,
@@ -210,7 +212,7 @@ export function AssetSectionTransfer({
             <p className="text-caption text-amber-700 dark:text-amber-300">
               {bgCollateralForcesStdAcq(asset) ? (
                 <>
-                  담보평가액이 시가보다 커서 증여가액이 담보평가액(상증법 §66)이므로 취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호 괄호).
+                  담보평가액이 시가보다 커서 증여가액이 담보평가액(상증법 §66)이므로 취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호 괄호{bgCollateralParenEraUncertain(transferDate) && BG_COLLATERAL_PAREN_ERA_SUFFIX}).
                   위 양도시 기준시가와 같은 기준으로 취득 당시 값을 입력하세요.
                 </>
               ) : asset.bgValuationMode === "sangjeungbeop_market" ? (
