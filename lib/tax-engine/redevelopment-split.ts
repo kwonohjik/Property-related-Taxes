@@ -129,6 +129,16 @@ export interface RedevelopmentSplitInput {
    * 율 산출은 `estimatedDeductionRate()` 단일 경유.
    */
   isUnregistered?: boolean;
+  /**
+   * 부담부증여 × 기준시가 모드(「소득세법 시행령」 §159①1호 괄호) — 인가 전 분 개산공제 base = 취득시 기준시가 × 채무비율
+   * (§159 명세의 안분 취득가액 — 지분 축소까지 반영된 값이라 여기서 다시 줄이지 않는다).
+   *
+   * 취득가액이 기준시가라 실지거래가액이 아니므로 「소득세법」 §97②**2호**(그 밖의 경우)이고, §166①1호 인가 전 분 필요경비의
+   * 「§97①2·3호 **또는** §163⑥」 중 §163⑥(개산공제)이다 — 일반 부담부증여 기준시가 경로·완공 아파트 K-5와 같다.
+   * 있으면 Step B가 이 base로 개산공제를 내고, Step C 택일(`preApprovalNecessaryExpense`)이 인가 전 실비 대신 그것을 쓴다.
+   * 계획서 `docs/00-pm/bg-redev-apt-pre-approval-lump-deduction.plan.md`.
+   */
+  burdenedGiftStdLumpBase?: number;
 }
 
 /** 3분할 양도차익 결과 (LTHD 미적용 — lthd.ts 에서 별도 적용) */
@@ -219,7 +229,10 @@ export function computeRedevelopmentSplit(
       method: "actual",
       numerator: 0,
       denominator: 0,
-      rationale: "실가 모드 — actualAcquisitionPrice 사용",
+      rationale:
+        input.burdenedGiftStdLumpBase !== undefined
+          ? "부담부증여 기준시가 평가 — 취득시 기준시가 × 채무비율 (소득세법 시행령 제159조 제1항 제1호 괄호)"
+          : "실가 모드 — actualAcquisitionPrice 사용",
     };
   }
 
@@ -228,7 +241,14 @@ export function computeRedevelopmentSplit(
   // 필요경비로 차감. P_A = valuationMeta.numerator (본문 발동 시 Step 1 결과, 미발동 시
   // acquisitionHousingPrice 단일값). 실가 모드는 0.
   let estimatedLumpDeduction = 0;
-  if (
+  if (input.burdenedGiftStdLumpBase !== undefined && valuationMeta) {
+    // 부담부증여 기준시가 모드 — base는 §159 안분 취득가액(채무비율·지분 반영 완료)이라 그대로 율만 곱한다(위 입력 JSDoc).
+    const rate = estimatedDeductionRate(input.isUnregistered);
+    estimatedLumpDeduction = computeEstimatedDeduction(input.burdenedGiftStdLumpBase, rate);
+    valuationMeta.lumpDeductionBase = input.burdenedGiftStdLumpBase;
+    // «실가»가 아니다 — 들어온 취득가액이 §159 기준시가 안분값이다. 표시 산식이 이 율 echo로 갈린다.
+    valuationMeta.burdenedGiftStdLumpRate = rate;
+  } else if (
     useEstimatedAcquisition &&
     valuationMeta &&
     valuationMeta.method !== "actual" &&

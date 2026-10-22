@@ -60,3 +60,18 @@ export function redevSec166DisplayOf(result: {
   if (!d?.valuationMeta?.method.startsWith("estimated")) return undefined;
   return { acquisition: d.preApproval.apportionedAcquisition, lumpDeduction: d.estimatedLumpDeduction ?? 0 };
 }
+
+/**
+ * 부담부증여 × 완공 아파트(원조합원) — 인가 전 분 필요경비가 개산공제(「소득세법 시행령」 §163⑥)라 재개발 블록
+ * 「인가전 분 필요경비」(실비) 칸이 계산에 쓰이지 않는가. ⑤ 칸 숨김·안내의 단일 게이트.
+ *
+ * - 기준시가 모드: 취득가액이 취득시 기준시가 × 채무비율(§159①1호 괄호)이라 개산공제(엔진 `burdenedGiftStdLumpBase`).
+ * - 시가 · 환산(K-5): §166③ 환산 + 개산공제 — 실비와 택일이라 개산공제가 고른다(`preApprovalNecessaryExpense`).
+ * - 시가 · 실지(K-4) · 입주권(K-4 고정) · 승계조합원은 실비를 쓴다.
+ * 계획서 `docs/00-pm/bg-redev-apt-pre-approval-lump-deduction.plan.md`.
+ */
+export function redevPreApprovalExpensesUnused(asset: RedevPreApprovalAcqModeFields): boolean {
+  if (asset.transferType !== "burdened_gift") return false;
+  if (asset.assetKind !== "redevelopment_apt" || asset.redevIsSuccessorMember === "yes" || asset.redevSubject === "right") return false;
+  return redevPreApprovalAcqMode(asset) === "estimated" || asset.bgValuationMode !== "sangjeungbeop_market";
+}
