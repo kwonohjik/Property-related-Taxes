@@ -1198,6 +1198,11 @@ export interface TransferTaxInput {
   suppressShortTermRate?: boolean;
   /** P5 특례 — §98①1호 세율 20% 단일 (§104① 불구). 엔진 내부 주입 (STEP 7). */
   forceFlatRate20?: boolean;
+  /**
+   * 반사실 — §104⑦ 다주택 중과를 **세율·장특 두 축 모두** 적용하지 않은 세액(다주택 중과 판정 메뉴 시뮬레이션 B).
+   * 서버 route만 주입한다(Zod 스키마에 없다 — 클라이언트가 보낼 수 없다). 술어 `resolveSurchargeApplication` 최상단에서 닫는다.
+   */
+  forceNoMultiHouseSurcharge?: boolean;
   /** P5 모드 2 — 보유 감면주택 §89①3호 주택수 제외 (7개 조문 ②·§98 령②·§99②). */
   specialHouseExclusions?: import("../transfer-reductions/unsold-hybrid-p5").SpecialHouseExclusionInput[];
   /**

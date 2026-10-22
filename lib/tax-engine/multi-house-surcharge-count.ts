@@ -73,23 +73,48 @@ export function isEupMyeonByRegionCode(regionCode: string | undefined): boolean 
   return Number(regionCode.slice(5, 8)) >= 250;
 }
 
+/**
+ * 영 §167의3①1호 지역기준(REGION)·가액기준(VALUE)의 **이유** — 다주택 중과 판정 메뉴 표 ①·설명문(계획서 §4.4).
+ * `classifyRegionCriteriaByCode`는 이 함수의 `criteria`다(분기 하나 — 이유와 결론이 갈라지지 않게).
+ */
+export type RegionCriteriaReason =
+  | "no_code" // 코드 없음 — 가액기준으로 본다(호출부가 수동 지역 구분·「주소 미입력」을 따로 다룬다)
+  | "eup_myeon" // 「지방자치법」 §3③④·세종시법 §6③의 읍·면
+  | "seoul"
+  | "capital_city" // 경기 시(동)
+  | "capital_county" // 경기 군(연천·가평·양평)
+  | "metro_district" // 광역시·통합특별시 자치구(인천 포함)
+  | "metro_county" // 광역시에 소속된 군
+  | "sejong" // 세종 동
+  | "integrated_si_gun" // 전남광주통합특별시의 시·군
+  | "province"; // 그 밖의 도
+
+export interface RegionCriteriaDetail {
+  criteria: "REGION" | "VALUE";
+  reason: RegionCriteriaReason;
+}
+
 export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VALUE" {
-  if (!regionCode || regionCode.length < 2) return "VALUE";
+  return classifyRegionCriteriaDetail(regionCode).criteria;
+}
+
+export function classifyRegionCriteriaDetail(regionCode: string): RegionCriteriaDetail {
+  if (!regionCode || regionCode.length < 2) return { criteria: "VALUE", reason: "no_code" };
 
   // §167의3①1호 괄호 — 「지방자치법」 제3조제3항·제4항의 읍·면(군·도농복합시)과 세종시법 제6조제3항의 읍·면은
   //   지역기준에서 빠진다. 아래 시도·군 분기는 5자리만 보므로 경기 시의 읍·면·세종 읍·면을 놓쳤다(2026-10-22 정정 —
   //   docs/00-pm/multi-house-surcharge-eupmyeon-region.plan.md). 광역시 자치구에는 읍·면이 없다(같은 전체자료 실측).
-  if (isEupMyeonByRegionCode(regionCode)) return "VALUE";
+  if (isEupMyeonByRegionCode(regionCode)) return { criteria: "VALUE", reason: "eup_myeon" };
 
   const sidoCode = regionCode.substring(0, 2);
   const sggCode = regionCode.substring(0, 5);
 
-  if (sidoCode === "11") return "REGION"; // 서울
+  if (sidoCode === "11") return { criteria: "REGION", reason: "seoul" }; // 서울
 
   // 인천: 강화군(28710)·옹진군(28720) VALUE, 나머지 REGION
   if (sidoCode === "28") {
-    if (sggCode === "28710" || sggCode === "28720") return "VALUE";
-    return "REGION";
+    if (sggCode === "28710" || sggCode === "28720") return { criteria: "VALUE", reason: "metro_county" };
+    return { criteria: "REGION", reason: "metro_district" };
   }
 
   // 경기: 연천군(41800)·가평군(41820)·양평군(41830) VALUE, 나머지 REGION
@@ -105,14 +130,14 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
   //   있어 안전망에 걸리지 않았다 — 코드 리터럴 전수 대조 anchor를 함께 도입한 이유다
   //   (`__tests__/tax-engine/transfer/sigungu-code-literal-audit.anchor.test.ts`).
   if (sidoCode === "41") {
-    if (sggCode === "41800" || sggCode === "41820" || sggCode === "41830") return "VALUE";
-    return "REGION";
+    if (sggCode === "41800" || sggCode === "41820" || sggCode === "41830") return { criteria: "VALUE", reason: "capital_county" };
+    return { criteria: "REGION", reason: "capital_city" };
   }
 
   // 부산: 기장군(26710) VALUE
   if (sidoCode === "26") {
-    if (sggCode === "26710") return "VALUE";
-    return "REGION";
+    if (sggCode === "26710") return { criteria: "VALUE", reason: "metro_county" };
+    return { criteria: "REGION", reason: "metro_district" };
   }
 
   // 대구: 달성군(27710)·군위군(27720) VALUE
@@ -128,12 +153,12 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
   //   갈린다(납세자 불리 방향).
   //   편입 전(47720)·후(27720) 코드 모두 VALUE로 수렴하므로 시점 게이팅은 불필요하다.
   if (sidoCode === "27") {
-    if (sggCode === "27710" || sggCode === "27720") return "VALUE";
-    return "REGION";
+    if (sggCode === "27710" || sggCode === "27720") return { criteria: "VALUE", reason: "metro_county" };
+    return { criteria: "REGION", reason: "metro_district" };
   }
 
-  if (sidoCode === "29") return "REGION"; // 구 광주광역시 (통합 전 코드 — 저장된 이력·수동 입력)
-  if (sidoCode === "30") return "REGION"; // 대전
+  if (sidoCode === "29") return { criteria: "REGION", reason: "metro_district" }; // 구 광주광역시 (통합 전 코드 — 저장된 이력·수동 입력)
+  if (sidoCode === "30") return { criteria: "REGION", reason: "metro_district" }; // 대전
 
   // 전남광주통합특별시(12): **자치구만** REGION, 시·군은 VALUE.
   //
@@ -150,19 +175,21 @@ export function classifyRegionCriteriaByCode(regionCode: string): "REGION" | "VA
   //   같은 파일의 군위군(47720→27720) 주석이 지적한 「행정구역 개편이 세법상 취급을
   //   바꿔버리는」 함정이 재발한 것이다.
   if (sidoCode === "12") {
-    return INTEGRATED_GWANGJU_DISTRICT_CODES.has(sggCode) ? "REGION" : "VALUE";
+    return INTEGRATED_GWANGJU_DISTRICT_CODES.has(sggCode)
+      ? { criteria: "REGION", reason: "metro_district" }
+      : { criteria: "VALUE", reason: "integrated_si_gun" };
   }
 
   // 울산: 울주군(31710) VALUE
   if (sidoCode === "31") {
-    if (sggCode === "31710") return "VALUE";
-    return "REGION";
+    if (sggCode === "31710") return { criteria: "VALUE", reason: "metro_county" };
+    return { criteria: "REGION", reason: "metro_district" };
   }
 
-  if (sidoCode === "36") return "REGION"; // 세종
+  if (sidoCode === "36") return { criteria: "REGION", reason: "sejong" }; // 세종
 
   // 기타 도 지역: VALUE
-  return "VALUE";
+  return { criteria: "VALUE", reason: "province" };
 }
 
 // ============================================================
@@ -481,16 +508,29 @@ export function taxIncentiveRentalAptDeadlineConfirmReasons(
  * 여기에 양도일 조건을 또 넣으면 진실이 둘이 된다.
  */
 export function isPresaleRightCounted(right: PresaleRight, presaleStartDate: Date): boolean {
+  return presaleRightCountReason(right, presaleStartDate) === "counted";
+}
+
+/**
+ * `isPresaleRightCounted`의 **사유** — 다주택 중과 판정 메뉴 표 ③(계획서 §4.4). 술어는 이 함수 하나다.
+ * - `presale_before_start` — 2021.1.1. 전 취득 분양권(§88 10호 정의 신설 적용례)
+ * - `low_value_local` — 가액기준 지역 3억 이하(영 §167의4②1호·§167의11②1호)
+ */
+export function presaleRightCountReason(
+  right: PresaleRight,
+  presaleStartDate: Date,
+): "counted" | "presale_before_start" | "low_value_local" {
   // 분양권 전용 — §88 10호 정의 신설 적용례. 조합원입주권은 그 이전부터 산입 요소였다(위 주석).
   // 상속 분양권은 동일세대면 피상속인 취득일 — §89②와 같은 leaf(`presale-right-definition-date.ts`).
-  if (right.type === "presale_right" && presaleRightDefinitionAcquisitionDate(right) < presaleStartDate) return false;
+  if (right.type === "presale_right" && presaleRightDefinitionAcquisitionDate(right) < presaleStartDate)
+    return "presale_before_start";
   // 소재지 법정동코드(10자리)가 있으면 그것으로 분류한다 — 선택값(수도권/광역시·세종/그 외 지방)으로는 읍·면을 고를 수 없다.
   const rc =
     right.regionCode && right.regionCode.length >= 10
       ? classifyRegionCriteriaByCode(right.regionCode)
       : (right.regionCriteria ?? (right.region === "capital" ? "REGION" : "VALUE"));
-  if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) return false;
-  return true;
+  if (rc === "VALUE" && (right.rightValue ?? Infinity) <= MULTI_HOUSE.PRESALE_LOW_VALUE_CAP) return "low_value_local";
+  return "counted";
 }
 
 /**
