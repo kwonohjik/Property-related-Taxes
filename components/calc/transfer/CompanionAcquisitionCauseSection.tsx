@@ -18,6 +18,7 @@ import { CompanionAcqInheritanceBlock } from "./CompanionAcqInheritanceBlock";
 import { CompanionAcqGiftBlock } from "./CompanionAcqGiftBlock";
 import { GiftHouseStdPriceSection } from "./GiftHouseStdPriceSection";
 import { GiftLandStdPriceSection } from "./GiftLandStdPriceSection";
+import { GiftPreDeemedConversionSection } from "./GiftPreDeemedConversionSection";
 import { GiftHouseholdFactInputs } from "./GiftedSameHouseholdField";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -359,6 +360,11 @@ export function CompanionAcquisitionCauseSection({
       {/* 증여 토지 §164④ 취득당시 기준시가 — max(증여일 상증법 평가액, §164④). 소령 §163⑨1호.
           환산(나목)과 무관한 가목 입력이라 환산 모드 토글 밖에 둔다. */}
       {!d2On && <GiftLandStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />}
+
+      {/* 의제취득일(1985.1.1.) 전 증여 — ③ 환산취득가액의 분자·분모(①·② 칸 뒤 · 상속 `PreDeemedInputs`와 같은 칸). 자체 게이트
+          (`isGiftPreDeemedConversionAsset` — ④ 전송 게이트와 같은 술어). 상가는 위 증여 블록 뒤에 오고 §164⑥ 칸은 아래 상가 섹션에 있다
+          (상속 상가와 같은 배치). 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §16. */}
+      {!d2On && <GiftPreDeemedConversionSection asset={asset} onChange={onChange} transferDate={transferDate} />}
 
       {/* 의제취득일 前 상속·증여 + ①·② 미충족 → §163⑨ 평가액 미반영 안내 + 「가목 확인 불가」 선언.
           E-1(U2-E)로 **차단이 붙었다** — 선언이 없으면 `clauseADeclarationError`가 계산을 막는다.

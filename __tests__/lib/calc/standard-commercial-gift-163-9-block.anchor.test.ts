@@ -73,10 +73,10 @@ describe("표준·상가 gift §163⑨ 추계모드 차단 (validation)", () => 
   it("A5 표준 건물 gift + 실거래가 + 신고가액 → 가드 미발동", () => {
     expect(V(asset()) ?? "").not.toContain(BLOCK_MSG);
   });
-  it("A6 표준 건물 gift(1983, pre-1985) + 환산 → 가드 미발동(의제취득)", () => {
-    expect(V(asset({ acquisitionDate: "1983-06-01", useEstimatedAcquisition: true })) ?? "").not.toContain(
-      BLOCK_MSG,
-    );
+  // 🔄 PR-5(2026-10-22) — 1985 전 증여도 막는다. ③은 증여 화면 전용 칸(`GiftPreDeemedConversionSection`)이 받고
+  //    ①(증여 신고가액)이 필수라(사용자 결정 Q-14) 추계 플래그는 ③으로 가는 통로가 아니다.
+  it("🔄 A6 표준 건물 gift(1983, pre-1985) + 환산 → 가드 발동", () => {
+    expect(V(asset({ acquisitionDate: "1983-06-01", useEstimatedAcquisition: true })) ?? "").toContain(BLOCK_MSG);
   });
   it("A9 상가 gift + 실거래가 + 신고가액 → 가드 미발동", () => {
     expect(V(asset({ assetKind: "commercial_building" })) ?? "").not.toContain(BLOCK_MSG);

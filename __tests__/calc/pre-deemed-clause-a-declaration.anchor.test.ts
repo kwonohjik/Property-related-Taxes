@@ -97,20 +97,32 @@ function inhCommercial(over: Partial<AssetForm> = {}): AssetForm {
 // ── X-1 ~ X-6: 기본 4분면 ─────────────────────────────────────────
 
 describe("E-1 — ①·② 미충족 시 「확인 불가」 선언 요구", () => {
-  it("X-1: 증여·추계 · ① 입력 → 통과 (가목 = ①)", () => {
-    expect(V(giftLand({ fixedAcquisitionPrice: "100000000" }))).toBeNull();
+  /**
+   * 🔄 **증여에는 선언 경로가 없다**(PR-5 · 사용자 결정 Q-14, 2026-10-22). ①(증여 신고가액)은 계속 필수이고 ③은 증여 화면의
+   * 전용 칸(`GiftPreDeemedConversionSection`)으로 받는다. 종전 X-1~X-4는 「1985 전 증여 · 추계 플래그」를 ③으로 가는 통로로 썼다 —
+   * 그 플래그는 이제 남은 값으로 보아 ⑧이 막고(`giftEstimatedModeBlocked` 1985 하한 제거) 복원에서 비운다.
+   */
+  const GIFT_EST_BLOCK = /증여 취득 자산은 환산취득가·감정가액·매매사례가액을 지원하지 않습니다/;
+
+  it("🔄 X-1: 증여 · 남은 추계 플래그 · ① 입력 → 추계 차단(선언이 아니라 플래그를 끄라는 안내)", () => {
+    expect(V(giftLand({ fixedAcquisitionPrice: "100000000" }))).toMatch(GIFT_EST_BLOCK);
   });
 
-  it("X-2: 증여·추계 · ① 비움 · ② 충족 → 통과 (가목 = ② 단독, §163⑨1호 「많은 금액」)", () => {
-    expect(V(giftLand({ ...LAND_5 }))).toBeNull();
+  it("🔄 X-2: 증여 · 실거래가 · ① 비움 · ② 충족(토지 등급) → 증여 신고가액 요구 (종전 실거래가 규칙 그대로 · Q-14)", () => {
+    // 종전 X-2는 추계 플래그 덕에 ① 검사를 건너뛰었다. 화면의 증여 토지 등급 입력은 `pre1990Enabled` 래치를 켜지 않으므로
+    // (`alwaysOpen` · 복원 시 `sec164LandLatchClearPatch`) 실거래가 증여는 ①이 필수다 — ②는 ①과 비교할 값이다.
+    expect(V(giftLand({ ...LAND_5, useEstimatedAcquisition: false }))).toMatch(/증여 신고가액을 입력하세요/);
+    expect(V(giftLand({ ...LAND_5, useEstimatedAcquisition: false, fixedAcquisitionPrice: "100000000" }))).toBeNull();
   });
 
-  it("★ X-3: 증여·추계 · ① 비움 · ② 미충족 · 선언 없음 → 차단 (신규)", () => {
-    expect(V(giftLand())).toMatch(CLAUSE_A);
+  it("🔄 X-3: 증여 · 실거래가 · ①② 비움 → 「확인 불가」 선언이 아니라 증여 신고가액을 요구한다 (Q-14)", () => {
+    const err = V(giftLand({ useEstimatedAcquisition: false, standardPriceAtAcq: "", standardPriceAtTransfer: "" }));
+    expect(err).toMatch(/증여 신고가액을 입력하세요/);
+    expect(err).not.toMatch(CLAUSE_A);
   });
 
-  it("X-4: 증여·추계 · ① 비움 · ② 미충족 · 선언 → 통과 (③ 나목)", () => {
-    expect(V(giftLand({ preDeemedClauseAUnconfirmed: true }))).toBeNull();
+  it("🔄 X-4: 증여 · 실거래가 · ①② 비움 · 선언 + ③ 칸 → 선언으로 뚫리지 않는다 (Q-14)", () => {
+    expect(V(giftLand({ useEstimatedAcquisition: false, preDeemedClauseAUnconfirmed: true }))).toMatch(/증여 신고가액을 입력하세요/);
   });
 
   it("★ X-5: 상속 주택 · 실거래가 · ① 비움 · ② 미충족 · 선언 없음 → 차단 (P2c 제외의 해소)", () => {
@@ -183,7 +195,7 @@ describe("D-5 — 상가 게이트 완화 (§163⑨2호 「많은 금액」 = �
     expect(V(a)).toMatch(/상속개시일 평가액/);
   });
 
-  it("X-13: **증여** 상가 · 추계 · ① 비움 · ② 미충족 · 선언 없음 → 차단", () => {
+  it("🔄 X-13: **증여** 상가 · 남은 추계 플래그 → 추계 차단 (PR-5 — 1985 전 증여 상가는 환산 토글을 숨기고 ③ 칸을 쓴다 · Q-13)", () => {
     const a = inhCommercial({
       acquisitionCause: "gift",
       inheritanceStartDate: "",
@@ -197,7 +209,7 @@ describe("D-5 — 상가 게이트 완화 (§163⑨2호 「많은 금액」 = �
       standardPriceAtAcq: "50000000",
       standardPriceAtTransfer: "1243350000",
     });
-    expect(V(a)).toMatch(CLAUSE_A);
+    expect(V(a)).toMatch(/증여 취득 자산은 환산취득가·감정가액·매매사례가액을 지원하지 않습니다/);
   });
 });
 

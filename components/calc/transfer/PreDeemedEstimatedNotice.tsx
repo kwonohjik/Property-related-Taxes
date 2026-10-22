@@ -18,6 +18,7 @@
  *    「토글은 보이는데 차단은 안 되는」 침묵 실패가 된다(memory `feedback_shared_predicate_argument_parity`).
  *    그 술어는 취득원인별로 비대칭이다 — **증여는 추계 계열에서만**(실거래가는 「증여 신고가액을
  *    입력하세요」가 이미 막는다), **상속은 모드와 무관**하다(P2c 제외로 구멍이었다).
+ *    ③ 칸이 있는 증여(`isGiftPreDeemedConversionAsset` — PR-5)는 ①이 늘 필수라(Q-14) 이 안내가 뜨지 않는다.
  *
  * 설계: docs/02-design/features/pre-deemed-clause-a-confirmation-criteria.engine.design.md §4.2·§4.4
  */

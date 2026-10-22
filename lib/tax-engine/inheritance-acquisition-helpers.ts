@@ -329,8 +329,12 @@ function resolveInheritedAcquisitionInput(
     //    계획서: docs/02-design/features/inheritance-pre-deemed-converted-numerator-timing.plan.md
     //           docs/02-design/features/sec164-clause-a-deemed-date-timing-b1.plan.md
     standardPriceAtDeemedDate = houseValuationResult.housePriceAtInheritanceUsed;
+    // 분모 — 직접 보낸 양도시 기준시가가 있으면 그것(④는 「양도시 기준시가 직접 입력」 토글이 켜졌을 때만 싣는다 ·
+    // `preDeemedSentStdPrices`), 없으면 양도 당시 공시 개별주택가격(PR-5 — 종전에는 직접 입력을 덮었다).
     standardPriceAtTransfer =
-      rawInput.inheritedHouseValuation?.housePriceAtTransfer ?? standardPriceAtTransfer;
+      base.standardPriceAtTransfer ??
+      rawInput.inheritedHouseValuation?.housePriceAtTransfer ??
+      standardPriceAtTransfer;
   } else if (shouldInjectPre1990) {
     standardPriceAtDeemedDate = pre1990LandResult.standardPriceAtAcquisition;
   }

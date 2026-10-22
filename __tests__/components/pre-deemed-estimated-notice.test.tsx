@@ -25,6 +25,11 @@ function asset(over: Partial<AssetForm> = {}): AssetForm {
   return { ...makeDefaultAsset(1), assetKind: "land", ...over } as AssetForm;
 }
 
+/** 의제취득일 前 상속 + 환산 모드 — 선언 토글 쓰기 경로는 상속으로 본다(증여는 PR-5 Q-14로 선언 경로가 없다). */
+function preDeemedInh(over: Partial<AssetForm> = {}): AssetForm {
+  return asset({ acquisitionCause: "inheritance", acquisitionDate: "1980-03-01", inheritanceStartDate: "1980-03-01", useEstimatedAcquisition: true, ...over });
+}
+
 /** 의제취득일 前 증여 + 환산 모드 */
 function preDeemedGift(over: Partial<AssetForm> = {}): AssetForm {
   return asset({
@@ -37,9 +42,11 @@ function preDeemedGift(over: Partial<AssetForm> = {}): AssetForm {
 }
 
 describe("S-1: pre-deemed + 추계 + ① 미입력 안내", () => {
-  it("U2-1: 증여 pre-1985 + 환산 + ① 비움 → 노출", () => {
+  // 🔄 PR-5(사용자 결정 Q-14) — 증여는 ①(증여 신고가액)이 필수라 「①을 비우면 ③만 남는다」는 안내·선언이 없다.
+  //    남은 추계 플래그는 ⑧ `giftEstimatedModeBlocked`가 막고 복원에서 비운다.
+  it("🔄 U2-1: 증여 pre-1985 + 환산(남은 플래그) + ① 비움 → 미노출 (Q-14)", () => {
     render(<PreDeemedEstimatedNotice asset={preDeemedGift()} onChange={NOOP} />);
-    expect(screen.queryAllByText(NOTICE).length).toBeGreaterThan(0);
+    expect(screen.queryByText(NOTICE)).toBeNull();
   });
 
   it("U2-2: **상속** pre-1985 + 환산 + ① 비움 → 노출 (증여와 대칭)", () => {
@@ -82,11 +89,11 @@ describe("S-1: pre-deemed + 추계 + ① 미입력 안내", () => {
     expect(screen.queryByText(NOTICE)).toBeNull();
   });
 
-  it("U2-8: 감정가액·매매사례가액 모드도 같은 안내 (추계 3종 공통)", () => {
+  it("U2-8: 감정가액·매매사례가액 모드도 같은 안내 (추계 3종 공통 — 상속)", () => {
     render(
       <PreDeemedEstimatedNotice
         onChange={NOOP}
-        asset={preDeemedGift({ useEstimatedAcquisition: false, isAppraisalAcquisition: true })}
+        asset={preDeemedInh({ useEstimatedAcquisition: false, isAppraisalAcquisition: true })}
       />,
     );
     expect(screen.queryAllByText(NOTICE).length).toBeGreaterThan(0);
@@ -101,14 +108,14 @@ describe("E-1: 「가목 확인 불가」 선언 토글", () => {
   const DECL = /상증법 평가액」을 확인할 수 없음/;
 
   it("U2-9: 안내가 뜨는 조합이면 선언 토글도 함께 뜬다 (⑤⑧ 술어 공유)", () => {
-    render(<PreDeemedEstimatedNotice asset={preDeemedGift()} onChange={NOOP} />);
+    render(<PreDeemedEstimatedNotice asset={preDeemedInh()} onChange={NOOP} />);
     expect(screen.queryAllByText(DECL).length).toBeGreaterThan(0);
   });
 
   it("U2-10: 토글을 켜면 `preDeemedClauseAUnconfirmed: true`를 쓴다", () => {
     const writes: Partial<AssetForm>[] = [];
     render(
-      <PreDeemedEstimatedNotice asset={preDeemedGift()} onChange={(d) => writes.push(d)} />,
+      <PreDeemedEstimatedNotice asset={preDeemedInh()} onChange={(d) => writes.push(d)} />,
     );
     fireEvent.click(screen.getAllByRole("switch")[0]);
     expect(writes).toEqual([{ preDeemedClauseAUnconfirmed: true }]);

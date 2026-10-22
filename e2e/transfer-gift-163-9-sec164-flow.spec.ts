@@ -171,71 +171,55 @@ test.describe("증여 §163⑨1호 — §164④ 전 구간 (#1103·#1106·#1108)
     await expect(page.getByText(/누락: 취득시 토지등급/).first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test("③ 안내: 의제취득일 前 증여 + 추계 + ① 비움 → §163⑨ 미반영 경고 (#1108)", async ({
-    page,
-  }) => {
+  /**
+   * ③ 🔄 PR-5(2026-10-22) — 의제취득일 前 증여에는 **③ 전용 칸**이 있다. 종전에는 칸이 없어 「추계 플래그 + 선언」이 ③으로 가는
+   * 유일한 통로였고(시드 주입으로만 닿았다), ①을 비운 채 선언하는 길도 열려 있었다. 사용자 결정 Q-14로 증여는 ①이 필수이고
+   * 남은 추계 플래그는 복원에서 비운다 ⇒ 선언 안내는 뜨지 않고, ③ 칸과 ① 칸이 보인다.
+   */
+  test("③ 의제취득일 前 증여 — ③ 칸이 보이고, 남은 추계 플래그는 지워져 선언 안내가 뜨지 않는다", async ({ page }) => {
     test.setTimeout(90_000);
-    // stale 재현 — 매매로 환산을 켰다가 취득원인을 증여로 바꾼 상태(표준 자산은 UI로 못 켠다)
     await seedAndOpen(page, {
       acquisitionDate: "1980-03-01", // 의제취득일 前
-      useEstimatedAcquisition: true,
-      fixedAcquisitionPrice: "", // ① 비움
+      useEstimatedAcquisition: true, // 매매에서 남은 플래그(복원 마이그레이션이 비운다)
+      fixedAcquisitionPrice: "",
     });
-
-    await expect(page.getByText(/계산에 등장하지 않습니다/)).toBeVisible();
-
-    // ⭐ 안내가 **dead-end가 아님**을 함께 확인한다 — 추계 모드여도 ① 입력칸이 화면에 있다.
-    //    「①을 입력하면 비교된다」고 안내하면서 넣을 칸이 없으면 그 안내는 무의미하다.
-    //    (상태 변화 「①을 채우면 안내가 사라진다」는 RTL U2-3이 커버하므로 여기서 중복하지 않는다.)
+    await expandAssetSection(page, 3);
+    await expect(page.getByTestId("gift-pre-deemed-conversion")).toBeVisible();
     await expect(page.getByText("증여 신고가액 (원)")).toBeVisible();
+    await expect(page.getByText(/계산에 등장하지 않습니다/)).toHaveCount(0);
   });
 
   /**
-   * ④ **E-1**(#1114) — ③의 안내에 **차단**과 **선언**이 붙었다.
-   *
-   * 엔진은 ①②③ 3자 max라(2026-10-22 — 종전 「가목 우선」) ①·②를 비우면 그 값이 후보에서
-   * 조용히 빠진다. 비워두기만 한 것은 선언이 아니므로, 계산이 막히고 명시 선택을 요구한다(Q-6 a).
-   *
-   * RTL(`pre-deemed-estimated-notice.test.tsx`)은 토글 **노출·쓰기**만 본다. 여기서는
-   * 「차단 → 선언 → 통과 → 실제로 ③이 채택」까지 브라우저로 관통시킨다.
+   * ④ 🔄 PR-5 — ① + 화면의 ③ 칸 → 3자 max에서 ③이 채택된다. ①을 비우면 선언이 아니라 「증여 신고가액」을 요구한다(Q-14).
+   * 시드의 양도시 기준시가(200,000,000)도 이제 ③ 칸(`standardPriceAtTransfer`)으로 화면에 보인다.
    */
-  test("④ E-1: ①·② 미충족이면 차단되고, 「확인할 수 없음」 선언 후 ③(환산)으로 계산된다", async ({
-    page,
-  }) => {
+  test("④ ① 5천만 + ③ 칸(의제취득일 기준시가 5천만) → ③ 125,000,000 채택 · ① 비우면 증여 신고가액 요구", async ({ page }) => {
     test.setTimeout(120_000);
-    await seedAndOpen(page, {
-      acquisitionDate: "1980-03-01", // 의제취득일 前 → 나목(③)이 존재하는 구간
-      useEstimatedAcquisition: true,
-      fixedAcquisitionPrice: "", // ① 비움
-      standardPriceAtAcq: "50000000", // 환산 분자 — 추계 모드의 필수 입력
-    });
+    await seedAndOpen(page, { acquisitionDate: "1980-03-01", fixedAcquisitionPrice: "" });
 
-    // ── 1. 차단 — 종전에는 조용히 ③으로 갔다
+    // ── 1. ① 비움 → 증여 신고가액 요구(선언 경로 없음)
     for (const step of ["보유 상황", "감면·공제", "가산세"]) {
       await page.getByRole("button", { name: step }).first().click();
     }
     await page.getByRole("button", { name: /계산하기/ }).click();
-    await expect(page.getByText(/상증법 평가액\(§163⑨\)·§164④~⑦ 기준시가·환산취득가액 중 큰 금액/).first()).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(page.getByText(/증여 신고가액을 입력하세요/).first()).toBeVisible({ timeout: 15_000 });
 
-    // ── 2. 선언 — 안내 카드 안의 토글이 통과 경로다(dead-end가 아니다)
+    // ── 2. 화면에서 ①과 ③ 분자를 입력
     await page.getByRole("button", { name: "자산 목록" }).first().click();
     await expandAssetSection(page, 3);
-    const declToggle = page.getByRole("switch", { name: /증여일 상증법 평가액」을 확인할 수 없음/ });
-    await expect(declToggle, "선언 토글이 화면에 없다 — 차단만 있고 통과 경로가 없으면 dead-end다").toBeVisible();
-    await declToggle.click();
+    await page.locator('input[data-field="fixedAcquisitionPrice"], [data-field="fixedAcquisitionPrice"] input').first().fill(String(REPORTED_VALUE));
+    const card = page.getByTestId("gift-pre-deemed-conversion");
+    await expect(card.locator('[data-field="standardPriceAtTransfer"] input').first()).toHaveValue("200,000,000");
+    await card.locator('[data-field="standardPriceAtAcq"] input').first().fill("50000000");
 
-    // ── 3. 통과 — 그리고 실제로 ③(환산)이 채택된다
+    // ── 3. 계산 — body에 ③ 분자·분모, 결과는 ③ 채택
+    const requestPromise = page.waitForRequest((r) => r.url().includes("/api/calc/transfer") && r.method() === "POST");
     const response = await calculate(page);
-    expect(
-      response.ok(),
-      `계산 API 비정상 응답 ${response.status()} — ${await response.text()}`,
-    ).toBe(true);
-    const body = await response.json();
-    const detail = body.data.result?.inheritedAcquisitionDetail;
-    expect(detail, "취득가액 의제 상세가 없다").toBeTruthy();
-    // 양도가 500,000,000 × (50,000,000 ÷ 200,000,000) = 125,000,000
+    const sent = (await requestPromise).postDataJSON() as { inheritedAcquisition?: Record<string, unknown> };
+    expect(sent.inheritedAcquisition).toMatchObject({ mode: "pre-deemed", reportedValue: REPORTED_VALUE, standardPriceAtDeemedDate: 50_000_000, standardPriceAtTransfer: 200_000_000 });
+    expect(response.ok(), `계산 API 비정상 응답 ${response.status()} — ${await response.text()}`).toBe(true);
+    const detail = (await response.json()).data.result?.inheritedAcquisitionDetail;
+    // 양도가 500,000,000 × (50,000,000 ÷ 200,000,000) = 125,000,000 > ① 50,000,000
     expect(detail.preDeemedBreakdown?.selectedMethod).toBe("converted");
     expect(detail.acquisitionPrice).toBe(125_000_000);
   });

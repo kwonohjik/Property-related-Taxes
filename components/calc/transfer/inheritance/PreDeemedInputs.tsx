@@ -15,29 +15,24 @@
  * ① 의제취득일 시점 기준시가 (토지: pre1990 환산 자동 계산 포함) → ② 양도시 기준시가 → ③ 상증법 평가액
  */
 
-import { useMemo } from "react";
-import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
 import { HouseValuationSection } from "./HouseValuationSection";
+import { PreDeemedConversionFields } from "./PreDeemedConversionFields";
 import { InheritanceHouseKindPicker } from "./InheritanceHouseKindPicker";
 import { ApartNtsPriceQuestion } from "./ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
 import { inheritanceReportedValuePartSuffix } from "@/lib/calc/inheritance-reported-value-scope";
 import { isRedev166_3PreDeemedAsset } from "@/lib/calc/transfer-tax-validate-clause-a";
-import { calculatePre1990LandValuation, type LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 개별주택가격 최초 공시일 */
 const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";
-/** 1990.8.30. 토지등급 → 개별공시지가 전환일 */
-const PRE_1990_DATE = "1990-08-30";
 
 import { LAW_BADGE_CLASS } from "@/components/calc/shared/lawBadge";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
-import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 interface Props {
   asset: AssetForm;
@@ -68,147 +63,6 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
 
   // 토지인 경우 의제취득일(1985.1.1.) 자체가 1990.8.30. 이전이므로 항상 환산 대상
   const showPre1990 = isLand;
-
-  // hint 텍스트: 자산 종류에 따라 다르게 표시
-  const stdPriceHint = isLand
-    ? "1985.1.1. 개별공시지가 × 면적. 아래 토지등급가액 환산을 사용하면 자동 입력됩니다."
-    : "국세청 기준시가 직접 입력.";
-
-  // ── 자동 계산값 미리보기 (엔진 자동 주입 로직과 동일한 결과를 재현) ──
-  // 엔진은 `inheritance-acquisition-helpers.ts`의 resolveInheritedAcquisitionInput에서
-  // PHD 결과(houseValuationResult.housePriceAtInheritanceUsed) 또는 Pre1990 결과를 자동 주입.
-  // UI에서도 동일한 로직을 미리 계산해 사용자에게 노출.
-  const phdAutoDeemedPrice = useMemo<number | null>(() => {
-    if (!showHouseValuation) return null;
-    const area = parseFloat(asset.inhHouseValLandArea) || 0;
-    const isBefore1990 = !!inheritanceDate && inheritanceDate < PRE_1990_DATE;
-
-    // 상속개시일 시점 토지기준시가 (Sum_A의 토지 성분)
-    let landStdA = 0;
-    if (isBefore1990 && asset.pre1990Enabled) {
-      const buildGrade = (raw: string | undefined): LandGradeInput | undefined => {
-        if (!raw) return undefined;
-        const n = parseFloat(raw);
-        if (!Number.isFinite(n) || n <= 0) return undefined;
-        return asset.pre1990GradeMode === "number" ? Math.trunc(n) : { gradeValue: n };
-      };
-      const gCur = buildGrade(asset.pre1990Grade_current);
-      const gPrev = buildGrade(asset.pre1990Grade_prev);
-      const gAcq = buildGrade(asset.pre1990Grade_atAcq);
-      const p1990 = parseAmount(asset.pre1990PricePerSqm_1990 || "");
-      if (gCur && gPrev && gAcq && p1990 > 0 && area > 0) {
-        try {
-          const r = calculatePre1990LandValuation({
-            acquisitionDate: new Date(inheritanceDate),
-            transferDate: new Date(transferDate || inheritanceDate),
-            areaSqm: area,
-            pricePerSqm_1990: p1990,
-            pricePerSqm_atTransfer: p1990,
-            grade_1990_0830: gCur,
-            gradePrev_1990_0830: gPrev,
-            gradeAtAcquisition: gAcq,
-          });
-          landStdA = r.standardPriceAtAcquisition;
-        } catch {
-          landStdA = 0;
-        }
-      }
-    } else {
-      landStdA = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtInheritance), area);
-    }
-
-    const buildingA = parseAmount(asset.inhHouseValBuildingStdPriceAtInheritance) || 0;
-    const landStdF = multiplyByArea(parseAmount(asset.inhHouseValLandPricePerSqmAtFirst), area);
-    const buildingStdF = parseAmount(asset.inhHouseValBuildingStdPriceAtFirst) || 0;
-    const P_F = parseAmount(asset.inhHouseValHousePriceAtFirst) || 0;
-    const sumA = landStdA + buildingA;
-    const sumF = landStdF + buildingStdF;
-
-    // override 사용 시 그 값을 그대로 반환
-    if (asset.inhHouseValUseHousePriceOverride) {
-      const override = parseAmount(asset.inhHouseValHousePriceAtInheritanceOverride) || 0;
-      return override > 0 ? Math.floor(override) : null;
-    }
-
-    if (sumF <= 0 || P_F <= 0 || sumA <= 0) return null;
-    return Math.floor((P_F * sumA) / sumF);
-  }, [
-    showHouseValuation,
-    inheritanceDate,
-    transferDate,
-    asset.inhHouseValLandArea,
-    asset.inhHouseValLandPricePerSqmAtFirst,
-    asset.inhHouseValLandPricePerSqmAtInheritance,
-    asset.inhHouseValBuildingStdPriceAtFirst,
-    asset.inhHouseValBuildingStdPriceAtInheritance,
-    asset.inhHouseValHousePriceAtFirst,
-    asset.inhHouseValUseHousePriceOverride,
-    asset.inhHouseValHousePriceAtInheritanceOverride,
-    asset.pre1990Enabled,
-    asset.pre1990PricePerSqm_1990,
-    asset.pre1990Grade_current,
-    asset.pre1990Grade_prev,
-    asset.pre1990Grade_atAcq,
-    asset.pre1990GradeMode,
-  ]);
-
-  // Pre1990 토지 자동값 (주택이 아닌 토지 자산일 때)
-  const pre1990AutoDeemedPrice = useMemo<number | null>(() => {
-    if (showHouseValuation) return null; // 주택은 PHD 우선
-    if (!showPre1990 || !asset.pre1990Enabled) return null;
-    const area = parseFloat(asset.acquisitionArea || "") || 0;
-    const buildGrade = (raw: string | undefined): LandGradeInput | undefined => {
-      if (!raw) return undefined;
-      const n = parseFloat(raw);
-      if (!Number.isFinite(n) || n <= 0) return undefined;
-      return asset.pre1990GradeMode === "number" ? Math.trunc(n) : { gradeValue: n };
-    };
-    const gCur = buildGrade(asset.pre1990Grade_current);
-    const gPrev = buildGrade(asset.pre1990Grade_prev);
-    const gAcq = buildGrade(asset.pre1990Grade_atAcq);
-    const p1990 = parseAmount(asset.pre1990PricePerSqm_1990 || "");
-    if (!gCur || !gPrev || !gAcq || p1990 <= 0 || area <= 0) return null;
-    try {
-      const r = calculatePre1990LandValuation({
-        acquisitionDate: new Date(asset.acquisitionDate || inheritanceDate),
-        transferDate: new Date(transferDate || asset.acquisitionDate || inheritanceDate),
-        areaSqm: area,
-        pricePerSqm_1990: p1990,
-        pricePerSqm_atTransfer: parseAmount(asset.pre1990PricePerSqm_atTransfer || "") || p1990,
-        grade_1990_0830: gCur,
-        gradePrev_1990_0830: gPrev,
-        gradeAtAcquisition: gAcq,
-      });
-      return r.standardPriceAtAcquisition;
-    } catch {
-      return null;
-    }
-  }, [
-    showHouseValuation,
-    showPre1990,
-    asset.pre1990Enabled,
-    asset.acquisitionArea,
-    asset.acquisitionDate,
-    asset.pre1990PricePerSqm_1990,
-    asset.pre1990PricePerSqm_atTransfer,
-    asset.pre1990Grade_current,
-    asset.pre1990Grade_prev,
-    asset.pre1990Grade_atAcq,
-    asset.pre1990GradeMode,
-    inheritanceDate,
-    transferDate,
-  ]);
-
-  // 양도시 기준시가 자동값: PHD inhHouseValHousePriceAtTransfer 사용
-  const autoStdPriceAtTransfer = useMemo<number | null>(() => {
-    if (!showHouseValuation) return null;
-    const v = parseAmount(asset.inhHouseValHousePriceAtTransfer) || 0;
-    return v > 0 ? v : null;
-  }, [showHouseValuation, asset.inhHouseValHousePriceAtTransfer]);
-
-  const autoStdPriceAtAcq = phdAutoDeemedPrice ?? pre1990AutoDeemedPrice;
-  const stdPriceAtAcqAutoActive = autoStdPriceAtAcq !== null && !asset.useStandardPriceAtAcqOverride;
-  const stdPriceAtTransferAutoActive = autoStdPriceAtTransfer !== null && !asset.useStandardPriceAtTransferOverride;
 
   return (
     <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20 py-3 px-2 sm:px-3">
@@ -251,131 +105,47 @@ export function PreDeemedInputs({ asset, onChange, transferDate }: Props) {
         </>
       )}
 
-      {/* ① 의제취득일(1985.1.1.) 시점 기준시가 — 재개발은 ③이 §166③이라 숨긴다 */}
-      {!isRedev && (
-      <div className="space-y-1">
-        <FieldCard
-          field="standardPriceAtAcq"
-          label={showHouseValuation ? "의제취득일(1985.1.1.) 시점 합계 기준시가" : "의제취득일(1985.1.1.) 시점 기준시가"}
-          hint={
-            stdPriceAtAcqAutoActive
-              ? `자동 계산값: ${autoStdPriceAtAcq!.toLocaleString()} (위 환산 결과 사용 중). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
-              : showHouseValuation
-                ? "위 3-시점 환산 결과(토지+주택 합계)가 있으면 자동 계산됩니다. 또는 직접 입력."
-                : stdPriceHint
-          }
-          disabled={stdPriceAtAcqAutoActive}
-          trailing={
-            <LawArticleModal
-              legalBasis="소득세법시행령 §164"
-              label="소령 §164"
-              className={LAW_BADGE_CLASS}
-            />
-          }
-        >
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={
-              stdPriceAtAcqAutoActive
-                ? String(autoStdPriceAtAcq ?? "")
-                : asset.standardPriceAtAcq
-            }
-            onChange={(v) => onChange({ standardPriceAtAcq: v })}
-            disabled={stdPriceAtAcqAutoActive}
+      {/* ③ 분자·분모 — 상속·증여 공용(`PreDeemedConversionFields`). 토지 등급 환산은 두 칸 사이에 둔다. */}
+      <PreDeemedConversionFields
+        asset={asset}
+        onChange={onChange}
+        transferDate={transferDate}
+        baseDate={inheritanceDate}
+        showHouseValuation={showHouseValuation}
+        hideFields={isRedev}
+        between={
+          showPre1990 && (
+          <Pre1990LandValuationInput
+            form={{
+              pre1990Enabled: asset.pre1990Enabled,
+              pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
+              pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
+              pre1990Grade_current: asset.pre1990Grade_current,
+              pre1990Grade_prev: asset.pre1990Grade_prev,
+              pre1990Grade_atAcq: asset.pre1990Grade_atAcq,
+              pre1990GradeMode: asset.pre1990GradeMode,
+            }}
+            onChange={(patch) => onChange(patch)}
+            acquisitionArea={asset.acquisitionArea || undefined}
+            jibun={asset.addressJibun || undefined}
+            acquisitionDate={asset.acquisitionDate || undefined}
+            transferDate={transferDate}
+            /**
+             * 🔴 **override가 켜져 있으면 덮지 않는다** (2026-09-07 대장 재대조).
+             *
+             * 종전에는 `useStandardPriceAtAcqOverride`와 무관하게 자동 환산값을 store에 썼다.
+             * 사용자가 「직접 입력」 토글을 켜고 값을 넣어도, 등급·연도 입력을 조금만 건드리면
+             * 그 값이 자동값으로 되덮였다 — 직접 입력이라는 선언 자체가 무의미해진다.
+             * 표시 분기(`PreDeemedConversionFields`의 `stdPriceAtAcqAutoActive`)는 이미 같은 플래그를 본다.
+             */
+            onCalculatedPrice={(price) => {
+              if (asset.useStandardPriceAtAcqOverride) return;
+              onChange({ standardPriceAtAcq: String(price) });
+            }}
           />
-        </FieldCard>
-        {autoStdPriceAtAcq !== null && (
-          <ToggleCard
-            tone="amber"
-            size="sm"
-            title="의제취득일 시점 기준시가 직접 입력"
-            checked={asset.useStandardPriceAtAcqOverride}
-            onCheckedChange={(v) =>
-              onChange({
-                useStandardPriceAtAcqOverride: v,
-                ...(!v && { standardPriceAtAcq: "" }),
-              })
-            }
-          />
-        )}
-      </div>
-      )}
-
-      {/* 토지 전용: 1990.8.30. 이전 취득 토지 등급가액 환산 */}
-      {showPre1990 && (
-        <Pre1990LandValuationInput
-          form={{
-            pre1990Enabled: asset.pre1990Enabled,
-            pre1990PricePerSqm_1990: asset.pre1990PricePerSqm_1990,
-            pre1990PricePerSqm_atTransfer: asset.pre1990PricePerSqm_atTransfer,
-            pre1990Grade_current: asset.pre1990Grade_current,
-            pre1990Grade_prev: asset.pre1990Grade_prev,
-            pre1990Grade_atAcq: asset.pre1990Grade_atAcq,
-            pre1990GradeMode: asset.pre1990GradeMode,
-          }}
-          onChange={(patch) => onChange(patch)}
-          acquisitionArea={asset.acquisitionArea || undefined}
-          jibun={asset.addressJibun || undefined}
-          acquisitionDate={asset.acquisitionDate || undefined}
-          transferDate={transferDate}
-          /**
-           * 🔴 **override가 켜져 있으면 덮지 않는다** (2026-09-07 대장 재대조).
-           *
-           * 종전에는 `useStandardPriceAtAcqOverride`와 무관하게 자동 환산값을 store에 썼다.
-           * 사용자가 「직접 입력」 토글을 켜고 값을 넣어도, 등급·연도 입력을 조금만 건드리면
-           * 그 값이 자동값으로 되덮였다 — 직접 입력이라는 선언 자체가 무의미해진다.
-           * 표시 분기(:196 `stdPriceAtAcqAutoActive`)는 이미 같은 플래그를 본다.
-           */
-          onCalculatedPrice={(price) => {
-            if (asset.useStandardPriceAtAcqOverride) return;
-            onChange({ standardPriceAtAcq: String(price) });
-          }}
-        />
-      )}
-
-      {/* ② 양도시 기준시가 — 재개발은 숨긴다(위와 같은 이유) */}
-      {!isRedev && (
-      <div className="space-y-1">
-        <FieldCard
-          field="standardPriceAtTransfer"
-          label="양도시 기준시가"
-          unit="원"
-          hint={
-            stdPriceAtTransferAutoActive
-              ? `자동 계산값: ${autoStdPriceAtTransfer!.toLocaleString()} (양도 당시 공시된 개별주택가격 사용). 직접 입력하려면 아래 직접 입력 토글을 켜세요.`
-              : "환산취득가 공식 분모 — 양도일 직전 공시된 기준시가."
-          }
-          disabled={stdPriceAtTransferAutoActive}
-        >
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={
-              stdPriceAtTransferAutoActive
-                ? String(autoStdPriceAtTransfer ?? "")
-                : asset.standardPriceAtTransfer
-            }
-            onChange={(v) => onChange({ standardPriceAtTransfer: v })}
-            disabled={stdPriceAtTransferAutoActive}
-          />
-        </FieldCard>
-        {autoStdPriceAtTransfer !== null && (
-          <ToggleCard
-            tone="emerald"
-            size="sm"
-            title="양도시 기준시가 직접 입력"
-            checked={asset.useStandardPriceAtTransferOverride}
-            onCheckedChange={(v) =>
-              onChange({
-                useStandardPriceAtTransferOverride: v,
-                ...(!v && { standardPriceAtTransfer: "" }),
-              })
-            }
-          />
-        )}
-      </div>
-      )}
+          )
+        }
+      />
 
       {/* ① 상증법 §60~66 평가액 (상속세 신고가액) — ②·③과 함께 3자 max(엔진 `calcPreDeemed`) */}
       <FieldCard

@@ -52,8 +52,8 @@ describe("복원 마이그레이션 — migrateAsset", () => {
   it("🔑 긍정 짝: 매매의 환산은 그대로 (게이트를 넓힌 게 아니다)", () => {
     expect(migrateAsset(raw({ acquisitionCause: "purchase" })).useEstimatedAcquisition).toBe(true);
   });
-  it("긍정 짝: 1985 이전 증여는 ⑧이 막지 않는 영역(§176의2④ 의제취득) — 건드리지 않는다", () => {
-    expect(migrateAsset(raw({ acquisitionDate: "1980-05-01" })).useEstimatedAcquisition).toBe(true);
+  it("🔄 1985 이전 증여도 비운다 (PR-5) — ③은 증여 화면 전용 칸으로 받고 ①이 필수라(Q-14) 추계 플래그는 쓰이지 않는 남은 값이다", () => {
+    expect(migrateAsset(raw({ acquisitionDate: "1980-05-01" })).useEstimatedAcquisition).toBe(false);
   });
   it.each(["redevelopment_apt", "right_to_move_in", "general_building"])(
     "🔑 %s — 범위 밖: 플래그 의미가 다르거나 자체 검증·라디오가 있다 (재개발 「증여 종전자산 환산 차단」 오류가 시드로 닿아야 한다)",
