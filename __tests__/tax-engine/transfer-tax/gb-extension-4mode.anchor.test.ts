@@ -263,8 +263,9 @@ describe("취득가액 — 조합별 산식 (대조군 쌍)", () => {
  * 원건물 환산(C·D)에서는 `bundledExpenses`가 소비되지 않으므로 이중계상이 성립하지 않는다.
  * ⇒ 양도비는 나목(§97②2호 나목 = 제1항제2호 **및** 제3호의 합계액)에 들어가야 한다.
  *
- * 원건물 실가(A·B)는 `bundledExpenses` fallback ②가 양도비를 소비하므로 **현행 규칙 유지**가 정본이다
- * (전용 필드 `gbBundledAcquisitionExpenses` 입력 시에만 나목에 싣는다 — W-1b).
+ * 원건물 실가(A·B)도 2026-10-22 E-1부터 **항상 나목으로만** 싣는다 — `bundledExpenses` 사슬에서 양도비를 뺐다
+ * (`docs/00-pm/gb-extension-actual-expenses.plan.md`). 엔진 진입이 실가 카드에 §97②1호로 가산하므로 경로는 하나다.
+ * 종전(W-1b)에는 사슬 ②가 양도비를 소비해 나목에서 뺐는데, 파트 가격으로 대체된 파트에서 그 값이 사라졌다.
  */
 describe("D-10 — 조합 C·D는 양도비를 나목에 싣는다 (전용 필드 미입력 시에도)", () => {
   const withExpenses = { capitalExpenditure: "20,000,000", transferExpense: "10,000,000" };
@@ -277,10 +278,10 @@ describe("D-10 — 조합 C·D는 양도비를 나목에 싣는다 (전용 필�
   }
 
   for (const id of ["A", "B"] as const) {
-    it(`${id} — 전용 필드 미입력이면 제외가 정본 (bundledExpenses가 소비한다)`, () => {
+    it(`${id} — 전용 필드 미입력이어도 양도비는 나목에만 · 일괄 슬롯은 비운다 (E-1 — 이중계상 없음)`, () => {
       const r = runCombo({ ...COMBOS.find((c) => c.id === id)!.over, ...withExpenses });
-      expect(r.payload.transferExpense).toBeUndefined();
-      expect(r.payload.bundledExpenses).toBe(10_000_000);
+      expect(r.payload.transferExpense).toBe(10_000_000);
+      expect(r.payload.bundledExpenses).toBe(0);
     });
 
     it(`${id} — 전용 필드를 입력하면 나목에 실린다`, () => {

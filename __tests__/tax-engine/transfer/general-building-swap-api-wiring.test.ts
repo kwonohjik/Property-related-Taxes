@@ -78,12 +78,15 @@ describe("§97②2호 swap API 배선 (buildGeneralBuildingValuation)", () => {
    * 🔄 **픽스처를 원건물 실가로 옮겼다** (2026-08-12 D-10) — 이 규칙이 성립하는 유일한 축이다.
    *    원건물 환산에서는 ②가 채택돼도 그 값이 **소비되지 않으므로** 제외할 이유가 없다.
    */
-  it("증축(G3) × 원건물 실가 + 전용 필드 **미입력** ⇒ ② 채택 → transferExpense 제외 (이중차감 회피)", () => {
+  /*
+   * 🔄 2026-10-22 E-1 — `bundledExpenses` 사슬에서 양도비(②)를 뺐다. 양도비는 **항상 나목 하나로만** 간다
+   * (`docs/00-pm/gb-extension-actual-expenses.plan.md`). 이중차감이 구조적으로 없으므로 W-1b·D-10의 조건부 게이트가 사라졌다.
+   */
+  it("증축(G3) × 원건물 실가 + 전용 필드 **미입력** ⇒ 일괄 슬롯 0 · transferExpense 나목에만 (E-1)", () => {
     const p = buildGeneralBuildingValuation(gbAsset(EXT_ORIGIN_ACTUAL)) as Record<string, unknown>;
     expect(p.capitalExpenditure).toBe(800_000_000);
-    // ②가 채택되어 bundledExpenses가 곧 양도비다 — 나목에 또 넣으면 두 번 반영된다.
-    expect(p.bundledExpenses).toBe(10_000_000);
-    expect(p.transferExpense).toBeUndefined();
+    expect(p.bundledExpenses).toBe(0);
+    expect(p.transferExpense).toBe(10_000_000);
   });
 
   it("🔴 증축(G3) × 원건물 실가 + 전용 필드 **입력** ⇒ ① 채택 → transferExpense **포함**", () => {
@@ -105,8 +108,8 @@ describe("§97②2호 swap API 배선 (buildGeneralBuildingValuation)", () => {
   it("🔴 증축(G3) × 원건물 환산 ⇒ 전용 필드 미입력이어도 transferExpense **포함**", () => {
     const p = buildGeneralBuildingValuation(gbAsset(EXT)) as Record<string, unknown>;
     expect(p.capitalExpenditure).toBe(800_000_000);
-    // fallback ②가 집기는 하지만 환산 파트에서 소비되지 않는다(개산공제로 덮인다).
-    expect(p.bundledExpenses).toBe(10_000_000);
+    // E-1 — 일괄 슬롯에는 양도비를 넣지 않는다(종전엔 ②가 집고도 소비되지 않았다).
+    expect(p.bundledExpenses).toBe(0);
     expect(p.transferExpense).toBe(10_000_000);
   });
 });

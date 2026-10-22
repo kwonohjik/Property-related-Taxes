@@ -701,6 +701,11 @@ export type GeneralBuildingOutput = {
    * (양도비 몫은 따로 더한다). 표시 계층이 「직접 입력」 항목으로 적는다 — 엔진 산식 변경 없음(echo-field-pattern).
    */
   bundledActualPartCapitalExpenditure?: { land?: number; building?: number };
+  /**
+   * 카드별 §97②1호 **가산액**(실가 파트의 자본적지출·양도비 몫 — swap 파트 축 `addition`) echo. propertyId → 금액.
+   * 최종 필요경비 = 카드 `expenses` + 이 값이다. 표시 계층이 「자기 경비 + 안분 가산」 산식을 적을 때 쓴다(E-1 · 엔진 산식 변경 없음).
+   */
+  partDirectAddition?: Record<string, number>;
 
   /**
    * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).
