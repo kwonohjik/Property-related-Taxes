@@ -16,6 +16,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { gbBuildingOwnDecedentDate } from "./transfer-tax-validate-gb-required";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 import { gbSec1639Acquisition } from "./transfer-tax-api-gb-sec163-9";
+import { gbCapexBeforeExtensionSlots } from "./gb-extension-capex-timing";
 
 /**
  * 수유자(상속인 아닌 유증·사인증여) — 상속 취득 블록의 토글(취득원인 = 상속일 때 뜬다)을 환산·실가 두 경로에 같은 키로 싣는다.
@@ -273,10 +274,15 @@ export function buildGeneralBuildingValuation(
    * 같은 호 단서 **택일**이라 단위가 다르기 때문이다(`general-building-swap.ts`).
    */
   const bothEstimated = landMode === "estimated" && buildingMode === "estimated";
+  // 증축 × 자본적지출 — 그중 증축 전 지출액(증축분에 배분하지 않는다 · `gb-extension-capex-timing.plan.md`). 0도 싣는다(⑧이 비움을 막는다).
+  const capexBeforeExt = gbCapexBeforeExtensionSlots(asset);
   const partExpensePayload = !bothEstimated
     ? {
         ...(parseAmount(asset.landDirectExpenses) ? { landDirectExpenses: parseAmount(asset.landDirectExpenses) } : {}),
         ...(parseAmount(asset.buildingDirectExpenses) ? { buildingDirectExpenses: parseAmount(asset.buildingDirectExpenses) } : {}),
+        ...(capexBeforeExt.building
+          ? { buildingDirectExpensesBeforeExtension: parseAmount(asset.gbBuildingCapexBeforeExtension) }
+          : {}),
       }
     : {};
 
@@ -416,6 +422,9 @@ export function buildGeneralBuildingValuation(
       //   포함되지 않아 증축에서도 이중소비 없음.
       ...(parseAmount(asset.capitalExpenditure)
         ? { capitalExpenditure: parseAmount(asset.capitalExpenditure) }
+        : {}),
+      ...(capexBeforeExt.asset
+        ? { capitalExpenditureBeforeExtension: parseAmount(asset.gbCapexBeforeExtension) }
         : {}),
       // §97③ 감가상각비 — 건물분. 지분 스케일은 `applyShareScale`(gb-shares)이 한다.
       ...(depreciationSupport(asset).status === "ok" && parseAmount(asset.depreciationAmount ?? "")

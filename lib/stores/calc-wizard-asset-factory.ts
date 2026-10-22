@@ -477,6 +477,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     gbExtensionActualAcquisitionPrice: "",
     gbExtensionActualExpenses: "",
     gbExtensionFloorArea85: "",
+    gbCapexBeforeExtension: "",
+    gbBuildingCapexBeforeExtension: "",
     // ── 사례 35: 주택→상가 용도변경 ──
     gbHouseToCommercialConversion: false,
     gbConversionDate: "",

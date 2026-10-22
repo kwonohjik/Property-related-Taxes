@@ -168,6 +168,9 @@ export function migrateGeneralBuildingFields(a: Record<string, unknown>): void {
   }
   // ③ §114조의2 Phase2: 증축부분 바닥면적 합계 (85㎡ 게이트용) — 구 세션 복원 방어
   if (a.gbExtensionFloorArea85 === undefined) a.gbExtensionFloorArea85 = "";
+  // 자본적지출 중 증축 전 지출액(2026-10-23) — 구 세션 복원 방어. 빈 값으로 둔다: 증축 + 자본적지출이 있으면 ⑧이 입력을 요구한다.
+  if (a.gbCapexBeforeExtension === undefined) a.gbCapexBeforeExtension = "";
+  if (a.gbBuildingCapexBeforeExtension === undefined) a.gbBuildingCapexBeforeExtension = "";
 }
 
 /**
