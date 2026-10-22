@@ -27,7 +27,8 @@ import { useMemo } from "react";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseCountExemptionInputs } from "@/app/calc/transfer-tax/steps/step4-sections/HouseCountExemptionInputs";
-import { judgmentMenuFlags } from "@/lib/calc/judgment-menu-flags";
+import { judgmentMenuFlags, type JudgmentMenu } from "@/lib/calc/judgment-menu-flags";
+import { isMultiHouseSurchargeSuppressed } from "@/lib/calc/transfer-tax-api-helpers";
 import { TemporaryTwoHouseSection } from "@/app/calc/transfer-tax/steps/step4-sections/TemporaryTwoHouseSection";
 import { DeclaredNewHouseOriginBlock } from "@/components/calc/transfer/DeclaredNewHouseOriginBlock";
 import { RightThreeYearExceptionSection } from "@/components/calc/transfer/RightThreeYearExceptionSection";
@@ -69,11 +70,12 @@ import {
 type Props = {
   form: OneHouseJudgmentFormData;
   onChange: (patch: Partial<OneHouseJudgmentFormData>) => void;
+  /** 판정 메뉴 — 열고 닫는 칸은 `judgmentMenuFlags` 표 한 곳에서 정한다(계획서 §5.3) */
+  menu?: JudgmentMenu;
 };
 
-const ONE_HOUSE_FLAGS = judgmentMenuFlags("one_house");
-
-export function Step2({ form, onChange }: Props) {
+export function Step2({ form, onChange, menu = "one_house" }: Props) {
+  const flags = judgmentMenuFlags(menu);
   /**
    * 🔑 재사용 섹션은 렌더 게이트로 `form.householdHousingCount`를 읽는다. 판정 메뉴는 그 값을
    *    store에 두지 않으므로(Q-8) **넘기기 직전에 합성**한다. `useEffect` 미러링이 아니라
@@ -173,18 +175,32 @@ export function Step2({ form, onChange }: Props) {
         </p>
       </ToneCard>
 
+      {/*
+        T11 — 한시배제 창 안 양도(계산기 Step4와 같은 술어). 중과 경과조치 칸은 `gracePeriodInScope`가 스스로 닫는다.
+        나머지 중과 칸은 연다: 결과가 「이론상 중과 유형 + 유예 근거」를 함께 보여 주고, 그 유형을 이 칸들이 가른다.
+      */}
+      {menu === "surcharge" && isMultiHouseSurchargeSuppressed(form.transferDate, form.assets?.[0]?.acquisitionDate) && (
+        <ToneCard tone="sky" title="다주택 중과 한시 배제기간">
+          <p data-testid="surcharge-judgment-suspended-notice" className="text-sm leading-relaxed">
+            양도일이 다주택 중과 한시 배제기간(2022-05-10~2026-05-09)에 해당하고 보유기간이 2년 이상이라
+            조정대상지역 다주택이라도 <b>일반세율</b>입니다. 판정 결과에는 배제기간이 아니었다면 적용될 중과 유형을 함께
+            보여 드리므로, 아래 입력은 그대로 받습니다(중과 경과조치 조건은 이 기간에 쓰이지 않아 생략).
+          </p>
+        </ToneCard>
+      )}
+
       {/* F-2 — `HousesListSection`을 따로 렌더하지 않는다(이 컴포넌트가 내부에서 렌더한다). */}
       <HouseCountExemptionInputs
         form={viewForm}
         onChange={onChange}
-        // 열고 닫는 칸은 메뉴별 표 한 곳(`judgmentMenuFlags`)에 있다 — 중과 축 입력은 이 메뉴에서 닫는다.
-        //   「배우자 단독 보유」(중과 축)는 판정에 쓰이지 않는다 — 같은 사실을 합가 전 보유 쪽이 묻는다.
-        hideGracePeriod={ONE_HOUSE_FLAGS.hideGracePeriod}
-        hideSellingHouseExclusion={ONE_HOUSE_FLAGS.hideSellingHouseExclusion}
-        hideSpouseOwned={ONE_HOUSE_FLAGS.hideSpouseOwned}
-        hideSurchargeInputs={ONE_HOUSE_FLAGS.hideSurchargeInputs}
-        taxIncentiveRentalEnabled={ONE_HOUSE_FLAGS.taxIncentiveRentalEnabled}
-        householdGiftEnabled={ONE_HOUSE_FLAGS.householdGiftEnabled}
+        // 열고 닫는 칸은 메뉴별 표 한 곳(`judgmentMenuFlags`)에 있다 — 1주택 메뉴는 중과 축 입력을 닫는다.
+        //   「배우자 단독 보유」(중과 축)는 1주택 판정에 쓰이지 않는다 — 같은 사실을 합가 전 보유 쪽이 묻는다.
+        hideGracePeriod={flags.hideGracePeriod}
+        hideSellingHouseExclusion={flags.hideSellingHouseExclusion}
+        hideSpouseOwned={flags.hideSpouseOwned}
+        hideSurchargeInputs={flags.hideSurchargeInputs}
+        taxIncentiveRentalEnabled={flags.taxIncentiveRentalEnabled}
+        householdGiftEnabled={flags.householdGiftEnabled}
         // 합가 칸과 같은 게이트 — 칸이 없거나 합가일이 비면 행에 묻지 않는다.
         mergeContext={judgmentMergeInputVisible(form) ? mergeContextOf(form) : undefined}
         /*
@@ -196,7 +212,7 @@ export function Step2({ form, onChange }: Props) {
         countExclusionEnabled
         countExclusionApplies={(h) => judgmentCountExclusionRowApplies(form, h)}
         // 명시 prop — 머리말·확인 토글이 이 화면에서 달라진다(S14a-12·S10-9).
-        judgmentMenu={ONE_HOUSE_FLAGS.judgmentMenu}
+        judgmentMenu={flags.judgmentMenu}
       />
 
       {/* 행을 지정하지 않은 옛 세대 단위 선언 — ⑧이 막으므로 해소 경로를 함께 둔다(Q-2). */}
