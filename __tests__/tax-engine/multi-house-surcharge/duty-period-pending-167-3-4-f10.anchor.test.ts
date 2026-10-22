@@ -108,7 +108,7 @@ describe("F-10 §167의3④ — 의무임대기간 충족 전 일반주택 양�
 
   it("F10-5 사원용(4호) 무상 3년 · 어린이집(8의2호) 운영 2년 · 감면임대(3호) 3년도 같다", () => {
     expect(run([{ isEmployeeHousing: true, freeProvisionYears: 3 }]).surchargeApplicable).toBe(false);
-    expect(run([{ isDayCareCenter: true, dayCareOperationYears: 2 }]).surchargeApplicable).toBe(false);
+    expect(run([{ isDayCareCenter: true, dayCareOperationYears: 2, dayCareInUse: true }]).surchargeApplicable).toBe(false);
     expect(
       run([{ isTaxIncentiveRental: true, isNationalSizeHousing: true, rentalPeriodYears: 3 }]).surchargeApplicable,
     ).toBe(false);

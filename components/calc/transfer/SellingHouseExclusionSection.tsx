@@ -12,6 +12,7 @@
  */
 
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DayCareUsageFields } from "@/components/calc/transfer/DayCareUsageFields";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -84,24 +85,30 @@ export function SellingHouseExclusionSection({ value, onChange }: Props) {
         title="국가유산(문화재) 주택"
       />
 
-      {/* 어린이집 (5년 이상 운영) */}
+      {/* 어린이집 (소령 §167의3①8호의2 — 5년 이상 사용 + 사용 종료 후 6개월 미경과) */}
       <ToggleCard
         variant="card"
         tone="amber"
         checked={v.isDayCareCenter ?? false}
-        onCheckedChange={(b) => patch({ isDayCareCenter: b, dayCareOperationYears: b ? v.dayCareOperationYears : undefined })}
+        onCheckedChange={(b) =>
+          patch({
+            isDayCareCenter: b,
+            dayCareOperationYears: b ? v.dayCareOperationYears : undefined,
+            dayCareEndDate: b ? v.dayCareEndDate : undefined,
+            dayCareInUse: b ? v.dayCareInUse : undefined,
+          })
+        }
         title="어린이집 운영 주택"
-        description="5년 이상 어린이집으로 운영"
+        description="인가 어린이집 또는 국가·지방자치단체 위탁 어린이집으로 5년 이상 사용 (소령 §167의3①8호의2)"
       >
-        <div className="space-y-1 pt-1" data-field="sellingHouseExclusion.dayCareOperationYears">
-          <label className="block text-caption text-muted-foreground font-medium">운영 기간 (년)</label>
-          <DecimalInput
-            value={v.dayCareOperationYears ?? ""}
-            onChange={(s) => patch({ dayCareOperationYears: s || undefined })}
-            placeholder="운영 기간"
-          />
-          <p className="text-caption text-muted-foreground">5년 이상이어야 배제 적용</p>
-        </div>
+        <DayCareUsageFields
+          value={v}
+          onPatch={patch}
+          tone="amber"
+          fieldYears="sellingHouseExclusion.dayCareOperationYears"
+          fieldEndDate="sellingHouseExclusion.dayCareEndDate"
+          inUseTestId="selling-daycare-in-use"
+        />
       </ToggleCard>
     </ToneCard>
   );

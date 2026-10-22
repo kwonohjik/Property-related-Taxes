@@ -19,6 +19,8 @@ import { refineHouseholdRequiredInputs, type HouseholdRefineInput } from "./tran
 import { refineRequiredInputs2a, type Required2aLike } from "./transfer-tax-schema-required-refines-2a";
 import { twoHouseExclusionStatusConflict } from "@/lib/calc/two-house-exclusion-status";
 import { twoHouseExclusionStatusIssue } from "@/lib/calc/two-house-exclusion-status";
+import { dayCareUsageStatusConflict } from "@/lib/calc/daycare-usage-status";
+import { dayCareUsageStatusIssue } from "@/lib/calc/daycare-usage-status";
 import { duplicateUnavoidableOutsideCapitalRows } from "@/lib/calc/house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "@/lib/calc/house-row-required-issues";
 
@@ -40,6 +42,8 @@ type HouseRow = {
   freeProvisionYears?: number;
   isDayCareCenter?: boolean;
   dayCareOperationYears?: number;
+  dayCareEndDate?: string;
+  dayCareInUse?: boolean;
   isTaxIncentiveRental?: boolean;
   rentalPeriodYears?: number;
   isUnavoidableOutsideCapital?: boolean;
@@ -69,6 +73,9 @@ export function refineHouseExclusionInputs(
       issue(["houses", i, "freeProvisionYears"], "사원용 주택은 무상 제공 기간(년)이 필요합니다");
     if (h.isDayCareCenter && !positive(h.dayCareOperationYears))
       issue(["houses", i, "dayCareOperationYears"], "어린이집은 운영 기간(년)이 필요합니다");
+    // §167의3①8호의2 「사용하지 않게 된 날부터 6개월」 — 사용 종료일과 「사용 중」은 택일(⑧ `dayCareUsageStatusIssue`의 거울 + 모순).
+    const dayCareIssue = dayCareUsageStatusIssue(h) ?? dayCareUsageStatusConflict(h);
+    if (dayCareIssue) issue(["houses", i, dayCareIssue.field], dayCareIssue.message);
     // 3호 「5년 이상 임대」 — 비우면 `calcRentalPeriodYears`가 0년으로 읽어 3호가 조용히 빠진다.
     // ⑧ `taxIncentiveRentalPeriodMissing`의 거울: 양도 주택은 ④가 유효 사실(2호 선언 시 2호 칸)을 이 칸에 싣는다.
     if (h.isTaxIncentiveRental === true && !positive(h.rentalPeriodYears))

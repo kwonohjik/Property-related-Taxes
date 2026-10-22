@@ -387,6 +387,7 @@ describe("MH-15: 배제 후 유일한 1주택 → 중과 배제 (소령 §167-3 
     const h3 = makeHouse("h3", {
       isDayCareCenter: true,
       dayCareOperationYears: 7, // ⑨ 5년 이상
+      dayCareInUse: true, // 8호의2 — 양도일 현재 사용 중(P1 6개월 요건)
     });
 
     const input = makeInput([h1, h2, h3], {

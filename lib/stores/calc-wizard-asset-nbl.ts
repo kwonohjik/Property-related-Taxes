@@ -424,6 +424,21 @@ export interface HouseEntry {
   litigationAcquisitionDate?: string;
   /** 「양도일 현재 소송 진행 중」 — 확정판결일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단 */
   litigationPending?: boolean;
+  // ── 3주택+ 중과 배제(소령 §167의3①4호·8호·8호의2 — 2주택은 §167의10①2호 준용) · D7. 양도 주택 `sellingHouseExclusion`과 같은 이름·의미 ──
+  /** 저당권 실행·채권변제로 취득한 주택 — 취득일부터 3년이 경과하지 않은 동안(8호) */
+  isMortgageExecution?: boolean;
+  /** 종업원에게 무상 제공하는 사용자 소유 주택(4호 장기사원용주택) */
+  isEmployeeHousing?: boolean;
+  /** 무상 제공 기간(년) — 10년 이상 요건 */
+  freeProvisionYears?: string;
+  /** 인가·위탁 어린이집으로 사용하는 주택(8호의2) */
+  isDayCareCenter?: boolean;
+  /** 어린이집 사용 기간(년) — 5년 이상 요건(가·나목 전환 시 합산) */
+  dayCareOperationYears?: string;
+  /** 어린이집으로 사용하지 않게 된 날 — 「사용 중」과 택일(`daycare-usage-status.ts`) */
+  dayCareEndDate?: string;
+  /** 「양도일 현재 어린이집으로 사용 중」 */
+  dayCareInUse?: boolean;
   /** 정비구역(재개발·재건축) 지정 주택 — 기준시가 1억↓ 소형 배제에서 제외(정비구역은 산입) */
   isRedevelopmentZone?: boolean;
   /** 인구감소지역 소재 주택 — 소령 §167의3①12 다·라목 (세컨드홈 특례) */
