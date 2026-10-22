@@ -389,6 +389,7 @@ export function CompanionAssetCard({
             isFractionalSplit={splitMode === "fractional"}
             isCompanionBundle={splitMode === "companion"}
             isSingleAsset={!hasSiblings}
+            isPrimary={index === 0}
           />
         </AssetSection>
       )}

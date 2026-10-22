@@ -5,6 +5,7 @@
  * houses 인라인 map + 장기임대 9유형 매트릭스 18필드 게이트를 담당.
  */
 
+import { sellingHouseStdPriceAtTransfer } from "./selling-std-price-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { HouseEntry, RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -139,7 +140,8 @@ export function buildHousesPayload(
     // ④ 지정 지구 안인가 — 코드와 함께만 의미가 있다(소재 동이 지구 한정일 때)
     inDesignatedDistrict: primary.regionCode ? primary.regionInDesignatedDistrict : undefined,
     acquisitionDate: primaryAcquisitionDateOf(primary),
-    officialPrice: parseAmount(primary.standardPriceAtTransfer) || 0,
+    // 양도 당시 기준시가 — 같은 사실을 모드마다 다른 칸이 받는다(§164⑦ 3시점·상속 주택 3시점). ⑤·⑧과 같은 leaf.
+    officialPrice: sellingHouseStdPriceAtTransfer(primary),
     /**
      * ④⑬ §167의3①**7호** — 양도 주택 **자신**이 5년 내 상속주택이면 중과 대상에서 빠진다.
      *
