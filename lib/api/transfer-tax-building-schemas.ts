@@ -14,6 +14,12 @@ import { refineGbValuationRequired } from "./transfer-tax-schema-required-refine
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { carryoverExclusionShape, carryoverGiftEventShape, carryoverHouseholdStartIssues } from "./transfer-tax-schema-split-carryover";
+import {
+  donorBuiltRejectedKey,
+  donorBuiltShape,
+  refineDonorBuiltInCarryover,
+  rejectDonorBuiltRefine,
+} from "./transfer-tax-schema-donor-built";
 
 // 이월과세 적용배제 선언 shape(`carryoverExclusionShape`)과 증여 사건 shape(`carryoverGiftEventShape`)는
 // 주택 split 파트 이월과세(P1)와 공유하는 leaf(`transfer-tax-schema-split-carryover.ts`)가 정본이다.
@@ -74,8 +80,10 @@ export const carryoverTaxationEngineShape = z.object({
    * 분모(양도 당시)는 받지 않는다 — 일반건물이 이미 안다.
    */
   donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
+  /** 증여자가 신축·증축한 건물(§114조의2) — 단건 인라인 shape과 parity. 컴패니언이 쓴다. GB 파트(`land/buildingCarryoverTaxation`)는 아래에서 거부한다 */
+  donorBuilt: donorBuiltShape.optional(),
   exclusionDeclared: carryoverExclusionShape.optional(),
-}).superRefine(refineCarryoverHouseholdStart);
+}).superRefine(refineCarryoverHouseholdStart).superRefine(refineDonorBuiltInCarryover);
 
 /**
  * **UI가 만드는 모양**의 파트별 이월과세 입력 (설계 D9-10).
@@ -93,6 +101,8 @@ const carryoverPartShape = z.object({
    * 분모(양도 당시)는 받지 않는다 — 일반건물이 이미 안다.
    */
   donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
+  /** 증여자 신축·증축 가산세는 이 경로를 아직 지원하지 않는다 — 받아 놓고 무시하지 않고 거부 */
+  donorBuilt: donorBuiltRejectedKey,
 });
 
 /**
@@ -351,12 +361,12 @@ export const generalBuildingValuationSchema = z.object({
    * (`general-building-case-7b-carryover.test.ts` 16건 · 지분 anchor GBF-27)가 이 모양을 쓴다.
    * 신규 `carryoverGiftEvent` + `*CarryoverPart`는 **추가**이지 대체가 아니다(설계 D9-10).
    */
-  landCarryoverTaxation: carryoverTaxationEngineShape.optional(),
+  landCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltRefine).optional(),
   /**
    * ⑫ 건물 파트 이월과세 (§97의2) — `buildingAcquisitionCause === "carryover_gift"` 시.
    * 토지의 `landCarryoverTaxation`과 **같은 모양**이다(엔진이 카드별로 같은 규칙을 쓴다).
    */
-  buildingCarryoverTaxation: carryoverTaxationEngineShape.optional(),
+  buildingCarryoverTaxation: carryoverTaxationEngineShape.superRefine(rejectDonorBuiltRefine).optional(),
   /**
    * ⑫ **증여 사건** (파트로 나뉘지 않는 사실) — 영 §163의2②1호·3호.
    *

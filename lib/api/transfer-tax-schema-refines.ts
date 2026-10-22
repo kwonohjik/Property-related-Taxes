@@ -11,6 +11,7 @@ import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-
 import { isHousingContribEstimatedAxes } from "@/lib/tax-engine/redevelopment-branch-gate";
 import { refineReductionRequiredInputs } from "./transfer-tax-schema-reduction-refines";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
+import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
 /**
  * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
  *
@@ -90,7 +91,7 @@ export function addPropertyRefines(
     /** ⑩ 비주택 → 주택 용도변경(§95⑥) — 주거용 사용 개시일의 취득일·양도일 사이 검증 */
     nonHousingToHousingConversion?: { residentialUseStartDate: string } | null;
     /** 이월과세(§97의2) — PHD 게이트 비교일 = 증여자 취득일 */
-    carryoverTaxation?: { donorAcquisitionDate?: string } | null;
+    carryoverTaxation?: { donorAcquisitionDate?: string; donorBuilt?: DonorBuiltWire } | null;
     /** 겸용주택 PHD — mixedUse.preHousingDisclosure 위치 (동일 §164⑦ 게이트 적용) */
     mixedUse?: { preHousingDisclosure?: { firstDisclosureDate?: string } | null };
     /** ⑩ 상업용건물·오피스텔 환산취득가 서브객체 — era별 필수 필드 검증 */
@@ -312,6 +313,8 @@ export function addPropertyRefines(
   }
   // 겸용주택 × 부담부증여 (소령 §159) — 판정은 엔진 leaf 하나(MB-1~MB-18). ⑧·엔진 throw와 같은 함수다.
   refineMixedUseBurdenedGift(data, ctx);
+  // 이월과세 × 증여자 신축·증축(§114조의2) — 자산 종류·취득원인 의존 규칙(서브객체 수준 규칙은 shape 가 한다)
+  refineDonorBuiltOuter(data, ctx);
   if (data.acquisitionMethod === "appraisal" && !data.appraisalValue) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,

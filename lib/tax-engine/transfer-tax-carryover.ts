@@ -20,6 +20,7 @@ import {
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
 import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
+import { assertDonorBuiltInput, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
 import { carryoverGiftHouseholdBasis, resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
@@ -70,7 +71,7 @@ export const DONOR_CAPEX_EFFECTIVE_DATE = new Date("2024-01-01");
  * @param calculateTransferTax - 양도세 계산 함수 (순환 의존 방지를 위해 주입)
  * @returns CalcCarryoverResult | null  (null 이면 이월과세 미적용 → Orchestrator skip)
  */
-export function calcCarryoverScenarios(
+function calcCarryoverScenariosCore(
   rawInput: TransferTaxInput,
   rates: TaxRatesMap,
   calculateTransferTax: (input: TransferTaxInput, rates: TaxRatesMap) => {
@@ -586,6 +587,15 @@ function finishScenarios(args: {
     detail,
     adoptedInput: adoptedScenario === "A" ? inputAFinal : inputB,
   };
+}
+
+/** 공개 진입점 — core 뒤에 증여자 신축·증축 §114조의2 가산세를 A 채택 입력에만 얹는다(`donorBuilt` 없으면 core 그대로, 비교·채택 불변). @see ./transfer-tax-carryover-donor-penalty.ts */
+export function calcCarryoverScenarios(...args: Parameters<typeof calcCarryoverScenariosCore>): CalcCarryoverResult | null {
+  const [rawInput] = args;
+  const ct = rawInput.carryoverTaxation;
+  if (ct?.donorBuilt && rawInput.acquisitionCause === "carryover_gift") assertDonorBuiltInput(rawInput, ct);
+  const result = calcCarryoverScenariosCore(...args);
+  return result ? withDonorBuiltPenalty(rawInput, result) : null;
 }
 
 // ============================================================

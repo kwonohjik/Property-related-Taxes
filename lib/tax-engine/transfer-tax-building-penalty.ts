@@ -60,7 +60,7 @@ export function calculateBuildingPenalty(
   if (transferDate.getTime() > fifthAnniversary.getTime()) return null;
 
   const penalty = applyRate(acquisitionPriceForPenalty, 0.05);
-  const typeLabel = input.buildingType === "extension" ? "증축" : "신축";
+  const typeLabel = `${input.penaltyDonorBuilt ? "증여자 " : ""}${input.buildingType === "extension" ? "증축" : "신축"}`;
   const methodLabel = method === "appraisal" ? "감정가액" : "환산취득가액";
   return {
     penalty,

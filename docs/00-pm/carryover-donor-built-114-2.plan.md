@@ -379,3 +379,16 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 - [x] 자동 안분 fallback 금지: 건물분 기준시가·신축일·바닥면적 미입력은 ⑧ 차단(§6 격자). 일체 주택 건물분은 사용자가 입력한 H·L·N을 기존 S3-1 산식으로 나누는 것이며 비어 있는 칸을 메우는 안분 fallback이 아니다(하나라도 비면 ⑧ 차단).
 - [x] ⑧ 동기화: ⑧↔⑫↔엔진 격자 작성(§6). 구현 시 ⑧ 전수 대조 필요.
 - [ ] 14지점 grep(⑫⑬⑭), anchor, tsc, vitest, 브라우저 확인 — **Do 단계 항목(이번은 계획서만)**.
+
+---
+
+## 14. PR-1 Do 기록 (2026-10-22) — 계획 대비 이탈
+
+| 항목 | 계획 | 실제 | 이유 |
+|---|---|---|---|
+| 후크 위치 | `finishScenarios` 꼬리 | `calcCarryoverScenarios`를 얇은 래퍼로 감싸고 기존 본문은 `calcCarryoverScenariosCore`로 개명 — 래퍼가 `assertDonorBuiltInput`(입력 거부)과 `withDonorBuiltPenalty`(A 채택 후크)를 부른다 | `finishScenarios` 반환 지점이 5곳(적용배제 조기 반환 2·②2호·정상 2)이라 곳곳에 후크를 넣으면 688줄 파일이 800줄 쪽으로 간다. 래퍼는 한 곳에서 `donorBuilt` 부재 시 core 결과를 그대로 돌려준다(회귀 0). |
+| 가산세 설명 문구 | `calculateBuildingPenalty` note 분기 | 내부 표식 `TransferTaxInput.penaltyDonorBuilt`(와이어에 없음)를 A 채택 입력에 싣고 note 앞에 「증여자 」를 붙임 | note 가 입력만 보는 순수 함수라 «증여자 신축 여부»를 넘길 채널이 필요했다. `DetailedStatementLateStages`의 「감정가액 적용」 부분 문자열 판별은 보존. |
+| GB 파트·split 파트 wire | 「전 스키마 parity」 | **수용이 아니라 명시 거부**: `carryoverPartShape`·`splitCarryoverPartShape`에 거부용 키(`donorBuiltRejectedKey`), GB `landCarryoverTaxation`·`buildingCarryoverTaxation`에 `rejectDonorBuiltRefine` | 이 PR에서 엔진이 읽지 않는 경로에 키를 열어 두면 «받아서 무시» = 침묵 오답. PR-3(split)·PR-5(GB)에서 거부를 수용으로 바꾼다. 메인 인라인 shape·엔진 shape(컴패니언)는 수용(parity 유지). |
+| 입력 거부 위치 | ⑫·⑧·엔진 | ⑫: 서브객체 규칙(`refineDonorBuiltInCarryover`) + 자산 종류·취득원인 규칙(`refineDonorBuiltOuter`, `addPropertyRefines`) / 엔진: `assertDonorBuiltInput` | ⑧은 PR-2(입력 UI) 범위. |
+| 일체 주택 `sale` 전송 | PR-2에서 ④ | PR-1 엔진·⑫가 `donorBuilt.housing.sale`을 수용(anchor DB-2b·DBR-1) | Q-6(b) 법정 서열을 엔진에서 먼저 고정. |
+| 신규 법령 상수 | 필요 시 manifest 등록 | 신규 상수 없음(`TRANSFER.BUILDING_PENALTY`·`CARRYOVER_DONOR_BASIS`·`PRE_HOUSING_DISCLOSURE_APPORTION`·`BUNDLED_APPORTIONMENT` 재사용) | manifest 등록 불필요. |
