@@ -155,6 +155,9 @@ const TAX_INCENTIVE_RENTAL_APT_GATE_UNKNOWN_WARNING =
   "아파트 양도기한을 적용했습니다(기한 경과 → 3호 불인정). 후단 대상이 아니면(건설임대 · 그 밖의 등록 유형 · " +
   "도시형 생활주택) 기한 없이 3호가 적용됩니다 — 확인 필요.";
 
+/** 양도 주택에 법정동코드가 없어 원시 플래그(`isRegulatedArea`)로 조정대상지역을 판정했다 — 설명문이 같은 사실을 풀어 쓴다 */
+export const REGION_CODE_MISSING_WARNING = "양도 주택의 regionCode 미제공 — isRegulatedArea 플래그 사용";
+
 /** 이 주택이 ①~⑨ 배제가 아니라 §167의3④ 의제로만 10호 판정에서 빠지는가 */
 function usesDutyPeriodPending(house: Parameters<typeof isGroupExcludable>[0], transferDate: Date): boolean {
   return !isGroupExcludable(house, transferDate) && dutyPeriodPendingReason(house, transferDate) !== null;
@@ -310,7 +313,7 @@ function computeMultiHouseSurcharge(
     ).isRegulated;
   } else if (sellingHouse) {
     // regionCode 미제공 → isRegulatedFallback(boolean = isRegulatedArea) 유지 (회귀 0 보장)
-    warnings.push("양도 주택의 regionCode 미제공 — isRegulatedArea 플래그 사용");
+    warnings.push(REGION_CODE_MISSING_WARNING);
   }
 
   // Step 3: 1주택 이하 → 중과 없음

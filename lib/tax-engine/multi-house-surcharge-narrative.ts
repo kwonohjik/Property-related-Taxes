@@ -12,6 +12,7 @@ import { transitionExemptionMonths } from "./multi-house-surcharge-exclusion";
 import { withTaxIncentiveRental3hoNotice } from "./surcharge-tax-incentive-house-link";
 import { assembleSurchargeHouseSet, linkSurchargeHousesForSelling } from "./transfer-tax-judgment-steps";
 import { SURCHARGE_TRANSITION } from "./legal-codes";
+import { buildNarrativeSteps, type SurchargeNarrative } from "./multi-house-surcharge-narrative-steps";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { HouseInfo, MultiHouseSurchargeInput, MultiHouseSurchargeResult } from "./types/multi-house-surcharge.types";
@@ -190,4 +191,23 @@ export function judgeSurchargeRows(
     });
   }
   return rows;
+}
+
+/**
+ * 양도 예정 주택(headline) 상세 설명문 — §4.5. 양도 주택 행은 STEP 0.5 집합에서 찾는다(행 판정과 같은 집합 — F-5).
+ * 집합이 없으면(명부·의제 사실 없음) 판정기준 단계 없이 결과 신호만으로 쓴다. 주택 수 규칙이 없으면 undefined.
+ */
+export function buildSurchargeNarrative(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  headline: MultiHouseSurchargeResult,
+  generalHouseAcquisitionDate?: Date,
+): SurchargeNarrative | undefined {
+  const rules = parsedRates.houseCountExclusionRules;
+  if (!rules) return undefined;
+  const set = assembleSurchargeHouseSet(workingInput, parsedRates, generalHouseAcquisitionDate);
+  // STEP 0.5와 같은 양도 주택 식별(`sellingHouseId ?? rawHouses[0].id`)
+  const sellingId = workingInput.sellingHouseId ?? set?.rawHouses[0]?.id;
+  const selling = set?.rawHouses.find((h) => h.id === sellingId);
+  return buildNarrativeSteps(headline, decisionStageOf(headline), selling, workingInput.transferDate, rules);
 }

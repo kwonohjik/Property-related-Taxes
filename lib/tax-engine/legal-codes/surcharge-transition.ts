@@ -20,6 +20,8 @@ export const SURCHARGE_TRANSITION = {
   ABSOLUTE_DEADLINE_4M: "2026-09-09",
   ABSOLUTE_DEADLINE_6M: "2026-11-09",
   BASIS: "소득세법 시행령 §167의3①12의2 나·다목 · §167의10①12의2 나·다목",
+  /** 가목 — 보유기간 2년 이상 주택을 2026.5.9.까지 양도(MST 290841 실독 2026-10-22) */
+  BASIS_A: "소득세법 시행령 §167의3①12의2 가목 · §167의10①12의2 가목",
 } as const;
 
 /**
