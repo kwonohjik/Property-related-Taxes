@@ -126,6 +126,23 @@ export interface CarryoverTaxationForm {
    * 결론이 달라질 때만 확인 필요) · `"0"` = 거주한 적 없음. §154① 비과세 거주요건과 표2 대상 판정(거주 2년)에 통산한다(공제율에는 통산하지 않는다).
    */
   donorPriorHouseholdResidenceMonths: string;
+  // ── 증여자가 신축·증축한 건물(소득세법 §114조의2) — 환산취득가액일 때만 묻는다(`donor-built-scope.ts`) ──
+  /** 증여자가 신축·증축한 건물인가 — 켜면 아래 칸이 필수. 범위 밖(실가 승계·PHD·분리 계산 등)에서 켜 둔 값은 stale이라 전송하지 않는다. */
+  donorBuilt: boolean;
+  /** 신축 / 증축. ""(미선택) = ⑧이 선택을 요구 */
+  donorBuiltType: "" | "new" | "extension";
+  /** 증여자의 신축 취득일(사용승인서 교부일 등) 또는 증축 완공일 — 5년 기산점. **증여자 취득일로 자동 채우지 않는다**(증축은 날짜가 다르고 일체 주택은 취득일이 토지 선취득일일 수 있다) */
+  donorBuiltDate: string;
+  /** 증축 바닥면적 합계(㎡) — 85㎡ 초과만 대상 */
+  donorBuiltExtensionArea: string;
+  /** 증축 부분의 증여자 취득(완공) 당시 기준시가 총액 (원) */
+  donorBuiltExtensionStdPrice: string;
+  /** 일체 주택 건물분 — 증여자 취득 당시 ㎡당 개별공시지가 (원/㎡) */
+  donorBuiltLandPricePerSqm: string;
+  /** 일체 주택 건물분 — 토지 면적 (㎡) */
+  donorBuiltLandArea: string;
+  /** 일체 주택 건물분 — 증여자 취득 당시 건물 기준시가 (원, 국세청 고시 산식) */
+  donorBuiltBuildingStdAtAcq: string;
   /** 이월과세 적용배제 선언 */
   exclusionDeclared: CarryoverExclusionDeclared;
 }
@@ -152,6 +169,14 @@ export const CARRYOVER_DEFAULTS: CarryoverTaxationForm = {
   donorSameHousehold: "",
   donorHouseholdHoldingStartDate: "",
   donorPriorHouseholdResidenceMonths: "",
+  donorBuilt: false,
+  donorBuiltType: "",
+  donorBuiltDate: "",
+  donorBuiltExtensionArea: "",
+  donorBuiltExtensionStdPrice: "",
+  donorBuiltLandPricePerSqm: "",
+  donorBuiltLandArea: "",
+  donorBuiltBuildingStdAtAcq: "",
   exclusionDeclared: {
     expropriationWithin2Years: false,
     legacyOneHouseExemptionDeclared: false,
@@ -220,6 +245,15 @@ export function normalizeCarryoverForm(rawInput: unknown): CarryoverTaxationForm
       typeof raw.donorPriorHouseholdResidenceMonths === "string" && /^\d+$/.test(raw.donorPriorHouseholdResidenceMonths)
         ? raw.donorPriorHouseholdResidenceMonths
         : "",
+    // ③ normalize — 증여자 신축·증축(§114조의2). 구 세션·이력에는 없다 → OFF("" )라 가산세가 붙지 않는다(회귀 0). 형이 틀린 값은 기본값.
+    donorBuilt: raw.donorBuilt === true,
+    donorBuiltType: raw.donorBuiltType === "new" || raw.donorBuiltType === "extension" ? raw.donorBuiltType : "",
+    donorBuiltDate: typeof raw.donorBuiltDate === "string" ? raw.donorBuiltDate : "",
+    donorBuiltExtensionArea: typeof raw.donorBuiltExtensionArea === "string" ? raw.donorBuiltExtensionArea : "",
+    donorBuiltExtensionStdPrice: typeof raw.donorBuiltExtensionStdPrice === "string" ? raw.donorBuiltExtensionStdPrice : "",
+    donorBuiltLandPricePerSqm: typeof raw.donorBuiltLandPricePerSqm === "string" ? raw.donorBuiltLandPricePerSqm : "",
+    donorBuiltLandArea: typeof raw.donorBuiltLandArea === "string" ? raw.donorBuiltLandArea : "",
+    donorBuiltBuildingStdAtAcq: typeof raw.donorBuiltBuildingStdAtAcq === "string" ? raw.donorBuiltBuildingStdAtAcq : "",
     exclusionDeclared: {
       expropriationWithin2Years: !!excl.expropriationWithin2Years,
       /**

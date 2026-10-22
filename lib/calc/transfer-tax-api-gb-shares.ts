@@ -116,6 +116,12 @@ export function mergeGbPropertyLevel(asset: AssetForm, primary: AssetForm): Asse
  *    (`lib/tax-engine/types/general-building.types.ts` `ownershipRatio` 주석).
  *
  * UI 안내문(「모든 금액을 100% 기준으로 입력하세요」)과 **같은 계층**에서 변환해야 3중 mirror가 성립한다.
+ *
+ * 축 B 지분 배열·축 A 공유 주 자산·함께 양도 공유 컴패니언이 **모두 이 함수를 거친다**(종전에는 축 B만 — 축 A·컴패니언은
+ * 평가 객체를 100% 그대로 보내 파트 취득가액·상속 평가액·경비가 지분 몫으로 줄지 않았다).
+ * ⚠️ 계약서 구분 기재 양도가액(`landTransferPrice`·`buildingTransferPrice`)은 여기서 줄이지 않는다 — 물건 단위 값이라
+ *    지분마다 같아야 하고(⑫ `GB_SHARE_PROPERTY_LEVEL_PATHS`), 지분 양도가액을 정하는 route가 함께 줄인다
+ *    (`scaleDeclaredSaleSplitToShare`).
  */
 export function applyShareScale(
   valuation: Record<string, unknown>,
@@ -130,6 +136,9 @@ export function applyShareScale(
   for (const k of [
     "landAcquisitionPrice",
     "buildingAcquisitionPrice",
+    // 둘 다 상속(C1) 실가 분기가 파트 슬롯보다 먼저 읽는 상속개시일 평가액(영 §163⑨) — 100% 기준 입력. 빠지면 지분 100%로 새어 과소과세.
+    "inheritedLandValue",
+    "inheritedBuildingValue",
     // 파트별 매매사례가액(영 §176의2③1호) — 100% 기준 입력. 빠지면 지분 100%로 새어 **과소과세**(F-7).
     "landSalesCaseValue",
     "buildingSalesCaseValue",

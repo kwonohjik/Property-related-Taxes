@@ -7,6 +7,7 @@ import { effectiveSelfOwns } from "./self-owns-scope";
 import { effectiveCarryoverDonorSplit } from "./transfer-land-part-cause";
 import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
+import { validateDonorBuilt } from "./transfer-tax-validate-donor-built";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -112,6 +113,10 @@ export function validateCarryoverAsset(
       if (transferPrice <= 0) return fieldError("phdTransferHousingPrice", `${label}: 양도시 공동주택가격을 입력하세요.`);
     }
   }
+
+  // (e-2) 증여자 신축·증축 §114조의2 — 환산(일반 기준시가) 입력 다음 순서(화면 순서와 같다). 범위 밖 stale 은 요구하지 않는다.
+  const donorBuiltErr = validateDonorBuilt(asset, label, formTransferDate, { isNonPrimaryAsset: ctx.isNonPrimaryAsset });
+  if (donorBuiltErr) return donorBuiltErr;
 
   // (f) 음수 차단
   if (parseAmount(c.donorCapitalExpenditure) < 0)

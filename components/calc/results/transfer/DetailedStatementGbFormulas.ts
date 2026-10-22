@@ -417,7 +417,7 @@ function dedRatePct(rate: number | undefined): string {
  * 기준시가), 자본적지출을 **취득시 기준시가**로 나누므로 그 분모를 echo에서 읽어 적는다.
  *
  * `undefined`를 돌려주면 호출부가 종전 산식으로 후퇴한다 — echo가 없는 옛 이력, 토지 NBL 2분할 카드(카드가 토지 필요경비의
- * 일부라 총액 산식으로 못 만든다), 파트 직접 귀속 입력(안분 값이 아님), 그 밖에 **적을 산식이 카드 값과 안 맞는** 모든 경우.
+ * 일부라 총액 산식으로 못 만든다), 그 밖에 **적을 산식이 카드 값과 안 맞는** 모든 경우. 파트 자본적지출 칸 입력은 아래 전용 함수가 적는다.
  */
 function buildGbActualBundledExpenseFormula(
   p: PerPropertyBreakdown,
@@ -426,6 +426,9 @@ function buildGbActualBundledExpenseFormula(
 ): string | undefined {
   const basis = gb.bundledActualTransferBasis;
   if (!basis) return undefined;
+  if (gb.bundledActualPartCapitalExpenditure) {
+    return buildGbPartCapexExpenseFormula(p, gb, basis, gb.bundledActualPartCapitalExpenditure, displayExp);
+  }
   const capex = gb.bundledActualCapitalExpenditure ?? 0;
   const transfer = gb.bundledActualTransferExpense ?? 0;
   if (capex <= 0 && transfer <= 0) return undefined;
@@ -455,6 +458,57 @@ function buildGbActualBundledExpenseFormula(
     return `양도비 ${transferText}\n        자본적지출 ${capexText}\n        합계 = ${fmt(landTotal)}`;
   }
   return transferText ?? capexText;
+}
+
+/**
+ * 파트 자본적지출 칸(직접 입력)이 있는 실가 경로 — 그 파트의 자본적지출은 입력값 그대로, 양도비 몫은 안분해 더한다
+ * (엔진 `resolvePartExpenses`와 같은 규칙). 적을 산식이 카드 값과 안 맞으면 `undefined`(위 함수와 같은 규약).
+ */
+function buildGbPartCapexExpenseFormula(
+  p: PerPropertyBreakdown,
+  gb: GeneralBuildingOutput,
+  basis: { land: number; building: number },
+  part: { land?: number; building?: number },
+  displayExp: number,
+): string | undefined {
+  const id = baseCardId(p.propertyId);
+  if (id !== "land" && id !== "building") return undefined;
+  const isLand = id === "land";
+  const capex = gb.bundledActualCapitalExpenditure ?? 0;
+  const transfer = gb.bundledActualTransferExpense ?? 0;
+  const direct = isLand ? part.land : part.building;
+
+  let capexValue = 0;
+  let capexText: string | undefined;
+  if (direct !== undefined) {
+    capexValue = direct;
+    capexText = `${fmt(direct)} (${isLand ? "토지" : "건물"} 칸 직접 입력)`;
+  } else if (capex > 0) {
+    const acqLand = gb.acqLandStdTotal ?? 0;
+    const acqBuilding = gb.acqBuilding1StdTotal ?? 0;
+    if (acqLand + acqBuilding <= 0) return undefined;
+    const land = apportionByStdPrice(capex, acqLand, acqBuilding).land;
+    capexValue = isLand ? land : capex - land;
+    capexText = isLand
+      ? buildAllocationFormula(capex, acqLand, [acqLand, acqBuilding], land)
+      : buildResidualFormula(capex, [{ label: "토지", value: land }], capexValue);
+  }
+
+  let transferValue = 0;
+  let transferText: string | undefined;
+  if (transfer > 0) {
+    const land = apportionByStdPrice(transfer, basis.land, basis.building).land;
+    transferValue = isLand ? land : transfer - land;
+    transferText = isLand
+      ? buildAllocationFormula(transfer, basis.land, [basis.land, basis.building], land)
+      : buildResidualFormula(transfer, [{ label: "토지", value: land }], transferValue);
+  }
+
+  if (capexValue + transferValue !== displayExp) return undefined;
+  if (transferText && capexText) {
+    return `양도비 ${transferText}\n        자본적지출 ${capexText}\n        합계 = ${fmt(displayExp)}`;
+  }
+  return capexText ? `자본적지출 ${capexText}` : transferText;
 }
 
 /**

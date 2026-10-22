@@ -588,6 +588,8 @@ export function calculateTransferTax(
       isRegulatedArea: effectiveInput.isRegulatedArea,
       householdHousingCount: effectiveInput.householdHousingCount,
       transferDate: input.transferDate,
+      // 리터럴이라 반사실 플래그를 명시 전달한다 — 빠지면 장특 축만 중과로 남는다(MH-P9).
+      forceNoMultiHouseSurcharge: effectiveInput.forceNoMultiHouseSurcharge,
     },
     multiHouseSurchargeResult,
     parsedRates.surchargeSpecialRules,

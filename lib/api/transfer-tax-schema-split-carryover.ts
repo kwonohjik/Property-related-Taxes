@@ -17,6 +17,7 @@ import { z } from "zod";
 import { toDate } from "@/lib/api/date-coerce";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { donorBuiltRejectedKey } from "./transfer-tax-schema-donor-built";
 
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물·일반건물 공통. */
 export const carryoverExclusionShape = z.object({
@@ -73,6 +74,8 @@ export const splitCarryoverPartShape = z.object({
   donorStandardPriceAtAcquisition: z.number().int().positive().optional(),
   /** 증여자가 보유 중 지출한 자본적지출 (§97의2①2호 — 양도일 2024.1.1. 전은 엔진이 0 처리) */
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
+  /** 증여자 신축·증축 가산세(§114조의2)는 파트 이월과세를 아직 지원하지 않는다 — 침묵 무시 대신 거부 */
+  donorBuilt: donorBuiltRejectedKey,
 });
 
 /** 단건 `propertyBaseShape`·컴패니언 `splitAcquisitionShape`가 spread하는 최상위 키 3종 */

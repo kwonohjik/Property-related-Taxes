@@ -14,6 +14,56 @@ import type { RateBasisFacts } from "../transfer-rate-holding-basis";
 // ============================================================
 
 /**
+ * 일체 주택(토지+건물을 결합 공시한 개별주택가격·공동주택가격) 증여자 신축·증축의 **건물분 환산 입력** (Q-2).
+ *
+ * 건물분 = 주택공시가격 × 건물 기준시가 ÷ (토지 기준시가 + 건물 기준시가) — 증여자 취득 당시·양도 당시 각각.
+ * 주택공시가격 H(취득 당시)·H_T(양도 당시)는 여기 없다 — 기존 환산 입력(`standardPriceAtAcquisition`·`standardPriceAtTransfer`,
+ * 이월과세 환산 모드에서는 증여자 값)을 그대로 쓴다(두 벌 금지).
+ */
+export interface DonorBuiltHousingInput {
+  /** 증여자 취득 당시 ㎡당 개별공시지가 (원) — 토지 기준시가 L = 단가 × 면적 */
+  landPricePerSqmAtAcquisition: number;
+  /** 토지 면적 (㎡) */
+  landArea: number;
+  /** 증여자 취득 당시 건물 기준시가 N (원, 국세청 고시 산식) */
+  buildingStdPriceAtAcquisition: number;
+  /** 양도 당시 토지 기준시가 L_T (원) — 건물분 양도 당시 안분과 양도가액 기준시가 안분에 둘 다 쓰인다 */
+  landStdPriceAtTransfer: number;
+  /** 양도 당시 건물 기준시가 N_T (원) */
+  buildingStdPriceAtTransfer: number;
+  /** 양도가액 토지·건물 구분 — 소득세법 §100②·③, 시행령 §166⑥·⑧ (Q-6 b: 법정 서열 그대로) */
+  sale?: {
+    /** 계약서 토지·건물 구분 기재 (둘 중 하나만 있어도 나머지는 총액 − 입력값) */
+    landTransferPrice?: number;
+    buildingTransferPrice?: number;
+    /** 양도 당시 감정평가가액 — 양쪽이 모두 있어야 채택, 기준시가보다 우선 */
+    landAppraisalAtTransfer?: number;
+    buildingAppraisalAtTransfer?: number;
+    /** 시행령 §166⑧ 예외 */
+    saleSplitExemption?: "other_law" | "demolished_land_only";
+  };
+}
+
+/**
+ * 이월과세 **증여자가 신축·증축한 건물** (소득세법 §114조의2 — 증여자 기준 환산취득가액의 5% 가산세).
+ *
+ * 증여자의 신축일(증축이면 증축 완공일)부터 5년 이내 양도 + **이월과세가 적용(A 채택)** 되어 증여자 기준 환산취득가액이 취득가액이 될 때만 가산세가 붙는다.
+ * 수증자 취득가액을 증여 당시 평가액(실지거래가액, 시행령 §163⑨)으로 계산하는 경우(②3호 B 채택·②1호·②2호·③ 배제)는 가산세가 없다.
+ * 최상위 `isSelfBuilt`/`constructionDate`(양도자 본인 신축)와 **다른 축**이다.
+ */
+export interface DonorBuiltInput {
+  buildingType: "new" | "extension";
+  /** 증여자의 신축 취득일(시행령 §162①4호 사용승인서 교부일 등) 또는 증축 완공일 — 5년 기산점 */
+  constructionDate: Date;
+  /** 증축 바닥면적 합계 (㎡) — 85㎡ 초과만 대상 */
+  extensionFloorArea?: number;
+  /** 증축 부분의 증여자 취득(완공) 당시 기준시가 총액 — 증축 부분 환산취득가의 분자 */
+  extensionStdPriceAtAcquisition?: number;
+  /** 일체 주택(`propertyType: housing`)일 때 필수 — 건물분 산정 입력 */
+  housing?: DonorBuiltHousingInput;
+}
+
+/**
  * 배우자등 이월과세 입력 (소득세법 §97조의2).
  * acquisitionCause === "carryover_gift" 일 때만 유효.
  */
@@ -104,6 +154,11 @@ export interface CarryoverTaxationInput {
    * 소비자는 `general-building-valuation.ts`의 `applyCarryoverEstimationBasis` 하나다.
    */
   donorStandardPriceAtAcquisition?: number;
+  /**
+   * 증여자가 신축·증축한 건물 — §114조의2 가산세 입력. **`useEstimatedAcquisition === true`일 때만** 의미가 있다(실가 승계는 대상이 아니다).
+   * 엔진은 A(이월과세 적용) 채택일 때만 가산세를 싣는다(`transfer-tax-carryover-donor-penalty.ts`).
+   */
+  donorBuilt?: DonorBuiltInput;
   /**
    * 적용배제 — 사용자 선언 (§97조의2 ② 1호·2호·④항).
    * ② 3호(비교과세)는 자동 판정이므로 선언 불필요.
@@ -299,6 +354,11 @@ export interface CarryoverTaxationDetail {
   /** ② 3호 비교과세 적용배제 여부 (B 채택 시 true) */
   comparisonExclusion: boolean;
   /**
+   * [echo] 증여자 신축·증축 §114조의2 가산세 — `carryoverTaxation.donorBuilt`가 입력됐을 때만 존재한다.
+   * `applied=false`면 가산세가 붙지 않은 이유를 `notAppliedReason`에 싣는다(침묵 금지 — 결과 화면 중립 안내의 소스).
+   */
+  donorBuiltPenalty?: DonorBuiltPenaltyEcho;
+  /**
    * **[다건 전용] ②3호를 신고단위 결정세액으로 비교한 실적.**
    *
    * `scenarioA.determinedTax`·`scenarioB.determinedTax`는 **그 자산만** 떼어낸 값이라
@@ -342,4 +402,41 @@ export interface CarryoverTaxationDetail {
    * 소비자는 이 값을 그대로 입력에 덮어쓰기만 하면 된다(판단을 넘기지 않는다).
    */
   adoptedRateBasis?: RateBasisFacts;
+}
+
+/** 증여자 신축·증축 §114조의2 가산세 echo (CarryoverTaxationDetail.donorBuiltPenalty) */
+export interface DonorBuiltPenaltyEcho {
+  /** 가산세가 실제로 붙었는가 */
+  applied: boolean;
+  /**
+   * 붙지 않은 이유 —
+   * `scenario_b`: ②3호 비교로 B 채택(수증자 취득가액 = 증여 당시 평가액, 환산·감정 아님) ·
+   * `carryover_excluded`: ②1호·②2호·③ 기간·관계 등으로 이월과세 자체가 배제 ·
+   * `outside_penalty_window`: A 채택이지만 5년 경과·시행일 전 양도·증축 85㎡ 이하.
+   */
+  notAppliedReason?: "scenario_b" | "carryover_excluded" | "outside_penalty_window";
+  buildingType: "new" | "extension";
+  /** 증여자 신축·증축일 (YYYY-MM-DD) */
+  constructionDate: string;
+  /** 신축·증축일 + 5년 되는 날 (YYYY-MM-DD, 당일 포함) — applied 또는 outside_penalty_window일 때만 */
+  fifthAnniversary?: string;
+  /** 가산세 base (건물분 환산취득가액, 증축은 증축 부분) — applied일 때만 */
+  base?: number;
+  /** 가산세 (base × 5%) — applied일 때만 */
+  penalty?: number;
+  /**
+   * base 를 비율로 구한 산식 `base = multiplicand × numerator ÷ denominator` — 증축(비주택)·일체 주택에서만 존재한다(건물 단독 신축의 base 는 증여자 환산취득가액 그대로).
+   * 일체 주택: multiplicand = 건물분 양도가액, numerator = 취득 당시 건물분 기준시가(증축은 증축 부분 기준시가), denominator = 양도 당시 건물분 기준시가.
+   * 증축(비주택): multiplicand = 양도가액, numerator = 증축 부분 취득(완공) 당시 기준시가, denominator = 양도 당시 기준시가.
+   */
+  formula?: { multiplicand: number; numerator: number; denominator: number };
+  /** 일체 주택 건물분 산정 내역 — 일체 주택이고 applied일 때만 */
+  housingSplit?: {
+    /** 증여자 취득 당시 건물분 기준시가 B_acq */
+    acquisitionBuilding: number;
+    /** 양도 당시 건물분 기준시가 B_tr */
+    transferBuilding: number;
+    /** 양도가액 건물분 S_b */
+    saleBuilding: number;
+  };
 }

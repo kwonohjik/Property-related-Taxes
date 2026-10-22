@@ -23,6 +23,7 @@ import {
   getOwnershipRatio,
 } from "./transfer-tax-api-helpers";
 import { buildGeneralBuildingShares } from "./transfer-tax-api-gb-shares";
+import { applyShareScale } from "./transfer-tax-api-gb-shares";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { apportionCompanionBurdenedGiftDebt } from "./transfer-tax-api-burdened-gift";
 import { phdFlagEffective } from "./phd-toggle-scope";
@@ -151,9 +152,14 @@ export function buildPrimaryContext(
 
   // ⑬ 일반건물(토지+건물 일괄) 환산취득가 서브객체 빌드 (TypeScript 미감지 영역 — grep 자가 점검 완료)
   const isGeneralBuilding = primary.assetKind === "general_building";
-  const gbValuation = isGeneralBuilding
+  const gbValuationRaw = isGeneralBuilding
     ? buildGeneralBuildingValuation(primary, form.transferDate)
     : undefined;
+  // 공유 지분(축 A·함께 양도 지분) — 100% 기준 입력 금액을 지분 몫으로(축 B 지분 배열과 같은 leaf). 축 B 최상위 값은 종전 그대로.
+  const gbValuation =
+    gbValuationRaw && fractionalBundleMerge === false
+      ? applyShareScale(gbValuationRaw as Record<string, unknown>, getOwnershipRatio(primary))
+      : gbValuationRaw;
   /**
    * E-3 — **일반건물 분리 ON**이면 최상위 `acquisitionMethod`는 `"actual"`로 고정하고 `appraisalValue`·`similarSalesValue`는 싣지 않는다.
    *

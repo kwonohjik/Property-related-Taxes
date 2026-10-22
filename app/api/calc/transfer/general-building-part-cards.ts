@@ -28,6 +28,7 @@ import type { GeneralBuildingActualPricePayload } from "./general-building-route
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
 import { buildProperties } from "./general-building-route-cards";
 import { resolveGbPreDeemedRoute } from "@/lib/tax-engine/general-building-pre-deemed";
+import { scaleDeclaredSaleSplitToShare } from "@/lib/tax-engine/general-building-entry";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 
 export interface GbPartCards {
@@ -90,8 +91,10 @@ export function buildGbPartCards(
     // 증축 원건물 일괄 실가 — 단건과 같은 주입(엔진이 키의 존재로 원건물 모드를 고른다).
     ...extensionBundledInjection(raw, actualAcquisitionPrice, actualExpenses),
   });
+  // 공유 지분 — 계약서 구분 기재 양도가액(100% 기준)을 이 지분의 양도가액에 맞춘다(단건 `dispatchGeneralBuilding`과 같은 leaf).
+  const gbvShare = scaleDeclaredSaleSplitToShare(gbvIn, ownershipRatio);
   // 의제취득일 전 상속·증여 파트 — 단건 `dispatchCoercedGeneralBuilding`과 같은 재선택(PR-4).
-  const preDeemed = resolveGbPreDeemedRoute(gbvIn, actualExpenses, (r) =>
+  const preDeemed = resolveGbPreDeemedRoute(gbvShare, actualExpenses, (r) =>
     buildEstimatedGeneralBuildingCards(estimatedPayloadOf(r)).gbOut.acquisition);
   const gbv = preDeemed.raw;
   const echo = preDeemed.echo ? { preDeemedAcquisition: preDeemed.echo } : {};

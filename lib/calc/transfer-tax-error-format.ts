@@ -85,6 +85,14 @@ const FIELD_LABEL: Record<string, string> = {
   constructionDate: "신축·증축 완공일",
   extensionFloorArea: "증축 바닥면적",
 
+  // 이월과세 × 증여자 신축·증축(§114조의2) — ⑫ 400 이 가리키는 와이어 경로(화면 라벨과 같다)
+  "carryoverTaxation.donorBuilt": "증여자 신축·증축 정보",
+  "carryoverTaxation.donorBuilt.buildingType": "증여자 신축·증축 구분",
+  "carryoverTaxation.donorBuilt.constructionDate": "증여자 신축·증축일",
+  "carryoverTaxation.donorBuilt.extensionFloorArea": "증축 바닥면적",
+  "carryoverTaxation.donorBuilt.extensionStdPriceAtAcquisition": "증축 부분 취득 당시 기준시가",
+  "carryoverTaxation.donorBuilt.housing": "일체 주택 건물분 입력",
+
   // 1990 토지
   "pre1990Land.acquisitionDate": "1990 토지 취득일",
   "pre1990Land.gradeAtAcquisition": "1990 취득시 토지등급",

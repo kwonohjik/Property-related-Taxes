@@ -57,6 +57,7 @@ import { anyPartCarryover } from "./transfer-land-part-cause";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { withDonorBuilt } from "./transfer-tax-api-donor-built";
 import { carryoverAcquisitionDateFallback, primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
@@ -706,7 +707,9 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...(primary.acquisitionCause === "carryover_gift" && primary.carryover && !partCarryover(primary).building
       ? (() => {
           const payload = buildCarryoverPayload(primary, form.transferDate, primaryRatio);
-          return payload ? { carryoverTaxation: payload.carryoverTaxation } : {};
+          return payload
+            ? { carryoverTaxation: withDonorBuilt(payload.carryoverTaxation, primary, { transferDate: form.transferDate }, primaryRatio) }
+            : {};
         })()
       : {}),
     // ⑬ 장기임대주택 거주주택 비과세 특례 (소령 §155⑳) — 토글 OFF 시 undefined, body에서 제외

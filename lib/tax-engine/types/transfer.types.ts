@@ -1142,6 +1142,11 @@ export interface TransferTaxInput {
    * `resolvePenaltyAxis`(`transfer-tax-finalize.ts`)가 splitDetail 축보다 뒤에 읽는다.
    */
   penaltyAxis?: { acquisitionMethod: "estimated" | "appraisal"; base: number };
+  /**
+   * §114조의2 가산세가 **이월과세 증여자 신축·증축**(`carryoverTaxation.donorBuilt`)에서 왔다는 표식 — 가산세 설명 문구만 가른다.
+   * 이월과세 해결자(`transfer-tax-carryover-donor-penalty.ts`)가 A 채택 입력에만 싣는 **내부 값**이며 와이어(Zod)에는 없다.
+   */
+  penaltyDonorBuilt?: boolean;
   /** 본인 신축·증축 여부 */
   isSelfBuilt?: boolean;
   /** 신축(new) / 증축(extension) */
@@ -1198,6 +1203,11 @@ export interface TransferTaxInput {
   suppressShortTermRate?: boolean;
   /** P5 특례 — §98①1호 세율 20% 단일 (§104① 불구). 엔진 내부 주입 (STEP 7). */
   forceFlatRate20?: boolean;
+  /**
+   * 반사실 — §104⑦ 다주택 중과를 **세율·장특 두 축 모두** 적용하지 않은 세액(다주택 중과 판정 메뉴 시뮬레이션 B).
+   * 서버 route만 주입한다(Zod 스키마에 없다 — 클라이언트가 보낼 수 없다). 술어 `resolveSurchargeApplication` 최상단에서 닫는다.
+   */
+  forceNoMultiHouseSurcharge?: boolean;
   /** P5 모드 2 — 보유 감면주택 §89①3호 주택수 제외 (7개 조문 ②·§98 령②·§99②). */
   specialHouseExclusions?: import("../transfer-reductions/unsold-hybrid-p5").SpecialHouseExclusionInput[];
   /**

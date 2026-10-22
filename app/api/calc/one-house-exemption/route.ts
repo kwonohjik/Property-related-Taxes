@@ -24,252 +24,47 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { preloadTaxRates, loadFallbackTransferRates } from "@/lib/db/tax-rates";
-import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
+import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { taxCalculationErrorResponse } from "@/lib/api/tax-error-response";
-import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
-import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { finiteJson } from "@/lib/api/non-finite-guard";
 import { propertySchema as inputSchema } from "@/lib/api/transfer-tax-schema";
-import { buildTransferEngineInput } from "../transfer/engine-input";
-import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { resolveJudgmentBaseDate } from "@/lib/api/judgment-base-date";
-import type { OneHouseRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import {
-  buildOneHouseCountBreakdown,
-  deriveHouseholdHousingCount,
-  deriveHouseholdRightCount,
-  type OneHouseCountBreakdown,
-} from "@/lib/tax-engine/one-house/house-count";
-import type { OneHouseOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
-import {
-  buildContestedIssue,
-  contestedVerdictOf,
-  detectContestedIssues,
-  type OneHouseContestedIssue,
-} from "@/lib/tax-engine/one-house/contested-issues";
-import { runOneHouseJudgmentPipeline } from "./judgment-pipeline";
-import { withSameDayRightNotice } from "@/lib/tax-engine/one-house/same-day-right";
-import { resolveRightSaleSpecialExclusion } from "@/lib/tax-engine/one-house/right-sale-special-act-exclusion";
-import type { OneHouseJudgment } from "@/lib/tax-engine/one-house/types";
-import {
-  resolveExemptionHoldingStartDate,
-  resolveExemptionResidenceMonths,
-} from "@/lib/tax-engine/transfer-tax-exemption-requirements";
-import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+  buildJudgmentEngineInput,
+  buildOneHouseExemptionPayload,
+  judgmentRateLimitResponse,
+  judgmentZodErrorResponse,
+  loadJudgmentRates,
+  parseJudgmentJson,
+} from "./judgment-request";
 
-/** 판정 메뉴 응답 — 화면(④ 결과)이 읽는 전부. */
-export type OneHouseExemptionResponse = {
-  judgment: OneHouseJudgment;
-  /**
-   * 판정 기준일(조회일, 한국 날짜 YYYY-MM-DD) — 이 날 전에 지난 「이 날까지 양도」 기한은 `pending`에서
-   * 빠진다(2026-09-29). 이력 상세는 **저장 당시의 판정**이라 화면이 이 날짜를 함께 보여 준다.
-   * 구 이력에는 없다.
-   */
-  judgmentBaseDate?: string;
-  houseCount: OneHouseCountBreakdown;
-  /**
-   * §155⑳ 장기임대주택 특례 결론 (P4-3a) — 특례를 **선언한 경우에만** 실린다.
-   * `undefined`는 「선언하지 않음」이고 `passed: false`는 「선언했으나 미충족」이다.
-   */
-  rentalHousingException?: OneHouseRentalHousingVerdict;
-  /**
-   * §89①4호 1세대1입주권 결론 (P4-3b) — 양도 대상이 **조합원입주권일 때만** 실린다.
-   * `undefined`는 「주택 양도라 물을 일이 아님」이고 `clause: null`은 「물었으나 미성립」이다.
-   */
-  oneRightExemption?: OneHouseOneRightVerdict;
-  /**
-   * §154⑧3호 동일세대 상속 통산 (OH-18) — 동일세대 상속을 **선언한 경우에만** 실린다.
-   * 값은 엔진 정본(`resolveExemptionHoldingStartDate`·`resolveExemptionResidenceMonths`)이 낸 것이다.
-   * 화면이 역산하지 않도록 route가 싣는다(`feedback_aggregate_display_rederives_engine_value`).
-   */
-  inheritedPeriodConsolidation?: {
-    /** §154① 보유기간 기산일(YYYY-MM-DD) — 통산이 성립하면 동일세대 거주·보유 개시일 */
-    holdingStartDate: string;
-    /** §154① 거주요건 판정에 쓰는 거주 개월 — 상속 후 실거주 + 상속개시 전 동일세대 거주 */
-    residenceMonths: number;
-  };
-  /**
-   * 해석이 갈리는 쟁점(P4) — 양론 사실 패턴이 있을 때만 실린다. 두 입장 각각의 결론을 담는다.
-   * `judgment`는 그중 엔진 입장(`enginePosition`)의 판정이다. 구 이력에는 없다.
-   */
-  contestedIssues?: OneHouseContestedIssue[];
-};
+// 응답 타입은 공용 모듈로 옮겼다(중과 판정 route가 D3a 요약으로 같은 것을 싣는다) — 기존 import 경로 유지.
+export type { OneHouseExemptionResponse } from "./judgment-request";
 
 export async function POST(request: NextRequest) {
   // 단계 0: Rate Limiting — 계산 route와 같은 분당 30회
-  const ip = getClientIp(request);
-  const rl = checkRateLimit(`one-house-exemption:${ip}`, {
-    limit: 30,
-    windowMs: 60_000,
-    bypass: shouldBypassRateLimit(request),
-  });
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: { code: "RATE_LIMITED", message: "요청이 너무 많습니다. 잠시 후 다시 시도하세요" } },
-      { status: 429 },
-    );
-  }
+  const limited = judgmentRateLimitResponse(request, "one-house-exemption");
+  if (limited) return limited;
 
   // 단계 1: JSON 파싱
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: { code: "INVALID_JSON", message: "요청 본문을 파싱할 수 없습니다" } },
-      { status: 400 },
-    );
-  }
+  const json = await parseJudgmentJson(request);
+  if ("response" in json) return json.response;
 
   // 단계 2: Zod 검증 — 계산기와 **같은 스키마**
-  const parsed = inputSchema.safeParse(body);
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string[]> = {};
-    for (const issue of parsed.error.issues) {
-      const key = issue.path.length > 0 ? issue.path.join(".") : "_root";
-      fieldErrors[key] = [...(fieldErrors[key] ?? []), issue.message];
-    }
-    console.error("[one-house-exemption route] zod validation failed", {
-      issueCount: parsed.error.issues.length,
-      issues: parsed.error.issues.map((i) => ({ path: i.path, message: i.message, code: i.code })),
-    });
-    return NextResponse.json(
-      {
-        error: {
-          code: TaxErrorCode.INVALID_INPUT,
-          message: "입력값이 올바르지 않습니다",
-          fieldErrors,
-        },
-      },
-      { status: 400 },
-    );
-  }
+  const parsed = inputSchema.safeParse(json.body);
+  if (!parsed.success) return judgmentZodErrorResponse(parsed.error, "one-house-exemption route");
 
   try {
-    // 단계 3: string → Date (⑭ — `date-coerce` 경유 강제)
-    const data = parsed.data;
-    const transferDate = toDate(data.transferDate, "transferDate");
-    const acquisitionDate = toDate(data.acquisitionDate, "acquisitionDate");
-    const assetContractDate = toOptionalDate(data.assetContractDate);
-
-    const baseInput = buildTransferEngineInput(
-      data,
-      transferDate,
-      acquisitionDate,
-      assetContractDate,
-    );
-
-    /**
-     * 단계 4: **주택 수는 명부에서 도출한다**(G-1 · D-3).
-     *
-     * 계산기는 사용자가 선언한 스칼라를 쓰지만 판정 메뉴에는 그 위젯이 없다. 본문에 실려 온
-     * 값을 그대로 쓰면 「명부가 정본」이 무너지고, 조작된 본문으로 판정을 흔들 수도 있다.
-     */
-    /**
-     * 🔴 **양도 대상이 주택이 아니면 주택 수 축이 갈린다**(P4-3b).
-     *
-     * 조합원입주권 양도는 §89①**4호** 경로이고, 가목이 「다른 주택을 보유하지 **아니할** 것」
-     * = 0채를 요구한다. `buildHousesPayload`가 붙인 `selling` 행을 주택으로 세면 명부가 비어도
-     * 1채가 되어 가목이 **절대 성립하지 않는다**. 대신 그 양도 대상은 **입주권 수**에 들어간다.
-     */
-    const isRightSale = data.propertyType === "right_to_move_in";
-
-    const engineInput: TransferTaxInput = {
-      ...baseInput,
-      householdHousingCount: deriveHouseholdHousingCount(baseInput.houses, !isRightSale),
-      householdRightCount: deriveHouseholdRightCount(baseInput.presaleRights, isRightSale),
-      /**
-       * §89①4호 가·나목 분양권 게이트(`oneRightPresaleGate`) 전용 — **판정 메뉴는 예외**
-       * (2026-10-06 사용자 결정, 계획서 §10 남은 별건 1 「입력 안 함과 없음을 구별할 필요가
-       * 없어」). 이 화면에는 「세대 보유 분양권·입주권이 없습니다」확인 토글 자체가 없다 —
-       * 목록이 비어 있으면 그 자체가 조사의 결론(「없음」)이고, 계산기 전용 확인 플래그가
-       * 없다는 이유로 가·나목을 "undetermined"로 떨어뜨리면 판정을 다시 요구하는 것이 된다.
-       * 목록에 항목이 있으면 이 값은 게이트가 아예 보지 않는다(`oneRightPresaleGate` 참조).
-       */
-      householdNoPresaleRightsConfirmed: true,
-    };
-
+    // 단계 3~4: Date 변환 · 엔진 input 조립 · 주택 수 명부 도출(`judgment-request.ts`)
+    const { engineInput, transferDate, isRightSale } = buildJudgmentEngineInput(parsed.data);
     // 단계 5: 세율 로드 — 계산기와 동일한 graceful fallback 정책
-    let rates;
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
-      try {
-        rates = await preloadTaxRates(["transfer"], transferDate);
-        if (rates.size === 0) rates = loadFallbackTransferRates(transferDate);
-      } catch (err) {
-        console.warn("[POST /api/calc/one-house-exemption] preloadTaxRates 실패, 로컬 fallback:", err);
-        rates = loadFallbackTransferRates(transferDate);
-      }
-    } else {
-      rates = loadFallbackTransferRates(transferDate);
-    }
-    const parsedRates = parseRatesFromMap(rates);
+    const parsedRates = await loadJudgmentRates(transferDate, "/api/calc/one-house-exemption");
 
     // 판정 기준일(오늘, 한국 날짜) — 이미 지난 「이 날까지 양도」 기한을 안내하지 않기 위해 넘긴다.
     //   계산기(`transfer-tax.ts`)는 넘기지 않는다 — 세액 경로 불변.
     const judgmentBaseDate = resolveJudgmentBaseDate();
-    // 단계 6~6.7: 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자(`judgment-pipeline.ts`)
-    const { exclusion, rentalVerdict, oneRightVerdict, judgment } = runOneHouseJudgmentPipeline(
-      engineInput,
-      parsedRates,
-      judgmentBaseDate,
-      isRightSale,
-    );
-
-    /**
-     * 단계 6.8: 해석이 갈리는 쟁점(P4) — 반대 입장 입력으로 **같은 파이프라인**을 한 번 더 돌려 두 결론을 싣는다.
-     * 판정 메뉴 전용 — 계산기는 엔진 입장대로 세액을 낸다.
-     */
-    const engineVerdict = contestedVerdictOf(judgment);
-    const contestedIssues = detectContestedIssues(engineInput).map((d) =>
-      buildContestedIssue(
-        d,
-        engineVerdict,
-        contestedVerdictOf(
-          runOneHouseJudgmentPipeline(d.otherPositionInput, parsedRates, judgmentBaseDate, isRightSale).judgment,
-        ),
-      ),
-    );
-
-    // 입주권 양도 판정이 「다른 주택」에서 빼는 것은 해석례로 확인된 보유 감면주택 4개 조문과 명부 도출 §71의2①뿐이다(§99의4·§98의9·
-    // 그 밖의 조문은 효과가 없다) — 명세도 판정과 같은 목록으로 만든다(`oneRightInputAfterSpecialActExclusionOf`와 같은 leaf · S03-6 · 결정 #42).
-    const houseCount = buildOneHouseCountBreakdown({
-      total: engineInput.householdHousingCount,
-      houseCountExclusion: isRightSale ? { appliedList: [], details: [] } : exclusion.houseCountExclusion,
-      specialHouseExclusion: isRightSale ? resolveRightSaleSpecialExclusion(engineInput) : exclusion.specialHouseExclusionDetail,
-      inheritedExclusion: exclusion.inheritedExclusion,
-      // 입주권 양도 판정은 §155②③ 상속주택을 「다른 주택」에서 빼지 않는다 — 명세도 같은 입장이어야 한다(S03-6).
-      inheritedExclusionApplies: !isRightSale,
-      houses: engineInput.houses,
-    });
-
-    const judgeInput = exclusion.exemptionJudgeInput;
-    const inheritedPeriodConsolidation =
-      judgeInput.acquisitionCause === "inheritance" &&
-      judgeInput.decedentSameHouseholdBeforeInheritance === true
-        ? {
-            holdingStartDate: resolveExemptionHoldingStartDate(judgeInput).toISOString().slice(0, 10),
-            residenceMonths: resolveExemptionResidenceMonths(judgeInput),
-          }
-        : undefined;
-
-    // 양도일과 같은 날 취득한 권리를 보유로 세면 결론이 달라질 때만 확인 필요를 덧붙인다(코드 리뷰 결정 #1) — 같은 파이프라인 재실행.
-    const judgmentWithSameDayNotice = withSameDayRightNotice(
-      engineInput,
-      judgment,
-      (counterfactual) =>
-        runOneHouseJudgmentPipeline(counterfactual, parsedRates, judgmentBaseDate, isRightSale).judgment,
-    );
-
-    const payload: OneHouseExemptionResponse = {
-      judgment: judgmentWithSameDayNotice,
-      judgmentBaseDate: judgmentBaseDate.toISOString().slice(0, 10),
-      houseCount,
-      ...(rentalVerdict ? { rentalHousingException: rentalVerdict } : {}),
-      ...(oneRightVerdict ? { oneRightExemption: oneRightVerdict } : {}),
-      ...(inheritedPeriodConsolidation ? { inheritedPeriodConsolidation } : {}),
-      ...(contestedIssues.length > 0 ? { contestedIssues } : {}),
-    };
+    // 단계 6~: 판정 · 쟁점 · 주택 수 명세 · 동일세대 통산 · 같은 날 권리(`buildOneHouseExemptionPayload`)
+    const payload = buildOneHouseExemptionPayload(engineInput, parsedRates, judgmentBaseDate, isRightSale);
     return finiteJson({ data: payload }, { status: 200 });
   } catch (err) {
     console.error("[/api/calc/one-house-exemption] engine error:", err);

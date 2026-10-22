@@ -12,6 +12,7 @@
 import { z } from "zod";
 import { rentalHousingExceptionSchema } from "./transfer-tax-schema-rental-exception";
 import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
+import { donorBuiltShape, refineDonorBuiltInCarryover } from "./transfer-tax-schema-donor-built";
 import { landRebuildShape } from "./transfer-tax-schema-land-rebuild";
 import { oneRightExemptionFactsSchema } from "./transfer-tax-schema-sub";
 import {
@@ -560,6 +561,8 @@ export const propertyBaseShape = {
      *    (mutation 실측: 이 줄을 지워도 `__tests__/api`·`calc`·`tax-engine/transfer` 3,040건 전건 green).
      */
     donorStandardPriceAtAcquisition: z.number().int().nonnegative().optional(),
+    /** 증여자가 신축·증축한 건물(§114조의2) — 엔진 shape(`carryoverTaxationEngineShape`)과 parity. 환산취득가액일 때만 */
+    donorBuilt: donorBuiltShape.optional(),
     exclusionDeclared: z.object({
       expropriationWithin2Years: z.boolean().optional(),
       /**
@@ -569,7 +572,7 @@ export const propertyBaseShape = {
       legacyOneHouseExemptionDeclared: z.boolean().optional(),
       isFamilyBusinessInheritedAsset: z.boolean().optional(),
     }).optional(),
-  }).superRefine(refineCarryoverHouseholdStart).optional(),
+  }).superRefine(refineCarryoverHouseholdStart).superRefine(refineDonorBuiltInCarryover).optional(),
   /**
    * §163⑨ 상속·증여 취득가액 운반 4키(pre1990Land·inheritedAcquisition·inheritedHouseValuation·
    * commercialInheritanceValuation) — **컴패니언과 같은 shape**을 spread한다(CP-3 · 목록 복사 금지).
