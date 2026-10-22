@@ -1,6 +1,6 @@
 # 일반건물 단독 경로 ⑧↔⑫ 점검(축 A) · 감정평가가액 한쪽만 입력 ⑧↔⑫ 비대칭(축 B) 계획서
 
-> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **📝 Plan 초안 — 사용자 결정 대기** (§8 Q-1~Q-3)
+> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — Q-1 (a) ⑫ 조임 · Q-2 V8-b도 같이 조임 · Q-3 일반건물 같은 PR 포함) → Do** · 별건(GB 양도비 배분 기준·GB V8-b ⑧)은 별도 계획서
 > 관련: `docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md`(§9 범위 밖 = 본 건) · `docs/00-pm/split-v7-pre2016-fe8-12-parity.plan.md` · `docs/00-pm/mixed-use-sale-split-basis.plan.md`(:124 · P-18 — ⑫ 짝 검사 선례) · 테스트 `__tests__/calc/split-sale-std-era-fe8-12-parity.test.ts` · memory `feedback_fe8_vs_12_parity_grid`
 
 ## 0. 한 줄 요약
