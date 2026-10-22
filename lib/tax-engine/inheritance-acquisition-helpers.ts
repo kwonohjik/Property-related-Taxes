@@ -23,6 +23,7 @@ import { applyRatio } from "./tax-utils";
 import { isRedevelopmentActive } from "./redevelopment-dispatch";
 import { resolveRedevelopment166_3AcquisitionPrice } from "./redevelopment-166-3-price";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { resolveConversionDenominatorAtTransfer } from "./transfer-tax-expropriation-valuation";
 
 /** STEP 0.45 실행 결과 */
 export interface InheritedAcquisitionStepResult {
@@ -64,7 +65,7 @@ export function runInheritedAcquisitionStep(
 
   const redevelopment166_3Price = resolvePreDeemedRedevelopment166_3Price(rawInput);
   const result = withApartNotes(
-    calculateInheritanceAcquisitionPrice(resolvedInput, redevelopment166_3Price),
+    calculateInheritanceAcquisitionPrice(withConversionDenominator(resolvedInput, currentInput), redevelopment166_3Price),
     apartGate,
   );
 
@@ -115,6 +116,29 @@ export function resolveInheritedRedevelopmentAcqPrice(
 }
 
 // ─── 내부 헬퍼 ────────────────────────────────────────────────────────────
+
+/**
+ * 의제취득일 전 ③의 분모 = ③이 채택된 뒤 하류 환산(`calcTransferGain`)이 실제로 쓰는 양도시 기준시가(Q-10 A).
+ *
+ * 영 §164⑨은 수용(1호)·공매·경락(2호)이면 차액을 빼 「양도 당시 기준시가」 자체를 계산하라고 하고, ③은 영 §176조의2④1호 →
+ * ③3호 → ②2호의 환산이라 분모가 그 양도 당시 기준시가다. 비교만 원값으로 하면 카드의 ③과 양도차익의 취득가액이 갈린다
+ * (실측: 수용 토지 ③ 149,925,925로 채택·표시 → 하류 253,000,000으로 계산). 하류와 **같은 함수·같은 입력**으로 정한다 —
+ * `applyResultToInput`이 넘기는 값(`standardPriceAtTransfer`)과 같은 것을 넣는다. 하류 입력 자체는 바꾸지 않는다(하류가 다시 적용한다).
+ * 재개발 종전자산은 ③이 §166③ 주입값이라 이 분모를 쓰지 않는다(`calcPreDeemed`).
+ */
+function withConversionDenominator(
+  resolved: InheritanceAcquisitionInput,
+  currentInput: TransferTaxInput,
+): InheritanceAcquisitionInput {
+  const atTransfer = resolved.standardPriceAtTransfer;
+  if (resolved.inheritanceDate.getTime() >= DEEMED_ACQUISITION_DATE.getTime() || !(atTransfer && atTransfer > 0)) return resolved;
+  const { denominator } = resolveConversionDenominatorAtTransfer({
+    ...currentInput,
+    useEstimatedAcquisition: true,
+    standardPriceAtTransfer: atTransfer,
+  });
+  return denominator === atTransfer ? resolved : { ...resolved, standardPriceAtTransfer: denominator };
+}
 
 /**
  * 의제취득일 전 상속·증여 **재개발·재건축 종전자산**의 ③ = §166③ 금액(계획서 §12 · Q-8 a).

@@ -273,7 +273,7 @@ export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment
     sameAdjustmentPeriod: buildSameAdjustmentPeriodInput(primary),
     // ⑬ §164⑨ 1호(공익수용)·2호(공매·경락) 양도당시 기준시가 특례 — 단건 ④와 같은 leaf(F-12).
     //    종전에는 화면에 입력칸이 뜨는데 ⑬·⑭ 모두 빠져 환산이 특례 없이 계산됐다(49,293,200 → 85,868,200).
-    ...(primary ? buildExpropriationInput(primary) : {}),
+    ...(primary ? buildExpropriationInput(primary, form.transferDate) : {}),
     acquisitionMethod: isSalesCase ? "salesCase" : isAppraisal ? "appraisal" : isEstimated ? "estimated" : "actual",
     // 개산공제(§163⑥) base 축소용 지분율 — 금액 필드와 달리 **기준시가는 raw 100% 유지**하고
     // 엔진이 개산공제 지점에서만 적용한다(단건 정본 `transfer-tax-api.ts:205-207`).

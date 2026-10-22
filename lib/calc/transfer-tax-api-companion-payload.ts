@@ -9,6 +9,7 @@
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
 import { parseAmount } from "@/lib/calc/number-parse";
+import { exprCompensationSendGates } from "./transfer-tax-validate-expropriation";
 import { depreciationSupport } from "./depreciation-scope";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -340,8 +341,13 @@ export function buildAssetPayload(
           standardPricePerSqmAtTransfer:
             parseAmount(asset.standardPricePerSqmAtTransfer) || undefined,
           transferArea: parseFloat(asset.transferArea) || undefined,
-          compensationPerSqm: parseAmount(asset.compensationPerSqm) || undefined,
-          compensationBasisStdPrice: parseAmount(asset.compensationBasisStdPrice) || undefined,
+          // 보상액은 ⑤가 칸을 보이는 조건에서만 싣는다(주 자산 `buildExpropriationInput`과 같은 게이트 — 숨은 칸의 옛 값 차단).
+          ...(exprCompensationSendGates(asset, transferDate, true).perSqm
+            ? {
+                compensationPerSqm: parseAmount(asset.compensationPerSqm) || undefined,
+                compensationBasisStdPrice: parseAmount(asset.compensationBasisStdPrice) || undefined,
+              }
+            : {}),
         }
       : {}),
     // §164⑨2호 공매·경락 (P4) — 컴패니언도 지원(1호와 대칭). 적격 자산(land·building·housing)만 전송.
@@ -352,7 +358,7 @@ export function buildAssetPayload(
         }
       : {}),
     // §164⑨1호 주택 총액 트랙 (P5) — 컴패니언 주택도 지원. 주택일 때만 전송.
-    ...(isHousingExprEligibleAssetKind(asset.assetKind)
+    ...(isHousingExprEligibleAssetKind(asset.assetKind) && exprCompensationSendGates(asset, transferDate, true).housingTotal
       ? {
           housingCompensationTotal: parseAmount(asset.housingCompensationTotal) || undefined,
           housingCompensationBasisTotal: parseAmount(asset.housingCompensationBasisTotal) || undefined,

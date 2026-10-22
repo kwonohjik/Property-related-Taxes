@@ -534,11 +534,17 @@ export function calcSplitAcquisitionPrice(
     }
   }
 
-  // §164⑨1호 공익수용 특례 — **토지분이 환산(estimated) 모드일 때만** 분모를 min[]로 낮춘다
+  // §164⑨1호 공익수용 특례 — **토지분이 환산되는 경우만** 분모를 min[]로 낮춘다
   // (건물분 무변경 — 시행규칙 §80⑧, 계획 D16-GB). 미충족 시 null → landStdAtTransferBase 유지(회귀 0).
-  let landStdAtTransfer = landStdAtTransferBase;
-  let splitLandExpropriationValuationDetail: SplitLandExpropriationValuationDetail | undefined;
-  if (landMode === "estimated") {
+  // 1985.1.1. 전 토지 파트의 ③도 환산이라 같은 분모로 비교한다(Q-10 A) — 채택되면 아래에서 이 분모·내역을 돌려준다.
+  const landDate = input.landAcquisitionDate as Date | string | undefined;
+  const landPreDeemed = isPreDeemedLandPart(
+    input.landAcquisitionCause,
+    landDate instanceof Date ? landDate.toISOString().slice(0, 10) : landDate,
+  );
+  let landStdAtTransferExpr = landStdAtTransferBase;
+  let landExprDetail: SplitLandExpropriationValuationDetail | undefined;
+  if (landMode === "estimated" || landPreDeemed) {
     const landExprVal = applySplitLandExpropriationValuation({
       propertyType: input.propertyType,
       useEstimatedAcquisition: true,
@@ -548,9 +554,11 @@ export function calcSplitAcquisitionPrice(
       compensationTotal: input.splitLandCompensationTotal,
       compensationBasisTotal: input.splitLandCompensationBasisTotal,
     });
-    landStdAtTransfer = landExprVal?.denominator ?? landStdAtTransferBase;
-    splitLandExpropriationValuationDetail = landExprVal?.detail;
+    landStdAtTransferExpr = landExprVal?.denominator ?? landStdAtTransferBase;
+    landExprDetail = landExprVal?.detail;
   }
+  let landStdAtTransfer = landMode === "estimated" ? landStdAtTransferExpr : landStdAtTransferBase;
+  let splitLandExpropriationValuationDetail = landMode === "estimated" ? landExprDetail : undefined;
 
   /**
    * 별개 취득(`isSeparateAcquisition`) 자산에서 **취득가액 축은 파트별로 완결**한다 —
@@ -567,8 +575,8 @@ export function calcSplitAcquisitionPrice(
    * 미입력은 `null`로 승격해 호출부가 차단한다. `?? 0`으로 메우면 감정·매매사례 모드에서
    * "취득가액 0 + 개산공제 3%"라는 그럴듯한 소액이 남아 오답이 눈에 띄지 않는다.
    */
-  // ③(1985.1.1. 전 토지 파트) 분모 — 결합 공시 비례 안분·공익수용 min[] 전의 양도시 토지 기준시가(별개 취득은 원값).
-  const landPartAcq = resolveLandPartAcquisition(input, { partTransferPrice: landTransferPrice, stdAtTransfer: landStdAtTransferBase });
+  // ③(1985.1.1. 전 토지 파트) 분모 — 양도시 토지 기준시가(별개 취득은 원값)에 §164⑨1호 공익수용 min[]을 적용한 값(Q-10 A).
+  const landPartAcq = resolveLandPartAcquisition(input, { partTransferPrice: landTransferPrice, stdAtTransfer: landStdAtTransferExpr });
   const buildingPartAcq = resolveBuildingPartAcquisition(input);
   const partCtx: PartAcqPriceContext = {
     isSeparate,
@@ -603,6 +611,10 @@ export function calcSplitAcquisitionPrice(
   // ③이 채택된 토지 파트는 추계다 — 입력 모드(실가 강제 · G-2)와 별개로 엔진 안에서만 환산으로 돌려 개산공제·§97②2호 단서를 적용한다.
   // 취득가액은 위 `calcPartAcquisitionPrice("actual")`가 ③을 그대로 돌려준다(ctx.landAcquisitionPrice = ③).
   const landConverted = landPartAcq.convertedNumerator !== undefined;
+  if (landConverted) {
+    landStdAtTransfer = landStdAtTransferExpr;
+    splitLandExpropriationValuationDetail = landExprDetail;
+  }
   return {
     land: landRaw ?? 0,
     building: buildingRaw ?? 0,

@@ -12,6 +12,7 @@
  *    않는다. 요구 조건이 ⑧보다 넓어지면 「⑧ 통과 ↔ ⑫ 400」 막다른 길이 된다.
  */
 import { z } from "zod";
+import { multiplyByArea, round2 } from "@/lib/tax-engine/area-utils";
 import {
   type ExprGateFacts,
   isExprPerSqmRequired,
@@ -19,6 +20,8 @@ import {
   isExprHousingTotalRequired,
   exprSplitLandGate,
   isExprMixedUseRequired,
+  isPreDeemedConversionCandidate,
+  isExprPerSqmStdInputRequired,
 } from "@/lib/calc/expropriation-required-gate";
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
@@ -27,6 +30,7 @@ import { partialAppraisal, usableAppraisal } from "@/lib/tax-engine/sale-split-a
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import {
   collectSplitPartCauseIssues,
+  isPreDeemedLandPart,
   HOUSE_FIRST_DISCLOSURE_RANGE_MESSAGE,
   houseFirstDisclosureDateInRange,
 } from "@/lib/tax-engine/transfer-split-part-cause";
@@ -79,6 +83,8 @@ export type Required2aLike = {
   // §164⑨
   transferCause?: string;
   compensationPerSqm?: number;
+  standardPricePerSqmAtTransfer?: number;
+  transferArea?: number;
   compensationBasisStdPrice?: number;
   isAuctionTransfer?: boolean;
   auctionPrice?: number;
@@ -167,6 +173,10 @@ function exprFactsFromBody(d: Required2aLike): ExprGateFacts {
     separateLandAcquisition: !!d.landAcquisitionDate || isMixedUse,
     usePreHousingDisclosure: !!d.preHousingDisclosure,
     isAuctionTransfer: d.isAuctionTransfer === true,
+    // ③ 후보(Q-10 A) — ⑧은 ④ 빌더 결과로 같은 함수를 부른다. split 토지 파트는 ④가 1985 전 파트에만 싣는 ③ 분자로 확정한다.
+    preDeemedConversion: isPreDeemedConversionCandidate(d),
+    preDeemedSplitLand:
+      d.isSeparateAcquisition === true && isPreDeemedLandPart(d.landAcquisitionCause, d.landAcquisitionDate),
   };
 }
 
@@ -179,6 +189,20 @@ export function refineExpropriationInputs(d: Required2aLike, ctx: z.RefinementCt
   const f = exprFactsFromBody(d);
 
   if (isExprPerSqmRequired(f)) {
+    // 의제취득일 전 ③ 후보 — 엔진 원/㎡ 트랙은 양도시 ㎡당 기준시가·면적이 모두 있어야 발동한다(⑧ `validateExprValuationAsset`과 같은 게이트).
+    if (isExprPerSqmStdInputRequired(f)) {
+      if (!positive(d.standardPricePerSqmAtTransfer))
+        issue(["standardPricePerSqmAtTransfer"], "의제취득일 전 상속·증여 토지의 공익수용 환산 특례는 양도시 ㎡당 공시지가가 필요합니다 (소득세법 시행령 §164⑨1호·§176조의2④)");
+      else if (!positive(d.transferArea))
+        issue(["transferArea"], "의제취득일 전 상속·증여 토지의 공익수용 환산 특례는 양도 당시 면적이 필요합니다 (소득세법 시행령 §164⑨1호·§176조의2④)");
+      else {
+        // ③ 분모 총액(엔진: `inheritedAcquisition.standardPriceAtTransfer ?? standardPriceAtTransfer`)과 ㎡당 × 면적이 같아야 한다(⑧ 같은 규칙).
+        const ia = d.inheritedAcquisition as { standardPriceAtTransfer?: number } | undefined;
+        const total = ia?.standardPriceAtTransfer ?? d.standardPriceAtTransfer;
+        if (total !== multiplyByArea(d.standardPricePerSqmAtTransfer!, round2(d.transferArea!)))
+          issue(["standardPriceAtTransfer"], "양도시 기준시가가 「양도시 ㎡당 공시지가 × 면적」과 다릅니다 — 같은 값이어야 합니다 (소득세법 §99①1호 가목·시행령 §164⑨1호)");
+      }
+    }
     if (!positive(d.compensationPerSqm))
       issue(["compensationPerSqm"], "공익수용 환산 특례는 보상가액(원/㎡)이 필요합니다 (소득세법 시행령 §164⑨1호)");
     if (!positive(d.compensationBasisStdPrice))

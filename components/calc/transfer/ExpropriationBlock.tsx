@@ -4,8 +4,14 @@ import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInp
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { hasStaleSplitInput } from "@/lib/calc/transfer-land-part-cause";
+import { preDeemedExprFacts } from "@/lib/calc/expropriation-pre-deemed-facts";
+import { isPreDeemedPerSqmStdInputActive } from "@/lib/calc/transfer-tax-validate-expropriation";
+import { companionSplitLandRemedy } from "@/lib/calc/transfer-tax-validate-expropriation";
+import { isExprPerSqmShown } from "@/lib/calc/transfer-tax-validate-expropriation";
+import { LandPriceLookupField } from "@/components/calc/inputs/LandPriceLookupField";
+import { parseDecimal } from "@/lib/calc/number-parse";
+import { multiplyByArea, round2 } from "@/lib/tax-engine/area-utils";
 import {
-  isExprValuationEligibleAssetKind,
   isHousingExprEligibleAssetKind,
   isSplitLandExprEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
@@ -58,15 +64,18 @@ export function ExpropriationBlock({
   isCompanionBundle?: boolean;
 }) {
   // 공통 게이트: 환산모드 + 양도 ≥ 2009.02.04 (단건 — 다필지는 필지 카드 전용).
-  const exprDateOk =
-    !asset.parcelMode &&
-    asset.useEstimatedAcquisition &&
-    !!transferDate &&
-    transferDate >= EXPR_VALUATION_MIN_DATE;
+  // 의제취득일 전 상속·증여 ③도 환산이라 §164⑨이 분모에 걸린다(Q-10 A) — 환산 토글이 없는 상속 자산도 칸을 연다.
+  //   ⑧ 어댑터(`exprFactsFromAsset`)와 같은 함수 · 같은 `splitActive`.
+  const splitActive = !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset);
+  const preDeemed = preDeemedExprFacts(asset, transferDate, splitActive);
+  const dateOk = !asset.parcelMode && !!transferDate && transferDate >= EXPR_VALUATION_MIN_DATE;
+  const exprDateOk = dateOk && (asset.useEstimatedAcquisition || preDeemed.preDeemedConversion);
+  // ③ 후보의 원/㎡ 트랙 — ① 양도시 ㎡당 기준시가·면적을 이 블록에서 받는다(⑧과 같은 판정).
+  const perSqmStdInput = isPreDeemedPerSqmStdInputActive(asset, transferDate);
+  const splitLandDateOk = dateOk && (asset.useEstimatedAcquisition || preDeemed.preDeemedSplitLand);
   // 건물 split(토지·건물 취득일 분리) — `calcSplitGain` 경로라 단건 per-sqm 특례가 우회된다.
   // 이 경우 per-sqm 칸을 노출하면 입력해도 엔진이 안 읽는 **침묵 무시** → 토지분 총액 블록으로 전환(P6/D6).
   // stale 분리 입력은 「분리 없음」(④·⑧과 같은 술어 `hasStaleSplitInput`) — 아니면 칸이 숨어 ⑫가 요구하는 원/㎡를 못 넣는다.
-  const splitActive = !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset);
   const isSplitBuilding =
     isSplitLandExprEligibleAssetKind(asset.assetKind) && splitActive;
   // 주택 **regular** split(비-PHD)만 총액 트랙에서 제외 — Q6 미지원(validate 차단). 노출 시 침묵 무시.
@@ -79,8 +88,8 @@ export function ExpropriationBlock({
   // ⚠️ 적격 판정은 `expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면
   //    validate·엔진과 갈라진다(3층 드리프트). UI 노출 조건 = validate와 동일해야 한다.
   // split 건물은 per-sqm 경로가 우회되므로 제외(아래 split 총액 블록으로).
-  const showValuationMin =
-    isExprValuationEligibleAssetKind(asset.assetKind) && exprDateOk && !isSplitBuilding;
+  // ⑧ 필수 게이트와 같은 함수 — ③ 후보만으로 열리는 원/㎡ 트랙은 토지만(`isExprPerSqmStdInputRequired`).
+  const showValuationMin = isExprPerSqmShown(asset, transferDate);
   // 겸용주택(나·라 복합) — 주택분(라목 총액)+상가분(가목 토지) 두 트랙(P7/D8). 별도 겸용 블록으로 처리하고
   // 아래 단건 주택 총액 블록은 제외한다. 겸용은 환산 기반이라 useEstimatedAcquisition 게이트 불요.
   const isMixedUse = asset.assetKind === "housing" && !!asset.isMixedUseHouse;
@@ -92,8 +101,8 @@ export function ExpropriationBlock({
     isHousingExprEligibleAssetKind(asset.assetKind) && exprDateOk && !isHousingRegularSplit && !isMixedUse;
   // §164⑨ 1호 건물 split 토지분 총액 트랙 게이트 (P6/D6).
   // 컴패니언은 ⑧이 이 조합 전체를 차단한다(A05) — 칸 대신 그 사유를 보여준다(침묵 숨김 금지).
-  const splitLandExprBlockedByCompanion = isSplitBuilding && exprDateOk && isCompanionBundle;
-  const showSplitLandExpr = isSplitBuilding && exprDateOk && !isCompanionBundle;
+  const splitLandExprBlockedByCompanion = isSplitBuilding && splitLandDateOk && isCompanionBundle;
+  const showSplitLandExpr = isSplitBuilding && splitLandDateOk && !isCompanionBundle;
 
   const expr = asset.reductions?.find(
     (r): r is ExprReduction => r.type === "public_expropriation",
@@ -245,16 +254,41 @@ export function ExpropriationBlock({
           </p>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:items-start">
-            {/* ① 공시지가 = 위 양도가액 섹션의 양도시 기준시가(원/㎡) — 읽기전용 참조 */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-medium text-amber-900 dark:text-amber-200">
-                ① 공시지가 (양도시 기준시가)
-              </label>
-              <div className="flex min-h-[2.5rem] items-center justify-end rounded-md border border-amber-300/60 bg-amber-100/50 px-3 font-mono text-sm tabular-nums text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
-                {stdPerSqm > 0 ? stdPerSqm.toLocaleString() : "—"}
+            {perSqmStdInput ? (
+              // 의제취득일 전 상속·증여 ③ 후보 — 상속 자산에는 매매 블록의 양도시 ㎡당 기준시가 칸이 없어 여기서 받는다(⑧ `validateExprValuationAsset`).
+              <div className="space-y-1.5">
+                <LandPriceLookupField
+                  label="① 양도시 ㎡당 공시지가"
+                  data-field="standardPricePerSqmAtTransfer"
+                  pricePerSqm={asset.standardPricePerSqmAtTransfer}
+                  onPricePerSqmChange={(v) => {
+                    // ③ 분모 총액도 같은 값으로 함께 쓴다(단일 배치 — 토지 = 개별공시지가 × 면적). 면적은 기본정보 면적 칸이 원천이다.
+                    const p = parseAmount(v);
+                    const a = parseDecimal(asset.transferArea);
+                    onChange({
+                      standardPricePerSqmAtTransfer: v,
+                      ...(p > 0 && a > 0 ? { standardPriceAtTransfer: String(multiplyByArea(p, round2(a))) } : {}),
+                    });
+                  }}
+                  area={parseDecimal(asset.transferArea) || undefined}
+                  referenceDate={transferDate}
+                  jibun={asset.addressJibun}
+                  hint="양도일 직전 고시 개별공시지가 (원/㎡, 소득령 §164③) — 면적은 기본정보의 양도 당시 면적"
+                  pricePerSqmTestId="expr-pre-deemed-std-persqm"
+                />
               </div>
-              <p className="text-xs text-muted-foreground">위 ‘양도가액’의 양도시 기준시가 (원/㎡)</p>
-            </div>
+            ) : (
+              // ① 공시지가 = 위 양도가액 섹션의 양도시 기준시가(원/㎡) — 읽기전용 참조
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-amber-900 dark:text-amber-200">
+                  ① 공시지가 (양도시 기준시가)
+                </label>
+                <div className="flex min-h-[2.5rem] items-center justify-end rounded-md border border-amber-300/60 bg-amber-100/50 px-3 font-mono text-sm tabular-nums text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+                  {stdPerSqm > 0 ? stdPerSqm.toLocaleString() : "—"}
+                </div>
+                <p className="text-xs text-muted-foreground">위 ‘양도가액’의 양도시 기준시가 (원/㎡)</p>
+              </div>
+            )}
 
             <CurrencyInput
               label="② 보상가액"
@@ -316,8 +350,8 @@ export function ExpropriationBlock({
         <ToneCard tone="rose" title="토지·건물 분리 양도 + 공익수용 환산 — 함께양도 미지원">
           <p className="text-caption leading-relaxed">
             함께양도(두 번째 이후) 자산은 <b>토지·건물 취득일 분리</b> + <b>공익수용 환산</b>
-            (「소득세법 시행령」 §164⑨ 1호) 조합을 지원하지 않습니다. 이 자산을 첫 번째로 옮기거나
-            취득일 분리를 해제하세요.
+            (「소득세법 시행령」 §164⑨ 1호) 조합을 지원하지 않습니다.{" "}
+            {companionSplitLandRemedy(asset, transferDate)}
           </p>
         </ToneCard>
       )}
