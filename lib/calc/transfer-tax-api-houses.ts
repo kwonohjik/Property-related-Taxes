@@ -16,6 +16,7 @@ import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope"
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 import { aptDeadlineExtensionPayload, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { twoHouseExclusionStatusPayload } from "./two-house-exclusion-status";
+import { dayCareUsageStatusPayload } from "./daycare-usage-status";
 import { popDeclineAcquiredFromOther } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import { decedentHouseholdEngineBoolean, decedentHouseholdOf } from "./decedent-household";
 import { effectiveNewHouseAcquisitionDate, housesOwnedAtTransfer } from "./household-house-count";
@@ -205,6 +206,8 @@ export function buildHousesPayload(
     isDayCareCenter: se?.isDayCareCenter,
     dayCareOperationYears:
       se?.isDayCareCenter && se.dayCareOperationYears ? parseFloat(se.dayCareOperationYears) : undefined,
+    // ④⑬ 8호의2 사용 상태(종료일 · 「사용 중」 택일) — 명부 행과 같은 leaf
+    ...dayCareUsageStatusPayload(se ?? {}),
     // P2 양도 주택 2주택 전용 배제 — §167의10①3호(부득이)·7호(소송)는 **양도하는 주택 자신**에도
     // 적용된다(F-16). 종전에는 이 두 호가 다른 주택 행에만 실려 입력 경로가 아예 없었다.
     isUnavoidableReason: se?.isUnavoidableReason,
@@ -364,6 +367,16 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // ④⑬ 3호·7호 기산 상태 — ⑤·⑧·⑫와 같은 leaf(「미해소·진행 중」이면 남은 날짜는 싣지 않는다)
       ...twoHouseExclusionStatusPayload(h),
       isLitigationHousing: h.isLitigationHousing,
+      // ④⑬ D7 — 명부 행의 §167의3①4호·8호·8호의2. 양도 주택 매핑(`buildHousesPayload`)과 같은 변환이다.
+      //   행에도 실리면 그 주택이 ⑩호 「유일한 일반주택」 판정(`isGroupExcludable`)에서 배제 주택으로 빠진다.
+      isMortgageExecution: h.isMortgageExecution,
+      isEmployeeHousing: h.isEmployeeHousing,
+      freeProvisionYears:
+        h.isEmployeeHousing && h.freeProvisionYears ? parseFloat(h.freeProvisionYears) : undefined,
+      isDayCareCenter: h.isDayCareCenter,
+      dayCareOperationYears:
+        h.isDayCareCenter && h.dayCareOperationYears ? parseFloat(h.dayCareOperationYears) : undefined,
+      ...dayCareUsageStatusPayload(h),
       isRedevelopmentZone: h.isRedevelopmentZone,
       isPopulationDeclineArea: h.isPopulationDeclineArea,
       populationAreaType: h.isPopulationDeclineArea ? h.populationAreaType : undefined,

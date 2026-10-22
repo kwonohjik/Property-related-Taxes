@@ -151,6 +151,9 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     isUnavoidableOutsideCapital: h.isUnavoidableOutsideCapital,
     isDayCareCenter: h.isDayCareCenter,
     dayCareOperationYears: h.dayCareOperationYears,
+    // ⑭ §167의3①8호의2 사용 상태 — 종료일 Date 변환 · 「사용 중」 택일
+    dayCareEndDate: toOptionalDate(h.dayCareEndDate),
+    dayCareInUse: h.dayCareInUse,
     // ⑭ 공고 전 매매계약(영 §167의10①11호 등) — 양도 계약일 Date 변환 + 계약금 수령. 단건·다건·겸용 공유 매퍼.
     contractDate: toOptionalDate(h.contractDate),
     saleDepositReceived: h.saleDepositReceived,

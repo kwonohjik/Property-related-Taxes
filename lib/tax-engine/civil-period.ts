@@ -143,6 +143,15 @@ export function isWithinDeadline(event: Date, years: number, target: Date): bool
   return dayKey(target) <= dayKey(deadlineEndFrom(event, years).end);
 }
 
+/**
+ * B 유형 기한(개월) — `target`이 「`event`한 날부터 `months`개월이 경과하지 아니한」 기간 안인가(민법 §161 반영).
+ * 예: 영 §167의3①8호의2 「어린이집으로 사용하지 않게 된 날부터 6개월이 경과하지 않은」.
+ */
+export function isWithinDeadlineMonths(event: Date, months: number, target: Date): boolean {
+  const calendarEnd = civilPeriodEnd(new Date(dayKey(event) + DAY_MS), months);
+  return dayKey(target) <= dayKey(deadlineEnd(calendarEnd).end);
+}
+
 /** 날짜로 정해진 기한(말일 `calendarEnd`) **당일까지**인가(민법 §161 반영) */
 export function isOnOrBeforeDeadline(target: Date, calendarEnd: Date): boolean {
   return dayKey(target) <= dayKey(deadlineEnd(calendarEnd).end);

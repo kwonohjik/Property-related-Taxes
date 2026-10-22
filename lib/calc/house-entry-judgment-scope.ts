@@ -24,6 +24,9 @@ type SpecialExclusionFacts = Pick<
   | "isLitigationHousing"
   | "isRedevelopmentZone"
   | "isPopulationDeclineArea"
+  | "isMortgageExecution"
+  | "isEmployeeHousing"
+  | "isDayCareCenter"
 >;
 
 /** ④ 특수 배제 사유 카드가 소유한 사실 중 하나라도 켜져 있는가. */
@@ -32,7 +35,11 @@ export function houseEntryHasSpecialExclusionFacts(house: SpecialExclusionFacts)
     house.isUnavoidableReason === true ||
     house.isLitigationHousing === true ||
     house.isRedevelopmentZone === true ||
-    house.isPopulationDeclineArea === true
+    house.isPopulationDeclineArea === true ||
+    // D7 4호·8호·8호의2 — 사원용·어린이집은 ⑧·⑫가 기간·사용 상태를 요구한다(막다른 길 방지 — 위 주석)
+    house.isMortgageExecution === true ||
+    house.isEmployeeHousing === true ||
+    house.isDayCareCenter === true
   );
 }
 

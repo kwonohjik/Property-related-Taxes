@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * HouseEntrySpecialExclusionSection — 다른 보유 주택의 P2 특수 배제 사유 (2주택 전용·인구감소)
+ * HouseEntrySpecialExclusionSection — 다른 보유 주택의 특수 배제 사유 (3주택+ 중과 배제·2주택 전용·인구감소)
  *
- * 소령 §167의10① 3호(부득이)·7호(소송)·9호(기준시가 1억↓ 정비구역 제외) + §167의3①2호의2(인구감소 세컨드홈).
- * 엔진은 effectiveHouseCount===2(부득이·소송·저가) / countEffectiveHouses(인구감소)에서 평가.
+ * 소령 §167의3①4호(사원용)·8호(저당권 3년)·8호의2(어린이집) — D7, ⑩호 「유일한 일반주택」 판정에서 이 주택을 뺀다
+ * (2주택은 §167의10①2호 준용) + §167의10① 3호(부득이)·7호(소송)·9호(기준시가 1억↓ 정비구역 제외) + §167의3①12호 다·라목(인구감소 세컨드홈).
+ * 엔진은 isGroupExcludable(4·8·8의2) / effectiveHouseCount===2(부득이·소송·저가) / countEffectiveHouses(인구감소)에서 평가.
  *
  * 정책: ToggleCard/DateInput/DecimalInput 전용 · OFF 시 onUpdate 직접 undefined(useEffect 미러링 금지).
  */
@@ -12,6 +13,7 @@
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { DayCareUsageFields } from "@/components/calc/transfer/DayCareUsageFields";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -33,7 +35,58 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
     : null;
 
   return (
-    <ToneCard tone="rose" sectionNum="④" bodyClassName="space-y-2.5" title="특수 배제 사유 (2주택·인구감소)">
+    <ToneCard tone="rose" sectionNum="④" bodyClassName="space-y-2.5" title="특수 배제 사유 (중과 배제·인구감소)">
+
+      {/* D7 — 소령 §167의3①8호 저당권 실행·채권변제 취득 (취득일부터 3년) */}
+      <ToggleCard
+        variant="chip"
+        tone="rose"
+        data-testid={`house-mortgage-execution-${house.id}`}
+        checked={house.isMortgageExecution ?? false}
+        onCheckedChange={(v) => onUpdate({ isMortgageExecution: v })}
+        title="저당권 실행·채권변제 취득 (3년 이내)"
+      />
+
+      {/* D7 — 소령 §167의3①4호 장기사원용주택 */}
+      <ToggleCard
+        variant="card"
+        tone="rose"
+        checked={house.isEmployeeHousing ?? false}
+        onCheckedChange={(v) =>
+          onUpdate({ isEmployeeHousing: v, freeProvisionYears: v ? house.freeProvisionYears : undefined })
+        }
+        title="사원용 주택"
+        description="종업원(특수관계인 제외)에게 10년 이상 무상 제공하는 사용자 소유 주택 (소령 §167의3①4호)"
+      >
+        <div className="space-y-1 pt-1">
+          <label className="block text-caption text-muted-foreground font-medium">무상 제공 기간 (년)</label>
+          <DecimalInput
+            value={house.freeProvisionYears ?? ""}
+            onChange={(v) => onUpdate({ freeProvisionYears: v || undefined })}
+            placeholder="무상 제공 기간"
+          />
+          <p className="text-caption text-muted-foreground">10년 이상이어야 배제 적용</p>
+        </div>
+      </ToggleCard>
+
+      {/* D7 — 소령 §167의3①8호의2 어린이집 */}
+      <ToggleCard
+        variant="card"
+        tone="rose"
+        checked={house.isDayCareCenter ?? false}
+        onCheckedChange={(v) =>
+          onUpdate({
+            isDayCareCenter: v,
+            dayCareOperationYears: v ? house.dayCareOperationYears : undefined,
+            dayCareEndDate: v ? house.dayCareEndDate : undefined,
+            dayCareInUse: v ? house.dayCareInUse : undefined,
+          })
+        }
+        title="어린이집 운영 주택"
+        description="인가 어린이집 또는 국가·지방자치단체 위탁 어린이집으로 5년 이상 사용 (소령 §167의3①8호의2)"
+      >
+        <DayCareUsageFields value={house} onPatch={onUpdate} tone="rose" inUseTestId={`house-daycare-in-use-${house.id}`} />
+      </ToggleCard>
 
       {/* 부득이한 사유 (취학·근무·질병) */}
       <ToggleCard

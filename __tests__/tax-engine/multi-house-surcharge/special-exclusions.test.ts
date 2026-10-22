@@ -459,6 +459,7 @@ describe("MH-20: ④⑤⑥⑨ 특수용도 주택 → 3주택+ 중과배제", ()
       regionCode: "11680",
       isDayCareCenter: true,
       dayCareOperationYears: 7,
+      dayCareInUse: true,
     });
     const h2 = makeHouse("h2");
     const h3 = makeHouse("h3");
@@ -496,6 +497,7 @@ describe("MH-20: ④⑤⑥⑨ 특수용도 주택 → 3주택+ 중과배제", ()
       isCulturalHeritage: true,
       isDayCareCenter: true,
       dayCareOperationYears: 10,
+      dayCareInUse: true,
     });
     const h2 = makeHouse("h2");
 

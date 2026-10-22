@@ -50,6 +50,8 @@ import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
 import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./selling-house-origin-scope";
 import { houseRentalTypeIssue } from "./house-row-required-issues";
 import { houseUnavoidableIssue } from "./house-row-required-issues";
+import { houseSpecialUseIssue } from "./house-row-required-issues";
+import { dayCareUsageStatusIssue } from "./daycare-usage-status";
 import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
 import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
@@ -190,6 +192,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       // P2 부득이한 사유: 거주기간(년)·취득 당시 기준시가 필수 — 판정 메뉴 ⑧과 **같은 leaf**(S09-1).
       const unavoidableIssue = houseUnavoidableIssue(h);
       if (unavoidableIssue) return fieldError(rowKey, `${label}: ${unavoidableIssue.message}`);
+      // D7 §167의3①4호·8호의2 — 기간(년)·어린이집 사용 상태(판정 메뉴 ⑧과 같은 leaf · ⑫ 거울).
+      const specialUseIssue = houseSpecialUseIssue(h);
+      if (specialUseIssue) return fieldError(rowKey, `${label}: ${specialUseIssue.message}`);
       // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
       const statusIssue = twoHouseExclusionStatusIssue(h);
       if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
@@ -231,6 +236,10 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
     issues.push({ step, field: "sellingHouseExclusion.freeProvisionYears", message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
   if (se?.isDayCareCenter && (!se.dayCareOperationYears || parseFloat(se.dayCareOperationYears) <= 0))
     issues.push({ step, field: "sellingHouseExclusion.dayCareOperationYears", message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
+  // ⑧ 8호의2 사용 상태 — 종료일 또는 「양도일 현재 사용 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
+  const sellDayCareIssue = se ? dayCareUsageStatusIssue(se) : null;
+  if (sellDayCareIssue)
+    issues.push({ step, field: "sellingHouseExclusion.dayCareEndDate", message: `양도 주택 ${sellDayCareIssue.message}` });
 
   // ⑧ 양도 주택 §167의3①3호 — 2호 선언이 켜져 있으면 그 칸의 임대기간을 함께 쓴다(⑤·④와 같은 유효 사실).
   if (taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se)))

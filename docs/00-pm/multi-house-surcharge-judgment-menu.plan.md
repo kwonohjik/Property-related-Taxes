@@ -295,6 +295,13 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 - 계산기 명부에도 같은 칸이 생긴다 — 입력하면 계산기 중과 판정도 바뀐다(의도된 정정). 별도 PR로 계산기 회귀(transfer 범위)를 돌린다. 기존 입력(새 칸 미입력)의 세액 불변은 부정형 단언이므로 mutation probe로 확인한다(§11 P-n).
 - 🔴 **8호의2 엔진 요건 누락(F-4 · Q-A)** — 현행 「소득세법 시행령」 §167의3①8호의2(시행 2026-07-01, 로컬 캐시 원문)는 「…고유번호를 부여받은 후 5년 이상 어린이집으로 사용하고 **어린이집으로 사용하지 않게 된 날부터 6개월이 경과하지 않은** 주택. 이 경우 가목에서 나목으로 또는 나목에서 가목으로 전환된 경우에는 … 각각의 사용기간을 합산한다」이다. 엔진은 `dayCareOperationYears >= 5`만 본다(`multi-house-surcharge-exclusion.ts:72`·`:109`) — 사용 종료 후 6개월이 지난 주택도 배제한다(과소과세). 양도 주택 경로에도 이미 있는 결함이고 D7이 보유 주택 행까지 넓힌다. 처리 방향은 Q-A → **(a) P1에 포함**(2026-10-22 결정): 행·양도 주택에 「어린이집 사용 종료일」(사용 중이면 비움)을 받고, 엔진 8호의2 판정을 「5년 이상 사용 **그리고** (사용 중이거나 종료일부터 6개월 미경과)」로 정정한다. 운영 연수 칸은 가·나목 전환 시 **합산 기간**임을 안내한다. 신규 필드라 ①~⑭ 전부(⑫ `houseSchema`·양도 주택 Zod, ⑬ body, ⑭ route 매핑·Date 변환) 동기화. 「사용 종료일 모름」은 모름 = 혜택 불성립 + 확인 필요(`feedback_unknown_fact_applies_unfavorably`)이므로 3-state(사용 중 / 종료일 입력 / 모름)로 받는다.
 
+- **P1 구현 결정(2026-10-22)**:
+  - 사용 상태는 **택일 2필드**(`dayCareEndDate` · `dayCareInUse`)로 받는다 — §167의10①3호·7호·§155⑧의 기산 상태와 같은 규약(`two-house-exclusion-status.ts`, 사용자 결정 2026-10-04). 초판의 「3-state(사용 중 / 종료일 / 모름)」는 이 규약으로 **정밀화**했다: 「모름」을 선택지로 두지 않고 ⑧·⑫가 막으며, 엔진은 둘 다 없으면 불성립(`isDayCareCenterExempt`). 공용 leaf `lib/calc/daycare-usage-status.ts`(④·⑧·⑫) · 화면 `DayCareUsageFields`(양도 주택·행 공용).
+  - 「경과하지 않은」 = 저당권 3년과 같은 독법(초일불산입·말일 당일까지·민법 §161) — `civil-period.ts` `isWithinDeadlineMonths` 신설.
+  - §167의3④ 의무사용기간 충족 전 의제는 **사용 중일 때만** 본다 — 5년 전에 사용을 그만뒀으면 요건 미충족(⑤ 추징 사유)이다.
+  - 엔진 `multi-house-surcharge-exclusion.ts`가 784줄이 되어 ①~⑨ 그룹 배제·④ 의제를 `multi-house-surcharge-group-exclusion.ts`로 분리(re-export 유지, 681+144).
+  - 행 ④ 카드 제목 「특수 배제 사유 (2주택·인구감소)」→「(중과 배제·인구감소)」. 판정 메뉴(중과 입력 닫힘)에서는 D7 사실이 담긴 행에만 열린다(`houseEntryHasSpecialExclusionFacts` — 막다른 길 방지). 판정 메뉴 ⑧(`one-house-exemption-validate.ts`)도 같은 leaf `houseSpecialUseIssue`로 막는다(⑫가 같은 조건으로 400).
+
 ### 5.5 결과 화면
 
 **표(`SurchargeHouseTable`)** — 행: 양도 예정 주택(맨 위, 강조) → 명부 순서 → 분양권·입주권 → 양도일 현재 미보유. 열: ①판정기준 ②기준시가 ③주택 수 산입 ④조정대상지역 ⑤양도한다면.
@@ -425,7 +432,7 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | PR | 내용 | verify |
 |---|---|---|
 | P0 ✅ | 숨김 플래그 프록시 해체 + `judgment-menu-flags.ts`(동작 불변). 편집 창 `judgmentMenu` → `hideSurchargeInputs`(뜻대로 개명), `HouseCountExemptionInputs`·`HousesListSection`에 명시 prop 3개(`hideSurchargeInputs`·`taxIncentiveRentalEnabled`·`householdGiftEnabled`) | 관련 72파일 740건 통과 · 구현 후 mutation 6/6이 정확한 테스트에 잡힘(1주택 값 3 · 계산기 기본값 2 · 중간 전달 1). ⚠️ `HousesListSection.tsx` 761줄(위험구간) — P6에서 이 파일을 다시 열 때 분리 |
-| P1 | D7 행 4호·8호·8호의2(①②③④⑤⑧) + **8호의2 사용 종료일 신규 필드(①~⑭) · 엔진 6개월 요건 정정**(Q-A) — 계산기·판정 공용 | 행 판정 anchor · 8호의2 경계(종료 후 6개월 전날·당일·다음 날, 민법 기간 계산) · 양도 주택 경로 세액 변경 anchor · transfer 범위 회귀 |
+| P1 🔄 | D7 행 4호·8호·8호의2(①②③④⑤⑧) + **8호의2 사용 종료일 신규 필드(①~⑭) · 엔진 6개월 요건 정정**(Q-A) — 계산기·판정 공용 | 행 판정 anchor · 8호의2 경계(종료 후 6개월 전날·당일·다음 날, 민법 기간 계산) · 양도 주택 경로 세액 변경 anchor · transfer 범위 회귀 |
 | P2 | 계산기 ⑧ 중과 축 leaf 추출(동작 불변) | 계산기 validate 회귀 |
 | P3 | 엔진: `forceNoMultiHouseSurcharge`(술어 최상단 게이트 + 호출부 4곳 전달) · 행 판정 주택 집합 조립부 export(결과 불변) · `hceGeneralHouseAcquisitionDate` 추출 · `classifyRegionCriteriaDetail` · 권리 사유 helper · `multi-house-surcharge-narrative.ts`(`decisionStageOf`·행 판정·민감도·설명문) | MH-P3·P5·P6·P7 · 동치 anchor |
 | P4 | route + 공용 전처리 추출 + body 빌더 | MH-1~5 · MH-B1~B5 · MH-P1·P2·P4 |
@@ -467,7 +474,7 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | V-7 | 일반 매매 양도 경로에 양도 당시 기준시가 입력 칸이 정말 없는지 |
 | V-8 | 홈 메뉴 14개에서 `home-menu-layout.spec.ts` 높이 단언 실측 |
 | V-9 | 메타데이터·설명문 신규 인용 조문 KoreanLaw 본문 확인 |
-| V-10 | 8호의2 연혁 — 6개월 요건은 2011.12.8. 시행본에도 있었다(지난번 조회 원문 「사용하지 아니하게 된 날부터 6월이 경과하지 아니한」). **가·나목(인가·위탁) 구분과 합산 단서가 들어온 개정 시점**과 그 부칙(적용 양도일)을 KoreanLaw로 확인 — 그 전 양도분에 합산을 적용할지가 갈린다 |
+| V-10 | 8호의2 연혁 — ✅ **해소(2026-10-22, DRF 시행본 대조)**. 6개월 요건은 2006.2.9. 개정(MST 72871)부터 모든 시행본에 있다(2005.12.31. 신설본 MST 72432에는 없음 — 범위 밖). 가·나목(인가·위탁) 구분·「고유번호」·합산 후단은 **대통령령 제32420호(2022.2.15., MST 240311)** 에서 들어왔고 별도 적용례가 없어 부칙 §2②(「양도소득세에 관한 개정규정은 시행일 이후 양도하는 경우부터」) — **2022.2.15. 이후 양도분**부터다. 그 전 시행본은 「인가 받은 **가정어린이집**」(2011.12.8. 전 「가정보육시설」)만 대상이다. ⇒ 설계 영향: 6개월 요건은 연혁 게이트 없이 적용(2009.3.16. 이후 범위 전부). 종류 한정·합산 시기는 신규 필드 없이 **사용 기간 칸 안내**로 둔다(자기 선언 칸 — 4호 특수관계인 제외와 같은 층위) |
 
 ---
 

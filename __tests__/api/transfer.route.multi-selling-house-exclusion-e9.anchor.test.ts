@@ -149,7 +149,7 @@ const THREE_PLUS: [string, Exclusion, string?][] = [
   ["사원용 주택 10년 이상(§167의3①4호)", { isEmployeeHousing: true, freeProvisionYears: "12" }],
   ["조특법 특례 주택(§167의3①5호)", { isTaxSpecialExemption: true }],
   ["국가유산주택(§167의3①6호)", { isCulturalHeritage: true }],
-  ["어린이집 5년 이상(§167의3①8호의2)", { isDayCareCenter: true, dayCareOperationYears: "6" }],
+  ["어린이집 5년 이상(§167의3①8호의2)", { isDayCareCenter: true, dayCareOperationYears: "6", dayCareInUse: true }],
   [
     "장기임대 등록 완비 6년(§167의3①2호)",
     {

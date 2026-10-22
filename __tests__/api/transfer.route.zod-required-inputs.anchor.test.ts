@@ -263,6 +263,20 @@ describe("명부·상속 — 비우면 400", () => {
       "houses.0.dayCareOperationYears",
     );
   });
+
+  it("H-4b 어린이집 사용 상태(소령 §167의3①8호의2) — 종료일·「사용 중」 둘 다 없거나 둘 다 있으면 400", async () => {
+    const dc = { ...ROW, id: "selling", isDayCareCenter: true, dayCareOperationYears: 6 };
+    const rows = [{ ...ROW, id: "h1" }, { ...ROW, id: "h2" }];
+    expect((await single({ ...BASE, houses: [{ ...dc, dayCareInUse: true }, ...rows] })).status).toBe(200);
+    expect((await single({ ...BASE, houses: [{ ...dc, dayCareEndDate: "2023-01-01" }, ...rows] })).status).toBe(200);
+    await expectRejected({ ...BASE, houses: [dc, ...rows] }, "houses.0.dayCareEndDate");
+    await expectRejected(
+      { ...BASE, houses: [{ ...dc, dayCareInUse: true, dayCareEndDate: "2023-01-01" }, ...rows] },
+      "houses.0.dayCareEndDate",
+    );
+    // 명부 행에도 같은 요구(D7)
+    await expectRejected({ ...BASE, houses: [{ ...ROW, id: "selling" }, { ...dc, id: "h1" }, rows[1]] }, "houses.1.dayCareEndDate");
+  });
 });
 
 // ── 이월과세 · §163⑨ · 승계조합원 ───────────────────────────────────
