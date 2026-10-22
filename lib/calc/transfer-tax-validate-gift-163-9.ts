@@ -5,7 +5,9 @@
  * 실지거래가액으로 의제한다 → 취득가액이 항상 확인 가능 → 추계(§176의2 환산·감정가액·매매사례가액)는
  * 법적 불필요·위반. 따라서 post-1985 증여는 실거래가 모드(신고가액=취득가액)를 강제한다.
  *
- * - pre-1985 증여는 §176의2④ 의제취득 영역이라 제외(게이트 false → 기존 환산 fallback 유지·회귀-safe).
+ * - 🔄 pre-1985 증여도 포함한다(2026-10-22 PR-5). 종전에는 「§176의2④ 의제취득 영역」이라 빼서 추계 플래그가 ③으로 가는
+ *   통로였다. 이제 ③은 증여 화면의 전용 칸(`GiftPreDeemedConversionSection` · 술어 `isGiftPreDeemedConversionAsset`)으로
+ *   입력하고 ①(증여 신고가액)은 계속 필수다(사용자 결정 Q-14) — 추계 플래그는 쓰이지 않는 남은 값이라 막고 복원에서 비운다.
  * - 부담부증여(transferType)는 UI가 추계모드를 미노출(CompanionAcqPurchaseBlock:309)이나 방어적 제외.
  * - GB(general_building)·재개발은 자체 validator(transfer-tax-validate-gb/redev.ts)에서 처리,
  *   겸용(mixed-use)은 자체 경로에서 처리 → 이 헬퍼는 표준(주택·토지·건물·분양권 등)·상가 전용.
@@ -41,7 +43,6 @@ export function giftEstimatedModeBlocked(
     giftEstimationGenericScope(asset) &&
     asset.acquisitionCause === "gift" &&
     asset.transferType !== "burdened_gift" &&
-    (asset.acquisitionDate ?? "") >= "1985-01-01" &&
     !!(asset.useEstimatedAcquisition || asset.isAppraisalAcquisition || asset.isSalesCaseAcquisition)
   );
 }

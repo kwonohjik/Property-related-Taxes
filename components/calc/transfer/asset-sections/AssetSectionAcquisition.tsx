@@ -26,6 +26,7 @@ import {
 } from "../CompanionAssetCardNewConstruction";
 import { CompanionAcquisitionCauseSection } from "../CompanionAcquisitionCauseSection";
 import { CommercialBuildingBlock } from "../CommercialBuildingBlock";
+import { isGiftPreDeemedConversionAsset } from "@/lib/calc/gift-pre-deemed";
 import { CommercialInheritanceStdPriceSection } from "../CommercialInheritanceStdPriceSection";
 import { CommercialAppurtenantLandSection } from "../CommercialAppurtenantLandSection";
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
@@ -297,7 +298,8 @@ export function AssetSectionAcquisition({
       {/* 상업용건물·오피스텔 환산취득가 입력 (assetKind === "commercial_building" 시만 표시)
           §163⑨: 상속 취득 상가는 상속개시일 평가액 직접(환산 아님) → 환산 토글 미노출.
           상속 평가액은 상단 상속 블록(CompanionAcqInheritanceBlock)의 "상속세 신고가액"으로 입력. */}
-      {asset.assetKind === "commercial_building" && asset.acquisitionCause !== "inheritance" && (
+      {/* 1985 전 증여 상가도 상속처럼 환산 토글을 두지 않는다 — ③은 위 증여 ③ 칸으로 받는다(사용자 결정 Q-13 · PR-5). */}
+      {asset.assetKind === "commercial_building" && asset.acquisitionCause !== "inheritance" && !isGiftPreDeemedConversionAsset(asset) && (
         <CommercialBuildingBlock
           asset={asset}
           onChange={onChange}

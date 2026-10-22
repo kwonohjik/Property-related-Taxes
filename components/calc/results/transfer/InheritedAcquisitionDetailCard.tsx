@@ -76,7 +76,7 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
       {/* 헤더 */}
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-          상속 취득가액 의제 계산
+          상속·증여 취득가액 의제 계산
         </p>
         <span className="text-micro text-muted-foreground">{legalBasis}</span>
         <span className="text-micro rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5">
@@ -122,7 +122,7 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
               {preDeemedBreakdown.reportedAmount !== null && (
                 <PreDeemedCandidateRow
-                  label="① 상증법 평가액 (상속세 신고가액)"
+                  label="① 상증법 평가액 (상속세·증여세 신고가액)"
                   amount={preDeemedBreakdown.reportedAmount}
                   selected={preDeemedBreakdown.selectedMethod === "reported"}
                 />

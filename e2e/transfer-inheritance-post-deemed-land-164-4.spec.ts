@@ -147,7 +147,7 @@ test.describe("post-deemed 상속토지 §164④ 등급환산 (소령 §163⑨1�
 
     // ── 4. 결과 화면에도 산출근거가 보인다 (인쇄용 숨김 사본이 있어 가시성으로 한정)
     const visible = (re: RegExp) => page.getByText(re).filter({ visible: true }).first();
-    await expect(visible(/상속 취득가액 의제 계산/)).toBeVisible({ timeout: 20_000 });
+    await expect(visible(/상속·증여 취득가액 의제 계산/)).toBeVisible({ timeout: 20_000 });
     await expect(visible(/§164④ 취득당시 기준시가 100,000,000/)).toBeVisible();
   });
 

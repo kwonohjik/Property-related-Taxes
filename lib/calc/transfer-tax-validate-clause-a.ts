@@ -16,6 +16,8 @@
  * · **post-deemed**: 나목이 §163⑨ 의제로 대체돼 ③이 없다. 선언해도 갈 곳이 없어 무의미하다.
  * · **증여 · 실거래가**: 이미 「증여 신고가액을 입력하세요」가 막는다. E-1이 앞서면 그 메시지가
  *   사라지고, 선언으로 **뚫리는** 완화가 되어 버린다 ⇒ 추계 계열에서만 적용한다.
+ * · **증여 · ③ 칸이 있는 자산**(`isGiftPreDeemedConversionAsset` — PR-5): ①이 늘 필수라(사용자 결정 Q-14) 적용하지 않는다.
+ *   범위 밖 증여(재개발·입주권·부담부증여 등)는 위 줄대로 추계 계열에서만 적용한다.
  *
  * 이 경계가 무너지면 E-1은 강화가 아니라 완화다(설계서 §5 X-7·X-12c).
  *
@@ -28,6 +30,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
+import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
@@ -86,7 +89,10 @@ function isEstimatingMode(asset: AssetForm): boolean {
  */
 export function needsClauseADeclaration(asset: AssetForm): boolean {
   if (!isSec163_9PreDeemed(asset)) return false;
-  // 증여 실거래가는 「증여 신고가액을 입력하세요」가 이미 막는다 — 여기서 앞지르면 완화가 된다.
+  // ③ 칸이 있는 증여는 ①(증여 신고가액)이 필수다 — 「증여일 평가액 확인 불가」로 ③만 쓰는 길은 두지 않는다(사용자 결정 Q-14, 2026-10-22).
+  //   그 범위의 추계 플래그는 이제 막히고(`giftEstimatedModeBlocked`) 복원에서 비운다.
+  if (isGiftPreDeemedConversionAsset(asset)) return false;
+  // 범위 밖 증여(재개발·입주권·부담부증여 등)는 종전대로 — 실거래가는 「증여 신고가액을 입력하세요」가 막고, 추계 계열만 선언을 요구한다.
   if (asset.acquisitionCause === "gift" && !isEstimatingMode(asset)) return false;
   if (clauseAReportedValue(asset) > 0) return false;
   if (isSec164ClauseAFilled(asset)) return false;
@@ -228,6 +234,8 @@ export function preDeemedConversionInputError(
   // 상가·오피스텔 상속은 ⑫(`refinePreDeemedAcquisitionSource`)가 검사한다 — 상속이면 `commercialBuildingValuation`을
   // 만들지 않아 ⑫의 제외 조건에 안 걸린다. 종전에는 여기서 제외해 「선언 + ③ 칸 비움」이 ⑧ 통과 ↔ ⑫ 400이었다(2026-10-22).
   if (!isNonPrimaryAsset && (asset.isAppraisalAcquisition === true || asset.isSalesCaseAcquisition === true)) return null;
+  // ③ 칸이 있는 증여는 ①(증여 신고가액)이 필수라(Q-14) ①·②가 모두 없으면 그 검사가 막는다 — 여기서 ③ 칸을 먼저 요구하면 엉뚱한 칸을 가리킨다.
+  if (isGiftPreDeemedConversionAsset(asset)) return null;
   const ia = buildInheritedAcquisitionPayload(asset, 1, false).inheritedAcquisition as
     | { mode?: string; reportedValue?: number }
     | undefined;

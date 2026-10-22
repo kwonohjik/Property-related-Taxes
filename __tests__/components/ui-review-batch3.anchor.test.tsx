@@ -100,7 +100,10 @@ describe("R02 · §114조의2 인용에 법령명이 있다", () => {
 /* ══ R05 — trailing과 unit을 같이 넘기지 않는다 (죽은 prop) ══════════════════ */
 describe("R05 · FieldCard unit이 trailing에 먹히지 않는다", () => {
   it("🔴 PreDeemedInputs에서 unit·trailing 동시 선언이 사라졌다", () => {
-    const code = codeOnly("components/calc/transfer/inheritance/PreDeemedInputs.tsx");
+    // PR-5 — ③ 칸은 `PreDeemedConversionFields`로 옮겼다. 두 파일을 함께 본다.
+    const code = ["PreDeemedInputs", "PreDeemedConversionFields"]
+      .map((f) => codeOnly(`components/calc/transfer/inheritance/${f}.tsx`))
+      .join("\n");
     // FieldCard 하나의 여는 태그 안에 둘 다 있으면 unit은 렌더되지 않는다(FieldCard.tsx:79-82).
     const cards = code.split("<FieldCard").slice(1);
     for (const c of cards) {
@@ -111,7 +114,8 @@ describe("R05 · FieldCard unit이 trailing에 먹히지 않는다", () => {
   });
 
   it("🔑 trailing이 없는 칸의 unit은 그대로 살아 있다 (전량 삭제가 아니다)", () => {
-    expect(src("components/calc/transfer/inheritance/PreDeemedInputs.tsx")).toContain('unit="원"');
+    // PR-5 — ③ 분자·분모 칸은 상속·증여 공용 `PreDeemedConversionFields`로 옮겼다.
+    expect(src("components/calc/transfer/inheritance/PreDeemedConversionFields.tsx")).toContain('unit="원"');
   });
 });
 

@@ -11,6 +11,8 @@ import { applyRatio, deriveEngineInheritanceAssetKind } from "./transfer-tax-api
 import { deriveSec163_9BaseDate, isSec163_9Cause } from "./transfer-163-9-base-date";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { buildApartNtsPricePayload } from "./apart-nts-price";
+import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
+import { preDeemedSentStdPrices } from "./pre-deemed-auto-std-price";
 import {
   sec164HouseStatus,
   sec164CommercialStatus,
@@ -60,8 +62,16 @@ export function buildInheritedAcquisitionPayload(
     : primary.publishedValueAtInheritance;
 
   if (isPreDeemed) {
-    const stdAtDeemed = parseAmount(primary.standardPriceAtAcq);
-    const stdAtTransfer = parseAmount(primary.standardPriceAtTransfer);
+    // ③ 분자·분모 — 증여는 그 칸이 화면에 있을 때만 싣는다(`isGiftPreDeemedConversionAsset` · PR-5). 칸이 없는 증여 자산에
+    //   매매에서 남은 값이 보이지 않는 채 실리면 ③이 세액을 바꾼다(계획서 §16).
+    //   칸이 자동값(토지 등급·주택 3시점)을 보여 주는 동안은 store 값을 싣지 않는다 — 엔진이 같은 자동값을 주입한다
+    //   (`preDeemedSentStdPrices`). 종전에는 보이지 않는 남은 값이 자동값을 이겼다(엔진은 보낸 분자를 우선한다).
+    const conversionInputShown = !isGift || isGiftPreDeemedConversionAsset(primary);
+    const sent = conversionInputShown
+      ? preDeemedSentStdPrices(primary, inheritanceStartDate)
+      : { atDeemed: 0, atTransfer: 0 };
+    const stdAtDeemed = sent.atDeemed;
+    const stdAtTransfer = sent.atTransfer;
     // ① 상증법 §60~66 평가액 — 지분 모드 시 × ratio (post-deemed와 일관)
     const reportedRaw = parseAmount(reportedSource);
     const reportedValue =
