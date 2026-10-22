@@ -236,7 +236,8 @@ export async function searchDecisions(
     .map((k) => `${k}=${extraParams[k]}`)
     .join("&");
   const optionsSuffix = optionsKey ? `_${safeCacheKey(optionsKey)}` : "";
-  const cacheKey = `decision_search_${domain}_${safeCacheKey(query)}_p${page}_s${pageSize}${optionsSuffix}`;
+  // v2: 제목의 꺾쇠 글을 남긴다(`strip`) — 옛 캐시에 지워진 제목이 30일 남는다
+  const cacheKey = `decision_search_v2_${domain}_${safeCacheKey(query)}_p${page}_s${pageSize}${optionsSuffix}`;
   const cached = await readCacheNonEmpty<DecisionSearchPage>(cacheKey);
   if (cached) return cached;
 

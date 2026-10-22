@@ -56,6 +56,25 @@ describe("checkSourceCitations", () => {
     expect(r.map((c) => c.status)).toEqual(["failed", "failed"]);
   });
 
+  // 상한을 넘은 인용은 버리지 않는다 — 조문은 법제처 링크를, 해석례는 문서번호를 남겨 사용자가 직접 확인한다(2026-10-22 사용자 요청)
+  it("확인 상한(조문 20 · 해석례 10)을 넘은 인용은 「unchecked」로 남기고 조회하지 않는다", async () => {
+    m(checkStatute).mockResolvedValue({ status: "verified", url: "https://www.law.go.kr/x" });
+    m(findInterpretationByDocNo).mockResolvedValue(null);
+    const statutes = Array.from({ length: 22 }, (_, i) => `소득세법 제${i + 1}조`).join(", ");
+    const docs = Array.from({ length: 12 }, (_, i) => `서면-2016-부동산-${1000 + i}`).join(" ");
+    const r = await checkSourceCitations(`${statutes}. ${docs}`, null);
+    expect(checkStatute).toHaveBeenCalledTimes(20);
+    expect(findInterpretationByDocNo).toHaveBeenCalledTimes(10);
+    const unchecked = r.filter((c) => c.status === "unchecked");
+    expect(unchecked).toEqual([
+      { kind: "statute", raw: "소득세법 제21조", status: "unchecked", url: "https://www.law.go.kr/법령/" + encodeURIComponent("소득세법") + "/" + encodeURIComponent("제21조"), note: undefined },
+      { kind: "statute", raw: "소득세법 제22조", status: "unchecked", url: "https://www.law.go.kr/법령/" + encodeURIComponent("소득세법") + "/" + encodeURIComponent("제22조"), note: undefined },
+      { kind: "doc", raw: "서면-2016-부동산-1010", status: "unchecked" },
+      { kind: "doc", raw: "서면-2016-부동산-1011", status: "unchecked" },
+    ]);
+    expect(r.length).toBe(34);
+  });
+
   // 계획서 law-citation-residuals Q-3 b — 원문이 괄호로 시대를 밝히면 양도일이 아니라 그 시행본으로 본다
   it("개정 괄호가 붙은 인용은 그 시대 시행본(cited_era) — 시대를 못 정하면 「확인 불가」", async () => {
     m(checkStatute).mockResolvedValue({ status: "verified", url: "https://www.law.go.kr/x" });

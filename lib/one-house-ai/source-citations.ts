@@ -8,7 +8,9 @@
  *   대조하지 않는다. 교재식 약식 번호(「재산-123」 등)는 DRF 안건번호와 표기가 달라 「찾지 못함」이 될 수 있다.
  */
 import { findInterpretationByDocNo } from "@/lib/korean-law/client-cgm-expc";
+import { resolveLawAlias } from "@/lib/korean-law/aliases";
 import { resolveCitationEraDate } from "@/lib/korean-law/applicable-law";
+import { buildLawSourceUrl } from "@/lib/korean-law/client-law";
 import { extractCitations } from "@/lib/korean-law/verify-citations";
 import type { StatuteRef } from "./statute-ref";
 import { checkStatute, mapLimit } from "./verify/verify";
@@ -17,7 +19,8 @@ export type SourceCitation = {
   kind: "statute" | "doc";
   /** 원문에 나온 표기 */
   raw: string;
-  status: "found" | "not_found" | "failed";
+  /** `unchecked` — 확인 상한(`SOURCE_CITATION_LIMITS`)을 넘어 조회하지 않았다. 사용자가 직접 확인하도록 목록에 남긴다 */
+  status: "found" | "not_found" | "failed" | "unchecked";
   /** 조문 — 양도일 시행본 · 현행 · 원문이 괄호로 밝힌 옛 시행본(「(… 개정되기 전의 것)」) 중 무엇으로 봤는지 */
   basis?: "transfer_date" | "current" | "cited_era";
   /** 해석례 — 찾은 문서번호(DRF 표기) */
@@ -42,12 +45,21 @@ export async function checkSourceCitations(text: string, transferDate: string | 
   const baseDate = transferDate && /^\d{4}-\d{2}-\d{2}$/.test(transferDate) ? transferDate : null;
   const basis = baseDate ? "transfer_date" : "current";
 
-  const statutes = extractCitations(text)
-    .slice(0, SOURCE_CITATION_LIMITS.statutes)
-    .flatMap((c) => {
-      const ref = toRef(c.lawName, c.articleNo, c.hang, c.ho);
-      return ref ? [{ raw: c.raw, ref, era: c.era }] : [];
-    });
+  const allStatutes = extractCitations(text).flatMap((c) => {
+    const ref = toRef(c.lawName, c.articleNo, c.hang, c.ho);
+    return ref ? [{ raw: c.raw, ref, era: c.era, url: buildLawSourceUrl(resolveLawAlias(c.lawName), c.articleNo) }] : [];
+  });
+  const statutes = allStatutes.slice(0, SOURCE_CITATION_LIMITS.statutes);
+  // 상한을 넘은 인용은 버리지 않는다 — 법제처 조문 링크(현행)를 붙여 사용자가 직접 확인하게 한다
+  const uncheckedStatutes = allStatutes.slice(SOURCE_CITATION_LIMITS.statutes).map(
+    ({ raw, era, url }): SourceCitation => ({
+      kind: "statute",
+      raw,
+      status: "unchecked",
+      url,
+      note: era ? "현행 조문 링크입니다 — 옛 시행본은 법제처 연혁에서 확인하세요" : undefined,
+    }),
+  );
   const statuteResults = await mapLimit(statutes, 4, async ({ raw, ref, era }): Promise<SourceCitation> => {
     // 원문이 괄호로 시대를 밝힌 인용은 양도일이 아니라 그 시행본으로 본다
     let date = baseDate;
@@ -71,7 +83,9 @@ export async function checkSourceCitations(text: string, transferDate: string | 
     };
   });
 
-  const docNos = [...new Set(text.match(DOC_NO_RE) ?? [])].slice(0, SOURCE_CITATION_LIMITS.docs);
+  const allDocNos = [...new Set(text.match(DOC_NO_RE) ?? [])];
+  const docNos = allDocNos.slice(0, SOURCE_CITATION_LIMITS.docs);
+  const uncheckedDocs = allDocNos.slice(SOURCE_CITATION_LIMITS.docs).map((raw): SourceCitation => ({ kind: "doc", raw, status: "unchecked" }));
   const docResults = await mapLimit(docNos, 2, async (raw): Promise<SourceCitation> => {
     try {
       const hit = await findInterpretationByDocNo(raw);
@@ -83,5 +97,5 @@ export async function checkSourceCitations(text: string, transferDate: string | 
     }
   });
 
-  return [...statuteResults, ...docResults];
+  return [...statuteResults, ...docResults, ...uncheckedStatutes, ...uncheckedDocs];
 }

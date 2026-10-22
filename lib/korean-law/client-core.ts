@@ -201,9 +201,14 @@ export function normalizeCaseNo(s: string): string {
   return m ? `${m[1]}${m[2]}${m[3]}` : flat;
 }
 
-/** HTML 태그·엔티티를 제거한 순수 텍스트 반환 */
+/**
+ * HTML 태그·엔티티를 제거한 순수 텍스트 반환.
+ * 마크업 태그(`<strong>`·`</b>`·`<!-- -->`)만 지운다 — 꺾쇠 글(「<○○법 시행령> 제3조…」)은 제목의 일부다.
+ * 종전 `/<[^>]+>/g`는 해석례 제목 맨 앞의 법령명을 지웠다(실응답 제목 3,854건 중 꺾쇠 1건 · 마크업 0건 — 계획서 F-7).
+ * 조문·결정례 본문의 `cleanHtml`(`article-parser.ts` · `compact.ts`)과 같은 정규식이다.
+ */
 export function strip(raw: string): string {
-  return raw.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+  return raw.replace(/<(?:\/?[A-Za-z]|!)[^<>]*>/g, "").replace(/&nbsp;/g, " ").trim();
 }
 
 /**
