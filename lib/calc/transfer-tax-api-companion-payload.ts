@@ -20,6 +20,7 @@ import {
 } from "@/lib/tax-engine/expropriation-scope";
 import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
+import { withDonorBuilt } from "./transfer-tax-api-donor-built";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
@@ -621,7 +622,8 @@ export function buildAssetPayload(
       const cp = buildCarryoverPayload(asset, transferDate, ratio);
       if (!cp) return {};
       return {
-        carryoverTaxation: cp.carryoverTaxation,
+        // 함께 양도 자산(첫 자산이 아님) — 증여자 신축·증축(§114조의2)도 같은 ④ 함수
+        carryoverTaxation: withDonorBuilt(cp.carryoverTaxation, asset, { transferDate, isNonPrimary: true }, ratio),
         ...cp.topLevelOverrides,
       };
     })(),

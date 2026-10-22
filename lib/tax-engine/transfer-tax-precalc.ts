@@ -35,6 +35,7 @@ import { resolveAcquisitionOverride } from "./transfer-tax-acquisition-override"
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
 import { calcCarryoverScenarios, resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover";
+import { donorBuiltPenaltyNotice } from "./transfer-tax-carryover-donor-display";
 import {
   calcSplitCarryoverScenarios,
   splitCarryoverStepLines,
@@ -192,6 +193,9 @@ export function runPreCalculationSteps(
       };
       // 채택 시나리오 입력으로 workingInput 교체 → 이후 STEP 0.5~11이 그대로 통과
       workingInput = carryoverResult.adoptedInput;
+      // §114조의2 증여자 신축·증축 — 적용/미적용 안내를 경고 목록에도 싣는다(입력이 없으면 undefined)
+      const donorBuiltNotice = donorBuiltPenaltyNotice(carryoverResult.detail.donorBuiltPenalty);
+      if (donorBuiltNotice) warnings.push(donorBuiltNotice);
       steps.push({
         label: "배우자등 이월과세 판정",
         formula: carryoverResult.detail.isEligible

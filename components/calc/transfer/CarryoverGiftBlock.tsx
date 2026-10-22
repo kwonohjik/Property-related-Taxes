@@ -22,6 +22,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CarryoverGiftExclusionSection } from "./CarryoverGiftExclusionSection";
 import { CarryoverEstimationSection } from "./CarryoverEstimationSection";
+import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
 import { carryoverHouseholdFactVisible } from "@/lib/calc/transfer-tax-api-carryover";
 import { effectiveCarryoverDonorSplit } from "@/lib/calc/transfer-land-part-cause";
@@ -267,6 +268,15 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
             part={part}
           />
         )}
+
+        {/* 환산 입력 다음 — 그 건물이 증여자 신축·증축인가 (§114조의2). 노출 술어는 ④ 전송·⑧ 필수와 같다(`donor-built-scope.ts`). */}
+        <CarryoverDonorBuiltSection
+          asset={asset}
+          transferDate={transferDate}
+          isNonPrimaryAsset={isNonPrimaryAsset}
+          onChange={onChange}
+          onCarryoverChange={updateCarryover}
+        />
       </div>
 
       {/* ③ 필요경비 가산 */}

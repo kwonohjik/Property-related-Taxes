@@ -392,3 +392,21 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 | 입력 거부 위치 | ⑫·⑧·엔진 | ⑫: 서브객체 규칙(`refineDonorBuiltInCarryover`) + 자산 종류·취득원인 규칙(`refineDonorBuiltOuter`, `addPropertyRefines`) / 엔진: `assertDonorBuiltInput` | ⑧은 PR-2(입력 UI) 범위. |
 | 일체 주택 `sale` 전송 | PR-2에서 ④ | PR-1 엔진·⑫가 `donorBuilt.housing.sale`을 수용(anchor DB-2b·DBR-1) | Q-6(b) 법정 서열을 엔진에서 먼저 고정. |
 | 신규 법령 상수 | 필요 시 manifest 등록 | 신규 상수 없음(`TRANSFER.BUILDING_PENALTY`·`CARRYOVER_DONOR_BASIS`·`PRE_HOUSING_DISCLOSURE_APPORTION`·`BUNDLED_APPORTIONMENT` 재사용) | manifest 등록 불필요. |
+
+---
+
+## 15. PR-2 Do 기록 (2026-10-22) — 입력·UI·결과(자산 전체) · 계획 대비 이탈
+
+| 항목 | 계획 | 실제 | 이유 |
+|---|---|---|---|
+| ① 폼 필드 | 취득 당시 3칸 + 양도 당시·sale 은 기존 칸 재사용 | 그대로. `CarryoverTaxationForm`에 8칸(`donorBuilt`·`donorBuiltType`·`donorBuiltDate`·`donorBuiltExtensionArea`·`donorBuiltExtensionStdPrice`·`donorBuiltLandPricePerSqm`·`donorBuiltLandArea`·`donorBuiltBuildingStdAtAcq`) | `normalizeCarryoverForm`이 구 세션·이력(필드 없음)을 OFF로 복원 — anchor DBC-N |
+| ④ 위치 | `buildCarryoverPayload` 안 | 신규 `lib/calc/transfer-tax-api-donor-built.ts`(`withDonorBuilt`)를 주 자산(`transfer-tax-api.ts`)·컴패니언(`transfer-tax-api-companion-payload.ts`) 호출부에서 얹음 | `transfer-tax-api-carryover.ts` → `donor-built-scope` → `transfer-tax-api-split` → `transfer-tax-api-carryover` 순환을 피하려고 분리 |
+| ④ sale 부분집합 | 기존 `transfer-tax-api-split.ts` sale 부분집합 함수 추출 | **추출하지 않고** 그 게이트 규약(구분 기재=`actual` 모드·감정=`actual`/`appraisal`·예외=양도일 2025.1.1.+)을 새 빌더에 옮겨 적용 | 기존 빌더는 `isSplitPayloadActive`·`partInputsActive` 등 분리 계산 게이트와 얽혀 있어 추출이 회귀 면적을 키운다. 규약은 anchor(안분 모드 stale 미전송 · 감정/예외)가 고정 |
+| 지분 스케일 | 확인 | 구분 기재 양도가액만 `transferPrice`와 같은 축으로 스케일, 기준시가·감정·취득 당시 입력은 미스케일(anchor 50% 셀) | 환산 산식에서 분자·분모로 약분 |
+| ⑧ sale 규칙 | `validateSaleStdAndAppraisal` 재사용 | 그대로(`landMode`·`buildingMode`=estimated로 호출 — 양쪽 양도 당시 기준시가 필수) | 엔진이 B_tr 안분·S_b 기준시가 basis 둘 다에 L_T·N_T를 요구 |
+| ⑦ echo | `donorBuiltPenalty` | 엔진 echo에 `formula`(`base = multiplicand × numerator ÷ denominator`) 추가 + 안내 문장을 `result.warnings`에도 싣음(`transfer-tax-precalc.ts` 4줄) | 4뷰가 같은 문장 정본(`transfer-tax-carryover-donor-display.ts`)을 읽게 하려고 |
+| ⑦ 산식 표기 | 한국어 풀어쓰기 | 문자열 산식은 `× (분자) ÷ (분모)` 괄호 피연산자 규약 — 결과 카드는 `FormulaText`가 분수(Frac)로 그림, 평문 매체(PDF·상세명세서 문자열)는 그대로 읽힘 / 「건물분 기준시가 = H × N ÷ (L+N)」 식은 `÷` 없이 말로 풀어 씀 | `formula-fraction-render-path.anchor.test.tsx`(산식 나눗셈 분수 변환 감사)가 첫 실행에서 2건 적발 → 규약에 맞춤 |
+| ⑦ 신고서 | 4뷰 | 신고서 「가산세액」 칸 각주(`setRoseNote`) + 상세명세서 가산세액 항목 문구 + PDF 행 + 결과 카드 | `TransferTaxResultView.tsx`(790줄)는 건드리지 않음 |
+| ⑥ 사이드바 | 변경 여부 확인 | **변경 없음** — `transfer-per-asset-summary.ts`가 가산세를 합산하지 않는다(본인 신축 가산세도 동일) | 계획서 §6 N/A 유지 |
+| 겸용·상가·분양권·입주권 | 토글 비노출 | `donorBuiltApplicable`이 housing·building 외·겸용·부담부증여·분리 계산·파트 이월과세·환산 OFF·phd/apd를 모두 비노출 | 엔진·⑫ 거부 조합과 같은 집합 — DBC-S 격자 |
+| 인쇄(print) E2E | 「전체 선택」 먼저 | **하지 않음** — 인쇄 경로는 vitest PDF·신고서 anchor로만 확인 | 가산세 근거는 같은 view 정본을 읽고 별도 인쇄 전용 분기가 없다. 필요 시 PR-3 이후 E2E에 추가 |

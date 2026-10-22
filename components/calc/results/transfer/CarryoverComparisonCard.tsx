@@ -11,6 +11,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { cn } from "@/lib/utils";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { CarryoverDonorBuiltPenaltyCard } from "./CarryoverDonorBuiltPenaltyCard";
 import {
   CARRYOVER_EXCLUSION_REASON_LABELS,
   carryoverComparisonPerformed,
@@ -317,6 +318,9 @@ export function CarryoverComparisonCard({ detail }: Props) {
           />
         </div>
       )}
+
+      {/* 증여자 신축·증축 §114조의2 가산세 — donorBuilt 입력이 있을 때만(적용 근거 또는 붙지 않은 이유) */}
+      <CarryoverDonorBuiltPenaltyCard echo={detail.donorBuiltPenalty} />
 
       {/* 하단 요약 */}
       <div className="rounded-md border-t pt-3 space-y-1 text-xs text-muted-foreground">

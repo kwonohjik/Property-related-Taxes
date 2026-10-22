@@ -1,0 +1,90 @@
+/**
+ * 이월과세 × 증여자 신축·증축 §114조의2 가산세 — **표시 문구 정본** (순수 함수).
+ *
+ * 결과 카드(`CarryoverComparisonCard`)·상세명세서·신고서·PDF·경고(`result.warnings`)가 **같은 문장**을 쓰도록 한곳에 둔다.
+ * 값은 전부 엔진 echo(`CarryoverTaxationDetail.donorBuiltPenalty`)이고 여기서 새로 계산하지 않는다(표시 드리프트 방지).
+ * 한국어 풀어쓰기 — 변수 약어·`floor()` 금지(`components/calc/CLAUDE.md`). 유불리·절감 표현을 쓰지 않는다.
+ *
+ * 계획서: docs/00-pm/carryover-donor-built-114-2.plan.md §7
+ */
+import { TRANSFER } from "./legal-codes";
+import type { DonorBuiltPenaltyEcho } from "./types/transfer-carryover.types";
+
+const won = (n: number): string => n.toLocaleString("ko-KR");
+const typeLabel = (e: DonorBuiltPenaltyEcho): string => (e.buildingType === "extension" ? "증축" : "신축");
+const dateLabel = (e: DonorBuiltPenaltyEcho): string => (e.buildingType === "extension" ? "증축 완공일" : "신축 취득일");
+
+/** 이월과세를 적용하지 않아 가산세가 붙지 않은 경우의 중립 안내 — 사용자 확정 문구(2026-10-22). */
+export const DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE =
+  `이월과세를 적용하지 않아 수증자 취득가액을 증여 당시 평가액(실지거래가액)으로 계산했고, 증여자 신축분 ${TRANSFER.BUILDING_PENALTY} 가산세는 붙지 않았습니다.`;
+
+/** A 채택인데 §114조의2 요건(5년 이내·환산 시행일 이후·증축은 85㎡ 초과)을 채우지 못한 경우 */
+export const DONOR_BUILT_OUTSIDE_WINDOW_NOTICE =
+  `증여자가 신축·증축한 건물로 입력했지만 ${TRANSFER.BUILDING_PENALTY} 요건(신축·증축일부터 5년 이내 양도 · 환산취득가액 적용 시행일 이후 양도 · 증축은 바닥면적 85㎡ 초과)을 충족하지 않아 가산세는 붙지 않았습니다.`;
+
+/** 가산세를 적용한 경우의 고지 — 「적용했다 + 정면 해석례 미확보」(사용자 확정 Q-5). */
+export const DONOR_BUILT_APPLIED_NOTICE =
+  `증여자가 신축·증축한 건물에 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세를 적용했습니다(증여자 신축·증축일 기산, 증여자 기준 환산취득가액의 건물분 5%, 증축은 증축 부분). 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
+
+export interface DonorBuiltPenaltyView {
+  applied: boolean;
+  /** 카드 제목 */
+  title: string;
+  /** 요건·기산 설명 한 줄 */
+  windowLine?: string;
+  /** 산식 줄들 — 앞에서부터 순서대로 읽는다 */
+  formulaLines: string[];
+  /** 안내·고지 (경고 목록에도 같은 문장이 들어간다) */
+  notice: string;
+}
+
+/** echo → 표시. `undefined`(donorBuilt 미입력)면 undefined. */
+export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): DonorBuiltPenaltyView | undefined {
+  if (!e) return undefined;
+  const title = `증여자 ${typeLabel(e)} 건물 환산취득가액 가산세 (${TRANSFER.BUILDING_PENALTY})`;
+  if (!e.applied) {
+    return {
+      applied: false,
+      title,
+      formulaLines: [],
+      notice: e.notAppliedReason === "outside_penalty_window" ? DONOR_BUILT_OUTSIDE_WINDOW_NOTICE : DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE,
+    };
+  }
+  const lines: string[] = [];
+  const f = e.formula;
+  if (e.housingSplit && f) {
+    // `× (분자) ÷ (분모)` — 결과뷰는 `FormulaText`가 분수로 그린다(괄호 피연산자 규약, 평문 매체 PDF는 그대로 읽힌다)
+    lines.push(
+      `건물분 환산취득가액 ${won(e.base!)} = 건물분 양도가액 ${won(f.multiplicand)} × (${e.buildingType === "extension" ? "증축 완공 당시 증축 부분 기준시가" : "취득 당시 건물분 기준시가"} ${won(f.numerator)}) ÷ (양도 당시 건물분 기준시가 ${won(f.denominator)})`,
+    );
+    lines.push(
+      "건물분 기준시가는 주택공시가격을 토지 기준시가와 건물 기준시가의 비율로 나눈 값입니다 — 토지분은 가산세 대상에서 제외합니다 (소득세법 §99①1호, 시행령 §166⑥).",
+    );
+  } else if (f) {
+    lines.push(
+      `증축 부분 환산취득가액 ${won(e.base!)} = 양도가액 ${won(f.multiplicand)} × (증축 완공 당시 증축 부분 기준시가 ${won(f.numerator)}) ÷ (양도 당시 기준시가 ${won(f.denominator)})`,
+    );
+  } else {
+    lines.push(`가산세 기준액 = 증여자 환산취득가액 ${won(e.base!)} (건물)`);
+  }
+  lines.push(`가산세 ${won(e.penalty!)} = ${won(e.base!)} × 5%`);
+  return {
+    applied: true,
+    title,
+    windowLine: `증여자 ${dateLabel(e)} ${e.constructionDate}부터 5년이 되는 날(${e.fifthAnniversary})까지 양도하는 경우입니다.`,
+    formulaLines: lines,
+    notice: DONOR_BUILT_APPLIED_NOTICE,
+  };
+}
+
+/** `result.warnings` 에 넣는 문장 — 입력이 없으면 undefined */
+export function donorBuiltPenaltyNotice(e: DonorBuiltPenaltyEcho | undefined): string | undefined {
+  return donorBuiltPenaltyView(e)?.notice;
+}
+
+/** 신고서 «가산세액» 칸 각주 — 적용된 경우만 */
+export function donorBuiltPenaltyFilingNote(e: DonorBuiltPenaltyEcho | undefined): string | undefined {
+  const v = donorBuiltPenaltyView(e);
+  if (!v?.applied) return undefined;
+  return `${TRANSFER.BUILDING_PENALTY} 증여자 ${typeLabel(e!)} 건물 가산세 ${won(e!.penalty!)} (= 건물분 환산취득가액 ${won(e!.base!)} × 5%)`;
+}
