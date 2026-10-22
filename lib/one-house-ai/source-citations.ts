@@ -8,6 +8,7 @@
  *   대조하지 않는다. 교재식 약식 번호(「재산-123」 등)는 DRF 안건번호와 표기가 달라 「찾지 못함」이 될 수 있다.
  */
 import { findInterpretationByDocNo } from "@/lib/korean-law/client-cgm-expc";
+import { resolveCitationEraDate } from "@/lib/korean-law/applicable-law";
 import { extractCitations } from "@/lib/korean-law/verify-citations";
 import type { StatuteRef } from "./statute-ref";
 import { checkStatute, mapLimit } from "./verify/verify";
@@ -17,8 +18,8 @@ export type SourceCitation = {
   /** 원문에 나온 표기 */
   raw: string;
   status: "found" | "not_found" | "failed";
-  /** 조문 — 양도일 시행본으로 봤는지, 현행으로 봤는지 */
-  basis?: "transfer_date" | "current";
+  /** 조문 — 양도일 시행본 · 현행 · 원문이 괄호로 밝힌 옛 시행본(「(… 개정되기 전의 것)」) 중 무엇으로 봤는지 */
+  basis?: "transfer_date" | "current" | "cited_era";
   /** 해석례 — 찾은 문서번호(DRF 표기) */
   docNo?: string;
   note?: string;
@@ -45,18 +46,28 @@ export async function checkSourceCitations(text: string, transferDate: string | 
     .slice(0, SOURCE_CITATION_LIMITS.statutes)
     .flatMap((c) => {
       const ref = toRef(c.lawName, c.articleNo, c.hang, c.ho);
-      return ref ? [{ raw: c.raw, ref }] : [];
+      return ref ? [{ raw: c.raw, ref, era: c.era }] : [];
     });
-  const statuteResults = await mapLimit(statutes, 4, async ({ raw, ref }): Promise<SourceCitation> => {
-    const r = await checkStatute(ref, baseDate);
-    if (r.status === "verified") return { kind: "statute", raw, status: "found", basis, url: r.url };
-    if (r.status === "failed") return { kind: "statute", raw, status: "failed", basis, note: r.reason };
+  const statuteResults = await mapLimit(statutes, 4, async ({ raw, ref, era }): Promise<SourceCitation> => {
+    // 원문이 괄호로 시대를 밝힌 인용은 양도일이 아니라 그 시행본으로 본다
+    let date = baseDate;
+    const b: SourceCitation["basis"] = era ? "cited_era" : basis;
+    if (era) {
+      try {
+        date = await resolveCitationEraDate(era);
+      } catch (e) {
+        return { kind: "statute", raw, status: "failed", basis: b, note: e instanceof Error ? e.message : String(e) };
+      }
+    }
+    const r = await checkStatute(ref, date);
+    if (r.status === "verified") return { kind: "statute", raw, status: "found", basis: b, url: r.url };
+    if (r.status === "failed") return { kind: "statute", raw, status: "failed", basis: b, note: r.reason };
     return {
       kind: "statute",
       raw,
       status: "not_found",
-      basis,
-      note: baseDate ? r.reason : `현행에 없음 — 과거 조문일 수 있음${r.reason ? ` (${r.reason})` : ""}`,
+      basis: b,
+      note: date ? r.reason : `현행에 없음 — 과거 조문일 수 있음${r.reason ? ` (${r.reason})` : ""}`,
     };
   });
 

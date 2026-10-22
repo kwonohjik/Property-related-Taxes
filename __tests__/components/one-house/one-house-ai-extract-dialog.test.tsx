@@ -42,6 +42,7 @@ const data: OneHouseAiExtractData = {
   lawLookups: [{ tool: "lookup_statute", input: { lawName: "소득세법 시행령", article: "제154조" }, ok: true, summary: "소득세법 시행령 제154조 (현행)" }],
   sourceCitations: [
     { kind: "statute", raw: "소득세법 시행령 제155조 제20항", status: "not_found", basis: "current", note: "현행에 없음 — 과거 조문일 수 있음" },
+    { kind: "statute", raw: "소득세법 시행령(2020-02-11 개정 전) 제155조 제20항", status: "found", basis: "cited_era", url: "https://www.law.go.kr/y" },
     { kind: "doc", raw: "서면-2016-부동산-2944", status: "found", docNo: "서면-2016-부동산-2944[부동산납세과-425]", url: "https://taxlaw.nts.go.kr/qt/x" },
   ],
   model: "claude-opus-5-5",
@@ -88,7 +89,8 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
     expect(preview.textContent).toContain("참고용");
     // 원문 속 인용 대조(결정론)와 AI 조문 조회 기록
     const cites = screen.getByTestId("one-house-ai-source-citations").textContent ?? "";
-    expect(cites).toContain("원문 속 인용 대조 2건");
+    expect(cites).toContain("원문 속 인용 대조 3건");
+    expect(cites).toContain("소득세법 시행령(2020-02-11 개정 전) 제155조 제20항 — 확인됨 (인용된 옛 시행본)");
     expect(cites).toContain("소득세법 시행령 제155조 제20항 — 찾지 못함 (현행 기준) · 현행에 없음 — 과거 조문일 수 있음");
     expect(cites).toContain("서면-2016-부동산-2944 — 확인됨");
     expect(screen.getByTestId("one-house-ai-law-lookups").textContent).toContain("소득세법 시행령 제154조 (현행)");
@@ -104,7 +106,7 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
     const card = screen.getByTestId("one-house-ai-review");
     expect(card.textContent).toContain("A아파트에 입주한 날은 언제입니까?");
     // 적용 후 남는 검토 카드에도 대조 결과가 남는다
-    expect(card.textContent).toContain("원문 속 인용 대조 2건");
+    expect(card.textContent).toContain("원문 속 인용 대조 3건");
     // 전입일은 ② 양도 대상 주택 화면의 칸이다
     fireEvent.click(screen.getByRole("button", { name: "「양도 대상 주택」 단계에서 입력" }));
     expect(useOneHouseJudgmentStore.getState().currentStep).toBe(1);

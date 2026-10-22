@@ -8,10 +8,15 @@ vi.mock("@/lib/one-house-ai/verify/verify", async (orig) => ({
   checkStatute: vi.fn(),
 }));
 vi.mock("@/lib/korean-law/client-cgm-expc", () => ({ findInterpretationByDocNo: vi.fn() }));
+vi.mock("@/lib/korean-law/applicable-law", async (orig) => ({
+  ...(await orig<typeof import("@/lib/korean-law/applicable-law")>()),
+  resolveCitationEraDate: vi.fn(),
+}));
 
 import { findInterpretationByDocNo } from "@/lib/korean-law/client-cgm-expc";
 import { checkSourceCitations } from "@/lib/one-house-ai/source-citations";
 import { checkStatute } from "@/lib/one-house-ai/verify/verify";
+import { resolveCitationEraDate } from "@/lib/korean-law/applicable-law";
 
 const m = <T>(f: T) => f as unknown as ReturnType<typeof vi.fn>;
 beforeEach(() => {
@@ -49,5 +54,20 @@ describe("checkSourceCitations", () => {
     m(findInterpretationByDocNo).mockRejectedValue(new Error("법제처 API 오류 (503)"));
     const r = await checkSourceCitations("소득세법 제89조 · 서면-2016-부동산-2944", null);
     expect(r.map((c) => c.status)).toEqual(["failed", "failed"]);
+  });
+
+  // 계획서 law-citation-residuals Q-3 b — 원문이 괄호로 시대를 밝히면 양도일이 아니라 그 시행본으로 본다
+  it("개정 괄호가 붙은 인용은 그 시대 시행본(cited_era) — 시대를 못 정하면 「확인 불가」", async () => {
+    m(checkStatute).mockResolvedValue({ status: "verified", url: "https://www.law.go.kr/x" });
+    m(resolveCitationEraDate).mockResolvedValueOnce("2020-02-10");
+    const text = "소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조 제20항과 소득세법 제89조";
+    const r = await checkSourceCitations(text, "2016-03-01");
+    expect(checkStatute).toHaveBeenCalledWith({ law: "소득세법 시행령", article: 155, paragraph: 20 }, "2020-02-10");
+    expect(checkStatute).toHaveBeenCalledWith({ law: "소득세법", article: 89 }, "2016-03-01");
+    expect(r.map((c) => [c.status, c.basis])).toEqual([["found", "cited_era"], ["found", "transfer_date"]]);
+
+    m(resolveCitationEraDate).mockRejectedValueOnce(new Error("소득세법 시행령 연혁 목록에서 제30395호 개정을 찾지 못했습니다."));
+    const r2 = await checkSourceCitations(text.replace("개정되기 전의 것", "개정된 것"), null);
+    expect(r2[0]).toMatchObject({ status: "failed", basis: "cited_era" });
   });
 });
