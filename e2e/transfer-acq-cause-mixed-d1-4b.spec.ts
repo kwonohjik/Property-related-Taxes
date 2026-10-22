@@ -111,6 +111,29 @@ test.describe("D1-4b 1990.8.30. 전 상속 토지 — ② 입력 카드 → 계�
     await expect(sec164Card(page)).not.toContainText("1985.1.1.에 취득한 것으로 봅니다");
   });
 
+  // 1985.1.1. 전 상속 — 3자 max(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13).
+  // ② 200,000,000(㎡당 1,000,000 × 200㎡). 토지 양도가액은 구분 기재 600,000,000이 아니라 기준시가 안분값 675,000,000이다 —
+  // 건물 구분 기재 300,000,000이 안분값 225,000,000과 30% 넘게 달라 소득세법 §100③이 안분값을 쓴다. ③은 그 파트 양도가액으로 계산한다:
+  // 675,000,000 × 200,000,000 ÷ 양도시 토지 기준시가 300,000,000 = 450,000,000 > ① 300,000,000.
+  test("1984 상속 토지: 안내 2곳 → 계산 → body ③ 분자(지분 반영 전) → ③ 450,000,000 채택(§100③ 안분 양도가액 기준) · 명세서 3자 문장", async ({ page }) => {
+    test.setTimeout(150_000);
+    await seedWizard(page, singleSeed([mixed({ landAcquisitionDate: "1984-05-01", pre1990Grade_current: "1000", pre1990Grade_prev: "1000", pre1990Grade_atAcq: "1000", pre1990PricePerSqm_1990: "1000000" })]));
+    await expandAssetSection(page, 3);
+    await expect(page.getByTestId("part-acq-mode-land-pre-deemed")).toContainText("환산취득가액");
+    await expect(page.getByTestId("land-sec164-pre-deemed-note")).toContainText("환산취득가액");
+    await expect(page.getByTestId("land-sec164-total")).toHaveText("200,000,000");
+
+    const body = await calculate(page);
+    expect(body).toMatchObject({ landSec164Value: 200_000_000, landSec164ValueWhole: 200_000_000, landStandardPriceAtTransfer: 300_000_000 });
+
+    await expect(card(page, "split-card-acq-basis-converted")).toHaveText("450,000,000");
+    await expect(card(page, "split-card-acq-basis-adopted")).toHaveText("환산취득가액(영 §176조의2④)");
+    await expect(card(page, "split-card-acq-land")).toHaveText("450,000,000");
+    expect(await stmtText(page, "취득가액")).toContain(
+      "많은 금액(상속개시일 평가액 300,000,000, 영 §164④ 가액 200,000,000, 환산취득가액(영 §176조의2④) 450,000,000)",
+    );
+  });
+
   test("부정형 짝 — 토지 상속개시일을 1991로 고치면 카드가 사라지고 body에 landSec164Value가 없다", async ({ page }) => {
     test.setTimeout(150_000);
     // D1-H — 1991은 단서 2호 주택 부수토지 구간이라 「받을 당시 주택」을 묻는다. 이 테스트는 단서 1호 카드가 주제라 「없었음」으로 고정.

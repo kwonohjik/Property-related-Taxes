@@ -23,6 +23,7 @@ import {
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPriceWaivedByEra } from "@/lib/calc/sale-split-100-3-era";
+import { usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import {
   collectSplitPartCauseIssues,
@@ -94,6 +95,7 @@ export type Required2aLike = {
   landAcquisitionCause?: string;
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
+  landSec164ValueWhole?: number;
   isPartialAreaTransfer?: boolean;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
@@ -392,8 +394,9 @@ export function refineSplitAcquisitionInputs(
   }
 
   // 양도시 감정평가가액 양쪽이 있으면 엔진은 그것을 안분 basis 1순위로 쓴다(부가령 §64①1호 단서) —
-  // ⑧ V4·V7은 기준시가를 요구하지만 ⑫는 엔진이 실제로 던지는 조건으로 좁힌다(막다른 길 방지).
-  if (positive(d.landAppraisalAtTransfer) && positive(d.buildingAppraisalAtTransfer)) {
+  // 기준시가는 환산 파트의 분모로만 쓰이므로 ⑫는 엔진이 실제로 던지는 조건으로 좁힌다(막다른 길 방지). ⑧ V4·V7도 같은 술어(`saleAppraisalIsBasis` → `usableAppraisal`)로
+  // 같은 범위만 요구한다(docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md).
+  if (usableAppraisal({ land: d.landAppraisalAtTransfer ?? 0, building: d.buildingAppraisalAtTransfer ?? 0 })) {
     // A3 — 감정평가가액이 안분 basis여도 **환산 파트의 분모**(양도시 기준시가)는 별개로 필요하다. 아래 V7이 건너뛰어져
     //      엔진이 던지는 400(경로 없음)이 되던 구간이다(S3-1: 취득시 비율로 양도시를 나누는 후퇴 제거).
     refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue);
@@ -437,7 +440,7 @@ export function refineSplitPartCause(
   d: Pick<
     Required2aLike,
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
-    | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
+    | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "landSec164ValueWhole" | "isPartialAreaTransfer"
     | "buildingSec164Value" | "buildingHouseKind" | "buildingBundledStdPrice" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
     | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation"
@@ -479,6 +482,8 @@ export function refineSplitPartCause(
     hasPreHousingDisclosure: !!d.preHousingDisclosure,
     hasFamilyBusinessInheritance: !!d.familyBusinessInheritance,
     landSec164Value: d.landSec164Value,
+    landSec164ValueWhole: d.landSec164ValueWhole,
+    hasLandStdAtTransfer: (d.landStandardPriceAtTransfer ?? 0) > 0,
     isPartialAreaTransfer: d.isPartialAreaTransfer,
     // D2-4 — 건물 상속·증여 §163⑨ 단서 2호(단독·다가구주택만)
     isHousing,
@@ -545,7 +550,10 @@ type PreDeemedLike = Pick<
   | "commercialInheritanceValuation"
   | "pre1990Land"
   | "standardPriceAtTransfer"
->;
+> &
+  Partial<Pick<Required2aLike, "acquisitionCause" | "transferType" | "useEstimatedAcquisition">> & {
+    isSuccessorRightToMoveIn?: boolean;
+  };
 
 export function refinePreDeemedAcquisitionSource(
   d: PreDeemedLike,
@@ -554,13 +562,33 @@ export function refinePreDeemedAcquisitionSource(
 ) {
   const ia = d.inheritedAcquisition;
   if (ia?.mode !== "pre-deemed") return;
-  if (d.generalBuildingValuation || d.redevelopment || d.mixedUse || d.commercialBuildingValuation) return;
-  if (d.acquisitionMethod === "appraisal" || d.acquisitionMethod === "salesCase") return;
   const base = issuer(ctx);
   const issue: Issue = (path, message) => base([...prefix, ...path], message);
-
   const clauseA =
     positive(ia.reportedValue) || !!d.inheritedHouseValuation || !!d.commercialInheritanceValuation || !!d.pre1990Land;
+
+  // 재개발·재건축 종전자산(상속) — ③은 §166③이고 엔진은 환산 모드에서만 쓴다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12).
+  // ①② 없이 실가 모드면 취득가액 0 — ⑧ `redevPreDeemedEstimatedRequiredError`. 증여는 ⑧ E-1이 환산 모드에서만 걸려 제외.
+  // 승계조합원(완공 아파트 `isSuccessorMember` · 승계 입주권)은 §166③ 대상이 아니다 — ⑧ `isRedev166_3PreDeemedAsset`와 같은 축.
+  const redevSuccessor =
+    (d.redevelopment as { isSuccessorMember?: boolean } | null | undefined)?.isSuccessorMember === true ||
+    d.isSuccessorRightToMoveIn === true;
+  if (
+    d.redevelopment &&
+    !redevSuccessor &&
+    d.acquisitionCause === "inheritance" &&
+    d.transferType !== "burdened_gift" &&
+    !clauseA &&
+    d.useEstimatedAcquisition !== true
+  ) {
+    issue(
+      ["useEstimatedAcquisition"],
+      "의제취득일(1985.1.1.) 전 상속 재개발·재건축 종전자산에 상증법 평가액·§164④~⑦ 기준시가가 없으면 §166③ 환산취득가액으로 계산합니다 — useEstimatedAcquisition을 true로 보내고 §166③ 입력을 채우세요 (소득세법 시행령 §163⑨·§166③)",
+    );
+    return;
+  }
+  if (d.generalBuildingValuation || d.redevelopment || d.mixedUse || d.commercialBuildingValuation) return;
+  if (d.acquisitionMethod === "appraisal" || d.acquisitionMethod === "salesCase") return;
   if (clauseA) return;
   if (!positive(ia.standardPriceAtDeemedDate)) {
     issue(

@@ -39,10 +39,12 @@ import {
 } from "./transfer-house-land-sec164-bridge";
 import {
   deriveHousingLandSec164Total,
+  deriveHousingLandSec164Whole,
   isPartialAreaScenario,
   landSec164Applies,
 } from "./transfer-pre1990-housing-land-bridge";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
+import { isPreDeemedLandPart } from "@/lib/tax-engine/transfer-split-part-cause";
 
 /**
  * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
@@ -361,6 +363,7 @@ export function buildLandPartCausePayload(
   landAcquisitionCause?: "inheritance" | "gift" | "purchase" | "carryover_gift";
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
+  landSec164ValueWhole?: number;
   isPartialAreaTransfer?: true;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
@@ -400,6 +403,10 @@ export function buildLandPartCausePayload(
     // 따로 보낸다. max·채택 echo·「② 필수」 차단은 엔진·⑫가 한다. 단서 구간 밖이거나 5필드가 덜 차면 보내지 않는다.
     ...(landSec164Applies(primary) && deriveHousingLandSec164Total(primary) > 0
       ? { landSec164Value: deriveHousingLandSec164Total(primary) }
+      : {}),
+    // 1985.1.1. 전 — ③(환산취득가액) 분자로 ②의 지분 반영 전 값을 함께 보낸다(양도시 토지 기준시가가 전체 값 · 계획서 §13).
+    ...(landSec164Applies(primary) && isPreDeemedLandPart(cause, primary.landAcquisitionDate) && deriveHousingLandSec164Whole(primary) > 0
+      ? { landSec164ValueWhole: deriveHousingLandSec164Whole(primary) }
       : {}),
     // 일부 양도는 단서 구간에서 차단(평가액의 기준 면적 미확정, 자동 안분 금지) — 그 사실을 엔진·⑫에 알린다.
     ...(landSec164Applies(primary) && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),

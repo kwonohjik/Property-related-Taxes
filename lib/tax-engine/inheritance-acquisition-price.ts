@@ -17,7 +17,7 @@
  */
 
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
-import { TRANSFER } from "./legal-codes";
+import { TRANSFER, REDEVELOPMENT } from "./legal-codes";
 import { DEEMED_ACQUISITION_DATE } from "./types/inheritance-acquisition.types";
 import type {
   InheritanceAcquisitionInput,
@@ -41,13 +41,18 @@ export type {
 
 export function calculateInheritanceAcquisitionPrice(
   input: InheritanceAcquisitionInput,
+  /**
+   * 재개발·재건축 종전자산이면 ③으로 쓸 §166③ 금액(엔진 내부 주입 — 와이어 필드 아님).
+   * undefined = 재개발 아님(③ = §176조의2④) · null = 재개발이지만 §166③을 산출할 수 없음(③ = 0).
+   */
+  redevelopment166_3Price?: number | null,
 ): InheritanceAcquisitionResult {
   validateInput(input);
 
   const isPreDeemed =
     input.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime();
 
-  if (isPreDeemed) return calcPreDeemed(input);
+  if (isPreDeemed) return calcPreDeemed(input, redevelopment166_3Price);
   return calcPostDeemed(input);
 }
 
@@ -111,12 +116,19 @@ function validateInput(input: InheritanceAcquisitionInput): void {
 // ※ ①②가 둘 다 비면 ③만 남는다. 「①②를 빠뜨려 max 후보에서 빠지는」 오입력은 ⑧ E-1 선언 게이트
 //   (`lib/calc/transfer-tax-validate-clause-a.ts`)가 막는다(Q-6 a — 게이트 유지).
 
-function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisitionResult {
+function calcPreDeemed(
+  input: InheritanceAcquisitionInput,
+  redevelopment166_3Price: number | null | undefined,
+): InheritanceAcquisitionResult {
   const warnings: string[] = [];
+  const isRedevelopment = redevelopment166_3Price !== undefined;
 
   // ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) — §176조의2④·③3호
+  //   재개발·재건축 종전자산은 §166③ 금액(Q-8 a — 재개발 분기가 실제로 적용하는 산식). §176조의2④ 입력은 쓰지 않는다.
   let converted = 0;
-  if (
+  if (isRedevelopment) {
+    converted = redevelopment166_3Price ?? 0;
+  } else if (
     input.transferPrice &&
     input.standardPriceAtDeemedDate &&
     input.standardPriceAtTransfer &&
@@ -168,12 +180,15 @@ function calcPreDeemed(input: InheritanceAcquisitionInput): InheritanceAcquisiti
     convertedAmount: converted,
     sec164Amount: sec164 > 0 ? sec164 : null,
     selectedMethod,
+    ...(isRedevelopment && { convertedBasis: "redevelopment_166_3" as const }),
   };
 
   return {
     acquisitionPrice,
     method: "pre_deemed_max",
-    legalBasis: `${TRANSFER.INHERITED_BEFORE_DEEMED} · ${TRANSFER.PRE1990_STD_PRICE_CONVERSION}`,
+    legalBasis: isRedevelopment
+      ? `${TRANSFER.INHERITED_BEFORE_DEEMED} · ${REDEVELOPMENT.CONVERTED_ACQ}`
+      : `${TRANSFER.INHERITED_BEFORE_DEEMED} · ${TRANSFER.PRE1990_STD_PRICE_CONVERSION}`,
     formula: buildPreDeemedFormula(breakdown, acquisitionPrice),
     preDeemedBreakdown: breakdown,
     warnings: warnings.length > 0 ? warnings : undefined,
@@ -195,8 +210,10 @@ function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number):
         (b.selectedMethod === "sec164" ? "" : notSelected),
     );
   }
+  const convertedLabel =
+    b.convertedBasis === "redevelopment_166_3" ? "③ §166③ 재개발 환산취득가액" : "③ 환산취득가액";
   lines.push(
-    `③ 환산취득가액: ${b.convertedAmount.toLocaleString()}` +
+    `${convertedLabel}: ${b.convertedAmount.toLocaleString()}` +
       (b.selectedMethod === "converted" ? "" : notSelected),
   );
 
@@ -205,7 +222,7 @@ function buildPreDeemedFormula(b: PreDeemedBreakdown, acquisitionPrice: number):
       ? "① 상증법 평가액"
       : b.selectedMethod === "sec164"
         ? "② §164 취득당시 기준시가"
-        : "③ 환산취득가액";
+        : convertedLabel;
   lines.push(`→ 적용 (①②③ 중 큰 금액, ${label}): ${acquisitionPrice.toLocaleString()}`);
   return lines.join("\n");
 }

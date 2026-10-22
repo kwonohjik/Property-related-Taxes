@@ -46,6 +46,11 @@ export interface SplitPartCauseFacts {
   landSec164Value?: number;
   /** 면적 입력 방식 「일부 양도」 — 평가액이 취득 전체분인지 양도분인지 미확정이라 단서 구간에서 차단한다 */
   isPartialAreaTransfer?: boolean;
+  // ── 1985.1.1. 전 상속·증여 토지 파트 ③(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13) ──
+  /** ② 영 §164④ 가액의 지분 반영 전 총액 — ③ 분자. 생략·0 = 없음 */
+  landSec164ValueWhole?: number;
+  /** 양도시 토지 기준시가 > 0 — ③ 분모. 생략 = 확인하지 않는다 */
+  hasLandStdAtTransfer?: boolean;
   // ── D2 (건물 상속·증여 + 토지 매매) ──
   /** 건물 파트 **유효** 산정방식 — 생략 = 확인하지 않는다 */
   buildingMode?: PartAcqMode;
@@ -115,6 +120,8 @@ export type SplitPartCauseField =
   | "landDecedentAcquisitionDate"
   | "landAcquisitionDate"
   | "landSec164Value"
+  | "landSec164ValueWhole"
+  | "landStandardPriceAtTransfer"
   | "buildingSec164Value"
   // 비주택 건물 2001.1.1.~2005.4.29. — 일괄 고시 오피스텔·상업용 건물인가(Y4e)
   | "buildingBundledStdPrice"
@@ -181,6 +188,25 @@ export const LAND_INHERITED_ESTIMATION_MESSAGE =
 
 export const LAND_DECEDENT_DATE_REQUIRED_MESSAGE =
   "상속으로 취득한 토지는 피상속인 취득일이 필요합니다 — 세율 판정 보유기간을 피상속인이 취득한 날부터 통산합니다 (소득세법 §104②1호)";
+
+/** 의제취득일 — 「소득세법」 부칙(법률 제4803호) §8: 1984.12.31. 이전 취득분은 1985.1.1.에 취득한 것으로 본다. */
+export const PRE_DEEMED_BOUNDARY = "1985-01-01";
+
+/**
+ * 1985.1.1. 전 상속·증여 토지 파트인가 — 취득가액이 max(① 평가액, ② 영 §164④ 가액, ③ 환산취득가액)인 구간(3자 max ·
+ * 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13). 엔진·⑫·⑧·④가 이 술어 하나를 쓴다.
+ */
+export function isPreDeemedLandPart(cause: string | undefined, landDate: string | undefined): boolean {
+  return (cause === "inheritance" || cause === "gift") && !!landDate && landDate.slice(0, 10) < PRE_DEEMED_BOUNDARY;
+}
+
+export const LAND_PRE_DEEMED_WHOLE_REQUIRED_MESSAGE =
+  "1985.1.1. 전에 상속·증여받은 토지는 환산취득가액(양도가액에 의제취득일 기준시가와 양도시 기준시가의 비율을 곱한 금액)과도 비교하므로 "
+  + "지분 반영 전 영 §164④ 가액(landSec164ValueWhole)이 필요합니다 (소득세법 시행령 §163⑨·§176조의2④)";
+
+export const LAND_PRE_DEEMED_STD_AT_TRANSFER_REQUIRED_MESSAGE =
+  "1985.1.1. 전에 상속·증여받은 토지는 평가액·영 §164④ 가액·환산취득가액 중 많은 금액이 취득가액입니다 — 환산취득가액의 분모인 "
+  + "양도시 토지 기준시가를 입력하세요 (소득세법 시행령 §163⑨·§176조의2④)";
 
 /** 「소득세법 시행령」 §163⑨ 단서 1호 — 「1990년 8월 30일 개별공시지가가 고시되기 전에 상속 또는 증여받은 토지」. */
 export const SEC_163_9_LAND_FIRST_DISCLOSURE = "1990-08-30";
@@ -630,6 +656,13 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
     if (f.isPartialAreaTransfer) issues.push({ field: "areaScenario", message: LAND_SEC164_PARTIAL_MESSAGE });
     else if (!((f.landSec164Value ?? 0) > 0))
       issues.push({ field: "landSec164Value", message: LAND_SEC164_REQUIRED_MESSAGE });
+    // 1985.1.1. 전 — ③(환산취득가액)도 비교한다. 분자(② 지분 반영 전)·분모(양도시 토지 기준시가)가 없으면 ③이 조용히 빠진다.
+    else if (isPreDeemedLandPart(cause, f.landAcquisitionDate)) {
+      if (!((f.landSec164ValueWhole ?? 0) > 0))
+        issues.push({ field: "landSec164ValueWhole", message: LAND_PRE_DEEMED_WHOLE_REQUIRED_MESSAGE });
+      if (f.hasLandStdAtTransfer === false)
+        issues.push({ field: "landStandardPriceAtTransfer", message: LAND_PRE_DEEMED_STD_AT_TRANSFER_REQUIRED_MESSAGE });
+    }
   }
 
   // D1-H — 영 §163⑨ 단서 2호 주택 부수토지: 받을 당시 주택이 있었다고 한 경우에만 ②가 필수다(D2-4 Y4 미러 — 구분 → 일부 양도 → ②).

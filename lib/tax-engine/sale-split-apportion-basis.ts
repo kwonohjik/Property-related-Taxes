@@ -91,7 +91,7 @@ function usableStdPrice(pair: SaleSplitPair | undefined): boolean {
   return !!pair && pair.land + pair.building > 0;
 }
 
-function usableAppraisal(pair: SaleSplitPair | undefined): boolean {
+export function usableAppraisal(pair: SaleSplitPair | undefined): boolean {
   return !!pair && pair.land > 0 && pair.building > 0;
 }
 

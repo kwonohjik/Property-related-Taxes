@@ -28,6 +28,7 @@ import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { sec164LandPartStatus } from "@/lib/calc/sec164-required-fields";
 import { SPLIT_SEC164_VALUE_LABEL } from "@/lib/tax-engine/transfer-tax-split-display";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isPreDeemedLandPart } from "@/lib/tax-engine/transfer-split-part-cause";
 
 const fmt = (n: number) => n.toLocaleString();
 
@@ -57,6 +58,12 @@ export function LandSec164Card(props: {
           <strong>많은 금액</strong>이 토지 취득가액입니다 (소득세법 시행령 §163조 제9항 단서 1호). 토지 면적은 기본 정보의 토지 면적을
           사용하고, 취득일을 바꾸면 취득시 등급을 다시 확인하세요.
         </p>
+        {isPreDeemedLandPart(cause, asset.landAcquisitionDate) && (
+          <p className="mt-1 text-xs text-amber-900 dark:text-amber-200" data-testid="land-sec164-pre-deemed-note">
+            1985.1.1. 전 {meta.label}이라 이 가액(의제취득일 현재 기준시가)으로 구한 <strong>환산취득가액</strong>(토지 양도가액에 이 가액과
+            양도시 토지 기준시가의 비율을 곱한 금액)과도 비교해 셋 중 많은 금액을 씁니다 (같은 영 §163⑨·§176조의2④).
+          </p>
+        )}
       </ToneCard>
 
       <Pre1990LandValuationInput

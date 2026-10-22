@@ -194,11 +194,21 @@ export function SplitGainDetailSection({
                   {acqBasis.reportedLabel} <span className="font-mono tabular-nums" data-testid="split-card-acq-basis-reported">{acqBasis.reported.toLocaleString()}</span>
                   {" · "}
                   {acqBasis.sec164Label} <span className="font-mono tabular-nums" data-testid="split-card-acq-basis-sec164">{acqBasis.sec164.toLocaleString()}</span>
+                  {/* 1985.1.1. 전 토지 파트 — ③(환산취득가액)도 비교한다(3자 max). 채택되면 그 파트는 추계(개산공제·§97②2호 단서). */}
+                  {acqBasis.converted !== undefined && (
+                    <>
+                      {" · "}
+                      {acqBasis.convertedLabel} <span className="font-mono tabular-nums" data-testid="split-card-acq-basis-converted">{acqBasis.converted.toLocaleString()}</span>
+                    </>
+                  )}
                 </FLine>
                 <FLine>
                   채택: <span className="font-medium text-foreground/80" data-testid="split-card-acq-basis-adopted">{acqBasis.adoptedLabel}</span>{" "}
                   <span className="font-mono tabular-nums">{acqBasis.adoptedValue.toLocaleString()}</span>
                 </FLine>
+                {acqBasis.uncomparedNote && (
+                  <span className="block" data-testid="split-card-acq-basis-uncompared">{acqBasis.uncomparedNote}</span>
+                )}
               </div>
             )}
             <span className="text-muted-foreground">필요경비 (개산공제)</span>

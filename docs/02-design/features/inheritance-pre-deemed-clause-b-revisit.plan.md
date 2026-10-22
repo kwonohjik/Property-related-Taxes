@@ -360,3 +360,155 @@ probe `__tests__/zz-probe-pdmax/probe.test.ts`(미커밋) · 결과 `scratchpad/
 | 별건 | 소유자 분리(`NonPurchaseSplitInputsBlock`) | 자산 단위 3자 max 후 기준시가 비율 안분 | ③ 채택 시 split 엔진 파트 환산과 정합 실측 | 미확인 | — |
 
 > 이 표는 조사 에이전트의 코드 읽기 결과다. 상가(§10.3)처럼 각 PR 착수 전에 probe로 실측한다.
+
+---
+
+## 12. PR-2 — 재개발·재건축 종전자산(§166③) 설계 · 2026-10-22
+
+> PR-1 머지 #2398(`aac970c0f`) 뒤 워크트리 `Property-related-Taxes-pdredev`(브랜치 `fix/pre-deemed-redev-166-3-max`). Q-8 a(사용자 결정): 재개발 종전자산의 ③ = **§166③ 재개발 환산**.
+
+### 12.1 착수 전 실측 (probe — master `aac970c0f`, case44 재개발 정보 · 양도 525M · §176조의2④ ③ = 262,500,000 · §166③ = 141,221,534)
+
+| 시료 | 원인 | ① | 엔진 채택(STEP 0.45) | 재개발 종전자산 취득가액 | 판정 |
+|---|---|---:|---|---:|---|
+| I-R1 | 상속 | 100,000,000 | ③(§176조의2④) | 100,000,000 (①) | 카드는 「③ 262,500,000 적용」 — **표시 모순** |
+| I-R3 | 상속 | — | ③(§176조의2④) | 141,221,534 (§166③) | 카드 ③ 금액 ≠ 적용 금액 — **표시 모순**(PR-1 전부터) |
+| I-R4 | 상속 | 200,000,000 | ③(§176조의2④) | 200,000,000 (①) | 표시 모순 |
+| G-R4 | 증여 | 200,000,000 | ③(§176조의2④) | **141,221,534 — ①보다 작음** | **PR-1 회귀**(증여는 재개발 분기 덮어쓰기가 상속 전용 `transfer-tax.ts:184`) |
+| G-R7 | 증여 · 입주권 | 200,000,000 | ③ | 141,221,534 | 같은 회귀 |
+
+- G-R4 회귀의 화면 도달: 증여 화면에는 ③(§176조의2④) 입력 칸이 없다(`CompanionAcqGiftBlock` · 계획서 §11 PR-5). 매매→증여 전환 뒤 남은 `standardPriceAtAcq`나 API 직접 호출에서만 닿는다.
+- 경로 조사(2026-10-22): 재개발 상속 pre-deemed 화면에 ③ 입력이 **두 벌** 있다 — `PreDeemedInputs`(§176조의2④ 기준시가 2칸)와 `RedevelopmentBlock` ⑤ 「환산」 + §166③ 칸. 엔진은 §166③만 실제로 쓴다.
+- 기존 결함(PR-1 전부터): 재개발 pre-deemed에서 ①② 없이 「확인할 수 없음」을 선언하고 ⑤ = 「실가」면 STEP 0.45가 취득가액을 0으로 덮는다(⑤ 실가 값은 쓰이지 않는다). ⑧은 E-1 선언 + `redevActualAcquisitionPrice` 입력으로 통과, ⑫는 재개발을 건너뛴다.
+
+### 12.2 §166③ 산식은 재개발 엔진 안에 세 갈래다
+
+`runRedevelopment`(`redevelopment.ts`)의 분기와 같은 규칙:
+
+| 분기 | 조건 | 종전자산 환산취득가액 |
+|---|---|---|
+| 승계조합원 | `isSuccessorMember` | §166③ 없음 → null |
+| 주택 출자 · 입주권 · 청산금 수령 | `isHousingContribEstimatedAxes` + PHD 2칸 > 0 | 권리가액 × 취득당시 PHD ÷ 인가당시 PHD (`redevelopment-housing-contribution.ts`) |
+| 토지 출자 · 입주권 | `subject = right` + `originalAssetType = land` | 권리가액 × 취득당시 공시지가 ÷ 인가당시 공시지가 (`redevelopment-land-contribution.ts`) |
+| 그 밖 | — | `computeRedevelopmentValuation`(`redevelopment-valuation.ts`) |
+
+### 12.3 설계
+
+- **E-a 리프** `resolveRedevelopment166_3AcquisitionPrice(info, acquisitionDate)` — 위 분기를 그대로 따라 §166③ 금액(없으면 null). anchor가 분기마다 「리프 값 = 재개발 엔진 환산 모드 실행의 종전자산 취득가액」을 고정한다(드리프트 가드).
+- **E-b STEP 0.45** — 재개발 분기 대상(`isRedevelopmentActive`) + pre-deemed면 `calcPreDeemed`의 ③을 §176조의2④ 대신 **§166③ 금액**으로 계산한다. ⑤가 「환산」(`useEstimatedAcquisition === true`)일 때만 — 실가 모드면 §166③ 칸이 화면에 없어 남은 값을 쓰면 안 된다(③ = 0). §176조의2④ 입력은 재개발에서 쓰지 않는다. 결과 `preDeemedBreakdown.convertedBasis = "redevelopment_166_3"`(표시용) · 산식 「③ §166③ 재개발 환산취득가액」.
+- **E-c** `resolveInheritedRedevelopmentAcqPrice` — pre-deemed에서 ③(§166③)이 채택되면 null(재개발 분기가 같은 산식으로 §166③을 계산), ①②가 이기면 max(①,②). 증여는 덮어쓰기가 없지만 STEP 0.45 결과(①② 채택 → 실가, ③ 채택 → 환산 모드 유지)가 그대로 맞는 값을 만든다.
+- **⑧·⑫** — 재개발 pre-deemed에서 ①② 없이 선언했는데 ⑤가 「환산」이 아니면 차단(⑧ `useEstimatedAcquisition` · ⑫ `refinePreDeemedAcquisitionSource` 재개발 분기). 비우면 취득가액 0.
+- **⑤** — `PreDeemedInputs`: 재개발 자산이면 §176조의2④ 기준시가 2칸을 숨기고 「③은 아래 재개발 입력 ⑤에서 「환산」을 고르고 §166③ 칸을 채우면 계산된다」 안내. `PreDeemedEstimatedNotice`·`RedevelopmentDeemedAcquisitionNotice` 문구를 §166③ 기준으로.
+- **⑦** — `InheritedAcquisitionDetailCard`: `convertedBasis`가 재개발이면 ③ 라벨 「§166③ 재개발 환산취득가액」, 하단 근거 「소령 §166③」.
+- **엔진 input 필드 변경 없음**(③ 주입은 엔진 내부 인자) · result는 `PreDeemedBreakdown.convertedBasis` 선택 필드 1개(⑦만 소비).
+
+### 12.4 범위 밖 (별건으로 남김)
+
+- 함께 양도 카드의 재개발 상속: `inheritedAcquisition`을 싣지 않아 ①만 쓰이고 ②③·⑤ 「환산」이 전달되지 않는다(`transfer-tax-api-companion-payload.ts:531-540`·`:578-579`). 주 자산 경로와 구조가 달라 별건.
+- 부담부증여 × 상속 재개발(§159 β 스케일) — PR-7(법리 결정 선행).
+- ⑤ 「실가」 칸의 의미(pre-deemed 상속에서 `redevActualAcquisitionPrice`는 계산에 쓰이지 않는데 필수) — 화면 정리 별건.
+
+### 12.5 Do 결과 (2026-10-22)
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| E-a | `lib/tax-engine/redevelopment-166-3-price.ts`(신규) | `resolveRedevelopment166_3AcquisitionPrice` — 승계조합원 null · 주택 출자 receive PHD 2-point · 그 밖 `computeRedevelopmentValuation`(토지 출자 입주권도 같은 산식 — 뮤테이션 M7이 등가로 드러나 별도 분기 삭제) |
+| E-b | `inheritance-acquisition-helpers.ts` · `inheritance-acquisition-price.ts` · `types/inheritance-acquisition.types.ts` | STEP 0.45 ③ 주입(`resolvePreDeemedRedevelopment166_3Price` — ⑤ 환산일 때만) · `calcPreDeemed(input, redevelopment166_3Price)` · `convertedBasis` · 산식·근거(`REDEVELOPMENT.CONVERTED_ACQ`) · `applyResultToInput`가 재개발에서 §176조의2④ 값으로 환산 전환하지 않음 |
+| E-c | `inheritance-acquisition-helpers.ts` `resolveInheritedRedevelopmentAcqPrice` · `transfer-tax.ts` 주석 | ③ 채택이면 null · ①②면 max(①,②) — `transfer-tax.ts` 802줄(순감 2) |
+| ⑧ | `transfer-tax-validate-clause-a.ts` `redevPreDeemedEstimatedRequiredError` · `transfer-tax-validate-acquisition.ts` | 상속 재개발 pre-deemed · ①② 없음(선언) · ⑤ 실가 → `useEstimatedAcquisition` 차단 |
+| ⑫ | `transfer-tax-schema-required-refines-2a.ts` `refinePreDeemedAcquisitionSource` | 같은 조건 400(증여 제외 — ⑧ E-1이 증여는 추계 모드에서만) |
+| ⑤ | `PreDeemedInputs.tsx` · `PreDeemedEstimatedNotice.tsx` · `RedevelopmentDeemedAcquisitionNotice.tsx` | 재개발이면 §176조의2④ 기준시가 2칸 숨김 + §166③ 안내 · 배지 §166③ · pre-deemed 재개발 블록 안내를 3자 max로(종전 「평가액 우선 · 환산 미적용」은 틀린 안내) · 증여 안내에 1985 전 단서 · `PreDeemedInputs` 머리말 「①과 ② 중 많은 금액」(PR-1이 놓친 옛 문구) 정정 |
+| ⑦ | `InheritedAcquisitionDetailCard.tsx` | `convertedBasis`면 ③ 「재개발 환산취득가액 (소령 §166③)」 · 하단 근거 §166③ |
+
+실측(case44 · mock 세율 · 결정세액, 「종전」은 PR-1 엔진 실측):
+
+| 시료 | 채택 | 종전자산 취득가액 | 결정세액 | 종전 |
+|---|---|---:|---:|---:|
+| 상속 ① 1억 | ③ §166③ | 141,221,534 | 61,420,275 | 74,228,133 |
+| 상속 ① 2억 | ① | 200,000,000 | 44,968,133 | 44,968,133 |
+| 상속 ③만 | ③ | 141,221,534 | 61,420,275 | 61,420,275 |
+| 상속 ① 1억 · ⑤ 실가 | ① | 100,000,000 | 74,228,133 | 74,228,133 |
+| 증여 ① 2억 | ① | 200,000,000 | 44,968,133 | **61,420,275**(PR-1 회귀 해소) |
+
+검증: 신규 anchor 21 · ⑧↔⑫ 격자 8(폼→route 통합 + 승계 단위) · 화면 8 · 수정 2파일 · 회귀(엔진·계산·화면·API·lib) 3,162파일 37,913건 통과 · E2E 11스펙 73건 통과 · 뮤테이션 1차 14종 중 13 KILLED·1 등가(M7 → 분기 삭제) · 2차(리뷰 수정분) 6종 전부 KILLED(처음 F2·F4 생존 → 승계 적용값·승계 입주권 단언 보강) · tsc 0 · eslint 0.
+
+**취득가액 리뷰 게이트(acquisition-cost-review) 결과 반영**:
+- FAIL-1(표시) — `InheritedHouseValuationDetailCard`가 재개발 ③(§166③) 채택을 「환산취득가액 적용」 + §176조의2④식 주택 산식으로 보였다 → 상태 `redev_166_3` 「미적용 — 재개발 종전자산은 §166③ 환산취득가액 적용」. 엔진 결과로 렌더하는 화면 테스트 추가.
+- FAIL-2(막다른 길) — 승계조합원(완공 아파트 `redevIsSuccessorMember` · 승계 입주권 `isSuccessorRightToMoveIn`)은 §166③ 대상이 아닌데 ⑤가 §176조의2④ 칸을 숨기고 ⑧⑫가 ⑤ 「환산」을 요구했다 → 엔진·⑤·⑧·⑫ 모두 승계 제외(⑤⑧ 공용 leaf `isRedev166_3PreDeemedAsset`). 승계는 PR-1과 같은 값(실측 결정세액 101,376,000).
+- 확인 필요로 남긴 것: 부담부증여 × pre-deemed 재개발에서 카드 ③(β 미스케일) 표시(세액 무관 — PR-7) · `carryover_gift` + `inheritedAcquisition` API 직접 호출 시 취득일 축 · stale 감정가액·매매사례 플래그 셀 · 공유지분 셀 앵커 부재 · §166③ 과거 시행본 문언 미조회.
+반전한 기존 단언 2건: `inheritance-163-9-acquisition.anchor.test.ts` B(① 1억 → §166③ 141,221,534, B' 추가) · `inheritance-redevelopment-confirmed-acq-price.test.ts` Q3-1(③ 채택 → null, Q3-2~4 추가).
+
+---
+
+## 13. PR-3 — 토지·건물 분리 계산(split) 파트 · 2026-10-22
+
+> PR-2 머지 #2404(`4568a1bcb`) 뒤 워크트리 `Property-related-Taxes-pdsplit`(브랜치 `fix/pre-deemed-split-part-3way-max`). 경로 조사(에이전트) + probe.
+
+### 13.1 현행 (코드 · 실측)
+
+- split 계열(`transfer-split-part-cause.ts` · `transfer-tax-split-acq-price.ts` · `transfer-tax-split-gain.ts` · ④ `transfer-tax-api-split.ts` · ⑧ `transfer-tax-validate-split.ts` · ⑫ `schema-split`)에 **1985·의제취득일 판정이 0건**이다. 1985 전 상속 토지도 단서 1호(<1990-08-30) 하나로 max(① `landAcquisitionPrice`, ② `landSec164Value`)만 한다(`resolveLandPartAcquisition` :344). 상속·증여 파트는 실가만(G-2 :646 · S6 :551).
+- E-1·PD-1은 split 파트에 걸리지 않는다(D1 자산 원인 = 매매 → `isSec163_9PreDeemed` 거짓 · D2는 그 전에 분기). D1-4는 ② 필수(:631)라 「①② 없음」 상태가 없다.
+- 결과 표시는 2자(`adopted: "reported" | "sec164"`) — 결과 카드·계산명세서·신고서·PDF 소비처 8곳(`transfer-tax-split-display.ts` 정본).
+- 함께 양도 카드도 같은 `calcSplitGain`을 쓴다.
+
+probe(D1 · 1980 상속 토지 + 건물 매매 · 파트 양도 7억 · 양도시 토지 기준시가 4억 · mock 세율):
+
+| 시료 | 현행 채택 | 토지 취득가액 | 결정세액 | ③(= 7억 × ② ÷ 4억) |
+|---|---|---:|---:|---:|
+| ① 3억 · ② 3.5억 | ② | 350,000,000 | 115,126,000 | 612,500,000 — ③이 가장 큼 |
+| ① 1억 · ② 0.5억 | ① | 100,000,000 | 192,159,000 | 87,500,000 |
+| ① 6.5억 · ② 3.5억 | ① | 650,000,000 | 27,868,500 | 612,500,000 |
+
+### 13.2 ③의 재료
+
+- **D1 토지**: 분자(의제취득일 현재 토지 기준시가)는 1990 전이라 §164④ 등급 환산값 = ②와 같은 값이다(② 등급 칸 라벨이 이미 `sec164AcqTimePointLabel`로 1985 전이면 「의제취득일(1985.1.1.) 유효 등급」 — `Pre1990LandValuationInput.tsx:271`). 분모(`landStandardPriceAtTransfer`)·파트 양도가액은 이미 있다. 새 화면 칸 불필요.
+  - ⚠️ 지분 축: ④는 ②와 파트 양도가액을 **지분 몫**으로, 양도시 기준시가는 **전체 값**으로 보낸다(`transfer-pre1990-housing-land-bridge.ts:91-97` · `transfer-tax-api-split.ts:259-262`·`:323-331`). ③ = 지분 양도가액 × ②(전체) ÷ 양도시 기준시가(전체)여야 하므로 ②의 **지분 반영 전 값**이 엔진에 필요하다 → 와이어 필드 1개 추가(④⑫⑬⑭) 또는 역산(정밀도 손실 — 기각).
+- **D2 건물(단독·다가구)**: ② = §164⑦ 주택가격의 건물 몫(라목 척도)인데 분모 `buildingStandardPriceAtTransfer`는 국세청 건물 기준시가(나목 척도)라 척도가 다르다. 척도를 맞추는 입력(양도시 개별주택가격 등)이 D2 화면에 없고, 건물분 ③ 산식의 해석례도 확인 못 했다 — Q-9.
+
+### 13.3 결정 필요 (Q-9)
+
+| # | 쟁점 | 선택지 | 권고 |
+|---|---|---|---|
+| Q-9 | D2(건물 상속·증여 + 토지 매매) 1985 전 건물 파트의 ③ | a 범위 밖 — 현행 max(①,②) 유지 + 결과에 「③ 미비교」 확인 필요 고지 / b 새 입력(양도시 개별주택가격 등)으로 ③ 계산 | ✅ **a** (사용자 결정 2026-10-22) |
+
+### 13.4 설계 (D1)
+
+- 엔진 `resolveLandPartAcquisition`: 토지 파트 상속·증여 ∧ 토지 취득일 < 1985-01-01이면 ③ = 파트 양도가액 × ②(전체) ÷ 양도시 토지 기준시가, max(①,②,③) — 동점 ①② 우선(Q-5) · 취득가액만 비교(Q-7 a). echo `adopted: "converted"` · rule 그대로.
+- ③ 채택 파트는 추계: 파트 모드 `estimated`로 전환 → 개산공제 = 의제취득일 토지 기준시가(②, 지분 반영) × 3% · §97②2호 단서 파트 비교(현행 파트 swap 경로).
+- G-2는 사용자 입력 모드를 실가로 유지(엔진 내부 전환) · ② 필수 유지(③ 분자이기도 하다).
+- 표시 8곳 3자화 · ⑤ 문구(「환산·감정·매매사례로 산정하지 않습니다」 → 1985 전 단서) · ① hint 의제취득일 안내.
+
+### 13.5 Do 결과 (2026-10-22)
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| leaf | `transfer-split-part-cause.ts` | `PRE_DEEMED_BOUNDARY`·`isPreDeemedLandPart` · 1985 전 토지 파트는 ③ 분자(`landSec164ValueWhole`)·분모(양도시 토지 기준시가) 필수(엔진·⑫·⑧ 공용) |
+| 엔진 | `transfer-tax-split-acq-price.ts` | `resolveLandPartAcquisition` 3자 max(동점 ①②) · ③ 채택 시 파트 모드 `estimated`(입력은 실가 유지) · D2 1985 전 건물 echo `preDeemedUncompared` |
+| 엔진 | `transfer-tax-split-gain.ts` | ③ 채택 파트 개산공제 base = ② 전체 × 지분(`landStdAtAcqOverride`) |
+| 타입 | `types/transfer.types.ts` · `types/transfer-split-gain.types.ts` | 입력 `landSec164ValueWhole` · echo `converted`·`adopted: "converted"`·`preDeemedUncompared` |
+| ④ | `transfer-tax-api-split.ts` · 브리지 `deriveHousingLandSec164Whole` | 1985 전 토지 파트만 ② 지분 반영 전 값 전송 |
+| ⑫ | `schema-base-shape.ts` · `schema-split.ts` · `refines-2a.ts` | 필드 · leaf 사실 2개 |
+| ⑭ | `engine-input.ts` · `multi/route.ts` · `bundled-split-helpers.ts` | 매핑 |
+| ⑧ | `transfer-tax-validate-split.ts` | leaf 사실(④와 같은 파생) · 오류 칸 이동(② 카드 · 양도시 ㎡당 공시지가) |
+| ⑦ | `transfer-tax-split-display.ts` · `SplitGainDetailSection.tsx` | 3자 문장·근거 §176조의2④ · ③ 칸 · D2 미비교 고지(카드·명세서·신고서·PDF 공용 정본) |
+| ⑤ | `LandBuildingSplitSection.tsx` · `LandSec164Card.tsx` | 1985 전 단서 안내 |
+
+실측(D1 · mock 세율 · `totalTax`): ① 3억·② 3.5억 → ③ 612,500,000 채택 · 개산공제 10,500,000 · 115,126,000 → 35,145,000 / ①이 큰 두 시료 불변.
+반전·보강한 기존 테스트: `split-part-cause.d1.test.ts`(1984 시료에 ③ 분자 · 「의제취득일 조건 없음」 제목 정정 · ①② max echo 시료를 1988로) · `transfer.route.split-land-part-cause.d1-4.predo.anchor.test.ts` D-4(③ = ② 동점이라 값 불변 — 제목 정정).
+신규: `split-part-pre-deemed-3way-max.anchor.test.ts`(엔진 15) · `transfer.route.split-land-pre-deemed-3way-max.routes.anchor.test.ts`(단건·다건·컴패니언 + ⑧↔⑫ 8) · `split-pre-deemed-3way-max-display.test.tsx`(화면 7) · E2E `transfer-acq-cause-mixed-d1-4b.spec.ts` 1건(1984 상속 토지 — 안내 2곳 → body `landSec164ValueWhole` → ③ 채택 카드·명세서).
+
+뮤테이션 23종 전부 KILLED. 처음 돈 판에서 2종이 살아남아 테스트를 보강했다.
+- ⑫ refine 분모 사실 제거: ⑫가 빠져도 엔진이 같은 leaf 문구로 던져 400이 됐다. 양도시 감정평가가 안분 basis면 V7(양도시 기준시가 파트별 필수)이 건너뛰어지므로 ③ 분모는 이 leaf만 지킨다. 그 시료로 ⑫가 `fieldErrors`로 칸을 지목해 막는지를 단언한다.
+- 분리 섹션 안내: 렌더 테스트를 추가했다.
+
+리뷰 게이트(acquisition-cost-review) 결과는 FAIL 0건이다. 비차단 지적은 다음처럼 처리했다.
+- `FIELD_LABEL`에 `landSec164ValueWhole`을 추가했다.
+- §100③ 되돌림 뒤 ③ 채택 앵커를 추가했다.
+- 조문 표기 「영 §176조의2④」 → 「②2호·④」 정정 권고는 반영하지 않았다. 기존 상수 `INHERITED_BEFORE_DEEMED`와 PR-1·PR-2 라벨이 모두 「§176조의2④」라, 이 PR만 바꾸면 표기가 갈린다. 바꾸려면 전 경로를 한 번에 정정하는 별건으로 다룬다.
+
+확인 필요(별건): 공익수용 특례(영 §164⑨1호) × ③.
+- split ③은 비교·적용 모두 특례 없는 분모를 쓴다. 입력 파트 모드가 실가라 `applySplitLandExpropriationValuation`이 걸리지 않는다. 내부적으로는 일관된다.
+- 자산 단위(PR-1)는 비교(`calcPreDeemed`)에서 특례 없는 분모를 쓴다. 그런데 ③ 채택 후 `useEstimatedAcquisition` 경로의 `resolveConversionDenominatorAtTransfer`가 특례 분모를 쓸 수 있어, 비교한 금액과 적용 금액이 갈릴 가능성이 있다. 미실측이다.
+- 법령상 ③에 특례 분모가 맞는지부터 확인해야 한다.
+
+E2E 실측 메모: 구분 기재 토지 6억·건물 3억에 양도시 기준시가 3억:1억이면 건물이 안분값 2.25억과 30% 넘게 달라 소득세법 §100③이 안분값을 쓴다. 토지 양도가액은 6.75억이 된다. ③은 그 파트 양도가액(6.75억 × 2억 ÷ 3억 = 4.5억)으로 계산하므로 양도차익과 같은 값을 쓴다(엔진 probe 대조).

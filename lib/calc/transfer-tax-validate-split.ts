@@ -49,6 +49,7 @@ import { phdFlagEffective } from "./phd-toggle-scope";
 import { collectSplitPartCauseIssues } from "@/lib/tax-engine/transfer-split-part-cause";
 import { isPartialAreaScenario } from "./transfer-pre1990-housing-land-bridge";
 import { deriveHousingLandSec164Total } from "./transfer-pre1990-housing-land-bridge";
+import { deriveHousingLandSec164Whole } from "./transfer-pre1990-housing-land-bridge";
 import { invalidSec164GradeField } from "./transfer-pre1990-housing-land-bridge";
 import { sec164LandPartStatus } from "./sec164-required-fields";
 import { sec164BuildingPartStatus } from "./sec164-required-fields";
@@ -59,7 +60,7 @@ import { houseLandKindSent } from "./transfer-house-land-sec164-bridge";
 import { deriveHouseLandSec164Total } from "./transfer-house-land-sec164-bridge";
 import { houseFirstDisclosureSent } from "./house-first-disclosure";
 import { validateLandRebuild } from "./transfer-tax-validate-land-rebuild";
-import { opt, validateSaleStdAndAppraisal } from "./transfer-tax-validate-split-sale-std";
+import { opt, saleAppraisalIsBasis, validateSaleStdAndAppraisal } from "./transfer-tax-validate-split-sale-std";
 
 /**
  * `requiresAcqStdPrice` ⑥절 인자 보정 — `AssetForm`에는 `expenses` 프로퍼티가 **없다**
@@ -254,6 +255,9 @@ export function validateLandPartCause(
     //   `asset.landAcquisitionDate`를 직독하므로 같은 값을 넣은 사본을 먹인다(유효 토지 원인이면 `hasSeperate…`가 참이라 두 식은 같다).
     //   일부 양도는 ④가 `isPartialAreaTransfer`로 실제로 보낸다(`buildLandPartCausePayload`).
     landSec164Value: deriveHousingLandSec164Total({ ...asset, landAcquisitionDate: landDateSent ?? "" }) || undefined,
+    // 1985.1.1. 전 토지 파트 ③ — ④가 실제로 보내는 값(같은 브리지의 지분 반영 전 파생 · 양도시 토지 기준시가 `resolveLandStdAtTransfer`).
+    landSec164ValueWhole: deriveHousingLandSec164Whole({ ...asset, landAcquisitionDate: landDateSent ?? "" }) || undefined,
+    hasLandStdAtTransfer: (resolveLandStdAtTransfer(asset) ?? 0) > 0,
     isPartialAreaTransfer: isPartialAreaScenario(asset),
     // D2-4 — 영 §163⑨ 단서 2호(2005.4.30. 전 상속·증여 건물). 주택 구분·②는 ④가 실제로 보내는 값(`buildingHouseKindSent`·
     //   `deriveBuildingSec164Total` — 카드 `BuildingSec164Card`가 받는 5칸의 파생) 그대로. 일부 양도·공동주택·비주택은 leaf가 판정한다.
@@ -283,7 +287,10 @@ export function validateLandPartCause(
   // 구주택 멸실·신축 통산 — 위 원인 규칙을 모두 통과한 뒤(토지 취득일·원인 칸이 먼저). 입력이 없으면 null(회귀 0).
   if (!issue) return validateLandRebuild(asset, label, opts);
   // ② 필수 위반 = 화면 입력 칸(`LandSec164Card` 5칸 + 기본 정보의 토지 면적) 중 첫 미완 칸으로 이동시킨다(엔진 문구는 API 소비자용).
-  if (issue.field === "landSec164Value") return validateLandSec164Inputs(asset, label);
+  // ③ 분자(② 지분 반영 전)도 같은 카드 5칸에서 나온다 — ②가 있으면 ④가 함께 보내므로 화면에서는 ②와 같이 풀린다.
+  if (issue.field === "landSec164Value" || issue.field === "landSec164ValueWhole") return validateLandSec164Inputs(asset, label);
+  // ③ 분모 — 축 A 「양도시 기준시가」 카드의 ㎡당 공시지가 칸으로(양도시 토지 기준시가 = 단가 × 양도 당시 면적).
+  if (issue.field === "landStandardPriceAtTransfer") return fieldError("standardPricePerSqmAtTransfer", `${label}: ${issue.message}`);
   // D2-4b — 단서 2호 ② 필수 위반 = 카드(`BuildingSec164Card`) 5칸 + 기본 정보의 토지 면적 중 첫 미완 칸으로.
   if (issue.field === "buildingSec164Value") return validateBuildingSec164Inputs(asset, label);
   // D1-H — 주택 부수토지 ② 필수 위반 = 카드(`HouseLandSec164Card`) 4칸 + 기본 정보의 토지 면적 중 첫 미완 칸으로.
@@ -519,7 +526,9 @@ export function validateSplitDirectInputs(
     asset.saleSplitMode === "actual" &&
     opt(asset.landTransferPrice) == null &&
     opt(asset.buildingTransferPrice) == null &&
-    !hasSaleRatio
+    !hasSaleRatio &&
+    // 양도시 감정평가가액 양쪽도 구분 근거다 — 안분 basis 1순위(부가령 §64①1호 단서). 엔진·⑫ V4도 같은 술어로 이 경우를 막지 않는다(`saleAppraisalIsBasis`).
+    !saleAppraisalIsBasis(asset)
   ) {
     // ⚠️ 안내 문구는 **실제 입력 칸의 이름**과 일치해야 한다 — 토지분 총액 칸은 표시 전용으로
     //    바뀌었으므로(2026-07-29) "양도시 토지 기준시가를 입력하세요"라고 하면 없는 칸을 찾게 된다.

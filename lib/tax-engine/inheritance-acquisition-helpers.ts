@@ -20,6 +20,8 @@ import type { InheritanceHouseValuationResult } from "./types/inheritance-house-
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { Pre1990LandValuationResult } from "./pre-1990-land-valuation";
 import { applyRatio } from "./tax-utils";
+import { isRedevelopmentActive } from "./redevelopment-dispatch";
+import { resolveRedevelopment166_3AcquisitionPrice } from "./redevelopment-166-3-price";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 
 /** STEP 0.45 실행 결과 */
@@ -60,9 +62,13 @@ export function runInheritedAcquisitionStep(
     houseValuationResult,
   );
 
-  const result = withApartNotes(calculateInheritanceAcquisitionPrice(resolvedInput), apartGate);
+  const redevelopment166_3Price = resolvePreDeemedRedevelopment166_3Price(rawInput);
+  const result = withApartNotes(
+    calculateInheritanceAcquisitionPrice(resolvedInput, redevelopment166_3Price),
+    apartGate,
+  );
 
-  const updatedInput = applyResultToInput(currentInput, result, resolvedInput);
+  const updatedInput = applyResultToInput(currentInput, result, resolvedInput, redevelopment166_3Price !== undefined);
 
   const step: CalculationStep = {
     label: "상속 취득가액 의제",
@@ -82,13 +88,12 @@ export function runInheritedAcquisitionStep(
  * 취득가액이 "확인 가능" → §166③ 환산·§163⑥ 개산공제 배제. 이 확인된 평가액을 반환한다.
  *
  * - post-deemed: result.acquisitionPrice(§163⑨ 본문/2호 평가액, 항상 확인됨).
- * - pre-deemed: **①(§163⑨ 본문 상증법 평가액)과 ②(§163⑨1호·2호 §164④~⑦ 기준시가) 중 큰 값**.
- *   ⚠️ ③이 채택(selectedMethod==="converted")됐더라도 ①② 중 확인된 값이 있으면 그것을 반환한다.
- *   🔴 **재개발 경로는 아직 3자 max가 아니다**(2026-10-22). `calcPreDeemed`는 3자 max로 바뀌었지만
- *      여기서 null을 반환하면 재개발 분기가 STEP 0.45의 ③(§176조의2④)이 아니라 **§166③ 자체 환산**으로
- *      다시 계산해, ①보다 작은 값이 취득가액이 되는 회귀가 난다(probe R4 — ① 200,000,000 · ③ 262,500,000
- *      → §166③ 141,221,534). 재개발의 ③을 §166③으로 볼지 §176조의2④로 볼지 결정한 뒤 별건 PR에서
- *      바꾼다 — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §11.
+ * - pre-deemed: 3자 max — ③은 **§166③ 재개발 환산**이다(STEP 0.45가 `resolvePreDeemedRedevelopment166_3Price`로
+ *   주입 · 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12 · Q-8 a).
+ *   · ③이 채택되면 null → 재개발 분기가 **같은 산식**으로 §166③을 계산한다(환산 모드 · 개산공제).
+ *   · ①② 중 큰 값이 이기면 그 값(실가 · 개산공제 배제).
+ *   ⚠️ 종전(PR-1까지)에는 ③을 §176조의2④로 비교해 놓고 여기서 ①②를 반환했다 — ③이 채택된 카드와 다른 값으로
+ *      계산됐고, 증여는 이 덮어쓰기가 없어 ①보다 작은 §166③이 쓰였다(probe G-R4 ① 200,000,000 → 141,221,534).
  * - 확인된 값이 없으면(신고가액 미입력 등) null → 호출측이 현행 §166③ 환산 경로를 유지한다.
  */
 export function resolveInheritedRedevelopmentAcqPrice(
@@ -97,6 +102,9 @@ export function resolveInheritedRedevelopmentAcqPrice(
   if (!step) return null;
   const r = step.result;
   if (r.preDeemedBreakdown) {
+    if (r.preDeemedBreakdown.selectedMethod === "converted" && r.preDeemedBreakdown.convertedBasis === "redevelopment_166_3") {
+      return null;
+    }
     const confirmed = Math.max(
       r.preDeemedBreakdown.reportedAmount ?? 0,
       r.preDeemedBreakdown.sec164Amount ?? 0,
@@ -107,6 +115,26 @@ export function resolveInheritedRedevelopmentAcqPrice(
 }
 
 // ─── 내부 헬퍼 ────────────────────────────────────────────────────────────
+
+/**
+ * 의제취득일 전 상속·증여 **재개발·재건축 종전자산**의 ③ = §166③ 금액(계획서 §12 · Q-8 a).
+ *
+ * - undefined: 재개발 분기 대상이 아니거나 post-deemed → `calcPreDeemed`가 §176조의2④로 ③을 계산(종전).
+ * - null: 재개발이지만 ③을 쓸 수 없다 — ⑤가 「환산」이 아니면 §166③ 칸이 화면에 없어 남은 값을 쓰면 안 되고,
+ *   칸이 비었으면 산출할 수 없다. ③ = 0.
+ * 분기 판정은 STEP 0.65 진입(`isRedevelopmentActive`)과 같은 술어 + 승계조합원 제외(⑤⑧ `isRedev166_3PreDeemedAsset`와 같은 축).
+ */
+function resolvePreDeemedRedevelopment166_3Price(rawInput: TransferTaxInput): number | null | undefined {
+  const ia = rawInput.inheritedAcquisition!;
+  if (ia.inheritanceDate.getTime() >= DEEMED_ACQUISITION_DATE.getTime()) return undefined;
+  if (!isRedevelopmentActive(rawInput.propertyType, rawInput.redevelopment, rawInput.isSuccessorRightToMoveIn)) {
+    return undefined;
+  }
+  // 승계조합원은 §166③ 대상이 아니다(`runSuccessorMember`) — ③은 종전대로 §176조의2④.
+  if (rawInput.redevelopment!.isSuccessorMember === true) return undefined;
+  if (rawInput.useEstimatedAcquisition !== true) return null;
+  return resolveRedevelopment166_3AcquisitionPrice(rawInput.redevelopment!, rawInput.acquisitionDate);
+}
 
 /**
  * 상가/오피스텔 기준시가 최초고시일 — 이 날짜 전 상속 상가는 §163⑨2호로 §164⑥ max 대상.
@@ -327,6 +355,8 @@ function applyResultToInput(
   currentInput: TransferTaxInput,
   result: InheritanceAcquisitionResult,
   resolvedInput: InheritanceAcquisitionInput,
+  /** 재개발 종전자산 — ③이 §166③이라 §176조의2④ 입력을 하류(STEP 0.35 환산)에 넘기지 않는다. 환산 모드는 ⑤가 이미 정했다. */
+  isRedevelopment166_3: boolean,
 ): TransferTaxInput {
   const isConvertedSelected =
     result.preDeemedBreakdown?.selectedMethod === "converted";
@@ -345,7 +375,7 @@ function applyResultToInput(
     ...currentInput,
     acquisitionPrice: result.acquisitionPrice,
     // case A에서 환산취득가가 채택된 경우: 이후 단계의 useEstimatedAcquisition 흐름과 일치
-    ...(isConvertedSelected && resolvedInput.standardPriceAtDeemedDate && {
+    ...(isConvertedSelected && !isRedevelopment166_3 && resolvedInput.standardPriceAtDeemedDate && {
       useEstimatedAcquisition: true,
       acquisitionMethod: "estimated" as const,
       standardPriceAtAcquisition: resolvedInput.standardPriceAtDeemedDate,

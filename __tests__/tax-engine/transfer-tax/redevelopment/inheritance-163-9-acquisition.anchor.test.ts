@@ -70,12 +70,27 @@ describe("재개발 상속 §163⑨ 취득가액 정합", () => {
     expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(200_000_000);
   });
 
-  it("B. pre-1985 상속평가액 확인 → 종전자산 취득가액 = 상속평가액(§166③ 환산 아닌 reported 우선)", () => {
+  /**
+   * pre-1985는 3자 max — ③은 §166③(141,221,534 · 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12).
+   * 2026-10-22 전에는 「가목 우선」이라 ① 1억이 무조건 이겼다(B의 종전 기대값 100,000,000).
+   */
+  it("B. pre-1985 상속평가액 1억 < §166③ → 종전자산 취득가액 = §166③ 환산(개산공제 포함)", () => {
     const r = calculateTransferTax(
       buildInput({ useEstimatedAcquisition: true, inhDate: "1980-01-01", reportedValue: 100_000_000 }),
       mockRates,
     );
-    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(100_000_000);
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(141_221_534);
+    expect(r.redevelopmentDetail?.valuationMeta?.method).toBe("estimated_post_disclosure_decree_166_3");
+    expect(r.inheritedAcquisitionDetail?.preDeemedBreakdown?.selectedMethod).toBe("converted");
+  });
+
+  it("B'. pre-1985 상속평가액 2억 > §166③ → 종전자산 취득가액 = 상속평가액(실가)", () => {
+    const r = calculateTransferTax(
+      buildInput({ useEstimatedAcquisition: true, inhDate: "1980-01-01", reportedValue: 200_000_000 }),
+      mockRates,
+    );
+    expect(r.redevelopmentDetail?.preApproval.apportionedAcquisition).toBe(200_000_000);
+    expect(r.redevelopmentDetail?.valuationMeta?.method).toBe("actual");
   });
 
   it("C. 상속평가액 미확인(신고가액 미입력) + 환산모드 → §166③ 환산 유지(141,221,534)", () => {

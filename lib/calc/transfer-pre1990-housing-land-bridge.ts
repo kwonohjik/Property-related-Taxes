@@ -97,6 +97,17 @@ export function deriveHousingLandSec164Total(asset: AssetForm): number {
 }
 
 /**
+ * ② 영 §164④ 가액의 **지분 반영 전** 총액 — 1985.1.1. 전 상속·증여 토지 파트의 ③ 분자(양도시 토지 기준시가가 전체 값이라 분자도 전체 값).
+ * `deriveHousingLandSec164Total`과 같은 입력·같은 단가 — 지분만 곱하지 않는다. 파생 불가·단서 밖이면 0.
+ */
+export function deriveHousingLandSec164Whole(asset: AssetForm): number {
+  const perSqm = deriveHousingLandSec164PerSqm(asset);
+  const area = sec164AreaSqm(asset);
+  if (!perSqm || !area) return 0;
+  return multiplyByArea(perSqm, area);
+}
+
+/**
  * 5칸이 모두 찼는데 ②가 안 나올 때(`deriveHousingLandSec164PerSqm` null) 고칠 **첫 등급 칸**.
  * 등급번호 모드에서 1 미만(예: 0.5 → 정수부 0)은 등급가액을 구할 수 없다(`Pre1990LandValuationInput`의 「등급 범위 밖」과 같은 판정).
  * 등급가액 모드는 양수면 항상 계산된다. 해당 칸이 없으면 null.
