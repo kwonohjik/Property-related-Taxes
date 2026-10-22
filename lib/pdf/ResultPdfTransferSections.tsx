@@ -5,6 +5,8 @@
  * 여기는 양도세 세목 섹션만 맡는다. 방향은 한쪽뿐이다(문서 → 여기).
  */
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
+import { donorBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import type { DonorBuiltPenaltyEcho } from "@/lib/tax-engine/types/transfer-carryover.types";
 import {
   View,
   Text,
@@ -82,6 +84,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   const penaltyTax = ((num(r.penaltyTax) ?? 0) as number) + penaltyDetailTotal;
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
+  const donorView = donorBuiltPenaltyView((r.carryoverTaxationDetail as { donorBuiltPenalty?: DonorBuiltPenaltyEcho } | undefined)?.donorBuiltPenalty);
   return (
     <>
       <Text style={s.sectionTitle}>신고서 양식</Text>
@@ -103,6 +106,9 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
         {num(r.reductionAmount) !== undefined && (r.reductionAmount as number) > 0 && (<View style={s.row}><Text style={s.lbl}>감면세액 ({str(r.reductionType) ?? ""})</Text><Text style={s.val}>- {fmt(r.reductionAmount)}</Text></View>)}
         <View style={s.rowBg}><Text style={s.lbl}>결정세액</Text><Text style={s.valAccent}>{fmt(determinedTax)}</Text></View>
         {penaltyTax > 0 && (<View style={s.row}><Text style={s.lbl}>가산세액</Text><Text style={s.val}>{fmt(penaltyTax)}</Text></View>)}
+        {/* 이월과세 × 증여자 신축·증축 §114조의2 — 가산세 근거·고지(화면과 같은 문장 정본). 입력이 없으면 아무것도 그리지 않는다. */}
+        {donorView && donorView.formulaLines.map((line, i) => (<View key={`db${i}`} style={s.row}><Text style={s.lblSub}>{line}</Text></View>))}
+        {donorView && (<View style={s.row}><Text style={s.lblSub}>{donorView.notice}</Text></View>)}
         <View style={s.rowBg}><Text style={s.lbl}>총결정세액</Text><Text style={s.valAccent}>{fmt(totalDeterminedTax)}</Text></View>
         {ruralSurtax > 0 && (<View style={s.row}><Text style={s.lbl}>농어촌특별세</Text><Text style={s.val}>{fmt(ruralSurtax)}</Text></View>)}
         {num(r.localIncomeTax) !== undefined && (<View style={s.rowLast}><Text style={s.lbl}>지방소득세 산출세액 (10%)</Text><Text style={s.val}>{fmt(r.localIncomeTax)}</Text></View>)}

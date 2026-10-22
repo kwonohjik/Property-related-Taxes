@@ -424,6 +424,12 @@ export interface DonorBuiltPenaltyEcho {
   base?: number;
   /** 가산세 (base × 5%) — applied일 때만 */
   penalty?: number;
+  /**
+   * base 를 비율로 구한 산식 `base = multiplicand × numerator ÷ denominator` — 증축(비주택)·일체 주택에서만 존재한다(건물 단독 신축의 base 는 증여자 환산취득가액 그대로).
+   * 일체 주택: multiplicand = 건물분 양도가액, numerator = 취득 당시 건물분 기준시가(증축은 증축 부분 기준시가), denominator = 양도 당시 건물분 기준시가.
+   * 증축(비주택): multiplicand = 양도가액, numerator = 증축 부분 취득(완공) 당시 기준시가, denominator = 양도 당시 기준시가.
+   */
+  formula?: { multiplicand: number; numerator: number; denominator: number };
   /** 일체 주택 건물분 산정 내역 — 일체 주택이고 applied일 때만 */
   housingSplit?: {
     /** 증여자 취득 당시 건물분 기준시가 B_acq */

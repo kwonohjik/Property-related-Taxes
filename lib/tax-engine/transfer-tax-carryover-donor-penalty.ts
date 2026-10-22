@@ -115,7 +115,7 @@ export function assertDonorBuiltInput(rawInput: TransferTaxInput, ct: Ct): void 
 function housingBase(
   rawInput: TransferTaxInput,
   db: DonorBuiltInput,
-): { base: number; split: NonNullable<DonorBuiltPenaltyEcho["housingSplit"]> } {
+): { base: number; split: NonNullable<DonorBuiltPenaltyEcho["housingSplit"]>; formula: NonNullable<DonorBuiltPenaltyEcho["formula"]> } {
   const h = db.housing!;
   // ① 취득 당시 건물분 B_acq = H − floor(H × L ÷ (L+N)) — `calcAcqStdPair` 주택 비-별개 분기와 같은 함수
   const landAtAcq = calcLandStdPriceAtAcq(h.landPricePerSqmAtAcquisition, h.landArea)!;
@@ -142,6 +142,7 @@ function housingBase(
   return {
     base: calculateEstimatedAcquisitionPrice(saleBuilding, numerator, transferBuilding),
     split: { acquisitionBuilding, transferBuilding, saleBuilding },
+    formula: { multiplicand: saleBuilding, numerator, denominator: transferBuilding },
   };
 }
 
@@ -184,12 +185,15 @@ export function withDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetai
 
   let base: number;
   let housingSplit: DonorBuiltPenaltyEcho["housingSplit"];
+  let formula: DonorBuiltPenaltyEcho["formula"];
   if (rawInput.propertyType === "housing") {
     const h = housingBase(rawInput, db);
     base = h.base;
     housingSplit = h.split;
+    formula = h.formula;
   } else if (db.buildingType === "extension") {
     base = calculateEstimatedAcquisitionPrice(rawInput.transferPrice, db.extensionStdPriceAtAcquisition!, rawInput.standardPriceAtTransfer!);
+    formula = { multiplicand: rawInput.transferPrice, numerator: db.extensionStdPriceAtAcquisition!, denominator: rawInput.standardPriceAtTransfer! };
   } else {
     // 건물 단독 신축 — 증여자 환산취득가액 전체가 건물분이다. §97②2호 단서 swap 이 발동해도 «환산을 썼다는 사실»에 붙는 가산세라 base 는 swap 전 값이다.
     base = detail.scenarioA.acquisitionPrice;
@@ -228,6 +232,7 @@ export function withDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetai
         base,
         penalty,
         ...(housingSplit ? { housingSplit } : {}),
+        ...(formula ? { formula } : {}),
       },
     },
   };
