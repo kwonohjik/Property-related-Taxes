@@ -7,7 +7,13 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { TransferModeBlock } from "../TransferModeBlock";
 import { isExprValuationEligibleAssetKind } from "@/lib/tax-engine/expropriation-scope";
-import { CompanionSaleModeBlock, toPropertyKind, type BundledSaleMode } from "../CompanionSaleModeBlock";
+import { CompanionSaleModeBlock, saleModeBlockShowsStdPrice, toPropertyKind, type BundledSaleMode } from "../CompanionSaleModeBlock";
+import { SellingStdPriceField } from "../SellingStdPriceField";
+import {
+  sellingStdPriceInScope,
+  sellingStdPriceInputElsewhere,
+  sellingStdPriceRequired,
+} from "@/lib/calc/selling-std-price-scope";
 import { GeneralBuildingSaleSplitSection } from "../GeneralBuildingSaleSplitSection";
 import { MixedUseSaleSplitSection } from "../mixed-use/MixedUseSaleSplitSection";
 import { SameAdjustmentPeriodSection } from "../SameAdjustmentPeriodSection";
@@ -42,6 +48,8 @@ interface Props {
   isCompanionBundle?: boolean;
   /** 신고서 자산이 1건뿐인가 — 겸용주택 양도가액 안분 방식은 단건만 받는다(`mixedSaleSplitScope`). */
   isSingleAsset?: boolean;
+  /** 첫 자산(양도 주택) — 다주택 중과의 양도 주택 행은 첫 자산만 싣는다(`buildHousesPayload`) */
+  isPrimary?: boolean;
 }
 
 export function AssetSectionTransfer({
@@ -55,6 +63,7 @@ export function AssetSectionTransfer({
   isFractionalSplit,
   isCompanionBundle,
   isSingleAsset,
+  isPrimary,
 }: Props) {
   // 증환지 증가분: 당초분(assets[0]) 양도시 기준시가에서 live fallback (증가분 추가 순서와 무관하게 자동).
   // 사용자가 증가분 카드에서 직접 입력하면 자기 값이 우선(override). API·validate도 동일 fallback.
@@ -65,6 +74,25 @@ export function AssetSectionTransfer({
   const fbTotalNum = replotIncrementStdPriceAtTransfer(asset, primaryAsset);
   const fbTotal = fbTotalNum !== undefined ? String(fbTotalNum) : "";
   const effTotal = parseAmount(asset.standardPriceAtTransfer) > 0 ? asset.standardPriceAtTransfer : fbTotal;
+  const saleBlockMode: BundledSaleMode = usesSelfComputedTransferPrice(asset) ? "apportioned" : singleMode ? "actual" : bundledSaleMode;
+  // 지분 분할 모드는 양도가액 자동계산 — 기준시가 안분 입력 숨김. 부담부증여(§159)는 standardPriceAtTransfer가 분모(C) 산정에 필요하므로 제외.
+  const saleBlockFractional = isFractionalSplit && asset.transferType !== "burdened_gift";
+  // 양도 주택의 양도 당시 기준시가(§167의3①1호) — 같은 사실을 받는 칸이 이 카드에 없을 때만 그린다(`selling-std-price-scope.ts`).
+  const showSellingStdPrice =
+    !!isPrimary &&
+    sellingStdPriceInScope(asset, transferDate) &&
+    !sellingStdPriceInputElsewhere(
+      asset,
+      !stdPriceAtTransferComesFromElsewhere(asset) &&
+        saleModeBlockShowsStdPrice({
+          bundledSaleMode: saleBlockMode,
+          singleMode,
+          ownershipNumerator: asset.ownershipNumerator,
+          ownershipDenominator: asset.ownershipDenominator,
+          contractTotalPrice,
+          isFractionalSplit: saleBlockFractional,
+        }),
+    );
   return (
     <>
       {/*
@@ -128,13 +156,7 @@ export function AssetSectionTransfer({
           (종전에는 ⑧이 폼-전역 모드만 보고 화면에 없는 칸을 요구했다). */}
       {!stdPriceAtTransferComesFromElsewhere(asset) && (
         <CompanionSaleModeBlock
-          bundledSaleMode={
-            usesSelfComputedTransferPrice(asset)
-              ? "apportioned"
-              : singleMode
-                ? "actual"
-                : bundledSaleMode
-          }
+          bundledSaleMode={saleBlockMode}
           assetKind={(asset.assetKind === "commercial_building" || asset.assetKind === "general_building" || asset.assetKind === "redevelopment_apt") ? "building" : asset.assetKind}
           actualSalePrice={asset.actualSalePrice}
           onActualSalePriceChange={(v) => onChange({ actualSalePrice: v })}
@@ -160,11 +182,18 @@ export function AssetSectionTransfer({
           ownershipNumerator={asset.ownershipNumerator}
           ownershipDenominator={asset.ownershipDenominator}
           contractTotalPrice={contractTotalPrice}
-          // 지분 분할 모드는 양도가액 자동계산 — 기준시가 안분 입력 숨김.
-          // 부담부증여(§159)는 standardPriceAtTransfer가 분모(C) 산정에 필요하므로 제외.
-          isFractionalSplit={isFractionalSplit && asset.transferType !== "burdened_gift"}
+          isFractionalSplit={saleBlockFractional}
           standardPricePerSqmAtTransfer={effPerSqm}
           onStandardPricePerSqmAtTransferChange={(v) => onChange({ standardPricePerSqmAtTransfer: v })}
+        />
+      )}
+
+      {showSellingStdPrice && (
+        <SellingStdPriceField
+          asset={asset}
+          onChange={onChange}
+          transferDate={transferDate}
+          required={sellingStdPriceRequired(asset, transferDate)}
         />
       )}
 
