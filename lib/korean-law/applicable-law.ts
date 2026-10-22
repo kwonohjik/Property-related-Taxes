@@ -166,9 +166,12 @@ export function extractTransitionExcerpts(
   return out.slice(0, maxAddenda);
 }
 
-/** 본문 텍스트 동일성 비교 — 공백 정규화 후 비교 */
+/**
+ * 본문 텍스트 동일성 비교 — 꺾쇠 주석을 빼고 공백 정규화 후 비교.
+ * 본문이 「<개정 2023.2.28>」 같은 주석을 남기게 됐지만(`cleanHtml`), 「현행과 같음」은 종전처럼 주석을 뺀 본문으로 판정한다.
+ */
 export function isSameArticleText(a: string, b: string): boolean {
-  const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+  const norm = (s: string) => s.replace(/<[^<>]*>/g, "").replace(/\s+/g, " ").trim();
   return norm(a) === norm(b);
 }
 
@@ -279,7 +282,8 @@ export async function fetchEflawArticle(
     throw new LawApiError(`조문번호를 해석할 수 없습니다: ${articleNo}`, "BAD_REQUEST");
   }
   // v2: 16항 이상 항번호(`<16>`)를 원숫자로 보존 — 종전 캐시는 항 번호가 지워진 본문이다
-  const cacheKey = `eflaw_article_v2_${mst}_${efYd}_${jo}`;
+  // v3: 꺾쇠 주석(「<개정 …>」「삭제<…>」) 보존 — 종전 캐시는 주석이 지워진 본문이다
+  const cacheKey = `eflaw_article_v3_${mst}_${efYd}_${jo}`;
   const cached = await readCache<{ title: string; fullText: string } | { notFound: true }>(
     cacheKey
   );
@@ -307,7 +311,8 @@ export async function fetchEflawArticle(
  * 전체 응답이 크므로 부칙만 정규화해 캐시.
  */
 export async function fetchAddendaUnits(mst: string): Promise<AddendumUnit[]> {
-  const cacheKey = `law_addenda_${mst}`;
+  // v2: 꺾쇠 주석 보존(`cleanHtml`) — 종전 캐시는 주석이 지워진 부칙이다
+  const cacheKey = `law_addenda_v2_${mst}`;
   const cached = await readCacheNonEmpty<AddendumUnit[]>(cacheKey);
   if (cached) return cached;
 

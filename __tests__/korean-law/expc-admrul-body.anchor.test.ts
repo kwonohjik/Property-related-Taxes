@@ -72,10 +72,11 @@ describe("EXPC — 법령해석례 본문", () => {
     expect(t!.ruling).toBeUndefined();
   });
 
-  it("EXPC-4: 캐시 키가 v3 — 종전 파서가 남긴 빈약한 결과를 30일간 재사용하지 않는다", async () => {
+  // v4(꺾쇠 주석 보존)로 다시 올렸다 — v3 이전 캐시를 재사용하지 않는다는 의도는 같다
+  it("EXPC-4: 캐시 키가 v4 — 종전 파서·주석 제거 본문을 30일간 재사용하지 않는다", async () => {
     mockFetch.mockResolvedValue(EXPC);
     await getDecisionText("313499", "expc");
-    expect(mockReadCache.mock.calls[0][0]).toMatch(/^decision_text_expc_313499_comp_v3$/);
+    expect(mockReadCache.mock.calls[0][0]).toMatch(/^decision_text_expc_313499_comp_v4$/);
   });
 });
 
