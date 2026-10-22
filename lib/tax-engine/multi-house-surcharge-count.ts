@@ -596,22 +596,33 @@ export function isSurchargeExemptInherited(house: HouseInfo, transferDate: Date)
  *
  * 1호는 주택 수 불산입이면서 중과 배제 각 호의 하나다 — 주택 수 산정과 양도 주택 자체의 배제 backstop
  * (`computeMultiHouseSurcharge` Step 4.5)이 같은 술어를 쓴다. 해당하지 않으면 null.
+ *
+ * 🔴 기준시가 0은 「3억 이하」가 아니라 **미입력**이다(9호 `isLowPriceSmallHouseUndecidable`와 같은 규약). 종전에는 0을 3억 이하로 읽어
+ *    가액기준 양도 주택을 주택 수·중과에서 뺐다 — 계산기 실가 경로에 칸이 없어 늘 0이었고(실측 −190,575,000), 모르는 사실이 납세자에게
+ *    유리하게 작동했다. 미입력이면 불산입·배제를 주지 않고(산입) `isLowPriceLocalHouseUndecidable`로 판정 불가를 알린다
+ *    (계획서 `calc-selling-house-std-price-value-region.plan.md` Q-1 a · PR-2).
  */
 export function resolveLowPriceLocalHouse(
   house: HouseInfo,
   rules: HouseCountExclusionRules,
 ): { price: number; threshold: number } | null {
-  const criteria: "REGION" | "VALUE" =
-    house.regionCriteria ??
-    (house.regionCode
-      ? classifyRegionCriteriaByCode(house.regionCode)
-      : house.region === "capital"
-        ? "REGION"
-        : "VALUE");
-  if (criteria !== "VALUE") return null;
+  if (regionCriteriaOf(house) !== "VALUE") return null;
   const threshold = rules.lowPriceThreshold.local ?? rules.lowPriceThreshold.non_capital;
   const price = house.transferOfficialPrice ?? house.officialPrice;
-  return price <= threshold ? { price, threshold } : null;
+  return price > 0 && price <= threshold ? { price, threshold } : null;
+}
+
+/** 1호를 판정할 수 없는 상태 — 가액기준 주택인데 양도 당시 기준시가가 미입력(0)이다. */
+export function isLowPriceLocalHouseUndecidable(house: HouseInfo): boolean {
+  return regionCriteriaOf(house) === "VALUE" && (house.transferOfficialPrice ?? house.officialPrice) <= 0;
+}
+
+/** 지역기준·가액기준 — 명시 값 → 법정동코드 분류 → 수동 지역 구분(`capital` 외는 가액기준) 순 */
+function regionCriteriaOf(house: HouseInfo): "REGION" | "VALUE" {
+  return (
+    house.regionCriteria ??
+    (house.regionCode ? classifyRegionCriteriaByCode(house.regionCode) : house.region === "capital" ? "REGION" : "VALUE")
+  );
 }
 
 export function countEffectiveHouses(

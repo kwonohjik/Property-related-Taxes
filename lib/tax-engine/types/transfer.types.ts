@@ -307,6 +307,15 @@ export interface TransferTaxInput {
   /** 양도시 기준시가 (환산취득가 사용 시 필수) */
   standardPriceAtTransfer?: number;
   /**
+   * 양도 주택의 양도 당시 기준시가(주택 공시가격) — 명부 없는 중과 판정 구성(§155⑳ 거주주택·불성립 임대 호 복원·§155①⑦ 의제)의
+   * 양도 주택 행 전용(`noRosterSellingHouse`). 소득세법 시행령 §167의3①1호(가액기준 3억 이하) 판정에 쓴다.
+   *
+   * `standardPriceAtTransfer`와 따로 둔 이유: 그 값은 실가 모드에서 ④가 싣지 않는다 — 실으면 감면 기준시가 폴백·장특·환산 등
+   * 중과와 무관한 축이 함께 움직인다(계획서 `calc-selling-house-std-price-value-region.plan.md` Q-4). 명부가 있으면 양도 주택 행
+   * `houses[selling].officialPrice`가 같은 값을 싣는다.
+   */
+  sellingHouseStdPriceAtTransfer?: number;
+  /**
    * 동일조정기간 내 취득·양도 시 「양도당시 기준시가」 환산 입력
    * — 소득세법 시행령 §164⑧ · 시행규칙 §80①~⑤.
    *

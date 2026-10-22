@@ -1,7 +1,9 @@
 /**
  * anchor — 다주택 중과 판정 메뉴 ⑧(계획서 `multi-house-surcharge-judgment-menu.plan.md` §5.9 · P6a) · M1 · MH-P8.
  *
- * - VC-0 왜 M1이 필수인가: 가액기준 지역 양도 주택의 양도 당시 기준시가를 비우면 엔진이 0을 3억 이하로 읽어 주택 수에서 뺀다.
+ * - VC-0 왜 M1이 필수인가: 가액기준 지역 양도 주택의 양도 당시 기준시가가 없으면 1호(3억 이하 불산입·중과 배제)를 판정할 수 없다.
+ *   종전 엔진은 0을 3억 이하로 읽어 주택 수에서 뺐다(납세자 유리) — 계산기 PR-2(`calc-selling-house-std-price-value-region.plan.md`)부터
+ *   0은 미입력이다(산입 + 판정 불가 경고). 값이 3억 이하여야 1호가 선다.
  * - VC-1~2 M1·가액기준 행 기준시가 — 칸·⑧이 같은 술어(`surcharge-price-criteria.ts`)
  * - VC-3~5 중과 축 leaf(계산기 ⑧과 같은 것) — 1주택 ⑧에는 없고 중과 ⑧에만 있다 · 행별 첫 오류 1건
  * - VC-6 3중 패턴 — ⑧이 막는 값과 ④가 싣는 값이 같은 칸이다
@@ -56,14 +58,18 @@ async function post(handler: typeof surchargePOST, url: string, body: unknown) {
   return { status: res.status, json: (await res.json()) as any };
 }
 
-describe("VC-0 — 가액기준 양도 주택의 기준시가를 비우면 엔진이 3억 이하로 읽는다(M1이 필수인 이유)", () => {
+describe("VC-0 — 가액기준 양도 주택의 기준시가 없이는 1호를 판정할 수 없다(M1이 필수인 이유)", () => {
   const rows = [row("h1", { regionCode: GANGNAM, officialPrice: "500000000" }), row("h2", { regionCode: GANGNAM, officialPrice: "500000000" })];
-  it("비움 → 양도 주택이 주택 수에서 빠져 중과 없음 / 4억 → 3주택 산입", async () => {
-    const empty = await post(surchargePOST, "/api/calc/multi-house-surcharge-judgment", buildMultiHouseSurchargeApiBody(form(ASAN, "", rows)));
-    const filled = await post(surchargePOST, "/api/calc/multi-house-surcharge-judgment", buildMultiHouseSurchargeApiBody(form(ASAN, "400000000", rows)));
-    expect([empty.status, filled.status]).toEqual([200, 200]);
-    expect(empty.json.data.headline.result.excludedHouses.map((e: { houseId: string }) => e.houseId)).toContain("selling");
-    expect(filled.json.data.headline.result.effectiveHouseCount).toBe(3);
+  const judge = (price: string) =>
+    post(surchargePOST, "/api/calc/multi-house-surcharge-judgment", buildMultiHouseSurchargeApiBody(form(ASAN, price, rows)));
+  it("비움 → 3억 이하로 읽지 않는다: 산입(3) / 2억 → 1호로 불산입 / 4억 → 산입(3)", async () => {
+    const [empty, low, high] = await Promise.all([judge(""), judge("200000000"), judge("400000000")]);
+    expect([empty.status, low.status, high.status]).toEqual([200, 200, 200]);
+    const ids = (r: typeof empty) => r.json.data.headline.result.excludedHouses.map((e: { houseId: string }) => e.houseId);
+    expect(ids(empty)).not.toContain("selling");
+    expect(empty.json.data.headline.result.effectiveHouseCount).toBe(3);
+    expect(ids(low)).toContain("selling");
+    expect(high.json.data.headline.result.effectiveHouseCount).toBe(3);
   });
 });
 

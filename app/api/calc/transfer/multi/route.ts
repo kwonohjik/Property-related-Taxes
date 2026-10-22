@@ -255,6 +255,8 @@ export async function POST(request: NextRequest) {
       isUrbanArea: p.isUrbanArea,
       appurtenantLandZone: p.appurtenantLandZone,
       householdHousingCount: p.householdHousingCount,
+      // ⑭ 양도 주택의 양도 당시 기준시가 — 명부 없는 중과 판정 구성의 양도 주택 행(단건 `engine-input.ts`와 같은 키)
+      sellingHouseStdPriceAtTransfer: p.sellingHouseStdPriceAtTransfer,
       // ⑭ §104①4호 단서(영 §167의6 1·2호) — 단건 정본과 같은 leaf(engine-input.ts).
       presaleRightNoOtherRight: p.presaleRightNoOtherRight,
       presaleRightAgeOrSpouseMet: p.presaleRightAgeOrSpouseMet,
