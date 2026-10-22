@@ -44,9 +44,15 @@ import {
 import { DONOR_CAPEX_EFFECTIVE_DATE } from "./transfer-tax-carryover";
 import { isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
 import { carryoverGiftHouseholdBasis } from "./one-house/gift-household-basis";
+import {
+  assertDonorBuiltPartInput,
+  donorBuiltNotAppliedEcho,
+  donorBuiltPartAppliedEcho,
+  donorBuiltPartPatch,
+} from "./transfer-tax-carryover-donor-penalty";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "./types/transfer.types";
-import type { CarryoverTaxationInput } from "./types/transfer-carryover.types";
+import type { CarryoverTaxationInput, DonorBuiltPenaltyEcho } from "./types/transfer-carryover.types";
 import type {
   SplitCarryoverEventEcho,
   SplitGainResult,
@@ -204,6 +210,8 @@ export function calcSplitCarryoverScenarios(
   const plans: Plans = {};
   for (const [key, ct] of [["land", landCt], ["building", buildingCt]] as const) {
     if (!ct) continue;
+    // PR-3 — 증여자 신축·증축 §114조의2 입력 거부(토지 파트·실가 입력·공시 전 환산 등 — 조용히 무시하지 않는다)
+    assertDonorBuiltPartInput(rawInput, key, ct);
     // P6 — 환산 입력의 분자는 양수여야 한다. 비면 환산취득가액·개산공제가 0이 되어 «취득가액 0» 양도차익이 조용히 나온다(⑫·⑧이 먼저 막는다 — 직접 호출 방어선).
     if (ct.useEstimatedAcquisition === true && !((ct.donorStandardPriceAtAcquisition ?? 0) > 0))
       throw new TaxCalculationError(
@@ -286,7 +294,22 @@ export function calcSplitCarryoverScenarios(
 
   // ── 6. 채택 입력 + echo
   const finalSide = sideOfAssignment(overrides);
-  const adoptedInput = inputOf(overrides);
+  let adoptedInput = inputOf(overrides);
+  // PR-3 — 건물 파트가 이월과세 적용(A)이면 증여자 신축·증축 사실을 채택 입력에 싣는다. finalize·손실 조기반환의 §114조의2 게이트가 `effectiveInput`에서 읽고,
+  //   base 는 건물 파트 환산취득가액(`resolveSplitBuildingPenaltyAxis`)이라 토지 파트는 섞이지 않는다. ②3호 비교는 가산세 前 결정세액이라 위 비교(`inputOf`)는 패치하지 않는다.
+  const donorBuilt = plans.building?.ct.donorBuilt;
+  let donorBuiltEcho: DonorBuiltPenaltyEcho | undefined;
+  if (donorBuilt) {
+    if (finalSide.building === "A") {
+      adoptedInput = { ...adoptedInput, ...donorBuiltPartPatch(donorBuilt) };
+      donorBuiltEcho = donorBuiltPartAppliedEcho(donorBuilt, adoptedInput, calcSplitGain(adoptedInput)!.building);
+    } else {
+      donorBuiltEcho = donorBuiltNotAppliedEcho(
+        donorBuilt,
+        !plans.building!.eligibility.isEligible || oneHouseExclusion ? "carryover_excluded" : "scenario_b",
+      );
+    }
+  }
   const echoOf = (key: PartKey): SplitPartCarryoverEcho | undefined => {
     const plan = plans[key];
     if (!plan) return undefined;
@@ -316,6 +339,7 @@ export function calcSplitCarryoverScenarios(
       giftTaxAddedToExpense: applied ? plan.giftTaxAdded : 0,
       giftTaxLimitApplied: applied && plan.giftTaxLimitApplied,
       ...(comparison ? { comparison } : {}),
+      ...(key === "building" && donorBuiltEcho ? { donorBuiltPenalty: donorBuiltEcho } : {}),
     };
   };
   const period = (plans.land ?? plans.building)!.eligibility.applicablePeriodYears;

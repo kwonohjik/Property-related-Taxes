@@ -26,7 +26,7 @@ vi.mock("@/lib/api/rate-limit", () => ({
 import { POST } from "@/app/api/calc/transfer/route";
 import { carryoverTaxationEngineShape, generalBuildingValuationSchema } from "@/lib/api/transfer-tax-building-schemas";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
-import { splitCarryoverPartShape } from "@/lib/api/transfer-tax-schema-split-carryover";
+import { splitCarryoverBuildingPartShape, splitCarryoverPartShape } from "@/lib/api/transfer-tax-schema-split-carryover";
 import { buildCompanionEngineInputs } from "@/app/api/calc/transfer/bundled-split-helpers";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 
@@ -219,9 +219,10 @@ describe("DBR-3 컴패니언 ⑭ · wire 별 수용/거부", () => {
     expect(shape.buildingCarryoverTaxation.safeParse({ ...CT, donorBuilt: DB_NEW }).success).toBe(false);
   });
 
-  it("split 파트 wire(splitCarryoverPartShape)는 donorBuilt 거부", () => {
+  it("split 파트 wire — 토지 파트(splitCarryoverPartShape)는 donorBuilt 거부, 건물 파트(splitCarryoverBuildingPartShape)만 수용(PR-3)", () => {
     const part = { donorAcquisitionDate: "2020-01-01", donorAcquisitionPrice: 100_000_000 };
     expect(splitCarryoverPartShape.safeParse(part).success).toBe(true);
     expect(splitCarryoverPartShape.safeParse({ ...part, donorBuilt: DB_NEW }).success).toBe(false);
+    expect(splitCarryoverBuildingPartShape.safeParse({ ...part, donorBuilt: DB_NEW }).success).toBe(true);
   });
 });

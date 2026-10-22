@@ -5,7 +5,7 @@
  *
  * 계획서: docs/00-pm/carryover-donor-built-114-2.plan.md §3.2·§6 (PR-2)
  *
- * · 노출은 `donorBuiltApplicable` 하나(⑤) — ④ 전송·⑧ 필수와 같은 술어다. 엔진·⑫가 거부하는 조합(실가 승계·PHD·분리 계산·부담부증여·겸용·상가 등)에서는 렌더하지 않는다.
+ * · 노출은 `donorBuiltApplicable`(자산 전체) 또는 `donorBuiltPartApplicable`(`mode="part"` — split 건물 파트, PR-3) 하나(⑤) — ④ 전송·⑧ 필수와 같은 술어다. 엔진·⑫가 거부하는 조합(실가 승계·PHD·분리 계산·부담부증여·겸용·상가 등)에서는 렌더하지 않는다.
  * · 위치는 «② 증여자 취득가액»의 환산 입력 **다음**이다 — 계산 순서(환산 → 그 건물이 신축·증축인가)가 화면 순서다.
  * · 신축·증축일은 증여자 취득일로 **자동 채우지 않는다**(증축은 날짜가 다르고, 일체 주택은 취득일이 토지 선취득일일 수 있다).
  * · 일체 주택: 개별주택가격은 토지+건물 결합 공시라 **건물분만** 가산세 대상이다 — 취득 당시 토지·건물 기준시가를 받고(아래), 양도 당시 토지·건물 기준시가·
@@ -23,6 +23,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { LandBuildingSaleSplitSection } from "./LandBuildingSaleSplitSection";
 import { donorBuiltApplicable, donorBuiltNeedsHousingSplit } from "@/lib/calc/donor-built-scope";
+import { donorBuiltPartApplicable } from "@/lib/calc/donor-built-part-scope";
 import { saleStdPlacement } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -34,6 +35,11 @@ const TYPE_OPTIONS = [
 ];
 
 interface Props {
+  /**
+   * `whole` = 자산 전체 이월과세(기본) · `part` = 토지·건물 분리 이월과세의 건물 파트(PR-3 — 노출 술어 `donorBuiltPartApplicable`, 일체 주택 안분 입력 없음).
+   * 두 술어는 상호배타라 한 화면에 둘이 동시에 뜨지 않는다.
+   */
+  mode?: "whole" | "part";
   asset: AssetForm;
   /** 양도일(YYYY-MM-DD) */
   transferDate: string;
@@ -44,10 +50,12 @@ interface Props {
   onCarryoverChange: (patch: Partial<CarryoverTaxationForm>) => void;
 }
 
-export function CarryoverDonorBuiltSection({ asset, transferDate, isNonPrimaryAsset, onChange, onCarryoverChange }: Props) {
-  if (!donorBuiltApplicable(asset, { transferDate, isNonPrimary: isNonPrimaryAsset })) return null;
+export function CarryoverDonorBuiltSection({ mode = "whole", asset, transferDate, isNonPrimaryAsset, onChange, onCarryoverChange }: Props) {
+  const part = mode === "part";
+  if (part ? !donorBuiltPartApplicable(asset, { isNonPrimary: isNonPrimaryAsset }) : !donorBuiltApplicable(asset, { transferDate, isNonPrimary: isNonPrimaryAsset })) return null;
   const c = asset.carryover!;
-  const housing = donorBuiltNeedsHousingSplit(asset);
+  // 건물 파트는 파트별 기준시가가 이미 토지·건물로 나뉘어 있어 일체 주택 안분 입력이 없다.
+  const housing = !part && donorBuiltNeedsHousingSplit(asset);
   const isExtension = c.donorBuiltType === "extension";
 
   return (
@@ -56,7 +64,11 @@ export function CarryoverDonorBuiltSection({ asset, transferDate, isNonPrimaryAs
       data-testid="donor-built-toggle"
       data-field="carryover.donorBuilt"
       title="증여자가 신축·증축한 건물입니까?"
-      description="증여자가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하면서 증여자 취득가액을 환산취득가액으로 계산하면, 건물분 환산취득가액의 5%가 가산세로 더해집니다 (소득세법 §114조의2). 이월과세가 적용되는 경우에만 붙습니다."
+      description={
+        part
+          ? "증여자가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하면서 증여자 취득가액을 환산취득가액으로 계산하면, 건물 파트 환산취득가액의 5%가 가산세로 더해집니다 (소득세법 §114조의2). 건물 파트에 이월과세가 적용되는 경우에만 붙고, 토지 파트는 대상이 아닙니다."
+          : "증여자가 신축·증축한 건물을 그 신축·증축일부터 5년 이내에 양도하면서 증여자 취득가액을 환산취득가액으로 계산하면, 건물분 환산취득가액의 5%가 가산세로 더해집니다 (소득세법 §114조의2). 이월과세가 적용되는 경우에만 붙습니다."
+      }
       checked={c.donorBuilt}
       onCheckedChange={(v) => onCarryoverChange({ donorBuilt: v })}
     >

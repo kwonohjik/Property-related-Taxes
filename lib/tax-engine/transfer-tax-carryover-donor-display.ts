@@ -26,6 +26,13 @@ export const DONOR_BUILT_OUTSIDE_WINDOW_NOTICE =
 export const DONOR_BUILT_APPLIED_NOTICE =
   `증여자가 신축·증축한 건물에 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세를 적용했습니다(증여자 신축·증축일 기산, 증여자 기준 환산취득가액의 건물분 5%, 증축은 증축 부분). 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
 
+/**
+ * 토지·건물 분리 이월과세(P6)에서 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했는데 «증여자 신축·증축» 정보가 없는 경우 —
+ * 가산세를 붙이지 않았다는 사실과 입력 경로를 알린다(침묵 금지). 증여자 신축분 정면 해석례는 확인하지 못했다.
+ */
+export const DONOR_BUILT_SPLIT_UNDECLARED_NOTICE =
+  `건물 파트의 증여자 취득가액을 환산취득가액으로 계산했습니다. 증여자가 그 건물을 신축·증축한 뒤 5년 이내에 양도하는 경우 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세 대상일 수 있으나, «증여자 신축·증축» 정보가 입력되지 않아 가산세는 붙이지 않았습니다. 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
+
 export interface DonorBuiltPenaltyView {
   applied: boolean;
   /** 카드 제목 */
@@ -75,6 +82,22 @@ export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): Don
     formulaLines: lines,
     notice: DONOR_BUILT_APPLIED_NOTICE,
   };
+}
+
+/**
+ * 결과에서 증여자 신축·증축 가산세 echo 를 읽는 **단일 지점** — 자산 전체 이월과세(`carryoverTaxationDetail`)와 토지·건물 분리 이월과세 건물 파트
+ * (`splitDetail.building.carryover`, PR-3)가 둘 다 같은 `DonorBuiltPenaltyEcho`를 낸다. 두 경로는 상호배제라 둘 중 하나만 존재한다.
+ * 결과 4뷰가 각자 경로를 읽으면 한쪽 뷰만 분리 경로를 놓친다(표시 드리프트).
+ */
+export function resultDonorBuiltEcho(
+  r:
+    | {
+        carryoverTaxationDetail?: { donorBuiltPenalty?: DonorBuiltPenaltyEcho };
+        splitDetail?: { building?: { carryover?: { donorBuiltPenalty?: DonorBuiltPenaltyEcho } } };
+      }
+    | undefined,
+): DonorBuiltPenaltyEcho | undefined {
+  return r?.carryoverTaxationDetail?.donorBuiltPenalty ?? r?.splitDetail?.building?.carryover?.donorBuiltPenalty;
 }
 
 /** `result.warnings` 에 넣는 문장 — 입력이 없으면 undefined */

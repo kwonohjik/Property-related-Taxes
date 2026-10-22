@@ -12,6 +12,7 @@
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Frac, FLine } from "@/components/calc/results/shared/FormulaParts";
 import { InfoRow, ScenarioCol } from "./CarryoverComparisonCard";
+import { CarryoverDonorBuiltPenaltyCard } from "./CarryoverDonorBuiltPenaltyCard";
 import {
   splitCarryoverEstimatedExpenseLines,
   splitCarryoverNotices,
@@ -139,6 +140,8 @@ export function SplitCarryoverComparisonCard({ splitDetail }: { splitDetail: Spl
           <PartBlock key={p.key} v={v} p={p} />
         ))}
       </div>
+      {/* 증여자 신축·증축 §114조의2 가산세(건물 파트) — donorBuilt 입력이 있을 때만(적용 근거 또는 붙지 않은 이유) */}
+      <CarryoverDonorBuiltPenaltyCard echo={v.parts.find((p) => p.key === "building")?.donorBuiltPenalty} />
       <ToneCard tone="amber" bodyClassName="space-y-1">
         <p className="text-caption font-semibold text-amber-900 dark:text-amber-200">확인 필요</p>
         {notices.map((n, i) => (
