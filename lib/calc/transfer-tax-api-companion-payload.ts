@@ -42,6 +42,7 @@ import { legacyExpenseMovesToParts } from "./split-legacy-expense";
 import { toEngineReductions, toSelfCultivatedExpropriatedLand } from "./transfer-tax-api-reductions";
 import { buildCommercialAppurtenantLand, buildCommercialBuildingValuation } from "./transfer-tax-api-commercial";
 import { buildGeneralBuildingValuation as buildGeneralBuildingValuationForCompanion } from "./transfer-tax-api-gb";
+import { applyShareScale } from "./transfer-tax-api-gb-shares";
 import { buildRedevelopmentPayload as buildRedevPayloadForCompanion } from "./transfer-tax-api-redev";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
@@ -472,11 +473,13 @@ export function buildAssetPayload(
      *
      * ⑭가 이것을 받아 `buildGbPartCards`로 **토지·건물 파트 카드**를 만든다. 누락 시 침묵
      * strip이라 그 자산이 토지·건물 분리 없이 계산된다(route 5-a-3이 도달 못 하던 종전 상태).
+     * 공유 지분이면 100% 기준 입력 금액을 지분 몫으로 줄인다 — 주 자산·축 B와 같은 leaf(`applyShareScale`, 단독 소유면 항등).
      */
     ...(() => {
-      const gbv = asset.assetKind === "general_building"
-        ? buildGeneralBuildingValuationForCompanion(asset, transferDate)
+      const raw = asset.assetKind === "general_building"
+        ? (buildGeneralBuildingValuationForCompanion(asset, transferDate) as Record<string, unknown> | undefined)
         : undefined;
+      const gbv = raw !== undefined ? applyShareScale(raw, ratio) : undefined;
       return gbv !== undefined ? { generalBuildingValuation: gbv } : {};
     })(),
     ...(asset.transferType === "burdened_gift"
