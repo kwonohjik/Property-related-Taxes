@@ -387,6 +387,10 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: gb({ saleSplitMode: "appraisal", buildingAppraisalAtTransfer: "500000000" }),
   },
   {
+    name: "gb: landAppraisalAtTransfer (감정평가 선택 후 미입력)", field: "landAppraisalAtTransfer", step: 0, assetIndex: A, message: /^자산: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요/,
+    form: gb({ saleSplitMode: "appraisal" }),
+  },
+  {
     name: "gb: saleSplitMode (증축 + 감정평가)", field: "saleSplitMode", step: 0, assetIndex: A, message: /^자산: 증축이 있는 건물에서는 감정평가가액으로/,
     form: ext({ saleSplitMode: "appraisal", landAppraisalAtTransfer: "500000000", buildingAppraisalAtTransfer: "300000000" }),
   },

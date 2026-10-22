@@ -40,6 +40,20 @@ export function validateGbSaleAxis(
   }
 
   /**
+   * V8-b **「감정평가」 모드를 골랐으면 금액이 있어야 한다** (split V8-b와 같은 규칙 — 계획서 `gb-v8b-appraisal-mode-empty`).
+   *
+   * ④는 일반건물 `saleSplitMode`를 와이어에 싣지 않고 엔진 스위치는 값의 유무다 — 모드만 고르고 금액을 비우면
+   * basis 서열에서 감정평가가 빠져 **조용히 기준시가로 안분**된다(자동 fallback 금지). ⑫는 모드를 모르므로 ⑧ 전용이다.
+   * 위 V8은 「한쪽만」을 막고, 여기서는 「둘 다 빈 채로 모드만 선택」을 막는다.
+   *
+   * 🔴 **증축은 제외한다**(Q-1 (a)) — 증축에서는 UI가 감정 선택지를 비활성화하고 3-way 엔진이 감정값을 읽지 않는다.
+   *    F36 계약 «감정평가가액이 없으면 감정 모드여도 통과한다 — 차단 사유는 감정값이다»를 유지한다.
+   */
+  if (asset.saleSplitMode === "appraisal" && !anyAppraisal && !asset.gbHasExtension) {
+    return fieldError("landAppraisalAtTransfer", `${label}: 「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요 — 비워두면 양도시 기준시가 비율로 안분됩니다 (부가가치세법 시행령 §64①1호 단서).`);
+  }
+
+  /**
    * ⚠️ **증축 × 감정평가가액은 구분양도 밖에서도 성립하지 않는다**(2026-08-13 정정).
    *
    * 종전에는 이 차단이 `saleSplitMode === "actual"` 블록 **안**에만 있었다. 그런데 안분 방식

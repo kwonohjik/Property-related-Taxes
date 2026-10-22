@@ -166,3 +166,41 @@ if (asset.saleSplitMode === "appraisal" && !anyAppraisal && !asset.gbHasExtensio
 5. 브라우저(Playwright) 1회: 일반건물 → 양도 정보 «감정평가» 선택·빈칸 → «다음» → 차단 문구와 입력 칸 포커스 이동 확인
 
 **PR 1건**(제품 1파일 +4줄 · 테스트 1 · E2E helper 1줄). 짝 계획서(양도비 배분 기준)와 파일이 겹치지 않아 순서 무관.
+
+## 10. Do 결과 (2026-10-22)
+
+**변경 파일 4개 + 계획서**: `lib/calc/transfer-tax-validate-gb-sale.ts`(+14줄 — 주석 11 + 검사 3) · `__tests__/calc/appraisal-one-side-fe8-12-parity.test.ts`(기존 기대값 갱신 1건 — 아래) · `__tests__/calc/gb-v8b-appraisal-mode-empty.test.ts`(신규 14건) · `e2e/_helpers/validation-field-jump-cases-gb.ts`(+4줄, 케이스 1건) · 이 문서.
+
+| 항목 | 결과 |
+|---|---|
+| 구현 | `validateGbSaleAxis`의 V8(한쪽만) 직후, 증축 차단(F36) 앞에 `saleSplitMode === "appraisal" && !anyAppraisal && !gbHasExtension` → `fieldError("landAppraisalAtTransfer", …)`. 문구는 split V8-b와 동일. 최신 코드 기준(#2411이 바꾼 `partialAppraisal` 술어 뒤에 위치) |
+| 수정 전 실패 | anchor 14건 중 **5건 실패**(V-1·V-2·V-8·V-9·V-10) · 9건 통과(V-3~V-7·V-11 포함) — 계획서 §9 예측과 일치. V-10 격자는 `appraisal/none`·`appraisal/zero` 두 셀(split=차단, gb=통과)이 불일치였다 |
+| 수정 후 | anchor 14건 + F36 8건 = 22건 통과 |
+| 바뀐 기존 기대값 | **1건** — `appraisal-one-side-fe8-12-parity.test.ts` T-B4 «전 384셀: ⑧ 차단 ⇔ ⑫ 400 (통과 48 · 차단 336)». 계획서 §6.1 프로토타입은 이 테스트가 없던 master(`4568a1bcb`)에서 돌려 «기대값 변경 0건»이었으나, #2411이 추가한 이 격자가 새로 V8-b 8셀(`sale=appraisal ∧ app=none ∧ std=both`, 양도일 2 × 취득 2 × 양도비 2)에서 ⑧ 차단 ∧ ⑫ 200으로 어긋났다. **의도된 비대칭**(⑫는 모드를 모른다 — V-11)이라 격자를 «⑧ 전용 8셀 + 나머지 376셀 정합(통과 40 · 차단 336)»로 분할하고 8셀은 «⑧ 차단 ∧ ⑫ 200»을 명시 단언했다 |
+| 지분(축 B) 후속 카드 | V-9 실측: 첫 카드 `appraisal`·빈칸 → 자산 1·자산 2 **둘 다** 같은 V8-b(`axisBEffectiveAsset` → `mergeGbPropertyLevel`이 `saleSplitMode`·감정 키를 병합). 양쪽 입력·`apportioned`이면 없음 |
+| ④ 와이어 | V-11: `appraisal`+빈칸/0·0 body의 `generalBuildingValuation`에 `saleSplitMode`·감정 키 **없음** → ⑫로 막을 수 없다는 계획서 §5.2 근거 실측 확인 |
+
+### 뮤테이션 (cp 백업 → 변형 → 대상 2파일(anchor+F36) → sha 원복 일치, 하네스 bash)
+
+| # | 변이 | 결과 |
+|---|---|---|
+| M-1 | 검사 제거 | KILLED — V-1·V-2·V-8·V-9·V-10 (5건) |
+| M-2 | `!anyAppraisal` → `anyAppraisal` | KILLED — V-1·V-2·V-3·V-8·V-9×2·V-10 + 기존 F36 «증축 없으면 정상 경로» (8건) |
+| M-3 | `"appraisal"` → `"actual"` | KILLED — V-1·V-2·V-6·V-8·V-9·V-10 (6건) |
+| M-4 | `!gbHasExtension` 제거 | KILLED — V-7 + 기존 F36 «감정값 없으면 통과» (2건) |
+| M-5 | `landApp<=0 \|\| buildingApp<=0`(한쪽만 흡수) | KILLED — V-4 (문구) |
+| M-6 | 오류 필드 `buildingAppraisalAtTransfer` | KILLED — vitest V-1·V-2 + **E2E 케이스**(2회 시도 모두 실패) |
+| M-7 | 검사를 V8 앞으로 이동 | **SURVIVED — 동치 변이로 판정**. V8은 `partialAppraisal`(한쪽 > 0)에서, V8-b는 `!anyAppraisal`(둘 다 ≤ 0)에서만 발화해 **조건이 서로소**라 순서가 관측 결과를 바꿀 수 없다. 위치 단언은 불필요 — 순서 의존이 생기는 변경(예: V8-b 술어 완화)은 M-5가 잡는다 |
+
+### E2E · 검증
+
+- 필드 점프 spec `-g "gb: landAppraisalAtTransfer"` 2건 통과, `-g "gb: "` 전체 **74 passed / 3 skipped**(실패 0). 워크트리 node_modules 심볼릭 때문에 Turbopack이 거부해 `next.config.ts`에 `turbopack.root`를 임시로 넣었다가 **sha 원복**(`b91da05e…`), 커밋 제외.
+- 전체 vitest(`--maxWorkers=2`, 3,265파일 39,376건) 1회: **위 T-B4 1건만 실패**(그 외 3,263파일 통과) → 기대값 갱신 후 해당 파일 21건 통과. 필드 점프 spec 전체 + `gb-sale-split-30pct.spec.ts` E2E **676 passed / 21 skipped / 실패 0**.
+- `npx tsc --noEmit` 0건 · `npm run lint` 오류 0(경고 365 — 사전 존재분, 변경 3파일은 경고 0) · pre-push 4종(폰트·톤·다크 짝·워크플로 러너) 전부 exit 0.
+- 브라우저 수동 확인(계획서 §9-5)은 Playwright 필드 점프 케이스가 같은 경로(일반건물 → 양도 정보 «감정평가» 선택·빈칸 → 다음 → 차단 문구·입력 칸 이동)를 자동화해 대체했다.
+
+### 계획과 다르게 한 점
+
+- 계획 V-12는 E2E 케이스 1건 — 그대로. 케이스 이름은 spec 규약에 맞춰 `gb: landAppraisalAtTransfer (감정평가 선택 후 미입력)`.
+- 계획 §6.3 M-7을 «SURVIVED 가능 — 실측 후 판정»으로 적었고 실측 결과 동치 변이로 확정했다(위).
+- 오류 필드는 anchor에서 `validateGeneralBuildingAsset` 직접 호출(문자열만 반환)이 아니라 `collectStepIssues` 수집 경로(`issue.field`)로 단언했다.

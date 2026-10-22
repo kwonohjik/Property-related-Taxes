@@ -341,12 +341,28 @@ describe("T-B4 · 일반건물 384셀 — 양도일 2 × 취득(실가/환산) �
     expect(cells.length).toBe(384);
   }, 900_000);
 
-  it("전 384셀: ⑧ 차단 ⇔ ⑫ 400 · 비공허 (통과 ∧ 200 = 48 · 차단 ∧ 400 = 336)", () => {
-    const mismatch = cells.filter((c) => c.blocked8 !== (c.st12 === 400));
+  /**
+   * ⑧ 전용 갭 — 「감정평가」 모드 + 감정평가가액 없음 + 기준시가 양쪽(V8-b). ④가 일반건물 `saleSplitMode`를 와이어에 싣지 않아
+   * (V-11, `gb-v8b-appraisal-mode-empty.test.ts`) ⑫는 이 요청을 정당한 «기준시가 안분»과 구별할 수 없다 — ⑧만 막는다
+   * (계획서 `gb-v8b-appraisal-mode-empty.plan.md` §5.2). 그 밖의 셀은 종전대로 ⑧ ⇔ ⑫ 정합.
+   */
+  const gbV8bOnly = (c: Cell) => c.sale === "appraisal" && c.app === "none" && c.std === "both";
+
+  it("전 384셀: ⑧ 차단 ⇔ ⑫ 400 (⑧ 전용 V8-b 8셀 제외) · 비공허 (통과 ∧ 200 = 40 · 차단 ∧ 400 = 336)", () => {
+    const rest = cells.filter((c) => !gbV8bOnly(c));
+    expect(rest.length).toBe(376);
+    const mismatch = rest.filter((c) => c.blocked8 !== (c.st12 === 400));
     expect(mismatch.length, JSON.stringify(mismatch.slice(0, 3))).toBe(0);
-    const blocked = cells.filter((c) => c.blocked8).length;
-    expect(cells.length - blocked).toBe(48);
+    const blocked = rest.filter((c) => c.blocked8).length;
+    expect(rest.length - blocked).toBe(40);
     expect(blocked).toBe(336);
+  });
+
+  it("⑧ 전용 V8-b 8셀(양도일 2 × 취득 2 × 양도비 2): ⑧ 차단 ∧ ⑫ 200 — 모드가 와이어에 없어 ⑫ 대칭 불가(의도된 비대칭)", () => {
+    const only = cells.filter(gbV8bOnly);
+    expect(only.length).toBe(8);
+    expect(only.filter((c) => !c.blocked8)).toEqual([]);
+    expect(only.filter((c) => c.st12 !== 200)).toEqual([]);
   });
 
   it("한쪽만 입력 + 기준시가 양쪽 48셀: ⑫ 400이고 키가 generalBuildingValuation.<누락 쪽> 하나", () => {
