@@ -7,7 +7,6 @@
  */
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
-import { gracePeriodInScope } from "@/lib/calc/grace-period-scope";
 import { isHousingLike } from "@/lib/calc/housing-like-asset";
 import { memberOriginErrors } from "./right-member-origin-scope";
 import { originalMemberFactErrors } from "./right-member-origin-scope";
@@ -20,7 +19,6 @@ import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { calcGiftPriorResidenceAsked } from "./gift-household-payload";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
-import { collectPreDesignationContractErrors } from "./pre-designation-contract-scope";
 import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
 import { redevSplitResidenceSupersedesStep4, redevAptHoldingStartDate } from "./redev-field-scope";
 import { successorAptResidenceOverflow } from "./redev-field-scope";
@@ -30,12 +28,6 @@ import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidat
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { collectCountExclusionIssues } from "./transfer-tax-validate-count-exclusion";
-import {
-  effectiveSellingTaxIncentiveRental,
-  taxIncentiveAptDeadlineIncomplete,
-  taxIncentiveRentalPeriodMissing,
-} from "./tax-incentive-rental-scope";
-import { aptDeadlineExtensionIncomplete, rentalDeclarationAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { mergeContextOf, mergeHouseSideOf } from "./merge-house-origin";
 import { PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE, parentalCareParentAgeMissing } from "./parental-care-age-issue";
 import { temporaryTwoHouseSectionVisible } from "./temporary-two-house-section-scope";
@@ -43,18 +35,14 @@ import { spouseHoldingUnansweredIndexes } from "./spouse-holding-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { ValidationIssue } from "./transfer-tax-validate";
-import { twoHouseExclusionStatusIssue } from "./two-house-exclusion-status";
 import { houseRowFactIssues } from "./house-row-fact-issues";
 import { declaredNewHouseOriginIssue } from "./declared-new-house-origin";
 import { deriveCalcTemporaryTwoHouse } from "./transfer-tax-api-body-blocks";
 import { sellingHouseOriginIssue, sellingHousePreviousDateOverride } from "./selling-house-origin-scope";
-import { houseRentalTypeIssue } from "./house-row-required-issues";
-import { houseUnavoidableIssue } from "./house-row-required-issues";
-import { houseSpecialUseIssue } from "./house-row-required-issues";
-import { dayCareUsageStatusIssue } from "./daycare-usage-status";
-import { houseUnavoidableOutsideCapitalIssue } from "./house-row-required-issues";
 import { duplicateOwnedUnavoidableOutsideCapitalRows } from "./house-row-required-issues";
-import { duplicateUnavoidableOutsideCapitalMessage } from "./house-row-required-issues";
+import { houseRowSurchargeAxisIssue } from "./transfer-tax-validate-surcharge-axis";
+import { collectSellingHouseSurchargeIssues } from "./transfer-tax-validate-surcharge-axis";
+import { collectGracePeriodIssues } from "./transfer-tax-validate-surcharge-axis";
 
 export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const step = 1;
@@ -166,44 +154,9 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       if (!h.acquisitionDate) return fieldError(rowKey, `${label}: 취득일을 입력하세요.`);
       if (!h.officialPrice || parseAmount(h.officialPrice) <= 0)
         return fieldError(rowKey, `${label}: 기준시가(공시가격)를 입력하세요.`);
-      // 상속주택 5년 배제는 상속개시일이 있어야 기산 (소령 §167의3①7호) — 미입력 시 배제 미발동 → 차단
-      if (h.isInherited && !h.inheritedDate)
-        return fieldError(rowKey, `${label}: 상속주택이면 상속개시일을 입력하세요. (상속 5년 중과배제 판정 기준)`);
-      // 장기임대 등록 경로: 등록사업자 선택 시 등록일 2종·임대기간 필수
-      if (h.isLongTermRental && h.isRegisteredRental) {
-        if (!h.rentalRegistrationDate) return fieldError(rowKey, `${label}: 임대사업자 등록일을 입력하세요.`);
-        if (!h.businessRegistrationDate) return fieldError(rowKey, `${label}: 사업자 등록일을 입력하세요.`);
-        if (!h.rentalPeriodYears || parseFloat(h.rentalPeriodYears) <= 0)
-          return fieldError(rowKey, `${label}: 임대기간(년)을 입력하세요.`);
-      }
-      // 장기임대 9유형: 유형별 필수 입력값(가액·면적·날짜) — 미입력 시 엔진 오판정
-      // (특히 면적 미입력 → 엔진 0 간주 → 298㎡ 이하 통과 → 과대 적용). 판정 메뉴 ⑧과 **같은 leaf**(S09-1).
-      const rentalTypeIssue = houseRentalTypeIssue(h);
-      if (rentalTypeIssue) return fieldError(rowKey, `${label}: ${rentalTypeIssue.message}`);
-      // §167의3①3호 감면대상장기임대주택 — 「5년 이상 임대」 판정 칸. 미입력이면 엔진이 0년으로 읽어 조용히 불적용.
-      if (taxIncentiveRentalPeriodMissing(h))
-        return fieldError(rowKey, `${label}: 조특법 감면 임대주택이면 임대기간(년)을 입력하세요.`);
-      // §167의3⑪ 「연장 사유 있음」 입력이 덜 됐다(사실 없음 · 3호 이전고시 상태 없음) — 그대로면 선택이 조용히 사라지거나
-      // 3호 기한을 정할 수 없다. 2호는 ⑤·④와 같은 범위 술어 안에서만, 3호는 ⑤가 칸을 여는 후단 대상에서만.
-      const ext2Issue = rentalDeclarationAptDeadlineInScope(h) ? aptDeadlineExtensionIncomplete(h.rentalAptDeadlineExtension) : null;
-      if (ext2Issue) return fieldError(rowKey, `${label}: 장기임대 아파트 양도기한 연장 사유(소령 §167의3⑪) — ${ext2Issue}`);
-      const ext3Issue = taxIncentiveAptDeadlineIncomplete(h);
-      if (ext3Issue) return fieldError(rowKey, `${label}: 조특법 감면 임대주택 양도기한 연장 사유(소령 §167의3⑪) — ${ext3Issue}`);
-      // P2 부득이한 사유: 거주기간(년)·취득 당시 기준시가 필수 — 판정 메뉴 ⑧과 **같은 leaf**(S09-1).
-      const unavoidableIssue = houseUnavoidableIssue(h);
-      if (unavoidableIssue) return fieldError(rowKey, `${label}: ${unavoidableIssue.message}`);
-      // D7 §167의3①4호·8호의2 — 기간(년)·어린이집 사용 상태(판정 메뉴 ⑧과 같은 leaf · ⑫ 거울).
-      const specialUseIssue = houseSpecialUseIssue(h);
-      if (specialUseIssue) return fieldError(rowKey, `${label}: ${specialUseIssue.message}`);
-      // §167의10①3호·7호 기산 상태 — 날짜 또는 「양도일 현재 미해소·진행 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
-      const statusIssue = twoHouseExclusionStatusIssue(h);
-      if (statusIssue) return fieldError(rowKey, `${label}: ${statusIssue.message}`);
-      // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 판정 메뉴 ⑧과 같은 leaf.
-      const uocIssue = houseUnavoidableOutsideCapitalIssue(h, form.transferDate);
-      if (uocIssue) return fieldError(rowKey, `${label}: ${uocIssue.message}`);
-      const uocFirst = uocDuplicateOf.get(i);
-      if (uocFirst !== undefined)
-        return fieldError(rowKey, `${label}: ${duplicateUnavoidableOutsideCapitalMessage(`보유 주택 ${uocFirst + 1}`)}`);
+      // 중과 축(상속 5년·장기임대·3호·⑪·부득이·4호·8호의2·3호/7호 기산·§155⑧) — 다주택 중과 판정 메뉴 ⑧과 같은 leaf.
+      const surchargeIssue = houseRowSurchargeAxisIssue(h, label, form.transferDate, uocDuplicateOf.get(i));
+      if (surchargeIssue) return fieldError(rowKey, surchargeIssue);
       // 명부 행 사실 답 누락 — D7 §155⑦1호 동일세대 · §155⑦2·3호 재귀농 · §155⑦3호 귀농 ⑩3·4호·⑪ · §155① 신규 주택 취득 경위(판정 메뉴 ⑧과 같은 leaf).
       const factIssue = houseRowFactIssues(h, newHouseRowId)[0];
       if (factIssue) return fieldError(rowKey, `${label}: ${factIssue.message}`);
@@ -230,46 +183,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], houses.length);
   if (sellingOrigin) issues.push({ step, field: sellingOrigin.field as "sellingHouseExistingAcquisitionDate", message: sellingOrigin.message });
 
-  // ⑧ 양도 주택 자체 배제 특례(2주택 이상) — 사원주택/어린이집 선택 시 기간(년) 필수
-  const se = form.sellingHouseExclusion;
-  if (se?.isEmployeeHousing && (!se.freeProvisionYears || parseFloat(se.freeProvisionYears) <= 0))
-    issues.push({ step, field: "sellingHouseExclusion.freeProvisionYears", message: "양도 주택 사원용 주택: 무상 제공 기간(년)을 입력하세요." });
-  if (se?.isDayCareCenter && (!se.dayCareOperationYears || parseFloat(se.dayCareOperationYears) <= 0))
-    issues.push({ step, field: "sellingHouseExclusion.dayCareOperationYears", message: "양도 주택 어린이집: 운영 기간(년)을 입력하세요." });
-  // ⑧ 8호의2 사용 상태 — 종료일 또는 「양도일 현재 사용 중」 택일(⑫ 거울 · 빈 값 = 「모름」 차단)
-  const sellDayCareIssue = se ? dayCareUsageStatusIssue(se) : null;
-  if (sellDayCareIssue)
-    issues.push({ step, field: "sellingHouseExclusion.dayCareEndDate", message: `양도 주택 ${sellDayCareIssue.message}` });
-
-  // ⑧ 양도 주택 §167의3①3호 — 2호 선언이 켜져 있으면 그 칸의 임대기간을 함께 쓴다(⑤·④와 같은 유효 사실).
-  if (taxIncentiveRentalPeriodMissing(effectiveSellingTaxIncentiveRental(se)))
-    issues.push({ step, field: "sellingHouseExclusion.taxIncentiveRentalYears", message: "양도 주택 조특법 감면 임대주택: 임대기간(년)을 입력하세요." });
-  // ⑧ 양도 주택 §167의3⑪ 「연장 사유 있음」 입력 미완 — 2호·3호 각자의 범위 술어(⑤·④와 같음)
-  const sell2Issue = rentalDeclarationAptDeadlineInScope(se?.longTermRental)
-    ? aptDeadlineExtensionIncomplete(se?.longTermRental?.rentalAptDeadlineExtension)
-    : null;
-  if (sell2Issue)
-    issues.push({ step, message: `양도 주택 장기임대 아파트: 양도기한 연장 사유(소령 §167의3⑪) — ${sell2Issue}` });
-  const sell3Issue = taxIncentiveAptDeadlineIncomplete(effectiveSellingTaxIncentiveRental(se));
-  if (sell3Issue)
-    issues.push({ step, message: `양도 주택 조특법 감면 임대주택: 양도기한 연장 사유(소령 §167의3⑪) — ${sell3Issue}` });
-
-  // ⑧ 양도 주택 2주택 전용 배제 — §167의10①3호(F-16). 「다른 보유 주택」 행과 같은 요구다.
-  //    3호·7호 기산 상태는 날짜 또는 「양도일 현재 미해소·진행 중」 택일이다 — 종전에는 7호 날짜 미입력을
-  //    「진행 중」으로 읽어 요구하지 않았는데, 같은 빈 값에 「모름」이 겹쳤다(사용자 결정 2026-10-04).
-  if (se?.isUnavoidableReason) {
-    if (!se.unavoidableResidenceYears || parseFloat(se.unavoidableResidenceYears) <= 0)
-      issues.push({ step, field: "sellingHouseExclusion.unavoidableResidenceYears", message: "양도 주택 부득이한 사유: 거주기간(년)을 입력하세요." });
-    if (!se.acquisitionOfficialPrice)
-      issues.push({ step, field: "sellingHouseExclusion.acquisitionOfficialPrice", message: "양도 주택 부득이한 사유: 취득 당시 기준시가를 입력하세요." });
-  }
-  const sellStatusIssue = se ? twoHouseExclusionStatusIssue(se) : null;
-  if (sellStatusIssue?.field === "unavoidableReasonResolvedDate")
-    issues.push({ step, field: "sellingHouseExclusion.unavoidableReasonResolvedDate", message: `양도 주택 ${sellStatusIssue.message}` });
-  else if (sellStatusIssue)
-    issues.push({ step, field: "sellingHouseExclusion.litigationAcquisitionDate", message: `양도 주택 ${sellStatusIssue.message}` });
-  // ⑧ 공고 전 매매계약(영 §167의10①11호 등) — ⑤·④와 같은 범위 술어(`pre-designation-contract-scope.ts`).
-  for (const message of collectPreDesignationContractErrors(form)) issues.push({ step, message });
+  // ⑧ 양도 주택 자체 중과배제 특례·공고 전 매매계약 — 다주택 중과 판정 메뉴 ⑧과 같은 leaf.
+  for (const issue of collectSellingHouseSurchargeIssues(form)) issues.push({ step, ...issue });
 
   // ⑧ OH-12c — 피상속인 증여분 선언이면 증여일 필수(2018-02-13 부칙 게이트). ⑤와 같은 게이트
   //    (`HouseCountExemptionInputs` — 명부에 상속주택이 있을 때만 토글·날짜 칸이 열린다).
@@ -316,25 +231,8 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
   // 상속 분양권 피상속인 취득일 — ④가 싣는 행이면 늘(§89②·§104⑦ 공용 날짜 — 위 `isHousingLike` 목록과 같은 범위).
   for (const e of inheritedPresaleRightFactErrors(presaleRights)) issues.push({ step, ...e });
 
-  /**
-   * ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 입력(ON) 시 목별 필수 입력.
-   * houses 0건이면 엔진이 gracePeriod를 소비하지 않고 위젯도 숨김 → 검증도 houses>0 게이트(보이지 않는 필드 차단 방지).
-   * 허가·계약금 증빙 미확인은 silent 차단이 아닌 "경과조치 부적용으로 계산 진행"(원문 "모두 갖춘" 요건 —
-   * 엔진 checkGracePeriodExemption이 미충족 시 자동으로 suspended:false 처리·차단 대상 아님).
-   *
-   * ⚠️ **한시배제 창 안에서는 건너뛴다** — 위 houses·presaleRights와 달리 이 축만은 여전히
-   * 중과 전용이고 창 안에서 **증명 가능한 no-op**이다(`checkGracePeriodExemption`의 가목 우선
-   * 게이트가 `gracePeriod` 내용과 무관하게 `suspended: true`를 낸다). ⑤도 같은 조건으로
-   * `HousesListSection hideGracePeriod`가 위젯을 닫으므로 짝이 맞는다.
-   */
-  // 술어는 ⑤ 위젯·④ 전송과 **같은 함수**다 (Q03). 종전에는 여기만 `houses.length > 0`이라
-  // 「분양권·입주권만 있는 세대」에서 검증이 빠졌고, 그 상태로 ④가 보내 ⑫ Zod가 400을 냈다.
-  if (gracePeriodInScope(form) && form.gracePeriod) {
-    if (!form.gracePeriod.contractDate)
-      issues.push({ step, field: "gracePeriod.contractDate", message: "중과 한시 유예: 매매계약 체결일을 입력하세요." });
-    if (form.gracePeriod.isLandPermitTarget === true && !form.gracePeriod.permitApplicationDate)
-      issues.push({ step, field: "gracePeriod.permitApplicationDate", message: "중과 한시 유예(나목): 토지거래허가 신청일을 입력하세요." });
-  }
+  // ⑧ 다주택 중과 한시 유예(§167의3①12의2 나·다목) — 다주택 중과 판정 메뉴 ⑧과 같은 leaf.
+  for (const issue of collectGracePeriodIssues(form)) issues.push({ step, ...issue });
 
   /**
    * 🔄 §156의2⑤ 대체주택(4필드)·§155① 일시적 2주택(2필드) 검증은 **판정 메뉴로 이관**됐다
