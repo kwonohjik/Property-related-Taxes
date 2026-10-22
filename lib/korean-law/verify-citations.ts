@@ -81,45 +81,94 @@ type ExtractedCitation = {
  * 텍스트에서 법령 조문 인용 패턴 추출.
  *
  * 매칭 패턴: `법령명 제N조[의M][ 제P항][ 제Q호]` · `법령명 §N[의M][①][N호]`
- * 「제N조」와 「§N」을 원문 위치순으로 한 번에 돈다 — 이어받기(5)가 바로 앞 인용을 알아야 하기 때문이다.
+ * 「제N조」와 「§N」을 원문 위치순으로 한 번에 돈다 — 이어받기(6)가 바로 앞 인용을 알아야 하기 때문이다.
  * 법령명은 인용 바로 앞에서 찾는다(우선순위 순):
  *  1. 낫표 이름 — 「소득세법 시행령」 제155조 · ｢민간임대주택에 관한 특별법｣ 제43조. 「구 「…」」(옛 조문)는 제외
- *  2. 상대 인용(「같은 법」「동법 시행령」「같은 영」)은 추출하지 않는다 — 종전엔 「동법」이 법령명으로 잡혀 거짓 「찾지 못함」이었다.
- *     「마지막으로 인용한 법령」을 따르게 해 봤으나 원문 묶음 표본 20건 중 3건이 틀렸다(관련 법령 목록의 「(4) 같은 법 시행령」은
- *     목록 머리의 법령을, 「○○법에 따른 … 같은 법 제48조」는 조문 없이 이름만 나온 법률을 가리킨다)
+ *  2. 상대 인용(「같은 법」「동법 시행령」「같은 영」) — **같은 줄에서 마지막으로 이름이 나온 법령**(조문 유무 무관).
+ *     같은 줄에 이름이 없거나 사이에 목록 표시(「(4)」「①」「가.」)가 있으면 건너뛴다.
+ *     「바로 앞 인용의 법령」을 따르면 원문 묶음 표본 20건 중 3건이 틀렸다(목록 항목 머리의 「(4) 같은 법 시행령」 ·
+ *     조문 없이 이름만 나온 법률을 가리키는 「같은 법」) — 이 규칙은 둘 다 피하고 표본 40건이 모두 맞았다(계획서 F-2)
  *  3. 띄어 쓴 정식명(별칭 표) — 「상속세 및 증여세법」「민간임대주택에 관한 특별법」
  *  4. 법령명 회복(`recoverLawName`) — 「특별법」「법률」처럼 꼬리만 잡힌 이름은 버린다(다른 법령으로 조회된다)
- *  5. 이어받기 — 앞 인용과 접속어(및 , · ㆍ 와 과 또는)만 사이에 두면 그 법령명
+ *  5. 약칭 「법 제N조」「영 제N조」 — 마지막으로 인용된 조문 머리(「○○ 시행령 제N조【…】」)가 시행령·시행규칙일 때만 그 모법·모법 시행령
+ *     (하위 법령 본문이 모법을 「법」이라 부르는 작성 관례. 앞 이름이 법률이면 무엇을 가리키는지 정할 근거가 없다)
+ *  6. 이어받기 — 앞 인용과 접속어(및 , · ㆍ 와 과 또는)만 사이에 두면 그 법령명
+ * 「구 소득세법」처럼 옛 조문이라 밝힌 이름과, 그런 이름(또는 개정 괄호가 붙은 이름)을 가리키는 상대 인용·약칭은 건너뛴다.
  * 어느 것도 아니면 추출하지 않는다 — 틀린 법령으로 「확인됨」이 되느니 검사하지 않는다.
+ * 인용 뒤에 「및 제21항」「및 제2호」처럼 항·호만 이어지면 같은 조문의 항·호로, 「같은 조 제N항」은 바로 앞 인용의 조문으로 읽는다.
  */
 export function extractCitations(text: string): ExtractedCitation[] {
   if (!text) return [];
+  // 1차는 이름이 직접 붙은 인용만 — 거기서 나온 법령명이 상대 인용·약칭의 「앞 이름」 후보가 된다(별칭 표 이름과 함께)
+  const direct = extractWith(text, null);
+  return extractWith(text, mentionIndex(text, direct.map((c) => c.lawName)));
+}
 
-  // 「제N조」 갈래와 「§N」 갈래(약칭형 「상증법 §18의2」 포함) — 꼬리는 「·」「§」 앞에서 멈춘다(뒤 인용은 따로 잡는다)
-  const ARTICLE_RE = /제(\d+)조(?:의(\d+))?(?:\s*제(\d+)항)?(?:\s*제(\d+)호)?/g;
-  const SECTION_RE = /§\d+(?:의\d+)?[^\s,.)·ㆍ§]*/g;
+// 「제N조」 갈래와 「§N」 갈래(약칭형 「상증법 §18의2」 포함) — 꼬리는 「·」「§」 앞에서 멈춘다(뒤 인용은 따로 잡는다).
+// 「제99조의 2」처럼 띄어 쓴 가지 번호도 받는다 — 종전엔 「제99조」로 읽어 **다른 조문으로 「확인됨」**이 됐다(원문 묶음 263회).
+// 단 「제154조의 1세대1주택」「제97조의 10년」의 숫자는 가지 번호가 아니다 — 뒤따르는 말로 거른다
+const ARTICLE_RE = /제\s?(\d+)\s?조(?:\s?의\s?(\d+)(?!\d|세대|년|개월|배|분|%|주택))?(?:\s*제(\d+)항)?(?:\s*제(\d+)호)?/g;
+const SECTION_RE = /§\d+(?:의\d+)?[^\s,.)·ㆍ§]*/g;
+/** 「같은 조 제N항」 — 바로 앞 인용의 조문 */
+const SAME_ARTICLE_RE = /같은\s?조\s*제(\d+)항(?:\s*제(\d+)호)?/g;
+/** 인용 바로 뒤에 항·호만 이어진 것 — 「제155조 제20항 및 제21항」 · 「제89조 제3호 및 제4호」 */
+const CONTINUATION_RE = /\s*(?:및|,|·|ㆍ|또는|과|와)\s*제(\d+)(항|호)(?:\s*제(\d+)호)?/y;
+
+type LastCitation = { lawName: string; articleNo: string; hang?: number; end: number };
+
+function extractWith(text: string, mentions: Mention[] | null): ExtractedCitation[] {
   const hits = [
     ...Array.from(text.matchAll(ARTICLE_RE), (m) => ({ m, kind: "article" as const })),
     ...Array.from(text.matchAll(SECTION_RE), (m) => ({ m, kind: "section" as const })),
+    ...Array.from(text.matchAll(SAME_ARTICLE_RE), (m) => ({ m, kind: "same" as const })),
   ].sort((a, b) => a.m.index - b.m.index);
 
   const results: ExtractedCitation[] = [];
   const seen = new Set<string>();
-  let last: { lawName: string; end: number } | null = null;
+  const add = (c: ExtractedCitation) => {
+    if (seen.has(c.key)) return;
+    seen.add(c.key);
+    results.push(c);
+  };
+  let last: LastCitation | null = null;
 
   for (const { m, kind } of hits) {
-    const lookback = text.slice(Math.max(0, m.index - 80), m.index);
-    const lawName = nameBefore(lookback, kind, last, text.slice(last?.end ?? 0, m.index));
+    if (kind === "same") {
+      // 앞 인용과 같은 줄이고 사이에 닫는 괄호가 없을 때만 — 「제154조 …(… 제160조 …) 같은 조 제1항」의 「같은 조」는
+      // 괄호 앞 조문을 가리킨다(원문 묶음 표본). 줄이 바뀌어도 무엇을 가리키는지 원문 구조를 봐야 한다
+      if (!last || /[\n)）]/.test(text.slice(last.end, m.index))) continue;
+      const hang = parseInt(m[1], 10);
+      const ho = m[2] ? parseInt(m[2], 10) : undefined;
+      add(paragraphCitation(last.lawName, last.articleNo, hang, ho));
+      last = { lawName: last.lawName, articleNo: last.articleNo, hang, end: m.index + m[0].length };
+      continue;
+    }
+
+    const lawName = nameBefore(text, m.index, kind, last, text.slice(last?.end ?? 0, m.index), mentions);
     if (!lawName) continue; // 법령명 회복 실패는 skip (후속 LLM-safe)
 
     const c = kind === "article" ? articleCitation(m, lawName) : sectionCitation(m[0], lawName);
     if (!c) continue;
-    last = { lawName, end: m.index + m[0].length };
-    if (seen.has(c.key)) continue;
-    seen.add(c.key);
-    results.push(c);
+    add(c);
+    last = { lawName, articleNo: c.articleNo, hang: c.hang, end: m.index + m[0].length };
+
+    if (kind !== "article") continue;
+    CONTINUATION_RE.lastIndex = last.end;
+    for (let x = CONTINUATION_RE.exec(text); x; x = CONTINUATION_RE.exec(text)) {
+      const n = parseInt(x[1], 10);
+      const hang: number | undefined = x[2] === "항" ? n : last.hang;
+      const ho = x[2] === "항" ? (x[3] ? parseInt(x[3], 10) : undefined) : n;
+      add(paragraphCitation(lawName, c.articleNo, hang, ho));
+      last = { lawName, articleNo: c.articleNo, hang, end: CONTINUATION_RE.lastIndex };
+    }
   }
   return results;
+}
+
+/** 이어진 항·호와 「같은 조」 — 조문 표기는 앞 인용 그대로 */
+function paragraphCitation(lawName: string, articleNo: string, hang?: number, ho?: number): ExtractedCitation {
+  const raw = `${lawName} ${articleNo}${hang ? ` 제${hang}항` : ""}${ho ? ` 제${ho}호` : ""}`;
+  return { raw, lawName, articleNo, hang, ho, key: citationKey(lawName, articleNo, hang, ho) };
 }
 
 function citationKey(lawName: string, articleNo: string, hang?: number, ho?: number): string {
@@ -170,6 +219,8 @@ const LAW_SUFFIX_RE = /(?:법|법률|령|규칙|규정|조례)$/;
 
 /** 이름 꼬리만 잡힌 것 — 「민간임대주택에 관한 특별법」 → 「특별법」은 다른 특별법으로 조회됐다(실측: 이태원참사 특별법 §43) */
 const GENERIC_TAIL_NAMES = new Set(["특별법", "법률"]);
+/** 「주택법 일부개정법률 제63조의2」 — 개정하는 법률(그 부칙 조문)이지 법령명이 아니다 */
+const AMENDING_ACT_RE = /개정법(?:률)?$/;
 
 /**
  * 띄어 쓴 정식명(「상속세 및 증여세법」「국토의 계획 및 이용에 관한 법률」) — 별칭 표의 정식명과 그 시행령·시행규칙.
@@ -192,25 +243,135 @@ function spacedNameAtEnd(lookback: string): string | null {
   return /[\uAC00-\uD7A3]/.test(before) ? null : full;
 }
 
+/** 약칭 「법 제N조」「영 제N조」 — 「이 법」「구 법」은 아니다(앞 글자가 한글이면 「세법」 같은 이름의 꼬리) */
+const ABBREVIATION_RE = /(?<![가-힣]|(?:이|구)\s)(법|영)\s*$/;
+
+/** 「구 소득세법」 — 이름 앞에 「구」(옛 조문). 앞 글자가 한글이면(「광산구 」) 아니다 */
+function isLegacyName(lookback: string, name: string): boolean {
+  const body = escapeRe(name).replace(/ /g, "\\s*");
+  return new RegExp(`(?:^|[^가-힣])구\\s*${body}\\s*$`).test(lookback);
+}
+
 function nameBefore(
-  lookback: string,
+  text: string,
+  pos: number,
   kind: "article" | "section",
   last: { lawName: string } | null,
   gap: string,
+  mentions: Mention[] | null,
 ): string | null {
+  const lookback = text.slice(Math.max(0, pos - 80), pos);
   const bracket = lookback.match(BRACKET_RE);
   if (bracket) {
     const inner = bracket[2].replace(/\s+/g, " ").trim();
-    return bracket[1] || RELATIVE_RE.test(inner) || !LAW_SUFFIX_RE.test(inner) ? null : normalizeLawName(inner);
+    if (bracket[1] || /^구\s/.test(inner) || RELATIVE_RE.test(inner) || !LAW_SUFFIX_RE.test(inner)) return null; // 「구 소득세법 시행령」
+    return normalizeLawName(inner);
   }
-  if (RELATIVE_RE.test(lookback)) return null;
+  const relative = lookback.match(RELATIVE_RE);
+  if (relative) return mentions ? relativeName(text, pos - lookback.length + relative.index!, relative[0], mentions) : null;
 
   const spaced = spacedNameAtEnd(lookback);
-  if (spaced) return spaced;
+  if (spaced) return isLegacyName(lookback, spaced) ? null : spaced;
   const recovered = recoverLawName(lookback.slice(-30), kind === "section");
-  if (recovered) return GENERIC_TAIL_NAMES.has(recovered) ? null : normalizeLawName(recovered);
+  if (recovered) {
+    if (GENERIC_TAIL_NAMES.has(recovered) || AMENDING_ACT_RE.test(recovered) || isLegacyName(lookback, recovered)) return null;
+    // 붙여 쓴 「구소득세법」 · 이름 없는 「구법」「구시행령」
+    const rest = recovered.slice(1).replace(/\s/g, "");
+    if (recovered.startsWith("구") && (COMPACT_ALIAS_NAMES.has(rest) || /^(?:법|시행령|시행규칙)$/.test(rest))) return null;
+    return normalizeLawName(recovered);
+  }
+  const abbreviation = lookback.match(ABBREVIATION_RE);
+  if (abbreviation) {
+    return mentions ? abbreviationName(pos - lookback.length + abbreviation.index!, abbreviation[1], mentions) : null;
+  }
 
   return last && JOINER_ONLY_RE.test(gap) ? last.lawName : null;
+}
+
+// ── 앞 이름(언급) — 상대 인용·약칭이 가리키는 법령 ─────────────────────────────
+
+type Mention = { start: number; end: number; name: string; legacy: boolean; era: boolean; heading: boolean };
+
+/** 법령 이름 후보 — 별칭 표 키·값 중 법령 꼬리로 끝나는 것(「소득령」「상증법」 같은 약칭 포함) */
+const MENTION_ALIAS_NAMES = [...new Set([...Object.keys(LAW_ALIASES), ...Object.values(LAW_ALIASES)])].filter(
+  (n) => n.length >= 3 && /(?:법|법률|령|규칙)$/.test(n),
+);
+const COMPACT_ALIAS_NAMES = new Set(MENTION_ALIAS_NAMES.map((n) => n.replace(/\s/g, "")));
+
+/** 이름 바로 뒤의 개정 괄호 — 「소득세법 시행령(2011. 3. 28. … 개정되기 전의 것)」. 「(이하 '영'이라 한다)」는 아니다 */
+const ERA_BRACKET_RE = /^\s*[」｣]?\s*\([^()]{0,90}(?:개정|전의\s*것)/;
+/** 조문 머리 — 「소득세법 시행령 제154조【1세대1주택의 범위】」「… 제152조(환지 등의 정의)」. 인용된 조문 본문이 이 뒤에 온다 */
+const HEADING_AFTER_RE = /^\s*[」｣]?\s*제\s?\d+\s?조(?:\s?의\s?\d+)?\s*(?:\([^()]{0,60}\)\s*)?[【\[〔(]/;
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/** 원문에서 법령 이름이 나온 자리 전부(위치순). 띄어쓰기는 있든 없든 같은 이름이다 */
+function mentionIndex(text: string, extracted: string[]): Mention[] {
+  const names = [...new Set([...MENTION_ALIAS_NAMES, ...extracted])].sort((a, b) => b.length - a.length);
+  const re = new RegExp(names.map((n) => escapeRe(n).replace(/ /g, "\\s?")).join("|"), "g");
+  const out: Mention[] = [];
+  for (const m of text.matchAll(re)) {
+    const start = m.index;
+    const pre = text.slice(Math.max(0, start - 3), start);
+    const legacy = /(?:^|[^가-힣])구\s?$/.test(pre);
+    if (/[가-힣]$/.test(pre) && !legacy) continue; // 단어 중간(「이동법」)
+    const end = start + m[0].length;
+    const n = normalizeLawName(m[0].replace(/\s+/g, " "));
+    const name = /(?:시행령|시행규칙|법|법률)$/.test(n) ? n : resolveLawAlias(n); // 「소득령」 → 소득세법 시행령
+    const after = text.slice(end, end + 100);
+    out.push({ start, end, name, legacy, era: ERA_BRACKET_RE.test(after), heading: HEADING_AFTER_RE.test(after) });
+  }
+  return out;
+}
+
+/** pos 앞에서 끝난 마지막 이름(시작이 minStart 이후) */
+function lastMention(mentions: Mention[], pos: number, minStart: number): Mention | null {
+  for (let i = mentions.length - 1; i >= 0; i--) {
+    const m = mentions[i];
+    if (m.end > pos) continue;
+    return m.start >= minStart ? m : null;
+  }
+  return null;
+}
+
+/** 목록 표시 — 「(4) 같은 법 시행령」은 목록 머리의 법령을 가리킬 수 있다(앞 계획 V-5 오류 2건) */
+const LIST_MARK_RE = /(?:^|\s)(?:\(\d+\)|\d+\)|[①-⑳]|[가-하]\.|\d+\.)\s/;
+const DECREE_TAIL_RE = / (?:시행령|시행규칙)$/;
+
+function relativeName(text: string, relStart: number, relText: string, mentions: Mention[]): string | null {
+  const lineStart = text.lastIndexOf("\n", relStart - 1) + 1;
+  const m = lastMention(mentions, relStart, lineStart);
+  if (!m || m.legacy || m.era) return null; // 옛 조문을 가리키면 현행으로 대조하지 않는다
+  if (LIST_MARK_RE.test(text.slice(m.end, relStart))) return null;
+  const base = m.name.replace(DECREE_TAIL_RE, "");
+  switch (relText.replace(/\s/g, "").replace(/^(?:같은|동)/, "")) {
+    case "법":
+      return base;
+    case "법시행령":
+      return `${base} 시행령`;
+    case "법시행규칙":
+      return `${base} 시행규칙`;
+    case "영":
+    case "령":
+      return m.name.endsWith(" 시행령") ? m.name : null;
+    default:
+      return null; // 「동법령」 — 법인지 영인지 가를 수 없다
+  }
+}
+
+/**
+ * 약칭은 **인용 중인 조문의 머리**를 따른다 — 마지막 이름이 아니다. 조문 본문 안에서 다른 시행령을 언급하면
+ * (「「소득세법 시행령」 제32조를 준용한다」) 그 뒤의 「법 제97조」가 엉뚱한 모법으로 읽혔다(원문 묶음 표본 30건 중 2건).
+ * 머리가 법률이면(법률 본문에는 「법 제N조」가 없다) 건너뛴다.
+ */
+function abbreviationName(abbrStart: number, which: string, mentions: Mention[]): string | null {
+  let m: Mention | null = null;
+  for (let i = mentions.length - 1; i >= 0 && !m; i--) if (mentions[i].end <= abbrStart && mentions[i].heading) m = mentions[i];
+  if (!m || m.legacy || m.era || !DECREE_TAIL_RE.test(m.name)) return null;
+  const base = m.name.replace(DECREE_TAIL_RE, "");
+  return which === "법" ? base : `${base} 시행령`;
 }
 
 /** 「소득세법시행령」 → 「소득세법 시행령」 — 붙여 쓴 이름이 다른 키가 되어 같은 조문을 두 번 조회했다 */
