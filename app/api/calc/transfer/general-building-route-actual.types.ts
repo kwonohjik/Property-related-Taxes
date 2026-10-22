@@ -183,6 +183,7 @@ export interface ActualGbCardsResult {
   bundledActualCapitalExpenditure?: number;
   bundledActualTransferExpense?: number;
   bundledActualTransferBasis?: { land: number; building: number };
+  bundledActualPartCapitalExpenditure?: { land?: number; building?: number };
   saleSplitJudgment?: SaleSplitJudgmentDetail;
   /** 구분 기재 없이 안분했을 때 엔진이 쓴 basis 종류 — 표시 전용 echo(판정과 배타). */
   saleApportionBasisKind?: import("@/lib/tax-engine/sale-split-apportion-basis").ApportionBasisKind;
