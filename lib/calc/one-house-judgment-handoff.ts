@@ -141,15 +141,19 @@ export function toTransferFormPatch(
     sourceJudgmentId: judgmentId || undefined,
     sourceJudgmentInputHash: judgmentInputHash || undefined,
     /**
-     * 🔴 **양도 자산에 붙는 계산기 전용 선택을 비운다**(S11-7) — 판정 메뉴는 이 셋을 모른다(`createInitialOneHouseJudgmentForm`
-     *    에 없음). 이 patch가 `assets`를 통째로 바꾸므로 이 셋도 **이전 물건의 것**이다. 비우지 않으면 이전 물건의 저당권 실행
-     *    선언(`sellingHouseExclusion`)이 새 물건 본문에 실려 2주택 중과가 일반세율로 과소 산출됐고, 폼-전역 `regionCode`는
-     *    새 자산의 `regionCode` 폴백(`primary.regionCode || form.regionCode`)으로 새어 들었다.
+     * 🔴 **양도 자산에 붙는 계산기 전용 선택을 비운다**(S11-7) — 이 patch가 `assets`를 통째로 바꾸므로 계산기에 남은 값은
+     *    **이전 물건의 것**이다. 비우지 않으면 이전 물건의 저당권 실행 선언(`sellingHouseExclusion`)이 새 물건 본문에 실려
+     *    2주택 중과가 일반세율로 과소 산출됐고, 폼-전역 `regionCode`는 새 자산의 `regionCode` 폴백
+     *    (`primary.regionCode || form.regionCode`)으로 새어 들었다.
      *    미납세액 방식(`unpaidTaxMode`)은 가산세 축이라 물건과 무관하므로 건드리지 않는다.
+     *
+     * 양도 주택 자체 배제 사실·한시 유예 나·다목은 다주택 중과 판정 메뉴가 **판정 폼에서 편집한다**(입력 공유 — 계획서
+     * `multi-house-surcharge-judgment-menu.plan.md` §5.7). 그래서 지우지 않고 **판정 폼의 값**으로 덮는다 — 판정 폼에 값이
+     * 없으면 종전처럼 `undefined`라 이전 물건의 값은 여전히 남지 않는다. 같은 물건의 사실이므로 1주택 메뉴에서 넘겨도 실린다.
      */
     regionCode: undefined,
-    sellingHouseExclusion: undefined,
-    gracePeriod: undefined,
+    sellingHouseExclusion: form.sellingHouseExclusion,
+    gracePeriod: form.gracePeriod,
     /**
      * 🔴 **자산 분할 모드도 비운다**(S11-7 형제) — 판정 메뉴는 이 키를 모르고(축 B 지분 분할·함께 양도는 계산기 Step1 전용 선택)
      *    `assets`가 통째로 바뀌므로 이전 물건 묶음의 선택이다. 남기면 2건 판정 폼이 들어올 때 `assets.length > 1 && assetSplitMode`

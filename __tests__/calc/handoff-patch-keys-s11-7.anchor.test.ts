@@ -162,3 +162,38 @@ describe("S11-7 anchor — 이전 물건의 계산기 전용 선택이 새 물�
     expect(sell?.isMortgageExecution).toBe(true);
   });
 });
+
+/**
+ * P5 — 다주택 중과 판정 메뉴가 판정 폼에서 편집한 양도 주택 자체 배제 사실·한시 유예 나·다목은 **넘어간다**
+ * (계획서 `multi-house-surcharge-judgment-menu.plan.md` §5.7 · D3d). 위 S11-7 단언(판정 폼에 값이 없으면 이전 물건의 값이
+ * 남지 않는다)은 그대로 통과해야 하고, 아래는 그 짝이다 — 같은 B 폼에서 판정 폼 값 유무로 세액이 갈린다.
+ */
+describe("P5 — 판정 폼의 중과 값은 계산기에 도착한다", () => {
+  it("판정 폼의 저당권 실행 선언이 본문 양도 주택 행에 실려 2주택 중과가 배제된다(640,761,000에서 내려간다)", async () => {
+    const b = judgmentB();
+    b.sellingHouseExclusion = { isMortgageExecution: true };
+    await openTransferWithOneHouseFacts(b, router, undefined);
+    const st = useCalcWizardStore.getState();
+    expect(st.formData.sellingHouseExclusion).toEqual({ isMortgageExecution: true });
+    st.updateFormData({ assets: [{ ...st.formData.assets[0], fixedAcquisitionPrice: "500000000" }] });
+    const r = await withToday("2026-10-11", () => runCalc(useCalcWizardStore.getState().formData));
+    const sell = (r.body.houses as Record<string, unknown>[]).find((h) => h.id === "selling");
+    expect(sell?.isMortgageExecution).toBe(true);
+    expect(r.r.surchargeType).not.toBe("multi_house_2");
+    expect(r.totalTax).toBeLessThan(640_761_000);
+  });
+
+  it("판정 폼의 값이 계산기에 남아 있던 이전 물건의 값을 덮는다", async () => {
+    useCalcWizardStore.getState().updateFormData({
+      sellingHouseExclusion: { isMortgageExecution: true },
+      gracePeriod: { contractDate: "2020-01-01", isLandPermitTarget: true },
+    });
+    const b = judgmentB();
+    b.sellingHouseExclusion = { isCulturalHeritage: true };
+    b.gracePeriod = { contractDate: "2026-04-01", isLandPermitTarget: false, depositReceiptConfirmed: true };
+    await openTransferWithOneHouseFacts(b, router, undefined);
+    const f = useCalcWizardStore.getState().formData;
+    expect(f.sellingHouseExclusion).toEqual({ isCulturalHeritage: true });
+    expect(f.gracePeriod).toEqual({ contractDate: "2026-04-01", isLandPermitTarget: false, depositReceiptConfirmed: true });
+  });
+});

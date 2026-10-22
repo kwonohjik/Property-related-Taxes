@@ -12,12 +12,33 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
+import type { MultiHouseSurchargeJudgmentResponse } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 import { useProfessionalStore } from "./professional-store";
 import {
   createInitialOneHouseJudgmentForm,
   normalizeOneHouseJudgmentForm,
   type OneHouseJudgmentFormData,
 } from "./one-house-judgment-form.types";
+
+/**
+ * 다주택 중과 판정 메뉴의 결과·단계·오류·로딩(계획서 `multi-house-surcharge-judgment-menu.plan.md` §5.2 · T7).
+ *
+ * 두 판정 메뉴는 **입력(`formData`)을 함께 쓰고** 결과·단계는 메뉴별로 둔다. 같은 store에 두는 이유는 무효화다 —
+ * `updateFormData`가 한 `set`에서 두 메뉴의 결과를 함께 비워야 어느 메뉴도 옛 입력의 판정을 보여주지 않는다.
+ */
+export interface SurchargeJudgmentSlot {
+  currentStep: number;
+  /** persist 대상이 아니다(`partialize`가 `formData`만 남긴다) */
+  result: MultiHouseSurchargeJudgmentResponse | null;
+  /** 판정을 요청한 시점의 의뢰인 — 1주택 `resultClientId`와 같은 규약 */
+  resultClientId: string | null;
+  error: string | null;
+  isLoading: boolean;
+}
+
+export function createInitialSurchargeSlot(): SurchargeJudgmentSlot {
+  return { currentStep: 0, result: null, resultClientId: null, error: null, isLoading: false };
+}
 
 export interface OneHouseJudgmentState {
   currentStep: number;
@@ -32,6 +53,8 @@ export interface OneHouseJudgmentState {
   resultClientId: string | null;
   error: string | null;
   isLoading: boolean;
+  /** 다주택 중과 판정 메뉴 슬롯 — 입력은 위 `formData`를 함께 쓴다 */
+  surcharge: SurchargeJudgmentSlot;
 }
 
 export interface OneHouseJudgmentActions {
@@ -39,11 +62,16 @@ export interface OneHouseJudgmentActions {
   updateFormData: (patch: Partial<OneHouseJudgmentFormData>) => void;
   /** @param clientId 판정을 **요청한 시점**의 의뢰인. 응답 도착 시점의 값이 아니다. */
   setResult: (result: OneHouseExemptionResponse | null, clientId?: string | null) => void;
-  /** 다른 의뢰인의 결과를 비우고 1단계로 — 입력(formData)은 유지한다. */
+  /** 다른 의뢰인의 결과를 비우고 1단계로 — 입력(formData)은 유지한다. 결과가 있는 메뉴(1주택·중과)만 비운다. */
   discardResultForClientChange: () => void;
   setError: (error: string | null) => void;
   setLoading: (isLoading: boolean) => void;
   reset: () => void;
+  setSurchargeStep: (step: number) => void;
+  /** @param clientId 판정을 **요청한 시점**의 의뢰인 */
+  setSurchargeResult: (result: MultiHouseSurchargeJudgmentResponse | null, clientId?: string | null) => void;
+  setSurchargeError: (error: string | null) => void;
+  setSurchargeLoading: (isLoading: boolean) => void;
 }
 
 type OneHouseJudgmentStore = OneHouseJudgmentState & OneHouseJudgmentActions;
@@ -57,19 +85,32 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
       resultClientId: null,
       error: null,
       isLoading: false,
+      surcharge: createInitialSurchargeSlot(),
 
       setStep: (currentStep) => set({ currentStep }),
       /**
        * 🔴 입력이 바뀌면 결과를 **무효화**한다.
        * 남겨 두면 ④ 화면이 옛 판정을 계속 보여준다
-       * (`feedback_store_update_must_invalidate_result`).
+       * (`feedback_store_update_must_invalidate_result`). 입력을 함께 쓰는 중과 판정 결과도 **같은 `set`** 에서 비운다
+       * (단계·오류는 그대로).
        */
       updateFormData: (patch) =>
-        set((state) => ({ formData: { ...state.formData, ...patch }, result: null, resultClientId: null })),
+        set((state) => ({
+          formData: { ...state.formData, ...patch },
+          result: null,
+          resultClientId: null,
+          surcharge: { ...state.surcharge, result: null, resultClientId: null },
+        })),
       setResult: (result, clientId = null) =>
         set({ result, resultClientId: result ? clientId : null }),
+      /** 결과가 있는 메뉴만 비우고 1단계로 — 다른 메뉴가 입력 도중이면 그 단계는 둔다(아래 구독의 「결과가 있을 때만」과 같은 원칙). */
       discardResultForClientChange: () =>
-        set({ result: null, resultClientId: null, currentStep: 0, error: null, isLoading: false }),
+        set((state) => ({
+          ...(state.result !== null
+            ? { result: null, resultClientId: null, currentStep: 0, error: null, isLoading: false }
+            : {}),
+          ...(state.surcharge.result !== null ? { surcharge: createInitialSurchargeSlot() } : {}),
+        })),
       setError: (error) => set({ error }),
       setLoading: (isLoading) => set({ isLoading }),
       reset: () =>
@@ -80,7 +121,13 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
           resultClientId: null,
           error: null,
           isLoading: false,
+          surcharge: createInitialSurchargeSlot(),
         }),
+      setSurchargeStep: (currentStep) => set((state) => ({ surcharge: { ...state.surcharge, currentStep } })),
+      setSurchargeResult: (result, clientId = null) =>
+        set((state) => ({ surcharge: { ...state.surcharge, result, resultClientId: result ? clientId : null } })),
+      setSurchargeError: (error) => set((state) => ({ surcharge: { ...state.surcharge, error } })),
+      setSurchargeLoading: (isLoading) => set((state) => ({ surcharge: { ...state.surcharge, isLoading } })),
     }),
     {
       name: "one-house-judgment-wizard",
@@ -104,6 +151,7 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
         state.currentStep = 0;
         state.result = null;
         state.resultClientId = null;
+        state.surcharge = createInitialSurchargeSlot();
         // 이력 재개(`HistoryClient`·`HistoryDetailDrawer`)와 **같은 leaf**를 쓴다.
         state.formData = normalizeOneHouseJudgmentForm(
           state.formData as unknown as Record<string, unknown>,
@@ -123,7 +171,8 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
  */
 useProfessionalStore.subscribe((state, prev) => {
   if (state.activeClientId === prev.activeClientId) return;
-  if (useOneHouseJudgmentStore.getState().result !== null) {
+  const { result, surcharge } = useOneHouseJudgmentStore.getState();
+  if (result !== null || surcharge.result !== null) {
     useOneHouseJudgmentStore.getState().discardResultForClientChange();
   }
 });
