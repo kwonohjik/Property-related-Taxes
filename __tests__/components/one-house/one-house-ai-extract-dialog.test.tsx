@@ -43,6 +43,8 @@ const data: OneHouseAiExtractData = {
   sourceCitations: [
     { kind: "statute", raw: "소득세법 시행령 제155조 제20항", status: "not_found", basis: "current", note: "현행에 없음 — 과거 조문일 수 있음" },
     { kind: "statute", raw: "소득세법 시행령(2020-02-11 개정 전) 제155조 제20항", status: "found", basis: "cited_era", url: "https://www.law.go.kr/y" },
+    { kind: "statute", raw: "소득세법 제104조", status: "unchecked", url: "https://www.law.go.kr/z" },
+    { kind: "doc", raw: "서면-2020-부동산-1234", status: "unchecked" },
     { kind: "doc", raw: "서면-2016-부동산-2944", status: "found", docNo: "서면-2016-부동산-2944[부동산납세과-425]", url: "https://taxlaw.nts.go.kr/qt/x" },
   ],
   model: "claude-opus-5-5",
@@ -91,6 +93,13 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
     const cites = screen.getByTestId("one-house-ai-source-citations").textContent ?? "";
     expect(cites).toContain("원문 속 인용 대조 3건");
     expect(cites).toContain("소득세법 시행령(2020-02-11 개정 전) 제155조 제20항 — 확인됨 (인용된 옛 시행본)");
+    // 확인 상한을 넘은 인용은 따로 — 버리지 않고 링크·문서번호를 보여 준다
+    expect(cites).toContain("원문 속 인용 대조 3건 · 직접 확인할 인용 2건");
+    const unchecked = screen.getByTestId("one-house-ai-source-citations-unchecked");
+    expect(unchecked.textContent).toContain("직접 확인하세요");
+    expect(unchecked.textContent).toContain("소득세법 제104조");
+    expect(unchecked.textContent).toContain("서면-2020-부동산-1234");
+    expect(unchecked.querySelector("a")?.getAttribute("href")).toBe("https://www.law.go.kr/z");
     expect(cites).toContain("소득세법 시행령 제155조 제20항 — 찾지 못함 (현행 기준) · 현행에 없음 — 과거 조문일 수 있음");
     expect(cites).toContain("서면-2016-부동산-2944 — 확인됨");
     expect(screen.getByTestId("one-house-ai-law-lookups").textContent).toContain("소득세법 시행령 제154조 (현행)");
