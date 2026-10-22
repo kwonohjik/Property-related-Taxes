@@ -60,7 +60,7 @@ const DECISIVE_STEP: Record<DecisionStage, NarrativeStepId> = {
 /** 엔진이 ④ 배제 판정까지 간 단계 */
 const REACHED_EXCLUSION: ReadonlySet<DecisionStage> = new Set(["only_one_remaining", "excluded", "suspended", "surcharged"]);
 
-const REGION_REASON_TEXT: Record<Exclude<RegionCriteriaReason, "no_code">, string> = {
+export const REGION_REASON_TEXT: Record<Exclude<RegionCriteriaReason, "no_code">, string> = {
   eup_myeon: "읍·면 지역이라",
   seoul: "서울특별시라",
   capital_city: "수도권(경기도) 시의 동 지역이라",
