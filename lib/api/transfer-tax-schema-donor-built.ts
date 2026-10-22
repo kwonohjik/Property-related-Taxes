@@ -5,10 +5,12 @@
  *
  * 이 객체는 **단건 인라인 shape(`transfer-tax-schema-base-shape.ts`)과 엔진 shape(`carryoverTaxationEngineShape` — 컴패니언·GB 파트)가
  * 함께 쓴다.** 한쪽에만 두면 다른 쪽에서 **침묵 strip**된다(400이 아니라 200 + 가산세 0).
- * 토지·건물 파트 이월과세(P1~P6 wire — `splitCarryoverPartShape`·`carryoverPartShape`)와 GB 파트(`landCarryoverTaxation`·`buildingCarryoverTaxation`)는
- * 이 PR 범위 밖이라 **명시 거부**한다(`rejectDonorBuiltRefine`) — 받아 놓고 무시하면 침묵 오답이다.
+ * GB 파트(`landCarryoverTaxation`·`buildingCarryoverTaxation`)·일반건물 `carryoverPartShape`와 split **토지 파트**(`splitCarryoverPartShape`)는
+ * 범위 밖이라 **명시 거부**한다(`rejectDonorBuiltRefine`·`donorBuiltRejectedKey`) — 받아 놓고 무시하면 침묵 오답이다.
+ * split **건물 파트**(`buildingCarryoverPart`)는 PR-3 부터 수용한다 — `lib/api/transfer-tax-schema-split-carryover.ts`의 `splitCarryoverBuildingPartShape`.
  */
 import { z } from "zod";
+import { toDate } from "./date-coerce";
 
 const positiveInt = z.number().int().positive();
 
@@ -48,6 +50,18 @@ export const donorBuiltShape = z.object({
 
 export type DonorBuiltWire = z.infer<typeof donorBuiltShape>;
 
+/**
+ * 부담부증여(§159) × 이월과세의 «당초 증여자 신축·증축»(PR-4) — `burdenedGiftInfo.carryoverDonorBasis.donorBuilt`.
+ * 일체 주택 안분(`housing`)은 받지 않는다(§159가 토지·건물을 자산별로 따로 구한다) — 받으면 조용히 strip 되므로 `.strict()`로 400.
+ *
+ * ⑭ Date 변환을 **스키마가 한다**(`constructionDate` transform) — `burdenedGiftInfo`는 단건·컴패니언·번들 안분·일반건물 route 여러 곳으로 객체째 흘러가
+ * 지점마다 변환을 두면 한 곳만 빠져도 `Date < string` 침묵 false 가 난다(`lib/api/date-coerce.ts`). 파싱 결과가 곧 엔진 입력 타입이다.
+ */
+export const bgDonorBuiltShape = donorBuiltShape
+  .omit({ housing: true })
+  .extend({ constructionDate: z.string().date().transform((v) => toDate(v, "burdenedGiftInfo.carryoverDonorBasis.donorBuilt.constructionDate")) })
+  .strict();
+
 type CtLike = {
   donorAcquisitionDate: string;
   giftRegistryDate: string;
@@ -75,7 +89,7 @@ export function refineDonorBuiltInCarryover(ct: CtLike, ctx: z.RefinementCtx): v
   }
 }
 
-/** 파트·GB 파트 wire 에서 `donorBuilt` 를 받으면 거부 — 아직 계산에 쓰이지 않으므로 침묵 무시 대신 400 */
+/** GB 파트 wire 에서 `donorBuilt` 를 받으면 거부 — 아직 계산에 쓰이지 않으므로 침묵 무시 대신 400 */
 export function rejectDonorBuiltRefine(ct: { donorBuilt?: unknown }, ctx: z.RefinementCtx): void {
   if (ct.donorBuilt !== undefined)
     ctx.addIssue({
@@ -85,7 +99,7 @@ export function rejectDonorBuiltRefine(ct: { donorBuilt?: unknown }, ctx: z.Refi
     });
 }
 
-/** 파트 wire(`z.object`)에 두는 거부용 키 — 값이 있으면 어떤 값이든 거부된다 */
+/** 거부용 키(일반건물 파트·split 토지 파트) — 값이 있으면 어떤 값이든 거부된다 */
 export const donorBuiltRejectedKey = z
   .any()
   .optional()
@@ -103,6 +117,49 @@ type OuterLike = {
   carryoverTaxation?: { donorBuilt?: z.infer<typeof donorBuiltShape> } | null;
 };
 
+type BgOuterLike = {
+  transferType?: string;
+  acquisitionCause?: string;
+  propertyType?: string;
+  isSelfBuilt?: boolean;
+  mixedUse?: unknown;
+  burdenedGiftInfo?: {
+    valuationMode?: string;
+    acquisitionMethod?: string;
+    carryoverDonorBasis?: { donorBuilt?: z.infer<typeof bgDonorBuiltShape> };
+  };
+  carryoverTaxation?: { donorAcquisitionDate?: string; giftRegistryDate?: string } | null;
+};
+
+/**
+ * 부담부증여 × 증여자 신축·증축 값 검사 (⑫) — 엔진 `assertBgDonorBuiltInput`·⑧ `validateDonorBuiltBg`와 같은 조건(UI 통과 ⇒ ⑫ 통과).
+ * 환산(K-5)·감정(K-7)만 가산세 대상이고, 양도인 본인 신축(`isSelfBuilt`)과는 다른 축이라 함께 받지 않는다.
+ */
+export function refineBgDonorBuilt(data: BgOuterLike, ctx: z.RefinementCtx): void {
+  const db = data.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt;
+  if (!db) return;
+  const issue = (path: (string | number)[], message: string) =>
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["burdenedGiftInfo", "carryoverDonorBasis", "donorBuilt", ...path], message });
+  if (data.transferType !== "burdened_gift") issue([], "증여자 신축·증축 정보는 부담부증여에서만 burdenedGiftInfo 로 보낼 수 있습니다");
+  if (data.acquisitionCause !== "carryover_gift") issue([], "증여자 신축·증축 정보는 취득 원인이 이월과세(증여)일 때만 보낼 수 있습니다");
+  const method = data.burdenedGiftInfo?.acquisitionMethod;
+  if (data.burdenedGiftInfo?.valuationMode !== "sangjeungbeop_market" || (method !== "converted" && method !== "appraisal"))
+    issue([], "부담부증여의 증여자 신축·증축 가산세는 시가 모드의 취득가액 산정방식이 환산취득가액(K-5) 또는 감정가액(K-7)일 때만 적용됩니다");
+  if (data.propertyType !== "housing" && data.propertyType !== "building") issue([], "증여자 신축·증축 가산세는 주택·건물에만 적용됩니다");
+  if (data.mixedUse) issue([], "겸용주택 부담부증여는 증여자 신축·증축 가산세를 아직 지원하지 않습니다");
+  if (data.isSelfBuilt === true)
+    issue([], "부담부증여에서 양도인 본인 신축(isSelfBuilt)과 당초 증여자 신축(donorBuilt)은 다른 축입니다 — 함께 보낼 수 없습니다");
+  const ct = data.carryoverTaxation;
+  const built = db.constructionDate.toISOString().slice(0, 10); // 스키마 transform 이 Date 로 바꿨다 — ISO 일자 문자열로 되돌려 비교한다
+  if ((ct?.donorAcquisitionDate && built < ct.donorAcquisitionDate) || (ct?.giftRegistryDate && built > ct.giftRegistryDate))
+    issue(["constructionDate"], "증여자의 신축·증축일은 증여자 취득일 이후, 증여 등기접수일 이전이어야 합니다");
+  if (db.buildingType === "extension") {
+    if (!db.extensionFloorArea) issue(["extensionFloorArea"], "증축은 바닥면적 합계가 필요합니다 (85㎡ 초과만 대상)");
+    if (method === "converted" && !db.extensionStdPriceAtAcquisition)
+      issue(["extensionStdPriceAtAcquisition"], "증축 환산(K-5) 가산세는 증축 부분의 증여자 취득(완공) 당시 기준시가가 필요합니다");
+  }
+}
+
 /** 자산 종류·취득원인 의존 규칙 — 단건 `addPropertyRefines`가 호출한다. */
 export function refineDonorBuiltOuter(data: OuterLike, ctx: z.RefinementCtx): void {
   const db = data.carryoverTaxation?.donorBuilt;
@@ -116,7 +173,8 @@ export function refineDonorBuiltOuter(data: OuterLike, ctx: z.RefinementCtx): vo
   if (data.preHousingDisclosure)
     issue([], "개별주택가격·공동주택가격 최초공시 전 환산과 함께 쓸 수 없습니다 — 일반 기준시가 환산을 선택하세요");
   if (data.landAcquisitionDate) issue([], "토지·건물을 나눠 계산하는 자산은 아직 지원하지 않습니다");
-  if (data.transferType === "burdened_gift" || data.burdenedGiftInfo) issue([], "부담부증여의 이월과세는 아직 지원하지 않습니다");
+  if (data.transferType === "burdened_gift" || data.burdenedGiftInfo)
+    issue([], "부담부증여의 증여자 신축·증축은 burdenedGiftInfo.carryoverDonorBasis.donorBuilt 로 보냅니다 — 이월과세 서브객체로는 받지 않습니다");
   if (data.propertyType === "housing") {
     if (!db.housing)
       issue(["housing"], "일체 주택은 건물분만 가산세 대상이라 개별주택가격을 토지·건물 기준시가 비율로 나누는 입력이 필요합니다");

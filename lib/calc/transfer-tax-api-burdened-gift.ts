@@ -23,6 +23,7 @@ import {
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { bgPresumedInputKind, isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { selfBuiltActive } from "./self-built-scope";
+import { buildDonorBuiltBgExtensionAppraisal, buildDonorBuiltBgPayload, type BgDonorBuiltPayload } from "./transfer-tax-api-donor-built-bg";
 import {
   isMixedBurdenedGift,
   mixedAcqStdTotal,
@@ -118,6 +119,8 @@ export interface BurdenedGiftInfoPayload {
     presumedLandAcquisitionPrice?: number;
     presumedBuildingAcquisitionPrice?: number;
     presumedAcquisitionTotal?: number;
+    /** 당초 증여자가 신축·증축한 건물(§114조의2 가산세, PR-4) — 토글 ON + K-5/K-7 일 때만 */
+    donorBuilt?: BgDonorBuiltPayload;
   };
 }
 
@@ -152,6 +155,11 @@ function buildCarryoverDonorBasis(
     actualAcquisitionTotal: num(primary.bgCoDonorActualAcquisitionTotal),
     marketValueAtAcquisition: num(primary.bgCoDonorMarketValueAtAcquisition),
     ...buildCoDonorPresumed(primary),
+    // 당초 증여자 신축·증축(§114조의2, PR-4) — 토글 ON + 환산(K-5)·감정(K-7)일 때만. 양도인 본인 신축(`isSelfBuilt`)과 다른 축이다.
+    ...(() => {
+      const donorBuilt = buildDonorBuiltBgPayload(primary);
+      return donorBuilt ? { donorBuilt } : {};
+    })(),
   };
 }
 
@@ -199,6 +207,15 @@ function buildExtensionAppraisal(
     return {};
   }
   return { presumedExtensionAppraisalValue: parseAmount(primary.bgPresumedExtensionAppraisal) };
+}
+
+/**
+ * K-7 × **당초 증여자** 증축 — 증축한 부분의 감정가액(§114조의2① 가산세 base, PR-4). 양도인 본인 신축 축(`buildExtensionAppraisal`)과 상호배타다 —
+ * 이월과세 취득원인에서는 `selfBuiltActive`가 꺼져 위 함수가 비고, 이쪽은 `donorBuiltBgActive`(= 이월과세 + 당초 증여자 신축 토글)일 때만 값을 싣는다.
+ */
+function donorBuiltExtensionAppraisal(primary: AssetForm): Pick<BurdenedGiftInfoPayload, "presumedExtensionAppraisalValue"> {
+  const v = buildDonorBuiltBgExtensionAppraisal(primary);
+  return v === undefined ? {} : { presumedExtensionAppraisalValue: v };
 }
 
 /**
@@ -319,6 +336,7 @@ export function buildBurdenedGiftInfo(
      */
     ...buildPresumedAcquisition(primary),
     ...buildExtensionAppraisal(primary),
+    ...donorBuiltExtensionAppraisal(primary),
     // 증여재산 평가용 건물 기준시가 (층별 가감율 적용 — 미입력 시 양도세용 값 fallback)
     giftBuildingStdPriceAtTransfer: primary.bgGiftBuildingStdPriceAtTransfer
       ? parseAmount(primary.bgGiftBuildingStdPriceAtTransfer)

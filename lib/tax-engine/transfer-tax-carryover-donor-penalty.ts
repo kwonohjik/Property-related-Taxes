@@ -23,12 +23,15 @@ import { TRANSFER } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { calculateEstimatedAcquisitionPrice } from "./tax-utils";
 import { apportionByStdPrice } from "./std-price-apportion";
-import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
+import { calculateBuildingPenalty, splitExtensionPenaltyBase } from "./transfer-tax-building-penalty";
 import { resolveTransferPriceSplit } from "./transfer-tax-split-sale-price";
 import { calcLandStdPriceAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
+import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxInput } from "./types/transfer.types";
+import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type {
   CarryoverTaxationDetail,
+  CarryoverTaxationInput,
   DonorBuiltInput,
   DonorBuiltPenaltyEcho,
 } from "./types/transfer-carryover.types";
@@ -42,6 +45,32 @@ function invalid(message: string, field: string): never {
   throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, message, { field });
 }
 
+/** 신축·증축일 범위와 증축 필수 칸 — 자산 전체(`carryoverTaxation.donorBuilt`)와 split 건물 파트가 같은 규칙을 쓴다. */
+function assertDonorBuiltDatesAndExtension(
+  db: DonorBuiltInput,
+  ct: Pick<Ct, "donorAcquisitionDate" | "giftRegistryDate">,
+  field: string,
+  /** 증축 부분 기준시가가 필요한가 — 환산(K-5)·일반 환산은 필요, 부담부증여 감정(K-7)은 증축 부분 **감정가액**(`burdenedGiftInfo`)이 대신한다 */
+  needExtensionStd = true,
+): void {
+  const law = TRANSFER.BUILDING_PENALTY;
+  const t = db.constructionDate.getTime();
+  if (!(t >= ct.donorAcquisitionDate.getTime()) || !(t <= ct.giftRegistryDate.getTime()))
+    invalid(
+      `증여자의 신축·증축일은 증여자 취득일 이후, 증여 등기접수일 이전이어야 합니다 (${TRANSFER.CARRYOVER_DONOR_BASIS}).`,
+      `${field}.constructionDate`,
+    );
+  if (db.buildingType === "extension") {
+    if (!positive(db.extensionFloorArea))
+      invalid(`증축한 건물의 가산세(${law})는 증축 바닥면적 합계가 필요합니다 (85㎡ 초과만 대상).`, `${field}.extensionFloorArea`);
+    if (needExtensionStd && !positive(db.extensionStdPriceAtAcquisition))
+      invalid(
+        `증축 가산세(${law})의 기준은 「증축한 부분에 한정한」 환산취득가액이라 증축 부분의 증여자 취득(완공) 당시 기준시가가 필요합니다.`,
+        `${field}.extensionStdPriceAtAcquisition`,
+      );
+  }
+}
+
 /**
  * 입력 거부 — **조용히 무시하지 않는다.** `donorBuilt`가 있는데 계산에 닿을 수 없는 조합이면 던진다(⑧·⑫와 같은 규칙, 직접 호출 방어선).
  * 이월과세가 적용배제되더라도(입력 수준 오류) 같다 — 입력이 모순이면 시나리오 판정과 무관하게 막는다.
@@ -51,6 +80,11 @@ export function assertDonorBuiltInput(rawInput: TransferTaxInput, ct: Ct): void 
   if (!db) return;
   const law = TRANSFER.BUILDING_PENALTY;
 
+  if (rawInput.transferType === "burdened_gift" || rawInput.burdenedGiftInfo)
+    invalid(
+      `부담부증여의 증여자 신축·증축 가산세(${law})는 burdenedGiftInfo.carryoverDonorBasis.donorBuilt 로 보냅니다 — 이월과세 서브객체(carryoverTaxation.donorBuilt)로는 받지 않습니다.`,
+      "carryoverTaxation.donorBuilt",
+    );
   if (ct.useEstimatedAcquisition !== true)
     invalid(
       `증여자가 신축·증축한 건물의 가산세(${law})는 증여자 취득가액을 환산취득가액으로 계산할 때만 적용됩니다 — 실지거래가액 승계에는 보낼 수 없습니다.`,
@@ -68,28 +102,8 @@ export function assertDonorBuiltInput(rawInput: TransferTaxInput, ct: Ct): void 
       `토지·건물을 나눠 계산하는 자산의 증여자 신축·증축 가산세(${law})는 아직 지원하지 않습니다.`,
       "carryoverTaxation.donorBuilt",
     );
-  if (rawInput.transferType === "burdened_gift" || rawInput.burdenedGiftInfo)
-    invalid(
-      `부담부증여의 이월과세에서 증여자 신축·증축 가산세(${law})는 아직 지원하지 않습니다.`,
-      "carryoverTaxation.donorBuilt",
-    );
 
-  const t = db.constructionDate.getTime();
-  if (!(t >= ct.donorAcquisitionDate.getTime()) || !(t <= ct.giftRegistryDate.getTime()))
-    invalid(
-      `증여자의 신축·증축일은 증여자 취득일 이후, 증여 등기접수일 이전이어야 합니다 (${TRANSFER.CARRYOVER_DONOR_BASIS}).`,
-      "carryoverTaxation.donorBuilt.constructionDate",
-    );
-
-  if (db.buildingType === "extension") {
-    if (!positive(db.extensionFloorArea))
-      invalid(`증축한 건물의 가산세(${law})는 증축 바닥면적 합계가 필요합니다 (85㎡ 초과만 대상).`, "carryoverTaxation.donorBuilt.extensionFloorArea");
-    if (!positive(db.extensionStdPriceAtAcquisition))
-      invalid(
-        `증축 가산세(${law})의 기준은 「증축한 부분에 한정한」 환산취득가액이라 증축 부분의 증여자 취득(완공) 당시 기준시가가 필요합니다.`,
-        "carryoverTaxation.donorBuilt.extensionStdPriceAtAcquisition",
-      );
-  }
+  assertDonorBuiltDatesAndExtension(db, ct, "carryoverTaxation.donorBuilt");
 
   if (rawInput.propertyType === "housing") {
     const h = db.housing;
@@ -155,7 +169,11 @@ function housingBase(
 export function withDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetail; adoptedInput: TransferTaxInput }>(
   rawInput: TransferTaxInput,
   result: R,
+  /** 부담부증여 — 채택 입력으로 §159 본 계산을 한 번 더 돌려 echo 의 base·가산세를 **실제 값**으로 읽는다(재계산·표시 드리프트 없음) */
+  bg?: { rates: TaxRatesMap; calculate: (input: TransferTaxInput, rates: TaxRatesMap) => { penaltyBase?: number; penaltyTax?: number } },
 ): R {
+  const bgDonorBuilt = bgDonorBuiltOf(rawInput);
+  if (bgDonorBuilt) return withBgDonorBuiltPenalty(rawInput, result, bgDonorBuilt, bg);
   const db = rawInput.carryoverTaxation?.donorBuilt;
   if (!db) return result;
   const { detail, adoptedInput } = result;
@@ -233,6 +251,182 @@ export function withDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetai
         penalty,
         ...(housingSplit ? { housingSplit } : {}),
         ...(formula ? { formula } : {}),
+      },
+    },
+  };
+}
+
+// ─── split 파트(P6) — 건물 파트 이월과세 × 증여자 신축·증축 ───────────────────────────────────────────
+
+/**
+ * 입력 거부(split 파트) — 토지 파트는 가산세 대상이 아니다(건물분만, D4). 건물 파트는 환산 입력(`useEstimatedAcquisition`)일 때만.
+ * 주택 일체 안분은 필요 없다 — 파트별 기준시가가 이미 토지·건물로 나뉘어 있다.
+ */
+export function assertDonorBuiltPartInput(rawInput: TransferTaxInput, key: "land" | "building", ct: CarryoverTaxationInput): void {
+  const db = ct.donorBuilt;
+  if (!db) return;
+  const law = TRANSFER.BUILDING_PENALTY;
+  const field = `${key}CarryoverPart.donorBuilt`;
+  if (key === "land")
+    invalid(`토지 파트에는 증여자 신축·증축 가산세(${law})를 적용하지 않습니다 — 가산세는 건물분만 대상입니다.`, field);
+  if (ct.useEstimatedAcquisition !== true)
+    invalid(
+      `증여자가 신축·증축한 건물의 가산세(${law})는 증여자 취득가액을 환산취득가액으로 계산할 때만 적용됩니다 — 실지거래가액 승계에는 보낼 수 없습니다.`,
+      field,
+    );
+  if (rawInput.propertyType !== "housing" && rawInput.propertyType !== "building")
+    invalid(`증여자 신축·증축 가산세(${law})는 주택·건물에만 적용됩니다.`, field);
+  if (rawInput.preHousingDisclosure)
+    invalid(
+      `증여자 신축·증축 가산세(${law})는 개별주택가격·공동주택가격 최초공시 전 환산(${TRANSFER.PRE_HOUSING_DISCLOSURE_APPORTION})과 함께 쓸 수 없습니다 — 신축 후 5년 이내 양도 건물은 최초공시 이후 취득입니다.`,
+      field,
+    );
+  if (rawInput.transferType === "burdened_gift" || rawInput.burdenedGiftInfo)
+    invalid(`부담부증여의 이월과세에서 증여자 신축·증축 가산세(${law})는 아직 지원하지 않습니다.`, field);
+  assertDonorBuiltDatesAndExtension(db, ct, field);
+}
+
+/** 채택(A) 입력에 싣는 §114조의2 게이트 입력 — finalize·손실 조기반환이 `effectiveInput`에서 읽는다(`penaltyAxis`는 split 건물 파트 축이 따로 낸다). */
+export function donorBuiltPartPatch(db: DonorBuiltInput): Partial<TransferTaxInput> {
+  return {
+    isSelfBuilt: true,
+    penaltyDonorBuilt: true,
+    buildingType: db.buildingType,
+    constructionDate: db.constructionDate,
+    extensionFloorArea: db.extensionFloorArea,
+    extensionStdPriceAtAcquisition: db.extensionStdPriceAtAcquisition,
+  };
+}
+
+/** 가산세가 붙지 않은 이유 echo — 입력 머리(신축·증축 구분, 신축일)만 싣는다. */
+export function donorBuiltNotAppliedEcho(
+  db: DonorBuiltInput,
+  reason: NonNullable<DonorBuiltPenaltyEcho["notAppliedReason"]>,
+  extra?: Partial<DonorBuiltPenaltyEcho>,
+): DonorBuiltPenaltyEcho {
+  return { applied: false, notAppliedReason: reason, buildingType: db.buildingType, constructionDate: ymd(db.constructionDate), ...extra };
+}
+
+/**
+ * A 채택 건물 파트의 가산세 echo — 패치가 실린 채택 입력(`patched`)과 그 입력으로 낸 건물 파트 결과(`part`)에서 읽는다.
+ * base 는 엔진 finalize 와 **같은 함수**(`splitExtensionPenaltyBase`)가 구한 값이다 — 신축은 건물 파트 환산취득가액, 증축은 증축 부분 환산.
+ * 게이트(5년·시행일·증축 85㎡)가 닫히면 `outside_penalty_window`.
+ */
+export function donorBuiltPartAppliedEcho(db: DonorBuiltInput, patched: TransferTaxInput, part: SplitPartResult): DonorBuiltPenaltyEcho {
+  const fifth = ymd(addYears(db.constructionDate, 5));
+  const gateInput: TransferTaxInput = { ...patched, acquisitionMethod: "estimated" };
+  if (calculateBuildingPenalty(gateInput, 1) === null) return donorBuiltNotAppliedEcho(db, "outside_penalty_window", { fifthAnniversary: fifth });
+  let formula: DonorBuiltPenaltyEcho["formula"];
+  if (db.buildingType === "extension") {
+    // 분모(양도 당시 건물 기준시가)는 환산 파트의 필수 입력이라 비면 엔진이 이미 던졌다(`splitCarryoverBasis` 경로) — 여기서는 항상 양수다.
+    formula = { multiplicand: part.transferPrice, numerator: db.extensionStdPriceAtAcquisition!, denominator: part.stdPriceAtTransfer! };
+  }
+  const base = splitExtensionPenaltyBase(gateInput, "estimated", part);
+  const penalty = calculateBuildingPenalty(gateInput, base)!.penalty;
+  return {
+    applied: true,
+    buildingType: db.buildingType,
+    constructionDate: ymd(db.constructionDate),
+    fifthAnniversary: fifth,
+    base,
+    penalty,
+    ...(formula ? { formula } : {}),
+  };
+}
+
+// ─── 부담부증여(§159) × 이월과세 — 당초 증여자 신축·증축 (PR-4) ─────────────────────────────────────────────
+
+/** 부담부증여의 `burdenedGiftInfo.carryoverDonorBasis.donorBuilt` — 입력이 없으면 undefined. */
+export function bgDonorBuiltOf(rawInput: TransferTaxInput): DonorBuiltInput | undefined {
+  // 호출부(`calcCarryoverScenarios`)가 이월과세 취득원인에서만 부른다 — 취득원인은 ⑫(`refineBgDonorBuilt`)가 막는다
+  if (rawInput.transferType !== "burdened_gift") return undefined;
+  return rawInput.burdenedGiftInfo?.carryoverDonorBasis?.donorBuilt;
+}
+
+/** 엔진이 부담부증여 STEP 0.48 에서 읽는 «신축·증축» 입력 — 채택(A) 입력의 사실을 §159 소스 입력으로 옮길 때 쓴다(`transfer-tax-precalc.ts`). */
+export function donorBuiltFactsOf(input: TransferTaxInput): Partial<TransferTaxInput> {
+  return {
+    isSelfBuilt: input.isSelfBuilt,
+    penaltyDonorBuilt: input.penaltyDonorBuilt,
+    buildingType: input.buildingType,
+    constructionDate: input.constructionDate,
+    extensionFloorArea: input.extensionFloorArea,
+    extensionStdPriceAtAcquisition: input.extensionStdPriceAtAcquisition,
+  };
+}
+
+/**
+ * 입력 거부(부담부증여) — 조용히 무시하지 않는다(⑧·⑫와 같은 규칙, 직접 호출 방어선).
+ * 가산세 대상은 **환산(K-5)·감정(K-7)** 뿐이다 — 실지(K-4)·기준시가(K-1~K-3)·매매사례가액(K-6)은 조문(「감정가액 또는 환산취득가액」)에 없다.
+ * 양도인 본인 신축 플래그(`isSelfBuilt`)와는 **다른 축**이라 함께 받지 않는다 — 이중 부과·혼동을 입력 단계에서 막는다.
+ */
+export function assertBgDonorBuiltInput(rawInput: TransferTaxInput, db: DonorBuiltInput): void {
+  const law = TRANSFER.BUILDING_PENALTY;
+  const field = "burdenedGiftInfo.carryoverDonorBasis.donorBuilt";
+  const info = rawInput.burdenedGiftInfo!;
+  const ct = rawInput.carryoverTaxation;
+  if (!ct) invalid(`부담부증여의 증여자 신축·증축 가산세(${law})는 이월과세 취득원인이어야 합니다.`, field);
+  const method = info.acquisitionMethod;
+  if (info.valuationMode !== "sangjeungbeop_market" || (method !== "converted" && method !== "appraisal"))
+    invalid(
+      `부담부증여의 증여자 신축·증축 가산세(${law})는 시가 모드의 취득가액 산정방식이 «환산취득가액»(K-5) 또는 «감정가액»(K-7)일 때만 적용됩니다 — 실지취득가액·기준시가·매매사례가액은 조문의 대상이 아닙니다.`,
+      field,
+    );
+  if (rawInput.propertyType !== "housing" && rawInput.propertyType !== "building")
+    invalid(`증여자 신축·증축 가산세(${law})는 주택·건물에만 적용됩니다.`, field);
+  if (rawInput.mixedUse) invalid(`겸용주택 부담부증여는 증여자 신축·증축 가산세(${law})를 아직 지원하지 않습니다.`, field);
+  if (rawInput.isSelfBuilt === true)
+    invalid(
+      `부담부증여에서 «양도인 본인 신축»(isSelfBuilt)과 «당초 증여자 신축»(donorBuilt)은 다른 축입니다 — 함께 입력할 수 없습니다. 이월과세 취득원인에서 신축·증축한 사람은 당초 증여자입니다.`,
+      field,
+    );
+  assertDonorBuiltDatesAndExtension(db, ct, field, method === "converted");
+}
+
+/**
+ * 부담부증여 A 채택 시 증여자 신축·증축 가산세를 얹는다. B 채택·이월과세 배제는 가산세 없음(R2).
+ *
+ * 채택(A) 입력에 «신축·증축» 사실만 싣는다 — base 는 **기존 §159 step 이 만든다**(`transfer-tax-burdened-gift-step.ts`): K-5 는 채무비율 안분 후 건물 환산취득가
+ * (W-6 단서 전 값, 증축은 증축 부분), K-7 은 안분 후 건물 감정가액(증축은 `presumedExtensionAppraisalValue × 채무비율`). A 입력의 `burdenedGiftInfo`가 이미 당초 증여자
+ * 기준이라 그 base 가 곧 «증여자 기준·건물분»이다(D2·D4). 본인 신축 K-5/K-7 과 같은 규칙이다.
+ */
+function withBgDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetail; adoptedInput: TransferTaxInput }>(
+  rawInput: TransferTaxInput,
+  result: R,
+  db: DonorBuiltInput,
+  bg: Parameters<typeof withDonorBuiltPenalty>[2],
+): R {
+  const { detail, adoptedInput } = result;
+  const notApplied = (reason: NonNullable<DonorBuiltPenaltyEcho["notAppliedReason"]>, extra?: Partial<DonorBuiltPenaltyEcho>): R => ({
+    ...result,
+    detail: { ...detail, donorBuiltPenalty: donorBuiltNotAppliedEcho(db, reason, extra) },
+  });
+  if (!detail.isEligible) return notApplied("carryover_excluded");
+  if (detail.adoptedScenario !== "A") return notApplied("scenario_b");
+  if (!bg) throw new Error("부담부증여 가산세에는 본 계산 함수가 필요합니다(calcCarryoverScenarios 가 넘긴다).");
+
+  const method = rawInput.burdenedGiftInfo!.acquisitionMethod === "appraisal" ? ("appraisal" as const) : ("estimated" as const);
+  const patched: TransferTaxInput = { ...adoptedInput, ...donorBuiltPartPatch(db) };
+  const fifth = ymd(addYears(db.constructionDate, 5));
+  if (calculateBuildingPenalty({ ...patched, acquisitionMethod: method }, 1) === null)
+    return notApplied("outside_penalty_window", { fifthAnniversary: fifth });
+  // 채택 입력으로 본 계산과 **같은 입력**을 한 번 더 돌려 base·가산세를 읽는다(§159 안분·W-6 단서·증축 안분을 재구현하지 않는다)
+  const probe = bg.calculate(patched, bg.rates);
+  const base = probe.penaltyBase ?? 0;
+  if (!(base > 0)) return notApplied("zero_base", { fifthAnniversary: fifth });
+  return {
+    ...result,
+    adoptedInput: patched,
+    detail: {
+      ...detail,
+      donorBuiltPenalty: {
+        applied: true,
+        buildingType: db.buildingType,
+        constructionDate: ymd(db.constructionDate),
+        fifthAnniversary: fifth,
+        base,
+        penalty: probe.penaltyTax ?? 0,
+        burdenedGift: { method },
       },
     },
   };

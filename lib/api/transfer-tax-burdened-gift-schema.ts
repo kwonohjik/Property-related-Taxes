@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import { bgDonorBuiltShape } from "./transfer-tax-schema-donor-built";
 
 export const burdenedGiftInfoSchema = z.object({
   /** 양도(증여)시 평가 모드. */
@@ -76,6 +77,8 @@ export const burdenedGiftInfoSchema = z.object({
       presumedLandAcquisitionPrice: z.number().int().nonnegative().optional(),
       presumedBuildingAcquisitionPrice: z.number().int().nonnegative().optional(),
       presumedAcquisitionTotal: z.number().int().nonnegative().optional(),
+      /** 당초 증여자가 신축·증축한 건물(§114조의2 가산세, PR-4) — K-5·K-7 + 이월과세 A 채택일 때만 가산세. 양도인 본인 신축(`isSelfBuilt`)과 다른 축이다 */
+      donorBuilt: bgDonorBuiltShape.optional(),
     })
     .optional(),
   /**

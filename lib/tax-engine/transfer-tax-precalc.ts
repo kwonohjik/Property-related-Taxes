@@ -36,6 +36,7 @@ import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
 import { calcCarryoverScenarios, resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover";
 import { donorBuiltPenaltyNotice } from "./transfer-tax-carryover-donor-display";
+import { donorBuiltFactsOf } from "./transfer-tax-carryover-donor-penalty";
 import {
   calcSplitCarryoverScenarios,
   splitCarryoverStepLines,
@@ -171,6 +172,9 @@ export function runPreCalculationSteps(
     splitCarryover = splitCarryoverResult.detail;
     workingInput = splitCarryoverResult.adoptedInput;
     for (const line of splitCarryoverStepLines(splitCarryoverResult.detail)) steps.push({ ...line, amount: 0 });
+    // §114조의2 증여자 신축·증축(건물 파트) — 적용/미적용 안내를 경고 목록에도 싣는다(입력이 없으면 undefined)
+    const splitDonorBuiltNotice = donorBuiltPenaltyNotice(splitCarryoverResult.detail.building?.donorBuiltPenalty);
+    if (splitDonorBuiltNotice) warnings.push(splitDonorBuiltNotice);
   }
   // STEP 0.475: 배우자등 이월과세 §97조의2 (carryoverTaxation 없으면 skip, 재귀 시 자동 skip)
   let carryoverDetail: CarryoverTaxationDetail | undefined;
@@ -233,6 +237,8 @@ export function runPreCalculationSteps(
         burdenedGiftInfo: workingInput.burdenedGiftInfo,
         capitalExpenditure: workingInput.capitalExpenditure,
         transferExpense: workingInput.transferExpense,
+        // 부담부증여 × 이월과세 × 증여자 신축·증축(PR-4) — 채택(A) 입력의 «신축·증축» 사실을 §159 step 이 읽게 한다(K-5/K-7 가산세 base 를 step 이 만든다).
+        ...(workingInput.penaltyDonorBuilt && rawInput.transferType === "burdened_gift" ? donorBuiltFactsOf(workingInput) : {}),
       }
     : rawInput;
   const bgStep = runBurdenedGiftStep(bgSourceInput, workingInput, steps);

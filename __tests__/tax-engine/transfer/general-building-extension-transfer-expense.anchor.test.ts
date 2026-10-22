@@ -181,19 +181,41 @@ describe("W-1b — 전용 필드 입력(① 채택) 시 양도비가 나목에 �
  *   조합 C·D의 반대 단언은 바로 아래 describe가 맡는다.
  * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §4 D-10
  */
-describe("W-1b — 원건물 실가 + 전용 필드 미입력(② 채택) 시 제외가 정본", () => {
-  it("🔴 bundledExpenses가 곧 양도비다 — 나목에 또 넣지 않는다", () => {
-    const r = calc(gbExtAssetOriginActual());
-    expect(r.bundledExpenses).toBe(TRANSFER_EXP);
-    expect(r.directSide).toBe(CAPEX);
+/**
+ * 🔄 **2026-10-22 E-1 — 원건물 실가는 「제외」도 「증축분 단서 비교」도 아니다**(`docs/00-pm/gb-extension-actual-expenses.plan.md` §5.1 · Q-7 a).
+ *
+ * 양도비는 일괄 슬롯에 들어가지 않고(사슬에서 ② 제거), 자본적지출·양도비는 실가 파트(토지·원건물)에 §97②1호로 **가산**된다
+ * (엔진 진입 파트 축 · 자산 단위 자본적지출은 취득시 기준시가 안분). 증축분(환산)은 개산공제만이다 — §97②2호 단서는 「자산별」
+ * 비교라 원건물 지출을 증축분 나목에 넣을 근거가 없다. 종전에는 자산 전체 나목을 증축분 카드의 단서 비교에 넣어
+ * 증축분에서 큰 차손이 나고 그 차손이 장특 뒤 통산됐다(결정세액 131,082,800 · 49,431,660).
+ */
+describe("E-1 — 원건물 실가 + 증축분 환산: 자본적지출·양도비는 실가 파트에 가산 (단서 비교 없음)", () => {
+  const props = (asset: AssetForm) => {
+    const gbv = buildGeneralBuildingValuation(asset) as Record<string, unknown>;
+    const r = dispatchGeneralBuilding(
+      gbv, 2_000_000_000, new Date("2024-03-01"), new Date("1999-05-24"),
+      (gbv.bundledAcquisitionPrice as number | undefined) ?? 0, (gbv.bundledExpenses as number) ?? 0,
+      2024, 0, [], rates, undefined, {}, undefined,
+    ) as unknown as { aggregated: { determinedTax: number; swapComparison?: unknown; properties: { propertyId: string; necessaryExpense: number }[] } };
+    const e = (id: string) => r.aggregated.properties.find((p) => p.propertyId === id)!.necessaryExpense;
+    return { tax: r.aggregated.determinedTax, swap: r.aggregated.swapComparison, land: e("land"), b1: e("building1"), b2: e("building2"), bundled: gbv.bundledExpenses };
+  };
+
+  it("🔴 자본적지출 8억 + 양도비 3억 → 토지·원건물 합 11억 가산 · 증축분은 개산공제 180,000 · swap 없음", () => {
+    const r = props(gbExtAssetOriginActual());
+    expect(r.bundled).toBe(0); // 일괄 슬롯에 양도비가 없다 — 이중계상 불가
+    expect(r.swap).toBeUndefined();
+    expect(r.b2).toBe(180_000);
+    expect(r.land + r.b1).toBe(CAPEX + TRANSFER_EXP);
+    expect(r.tax).toBe(127_866_974);
   });
 
-  it("전용 필드를 입력하면 ①에서 멈추고 양도비가 나목에 들어간다 (대조군)", () => {
-    const r = calc(
-      gbExtAssetOriginActual({ gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED) }),
-    );
-    expect(r.bundledExpenses).toBe(DEDICATED_BUNDLED);
-    expect(r.directSide).toBe(CAPEX + TRANSFER_EXP);
+  it("전용 필드 5백만을 더하면 그만큼만 늘어난다 — 양도비가 두 번 들어가지 않는다", () => {
+    const base = props(gbExtAssetOriginActual());
+    const r = props(gbExtAssetOriginActual({ gbBundledAcquisitionExpenses: String(DEDICATED_BUNDLED) }));
+    expect(r.bundled).toBe(DEDICATED_BUNDLED);
+    expect(r.land + r.b1).toBe(CAPEX + TRANSFER_EXP + DEDICATED_BUNDLED);
+    expect(r.land + r.b1 - (base.land + base.b1)).toBe(DEDICATED_BUNDLED);
   });
 });
 
@@ -210,8 +232,8 @@ describe("W-1b — 원건물 실가 + 전용 필드 미입력(② 채택) 시 �
 describe("D-10 — 원건물 환산이면 전용 필드 미입력이어도 나목에 포함", () => {
   it("🔴 나목 = 자본적지출 + 양도비 (bundledExpenses는 소비되지 않는다)", () => {
     const r = calc(gbExtAsset());
-    expect(r.bundledExpenses).toBe(TRANSFER_EXP); // fallback ②가 집기는 한다
-    expect(r.directSide).toBe(CAPEX + TRANSFER_EXP); // 그러나 소비되지 않으므로 나목에 포함
+    expect(r.bundledExpenses).toBe(0); // E-1 — 일괄 슬롯에 양도비를 넣지 않는다(종전엔 ②가 집고도 소비되지 않았다)
+    expect(r.directSide).toBe(CAPEX + TRANSFER_EXP); // 나목 = 자본적지출 + 양도비
   });
 
   it("세액이 실제로 달라진다 — 양도비를 뺀 종전 동작과의 차액", () => {

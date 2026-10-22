@@ -35,6 +35,7 @@ import { phdPayloadActive } from "./phd-toggle-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { splitCarryoverEventSource } from "./transfer-tax-api-split-carryover";
 import { validateCarryoverHouseholdFact } from "./transfer-tax-validate-carryover-household";
+import { validateDonorBuiltPart } from "./transfer-tax-validate-donor-built-part";
 
 /** 호출 맥락 — 폼 전역 사실. 생략 = 그 결합이 아니다(단위 테스트·자산 단독 호출). */
 export interface SplitCarryoverCtx {
@@ -236,6 +237,11 @@ export function validateSplitCarryoverParts(
         `${p.keyPrefix}.donorAcquisitionPrice`,
         `${label}: ${p.name} 증여자 취득가액을 입력하세요 — 증여자의 취득 당시 실지거래가액을 알 수 없으면 «환산취득가액»을 켜서 증여자 취득 당시 기준시가로 환산하세요 ${MSG_TAIL_DONOR}.`,
       );
+    // PR-3 — 건물 파트가 환산이면 «그 건물이 증여자 신축·증축인가»가 환산 입력 바로 다음에 온다(⑤ 카드 순서와 같다). 토지 파트는 대상이 아니다.
+    if (p.name === "건물") {
+      const donorBuiltErr = validateDonorBuiltPart(asset, label, { isNonPrimary: ctx.isNonPrimary });
+      if (donorBuiltErr) return donorBuiltErr;
+    }
     if (parseAmount(f.donorCapitalExpenditure) < 0)
       return fieldError(`${p.keyPrefix}.donorCapitalExpenditure`, `${label}: ${p.name} 증여자 자본적지출은 음수일 수 없습니다.`);
     if (!(parseAmount(p.valuation) > 0))

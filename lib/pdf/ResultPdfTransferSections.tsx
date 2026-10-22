@@ -5,8 +5,7 @@
  * 여기는 양도세 세목 섹션만 맡는다. 방향은 한쪽뿐이다(문서 → 여기).
  */
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
-import { donorBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
-import type { DonorBuiltPenaltyEcho } from "@/lib/tax-engine/types/transfer-carryover.types";
+import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import {
   View,
   Text,
@@ -84,7 +83,7 @@ export function TransferSection({ r, selectedSectionIds }: { r: R; selectedSecti
   const penaltyTax = ((num(r.penaltyTax) ?? 0) as number) + penaltyDetailTotal;
   const determinedTax = (num(r.determinedTax) ?? 0) as number;
   const totalDeterminedTax = determinedTax + penaltyTax;
-  const donorView = donorBuiltPenaltyView((r.carryoverTaxationDetail as { donorBuiltPenalty?: DonorBuiltPenaltyEcho } | undefined)?.donorBuiltPenalty);
+  const donorView = donorBuiltPenaltyView(resultDonorBuiltEcho(r as Parameters<typeof resultDonorBuiltEcho>[0]));
   return (
     <>
       <Text style={s.sectionTitle}>신고서 양식</Text>

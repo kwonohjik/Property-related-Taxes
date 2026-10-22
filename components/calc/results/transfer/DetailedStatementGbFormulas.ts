@@ -616,6 +616,19 @@ export function buildGbExpenseFormula(
       ? `자산별 양도비 = ${fmt(displayExp)} (§97① 나목)\n        ※ 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`
       : `필요경비 없음 — 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`;
 
+  /*
+   * §97②1호 가산분이 실린 카드(실가 파트의 자본적지출·양도비 안분 몫 — E-1) — 「자기 경비 + 안분 가산 = 합계」로 적는다.
+   * 종전 문구(「자산별 양도비 = …」·「사용자 직접 입력 (증축 실제 필요경비)」)는 가산분을 다른 성질로 적었다.
+   */
+  const addition = gb.partDirectAddition?.[p.propertyId] ?? 0;
+  if (addition > 0 && addition <= displayExp) {
+    const own = displayExp - addition;
+    const ownLabel = isBuilding2Prop(p.propertyId) ? "증축 실제 필요경비" : "일괄 취득 필요경비 안분";
+    return own > 0
+      ? `${ownLabel} ${fmt(own)} + 자본적지출·양도비 안분 ${fmt(addition)} = ${fmt(displayExp)} (§97②1호)`
+      : `자본적지출·양도비 안분 = ${fmt(addition)} (§97②1호 — 실지거래가액 파트 가산)`;
+  }
+
   if (isLandProp(p.propertyId)) {
     if (isActualPart) return actualPartFormula();
     if (!gb.acqLandStdTotal) return undefined;

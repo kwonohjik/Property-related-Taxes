@@ -244,7 +244,10 @@ function resolvePerPart(
     if (mode === "actual") {
       // 갈래 3 — 실가 파트: §97②1호. 택일 아님, **가산**.
       // 배분 basis는 양도가액(파트 내 카드 금액이 모두 양도가액 비율로 쪼개져 있다).
-      allocateWithinGroup(addition, partCards, partDirectSide, (c) => c.transferPrice);
+      // 그룹 안의 **환산 카드에는 가산하지 않는다**(2026-10-22 E-1) — 증축분이 환산이면 §97②2호(개산공제 · 단서 택일)라 1호 가산과
+      // 섞이면 안 된다. 그 몫은 같은 그룹의 실가 카드가 받는다(합계 보존). 실가 카드가 없으면 종전대로 그룹 전체.
+      const actualCards = partCards.filter((c) => !c.usedEstimatedAcquisition);
+      allocateWithinGroup(addition, actualCards.length > 0 ? actualCards : partCards, partDirectSide, (c) => c.transferPrice);
       perPart[part] = { estimatedSide: 0, directSide: partDirectSide, swapApplied: false };
       continue;
     }

@@ -136,8 +136,10 @@ describe("① 카드", () => {
     render(<SplitGainDetailSection splitDetail={B.splitDetail!} assetKind="housing" />);
     const notices = Array.from(document.querySelectorAll('[data-testid^="split-carryover-notice-"]')).map((e) => e.textContent!).join("\n");
     expect(notices).toContain("소득세법 §114조의2");
-    expect(notices).toContain("증여자가 신축·증축한 건물");
-    expect(notices).toContain("양도자 본인이 신축·증축한 건물만 가산세를 붙입니다");
+    expect(notices).toContain("증여자가 그 건물을 신축·증축한 뒤 5년 이내에 양도하는 경우");
+    // PR-3 — 종전 «양도자 본인 신축만 붙인다» 고지는 입력 경로가 생겨 교체됐다(증여자 신축·증축 정보가 없으면 입력 안내)
+    expect(notices).toContain("«증여자 신축·증축» 정보가 입력되지 않아 가산세는 붙이지 않았습니다");
+    expect(notices).not.toContain("양도자 본인이 신축·증축한 건물만 가산세를 붙입니다");
     cleanup();
     for (const r of [A, REAL]) {
       render(<SplitGainDetailSection splitDetail={r.splitDetail!} assetKind="housing" />);

@@ -20,7 +20,7 @@ import {
 } from "./transfer-tax-carryover-burdened-gift";
 import { TRANSFER } from "./legal-codes";
 import { judgeCarryoverEligibility } from "./transfer-tax-carryover-eligibility";
-import { assertDonorBuiltInput, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
+import { assertBgDonorBuiltInput, assertDonorBuiltInput, bgDonorBuiltOf, withDonorBuiltPenalty } from "./transfer-tax-carryover-donor-penalty";
 import { carryoverGiftHouseholdBasis, resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
@@ -95,6 +95,9 @@ function calcCarryoverScenariosCore(
     isExempt?: boolean;
     /** 동상 — 12억 초과 고가주택(부분 비과세). `isExempt || isPartialExempt`가 ②2호 요건이다. */
     isPartialExempt?: boolean;
+    /** §114조의2 가산세 base·세액 — 부담부증여 × 증여자 신축·증축(PR-4)의 echo 가 채택 입력의 실제 값을 읽는다. */
+    penaltyBase?: number;
+    penaltyTax?: number;
   },
   /**
    * §97의2②3호 **세액 비교 결과 강제** — 다건 엔진이 「신고단위 결정세액」으로 비교할 때만 쓴다.
@@ -594,8 +597,10 @@ export function calcCarryoverScenarios(...args: Parameters<typeof calcCarryoverS
   const [rawInput] = args;
   const ct = rawInput.carryoverTaxation;
   if (ct?.donorBuilt && rawInput.acquisitionCause === "carryover_gift") assertDonorBuiltInput(rawInput, ct);
+  const bgDonorBuilt = bgDonorBuiltOf(rawInput);
+  if (bgDonorBuilt) assertBgDonorBuiltInput(rawInput, bgDonorBuilt);
   const result = calcCarryoverScenariosCore(...args);
-  return result ? withDonorBuiltPenalty(rawInput, result) : null;
+  return result ? withDonorBuiltPenalty(rawInput, result, bgDonorBuilt ? { rates: args[1], calculate: args[2] } : undefined) : null;
 }
 
 // ============================================================

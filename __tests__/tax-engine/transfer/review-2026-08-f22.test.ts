@@ -150,7 +150,12 @@ describe("F22 회귀 가드 — 두 파트가 같은 모드면 자산총액 판�
     expect(swap.swapApplied).toBe(true);
   });
 
-  it("🔑 두 파트 모두 실가여도 파트 칸이 없으면 자산총액 분기다 — 자산 단위 값이 사라지면 안 된다", () => {
+  /*
+   * 🔄 2026-10-22 E-1 — **증축 × 원건물 두 파트 실가**는 예외로 파트 축이다(`general-building-entry.ts` `extensionActual`).
+   * 자산총액 분기는 실가 카드에 가산하지 않아 자산 단위 값이 사라졌다. 이 가드가 지키던 불변식(「자산 단위 값이 사라지면
+   * 안 된다」)은 그대로다 — 파트 축이 자산 단위 자본적지출을 취득시 기준시가로 나눠 파트 직접분으로 싣는다.
+   */
+  it("🔑 증축 × 두 파트 실가 · 파트 칸 없음 → 파트 축이지만 자산 단위 값이 나목에 전부 도달한다 (E-1)", () => {
     // 분리 OFF·실가 모드: 파트 산정방식·파트 자본적지출 위젯이 화면에 없다.
     const asset = gbAsset({
       useEstimatedAcquisition: false,
@@ -166,7 +171,8 @@ describe("F22 회귀 가드 — 두 파트가 같은 모드면 자산총액 판�
       gbBundledAcquisitionExpenses: "5000000",
     } as Partial<AssetForm>);
     const swap = swapOf(asset);
-    expect(swap.perPart).toBeUndefined();
-    expect(swap.directSide).toBe(1_000_000_000); // 자본적지출 7억 + 양도비 3억
+    expect(swap.perPart).toBeDefined();
+    expect(swap.directSide).toBe(1_000_000_000); // 자본적지출 7억 + 양도비 3억 — 사라지지 않는다
+    expect(swap.swapApplied).toBe(false); // 실가 파트는 §97②1호 가산이지 단서 택일이 아니다
   });
 });

@@ -7,7 +7,7 @@
  * 재개발 분기 행 생성은 FilingFormTableRedevRows.ts 에 분리.
  */
 
-import { donorBuiltPenaltyFilingNote } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { donorBuiltPenaltyFilingNote, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { separateAcqFilingNotes } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -685,7 +685,7 @@ export function buildRows(
   const totalPenalty = result.penaltyTax + (result.penaltyDetail?.totalPenalty ?? 0);
   setNum("penaltyTax", "total", totalPenalty);
   // 이월과세 × 증여자 신축·증축 §114조의2 — 가산세가 붙었으면 칸 값을 설명하는 각주(새 수를 만들지 않는다)
-  const donorNote = donorBuiltPenaltyFilingNote(result.carryoverTaxationDetail?.donorBuiltPenalty);
+  const donorNote = donorBuiltPenaltyFilingNote(resultDonorBuiltEcho(result));
   if (donorNote) setRoseNote("penaltyTax", "total", donorNote);
   setNum("totalDeterminedTax", "total", result.determinedTax + totalPenalty);
   // Round 11 (2026-05-06): §99의3 등 감면 적용 시 농어촌특별세 (감면세액 × 20%, 농특세법 §3·§5)

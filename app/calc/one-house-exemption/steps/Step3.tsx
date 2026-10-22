@@ -52,13 +52,18 @@ import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
+import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
+import type { JudgmentMenu } from "@/lib/calc/judgment-menu-flags";
+import { sellingTransferStdPriceRequired } from "@/lib/calc/surcharge-price-criteria";
 
 type Props = {
   form: OneHouseJudgmentFormData;
   onChange: (patch: Partial<OneHouseJudgmentFormData>) => void;
+  /** 판정 메뉴 — 다주택 중과 판정은 2-C 안내와 양도 당시 기준시가 칸(M1)이 다르다(계획서 §5.3) */
+  menu?: JudgmentMenu;
 };
 
-export function Step3({ form, onChange }: Props) {
+export function Step3({ form, onChange, menu = "one_house" }: Props) {
   const primary = form.assets[0];
   /** 양도 대상이 조합원입주권인가 — §89①3호(주택)와 §89①4호(입주권)를 가르는 축이다. */
   const isRightSale = primary.assetKind === "right_to_move_in";
@@ -336,10 +341,17 @@ export function Step3({ form, onChange }: Props) {
       </ToneCard>
 
       <ToneCard tone="rose" sectionNum="2-C" title="조정대상지역">
-        <p className="text-sm leading-relaxed">
-          <b>취득 당시</b> 조정대상지역이었다면 보유 2년에 더해 <b>거주 2년</b>이 필요합니다.
-          양도 당시 지정 여부는 거주요건과 무관합니다.
-        </p>
+        {menu === "surcharge" ? (
+          <p className="text-sm leading-relaxed">
+            <b>양도일 현재</b> 조정대상지역에 있는 주택을 양도하면 다주택 중과 대상이 될 수 있습니다(소득세법 §104⑦).
+            취득 당시 지정 여부는 함께 보여 드리는 1세대1주택 비과세 요약의 거주요건 판정에 쓰입니다.
+          </p>
+        ) : (
+          <p className="text-sm leading-relaxed">
+            <b>취득 당시</b> 조정대상지역이었다면 보유 2년에 더해 <b>거주 2년</b>이 필요합니다.
+            양도 당시 지정 여부는 거주요건과 무관합니다.
+          </p>
+        )}
 
         <RegulatedAreaField
           verdict={regulatedVerdict}
@@ -372,6 +384,31 @@ export function Step3({ form, onChange }: Props) {
           checked={form.isRegulatedArea}
           onCheckedChange={(isRegulatedArea) => onChange({ isRegulatedArea })}
         />
+
+        {/*
+          M1 — 양도 주택의 양도 당시 기준시가. 계산기의 일반 매매·실가 경로에는 이 칸이 없어(V-7) 판정 메뉴가 받는다.
+          가액기준 지역이면 §167의3①1호(3억 이하 불산입)를 가르므로 필수 — 칸·⑧이 같은 술어(`sellingTransferStdPriceRequired`).
+          2주택이면 §167의10①9호(1억 이하) 판정에도 쓰인다.
+        */}
+        {menu === "surcharge" && !isRightSale && (
+          <HousingStdPriceLookupField
+            data-field="standardPriceAtTransfer"
+            label="양도 당시 기준시가 (공시가격)"
+            required={sellingTransferStdPriceRequired(form)}
+            hint={
+              sellingTransferStdPriceRequired(form)
+                ? "가액기준 지역 주택입니다 — 양도 당시 기준시가 3억원 이하면 주택 수에 넣지 않습니다(소득세법 시행령 §167의3①1호)"
+                : "지역기준 지역은 주택 수와 무관합니다 — 2주택이면 1억원 이하 소형주택 배제(§167의10①9호) 판정에 씁니다"
+            }
+            value={primary.standardPriceAtTransfer ?? ""}
+            onChange={(standardPriceAtTransfer) => patchAsset({ standardPriceAtTransfer })}
+            jibun={primary.addressJibun || undefined}
+            dong={primary.addressDong || undefined}
+            ho={primary.addressHo || undefined}
+            referenceDate={form.transferDate || undefined}
+            testidPrefix="surcharge-selling-std-price"
+          />
+        )}
       </ToneCard>
 
       {/*

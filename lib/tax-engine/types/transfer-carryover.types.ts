@@ -412,9 +412,10 @@ export interface DonorBuiltPenaltyEcho {
    * 붙지 않은 이유 —
    * `scenario_b`: ②3호 비교로 B 채택(수증자 취득가액 = 증여 당시 평가액, 환산·감정 아님) ·
    * `carryover_excluded`: ②1호·②2호·③ 기간·관계 등으로 이월과세 자체가 배제 ·
-   * `outside_penalty_window`: A 채택이지만 5년 경과·시행일 전 양도·증축 85㎡ 이하.
+   * `outside_penalty_window`: A 채택이지만 5년 경과·시행일 전 양도·증축 85㎡ 이하 ·
+   * `zero_base`: (부담부증여) A 채택이지만 가산세 기준액(채무비율 안분 후 건물분)이 0원이다 — 당초 증여자의 건물 기준시가·감정가액이 0.
    */
-  notAppliedReason?: "scenario_b" | "carryover_excluded" | "outside_penalty_window";
+  notAppliedReason?: "scenario_b" | "carryover_excluded" | "outside_penalty_window" | "zero_base";
   buildingType: "new" | "extension";
   /** 증여자 신축·증축일 (YYYY-MM-DD) */
   constructionDate: string;
@@ -430,6 +431,11 @@ export interface DonorBuiltPenaltyEcho {
    * 증축(비주택): multiplicand = 양도가액, numerator = 증축 부분 취득(완공) 당시 기준시가, denominator = 양도 당시 기준시가.
    */
   formula?: { multiplicand: number; numerator: number; denominator: number };
+  /**
+   * 부담부증여(§159) × 이월과세 — 가산세 base 가 **채무비율 안분 후** 건물분 값임을 알린다(PR-4). `method`: K-5 환산(`estimated`) · K-7 감정(`appraisal`).
+   * 부담부증여에서만 존재한다 — 일체 주택 안분(`housingSplit`)·`formula` 와 배타다.
+   */
+  burdenedGift?: { method: "estimated" | "appraisal" };
   /** 일체 주택 건물분 산정 내역 — 일체 주택이고 applied일 때만 */
   housingSplit?: {
     /** 증여자 취득 당시 건물분 기준시가 B_acq */

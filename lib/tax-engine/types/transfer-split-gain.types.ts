@@ -9,6 +9,7 @@ import type { Sec100_3Era } from "../data/sec100-3-split-era";
 import type { ApportionBasisKind, AppraisalRejectReason } from "../sale-split-apportion-basis";
 import type { CarryoverExclusionReason } from "../transfer-tax-carryover-eligibility";
 import type { FilingUnitCarryoverComparison } from "../transfer-tax-aggregate-carryover-scope";
+import type { DonorBuiltPenaltyEcho } from "./transfer-carryover.types";
 
 /**
  * §164⑨ 1호 건물 split 토지분 산출근거 (총액 3후보) — Record(Map 금지, JSON 소실).
@@ -116,6 +117,11 @@ export interface SplitPartCarryoverEcho {
   giftTaxLimitApplied: boolean;
   /** §97의2②3호 비교 — 신고 전체 결정세액. 적격 판정에서 이미 배제된 파트는 없다 */
   comparison?: FilingUnitCarryoverComparison;
+  /**
+   * 증여자 신축·증축 §114조의2 가산세 echo — 건물 파트에 `donorBuilt`가 입력됐을 때만 존재한다(PR-3).
+   * 적용(A 채택) → base·가산세, 미적용(②3호 B 채택·배제·5년 경과) → 붙지 않은 이유. 자산 전체 이월과세의 `CarryoverTaxationDetail.donorBuiltPenalty`와 같은 모양이다.
+   */
+  donorBuiltPenalty?: DonorBuiltPenaltyEcho;
 }
 
 /** `SplitPartCarryoverEcho.estimated` — 파트 환산(P6). 환산취득가액 = 파트 양도가액 × 분자 ÷ 분모, 개산공제 = 분자 × 3%(영 §163⑥, 지분 반영). */
