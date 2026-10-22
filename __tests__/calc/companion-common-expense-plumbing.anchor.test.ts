@@ -90,24 +90,36 @@ describe("⑬ 공통 양도비 — 신고 단위 1회 전송", () => {
     expect(companions[0].transferExpense).toBeUndefined();
   });
 
-  it("자산별 **직접 입력** 양도비는 그대로 실린다 (직접분 + 공통분은 합산 관계)", async () => {
+  it("총 양도비가 있으면 꺼진 자산 양도비 칸의 값은 싣지 않는다 (O-9 — 그 칸은 화면에서 잠겨 있다)", async () => {
+    // 종전 단언은 「직접분 + 공통분 합산」이었으나 실측은 직접분이 그 자산의 공통분 몫을 **대체**했고(Σ ≠ 총 양도비),
+    // 화면은 그 칸을 잠가 사용자가 볼 수도 고칠 수도 없었다(계획서 `burdened-gift-residuals-o9-o11.plan.md` §5).
     const cap = captureBody();
     const f = companionForm();
     f.assets[1].transferExpense = "2,000,000";
     await callTransferTaxAPI(f);
     const companions = cap.body?.companionAssets as { transferExpense?: number }[];
-    expect(companions[0].transferExpense).toBe(2_000_000);
-    // 공통분은 여전히 신고 단위로 별도 전송된다.
+    expect(companions[0].transferExpense).toBeUndefined();
     expect(cap.body?.commonTransferExpense).toBe(10_000_000);
   });
 
-  it("대조군 — 단건(자산 1건)은 종전대로 주 자산에 싣는다 (안분할 상대가 없다)", async () => {
+  it("대조군 — 총 양도비가 비면 자산별 직접 입력 양도비는 그대로 실린다", async () => {
+    const cap = captureBody();
+    const f = companionForm({ totalTransferExpense: "" } as Partial<TransferFormData>);
+    f.assets[1].transferExpense = "2,000,000";
+    await callTransferTaxAPI(f);
+    const companions = cap.body?.companionAssets as { transferExpense?: number }[];
+    expect(companions[0].transferExpense).toBe(2_000_000);
+    expect(cap.body?.commonTransferExpense).toBeUndefined();
+  });
+
+  it("대조군 — 단건(자산 1건)은 총 양도비를 싣지 않는다 (O-9 — 단건에는 그 칸이 없다)", async () => {
+    // 종전에는 주 자산에 그대로 실었다 — 「함께 양도」를 끄거나 세션 복원으로 단건이 되면 칸이 사라진 값이 필요경비가 됐다.
     const cap = captureBody();
     const f = companionForm();
     f.assets = [f.assets[0]];
     await callTransferTaxAPI(f);
     expect(cap.body?.commonTransferExpense).toBeUndefined();
-    expect(cap.body?.transferExpense).toBe(10_000_000);
+    expect(cap.body?.transferExpense).toBeUndefined();
   });
 
   it("대조군 — 총 양도비가 비면 키를 보내지 않는다", async () => {

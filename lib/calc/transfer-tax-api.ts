@@ -12,6 +12,7 @@ import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
+import { withInScopeTransferExpenses } from "./transfer-expense-in-scope";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
@@ -102,7 +103,9 @@ export type TransferAPIResult = SingleTransferResult | BundledTransferResult | M
 
 /** 엔진이 이해하는 3종 assetKind (right_to_move_in / presale_right → housing) */
 
-export async function callTransferTaxAPI(form: TransferFormData): Promise<TransferAPIResult> {
+export async function callTransferTaxAPI(formInput: TransferFormData): Promise<TransferAPIResult> {
+  // 화면에 보이는 양도비만 싣는다 — 숨은 총 양도비·꺼진 자산 양도비를 비운다(O-9, ⑥과 같은 leaf).
+  const form = withInScopeTransferExpenses(formInput);
   const primary = form.assets[0];
   if (!primary) throw new Error("자산이 없습니다.");
 

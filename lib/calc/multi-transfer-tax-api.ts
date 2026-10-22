@@ -12,6 +12,7 @@ import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
+import { withInScopeTransferExpenses } from "@/lib/calc/transfer-expense-in-scope";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
@@ -72,7 +73,9 @@ import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
  *   같은 과소신고 1건에 신고불성실가산세가 두 번 산출되기 때문이다. 단건 경로는 ④·⑫ 양쪽에서
  *   막는데(`transfer-tax-api-body-blocks.ts:90` · `transfer-tax-schema.ts:536`) 다건만 없었다.
  */
-export function buildPropertyPayload(form: TransferFormData, filingUnitAmendment = false) {
+export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmendment = false) {
+  // 화면에 보이는 양도비만 싣는다 — 단건 ④·⑥과 같은 leaf(O-9).
+  const form = withInScopeTransferExpenses(formInput);
   const primary = form.assets?.[0];
   // 명부 행 ⑥의 §99의4·§98의9도 건별로 싣는다(단건과 같은 leaf). 감면주택 행은 아래 `specialHouseExclusions`(Q4).
   const reductions = toEngineReductions(primaryReductionsWithRows(form), primary ?? { acquisitionCause: "purchase" }, primary?.expropriationNoticeDate);

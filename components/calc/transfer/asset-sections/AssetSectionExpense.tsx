@@ -186,11 +186,12 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
       </div>
 
       {/* legacy 단일 필드 — backward-compat (sessionStorage 로드 시 표시).
-          분리 계산 자산은 ⑧이 이 값을 파트 칸으로 옮기라고 막으므로(`legacyExpenseMovesToParts`) 양도비가 있어도 보인다 — 숨은 값으로 막지 않는다. */}
+          분리 계산 자산은 ⑧이 이 값을 파트 칸으로 옮기라고 막으므로(`legacyExpenseMovesToParts`) 양도비가 있어도 보인다 — 숨은 값으로 막지 않는다.
+          총 양도비가 쓰이면 꺼진 양도비는 ④가 0으로 본다(O-9 `withInScopeTransferExpenses`) — 같은 값으로 판정해야 이 칸이 숨은 채 쓰이지 않는다. */}
       {parseInt(asset.directExpenses || "0", 10) > 0
        && (legacyExpenseMovesToParts(asset)
          || (parseInt(asset.capitalExpenditure || "0", 10) === 0
-           && parseInt(asset.transferExpense || "0", 10) === 0)) && (
+           && (parseAmount(totalTransferExpense || "0") > 0 || parseInt(asset.transferExpense || "0", 10) === 0))) && (
         <CurrencyInput
           label="직접 귀속 필요경비 (원) — 이전 입력 형식"
           data-field="directExpenses"

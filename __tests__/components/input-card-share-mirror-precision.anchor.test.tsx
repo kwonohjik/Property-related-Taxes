@@ -188,11 +188,15 @@ describe("카드 = ④ body — 화면 숫자가 엔진으로 가는 값과 같�
   for (const [p, price, expense] of LINKS) {
     it(`${p}% — 카드 숫자 = body.transferPrice, 양도비 칸 = body.transferExpense`, async () => {
       const card = renderSaleCard(p, price);
-      const { input } = renderExpense(p, "100", String(expense));
+      // 단건에는 「총 양도비」 칸이 없어 Step1이 빈 값을 넘긴다 — 칸은 자산 자신의 값(빈칸)이고 ④도 숨은 총 양도비를 싣지 않는다(O-9).
+      //   지분 안분 표시 정밀도(applyRatio)는 위 B가 지킨다.
+      const { input } = renderExpense(p, "100", "");
       const body = await captureBody(p, price, expense);
       expect(body).toBeDefined();
       expect(card).toBe(`${comma(Number(body!.transferPrice))} 원`);
-      expect(input.value).toBe(comma(Number(body!.transferExpense)));
+      expect(body!.transferExpense).toBeUndefined();
+      expect(Number(input.value.replace(/,/g, "") || 0)).toBe(Number(body!.transferExpense ?? 0));
+      expect(input.disabled).toBe(false);
     });
   }
 });
