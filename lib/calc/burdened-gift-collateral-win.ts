@@ -20,6 +20,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildBurdenedGiftInfo, companionBurdenedGiftValuations, type CompanionBurdenedGiftValuation } from "./transfer-tax-api-burdened-gift";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { BG_PAREN_MORTGAGE_66_FROM } from "@/lib/tax-engine/burdened-gift-valuation";
 
 /** 단독 소유 단건의 증여가액 C(엔진 `giftValuation.max`)와 승자. 지분이 있으면 `undefined`(위 범위). */
 export function bgWholeGiftValuation(asset: AssetForm): CompanionBurdenedGiftValuation | undefined {
@@ -42,3 +43,15 @@ export function bgCollateralForcesStdAcq(asset: AssetForm): boolean {
   if (isMixedBurdenedGift(asset)) return false;
   return bgWholeGiftValuation(asset)?.selectedMode === "mortgage";
 }
+
+/**
+ * 담보 승 취득가액 문구의 시기 단서 — §159①1호 괄호에 상증법 §66이 열거된 2023.2.28. 전 양도면 `true`.
+ * 결과 화면 고지(`bgParenthesisEraNotice`)와 같은 경계다. 담보 승 판정(`bgCollateralForcesStdAcq`)이 이미 승자를 정했으므로
+ * 여기서는 양도일만 본다. 양도일 미입력은 `false` — 결과 화면이 판정한다.
+ */
+export function bgCollateralParenEraUncertain(transferDate: string | undefined): boolean {
+  return !!transferDate && transferDate < BG_PAREN_MORTGAGE_66_FROM.toISOString().slice(0, 10);
+}
+
+/** 위 경우 「(소령 §159①1호 괄호)」 인용 뒤에 붙이는 짧은 단서. 상세 안내는 부담부증여 블록 한 곳에서 한다. */
+export const BG_COLLATERAL_PAREN_ERA_SUFFIX = " — 2023.2.28. 전 양도는 그 당시 괄호에 상증법 §66이 없어 확인이 필요합니다";
