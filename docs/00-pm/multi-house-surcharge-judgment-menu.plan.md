@@ -156,6 +156,8 @@ store.surcharge.result ──> MultiHouseSurchargeResultView
 
 **전환 버튼**(D6): 「이 주택을 양도 예정 주택으로 바꿔 판정」 → **확인 대화상자**(「양도 예정 주택이 바뀌고, 입력을 함께 쓰는 1세대1주택 비과세 판정 메뉴에도 반영됩니다」 — F-9) 후 `swapSellingHouse(form, houseId)`가 assets[0] ↔ 명부 행을 맞바꾼다. 맞바꾸기는 `updateFormData` 한 번이라 두 메뉴의 결과가 함께 무효화된다. 양도 주택에만 있는 사실(양도가액·거주기간·§155 특례 입력·`sellingHouseExclusion` 등)은 **비우고** ② 양도 대상 주택 단계로 보내며 「새 양도 주택의 사실을 입력하세요」를 고지한다. 필드 대응표(AssetForm ↔ HouseEntry)는 Do 진입 전 전수 작성(V-6) — 대응 없는 필드를 조용히 버리지 않는다.
 
+- **P3a 실측 메모(2026-10-22)**: `assembleSurchargeHouseSet`의 `fromTwoHouseDeeming`은 「구성 행이 **만들어졌는가**」(`!!twoHouseDeemingHouses`)로 종전 의미를 유지했다. 「집합으로 쓰였는가」로 바꾸는 mutation은 `__tests__/tax-engine/{multi-house-surcharge,transfer}/` 5,563건에서 **살아남는다** — 명부 없는 §155⑳ 불성립 임대 호(주택 수 1)와 조특법 제외만의 의제 구성 행이 동시에 서는 조합을 다루는 테스트가 없다(기존 공백 · 이번 변경은 결과 불변). `classifyRegionCriteriaDetail` 동치는 변경 전 함수 스냅샷(시군구 2,153코드)과 대조해 전부 같았다.
+
 ### 4.4 표 셀 출처
 
 | 셀 | 출처 | 비고 |
@@ -434,7 +436,8 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | P0 ✅ | 숨김 플래그 프록시 해체 + `judgment-menu-flags.ts`(동작 불변). 편집 창 `judgmentMenu` → `hideSurchargeInputs`(뜻대로 개명), `HouseCountExemptionInputs`·`HousesListSection`에 명시 prop 3개(`hideSurchargeInputs`·`taxIncentiveRentalEnabled`·`householdGiftEnabled`) | 관련 72파일 740건 통과 · 구현 후 mutation 6/6이 정확한 테스트에 잡힘(1주택 값 3 · 계산기 기본값 2 · 중간 전달 1). ⚠️ `HousesListSection.tsx` 761줄(위험구간) — P6에서 이 파일을 다시 열 때 분리 |
 | P1 ✅ #2425 | D7 행 4호·8호·8호의2(①②③④⑤⑧) + **8호의2 사용 종료일 신규 필드(①~⑭) · 엔진 6개월 요건 정정**(Q-A) — 계산기·판정 공용 | 행 판정 anchor · 8호의2 경계(종료 후 6개월 전날·당일·다음 날, 민법 기간 계산) · 양도 주택 경로 세액 변경 anchor · transfer 범위 회귀 |
 | P2 ✅ | 계산기 ⑧ 중과 축 leaf 추출(동작 불변) — `transfer-tax-validate-surcharge-axis.ts`(행·양도 주택·유예 3 leaf). 동작 불변 실측: 변경 전·후 `collectStep1Issues` 표적 9,792폼 + e2e 케이스 380폼 출력 동일(메시지 56종) | 계산기 validate 회귀 · `surcharge-axis-validate-leaf.anchor.test.ts`(호출 3곳 mutation 포착) |
-| P3 | 엔진: `forceNoMultiHouseSurcharge`(술어 최상단 게이트 + 호출부 4곳 전달) · 행 판정 주택 집합 조립부 export(결과 불변) · `hceGeneralHouseAcquisitionDate` 추출 · `classifyRegionCriteriaDetail` · 권리 사유 helper · `multi-house-surcharge-narrative.ts`(`decisionStageOf`·행 판정·민감도·설명문) | MH-P3·P5·P6·P7 · 동치 anchor |
+| P3a 🔄 | 엔진 배관(결과 불변 + 반사실 플래그) — `forceNoMultiHouseSurcharge`(술어 최상단 게이트 · `transfer-tax.ts` 장특 리터럴 명시 전달) · `assembleSurchargeHouseSet`/`linkSurchargeHousesForSelling` export · `resolveHceGeneralHouseAcquisitionDate` 추출 · `classifyRegionCriteriaDetail` · `presaleRightCountReason` | MH-P6·P9(FN-1~5) · 지역기준 이유 · 권리 사유 · 집합 조립 |
+| P3b | `multi-house-surcharge-narrative.ts`(`decisionStageOf`·행 판정(V-2)·민감도(V-3)·설명문) | MH-P3·P5·P7·P10 |
 | P4 | route + 공용 전처리 추출 + body 빌더 | MH-1~5 · MH-B1~B5 · MH-P1·P2·P4 |
 | P5 | store 슬롯 · handoff 수정 | store·handoff anchor |
 | P6 | 라우트·오케스트레이터·단계 재사용·M1·사이드바·validate·교차 링크 | 격리·공유·3중 패턴 anchor |
@@ -465,7 +468,7 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 
 | ID | 내용 |
 |---|---|
-| V-1 | ~~지점~~ ✅ 술어 최상단으로 확정(F-1). 남은 것: 호출부 4곳(`transfer-tax.ts:585`·`transfer-tax-rate-calc.ts:370`·`transfer-tax-redevelopment-steps.ts:325`·`transfer-tax-mixed-use.ts:233`)에 모두 전달되는지와 B 세액 = 「중과 없는 세대」 세액(MH-P6·P9) |
+| V-1 | ✅ **해소(2026-10-22, P3a)** — 술어 호출부 4곳: `transfer-tax-rate-calc.ts`(세율 축)·`transfer-tax-redevelopment-steps.ts`는 `TransferTaxInput`을 통째로 넘겨 자동 전달(`calcTax` 입력은 모든 경로에서 `effectiveInput` spread — `transfer-tax.ts:517·717`·`transfer-tax-redevelopment.ts:339`). `transfer-tax.ts`(장특 축) 리터럴만 명시 전달이 필요해 넣었다(빠지면 FN-2·FN-3 실패 — mutation 실측). `transfer-tax-mixed-use.ts`는 별도 입력 타입(`MixedUseAssetInput`)이고 D8(매매·실가·단일 주택)이 겸용 시뮬레이션을 범위 밖에 두므로 플래그를 넣지 않는다(쓰는 호출자 없는 필드 금지). 술어를 우회해 정밀 결과를 직접 읽는 곳은 안내문 2곳(`transfer-tax.ts:278·299`)뿐 — 세액 무관. B = 「중과 없는 세대 구성」 세액은 FN-2(명부)·FN-3(명부 없음 fallback)로 실측 |
 | V-2 | assets[0]이 「다른 주택」일 때 `HouseInfo` 필드를 **주택 속성**(사원용·저당권·문화유산·어린이집·조특법 감면 — 보존)과 **양도 행위 사실**(11호 계약·12의2 나·다목·감면 배제 주입 — 제거)로 전수 분류(F-10) |
 | V-3 | 민감도 S3(12의2 나·다목)의 `transitionExemptionMonths` 범위가 현행 데이터와 맞는지 |
 | V-4 | 1주택 pipeline의 `generalHouseAcquisitionDate` 미전달이 증여 세대에서 결론을 가르는지(별건) |

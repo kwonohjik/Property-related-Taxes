@@ -94,6 +94,8 @@ export interface SurchargeApplicationInput {
   isRegulatedArea?: boolean;
   householdHousingCount: number;
   transferDate: Date;
+  /** 반사실 시뮬레이션 — 참이면 정밀·fallback과 무관하게 중과를 닫는다(`TransferTaxInput.forceNoMultiHouseSurcharge`) */
+  forceNoMultiHouseSurcharge?: boolean;
 }
 
 export interface SurchargeApplication {
@@ -142,6 +144,24 @@ export function resolveSurchargeApplication(
    * 결함의 발생 기전 그 자체다.
    */
   const isSubjectAsset = SURCHARGE_SUBJECT_PROPERTY_TYPES.has(input.propertyType);
+
+  /**
+   * 🔑 반사실 플래그도 **최상단**에서 닫는다(계획서 F-1). 정밀 결과를 `undefined`로 지우는 방식은 아래 fallback(원시 플래그
+   *    `isRegulatedArea && householdHousingCount >= 2`)으로 떨어져 다시 중과가 된다. 장특 축(`isSurchargeCase`)과 세율 축
+   *    (`isRateSurchargeApplied`)을 함께 닫는다.
+   */
+  if (input.forceNoMultiHouseSurcharge) {
+    const effectiveHouseCount = multiHouseSurchargeResult?.effectiveHouseCount ?? input.householdHousingCount;
+    return {
+      isSurchargeCase: false,
+      isSuspended: false,
+      isSurchargeApplied: false,
+      isRateSurchargeApplied: false,
+      effectiveSurchargeType: "none",
+      effectiveHouseCount,
+      surchargeTypeKey: effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2",
+    };
+  }
 
   const isSurchargeCase =
     isSubjectAsset &&

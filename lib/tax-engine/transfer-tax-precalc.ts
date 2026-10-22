@@ -246,14 +246,7 @@ export function runPreCalculationSteps(
    * 다만 증여자와 증여일부터 양도일까지 **계속 같은 세대**로 확인되면(배우자는 소득세법 §88 6호 기준 혼인 유지) 세대 보유 시작일이다 —
    * `one-house/gift-household-basis.ts`의 한 leaf가 정한다(결정 #33). 미확인은 양도자 본인의 취득일이다.
    */
-  const hceGeneralHouseAcquisitionDate =
-    input.houseCountExclusionAcquisitionDate ??
-    // #12 — 토지만 출자한 원조합원 신축주택의 취득시기는 사용승인서 교부일이다(영 §162①4호). 비과세 판정 번역과 같은 날짜로 맞춘다.
-    (isLandContributedOriginalApt(input)
-      ? input.redevelopment!.completionDate!
-      : input.carryoverTaxation
-        ? resolveHouseCountExclusionAcqDate(input, input.carryoverTaxation)
-        : resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis));
+  const hceGeneralHouseAcquisitionDate = resolveHceGeneralHouseAcquisitionDate(input);
   return {
     parsedRates,
     input,
@@ -267,6 +260,22 @@ export function runPreCalculationSteps(
   };
 }
 
+
+/**
+ * §99의4①·§98의9①의 「그 주택 취득 전에 보유하던 다른 주택」 판정용 일반주택 취득일 — STEP 0.9·STEP 0.5 공용 (D4-05 · 결정 #33).
+ * 다주택 중과 판정 메뉴 route가 계산기와 같은 값을 쓰도록 export한다(계획서 §4.1 단계 9). 근거는 호출부 주석.
+ */
+export function resolveHceGeneralHouseAcquisitionDate(input: TransferTaxInput): Date {
+  return (
+    input.houseCountExclusionAcquisitionDate ??
+    // #12 — 토지만 출자한 원조합원 신축주택의 취득시기는 사용승인서 교부일이다(영 §162①4호). 비과세 판정 번역과 같은 날짜로 맞춘다.
+    (isLandContributedOriginalApt(input)
+      ? input.redevelopment!.completionDate!
+      : input.carryoverTaxation
+        ? resolveHouseCountExclusionAcqDate(input, input.carryoverTaxation)
+        : resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis))
+  );
+}
 
 /**
  * STEP 0.45 ~ 0.62 — **중과·비사업용 판정 전처리**

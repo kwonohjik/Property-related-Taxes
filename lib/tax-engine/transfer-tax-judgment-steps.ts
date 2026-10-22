@@ -402,6 +402,46 @@ export function surchargeSlotInput(workingInput: TransferTaxInput, generalHouseA
   return { ...workingInput, householdHousingCount: count, inheritedHouseExclusionCount: inheritedExcluded };
 }
 
+/** STEP 0.5가 판정에 쓰는 주택 집합 — 다주택 중과 판정 메뉴의 행별 판정이 같은 집합을 쓴다(계획서 F-5 · MH-P10). */
+export interface SurchargeHouseSet {
+  /** §155⑳ 불성립 임대 호 · 명부 없는 구성 행까지 반영한 집합(5호 연결 전 — 양도 주택에 따라 달라지므로) */
+  rawHouses: NonNullable<TransferTaxInput["houses"]>;
+  /** 명부 없는 §155①⑦·조특법 제외 의제 구성 행이 만들어졌는가 — 그렇다면 중과가 배제될 때만 결과를 쓴다(`runMultiHouseSurchargeStep`) */
+  fromTwoHouseDeeming: boolean;
+}
+
+/**
+ * STEP 0.5의 주택 집합 조립 — 명부 · §155⑳ 불성립 임대 호(`unmetRentalSurchargeHouses`) · 명부 없는 §155⑳ 거주주택
+ * (`noRosterRentalResidenceHouses`) · §155①⑦ 의제 구성 행(`noRosterTwoHouseDeemingHouses`) 순. 없으면 undefined.
+ */
+export function assembleSurchargeHouseSet(
+  workingInput: TransferTaxInput,
+  parsedRates: ParsedRates,
+  generalHouseAcquisitionDate?: Date,
+): SurchargeHouseSet | undefined {
+  const roster = workingInput.houses && workingInput.houses.length > 0 ? workingInput.houses : undefined;
+  const unmetRentalHouses = unmetRentalSurchargeHouses(workingInput, parsedRates, generalHouseAcquisitionDate, roster);
+  const rentalResidenceHouses = roster
+    ? undefined
+    : noRosterRentalResidenceHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
+  const twoHouseDeemingHouses =
+    roster || rentalResidenceHouses
+      ? undefined
+      : noRosterTwoHouseDeemingHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
+  const rawHouses = unmetRentalHouses ?? roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
+  // `fromTwoHouseDeeming`은 구성 행이 **만들어졌는가**다(집합으로 쓰였는지가 아니다) — 종전 `twoHouseDeemingHouses &&` 분기 그대로.
+  return rawHouses ? { rawHouses, fromTwoHouseDeeming: !!twoHouseDeemingHouses } : undefined;
+}
+
+/** ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16) — 양도 주택마다 다시 잇는다. */
+export function linkSurchargeHousesForSelling(
+  rawHouses: NonNullable<TransferTaxInput["houses"]>,
+  workingInput: TransferTaxInput,
+  sellingId: string,
+): NonNullable<TransferTaxInput["houses"]> {
+  return linkTaxIncentiveHouse5ho(rawHouses, workingInput.specialHouseExclusions, workingInput.transferDate, sellingId);
+}
+
 /**
  * STEP 0.5 — houses[] + 주택 수 산정 규칙이 모두 있을 때만 정밀 중과 판정.
  * §155⑳ 불성립이면 카드의 임대 호를 명부에 더한다(`unmetRentalSurchargeHouses`). 명부가 없어도 §155⑳ 거주주택 의제(`noRosterRentalResidenceHouses`)·§155①⑦ 의제와 조특법 제외만의 1주택 의제
@@ -417,20 +457,12 @@ export function runMultiHouseSurchargeStep(
 ): MultiHouseSurchargeResult | undefined {
   // STEP 0.5: 다주택 중과세 판정 (houses[] 제공 + 주택 수 산정 규칙 로드 완료 시)
   let multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
-  const roster = workingInput.houses && workingInput.houses.length > 0 ? workingInput.houses : undefined;
-  const unmetRentalHouses = unmetRentalSurchargeHouses(workingInput, parsedRates, generalHouseAcquisitionDate, roster);
-  const rentalResidenceHouses = roster
-    ? undefined
-    : noRosterRentalResidenceHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
-  const twoHouseDeemingHouses =
-    roster || rentalResidenceHouses
-      ? undefined
-      : noRosterTwoHouseDeemingHouses(workingInput, parsedRates, generalHouseAcquisitionDate);
-  const rawHouses = unmetRentalHouses ?? roster ?? rentalResidenceHouses ?? twoHouseDeemingHouses;
-  if (rawHouses && parsedRates.houseCountExclusionRules) {
+  const houseSet = assembleSurchargeHouseSet(workingInput, parsedRates, generalHouseAcquisitionDate);
+  if (houseSet && parsedRates.houseCountExclusionRules) {
+    const { rawHouses } = houseSet;
     const sellingId = workingInput.sellingHouseId ?? rawHouses[0].id;
     // ⑥ 주택 수 제외의 확인된 영 §167의3①5호 조문 → 10호 「일반주택」 판정의 5호 주택(결정 #16 공백 · 겸용과 같은 leaf)
-    const houses = linkTaxIncentiveHouse5ho(rawHouses, workingInput.specialHouseExclusions, workingInput.transferDate, sellingId);
+    const houses = linkSurchargeHousesForSelling(rawHouses, workingInput, sellingId);
     const housesForSurcharge = surchargeExclusionByReduction.excluded
       ? houses.map((h) => (h.id === sellingId ? { ...h, isTaxSpecialExemption: true } : h))
       : houses;
@@ -511,7 +543,7 @@ export function runMultiHouseSurchargeStep(
     //   배제될 때만 쓴다(2023.2.28. 전 양도분 3채 → 2채면 15호가 없어 중과 · 2021-09-18 실측 13호 219,087,000 ↔
     //   1호 불산입 명부 597,025,000 — 그 명부의 남은 주택이 ⑥ §99의2(5호)면 지금은 10호 219,087,000이다(결정 #16)).
     if (
-      twoHouseDeemingHouses &&
+      houseSet.fromTwoHouseDeeming &&
       (multiHouseSurchargeResult.surchargeType !== "none" ||
         housesForSurcharge.slice(1).some((_, i) => judge(housesForSurcharge.slice(0, i + 1)).surchargeType !== "none"))
     ) {
