@@ -198,6 +198,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     buildingAcquisitionBasis,
     buildingStdAtTransfer,
     landStdAtTransfer,
+    landStdAtAcqOverride,
   } = calcSplitAcquisitionPrice(
     acqContract.input,
     landTransferPrice,
@@ -257,13 +258,15 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   // ⚠️ §97② swap은 이 플래그가 아니라 파트 모드==="estimated" 단독 게이트(아래 applyAssetSwap)라
   //    salesCase 추가에도 무영향 — "환산모드 전용" 정책 유지. 파트별 독립(2026-07-28 mixed-mode).
   const landNonActual = landMode !== "actual";
+  // 1985.1.1. 전 토지 파트 ③ 채택 — 개산공제 base는 ③의 분자(의제취득일 현재 기준시가 = ② 지분 반영 전)다(취득시 공시지가 칸은 1990 전이라 없다).
+  const landStdAtAcqEff = landStdAtAcqOverride ?? landStdAtAcq;
   const buildingNonActual = buildingMode !== "actual";
   // 공유지분 축소(§163⑥ base) — 기준시가는 물건 전체(100%)로 유지하고 여기서만 지분을 적용한다.
   const ownRatio = input.ownershipRatio;
   // §104③ 미등기양도자산 → 3/1000 (단일 판정점 경유)
   const dedRate = estimatedDeductionRate(input.isUnregistered);
   const landAppraisalDed = landNonActual
-    ? computeEstimatedDeduction(landStdAtAcq, dedRate, ownRatio)
+    ? computeEstimatedDeduction(landStdAtAcqEff, dedRate, ownRatio)
     : 0;
   // ⚠️ **성분별 독립 floor가 정본이다. 잔액 흡수(「총액분 − 토지분」)를 넣지 말 것.**
   //    **소득세법 §100②**이 토지·건물 등을 함께 양도한 경우 "이를 **각각 구분하여 기장**"하도록
@@ -320,10 +323,10 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
     acquisitionPrice: landAcqPrice,
     directExpenses: landDirectFinal,
     appraisalDeduction: landSwap.effectiveAppraisalDed,
-    stdPriceAtAcq: landNonActual ? landStdAtAcq : undefined,
+    stdPriceAtAcq: landNonActual ? landStdAtAcqEff : undefined,
     stdPriceAtTransfer: landMode === "estimated" ? landStdAtTransfer : undefined,
     lumpDeductionBase: landNonActual
-      ? computeLumpSumDeductionBase(landStdAtAcq, ownRatio)
+      ? computeLumpSumDeductionBase(landStdAtAcqEff, ownRatio)
       : undefined,
     lumpDeductionRate: landNonActual ? dedRate : undefined,
     gain: landGain,

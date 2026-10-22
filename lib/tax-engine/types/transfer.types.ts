@@ -1419,6 +1419,12 @@ export interface TransferTaxInput {
    * 단서 구간이 아니면 무시한다. ④가 ㎡당 가액 × 면적을 한 함수로 산출해 보낸다.
    */
   landSec164Value?: number;
+  /**
+   * 토지 파트 영 §164④ 가액 — **지분 반영 전**(물건 전체) 총액. 1985.1.1. 전 상속·증여 토지 파트에서만 ④가 보낸다.
+   * ③ 환산취득가액(파트 양도가액 × 이 값 ÷ 양도시 토지 기준시가 — 의제취득일 현재 기준시가 = §164④ 등급 환산값)의 분자이자
+   * ③ 채택 시 개산공제 base다. 양도시 기준시가가 전체 값이라 분자도 전체 값이어야 한다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13).
+   */
+  landSec164ValueWhole?: number;
   /** 면적 입력 방식 「일부 양도」 — 단서 구간에서는 ①의 기준 면적이 미확정이라 차단(`transfer-split-part-cause.ts`). 그 밖은 무영향 */
   isPartialAreaTransfer?: boolean;
   /**

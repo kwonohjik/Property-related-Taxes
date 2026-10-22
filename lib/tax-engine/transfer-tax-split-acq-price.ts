@@ -13,6 +13,7 @@ import type {
 import type { LandAcquisitionBasis, StdSplitDetail } from "./types/transfer-split-gain.types";
 import {
   isSec163_9BuildingProviso, isSec163_9BuildingSec164Open, isSec163_9HouseLandTarget, isSec163_9LandProviso, houseDisclosureBoundary,
+  isPreDeemedLandPart, PRE_DEEMED_BOUNDARY,
 } from "./transfer-split-part-cause";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
@@ -337,6 +338,12 @@ export function deriveUseEstimatedAcquisitionFromParts(
  * (`transfer-split-part-cause.ts` G-2). 동점은 평가액(`calcPostDeemed`·일반건물과 같은 규약).
  * 단서 밖이거나 ②가 없으면 ①을 그대로 쓴다(②가 없는 단서 구간은 leaf가 이미 던졌다).
  * ①이 없으면 비교하지 않고 그대로 비워 둔다 — ②만으로 채우면 아래 「미입력 → null 승격 → 차단」을 건너뛴다.
+ *
+ * 🔑 **1985.1.1. 전 상속·증여 토지(의제취득일 전)는 3자 max**(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13 ·
+ * 자산 단위 `calcPreDeemed`와 같은 규칙) — ③ 환산취득가액 = 파트 양도가액 × 의제취득일 현재 기준시가 ÷ 양도시 토지 기준시가.
+ * 1990 전이라 의제취득일 현재 기준시가는 §164④ 등급 환산값 = ②의 **지분 반영 전** 값(`landSec164ValueWhole`)이다
+ * (양도시 기준시가가 전체 값이므로). 동점 ①② 우선 · 취득가액만 비교(Q-7 a). ③이 채택되면 호출부가 그 파트를 추계로 돌린다
+ * (개산공제 base = 같은 분자 · §97②2호 단서 비교) — 반환 `convertedNumerator`.
  * 별개 취득이 아니면(총액 안분 모델) 파트 ①을 쓰지 않으므로 비교·echo도 없다 — echo만 「② 채택」이라 말하면 거짓 표시다
  * (같은 날 원인 혼합은 ⑧ 전용 차단 — 계획서 §10.2 T-4).
  * ①②는 ④에서 같은 지분 스케일(`makeRatioed`)을 거쳐 온다 — 여기서 다시 스케일하지 않는다.
@@ -347,14 +354,33 @@ export function resolveLandPartAcquisition(
     | "landAcquisitionPrice" | "landSec164Value" | "landAcquisitionCause" | "landAcquisitionDate" | "isSeparateAcquisition"
     | "propertyType" | "acquisitionCause" | "landHouseExisted" | "landHouseSec164Value"
     | "houseFirstDisclosureDate" | "buildingHouseKind"
-  >,
-): { price: number | undefined; basis?: LandAcquisitionBasis } {
+  > & Pick<TransferTaxInput, "landSec164ValueWhole">,
+  /** ③ 재료 — 파트 양도가액(지분 몫)과 양도시 토지 기준시가(전체). 1985.1.1. 전 토지 파트에서만 쓴다. */
+  conv?: { partTransferPrice: number; stdAtTransfer: number },
+): { price: number | undefined; basis?: LandAcquisitionBasis; convertedNumerator?: number } {
   const d = input.landAcquisitionDate as Date | string | undefined;
   const dayKey = d instanceof Date ? d.toISOString().slice(0, 10) : d?.slice(0, 10);
   const reported = input.landAcquisitionPrice;
   if (reported === undefined || input.isSeparateAcquisition !== true) return { price: reported };
   const sec164 = input.landSec164Value ?? 0;
   if (isSec163_9LandProviso(input.landAcquisitionCause, dayKey) && sec164 > 0) {
+    const whole = input.landSec164ValueWhole ?? 0;
+    if (isPreDeemedLandPart(input.landAcquisitionCause, dayKey) && conv && whole > 0 && conv.stdAtTransfer > 0) {
+      const converted = calculateEstimatedAcquisitionPrice(conv.partTransferPrice, whole, conv.stdAtTransfer);
+      const clauseA = Math.max(reported, sec164);
+      const clauseAWins = clauseA >= converted;
+      return {
+        price: clauseAWins ? clauseA : converted,
+        basis: {
+          rule: "sec163_9_1",
+          reported,
+          sec164,
+          converted,
+          adopted: clauseAWins ? (reported >= sec164 ? "reported" : "sec164") : "converted",
+        },
+        ...(clauseAWins ? {} : { convertedNumerator: whole }),
+      };
+    }
     return {
       price: Math.max(reported, sec164),
       basis: { rule: "sec163_9_1", reported, sec164, adopted: reported >= sec164 ? "reported" : "sec164" },
@@ -413,7 +439,15 @@ export function resolveBuildingPartAcquisition(
   ) return { price: reported };
   return {
     price: Math.max(reported, sec164),
-    basis: { rule: "sec163_9_2", reported, sec164, adopted: reported >= sec164 ? "reported" : "sec164" },
+    basis: {
+      rule: "sec163_9_2",
+      reported,
+      sec164,
+      adopted: reported >= sec164 ? "reported" : "sec164",
+      // 1985.1.1. 전 건물 — ③은 비교하지 않는다(Q-9 a: ②는 개별주택가격 척도·양도시 건물 기준시가는 국세청 건물 기준시가 척도라
+      // 그대로 나눌 수 없고 맞출 입력·해석례가 없다). 결과에 확인 필요를 고지한다.
+      ...(dayKey && dayKey < PRE_DEEMED_BOUNDARY ? { preDeemedUncompared: true as const } : {}),
+    },
   };
 }
 
@@ -441,6 +475,8 @@ export function calcSplitAcquisitionPrice(
   buildingStdAtTransfer: number;
   /** 토지 파트 환산 분모로 쓴 양도시 기준시가(§164⑨1호 공익수용 특례 min[] 적용 후) — 토지 파트가 환산(estimated)일 때만 의미가 있다 */
   landStdAtTransfer: number;
+  /** 1985.1.1. 전 토지 파트에서 ③이 채택됐을 때 — 그 분자(의제취득일 현재 기준시가 = ② 지분 반영 전). 개산공제 base·표시용 */
+  landStdAtAcqOverride?: number;
 } {
   const landMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);
   const buildingMode: PartAcqMode = input.buildingAcqMode ?? deriveLegacyAcqMode(input);
@@ -531,7 +567,8 @@ export function calcSplitAcquisitionPrice(
    * 미입력은 `null`로 승격해 호출부가 차단한다. `?? 0`으로 메우면 감정·매매사례 모드에서
    * "취득가액 0 + 개산공제 3%"라는 그럴듯한 소액이 남아 오답이 눈에 띄지 않는다.
    */
-  const landPartAcq = resolveLandPartAcquisition(input);
+  // ③(1985.1.1. 전 토지 파트) 분모 — 결합 공시 비례 안분·공익수용 min[] 전의 양도시 토지 기준시가(별개 취득은 원값).
+  const landPartAcq = resolveLandPartAcquisition(input, { partTransferPrice: landTransferPrice, stdAtTransfer: landStdAtTransferBase });
   const buildingPartAcq = resolveBuildingPartAcquisition(input);
   const partCtx: PartAcqPriceContext = {
     isSeparate,
@@ -563,10 +600,14 @@ export function calcSplitAcquisitionPrice(
     );
   }
 
+  // ③이 채택된 토지 파트는 추계다 — 입력 모드(실가 강제 · G-2)와 별개로 엔진 안에서만 환산으로 돌려 개산공제·§97②2호 단서를 적용한다.
+  // 취득가액은 위 `calcPartAcquisitionPrice("actual")`가 ③을 그대로 돌려준다(ctx.landAcquisitionPrice = ③).
+  const landConverted = landPartAcq.convertedNumerator !== undefined;
   return {
     land: landRaw ?? 0,
     building: buildingRaw ?? 0,
-    landMode,
+    landMode: landConverted ? "estimated" : landMode,
+    ...(landConverted ? { landStdAtAcqOverride: landPartAcq.convertedNumerator } : {}),
     buildingMode,
     buildingStdAtTransfer,
     landStdAtTransfer,

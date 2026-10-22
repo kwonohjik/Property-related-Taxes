@@ -51,6 +51,7 @@ const FIELD_LABEL: Record<string, string> = {
   "landRebuildPriorHouse.demolitionDate": "구주택 멸실일",
   "landRebuildPriorHouse.footprintUnchanged": "신축주택 정착면적 미증가 확인",
   landSec164Value: "토지 영 §164④ 가액(토지등급 환산)",
+  landSec164ValueWhole: "토지 영 §164④ 가액(지분 반영 전)",
   isPartialAreaTransfer: "일부 양도 여부",
   buildingSec164Value: "건물 영 §164⑦ 가액(건물 몫)",
   buildingHouseKind: "주택 구분(단독·다가구/공동주택)",

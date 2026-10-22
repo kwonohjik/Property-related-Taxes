@@ -66,8 +66,15 @@ export interface LandAcquisitionBasis {
   reported: number;
   /** ② 토지 = 영 §164④ 가액(또는 §164⑦ 가액의 토지 몫) · 건물 = 영 §164⑦ 가액의 건물 몫 */
   sec164: number;
-  /** 많은 금액 쪽 — 동점은 reported */
-  adopted: "reported" | "sec164";
+  /** 많은 금액 쪽 — 동점은 reported(①② 우선) */
+  adopted: "reported" | "sec164" | "converted";
+  /**
+   * ③ 환산취득가액(지분 반영) — 1985.1.1. 전 상속·증여 토지 파트만(3자 max — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13).
+   * 채택되면 그 파트는 추계(개산공제 · §97②2호 단서 비교)로 계산된다.
+   */
+  converted?: number;
+  /** 1985.1.1. 전 상속·증여 **건물** 파트(D2) — ③을 비교하지 않았다(Q-9 a: 척도 불일치·해석례 미확보 · 확인 필요 고지) */
+  preDeemedUncompared?: true;
 }
 
 /**

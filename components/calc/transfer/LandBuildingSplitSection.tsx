@@ -43,6 +43,7 @@ import { HouseFirstDisclosureEntryCard } from "./HouseFirstDisclosureFields";
 import { houseLandSec164Applies } from "@/lib/calc/transfer-house-land-sec164-bridge";
 import { buildingSec164Applies } from "@/lib/calc/transfer-building-sec164-bridge";
 import { BUILDING_CAUSE_META, LAND_CAUSE_META } from "./land-cause-meta";
+import { isPreDeemedLandPart } from "@/lib/tax-engine/transfer-split-part-cause";
 
 export type { PartAcqMode };
 
@@ -360,6 +361,15 @@ export function LandBuildingSplitSection(props: Props) {
                 <strong>{LAND_CAUSE_META[props.landCause].fixedMode}</strong> — 상속·증여로 취득한 토지는 평가액이
                 취득당시 실지거래가액이라 환산·감정·매매사례로 산정하지 않습니다 (소득세법 §97①1호·같은 법 시행령 §163⑨).
               </p>
+              {/* 1985.1.1. 전 상속·증여 토지 — 3자 max(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13). 엔진 `isPreDeemedLandPart`와 같은 술어. */}
+              {isPreDeemedLandPart(props.landCause, props.asset?.landAcquisitionDate) && (
+                <p className="mt-1 text-xs text-amber-900 dark:text-amber-200" data-testid="part-acq-mode-land-pre-deemed">
+                  다만 1985.1.1. 전에 {LAND_CAUSE_META[props.landCause].label}받은 토지는 평가액·영 §164④ 가액·환산취득가액(토지 양도가액에 의제취득일 기준시가와
+                  양도시 토지 기준시가의 비율을 곱한 금액) 중 많은 금액이 취득가액이고, 환산취득가액이 채택되면 개산공제가 함께
+                  적용됩니다 (같은 영 §163⑨·§176조의2④). 의제취득일 기준시가는 아래 영 §164④ 가액을, 양도시 토지 기준시가는 「양도시
+                  기준시가」 칸을 씁니다.
+                </p>
+              )}
             </ToneCard>
           ) : (
             // data-field — ⑧ 오류 → 이 라디오로 이동(같은 날 취득 주택의 파트 방식 ≠ 자산 단위 방식 · 배율 한도 이내·함께 양도 주택 카드 포함 · `housingExcessPartModeMismatch`)

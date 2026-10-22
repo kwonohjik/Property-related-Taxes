@@ -276,10 +276,12 @@ describe("D. D1-4a 구현 기대값 (Pre-Do todo → 활성)", () => {
     expect(r.splitDetail.land.acquisitionBasis.adopted).toBe("reported");
   });
 
-  it("D-4 증여 · 1985.1.1. 전(1984)·후(1988) 모두 같은 값 (영 §163⑨ 본문·단서 1호에 의제취득일 조건 없음 — 가목이 정본)", async () => {
-    const g84 = await post({ ...GIFT("1984-05-01", 300_000_000), landSec164Value: 350_000_000 });
+  // 2026-10-22: 1985.1.1. 전은 3자 max(③ 환산취득가액도 비교 — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13). 종전 제목은 「의제취득일 조건 없음 — 가목이 정본」이었다.
+  // 이 시료는 파트 양도가액 = 양도시 토지 기준시가(7억)라 ③ = ② 동점 → ①② 우선이어서 값이 같다.
+  it("D-4 증여 · 1985.1.1. 전(1984 — ③ = ② 동점이라 ①② 우선)·후(1988) 같은 값", async () => {
+    const g84 = await post({ ...GIFT("1984-05-01", 300_000_000), landSec164Value: 350_000_000, landSec164ValueWhole: 350_000_000 });
     const g88 = await post({ ...GIFT("1988-05-01", 300_000_000), landSec164Value: 350_000_000 });
-    const i84 = await post(SEC("1984-05-01", 300_000_000, 350_000_000));
+    const i84 = await post({ ...SEC("1984-05-01", 300_000_000, 350_000_000), landSec164ValueWhole: 350_000_000 });
     for (const x of [g84, g88, i84]) expect(x.r.determinedTax).toBe(104_660_000);
     // 보유연수 표기는 원 날짜(엔진은 의제취득일 클램프 없음) — 세액은 장특 30% 포화로 동일
     expect(g84.r.splitDetail.land.holdingYears).toBeGreaterThan(g88.r.splitDetail.land.holdingYears);
