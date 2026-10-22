@@ -1,6 +1,6 @@
 # 양도가액 «구분 기재» 선택 후 토지·건물 양도가액 두 칸 비움 — 일반건물·split ⑧ 처리 계획서
 
-> 작성 2026-10-22 · master `eee6c480f` 기준 · 상태: **📝 Plan 초안 — 사용자 결정 대기** (Do 미착수 · 제품 파일 무변경)
+> 작성 2026-10-22 · master `eee6c480f` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — Q-1 B: 현행 계산 유지 + 결과·신고서에 «구분 기재 없어 안분» 흔적 표시. Q-2·Q-3 해당 없음) → Do**
 > 관련: `docs/00-pm/gb-v8b-appraisal-mode-empty.plan.md` §7 Q-2(이 건의 출처) · `docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md`(#2402 §6) · `docs/00-pm/split-v7-pre2016-fe8-12-parity.plan.md`(T-7) · `docs/02-design/features/transfer-split-acq-std-gate-relaxation.plan.md` §4.8(규칙 ① 확정 경위)
 
 ## 0. 한 줄 요약
