@@ -26,11 +26,11 @@ export const GUARDED_FILES = [
   "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts",
 ];
 
-/** 폐지된 와이어 필드 — 코드 줄에는 «구필드 수신 거절» 1곳(스키마)만 남는다. 주석은 제외. */
+/** 폐지된 와이어 필드 — 코드 줄(주석 제외)에 0곳. S-2 다음 릴리스에 «수신 거절» 정의도 지웠다. */
 export const LEGACY_RATIO_FIELD = "burdenedGiftDebtRatio";
-export const LEGACY_FIELD_REJECT_FILE = "lib/api/stock-transfer-tax-schema.ts";
-/** 구필드가 코드에 나오면 안 되는 파일 — 생산(④)·소비(엔진)·매핑(⑭)·타입·refine */
+/** 구필드가 코드에 나오면 안 되는 파일 — 생산(④)·소비(엔진)·매핑(⑭)·타입·refine·스키마(⑫) */
 export const LEGACY_FIELD_FORBIDDEN_FILES = [
+  "lib/api/stock-transfer-tax-schema.ts",
   "lib/calc/gift-burdened-transfer-api.ts",
   "lib/tax-engine/stock-transfer/stock-acquisition-basis.ts",
   "lib/tax-engine/stock-transfer/types/stock-transfer.types.ts",
@@ -168,18 +168,12 @@ describe("부담부증여 채무비율 — 소수 비율을 곱하지 않는다"
     expect(found, `소수 비율 식별자 ${found.length}건 — debtFraction {debt, valuation}으로 바꿀 것:\n${found.join("\n")}`).toHaveLength(0);
   });
 
-  it("🔴 폐지된 와이어 필드 `burdenedGiftDebtRatio`는 코드에 «구필드 수신 거절» 1곳(스키마)만 남는다 (S-2 · 침묵 strip 방지)", () => {
+  it("🔴 폐지된 와이어 필드 `burdenedGiftDebtRatio`가 코드에 남아 있지 않다 (S-2 · 생산·스키마·매핑·엔진 전부)", () => {
     const found: string[] = [];
     for (const file of LEGACY_FIELD_FORBIDDEN_FILES) {
       for (const h of scanLegacyField(readFileSync(join(ROOT, file), "utf8"))) found.push(`  ${file}:${h.line}\n    ${h.text}`);
     }
     expect(found, `폐지 필드 ${found.length}건 — 증여가액 C(burdenedGiftValuationAmount)로 바꿀 것:\n${found.join("\n")}`).toHaveLength(0);
-    // 스키마에는 구필드 «키 정의»가 정확히 1개 있고 z.never 로 거절한다 — 없으면 구버전 payload 가 조용히 strip 된다.
-    const rejectSrc = readFileSync(join(ROOT, LEGACY_FIELD_REJECT_FILE), "utf8");
-    const defs = scanLegacyField(rejectSrc).filter((h) => h.text.startsWith(`${LEGACY_RATIO_FIELD}:`));
-    expect(defs, "구필드 키 정의 1개").toHaveLength(1);
-    const defStart = rejectSrc.indexOf(`  ${LEGACY_RATIO_FIELD}:`);
-    expect(rejectSrc.slice(defStart, defStart + 400), "z.never 로 수신 거절").toMatch(/z\s*\.never\(/);
   });
 
   it("대상 파일이 코드(주석 제외)에서 safeMultiplyThenDivide를 실제로 호출한다 (가드가 «아무것도 안 보는» 상태로 통과하지 않는다)", () => {

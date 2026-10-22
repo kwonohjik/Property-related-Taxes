@@ -331,3 +331,14 @@ estimated 모드에서 B=1.2억 > C=1억: 현행 Zod가 `burdenedGiftDebtRatio: 
 1. C 정수성: `computeStockValuation` 상장(평균가에 .5 포함)·비상장 간이 무작위 5,000건 probe → 비정수 0건. 그러나 `marketValue` 사용자 입력(§60 시가)은 정수가 보장되지 않으므로 `.int()`는 계속 걸지 않는다(Q4). 비정수 C 허용은 BD-15가 고정.
 2. 구필드 거절 제거 시점(§10-7)은 배포 주기에 따라 사용자 결정 — 스키마의 `burdenedGiftDebtRatio` 정의 1줄과 정적 가드의 `LEGACY_*` 상수를 함께 지울 것.
 3. §10-2·3·4(개산공제 base B/C 곱의 법 명문 근거 · B>C UI 경고↔API 400 모순 · 단건 호출 함수 죽은 코드)는 정책 불변이라 그대로 남는다.
+
+## 13. 후속 — 구필드 수신 거절 제거 (2026-10-22)
+
+Q2′의 「1릴리스 후 제거」를 이행했다. 저장소에는 배포 기록(GitHub deployments 0건)·배포 워크플로·Vercel 설정이 없어, 「구버전 번들 탭」 위험은 #2391 머지 시점으로 소멸한다고 보았다(사용자 지시).
+
+- `lib/api/stock-transfer-tax-schema.ts` — `burdenedGiftDebtRatio: z.never(...)` 정의·주석 삭제. 이제 구필드는 Zod 기본 동작으로 strip된다(그 경로를 보내는 생산자는 코드에 0곳).
+- `types/stock-transfer.types.ts` 주석의 «수신 시 400» 문구 삭제.
+- `__tests__/calc/gift-burdened-stock-debt-fraction-wire.anchor.test.ts` BD-14 — 구필드 400 단언 3건 삭제(제거 후에는 strip이라 그 동작을 단언으로 고정하지 않는다). 「C 미지정 → 안분 없음」 대조만 남김.
+- `__tests__/lib/debt-ratio-apply-policy.test.ts` — 구필드 허용 1곳(스키마)을 없애고 스키마도 금지 파일에 편입(코드 줄 0곳).
+- 뮤테이션: 스키마에 `burdenedGiftDebtRatio: z.number()…` 재삽입 → 가드 1건 실패(KILLED), cp 원복 sha 일치.
+- ④가 구필드를 보내지 않는다는 단언(vitest 3곳·E2E 2곳)은 유지.
