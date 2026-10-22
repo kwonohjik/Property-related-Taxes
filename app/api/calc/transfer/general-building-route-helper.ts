@@ -59,7 +59,17 @@ import {
   buildEstimatedGeneralBuildingCards,
   type GeneralBuildingValuationPayload,
 } from "@/lib/tax-engine/general-building-entry";
+import { resolveGbPreDeemedRoute, type GbPreDeemedEcho } from "@/lib/tax-engine/general-building-pre-deemed";
 
+/** 의제취득일 전 상속·증여 파트의 ①②③ 비교를 결과 detail에 싣는다 — 결과 카드의 유일한 소스. */
+export function withGbPreDeemedEcho<T extends { generalBuildingValuationDetail?: object }>(
+  aggregated: T,
+  echo: GbPreDeemedEcho | undefined,
+): void {
+  if (echo && aggregated.generalBuildingValuationDetail) {
+    aggregated.generalBuildingValuationDetail = { ...aggregated.generalBuildingValuationDetail, preDeemedAcquisition: echo };
+  }
+}
 
 // ── 통합 진입점 (route.ts에서 호출) ─────────────────────────────────────
 
@@ -140,7 +150,38 @@ function dispatchCoercedGeneralBuilding(
   ownershipRatio?: number,
   assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
-  if (coercedGbRaw.actualPriceMode === true) {
+  // ⑭ 사례 33: 증축 경로에서 actualBundledAcquisitionPrice/Expenses 주입 (`extensionBundledInjection`)
+  // extensionInfo.actualBundledAcquisitionPrice: 토지+건물1 일괄 취득가 (route handler actualAcquisitionPrice)
+  // extensionInfo.actualBundledExpenses: 토지+건물1 일괄 필요경비 (route handler actualExpenses)
+  // GeneralBuildingInput.extensionInfo 타입에 필수 필드 — 미주입 시 landAcq/landExp가 NaN.
+  const estimatedPayloadOf = (raw: Record<string, unknown>): GeneralBuildingValuationPayload => ({
+    ...(raw as unknown as GeneralBuildingValuationPayload),
+    totalTransferPrice,
+    transferDate,
+    acquisitionDate,
+    ownershipRatio,
+    // §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 주입.
+    // 환산 경로 엔진이 게이트(수용·환산·2009.02.04·보상 후보) 판정. undefined이면 무영향(회귀 0).
+    ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+    ...(expropriation?.compensationPerSqm !== undefined
+      ? { compensationPerSqm: expropriation.compensationPerSqm }
+      : {}),
+    ...(expropriation?.compensationBasisStdPrice !== undefined
+      ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
+      : {}),
+    ...extensionBundledInjection(raw, actualAcquisitionPrice, actualExpenses),
+  });
+  /**
+   * 의제취득일 전 상속·증여 파트 — ③(환산취득가액)과 비교해 이긴 파트만 환산 파트로 바꿔 환산 경로로 보낸다(PR-4).
+   * ③이 지면 payload가 그대로라 종전 경로가 그대로 돈다. 부담부증여는 §159가 취득가액을 정하므로 범위 밖(PR-7).
+   */
+  const preDeemed = burdenedGiftInfo
+    ? { raw: coercedGbRaw }
+    : resolveGbPreDeemedRoute(coercedGbRaw, actualExpenses, (r) =>
+        buildEstimatedGeneralBuildingCards(estimatedPayloadOf(r)).gbOut.acquisition);
+  const gbRaw = preDeemed.raw;
+  let result: GeneralBuildingRouteResult;
+  if (gbRaw.actualPriceMode === true) {
     /**
      * 🔴 payload는 **스프레드로 통째 전달**한다 — 필드를 나열하지 않는다(2026-08-06).
      *
@@ -158,9 +199,9 @@ function dispatchCoercedGeneralBuilding(
      *    (`lib/api/date-coerce.ts`).
      * 구조 가드: `__tests__/api/gb-route-actual-payload-forwarding.anchor.test.ts`
      */
-    return calculateGeneralBuildingActualTransfer(
+    result = calculateGeneralBuildingActualTransfer(
       {
-        ...(coercedGbRaw as unknown as GeneralBuildingActualPricePayload),
+        ...(gbRaw as unknown as GeneralBuildingActualPricePayload),
         totalTransferPrice,
         transferDate,
         acquisitionDate,
@@ -174,33 +215,14 @@ function dispatchCoercedGeneralBuilding(
       },
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
     );
+  } else {
+    result = calculateGeneralBuildingTransfer(
+      estimatedPayloadOf(gbRaw),
+      taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
+    );
   }
-  // ⑭ 사례 33: 증축 경로에서 actualBundledAcquisitionPrice/Expenses 주입 (`extensionBundledInjection`)
-  // extensionInfo.actualBundledAcquisitionPrice: 토지+건물1 일괄 취득가 (route handler actualAcquisitionPrice)
-  // extensionInfo.actualBundledExpenses: 토지+건물1 일괄 필요경비 (route handler actualExpenses)
-  // GeneralBuildingInput.extensionInfo 타입에 필수 필드 — 미주입 시 landAcq/landExp가 NaN.
-  const gbPayload: GeneralBuildingValuationPayload = {
-    ...(coercedGbRaw as unknown as GeneralBuildingValuationPayload),
-    totalTransferPrice,
-    transferDate,
-    acquisitionDate,
-    ownershipRatio,
-    // §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 주입.
-    // 환산 경로 엔진이 게이트(수용·환산·2009.02.04·보상 후보) 판정. undefined이면 무영향(회귀 0).
-    ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
-    ...(expropriation?.compensationPerSqm !== undefined
-      ? { compensationPerSqm: expropriation.compensationPerSqm }
-      : {}),
-    ...(expropriation?.compensationBasisStdPrice !== undefined
-      ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
-      : {}),
-    ...extensionBundledInjection(coercedGbRaw, actualAcquisitionPrice, actualExpenses),
-  };
-
-  return calculateGeneralBuildingTransfer(
-    gbPayload,
-    taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
-  );
+  withGbPreDeemedEcho(result.aggregated, preDeemed.echo);
+  return result;
 }
 
 /**

@@ -26,26 +26,26 @@ const SRC = resolve(process.cwd(), "app/api/calc/transfer/general-building-route
 describe("실가 경로 payload는 스프레드로 전달한다", () => {
   const src = readFileSync(SRC, "utf8");
 
-  it("🔴 실가 경로 호출부가 `coercedGbRaw`를 **스프레드**한다 (필드 나열 금지)", () => {
+  it("🔴 실가 경로 호출부가 `gbRaw`(의제취득일 전 재선택을 거친 coercedGbRaw)를 **스프레드**한다 (필드 나열 금지)", () => {
     // dispatch의 actualPriceMode 분기만 잘라낸다.
     const start = src.indexOf("actualPriceMode === true");
     expect(start).toBeGreaterThan(-1);
     const branch = src.slice(start, src.indexOf("taxYear, annualBasicDeductionUsed", start));
-    expect(branch).toMatch(/\.\.\.\(coercedGbRaw as/);
+    expect(branch).toMatch(/\.\.\.\(gbRaw as/);
   });
 
   it("파트 취득가액·자본적지출을 **개별 나열하지 않는다** — 스프레드가 덮으므로 불필요하다", () => {
     const start = src.indexOf("actualPriceMode === true");
     const branch = src.slice(start, src.indexOf("taxYear, annualBasicDeductionUsed", start));
     // 나열이 남아 있으면 「빠뜨릴 수 있는 목록」이 그대로 존재한다는 뜻이다.
-    expect(branch).not.toMatch(/landAcquisitionPrice:\s*coercedGbRaw/);
-    expect(branch).not.toMatch(/landDirectExpenses:\s*coercedGbRaw/);
+    expect(branch).not.toMatch(/landAcquisitionPrice:\s*gbRaw/);
+    expect(branch).not.toMatch(/landDirectExpenses:\s*gbRaw/);
   });
 
   it("함수 인자·Date 변환값은 스프레드 **뒤에** 명시 override한다 (덮어쓰기 순서)", () => {
     const start = src.indexOf("actualPriceMode === true");
     const branch = src.slice(start, src.indexOf("taxYear, annualBasicDeductionUsed", start));
-    const spreadAt = branch.search(/\.\.\.\(coercedGbRaw as/);
+    const spreadAt = branch.search(/\.\.\.\(gbRaw as/);
     // 함수 파라미터에서 오는 값들은 payload에 없거나 raw 상태라 반드시 나중에 덮어써야 한다.
     for (const key of ["totalTransferPrice", "actualAcquisitionPrice", "landAcquisitionDate"]) {
       const at = branch.indexOf(`${key}`, spreadAt);

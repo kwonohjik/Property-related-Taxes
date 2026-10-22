@@ -700,4 +700,26 @@ export type GeneralBuildingOutput = {
   acquisitionByInheritance?: boolean;
   /** §163⑨ 상속 취득가액 직접 산정 여부 — 건물분. */
   buildingAcquisitionByInheritance?: boolean;
+  /** 의제취득일(1985.1.1.) 전 상속·증여 파트의 ①②③ 비교 — 결과 카드가 읽는다(`general-building-pre-deemed.ts`). */
+  preDeemedAcquisition?: GbPreDeemedEcho;
 };
+
+/** ④가 싣는 의제취득일 전 상속·증여 파트의 ①② — 그 파트(지분이면 지분 몫)의 금액. */
+export interface GbPreDeemedClauseA {
+  /** ① 상증법 평가액(상속개시일·증여일 신고가액) */
+  reported: number;
+  /** ② 영 §164④(토지)·⑤(건물) 가액 */
+  sec164: number;
+}
+
+/** 파트별 세 후보와 채택 — 동점은 ①② 쪽(Q-5). */
+export interface GbPreDeemedPartEcho extends GbPreDeemedClauseA {
+  /** ③ 환산취득가액(영 §176조의2④ → ②2호) */
+  converted: number;
+  adopted: "reported" | "sec164" | "converted";
+}
+
+export interface GbPreDeemedEcho {
+  land?: GbPreDeemedPartEcho;
+  building?: GbPreDeemedPartEcho;
+}

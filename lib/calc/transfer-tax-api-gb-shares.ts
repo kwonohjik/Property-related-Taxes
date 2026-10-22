@@ -146,6 +146,11 @@ export function applyShareScale(
   ]) {
     if (out[k] !== undefined) out[k] = scale(out[k]);
   }
+  // 의제취득일 전 상속·증여 파트의 ①② — 파트 슬롯(위 `*AcquisitionPrice`)과 같은 100% 기준 금액이다(PR-4).
+  for (const k of ["landPreDeemedClauseA", "buildingPreDeemedClauseA"]) {
+    const c = out[k] as { reported: number; sec164: number } | undefined;
+    if (c) out[k] = { reported: scale(c.reported), sec164: scale(c.sec164) };
+  }
   // 증축 **실가** 2필드만 — 기준시가 2필드는 물건-수준이라 건드리지 않는다.
   const ext = out.extensionInfo as Record<string, unknown> | undefined;
   if (ext) {

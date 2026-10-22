@@ -15,6 +15,7 @@
 import { z } from "zod";
 import { usesBundledPartAcquisition } from "@/lib/tax-engine/general-building-part-acq";
 import { partialAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
+import { GB_PRE_DEEMED_NUMERATOR_MESSAGE } from "@/lib/tax-engine/general-building-pre-deemed";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx, prefix: (string | number)[]): Issue => (path, message) =>
@@ -60,6 +61,8 @@ export type GbValuationLike = {
   buildingAcquisitionByInheritance?: boolean;
   inheritedLandValue?: number;
   inheritedBuildingValue?: number;
+  landPreDeemedClauseA?: object;
+  buildingPreDeemedClauseA?: object;
   extensionInfo?: unknown;
   bundledAcquisitionPrice?: number;
   carryoverGiftEvent?: { giftTaxBase: number; donorRelation?: string; donorDeceased?: boolean };
@@ -76,6 +79,13 @@ export type GbValuationLike = {
  */
 export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementCtx) {
   const issue = issuer(ctx, []);
+
+  // 의제취득일 전 상속·증여 파트 — ③ 분자(의제취득일 기준시가)가 없으면 엔진이 비교하지 못한다(PR-4 · 엔진과 같은 문구).
+  //   ⑧은 같은 값을 영 §163⑨ 단서 ②로 이미 요구한다(1985 전이면 늘 단서 구간) — 여기서는 API 직접 호출을 막는다.
+  if (v.landPreDeemedClauseA && !v.acquisitionLandPricePerSqm)
+    issue(["acquisitionLandPricePerSqm"], GB_PRE_DEEMED_NUMERATOR_MESSAGE.land);
+  if (v.buildingPreDeemedClauseA && !v.acquisitionBuildingStdPrice)
+    issue(["acquisitionBuildingStdPrice"], GB_PRE_DEEMED_NUMERATOR_MESSAGE.building);
 
   // V8 — 양도시 감정평가가액 한쪽만: 엔진은 쓰지 않고 기준시가로 후퇴한다(`incomplete`) — 입력이 조용히 폐기되므로 ⑧ `validateGbSaleAxis`와 같은 술어로 막는다.
   //      일반건물 ④는 `saleSplitMode`를 보내지 않아(계획서 Q-7) V8-b 거울은 없다.

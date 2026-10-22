@@ -27,6 +27,7 @@ import { buildActualGeneralBuildingCards } from "./general-building-route-actual
 import type { GeneralBuildingActualPricePayload } from "./general-building-route-actual";
 import { coerceGeneralBuildingPayload } from "./general-building-route-helper";
 import { buildProperties } from "./general-building-route-cards";
+import { resolveGbPreDeemedRoute } from "@/lib/tax-engine/general-building-pre-deemed";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 
 export interface GbPartCards {
@@ -59,7 +60,7 @@ export interface GbPartCards {
  * `dispatchGeneralBuilding`(단건 진입점)과 **같은 축**이다.
  */
 export function buildGbPartCards(
-  gbv: Record<string, unknown>,
+  gbvIn: Record<string, unknown>,
   /** 이 자산(또는 지분)에 귀속된 양도가액. 자산 간 안분은 **호출부가 이미 끝냈다**. */
   partTransferPrice: number,
   transferDate: Date,
@@ -77,6 +78,23 @@ export function buildGbPartCards(
   actualAcquisitionPrice: number,
   actualExpenses: number,
 ): GbPartCards {
+  const estimatedPayloadOf = (raw: Record<string, unknown>): GeneralBuildingValuationPayload => ({
+    ...(raw as unknown as GeneralBuildingValuationPayload),
+    totalTransferPrice: partTransferPrice,
+    transferDate,
+    // M-1a — `acquisitionDate`는 **건물** 취득일, 토지는 별도 필드다.
+    acquisitionDate,
+    landAcquisitionDate,
+    // 개산공제(영 §163⑥) base 축소 전용 — 기준시가·면적은 100% 유지가 정확성의 근거다.
+    ownershipRatio,
+    // 증축 원건물 일괄 실가 — 단건과 같은 주입(엔진이 키의 존재로 원건물 모드를 고른다).
+    ...extensionBundledInjection(raw, actualAcquisitionPrice, actualExpenses),
+  });
+  // 의제취득일 전 상속·증여 파트 — 단건 `dispatchCoercedGeneralBuilding`과 같은 재선택(PR-4).
+  const preDeemed = resolveGbPreDeemedRoute(gbvIn, actualExpenses, (r) =>
+    buildEstimatedGeneralBuildingCards(estimatedPayloadOf(r)).gbOut.acquisition);
+  const gbv = preDeemed.raw;
+  const echo = preDeemed.echo ? { preDeemedAcquisition: preDeemed.echo } : {};
   const landArea = (gbv.landArea as number) ?? 0;
   const landStdAtTransfer = ((gbv.transferLandPricePerSqm as number) ?? 0) * landArea;
   const buildingStdAtTransfer = (gbv.transferBuildingStdPrice as number) ?? 0;
@@ -101,7 +119,7 @@ export function buildGbPartCards(
     return {
       cards: built.cards,
       nonBusinessRatio: built.nonBusinessRatio,
-      detailBase: { ...built.nblDetail, nonBusinessRatio: built.nonBusinessRatio },
+      detailBase: { ...built.nblDetail, nonBusinessRatio: built.nonBusinessRatio, ...echo },
       totalStd: built.totalStd + extensionStdAtTransfer,
       landStdAtTransfer: built.landStdAtTransfer,
       landStdAtAcq: null,
@@ -114,25 +132,13 @@ export function buildGbPartCards(
     };
   }
 
-  const payload: GeneralBuildingValuationPayload = {
-    ...(gbv as unknown as GeneralBuildingValuationPayload),
-    totalTransferPrice: partTransferPrice,
-    transferDate,
-    // M-1a — `acquisitionDate`는 **건물** 취득일, 토지는 별도 필드다.
-    acquisitionDate,
-    landAcquisitionDate,
-    // 개산공제(영 §163⑥) base 축소 전용 — 기준시가·면적은 100% 유지가 정확성의 근거다.
-    ownershipRatio,
-    // 증축 원건물 일괄 실가 — 단건과 같은 주입(엔진이 키의 존재로 원건물 모드를 고른다).
-    ...extensionBundledInjection(gbv, actualAcquisitionPrice, actualExpenses),
-  };
-  const { gbOut, swap } = buildEstimatedGeneralBuildingCards(payload);
+  const { gbOut, swap } = buildEstimatedGeneralBuildingCards(estimatedPayloadOf(gbv));
   const acqLandPerSqm = (gbv.acquisitionLandPricePerSqm as number) ?? 0;
   return {
     cards: gbOut.assetCards,
     nonBusinessRatio: gbOut.nonBusinessRatio,
     // 환산 경로는 `gbOut` 자체가 완전한 `GeneralBuildingOutput`이다.
-    detailBase: gbOut as unknown as Record<string, unknown>,
+    detailBase: { ...(gbOut as unknown as Record<string, unknown>), ...echo },
     swap,
     totalStd: landStdAtTransfer + buildingStdAtTransfer + extensionStdAtTransfer,
     landStdAtTransfer,

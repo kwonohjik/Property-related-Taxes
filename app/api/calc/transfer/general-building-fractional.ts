@@ -266,6 +266,8 @@ export function calculateGeneralBuildingFractional(
    */
   aggregated.generalBuildingValuationDetail = {
     ...(detailBase ?? {}),
+    // 의제취득일 전 ①②③ 비교는 **지분마다** 다르다 — 첫 지분 값만 실으면 다른 지분의 비교로 오독된다(PR-4 한계: 블록 미표시).
+    preDeemedAcquisition: undefined,
     // 카드는 **전 지분 concat** — 라벨에 지분 이름이 들어 있다.
     assetCards: allCards,
     ...(lastLandStdTotal !== undefined ? { landStdTotal: lastLandStdTotal } : {}),

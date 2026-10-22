@@ -47,7 +47,7 @@ function SelectedBadge() {
 }
 
 /** 의제취득일 전 후보 한 줄 — 채택이면 「선택」, 아니면 「(미적용)」 + 취소선 */
-function PreDeemedCandidateRow({ label, amount, selected }: { label: string; amount: number; selected: boolean }) {
+export function PreDeemedCandidateRow({ label, amount, selected }: { label: string; amount: number; selected: boolean }) {
   return (
     <>
       <span className="text-muted-foreground">
