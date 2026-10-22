@@ -14,8 +14,6 @@ import {
   applyCarryoverEstimationBasis,
 } from "@/lib/tax-engine/general-building-valuation";
 import { splitLandCarryover } from "@/lib/tax-engine/carryover-land-split";
-import type { CarryoverTaxationInput } from "@/lib/tax-engine/types/transfer-carryover.types";
-import type { SaleSplitExemption } from "@/lib/tax-engine/sale-split-deemed-unclear";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
@@ -25,7 +23,6 @@ import type {
   GeneralBuildingOutput,
 } from "@/lib/tax-engine/general-building-valuation";
 import { buildBurdenedGiftBreakdown } from "@/lib/tax-engine/burdened-gift-apportionment";
-import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { attachBuildingDepreciation } from "@/lib/tax-engine/general-building-depreciation";
 import {
   buildProperties,
@@ -34,181 +31,10 @@ import {
   type GbAssetLevelInputs,
 } from "./general-building-route-cards";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 
-/** 실거래가/감정가 모드 NBL 전용 payload. */
-export interface GeneralBuildingActualPricePayload {
-  totalTransferPrice: number;
-  transferDate: Date;
-  acquisitionDate: Date;
-  landArea: number;
-  buildingFootprintArea: number;
-  transferLandPricePerSqm: number;
-  transferBuildingStdPrice: number;
-  zoneType?: string;
-  isMetropolitan?: boolean;
-  /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(NBL 축). §104③과 무관. */
-  unapprovedBuilding?: boolean;
-  /** 「소득세법」 §104의2② 지정지역 선언 — 배율초과 토지 카드의 §104①8호 중과 유예 판정용(양도 2009.3.16.~2015.12.31.). */
-  isDesignatedArea?: boolean;
-  /** 「소득세법」 §104③ 미등기양도자산 — 토지 축 / 건물 축(별개 등기부). */
-  unregisteredLand?: boolean;
-  unregisteredBuilding?: boolean;
-  actualAcquisitionPrice: number;
-  actualExpenses: number;
-  /** 부담부증여 §159①1호 산식용 — 취득시 토지 ㎡당 기준시가. 부담부증여 모드 시 필수. */
-  acquisitionLandPricePerSqm?: number;
-  /** 부담부증여 §159①1호 산식용 — 취득시 건물 기준시가 총액. 부담부증여 모드 시 필수. */
-  acquisitionBuildingStdPrice?: number;
-  /**
-   * 부담부증여 정보 (소령 §159).
-   * 제공 시 §159①1호 단서에 따라 사용자 입력 actualAcquisitionPrice를 무시하고
-   * 취득시 기준시가 × 채무비율로 환산.
-   */
-  burdenedGiftInfo?: BurdenedGiftInfo;
-  // ── 사례 35: 주택→상가 용도변경 (자산 공통 — actual 경로도 동일 분기) ──
-  houseToCommercialConversion?: boolean;
-  conversionDate?: Date;
-  wasMultiHouseAtConversion?: boolean;
-  // ── §163⑨ 상속 취득가액 직접 산정 (Phase 1 = C1) ──
-  /** 토지 상속 게이트 (§163⑨). */
-  acquisitionByInheritance?: boolean;
-  /** 건물 상속 게이트. */
-  buildingAcquisitionByInheritance?: boolean;
-  /** 상속개시일 토지 평가액 (원) — 취득당시 실지거래가액 의제(§166⑥ 안분 아님). */
-  inheritedLandValue?: number;
-  /** 상속개시일 건물 평가액 (원). */
-  inheritedBuildingValue?: number;
-  // ── §95④ 단기보유 기산점 — actual 분기 기존 결측(회귀 동반 수정) ──
-  /** 토지 취득원인 — 단기보유 기산점 분기(법 §104②). */
-  landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
-  /**
-   * M-1a 파트 취득일 — `acquisitionDate`(자산 단위)는 **건물** 취득일이고,
-   * 토지 카드는 `landAcquisitionDate`로 보유기간·세율을 잡는다. 둘 다 미주입이면 분리 OFF.
-   */
-  landAcquisitionDate?: Date;
-  buildingAcquisitionDate?: Date;
-  /**
-   * 파트별 자본적지출(§97①2호) — **직접 귀속** 금액이다.
-   * 「소득세법」 제100조 제2항 후문은 "**공통되는** 취득가액과 양도비용"만 안분하라고 하므로,
-   * 그 파트에 귀속되는 것이 분명하면 안분하지 않고 전액 그 파트에서 차감한다.
-   * 미주입 파트는 종전대로 §166⑥ 비율 안분.
-   */
-  landDirectExpenses?: number;
-  buildingDirectExpenses?: number;
-  /**
-   * 파트별 **실지거래가액**(§97①1호 가목) — 별개 취득이라 파트별로 실재하는 취득가액이다.
-   *
-   * 두 값이 모두 있으면 자산 총액 안분을 **쓰지 않는다**. 「소득세법」 제100조 제2항 전문은
-   * 「토지와 건물 등을 함께 취득하거나 양도한 경우에는 이를 **각각 구분하여 기장**하되 …
-   * 가액 **구분이 불분명할 때에는** … 안분계산한다」이므로, 구분이 분명하면 안분 대상이 아니다.
-   */
-  landAcquisitionPrice?: number;
-  buildingAcquisitionPrice?: number;
-  /**
-   * 자산 단위 자본적지출(§97①2호) · 양도비(§97①3호) — **필요경비**다.
-   *
-   * 🔴 2026-08-07 신설(P-3). 종전에는 이 경로에 도달할 필드가 없어 사용자가 입력한 값이
-   *    **통째로 누락**됐다(실측 결정세액 12,800,000원 과대). `actualExpenses`는 legacy
-   *    `directExpenses`에서만 오는데, 현행 UI는 legacy 칸을 「새 두 필드가 둘 다 0일 때만」
-   *    띄우므로(`AssetSectionExpense.tsx:109-111`) 정상 입력에서는 늘 0이었다.
-   *
-   * ⚠️ **swap(§97②2호 단서) 대상이 아니다.** 실가 경로는 환산취득가·개산공제를 쓰지 않아
-   *    단서 요건을 충족하지 않는다 ⇒ 같은 항 **1호**의 「실지거래가액 + 2호·3호」 **가산**이다.
-   *    환산 경로(`resolveGeneralBuildingSwap`)와 처리가 다른 것은 그 때문이다.
-   */
-  capitalExpenditure?: number;
-  transferExpense?: number;
-  /**
-   * §97③ 감가상각비 — **건물분**(원건물 카드)의 취득가액에서 공제한다. 실가 경로는 swap 대상이 아니라
-   * 비교 없이 공제만 한다(`attachBuildingDepreciation` → 카드 → 단건 엔진 `calcTransferGain`).
-   */
-  depreciationAmount?: number;
-  /**
-   * 🔴 구분양도(§100②③)·감정평가 basis(부가령 §64①1호 단서)·§166⑧ 예외 — 2026-08-07 신설(P-1).
-   *
-   * 종전에는 payload에 **실려 오는데 구조분해를 하지 않아** 통째로 버려졌다
-   * (실측: 구분 기재 3,500,000,000 → 안분값 3,816,625,253 적용 · 판정 흔적 `null`).
-   * 이제 환산 경로와 **같은 함수**(`allocateBundledTransferPrice`)를 쓴다.
-   */
-  landTransferPrice?: number;
-  buildingTransferPrice?: number;
-  landAppraisalAtTransfer?: number;
-  buildingAppraisalAtTransfer?: number;
-  saleSplitExemption?: SaleSplitExemption;
-  buildingAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift" | "newConstruction";
-  /** 상속 시 피상속인 취득일 (법 §104②1호). */
-  decedentAcquisitionDate?: Date;
-  /** 상속인이 아닌 수유자(유증·사인증여) — 상속 카드의 §104②1호 통산 미적용(`buildProperties`). */
-  nonHeirBequest?: boolean;
-  /** 건물 전용 피상속인 취득일 — 비면 `decedentAcquisitionDate` (환산 경로와 같은 fallback · D3 2026-09-30) */
-  buildingDecedentAcquisitionDate?: Date;
-  /** 증여 시 증여자 취득일 (법 §104②2호 — 이월과세 자산). */
-  donorAcquisitionDate?: Date;
-  /**
-   * 🔴 배우자등 이월과세(「소득세법」 §97의2①) — 토지·건물 파트별 서브객체.
-   *
-   * ## 종전 결함 (2026-08-23 P-C)
-   *
-   * 데이터는 **이미 도착해 있었다**. ④(`transfer-tax-api-gb.ts`의 실가 return)가
-   * `buildGbCarryoverPayload(asset)`를 스프레드하고, `coerceGeneralBuildingPayload`
-   * (`general-building-entry.ts`)가 **모드와 무관하게** 두 키를 붙여 보내며,
-   * 실가 dispatch(`general-building-route-helper.ts`)가 payload를 통째 스프레드한다.
-   * 그런데 이 타입에 필드가 없고 아래 구조분해가 꺼내지 않아 **여기서 조용히 증발**했다
-   * (`as unknown as` 캐스트라 tsc도 침묵). ⑤·⑧ 어디에도 모드 게이트가 없어
-   * 「실가 모드 + 이월과세」는 정상적으로 만들어지는 조합인데도 세액이 **1원도 안 바뀌었다**
-   * (실측 299,010,000 → 299,010,000 · 배선 후 225,090,000).
-   *
-   * ## 취득가액 축 셋의 우열 (§159①1호 · §100② · §97의2①)
-   *
-   * 1. **§159①1호(부담부증여)** 와는 **결합하지 않는다** — ④ `buildGbCarryoverPayload`가
-   *    `transferType === "burdened_gift"`에서 `{}`를 반환한다(중복 배선 회피).
-   *    그쪽은 `bgCoDonor*` 입력으로 §159 안분 단계에 이월과세를 얹는 **다른 줄기**다.
-   * 2. **§100②(파트 실지거래가액 · 자산 총액 안분)** 와는 **다투지 않는다**. 이월과세는
-   *    이 라우트에서 취득가액을 **덮지 않기 때문**이다 — 카드에 서브객체를 실어 보내면
-   *    단건 엔진 `calcCarryoverScenarios`가 시나리오 A(증여자 취득가액 승계)와
-   *    B(`giftDateValuation`)를 **각각 통째로 교체해** 계산하고 세액이 큰 쪽을 채택한다
-   *    (`transfer-tax-carryover.ts` `buildInputB:622` · `inputABase:410`).
-   *    ⇒ 이월과세가 **발동하면** 위 §100② 값은 어느 시나리오에도 쓰이지 않고,
-   *      **배제되면**(기간 초과·관계·가업상속) 엔진이 시나리오 B로 되돌린다.
-   *    ⇒ 라우트 단계에서 우열을 판정할 것이 없다. 환산 경로가 같은 이유로 서브객체만 싣는다.
-   */
-  landCarryoverTaxation?: CarryoverTaxationInput;
-  buildingCarryoverTaxation?: CarryoverTaxationInput;
-}
-// ── 경로 B: 실거래가/감정가 모드 ─────────────────────────────────────
-
-/**
- * 경로 B의 **카드 조립 결과** — aggregate 직전 상태.
- *
- * 지분(%) 분할 취득에서 지분마다 카드를 만들어 **concat 후 aggregate 1회**를 하려면
- * 「카드까지」와 「aggregate부터」가 갈려 있어야 한다
- * (설계 `transfer-general-building-fractional-share.engine.design.md` D3-2-c).
- */
-export interface ActualGbCardsResult {
-  cards: AssetCardForAggregate[];
-  nonBusinessRatio: number;
-  /** NBL 판정 명세 — 결과 카드(`GeneralBuildingValuationDetailCard`)가 **가드 없이** 읽는다. */
-  nblDetail: {
-    buildingFootprintArea: number;
-    allowedLandArea: number;
-    isWithinNblRatio: boolean;
-    nonBusinessArea: number;
-    appliedMultiplier: number;
-    multiplierDetail: string;
-  };
-  /** §166⑥ 안분 분모 (양도시 토지 + 건물 기준시가) */
-  totalStd: number;
-  landStdAtTransfer: number;
-  transferBuildingStdPrice: number;
-  acqLandStdTotal?: number;
-  acqBuilding1StdTotal?: number;
-  bundledActualAcquisitionPrice?: number;
-  bundledActualExpenses?: number;
-  saleSplitJudgment?: SaleSplitJudgmentDetail;
-  transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
-  acquisitionByInheritance?: boolean;
-  buildingAcquisitionByInheritance?: boolean;
-}
+export type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
+import type { GeneralBuildingActualPricePayload, ActualGbCardsResult } from "./general-building-route-actual.types";
 
 /**
  * 경로 B 카드 조립 — §166⑥ 비율로 실거래가 안분 + NBL 중과.
@@ -254,7 +80,8 @@ export function buildActualGeneralBuildingCards(
    * 그래서 여기서도 둘 다 없을 때만 `actualExpenses`(= legacy 경로)로 후퇴한다 —
    * 합산하면 legacy만 입력한 기존 이력과 새 입력이 **이중계상**된다.
    *
-   * ⚠️ 안분 **비율**은 성질별로 다르다(P-2 · §5) — 자본적지출은 **취득시**, 양도비는 **양도시**.
+   * ⚠️ 안분 **기준**은 성질별로 다르다(P-2 · §5 + 2026-10-22 사용자 규칙) — 자본적지출은 **취득시 기준시가**,
+   *    양도비는 **각 파트에 적용된 양도가액**(구분 기재·감정이면 그 가액, 기준시가 안분이면 양도시 기준시가).
    *    아래 `apportionExpenses()`가 그것을 적용한다.
    */
   const declaredExpenses = (capitalExpenditure ?? 0) + (transferExpense ?? 0);
@@ -272,8 +99,6 @@ export function buildActualGeneralBuildingCards(
   const totalStd = landStdAtTransfer + transferBuildingStdPrice;
   if (totalStd <= 0) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT,
     "일반건물(실거래가): 양도시 기준시가 합계가 0이면 안분이 불가합니다.");
-
-  const landRatioNum = landStdAtTransfer / totalStd; // 연속 부동소수 계산용
 
   /**
    * 🔴 **취득 축 안분 비율** — 「소득세법」 제100조 제2항 **본문**(2026-08-07 P-2).
@@ -295,9 +120,9 @@ export function buildActualGeneralBuildingCards(
    *    실가 경로만 미반영이었다.
    */
   const acqLandStdTotal = multiplyByArea((acquisitionLandPricePerSqm ?? 0), landArea);
-  const acqTotalStd = acqLandStdTotal + (acquisitionBuildingStdPrice ?? 0);
+  const acqBuildingStd = acquisitionBuildingStdPrice ?? 0;
+  const acqTotalStd = acqLandStdTotal + acqBuildingStd;
   const hasAcqStd = acqTotalStd > 0;
-  const acqLandRatioNum = hasAcqStd ? acqLandStdTotal / acqTotalStd : 0;
 
   /**
    * 취득 축 안분이 필요한데 취득시 기준시가가 없으면 **차단한다**.
@@ -315,16 +140,6 @@ export function buildActualGeneralBuildingCards(
     );
   }
 
-  /**
-   * 필요경비 안분 — **성질별로 시점이 다르다**(§100② 후문 · P-2 확정 규칙).
-   *
-   * · 자본적지출(§97①2호) → **취득시** 비율 (취득에 부수하는 지출)
-   * · 양도비(§97①3호)     → **양도시** 비율 (양도에 부수하는 지출)
-   * · legacy `directExpenses` → **양도시** 비율 **유지**. 두 성질이 섞인 한 덩어리라 나눌 근거가
-   *   없고, 근거 없이 바꾸면 기존 이력의 세액이 움직인다.
-   *
-   * 잔액 흡수로 `land + building = 총액` 불변식을 지킨다(메모리 `feedback_floor_residual_absorption`).
-   */
   /**
    * 🔴 양도가액 안분 — **환산 경로와 같은 함수를 쓴다**(2026-08-07 P-1).
    *
@@ -350,19 +165,36 @@ export function buildActualGeneralBuildingCards(
     });
   }
 
-  function apportionExpenses(): { land: number; building: number } {
+  /**
+   * 필요경비 안분 — **성질별로 기준이 다르다**(§100② 후문 · P-2 확정 규칙 + 2026-10-22 사용자 규칙).
+   *
+   * · 자본적지출(§97①2호) → **취득시 기준시가** 비율 (취득에 부수하는 지출)
+   * · 양도비(§97①3호)     → **각 파트에 적용된 자산가액** 비율 (`saleBasis`) — 구분 기재 채택이면 그 가액,
+   *   감정이면 감정가액, 기준시가 안분이면 양도시 기준시가. 종전에는 양도시 기준시가 고정이라 구분 기재·감정으로
+   *   양도가액을 나눈 경우에도 양도비만 다른 비율로 나뉘었다(`gb-transfer-expense-apportion-basis.plan.md`).
+   * · legacy `directExpenses` → **양도시 기준시가** 비율 **유지**. 두 성질이 섞인 한 덩어리라 나눌 근거가
+   *   없고, 근거 없이 바꾸면 기존 이력의 세액이 움직인다.
+   *
+   * 모두 `apportionByStdPrice`(정수 곱셈 먼저·잔액 흡수)다 — 비율 변수로 `Math.floor(x * ratio)` 하면 1원 과소가 난다.
+   * 잔액 흡수로 `land + building = 총액` 불변식을 지킨다(메모리 `feedback_floor_residual_absorption`).
+   */
+  function apportionExpenses(saleBasis: { land: number; building: number }): { land: number; building: number } {
     if (declaredExpenses > 0) {
       if (capitalExpenditure) requireAcqStd("자본적지출");
       const capexLand = capitalExpenditure
-        ? Math.floor(capitalExpenditure * acqLandRatioNum)
+        ? apportionByStdPrice(capitalExpenditure, acqLandStdTotal, acqBuildingStd).land
         : 0;
       const transferLand = transferExpense
-        ? Math.floor(transferExpense * landRatioNum)
+        ? apportionByStdPrice(transferExpense, saleBasis.land, saleBasis.building).land
         : 0;
       const land = capexLand + transferLand;
       return { land, building: declaredExpenses - land };
     }
-    const land = Math.floor(actualExpenses * landRatioNum);
+    const land = apportionByStdPrice(
+      actualExpenses,
+      multiplyByArea(transferLandPricePerSqm, landArea),
+      transferBuildingStdPrice,
+    ).land;
     return { land, building: actualExpenses - land };
   }
 
@@ -383,6 +215,8 @@ export function buildActualGeneralBuildingCards(
     | undefined;
   /** §100③ 판정 명세 — 구분 기재가 있을 때만 채워진다(표시 계층이 소비). */
   let saleSplitJudgment: SaleSplitJudgmentDetail | undefined;
+  /** 양도비를 토지·건물로 나눌 때 비례시킨 자산가액 — 표시 계층 산식용 echo(상속·일반 분기에서만 채운다). */
+  let transferExpenseBasis: { land: number; building: number } | undefined;
 
   if (burdenedGiftInfo) {
     if (!acquisitionLandPricePerSqm || !acquisitionBuildingStdPrice) {
@@ -433,16 +267,18 @@ export function buildActualGeneralBuildingCards(
     landTransfer = saleAlloc.allocation.land;
     buildingTransfer = saleAlloc.allocation.building;
     saleSplitJudgment = saleAlloc.judgment;
+    transferExpenseBasis = saleAlloc.proportionBasis;
     landAcq = inheritedLandValue ?? 0;
     buildingAcq = inheritedBuildingValue ?? 0;
-    // 필요경비는 성질별 비율로 안분한다(P-2). 개산공제 아님 —
+    // 필요경비는 성질별 기준으로 안분한다(P-2). 개산공제 아님 —
     // actual 모드는 이미 전 카드 estimatedDeduction:0(§163⑥ 미적용, §163⑨ 정합).
-    ({ land: landExp, building: buildingExp } = apportionExpenses());
+    ({ land: landExp, building: buildingExp } = apportionExpenses(saleAlloc.proportionBasis));
   } else {
     const saleAlloc = resolveSaleAllocation();
     landTransfer = saleAlloc.allocation.land;
     buildingTransfer = saleAlloc.allocation.building;
     saleSplitJudgment = saleAlloc.judgment;
+    transferExpenseBasis = saleAlloc.proportionBasis;
     /**
      * 🔴 파트별 실지거래가액이 **둘 다** 있으면 안분하지 않고 그대로 쓴다(2026-08-06).
      *
@@ -471,7 +307,7 @@ export function buildActualGeneralBuildingCards(
       actualSource = "bundled_apportion";
       // 🔴 **취득시** 비율이다(P-2) — §100② 본문 「취득 당시」. 종전 양도시 비율은 정정 대상이었다.
       requireAcqStd("취득가액");
-      landAcq = Math.floor(actualAcquisitionPrice * acqLandRatioNum);
+      landAcq = apportionByStdPrice(actualAcquisitionPrice, acqLandStdTotal, acqBuildingStd).land;
       buildingAcq = actualAcquisitionPrice - landAcq;
     } else {
       // 취득가액 0 — 나눌 것이 없으므로 취득시 기준시가를 요구하지 않는다(거짓 차단 금지).
@@ -494,7 +330,7 @@ export function buildActualGeneralBuildingCards(
       landExp = landDirectExpenses;
       buildingExp = buildingDirectExpenses;
     } else {
-      const apportionedExp = apportionExpenses();
+      const apportionedExp = apportionExpenses(saleAlloc.proportionBasis);
       landExp = landDirectExpenses ?? apportionedExp.land;
       buildingExp = buildingDirectExpenses ?? apportionedExp.building;
     }
@@ -648,6 +484,14 @@ export function buildActualGeneralBuildingCards(
     acqBuilding1StdTotal: acquisitionBuildingStdPrice ?? undefined,
     bundledActualAcquisitionPrice: actualAcquisitionPrice ?? undefined,
     bundledActualExpenses: actualExpenses ?? undefined,
+    // 신규 두 칸 입력일 때만 — legacy 후퇴(`declaredExpenses === 0`)에서는 안분 echo가 없다(표시 계층이 종전 산식을 쓴다).
+    ...(declaredExpenses > 0 && transferExpenseBasis
+      ? {
+          bundledActualCapitalExpenditure: capitalExpenditure ?? 0,
+          bundledActualTransferExpense: transferExpense ?? 0,
+          bundledActualTransferBasis: transferExpenseBasis,
+        }
+      : {}),
     saleSplitJudgment,
     transferBurdenedGiftBreakdown,
     acquisitionByInheritance,
@@ -713,6 +557,13 @@ export function runActualGeneralBuildingOnce(
     acqBuilding1StdTotal: built.acqBuilding1StdTotal,
     bundledActualAcquisitionPrice: built.bundledActualAcquisitionPrice,
     bundledActualExpenses: built.bundledActualExpenses,
+    ...(built.bundledActualTransferBasis
+      ? {
+          bundledActualCapitalExpenditure: built.bundledActualCapitalExpenditure,
+          bundledActualTransferExpense: built.bundledActualTransferExpense,
+          bundledActualTransferBasis: built.bundledActualTransferBasis,
+        }
+      : {}),
     /**
      * §100③ 판정 명세 — 화면(`BundledAllocationCard.tsx:575`)이 이 키를 읽는다.
      * 🔴 종전에는 이 객체를 만들면서 이 키만 빠져 있었다 ⇒ 판정해도 화면에 안 떴다(P-1).

@@ -677,6 +677,18 @@ export type GeneralBuildingOutput = {
   bundledActualAcquisitionPrice?: number;
   /** 일괄 실가 양도비(자본적지출+양도비) (원) — 실가 모드에서만 채움. */
   bundledActualExpenses?: number;
+  /**
+   * 실가 경로 **자산 단위 자본적지출·양도비 echo** — 신규 두 칸 입력일 때만 채운다(legacy `directExpenses` 후퇴·옛 이력은 없음).
+   * 표시 계층(`buildGbExpenseFormula`)이 파트 필요경비의 산식을 적을 때 쓴다 — 엔진 산식 변경 없음(echo-field-pattern).
+   * `bundledActualExpenses`(legacy 칸)와 **다른 슬롯**이다: 신규 칸 입력에서 그 값은 0이라 산식이 `0 × …`로 값을 못 만들었다.
+   */
+  bundledActualCapitalExpenditure?: number;
+  bundledActualTransferExpense?: number;
+  /**
+   * 양도비를 토지·건물로 나눌 때 비례시킨 **자산가액**(「소득세법」 §100② 후문) — 구분 기재 채택이면 그 가액, 감정이면 감정가액,
+   * 기준시가 안분이면 양도시 기준시가. `assetCards[].transferPrice`(안분 결과)와 다를 수 있다(floor·잔액 흡수).
+   */
+  bundledActualTransferBasis?: { land: number; building: number };
 
   /**
    * §164⑨ 1호 공익수용 특례 산출근거 (토지 전용 — 계획 D16-GB).

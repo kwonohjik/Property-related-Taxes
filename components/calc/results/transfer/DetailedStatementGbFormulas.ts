@@ -21,6 +21,7 @@ import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
 import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildBgAcquisitionFormula, buildBgExpenseFormula } from "./DetailedStatementBgFormulas";
+import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
 
 /**
  * propertyId가 토지에 해당하는지 — 일반건물(land/land_business/land_nbl) + 토지 자산.
@@ -409,6 +410,54 @@ function dedRatePct(rate: number | undefined): string {
 }
 
 /**
+ * 실가 일괄 경로 «자산별 양도비» 산식 — **신규 두 칸(자본적지출·양도비) 입력**용. 엔진 echo(`bundledActualTransferBasis` 등)로 적는다.
+ *
+ * 종전 산식은 legacy 칸(`bundledActualExpenses`)을 «총 양도비»로 쓰고 분모를 양도시 기준시가로 고정해, 신규 칸 입력에서는
+ * `0 × 920,550,000 / (…) = 3,771,045`처럼 **자기 값을 못 만들었다**. 엔진은 양도비를 **각 파트에 적용된 양도가액**(구분 기재·감정·
+ * 기준시가), 자본적지출을 **취득시 기준시가**로 나누므로 그 분모를 echo에서 읽어 적는다.
+ *
+ * `undefined`를 돌려주면 호출부가 종전 산식으로 후퇴한다 — echo가 없는 옛 이력, 토지 NBL 2분할 카드(카드가 토지 필요경비의
+ * 일부라 총액 산식으로 못 만든다), 파트 직접 귀속 입력(안분 값이 아님), 그 밖에 **적을 산식이 카드 값과 안 맞는** 모든 경우.
+ */
+function buildGbActualBundledExpenseFormula(
+  p: PerPropertyBreakdown,
+  gb: GeneralBuildingOutput,
+  displayExp: number,
+): string | undefined {
+  const basis = gb.bundledActualTransferBasis;
+  if (!basis) return undefined;
+  const capex = gb.bundledActualCapitalExpenditure ?? 0;
+  const transfer = gb.bundledActualTransferExpense ?? 0;
+  if (capex <= 0 && transfer <= 0) return undefined;
+  const acqLand = gb.acqLandStdTotal ?? 0;
+  const acqBuilding = gb.acqBuilding1StdTotal ?? 0;
+  if (capex > 0 && acqLand + acqBuilding <= 0) return undefined;
+
+  const capexLand = capex > 0 ? apportionByStdPrice(capex, acqLand, acqBuilding).land : 0;
+  const transferLand = transfer > 0 ? apportionByStdPrice(transfer, basis.land, basis.building).land : 0;
+  const landTotal = capexLand + transferLand;
+
+  const id = baseCardId(p.propertyId);
+  if (id === "building") {
+    return capex + transfer - landTotal === displayExp
+      ? buildResidualFormula(capex + transfer, [{ label: "토지", value: landTotal }], displayExp)
+      : undefined;
+  }
+  if (id !== "land" || landTotal !== displayExp) return undefined;
+
+  const transferText = transfer > 0
+    ? buildAllocationFormula(transfer, basis.land, [basis.land, basis.building], transferLand)
+    : undefined;
+  const capexText = capex > 0
+    ? buildAllocationFormula(capex, acqLand, [acqLand, acqBuilding], capexLand)
+    : undefined;
+  if (transferText && capexText) {
+    return `양도비 ${transferText}\n        자본적지출 ${capexText}\n        합계 = ${fmt(landTotal)}`;
+  }
+  return transferText ?? capexText;
+}
+
+/**
  * 필요경비 자산별 산식 — 개산공제 = 취득시 기준시가 × 개산공제율(§163⑥ 3% · 미등기 0.3%).
  * 자본적지출은 실가 모드에서 필요경비 칸에 머문다. 예외 축(swap·이월과세 A)만 취득가액에 흡수되어 본 행에는 양도비만 남음.
  */
@@ -463,6 +512,8 @@ export function buildGbExpenseFormula(
     !gb.extensionStdTotal &&
     !gb.acqExtensionStdTotal;
   if (isActualBundledMode) {
+    const echoed = buildGbActualBundledExpenseFormula(p, gb, displayExp);
+    if (echoed) return echoed;
     const totalExp = gb.bundledActualExpenses ?? 0;
     if (totalExp <= 0 && displayExp <= 0) {
       return `자산별 양도비 = 0 (입력 없음)`;

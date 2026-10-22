@@ -40,6 +40,20 @@ export const GUARDED_FILES = [
   "lib/tax-engine/transfer-tax-mixed-use-inheritance.ts",
   "lib/tax-engine/transfer-tax-mixed-use-helpers.ts",
   "lib/stores/calc-wizard-store.ts",
+  // 일반건물 양도비 배분 기준(gb-transfer-expense-apportion-basis.plan.md Q-6) — 실가 경로·swap·split/PHD
+  "app/api/calc/transfer/general-building-route-actual.ts",
+  "lib/tax-engine/general-building-swap.ts",
+  "lib/tax-engine/transfer-tax-split-gain.ts",
+];
+
+/**
+ * A 모양 가드 대상 — `applyRate(금액, a / b)`. 비율 `a / b`가 이진 소수로 정확히 표현되지 않으면 `applyRate`가 `Math.floor(amount * rate)`로
+ * 후퇴해(`tax-utils.ts` `applyRate`) R 모양과 같은 1원 과소가 난다. 정본은 `apportionByStdPrice` / `safeMultiplyThenDivide`.
+ * 세율·감면율 상수 `applyRate(x, 0.5)`는 `/`가 없어 걸리지 않는다. 이번에 고친 세 파일만 대상이다 — 다른 파일의 `applyRate(…, a / b)`는 별건.
+ */
+export const APPLY_RATE_GUARDED_FILES = [
+  "lib/tax-engine/general-building-swap.ts",
+  "lib/tax-engine/transfer-tax-split-gain.ts",
 ];
 
 /**
@@ -99,7 +113,7 @@ function unwrap(op: string): string | null {
   return t.slice(1, -1);
 }
 
-export type Shape = "R" | "P" | "RV";
+export type Shape = "R" | "P" | "RV" | "A";
 
 /**
  * 한 `Math.floor(...)` 인자가 위험한 모양인가.
@@ -142,12 +156,59 @@ export function ratioVariables(src: string): Set<string> {
   return out;
 }
 
+/** 쉼표 기준 최상위 인자들 */
+function topLevelArgs(inner: string): string[] {
+  const idx = topLevel(inner, ",");
+  const out: string[] = [];
+  let prev = 0;
+  for (const i of idx) {
+    out.push(inner.slice(prev, i).trim());
+    prev = i + 1;
+  }
+  out.push(inner.slice(prev).trim());
+  return out;
+}
+
+/** `applyRate(amount, <나눗셈>)` 인가 — 둘째 인자에 최상위 `/`가 있다. 비율 변수(`…Ratio`)도 같은 취급. */
+export function classifyApplyRate(inner: string): Shape | null {
+  const args = topLevelArgs(inner);
+  if (args.length < 2) return null;
+  const rate = args[1];
+  if (topLevel(rate, "/").length > 0) return "A";
+  if (/^[A-Za-z_$][\w$.]*Ratio$/.test(rate)) return "A";
+  return null;
+}
+
 interface Hit {
   key: string;
   file: string;
   line: number;
   shape: Shape;
   text: string;
+}
+
+/** `applyRate(...)` 호출 중 A 모양만 모은다. 주석 줄은 건너뛴다. */
+export function scanApplyRate(file: string, src: string): Hit[] {
+  const hits: Hit[] = [];
+  const lines = src.split("\n");
+  let idx = 0;
+  for (;;) {
+    const at = src.indexOf("applyRate(", idx);
+    if (at === -1) break;
+    idx = at + 1;
+    if (at > 0 && /[\w$.]/.test(src[at - 1])) continue; // `xxxApplyRate(` 같은 접미 이름은 제외
+    const open = at + "applyRate".length;
+    const close = matchParen(src, open);
+    if (close === -1) break;
+    const inner = src.slice(open + 1, close);
+    const line = src.slice(0, at).split("\n").length;
+    const lineText = (lines[line - 1] ?? "").trim();
+    if (lineText.startsWith("//") || lineText.startsWith("*") || lineText.startsWith("/*")) continue;
+    const shape = classifyApplyRate(inner);
+    const norm = inner.replace(/\s+/g, " ").trim();
+    if (shape) hits.push({ key: `${file}::applyRate(${norm})`, file, line, shape, text: norm.slice(0, 120) });
+  }
+  return hits;
 }
 
 export function scan(file: string, src: string): Hit[] {
@@ -185,6 +246,15 @@ describe("환산·비율 안분 정밀도 — 분자·분모 정수 곱셈 먼�
       found,
       `부동소수 환산·비율 안분 ${found.length}건 — safeMultiplyThenDivide/calculateEstimatedAcquisitionPrice/apportionByStdPrice로 바꿀 것:\n${msg}`,
     ).toHaveLength(0);
+  });
+
+  it("🔴 일반건물 양도비 배분 파일에 `applyRate(금액, a / b)` 모양이 0건이다", () => {
+    const found: Hit[] = [];
+    for (const file of APPLY_RATE_GUARDED_FILES) {
+      found.push(...scanApplyRate(file, readFileSync(join(ROOT, file), "utf8")));
+    }
+    const msg = found.map((h) => `  ${h.file}:${h.line} [${h.shape}]\n    applyRate(${h.text})`).join("\n");
+    expect(found, `applyRate 비율 인자가 나눗셈 ${found.length}건 — apportionByStdPrice/safeMultiplyThenDivide로 바꿀 것:\n${msg}`).toHaveLength(0);
   });
 
   it("허용 목록의 모든 항목이 실제로 존재한다 — 낡은 허용 항목이 가드를 조용히 약화시키지 않는다", () => {
@@ -225,6 +295,18 @@ describe("가드 자체의 구별력 — 규칙이 실제로 무언가를 잡는
     expect(classify("a * 0.5")).toBeNull();
     expect(classify("totalAcqPrice / 2")).toBeNull();
     expect(classify("x / (a * b)")).toBeNull(); // 분모의 곱
+  });
+  it("🔑 A 모양: `applyRate(금액, a / b)` · 비율 변수 — 세율 상수는 잡지 않는다", () => {
+    expect(classifyApplyRate("totalTransferExpense, landTransferPrice / transferPriceTotal")).toBe("A");
+    expect(classifyApplyRate("amount, basis(c) / basisTotal")).toBe("A");
+    expect(classifyApplyRate("amount, landRatio")).toBe("A");
+    expect(classifyApplyRate("amount, 0.5")).toBeNull();
+    expect(classifyApplyRate("amount, rate")).toBeNull();
+    expect(classifyApplyRate("fn(a, b), 0.3")).toBeNull(); // 안쪽 쉼표는 인자 구분이 아니다
+    const src = "// applyRate(a, b / c)\nconst x = applyRate(a, b / c);\nconst y = reapplyRate(a, b / c);\nconst z = applyRate(a, 0.5);\n";
+    const hits = scanApplyRate("t.ts", src);
+    expect(hits).toHaveLength(1);
+    expect(hits[0].line).toBe(2);
   });
   it("🔑 scan: 주석 안의 인용은 세지 않는다", () => {
     const src = "// Math.floor(a * (b / c))\n/* Math.floor(a * b / c) */\nconst y = Math.floor(a * (b / c));\n";
