@@ -10,6 +10,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { isBgPresumedMethod } from "@/lib/calc/burdened-gift-presumed-acquisition";
 import { BurdenedGiftPresumedAcquisitionSection } from "./BurdenedGiftPresumedAcquisitionSection";
+import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 
 interface Props {
   asset: AssetForm;
@@ -140,6 +141,15 @@ export function BurdenedGiftCarryoverBlock({ asset, onChange, coDonorNeedsStdPri
           />
         </FieldCard>
       )}
+
+      {/* 당초 증여자 취득 입력 다음 — 그 건물이 당초 증여자 신축·증축인가 (§114조의2, K-5 환산·K-7 감정만). 노출 술어는 ④ 전송·⑧ 필수와 같다(`donor-built-bg-scope.ts`). */}
+      <CarryoverDonorBuiltSection
+        mode="bg"
+        asset={asset}
+        transferDate=""
+        onChange={onChange}
+        onCarryoverChange={(patch) => onChange({ carryover: { ...asset.carryover!, ...patch } })}
+      />
     </div>
   );
 }

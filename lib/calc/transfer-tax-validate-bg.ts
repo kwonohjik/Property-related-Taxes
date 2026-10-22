@@ -43,6 +43,7 @@ import {
   isBgPresumedMethod,
 } from "./burdened-gift-presumed-acquisition";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
+import { validateDonorBuiltBg } from "./transfer-tax-validate-donor-built-bg";
 import { bgCollateralForcesStdAcq, bgWholeGiftValuation } from "./burdened-gift-collateral-win";
 
 /**
@@ -474,6 +475,10 @@ export function validateBurdenedGiftAsset(
       return `${label}: 조합원입주권 증여재산 평가 항목의 합계가 평가액과 일치하지 않습니다. 조합원권리가액·납입금·프리미엄을 재확인하세요.`;
     }
   }
+
+  // (5-d) 이월과세 × 당초 증여자 신축·증축 §114조의2 (PR-4) — 환산(K-5)·감정(K-7) 입력 다음 순서. 범위 밖 stale 은 요구하지 않는다.
+  const donorBuiltErr = validateDonorBuiltBg(asset, label, formTransferDate, isFractionalSplitAxis === true);
+  if (donorBuiltErr) return donorBuiltErr;
 
   // (6) Phase 3 — 사전증여 행별 부분 입력 검증
   const priorGifts = asset.bgPriorGifts ?? [];

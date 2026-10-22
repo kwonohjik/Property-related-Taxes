@@ -442,3 +442,64 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 - 뮤테이션 35건: 33 KILLED · 2 동치(죽은 방어 코드 — echo 증축 분모 가드(엔진이 환산 파트 분모를 먼저 던진다)·술어의 부담부증여 가드(`partCarryover`가 이미 거절)는 **코드에서 제거**) · 초판 SURVIVED 2건은 anchor 보강 후 KILLED(N02 손실×증축, N33 토지 환산 ON 인 토지 카드).
 - ⚠️ 하네스 교훈: `mutate.sh`가 백업 파일명을 `shift` 뒤의 `$2`(두 번째 테스트 경로)로 만들어 **테스트가 1개뿐인 변형은 백업이 안 되고 복원이 실패**했다(RESTORE-MISMATCH → 변형이 남음). sha 대조로 발견해 3곳을 수작업 복원했고(원본 diff 와 대조), 백업 키를 `label+file` md5 로 고친 뒤 재실행했다. 뮤테이션 후에는 전 변경 파일 sha 를 반드시 전후 비교할 것.
 
+## 17. PR-4 Do 기록 (2026-10-22) — 부담부증여(§159) × 이월과세 · 계획 대비 이탈
+
+범위: 단건(주 자산) 부담부증여에서 **이월과세 A 채택 + 환산(K-5)·감정(K-7)** 일 때만 가산세. B 채택·적용배제·K-4/K-1~K-3/K-6은 가산세 없음(R2). **일반건물 부담부증여(M9, F27)는 구현하지 않았다**(아래 Q-7).
+
+### 두 축 구분 (실측)
+| 축 | 입력 | 의미 | 이월과세에서의 거동 |
+|---|---|---|---|
+| 양도인 **본인 신축** | `TransferTaxInput.isSelfBuilt`(+`buildingType`·`constructionDate`) | 양도인이 **매매로 취득해 신축**한 건물 — K-5/K-7 기존 가산세 | 화면은 이월과세 취득원인에서 **보내지 않는다**(`selfBuiltActive`는 `acquisitionCause === "purchase"`만). API 직접 호출만: K-7 은 `assertCarryoverDonorBasis`가 차단(G-4·G-4b 유지), K-5 는 종전대로 A 환산 base 에 가산세(실측 4,687,500 — 종전 거동, 건드리지 않음) |
+| **당초 증여자 신축** | `burdenedGiftInfo.carryoverDonorBasis.donorBuilt` | 양도인에게 이 자산을 증여한 사람이 신축·증축한 건물 | A 채택일 때만 가산세. **본인 신축과 함께 보내면 ⑫·엔진이 거부**(이중 부과·혼동 차단) |
+- M8 의 «throw 완화»는 **필요 없었다** — 새 입력이 `ct`/최상위 `isSelfBuilt`가 아니라 `carryoverDonorBasis.donorBuilt`에 있어 `assertCarryoverDonorBasis`(본인 신축 플래그 + 감정 + 이월과세)는 그대로 유지되고, 두 입력의 동시 입력만 새로 막았다. G-4·G-4b 는 변경 없이 통과.
+
+### base 규칙과 코드 선례
+**채무비율 안분 후 건물분** — 본인 신축 K-5/K-7 과 같은 규칙이다(선례 확정 → 질문 없이 진행):
+- K-5: `transfer-tax-burdened-gift-step.ts` `estimatedBase = extensionPenaltyBase ?? convertedAcquisitionBeforeSwap?.building ?? building.acquisitionPrice`(W-6 단서 전 값, 증축은 `calculateEstimatedAcquisitionPrice(building.transferPrice, 증축 기준시가, 양도시 건물 기준시가)`)
+- K-7: 같은 파일 `penaltyAxis.base = building.acquisitionPrice`(안분 후), 증축은 `apportionAcquisitionPrice(scale(presumedExtensionAppraisalValue), 채무, 증여가액)`
+- 구현은 **그 step 을 재사용**한다 — A 입력(`burdenedGiftInfo`가 이미 당초 증여자 기준)에 «신축·증축» 사실만 싣고 base 는 step 이 만든다. 실측: K-7 base 125,000,000(= 감정 200M × 0.625) → 6,250,000 / K-5 93,750,000 → 4,687,500 (anchor 가 둘을 고정).
+
+### 14지점
+| 지점 | 내용 |
+|---|---|
+| ①②③ | 변경 없음 — 폼 `carryover.donorBuilt*` 8칸 재사용(부담부증여는 일체 주택 3칸 미사용). K-7 증축 감정가액은 기존 `bgPresumedExtensionAppraisal` 재사용 |
+| ④ | `buildDonorBuiltBgPayload`(`lib/calc/transfer-tax-api-donor-built-bg.ts`) → `buildCarryoverDonorBasis`가 `donorBuilt` 를 얹음. 증축 부분 기준시가는 K-5 만, 증축 감정가액은 `presumedExtensionAppraisalValue`(K-7 + 증축 + 토글 ON 일 때만). 본인 신축 증축 감정가액 빌더와 상호배타 |
+| ⑤ | `CarryoverDonorBuiltSection mode="bg"` 를 `BurdenedGiftCarryoverBlock` 당초 증여자 입력 다음에 마운트. 술어 `donorBuiltBgApplicable`(leaf `donor-built-bg-scope.ts`) — 자산 전체·분리 술어와 상호배타 |
+| ⑥ | 변경 없음(사이드바에 가산세 없음 — PR-2 와 같다) |
+| ⑦ | `DonorBuiltPenaltyEcho.burdenedGift{method}` + 사유 `zero_base` · 표시 정본이 «채무비율 안분 후 건물 감정가액/환산취득가액»을 말한다. 4뷰는 기존 `resultDonorBuiltEcho` 단일 지점 그대로(카드·상세명세서·신고서·PDF·경고) |
+| ⑧ | `validateDonorBuiltBg`(`validateBurdenedGiftAsset` (5-d)) — K-7 증축 감정가액은 가산세 게이트(5년·2020.1.1.·85㎡)가 열릴 때만 요구(엔진 step 과 같은 `calculateBuildingPenalty`) + 상한(당초 증여자 감정가액) |
+| ⑨⑩⑪ | 해당 없음 |
+| ⑫ | `bgDonorBuiltShape`(`burdenedGiftInfo.carryoverDonorBasis.donorBuilt`, `housing` 금지 `.strict()`) + `refineBgDonorBuilt`. `carryoverTaxation.donorBuilt` 경로는 부담부증여에서 거부 유지(메시지 정정). 컴패니언 `burdenedGiftInfo`는 거부 |
+| ⑬ | ④ 결과를 `burdenedGiftInfo` 째로 body 에 spread(신규 코드 없음) |
+| ⑭ | **스키마 transform** 으로 `constructionDate`→Date(`burdenedGiftInfo`는 단건·컴패니언·번들 안분·일반건물 route 여러 곳으로 객체째 흘러가 지점별 변환은 한 곳만 빠져도 침묵 오작동) |
+
+### 엔진
+- `withDonorBuiltPenalty(rawInput, result, bg?)` BG 분기: A 채택이면 채택 입력에 `donorBuiltPartPatch`(PR-3 재사용)를 싣고, **채택 입력으로 §159 본 계산을 한 번 더 돌려** echo 의 base·가산세를 실제 값으로 읽는다(안분·W-6 단서·증축 안분 재구현 없음).
+- `runPreCalculationSteps`: 본 계산 STEP 0.48 의 소스 입력(`bgSourceInput`)에 채택 입력의 «신축·증축» 사실을 옮긴다(`donorBuiltFactsOf`) — 안 옮기면 step 이 K-5/K-7 가산세를 안 만든다.
+
+### 세액 (anchor, 지방소득세 10% 포함)
+| 셀 | 현행 총납부 | 구현 후 | 차이 |
+|---|---|---|---|
+| K-7 감정 · A 채택 (base 125,000,000) | 85,923,062 | 92,798,062 | +6,875,000 |
+| K-5 환산 · A 채택 (base 93,750,000) | 95,066,812 | 100,223,062 | +5,156,250 |
+| ②3호 B 채택 | 변화 0 | | 0 |
+| 증축 K-5(85.01㎡, 증축 기준시가 40M → base 25M) / K-7(증축 감정 80M → base 50M) | — | 가산세 1,250,000 / 2,500,000 | — |
+
+### 검증
+- 엔진 anchor 19 · route 13 · 클라이언트 18(⑧↔⑫ 96셀) · 결과 4뷰 9 · ⑤ 렌더 11 · E2E 6.
+- 회귀 0: donorBuilt 없는 부담부증여×이월과세 격자(5모드 × 2종류 × 양도일 3 × 관계 4 × 증여자 취득일 2 × 증여세 2 × 양도인 평가액 3 × 본인 신축 플래그 2 × 자본적지출 2 = **5,760셀**, ERR 288(본인 신축 K-7 차단 — 종전과 동일)·A 채택 2,820·본인 신축 가산세 576)을 기준선(d5c9a748a)과 구현 후에서 응답 JSON 해시 **동일**.
+- 뮤테이션 47건(백업 키 label+file md5 · 건별 sha 대조 · 끝나고 전 변경 파일 sha 전후 동일 확인): KILLED 45 · 동치 2(죽은 코드 — `carryoverTaxation.donorBuilt` 중복 가드는 앞단 `assertDonorBuiltInput`이 먼저 던짐 · `bgDonorBuiltOf`의 취득원인 가드는 호출부 게이트와 ⑫가 대신함 → 제거). 초판 SURVIVED 중 ⑫ 두 검사(본인 신축 동시·증축 면적)는 엔진 메시지가 같은 문구라 가려졌다 → 단언을 ⑫ 경로(`fieldErrors` 키)로 고쳐 KILLED.
+
+### 이탈 · 미구현
+| 항목 | 계획 | 실제 | 이유 |
+|---|---|---|---|
+| M8 throw 완화 | G-4·G-4b 반전 | **유지** + 동시 입력 차단 신설 | 위 «두 축 구분» — 입력 위치가 달라 완화 불필요 |
+| 입력 위치 | `carryoverTaxation.donorBuilt` | `burdenedGiftInfo.carryoverDonorBasis.donorBuilt` | §159 가 `burdenedGiftInfo`에서 취득 축을 읽고 «당초 증여자 값 한 벌»이 거기 있다. `ct` 쪽 ⑫(`!useEstimatedAcquisition` 거부)는 부담부증여에서 환산이 꺼져 있어 맞지 않는다 |
+| **M9 일반건물 부담부증여(F27)** | A 호출에만 전달 | **미구현 — Q-7** | 일반건물 실가 route(`general-building-route-actual.ts` 카드 조립)는 건물 카드를 `usedEstimatedAcquisition:false`·`penaltyAxis` 없음·`isSelfBuilt` 미전달로 **하드코딩**한다 — 즉 부담부증여에서 **양도인 본인 신축 가산세조차 이 경로에는 없다**(선례 없음). 증여자 신축 가산세만 신설하면 본인 신축과 비대칭이 되고, 결과(`burdenedGiftCarryoverDetail`)·⑫(일반건물 스키마)·4뷰 표시도 별도 구조라 base 규칙의 코드 선례가 없다 |
+| 컴패니언(지분 분할 취득 묶음) | — | 범위 밖: ⑫ 거부 + ⑧ 이 토글을 끄라고 안내 | 묶음 신고의 §159 안분·신고 단위 비교는 별 구조 |
+| 겸용주택 부담부증여 | 차단 유지 | 차단 유지(엔진 `mixedUse` 거부 · 술어 비노출 · ⑫ 거부) | |
+| 인쇄 E2E | — | 하지 않음(vitest PDF·신고서 anchor) | PR-2·3 과 같다 |
+
+### 확인 필요 (사용자 결정 필요 — Q-7)
+일반건물 부담부증여(M9)에 당초 증여자 신축 가산세를 신설할지. 선택지: (a) 하지 않는다(현행 — 일반건물 부담부증여는 본인 신축 포함 가산세 자체가 없음) (b) 본인 신축·증여자 신축을 **함께** 일반건물 카드 조립에 신설(별도 계획서 — 본인 신축 거동 변경 포함). 이 PR 은 (a)로 둔다.
+

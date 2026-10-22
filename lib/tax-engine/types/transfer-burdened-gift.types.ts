@@ -357,6 +357,12 @@ export interface BurdenedGiftCarryoverDonorBasis {
   presumedLandAcquisitionPrice?: number;
   presumedBuildingAcquisitionPrice?: number;
   presumedAcquisitionTotal?: number;
+  /**
+   * **당초 증여자가 신축·증축한 건물**(소득세법 §114조의2 가산세 — PR-4). K-5(환산)·K-7(감정)에서만 의미가 있다.
+   * 양도인 본인 신축(`TransferTaxInput.isSelfBuilt` — K-5/K-7 기존 가산세)과 **다른 축**이다 — 둘을 함께 보내면 엔진이 거부한다.
+   * 이월과세 A 채택일 때만 가산세가 붙고(R2), base 는 채무비율 안분 후 건물분이다(기존 본인 신축 K-5/K-7 과 같은 규칙).
+   */
+  donorBuilt?: import("./transfer-carryover.types").DonorBuiltInput;
 }
 
 /** 실제 적용된 취득가액 산정 경로 — `TransferBurdenedGiftBreakdown.acquisitionMethodUsed`·`perAsset.*.acquisitionMethod`. */

@@ -12,6 +12,7 @@ import { computeSangjeungbeopValuation } from "@/lib/tax-engine/burdened-gift-va
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { successorAptMaxResidenceMonths } from "@/lib/tax-engine/redevelopment-lthd";
 import { toDate } from "./date-coerce";
+import { refineBgDonorBuilt } from "./transfer-tax-schema-donor-built";
 import { refineCarryoverTaxation } from "./transfer-tax-schema-companion-refines";
 import { refineMixedUsePresence } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
@@ -351,6 +352,7 @@ export function refinePropertyRequiredInputs(
 ) {
   refineHouseExclusionInputs(data.houses, ctx);
   refineBurdenedGiftInputs(data, ctx);
+  refineBgDonorBuilt(data as Parameters<typeof refineBgDonorBuilt>[0], ctx); // 부담부증여 × 증여자 신축·증축 (PR-4)
   refinePrimaryAcquisitionInputs(data, ctx);
   refineMixedUsePresence(data, ctx); // MU-7 (2차 점검)
   refineHouseholdRequiredInputs(data, ctx); // O3·O4·H-3·유예 나목·M2 (2차 점검)

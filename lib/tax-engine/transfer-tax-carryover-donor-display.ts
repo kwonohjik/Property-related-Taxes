@@ -33,6 +33,10 @@ export const DONOR_BUILT_APPLIED_NOTICE =
 export const DONOR_BUILT_SPLIT_UNDECLARED_NOTICE =
   `건물 파트의 증여자 취득가액을 환산취득가액으로 계산했습니다. 증여자가 그 건물을 신축·증축한 뒤 5년 이내에 양도하는 경우 ${TRANSFER.BUILDING_PENALTY} 환산취득가액 가산세 대상일 수 있으나, «증여자 신축·증축» 정보가 입력되지 않아 가산세는 붙이지 않았습니다. 증여자 신축분에 대한 정면 해석례는 확인하지 못했습니다 — 확인 필요.`;
 
+/** (부담부증여) A 채택이지만 가산세 기준액(채무비율 안분 후 건물분 환산취득가액·감정가액)이 0원이라 가산세가 붙지 않은 경우 — 당초 증여자 건물 값이 0 */
+export const DONOR_BUILT_ZERO_BASE_NOTICE =
+  `증여자가 신축·증축한 건물로 입력했지만 가산세 기준액(채무비율 안분 후 건물분 환산취득가액·감정가액)이 0원이라 ${TRANSFER.BUILDING_PENALTY} 가산세는 붙지 않았습니다 — 당초 증여자의 건물 취득 당시 기준시가·감정가액을 확인하세요.`;
+
 export interface DonorBuiltPenaltyView {
   applied: boolean;
   /** 카드 제목 */
@@ -54,12 +58,22 @@ export function donorBuiltPenaltyView(e: DonorBuiltPenaltyEcho | undefined): Don
       applied: false,
       title,
       formulaLines: [],
-      notice: e.notAppliedReason === "outside_penalty_window" ? DONOR_BUILT_OUTSIDE_WINDOW_NOTICE : DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE,
+      notice:
+        e.notAppliedReason === "outside_penalty_window"
+          ? DONOR_BUILT_OUTSIDE_WINDOW_NOTICE
+          : e.notAppliedReason === "zero_base"
+            ? DONOR_BUILT_ZERO_BASE_NOTICE
+            : DONOR_BUILT_NOT_APPLIED_CARRYOVER_NOTICE,
     };
   }
   const lines: string[] = [];
   const f = e.formula;
-  if (e.housingSplit && f) {
+  if (e.burdenedGift) {
+    // 부담부증여(§159) — base 는 채무비율 안분 **후** 건물분(기존 본인 신축 K-5/K-7 과 같은 규칙). 증축이면 증축 부분.
+    const ext = e.buildingType === "extension";
+    const what = e.burdenedGift.method === "appraisal" ? (ext ? "증축한 부분의 감정가액" : "건물 감정가액") : ext ? "증축 부분 환산취득가액" : "건물 환산취득가액";
+    lines.push(`가산세 기준액 = 당초 증여자 ${what} 중 채무비율 안분 후 금액 ${won(e.base!)}`);
+  } else if (e.housingSplit && f) {
     // `× (분자) ÷ (분모)` — 결과뷰는 `FormulaText`가 분수로 그린다(괄호 피연산자 규약, 평문 매체 PDF는 그대로 읽힌다)
     lines.push(
       `건물분 환산취득가액 ${won(e.base!)} = 건물분 양도가액 ${won(f.multiplicand)} × (${e.buildingType === "extension" ? "증축 완공 당시 증축 부분 기준시가" : "취득 당시 건물분 기준시가"} ${won(f.numerator)}) ÷ (양도 당시 건물분 기준시가 ${won(f.denominator)})`,
@@ -109,5 +123,6 @@ export function donorBuiltPenaltyNotice(e: DonorBuiltPenaltyEcho | undefined): s
 export function donorBuiltPenaltyFilingNote(e: DonorBuiltPenaltyEcho | undefined): string | undefined {
   const v = donorBuiltPenaltyView(e);
   if (!v?.applied) return undefined;
-  return `${TRANSFER.BUILDING_PENALTY} 증여자 ${typeLabel(e!)} 건물 가산세 ${won(e!.penalty!)} (= 건물분 환산취득가액 ${won(e!.base!)} × 5%)`;
+  const basis = e!.burdenedGift?.method === "appraisal" ? "채무비율 안분 후 건물 감정가액" : e!.burdenedGift ? "채무비율 안분 후 건물 환산취득가액" : "건물분 환산취득가액";
+  return `${TRANSFER.BUILDING_PENALTY} 증여자 ${typeLabel(e!)} 건물 가산세 ${won(e!.penalty!)} (= ${basis} ${won(e!.base!)} × 5%)`;
 }
