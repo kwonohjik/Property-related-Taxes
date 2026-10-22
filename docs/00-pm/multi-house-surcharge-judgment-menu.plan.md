@@ -438,8 +438,8 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | P2 ✅ | 계산기 ⑧ 중과 축 leaf 추출(동작 불변) — `transfer-tax-validate-surcharge-axis.ts`(행·양도 주택·유예 3 leaf). 동작 불변 실측: 변경 전·후 `collectStep1Issues` 표적 9,792폼 + e2e 케이스 380폼 출력 동일(메시지 56종) | 계산기 validate 회귀 · `surcharge-axis-validate-leaf.anchor.test.ts`(호출 3곳 mutation 포착) |
 | P3a ✅ #2428 | 엔진 배관(결과 불변 + 반사실 플래그) — `forceNoMultiHouseSurcharge`(술어 최상단 게이트 · `transfer-tax.ts` 장특 리터럴 명시 전달) · `assembleSurchargeHouseSet`/`linkSurchargeHousesForSelling` export · `resolveHceGeneralHouseAcquisitionDate` 추출 · `classifyRegionCriteriaDetail` · `presaleRightCountReason` | MH-P6·P9(FN-1~5) · 지역기준 이유 · 권리 사유 · 집합 조립 |
 | P3b ✅ #2429 | `multi-house-surcharge-narrative.ts` — `decisionStageOf`(7갈래) · 행별 간이 판정(`rowJudgmentHouses` = STEP 0.5 집합 − 11호 계약 사실 · `judgeSurchargeRowSimplified` · 소재지 코드 없으면 조정지역으로 봄) · 민감도 S1~S3 · `judgeSurchargeRows` | MH-P3(RJ-1)·P5(SN-1~3)·P7(DS-1·2)·P10(RJ-2·3) |
-| P3c 🔄 | 설명문 `buildSurchargeNarrative`(`multi-house-surcharge-narrative-steps.ts`) — ①조정대상지역 ②판정기준 ③주택 수 ④배제 ⑤유예·취득 시기 특례 ⑥결론. ①②③은 늘, ④⑤는 엔진이 간 단계만. `decisive` = `decisionStageOf`. `headline.warnings` 전건 → `checks`(코드 없음 경고만 ①의 쉬운 문구로 대신 — `REGION_CODE_MISSING_WARNING` export). 주택별 서술은 `houseNotes`(문장에 id 없음) | NR-1~10 · NC-1·2 · mutation 10/10 포착 |
-| P4 | route + 공용 전처리 추출 + body 빌더 | MH-1~5 · MH-B1~B5 · MH-P1·P2·P4 |
+| P3c ✅ #2432 | 설명문 `buildSurchargeNarrative`(`multi-house-surcharge-narrative-steps.ts`) — ①조정대상지역 ②판정기준 ③주택 수 ④배제 ⑤유예·취득 시기 특례 ⑥결론. ①②③은 늘, ④⑤는 엔진이 간 단계만. `decisive` = `decisionStageOf`. `headline.warnings` 전건 → `checks`(코드 없음 경고만 ①의 쉬운 문구로 대신 — `REGION_CODE_MISSING_WARNING` export). 주택별 서술은 `houseNotes`(문장에 id 없음) | NR-1~10 · NC-1·2 · mutation 10/10 포착 |
+| P4 🔄 | route `app/api/calc/multi-house-surcharge-judgment/` (`{ property }` · 순수 조립 `surcharge-judgment-payload.ts`) + 공용 전처리 `one-house-exemption/judgment-request.ts`(1주택 route 284→79줄, 동작 불변) + body `lib/calc/multi-house-surcharge-api.ts`(1주택 본문 + 양도 주택 배제 사실 + `gracePeriod`(파생 주택 수 폼) + 빈 명부에도 양도 주택 행 — `buildHousesPayload` `includeSellingWithoutRoster`). scope 밖 4종: `before_2018_04_01`·`non_housing_sale`(입주권·분양권 양도 — 행 표는 V-5 남음)·`rules_not_loaded`·`no_house_roster`. 가목 유예는 엔진이 목을 비워 두므로 `rateImpact.suspension.basis`를 `"a"`로 정규화 | MH-1~5 · MH-B1~B6 · MH-P1·P2(3폼) · MH-P4 · 20건 · mutation 9/10(M8 감면 배제 전달 = 동치: 메뉴 본문 `reductions`는 §99의4·§98의9 행 선언뿐이라 중과 배제 감면 목록과 겹치지 않음) |
 | P5 | store 슬롯 · handoff 수정 | store·handoff anchor |
 | P6 | 라우트·오케스트레이터·단계 재사용·M1·사이드바·validate·교차 링크 | 격리·공유·3중 패턴 anchor |
 | P7 | 결과 뷰(표·상세·D3 a/b/d) | UI 테스트 · E2E flow |
@@ -473,7 +473,7 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | V-2 | ✅ **해소(2026-10-22, P3b)** — ④ `buildHousesPayload`의 양도 주택 전용 칸을 `HouseInfo` 필드 전수와 대조: 양도 행위 사실은 **11호 공고 전 매매계약 `contractDate`·`saleDepositReceived` 둘뿐**이다. 나머지(사원용·저당권·문화유산·어린이집·조특법 감면 선언·장기임대·3호/7호·상속·소재지)는 주택 속성 — 보존. 12의2 나·다목(`gracePeriod`)·§155 의제·감면 배제 주입(`surchargeExclusionByReduction`)은 `HouseInfo` 밖 입력이라 간이 판정이 넘기지 않는다(주입은 STEP 0.5가 `sellingId`에만 하므로 집합 `rawHouses`에 남지 않는다) |
 | V-3 | ✅ **해소(2026-10-22)** — `transitionExemptionMonths`를 전국 시군구(256)에 돌린 결과 6개월 = 서울 21구 + 경기 12곳, 4개월 = 강남·서초·송파·용산. 현행 시행령(MST 290841 · 시행 2026-10-01) §167의3①12의2 나목4) 표와 **정확히 일치** |
 | V-4 | 1주택 pipeline의 `generalHouseAcquisitionDate` 미전달이 증여 세대에서 결론을 가르는지(별건) |
-| V-5 | assets[0]이 입주권·분양권일 때 권리 행 변환의 `rightValue` 출처 |
+| V-5 | assets[0]이 입주권·분양권일 때 권리 행 변환의 `rightValue` 출처 — **P4는 범위 밖으로 둠**: 양도 대상이 권리면 `scope.reason = "non_housing_sale"`(§104⑦은 주택 양도 · 자산 게이트)로 답하고 보유 주택별 표는 싣지 않는다. 표를 열려면 이 항목을 먼저 푼다(P7 전) |
 | V-6 | 전환(D6) 필드 대응표 — AssetForm ↔ HouseEntry 전 필드 grep 대조 |
 | V-7 | 일반 매매 양도 경로에 양도 당시 기준시가 입력 칸이 정말 없는지 |
 | V-8 | 홈 메뉴 14개에서 `home-menu-layout.spec.ts` 높이 단언 실측 |
