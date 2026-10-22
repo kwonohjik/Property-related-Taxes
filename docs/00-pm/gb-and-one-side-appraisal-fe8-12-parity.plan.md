@@ -1,6 +1,6 @@
 # 일반건물 단독 경로 ⑧↔⑫ 점검(축 A) · 감정평가가액 한쪽만 입력 ⑧↔⑫ 비대칭(축 B) 계획서
 
-> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — Q-1 (a) ⑫ 조임 · Q-2 V8-b도 같이 조임 · Q-3 일반건물 같은 PR 포함) → Do** · 별건(GB 양도비 배분 기준·GB V8-b ⑧)은 별도 계획서
+> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — Q-1 (a) ⑫ 조임 · Q-2 V8-b도 같이 조임 · Q-3 일반건물 같은 PR 포함) → ✅ Do 완료 (§9)** · 별건(GB 양도비 배분 기준·GB V8-b ⑧)은 별도 계획서
 > 관련: `docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md`(§9 범위 밖 = 본 건) · `docs/00-pm/split-v7-pre2016-fe8-12-parity.plan.md` · `docs/00-pm/mixed-use-sale-split-basis.plan.md`(:124 · P-18 — ⑫ 짝 검사 선례) · 테스트 `__tests__/calc/split-sale-std-era-fe8-12-parity.test.ts` · memory `feedback_fe8_vs_12_parity_grid`
 
 ## 0. 한 줄 요약
@@ -211,3 +211,69 @@ scratch `gbp/b.probe.ts`. split: 양도일{2015-12-31, 2016-01-01, 2025-06-30} �
 3. GB에는 V8-b 대응이 ⑧에도 없다(`saleSplitMode: "appraisal"`인데 금액 비면 기준시가 안분으로 침묵 후퇴). `saleSplitMode`가 ④에서 전송되지 않아 ⑫ 거울도 불가 — 별건 후보(⑧ 신설 여부는 UI 라디오 구조 확인 필요).
 4. 전체 vitest·E2E·브라우저는 미수행(프로토타입은 `__tests__/api|calc|lib|tax-engine/transfer(-tax)` 범위만).
 5. probe 스크래치: `/private/tmp/claude-501/-Users-mynote-workspace-Property-related-Taxes/037975ee-7a66-4673-bbc6-201a0bdbac7c/scratchpad/gbp/` (`a.probe.ts`·`a2.probe.ts`·`b.probe.ts`·`b2.probe.ts`, 결과 `*.out.jsonl`·`*.proto.jsonl`, 백업 `bak/`) — 워크트리에는 probe 파일을 남기지 않았다.
+
+## 9. Do 결과 (2026-10-22)
+
+### 9.1 변경
+
+| 파일 | 내용 |
+|---|---|
+| `lib/tax-engine/sale-split-apportion-basis.ts` | `partialAppraisal(pair)` 신설·export (`usableAppraisal` 바로 아래) — 엔진 `incomplete` 후퇴 조건과 같은 사실 |
+| `lib/api/transfer-tax-schema-required-refines-2a.ts` | ⑫ split `refineSplitAcquisitionInputs`: 한쪽만 > 0 → 누락된 쪽 키에 issue · `saleSplitMode === "appraisal"` ∧ 양쪽 비양수 → `landAppraisalAtTransfer` issue(V8-b 거울). `usableAppraisal` 분기 **앞**, 같은 지역변수 재사용 |
+| `lib/api/transfer-tax-schema-required-refines-gb.ts` | ⑫ GB `refineGbValuationRequired`: 한쪽만 → 누락된 쪽 키 issue (`GbValuationLike`에 두 필드 추가). V8-b 거울 없음(Q-7) |
+| `lib/calc/transfer-tax-validate-split-sale-std.ts` · `…-validate-gb-sale.ts` | ⑧ V8 술어를 `partialAppraisal`로 교체(동작 변화 0 — §9.3) |
+| 스키마 주석 3곳 | `…-schema-split.ts` · `…-schema-base-shape.ts` · `…-building-schemas.ts` — «정상 경로는 ⑫가 먼저 400, 엔진 `incomplete` 기록은 직접 엔진 호출 안전망» 한 줄 |
+| 테스트 | 신규 `__tests__/calc/appraisal-one-side-fe8-12-parity.test.ts`(20건) · 수정 `split-sale-std-era-fe8-12-parity.test.ts` T-15 |
+
+엔진(`resolveSaleApportionBasis`)·④·⑬·⑭ 무변경. 메시지는 ⑧ V8·V8-b와 **같은 문장**(라벨 제외, «(부가가치세법 시행령 §64①1호 단서)» 포함 — 이 저장소의 같은 계열 메시지가 모두 인라인 리터럴이라 그 관행을 따랐고 `legal-codes` 상수 신설은 하지 않았다).
+
+### 9.2 수정 전 실패 (anchor 선행 — 술어 export·⑫ 변경 전)
+
+| 격자 | 수정 전 ⑧ 차단 ∧ ⑫ 200 |
+|---|---|
+| T-B1 split 864셀 | **126** |
+| T-B5 V8-b 96셀 | **24** |
+| T-B4 일반건물 384셀(⑫ 직접 body) | **48** |
+| T-B2/T-B3(다건·컴패니언·이월과세 C)·일반건물 키·지분 카드 | 각 실패(⑫ 200 / issue 없음) |
+
+### 9.3 격자 재측정 (수정 후) — 계획서 §3.5 프로토타입과 동일
+
+| 격자 | 수정 후 |
+|---|---|
+| split 864셀 | 통과∧200 174 · 차단∧400 690 · **불일치 0** |
+| V8-b 96셀 | 차단∧400 **96/96** |
+| 일반건물 384셀(⑫ 직접 body) | 통과∧200 48 · 차단∧400 336 · **불일치 0** |
+| **⑧ 동작 변화(수정 전 출력과 셀별 대조: 차단 여부·첫 메시지·필드)** | split 864 · V8-b 96 · GB 384 — **전부 0** |
+| ⑫ 상태 변화 | 126 · 24 · 48 (= 수정 전 비대칭 셀과 정확히 일치, 그 밖은 0) |
+
+### 9.4 바뀐 기존 기대값
+
+`split-sale-std-era-fe8-12-parity.test.ts` T-15(토지만·건물만 × 2016-01-01 × 기준시가 없음): ⑫ 오류 키 `[BLD_KEY, LAND_KEY]` → `[BLD_KEY, LAND_KEY, <누락된 감정평가 키>]`(토지만→`buildingAppraisalAtTransfer`, 건물만→`landAppraisalAtTransfer`). 제목·주석 갱신. 그 외 기존 테스트 변경 0.
+
+### 9.5 뮤테이션 (cp 백업 → 변형 → 신규 테스트 → 원복 sha 일치, git checkout/stash 미사용)
+
+| # | 변이 | 결과 |
+|---|---|---|
+| M-1 | ⑫ split 한쪽만 refine 무력화 | KILLED(6 fail) |
+| M-2 | ⑫ GB 한쪽만 refine 무력화 | KILLED(3) |
+| M-3 | 술어 `\|\|`→`&&` | KILLED(12) |
+| M-4 | 술어가 건물 무시 | KILLED(9) |
+| M-5a/b | 오류 키를 항상 토지로(split/GB) | KILLED(3 / 2) |
+| M-6 | refine을 `usableAppraisal` early-return 뒤로 | **SURVIVED — 동치 변이**(그 return은 usable일 때만 타고 한쪽만은 usable이 아니라 순서 무관). 의미 있는 위치 변이 **M-6b**(연혁 면제 `return` 뒤, 함수 끝)는 KILLED(3) → 위치 단언은 격자(2015-12-31 셀)가 이미 한다 |
+| M-7 | V8-b 거울 제거 | KILLED(1) |
+| M-8 | ⑧ split 술어 `landApp ?? 1` | KILLED(5) |
+| M-9 | ⑧ GB 술어가 건물값 대신 토지값 | KILLED(1) |
+| M-10 | ⑫ split 술어 건물 무시 | KILLED(6) |
+
+### 9.6 검증
+
+- `npx tsc --noEmit` 0건 · `npm run lint` 오류 0(경고 365, 사전 존재분 — 변경 파일 eslint 무경고) · pre-push 게이트 4종(폰트·톤·다크 짝·워크플로 러너) 통과
+- 전체 vitest `--maxWorkers=2`: **3259 파일 통과 · 1 skipped · 38,966 테스트 통과 · 실패 0**(머신 부하로 61분 소요 — 부하성 타임아웃 실패 없음)
+- E2E: `e2e/_helpers/validation-field-jump-cases-{leaf,gb,mixed}.ts`의 감정평가 한쪽만·V8-b 케이스는 **⑧ 메시지·필드 점프를 보는 것이라 /api/calc/transfer를 호출하지 않고**, ⑧ 출력은 §9.3에서 셀별 동일함을 확인했다. `gb-sale-split-30pct.spec.ts`는 감정평가 **양쪽**(영향 없음). ⇒ **E2E 미실행**(판단 근거 위와 같음 — 확인 필요: CI 샤드 결과)
+- 브라우저(Playwright) 수동 확인: **미수행** — 화면 거동 변화 0이고 서버 400은 UI에서 도달 불가(직접 API만)
+
+### 9.7 계획과 다르게 한 점
+
+- T-B6을 «직전 T-4·T-10~T-12 유지»에 의존하는 대신 신규 파일 안에서 «양쪽·없음 셀에는 새 감정평가 키 오류가 없다 + 양쪽 ∧ 환산 없음은 기준시가와 무관하게 통과»로 직접 단언했다(T-4/T-10~T-12는 그대로 통과).
+- M-6은 동치 변이로 판정하고 M-6b를 추가했다.
+- 일반건물 지분 카드는 route가 아니라 `generalBuildingShareSchema.safeParse` 단위로 단언했다(issue path `valuation.<누락 쪽>`).

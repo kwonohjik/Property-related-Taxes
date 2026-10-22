@@ -23,7 +23,7 @@ import {
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPriceWaivedByEra } from "@/lib/calc/sale-split-100-3-era";
-import { usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
+import { partialAppraisal, usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import {
   collectSplitPartCauseIssues,
@@ -392,10 +392,26 @@ export function refineSplitAcquisitionInputs(
       issue(["buildingStandardPriceAtAcquisition"], "토지·건물 취득시기가 다른 자산은 건물분 취득시 기준시가가 필요합니다 (소득세법 §99①1호 나목·시행령 §164③)");
   }
 
+  // V8 — 감정평가가액은 양쪽 모두여야 안분 basis가 된다. 한쪽만 오면 엔진은 그 값을 쓰지 않고(`incomplete`) 기준시가로 후퇴하는데, 일괄양도에서는
+  // 결과에 흔적도 없어 입력이 폐기된 사실을 알 수 없다 — 자동 fallback 금지라 ⑧ V8과 같은 술어(`partialAppraisal`)로 서버도 막는다(겸용 ⑫ `appraisalOne`과 같은 방향).
+  // V8-b — 「감정평가」 모드를 골랐는데 두 금액이 모두 비면 같은 후퇴가 조용히 일어난다(⑧ V8-b의 거울, 모드는 ④가 split 본문에 싣는다).
+  const appraisalAtTransfer = { land: d.landAppraisalAtTransfer ?? 0, building: d.buildingAppraisalAtTransfer ?? 0 };
+  if (partialAppraisal(appraisalAtTransfer)) {
+    issue(
+      [appraisalAtTransfer.land > 0 ? "buildingAppraisalAtTransfer" : "landAppraisalAtTransfer"],
+      "양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).",
+    );
+  } else if (d.saleSplitMode === "appraisal" && !usableAppraisal(appraisalAtTransfer)) {
+    issue(
+      ["landAppraisalAtTransfer"],
+      "「감정평가」를 선택했으면 토지·건물 감정평가가액을 입력하세요 — 비워두면 양도시 기준시가 비율로 안분됩니다 (부가가치세법 시행령 §64①1호 단서).",
+    );
+  }
+
   // 양도시 감정평가가액 양쪽이 있으면 엔진은 그것을 안분 basis 1순위로 쓴다(부가령 §64①1호 단서) —
   // 기준시가는 환산 파트의 분모로만 쓰이므로 ⑫는 엔진이 실제로 던지는 조건으로 좁힌다(막다른 길 방지). ⑧ V4·V7도 같은 술어(`saleAppraisalIsBasis` → `usableAppraisal`)로
   // 같은 범위만 요구한다(docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md).
-  if (usableAppraisal({ land: d.landAppraisalAtTransfer ?? 0, building: d.buildingAppraisalAtTransfer ?? 0 })) {
+  if (usableAppraisal(appraisalAtTransfer)) {
     // A3 — 감정평가가액이 안분 basis여도 **환산 파트의 분모**(양도시 기준시가)는 별개로 필요하다. 아래 V7이 건너뛰어져
     //      엔진이 던지는 400(경로 없음)이 되던 구간이다(S3-1: 취득시 비율로 양도시를 나누는 후퇴 제거).
     refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue);
