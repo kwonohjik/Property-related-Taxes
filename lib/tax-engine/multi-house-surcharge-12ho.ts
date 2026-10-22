@@ -12,7 +12,21 @@
 
 import { MULTI_HOUSE } from "./legal-codes";
 import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
+import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import type { HouseInfo, PresaleRight } from "./types/multi-house-surcharge.types";
+
+/**
+ * 주택이 「수도권정비계획법」 §2 1호 **수도권**(서울·인천·경기 전역)에 있는가 — 12호 가·나·다목 · 2호 각 목의
+ * 「수도권 밖」 가액 한도가 이것을 본다.
+ *
+ * 🔴 `region`(capital/non_capital)은 §167의3①1호 **지역기준 여부**다(`deriveHouseRegionFromCode`). 수도권과 다르다 —
+ *    광역시·세종은 지역기준이지만 수도권 밖이고, 수도권의 군·읍·면은 가액기준이지만 수도권이다. 종전에는
+ *    `region`을 수도권 대용으로 써서 부산 주택에 수도권 한도를, 양평군 주택에 수도권 밖 한도를 적용했다.
+ *    API는 `isCapitalArea`를 보내지 않으므로 법정동코드 시도로 판정하고, 코드가 없을 때만 `region`으로 떨어진다.
+ */
+export function isCapitalAreaHouse(house: Pick<HouseInfo, "isCapitalArea" | "regionCode" | "region">): boolean {
+  return house.isCapitalArea ?? isCapitalAreaByRegionCode(house.regionCode) ?? house.region === "capital";
+}
 
 // ============================================================
 // 소형 신축/미분양 주택 판정 (⑬)
@@ -42,7 +56,7 @@ export function isSmallNewHouseSpecial(house: HouseInfo, transferDate: Date): bo
   if (transferDate < SMALL_NEW_HOUSE_TRANSFER_FROM) return false;
 
   const acqDate = house.acquisitionDate;
-  const isCapital = house.isCapitalArea ?? house.region === "capital";
+  const isCapital = isCapitalAreaHouse(house);
 
   // 소형 신축주택 (소령 §167의3①12가목: 취득·준공 모두 2024.1.10~2027.12.31, 전용 60㎡ 이하, 아파트 제외, 취득가 수도권 6억/비수도권 3억 이하)
   // 가목 3호 준공일 검증 — completionDate 미제공 시 미발동(보수적)
@@ -103,7 +117,7 @@ export function resolvePopulationDeclineSecondHome(
   // populationAreaType 미입력 시 regionCode 자동판정(autoKind)으로 다·라목 구분 도출 (N-6).
   const effectiveAreaType = house.populationAreaType ?? autoKind ?? undefined;
   const popCap =
-    house.region === "non_capital" && effectiveAreaType === "decline"
+    !isCapitalAreaHouse(house) && effectiveAreaType === "decline"
       ? MULTI_HOUSE.POP_DECLINE_PRICE_CAP_NONCAPITAL
       : MULTI_HOUSE.POP_DECLINE_PRICE_CAP_DEFAULT;
   if (house.officialPrice > popCap) return null; // 한도 초과 → 배제 미적용, 일반 산입

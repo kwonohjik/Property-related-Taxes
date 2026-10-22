@@ -25,6 +25,8 @@ import { AddressSearch, type AddressValue } from "@/components/ui/address-search
 import { HousePriceYearLookup } from "@/components/calc/transfer/HousePriceYearLookup";
 import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surcharge-count";
 import { buildHouseAddressPatch } from "@/lib/calc/house-region";
+import { HOUSE_REGION_LABEL } from "@/lib/calc/house-region";
+import { HOUSE_REGION_MANUAL_HINT } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { RentalCancellationReasonField } from "@/components/calc/transfer/RentalCancellationReasonField";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
@@ -149,22 +151,25 @@ function BasicInfoSection({ house, onUpdate, transferDate, taxIncentiveRentalEna
         {house.regionCode ? (
           <ToneCard tone="rose" bodyClassName="" className="px-3 py-2">
             <span className="text-sm font-medium">
-              {house.region === "capital" ? "수도권·광역시 등" : "지방"}
+              {HOUSE_REGION_LABEL[house.region]}
             </span>
             <span className="ml-2 text-xs text-muted-foreground">소재지 주소에서 자동 판정</span>
           </ToneCard>
         ) : (
-          <RadioCardGroup
-            name={`house-region-${house.id}`}
-            layout="inline"
-            tone="rose"
-            value={house.region}
-            onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
-            options={[
-              { value: "capital", label: "수도권·광역시 등" },
-              { value: "non_capital", label: "지방" },
-            ]}
-          />
+          <>
+            <RadioCardGroup
+              name={`house-region-${house.id}`}
+              layout="inline"
+              tone="rose"
+              value={house.region}
+              onChange={(v) => onUpdate({ region: v as "capital" | "non_capital" })}
+              options={[
+                { value: "capital", label: HOUSE_REGION_LABEL.capital },
+                { value: "non_capital", label: HOUSE_REGION_LABEL.non_capital },
+              ]}
+            />
+            <p className="text-caption text-muted-foreground">{HOUSE_REGION_MANUAL_HINT}</p>
+          </>
         )}
       </div>
 
