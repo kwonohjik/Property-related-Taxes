@@ -547,7 +547,10 @@ type PreDeemedLike = Pick<
   | "commercialInheritanceValuation"
   | "pre1990Land"
   | "standardPriceAtTransfer"
->;
+> &
+  Partial<Pick<Required2aLike, "acquisitionCause" | "transferType" | "useEstimatedAcquisition">> & {
+    isSuccessorRightToMoveIn?: boolean;
+  };
 
 export function refinePreDeemedAcquisitionSource(
   d: PreDeemedLike,
@@ -556,13 +559,33 @@ export function refinePreDeemedAcquisitionSource(
 ) {
   const ia = d.inheritedAcquisition;
   if (ia?.mode !== "pre-deemed") return;
-  if (d.generalBuildingValuation || d.redevelopment || d.mixedUse || d.commercialBuildingValuation) return;
-  if (d.acquisitionMethod === "appraisal" || d.acquisitionMethod === "salesCase") return;
   const base = issuer(ctx);
   const issue: Issue = (path, message) => base([...prefix, ...path], message);
-
   const clauseA =
     positive(ia.reportedValue) || !!d.inheritedHouseValuation || !!d.commercialInheritanceValuation || !!d.pre1990Land;
+
+  // 재개발·재건축 종전자산(상속) — ③은 §166③이고 엔진은 환산 모드에서만 쓴다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12).
+  // ①② 없이 실가 모드면 취득가액 0 — ⑧ `redevPreDeemedEstimatedRequiredError`. 증여는 ⑧ E-1이 환산 모드에서만 걸려 제외.
+  // 승계조합원(완공 아파트 `isSuccessorMember` · 승계 입주권)은 §166③ 대상이 아니다 — ⑧ `isRedev166_3PreDeemedAsset`와 같은 축.
+  const redevSuccessor =
+    (d.redevelopment as { isSuccessorMember?: boolean } | null | undefined)?.isSuccessorMember === true ||
+    d.isSuccessorRightToMoveIn === true;
+  if (
+    d.redevelopment &&
+    !redevSuccessor &&
+    d.acquisitionCause === "inheritance" &&
+    d.transferType !== "burdened_gift" &&
+    !clauseA &&
+    d.useEstimatedAcquisition !== true
+  ) {
+    issue(
+      ["useEstimatedAcquisition"],
+      "의제취득일(1985.1.1.) 전 상속 재개발·재건축 종전자산에 상증법 평가액·§164④~⑦ 기준시가가 없으면 §166③ 환산취득가액으로 계산합니다 — useEstimatedAcquisition을 true로 보내고 §166③ 입력을 채우세요 (소득세법 시행령 §163⑨·§166③)",
+    );
+    return;
+  }
+  if (d.generalBuildingValuation || d.redevelopment || d.mixedUse || d.commercialBuildingValuation) return;
+  if (d.acquisitionMethod === "appraisal" || d.acquisitionMethod === "salesCase") return;
   if (clauseA) return;
   if (!positive(ia.standardPriceAtDeemedDate)) {
     issue(

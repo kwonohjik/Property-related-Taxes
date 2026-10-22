@@ -20,6 +20,7 @@ import { sec164PartialInputError, sameAdjustmentPeriodError } from "./transfer-t
 import { clauseADeclarationError } from "./transfer-tax-validate-clause-a";
 import { postDeemedClauseARequiredError } from "./transfer-tax-validate-clause-a";
 import { preDeemedConversionInputError } from "./transfer-tax-validate-clause-a";
+import { redevPreDeemedEstimatedRequiredError } from "./transfer-tax-validate-clause-a";
 import { validateCommercialInheritanceAsset } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialAppurtenantLand } from "./transfer-tax-validate-commercial-asset";
 import { validateCommercialEstimatedAsset } from "./transfer-tax-validate-commercial-asset";
@@ -177,6 +178,9 @@ export function validateAssetAcquisition(
   // PD-1 — ③(환산)으로 가는 의제 전 자산은 분자·분모 필수(비우면 취득가액 0). ⑫와 같은 ④ payload로 판정.
   const preDeemedConvError = preDeemedConversionInputError(asset, label, formTransferDate, isNonPrimaryAsset);
   if (preDeemedConvError) return preDeemedConvError;
+  // 재개발 종전자산은 ③이 §166③ — ①② 없이 선언했으면 ⑤ 「환산」이어야 한다(실가면 취득가액 0).
+  const redevPreDeemedError = redevPreDeemedEstimatedRequiredError(asset, label);
+  if (redevPreDeemedError) return redevPreDeemedError;
 
   // ── post-deemed 상속: ①(상증법 평가액) 또는 ②(§164⑤~⑦) 필수 (근거·예외는 함수 JSDoc) ──
   // ⚠️ E-1과 **같은 자리**여야 한다 — 위 조기 return(용도변경·부담부증여)보다 뒤면 dead code다.

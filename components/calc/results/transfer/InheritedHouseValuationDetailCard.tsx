@@ -62,12 +62,17 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
    *  · "no_clause_b" — 의제취득일 **이후** 상속은 §163⑨가 가목을 의제하므로 나목 자체가 없다
    *    (`preDeemedBreakdown`이 붙지 않는 경로가 곧 그 경우다).
    *  · "unknown" — 취득가액 결과가 함께 오지 않았다. **단정하지 않는다**.
+   *  · "redev_166_3" — 재개발·재건축 종전자산: ③이 이 카드의 산식이 아니라 소령 §166③ 환산이고 그것이 채택됐다
+   *    (`convertedBasis` — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12).
    */
-  const convertedState: "applied" | "clause_a" | "no_clause_b" | "unknown" = !acquisitionDetail
+  const breakdown = acquisitionDetail?.preDeemedBreakdown;
+  const convertedState: "applied" | "clause_a" | "no_clause_b" | "unknown" | "redev_166_3" = !acquisitionDetail
     ? "unknown"
-    : acquisitionDetail.preDeemedBreakdown
-      ? acquisitionDetail.preDeemedBreakdown.selectedMethod === "converted"
-        ? "applied"
+    : breakdown
+      ? breakdown.selectedMethod === "converted"
+        ? breakdown.convertedBasis === "redevelopment_166_3"
+          ? "redev_166_3"
+          : "applied"
         : "clause_a"
       : "no_clause_b";
   const convertedApplied = convertedState === "applied";
@@ -169,6 +174,11 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
           {convertedState === "no_clause_b" && (
             <span className="text-micro rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
               미적용 — 상증법 평가액·§164 기준시가로 산정
+            </span>
+          )}
+          {convertedState === "redev_166_3" && (
+            <span className="text-micro rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+              미적용 — 재개발 종전자산은 §166③ 환산취득가액 적용
             </span>
           )}
           {convertedState === "applied" && (

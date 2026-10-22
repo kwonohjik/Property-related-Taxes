@@ -27,6 +27,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { needsClauseADeclaration } from "@/lib/calc/transfer-tax-validate-clause-a";
+import { isRedev166_3PreDeemedAsset } from "@/lib/calc/transfer-tax-validate-clause-a";
 import {
   sec163_9BaseDateLabel,
   sec163_9CauseLabel,
@@ -45,13 +46,19 @@ export function PreDeemedEstimatedNotice({
 
   const dateLabel = sec163_9BaseDateLabel(asset);
   const causeLabel = sec163_9CauseLabel(asset);
+  // 재개발·재건축 종전자산의 ③은 §166③이다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12) — ⑤ 「환산취득가액」 칸으로 계산.
+  const isRedev = isRedev166_3PreDeemedAsset(asset);
 
   return (
     <ToneCard tone="amber" title="§163⑨ 평가액이 계산에 반영되지 않습니다">
       <div className="flex flex-wrap items-center gap-1.5">
         <LawArticleModal legalBasis="소득세법 §97 ①" label="§97①1호" />
         <LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="§163⑨" />
-        <LawArticleModal legalBasis="소득세법 시행령 §176조의2" label="§176조의2④" />
+        {isRedev ? (
+          <LawArticleModal legalBasis="소득세법 시행령 §166 ③" label="§166③" />
+        ) : (
+          <LawArticleModal legalBasis="소득세법 시행령 §176조의2" label="§176조의2④" />
+        )}
       </div>
       <p className="text-xs text-amber-700 dark:text-amber-300">
         의제취득일(1985.1.1.) 이전에 {causeLabel}받은 자산입니다. 「{dateLabel} 상증법 평가액」이나
@@ -59,8 +66,10 @@ export function PreDeemedEstimatedNotice({
         <b>지금은 그 두 값이 계산에 등장하지 않습니다.</b>
       </p>
       <p className="text-xs text-amber-700 dark:text-amber-300">
-        두 값을 모두 확인할 수 없다면 아래에서 선택하세요. 환산취득가액 등 추계(§176조의2④)만으로
-        계산합니다.
+        두 값을 모두 확인할 수 없다면 아래에서 선택하세요.{" "}
+        {isRedev
+          ? "§166③ 환산취득가액만으로 계산합니다 — 재개발 입력 ⑤ 「인가전 분 종전 부동산 취득가액」에서 「환산취득가액」을 고르고 §166③ 칸을 채우세요."
+          : "환산취득가액 등 추계(§176조의2④)만으로 계산합니다."}
       </p>
       <div data-field="preDeemedClauseAUnconfirmed">
         <ToggleCard

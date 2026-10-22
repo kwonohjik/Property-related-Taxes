@@ -217,8 +217,10 @@ export type PreDeemedSelectedMethod = "reported" | "converted" | "sec164";
 export interface PreDeemedBreakdown {
   /** ① 상증법 §60~66 평가액 (상속세 신고가액) — null=미입력 */
   reportedAmount: number | null;
-  /** ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) */
+  /** ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) — 재개발 종전자산은 §166③ 금액(`convertedBasis`) */
   convertedAmount: number;
+  /** ③의 산식 — 재개발·재건축 종전자산이면 「소득세법 시행령」 §166③(표시용). 없으면 §176조의2④. */
+  convertedBasis?: "redevelopment_166_3";
   /** ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — null=미주입(opt-in) */
   sec164Amount: number | null;
   /** 채택된 후보 (max) */

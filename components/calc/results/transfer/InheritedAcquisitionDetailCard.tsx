@@ -69,6 +69,7 @@ function PreDeemedCandidateRow({ label, amount, selected }: { label: string; amo
 
 export function InheritedAcquisitionDetailCard({ detail }: Props) {
   const { acquisitionPrice, method, legalBasis, formula, preDeemedBreakdown, warnings } = detail;
+  const isRedev166_3 = preDeemedBreakdown?.convertedBasis === "redevelopment_166_3";
 
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-950/20 p-4 space-y-4">
@@ -110,7 +111,8 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
       )}
 
       {/* Case A — 의제취득일 전 상속·증여: ①②③ 중 큰 금액(엔진 `calcPreDeemed` 3자 max).
-          ①② = 소령 §163⑨(법 §97①1호 가목 의제) · ③ = 소령 §163⑫ → §176조의2(나목). */}
+          ①② = 소령 §163⑨(법 §97①1호 가목 의제) · ③ = 소령 §163⑫ → §176조의2(나목).
+          재개발·재건축 종전자산은 ③이 소령 §166③ 환산(`convertedBasis` — 재개발 분기가 실제로 적용하는 산식). */}
       {preDeemedBreakdown && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">
@@ -133,14 +135,16 @@ export function InheritedAcquisitionDetailCard({ detail }: Props) {
                 />
               )}
               <PreDeemedCandidateRow
-                label="③ 환산취득가액"
+                label={isRedev166_3 ? "③ 재개발 환산취득가액 (소령 §166③)" : "③ 환산취득가액"}
                 amount={preDeemedBreakdown.convertedAmount}
                 selected={preDeemedBreakdown.selectedMethod === "converted"}
               />
             </div>
             <p className="text-muted-foreground pt-1">
               {preDeemedBreakdown.selectedMethod === "converted"
-                ? "①②③ 중 큰 금액 — 환산취득가액 적용 (소령 §163⑫ → §176조의2④)"
+                ? isRedev166_3
+                  ? "①②③ 중 큰 금액 — 재개발 환산취득가액 적용 (소령 §166③)"
+                  : "①②③ 중 큰 금액 — 환산취득가액 적용 (소령 §163⑫ → §176조의2④)"
                 : "①②③ 중 큰 금액 — 실지거래가액 의제 적용 (소령 §163⑨)"}
             </p>
           </div>

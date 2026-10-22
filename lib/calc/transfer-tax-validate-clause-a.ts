@@ -28,6 +28,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
+import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
   isFullyFilled,
@@ -102,6 +103,35 @@ export function clauseADeclarationError(asset: AssetForm, label: string): string
       `${label}: 의제취득일 전 상속·증여 자산의 취득가액은 상증법 평가액(§163⑨)·§164④~⑦ 기준시가·환산취득가액 중 큰 금액입니다. ` +
       `기준일 현재 상증법 평가액이나 §164④~⑦ 기준시가를 입력하거나, 둘 다 확인할 수 없으면 「상증법 평가액을 확인할 수 없음」을 선택하세요.`
     ),
+  );
+}
+
+/**
+ * ③이 §166③인 재개발·재건축 종전자산인가 — ⑤ 입력 카드·선언 안내·⑧이 공유한다(엔진 `resolvePreDeemedRedevelopment166_3Price`와 같은 축).
+ * 승계조합원(완공 아파트 `redevIsSuccessorMember` · 승계 입주권 `isSuccessorRightToMoveIn`)은 §166③ 대상이 아니라 ③이 §176조의2④다.
+ */
+export function isRedev166_3PreDeemedAsset(asset: AssetForm): boolean {
+  if (asset.assetKind !== "redevelopment_apt" && asset.assetKind !== "right_to_move_in") return false;
+  if (asset.redevIsSuccessorMember === "yes") return false;
+  return !(asset.assetKind === "right_to_move_in" && asset.isSuccessorRightToMoveIn === true);
+}
+
+/**
+ * 재개발·재건축 종전자산(의제취득일 전 상속) — ①② 없이 선언했으면 ⑤ 「환산」 필수(⑫ `refinePreDeemedAcquisitionSource` 재개발 분기).
+ *
+ * 재개발 종전자산의 ③은 §176조의2④가 아니라 §166③이고, 엔진은 ⑤가 「환산」일 때만 §166③을 ③으로 쓴다
+ * (화면에 없는 §166③ 칸 값을 쓰지 않기 위해 — 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §12).
+ * ⑤ 「실가」로 두면 ①②③이 모두 없어 취득가액이 0이 된다 — ⑤ 실가 칸 값은 §163⑨ 의제가 덮어 쓰이지 않는다.
+ * 증여는 E-1이 ⑤ 「환산」일 때만 걸리므로(`needsClauseADeclaration`) 여기 오지 않는다.
+ */
+export function redevPreDeemedEstimatedRequiredError(asset: AssetForm, label: string): string | null {
+  if (!isRedev166_3PreDeemedAsset(asset)) return null;
+  if (!needsClauseADeclaration(asset)) return null;
+  if (redevPreApprovalAcqMode(asset) !== "actual") return null;
+  return fieldError(
+    "useEstimatedAcquisition",
+    `${label}: 의제취득일 전 상속 종전자산에 상증법 평가액·§164④~⑦ 기준시가가 없으면 §166③ 환산취득가액으로 계산합니다. ` +
+      `⑤ 「인가전 분 종전 부동산 취득가액」에서 "환산취득가액"을 선택하고 §166③ 칸을 입력하세요 (소득세법 시행령 §166③).`,
   );
 }
 
