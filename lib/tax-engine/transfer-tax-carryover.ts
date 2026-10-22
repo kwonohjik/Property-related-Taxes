@@ -214,6 +214,19 @@ function calcCarryoverScenariosCore(
     // ⑧ validate가 먼저 막는다. 막히지 않은 경로(API 직접 호출)에서도 수증자 감가상각비를 증여자 취득가액에서 빼지 않는다.
     depreciationAmount: undefined,
     acquisitionPrice: ct.useEstimatedAcquisition ? 0 : donorAcqPrice,
+    /**
+     * 🔴 환산 donor 는 **엔진이 재환산**해야 한다(PR-0b) — 위 `acquisitionPrice: 0`은 그 전제다.
+     * 단건 주택·건물은 폼이 최상위 `useEstimatedAcquisition:true`를 보내 전제가 성립하지만, 일반건물 카드는 aggregate 경로라
+     * `useEstimatedAcquisition:false`(`general-building-route-cards.ts`)여서 환산이 일어나지 않았다 — 증여세 0이면 취득가액 0·필요경비 0
+     * (양도차익 = 양도가 전액), 증여세>0이면 아래 실가 전환의 `necessaryExpenseBeforeGift`·한도가 같은 잘못된 계산에서 나와 개산공제가 소실됐다.
+     *
+     * **일반건물 카드**(`buildProperties`가 토지·건물 파트 카드 모두에 `usedEstimatedAcquisition`을 항상 boolean 으로 싣는 표지)이고 환산 donor 이면 켠다.
+     * **범위를 일반건물 카드로 좁혔다** — 단건 주택·건물은 이미 true 이고, 최상위 false 로 오는 단건 API 직접 호출·컴패니언은 같은 결함이 있으나
+     * 현행 결과가 바뀌므로 이번 수정에 넣지 않는다(계획서 §15 Q-16). 환산 입력(기준시가)이 없는 카드는 켜도 결과가 같다(anchor R8).
+     */
+    useEstimatedAcquisition:
+      rawInput.useEstimatedAcquisition ||
+      (rawInput.usedEstimatedAcquisition !== undefined && ct.useEstimatedAcquisition),
     acquisitionDate: ct.donorAcquisitionDate,   // §95 ④ 단서 보유기간 기산
     /**
      * 🔑 **부담부증여의 취득가액 축은 여기서만 움직인다**(D-7a).

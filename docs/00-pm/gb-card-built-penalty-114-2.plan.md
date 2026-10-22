@@ -340,3 +340,59 @@ mock 세율 기준 상대값. 지방소득세 10% 포함 총납부 기준.
 
 ### 3중 패턴(⑧↔엔진)
 ⑧ `validateGbCarryover`(`transfer-tax-validate-gb-carryover.ts`)는 환산 파트마다 `donorStandardPriceAtAcquisition`을 필수로 요구하고(증축 여부와 무관), ④(`buildPart`·`buildEngineShaped`)와 ⑫(`carryoverPartShape`·`carryoverTaxationEngineShape`)는 이미 그 값을 전송·수용했다. 수정으로 엔진이 3-way에서도 그 값을 소비해 **요구 = 전송 = 수용 = 사용**이 일치한다(신규 필드·분기 없음, 14지점 변경 없음).
+
+---
+
+## 15. PR-0b Do 기록 (2026-10-23) — 일반건물 이월과세 환산 donor 시나리오 A 재환산 (Q-15 확정)
+
+브랜치 `fix/gb-carryover-zero-gift-tax-estimated`(PR-0 head 8177bc950에서 분기). §14 말미의 별건 결함을 수정했다.
+
+### 결함의 실제 범위 (실측 — §14의 서술을 정정한다)
+증여세 0만의 문제가 아니었다. 환산 donor 의 A 입력은 `acquisitionPrice: 0`을 두고 엔진이 `useEstimatedAcquisition`으로 재환산하길 기대하는데(`transfer-tax-carryover.ts` Step 4c), 일반건물 카드는 `useEstimatedAcquisition:false`라 재환산이 일어나지 않는다. 그 결과:
+- 증여세 **0**: `resultABeforeGiftTax`가 취득가액 0·필요경비 0으로 계산 → A 양도차익 = 양도가 전액(500,000,000, 필요경비 echo −250,000,000).
+- 증여세 **>0**: 실가 전환 분기에 들어가지만 `necessaryExpenseBeforeGift`·한도(`giftTaxLimitCap`)가 위 잘못된 계산에서 나와 **개산공제(§163⑥ 3%)가 소실** — 양도차익 249,999,999(정상 246,999,999).
+- 앞선 PR-0 anchor에서 echo(`scenarioA.acquisitionPrice`)만 맞고 세액이 안 움직인 이유가 이것이다.
+
+### 수정 방식 선택 근거 (두 방식을 단건 격자로 실측)
+단건 이월과세 격자 432셀(주택·건물 × 최상위 플래그 true/false × 실가/환산/PHD × 증여세 0/3천만 × 자본적지출 0/5천만/6억[swap] × 양도비 0/5백만 × 평가액 2 × 지분 2)에서:
+- **방식 ① 「환산 donor면 무조건 켠다」**(조건에서 일반건물 카드 한정을 뺀 형태): 단건 중 **최상위 플래그 false·환산 donor 64셀이 바뀐다**(API 직접 호출, 예: 증여세 0 양도차익 1,000,000,000→494,000,000) + 컴패니언 회귀 격자(`transfer.route.split-part-carryover.regression-grid.test.ts`)의 환산·PHD 컴패니언 16셀이 바뀐다(292,290,000→289,644,000 등) — 컴패니언 엔진 입력은 환산 donor여도 최상위 플래그가 false(`bundled-split-helpers.ts:503`, 컴패니언 ④는 매매 취득일 때만 전송 `transfer-tax-api-companion-payload.ts:588`)라 **같은 결함이 운영 경로에도 있다.** 사용자 지시(단건 결과가 바뀌는 방식은 택하지 말 것)에 따라 **택하지 않았다.**
+- **방식 ② 「일반건물 카드로 한정」(채택)**: 카드 표지는 `buildProperties`가 항상 boolean 으로 싣는 `usedEstimatedAcquisition`(토지·건물 파트 카드 공통 — 토지 카드는 propertyType 이 `land`라 propertyType 으로는 못 가른다). 단건 격자 432셀 **0셀 변경**, 컴패니언 회귀 격자 통과.
+
+수정 위치: `lib/tax-engine/transfer-tax-carryover.ts` Step 4c `inputABase`의 `useEstimatedAcquisition`(703→716줄) — `rawInput.useEstimatedAcquisition || (rawInput.usedEstimatedAcquisition !== undefined && ct.useEstimatedAcquisition)`. 이미 true 이던 단건 주택·건물은 `||` 앞 항이 true 라 값이 그대로다. 이 값이 켜지면 증여세 0은 엔진이 환산(양도가 × 분자 ÷ 분모 + 개산공제·§97②2호 단서 swap 포함)하고, 증여세>0은 `resultABeforeGiftTax`가 환산 기준으로 나와 `necessaryExpenseBeforeGift`(swap-aware 필요경비)·한도가 단건과 같은 방식으로 정해진 뒤 실가 전환한다 — 실가 전환 분기 자체는 한 줄도 바꾸지 않았다.
+
+### 기대값 근거 (손계산)
+환산 donor: 건물 양도가 500,000,000(1e9 × 2억/4억) × 분자 1억 ÷ 분모 2억 = 250,000,000, 개산공제 = 분자 1억 × 3% = 3,000,000 → 양도차익 247,000,000. 증축(3-way) 건물1 양도가 444,444,444 → 222,222,222, 개산공제 3,000,000 → 219,222,222. 증여세 g가 있으면 필요경비에 가산 → 양도차익 − g.
+
+### anchor 전/후
+`__tests__/api/transfer.route.gb-carryover-estimated-donor-zero-gift-tax.anchor.test.ts` 9건(2-way·실가·증축 × 증여세 0 / 1원[연속성 1원 차이] / 1,000,000). **수정 前 9건 전부 실패**(0 → 양도차익 500,000,000 / 444,444,444, 1원 셀과의 차이 250,000,001 등), 수정 後 9/9 통과. `__tests__/tax-engine/transfer/carryover-estimated-donor-reestimate.anchor.test.ts` 7건은 **불변이어야 하는 단건 셀을 수정 前 격자 값으로 고정**(R1 주택 환산 494,000,000 · R2 증여세 3천만 464,000,000/B 채택 · R4 swap 400,000,000 · R5 실가 donor 940,000,000 · R6 PHD · R7 입력 없음) + R3 범위 밖 고정(Q-16).
+
+### 세액 변화 (대표값 — 일반건물 환산 donor 시나리오 A, mock 세율)
+| 셀 | 현행 | 수정 후 |
+|---|---|---|
+| 2-way 건물 이월과세 · 증여세 0 · 건물 양도차익 | 500,000,000 (취득가액·필요경비 0) | 247,000,000 |
+| 〃 결정세액 / 총납부 | 259,950,000 / 285,945,000 | **164,211,200 / 180,632,320** (−95,738,800 / −105,312,680) |
+| 〃 증여세 1원 | 165,260,000 | 164,211,200 (증여세 0과 연속) |
+| 〃 증여세 1,000,000 | 164,910,400 | 163,861,600 (−1,048,800: 개산공제 3,000,000 회복) |
+| 증축(원건물 환산) 건물 환산 donor · 증여세 0 (PR-0 포함 기준) | 321,359,787 / 355,940,209 | 247,576,987 / 274,779,129 |
+| 증축(실가 원건물) · 증여세 3천만 | 176,411,457 / 196,497,046 | 175,522,257 / 195,518,926 (−889,200 / −978,120) |
+| 토지·건물 모두 환산 donor · 증여세 0 | 290,610,000 / 319,671,000 | 127,188,000 / 139,906,800 |
+**증여세 0뿐 아니라 증여세>0 셀도 바뀐다**(개산공제 회복, 방향은 세액 감소). 일부 셀은 A↔B 채택이 바뀐다(A 양도차익이 정상값이 되며 ②3호 비교 결과가 달라짐).
+
+### 회귀 0 근거
+- 일반건물 이월과세 격자(증축 3종 × 건물 이월과세 3종 × 토지 이월과세 3종 × 비사업용 분할 2 × 양도일 2 × 평가액 2 × 증여세 2 × 자본적지출 {0·6천만·3억} = **1,296셀**) 수정 前(조건 삭제로 복원 — sha 대조)·後 응답 JSON 비교: 변한 셀 **512 = 전부 «환산 donor 포함»** 셀(증여세 0: 332, 증여세>0: 180). 환산 donor가 없는 셀(실가 donor·이월과세 없음·증축 비이월) **변화 0**. 환산 donor 포함인데 변하지 않은 208셀은 해당 카드가 B 채택(수증자 평가액)이라 A 변경이 영향이 없는 셀이다.
+- 단건 이월과세 격자 432셀(위 §선택 근거): **변화 0**(swap 144셀 포함).
+- 자본적지출 6억(>환산취득가 5억+개산공제 → §97②2호 단서 swap) 단건 셀 변화 0. 일반건물 swap 셀은 별도 한계가 있다 — 아래.
+
+### 표시(echo)↔계산 일치
+수정 前: 결과 echo `scenarioA.acquisitionPrice` 250,000,000 · `necessaryExpenseIsLumpDeduction` true(개산공제 라벨)인데 실제 필요경비는 −250,000,000/0. 수정 後: 건물 필요경비 3,000,000 = 라벨의 개산공제(base 100,000,000 × 3%) + 증여세 상당액, `scenarioA.transferGain`(247,000,000) = 카드 양도차익 = 양도가 − 250,000,000 − 3,000,000. anchor 가 `scenarioA.transferGain`과 카드 `transferGain`을 함께 단언한다.
+
+### 뮤테이션 (cp 백업 · label+file md5 키 · 건별 sha 대조 · bash)
+`transfer-tax-carryover.ts`의 새 조건식에 8건 → 초판(가드 5개) 결과: 절 전체 제거 KILLED(15실패) · 카드 표지 제거(넓힘) KILLED(2: 컴패니언 회귀 격자 포함) · `ct` 환산 가드 제거 KILLED(1) · `||→&&` KILLED(19) · **`isBurdenedGift`·PHD·취득시/양도시 기준시가 가드 4건은 생존 = 동치(죽은 방어 코드)** — 일반건물 카드는 부담부증여·PHD 입력을 갖지 않고(부담부증여는 route 레벨 §159), 기준시가가 없는 카드는 플래그를 켜도 결과가 같다(anchor R8). 관례대로 **4가드를 코드에서 제거**하고 재실행: 절 제거 KILLED(15) · 카드 표지 제거 KILLED(2) · `ct` 환산 제거 KILLED(8) · `||→&&` KILLED(19), 격자(단건 432셀 0변경 · 일반건물 1,296셀 512변경) 제거 前후 동일. 건별 `[RESTORED]`, 끝난 뒤 변경 파일 sha 전후 동일.
+
+### 이탈·한계
+- **Q-16 (신규, 범위 밖)**: 같은 결함이 ① 단건 주택·건물의 **최상위 플래그 false 입력(API 직접 호출)** ② **컴패니언(함께 양도) 이월과세 환산 donor**에도 있다. 후자는 운영 경로다 — 컴패니언 엔진 입력의 `useEstimatedAcquisition`이 취득원인이 매매일 때만 전송된다(`transfer-tax-api-companion-payload.ts:588`). 수정하면 단건/컴패니언 현행 결과가 바뀌므로(회귀 격자 16셀 292,290,000→289,644,000 등) 이번에 넣지 않았다. 별도 결정 필요.
+- **일반건물 이월과세 × 자본적지출(swap) 한계(미수정·기존)**: 자본적지출 6억 > 환산취득가+개산공제인 셀에서 비이월 대조군은 양도차익 200,000,000(swap)인데, 이월과세 A 시나리오는 247,000,000으로 자본적지출이 반영되지 않는다(수정 前 500,000,000). 일반건물 카드의 swap 은 GB 레이어에서 수증자 환산으로 판정돼 `buildProperties`가 `capitalExpenditure`를 단건 엔진 input 에 싣지 않기 때문 — 수정 後가 수정 前보다 정답에 가깝지만 완전하지 않다. **확인 필요 / 별건.**
+- 기존 anchor 5건(GBAC-06 · GBLE-01·02·04·05)의 고정값이 «개산공제 소실» 상태였다. 새 값으로 갱신하고 사유를 주석에 남겼다(GBLE-03 실가 donor 불변; 환산·실가가 우연히 같던 교차검증 주석 정정).
+
+### 검증
+`npx tsc --noEmit` 0건 · eslint(변경 파일) 0건 · 전체 `vitest run` **3323파일 39828 passed 0 failed**(조건 단순화 前 실행 — 단순화 後는 격자 동일 확인 + 범위 `carryover general-building gb- bundled burdened-gift split-part companion` 385파일 4677 passed). 브라우저 확인: 수행하지 않음(엔진 시나리오 입력 변경, 화면·입력 변경 없음).
