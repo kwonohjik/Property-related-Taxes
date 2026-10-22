@@ -1,6 +1,6 @@
 # 일반건물 양도비 토지·건물 배분 기준 — 양도시 기준시가 고정 → 적용 자산가액(실가·감정가액·기준시가) 비례 계획서
 
-> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **📝 Plan 초안 — 사용자 결정 대기** (§8)
+> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — 권장안: Q-1 (a) 양도측 «적용 양도가액» · Q-2 (a) 실가·증축 · Q-3 (a) legacy 현행 유지+정수화 · Q-4 (a) 자본적지출 현행 · Q-5 이번엔 유지 · Q-6 (b) 일반건물+swap+split/PHD 정수화 · Q-7 상세명세서 산식 포함 · Q-8 (a) 1 PR) → Do**
 > 관련: `docs/00-pm/gb-and-one-side-appraisal-fe8-12-parity.plan.md` §8 확인 필요 1 · `docs/02-design/features/gb-actual-path-sale-split-noop.plan.md` §5(2026-08-07 P-2 확정 규칙) · `docs/00-pm/mixed-use-sale-split-basis.plan.md` R-2(겸용 선례) · `docs/00-pm/estimated-acquisition-float-precision.plan.md`(1원 과소 선례) · 짝 계획서 `docs/00-pm/gb-v8b-appraisal-mode-empty.plan.md`
 
 ## 0. 한 줄 요약

@@ -1,6 +1,6 @@
 # 일반건물 «감정평가» 안분 모드 선택 후 금액 미입력 — ⑧ V8-b 누락 해소 계획서
 
-> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **📝 Plan 초안 — 사용자 결정 대기** (§7)
+> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — 권장안: Q-1 증축 × 감정 선택 × 빈칸 통과 유지 · Q-2 «구분 기재» 두 칸 비움은 별건) → Do**
 > 관련: `docs/00-pm/gb-and-one-side-appraisal-fe8-12-parity.plan.md` §8 확인 필요 3 · `docs/02-design/features/general-building-sale-split-mode.plan.md`(3지선다·Q-7) · 테스트 `__tests__/calc/gb-sale-split-appraisal-block-review-2026-08-f36.test.ts`(F36) · 짝 계획서 `docs/00-pm/gb-transfer-expense-apportion-basis.plan.md`
 
 ## 0. 한 줄 요약
