@@ -169,7 +169,7 @@ export function resolveSplitBuildingPenaltyAxis(
 }
 
 /** 분리 취득 건물 파트의 §114조의2 base — 증축이고 가산세 게이트가 열릴 때만 증축부분 값, 그 밖은 건물 파트 전체. */
-function splitExtensionPenaltyBase(
+export function splitExtensionPenaltyBase(
   input: TransferTaxInput,
   mode: "estimated" | "appraisal",
   building: SplitPartResult,

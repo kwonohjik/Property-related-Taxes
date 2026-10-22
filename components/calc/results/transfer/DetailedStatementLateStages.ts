@@ -18,7 +18,7 @@
  */
 
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
-import { donorBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
+import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import {
 } from "@/components/calc/results/transfer/exempt-gross-gain";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
@@ -193,7 +193,7 @@ export function appendLateStageItems(
     const penaltyMethod = penaltyStep?.formula?.includes("감정가액 적용") ? "감정가액" : "환산취득가액";
     // 산정기준액은 어댑터 경유 result에서 0이다(자산별 값이 합쳐지지 않는다) — 없으면 꼬리를 생략한다.
     // 이월과세 × 증여자 신축·증축(§114조의2) — 신축자가 증여자임과 건물분 산식을 같은 문장 정본(`donorBuiltPenaltyView`)으로 밝힌다.
-    const donorView = donorBuiltPenaltyView(result.carryoverTaxationDetail?.donorBuiltPenalty);
+    const donorView = donorBuiltPenaltyView(resultDonorBuiltEcho(result));
     if (donorView?.applied) {
       penaltyParts.push(`§114조의2 증여자 신축·증축 ${penaltyMethod} 가산세 ${section114_2Penalty.toLocaleString()} — ${donorView.formulaLines.join(" · ")}`);
     } else penaltyParts.push(

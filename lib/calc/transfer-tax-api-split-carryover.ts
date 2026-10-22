@@ -19,6 +19,7 @@ import { effectiveCarryoverDonorSplit, effectiveLandCarryover } from "./transfer
 import { effectiveBuildingCarryoverMix } from "./transfer-land-part-cause";
 import { partDonorEstimated } from "./transfer-land-part-cause";
 import { carryoverHouseholdPayload } from "./transfer-tax-api-carryover";
+import { buildDonorBuiltPartPayload, type SplitDonorBuiltPayload } from "./transfer-tax-api-donor-built-part";
 
 /** ⑫ `carryoverGiftEvent` — 증여 그 자체의 사실. */
 export interface SplitCarryoverEventPayload {
@@ -52,6 +53,8 @@ export interface SplitCarryoverPartPayload {
   /** P6 — 환산 분자: 증여자 취득 당시 그 파트 기준시가 총액(지분 스케일 없음) */
   donorStandardPriceAtAcquisition?: number | undefined;
   donorCapitalExpenditure: number | undefined;
+  /** PR-3 — 증여자가 신축·증축한 건물(§114조의2 가산세). 건물 파트에서만, 토글 ON일 때만 싣는다(토지 파트는 ⑫가 거부) */
+  donorBuilt?: SplitDonorBuiltPayload;
 }
 
 export interface SplitCarryoverPayload {
@@ -85,6 +88,7 @@ function buildPart(
   c: CarryoverTaxationForm | undefined,
   ratioed: (v: string | undefined) => number | undefined,
   estimated: boolean,
+  donorBuilt?: SplitDonorBuiltPayload,
 ): SplitCarryoverPartPayload {
   return {
     donorAcquisitionDate: c?.donorAcquisitionDate ?? "",
@@ -92,6 +96,7 @@ function buildPart(
       ? { useEstimatedAcquisition: true as const, donorStandardPriceAtAcquisition: parseAmount(c?.donorStandardPriceAtAcquisition ?? "") || undefined }
       : { donorAcquisitionPrice: ratioed(c?.donorAcquisitionPrice) }),
     donorCapitalExpenditure: ratioed(c?.donorCapitalExpenditure),
+    ...(donorBuilt ? { donorBuilt } : {}),
   };
 }
 
@@ -130,6 +135,8 @@ export function buildSplitCarryoverPayload(
   opts?: { isNonPrimary?: boolean },
 ): SplitCarryoverPayload | undefined {
   const est = partDonorEstimated(asset, opts);
+  // PR-3 — 건물 파트의 증여자 신축·증축(⑤·⑧과 같은 술어). 토지 파트에는 싣지 않는다.
+  const donorBuilt = buildDonorBuiltPartPayload(asset, opts);
   if (effectiveCarryoverDonorSplit(asset, opts)) {
     const c = asset.carryover;
     return {
@@ -141,7 +148,7 @@ export function buildSplitCarryoverPayload(
         ...(c?.donorRelation === "spouse" && c.spouseGiftOneHouseAtGiftDate ? { spouseGiftOneHouseAtGiftDate: true as const } : {}),
       },
       landCarryoverPart: buildPart(asset.landCarryover, ratioed, est.land),
-      buildingCarryoverPart: buildPart(asset.carryover, ratioed, est.building),
+      buildingCarryoverPart: buildPart(asset.carryover, ratioed, est.building, donorBuilt),
     };
   }
   if (!opts?.isNonPrimary && effectiveLandCarryover(asset))
@@ -155,7 +162,7 @@ export function buildSplitCarryoverPayload(
       landAcquisitionCause: "purchase",
       // 세대 사실(P5-Q3) — 건물이 증여받은 주택이다. 배우자 예외는 싣지 않는다(P5-Q4 — 건물만 증여는 해석례 없음).
       carryoverGiftEvent: { ...buildEvent(splitCarryoverEventSource(asset)), ...carryoverHouseholdPayload(asset) },
-      buildingCarryoverPart: buildPart(asset.carryover, ratioed, est.building),
+      buildingCarryoverPart: buildPart(asset.carryover, ratioed, est.building, donorBuilt),
     };
   return undefined;
 }

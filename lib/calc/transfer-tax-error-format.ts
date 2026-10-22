@@ -92,6 +92,12 @@ const FIELD_LABEL: Record<string, string> = {
   "carryoverTaxation.donorBuilt.extensionFloorArea": "증축 바닥면적",
   "carryoverTaxation.donorBuilt.extensionStdPriceAtAcquisition": "증축 부분 취득 당시 기준시가",
   "carryoverTaxation.donorBuilt.housing": "일체 주택 건물분 입력",
+  // 토지·건물 분리 이월과세 건물 파트(PR-3) — 같은 화면 라벨
+  "buildingCarryoverPart.donorBuilt": "증여자 신축·증축 정보",
+  "buildingCarryoverPart.donorBuilt.buildingType": "증여자 신축·증축 구분",
+  "buildingCarryoverPart.donorBuilt.constructionDate": "증여자 신축·증축일",
+  "buildingCarryoverPart.donorBuilt.extensionFloorArea": "증축 바닥면적",
+  "buildingCarryoverPart.donorBuilt.extensionStdPriceAtAcquisition": "증축 부분 취득 당시 기준시가",
 
   // 1990 토지
   "pre1990Land.acquisitionDate": "1990 토지 취득일",

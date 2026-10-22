@@ -22,6 +22,7 @@ import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { isFractionalOwnership } from "@/lib/calc/transfer-tax-api-helpers";
+import { CarryoverDonorBuiltSection } from "./CarryoverDonorBuiltSection";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
@@ -114,6 +115,10 @@ export function SplitPartCarryoverCard(props: SplitPartCarryoverCardProps) {
                 필요경비 = 개산공제(증여자 취득 당시 기준시가 × 개산공제율, {TRANSFER.CARRYOVER_ESTIMATED_LUMP_DED}) — 자본적지출과 양도비 합계가 (환산취득가액 + 개산공제)보다 크면 그 합계로 대신합니다 ({TRANSFER.CARRYOVER_ESTIMATED_EXPENSE_PROVISO}).
               </p>
             </ToneCard>
+            {/* 환산 입력 다음 — 그 건물이 증여자 신축·증축인가 (§114조의2). 노출 술어는 ④ 전송·⑧ 필수와 같다(`donor-built-part-scope.ts`). 토지 파트에는 없다. */}
+            {part === "building" && props.asset && (
+              <CarryoverDonorBuiltSection mode="part" asset={props.asset} transferDate="" onChange={() => {}} onCarryoverChange={onPatch} />
+            )}
           </>
         ) : (
           <FieldCard

@@ -171,6 +171,9 @@ export function runPreCalculationSteps(
     splitCarryover = splitCarryoverResult.detail;
     workingInput = splitCarryoverResult.adoptedInput;
     for (const line of splitCarryoverStepLines(splitCarryoverResult.detail)) steps.push({ ...line, amount: 0 });
+    // §114조의2 증여자 신축·증축(건물 파트) — 적용/미적용 안내를 경고 목록에도 싣는다(입력이 없으면 undefined)
+    const splitDonorBuiltNotice = donorBuiltPenaltyNotice(splitCarryoverResult.detail.building?.donorBuiltPenalty);
+    if (splitDonorBuiltNotice) warnings.push(splitDonorBuiltNotice);
   }
   // STEP 0.475: 배우자등 이월과세 §97조의2 (carryoverTaxation 없으면 skip, 재귀 시 자동 skip)
   let carryoverDetail: CarryoverTaxationDetail | undefined;

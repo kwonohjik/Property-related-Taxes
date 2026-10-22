@@ -322,7 +322,7 @@ export function finalizeTransferTax(args: FinalizeArgs): FinalizeResult {
   //    `resolveSplitBuildingPenaltyAxis` 참조 — 게이트(산정방식)·base 둘 다 건물 파트에서 온다.
   //    일반건물 카드는 `input.penaltyAxis`로 같은 축을 직접 싣는다(Q-A5 — 건물 파트 감정가액).
   // 부담부증여 K-7(감정가액) 신축은 §159 스텝이 `effectiveInput.penaltyAxis`로 싣는다(원본 input에는 없다).
-  const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetailForRate, input);
+  const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetailForRate, effectiveInput.penaltyDonorBuilt ? effectiveInput : input);
   const splitPenaltyAxis = splitBuildingAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   let penaltyBase = splitPenaltyAxis
     ? splitPenaltyAxis.base

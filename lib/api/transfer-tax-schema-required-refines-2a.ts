@@ -68,6 +68,8 @@ type SplitCarryoverPartLike = {
   useEstimatedAcquisition?: boolean;
   donorStandardPriceAtAcquisition?: number;
   donorCapitalExpenditure?: number;
+  /** PR-3 — 건물 파트만 받는다(`splitCarryoverBuildingPartShape`) */
+  donorBuilt?: { buildingType: "new" | "extension"; constructionDate: string; extensionFloorArea?: number; extensionStdPriceAtAcquisition?: number };
 };
 
 export type Required2aLike = {

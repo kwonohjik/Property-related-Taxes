@@ -5,8 +5,9 @@
  *
  * 이 객체는 **단건 인라인 shape(`transfer-tax-schema-base-shape.ts`)과 엔진 shape(`carryoverTaxationEngineShape` — 컴패니언·GB 파트)가
  * 함께 쓴다.** 한쪽에만 두면 다른 쪽에서 **침묵 strip**된다(400이 아니라 200 + 가산세 0).
- * 토지·건물 파트 이월과세(P1~P6 wire — `splitCarryoverPartShape`·`carryoverPartShape`)와 GB 파트(`landCarryoverTaxation`·`buildingCarryoverTaxation`)는
- * 이 PR 범위 밖이라 **명시 거부**한다(`rejectDonorBuiltRefine`) — 받아 놓고 무시하면 침묵 오답이다.
+ * GB 파트(`landCarryoverTaxation`·`buildingCarryoverTaxation`)·일반건물 `carryoverPartShape`와 split **토지 파트**(`splitCarryoverPartShape`)는
+ * 범위 밖이라 **명시 거부**한다(`rejectDonorBuiltRefine`·`donorBuiltRejectedKey`) — 받아 놓고 무시하면 침묵 오답이다.
+ * split **건물 파트**(`buildingCarryoverPart`)는 PR-3 부터 수용한다 — `lib/api/transfer-tax-schema-split-carryover.ts`의 `splitCarryoverBuildingPartShape`.
  */
 import { z } from "zod";
 
@@ -75,7 +76,7 @@ export function refineDonorBuiltInCarryover(ct: CtLike, ctx: z.RefinementCtx): v
   }
 }
 
-/** 파트·GB 파트 wire 에서 `donorBuilt` 를 받으면 거부 — 아직 계산에 쓰이지 않으므로 침묵 무시 대신 400 */
+/** GB 파트 wire 에서 `donorBuilt` 를 받으면 거부 — 아직 계산에 쓰이지 않으므로 침묵 무시 대신 400 */
 export function rejectDonorBuiltRefine(ct: { donorBuilt?: unknown }, ctx: z.RefinementCtx): void {
   if (ct.donorBuilt !== undefined)
     ctx.addIssue({
@@ -85,7 +86,7 @@ export function rejectDonorBuiltRefine(ct: { donorBuilt?: unknown }, ctx: z.Refi
     });
 }
 
-/** 파트 wire(`z.object`)에 두는 거부용 키 — 값이 있으면 어떤 값이든 거부된다 */
+/** 거부용 키(일반건물 파트·split 토지 파트) — 값이 있으면 어떤 값이든 거부된다 */
 export const donorBuiltRejectedKey = z
   .any()
   .optional()

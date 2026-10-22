@@ -410,3 +410,35 @@ PR-1~2는 한 세트로 머지해야 사용자에게 열린다(엔진만 머지�
 | ⑥ 사이드바 | 변경 여부 확인 | **변경 없음** — `transfer-per-asset-summary.ts`가 가산세를 합산하지 않는다(본인 신축 가산세도 동일) | 계획서 §6 N/A 유지 |
 | 겸용·상가·분양권·입주권 | 토글 비노출 | `donorBuiltApplicable`이 housing·building 외·겸용·부담부증여·분리 계산·파트 이월과세·환산 OFF·phd/apd를 모두 비노출 | 엔진·⑫ 거부 조합과 같은 집합 — DBC-S 격자 |
 | 인쇄(print) E2E | 「전체 선택」 먼저 | **하지 않음** — 인쇄 경로는 vitest PDF·신고서 anchor로만 확인 | 가산세 근거는 같은 view 정본을 읽고 별도 인쇄 전용 분기가 없다. 필요 시 PR-3 이후 E2E에 추가 |
+
+## 16. PR-3 Do 기록 (2026-10-22) — 토지·건물 분리 이월과세 건물 파트(P6) · 계획 대비 이탈
+
+범위: 건물 파트(B·C)가 **이월과세 적용(A 채택) + 증여자 기준 환산취득가액**일 때만 건물 파트 환산취득가액(증축은 증축 부분)의 5%. 토지 파트·②3호 B 채택·적용배제는 가산세 없음(R2). 5년 기산 = 증여자 신축·증축일(D1).
+
+| 항목 | 계획 | 실제 | 이유 |
+|---|---|---|---|
+| 해결자 후크 | A 채택 파트에 축을 싣는다 | `calcSplitCarryoverScenarios`가 **최종 채택 입력(`adoptedInput`)에만** `donorBuiltPartPatch`(isSelfBuilt·penaltyDonorBuilt·buildingType·constructionDate·extensionFloorArea·extensionStdPriceAtAcquisition)를 싣는다. ②3호 비교용 시나리오 입력은 패치하지 않는다 | 비교는 가산세 前 결정세액(§92③2호) — 채택·비교가 현행과 모든 셀에서 같다(회귀 0 격자 5,184셀 바이트 동일). `penaltyAxis`는 싣지 않는다 — split 건물 파트 축(`resolveSplitBuildingPenaltyAxis`)이 파트 결과에서 base 를 낸다 |
+| echo 위치 | 파트 echo | `SplitPartCarryoverEcho.donorBuiltPenalty`(자산 전체와 같은 `DonorBuiltPenaltyEcho`). 적용은 채택 입력으로 낸 `calcSplitGain(adoptedInput).building` 에서 `splitExtensionPenaltyBase`(export 전환)로 base 를 읽는다 | finalize 와 **같은 함수**라 표시 드리프트가 없다. B·배제는 `scenario_b`/`carryover_excluded`(②1호·②2호·③ 포함), 5년 경과·시행일 전·증축 85㎡ 이하는 `outside_penalty_window` |
+| V-3 | `resolveSplitBuildingPenaltyAxis`가 원본 input 을 읽는 문제 | finalize STEP 10.5·손실 조기반환 2곳이 `effectiveInput.penaltyDonorBuilt ? effectiveInput : input` 을 넘긴다 | 증축 base 가 원본 `buildingType`(미설정)을 읽어 건물 파트 전체 base(5,000,000)로 나오던 것을 실측으로 확인 → 증축 부분 base(1,000,000). `penaltyDonorBuilt`가 없으면 종전과 같은 `input`이라 회귀 0. **손실 경로는 증축 케이스가 있어야 뮤테이션이 죽는다**(N02 — 초판 anchor 는 신축만 있어 SURVIVED → 증축×손실 anchor 추가) |
+| ⑫ | split 파트 wire 명시 거부 → 건물 파트 수용 | `splitCarryoverBuildingPartShape`(건물만 `donorBuilt` 수용, `.strict()`로 `housing` 키는 400) + `refineSplitDonorBuilt`(환산 아님·자산 종류·PHD·부담부증여·신축일 범위·증축 필수). 토지 파트는 종전대로 `donorBuiltRejectedKey` 거부 | 일체 주택 안분은 split 에 필요 없다(파트별 기준시가가 이미 나뉨) — 받으면 침묵 strip 되므로 strict |
+| ⑭ | Date 변환 | `composeSplitCarryover`가 `toEngineDonorBuilt`로 변환(자산 전체와 같은 함수). 토지 파트에 와도 합성해 엔진이 거부 | 합성기가 침묵으로 버리면 직접 호출 방어선이 비게 된다 |
+| ①②③ | 폼 8칸 재사용 | **변경 없음** — 건물 파트 서브폼이 `carryover`라 같은 8칸을 쓴다(part 모드는 housing 3칸을 안 쓴다) | |
+| ④ | `buildingCarryoverPart.donorBuilt` | `buildDonorBuiltPartPayload`(`lib/calc/transfer-tax-api-donor-built-part.ts`) — 토글 OFF·환산 아님·범위 밖 stale 은 미전송, 토지 파트에는 싣지 않는다 | |
+| ⑤ | `donorBuiltApplicable`의 「파트 이월과세 제외」 조정 | **조정하지 않고 짝 술어**(`donorBuiltPartApplicable`/`Active`, `lib/calc/donor-built-part-scope.ts`)를 추가했다. 자산 전체 술어는 그대로(파트 이월과세 거절) | 계획서 초안의 `donorBuiltMode` 확장안은 `donor-built-scope.ts` → `transfer-tax-api-split` → `transfer-tax-api-split-carryover` 순환을 만든다. 두 술어는 상호배타(`partCarryover`)이고 짝 leaf 로 둔다. `CarryoverDonorBuiltSection`에 `mode="part"`, `SplitPartCarryoverCard` 건물 카드의 환산 입력 **다음**(자본적지출 앞)에 마운트 |
+| ⑧ | 같은 규칙 | `validateDonorBuiltPart` — `validateSplitCarryoverParts` 건물 파트 환산 검증 직후. 앵커는 `carryover.donorBuilt*`(자산 전체와 같은 칸) | ⑧↔⑫ 격자 48셀 — ⑧ 통과 6셀 전부 ⑫ 통과, 날짜 범위 위반은 ⑧·⑫ 둘 다 차단 |
+| ⑥ 사이드바 | 확인 | **변경 없음** — 가산세는 사이드바 합계에 들어가지 않는다(PR-2 와 같다) | |
+| ⑦ | 4뷰 재사용 + P6 고지 교체 | `resultDonorBuiltEcho`(자산 전체 `carryoverTaxationDetail` ?? split 건물 파트 echo) 단일 지점을 상세명세서·신고서·PDF 가 읽는다. 카드는 `SplitCarryoverComparisonCard`가 `CarryoverDonorBuiltPenaltyCard`를 붙인다. `transfer-tax-split-carryover-display.ts`의 «양도자 본인 신축만 붙인다» 고지를 제거하고, **echo 가 없을 때** «입력하지 않아 가산세를 붙이지 않았다 — 확인 필요»(`DONOR_BUILT_SPLIT_UNDECLARED_NOTICE`)로 대체. echo 가 있으면 카드·경고(`result.warnings`)가 Q-5 문구 / B·배제 중립 안내를 말한다 | 「확인 필요」 목록에 중립 안내가 섞이지 않게 echo 문장은 가산세 카드에만 둔다 |
+
+### 세액 (anchor 재현 — 계획서 §5.2 P6)
+| 셀 | 현행 총납부 | 구현 후 | 차이 |
+|---|---|---|---|
+| 건물 파트 A 채택 (분자 1억·증여 신고가 3.15억, base 100,000,000) | 170,997,200 | 176,497,200 | +5,500,000 (가산세 5,000,000 + 지방소득세 500,000) |
+| 건물 파트 ②3호 B 채택 (분자 2.5억·증여 신고가 2억) | 243,870,000 | 243,870,000 | 0 |
+| 증축 85㎡ / 85.01㎡ (증축 부분 환산 2천만) | — | 0 / 1,000,000 | — |
+
+### 검증
+- 엔진 anchor `split-part-carryover.donor-built.anchor.test.ts` 17 · route `transfer.route.split-part-carryover.donor-built.wire.test.ts` 8 · 클라이언트 `split-carryover-donor-built-part.anchor.test.ts` 20(⑧↔⑫ 48셀) · 결과 4뷰 10 · ⑤ 렌더 9 · E2E 7(`e2e/transfer-split-part-carryover-donor-built.spec.ts`).
+- 회귀 0: donorBuilt 없는 P6 격자(A·B·C × 환산/실가 × 분자 4 × 증여 신고가 3 × 양도일 3 × 관계 3 × 자본적지출 2 × 증여자 취득일 2 × 증여세 2 = 5,184셀, 건물 A 1,962·B 1,494·환산 1,728)를 기준선(master 609f621d7)과 구현 후에서 돌려 **응답 전체 JSON 해시 동일**.
+- 뮤테이션 35건: 33 KILLED · 2 동치(죽은 방어 코드 — echo 증축 분모 가드(엔진이 환산 파트 분모를 먼저 던진다)·술어의 부담부증여 가드(`partCarryover`가 이미 거절)는 **코드에서 제거**) · 초판 SURVIVED 2건은 anchor 보강 후 KILLED(N02 손실×증축, N33 토지 환산 ON 인 토지 카드).
+- ⚠️ 하네스 교훈: `mutate.sh`가 백업 파일명을 `shift` 뒤의 `$2`(두 번째 테스트 경로)로 만들어 **테스트가 1개뿐인 변형은 백업이 안 되고 복원이 실패**했다(RESTORE-MISMATCH → 변형이 남음). sha 대조로 발견해 3곳을 수작업 복원했고(원본 diff 와 대조), 백업 키를 `label+file` md5 로 고친 뒤 재실행했다. 뮤테이션 후에는 전 변경 파일 sha 를 반드시 전후 비교할 것.
+

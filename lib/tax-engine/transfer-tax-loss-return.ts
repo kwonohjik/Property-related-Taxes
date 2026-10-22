@@ -101,7 +101,7 @@ export function buildLossTransferTaxResult({
   // §114조의2 판정 축 — 손실(산출세액 0)에도 적용된다(법 §114의2②). 정상 경로 finalize와 **같은 축을 같은 순서로** 읽는다(dual-truth 방지):
   //    ① 토지·건물 분리 자산의 건물 파트(증축이면 증축부분 base) ② 일반건물 카드 ③ 부담부증여 §159 스텝.
   //    🔴 종전엔 ①을 빠뜨려 분리 취득 건물 파트가 환산·감정이어도 손실이면 가산세가 0이었다(실측 — 2026-10-16).
-  const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetail, input);
+  const splitBuildingAxis = resolveSplitBuildingPenaltyAxis(splitDetail, effectiveInput.penaltyDonorBuilt ? effectiveInput : input);
   const penaltyAxis = splitBuildingAxis ?? input.penaltyAxis ?? effectiveInput.penaltyAxis;
   if (penaltyAxis) pb0 = penaltyAxis.base;
   // §114조의2① 손실(산출세액 0, ②) 경로도 증축부분 한정 base 적용 — 정상 경로 finalize와 동일 헬퍼(dual-truth 방지).

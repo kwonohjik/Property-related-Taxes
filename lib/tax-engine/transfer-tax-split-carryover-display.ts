@@ -8,6 +8,7 @@
  * 구 이력(echo 없음)은 `undefined`를 돌려줘 소비처가 종전 화면을 그대로 낸다.
  */
 import { TRANSFER } from "./legal-codes";
+import { DONOR_BUILT_SPLIT_UNDECLARED_NOTICE } from "./transfer-tax-carryover-donor-display";
 import { CARRYOVER_EXCLUSION_REASON_LABELS } from "./transfer-carryover-exclusion-labels";
 import { splitRateBasisDateText, splitRateBasisNote } from "./transfer-tax-split-display";
 import type { SplitGainResult, SplitPartCarryoverEcho, SplitPartResult } from "./types/transfer-split-gain.types";
@@ -61,6 +62,8 @@ export interface SplitCarryoverPartView {
   recipientExpense: number;
   /** ②3호 비교 — 신고 전체 결정세액(상대 파트의 확정값 기준). 적격 판정에서 이미 배제된 파트는 없다 */
   comparison?: { withCarryover: number; without: number };
+  /** 증여자 신축·증축 §114조의2 가산세 echo(PR-3) — 건물 파트에 `donorBuilt`가 입력됐을 때만. 엔진 echo 그대로 */
+  donorBuiltPenalty?: SplitPartCarryoverEcho["donorBuiltPenalty"];
 }
 
 export interface SplitCarryoverView {
@@ -127,6 +130,7 @@ function partView(
     ...(e.comparison
       ? { comparison: { withCarryover: e.comparison.determinedTaxWithCarryover, without: e.comparison.determinedTaxWithout } }
       : {}),
+    ...(e.donorBuiltPenalty ? { donorBuiltPenalty: e.donorBuiltPenalty } : {}),
   };
 }
 
@@ -271,11 +275,10 @@ export function splitCarryoverNotices(v: SplitCarryoverView): string[] {
     out.push(
       "②2호(이월과세를 적용해야 비로소 1세대1주택 비과세 양도가 되는 경우)는 토지·건물을 주택 하나(딸린 토지 포함)로 보고, 이월과세 파트를 모두 적용한 경우와 모두 적용하지 않은 경우의 비과세 해당 여부를 건물·토지 각각 비교해 판정했습니다. 토지·건물 중 일부만 증여받은 경우를 정면으로 다룬 해석례는 확인하지 못했습니다 — 확인 필요.",
     );
-  // P6 §114조의2 — 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했다. 가산세는 거주자 본인이 신축·증축한 건물만 붙인다(조문 주어) — 증여자 신축분은 해석례를 확인하지 못했다.
-  if (v.parts.some((p) => p.key === "building" && appliedEstimated(p)))
-    out.push(
-      `증여자가 신축·증축한 건물을 그 취득일부터 5년 이내에 양도하는 경우의 ${TRANSFER.BUILDING_PENALTY} 환산가액적용가산세 적용 여부는 확인이 필요합니다 — 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했으나, 이 계산은 양도자 본인이 신축·증축한 건물만 가산세를 붙입니다.`,
-    );
+  // P6 §114조의2 — 건물 파트의 증여자 취득가액을 환산취득가액으로 계산했다. «증여자 신축·증축»을 입력했으면 적용/미적용을 echo 문장 정본으로, 입력하지 않았으면 입력 경로를 안내한다.
+  const bldg = v.parts.find((p) => p.key === "building");
+  //   echo 가 있으면 가산세 카드(적용 근거·붙지 않은 이유)가 따로 말한다 — 「확인 필요」 목록에는 입력이 없을 때의 안내만 싣는다.
+  if (bldg && !bldg.donorBuiltPenalty && appliedEstimated(bldg)) out.push(DONOR_BUILT_SPLIT_UNDECLARED_NOTICE);
   if (v.spouseOneHouseExceptionApplied)
     out.push("증여일 현재 1세대1주택이던 주택을 배우자로부터 증여받아 ②2호를 적용하지 않았습니다(이월과세 판정은 ②3호 비교로 했습니다).");
   if (v.orderDependent)

@@ -17,7 +17,7 @@ import { z } from "zod";
 import { toDate } from "@/lib/api/date-coerce";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
-import { donorBuiltRejectedKey } from "./transfer-tax-schema-donor-built";
+import { donorBuiltRejectedKey, donorBuiltShape } from "./transfer-tax-schema-donor-built";
 
 /** 이월과세 적용배제 선언 (법 §97의2②) — 토지·건물·일반건물 공통. */
 export const carryoverExclusionShape = z.object({
@@ -74,15 +74,26 @@ export const splitCarryoverPartShape = z.object({
   donorStandardPriceAtAcquisition: z.number().int().positive().optional(),
   /** 증여자가 보유 중 지출한 자본적지출 (§97의2①2호 — 양도일 2024.1.1. 전은 엔진이 0 처리) */
   donorCapitalExpenditure: z.number().int().nonnegative().optional(),
-  /** 증여자 신축·증축 가산세(§114조의2)는 파트 이월과세를 아직 지원하지 않는다 — 침묵 무시 대신 거부 */
+  /** 증여자 신축·증축 가산세(§114조의2)는 **건물 파트만** 받는다(`splitCarryoverBuildingPartShape`) — 토지 파트에는 침묵 무시 대신 거부 */
   donorBuilt: donorBuiltRejectedKey,
+});
+
+/**
+ * PR-3 — 건물 파트의 증여자 신축·증축(§114조의2). 일체 주택 안분(`housing`)은 split 파트에 필요 없다(파트별 기준시가가 이미 나뉘어 있다) —
+ * 받으면 조용히 strip되지 않도록 `.strict()`로 400을 낸다.
+ */
+export const splitDonorBuiltShape = donorBuiltShape.omit({ housing: true }).strict();
+
+/** 건물 파트 — 토지 파트 shape + 증여자 신축·증축. `buildingCarryoverPart`만 이 shape를 쓴다. */
+export const splitCarryoverBuildingPartShape = splitCarryoverPartShape.extend({
+  donorBuilt: splitDonorBuiltShape.optional(),
 });
 
 /** 단건 `propertyBaseShape`·컴패니언 `splitAcquisitionShape`가 spread하는 최상위 키 3종 */
 export const splitCarryoverShape = {
   carryoverGiftEvent: splitCarryoverGiftEventShape.optional(),
   landCarryoverPart: splitCarryoverPartShape.optional(),
-  buildingCarryoverPart: splitCarryoverPartShape.optional(),
+  buildingCarryoverPart: splitCarryoverBuildingPartShape.optional(),
 } as const;
 
 type Issue = (path: (string | number)[], message: string) => void;
@@ -141,16 +152,21 @@ export function refineSplitCarryoverValues(
   d: {
     carryoverGiftEvent?: z.infer<typeof splitCarryoverGiftEventShape>;
     landCarryoverPart?: z.infer<typeof splitCarryoverPartShape>;
-    buildingCarryoverPart?: z.infer<typeof splitCarryoverPartShape>;
+    buildingCarryoverPart?: z.infer<typeof splitCarryoverBuildingPartShape>;
     landAcquisitionPrice?: number;
     buildingAcquisitionPrice?: number;
     landStandardPriceAtTransfer?: number;
     buildingStandardPriceAtTransfer?: number;
+    // PR-3 — 증여자 신축·증축(건물 파트)이 계산에 닿을 수 있는 자산 조건(엔진 `assertDonorBuiltPartInput`의 거울)
+    propertyType?: string;
+    preHousingDisclosure?: unknown;
+    transferType?: string;
   },
   issue: Issue,
   prefix: (string | number)[] = [],
 ): void {
   const at = (k: string) => [...prefix, k];
+  refineSplitDonorBuilt(d, issue, prefix);
   // P6 — 파트 가액 ⇔ 환산 분자 (상호배타 + 하나 필수). 사건 유무와 무관한 파트 자체의 완결이다(가액이 optional이 되어 shape가 더는 필수를 강제하지 않는다).
   for (const [key, part, transferStd, noun] of [
     ["landCarryoverPart", d.landCarryoverPart, d.landStandardPriceAtTransfer, "토지"],
@@ -198,4 +214,36 @@ export function refineSplitCarryoverValues(
     (d.landCarryoverPart ? (d.landAcquisitionPrice ?? 0) : 0) + (d.buildingCarryoverPart ? (d.buildingAcquisitionPrice ?? 0) : 0);
   if (sum > ev.giftTaxBase)
     issue(at("carryoverGiftEvent").concat("giftTaxBase"), "파트별 증여 당시 평가액 합계가 증여세 과세가액을 초과합니다 (소득세법 시행령 §163의2②)");
+}
+
+/**
+ * 건물 파트 `donorBuilt`의 값 검사 (⑫) — 엔진 `assertDonorBuiltPartInput`·⑧ `validateSplitDonorBuilt`와 같은 조건(UI 통과 ⇒ ⑫ 통과, 400 모순 0).
+ * 사건(`carryoverGiftEvent`)이 없으면 날짜 상한은 건너뛴다 — 짝 누락은 leaf(S1)가 짚는다.
+ */
+function refineSplitDonorBuilt(
+  d: {
+    carryoverGiftEvent?: { giftRegistryDate: string };
+    buildingCarryoverPart?: z.infer<typeof splitCarryoverBuildingPartShape>;
+    propertyType?: string;
+    preHousingDisclosure?: unknown;
+    transferType?: string;
+  },
+  issue: Issue,
+  prefix: (string | number)[],
+): void {
+  const part = d.buildingCarryoverPart;
+  const db = part?.donorBuilt;
+  if (!part || !db) return;
+  const at = (...k: (string | number)[]) => [...prefix, "buildingCarryoverPart", "donorBuilt", ...k];
+  if (part.useEstimatedAcquisition !== true)
+    issue(at(), "증여자 신축·증축 가산세(소득세법 §114조의2)는 증여자 취득가액을 환산취득가액으로 계산할 때만 적용됩니다 — 실지거래가액 승계에는 보낼 수 없습니다");
+  if (d.propertyType !== "housing" && d.propertyType !== "building") issue(at(), "증여자 신축·증축 가산세는 주택·건물에만 적용됩니다");
+  if (d.preHousingDisclosure) issue(at(), "개별주택가격·공동주택가격 최초공시 전 환산과 함께 쓸 수 없습니다 — 신축 후 5년 이내 양도 건물은 최초공시 이후 취득입니다");
+  if (d.transferType === "burdened_gift") issue(at(), "부담부증여의 이월과세는 아직 지원하지 않습니다");
+  if (db.constructionDate < part.donorAcquisitionDate || (d.carryoverGiftEvent && db.constructionDate > d.carryoverGiftEvent.giftRegistryDate))
+    issue(at("constructionDate"), "증여자의 신축·증축일은 증여자 취득일 이후, 증여 등기접수일 이전이어야 합니다");
+  if (db.buildingType === "extension") {
+    if (!db.extensionFloorArea) issue(at("extensionFloorArea"), "증축은 바닥면적 합계가 필요합니다 (85㎡ 초과만 대상)");
+    if (!db.extensionStdPriceAtAcquisition) issue(at("extensionStdPriceAtAcquisition"), "증축 가산세는 증축 부분의 증여자 취득(완공) 당시 기준시가가 필요합니다");
+  }
 }
