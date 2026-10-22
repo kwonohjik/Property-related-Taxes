@@ -15,6 +15,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { isSplitValidationActive } from "./transfer-tax-validate-split";
+import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 
 /** 취득가액 산정 근거 — 안내 문구가 그 이름으로 말한다. 칸이 쓰이면 null. */
 export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정가액" | "매매사례가액" | null {
@@ -23,7 +24,8 @@ export function bgExpenseUnusedBasis(asset: AssetForm): "기준시가" | "감정
   if (asset.acquisitionCause === "carryover_gift") return null;
   if (isSplitValidationActive(asset)) return null;
   // 평가 모드 미선택은 ④가 기준시가 모드로 보낸다(`buildBurdenedGiftInfo` — `bgValuationMode || "sangjeungbeop_standard"`).
-  if (asset.bgValuationMode !== "sangjeungbeop_market") return "기준시가";
+  // 시가 모드여도 담보평가(상증법 §66)가 이기면 취득가액이 취득시 기준시가로 강제된다(§159①1호 괄호 · 엔진 `acqStdPriceForced`) — 개산공제뿐(O-5).
+  if (asset.bgValuationMode !== "sangjeungbeop_market" || bgCollateralForcesStdAcq(asset)) return "기준시가";
   if (!isBgPresumedMethod(asset.bgAcquisitionMethod)) return null;
   return asset.bgAcquisitionMethod === "appraisal" ? "감정가액" : "매매사례가액";
 }

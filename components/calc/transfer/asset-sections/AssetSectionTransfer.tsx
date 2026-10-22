@@ -18,6 +18,7 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { needsBgAcqStdPriceInput } from "@/lib/calc/burdened-gift-acq-std-price";
+import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import {
   stdPriceAtTransferComesFromElsewhere,
@@ -207,7 +208,12 @@ export function AssetSectionTransfer({
             </div>
             {/* 시가 + 환산(K-5)에서도 이 칸이 열린다(B2) — 그때는 채무비율이 아니라 환산 분자다 */}
             <p className="text-caption text-amber-700 dark:text-amber-300">
-              {asset.bgValuationMode === "sangjeungbeop_market" ? (
+              {bgCollateralForcesStdAcq(asset) ? (
+                <>
+                  담보평가액이 시가보다 커서 증여가액이 담보평가액(상증법 §66)이므로 취득가액 = <b>취득시 기준시가 × 채무비율</b>(소령 §159①1호 괄호).
+                  위 양도시 기준시가와 같은 기준으로 취득 당시 값을 입력하세요.
+                </>
+              ) : asset.bgValuationMode === "sangjeungbeop_market" ? (
                 <>
                   환산취득가액 = 양도가액 × <Frac top="취득시 기준시가" bottom="양도시 기준시가" />(소령 §176의2②2호).
                   위 양도시 기준시가와 같은 기준으로 취득 당시 값을 입력하세요.
@@ -240,7 +246,9 @@ export function AssetSectionTransfer({
               referenceDate={asset.acquisitionDate || undefined}
               label="취득시 기준시가 (원)"
               hint={
-                asset.bgValuationMode === "sangjeungbeop_market"
+                bgCollateralForcesStdAcq(asset)
+                  ? "§159①1호 A괄호(담보평가 승) — 채무비율을 곱해 취득가액이 된다"
+                  : asset.bgValuationMode === "sangjeungbeop_market"
                   ? "§176의2②2호 — 환산취득가액의 분자"
                   : "§159①1호 A괄호 — 채무비율을 곱해 취득가액이 된다"
               }

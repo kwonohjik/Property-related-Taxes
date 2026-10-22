@@ -43,6 +43,10 @@ import {
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { BurdenedGiftDebtAttributionCard } from "./BurdenedGiftDebtAttributionCard";
 import { BurdenedGiftHousingAppraisalField, BurdenedGiftMixedUsePanel } from "./BurdenedGiftMixedUsePanel";
+import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuation";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 
 interface Props {
   asset: AssetForm;
@@ -111,15 +115,23 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
   // 상증법 §60~§66 평가 미리보기 (useMemo — store 미러링 금지)
   const valuationPreview = useMemo(() => {
     const annualRent = parseAmount(asset.bgAnnualRentTotal) || 0;
-    const mortgageSet = asset.bgMortgageSetAmount
-      ? (parseAmount(asset.bgMortgageSetAmount) || mortgageDebt)
-      : mortgageDebt;
     const rental = lendingDeposit + (annualRent > 0 ? Math.floor(annualRent / 0.12) : 0);
-    const mortgage = lendingDeposit + mortgageSet;
+    // 담보평가 = 임대보증금 + min(채권최고액, 담보채무) — 엔진 함수 그대로(상증령 §63②). ④와 같은 값(채권최고액 미입력 = undefined)을 넣는다.
+    // 종전에는 채권최고액을 그대로 더해 엔진(#1124 이후 min)과 갈렸다(실측 720,000,000 ↔ 600,000,000 — O-5).
+    const mortgage = computeMortgageValuation({
+      lendingDepositTotal: lendingDeposit,
+      mortgageDebtAmount: mortgageDebt,
+      mortgageSetAmount: asset.bgMortgageSetAmount ? parseAmount(asset.bgMortgageSetAmount) : undefined,
+    } as BurdenedGiftInfo);
     return { rental, mortgage };
   }, [asset.bgAnnualRentTotal, asset.bgMortgageSetAmount, lendingDeposit, mortgageDebt]);
 
   const isMarketMode = asset.bgValuationMode === "sangjeungbeop_market";
+  /**
+   * 시가 모드 · 담보 승(「상속세 및 증여세법」 제66조) — 취득가액이 산정방식과 무관하게 취득시 기준시가 × 채무비율이다(§159①1호 괄호).
+   * 방식별 금액 칸(K-4 박스·K-6/K-7·K-5 안내)을 숨기고 한 줄로 알린다. ②의 취득시 기준시가 칸·⑧은 같은 leaf로 연다(O-5).
+   */
+  const collateralForced = bgCollateralForcesStdAcq(asset);
   /**
    * 겸용주택 × 부담부증여 — 4부분 기준시가의 정본은 ③ 겸용 패널이다. 이 블록은 요약(읽기 전용)과 채무 귀속·구분 감정평가 선언만 받는다
    * (엔진이 읽지 않는 ④ 「증여일 주택 기준시가」·② 총액 칸은 숨긴다 — 설계 UI R2 §4).
@@ -242,7 +254,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           >
             <CurrencyInput label=""
               hideUnit
-              value={asset.bgMortgageDebtAmount}
+              value={asset.bgMortgageDebtAmount} data-field="bgMortgageDebtAmount"
               onChange={(v) => onChange({ bgMortgageDebtAmount: v })}
             />
           </FieldCard>
@@ -288,8 +300,22 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
             fractionalSplit={isFractionalSplit}
           />
 
+          {/* 담보 승 — 방식별 칸(K-6/K-7 · K-5 안내 · K-4 박스)은 쓰이지 않는다. 산정방식 선택은 ⑫가 요구해 남긴다(Q-2). */}
+          {collateralForced && (
+            <ToneCard tone="violet">
+              <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-collateral-forced-notice">
+                담보평가액 {fmt(valuationPreview.mortgage)}원이 시가 {fmt(parseAmount(asset.bgMarketValueAtTransfer) || 0)}원보다 커서 증여가액이 담보평가액입니다
+                (「상속세 및 증여세법」 제66조). 취득가액은 위 산정방식과 관계없이 <b>취득시 기준시가 × 채무비율</b>로 산정하고(「소득세법 시행령」 제159조
+                제1항 제1호 괄호), 필요경비는 개산공제입니다.{" "}
+                {asset.assetKind === "general_building"
+                  ? "취득시 기준시가는 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 씁니다."
+                  : "취득시 기준시가는 「② 양도정보」에 입력하세요."}
+              </p>
+            </ToneCard>
+          )}
+
           {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
-          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && (
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && (
             <BurdenedGiftPresumedAcquisitionSection
               asset={asset}
               onChange={onChange}
@@ -300,7 +326,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
-          {asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
+          {collateralForced ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
             // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.
@@ -330,7 +356,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         그래서 이 블록을 「시가 모드」 카드 **밖으로** 뺐다. 안에 두면 기준시가 모드를 고른
         입주권 사용자에게 칸이 뜨지 않아 ⑧이 요구하는 값을 넣을 곳이 없어진다.
       */}
-      {((isMarketMode && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
+      {((isMarketMode && !collateralForced && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">

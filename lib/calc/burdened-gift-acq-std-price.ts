@@ -19,6 +19,7 @@ import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { isBgPresumedMethod } from "./burdened-gift-presumed-acquisition";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
+import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
 
 type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccessorMember" | "isMixedUseHouse">> & Pick<
   AssetForm,
@@ -53,13 +54,18 @@ type AcqStdAsset = Partial<Pick<AssetForm, "acquisitionCause" | "redevIsSuccesso
  *    `buildingStdPriceAtAcquisition: 0`을 보낸다 — 칸을 띄우면 **엔진이 버리는 값**을 요구하게 된다.
  *  · **재개발 완공 아파트 × K-5** — 취득가액은 종전 부동산의 취득가액이라 시행령 §166③으로 환산하고, 그 분자·분모와
  *    개산공제 base는 재개발 블록 ⑤의 §166③ 칸이 받는다(`redevPreApprovalAcqMode`). 이 칸(일반 환산 분자)은 엔진이 쓰지 않는다(2026-10-16).
+ *
+ * 포함(예외의 예외): **시가 모드 · 담보 승**(`bgCollateralForcesStdAcq` — 단독 소유 단건)은 위 시가 모드 제외가 풀린다. 엔진이 §159①1호 괄호로
+ * 취득가액을 취득시 기준시가로 강제하고, 이 칸이 비면 400을 낸다(`burdened-gift-residuals-o3-o5-o8.plan.md` O-5).
  */
 export function needsBgAcqStdPriceInput(asset: AcqStdAsset): boolean {
   return (
     asset.transferType === "burdened_gift" &&
     (asset.bgValuationMode !== "sangjeungbeop_market" ||
       asset.bgAcquisitionMethod === "converted" ||
-      (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift")) &&
+      (isBgPresumedMethod(asset.bgAcquisitionMethod) && asset.acquisitionCause !== "carryover_gift") ||
+      // 시가 모드 · 담보 승(상증법 §66) — 산정방식과 무관하게 취득가액이 취득시 기준시가 × 채무비율이다(엔진 `acqStdPriceForced`). 실지(K-4)여도 이 칸을 쓴다.
+      bgCollateralForcesStdAcq(asset as AssetForm)) &&
     asset.assetKind !== "general_building" &&
     asset.assetKind !== "right_to_move_in" &&
     // 겸용주택 — 취득시 기준시가는 4부분 겸용 패널(`mixedAcq*`)이 정본이다. 총액 칸을 띄우면 엔진이 읽지 않는 값을 받는다(설계 UI R2 §4 DUP-2).
