@@ -31,6 +31,7 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { judgeDeemedUnclearSplit } from "./sale-split-deemed-unclear";
 import { sec100_3Era } from "./data/sec100-3-split-era";
 import { applyPartAcqModes } from "./general-building-part-acq";
+import { applyCarryoverEstimationBasis } from "./general-building-carryover-basis";
 import type { SaleSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { estimatedDeductionRate } from "./legal-codes";
 import {
@@ -617,6 +618,15 @@ export function buildGeneralBuildingAssetCardsWithExtension(
     buildingAcquisitionDate: ext.extensionDate, // §114조의2 5년 기산점
     buildingAcquisitionCause: ext.extensionAcquisitionCause,
   });
+
+  /**
+   * 🔴 환산 모드 이월과세의 분자·분모 주입 — 2-way(`general-building-valuation.ts`)·실가(`general-building-route-actual.ts`)와 **같은 함수·같은 인자**.
+   *
+   * 종전에는 이 분기에만 호출이 없어 환산 donor 의 증여자 취득가액이 **0**이었다(⑧은 분자를 필수로 요구하는데 엔진이 버림 — PR-0).
+   * 분모는 그 파트의 양도 당시 기준시가: 토지 `landStdTotal`, 건물1 `buildingStdTotal`(**증축 부분 제외** — 2-way 가 `input.transferBuildingStdPrice`를 넘기는 것과 같다).
+   * 건물2 카드는 `carryoverTaxation`이 없어(위 주석·GX-3) 건너뛴다.
+   */
+  applyCarryoverEstimationBasis(assetCards, landStdTotal, buildingStdTotal);
 
   // allocation·acquisition·estimatedDeduction 출력 구조는 2-way 기준 호환.
   // 증축 경로에서는 토지·건물1 값으로 채움 (건물2는 assetCards에 직접 포함).
