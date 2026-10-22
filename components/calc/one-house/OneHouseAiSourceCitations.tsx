@@ -4,6 +4,11 @@
 import type { SourceCitation } from "@/lib/one-house-ai/source-citations";
 
 const STATUS: Record<SourceCitation["status"], string> = { found: "확인됨", not_found: "찾지 못함", failed: "확인 불가" };
+const BASIS: Record<NonNullable<SourceCitation["basis"]>, string> = {
+  transfer_date: " (양도일 시행본)",
+  current: " (현행 기준)",
+  cited_era: " (인용된 옛 시행본)",
+};
 
 export function OneHouseAiSourceCitations({ items }: { items: readonly SourceCitation[] }) {
   if (items.length === 0) return null;
@@ -21,7 +26,7 @@ export function OneHouseAiSourceCitations({ items }: { items: readonly SourceCit
               c.raw
             )}{" "}
             — <span className={c.status === "found" ? "" : "text-amber-700 dark:text-amber-400"}>{STATUS[c.status]}</span>
-            {c.kind === "statute" && (c.basis === "transfer_date" ? " (양도일 시행본)" : " (현행 기준)")}
+            {c.kind === "statute" && BASIS[c.basis ?? "current"]}
             {c.note && <span className="text-muted-foreground"> · {c.note}</span>}
           </li>
         ))}

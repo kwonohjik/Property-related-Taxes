@@ -18,6 +18,8 @@
  */
 
 import { getLawText, searchLaw } from "./client";
+import { type CitationEra, getApplicableLaw, resolveCitationEraDate } from "./applicable-law";
+import { LawApiError } from "./client-core";
 import { LAW_ALIASES, resolveLawAlias } from "./aliases";
 import { circledHangMark, circledHangNumber, parseHangNumber } from "./article-parser";
 import { parseCitation } from "@/lib/legal-verification/citation-parser";
@@ -73,9 +75,14 @@ type ExtractedCitation = {
   articleNo: string;
   hang?: number;
   ho?: number;
+  /** 옛 조문 인용 — 법령명 뒤 개정 괄호. 있으면 그 시대 시행본으로 대조한다 */
+  era?: CitationEra;
   /** dedup 키 */
   key: string;
 };
+
+/** 법령명과 (옛 조문이면) 그 시대 — 이어받기·항 이어짐·「같은 조」가 함께 넘겨받는다 */
+type Named = { lawName: string; era?: CitationEra };
 
 /**
  * 텍스트에서 법령 조문 인용 패턴 추출.
@@ -93,7 +100,8 @@ type ExtractedCitation = {
  *  5. 약칭 「법 제N조」「영 제N조」 — 마지막으로 인용된 조문 머리(「○○ 시행령 제N조【…】」)가 시행령·시행규칙일 때만 그 모법·모법 시행령
  *     (하위 법령 본문이 모법을 「법」이라 부르는 작성 관례. 앞 이름이 법률이면 무엇을 가리키는지 정할 근거가 없다)
  *  6. 이어받기 — 앞 인용과 접속어(및 , · ㆍ 와 과 또는)만 사이에 두면 그 법령명
- * 「구 소득세법」처럼 옛 조문이라 밝힌 이름과, 그런 이름(또는 개정 괄호가 붙은 이름)을 가리키는 상대 인용·약칭은 건너뛴다.
+ * 「구 소득세법」처럼 옛 조문이라 밝힌 이름과 그것을 가리키는 상대 인용·약칭은 건너뛴다. 단 법령명 뒤 괄호에 날짜가 있으면
+ * (「(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것)」·「(… 제N호로 개정된 것)」) 그 시대(`era`)를 붙여 추출한다.
  * 어느 것도 아니면 추출하지 않는다 — 틀린 법령으로 「확인됨」이 되느니 검사하지 않는다.
  * 인용 뒤에 「및 제21항」「및 제2호」처럼 항·호만 이어지면 같은 조문의 항·호로, 「같은 조 제N항」은 바로 앞 인용의 조문으로 읽는다.
  */
@@ -114,7 +122,7 @@ const SAME_ARTICLE_RE = /같은\s?조\s*제(\d+)항(?:\s*제(\d+)호)?/g;
 /** 인용 바로 뒤에 항·호만 이어진 것 — 「제155조 제20항 및 제21항」 · 「제89조 제3호 및 제4호」 */
 const CONTINUATION_RE = /\s*(?:및|,|·|ㆍ|또는|과|와)\s*제(\d+)(항|호)(?:\s*제(\d+)호)?/y;
 
-type LastCitation = { lawName: string; articleNo: string; hang?: number; end: number };
+type LastCitation = Named & { articleNo: string; hang?: number; end: number };
 
 function extractWith(text: string, mentions: Mention[] | null): ExtractedCitation[] {
   const hits = [
@@ -139,18 +147,18 @@ function extractWith(text: string, mentions: Mention[] | null): ExtractedCitatio
       if (!last || /[\n)）]/.test(text.slice(last.end, m.index))) continue;
       const hang = parseInt(m[1], 10);
       const ho = m[2] ? parseInt(m[2], 10) : undefined;
-      add(paragraphCitation(last.lawName, last.articleNo, hang, ho));
-      last = { lawName: last.lawName, articleNo: last.articleNo, hang, end: m.index + m[0].length };
+      add(paragraphCitation(last, last.articleNo, hang, ho));
+      last = { ...named(last), articleNo: last.articleNo, hang, end: m.index + m[0].length };
       continue;
     }
 
-    const lawName = nameBefore(text, m.index, kind, last, text.slice(last?.end ?? 0, m.index), mentions);
-    if (!lawName) continue; // 법령명 회복 실패는 skip (후속 LLM-safe)
+    const name = nameBefore(text, m.index, kind, last, text.slice(last?.end ?? 0, m.index), mentions);
+    if (!name) continue; // 법령명 회복 실패는 skip (후속 LLM-safe)
 
-    const c = kind === "article" ? articleCitation(m, lawName) : sectionCitation(m[0], lawName);
+    const c = kind === "article" ? articleCitation(m, name) : sectionCitation(m[0], name);
     if (!c) continue;
     add(c);
-    last = { lawName, articleNo: c.articleNo, hang: c.hang, end: m.index + m[0].length };
+    last = { ...name, articleNo: c.articleNo, hang: c.hang, end: m.index + m[0].length };
 
     if (kind !== "article") continue;
     CONTINUATION_RE.lastIndex = last.end;
@@ -158,36 +166,47 @@ function extractWith(text: string, mentions: Mention[] | null): ExtractedCitatio
       const n = parseInt(x[1], 10);
       const hang: number | undefined = x[2] === "항" ? n : last.hang;
       const ho = x[2] === "항" ? (x[3] ? parseInt(x[3], 10) : undefined) : n;
-      add(paragraphCitation(lawName, c.articleNo, hang, ho));
-      last = { lawName, articleNo: c.articleNo, hang, end: CONTINUATION_RE.lastIndex };
+      add(paragraphCitation(name, c.articleNo, hang, ho));
+      last = { ...name, articleNo: c.articleNo, hang, end: CONTINUATION_RE.lastIndex };
     }
   }
   return results;
 }
 
+function named(n: Named): Named {
+  return n.era ? { lawName: n.lawName, era: n.era } : { lawName: n.lawName };
+}
+
+/** 표시용 법령명 — 옛 조문이면 시대를 붙인다(「소득세법 시행령(2020-02-11 개정 전)」) */
+function displayName({ lawName, era }: Named): string {
+  if (!era) return lawName;
+  return `${lawName}(${era.kind === "before" ? `${era.date} 개정 전` : `제${era.ancNo}호 개정`})`;
+}
+
 /** 이어진 항·호와 「같은 조」 — 조문 표기는 앞 인용 그대로 */
-function paragraphCitation(lawName: string, articleNo: string, hang?: number, ho?: number): ExtractedCitation {
-  const raw = `${lawName} ${articleNo}${hang ? ` 제${hang}항` : ""}${ho ? ` 제${ho}호` : ""}`;
-  return { raw, lawName, articleNo, hang, ho, key: citationKey(lawName, articleNo, hang, ho) };
+function paragraphCitation(n: Named, articleNo: string, hang?: number, ho?: number): ExtractedCitation {
+  const raw = `${displayName(n)} ${articleNo}${hang ? ` 제${hang}항` : ""}${ho ? ` 제${ho}호` : ""}`;
+  return { raw, ...named(n), articleNo, hang, ho, key: citationKey(n, articleNo, hang, ho) };
 }
 
-function citationKey(lawName: string, articleNo: string, hang?: number, ho?: number): string {
-  return `${lawName}::${articleNo}::${hang ?? ""}::${ho ?? ""}`;
+/** 같은 조문의 현행 인용과 옛 인용은 따로 검사한다 */
+function citationKey({ lawName, era }: Named, articleNo: string, hang?: number, ho?: number): string {
+  const e = era ? (era.kind === "before" ? `before:${era.date}` : `amended:${era.ancNo}`) : "";
+  return `${lawName}::${articleNo}::${hang ?? ""}::${ho ?? ""}::${e}`;
 }
 
-function articleCitation(m: RegExpMatchArray, lawName: string): ExtractedCitation {
+function articleCitation(m: RegExpMatchArray, n: Named): ExtractedCitation {
   const [articleFull, main, sub, hang, ho] = m;
   const articleNo = sub ? `제${main}조의${sub}` : `제${main}조`;
   const hangNum = hang ? parseInt(hang, 10) : undefined;
   const hoNum = ho ? parseInt(ho, 10) : undefined;
   // raw: 법령명 + 조문 전체 (원문 위치 보존용)
-  return { raw: `${lawName} ${articleFull}`.trim(), lawName, articleNo, hang: hangNum, ho: hoNum, key: citationKey(lawName, articleNo, hangNum, hoNum) };
+  return { raw: `${displayName(n)} ${articleFull}`.trim(), ...named(n), articleNo, hang: hangNum, ho: hoNum, key: citationKey(n, articleNo, hangNum, hoNum) };
 }
 
 /** 「§N」 갈래 — 조·항·호와 약칭(「상증법」→ 상속세 및 증여세법)은 기존 파서(`parseCitation`)가 읽는다 */
-function sectionCitation(section: string, lawName: string): ExtractedCitation | null {
-  const raw = `${lawName} ${section}`;
-  const parsed = parseCitation(raw);
+function sectionCitation(section: string, n: Named): ExtractedCitation | null {
+  const parsed = parseCitation(`${n.lawName} ${section}`);
   if (!parsed) return null;
   // `parseCitation`의 항 패턴은 ①~⑩까지다(`verify:legal`·커버리지 게이트가 공유해 여기서 고치지 않는다) —
   // §155⑳·㉑처럼 ⑪ 이상은 「§N」 바로 뒤 원숫자를 직접 읽는다.
@@ -200,8 +219,8 @@ function sectionCitation(section: string, lawName: string): ExtractedCitation | 
   const hoNum = parsed.item ? parseInt(parsed.item, 10) : undefined;
   const hang = Number.isFinite(hangNum) ? hangNum : undefined;
   const ho = Number.isFinite(hoNum) ? hoNum : undefined;
-  const name = normalizeLawName(parsed.lawFullName);
-  return { raw, lawName: name, articleNo: parsed.articleNo, hang, ho, key: citationKey(name, parsed.articleNo, hang, ho) };
+  const name: Named = { ...named(n), lawName: normalizeLawName(parsed.lawFullName) };
+  return { raw: `${displayName(name)} ${section}`, ...name, articleNo: parsed.articleNo, hang, ho, key: citationKey(name, parsed.articleNo, hang, ho) };
 }
 
 /** 앞 인용과 이 인용 사이가 접속어뿐인가 — 「제155조 및 제156조의2」 · 「§89①3호·§95②」 */
@@ -252,45 +271,92 @@ function isLegacyName(lookback: string, name: string): boolean {
   return new RegExp(`(?:^|[^가-힣])구\\s*${body}\\s*$`).test(lookback);
 }
 
+/** 법령명 바로 뒤의 괄호 — 「소득세법 시행령(2020. 2. 11. … 개정되기 전의 것) 제155조」 · 「「…」(…) 제N조」 */
+const ERA_TAIL_RE = /([」｣]?)\s*\(([^()]{4,90})\)\s*$/;
+const ERA_DATE_RE = /^\s*(\d{4})\s*\.\s*(\d{1,2})\s*\.\s*(\d{1,2})\s*\.?/;
+
+/**
+ * 개정 괄호 → 시대. 날짜가 없거나(「(… 개정되기 전의 것)」만) 다른 괄호(「(이하 '법')」「(… 시행)」)면 null — 추출하지 않는다.
+ * `owner`는 괄호가 붙은 법령 — 「개정된 것」의 공포번호를 그 법령의 연혁 목록에서 찾는다
+ */
+export function parseCitationEra(bracket: string, owner: string): CitationEra | null {
+  const d = bracket.match(ERA_DATE_RE);
+  if (!d) return null;
+  const date = `${d[1]}-${d[2].padStart(2, "0")}-${d[3].padStart(2, "0")}`;
+  const t = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(t.getTime()) || t.toISOString().slice(0, 10) !== date) return null;
+  const compact = bracket.replace(/\s+/g, "");
+  if (/개정되기전의것$/.test(compact)) return { kind: "before", date };
+  const no = compact.match(/(?:법률|대통령령|[가-힣]+부령|총리령)제(\d+)호로개정된것$/);
+  return no ? { kind: "amendedBy", date, ancNo: no[1], owner } : null;
+}
+
+/**
+ * 인용 바로 앞의 법령명. `allowLegacy`는 개정 괄호에 날짜가 있을 때(시대를 정할 수 있을 때) 「구 」를 받는다.
+ */
 function nameBefore(
   text: string,
   pos: number,
   kind: "article" | "section",
-  last: { lawName: string } | null,
+  last: Named | null,
   gap: string,
   mentions: Mention[] | null,
-): string | null {
+  allowLegacy = false,
+): Named | null {
   const lookback = text.slice(Math.max(0, pos - 80), pos);
+  const eraTail = lookback.match(ERA_TAIL_RE);
+  if (eraTail) {
+    const namePos = pos - lookback.length + eraTail.index! + eraTail[1].length;
+    const r = nameBefore(text, namePos, kind, null, "", mentions, true);
+    const era = r && parseCitationEra(eraTail[2], r.lawName);
+    return r && era ? { lawName: r.lawName, era } : null;
+  }
   const bracket = lookback.match(BRACKET_RE);
   if (bracket) {
-    const inner = bracket[2].replace(/\s+/g, " ").trim();
-    if (bracket[1] || /^구\s/.test(inner) || RELATIVE_RE.test(inner) || !LAW_SUFFIX_RE.test(inner)) return null; // 「구 소득세법 시행령」
-    return normalizeLawName(inner);
+    let inner = bracket[2].replace(/\s+/g, " ").trim();
+    // 낫표 안에 든 개정 괄호 — 「소득세법 시행령(2022. 5. 31. … 개정된 것)」
+    const innerEra = inner.match(/^(.+?)\s*\(([^()]{4,90})\)$/);
+    let era: CitationEra | null = null;
+    if (innerEra) {
+      inner = innerEra[1];
+      era = parseCitationEra(innerEra[2], normalizeLawName(inner.replace(/^구\s/, "")));
+      if (!era) return null;
+    }
+    const legacy = !!bracket[1] || /^구\s/.test(inner);
+    if ((legacy && !era && !allowLegacy) || RELATIVE_RE.test(inner)) return null; // 「구 소득세법 시행령」
+    inner = inner.replace(/^구\s/, "");
+    if (!LAW_SUFFIX_RE.test(inner)) return null;
+    return era ? { lawName: normalizeLawName(inner), era } : { lawName: normalizeLawName(inner) };
   }
   const relative = lookback.match(RELATIVE_RE);
   if (relative) return mentions ? relativeName(text, pos - lookback.length + relative.index!, relative[0], mentions) : null;
 
   const spaced = spacedNameAtEnd(lookback);
-  if (spaced) return isLegacyName(lookback, spaced) ? null : spaced;
+  if (spaced) return isLegacyName(lookback, spaced) && !allowLegacy ? null : { lawName: spaced };
   const recovered = recoverLawName(lookback.slice(-30), kind === "section");
   if (recovered) {
-    if (GENERIC_TAIL_NAMES.has(recovered) || AMENDING_ACT_RE.test(recovered) || isLegacyName(lookback, recovered)) return null;
+    if (GENERIC_TAIL_NAMES.has(recovered) || AMENDING_ACT_RE.test(recovered)) return null;
+    if (isLegacyName(lookback, recovered) && !allowLegacy) return null;
     // 붙여 쓴 「구소득세법」 · 이름 없는 「구법」「구시행령」
     const rest = recovered.slice(1).replace(/\s/g, "");
-    if (recovered.startsWith("구") && (COMPACT_ALIAS_NAMES.has(rest) || /^(?:법|시행령|시행규칙)$/.test(rest))) return null;
-    return normalizeLawName(recovered);
+    if (recovered.startsWith("구") && /^(?:법|시행령|시행규칙)$/.test(rest)) return null;
+    if (recovered.startsWith("구") && COMPACT_ALIAS_NAMES.has(rest)) {
+      return allowLegacy ? { lawName: normalizeLawName(recovered.slice(1)) } : null;
+    }
+    return { lawName: normalizeLawName(recovered) };
   }
   const abbreviation = lookback.match(ABBREVIATION_RE);
   if (abbreviation) {
     return mentions ? abbreviationName(pos - lookback.length + abbreviation.index!, abbreviation[1], mentions) : null;
   }
 
-  return last && JOINER_ONLY_RE.test(gap) ? last.lawName : null;
+  return last && JOINER_ONLY_RE.test(gap) ? named(last) : null;
 }
 
 // ── 앞 이름(언급) — 상대 인용·약칭이 가리키는 법령 ─────────────────────────────
 
-type Mention = { start: number; end: number; name: string; legacy: boolean; era: boolean; heading: boolean };
+/** `era`: 이름 뒤 개정 괄호의 시대 · `"unknown"`은 개정 괄호가 있으나 날짜를 못 읽은 것(가리키면 건너뛴다) */
+type Mention = { start: number; end: number; name: string; legacy: boolean; era: CitationEra | "unknown" | null; heading: boolean };
 
 /** 법령 이름 후보 — 별칭 표 키·값 중 법령 꼬리로 끝나는 것(「소득령」「상증법」 같은 약칭 포함) */
 const MENTION_ALIAS_NAMES = [...new Set([...Object.keys(LAW_ALIASES), ...Object.values(LAW_ALIASES)])].filter(
@@ -299,9 +365,9 @@ const MENTION_ALIAS_NAMES = [...new Set([...Object.keys(LAW_ALIASES), ...Object.
 const COMPACT_ALIAS_NAMES = new Set(MENTION_ALIAS_NAMES.map((n) => n.replace(/\s/g, "")));
 
 /** 이름 바로 뒤의 개정 괄호 — 「소득세법 시행령(2011. 3. 28. … 개정되기 전의 것)」. 「(이하 '영'이라 한다)」는 아니다 */
-const ERA_BRACKET_RE = /^\s*[」｣]?\s*\([^()]{0,90}(?:개정|전의\s*것)/;
+const ERA_BRACKET_RE = /^\s*[」｣]?\s*\(([^()]{0,90})\)/;
 /** 조문 머리 — 「소득세법 시행령 제154조【1세대1주택의 범위】」「… 제152조(환지 등의 정의)」. 인용된 조문 본문이 이 뒤에 온다 */
-const HEADING_AFTER_RE = /^\s*[」｣]?\s*제\s?\d+\s?조(?:\s?의\s?\d+)?\s*(?:\([^()]{0,60}\)\s*)?[【\[〔(]/;
+const HEADING_AFTER_RE = /^\s*[」｣]?\s*(?:\([^()]{0,90}\)\s*)?제\s?\d+\s?조(?:\s?의\s?\d+)?\s*(?:\([^()]{0,60}\)\s*)?[【\[〔(]/;
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -321,7 +387,9 @@ function mentionIndex(text: string, extracted: string[]): Mention[] {
     const n = normalizeLawName(m[0].replace(/\s+/g, " "));
     const name = /(?:시행령|시행규칙|법|법률)$/.test(n) ? n : resolveLawAlias(n); // 「소득령」 → 소득세법 시행령
     const after = text.slice(end, end + 100);
-    out.push({ start, end, name, legacy, era: ERA_BRACKET_RE.test(after), heading: HEADING_AFTER_RE.test(after) });
+    const bracket = after.match(ERA_BRACKET_RE)?.[1];
+    const era = bracket && /개정|전의\s*것/.test(bracket) ? (parseCitationEra(bracket, name) ?? "unknown") : null;
+    out.push({ start, end, name, legacy, era, heading: HEADING_AFTER_RE.test(after) });
   }
   return out;
 }
@@ -340,22 +408,28 @@ function lastMention(mentions: Mention[], pos: number, minStart: number): Mentio
 const LIST_MARK_RE = /(?:^|\s)(?:\(\d+\)|\d+\)|[①-⑳]|[가-하]\.|\d+\.)\s/;
 const DECREE_TAIL_RE = / (?:시행령|시행규칙)$/;
 
-function relativeName(text: string, relStart: number, relText: string, mentions: Mention[]): string | null {
+/** 가리킨 이름의 시대를 넘겨받는다 — 「구 X법」(날짜 없음)·읽지 못한 개정 괄호는 현행으로 대조하지 않도록 null */
+function inheritEra(m: Mention, lawName: string | null): Named | null {
+  if (!lawName || m.era === "unknown" || (m.legacy && !m.era)) return null;
+  return m.era ? { lawName, era: m.era } : { lawName };
+}
+
+function relativeName(text: string, relStart: number, relText: string, mentions: Mention[]): Named | null {
   const lineStart = text.lastIndexOf("\n", relStart - 1) + 1;
   const m = lastMention(mentions, relStart, lineStart);
-  if (!m || m.legacy || m.era) return null; // 옛 조문을 가리키면 현행으로 대조하지 않는다
-  if (LIST_MARK_RE.test(text.slice(m.end, relStart))) return null;
+  // 이름 바로 뒤 개정 괄호의 날짜(「2020. 2. 11.」)는 목록 표시(「2. 」)가 아니다
+  if (!m || LIST_MARK_RE.test(text.slice(m.end, relStart).replace(ERA_BRACKET_RE, ""))) return null;
   const base = m.name.replace(DECREE_TAIL_RE, "");
   switch (relText.replace(/\s/g, "").replace(/^(?:같은|동)/, "")) {
     case "법":
-      return base;
+      return inheritEra(m, base);
     case "법시행령":
-      return `${base} 시행령`;
+      return inheritEra(m, `${base} 시행령`);
     case "법시행규칙":
-      return `${base} 시행규칙`;
+      return inheritEra(m, `${base} 시행규칙`);
     case "영":
     case "령":
-      return m.name.endsWith(" 시행령") ? m.name : null;
+      return inheritEra(m, m.name.endsWith(" 시행령") ? m.name : null);
     default:
       return null; // 「동법령」 — 법인지 영인지 가를 수 없다
   }
@@ -366,12 +440,12 @@ function relativeName(text: string, relStart: number, relText: string, mentions:
  * (「「소득세법 시행령」 제32조를 준용한다」) 그 뒤의 「법 제97조」가 엉뚱한 모법으로 읽혔다(원문 묶음 표본 30건 중 2건).
  * 머리가 법률이면(법률 본문에는 「법 제N조」가 없다) 건너뛴다.
  */
-function abbreviationName(abbrStart: number, which: string, mentions: Mention[]): string | null {
+function abbreviationName(abbrStart: number, which: string, mentions: Mention[]): Named | null {
   let m: Mention | null = null;
   for (let i = mentions.length - 1; i >= 0 && !m; i--) if (mentions[i].end <= abbrStart && mentions[i].heading) m = mentions[i];
-  if (!m || m.legacy || m.era || !DECREE_TAIL_RE.test(m.name)) return null;
+  if (!m || !DECREE_TAIL_RE.test(m.name)) return null;
   const base = m.name.replace(DECREE_TAIL_RE, "");
-  return which === "법" ? base : `${base} 시행령`;
+  return inheritEra(m, which === "법" ? base : `${base} 시행령`);
 }
 
 /** 「소득세법시행령」 → 「소득세법 시행령」 — 붙여 쓴 이름이 다른 키가 되어 같은 조문을 두 번 조회했다 */
@@ -418,27 +492,56 @@ function recoverLawName(lookback: string, section = false): string | null {
 // 2. 단일 인용 검증
 // ────────────────────────────────────────────────────────────────────────────
 
+/**
+ * 옛 조문 인용 — 그 시대 시행본(`getApplicableLaw`). 연혁 목록 밖(OUT_OF_RANGE)·법제처 장애는 「확인 불가」,
+ * 그 시행본에 조문이 없거나 법령 연혁이 없으면 「없음」.
+ */
+async function eraArticle(
+  lawName: string,
+  articleNo: string,
+  era: CitationEra,
+): Promise<{ article: { fullText: string; sourceUrl: string; title: string } } | { status: CitationStatus; reason: string }> {
+  try {
+    const date = await resolveCitationEraDate(era);
+    const r = await getApplicableLaw(lawName, articleNo, date);
+    if (!r.article) return { status: "not_found", reason: `${date} 시행본 ${lawName}에 ${articleNo} 이(가) 존재하지 않습니다.` };
+    return { article: { fullText: r.article.fullText, sourceUrl: r.sourceUrl, title: r.article.title } };
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : "API 호출 실패";
+    return { status: err instanceof LawApiError && err.code === "NOT_FOUND" ? "not_found" : "failed", reason };
+  }
+}
+
 async function verifyOne(citation: {
   raw: string;
   lawName: string;
   articleNo: string;
   hang?: number;
   ho?: number;
+  era?: CitationEra;
 }): Promise<VerifiedCitation> {
   const resolved = resolveLawAlias(citation.lawName);
 
-  // 1) 법령 존재 확인
+  // 1) 법령 존재 확인 — 옛 조문 인용은 그 시대 시행본
   let article;
-  try {
-    article = await getLawText(resolved, citation.articleNo);
-  } catch (err) {
-    return {
-      raw: citation.raw,
-      status: "failed",
-      lawName: resolved,
-      articleNo: citation.articleNo,
-      reason: err instanceof Error ? err.message : "API 호출 실패",
-    };
+  if (citation.era) {
+    const got = await eraArticle(resolved, citation.articleNo, citation.era);
+    if (!("article" in got)) {
+      return { raw: citation.raw, lawName: resolved, articleNo: citation.articleNo, hang: citation.hang, ho: citation.ho, ...got };
+    }
+    article = got.article;
+  } else {
+    try {
+      article = await getLawText(resolved, citation.articleNo);
+    } catch (err) {
+      return {
+        raw: citation.raw,
+        status: "failed",
+        lawName: resolved,
+        articleNo: citation.articleNo,
+        reason: err instanceof Error ? err.message : "API 호출 실패",
+      };
+    }
   }
 
   // 2) 조문이 없으면 환각

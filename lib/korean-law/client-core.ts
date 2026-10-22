@@ -32,6 +32,8 @@ export type LawApiErrorCode =
   | "API_KEY_MISSING"
   | "UPSTREAM"
   | "NOT_FOUND"
+  /** 연혁 목록 밖 — 시행령·시행규칙 목록은 2005년부터라 그 전 시행본은 「없음」이 아니라 「확인 불가」다 */
+  | "OUT_OF_RANGE"
   | "BAD_REQUEST"
   | "PARSE";
 

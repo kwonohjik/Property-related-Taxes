@@ -338,7 +338,7 @@ export async function fetchAddendaUnits(mst: string): Promise<AddendumUnit[]> {
 /**
  * 행위시법 판단 — 기준일에 시행 중이던 조문 + 현행 대비 + 부칙 경과규정.
  *
- * @throws LawApiError BAD_REQUEST (기준일 형식 오류) / NOT_FOUND (법령·버전 없음)
+ * @throws LawApiError BAD_REQUEST (기준일 형식 오류) / NOT_FOUND (법령·버전 없음) / OUT_OF_RANGE (연혁 목록보다 이른 기준일)
  */
 export async function getApplicableLaw(
   lawNameInput: string,
@@ -362,6 +362,15 @@ export async function getApplicableLaw(
   const applicable = selectApplicableVersion(versions, baseDate);
   if (!applicable) {
     const oldest = versions[versions.length - 1];
+    // 법제처 연혁 목록은 시행령·시행규칙을 2005년부터만 준다(소득세법 시행령 최초 20050219 「일부개정」 — 전 페이지 실측).
+    // 최초 버전이 「제정」이 아니면 그 앞은 「없음」이 아니라 목록 밖이다 — 종전엔 「제정 전」 NOT_FOUND라 1주택 원문 대조가
+    // 2005년 전 시행령 인용을 「찾지 못함」으로 보였다(계획서 N-1)
+    if (oldest && oldest.rrCls !== "제정") {
+      throw new LawApiError(
+        `${lawName} 연혁 목록이 ${oldest.efYd} 시행본부터라 기준일 ${baseDate}의 시행본은 확인할 수 없습니다.`,
+        "OUT_OF_RANGE"
+      );
+    }
     throw new LawApiError(
       `기준일 ${baseDate}에 시행 중인 ${lawName} 버전이 없습니다 (최초 시행일 ${oldest?.efYd ?? "불명"} — 제정 전).`,
       "NOT_FOUND"
@@ -418,4 +427,34 @@ export async function getApplicableLaw(
     transitionExcerpts,
     sourceUrl: buildLawSourceUrl(lawName, articleNo),
   };
+}
+
+/**
+ * 옛 조문 인용의 시대 — 법령명 뒤 괄호(계획서 law-citation-residuals F-6).
+ *  - `before`: 「(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것)」 — 괄호 날짜(공포일) 전날 시행본
+ *  - `amendedBy`: 「(2022. 5. 31. 대통령령 제32654호로 개정된 것)」 — 그 개정(공포번호)의 시행일 시행본.
+ *    공포일로 대조하면 시행일이 늦은 개정에서 **개정 전 본문**을 본다 ⇒ 연혁 목록에서 공포번호로 찾는다(`owner` = 괄호가 붙은 법령)
+ */
+export type CitationEra =
+  | { kind: "before"; date: string }
+  | { kind: "amendedBy"; date: string; ancNo: string; owner: string };
+
+/** 그 시대를 대조할 기준일(YYYY-MM-DD). `amendedBy`가 연혁 목록에 없으면 OUT_OF_RANGE */
+export async function resolveCitationEraDate(era: CitationEra): Promise<string> {
+  if (era.kind === "before") {
+    // 공포일 전날엔 그 개정이 아직 시행되지 않았다(시행일 ≥ 공포일) — 연혁 목록 없이 정해진다
+    const d = new Date(`${era.date}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+  const { versions } = await fetchLawVersions(era.owner);
+  const efYds = versions
+    .filter((v) => normalizeAncNo(v.ancNo) === normalizeAncNo(era.ancNo))
+    .map((v) => v.efYd)
+    .sort(); // 시행일 분리 개정이면 가장 이른 시행일
+  if (efYds.length === 0) {
+    throw new LawApiError(`${era.owner} 연혁 목록에서 제${era.ancNo}호 개정을 찾지 못했습니다.`, "OUT_OF_RANGE");
+  }
+  const e = efYds[0];
+  return `${e.slice(0, 4)}-${e.slice(4, 6)}-${e.slice(6, 8)}`;
 }

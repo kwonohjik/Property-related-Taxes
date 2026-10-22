@@ -32,8 +32,10 @@ import {
   extractTransitionExcerpts,
   isSameArticleText,
   getApplicableLaw,
+  resolveCitationEraDate,
   type AddendumUnit,
 } from "@/lib/korean-law/applicable-law";
+import { LawApiError } from "@/lib/korean-law/client-core";
 import type { LawVersionEntry } from "@/lib/korean-law/types";
 
 const mockFetchJson = fetchJson as ReturnType<typeof vi.fn>;
@@ -145,7 +147,9 @@ describe("applicable-law 순수 함수 — 본문 비교", () => {
 });
 
 describe("getApplicableLaw — 오케스트레이션 (mock)", () => {
-  beforeEach(() => mockFetchJson.mockReset());
+  beforeEach(() => {
+    mockFetchJson.mockReset();
+  });
 
   it("기준일 시행 버전 + 조문 + 부칙 통합", async () => {
     mockFetchJson.mockImplementation(async (endpoint: string, params: Record<string, string>) => {
@@ -213,5 +217,59 @@ describe("getApplicableLaw — 오케스트레이션 (mock)", () => {
       },
     });
     await expect(getApplicableLaw("소득세법", "89", "1990-01-01")).rejects.toThrow(/시행 중인/);
+  });
+});
+
+// 계획서 law-citation-residuals N-1·P-10·P-11 — 착수 전 「제정 전」 판정을 바꿔도 잡는 테스트가 없었다(P0-2)
+describe("applicable-law — 연혁 목록 밖 · 옛 조문 인용의 기준일", () => {
+  beforeEach(() => {
+    mockFetchJson.mockReset();
+  });
+
+  // 실응답 모양: 소득세법 시행령 목록의 최초 버전은 20050219 「일부개정」이다(2026-10-22 전 페이지 실측 — 목록이 2005년부터)
+  const decreeList = (rrCls: string) => ({
+    LawSearch: {
+      law: [
+        { 법령명한글: "소득세법 시행령", 법령일련번호: "2", 시행일자: "20060101", 공포일자: "20051231", 공포번호: "19254", 제개정구분명: "일부개정", 현행연혁코드: "연혁" },
+        { 법령명한글: "소득세법 시행령", 법령일련번호: "1", 시행일자: "20050219", 공포일자: "20050219", 공포번호: "18705", 제개정구분명: rrCls, 현행연혁코드: "연혁" },
+      ],
+    },
+  });
+
+  it("P-11 최초 버전이 「제정」이 아니면 그 앞 기준일은 OUT_OF_RANGE(확인 불가) — 「제정 전」이 아니다", async () => {
+    mockFetchJson.mockResolvedValue(decreeList("일부개정"));
+    const err = await getApplicableLaw("소득세법 시행령", "155", "2003-06-30").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(LawApiError);
+    expect((err as LawApiError).code).toBe("OUT_OF_RANGE");
+    expect((err as LawApiError).message).toMatch(/20050219 시행본부터라 .*확인할 수 없습니다/);
+  });
+
+  it("P-11 최초 버전이 「제정」이면 지금처럼 NOT_FOUND(제정 전)", async () => {
+    mockFetchJson.mockResolvedValue(decreeList("제정"));
+    const err = await getApplicableLaw("소득세법 시행령", "155", "2003-06-30").catch((e: unknown) => e);
+    expect((err as LawApiError).code).toBe("NOT_FOUND");
+  });
+
+  it("P-10 「개정되기 전의 것」 — 괄호 날짜 전날(달·윤년 경계 포함), 연혁 목록 없이", async () => {
+    expect(await resolveCitationEraDate({ kind: "before", date: "2020-02-11" })).toBe("2020-02-10");
+    expect(await resolveCitationEraDate({ kind: "before", date: "2020-03-01" })).toBe("2020-02-29");
+    expect(await resolveCitationEraDate({ kind: "before", date: "2021-01-01" })).toBe("2020-12-31");
+    expect(mockFetchJson).not.toHaveBeenCalled();
+  });
+
+  it("P-10 「개정된 것」 — 공포번호로 찾은 버전의 시행일(시행일 분리면 가장 이른 것) · 없으면 OUT_OF_RANGE", async () => {
+    mockFetchJson.mockResolvedValue({
+      LawSearch: {
+        law: [
+          { 법령명한글: "소득세법 시행령", 법령일련번호: "9", 시행일자: "20230101", 공포일자: "20220531", 공포번호: "32654", 제개정구분명: "일부개정", 현행연혁코드: "연혁" },
+          { 법령명한글: "소득세법 시행령", 법령일련번호: "8", 시행일자: "20220531", 공포일자: "20220531", 공포번호: "032654", 제개정구분명: "일부개정", 현행연혁코드: "연혁" },
+          { 법령명한글: "소득세법 시행령", 법령일련번호: "7", 시행일자: "20220215", 공포일자: "20220215", 공포번호: "32420", 제개정구분명: "일부개정", 현행연혁코드: "연혁" },
+        ],
+      },
+    });
+    const era = { kind: "amendedBy" as const, date: "2022-05-31", ancNo: "32654", owner: "소득세법 시행령" };
+    expect(await resolveCitationEraDate(era)).toBe("2022-05-31");
+    const err = await resolveCitationEraDate({ ...era, ancNo: "99999" }).catch((e: unknown) => e);
+    expect((err as LawApiError).code).toBe("OUT_OF_RANGE");
   });
 });

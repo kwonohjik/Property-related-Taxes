@@ -13,9 +13,17 @@ vi.mock("@/lib/korean-law/client", () => ({
   searchLaw: vi.fn(),
   getLawText: vi.fn(),
 }));
+// 옛 조문 인용(개정 괄호)은 그 시대 시행본을 본다 — 연혁 조회도 막는다
+vi.mock("@/lib/korean-law/applicable-law", async (orig) => ({
+  ...(await orig<typeof import("@/lib/korean-law/applicable-law")>()),
+  getApplicableLaw: vi.fn(),
+  resolveCitationEraDate: vi.fn(),
+}));
 
 import { extractCitations, verifyCitations } from "@/lib/korean-law/verify-citations";
 import { getLawText, searchLaw } from "@/lib/korean-law/client";
+import { getApplicableLaw, resolveCitationEraDate } from "@/lib/korean-law/applicable-law";
+import { LawApiError } from "@/lib/korean-law/client-core";
 
 const mockGetLawText = getLawText as ReturnType<typeof vi.fn>;
 const mockSearchLaw = searchLaw as ReturnType<typeof vi.fn>;
@@ -164,10 +172,15 @@ describe("verify-citations: 법령명 회복 — 낫표·꼬리·상대 인용·
     ]);
   });
 
-  it("옛 조문 인용(「구 「…」」·이름 뒤 개정 괄호)은 현행으로 대조하지 않도록 추출하지 않는다", () => {
+  // 날짜 없는 옛 조문은 시대를 정할 수 없어 건너뛰고, 개정 괄호에 날짜가 있으면 그 시대로 추출한다(계획서 Q-3 b — 아래 P-9)
+  it("옛 조문 인용 — 날짜 없는 「구 「…」」는 추출하지 않고, 개정 괄호는 시대를 붙여 추출한다", () => {
     expect(names("구 「소득세법 시행령」 제155조")).toEqual([]);
-    expect(names("「소득세법 시행령(2022. 5. 31. 대통령령 제32654호로 개정된 것)」 제155조")).toEqual([]);
-    expect(names("소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조 제20항")).toEqual([]);
+    expect(extractCitations("「소득세법 시행령(2022. 5. 31. 대통령령 제32654호로 개정된 것)」 제155조").map((c) => [c.lawName, c.articleNo, c.era])).toEqual([
+      ["소득세법 시행령", "제155조", { kind: "amendedBy", date: "2022-05-31", ancNo: "32654", owner: "소득세법 시행령" }],
+    ]);
+    expect(extractCitations("소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조 제20항").map((c) => [c.lawName, c.hang, c.era])).toEqual([
+      ["소득세법 시행령", 20, { kind: "before", date: "2020-02-11" }],
+    ]);
   });
 
   // 종전엔 「같은법시행령」·「동법」이 법령명으로 잡혀 거짓 「찾지 못함」이 됐다. 지금은 같은 줄에서 마지막으로 이름이 나온
@@ -312,7 +325,8 @@ describe("verify-citations: 띄어 쓴 가지 번호 · 앞 이름 · 항 이어
     expect(names("「구 소득세법 시행령」 제166조")).toEqual([]);
     expect(names("구법 제89조 및 구시행령 제154조")).toEqual([]);
     expect(names("구 소득세법 제94조의 권리로서 같은 법 제89조")).toEqual([]);
-    expect(names("소득세법 시행규칙(2011. 3. 28. 기획재정부령 제195호로 개정되기 전의 것) 제72조 ② 법 제89조")).toEqual([]);
+    // 개정 괄호가 붙은 시행규칙 인용은 그 시대로 추출된다(P-9) — 그 뒤 「법 제89조」는 조문 머리가 없어 건너뛴다
+    expect(names("소득세법 시행규칙(2011. 3. 28. 기획재정부령 제195호로 개정되기 전의 것) 제72조 ② 법 제89조")).toEqual([["소득세법 시행규칙", "제72조", null]]);
     // 「구강보건법」처럼 「구」로 시작하는 이름은 그대로
     expect(names("구강보건법 제5조")).toEqual([["구강보건법", "제5조", null]]);
   });
@@ -477,5 +491,77 @@ describe("verify-citations: verifyCitations (mocked)", () => {
     expect(result.citations).toHaveLength(5);
     expect(result.totalCount).toBe(30);
     expect(result.summary).toContain("최대 5건만 검증");
+  });
+});
+
+// 계획서 law-citation-residuals §5 P-9 — 옛 조문 인용의 시대(PR-E). 착수 전엔 개정 괄호가 붙으면 추출하지 않았다
+describe("verify-citations: 옛 조문 인용의 시대", () => {
+  const eras = (text: string) => extractCitations(text).map((c) => [c.lawName, c.articleNo, c.hang ?? null, c.era ?? null]);
+  const BEFORE = { kind: "before", date: "2020-02-11" };
+
+  it("P-9 「개정되기 전의 것」·「개정된 것」 — 낫표 안·밖 모두, 날짜가 있으면 「구 」가 붙어도", () => {
+    expect(eras("소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조")).toEqual([["소득세법 시행령", "제155조", null, BEFORE]]);
+    expect(eras("「소득세법 시행령」(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조")).toEqual([["소득세법 시행령", "제155조", null, BEFORE]]);
+    expect(eras("구 소득세법(2020. 2. 11. 법률 제30395호로 개정되기 전의 것) 제89조")).toEqual([["소득세법", "제89조", null, BEFORE]]);
+    expect(eras("조세특례제한법 시행령(2022.5.31. 대통령령 제32654호로 개정된 것) 제97조")).toEqual([
+      ["조세특례제한법 시행령", "제97조", null, { kind: "amendedBy", date: "2022-05-31", ancNo: "32654", owner: "조세특례제한법 시행령" }],
+    ]);
+  });
+
+  it("P-9 날짜가 없거나 개정 괄호가 아니면 추출하지 않는다", () => {
+    expect(eras("소득세법 시행령(대통령령 제30395호로 개정되기 전의 것) 제155조")).toEqual([]);
+    expect(eras("소득세법(이하 '법'이라 한다) 제89조")).toEqual([]);
+    expect(eras("소득세법 시행령(2020. 2. 30. 개정되기 전의 것) 제155조")).toEqual([]); // 없는 날짜
+  });
+
+  it("P-9 시대는 이어받기·항 이어짐·상대 인용으로 넘어가고, 같은 조문의 현행 인용과는 따로 센다", () => {
+    expect(eras("소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조 제20항 및 제21항, 제156조")).toEqual([
+      ["소득세법 시행령", "제155조", 20, BEFORE],
+      ["소득세법 시행령", "제155조", 21, BEFORE],
+      ["소득세법 시행령", "제156조", null, BEFORE],
+    ]);
+    expect(eras("소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조와 같은 영 제154조")).toEqual([
+      ["소득세법 시행령", "제155조", null, BEFORE],
+      ["소득세법 시행령", "제154조", null, BEFORE],
+    ]);
+    expect(eras("소득세법 시행령 제155조와 소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조")).toEqual([
+      ["소득세법 시행령", "제155조", null, null],
+      ["소득세법 시행령", "제155조", null, BEFORE],
+    ]);
+  });
+
+  it("P-9 약칭 — 개정 괄호가 붙은 조문 머리를 따르면 그 시대", () => {
+    expect(eras("소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제154조【1세대1주택의 범위】 ① 법 제89조")).toEqual([
+      ["소득세법 시행령", "제154조", null, BEFORE],
+      ["소득세법", "제89조", null, BEFORE],
+    ]);
+  });
+});
+
+describe("verify-citations: 옛 조문 인용은 그 시대 시행본으로 검증", () => {
+  const mockApplicable = getApplicableLaw as ReturnType<typeof vi.fn>;
+  const mockEraDate = resolveCitationEraDate as ReturnType<typeof vi.fn>;
+  const TEXT = "소득세법 시행령(2020. 2. 11. 대통령령 제30395호로 개정되기 전의 것) 제155조 제20항";
+  beforeEach(() => {
+    mockApplicable.mockReset();
+    mockEraDate.mockReset();
+    mockEraDate.mockResolvedValue("2020-02-10");
+  });
+
+  it("그 시행본에 항이 있으면 verified — 현행 조회(getLawText)는 하지 않는다", async () => {
+    mockApplicable.mockResolvedValue({ article: { fullText: "① 가 ⑳ 장기임대주택", title: "1세대1주택의 특례" }, sourceUrl: "https://www.law.go.kr/x" });
+    const r = await verifyCitations(TEXT);
+    expect(mockApplicable).toHaveBeenCalledWith("소득세법 시행령", "제155조", "2020-02-10");
+    expect(mockGetLawText).not.toHaveBeenCalled();
+    expect(r.citations[0]).toMatchObject({ status: "verified", raw: "소득세법 시행령(2020-02-11 개정 전) 제155조 제20항", hang: 20 });
+  });
+
+  it("그 시행본에 조문이 없으면 not_found · 연혁 목록 밖은 failed(확인 불가)", async () => {
+    mockApplicable.mockResolvedValueOnce({ article: null, sourceUrl: "" });
+    expect((await verifyCitations(TEXT)).citations[0].status).toBe("not_found");
+    mockApplicable.mockRejectedValueOnce(new LawApiError("연혁 목록이 20050219 시행본부터라 …", "OUT_OF_RANGE"));
+    const r = await verifyCitations(TEXT);
+    expect(r.citations[0]).toMatchObject({ status: "failed" });
+    expect(r.citations[0].reason).toMatch(/연혁 목록/);
   });
 });

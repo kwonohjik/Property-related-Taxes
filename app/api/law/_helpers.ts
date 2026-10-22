@@ -35,7 +35,7 @@ export function mapErrorToResponse(err: unknown): NextResponse<LawApiErrorEnvelo
   if (err instanceof LawApiError) {
     const status =
       err.code === "API_KEY_MISSING" ? 503 :
-      err.code === "NOT_FOUND" ? 404 :
+      err.code === "NOT_FOUND" || err.code === "OUT_OF_RANGE" ? 404 :
       err.code === "BAD_REQUEST" ? 400 :
       err.code === "UPSTREAM" ? 502 :
       500;
