@@ -9,11 +9,22 @@ import { needsSaleStdPart, ownerSplitHousingNeedsTransferTotal, resolveLandStdAt
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import { partDonorEstimated } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
+import { effectiveSelfOwns } from "./self-owns-scope";
+import { usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 export function opt(v: string | undefined): number | undefined {
   const n = parseAmount(v ?? "");
   return n > 0 ? n : undefined;
+}
+
+/**
+ * 양도시 감정평가가액이 **양쪽 모두** 입력되어 안분 basis가 되는가 — 엔진 `resolveSaleApportionBasis`(`usableAppraisal`)와 ⑫와 같은 술어다.
+ * 부가가치세법 시행령 §64①1호 단서(감정평가가액이 있으면 그 가액 비례)·2호(기준시가가 없어도 감정평가가액이 있으면 그 가액 비례) — 이때 양도시 기준시가는
+ * 양도가액 안분·§100③ 30% 판정에 쓰이지 않는다. 환산 파트의 분모로만 쓰인다.
+ */
+export function saleAppraisalIsBasis(asset: AssetForm): boolean {
+  return usableAppraisal({ land: opt(asset.landAppraisalAtTransfer) ?? 0, building: opt(asset.buildingAppraisalAtTransfer) ?? 0 });
 }
 
 export function validateSaleStdAndAppraisal(
@@ -42,14 +53,34 @@ export function validateSaleStdAndAppraisal(
     landMode: donorEst.land ? "estimated" : landMode,
     buildingMode: donorEst.building ? "estimated" : buildingMode,
   });
-  if (saleAxisInput && !stdWaived && needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
-    const saleLandMsg = `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
+  // 감정평가가액 양쪽 입력(안분 basis 1순위) — 양도시 기준시가는 **환산 파트의 분모**일 때만 쓰인다(⑫ `refineEstimatedTransferStd`·`refineSplitCarryoverValues`와 같은 범위).
+  //   · 환산(estimated) 본인 소유 파트 또는 증여자 환산 파트 → 그 파트의 기준시가
+  //   · 개별주택가격 비례 안분(소유자 분리 + 환산 파트) → 양쪽(분모가 가목:나목 비율) — 총액은 아래 V7-H
+  //   · 환산 파트 없음 → 요구 없음 (연혁 면제 `stdWaived`의 상위 집합 — 면제는 감정평가 없이도 쓰이지 않는 경우다)
+  const appraisalBasis = saleAppraisalIsBasis(asset);
+  let needLandStd = !stdWaived;
+  let needBuildingStd = !stdWaived;
+  if (appraisalBasis) {
+    const selfOwns = effectiveSelfOwns(asset) ?? "both";
+    const proportional = ownerSplitHousingNeedsTransferTotal(asset);
+    needLandStd = proportional || donorEst.land || (landMode === "estimated" && selfOwns !== "building_only");
+    needBuildingStd = proportional || donorEst.building || (buildingMode === "estimated" && selfOwns !== "land_only");
+  }
+  if (saleAxisInput && needLandStd && needsSaleStdPart("land") && resolveLandStdAtTransfer(asset) == null) {
+    const saleLandMsg = appraisalBasis
+      ? `${label}: 환산취득가액의 분모인 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 — 취득시와 같은 방식으로 환산합니다 (소득세법 §99①1호 가목).`
+      : `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 토지분(㎡당 공시지가 × 면적)이 필요합니다 (소득세법 §99①1호 가목).`;
     // 단가가 있으면 면적이 빈 것이다(`resolveLandStdAtTransfer` = 단가 × 면적, 또는 총액)
     if (opt(asset.standardPricePerSqmAtTransfer) != null) return fieldError("transferArea", saleLandMsg);
     return fieldError("standardPricePerSqmAtTransfer", saleLandMsg);
   }
-  if (saleAxisInput && !stdWaived && needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
-    return fieldError("buildingStandardPriceAtTransfer", `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`);
+  if (saleAxisInput && needBuildingStd && needsSaleStdPart("building") && opt(asset.buildingStandardPriceAtTransfer) == null) {
+    return fieldError(
+      "buildingStandardPriceAtTransfer",
+      appraisalBasis
+        ? `${label}: 환산취득가액의 분모인 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`
+        : `${label}: 일괄양도 안분·환산취득가 계산에는 양도시 기준시가 중 건물분이 필요합니다 — 「건물 기준시가 계산」으로 산정해 입력하세요 (소득세법 §99①1호 나목).`,
+    );
   }
 
   // ── V7-H. 양도시 개별주택가격 — 주택 소유자 분리 + 환산 파트 (S3-1 D-1 ⓑ) ──────────────

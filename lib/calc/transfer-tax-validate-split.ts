@@ -59,7 +59,7 @@ import { houseLandKindSent } from "./transfer-house-land-sec164-bridge";
 import { deriveHouseLandSec164Total } from "./transfer-house-land-sec164-bridge";
 import { houseFirstDisclosureSent } from "./house-first-disclosure";
 import { validateLandRebuild } from "./transfer-tax-validate-land-rebuild";
-import { opt, validateSaleStdAndAppraisal } from "./transfer-tax-validate-split-sale-std";
+import { opt, saleAppraisalIsBasis, validateSaleStdAndAppraisal } from "./transfer-tax-validate-split-sale-std";
 
 /**
  * `requiresAcqStdPrice` ⑥절 인자 보정 — `AssetForm`에는 `expenses` 프로퍼티가 **없다**
@@ -519,7 +519,9 @@ export function validateSplitDirectInputs(
     asset.saleSplitMode === "actual" &&
     opt(asset.landTransferPrice) == null &&
     opt(asset.buildingTransferPrice) == null &&
-    !hasSaleRatio
+    !hasSaleRatio &&
+    // 양도시 감정평가가액 양쪽도 구분 근거다 — 안분 basis 1순위(부가령 §64①1호 단서). 엔진·⑫ V4도 같은 술어로 이 경우를 막지 않는다(`saleAppraisalIsBasis`).
+    !saleAppraisalIsBasis(asset)
   ) {
     // ⚠️ 안내 문구는 **실제 입력 칸의 이름**과 일치해야 한다 — 토지분 총액 칸은 표시 전용으로
     //    바뀌었으므로(2026-07-29) "양도시 토지 기준시가를 입력하세요"라고 하면 없는 칸을 찾게 된다.

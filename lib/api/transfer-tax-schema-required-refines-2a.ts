@@ -23,6 +23,7 @@ import {
 import { requiresAcqStdPrice, requiresAcqStdPricePart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { requiresHousingBuildingStdAtAcq } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { saleStdPriceWaivedByEra } from "@/lib/calc/sale-split-100-3-era";
+import { usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price";
 import {
   collectSplitPartCauseIssues,
@@ -392,8 +393,9 @@ export function refineSplitAcquisitionInputs(
   }
 
   // 양도시 감정평가가액 양쪽이 있으면 엔진은 그것을 안분 basis 1순위로 쓴다(부가령 §64①1호 단서) —
-  // ⑧ V4·V7은 기준시가를 요구하지만 ⑫는 엔진이 실제로 던지는 조건으로 좁힌다(막다른 길 방지).
-  if (positive(d.landAppraisalAtTransfer) && positive(d.buildingAppraisalAtTransfer)) {
+  // 기준시가는 환산 파트의 분모로만 쓰이므로 ⑫는 엔진이 실제로 던지는 조건으로 좁힌다(막다른 길 방지). ⑧ V4·V7도 같은 술어(`saleAppraisalIsBasis` → `usableAppraisal`)로
+  // 같은 범위만 요구한다(docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md).
+  if (usableAppraisal({ land: d.landAppraisalAtTransfer ?? 0, building: d.buildingAppraisalAtTransfer ?? 0 })) {
     // A3 — 감정평가가액이 안분 basis여도 **환산 파트의 분모**(양도시 기준시가)는 별개로 필요하다. 아래 V7이 건너뛰어져
     //      엔진이 던지는 400(경로 없음)이 되던 구간이다(S3-1: 취득시 비율로 양도시를 나누는 후퇴 제거).
     refineEstimatedTransferStd(d, landMode, buildingMode, separate, issue);
