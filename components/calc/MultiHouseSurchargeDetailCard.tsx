@@ -28,7 +28,7 @@ interface Props {
 }
 
 // 제외 사유 레이블 매핑
-const EXCLUDED_REASON_LABEL: Record<string, string> = {
+export const EXCLUDED_REASON_LABEL: Record<string, string> = {
   inherited_5years: "상속주택 (5년 이내)",
   co_inherited_minor_share: "공동상속주택 소수지분 (§167의3②2호)",
   long_term_rental: "장기임대 등록주택",
@@ -43,7 +43,7 @@ const EXCLUDED_REASON_LABEL: Record<string, string> = {
 
 // 배제 사유 레이블 매핑
 // 🔑 합가 기한 연수(5년·10년)는 라벨에 적지 않는다 — 양도일 연혁이라 엔진 `detail`이 말한다.
-const EXCLUSION_REASON_LABEL: Record<string, string> = {
+export const EXCLUSION_REASON_LABEL: Record<string, string> = {
   temporary_two_house: "일시적 2주택 특례",
   rural_house: "농어촌주택 1세대1주택 의제 (§155⑦)",
   marriage_merge: "혼인합가 1세대1주택 의제 (2주택)",

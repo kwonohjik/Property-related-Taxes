@@ -12,6 +12,7 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -300,7 +301,7 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
           </div>
           <div className="flex items-center gap-2">
             <HomeButton
-              confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다.&#10;계속하시겠습니까?"
+              confirmMessage="홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다. 1세대1주택 비과세 판정과 다주택 중과 판정은 입력을 함께 씁니다.&#10;계속하시겠습니까?"
               onBeforeNavigate={() => {
                 if (isResult) {
                   setResult(null);
@@ -316,8 +317,22 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
                 aria-label="이전 단계로 이동"
               />
             )}
-            <ResetButton onReset={handleReset} />
+            <ResetButton
+              onReset={handleReset}
+              confirmMessage="지금까지 입력한 값이 모두 삭제되고 빈 폼으로 돌아갑니다. 1세대1주택 비과세 판정과 다주택 중과 판정은 입력을 함께 씁니다. 이 동작은 되돌릴 수 없습니다."
+            />
           </div>
+        </div>
+
+        {/* 교차 링크(다주택 중과 판정 계획서 §5.8 D5) — 입력을 함께 쓰므로 그대로 둔 채 같은 사실로 중과를 판정한다(`?new=1` 없음). */}
+        <div className="mb-4 flex justify-end">
+          <Link
+            href="/calc/multi-house-surcharge"
+            data-testid="one-house-to-surcharge-link"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            이 입력으로 다주택 중과 판정 보기 →
+          </Link>
         </div>
 
         {/* 머리줄에 두면 375px에서 홈·초기화 버튼이 세로로 깨진다 — 따로 한 줄 */}

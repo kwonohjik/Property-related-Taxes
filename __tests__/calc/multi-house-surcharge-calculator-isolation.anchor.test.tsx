@@ -16,13 +16,15 @@ import Calc from "@/app/calc/multi-house-surcharge/MultiHouseSurchargeCalculator
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { useOneHouseJudgmentStore, createInitialSurchargeSlot } from "@/lib/stores/one-house-judgment-store";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { useCalcWizardStore } from "@/lib/stores/calc-wizard-store";
 import {
   createInitialOneHouseJudgmentForm,
   type OneHouseJudgmentFormData,
 } from "@/lib/stores/one-house-judgment-form.types";
 
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 const autoSaveCalls: unknown[] = [];
@@ -105,7 +107,7 @@ describe("CI-1 — 응답 귀속", () => {
     await act(async () => { holds[0](); });
     await flush();
     expect(useOneHouseJudgmentStore.getState().surcharge.result?.headline?.result.surchargeType).toBe("multi_house_2");
-    expect(screen.queryByTestId("surcharge-narrative")).not.toBeNull();
+    expect(screen.queryByTestId("surcharge-selling-detail")).not.toBeNull();
     // 설명문 단계 ①~⑥ 중 늘 서술하는 ①②③이 실제로 그려진다
     expect(screen.queryAllByTestId(/^surcharge-step-/).length).toBeGreaterThanOrEqual(3);
   });
@@ -150,11 +152,11 @@ describe("CI-2 — 의뢰인 격리", () => {
   }
   it("다른 의뢰인(c1) 몫의 결과는 그리지 않는다", async () => {
     await renderWithResultOf("c1");
-    expect(screen.queryByTestId("surcharge-narrative")).toBeNull();
+    expect(screen.queryByTestId("surcharge-selling-detail")).toBeNull();
   });
   it("긍정 짝: 지금 의뢰인(c2) 몫이면 그린다", async () => {
     await renderWithResultOf("c2");
-    expect(screen.queryByTestId("surcharge-narrative")).not.toBeNull();
+    expect(screen.queryByTestId("surcharge-selling-detail")).not.toBeNull();
   });
 });
 
@@ -208,5 +210,30 @@ describe("CI-6·7 — 단계 화면 menu · 사이드바 echo", () => {
     await flush();
     // 같은 사이드바의 「세대 보유 주택 수 2채」와 섞이지 않게 그 줄(SummaryRow)의 글자만 본다
     expect(screen.getByText("중과 판정 주택 수").parentElement!.textContent).toContain("2채");
+  });
+});
+
+describe("CI-8 — 계산기 넘기기(D3d)", () => {
+  it("「이 사실로 양도세 계산」 → 판정 폼의 양도 주택 자체 배제 사실이 계산기 폼에 도착하고 계산기로 이동한다", async () => {
+    stubFetch(false);
+    useCalcWizardStore.getState().reset();
+    const f = form0();
+    f.sellingHouseExclusion = { isCulturalHeritage: true };
+    atResult(f);
+    render(<Calc />);
+    await flush();
+    act(() => { fireEvent.click(screen.getByTestId("surcharge-calculate-tax")); });
+    await flush();
+    expect(useCalcWizardStore.getState().formData.sellingHouseExclusion).toEqual({ isCulturalHeritage: true });
+    expect(push).toHaveBeenCalled();
+  });
+});
+
+describe("CI-9 — 1주택 판정 → 중과 판정 교차 링크", () => {
+  it("입력을 지우지 않는다(`?new=1` 없음)", async () => {
+    const { default: OneHouseCalc } = await import("@/app/calc/one-house-exemption/OneHouseJudgmentCalculator");
+    useOneHouseJudgmentStore.setState({ formData: form0() });
+    render(<OneHouseCalc />);
+    expect(screen.getByTestId("one-house-to-surcharge-link").getAttribute("href")).toBe("/calc/multi-house-surcharge");
   });
 });

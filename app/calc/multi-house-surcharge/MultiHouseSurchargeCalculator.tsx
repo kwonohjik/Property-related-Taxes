@@ -12,6 +12,7 @@
  */
 import { useCallback, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -26,6 +27,7 @@ import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store"
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { callMultiHouseSurchargeJudgmentAPI } from "@/lib/calc/multi-house-surcharge-api";
+import { openTransferWithOneHouseFacts } from "@/lib/calc/one-house-judgment-handoff";
 import {
   validateAllSurchargeSteps,
   validateSurchargeStepByIndex,
@@ -54,6 +56,7 @@ export default function MultiHouseSurchargeCalculator() {
   const reset = useOneHouseJudgmentStore((s) => s.reset);
 
   const activeClientId = useProfessionalStore((s) => s.activeClientId);
+  const router = useRouter();
 
   /** 다른 의뢰인이 만든 결과는 쓰지 않는다 — store 구독이 놓친 경로를 막는 표시 단계 방어(1주택 메뉴 S13-3과 같다). */
   const result = storeResult !== null && resultClientId !== activeClientId ? null : storeResult;
@@ -130,6 +133,14 @@ export default function MultiHouseSurchargeCalculator() {
 
   const isResult = currentStep === RESULT_STEP && result !== null;
 
+  /**
+   * D3d 「이 사실로 양도세 계산」 — 넘기는 것은 **폼(사실)** 이다. 계산기는 같은 엔진으로 다시 판정한다. 판정 이력을 남기지 않으므로(D4)
+   * 출처 id 없이 넘긴다. 양도 주택 자체 배제 사실·한시 유예도 판정 폼의 값이 실린다(§5.7 · P5).
+   */
+  const handleCalculateTax = useCallback(() => {
+    void openTransferWithOneHouseFacts(formData, router, undefined);
+  }, [formData, router]);
+
   /** 단계 점프 — StepIndicator·사이드바 공용. 뒤로·제자리는 허용, 앞으로 갈 때만 건너뛰는 단계를 검사한다. */
   const onStepClick = useCallback(
     (target: number) => {
@@ -145,14 +156,15 @@ export default function MultiHouseSurchargeCalculator() {
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
+        {/* 375px — 부제목이 길어 한 줄에 두면 버튼 묶음이 세로로 눌린다. 좁은 화면에서는 버튼을 제목 아래 줄로 내린다 */}
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-2xl font-bold tracking-tight">다주택 중과 판정</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               소득세법 §104⑦ · 시행령 §167의3·§167의10 — 세액이 아니라 <b>중과 여부와 사유</b>를 판정합니다
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 print:hidden">
             <HomeButton
               confirmMessage={`홈으로 이동하면 현재 입력 중인 값이 유지된 채 페이지를 떠납니다. ${SHARED_INPUT_NOTE}\n계속하시겠습니까?`}
               onBeforeNavigate={() => {
@@ -173,7 +185,7 @@ export default function MultiHouseSurchargeCalculator() {
         </div>
 
         {/* 교차 링크(§5.8 D5) — 입력을 그대로 둔 채 같은 사실로 비과세를 판정한다(`?new=1` 없음). */}
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex justify-end print:hidden">
           <Link
             href="/calc/one-house-exemption"
             data-testid="surcharge-to-one-house-link"
@@ -183,7 +195,7 @@ export default function MultiHouseSurchargeCalculator() {
           </Link>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-6 print:hidden">
           <StepIndicator steps={Array.from(SURCHARGE_STEPS)} current={currentStep} onStepClick={onStepClick} />
         </div>
 
@@ -206,10 +218,19 @@ export default function MultiHouseSurchargeCalculator() {
             {currentStep === 1 && <Step3 form={formData} onChange={updateFormData} menu="surcharge" />}
             {currentStep === 2 && <Step2 form={formData} onChange={updateFormData} menu="surcharge" />}
             {currentStep === RESULT_STEP && (
-              <StepResult result={result} error={error} isLoading={isLoading} onJudge={handleJudge} />
+              <StepResult
+                result={result}
+                error={error}
+                isLoading={isLoading}
+                onJudge={handleJudge}
+                formHouses={formData.houses ?? []}
+                formRights={formData.presaleRights ?? []}
+                sellingStdPrice={formData.assets?.[0]?.standardPriceAtTransfer}
+                onCalculateTax={handleCalculateTax}
+              />
             )}
 
-            <div className="mt-8 flex items-center justify-between border-t pt-6">
+            <div className="mt-8 flex items-center justify-between border-t pt-6 print:hidden">
               <WizardBackNav isFirstStep={currentStep === 0} onBack={handleBack} />
               {currentStep < 2 && <NavButton direction="next" label="다음" onClick={handleNext} />}
               {currentStep === 2 && (
@@ -233,7 +254,7 @@ export default function MultiHouseSurchargeCalculator() {
             </div>
           </div>
 
-          <div className="hidden w-72 flex-shrink-0 lg:block">
+          <div className="hidden w-72 flex-shrink-0 lg:block print:hidden">
             <div className="sticky top-8">
               <MultiHouseSurchargeSidebar form={formData} currentStep={currentStep} onStepClick={onStepClick} result={result} />
             </div>
