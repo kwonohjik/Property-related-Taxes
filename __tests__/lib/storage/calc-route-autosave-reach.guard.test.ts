@@ -20,13 +20,15 @@ const ROOT = process.cwd();
 
 /**
  * 이력 자동저장이 **없는** 계산 라우트. 사유를 반드시 적는다 — 이 목록의 길이가
- * 곧 영속 공백의 실제 크기다(2026-09-28 실측 5건). 이 라우트에 이력을 붙이면 목록에서 빼야 한다(아래 [AR-2]가 강제).
+ * 곧 영속 공백의 실제 크기다(2026-09-28 실측 5건 · 2026-10-22 다주택 중과 판정 추가 6건). 이 라우트에 이력을 붙이면 목록에서 빼야 한다(아래 [AR-2]가 강제).
  */
 const NO_HISTORY_ROUTES: Record<string, string> = {
   "app/calc/cross-104-5/page.tsx":
     "소득세법 §104⑤ 합산 비교 — 저장된 양도세 이력(`calculationRepository`)을 읽어 재계산하는 화면이라 새 record를 만들지 않는다",
   "app/calc/family-business-postmgmt/page.tsx":
     "상증법 §18의2⑤ 가업상속공제 사후관리 추징 시뮬레이터 — 이력 세목 미등록(별건)",
+  "app/calc/multi-house-surcharge/page.tsx":
+    "다주택 중과 판정 메뉴 — 이력을 저장하지 않기로 결정(계획서 multi-house-surcharge-judgment-menu.plan.md D4 · 2026-10-22 사용자 결정). 입력은 1세대1주택 판정 메뉴와 함께 쓰고 그쪽이 이력을 남긴다",
   "app/calc/inheritance-postmgmt/page.tsx":
     "상증법 §18의3④ 영농상속공제 사후관리 추징 시뮬레이터 — 이력 세목 미등록(별건)",
   "app/calc/public-interest-penalty/page.tsx":

@@ -26,7 +26,7 @@ import {
 } from "../one-house-exemption/judgment-request";
 import { buildSurchargeJudgmentPayload } from "./surcharge-judgment-payload";
 
-export type { MultiHouseSurchargeJudgmentResponse } from "./surcharge-judgment-payload";
+export type { MultiHouseSurchargeJudgmentResponse, SurchargeJudgmentScopeReason } from "./surcharge-judgment-payload";
 
 const requestSchema = z.object({ property: propertySchema });
 
