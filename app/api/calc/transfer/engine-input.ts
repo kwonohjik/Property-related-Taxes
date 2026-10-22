@@ -16,6 +16,7 @@ import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce"
 import type { z } from "zod";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
 import { toEngineLandRebuild } from "@/lib/api/transfer-tax-schema-land-rebuild";
 import { mapTemporaryTwoHouseEraFacts } from "@/lib/api/temp-two-house-era-route-map";
 import { mapGiftHouseholdBasis } from "@/lib/api/gift-household-basis-route-map";
@@ -144,6 +145,8 @@ export function buildTransferEngineInput(
           ),
           // 결정 #33·#34 — 세대 보유 시작일도 일자라 spread의 string을 덮어쓴다(전송하지 않았으면 undefined).
           donorHouseholdHoldingStartDate: toOptionalDate(data.carryoverTaxation.donorHouseholdHoldingStartDate),
+          // §114조의2 증여자 신축·증축 — 신축·증축일(Date). spread의 string 을 덮어쓴다(Zod 출력은 일자가 string).
+          donorBuilt: toEngineDonorBuilt(data.carryoverTaxation.donorBuilt, "carryoverTaxation"),
         }
       : undefined,
     isOneHousehold: data.isOneHousehold,

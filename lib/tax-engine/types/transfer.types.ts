@@ -1142,6 +1142,11 @@ export interface TransferTaxInput {
    * `resolvePenaltyAxis`(`transfer-tax-finalize.ts`)가 splitDetail 축보다 뒤에 읽는다.
    */
   penaltyAxis?: { acquisitionMethod: "estimated" | "appraisal"; base: number };
+  /**
+   * §114조의2 가산세가 **이월과세 증여자 신축·증축**(`carryoverTaxation.donorBuilt`)에서 왔다는 표식 — 가산세 설명 문구만 가른다.
+   * 이월과세 해결자(`transfer-tax-carryover-donor-penalty.ts`)가 A 채택 입력에만 싣는 **내부 값**이며 와이어(Zod)에는 없다.
+   */
+  penaltyDonorBuilt?: boolean;
   /** 본인 신축·증축 여부 */
   isSelfBuilt?: boolean;
   /** 신축(new) / 증축(extension) */

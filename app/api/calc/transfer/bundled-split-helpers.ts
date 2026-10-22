@@ -49,6 +49,7 @@ import {
 import { calculateInheritanceAcquisitionPrice } from "@/lib/tax-engine/inheritance-acquisition-price";
 import type { InheritanceAssetKind } from "@/lib/tax-engine/inheritance-acquisition-price";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
+import { toEngineDonorBuilt } from "@/lib/api/donor-built-engine-input";
 import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 
@@ -634,6 +635,7 @@ export function buildCompanionEngineInputs(
             "companionAssets[].carryoverTaxation.donorAcquisitionDate",
           ),
           donorHouseholdHoldingStartDate: toOptionalDate(c.carryoverTaxation.donorHouseholdHoldingStartDate),
+          donorBuilt: toEngineDonorBuilt(c.carryoverTaxation.donorBuilt, "companionAssets[].carryoverTaxation"),
         }
       : undefined,
     // ⑭ 감면 일자 변환은 **단건과 같은 정본 매퍼**를 쓴다(`route-reductions-mapper.ts`).
