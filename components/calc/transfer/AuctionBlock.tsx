@@ -2,6 +2,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { preDeemedExprFacts } from "@/lib/calc/expropriation-pre-deemed-facts";
 import {
   isAuctionEligibleAssetKind,
   EXPR_VALUATION_MIN_TRANSFER_DATE,
@@ -49,7 +50,8 @@ export function AuctionBlock({
   const unsupportedPath = asset.parcelMode || asset.hasSeperateLandAcquisitionDate;
   const show =
     isAuctionEligibleAssetKind(asset.assetKind) &&
-    asset.useEstimatedAcquisition &&
+    // 의제취득일 전 상속·증여 ③도 환산이라 2호가 분모에 걸린다(Q-10 A) — ⑧ `exprAuctionGate`와 같은 사실.
+    (asset.useEstimatedAcquisition || preDeemedExprFacts(asset, transferDate, false).preDeemedConversion) &&
     !unsupportedPath &&
     !!transferDate &&
     transferDate >= EXPR_VALUATION_MIN_TRANSFER_DATE;

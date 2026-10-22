@@ -148,6 +148,29 @@ describe("D1 1985 전 토지 파트 3자 max", () => {
   });
 });
 
+describe("§164⑨1호 공익수용 — ③도 환산 파트와 같은 min[] 분모로 비교(Q-10 A · 일반건물 split만 특례 대상)", () => {
+  // 토지 보상액 3.5억 · 보상기초 3.8억 · 양도시 토지 기준시가 4억 → 분모 3.5억 · ③ = 7억 × 3.5억 ÷ 3.5억 = 7억
+  const EXPR = { propertyType: "building" as const, householdHousingCount: 0, transferCause: "public_expropriation" as const, splitLandCompensationTotal: 350_000_000, splitLandCompensationBasisTotal: 380_000_000 };
+  it("③ 7억 채택 · 분모·내역 echo (종전 원값 ③ 6.125억 · 35,145,000 → 12,408,000)", () => {
+    const r = run(EXPR);
+    const land = r.splitDetail!.land;
+    expect(land.acquisitionBasis).toMatchObject({ converted: 700_000_000, adopted: "converted" });
+    expect(land.acquisitionPrice).toBe(700_000_000);
+    expect(r.splitDetail!.splitLandExpropriationValuationDetail?.denominator).toBe(350_000_000);
+    expect(r.totalTax).toBe(12_408_000);
+  });
+  it("① 6.5억이 원값 ③(6.125억)과 특례 ③(7억) 사이 → ③ 채택 (종전 ① · 27,868,500 → 12,408,000)", () => {
+    const r = run({ ...EXPR, landAcquisitionPrice: 650_000_000 });
+    expect(r.splitDetail!.land.acquisitionBasis?.adopted).toBe("converted");
+    expect(r.totalTax).toBe(12_408_000);
+  });
+  it("①이 특례 ③보다 크면 ① — 특례 내역은 싣지 않는다(토지 파트가 환산이 아니다)", () => {
+    const r = run({ ...EXPR, landAcquisitionPrice: 750_000_000 });
+    expect(r.splitDetail!.land.acquisitionBasis?.adopted).toBe("reported");
+    expect(r.splitDetail!.splitLandExpropriationValuationDetail).toBeUndefined();
+  });
+});
+
 describe("leaf — 1985 전 토지 파트의 ③ 재료 필수 (엔진·⑫·⑧ 공용)", () => {
   it("② 지분 반영 전 값이 없으면 엔진도 던진다 — ③이 조용히 빠지지 않는다", () => {
     expect(() => run({ landSec164ValueWhole: undefined })).toThrow("landSec164ValueWhole");

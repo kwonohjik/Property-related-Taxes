@@ -4,6 +4,7 @@
  */
 
 import { parseAmount } from "@/lib/calc/number-parse";
+import { exprCompensationSendGates } from "./transfer-tax-validate-expropriation";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
@@ -370,7 +371,8 @@ export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
  * 자산종류 게이트는 **UI·validate·엔진 3층 모두**에 있다(계획 Q4 — 3층 명시).
  * 판정은 `lib/tax-engine/expropriation-scope.ts` **단일 소스** 위임 — 세 층이 같은 목록을 조회한다.
  */
-export function buildExpropriationInput(primary: AssetForm) {
+export function buildExpropriationInput(primary: AssetForm, transferDate: string | undefined) {
+  const send = exprCompensationSendGates(primary, transferDate);
   return {
     transferCause: primary.transferCause,
     // §164⑨1호 per-sqm(가~다목) — **per-sqm 적격 자산일 때만** 전송(`buildAssetPayload` 컴패니언과 대칭).
@@ -380,8 +382,12 @@ export function buildExpropriationInput(primary: AssetForm) {
       ? {
           standardPricePerSqmAtTransfer: parseAmount(primary.standardPricePerSqmAtTransfer) || undefined,
           transferArea: parseFloat(primary.transferArea) || undefined,
-          compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
-          compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+          ...(send.perSqm
+            ? {
+                compensationPerSqm: parseAmount(primary.compensationPerSqm) || undefined,
+                compensationBasisStdPrice: parseAmount(primary.compensationBasisStdPrice) || undefined,
+              }
+            : {}),
         }
       : {}),
     // §164⑨2호 공매·경락 (P4) — **적격 자산(land·building)일 때만** 전송(UI 노출 조건과 동일).
@@ -394,7 +400,7 @@ export function buildExpropriationInput(primary: AssetForm) {
         }
       : {}),
     // §164⑨1호 주택 총액 트랙 (P5) — 주택일 때만 전송(엔진이 게이트).
-    ...(isHousingExprEligibleAssetKind(primary.assetKind)
+    ...(isHousingExprEligibleAssetKind(primary.assetKind) && send.housingTotal
       ? {
           housingCompensationTotal: parseAmount(primary.housingCompensationTotal) || undefined,
           housingCompensationBasisTotal: parseAmount(primary.housingCompensationBasisTotal) || undefined,
@@ -402,7 +408,7 @@ export function buildExpropriationInput(primary: AssetForm) {
       : {}),
     // §164⑨1호 건물 split 토지분 트랙 (P6/D6) — 건물 자산일 때만 전송(엔진이 split·수용·환산 게이트).
     // 토지·건물 취득일 분리 양도 시 토지분 환산 분모만 낮춘다. 주택 split은 Q6 미지원(validate 차단).
-    ...(isSplitLandExprEligibleAssetKind(primary.assetKind)
+    ...(isSplitLandExprEligibleAssetKind(primary.assetKind) && send.splitLand
       ? {
           splitLandCompensationTotal: parseAmount(primary.splitLandCompensationTotal) || undefined,
           splitLandCompensationBasisTotal: parseAmount(primary.splitLandCompensationBasisTotal) || undefined,

@@ -512,3 +512,111 @@ probe(D1 · 1980 상속 토지 + 건물 매매 · 파트 양도 7억 · 양도�
 - 법령상 ③에 특례 분모가 맞는지부터 확인해야 한다.
 
 E2E 실측 메모: 구분 기재 토지 6억·건물 3억에 양도시 기준시가 3억:1억이면 건물이 안분값 2.25억과 30% 넘게 달라 소득세법 §100③이 안분값을 쓴다. 토지 양도가액은 6.75억이 된다. ③은 그 파트 양도가액(6.75억 × 2억 ÷ 3억 = 4.5억)으로 계산하므로 양도차익과 같은 값을 쓴다(엔진 probe 대조).
+
+## 14. 별건 검토 — 공익수용 특례 × ③ · 조문 표기 (2026-10-22)
+
+### 14.1 별건 1 — 영 §164⑨ × ③: 결함 확정 · ✅ Q-10 = A(비교에도 특례, 사용자 2026-10-22)
+
+**법령 체인(원문 · 소득세법 시행령 MST 290841)**
+- §164⑨: 수용(1호)이나 공매·경락(2호)이면 「그 차액을 … 가액에서 차감하여 **양도 당시 기준시가를 계산한다**」. 특정 산식에 한정하지 않고 양도 당시 기준시가 자체를 정한다.
+- ③은 다음 체인으로 이어진다. 분모가 「양도당시의 기준시가」다.
+  - §163⑫: 법 §97①1호 나목의 환산취득가액 = 「제176조의2제2항부터 제4항까지」에 따른 가액
+  - §176조의2④1호: 「의제취득일 현재 제3항제1호 내지 제3호의 규정에 의한 가액」
+  - ③3호: 「제2항의 규정에 의하여 환산한 취득가액」
+  - ②2호: 양도당시 실지거래가액 × 취득당시 기준시가 ÷ 양도당시의 기준시가
+- 엔진은 이미 일반 환산(`calcTransferGain` → `resolveConversionDenominatorAtTransfer`)과 split 환산 파트(`applySplitLandExpropriationValuation`)에 특례를 적용한다. ③만 원값으로 비교하고 있었다.
+- 해석례는 찾지 않았다. 판단 근거는 위 조문 체인이다.
+
+**실측 (mock 세율 · `totalTax`, 수정 전 → 수정 후)**
+
+| 경로 | 시료 | 수정 전 | 수정 후 |
+|---|---|---|---|
+| 자산 단위 토지 | ①② 없음 · 분모 1,243,350,000 → 수용 736,800,000 | 카드 ③ 149,925,925 · 양도차익은 253,000,000으로 계산(카드≠적용) · 173,929,791 | 카드 ③ = 적용 253,000,000 · 173,929,791 |
+| 자산 단위 토지 | ① 2억(원값 ③과 특례 ③ 사이) | ① 채택 · 192,159,000 | ③ 채택 · 173,929,791 |
+| 상가·주택 | ① 1억 · 분모 4억 → 수용 2.5억 | 카드 ③ 460,000,000 · 적용 736,000,000 · 30,024,500 | 카드 = 적용 736,000,000 · 30,024,500 |
+| 상가·주택 | ① 5억 | ① 채택 · 99,913,000 | ③ 채택 · 30,024,500 |
+| 일반건물 split D1 | 토지 분모 4억 → 보상 3.5억 | ③ 612,500,000 · 35,145,000 | ③ 700,000,000 · 12,408,000 |
+| 일반건물 split D1 | ① 6.5억 | ① 채택 · 27,868,500 | ③ 채택 · 12,408,000 |
+
+- split은 비교와 적용이 모두 원값 분모라 서로 일관됐다. 다만 환산 파트(특례 적용)와는 척도가 달랐다.
+- 일반건물 자산 단위는 아직 ③을 비교하지 않는다(PR-4 O-3). 재개발은 ③이 §166③이고 특례 대상이 아니다(`expropriation-redevelopment-not-applicable`).
+
+**입력 경로 결함(같은 축)**
+- 화면의 수용 특례 칸(`ExpropriationBlock.tsx:61-65`)과 ⑧·⑫ 필수 게이트(`expropriation-required-gate.ts`)는 폼 `useEstimatedAcquisition`이 켜졌을 때만 연다.
+- 상속 자산에는 그 토글이 없고(`CompanionAcqPurchaseBlock`은 매매 등만), 기본값이 false다. 그래서 의제취득일 전 상속 자산은 보상액을 넣을 칸이 없다.
+- ④(`buildExpropriationInput`)는 게이트 없이 저장값을 보낸다. 숨은 칸에 남은 옛 값이 하류 환산에 조용히 쓰일 수 있었다. 수정 후에는 ③ 비교에도 쓰인다.
+
+**설계**
+1. 엔진 — 자산 단위: `withConversionDenominator`(`inheritance-acquisition-helpers.ts`)가 ③ 분모를 하류와 같은 함수·같은 입력(`resolveConversionDenominatorAtTransfer`)으로 정한다. 하류 입력은 바꾸지 않는다(하류가 다시 적용한다). 1호 원/㎡·주택 총액과 2호 공매·경락을 모두 포함한다.
+2. 엔진 — split: 1985 전 토지 파트면 `applySplitLandExpropriationValuation` 분모로 ③을 비교한다. ③이 채택되면 그 분모와 내역을 돌려준다. ①②가 이기면 내역을 싣지 않는다.
+3. 입력 경로 — `ExprGateFacts`에 「의제취득일 전 ③ 후보」 사실 2개를 추가한다.
+   - 자산 단위: ④가 pre-deemed `inheritedAcquisition`을 싣는다. 재개발·겸용·일반건물·입주권은 제외한다.
+   - split 토지 파트: `isPreDeemedLandPart` ∧ 분리 활성.
+   - 게이트(원/㎡·주택 총액·공매·경락·split 토지분)는 `useEstimatedAcquisition ∨ 해당 사실`로 연다. ⑧·⑫ 어댑터가 같은 사실을 만들고, ⑤ `ExpropriationBlock`도 같은 사실로 칸을 연다.
+
+### 14.2 별건 2 — 조문 표기 「영 §176조의2④」: 정정 불필요
+
+- 의제취득일 전 자산의 「의제취득일 현재의 취득가액」을 정하는 조항이 ④다. ④1호가 ③1~3호(③3호 = ②의 환산)를 끌어온다. ③의 근거 조항으로 ④를 적는 것은 정확하다.
+- ②2호는 산식의 소재일 뿐 의제취득일 전 자산에 ③을 적용하는 근거가 아니다. 「②2호·④」는 정밀도를 더할 뿐 오류 정정이 아니다.
+- 기존 상수 `INHERITED_BEFORE_DEEMED`(`legal-codes/transfer.ts:277`)와 PR-1·PR-2 라벨이 이미 같은 표기다.
+- `GENERAL_BUILDING_ESTIMATED_ACQ`의 정정 이력(「§176조의2④」 → 「②」, 2026-05-10)은 의제취득일과 무관한 일반 환산이라 사정이 다르다.
+- ⇒ 코드 변경 없음.
+
+### 14.3 Do 결과 (2026-10-22)
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| 엔진 | `inheritance-acquisition-helpers.ts` `withConversionDenominator` | ③ 비교 분모 = 하류 `resolveConversionDenominatorAtTransfer`와 같은 함수·같은 입력. 하류 입력은 그대로 둔다 |
+| 엔진 | `transfer-tax-split-acq-price.ts` | 1985 전 토지 파트 ③ 분모 = `applySplitLandExpropriationValuation`(일반건물). ③이 채택될 때만 분모·내역 echo |
+| 게이트 | `lib/calc/expropriation-required-gate.ts` | `preDeemedConversion`·`preDeemedSplitLand` 사실과 `isPreDeemedConversionCandidate`(④ payload 모양). split은 일반건물만 연다 |
+| ⑫ | `refines-2a.ts` `exprFactsFromBody` | 본문으로 같은 판정 |
+| ⑧ | `transfer-tax-validate-expropriation.ts` · 신규 `expropriation-pre-deemed-facts.ts` | ④ 빌더 결과로 같은 판정(PD-1과 같은 짝) |
+| ⑤ | `ExpropriationBlock.tsx` · `AuctionBlock.tsx` | 같은 함수로 보상액 칸·공매 토글을 연다 |
+
+테스트:
+- 엔진 앵커 `pre-deemed-3way-max-expropriation.anchor.test.ts` 5건과 split 앵커 3건(`split-part-pre-deemed-3way-max.anchor.test.ts`)
+- route ⑧↔⑫ `transfer.route.pre-deemed-expropriation.anchor.test.ts` 6건
+- 판정 함수 `expropriation-pre-deemed-candidate.test.ts` 4건
+- 화면 `expropriation-block-pre-deemed.test.tsx` 4건
+- E2E `transfer-pre-deemed-expropriation.spec.ts` 2건
+
+검증:
+- 뮤테이션은 엔진 5종, 입력 경로 9종, 제외 조건 2종으로 모두 KILLED다. 첫 판에서 G9(재개발 등 제외)가 살아남아 판정 함수 테스트를 추가했다.
+- 회귀: vitest 3,172파일 38,030건, 관련 E2E 21개 스펙 718건 통과.
+
+남은 한계(확인 필요):
+- 주택 D1 × 수용: ③에 split 특례를 걸지 않는다. 엔진 `applySplitLandExpropriationValuation`이 일반건물 전용이고, 주택 regular split × 수용은 Q6 미지원이다. 비교와 적용은 서로 일관된다.
+- 컴패니언 D1(일반건물) × 수용: A05에 따라 「함께양도 자산은 … 지원하지 않습니다」 차단이 새로 걸린다. 자산을 첫 번째로 옮기면 계산된다.
+
+### 14.4 리뷰 게이트(acquisition-cost-review) 대응 · ✅ Q-11 = 칸 추가 · ✅ Q-12 = 차단 유지 + 문구 정정 (사용자 2026-10-22)
+
+| 지적 | 판정 | 처리 |
+|---|---|---|
+| F-1 원/㎡ 트랙이 화면에서 발동 불가 | 확인(grep: 상속 자산에 `standardPricePerSqmAtTransfer` 쓰기 지점 없음, 토지등급 payload도 양도시 ㎡당 값을 싣지 않음) | ③ 후보일 때 ⑤ 수용 블록에 「① 양도시 ㎡당 공시지가(`LandPriceLookupField`) + 양도 면적」 칸을 연다. ⑧·⑫는 `isExprPerSqmStdInputRequired`로 두 값을 함께 요구한다. E2E는 시드가 아니라 화면 입력으로 바꿨다 |
+| 항목 4 숨은 칸 보상액 | 확인 | ④ 단건·다건(`buildExpropriationInput`)과 컴패니언이 보상액 금액 필드(원/㎡·주택 총액·분리 토지분)를 ⑧ 필수 게이트(= ⑤ 노출 조건, `exprCompensationSendGates`)일 때만 싣는다. 공매·경락 플래그는 고가주택 분리 계산(`housing-excess-split.ts:252`)도 읽어 감싸지 않는다 |
+| 항목 3 감정·매매사례 stale 판정 | 반영 | ⑧ 사실 함수가 ④와 같은 `primaryAcquisitionModeFlags`(`hasPre1990` 우선)와 같은 상가 서브객체 조건을 쓴다 |
+| 항목 5 컴패니언 D1 | Q-12 | 차단을 유지한다. 안내(⑧ 문구 · ⑤ 카드 공용 `companionSplitLandRemedy`)는 D1이면 「첫 번째로 옮기세요 — 1985.1.1. 전에 상속·증여받은 토지 파트는 취득일 분리를 해제할 수 없습니다」만 보인다 |
+
+- ⑤ 수용 블록의 원/㎡ 영역은 ③ 후보일 때 입력 칸이 되고, 매매 환산 경로에서는 종전처럼 읽기 전용 참조로 남는다.
+- 엔진은 특례가 걸리면 분모를 `min(㎡당 3후보) × 면적`으로 정하므로 PreDeemedInputs의 양도시 기준시가 총액을 쓰지 않는다. 총액은 수용 아님·2009.2.4. 전의 ③ 분모로 남는다.
+- 확인 필요(유지): 영 §176조의2②2호 분모에 §164⑨을 적용하는 해석례(문리 해석만), §164⑨ 2009.2.4.~4.14. 구간 문언(기존 미결), 부담부증여 STEP 0.48의 ③ 비교 분모(PR-7 기존 미결).
+
+### 14.5 리뷰 재검토 대응 (2026-10-22)
+
+재검토 결과는 FAIL 1건(이중 원천)과 확인 필요 2건이었다.
+
+**FAIL — 이중 원천**
+- 면적: 수용 블록의 면적 칸을 없앴다. 면적은 기본정보 면적 칸(`AssetAreaSection`, 「같음」이면 취득·양도 면적을 함께 쓴다)만 원천으로 둔다. ㎡당 칸은 그 값을 참조만 하고, 조회 결과로 면적을 덮어쓰지 않는다. ⑧ 면적 오류는 시나리오에 맞는 앵커(`acquisitionArea`/`transferArea`)로 간다.
+- 총액: ㎡당 공시지가를 입력하면 같은 onChange에서 ③ 분모 총액(`standardPriceAtTransfer`)을 `multiplyByArea(㎡당, round2(면적))`로 함께 쓴다.
+  - 면적을 나중에 바꾸는 등으로 어긋나면 ⑧과 ⑫가 모두 `standardPriceAtTransfer`로 차단한다. ⑫는 `inheritedAcquisition.standardPriceAtTransfer ?? standardPriceAtTransfer`, 곧 엔진이 쓰는 값과 비교한다.
+- 비토지: 상가 연면적 등 면적 원천이 달라, ③ 후보만으로 열리는 원/㎡ 트랙은 토지만 연다. 화면에서 ③ 후보가 되는 것도 `inheritanceAssetKind` 토지·주택뿐이다. ⑤ 원/㎡ 영역 노출도 ⑧ 게이트 함수(`isExprPerSqmShown`)를 쓴다.
+
+**확인 필요 — 환산 플래그 잔재**
+- ㎡당 칸을 여는 조건을 「환산 토글 없음」에서 「③ 후보 ∧ 토지」로 바꿨다. ③ 후보는 상속·증여라 매매 블록이 뜨지 않는다.
+
+**확인 필요 — 순환 import(유지)**
+- api-helpers → validate-expropriation → pre-deemed-facts → api-helpers.
+- 순환 멤버 파일에 모듈 최상위 평가 코드가 없어 동작에는 문제가 없다. 다만 이후 최상위 상수를 넣으면 깨질 수 있다.
+
+**검증**
+- 새 규칙 뮤테이션 6종(총액 정합 ⑧·⑫, 토지 한정, 면적 앵커, 총액 동시 기록, 플래그 잔재)이 모두 KILLED다.

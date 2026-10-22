@@ -16,11 +16,13 @@
  * 불일치 시 "UI 통과 ↔ validate 차단" 모순이 난다. 적격 자산 판정은
  * `lib/tax-engine/expropriation-scope.ts` **단일 소스** 위임 — 여기서 자산종류를 나열하면 드리프트다.
  */
-import { parseAmount } from "@/lib/calc/number-parse";
+import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
+import { multiplyByArea, round2 } from "@/lib/tax-engine/area-utils";
 import { EXPR_VALUATION_MIN_TRANSFER_DATE as MIN_TRANSFER_DATE } from "@/lib/tax-engine/expropriation-scope";
 import {
   type ExprGateFacts,
   isExprPerSqmRequired,
+  isExprPerSqmStdInputRequired,
   exprAuctionGate,
   isExprHousingTotalRequired,
   exprSplitLandGate,
@@ -29,13 +31,17 @@ import {
 import type { AssetForm, ParcelFormItem } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
 import { hasStaleSplitInput } from "./transfer-land-part-cause";
+import { preDeemedExprFacts } from "./expropriation-pre-deemed-facts";
 
 /**
  * ⑧ 어댑터 — `AssetForm` → 게이트 사실. 판정은 `expropriation-required-gate.ts`가 한다
  * (⑫ `lib/api/transfer-tax-schema-required-refines-2a.ts`와 **같은 술어** — 2026-09-30 EX-1~3).
  */
 function exprFactsFromAsset(asset: AssetForm, formTransferDate: string | undefined): ExprGateFacts {
+  const splitActive = !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset);
   return {
+    // 의제취득일 전 ③ 후보(Q-10 A) — ⑤ `ExpropriationBlock`도 같은 함수로 칸을 연다.
+    ...preDeemedExprFacts(asset, formTransferDate, splitActive),
     assetKind: asset.assetKind,
     isMixedUse: asset.assetKind === "housing" && !!asset.isMixedUseHouse,
     transferCause: asset.transferCause,
@@ -43,7 +49,7 @@ function exprFactsFromAsset(asset: AssetForm, formTransferDate: string | undefin
     useEstimatedAcquisition: !!asset.useEstimatedAcquisition,
     parcelMode: !!asset.parcelMode,
     // 화면에 없는 stale 분리 입력(상속·증여 호스트)은 「분리 없음」 — ④가 보내지 않는 축을 ⑧이 읽으면 막다른 오류가 된다.
-    separateLandAcquisition: !!asset.hasSeperateLandAcquisitionDate && !hasStaleSplitInput(asset),
+    separateLandAcquisition: splitActive,
     usePreHousingDisclosure: !!asset.usePreHousingDisclosure,
     isAuctionTransfer: !!asset.isAuctionTransfer,
   };
@@ -62,6 +68,40 @@ function isExprValuationDateAndCauseOk(
 }
 
 /**
+ * ④ — 보상액(원/㎡ · 주택 총액 · 분리 토지분)을 싣는가. ⑤가 칸을 보이고 ⑧이 요구하는 조건과 같다(같은 게이트 함수).
+ * 숨은 칸에 남은 옛 값이 엔진 특례(하류 환산 · 의제취득일 전 ③ 비교)에 끼어들지 않게 한다(계획서 §14 리뷰 항목 4).
+ * 공매·경락(`isAuctionTransfer`)은 고가주택 분리 계산도 읽어 감싸지 않는다.
+ */
+export function exprCompensationSendGates(asset: AssetForm, formTransferDate: string | undefined, isNonPrimaryAsset = false) {
+  const f = exprFactsFromAsset(asset, formTransferDate);
+  return {
+    perSqm: isExprPerSqmRequired(f),
+    housingTotal: isExprHousingTotalRequired(f),
+    splitLand: exprSplitLandGate(f, isNonPrimaryAsset) === "required",
+  };
+}
+
+/**
+ * 함께양도 분리취득 × 수용 차단(A05)의 해소 안내 — ⑧ 문구와 ⑤ 카드가 같은 함수를 쓴다.
+ * 1985.1.1. 전 상속·증여 토지 파트(D1)는 토지·건물 취득원인이 달라 취득일 분리를 풀 수 없으므로 「첫 번째로 옮기기」만 안내한다(Q-12).
+ */
+export function companionSplitLandRemedy(asset: AssetForm, formTransferDate: string | undefined): string {
+  return exprFactsFromAsset(asset, formTransferDate).preDeemedSplitLand
+    ? "이 자산을 첫 번째로 옮기세요 — 1985.1.1. 전에 상속·증여받은 토지 파트는 취득일 분리를 해제할 수 없습니다."
+    : "해당 자산을 첫 번째로 옮기거나 취득일 분리를 해제하세요.";
+}
+
+/** ⑤ `ExpropriationBlock` — 원/㎡ 특례 영역을 보이는가(⑧ 필수 게이트와 같은 함수 · ④ 전송 게이트와도 같다). */
+export function isExprPerSqmShown(asset: AssetForm, formTransferDate: string | undefined): boolean {
+  return isExprPerSqmRequired(exprFactsFromAsset(asset, formTransferDate));
+}
+
+/** ⑤ `ExpropriationBlock` — 의제취득일 전 ③ 후보라 양도시 ㎡당 기준시가·면적 칸을 수용 블록에 여는가(⑧과 같은 사실). */
+export function isPreDeemedPerSqmStdInputActive(asset: AssetForm, formTransferDate: string | undefined): boolean {
+  return isExprPerSqmStdInputRequired(exprFactsFromAsset(asset, formTransferDate));
+}
+
+/**
  * 자산-수준(단건) 보상 2필드 필수 검증.
  * 다필지는 필지별 값을 쓰므로 제외한다(`validateExprValuationParcel`).
  */
@@ -72,8 +112,23 @@ export function validateExprValuationAsset(
 ): string | null {
   // 게이트 = `isExprPerSqmRequired` — 적격 자산 · 건물 split 제외(per-sqm 경로 우회 + UI가 블록을
   // 숨김 → 요구하면 숨겨진 칸 요구) · 다필지 제외(필지별 검증) · 환산 · 수용 + 2009.02.04.
-  if (!isExprPerSqmRequired(exprFactsFromAsset(asset, formTransferDate))) return null;
+  const facts = exprFactsFromAsset(asset, formTransferDate);
+  if (!isExprPerSqmRequired(facts)) return null;
 
+  // 의제취득일 전 상속·증여 ③ 후보 — 양도시 ㎡당 기준시가·면적은 수용 블록에서만 받는다(엔진은 둘 다 있어야 특례를 건다).
+  if (isExprPerSqmStdInputRequired(facts)) {
+    const perSqm = parseAmount(asset.standardPricePerSqmAtTransfer);
+    const area = parseDecimal(asset.transferArea);
+    // 면적은 기본정보 면적 칸이 원천 — 「같음」이면 그 칸의 앵커가 `acquisitionArea`다.
+    const areaField = (asset.areaScenario ?? "same") === "same" ? "acquisitionArea" : "transferArea";
+    if (!perSqm)
+      return fieldError("standardPricePerSqmAtTransfer", `${label}: 공익수용 환산 특례 — 양도시 ㎡당 공시지가(원/㎡)를 입력하세요.`);
+    if (!(area > 0))
+      return fieldError(areaField, `${label}: 공익수용 환산 특례 — 양도 당시 면적(㎡)을 입력하세요.`);
+    // ③ 분모(양도시 기준시가 총액)와 특례 분모의 원값(㎡당 × 면적)은 같은 값이어야 한다(토지 = 개별공시지가 × 면적 · ⑫ 같은 규칙).
+    if (parseAmount(asset.standardPriceAtTransfer) !== multiplyByArea(perSqm, round2(area)))
+      return fieldError("standardPriceAtTransfer", `${label}: 양도시 기준시가가 「양도시 ㎡당 공시지가 × 면적」(${multiplyByArea(perSqm, round2(area)).toLocaleString()})과 다릅니다 — 같은 값으로 맞추세요.`);
+  }
   if (!parseAmount(asset.compensationPerSqm))
     return fieldError("compensationPerSqm", `${label}: 공익수용 환산 특례 — 보상가액(원/㎡)을 입력하세요.`);
   if (!parseAmount(asset.compensationBasisStdPrice))
@@ -190,7 +245,7 @@ export function validateSplitLandExprAsset(
    * 차단은 부수적으로 그 500 경로를 **도달 불가**로 만든다.
    */
   if (gate === "companion_unsupported") {
-    return `${label}: 함께양도 자산은 토지·건물 분리취득 + 공익수용 환산(§164⑨1호) 조합을 지원하지 않습니다. 해당 자산을 첫 번째로 옮기거나 취득일 분리를 해제하세요.`;
+    return `${label}: 함께양도 자산은 토지·건물 분리취득 + 공익수용 환산(§164⑨1호) 조합을 지원하지 않습니다. ${companionSplitLandRemedy(asset, formTransferDate)}`;
   }
 
   if (gate !== "required") return null;
