@@ -69,7 +69,8 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 (K-4/K-5)
     // 근거 조문이 같은 안내 안에 있다
     await expect(convertedNotice).toContainText("시행령 §176의2②2호");
 
-    // K-4 실지 선택 → 실지취득가 입력 + 자본적지출·양도비 노출 (§97①1호가목)
+    // K-4 실지 선택 → 실지취득가 입력 (§97①1호가목). 자본적지출·양도비는 ④ 한 곳에서 받는다 — 박스는 ④를 가리킨다
+    // (`burdened-gift-residuals-o3-o5-o8.plan.md` O-3).
     await actualRadio.check();
     await expect(actualRadio).toBeChecked();
     await expect(card.getByText("실지취득가액 입력")).toBeVisible();
@@ -77,8 +78,9 @@ test.describe("부담부증여 양도세 — 취득가액 산정방식 (K-4/K-5)
     await expect(
       card.getByText("실지취득가액 (주택·건물 전체)"),
     ).toBeVisible();
-    await expect(card.getByText("자본적지출 (선택)")).toBeVisible();
-    await expect(card.getByText("양도비 (선택)")).toBeVisible();
+    await expect(card.getByTestId("bg-k4-expense-pointer")).toContainText("「④ 자본적 지출, 필요경비」에 입력하세요");
+    await expect(card.getByText("자본적지출 (선택)")).toHaveCount(0);
+    await expect(card.getByText("양도비 (선택)")).toHaveCount(0);
 
     // K-5로 되돌리면 실지취득가 입력 숨김 (조건부 토글 회귀)
     await convertedRadio.check();

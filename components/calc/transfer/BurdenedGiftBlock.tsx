@@ -344,8 +344,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 취득 당시 실지거래가액으로 간주됩니다(소득세법 시행령 §163⑨) — 매매사례가액·감정가액은 <b>당초 증여자</b> 값만 아래 이월과세 박스에 입력합니다.
               </div>
             ) : (
-              <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200">
+              <div className="rounded border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 p-2 text-caption text-violet-800 dark:text-violet-200" data-testid="bg-k4-expense-pointer">
                 개산공제(§163⑥ 3%) 미적용 — 실지거래가액 경로이므로 자본적지출·양도비를 필요경비로 공제합니다 (양도분 채무비율 안분).
+                금액은 아래 「④ 자본적 지출, 필요경비」에 입력하세요.
               </div>
             )}
             {isRightToMoveIn && (
@@ -384,18 +385,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                   onChange={(v) => onChange({ bgActualAcquisitionTotal: v })} />
               </FieldCard>
             )}
-            <FieldCard label="자본적지출 (선택)"
-              hint="소령 §163③ — 양도분(채무비율)에 대응하는 부분만 안분 공제">
-              <CurrencyInput label="" hideUnit
-                value={asset.capitalExpenditure}
-                onChange={(v) => onChange({ capitalExpenditure: v })} />
-            </FieldCard>
-            <FieldCard label="양도비 (선택)"
-              >
-              <CurrencyInput label="" hideUnit
-                value={asset.transferExpense}
-                onChange={(v) => onChange({ transferExpense: v })} />
-            </FieldCard>
+            {/* 자본적지출·양도비는 ④ 한 곳에서만 받는다. 같은 상태를 이 박스도 받으면 ④의 「총 양도비」 비활성·지분·일부 양도 처리를
+                건너뛰고, 여기 넣은 값이 총 양도비보다 우선해 ④ 안내와 계산이 갈렸다(`burdened-gift-residuals-o3-o5-o8.plan.md` O-3). */}
           </div>
       )}
 
