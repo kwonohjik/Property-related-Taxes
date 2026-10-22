@@ -14,6 +14,7 @@
  */
 import { z } from "zod";
 import { usesBundledPartAcquisition } from "@/lib/tax-engine/general-building-part-acq";
+import { partialAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx, prefix: (string | number)[]): Issue => (path, message) =>
@@ -66,6 +67,8 @@ export type GbValuationLike = {
   buildingCarryoverPart?: CarryoverPartLike;
   landCarryoverTaxation?: CarryoverLegacyLike;
   buildingCarryoverTaxation?: CarryoverLegacyLike;
+  landAppraisalAtTransfer?: number;
+  buildingAppraisalAtTransfer?: number;
 };
 
 /**
@@ -73,6 +76,15 @@ export type GbValuationLike = {
  */
 export function refineGbValuationRequired(v: GbValuationLike, ctx: z.RefinementCtx) {
   const issue = issuer(ctx, []);
+
+  // V8 — 양도시 감정평가가액 한쪽만: 엔진은 쓰지 않고 기준시가로 후퇴한다(`incomplete`) — 입력이 조용히 폐기되므로 ⑧ `validateGbSaleAxis`와 같은 술어로 막는다.
+  //      일반건물 ④는 `saleSplitMode`를 보내지 않아(계획서 Q-7) V8-b 거울은 없다.
+  const appraisalAtTransfer = { land: v.landAppraisalAtTransfer ?? 0, building: v.buildingAppraisalAtTransfer ?? 0 };
+  if (partialAppraisal(appraisalAtTransfer))
+    issue(
+      [appraisalAtTransfer.land > 0 ? "buildingAppraisalAtTransfer" : "landAppraisalAtTransfer"],
+      "양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).",
+    );
 
   // D1 — 토지 상속: 피상속인 취득일(§95④·§104②1호 단기보유 통산). 엔진 GB 경로는 이 서브객체의 값을
   //      읽는다(최상위 `decedentAcquisitionDate`가 아니다) — 비우면 상속개시일부터 기산해 단기세율이 됐다.

@@ -95,6 +95,15 @@ export function usableAppraisal(pair: SaleSplitPair | undefined): boolean {
   return !!pair && pair.land > 0 && pair.building > 0;
 }
 
+/**
+ * 감정평가가액이 **한쪽만** 입력됐는가 — 엔진이 `appraisalRejected: "incomplete"`로 기록하고 기준시가로 후퇴하는 바로 그 조건이다.
+ * ⑧ V8(split·일반건물)과 ⑫(`refineSplitAcquisitionInputs`·`refineGbValuationRequired`)가 이 함수 하나로 «입력 시점에 막는다»
+ * (한쪽만 입력한 값은 어디에도 반영되지 않는데 일괄양도에서는 결과에 흔적도 없다 — 자동 fallback 금지).
+ */
+export function partialAppraisal(pair: SaleSplitPair | undefined): boolean {
+  return !!pair && (pair.land > 0 || pair.building > 0) && !usableAppraisal(pair);
+}
+
 /** 잔액 흡수 안분 — `토지 + 건물 = 총액` 불변식. 공용 leaf(개별주택가격 분할과 같은 함수). */
 function apportion(total: number, basis: SaleSplitPair): SaleSplitPair {
   return apportionByStdPrice(total, basis.land, basis.building);

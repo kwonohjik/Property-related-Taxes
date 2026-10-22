@@ -380,20 +380,23 @@ describe("T-13 · 소유자 분리(동시 취득 · 개별주택가격 비례 �
   }, 180_000);
 });
 
-describe("T-15 · 감정평가 한쪽만 — 기존 동작 유지(안분 basis가 못 되므로 기준시가를 계속 요구)", () => {
-  for (const [name, app] of [
-    ["토지만", { landAppraisalAtTransfer: "1,100,000,000" }],
-    ["건물만", { buildingAppraisalAtTransfer: "400,000,000" }],
+describe("T-15 · 감정평가 한쪽만 — 안분 basis가 못 되므로 기준시가를 계속 요구하고, ⑫는 누락된 감정평가 키도 함께 짚는다", () => {
+  // 2026-10-22 갱신: 종전 기대값은 [BLD_KEY, LAND_KEY]였다. ⑫가 «한쪽만 입력 → 400»(⑧ V8 거울, `partialAppraisal`)을 추가하면서 누락된 감정평가 키가 한 개 더 붙는다
+  // (토지만 입력 → buildingAppraisalAtTransfer, 건물만 입력 → landAppraisalAtTransfer). 기준시가 두 칸 요구·⑧ 차단·⑫ 400은 그대로다.
+  // 계획서: docs/00-pm/gb-and-one-side-appraisal-fe8-12-parity.plan.md · 격자 정합은 appraisal-one-side-fe8-12-parity.test.ts
+  for (const [name, app, missing] of [
+    ["토지만", { landAppraisalAtTransfer: "1,100,000,000" }, "buildingAppraisalAtTransfer"],
+    ["건물만", { buildingAppraisalAtTransfer: "400,000,000" }, "landAppraisalAtTransfer"],
   ] as const) {
-    // 2016-01-01(연혁 면제 없음)만 — 2015-12-31은 면제라 ⑫가 200이고 ⑧은 V8(한쪽만 입력)로 막는 별개 비대칭이다(fail-closed, 기준시가와 무관).
+    // 2016-01-01(연혁 면제 없음)만 — 2015-12-31은 면제라 기준시가 요구가 풀리고 감정평가 한쪽만 입력 사유(V8)만 남는다(이 파일 밖 격자 T-B1이 전수 대조).
     for (const td of [FIRST]) {
-      it(`${name} · ${td} · 기준시가 없음: ⑧ 차단 ∧ ⑫ 400(양도시 기준시가 두 칸)`, async () => {
+      it(`${name} · ${td} · 기준시가 없음: ⑧ 차단 ∧ ⑫ 400(양도시 기준시가 두 칸 + 누락된 감정평가 칸)`, async () => {
         const r = await both(formOf(td, { ...SALE_ACTUAL, landAcqMode: "actual", buildingAcqMode: "actual", ...app }, "2017-02-28"));
         expect(r.blocked8).toBe(true);
         // ⑧도 한쪽만 입력한 감정평가를 안분 basis로 보지 않아 V8(한쪽만 입력)보다 먼저 V7(양도시 기준시가)에서 막힌다
         expect(r.i8[0].message).toContain("양도시 기준시가");
         expect(r.st12).toBe(400);
-        expect(r.keys12.sort()).toEqual([BLD_KEY, LAND_KEY].sort());
+        expect(r.keys12.sort()).toEqual([BLD_KEY, LAND_KEY, missing].sort());
       });
     }
   }

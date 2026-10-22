@@ -11,6 +11,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
+import { partialAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 
 /**
  * @param isBurdenedGiftGB 부담부증여 판정 — 호출부가 이미 도출한 값을 받는다.
@@ -34,7 +35,7 @@ export function validateGbSaleAxis(
    * 🔴 **감정일자는 요구하지 않는다**(2026-08-06 · Q-9 확정 — 계획서 §21). 시기 요건 판정을
    * 폐지했으므로 일자는 선택 입력이다. 「양쪽 모두」는 비율 산출의 **산술적 필요조건**이라 유지한다.
    */
-  if (anyAppraisal && (landApp <= 0 || buildingApp <= 0)) {
+  if (partialAppraisal({ land: landApp, building: buildingApp })) {
     return fieldError(landApp <= 0 ? "landAppraisalAtTransfer" : "buildingAppraisalAtTransfer", `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`);
   }
 

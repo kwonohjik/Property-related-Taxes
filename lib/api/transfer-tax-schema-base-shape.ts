@@ -386,6 +386,7 @@ export const propertyBaseShape = {
    * 양도시 감정평가가액 — 안분 basis 서열 1순위(부가령 §64①1호 단서 · 소령 §166⑥ 차용).
    * `positive()`가 아니라 `nonnegative()`다: 0은 「그 파트를 평가하지 않았다」는 뜻이고,
    * 그 상태를 엔진이 `incomplete`로 **배제 사유에 기록**해야 화면이 이유를 말할 수 있다.
+   * 정상 경로에서는 ⑫ refine이 한쪽만 입력(`partialAppraisal`)을 먼저 400으로 막는다 — 이 기록은 직접 엔진 호출의 안전망이다.
    */
   landAppraisalAtTransfer: z.number().int().nonnegative().optional(),
   /** 양도시 감정평가가액 (건물분) */

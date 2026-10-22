@@ -10,7 +10,7 @@ import type { PartAcqMode } from "@/lib/tax-engine/transfer-tax-split-acq-price"
 import { partDonorEstimated } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
 import { effectiveSelfOwns } from "./self-owns-scope";
-import { usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
+import { partialAppraisal, usableAppraisal } from "@/lib/tax-engine/sale-split-apportion-basis";
 
 /** 빈 문자열·0 → undefined (API 변환 `parseAmount(...) || undefined`과 동일 규약) */
 export function opt(v: string | undefined): number | undefined {
@@ -112,7 +112,7 @@ export function validateSaleStdAndAppraisal(
    * ⚠️ 반면 「양쪽 모두」는 **그대로 요구한다** — 법령 판단이 아니라 **비율을 내려면 두 값이
    *    필요하다**는 산술적 필요조건이기 때문이다.
    */
-  if (anyAppraisal && (landApp == null || buildingApp == null)) {
+  if (partialAppraisal({ land: landApp ?? 0, building: buildingApp ?? 0 })) {
     const appraisalPairMsg = `${label}: 양도시 감정평가가액은 토지·건물 양쪽 모두 필요합니다 — 한쪽만 입력하면 그 파트를 평가하지 않은 것으로 보아 기준시가 비율로 안분합니다 (부가가치세법 시행령 §64①1호 단서).`;
     if (landApp == null) return fieldError("landAppraisalAtTransfer", appraisalPairMsg);
     return fieldError("buildingAppraisalAtTransfer", appraisalPairMsg);
