@@ -95,6 +95,7 @@ export type Required2aLike = {
   landAcquisitionCause?: string;
   landDecedentAcquisitionDate?: string;
   landSec164Value?: number;
+  landSec164ValueWhole?: number;
   isPartialAreaTransfer?: boolean;
   buildingSec164Value?: number;
   buildingHouseKind?: "house_individual" | "house_apart";
@@ -439,7 +440,7 @@ export function refineSplitPartCause(
   d: Pick<
     Required2aLike,
     "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landAcqMode" | "acquisitionMethod"
-    | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "isPartialAreaTransfer"
+    | "acquisitionCause" | "selfOwns" | "transferType" | "landSec164Value" | "landSec164ValueWhole" | "isPartialAreaTransfer"
     | "buildingSec164Value" | "buildingHouseKind" | "buildingBundledStdPrice" | "buildingAcqMode" | "buildingAcquisitionPrice" | "landAcquisitionPrice"
     | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation"
@@ -481,6 +482,8 @@ export function refineSplitPartCause(
     hasPreHousingDisclosure: !!d.preHousingDisclosure,
     hasFamilyBusinessInheritance: !!d.familyBusinessInheritance,
     landSec164Value: d.landSec164Value,
+    landSec164ValueWhole: d.landSec164ValueWhole,
+    hasLandStdAtTransfer: (d.landStandardPriceAtTransfer ?? 0) > 0,
     isPartialAreaTransfer: d.isPartialAreaTransfer,
     // D2-4 — 건물 상속·증여 §163⑨ 단서 2호(단독·다가구주택만)
     isHousing,

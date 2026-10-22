@@ -86,11 +86,14 @@ describe("leaf — D1 규칙별 발동·긍정 짝", () => {
     );
   });
 
-  it("Q-7 ② 있음이면 통과(상속·증여·1985 전 포함) — ② 0·음수·undefined는 없음", () => {
-    for (const d of ["1984-05-01", "1988-05-01", "1990-08-29"]) {
+  it("Q-7 ② 있음이면 통과(상속·증여) — 1985 전은 ③ 분자(② 지분 반영 전)도 함께 · ② 0·음수·undefined는 없음", () => {
+    for (const d of ["1988-05-01", "1990-08-29"]) {
       expect(msgs({ landAcquisitionDate: d, landSec164Value: 350_000_000 })).toEqual([]);
       expect(msgs({ landAcquisitionCause: "gift", hasLandDecedentAcquisitionDate: false, landAcquisitionDate: d, landSec164Value: 1 })).toEqual([]);
     }
+    // 1985.1.1. 전 — 3자 max라 ③ 분자가 필요하다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13).
+    expect(msgs({ landAcquisitionDate: "1984-05-01", landSec164Value: 350_000_000, landSec164ValueWhole: 350_000_000 })).toEqual([]);
+    expect(first({ landAcquisitionDate: "1984-05-01", landSec164Value: 350_000_000 })?.field).toBe("landSec164ValueWhole");
     for (const v of [0, -1, undefined]) expect(first({ landAcquisitionDate: "1988-05-01", landSec164Value: v })?.field).toBe("landSec164Value");
   });
 
@@ -172,9 +175,10 @@ describe("엔진 직접 — calcSplitGain이 같은 leaf로 던진다", () => {
     expect(() => run({ landAcquisitionDate: D("1990-08-30"), landDecedentAcquisitionDate: D("1960-01-01") })).not.toThrow();
   });
   it("D1-4 ② 있음 → 계산하고 max(①,②)를 echo한다 (영 §163⑨ 단서 1호) — ②>① sec164 / ①>② reported / 동점 reported", () => {
+    // 1985.1.1. 이후(1988) — 1985 전은 ③이 더해지는 3자 max라 `split-part-pre-deemed-3way-max.anchor.test.ts`가 본다.
     const at = (reported: number, sec164: number) =>
       run({
-        landAcquisitionDate: D("1984-05-01"),
+        landAcquisitionDate: D("1988-05-01"),
         landDecedentAcquisitionDate: D("1960-01-01"),
         landAcquisitionPrice: reported,
         landSec164Value: sec164,
@@ -202,7 +206,9 @@ describe("엔진 직접 — calcSplitGain이 같은 leaf로 던진다", () => {
       expect(land.acquisitionBasis).toBeUndefined();
     }
   });
-  it("D1-4 증여도 같은 단서 · 1984 이전과 1985~1990 사이가 같은 값(의제취득일 조건 없음)", () => {
+  // 1985.1.1. 전은 ③(파트 양도가액 × ② ÷ 양도시 토지 기준시가)도 비교한다(2026-10-22 3자 max). 이 시료는 양도가액 = 양도시 기준시가(7억)라
+  // ③ = ② 동점 → ①② 우선이어서 1985 전후 값이 같다. ③이 이기는 시료는 `split-part-pre-deemed-3way-max.anchor.test.ts`.
+  it("D1-4 증여도 같은 단서 · 1984(③ = ② 동점 → ①② 우선)와 1985~1990 사이가 같은 값", () => {
     const at = (d: string, cause: "gift" | "inheritance") =>
       run({
         landAcquisitionDate: D(d),
@@ -210,13 +216,14 @@ describe("엔진 직접 — calcSplitGain이 같은 leaf로 던진다", () => {
         landDecedentAcquisitionDate: cause === "inheritance" ? D("1960-01-01") : undefined,
         landAcquisitionPrice: 300_000_000,
         landSec164Value: 350_000_000,
+        landSec164ValueWhole: 350_000_000,
       }).determinedTax;
     expect(at("1984-05-01", "gift")).toBe(at("1988-05-01", "gift"));
     expect(at("1984-05-01", "inheritance")).toBe(at("1988-05-01", "inheritance"));
     expect(at("1984-05-01", "gift")).toBe(at("1984-05-01", "inheritance"));
   });
   it("D1-4 ① 평가액 없음 + ② 있음 → ②로 채우지 않는다(① 미입력 차단 경로를 건너뛰지 않음 — ②만 있는 것과 ① 없음이 같은 결과)", () => {
-    const pre = { landAcquisitionDate: D("1984-05-01"), landDecedentAcquisitionDate: D("1960-01-01"), landAcquisitionPrice: undefined };
+    const pre = { landAcquisitionDate: D("1984-05-01"), landDecedentAcquisitionDate: D("1960-01-01"), landAcquisitionPrice: undefined, landSec164ValueWhole: 350_000_000 };
     const outcome = (o: Partial<TransferTaxInput>) => {
       try {
         return { land: run(o).splitDetail?.land?.acquisitionPrice };
@@ -312,7 +319,7 @@ describe("⑫ 컴패니언 경로 — companionAssets[i]에 같은 규칙", () =
     expect(landIssues(companion)).toEqual([]);
   });
   it("Q-7 긍정 짝: 1984 + ② 있음은 issue 0 · 1990-08-30 당일은 ② 없이 0", () => {
-    expect(landIssues({ ...companion, landAcquisitionDate: "1984-05-01", landSec164Value: 350_000_000 })).toEqual([]);
+    expect(landIssues({ ...companion, landAcquisitionDate: "1984-05-01", landSec164Value: 350_000_000, landSec164ValueWhole: 350_000_000 })).toEqual([]);
     expect(landIssues({ ...companion, landAcquisitionDate: "1990-08-30" })).toEqual([]);
   });
   it.each([

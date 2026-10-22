@@ -171,6 +171,13 @@ export const SPLIT_SEC164_BUILDING_VALUE_LABEL = "영 §164⑦ 가액의 건물 
 /** 토지 파트 ② 가액의 이름(D1-H) — 1990.8.30.~2005.4.29. 상속·증여 주택 부수토지는 영 §164⑦로 환산한 주택가격을 토지 몫으로 안분한다. */
 export const SPLIT_SEC164_HOUSE_LAND_VALUE_LABEL = "영 §164⑦ 가액의 토지 몫";
 
+/** ③ 이름 — 1985.1.1. 전 상속·증여 토지 파트(3자 max · 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13). */
+export const SPLIT_CONVERTED_VALUE_LABEL = "환산취득가액(영 §176조의2④)";
+
+/** D2 1985.1.1. 전 건물 파트 — ③을 비교하지 않았다는 고지(Q-9 a). 문구에 `/`·`÷`를 쓰지 않는다. */
+export const SPLIT_PRE_DEEMED_UNCOMPARED_NOTE =
+  "1985.1.1. 전 상속·증여 건물은 환산취득가액과 비교하지 않았습니다(개별주택가격 기준 가액과 양도시 건물 기준시가의 척도가 달라 이 계산에서 지원하지 않음 — 확인 필요)";
+
 /** 비교 규칙별 파트·② 이름·근거 — 엔진 echo `rule`이 단일 키다(호출부가 파트·조문을 하드코딩하지 않는다). */
 const SPLIT_ACQ_BASIS_RULE = {
   sec163_9_1: { partLabel: "토지", sec164Label: SPLIT_SEC164_VALUE_LABEL, legalBasis: "소득세법 시행령 §163조 제9항 단서 1호" },
@@ -188,7 +195,12 @@ export interface SplitAcqBasisView {
   sec164Label: string;
   reported: number;
   sec164: number;
-  adopted: "reported" | "sec164";
+  /** ③ — 1985.1.1. 전 토지 파트만 */
+  converted?: number;
+  convertedLabel: string;
+  adopted: "reported" | "sec164" | "converted";
+  /** D2 1985.1.1. 전 건물 — ③ 미비교 고지(있으면 표시) */
+  uncomparedNote?: string;
   /** 채택된 쪽 이름 */
   adoptedLabel: string;
   /** 채택된 금액 */
@@ -207,25 +219,39 @@ export function splitAcqBasisView(
   const b = p.acquisitionBasis;
   if (!b) return undefined;
   const reportedLabel = p.acquisitionCause === "gift" ? SPLIT_CAUSE_VALUE_LABEL.gift : SPLIT_CAUSE_VALUE_LABEL.inheritance;
-  const adoptedReported = b.adopted === "reported";
   const { partLabel, sec164Label, legalBasis } = SPLIT_ACQ_BASIS_RULE[b.rule];
+  const [adoptedLabel, adoptedValue] =
+    b.adopted === "reported"
+      ? [reportedLabel, b.reported]
+      : b.adopted === "sec164"
+        ? [sec164Label, b.sec164]
+        : [SPLIT_CONVERTED_VALUE_LABEL, b.converted ?? 0];
   return {
     partLabel,
-    legalBasis,
+    // ③이 있으면 근거에 §176조의2④를 더한다(①②는 §163⑨ 단서 1호).
+    legalBasis: b.converted !== undefined ? `${legalBasis} · 같은 영 §176조의2④` : legalBasis,
     reportedLabel,
     sec164Label,
     reported: b.reported,
     sec164: b.sec164,
+    ...(b.converted !== undefined ? { converted: b.converted } : {}),
+    convertedLabel: SPLIT_CONVERTED_VALUE_LABEL,
     adopted: b.adopted,
-    adoptedLabel: adoptedReported ? reportedLabel : sec164Label,
-    adoptedValue: adoptedReported ? b.reported : b.sec164,
+    ...(b.preDeemedUncompared ? { uncomparedNote: SPLIT_PRE_DEEMED_UNCOMPARED_NOTE } : {}),
+    adoptedLabel,
+    adoptedValue,
   };
 }
 
-/** `토지 취득가액 = 많은 금액(상속개시일 평가액 A, 영 §164④ 가액 B) = C` — 숫자 `/`·`÷` 없음(분수 치환 방지). 건물(단서 2호)도 같은 모양. */
+/**
+ * `토지 취득가액 = 많은 금액(상속개시일 평가액 A, 영 §164④ 가액 B) = C` — 숫자 `/`·`÷` 없음(분수 치환 방지). 건물(단서 2호)도 같은 모양.
+ * 1985.1.1. 전 토지 파트는 ③을 더한 3자(`…, 환산취득가액(영 §176조의2④) D) = E`), D2 1985 전 건물은 미비교 고지를 붙인다.
+ */
 export function splitAcqBasisFormula(v: SplitAcqBasisView): string {
   const f = (n: number) => n.toLocaleString();
-  return `${v.partLabel} 취득가액 = 많은 금액(${v.reportedLabel} ${f(v.reported)}, ${v.sec164Label} ${f(v.sec164)}) = ${f(v.adoptedValue)}`;
+  const third = v.converted !== undefined ? `, ${v.convertedLabel} ${f(v.converted)}` : "";
+  const note = v.uncomparedNote ? ` — ${v.uncomparedNote}` : "";
+  return `${v.partLabel} 취득가액 = 많은 금액(${v.reportedLabel} ${f(v.reported)}, ${v.sec164Label} ${f(v.sec164)}${third}) = ${f(v.adoptedValue)}${note}`;
 }
 
 export interface SplitGainPartSummary {

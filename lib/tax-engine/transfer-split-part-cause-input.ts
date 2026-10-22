@@ -34,6 +34,8 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     hasPreHousingDisclosure: !!input.preHousingDisclosure,
     hasFamilyBusinessInheritance: !!input.familyBusinessInheritance,
     landSec164Value: input.landSec164Value,
+    landSec164ValueWhole: input.landSec164ValueWhole,
+    hasLandStdAtTransfer: (input.landStandardPriceAtTransfer ?? 0) > 0,
     isPartialAreaTransfer: input.isPartialAreaTransfer,
     // D2-4 — 건물 상속·증여 §163⑨ 단서 2호(단독·다가구주택만). 주택 여부는 엔진 입력의 자산 종류에서 읽는다.
     isHousing: input.propertyType === "housing",

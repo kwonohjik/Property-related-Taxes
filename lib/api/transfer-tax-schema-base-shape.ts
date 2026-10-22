@@ -315,6 +315,8 @@ export const propertyBaseShape = {
   landDecedentAcquisitionDate: z.string().date().optional(),
   /** 토지 파트 영 §164④ 가액(②, 총액·지분 스케일 후) — 1990.8.30. 전 상속·증여 토지(영 §163⑨ 단서 1호)에서 필수, 엔진이 평가액과 max */
   landSec164Value: z.number().int().positive().optional(),
+  /** ②의 지분 반영 전 총액 — 1985.1.1. 전 상속·증여 토지 파트에서 필수(③ 환산취득가액 분자 · 계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §13) */
+  landSec164ValueWhole: z.number().int().positive().optional(),
   /** 면적 입력 방식 「일부 양도」 — 단서 구간 차단 사실(D1-4). 그 밖은 무영향 */
   isPartialAreaTransfer: z.boolean().optional(),
   /** 건물 파트 영 §164⑦ 가액(②, 건물 몫 총액·지분 스케일 후) — 2005.4.30. 전 상속·증여 건물(영 §163⑨ 단서 2호, 단독·다가구주택)에서 필수, 엔진이 평가액과 max */
