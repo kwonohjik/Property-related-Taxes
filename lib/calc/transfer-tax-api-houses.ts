@@ -117,9 +117,14 @@ export function buildHousesPayload(
    * 넘기지 않으므로 ②는 그쪽에서 실리지 않는다. 필수: 빠뜨린 호출부를 컴파일러가 찾는다.
    */
   transferDate: string | undefined,
+  /**
+   * 명부가 비어도 양도 주택 행 하나는 싣는다 — 다주택 중과 판정 메뉴 전용. 판정 메뉴에서 「목록 미입력 = 없음」이라
+   * 보유 주택이 양도 주택뿐인 세대도 정밀 판정(주택 수 1 · 조정대상지역)과 설명문을 받아야 한다. 계산기는 넘기지 않는다.
+   */
+  options?: { includeSellingWithoutRoster?: boolean },
 ): object[] | undefined {
   const hasMultiHouseEntries = houses.length > 0 || presaleRightsCount > 0;
-  if (!isHousingLike(primary.assetKind) || !hasMultiHouseEntries) return undefined;
+  if (!isHousingLike(primary.assetKind) || (!hasMultiHouseEntries && !options?.includeSellingWithoutRoster)) return undefined;
 
   const se = sellingExclusion;
   // D2(건물 상속·증여 + 토지 매매, 계획서 §12 D2-Q3) — 영 §155②(상속주택 특례)·§167의3①7호(5년 내 상속주택 중과 배제)는
