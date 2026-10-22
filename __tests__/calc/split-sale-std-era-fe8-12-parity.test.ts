@@ -5,6 +5,9 @@
  * 토지·건물 기준시가를 면제하는데, ⑫ Zod refine V7이 연혁을 보지 않고 무조건 요구해 «화면 통과 → 서버 400»이 났다.
  * 엔진은 그 구간에서 기준시가를 쓰지 않으므로(T-6) ⑫를 ⑧과 같은 술어로 좁혔다.
  *
+ * 후속(감정평가 양쪽): 양도시 감정평가가액이 토지·건물 양쪽이면 그 가액이 안분 basis 1순위라(부가령 §64①1호 단서) 양도시 기준시가는 안분·§100③ 판정에 쓰이지 않는다.
+ * ⑫는 이미 그렇게 풀어 줬고 ⑧만 기준시가를 요구하던 비대칭(47셀)을 같은 술어로 맞췄다 — T-4(전 256셀 ⇔)·T-10~T-12. 계획서: docs/00-pm/split-sale-std-appraisal-fe8-parity.plan.md
+ *
  * 기대값의 정본은 ⑫ route 응답(status·fieldErrors)이고, ⑧은 `collectStepIssues` 0·1단계 차단 여부다 — 두 쪽을 같은 폼으로 나란히 돌린다.
  * 계획서: docs/00-pm/split-v7-pre2016-fe8-12-parity.plan.md
  */
@@ -215,7 +218,7 @@ describe("T-9 · saleSplitMode 생략 직접 API — fail-closed(현행 유지)"
 });
 
 describe("T-4 · 격자 정합 — 양도일{2015-12-31, 2016-01-01} × 구분 방식 × 취득 모드 × 감정평가 × 구분 기재 × 기준시가", () => {
-  type Cell = { td: string; sm: string; lm: string; bm: string; app: "noApp" | "bothApp"; price: string; std: Std; blocked8: boolean; st12: number };
+  type Cell = { td: string; sm: string; lm: string; bm: string; app: "noApp" | "bothApp"; price: string; std: Std; blocked8: boolean; st12: number; res: string };
   const cells: Cell[] = [];
 
   it("256셀 수집", async () => {
@@ -244,7 +247,7 @@ describe("T-4 · 격자 정합 — 양도일{2015-12-31, 2016-01-01} × 구분 �
                   over.buildingAppraisalAtTransfer = "400,000,000";
                 }
                 const r = await both(formOf(td, over));
-                cells.push({ td, sm, lm, bm, app, price, std, blocked8: r.blocked8, st12: r.st12 });
+                cells.push({ td, sm, lm, bm, app, price, std, blocked8: r.blocked8, st12: r.st12, res: JSON.stringify(r.json?.data?.result ?? null) });
               }
     expect(cells.length).toBe(256);
   }, 180_000);
@@ -268,9 +271,169 @@ describe("T-4 · 격자 정합 — 양도일{2015-12-31, 2016-01-01} × 구분 �
     expect(contradictions, JSON.stringify(contradictions.slice(0, 3))).toEqual([]);
   });
 
-  it("T-8 · ⑧이 더 엄격한 셀은 전부 감정평가 양쪽 입력 셀 — 의도된 비대칭(별건), 양방향 단언 금지", () => {
-    const stricter = cells.filter((c) => c.blocked8 && c.st12 === 200);
-    expect(stricter.length).toBeGreaterThan(0);
-    expect(stricter.every((c) => c.app === "bothApp")).toBe(true);
+  it("전 256셀: ⑧ 차단 ⇔ ⑫ 400 (양방향 정합 — 감정평가 양쪽 셀 포함) · 비공허", () => {
+    const mismatch = cells.filter((c) => c.blocked8 !== (c.st12 === 400));
+    expect(mismatch, JSON.stringify(mismatch.slice(0, 3))).toEqual([]);
+    const blocked = cells.filter((c) => c.blocked8).length;
+    expect(blocked).toBeGreaterThanOrEqual(130);
+    expect(cells.length - blocked).toBeGreaterThanOrEqual(110);
   });
+
+  it("T-10 · 감정평가 양쪽: 환산 파트가 없으면 기준시가가 없어도·한쪽만 있어도 ⑧ 통과 ∧ ⑫ 200 (V4·V7 모두)", () => {
+    const sub = cells.filter((c) => c.app === "bothApp" && c.lm === "actual" && c.bm === "actual");
+    expect(sub.length).toBe(40); // 양도일 2 × (구분양도 priced·unpriced + 일괄 unpriced + 감정 priced·unpriced = 5) × 기준시가 4
+    const bad = sub.filter((c) => c.blocked8 || c.st12 !== 200);
+    expect(bad, JSON.stringify(bad.slice(0, 3))).toEqual([]);
+    // 비공허: 기준시가 없음·토지만·건물만이 각각 들어 있다
+    for (const std of ["none", "landOnly", "bldOnly"] as const) expect(sub.some((c) => c.std === std)).toBe(true);
+  });
+
+  it("T-11 · 감정평가 양쪽 + 환산 파트: 그 파트의 분모(양도시 기준시가)만 요구한다 — 반대 파트 기준시가는 요구하지 않는다", () => {
+    for (const [part, own, other] of [["토지", "landOnly", "bldOnly"], ["건물", "bldOnly", "landOnly"]] as const) {
+      const sub = cells.filter((c) => c.app === "bothApp" && (part === "토지" ? c.lm === "estimated" && c.bm === "actual" : c.bm === "estimated" && c.lm === "actual"));
+      expect(sub.length).toBeGreaterThan(0);
+      for (const c of sub) {
+        const ok = c.std === "both" || c.std === own;
+        expect(c.blocked8, `${part} ${c.td}/${c.sm}/${c.price}/${c.std} ⑧`).toBe(!ok);
+        expect(c.st12 === 400, `${part} ${c.td}/${c.sm}/${c.price}/${c.std} ⑫`).toBe(!ok);
+      }
+      expect(sub.some((c) => c.std === other)).toBe(true);
+    }
+  });
+
+  it("T-12 · 세액 불변 — 감정평가 양쪽이면 결과 전체가 기준시가 입력과 무관하다 (200인 셀끼리 result JSON 동일)", () => {
+    const groups = new Map<string, Cell[]>();
+    for (const c of cells.filter((x) => x.app === "bothApp" && x.st12 === 200)) {
+      const k = [c.td, c.sm, c.lm, c.bm, c.price].join("|");
+      groups.set(k, [...(groups.get(k) ?? []), c]);
+    }
+    let compared = 0;
+    for (const [k, g] of groups) {
+      for (const c of g.slice(1)) {
+        expect(c.res, `${k}: ${g[0].std} vs ${c.std}`).toBe(g[0].res);
+        compared++;
+      }
+    }
+    expect(compared).toBeGreaterThanOrEqual(40);
+  });
+});
+
+describe("T-13 · 소유자 분리(동시 취득 · 개별주택가격 비례 안분) 격자 — 감정평가 양쪽에서도 ⑧ 차단 ⇔ ⑫ 400", () => {
+  it("384셀(환산 없음·본인 소유 파트 환산·비소유 파트 환산): 모순 0 · 불일치 0 · 환산 파트가 있으면 비례 척도라 양쪽 기준시가를 요구(부분 입력 차단) · 없으면 요구 없음", async () => {
+    type C = { so: string; est: string; app: string; std: Std; td: string; sm: string; price: string; blocked8: boolean; st12: number; res: string };
+    const cells: C[] = [];
+    for (const td of [EARLY, FIRST])
+      for (const so of ["land_only", "building_only"])
+        for (const est of ["none", "owned", "foreign"])
+          for (const sm of ["actual", "apportioned", "appraisal"])
+            for (const app of ["noApp", "bothApp"])
+              for (const std of ["none", "both", "landOnly", "bldOnly"] as const)
+                for (const price of ["priced", "unpriced"]) {
+                  if (sm === "appraisal" && app === "noApp") continue;
+                  if (sm === "apportioned" && price === "priced") continue;
+                  // owned = 본인 소유 파트가 환산, foreign = 소유하지 않는 파트가 환산(엔진·⑫는 비소유 파트 환산을 세지 않는다)
+                  const lm = (so === "land_only" && est === "owned") || (so === "building_only" && est === "foreign") ? "estimated" : "actual";
+                  const bm = (so === "building_only" && est === "owned") || (so === "land_only" && est === "foreign") ? "estimated" : "actual";
+                  const over: Record<string, unknown> = {
+                    saleSplitMode: sm,
+                    selfOwns: so,
+                    hasSeperateLandAcquisitionDate: false,
+                    landAcquisitionDate: "",
+                    acquisitionDate: "2005-06-01",
+                    landAcqMode: lm,
+                    buildingAcqMode: bm,
+                    landAcquisitionPrice: lm === "actual" ? "300,000,000" : "",
+                    buildingAcquisitionPrice: bm === "actual" ? "250,000,000" : "",
+                    standardPriceAtAcq: "300,000,000",
+                    fixedAcquisitionPrice: "550,000,000",
+                    standardPriceAtTransfer: est !== "none" ? "900,000,000" : "",
+                    ...stdOver(std),
+                  };
+                  if (price === "priced") {
+                    over.landTransferPrice = "1,200,000,000";
+                    over.buildingTransferPrice = "300,000,000";
+                  }
+                  if (app === "bothApp") {
+                    over.landAppraisalAtTransfer = "1,100,000,000";
+                    over.buildingAppraisalAtTransfer = "400,000,000";
+                  }
+                  const r = await both(formOf(td, over));
+                  cells.push({ so, est, app, std, td, sm, price, blocked8: r.blocked8, st12: r.st12, res: JSON.stringify(r.json?.data?.result ?? null) });
+                }
+    expect(cells.length).toBe(384);
+    const mismatch = cells.filter((c) => c.blocked8 !== (c.st12 === 400));
+    expect(mismatch, JSON.stringify(mismatch.slice(0, 3).map((c) => ({ ...c, res: undefined })))).toEqual([]);
+    // 비공허: 감정평가 양쪽 + 환산 파트 + 부분 기준시가 = 차단, 환산 파트 없음 + 기준시가 없음 = 통과
+    expect(cells.some((c) => c.app === "bothApp" && c.est === "owned" && (c.std === "landOnly" || c.std === "bldOnly") && c.blocked8)).toBe(true);
+    expect(cells.some((c) => c.app === "bothApp" && c.est === "none" && c.std === "none" && !c.blocked8 && c.st12 === 200)).toBe(true);
+    // 비소유 파트 환산은 분모가 쓰이지 않는다 — 기준시가 없이도 통과
+    expect(cells.some((c) => c.app === "bothApp" && c.est === "foreign" && c.std === "none" && !c.blocked8 && c.st12 === 200)).toBe(true);
+    // 세액 불변: 감정평가 양쪽 + 환산 파트 없음이면 기준시가와 무관
+    const byKey = new Map<string, C[]>();
+    for (const c of cells.filter((x) => x.app === "bothApp" && x.est !== "owned" && x.st12 === 200)) {
+      const k = [c.td, c.so, c.est, c.sm, c.price].join("|");
+      byKey.set(k, [...(byKey.get(k) ?? []), c]);
+    }
+    let compared = 0;
+    for (const [k, g] of byKey) for (const c of g.slice(1)) { expect(c.res, k).toBe(g[0].res); compared++; }
+    expect(compared).toBeGreaterThanOrEqual(30);
+  }, 180_000);
+});
+
+describe("T-15 · 감정평가 한쪽만 — 기존 동작 유지(안분 basis가 못 되므로 기준시가를 계속 요구)", () => {
+  for (const [name, app] of [
+    ["토지만", { landAppraisalAtTransfer: "1,100,000,000" }],
+    ["건물만", { buildingAppraisalAtTransfer: "400,000,000" }],
+  ] as const) {
+    // 2016-01-01(연혁 면제 없음)만 — 2015-12-31은 면제라 ⑫가 200이고 ⑧은 V8(한쪽만 입력)로 막는 별개 비대칭이다(fail-closed, 기준시가와 무관).
+    for (const td of [FIRST]) {
+      it(`${name} · ${td} · 기준시가 없음: ⑧ 차단 ∧ ⑫ 400(양도시 기준시가 두 칸)`, async () => {
+        const r = await both(formOf(td, { ...SALE_ACTUAL, landAcqMode: "actual", buildingAcqMode: "actual", ...app }, "2017-02-28"));
+        expect(r.blocked8).toBe(true);
+        // ⑧도 한쪽만 입력한 감정평가를 안분 basis로 보지 않아 V8(한쪽만 입력)보다 먼저 V7(양도시 기준시가)에서 막힌다
+        expect(r.i8[0].message).toContain("양도시 기준시가");
+        expect(r.st12).toBe(400);
+        expect(r.keys12.sort()).toEqual([BLD_KEY, LAND_KEY].sort());
+      });
+    }
+  }
+});
+
+describe("T-14 · 파트 이월과세(증여자 환산) 격자 — 감정평가 양쪽에서도 ⑧ 차단 ⇔ ⑫ 400", () => {
+  it("72셀: 불일치 0 · 증여자 환산 파트의 분모만 요구", async () => {
+    const est = { partEstimated: true, donorAcquisitionPrice: "", donorStandardPriceAtAcquisition: "30,000,000" };
+    type C = { donor: string; app: string; std: string; blocked8: boolean; st12: number };
+    const cells: C[] = [];
+    for (const [td, filing] of [["2015-09-30", "2015-11-30"], ["2025-06-30", "2025-08-31"]])
+      for (const donor of ["none", "land", "building"])
+        for (const sm of ["actual", "appraisal"])
+          for (const app of ["noApp", "bothApp"])
+            for (const std of ["none", "both", "landOnly", "bldOnly"]) {
+              if (sm === "appraisal" && app === "noApp") continue;
+              const base = cAsset();
+              const over: Record<string, unknown> = {
+                saleSplitMode: sm,
+                landStandardPriceAtTransfer: std === "both" || std === "landOnly" ? "700,000,000" : "",
+                buildingStandardPriceAtTransfer: std === "both" || std === "bldOnly" ? "500,000,000" : "",
+                landCarryover: { ...base.landCarryover, donorAcquisitionDate: "1995-03-01", ...(donor === "land" ? est : {}) },
+                carryover: { ...base.carryover, giftRegistryDate: "2012-03-01", donorAcquisitionDate: "2008-06-01", ...(donor === "building" ? est : {}) },
+              };
+              if (sm === "appraisal") {
+                over.landTransferPrice = "";
+                over.buildingTransferPrice = "";
+              }
+              if (app === "bothApp") {
+                over.landAppraisalAtTransfer = "700,000,000";
+                over.buildingAppraisalAtTransfer = "500,000,000";
+              }
+              const r = await both(cForm({ transferDate: td, filingDate: filing } as never, cAsset(over)));
+              cells.push({ donor, app, std, blocked8: r.blocked8, st12: r.st12 });
+            }
+    expect(cells.length).toBe(72);
+    const mismatch = cells.filter((c) => c.blocked8 !== (c.st12 === 400));
+    expect(mismatch, JSON.stringify(mismatch.slice(0, 3))).toEqual([]);
+    // 비공허: 증여자 환산 토지 + 토지 기준시가만 = 통과(건물 기준시가 불요), 증여자 환산 토지 + 건물 기준시가만 = 차단
+    expect(cells.some((c) => c.app === "bothApp" && c.donor === "land" && c.std === "landOnly" && !c.blocked8 && c.st12 === 200)).toBe(true);
+    expect(cells.some((c) => c.app === "bothApp" && c.donor === "land" && c.std === "bldOnly" && c.blocked8 && c.st12 === 400)).toBe(true);
+  }, 180_000);
 });
