@@ -16,6 +16,7 @@
  */
 
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { buildGeneralBuildingAssetCards } from "@/lib/tax-engine/general-building-valuation";
 import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
@@ -180,6 +181,30 @@ export function coerceGeneralBuildingPayload(
       : {}),
   };
   return coercedGbRaw;
+}
+
+/**
+ * 계약서 구분 기재 양도가액(「소득세법」 §100②)을 **지분 몫**으로 줄인다 — 지분 양도가액을 정하는 진입점(단건·지분 카드)이 부른다.
+ *
+ * 구분 가액은 물건 단위 100% 기준 입력이라(⑫가 전 지분 동일을 강제) 지분 양도가액(총액 × 지분율)과 합이 맞지 않아
+ * 엔진이 「합 불일치」 400을 냈다. 토지만 × 지분율(버림)로 보내고 건물은 비운다 — 엔진이 「총액 − 토지」로 정한다
+ * (한쪽 기재 규칙, `allocateBundledTransferPrice`). 그래서 1원 끝수로 합이 어긋나는 일이 구조적으로 없다.
+ * 건물만 기재했으면 건물을 줄인다. 단독 소유(지분율 없음·1)면 그대로다.
+ */
+export function scaleDeclaredSaleSplitToShare(
+  gbRaw: Record<string, unknown>,
+  ownershipRatio: number | undefined,
+): Record<string, unknown> {
+  if (ownershipRatio === undefined || !(ownershipRatio > 0 && ownershipRatio < 1)) return gbRaw;
+  const land = gbRaw.landTransferPrice as number | undefined;
+  const building = gbRaw.buildingTransferPrice as number | undefined;
+  if (land == null && building == null) return gbRaw;
+  const out = { ...gbRaw };
+  delete out.landTransferPrice;
+  delete out.buildingTransferPrice;
+  if (land != null) out.landTransferPrice = applyRatio(land, ownershipRatio);
+  else out.buildingTransferPrice = applyRatio(building as number, ownershipRatio);
+  return out;
 }
 
 /**

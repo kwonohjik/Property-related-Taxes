@@ -54,6 +54,7 @@ export {
   type GeneralBuildingValuationPayload,
 } from "@/lib/tax-engine/general-building-entry";
 // 재수출은 로컬 바인딩을 만들지 않는다 — 이 파일 본문에서도 쓰므로 별도로 들여온다.
+import { scaleDeclaredSaleSplitToShare } from "@/lib/tax-engine/general-building-entry";
 import {
   coerceGeneralBuildingPayload,
   buildEstimatedGeneralBuildingCards,
@@ -110,7 +111,8 @@ export function dispatchGeneralBuilding(
    */
   assetLevel?: GbAssetLevelInputs,
 ): GeneralBuildingRouteResult {
-  const coercedGbRaw = coerceGeneralBuildingPayload(gbRaw);
+  // 공유 지분 — 계약서 구분 기재 양도가액(100% 기준)을 지분 양도가액에 맞춘다(지분·컴패니언 카드 `buildGbPartCards`와 같은 leaf).
+  const coercedGbRaw = scaleDeclaredSaleSplitToShare(coerceGeneralBuildingPayload(gbRaw), ownershipRatio);
   const buildingAcqDate = coercedGbRaw.buildingAcquisitionDate as Date | undefined;
   const landAcqDateCoerced = coercedGbRaw.landAcquisitionDate as Date | undefined;
   const buildingAcqCause = coercedGbRaw.buildingAcquisitionCause as
