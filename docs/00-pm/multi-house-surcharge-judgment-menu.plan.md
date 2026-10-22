@@ -260,7 +260,7 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | state | `surcharge: { currentStep, result, resultClientId, error, isLoading }` — 초기값은 팩토리 `createInitialSurchargeSlot()` 하나 |
 | `updateFormData` | 같은 `set`에서 `surcharge.result/resultClientId`도 null(단계·오류는 유지) |
 | `reset` · `discardResultForClientChange` · `onRehydrateStorage` | 슬롯 초기화 |
-| 의뢰인 전환 구독(`:124-129`) | 조건을 `result !== null \|\| surcharge.result !== null`로 확장 |
+| 의뢰인 전환 구독(`:124-129`) | 조건을 `result !== null \|\| surcharge.result !== null`로 확장. **P5 정밀화**: `discardResultForClientChange`는 결과가 있는 메뉴만 비우고 1단계로 보낸다 — 두 메뉴를 한꺼번에 초기화하면 결과가 없는(입력 도중인) 다른 메뉴의 단계까지 0이 되어 구독 주석의 「결과가 있을 때만 비운다」 원칙과 어긋난다 |
 | 신규 액션 | `setSurchargeStep` · `setSurchargeResult(result, clientId)` · `setSurchargeError` · `setSurchargeLoading` |
 | persist | `partialize: formData` 그대로 — 슬롯은 자동 제외 |
 
@@ -413,11 +413,11 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | 파일 | 지키는 것 |
 |---|---|
 | `__tests__/calc/judgment-menu-flags.anchor.test.ts` | one_house 매핑 = 종전 값, surcharge 매핑 |
-| `__tests__/stores/one-house-judgment-store-surcharge-slot.test.ts` | `updateFormData`가 두 슬롯 무효화 · reset/의뢰인 전환/rehydrate · partialize |
+| `__tests__/stores/one-house-judgment-store-surcharge-slot.test.tsx`(persist API가 sessionStorage를 요구해 jsdom) | `updateFormData`가 두 슬롯 무효화 · reset/의뢰인 전환/rehydrate · partialize |
 | `__tests__/calc/multi-house-surcharge-calculator-isolation.anchor.test.tsx` | 의뢰인 격리 · 응답 귀속 · 점프 관문 · 자동저장 **미호출** |
 | `__tests__/calc/judgment-input-sharing.anchor.test.tsx` | 한 메뉴 입력이 다른 메뉴에 그대로 렌더 |
 | `__tests__/calc/multi-house-surcharge-api.anchor.test.ts` | 공통 키는 1주택 body와 동일 · 중과 축 도달 · 3중 패턴(UI 노출 ↔ 전송 ↔ validate) |
-| `__tests__/calc/one-house-judgment-handoff.anchor.test.ts`(확장) | 중과 값 도착 · 1주택 값은 종전대로 |
+| `__tests__/calc/handoff-patch-keys-s11-7.anchor.test.ts`(확장 — 2주택 중과 세액 하네스가 이미 있어 이 파일에 둠) | 중과 값 도착(세액 짝) · 판정 폼에 값이 없으면 이전 물건 값이 남지 않음(기존 단언) |
 | `__tests__/calc/surcharge-result-table.ui.test.tsx` | 행·열·○/× · 금액 칸 클래스 · 「원」 없음 |
 | `__tests__/calc/swap-selling-house.test.ts` | 대응표 전 필드 · 양도 주택 전용 사실 비움 · 명부 행 수 보존 |
 | `e2e/multi-house-surcharge-flow.spec.ts` | 시드 → 판정 → 표·상세 → 계산기 넘기기 후 중과 사실 도착 |
@@ -439,8 +439,8 @@ lib/tax-engine/multi-house-surcharge-narrative.ts  # 설명문·decisionStageOf�
 | P3a ✅ #2428 | 엔진 배관(결과 불변 + 반사실 플래그) — `forceNoMultiHouseSurcharge`(술어 최상단 게이트 · `transfer-tax.ts` 장특 리터럴 명시 전달) · `assembleSurchargeHouseSet`/`linkSurchargeHousesForSelling` export · `resolveHceGeneralHouseAcquisitionDate` 추출 · `classifyRegionCriteriaDetail` · `presaleRightCountReason` | MH-P6·P9(FN-1~5) · 지역기준 이유 · 권리 사유 · 집합 조립 |
 | P3b ✅ #2429 | `multi-house-surcharge-narrative.ts` — `decisionStageOf`(7갈래) · 행별 간이 판정(`rowJudgmentHouses` = STEP 0.5 집합 − 11호 계약 사실 · `judgeSurchargeRowSimplified` · 소재지 코드 없으면 조정지역으로 봄) · 민감도 S1~S3 · `judgeSurchargeRows` | MH-P3(RJ-1)·P5(SN-1~3)·P7(DS-1·2)·P10(RJ-2·3) |
 | P3c ✅ #2432 | 설명문 `buildSurchargeNarrative`(`multi-house-surcharge-narrative-steps.ts`) — ①조정대상지역 ②판정기준 ③주택 수 ④배제 ⑤유예·취득 시기 특례 ⑥결론. ①②③은 늘, ④⑤는 엔진이 간 단계만. `decisive` = `decisionStageOf`. `headline.warnings` 전건 → `checks`(코드 없음 경고만 ①의 쉬운 문구로 대신 — `REGION_CODE_MISSING_WARNING` export). 주택별 서술은 `houseNotes`(문장에 id 없음) | NR-1~10 · NC-1·2 · mutation 10/10 포착 |
-| P4 🔄 | route `app/api/calc/multi-house-surcharge-judgment/` (`{ property }` · 순수 조립 `surcharge-judgment-payload.ts`) + 공용 전처리 `one-house-exemption/judgment-request.ts`(1주택 route 284→79줄, 동작 불변) + body `lib/calc/multi-house-surcharge-api.ts`(1주택 본문 + 양도 주택 배제 사실 + `gracePeriod`(파생 주택 수 폼) + 빈 명부에도 양도 주택 행 — `buildHousesPayload` `includeSellingWithoutRoster`). scope 밖 4종: `before_2018_04_01`·`non_housing_sale`(입주권·분양권 양도 — 행 표는 V-5 남음)·`rules_not_loaded`·`no_house_roster`. 가목 유예는 엔진이 목을 비워 두므로 `rateImpact.suspension.basis`를 `"a"`로 정규화 | MH-1~5 · MH-B1~B6 · MH-P1·P2(3폼) · MH-P4 · 20건 · mutation 9/10(M8 감면 배제 전달 = 동치: 메뉴 본문 `reductions`는 §99의4·§98의9 행 선언뿐이라 중과 배제 감면 목록과 겹치지 않음) |
-| P5 | store 슬롯 · handoff 수정 | store·handoff anchor |
+| P4 ✅ #2434 | route `app/api/calc/multi-house-surcharge-judgment/` (`{ property }` · 순수 조립 `surcharge-judgment-payload.ts`) + 공용 전처리 `one-house-exemption/judgment-request.ts`(1주택 route 284→79줄, 동작 불변) + body `lib/calc/multi-house-surcharge-api.ts`(1주택 본문 + 양도 주택 배제 사실 + `gracePeriod`(파생 주택 수 폼) + 빈 명부에도 양도 주택 행 — `buildHousesPayload` `includeSellingWithoutRoster`). scope 밖 4종: `before_2018_04_01`·`non_housing_sale`(입주권·분양권 양도 — 행 표는 V-5 남음)·`rules_not_loaded`·`no_house_roster`. 가목 유예는 엔진이 목을 비워 두므로 `rateImpact.suspension.basis`를 `"a"`로 정규화 | MH-1~5 · MH-B1~B6 · MH-P1·P2(3폼) · MH-P4 · 20건 · mutation 9/10(M8 감면 배제 전달 = 동치: 메뉴 본문 `reductions`는 §99의4·§98의9 행 선언뿐이라 중과 배제 감면 목록과 겹치지 않음) |
+| P5 🔄 | store `surcharge` 슬롯(`SurchargeJudgmentSlot` · `createInitialSurchargeSlot` · 액션 4개) — `updateFormData` 한 `set`에서 두 메뉴 결과 무효화 · reset/rehydrate 초기화 · 의뢰인 전환은 **결과가 있는 메뉴만** 비움(§5.2 정밀화) · handoff는 판정 폼의 `sellingHouseExclusion`·`gracePeriod`를 넘김(§5.7) | SS-1~4(9건) · P5 짝 2건(S11-7 파일 — 같은 B 폼 저당권 실행 선언 도착 → 2주택 중과 배제) · S11-7 기존 단언 통과 · mutation 9/9 |
 | P6 | 라우트·오케스트레이터·단계 재사용·M1·사이드바·validate·교차 링크 | 격리·공유·3중 패턴 anchor |
 | P7 | 결과 뷰(표·상세·D3 a/b/d) | UI 테스트 · E2E flow |
 | P8 | 시뮬레이션 단계(D3c) | MH-P6 화면 · E2E |
