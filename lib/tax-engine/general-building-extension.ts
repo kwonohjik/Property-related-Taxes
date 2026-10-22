@@ -39,6 +39,7 @@ import {
   type AssetCardForAggregate,
 } from "./general-building-valuation";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { apportionByStdPrice } from "./std-price-apportion";
 
 // ============================================================
 // 증축 3-way 분기 메인 함수
@@ -120,6 +121,11 @@ export function buildGeneralBuildingAssetCardsWithExtension(
   let building1TransferPrice = apportionedBuilding1;
   let building2TransferPrice = apportionedBuilding2;
   let saleSplitJudgment: SaleSplitJudgmentDetail | undefined;
+  /**
+   * 양도비를 토지·건물1로 나눌 때 비례시킬 **자산가액**(「소득세법」 §100② 후문 · 2026-10-22 사용자 규칙).
+   * 기본은 양도시 기준시가(환산·기준시가 안분 — 종전과 같다). 구분 기재를 채택하면 그 가액을 쓴다(아래 `!deemedUnclear`).
+   */
+  let expenseSaleBasis = { land: landStdTotal, building: buildingStdTotal };
 
   if (hasDeclared) {
     if (landIn != null && buildingIn != null && landIn + buildingIn !== input.totalTransferPrice) {
@@ -154,6 +160,7 @@ export function buildGeneralBuildingAssetCardsWithExtension(
           ? Math.floor(safeMultiplyThenDivide(judged.applied.building, buildingStdTotal, buildingDenom))
           : judged.applied.building;
       building2TransferPrice = judged.applied.building - building1TransferPrice;
+      expenseSaleBasis = { land: landTransferPrice, building: building1TransferPrice };
     }
     // 발동 시에는 3-way 안분값(초기값)을 그대로 둔다.
 
@@ -247,12 +254,15 @@ export function buildGeneralBuildingAssetCardsWithExtension(
      * `actualBundledExpenses`는 세 후보를 한 슬롯에 담아 성질을 지우므로,
      * 배관이 함께 보낸 `bundledExpenseNature`로 축을 고른다.
      *
+     * 🔑 양도비의 비례 basis는 **각 파트에 적용된 양도가액**이다(2026-10-22 사용자 규칙) — 구분 기재를 채택했으면 그 가액
+     *    (`expenseSaleBasis`), 아니면 양도시 기준시가(종전과 같다).
+     *
      * ⚠️ `mixed`(legacy `directExpenses`)는 **취득시 유지**다 — 두 성질이 섞인 덩어리라
      *    나눌 근거가 없고, 근거 없이 바꾸면 기존 이력의 배분이 움직인다(W-5 교리).
      */
     const expenseIsTransferNature = ext.bundledExpenseNature === "transfer";
     landExp = expenseIsTransferNature
-      ? Math.floor(safeMultiplyThenDivide(bundledExp, landStdTotal, landStdTotal + buildingStdTotal))
+      ? apportionByStdPrice(bundledExp, expenseSaleBasis.land, expenseSaleBasis.building).land
       : Math.floor(safeMultiplyThenDivide(bundledExp, acqLandStdTotal, denom2));
     building1Exp = bundledExp - landExp; // 잔액 보정
 

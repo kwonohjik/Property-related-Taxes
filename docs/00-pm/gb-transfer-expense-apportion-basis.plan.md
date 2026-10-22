@@ -1,6 +1,6 @@
 # 일반건물 양도비 토지·건물 배분 기준 — 양도시 기준시가 고정 → 적용 자산가액(실가·감정가액·기준시가) 비례 계획서
 
-> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — 권장안: Q-1 (a) 양도측 «적용 양도가액» · Q-2 (a) 실가·증축 · Q-3 (a) legacy 현행 유지+정수화 · Q-4 (a) 자본적지출 현행 · Q-5 이번엔 유지 · Q-6 (b) 일반건물+swap+split/PHD 정수화 · Q-7 상세명세서 산식 포함 · Q-8 (a) 1 PR) → Do**
+> 작성 2026-10-22 · master `4568a1bcb` 기준 · 상태: **✅ Plan 확정 (2026-10-22 사용자 결정 — 권장안: Q-1 (a) 양도측 «적용 양도가액» · Q-2 (a) 실가·증축 · Q-3 (a) legacy 현행 유지+정수화 · Q-4 (a) 자본적지출 현행 · Q-5 이번엔 유지 · Q-6 (b) 일반건물+swap+split/PHD 정수화 · Q-7 상세명세서 산식 포함 · Q-8 (a) 1 PR) → ✅ Do 완료 (2026-10-22 — §11 Do 결과)**
 > 관련: `docs/00-pm/gb-and-one-side-appraisal-fe8-12-parity.plan.md` §8 확인 필요 1 · `docs/02-design/features/gb-actual-path-sale-split-noop.plan.md` §5(2026-08-07 P-2 확정 규칙) · `docs/00-pm/mixed-use-sale-split-basis.plan.md` R-2(겸용 선례) · `docs/00-pm/estimated-acquisition-float-precision.plan.md`(1원 과소 선례) · 짝 계획서 `docs/00-pm/gb-v8b-appraisal-mode-empty.plan.md`
 
 ## 0. 한 줄 요약
@@ -332,3 +332,54 @@ SURVIVED가 나오면 단언을 보강한다(특히 M-3: 30% 의제가 걸리는
 7. 브라우저 확인 + CI E2E 샤드
 
 **PR 1건 권장**(제품 파일 5~8개 · 테스트 1 + 수정 0~2). Q-5 (b)를 택하면 별도 PR.
+
+## 11. Do 결과 (2026-10-22)
+
+> 결정 Q-1 (a) · Q-2 (a) · Q-3 (a) · Q-4 (a) · Q-5 유지 · Q-6 (b) · Q-7 포함 · Q-8 1 PR 그대로 구현. 아래는 실측.
+
+### 11.1 변경 파일
+
+| 구분 | 파일 | 내용 |
+|---|---|---|
+| 엔진 | `lib/tax-engine/general-building-valuation.ts` | `allocateBundledTransferPrice` 반환에 `proportionBasis` 추가 — 구분 기재 채택이면 그 가액 · 감정이면 감정가액 · 기준시가 안분(의제 구분 불분명 포함)이면 **양도시 기준시가 원값** |
+| 엔진 | `app/api/calc/transfer/general-building-route-actual.ts` | 양도비 `apportionByStdPrice(transferExpense, saleBasis…)` · 자본적지출·일괄 취득가액·legacy 정수화 · 비율 변수 `landRatioNum`·`acqLandRatioNum` 제거 · echo 3필드 |
+| 엔진 | `app/api/calc/transfer/general-building-route-actual.types.ts` (신규) | payload·결과 타입 분리(762줄 위험구간 → 583줄) — 원 파일이 재수출 |
+| 엔진 | `lib/tax-engine/general-building-extension.ts` | 증축 양도비: 구분 기재 채택이면 `landTransferPrice : building1TransferPrice`, 아니면 양도시 기준시가(종전과 같다) |
+| 엔진 | `lib/tax-engine/general-building-swap.ts` | `allocateWithinGroup`·`resolvePerPart` 정수화(Q-6 b) |
+| 엔진 | `lib/tax-engine/transfer-tax-split-gain.ts` | split 양도비·PHD 양도비·PHD 자본적지출 정수화(Q-6 b) |
+| 타입 | `lib/tax-engine/types/general-building.types.ts` | `bundledActualCapitalExpenditure`·`bundledActualTransferExpense`·`bundledActualTransferBasis` (optional echo) |
+| 표시 ⑦ | `components/calc/results/transfer/DetailedStatementGbFormulas.ts` | `buildGbActualBundledExpenseFormula` — echo로 산식을 적고, 카드 값과 안 맞으면 종전 산식으로 후퇴 |
+| 테스트 | `__tests__/tax-engine/transfer/gb-transfer-expense-sale-basis.anchor.test.ts` (신규 34건) · `__tests__/lib/estimated-acq-float-policy.test.ts`(가드 확장) · `e2e/gb-transfer-expense-sale-basis.spec.ts`(신규 2건) | |
+
+### 11.2 계획과 달라진 점
+
+1. **비례 기준을 `allocation`(안분 결과)이 아니라 «안분에 쓰인 원래 basis 값»으로 한다.** 계획서 §5.2는 `sale.land/sale.building`(= 안분 결과)을 썼으나, 안분 결과는 총액에 맞춰 floor된 값이라 그 비율로 다시 나누면 기준시가로 한 번에 나눈 값과 1원 어긋난다. E-12 시료(양도비 91,640,000 · 토지 15,300,000 · 건물 77,500,000, 총 양도가 10억)에서 안분 결과 비례는 **15,108,749**(정확값 15,108,750)였다 ⇒ 사용자 규칙 «환산(기준시가 안분)이면 기준시가»를 문자 그대로 따라 `proportionBasis`를 새로 두었다.
+2. **echo 필드가 2개가 아니라 3개**(`bundledActualTransferBasis` 추가) — 기준시가 안분일 때 분모가 «적용 양도가액»이 아니라 «양도시 기준시가»여야 산식이 자기 값을 만든다(D-1).
+3. 타입 전용 파일 분리(`…route-actual.types.ts`)는 계획에 없던 것이다 — 기능 작업으로 파일이 762줄(≥750 위험구간)이 되어 «기회주의적 분리» 정책을 따랐다.
+4. 계획서 §4.1의 C 열 «기준시가 안분 취득일 상이 세액 불변» 수치는 **348,656,121이 아니라 336,224,441**이다(348,656,121은 A열 수정 전 값 — 계획서 표의 C 열에는 값이 없었다). 앵커는 실측 336,224,441로 고정했다.
+
+### 11.3 수정 전 실패 → 수정 후
+
+- anchor 신규 29건(당시) 중 **수정 전 20건 실패 · 9건 통과**(통과 9건 = 기준시가 안분 불변 가드 E-3·E-4·E-6 C·E-7 일부 등). 수정 후 전건 통과. 이후 swap/split/PHD/D-3을 더해 **34건**.
+- 세액 변화(취득일 상이: 토지 1999 · 건물 2022, 양도비 5,000,000): A 구분 기재 70:30 **348,656,121 → 348,628,800 (−27,321)** · B 감정 55:45 **378,896,121 → 378,793,200 (−102,921)** · C 기준시가 안분 336,224,441 **불변**. 건물 취득 2024-08-01(단기) 양도비 50,000,000: A **338,078,354 → 337,520,000 (−558,354)** · B **399,878,354 → 397,775,000 (−2,103,354)**. 취득일 동일이면 세액 343,740,000 불변(파트 배분만 이동).
+- 증축: 구분 기재 14억/6억 양도비 50,000,000 → 토지 37,710,458 → **35,668,789**(세액 450,991,875 → 450,726,960), 16억/4억 → **40,506,329**(→ 451,356,960), 기준시가 안분은 불변.
+
+### 11.4 동작 불변 계측 (기존 테스트)
+
+10개 호출 지점(route 4 · 증축 1 · swap 2 · split 1 · PHD 2)에 신·구 병행 로그를 넣고(원복·sha 일치 확인) 범위 6디렉터리 29,585건을 돌렸다 — 기존 테스트가 부른 호출 **8,600회**(그중 값이 0이 아닌 호출 332회) 중 **값이 바뀐 호출 0회**. 바뀐 것은 신규 anchor(당시 29건)의 호출 23회뿐. ⇒ **기존 테스트 기대값 변경 0건**(계획 예측과 일치). 단, 양도비 + GB 실가 호출(`route.transfer`)이 기존 테스트에는 **6회**뿐이다 — 전건 통과는 안전의 증거라기보다 커버리지 부재의 증거이고, 그래서 신규 anchor를 두껍게 썼다.
+
+### 11.5 뮤테이션 (cp 백업 → 변형 → 대상 테스트 → sha 원복)
+
+M-1(기준시가 고정 복귀) · M-2(토지·건물 뒤바뀜) · M-3(구분 기재 원본 사용) · M-4(`Math.floor(x * (a/b))` 복귀 — E-12 + 정적 가드) · M-5(자본적지출도 양도가액 비례) · M-6(증축 분기 원복) · M-7(표시를 legacy 총액으로) · M-8(건물 잔액 흡수 제거) · M-9(NBL 분할 합계 깨짐) · M-10(표시 정합 후퇴 가드 제거) · M-10b(옛 이력 후퇴 분기 제거) · M-11~M-13(swap 2·split을 `applyRate` 복귀) · M-14·M-15(PHD 복귀) — **전부 KILLED**. 처음 M-8을 공용 헬퍼에 걸었더니 SURVIVED였다(잔액 흡수는 route가 하고 헬퍼의 `building`은 안 쓰인다) — 변이 위치를 route로 옮겨 KILLED. M-14는 처음 SURVIVED(가드가 `phd.transferApportionRatio.land` 모양을 못 봄, PHD 행동 테스트 부재) → E-12h 추가 후 KILLED.
+
+### 11.6 검증
+
+`tsc --noEmit` 0건 · `npm run lint` 오류 0(경고 365, 사전 존재) · pre-push 4종(폰트·톤·다크 짝·워크플로 러너) 통과 · 전체 vitest `--maxWorkers=2` **3,263 파일 통과 · 1 skip / 39,055 테스트 통과 · 실패 0** · E2E: 신규 2건 + 영향 spec 10파일 37건 통과 · Playwright 브라우저: 폼 시드 → 가산세 스텝 → 계산 → 상세명세서 «필요경비» 행에서 `5,000,000 × 1,400,000,000(1,400,000,000+600,000,000) = 3,500,000` 확인, Network 요청 body에 `transferExpense`·`landTransferPrice`·`buildingTransferPrice`가 기존 필드로 실림(신규 필드 없음).
+
+### 11.7 확인 필요 · 한계
+
+- PHD 경로는 행동 테스트 1건(E-12h)으로만 잡고, 그 안에서 양도비·자본적지출 두 지점을 함께 본다.
+- 실사용 빈도(§9-3)는 여전히 telemetry 부재로 알 수 없다.
+- 시스템 부하(load 20+)에서 vitest를 `--maxWorkers=2`로 돌려 실패 0이었다(재실행 필요 없었음).
+- `docs/02-design/features/gb-actual-path-sale-split-noop.plan.md` §5 표의 «양도비용=양도시(기준시가)»는 이번 규칙으로 대체됐으나 그 문서는 고치지 않았다.
+

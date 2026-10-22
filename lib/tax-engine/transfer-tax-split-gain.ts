@@ -16,7 +16,8 @@ import type {
   SplitPartResult,
 } from "./types/transfer.types";
 import type { AcqSplitJudgmentDetail } from "./types/transfer-split-gain.types";
-import { applyRate, calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
+import { calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
+import { apportionByStdPrice } from "./std-price-apportion";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { housingExcessNeedsStdInputsOfInput, phdSplitPathTaken } from "./housing-excess-split";
 import { resolveHousingExcessAcqContract } from "./housing-excess-acq-contract";
@@ -245,7 +246,7 @@ export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   const transferPriceTotal = landTransferPrice + buildingTransferPrice;
   const landTransferExpense =
     totalTransferExpense > 0 && transferPriceTotal > 0
-      ? applyRate(totalTransferExpense, landTransferPrice / transferPriceTotal)
+      ? apportionByStdPrice(totalTransferExpense, landTransferPrice, buildingTransferPrice).land
       : 0;
   const buildingTransferExpense = totalTransferExpense - landTransferExpense;
   const landDirectExp = landCapex + landTransferExpense;
@@ -443,8 +444,9 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
 
   // 추가 필요경비(자본적지출) 안분 — preHousingDisclosure 경로에서도 적용
   const totalExpenses = input.expenses ?? 0;
-  const landExpRatio = phd.transferApportionRatio.land;
-  const landCapex = input.landDirectExpenses ?? Math.floor(totalExpenses * landExpRatio);
+  const landCapex =
+    input.landDirectExpenses ??
+    apportionByStdPrice(totalExpenses, phd.landHousingAtTransfer, phd.buildingHousingAtTransfer).land;
   const buildingCapex = input.buildingDirectExpenses ?? (totalExpenses - landCapex);
 
   /**
@@ -468,7 +470,7 @@ function calcSplitGainPreDisclosure(input: TransferTaxInput): SplitGainResult {
   const phdTransferPriceTotal = phd.landTransferPrice + phd.buildingTransferPrice;
   const landTransferExpense =
     totalTransferExpense > 0 && phdTransferPriceTotal > 0
-      ? applyRate(totalTransferExpense, phd.landTransferPrice / phdTransferPriceTotal)
+      ? apportionByStdPrice(totalTransferExpense, phd.landTransferPrice, phd.buildingTransferPrice).land
       : 0;
   const buildingTransferExpense = totalTransferExpense - landTransferExpense;
 

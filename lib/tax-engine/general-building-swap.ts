@@ -35,7 +35,8 @@
  * 마지막 카드가 잔액을 흡수해 `Σ 배분 = 그 파트 나목` 불변식을 지킨다
  * (메모리 `feedback_floor_residual_absorption`).
  */
-import { applyRate } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
+import { apportionByStdPrice } from "./std-price-apportion";
 import type { AssetCardForAggregate } from "./general-building-valuation";
 import type { PartAcqMode } from "./transfer-tax-split-gain";
 
@@ -117,7 +118,7 @@ function allocateWithinGroup(
     } else {
       share =
         basisTotal > 0
-          ? applyRate(amount, basis(c) / basisTotal)
+          ? safeMultiplyThenDivide(amount, basis(c), basisTotal)
           : Math.floor(amount / cards.length);
       allocated += share;
     }
@@ -207,7 +208,7 @@ function resolvePerPart(
   const transferPriceTotal = landTransferPrice + buildingTransferPrice;
   const landTransferExpense =
     transferPriceTotal > 0
-      ? applyRate(totalTransferExpense, landTransferPrice / transferPriceTotal)
+      ? apportionByStdPrice(totalTransferExpense, landTransferPrice, buildingTransferPrice).land
       : 0;
   const partTransferExpense: Record<"land" | "building", number> = {
     land: landTransferExpense,

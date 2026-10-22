@@ -131,6 +131,15 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
   allocation: GeneralBuildingAllocation;
   /** 구분 기재가 있을 때만 채워진다 — 일괄양도는 비교 대상이 없어 판정하지 않는다 */
   judgment?: SaleSplitJudgmentDetail;
+  /**
+   * 양도비처럼 **공통되는 비용**을 토지·건물로 나눌 때 비례시킬 「자산가액」 — 「소득세법」 §100② 후문
+   * 「해당 자산의 가액에 비례」(계획서 `gb-transfer-expense-apportion-basis.plan.md`).
+   *
+   * 사용자 규칙: 자산가액이 **실가(구분 기재 채택)** 면 그 가액, **감정가액**이면 감정가액, **환산(기준시가 안분)** 이면 기준시가.
+   * `allocation`(안분 결과)과 다른 값일 수 있다 — 안분 결과는 총액에 맞춰 floor·잔액 흡수된 값이라, 그 비율로 다시 나누면
+   * 기준시가 비율로 한 번에 나눈 값과 1원 어긋난다(`Math.floor(x * ratio)` 계열 과소와 같은 뿌리).
+   */
+  proportionBasis: GeneralBuildingAllocation;
 } {
   // 토지 기준시가 총액
   const landStdTotal = multiplyByArea(input.transferLandPricePerSqm, input.landArea);
@@ -172,11 +181,18 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
     );
   }
   const apportioned = basis.apportioned;
+  // 안분에 쓰인 원래 basis 값 — 감정 채택이면 감정가액(양쪽 양수가 `usableAppraisal`로 보장됨), 아니면 양도시 기준시가.
+  const apportionBasisValue: GeneralBuildingAllocation =
+    basis.kind === "appraisal"
+      ? { land: input.landAppraisalAtTransfer!, building: input.buildingAppraisalAtTransfer! }
+      : { land: landStdTotal, building: input.transferBuildingStdPrice };
 
   // ── 구분 기재 없음(일괄양도) — 안분값이 곧 양도가액이다. 비교 대상이 없어 판정하지 않는다.
   const landIn = input.landTransferPrice;
   const buildingIn = input.buildingTransferPrice;
-  if (landIn == null && buildingIn == null) return { allocation: apportioned };
+  if (landIn == null && buildingIn == null) {
+    return { allocation: apportioned, proportionBasis: apportionBasisValue };
+  }
 
   /**
    * ── 구분 기재 있음 — 한쪽만 주면 반대쪽은 `총액 − 입력값`으로 **유일하게 확정**된다.
@@ -209,6 +225,8 @@ export function allocateBundledTransferPrice(input: BundledSaleAllocationInput):
 
   return {
     allocation: judged.applied,
+    // 구분 기재 채택(§100③ 30% 미만) → 그 가액 / 의제 구분 불분명 → 안분 basis 값
+    proportionBasis: judged.deemedUnclear ? apportionBasisValue : judged.applied,
     judgment: {
       deemedUnclear: judged.deemedUnclear,
       declared,
