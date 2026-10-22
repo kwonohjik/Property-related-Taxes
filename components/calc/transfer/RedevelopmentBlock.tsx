@@ -406,14 +406,22 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
             </FieldCard>
           )}
 
-          {/* 부담부증여 완공 아파트 · 기준시가 모드 또는 환산 — 인가 전 분 필요경비는 개산공제라 실비 칸이 쓰이지 않는다(값은 지우지 않는다). */}
+          {/* 인가 전 분 필요경비가 개산공제인 경우(부담부증여 완공 아파트 기준시가·환산 · 일반 양도 환산) — 실비 칸이 쓰이지 않는다(값은 지우지 않는다). */}
           {asset.redevIsSuccessorMember !== "yes" && redevPreApprovalExpensesUnused(asset) && (
             <ToneCard tone="amber">
-              <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-pre-expense-lump-notice">
-                인가 전 분 필요경비는 개산공제(취득시 기준시가 × 채무비율 × 율 — 「소득세법 시행령」 제163조 제6항)로 계산합니다.
-                부담부증여의 종전 부동산 취득가액을 기준시가 또는 환산취득가액으로 정하므로 인가 전에 쓴 실제 비용은 계산에 쓰이지 않습니다
-                (「소득세법 시행령」 제166조 제1항 제1호 · 「소득세법」 제97조 제2항 제2호).
-              </p>
+              {asset.transferType === "burdened_gift" ? (
+                <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-pre-expense-lump-notice">
+                  인가 전 분 필요경비는 개산공제(취득시 기준시가 × 채무비율 × 율 — 「소득세법 시행령」 제163조 제6항)로 계산합니다.
+                  부담부증여의 종전 부동산 취득가액을 기준시가 또는 환산취득가액으로 정하므로 인가 전에 쓴 실제 비용은 계산에 쓰이지 않습니다
+                  (「소득세법 시행령」 제166조 제1항 제1호 · 「소득세법」 제97조 제2항 제2호).
+                </p>
+              ) : (
+                <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-pre-expense-lump-notice">
+                  인가 전 분 필요경비는 개산공제(취득일 기준시가 × 율 — 「소득세법 시행령」 제163조 제6항)로 계산합니다.
+                  종전 부동산 취득가액을 환산(같은 영 제166조 제3항)으로 정하므로 인가 전에 쓴 실제 비용은 계산에 쓰이지 않습니다
+                  (같은 영 제166조 제1항 제1호 — 실제 필요경비 「또는」 개산공제).
+                </p>
+              )}
             </ToneCard>
           )}
           {asset.redevIsSuccessorMember !== "yes" && !redevPreApprovalExpensesUnused(asset) && (

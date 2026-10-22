@@ -31,6 +31,7 @@ import { gbPartModes } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { partNeedsOwnAcqStd } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { splitHasNonActualOwnedPart } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
+import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { redevFilingTotals } from "@/components/calc/results/transfer/redev-acquisition-inverse";
 import type { BundledAssetInput, BundledAssetKind } from "@/lib/tax-engine/types/bundled-sale.types";
 import { apportionBundledSale } from "@/lib/tax-engine/bundled-sale-apportionment";
@@ -639,6 +640,11 @@ export function computeTransferPerAssetSummary(
     } else if (!result && usesSelfComputedTransferPrice(a)) {
       // 부담부증여 계산 전 — 필요경비는 §159 취득가액의 개산공제(§163⑥)이거나 §97②2호 단서 비교 결과라 엔진만 안다.
       // 화면의 자본적지출을 그대로 보이면 엔진 값과 다르다(실측 50,000,000 vs 6,000,000). 계산 후는 아래 엔진 `expenses`·echo.
+      expense = 0;
+      expensePending = true;
+    } else if (!result && isRedevelopmentPath(a) && redevPreApprovalExpensesUnused(a)) {
+      // 원조합원 재개발 · 환산 — 인가 전 분 필요경비는 개산공제(§163⑥)라 계산 후 확정된다. 재개발 블록이 숨긴 인가 전 실비를 더한
+      // 부분합을 보이면 쓰이지 않는 금액을 보여 준다(실측 10,000,000 ↔ 엔진 9,000,000 — `burdened-gift-residuals-o3-o5-o8.plan.md` D3).
       expense = 0;
       expensePending = true;
     } else if (!result && isGbNonActualPart(a)) {
