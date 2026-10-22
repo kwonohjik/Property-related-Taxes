@@ -58,9 +58,11 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
       const body = await res.json().catch(() => null);
       if (latestOpinion.current !== d) return; // 그사이 의견을 다시 받았다 — 옛 검증은 버린다
       setVerify(
-        res.ok
-          ? { for: d, data: body.data as OneHouseAiVerifyData, error: null }
-          : { for: d, data: null, error: body?.error?.message ?? `원문 검증을 받지 못했습니다(${res.status}).` },
+        !res.ok
+          ? { for: d, data: null, error: body?.error?.message ?? `원문 검증을 받지 못했습니다(${res.status}).` }
+          : body?.data // 200인데 본문을 읽지 못했으면 네트워크 탓이 아니다
+            ? { for: d, data: body.data as OneHouseAiVerifyData, error: null }
+            : { for: d, data: null, error: "원문 검증 응답을 읽지 못했습니다. 다시 시도하세요." },
       );
     } catch {
       if (latestOpinion.current === d) setVerify({ for: d, data: null, error: "원문 검증 요청을 보내지 못했습니다. 네트워크를 확인하세요." });
@@ -81,6 +83,11 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
       const body = await res.json().catch(() => null);
       if (!res.ok) {
         setError(body?.error?.message ?? `AI 참고 의견을 받지 못했습니다(${res.status}).`);
+        return;
+      }
+      // 200인데 본문을 읽지 못했다 — 네트워크 탓이 아니다
+      if (!body?.data) {
+        setError("AI 참고 의견 응답을 읽지 못했습니다. 다시 시도하세요.");
         return;
       }
       const d = body.data as OneHouseAiOpinionData;

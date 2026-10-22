@@ -215,14 +215,14 @@ export const ONE_HOUSE_FIELD_CATALOG_TOP = [
     path: "relocatedSigunguCode",
     kind: "string",
     label: "이전한 기관·법인 소재지",
-    hint: "이전한 기관·법인 소재지의 시·군 코드(행안부 10자리). 화면에서는 주소 검색 결과에서 자동으로 만들어진다 — 코드를 확실히 알 때만 넣는다.",
+    hint: "이전한 기관·법인 소재지의 시·군 코드(행안부 10자리). 화면의 주소 검색 결과에서 자동으로 만들어진다 — 넣지 않는다(서버가 추출 값을 지우고 질문으로 바꾼다).",
     when: "publicInstitutionRelocation = true",
   },
   {
     path: "newHouseSigunguCode",
     kind: "string",
     label: "신규 주택 소재지",
-    hint: "신규 주택 소재지의 시·군 코드(행안부 10자리) — 이전 기관 소재지와의 연접 판정용. 주소 검색 결과에서 자동으로 만들어진다 — 코드를 확실히 알 때만 넣는다.",
+    hint: "신규 주택 소재지의 시·군 코드(행안부 10자리) — 이전 기관 소재지와의 연접 판정용. 주소 검색 결과에서 자동으로 만들어진다 — 넣지 않는다(서버가 추출 값을 지우고 질문으로 바꾼다).",
     when: "publicInstitutionRelocation = true",
   },
 

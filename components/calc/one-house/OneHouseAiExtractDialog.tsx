@@ -58,11 +58,15 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
   const [data, setData] = useState<OneHouseAiExtractData | null>(null);
   /** 적용할 폼 — 추출값 위에 질문에 바로 답한 값을 더한다 */
   const [draft, setDraft] = useState<OneHouseJudgmentFormData | null>(null);
+  /** 추출에 쓴 원문 — 사실·질문·인용 대조가 이 글에서 나왔다 */
+  const [extractedText, setExtractedText] = useState<string | null>(null);
 
   // 서버와 같은 기준(앞뒤 공백 제외)으로 센다
   const length = text.trim().length;
   const overLimit = length > ONE_HOUSE_AI_TEXT_MAX;
   const replacesInput = hasJudgmentInput(form);
+  // 추출 뒤 원문을 고쳤다 — 그대로 적용하면 참고 의견이 고친 글을 받는데 사실은 옛 글에서 나왔다(계획서 Q-2 c)
+  const stale = data !== null && text.trim() !== extractedText;
 
   const extract = async () => {
     setLoading(true);
@@ -80,9 +84,15 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
         setError(body?.error?.message ?? `AI 사실 추출에 실패했습니다(${res.status}).`);
         return;
       }
+      // 200인데 본문을 읽지 못했다 — 네트워크 탓이 아니다
+      if (!body?.data) {
+        setError("AI 사실 추출 응답을 읽지 못했습니다. 다시 시도하세요.");
+        return;
+      }
       const extracted = body.data as OneHouseAiExtractData;
       setData(extracted);
       setDraft(mergeExtractedForm(extracted.form));
+      setExtractedText(text.trim());
     } catch {
       setError("AI 사실 추출 요청을 보내지 못했습니다. 네트워크를 확인하세요.");
     } finally {
@@ -91,7 +101,8 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
   };
 
   const apply = () => {
-    if (!data || !draft) return;
+    // 막지 않았으면 지금 원문(공백 제외)이 추출에 쓴 원문과 같다
+    if (!data || !draft || stale) return;
     onApply(draft, {
       facts: data.facts,
       questions: data.questions,
@@ -157,8 +168,15 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
           {data && draft && <ExtractionPreview data={data} draft={draft} onDraftChange={setDraft} />}
 
           <DialogFooter className="flex-col gap-2 sm:flex-row sm:items-center">
-            {data && replacesInput && (
-              <p className="text-xs text-rose-700 sm:mr-auto dark:text-rose-400">적용하면 지금 입력한 값은 모두 지워집니다.</p>
+            {stale ? (
+              <p data-testid="one-house-ai-extract-stale" className="text-xs text-rose-700 sm:mr-auto dark:text-rose-400">
+                원문이 바뀌었습니다. 다시 추출해야 적용할 수 있습니다.
+              </p>
+            ) : (
+              data &&
+              replacesInput && (
+                <p className="text-xs text-rose-700 sm:mr-auto dark:text-rose-400">적용하면 지금 입력한 값은 모두 지워집니다.</p>
+              )
             )}
             <Button
               type="button"
@@ -170,7 +188,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
               {data ? "다시 추출" : "사실 추출"}
             </Button>
             {data && (
-              <Button type="button" data-testid="one-house-ai-extract-apply" onClick={apply}>
+              <Button type="button" data-testid="one-house-ai-extract-apply" disabled={stale} onClick={apply}>
                 {replacesInput ? "지금 입력을 지우고 적용" : "판정 메뉴에 적용"}
               </Button>
             )}

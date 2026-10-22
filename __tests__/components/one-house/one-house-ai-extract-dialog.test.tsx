@@ -7,6 +7,8 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import OneHouseJudgmentCalculator from "@/app/calc/one-house-exemption/OneHouseJudgmentCalculator";
+import { OneHouseAiExtractDialog } from "@/components/calc/one-house/OneHouseAiExtractDialog";
+import { createInitialOneHouseJudgmentForm } from "@/lib/stores/one-house-judgment-form.types";
 import { useOneHouseJudgmentStore } from "@/lib/stores/one-house-judgment-store";
 import type { OneHouseAiExtractData } from "@/app/api/one-house-ai/extract/route";
 import { ONE_HOUSE_FIELD_CATALOG } from "@/lib/one-house-ai/field-catalog";
@@ -196,5 +198,37 @@ describe("판정 메뉴 AI 사실 추출 (P4)", () => {
       expect(screen.getByRole("button", { name: "「양도 대상 주택」 단계에서 입력" })).toBeTruthy();
       expect(container.querySelectorAll('[data-testid^="one-house-ai-answer-"][data-testid$="-field"]')).toHaveLength(2);
     });
+  });
+});
+
+// 계획서 docs/00-pm/one-house-ai-recorded-leftovers.plan.md §3.3-2·3 (F-9 · F-10, Q-2 c)
+describe("원문 수정 뒤 적용 · 응답 본문을 읽지 못함", () => {
+  it("추출 뒤 원문을 고치면 적용을 막고, 되돌리면 추출에 쓴 원문으로 적용한다", async () => {
+    respond(200, { data });
+    const onApply = vi.fn();
+    render(<OneHouseAiExtractDialog form={createInitialOneHouseJudgmentForm()} onApply={onApply} />);
+    await extract("원문 가");
+    await screen.findByTestId("one-house-ai-extract-preview");
+    const box = screen.getByTestId("one-house-ai-extract-text");
+    const applyButton = () => screen.getByTestId("one-house-ai-extract-apply") as HTMLButtonElement;
+
+    fireEvent.change(box, { target: { value: "원문 가 고침" } });
+    expect(screen.getByTestId("one-house-ai-extract-stale").textContent).toContain("다시 추출해야 적용할 수 있습니다");
+    expect(applyButton().disabled).toBe(true);
+
+    // 앞뒤 공백만 다르면 같은 원문이다(서버와 같은 기준)
+    fireEvent.change(box, { target: { value: "  원문 가  " } });
+    expect(screen.queryByTestId("one-house-ai-extract-stale")).toBeNull();
+    fireEvent.click(applyButton());
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(onApply.mock.calls[0][1].sourceText).toBe("원문 가");
+  });
+
+  it("200인데 본문을 읽지 못하면 네트워크가 아니라 응답 문제로 알린다", async () => {
+    fetchMock.mockResolvedValueOnce({ ok: true, status: 200, json: async () => { throw new SyntaxError("Unexpected end of JSON input"); } });
+    render(<OneHouseAiExtractDialog form={createInitialOneHouseJudgmentForm()} onApply={vi.fn()} />);
+    await extract();
+    expect((await screen.findByRole("alert")).textContent).toBe("AI 사실 추출 응답을 읽지 못했습니다. 다시 시도하세요.");
+    expect(screen.queryByTestId("one-house-ai-extract-preview")).toBeNull();
   });
 });
