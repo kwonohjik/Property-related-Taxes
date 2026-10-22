@@ -200,7 +200,7 @@ describe("CP-3 컴패니언 §163⑨ — 주 자산과 같은 값이 엔진에 �
     expect(r.json.data.result.inheritedAcquisitionDetail.acquisitionPrice).toBe(deemed);
   });
 
-  it("🟢 겸용 컴패니언(1985 前 상속·선언)은 §163⑨ 운반을 싣지 않는다 — 자기 서브객체가 취득가액을 만든다 (328,952,309 — S3-2: 종전 328,370,189)", async () => {
+  it("🟢 겸용 컴패니언(1985 前 상속·선언)은 §163⑨ 운반을 싣지 않는다 — 자기 서브객체가 취득가액을 만든다 (302,115,000 — PR-6 3자 max: 종전 ③만 328,952,309)", async () => {
     // 게이트를 빼면 ⑭가 파트 카드마다 STEP 0.45를 다시 돌려 492,297,397이 된다(뮤테이션 실측).
     const MIXED_PRE_DEEMED = {
       assetKind: "housing",
@@ -229,8 +229,17 @@ describe("CP-3 컴패니언 §163⑨ — 주 자산과 같은 값이 엔진에 �
     expect(issues(f)).toEqual([]);
     const r = await run(f);
     expect(r.body.companionAssets[0].inheritedAcquisition).toBeUndefined();
+    // PR-6 — 겸용 서브객체가 자산 합계 비교 구간을 싣는다(주 자산과 같은 ④ 빌더).
+    expect(r.body.companionAssets[0].mixedUse.sec163_9Compare).toEqual({ era: "pre_deemed", cause: "inheritance" });
+    // PR-6 갱신 — ①이 없어 Σ②(취득시 기준시가 합계)와 Σ③(환산)을 비교한다. 의제취득일 전 ②·③은 분자가 같아
+    //   ③ = 양도가액 × ② ÷ 양도시 기준시가이므로, 겸용 몫 양도가액이 양도시 기준시가(주택 9억 + 상가 3억 + 토지)보다 작은 이 시료는 ②가 이긴다.
+    //   종전(③만) 328,952,309 → 302,115,000.
     // S3-2 갱신 — 개산공제 base 합이 라목 가액(H 300M) × 3% = 9,000,000이 됐다(종전 뺄셈은 H < 가목이라 가목 360M 전부 × 3% = 10,800,000으로 H를 넘겼다). 토지·건물 분배 자체는 세액에 안 닿는다(같은 보유기간·초과 없음).
-    expect(bundled(r.json).totalTax).toBe(328_952_309);
+    expect(bundled(r.json).totalTax).toBe(302_115_000);
+    // 리뷰 F3 — ② 채택(상속·증여 직접 산정)이면 파트 카드에 「환산」 표시가 없다(종전: 입력 플래그만 보고 5장 모두 estimated).
+    const mixedCards = (r.json.data.aggregated.properties as Body[]).filter((p) => String(p.id ?? p.propertyId ?? "").startsWith("mu-"));
+    expect(mixedCards.length).toBe(5);
+    for (const p of mixedCards) expect(p.displayAcquisitionMode).toBeUndefined();
   });
 });
 

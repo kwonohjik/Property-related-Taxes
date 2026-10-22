@@ -20,6 +20,7 @@ import {
 } from "./data/lthd-table2-era";
 import { multiplyByArea } from "./area-utils";
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { applyRatio } from "./tax-utils";
 import type {
   MixedPartLthd,
   MixedPartLthdEcho,
@@ -275,12 +276,22 @@ export function resolvePartNecessaryExpense(args: {
   };
 }
 
+/**
+ * 기준시가 후보(②) → 지분분. ①(신고가액)은 ④가 이미 지분분으로 보낸다(`transfer-tax-api-mixed-use.ts` `share()`)지만 기준시가는
+ * 물건 전체(100%) 값으로 온다 — 그대로 취득가액에 쓰면 공유지분에서 물건 전체 금액이 된다(PR-6 리뷰 F1 · 1/2 지분 1990 상속 실측
+ * 취득가액 6억 ↔ 지분분 3억). 환산(③)은 분자·분모가 상쇄돼 이 문제가 없다. 일반건물 #2431과 같은 결함 축.
+ */
+function stdShare(asset: MixedUseAssetInput, amount: number): number {
+  const r = asset.ownershipRatio;
+  return r === undefined || r >= 1 ? amount : applyRatio(amount, r);
+}
+
 /** §163⑨ 본문 — 공시(비-PHD) 주택분. fallback(??), max 아님. */
 export function resolveHousingInheritedAcqDirect(
   asset: MixedUseAssetInput,
 ): { estimatedAcq: number; detail: InheritedAcquisitionDetail } {
   const reported = asset.housingInheritedValue ?? null;
-  const stdCandidate = asset.acquisitionStandardPrice.housingPrice ?? 0;
+  const stdCandidate = stdShare(asset, asset.acquisitionStandardPrice.housingPrice ?? 0);
   if (reported === null && stdCandidate <= 0) {
     const kind = asset.acquisitionByGift ? "증여" : "상속";
     const at = asset.acquisitionByGift ? "증여일" : "상속개시일";
@@ -310,15 +321,19 @@ export function resolveHousingInheritedAcqPhd(
   detail: InheritedAcquisitionDetail;
 } {
   const reported = asset.housingInheritedValue ?? null;
-  const stdCandidate = phd.estimatedHousingPriceAtAcquisition; // P_A_est, 미스케일(양도가 무관)
-  const estimatedAcq = Math.max(reported ?? 0, stdCandidate);
+  const stdFull = phd.estimatedHousingPriceAtAcquisition; // P_A_est, 물건 전체(양도가 무관)
+  const stdCandidate = stdShare(asset, stdFull);
+  // 자산 합계 비교(`sec163_9Compare` — PR-6)가 후보 하나로 다시 계산하면 그 값을 그대로 쓴다(파트별 max를 하면 비교 결과가 뒤집힌다 — Q-20).
+  const asIs = asset.inheritedValuesAsIs === true;
+  const estimatedAcq = asIs ? (reported ?? stdCandidate) : Math.max(reported ?? 0, stdCandidate);
   const selected: "reported" | "standard_price" =
-    reported !== null && reported >= stdCandidate ? "reported" : "standard_price";
+    reported !== null && (asIs || reported >= stdCandidate) ? "reported" : "standard_price";
 
   // 토지/건물 분리 — PHD 내부 취득시 미스케일 비율(landHousingAtAcquisition/P_A_est) 재사용.
   // phd.landHousingAtAcquisition + phd.buildingHousingAtAcquisition === P_A_est 항상 성립(Step5).
   // 비율은 분자·분모 쌍으로 둔다(`금액 × (분자 ÷ 분모)`는 참값이 정수일 때 1원 과소). 분모가 없으면 균등 1/2(도달 불가 방어선).
-  const landBasis = stdCandidate > 0 ? { n: phd.landHousingAtAcquisition, d: stdCandidate } : { n: 1, d: 2 };
+  // 비율의 분자(`landHousingAtAcquisition`)가 물건 전체 값이라 분모도 물건 전체(`stdFull`)다.
+  const landBasis = stdFull > 0 ? { n: phd.landHousingAtAcquisition, d: stdFull } : { n: 1, d: 2 };
   const landAcqPrice = safeMultiplyThenDivide(estimatedAcq, landBasis.n, landBasis.d);
   const buildingAcqPrice = estimatedAcq - landAcqPrice;
 
@@ -336,7 +351,8 @@ export function resolveCommercialInheritedAcq(
   acqTotalStd: number,
 ): { estimatedAcqPrice: number; detail: InheritedAcquisitionDetail } {
   const reported = asset.commercialInheritedValue ?? null;
-  if (reported === null && acqTotalStd <= 0) {
+  const stdCandidate = stdShare(asset, acqTotalStd);
+  if (reported === null && stdCandidate <= 0) {
     const kind = asset.acquisitionByGift ? "증여" : "상속";
     const at = asset.acquisitionByGift ? "증여일" : "상속개시일";
     throw new Error(
@@ -345,10 +361,10 @@ export function resolveCommercialInheritedAcq(
     );
   }
   return {
-    estimatedAcqPrice: reported ?? acqTotalStd,
+    estimatedAcqPrice: reported ?? stdCandidate,
     detail: {
       reportedValue: reported,
-      standardPriceCandidate: acqTotalStd,
+      standardPriceCandidate: stdCandidate,
       selected: reported !== null ? "reported" : "standard_price",
     },
   };
@@ -384,9 +400,13 @@ export function inheritedCapexStdOverride(
   acqDerived: MixedUseDerivedAreas,
 ): { housingStd: number; commercialStd: number } | undefined {
   if (!inheritedCapexUsesReportedRatio(asset)) return undefined;
+  // 주택 신고가액(지분분)과 같은 축 — 상가 신고가액이 없으면 보충적 평가 합계의 지분분(F1).
   const commercialStd =
     asset.commercialInheritedValue ??
-    multiplyByArea(asset.acquisitionStandardPrice.landPricePerSqm, acqDerived.commercialLandArea) +
-      asset.acquisitionStandardPrice.commercialBuildingPrice;
+    stdShare(
+      asset,
+      multiplyByArea(asset.acquisitionStandardPrice.landPricePerSqm, acqDerived.commercialLandArea) +
+        asset.acquisitionStandardPrice.commercialBuildingPrice,
+    );
   return { housingStd: asset.housingInheritedValue ?? 0, commercialStd };
 }

@@ -16,6 +16,7 @@
  * inheritanceValuationMode는 항상 "auto"(factory 기본·migration 전환) — UI에 토글 없음.
  */
 
+import { mixedSec163_9CompareOf } from "@/lib/calc/mixed-use-sec163-9";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -40,6 +41,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
   // 직접 산정(MixedUseAssetMajorStdPrice) — 여기의 자산 구분·취득가액 의제 특례는 겸용 엔진이
   // 소비하지 않는 dead 입력이라 숨긴다(CompanionAcqPurchaseBlock.tsx의 기존 isMixedUse 파생 패턴 재사용).
   const isMixedUse = !!asset.isMixedUseHouse;
+  const mixedCmp = mixedSec163_9CompareOf(asset);
   /**
    * 🔴 **부담부증여는 취득가액 축이 통째로 무효다** (2026-08-08 · 계획서 §10-5).
    *
@@ -189,18 +191,34 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
 
       {/* 겸용주택 안내 — 자산 구분·취득가액 의제 특례 대신 §163⑨ 직접 산정 경로로 유도 */}
       {!isBurdenedGift && isMixedUse && (
-        <ToneCard
-          tone="violet"
-          title="취득가액 — 겸용주택 상속개시일 평가액 자동 적용"
-          titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
-        >
-          <p className="text-xs text-violet-800 dark:text-violet-200">
-            겸용주택(주택+상가)은 상속개시일 현재 상증법 §60~66 평가액을 취득가액으로 직접
-            사용합니다. 아래 &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션의
-            &ldquo;상속개시일&rdquo; 입력에서 산정하므로, 이 화면의 자산 구분·취득가액 의제
-            특례 입력은 표시하지 않습니다.
-          </p>
-        </ToneCard>
+        mixedCmp ? (
+          // §163⑨ 단서 자산 합계 비교 구간(PR-6) — 상속개시일 평가액을 「그대로」 쓰지 않는다.
+          <ToneCard
+            tone="violet"
+            title={mixedCmp.era === "pre_deemed" ? "취득가액 — 겸용주택 ①②③ 합계 비교 (의제취득일 전)" : "취득가액 — 겸용주택 ①② 합계 비교 (개별주택가격 공시 전)"}
+            titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+          >
+            <p className="text-xs text-violet-800 dark:text-violet-200">
+              주택분·상가분 ① 상속세 신고가액 합계, ② §164 기준시가 합계
+              {mixedCmp.era === "pre_deemed" ? ", ③ 환산취득가액 합계" : ""} 중 가장 큰 금액을 취득가액으로 씁니다.
+              아래 &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션에서 입력하므로, 이 화면의 자산 구분·취득가액 의제
+              특례 입력은 표시하지 않습니다.
+            </p>
+          </ToneCard>
+        ) : (
+          <ToneCard
+            tone="violet"
+            title="취득가액 — 겸용주택 상속개시일 평가액 자동 적용"
+            titleExtra={<LawArticleModal legalBasis="소득세법 시행령 §163 ⑨" label="소령 §163⑨" />}
+          >
+            <p className="text-xs text-violet-800 dark:text-violet-200">
+              겸용주택(주택+상가)은 상속개시일 현재 상증법 §60~66 평가액을 취득가액으로 직접
+              사용합니다. 아래 &ldquo;주택 기준시가&rdquo;·&ldquo;상가 기준시가&rdquo; 섹션의
+              &ldquo;상속개시일&rdquo; 입력에서 산정하므로, 이 화면의 자산 구분·취득가액 의제
+              특례 입력은 표시하지 않습니다.
+            </p>
+          </ToneCard>
+        )
       )}
     </div>
   );

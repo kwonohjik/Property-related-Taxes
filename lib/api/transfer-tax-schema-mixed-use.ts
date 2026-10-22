@@ -107,6 +107,14 @@ export const mixedUseAssetSchema = z.object({
   commercialInheritedValue: z.number().int().positive().optional(),
   housingInheritedExpense: z.number().int().nonnegative().optional(),
   commercialInheritedExpense: z.number().int().nonnegative().optional(),
+  // ⑫ §163⑨ 단서 자산 합계 비교 구간(PR-6) — ④가 상속개시일·증여일로 파생. 엔진 `calcMixedSec163_9Compare`.
+  sec163_9Compare: z
+    .object({
+      era: z.enum(["pre_deemed", "clause"]),
+      cause: z.enum(["inheritance", "gift"]),
+      commercialOutsideClause: z.boolean().optional(),
+    })
+    .optional(),
   /**
    * 🔴 자산 단위 **공통** 자본적지출·양도비 (「소득세법」 제97조 제1항 제2호·제3호) — 2026-08-07 W-3.
    * 위 파트별 필드로 나눌 수 없는 공통 지출을 엔진이 §100② 후문으로 안분한다
@@ -196,6 +204,17 @@ export const mixedUseAssetSchema = z.object({
     !((v.acquisitionStandardPrice.housingPrice ?? 0) > 0)
   ) {
     ctx.addIssue({ code: "custom", message: "상속·증여 겸용주택은 주택분 평가액(신고가액) 또는 취득시 개별주택가격이 필요합니다 (소득세법 시행령 §163⑨)", path: ["housingInheritedValue"] });
+  }
+  // §163⑨ 단서 자산 합계 비교(PR-6) — ① 평가액은 주택분·상가분을 모두 넣거나 모두 비운다(Q-19).
+  // 의제취득일 전 증여는 ①(증여 신고가액)이 필수다(Q-16 — 일반 증여 Q-14와 같다). ⑧ `mixedSec163_9ReportedError` 거울.
+  if (v.sec163_9Compare) {
+    const h = (v.housingInheritedValue ?? 0) > 0;
+    const c = (v.commercialInheritedValue ?? 0) > 0;
+    if (h !== c) {
+      ctx.addIssue({ code: "custom", message: "겸용주택 상속·증여 평가액은 주택분·상가분을 모두 입력하거나 모두 비워야 합니다 (소득세법 시행령 §163⑨)", path: [h ? "commercialInheritedValue" : "housingInheritedValue"] });
+    } else if (!h && v.sec163_9Compare.era === "pre_deemed" && v.sec163_9Compare.cause === "gift") {
+      ctx.addIssue({ code: "custom", message: "의제취득일(1985.1.1.) 전 증여 겸용주택은 주택분·상가분 증여 신고가액이 필요합니다 (소득세법 시행령 §163⑨)", path: ["housingInheritedValue"] });
+    }
   }
   // B0 — 별개 취득(두 취득일 다름)이면 개별주택가격(건물 취득일)을 가목:나목 비례로 나눌 때의 가목
   // (주택부수토지 공시지가)도 건물 취득일 기준이어야 한다. 미입력·0 → 400 (토지 취득일 값으로 대체하지 않는다 · 엔진 throw 거울).

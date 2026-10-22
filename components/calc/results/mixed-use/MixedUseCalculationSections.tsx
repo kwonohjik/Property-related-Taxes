@@ -24,6 +24,8 @@ import { mixedPartLthdRates } from "@/lib/tax-engine/transfer-tax-mixed-use-inhe
 import { mixedPartLthdRateText } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { MixedUseExpropriationValuationCard } from "@/components/calc/results/mixed-use/MixedUseExpropriationValuationCard";
+import { MixedSec163_9ComparisonCard } from "@/components/calc/results/mixed-use/MixedSec163_9ComparisonCard";
+import { mixedSec163_9PartFormula } from "@/components/calc/results/mixed-use/MixedSec163_9ComparisonCard";
 import { MixedUseNblSection } from "@/components/calc/results/mixed-use/MixedUseNblSection";
 import { MixedUseTotalTaxSection } from "@/components/calc/results/mixed-use/MixedUseTotalTaxSection";
 import { MixedUseHousingStdSplit } from "@/components/calc/results/mixed-use/MixedUseHousingStdSplit";
@@ -102,6 +104,8 @@ export function MixedUseCalculationSections({
   // 실지거래가액 기반(상속·증여 §163⑨ 의제 / 매매 §100² 실가) — 산식 분기(개산공제 미표시·실비)는 공통, 라벨만 구분.
   // ⚠️ 감정·매매사례(isAppraisalSalesAcq)는 개산공제 유지라 isDeemedAcq에 포함하지 않음(환산 산식 분기 사용).
   const isDeemedAcq = isInheritedAcq || isGiftAcq || isActualAcq;
+  // §163⑨ 단서 자산 합계 비교(PR-6) — 있으면 상속·증여 취득가액 행은 «어느 후보가 이겼는지»를 그린다(종전 «상속개시일 평가액» 문구는 ② 채택에서 틀린다).
+  const sec163_9 = breakdown.sec163_9Comparison;
   // 비-의제(환산·감정·매매사례) 취득가액 용어 — 감정/매매사례는 직접 안분이라 "환산취득가액" 아닌 "취득가액".
   const nonDeemedAcqTerm = isAppraisalSalesAcq ? "취득가액" : "환산취득가액";
   // 새 안분(계약서 구분·감정가액) + 환산 — 엔진이 토지·건물 파트별로 환산한다(Q-8). 그 경우만 산식을 바꾼다(M-2).
@@ -109,6 +113,7 @@ export function MixedUseCalculationSections({
 
   /** 주택 취득가액 산식 — 종전 행과 B1 환산 파트 행이 **같은 산식**을 쓴다(복제 금지). */
   const housingAcqFormula = (): React.ReactNode => {
+            if (sec163_9 && sec163_9.selected !== "converted") return mixedSec163_9PartFormula(sec163_9, "housing", h.estimatedAcquisitionPrice);
             if (isDeemedAcq && h.inheritedAcquisitionDetail) {
               const d = h.inheritedAcquisitionDetail;
               const base =
@@ -212,6 +217,7 @@ export function MixedUseCalculationSections({
       {breakdown.expropriationDetail && (
         <MixedUseExpropriationValuationCard detail={breakdown.expropriationDetail} />
       )}
+      {sec163_9 && <MixedSec163_9ComparisonCard cmp={sec163_9} />}
       {/* 경고 — 🔴 종전에는 겸용만 자체 마크업이라 공용 카드의 「확인이 필요한 사항」 제목과
              다크모드 색이 없었다. 나머지 세 결과뷰는 모두 이 leaf를 쓴다 (#086). */}
       <CalculationWarningsCard warnings={breakdown.warnings} />
@@ -284,7 +290,7 @@ export function MixedUseCalculationSections({
           <SeparateAcqPartRows kind="housing" breakdown={breakdown} estimatedFormula={housingAcqFormula()} />
         ) : (
           <Row
-            label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "주택 감정·매매사례 취득가액" : "주택 환산취득가액"}
+            label={sec163_9 && sec163_9.selected !== "converted" ? "취득가액(§163⑨ 합계 비교)" : isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "주택 감정·매매사례 취득가액" : "주택 환산취득가액"}
             value={fmt(h.estimatedAcquisitionPrice)}
             formula={housingAcqFormula()}
           />
@@ -574,9 +580,10 @@ export function MixedUseCalculationSections({
           />
         ) : (
           <Row
-            label={isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "상가 감정·매매사례 취득가액" : "상가 환산취득가액"}
+            label={sec163_9 && sec163_9.selected !== "converted" ? "취득가액(§163⑨ 합계 비교)" : isActualAcq ? "취득 실거래가(취득가액)" : isDeemedAcq ? `${isGiftAcq ? "증여일" : "상속개시일"} 평가액(취득가액)` : isAppraisalSalesAcq ? "상가 감정·매매사례 취득가액" : "상가 환산취득가액"}
             value={fmt(c.estimatedAcquisitionPrice)}
             formula={(() => {
+              if (sec163_9 && sec163_9.selected !== "converted") return mixedSec163_9PartFormula(sec163_9, "commercial", c.estimatedAcquisitionPrice);
               if (isDeemedAcq && c.inheritedAcquisitionDetail) {
                 const d = c.inheritedAcquisitionDetail;
                 const base =

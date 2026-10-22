@@ -223,8 +223,13 @@ export function buildMixedUsePartCards(
   const sep = r.separateAcquisition;
   const directChosen = (part: "land" | "building") =>
     sep ? sep.provisoGroup?.chosen === "direct" && sep.provisoGroup.parts.includes(part) : r.necessaryExpenseProviso?.chosen === "direct";
+  // §163⑨ 단서 자산 합계 비교(PR-6)에서 ①·②가 이기면 입력 플래그는 꺼진 채(의제취득일 전)라도 상속·증여 직접 산정이다 — 엔진 결과로 가른다(리뷰 F3).
+  const inheritedDirect =
+    mixedAsset.acquisitionByInheritance ||
+    mixedAsset.acquisitionByGift ||
+    (r.sec163_9Comparison !== undefined && r.sec163_9Comparison.selected !== "converted");
   const totalMode: TransferTaxItemInput["displayAcquisitionMode"] =
-    mixedAsset.acquisitionByInheritance || mixedAsset.acquisitionByGift
+    inheritedDirect
       ? undefined
       : mixedAsset.useActualAcquisition
         ? "actual"
