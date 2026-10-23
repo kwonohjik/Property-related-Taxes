@@ -29,6 +29,7 @@ import { shareWholePropertyPrice } from "./bundled-apportionment";
 import { appurtenantLimitShareOf } from "./bundled-companion-split";
 import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFacts, splitReversePrimaryLand } from "./bundled-reverse-appurtenant";
 import { aggregateWithSameDayRightWarning } from "@/lib/tax-engine/one-house/same-day-right";
+import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/types/general-building.types";
 
 export function calculateBundledTransfer(
@@ -367,6 +368,11 @@ export function calculateBundledTransfer(
     (heldItems) => calculateTransferTaxAggregate({ ...aggregateInput, properties: heldItems }, rates),
   );
 
+  // 일반건물 부담부증여 × 본인 신축 §114조의2 가산세가 붙었으면 고지(Q-14) — 단건(`runActualGeneralBuildingOnce`)과 같은 문구·같은 조건.
+  //   전 자산 부담부증여 묶음에서 카드의 `penaltyAxis`는 GB 부담부증여 카드만 싣는다(일반 양도 GB 카드의 감정 신호는 혼합 묶음이라 ⑧이 막는다).
+  if (isAllBurdenedGift && items.some((it) => it.penaltyAxis) && !aggregated.warnings.includes(GB_BG_SELF_BUILT_NOTICE)) {
+    aggregated.warnings.push(GB_BG_SELF_BUILT_NOTICE);
+  }
   if (Object.keys(gbDetailsByAsset).length > 0) aggregated.generalBuildingDetailsByAsset = gbDetailsByAsset;
 
   return {
