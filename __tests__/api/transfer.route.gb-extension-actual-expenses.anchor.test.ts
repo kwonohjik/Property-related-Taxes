@@ -68,9 +68,10 @@ const ACQ = {
   /** C1 · 분리 ON */
   c1On: { acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1988-05-01", acquisitionDate: "1995-05-01", decedentAcquisitionDate: "1970-01-01", publishedValueAtInheritance: "300000000", gbBuildingInheritedValue: "200000000" },
 } satisfies Record<string, Partial<AssetForm>>;
-const CAPEX = { capitalExpenditure: "20000000" } as Partial<AssetForm>;
+// 그중 증축 전 지출액 0 = 전부 증축 후(2026-10-23 `gb-extension-capex-timing.plan.md` — ⑧ 필수 · 종전 배분과 같다).
+const CAPEX = { capitalExpenditure: "20000000", gbCapexBeforeExtension: "0" } as Partial<AssetForm>;
 const TX = { transferExpense: "10000000" } as Partial<AssetForm>;
-const PART = { landDirectExpenses: "30000000", buildingDirectExpenses: "20000000" } as Partial<AssetForm>;
+const PART = { landDirectExpenses: "30000000", buildingDirectExpenses: "20000000", gbBuildingCapexBeforeExtension: "0" } as Partial<AssetForm>;
 const BUNDLED = { gbBundledAcquisitionExpenses: "15000000" } as Partial<AssetForm>;
 const LEGACY = { directExpenses: "12000000" } as Partial<AssetForm>;
 
@@ -190,15 +191,20 @@ describe("회귀 0 — 종전에도 맞던 셀은 값이 그대로다", () => {
   });
 });
 
-describe("증축분 환산 — 실가 그룹 가산은 실가 카드에만 (Q-7 a · Q-8 a)", () => {
-  it("매매 분리 ON · 파트 칸 → 건물 자본적지출 2천만은 원건물로 · 증축분은 개산공제만 (종전 증축분에 2,674,938 가산)", async () => {
-    const r = await ok(asset(EXT_ESTIMATED, ACQ.buyOn, PART));
+/**
+ * 🔄 2026-10-23 지출 시점별 배분(`docs/00-pm/gb-extension-capex-timing.plan.md` Q-3 a) — 「실가 카드에만」은 **증축 전** 자본적지출에
+ *    남는다(아래 두 it은 그래서 「전부 증축 전」이다). 증축 후 자본적지출의 증축분 몫은 증축분의 단서 비교로 간다 — 그 셀은
+ *    `transfer.route.gb-extension-capex-timing.anchor.test.ts`가 고정한다(증축 전 0: b1 17,325,062 · b2 900,000).
+ */
+describe("증축분 환산 — 증축 전 자본적지출·양도비는 실가 카드에만 (Q-7 a · Q-8 a)", () => {
+  it("매매 분리 ON · 파트 칸 전부 증축 전 → 건물 자본적지출 2천만은 원건물로 · 증축분은 개산공제만 (종전 증축분에 2,674,938 가산)", async () => {
+    const r = await ok(asset(EXT_ESTIMATED, ACQ.buyOn, PART, { gbBuildingCapexBeforeExtension: "20000000" }));
     expect([r.b1, r.b2]).toEqual([20_000_000, 900_000]);
     expect(r.tax).toBe(232_864_720);
   });
 
-  it("매매 분리 OFF · 자산 단위 자본적지출 + 양도비 → 실가 파트에 가산 · 증축분 개산공제만", async () => {
-    const r = await ok(asset(EXT_ESTIMATED, ACQ.buyOff, CAPEX, TX));
+  it("매매 분리 OFF · 자산 단위 자본적지출(전부 증축 전) + 양도비 → 실가 파트에 가산 · 증축분 개산공제만", async () => {
+    const r = await ok(asset(EXT_ESTIMATED, ACQ.buyOff, CAPEX, TX, { gbCapexBeforeExtension: "20000000" }));
     expect(r.b2).toBe(900_000);
     expect(r.land + r.b1).toBe(30_000_000);
   });

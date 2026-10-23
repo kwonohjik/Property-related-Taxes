@@ -22,6 +22,8 @@ import { stdPriceAddressOf } from "@/components/calc/transfer/asset-std-price-ad
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { BgPreDeemedNotice } from "./BgPreDeemedNotice";
+import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { BurdenedGiftRightValuationSection } from "./BurdenedGiftRightValuationSection";
 import { BurdenedGiftPriorGiftsBlock } from "./BurdenedGiftPriorGiftsBlock";
@@ -153,6 +155,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
    * (계획서 `burdened-gift-carryover-159-97-2.plan.md` §5.6)
    */
   const isCarryover = asset.acquisitionCause === "carryover_gift";
+  /** 의제취득일 전 상속·증여 토지·주택 — 산정방식 대신 ①②③ 중 큰 금액(시가)·의제취득일 기준시가(기준시가)다(계획서 §18). */
+  const preDeemed = isBgPreDeemedAsset(asset);
   /** K-1~K-3(기준시가) · K-5(환산) 모두 **취득시 기준시가**를 쓴다 — 환산은 이 값을 분자로 자동 추종. */
   const coDonorNeedsStdPrice =
     asset.bgValuationMode === "sangjeungbeop_standard" ||
@@ -293,16 +297,18 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           {/* 겸용주택 — 구분 감정평가가액 유무 선언(G-13): 시가를 주택·상가로 나누는 법정 안분의 근거 */}
           {isMixed && <BurdenedGiftHousingAppraisalField asset={asset} onChange={onChange} />}
 
-          {/* 취득가액 산정방식 (§100① 일치 원칙) — 4옵션 라디오는 분리 파일(800줄 한도) */}
-          <BurdenedGiftAcquisitionMethodField
-            asset={asset}
-            onChange={onChange}
-            transferDate={transferDate}
-            fractionalSplit={isFractionalSplit}
-          />
+          {/* 취득가액 산정방식 (§100① 일치 원칙) — 4옵션 라디오는 분리 파일(800줄 한도). 의제취득일 전 자산은 산정방식이 없다(아래 안내). */}
+          {!preDeemed && (
+            <BurdenedGiftAcquisitionMethodField
+              asset={asset}
+              onChange={onChange}
+              transferDate={transferDate}
+              fractionalSplit={isFractionalSplit}
+            />
+          )}
 
           {/* 담보 승 — 방식별 칸(K-6/K-7 · K-5 안내 · K-4 박스)은 쓰이지 않는다. 산정방식 선택은 ⑫가 요구해 남긴다(Q-2). */}
-          {collateralForced && (
+          {collateralForced && !preDeemed && (
             <ToneCard tone="violet">
               <p className="text-xs text-violet-900 dark:text-violet-200" data-testid="bg-collateral-forced-notice">
                 담보평가액 {fmt(valuationPreview.mortgage)}원이 시가 {fmt(parseAmount(asset.bgMarketValueAtTransfer) || 0)}원보다 커서 증여가액이 담보평가액입니다
@@ -318,7 +324,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-6/K-7: 매매사례가액·감정가액 입력 (§97①1호나목 · 시행령 §176의2③1·2호) */}
-          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && (
+          {isBgPresumedMethod(asset.bgAcquisitionMethod) && !isCarryover && !collateralForced && !preDeemed && (
             <BurdenedGiftPresumedAcquisitionSection
               asset={asset}
               onChange={onChange}
@@ -329,7 +335,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
-          {collateralForced ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
+          {collateralForced || preDeemed ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
             // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.
@@ -359,7 +365,10 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         그래서 이 블록을 「시가 모드」 카드 **밖으로** 뺐다. 안에 두면 기준시가 모드를 고른
         입주권 사용자에게 칸이 뜨지 않아 ⑧이 요구하는 값을 넣을 곳이 없어진다.
       */}
-      {((isMarketMode && !collateralForced && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
+      {/* 의제취득일 전 상속·증여 토지·주택 — 시가·기준시가 모두 이 안내가 산정 기준을 알린다 */}
+      <BgPreDeemedNotice asset={asset} />
+
+      {((isMarketMode && !collateralForced && !preDeemed && (asset.bgAcquisitionMethod === "actual" || isCarryoverPresumed)) || isRightToMoveIn) && (
           <div className="rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-200">

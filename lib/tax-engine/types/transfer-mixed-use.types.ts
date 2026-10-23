@@ -499,6 +499,26 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
   commercialInheritedExpense?: number;
 
   /**
+   * 소득세법 시행령 §163⑨ 단서 — 상속·증여 취득가액 후보를 **자산 합계로 비교**하는 구간(PR-6 · 계획서
+   * `inheritance-pre-deemed-clause-b-revisit.plan.md` §17). ④가 상속개시일·증여일로 파생한다.
+   * · `pre_deemed`: 의제취득일(1985.1.1.) 전 — max(Σ① 평가액, Σ② §164 가액, Σ③ 환산취득가액 §176조의2④). ④는 상속·증여 플래그를
+   *   보내지 않는다(③ 경로 = 종전 경로).
+   * · `clause`: 1985.1.1. 이후 개별주택가격 최초공시(2005-04-30) 전 — max(Σ①, Σ②).
+   * 동점이면 ① > ② > ③(Q-5). ①은 주택분·상가분 두 칸이 다 있을 때만 후보다(Q-19). 이긴 후보의 파트 값을 그대로 쓴다(Q-20).
+   * 없으면 종전 동작(① ?? ② — PHD 주택분만 max).
+   * `commercialOutsideClause`: `clause` 구간에서 상가분이 단서 밖(상가 건물 기준시가 고시 2001-01-01 이후 취득 — Q-22)이면 참.
+   *   그때 ② 후보의 상가분은 §164 가액이 아니라 ①(없으면 보충적 평가)이다 — 주택분만 ①②를 가른다.
+   */
+  sec163_9Compare?: { era: "pre_deemed" | "clause"; cause: "inheritance" | "gift"; commercialOutsideClause?: boolean };
+
+  /**
+   * 엔진 내부 전용(⑫ 스키마에 없다) — `sec163_9Compare` 비교가 후보 하나로 다시 계산할 때 켠다.
+   * 주택 PHD 분기의 파트별 max를 끄고 받은 값을 그대로 쓰며(자산 합계 비교의 결과를 존중), 상가분의 상속·증여 × 공익수용
+   * 거부를 푼다(①②는 환산이 아니라 특례 분모가 닿을 곳이 없다 — Q-17).
+   */
+  inheritedValuesAsIs?: boolean;
+
+  /**
    * 증여 취득가액 직접 산정 게이트(소령 §163⑨) — 순수 증여(§34~§42의3 증여의제 제외).
    * true면 상속과 **동일하게** reported 필드(housingInheritedValue 등)를 소비 —
    * 증여일 상증법 §60~66 평가액을 취득당시 실지거래가액으로 직접 사용(환산·개산공제 배제).
@@ -541,7 +561,8 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    */
   separateAcquisition?: MixedSeparateAcquisition;
   /**
-   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소 전용**.
+   * 공유지분율 (0 < r ≤ 1, 미전달 시 1). **개산공제(소득령 §163⑥) base 축소**와 상속·증여 직접 경로의 **② 기준시가 후보 지분분**
+   * (`transfer-tax-mixed-use-inheritance.ts` `stdShare` — 기준시가를 취득가액 금액으로 쓰는 유일한 곳 · PR-6 리뷰 F1).
    *
    * 기준시가·면적은 물건 전체(100%) 값을 유지한다 — 환산 산식에서 분자·분모로 함께 나타나 상쇄되고,
    * §166⑥ 안분 비율도 100% 스케일을 전제하기 때문이다. 호출부가 `TransferTaxInput.ownershipRatio`를
@@ -1034,6 +1055,23 @@ export interface MixedUseCalculationRoute {
   partialUsageChangeReason?: string;
 }
 
+/** 겸용주택 §163⑨ 단서 자산 합계 비교 echo (PR-6). 각 후보는 그 후보로 계산한 주택분 + 상가분 취득가액이다. */
+export interface MixedSec163_9Comparison {
+  era: "pre_deemed" | "clause";
+  cause: "inheritance" | "gift";
+  /** 상가분이 단서 밖이라 ② 후보의 상가분도 ①(없으면 보충적 평가)이다(Q-22) */
+  commercialOutsideClause?: boolean;
+  /** Σ① 상증법 평가액 — 주택분·상가분 두 칸이 다 있을 때만, 아니면 null */
+  reported: { housing: number; commercial: number; total: number } | null;
+  /** Σ② §164 가액(PHD 주택은 §164⑦ 환산) */
+  standard: { housing: number; commercial: number; total: number } | null;
+  /** Σ③ 환산취득가액(의제취득일 전만) */
+  converted: { housing: number; commercial: number; total: number } | null;
+  selected: "reported" | "standard" | "converted";
+  /** 비교하지 못하고 ③만 쓴 이유(보유 중 용도변경 — 상속·증여 분기 미지원) */
+  uncomparedReason?: string;
+}
+
 /** 겸용주택 분리계산 최종 결과 */
 export interface MixedUseGainBreakdown {
   /** §99의4 농어촌·고향주택 주택수 제외 상세 (D4-02) */
@@ -1049,6 +1087,9 @@ export interface MixedUseGainBreakdown {
    * - "pre-2022-rejected": 2022.1.1 이전 양도분, 처리 불가
    */
   splitMode: "post-2022" | "pre-2022-rejected";
+
+  /** 소득세법 시행령 §163⑨ 단서 자산 합계 비교(`sec163_9Compare`) — 후보 합계와 채택. 비교 구간이 아니면 없다. */
+  sec163_9Comparison?: MixedSec163_9Comparison;
 
   /**
    * 🔴 §97②2호 **단서** 판정 — **환산 경로 전용** (2026-08-07 W-8).

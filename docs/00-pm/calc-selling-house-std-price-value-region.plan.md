@@ -79,6 +79,13 @@
 
 ### 5.1 술어 leaf — `lib/calc/selling-std-price-scope.ts`(신규)
 
+> **PR-1 구현 정정(2026-10-23)** — V-2~V-4 실측으로 아래가 바뀌었다(방향은 유지).
+> - **범위 밖 둘 추가**: 겸용(V-3 · O-4)과 부담부증여 시가 모드(O-5). 칸·⑧ 모두 같은 술어(`isHouseSale`)라 막다른 길이 없다.
+> - **④ 값 leaf `sellingHouseStdPriceAtTransfer`**: §164⑦ 3시점이면 그 카드의 `phdTransferHousingPrice`(일반 칸에 남은 값은 쓰지 않는다), 그 밖은 `standardPriceAtTransfer` → 비었으면 상속·증여 주택 3시점 카드의 `inhHouseValHousePriceAtTransfer`. 종전 ④는 PHD 경로에서도 일반 칸(숨은 칸)을 읽어 0이었다 — PHD 가액기준 양도 주택도 같은 결함이었다.
+> - **⑧ 앵커**: PHD면 `phdTransferHousingPrice`, 그 밖은 `standardPriceAtTransfer`.
+> - **`sellingStdPriceInScope`는 주소 판정만 쓴다**(폼-전역 조정지역 토글은 보지 않는다) — 필수 판정이 가액기준(법정동코드)이라 주소 없이는 성립하지 않는다.
+> - 양도가액 블록의 안분 칸 판정은 블록이 가진 값으로 정한다 — `CompanionSaleModeBlock`에서 `saleModeBlockShowsStdPrice`를 추출했다(동작 불변).
+
 ```ts
 /** 양도 주택이 가액기준인가 — ④가 싣는 `regionCode`(primary.regionCode)로 엔진과 같은 분류 */
 sellingHouseIsValueCriteriaCalc(primary: AssetForm): boolean
@@ -179,8 +186,8 @@ sellingStdPriceShownElsewhere(asset, form): boolean
 
 | PR | 내용 | 세액 |
 |---|---|---|
-| PR-1 | 5.1 leaf · 5.2 ⑤ · 5.3 ⑧ · SP-1~4 · 브라우저 | 칸을 비운 사용자는 막히고, 값을 넣은 사용자는 정확해진다(M-2·M-4 증가 방향) |
-| PR-2 | 5.4 새 본문 키(Q-4 a) · 5.5 엔진 backstop · SP-5·6 · VC-0 개정 | 옛 이력·합성 구성의 0이 불리 + 경고로 바뀐다 |
+| PR-1 ✅ | 5.1 leaf · 5.2 ⑤ · 5.3 ⑧ · ④ 값 leaf(PHD·상속 3시점) · SP-1~4 · V-5 · 브라우저 — 테스트 45건(SP-1~3 · SP-4 22 · V-5) · 전체 39,849 통과 · mutation 14/14(각 변형이 겨냥한 테스트에서만 실패) · 브라우저(Playwright): 전주 완산구 + 강남 2채 → 칸 노출 · 비움 ⑧ 배너 · 4억 → 본문 양도 행 400,000,000 · 3주택 이상 중과 355,135,000 · 다크 375 가로 스크롤 0 | 칸을 비운 사용자는 막히고, 값을 넣은 사용자는 정확해진다(M-2·M-4 증가 방향) |
+| PR-2 ✅ | 5.4 새 본문 키(Q-4 a — ⑫ 공용 shape · ⑬ 단건·다건 · ⑭ 단건 `engine-input.ts`·다건 route · 엔진 `noRosterSellingHouse`) · 5.5 엔진 backstop(`resolveLowPriceLocalHouse` `price > 0` · `isLowPriceLocalHouseUndecidable` · 양도 주택/다른 행 경고 · 설명문 ② 미입력 문장) · SP-5(6) · SP-6(3) · VC-0 개정(단언을 지우지 않고 새 계약으로) | 옛 이력·합성 구성의 0이 불리 + 경고로 바뀐다 · 합성 구성에 넣은 값이 처음으로 엔진에 도착한다 |
 
 PR-1만으로 실제로 도달하는 결함(명부 있는 단건·다건)이 닫힌다. PR-2는 V-1 실측 후 착수한다.
 
@@ -188,14 +195,16 @@ PR-1만으로 실제로 도달하는 결함(명부 있는 단건·다건)이 닫
 
 | ID | 항목 | 검증 방법 | 설계 영향 | 상태 |
 |---|---|---|---|---|
-| V-1 | 명부 없는 합성 구성(§155⑳ 거주주택 의제 · §155①⑦ 의제 · 임대 불성립 복원)에서 가액기준 양도 주택 0 → 1호 불산입이 실제 세액을 가르는지 | route probe(합성 구성 3종 × 0/4억) | Q-4가 (a)인지 (b)인지 | ⏳ PR-2 착수 전 |
-| V-2 | Step1 같은 화면에서 주 자산 `standardPriceAtTransfer`를 그리는 위치 전수 — 현재 grep 6곳: `CompanionAcqStdPriceSection:235` · `TransferStdPriceCards:175` · `CompanionSaleModeBlock:157` · `CompanionAcquisitionCauseSection:229` · `PreDeemedConversionFields:130` · `GeneralBuildingAcquisitionCards:384`(일반건물 — 범위 밖) | 각 위치의 렌더 조건 Read + SP-4 격자 | `ShownElsewhere` 갈래 수 | ⏳ PR-1 착수 전 |
-| V-3 | 겸용주택(`assetKind: housing` + 겸용) — 기준시가가 4부분 패널(`mixedTransfer*`)에 있고 ④ 양도 행은 `standardPriceAtTransfer`를 읽는다. 겸용 양도 주택의 1호 판정 값 출처 | 겸용 + 가액기준 probe | 겸용을 범위에 넣을지, 별건으로 둘지 | ⏳ PR-1 착수 전 |
-| V-4 | 완공 재개발 아파트(`redevelopment_apt`) — 숨은 기준시가(`redevHiddenGeneralStdPrice`)와 이 칸의 관계 | Read + probe | 노출 조건에 포함할지 | ⏳ PR-1 착수 전 |
-| V-5 | 판정 메뉴 → 계산기 넘기기에서 M1 값이 그대로 도착하는지(`toTransferFormPatch` assets 경유) | handoff anchor 1건 | 없음(확인용) | ⏳ |
+| V-1 | 명부 없는 합성 구성(§155⑳ 거주주택 의제 · §155①⑦ 의제 · 임대 불성립 복원)에서 가액기준 양도 주택 0 → 1호 불산입이 실제 세액을 가르는지 | route probe(합성 구성 3종 × 0/4억) | Q-4가 (a)인지 (b)인지 | ✅ **해소(2026-10-23, PR-2)** — **임대 불성립 복원 경로가 세액을 가른다**: 전주 완산구 양도 · 명부 없음 1채 · §155⑳ 거주 0 → 불성립 · 임대 카드 1호(임대개시 기준시가 9억 — 2호 아님) → 0이면 1호 자기 배제 667,342,500 / 4억이면 2주택 중과 1,141,772,500(−474,430,000). 그런데 실가 모드 ④가 주 본문 `standardPriceAtTransfer`를 싣지 않아 **칸에 4억을 넣어도 0으로 계산됐다** ⇒ Q-4 (a) 확정. §155①⑦ 의제 경로는 결론을 가르지 않는다 — 의제가 서지 않으면 구성 행이 없고(원시 플래그), 서면 15호가 먼저 배제한다. §155⑳ 거주주택 의제(성립) 경로는 임대 호가 2호라 10호가 먼저 배제한다(probe 2건) |
+| V-2 | Step1 같은 화면에서 같은 사실(양도 당시 주택 공시가격)을 받는 칸 전수 | 실제 자산 카드를 19개 모드로 렌더해 `data-field` 개수 실측 | `ShownElsewhere` 갈래 수 | ✅ **해소(2026-10-23, PR-1)** — 수정 전 칸이 있던 모드는 다섯이다: 환산 분모(`CompanionAcqStdPriceSection`) · 소유자 분리 축 A 개별주택가격(`TransferStdPriceCards`) · 의제취득일 전 상속 환산 분모(`PreDeemedConversionFields`) · 부담부증여(기준시가) 안분 칸 · 함께 양도 기준시가 안분 칸(`CompanionSaleModeBlock`). **§164⑦ 3시점(PHD)은 같은 사실을 다른 필드(`phdTransferHousingPrice`)로 받는다** — grep 6곳 목록에 없던 갈래다. 상속·증여 주택 3시점 평가 카드(`HouseValuationSection` `inhHouseValHousePriceAtTransfer`)도 같은 사실이지만 선택 입력 카드라 새 칸을 함께 둔다(④·⑧은 둘 중 값이 있는 쪽을 쓴다). 실측 뒤 범위 안 15개 모드 모두 칸이 정확히 하나다(SP-4) |
+| V-3 | 겸용주택(`assetKind: housing` + 겸용) — 기준시가가 4부분 패널(`mixedTransfer*`)에 있고 ④ 양도 행은 `standardPriceAtTransfer`를 읽는다. 겸용 양도 주택의 1호 판정 값 출처 | Read(`mixed-use-asset-input.ts:159-181` — 겸용 엔진도 같은 본문 `houses`를 쓴다) | 겸용을 범위에 넣을지, 별건으로 둘지 | 🟡 **범위 밖으로 확정(2026-10-23)** — 겸용 양도 주택의 1호 「해당 주택 … 기준시가」가 주택분(`mixedTransferHousingPrice`)인지 상가분을 포함하는지 법령 근거를 확인하지 않았다(`feedback_unverified_authority_blocks_tax_change`). 겸용은 칸·⑧ 없이 ④ 종전 값(대개 0)을 싣는다 — 같은 과소 방향의 결함이 남는다. 별건 O-4 |
+| V-4 | 완공 재개발 아파트(`redevelopment_apt`) — 숨은 기준시가(`redevHiddenGeneralStdPrice`)와 이 칸의 관계 | Read | 노출 조건에 포함할지 | ✅ **해소(2026-10-23)** — 범위에 넣는다. 재개발 자산의 일반 양도시 칸은 숨은 칸이라 ④ 주 본문이 싣지 않고 ⑧ 감면 폴백도 인정하지 않는다(`redev-acquisition-price-source.ts:87-97`). 새 칸 값은 ④ 양도 주택 행에만 간다 — 주 본문·감면 축은 움직이지 않는다 |
+| V-5 | 판정 메뉴 → 계산기 넘기기에서 M1 값이 그대로 도착하는지(`toTransferFormPatch` assets 경유) | handoff anchor 1건 | 없음(확인용) | ✅ 도착한다(`selling-std-price-scope.test.ts` V-5) |
 
 ## 10. 범위 밖 관찰
 
 - **O-1** 지역기준 2주택의 9호(1억) 판정 불가 경고는 지금 풀 칸이 실가 경로에 없다(C2-0). Q-3 (a)이면 이 계획서의 선택 칸으로 함께 풀린다. (b)·(c)이면 남는다.
 - **O-2** 명부 없이 세대 주택 수만 있는 옛 경로(`legacyHouseCountPrecedence`)는 양도 주택 행이 없어 1호 자기 배제를 아예 보지 않는다(probe에서 명부 없음 3주택은 기준시가와 관계없이 중과 355,135,000). 지금은 ⑧(「다른 보유 주택이 없는지 확인하세요」, `transfer-tax-validate-step1.ts:62-75`)이 새 입력을 명부로 보내므로 옛 이력에서만 남는다. 방향은 과다다. 별건 후보.
 - **O-3** 조정대상지역 판정에 주소가 없을 때의 토글 fallback(probe D3)은 이 결함과 관계없다.
+- **O-4** 겸용주택 양도 주택(V-3) — 칸·⑧ 없이 ④가 `standardPriceAtTransfer`(겸용 화면엔 없는 칸)를 싣는다. 1호 「기준시가」의 범위를 법령으로 확인한 뒤 별건으로 다룬다. PR-2 backstop(0 = 미입력 → 산입 + 경고)이 들어가면 과소 방향은 막히지만 경고를 풀 칸이 없다.
+- **O-5** 부담부증여 시가 모드 — 그 모드에서도 ④가 `standardPriceAtTransfer`를 §159 본문의 건물 기준시가(`transfer-tax-api-burdened-gift.ts:481-487`)로 싣고, 엔진이 그 값을 양도가액 안분 분모(`burdened-gift-apportionment.ts:120-130`)에 쓴다. 중과용 칸을 열면 그 축이 함께 움직일 수 있어 범위에서 뺐다(칸·⑧ 모두 없음 — 막다른 길 없음). 과소 방향 결함은 남는다.

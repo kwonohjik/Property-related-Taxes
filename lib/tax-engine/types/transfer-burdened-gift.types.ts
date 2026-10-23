@@ -495,6 +495,23 @@ export interface TransferBurdenedGiftBreakdown {
   acquisitionMethodUsed: TransferBurdenedGiftAcquisitionMethodUsed;
 
   /**
+   * 의제취득일(1985.1.1.) 전 상속·증여 자산의 §159①1호 A (계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18).
+   * · `deemed_std`(기준시가 평가 — 괄호): 취득시 기준시가 = 의제취득일 기준시가(`stdAtDeemed`) × B/C (Q-25)
+   * · `three_way`(시가 평가): max(①,②,③) 안분 전 전체 금액 × B/C (Q-24 — ③의 양도가액 = 증여가액 C).
+   *   ①② 채택이면 `acquisitionMethodUsed` = "actual"(실제 필요경비), ③ 채택이면 "converted"(개산공제 + §97②2호 단서).
+   * 금액은 지분 축소 후·채무비율 안분 전이다(`stdAtDeemed`만 물건 전체).
+   */
+  preDeemed?: {
+    basis: "deemed_std" | "three_way";
+    stdAtDeemed: number;
+    reported?: number | null;
+    sec164?: number | null;
+    converted?: number;
+    selected?: "reported" | "sec164" | "converted";
+    wholeAcquisition?: number;
+  };
+
+  /**
    * 🔴 §97②2호 **단서** 판정 — **K-5(환산취득가액) 전용** (2026-08-07 W-6).
    *
    * 「다만, 제1항제1호나목에 따라 취득가액을 **환산취득가액**으로 하는 경우로서 **가목의 금액이

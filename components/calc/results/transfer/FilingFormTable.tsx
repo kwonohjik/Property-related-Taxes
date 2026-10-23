@@ -38,13 +38,20 @@ export function FilingFormTable({
   // 겸용주택은 `transferBurdenedGiftBreakdown`이 아니라 `mixedUseDetail.burdenedGift`(4부분 구조)에 싣는다.
   const burdenedGiftBreakdown = (
     result as unknown as {
-      transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed };
+      transferBurdenedGiftBreakdown?: { acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed; preDeemed?: { basis: "deemed_std" | "three_way" } };
     }
   ).transferBurdenedGiftBreakdown ?? result.mixedUseDetail?.burdenedGift;
   const isBurdenedGift = Boolean(burdenedGiftBreakdown);
   // 배지 툴팁은 엔진이 실제로 쓴 취득가액 경로를 적는다 — 「기준시가 환산」 일괄 표기는 실지·환산 경로에서 틀린다.
+  // 의제취득일 전 취득 자산은 산정 기준이 따로다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18) — 겸용 명세에는 이 echo가 없다.
+  const preDeemedBasis =
+    burdenedGiftBreakdown && "preDeemed" in burdenedGiftBreakdown ? burdenedGiftBreakdown.preDeemed?.basis : undefined;
   const burdenedGiftAcqFormula =
-    burdenedGiftBreakdown?.acquisitionMethodUsed === "actual"
+    preDeemedBasis === "three_way"
+      ? "①상증법 평가액·②§164 기준시가·③환산취득가액 중 큰 금액 × 채무비율"
+      : preDeemedBasis === "deemed_std"
+        ? "의제취득일(1985.1.1.) 기준시가 × 채무비율"
+        : burdenedGiftBreakdown?.acquisitionMethodUsed === "actual"
       ? "실지취득가액 × 채무비율"
       : burdenedGiftBreakdown?.acquisitionMethodUsed === "converted"
         ? "환산취득가액(자산별 양도가액 × 취득시 기준시가를 양도시 기준시가로 나눈 비율)"

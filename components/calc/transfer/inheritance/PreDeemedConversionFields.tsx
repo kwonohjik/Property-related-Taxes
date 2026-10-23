@@ -29,9 +29,11 @@ interface Props {
   between?: ReactNode;
   /** 재개발 종전자산은 ③이 §166③이라 두 칸을 숨긴다(`between`만 그린다). */
   hideFields?: boolean;
+  /** 양도시 기준시가 칸을 다른 곳이 받는다(기준시가 평가 부담부증여 — 양도정보의 같은 칸 · 계획서 §18). */
+  hideTransferField?: boolean;
 }
 
-export function PreDeemedConversionFields({ asset, onChange, transferDate, baseDate, showHouseValuation, between, hideFields }: Props) {
+export function PreDeemedConversionFields({ asset, onChange, transferDate, baseDate, showHouseValuation, between, hideFields, hideTransferField }: Props) {
   const isLand = asset.assetKind === "land";
   // hint 텍스트: 자산 종류에 따라 다르게 표시
   // 토지 등급 입력이 두 칸 사이(`between` — 상속)에 있으면 「아래」, 없으면(증여 — 위 §164④ 섹션) 「위」다.
@@ -106,7 +108,7 @@ export function PreDeemedConversionFields({ asset, onChange, transferDate, baseD
 
       {between}
     {/* ② 양도시 기준시가 — 재개발은 숨긴다(위와 같은 이유) */}
-    {!hideFields && (
+    {!hideFields && !hideTransferField && (
     <div className="space-y-1">
       <FieldCard
         field="standardPriceAtTransfer"

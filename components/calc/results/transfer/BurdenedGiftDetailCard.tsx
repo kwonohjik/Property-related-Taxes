@@ -15,6 +15,8 @@ import type {
   TransferBurdenedGiftBreakdown,
 } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BurdenedGiftGiftTaxRows } from "@/components/calc/results/transfer/BurdenedGiftGiftTaxRows";
 
 const SELECTED_LABEL: Record<string, string> = {
@@ -192,10 +194,16 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
           {/* 자산별 취득가액 산식 (소령 §159①1호) — 3경로 분기 (8개 동기화 지점 ⑦) */}
           <tr className="border-t border-fuchsia-300">
             <td colSpan={2} className="py-1 pr-2 pt-2 text-caption font-semibold text-fuchsia-700 dark:text-fuchsia-300">
-              자산별 취득가액 ({redevSec166 && bg.acquisitionMethodUsed === "converted" ? "환산취득가액 · 시행령 §166③" : (ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed)})
+              자산별 취득가액 ({bg.preDeemed?.basis === "three_way"
+                ? "의제취득일 전 취득 — ①②③ 중 큰 금액 안분 · 소령 §159①1호"
+                : bg.preDeemed?.basis === "deemed_std"
+                  ? "의제취득일 기준시가 안분 · 소령 §159①1호 괄호"
+                  : redevSec166 && bg.acquisitionMethodUsed === "converted" ? "환산취득가액 · 시행령 §166③" : (ACQ_METHOD_LABEL[bg.acquisitionMethodUsed] ?? bg.acquisitionMethodUsed)})
             </td>
           </tr>
-          {bg.acquisitionMethodUsed === "converted" && redevSec166 ? (
+          {bg.preDeemed?.basis === "three_way" ? (
+            <BgPreDeemedThreeWayRows bg={bg} />
+          ) : bg.acquisitionMethodUsed === "converted" && redevSec166 ? (
             <>
               <tr>
                 <td className="py-1 pr-2 pl-3" data-testid="bg-redev-sec166-acquisition">
@@ -329,6 +337,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
               )}
             </>
           )}
+          <BgPreDeemedStdCaption bg={bg} />
           {redevFilingAcquisition !== undefined && (
             <tr data-testid="bg-redev-filing-acquisition">
               <td className="py-1 pr-2 pl-3 text-caption text-fuchsia-700 dark:text-fuchsia-400">

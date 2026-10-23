@@ -21,6 +21,7 @@
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
 import { hasStaleSplitInput } from "./transfer-land-part-cause";
 import { fieldError } from "./transfer-tax-validate-field";
+import { sellingStdPriceIssue } from "./selling-std-price-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
 import {
   usesSelfComputedTransferPrice,
@@ -328,6 +329,13 @@ export function validateAssetEntry(
       if (!replotIncDerivable && (!a.standardPriceAtTransfer || parseAmount(a.standardPriceAtTransfer) <= 0))
         return fieldError("standardPriceAtTransfer", `${label}: 양도시 기준시가를 입력하세요.`);
     }
+  }
+
+  // ⑧ 양도 주택의 양도 당시 기준시가 — 가액기준 지역 · 양도일 현재 조정대상지역(소득세법 시행령 §167의3①1호).
+  //    ⑤ 칸(`SellingStdPriceField` 또는 같은 사실의 다른 칸)·④ 양도 주택 행과 같은 leaf다. 첫 자산만 — ④가 첫 자산만 싣는다.
+  if (index === 0) {
+    const sellingStd = sellingStdPriceIssue(a, form.transferDate);
+    if (sellingStd) return fieldError(sellingStd.field, `${label}: ${sellingStd.message}`);
   }
 
   // 자산별 취득 정보 검증 (취득일 + 취득가 + 환산 + 1990 + 신축)

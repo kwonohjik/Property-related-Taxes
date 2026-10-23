@@ -31,6 +31,9 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { isSec163_9PreDeemed } from "./transfer-163-9-base-date";
 import { deriveSec163_9BaseDate } from "./transfer-163-9-base-date";
 import { isGiftPreDeemedConversionAsset } from "./gift-pre-deemed";
+import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
+import { isBgPreDeemedAsset } from "./bg-pre-deemed";
+import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
 import {
@@ -92,6 +95,11 @@ export function needsClauseADeclaration(asset: AssetForm): boolean {
   // ③ 칸이 있는 증여는 ①(증여 신고가액)이 필수다 — 「증여일 평가액 확인 불가」로 ③만 쓰는 길은 두지 않는다(사용자 결정 Q-14, 2026-10-22).
   //   그 범위의 추계 플래그는 이제 막히고(`giftEstimatedModeBlocked`) 복원에서 비운다.
   if (isGiftPreDeemedConversionAsset(asset)) return false;
+  // 겸용주택은 ①(주택분·상가분 평가액)·②(취득시 기준시가)를 자기 칸으로 받고 엔진이 자산 합계로 비교한다(PR-6) —
+  //   ②가 늘 필수라 「확인 불가」 선언이 갈 곳이 없다. 종전에는 이 술어가 겸용 ① 칸을 읽지 못해 ①을 넣어도 선언을 요구했다.
+  if (mixedSec163_9CompareOf(asset)) return false;
+  // 기준시가로 평가한 부담부증여(§159①1호 괄호)는 의제취득일 기준시가만 쓴다 — ①③이 후보가 아니라 선언이 갈 곳이 없다(Q-25 · `bgPreDeemedError`가 그 기준시가를 요구).
+  if (isBgPreDeemedAsset(asset) && !bgPreDeemedUsesThreeWay(asset)) return false;
   // 범위 밖 증여(재개발·입주권·부담부증여 등)는 종전대로 — 실거래가는 「증여 신고가액을 입력하세요」가 막고, 추계 계열만 선언을 요구한다.
   if (asset.acquisitionCause === "gift" && !isEstimatingMode(asset)) return false;
   if (clauseAReportedValue(asset) > 0) return false;

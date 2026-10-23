@@ -16,6 +16,7 @@ import { bgExpenseUnusedBasis } from "@/lib/calc/burdened-gift-expense-scope";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isRedevelopmentSec166Asset } from "@/lib/calc/redev-acquisition-price-source";
 import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 
 interface Props {
   asset: AssetForm;
@@ -116,6 +117,20 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           }
           data-testid="capital-expenditure"
         />
+        {/* 일반건물 증축 — 지출 시점으로 원건물·증축분 배분이 갈린다. ④·⑧과 같은 leaf로 띄운다. */}
+        {gbCapexBeforeExtensionSlots(asset).asset && (
+          <CurrencyInput
+            label="그중 증축 전에 지출한 금액 (원)"
+            data-field="gbCapexBeforeExtension"
+            value={asset.gbCapexBeforeExtension ?? ""}
+            onChange={(v) => onChange({ gbCapexBeforeExtension: v })}
+            hint={
+              "증축 전에 지출한 금액은 원건물에만, 증축 후 금액은 원건물과 증축분에 양도가액 비율로 나눕니다(「소득세법 시행령」 제163조 제3항). 없으면 0을 입력하세요" +
+              (isFractionalMode(asset.ownershipNumerator, asset.ownershipDenominator) ? ". 100% 기준 입력" : "")
+            }
+            data-testid="gb-capex-before-extension"
+          />
+        )}
         {(() => {
           const formTotal = parseAmount(totalTransferExpense || "0");
           const num = parseFloat(asset.ownershipNumerator || "100");

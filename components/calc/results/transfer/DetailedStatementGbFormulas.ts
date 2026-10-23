@@ -624,9 +624,16 @@ export function buildGbExpenseFormula(
   if (addition > 0 && addition <= displayExp) {
     const own = displayExp - addition;
     const ownLabel = isBuilding2Prop(p.propertyId) ? "증축 실제 필요경비" : "일괄 취득 필요경비 안분";
-    return own > 0
-      ? `${ownLabel} ${fmt(own)} + 자본적지출·양도비 안분 ${fmt(addition)} = ${fmt(displayExp)} (§97②1호)`
-      : `자본적지출·양도비 안분 = ${fmt(addition)} (§97②1호 — 실지거래가액 파트 가산)`;
+    // 증축 전 자본적지출은 원건물에만 귀속된다 — 안분 몫과 나눠 적는다(`gb-extension-capex-timing.plan.md`).
+    const before = Math.min(gb.partBeforeExtensionCapex?.[p.propertyId] ?? 0, addition);
+    const terms: Array<[string, number]> = [
+      ...(own > 0 ? [[ownLabel, own] as [string, number]] : []),
+      ...(before > 0 ? [["증축 전 자본적지출", before] as [string, number]] : []),
+      ...(addition - before > 0 ? [["자본적지출·양도비 안분", addition - before] as [string, number]] : []),
+    ];
+    return terms.length > 1
+      ? `${terms.map(([l, v]) => `${l} ${fmt(v)}`).join(" + ")} = ${fmt(displayExp)} (§97②1호)`
+      : `${terms[0][0]} = ${fmt(displayExp)} (§97②1호 — 실지거래가액 파트 가산)`;
   }
 
   if (isLandProp(p.propertyId)) {

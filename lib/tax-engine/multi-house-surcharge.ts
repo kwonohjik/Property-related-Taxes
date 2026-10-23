@@ -132,6 +132,7 @@ import {
   determineSurchargeExclusion,
   resolveLowPriceLocalHouse,
   isLowPriceSmallHouseUndecidable,
+  isLowPriceLocalHouseUndecidable,
   isUnavoidableReasonUndecidable,
   isAptTransferDeadlinePending,
   isTaxIncentiveRentalAptDeadlinePending,
@@ -449,6 +450,24 @@ function computeMultiHouseSurcharge(
   );
   // 판정하지 못한 배제 호(예: 11호 공고일 표 누락) — 중과가 남는 경로에서만 실린다.
   if (exclusionWarnings) warnings.push(...exclusionWarnings);
+
+  // 1호(가액기준 · 양도 당시 기준시가 3억 이하)를 판정할 값이 없으면 산입·중과하되 그 사실을 알린다(9호와 같은 규약).
+  //   다른 사유로 이미 주택 수에서 빠진 행은 결론과 무관하다.
+  if (!isExcluded) {
+    const excludedIds = new Set(excludedHouses.map((e) => e.houseId));
+    const undecided = input.houses.filter((h) => !excludedIds.has(h.id) && isLowPriceLocalHouseUndecidable(h));
+    if (undecided.some((h) => h.id === input.sellingHouseId)) {
+      warnings.push(
+        `양도 주택의 양도 당시 기준시가가 입력되지 않아 지방 저가주택(양도 당시 기준시가 3억원 이하 — ${MULTI_HOUSE.LOW_PRICE_LOCAL_BASIS}) 해당 여부를 판정하지 못했습니다 — 주택 수에 넣고 중과를 판정했습니다`,
+      );
+    }
+    const others = undecided.filter((h) => h.id !== input.sellingHouseId).length;
+    if (others > 0) {
+      warnings.push(
+        `다른 보유 주택 ${others}채의 양도 당시 기준시가가 입력되지 않아 지방 저가주택(3억원 이하 — ${MULTI_HOUSE.LOW_PRICE_LOCAL_BASIS}) 해당 여부를 판정하지 못했습니다 — 주택 수에 넣었습니다`,
+      );
+    }
+  }
 
   // 9호(양도 당시 기준시가 1억 이하)를 판정할 값이 없으면 중과를 그대로 적용하되 그 사실을 알린다.
   if (

@@ -219,29 +219,44 @@ function FractionalAutoSalePriceCard({
  *   - actual 모드: 양도가액 입력란을 자동계산값 카드로 대체 (read-only)
  *   - apportioned 모드: 안분 키(기준시가) 입력란을 안내 메시지로 대체 (지분율 자체가 안분 키)
  */
+type SaleModeGateProps = Pick<
+  BlockProps,
+  "bundledSaleMode" | "singleMode" | "ownershipNumerator" | "ownershipDenominator" | "contractTotalPrice" | "isFractionalSplit"
+>;
+
+/** 개별 자산 지분율이 입력돼 자동계산 가능한 상태 — 분자<분모 + contractTotalPrice 존재 */
+function saleRatioReady(props: SaleModeGateProps): boolean {
+  const ownN = parseFloat(props.ownershipNumerator || "100");
+  const ownD = parseFloat(props.ownershipDenominator || "100");
+  return isFinite(ownN) && isFinite(ownD) && ownD > 0 && ownN > 0 && ownN < ownD && !!props.contractTotalPrice;
+}
+
+/**
+ * 지분 분할 모드: 양도가액은 총양도가 × 지분율로 자동 결정 → actual 입력·기준시가(§166⑥) 안분 입력
+ * 모두 불필요. 모드(isFractionalSplit)로 게이트해 지분율 미입력(공란) 상태에서도 안분 입력을 숨긴다.
+ * ⚠️ 함께양도(다른 물건) 묶음의 지분 자산은 여기 오지 않는다 — 총양도가가 여러 물건의 합이라 지분율을 곱할 대상이 아니다.
+ *    그 자산은 아래 일반 칸(물건 전체 100% 기준)을 받고 ④가 지분율을 곱한다(2026-10-10 — 종전엔 자동가를 보여 주고
+ *    서버는 그 값을 쓰지 않아 500·양도가액 0). 단건(`singleMode`)의 지분 자동가는 종전 그대로.
+ */
+function saleFractionalActive(props: SaleModeGateProps): boolean {
+  return !!props.isFractionalSplit || (saleRatioReady(props) && !!props.singleMode);
+}
+
+/** 이 블록이 양도시 기준시가(안분 키) 칸을 그리는가 — 양도 주택 기준시가 칸(`selling-std-price-scope.ts`)의 중복 판정이 같은 값을 쓴다 */
+export function saleModeBlockShowsStdPrice(props: SaleModeGateProps): boolean {
+  return props.bundledSaleMode === "apportioned" && !saleFractionalActive(props);
+}
+
 export function CompanionSaleModeBlock(props: BlockProps) {
   // 내부 fallback state (외부 props 없을 때 사용)
   const [internalPricePerSqm, setInternalPricePerSqm] = useState("");
   const pricePerSqm = props.standardPricePerSqmAtTransfer ?? internalPricePerSqm;
   const onPricePerSqmChange = props.onStandardPricePerSqmAtTransferChange ?? setInternalPricePerSqm;
 
-  // 개별 자산 지분율이 입력돼 자동계산 가능한 상태 — 분자<분모 + contractTotalPrice 존재
   const ownN = parseFloat(props.ownershipNumerator || "100");
   const ownD = parseFloat(props.ownershipDenominator || "100");
-  const ratioReady =
-    isFinite(ownN) &&
-    isFinite(ownD) &&
-    ownD > 0 &&
-    ownN > 0 &&
-    ownN < ownD &&
-    !!props.contractTotalPrice;
-
-  // 지분 분할 모드: 양도가액은 총양도가 × 지분율로 자동 결정 → actual 입력·기준시가(§166⑥) 안분 입력
-  // 모두 불필요. 모드(isFractionalSplit)로 게이트해 지분율 미입력(공란) 상태에서도 안분 입력을 숨긴다.
-  // ⚠️ 함께양도(다른 물건) 묶음의 지분 자산은 여기 오지 않는다 — 총양도가가 여러 물건의 합이라 지분율을 곱할 대상이 아니다.
-  //    그 자산은 아래 일반 칸(물건 전체 100% 기준)을 받고 ④가 지분율을 곱한다(2026-10-10 — 종전엔 자동가를 보여 주고
-  //    서버는 그 값을 쓰지 않아 500·양도가액 0). 단건(`singleMode`)의 지분 자동가는 종전 그대로.
-  const fractionalActive = props.isFractionalSplit || (ratioReady && !!props.singleMode);
+  const ratioReady = saleRatioReady(props);
+  const fractionalActive = saleFractionalActive(props);
   const sharePct = ownN > 0 && ownN < ownD ? Number(((ownN / ownD) * 100).toFixed(4)) : undefined;
   const shareInCompanion = !props.singleMode && sharePct !== undefined;
   if (fractionalActive) {

@@ -13,6 +13,7 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { fieldError } from "./transfer-tax-validate-field";
+import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 
 /**
  * 상속·증여 취득 겸용주택 §163⑨ 검증. `acquisitionCause`가 inheritance·gift가 아니면 즉시 null.
@@ -34,7 +35,9 @@ export function validateMixedUseInheritanceAsset(
   if (asset.hasPartialUsageChange) {
     return `${label}: ${kindLabel} 취득 + 보유 중 일부 용도변경 조합은 아직 지원하지 않습니다.`;
   }
-  if (asset.transferCause === "public_expropriation") {
+  const cmp = mixedSec163_9CompareOf(asset);
+  // 의제취득일 전은 지원한다(Q-17 — ③은 특례 분모, ①②는 환산이 아니라 특례가 닿을 곳이 없다 · 엔진 `calcMixedSec163_9Compare`).
+  if (asset.transferCause === "public_expropriation" && cmp?.era !== "pre_deemed") {
     return `${label}: ${kindLabel} 취득 + 공익수용 특례 조합은 아직 지원하지 않습니다.`;
   }
 
@@ -42,6 +45,23 @@ export function validateMixedUseInheritanceAsset(
   const housingOverride = isGift
     ? parseAmount(asset.mixedHousingGiftValueOverride)
     : parseAmount(asset.mixedHousingInheritedValueOverride);
+
+  // §163⑨ 단서 자산 합계 비교 구간(PR-6) — ①은 두 칸 모두 넣거나 모두 비운다(Q-19) · 의제취득일 전 증여는 ① 필수(Q-16). ⑫ 거울.
+  if (cmp) {
+    const commercialReported = isGift
+      ? parseAmount(asset.mixedCommercialGiftValueOverride)
+      : parseAmount(asset.mixedCommercialInheritedValueOverride);
+    const h = housingOverride > 0;
+    const c = commercialReported > 0;
+    const housingField = isGift ? "mixedHousingGiftValueOverride" : "mixedHousingInheritedValueOverride";
+    const commercialField = isGift ? "mixedCommercialGiftValueOverride" : "mixedCommercialInheritedValueOverride";
+    if (h !== c) {
+      return fieldError(h ? commercialField : housingField, `${label}: ${kindLabel}세 신고가액은 주택분·상가분을 모두 입력하거나 모두 비워 두세요 — 두 칸의 합계로 §164 가액·환산취득가액과 비교합니다 (소득세법 시행령 §163⑨).`);
+    }
+    if (!h && isGift && cmp.era === "pre_deemed") {
+      return fieldError(housingField, `${label}: 의제취득일(1985.1.1.) 전 증여 겸용주택은 주택분·상가분 증여 신고가액을 입력하세요 (소득세법 시행령 §163⑨).`);
+    }
+  }
 
   // 주택분 — PHD ON이면 PHD 자체 필수 검증이 이미 개별주택가격을 커버 → override는 항상 optional.
   // PHD OFF일 때만 override||기존필드 필수.

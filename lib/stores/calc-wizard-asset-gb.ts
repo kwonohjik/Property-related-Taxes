@@ -217,6 +217,15 @@ export interface GeneralBuildingFormSlice {
    */
   gbExtensionFloorArea85: string;
 
+  /**
+   * 자본적지출 중 **증축 전**에 지출한 금액 (원) — 증축이 있을 때만 쓴다(`docs/00-pm/gb-extension-capex-timing.plan.md` Q-1 a).
+   * `gbCapexBeforeExtension`은 자산 단위 「자본적지출」(`capitalExpenditure`)의, `gbBuildingCapexBeforeExtension`은 분리 ON
+   * 건물 파트 칸(`buildingDirectExpenses`)의 일부다. 그 칸에 금액이 있으면 필수(0 허용) — 비우면 증축 전·후를 알 수 없다.
+   * 증축 전 지출은 원건물에만, 증축 후 지출은 원건물·증축분에 양도가액 비율로 나눈다.
+   */
+  gbCapexBeforeExtension: string;
+  gbBuildingCapexBeforeExtension: string;
+
   // ── 사례 35: 주택→상가 용도변경 (사전법규재산 2022-684) ──
   /** 주택→상가 단일 용도변경 토글 (general_building 한정). */
   gbHouseToCommercialConversion: boolean;

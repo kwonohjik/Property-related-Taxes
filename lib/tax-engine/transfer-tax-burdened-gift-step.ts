@@ -18,11 +18,30 @@ import { calculateBuildingPenalty } from "./transfer-tax-building-penalty";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferBurdenedGiftBreakdown } from "./types/transfer-burdened-gift.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
+import type { InheritedAcquisitionStepResult } from "./inheritance-acquisition-helpers";
+
+/** STEP 0.45가 부담부증여 × 의제취득일 전으로 판정한 결과(`bgPreDeemed`)만 §159에 넘긴다 — 그 밖은 빈 객체(종전 그대로). */
+function preDeemedParamOf(inheritedStep: InheritedAcquisitionStepResult | undefined) {
+  const b = inheritedStep?.result.preDeemedBreakdown;
+  if (!inheritedStep?.bgPreDeemed || !b) return {};
+  return {
+    preDeemed: {
+      stdAtDeemed: inheritedStep.bgPreDeemed.stdAtDeemed,
+      acquisition: inheritedStep.result.acquisitionPrice,
+      selected: b.selectedMethod,
+      reported: b.reportedAmount,
+      sec164: b.sec164Amount,
+      converted: b.convertedAmount,
+    },
+  };
+}
 
 export function runBurdenedGiftStep(
   rawInput: TransferTaxInput,
   workingInputIn: TransferTaxInput,
   steps: CalculationStep[],
+  /** STEP 0.45 결과 — 의제취득일 전 상속·증여 자산이면 §159①1호 A를 그 결과로 정한다(계획서 inheritance-pre-deemed-clause-b-revisit.plan.md §18). */
+  inheritedStep?: InheritedAcquisitionStepResult,
 ): { breakdown?: TransferBurdenedGiftBreakdown; workingInput: TransferTaxInput; notices: string[] } {
   let workingInput = workingInputIn;
   let transferBurdenedGiftBreakdown: TransferBurdenedGiftBreakdown | undefined;
@@ -68,6 +87,7 @@ export function runBurdenedGiftStep(
       // §104③ 미등기양도자산 — 개산공제율 0.3% (소령 §163⑥1호 단서). transfer 미등기 토글 재사용. (H-25)
       isUnregistered: rawInput.isUnregistered,
       ownershipRatio,
+      ...preDeemedParamOf(inheritedStep),
     });
     /**
      * 재개발·재건축 완공 아파트(원조합원) × 시가 모드 × 환산(K-5) — 취득가액은 **종전 부동산**(기존건물과 그 부수토지)의 취득가액이고,

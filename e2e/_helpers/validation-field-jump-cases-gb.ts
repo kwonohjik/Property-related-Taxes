@@ -268,6 +268,18 @@ export const GB_FIELD_JUMP_CASES: FieldJumpCase[] = [
   },
   { name: "gb: gbExtensionDate (취득일 이전)", field: "gbExtensionDate", step: 0, assetIndex: A, message: /^자산: 증축일은 토지·건물1 취득일/, form: ext({ gbExtensionDate: "2014-01-01" }) },
   { name: "gb: gbExtensionDate (양도일 이후)", field: "gbExtensionDate", step: 0, assetIndex: A, message: /^자산: 증축일은 양도일/, form: ext({ gbExtensionDate: "2024-06-01" }) },
+  // 자본적지출 중 증축 전 지출액(2026-10-23 · `gb-extension-capex-timing.plan.md`) — 자산 단위 칸 · 분리 ON 건물 파트 칸
+  {
+    name: "gb: gbCapexBeforeExtension (증축 · 자산 단위 자본적지출)", field: "gbCapexBeforeExtension", step: 0, assetIndex: A, message: /^자산: 자본적지출 중 증축 전에 지출한 금액/,
+    form: ext({ capitalExpenditure: "10000000", gbCapexBeforeExtension: "" }),
+  },
+  {
+    name: "gb: gbBuildingCapexBeforeExtension (증축 · 분리 ON 건물 파트)", field: "gbBuildingCapexBeforeExtension", step: 0, assetIndex: A, message: /^자산: 건물 자본적지출 중 증축 전에 지출한 금액/,
+    form: ext({
+      hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2012-03-01", acquisitionDate: "2015-03-01", landAcqMode: "actual", buildingAcqMode: "actual",
+      landAcquisitionPrice: "300000000", buildingAcquisitionPrice: "200000000", fixedAcquisitionPrice: "", buildingDirectExpenses: "10000000", gbBuildingCapexBeforeExtension: "",
+    }),
+  },
 
   // ── 주택→상가 용도변경 ──
   {
