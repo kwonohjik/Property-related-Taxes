@@ -370,8 +370,8 @@ describe("D-1·D-2 — 상세명세서 «자산별 양도비» 산식이 자기 
   const ALLOC = /^([\d,]+) × ([\d,]+) \/ \(([\d,]+)\+([\d,]+)\) = ([\d,]+)$/;
   const n = (s: string) => Number(s.replace(/,/g, ""));
 
-  async function formulas(sale: keyof typeof SALE, exp: Record<string, string>) {
-    const r = await run(sale, "same", exp);
+  async function formulas(sale: keyof typeof SALE, exp: Record<string, string>, extra: Record<string, unknown> = {}) {
+    const r = await run(sale, "same", exp, extra);
     const f = (id: string) => {
       const c = r.cards.find((x) => x.propertyId === id)!;
       return buildGbExpenseFormula({ propertyId: id, necessaryExpense: c.expenses, capitalExpenditureForDisplay: 0 } as never, r.gbd);
@@ -418,9 +418,10 @@ describe("D-1·D-2 — 상세명세서 «자산별 양도비» 산식이 자기 
     expect(fOld).toBe(land);
   });
   it("D-3 파트 자본적지출 칸(직접 입력) + 양도비 → 자본적지출은 입력값, 양도비 몫은 안분해 더하고 산식이 그 합을 만든다", async () => {
+    // 파트 자본적지출 칸은 분리 ON 파트 카드에만 있다 — 분리 OFF의 숨은 칸 값은 ④가 싣지 않는다(gb-extension-capex-residuals O-1).
     const { r, land, building } = await formulas("A_declared_70_30", {
       transferExpense: "5,000,000", landDirectExpenses: "1,000,000", buildingDirectExpenses: "2,000,000",
-    });
+    }, { hasSeperateLandAcquisitionDate: true, fixedAcquisitionPrice: "", landAcquisitionPrice: "300,000,000", buildingAcquisitionPrice: "400,000,000" });
     // 파트 칸은 자본적지출만 대체한다 — 종전엔 양도비 5,000,000이 통째로 사라졌다(1,000,000 / 2,000,000).
     expect([r.land, r.building]).toEqual([1_000_000 + 3_500_000, 2_000_000 + 1_500_000]);
     expect(land).toBe(

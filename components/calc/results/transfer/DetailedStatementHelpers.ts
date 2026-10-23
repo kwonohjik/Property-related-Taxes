@@ -98,6 +98,7 @@ export function residenceMonthsOfAsset(
 
 // 800줄 분리 — 양쪽이 함께 쓰는 두 헬퍼는 `DetailedStatementLeaf.ts`(순환 차단 leaf)로 이동.
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementLeaf";
+import { gbFormulaInputsOf } from "./DetailedStatementGbAsset";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 export { findStepByLabel, buildPerAssetWithFormula };
 
@@ -149,6 +150,12 @@ export function buildStatementItems(
   // 일반건물 일괄 모드(사례 31·33) — 자산별 산식 빌더에 전달할 분모/분자 변수.
   // 비-일반건물 모드에서는 undefined → formulaBuilder가 undefined 반환 → 산식 미표시.
   const gbDetail = result.generalBuildingValuationDetail;
+  // 함께 양도 — 일반건물 자산별 상세(카드 접미사로 찾는다). 단건 슬롯이 있으면 그것이 우선한다.
+  const gbOf = (p: (typeof properties)[number], fallbackTotal = 0) =>
+    gbFormulaInputsOf(p, gbDetail, aggregate?.aggregated.generalBuildingDetailsByAsset, properties, formData, {
+      totalTransferPrice: fallbackTotal,
+      asset: primary,
+    });
   // 부담부증여 모드 — 자산별 §159 산식 빌더에 전달할 분모/분자 변수 (perAsset.{land,building}).
   // 비-부담부증여 모드에서는 undefined → 빌더가 일반건물·기본 분기로 진행.
   const burdenedGift = (result as unknown as {
@@ -242,7 +249,10 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => p.transferPrice,
-          (p) => buildGbTransferFormula(p, gbDetail, totalTransferPrice || sumPropTransfer, burdenedGift),
+          (p) => {
+            const g = gbOf(p, totalTransferPrice || sumPropTransfer);
+            return buildGbTransferFormula(p, g.gb, g.totalTransferPrice, burdenedGift);
+          },
         )
       : undefined,
   });
@@ -328,7 +338,10 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => p.acquisitionPrice + capExInAcquisitionColumnOfProperty(p),
-          (p) => buildGbAcquisitionFormula(p, gbDetail, primary, burdenedGift),
+          (p) => {
+            const g = gbOf(p);
+            return buildGbAcquisitionFormula(p, g.gb, g.asset, burdenedGift);
+          },
         )
       : undefined,
   });
@@ -373,7 +386,7 @@ export function buildStatementItems(
       ? buildPerAssetWithFormula(
           properties,
           (p) => Math.max(0, p.necessaryExpense - capExInAcquisitionColumnOfProperty(p)),
-          (p) => buildGbExpenseFormula(p, gbDetail, burdenedGift),
+          (p) => buildGbExpenseFormula(p, gbOf(p).gb, burdenedGift),
         )
       : undefined,
   });

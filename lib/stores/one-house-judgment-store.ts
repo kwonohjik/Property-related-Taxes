@@ -15,6 +15,10 @@ import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exempti
 import type { MultiHouseSurchargeJudgmentResponse } from "@/app/api/calc/multi-house-surcharge-judgment/route";
 import { useProfessionalStore } from "./professional-store";
 import {
+  createInitialSurchargeSimulationInput,
+  type SurchargeSimulationInputForm,
+} from "@/lib/calc/surcharge-simulation-input";
+import {
   createInitialOneHouseJudgmentForm,
   normalizeOneHouseJudgmentForm,
   type OneHouseJudgmentFormData,
@@ -34,10 +38,22 @@ export interface SurchargeJudgmentSlot {
   resultClientId: string | null;
   error: string | null;
   isLoading: boolean;
+  /**
+   * ⑤ 세부담 시뮬레이션 입력(P8) — 판정 사실이 아니라 공유 폼에 두지 않는다. 입력이 바뀌어도 판정은 그대로이므로 결과는 두고
+   * 시뮬레이션만 비운다(`setSurchargeSimulationInput`). persist 대상이 아니다.
+   */
+  simulationInput: SurchargeSimulationInputForm;
 }
 
 export function createInitialSurchargeSlot(): SurchargeJudgmentSlot {
-  return { currentStep: 0, result: null, resultClientId: null, error: null, isLoading: false };
+  return {
+    currentStep: 0,
+    result: null,
+    resultClientId: null,
+    error: null,
+    isLoading: false,
+    simulationInput: createInitialSurchargeSimulationInput(),
+  };
 }
 
 export interface OneHouseJudgmentState {
@@ -72,6 +88,8 @@ export interface OneHouseJudgmentActions {
   setSurchargeResult: (result: MultiHouseSurchargeJudgmentResponse | null, clientId?: string | null) => void;
   setSurchargeError: (error: string | null) => void;
   setSurchargeLoading: (isLoading: boolean) => void;
+  /** 시뮬레이션 입력을 고친다 — 옛 입력으로 낸 시뮬레이션은 같은 `set`에서 비운다(판정 결과는 둔다) */
+  setSurchargeSimulationInput: (patch: Partial<SurchargeSimulationInputForm>) => void;
 }
 
 type OneHouseJudgmentStore = OneHouseJudgmentState & OneHouseJudgmentActions;
@@ -128,6 +146,17 @@ export const useOneHouseJudgmentStore = create<OneHouseJudgmentStore>()(
         set((state) => ({ surcharge: { ...state.surcharge, result, resultClientId: result ? clientId : null } })),
       setSurchargeError: (error) => set((state) => ({ surcharge: { ...state.surcharge, error } })),
       setSurchargeLoading: (isLoading) => set((state) => ({ surcharge: { ...state.surcharge, isLoading } })),
+      setSurchargeSimulationInput: (patch) =>
+        set((state) => {
+          const { result } = state.surcharge;
+          return {
+            surcharge: {
+              ...state.surcharge,
+              simulationInput: { ...state.surcharge.simulationInput, ...patch },
+              result: result?.simulation ? { ...result, simulation: undefined } : result,
+            },
+          };
+        }),
     }),
     {
       name: "one-house-judgment-wizard",

@@ -16,6 +16,7 @@ import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggre
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
+import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
@@ -290,7 +291,7 @@ function buildGbAcquisitionFormulaCore(
   // 실가 파트(혼합 환산의 기존 거짓 등식)는 Phase C 범위다(Q-F).
   const gbModeCard = gb.assetCards.find(
     (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
-  ) as { acquisitionMode?: string; actualSource?: "part_input" | "bundled_apportion" } | undefined;
+  ) as { acquisitionMode?: string; actualSource?: "part_input" | "bundled_apportion" | "inherited" } | undefined;
   if (gbModeCard?.acquisitionMode === "appraisal" || gbModeCard?.acquisitionMode === "salesCase") {
     return gbModeCard.acquisitionMode === "appraisal"
       ? `자산별 취득가액 = ${fmt(displayValue)} (감정가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③2호)`
@@ -305,6 +306,10 @@ function buildGbAcquisitionFormulaCore(
   // echo가 없는 구 이력은 종전 산식을 유지한다. 증축분(건물2)은 별도 직접 입력 문구가 아래에 있어 제외한다.
   if (gbModeCard?.acquisitionMode === "actual" && gbModeCard.actualSource === "part_input" && !isBuilding2Prop(p.propertyId)) {
     return `자산별 취득가액 = ${fmt(displayValue)} (실거래가 — 소득세법 §97①1호 가목)`;
+  }
+  // 상속(§163⑨) — 상속개시일 평가액을 그대로 쓴다. 아래 일괄 실가 안분 분기로 떨어지면 「0 × … = 평가액」 거짓 등식이 된다.
+  if (gbModeCard?.acquisitionMode === "actual" && gbModeCard.actualSource === "inherited") {
+    return `자산별 취득가액 = ${fmt(displayValue)} (상속개시일 평가액 — 소득세법 시행령 §163⑨)`;
   }
 
   // ── 실가 모드 분기 (사례 35 등 — 환산취득가 미사용, 일괄 실가 안분) ──
@@ -517,9 +522,12 @@ function buildGbPartCapexExpenseFormula(
  */
 export function buildGbExpenseFormula(
   p: PerPropertyBreakdown,
-  gb: GeneralBuildingOutput | undefined,
+  gbIn: GeneralBuildingOutput | undefined,
   burdenedGift?: TransferBurdenedGiftBreakdown,
 ): string | undefined {
+  // 지분 분할 실가 경로 — 이 카드가 속한 지분의 필요경비 echo로 덮어 읽는다(지분마다 금액이 다르다).
+  const shareEcho = gbIn?.shareActualExpenseEcho?.[String(shareIndexOf(p.propertyId))];
+  const gb = gbIn && shareEcho ? { ...gbIn, ...shareEcho } : gbIn;
   // 부담부증여 §163⑥ 분기 — 자산별 개산공제 = 안분 취득가액 × 개산공제율
   if (burdenedGift) {
     const bgAsset = isLandProp(p.propertyId)
