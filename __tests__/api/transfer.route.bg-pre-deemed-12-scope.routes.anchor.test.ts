@@ -166,18 +166,22 @@ const CB: Record<string, unknown> = {
 };
 
 describe("B-1 ⑫ 면제는 엔진이 3자 max로 받는 자산만", () => {
-  it("재개발 — 산정방식 없음 + 의제취득일 전 상속 입력 → 400 산정방식 (종전 200 · 취득가액 0 · 26,042,413)", async () => {
+  // PR-7b-4가 재개발 완공 아파트를 엔진 3자 max에 넣으면서 ⑫ 면제를 넓혔다(종전 400) — 「취득가액 0」(7b-0 전 26,042,413)으로 떨어지지 않는다
+  it("재개발 — 산정방식 없음 + 의제취득일 전 상속 입력(① 2억) → 200 · 3자 max ① 채택 × β = 8천만 · 9,245,083 (7b-0 전 취득가액 0 · 26,042,413)", async () => {
     const body = await captureBody(form(REDEV, "2026-02-16", { contractTotalPrice: "525000000" }));
     const r = await postTransfer(directPreDeemed(body, REDEV_IA));
-    expect(r.status).toBe(400);
-    expect(fieldErrorsOf(r)).toContain("burdenedGiftInfo.acquisitionMethod");
+    expect(r.status).toBe(200);
+    expect(bgOf(r)?.preDeemed?.selected).toBe("reported");
+    expect(bgOf(r)?.perAsset.building.acquisitionPrice + bgOf(r)?.perAsset.land.acquisitionPrice).toBe(80_000_000);
+    expect(taxOf(r)).toBe(9_245_083);
   });
 
-  it("재개발 — 산정방식(환산)이 있으면 종전 그대로 13,023,566", async () => {
+  it("재개발 — 산정방식(환산) + §166③ 칸 + ① 2억 → 3자 max ① 채택 9,245,083 (종전 13,023,566 — ①을 무시하고 고른 환산)", async () => {
     const body = await captureBody(form(REDEV, "2026-02-16", { contractTotalPrice: "525000000" }));
     const r = await postTransfer({ ...body, inheritedAcquisition: REDEV_IA, useEstimatedAcquisition: true });
     expect(r.status).toBe(200);
-    expect(taxOf(r)).toBe(13_023_566);
+    expect(bgOf(r)?.preDeemed).toMatchObject({ basis: "three_way", reported: 200_000_000, converted: 141_221_534, selected: "reported" });
+    expect(taxOf(r)).toBe(9_245_083);
   });
 
   it("일반건물 — 산정방식 없음 + 의제취득일 전 상속 입력 → 400 산정방식 (종전 200 · 취득가액 0 · 112,808,000)", async () => {

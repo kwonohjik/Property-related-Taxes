@@ -72,11 +72,13 @@ export function runInheritedAcquisitionStep(
 
   const redevelopment166_3Price = resolvePreDeemedRedevelopment166_3Price(rawInput);
   // 부담부증여면 ③의 양도가액은 ④가 채운 채무 합계가 아니라 증여가액 C다(Q-24 · 국심2007서2099) — ①②(물건 전체)와 같은 축으로 비교한다.
-  // 재개발 종전자산은 ③이 §166③이라 해당 없다(§166 경로가 β로 안분한다).
+  // 재개발 종전자산은 ③이 §166③(평가액 × 기준시가 비율 — 양도가액 항 없음)이라 이 치환이 쓰이지 않는다(`calcPreDeemed`). 안분 전 전체 금액끼리
+  // 비교하고, §159가 채택 결과로 고른 분기(①② → 실지 · ③ → 환산)를 재개발 경로가 §166으로 β 안분한다(`redevSec166Conversion` · PR-7b-4 · Q-8 a).
   const bgBasis =
     rawInput.transferType === "burdened_gift" &&
     rawInput.burdenedGiftInfo &&
-    redevelopment166_3Price === undefined &&
+    // 입주권은 §159가 K-4 고정이고 의제취득일 전 3자 max 범위 밖이다(사용자 결정 Q-30 · 설계 D-2) — 의제 입력이 직접 실려도 받지 않는다
+    rawInput.propertyType !== "right_to_move_in" &&
     resolvedInput.inheritanceDate.getTime() < DEEMED_ACQUISITION_DATE.getTime()
       ? burdenedGiftPreDeemedBasis(rawInput.burdenedGiftInfo, rawInput.ownershipRatio)
       : undefined;

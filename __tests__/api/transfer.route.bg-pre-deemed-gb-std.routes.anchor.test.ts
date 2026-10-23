@@ -179,10 +179,11 @@ describe("PR-7b-2 일반건물 × 의제취득일 전 × 부담부증여 · 기�
     expect(r.issues.map((i) => i.field)).toContain("preDeemedClauseAUnconfirmed");
   });
 
-  it("M-1b 경계: 재개발 완공 아파트 기준시가 평가 부담부증여는 E-1 면제가 아니다 — 일반건물 술어가 다른 자산으로 새지 않는다(PR-7b-4 범위)", () => {
+  // 경계 자산은 범위 밖인 입주권(Q-30)이다 — 종전 재개발 완공 아파트는 PR-7b-4로 기준시가 평가 E-1 면제(`isBgPreDeemedAsset`)가 되어 이 경계를 가렸다
+  it("M-1b 경계: 입주권 기준시가 평가 부담부증여는 E-1 면제가 아니다 — 일반건물 술어가 다른 자산으로 새지 않는다", () => {
     const redev = {
       ...makeDefaultAsset(1),
-      assetKind: "redevelopment_apt",
+      assetKind: "right_to_move_in",
       acquisitionCause: "inheritance",
       acquisitionDate: "1983-07-26",
       inheritanceStartDate: "1983-07-26",
