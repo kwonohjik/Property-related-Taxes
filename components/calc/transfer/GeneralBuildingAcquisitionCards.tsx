@@ -48,6 +48,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { gbLandPreDeemed, GB_PRE_DEEMED_LAND_NOTE } from "@/lib/calc/gb-pre-deemed";
 import { gbBgPre1990LandNote } from "@/lib/calc/gb-pre-deemed";
 import { gbBgUsesStdAcq } from "@/lib/calc/bg-pre-deemed-mode";
+import { gbBgThreeWayParts } from "@/lib/calc/bg-pre-deemed-mode";
 import { bgCollateralParenEraUncertain } from "@/lib/calc/burdened-gift-collateral-win";
 import { BG_COLLATERAL_PAREN_ERA_SUFFIX } from "@/lib/calc/burdened-gift-collateral-win";
 import {
@@ -128,6 +129,7 @@ import {
   PART_MODE_LABELS,
   GbBuildingInheritedValueCard,
   GbBuildingCarryoverCard,
+  GbBgPreDeemedReportedCard,
 } from "./GeneralBuildingAcquisitionCardsParts";
 
 export function GeneralBuildingAcquisitionCards({
@@ -151,6 +153,8 @@ export function GeneralBuildingAcquisitionCards({
    * memory `feedback_multikey_patch_stale_spread_overwrite`). `useEffect` 미러링 아님.
    */
   const isSeparate = !!asset.hasSeperateLandAcquisitionDate;
+  /** 부담부증여 · 시가 평가(담보 패) — 의제취득일 전 상속·증여 파트(그 파트만 3자 max · Q-28 · PR-7b-6b). ① 칸·안내가 같은 술어를 쓴다. */
+  const gbBgParts = gbBgThreeWayParts(asset);
   const setLandAcqDate = (v: string) =>
     onChange(isSeparate ? { landAcquisitionDate: v } : { acquisitionDate: v, landAcquisitionDate: v });
   const setBuildingAcqDate = (v: string) =>
@@ -480,7 +484,7 @@ export function GeneralBuildingAcquisitionCards({
               <p data-testid="gb-bg-pre1990-land-note" className="text-xs text-amber-800 dark:text-amber-200">
                 {gbBgPre1990LandNote(
                   asset,
-                  !gbBgUsesStdAcq(asset) ? "market" : asset.bgValuationMode === "sangjeungbeop_market" ? "collateral" : "standard",
+                  gbBgParts.land ? "three_way" : !gbBgUsesStdAcq(asset) ? "market" : asset.bgValuationMode === "sangjeungbeop_market" ? "collateral" : "standard",
                   bgCollateralParenEraUncertain(transferDate) ? BG_COLLATERAL_PAREN_ERA_SUFFIX : "",
                 )}
               </p>
@@ -534,8 +538,13 @@ export function GeneralBuildingAcquisitionCards({
               onChange({ fixedAcquisitionPrice: v })
             }
             isBurdenedGift={asset.transferType === "burdened_gift"}
+            bgPartReportedElsewhere={gbBgParts.land}
           />
         )}
+
+        {/* 부담부증여 · 시가 평가 — 의제취득일 전 파트의 ①(PR-7b-6b). 분리 OFF면 건물 파트도 이 카드에서 받는다(아래 상속 건물 평가액과 같은 자리·이유). */}
+        {gbBgParts.land && <GbBgPreDeemedReportedCard asset={asset} part="land" onChange={onChange} />}
+        {!isSeparate && gbBgParts.building && <GbBgPreDeemedReportedCard asset={asset} part="building" onChange={onChange} />}
 
         {/* 이월과세(증여): CarryoverGiftBlock */}
         {asset.acquisitionCause === "carryover_gift" && (
@@ -712,6 +721,8 @@ export function GeneralBuildingAcquisitionCards({
         )}
 
         <PartAcqModeField part="building" asset={asset} onChange={onChange} showCapex={showPartCapex} />
+
+        {gbBgParts.building && <GbBgPreDeemedReportedCard asset={asset} part="building" onChange={onChange} />}
 
         {/* §163⑨ 상속개시일 건물 신고가액 (Phase 1 = 토지·건물 모두 상속) */}
         {asset.transferType !== "burdened_gift" &&

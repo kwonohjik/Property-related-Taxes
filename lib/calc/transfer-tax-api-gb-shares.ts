@@ -127,6 +127,12 @@ export function mergeGbPropertyLevel(asset: AssetForm, primary: AssetForm): Asse
 export function applyShareScale(
   valuation: Record<string, unknown>,
   ratio: number,
+  /**
+   * 부담부증여 공유 단건(축 A)·함께 양도 공유 카드 — 파트 ①②를 줄이지 않는다(사용자 결정 2026-10-24 · 계획서 PR-7b-6 L-1 (a)).
+   * 그 경로의 §159는 지분 축소를 하지 않아(`ownershipRatio`는 축 B 지분 카드만 — 기존 한계 V-5) ③이 물건 전체 기준이다 — ①②도 같은 기준이어야
+   * 파트별 3자 max가 같은 단위끼리 비교된다. 축 B 지분 배열은 §159가 지분으로 줄이므로 종전대로 줄인다.
+   */
+  opts: { keepPreDeemedClauseA?: boolean } = {},
 ): Record<string, unknown> {
   if (ratio >= 1) return valuation;
   const scale = (v: unknown) =>
@@ -160,7 +166,7 @@ export function applyShareScale(
     if (out[k] !== undefined) out[k] = scale(out[k]);
   }
   // 의제취득일 전 상속·증여 파트의 ①② — 파트 슬롯(위 `*AcquisitionPrice`)과 같은 100% 기준 금액이다(PR-4).
-  for (const k of ["landPreDeemedClauseA", "buildingPreDeemedClauseA"]) {
+  for (const k of opts.keepPreDeemedClauseA ? [] : ["landPreDeemedClauseA", "buildingPreDeemedClauseA"]) {
     const c = out[k] as { reported: number; sec164: number } | undefined;
     if (c) out[k] = { reported: scale(c.reported), sec164: scale(c.sec164) };
   }

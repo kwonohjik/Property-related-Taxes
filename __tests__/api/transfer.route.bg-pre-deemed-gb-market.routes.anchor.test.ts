@@ -2,8 +2,8 @@
  * PR-7b-6a — 의제취득일(1985.1.1.) 전 상속 일반건물 × 부담부증여 × **시가 평가** — 파트별 3자 max (사용자 결정 Q-28).
  * 계획서 `docs/02-design/features/inheritance-pre-deemed-bg-pr7b.plan.md` §6 PR-7b-6.
  *
- * 이 PR은 엔진·route·⑫까지다 — ④가 부담부증여에 파트 ①②(`{land,building}PreDeemedClauseA`)를 싣는 것은 PR-7b-6b(화면)이다.
- * 그래서 화면 폼으로 만든 body(산정방식 환산 · 선언)에 ①②를 **직접 넣어** route ⑫⑭ → 엔진을 고정한다.
+ * 6a(엔진·route·⑫)에서 만든 anchor다 — 화면 폼으로 만든 body에 ①②를 **직접 넣어** route ⑫⑭ → 엔진을 고정한다. PR-7b-6b부터 ④가 파트 ①②를
+ * 스스로 싣는다(이 폼은 ① 칸이 비어 ① 0) — 「한 파트만」 시료는 다른 파트의 ①②를 걷어 낸다. 화면 경로 anchor는 `...-gb-market-ui.routes.anchor.test.ts`.
  *
  * 시료: 1983-07-26 상속 · 2023-02-16 부담부증여 · 시가 10억 · 채무 5억(β 0.5) · 토지 100㎡ · 양도시 토지 2,000,000/㎡ · 건물 2억 ·
  * 취득시(의제취득일) 토지 300,000/㎡ · 건물 3천만. 파트 증여가액 5억씩 → ③ = 5억 × 3천만/2억 = 7,500만씩. 세율은 mock.
@@ -101,7 +101,7 @@ const both = (land: Pair, building: Pair, dropMethod = true) => (b: Loose) => {
 };
 
 describe("PR-7b-6a 일반건물 × 의제취득일 전 × 부담부증여 · 시가 평가 — 파트별 3자 max", () => {
-  it("R-0 종전: 파트 ①②가 없으면 고른 산정방식(환산) 그대로 — 91,920,600", async () => {
+  it("R-0 ① 칸이 빈 폼 그대로 — ④가 ① 0으로 싣고 두 파트 ③(7,500만씩) → 종전 환산과 같은 91,920,600", async () => {
     const r = await run({});
     expect(r.status).toBe(200);
     expect(r.acq).toEqual([37_500_000, 37_500_000]);
@@ -127,6 +127,7 @@ describe("PR-7b-6a 일반건물 × 의제취득일 전 × 부담부증여 · 시
   it("R-3 한 파트만 의제취득일 전 · 산정방식 없음 → ⑫ 400(다른 파트가 쓸 방식이 없다)", async () => {
     const r = await run({}, (b) => {
       inject(b.generalBuildingValuation, SAMPLE_LAND);
+      delete b.generalBuildingValuation.buildingPreDeemedClauseA;
       delete b.burdenedGiftInfo.acquisitionMethod;
     });
     expect(r.status).toBe(400);
@@ -152,7 +153,11 @@ describe("PR-7b-6a 일반건물 × 의제취득일 전 × 부담부증여 · 시
   });
 
   it("R-4 한 파트만 의제취득일 전 · 다른 파트는 고른 환산 — 토지 ①, 건물 K-5", async () => {
-    const r = await run({}, (b) => inject(b.generalBuildingValuation, SAMPLE_LAND));
+    const r = await run({}, (b) => {
+      inject(b.generalBuildingValuation, SAMPLE_LAND);
+      delete b.generalBuildingValuation.buildingPreDeemedClauseA;
+      b.burdenedGiftInfo.acquisitionMethod = "converted"; // ④는 두 파트 다 의제면 방식을 싣지 않는다 — 건물 파트가 쓸 방식을 되돌린다
+    });
     expect(r.status).toBe(200);
     expect(r.acq).toEqual([300_000_000, 37_500_000]);
     expect(r.bg.preDeemed.parts).toEqual({ land: expect.objectContaining({ selected: "reported" }) });
@@ -238,6 +243,7 @@ describe("PR-7b-6a 일반건물 × 의제취득일 전 × 부담부증여 · 시
   it("R-9 함께 양도 카드 · 한 파트만 의제취득일 전 · 산정방식 없음 — 컴패니언 ⑫에는 이 검사가 없어 엔진이 막는다(취득가액 0 방지)", async () => {
     const { body, card } = await companionBody();
     inject(card.generalBuildingValuation, SAMPLE_LAND);
+    delete card.generalBuildingValuation.buildingPreDeemedClauseA;
     delete card.burdenedGiftInfo.acquisitionMethod;
     const r = await postTransfer(body);
     expect(r.status).toBe(400);

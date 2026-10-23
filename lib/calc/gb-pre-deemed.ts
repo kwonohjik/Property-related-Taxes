@@ -14,6 +14,7 @@ type GbAsset = Pick<
   AssetForm,
   "acquisitionCause" | "gbBuildingAcquisitionCause" | "acquisitionDate" | "landAcquisitionDate" | "hasSeperateLandAcquisitionDate"
 >;
+type GbBgAsset = GbAsset & Pick<AssetForm, "assetKind" | "transferType" | "bgValuationMode">;
 
 export const gbLandPreDeemed = (asset: GbAsset): boolean =>
   isPreDeemedLandPart(asset.acquisitionCause, partAcquisitionDates(asset).land);
@@ -21,17 +22,44 @@ export const gbLandPreDeemed = (asset: GbAsset): boolean =>
 export const gbBuildingPreDeemed = (asset: GbAsset): boolean =>
   isPreDeemedLandPart(asset.gbBuildingAcquisitionCause, asset.acquisitionDate);
 
-/** ④ payload 필드 — ①②를 따로 싣는다. 부담부증여는 아직 싣지 않는다 — 엔진 §159의 파트별 3자 max(PR-7b-6a)를 화면이 여는 것은 PR-7b-6b. */
+/**
+ * 부담부증여 · 시가 평가 — 의제취득일 전 상속·증여 파트(④ 전송 판정 · PR-7b-6b). 엔진 §159가 그 파트만 3자 max를 한다(사용자 결정 Q-28 ·
+ * `burdened-gift-part-pre-deemed.ts`). 담보 승(§159①1호 괄호)은 여기서 보지 않는다 — 그때 엔진은 파트 ①②도 산정방식도 읽지 않아 실어도 결과가 같고,
+ * 담보 승 판정이 ④ 부담부증여 빌더를 import해서 이 파일(④가 쓰는 leaf)이 보면 순환 import가 된다. ⑤⑧은 담보 승까지 본 `gbBgThreeWayParts`를 쓴다.
+ */
+export function gbBgMarketPreDeemedParts(asset: GbBgAsset): { land: boolean; building: boolean } {
+  const on =
+    asset.assetKind === "general_building" &&
+    asset.transferType === "burdened_gift" &&
+    asset.bgValuationMode === "sangjeungbeop_market";
+  return { land: on && gbLandPreDeemed(asset), building: on && gbBuildingPreDeemed(asset) };
+}
+
+/**
+ * 파트 ①(상증법 평가액)을 받는 칸 — 상속은 상속개시일 평가액 칸, 증여는 파트 취득가액 칸(증여 신고가액). ④ `gbSec1639Acquisition`의
+ * `reported`와 같은 규칙이다(부담부증여 화면은 이 칸을 의제취득일 전 파트 ① 카드에서 받는다 — PR-7b-6b).
+ */
+export function gbPartReportedField(
+  asset: Pick<AssetForm, "acquisitionCause" | "gbBuildingAcquisitionCause">,
+  part: "land" | "building",
+): "publishedValueAtInheritance" | "landAcquisitionPrice" | "gbBuildingInheritedValue" | "buildingAcquisitionPrice" {
+  if (part === "land") return asset.acquisitionCause === "inheritance" ? "publishedValueAtInheritance" : "landAcquisitionPrice";
+  return asset.gbBuildingAcquisitionCause === "inheritance" ? "gbBuildingInheritedValue" : "buildingAcquisitionPrice";
+}
+
+/** ④ payload 필드 — ①②를 따로 싣는다. 부담부증여는 시가 평가일 때만(기준시가 평가는 의제취득일 기준시가 × 채무비율이라 ①②를 쓰지 않는다 · Q-25). */
 export function gbPreDeemedClauseAFields(
-  asset: GbAsset,
+  asset: GbBgAsset,
   isBurdenedGift: boolean,
   land: GbPreDeemedClauseA,
   building: GbPreDeemedClauseA,
 ): { landPreDeemedClauseA?: GbPreDeemedClauseA; buildingPreDeemedClauseA?: GbPreDeemedClauseA } {
-  if (isBurdenedGift) return {};
+  const parts = isBurdenedGift
+    ? gbBgMarketPreDeemedParts(asset)
+    : { land: gbLandPreDeemed(asset), building: gbBuildingPreDeemed(asset) };
   return {
-    ...(gbLandPreDeemed(asset) ? { landPreDeemedClauseA: land } : {}),
-    ...(gbBuildingPreDeemed(asset) ? { buildingPreDeemedClauseA: building } : {}),
+    ...(parts.land ? { landPreDeemedClauseA: land } : {}),
+    ...(parts.building ? { buildingPreDeemedClauseA: building } : {}),
   };
 }
 
@@ -43,10 +71,15 @@ export const GB_PRE_DEEMED_BUILDING_HINT =
 
 /**
  * 부담부증여 — 1990.8.30. 전 상속·증여 토지 등급 카드 안내(PR-7b-2 G-4). §159가 취득가액을 정해 §163⑨ 「많은 금액」·§176조의2④ 「셋 중 큰 금액」 비교가 없다.
- * @param use standard = 기준시가 평가 · collateral = 시가 평가지만 담보평가(상증법 §66) 승 — 둘 다 취득시 기준시가 × 채무비율(`gbBgUsesStdAcq`) · market = 그 밖의 시가 평가
+ * @param use standard = 기준시가 평가 · collateral = 시가 평가지만 담보평가(상증법 §66) 승 — 둘 다 취득시 기준시가 × 채무비율(`gbBgUsesStdAcq`) · market = 그 밖의 시가 평가 ·
+ *            three_way = 시가 평가 · 의제취득일 전 상속·증여 토지(파트별 3자 max — `gbBgThreeWayParts`)
  * @param collateralEraSuffix 담보 승일 때 괄호 인용 뒤에 붙이는 시기 단서(`BG_COLLATERAL_PAREN_ERA_SUFFIX` — 같은 블록의 다른 안내와 같다)
  */
-export function gbBgPre1990LandNote(asset: GbAsset, use: "standard" | "collateral" | "market", collateralEraSuffix = ""): string {
+export function gbBgPre1990LandNote(asset: GbAsset, use: "standard" | "collateral" | "market" | "three_way", collateralEraSuffix = ""): string {
+  // three_way — 의제취득일 전 상속·증여 토지 · 시가 평가(담보 패): 그 파트만 3자 max(Q-28 · PR-7b-6b). 환산값이 ②이자 ③의 분자다.
+  if (use === "three_way") {
+    return "부담부증여를 시가로 평가하면 1985.1.1. 전에 상속·증여받은 토지는 아래 환산값(등급을 의제취득일(1985.1.1.) 기준으로 입력)이 ②(§164④ 가액)이자 ③(환산취득가액)의 분자이고, ①②③ 중 큰 금액 × 채무비율이 토지 취득가액입니다 (소득세법 시행령 §159①1호·§164④·§176조의2④).";
+  }
   const text =
     use === "standard"
       ? "부담부증여를 기준시가로 평가하면 아래 환산값이 취득시 토지 기준시가이고, 이 금액 × 채무비율이 토지 취득가액입니다 (소득세법 시행령 §159①1호 괄호·§164④)."

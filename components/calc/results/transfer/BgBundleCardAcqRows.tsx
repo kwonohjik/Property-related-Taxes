@@ -7,6 +7,7 @@
  */
 import { Fragment } from "react";
 import { BgPreDeemedThreeWayRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
+import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import type {
   TransferBurdenedGiftAcquisitionMethodUsed,
   TransferBurdenedGiftBreakdown,
@@ -37,6 +38,8 @@ export function BgBundleCardAcqRows({
                 {title} —{" "}
                 {b.preDeemed?.basis === "three_way"
                   ? "의제취득일 전 취득 · ①②③ 중 큰 금액"
+                  : b.preDeemed?.basis === "three_way_parts"
+                  ? "토지·건물별 — 의제취득일 전 파트는 ①②③ 중 큰 금액"
                   : b.preDeemed?.basis === "deemed_std"
                     ? "의제취득일 기준시가"
                     : methodLabels[b.acquisitionMethodUsed]}
@@ -44,6 +47,8 @@ export function BgBundleCardAcqRows({
             </tr>
             {b.preDeemed?.basis === "three_way" ? (
               <BgPreDeemedThreeWayRows bg={b} />
+            ) : b.preDeemed?.basis === "three_way_parts" ? (
+              <BgPreDeemedPartsRows bg={b} methodLabels={methodLabels} />
             ) : (
               <tr data-testid="bg-bundle-card-acquisition">
                 <td className="py-1 pr-2 pl-3">

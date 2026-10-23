@@ -33,6 +33,7 @@ import {
 } from "./burdened-gift-mixed-use-scope";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
+import { gbBgMarketPreDeemedParts } from "./gb-pre-deemed";
 
 export interface BurdenedGiftInfoPayload {
   valuationMode: "sangjeungbeop_standard" | "sangjeungbeop_market";
@@ -423,8 +424,17 @@ export function buildBurdenedGiftInfo(
     const landStdAtTransfer = (parseAmount(primary.gbTransferLandPricePerSqm) || 0) * landArea;
     // 1990.8.30. 전 상속·증여 토지는 등급 환산값(⑤ display fallback·⑧과 같은 leaf · PR-7b-2 G-3). 엔진 §159는 이 info 값을 읽는다(route 인자가 아니다).
     const landStdAtAcquisition = effectiveGbLandPriceAtAcq(primary, transferDate ?? "") * landArea;
+    // 의제취득일 전 상속·증여 파트(시가 평가) — §159가 그 파트만 3자 max를 한다(Q-28 · PR-7b-6). 두 파트 다면 산정방식이 없고(⑤가 라디오를 숨긴다 · ⑫ 면제),
+    // 한 파트면 그 파트의 방식별 금액 칸이 숨는다 — 남은 값을 싣지 않는다(엔진은 그 파트에서 읽지 않지만 총액·분리 판정에 끼지 않게).
+    const pre = gbBgMarketPreDeemedParts(primary);
+    const gbPartOmit = {
+      ...(pre.land && pre.building ? { acquisitionMethod: undefined } : {}),
+      ...(pre.land ? { actualLandAcquisitionPrice: undefined, presumedLandAcquisitionPrice: undefined } : {}),
+      ...(pre.building ? { actualBuildingAcquisitionPrice: undefined, presumedBuildingAcquisitionPrice: undefined } : {}),
+    };
     return {
       ...common,
+      ...gbPartOmit,
       landStdPriceAtTransfer: Math.floor(landStdAtTransfer),
       buildingStdPriceAtTransfer: parseAmount(primary.gbTransferBuildingValue) || 0,
       landStdPriceAtAcquisition: Math.floor(landStdAtAcquisition),

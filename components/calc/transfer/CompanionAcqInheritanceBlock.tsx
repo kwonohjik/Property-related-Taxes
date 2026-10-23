@@ -18,6 +18,7 @@
 
 import { mixedSec163_9CompareOf } from "@/lib/calc/mixed-use-sec163-9";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
+import { gbBgThreeWayParts } from "@/lib/calc/bg-pre-deemed-mode";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -150,8 +151,9 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
         </ToggleCard>
       )}
 
-      {/* 부담부증여 — §159가 취득가액을 정하므로 아래 취득가액 축을 숨긴다(위 주석). */}
-      {isBurdenedGift && (
+      {/* 부담부증여 — §159가 취득가액을 정하므로 아래 취득가액 축을 숨긴다(위 주석). 일반건물 · 시가 · 의제취득일 전 토지는 ①을 같은 카드의
+          「① 상증법 평가액」 칸에서 받으므로(PR-7b-6b) 「입력란을 표시하지 않습니다」 안내를 띄우지 않는다. */}
+      {isBurdenedGift && !gbBgThreeWayParts(asset).land && (
         <ToneCard
           tone="amber"
           title="취득가액 — 부담부증여 §159 자동 산정"

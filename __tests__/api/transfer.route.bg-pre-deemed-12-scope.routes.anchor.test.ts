@@ -184,11 +184,24 @@ describe("B-1 ⑫ 면제는 엔진이 3자 max로 받는 자산만", () => {
     expect(taxOf(r)).toBe(9_245_083);
   });
 
-  it("일반건물 — 산정방식 없음 + 의제취득일 전 상속 입력 → 400 산정방식 (종전 200 · 취득가액 0 · 112,808,000)", async () => {
+  it("일반건물 — 산정방식 없음 + 의제취득일 전 상속 입력(단일 자산 축) → 400 산정방식 (종전 200 · 취득가액 0 · 112,808,000)", async () => {
     const body = await captureBody(form({ ...GB, ...GB_MARKET }, "2023-02-16"));
+    // PR-7b-6b부터 ④가 일반건물 파트 ①②를 싣는다 — 그것을 걷어 낸 body가 B-1의 원래 모양이다(일반건물은 단일 자산 의제 입력을 읽지 않는다)
+    const gbv = body.generalBuildingValuation as Record<string, unknown>;
+    expect(gbv.landPreDeemedClauseA).toBeDefined();
+    delete gbv.landPreDeemedClauseA;
+    delete gbv.buildingPreDeemedClauseA;
     const r = await postTransfer(directPreDeemed(body, GB_IA));
     expect(r.status).toBe(400);
     expect(fieldErrorsOf(r)).toContain("burdenedGiftInfo.acquisitionMethod");
+  });
+
+  it("일반건물 — 두 파트 ①②가 실리면 산정방식 없이 파트별 3자 max(PR-7b-6) — 취득가액 0으로 떨어지지 않는다", async () => {
+    const body = await captureBody(form({ ...GB, ...GB_MARKET }, "2023-02-16"));
+    const r = await postTransfer(directPreDeemed(body, GB_IA));
+    expect(r.status).toBe(200);
+    expect(bgOf(r)?.preDeemed?.basis).toBe("three_way_parts");
+    expect(taxOf(r)).toBe(91_920_600); // ① 없음 → 두 파트 ③(7,500만씩 × 0.5) — 종전 환산과 같다
   });
 
   it("면제 경계 — 같은 토지 body의 propertyType만 바꾼다: 건물은 면제(3자 max) · 겸용·입주권·분양권은 산정방식 요구", async () => {
@@ -203,8 +216,9 @@ describe("B-1 ⑫ 면제는 엔진이 3자 max로 받는 자산만", () => {
     }
   });
 
-  it("일반건물 — 화면 경로(환산)는 종전 그대로 91,920,600", async () => {
-    const f = form({ ...GB, ...GB_MARKET }, "2023-02-16");
+  it("일반건물 — 화면 경로는 의제취득일 전 파트의 ①을 요구하고(Q-29), ①이 ③보다 작으면 종전 환산과 같은 91,920,600", async () => {
+    expect(allIssues(form({ ...GB, ...GB_MARKET }, "2023-02-16")).map((i) => i.field)).toContain("publishedValueAtInheritance");
+    const f = form({ ...GB, ...GB_MARKET, publishedValueAtInheritance: "10,000,000", gbBuildingInheritedValue: "10,000,000" }, "2023-02-16");
     expect(allIssues(f)).toEqual([]);
     const r = await postTransfer(await captureBody(f));
     expect(r.status).toBe(200);

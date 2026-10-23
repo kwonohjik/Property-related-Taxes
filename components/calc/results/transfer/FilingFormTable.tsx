@@ -40,7 +40,7 @@ export function FilingFormTable({
     result as unknown as {
       transferBurdenedGiftBreakdown?: {
         acquisitionMethodUsed?: TransferBurdenedGiftAcquisitionMethodUsed;
-        preDeemed?: { basis: "deemed_std" | "three_way" };
+        preDeemed?: { basis: "deemed_std" | "three_way" | "three_way_parts" };
         cards?: unknown[];
       };
     }
@@ -57,6 +57,8 @@ export function FilingFormTable({
       ? "자산별 §159①1호 취득가액(의제취득일 전 자산은 3자 max·의제취득일 기준시가) × 채무비율 — 부담부증여 명세 참조"
       : preDeemedBasis === "three_way"
       ? "①상증법 평가액·②§164 기준시가·③환산취득가액 중 큰 금액 × 채무비율"
+      : preDeemedBasis === "three_way_parts"
+      ? "토지·건물별 — 의제취득일 전 파트는 ①상증법 평가액·②§164 기준시가·③환산취득가액 중 큰 금액 × 채무비율 — 부담부증여 명세 참조"
       : preDeemedBasis === "deemed_std"
         ? "의제취득일(1985.1.1.) 기준시가 × 채무비율"
         : burdenedGiftBreakdown?.acquisitionMethodUsed === "actual"
