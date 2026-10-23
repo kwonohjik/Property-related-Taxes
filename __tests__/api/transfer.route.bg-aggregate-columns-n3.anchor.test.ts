@@ -132,9 +132,10 @@ async function run(over: object = {}) {
 /** ⑫ enum이 허용하는 취득방법 전수 (`"actual" | "converted"`). */
 const MODES = {
   actual: {},
+  // 환산(K-5)은 «취득가액 산정방식»(`burdenedGiftInfo.acquisitionMethod`)이지 환산 **경로**가 아니다 — ④는 부담부증여면 항상 실가 payload
+  // (`actualPriceMode: true`)를 보내고 §159가 환산을 한다. 종전 픽스처는 `actualPriceMode: false`(환산 경로)로 보내 §159가 **무시된 채** 200 이었다
+  // (PR-1 · 계획서 `docs/00-pm/gb-burdened-gift-silent-drop.plan.md` — 서버가 이제 400 으로 거부한다).
   converted: {
-    useEstimatedAcquisition: true,
-    generalBuildingValuation: { ...BASE.generalBuildingValuation, actualPriceMode: false },
     burdenedGiftInfo: { ...BASE.burdenedGiftInfo, acquisitionMethod: "converted" as const },
   },
 };

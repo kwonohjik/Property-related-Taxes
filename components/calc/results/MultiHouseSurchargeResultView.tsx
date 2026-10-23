@@ -36,9 +36,18 @@ type Props = {
   sellingStdPrice: string | undefined;
   /** D3d 「이 사실로 양도세 계산」 — 사실(폼)을 아는 것은 오케스트레이터다 */
   onCalculateTax?: () => void;
+  /** D6 「이 주택을 양도 예정 주택으로 바꿔 판정」 */
+  onSwapSelling?: (houseId: string) => void;
 };
 
-export function MultiHouseSurchargeResultView({ result, formHouses, formRights, sellingStdPrice, onCalculateTax }: Props) {
+export function MultiHouseSurchargeResultView({
+  result,
+  formHouses,
+  formRights,
+  sellingStdPrice,
+  onCalculateTax,
+  onSwapSelling,
+}: Props) {
   let n = 0;
   const next = () => String(++n);
   const { headline, rows, rateImpact } = result;
@@ -79,6 +88,7 @@ export function MultiHouseSurchargeResultView({ result, formHouses, formRights, 
             formRights={formRights}
             sellingStdPrice={sellingStdPrice}
             effectiveHouseCount={headline.result.effectiveHouseCount}
+            onSwapSelling={onSwapSelling}
           />
         </ToneCard>
       )}
