@@ -3,16 +3,21 @@
 import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
+import { gbViewProperties, type GbBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 
 /**
  * 일반건물 증축 케이스(사례 33) 전용 — 토지(1001)·건물1(3001)·건물2(3002) 3열 요약 표.
  * 영 §102② 결손 통산 전·후 양도소득금액을 자산별로 분리 표시.
  *
- * 진입 조건: aggregated.properties 중 propertyLabel에 "3002" 포함한 항목이 있을 때.
+ * 진입 조건: 그 일반건물의 카드가 정확히 3장이고 그중 「증축건물(3002)」이 있을 때.
+ *
+ * `view`(`gb-result-block-views.ts`)를 주면 그 일반건물 한 물건분만 그린다 — 함께 양도는 다른 자산 카드가 섞여 있어
+ * 일반건물 자산마다 같은 접미사 카드 3장으로 그린다(`gb-bundled-result-blocks.plan.md` D-2). 없으면 단건 슬롯·전 카드.
  */
-export function GeneralBuilding3WayTable({ aggregated }: { aggregated: AggregateTransferResult }) {
+export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: AggregateTransferResult; view?: GbBlockView }) {
   // 3-way 유효성 확인: 정확히 3개 카드이고, 마지막 카드가 "증축건물(3002)"일 때만 렌더
-  const props = aggregated.properties;
+  const props = view ? gbViewProperties(aggregated, view) : aggregated.properties;
   if (props.length !== 3) return null;
   const hasExtension = props.some((p) => p.propertyLabel.includes("3002"));
   if (!hasExtension) return null;
@@ -34,8 +39,9 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
    *    이미 실려 있으므로 prop 추가 없이 읽는다.
    * 계획서: `docs/02-design/features/transfer-gb-extension-4mode-matrix.plan.md` §4 D-9
    */
-  const gbCards = aggregated.generalBuildingValuationDetail?.assetCards;
-  const cardOf = (propertyId: string) => gbCards?.find((c) => c.propertyId === propertyId);
+  const gbCards = (view?.detail ?? aggregated.generalBuildingValuationDetail)?.assetCards;
+  // 함께 양도 카드 id에는 자산 접미사가 붙는다 — 상세 카드는 그 자산 것뿐이라 base id로 찾는다.
+  const cardOf = (propertyId: string) => gbCards?.find((c) => baseCardId(c.propertyId) === propertyId);
   const bld2Estimated = cardOf("building2")?.usedEstimatedAcquisition;
 
   /**
@@ -91,13 +97,23 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
     if (absorbed > 0) return { text: `△${formatKRW(absorbed)}`, tone: "text-rose-700 dark:text-rose-400" };
     return { text: "-", tone: "text-muted-foreground" };
   };
+  /**
+   * 결손 통산 합계 — 세 칸의 「기여 − 흡수」 합. 단건은 결손이 이 물건 안에서만 오가 늘 0이다.
+   * 함께 양도는 결손이 다른 자산으로 넘어가거나(+) 다른 자산의 결손을 흡수한다(△) — 하드코딩 0은 거짓이 된다(계획서 C-4 · Q-2 a).
+   */
+  const netOffset = [land, bld1, bld2].reduce((s, a) => {
+    const { contributed, absorbed } = offsetOf(a);
+    return s + contributed - absorbed;
+  }, 0);
   const landOffsetCell = offsetCell(land);
   const bld1OffsetCell = offsetCell(bld1);
   const bld2OffsetCell = offsetCell(bld2);
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
-      <h3 className="font-semibold text-base mb-1">일반건물 3-자산 요약 (영 §102② 결손 통산)</h3>
+      <h3 className="font-semibold text-base mb-1">
+        일반건물 3-자산 요약 (영 §102② 결손 통산){view?.label ? ` — ${view.label}` : ""}
+      </h3>
       <p className="text-xs text-muted-foreground mb-3">
         토지(1001) · 건물1(3001) · 증축건물2(3002) 소득 라인을 분리 표시.
         자산별 취득가액 산정 방식은 취득가액 옆에 표기됩니다. 결손이 난 자산의 손실은 나머지 자산의 양수 소득에 안분 흡수됩니다.
@@ -216,7 +232,9 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
               <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${landOffsetCell.tone}`}>{landOffsetCell.text}</td>
               <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${bld1OffsetCell.tone}`}>{bld1OffsetCell.text}</td>
               <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${bld2OffsetCell.tone}`}>{bld2OffsetCell.text}</td>
-              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">0</td>
+              <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">
+                {netOffset === 0 ? "0" : netOffset > 0 ? `+${formatKRW(netOffset)}` : `△${formatKRW(-netOffset)}`}
+              </td>
             </tr>
             {/* 통산 후 양도소득금액 */}
             <tr className="bg-muted/40 font-semibold">
@@ -232,9 +250,23 @@ export function GeneralBuilding3WayTable({ aggregated }: { aggregated: Aggregate
         </table>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        양도소득금액 합계는 통산 전후 동일하지만,{" "}
-        <strong>자산별 분포가 변경</strong>됩니다. 결손 자산의 손실이 나머지 자산의 양수에 흡수되어
-        세율 적용 기준 양도소득금액이 자산 단위로 재분배됩니다 (영 §102②).
+        {netOffset === 0 ? (
+          <>
+            양도소득금액 합계는 통산 전후 동일하지만,{" "}
+            <strong>자산별 분포가 변경</strong>됩니다. 결손 자산의 손실이 나머지 자산의 양수에 흡수되어
+            세율 적용 기준 양도소득금액이 자산 단위로 재분배됩니다 (영 §102②).
+          </>
+        ) : netOffset > 0 ? (
+          <>
+            결손 중 {formatKRW(netOffset)}은 <strong>함께 양도한 다른 자산</strong>의 양수 소득에 흡수되어, 이 표의 통산 후
+            합계는 통산 전보다 그만큼 큽니다 (영 §102②).
+          </>
+        ) : (
+          <>
+            <strong>함께 양도한 다른 자산</strong>의 결손 {formatKRW(-netOffset)}을 이 물건이 흡수해, 이 표의 통산 후 합계는
+            통산 전보다 그만큼 작습니다 (영 §102②).
+          </>
+        )}
       </p>
     </div>
   );
